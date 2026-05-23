@@ -2,9 +2,10 @@
 //!
 //! Core phase shifting functionality for beam control.
 
+use crate::core::constants::SOUND_SPEED_WATER;
 use super::core::{
     calculate_wavelength, quantize_phase, wrap_phase, ShiftingStrategy, MAX_FOCAL_POINTS,
-    MAX_STEERING_ANGLE, MIN_FOCAL_DISTANCE, SPEED_OF_SOUND,
+    MAX_STEERING_ANGLE, MIN_FOCAL_DISTANCE,
 };
 
 /// Default quantization levels for phase control
@@ -27,7 +28,7 @@ impl PhaseShifter {
     /// Create a new phase shifter
     #[must_use]
     pub fn new(element_positions: Array2<f64>, operating_frequency: f64) -> Self {
-        let wavelength = calculate_wavelength(operating_frequency, SPEED_OF_SOUND);
+        let wavelength = calculate_wavelength(operating_frequency, SOUND_SPEED_WATER);
         let num_elements = element_positions.nrows();
         let phase_offsets = Array1::zeros(num_elements);
 

@@ -2,7 +2,8 @@ use crate::core::error::KwaversResult;
 use crate::physics::acoustics::skull::AcousticSkullProperties;
 use ndarray::Array3;
 
-use super::constants::{ALPHA_WATER, C_WATER, RHO_WATER};
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
+use super::constants::ALPHA_WATER;
 use super::model::HeterogeneousSkull;
 
 impl HeterogeneousSkull {
@@ -51,17 +52,17 @@ impl HeterogeneousSkull {
         alpha_bone: f64,
     ) -> KwaversResult<Self> {
         let k_bone = rho_bone * c_bone * c_bone;
-        let k_water = RHO_WATER * C_WATER * C_WATER;
+        let k_water = DENSITY_WATER_NOMINAL * SOUND_SPEED_WATER_SIM * SOUND_SPEED_WATER_SIM;
 
         let sound_speed = ct_data.mapv(|hu| {
             let phi = Self::bone_volume_fraction(hu);
             if phi <= 0.0 {
-                return C_WATER;
+                return SOUND_SPEED_WATER_SIM;
             }
             if phi >= 1.0 {
                 return c_bone;
             }
-            let rho_eff = phi.mul_add(rho_bone, (1.0 - phi) * RHO_WATER);
+            let rho_eff = phi.mul_add(rho_bone, (1.0 - phi) * DENSITY_WATER_NOMINAL);
             let k_voigt = phi.mul_add(k_bone, (1.0 - phi) * k_water);
             let k_reuss = 1.0 / (phi / k_bone + (1.0 - phi) / k_water);
             let k_hill = 0.5 * (k_voigt + k_reuss);
@@ -70,7 +71,7 @@ impl HeterogeneousSkull {
 
         let density = ct_data.mapv(|hu| {
             let phi = Self::bone_volume_fraction(hu);
-            phi.mul_add(rho_bone, (1.0 - phi) * RHO_WATER)
+            phi.mul_add(rho_bone, (1.0 - phi) * DENSITY_WATER_NOMINAL)
         });
 
         let attenuation = ct_data.mapv(|hu| {

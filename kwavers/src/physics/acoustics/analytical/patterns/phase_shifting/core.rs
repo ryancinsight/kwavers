@@ -4,7 +4,6 @@
 //! used throughout the phase shifting subsystem. Implements SSOT principle
 //! for phase-related computations.
 
-use crate::core::constants::SOUND_SPEED_WATER;
 use std::f64::consts::{PI, TAU};
 
 /// Maximum number of focal points supported
@@ -15,9 +14,6 @@ pub const MAX_STEERING_ANGLE: f64 = PI / 3.0; // 60 degrees
 
 /// Minimum focal distance in meters
 pub const MIN_FOCAL_DISTANCE: f64 = 0.001; // 1mm
-
-/// Default speed of sound for phase calculations
-pub const SPEED_OF_SOUND: f64 = SOUND_SPEED_WATER;
 
 /// Phase shifting strategy enumeration
 #[derive(Debug, Clone, Copy, PartialEq)]

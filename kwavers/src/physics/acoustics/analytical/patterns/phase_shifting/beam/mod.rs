@@ -9,8 +9,9 @@ use crate::core::error::KwaversResult;
 use ndarray::{Array1, Array2};
 use std::f64::consts::PI;
 
+use crate::core::constants::SOUND_SPEED_WATER;
 use crate::physics::acoustics::analytical::patterns::phase_shifting::core::{
-    calculate_wavelength, wrap_phase, MAX_STEERING_ANGLE, SPEED_OF_SOUND,
+    calculate_wavelength, wrap_phase, MAX_STEERING_ANGLE,
 };
 
 /// Beam steering controller
@@ -69,7 +70,7 @@ impl BeamSteering {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     fn calculate_phase_distribution(&mut self) -> KwaversResult<()> {
-        let wavelength = calculate_wavelength(self.frequency, SPEED_OF_SOUND);
+        let wavelength = calculate_wavelength(self.frequency, SOUND_SPEED_WATER);
         let k = 2.0 * PI / wavelength;
 
         let az_rad = self.steering_angles.0.to_radians();
@@ -91,7 +92,7 @@ impl BeamSteering {
     /// Check for grating lobes
     #[must_use]
     pub fn check_grating_lobes(&self) -> bool {
-        let wavelength = calculate_wavelength(self.frequency, SPEED_OF_SOUND);
+        let wavelength = calculate_wavelength(self.frequency, SOUND_SPEED_WATER);
 
         // Find element spacing
         let mut min_spacing = f64::INFINITY;
@@ -126,7 +127,7 @@ impl BeamSteering {
     /// Calculate beam pattern at given angles
     #[must_use]
     pub fn calculate_beam_pattern(&self, theta: f64, phi: f64) -> f64 {
-        let wavelength = calculate_wavelength(self.frequency, SPEED_OF_SOUND);
+        let wavelength = calculate_wavelength(self.frequency, SOUND_SPEED_WATER);
         let k = 2.0 * PI / wavelength;
 
         let theta_rad = theta.to_radians();
@@ -167,7 +168,7 @@ mod tests {
 
         steering.set_steering_angles(60.0, 0.0).unwrap();
 
-        let wavelength = calculate_wavelength(MHZ_TO_HZ, SPEED_OF_SOUND);
+        let wavelength = calculate_wavelength(MHZ_TO_HZ, SOUND_SPEED_WATER);
         let k = 2.0 * PI / wavelength;
         let expected_left = wrap_phase(-k * -0.001 * 60.0_f64.to_radians().sin());
         let phases = steering.get_phase_distribution();

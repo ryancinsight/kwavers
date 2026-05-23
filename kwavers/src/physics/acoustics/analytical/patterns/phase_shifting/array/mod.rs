@@ -8,9 +8,8 @@ use ndarray::{Array1, Array2};
 use std::f64::consts::PI;
 
 use crate::physics::phase_modulation::phase_shifting::beam::BeamSteering;
-use crate::physics::phase_modulation::phase_shifting::core::{
-    calculate_wavelength, wrap_phase, SPEED_OF_SOUND,
-};
+use crate::core::constants::SOUND_SPEED_WATER;
+use crate::physics::phase_modulation::phase_shifting::core::{calculate_wavelength, wrap_phase};
 use crate::physics::phase_modulation::phase_shifting::focus::DynamicFocusing;
 
 /// Phased array system
@@ -137,7 +136,7 @@ impl PhaseArray {
     /// Calculate field at a point
     #[must_use]
     pub fn calculate_field(&self, x: f64, y: f64, z: f64) -> (f64, f64) {
-        let wavelength = calculate_wavelength(self.frequency, SPEED_OF_SOUND);
+        let wavelength = calculate_wavelength(self.frequency, SOUND_SPEED_WATER);
         let k = 2.0 * PI / wavelength;
 
         let phases = self.get_phase_distribution();
@@ -175,7 +174,7 @@ impl PhaseArray {
     /// Check system performance
     #[must_use]
     pub fn check_performance(&self) -> PhaseArrayMetrics {
-        let wavelength = calculate_wavelength(self.frequency, SPEED_OF_SOUND);
+        let wavelength = calculate_wavelength(self.frequency, SOUND_SPEED_WATER);
 
         // Find minimum element spacing
         let mut min_spacing = f64::INFINITY;

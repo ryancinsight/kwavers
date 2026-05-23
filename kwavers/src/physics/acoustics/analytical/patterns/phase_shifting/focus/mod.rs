@@ -9,8 +9,9 @@ use crate::core::error::KwaversResult;
 use ndarray::{Array1, Array2};
 use std::f64::consts::PI;
 
+use crate::core::constants::SOUND_SPEED_WATER;
 use crate::physics::phase_modulation::phase_shifting::core::{
-    calculate_wavelength, wrap_phase, MAX_FOCAL_POINTS, MIN_FOCAL_DISTANCE, SPEED_OF_SOUND,
+    calculate_wavelength, wrap_phase, MAX_FOCAL_POINTS, MIN_FOCAL_DISTANCE,
 };
 
 /// Dynamic focusing controller
@@ -102,7 +103,7 @@ impl DynamicFocusing {
             return Ok(());
         }
 
-        let wavelength = calculate_wavelength(self.frequency, SPEED_OF_SOUND);
+        let wavelength = calculate_wavelength(self.frequency, SOUND_SPEED_WATER);
         let k = 2.0 * PI / wavelength;
 
         self.phase_distribution.fill(0.0);
@@ -159,7 +160,7 @@ impl DynamicFocusing {
     /// Calculate intensity at a point
     #[must_use]
     pub fn calculate_intensity(&self, x: f64, y: f64, z: f64) -> f64 {
-        let wavelength = calculate_wavelength(self.frequency, SPEED_OF_SOUND);
+        let wavelength = calculate_wavelength(self.frequency, SOUND_SPEED_WATER);
         let k = 2.0 * PI / wavelength;
 
         let mut sum_real = 0.0;

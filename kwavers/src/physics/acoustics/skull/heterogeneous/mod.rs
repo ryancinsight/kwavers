@@ -32,6 +32,6 @@ mod types;
 #[cfg(test)]
 mod tests;
 
-pub use constants::{ALPHA_WATER, C_WATER, HU_CORTICAL, HU_WATER, RHO_WATER};
+pub use constants::{ALPHA_WATER, HU_CORTICAL, HU_WATER};
 pub use model::HeterogeneousSkull;
 pub use types::SkullLayer;

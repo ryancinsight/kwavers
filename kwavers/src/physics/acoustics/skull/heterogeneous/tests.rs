@@ -1,4 +1,5 @@
 use super::*;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use ndarray::Array3;
 
 #[test]
@@ -60,8 +61,8 @@ fn test_hill_water_limit_gives_c_water() {
     let skull = HeterogeneousSkull::from_ct_hill(&ct, 3100.0, 2100.0, 20.0).unwrap();
     for &c in skull.sound_speed.iter() {
         assert!(
-            (c - C_WATER).abs() < 1.0,
-            "water voxel speed {c:.1} should equal C_WATER={C_WATER}"
+            (c - SOUND_SPEED_WATER_SIM).abs() < 1.0,
+            "water voxel speed {c:.1} should equal SOUND_SPEED_WATER_SIM={SOUND_SPEED_WATER_SIM}"
         );
     }
 }
@@ -86,8 +87,8 @@ fn test_hill_diploe_speed_between_water_and_bone() {
     let skull = HeterogeneousSkull::from_ct_hill(&ct, c_bone, 2100.0, 20.0).unwrap();
     for &c in skull.sound_speed.iter() {
         assert!(
-            c > C_WATER && c < c_bone,
-            "diploe speed {c:.1} must be strictly between {C_WATER} and {c_bone}"
+            c > SOUND_SPEED_WATER_SIM && c < c_bone,
+            "diploe speed {c:.1} must be strictly between {SOUND_SPEED_WATER_SIM} and {c_bone}"
         );
     }
 }
@@ -99,7 +100,7 @@ fn test_hill_density_voigt_rule() {
     let hu = phi * HU_CORTICAL;
     let ct = Array3::from_elem((2, 2, 2), hu);
     let skull = HeterogeneousSkull::from_ct_hill(&ct, 3100.0, rho_bone, 20.0).unwrap();
-    let expected_rho = phi * rho_bone + (1.0 - phi) * RHO_WATER;
+    let expected_rho = phi * rho_bone + (1.0 - phi) * DENSITY_WATER_NOMINAL;
     for &rho in skull.density.iter() {
         assert!(
             (rho - expected_rho).abs() < 1e-6,
@@ -129,11 +130,11 @@ fn test_hill_speed_does_not_exceed_voigt_modulus_speed() {
     let c_bone = 3100.0_f64;
     let rho_bone = 2100.0_f64;
     let k_bone = rho_bone * c_bone * c_bone;
-    let k_water = RHO_WATER * C_WATER * C_WATER;
+    let k_water = DENSITY_WATER_NOMINAL * SOUND_SPEED_WATER_SIM * SOUND_SPEED_WATER_SIM;
     for hu_int in 1_u32..10 {
         let hu = hu_int as f64 * 100.0;
         let phi = HeterogeneousSkull::bone_volume_fraction(hu);
-        let rho_eff = phi * rho_bone + (1.0 - phi) * RHO_WATER;
+        let rho_eff = phi * rho_bone + (1.0 - phi) * DENSITY_WATER_NOMINAL;
         let k_voigt = phi * k_bone + (1.0 - phi) * k_water;
         let voigt_modulus_speed = (k_voigt / rho_eff).sqrt();
         let ct = Array3::from_elem((1, 1, 1), hu);
