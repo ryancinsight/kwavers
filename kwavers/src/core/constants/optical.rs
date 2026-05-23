@@ -60,3 +60,44 @@ pub const REFRACTIVE_INDEX_WATER: f64 = 1.33;
 /// - Graaff R et al. (1992). Appl. Opt. 31(10), 1370–1376.
 /// - Duck F A (1990). Physical Properties of Tissue. Academic Press. §5.
 pub const REFRACTIVE_INDEX_SOFT_TISSUE: f64 = 1.4;
+
+/// Refractive index of blood plasma and biological fluids (dimensionless, NIR).
+///
+/// Value: 1.335 — characteristic of protein-containing aqueous solutions such as
+/// blood plasma, whole blood, urine, synovial fluid, and similar biological fluids.
+/// Slightly higher than pure water (1.33) due to dissolved proteins and electrolytes.
+///
+/// References:
+/// - Faber D J et al. (2004). Opt. Lett. 29(22), 2641–2643 (blood plasma).
+/// - Duck, F. A. (1990). Physical Properties of Tissue. Academic Press, Table 7.1.
+pub const REFRACTIVE_INDEX_BIOLOGICAL_FLUID: f64 = 1.335;
+
+/// Refractive index of brain parenchyma (dimensionless, NIR ~700–900 nm).
+///
+/// Value: 1.37 — applies to both white and gray matter, and broadly to
+/// neurological soft tissue. Frequently used in photoacoustic and transcranial
+/// optical models.
+///
+/// References:
+/// - Tuchin V V (2007). Tissue Optics. SPIE Press. Table 1.1.
+/// - Duck, F. A. (1990). Physical Properties of Tissue, §7.
+pub const REFRACTIVE_INDEX_BRAIN_TISSUE: f64 = 1.37;
+
+/// Refractive index of cerebrospinal fluid (dimensionless, NIR).
+///
+/// Value: 1.333 — close to pure water due to very low protein content.
+/// Used in transcranial optical and photoacoustic models.
+///
+/// Reference: Duck, F. A. (1990). Physical Properties of Tissue, Table 7.1.
+pub const REFRACTIVE_INDEX_CSF: f64 = 1.333;
+
+/// Refractive index of parenchymal soft tissue in the NIR window (dimensionless).
+///
+/// Value: 1.38 — representative of liver parenchyma, skeletal muscle, and
+/// general soft tissue at NIR wavelengths (~700–900 nm). More precise than the
+/// rounded `REFRACTIVE_INDEX_SOFT_TISSUE = 1.4` approximation.
+///
+/// References:
+/// - Graaff R et al. (1992). Appl. Opt. 31(10), 1370–1376.
+/// - Tuchin V V (2007). Tissue Optics. SPIE Press. Table 1.1.
+pub const REFRACTIVE_INDEX_SOFT_TISSUE_NIR: f64 = 1.38;

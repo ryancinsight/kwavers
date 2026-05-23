@@ -10,7 +10,10 @@
 
 use super::material::AcousticMaterialProperties;
 use crate::core::constants::acoustic_parameters::{DENSITY_SKULL, VISCOSITY_PARENCHYMAL_TISSUE};
-use crate::core::constants::optical::REFRACTIVE_INDEX_WATER;
+use crate::core::constants::optical::{
+    REFRACTIVE_INDEX_BIOLOGICAL_FLUID, REFRACTIVE_INDEX_BRAIN_TISSUE,
+    REFRACTIVE_INDEX_SOFT_TISSUE_NIR, REFRACTIVE_INDEX_WATER,
+};
 use crate::core::constants::cavitation::VISCOSITY_WATER;
 use crate::core::constants::fundamental::{
     ATMOSPHERIC_PRESSURE, B_OVER_A_BLOOD, B_OVER_A_BONE, B_OVER_A_BRAIN, B_OVER_A_CSF,
@@ -87,7 +90,7 @@ pub const BRAIN_WHITE_MATTER: TissueProperties = TissueProperties {
     metabolic_heat: 0.7,       // W/kg
     optical_absorption: 2.0,   // 1/m (near-IR)
     optical_scattering: 100.0, // 1/m
-    refractive_index: 1.37,
+    refractive_index: REFRACTIVE_INDEX_BRAIN_TISSUE,
     reference_temperature: BODY_TEMPERATURE_C,
     reference_pressure: ATMOSPHERIC_PRESSURE,
 };
@@ -112,7 +115,7 @@ pub const BRAIN_GRAY_MATTER: TissueProperties = TissueProperties {
     metabolic_heat: 1.2, // W/kg (higher metabolic rate)
     optical_absorption: 2.5,
     optical_scattering: 110.0,
-    refractive_index: 1.37,
+    refractive_index: REFRACTIVE_INDEX_BRAIN_TISSUE,
     reference_temperature: BODY_TEMPERATURE_C,
     reference_pressure: ATMOSPHERIC_PRESSURE,
 };
@@ -168,7 +171,7 @@ pub const LIVER: TissueProperties = TissueProperties {
     metabolic_heat: 0.8, // W/kg
     optical_absorption: 3.0,
     optical_scattering: 120.0,
-    refractive_index: 1.38,
+    refractive_index: REFRACTIVE_INDEX_SOFT_TISSUE_NIR,
     reference_temperature: BODY_TEMPERATURE_C,
     reference_pressure: ATMOSPHERIC_PRESSURE,
 };
@@ -197,7 +200,7 @@ pub const KIDNEY_CORTEX: TissueProperties = TissueProperties {
     metabolic_heat: 1.0,
     optical_absorption: 2.5,
     optical_scattering: 110.0,
-    refractive_index: 1.37,
+    refractive_index: REFRACTIVE_INDEX_BRAIN_TISSUE,
     reference_temperature: BODY_TEMPERATURE_C,
     reference_pressure: ATMOSPHERIC_PRESSURE,
 };
@@ -222,7 +225,7 @@ pub const KIDNEY_MEDULLA: TissueProperties = TissueProperties {
     metabolic_heat: 1.1,
     optical_absorption: 2.5,
     optical_scattering: 110.0,
-    refractive_index: 1.37,
+    refractive_index: REFRACTIVE_INDEX_BRAIN_TISSUE,
     reference_temperature: BODY_TEMPERATURE_C,
     reference_pressure: ATMOSPHERIC_PRESSURE,
 };
@@ -252,7 +255,7 @@ pub const BLOOD: TissueProperties = TissueProperties {
     metabolic_heat: 0.0,
     optical_absorption: 100.0, // Blood strongly absorbs light
     optical_scattering: 500.0, // High scattering
-    refractive_index: 1.335,
+    refractive_index: REFRACTIVE_INDEX_BIOLOGICAL_FLUID,
     reference_temperature: BODY_TEMPERATURE_C,
     reference_pressure: ATMOSPHERIC_PRESSURE,
 };
@@ -278,7 +281,7 @@ pub const MUSCLE: TissueProperties = TissueProperties {
     metabolic_heat: 1.2, // Active metabolism
     optical_absorption: 0.1,
     optical_scattering: 50.0,
-    refractive_index: 1.38,
+    refractive_index: REFRACTIVE_INDEX_SOFT_TISSUE_NIR,
     reference_temperature: BODY_TEMPERATURE_C,
     reference_pressure: ATMOSPHERIC_PRESSURE,
 };

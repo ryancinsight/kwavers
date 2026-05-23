@@ -17,7 +17,9 @@
 use super::material::AcousticMaterialProperties;
 use crate::core::constants::acoustic_parameters::{BLOOD_PLASMA_VISCOSITY_37C, BLOOD_VISCOSITY_37C};
 use crate::core::constants::cavitation::VISCOSITY_WATER;
-use crate::core::constants::optical::REFRACTIVE_INDEX_WATER;
+use crate::core::constants::optical::{
+    REFRACTIVE_INDEX_BIOLOGICAL_FLUID, REFRACTIVE_INDEX_CSF, REFRACTIVE_INDEX_WATER,
+};
 use crate::core::constants::fundamental::{
     ATMOSPHERIC_PRESSURE, B_OVER_A_BLOOD, B_OVER_A_CSF, B_OVER_A_WATER, DENSITY_BLOOD,
     DENSITY_TISSUE, DENSITY_WATER_37C, SOUND_SPEED_BLOOD, SOUND_SPEED_WATER, SOUND_SPEED_WATER_37C,
@@ -59,7 +61,7 @@ pub const BLOOD_PLASMA: FluidProperties = FluidProperties {
     metabolic_heat: 0.0, // Carries heat via circulation
     optical_absorption: 0.1,
     optical_scattering: 10.0,
-    refractive_index: 1.335,
+    refractive_index: REFRACTIVE_INDEX_BIOLOGICAL_FLUID,
     reference_temperature: BODY_TEMPERATURE_C,
     reference_pressure: ATMOSPHERIC_PRESSURE,
 };
@@ -84,7 +86,7 @@ pub const WHOLE_BLOOD: FluidProperties = FluidProperties {
     metabolic_heat: 0.0,
     optical_absorption: 0.5, // Red blood cells scatter and absorb
     optical_scattering: 50.0,
-    refractive_index: 1.335,
+    refractive_index: REFRACTIVE_INDEX_BIOLOGICAL_FLUID,
     reference_temperature: BODY_TEMPERATURE_C,
     reference_pressure: ATMOSPHERIC_PRESSURE,
 };
@@ -110,7 +112,7 @@ pub const CSF: FluidProperties = FluidProperties {
     metabolic_heat: 0.0,
     optical_absorption: 0.05,
     optical_scattering: 5.0,
-    refractive_index: 1.333,
+    refractive_index: REFRACTIVE_INDEX_CSF,
     reference_temperature: BODY_TEMPERATURE_C,
     reference_pressure: ATMOSPHERIC_PRESSURE,
 };
@@ -136,7 +138,7 @@ pub const URINE: FluidProperties = FluidProperties {
     metabolic_heat: 0.0,
     optical_absorption: 0.2,
     optical_scattering: 15.0,
-    refractive_index: 1.335,
+    refractive_index: REFRACTIVE_INDEX_BIOLOGICAL_FLUID,
     reference_temperature: BODY_TEMPERATURE_C,
     reference_pressure: ATMOSPHERIC_PRESSURE,
 };
