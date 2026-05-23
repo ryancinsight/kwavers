@@ -78,6 +78,25 @@ pub const BLOOD_SPECIFIC_HEAT: f64 = 3617.0;
 /// Typical HIFU focal intensity (W/cm²)
 pub const HIFU_FOCAL_INTENSITY: f64 = 1000.0;
 
+/// IEC 62359 (2017) §8.3.2 — Thermal Index soft tissue (TIS) formula divisor
+/// (mW · MHz)⁻¹.
+///
+/// TIS = W_stp [mW] / (IEC_TIS_DIVISOR · f_MHz)
+///
+/// Reference: IEC 62359 (2017). *Ultrasonics — Field characterization —
+/// Test methods for the determination of thermal and mechanical indices
+/// related to medical diagnostic ultrasonic fields.*
+pub const IEC_TIS_DIVISOR: f64 = 210.0;
+
+/// IEC 62359 (2017) §8.4 — Thermal Index bone (TIB) formula divisor (mW · MHz).
+///
+/// TIB = W [mW] · f_MHz / IEC_TIB_DIVISOR
+///
+/// Reference: IEC 62359 (2017). *Ultrasonics — Field characterization —
+/// Test methods for the determination of thermal and mechanical indices
+/// related to medical diagnostic ultrasonic fields.*
+pub const IEC_TIB_DIVISOR: f64 = 40.0;
+
 /// Default ultrasound frequency (Hz)
 pub const DEFAULT_ULTRASOUND_FREQUENCY: f64 = 1e6;
 

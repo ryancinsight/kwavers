@@ -1,5 +1,6 @@
 use crate::core::constants::{GRUNEISEN_WATER_20C, SOUND_SPEED_WATER_SIM};
 use crate::core::constants::numerical::MHZ_TO_HZ;
+use crate::core::constants::optical::REFRACTIVE_INDEX_SOFT_TISSUE;
 use crate::domain::medium::properties::OpticalPropertyData;
 use ndarray::{Array2, Array3};
 
@@ -80,7 +81,7 @@ impl PhotoacousticOpticalProperties {
             absorption_coefficient: absorption,
             scattering_coefficient: 150.0,
             anisotropy: 0.95,
-            refractive_index: 1.4,
+            refractive_index: REFRACTIVE_INDEX_SOFT_TISSUE,
         }
     }
 
@@ -90,7 +91,7 @@ impl PhotoacousticOpticalProperties {
             absorption_coefficient: wavelength.mul_add(0.001, 0.1).max(0.0_f64),
             scattering_coefficient: wavelength.mul_add(0.1, 100.0).max(0.0_f64),
             anisotropy: 0.8,
-            refractive_index: 1.4,
+            refractive_index: REFRACTIVE_INDEX_SOFT_TISSUE,
         }
     }
 
@@ -100,7 +101,7 @@ impl PhotoacousticOpticalProperties {
             absorption_coefficient: wavelength.mul_add(0.01, 5.0).max(0.0_f64),
             scattering_coefficient: wavelength.mul_add(0.15, 120.0).max(0.0_f64),
             anisotropy: 0.85,
-            refractive_index: 1.4,
+            refractive_index: REFRACTIVE_INDEX_SOFT_TISSUE,
         }
     }
 }

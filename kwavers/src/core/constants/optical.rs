@@ -36,3 +36,17 @@ pub const DEFAULT_POLARIZATION_FACTOR: f64 = 1.0;
 
 /// Laplacian center coefficient for optical calculations
 pub const LAPLACIAN_CENTER_COEFF: f64 = -2.0;
+
+// ============================================================================
+// Biological Tissue Refractive Indices (NIR wavelengths, ~700–900 nm)
+// ============================================================================
+
+/// Refractive index of soft biological tissue (dimensionless) in the NIR window.
+///
+/// This value of 1.4 is the widely adopted approximation for soft tissue
+/// at near-infrared wavelengths used in photoacoustic and diffuse-optics models.
+///
+/// References:
+/// - Graaff R et al. (1992). Appl. Opt. 31(10), 1370–1376.
+/// - Duck F A (1990). Physical Properties of Tissue. Academic Press. §5.
+pub const REFRACTIVE_INDEX_SOFT_TISSUE: f64 = 1.4;

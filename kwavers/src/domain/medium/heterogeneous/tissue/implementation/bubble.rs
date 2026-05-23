@@ -1,6 +1,7 @@
 //! `BubbleProperties` and `BubbleState` impls for `HeterogeneousTissueMedium`
 
 use super::HeterogeneousTissueMedium;
+use crate::core::constants::acoustic_parameters::AIR_POLYTROPIC_INDEX;
 use crate::core::constants::cavitation::VAPOR_PRESSURE_WATER;
 use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use crate::domain::grid::Grid;
@@ -22,7 +23,7 @@ impl BubbleProperties for HeterogeneousTissueMedium {
     }
 
     fn polytropic_index(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        1.4 // Air
+        AIR_POLYTROPIC_INDEX
     }
 
     fn gas_diffusion_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {

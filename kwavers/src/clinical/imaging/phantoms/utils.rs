@@ -1,5 +1,6 @@
 use super::types::PhantomTissueType;
 use crate::clinical::imaging::chromophores::HemoglobinDatabase;
+use crate::core::constants::optical::REFRACTIVE_INDEX_SOFT_TISSUE;
 use crate::domain::medium::properties::OpticalPropertyData;
 
 /// Compute blood optical properties from hemoglobin database
@@ -33,7 +34,7 @@ pub fn compute_blood_properties(
     // Blood scattering properties (weakly wavelength-dependent)
     let mu_s = 200.0;
     let g = 0.95;
-    let n = 1.4;
+    let n = REFRACTIVE_INDEX_SOFT_TISSUE;
 
     OpticalPropertyData::new(mu_a, mu_s, g, n).unwrap()
 }
@@ -57,7 +58,7 @@ pub fn compute_tumor_properties(
     // Tumor scattering is slightly higher due to disorganized structure
     let mu_s = 120.0;
     let g = 0.85;
-    let n = 1.4;
+    let n = REFRACTIVE_INDEX_SOFT_TISSUE;
 
     OpticalPropertyData::new(mu_a, mu_s, g, n).unwrap()
 }

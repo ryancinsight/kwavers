@@ -6,7 +6,8 @@
 
 use crate::core::constants::fundamental::GAS_CONSTANT;
 use crate::core::constants::medical::{
-    THERMAL_DOSE_REFERENCE_TEMP_C, THERMAL_DOSE_R_ABOVE_43C, THERMAL_DOSE_R_BELOW_43C,
+    IEC_TIB_DIVISOR, IEC_TIS_DIVISOR, THERMAL_DOSE_REFERENCE_TEMP_C, THERMAL_DOSE_R_ABOVE_43C,
+    THERMAL_DOSE_R_BELOW_43C,
 };
 use crate::core::constants::thermodynamic::KELVIN_OFFSET_C;
 
@@ -50,7 +51,7 @@ pub fn thermal_index_soft_tissue(wstp_mw: f64, f_mhz: f64) -> f64 {
     if !(wstp_mw.is_finite() && f_mhz.is_finite() && wstp_mw >= 0.0 && f_mhz > 0.0) {
         return 0.0;
     }
-    wstp_mw / (210.0 * f_mhz)
+    wstp_mw / (IEC_TIS_DIVISOR * f_mhz)
 }
 
 /// Thermal Index for bone (TIB).
@@ -67,7 +68,7 @@ pub fn thermal_index_bone(w_mw: f64, f_mhz: f64) -> f64 {
     if !(w_mw.is_finite() && f_mhz.is_finite() && w_mw >= 0.0 && f_mhz >= 0.0) {
         return 0.0;
     }
-    w_mw * f_mhz / 40.0
+    w_mw * f_mhz / IEC_TIB_DIVISOR
 }
 
 /// CEM43 cumulative equivalent minutes at 43 °C.
