@@ -100,7 +100,7 @@ impl TheoremValidator {
             DENSITY_WATER_NOMINAL,
             SOUND_SPEED_WATER_SIM,
             1.2,
-            340.0,
+            SOUND_SPEED_AIR,
             -0.9999,
         ));
         results.push(Self::validate_ideal_gas_speed(

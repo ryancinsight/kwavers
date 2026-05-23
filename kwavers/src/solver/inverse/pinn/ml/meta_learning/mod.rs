@@ -213,6 +213,7 @@ pub use types::{
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::fundamental::SOUND_SPEED_AIR;
 
     #[test]
     fn test_module_exports() {
@@ -251,7 +252,7 @@ mod tests {
     #[test]
     fn test_physics_parameters_presets() {
         let air = MetaLearningPhysicsParameters::acoustic_air();
-        assert_eq!(air.wave_speed, 343.0);
+        assert_eq!(air.wave_speed, SOUND_SPEED_AIR);
 
         let water = MetaLearningPhysicsParameters::acoustic_water();
         assert_eq!(

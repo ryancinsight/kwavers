@@ -139,7 +139,7 @@ mod tests {
     use super::*;
     use crate::clinical::therapy::theranostic_guidance::config::AnatomyKind;
     use crate::clinical::therapy::theranostic_guidance::geometry::Point2;
-    use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
+    use crate::core::constants::fundamental::{SOUND_SPEED_AIR, SOUND_SPEED_TISSUE};
 
     #[test]
     fn peak_pressure_exposure_records_bounded_workspace() {
@@ -179,7 +179,7 @@ mod tests {
         let mut speed = Array2::from_elem((28, 28), SOUND_SPEED_TISSUE);
         for ix in 12..16 {
             for iy in 8..20 {
-                speed[[ix, iy]] = 343.0;
+                speed[[ix, iy]] = SOUND_SPEED_AIR;
             }
         }
         let scattered = simulate_peak_pressure_exposure(&prepared_fixture(speed), &layout, &config);
