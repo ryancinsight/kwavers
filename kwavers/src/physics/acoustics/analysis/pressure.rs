@@ -13,6 +13,7 @@ fn nonnegative_finite(value: f64) -> bool {
     value.is_finite() && value >= 0.0
 }
 
+#[must_use]
 #[inline]
 pub(crate) fn acoustic_impedance(density: f64, sound_speed: f64) -> Option<f64> {
     if positive_finite(density) && positive_finite(sound_speed) {
@@ -23,6 +24,7 @@ pub(crate) fn acoustic_impedance(density: f64, sound_speed: f64) -> Option<f64> 
     }
 }
 
+#[must_use]
 #[inline]
 pub(crate) fn harmonic_peak_intensity(pressure: f64, impedance: f64) -> f64 {
     if pressure.is_finite() {
