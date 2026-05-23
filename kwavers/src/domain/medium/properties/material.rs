@@ -42,7 +42,7 @@
 
 use crate::core::constants::cavitation::VISCOSITY_WATER;
 use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
-use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
+use crate::core::constants::thermodynamic::{BODY_TEMPERATURE_C, ROOM_TEMPERATURE_C};
 use crate::core::error::{KwaversError, KwaversResult};
 use serde::{Deserialize, Serialize};
 
@@ -157,7 +157,7 @@ impl AcousticMaterialProperties {
             optical_absorption: 0.0,
             optical_scattering: 0.0,
             refractive_index: 1.0,
-            reference_temperature: 20.0,
+            reference_temperature: ROOM_TEMPERATURE_C,
             reference_pressure: ATMOSPHERIC_PRESSURE,
         }
     }
