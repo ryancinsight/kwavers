@@ -63,14 +63,6 @@ pub const VISCOSITY_SOFT_TISSUE: f64 = 3.0e-3;
 /// Reference: Duck, F. A. (1990). Physical Properties of Tissue, Tables 5.2–5.3.
 pub const VISCOSITY_PARENCHYMAL_TISSUE: f64 = 2.0e-3;
 
-/// Water surface tension at 20°C (N/m).
-///
-/// Re-exports the canonical
-/// [`crate::core::constants::cavitation::SURFACE_TENSION_WATER`] (= 0.0728 N/m)
-/// so both historical names (`WATER_SURFACE_TENSION_20C` and
-/// `SURFACE_TENSION_WATER`) resolve to the same SSOT constant.
-pub use super::cavitation::SURFACE_TENSION_WATER as WATER_SURFACE_TENSION_20C;
-
 /// Water vapor pressure at 20°C (Pa)
 /// Value: 2339
 /// Reference: Wagner & Pruss (2002). "The IAPWS formulation for water"
@@ -78,18 +70,9 @@ pub const WATER_VAPOR_PRESSURE_20C: f64 = 2339.0;
 
 /// Reference frequency for absorption calculations (Hz).
 ///
-/// Value: `1e6 Hz = 1 MHz` — the standard reference frequency in medical
-/// ultrasound. The unit in the constant *value* is Hz; the `_MHZ` suffix
-/// in the name refers to the conventional unit name (1 MHz), not the unit
-/// the value is expressed in. New code should use `REFERENCE_FREQUENCY_HZ`,
-/// which is a clearer alias for the same value.
-pub const REFERENCE_FREQUENCY_MHZ: f64 = 1e6;
-
-/// Reference frequency for absorption calculations (Hz).
-///
-/// Alias of `REFERENCE_FREQUENCY_MHZ` (= 1 MHz in Hz) with an unambiguous
-/// unit suffix. Prefer this name in new code; the SSOT value is the same.
-pub const REFERENCE_FREQUENCY_HZ: f64 = REFERENCE_FREQUENCY_MHZ;
+/// Value: `1.0e6 Hz` (1 MHz) — the standard reference frequency in medical
+/// ultrasound per Pinkerton (1949) and IEC 62127-1.
+pub const REFERENCE_FREQUENCY_HZ: f64 = 1.0e6;
 
 /// Minimum time step for acoustic simulations (s)
 /// Value: 1e-10
@@ -102,21 +85,6 @@ pub const MIN_ACOUSTIC_TIME_STEP: f64 = 1e-10;
 /// Value: 0.915
 /// Reference: Rayleigh (1917). "On the pressure developed in a liquid"
 pub const RAYLEIGH_COLLAPSE_COEFFICIENT: f64 = 0.915;
-
-/// Water specific heat capacity (J/(kg·K)).
-///
-/// Re-exports the canonical
-/// [`crate::core::constants::thermodynamic::SPECIFIC_HEAT_WATER`] so the
-/// two long-standing names (`WATER_SPECIFIC_HEAT` and `SPECIFIC_HEAT_WATER`)
-/// stay in lock-step.
-pub use super::thermodynamic::SPECIFIC_HEAT_WATER as WATER_SPECIFIC_HEAT;
-
-/// Water thermal conductivity at 20°C (W/(m·K)).
-///
-/// Re-exports the canonical
-/// [`crate::core::constants::thermodynamic::THERMAL_CONDUCTIVITY_WATER`] so
-/// the two long-standing names stay in lock-step.
-pub use super::thermodynamic::THERMAL_CONDUCTIVITY_WATER as WATER_THERMAL_CONDUCTIVITY;
 
 /// Air specific heat at constant pressure (J/(kg·K))
 /// Value: 1005

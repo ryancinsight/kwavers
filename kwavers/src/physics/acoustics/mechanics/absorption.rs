@@ -3,7 +3,7 @@
 //! Numerical models for simulating absorption and dispersion in various media.
 
 use crate::core::constants::numerical::CM_TO_M;
-use crate::core::constants::{DB_TO_NP, REFERENCE_FREQUENCY_MHZ};
+use crate::core::constants::{DB_TO_NP, REFERENCE_FREQUENCY_HZ};
 use serde::{Deserialize, Serialize};
 use std::f64::consts::PI;
 
@@ -59,7 +59,7 @@ pub enum AbsorptionMode {
 pub fn power_law_db_cm_to_np_omega_m(alpha_db_cm: f64, alpha_power: f64) -> f64 {
     // The `/ CM_TO_M` factor converts dB/cm → dB/m (1/0.01 = 100).
     alpha_db_cm * DB_TO_NP / CM_TO_M
-        * (1.0 / (2.0 * PI * REFERENCE_FREQUENCY_MHZ)).powf(alpha_power)
+        * (1.0 / (2.0 * PI * REFERENCE_FREQUENCY_HZ)).powf(alpha_power)
 }
 
 #[cfg(test)]

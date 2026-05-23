@@ -60,19 +60,9 @@ use log::info;
 
 /// Physical constants for validation
 pub mod constants {
-    /// Speed of sound in water at 20°C (m/s) - NIST reference
-    /// SSOT: Re-exported from core::constants::fundamental
-    pub use crate::core::constants::fundamental::SOUND_SPEED_WATER;
-
-    /// Absorption in water at 1 MHz — re-exported from SSOT (Pinkerton 1949)
-    pub use crate::core::constants::acoustic_parameters::WATER_ABSORPTION_ALPHA_0 as WATER_ABSORPTION;
-
     /// CFL limit for 3D FDTD - Taflove & Hagness (2005) Eq. 4.92
     pub const CFL_LIMIT_3D: f64 = 0.577350269; // 1/sqrt(3)
 }
-
-// Re-export constants for backward compatibility
-pub use constants::SOUND_SPEED_WATER;
 
 /// Physics validation results (extends `ValidationReport`)
 #[derive(Debug)]
@@ -133,7 +123,8 @@ pub fn validate_absorption_model(
     // Szabo's power law: α = α₀|ω|^y
     // For water: y = 2, α₀ = 0.0022 dB/(cm·MHz²)
 
-    let alpha_theory = constants::WATER_ABSORPTION * (frequency / crate::core::constants::MHZ_TO_HZ).powi(2);
+    let alpha_theory = crate::core::constants::acoustic_parameters::WATER_ABSORPTION_ALPHA_0
+        * (frequency / crate::core::constants::MHZ_TO_HZ).powi(2);
     let alpha_np_m = alpha_theory * crate::core::constants::DB_TO_NP; // Convert dB/cm to Np/cm (DB_TO_NP = ln(10)/20)
 
     // Get implementation's absorption

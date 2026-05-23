@@ -3,10 +3,11 @@
 use crate::core::constants::fundamental::B_OVER_A_WATER;
 use crate::core::constants::thermodynamic::THERMAL_EXPANSION_WATER_20C;
 use crate::core::constants::{
-    AIR_POLYTROPIC_INDEX, ATMOSPHERIC_PRESSURE, MHZ_TO_HZ, REFERENCE_FREQUENCY_MHZ,
-    VISCOSITY_WATER, WATER_ABSORPTION_ALPHA_0, WATER_ABSORPTION_POWER, WATER_SPECIFIC_HEAT,
-    WATER_SURFACE_TENSION_20C, WATER_THERMAL_CONDUCTIVITY, WATER_VAPOR_PRESSURE_20C,
+    AIR_POLYTROPIC_INDEX, ATMOSPHERIC_PRESSURE, MHZ_TO_HZ, REFERENCE_FREQUENCY_HZ,
+    VISCOSITY_WATER, WATER_ABSORPTION_ALPHA_0, WATER_ABSORPTION_POWER, WATER_VAPOR_PRESSURE_20C,
 };
+use crate::core::constants::cavitation::SURFACE_TENSION_WATER;
+use crate::core::constants::thermodynamic::{SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER};
 use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 use crate::domain::grid::Grid;
 use ndarray::Array3;
@@ -53,12 +54,12 @@ impl HomogeneousMedium {
             density,
             sound_speed,
             viscosity,
-            surface_tension: WATER_SURFACE_TENSION_20C,
+            surface_tension: SURFACE_TENSION_WATER,
             ambient_pressure: ATMOSPHERIC_PRESSURE,
             vapor_pressure: WATER_VAPOR_PRESSURE_20C,
             polytropic_index: AIR_POLYTROPIC_INDEX,
-            specific_heat: WATER_SPECIFIC_HEAT,
-            thermal_conductivity: WATER_THERMAL_CONDUCTIVITY,
+            specific_heat: SPECIFIC_HEAT_WATER,
+            thermal_conductivity: THERMAL_CONDUCTIVITY_WATER,
             shear_viscosity: viscosity,
             bulk_viscosity: 2.5 * viscosity,
             absorption_alpha: WATER_ABSORPTION_ALPHA_0,
@@ -68,7 +69,7 @@ impl HomogeneousMedium {
             nonlinearity: B_OVER_A_WATER, // 5.2 at 20°C (Duck 1990 Table 4.16)
             optical_absorption: mu_a,
             optical_scattering: mu_s_prime,
-            reference_frequency: REFERENCE_FREQUENCY_MHZ,
+            reference_frequency: REFERENCE_FREQUENCY_HZ,
             temperature: Array3::zeros((1, 1, 1)),
             bubble_radius: Array3::zeros((1, 1, 1)),
             bubble_velocity: Array3::zeros((1, 1, 1)),
