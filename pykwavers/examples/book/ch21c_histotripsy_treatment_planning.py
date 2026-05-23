@@ -36,6 +36,16 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.special import erf
 
+try:
+    import pykwavers as kw
+    _HAS_KW = True
+except ImportError:
+    _HAS_KW = False
+    raise RuntimeError(
+        "pykwavers not found — build with `maturin develop --release` "
+        "from the pykwavers directory."
+    )
+
 REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 OUT_DIR = os.path.join(REPO_ROOT, "docs", "book", "figures", "ch21c")
 os.makedirs(OUT_DIR, exist_ok=True)
@@ -225,18 +235,9 @@ def fig08_intrinsic_threshold_freq() -> None:
 def fig09_prf_optimization() -> None:
     """Lesion-volume rate vs PRF for the μs intrinsic-threshold regime.
 
-    Two competing effects shape the curve:
-
-      (a) faster PRF → more pulses per second → more cavitation events
-          per unit time → higher lesion rate;
-      (b) inter-pulse gas-nucleus dissolution time τ_d ≈ 5 ms in degassed
-          liver (Vlaisavljevich 2015). At PRF > 1/τ_d, residual nuclei
-          from the previous shot bias the cloud toward the previous
-          location, reducing effective coverage and producing residual-bubble
-          shielding that lowers per-shot Pcav (Macoskey 2018).
-
-    Net behaviour: a peak rate at PRF ≈ 1/τ_d ≈ 200 Hz, falling off at
-    higher PRF.
+    Two competing effects: (a) faster PRF → more cavitation events/s;
+    (b) residual-bubble dissolution τ_d ≈ 5 ms → shielding at high PRF
+    (Macoskey 2018, Vlaisavljevich 2015). Peak near PRF ≈ 1/τ_d ≈ 200 Hz.
     """
     print("[fig09] PRF optimization (Macoskey 2018-style)")
 
@@ -299,12 +300,12 @@ class ScenarioLite:
 
 
 def fig10_rib_thermal_safety() -> None:
-    """Bulk T at a 6 mm intercostal rib placed 5 mm anterior to the
-    focal voxel for each scenario. Bone has α ≈ 250 Np/m at 1 MHz
-    (Duck 1990) — about 30× soft tissue — so a small bone fraction in
-    the beam path raises the bone-surface temperature substantially.
+    """Peak temperature at a 6 mm intercostal rib placed 5 mm anterior to the
+    focal voxel for each scenario. Bone has α ≈ 250 Np/m at 1 MHz (Duck 1990)
+    — about 30× soft tissue. Computed via pykwavers ThermalSimulation
+    (Pennes bioheat PDE, Rust solver) for each scenario's treatment duration.
     """
-    print("[fig10] Rib-adjacent thermal safety")
+    print("[fig10] Rib-adjacent thermal safety (pykwavers ThermalSimulation)")
 
     scenarios = [
         ScenarioLite("μs intrinsic", 1.0e6, 30.0e6, 80.0e6, 4.0e-4, 1800.0, 1.0,  "#1f77b4"),
@@ -314,36 +315,51 @@ def fig10_rib_thermal_safety() -> None:
 
     # Bone properties (Duck 1990 cortical bone at 1 MHz)
     rho_b, c_b, alpha_b_1mhz, cp_b, kappa_b = 1850.0, 4080.0, 250.0, 1300.0, 0.38
-    # Soft-tissue properties for comparison (liver)
+    # Soft-tissue (liver) properties
     rho_s, c_s, alpha_s_1mhz, cp_s = 1079.0, 1595.0, 8.69, 3540.0
 
-    # Distance from focus to rib (5 mm); fraction of focal pressure
-    # arriving at rib through diffraction sidelobes ≈ 0.15 (typical).
-    rib_pressure_fraction = 0.15
+    rib_pressure_fraction = 0.15  # sidelobe pressure fraction at rib
+    L_RIB = 6.0e-3               # rib slab thickness [m]
+
+    # Bone mesh: 12 × 0.5 mm cells = 6 mm; dt stability: dx²/(2D_b) ≈ 0.79 s
+    NX_B, DX_B, DT_B = 12, 0.5e-3, 0.4
+    # Soft-tissue mesh: 5 × 1 mm cells = 5 mm; dt stability: dx²/(2D_s) ≈ 3.7 s
+    NX_S, DX_S, DT_S = 5, 1.0e-3, 1.0
 
     bone_T = []
     soft_T = []
     for sc in scenarios:
-        alpha_b = alpha_b_1mhz * (sc.f0 / 1e6) ** 1.0
+        alpha_b = alpha_b_1mhz * (sc.f0 / 1e6)
         alpha_s = alpha_s_1mhz * (sc.f0 / 1e6) ** 1.1
         heating_amp = max(sc.ppp / max(sc.pnp, 1.0), 1.0)
 
-        # Bone heating: full waveform absorbed at α_b × shock_gain (bone
-        # nonlinearity is weak; use ×3 ceiling).
         I_bone = (sc.pnp * heating_amp * rib_pressure_fraction) ** 2 / (2.0 * rho_b * c_b)
-        Q_bone = 2.0 * alpha_b * min(sc.shock_alpha_gain, 3.0) * I_bone * sc.duty
-        # Bone has zero perfusion; steady-state from diffusion only:
-        # T_rise ≈ Q × L² / (4 κ_bone) for a rib slab of thickness L=6mm.
-        L = 6.0e-3
-        T_bone = 37.0 + Q_bone * L**2 / (4.0 * kappa_b)
+        Q_bone_val = 2.0 * alpha_b * min(sc.shock_alpha_gain, 3.0) * I_bone * sc.duty
 
-        # Soft-tissue prefocal point at same depth, same beam path:
         I_soft = (sc.pnp * heating_amp * rib_pressure_fraction) ** 2 / (2.0 * rho_s * c_s)
-        Q_soft = 2.0 * alpha_s * sc.shock_alpha_gain * I_soft * sc.duty
-        T_soft = 37.0 + Q_soft * (1.0e-3) ** 2 / (4.0 * 0.52)
+        Q_soft_val = 2.0 * alpha_s * sc.shock_alpha_gain * I_soft * sc.duty
 
-        bone_T.append(min(T_bone, 200.0))
-        soft_T.append(min(T_soft, 100.0))
+        # ── Bone slab: Rust Pennes solver, no perfusion ──────────────────
+        n_b = int(sc.treatment_s / DT_B)
+        Q_b = np.full((NX_B, 1, 1), Q_bone_val)
+        res_b = kw.ThermalSimulation(
+            NX_B, 1, 1, DX_B, DX_B, DX_B,
+            thermal_conductivity=kappa_b, density=rho_b, specific_heat=cp_b,
+            enable_bioheat=False, initial_temperature=37.0,
+        ).run(n_b, DT_B, heat_source=Q_b)
+        bone_T.append(min(float(np.asarray(res_b.temperature).max()), 200.0))
+
+        # ── Soft-tissue prefocal point: Pennes bioheat + liver perfusion ─
+        n_s = int(sc.treatment_s / DT_S)
+        Q_s = np.full((NX_S, 1, 1), Q_soft_val)
+        res_s = kw.ThermalSimulation(
+            NX_S, 1, 1, DX_S, DX_S, DX_S,
+            thermal_conductivity=0.52, density=rho_s, specific_heat=cp_s,
+            enable_bioheat=True, perfusion_rate=5e-3,
+            blood_density=1050.0, blood_specific_heat=3840.0,
+            arterial_temperature=37.0, initial_temperature=37.0,
+        ).run(n_s, DT_S, heat_source=Q_s)
+        soft_T.append(min(float(np.asarray(res_s.temperature).max()), 100.0))
 
     fig, ax = plt.subplots(figsize=(8, 4.6))
     x = np.arange(len(scenarios))
@@ -370,13 +386,9 @@ def fig10_rib_thermal_safety() -> None:
 
 
 def fig11_tumour_coverage() -> None:
-    """Reload the lesion masks computed by ch21b and produce two new
-    derived metrics:
-
-    (1) radial coverage curve — fraction of the tumour at each radial
-        distance from the centre that is within the predicted lesion;
-    (2) margin map — distance transform of the unablated tumour
-        showing untreated peripheral rim per scenario.
+    """Radial ablation coverage and margin map derived from ch21b scenario
+    metrics. Coverage modelled from per-shot Gaussian footprint and raster
+    pitch for each histotripsy regime; margin map shows residual rim.
     """
     print("[fig11] Tumour coverage statistics")
 
@@ -385,9 +397,6 @@ def fig11_tumour_coverage() -> None:
         print(f"  WARNING: {metrics_path} not found — run ch21b first.")
         return
 
-    # Reconstruct radial coverage analytically from per-shot Gaussian
-    # focal envelope and raster pitch (this avoids re-running the full
-    # 3-D simulation just for this figure).
     tumour_radius_mm = 20.0
     r_axis = np.linspace(0.0, tumour_radius_mm, 200)
     fig, axes = plt.subplots(1, 2, figsize=(13, 4.5))
@@ -399,18 +408,13 @@ def fig11_tumour_coverage() -> None:
     ]
 
     for name, n_pts, f_mhz, w_lat, w_axial, color in scenarios:
-        # Effective per-shot footprint volume (ellipsoid) and raster pitch
         per_shot_vol = (4.0 / 3.0) * np.pi * w_lat * w_lat * w_axial
         tumour_vol = (4.0 / 3.0) * np.pi * tumour_radius_mm**3
         pitch = (tumour_vol / n_pts) ** (1.0 / 3.0)
-        r_eff = max(min(w_lat, w_axial), pitch / 2.0)
-        # Radial coverage: fraction of shell at radius r covered.
-        # Approximation: shell coverage = min(1, (r_eff / pitch)³ * shell_density).
         coverage = np.minimum(
             1.0, (per_shot_vol * n_pts) / np.maximum(tumour_vol, 1e-9)
-                  * np.exp(-((r_axis - 0.0) / (tumour_radius_mm + 2.0)) ** 8)  # taper at edge
+                  * np.exp(-((r_axis) / (tumour_radius_mm + 2.0)) ** 8)
         )
-        # Apply a tumour boundary attenuation
         coverage *= np.where(r_axis <= tumour_radius_mm - pitch / 2, 1.0,
                              np.maximum(0, 1.0 - (r_axis - (tumour_radius_mm - pitch / 2)) / pitch))
         axes[0].plot(r_axis, coverage * 100, color=color, lw=1.6, label=name)
@@ -424,37 +428,24 @@ def fig11_tumour_coverage() -> None:
     axes[0].grid(True, alpha=0.3)
     axes[0].legend(fontsize=8, loc="lower left")
 
-    # Margin map (idealised): residual untreated tumour rim thickness.
     tumour_y = np.linspace(-1.4 * tumour_radius_mm, 1.4 * tumour_radius_mm, 200)
     tumour_z = np.linspace(-1.4 * tumour_radius_mm, 1.4 * tumour_radius_mm, 200)
     Y, Z = np.meshgrid(tumour_y, tumour_z, indexing="ij")
     R = np.sqrt(Y**2 + Z**2)
-    # Use the worst-case (largest unablated rim) across scenarios for the map.
-    rim_thicknesses = {"μs intrinsic-threshold": 1.0,
-                       "ms shock-vapor": 4.5,
-                       "ms sub-threshold cav": 2.0}
-    panel_count = len(rim_thicknesses)
+    rim_thicknesses = {"μs intrinsic-threshold": 1.0, "ms shock-vapor": 4.5, "ms sub-threshold cav": 2.0}
     fig.delaxes(axes[1])
-    sub_ax = fig.add_subplot(1, 2, 2)
-    sub_ax.set_axis_off()
-    inner = []
+    fig.add_subplot(1, 2, 2).set_axis_off()
     for i, (name, rim) in enumerate(rim_thicknesses.items()):
         ax_i = fig.add_axes([0.55 + i * 0.13, 0.14, 0.12, 0.76])
-        treated = R <= (tumour_radius_mm - rim)
         in_tumour = R <= tumour_radius_mm
-        residual = in_tumour & (~treated)
-        img = np.zeros_like(R)
-        img[in_tumour] = 1
-        img[residual] = 2
+        img = np.where(in_tumour & (R > tumour_radius_mm - rim), 2.0,
+                       np.where(in_tumour, 1.0, 0.0))
         ax_i.imshow(img.T, origin="lower",
                     extent=[tumour_y[0], tumour_y[-1], tumour_z[0], tumour_z[-1]],
                     cmap="RdYlGn_r", vmin=0, vmax=2)
         ax_i.set_title(f"{name}\nresidual rim ≈ {rim:.1f} mm", fontsize=8)
-        ax_i.set_xticks([])
-        ax_i.set_yticks([])
-        inner.append(ax_i)
+        ax_i.set_xticks([]); ax_i.set_yticks([])
 
-    # Right-side title for the margin-map subpanel group.
     fig.text(0.66, 0.93, "Residual untreated rim (axial slice through tumour centre)",
              ha="center", fontsize=10)
     fig.suptitle("Tumour ablation completeness")
@@ -464,33 +455,15 @@ def fig11_tumour_coverage() -> None:
 
 
 # ───────────────────────────────────────────────────────────────────────
-# Main
-# ───────────────────────────────────────────────────────────────────────
-
-
-# ───────────────────────────────────────────────────────────────────────
 # Figure 12 — Pulse-duration sweep (μs → ms)
 # ───────────────────────────────────────────────────────────────────────
 
 
 def fig12_pulse_duration_sweep() -> None:
-    """Sweep pulse duration τ_p from 1 μs to 20 ms at fixed PNP and
-    carrier frequency, holding duty cycle constant at 1% so the
-    cycle-averaged thermal load is comparable across the sweep. Track
-    six outcome variables to expose the regime transitions:
-
-        (1) cycles per pulse N_c = τ_p · f0
-        (2) shock-formation indicator: σ = β · k · ε · L_p (Hamilton & Blackstock 1998)
-        (3) per-pulse cumulative cavitation probability over the cycle count
-        (4) per-pulse adiabatic focal ΔT (linear-fundamental absorption)
-        (5) effective harmonic-absorption gain (depends on σ)
-        (6) per-pulse focal-voxel transient T (clamped at 100 °C)
-
-    Three carrier frequencies (0.5 MHz, 1 MHz, 1.5 MHz) shown. The
-    sweep crosses the canonical regime boundaries automatically:
-    intrinsic-threshold regime at small τ_p (single-cycle nucleation),
-    shock-vapor regime at large τ_p with shock formation, and a
-    transitional shock-scattering band in between.
+    """Parametric sweep τ_p ∈ [1 µs, 20 ms] at fixed PNP and DC=1%.
+    Tracks: cycle count, Goldberg shock parameter σ, cumulative Pcav,
+    absorption gain, adiabatic ΔT, and transient focal T. Three frequencies
+    (0.5/1.0/1.0 MHz) expose regime crossovers (Hamilton & Blackstock 1998).
     """
     print("[fig12] Pulse-duration sweep (μs → ms)")
 
@@ -508,26 +481,16 @@ def fig12_pulse_duration_sweep() -> None:
     fig, axes = plt.subplots(2, 3, figsize=(14, 7.5))
 
     for label, f0, pnp, ppp, color in cases:
-        n_c = tau * f0  # cycles per pulse
-        # Goldberg shock-formation parameter σ ≈ β · k · ε · L_p,
-        # ε = pnp/(ρ c²) is the acoustic Mach number, L_p = c · τ_p
-        # (single-pass propagation length over pulse duration). σ ≥ 1
-        # marks fully-formed shock.
+        n_c = tau * f0
+        # Goldberg σ (Hamilton & Blackstock 1998): σ ≥ 1 → shock onset
         eps = pnp / (rho * c * c)
-        k = 2 * np.pi * f0 / c
-        L_p = c * tau
-        sigma_shock = beta * k * eps * L_p
-        # Effective absorption gain: rises from 1 (no shock) to ~10 (full shock)
-        # following a soft saturation σ/(σ+1)+1 → max 10 at σ→∞.
+        sigma_shock = beta * (2 * np.pi * f0 / c) * eps * (c * tau)
+        # Absorption gain: 1 (linear) → 10 (fully shocked)
         alpha_gain = 1.0 + 9.0 * sigma_shock / (sigma_shock + 1.0)
-
-        # Cumulative cavitation probability over the cycle count.
-        # Per-cycle Pcav from Maxwell 2013 erf-CDF at f0.
+        # Cumulative Pcav: Maxwell 2013 erf-CDF per cycle
         pcav_per_cycle = cav_prob(pnp, f0)
         p_cum = 1.0 - (1.0 - pcav_per_cycle) ** np.maximum(n_c, 1.0)
-
-        # Heating amplitude factor: PPP-dominated for shock-rich pulses,
-        # blends in with sigma_shock.
+        # Effective I: blended PPP/PNP amplitude for shocked waveform
         amp_factor = 1.0 + (ppp / pnp - 1.0) * sigma_shock / (sigma_shock + 1.0)
         alpha = alpha0 * (f0 / 1e6) ** 1.1
         I_eff = (pnp * amp_factor) ** 2 / (2.0 * rho * c)
@@ -542,12 +505,11 @@ def fig12_pulse_duration_sweep() -> None:
         axes[1, 1].plot(tau * 1e6, dT_p, color=color, lw=1.5)
         axes[1, 2].plot(tau * 1e6, T_transient, color=color, lw=1.5)
 
-    # Regime band shading on each subplot
     for ax in axes.flat:
         ax.set_xscale("log")
-        ax.axvspan(1.0, 20.0, alpha=0.07, color="#1f77b4")             # μs intrinsic
-        ax.axvspan(20.0, 1000.0, alpha=0.07, color="#9467bd")          # transitional
-        ax.axvspan(1000.0, 20000.0, alpha=0.07, color="#d62728")       # ms regime
+        ax.axvspan(1.0, 20.0, alpha=0.07, color="#1f77b4")
+        ax.axvspan(20.0, 1000.0, alpha=0.07, color="#9467bd")
+        ax.axvspan(1000.0, 20000.0, alpha=0.07, color="#d62728")
         ax.grid(True, which="both", alpha=0.25)
         ax.set_xlabel("pulse duration τ_p [μs]")
 
@@ -579,7 +541,6 @@ def fig12_pulse_duration_sweep() -> None:
     axes[1, 2].axhline(43.0, color="k", ls="--", lw=0.8)
     axes[1, 2].set_ylim(35, 105)
 
-    # Add regime-band annotations to top-left only.
     for x_mid, label in [(4.0, "μs\nintrinsic"), (140.0, "transitional\nshock-scattering"),
                          (5000.0, "ms shock-vapor /\nsub-threshold")]:
         axes[0, 0].text(x_mid, axes[0, 0].get_ylim()[1] * 0.4, label,

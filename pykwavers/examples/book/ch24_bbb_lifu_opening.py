@@ -19,8 +19,12 @@ fig04  Thermal safety: focal temperature rise and CEM43 for LIFU parameters
 fig05  CEUS contrast enhancement: peak signal vs MB concentration
 fig06  BBB opening window: permeability vs time post-sonication
 
+All bubble dynamics use pykwavers.solve_keller_miksis (Rust RK4).
+Thermal safety uses pykwavers.ThermalSimulation (Pennes bioheat, Rust solver)
+and pykwavers.compute_cem43 (Rust CEM43 accumulator).
+
 Output directory: docs/book/figures/ch24/
-Requires: numpy, matplotlib, scipy
+Requires: numpy, matplotlib, pykwavers
 
 References
 ----------
@@ -31,6 +35,7 @@ Tung et al. (2010) Proc. Natl. Acad. Sci. 107(8):3699–3704
 O'Reilly & Hynynen (2012) Radiology 263(1):96–106
 Duck (1990) Physical Properties of Tissue. Academic Press.
 Sapareto & Dewey (1984) Int. J. Radiat. Oncol. Biol. Phys. 10(6):787–800
+Keller & Miksis (1980) J. Acoust. Soc. Am. 68(2):628–633
 """
 
 from __future__ import annotations
@@ -41,9 +46,17 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-import matplotlib.ticker as mticker
 import numpy as np
-from scipy.integrate import solve_ivp
+
+try:
+    import pykwavers as kw
+    _HAS_KW = True
+except ImportError:
+    _HAS_KW = False
+    raise RuntimeError(
+        "pykwavers not found — build with `maturin develop --release` "
+        "from the pykwavers directory."
+    )
 
 REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 OUT_DIR = os.path.join(REPO_ROOT, "docs", "book", "figures", "ch24")
@@ -67,56 +80,20 @@ RHO_L = 998.0      # kg/m³  liquid density (blood-like)
 MU_L  = 3.5e-3     # Pa·s   blood viscosity
 SIGMA = 0.0056     # N/m    MB shell surface tension (coated bubble)
 P0    = 101_325.0  # Pa     ambient pressure
+PV    = 2338.0     # Pa     water vapour pressure at 20 °C
 C_L   = 1540.0     # m/s    blood sound speed
 KAPPA = 1.07       # polytropic index (gas + shell)
 R0    = 1.5e-6     # m      MB equilibrium radius (1.5 µm — SonoVue-like)
 # Shell parameters (Doinikov–Dayton 2007 neo-Hookean)
-G_S   = 10.0       # MPa  shell shear modulus / m  (× shell thickness ~4 nm)
 XI_S  = 1.5e-9     # Pa·s·m  shell viscosity parameter
 
-
 # ── Figure 01: Keller–Miksis microbubble dynamics ────────────────────────────
-print("[fig01] MB dynamics — Keller–Miksis ODE")
+print("[fig01] MB dynamics — Keller–Miksis ODE (pykwavers Rust RK4)")
 
-def keller_miksis_rhs(t: float, y: np.ndarray, omega: float, pa: float) -> list[float]:
-    """
-    Keller–Miksis equation for a coated microbubble (Prosperetti 1988):
-
-        (1 - Ṙ/c) R R̈  +  (3/2)(1 - Ṙ/(3c)) Ṙ²
-            = (1 + Ṙ/c)/ρ · [p_L - P₀ - p_ac(t)]  +  R/(ρc) · dp_L/dt
-
-    where p_L(R) = (P₀ + 2σ/R₀)(R₀/R)^{3κ} - 2σ/R - 4μṘ/R - 4ξṘ/R²
-
-    Shell viscosity modelled as an additional viscous term 4·XI_S·Ṙ/R².
-    Radiation damping implicit via c-correction (Keller & Miksis 1980).
-    """
-    R, Rdot = y
-    if R <= 0:
-        return [0.0, 0.0]
-
-    p_inf = P0 + pa * np.sin(omega * t)
-    # Inner gas pressure (polytropic)
-    p_gas = (P0 + 2.0 * SIGMA / R0) * (R0 / R) ** (3.0 * KAPPA)
-    # Liquid pressure on bubble wall
-    p_L = p_gas - 2.0 * SIGMA / R - 4.0 * MU_L * Rdot / R - 4.0 * XI_S * Rdot / R**2
-
-    # dp_L/dt (approximate, ignoring dσ/dR terms)
-    dp_L_dt = -3.0 * KAPPA * p_gas * Rdot / R
-
-    c = C_L
-    lhs_coeff = (1.0 - Rdot / c) * R
-    rhs = ((1.0 + Rdot / c) * (p_L - p_inf) / RHO_L
-           + R * dp_L_dt / (RHO_L * c)
-           - 1.5 * (1.0 - Rdot / (3.0 * c)) * Rdot**2)
-
-    Rddot = rhs / lhs_coeff if abs(lhs_coeff) > 1e-20 else 0.0
-    return [Rdot, Rddot]
-
-f0 = 1.0e6  # Hz
-omega = 2.0 * np.pi * f0
-t_end = 10.0 / f0
-t_span = (0.0, t_end)
-t_eval = np.linspace(0.0, t_end, 4000)
+f0 = 1.0e6   # Hz
+# 10 acoustic cycles; 3 000 pts/cycle gives smooth waveform resolution
+N_STEPS_KM = 30_000
+T_END_KM = 10.0 / f0  # 10 µs
 
 pressures_pa = [50e3, 150e3, 350e3]  # Pa  — sub-threshold LIFU range
 colors = ["#2166ac", "#4dac26", "#d6604d"]
@@ -124,21 +101,29 @@ labels = [f"|p_a| = {p/1e3:.0f} kPa" for p in pressures_pa]
 
 fig, axes = plt.subplots(len(pressures_pa), 1, figsize=(8, 7), sharex=True)
 for ax, pa, col, lbl in zip(axes, pressures_pa, colors, labels):
-    sol = solve_ivp(
-        keller_miksis_rhs, t_span, [R0, 0.0],
-        args=(omega, pa), t_eval=t_eval,
-        method="Radau", rtol=1e-8, atol=1e-12,
-        max_step=1.0 / (50 * f0),
+    # Rust RK4 Keller–Miksis solver with coated-bubble shell viscosity (xi_s)
+    time_s, R_m, _ = kw.solve_keller_miksis(
+        R0, 0.0,         # R₀, Ṙ₀
+        P0, pa,          # ambient pressure, acoustic driving amplitude
+        f0,              # driving frequency [Hz]
+        T_END_KM,        # integration end time [s]
+        N_STEPS_KM,      # RK4 step count
+        RHO_L, SIGMA, KAPPA, MU_L, PV, C_L,
+        XI_S,            # shell viscosity [Pa·s·m]
     )
-    ax.plot(sol.t * 1e6, sol.y[0] / R0, color=col, lw=1.4, label=lbl)
+    t_us = np.asarray(time_s) * 1e6
+    r_norm = np.asarray(R_m) / R0
+    ax.plot(t_us, r_norm, color=col, lw=1.4, label=lbl)
     ax.axhline(1.0, color="#aaa", lw=0.6, ls="--")
     ax.set_ylabel("$R/R_0$")
     ax.legend(loc="upper right")
     ax.set_ylim(0, None)
 
 axes[-1].set_xlabel("Time (µs)")
-axes[0].set_title(f"Keller–Miksis MB dynamics — $R_0$ = {R0*1e6:.1f} µm, $f_0$ = {f0/1e6:.0f} MHz\n"
-                  "SonoVue-like shell; LIFU sub-threshold driving")
+axes[0].set_title(
+    f"Keller–Miksis MB dynamics — $R_0$ = {R0*1e6:.1f} µm, $f_0$ = {f0/1e6:.0f} MHz\n"
+    "SonoVue-like shell; LIFU sub-threshold driving (pykwavers Rust RK4)"
+)
 fig.tight_layout()
 savefig("fig01_keller_miksis_dynamics")
 plt.close(fig)
@@ -231,66 +216,86 @@ plt.close(fig)
 
 
 # ── Figure 04: Thermal safety — focal temperature rise + CEM43 ───────────────
-print("[fig04] LIFU thermal safety: temperature rise and CEM43")
+print("[fig04] LIFU thermal safety: ThermalSimulation (Pennes bioheat, Rust) + CEM43")
 
-# Bio-heat transfer model (Pennes 1948) linearised for small ΔT:
-#   ρ Cp dT/dt = Q - W_b ρ_b Cb (T - T_art)
-# At steady state: ΔT_ss = ISATA · α / (W_b · ρ_b · Cb)
-# For pulsed LIFU: duty cycle DC reduces effective heating.
-# CEM43 (Sapareto & Dewey 1984):
-#   CEM43 = Σ_i Δt_i · R^(43 - T_i)   R = 0.5 for T>43°C, 0.25 for T≤43°C
-
-RHO_T = 1040.0      # kg/m³  tissue density
-CP_T  = 3600.0      # J/(kg·K)  specific heat
-ALPHA_T = 3.5       # Np/m  absorption at 1 MHz (brain tissue)
-WB    = 0.01        # s⁻¹   blood perfusion rate (brain, Hasgall 2022)
-RHO_B = 1060.0      # kg/m³  blood density
-CP_B  = 3600.0      # J/(kg·K)  blood specific heat
-T_ART = 37.0        # °C    arterial blood temperature
+# Duck 1990 / Hasgall IT'IS v4.1 — brain tissue
+RHO_T  = 1040.0     # kg/m³  tissue density
+CP_T   = 3600.0     # J/(kg·K)  specific heat
+K_T    = 0.50       # W/(m·K)  thermal conductivity
+ALPHA_T = 3.5       # Np/m  absorption at 1 MHz
+WB     = 0.01       # s⁻¹   blood perfusion rate (brain)
+RHO_B  = 1060.0     # kg/m³  blood density
+CP_B   = 3600.0     # J/(kg·K)  blood specific heat
+T_ART  = 37.0       # °C    arterial blood temperature
 
 # LIFU pulse sequence
-ISATA = 10.0        # W/cm²  spatial-average temporal-average intensity
-DC    = 0.05        # 5% duty cycle (50 ms on, 950 ms off per second)
-ISPTP = ISATA / DC  # W/cm²  spatial-peak temporal-peak
+ISATA  = 10.0       # W/cm²  spatial-average temporal-average intensity
+DC     = 0.05       # 5% duty cycle (50 ms on, 950 ms off per second)
+ISPTP  = ISATA / DC # W/cm²  spatial-peak temporal-peak
 
-t_max = 120.0       # s  total sonication duration
-dt    = 0.01        # s  time step
-n_t   = int(t_max / dt)
-t_arr = np.linspace(0.0, t_max, n_t)
+t_max  = 120.0      # s  total sonication duration
+DT_TH  = 0.01       # s  Pennes bioheat time step
+N_TH   = int(t_max / DT_TH)  # 12 000 steps
 
-# Heat source (on/off pulsing at DC)
-# Q = 2·ALPHA_T·I  [W/m³]  (both expansion and compression contribute)
-Q_on  = 2.0 * ALPHA_T * ISPTP * 1e4  # W/m³  (ISPTP in W/cm² × 1e4 to W/m²)
-Q_off = 0.0
+# Diffusivity check: D = K/(ρ·cp) = 0.5/(1040·3600) ≈ 1.34×10⁻⁷ m²/s
+# For DX=1mm: dt_max_1D = dx²/(2D) = 1e-6/(2·1.34e-7) ≈ 3.7 s >> DT_TH ✓
 
-T_tissue = np.zeros(n_t)
-T = T_ART
-cem43 = 0.0
-cem43_arr = np.zeros(n_t)
-perfusion_loss = WB * RHO_B * CP_B
+# Focal heat source: time-averaged Q_eff = 2·α·ISATA [W/m³]
+# (thermal time constant τ = ρcp/(WB·ρB·cpB) ≈ 98 s >> 1 s pulse period →
+#  pulsed Q is thermally equivalent to its duty-cycle average on this timescale)
+Q_EFF = 2.0 * ALPHA_T * ISATA * 1e4  # W/m³  (ISATA W/cm² × 1e4 → W/m²)
 
-period = 1.0         # s  pulse period
-on_time = DC * period
+# 1-D tissue column (200 mm, 1 mm spacing); focal point at centre (ix=100)
+NX_TH = 200
+DX_TH = 1e-3        # m
+IX_FOC = NX_TH // 2
 
-for i in range(n_t):
-    t_i = t_arr[i]
-    phase = t_i % period
-    Q = Q_on if phase < on_time else Q_off
-    dT = (Q - perfusion_loss * (T - T_ART)) / (RHO_T * CP_T) * dt
-    T = T + dT
-    T_tissue[i] = T
-    # CEM43 increment
-    R = 0.5 if T > 43.0 else 0.25
-    cem43 += (T - 43.0 > 0) * (R ** (43.0 - T)) * dt / 60.0  # minutes
-    cem43_arr[i] = cem43
+Q_field = np.zeros((NX_TH, 1, 1))
+Q_field[IX_FOC, 0, 0] = Q_EFF
+
+sensor_mask = np.zeros((NX_TH, 1, 1), dtype=bool)
+sensor_mask[IX_FOC, 0, 0] = True
+
+print(f"  Q_eff = {Q_EFF:.0f} W/m³  |  N_steps = {N_TH}  |  t_max = {t_max:.0f} s")
+sim_th = kw.ThermalSimulation(
+    NX_TH, 1, 1, DX_TH, DX_TH, DX_TH,
+    thermal_conductivity=K_T,
+    density=RHO_T,
+    specific_heat=CP_T,
+    enable_bioheat=True,
+    perfusion_rate=WB,
+    blood_density=RHO_B,
+    blood_specific_heat=CP_B,
+    arterial_temperature=T_ART,
+    initial_temperature=T_ART,
+    track_thermal_dose=True,
+)
+res_th = sim_th.run(N_TH, DT_TH, heat_source=Q_field, sensor_mask=sensor_mask)
+T_arr = np.asarray(res_th.temperature_at_sensors)[0]   # shape (N_TH,)
+t_arr = np.asarray(res_th.time)                         # shape (N_TH,)
+
+# Cumulative CEM43 via kw.compute_cem43 on growing sub-trajectories
+# Downsampled to 200 query points (each query is O(i) → total O(N_TH·n_q/2))
+n_cem_query = 200
+query_indices = np.linspace(0, N_TH - 1, n_cem_query, dtype=int)
+cem43_sparse = np.array([
+    kw.compute_cem43(T_arr[:idx + 1].astype(float), DT_TH)
+    for idx in query_indices
+])
+# Interpolate sparse samples to full time axis
+cem43_arr = np.interp(np.arange(N_TH), query_indices, cem43_sparse)
+T_max_C = float(T_arr.max())
+print(f"  T_peak = {T_max_C:.2f} °C  |  CEM43_total = {cem43_sparse[-1]:.4g} min")
 
 fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(9, 6), sharex=True)
-ax1.plot(t_arr, T_tissue, color="#d6604d", lw=1.2)
+ax1.plot(t_arr, T_arr, color="#d6604d", lw=1.2)
 ax1.axhline(T_ART, color="#888", lw=0.8, ls="--", label="$T_{art}$ = 37°C")
 ax1.axhline(43.0, color="#a50026", lw=0.8, ls=":", label="43°C safety threshold")
 ax1.set_ylabel("Focal temperature (°C)")
-ax1.set_title(f"LIFU thermal safety — ISATA = {ISATA:.0f} W/cm², DC = {DC*100:.0f}%\n"
-              "Pennes bioheat model with blood perfusion")
+ax1.set_title(
+    f"LIFU thermal safety — ISATA = {ISATA:.0f} W/cm², DC = {DC*100:.0f}%\n"
+    "Pennes bioheat (pykwavers ThermalSimulation); time-averaged Q"
+)
 ax1.legend(loc="lower right")
 
 ax2.semilogy(t_arr, cem43_arr + 1e-10, color="#2166ac", lw=1.2)
