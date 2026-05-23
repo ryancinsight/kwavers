@@ -1,5 +1,20 @@
 # Backlog / Strategy
 
+## CBS adjoint O(N log N) iterative solver — deferred for correct derivation (2026-05-23)
+- **[pending] [minor]** The dense LU adjoint in `solve_adjoint_volume_field_with_operator`
+  scales as O(N³) for spectral operators via `operator_matrix_by_columns`. The correct
+  O(N log N) path is the adjoint Richardson iteration, but the sign convention must be
+  derived consistently with the forward iterate: the forward uses `u += γ·(Au - b)` (so
+  the iteration matrix is `I + γA`), and the adjoint must use the matching `λ += conj(γ)·(A^H λ - r)`
+  (NOT `λ -= conj(γ)·...`). A prior implementation attempt (`27490eddf`) used `-=` which
+  diverged catastrophically (`analytic ~10^41` vs finite-difference `~2104`); revert `117f637ce`
+  restored the dense LU path. The correct fix requires:
+  1. Prove forward iterate `u_{k+1} = u + γ(Au - b)` contracts with `ρ(I + γA) < 1` under CBS
+     Theorem 1 (Osnabrugge et al. 2016).
+  2. Derive `λ_{k+1} = λ + conj(γ)(A^H λ - r)` as the exact discrete Euclidean adjoint,
+     with `ρ(I + conj(γ)A^H) = ρ(conj(I + γA)^T) = ρ(I + γA) < 1`.
+  3. Implement and verify with `spectral_cbs_adjoint_gradient_matches_finite_difference` PASS.
+
 ## Ch29 OOM fix — early CT drop in `run_theranostic_nonlinear_3d` (2026-05-22)
 - **[done] [patch]** Root cause of "memory allocation ... failed" abort in the PyO3 book generation
   path (`fig05 nonlinear brain start` / `comparison nonlinear brain start`):
