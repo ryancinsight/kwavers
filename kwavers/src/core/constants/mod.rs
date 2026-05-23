@@ -46,7 +46,7 @@ pub use cavitation::{
 pub use fundamental::{BULK_MODULUS_WATER, C_WATER, DENSITY_WATER};
 
 // Cavitation control limits
-pub use cavitation::{MAX_DUTY_CYCLE, MIN_DUTY_CYCLE};
+pub use cavitation::{INITIAL_BUBBLE_RADIUS, MAX_DUTY_CYCLE, MAX_RADIUS, MIN_DUTY_CYCLE, MIN_RADIUS};
 
 // Acoustic parameters (most commonly used)
 pub use acoustic_parameters::{

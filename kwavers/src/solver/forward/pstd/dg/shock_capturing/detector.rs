@@ -41,6 +41,7 @@ use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::{Array3, Array4};
 
+use crate::core::constants::acoustic_parameters::AIR_POLYTROPIC_INDEX;
 use crate::core::constants::numerical::EPSILON;
 
 /// Shock detector with multiple indicators
@@ -155,7 +156,7 @@ impl ShockDetector {
         let mut indicator = Array3::zeros((nx, ny, nz));
 
         // Compute specific entropy s = p/ρ^γ
-        let gamma = 1.4; // Adiabatic index for air
+        let gamma = AIR_POLYTROPIC_INDEX;
 
         for i in 1..nx - 1 {
             for j in 1..ny - 1 {

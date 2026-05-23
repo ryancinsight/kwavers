@@ -154,10 +154,10 @@
       },
       {
         "model": "pstd_spectral_convergent_born",
-        "normalized_l2_residual": 0.5227508888630437,
-        "row_normalized_l2_residual_mean": 0.6418230641188836,
-        "source_scale_magnitude_coefficient_of_variation": 0.2949195936455493,
-        "source_scale_phase_span_rad": 0.9198625143263315
+        "normalized_l2_residual": 0.5233688602227166,
+        "row_normalized_l2_residual_mean": 0.6423006848939268,
+        "source_scale_magnitude_coefficient_of_variation": 0.29539684772459845,
+        "source_scale_phase_span_rad": 0.9166131140816933
       },
       {
         "model": "spectral_convergent_born",
@@ -187,10 +187,10 @@
         },
         {
           "model": "pstd_spectral_convergent_born",
-          "normalized_l2_residual": 1.159346241161157e-16,
-          "row_normalized_l2_residual_mean": 1.2465157356188917e-16,
-          "source_scale_magnitude_coefficient_of_variation": 0.14497301483179814,
-          "source_scale_phase_span_rad": 0.4913587190971054
+          "normalized_l2_residual": 8.204143806172696e-17,
+          "row_normalized_l2_residual_mean": 7.697533872288528e-17,
+          "source_scale_magnitude_coefficient_of_variation": 0.14503659752543135,
+          "source_scale_phase_span_rad": 0.49078384129169494
         },
         {
           "model": "single_scatter_born",
@@ -233,10 +233,10 @@
         },
         {
           "model": "pstd_spectral_convergent_born",
-          "normalized_l2_residual": 0.5227508888630437,
-          "row_normalized_l2_residual_mean": 0.6418230641188836,
-          "source_scale_magnitude_coefficient_of_variation": 0.2949195936455493,
-          "source_scale_phase_span_rad": 0.9198625143263315
+          "normalized_l2_residual": 0.5233688602227166,
+          "row_normalized_l2_residual_mean": 0.6423006848939268,
+          "source_scale_magnitude_coefficient_of_variation": 0.29539684772459845,
+          "source_scale_phase_span_rad": 0.9166131140816933
         },
         {
           "model": "spectral_convergent_born",
@@ -265,10 +265,10 @@
         },
         {
           "model": "pstd_spectral_convergent_born",
-          "normalized_l2_residual": 0.5435181467026386,
-          "row_normalized_l2_residual_mean": 0.6227492951571353,
-          "source_scale_magnitude_coefficient_of_variation": 0.27191588831458485,
-          "source_scale_phase_span_rad": 6.766913846903561
+          "normalized_l2_residual": 0.5434979751472874,
+          "row_normalized_l2_residual_mean": 0.6224433304728527,
+          "source_scale_magnitude_coefficient_of_variation": 0.27235773019610854,
+          "source_scale_phase_span_rad": 6.7630538655199555
         },
         {
           "model": "single_scatter_born",

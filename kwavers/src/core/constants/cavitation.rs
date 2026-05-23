@@ -3,9 +3,6 @@
 /// Blake threshold pressure ratio for inertial cavitation
 pub const BLAKE_THRESHOLD: f64 = 0.541;
 
-/// Typical initial bubble radius (m)
-pub const INITIAL_BUBBLE_RADIUS: f64 = 5e-6;
-
 /// Surface tension of water at 20°C (N/m)
 pub const SURFACE_TENSION_WATER: f64 = 0.0728;
 
@@ -125,6 +122,13 @@ pub const MAX_RADIUS: f64 = 1e-3;
 
 /// Minimum bubble radius (m)
 pub const MIN_RADIUS: f64 = 1e-9;
+
+/// Initial (equilibrium) bubble radius for a 5 μm air bubble in water at 20°C (m).
+///
+/// Representative value for ultrasound contrast agents and dissolved-gas nuclei.
+///
+/// Reference: Leighton T. G. (1994). The Acoustic Bubble. Academic Press. §2.1.
+pub const INITIAL_BUBBLE_RADIUS: f64 = 5e-6;
 
 /// Conversion factor from `bar·L²` to `Pa·m⁶`.
 ///

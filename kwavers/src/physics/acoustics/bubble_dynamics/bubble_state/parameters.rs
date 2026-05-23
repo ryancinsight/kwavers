@@ -1,6 +1,7 @@
 use super::gas_dynamics::{GasSpecies, GasType};
+use crate::core::constants::acoustic_parameters::AIR_POLYTROPIC_INDEX;
 use crate::core::constants::cavitation::{
-    SURFACE_TENSION_WATER, VAPOR_PRESSURE_WATER, VISCOSITY_WATER,
+    INITIAL_BUBBLE_RADIUS, SURFACE_TENSION_WATER, VAPOR_PRESSURE_WATER, VISCOSITY_WATER,
 };
 use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, C_WATER, DENSITY_WATER};
 use crate::core::constants::thermodynamic::{
@@ -55,11 +56,11 @@ impl Default for BubbleParameters {
 
         Self {
             // Water at 20°C with 5 μm air bubble — all water properties from SSOT.
-            r0: 5e-6,
+            r0: INITIAL_BUBBLE_RADIUS,
             p0: ATMOSPHERIC_PRESSURE,
             rho_liquid: DENSITY_WATER,
             c_liquid: C_WATER,
-            gamma: 1.4,    // Air adiabatic index
+            gamma: AIR_POLYTROPIC_INDEX,
             t0: T_AMBIENT, // 20°C in Kelvin (293.15 K)
             mu_liquid: VISCOSITY_WATER,
             sigma: SURFACE_TENSION_WATER,

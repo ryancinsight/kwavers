@@ -1,3 +1,4 @@
+use crate::core::constants::MIN_RADIUS;
 use crate::physics::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};
 
 /// Update thermodynamic state using adiabatic compression
@@ -5,7 +6,7 @@ use crate::physics::bubble_dynamics::bubble_state::{BubbleParameters, BubbleStat
 /// T = T₀ (R₀/R)^{3(γ-1)},  P = P₀ (R₀/R)^{3γ}
 pub(crate) fn update_thermodynamics(state: &mut BubbleState, bubble_params: &BubbleParameters) {
     if state.radius <= 0.0 {
-        state.radius = 1e-9;
+        state.radius = MIN_RADIUS;
     }
 
     let gamma = bubble_params.gamma;
