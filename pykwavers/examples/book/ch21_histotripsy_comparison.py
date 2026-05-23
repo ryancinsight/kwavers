@@ -25,6 +25,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.special import erf
 
+try:
+    import pykwavers as kw
+    _HAS_PYKWAVERS = True
+except ImportError:
+    kw = None
+    _HAS_PYKWAVERS = False
+
 REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 OUT_DIR = os.path.join(REPO_ROOT, "docs", "book", "figures", "ch21")
 os.makedirs(OUT_DIR, exist_ok=True)
@@ -167,24 +174,43 @@ plt.close(fig)
 # ──────────────────────────────────────────────────────────────────────────
 print("[fig03] Bioheat temperature rise during single pulse")
 
-# Classical heating rate: I_spta during pulse ~ p^2/(2 rho c)
-# but pulse is too short to register on bioheat timescale.
+# Classical: at 5 μs, thermal diffusion is negligible → linear ODE is exact.
 I_C = (PNP_C ** 2) / (2.0 * RHO0 * 1540.0)  # cycle-averaged peak [W/m^2]
 Q_C = 2.0 * ALPHA_F * I_C
 dT_dt_C = Q_C / (RHO0 * CP)
-
-# Millisecond regime: shock-spectrum absorption against intensity I_S_M
-Q_M = 2.0 * ALPHA_S * I_S_M
-dT_dt_M = Q_M / (RHO0 * CP)
-
-# Time grids — chosen to make both pulses comparable on log axis.
 t_pulse_C = np.linspace(0.0, TAU_C, 500)
-t_pulse_M = np.linspace(0.0, TAU_M, 5000)
-T_C = np.minimum(T0 + dT_dt_C * t_pulse_C, T_BOIL)
-T_M = np.minimum(T0 + dT_dt_M * t_pulse_M, T_BOIL)
+T_C = T0 + dT_dt_C * t_pulse_C  # ΔT ≈ 5 μ°C; linear exact at this timescale
 
-t_boil = (T_BOIL - T0) * RHO0 * CP / Q_M
-print(f"        analytical t_boil (ms-pulse) = {t_boil*1e3:.2f} ms")
+# Millisecond regime: ThermalDiffusionSolver (Pennes bioheat, includes diffusion
+# and perfusion which influence the temperature trajectory at 10 ms timescale).
+Q_M = 2.0 * ALPHA_S * I_S_M
+if _HAS_PYKWAVERS:
+    # 1-D focused-point thermal simulation; single sensor at focal index.
+    NX_21, DX_21, IX_FOC_21 = 40, 2.5e-4, 20
+    DT_21 = 5e-5   # s; stable (dt_max_1D = DX²/(2D) ≈ 0.23 s)
+    N_21 = int(TAU_M / DT_21)
+    Q21 = np.zeros((NX_21, 1, 1))
+    Q21[IX_FOC_21, 0, 0] = Q_M
+    sensor_21 = np.zeros((NX_21, 1, 1), dtype=bool)
+    sensor_21[IX_FOC_21, 0, 0] = True
+    sim_21 = kw.ThermalSimulation(
+        NX_21, 1, 1, DX_21, DX_21, DX_21,
+        thermal_conductivity=KAPPA, density=RHO0, specific_heat=CP,
+        enable_bioheat=True, perfusion_rate=5e-3,
+        blood_density=1050.0, blood_specific_heat=3840.0,
+        arterial_temperature=T0, initial_temperature=T0,
+        track_thermal_dose=False,
+    )
+    res_21 = sim_21.run(N_21, DT_21, heat_source=Q21, sensor_mask=sensor_21)
+    T_M = np.asarray(res_21.temperature_at_sensors)[0, :]
+    t_pulse_M = np.asarray(res_21.time)
+    t_boil_sim = float(t_pulse_M[T_M >= T_BOIL][0]) if (T_M >= T_BOIL).any() else TAU_M
+    print(f"        ThermalDiffusionSolver t_boil = {t_boil_sim*1e3:.2f} ms")
+else:
+    dT_dt_M = Q_M / (RHO0 * CP)
+    t_pulse_M = np.linspace(0.0, TAU_M, 5000)
+    T_M = np.minimum(T0 + dT_dt_M * t_pulse_M, T_BOIL)
+    t_boil_sim = (T_BOIL - T0) * RHO0 * CP / Q_M
 
 fig, axes = plt.subplots(1, 2, figsize=(11, 4.0))
 
@@ -192,8 +218,8 @@ axes[0].plot(t_pulse_C * 1e6, T_C, color="C0", lw=1.6)
 axes[0].axhline(43.0, color="orange", lw=0.7, ls=":", label="43 °C (CEM43 ref)")
 axes[0].set_xlabel("time (μs)")
 axes[0].set_ylabel("focal temperature (°C)")
-axes[0].set_title(f"Classical, $\\Delta T_\\mathrm{{end}}="
-                  f"{T_C[-1]-T0:.2e}$ °C")
+axes[0].set_title(f"Classical, $\\Delta T_\\mathrm{{end}}={T_C[-1]-T0:.2e}$ °C\n"
+                  "(diffusion negligible at 5 μs)")
 axes[0].legend(loc="best")
 axes[0].set_ylim(36.99, 37.05)
 axes[0].grid(True, alpha=0.3)
@@ -201,11 +227,15 @@ axes[0].grid(True, alpha=0.3)
 axes[1].plot(t_pulse_M * 1e3, T_M, color="C3", lw=1.6)
 axes[1].axhline(43.0, color="orange", lw=0.7, ls=":", label="43 °C")
 axes[1].axhline(T_BOIL, color="r", lw=0.8, ls="--", label="100 °C")
-axes[1].axvline(t_boil * 1e3, color="k", lw=0.6, ls=":",
-                label=f"$t_\\mathrm{{boil}}={t_boil*1e3:.2f}$ ms")
+axes[1].axvline(t_boil_sim * 1e3, color="k", lw=0.6, ls=":",
+                label=f"$t_{{boil}}={t_boil_sim*1e3:.2f}$ ms")
 axes[1].set_xlabel("time (ms)")
 axes[1].set_ylabel("focal temperature (°C)")
-axes[1].set_title(f"Millisecond, peak $T={T_M.max():.0f}$ °C")
+axes[1].set_title(
+    f"Millisecond, peak $T={T_M.max():.0f}$ °C\n"
+    + ("(kwavers ThermalDiffusionSolver + Pennes bioheat)" if _HAS_PYKWAVERS
+       else "(linear ODE approximation)")
+)
 axes[1].legend(loc="lower right")
 axes[1].grid(True, alpha=0.3)
 
@@ -217,22 +247,28 @@ plt.close(fig)
 # ──────────────────────────────────────────────────────────────────────────
 # Figure 21.4 — CEM43 accumulation per single pulse (Theorem 21.3)
 # ──────────────────────────────────────────────────────────────────────────
-print("[fig04] CEM43 accumulation per single pulse")
+print("[fig04] CEM43 accumulation per single pulse (pykwavers.cem43_at_temperatures)")
 
-
-def cem43(t_min: np.ndarray, T_celsius: np.ndarray) -> np.ndarray:
-    """Sapareto-Dewey CEM43 cumulative integral [min]."""
-    R = np.where(T_celsius >= 43.0, 0.5, 0.25)
-    integrand = R ** (43.0 - T_celsius)
-    # cumulative trapezoidal
-    return np.concatenate([[0.0], np.cumsum(0.5 * (integrand[1:] + integrand[:-1])
-                                             * np.diff(t_min))])
-
-
-t_pulse_C_min = t_pulse_C / 60.0
-t_pulse_M_min = t_pulse_M / 60.0
-cem_C = cem43(t_pulse_C_min, T_C)
-cem_M = cem43(t_pulse_M_min, T_M)
+# Use pykwavers.cem43_at_temperatures for cumulative CEM43 integration.
+# cem43_at_temperatures(T, dt) gives the per-step contribution R^{43-T}*dt/60.
+# cumsum over steps gives the cumulative CEM43.
+dt_C = float(t_pulse_C[1] - t_pulse_C[0])
+dt_M = float(t_pulse_M[1] - t_pulse_M[0])
+if _HAS_PYKWAVERS:
+    cem_C = np.concatenate([
+        [0.0],
+        np.cumsum(np.asarray(kw.cem43_at_temperatures(T_C.astype(float), dt_C))),
+    ])
+    cem_M = np.concatenate([
+        [0.0],
+        np.cumsum(np.asarray(kw.cem43_at_temperatures(T_M.astype(float), dt_M))),
+    ])
+else:
+    def _cem43(T_celsius: np.ndarray, dt_s: float) -> np.ndarray:
+        R = np.where(T_celsius >= 43.0, 0.5, 0.25)
+        return np.concatenate([[0.0], np.cumsum(R ** (43.0 - T_celsius) * dt_s / 60.0)])
+    cem_C = _cem43(T_C, dt_C)
+    cem_M = _cem43(T_M, dt_M)
 
 fig, axes = plt.subplots(1, 2, figsize=(11, 4.0))
 
