@@ -13,6 +13,16 @@ impl TheoremValidator {
         dispersion: &[f64],
         sound_speed: f64,
     ) -> TheoremValidation {
+        if frequencies.is_empty() || absorption.is_empty() || dispersion.is_empty() {
+            return TheoremValidation {
+                theorem: "Kramers-Kronig Relations".to_owned(),
+                passed: false,
+                error_bound: 0.05,
+                measured_error: f64::NAN,
+                confidence: 0.0,
+                details: "Empty input slices".to_owned(),
+            };
+        }
         let alpha_0 = absorption[0] / frequencies[0].powf(1.5);
         let alpha_power = 1.5;
 
@@ -35,7 +45,11 @@ impl TheoremValidator {
             max_error = max_error.max(alpha_error);
         }
 
-        let avg_error = total_error / frequencies.len() as f64;
+        let avg_error = if frequencies.is_empty() {
+            0.0
+        } else {
+            total_error / frequencies.len() as f64
+        };
         let passed = max_error < 0.1;
 
         TheoremValidation {

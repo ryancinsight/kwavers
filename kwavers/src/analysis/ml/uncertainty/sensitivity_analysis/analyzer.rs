@@ -138,7 +138,12 @@ impl SensitivityAnalyzer {
         let mut sum_y = 0.0;
         for i in 0..n {
             sum_x += parameter_samples[i][param_idx];
-            let y = model_outputs[i].iter().sum::<f64>() / model_outputs[i].len() as f64;
+            let output_len = model_outputs[i].len();
+            let y = if output_len == 0 {
+                0.0
+            } else {
+                model_outputs[i].iter().sum::<f64>() / output_len as f64
+            };
             sum_y += y;
         }
         let mean_x = sum_x / n as f64;
@@ -147,7 +152,12 @@ impl SensitivityAnalyzer {
         let mut cov_xy = 0.0;
         for i in 0..n {
             let x = parameter_samples[i][param_idx] - mean_x;
-            let y = (model_outputs[i].iter().sum::<f64>() / model_outputs[i].len() as f64) - mean_y;
+            let output_len_i = model_outputs[i].len();
+            let y = (if output_len_i == 0 {
+                0.0
+            } else {
+                model_outputs[i].iter().sum::<f64>() / output_len_i as f64
+            }) - mean_y;
             var_x += x * x;
             cov_xy += x * y;
         }
@@ -177,7 +187,11 @@ impl SensitivityAnalyzer {
             let diff = output - &mean_output;
             variance += diff.iter().map(|x| x * x).sum::<f64>();
         }
-        variance / (model_outputs.len() * model_outputs[0].len()) as f64
+        let denominator = model_outputs.len() * model_outputs[0].len();
+        if denominator == 0 {
+            return 0.0;
+        }
+        variance / denominator as f64
     }
 
     fn compute_confidence_intervals(
@@ -307,8 +321,12 @@ impl SensitivityAnalyzer {
             let output1 = model_fn(&trajectory[i]);
             let output2 = model_fn(&trajectory[i + 1]);
             let output_diff = &output2 - &output1;
-            let effect =
-                output_diff.iter().map(|x| x.abs()).sum::<f64>() / output_diff.len() as f64;
+            let diff_len = output_diff.len();
+            let effect = if diff_len == 0 {
+                0.0
+            } else {
+                output_diff.iter().map(|x| x.abs()).sum::<f64>() / diff_len as f64
+            };
             effects.push(effect);
         }
         Ok(effects)

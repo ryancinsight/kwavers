@@ -48,6 +48,9 @@ impl PhysicsLoss {
     /// Violation = sum_i |phase(i+1) - phase(i)|
     #[must_use]
     pub fn coherence_violation(phases: &Array2<f64>) -> f64 {
+        if phases.is_empty() || phases.dim().0 < 2 {
+            return 0.0;
+        }
         let mut violation = 0.0;
         for i in 0..phases.dim().0 - 1 {
             for j in 0..phases.dim().1 {
@@ -66,6 +69,9 @@ impl PhysicsLoss {
     /// Compute sparsity constraint (L1 regularization on weights)
     #[must_use]
     pub fn sparsity_violation(weights: &Array2<f64>) -> f64 {
+        if weights.is_empty() {
+            return 0.0;
+        }
         weights.iter().map(|w| w.abs()).sum::<f64>() / weights.len() as f64
     }
 }

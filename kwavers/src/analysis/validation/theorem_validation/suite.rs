@@ -131,7 +131,11 @@ impl TheoremValidator {
         ));
 
         let passed_count = validations.iter().filter(|v| v.passed).count();
-        let pass_rate = passed_count as f64 / validations.len() as f64 * 100.0;
+        let pass_rate = if validations.is_empty() {
+            0.0
+        } else {
+            passed_count as f64 / validations.len() as f64 * 100.0
+        };
 
         report.push_str(&format!("Pass rate: {:.1}%\n\n", pass_rate));
         report.push_str("## Detailed Results\n\n");
