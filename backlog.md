@@ -1,19 +1,15 @@
 # Backlog / Strategy
 
-## CBS adjoint O(N log N) iterative solver — deferred for correct derivation (2026-05-23)
-- **[pending] [minor]** The dense LU adjoint in `solve_adjoint_volume_field_with_operator`
-  scales as O(N³) for spectral operators via `operator_matrix_by_columns`. The correct
-  O(N log N) path is the adjoint Richardson iteration, but the sign convention must be
-  derived consistently with the forward iterate: the forward uses `u += γ·(Au - b)` (so
-  the iteration matrix is `I + γA`), and the adjoint must use the matching `λ += conj(γ)·(A^H λ - r)`
-  (NOT `λ -= conj(γ)·...`). A prior implementation attempt (`27490eddf`) used `-=` which
-  diverged catastrophically (`analytic ~10^41` vs finite-difference `~2104`); revert `117f637ce`
-  restored the dense LU path. The correct fix requires:
-  1. Prove forward iterate `u_{k+1} = u + γ(Au - b)` contracts with `ρ(I + γA) < 1` under CBS
-     Theorem 1 (Osnabrugge et al. 2016).
-  2. Derive `λ_{k+1} = λ + conj(γ)(A^H λ - r)` as the exact discrete Euclidean adjoint,
-     with `ρ(I + conj(γ)A^H) = ρ(conj(I + γA)^T) = ρ(I + γA) < 1`.
-  3. Implement and verify with `spectral_cbs_adjoint_gradient_matches_finite_difference` PASS.
+## CBS adjoint O(N log N) iterative solver — closed (2026-05-23)
+- **[done] [minor]** `solve_adjoint_spectral_iterative` now implements the correct
+  Richardson adjoint for spectral CBS operators. The iterate uses `λ += γ^H·residual`
+  where `γ^H = conj(γ) = −iε/Ṽ*`, giving iteration matrix `I + γ^H A^H` with diagonal
+  `V/(V+iε)` satisfying `|V/(V+iε)| < 1` under `ε ≥ ‖V‖_∞` — the same contraction bound
+  as the forward. `DenseFreeSpace` retains exact dense LU; `SpectralPeriodic` and
+  `SpectralPstdPeriodic` use the O(max_iter × N log N) iterative path. The
+  O(N² log N) `operator_matrix_by_columns` matrix build is removed.
+  Verification: `spectral_cbs_adjoint_gradient_matches_finite_difference` and
+  `pstd_spectral_cbs_adjoint_gradient_matches_finite_difference` both PASS. (commit `045982e44`)
 
 ## Ch29 OOM fix — early CT drop in `run_theranostic_nonlinear_3d` (2026-05-22)
 - **[done] [patch]** Root cause of "memory allocation ... failed" abort in the PyO3 book generation
@@ -543,6 +539,16 @@ breast-imaging reconstruction.
   PSTD receiver rejection. This closes receiver sampling as a hidden
   interpolation variable; the remaining parity variable is the temporal
   source/frequency-bin transfer function.
+- **[done] [minor] T8z: PSTD temporal bin transfer SSOT — CLOSED 2026-05-23.**
+  Added `solver::inverse::fwi::frequency_domain::cbs::temporal` as the
+  solver-owned theorem boundary for PSTD source kappa, leapfrog modal theta,
+  the frequency-domain PSTD denominator, and the exact finite-window modal
+  frequency-bin response of the additive sine pressure-source recurrence.
+  The clinical breast-UST homogeneous direct-field diagnostic now consumes this
+  solver SSOT and no longer owns a separate PSTD modal recurrence. This closes
+  the hidden formula duplication; the next parity step is to wire the temporal
+  transfer into the selectable frequency-domain forward operator and rerun the
+  determined probe.
 - **[done] [patch] T8x: focused source adapter compile closure — CLOSED 2026-05-22.**
   Added the explicit `ElementMap` type to the focused bowl source adapter's
   `HashMap` construction. This resolves the unrelated `E0282` inference defect
@@ -594,9 +600,10 @@ breast-imaging reconstruction.
   path changes the all-channel residual to `0.5233688602227166` and passive-only
   residual to `0.5434979751472874`, so source projection/filtering alone is not
   the repair. Receiver projection is now operator-aware and exact-grid for PSTD
-  CBS, so the next work should isolate the temporal source/frequency-bin
-  transfer function between the PSTD acquisition and frequency-domain CBS
-  operators.
+  CBS. The PSTD temporal source/frequency-bin transfer formulas are now
+  solver-owned and shared by clinical diagnostics. The next work should wire
+  that temporal transfer into the selectable frequency-domain CBS forward
+  operator and rerun the determined probe.
 
 ### Deprecation (T2 prerequisite)
 - **[patch] Mark `solver::forward::helmholtz::born_series::convergent::ConvergentBornSolver`

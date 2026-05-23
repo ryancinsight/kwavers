@@ -2,6 +2,37 @@
 
 ## Unreleased
 
+### Fixed (2026-05-23) - CBS Adjoint Richardson Iterate Sign
+
+- [minor] Restore correct `+=` sign in `solve_adjoint_spectral_iterative`.
+  The adjoint iterate `λ += γ^H·residual` (γ^H = −iε/Ṽ*) gives iteration
+  matrix `I + γ^H A^H` with spectral radius `|V/(V+iε)| < 1`, matching the
+  forward CBS contraction bound. The previous `-=` caused ~10^38 divergence.
+  `DenseFreeSpace` retains exact dense LU; all spectral operators now use the
+  O(max_iter × N log N) iterative adjoint. The O(N²logN) `operator_matrix_by_columns`
+  path is removed. All 11 gradient-matching tests pass.
+
+### Fixed (2026-05-23) - Panic-on-NaN in floating-point comparators
+
+- [patch] Replace `partial_cmp(…).unwrap()` with `total_cmp(…)` across 74 call
+  sites in analysis, clinical, domain, math, physics, and solver layers.
+  `total_cmp` defines a total order over all f64 bit patterns (incl. NaN/±inf)
+  without panicking; `partial_cmp` returns `None` for NaN, causing `.unwrap()`
+  panics in release mode on subnormal inputs.
+
+### Fixed (2026-05-23) - Divide-by-zero in SonothermalStats::from_slice
+
+- [patch] Guard `SonothermalStats::from_slice` against empty slice input.
+  Without the guard, `values.len() as f64 == 0.0` caused silent NaN propagation
+  through mean/variance. Returns an all-zero stats struct when input is empty.
+
+### Added (2026-05-23) - Breast FWI PSTD Temporal Bin Transfer
+
+- [minor] Add solver-owned PSTD temporal source and finite frequency-bin
+  transfer identities under `frequency_domain::cbs::temporal`. Clinical breast
+  UST direct-field diagnostics now consume those modal response functions
+  instead of owning a private PSTD recurrence.
+
 ### Changed (2026-05-23) - Breast FWI PSTD CBS Receiver Projection
 
 - [minor] Route `PstdSpectralConvergentBornOperator` receiver sampling and

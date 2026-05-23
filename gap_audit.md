@@ -437,10 +437,12 @@ theorems against an external published reconstruction.
    the PSTD source-kappa projection alone as the immediate parity path. The PSTD
    CBS receiver path now uses exact centered-grid extraction/injection and
    rejects off-grid receiver positions instead of silently applying BLI, closing
-   receiver sampling as a hidden interpolation variable. The next repair should
-   isolate the temporal source/frequency-bin transfer function between PSTD
-   acquisition and frequency-domain CBS rather than active-channel exclusion or
-   inversion tuning.
+   receiver sampling as a hidden interpolation variable. The PSTD temporal
+   source/frequency-bin transfer identities now live under the solver CBS
+   theorem boundary and are consumed by the clinical homogeneous direct-field
+   diagnostic. The next repair should wire that temporal transfer into the
+   selectable frequency-domain CBS forward operator rather than active-channel
+   exclusion or inversion tuning.
 4. **MAT5/HDF5 ingest — CLOSED.** The published phantom file is MATLAB 5.0,
    while alternate user-provided sound-speed phantoms may be HDF5/MAT-v7.3.
    The selected boundary supports both under Rust-owned clinical ingest; Python
