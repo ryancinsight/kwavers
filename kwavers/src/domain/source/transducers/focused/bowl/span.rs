@@ -7,10 +7,8 @@
 
 use std::f64::consts::PI;
 
-use super::{
-    add3, field_validation_error, normalize3, scale3, sub3, validate_element_count, BowlConfig,
-    BowlTransducer,
-};
+use super::super::validation::{field_validation_error, validate_element_count};
+use super::{add3, normalize3, scale3, sub3, BowlConfig, BowlTransducer};
 use crate::core::error::KwaversResult;
 use crate::domain::source::transducers::focused::{SphericalCapConfig, SphericalCapLayout};
 

@@ -13,6 +13,10 @@ use ndarray::{Array3, Zip};
 use std::f64::consts::PI;
 
 use super::cap::{SphericalCapConfig, SphericalCapLayout};
+use super::validation::{
+    field_validation_error, positive_finite, validate_element_count, validate_finite_field,
+    validate_finite_vector, validate_positive_finite_field,
+};
 
 mod presets;
 mod span;
@@ -396,66 +400,6 @@ impl BowlTransducer {
     }
 }
 
-fn validate_positive_finite_field(field: &'static str, value: f64) -> KwaversResult<()> {
-    if positive_finite(value) {
-        Ok(())
-    } else {
-        Err(field_validation_error(
-            field,
-            value.to_string(),
-            "must be positive and finite",
-        ))
-    }
-}
-
-fn validate_element_count(element_count: usize) -> KwaversResult<()> {
-    if element_count > 0 {
-        Ok(())
-    } else {
-        Err(field_validation_error(
-            "element_count",
-            element_count.to_string(),
-            "must be at least one",
-        ))
-    }
-}
-
-fn validate_finite_field(field: &'static str, value: f64) -> KwaversResult<()> {
-    if value.is_finite() {
-        Ok(())
-    } else {
-        Err(field_validation_error(
-            field,
-            value.to_string(),
-            "must be finite",
-        ))
-    }
-}
-
-fn validate_finite_vector(field: &'static str, value: [f64; 3]) -> KwaversResult<()> {
-    if value.iter().all(|component| component.is_finite()) {
-        Ok(())
-    } else {
-        Err(field_validation_error(
-            field,
-            format!("{value:?}"),
-            "must contain only finite coordinates",
-        ))
-    }
-}
-
-fn field_validation_error(
-    field: &'static str,
-    value: String,
-    constraint: &'static str,
-) -> KwaversError {
-    KwaversError::Validation(ValidationError::FieldValidation {
-        field: field.to_owned(),
-        value,
-        constraint: constraint.to_owned(),
-    })
-}
-
 fn element_count_from_area(area_m2: f64, element_size_m: f64) -> KwaversResult<usize> {
     let count = (area_m2 / element_size_m.powi(2)).ceil();
     if !count.is_finite() || count < 1.0 || count > usize::MAX as f64 {
@@ -479,10 +423,6 @@ fn default_or_configured_element_size(config: &BowlConfig) -> KwaversResult<f64>
 
 fn spherical_cap_area(radius_m: f64, theta_max_rad: f64) -> f64 {
     2.0 * PI * radius_m * radius_m * (1.0 - theta_max_rad.cos())
-}
-
-fn positive_finite(value: f64) -> bool {
-    value.is_finite() && value > 0.0
 }
 
 fn add3(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
