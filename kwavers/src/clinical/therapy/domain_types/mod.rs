@@ -2,6 +2,8 @@
 //!
 //! Core types for therapeutic ultrasound applications.
 
+use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
+
 /// Treatment metrics for therapy monitoring
 #[derive(Debug, Clone, Default)]
 pub struct ClinicalTreatmentMetrics {
@@ -80,10 +82,10 @@ impl ClinicalTherapyParameters {
     #[must_use]
     pub fn hifu() -> Self {
         Self {
-            frequency: 1.5e6,
-            pressure: 2.0e6,
+            frequency: 1.5 * MHZ_TO_HZ,
+            pressure: 2.0 * MPA_TO_PA,
             duration: 5.0,
-            peak_negative_pressure: 2.0e6,
+            peak_negative_pressure: 2.0 * MPA_TO_PA,
             mechanical_index: 1.5,
             treatment_duration: 5.0,
             duty_cycle: 0.5,

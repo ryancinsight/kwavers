@@ -81,6 +81,7 @@ impl Reconstructor for PhotoacousticReconstructor {
 mod tests {
     use super::*;
     use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use crate::core::constants::numerical::MHZ_TO_HZ;
     use ndarray::Array2;
 
     #[test]
@@ -91,7 +92,7 @@ mod tests {
             grid_size: [100, 100, 100],
             grid_spacing: [0.01, 0.01, 0.01],
             sound_speed: SOUND_SPEED_WATER_SIM,
-            sampling_frequency: 10e6,
+            sampling_frequency: 10.0 * MHZ_TO_HZ,
             envelope_detection: false,
             bandpass_filter: None,
             regularization_parameter: 0.0,
@@ -108,7 +109,7 @@ mod tests {
             grid_size: [10, 10, 10],
             grid_spacing: [0.1, 0.1, 0.1],
             sound_speed: SOUND_SPEED_WATER_SIM,
-            sampling_frequency: 10e6,
+            sampling_frequency: 10.0 * MHZ_TO_HZ,
             envelope_detection: false,
             bandpass_filter: None,
             regularization_parameter: 0.0,
@@ -121,7 +122,7 @@ mod tests {
             &reconstructor.config.sensor_positions,
             [10, 10, 10],
             SOUND_SPEED_WATER_SIM,
-            10e6,
+            10.0 * MHZ_TO_HZ,
         );
         result.unwrap();
     }
@@ -138,7 +139,7 @@ mod tests {
             grid_size: [10, 10, 10],
             grid_spacing: [0.1, 0.1, 0.1],
             sound_speed: SOUND_SPEED_WATER_SIM,
-            sampling_frequency: 10e6,
+            sampling_frequency: 10.0 * MHZ_TO_HZ,
             envelope_detection: false,
             bandpass_filter: None,
             regularization_parameter: 0.0,

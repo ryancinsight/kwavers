@@ -242,6 +242,7 @@ impl PhotoacousticConversion {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::numerical::MHZ_TO_HZ;
 
     #[test]
     fn test_kerr_effect_refractive_index() {
@@ -281,14 +282,14 @@ mod tests {
     #[test]
     fn test_photoacoustic_efficiency() {
         let pa = PhotoacousticConversion::tissue();
-        let efficiency = pa.efficiency(100.0, 1e6); // 100 1/m absorption, 1 MHz
+        let efficiency = pa.efficiency(100.0, MHZ_TO_HZ); // 100 1/m absorption, 1 MHz
         assert!(efficiency > 0.0);
     }
 
     #[test]
     fn test_thermal_diffusion_length() {
         let pa = PhotoacousticConversion::tissue();
-        let l_th = pa.thermal_diffusion_length(1e6); // 1 MHz
+        let l_th = pa.thermal_diffusion_length(MHZ_TO_HZ); // 1 MHz
         assert!(l_th > 0.0);
         assert!(l_th < 1e-2); // Should be < 10 μm
     }

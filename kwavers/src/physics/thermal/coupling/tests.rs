@@ -2,6 +2,7 @@ use super::*;
 use crate::core::constants::fundamental::{
     DENSITY_TISSUE, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM,
 };
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use ndarray::Array3;
 
@@ -58,7 +59,7 @@ fn test_nonlinear_heating() {
         1e5,                   // 100 kPa
         SOUND_SPEED_WATER_SIM, // m/s
         DENSITY_TISSUE,        // kg/m³
-        1.0e6,                 // 1 MHz
+        MHZ_TO_HZ,             // 1 MHz
     );
     let power = nl.power();
     assert!(power > 0.0);
@@ -70,12 +71,12 @@ fn test_nonlinear_heating() {
 #[test]
 fn test_nonlinear_regime_detection() {
     // Linear regime
-    let nl_linear = NonlinearHeating::new(5.0, 1e4, SOUND_SPEED_WATER_SIM, DENSITY_TISSUE, 1.0e6);
+    let nl_linear = NonlinearHeating::new(5.0, 1e4, SOUND_SPEED_WATER_SIM, DENSITY_TISSUE, MHZ_TO_HZ);
     assert!(!nl_linear.is_nonlinear_significant());
 
     // Nonlinear regime
     let nl_nonlinear =
-        NonlinearHeating::new(5.0, 5e5, SOUND_SPEED_WATER_SIM, DENSITY_TISSUE, 1.0e6);
+        NonlinearHeating::new(5.0, 5e5, SOUND_SPEED_WATER_SIM, DENSITY_TISSUE, MHZ_TO_HZ);
     assert!(nl_nonlinear.is_nonlinear_significant());
 }
 

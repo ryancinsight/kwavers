@@ -2,6 +2,7 @@ use super::*;
 use crate::core::constants::fundamental::{
     ATMOSPHERIC_PRESSURE, BOLTZMANN as BOLTZMANN_CONSTANT, PLANCK as PLANCK_CONSTANT,
 };
+use crate::core::constants::numerical::MPA_TO_PA;
 
 #[test]
 fn gaunt_factor_lower_bound() {
@@ -47,7 +48,7 @@ fn saha_hydrogen_fully_ionized_at_50000k() {
 #[test]
 fn saha_output_in_valid_range() {
     let model = BremsstrahlungModel::default();
-    for (t, p) in [(5_000.0, 1e5), (20_000.0, 1e5), (100_000.0, 1e6)] {
+    for (t, p) in [(5_000.0, 1e5), (20_000.0, 1e5), (100_000.0, MPA_TO_PA)] {
         let x = model.saha_ionization(t, p, 13.6);
         assert!((0.0..=1.0).contains(&x), "x({t}K, {p}Pa) = {x}");
     }
