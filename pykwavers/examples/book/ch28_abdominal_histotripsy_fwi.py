@@ -1,348 +1,353 @@
 """Chapter 28: CT-derived abdominal FWI for histotripsy analysis.
 
-This script reuses the real kidney and liver CT/segmentation loaders from the
-histotripsy chapters, runs a deterministic synthetic finite-frequency FWI
-targeting reconstruction, and then runs reduced receiver inversions on
-time-lapse lesion-state, Westervelt harmonic, and Rayleigh-Plesset subharmonic
-source maps. The figures are model-consistent simulation outputs, not measured
-transducer data or clinical targeting proof.
+This script calls pykwavers.run_theranostic_inverse_from_ritk for kidney
+and liver abdominal histotripsy targets. When real CT/segmentation NIfTI
+files are provided (via environment variables), the simulation runs on
+actual CT-derived tissue properties. When paths are absent, kwavers uses
+its built-in synthetic abdominal phantom.
+
+All acoustic wave physics — FDTD/PSTD forward propagation, waveform-misfit
+FWI with Charbonnier functional, RTM imaging, and iterative elastic shear
+FWI — executes in Rust via the pykwavers PyO3 binding. No physics is
+implemented in this file.
+
+Transducer placement invariant
+-------------------------------
+Element positions satisfy placement_context_skin_gap_m >= 0: the transducer
+array is positioned on the patient skin surface (hip/abdominal region), not
+inside the patient.
+
+Figures produced
+----------------
+fig01  CT anatomy, sound speed, anatomy FWI reconstruction, lesion target
+fig02  Multi-modal reconstructions (subharmonic, harmonic, ultraharmonic, fused)
+fig03  FWI convergence (anatomy objective, elastic shear objective)
+
+Environment variables
+---------------------
+KWAVERS_CH28_KIDNEY_CT_NIFTI   path to kidney CT NIfTI (synthetic if absent)
+KWAVERS_CH28_KIDNEY_SEG_NIFTI  path to kidney segmentation NIfTI
+KWAVERS_CH28_LIVER_CT_NIFTI    path to liver CT NIfTI (synthetic if absent)
+KWAVERS_CH28_LIVER_SEG_NIFTI   path to liver segmentation NIfTI
+KWAVERS_CH28_GRID_SIZE         inversion grid size (default 64)
+KWAVERS_CH28_ITERATIONS        FWI iterations (default 12)
+KWAVERS_CH28_ELASTIC_ITER      elastic shear FWI iterations (default 3)
+
+References
+----------
+Hall et al. (2007) Ultrasound Med. Biol. 33(9):1417
+Parsons et al. (2006) Ultrasound Med. Biol. 32(1):115
+Lin et al. (2014) IEEE Trans. UFFC 61(1):41
 """
 
 from __future__ import annotations
 
 import json
 import os
-import sys
 from pathlib import Path
 
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
+import pykwavers  # All physics: Rust FDTD/PSTD/FWI via PyO3
 
-BOOK_DIR = Path(__file__).resolve().parent
-REPO_ROOT = BOOK_DIR.parents[2]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 OUT_DIR = REPO_ROOT / "docs" / "book" / "figures" / "ch28"
 
-sys.path.insert(0, str(BOOK_DIR))
+plt.rcParams.update({
+    "font.family": "serif", "font.size": 10,
+    "axes.titlesize": 11, "axes.labelsize": 10,
+    "legend.fontsize": 8, "lines.linewidth": 1.5,
+})
 
-import ch21d_real_kidney_ct_histotripsy as kidney  # noqa: E402
-import ch21e_real_liver_ct_histotripsy as liver  # noqa: E402
-from abdominal_fwi.model import (  # noqa: E402
-    ApertureConfig,
-    CaseResult,
-    run_case,
-)
-from abdominal_fwi.constants import C_REF_M_S  # noqa: E402
-from abdominal_fwi.metrics import as_metric_dict, equal_volume_detection  # noqa: E402
-from abdominal_fwi.preprocessing import prepare_ct_slice  # noqa: E402
-
-
-DX_M = float(os.environ.get("KWAVERS_CH28_FWI_DX_M", "0.002"))
-GRID_SIZE = int(os.environ.get("KWAVERS_CH28_FWI_GRID_SIZE", "96"))
-ELEMENT_COUNT = int(os.environ.get("KWAVERS_CH28_FWI_ELEMENTS", "256"))
-ITERATIONS = int(os.environ.get("KWAVERS_CH28_FWI_ITERATIONS", "18"))
+CT_KIDNEY_NIFTI = os.environ.get("KWAVERS_CH28_KIDNEY_CT_NIFTI", "")
+CT_LIVER_NIFTI = os.environ.get("KWAVERS_CH28_LIVER_CT_NIFTI", "")
+SEG_KIDNEY_NIFTI = os.environ.get("KWAVERS_CH28_KIDNEY_SEG_NIFTI", "")
+SEG_LIVER_NIFTI = os.environ.get("KWAVERS_CH28_LIVER_SEG_NIFTI", "")
+GRID_SIZE = int(os.environ.get("KWAVERS_CH28_GRID_SIZE", "64"))
+ITERATIONS = int(os.environ.get("KWAVERS_CH28_ITERATIONS", "12"))
+ELASTIC_ITERATIONS = int(os.environ.get("KWAVERS_CH28_ELASTIC_ITER", "3"))
 
 
-def load_cases() -> list[CaseResult]:
-    """Load CT-derived kidney and liver slices, then run FWI for each."""
+def savefig(name: str) -> None:
+    for ext in ("pdf", "png"):
+        plt.savefig(OUT_DIR / f"{name}.{ext}", dpi=150, bbox_inches="tight")
+    print(f"  saved: figures/ch28/{name}.{{pdf,png}}")
 
-    config = ApertureConfig(element_count=ELEMENT_COUNT, iterations=ITERATIONS)
-    cases = []
 
-    ct, label, info = kidney.load_ct_and_segment(target_dx_m=DX_M)
-    props = kidney.property_maps(label, f0=500_000.0)
-    kidney_slice = prepare_ct_slice(
-        name="kidney",
-        title="KiTS19 kidney tumor",
-        ct_hu=ct,
-        label=label,
-        sound_speed_m_s=props["c"],
-        focus_index=int(info["focus_idx"][0]),
-        input_spacing_m=float(info["dx"]),
-        organ_labels=(kidney.KIDNEY.label,),
-        target_labels=(kidney.TUMOR.label,),
-        focus_indices=tuple(int(i) for i in info["focus_idx"]),
-        slice_axis=int(np.argmin(label.shape)),
-        output_size=GRID_SIZE,
+def _run_case(anatomy: str, ct_nifti: str, seg_nifti: str | None) -> dict:
+    """
+    Run kwavers theranostic FWI/RTM for one abdominal organ.
+
+    Falls back to the kwavers built-in synthetic abdominal phantom when
+    the CT path is absent or does not exist. All acoustic wave physics
+    (FDTD/PSTD propagation, waveform-misfit FWI, RTM, elastic shear FWI)
+    executes in Rust.
+    """
+    kwargs: dict = dict(
+        ct_nifti_path=ct_nifti if ct_nifti and Path(ct_nifti).exists() else "__synthetic__",
+        anatomy=anatomy,
+        grid_size=GRID_SIZE,
+        iterations=ITERATIONS,
+        waveform_misfit="charbonnier",
+        elastic_fwi_iterations=ELASTIC_ITERATIONS,
+        transmit_schedule_strategy="full",
     )
-    cases.append(run_case(kidney_slice, config))
-
-    ct, label, info = liver.load_ct_and_segment(target_dx_m=DX_M)
-    props = liver.property_maps(label, f0=500_000.0)
-    liver_slice = prepare_ct_slice(
-        name="liver",
-        title="LiTS liver HCC",
-        ct_hu=ct,
-        label=label,
-        sound_speed_m_s=props["c"],
-        focus_index=int(info["focus_idx"][0]),
-        input_spacing_m=float(info["dx"]),
-        organ_labels=(liver.LIVER.label,),
-        target_labels=(liver.HCC.label,),
-        focus_indices=tuple(int(i) for i in info["focus_idx"]),
-        slice_axis=int(np.argmin(label.shape)),
-        output_size=GRID_SIZE,
-    )
-    cases.append(run_case(liver_slice, config))
-    return cases
+    if seg_nifti and Path(seg_nifti).exists():
+        kwargs["segmentation_nifti_path"] = seg_nifti
+    return pykwavers.run_theranostic_inverse_from_ritk(**kwargs)
 
 
-def plot_case(result: CaseResult) -> Path:
-    """Save a compact targeting and lesion-state reconstruction panel."""
+def _norm(arr: np.ndarray) -> np.ndarray:
+    """Clip to non-negative and normalise to [0, 1]."""
+    a = np.clip(np.asarray(arr, dtype=float), 0.0, None)
+    mx = float(a.max())
+    return a / mx if mx > 0.0 else a
 
-    prepared = result.prepared
-    fig, axes = plt.subplots(2, 4, figsize=(14, 6.4), constrained_layout=True)
+
+# ── Figure 01: Anatomy + FWI reconstruction ───────────────────────────────────
+def fig01_anatomy_fwi(results: dict[str, dict]) -> None:
+    """CT HU, sound speed, anatomy FWI reconstruction, and lesion target."""
+    n_rows = len(results)
+    fig, axes = plt.subplots(n_rows, 4,
+                             figsize=(16, 5 * n_rows), constrained_layout=True)
+    if n_rows == 1:
+        axes = [axes]
+    for row, (name, r) in enumerate(results.items()):
+        dx = float(r["spacing_m"]) * 1e3
+        ct = np.asarray(r["ct_hu"])
+        cs = np.asarray(r["sound_speed_m_s"])
+        anat = _norm(r["anatomy_reconstruction"])
+        les = _norm(r["lesion_target"])
+        nx, ny = ct.shape
+        ext = [0, nx * dx, 0, ny * dx]
+        foc = r.get("focus_m", (0.0, 0.0))
+        m = r.get("metrics", {})
+        anat_dice = m.get("anatomy", {}).get("dice_equal_area", float("nan"))
+        anat_cnr = m.get("anatomy", {}).get("cnr", float("nan"))
+
+        im0 = axes[row][0].imshow(ct.T, origin="lower", cmap="gray",
+                                   vmin=-300, vmax=300, extent=ext, aspect="equal")
+        axes[row][0].set_title(f"{name.capitalize()} — CT HU")
+        axes[row][0].set_xlabel("x [mm]"); axes[row][0].set_ylabel("y [mm]")
+        fig.colorbar(im0, ax=axes[row][0], fraction=0.046, label="HU")
+
+        im1 = axes[row][1].imshow(cs.T, origin="lower", cmap="plasma",
+                                   vmin=1450, vmax=1700, extent=ext, aspect="equal")
+        axes[row][1].set_title(f"{name.capitalize()} — Sound speed [m/s]")
+        axes[row][1].set_xlabel("x [mm]")
+        fig.colorbar(im1, ax=axes[row][1], fraction=0.046, label="c [m/s]")
+
+        anat_title = f"{name.capitalize()} — Anatomy FWI"
+        if not (anat_dice != anat_dice):  # NaN check
+            anat_title += f"\nDice={anat_dice:.3f} CNR={anat_cnr:.2f}"
+        im2 = axes[row][2].imshow(anat.T, origin="lower", cmap="inferno",
+                                   extent=ext, aspect="equal")
+        axes[row][2].set_title(anat_title)
+        axes[row][2].set_xlabel("x [mm]")
+        axes[row][2].plot(foc[0] * 1e3, foc[1] * 1e3, "c+", ms=10, mew=1.5,
+                          label="Focus")
+        axes[row][2].legend(fontsize=7)
+        fig.colorbar(im2, ax=axes[row][2], fraction=0.046, label="score")
+
+        im3 = axes[row][3].imshow(les.T, origin="lower", cmap="hot",
+                                   extent=ext, aspect="equal")
+        axes[row][3].set_title(f"{name.capitalize()} — Lesion target")
+        axes[row][3].set_xlabel("x [mm]")
+        axes[row][3].plot(foc[0] * 1e3, foc[1] * 1e3, "c+", ms=10, mew=1.5)
+        fig.colorbar(im3, ax=axes[row][3], fraction=0.046, label="norm.")
+
     fig.suptitle(
-        (
-            f"{prepared.title}: synthetic CT-derived abdominal FWI "
-            "(not measured hardware data)"
-        ),
-        fontsize=11,
-    )
-
-    show_ct(axes[0, 0], prepared.ct_hu, prepared.organ_mask, prepared.target_mask)
-    axes[0, 0].set_title("CT + labels")
-
-    targeting_true = result.targeting.target_map * C_REF_M_S
-    targeting_recon = result.targeting.reconstruction_map * C_REF_M_S
-    targeting_error = result.targeting.error_map * C_REF_M_S
-    vmax = robust_vmax(targeting_true, targeting_recon)
-    show_field(axes[0, 1], targeting_true, "CT-derived anatomy", "m/s", vmax=vmax)
-    show_field(axes[0, 2], targeting_recon, "FWI anatomy", "m/s", vmax=vmax)
-    show_field(
-        axes[0, 3],
-        targeting_error,
-        "targeting error",
-        "m/s",
-        vmax=max(float(np.max(np.abs(targeting_error))), 1.0),
-    )
-
-    lesion_true = result.lesioning.target_map * C_REF_M_S
-    lesion_recon = result.lesioning.reconstruction_map * C_REF_M_S
-    lesion_error = result.lesioning.error_map * C_REF_M_S
-    lesion_vmax = max(abs(float(np.min(lesion_true))), 1.0)
-    show_field(axes[1, 0], lesion_true, "lesion delta c", "m/s", vmax=lesion_vmax)
-    show_field(axes[1, 1], lesion_recon, "time-lapse FWI", "m/s", vmax=lesion_vmax)
-    show_detection(
-        axes[1, 2],
-        result,
-        result.lesioning,
-        "lesion detection",
-        negative=True,
-    )
-    show_objective(
-        axes[1, 3],
-        (
-            ("targeting", result.targeting),
-            ("lesioning", result.lesioning),
-        ),
-    )
-
-    output = OUT_DIR / f"fig01_{prepared.name}_abdominal_fwi.png"
-    fig.savefig(output, dpi=180)
-    fig.savefig(output.with_suffix(".pdf"))
+        "Figure 01 — CT anatomy and anatomy FWI reconstruction (kwavers Rust solver)\n"
+        "(synthetic phantom when CT not provided; transducer on skin surface)",
+        fontsize=11)
+    savefig("fig01_anatomy_fwi")
     plt.close(fig)
-    return output
 
 
-def plot_advanced_case(result: CaseResult) -> Path:
-    """Save subharmonic and nonlinear reconstruction panels."""
+# ── Figure 02: Multi-modal reconstructions ────────────────────────────────────
+def fig02_multimodal(results: dict[str, dict]) -> None:
+    """Subharmonic, harmonic, ultraharmonic, and fused FWI reconstructions."""
+    keys = [
+        "subharmonic_reconstruction",
+        "harmonic_reconstruction",
+        "ultraharmonic_reconstruction",
+        "fused_reconstruction",
+    ]
+    labels = ["Subharmonic (f₀/2)", "Harmonic (2f₀)", "Ultraharmonic (3f₀/2)", "Fused"]
+    metric_keys = ["subharmonic", "harmonic", "ultraharmonic", "fusion"]
+    cmaps = ["Blues", "Reds", "Greens", "Purples"]
 
-    prepared = result.prepared
-    fig, axes = plt.subplots(2, 4, figsize=(14, 6.4), constrained_layout=True)
+    n_rows = len(results)
+    fig, axes = plt.subplots(n_rows, 4,
+                             figsize=(16, 5 * n_rows), constrained_layout=True)
+    if n_rows == 1:
+        axes = [axes]
+
+    for row, (name, r) in enumerate(results.items()):
+        dx = float(r["spacing_m"]) * 1e3
+        foc = r.get("focus_m", (0.0, 0.0))
+        m = r.get("metrics", {})
+
+        for col, (key, lbl, cm, mk) in enumerate(zip(keys, labels, cmaps, metric_keys)):
+            img = _norm(r[key])
+            nx, ny = img.shape
+            ext = [0, nx * dx, 0, ny * dx]
+            dice = m.get(mk, {}).get("dice_equal_area", float("nan"))
+            cnr = m.get(mk, {}).get("cnr", float("nan"))
+            title = f"{name.capitalize()} — {lbl}"
+            if not (dice != dice):  # not NaN
+                title += f"\nDice={dice:.3f} CNR={cnr:.2f}"
+            im = axes[row][col].imshow(img.T, origin="lower", cmap=cm,
+                                       extent=ext, aspect="equal")
+            axes[row][col].set_title(title)
+            axes[row][col].set_xlabel("x [mm]")
+            if col == 0:
+                axes[row][col].set_ylabel("y [mm]")
+            axes[row][col].plot(foc[0] * 1e3, foc[1] * 1e3, "k+", ms=8, mew=1.2)
+            fig.colorbar(im, ax=axes[row][col], fraction=0.046, label="score")
+
     fig.suptitle(
-        (
-            f"{prepared.title}: subharmonic and nonlinear abdominal FWI "
-            "(synthetic model-consistent channels)"
-        ),
-        fontsize=11,
-    )
-
-    show_ct(axes[0, 0], prepared.ct_hu, prepared.organ_mask, prepared.target_mask)
-    axes[0, 0].set_title("CT + labels")
-    show_field(
-        axes[0, 1],
-        result.subharmonic.target_map,
-        "subharmonic source",
-        "a.u.",
-        vmax=1.0,
-    )
-    show_field(
-        axes[0, 2],
-        result.subharmonic.reconstruction_map,
-        "subharmonic FWI",
-        "a.u.",
-        vmax=robust_vmax(result.subharmonic.reconstruction_map),
-    )
-    show_detection(
-        axes[0, 3],
-        result,
-        result.subharmonic,
-        "subharmonic detection",
-        negative=False,
-    )
-
-    nonlinear_true = result.nonlinear.target_map * C_REF_M_S
-    nonlinear_recon = result.nonlinear.reconstruction_map * C_REF_M_S
-    nonlinear_vmax = max(
-        float(np.max(np.abs(nonlinear_true))),
-        robust_vmax(nonlinear_recon),
-    )
-    show_field(
-        axes[1, 0],
-        nonlinear_true,
-        "nonlinear susceptibility",
-        "m/s eq.",
-        vmax=nonlinear_vmax,
-    )
-    show_field(
-        axes[1, 1],
-        nonlinear_recon,
-        "nonlinear FWI",
-        "m/s eq.",
-        vmax=nonlinear_vmax,
-    )
-    show_detection(
-        axes[1, 2],
-        result,
-        result.nonlinear,
-        "nonlinear detection",
-        negative=False,
-    )
-    show_objective(
-        axes[1, 3],
-        (
-            ("subharmonic", result.subharmonic),
-            ("nonlinear", result.nonlinear),
-        ),
-    )
-
-    output = OUT_DIR / f"fig02_{prepared.name}_subharmonic_nonlinear_fwi.png"
-    fig.savefig(output, dpi=180)
-    fig.savefig(output.with_suffix(".pdf"))
+        "Figure 02 — Multi-modal cavitation emission reconstructions (kwavers Rust FWI)\n"
+        "Subharmonic + harmonic + ultraharmonic + fused reconstruction",
+        fontsize=11)
+    savefig("fig02_multimodal")
     plt.close(fig)
-    return output
 
 
-def show_ct(ax: plt.Axes, ct_hu: np.ndarray, organ: np.ndarray, target: np.ndarray) -> None:
-    """Draw CT HU with organ and target contours."""
+# ── Figure 03: FWI convergence ────────────────────────────────────────────────
+def fig03_convergence(results: dict[str, dict]) -> None:
+    """Anatomy FWI and elastic shear FWI objective history vs iteration."""
+    fig, (ax_anat, ax_shear) = plt.subplots(1, 2, figsize=(12, 5), constrained_layout=True)
+    colors = ["#1f77b4", "#d62728"]
 
-    ax.imshow(ct_hu.T, cmap="gray", origin="lower", vmin=-150, vmax=250)
-    ax.contour(organ.T, levels=[0.5], colors=["cyan"], linewidths=1.0)
-    ax.contour(target.T, levels=[0.5], colors=["yellow"], linewidths=1.4)
-    ax.set_xticks([])
-    ax.set_yticks([])
+    for col_idx, (name, r) in enumerate(results.items()):
+        color = colors[col_idx % 2]
 
+        obj = np.asarray(r.get("objective_history", []), dtype=float)
+        if obj.size > 0:
+            j0 = max(float(obj[0]), 1.0e-30)
+            ax_anat.semilogy(np.arange(len(obj)), obj / j0, "o-", color=color,
+                             ms=5, lw=1.5, label=name.capitalize())
+            reduction = (1.0 - float(obj[-1]) / j0) * 100.0
+            print(f"  {name}: anatomy FWI objective reduction = {reduction:.1f}%")
 
-def show_field(
-    ax: plt.Axes,
-    field: np.ndarray,
-    title: str,
-    label: str,
-    *,
-    vmax: float,
-) -> None:
-    """Draw a signed acoustic-property field."""
+        shear = np.asarray(r.get("elastic_shear_objective_history", []), dtype=float)
+        if shear.size > 0:
+            s0 = max(float(shear[0]), 1.0e-30)
+            accepted = int(r.get("elastic_shear_accepted_step_count", 0))
+            n_iter = int(r.get("elastic_shear_iteration_count", len(shear)))
+            ax_shear.semilogy(np.arange(len(shear)), shear / s0, "s-", color=color,
+                              ms=5, lw=1.5,
+                              label=f"{name.capitalize()} ({accepted}/{n_iter} accepted)")
 
-    im = ax.imshow(field.T, cmap="coolwarm", origin="lower", vmin=-vmax, vmax=vmax)
-    ax.set_title(title)
-    ax.set_xticks([])
-    ax.set_yticks([])
-    plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04, label=label)
+    for ax, title in [
+        (ax_anat, "Anatomy FWI (waveform-misfit Charbonnier)"),
+        (ax_shear, "Elastic shear FWI (Armijo line search)"),
+    ]:
+        ax.set_xlabel("Iteration $k$")
+        ax.set_ylabel("Normalized objective $\\mathcal{J}/\\mathcal{J}_0$")
+        ax.set_title(title)
+        ax.legend(fontsize=9)
+        ax.grid(True, which="both", alpha=0.3)
 
-
-def show_detection(
-    ax: plt.Axes,
-    result: CaseResult,
-    inversion,
-    title: str,
-    *,
-    negative: bool,
-) -> None:
-    """Overlay equal-volume detections on the CT-derived target."""
-
-    active = result.prepared.imaging_mask
-    detection_active = equal_volume_detection(
-        inversion.reconstruction_map[active],
-        result.lesion_mask[active],
-        negative=negative,
-    )
-    detected = np.zeros_like(result.lesion_mask, dtype=bool)
-    detected[active] = detection_active
-
-    ax.imshow(result.prepared.ct_hu.T, cmap="gray", origin="lower", vmin=-150, vmax=250)
-    ax.contour(result.lesion_mask.T, levels=[0.5], colors=["lime"], linewidths=1.4)
-    ax.contour(detected.T, levels=[0.5], colors=["red"], linewidths=1.2)
-    ax.set_title(
-        f"{title}\n"
-        f"Dice={inversion.metrics['equal_volume_dice']:.3f}"
-    )
-    ax.set_xticks([])
-    ax.set_yticks([])
+    fig.suptitle("Figure 03 — FWI convergence (kwavers Rust solver)", fontsize=11)
+    savefig("fig03_convergence")
+    plt.close(fig)
 
 
-def show_objective(ax: plt.Axes, entries: tuple[tuple[str, object], ...]) -> None:
-    """Plot normalized objective histories."""
-
-    for label, inversion in entries:
-        history = np.asarray(inversion.metrics["objective_history"], dtype=float)
-        history = history / max(float(history[0]), 1.0e-30)
-        ax.plot(np.arange(history.size), history, marker="o", label=label)
-    ax.set_yscale("log")
-    ax.set_xlabel("PCG iteration")
-    ax.set_ylabel("normalized objective")
-    ax.set_title("solver convergence")
-    ax.grid(True, alpha=0.25)
-    ax.legend(frameon=False, fontsize=8)
-
-
-def robust_vmax(*fields: np.ndarray) -> float:
-    """Return a shared display scale that preserves soft-tissue structure."""
-
-    values = np.concatenate([np.abs(field).ravel() for field in fields])
-    values = values[values > 0.0]
-    if values.size == 0:
-        return 1.0
-    return min(max(float(np.percentile(values, 97.0)), 1.0), 220.0)
-
-
-def write_metrics(results: list[CaseResult]) -> Path:
+# ── Metrics export ────────────────────────────────────────────────────────────
+def write_metrics(results: dict[str, dict]) -> Path:
     """Write reproducible scalar diagnostics for the generated figures."""
-
     payload = {
         "chapter": 28,
-        "analysis": "CT-derived abdominal histotripsy FWI targeting and lesioning",
-        "simulation_type": (
-            "synthetic CT-derived Born inversion with bounded 2-D Westervelt "
-            "and Rayleigh-Plesset source maps"
-        ),
-        "dx_m": DX_M,
         "grid_size": GRID_SIZE,
-        "element_count": ELEMENT_COUNT,
         "iterations": ITERATIONS,
-        "cases": [as_metric_dict(result) for result in results],
+        "elastic_fwi_iterations": ELASTIC_ITERATIONS,
+        "cases": {
+            name: {
+                "anatomy": r.get("metrics", {}).get("anatomy", {}),
+                "active_lesion": r.get("metrics", {}).get("active_lesion", {}),
+                "subharmonic": r.get("metrics", {}).get("subharmonic", {}),
+                "harmonic": r.get("metrics", {}).get("harmonic", {}),
+                "ultraharmonic": r.get("metrics", {}).get("ultraharmonic", {}),
+                "fused": r.get("metrics", {}).get("fusion", {}),
+                "waveform_objective": float(r.get("waveform_objective", float("nan"))),
+                "elastic_shear_accepted_step_count": int(
+                    r.get("elastic_shear_accepted_step_count", 0)
+                ),
+                "is_full_wave_inversion": bool(r.get("is_full_wave_inversion", False)),
+                "uses_nonlinear_wave_propagation": bool(
+                    r.get("uses_nonlinear_wave_propagation", False)
+                ),
+                "placement_context_skin_gap_m": float(
+                    r.get("placement_context_skin_gap_m", 0.0)
+                ),
+            }
+            for name, r in results.items()
+        },
     }
     output = OUT_DIR / "metrics.json"
     output.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     return output
 
 
+# ── Entry point ───────────────────────────────────────────────────────────────
 def run() -> dict[str, object]:
     """Generate Chapter 28 abdominal FWI figures and metrics."""
-
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    results = load_cases()
-    figure_paths = []
-    for result in results:
-        figure_paths.append(plot_case(result))
-        figure_paths.append(plot_advanced_case(result))
+
+    print("  [1/2] Running kidney FWI (kwavers Rust solver)...")
+    results: dict[str, dict] = {}
+    results["kidney"] = _run_case("kidney", CT_KIDNEY_NIFTI, SEG_KIDNEY_NIFTI)
+    km = results["kidney"].get("placement_metrics", {})
+    print(f"    skin→focus: {km.get('skin_to_focus_m', 0) * 100:.1f} cm")
+
+    print("  [2/2] Running liver FWI (kwavers Rust solver)...")
+    results["liver"] = _run_case("liver", CT_LIVER_NIFTI, SEG_LIVER_NIFTI)
+    lm = results["liver"].get("placement_metrics", {})
+    print(f"    skin→focus: {lm.get('skin_to_focus_m', 0) * 100:.1f} cm")
+
+    # Verify transducer placement invariant: all elements outside body.
+    for name, r in results.items():
+        gap = float(r.get("placement_context_skin_gap_m", 0.0))
+        assert gap >= 0.0, (
+            f"{name}: skin_gap_m={gap:.4f} < 0 — element inside body! "
+            "Transducer placement invariant violated."
+        )
+        print(f"  {name}: skin coupling gap = {gap * 1e3:.2f} mm (transducer outside body ✓)")
+
+    print("  Generating figures...")
+    print("  fig01...", end=" ", flush=True)
+    fig01_anatomy_fwi(results)
+    print("done")
+
+    print("  fig02...", end=" ", flush=True)
+    fig02_multimodal(results)
+    print("done")
+
+    print("  fig03...", end=" ", flush=True)
+    fig03_convergence(results)
+    print("done")
+
     metrics_path = write_metrics(results)
+    print(f"  metrics → {metrics_path}")
+
+    figure_names = ["fig01_anatomy_fwi.png", "fig02_multimodal.png", "fig03_convergence.png"]
     return {
-        "figures": [str(path) for path in figure_paths],
+        "figures": [str(OUT_DIR / n) for n in figure_names],
         "metrics": str(metrics_path),
-        "cases": [as_metric_dict(result) for result in results],
     }
 
 
 if __name__ == "__main__" or __name__ == "ch28":
+    print("Chapter 28: CT-derived abdominal FWI for histotripsy analysis")
+    print("=" * 60)
+    print(f"  Grid size     : {GRID_SIZE}")
+    print(f"  Iterations    : {ITERATIONS}")
+    print(f"  Elastic iter  : {ELASTIC_ITERATIONS}")
+    print(f"  Kidney CT     : {CT_KIDNEY_NIFTI or '(synthetic phantom)'}")
+    print(f"  Liver CT      : {CT_LIVER_NIFTI or '(synthetic phantom)'}")
     run()

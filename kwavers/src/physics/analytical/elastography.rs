@@ -21,6 +21,7 @@ use std::f64::consts::PI;
 ///
 /// # Reference
 /// Sarvazyan et al. (1998), *Ultrasound Med. Biol.* 24, 1419.
+#[must_use]
 #[inline]
 pub fn shear_wave_speed(mu_pa: f64, rho: f64) -> f64 {
     (mu_pa / rho).sqrt()
@@ -41,6 +42,7 @@ pub fn shear_wave_speed(mu_pa: f64, rho: f64) -> f64 {
 ///
 /// # Reference
 /// Lakes (2009) *Viscoelastic Materials*, ch. 2.
+#[must_use]
 pub fn voigt_complex_modulus(omega_arr: &[f64], mu_pa: f64, eta_pa_s: f64) -> Vec<Complex64> {
     omega_arr
         .iter()
@@ -62,6 +64,7 @@ pub fn voigt_complex_modulus(omega_arr: &[f64], mu_pa: f64, eta_pa_s: f64) -> Ve
 ///
 /// # Reference
 /// Koeller (1984), *J. Appl. Mech.* 51, 299.
+#[must_use]
 pub fn springpot_complex_modulus(omega_arr: &[f64], g0: f64, alpha_exp: f64) -> Vec<Complex64> {
     // (iω)^α = |ω|^α · exp(i·α·π/2)
     let phase = alpha_exp * PI / 2.0;
@@ -90,6 +93,7 @@ pub fn springpot_complex_modulus(omega_arr: &[f64], g0: f64, alpha_exp: f64) -> 
 ///
 /// # Reference
 /// Catheline et al. (2004), *J. Acoust. Soc. Am.* 116, 3736.
+#[must_use]
 pub fn voigt_shear_wave_dispersion(f_arr: &[f64], mu_pa: f64, eta_pa_s: f64, rho: f64) -> Vec<f64> {
     f_arr
         .iter()
@@ -126,6 +130,7 @@ pub fn voigt_shear_wave_dispersion(f_arr: &[f64], mu_pa: f64, eta_pa_s: f64, rho
 ///
 /// # Reference
 /// Muthupillai et al. (1995), *Science* 269, 1854.
+#[must_use]
 pub fn mre_displacement_field(
     x_arr: &[f64],
     z_arr: &[f64],

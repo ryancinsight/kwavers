@@ -18,6 +18,7 @@
 ///
 /// # Reference
 /// Prahl S. (1999) <https://omlc.org/spectra/hemoglobin/>, accessed 2024.
+#[must_use]
 pub fn hbo2_molar_absorption(wavelength_nm: &[f64]) -> Vec<f64> {
     wavelength_nm.iter().map(|&lam| hbo2_poly(lam)).collect()
 }
@@ -28,6 +29,7 @@ pub fn hbo2_molar_absorption(wavelength_nm: &[f64]) -> Vec<f64> {
 ///
 /// # Reference
 /// Prahl S. (1999) <https://omlc.org/spectra/hemoglobin/>.
+#[must_use]
 pub fn hb_molar_absorption(wavelength_nm: &[f64]) -> Vec<f64> {
     wavelength_nm.iter().map(|&lam| hb_poly(lam)).collect()
 }
@@ -42,6 +44,7 @@ pub fn hb_molar_absorption(wavelength_nm: &[f64]) -> Vec<f64> {
 ///
 /// # Reference
 /// Sigrist & Kneubühl (1978), *J. Acoust. Soc. Am.* 64, 1652.
+#[must_use]
 #[inline]
 pub fn gruneisen_parameter_water(t_celsius: &[f64]) -> Vec<f64> {
     t_celsius.iter().map(|&t| 0.0043 + 0.0053 * t).collect()
@@ -75,6 +78,7 @@ pub fn gruneisen_parameter_water(t_celsius: &[f64]) -> Vec<f64> {
 ///
 /// # Reference
 /// Xu & Wang (2006), *Rev. Sci. Instrum.* 77, 041101, eq. (13).
+#[must_use]
 pub fn pa_sphere_pressure_signal(
     t_arr: &[f64],
     r0_m: f64,
@@ -119,6 +123,7 @@ pub fn pa_sphere_pressure_signal(
 ///
 /// # Reference
 /// Xu & Wang (2006), *Rev. Sci. Instrum.* 77, 041101.
+#[must_use]
 #[inline]
 pub fn pa_axial_resolution(bandwidth_hz: f64, c: f64) -> f64 {
     c / (2.0 * bandwidth_hz)
@@ -145,6 +150,7 @@ pub fn pa_axial_resolution(bandwidth_hz: f64, c: f64) -> f64 {
 ///
 /// # Reference
 /// Beard (2011), *Interface Focus* 1, 602.
+#[must_use]
 pub fn spectroscopic_unmixing_lstsq(spectra_matrix: &[Vec<f64>], measurements: &[f64]) -> Vec<f64> {
     let n_wav = spectra_matrix.len();
     let n_chrom = if n_wav > 0 {

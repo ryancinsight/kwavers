@@ -24,6 +24,7 @@ use std::f64::consts::PI;
 ///
 /// # Reference
 /// Szabo (2014) *Diagnostic Ultrasound Imaging*, §8.3.
+#[must_use]
 #[inline]
 pub fn lateral_psf_sinc2(x_arr: &[f64], f_number: f64, wavelength_m: f64) -> Vec<f64> {
     let width = 0.886 * f_number * wavelength_m;
@@ -51,6 +52,7 @@ pub fn lateral_psf_sinc2(x_arr: &[f64], f_number: f64, wavelength_m: f64) -> Vec
 ///
 /// # Reference
 /// Szabo (2014) *Diagnostic Ultrasound Imaging*, §6.5.
+#[must_use]
 #[inline]
 pub fn axial_psf_rect(z_arr: &[f64], c: f64, bandwidth_hz: f64) -> Vec<f64> {
     z_arr
@@ -80,6 +82,7 @@ pub fn axial_psf_rect(z_arr: &[f64], c: f64, bandwidth_hz: f64) -> Vec<f64> {
 ///
 /// # Reference
 /// Szabo (2014) *Diagnostic Ultrasound Imaging*, §11.2.
+#[must_use]
 #[inline]
 pub fn doppler_frequency_shift(v_m_s: f64, theta_rad: f64, f0_hz: f64, c: f64) -> f64 {
     2.0 * f0_hz * v_m_s * theta_rad.cos() / c
@@ -105,6 +108,7 @@ pub fn doppler_frequency_shift(v_m_s: f64, theta_rad: f64, f0_hz: f64, c: f64) -
 /// # Reference
 /// Montaldo et al. (2009), *IEEE Trans. Ultrason. Ferroelectr. Freq. Control*
 /// 56, 489.
+#[must_use]
 pub fn pw_compounding_lateral_psf(
     x_arr: &[f64],
     n_angles: usize,
@@ -125,6 +129,7 @@ pub fn pw_compounding_lateral_psf(
 ///
 /// # Reference
 /// Szabo (2014) *Diagnostic Ultrasound Imaging*, §8.3.
+#[must_use]
 #[inline]
 pub fn lateral_resolution_m(f_number: f64, wavelength_m: f64) -> f64 {
     0.886 * f_number * wavelength_m

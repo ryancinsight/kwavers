@@ -12,6 +12,7 @@
 ///
 /// # Reference
 /// Apfel & Holland (1991), *Ultrasound Med. Biol.* 17, 179.
+#[must_use]
 #[inline]
 pub fn mechanical_index(p_neg_pa: f64, freq_hz: f64) -> f64 {
     crate::physics::acoustics::analysis::calculate_mechanical_index(p_neg_pa, freq_hz)
@@ -31,6 +32,7 @@ pub fn mechanical_index(p_neg_pa: f64, freq_hz: f64) -> f64 {
 ///
 /// # Reference
 /// Duryea et al. (2015), *Ultrasound Med. Biol.* 41, 1937.
+#[must_use]
 pub fn inertial_cavitation_dose(r_arr: &[f64], rdot_arr: &[f64], r0_m: f64) -> f64 {
     let r0 = r0_m.max(1e-15);
     let n = r_arr.len().min(rdot_arr.len());
@@ -75,6 +77,7 @@ pub fn inertial_cavitation_dose(r_arr: &[f64], rdot_arr: &[f64], r0_m: f64) -> f
 /// # Reference
 /// Maxwell et al. (2011), *J. Acoust. Soc. Am.* 130, 2012.
 /// Vlaisavljevich et al. (2015), *Ultrasound Med. Biol.* 41, 2896.
+#[must_use]
 #[inline]
 pub fn histotripsy_lesion_radius_m(
     icd: f64,

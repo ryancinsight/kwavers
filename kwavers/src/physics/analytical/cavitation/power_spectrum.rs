@@ -18,6 +18,7 @@ use std::f64::consts::PI;
 /// # Note
 /// This implements a direct O(N²) DFT, which is exact but slow for large N.
 /// For production use, prefer a dedicated FFT; here correctness takes priority.
+#[must_use]
 pub fn bubble_power_spectrum(r_arr: &[f64], dt_s: f64, n_fft: usize) -> (Vec<f64>, Vec<f64>) {
     let n = n_fft;
     let n_f = n as f64;
@@ -62,6 +63,7 @@ pub fn bubble_power_spectrum(r_arr: &[f64], dt_s: f64, n_fft: usize) -> (Vec<f64
 ///
 /// # Reference
 /// Cramer et al. (2021), *Ultrasound Med. Biol.* 47, 2102.
+#[must_use]
 pub fn period_doubling_ratio(f_arr: &[f64], power_arr: &[f64], freq_hz: f64) -> f64 {
     if f_arr.len() < 2 || power_arr.is_empty() {
         return 0.0;

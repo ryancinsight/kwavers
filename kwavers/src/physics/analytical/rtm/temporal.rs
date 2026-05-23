@@ -14,6 +14,7 @@
 ///
 /// # Reference
 /// Dencks & Schmitz (2005), *Ultrasonics* 43, 183.
+#[must_use]
 pub fn temporal_modulation_frequencies(
     f0_hz: f64,
     m_steps: usize,
@@ -35,6 +36,7 @@ pub fn temporal_modulation_frequencies(
 ///
 /// # Reference
 /// Thomas et al. (2017), *Phys. Rev. Lett.* 119, 034301.
+#[must_use]
 #[inline]
 pub fn standing_wave_suppression_gain(r_back: f64) -> f64 {
     (1.0 + r_back).powi(2) / (1.0 + r_back * r_back)
