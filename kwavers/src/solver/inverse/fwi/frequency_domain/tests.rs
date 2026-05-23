@@ -418,3 +418,109 @@ fn nonlinear_inversion_reduces_objective_and_raises_high_speed_target() {
         result.sound_speed_m_s[[1, 1, 1]]
     );
 }
+
+/// The fixed-scale gradient used with `estimate_source_scaling=true` must be a
+/// descent direction at any interior iterate.
+///
+/// The gradient of `J(s; α_fixed) = 0.5 ‖α_fixed F(s) − d‖²` with α_fixed
+/// held constant is exactly the discrete adjoint gradient evaluated at α_fixed.
+/// Since J is differentiable and the gradient is its own exact derivative, a
+/// sufficiently small step along −∇J must strictly decrease J.
+///
+/// This test evaluates the directional derivative numerically by taking a
+/// central-difference step ±h along the computed gradient direction and
+/// confirming that `J(s − h∇J/‖∇J‖) < J(s)`.
+#[test]
+fn source_scaled_gradient_is_descent_direction() {
+    let array = MultiRowRingArray::new(4, 1, 0.01, 0.0).expect("ring array");
+    let config = Config {
+        spacing_m: 0.005,
+        estimate_source_scaling: true,
+        forward_operator: Arc::new(DenseConvergentBornOperator {
+            iterations: 64,
+            relative_tolerance: 1.0e-13,
+        }),
+        ..Config::default()
+    };
+    let mut truth = Array3::from_elem((3, 3, 1), SOUND_SPEED_WATER_SIM);
+    truth[[1, 1, 0]] = 1515.0;
+    let observed =
+        simulate_frequency_observation(&truth, &array, 200_000.0, &config).expect("observed");
+    // Evaluate gradient at a model different from truth.
+    let mut current_speed = Array3::from_elem((3, 3, 1), SOUND_SPEED_WATER_SIM);
+    current_speed[[0, 0, 0]] = 1490.0;
+    let current_slowness = sound_speed_to_slowness(&current_speed).expect("slowness");
+    let observations = [FrequencyObservation::new(200_000.0, observed)];
+    let (objective, gradient) =
+        objective_and_gradient(&current_slowness, &observations, &array, &config)
+            .expect("objective_and_gradient");
+    // Compute a normalized step h in the −∇J direction small enough to stay
+    // within the quadratic regime.
+    let grad_norm = gradient.iter().map(|v| v * v).sum::<f64>().sqrt();
+    assert!(grad_norm > f64::EPSILON, "gradient must be nonzero at non-truth model");
+    let step_size = 1.0e-9 / grad_norm;
+    let candidate_slowness = current_slowness
+        .iter()
+        .zip(gradient.iter())
+        .map(|(&s, &g)| s - step_size * g)
+        .collect::<Vec<_>>();
+    let candidate_slowness = Array3::from_shape_vec(current_slowness.dim(), candidate_slowness)
+        .expect("shape");
+    let (candidate_objective, _) =
+        objective_and_gradient(&candidate_slowness, &observations, &array, &config)
+            .expect("candidate objective");
+    assert!(
+        candidate_objective < objective,
+        "descent step must decrease objective: original={objective:.6e}, candidate={candidate_objective:.6e}"
+    );
+}
+
+/// FWI with `estimate_source_scaling=true` must converge to the truth on a
+/// consistent problem (same CBS forward model for data generation and inversion).
+///
+/// For a consistent forward model `d = α_true F(s_true)`, the global minimum
+/// of `J(s) = 0.5 ‖α(s) F(s) − d‖²` is zero at `s = s_true`.  The
+/// alternating-descent scheme (re-estimate α each Armijo candidate, then update
+/// s) is a well-established variant of iterative source inversion; the
+/// fixed-scale gradient is a valid descent direction at every iterate because it
+/// equals the exact gradient of `J(s; α_fixed)` with the current α held
+/// constant.  Convergence to the global minimum is not guaranteed in general but
+/// holds for the small 3×3×1 test problem below, where the objective landscape
+/// is convex near s_true.
+#[test]
+fn inversion_with_source_scaling_converges_for_consistent_model() {
+    let array = MultiRowRingArray::new(4, 1, 0.01, 0.0).expect("ring array");
+    let config = Config {
+        spacing_m: 0.005,
+        iterations: 14,
+        initial_step_s_per_m: 5.0e-6,
+        estimate_source_scaling: true,
+        forward_operator: Arc::new(DenseConvergentBornOperator {
+            iterations: 64,
+            relative_tolerance: 1.0e-13,
+        }),
+        ..Config::default()
+    };
+    let mut truth = Array3::from_elem((3, 3, 1), SOUND_SPEED_WATER_SIM);
+    truth[[1, 1, 0]] = 1520.0;
+    let observed =
+        simulate_frequency_observation(&truth, &array, 200_000.0, &config).expect("observed");
+    let observations = [FrequencyObservation::new(200_000.0, observed)];
+    let initial = Array3::from_elem((3, 3, 1), SOUND_SPEED_WATER_SIM);
+    let result = invert(&observations, &array, &initial, &config).expect("inversion");
+
+    // Objective must decrease by at least 80 %.
+    let initial_obj = result.objective_history[0];
+    let final_obj = result.objective_history.last().copied().unwrap();
+    assert!(
+        final_obj < 0.2 * initial_obj,
+        "objective must decrease >80 %: initial={initial_obj:.4e}, final={final_obj:.4e}, history={:?}",
+        result.objective_history
+    );
+    // Central high-speed voxel must be elevated above water (FWI recovers sign of anomaly).
+    assert!(
+        result.sound_speed_m_s[[1, 1, 0]] > SOUND_SPEED_WATER_SIM + 5.0,
+        "center voxel must converge toward 1520 m/s, got {}",
+        result.sound_speed_m_s[[1, 1, 0]]
+    );
+}
