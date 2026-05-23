@@ -9,7 +9,7 @@
 //! Pressure: 1 atm unless otherwise noted
 
 use super::material::AcousticMaterialProperties;
-use crate::core::constants::acoustic_parameters::DENSITY_SKULL;
+use crate::core::constants::acoustic_parameters::{DENSITY_SKULL, VISCOSITY_PARENCHYMAL_TISSUE};
 use crate::core::constants::optical::REFRACTIVE_INDEX_WATER;
 use crate::core::constants::cavitation::VISCOSITY_WATER;
 use crate::core::constants::fundamental::{
@@ -76,7 +76,7 @@ pub const BRAIN_WHITE_MATTER: TissueProperties = TissueProperties {
     absorption_coefficient: 0.6,
     absorption_exponent: 1.0,
     nonlinearity_parameter: B_OVER_A_BRAIN, // 6.55 (Duck 1990 Table 4.16)
-    shear_viscosity: 2e-3,
+    shear_viscosity: VISCOSITY_PARENCHYMAL_TISSUE,
     bulk_viscosity: 5e-3,
     specific_heat: SPECIFIC_HEAT_BRAIN_WHITE,
     thermal_conductivity: THERMAL_CONDUCTIVITY_BRAIN,
@@ -157,7 +157,7 @@ pub const LIVER: TissueProperties = TissueProperties {
     absorption_coefficient: 0.4,
     absorption_exponent: 1.0,
     nonlinearity_parameter: B_OVER_A_LIVER, // 6.75 (Duck 1990 Table 4.16 mean)
-    shear_viscosity: 2e-3,
+    shear_viscosity: VISCOSITY_PARENCHYMAL_TISSUE,
     bulk_viscosity: 5e-3,
     specific_heat: SPECIFIC_HEAT_LIVER,
     thermal_conductivity: THERMAL_CONDUCTIVITY_LIVER,
@@ -186,7 +186,7 @@ pub const KIDNEY_CORTEX: TissueProperties = TissueProperties {
     absorption_coefficient: 0.5,
     absorption_exponent: 1.0,
     nonlinearity_parameter: B_OVER_A_KIDNEY, // 7.2 (Duck 1990 Table 4.16)
-    shear_viscosity: 2e-3,
+    shear_viscosity: VISCOSITY_PARENCHYMAL_TISSUE,
     bulk_viscosity: 5e-3,
     specific_heat: SPECIFIC_HEAT_TISSUE,
     thermal_conductivity: THERMAL_CONDUCTIVITY_KIDNEY,
@@ -211,7 +211,7 @@ pub const KIDNEY_MEDULLA: TissueProperties = TissueProperties {
     absorption_coefficient: 0.5,
     absorption_exponent: 1.0,
     nonlinearity_parameter: B_OVER_A_KIDNEY, // 7.2 (Duck 1990 Table 4.16)
-    shear_viscosity: 2e-3,
+    shear_viscosity: VISCOSITY_PARENCHYMAL_TISSUE,
     bulk_viscosity: 5e-3,
     specific_heat: SPECIFIC_HEAT_TISSUE,
     thermal_conductivity: THERMAL_CONDUCTIVITY_KIDNEY,
@@ -267,7 +267,7 @@ pub const MUSCLE: TissueProperties = TissueProperties {
     absorption_coefficient: 0.13,
     absorption_exponent: 1.0,
     nonlinearity_parameter: B_OVER_A_MUSCLE, // 7.4 (Duck 1990 Table 4.16)
-    shear_viscosity: 2e-3,
+    shear_viscosity: VISCOSITY_PARENCHYMAL_TISSUE,
     bulk_viscosity: 5e-3,
     specific_heat: SPECIFIC_HEAT_MUSCLE,
     thermal_conductivity: THERMAL_CONDUCTIVITY_MUSCLE,
@@ -292,7 +292,7 @@ pub const FAT: TissueProperties = TissueProperties {
     absorption_coefficient: 0.48,
     absorption_exponent: 1.0,
     nonlinearity_parameter: B_OVER_A_FAT, // 9.6 (Duck 1990 Table 4.16)
-    shear_viscosity: 2e-3,
+    shear_viscosity: VISCOSITY_PARENCHYMAL_TISSUE,
     bulk_viscosity: 5e-3,
     specific_heat: SPECIFIC_HEAT_FAT,
     thermal_conductivity: THERMAL_CONDUCTIVITY_FAT,

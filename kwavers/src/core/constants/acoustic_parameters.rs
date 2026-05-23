@@ -54,6 +54,15 @@ pub const BLOOD_PLASMA_VISCOSITY_37C: f64 = 1.2e-3;
 /// Table 5.3.
 pub const VISCOSITY_SOFT_TISSUE: f64 = 3.0e-3;
 
+/// Shear viscosity of parenchymal tissues at 37°C (Pa·s)
+///
+/// Value: 2.0×10⁻³ Pa·s
+/// Empirical effective shear viscosity characteristic of major organ parenchyma
+/// (brain white/gray matter, liver, kidney cortex, kidney medulla, skeletal
+/// muscle, adipose tissue). Approximately 2× water viscosity.
+/// Reference: Duck, F. A. (1990). Physical Properties of Tissue, Tables 5.2–5.3.
+pub const VISCOSITY_PARENCHYMAL_TISSUE: f64 = 2.0e-3;
+
 /// Water surface tension at 20°C (N/m).
 ///
 /// Re-exports the canonical
