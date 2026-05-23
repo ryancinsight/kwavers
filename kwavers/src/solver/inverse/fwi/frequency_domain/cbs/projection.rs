@@ -114,8 +114,8 @@ fn source_density_from_pstd_grid_kappa(
                         time_step_s,
                         reference_sound_speed_m_s,
                     );
-                    multiplier *= modal_response
-                        * Complex64::new(denominator * grid.cell_volume_m3(), 0.0);
+                    multiplier *=
+                        modal_response * Complex64::new(denominator * grid.cell_volume_m3(), 0.0);
                 }
                 spectrum[[ix, iy, iz]] *= multiplier;
             }

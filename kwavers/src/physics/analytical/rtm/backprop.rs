@@ -26,6 +26,7 @@ use std::f64::consts::PI;
 ///
 /// # Reference
 /// Baysal et al. (1983), *Geophysics* 48, 1514 (RTM formulation).
+#[must_use]
 pub fn backprop_green_function_2d(
     x_arr: &[f64],
     z_arr: &[f64],
@@ -76,6 +77,7 @@ pub fn backprop_green_function_2d(
 ///
 /// # Reference
 /// Aki & Richards (2002), *Quantitative Seismology* §4.1.
+#[must_use]
 pub fn backprop_green_function_3d(
     x_arr: &[f64],
     y_arr: &[f64],

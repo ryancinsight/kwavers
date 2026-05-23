@@ -81,11 +81,8 @@ impl PstdTemporalTransferConfig {
                 "PSTD temporal reference sound speed must be positive and finite, got {reference_sound_speed_m_s}"
             )));
         }
-        let total_steps = pstd_time_steps_for_cycles(
-            frequency_hz,
-            time_step_s,
-            self.cycles_per_frequency,
-        )?;
+        let total_steps =
+            pstd_time_steps_for_cycles(frequency_hz, time_step_s, self.cycles_per_frequency)?;
         let bin_start_step = pstd_frequency_bin_start_step(
             frequency_hz,
             time_step_s,
@@ -265,8 +262,7 @@ fn validate_temporal_transfer(config: PstdTemporalTransferConfig) -> KwaversResu
             "PSTD temporal cycles_per_frequency must be positive".to_owned(),
         ));
     }
-    if config.frequency_bin_cycles == 0
-        || config.frequency_bin_cycles > config.cycles_per_frequency
+    if config.frequency_bin_cycles == 0 || config.frequency_bin_cycles > config.cycles_per_frequency
     {
         return Err(KwaversError::InvalidInput(format!(
             "PSTD temporal frequency_bin_cycles must be in 1..={}, got {}",

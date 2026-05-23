@@ -9,6 +9,7 @@
 /// * `k` – wavenumber [rad/m]
 /// * `x_arr` – spatial positions [m]
 /// * `omega_t` – phase `ω·t` [rad]
+#[must_use]
 #[inline]
 pub fn standing_wave_1d(p0: f64, k: f64, x_arr: &[f64], omega_t: f64) -> Vec<f64> {
     let cos_wt = omega_t.cos();
@@ -26,6 +27,7 @@ pub fn standing_wave_1d(p0: f64, k: f64, x_arr: &[f64], omega_t: f64) -> Vec<f64
 /// * `k` – wavenumber [rad/m]
 /// * `x_arr` – spatial positions [m]
 /// * `omega_t` – `ω·t` [rad]
+#[must_use]
 #[inline]
 pub fn plane_wave_pressure_1d(amplitude: f64, k: f64, x_arr: &[f64], omega_t: f64) -> Vec<f64> {
     x_arr
@@ -44,6 +46,7 @@ pub fn plane_wave_pressure_1d(amplitude: f64, k: f64, x_arr: &[f64], omega_t: f6
 ///
 /// # Reference
 /// Pierce (1989) *Acoustics*, §1.6.
+#[must_use]
 #[inline]
 pub fn spherical_wave_pressure(amplitude: f64, k: f64, r_arr: &[f64]) -> Vec<f64> {
     r_arr
@@ -66,6 +69,7 @@ pub fn spherical_wave_pressure(amplitude: f64, k: f64, r_arr: &[f64]) -> Vec<f64
 ///
 /// # Reference
 /// Kinsler et al. (2000) *Fundamentals of Acoustics*, §6.3.
+#[must_use]
 #[inline]
 pub fn reflection_pressure_coeff(z1: f64, z2: f64) -> f64 {
     (z2 - z1) / (z2 + z1)
@@ -79,6 +83,7 @@ pub fn reflection_pressure_coeff(z1: f64, z2: f64) -> f64 {
 ///
 /// # Reference
 /// Kinsler et al. (2000) *Fundamentals of Acoustics*, §6.3.
+#[must_use]
 #[inline]
 pub fn transmission_pressure_coeff(z1: f64, z2: f64) -> f64 {
     2.0 * z2 / (z2 + z1)
@@ -97,6 +102,7 @@ pub fn transmission_pressure_coeff(z1: f64, z2: f64) -> f64 {
 ///
 /// # Reference
 /// Szabo (1994), *J. Acoust. Soc. Am.* 96, 491.
+#[must_use]
 #[inline]
 pub fn power_law_attenuation_np_m(f_hz: &[f64], alpha0: f64, y: f64) -> Vec<f64> {
     f_hz.iter().map(|&f| alpha0 * f.powf(y)).collect()
@@ -112,6 +118,7 @@ pub fn power_law_attenuation_np_m(f_hz: &[f64], alpha0: f64, y: f64) -> Vec<f64>
 /// * `f_mhz` – frequencies [MHz]
 /// * `alpha0` – attenuation coefficient [dB/(cm·MHz^y)]
 /// * `y` – power-law exponent
+#[must_use]
 #[inline]
 pub fn absorption_power_law_db_cm(f_mhz: &[f64], alpha0: f64, y: f64) -> Vec<f64> {
     f_mhz.iter().map(|&f| alpha0 * f.powf(y)).collect()

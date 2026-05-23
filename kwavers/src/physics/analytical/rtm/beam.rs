@@ -36,6 +36,7 @@ use std::f64::consts::PI;
 /// # Reference
 /// Pinton et al. (2012), *IEEE Trans. Ultrason.* 59, 1302;
 /// Salahura et al. (2020), *Phys. Med. Biol.* 65, 115006.
+#[must_use]
 pub fn focused_gaussian_beam_2d(
     x_arr: &[f64],
     z_arr: &[f64],

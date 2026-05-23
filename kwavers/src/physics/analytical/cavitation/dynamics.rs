@@ -14,6 +14,7 @@ use std::f64::consts::PI;
 ///
 /// # Reference
 /// Minnaert (1933), *Philos. Mag.* 16, 235.
+#[must_use]
 #[inline]
 pub fn minnaert_resonance_hz(r0_m: f64, gamma: f64, p0_pa: f64, rho: f64) -> f64 {
     if !(r0_m.is_finite()
@@ -45,6 +46,7 @@ pub fn minnaert_resonance_hz(r0_m: f64, gamma: f64, p0_pa: f64, rho: f64) -> f64
 ///
 /// # Reference
 /// Blake (1949) *Appendix to: Cavitation*, HMSO Report.
+#[must_use]
 #[inline]
 pub fn blake_threshold_pa(r0_m: f64, p0_pa: f64, sigma_n_m: f64) -> f64 {
     if !(r0_m.is_finite()
@@ -77,6 +79,7 @@ pub fn blake_threshold_pa(r0_m: f64, p0_pa: f64, sigma_n_m: f64) -> f64 {
 ///
 /// # Reference
 /// Rayleigh (1917), *Philos. Mag.* 34, 94.
+#[must_use]
 #[inline]
 pub fn rayleigh_collapse_time_s(rmax_m: f64, p_inf_pa: f64, rho: f64) -> f64 {
     if !(rmax_m.is_finite()
@@ -119,6 +122,7 @@ pub fn rayleigh_collapse_time_s(rmax_m: f64, p_inf_pa: f64, rho: f64) -> f64 {
 ///
 /// # Reference
 /// Plesset & Prosperetti (1977), *Annu. Rev. Fluid Mech.* 9, 145.
+#[must_use]
 pub fn rayleigh_plesset_rk4(
     r0_m: f64,
     rdot0: f64,
@@ -203,6 +207,7 @@ pub fn rayleigh_plesset_rk4(
 ///
 /// # Reference
 /// Keller & Miksis (1980), *J. Acoust. Soc. Am.* 68, 628.
+#[must_use]
 pub fn keller_miksis_rk4(
     r0_m: f64,
     rdot0: f64,

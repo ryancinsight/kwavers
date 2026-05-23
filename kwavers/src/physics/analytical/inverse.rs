@@ -27,6 +27,7 @@
 ///
 /// # Reference
 /// Ihlenburg (1998) *Finite Element Analysis of Acoustic Scattering*, ch. 1.
+#[must_use]
 pub fn helmholtz_1d_fd_matrix(n: usize, k: f64, dx: f64) -> Vec<f64> {
     let mut mat = vec![0.0_f64; n * n];
     let inv_h2 = 1.0 / (dx * dx);
@@ -65,6 +66,7 @@ pub fn helmholtz_1d_fd_matrix(n: usize, k: f64, dx: f64) -> Vec<f64> {
 ///
 /// # Reference
 /// Golub & Van Loan (2013) *Matrix Computations*, §8.6.
+#[must_use]
 pub fn matrix_singular_values(matrix_flat: &[f64], nrows: usize, ncols: usize) -> Vec<f64> {
     // Compute AᵀA (ncols × ncols) then its eigenvalues
     let k = ncols;
@@ -106,6 +108,7 @@ pub fn matrix_singular_values(matrix_flat: &[f64], nrows: usize, ncols: usize) -
 ///
 /// # Reference
 /// Hansen (2010) *Discrete Ill-Posed Problems*, ch. 4.
+#[must_use]
 pub fn tikhonov_lcurve(
     a_flat: &[f64],
     b: &[f64],
@@ -177,6 +180,7 @@ pub fn tikhonov_lcurve(
 ///
 /// # Reference
 /// Born & Wolf (1999) *Principles of Optics*, §13.1; Born (1926) approximation.
+#[must_use]
 pub fn born_inversion_regularized(
     g_real: &[f64],
     g_imag: &[f64],
@@ -260,6 +264,7 @@ pub fn born_inversion_regularized(
 ///
 /// # Reference
 /// Tarantola (2005) *Inverse Problem Theory*, ch. 6.
+#[must_use]
 pub fn adjoint_gradient_convergence(n_iter: usize, initial_error: f64, decay: f64) -> Vec<f64> {
     (0..n_iter)
         .map(|i| initial_error * decay.powi(i as i32))

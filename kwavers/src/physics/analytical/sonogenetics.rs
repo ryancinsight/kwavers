@@ -20,6 +20,7 @@
 ///
 /// # Reference
 /// Ibsen et al. (2015), *Nat. Commun.* 6, 8264.
+#[must_use]
 pub fn hill_activation_probability(
     pressure_arr: &[f64],
     p_threshold_pa: f64,
@@ -108,6 +109,7 @@ pub fn radiation_force_1d(intensity_w_m2: &[f64], alpha_np_m: f64, c: f64) -> Ve
 ///
 /// # Reference
 /// Eckart (1948), *Phys. Rev.* 73, 68.
+#[must_use]
 #[inline]
 pub fn acoustic_streaming_velocity(
     i_w_m2: f64,

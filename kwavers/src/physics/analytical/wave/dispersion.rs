@@ -9,6 +9,7 @@
 ///
 /// # Reference
 /// Taflove & Hagness (2005) *Computational Electrodynamics*, §4.5.
+#[must_use]
 pub fn fdtd_phase_error_1d(kh_arr: &[f64], cfl: f64) -> Vec<f64> {
     kh_arr
         .iter()
@@ -32,6 +33,7 @@ pub fn fdtd_phase_error_1d(kh_arr: &[f64], cfl: f64) -> Vec<f64> {
 ///
 /// # Reference
 /// Liu (1997), *J. Comput. Phys.* 131, 306.
+#[must_use]
 #[inline]
 pub fn pstd_phase_error(kh_arr: &[f64]) -> Vec<f64> {
     vec![0.0; kh_arr.len()]
@@ -48,6 +50,7 @@ pub fn pstd_phase_error(kh_arr: &[f64]) -> Vec<f64> {
 ///
 /// # Reference
 /// Tabei et al. (2002), *J. Acoust. Soc. Am.* 111, 53.
+#[must_use]
 pub fn kspace_correction_error(kh_arr: &[f64], cfl: f64) -> Vec<f64> {
     let sinc = |x: f64| -> f64 {
         if x.abs() < 1e-12 {
@@ -78,6 +81,7 @@ pub fn kspace_correction_error(kh_arr: &[f64], cfl: f64) -> Vec<f64> {
 ///
 /// # Reference
 /// Courant, Friedrichs & Lewy (1928).
+#[must_use]
 #[inline]
 pub fn fdtd_cfl_limit(ndim: u32) -> f64 {
     1.0 / (ndim as f64).sqrt()

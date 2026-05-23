@@ -22,6 +22,7 @@ use std::f64::consts::PI;
 ///
 /// # Reference
 /// O'Neil (1949), *J. Acoust. Soc. Am.* 21, 516.
+#[must_use]
 pub fn circular_piston_directivity(theta_rad: &[f64], ka: f64) -> Vec<f64> {
     theta_rad
         .iter()
@@ -56,6 +57,7 @@ pub fn circular_piston_directivity(theta_rad: &[f64], ka: f64) -> Vec<f64> {
 ///
 /// # Reference
 /// Van Trees (2002) *Optimum Array Processing*, §2.2.
+#[must_use]
 pub fn linear_array_factor(
     theta_rad: &[f64],
     k: f64,
@@ -90,6 +92,7 @@ pub fn linear_array_factor(
 /// * `k` – wavenumber [rad/m]
 /// * `d_m` – element pitch [m]
 /// * `steer_rad` – steering angle [rad]
+#[must_use]
 pub fn grating_lobe_angles(k: f64, d_m: f64, steer_rad: f64) -> Vec<f64> {
     let lambda_over_d = 2.0 * PI / (k * d_m);
     let sin_steer = steer_rad.sin();
@@ -122,6 +125,7 @@ pub fn grating_lobe_angles(k: f64, d_m: f64, steer_rad: f64) -> Vec<f64> {
 ///
 /// # Reference
 /// Harris (1978), *Proc. IEEE* 66, 51.
+#[must_use]
 pub fn apodization_weights(n: usize, window_type: &str) -> Vec<f64> {
     let nm1 = (n - 1) as f64;
     match window_type {
@@ -172,6 +176,7 @@ pub fn apodization_weights(n: usize, window_type: &str) -> Vec<f64> {
 /// * `elem_x`, `elem_z` – element positions [m]
 /// * `x_f`, `z_f` – focal point [m]
 /// * `c` – sound speed [m/s]
+#[must_use]
 pub fn delay_law_focus_2d(elem_x: &[f64], elem_z: &[f64], x_f: f64, z_f: f64, c: f64) -> Vec<f64> {
     assert_eq!(
         elem_x.len(),
@@ -208,6 +213,7 @@ pub fn delay_law_focus_2d(elem_x: &[f64], elem_z: &[f64], x_f: f64, z_f: f64, c:
 /// * `c` – sound speed [m/s]
 /// * `weights` – apodization weights (length == n_elements)
 /// * `delays` – steering delays [s] (length == n_elements)
+#[must_use]
 pub fn beam_pattern_2d(
     x_arr: &[f64],
     z_arr: &[f64],
@@ -262,6 +268,7 @@ pub fn beam_pattern_2d(
 ///
 /// # Reference
 /// O'Neil (1949), *J. Acoust. Soc. Am.* 21, 516.
+#[must_use]
 pub fn circular_piston_onaxis(
     z_arr: &[f64],
     radius_m: f64,
@@ -299,6 +306,7 @@ pub fn circular_piston_onaxis(
 ///
 /// # Reference
 /// O'Neil (1949), *J. Acoust. Soc. Am.* 21, 516, eq. (8).
+#[must_use]
 pub fn focused_bowl_onaxis(
     z_arr: &[f64],
     bowl_radius_m: f64,
@@ -340,6 +348,7 @@ pub fn focused_bowl_onaxis(
 ///
 /// # Reference
 /// Schafer & Rabiner (1973), *Proc. IEEE* 61, 692.
+#[must_use]
 pub fn bli_stencil_weights(delta: &[f64], n_stencil: usize) -> Vec<Vec<f64>> {
     assert!(n_stencil % 2 == 0, "n_stencil must be even");
     let half = (n_stencil / 2) as i64;

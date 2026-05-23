@@ -418,10 +418,22 @@ fn pstd_spectral_green_adjoint_satisfies_inner_product_identity() {
         .collect::<Vec<_>>();
     let boundary = AbsorbingBoundary::disabled();
     let gx = apply_shifted_green_pstd_spectral_with_boundary(
-        grid, 11.0, 0.25, &x, 1.0e-7, SOUND_SPEED_WATER_SIM, boundary,
+        grid,
+        11.0,
+        0.25,
+        &x,
+        1.0e-7,
+        SOUND_SPEED_WATER_SIM,
+        boundary,
     );
     let ghy = apply_shifted_green_pstd_spectral_adjoint_with_boundary(
-        grid, 11.0, 0.25, &y, 1.0e-7, SOUND_SPEED_WATER_SIM, boundary,
+        grid,
+        11.0,
+        0.25,
+        &y,
+        1.0e-7,
+        SOUND_SPEED_WATER_SIM,
+        boundary,
     );
     let lhs = inner_product(&gx, &y);
     let rhs = inner_product(&x, &ghy);

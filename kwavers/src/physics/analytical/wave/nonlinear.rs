@@ -17,6 +17,7 @@ use super::bessel::jn;
 ///
 /// # Reference
 /// Hamilton & Blackstock (1998) *Nonlinear Acoustics*, §3.3.
+#[must_use]
 pub fn fubini_harmonic_amplitude(n: u32, sigma: f64) -> f64 {
     let n_f = n as f64;
     let x = n_f * sigma;
@@ -29,6 +30,7 @@ pub fn fubini_harmonic_amplitude(n: u32, sigma: f64) -> f64 {
 /// Compute the Fubini harmonic spectrum for harmonics n = 1..=n_max at parameter σ.
 ///
 /// Returns a `Vec<f64>` of length `n_max` where index 0 corresponds to n = 1.
+#[must_use]
 pub fn fubini_harmonic_spectrum(n_max: u32, sigma: f64) -> Vec<f64> {
     (1..=n_max)
         .map(|n| fubini_harmonic_amplitude(n, sigma))
@@ -50,6 +52,7 @@ pub fn fubini_harmonic_spectrum(n_max: u32, sigma: f64) -> Vec<f64> {
 ///
 /// # Reference
 /// Blackstock (1966), *J. Acoust. Soc. Am.* 39, 1019.
+#[must_use]
 #[inline]
 pub fn shock_formation_distance(p0_pa: f64, f0_hz: f64, c0: f64, rho0: f64, beta: f64) -> f64 {
     let omega = 2.0 * PI * f0_hz;
@@ -81,6 +84,7 @@ pub fn shock_formation_distance(p0_pa: f64, f0_hz: f64, c0: f64, rho0: f64, beta
 ///
 /// # Reference
 /// Hamilton & Blackstock (1998) *Nonlinear Acoustics*, ch. 4.
+#[must_use]
 pub fn westervelt_harmonic_evolution(
     z_arr: &[f64],
     p0: f64,

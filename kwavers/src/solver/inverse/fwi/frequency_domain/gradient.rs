@@ -97,13 +97,12 @@ fn accumulate_dense_cbs_frequency_gradient(
     let slowness = slowness_s_per_m.iter().copied().collect::<Vec<_>>();
 
     for transmit in 0..rows {
-        let source_density =
-            source_density_for_operator(
-                grid,
-                &array.cylindrical_source(transmit),
-                reference_wavenumber,
-                operator,
-            )?;
+        let source_density = source_density_for_operator(
+            grid,
+            &array.cylindrical_source(transmit),
+            reference_wavenumber,
+            operator,
+        )?;
         let forward_solution = solve_volume_field_with_operator(
             grid,
             reference_wavenumber,

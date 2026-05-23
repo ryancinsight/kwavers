@@ -41,6 +41,7 @@ use std::f64::consts::PI;
 ///
 /// # Reference
 /// Pennes (1948), *J. Appl. Physiol.* 1, 93.
+#[must_use]
 pub fn bioheat_focal_temperature_rise(
     t_arr: &[f64],
     acoustic_power_w: f64,
@@ -92,6 +93,7 @@ pub fn bioheat_focal_temperature_rise(
 /// # Reference
 /// O'Neil HT (1949), *J. Acoust. Soc. Am.* 21, 516–526.
 /// Hynynen K (1991), *Ultrasound Med. Biol.* 17, 157–169.
+#[must_use]
 #[inline]
 pub fn hifu_focal_pressure_gain(aperture_m: f64, f_number: f64, freq_hz: f64, c: f64) -> f64 {
     PI * aperture_m * freq_hz / (c * 4.0 * f_number)
@@ -124,6 +126,7 @@ pub fn hifu_focal_pressure_gain(aperture_m: f64, f_number: f64, freq_hz: f64, c:
 ///
 /// # Reference
 /// O'Neil (1949); Soneson (2011), *J. Acoust. Soc. Am.* 130, EL158.
+#[must_use]
 pub fn gaussian_power_deposition_2d(
     r_arr: &[f64],
     z_arr: &[f64],

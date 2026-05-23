@@ -24,6 +24,7 @@ use std::f64::consts::PI;
 ///
 /// # Reference
 /// Del Grosso & Mader (1972), *J. Acoust. Soc. Am.* 52, 1442.
+#[must_use]
 pub fn water_sound_speed_temperature(t_celsius: &[f64]) -> Vec<f64> {
     t_celsius
         .iter()
@@ -40,6 +41,7 @@ pub fn water_sound_speed_temperature(t_celsius: &[f64]) -> Vec<f64> {
 ///
 /// # Reference
 /// Kell (1975), *J. Chem. Eng. Data* 20, 97.
+#[must_use]
 pub fn water_density_temperature(t_celsius: &[f64]) -> Vec<f64> {
     t_celsius
         .iter()
@@ -71,6 +73,7 @@ pub fn water_density_temperature(t_celsius: &[f64]) -> Vec<f64> {
 ///
 /// # Reference
 /// Hamilton & Blackstock (1998) *Nonlinear Acoustics*, App. B.
+#[must_use]
 pub fn ba_parameter(medium: &str) -> f64 {
     match medium {
         "water" => 5.2,
@@ -109,6 +112,7 @@ pub fn ba_parameter(medium: &str) -> f64 {
 ///
 /// # Reference
 /// Duck (1990) *Physical Properties of Tissue*, Academic Press.
+#[must_use]
 pub fn tissue_absorption_db_cm(f_mhz: &[f64], tissue: &str) -> Vec<f64> {
     let (alpha0, y) = tissue_absorption_params(tissue);
     f_mhz.iter().map(|&f| alpha0 * f.powf(y)).collect()
@@ -133,6 +137,7 @@ pub fn tissue_absorption_db_cm(f_mhz: &[f64], tissue: &str) -> Vec<f64> {
 ///
 /// # Reference
 /// Szabo & Wu (2000), *J. Acoust. Soc. Am.* 107, 2437.
+#[must_use]
 pub fn kramers_kronig_sound_speed(
     f_hz: &[f64],
     alpha0_np_m_hzy: f64,
@@ -163,6 +168,7 @@ pub fn kramers_kronig_sound_speed(
 /// Returns `(c [m/s], ρ [kg/m³], α₀ [dB/cm/MHz^y], y, B/A)`.
 ///
 /// Sources: Duck (1990) and Szabo (2014) *Diagnostic Ultrasound Imaging*.
+#[must_use]
 pub fn tissue_properties(tissue: &str) -> (f64, f64, f64, f64, f64) {
     // (c [m/s], rho [kg/m3], alpha0 [dB/cm/MHz^y], y, B/A)
     match tissue {

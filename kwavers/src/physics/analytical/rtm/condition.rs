@@ -12,6 +12,7 @@
 ///
 /// # Reference
 /// Claerbout (1971), *Geophysics* 36, 467.
+#[must_use]
 pub fn rtm_imaging_condition(
     p_fwd_real: &[f64],
     p_fwd_imag: &[f64],
@@ -45,6 +46,7 @@ pub fn rtm_imaging_condition(
 ///
 /// # Reference
 /// Marty et al. (2021), *Phys. Rev. Applied* 15, 024061.
+#[must_use]
 pub fn rtm_multi_frequency_fusion(images: &[Vec<f64>]) -> Vec<f64> {
     if images.is_empty() {
         return Vec::new();
@@ -84,6 +86,7 @@ pub fn rtm_multi_frequency_fusion(images: &[Vec<f64>]) -> Vec<f64> {
 /// # Reference
 /// Guitton, Valenciano & Bevc (2007), *Geophysics* 72, S35.
 /// Whitmore (1983), *SEG Annual Meeting* 827.
+#[must_use]
 pub fn rtm_source_normalized_condition(
     p_fwd_real: &[f64],
     p_fwd_imag: &[f64],
@@ -121,6 +124,7 @@ pub fn rtm_source_normalized_condition(
 ///
 /// # Reference
 /// Margrave (2003), *CREWES Research Report* §3.2 (aperture weighting in migration).
+#[must_use]
 pub fn rtm_aperture_weighted_fusion(images: &[Vec<f64>], weights: &[f64]) -> Vec<f64> {
     if images.is_empty() {
         return Vec::new();
