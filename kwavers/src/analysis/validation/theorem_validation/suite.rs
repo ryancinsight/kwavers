@@ -4,6 +4,7 @@ use super::{TheoremValidation, TheoremValidator};
 use crate::core::constants::fundamental::{
     SOUND_SPEED_AIR, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM,
 };
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::core::constants::thermodynamic::ROOM_TEMPERATURE_K;
 use ndarray::Array1;
 use num_complex::Complex64;
@@ -63,7 +64,7 @@ impl TheoremValidator {
         results.push(Self::validate_pinn_convergence(1000, 50, 0.01, 1.0));
 
         // Kramers-Kronig with power-law absorption
-        let freqs = vec![1e6, 2e6, 5e6, 10e6];
+        let freqs = vec![MHZ_TO_HZ, 2.0 * MHZ_TO_HZ, 5.0 * MHZ_TO_HZ, 10.0 * MHZ_TO_HZ];
         let alpha_0 = 0.1;
         let alpha_power = 1.5;
         let c0 = SOUND_SPEED_WATER_SIM;
@@ -88,7 +89,7 @@ impl TheoremValidator {
         ));
 
         results.push(Self::validate_sa_resolution(
-            5e6,
+            5.0 * MHZ_TO_HZ,
             SOUND_SPEED_TISSUE,
             30.0,
             0.0003,

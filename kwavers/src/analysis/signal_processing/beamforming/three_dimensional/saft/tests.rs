@@ -4,6 +4,7 @@ use super::super::{Beamforming3dApodizationWindow, BeamformingAlgorithm3D};
 use super::config::SaftConfig;
 use super::processor::{distance3, SaftProcessor};
 use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 
 fn make_processor(nx: usize, ny: usize, nz: usize, ntx: usize, nrx: usize) -> SaftProcessor {
     use super::super::config::BeamformingConfig3D;
@@ -80,7 +81,7 @@ fn test_coherence_factor() {
 
 #[test]
 fn test_demodulate_phase_correctness() {
-    let f0 = 2.5e6_f64;
+    let f0 = 2.5 * MHZ_TO_HZ;
     let s = 1.0_f64;
 
     let (i0, q0) = SaftProcessor::demodulate(s, f0, 0.0);
@@ -120,7 +121,7 @@ fn test_reconstruct_volume_basic() {
 
 #[test]
 fn test_demodulate_envelope_invariant() {
-    let f0 = 2.5e6_f64;
+    let f0 = 2.5 * MHZ_TO_HZ;
     let s = 0.7_f64;
     for tau_ns in [0u64, 25, 50, 75, 100] {
         let tau = tau_ns as f64 * 1e-9;

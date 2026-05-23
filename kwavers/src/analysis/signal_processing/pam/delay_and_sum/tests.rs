@@ -201,7 +201,7 @@ fn test_event_detection() {
 fn test_event_detection_with_peak_frequency() {
     let sensors = vec![[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]];
     let config = DelayAndSumConfig {
-        sampling_frequency: 10e6,
+        sampling_frequency: 10.0 * MHZ_TO_HZ,
         window_size: 256,
         detection_threshold: 0.5,
         ..Default::default()

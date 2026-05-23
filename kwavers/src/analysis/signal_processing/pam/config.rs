@@ -93,7 +93,7 @@ impl Default for PamBeamformingConfig {
         Self {
             core: BeamformingCoreConfig::default(),
             method: PamBeamformingMethod::DelayAndSum,
-            frequency_range: (20e3, 10e6),
+            frequency_range: (20e3, 10.0 * MHZ_TO_HZ),
             spatial_resolution: 1e-3,
             apodization: ApodizationType::Hamming,
             focal_point: [0.0, 0.0, 0.0],

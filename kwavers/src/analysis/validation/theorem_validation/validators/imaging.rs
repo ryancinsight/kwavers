@@ -1,6 +1,7 @@
 //! Imaging resolution and signal quality theorem validators.
 
 use super::super::{TheoremValidation, TheoremValidator};
+use crate::core::constants::numerical::MHZ_TO_HZ;
 
 impl TheoremValidator {
     /// Validate MUSIC algorithm resolution theorem (Rayleigh criterion + Cramér-Rao bound)
@@ -49,7 +50,7 @@ impl TheoremValidator {
             confidence: if passed { 0.9 } else { 0.5 },
             details: format!(
                 "Bandwidth: {:.1} MHz, c: {:.0} m/s, Theoretical: {:.2e} m, Measured: {:.2e} m, Ratio: {:.1}x",
-                bandwidth / 1e6, sound_speed, theoretical_resolution, measured_resolution,
+                bandwidth / MHZ_TO_HZ, sound_speed, theoretical_resolution, measured_resolution,
                 measured_resolution / theoretical_resolution
             ),
         }

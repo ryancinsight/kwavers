@@ -206,12 +206,13 @@ mod tests {
         let focal_points = Array2::from_shape_vec((1, 3), vec![0.0, 0.0, 0.02]).unwrap();
 
         use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
+        use crate::core::constants::numerical::MHZ_TO_HZ;
         let result = beamform_cpu(
             &rf_data,
             &sensor_positions,
             &focal_points,
             None,
-            10e6,
+            10.0 * MHZ_TO_HZ,
             SOUND_SPEED_TISSUE,
         );
 

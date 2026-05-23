@@ -54,6 +54,7 @@ pub trait Validatable {
 // - Szabo (1994) for fractional absorption
 // - published benchmarks for accuracy
 
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::domain::grid::Grid;
 use log::info;
 
@@ -199,10 +200,10 @@ pub fn validate_all(
     reports.push(validate_cfl_condition(grid, dt, c_max));
 
     // Dispersion validation
-    reports.push(validate_fdtd_dispersion(grid, dt, 1e6, c_max));
+    reports.push(validate_fdtd_dispersion(grid, dt, MHZ_TO_HZ, c_max));
 
     // Absorption validation
-    reports.push(validate_absorption_model(1e6, 0.0, medium, grid));
+    reports.push(validate_absorption_model(MHZ_TO_HZ, 0.0, medium, grid));
 
     // Print summary
     info!("=== VALIDATION REPORT ===");
