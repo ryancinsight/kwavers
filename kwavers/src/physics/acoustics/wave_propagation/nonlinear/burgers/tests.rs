@@ -1,4 +1,5 @@
 use super::*;
+use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use crate::physics::acoustics::wave_propagation::NonlinearParameters;
 use std::f64::consts::PI;
 
@@ -134,8 +135,8 @@ fn aanonsen_fubini_harmonic_ratios() {
 #[test]
 fn burgers_returns_positive_attenuated_pressure() {
     let params = NonlinearParameters::soft_tissue();
-    let p0 = 1.0e6;
-    let f = 1.0e6;
+    let p0 = MPA_TO_PA;
+    let f = MHZ_TO_HZ;
     let z = 0.01;
 
     let p_z = burgers_equation(p0, f, z, &params);
@@ -147,7 +148,7 @@ fn burgers_returns_positive_attenuated_pressure() {
 fn burgers_at_zero_distance() {
     let params = NonlinearParameters::water();
     let p0 = 5.0e5;
-    let f = 1.0e6;
+    let f = MHZ_TO_HZ;
     let p_z = burgers_equation(p0, f, 0.0, &params);
     assert!(
         (p_z - p0).abs() < p0 * 1e-12,

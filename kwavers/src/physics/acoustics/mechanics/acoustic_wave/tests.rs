@@ -1,5 +1,6 @@
 use super::*;
 use crate::core::constants::fundamental::B_OVER_A_WATER;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::core::constants::SOUND_SPEED_WATER_SIM;
 use crate::domain::grid::Grid;
 use std::f64::consts::PI;
@@ -55,7 +56,7 @@ fn test_acoustic_diffusivity_formula() {
     // Test case 1: Zero absorption should give zero diffusivity
     let alpha = 0.0;
     let c: f64 = SOUND_SPEED_WATER_SIM;
-    let freq = 1e6;
+    let freq = MHZ_TO_HZ;
     let omega = 2.0 * PI * freq;
     let expected = 2.0 * alpha * c.powi(3) / (omega * omega);
     assert_eq!(expected, 0.0);
@@ -63,10 +64,10 @@ fn test_acoustic_diffusivity_formula() {
     // Test case 2: Non-zero values
     let alpha = 0.5;
     let c: f64 = SOUND_SPEED_WATER_SIM;
-    let freq = 1e6;
+    let freq = MHZ_TO_HZ;
     let omega = 2.0 * PI * freq;
     let diffusivity = 2.0 * alpha * c.powi(3) / (omega * omega);
-    let expected = 2.0 * 0.5 * SOUND_SPEED_WATER_SIM.powi(3) / (2.0 * PI * 1e6).powi(2);
+    let expected = 2.0 * 0.5 * SOUND_SPEED_WATER_SIM.powi(3) / (2.0 * PI * MHZ_TO_HZ).powi(2);
     assert!(
         (diffusivity - expected).abs() < 1e-10,
         "Formula calculation mismatch: got {}, expected {}",
@@ -75,7 +76,7 @@ fn test_acoustic_diffusivity_formula() {
     );
 
     // Test case 3: Frequency scaling — doubling ω halves δ by factor 4
-    let freq2 = 2e6;
+    let freq2 = 2.0 * MHZ_TO_HZ;
     let omega2 = 2.0 * PI * freq2;
     let diffusivity2 = 2.0 * alpha * c.powi(3) / (omega2 * omega2);
     assert!(

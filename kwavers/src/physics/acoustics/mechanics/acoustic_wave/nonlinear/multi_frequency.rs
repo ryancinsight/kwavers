@@ -4,6 +4,8 @@
 
 use ndarray::Array1;
 
+use crate::core::constants::numerical::MHZ_TO_HZ;
+
 /// Configuration for multi-frequency acoustic simulations.
 ///
 /// Enables analysis at multiple frequencies simultaneously, useful for:
@@ -27,7 +29,7 @@ pub struct MultiFrequencyConfig {
 impl Default for MultiFrequencyConfig {
     fn default() -> Self {
         Self {
-            frequencies: vec![1e6], // Default 1 MHz
+            frequencies: vec![MHZ_TO_HZ], // Default 1 MHz
             weights: vec![1.0],
             track_harmonics: false,
             max_harmonic_order: 5,
@@ -164,11 +166,12 @@ impl MultiFrequencyConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::numerical::MHZ_TO_HZ;
 
     #[test]
     fn default_produces_single_1mhz_component() {
         let cfg = MultiFrequencyConfig::default();
-        assert_eq!(cfg.frequencies, vec![1e6]);
+        assert_eq!(cfg.frequencies, vec![MHZ_TO_HZ]);
         assert_eq!(cfg.weights, vec![1.0]);
         assert!(!cfg.track_harmonics);
         assert_eq!(cfg.max_harmonic_order, 5);
@@ -177,7 +180,7 @@ mod tests {
     /// `new` with `None` weights produces equal-weight components.
     #[test]
     fn new_with_none_weights_distributes_equally() {
-        let freqs = vec![1e6, 2e6, 3e6];
+        let freqs = vec![MHZ_TO_HZ, 2.0 * MHZ_TO_HZ, 3.0 * MHZ_TO_HZ];
         let cfg = MultiFrequencyConfig::new(freqs.clone(), None);
         assert_eq!(cfg.frequencies, freqs);
         assert_eq!(cfg.weights.len(), 3);
@@ -190,7 +193,7 @@ mod tests {
     /// `new` with explicit weights stores them verbatim.
     #[test]
     fn new_with_explicit_weights_stores_them_verbatim() {
-        let freqs = vec![1e6, 2e6];
+        let freqs = vec![MHZ_TO_HZ, 2.0 * MHZ_TO_HZ];
         let weights = vec![0.7, 0.3];
         let cfg = MultiFrequencyConfig::new(freqs, Some(weights.clone()));
         assert_eq!(cfg.weights, weights);
@@ -200,7 +203,7 @@ mod tests {
     /// summing to 1 and sets `track_harmonics = true`.
     #[test]
     fn for_harmonics_produces_correct_frequency_series() {
-        let fundamental = 1e6_f64;
+        let fundamental = MHZ_TO_HZ;
         let n = 3usize;
         let cfg = MultiFrequencyConfig::for_harmonics(fundamental, n);
         assert_eq!(cfg.frequencies.len(), n);
@@ -221,7 +224,7 @@ mod tests {
     /// `broadband` produces endpoints matching min/max frequency and num_points entries.
     #[test]
     fn broadband_endpoints_and_count_are_correct() {
-        let (min_f, max_f, n) = (1e6, 5e6, 5usize);
+        let (min_f, max_f, n) = (MHZ_TO_HZ, 5.0 * MHZ_TO_HZ, 5usize);
         let cfg = MultiFrequencyConfig::broadband(min_f, max_f, n);
         assert_eq!(cfg.frequencies.len(), n);
         assert!((cfg.frequencies[0] - min_f).abs() < 1.0);
@@ -252,7 +255,7 @@ mod tests {
     #[test]
     fn validate_rejects_mismatched_lengths() {
         let cfg = MultiFrequencyConfig {
-            frequencies: vec![1e6, 2e6],
+            frequencies: vec![MHZ_TO_HZ, 2.0 * MHZ_TO_HZ],
             weights: vec![1.0],
             ..Default::default()
         };
@@ -262,16 +265,16 @@ mod tests {
     /// `fundamental_frequency` returns the minimum frequency.
     #[test]
     fn fundamental_frequency_returns_minimum() {
-        let cfg = MultiFrequencyConfig::new(vec![3e6, 1e6, 2e6], None);
+        let cfg = MultiFrequencyConfig::new(vec![3.0 * MHZ_TO_HZ, MHZ_TO_HZ, 2.0 * MHZ_TO_HZ], None);
         let f0 = cfg.fundamental_frequency().unwrap();
-        assert!((f0 - 1e6).abs() < 1.0);
+        assert!((f0 - MHZ_TO_HZ).abs() < 1.0);
     }
 
     /// `bandwidth` is max − min; single component → 0.
     #[test]
     fn bandwidth_is_max_minus_min() {
-        let cfg = MultiFrequencyConfig::new(vec![1e6, 5e6], None);
-        assert!((cfg.bandwidth() - 4e6).abs() < 1.0);
+        let cfg = MultiFrequencyConfig::new(vec![MHZ_TO_HZ, 5.0 * MHZ_TO_HZ], None);
+        assert!((cfg.bandwidth() - 4.0 * MHZ_TO_HZ).abs() < 1.0);
 
         let single = MultiFrequencyConfig::default();
         assert_eq!(single.bandwidth(), 0.0);

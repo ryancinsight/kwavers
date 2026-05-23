@@ -4,6 +4,7 @@ use super::*;
 use crate::core::constants::fundamental::{
     ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM,
 };
+use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 
 #[test]
 fn minnaert_water_air_bubble() {
@@ -48,7 +49,7 @@ fn rp_rk4_initial_condition() {
         10e-6,
         0.0,
         0.0,
-        1e6,
+        MPA_TO_PA,
         &t,
         ATMOSPHERIC_PRESSURE,
         DENSITY_WATER_NOMINAL,
@@ -68,7 +69,7 @@ fn km_rk4_length_matches() {
         10e-6,
         0.0,
         0.0,
-        1e6,
+        MPA_TO_PA,
         &t,
         ATMOSPHERIC_PRESSURE,
         DENSITY_WATER_NOMINAL,
@@ -84,22 +85,22 @@ fn km_rk4_length_matches() {
 
 #[test]
 fn mechanical_index_known_value() {
-    let mi = mechanical_index(-1e6, 1e6);
+    let mi = mechanical_index(-MPA_TO_PA, MHZ_TO_HZ);
     assert!((mi - 1.0).abs() < 1e-9, "mi={}", mi);
 }
 
 #[test]
 fn mechanical_index_scales_inversely_with_sqrt_freq() {
-    let mi_1 = mechanical_index(1e6, 1e6);
-    let mi_4 = mechanical_index(1e6, 4e6);
+    let mi_1 = mechanical_index(MPA_TO_PA, MHZ_TO_HZ);
+    let mi_4 = mechanical_index(MPA_TO_PA, 4.0 * MHZ_TO_HZ);
     assert!((mi_1 / mi_4 - 2.0).abs() < 1e-9, "ratio={}", mi_1 / mi_4);
 }
 
 #[test]
 fn mechanical_index_rejects_invalid_domain() {
-    assert_eq!(mechanical_index(1e6, 0.0), 0.0);
-    assert_eq!(mechanical_index(1e6, -1e6), 0.0);
-    assert_eq!(mechanical_index(f64::NAN, 1e6), 0.0);
+    assert_eq!(mechanical_index(MPA_TO_PA, 0.0), 0.0);
+    assert_eq!(mechanical_index(MPA_TO_PA, -MHZ_TO_HZ), 0.0);
+    assert_eq!(mechanical_index(f64::NAN, MHZ_TO_HZ), 0.0);
 }
 
 #[test]
@@ -109,7 +110,7 @@ fn icd_zero_driving_gives_zero() {
         10e-6,
         0.0,
         0.0,
-        1e6,
+        MPA_TO_PA,
         &t,
         ATMOSPHERIC_PRESSURE,
         DENSITY_WATER_NOMINAL,
@@ -172,7 +173,7 @@ fn lesion_radius_dimensional_consistency() {
 #[test]
 fn period_doubling_ratio_no_subharmonic_is_small() {
     let n = 512usize;
-    let f0 = 1e6_f64;
+    let f0 = MHZ_TO_HZ;
     let fs = f0 * n as f64 / 8.0;
     let dt = 1.0 / fs;
     let r: Vec<f64> = (0..n)
@@ -186,7 +187,7 @@ fn period_doubling_ratio_no_subharmonic_is_small() {
 #[test]
 fn period_doubling_ratio_dominant_subharmonic_exceeds_one() {
     let n = 512usize;
-    let f0 = 1e6_f64;
+    let f0 = MHZ_TO_HZ;
     let fs = f0 * n as f64 / 8.0;
     let dt = 1.0 / fs;
     let r: Vec<f64> = (0..n)

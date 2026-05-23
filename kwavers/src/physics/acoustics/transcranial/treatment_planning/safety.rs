@@ -94,6 +94,7 @@ fn peak_pressure_from_harmonic_intensity_field(acoustic_field: &Array3<f64>) -> 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
     use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 
     fn default_constraints() -> TranscranialSafetyConstraints {
@@ -102,11 +103,11 @@ mod tests {
 
     #[test]
     fn mechanical_index_from_intensity_matches_harmonic_pressure_contract() {
-        let pressure_pa = 1.0e6_f64;
+        let pressure_pa = MPA_TO_PA;
         let intensity = pressure_pa.powi(2) / (2.0 * DENSITY_BRAIN * SOUND_SPEED_BRAIN);
         let field = Array3::from_elem((2, 2, 2), intensity);
 
-        let mi = mechanical_index_from_harmonic_intensity_field(&field, 1.0e6);
+        let mi = mechanical_index_from_harmonic_intensity_field(&field, MHZ_TO_HZ);
 
         assert!((mi - 1.0).abs() < 1.0e-12);
     }
@@ -119,8 +120,8 @@ mod tests {
 
         assert!(mechanical_index_from_harmonic_intensity_field(&valid, 0.0).is_infinite());
         assert!(mechanical_index_from_harmonic_intensity_field(&valid, f64::NAN).is_infinite());
-        assert!(mechanical_index_from_harmonic_intensity_field(&negative, 1.0e6).is_infinite());
-        assert!(mechanical_index_from_harmonic_intensity_field(&nonfinite, 1.0e6).is_infinite());
+        assert!(mechanical_index_from_harmonic_intensity_field(&negative, MHZ_TO_HZ).is_infinite());
+        assert!(mechanical_index_from_harmonic_intensity_field(&nonfinite, MHZ_TO_HZ).is_infinite());
     }
 
     #[test]
@@ -128,7 +129,7 @@ mod tests {
         let temperature = Array3::from_elem((2, 2, 2), BODY_TEMPERATURE_C);
         let acoustic_field = Array3::from_elem((2, 2, 2), 1.0);
         let constraints = default_constraints();
-        let mi = mechanical_index_from_harmonic_intensity_field(&acoustic_field, 1.0e6);
+        let mi = mechanical_index_from_harmonic_intensity_field(&acoustic_field, MHZ_TO_HZ);
 
         assert!(mi.is_finite());
         assert!(mi < constraints.max_mi);
@@ -136,7 +137,7 @@ mod tests {
         TreatmentPlanner::validate_safety_fields(
             &temperature,
             &acoustic_field,
-            1.0e6,
+            MHZ_TO_HZ,
             &constraints,
         )
         .expect("finite low-intensity field must satisfy safety constraints");
@@ -150,7 +151,7 @@ mod tests {
         let result = TreatmentPlanner::validate_safety_fields(
             &temperature,
             &acoustic_field,
-            1.0e6,
+            MHZ_TO_HZ,
             &default_constraints(),
         );
 
@@ -166,7 +167,7 @@ mod tests {
         let result = TreatmentPlanner::validate_safety_fields(
             &temperature,
             &acoustic_field,
-            -1.0e6,
+            -MHZ_TO_HZ,
             &default_constraints(),
         );
 
@@ -182,7 +183,7 @@ mod tests {
         let result = TreatmentPlanner::validate_safety_fields(
             &temperature,
             &acoustic_field,
-            1.0e6,
+            MHZ_TO_HZ,
             &default_constraints(),
         );
 

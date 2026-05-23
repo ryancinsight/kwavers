@@ -211,6 +211,7 @@ fn cosine_window(n: usize, a0: f64, a1: f64) -> Vec<f64> {
 mod tests {
     use super::*;
     use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use crate::core::constants::numerical::MHZ_TO_HZ;
     use ndarray::{array, Array2};
 
     /// Analytical sanity check: a single Gaussian pulse emitted from a point
@@ -222,7 +223,7 @@ mod tests {
     #[test]
     fn point_source_localizes_at_true_position() {
         let c = SOUND_SPEED_WATER_SIM;
-        let fs = 5.0e6_f64;
+        let fs = 5.0 * MHZ_TO_HZ;
         let dt = 1.0 / fs;
 
         // Single point source at (depth=10mm, lateral=0).
@@ -311,7 +312,7 @@ mod tests {
         let grid_points = array![[0.0, 0.0, 0.0]];
         let cfg = ImagingDasConfig::new(
             SOUND_SPEED_WATER_SIM,
-            1e6,
+            MHZ_TO_HZ,
             ImagingDasApodization::Rectangular,
         )
         .unwrap();

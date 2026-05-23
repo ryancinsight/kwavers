@@ -14,8 +14,8 @@ use super::super::types::{GridIndex, Nonlinear3dAperture, SourceDomain};
 use super::super::Nonlinear3dConfig;
 use super::Point3;
 use crate::clinical::therapy::theranostic_guidance::AnatomyKind;
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
-use crate::core::constants::numerical::MHZ_TO_HZ;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
+use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 
 /// Linear-baseline negative-control for the Westervelt nonlinearity:
 /// with `β = 0` the Westervelt equation reduces to the linear wave equation,
@@ -35,7 +35,7 @@ fn linear_westervelt_with_beta_zero_produces_symmetric_pressure_trace_within_fdt
     let n = 24;
     let spacing_m = 4.0e-4_f64;
     let c0 = SOUND_SPEED_WATER_SIM;
-    let rho0 = 1000.0_f64;
+    let rho0 = DENSITY_WATER_NOMINAL;
     let cells = n * n * n;
     let speed = vec![c0; cells];
     let density = vec![rho0; cells];
@@ -72,7 +72,7 @@ fn linear_westervelt_with_beta_zero_produces_symmetric_pressure_trace_within_fdt
 
     let mut config = Nonlinear3dConfig::new(AnatomyKind::Liver);
     config.frequency_hz = MHZ_TO_HZ;
-    config.source_pressure_pa = 5.0e6;
+    config.source_pressure_pa = 5.0 * MPA_TO_PA;
     config.cycles = 12.0;
     config.cfl = 0.4;
     let dt = config.cfl * spacing_m / (c0 * 3.0_f64.sqrt());
@@ -145,7 +145,7 @@ fn westervelt_steepening_signature_scales_linearly_with_beta_per_weak_nonlinear_
     let n = 24;
     let spacing_m = 4.0e-4_f64;
     let c0 = SOUND_SPEED_WATER_SIM;
-    let rho0 = 1000.0_f64;
+    let rho0 = DENSITY_WATER_NOMINAL;
     let cells = n * n * n;
     let speed = vec![c0; cells];
     let density = vec![rho0; cells];
@@ -182,7 +182,7 @@ fn westervelt_steepening_signature_scales_linearly_with_beta_per_weak_nonlinear_
     config.frequency_hz = MHZ_TO_HZ;
     // Use the same source pressure as the existing forward-steepening test
     // so the nonlinear contribution dominates the FDTD-dispersion bias.
-    config.source_pressure_pa = 5.0e6;
+    config.source_pressure_pa = 5.0 * MPA_TO_PA;
     config.cycles = 12.0;
     config.cfl = 0.4;
     let dt = config.cfl * spacing_m / (c0 * 3.0_f64.sqrt());

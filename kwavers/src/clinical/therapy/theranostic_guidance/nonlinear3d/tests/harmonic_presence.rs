@@ -39,8 +39,8 @@ use super::super::types::{GridIndex, Nonlinear3dAperture, SourceDomain};
 use super::super::Nonlinear3dConfig;
 use super::Point3;
 use crate::clinical::therapy::theranostic_guidance::AnatomyKind;
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
-use crate::core::constants::numerical::MHZ_TO_HZ;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
+use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 
 #[test]
 #[ignore = "Tier 2: Harmonic-generation presence check, ~10s runtime"]
@@ -53,7 +53,7 @@ fn westervelt_fdtd_point_source_generates_measurable_second_harmonic_content() {
     let cells = n * n * n;
     let spacing_m = 1.0e-4_f64; // 0.1 mm → 4.8 mm cube
     let c0 = SOUND_SPEED_WATER_SIM;
-    let rho0 = 1000.0_f64;
+    let rho0 = DENSITY_WATER_NOMINAL;
     let beta_nl = 10.0_f64;
     let frequency_hz = MHZ_TO_HZ;
     let omega = std::f64::consts::TAU * frequency_hz;
@@ -95,7 +95,7 @@ fn westervelt_fdtd_point_source_generates_measurable_second_harmonic_content() {
     let distance_m = (receiver_x - source_x) as f64 * spacing_m;
     let mut config = Nonlinear3dConfig::new(AnatomyKind::Liver);
     config.frequency_hz = frequency_hz;
-    config.source_pressure_pa = 5.0e6;
+    config.source_pressure_pa = 5.0 * MPA_TO_PA;
     config.cycles = 12.0;
     config.cfl = 0.4;
     let dt = config.cfl * spacing_m / (c0 * 3.0_f64.sqrt());

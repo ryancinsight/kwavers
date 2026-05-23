@@ -1,4 +1,5 @@
 use super::*;
+use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use ndarray::Array3;
 
@@ -30,10 +31,10 @@ fn test_safety_level_classification() {
 
 #[test]
 fn test_mechanical_index_calculation() {
-    let mut monitor = TranscranialSafetyMonitor::new((8, 8, 8), 0.01, 1e6);
+    let mut monitor = TranscranialSafetyMonitor::new((8, 8, 8), 0.01, MHZ_TO_HZ);
     let temperature = Array3::from_elem((8, 8, 8), BODY_TEMPERATURE_C);
     let mut pressure = Array3::zeros((8, 8, 8));
-    pressure[[4, 4, 4]] = 1e6; // 1 MPa
+    pressure[[4, 4, 4]] = MPA_TO_PA; // 1 MPa
 
     monitor.update_fields(&temperature, &pressure, 0.1).unwrap();
 
@@ -44,10 +45,10 @@ fn test_mechanical_index_calculation() {
 
 #[test]
 fn test_mechanical_index_uses_pressure_magnitude() {
-    let mut monitor = TranscranialSafetyMonitor::new((8, 8, 8), 0.01, 1e6);
+    let mut monitor = TranscranialSafetyMonitor::new((8, 8, 8), 0.01, MHZ_TO_HZ);
     let temperature = Array3::from_elem((8, 8, 8), BODY_TEMPERATURE_C);
     let mut pressure = Array3::zeros((8, 8, 8));
-    pressure[[4, 4, 4]] = -1e6;
+    pressure[[4, 4, 4]] = -MPA_TO_PA;
 
     monitor.update_fields(&temperature, &pressure, 0.1).unwrap();
 
@@ -60,7 +61,7 @@ fn test_mechanical_index_invalid_frequency_fails_closed() {
     let mut monitor = TranscranialSafetyMonitor::new((8, 8, 8), 0.01, 0.0);
     let temperature = Array3::from_elem((8, 8, 8), BODY_TEMPERATURE_C);
     let mut pressure = Array3::zeros((8, 8, 8));
-    pressure[[4, 4, 4]] = 1e6;
+    pressure[[4, 4, 4]] = MPA_TO_PA;
 
     let result = monitor.update_fields(&temperature, &pressure, 0.1);
 
@@ -71,7 +72,7 @@ fn test_mechanical_index_invalid_frequency_fails_closed() {
 
 #[test]
 fn test_mechanical_index_nonfinite_pressure_fails_closed() {
-    let mut monitor = TranscranialSafetyMonitor::new((8, 8, 8), 0.01, 1e6);
+    let mut monitor = TranscranialSafetyMonitor::new((8, 8, 8), 0.01, MHZ_TO_HZ);
     let temperature = Array3::from_elem((8, 8, 8), BODY_TEMPERATURE_C);
     let mut pressure = Array3::zeros((8, 8, 8));
     pressure[[4, 4, 4]] = f64::NAN;

@@ -1,4 +1,5 @@
 use super::*;
+use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use crate::physics::acoustics::wave_propagation::nonlinear::{
     NonlinearParameters, TissueHarmonicProperties,
 };
@@ -14,8 +15,8 @@ fn soft_tissue() -> NonlinearParameters {
 #[test]
 fn second_harmonic_positive_and_bounded() {
     let params = soft_tissue();
-    let p0 = 2.0e6;
-    let f = 2.0e6;
+    let p0 = 2.0 * MPA_TO_PA;
+    let f = 2.0 * MHZ_TO_HZ;
     let z = 0.05;
     let p2 = second_harmonic_amplitude(p0, f, z, &params);
     assert!(p2 > 0.0, "P₂ must be positive");
@@ -25,8 +26,8 @@ fn second_harmonic_positive_and_bounded() {
 #[test]
 fn second_harmonic_measurable_at_5cm() {
     let params = soft_tissue();
-    let p0 = 2.0e6;
-    let f = 2.0e6;
+    let p0 = 2.0 * MPA_TO_PA;
+    let f = 2.0 * MHZ_TO_HZ;
     let z = 0.05;
     let p2 = second_harmonic_amplitude(p0, f, z, &params);
     assert!(
@@ -38,7 +39,7 @@ fn second_harmonic_measurable_at_5cm() {
 #[test]
 fn second_harmonic_zero_at_source() {
     let params = water();
-    let p2 = second_harmonic_amplitude(1.0e6, 1.0e6, 0.0, &params);
+    let p2 = second_harmonic_amplitude(MPA_TO_PA, MHZ_TO_HZ, 0.0, &params);
     assert!(p2.abs() < 1e-6, "P₂(z=0) must be 0, got {p2}");
 }
 
@@ -46,7 +47,7 @@ fn second_harmonic_zero_at_source() {
 fn harmonic_order_hierarchy() {
     let params = water();
     let p0 = 5.0e5;
-    let f = 1.0e6;
+    let f = MHZ_TO_HZ;
     let z = 0.02;
     let p1 = nth_harmonic_amplitude(p0, f, z, 1, &params);
     let p2 = nth_harmonic_amplitude(p0, f, z, 2, &params);
@@ -83,7 +84,7 @@ fn aanonsen_1984_fubini_p2_over_p1_ratios() {
 #[test]
 fn thi_efficiency_maximum_at_optimal_depth() {
     let params = soft_tissue();
-    let f0 = 2.0e6;
+    let f0 = 2.0 * MHZ_TO_HZ;
     let alpha1 = params.attenuation_at_frequency(f0);
     let alpha2 = params.attenuation_at_frequency(2.0 * f0);
     let kappa = alpha1 + alpha2;
@@ -91,7 +92,7 @@ fn thi_efficiency_maximum_at_optimal_depth() {
 
     let props = TissueHarmonicProperties {
         fundamental_frequency: f0,
-        fundamental_pressure: 1.0e6,
+        fundamental_pressure: MPA_TO_PA,
         fractional_bandwidth: 0.6,
         f_number: 2.0,
         focal_depth: f_opt,
@@ -104,7 +105,7 @@ fn thi_efficiency_maximum_at_optimal_depth() {
 #[test]
 fn thi_efficiency_less_than_one_away_from_optimum() {
     let params = soft_tissue();
-    let f0 = 2.0e6;
+    let f0 = 2.0 * MHZ_TO_HZ;
     let alpha1 = params.attenuation_at_frequency(f0);
     let alpha2 = params.attenuation_at_frequency(2.0 * f0);
     let kappa = alpha1 + alpha2;
@@ -113,7 +114,7 @@ fn thi_efficiency_less_than_one_away_from_optimum() {
     for scale in [0.3, 0.5, 2.0, 5.0] {
         let props = TissueHarmonicProperties {
             fundamental_frequency: f0,
-            fundamental_pressure: 1.0e6,
+            fundamental_pressure: MPA_TO_PA,
             fractional_bandwidth: 0.6,
             f_number: 2.0,
             focal_depth: f_opt * scale,
@@ -131,13 +132,13 @@ fn optimal_frequency_in_medical_range() {
     let params = soft_tissue();
     let f_opt = optimal_harmonic_frequency(0.05, &params);
     assert!(
-        (1.0e6..=15.0e6).contains(&f_opt),
+        (MHZ_TO_HZ..=15.0 * MHZ_TO_HZ).contains(&f_opt),
         "f_opt = {f_opt:.2e} Hz must be in [1, 15] MHz"
     );
 }
 
 #[test]
 fn contrast_response_positive_finite() {
-    let r = contrast_harmonic_response(1.0e5, 2.0e6, 3.0e6);
+    let r = contrast_harmonic_response(1.0e5, 2.0 * MHZ_TO_HZ, 3.0 * MHZ_TO_HZ);
     assert!(r > 0.0 && r.is_finite());
 }

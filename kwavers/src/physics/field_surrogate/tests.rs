@@ -4,6 +4,7 @@
 
 use ndarray::Array3;
 
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use super::{
     helmholtz_residual_field, helmholtz_residual_kernel, helmholtz_residual_stats,
     place_kernel_at_focus, resample_trilinear, FocalKernel, KernelCube, HELMHOLTZ_C0_WATER,
@@ -260,7 +261,7 @@ fn test_helmholtz_residual_zero_on_plane_wave() {
     // Helmholtz equation exactly in the continuum limit. With finite
     // differences the residual scales as O(k² · dx² · |p|) and must
     // be small relative to k²·|p_max|.
-    let f0 = 1.0e6;
+    let f0 = MHZ_TO_HZ;
     let c0 = HELMHOLTZ_C0_WATER;
     let k = 2.0 * std::f64::consts::PI * f0 / c0; // ~4189 m^-1
     let lam = 2.0 * std::f64::consts::PI / k; // ~1.5 mm
@@ -291,7 +292,7 @@ fn test_helmholtz_residual_nonzero_on_constant_field() {
     // For a uniform field p ≡ c, ∇²p = 0 and R = k²c ≠ 0. Confirms
     // the residual formulation actually includes the k² term and
     // isn't accidentally returning the bare Laplacian.
-    let f0 = 1.0e6;
+    let f0 = MHZ_TO_HZ;
     let c0 = HELMHOLTZ_C0_WATER;
     let dx = 1.0e-4;
     let n = 8usize;
@@ -308,7 +309,7 @@ fn test_helmholtz_residual_nonzero_on_constant_field() {
 
 #[test]
 fn test_helmholtz_residual_boundary_shell_zero() {
-    let f0 = 1.0e6;
+    let f0 = MHZ_TO_HZ;
     let c0 = HELMHOLTZ_C0_WATER;
     let dx = 1.0e-4;
     let n = 8usize;
@@ -333,7 +334,7 @@ fn test_helmholtz_residual_boundary_shell_zero() {
 fn test_helmholtz_residual_kernel_wrapper_matches_field() {
     let n = 16usize;
     let dx = 1.0e-3;
-    let f0 = 1.0e6;
+    let f0 = MHZ_TO_HZ;
     let kernel = synthetic_gaussian_kernel(n, n, n, dx, f0, 30.0e6);
     let r_kernel = helmholtz_residual_kernel(&kernel, HELMHOLTZ_C0_WATER);
     let r_field = helmholtz_residual_field(&kernel.field, dx, f0, HELMHOLTZ_C0_WATER);

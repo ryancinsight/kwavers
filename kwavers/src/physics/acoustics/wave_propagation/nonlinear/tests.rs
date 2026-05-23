@@ -1,10 +1,11 @@
 use super::*;
+use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 
 #[test]
 fn test_shock_formation_distance() {
     let params = NonlinearParameters::water();
-    let p0 = 1e6; // 1 MPa
-    let f = 1e6; // 1 MHz
+    let p0 = MPA_TO_PA; // 1 MPa
+    let f = MHZ_TO_HZ; // 1 MHz
 
     let l_s = shock::shock_formation_distance(p0, f, &params);
 
@@ -22,8 +23,8 @@ fn test_shock_formation_distance() {
 #[test]
 fn test_second_harmonic_generation() {
     let params = NonlinearParameters::soft_tissue();
-    let p0 = 2e6;
-    let f = 2e6;
+    let p0 = 2.0 * MPA_TO_PA;
+    let f = 2.0 * MHZ_TO_HZ;
     let z = 0.05; // 5 cm
 
     let p2 = harmonics::second_harmonic_amplitude(p0, f, z, &params);
@@ -39,7 +40,7 @@ fn test_second_harmonic_generation() {
 #[test]
 fn test_acoustic_saturation() {
     let params = NonlinearParameters::water();
-    let f = 1e6;
+    let f = MHZ_TO_HZ;
     let z = 0.1;
 
     let p_sat = saturation::acoustic_saturation_pressure(f, z, &params);
@@ -52,8 +53,8 @@ fn test_acoustic_saturation() {
 #[test]
 fn test_burgers_equation() {
     let params = NonlinearParameters::soft_tissue();
-    let p0 = 1e6;
-    let f = 1e6;
+    let p0 = MPA_TO_PA;
+    let f = MHZ_TO_HZ;
     let z = 0.01; // Pre-shock distance
 
     let p_z = burgers::burgers_equation(p0, f, z, &params);
@@ -148,7 +149,7 @@ fn tissue_nonlinear_parameter_factories_route_through_ssot() {
             params.attenuation_coeff
         );
         // At 1 MHz the power-law collapses to α(1 MHz) = α₀·1^y = α₀ (Np/m).
-        let alpha_1mhz = params.attenuation_at_frequency(1.0e6);
+        let alpha_1mhz = params.attenuation_at_frequency(MHZ_TO_HZ);
         assert!(
             (alpha_1mhz - params.attenuation_coeff).abs() < 1e-12 * params.attenuation_coeff,
             "{label}: α(1 MHz) must equal stored α₀; got {alpha_1mhz} vs {}",
@@ -208,10 +209,10 @@ fn test_parametric_array() {
     let params = NonlinearParameters::water();
 
     // Two high-frequency primaries
-    let p1 = 1e6;
-    let p2 = 1e6;
-    let f1 = 2.0e6;
-    let f2 = 2.1e6;
+    let p1 = MPA_TO_PA;       // 1 MPa
+    let p2 = MPA_TO_PA;       // 1 MPa
+    let f1 = 2.0 * MHZ_TO_HZ;
+    let f2 = 2.1 * MHZ_TO_HZ;
     let z = 1.0; // 1 meter far-field
 
     let p_diff = parametric::difference_frequency_amplitude(p1, p2, f1, f2, z, &params);

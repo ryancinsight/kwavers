@@ -1,5 +1,6 @@
 //! Stone material properties composing canonical domain types.
 
+use crate::core::constants::numerical::MPA_TO_PA;
 use crate::domain::medium::properties::{ElasticPropertyData, StrengthPropertyData};
 
 /// Stone material properties composing canonical domain types.
@@ -74,7 +75,7 @@ impl StoneMaterial {
         let density = 2000.0;
         let youngs_modulus = 20e9;
         let poisson_ratio = 0.3;
-        let tensile_strength = 5e6;
+        let tensile_strength = 5.0 * MPA_TO_PA;
         let yield_strength = 0.8 * tensile_strength;
         let hardness = 3.0 * yield_strength;
         let fatigue_exponent = 15.0;
@@ -98,7 +99,7 @@ impl StoneMaterial {
         let density = 1800.0;
         let youngs_modulus = 10e9;
         let poisson_ratio = 0.35;
-        let tensile_strength = 3e6;
+        let tensile_strength = 3.0 * MPA_TO_PA;
         let yield_strength = 0.8 * tensile_strength;
         let hardness = 3.0 * yield_strength;
         let fatigue_exponent = 12.0;
@@ -122,7 +123,7 @@ impl StoneMaterial {
         let density = 2100.0;
         let youngs_modulus = 30e9;
         let poisson_ratio = 0.28;
-        let tensile_strength = 8e6;
+        let tensile_strength = 8.0 * MPA_TO_PA;
         let yield_strength = 0.8 * tensile_strength;
         let hardness = 3.0 * yield_strength;
         let fatigue_exponent = 18.0;

@@ -1,5 +1,6 @@
 use super::*;
 use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL};
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::domain::imaging::ultrasound::ceus::Microbubble;
 
 fn test_bubble() -> Microbubble {
@@ -22,7 +23,7 @@ fn test_velocity_verlet_second_order_convergence() {
     };
 
     let p_ac = 1e3;
-    let freq = 1e6;
+    let freq = MHZ_TO_HZ;
 
     let r_ref = BubbleDynamics {
         dt: dt_ref,
@@ -71,7 +72,7 @@ fn test_linear_oscillation_bounded() {
         damping_coefficient: 0.1,
     };
 
-    let result = sim.simulate_oscillation(&bubble, 1e3, 1e6, 500e-9).unwrap();
+    let result = sim.simulate_oscillation(&bubble, 1e3, MHZ_TO_HZ, 500e-9).unwrap();
 
     let r0 = bubble.radius_eq;
     let max_r = result
