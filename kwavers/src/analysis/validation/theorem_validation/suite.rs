@@ -5,7 +5,7 @@ use crate::core::constants::fundamental::{
     DENSITY_WATER_NOMINAL, SOUND_SPEED_AIR, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM,
 };
 use crate::core::constants::numerical::MHZ_TO_HZ;
-use crate::core::constants::thermodynamic::ROOM_TEMPERATURE_K;
+use crate::core::constants::thermodynamic::{HEAT_CAPACITY_RATIO_DIATOMIC, ROOM_TEMPERATURE_K};
 use ndarray::Array1;
 use num_complex::Complex64;
 use std::f64::consts::PI;
@@ -106,7 +106,7 @@ impl TheoremValidator {
         results.push(Self::validate_ideal_gas_speed(
             ROOM_TEMPERATURE_K,
             0.02897,
-            1.4,
+            HEAT_CAPACITY_RATIO_DIATOMIC,
             SOUND_SPEED_AIR,
         ));
 

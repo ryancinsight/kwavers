@@ -1,5 +1,9 @@
 //! Gas types and species enumeration for composition specification
 
+use crate::core::constants::thermodynamic::{
+    HEAT_CAPACITY_RATIO_DIATOMIC, HEAT_CAPACITY_RATIO_MONATOMIC,
+};
+
 /// Gas type enumeration for composition specification
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum GasType {
@@ -87,11 +91,11 @@ impl GasSpecies {
     #[must_use]
     pub fn gamma(&self) -> f64 {
         match self {
-            Self::Air => 1.4,
-            Self::Argon => 5.0 / 3.0,
-            Self::Xenon => 5.0 / 3.0,
-            Self::Nitrogen => 1.4,
-            Self::Oxygen => 1.4,
+            Self::Air => HEAT_CAPACITY_RATIO_DIATOMIC,
+            Self::Argon => HEAT_CAPACITY_RATIO_MONATOMIC,
+            Self::Xenon => HEAT_CAPACITY_RATIO_MONATOMIC,
+            Self::Nitrogen => HEAT_CAPACITY_RATIO_DIATOMIC,
+            Self::Oxygen => HEAT_CAPACITY_RATIO_DIATOMIC,
             Self::Custom { gamma, .. } => *gamma,
         }
     }

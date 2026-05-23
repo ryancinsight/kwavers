@@ -1,5 +1,19 @@
 //! Thermodynamic constants
 
+/// Adiabatic index (heat capacity ratio) of diatomic ideal gases (Air, N₂, O₂) [-]
+///
+/// γ = Cp/Cv = 7/5 = 1.4 for diatomic ideal gases at ambient conditions.
+///
+/// Reference: NIST, *CRC Handbook of Chemistry and Physics*, 104th ed., §2.
+pub const HEAT_CAPACITY_RATIO_DIATOMIC: f64 = 1.4;
+
+/// Adiabatic index (heat capacity ratio) of monatomic ideal gases (Ar, Xe, He, Ne) [-]
+///
+/// γ = Cp/Cv = 5/3 ≈ 1.6667 for monatomic ideal gases.
+///
+/// Reference: NIST, *CRC Handbook of Chemistry and Physics*, 104th ed., §2.
+pub const HEAT_CAPACITY_RATIO_MONATOMIC: f64 = 5.0 / 3.0;
+
 /// Room temperature in Kelvin
 pub const ROOM_TEMPERATURE_K: f64 = 293.15;
 

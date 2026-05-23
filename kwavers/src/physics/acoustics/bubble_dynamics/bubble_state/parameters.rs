@@ -112,6 +112,7 @@ impl BubbleParameters {
 mod tests {
     use super::super::gas_dynamics::GasType;
     use super::*;
+    use crate::core::constants::thermodynamic::HEAT_CAPACITY_RATIO_DIATOMIC;
 
     /// Default BubbleParameters matches documented water/air-bubble values.
     ///
@@ -132,7 +133,10 @@ mod tests {
             p.sigma, SURFACE_TENSION_WATER,
             "surface tension from SSOT (= 72.8 mN/m at 20 °C)"
         );
-        assert!((p.gamma - 1.4).abs() < 1e-10, "air γ = 1.4 (diatomic)");
+        assert!(
+            (p.gamma - HEAT_CAPACITY_RATIO_DIATOMIC).abs() < 1e-10,
+            "air γ = 1.4 (diatomic)"
+        );
     }
 
     /// Default air composition sums to 1.0 (0.79 N₂ + 0.21 O₂).
