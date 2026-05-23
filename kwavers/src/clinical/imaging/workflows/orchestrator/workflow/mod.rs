@@ -3,6 +3,7 @@
 mod acquisition;
 
 use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 
 use super::super::analysis::{calculate_confidence_score, generate_diagnostic_recommendations};
 use super::super::config::{
@@ -236,10 +237,10 @@ impl ClinicalWorkflowOrchestrator {
             _optical_energy: 10e-3,
             _absorption_coefficient: 100.0,
             _speed_of_sound: SOUND_SPEED_TISSUE,
-            _sampling_frequency: 50e6,
+            _sampling_frequency: 50.0 * MHZ_TO_HZ,
             _num_detectors: 256,
             _detector_radius: 0.025,
-            _center_frequency: 5e6,
+            _center_frequency: 5.0 * MHZ_TO_HZ,
         };
 
         let (pressure_fields, time_points) = generate_realistic_pa_data(&pa_config);

@@ -5,6 +5,7 @@ use super::{
     openpros_shift_benchmark_case, run_openpros_shift_benchmark, OpenProsShiftBenchmarkConfig,
     OPENPROS_PAPER_ID,
 };
+use crate::core::constants::numerical::MHZ_TO_HZ;
 
 #[test]
 fn openpros_case_matches_limited_view_waveform_structure() {
@@ -15,7 +16,7 @@ fn openpros_case_matches_limited_view_waveform_structure() {
     assert_eq!(case.waveform.source_channels, 40);
     assert_eq!(case.waveform.receivers_per_channel, 17);
     assert_eq!(case.waveform.time_steps, 1_000);
-    assert_eq!(case.waveform.peak_frequency_hz, 1.0e6);
+    assert_eq!(case.waveform.peak_frequency_hz, MHZ_TO_HZ);
     assert_eq!(case.waveform.absorbing_boundary_points, 120);
     assert_eq!(case.waveform.sos_shape, (41, 17));
     assert_eq!(case.samples.len(), 40 * 17);

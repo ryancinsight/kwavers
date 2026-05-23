@@ -19,6 +19,7 @@
 //!   *IEEE Transactions on Ultrasonics, Ferroelectrics and Frequency Control*, 42(4), 672-688.
 
 use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::{Array2, ArrayView3};
 use num_complex::Complex64;
@@ -51,7 +52,7 @@ pub struct AutocorrelationConfig {
 impl Default for AutocorrelationConfig {
     fn default() -> Self {
         Self {
-            center_frequency: 5.0e6,            // 5 MHz
+            center_frequency: 5.0 * MHZ_TO_HZ,    // 5 MHz
             prf: 4e3,                           // 4 kHz
             speed_of_sound: SOUND_SPEED_TISSUE, // m/s
             beam_angle: 0.0,                    // Parallel to beam
@@ -66,7 +67,7 @@ impl AutocorrelationConfig {
     #[must_use]
     pub fn cardiac() -> Self {
         Self {
-            center_frequency: 2.5e6,
+            center_frequency: 2.5 * MHZ_TO_HZ,
             prf: 3e3,
             ensemble_size: 12,
             ..Default::default()
@@ -77,7 +78,7 @@ impl AutocorrelationConfig {
     #[must_use]
     pub fn vascular() -> Self {
         Self {
-            center_frequency: 7.5e6,
+            center_frequency: 7.5 * MHZ_TO_HZ,
             prf: 5e3,
             ensemble_size: 8,
             ..Default::default()
@@ -289,7 +290,7 @@ mod tests {
     #[test]
     fn test_phase_to_velocity_conversion() {
         let config = AutocorrelationConfig {
-            center_frequency: 5.0e6,
+            center_frequency: 5.0 * MHZ_TO_HZ,
             prf: 4e3,
             speed_of_sound: SOUND_SPEED_TISSUE,
             beam_angle: 0.0, // cos(0) = 1

@@ -2,6 +2,7 @@
 
 use super::ClinicalWorkflowOrchestrator;
 use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::core::error::KwaversResult;
 use ndarray::Array3;
 
@@ -35,8 +36,8 @@ impl ClinicalWorkflowOrchestrator {
 
             let config = UltrasoundConfig {
                 mode: UltrasoundMode::BMode,
-                frequency: 5e6,
-                sampling_frequency: 40e6,
+                frequency: 5.0 * MHZ_TO_HZ,
+                sampling_frequency: 40.0 * MHZ_TO_HZ,
                 dynamic_range: 60.0,
                 tgc_enabled: true,
             };
@@ -90,8 +91,8 @@ impl ClinicalWorkflowOrchestrator {
         {
             let config = UltrasoundConfig {
                 mode: UltrasoundMode::BMode,
-                frequency: 5e6,
-                sampling_frequency: 40e6,
+                frequency: 5.0 * MHZ_TO_HZ,
+                sampling_frequency: 40.0 * MHZ_TO_HZ,
                 dynamic_range: 60.0,
                 tgc_enabled: true,
             };

@@ -3,6 +3,7 @@ use super::classify::{classify_vessels, principal_axis, vessel_neighbor_count};
 use super::frangi::{compute_frangi_response, symmetric_3x3_eigenvalues};
 use super::*;
 use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 
 #[test]
 fn test_vessel_segmentation_creation() {
@@ -100,12 +101,12 @@ fn test_centerline_extracts_thin_vessel_axis() {
 
 #[test]
 fn test_doppler_velocity_formula() {
-    // v = f_d · c / (2 f₀ · cos θ) = 2000 * SOUND_SPEED_TISSUE / (2 * 5_000_000 * 1.0)
+    // v = f_d · c / (2 f₀ · cos θ) = 2000 * SOUND_SPEED_TISSUE / (2 * 5e6 * 1.0)
     //   = 3_080_000 / 10_000_000 = 0.308 m/s
-    let expected_v = 2_000.0 * SOUND_SPEED_TISSUE / (2.0 * 5_000_000.0);
+    let expected_v = 2_000.0 * SOUND_SPEED_TISSUE / (2.0 * 5.0 * MHZ_TO_HZ);
     let v = VesselSegmentation::estimate_flow_velocity_from_doppler(
         2_000.0,
-        5_000_000.0,
+        5.0 * MHZ_TO_HZ,
         SOUND_SPEED_TISSUE,
         0.0,
     )
@@ -121,7 +122,7 @@ fn test_doppler_velocity_invalid_inputs() {
     // Perpendicular beam
     assert!(VesselSegmentation::estimate_flow_velocity_from_doppler(
         2000.0,
-        5e6,
+        5.0 * MHZ_TO_HZ,
         SOUND_SPEED_TISSUE,
         std::f64::consts::FRAC_PI_2
     )
@@ -129,7 +130,7 @@ fn test_doppler_velocity_invalid_inputs() {
     // Negative frequency
     assert!(VesselSegmentation::estimate_flow_velocity_from_doppler(
         2000.0,
-        -5e6,
+        -5.0 * MHZ_TO_HZ,
         SOUND_SPEED_TISSUE,
         0.0
     )

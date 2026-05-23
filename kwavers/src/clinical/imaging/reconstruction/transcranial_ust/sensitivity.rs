@@ -8,6 +8,7 @@ use super::{
     transducer::TranscranialBowlGeometry,
 };
 use crate::core::constants::fundamental::DENSITY_BRAIN;
+use crate::core::constants::numerical::MPA_TO_PA;
 use crate::solver::inverse::linear_born_inversion::{
     LinearBornInversionConfig, TransducerGeometry,
 };
@@ -97,7 +98,7 @@ fn second_harmonic_factor(
     frequency_hz: f64,
     path_m: f64,
 ) -> f64 {
-    let source_pressure_pa = config.source_pressure_mpa * 1.0e6;
+    let source_pressure_pa = config.source_pressure_mpa * MPA_TO_PA;
     let omega = TAU * frequency_hz;
     let shock_distance_m = DENSITY_BRAIN * C_BRAIN_REF_M_S.powi(3)
         / (config.nonlinear_beta * omega * source_pressure_pa);

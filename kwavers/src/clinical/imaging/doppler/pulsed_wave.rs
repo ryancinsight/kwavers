@@ -49,6 +49,7 @@
 //!   an autocorrelation technique." *IEEE Trans Sonics Ultrason* 32(3):458–464.
 
 use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::math::fft::{fft_1d_complex, Complex64};
 use ndarray::{Array1, ArrayView1};
@@ -76,7 +77,7 @@ pub struct PWDConfig {
 impl Default for PWDConfig {
     fn default() -> Self {
         Self {
-            center_frequency: 5.0e6,     // 5 MHz
+            center_frequency: 5.0 * MHZ_TO_HZ, // 5 MHz
             prf: 4e3,                    // 4 kHz PRF
             sample_volume_depth: 0.05,   // 5 cm
             sample_volume_length: 0.005, // 5 mm gate
@@ -310,7 +311,7 @@ mod tests {
     #[test]
     fn test_velocity_axis_nyquist_limit() {
         let config = PWDConfig {
-            center_frequency: 5e6,
+            center_frequency: 5.0 * MHZ_TO_HZ,
             prf: 4e3,
             c_sound: SOUND_SPEED_TISSUE,
             beam_angle: 0.0,
@@ -323,7 +324,7 @@ mod tests {
         assert_eq!(v_axis.len(), config.fft_size / 2 + 1);
 
         let v_max = pwd.max_velocity();
-        let expected_v_max = 4000.0 * SOUND_SPEED_TISSUE / (4.0 * 5e6);
+        let expected_v_max = 4000.0 * SOUND_SPEED_TISSUE / (4.0 * 5.0 * MHZ_TO_HZ);
         let rel_err = (v_max - expected_v_max).abs() / expected_v_max;
         assert!(
             rel_err < 1e-10,

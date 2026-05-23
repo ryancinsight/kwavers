@@ -3,6 +3,7 @@ use super::{
     DoseController, Interlock, InterlockSystem, SystemConfiguration,
 };
 use crate::clinical::therapy::parameters::ClinicalTherapyParameters;
+use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 
 #[test]
 fn test_safety_limits_creation() {
@@ -18,10 +19,10 @@ fn test_safety_monitor_normal_operation() {
     let mut monitor = ClinicalSafetyMonitor::new(limits);
 
     let params = ClinicalTherapyParameters {
-        frequency: 1.5e6,
-        pressure: 1.0e6,
+        frequency: 1.5 * MHZ_TO_HZ,
+        pressure: MPA_TO_PA,
         duration: 600.0,
-        peak_negative_pressure: 1.0e6,
+        peak_negative_pressure: MPA_TO_PA,
         treatment_duration: 600.0,
         mechanical_index: 1.2,
         duty_cycle: 0.5,
@@ -39,10 +40,10 @@ fn test_safety_monitor_critical_violation() {
     let mut monitor = ClinicalSafetyMonitor::new(limits);
 
     let params = ClinicalTherapyParameters {
-        frequency: 1.5e6,
-        pressure: 3.0e6,
+        frequency: 1.5 * MHZ_TO_HZ,
+        pressure: 3.0 * MPA_TO_PA,
         duration: 600.0,
-        peak_negative_pressure: 3.0e6,
+        peak_negative_pressure: 3.0 * MPA_TO_PA,
         treatment_duration: 600.0,
         mechanical_index: 2.5,
         duty_cycle: 0.5,

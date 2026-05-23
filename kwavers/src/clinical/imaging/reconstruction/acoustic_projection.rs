@@ -34,6 +34,7 @@
 //! - Dines KA, Kak AC (1979). "Ultrasonic attenuation tomography of soft
 //!   tissues." *Ultrasonic Imaging* 1(1):16–33.
 
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use ndarray::{Array1, Array3};
 
 /// Acoustic forward-projection geometry for pulse-echo ultrasound SIRT.
@@ -63,7 +64,7 @@ impl Default for AcousticProjectionGeometry {
             element_z: 0.0,
             sound_speed: crate::core::constants::fundamental::SOUND_SPEED_TISSUE,
             attenuation_db_cm_mhz: 0.5,
-            center_frequency_hz: 5e6,
+            center_frequency_hz: 5.0 * MHZ_TO_HZ,
             voxel_spacing: (3e-4, 3e-4, 3e-4),
         }
     }

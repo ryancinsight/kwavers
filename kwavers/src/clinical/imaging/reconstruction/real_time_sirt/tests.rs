@@ -4,6 +4,7 @@ use crate::clinical::imaging::reconstruction::acoustic_projection::{
     backproject_acoustic, project_acoustic, AcousticProjectionGeometry,
 };
 use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::solver::inverse::reconstruction::unified_sirt::SirtConfig;
 use ndarray::{Array1, Array3};
 
@@ -197,7 +198,7 @@ fn test_acoustic_forward_projection_single_scatterer() {
         element_z: 0.0,
         sound_speed: SOUND_SPEED_TISSUE,
         attenuation_db_cm_mhz: 0.0,
-        center_frequency_hz: 5e6,
+        center_frequency_hz: 5.0 * MHZ_TO_HZ,
         voxel_spacing: (1e-3, 1e-3, 1e-3),
     };
     let mut image = Array3::zeros((1, 1, 1));
@@ -233,7 +234,7 @@ fn test_acoustic_backprojection_adjoint_property() {
         element_z: 0.0,
         sound_speed: SOUND_SPEED_TISSUE,
         attenuation_db_cm_mhz: 0.5,
-        center_frequency_hz: 5e6,
+        center_frequency_hz: 5.0 * MHZ_TO_HZ,
         voxel_spacing: (1e-3, 1e-3, 1e-3),
     };
     let shape = (3, 3, 3);
@@ -275,7 +276,7 @@ fn test_acoustic_sirt_converges_on_point_phantom() {
         element_z: -1e-2,
         sound_speed: SOUND_SPEED_TISSUE,
         attenuation_db_cm_mhz: 0.5,
-        center_frequency_hz: 5e6,
+        center_frequency_hz: 5.0 * MHZ_TO_HZ,
         voxel_spacing: (1e-3, 1e-3, 1e-3),
     };
     let mut truth = Array3::zeros((4, 4, 4));
