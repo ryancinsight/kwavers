@@ -1,6 +1,6 @@
 use crate::clinical::therapy::parameters::ClinicalTherapyParameters;
 use crate::core::constants::medical::MI_LIMIT_SOFT_TISSUE;
-use crate::core::constants::numerical::MPA_TO_PA;
+use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use std::time::{Duration, Instant};
 
 /// Safety levels for clinical ultrasound systems
@@ -127,11 +127,11 @@ impl ClinicalSafetyMonitor {
             new_state = ClinicalSafetyLevel::Critical;
         }
 
-        if params.frequency < 0.5e6 || params.frequency > 10e6 {
+        if params.frequency < 0.5 * MHZ_TO_HZ || params.frequency > 10.0 * MHZ_TO_HZ {
             self.violations.push(SafetyViolation {
                 parameter: "frequency".to_owned(),
                 measured_value: params.frequency,
-                limit_value: 5e6,
+                limit_value: 5.0 * MHZ_TO_HZ,
                 severity: ClinicalSafetyLevel::Warning,
                 timestamp: Instant::now(),
                 message: "Frequency outside typical therapeutic ultrasound range".to_owned(),

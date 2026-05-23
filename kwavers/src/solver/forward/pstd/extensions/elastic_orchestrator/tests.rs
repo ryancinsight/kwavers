@@ -3,6 +3,7 @@ use super::pml::ElasticPmlSpec;
 use super::split_field_pml::ElasticSplitFieldPml;
 use super::types::{ElasticPstdMedium, ElasticPstdSourceMode, ElasticPstdVelocitySource};
 use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::domain::grid::Grid;
 use ndarray::{Array1, Array3};
 use num_complex::Complex;
@@ -33,7 +34,7 @@ fn pstd_orchestrator_keeps_shear_stress_zero_when_mu_is_zero() {
 
     let amp = 1e-6;
     let signal: Array1<f64> = Array1::from_iter(
-        (0..n_steps).map(|n| amp * (2.0 * std::f64::consts::PI * 1e6 * (n as f64) * dt).sin()),
+        (0..n_steps).map(|n| amp * (2.0 * std::f64::consts::PI * MHZ_TO_HZ * (n as f64) * dt).sin()),
     );
     let mut src_mask = Array3::<bool>::from_elem((nx, ny, nz), false);
     src_mask[[3, 5, nz / 2]] = true;
@@ -168,7 +169,7 @@ fn split_field_pml_zero_thickness_reproduces_standard_leapfrog() {
     };
     let make_source = || {
         let signal =
-            Array1::from_iter((0..n_steps).map(|n| amp * (PI * 1e6 * n as f64 * dt).sin()));
+            Array1::from_iter((0..n_steps).map(|n| amp * (PI * MHZ_TO_HZ * n as f64 * dt).sin()));
         let mut mask = Array3::<bool>::from_elem((nx, nx, nx), false);
         mask[[1, 1, 1]] = true;
         ElasticPstdVelocitySource {
@@ -265,7 +266,7 @@ fn split_field_pml_attenuates_outgoing_wave() {
     // Continuous-tone source at grid centre for all n_steps so the interior
     // maintains a sustained field while the PML absorbs the outgoing wave.
     let signal =
-        Array1::from_iter((0..n_steps).map(|n| amp * (2.0 * PI * 1e6 * n as f64 * dt).sin()));
+        Array1::from_iter((0..n_steps).map(|n| amp * (2.0 * PI * MHZ_TO_HZ * n as f64 * dt).sin()));
     let mut src_mask = Array3::<bool>::from_elem((nx, ny, nz), false);
     src_mask[[nx / 2, ny / 2, nz / 2]] = true;
     let source = ElasticPstdVelocitySource {

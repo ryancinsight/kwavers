@@ -24,9 +24,9 @@ fn test_convergence_relative_not_absolute() {
         tolerance: 1e-6,
     };
 
-    // Field magnitude: 1e6 Pa; absolute change: 1 Pa → relative change: 1e-6
-    let prev = vec![Array3::from_elem((4, 4, 4), 1_000_000.0_f64)];
-    let curr = vec![Array3::from_elem((4, 4, 4), 1_000_001.0_f64)];
+    // Field magnitude: 1 MPa; absolute change: 1 Pa → relative change: 1e-6
+    let prev = vec![Array3::from_elem((4, 4, 4), MPA_TO_PA)];
+    let curr = vec![Array3::from_elem((4, 4, 4), MPA_TO_PA + 1.0)];
 
     assert!(
         coupler.check_convergence(&prev, &curr),

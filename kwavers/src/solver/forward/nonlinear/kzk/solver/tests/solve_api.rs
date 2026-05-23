@@ -59,7 +59,7 @@ fn test_kzk_solve_basic_propagation() {
         ..Default::default()
     };
     let mut solver = KZKSolver::new(config).unwrap();
-    solver.set_source(Array2::from_elem((8, 8), 1000.0_f64), 1e6);
+    solver.set_source(Array2::from_elem((8, 8), 1000.0_f64), MHZ_TO_HZ);
 
     solver.solve(10).expect("solve(10) must succeed");
     assert_eq!(solver.current_z_step, 10, "current_z_step must equal 10");
@@ -113,7 +113,7 @@ fn test_kzk_solve_full_propagation() {
     };
     let nz = config.nz;
     let mut solver = KZKSolver::new(config).unwrap();
-    solver.set_source(Array2::from_elem((4, 4), 100.0_f64), 1e6);
+    solver.set_source(Array2::from_elem((4, 4), 100.0_f64), MHZ_TO_HZ);
 
     solver
         .solve(nz)
@@ -148,11 +148,11 @@ fn test_kzk_solve_matches_manual_step_loop() {
     let source = Array2::from_elem((8, 8), 800.0_f64);
 
     let mut solver_a = KZKSolver::new(config.clone()).unwrap();
-    solver_a.set_source(source.clone(), 1e6);
+    solver_a.set_source(source.clone(), MHZ_TO_HZ);
     solver_a.solve(5).unwrap();
 
     let mut solver_b = KZKSolver::new(config).unwrap();
-    solver_b.set_source(source, 1e6);
+    solver_b.set_source(source, MHZ_TO_HZ);
     for _ in 0..5 {
         solver_b.step();
     }
