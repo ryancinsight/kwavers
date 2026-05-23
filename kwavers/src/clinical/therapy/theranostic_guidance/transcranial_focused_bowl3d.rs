@@ -25,7 +25,7 @@ use ndarray::{s, Array3};
 
 use crate::{
     core::error::{KwaversError, KwaversResult},
-    domain::source::transducers::focused::{BowlAngularBounds, BowlConfig, BowlTransducer},
+    domain::source::transducers::focused::{BowlConfig, BowlTransducer},
 };
 
 use super::geometry::{is_boundary_3d, Point3};
@@ -345,11 +345,11 @@ fn body_radius(
 /// toward the anatomical superior pole while the source-domain bowl layout owns
 /// the equal-area sampling.
 ///
-/// # Mathematical derivation
+/// # Mathematical contract
 ///
-/// For polar bounds `[theta_min, theta_max]`, axis-projection bounds are:
-/// `[u_min, u_max] = [cos(theta_max), cos(theta_min)]`.
-/// This preserves the equal-area sampling invariant of `BowlAngularBounds`.
+/// The source-domain [`BowlTransducer`] owns polar-bound validation and
+/// equal-area spherical-cap sampling. Clinical placement supplies only the
+/// anatomy-derived vertex orientation and requested polar span.
 fn calvarium_cap_elements(
     count: usize,
     radius_m: f64,
@@ -368,13 +368,7 @@ fn calvarium_cap_elements(
         BOWL_LAYOUT_UNIT_FREQUENCY_HZ,
         BOWL_LAYOUT_UNIT_AMPLITUDE_PA,
     );
-    // Convert polar-angle bounds to axis-projection bounds.
-    // u_max = cos(theta_min) ≈ near-vertex cutoff.
-    // u_min = cos(theta_max) ≈ equatorial/subequatorial limit.
-    let u_max = theta_min_rad.cos().clamp(-1.0, 1.0);
-    let u_min = theta_max_rad.cos().clamp(-1.0, 1.0);
-    let cap_bounds = BowlAngularBounds::from_axis_projection_bounds(u_min, u_max)?;
-    let layout = BowlTransducer::with_angular_bounds(config, cap_bounds, count)?;
+    let layout = BowlTransducer::with_polar_bounds(config, theta_min_rad, theta_max_rad, count)?;
 
     Ok(layout
         .element_positions()
