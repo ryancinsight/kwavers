@@ -1,4 +1,5 @@
 use crate::core::constants::{GRUNEISEN_WATER_20C, SOUND_SPEED_WATER_SIM};
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::domain::medium::properties::OpticalPropertyData;
 use ndarray::{Array2, Array3};
 
@@ -48,7 +49,7 @@ impl Default for PhotoacousticParameters {
             pulse_duration: 10e-9,
             laser_fluence: 10.0,
             speed_of_sound: SOUND_SPEED_WATER_SIM,
-            center_frequency: 5e6,
+            center_frequency: 5.0 * MHZ_TO_HZ,
             dt: 1e-9,
             sensors: None,
         }

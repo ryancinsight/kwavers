@@ -228,6 +228,7 @@ pub fn discover_focal_kernels(dir: &Path) -> KwaversResult<Vec<FocalKernel>> {
 mod tests {
     use super::*;
 
+    use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
     use ndarray::array;
     use ndarray_npy::NpzWriter;
     use std::io::Cursor;
@@ -244,9 +245,9 @@ mod tests {
             let mut w = NpzWriter::new(&mut buf);
             w.add_array("p_min", &p_min).unwrap();
             w.add_array("dx", &array![5.0e-4_f64]).unwrap();
-            w.add_array("f0", &array![1.0e6_f64]).unwrap();
-            w.add_array("pnp_realised", &array![1.0e7_f64]).unwrap();
-            w.add_array("source_pa", &array![1.5e6_f64]).unwrap();
+            w.add_array("f0", &array![MHZ_TO_HZ]).unwrap();
+            w.add_array("pnp_realised", &array![10.0 * MPA_TO_PA]).unwrap();
+            w.add_array("source_pa", &array![1.5 * MPA_TO_PA]).unwrap();
             w.add_array("fwhm_lat_m", &array![2.0e-3_f64]).unwrap();
             w.add_array("fwhm_ax_m", &array![6.0e-3_f64]).unwrap();
             w.add_array("focus_idx", &array![2_i64, 1, 1]).unwrap();
@@ -270,11 +271,11 @@ mod tests {
         let kernel = load_focal_kernel(&path, None).expect("load");
         assert_eq!(kernel.shape(), (4, 3, 3));
         // The loader negates p_min, so the focal magnitude must be +1e7.
-        assert!((kernel.focal_pressure() - 1.0e7).abs() < 1e-3);
+        assert!((kernel.focal_pressure() - 10.0 * MPA_TO_PA).abs() < 1e-3);
         assert!((kernel.dx_m - 5.0e-4).abs() < 1e-12);
-        assert!((kernel.f0 - 1.0e6).abs() < 1e-3);
-        assert!((kernel.pnp_realised - 1.0e7).abs() < 1e-3);
-        assert!((kernel.source_pa - 1.5e6).abs() < 1e-3);
+        assert!((kernel.f0 - MHZ_TO_HZ).abs() < 1e-3);
+        assert!((kernel.pnp_realised - 10.0 * MPA_TO_PA).abs() < 1e-3);
+        assert!((kernel.source_pa - 1.5 * MPA_TO_PA).abs() < 1e-3);
         assert!((kernel.fwhm_lat_m - 2.0e-3).abs() < 1e-9);
         assert!((kernel.fwhm_ax_m - 6.0e-3).abs() < 1e-9);
         assert_eq!(kernel.focus_idx, (2, 1, 1));
@@ -284,13 +285,13 @@ mod tests {
     fn rescaling_scales_field_and_pnp_linearly() {
         let bytes = write_fixture_npz();
         let path = write_to_tempfile(&bytes, "kernel_rescale.npz");
-        let target = 3.0e7_f64;
+        let target = 30.0 * MPA_TO_PA;
         let kernel = load_focal_kernel(&path, Some(target)).expect("rescaled load");
-        // Field was rescaled by 3×: focal magnitude = 3e7 Pa.
+        // Field was rescaled by 3×: focal magnitude = 30 MPa.
         assert!((kernel.focal_pressure() - target).abs() < 1.0);
         assert!((kernel.pnp_realised - target).abs() < 1.0);
-        // Source pressure scales by the same factor: 1.5e6 × 3 = 4.5e6.
-        assert!((kernel.source_pa - 4.5e6).abs() < 1.0);
+        // Source pressure scales by the same factor: 1.5 MPa × 3 = 4.5 MPa.
+        assert!((kernel.source_pa - 4.5 * MPA_TO_PA).abs() < 1.0);
     }
 
     #[test]
@@ -303,8 +304,8 @@ mod tests {
             let p_min = ndarray::Array3::<f64>::zeros((2, 2, 2));
             w.add_array("p_min", &p_min).unwrap();
             w.add_array("dx", &array![5.0e-4_f64]).unwrap();
-            w.add_array("pnp_realised", &array![1.0e7_f64]).unwrap();
-            w.add_array("source_pa", &array![1.0e6_f64]).unwrap();
+            w.add_array("pnp_realised", &array![10.0 * MPA_TO_PA]).unwrap();
+            w.add_array("source_pa", &array![MPA_TO_PA]).unwrap();
             w.add_array("fwhm_lat_m", &array![2.0e-3_f64]).unwrap();
             w.add_array("fwhm_ax_m", &array![6.0e-3_f64]).unwrap();
             w.add_array("focus_idx", &array![1_i64, 1, 1]).unwrap();
@@ -325,9 +326,9 @@ mod tests {
             let p_min = ndarray::Array3::<f64>::zeros((2, 2, 2));
             w.add_array("p_min", &p_min).unwrap();
             w.add_array("dx", &array![1.0e-3_f64]).unwrap();
-            w.add_array("f0", &array![1.0e6_f64]).unwrap();
-            w.add_array("pnp_realised", &array![1.0e7_f64]).unwrap();
-            w.add_array("source_pa", &array![1.0e6_f64]).unwrap();
+            w.add_array("f0", &array![MHZ_TO_HZ]).unwrap();
+            w.add_array("pnp_realised", &array![10.0 * MPA_TO_PA]).unwrap();
+            w.add_array("source_pa", &array![MPA_TO_PA]).unwrap();
             w.add_array("fwhm_lat_m", &array![2.0e-3_f64]).unwrap();
             w.add_array("fwhm_ax_m", &array![6.0e-3_f64]).unwrap();
             w.add_array("focus_idx", &array![5_i64, 0, 0]).unwrap(); // 5 ≥ nx=2

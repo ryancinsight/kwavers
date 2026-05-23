@@ -206,12 +206,13 @@ fn calculate_temperature_field(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 
     #[test]
     fn test_temperature_field_baseline() {
         // Create simple acoustic field
         let acoustic_field = AcousticField {
-            pressure: Array3::from_elem((10, 10, 10), 1e6), // 1 MPa
+            pressure: Array3::from_elem((10, 10, 10), MPA_TO_PA), // 1 MPa
             velocity_x: Array3::zeros((10, 10, 10)),
             velocity_y: Array3::zeros((10, 10, 10)),
             velocity_z: Array3::zeros((10, 10, 10)),
@@ -221,8 +222,8 @@ mod tests {
 
         let acoustic_params =
             crate::clinical::therapy::therapy_integration::config::AcousticTherapyParams {
-                frequency: 1e6,
-                pnp: 1e6,
+                frequency: MHZ_TO_HZ,
+                pnp: MPA_TO_PA,
                 prf: 100.0,
                 duty_cycle: 0.1,
                 focal_depth: 0.005, // 5mm
@@ -244,7 +245,7 @@ mod tests {
     fn test_temperature_field_spatial_decay() {
         // Create focused acoustic field
         let acoustic_field = AcousticField {
-            pressure: Array3::from_elem((20, 20, 20), 2e6), // 2 MPa
+            pressure: Array3::from_elem((20, 20, 20), 2.0 * MPA_TO_PA), // 2 MPa
             velocity_x: Array3::zeros((20, 20, 20)),
             velocity_y: Array3::zeros((20, 20, 20)),
             velocity_z: Array3::zeros((20, 20, 20)),
@@ -254,8 +255,8 @@ mod tests {
 
         let acoustic_params =
             crate::clinical::therapy::therapy_integration::config::AcousticTherapyParams {
-                frequency: 1e6,
-                pnp: 2e6,
+                frequency: MHZ_TO_HZ,
+                pnp: 2.0 * MPA_TO_PA,
                 prf: 100.0,
                 duty_cycle: 0.1,
                 focal_depth: 0.01, // 10mm (center of grid)

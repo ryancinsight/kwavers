@@ -9,6 +9,7 @@
 use burn::tensor::{backend::Backend, Tensor, TensorData};
 use ndarray::Array3;
 
+use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use crate::core::error::{KwaversError, KwaversResult};
 
 use super::config::OUTPUT_DIM;
@@ -57,15 +58,15 @@ impl Default for GridQueryParams {
             shape: (1, 1, 1),
             focus_idx: (0, 0, 0),
             dx_m: 1.0e-3,
-            f0: 1.0e6,
-            pnp: 30.0e6,
+            f0: MHZ_TO_HZ,
+            pnp: 30.0 * MPA_TO_PA,
             coord_half_m: (50.0e-3, 50.0e-3, 50.0e-3),
-            f0_range: (0.5e6, 1.0e6),
-            pnp_range: (15.0e6, 30.0e6),
+            f0_range: (0.5 * MHZ_TO_HZ, MHZ_TO_HZ),
+            pnp_range: (15.0 * MPA_TO_PA, 30.0 * MPA_TO_PA),
             output_transforms: OutputTransforms {
-                p_min: TargetTransform::Linear { scale_pa: 30.0e6 },
-                p_max: TargetTransform::Linear { scale_pa: 30.0e6 },
-                p_rms: TargetTransform::Linear { scale_pa: 21.0e6 },
+                p_min: TargetTransform::Linear { scale_pa: 30.0 * MPA_TO_PA as f32 },
+                p_max: TargetTransform::Linear { scale_pa: 30.0 * MPA_TO_PA as f32 },
+                p_rms: TargetTransform::Linear { scale_pa: 21.0 * MPA_TO_PA as f32 },
             },
             batch_size: 65_536,
         }

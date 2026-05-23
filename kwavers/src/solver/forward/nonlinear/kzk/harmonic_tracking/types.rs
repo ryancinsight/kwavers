@@ -1,5 +1,7 @@
 //! Types for harmonic tracking: config, model, and analysis result.
 
+use crate::core::constants::numerical::MHZ_TO_HZ;
+
 /// Harmonic analysis configuration.
 #[derive(Debug, Clone, Copy)]
 pub struct HarmonicConfig {
@@ -35,9 +37,9 @@ pub enum PredictionModel {
 impl Default for HarmonicConfig {
     fn default() -> Self {
         Self {
-            frequency: 1e6, // 1 MHz
+            frequency: MHZ_TO_HZ, // 1 MHz
             max_harmonic: 5,
-            sampling_rate: 100e6, // 100 MHz
+            sampling_rate: 100.0 * MHZ_TO_HZ, // 100 MHz
             fft_size: 512,
             enable_spectral: true,
             enable_waveform: true,

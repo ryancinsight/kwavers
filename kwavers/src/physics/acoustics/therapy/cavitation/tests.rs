@@ -1,10 +1,11 @@
 use super::*;
 use crate::core::constants::cavitation::{SURFACE_TENSION_WATER, VAPOR_PRESSURE_WATER};
 use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use ndarray::Array3;
 
 fn detector() -> TherapyCavitationDetector {
-    TherapyCavitationDetector::new(1e6, 0.0)
+    TherapyCavitationDetector::new(MHZ_TO_HZ, 0.0)
 }
 
 #[test]
@@ -31,8 +32,8 @@ fn test_blake_threshold_positive() {
 
 #[test]
 fn test_blake_threshold_larger_nucleus_higher_pressure() {
-    let det_1um = TherapyCavitationDetector::new_with_radius(1e6, 1e-6);
-    let det_10um = TherapyCavitationDetector::new_with_radius(1e6, 10e-6);
+    let det_1um = TherapyCavitationDetector::new_with_radius(MHZ_TO_HZ, 1e-6);
+    let det_10um = TherapyCavitationDetector::new_with_radius(MHZ_TO_HZ, 10e-6);
     assert!(
         det_10um.blake_threshold > det_1um.blake_threshold,
         "10 µm nucleus should have higher Blake threshold than 1 µm"
@@ -100,7 +101,7 @@ fn test_threshold_detection_spatial_heterogeneity() {
 
 #[test]
 fn test_spectral_detection_zero_pressure_no_cavitation() {
-    let mut det = TherapyCavitationDetector::new(3.26e6, 0.0);
+    let mut det = TherapyCavitationDetector::new(3.26 * MHZ_TO_HZ, 0.0);
     det.method = CavitationDetectionMethod::Spectral;
     let p = Array3::zeros((4, 4, 4));
     let cav = det.detect(&p);
@@ -113,7 +114,7 @@ fn test_spectral_detection_zero_pressure_no_cavitation() {
 #[test]
 fn test_spectral_detection_resonance_lowers_threshold() {
     let det_far = TherapyCavitationDetector::new(100e3, 0.0);
-    let mut det_near = TherapyCavitationDetector::new(3.26e6, 0.0);
+    let mut det_near = TherapyCavitationDetector::new(3.26 * MHZ_TO_HZ, 0.0);
     det_near.method = CavitationDetectionMethod::Spectral;
 
     let p_test = -0.80 * det_near.blake_threshold;

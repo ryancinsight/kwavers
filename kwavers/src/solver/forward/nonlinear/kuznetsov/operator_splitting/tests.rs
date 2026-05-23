@@ -1,5 +1,6 @@
 use super::OperatorSplittingSolver;
 use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use ndarray::Array3;
 use std::f64::consts::PI;
 
@@ -13,7 +14,7 @@ fn test_harmonic_generation() -> Result<(), crate::core::error::KwaversError> {
     let dy = dx;
     let dz = dx;
 
-    let frequency = 1e6; // 1 MHz
+    let frequency = MHZ_TO_HZ; // 1 MHz
     let wavelength = SOUND_SPEED_WATER_SIM / frequency;
     let k = 2.0 * PI / wavelength;
 
@@ -37,7 +38,7 @@ fn test_harmonic_generation() -> Result<(), crate::core::error::KwaversError> {
 
     for i in 0..nx {
         let x = i as f64 * dx;
-        let amplitude = 1e6; // 1 MPa
+        let amplitude = MPA_TO_PA; // 1 MPa
         pressure[[i, 0, 0]] = amplitude * (k * x).sin();
         pressure_prev[[i, 0, 0]] = amplitude * (k * x - 2.0 * PI * frequency * solver.dt).sin();
     }

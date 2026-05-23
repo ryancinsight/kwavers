@@ -134,6 +134,7 @@ impl HasAbsorptionOperator {
 mod tests {
     use super::*;
     use approx::assert_abs_diff_eq;
+    use crate::core::constants::numerical::MHZ_TO_HZ;
     use ndarray::Array2;
 
     fn default_config() -> HASConfig {
@@ -173,8 +174,8 @@ mod tests {
         use crate::core::constants::acoustic_parameters::NP_TO_DB;
         let mut config = default_config();
         config.power_law_exponent = 1.0;
-        config.reference_frequency = 1e6; // 1 MHz
-                                          // Set so that α_np_m = 10.0 Np/m
+        config.reference_frequency = MHZ_TO_HZ; // 1 MHz
+                                                  // Set so that α_np_m = 10.0 Np/m
         config.attenuation_coeff = 10.0 * NP_TO_DB / 100.0; // dB/cm/MHz
 
         let op = HasAbsorptionOperator::new(&config);

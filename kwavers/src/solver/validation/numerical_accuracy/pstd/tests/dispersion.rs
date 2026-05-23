@@ -5,7 +5,7 @@ use std::f64::consts::PI;
 #[test]
 fn test_numerical_dispersion() {
     // Test numerical dispersion for different PPW values
-    let frequencies = vec![0.5e6, 1e6, 2e6, 5e6];
+    let frequencies = vec![0.5 * MHZ_TO_HZ, MHZ_TO_HZ, 2.0 * MHZ_TO_HZ, 5.0 * MHZ_TO_HZ];
     let dx = 1e-3;
     let _n = 64;
 

@@ -1,5 +1,6 @@
 //! Simulation parameters configuration
 
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
@@ -207,7 +208,7 @@ impl Default for SimulationParameters {
             duration: 1e-3,
             dt: None,
             cfl: 0.3,
-            frequency: 1e6,
+            frequency: MHZ_TO_HZ,
             nonlinear: false,
             temperature: 293.15, // 20°C
             simulation_type: SimulationType::Forward,

@@ -6,6 +6,7 @@ use crate::core::constants::cavitation::{
 use crate::core::constants::fundamental::{
     ATMOSPHERIC_PRESSURE, AVOGADRO, DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE,
 };
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::core::constants::thermodynamic::{
     BODY_TEMPERATURE_K, SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER,
 };
@@ -62,7 +63,7 @@ impl MicrobubbleDynamicsService {
             gas_composition,
             gamma,
             t0,
-            driving_frequency: 1e6,
+            driving_frequency: MHZ_TO_HZ,
             driving_amplitude: 0.0,
             use_compressibility: true,
             use_thermal_effects: false,

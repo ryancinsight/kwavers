@@ -2,6 +2,7 @@
 #[allow(clippy::module_inception)]
 mod tests {
     use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use crate::core::constants::numerical::MHZ_TO_HZ;
     use crate::domain::grid::Grid;
     use crate::domain::medium::HomogeneousMedium;
     use crate::physics::acoustics::imaging::modalities::elastography::radiation_force::impulse::{
@@ -15,7 +16,7 @@ mod tests {
     #[test]
     fn test_push_parameters_default() {
         let params = PushPulseParameters::default();
-        assert_eq!(params.frequency, 5.0e6);
+        assert_eq!(params.frequency, 5.0 * MHZ_TO_HZ);
         assert_eq!(params.duration, 150e-6);
         assert!((params.f_number - 2.0).abs() < 1e-10);
     }
@@ -25,7 +26,7 @@ mod tests {
         let result = PushPulseParameters::new(-1.0, 100e-6, 1000.0, 0.04, 2.0);
         assert!(result.is_err());
 
-        let result = PushPulseParameters::new(5e6, -100e-6, 1000.0, 0.04, 2.0);
+        let result = PushPulseParameters::new(5.0 * MHZ_TO_HZ, -100e-6, 1000.0, 0.04, 2.0);
         assert!(result.is_err());
     }
 

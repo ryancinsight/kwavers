@@ -4,6 +4,7 @@
 //! corresponding `|k|^y` spectral-filter weights.
 
 use crate::core::constants::fundamental::SOUND_SPEED_AIR;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use rayon::prelude::*;
 
 use super::spectrum::build_k_power_spectrum;
@@ -47,7 +48,7 @@ impl FractionalLaplacianAbsorption {
         let n = input.n;
         let cells = n * n * n;
         let y_exponent = representative_y(input.attenuation_power_law_y);
-        let omega_ref = std::f64::consts::TAU * 1.0e6; // 1 MHz reference
+        let omega_ref = std::f64::consts::TAU * MHZ_TO_HZ; // 1 MHz reference angular frequency
 
         // Per-voxel τ and η for the wave-equation form of Treeby-Cox
         // 2010 §III.B (J. Biomed. Opt. 15(2) 021314, Eq. 11):

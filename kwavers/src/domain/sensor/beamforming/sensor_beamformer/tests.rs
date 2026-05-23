@@ -1,6 +1,7 @@
 use super::beamformer::SensorBeamformer;
 use super::types::{BeamformerWindowType, SensorProcessingParams};
 use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::domain::sensor::array::{Position, Sensor, SensorArray, SensorArrayGeometry};
 use approx::assert_relative_eq;
 use ndarray::Array2;
@@ -22,7 +23,7 @@ fn create_test_array(n_sensors: usize) -> SensorArray {
 #[test]
 fn test_windowing_preserves_dimensions() {
     let array = create_test_array(8);
-    let beamformer = SensorBeamformer::new(array, 1e6);
+    let beamformer = SensorBeamformer::new(array, MHZ_TO_HZ);
     let delays = Array2::ones((8, 100));
 
     for window_type in [
@@ -39,7 +40,7 @@ fn test_windowing_preserves_dimensions() {
 #[test]
 fn test_rectangular_window_is_identity() {
     let array = create_test_array(8);
-    let beamformer = SensorBeamformer::new(array, 1e6);
+    let beamformer = SensorBeamformer::new(array, MHZ_TO_HZ);
     let delays = Array2::from_shape_fn((8, 100), |(i, j)| i as f64 + j as f64 * 0.1);
 
     let windowed = beamformer
@@ -56,7 +57,7 @@ fn test_rectangular_window_is_identity() {
 #[test]
 fn test_window_reduces_edge_elements() {
     let array = create_test_array(16);
-    let beamformer = SensorBeamformer::new(array, 1e6);
+    let beamformer = SensorBeamformer::new(array, MHZ_TO_HZ);
     let delays = Array2::ones((16, 50));
 
     for window_type in [
@@ -81,7 +82,7 @@ fn test_window_reduces_edge_elements() {
 #[test]
 fn test_hanning_window_has_zero_endpoints() {
     let array = create_test_array(8);
-    let beamformer = SensorBeamformer::new(array, 1e6);
+    let beamformer = SensorBeamformer::new(array, MHZ_TO_HZ);
     let delays = Array2::ones((8, 10));
     let windowed = beamformer
         .apply_windowing(&delays, BeamformerWindowType::Hanning)
@@ -94,7 +95,7 @@ fn test_hanning_window_has_zero_endpoints() {
 #[test]
 fn test_windowing_applied_per_column() {
     let array = create_test_array(4);
-    let beamformer = SensorBeamformer::new(array, 1e6);
+    let beamformer = SensorBeamformer::new(array, MHZ_TO_HZ);
 
     let mut delays = Array2::zeros((4, 3));
     delays.column_mut(0).fill(1.0);
@@ -120,7 +121,7 @@ fn test_windowing_applied_per_column() {
 #[test]
 fn test_blackman_window_has_better_sidelobe_suppression() {
     let array = create_test_array(32);
-    let beamformer = SensorBeamformer::new(array, 1e6);
+    let beamformer = SensorBeamformer::new(array, MHZ_TO_HZ);
     let delays = Array2::ones((32, 1));
 
     let hanning = beamformer
@@ -141,7 +142,7 @@ fn test_blackman_window_has_better_sidelobe_suppression() {
 #[test]
 fn test_windowing_with_zero_delays() {
     let array = create_test_array(8);
-    let beamformer = SensorBeamformer::new(array, 1e6);
+    let beamformer = SensorBeamformer::new(array, MHZ_TO_HZ);
     let delays = Array2::zeros((8, 10));
     let windowed = beamformer
         .apply_windowing(&delays, BeamformerWindowType::Hanning)
@@ -158,7 +159,7 @@ fn test_windowing_with_zero_delays() {
 fn test_processing_params_f_number() {
     let params = SensorProcessingParams {
         n_sensors: 64,
-        sampling_frequency: 1e6,
+        sampling_frequency: MHZ_TO_HZ,
         element_spacing: 0.3e-3,
         array_aperture: 19.2e-3,
     };
@@ -172,7 +173,7 @@ fn test_processing_params_f_number() {
 fn test_processing_params_max_spatial_frequency() {
     let params = SensorProcessingParams {
         n_sensors: 64,
-        sampling_frequency: 1e6,
+        sampling_frequency: MHZ_TO_HZ,
         element_spacing: 0.3e-3,
         array_aperture: 19.2e-3,
     };
@@ -204,7 +205,7 @@ fn test_calculate_delays_logic() {
         ),
     ];
     let array = SensorArray::new(sensors, SOUND_SPEED_TISSUE, SensorArrayGeometry::Linear);
-    let beamformer = SensorBeamformer::new(array, 1e6);
+    let beamformer = SensorBeamformer::new(array, MHZ_TO_HZ);
 
     let grid = crate::domain::grid::Grid::new(2, 1, 1, 1.0, 1.0, 1.0).unwrap();
     let delays = beamformer.calculate_delays(&grid, 1.0).unwrap();

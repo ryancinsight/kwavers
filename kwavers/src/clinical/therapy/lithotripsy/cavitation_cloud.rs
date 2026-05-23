@@ -6,6 +6,7 @@
 
 use crate::core::constants::cavitation::{SURFACE_TENSION_WATER, VISCOSITY_WATER};
 use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL};
+use crate::core::constants::numerical::MPA_TO_PA;
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array3;
 use std::f64::consts::PI;
@@ -74,7 +75,7 @@ impl CavitationCloudDynamics {
             self.density_field = Array3::zeros(pressure.dim());
         }
         // Simple init: nucleate bubbles where pressure < threshold (-1 MPa) and near stone
-        let threshold = -1e6;
+        let threshold = -MPA_TO_PA;
         for ((i, j, k), p) in pressure.indexed_iter() {
             if *p < threshold && geometry[[i, j, k]] < 0.5 {
                 // Near stone but not inside?
@@ -181,7 +182,7 @@ mod tests {
         let mut cloud = CavitationCloudDynamics::new(params, (2, 2, 2));
         cloud.density_field.fill(0.0);
 
-        let pressure = Array3::from_elem((2, 2, 2), -2.0e6);
+        let pressure = Array3::from_elem((2, 2, 2), -2.0 * MPA_TO_PA);
         cloud.evolve_cloud(1e-6, 0.0, &pressure).unwrap();
 
         assert!(cloud.density_field.sum() > 0.0);
@@ -193,7 +194,7 @@ mod tests {
         let mut cloud = CavitationCloudDynamics::new(params.clone(), (2, 2, 2));
         cloud.density_field.fill(params.bubble_density * 0.5);
 
-        let pressure = Array3::from_elem((2, 2, 2), 2.0e6);
+        let pressure = Array3::from_elem((2, 2, 2), 2.0 * MPA_TO_PA);
         cloud.evolve_cloud(1e-6, 0.0, &pressure).unwrap();
 
         assert!(cloud.density_field.sum() < params.bubble_density * 0.5 * 8.0);
@@ -205,7 +206,7 @@ mod tests {
         let mut cloud = CavitationCloudDynamics::new(params.clone(), (2, 2, 2));
         cloud.density_field.fill(params.bubble_density * 0.5);
 
-        let pressure = Array3::from_elem((2, 2, 2), 2.0e6);
+        let pressure = Array3::from_elem((2, 2, 2), 2.0 * MPA_TO_PA);
         cloud.evolve_cloud(1e-6, 0.0, &pressure).unwrap();
 
         assert!(cloud.total_eroded_mass(0.0) > 0.0);

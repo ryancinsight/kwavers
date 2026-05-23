@@ -4,6 +4,7 @@
 //! lithotripsy (ESWL), including waveform generation, nonlinear propagation,
 //! and focusing characteristics.
 
+use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
@@ -30,13 +31,13 @@ pub struct ShockWaveParameters {
 impl Default for ShockWaveParameters {
     fn default() -> Self {
         Self {
-            peak_positive_pressure: 50e6,  // 50 MPa
-            peak_negative_pressure: -10e6, // -10 MPa
-            pulse_duration: 1e-6,          // 1 microsecond
-            repetition_rate: 2.0,          // 2 Hz
-            focal_spot_diameter: 5e-3,     // 5 mm
-            center_frequency: 500e3,       // 500 kHz
-            rise_time: 10e-9,              // 10 ns
+            peak_positive_pressure: 50.0 * MPA_TO_PA, // 50 MPa
+            peak_negative_pressure: -10.0 * MPA_TO_PA, // -10 MPa
+            pulse_duration: 1e-6,                       // 1 microsecond
+            repetition_rate: 2.0,                       // 2 Hz
+            focal_spot_diameter: 5e-3,                  // 5 mm
+            center_frequency: 0.5 * MHZ_TO_HZ,         // 500 kHz
+            rise_time: 10e-9,                           // 10 ns
         }
     }
 }

@@ -1,5 +1,6 @@
 use super::KzkParabolicDiffractionOperator;
 use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::core::constants::SOUND_SPEED_WATER;
 use crate::math::fft::Complex64;
 use crate::solver::forward::nonlinear::kzk::constants::{
@@ -185,7 +186,7 @@ fn test_fft_round_trip() {
         nx: 64,
         ny: 64,
         dx: 0.001,
-        frequency: 1e6,
+        frequency: MHZ_TO_HZ,
         c0: SOUND_SPEED_WATER_SIM,
         ..Default::default()
     };

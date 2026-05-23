@@ -40,10 +40,11 @@ pub struct UltrasoundConfig {
 
 impl Default for UltrasoundConfig {
     fn default() -> Self {
+        use crate::core::constants::numerical::MHZ_TO_HZ;
         Self {
             mode: UltrasoundMode::BMode,
-            frequency: 5e6,
-            sampling_frequency: 40e6,
+            frequency: 5.0 * MHZ_TO_HZ,
+            sampling_frequency: 40.0 * MHZ_TO_HZ,
             dynamic_range: 60.0,
             tgc_enabled: true,
         }

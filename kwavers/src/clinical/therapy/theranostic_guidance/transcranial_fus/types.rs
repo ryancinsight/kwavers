@@ -1,4 +1,5 @@
 use crate::core::constants::fundamental::{DENSITY_BRAIN, SOUND_SPEED_TISSUE};
+use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use ndarray::{Array1, Array2, Array3};
 
 /// Full configuration for the transcranial FUS planning pipeline.
@@ -48,13 +49,13 @@ impl Default for TranscranialFusPlanConfig {
     fn default() -> Self {
         Self {
             element_count: 1024,
-            frequency_hz: 650_000.0,
+            frequency_hz: 0.65 * MHZ_TO_HZ,
             radius_m: 0.150,
             cap_min_polar_rad: 0.22,
             cap_max_polar_rad: 1.18,
             brain_c: SOUND_SPEED_TISSUE,
             skull_c: 2800.0,
-            target_peak_pa: 1.0e6,
+            target_peak_pa: MPA_TO_PA,
             samples_per_ray: 192,
             chunk_size: 512,
             inertial_mi_threshold: 1.9,

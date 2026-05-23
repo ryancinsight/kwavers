@@ -1,6 +1,7 @@
 use super::core::FastNearfieldSolver;
 use super::types::FNMConfig;
 use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::domain::source::transducers::rectangular::RectangularTransducer;
 use crate::math::fft::Complex64;
 use ndarray::Array2;
@@ -19,7 +20,7 @@ fn test_transducer_setup() {
     let transducer = RectangularTransducer {
         width: 10e-3,
         height: 10e-3,
-        frequency: 1e6,
+        frequency: MHZ_TO_HZ,
         elements: (32, 32),
     };
 
@@ -38,7 +39,7 @@ fn test_precompute_factors() {
     let transducer = RectangularTransducer {
         width: 5e-3,
         height: 5e-3,
-        frequency: 2e6,
+        frequency: 2.0 * MHZ_TO_HZ,
         elements: (16, 16),
     };
 
@@ -63,7 +64,7 @@ fn test_field_computation() {
     let transducer = RectangularTransducer {
         width: 5e-3,
         height: 5e-3,
-        frequency: 2e6,
+        frequency: 2.0 * MHZ_TO_HZ,
         elements: (16, 16),
     };
 
@@ -89,7 +90,7 @@ fn test_memory_usage() {
     let transducer = RectangularTransducer {
         width: 10e-3,
         height: 10e-3,
-        frequency: 1e6,
+        frequency: MHZ_TO_HZ,
         elements: (32, 32),
     };
 

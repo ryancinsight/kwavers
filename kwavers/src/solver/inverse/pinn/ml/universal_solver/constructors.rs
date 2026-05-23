@@ -6,6 +6,7 @@ use super::solver::UniversalPINNSolver;
 use crate::core::constants::fundamental::{
     DENSITY_AIR, SOUND_SPEED_AIR, VACUUM_PERMEABILITY, VACUUM_PERMITTIVITY,
 };
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::core::error::KwaversResult;
 use crate::solver::inverse::pinn::ml::physics::PhysicsDomainRegistry;
 use burn::tensor::backend::AutodiffBackend;
@@ -87,7 +88,7 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
             bubbles_per_point: 1,
             multi_bubble_effects: false,
             nonlinear_acoustic: true,
-            center_frequency: 2.5e6,
+            center_frequency: 2.5 * MHZ_TO_HZ,
             sound_speed: crate::core::constants::fundamental::SOUND_SPEED_TISSUE,
             domain_size: vec![0.1, 0.1, 0.1],
         };

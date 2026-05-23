@@ -1,6 +1,7 @@
 //! Unit tests for the Hybrid Angular Spectrum module.
 
 use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
 
@@ -17,9 +18,9 @@ fn test_has_config_default() {
 
 #[test]
 fn test_has_config_validation() {
-    assert!(HASConfig::new(-1.0, 1000.0, 6.0, 0.5, 2.0, 0.0001, 1e6).is_err());
-    assert!(HASConfig::new(SOUND_SPEED_WATER_SIM, -1.0, 6.0, 0.5, 2.0, 0.0001, 1e6).is_err());
-    assert!(HASConfig::new(SOUND_SPEED_WATER_SIM, 1000.0, 6.0, 0.5, 2.0, -0.0001, 1e6).is_err());
+    assert!(HASConfig::new(-1.0, 1000.0, 6.0, 0.5, 2.0, 0.0001, MHZ_TO_HZ).is_err());
+    assert!(HASConfig::new(SOUND_SPEED_WATER_SIM, -1.0, 6.0, 0.5, 2.0, 0.0001, MHZ_TO_HZ).is_err());
+    assert!(HASConfig::new(SOUND_SPEED_WATER_SIM, 1000.0, 6.0, 0.5, 2.0, -0.0001, MHZ_TO_HZ).is_err());
 }
 
 /// Z = ρ·c (acoustic impedance definition, Pierce 1989 §1.5).
@@ -37,8 +38,8 @@ fn test_impedance_calculation() {
 fn test_attenuation_frequency_dependence() {
     use crate::core::constants::acoustic_parameters::NP_TO_DB;
     let config = HASConfig::default();
-    let atten_1mhz = config.attenuation_at_frequency(1e6);
-    let atten_2mhz = config.attenuation_at_frequency(2e6);
+    let atten_1mhz = config.attenuation_at_frequency(MHZ_TO_HZ);
+    let atten_2mhz = config.attenuation_at_frequency(2.0 * MHZ_TO_HZ);
     let ratio = atten_2mhz / atten_1mhz;
     assert!(
         (ratio - 4.0).abs() < 1e-12,
@@ -75,7 +76,7 @@ fn test_propagate_zero_distance_returns_input_unchanged() {
 fn test_shock_formation_distance_matches_analytical_formula() {
     let grid = Grid::new(4, 4, 4, 0.001, 0.001, 0.001).unwrap();
     // nonlinearity stores B/A; β = 1 + B/(2A) is used inside shock_formation_distance
-    let (rho0, c0, b_over_a, f_ref) = (1000.0_f64, SOUND_SPEED_WATER_SIM, 6.0_f64, 1.0e6_f64);
+    let (rho0, c0, b_over_a, f_ref) = (1000.0_f64, SOUND_SPEED_WATER_SIM, 6.0_f64, MHZ_TO_HZ);
     let beta = 1.0 + b_over_a / 2.0; // = 4.0 for B/A = 6 (tissue)
     let config = HASConfig {
         sound_speed: c0,
@@ -104,7 +105,7 @@ fn test_shock_formation_distance_matches_analytical_formula() {
 #[test]
 fn test_rayleigh_distance_matches_analytical_formula() {
     let grid = Grid::new(4, 4, 4, 0.001, 0.001, 0.001).unwrap();
-    let (c0, f_ref) = (SOUND_SPEED_WATER_SIM, 1.0e6_f64);
+    let (c0, f_ref) = (SOUND_SPEED_WATER_SIM, MHZ_TO_HZ);
     let config = HASConfig {
         sound_speed: c0,
         reference_frequency: f_ref,

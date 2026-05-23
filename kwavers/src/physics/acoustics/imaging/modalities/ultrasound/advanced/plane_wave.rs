@@ -12,6 +12,7 @@
 //! - Montaldo et al. (2009), "Coherent plane-wave compounding"
 
 use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use ndarray::{Array2, Array3};
 use num_complex::Complex64;
 use std::f64::consts::PI;
@@ -40,8 +41,8 @@ impl Default for UltrasoundPlaneWaveConfig {
             num_elements: 64,
             element_spacing: 0.3e-3,
             sound_speed: SOUND_SPEED_TISSUE,
-            frequency: 5e6,
-            sampling_frequency: 40e6,
+            frequency: 5.0 * MHZ_TO_HZ,
+            sampling_frequency: 40.0 * MHZ_TO_HZ,
         }
     }
 }

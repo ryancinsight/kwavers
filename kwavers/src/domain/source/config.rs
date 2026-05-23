@@ -2,6 +2,7 @@
 //!
 //! Defines the configuration structures for acoustic sources.
 
+use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use serde::{Deserialize, Serialize};
 
 use crate::domain::source::types::SourceField;
@@ -149,8 +150,8 @@ impl Default for DomainSourceParameters {
         Self {
             model: SourceModel::Point,
             source_field: SourceField::default(),
-            amplitude: 1e6, // 1 MPa
-            frequency: 1e6, // 1 MHz
+            amplitude: MPA_TO_PA, // 1 MPa
+            frequency: MHZ_TO_HZ, // 1 MHz
             phase: 0.0,
             position: [0.0, 0.0, 0.0],
             radius: 1e-3, // 1mm

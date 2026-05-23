@@ -1,5 +1,6 @@
 use super::*;
 use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 
 #[test]
 fn test_shock_capture_creation() {
@@ -26,7 +27,7 @@ fn test_no_shock_detection_smooth_field() {
     }
 
     let result = capture
-        .detect_shock(&pressure, 0.001, 0.001, SOUND_SPEED_TISSUE, 1e6)
+        .detect_shock(&pressure, 0.001, 0.001, SOUND_SPEED_TISSUE, MHZ_TO_HZ)
         .unwrap();
     assert!(result.max_gradient < config.gradient_threshold);
 }
@@ -47,7 +48,7 @@ fn test_shock_detection_steep_gradient() {
     }
 
     let result = capture
-        .detect_shock(&pressure, 0.001, 0.001, SOUND_SPEED_TISSUE, 1e6)
+        .detect_shock(&pressure, 0.001, 0.001, SOUND_SPEED_TISSUE, MHZ_TO_HZ)
         .unwrap();
     assert!(result.shock_detected);
     assert!(result.max_gradient > 0.0);
@@ -84,7 +85,7 @@ fn test_shock_filter_application() {
     }
 
     let result = capture
-        .detect_shock(&pressure, 0.001, 0.001, SOUND_SPEED_TISSUE, 1e6)
+        .detect_shock(&pressure, 0.001, 0.001, SOUND_SPEED_TISSUE, MHZ_TO_HZ)
         .unwrap();
 
     capture.shock_filter(&mut pressure, &result, 3).unwrap();

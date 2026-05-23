@@ -112,6 +112,7 @@ pub fn update_cavitation_control(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
     use crate::physics::cavitation_control::{ControlStrategy, FeedbackConfig};
 
     #[test]
@@ -126,7 +127,7 @@ mod tests {
             safety_factor: 0.5,
             enable_adaptive: true,
         };
-        let mut controller = FeedbackController::new(config, 1e6, 1000.0);
+        let mut controller = FeedbackController::new(config, MHZ_TO_HZ, 1000.0);
 
         // Create acoustic field with pressure below cavitation threshold
         let acoustic_field = AcousticField {
@@ -137,8 +138,8 @@ mod tests {
         };
 
         let acoustic_params = AcousticTherapyParams {
-            frequency: 1e6,
-            pnp: 1e6, // 1 MPa, threshold = 0.1 MPa
+            frequency: MHZ_TO_HZ,
+            pnp: MPA_TO_PA, // 1 MPa, threshold = 0.1 MPa
             prf: 100.0,
             duty_cycle: 0.01,
             focal_depth: 0.05,
@@ -166,7 +167,7 @@ mod tests {
             safety_factor: 0.5,
             enable_adaptive: true,
         };
-        let mut controller = FeedbackController::new(config, 1e6, 1000.0);
+        let mut controller = FeedbackController::new(config, MHZ_TO_HZ, 1000.0);
 
         // Create acoustic field with pressure above cavitation threshold
         let acoustic_field = AcousticField {
@@ -177,8 +178,8 @@ mod tests {
         };
 
         let acoustic_params = AcousticTherapyParams {
-            frequency: 1e6,
-            pnp: 1e6, // 1 MPa, threshold = 0.1 MPa
+            frequency: MHZ_TO_HZ,
+            pnp: MPA_TO_PA, // 1 MPa, threshold = 0.1 MPa
             prf: 100.0,
             duty_cycle: 0.01,
             focal_depth: 0.05,
@@ -209,7 +210,7 @@ mod tests {
             safety_factor: 0.7,
             enable_adaptive: true,
         };
-        let mut controller = FeedbackController::new(config, 1e6, 1000.0);
+        let mut controller = FeedbackController::new(config, MHZ_TO_HZ, 1000.0);
 
         // Create acoustic field with spatial variation
         let mut pressure = Array3::zeros((10, 10, 10));
@@ -235,8 +236,8 @@ mod tests {
         };
 
         let acoustic_params = AcousticTherapyParams {
-            frequency: 1e6,
-            pnp: 1e6,
+            frequency: MHZ_TO_HZ,
+            pnp: MPA_TO_PA,
             prf: 100.0,
             duty_cycle: 0.01,
             focal_depth: 0.05,

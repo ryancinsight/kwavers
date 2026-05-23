@@ -1,5 +1,6 @@
 //! Gaussian beam propagation tests (Tier 1 fast + Tier 3 comprehensive).
 
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::solver::forward::nonlinear::kzk::{KZKConfig, KZKSolver};
 use ndarray::Array2;
 
@@ -37,7 +38,7 @@ fn test_gaussian_beam_propagation() {
         }
     }
 
-    solver.set_source(source, 1e6);
+    solver.set_source(source, MHZ_TO_HZ);
     for _ in 0..10 {
         solver.step();
     }
@@ -82,7 +83,7 @@ fn test_gaussian_beam_propagation_fast() {
         }
     }
 
-    solver.set_source(source, 1e6);
+    solver.set_source(source, MHZ_TO_HZ);
     for _ in 0..3 {
         solver.step();
     }

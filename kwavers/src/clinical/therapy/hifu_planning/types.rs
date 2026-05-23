@@ -28,7 +28,7 @@ pub struct ClinicalHIFUTransducer {
 impl Default for ClinicalHIFUTransducer {
     fn default() -> Self {
         Self {
-            frequency: 1.5e6,
+            frequency: 1.5 * MHZ_TO_HZ,
             focal_length_mm: 80.0,
             aperture_diameter_mm: 40.0,
             power: 50.0,

@@ -119,6 +119,7 @@ impl AngularSpectrum2D {
 mod tests {
     use super::*;
     use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use crate::core::constants::numerical::MHZ_TO_HZ;
 
     #[test]
     fn test_2d_angular_spectrum() {
@@ -126,7 +127,7 @@ mod tests {
             nx: 128,
             ny: 128,
             dx: 0.2e-3,
-            frequency: 1e6,
+            frequency: MHZ_TO_HZ,
             c0: SOUND_SPEED_WATER_SIM,
             ..Default::default()
         };

@@ -57,7 +57,7 @@ fn test_absorption_temperature_and_frequency_dependence() {
     let alpha_hot = tissue.absorption(t_hot, freq);
 
     assert!(alpha_hot > alpha_ref);
-    let alpha_2mhz = tissue.absorption(t_ref, 2e6);
+    let alpha_2mhz = tissue.absorption(t_ref, 2.0 * MHZ_TO_HZ);
     assert!(alpha_2mhz > alpha_ref);
 }
 

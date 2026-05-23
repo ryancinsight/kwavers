@@ -309,6 +309,15 @@ theorems against an external published reconstruction.
   residual `0.5227508888630437` and passive-only residual
   `0.5435181467026386`, so the modal denominator alone is not the parity
   repair.
+- Added PSTD CBS source projection: `PstdSpectralConvergentBornOperator` now
+  injects sources through exact centered-grid indices and the PSTD source-kappa
+  spectral filter `cos(c0 Δt |k| / 2)`. The determined reduced probe reports
+  all-channel residual `0.5233688602227166` and passive-only residual
+  `0.5434979751472874`, so source projection/filtering alone is not the parity
+  repair.
+- Closed an unrelated focused source adapter compile defect: the focused bowl
+  `HashMap` construction now carries the explicit `ElementMap` type, restoring
+  full `kwavers` library-test compilation for this verification slice.
 - Completed the transcranial clinical/generic config boundary enough to restore
   compile gates: clinical entrypoints retain `TranscranialUstBornInversionConfig`
   for anatomy fields and pass `&config.linear` to generic linear-Born kernels.
@@ -409,6 +418,9 @@ theorems against an external published reconstruction.
    A frequency-domain PSTD spectral CBS operator now tests the modal denominator
    hypothesis directly and does not close the residual: all-channel residual is
    `0.5227508888630437` and passive-only residual is `0.5435181467026386`.
+   Matching PSTD source-kappa projection in that operator changes all-channel
+   residual to `0.5233688602227166` and passive-only residual to
+   `0.5434979751472874`, so source projection/filtering alone is not the repair.
    Source-channel attribution
    rejects co-located receiver contamination as the dominant root cause:
    active-source receiver channels account for 17.7068% of full-scale residual
@@ -421,11 +433,11 @@ theorems against an external published reconstruction.
    determined reduced gate. Forward-operator comparison shows single-scatter
    Born is currently closest to PSTD (`0.456575` normalized residual), followed
    by dense CBS (`0.476438`), with absorbed spectral CBS worst (`0.523411`).
-   This rules out extra CBS complexity and the PSTD modal denominator alone as
-   the immediate parity path. The next repair should isolate the discrete source
-   injection, source filtering, and receiver projection contract between PSTD
-   acquisition and frequency-domain CBS rather than source-kappa filtering,
-   active-channel exclusion, or inversion tuning.
+   This rules out extra CBS complexity, the PSTD modal denominator alone, and
+   the PSTD source-kappa projection alone as the immediate parity path. The next
+   repair should isolate receiver sampling and the temporal source/frequency-bin
+   transfer function between PSTD acquisition and frequency-domain CBS rather
+   than active-channel exclusion or inversion tuning.
 4. **MAT5/HDF5 ingest — CLOSED.** The published phantom file is MATLAB 5.0,
    while alternate user-provided sound-speed phantoms may be HDF5/MAT-v7.3.
    The selected boundary supports both under Rust-owned clinical ingest; Python

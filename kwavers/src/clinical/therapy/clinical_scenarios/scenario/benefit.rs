@@ -1,9 +1,10 @@
+use crate::core::constants::numerical::MPA_TO_PA;
 use crate::core::constants::REFERENCE_FREQUENCY_HZ;
 /// Baseline intrinsic-threshold magnitude at 1 MHz in water-rich soft tissue
 /// (Maxwell 2013, Table II — bovine liver).
-const PT0_PA: f64 = 28.2e6;
+const PT0_PA: f64 = 28.2 * MPA_TO_PA;
 /// Slope of the log-frequency fit (Vlaisavljevich 2015, Fig. 6 fit to liver).
-const PT_SLOPE_PA_PER_DECADE: f64 = 1.4e6;
+const PT_SLOPE_PA_PER_DECADE: f64 = 1.4 * MPA_TO_PA;
 
 /// Qualitative benefit/detriment summary for a clinical regime.
 ///

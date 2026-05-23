@@ -1,4 +1,5 @@
 use super::{EquivalenceReport, EquivalenceValidator};
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::core::error::{KwaversError, ValidationError};
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
@@ -46,7 +47,7 @@ fn run_simulation_cpu(
     }
 
     // Create signal: 1 MHz tone burst with 5 cycles
-    let signal = ToneBurst::new(1.0e6, 5.0, 1.0e-6, 1.0);
+    let signal = ToneBurst::new(MHZ_TO_HZ, 5.0, 1.0e-6, 1.0);
     let num_samples = nt + 1;
     let mut signal_array = Array2::zeros((1, num_samples));
     for i in 0..num_samples {
@@ -104,7 +105,7 @@ fn run_simulation_gpu(
                 }
             }
 
-            let signal = ToneBurst::new(1.0e6, 5.0, 1.0e-6, 1.0);
+            let signal = ToneBurst::new(MHZ_TO_HZ, 5.0, 1.0e-6, 1.0);
             let num_samples = nt + 1;
             let mut signal_array = Array2::zeros((1, num_samples));
             for i in 0..num_samples {

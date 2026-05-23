@@ -165,19 +165,20 @@ impl ConfigurationBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::numerical::MHZ_TO_HZ;
 
     #[test]
     fn test_configuration_builder_basic() {
         let config = ConfigurationBuilder::new()
             .grid_spacing([0.001, 0.001, 0.001])
             .grid_dimensions(100, 100, 100)
-            .frequency(1e6)
+            .frequency(MHZ_TO_HZ)
             .cfl(0.5)
             .build_unchecked();
 
         assert_eq!(config.grid.spacing, [0.001, 0.001, 0.001]);
         assert_eq!(config.grid.dimensions, [100, 100, 100]);
-        assert_eq!(config.simulation.frequency, 1e6);
+        assert_eq!(config.simulation.frequency, MHZ_TO_HZ);
         assert_eq!(config.simulation.cfl, 0.5);
     }
 
@@ -191,7 +192,7 @@ mod tests {
         let result = ConfigurationBuilder::new()
             .grid_spacing([0.0005, 0.0005, 0.0005]) // 0.5 mm spacing
             .grid_dimensions(100, 100, 100) // Add required grid dimensions
-            .frequency(1e6) // 1 MHz
+            .frequency(MHZ_TO_HZ) // 1 MHz
             .sound_speed_range(1000.0, 1600.0) // 1000-1600 m/s
             .cfl(0.5)
             .time_step(1e-7)
@@ -213,13 +214,13 @@ mod tests {
     #[test]
     fn test_configuration_builder_chaining() {
         let builder = ConfigurationBuilder::new()
-            .frequency(1e6)
+            .frequency(MHZ_TO_HZ)
             .cfl(0.5)
             .grid_spacing([0.001, 0.001, 0.001])
             .sound_speed_range(1400.0, 1600.0);
 
         let config = builder.build_unchecked();
-        assert_eq!(config.simulation.frequency, 1e6);
+        assert_eq!(config.simulation.frequency, MHZ_TO_HZ);
         assert_eq!(config.simulation.cfl, 0.5);
         assert_eq!(config.grid.spacing, [0.001, 0.001, 0.001]);
     }

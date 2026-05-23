@@ -2,6 +2,7 @@
 
 use super::*;
 use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use ndarray::Array3;
 
 #[test]
@@ -17,19 +18,19 @@ fn test_plane_wave_config() {
     let config = UltrasoundPlaneWaveConfig::default();
     assert_eq!(config.tx_angle, 0.0);
     assert_eq!(config.num_elements, 64);
-    assert!((config.frequency - 5e6).abs() < 1e-6);
+    assert!((config.frequency - 5.0 * MHZ_TO_HZ).abs() < 1e-6);
 }
 
 #[test]
 fn test_chirp_generation() {
     let config = CodedExcitationConfig {
         code: ExcitationCode::Chirp {
-            start_freq: 2e6,
-            end_freq: 8e6,
+            start_freq: 2.0 * MHZ_TO_HZ,
+            end_freq: 8.0 * MHZ_TO_HZ,
             length: 100,
         },
         sound_speed: SOUND_SPEED_TISSUE,
-        sampling_frequency: 20e6,
+        sampling_frequency: 20.0 * MHZ_TO_HZ,
     };
 
     let processor = CodedExcitationProcessor::new(config);
@@ -44,7 +45,7 @@ fn test_barker_generation() {
     let config = CodedExcitationConfig {
         code: ExcitationCode::Barker { length: 7 },
         sound_speed: SOUND_SPEED_TISSUE,
-        sampling_frequency: 20e6,
+        sampling_frequency: 20.0 * MHZ_TO_HZ,
     };
 
     let processor = CodedExcitationProcessor::new(config);
@@ -61,12 +62,12 @@ fn test_barker_generation() {
 fn test_snr_improvement_calculation() {
     let config = CodedExcitationConfig {
         code: ExcitationCode::Chirp {
-            start_freq: 2e6,
-            end_freq: 8e6,
+            start_freq: 2.0 * MHZ_TO_HZ,
+            end_freq: 8.0 * MHZ_TO_HZ,
             length: 100,
         },
         sound_speed: SOUND_SPEED_TISSUE,
-        sampling_frequency: 20e6,
+        sampling_frequency: 20.0 * MHZ_TO_HZ,
     };
 
     let processor = CodedExcitationProcessor::new(config);

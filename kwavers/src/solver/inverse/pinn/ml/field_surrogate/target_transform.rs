@@ -34,6 +34,7 @@
 //! magnitude — adequate for histotripsy fields whose useful dynamic
 //! range is ~`30 MPa → 30 Pa`.
 
+use crate::core::constants::numerical::MPA_TO_PA;
 use crate::core::error::{KwaversError, KwaversResult};
 
 /// Per-channel forward/inverse mapping between physical Pa and the
@@ -160,8 +161,9 @@ mod tests {
 
     #[test]
     fn linear_round_trips_within_clamp_range() {
-        let t = TargetTransform::linear(30.0e6).unwrap();
-        for &p in &[-30.0e6_f32, -1.0e6, 0.0, 1.0e6, 30.0e6] {
+        let scale = 30.0 * MPA_TO_PA as f32;
+        let t = TargetTransform::linear(scale).unwrap();
+        for &p in &[-30.0 * MPA_TO_PA as f32, -MPA_TO_PA as f32, 0.0, MPA_TO_PA as f32, 30.0 * MPA_TO_PA as f32] {
             let n = t.forward(p);
             assert!(n.abs() <= 1.0 + 1e-6);
             let back = t.inverse(n);
@@ -174,15 +176,17 @@ mod tests {
 
     #[test]
     fn signed_log1p_endpoints_map_to_unit_interval() {
-        let t = TargetTransform::signed_log1p(30.0e6, 30.0).unwrap();
-        assert!((t.forward(30.0e6) - 1.0).abs() < 1e-5);
-        assert!((t.forward(-30.0e6) + 1.0).abs() < 1e-5);
+        let p_max = 30.0 * MPA_TO_PA as f32;
+        let t = TargetTransform::signed_log1p(p_max, 30.0).unwrap();
+        assert!((t.forward(p_max) - 1.0).abs() < 1e-5);
+        assert!((t.forward(-p_max) + 1.0).abs() < 1e-5);
         assert!(t.forward(0.0).abs() < 1e-12);
     }
 
     #[test]
     fn signed_log1p_round_trip_preserves_pressure() {
-        let t = TargetTransform::signed_log1p(30.0e6, 30.0).unwrap();
+        let p_max = 30.0 * MPA_TO_PA as f32;
+        let t = TargetTransform::signed_log1p(p_max, 30.0).unwrap();
         // Six orders of magnitude in |p|.
         for &p in &[
             -3.0e7_f32, -3.0e6, -3.0e5, -3.0e4, -3.0e3, -3.0e2, -30.0, 0.0, 30.0, 3.0e2, 3.0e3,
@@ -204,10 +208,11 @@ mod tests {
 
     #[test]
     fn signed_log1p_is_monotonic() {
-        let t = TargetTransform::signed_log1p(30.0e6, 30.0).unwrap();
+        let p_max = 30.0 * MPA_TO_PA as f32;
+        let t = TargetTransform::signed_log1p(p_max, 30.0).unwrap();
         let mut prev = t.forward(-1.0e8);
         for k in -10..=10 {
-            let p = (k as f32) * 1.0e6;
+            let p = (k as f32) * MPA_TO_PA as f32;
             let n = t.forward(p);
             assert!(
                 n >= prev - 1e-7,
@@ -223,7 +228,7 @@ mod tests {
         // (tiny); the log1p transform yields ≈ ln(2)/t_max — a
         // substantial fraction of unity, demonstrating dynamic-range
         // compression.
-        let p_max = 30.0e6_f32;
+        let p_max = 30.0 * MPA_TO_PA as f32;
         let p_eps = 30.0_f32;
         let lin = TargetTransform::linear(p_max).unwrap();
         let log = TargetTransform::signed_log1p(p_max, p_eps).unwrap();
@@ -241,10 +246,12 @@ mod tests {
 
     #[test]
     fn output_transforms_signed_log1p_rejects_invalid_eps_ratio() {
-        assert!(OutputTransforms::signed_log1p(30e6, 30e6, 21e6, 0.0).is_err());
-        assert!(OutputTransforms::signed_log1p(30e6, 30e6, 21e6, 1.0).is_err());
-        assert!(OutputTransforms::signed_log1p(30e6, 30e6, 21e6, -0.1).is_err());
-        assert!(OutputTransforms::signed_log1p(30e6, 30e6, 21e6, 1.0e-6).is_ok());
+        let p30 = 30.0 * MPA_TO_PA as f32;
+        let p21 = 21.0 * MPA_TO_PA as f32;
+        assert!(OutputTransforms::signed_log1p(p30, p30, p21, 0.0).is_err());
+        assert!(OutputTransforms::signed_log1p(p30, p30, p21, 1.0).is_err());
+        assert!(OutputTransforms::signed_log1p(p30, p30, p21, -0.1).is_err());
+        assert!(OutputTransforms::signed_log1p(p30, p30, p21, 1.0e-6).is_ok());
     }
 
     #[test]

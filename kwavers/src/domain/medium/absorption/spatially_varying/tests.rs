@@ -1,4 +1,5 @@
 use super::*;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::core::constants::thermodynamic::BODY_TEMPERATURE_K;
 use crate::core::error::KwaversResult;
 use ndarray::Array3;
@@ -7,7 +8,7 @@ use ndarray::Array3;
 fn test_uniform_absorption() -> KwaversResult<()> {
     let absorption = SpatiallyVaryingAbsorption::uniform(10, 10, 10, 0.5, 1.1)?;
 
-    let alpha = absorption.absorption_at_point(5, 5, 5, 1e6);
+    let alpha = absorption.absorption_at_point(5, 5, 5, MHZ_TO_HZ);
     assert!((alpha - 0.5).abs() < 1e-10);
 
     Ok(())
@@ -17,8 +18,8 @@ fn test_uniform_absorption() -> KwaversResult<()> {
 fn test_frequency_dependence() -> KwaversResult<()> {
     let absorption = SpatiallyVaryingAbsorption::uniform(5, 5, 5, 1.0, 1.5)?;
 
-    let alpha_1mhz = absorption.absorption_at_point(0, 0, 0, 1e6);
-    let alpha_2mhz = absorption.absorption_at_point(0, 0, 0, 2e6);
+    let alpha_1mhz = absorption.absorption_at_point(0, 0, 0, MHZ_TO_HZ);
+    let alpha_2mhz = absorption.absorption_at_point(0, 0, 0, 2.0 * MHZ_TO_HZ);
 
     let expected_ratio = 2.0_f64.powf(1.5);
     let actual_ratio = alpha_2mhz / alpha_1mhz;
@@ -34,10 +35,10 @@ fn test_spherical_inclusion() -> KwaversResult<()> {
 
     absorption.add_spherical_inclusion((0.5, 0.5, 0.5), 0.3, 2.0, 1.5, 0.1, 0.1, 0.1);
 
-    let alpha_center = absorption.absorption_at_point(5, 5, 5, 1e6);
+    let alpha_center = absorption.absorption_at_point(5, 5, 5, MHZ_TO_HZ);
     assert!((alpha_center - 2.0).abs() < 1e-10);
 
-    let alpha_far = absorption.absorption_at_point(15, 15, 15, 1e6);
+    let alpha_far = absorption.absorption_at_point(15, 15, 15, MHZ_TO_HZ);
     assert!((alpha_far - 0.5).abs() < 1e-10);
 
     Ok(())
@@ -47,7 +48,7 @@ fn test_spherical_inclusion() -> KwaversResult<()> {
 fn test_compute_absorption_field() -> KwaversResult<()> {
     let absorption = SpatiallyVaryingAbsorption::uniform(8, 8, 8, 0.75, 1.1)?;
 
-    let field = absorption.compute_absorption_field(2e6);
+    let field = absorption.compute_absorption_field(2.0 * MHZ_TO_HZ);
 
     let expected = 0.75 * 2.0_f64.powf(1.1);
     for &val in field.iter() {
@@ -66,8 +67,8 @@ fn test_temperature_dependence() -> KwaversResult<()> {
 
     let absorption = absorption.with_temperature_dependence(temp_field, 0.01)?;
 
-    let alpha_ref = absorption.absorption_at_point(0, 0, 0, 1e6);
-    let alpha_hot = absorption.absorption_at_point(2, 2, 2, 1e6);
+    let alpha_ref = absorption.absorption_at_point(0, 0, 0, MHZ_TO_HZ);
+    let alpha_hot = absorption.absorption_at_point(2, 2, 2, MHZ_TO_HZ);
 
     let expected_ratio = 1.1;
     let actual_ratio = alpha_hot / alpha_ref;
@@ -84,7 +85,7 @@ fn test_validation() -> KwaversResult<()> {
 
     let mut bad_alpha = Array3::from_elem((3, 3, 3), 0.5);
     bad_alpha[[1, 1, 1]] = -0.1;
-    let bad = SpatiallyVaryingAbsorption::new(bad_alpha, Array3::from_elem((3, 3, 3), 1.0), 1e6);
+    let bad = SpatiallyVaryingAbsorption::new(bad_alpha, Array3::from_elem((3, 3, 3), 1.0), MHZ_TO_HZ);
     assert!(bad.is_err());
 
     Ok(())

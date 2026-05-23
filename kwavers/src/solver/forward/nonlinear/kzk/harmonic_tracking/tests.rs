@@ -55,8 +55,8 @@ fn test_shock_distance_prediction() {
     let config = HarmonicConfig::default();
     let tracker = HarmonicTracker::new(config);
 
-    let distance_1mpa = tracker.predict_shock_distance(1e6);
-    let distance_10mpa = tracker.predict_shock_distance(10e6);
+    let distance_1mpa = tracker.predict_shock_distance(MPA_TO_PA);
+    let distance_10mpa = tracker.predict_shock_distance(10.0 * MPA_TO_PA);
 
     assert!(distance_10mpa.unwrap() < distance_1mpa.unwrap());
 }

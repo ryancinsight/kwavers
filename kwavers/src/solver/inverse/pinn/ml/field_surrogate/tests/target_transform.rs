@@ -15,6 +15,7 @@ use super::super::network::ParamFieldPINNNetwork;
 use super::super::target_transform::{OutputTransforms, TargetTransform};
 use super::super::KernelCubeSampler;
 use super::{AB, B};
+use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use crate::physics::field_surrogate::FocalKernel;
 
 fn gaussian_kernel(f0: f64, pnp: f64) -> FocalKernel {
@@ -28,15 +29,15 @@ fn gaussian_kernel(f0: f64, pnp: f64) -> FocalKernel {
         let r2 = dx * dx + dy * dy + dz * dz;
         *v = pnp * (-0.5 * r2).exp();
     }
-    FocalKernel::new(field, 1.0e-3, focus, f0, pnp, 1.0e6, 2.0e-3, 5.0e-3)
+    FocalKernel::new(field, 1.0e-3, focus, f0, pnp, MPA_TO_PA, 2.0e-3, 5.0e-3)
 }
 
 fn cube() -> Vec<FocalKernel> {
     vec![
-        gaussian_kernel(0.5e6, 15.0e6),
-        gaussian_kernel(0.5e6, 30.0e6),
-        gaussian_kernel(1.0e6, 15.0e6),
-        gaussian_kernel(1.0e6, 30.0e6),
+        gaussian_kernel(0.5 * MHZ_TO_HZ, 15.0 * MPA_TO_PA),
+        gaussian_kernel(0.5 * MHZ_TO_HZ, 30.0 * MPA_TO_PA),
+        gaussian_kernel(MHZ_TO_HZ, 15.0 * MPA_TO_PA),
+        gaussian_kernel(MHZ_TO_HZ, 30.0 * MPA_TO_PA),
     ]
 }
 
@@ -46,7 +47,7 @@ fn sampler_default_uses_linear_transform() {
     match sampler.output_transforms.p_max {
         TargetTransform::Linear { scale_pa } => {
             // Default scale equals the per-channel maximum (30 MPa here).
-            assert!((scale_pa - 30.0e6).abs() < 1.0);
+            assert!((scale_pa - 30.0 * MPA_TO_PA as f32).abs() < 1.0);
         }
         TargetTransform::SignedLog1p { .. } => {
             panic!("default sampler must use linear transform");
@@ -57,7 +58,7 @@ fn sampler_default_uses_linear_transform() {
 #[test]
 fn sampler_with_signed_log1p_emits_targets_in_unit_interval() {
     let kernels = cube();
-    let p_max_pa = 30.0e6_f32;
+    let p_max_pa = 30.0 * MPA_TO_PA as f32;
     let transforms =
         OutputTransforms::signed_log1p(p_max_pa, p_max_pa, p_max_pa * 0.7, 1.0e-3).unwrap();
     let sampler =
@@ -95,7 +96,7 @@ fn signed_log1p_lifts_sub_epsilon_targets_above_linear() {
     // the signed-log1p transform with eps_ratio = 1e-3 emits
     // |t| = ln(2)/t_max ≈ 0.1. This contrast is what closes the
     // focal-peak underprediction.
-    let p_max_pa = 30.0e6_f32;
+    let p_max_pa = 30.0 * MPA_TO_PA as f32;
     let lin = OutputTransforms::linear(p_max_pa, p_max_pa, p_max_pa * 0.7).unwrap();
     let log = OutputTransforms::signed_log1p(p_max_pa, p_max_pa, p_max_pa * 0.7, 1.0e-3).unwrap();
     let p_probe = p_max_pa * 1.0e-3;
@@ -117,18 +118,18 @@ fn infer_grid_signed_log1p_round_trips_through_untrained_network() {
     let cfg = ParamFieldPINNConfig::default();
     let device = Default::default();
     let net = ParamFieldPINNNetwork::<B>::new(&cfg, &device).unwrap();
-    let p_max_pa = 30.0e6_f32;
+    let p_max_pa = 30.0 * MPA_TO_PA as f32;
     let transforms =
         OutputTransforms::signed_log1p(p_max_pa, p_max_pa, p_max_pa * 0.7, 1.0e-3).unwrap();
     let params = GridQueryParams {
         shape: (6, 4, 4),
         focus_idx: (3, 2, 2),
         dx_m: 1.0e-3,
-        f0: 0.75e6,
-        pnp: 22.5e6,
+        f0: 0.75 * MHZ_TO_HZ,
+        pnp: 22.5 * MPA_TO_PA,
         coord_half_m: (3.0e-3, 2.0e-3, 2.0e-3),
-        f0_range: (0.5e6, 1.0e6),
-        pnp_range: (15.0e6, 30.0e6),
+        f0_range: (0.5 * MHZ_TO_HZ, MHZ_TO_HZ),
+        pnp_range: (15.0 * MPA_TO_PA, 30.0 * MPA_TO_PA),
         output_transforms: transforms,
         batch_size: 64,
     };

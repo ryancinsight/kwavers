@@ -1,3 +1,4 @@
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::physics::bubble_dynamics::BubbleParameters;
 
 /// Cavitation coupling configuration
@@ -32,7 +33,7 @@ impl Default for CavitationCouplingConfig {
             bubbles_per_point: 1,
             multi_bubble_effects: false,
             nonlinear_acoustic: true,
-            center_frequency: 2.5e6, // 2.5 MHz default
+            center_frequency: 2.5 * MHZ_TO_HZ, // 2.5 MHz default
             sound_speed: crate::core::constants::fundamental::SOUND_SPEED_TISSUE, // Water/Tissue default
             domain_size: vec![1e-2, 1e-2, 1e-2],                                  // 1cm³ domain
         }

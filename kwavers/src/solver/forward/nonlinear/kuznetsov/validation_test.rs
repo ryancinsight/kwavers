@@ -8,6 +8,7 @@
 mod tests {
     use super::super::{AcousticEquationMode, KuznetsovConfig, KuznetsovWave};
     use crate::core::constants::{DENSITY_WATER, SOUND_SPEED_WATER};
+    use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
     use crate::domain::grid::Grid;
     use crate::domain::medium::HomogeneousMedium;
     use crate::domain::source::PointSource;
@@ -40,7 +41,7 @@ mod tests {
         // Point source at center
         use crate::domain::signal::{Signal, SineWave};
         use std::sync::Arc;
-        let signal: Arc<dyn Signal> = Arc::new(SineWave::new(1e6, 1.0, 0.0));
+        let signal: Arc<dyn Signal> = Arc::new(SineWave::new(MHZ_TO_HZ, 1.0, 0.0));
         let position = grid.indices_to_coordinates(grid.nx / 2, grid.ny / 2, grid.nz / 2);
         let source = PointSource::new(position, signal);
 
@@ -80,7 +81,7 @@ mod tests {
         let medium = HomogeneousMedium::new(DENSITY_WATER, SOUND_SPEED_WATER, 0.0, 0.0, &grid);
         use crate::domain::signal::{Signal, SineWave};
         use std::sync::Arc;
-        let signal: Arc<dyn Signal> = Arc::new(SineWave::new(1e6, 1.0, 0.0));
+        let signal: Arc<dyn Signal> = Arc::new(SineWave::new(MHZ_TO_HZ, 1.0, 0.0));
         let position = grid.indices_to_coordinates(16, 16, 16);
         let source = PointSource::new(position, signal);
 
@@ -284,10 +285,10 @@ mod tests {
         let medium = HomogeneousMedium::new(DENSITY_WATER, SOUND_SPEED_WATER, 0.0, 0.0, &grid);
 
         // Sinusoidal source
-        let frequency = 1e6; // 1 MHz
+        let frequency = MHZ_TO_HZ; // 1 MHz
         use crate::domain::signal::{Signal, SineWave};
         use std::sync::Arc;
-        let signal: Arc<dyn Signal> = Arc::new(SineWave::new(frequency, 1e6, 0.0));
+        let signal: Arc<dyn Signal> = Arc::new(SineWave::new(frequency, MPA_TO_PA, 0.0));
         let position = grid.indices_to_coordinates(10, grid.ny / 2, grid.nz / 2);
         let source = PointSource::new(position, signal);
 
@@ -339,10 +340,10 @@ mod tests {
         let medium = HomogeneousMedium::new(DENSITY_WATER, SOUND_SPEED_WATER, 0.0, 0.0, &grid);
 
         // Sinusoidal source
-        let frequency = 1e6; // 1 MHz
+        let frequency = MHZ_TO_HZ; // 1 MHz
         use crate::domain::signal::{Signal, SineWave};
         use std::sync::Arc;
-        let signal: Arc<dyn Signal> = Arc::new(SineWave::new(frequency, 1e6, 0.0));
+        let signal: Arc<dyn Signal> = Arc::new(SineWave::new(frequency, MPA_TO_PA, 0.0));
         let position = grid.indices_to_coordinates(5, grid.ny / 2, grid.nz / 2);
         let source = PointSource::new(position, signal);
 

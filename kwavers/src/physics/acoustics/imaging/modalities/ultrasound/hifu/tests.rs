@@ -1,5 +1,6 @@
 use super::*;
 use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::domain::grid::Grid;
 use crate::domain::imaging::ultrasound::hifu::{
     DomainHIFUTransducer, DomainHIFUTreatmentPlan, HifuTargetShape, HifuTreatmentProtocol,
@@ -12,7 +13,7 @@ use ndarray::Array3;
 fn hifu_pressure_field_is_centered_at_geometric_focus_depth() -> crate::KwaversResult<()> {
     let grid = Grid::new(9, 9, 17, 0.001, 0.001, 0.001)?;
     let medium = HomogeneousMedium::new(1000.0, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
-    let transducer = DomainHIFUTransducer::new_single_element(1.0e6, 50.0, 0.010, 0.004);
+    let transducer = DomainHIFUTransducer::new_single_element(MHZ_TO_HZ, 50.0, 0.010, 0.004);
 
     let pressure = compute_pressure_field(&transducer, &grid, &medium)?;
     let center = (grid.nx / 2, grid.ny / 2, 10);
@@ -35,7 +36,7 @@ fn hifu_pressure_field_is_centered_at_geometric_focus_depth() -> crate::KwaversR
 fn hifu_pressure_field_is_laterally_symmetric() -> crate::KwaversResult<()> {
     let grid = Grid::new(9, 9, 13, 0.001, 0.001, 0.001)?;
     let medium = HomogeneousMedium::new(1000.0, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
-    let transducer = DomainHIFUTransducer::new_single_element(1.0e6, 25.0, 0.008, 0.004);
+    let transducer = DomainHIFUTransducer::new_single_element(MHZ_TO_HZ, 25.0, 0.008, 0.004);
 
     let pressure = compute_pressure_field(&transducer, &grid, &medium)?;
     let left = pressure[[2, 4, 8]];
@@ -52,7 +53,7 @@ fn hifu_pressure_field_is_laterally_symmetric() -> crate::KwaversResult<()> {
 fn hifu_intensity_uses_peak_pressure_half_impedance_formula() -> crate::KwaversResult<()> {
     let grid = Grid::new(5, 5, 9, 0.001, 0.001, 0.001)?;
     let medium = HomogeneousMedium::new(1000.0, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
-    let transducer = DomainHIFUTransducer::new_single_element(1.0e6, 10.0, 0.006, 0.003);
+    let transducer = DomainHIFUTransducer::new_single_element(MHZ_TO_HZ, 10.0, 0.006, 0.003);
 
     let pressure = compute_pressure_field(&transducer, &grid, &medium)?;
     let intensity = compute_intensity_field(&transducer, &grid, &medium)?;
@@ -112,7 +113,7 @@ fn treatment_plan_validation_accepts_target_inside_focal_access_region() -> crat
     };
 
     let plan = DomainHIFUTreatmentPlan::new(target, protocol);
-    let transducer = DomainHIFUTransducer::new_single_element(1e6, 50.0, 0.08, 0.04);
+    let transducer = DomainHIFUTransducer::new_single_element(MHZ_TO_HZ, 50.0, 0.08, 0.04);
 
     plan.validate(&transducer)?;
     Ok(())

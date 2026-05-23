@@ -1,5 +1,6 @@
 use super::*;
 use crate::core::constants::fundamental::B_OVER_A_SOFT_TISSUE;
+use crate::core::constants::numerical::MPA_TO_PA;
 use ndarray::Array3;
 use std::f64::consts::PI;
 
@@ -257,7 +258,7 @@ fn test_harmonic_generation_by_nonlinearity() {
     let solver = HybridAngularSpectrumSolver::new(&grid, &config).unwrap();
 
     // Sinusoidal initial field in z (uniform in x,y)
-    let amplitude = 5e5; // 0.5 MPa — large amplitude to drive nonlinearity
+    let amplitude = 0.5 * MPA_TO_PA; // 0.5 MPa — large amplitude to drive nonlinearity
     let initial = Array3::from_shape_fn((4, 4, nz), |(_, _, k)| {
         amplitude * (2.0 * PI * k as f64 / nz as f64).sin()
     });

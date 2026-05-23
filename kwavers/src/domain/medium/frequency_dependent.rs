@@ -146,8 +146,8 @@ impl TissueFrequencyModels {
         let mut props = FrequencyDependentProperties::new(SOUND_SPEED_LIVER, 6.8);
         props.dispersion_coefficient = 0.002;
         // Add relaxation processes
-        let _ = props.add_relaxation(0.5e6, 0.02); // Low frequency relaxation
-        let _ = props.add_relaxation(5e6, 0.05); // Mid frequency relaxation
+        let _ = props.add_relaxation(0.5 * MHZ_TO_HZ, 0.02); // Low frequency relaxation
+        let _ = props.add_relaxation(5.0 * MHZ_TO_HZ, 0.05); // Mid frequency relaxation
         props.frequency_dependent_nonlinearity = true;
         props
     }
@@ -159,7 +159,7 @@ impl TissueFrequencyModels {
         props.dispersion_coefficient = 0.0015;
         // Add relaxation processes
         let _ = props.add_relaxation(MHZ_TO_HZ, 0.03); // 1 MHz relaxation frequency
-        let _ = props.add_relaxation(10e6, 0.04);
+        let _ = props.add_relaxation(10.0 * MHZ_TO_HZ, 0.04);
         props.frequency_dependent_nonlinearity = true;
         props
     }
@@ -170,8 +170,8 @@ impl TissueFrequencyModels {
         let mut props = FrequencyDependentProperties::new(SOUND_SPEED_FAT, 10.0);
         props.dispersion_coefficient = 0.003;
         // Fat has significant relaxation
-        let _ = props.add_relaxation(0.2e6, 0.05);
-        let _ = props.add_relaxation(2e6, 0.08);
+        let _ = props.add_relaxation(0.2 * MHZ_TO_HZ, 0.05);
+        let _ = props.add_relaxation(2.0 * MHZ_TO_HZ, 0.08);
         props.frequency_dependent_nonlinearity = true;
         props
     }
@@ -182,7 +182,7 @@ impl TissueFrequencyModels {
         let mut props = FrequencyDependentProperties::new(SOUND_SPEED_BLOOD, 6.0);
         props.dispersion_coefficient = 0.001;
         // Blood has minimal relaxation
-        let _ = props.add_relaxation(5e6, 0.01);
+        let _ = props.add_relaxation(5.0 * MHZ_TO_HZ, 0.01);
         props.frequency_dependent_nonlinearity = false;
         props
     }

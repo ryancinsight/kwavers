@@ -1,4 +1,5 @@
 use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::domain::grid::Grid;
 use crate::domain::medium::HomogeneousMedium;
 use crate::solver::pstd::PSTDConfig as PstdConfig;
@@ -58,7 +59,7 @@ fn test_pstd_phase_velocity_accuracy() {
     let n = 64_usize;
     let c0 = SOUND_SPEED_WATER_SIM;
     let rho0 = 1000.0_f64;
-    let frequency = 1e6_f64;
+    let frequency = MHZ_TO_HZ;
     let wavelength = c0 / frequency;
     let dx = wavelength / 20.0; // 20 PPW
     let k = 2.0 * PI / wavelength;

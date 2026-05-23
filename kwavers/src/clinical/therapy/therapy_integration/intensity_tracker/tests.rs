@@ -1,4 +1,5 @@
 use super::tracker::IntensityTracker;
+use crate::core::constants::numerical::MPA_TO_PA;
 use ndarray::Array3;
 
 #[test]
@@ -20,8 +21,8 @@ fn test_intensity_recording() {
     let mut tracker = IntensityTracker::new(0.01, 1e-6).unwrap();
 
     // Create simple test fields
-    let pressure = Array3::from_elem([8, 8, 8], 1e6); // 1 MPa
-    let impedance = Array3::from_elem([8, 8, 8], 1.5e6); // Water impedance
+    let pressure = Array3::from_elem([8, 8, 8], MPA_TO_PA); // 1 MPa
+    let impedance = Array3::from_elem([8, 8, 8], 1.5e6); // Water impedance (1.5 MRayl)
 
     let metrics = tracker
         .record_intensity(&pressure, &impedance, 0.0)
@@ -37,8 +38,8 @@ fn test_intensity_recording() {
 fn test_peak_tracking() {
     let mut tracker = IntensityTracker::new(0.01, 1e-6).unwrap();
 
-    let pressure = Array3::from_elem([4, 4, 4], 1e6);
-    let impedance = Array3::from_elem([4, 4, 4], 1.5e6);
+    let pressure = Array3::from_elem([4, 4, 4], MPA_TO_PA);
+    let impedance = Array3::from_elem([4, 4, 4], 1.5e6); // 1.5 MRayl
 
     tracker
         .record_intensity(&pressure, &impedance, 0.0)
@@ -46,7 +47,7 @@ fn test_peak_tracking() {
     let peak1 = tracker.peak_intensity_w_cm2();
 
     // Increase pressure
-    let pressure2 = Array3::from_elem([4, 4, 4], 2e6);
+    let pressure2 = Array3::from_elem([4, 4, 4], 2.0 * MPA_TO_PA);
     tracker
         .record_intensity(&pressure2, &impedance, 1e-6)
         .unwrap();
@@ -98,8 +99,8 @@ fn test_spta_units() {
 fn test_reset() {
     let mut tracker = IntensityTracker::new(0.01, 1e-6).unwrap();
 
-    let pressure = Array3::from_elem([4, 4, 4], 1e6);
-    let impedance = Array3::from_elem([4, 4, 4], 1.5e6);
+    let pressure = Array3::from_elem([4, 4, 4], MPA_TO_PA);
+    let impedance = Array3::from_elem([4, 4, 4], 1.5e6); // 1.5 MRayl
 
     tracker
         .record_intensity(&pressure, &impedance, 0.0)

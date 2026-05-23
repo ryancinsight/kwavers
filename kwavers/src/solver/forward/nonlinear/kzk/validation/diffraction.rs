@@ -3,6 +3,7 @@
 #[cfg(test)]
 mod tests {
     use super::super::super::*;
+    use crate::core::constants::numerical::MHZ_TO_HZ;
     use crate::solver::forward::nonlinear::kzk::constants::*;
     use ndarray::Array2;
     use std::f64::consts::PI;
@@ -165,7 +166,7 @@ mod tests {
             }
         }
 
-        solver.set_source(source, 1e6);
+        solver.set_source(source, MHZ_TO_HZ);
 
         for _ in 0..3 {
             solver.step();

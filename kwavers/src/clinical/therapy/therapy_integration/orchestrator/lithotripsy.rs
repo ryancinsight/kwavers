@@ -85,6 +85,7 @@ mod tests {
     use super::*;
     use crate::clinical::therapy::lithotripsy::stone_fracture::StoneMaterial;
     use crate::clinical::therapy::lithotripsy::LithotripsyParameters;
+    use crate::core::constants::numerical::MPA_TO_PA;
     use crate::domain::grid::Grid;
     use ndarray::Array3;
 
@@ -111,7 +112,7 @@ mod tests {
 
         // Create acoustic field
         let acoustic_field = super::super::super::state::AcousticField {
-            pressure: Array3::from_elem((16, 16, 16), 1e7), // 10 MPa shock wave
+            pressure: Array3::from_elem((16, 16, 16), 10.0 * MPA_TO_PA), // 10 MPa shock wave
             velocity_x: Array3::zeros((16, 16, 16)),
             velocity_y: Array3::zeros((16, 16, 16)),
             velocity_z: Array3::zeros((16, 16, 16)),
@@ -149,7 +150,7 @@ mod tests {
         let mut simulator = LithotripsySimulator::new(params, grid.clone()).unwrap();
 
         let acoustic_field = super::super::super::state::AcousticField {
-            pressure: Array3::from_elem((8, 8, 8), 5e6),
+            pressure: Array3::from_elem((8, 8, 8), 5.0 * MPA_TO_PA),
             velocity_x: Array3::zeros((8, 8, 8)),
             velocity_y: Array3::zeros((8, 8, 8)),
             velocity_z: Array3::zeros((8, 8, 8)),

@@ -1,4 +1,5 @@
 use super::*;
+use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 
 const REL_TOL: f64 = 1.0e-6;
 
@@ -9,20 +10,20 @@ fn approx_eq(a: f64, b: f64, tol: f64) -> bool {
 #[test]
 fn intrinsic_threshold_at_1mhz_matches_maxwell_2013() {
     // Maxwell 2013 Table II liver fit: p_t = 28.2 MPa at 1 MHz.
-    let pt = intrinsic_threshold_pa(1.0e6);
-    assert!(approx_eq(pt, 28.2e6, REL_TOL));
+    let pt = intrinsic_threshold_pa(MHZ_TO_HZ);
+    assert!(approx_eq(pt, 28.2 * MPA_TO_PA, REL_TOL));
 }
 
 #[test]
 fn intrinsic_threshold_is_monotone_in_frequency() {
     // Vlaisavljevich 2015 reports a weak monotone increase with frequency.
-    let lo = intrinsic_threshold_pa(0.5e6);
-    let mid = intrinsic_threshold_pa(1.0e6);
-    let hi = intrinsic_threshold_pa(3.0e6);
+    let lo = intrinsic_threshold_pa(0.5 * MHZ_TO_HZ);
+    let mid = intrinsic_threshold_pa(MHZ_TO_HZ);
+    let hi = intrinsic_threshold_pa(3.0 * MHZ_TO_HZ);
     assert!(lo < mid);
     assert!(mid < hi);
     // Slope is ~1.4 MPa/decade — verify mid/hi spread is bounded.
-    assert!((hi - mid) < 1.0e6); // < 1 MPa over factor of 3 in f
+    assert!((hi - mid) < MPA_TO_PA); // < 1 MPa over factor of 3 in f
 }
 
 #[test]
@@ -109,7 +110,7 @@ fn cavitation_probability_is_monotone_in_pnp() {
     let mut last = -1.0;
     for pnp_mpa in [20.0, 24.0, 27.0, 28.2, 30.0, 35.0_f64] {
         let mut s = base;
-        s.peak_negative_pressure_pa = -pnp_mpa * 1.0e6;
+        s.peak_negative_pressure_pa = -pnp_mpa * MPA_TO_PA;
         let p = s.cavitation_probability();
         assert!(p >= last - 1.0e-12, "non-monotone: {} < {}", p, last);
         last = p;

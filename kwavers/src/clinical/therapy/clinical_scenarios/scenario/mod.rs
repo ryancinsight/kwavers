@@ -103,7 +103,7 @@ impl HistotripsyScenario {
     /// formula is monotone in PNP magnitude (Theorem 21.1).
     #[must_use]
     pub fn cavitation_probability(&self) -> f64 {
-        const SIGMA_T_PA: f64 = 0.96e6;
+        const SIGMA_T_PA: f64 = 0.96 * MPA_TO_PA;
         let pnp_abs = self.peak_negative_pressure_pa.abs();
         let pt = self.intrinsic_threshold_pa();
         let arg = (pnp_abs - pt) / (SIGMA_T_PA * std::f64::consts::SQRT_2);
@@ -130,8 +130,8 @@ impl HistotripsyScenario {
         Self {
             regime: HistotripsyRegime::IntrinsicThreshold,
             frequency_hz: MHZ_TO_HZ, // 1 MHz
-            peak_negative_pressure_pa: -30.0e6,
-            peak_positive_pressure_pa: 80.0e6,
+            peak_negative_pressure_pa: -30.0 * MPA_TO_PA,
+            peak_positive_pressure_pa: 80.0 * MPA_TO_PA,
             pulse: PulsePattern::ToneBurst { cycles: 2 },
             treatment_duration_s: 600.0,
             focal_volume_mm3: 7.0,
@@ -160,8 +160,8 @@ impl HistotripsyScenario {
         Self {
             regime: HistotripsyRegime::ShockScattering,
             frequency_hz: MHZ_TO_HZ, // 1 MHz
-            peak_negative_pressure_pa: -20.0e6,
-            peak_positive_pressure_pa: 90.0e6,
+            peak_negative_pressure_pa: -20.0 * MPA_TO_PA,
+            peak_positive_pressure_pa: 90.0 * MPA_TO_PA,
             pulse: PulsePattern::ToneBurst { cycles: 5 },
             treatment_duration_s: 600.0,
             focal_volume_mm3: 8.0,
@@ -187,8 +187,8 @@ impl HistotripsyScenario {
         Self {
             regime: HistotripsyRegime::Boiling,
             frequency_hz: MHZ_TO_HZ, // 1 MHz
-            peak_negative_pressure_pa: -15.0e6,
-            peak_positive_pressure_pa: 85.0e6,
+            peak_negative_pressure_pa: -15.0 * MPA_TO_PA,
+            peak_positive_pressure_pa: 85.0 * MPA_TO_PA,
             pulse: PulsePattern::ShockFormed {
                 duration_s: 10.0e-3,
             },
@@ -217,9 +217,9 @@ impl HistotripsyScenario {
     pub fn millisecond_cavitation_500khz() -> Self {
         Self {
             regime: HistotripsyRegime::MillisecondCavitation,
-            frequency_hz: 0.5e6,
-            peak_negative_pressure_pa: -18.0e6,
-            peak_positive_pressure_pa: 35.0e6,
+            frequency_hz: 0.5 * MHZ_TO_HZ,
+            peak_negative_pressure_pa: -18.0 * MPA_TO_PA,
+            peak_positive_pressure_pa: 35.0 * MPA_TO_PA,
             pulse: PulsePattern::ShockFormed { duration_s: 5.0e-3 },
             treatment_duration_s: 1800.0,
             focal_volume_mm3: 25.0,
@@ -244,9 +244,9 @@ impl HistotripsyScenario {
     pub fn thrombolysis_1_5mhz() -> Self {
         Self {
             regime: HistotripsyRegime::IntrinsicThreshold,
-            frequency_hz: 1.5e6,
-            peak_negative_pressure_pa: -32.0e6,
-            peak_positive_pressure_pa: 70.0e6,
+            frequency_hz: 1.5 * MHZ_TO_HZ,
+            peak_negative_pressure_pa: -32.0 * MPA_TO_PA,
+            peak_positive_pressure_pa: 70.0 * MPA_TO_PA,
             pulse: PulsePattern::ToneBurst { cycles: 3 },
             treatment_duration_s: 300.0,
             focal_volume_mm3: 4.0,

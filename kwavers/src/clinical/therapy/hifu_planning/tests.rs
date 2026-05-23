@@ -3,6 +3,7 @@ use crate::clinical::safety::mechanical_index::MechanicalIndexTissueType;
 use crate::clinical::therapy::parameters::ClinicalTherapyParameters;
 use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use crate::core::constants::medical::THERMAL_DOSE_THRESHOLD;
+use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use crate::core::error::KwaversError;
 use std::f64::consts::PI;
@@ -10,7 +11,7 @@ use std::f64::consts::PI;
 #[test]
 fn test_hifu_transducer_default() {
     let transducer = ClinicalHIFUTransducer::default();
-    assert_eq!(transducer.frequency, 1.5e6);
+    assert_eq!(transducer.frequency, 1.5 * MHZ_TO_HZ);
     assert_eq!(transducer.focal_length_mm, 80.0);
 }
 
@@ -63,7 +64,7 @@ fn test_thermal_dose_calculation() {
 fn test_hifu_planner_creation() {
     let transducer = ClinicalHIFUTransducer::default();
     let planner = HIFUPlanner::new(transducer);
-    assert_eq!(planner.transducer().frequency, 1.5e6);
+    assert_eq!(planner.transducer().frequency, 1.5 * MHZ_TO_HZ);
 }
 
 #[test]
@@ -99,7 +100,7 @@ fn test_treatment_feasibility_assessment() {
 #[test]
 fn test_focal_spot_dimensions_match_oneil_formula() {
     let transducer = ClinicalHIFUTransducer {
-        frequency: 1.5e6,
+        frequency: 1.5 * MHZ_TO_HZ,
         focal_length_mm: 80.0,
         aperture_diameter_mm: 40.0,
         power: 50.0,
@@ -140,7 +141,7 @@ fn test_focal_spot_dimensions_match_oneil_formula() {
 #[test]
 fn focal_spot_pressure_uses_acoustic_power_without_empirical_ceiling() {
     let transducer = ClinicalHIFUTransducer {
-        frequency: 1.0e6,
+        frequency: MHZ_TO_HZ,
         focal_length_mm: 80.0,
         aperture_diameter_mm: 40.0,
         power: 10_000.0,
@@ -163,7 +164,7 @@ fn focal_spot_pressure_uses_acoustic_power_without_empirical_ceiling() {
     // pressure (well into the cavitation regime). The lower bound of 40
     // MPa keeps the check meaningful without being numerically brittle to
     // the exact resolution coefficient (1.02 here per Rayleigh).
-    assert!(expected_pressure > 40.0e6);
+    assert!(expected_pressure > 40.0 * MPA_TO_PA);
     assert!((focal_spot.peak_pressure_pa - expected_pressure).abs() / expected_pressure < 1.0e-12);
 }
 
@@ -194,7 +195,7 @@ fn focal_dose_uses_cem43_equivalent_minutes() {
         volume_minus6db_mm3: 70.0,
     };
 
-    let dose = FocalSpotDoseEstimate::estimate_from_focal_spot(&focal_spot, 1.0e6, 1.0, 60.0)
+    let dose = FocalSpotDoseEstimate::estimate_from_focal_spot(&focal_spot, MHZ_TO_HZ, 1.0, 60.0)
         .expect("zero pressure remains a valid no-heating dose");
 
     let expected = 0.25_f64.powf(43.0 - BODY_TEMPERATURE_C);
@@ -209,7 +210,7 @@ fn focal_dose_rejects_invalid_treatment_domain() {
         location_mm: (0.0, 0.0, 80.0),
         lateral_width_mm: 6.0,
         axial_width_mm: 12.0,
-        peak_pressure_pa: 1.0e6,
+        peak_pressure_pa: MPA_TO_PA,
         mechanical_index: 1.0,
         focal_volume_mm3: 100.0,
         volume_minus6db_mm3: 70.0,
@@ -219,7 +220,7 @@ fn focal_dose_rejects_invalid_treatment_domain() {
         .expect_err("zero frequency must be rejected");
     assert!(err.to_string().contains("frequency_hz"));
 
-    let err = FocalSpotDoseEstimate::estimate_from_focal_spot(&focal_spot, 1.0e6, 1.1, 10.0)
+    let err = FocalSpotDoseEstimate::estimate_from_focal_spot(&focal_spot, MHZ_TO_HZ, 1.1, 10.0)
         .expect_err("duty cycle above unity must be rejected");
     assert!(err.to_string().contains("duty_cycle"));
 }
@@ -230,7 +231,7 @@ fn test_sonication_schedule_pitch_proves_target_coverage() {
         location_mm: (0.0, 0.0, 80.0),
         lateral_width_mm: 6.0,
         axial_width_mm: 12.0,
-        peak_pressure_pa: 4.0e6,
+        peak_pressure_pa: 4.0 * MPA_TO_PA,
         mechanical_index: 1.0,
         focal_volume_mm3: 100.0,
         volume_minus6db_mm3: 70.0,
@@ -245,7 +246,7 @@ fn test_sonication_schedule_pitch_proves_target_coverage() {
     let params = ClinicalTherapyParameters {
         treatment_duration: 75.0,
         duty_cycle: 1.0,
-        frequency: 1.5e6,
+        frequency: 1.5 * MHZ_TO_HZ,
         ..ClinicalTherapyParameters::hifu()
     };
 
@@ -288,7 +289,7 @@ fn test_hifu_plan_uses_subspot_dose_for_feasibility() {
     let params = ClinicalTherapyParameters {
         treatment_duration: 5.0,
         duty_cycle: 0.5,
-        frequency: 1.5e6,
+        frequency: 1.5 * MHZ_TO_HZ,
         ..ClinicalTherapyParameters::hifu()
     };
 

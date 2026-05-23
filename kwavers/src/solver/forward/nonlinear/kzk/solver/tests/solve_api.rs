@@ -1,5 +1,6 @@
 //! `KZKSolver::solve(n)` API invariant tests.
 
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::solver::forward::nonlinear::kzk::{KZKConfig, KZKSolver};
 use ndarray::Array2;
 
@@ -27,7 +28,7 @@ fn test_kzk_solve_zero_steps() {
     };
     let mut solver = KZKSolver::new(config).unwrap();
     let source = Array2::from_elem((8, 8), 500.0_f64);
-    solver.set_source(source, 1e6);
+    solver.set_source(source, MHZ_TO_HZ);
     let p_before = solver.pressure.clone();
 
     solver.solve(0).expect("solve(0) must succeed");

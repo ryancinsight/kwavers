@@ -1,6 +1,7 @@
 //! Beamforming configuration (core, unified)
 
 use crate::core::constants::{SAMPLING_FREQUENCY_DEFAULT, SOUND_SPEED_TISSUE};
+use crate::core::constants::numerical::MHZ_TO_HZ;
 
 /// Core configuration for beamforming operations across array-processing consumers.
 ///
@@ -29,14 +30,14 @@ pub struct BeamformingCoreConfig {
 
 impl Default for BeamformingCoreConfig {
     fn default() -> Self {
-        const REFERENCE_FREQUENCY: f64 = 5e6; // 5 MHz
+        let reference_frequency = 5.0 * MHZ_TO_HZ; // 5 MHz
         const DIAGONAL_LOADING_FACTOR: f64 = 0.01; // 1% diagonal loading
         const DEFAULT_SNAPSHOTS: usize = 100;
 
         Self {
             sound_speed: SOUND_SPEED_TISSUE,
             sampling_frequency: SAMPLING_FREQUENCY_DEFAULT,
-            reference_frequency: REFERENCE_FREQUENCY,
+            reference_frequency,
             diagonal_loading: DIAGONAL_LOADING_FACTOR,
             num_snapshots: DEFAULT_SNAPSHOTS,
             spatial_smoothing: None,

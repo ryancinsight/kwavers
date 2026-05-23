@@ -1,3 +1,4 @@
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::core::error::{KwaversError, KwaversResult};
 
 /// Acoustic radiation force push pulse parameters
@@ -25,7 +26,7 @@ pub struct PushPulseParameters {
 impl Default for PushPulseParameters {
     fn default() -> Self {
         Self {
-            frequency: 5.0e6,  // 5 MHz
+            frequency: 5.0 * MHZ_TO_HZ, // 5 MHz
             duration: 150e-6,  // 150 μs
             intensity: 1.0e6,  // 1 MW/m²
             focal_depth: 0.04, // 40 mm

@@ -509,6 +509,21 @@ breast-imaging reconstruction.
   reduced probe includes it in operator-equivalence rankings. On the determined
   4x4x3/two-frequency probe it reports all-channel residual
   `0.5227508888630437` and passive-only residual `0.5435181467026386`.
+- **[done] [minor] T8w: PSTD CBS source projection — CLOSED 2026-05-22.**
+  Routed `PstdSpectralConvergentBornOperator` source injection through exact
+  centered-grid source indices and the PSTD pressure-source k-space correction
+  `cos(c0 Δt |k| / 2)`. Continuous Helmholtz CBS operators still use the
+  existing BLI point-source density path. The CBS tests now verify the two-cell
+  source-kappa symbol and the PSTD spectral adjoint-gradient path. On the
+  determined 4x4x3/two-frequency probe, the PSTD spectral CBS all-channel
+  residual is `0.5233688602227166` and passive-only residual is
+  `0.5434979751472874`, so source-kappa projection alone is not the parity
+  repair.
+- **[done] [patch] T8x: focused source adapter compile closure — CLOSED 2026-05-22.**
+  Added the explicit `ElementMap` type to the focused bowl source adapter's
+  `HashMap` construction. This resolves the unrelated `E0282` inference defect
+  that blocked full `kwavers` library-test compilation while verifying the FWI
+  solver slice.
 - **[done] [patch] T8n: focused-bowl terminology cleanup — CLOSED 2026-05-21.**
   Removed residual transcranial vendor/helmet labels from book examples and
   documentation, renamed the Chapter 25 phase-correction artifact stem to
@@ -551,9 +566,12 @@ breast-imaging reconstruction.
   mismatch as an isolated variable but does not close parity: all-channel
   residual improves only from `0.5234113936105187` to `0.5227508888630437`,
   while passive-only residual changes from `0.5432880999009376` to
-  `0.5435181467026386`. Next work should isolate the discrete source injection,
-  source filtering, and receiver projection contract between the PSTD
-  acquisition and frequency-domain CBS operators.
+  `0.5435181467026386`. Matching PSTD source-kappa projection in the CBS source
+  path changes the all-channel residual to `0.5233688602227166` and passive-only
+  residual to `0.5434979751472874`, so source projection/filtering alone is not
+  the repair. Next work should isolate receiver sampling and the temporal
+  source/frequency-bin transfer function between the PSTD acquisition and
+  frequency-domain CBS operators.
 
 ### Deprecation (T2 prerequisite)
 - **[patch] Mark `solver::forward::helmholtz::born_series::convergent::ConvergentBornSolver`

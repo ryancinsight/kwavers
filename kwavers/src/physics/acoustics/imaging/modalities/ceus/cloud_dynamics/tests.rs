@@ -1,5 +1,6 @@
 //! Tests for cloud dynamics
 
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use super::*;
 
 #[test]
@@ -27,7 +28,7 @@ fn test_cloud_simulation() {
     let mut cloud = CloudDynamics::new(config).unwrap();
     cloud.initialize_cloud().unwrap();
 
-    let field = IncidentField::plane_wave(100_000.0, 1e6, [1.0, 0.0, 0.0]);
+    let field = IncidentField::plane_wave(100_000.0, MHZ_TO_HZ, [1.0, 0.0, 0.0]);
     cloud.set_incident_field(field);
 
     let response = cloud.simulate().unwrap();

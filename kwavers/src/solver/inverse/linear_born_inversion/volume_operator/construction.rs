@@ -3,6 +3,7 @@
 use rayon::prelude::*;
 use std::f64::consts::TAU;
 
+use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use super::super::{LinearBornInversionConfig, TransducerGeometry};
 use super::helpers::distance;
 use super::{RowContext, VolumeOperator, VolumeVoxel};
@@ -89,7 +90,7 @@ fn build_row_context(
     RowContext {
         source_idx,
         receiver_idx,
-        frequency_mhz: channel_frequency_hz * 1.0e-6,
+        frequency_mhz: channel_frequency_hz / MHZ_TO_HZ,
         harmonic_path_scale: second_harmonic_scale(config, frequency_hz, harmonic_order),
         attenuation_model: config.attenuation_model,
         k: TAU * channel_frequency_hz / config.reference_sound_speed_m_s,
@@ -111,7 +112,7 @@ fn second_harmonic_scale(
     if harmonic_order == 1 {
         return 0.0;
     }
-    let source_pressure_pa = config.source_pressure_mpa * 1.0e6;
+    let source_pressure_pa = config.source_pressure_mpa * MPA_TO_PA;
     let omega = TAU * frequency_hz;
     let shock_distance_m = config.reference_density_kg_m3
         * config.reference_sound_speed_m_s.powi(3)

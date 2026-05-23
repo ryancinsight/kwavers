@@ -1,5 +1,6 @@
 use super::{test_k_mag, zeros_k_mag};
 use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::domain::grid::Grid;
 use crate::domain::medium::HomogeneousMedium;
 use crate::physics::acoustics::mechanics::absorption::AbsorptionMode;
@@ -26,7 +27,7 @@ fn test_power_law_initialization() {
         &grid,
         &medium,
         &k_mag,
-        1e6,
+        MHZ_TO_HZ,
         SOUND_SPEED_WATER_SIM,
     )
     .unwrap()
@@ -112,7 +113,7 @@ fn test_absorption_model_physics_validation() {
         &grid,
         &medium,
         &k_mag,
-        1e6,
+        MHZ_TO_HZ,
         SOUND_SPEED_WATER_SIM,
     )
     .unwrap()

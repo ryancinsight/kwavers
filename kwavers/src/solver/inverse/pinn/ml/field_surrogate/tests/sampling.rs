@@ -12,6 +12,7 @@ use ndarray::Array3;
 
 use super::super::{KernelCubeSampler, SamplingMode};
 use super::AB;
+use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use crate::physics::field_surrogate::FocalKernel;
 
 /// Build a 16×8×8 Gaussian kernel for testing — a tractable size with
@@ -30,15 +31,15 @@ fn small_kernel(f0: f64, pnp: f64) -> FocalKernel {
         let r2 = dx_n * dx_n + dy_n * dy_n + dz_n * dz_n;
         *v = pnp * (-0.5 * r2).exp();
     }
-    FocalKernel::new(field, 1.0e-3, focus, f0, pnp, 1.0e6, 2.0e-3, 5.0e-3)
+    FocalKernel::new(field, 1.0e-3, focus, f0, pnp, MPA_TO_PA, 2.0e-3, 5.0e-3)
 }
 
 fn make_cube_sampler() -> KernelCubeSampler {
     let kernels = vec![
-        small_kernel(0.5e6, 15.0e6),
-        small_kernel(0.5e6, 30.0e6),
-        small_kernel(1.0e6, 15.0e6),
-        small_kernel(1.0e6, 30.0e6),
+        small_kernel(0.5 * MHZ_TO_HZ, 15.0 * MPA_TO_PA),
+        small_kernel(0.5 * MHZ_TO_HZ, 30.0 * MPA_TO_PA),
+        small_kernel(MHZ_TO_HZ, 15.0 * MPA_TO_PA),
+        small_kernel(MHZ_TO_HZ, 30.0 * MPA_TO_PA),
     ];
     KernelCubeSampler::new(&kernels, None)
 }

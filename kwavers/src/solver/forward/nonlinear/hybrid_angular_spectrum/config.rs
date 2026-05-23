@@ -34,7 +34,7 @@ impl Default for HASConfig {
             attenuation_coeff: 0.5,
             power_law_exponent: 2.0,
             dz: 0.0001,
-            reference_frequency: 1e6,
+            reference_frequency: MHZ_TO_HZ,
         }
     }
 }

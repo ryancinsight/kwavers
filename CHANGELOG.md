@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Changed (2026-05-22) - Breast FWI PSTD CBS Source Projection
+
+- [minor] Route `PstdSpectralConvergentBornOperator` source injection through
+  the same on-grid pressure mask and PSTD source-kappa spectral filter used by
+  the clinical PSTD acquisition generator. The continuous Helmholtz CBS
+  operators still use the existing BLI point-source density path.
+
+### Fixed (2026-05-22) - Focused Source Adapter Type Inference
+
+- [patch] Add the explicit `ElementMap` type to the focused source adapter's
+  `HashMap` construction so Rust can infer the collected element-index vector
+  type during full library test compilation.
+
 ### Added (2026-05-22) - Breast FWI PSTD Spectral CBS Operator
 
 - [minor] Add `PstdSpectralConvergentBornOperator` to the

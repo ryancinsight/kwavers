@@ -4,6 +4,7 @@ use super::super::config::ParamFieldPINNConfig;
 use super::super::forward::{infer_grid, GridQueryParams};
 use super::super::network::ParamFieldPINNNetwork;
 use super::B;
+use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 
 #[test]
 fn test_infer_grid_shape_and_finiteness() {
@@ -15,13 +16,13 @@ fn test_infer_grid_shape_and_finiteness() {
         shape: (8, 6, 6),
         focus_idx: (4, 3, 3),
         dx_m: 1.0e-3,
-        f0: 0.75e6,
-        pnp: 22.5e6,
+        f0: 0.75 * MHZ_TO_HZ,
+        pnp: 22.5 * MPA_TO_PA,
         coord_half_m: (4.0e-3, 3.0e-3, 3.0e-3),
-        f0_range: (0.5e6, 1.0e6),
-        pnp_range: (15.0e6, 30.0e6),
+        f0_range: (0.5 * MHZ_TO_HZ, MHZ_TO_HZ),
+        pnp_range: (15.0 * MPA_TO_PA, 30.0 * MPA_TO_PA),
         output_transforms: super::super::target_transform::OutputTransforms::linear(
-            30.0e6, 30.0e6, 21.0e6,
+            30.0 * MPA_TO_PA as f32, 30.0 * MPA_TO_PA as f32, 21.0 * MPA_TO_PA as f32,
         )
         .unwrap(),
         batch_size: 64,
@@ -63,13 +64,13 @@ fn test_infer_grid_batch_size_invariance() {
         shape: (5, 4, 4),
         focus_idx: (2, 2, 2),
         dx_m: 1.0e-3,
-        f0: 0.6e6,
-        pnp: 18.0e6,
+        f0: 0.6 * MHZ_TO_HZ,
+        pnp: 18.0 * MPA_TO_PA,
         coord_half_m: (3.0e-3, 2.0e-3, 2.0e-3),
-        f0_range: (0.5e6, 1.0e6),
-        pnp_range: (15.0e6, 30.0e6),
+        f0_range: (0.5 * MHZ_TO_HZ, MHZ_TO_HZ),
+        pnp_range: (15.0 * MPA_TO_PA, 30.0 * MPA_TO_PA),
         output_transforms: super::super::target_transform::OutputTransforms::linear(
-            30.0e6, 30.0e6, 21.0e6,
+            30.0 * MPA_TO_PA as f32, 30.0 * MPA_TO_PA as f32, 21.0 * MPA_TO_PA as f32,
         )
         .unwrap(),
         batch_size: bs,

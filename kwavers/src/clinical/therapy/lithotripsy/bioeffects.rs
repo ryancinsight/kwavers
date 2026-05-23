@@ -8,7 +8,7 @@ use crate::core::constants::acoustic_parameters::NP_TO_DB;
 use crate::core::constants::medical::{
     IEC_TISSUE_ABSORPTION_DB_CM_MHZ, MI_LIMIT_SOFT_TISSUE, TI_LIMIT_SOFT_TISSUE,
 };
-use crate::core::constants::numerical::{CM_TO_M, MHZ_TO_HZ};
+use crate::core::constants::numerical::{CM_TO_M, MHZ_TO_HZ, MPA_TO_PA};
 use crate::core::constants::thermodynamic::THERMAL_CONDUCTIVITY_WATER;
 use ndarray::Array3;
 
@@ -28,7 +28,7 @@ impl Default for BioeffectsParameters {
         Self {
             thermal_threshold: 240.0,                         // 240 CEM43 minutes
             mechanical_index_threshold: MI_LIMIT_SOFT_TISSUE, // FDA guideline
-            max_negative_pressure: 20e6,                      // 20 MPa
+            max_negative_pressure: 20.0 * MPA_TO_PA,          // 20 MPa
         }
     }
 }
@@ -185,7 +185,7 @@ impl BioeffectsModel {
             .iter()
             .map(|&p| if p < 0.0 { -p } else { 0.0 })
             .fold(0.0_f64, f64::max);
-        let pnp_mpa = peak_neg_pressure_pa / MHZ_TO_HZ; // 1e6 Pa = 1 MPa
+        let pnp_mpa = peak_neg_pressure_pa / MPA_TO_PA; // Pa → MPa
         let mi = pnp_mpa / sqrt_f;
 
         // ── Thermal Index (simplified SPTA-based estimate) ─────────
