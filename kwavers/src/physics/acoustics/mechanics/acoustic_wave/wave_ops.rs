@@ -20,6 +20,7 @@ const POWER_LAW_ABSORPTION_TO_DIFFUSIVITY_FACTOR: f64 = 2.0;
 /// δ ≈ 2αc³/(ω²) where α is absorption coefficient, c sound speed, ω angular frequency.
 ///
 /// Returns 0.0 at zero frequency (DC) to avoid division by zero.
+#[must_use]
 pub fn compute_diffusivity_from_power_law_absorption<M: Medium + ?Sized>(
     medium: &M,
     x: f64,
@@ -45,6 +46,7 @@ pub fn compute_diffusivity_from_power_law_absorption<M: Medium + ?Sized>(
 /// Compute the maximum stable time step for acoustic wave propagation (CFL condition).
 ///
 /// dt_max = CFL_limit(order) · min(dx, dy, dz) / c_max
+#[must_use]
 pub fn compute_max_stable_timestep(
     grid: &Grid,
     max_sound_speed: f64,
@@ -56,6 +58,7 @@ pub fn compute_max_stable_timestep(
 }
 
 /// Compute nonlinearity coefficient β = 1 + B/(2A) for the given medium and position.
+#[must_use]
 pub fn compute_nonlinearity_coefficient<M: Medium + ?Sized>(
     medium: &M,
     x: f64,

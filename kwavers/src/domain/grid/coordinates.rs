@@ -11,6 +11,7 @@ pub struct CoordinateSystem;
 
 impl CoordinateSystem {
     /// Generate coordinate vector for a given dimension
+    #[must_use]
     pub fn generate_coordinate_vector(grid: &Grid, dim: GridDimension) -> Array1<f64> {
         match dim {
             GridDimension::X => Self::generate_x_vector(grid),
@@ -20,21 +21,25 @@ impl CoordinateSystem {
     }
 
     /// Generate x-coordinate vector
+    #[must_use]
     pub fn generate_x_vector(grid: &Grid) -> Array1<f64> {
         Array1::from_shape_fn(grid.nx, |i| (i as f64).mul_add(grid.dx, grid.origin[0]))
     }
 
     /// Generate y-coordinate vector
+    #[must_use]
     pub fn generate_y_vector(grid: &Grid) -> Array1<f64> {
         Array1::from_shape_fn(grid.ny, |j| (j as f64).mul_add(grid.dy, grid.origin[1]))
     }
 
     /// Generate z-coordinate vector
+    #[must_use]
     pub fn generate_z_vector(grid: &Grid) -> Array1<f64> {
         Array1::from_shape_fn(grid.nz, |k| (k as f64).mul_add(grid.dz, grid.origin[2]))
     }
 
     /// Generate 3D coordinate arrays
+    #[must_use]
     pub fn generate_coordinate_arrays(grid: &Grid) -> (Array3<f64>, Array3<f64>, Array3<f64>) {
         let mut x_coords = Array3::zeros((grid.nx, grid.ny, grid.nz));
         let mut y_coords = Array3::zeros((grid.nx, grid.ny, grid.nz));
@@ -54,6 +59,7 @@ impl CoordinateSystem {
     }
 
     /// Convert physical position to grid indices
+    #[must_use]
     pub fn position_to_indices(
         grid: &Grid,
         x: f64,
@@ -77,6 +83,7 @@ impl CoordinateSystem {
     }
 
     /// Convert physical position to nearest grid indices
+    #[must_use]
     pub fn position_to_nearest_indices(
         grid: &Grid,
         x: f64,
@@ -99,6 +106,7 @@ impl CoordinateSystem {
     }
 
     /// Convert grid indices to physical position (center of cell)
+    #[must_use]
     pub fn indices_to_position(
         grid: &Grid,
         i: usize,
@@ -117,6 +125,7 @@ impl CoordinateSystem {
     }
 
     /// Check if position is within grid bounds
+    #[must_use]
     pub fn is_position_in_bounds(grid: &Grid, x: f64, y: f64, z: f64) -> bool {
         x >= grid.origin[0]
             && y >= grid.origin[1]
@@ -127,6 +136,7 @@ impl CoordinateSystem {
     }
 
     /// Generate centered coordinate vector for a given dimension
+    #[must_use]
     pub fn generate_centered_coordinate_vector(grid: &Grid, dim: GridDimension) -> Array1<f64> {
         let (n, d, o) = match dim {
             GridDimension::X => (grid.nx, grid.dx, grid.origin[0]),
@@ -138,6 +148,7 @@ impl CoordinateSystem {
     }
 
     /// Generate 3D centered coordinate arrays
+    #[must_use]
     pub fn generate_centered_coordinate_arrays(
         grid: &Grid,
     ) -> (Array3<f64>, Array3<f64>, Array3<f64>) {

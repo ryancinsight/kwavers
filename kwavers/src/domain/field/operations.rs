@@ -11,24 +11,28 @@ pub struct FieldOperations;
 
 impl FieldOperations {
     /// Create a zero-initialized 3D field array
+    #[must_use]
     #[inline]
     pub fn create_field(grid: &Grid) -> Array3<f64> {
         Array3::zeros((grid.nx, grid.ny, grid.nz))
     }
 
     /// Create a zero-initialized complex 3D field array
+    #[must_use]
     #[inline]
     pub fn create_complex_field(grid: &Grid) -> Array3<num_complex::Complex<f64>> {
         Array3::zeros((grid.nx, grid.ny, grid.nz))
     }
 
     /// Create multiple fields as a 4D array
+    #[must_use]
     #[inline]
     pub fn create_field_bundle(grid: &Grid, n_fields: usize) -> Array4<f64> {
         Array4::zeros((n_fields, grid.nx, grid.ny, grid.nz))
     }
 
     /// Create a field initialized with a constant value
+    #[must_use]
     #[inline]
     pub fn create_constant_field(grid: &Grid, value: f64) -> Array3<f64> {
         Array3::from_elem((grid.nx, grid.ny, grid.nz), value)

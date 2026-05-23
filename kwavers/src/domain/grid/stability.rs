@@ -11,6 +11,7 @@ pub struct StabilityCalculator;
 
 impl StabilityCalculator {
     /// Calculate CFL timestep for FDTD scheme
+    #[must_use]
     pub fn cfl_timestep_fdtd(grid: &Grid, max_sound_speed: f64) -> f64 {
         let min_dx = grid.min_spacing();
         let dim_factor = (grid.dimensionality as f64).sqrt();
@@ -21,6 +22,7 @@ impl StabilityCalculator {
     }
 
     /// Calculate CFL timestep for PSTD scheme
+    #[must_use]
     pub fn cfl_timestep_pstd(grid: &Grid, max_sound_speed: f64) -> f64 {
         let min_dx = grid.min_spacing();
 
@@ -30,6 +32,7 @@ impl StabilityCalculator {
     }
 
     /// Calculate CFL timestep for k-space method
+    #[must_use]
     pub fn cfl_timestep_kspace(grid: &Grid, max_sound_speed: f64) -> f64 {
         // K-space method stability depends on k_max
         let k_max = std::f64::consts::PI / grid.min_spacing();
@@ -39,6 +42,7 @@ impl StabilityCalculator {
     }
 
     /// Calculate Courant number for given timestep
+    #[must_use]
     pub fn courant_number(grid: &Grid, dt: f64, sound_speed: f64) -> f64 {
         let min_dx = grid.min_spacing();
         sound_speed * dt / min_dx
@@ -50,6 +54,7 @@ impl StabilityCalculator {
     }
 
     /// Calculate diffusion stability for thermal problems
+    #[must_use]
     pub fn diffusion_timestep(grid: &Grid, thermal_diffusivity: f64) -> f64 {
         let min_dx = grid.min_spacing();
 
@@ -58,6 +63,7 @@ impl StabilityCalculator {
     }
 
     /// Calculate nonlinear stability timestep
+    #[must_use]
     pub fn nonlinear_timestep(
         grid: &Grid,
         max_sound_speed: f64,
@@ -73,6 +79,7 @@ impl StabilityCalculator {
     }
 
     /// Get recommended timestep for multi-physics simulation
+    #[must_use]
     pub fn recommended_timestep(
         grid: &Grid,
         max_sound_speed: f64,

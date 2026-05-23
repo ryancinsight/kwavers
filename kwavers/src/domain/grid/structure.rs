@@ -190,30 +190,35 @@ impl Grid {
     }
 
     /// Get the total number of grid points
+    #[must_use]
     #[inline]
     pub fn size(&self) -> usize {
         self.nx * self.ny * self.nz
     }
 
     /// Get dimensions as a tuple
+    #[must_use]
     #[inline]
     pub fn dimensions(&self) -> (usize, usize, usize) {
         (self.nx, self.ny, self.nz)
     }
 
     /// Get spacing as a tuple
+    #[must_use]
     #[inline]
     pub fn spacing(&self) -> (f64, f64, f64) {
         (self.dx, self.dy, self.dz)
     }
 
     /// Get total number of grid points (alias for size)
+    #[must_use]
     #[inline]
     pub fn total_grid_points(&self) -> usize {
         self.size()
     }
 
     /// Check if the grid has uniform spacing
+    #[must_use]
     #[inline]
     pub fn is_uniform(&self) -> bool {
         (self.dx - self.dy).abs() < GRID_SPACING_EQUALITY_EPSILON
@@ -221,6 +226,7 @@ impl Grid {
     }
 
     /// Convert grid indices to physical coordinates
+    #[must_use]
     #[inline]
     pub fn indices_to_coordinates(&self, i: usize, j: usize, k: usize) -> (f64, f64, f64) {
         (
@@ -249,6 +255,7 @@ impl Grid {
     /// cell lookup is `i = floor((x - origin_x) / dx)`. This preserves
     /// consistency with [`Self::indices_to_coordinates`] for nonzero-origin
     /// source and sensor grids.
+    #[must_use]
     #[inline]
     pub fn position_to_indices(&self, x: f64, y: f64, z: f64) -> Option<(usize, usize, usize)> {
         let max_x = (self.nx as f64).mul_add(self.dx, self.origin[0]);
