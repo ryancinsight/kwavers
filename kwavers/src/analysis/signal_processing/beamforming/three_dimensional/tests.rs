@@ -4,6 +4,7 @@
 //! processor initialization, and volume processing.
 
 use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 
 use super::*;
 
@@ -12,7 +13,7 @@ fn test_beamforming_config_3d_default() {
     let config = BeamformingConfig3D::default();
     assert_eq!(config.volume_dims, (128, 128, 128));
     assert_eq!(config.num_elements_3d, (32, 32, 16));
-    assert_eq!(config.center_frequency, 2.5e6);
+    assert_eq!(config.center_frequency, 2.5 * MHZ_TO_HZ);
     assert_eq!(config.sampling_frequency, 50e6);
     assert_eq!(config.sound_speed, SOUND_SPEED_TISSUE);
 }

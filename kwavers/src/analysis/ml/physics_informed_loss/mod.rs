@@ -16,6 +16,7 @@
 //! - Jin et al. (2021): "NSFNet"
 
 use crate::core::constants::fundamental::SOUND_SPEED_AIR;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::core::error::{KwaversError, KwaversResult};
 use std::collections::VecDeque;
 
@@ -80,7 +81,7 @@ impl Default for PhysicsLossConfig {
             lambda_data_init: 0.8,
             lambda_physics_init: 0.2,
             sound_speed: SOUND_SPEED_AIR,
-            frequency: 1_000_000.0,
+            frequency: MHZ_TO_HZ,
             grid_spacing: 1e-4, // 0.1 mm default
             gradient_method: GradientMethod::FiniteDifference { delta: 0.001 },
             weight_schedule: WeightSchedule::Exponential { decay_rate: 0.01 },

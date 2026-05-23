@@ -158,7 +158,7 @@ fn split_field_pml_zero_thickness_reproduces_standard_leapfrog() {
     let n_steps = 5usize;
     let amp = 1e-6_f64;
     let grid = Grid::new(nx, nx, nx, dx, dx, dx).unwrap();
-    let lam = 1000.0 * cp * cp;
+    let lam = DENSITY_WATER_NOMINAL * cp * cp;
     let mu = 500.0 * cp * cp;
     let rho = DENSITY_WATER_NOMINAL;
     let make_medium = || ElasticPstdMedium {

@@ -1,6 +1,7 @@
 //! BasebandSnapshotConfig — legacy analytic-signal snapshot parameters
 
 use crate::core::error::{KwaversError, KwaversResult};
+use crate::core::constants::numerical::MHZ_TO_HZ;
 
 /// Snapshot extraction configuration for **legacy** analytic-signal complex baseband.
 ///
@@ -45,7 +46,7 @@ impl BasebandSnapshotConfig {
 impl Default for BasebandSnapshotConfig {
     fn default() -> Self {
         Self {
-            sampling_frequency_hz: 1_000_000.0,
+            sampling_frequency_hz: MHZ_TO_HZ,
             center_frequency_hz: 200_000.0,
             snapshot_step_samples: 1,
         }

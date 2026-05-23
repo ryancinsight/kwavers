@@ -26,7 +26,8 @@
 use crate::analysis::signal_processing::beamforming::covariance::CovarianceEstimator;
 use crate::analysis::signal_processing::beamforming::narrowband::snapshots::SnapshotSelection;
 use crate::analysis::signal_processing::beamforming::utils::steering::SteeringVectorMethod;
-use crate::core::constants::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::core::error::{KwaversError, KwaversResult};
 
 mod spectrum;
@@ -109,7 +110,7 @@ impl CaponSpectrumConfig {
 impl Default for CaponSpectrumConfig {
     fn default() -> Self {
         Self {
-            frequency_hz: 1e6,
+            frequency_hz: MHZ_TO_HZ,
             sound_speed: SOUND_SPEED_WATER_SIM,
             diagonal_loading: 1e-6,
             covariance: CovarianceEstimator::default(),

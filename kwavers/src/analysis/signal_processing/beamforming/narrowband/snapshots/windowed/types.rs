@@ -1,3 +1,4 @@
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::core::error::{KwaversError, KwaversResult};
 
 /// Window function for windowed snapshot extraction.
@@ -153,7 +154,7 @@ impl StftBinConfig {
 impl Default for StftBinConfig {
     fn default() -> Self {
         Self {
-            sampling_frequency_hz: 1_000_000.0,
+            sampling_frequency_hz: MHZ_TO_HZ,
             frequency_hz: 200_000.0,
             frame_len_samples: 512,
             hop_len_samples: 128,

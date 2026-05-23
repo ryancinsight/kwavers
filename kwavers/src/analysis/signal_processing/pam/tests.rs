@@ -1,5 +1,6 @@
 use super::*;
 use crate::core::constants::{SAMPLING_FREQUENCY_DEFAULT, SOUND_SPEED_TISSUE};
+use crate::core::constants::numerical::MHZ_TO_HZ;
 
 #[test]
 fn pam_policy_to_core_capon_loading_and_midpoint_frequency() {
@@ -8,14 +9,14 @@ fn pam_policy_to_core_capon_loading_and_midpoint_frequency() {
         method: PamBeamformingMethod::CaponDiagonalLoading {
             diagonal_loading: 0.05,
         },
-        frequency_range: (1.0e6, 3.0e6),
+        frequency_range: (MHZ_TO_HZ, 3.0 * MHZ_TO_HZ),
         spatial_resolution: 1e-3,
         apodization: ApodizationType::Hamming,
         focal_point: [0.0, 0.0, 0.0],
     };
 
     let core: BeamformingCoreConfig = pam.into();
-    assert!((core.reference_frequency - 2.0e6).abs() < 1.0);
+    assert!((core.reference_frequency - 2.0 * MHZ_TO_HZ).abs() < 1.0);
     assert!((core.diagonal_loading - 0.05).abs() < 1e-12);
 
     assert_eq!(core.sound_speed, SOUND_SPEED_TISSUE);
@@ -34,13 +35,13 @@ fn pam_policy_to_core_non_capon_preserves_core_loading_and_sets_reference_freque
     let pam = PamBeamformingConfig {
         core: embedded_core.clone(),
         method: PamBeamformingMethod::DelayAndSum,
-        frequency_range: (2.0e6, 2.0e6),
+        frequency_range: (2.0 * MHZ_TO_HZ, 2.0 * MHZ_TO_HZ),
         spatial_resolution: 1e-3,
         apodization: ApodizationType::Uniform,
         focal_point: [0.0, 0.0, 0.0],
     };
 
     let core: BeamformingCoreConfig = pam.into();
-    assert!((core.reference_frequency - 2.0e6).abs() < 1.0);
+    assert!((core.reference_frequency - 2.0 * MHZ_TO_HZ).abs() < 1.0);
     assert!((core.diagonal_loading - embedded_core.diagonal_loading).abs() < 1e-12);
 }

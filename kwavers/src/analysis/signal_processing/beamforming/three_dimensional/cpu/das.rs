@@ -222,7 +222,7 @@ mod tests {
             (1e-3, 1e-3, 1e-3),
             (1, 1, 1),
             SOUND_SPEED_WATER_SIM,
-            1_000_000.0,
+            MHZ_TO_HZ,
         );
         let mut rf = Array4::<f32>::zeros((1, 1, 4, 1));
         rf[[0, 0, 0, 0]] = 7.0;
@@ -254,7 +254,7 @@ mod tests {
             (1e-3, 1e-3, 1e-3),
             (1, 1, 1),
             SOUND_SPEED_WATER_SIM,
-            1_000_000.0,
+            MHZ_TO_HZ,
         );
         // RF supplies 5 channels; config expects 1.
         let rf = Array4::<f32>::zeros((1, 5, 4, 1));
@@ -293,7 +293,7 @@ mod tests {
             (0.0, 0.0, 0.0), // all elements co-located at origin
             (1, 1, 1),
             SOUND_SPEED_WATER_SIM,
-            1_000_000.0,
+            MHZ_TO_HZ,
         );
         let mut rf = Array4::<f32>::zeros((1, M, 4, 1));
         for ch in 0..M {

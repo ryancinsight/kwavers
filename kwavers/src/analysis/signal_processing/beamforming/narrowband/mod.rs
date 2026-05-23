@@ -239,6 +239,7 @@ mod tests {
     use super::*;
     use crate::analysis::signal_processing::beamforming::covariance::CovariancePostProcess;
     use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use crate::core::constants::numerical::MHZ_TO_HZ;
 
     #[test]
     fn steering_module_exports_accessible() {
@@ -266,7 +267,7 @@ mod tests {
 
         let scenario = SnapshotScenario {
             frequency_hz: 100_000.0,
-            sampling_frequency_hz: 1_000_000.0,
+            sampling_frequency_hz: MHZ_TO_HZ,
             fractional_bandwidth: Some(0.05),
             prefer_robustness: true,
             prefer_time_resolution: false,
@@ -293,7 +294,7 @@ mod tests {
 
         let positions = vec![[0.0, 0.0, 0.0], [0.01, 0.0, 0.0]];
         let cfg = CaponSpectrumConfig {
-            frequency_hz: 1e6,
+            frequency_hz: MHZ_TO_HZ,
             sound_speed: SOUND_SPEED_WATER_SIM,
             diagonal_loading: 1e-3,
             covariance:

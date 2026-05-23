@@ -1,6 +1,7 @@
 use super::*;
 use crate::analysis::signal_processing::beamforming::three_dimensional::config::BeamformingConfig3D;
 use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use ndarray::Array4;
 
 fn make_config(
@@ -46,7 +47,7 @@ fn mvdr_single_element_equals_signal_at_delay() {
         (1e-3, 1e-3, 1e-3),
         (1, 1, 1),
         SOUND_SPEED_WATER_SIM,
-        1_000_000.0,
+        MHZ_TO_HZ,
     );
     let mut rf = Array4::<f32>::zeros((1, 1, 6, 1));
     rf[[0, 0, 0, 0]] = 3.0;
@@ -76,7 +77,7 @@ fn mvdr_single_element_invariant_to_diagonal_loading() {
         (1e-3, 1e-3, 1e-3),
         (1, 1, 1),
         SOUND_SPEED_WATER_SIM,
-        1_000_000.0,
+        MHZ_TO_HZ,
     );
     let mut rf = Array4::<f32>::zeros((1, 1, 6, 1));
     rf[[0, 0, 0, 0]] = 4.0;
@@ -105,7 +106,7 @@ fn mvdr_channel_mismatch_returns_error() {
         (1e-3, 1e-3, 1e-3),
         (1, 1, 1),
         SOUND_SPEED_WATER_SIM,
-        1_000_000.0,
+        MHZ_TO_HZ,
     );
     let rf = Array4::<f32>::zeros((1, 7, 4, 1));
     match mvdr_cpu(&rf, &config, 0.01, [1, 1, 1]).unwrap_err() {
@@ -133,7 +134,7 @@ fn mvdr_subarray_exceeds_array_returns_error() {
         (1e-3, 1e-3, 1e-3),
         (1, 1, 1),
         SOUND_SPEED_WATER_SIM,
-        1_000_000.0,
+        MHZ_TO_HZ,
     );
     let rf = Array4::<f32>::zeros((1, 2, 4, 1));
     // ly = 3 > nel_y = 2 → must be rejected.
@@ -166,7 +167,7 @@ fn mvdr_diagonal_loading_ensures_finite_positive_output() {
         (0.0, 0.0, 0.0),
         (1, 1, 1),
         SOUND_SPEED_WATER_SIM,
-        1_000_000.0,
+        MHZ_TO_HZ,
     );
     // Uncorrelated pulses: ch0 fires at n=0, ch1 fires at n=2.
     let mut rf = Array4::<f32>::zeros((1, 2, 5, 1));

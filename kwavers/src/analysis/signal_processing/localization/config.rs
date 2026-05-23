@@ -155,6 +155,7 @@ impl Default for AcousticLocalizationConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::numerical::MHZ_TO_HZ;
 
     #[test]
     fn test_config_creation() {
@@ -185,7 +186,7 @@ mod tests {
     #[test]
     fn test_wavelength_calculation() {
         let config = AcousticLocalizationConfig::default();
-        let wavelength = config.wavelength(1.0e6);
+        let wavelength = config.wavelength(MHZ_TO_HZ);
         assert!((wavelength - 1.54e-3).abs() < 1e-6);
     }
 }

@@ -1,7 +1,7 @@
 //! GPU PSTD solver construction tests.
 
 use super::super::{AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays, SolverParams};
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use std::sync::Arc;
 
 /// Verify GpuPstdSolver can be constructed and runs without error.
@@ -48,7 +48,7 @@ fn test_gpu_pstd_solver_new() {
     let n = 32usize;
     let dx = 1e-3_f64;
     let c0 = SOUND_SPEED_WATER_SIM;
-    let rho0 = 1000.0_f64;
+    let rho0 = DENSITY_WATER_NOMINAL;
     let dt = 0.3 * dx / c0;
     let nt = 10;
 

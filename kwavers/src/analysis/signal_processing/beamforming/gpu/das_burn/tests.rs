@@ -2,6 +2,7 @@ use burn::backend::NdArray;
 use ndarray::{Array2, Array3};
 
 use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 
 use super::*;
 
@@ -45,7 +46,7 @@ fn test_single_focal_point_beamforming() {
         &sensor_pos,
         &focal_points,
         None,
-        1e6,
+        MHZ_TO_HZ,
         SOUND_SPEED_WATER_SIM,
     );
 
@@ -81,7 +82,7 @@ fn test_apodization() {
         &sensor_pos,
         &focal_points,
         Some(&apod_weights),
-        1e6,
+        MHZ_TO_HZ,
         SOUND_SPEED_WATER_SIM,
     );
 
@@ -104,7 +105,7 @@ fn test_invalid_input_dimensions() {
         &sensor_pos,
         &focal_points,
         None,
-        1e6,
+        MHZ_TO_HZ,
         SOUND_SPEED_WATER_SIM,
     );
 
@@ -122,7 +123,7 @@ fn test_cpu_wrapper() {
         &sensor_pos,
         &focal_points,
         None,
-        1e6,
+        MHZ_TO_HZ,
         SOUND_SPEED_WATER_SIM,
     );
     let output = result.unwrap();
@@ -165,7 +166,7 @@ fn test_multiple_focal_points() {
         &sensor_pos,
         &focal_points,
         None,
-        1e6,
+        MHZ_TO_HZ,
         SOUND_SPEED_WATER_SIM,
     );
 

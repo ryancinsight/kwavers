@@ -331,10 +331,10 @@ mod tests {
 
     #[test]
     fn rejects_non_positive_sound_speed() {
-        assert!(ImagingDasConfig::new(0.0, 1.0e6, ImagingDasApodization::Rectangular).is_err());
-        assert!(ImagingDasConfig::new(-1.0, 1.0e6, ImagingDasApodization::Rectangular).is_err());
+        assert!(ImagingDasConfig::new(0.0, MHZ_TO_HZ, ImagingDasApodization::Rectangular).is_err());
+        assert!(ImagingDasConfig::new(-1.0, MHZ_TO_HZ, ImagingDasApodization::Rectangular).is_err());
         assert!(
-            ImagingDasConfig::new(f64::NAN, 1.0e6, ImagingDasApodization::Rectangular).is_err()
+            ImagingDasConfig::new(f64::NAN, MHZ_TO_HZ, ImagingDasApodization::Rectangular).is_err()
         );
     }
 

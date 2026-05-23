@@ -1,4 +1,5 @@
-use crate::core::constants::SOUND_SPEED_TISSUE;
+use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use serde::{Deserialize, Serialize};
 
 pub use crate::math::signal::ApodizationType;
@@ -24,7 +25,7 @@ impl Default for DelayAndSumConfig {
     fn default() -> Self {
         Self {
             sound_speed: SOUND_SPEED_TISSUE,
-            sampling_frequency: 5e6,
+            sampling_frequency: 5.0 * MHZ_TO_HZ,
             detection_threshold: 3.0,
             window_size: 512,
             apodization: ApodizationType::Hamming,

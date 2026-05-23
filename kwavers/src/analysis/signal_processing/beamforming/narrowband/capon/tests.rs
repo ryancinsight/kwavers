@@ -1,6 +1,7 @@
 use super::*;
 use crate::analysis::signal_processing::beamforming::covariance::CovariancePostProcess;
 use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use approx::assert_abs_diff_eq;
 use ndarray::Array3;
 
@@ -64,7 +65,7 @@ fn capon_spectrum_is_finite_for_simple_case() {
     use crate::analysis::signal_processing::beamforming::covariance::CovarianceEstimator;
     use crate::analysis::signal_processing::beamforming::utils::steering::SteeringVectorMethod;
     let cfg = CaponSpectrumConfig {
-        frequency_hz: 1e6,
+        frequency_hz: MHZ_TO_HZ,
         sound_speed: SOUND_SPEED_WATER_SIM,
         diagonal_loading: 1e-3,
         covariance: CovarianceEstimator {

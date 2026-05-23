@@ -253,7 +253,7 @@ mod tests {
             NarrowbandSteering::new(positions, SOUND_SPEED_WATER_SIM).expect("steering init");
 
         let err = steering
-            .steering_vector_point([f64::NAN, 0.0, 0.0], 1e6)
+            .steering_vector_point([f64::NAN, 0.0, 0.0], MHZ_TO_HZ)
             .expect_err("should error");
         assert!(err.to_string().contains("candidate"));
     }
