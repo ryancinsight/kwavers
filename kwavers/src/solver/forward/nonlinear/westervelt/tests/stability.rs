@@ -109,7 +109,7 @@ fn cfl_violation_causes_divergence_stable_dt_remains_bounded() {
     let n = 10usize;
     let dx = 1e-3;
     let c0 = SOUND_SPEED_WATER_SIM;
-    let rho0 = 1000.0;
+    let rho0 = DENSITY_WATER_NOMINAL;
     let grid = Grid::new(n, n, n, dx, dx, dx).unwrap();
     let medium = HomogeneousMedium::from_minimal(rho0, c0, &grid);
 

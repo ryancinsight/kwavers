@@ -1,6 +1,6 @@
 //! Energy conservation, absorption decay, and diagnostics check-interval tests.
 
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use crate::domain::grid::Grid;
 use crate::domain::medium::HomogeneousMedium;
 use crate::solver::forward::nonlinear::conservation::{
@@ -11,7 +11,7 @@ use crate::solver::forward::nonlinear::westervelt::{WesterveltFdtd, WesterveltFd
 #[test]
 fn test_energy_calculation_accuracy() {
     let grid = Grid::new(16, 16, 16, 1e-3, 1e-3, 1e-3).unwrap();
-    let medium = HomogeneousMedium::from_minimal(1000.0, SOUND_SPEED_WATER_SIM, &grid);
+    let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, &grid);
     let config = WesterveltFdtdConfig::default();
     let mut solver = WesterveltFdtd::new(config, &grid, &medium);
 
@@ -21,7 +21,7 @@ fn test_energy_calculation_accuracy() {
     let energy = solver.calculate_total_energy();
 
     // E = p²/(2ρ₀c₀²) * Volume
-    let rho0 = 1000.0;
+    let rho0 = DENSITY_WATER_NOMINAL;
     let c0 = SOUND_SPEED_WATER_SIM;
     let volume =
         (grid.nx as f64) * grid.dx * (grid.ny as f64) * grid.dy * (grid.nz as f64) * grid.dz;
@@ -38,7 +38,7 @@ fn test_energy_calculation_accuracy() {
 #[test]
 fn test_conservation_check_interval() {
     let grid = Grid::new(16, 16, 16, 1e-3, 1e-3, 1e-3).unwrap();
-    let medium = HomogeneousMedium::from_minimal(1000.0, SOUND_SPEED_WATER_SIM, &grid);
+    let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, &grid);
     let config = WesterveltFdtdConfig::default();
     let mut solver = WesterveltFdtd::new(config, &grid, &medium);
 

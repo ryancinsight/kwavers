@@ -2,7 +2,7 @@ use super::orchestrator::ElasticPstdOrchestrator;
 use super::pml::ElasticPmlSpec;
 use super::split_field_pml::ElasticSplitFieldPml;
 use super::types::{ElasticPstdMedium, ElasticPstdSourceMode, ElasticPstdVelocitySource};
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use crate::domain::grid::Grid;
 use ndarray::{Array1, Array3};
 use num_complex::Complex;
@@ -160,7 +160,7 @@ fn split_field_pml_zero_thickness_reproduces_standard_leapfrog() {
     let grid = Grid::new(nx, nx, nx, dx, dx, dx).unwrap();
     let lam = 1000.0 * cp * cp;
     let mu = 500.0 * cp * cp;
-    let rho = 1000.0_f64;
+    let rho = DENSITY_WATER_NOMINAL;
     let make_medium = || ElasticPstdMedium {
         lame_lambda: Array3::from_elem((nx, nx, nx), lam),
         lame_mu: Array3::from_elem((nx, nx, nx), mu),
@@ -245,7 +245,7 @@ fn split_field_pml_attenuates_outgoing_wave() {
     let nz = 4usize;
     let dx = 1e-3_f64;
     let cp = SOUND_SPEED_WATER_SIM;
-    let rho = 1000.0_f64;
+    let rho = DENSITY_WATER_NOMINAL;
     let lam = rho * cp * cp; // μ=0 acoustic fluid
     let dt = 0.3_f64 * dx / (cp * 3.0_f64.sqrt());
     let n_steps = 100usize;

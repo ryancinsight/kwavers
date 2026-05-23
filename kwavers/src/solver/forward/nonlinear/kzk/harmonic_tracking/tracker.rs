@@ -1,6 +1,7 @@
 //! HarmonicTracker implementation.
 
 use super::types::{HarmonicAnalysis, HarmonicConfig};
+use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::{Array1, Array2};
 use std::f64::consts::PI;
@@ -208,7 +209,7 @@ impl HarmonicTracker {
         // Fubini shock distance (Hamilton & Blackstock 1998, §4.3, eq. 4.3.5):
         //   z_shock = ρ₀ c₀³ / (β · ω₀ · p₀)
         // where β = 1 + B/(2A) and ω₀ = 2πf₀.
-        let rho0: f64 = 1000.0; // kg/m³
+        let rho0: f64 = DENSITY_WATER_NOMINAL; // kg/m³
         let c0: f64 = crate::core::constants::fundamental::SOUND_SPEED_TISSUE; // m/s
         let omega0: f64 = 2.0 * PI * self.config.frequency;
         let beta: f64 = 1.0 + self.config.b_a / 2.0; // β = 1 + B/(2A)

@@ -51,6 +51,7 @@ pub fn validate_momentum_conservation(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
     use crate::domain::grid::Grid;
     use ndarray::Array3;
 
@@ -115,7 +116,7 @@ mod tests {
         let s = (grid.nx, grid.ny, grid.nz);
         let dt = 1e-6_f64;
         let delta_vx = 0.1_f64;
-        let rho_val = 1000.0_f64;
+        let rho_val = DENSITY_WATER_NOMINAL;
         let vx = Array3::from_elem(s, delta_vx);
         let vx_prev = Array3::<f64>::zeros(s);
         let vy = Array3::<f64>::zeros(s);

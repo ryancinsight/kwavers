@@ -1,5 +1,5 @@
 use super::*;
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use crate::core::constants::thermodynamic::BODY_TEMPERATURE_K;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
@@ -29,7 +29,7 @@ fn test_energy_analytical_uniform_pressure() {
     let grid = make_grid();
     let shape = (grid.nx, grid.ny, grid.nz);
     let p0 = 1000.0_f64;
-    let rho0 = 1000.0_f64;
+    let rho0 = DENSITY_WATER_NOMINAL;
     let c0 = SOUND_SPEED_WATER_SIM;
     let p = uniform_array(shape, p0);
     let v = uniform_array(shape, 0.0);
@@ -95,7 +95,7 @@ fn test_entropy_production_analytical() {
     let grid = make_grid();
     let shape = (grid.nx, grid.ny, grid.nz);
     let p0 = 2000.0_f64;
-    let rho0 = 1000.0_f64;
+    let rho0 = DENSITY_WATER_NOMINAL;
     let c0 = SOUND_SPEED_WATER_SIM;
     let alpha0 = 3.0_f64;
     let t0 = 310.0_f64;

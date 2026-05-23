@@ -1,5 +1,6 @@
 use crate::clinical::therapy::parameters::ClinicalTherapyParameters;
 use crate::core::constants::medical::MI_LIMIT_SOFT_TISSUE;
+use crate::core::constants::numerical::MPA_TO_PA;
 use std::time::{Duration, Instant};
 
 /// Safety levels for clinical ultrasound systems
@@ -89,7 +90,7 @@ impl ClinicalSafetyMonitor {
         let mut new_state = ClinicalSafetyLevel::Normal;
 
         // FDA limit: ~3 MPa peak negative pressure for therapeutic ultrasound
-        const MAX_PEAK_NEGATIVE_PRESSURE: f64 = 3.0e6;
+        const MAX_PEAK_NEGATIVE_PRESSURE: f64 = 3.0 * MPA_TO_PA;
         if params.peak_negative_pressure > MAX_PEAK_NEGATIVE_PRESSURE {
             self.violations.push(SafetyViolation {
                 parameter: "peak_negative_pressure".to_owned(),

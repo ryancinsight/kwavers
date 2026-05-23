@@ -1,6 +1,6 @@
 use crate::core::constants::fundamental::{
-    DENSITY_BLOOD, DENSITY_WATER, SOUND_SPEED_AIR, SOUND_SPEED_BLOOD, SOUND_SPEED_WATER,
-    SOUND_SPEED_WATER_SIM,
+    DENSITY_BLOOD, DENSITY_WATER, DENSITY_WATER_NOMINAL, SOUND_SPEED_AIR, SOUND_SPEED_BLOOD,
+    SOUND_SPEED_WATER, SOUND_SPEED_WATER_SIM,
 };
 use crate::domain::grid::Grid;
 use crate::domain::medium::{
@@ -101,7 +101,7 @@ fn test_elastic_homogeneous_lame_inversion_satisfies_dispersion() {
 fn test_elastic_homogeneous_fluid_limit_zero_shear_speed() {
     let grid = Grid::new(8, 8, 8, 1e-4, 1e-4, 1e-4).unwrap();
     let cp = SOUND_SPEED_WATER_SIM;
-    let rho = 1000.0_f64;
+    let rho = DENSITY_WATER_NOMINAL;
 
     let med = HomogeneousMedium::elastic_homogeneous(rho, cp, 0.0, &grid)
         .expect("c_s = 0 must be permitted (fluid limit)");

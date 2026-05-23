@@ -1,6 +1,6 @@
 use super::solver::EpsteinPlessetStabilitySolver;
 use super::types::{AmplitudeEvolution, OscillationType};
-use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
+use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL};
 use crate::physics::acoustics::bubble_dynamics::bubble_state::BubbleParameters;
 use approx::assert_relative_eq;
 
@@ -9,7 +9,7 @@ fn test_epstein_plesset_stability_analysis() {
     let params = BubbleParameters {
         r0: 1e-3,
         p0: ATMOSPHERIC_PRESSURE,
-        rho_liquid: 1000.0,
+        rho_liquid: DENSITY_WATER_NOMINAL,
         sigma: 0.072,
         mu_liquid: 0.001,
         gamma: 1.4,
@@ -31,7 +31,7 @@ fn test_stability_boundary_analysis() {
     let params = BubbleParameters {
         r0: 1e-4,
         p0: ATMOSPHERIC_PRESSURE,
-        rho_liquid: 1000.0,
+        rho_liquid: DENSITY_WATER_NOMINAL,
         sigma: 0.072,
         mu_liquid: 0.001,
         gamma: 1.4,
@@ -74,7 +74,7 @@ fn test_validation_against_literature() {
     let params = BubbleParameters {
         r0: 1e-3,
         p0: ATMOSPHERIC_PRESSURE,
-        rho_liquid: 1000.0,
+        rho_liquid: DENSITY_WATER_NOMINAL,
         sigma: 0.072,
         mu_liquid: 0.001,
         gamma: 1.4,
@@ -94,7 +94,7 @@ fn test_validation_against_literature() {
 fn test_epstein_plesset_vs_minnaert_frequency() {
     let r0 = 1e-3;
     let p0 = ATMOSPHERIC_PRESSURE;
-    let rho = 1000.0;
+    let rho = DENSITY_WATER_NOMINAL;
     let gamma = 1.4;
 
     let params = BubbleParameters {

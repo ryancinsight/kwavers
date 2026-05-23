@@ -39,7 +39,7 @@ pub fn validate_energy_conservation(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
     use crate::domain::grid::Grid;
     use ndarray::Array3;
 
@@ -88,7 +88,7 @@ mod tests {
         let dv = grid.dx * grid.dy * grid.dz;
         let p_val = 100.0_f64;
         let v_val = 0.1_f64;
-        let rho_val = 1000.0_f64;
+        let rho_val = DENSITY_WATER_NOMINAL;
         let c_val = SOUND_SPEED_WATER_SIM;
         let kinetic = 0.5 * rho_val * v_val * v_val;
         let potential = p_val * p_val / (2.0 * rho_val * c_val * c_val);
