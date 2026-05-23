@@ -5,7 +5,7 @@ use crate::core::error::{KwaversError, KwaversResult};
 use crate::math::numerics::operators::interpolation::bilinear_index_space;
 use ndarray::{s, Array2, Array3};
 
-use super::config::{C_BONE_M_S, C_BRAIN_REF_M_S, C_WATER_M_S};
+use super::config::{SOUND_SPEED_SKULL, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM};
 
 pub(super) const AIR_REJECTION_HU: f64 = -300.0;
 pub(super) const SKULL_HU: f64 = 300.0;
@@ -160,7 +160,7 @@ impl AcousticSlice {
         }
 
         let mut sound_speed = Array2::<f64>::zeros((nx, ny));
-        let mut initial = Array2::<f64>::from_elem((nx, ny), C_WATER_M_S);
+        let mut initial = Array2::<f64>::from_elem((nx, ny), SOUND_SPEED_WATER_SIM);
         let mut attenuation = Array2::<f64>::zeros((nx, ny));
         let mut brain_mask = Array2::<bool>::from_elem((nx, ny), false);
         let mut skull_mask = Array2::<bool>::from_elem((nx, ny), false);
@@ -177,12 +177,12 @@ impl AcousticSlice {
                     let phi = (hu / 1000.0).clamp(0.0, 1.0);
                     attenuation[[ix, iy]] = SOFT_TISSUE_ATTENUATION_NP_PER_M_MHZ * (1.0 - phi)
                         + SKULL_ATTENUATION_NP_PER_M_MHZ * phi;
-                    C_WATER_M_S * (1.0 - phi) + C_BONE_M_S * phi
+                    SOUND_SPEED_WATER_SIM * (1.0 - phi) + SOUND_SPEED_SKULL * phi
                 } else if hu > AIR_REJECTION_HU {
                     attenuation[[ix, iy]] = SOFT_TISSUE_ATTENUATION_NP_PER_M_MHZ;
                     soft_tissue_speed(hu)
                 } else {
-                    C_WATER_M_S
+                    SOUND_SPEED_WATER_SIM
                 };
 
                 let dx = ix as f64 - center.0;
@@ -191,7 +191,7 @@ impl AcousticSlice {
                 let brain_hu = (-20.0..=120.0).contains(&hu);
                 brain_mask[[ix, iy]] = central && brain_hu && !skull;
                 initial[[ix, iy]] = if brain_mask[[ix, iy]] {
-                    C_BRAIN_REF_M_S
+                    SOUND_SPEED_TISSUE
                 } else {
                     sound_speed[[ix, iy]]
                 };
@@ -259,5 +259,5 @@ fn head_centroid(slice: &Array2<f64>) -> Option<(f64, f64)> {
 /// the active inversion set.  A safety floor/ceiling of [1480, 1620] m/s
 /// prevents physically implausible values if the clamp bounds are ever widened.
 pub(super) fn soft_tissue_speed(hu: f64) -> f64 {
-    (SOUND_SPEED_WATER_37C + 0.68 * hu.clamp(-20.0, 120.0)).clamp(C_WATER_M_S, 1620.0)
+    (SOUND_SPEED_WATER_37C + 0.68 * hu.clamp(-20.0, 120.0)).clamp(SOUND_SPEED_WATER_SIM, 1620.0)
 }

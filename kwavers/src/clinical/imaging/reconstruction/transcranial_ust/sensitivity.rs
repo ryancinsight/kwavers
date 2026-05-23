@@ -4,7 +4,7 @@ use rayon::prelude::*;
 use std::f64::consts::TAU;
 
 use super::{
-    born::ActiveVoxel, config::C_BRAIN_REF_M_S, medium::AcousticSlice,
+    born::ActiveVoxel, config::SOUND_SPEED_TISSUE, medium::AcousticSlice,
     transducer::TranscranialBowlGeometry,
 };
 use crate::core::constants::fundamental::DENSITY_BRAIN;
@@ -52,7 +52,7 @@ pub(super) fn build_sensitivity_matrix(
             let harmonic_order = harmonic_idx + 1;
             let channel_frequency_hz = harmonic_order as f64 * frequency_hz;
             let frequency_mhz = channel_frequency_hz * 1.0e-6;
-            let k = TAU * channel_frequency_hz / C_BRAIN_REF_M_S;
+            let k = TAU * channel_frequency_hz / SOUND_SPEED_TISSUE;
             let mut norm2 = 0.0;
 
             for (col, voxel) in active.iter().enumerate() {
@@ -100,7 +100,7 @@ fn second_harmonic_factor(
 ) -> f64 {
     let source_pressure_pa = config.source_pressure_mpa * MPA_TO_PA;
     let omega = TAU * frequency_hz;
-    let shock_distance_m = DENSITY_BRAIN * C_BRAIN_REF_M_S.powi(3)
+    let shock_distance_m = DENSITY_BRAIN * SOUND_SPEED_TISSUE.powi(3)
         / (config.nonlinear_beta * omega * source_pressure_pa);
     0.25 * (path_m / shock_distance_m).max(0.0)
 }

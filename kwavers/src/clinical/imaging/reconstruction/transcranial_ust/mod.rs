@@ -20,7 +20,7 @@ pub use born::{
     TranscranialUstBornInversionResult,
 };
 pub use config::{
-    TranscranialUstBornInversionConfig, C_BONE_M_S, C_BRAIN_REF_M_S, C_WATER_M_S,
+    TranscranialUstBornInversionConfig, SOUND_SPEED_SKULL, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM,
     TRANSCRANIAL_FOCUSED_BOWL_ELEMENT_COUNT,
 };
 pub use medium::{resample_head_slice, select_head_slice, AcousticSlice, CtResampledSlice};

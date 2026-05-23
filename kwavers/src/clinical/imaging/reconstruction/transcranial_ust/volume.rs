@@ -5,7 +5,7 @@ use crate::math::numerics::operators::interpolation::trilinear_index_space;
 use ndarray::Array3;
 
 use super::{
-    config::{C_BONE_M_S, C_BRAIN_REF_M_S, C_WATER_M_S},
+    config::{SOUND_SPEED_SKULL, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM},
     medium::{
         soft_tissue_speed, AIR_REJECTION_HU, SKULL_ATTENUATION_NP_PER_M_MHZ, SKULL_HU,
         SOFT_TISSUE_ATTENUATION_NP_PER_M_MHZ,
@@ -51,7 +51,7 @@ impl AcousticVolume {
         }
 
         let mut sound_speed = Array3::<f64>::zeros((nx, ny, nz));
-        let mut initial = Array3::<f64>::from_elem((nx, ny, nz), C_WATER_M_S);
+        let mut initial = Array3::<f64>::from_elem((nx, ny, nz), SOUND_SPEED_WATER_SIM);
         let mut attenuation = Array3::<f64>::zeros((nx, ny, nz));
         let mut brain_mask = Array3::<bool>::from_elem((nx, ny, nz), false);
         let mut skull_mask = Array3::<bool>::from_elem((nx, ny, nz), false);
@@ -73,12 +73,12 @@ impl AcousticVolume {
                         attenuation[[ix, iy, iz]] = SOFT_TISSUE_ATTENUATION_NP_PER_M_MHZ
                             * (1.0 - phi)
                             + SKULL_ATTENUATION_NP_PER_M_MHZ * phi;
-                        C_WATER_M_S * (1.0 - phi) + C_BONE_M_S * phi
+                        SOUND_SPEED_WATER_SIM * (1.0 - phi) + SOUND_SPEED_SKULL * phi
                     } else if hu > AIR_REJECTION_HU {
                         attenuation[[ix, iy, iz]] = SOFT_TISSUE_ATTENUATION_NP_PER_M_MHZ;
                         soft_tissue_speed(hu)
                     } else {
-                        C_WATER_M_S
+                        SOUND_SPEED_WATER_SIM
                     };
 
                     let ellipsoid =
@@ -86,7 +86,7 @@ impl AcousticVolume {
                     let brain_hu = (-20.0..=120.0).contains(&hu);
                     brain_mask[[ix, iy, iz]] = ellipsoid <= 1.0 && brain_hu && !skull;
                     initial[[ix, iy, iz]] = if brain_mask[[ix, iy, iz]] {
-                        C_BRAIN_REF_M_S
+                        SOUND_SPEED_TISSUE
                     } else {
                         sound_speed[[ix, iy, iz]]
                     };

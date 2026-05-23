@@ -12,7 +12,7 @@ use crate::solver::inverse::linear_born_inversion::{
 use ndarray::Array3;
 
 use super::{
-    config::{TranscranialUstBornInversionConfig, C_BRAIN_REF_M_S},
+    config::{TranscranialUstBornInversionConfig, SOUND_SPEED_TISSUE},
     transducer::TranscranialBowlGeometry,
     volume::AcousticVolume,
 };
@@ -89,22 +89,22 @@ pub fn reconstruct_brain_volume(
         &reconstruction,
         &medium.brain_mask,
         linear.enhancement_gain,
-        C_BRAIN_REF_M_S,
+        SOUND_SPEED_TISSUE,
     );
 
     let target: Vec<f64> = active
         .iter()
-        .map(|v| C_BRAIN_REF_M_S * (1.0 + v.target_contrast))
+        .map(|v| SOUND_SPEED_TISSUE * (1.0 + v.target_contrast))
         .collect();
     let recon: Vec<f64> = active
         .iter()
         .enumerate()
-        .map(|(idx, _)| C_BRAIN_REF_M_S * (1.0 + inversion.model[idx]))
+        .map(|(idx, _)| SOUND_SPEED_TISSUE * (1.0 + inversion.model[idx]))
         .collect();
     let migration_values: Vec<f64> = active
         .iter()
         .enumerate()
-        .map(|(idx, _)| C_BRAIN_REF_M_S * (1.0 + migration_model[idx]))
+        .map(|(idx, _)| SOUND_SPEED_TISSUE * (1.0 + migration_model[idx]))
         .collect();
     let enhanced_values: Vec<f64> = active
         .iter()
@@ -170,7 +170,7 @@ fn active_voxels(medium: &AcousticVolume) -> Vec<VolumeVoxel> {
                         x_m: (ix as f64 - cx) * medium.spacing_m,
                         y_m: (iy as f64 - cy) * medium.spacing_m,
                         z_m: (iz as f64 - cz) * medium.spacing_m,
-                        target_contrast: speed / C_BRAIN_REF_M_S - 1.0,
+                        target_contrast: speed / SOUND_SPEED_TISSUE - 1.0,
                         attenuation_np_per_m_mhz: medium.attenuation_np_per_m_mhz[[ix, iy, iz]],
                     });
                 }
@@ -187,7 +187,7 @@ fn fill_sound_speed_volume(
 ) -> Array3<f64> {
     let mut out = medium.initial_sound_speed_m_s.clone();
     for (voxel, value) in active.iter().zip(contrast) {
-        out[[voxel.ix, voxel.iy, voxel.iz]] = C_BRAIN_REF_M_S * (1.0 + value);
+        out[[voxel.ix, voxel.iy, voxel.iz]] = SOUND_SPEED_TISSUE * (1.0 + value);
     }
     out
 }

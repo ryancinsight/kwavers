@@ -16,7 +16,7 @@ use crate::solver::inverse::linear_born_inversion::high_pass_enhance_slice;
 
 use super::{
     conditioning::apply_sobolev_preconditioner,
-    config::{TranscranialUstBornInversionConfig, C_BRAIN_REF_M_S},
+    config::{TranscranialUstBornInversionConfig, SOUND_SPEED_TISSUE},
     medium::AcousticSlice,
     sensitivity::build_sensitivity_matrix,
     transducer::TranscranialBowlGeometry,
@@ -93,29 +93,29 @@ pub fn reconstruct_brain_slice(
     let mut migration = medium.initial_sound_speed_m_s.clone();
     let mut reconstruction = medium.initial_sound_speed_m_s.clone();
     for (idx, voxel) in active.iter().enumerate() {
-        migration[[voxel.ix, voxel.iy]] = C_BRAIN_REF_M_S * (1.0 + migration_model[idx]);
-        reconstruction[[voxel.ix, voxel.iy]] = C_BRAIN_REF_M_S * (1.0 + inversion.model[idx]);
+        migration[[voxel.ix, voxel.iy]] = SOUND_SPEED_TISSUE * (1.0 + migration_model[idx]);
+        reconstruction[[voxel.ix, voxel.iy]] = SOUND_SPEED_TISSUE * (1.0 + inversion.model[idx]);
     }
     let enhanced = high_pass_enhance_slice(
         &reconstruction,
         &medium.brain_mask,
         linear.enhancement_gain,
-        C_BRAIN_REF_M_S,
+        SOUND_SPEED_TISSUE,
     );
 
     let target: Vec<f64> = active
         .iter()
-        .map(|v| C_BRAIN_REF_M_S * (1.0 + v.target_contrast))
+        .map(|v| SOUND_SPEED_TISSUE * (1.0 + v.target_contrast))
         .collect();
     let recon: Vec<f64> = active
         .iter()
         .enumerate()
-        .map(|(idx, _)| C_BRAIN_REF_M_S * (1.0 + inversion.model[idx]))
+        .map(|(idx, _)| SOUND_SPEED_TISSUE * (1.0 + inversion.model[idx]))
         .collect();
     let migration_values: Vec<f64> = active
         .iter()
         .enumerate()
-        .map(|(idx, _)| C_BRAIN_REF_M_S * (1.0 + migration_model[idx]))
+        .map(|(idx, _)| SOUND_SPEED_TISSUE * (1.0 + migration_model[idx]))
         .collect();
     let enhanced_values: Vec<f64> = active
         .iter()
@@ -186,7 +186,7 @@ fn active_voxels(medium: &AcousticSlice) -> Vec<ActiveVoxel> {
                     x_m: (ix as f64 - cx) * medium.spacing_m,
                     y_m: (iy as f64 - cy) * medium.spacing_m,
                     z_m: medium.slice_offset_m,
-                    target_contrast: speed / C_BRAIN_REF_M_S - 1.0,
+                    target_contrast: speed / SOUND_SPEED_TISSUE - 1.0,
                 });
             }
         }
