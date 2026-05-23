@@ -1,5 +1,6 @@
 //! CT slice preparation and CT-to-acoustic property mapping.
 
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_37C;
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::math::numerics::operators::interpolation::bilinear_index_space;
 use ndarray::{s, Array2, Array3};
@@ -258,5 +259,5 @@ fn head_centroid(slice: &Array2<f64>) -> Option<(f64, f64)> {
 /// the active inversion set.  A safety floor/ceiling of [1480, 1620] m/s
 /// prevents physically implausible values if the clamp bounds are ever widened.
 pub(super) fn soft_tissue_speed(hu: f64) -> f64 {
-    (1524.0 + 0.68 * hu.clamp(-20.0, 120.0)).clamp(C_WATER_M_S, 1620.0)
+    (SOUND_SPEED_WATER_37C + 0.68 * hu.clamp(-20.0, 120.0)).clamp(C_WATER_M_S, 1620.0)
 }
