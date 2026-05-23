@@ -3,6 +3,7 @@
 
 use super::config::{CavitationCouplingConfig, CavitationCouplingType};
 use super::domain::CavitationCoupledDomain;
+use crate::core::constants::cavitation::SURFACE_TENSION_WATER;
 use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use crate::physics::bubble_dynamics::{BubbleState, KellerMiksisModel};
 use crate::solver::inverse::pinn::ml::physics::{
@@ -98,8 +99,8 @@ impl<B: AutodiffBackend> CavitationCoupledDomain<B> {
         y: &Tensor<B, 2>,
         z: Option<&Tensor<B, 2>>,
     ) -> Vec<(f64, f64, f64)> {
-        // Blake threshold: R_n = 5 μm, σ = 0.073 N/m (water), P_0 = 1 atm
-        let p_blake = Self::blake_threshold(5e-6, 0.073, ATMOSPHERIC_PRESSURE);
+        // Blake threshold: R_n = 5 μm, σ = SURFACE_TENSION_WATER (water at 20°C), P_0 = 1 atm
+        let p_blake = Self::blake_threshold(5e-6, SURFACE_TENSION_WATER, ATMOSPHERIC_PRESSURE);
 
         let pressure_data = pressure_field.clone().into_data();
         let pressure_slice = pressure_data.as_slice::<f32>().unwrap();
