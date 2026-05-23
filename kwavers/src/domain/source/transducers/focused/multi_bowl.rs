@@ -3,6 +3,7 @@
 //! Provides arrays of bowl transducers for complex field synthesis.
 
 use super::bowl::{BowlConfig, BowlTransducer};
+use super::validation::{field_validation_error, validate_finite_field};
 use crate::{core::error::KwaversResult, domain::grid::Grid};
 use ndarray::{Array3, Zip};
 use std::f64::consts::PI;
@@ -24,16 +25,35 @@ impl MultiBowlArray {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     pub fn new(configs: Vec<BowlConfig>) -> KwaversResult<Self> {
-        let n_bowls = configs.len();
-        let mut bowls = Vec::with_capacity(n_bowls);
-        let mut amplitudes = Vec::with_capacity(n_bowls);
-        let mut phases = Vec::with_capacity(n_bowls);
+        let mut bowls = Vec::with_capacity(configs.len());
 
         for config in configs {
-            amplitudes.push(config.amplitude);
-            phases.push(config.phase);
             bowls.push(BowlTransducer::new(config)?);
         }
+
+        Self::from_bowls(bowls)
+    }
+
+    /// Create a multi-bowl source from already constructed bowl transducers.
+    ///
+    /// This constructor keeps hemispherical, annular, and bounded polar-span
+    /// bowl layouts inside the generic source domain instead of introducing
+    /// anatomy-specific aggregate source types.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`crate::core::error::KwaversError::Validation`] when the array
+    /// contains no bowls.
+    pub fn from_bowls(bowls: Vec<BowlTransducer>) -> KwaversResult<Self> {
+        validate_bowl_count(bowls.len())?;
+        let amplitudes = bowls
+            .iter()
+            .map(|bowl| bowl.config.amplitude)
+            .collect::<Vec<_>>();
+        let phases = bowls
+            .iter()
+            .map(|bowl| bowl.config.phase)
+            .collect::<Vec<_>>();
 
         Ok(Self {
             bowls,
@@ -58,13 +78,15 @@ impl MultiBowlArray {
             // Generate source for this bowl at the current time
             // Note: We need to adjust the time to account for the phase offset
             let omega = 2.0 * PI * bowl.config.frequency;
+            validate_finite_field("multi_bowl_amplitude", self.amplitudes[i])?;
+            validate_finite_field("multi_bowl_phase", self.phases[i])?;
             let phase_offset = self.phases[i] - bowl.config.phase; // Relative phase
             let time_offset = phase_offset / omega; // Convert phase to time offset
 
             let bowl_source = bowl.generate_source(grid, time + time_offset)?;
 
             // Apply relative amplitude
-            let scale = self.amplitudes[i] / bowl.config.amplitude;
+            let scale = amplitude_scale(self.amplitudes[i], bowl.config.amplitude);
 
             Zip::from(&mut combined_source)
                 .and(&bowl_source)
@@ -82,10 +104,45 @@ impl MultiBowlArray {
         }
     }
 
-    /// Apply apodization (amplitude shading)
+    /// Apply dimensionless apodization weights to the original drive pressures.
+    ///
+    /// # Theorem
+    ///
+    /// Each bowl source is linear in its drive pressure `A_i`. Therefore an
+    /// apodized array field satisfies `p = sum_i w_i p_i` by storing the target
+    /// absolute pressure `w_i A_i` and scaling each generated bowl field by
+    /// `(w_i A_i) / A_i`. Zero-drive bowls preserve the unique zero field.
     pub fn apply_apodization(&mut self, apodization_type: ApodizationType) {
-        self.amplitudes = apodization_type.weights(self.bowls.len());
+        self.amplitudes = self
+            .bowls
+            .iter()
+            .zip(apodization_type.weights(self.bowls.len()))
+            .map(|(bowl, weight)| bowl.config.amplitude * weight)
+            .collect();
     }
 }
 
 pub use crate::math::signal::ApodizationType;
+
+fn validate_bowl_count(count: usize) -> KwaversResult<()> {
+    if count > 0 {
+        Ok(())
+    } else {
+        Err(field_validation_error(
+            "bowl_count",
+            count.to_string(),
+            "must be at least one",
+        ))
+    }
+}
+
+fn amplitude_scale(target_amplitude: f64, source_amplitude: f64) -> f64 {
+    if source_amplitude == 0.0 {
+        0.0
+    } else {
+        target_amplitude / source_amplitude
+    }
+}
+
+#[cfg(test)]
+mod tests;
