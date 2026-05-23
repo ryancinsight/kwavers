@@ -4,7 +4,12 @@
 
 use super::bowl::{BowlConfig, BowlTransducer};
 use super::multi_bowl::MultiBowlArray;
+use super::validation::{
+    field_validation_error, validate_finite_vector, validate_positive_finite_field,
+};
+use crate::core::constants::SOUND_SPEED_WATER;
 use crate::core::error::KwaversResult;
+use std::f64::consts::PI;
 
 pub use super::multi_bowl::ApodizationType;
 
@@ -32,48 +37,137 @@ pub fn make_bowl(
     BowlTransducer::new(config)
 }
 
-/// Helper function to create an annular array
+/// Create concentric annular active bands on one focused spherical bowl.
+///
+/// The aperture radii are measured in the plane normal to the vertex-to-focus
+/// axis. All rings share `radius_of_curvature` and the acoustic focus
+/// `vertex + [0, 0, radius_of_curvature]`; only their polar-angle span differs.
+///
+/// # Theorem
+///
+/// For a spherical focused bowl with curvature radius `R`, aperture radius
+/// `a = R sin(theta)`. An annular band `[a_i, a_o]` therefore maps to
+/// `theta in [asin(a_i/R), asin(a_o/R)]` and has surface area
+/// `2 pi R^2 (cos(theta_i) - cos(theta_o))`. Splitting the aperture by this
+/// mapping preserves the same source surface represented by
+/// [`BowlTransducer::with_polar_bounds`].
+///
 /// # Errors
-/// - Returns [`Err`] if an internal constraint is violated.
+///
+/// Returns [`crate::core::error::KwaversError::Validation`] when the curvature,
+/// aperture radii, ring count, vertex, or frequency violates the focused-bowl
+/// source domain.
 ///
 pub fn make_annular_array(
-    inner_radius: f64,
-    outer_radius: f64,
+    radius_of_curvature: f64,
+    inner_aperture_radius: f64,
+    outer_aperture_radius: f64,
     n_rings: usize,
-    center: [f64; 3],
+    vertex: [f64; 3],
     frequency: f64,
 ) -> KwaversResult<MultiBowlArray> {
-    let mut configs = Vec::new();
+    validate_annular_array_domain(
+        radius_of_curvature,
+        inner_aperture_radius,
+        outer_aperture_radius,
+        n_rings,
+        vertex,
+        frequency,
+    )?;
+
+    let focus = [vertex[0], vertex[1], vertex[2] + radius_of_curvature];
+    let base_config =
+        BowlConfig::from_vertex_focus(vertex, focus, 2.0 * outer_aperture_radius, frequency, 1.0e6);
+    let mut bowls = Vec::with_capacity(n_rings);
 
     for i in 0..n_rings {
-        let t = if n_rings > 1 {
-            i as f64 / (n_rings - 1) as f64
-        } else {
-            0.0
-        };
-        let radius = inner_radius + t * (outer_radius - inner_radius);
-
-        let config = BowlConfig {
-            radius_of_curvature: radius,
-            diameter: radius * 0.8, // 80% of radius for each ring
-            center,
-            focus: [center[0], center[1], center[2] + radius],
-            frequency,
-            amplitude: 1e6,
-            ..Default::default()
-        };
-
-        configs.push(config);
+        let ring_inner = inner_aperture_radius
+            + (outer_aperture_radius - inner_aperture_radius) * i as f64 / n_rings as f64;
+        let ring_outer = inner_aperture_radius
+            + (outer_aperture_radius - inner_aperture_radius) * (i + 1) as f64 / n_rings as f64;
+        let theta_min = (ring_inner / radius_of_curvature).asin();
+        let theta_max = (ring_outer / radius_of_curvature).asin();
+        let element_count =
+            annular_ring_element_count(radius_of_curvature, theta_min, theta_max, frequency)?;
+        bowls.push(BowlTransducer::with_polar_bounds(
+            base_config.clone(),
+            theta_min,
+            theta_max,
+            element_count,
+        )?);
     }
 
-    MultiBowlArray::new(configs)
+    MultiBowlArray::from_bowls(bowls)
+}
+
+fn validate_annular_array_domain(
+    radius_of_curvature: f64,
+    inner_aperture_radius: f64,
+    outer_aperture_radius: f64,
+    n_rings: usize,
+    vertex: [f64; 3],
+    frequency: f64,
+) -> KwaversResult<()> {
+    validate_positive_finite_field("radius_of_curvature", radius_of_curvature)?;
+    validate_positive_finite_field("outer_aperture_radius", outer_aperture_radius)?;
+    validate_positive_finite_field("frequency", frequency)?;
+    validate_finite_vector("vertex", vertex)?;
+    if !(inner_aperture_radius.is_finite() && inner_aperture_radius >= 0.0) {
+        return Err(field_validation_error(
+            "inner_aperture_radius",
+            inner_aperture_radius.to_string(),
+            "must be finite and nonnegative",
+        ));
+    }
+    if inner_aperture_radius >= outer_aperture_radius {
+        return Err(field_validation_error(
+            "aperture_radii",
+            format!("[{inner_aperture_radius}, {outer_aperture_radius}]"),
+            "must satisfy inner_aperture_radius < outer_aperture_radius",
+        ));
+    }
+    if outer_aperture_radius > radius_of_curvature {
+        return Err(field_validation_error(
+            "outer_aperture_radius",
+            outer_aperture_radius.to_string(),
+            "must not exceed radius_of_curvature",
+        ));
+    }
+    if n_rings == 0 {
+        return Err(field_validation_error(
+            "n_rings",
+            n_rings.to_string(),
+            "must be at least one",
+        ));
+    }
+    Ok(())
+}
+
+fn annular_ring_element_count(
+    radius_of_curvature: f64,
+    theta_min: f64,
+    theta_max: f64,
+    frequency: f64,
+) -> KwaversResult<usize> {
+    let area =
+        2.0 * PI * radius_of_curvature * radius_of_curvature * (theta_min.cos() - theta_max.cos());
+    let element_size = SOUND_SPEED_WATER / frequency / 4.0;
+    let count = (area / element_size.powi(2)).ceil();
+    if !count.is_finite() || count < 1.0 || count > usize::MAX as f64 {
+        return Err(field_validation_error(
+            "annular_ring_area",
+            area.to_string(),
+            "must produce a finite representable element count",
+        ));
+    }
+    Ok(count as usize)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::error::{KwaversError, ValidationError};
     use crate::domain::grid::Grid;
-    use std::f64::consts::PI;
 
     #[test]
     fn test_bowl_transducer_creation() {
@@ -125,6 +219,63 @@ mod tests {
 
         let array = MultiBowlArray::new(configs).unwrap();
         assert_eq!(array.bowls.len(), 2);
+    }
+
+    #[test]
+    fn annular_array_uses_common_curvature_focus_and_radial_bands() {
+        let array = make_annular_array(0.08, 0.02, 0.04, 2, [0.0, 0.0, 0.0], 1.0e6).unwrap();
+        let radial_bounds = [(0.02, 0.03), (0.03, 0.04)];
+
+        assert_eq!(array.bowls.len(), 2);
+        for (bowl, (inner, outer)) in array.bowls.iter().zip(radial_bounds) {
+            assert_close(bowl.config.radius_of_curvature, 0.08);
+            assert_eq!(bowl.config.center, [0.0, 0.0, 0.0]);
+            assert_eq!(bowl.config.focus, [0.0, 0.0, 0.08]);
+            assert!(bowl.element_count() > 0);
+
+            let summed_area: f64 = bowl.element_areas().iter().sum();
+            let theta_min = (inner / 0.08_f64).asin();
+            let theta_max = (outer / 0.08_f64).asin();
+            let expected_area = 2.0 * PI * 0.08_f64.powi(2) * (theta_min.cos() - theta_max.cos());
+            assert_close(summed_area, expected_area);
+
+            for position in bowl.element_positions() {
+                let aperture_radius = position[0].hypot(position[1]);
+                assert!(
+                    aperture_radius >= inner - 1.0e-12 && aperture_radius <= outer + 1.0e-12,
+                    "aperture radius {aperture_radius} outside [{inner}, {outer}]"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn annular_array_rejects_invalid_domains() {
+        let error = make_annular_array(0.08, 0.04, 0.02, 2, [0.0, 0.0, 0.0], 1.0e6).unwrap_err();
+        match error {
+            KwaversError::Validation(ValidationError::FieldValidation { field, .. }) => {
+                assert_eq!(field, "aperture_radii");
+            }
+            other => panic!("expected aperture radii validation error, got {other:?}"),
+        }
+
+        let excessive_aperture =
+            make_annular_array(0.08, 0.02, 0.09, 2, [0.0, 0.0, 0.0], 1.0e6).unwrap_err();
+        match excessive_aperture {
+            KwaversError::Validation(ValidationError::FieldValidation { field, .. }) => {
+                assert_eq!(field, "outer_aperture_radius");
+            }
+            other => panic!("expected outer aperture validation error, got {other:?}"),
+        }
+
+        let zero_rings =
+            make_annular_array(0.08, 0.02, 0.04, 0, [0.0, 0.0, 0.0], 1.0e6).unwrap_err();
+        match zero_rings {
+            KwaversError::Validation(ValidationError::FieldValidation { field, .. }) => {
+                assert_eq!(field, "n_rings");
+            }
+            other => panic!("expected ring-count validation error, got {other:?}"),
+        }
     }
 
     /// Test multi-bowl array with phase shifts (COMPREHENSIVE - Tier 3)
@@ -229,8 +380,8 @@ mod tests {
         let focus_distance = 0.064; // radius of curvature = geometric focus [m]
         let frequency = 1e6;
         let c = crate::core::constants::SOUND_SPEED_WATER;
-        let a = bowl.config.diameter / 2.0;       // aperture radius = 0.032 m
-        let r = bowl.config.radius_of_curvature;  // 0.064 m
+        let a = bowl.config.diameter / 2.0; // aperture radius = 0.032 m
+        let r = bowl.config.radius_of_curvature; // 0.064 m
         let k = 2.0 * PI * frequency / c;
         let h = r - (r * r - a * a).sqrt(); // spherical-cap height
 
@@ -253,7 +404,9 @@ mod tests {
         let peak_time = |z: f64| z / c + 1.0 / (4.0 * frequency);
 
         // Amplitude at the focal point.
-        let p_focus_max = bowl.oneil_solution(focus_distance, peak_time(focus_distance)).abs();
+        let p_focus_max = bowl
+            .oneil_solution(focus_distance, peak_time(focus_distance))
+            .abs();
         assert_relative_eq!(
             p_focus_max,
             expected_amplitude,
@@ -280,10 +433,14 @@ mod tests {
         let t0 = peak_time(focus_distance);
         let p_t0 = bowl.oneil_solution(focus_distance, t0);
         let p_t_half = bowl.oneil_solution(focus_distance, t0 + 1.0 / (2.0 * frequency));
-        assert_relative_eq!(
-            p_t0,
-            -p_t_half,
-            epsilon = 0.01 * expected_amplitude
+        assert_relative_eq!(p_t0, -p_t_half, epsilon = 0.01 * expected_amplitude);
+    }
+
+    fn assert_close(actual: f64, expected: f64) {
+        let tolerance = 64.0 * f64::EPSILON * expected.abs().max(1.0);
+        assert!(
+            (actual - expected).abs() <= tolerance,
+            "actual {actual}, expected {expected}, tolerance {tolerance}"
         );
     }
 }
