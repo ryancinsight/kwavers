@@ -1,19 +1,20 @@
 use super::*;
 use crate::core::constants::medical::TI_LIMIT_SOFT_TISSUE;
+use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use ndarray::Array3;
 
 #[test]
 fn test_thermal_index_calculation() {
     let acoustic_field = AcousticField {
-        pressure: Array3::from_elem((10, 10, 10), 1e6), // 1 MPa uniform pressure
+        pressure: Array3::from_elem((10, 10, 10), MPA_TO_PA), // 1 MPa uniform pressure
         velocity_x: Array3::zeros((10, 10, 10)),
         velocity_y: Array3::zeros((10, 10, 10)),
         velocity_z: Array3::zeros((10, 10, 10)),
     };
 
     let acoustic_params = AcousticTherapyParams {
-        frequency: 1e6,        // 1 MHz
-        pnp: 1e6,              // 1 MPa
+        frequency: MHZ_TO_HZ,   // 1 MHz
+        pnp: MPA_TO_PA,         // 1 MPa
         prf: 100.0,            // 100 Hz
         duty_cycle: 0.1,       // 10%
         focal_depth: 0.05,     // 5 cm
@@ -46,15 +47,15 @@ fn test_thermal_index_calculation() {
 #[test]
 fn test_mechanical_index_calculation() {
     let acoustic_field = AcousticField {
-        pressure: Array3::from_elem((8, 8, 8), 0.5e6), // 0.5 MPa
+        pressure: Array3::from_elem((8, 8, 8), 0.5 * MPA_TO_PA), // 0.5 MPa
         velocity_x: Array3::zeros((8, 8, 8)),
         velocity_y: Array3::zeros((8, 8, 8)),
         velocity_z: Array3::zeros((8, 8, 8)),
     };
 
     let acoustic_params = AcousticTherapyParams {
-        frequency: 1e6, // 1 MHz
-        pnp: 0.5e6,     // 0.5 MPa
+        frequency: MHZ_TO_HZ,   // 1 MHz
+        pnp: 0.5 * MPA_TO_PA,  // 0.5 MPa
         prf: 100.0,
         duty_cycle: 0.1,
         focal_depth: 0.03,
@@ -85,15 +86,15 @@ fn test_mechanical_index_calculation() {
 #[test]
 fn test_cavitation_dose_accumulation() {
     let acoustic_field = AcousticField {
-        pressure: Array3::from_elem((5, 5, 5), 1e6),
+        pressure: Array3::from_elem((5, 5, 5), MPA_TO_PA),
         velocity_x: Array3::zeros((5, 5, 5)),
         velocity_y: Array3::zeros((5, 5, 5)),
         velocity_z: Array3::zeros((5, 5, 5)),
     };
 
     let acoustic_params = AcousticTherapyParams {
-        frequency: 1e6,
-        pnp: 1e6,
+        frequency: MHZ_TO_HZ,
+        pnp: MPA_TO_PA,
         prf: 100.0,
         duty_cycle: 0.1,
         focal_depth: 0.05,

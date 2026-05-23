@@ -5,6 +5,7 @@
 use crate::{
     core::{
         constants::SOUND_SPEED_WATER,
+        constants::numerical::{MHZ_TO_HZ, MPA_TO_PA},
         error::{KwaversError, KwaversResult, ValidationError},
     },
     domain::grid::Grid,
@@ -70,8 +71,8 @@ impl Default for BowlConfig {
             diameter: 0.064,            // 64mm
             center: [0.0, 0.0, 0.0],
             focus: [0.0, 0.0, 0.064], // Focus at radius
-            frequency: 1e6,           // 1 MHz
-            amplitude: 1e6,           // 1 MPa
+            frequency: MHZ_TO_HZ, // 1 MHz
+            amplitude: MPA_TO_PA, // 1 MPa
             phase: 0.0,
             element_size: None,
             apply_directivity: true,

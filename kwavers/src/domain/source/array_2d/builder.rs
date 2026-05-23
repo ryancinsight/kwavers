@@ -21,6 +21,7 @@
 
 use super::{ApodizationType, TransducerArray2D, TransducerArray2DConfig};
 use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 
 /// Builder for 2D transducer arrays
 ///
@@ -178,7 +179,7 @@ impl TransducerArray2DBuilder {
             let wavelength = 2.0 * self.config.element_spacing; // Nyquist sampling
             sound_speed / wavelength
         } else {
-            1e6 // Default 1 MHz
+            MHZ_TO_HZ // Default 1 MHz
         };
 
         let mut array = TransducerArray2D::new(self.config, sound_speed, frequency)?;

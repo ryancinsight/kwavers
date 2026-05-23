@@ -2,6 +2,7 @@
 //!
 //! This module provides Gaussian laser beam sources for optical simulations.
 
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::domain::signal::{Signal, TimeVaryingSignal};
 
 /// Laser configuration
@@ -26,7 +27,7 @@ impl Default for LaserConfig {
             beam_waist: 1e-3,     // 1 mm beam waist
             peak_power: 1.0,      // 1 W peak power
             pulse_duration: 1e-9, // 1 ns pulse
-            repetition_rate: 1e6, // 1 MHz repetition rate
+            repetition_rate: MHZ_TO_HZ, // 1 MHz repetition rate
         }
     }
 }

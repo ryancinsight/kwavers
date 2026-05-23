@@ -1,6 +1,7 @@
 //! Constructors and element-addition methods for [`KWaveArray`].
 
 use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 
 use super::{ArrayTransform, ElementShape, KWaveArray};
 
@@ -10,7 +11,7 @@ impl KWaveArray {
     pub fn new() -> Self {
         Self {
             elements: Vec::new(),
-            frequency: 1e6,
+            frequency: MHZ_TO_HZ,
             sound_speed: SOUND_SPEED_TISSUE,
             _element_width: 0.5e-3,
             array_transform: None,

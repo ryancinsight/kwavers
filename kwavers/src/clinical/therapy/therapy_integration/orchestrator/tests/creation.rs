@@ -1,5 +1,6 @@
 use super::*;
 use crate::core::constants::medical::TI_LIMIT_SOFT_TISSUE;
+use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 
 #[test]
 fn test_therapy_orchestrator_creation() {
@@ -8,8 +9,8 @@ fn test_therapy_orchestrator_creation() {
         secondary_modalities: vec![TherapyIntegrationModality::Microbubble],
         duration: 60.0,
         acoustic_params: AcousticTherapyParams {
-            frequency: 1e6,
-            pnp: 10e6,
+            frequency: MHZ_TO_HZ,
+            pnp: 10.0 * MPA_TO_PA,
             prf: 100.0,
             duty_cycle: 0.01,
             focal_depth: 0.05,

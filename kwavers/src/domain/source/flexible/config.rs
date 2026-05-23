@@ -3,6 +3,7 @@
 //! This module defines the configuration structures and enums for flexible
 //! transducer arrays, following SSOT and SOLID principles.
 
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use serde::{Deserialize, Serialize};
 
 /// Configuration for flexible transducer arrays
@@ -30,7 +31,7 @@ impl Default for FlexibleTransducerConfig {
             num_elements: 128,
             nominal_spacing: 0.3e-3, // λ/2 at 2.5 MHz
             element_size: [0.25e-3, 10e-3],
-            frequency: 2.5e6,
+            frequency: 2.5 * MHZ_TO_HZ,
             flexibility: FlexibilityModel::Elastic {
                 young_modulus: 2e9, // 2 GPa for flexible materials
                 poisson_ratio: 0.3,

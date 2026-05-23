@@ -187,7 +187,7 @@ mod tests {
         let mut simulator = LithotripsySimulator::new(params, grid.clone()).unwrap();
 
         let acoustic_field = super::super::super::state::AcousticField {
-            pressure: Array3::from_elem((8, 8, 8), 1e7),
+            pressure: Array3::from_elem((8, 8, 8), 10.0 * MPA_TO_PA),
             velocity_x: Array3::zeros((8, 8, 8)),
             velocity_y: Array3::zeros((8, 8, 8)),
             velocity_z: Array3::zeros((8, 8, 8)),

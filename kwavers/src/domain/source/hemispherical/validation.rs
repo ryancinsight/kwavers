@@ -1,6 +1,7 @@
 //! Array validation and performance metrics
 
 use super::constants::{GRATING_LOBE_THRESHOLD_RATIO, MAX_STEERING_ANGLE_RAD};
+use crate::core::constants::numerical::MPA_TO_PA;
 use crate::core::error::KwaversResult;
 
 /// Array validator for safety and performance checks
@@ -24,7 +25,7 @@ impl ArrayValidator {
     #[must_use]
     pub fn new() -> Self {
         Self {
-            max_pressure: 10e6, // 10 MPa safety limit
+            max_pressure: 10.0 * MPA_TO_PA, // 10 MPa safety limit
         }
     }
 

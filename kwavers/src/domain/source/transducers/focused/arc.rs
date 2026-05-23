@@ -4,6 +4,7 @@
 
 use crate::{
     core::{constants::SOUND_SPEED_WATER, error::KwaversResult},
+    core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA},
     domain::grid::Grid,
 };
 use ndarray::{s, Array2, Array3, Zip};
@@ -46,8 +47,8 @@ impl Default for ArcConfig {
             arc_angle: PI / 3.0, // 60 degrees
             center: [0.0, 0.0],
             orientation: 0.0,
-            frequency: 1e6, // 1 MHz
-            amplitude: 1e6, // 1 MPa
+            frequency: MHZ_TO_HZ, // 1 MHz
+            amplitude: MPA_TO_PA, // 1 MPa
             element_spacing: None,
         }
     }

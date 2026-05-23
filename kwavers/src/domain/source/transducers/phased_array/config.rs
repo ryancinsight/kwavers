@@ -1,6 +1,7 @@
 //! Configuration for phased array transducers
 
 use crate::core::constants::SOUND_SPEED_TISSUE;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 
 /// Configuration for phased array transducer geometry and behavior
 #[derive(Debug, Clone)]
@@ -26,7 +27,7 @@ pub struct PhasedArrayConfig {
 impl Default for PhasedArrayConfig {
     fn default() -> Self {
         // Standard linear array for medical ultrasound
-        let wavelength = SOUND_SPEED_TISSUE / 2.5e6; // λ at 2.5 MHz
+        let wavelength = SOUND_SPEED_TISSUE / (2.5 * MHZ_TO_HZ); // λ at 2.5 MHz
 
         Self {
             num_elements: 64,
@@ -34,7 +35,7 @@ impl Default for PhasedArrayConfig {
             element_width: wavelength * 0.45,  // ~0.45λ width
             element_height: 10e-3,             // 10mm elevation
             center_position: (0.0, 0.0, 0.0),
-            frequency: 2.5e6, // 2.5 MHz center frequency
+            frequency: 2.5 * MHZ_TO_HZ, // 2.5 MHz center frequency
             enable_crosstalk: true,
             crosstalk_coefficient: 0.1, // 10% coupling (typical)
         }

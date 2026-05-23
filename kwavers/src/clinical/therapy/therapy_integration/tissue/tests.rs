@@ -1,4 +1,5 @@
 use super::*;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 
 // ========================================================================
 // TissuePropertyMap Composition Tests
@@ -47,7 +48,7 @@ fn test_tissue_property_map_extraction() {
     // Verify derived quantities are available
     assert!(props_center.impedance() > 0.0);
     // Wavelength = c / f
-    let wavelength_1mhz = props_center.sound_speed / 1e6;
+    let wavelength_1mhz = props_center.sound_speed / MHZ_TO_HZ;
     assert!(wavelength_1mhz > 0.0);
 }
 
@@ -183,7 +184,7 @@ fn test_tissue_property_map_clinical_workflow() {
     // Step 3: Calculate treatment parameters using canonical properties
     let acoustic_impedance = target_props.impedance();
     // Wavelength = c / f
-    let wavelength_at_1mhz = target_props.sound_speed / 1e6;
+    let wavelength_at_1mhz = target_props.sound_speed / MHZ_TO_HZ;
 
     // Verify clinical parameters are physically reasonable
     assert!(acoustic_impedance > 1e6); // Typical tissue impedance > 1 MRayl

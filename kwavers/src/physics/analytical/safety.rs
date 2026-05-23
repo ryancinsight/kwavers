@@ -165,19 +165,20 @@ pub fn fda_isppa_limit_w_cm2() -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
     use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 
     #[test]
     fn mi_dimensional_check() {
         // At 1 MPa negative, 1 MHz: MI = 1.0
-        let mi = mechanical_index(-1.0e6, 1.0e6);
+        let mi = mechanical_index(-MPA_TO_PA, MHZ_TO_HZ);
         assert!((mi - 1.0).abs() < 1e-10);
     }
 
     #[test]
     fn mi_rejects_nonpositive_frequency() {
-        assert_eq!(mechanical_index(-1.0e6, 0.0), 0.0);
-        assert_eq!(mechanical_index(-1.0e6, -1.0e6), 0.0);
+        assert_eq!(mechanical_index(-MPA_TO_PA, 0.0), 0.0);
+        assert_eq!(mechanical_index(-MPA_TO_PA, -MHZ_TO_HZ), 0.0);
     }
 
     #[test]

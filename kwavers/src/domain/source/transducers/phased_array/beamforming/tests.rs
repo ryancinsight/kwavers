@@ -1,9 +1,10 @@
 use super::*;
 use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 
 #[test]
 fn test_focus_delays_symmetry() {
-    let calculator = BeamformingCalculator::with_medium(SOUND_SPEED_TISSUE, 1e6);
+    let calculator = BeamformingCalculator::with_medium(SOUND_SPEED_TISSUE, MHZ_TO_HZ);
 
     // Symmetric linear array
     let positions = vec![
@@ -31,7 +32,7 @@ fn test_focus_delays_symmetry() {
 
 #[test]
 fn test_steering_delays_broadside() {
-    let calculator = BeamformingCalculator::with_medium(SOUND_SPEED_TISSUE, 1e6);
+    let calculator = BeamformingCalculator::with_medium(SOUND_SPEED_TISSUE, MHZ_TO_HZ);
 
     let positions = vec![(0.0, 0.0, 0.0), (0.001, 0.0, 0.0), (0.002, 0.0, 0.0)];
 
@@ -48,7 +49,7 @@ fn test_steering_delays_broadside() {
 
 #[test]
 fn test_plane_wave_delays() {
-    let calculator = BeamformingCalculator::with_medium(SOUND_SPEED_TISSUE, 1e6);
+    let calculator = BeamformingCalculator::with_medium(SOUND_SPEED_TISSUE, MHZ_TO_HZ);
 
     let positions = vec![(0.0, 0.0, 0.0), (0.001, 0.0, 0.0)];
 
@@ -66,7 +67,7 @@ fn test_plane_wave_delays() {
 
 #[test]
 fn test_beam_width_positive() {
-    let calculator = BeamformingCalculator::with_medium(SOUND_SPEED_TISSUE, 1e6);
+    let calculator = BeamformingCalculator::with_medium(SOUND_SPEED_TISSUE, MHZ_TO_HZ);
 
     let beam_width = calculator.calculate_beam_width(0.01); // 1cm aperture
 
@@ -76,7 +77,7 @@ fn test_beam_width_positive() {
 
 #[test]
 fn test_focal_zone_positive() {
-    let calculator = BeamformingCalculator::with_medium(SOUND_SPEED_TISSUE, 1e6);
+    let calculator = BeamformingCalculator::with_medium(SOUND_SPEED_TISSUE, MHZ_TO_HZ);
 
     let focal_zone = calculator.calculate_focal_zone(0.01, 0.05); // 1cm aperture, 5cm focus
 

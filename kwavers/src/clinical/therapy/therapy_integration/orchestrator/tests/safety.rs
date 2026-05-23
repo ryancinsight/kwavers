@@ -1,4 +1,5 @@
 use super::*;
+use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 
 #[test]
 fn test_safety_limit_checking() {
@@ -8,8 +9,8 @@ fn test_safety_limit_checking() {
         imaging_data_path: None,
         duration: 10.0,
         acoustic_params: AcousticTherapyParams {
-            frequency: 0.5e6,
-            pnp: 0.5e6,
+            frequency: 0.5 * MHZ_TO_HZ,
+            pnp: 0.5 * MPA_TO_PA,
             prf: 1.0,
             duty_cycle: 0.1,
             focal_depth: 0.05,
@@ -53,8 +54,8 @@ fn test_safety_controller_integration() {
         imaging_data_path: None,
         duration: 30.0,
         acoustic_params: AcousticTherapyParams {
-            frequency: 1.0e6,
-            pnp: 5e6,
+            frequency: MHZ_TO_HZ,
+            pnp: 5.0 * MPA_TO_PA,
             prf: 100.0,
             duty_cycle: 0.05,
             focal_depth: 0.04,

@@ -260,6 +260,7 @@ fn hb_poly(lam_nm: f64) -> f64 {
 mod tests {
     use super::*;
     use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use crate::core::constants::numerical::MHZ_TO_HZ;
     use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 
     #[test]
@@ -283,7 +284,7 @@ mod tests {
 
     #[test]
     fn axial_resolution_water_1mhz() {
-        let dz = pa_axial_resolution(1e6, SOUND_SPEED_WATER_SIM);
+        let dz = pa_axial_resolution(MHZ_TO_HZ, SOUND_SPEED_WATER_SIM);
         assert!((dz - 750e-6).abs() < 1e-9);
     }
 

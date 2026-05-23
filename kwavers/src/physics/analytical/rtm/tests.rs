@@ -1,4 +1,5 @@
 use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use num_complex::Complex64;
 
 use super::*;
@@ -13,7 +14,7 @@ fn gaussian_beam_size() {
         &z,
         0.0,
         5e-3,
-        1e6,
+        MHZ_TO_HZ,
         SOUND_SPEED_WATER_SIM,
         1e-3,
         t,
@@ -34,7 +35,7 @@ fn gaussian_beam_peak_at_focus() {
         &z,
         0.0,
         0.0,
-        1e6,
+        MHZ_TO_HZ,
         SOUND_SPEED_WATER_SIM,
         1e-3,
         t,
@@ -75,7 +76,7 @@ fn multi_freq_fusion_mean() {
 
 #[test]
 fn modulation_frequencies_increasing() {
-    let f = temporal_modulation_frequencies(1e6, 5, SOUND_SPEED_WATER_SIM, 0.1);
+    let f = temporal_modulation_frequencies(MHZ_TO_HZ, 5, SOUND_SPEED_WATER_SIM, 0.1);
     assert_eq!(f.len(), 5);
     for i in 1..f.len() {
         assert!(f[i] > f[i - 1]);
