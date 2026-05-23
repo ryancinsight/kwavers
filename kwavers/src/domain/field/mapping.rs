@@ -50,27 +50,32 @@ pub struct FieldAccessorMut<'a> {
 }
 
 impl<'a> FieldAccessorMut<'a> {
+    #[must_use]
     pub fn new(fields: &'a mut ndarray::Array4<f64>) -> Self {
         Self { fields }
     }
 
     /// Get a specific field mutably by type
+    #[must_use]
     pub fn get_mut(&mut self, field_type: UnifiedFieldType) -> ndarray::ArrayViewMut3<'_, f64> {
         self.fields
             .index_axis_mut(ndarray::Axis(0), field_type.index())
     }
 
     /// Get pressure field mutably
+    #[must_use]
     pub fn pressure_mut(&mut self) -> ndarray::ArrayViewMut3<'_, f64> {
         self.get_mut(UnifiedFieldType::Pressure)
     }
 
     /// Get temperature field mutably
+    #[must_use]
     pub fn temperature_mut(&mut self) -> ndarray::ArrayViewMut3<'_, f64> {
         self.get_mut(UnifiedFieldType::Temperature)
     }
 
     /// Get density field mutably
+    #[must_use]
     pub fn density_mut(&mut self) -> ndarray::ArrayViewMut3<'_, f64> {
         self.get_mut(UnifiedFieldType::Density)
     }
