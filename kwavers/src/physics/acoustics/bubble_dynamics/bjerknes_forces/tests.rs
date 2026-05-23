@@ -1,4 +1,5 @@
 use super::*;
+use crate::core::constants::numerical::MPA_TO_PA;
 
 #[test]
 fn test_bjerknes_calculator_creation() {
@@ -143,7 +144,7 @@ fn test_invalid_radius() {
     let config = BjerknesConfig::default();
     let calc = BjerknesCalculator::new(config);
 
-    let result = calc.primary_bjerknes_force(0.0, 100e3, 1e6);
+    let result = calc.primary_bjerknes_force(0.0, 100e3, MPA_TO_PA);
     assert!(result.is_err());
 }
 

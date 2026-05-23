@@ -1,5 +1,5 @@
 use super::*;
-use crate::core::constants::numerical::MHZ_TO_HZ;
+use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use crate::core::error::KwaversError;
 use crate::domain::grid::Grid;
 use std::f64::consts::PI;
@@ -82,7 +82,7 @@ fn bowl_explicit_element_count_controls_layout_count() {
         center: [0.0, 0.0, -0.16],
         focus: [0.0, 0.0, 0.0],
         frequency: 650.0e3,
-        amplitude: 1.0e6,
+        amplitude: MPA_TO_PA,
         ..Default::default()
     };
 
@@ -168,7 +168,7 @@ fn bowl_source_uses_axis_specific_grid_spacing_and_origin() {
 
 #[test]
 fn hemispherical_preset_generates_source_domain_fixed_count_layout() {
-    let config = BowlConfig::hemispherical([0.0, 0.0, 0.16], [0.0, 0.0, 0.0], 650.0e3, 1.0e6);
+    let config = BowlConfig::hemispherical([0.0, 0.0, 0.16], [0.0, 0.0, 0.0], 650.0e3, MPA_TO_PA);
 
     assert!((config.radius_of_curvature - 0.16).abs() < 1.0e-12);
     assert!((config.diameter - 0.32).abs() < 1.0e-12);
@@ -187,7 +187,7 @@ fn hemispherical_preset_generates_source_domain_fixed_count_layout() {
 #[test]
 fn bowl_polar_span_supports_major_cap_beyond_hemisphere() {
     let config =
-        BowlConfig::from_vertex_focus([0.0, 0.0, 0.16], [0.0, 0.0, 0.0], 0.32, 650.0e3, 1.0e6);
+        BowlConfig::from_vertex_focus([0.0, 0.0, 0.16], [0.0, 0.0, 0.0], 0.32, 650.0e3, MPA_TO_PA);
     let theta_max = 0.58 * std::f64::consts::PI;
 
     let bowl = BowlTransducer::with_polar_span(config, theta_max, 128).unwrap();
@@ -212,7 +212,7 @@ fn bowl_polar_span_supports_major_cap_beyond_hemisphere() {
 
 #[test]
 fn bowl_polar_span_rejects_invalid_angular_domain() {
-    let config = BowlConfig::hemispherical([0.0, 0.0, 0.16], [0.0, 0.0, 0.0], 650.0e3, 1.0e6);
+    let config = BowlConfig::hemispherical([0.0, 0.0, 0.16], [0.0, 0.0, 0.0], 650.0e3, MPA_TO_PA);
 
     assert!(matches!(
         BowlTransducer::with_polar_span(config.clone(), 0.0, 128).unwrap_err(),
@@ -249,7 +249,7 @@ fn bowl_polar_bounds_support_annular_cutout_area() {
 #[test]
 fn bowl_axis_projection_bounds_support_major_cap_area() {
     let config =
-        BowlConfig::from_vertex_focus([0.0, 0.0, 0.16], [0.0, 0.0, 0.0], 0.32, 650.0e3, 1.0e6);
+        BowlConfig::from_vertex_focus([0.0, 0.0, 0.16], [0.0, 0.0, 0.0], 0.32, 650.0e3, MPA_TO_PA);
     let bowl = BowlTransducer::with_axis_projection_bounds(config, -0.28, 0.98, 128).unwrap();
     let summed_area: f64 = bowl.element_areas().iter().sum();
     let expected_area = 2.0 * std::f64::consts::PI * 0.16_f64.powi(2) * (0.98 - -0.28);

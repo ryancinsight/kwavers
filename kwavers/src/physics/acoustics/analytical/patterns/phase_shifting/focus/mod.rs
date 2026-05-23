@@ -187,6 +187,7 @@ impl DynamicFocusing {
 mod tests {
     use super::*;
     use approx::assert_relative_eq;
+    use crate::core::constants::numerical::MHZ_TO_HZ;
     use ndarray::arr2;
 
     fn linear_array() -> Array2<f64> {
@@ -195,7 +196,7 @@ mod tests {
 
     #[test]
     fn focusing_accepts_documented_one_millimeter_bound() {
-        let mut focusing = DynamicFocusing::new(linear_array(), 1.0e6);
+        let mut focusing = DynamicFocusing::new(linear_array(), MHZ_TO_HZ);
 
         focusing.set_focal_point(0.0, 0.0, 0.001).unwrap();
 
@@ -206,7 +207,7 @@ mod tests {
 
     #[test]
     fn focusing_rejects_sub_millimeter_single_and_multiple_points() {
-        let mut focusing = DynamicFocusing::new(linear_array(), 1.0e6);
+        let mut focusing = DynamicFocusing::new(linear_array(), MHZ_TO_HZ);
 
         let single_error = focusing.set_focal_point(0.0, 0.0, 0.0005).unwrap_err();
         assert!(format!("{single_error}").contains("1"));

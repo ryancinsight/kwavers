@@ -105,6 +105,7 @@ impl ElasticWaveMetrics {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::numerical::MPA_TO_PA;
     use std::time::Duration;
 
     #[test]
@@ -134,12 +135,12 @@ mod tests {
     #[test]
     fn update_max_stress_is_monotone() {
         let mut m = ElasticWaveMetrics::new();
-        m.update_max_stress(1e6);
-        assert!((m.max_stress - 1e6).abs() < 1.0);
-        m.update_max_stress(0.5e6);
-        assert!((m.max_stress - 1e6).abs() < 1.0);
-        m.update_max_stress(2e6);
-        assert!((m.max_stress - 2e6).abs() < 1.0);
+        m.update_max_stress(MPA_TO_PA);
+        assert!((m.max_stress - MPA_TO_PA).abs() < 1.0);
+        m.update_max_stress(0.5 * MPA_TO_PA);
+        assert!((m.max_stress - MPA_TO_PA).abs() < 1.0);
+        m.update_max_stress(2.0 * MPA_TO_PA);
+        assert!((m.max_stress - 2.0 * MPA_TO_PA).abs() < 1.0);
     }
 
     #[test]

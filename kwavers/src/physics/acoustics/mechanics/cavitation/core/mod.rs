@@ -20,6 +20,7 @@ mod tests {
     use super::*;
     use crate::core::constants::cavitation::{SURFACE_TENSION_WATER, VAPOR_PRESSURE_WATER};
     use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
+    use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
     use crate::physics::acoustics::analysis::calculate_mechanical_index;
     use approx::assert_relative_eq;
     use ndarray::Array3;
@@ -44,7 +45,7 @@ mod tests {
         let neppiras = neppiras_threshold(p0, pv, sigma, r0);
         assert!(neppiras > 0.0);
 
-        let mi = calculate_mechanical_index(-1.0e6, 1.0e6);
+        let mi = calculate_mechanical_index(-MPA_TO_PA, MHZ_TO_HZ);
         assert_relative_eq!(mi, 1.0);
     }
 
@@ -54,9 +55,9 @@ mod tests {
         model.threshold_model = ThresholdModel::MechanicalIndex;
 
         let mut pressure = Array3::from_elem((5, 5, 5), ATMOSPHERIC_PRESSURE);
-        pressure[[2, 2, 2]] = -1.0e6; // Beyond typical threshold
+        pressure[[2, 2, 2]] = -MPA_TO_PA; // Beyond typical threshold
 
-        model.update_states(&pressure, 1.0e6, 1e-6, 1e-6);
+        model.update_states(&pressure, MHZ_TO_HZ, 1e-6, 1e-6);
 
         assert!(model.states[[2, 2, 2]].is_cavitating);
         assert!(!model.states[[0, 0, 0]].is_cavitating);

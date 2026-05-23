@@ -232,6 +232,7 @@ impl CavitationCore for CavitationModel {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::numerical::MPA_TO_PA;
     use ndarray::Array3;
 
     /// `CavitationModel::new` defaults to the MechanicalIndex threshold model.
@@ -296,7 +297,7 @@ mod tests {
         // MechanicalIndex threshold = APFEL_HOLLAND_CAVITATION_THRESHOLD_1MHZ_PA = 0.7e6 Pa
         // Any pressure < -0.7e6 triggers cavitation.
         let mut field = Array3::<f64>::zeros((2, 2, 2));
-        field[[0, 0, 0]] = -1.0e6; // below -0.7MPa → cavitating
+        field[[0, 0, 0]] = -MPA_TO_PA; // below -0.7MPa → cavitating
         field[[1, 1, 1]] = 0.0; // not below threshold
 
         m.update(&field, 1e-6).unwrap();

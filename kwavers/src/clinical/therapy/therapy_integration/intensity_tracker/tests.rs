@@ -81,7 +81,7 @@ fn test_thermal_dose() {
 fn test_spta_units() {
     let mut tracker = IntensityTracker::new(0.01, 1e-6).unwrap();
 
-    let pressure = Array3::from_elem([4, 4, 4], 1e6); // 1 MPa
+    let pressure = Array3::from_elem([4, 4, 4], MPA_TO_PA); // 1 MPa
     let impedance = Array3::from_elem([4, 4, 4], 1.5e6);
 
     tracker

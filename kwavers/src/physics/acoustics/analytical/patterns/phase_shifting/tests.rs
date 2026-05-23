@@ -1,6 +1,7 @@
 use super::core::ShiftingStrategy;
 use super::shifter::PhaseShifter;
 use approx::assert_relative_eq;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use ndarray::{arr2, Array2};
 use std::f64::consts::PI;
 
@@ -10,7 +11,7 @@ fn linear_array() -> Array2<f64> {
 
 #[test]
 fn focused_strategy_applies_spherical_phase_law() {
-    let mut shifter = PhaseShifter::new(linear_array(), 1.0e6);
+    let mut shifter = PhaseShifter::new(linear_array(), MHZ_TO_HZ);
     shifter.set_strategy(ShiftingStrategy::Focused);
 
     let phases = shifter.apply_phases(&[0.0, 0.0, 0.02]).unwrap();
@@ -26,7 +27,7 @@ fn focused_strategy_applies_spherical_phase_law() {
 
 #[test]
 fn multifocus_strategy_accepts_flat_focal_point_chunks() {
-    let mut shifter = PhaseShifter::new(linear_array(), 1.0e6);
+    let mut shifter = PhaseShifter::new(linear_array(), MHZ_TO_HZ);
     shifter.set_strategy(ShiftingStrategy::MultiFocus);
 
     let phases = shifter
@@ -50,7 +51,7 @@ fn multifocus_strategy_accepts_flat_focal_point_chunks() {
 
 #[test]
 fn custom_strategy_sets_wrapped_phase_pattern() {
-    let mut shifter = PhaseShifter::new(linear_array(), 1.0e6);
+    let mut shifter = PhaseShifter::new(linear_array(), MHZ_TO_HZ);
     shifter.set_strategy(ShiftingStrategy::Custom);
 
     let phases = shifter.apply_phases(&[0.0, PI, 3.0 * PI]).unwrap();
@@ -63,7 +64,7 @@ fn custom_strategy_sets_wrapped_phase_pattern() {
 
 #[test]
 fn linear_strategy_accepts_documented_sixty_degree_bound() {
-    let mut shifter = PhaseShifter::new(linear_array(), 1.0e6);
+    let mut shifter = PhaseShifter::new(linear_array(), MHZ_TO_HZ);
 
     shifter.set_strategy(ShiftingStrategy::Linear);
     let phases = shifter.apply_phases(&[60.0]).unwrap();
@@ -77,7 +78,7 @@ fn linear_strategy_accepts_documented_sixty_degree_bound() {
 
 #[test]
 fn phase_application_reuses_cached_buffer_for_equal_array_length() {
-    let mut shifter = PhaseShifter::new(linear_array(), 1.0e6);
+    let mut shifter = PhaseShifter::new(linear_array(), MHZ_TO_HZ);
     let phase_buffer = shifter.get_phase_offsets().as_ptr();
 
     let linear = shifter.apply_phases(&[15.0]).unwrap();
@@ -104,7 +105,7 @@ fn phase_application_reuses_cached_buffer_for_equal_array_length() {
 
 #[test]
 fn invalid_multifocus_input_preserves_last_valid_phase_offsets() {
-    let mut shifter = PhaseShifter::new(linear_array(), 1.0e6);
+    let mut shifter = PhaseShifter::new(linear_array(), MHZ_TO_HZ);
     shifter.set_strategy(ShiftingStrategy::Focused);
     let valid = shifter.apply_phases(&[0.0, 0.0, 0.02]).unwrap();
 
@@ -119,7 +120,7 @@ fn invalid_multifocus_input_preserves_last_valid_phase_offsets() {
 
 #[test]
 fn strategy_input_shapes_and_domains_are_rejected_before_computation() {
-    let mut shifter = PhaseShifter::new(linear_array(), 1.0e6);
+    let mut shifter = PhaseShifter::new(linear_array(), MHZ_TO_HZ);
 
     shifter.set_strategy(ShiftingStrategy::Linear);
     let steering_error = shifter.apply_phases(&[61.0]).unwrap_err();

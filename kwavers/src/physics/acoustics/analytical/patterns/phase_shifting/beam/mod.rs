@@ -154,6 +154,7 @@ impl BeamSteering {
 mod tests {
     use super::*;
     use approx::assert_relative_eq;
+    use crate::core::constants::numerical::MHZ_TO_HZ;
     use ndarray::arr2;
 
     fn linear_array() -> Array2<f64> {
@@ -162,11 +163,11 @@ mod tests {
 
     #[test]
     fn steering_accepts_documented_sixty_degree_bound() {
-        let mut steering = BeamSteering::new(linear_array(), 1.0e6);
+        let mut steering = BeamSteering::new(linear_array(), MHZ_TO_HZ);
 
         steering.set_steering_angles(60.0, 0.0).unwrap();
 
-        let wavelength = calculate_wavelength(1.0e6, SPEED_OF_SOUND);
+        let wavelength = calculate_wavelength(MHZ_TO_HZ, SPEED_OF_SOUND);
         let k = 2.0 * PI / wavelength;
         let expected_left = wrap_phase(-k * -0.001 * 60.0_f64.to_radians().sin());
         let phases = steering.get_phase_distribution();
@@ -178,7 +179,7 @@ mod tests {
 
     #[test]
     fn steering_rejects_angles_above_documented_bound() {
-        let mut steering = BeamSteering::new(linear_array(), 1.0e6);
+        let mut steering = BeamSteering::new(linear_array(), MHZ_TO_HZ);
 
         let error = steering.set_steering_angles(61.0, 0.0).unwrap_err();
 

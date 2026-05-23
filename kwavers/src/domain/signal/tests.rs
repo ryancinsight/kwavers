@@ -2,6 +2,7 @@ use super::functions::{
     add_noise, create_cw_signals, next_pow2, pad_zeros, tone_burst_series, ToneBurstSpec,
 };
 use super::window::SignalWindowType;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use proptest::prelude::*;
 use std::f64::consts::PI;
 
@@ -27,7 +28,7 @@ fn tone_burst_series_respects_offset_and_length() {
 fn tone_burst_series_matches_kwave_gaussian_reference() {
     let y = tone_burst_series(&ToneBurstSpec {
         sample_rate_hz: 10_000_000.0,
-        signal_freq_hz: 1_000_000.0,
+        signal_freq_hz: MHZ_TO_HZ,
         num_cycles: 3.0,
         signal_offset: 0,
         signal_length: None,

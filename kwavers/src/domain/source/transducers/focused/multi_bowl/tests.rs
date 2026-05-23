@@ -1,4 +1,5 @@
 use super::*;
+use crate::core::constants::numerical::MPA_TO_PA;
 use crate::core::error::{KwaversError, ValidationError};
 
 #[test]
@@ -21,13 +22,13 @@ fn multi_bowl_rejects_empty_source_set() {
 #[test]
 fn from_bowls_accepts_preconstructed_bounded_layouts() {
     let config =
-        BowlConfig::from_vertex_focus([0.0, 0.0, 0.16], [0.0, 0.0, 0.0], 0.32, 650.0e3, 1.0e6);
+        BowlConfig::from_vertex_focus([0.0, 0.0, 0.16], [0.0, 0.0, 0.0], 0.32, 650.0e3, MPA_TO_PA);
     let bowl = BowlTransducer::with_axis_projection_bounds(config, -0.28, 0.98, 16).unwrap();
     let array = MultiBowlArray::from_bowls(vec![bowl]).unwrap();
 
     assert_eq!(array.bowls.len(), 1);
     assert_eq!(array.bowls[0].element_count(), 16);
-    assert_eq!(array.amplitudes, vec![1.0e6]);
+    assert_eq!(array.amplitudes, vec![MPA_TO_PA]);
 }
 
 #[test]
