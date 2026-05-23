@@ -1,4 +1,5 @@
 // physics/chemistry/radical_initiation/mod.rs
+use crate::core::constants::numerical::MPA_TO_PA;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use log::debug;
@@ -43,9 +44,9 @@ impl RadicalInitiation {
                 );
 
                 // Cavitation-induced radical formation (e.g., water sonolysis)
-                let cav_rate = if p_val < -1.0e6 {
-                    // Threshold for cavitation collapse
-                    1e-6 * alpha * (-p_val - 1.0e6) * r_val.powi(2) // Proportional to bubble surface area
+                let cav_rate = if p_val < -MPA_TO_PA {
+                    // Threshold for cavitation collapse at -1 MPa
+                    1e-6 * alpha * (-p_val - MPA_TO_PA) * r_val.powi(2) // Proportional to bubble surface area
                 } else {
                     0.0
                 };

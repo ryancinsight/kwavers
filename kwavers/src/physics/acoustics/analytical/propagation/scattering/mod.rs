@@ -14,11 +14,12 @@ impl ScatteringCalculator {
 mod tests {
     use super::*;
     use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use crate::core::constants::numerical::MHZ_TO_HZ;
 
     /// ScatteringCalculator::new constructs without panic for physical parameters.
     #[test]
     fn new_constructs_for_physical_parameters() {
-        let _sc = ScatteringCalculator::new(1e6, SOUND_SPEED_WATER_SIM);
+        let _sc = ScatteringCalculator::new(MHZ_TO_HZ, SOUND_SPEED_WATER_SIM);
     }
 
     /// Debug output is non-empty.

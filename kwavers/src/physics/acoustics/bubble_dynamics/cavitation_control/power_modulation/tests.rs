@@ -55,7 +55,7 @@ fn test_pulse_sequence() {
         0.001, // pulse_duration
         0.001, // pulse_delay
         1.0,   // amplitude
-        1e6,   // frequency
+        MHZ_TO_HZ, // frequency
     );
 
     assert_eq!(generator.total_duration(), 3.0 * 0.002);

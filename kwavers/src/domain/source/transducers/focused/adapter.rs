@@ -150,6 +150,7 @@ impl Source for FocusedSource {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::numerical::MPA_TO_PA;
 
     #[derive(Clone, Debug)]
     struct ConstantSignal {

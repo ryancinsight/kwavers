@@ -280,7 +280,7 @@ mod tests {
     /// configure_rectangular produces nx×ny elements.
     #[test]
     fn configure_rectangular_produces_correct_element_count() {
-        let arr = PhaseArray::configure_rectangular(4, 3, 500e-6, 500e-6, 1e6);
+        let arr = PhaseArray::configure_rectangular(4, 3, 500e-6, 500e-6, MHZ_TO_HZ);
         assert_eq!(
             arr.element_positions.nrows(),
             12,
@@ -291,7 +291,7 @@ mod tests {
     /// configure_circular produces num_rings × elements_per_ring elements.
     #[test]
     fn configure_circular_produces_correct_element_count() {
-        let arr = PhaseArray::configure_circular(3, 8, 1e-3, 1e6);
+        let arr = PhaseArray::configure_circular(3, 8, 1e-3, MHZ_TO_HZ);
         assert_eq!(
             arr.element_positions.nrows(),
             24,
@@ -306,7 +306,7 @@ mod tests {
     #[test]
     fn check_performance_grating_lobe_free_at_sub_half_lambda_spacing() {
         // c = 1500 m/s, f = 1 MHz → λ = 1.5 mm; 0.4·λ = 600 µm < 750 µm = λ/2
-        let arr = PhaseArray::configure_linear(8, 600e-6, 1e6);
+        let arr = PhaseArray::configure_linear(8, 600e-6, MHZ_TO_HZ);
         let metrics = arr.check_performance();
         assert_eq!(metrics.num_elements, 8);
         assert!(
@@ -316,7 +316,7 @@ mod tests {
         );
 
         // Spacing = 0.6·λ = 900 µm > λ/2 → not grating-lobe-free
-        let arr2 = PhaseArray::configure_linear(8, 900e-6, 1e6);
+        let arr2 = PhaseArray::configure_linear(8, 900e-6, MHZ_TO_HZ);
         let metrics2 = arr2.check_performance();
         assert!(
             !metrics2.grating_lobe_free,
@@ -328,7 +328,7 @@ mod tests {
     /// calculate_intensity at the center of an on-axis focused array is finite and positive.
     #[test]
     fn calculate_intensity_at_origin_is_finite_and_positive() {
-        let arr = PhaseArray::configure_linear(8, 750e-6, 1e6);
+        let arr = PhaseArray::configure_linear(8, 750e-6, MHZ_TO_HZ);
         let intensity = arr.calculate_intensity(0.0, 0.0, 0.01);
         assert!(
             intensity.is_finite() && intensity > 0.0,

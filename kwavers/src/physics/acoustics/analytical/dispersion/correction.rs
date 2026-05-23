@@ -95,6 +95,7 @@ impl DispersionAnalysis {
 mod tests {
     use super::*;
     use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use crate::core::constants::numerical::MHZ_TO_HZ;
 
     fn unit_grid() -> Grid {
         Grid::new(8, 8, 8, 1e-4, 1e-4, 1e-4).expect("grid must be created")
@@ -108,7 +109,7 @@ mod tests {
         DispersionAnalysis::apply_correction(
             &mut field,
             &grid,
-            1e6,
+            MHZ_TO_HZ,
             SOUND_SPEED_WATER_SIM,
             DispersionMethod::None,
         );
@@ -131,7 +132,7 @@ mod tests {
         DispersionAnalysis::apply_correction(
             &mut field,
             &grid,
-            1e6,
+            MHZ_TO_HZ,
             SOUND_SPEED_WATER_SIM,
             DispersionMethod::PSTD(2),
         );

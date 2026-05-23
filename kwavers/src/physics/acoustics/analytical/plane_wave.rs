@@ -127,7 +127,7 @@ mod tests {
         let grid = water_grid_one_wavelength();
         let field = PlaneWaveSolution::generate(
             &grid,
-            1e6,
+            MHZ_TO_HZ,
             10.0,
             SOUND_SPEED_WATER_SIM,
             0.0,
@@ -149,7 +149,7 @@ mod tests {
         let amplitude = 7.0_f64;
         let field = PlaneWaveSolution::generate(
             &grid,
-            1e6,
+            MHZ_TO_HZ,
             amplitude,
             SOUND_SPEED_WATER_SIM,
             0.0,
@@ -169,7 +169,7 @@ mod tests {
         let grid = water_grid_one_wavelength();
         let field = PlaneWaveSolution::generate(
             &grid,
-            1e6,
+            MHZ_TO_HZ,
             1.0,
             SOUND_SPEED_WATER_SIM,
             0.0,
@@ -183,7 +183,7 @@ mod tests {
         let grid = water_grid_one_wavelength();
         let field = PlaneWaveSolution::generate(
             &grid,
-            1e6,
+            MHZ_TO_HZ,
             1.0,
             SOUND_SPEED_WATER_SIM,
             0.0,

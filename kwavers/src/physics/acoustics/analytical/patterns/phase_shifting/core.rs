@@ -114,11 +114,12 @@ pub fn quantize_phase(phase: f64, levels: u32) -> f64 {
 mod tests {
     use super::*;
     use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use crate::core::constants::numerical::MHZ_TO_HZ;
     use approx::assert_relative_eq;
 
     #[test]
     fn test_calculate_wavelength() {
-        let wavelength = calculate_wavelength(1e6, SOUND_SPEED_WATER_SIM);
+        let wavelength = calculate_wavelength(MHZ_TO_HZ, SOUND_SPEED_WATER_SIM);
         assert_relative_eq!(wavelength, 0.0015, epsilon = 1e-6);
     }
 

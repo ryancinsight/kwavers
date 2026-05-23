@@ -168,6 +168,7 @@ impl PhysicsTestUtils {
 mod tests {
     use super::*;
     use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use crate::core::constants::numerical::MHZ_TO_HZ;
     use crate::domain::grid::Grid;
     use ndarray::Array3;
 
@@ -192,7 +193,7 @@ mod tests {
         let grid = small_grid();
         let field = PhysicsTestUtils::analytical_plane_wave_with_dispersion(
             &grid,
-            1e6,
+            MHZ_TO_HZ,
             2.0,
             SOUND_SPEED_WATER_SIM,
             0.0,
@@ -216,7 +217,7 @@ mod tests {
         let amplitude = 5.0_f64;
         let field = PhysicsTestUtils::analytical_plane_wave_with_dispersion(
             &grid,
-            1e6,
+            MHZ_TO_HZ,
             amplitude,
             SOUND_SPEED_WATER_SIM,
             0.0,

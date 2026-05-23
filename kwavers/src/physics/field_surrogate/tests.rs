@@ -135,16 +135,16 @@ fn test_cube_construction_rejects_missing_corner() {
 #[test]
 fn test_cube_query_corner_returns_normalized_envelope() {
     let kernels: Vec<FocalKernel> = [
-        (0.5e6, 15.0e6),
-        (0.5e6, 30.0e6),
-        (1.0e6, 15.0e6),
-        (1.0e6, 30.0e6),
+        (0.5 * MHZ_TO_HZ, 15.0 * MPA_TO_PA),
+        (0.5 * MHZ_TO_HZ, 30.0 * MPA_TO_PA),
+        (MHZ_TO_HZ, 15.0 * MPA_TO_PA),
+        (MHZ_TO_HZ, 30.0 * MPA_TO_PA),
     ]
     .iter()
     .map(|&(f0, pnp)| synthetic_gaussian_kernel(40, 30, 30, 0.5e-3, f0, pnp))
     .collect();
     let cube = KernelCube::new(kernels).unwrap();
-    let env = cube.query(1.0e6, 30.0e6, (60, 40, 40), (45, 20, 20), 0.5e-3);
+    let env = cube.query(MHZ_TO_HZ, 30.0 * MPA_TO_PA, (60, 40, 40), (45, 20, 20), 0.5e-3);
     let max = env.iter().copied().fold(f64::NEG_INFINITY, f64::max);
     assert!(
         (max - 1.0).abs() < 1e-9,
@@ -155,10 +155,10 @@ fn test_cube_query_corner_returns_normalized_envelope() {
 #[test]
 fn test_cube_query_clamps_outside_sweep() {
     let kernels: Vec<FocalKernel> = [
-        (0.5e6, 15.0e6),
-        (0.5e6, 30.0e6),
-        (1.0e6, 15.0e6),
-        (1.0e6, 30.0e6),
+        (0.5 * MHZ_TO_HZ, 15.0 * MPA_TO_PA),
+        (0.5 * MHZ_TO_HZ, 30.0 * MPA_TO_PA),
+        (MHZ_TO_HZ, 15.0 * MPA_TO_PA),
+        (MHZ_TO_HZ, 30.0 * MPA_TO_PA),
     ]
     .iter()
     .map(|&(f0, pnp)| synthetic_gaussian_kernel(40, 30, 30, 0.5e-3, f0, pnp))
@@ -166,8 +166,8 @@ fn test_cube_query_clamps_outside_sweep() {
     let cube = KernelCube::new(kernels).unwrap();
     let target_shape = (60, 40, 40);
     let target_focus = (45, 20, 20);
-    let env_below = cube.query(0.1e6, 20.0e6, target_shape, target_focus, 0.5e-3);
-    let env_at_lo = cube.query(0.5e6, 20.0e6, target_shape, target_focus, 0.5e-3);
+    let env_below = cube.query(0.1 * MHZ_TO_HZ, 20.0 * MPA_TO_PA, target_shape, target_focus, 0.5e-3);
+    let env_at_lo = cube.query(0.5 * MHZ_TO_HZ, 20.0 * MPA_TO_PA, target_shape, target_focus, 0.5e-3);
     let max_diff = env_below
         .iter()
         .zip(env_at_lo.iter())
@@ -182,17 +182,17 @@ fn test_cube_query_clamps_outside_sweep() {
 #[test]
 fn test_cube_query_pnp_amplitude_invariant() {
     let kernels: Vec<FocalKernel> = [
-        (0.5e6, 15.0e6),
-        (0.5e6, 30.0e6),
-        (1.0e6, 15.0e6),
-        (1.0e6, 30.0e6),
+        (0.5 * MHZ_TO_HZ, 15.0 * MPA_TO_PA),
+        (0.5 * MHZ_TO_HZ, 30.0 * MPA_TO_PA),
+        (MHZ_TO_HZ, 15.0 * MPA_TO_PA),
+        (MHZ_TO_HZ, 30.0 * MPA_TO_PA),
     ]
     .iter()
     .map(|&(f0, pnp)| synthetic_gaussian_kernel(40, 30, 30, 0.5e-3, f0, pnp))
     .collect();
     let cube = KernelCube::new(kernels).unwrap();
-    let env_15 = cube.query(1.0e6, 15.0e6, (60, 40, 40), (45, 20, 20), 0.5e-3);
-    let env_30 = cube.query(1.0e6, 30.0e6, (60, 40, 40), (45, 20, 20), 0.5e-3);
+    let env_15 = cube.query(MHZ_TO_HZ, 15.0 * MPA_TO_PA, (60, 40, 40), (45, 20, 20), 0.5e-3);
+    let env_30 = cube.query(MHZ_TO_HZ, 30.0 * MPA_TO_PA, (60, 40, 40), (45, 20, 20), 0.5e-3);
     let max_diff = env_15
         .iter()
         .zip(env_30.iter())
@@ -214,7 +214,7 @@ fn test_resample_large_kernel_completes() {
     let nz = 100usize;
     let dx_in = 0.5e-3;
     let dx_out = 0.6e-3;
-    let k = synthetic_gaussian_kernel(nx, ny, nz, dx_in, 1.0e6, 30.0e6);
+    let k = synthetic_gaussian_kernel(nx, ny, nz, dx_in, MHZ_TO_HZ, 30.0 * MPA_TO_PA);
     let t0 = std::time::Instant::now();
     let r = resample_trilinear(&k, dx_out);
     let elapsed = t0.elapsed();
@@ -239,17 +239,17 @@ fn test_cube_blend_in_place_zero_extra_allocation() {
     // as the previous out-of-place implementation. Exercises the new
     // Zip-based blend path inside KernelCube::query.
     let kernels: Vec<FocalKernel> = [
-        (0.5e6, 15.0e6),
-        (0.5e6, 30.0e6),
-        (1.0e6, 15.0e6),
-        (1.0e6, 30.0e6),
+        (0.5 * MHZ_TO_HZ, 15.0 * MPA_TO_PA),
+        (0.5 * MHZ_TO_HZ, 30.0 * MPA_TO_PA),
+        (MHZ_TO_HZ, 15.0 * MPA_TO_PA),
+        (MHZ_TO_HZ, 30.0 * MPA_TO_PA),
     ]
     .iter()
     .map(|&(f0, pnp)| synthetic_gaussian_kernel(40, 30, 30, 0.5e-3, f0, pnp))
     .collect();
     let cube = KernelCube::new(kernels).unwrap();
-    let env_a = cube.query(0.6e6, 20.0e6, (60, 40, 40), (45, 20, 20), 0.5e-3);
-    let env_b = cube.query(0.6e6, 20.0e6, (60, 40, 40), (45, 20, 20), 0.5e-3);
+    let env_a = cube.query(0.6 * MHZ_TO_HZ, 20.0 * MPA_TO_PA, (60, 40, 40), (45, 20, 20), 0.5e-3);
+    let env_b = cube.query(0.6 * MHZ_TO_HZ, 20.0 * MPA_TO_PA, (60, 40, 40), (45, 20, 20), 0.5e-3);
     assert_eq!(env_a, env_b, "deterministic");
     let max_a = env_a.iter().copied().fold(f64::NEG_INFINITY, f64::max);
     assert!((max_a - 1.0).abs() < 1e-9);
@@ -296,10 +296,10 @@ fn test_helmholtz_residual_nonzero_on_constant_field() {
     let c0 = HELMHOLTZ_C0_WATER;
     let dx = 1.0e-4;
     let n = 8usize;
-    let p = Array3::<f64>::from_elem((n, n, n), 5.0e6);
+    let p = Array3::<f64>::from_elem((n, n, n), 5.0 * MPA_TO_PA);
     let r = helmholtz_residual_field(&p, dx, f0, c0);
     let k = 2.0 * std::f64::consts::PI * f0 / c0;
-    let expected = k * k * 5.0e6;
+    let expected = k * k * 5.0 * MPA_TO_PA;
     let interior_value = r[[n / 2, n / 2, n / 2]];
     assert!(
         (interior_value - expected).abs() / expected < 1e-6,
@@ -313,7 +313,7 @@ fn test_helmholtz_residual_boundary_shell_zero() {
     let c0 = HELMHOLTZ_C0_WATER;
     let dx = 1.0e-4;
     let n = 8usize;
-    let p = Array3::<f64>::from_elem((n, n, n), 5.0e6);
+    let p = Array3::<f64>::from_elem((n, n, n), 5.0 * MPA_TO_PA);
     let r = helmholtz_residual_field(&p, dx, f0, c0);
     // Every face of the cube should be zero (1-cell shell).
     for j in 0..n {
@@ -335,7 +335,7 @@ fn test_helmholtz_residual_kernel_wrapper_matches_field() {
     let n = 16usize;
     let dx = 1.0e-3;
     let f0 = MHZ_TO_HZ;
-    let kernel = synthetic_gaussian_kernel(n, n, n, dx, f0, 30.0e6);
+    let kernel = synthetic_gaussian_kernel(n, n, n, dx, f0, 30.0 * MPA_TO_PA);
     let r_kernel = helmholtz_residual_kernel(&kernel, HELMHOLTZ_C0_WATER);
     let r_field = helmholtz_residual_field(&kernel.field, dx, f0, HELMHOLTZ_C0_WATER);
     let max_diff = r_kernel
@@ -349,16 +349,16 @@ fn test_helmholtz_residual_kernel_wrapper_matches_field() {
 #[test]
 fn test_cube_query_midpoint_blends_and_renormalizes() {
     let kernels: Vec<FocalKernel> = [
-        (0.5e6, 15.0e6),
-        (0.5e6, 30.0e6),
-        (1.0e6, 15.0e6),
-        (1.0e6, 30.0e6),
+        (0.5 * MHZ_TO_HZ, 15.0 * MPA_TO_PA),
+        (0.5 * MHZ_TO_HZ, 30.0 * MPA_TO_PA),
+        (MHZ_TO_HZ, 15.0 * MPA_TO_PA),
+        (MHZ_TO_HZ, 30.0 * MPA_TO_PA),
     ]
     .iter()
     .map(|&(f0, pnp)| synthetic_gaussian_kernel(40, 30, 30, 0.5e-3, f0, pnp))
     .collect();
     let cube = KernelCube::new(kernels).unwrap();
-    let env_mid = cube.query(0.75e6, 20.0e6, (60, 40, 40), (45, 20, 20), 0.5e-3);
+    let env_mid = cube.query(0.75 * MHZ_TO_HZ, 20.0 * MPA_TO_PA, (60, 40, 40), (45, 20, 20), 0.5e-3);
     let max = env_mid.iter().copied().fold(f64::NEG_INFINITY, f64::max);
     assert!(
         (max - 1.0).abs() < 1e-9,

@@ -23,7 +23,7 @@ fn test_resonance_frequency() {
     let freq = bubble.resonance_frequency(ATMOSPHERIC_PRESSURE, 1000.0);
 
     // Typical resonance frequency for 2 μm bubble should be around 2-5 MHz
-    assert!(freq > 1e6 && freq < 10e6);
+    assert!(freq > MHZ_TO_HZ && freq < 10.0 * MHZ_TO_HZ);
 }
 
 #[test]

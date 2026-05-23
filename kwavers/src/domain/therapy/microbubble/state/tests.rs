@@ -1,6 +1,7 @@
 use super::*;
 use crate::core::constants::cavitation::SURFACE_TENSION_WATER;
 use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::core::constants::thermodynamic::BODY_TEMPERATURE_K;
 
 const AMBIENT_PRESSURE: f64 = ATMOSPHERIC_PRESSURE;
@@ -168,7 +169,7 @@ fn test_resonance_frequency() {
     let state = MicrobubbleState::new(1.0e-6, 1.0, 1.0, 0.0, pos).unwrap();
 
     let f0 = state.resonance_frequency();
-    assert!(f0 > 2e6 && f0 < 5e6);
+    assert!(f0 > 2.0 * MHZ_TO_HZ && f0 < 5.0 * MHZ_TO_HZ);
 }
 
 #[test]

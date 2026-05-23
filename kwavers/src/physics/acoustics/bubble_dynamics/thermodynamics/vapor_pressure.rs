@@ -1,6 +1,7 @@
 //! Vapor pressure models for phase equilibrium
 
 use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, GAS_CONSTANT as R_GAS};
+use crate::core::constants::numerical::MPA_TO_PA;
 use crate::core::constants::{
     H_VAP_WATER_100C, P_CRITICAL_WATER, P_TRIPLE_WATER, T_BOILING_WATER, T_CRITICAL_WATER,
     T_TRIPLE_WATER,
@@ -191,7 +192,7 @@ impl ThermodynamicsCalculator {
         let c = (N[5] * theta).mul_add(theta, N[6] * theta) + N[7];
 
         let p_mpa = (2.0 * c / (-b + b.mul_add(b, -(4.0 * a * c)).sqrt())).powi(4);
-        p_mpa * 1e6 // Convert MPa to Pa
+        p_mpa * MPA_TO_PA // Convert MPa to Pa
     }
 
     /// Calculate vapor pressure over ice (below triple point)

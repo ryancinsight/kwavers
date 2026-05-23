@@ -1,6 +1,7 @@
 //! Keller-Miksis wall-motion ODE regression tests.
 
 use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::physics::acoustics::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};
 use crate::physics::acoustics::bubble_dynamics::keller_miksis::KellerMiksisModel;
 
@@ -92,7 +93,7 @@ fn test_keller_miksis_expansion() {
 #[test]
 fn test_keller_miksis_acoustic_forcing() {
     let params = BubbleParameters {
-        driving_frequency: 1e6,
+        driving_frequency: MHZ_TO_HZ,
         ..Default::default()
     };
 
