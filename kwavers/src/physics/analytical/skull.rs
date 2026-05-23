@@ -26,6 +26,7 @@ use std::f64::consts::PI;
 ///
 /// # Reference
 /// Deffieux & Konofagou (2010), *Ultrasound Med. Biol.* 36, 1718.
+#[must_use]
 pub fn skull_insertion_loss_two_way_db(f_mhz: &[f64], thickness_cm: f64, alpha0: f64) -> Vec<f64> {
     f_mhz
         .iter()
@@ -47,6 +48,7 @@ pub fn skull_insertion_loss_two_way_db(f_mhz: &[f64], thickness_cm: f64, alpha0:
 ///
 /// # Reference
 /// Tanter et al. (1998), *J. Acoust. Soc. Am.* 103, 2403.
+#[must_use]
 pub fn skull_phase_screen(n: usize, sigma_phi_rad: f64, seed: u64) -> Vec<f64> {
     let mut rng = ChaCha8Rng::seed_from_u64(seed);
     let dist = Normal::new(0.0, sigma_phi_rad).expect("sigma must be finite and positive");
@@ -64,6 +66,7 @@ pub fn skull_phase_screen(n: usize, sigma_phi_rad: f64, seed: u64) -> Vec<f64> {
 ///
 /// # Reference
 /// Schneider et al. (1996), *Phys. Med. Biol.* 41, 111.
+#[must_use]
 pub fn hu_to_sound_speed_schneider(hu: &[f64]) -> Vec<f64> {
     hu.iter()
         .map(|&h| {
@@ -84,6 +87,7 @@ pub fn hu_to_sound_speed_schneider(hu: &[f64]) -> Vec<f64> {
 ///
 /// # Reference
 /// Schneider et al. (1996), *Phys. Med. Biol.* 41, 111.
+#[must_use]
 pub fn hu_to_density_schneider(hu: &[f64]) -> Vec<f64> {
     hu.iter().map(|&h| 1000.0 + 0.96 * h).collect()
 }
@@ -101,6 +105,7 @@ pub fn hu_to_density_schneider(hu: &[f64]) -> Vec<f64> {
 ///
 /// # Reference
 /// Maréchal (1947), *Rev. Opt.* 26, 257.
+#[must_use]
 #[inline]
 pub fn strehl_ratio(sigma_phi_rad: f64) -> f64 {
     (-sigma_phi_rad * sigma_phi_rad).exp()

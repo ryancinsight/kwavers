@@ -69,6 +69,7 @@ pub fn hill_activation_probability(
 ///
 /// # Reference
 /// Nyborg (1965), *Physical Acoustics* Vol. 2, ch. 11.
+#[must_use]
 #[inline]
 pub fn radiation_force_1d(intensity_w_m2: &[f64], alpha_np_m: f64, c: f64) -> Vec<f64> {
     if !nonnegative_finite(alpha_np_m) || !positive_finite(c) {
@@ -146,6 +147,7 @@ pub fn acoustic_streaming_velocity(
 ///
 /// # Reference
 /// NCRP Report 74 (1983), §4.
+#[must_use]
 pub fn ispta_w_cm2(p_pa: &[f64], dt_s: f64, rho: f64, c: f64) -> f64 {
     if p_pa.is_empty() || !positive_finite(dt_s) || !positive_finite(rho) || !positive_finite(c) {
         return 0.0;

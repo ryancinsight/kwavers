@@ -87,6 +87,7 @@ pub fn thermal_index_bone(w_mw: f64, f_mhz: f64) -> f64 {
 ///
 /// # Reference
 /// Sapareto & Dewey (1984), *Int. J. Radiat. Oncol. Biol. Phys.* 10, 787.
+#[must_use]
 pub fn cem43_cumulative(t_celsius: &[f64], dt_s: f64) -> Vec<f64> {
     let dt_min = dt_s / 60.0;
     let mut cem = 0.0_f64;

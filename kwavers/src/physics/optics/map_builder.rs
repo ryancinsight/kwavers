@@ -56,18 +56,26 @@ impl PropertyStats {
         Self::from_values(&values)
     }
 
-    /// Compute statistics from a slice
+    /// Compute statistics from a slice.
+    ///
+    /// Returns all-zero stats when `values` is empty.
+    #[must_use]
     pub fn from_values(values: &[f64]) -> Self {
-        let n = values.len() as f64;
-
-        let mean = values.iter().sum::<f64>() / n;
-
-        let variance = values.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / n;
+        let n = values.len();
+        if n == 0 {
+            return Self {
+                mean: 0.0,
+                std_dev: 0.0,
+                min: 0.0,
+                max: 0.0,
+            };
+        }
+        let n_f = n as f64;
+        let mean = values.iter().sum::<f64>() / n_f;
+        let variance = values.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / n_f;
         let std_dev = variance.sqrt();
-
         let min = values.iter().copied().fold(f64::INFINITY, f64::min);
         let max = values.iter().copied().fold(f64::NEG_INFINITY, f64::max);
-
         Self {
             mean,
             std_dev,
