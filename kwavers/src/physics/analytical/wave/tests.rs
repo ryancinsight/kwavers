@@ -21,7 +21,7 @@ fn reflection_plus_transmission_identity() {
 
 #[test]
 fn shock_distance_positive() {
-    let xs = shock_formation_distance(MHZ_TO_HZ, MPA_TO_PA, SOUND_SPEED_WATER_SIM, 1000.0, 3.5);
+    let xs = shock_formation_distance(MPA_TO_PA, MHZ_TO_HZ, SOUND_SPEED_WATER_SIM, 1000.0, 3.5);
     assert!(xs > 0.0);
 }
 
