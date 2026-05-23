@@ -68,6 +68,7 @@ impl PoroelasticSimulation {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::numerical::MHZ_TO_HZ;
     use crate::domain::grid::Grid;
     use crate::physics::acoustics::mechanics::poroelastic::PoroelasticMaterial;
 
@@ -89,7 +90,7 @@ mod tests {
     #[test]
     fn compute_wave_speeds_returns_positive_values() {
         let sim = make_sim();
-        let speeds = sim.compute_wave_speeds(1e6).unwrap();
+        let speeds = sim.compute_wave_speeds(MHZ_TO_HZ).unwrap();
         assert!(speeds.fast_wave > 0.0, "fast_wave must be positive");
         assert!(speeds.slow_wave > 0.0, "slow_wave must be positive");
         assert!(speeds.shear_wave > 0.0, "shear_wave must be positive");
@@ -99,7 +100,7 @@ mod tests {
     #[test]
     fn compute_attenuation_returns_positive_coefficients() {
         let sim = make_sim();
-        let (alpha_fast, alpha_slow) = sim.compute_attenuation(1e6).unwrap();
+        let (alpha_fast, alpha_slow) = sim.compute_attenuation(MHZ_TO_HZ).unwrap();
         assert!(alpha_fast > 0.0, "alpha_fast must be positive");
         assert!(alpha_slow > 0.0, "alpha_slow must be positive");
     }

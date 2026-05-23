@@ -164,52 +164,57 @@ impl FrequencyProfile {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::numerical::MHZ_TO_HZ;
 
     #[test]
     fn test_frequency_profile_flat() {
         let profile = FrequencyProfile::Flat;
         assert_eq!(profile.evaluate(0.0), 1.0);
-        assert_eq!(profile.evaluate(1e6), 1.0);
+        assert_eq!(profile.evaluate(MHZ_TO_HZ), 1.0);
     }
 
     #[test]
     fn test_frequency_profile_gaussian() {
         let profile = FrequencyProfile::Gaussian {
-            center_freq: 1e6,
-            bandwidth: 0.5e6,
+            center_freq: MHZ_TO_HZ,
+            bandwidth: 0.5 * MHZ_TO_HZ,
         };
 
         // Peak at center frequency
-        assert!((profile.evaluate(1e6) - 1.0).abs() < 1e-10);
+        assert!((profile.evaluate(MHZ_TO_HZ) - 1.0).abs() < 1e-10);
 
         // Lower at off-center frequencies
-        assert!(profile.evaluate(0.5e6) < 1.0);
-        assert!(profile.evaluate(1.5e6) < 1.0);
+        assert!(profile.evaluate(0.5 * MHZ_TO_HZ) < 1.0);
+        assert!(profile.evaluate(1.5 * MHZ_TO_HZ) < 1.0);
 
         // Symmetric
-        let v1 = profile.evaluate(0.8e6);
-        let v2 = profile.evaluate(1.2e6);
+        let v1 = profile.evaluate(0.8 * MHZ_TO_HZ);
+        let v2 = profile.evaluate(1.2 * MHZ_TO_HZ);
         assert!((v1 - v2).abs() < 1e-10);
     }
 
     #[test]
     fn test_frequency_profile_custom() {
-        let profile =
-            FrequencyProfile::Custom(vec![(0.0, 0.0), (1e6, 1.0), (2e6, 0.5), (3e6, 0.0)]);
+        let profile = FrequencyProfile::Custom(vec![
+            (0.0, 0.0),
+            (MHZ_TO_HZ, 1.0),
+            (2.0 * MHZ_TO_HZ, 0.5),
+            (3.0 * MHZ_TO_HZ, 0.0),
+        ]);
 
         // Exact points
         assert_eq!(profile.evaluate(0.0), 0.0);
-        assert_eq!(profile.evaluate(1e6), 1.0);
-        assert_eq!(profile.evaluate(2e6), 0.5);
-        assert_eq!(profile.evaluate(3e6), 0.0);
+        assert_eq!(profile.evaluate(MHZ_TO_HZ), 1.0);
+        assert_eq!(profile.evaluate(2.0 * MHZ_TO_HZ), 0.5);
+        assert_eq!(profile.evaluate(3.0 * MHZ_TO_HZ), 0.0);
 
         // Interpolation
-        assert!((profile.evaluate(0.5e6) - 0.5).abs() < 1e-10);
-        assert!((profile.evaluate(1.5e6) - 0.75).abs() < 1e-10);
+        assert!((profile.evaluate(0.5 * MHZ_TO_HZ) - 0.5).abs() < 1e-10);
+        assert!((profile.evaluate(1.5 * MHZ_TO_HZ) - 0.75).abs() < 1e-10);
 
         // Extrapolation (clamp to edges)
         assert_eq!(profile.evaluate(-1.0), 0.0);
-        assert_eq!(profile.evaluate(4e6), 0.0);
+        assert_eq!(profile.evaluate(4.0 * MHZ_TO_HZ), 0.0);
     }
 
     #[test]

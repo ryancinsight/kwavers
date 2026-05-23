@@ -80,7 +80,7 @@ fn test_streaming_velocity_far_field() {
     assert_eq!(v.vz, 0.0);
 
     let v_far =
-        calculate_acoustic_streaming_velocity(r0, 10.0, 1e6, 20.0 * r0, (1.0, 0.0, 0.0)).unwrap();
+        calculate_acoustic_streaming_velocity(r0, 10.0, MHZ_TO_HZ, 20.0 * r0, (1.0, 0.0, 0.0)).unwrap();
     assert!(v_far.vx < v.vx);
 }
 

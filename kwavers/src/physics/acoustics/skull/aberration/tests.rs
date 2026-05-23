@@ -1,5 +1,6 @@
 use std::f64::consts::PI;
 
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::domain::grid::Grid;
 use crate::physics::acoustics::skull::HeterogeneousSkull;
 use ndarray::Array3;
@@ -87,8 +88,8 @@ fn test_correction_is_negation_of_aberration() {
     let grid = Grid::new(6, 6, 12, 1e-3, 1e-3, 1e-3).unwrap();
     let skull = make_test_skull(6, 6, 12, 3, 7, 2800.0);
     let ac = AberrationCorrection::new(&grid, &skull);
-    let aberr = ac.compute_time_reversal_phases(1e6).unwrap();
-    let corr = ac.compute_correction_phases(1e6).unwrap();
+    let aberr = ac.compute_time_reversal_phases(MHZ_TO_HZ).unwrap();
+    let corr = ac.compute_correction_phases(MHZ_TO_HZ).unwrap();
     for (a, c) in aberr.iter().zip(corr.iter()) {
         assert!(
             (a + c).abs() < 1e-14,
@@ -187,7 +188,7 @@ fn test_phase_scales_linearly_with_frequency() {
     let skull = make_test_skull(4, 4, 12, 3, 7, 2800.0);
     let ac = AberrationCorrection::new(&grid, &skull);
     let p1 = ac.compute_time_reversal_phases(500e3).unwrap();
-    let p2 = ac.compute_time_reversal_phases(1e6).unwrap();
+    let p2 = ac.compute_time_reversal_phases(MHZ_TO_HZ).unwrap();
     let ratio = p2[[0, 0, 11]] / p1[[0, 0, 11]];
     assert!(
         (ratio - 2.0).abs() < 1e-10,

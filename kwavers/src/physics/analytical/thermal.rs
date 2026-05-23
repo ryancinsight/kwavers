@@ -161,6 +161,7 @@ pub fn gaussian_power_deposition_2d(
 mod tests {
     use super::*;
     use crate::core::constants::fundamental::{DENSITY_BLOOD, SOUND_SPEED_WATER_SIM};
+    use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
     use crate::core::constants::thermodynamic::{
         BODY_TEMPERATURE_C, SPECIFIC_HEAT_BLOOD, SPECIFIC_HEAT_TISSUE,
     };
@@ -244,7 +245,7 @@ mod tests {
 
     #[test]
     fn hifu_gain_positive() {
-        let g = hifu_focal_pressure_gain(0.1, 1.5, 1e6, SOUND_SPEED_WATER_SIM);
+        let g = hifu_focal_pressure_gain(0.1, 1.5, MHZ_TO_HZ, SOUND_SPEED_WATER_SIM);
         assert!(g > 1.0, "g={}", g);
     }
 
@@ -255,9 +256,9 @@ mod tests {
         let q = gaussian_power_deposition_2d(
             &r,
             &z,
-            1e6,
+            MHZ_TO_HZ,
             0.0,
-            1e6,
+            MPA_TO_PA,
             SOUND_SPEED_WATER_SIM,
             DENSITY_BLOOD,
             1.0,

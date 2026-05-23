@@ -4,7 +4,7 @@ use crate::clinical::imaging::reconstruction::acoustic_projection::{
     backproject_acoustic, project_acoustic, AcousticProjectionGeometry,
 };
 use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
-use crate::core::constants::numerical::MHZ_TO_HZ;
+use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use crate::solver::inverse::reconstruction::unified_sirt::SirtConfig;
 use ndarray::{Array1, Array3};
 
@@ -205,7 +205,7 @@ fn test_acoustic_forward_projection_single_scatterer() {
     image[[0, 0, 0]] = 1.0;
     let proj = project_acoustic(&image, &geom);
     assert!(
-        (proj[0] - 1e6).abs() / 1e6 < 1e-6,
+        (proj[0] - MPA_TO_PA).abs() / MPA_TO_PA < 1e-6,
         "Sensor 0 (at origin): expected 1e6, got {:.6e}",
         proj[0]
     );

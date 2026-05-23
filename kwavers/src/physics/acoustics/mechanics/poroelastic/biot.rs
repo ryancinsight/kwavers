@@ -210,6 +210,7 @@ impl BiotTheory {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::numerical::MHZ_TO_HZ;
     use crate::physics::acoustics::mechanics::poroelastic::PoroelasticMaterial;
 
     fn bone() -> PoroelasticMaterial {
@@ -223,7 +224,7 @@ mod tests {
     #[test]
     fn compute_wave_speeds_fast_greater_than_slow_for_bone() {
         let biot = BiotTheory::new(&bone());
-        let speeds = biot.compute_wave_speeds(1e6).unwrap();
+        let speeds = biot.compute_wave_speeds(MHZ_TO_HZ).unwrap();
         assert!(speeds.fast_wave > 0.0, "fast_wave must be positive");
         assert!(speeds.slow_wave > 0.0, "slow_wave must be positive");
         assert!(speeds.shear_wave > 0.0, "shear_wave must be positive");
@@ -246,7 +247,7 @@ mod tests {
         let expected_shear = (m.shear_modulus / rho_11).sqrt();
 
         let biot = BiotTheory::new(&m);
-        let speeds = biot.compute_wave_speeds(1e6).unwrap();
+        let speeds = biot.compute_wave_speeds(MHZ_TO_HZ).unwrap();
         assert!(
             (speeds.shear_wave - expected_shear).abs() < 1.0,
             "shear_wave {:.1} must match analytical {expected_shear:.1}",
@@ -258,7 +259,7 @@ mod tests {
     #[test]
     fn compute_attenuation_both_coefficients_positive() {
         let biot = BiotTheory::new(&bone());
-        let (af, as_) = biot.compute_attenuation(1e6).unwrap();
+        let (af, as_) = biot.compute_attenuation(MHZ_TO_HZ).unwrap();
         assert!(af > 0.0, "alpha_fast must be positive (got {af:.3e})");
         assert!(as_ > 0.0, "alpha_slow must be positive (got {as_:.3e})");
     }
@@ -270,7 +271,7 @@ mod tests {
     #[test]
     fn compute_attenuation_slow_wave_dominates_fast_wave() {
         let biot = BiotTheory::new(&bone());
-        let (alpha_fast, alpha_slow) = biot.compute_attenuation(1e6).unwrap();
+        let (alpha_fast, alpha_slow) = biot.compute_attenuation(MHZ_TO_HZ).unwrap();
         assert!(
             alpha_slow > alpha_fast,
             "slow-wave attenuation ({alpha_slow:.3e}) must exceed fast-wave ({alpha_fast:.3e})"

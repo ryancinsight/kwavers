@@ -2,6 +2,7 @@
 
 use super::material::StoneMaterial;
 use super::model::StoneFractureModel;
+use crate::core::constants::numerical::MPA_TO_PA;
 use ndarray::Array3;
 
 #[test]
@@ -65,7 +66,7 @@ fn test_damage_accumulation() {
     let threshold = stone.tensile_strength();
     stress_field[[2, 2, 2]] = -2.0 * threshold;
 
-    model.apply_stress_loading(&stress_field, 1e-6, 1e6);
+    model.apply_stress_loading(&stress_field, 1e-6, MPA_TO_PA);
 
     assert!(model.damage_field()[[2, 2, 2]] > 0.0);
     assert!(model.damage_field()[[2, 2, 2]] <= 1.0);
@@ -81,7 +82,7 @@ fn test_damage_saturation() {
     stress_field[[1, 1, 1]] = -100.0 * stone.tensile_strength();
 
     for _ in 0..100 {
-        model.apply_stress_loading(&stress_field, 1e-6, 1e6);
+        model.apply_stress_loading(&stress_field, 1e-6, MPA_TO_PA);
     }
 
     assert_eq!(model.damage_field()[[1, 1, 1]], 1.0);
@@ -95,7 +96,7 @@ fn test_no_damage_below_threshold() {
     let mut stress_field = Array3::zeros((4, 4, 4));
     stress_field[[2, 2, 2]] = -0.5 * stone.tensile_strength();
 
-    model.apply_stress_loading(&stress_field, 1e-6, 1e6);
+    model.apply_stress_loading(&stress_field, 1e-6, MPA_TO_PA);
 
     assert_eq!(model.damage_field()[[2, 2, 2]], 0.0);
 }

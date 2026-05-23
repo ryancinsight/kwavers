@@ -50,6 +50,7 @@ impl PoroelasticProperties {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::numerical::MHZ_TO_HZ;
     use crate::physics::acoustics::mechanics::poroelastic::PoroelasticMaterial;
 
     /// `dynamic_permeability` at zero frequency equals the static permeability κ₀.
@@ -73,7 +74,7 @@ mod tests {
         let m = PoroelasticMaterial::default();
         let props = PoroelasticProperties::new(&m);
         let k1 = props.dynamic_permeability(1e3);
-        let k2 = props.dynamic_permeability(1e6);
+        let k2 = props.dynamic_permeability(MHZ_TO_HZ);
         let k3 = props.dynamic_permeability(1e9);
         assert!(k1 > k2, "κ(1kHz) must exceed κ(1MHz)");
         assert!(k2 > k3, "κ(1MHz) must exceed κ(1GHz)");

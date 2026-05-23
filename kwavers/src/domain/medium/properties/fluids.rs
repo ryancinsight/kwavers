@@ -292,6 +292,7 @@ pub const NANOPARTICLE_SUSPENSION: FluidProperties = FluidProperties {
 mod tests {
     use super::*;
     use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use crate::core::constants::numerical::MHZ_TO_HZ;
 
     #[test]
     fn test_blood_properties() {
@@ -357,7 +358,7 @@ mod tests {
     #[test]
     fn test_attenuation_frequency_scaling() {
         // Test frequency-dependent attenuation for all fluids
-        let freqs = [1e6, 2e6, 5e6, 10e6]; // 1, 2, 5, 10 MHz
+        let freqs = [MHZ_TO_HZ, 2.0 * MHZ_TO_HZ, 5.0 * MHZ_TO_HZ, 10.0 * MHZ_TO_HZ]; // 1, 2, 5, 10 MHz
 
         for fluid in &[WHOLE_BLOOD, CSF, ULTRASOUND_GEL] {
             let mut prev_att = 0.0;

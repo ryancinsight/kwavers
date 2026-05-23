@@ -413,6 +413,7 @@ fn bessel_j1(x: f64) -> f64 {
 mod tests {
     use super::*;
     use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use crate::core::constants::numerical::MHZ_TO_HZ;
 
     #[test]
     fn piston_directivity_on_axis() {
@@ -423,7 +424,7 @@ mod tests {
     #[test]
     fn array_factor_at_steering_angle_is_one() {
         let steer = 0.1_f64;
-        let k = 2.0 * PI * 2e6 / SOUND_SPEED_WATER_SIM;
+        let k = 2.0 * PI * 2.0 * MHZ_TO_HZ / SOUND_SPEED_WATER_SIM;
         let af = linear_array_factor(&[steer], k, 0.3e-3, 64, steer);
         assert!((af[0] - 1.0).abs() < 1e-6);
     }

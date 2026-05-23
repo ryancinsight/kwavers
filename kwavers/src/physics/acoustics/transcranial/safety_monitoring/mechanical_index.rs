@@ -1,6 +1,7 @@
 //! Mechanical index calculation per AIUM/NEMA UD 3-2004
 
 use super::monitor::TranscranialSafetyMonitor;
+use crate::core::constants::numerical::MPA_TO_PA;
 use crate::physics::acoustics::analysis::calculate_mechanical_index;
 
 impl TranscranialSafetyMonitor {
@@ -19,7 +20,7 @@ impl TranscranialSafetyMonitor {
             f64::INFINITY
         };
 
-        self.mechanical_index.peak_pressure = peak_pressure / 1e6; // Convert to MPa
+        self.mechanical_index.peak_pressure = peak_pressure / MPA_TO_PA; // Convert to MPa
 
         let mi = if pressure_domain_valid && self.frequency.is_finite() && self.frequency > 0.0 {
             calculate_mechanical_index(peak_pressure, self.frequency)

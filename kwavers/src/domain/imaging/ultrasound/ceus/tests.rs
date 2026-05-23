@@ -2,6 +2,7 @@
 
 use super::microbubble::Microbubble;
 use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 
 /// Cross-section must be strictly positive for any physical frequency.
 /// # Panics
@@ -11,7 +12,7 @@ use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 fn test_scattering_cross_section_positive() {
     let mb = Microbubble::sono_vue(); // 1.5 µm radius
     for &f_mhz in &[1.0f64, 2.0, 3.0, 5.0, 10.0] {
-        let sigma = mb.scattering_cross_section(f_mhz * 1e6);
+        let sigma = mb.scattering_cross_section(f_mhz * MHZ_TO_HZ);
         assert!(
             sigma > 0.0 && sigma.is_finite(),
             "σ_s must be positive and finite at {f_mhz} MHz, got {sigma:.3e}"

@@ -5,6 +5,8 @@
 
 #![allow(dead_code)] // Clinical configuration constants for library users
 
+use crate::core::constants::numerical::MHZ_TO_HZ;
+
 /// Typical radius for clinical hemispherical arrays (m)
 pub const HEMISPHERE_RADIUS_DEFAULT: f64 = 0.15; // 150 mm clinical radius
 
@@ -37,7 +39,7 @@ pub const MAX_F_NUMBER: f64 = 1.2;
 
 /// Clinical frequency range (Hz)
 pub const CLINICAL_FREQ_MIN: f64 = 200e3; // 200 kHz
-pub const CLINICAL_FREQ_MAX: f64 = 2e6; // 2 MHz
+pub const CLINICAL_FREQ_MAX: f64 = 2.0 * MHZ_TO_HZ; // 2 MHz
 
 /// Skull attenuation coefficient (Np/m/MHz)
 pub const SKULL_ATTENUATION: f64 = 70.0;

@@ -1,6 +1,7 @@
 //! `MicrobubblePopulation` — bubble population with size distribution and scattering.
 
 use super::microbubble::{CeusSizeDistribution, Microbubble};
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 
 /// Population of microbubbles with size distribution
@@ -124,7 +125,7 @@ impl MicrobubblePopulation {
             let diameter_um = radius_eq * 2.0 * 1e6;
             let base_freq_mhz = 6.0 / diameter_um;
             let shell_factor = (shell_elasticity / 1000.0).mul_add(0.2, 1.0);
-            let f0_hz = base_freq_mhz * shell_factor * 1e6;
+            let f0_hz = base_freq_mhz * shell_factor * MHZ_TO_HZ;
 
             if !f0_hz.is_finite() || f0_hz <= 0.0 {
                 return Err(KwaversError::Validation(ValidationError::InvalidValue {

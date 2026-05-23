@@ -329,6 +329,7 @@ impl PluginBasedSolver {
 mod tests {
     use super::*;
     use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use crate::core::constants::numerical::MHZ_TO_HZ;
     use crate::domain::boundary::DomainPMLBoundary;
     use crate::domain::medium::homogeneous::HomogeneousMedium;
     use crate::domain::signal::SineWave;
@@ -344,7 +345,7 @@ mod tests {
             &grid,
         ));
         let boundary = Box::new(DomainPMLBoundary::new(Default::default()).unwrap());
-        let signal = Arc::new(SineWave::new(1e6, 1.0, 0.0));
+        let signal = Arc::new(SineWave::new(MHZ_TO_HZ, 1.0, 0.0));
         let source = Box::new(PointSource::new((5.0, 5.0, 5.0), signal));
 
         let solver = PluginBasedSolver::new(grid, time, medium, boundary, source);

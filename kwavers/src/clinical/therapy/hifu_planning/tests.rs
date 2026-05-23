@@ -270,7 +270,7 @@ fn test_sonication_schedule_pitch_proves_target_coverage() {
 #[test]
 fn test_hifu_plan_uses_subspot_dose_for_feasibility() {
     let transducer = ClinicalHIFUTransducer {
-        frequency: 1.5e6,
+        frequency: 1.5 * MHZ_TO_HZ,
         focal_length_mm: 80.0,
         aperture_diameter_mm: 40.0,
         power: 50.0,

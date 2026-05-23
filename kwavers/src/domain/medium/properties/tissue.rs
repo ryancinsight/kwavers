@@ -335,6 +335,7 @@ pub const CSF: TissueProperties = TissueProperties {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::numerical::MHZ_TO_HZ;
 
     #[test]
     fn test_tissue_properties_valid() {
@@ -376,8 +377,8 @@ mod tests {
 
     #[test]
     fn test_attenuation_at_frequency() {
-        let att_1mhz = BRAIN_WHITE_MATTER.absorption_at_frequency(1e6);
-        let att_3mhz = BRAIN_WHITE_MATTER.absorption_at_frequency(3e6);
+        let att_1mhz = BRAIN_WHITE_MATTER.absorption_at_frequency(MHZ_TO_HZ);
+        let att_3mhz = BRAIN_WHITE_MATTER.absorption_at_frequency(3.0 * MHZ_TO_HZ);
         assert!(att_3mhz > att_1mhz);
     }
 }

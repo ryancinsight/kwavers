@@ -216,32 +216,33 @@ impl BoundaryCondition for ImpedanceBoundary {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::numerical::MHZ_TO_HZ;
 
     #[test]
     fn test_impedance_boundary() {
         let boundary = ImpedanceBoundary::new(1.5e6, BoundaryDirections::all());
 
         // Test reflection coefficient
-        let r = boundary.reflection_coefficient(1e6, 1.5e6); // Matched impedance
+        let r = boundary.reflection_coefficient(MHZ_TO_HZ, 1.5e6); // Matched impedance
         assert!(r.abs() < 1e-10); // Perfect match, no reflection
 
-        let r = boundary.reflection_coefficient(1e6, 3.0e6); // Mismatched
+        let r = boundary.reflection_coefficient(MHZ_TO_HZ, 3.0e6); // Mismatched
         assert!(r.abs() > 0.0); // Some reflection
     }
 
     #[test]
     fn test_impedance_boundary_gaussian_profile() {
         let boundary = ImpedanceBoundary::new(1.5e6, BoundaryDirections::all())
-            .with_gaussian_profile(1e6, 0.5e6);
+            .with_gaussian_profile(MHZ_TO_HZ, 0.5 * MHZ_TO_HZ);
 
         let medium_impedance = 1.5e6;
 
         // At center frequency, should have maximum effect
-        let z_ratio_center = boundary.impedance_ratio(1e6, medium_impedance);
+        let z_ratio_center = boundary.impedance_ratio(MHZ_TO_HZ, medium_impedance);
         assert!((z_ratio_center - 1.0).abs() < 1e-10);
 
         // Off center, should be attenuated by Gaussian
-        let z_ratio_off = boundary.impedance_ratio(0.5e6, medium_impedance);
+        let z_ratio_off = boundary.impedance_ratio(0.5 * MHZ_TO_HZ, medium_impedance);
         assert!(z_ratio_off < z_ratio_center);
     }
 
@@ -252,7 +253,7 @@ mod tests {
         // Z_target = 2.0 MRayl, Z_medium = 1.0 MRayl
         // z_ratio = 2.0
         // R = (2.0 - 1.0) / (2.0 + 1.0) = 1/3 ≈ 0.333
-        let r = boundary.reflection_coefficient(1e6, 1.0e6);
+        let r = boundary.reflection_coefficient(MHZ_TO_HZ, 1.0e6);
         assert!((r - 1.0 / 3.0).abs() < 1e-10);
     }
 
@@ -261,7 +262,7 @@ mod tests {
         let boundary = ImpedanceBoundary::new(1.5e6, BoundaryDirections::all());
 
         // Matched impedances should give zero reflection
-        let r = boundary.reflection_coefficient(1e6, 1.5e6);
+        let r = boundary.reflection_coefficient(MHZ_TO_HZ, 1.5e6);
         assert!(r.abs() < 1e-12);
     }
 
@@ -271,7 +272,7 @@ mod tests {
 
         // Very high target impedance (rigid wall)
         // R → +1 as Z_target → ∞
-        let r = boundary.reflection_coefficient(1e6, 1.5e6);
+        let r = boundary.reflection_coefficient(MHZ_TO_HZ, 1.5e6);
         assert!(r > 0.999, "Rigid wall should have R ≈ 1, got {}", r);
     }
 
@@ -281,7 +282,7 @@ mod tests {
 
         // Very low target impedance (pressure release)
         // R → -1 as Z_target → 0
-        let r = boundary.reflection_coefficient(1e6, 1.5e6);
+        let r = boundary.reflection_coefficient(MHZ_TO_HZ, 1.5e6);
         assert!(r < -0.999, "Pressure release should have R ≈ -1, got {}", r);
     }
 }

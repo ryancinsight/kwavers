@@ -285,6 +285,7 @@ impl AcousticMaterialProperties {
 mod tests {
     use super::*;
     use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use crate::core::constants::numerical::MHZ_TO_HZ;
     use crate::core::constants::thermodynamic::SPECIFIC_HEAT_WATER;
 
     #[test]
@@ -353,8 +354,8 @@ mod tests {
             SPECIFIC_HEAT_WATER,
             0.6,
         );
-        let att_1mhz = mat.absorption_at_frequency(1e6);
-        let att_2mhz = mat.absorption_at_frequency(2e6);
+        let att_1mhz = mat.absorption_at_frequency(MHZ_TO_HZ);
+        let att_2mhz = mat.absorption_at_frequency(2.0 * MHZ_TO_HZ);
         // With exponent 1.0, doubling frequency doubles absorption
         assert!(att_2mhz > att_1mhz);
     }

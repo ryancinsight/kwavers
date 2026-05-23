@@ -1,5 +1,6 @@
 use super::properties::AcousticSkullProperties;
 use super::simulation::TranscranialSimulation;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::domain::grid::Grid;
 
 #[test]
@@ -46,7 +47,7 @@ fn test_frequency_dependent_attenuation() {
     let props = AcousticSkullProperties::default();
 
     let atten_500k = props.attenuation_at_frequency(500e3);
-    let atten_1m = props.attenuation_at_frequency(1e6);
+    let atten_1m = props.attenuation_at_frequency(MHZ_TO_HZ);
 
     // Attenuation should increase with frequency
     assert!(atten_1m > atten_500k);

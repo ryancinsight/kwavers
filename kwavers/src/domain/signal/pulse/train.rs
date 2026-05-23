@@ -138,10 +138,11 @@ impl Signal for PulseTrain {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::numerical::MHZ_TO_HZ;
 
     #[test]
     fn test_pulse_train() {
-        let train = PulseTrain::new(1000.0, 1e6, 1.0);
+        let train = PulseTrain::new(1000.0, MHZ_TO_HZ, 1.0);
 
         // Test periodicity
         let t1 = 0.0;

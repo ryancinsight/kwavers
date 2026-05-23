@@ -2,6 +2,7 @@
 //!
 //! Reference: Fellah & Depollier (2000) "Transient acoustic wave propagation"
 
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::physics::mechanics::poroelastic::{BiotTheory, PoroelasticMaterial};
@@ -34,7 +35,7 @@ impl PoroelasticSolver {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     pub fn compute_stable_timestep(&self) -> KwaversResult<f64> {
-        let speeds = self.biot.compute_wave_speeds(1e6)?; // At 1 MHz
+        let speeds = self.biot.compute_wave_speeds(MHZ_TO_HZ)?; // At 1 MHz
         let c_max = speeds.fast_wave;
 
         let dx_min = self.grid.dx.min(self.grid.dy).min(self.grid.dz);

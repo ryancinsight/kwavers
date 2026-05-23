@@ -4,6 +4,7 @@ use super::super::types::{BoundaryCouplingPhysicsDomain, BoundaryCouplingType};
 use super::interface::BoundaryMultiPhysicsInterface;
 use crate::core::constants::fundamental::DENSITY_BLOOD;
 use crate::core::constants::medical::BLOOD_SPECIFIC_HEAT;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 
 const Z_WATER: f64 = 1_479_036.0;
 const Z_SOFT_TISSUE: f64 = 1_632_400.0;
@@ -21,7 +22,7 @@ fn test_multiphysics_interface_photoacoustic() {
             gruneisen: 0.15,
         },
     );
-    let tau = interface.transmission_coefficient(1e6);
+    let tau = interface.transmission_coefficient(MHZ_TO_HZ);
     assert!(tau > 0.0);
     assert!((0.0..=1.0).contains(&tau));
 }
@@ -42,7 +43,7 @@ fn test_acoustic_elastic_water_soft_tissue_transmission() {
             z2_rayl: Z_SOFT_TISSUE,
         },
     );
-    let tau = interface.transmission_coefficient(1e6);
+    let tau = interface.transmission_coefficient(MHZ_TO_HZ);
     let expected = 4.0 * Z_WATER * Z_SOFT_TISSUE / (Z_WATER + Z_SOFT_TISSUE).powi(2);
     assert!(
         (tau - expected).abs() < 1e-10,
@@ -76,7 +77,7 @@ fn test_acoustic_elastic_water_bone_transmission() {
             z2_rayl: Z_BONE,
         },
     );
-    let tau = interface.transmission_coefficient(1e6);
+    let tau = interface.transmission_coefficient(MHZ_TO_HZ);
     let expected = 4.0 * Z_WATER * Z_BONE / (Z_WATER + Z_BONE).powi(2);
     assert!(
         (tau - expected).abs() < 1e-10,
@@ -149,7 +150,7 @@ fn test_acoustic_thermal_coupling_bounds() {
             c_p_j_per_kg_k: BLOOD_SPECIFIC_HEAT,
         },
     );
-    let tau = interface.transmission_coefficient(1e6);
+    let tau = interface.transmission_coefficient(MHZ_TO_HZ);
     assert!((0.0..=1.0).contains(&tau), "τ = {}", tau);
     let expected = (2.0 * 2.0 / (DENSITY_BLOOD * BLOOD_SPECIFIC_HEAT)).clamp(0.0, 1.0);
     assert!((tau - expected).abs() < 1e-15);
@@ -164,7 +165,7 @@ fn test_multiphysics_electromagnetic_thermal() {
         BoundaryCouplingPhysicsDomain::Thermal,
         BoundaryCouplingType::ElectromagneticThermal,
     );
-    let tau = interface.transmission_coefficient(1e6);
+    let tau = interface.transmission_coefficient(MHZ_TO_HZ);
     assert!(tau > 0.9, "photothermal coupling should exceed 90%");
     assert!(tau <= 1.0);
 }
@@ -197,7 +198,7 @@ fn test_acoustic_elastic_self_matched() {
             z2_rayl: Z_WATER,
         },
     );
-    let tau = interface.transmission_coefficient(1e6);
+    let tau = interface.transmission_coefficient(MHZ_TO_HZ);
     assert!(
         (tau - 1.0).abs() < 1e-14,
         "Z₁=Z₂ must give τ=1; got {}",

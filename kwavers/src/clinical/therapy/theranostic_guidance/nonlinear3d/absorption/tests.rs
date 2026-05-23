@@ -4,6 +4,7 @@
 
 use super::{AbsorptionBuilder, FractionalLaplacianAbsorption};
 use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 
 fn build_homogeneous_operator(
     n: usize,
@@ -43,7 +44,7 @@ fn fractional_laplacian_absorption_builder_matches_treeby_cox_2010_coefficients(
 
     // The FDTD wave-equation form (Treeby-Cox 2010 Eq. 11 multiplied
     // by c²) gives τ_FDTD = 2·α₀_ω·c^(y+1) with α₀_ω = α₀_f / ω_ref^y.
-    let omega_ref = std::f64::consts::TAU * 1.0e6;
+    let omega_ref = std::f64::consts::TAU * MHZ_TO_HZ;
     let alpha0_omega = alpha0 / omega_ref.powf(y);
     let expected_tau = 2.0 * alpha0_omega * c0.powf(y + 1.0);
     let expected_dt_tau = dt_s * expected_tau;

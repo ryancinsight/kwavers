@@ -13,6 +13,7 @@
 //! - **DRY**: Reusable tensor operations
 //! - **KISS**: Focused API for wave mode conversion
 
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::core::error::{KwaversResult, PhysicsError};
 use ndarray::Array2;
 
@@ -71,7 +72,7 @@ impl Default for ViscoelasticConfig {
         Self {
             q_p: 100.0,
             q_s: 50.0,
-            reference_frequency: 1e6, // 1 MHz
+            reference_frequency: MHZ_TO_HZ, // 1 MHz
             frequency_dependent: true,
             frequency_exponent: 0.8,
         }

@@ -3,6 +3,7 @@
 //! Core engine for managing visualization pipeline.
 
 use crate::{
+    core::constants::numerical::MHZ_TO_HZ,
     core::error::{KwaversError, KwaversResult},
     domain::field::UnifiedFieldType,
     domain::grid::Grid,
@@ -58,7 +59,7 @@ impl VisualizationEngine {
         );
 
         let mut parameters = HashMap::new();
-        parameters.insert("frequency".to_string(), 1.0e6);
+        parameters.insert("frequency".to_string(), MHZ_TO_HZ);
         parameters.insert("amplitude".to_string(), 1.0);
         parameters.insert("opacity".to_string(), 0.8);
 

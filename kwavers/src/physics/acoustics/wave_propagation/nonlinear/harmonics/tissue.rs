@@ -1,3 +1,5 @@
+use crate::core::constants::numerical::MHZ_TO_HZ;
+
 use super::super::{NonlinearParameters, TissueHarmonicProperties};
 
 /// Normalised THI efficiency at focal depth F, dimensionless ∈ (0, 1].
@@ -36,12 +38,12 @@ pub fn tissue_harmonic_efficiency(
 #[must_use]
 pub fn optimal_harmonic_frequency(depth: f64, params: &NonlinearParameters) -> f64 {
     let y = params.attenuation_exponent;
-    let alpha0_per_hz_y = params.attenuation_coeff / (1.0e6_f64).powf(y);
+    let alpha0_per_hz_y = params.attenuation_coeff / MHZ_TO_HZ.powf(y);
     let c = alpha0_per_hz_y * (1.0 + y.exp2()) * y * depth;
 
     if c <= 0.0 {
-        return 2.0e6;
+        return 2.0 * MHZ_TO_HZ;
     }
 
-    (1.0 / c).powf(1.0 / y).clamp(1.0e6, 15.0e6)
+    (1.0 / c).powf(1.0 / y).clamp(MHZ_TO_HZ, 15.0 * MHZ_TO_HZ)
 }

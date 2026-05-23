@@ -1,3 +1,4 @@
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use ndarray::Array3;
 
 /// Permeability enhancement data
@@ -32,7 +33,7 @@ pub struct BBBParameters {
 impl Default for BBBParameters {
     fn default() -> Self {
         Self {
-            frequency: 1.0e6,        // 1 MHz
+            frequency: MHZ_TO_HZ,    // 1 MHz
             prf: 1.0,                // 1 Hz
             duty_cycle: 10.0,        // 10%
             duration: 120.0,         // 2 minutes

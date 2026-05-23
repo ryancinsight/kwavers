@@ -81,6 +81,7 @@ impl BemFemSolver {
 mod tests {
     use super::*;
     use crate::core::constants::fundamental::SOUND_SPEED_WATER;
+    use crate::core::constants::numerical::MHZ_TO_HZ;
     use crate::domain::mesh::tetrahedral::MeshBoundaryType;
 
     #[test]
@@ -90,7 +91,7 @@ mod tests {
 
         let bem_boundary = vec![0];
         let config = BemFemCouplingConfig::default();
-        let wavenumber = 2.0 * std::f64::consts::PI * 1e6 / SOUND_SPEED_WATER; // k = 2πf/c
+        let wavenumber = 2.0 * std::f64::consts::PI * MHZ_TO_HZ / SOUND_SPEED_WATER; // k = 2πf/c
 
         let solver = BemFemSolver::new(config, fem_mesh, bem_boundary, wavenumber);
 

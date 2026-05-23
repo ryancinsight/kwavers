@@ -2,15 +2,16 @@
 
 use super::super::KWaveArray;
 use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 
 #[test]
 fn test_kwave_array_setters_preserve_elements() {
     let mut array = KWaveArray::new();
     array.add_disc_element((0.0, 0.0, 0.0), 0.005, None);
-    array.set_frequency(2.0e6);
+    array.set_frequency(2.0 * MHZ_TO_HZ);
     array.set_sound_speed(1600.0);
     assert_eq!(array.num_elements(), 1);
-    assert!((array.frequency() - 2.0e6).abs() < 1.0e-12);
+    assert!((array.frequency() - 2.0 * MHZ_TO_HZ).abs() < 1.0e-12);
     let delays = array.get_focus_delays((0.0, 0.0, 1.0));
     assert_eq!(delays.len(), 1);
     assert!((delays[0] - 1.0 / 1600.0).abs() < 1.0e-12);
@@ -18,7 +19,7 @@ fn test_kwave_array_setters_preserve_elements() {
 
 #[test]
 fn test_focus_delays() {
-    let mut array = KWaveArray::with_params(1e6, SOUND_SPEED_WATER_SIM);
+    let mut array = KWaveArray::with_params(MHZ_TO_HZ, SOUND_SPEED_WATER_SIM);
     array.add_disc_element((0.0, 0.0, 0.0), 0.005, None);
     array.add_disc_element((0.01, 0.0, 0.0), 0.005, None);
     let delays = array.get_focus_delays((0.005, 0.0, 0.02));
@@ -33,7 +34,7 @@ fn test_focus_delays() {
 ///
 #[test]
 fn test_get_element_delays_symmetric_array() {
-    let mut array = KWaveArray::with_params(1e6, SOUND_SPEED_WATER_SIM);
+    let mut array = KWaveArray::with_params(MHZ_TO_HZ, SOUND_SPEED_WATER_SIM);
     array.add_disc_element((-0.005, 0.0, 0.0), 0.002, None);
     array.add_disc_element((0.005, 0.0, 0.0), 0.002, None);
     let delays = array.get_element_delays((0.0, 0.0, 0.02));
@@ -50,7 +51,7 @@ fn test_get_element_delays_symmetric_array() {
 ///
 #[test]
 fn test_get_element_delays_non_negative_min_zero() {
-    let mut array = KWaveArray::with_params(1e6, SOUND_SPEED_WATER_SIM);
+    let mut array = KWaveArray::with_params(MHZ_TO_HZ, SOUND_SPEED_WATER_SIM);
     array.add_disc_element((0.0, 0.0, 0.0), 0.005, None);
     array.add_disc_element((0.01, 0.0, 0.0), 0.005, None);
     array.add_disc_element((0.02, 0.0, 0.0), 0.005, None);

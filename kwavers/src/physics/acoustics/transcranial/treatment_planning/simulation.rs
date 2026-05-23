@@ -266,6 +266,7 @@ fn estimate_treatment_time_from_intensity_field(acoustic_field: &Array3<f64>) ->
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::numerical::MHZ_TO_HZ;
 
     fn one_element_setup(amplitude: f64) -> TransducerSetup {
         TransducerSetup {
@@ -273,7 +274,7 @@ mod tests {
             element_positions: vec![[0.0, 0.0, 0.0]],
             element_phases: vec![0.0],
             element_amplitudes: vec![amplitude],
-            frequency: 1.0e6,
+            frequency: MHZ_TO_HZ,
             focal_distance: 1.0,
         }
     }
@@ -303,7 +304,7 @@ mod tests {
             element_positions: vec![[1.0, 0.0, 0.0]],
             element_phases: vec![0.0],
             element_amplitudes: vec![1.0],
-            frequency: 1.0e6,
+            frequency: MHZ_TO_HZ,
             focal_distance: 1.0,
         };
         let point_m = [0.002, 0.0, 0.0];

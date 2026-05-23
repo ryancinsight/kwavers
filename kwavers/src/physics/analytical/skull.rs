@@ -216,6 +216,7 @@ pub fn skull_transmission_spectrum(
 mod tests {
     use super::*;
     use crate::core::constants::acoustic_parameters::{BONE_DENSITY, SOUND_SPEED_SKULL};
+    use crate::core::constants::numerical::MHZ_TO_HZ;
     use crate::core::constants::thermodynamic::SPECIFIC_HEAT_BONE;
 
     #[test]
@@ -270,7 +271,7 @@ mod tests {
         let z_brain = 1.6e6_f64;
         // Use a very thin layer (d → 0 limit); cos≈1, sin≈0
         let t = skull_transfer_matrix_transmission(
-            1e6,
+            MHZ_TO_HZ,
             z_water,
             z_skull,
             z_brain,
@@ -291,7 +292,7 @@ mod tests {
     fn transfer_matrix_at_matching_impedance() {
         // When Z_skull = Z_water = Z_brain: T → 1 regardless of frequency
         let t =
-            skull_transfer_matrix_transmission(1e6, 1.5e6, 1.5e6, 1.5e6, SOUND_SPEED_SKULL, 7e-3);
+            skull_transfer_matrix_transmission(MHZ_TO_HZ, 1.5e6, 1.5e6, 1.5e6, SOUND_SPEED_SKULL, 7e-3);
         // With equal impedances, the 1+Z3/Z1 = 2 and Z3/Z2+Z2/Z1 = 2,
         // so T = 2/(2·cos + i·2·sin) = 1/(cos+i·sin) = exp(-iφ), |T| = 1
         assert!((t.norm() - 1.0).abs() < 1e-8, "|T|={}", t.norm());
