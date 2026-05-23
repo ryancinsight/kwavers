@@ -18,7 +18,7 @@ Figures produced:
   fig03: Second harmonic growth — Fubini, linearized, and Taylor comparison
   fig04: Effect of B/A on shock distance for tissue media
   fig05: Thermoviscous absorption vs frequency (Stokes-Kirchhoff vs power-law)
-  fig06: Westervelt solver validation — kwavers vs analytical (requires pykwavers)
+  fig06: kwavers PSTD Westervelt solver vs Fubini analytical (requires pykwavers)
 
 Usage::
 
@@ -36,6 +36,13 @@ from scipy.special import jv  # Bessel functions J_n
 import matplotlib
 
 matplotlib.use("Agg")
+
+try:
+    import pykwavers as kw
+    _HAS_PYKWAVERS = True
+except ImportError:
+    kw = None  # type: ignore[assignment]
+    _HAS_PYKWAVERS = False
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 
@@ -319,37 +326,135 @@ savefig("fig05_absorption_models")
 plt.close()
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Figure 06: Fubini harmonic residual verification
+# Figure 06: kwavers PSTD Westervelt solver vs Fubini analytical
 # ─────────────────────────────────────────────────────────────────────────────
 
-print("[fig06] Fubini harmonic residual verification")
-sigma = np.linspace(0.02, 0.95, 250)
-harmonics = np.arange(1, 12)
-residual = np.zeros((harmonics.size, sigma.size))
-for i, n in enumerate(harmonics):
-    exact = np.array([fubini_harmonic_amplitude(n, s, 1.0) for s in sigma])
-    small_signal = np.where(
-        n == 1,
-        1.0 - 0.125 * sigma * sigma,
-        np.where(n == 2, 0.5 * sigma, 0.0),
-    )
-    residual[i, :] = np.abs(exact - small_signal)
+print("[fig06] Westervelt PSTD solver validation (kwavers vs Fubini)")
 
-fig, ax = plt.subplots(figsize=(7.4, 4.8))
-im = ax.imshow(
-    residual,
-    origin="lower",
-    aspect="auto",
-    extent=[sigma[0], sigma[-1], harmonics[0], harmonics[-1]],
-    cmap="magma",
-)
-ax.set_xlabel(r"normalized distance $\sigma = z/z_s$")
-ax.set_ylabel("harmonic index n")
-ax.set_title("Fubini harmonic departure from weak-shock approximation")
-fig.colorbar(im, ax=ax, label=r"$|A_n^{Fubini} - A_n^{weak}|$")
-plt.tight_layout()
-savefig("fig06_fubini_harmonic_residual")
-plt.close()
+if not _HAS_PYKWAVERS:
+    print("  [skip] pykwavers not installed; skipping fig06")
+    print("  Install pykwavers to generate Westervelt PSTD solver validation figure.")
+else:
+    # ── Grid and solver parameters ─────────────────────────────────────────────
+    # 12 pts/wavelength at F0 → 6 pts at 2nd harmonic (adequate for PSTD).
+    DX_SIM = C0 / (12.0 * F0)       # 0.125 mm grid spacing
+    NX_SIM = 600                      # 600 cells → 75 mm domain
+    NY_SIM, NZ_SIM = 1, 1            # 1-D geometry (NX × 1 × 1)
+    CFL = 0.25
+    DT_SIM = CFL * DX_SIM / C0      # ≈ 2.08e-8 s time step
+    PML = 10                          # absorbing boundary cells each side
+    B_ON_A = 5.0                      # B/A for water at 20 °C → beta = 3.5
+
+    # Sensor positions: 4 axial cells at sigma ≈ 0.10, 0.20, 0.30, 0.40.
+    # Must satisfy PML < ix < NX_SIM - PML.
+    SENSOR_IX = [120, 240, 360, 480]
+    SIGMA_SENSOR = [ix * DX_SIM / Z_S for ix in SENSOR_IX]
+
+    # Run long enough to reach steady state at the farthest sensor.
+    N_TRAVEL = int(SENSOR_IX[-1] * DX_SIM / (C0 * DT_SIM)) + 1
+    N_STEADY_PERIODS = 10                               # periods of F0 for FFT
+    N_STEPS_SIM = N_TRAVEL + int(N_STEADY_PERIODS / (F0 * DT_SIM)) + 1
+
+    # ── Source: sinusoidal plane wave injected just inside domain ─────────────
+    src_ix = PML + 2
+    src_mask_f = np.zeros((NX_SIM, NY_SIM, NZ_SIM), dtype=float)
+    src_mask_f[src_ix, 0, 0] = 1.0
+
+    t_src = np.arange(N_STEPS_SIM) * DT_SIM
+    signal_2d = (P0 * np.sin(OMEGA0 * t_src)).reshape(1, N_STEPS_SIM)
+
+    source = kw.Source.from_mask(src_mask_f, signal_2d, F0)
+
+    # ── Sensor mask: Boolean flags at 4 axial positions ───────────────────────
+    sensor_mask_b = np.zeros((NX_SIM, NY_SIM, NZ_SIM), dtype=bool)
+    for ix in SENSOR_IX:
+        sensor_mask_b[ix, 0, 0] = True
+    sensor = kw.Sensor.from_mask(sensor_mask_b)
+
+    # ── Build and run simulation ───────────────────────────────────────────────
+    grid = kw.Grid(nx=NX_SIM, ny=NY_SIM, nz=NZ_SIM,
+                   dx=DX_SIM, dy=DX_SIM, dz=DX_SIM)
+    medium = kw.Medium.homogeneous(
+        sound_speed=C0, density=RHO0, nonlinearity=B_ON_A
+    )
+    sim = kw.Simulation(grid, medium, source, sensor, solver=kw.SolverType.PSTD)
+    sim.set_nonlinear(True)
+    sim.set_pml_size(PML)
+
+    print(
+        f"  NX={NX_SIM}, NY=NZ=1, DX={DX_SIM * 1e3:.3f} mm, "
+        f"N_STEPS={N_STEPS_SIM}, DT={DT_SIM * 1e9:.2f} ns"
+    )
+    result = sim.run(time_steps=N_STEPS_SIM, dt=DT_SIM)
+
+    # ── Extract harmonic amplitudes via windowed FFT ───────────────────────────
+    sensor_data = np.asarray(result.sensor_data)  # (4, N_STEPS_SIM)
+    dt_run = float(result.dt)
+    n_steady_samp = int(N_STEADY_PERIODS / (F0 * dt_run))
+    N_HARM = 3  # harmonics n = 1, 2, 3
+
+    pstd_amps = np.zeros((len(SENSOR_IX), N_HARM))
+    for i_s in range(len(SENSOR_IX)):
+        ts = sensor_data[i_s, -n_steady_samp:]
+        win = np.hanning(len(ts))
+        P_f = np.abs(np.fft.rfft(ts * win)) * 2.0 / win.sum()
+        df = 1.0 / (len(ts) * dt_run)
+        for n in range(1, N_HARM + 1):
+            idx_f = int(round(n * F0 / df))
+            pstd_amps[i_s, n - 1] = P_f[idx_f] if idx_f < len(P_f) else 0.0
+
+    fubini_amps = np.zeros((len(SENSOR_IX), N_HARM))
+    for i_s, ix in enumerate(SENSOR_IX):
+        z_sens = ix * DX_SIM
+        sigma_s = z_sens / Z_S
+        for n in range(1, N_HARM + 1):
+            fubini_amps[i_s, n - 1] = fubini_harmonic_amplitude(n, sigma_s, P0)
+
+    # ── Plot: PSTD vs Fubini per harmonic ─────────────────────────────────────
+    fig, axes = plt.subplots(1, N_HARM, figsize=(13, 4.5))
+    colors_h = ["C0", "C1", "C2"]
+    sigma_pts = [ix * DX_SIM / Z_S for ix in SENSOR_IX]
+
+    max_rel_err = 0.0
+    for col, (ax, col_h) in enumerate(zip(axes, colors_h)):
+        n = col + 1
+        ax.plot(
+            sigma_pts, fubini_amps[:, col] / P0 * 100.0,
+            "s--", color=col_h, ms=9, lw=1.5, label="Fubini (analytical)",
+        )
+        ax.plot(
+            sigma_pts, pstd_amps[:, col] / P0 * 100.0,
+            "o-", color=col_h, ms=9, lw=2.0, label="kwavers PSTD",
+        )
+        for i_s, sigma_s in enumerate(sigma_pts):
+            ref = fubini_amps[i_s, col]
+            if ref > 1e-3 * P0:
+                rel_e = abs(pstd_amps[i_s, col] - ref) / ref * 100.0
+                max_rel_err = max(max_rel_err, rel_e / 100.0)
+                ax.annotate(
+                    f"{rel_e:.1f}%",
+                    xy=(sigma_s, pstd_amps[i_s, col] / P0 * 100.0),
+                    xytext=(0, 9), textcoords="offset points",
+                    fontsize=7, ha="center", color="grey",
+                )
+        ax.set_xlabel(r"Normalized distance $\sigma = z/z_s$")
+        ax.set_ylabel(r"$|P_n| / P_0$ (%)")
+        ax.set_title(rf"Harmonic $n = {n}$")
+        ax.legend(fontsize=8)
+        ax.grid(True, alpha=0.25)
+        ax.set_xlim(0.0, max(sigma_pts) * 1.15)
+        ax.set_ylim(bottom=0.0)
+
+    fig.suptitle(
+        "Figure 06 — kwavers PSTD Westervelt solver vs Fubini analytical\n"
+        r"Water: $c_0=1500$ m/s, $\rho_0=1000$ kg/m³, $B/A=5$, "
+        r"$f_0=1$ MHz, $P_0=1$ MPa  (grey: relative error PSTD vs Fubini)",
+        fontsize=11, y=1.04,
+    )
+    plt.tight_layout()
+    print(f"  Max relative error PSTD vs Fubini: {max_rel_err * 100:.2f}%")
+    savefig("fig06_westervelt_pstd_validation")
+    plt.close()
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Summary
@@ -357,10 +462,10 @@ plt.close()
 
 print(
     f"\nChapter 3 figures written to: {os.path.relpath(OUT_DIR)}\n"
-    "  fig01_waveform_evolution.*    — Fubini waveform at σ = 0, 0.25, 0.5, 0.75, 0.99\n"
-    "  fig02_harmonic_spectra_sigma.*— Harmonics 1–5 vs normalized distance σ\n"
-    "  fig03_second_harmonic_growth.*— P₂ comparison: Fubini / linearized / Theorem 3.8\n"
-    "  fig04_shock_distance_tissue.* — z_s for 7 tissue media at 3 source amplitudes\n"
-    "  fig05_absorption_models.*     — Stokes-Kirchhoff (y=2) vs tissue power-law\n"
-    "  fig06_fubini_harmonic_residual.* — Fubini vs weak-shock harmonic residual\n"
+    "  fig01_waveform_evolution.*       — Fubini waveform at σ = 0, 0.25, 0.5, 0.75, 0.99\n"
+    "  fig02_harmonic_spectra_sigma.*   — Harmonics 1–5 vs normalized distance σ\n"
+    "  fig03_second_harmonic_growth.*   — P₂ comparison: Fubini / linearized / Theorem 3.8\n"
+    "  fig04_shock_distance_tissue.*    — z_s for 7 tissue media at 3 source amplitudes\n"
+    "  fig05_absorption_models.*        — Stokes-Kirchhoff (y=2) vs tissue power-law\n"
+    "  fig06_westervelt_pstd_validation.* — kwavers PSTD Westervelt solver vs Fubini\n"
 )
