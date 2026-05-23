@@ -1,4 +1,5 @@
 use super::*;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 
 #[test]
 fn test_communication_protocol_display() {
@@ -111,7 +112,7 @@ fn test_device_specification_creation() {
         model: "TEST-1.5".to_string(),
         manufacturer: "TestCorp".to_string(),
         serial_number: "SN-001".to_string(),
-        frequency_range: (0.5e6, 10.0e6),
+        frequency_range: (0.5 * MHZ_TO_HZ, 10.0 * MHZ_TO_HZ),
         max_power: 50.0,
         num_elements: 128,
         focal_length_mm: Some(60.0),

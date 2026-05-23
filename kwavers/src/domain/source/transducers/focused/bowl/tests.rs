@@ -1,4 +1,5 @@
 use super::*;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::core::error::KwaversError;
 use crate::domain::grid::Grid;
 use std::f64::consts::PI;
@@ -11,7 +12,7 @@ fn bowl_layout_uses_canonical_equal_area_cap() {
         diameter: 0.04,
         center: [0.01, -0.02, 0.003],
         focus: [0.01, -0.02, 0.083],
-        frequency: 1.2e6,
+        frequency: 1.2 * MHZ_TO_HZ,
         amplitude: 7.5e5,
         element_size: Some(element_size),
         ..Default::default()

@@ -184,7 +184,7 @@ mod tests {
     #[test]
     fn from_transducer_accepts_axis_projected_bowl_layout() {
         let config =
-            BowlConfig::from_vertex_focus([0.0, 0.0, 0.16], [0.0, 0.0, 0.0], 0.32, 650.0e3, 1.0e6);
+            BowlConfig::from_vertex_focus([0.0, 0.0, 0.16], [0.0, 0.0, 0.0], 0.32, 650.0e3, MPA_TO_PA);
         let bowl = BowlTransducer::with_axis_projection_bounds(config, -0.28, 0.98, 16).unwrap();
         let expected_area: f64 = bowl.element_areas().iter().sum();
 

@@ -206,25 +206,25 @@ mod tests {
     /// MI = |P_neg,MPa| / √f_MHz. At P=0.5 MPa, f=1 MHz: MI = 0.5/1 = 0.5.
     #[test]
     fn mechanical_index_matches_formula_at_half_mpa_one_mhz() {
-        let mi = calculate_mechanical_index(-0.5e6, 1e6);
+        let mi = calculate_mechanical_index(-0.5 * MPA_TO_PA, MHZ_TO_HZ);
         assert!((mi - 0.5).abs() < 1e-12, "MI must be 0.5 (got {mi:.6})");
     }
 
     /// Zero frequency → MI = 0.0 (guarded branch).
     #[test]
     fn mechanical_index_zero_for_zero_frequency() {
-        let mi = calculate_mechanical_index(1e6, 0.0);
+        let mi = calculate_mechanical_index(MPA_TO_PA, 0.0);
         assert_eq!(mi, 0.0);
     }
 
     /// Nonfinite pressure or invalid frequency cannot define a finite MI.
     #[test]
     fn mechanical_index_rejects_nonfinite_pressure_and_invalid_frequency() {
-        assert_eq!(calculate_mechanical_index(f64::NAN, 1e6), 0.0);
-        assert_eq!(calculate_mechanical_index(f64::INFINITY, 1e6), 0.0);
-        assert_eq!(calculate_mechanical_index(1e6, -1e6), 0.0);
-        assert_eq!(calculate_mechanical_index(1e6, f64::NAN), 0.0);
-        assert_eq!(calculate_mechanical_index(1e6, f64::INFINITY), 0.0);
+        assert_eq!(calculate_mechanical_index(f64::NAN, MHZ_TO_HZ), 0.0);
+        assert_eq!(calculate_mechanical_index(f64::INFINITY, MHZ_TO_HZ), 0.0);
+        assert_eq!(calculate_mechanical_index(MPA_TO_PA, -MHZ_TO_HZ), 0.0);
+        assert_eq!(calculate_mechanical_index(MPA_TO_PA, f64::NAN), 0.0);
+        assert_eq!(calculate_mechanical_index(MPA_TO_PA, f64::INFINITY), 0.0);
     }
 
     // ── calculate_thermal_index ───────────────────────────────────────────────
@@ -232,7 +232,7 @@ mod tests {
     /// TI₀ = P_abs/P_ref. With P=40 mW, absorption factor=1, TI = 1.
     #[test]
     fn thermal_index_matches_reference_power_ratio() {
-        let ti = calculate_thermal_index(0.04, 1e6, 1.0);
+        let ti = calculate_thermal_index(0.04, MHZ_TO_HZ, 1.0);
         assert!((ti - 1.0).abs() < 1e-12, "TI reference ratio (got {ti:.6})");
     }
 
@@ -240,11 +240,11 @@ mod tests {
     /// nonnegative thermal exposure ratio.
     #[test]
     fn thermal_index_rejects_negative_or_nonfinite_domains() {
-        assert_eq!(calculate_thermal_index(-0.04, 1e6, 1.0), 0.0);
+        assert_eq!(calculate_thermal_index(-0.04, MHZ_TO_HZ, 1.0), 0.0);
         assert_eq!(calculate_thermal_index(0.04, 0.0, 1.0), 0.0);
-        assert_eq!(calculate_thermal_index(0.04, -1e6, 1.0), 0.0);
-        assert_eq!(calculate_thermal_index(0.04, 1e6, -1.0), 0.0);
-        assert_eq!(calculate_thermal_index(f64::NAN, 1e6, 1.0), 0.0);
+        assert_eq!(calculate_thermal_index(0.04, -MHZ_TO_HZ, 1.0), 0.0);
+        assert_eq!(calculate_thermal_index(0.04, MHZ_TO_HZ, -1.0), 0.0);
+        assert_eq!(calculate_thermal_index(f64::NAN, MHZ_TO_HZ, 1.0), 0.0);
         assert_eq!(calculate_thermal_index(0.04, f64::INFINITY, 1.0), 0.0);
     }
 
@@ -254,7 +254,7 @@ mod tests {
     #[test]
     fn derated_pressure_unchanged_at_zero_depth() {
         let p = 1e5_f64;
-        let derated = calculate_derated_pressure(p, 1e6, 0.0);
+        let derated = calculate_derated_pressure(p, MHZ_TO_HZ, 0.0);
         assert_eq!(
             derated, p,
             "derated pressure at depth=0 must equal original"
@@ -266,7 +266,7 @@ mod tests {
     #[test]
     fn derated_pressure_matches_fda_3db_at_10cm_1mhz() {
         let p = 1.0_f64;
-        let derated = calculate_derated_pressure(p, 1e6, 0.10); // 10 cm = 0.10 m
+        let derated = calculate_derated_pressure(p, MHZ_TO_HZ, 0.10); // 10 cm = 0.10 m
         let expected = 10.0_f64.powf(-3.0 / 20.0);
         assert!(
             (derated - expected).abs() < 1e-14,
@@ -278,9 +278,9 @@ mod tests {
     /// rejected by the physical domain contract.
     #[test]
     fn derated_pressure_rejects_negative_or_nonfinite_domains() {
-        assert_eq!(calculate_derated_pressure(f64::NAN, 1e6, 0.10), 0.0);
-        assert_eq!(calculate_derated_pressure(1.0, -1e6, 0.10), 0.0);
-        assert_eq!(calculate_derated_pressure(1.0, 1e6, -0.10), 0.0);
+        assert_eq!(calculate_derated_pressure(f64::NAN, MHZ_TO_HZ, 0.10), 0.0);
+        assert_eq!(calculate_derated_pressure(1.0, -MHZ_TO_HZ, 0.10), 0.0);
+        assert_eq!(calculate_derated_pressure(1.0, MHZ_TO_HZ, -0.10), 0.0);
         assert_eq!(calculate_derated_pressure(1.0, f64::INFINITY, 0.10), 0.0);
     }
 

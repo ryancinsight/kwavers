@@ -222,14 +222,14 @@ fn test_reset() {
 fn test_builder_pattern() {
     let config = PhysicsLossConfig::default()
         .with_loss_weights(0.7, 0.3)
-        .with_wave_params(400.0, 2_000_000.0)
+        .with_wave_params(400.0, 2.0 * MHZ_TO_HZ)
         .with_schedule(WeightSchedule::Linear { total_epochs: 50 })
         .without_history();
 
     assert!((config.lambda_data_init - 0.7).abs() < 1e-10);
     assert!((config.lambda_physics_init - 0.3).abs() < 1e-10);
     assert!((config.sound_speed - 400.0).abs() < 1e-10);
-    assert!((config.frequency - 2_000_000.0).abs() < 1e-10);
+    assert!((config.frequency - 2.0 * MHZ_TO_HZ).abs() < 1e-10);
     assert!(!config.track_history);
 }
 

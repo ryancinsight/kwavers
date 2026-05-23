@@ -269,7 +269,7 @@ mod tests {
             arc_angle: 0.5,
             center: [0.0, 0.0],
             orientation: 0.25,
-            frequency: 1.2e6,
+            frequency: 1.2 * MHZ_TO_HZ,
             amplitude: 2.0e5,
             element_spacing: Some(0.1),
         };

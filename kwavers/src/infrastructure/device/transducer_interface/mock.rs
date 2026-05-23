@@ -5,6 +5,7 @@ use super::types::{
     DeviceTelemetry, DeviceTransducerSpecification, HardwareCommand, HardwareResponse,
     TransducerDeviceStatus, TransducerState,
 };
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::core::error::{KwaversError, KwaversResult};
 use std::time::Instant;
 
@@ -34,7 +35,7 @@ impl MockTransducer {
                 model,
                 manufacturer,
                 serial_number: "MOCK-001".to_owned(),
-                frequency_range: (0.5e6, 15.0e6),
+                frequency_range: (0.5 * MHZ_TO_HZ, 15.0 * MHZ_TO_HZ),
                 max_power: 100.0,
                 num_elements: 64,
                 focal_length_mm: Some(50.0),
@@ -77,8 +78,8 @@ impl TransducerHardware for MockTransducer {
                 if freq < self.spec.frequency_range.0 || freq > self.spec.frequency_range.1 {
                     self.last_error = Some(format!(
                         "Frequency out of range [{:.1} MHz, {:.1} MHz]",
-                        self.spec.frequency_range.0 / 1e6,
-                        self.spec.frequency_range.1 / 1e6
+                        self.spec.frequency_range.0 / MHZ_TO_HZ,
+                        self.spec.frequency_range.1 / MHZ_TO_HZ
                     ));
                     return Err(KwaversError::InvalidInput("Invalid frequency".to_owned()));
                 }
