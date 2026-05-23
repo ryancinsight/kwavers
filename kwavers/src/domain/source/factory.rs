@@ -9,7 +9,7 @@ use crate::domain::source::{
     basic::{LinearArray, MatrixArray, PistonApodization, PistonConfig},
     transducers::{
         apodization::RectangularApodization,
-        focused::{BowlConfig, FocusedSource},
+        focused::{BowlConfig, BowlTransducer, FocusedSource},
     },
     wavefront::{
         BesselConfig, GaussianConfig, PlaneWaveSourceConfig, SphericalConfig, SphericalWaveType,
@@ -203,7 +203,15 @@ impl SourceFactory {
                     element_size: None, // Auto-calculate
                     apply_directivity: true,
                 };
-                Ok(Box::new(FocusedSource::new(bowl_config, signal, grid)?))
+                let transducer = match config.num_elements {
+                    Some(element_count) => {
+                        BowlTransducer::with_element_count(bowl_config, element_count)?
+                    }
+                    None => BowlTransducer::new(bowl_config)?,
+                };
+                Ok(Box::new(FocusedSource::from_transducer(
+                    transducer, signal, grid,
+                )))
             }
             SourceModel::Custom => Err(ConfigError::InvalidValue {
                 parameter: "model".to_owned(),
@@ -249,5 +257,32 @@ impl SourceFactory {
             }
             .into()),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::source::{DomainSourceParameters, SourceModel};
+
+    #[test]
+    fn focused_source_factory_honors_configured_element_count() {
+        let mut grid = Grid::new(24, 24, 24, 0.004, 0.004, 0.004).unwrap();
+        grid.origin = [-0.048, -0.048, -0.008];
+        let element_count = 17;
+        let config = DomainSourceParameters {
+            model: SourceModel::Focused,
+            position: [0.0, 0.0, 0.0],
+            focus: Some([0.0, 0.0, 0.08]),
+            radius: 0.02,
+            frequency: 650.0e3,
+            num_elements: Some(element_count),
+            ..Default::default()
+        };
+
+        let source = SourceFactory::create_source(&config, &grid).unwrap();
+
+        assert_eq!(source.positions().len(), element_count);
+        assert_eq!(source.focal_point(), Some((0.0, 0.0, 0.08)));
     }
 }
