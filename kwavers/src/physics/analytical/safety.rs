@@ -166,6 +166,7 @@ pub fn fda_isppa_limit_w_cm2() -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::medical::THERMAL_DOSE_REFERENCE_TEMP_C;
     use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
     use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 
@@ -201,7 +202,7 @@ mod tests {
     #[test]
     fn cem43_flat_43c() {
         // At exactly 43°C, R = 0.5, 0.5^0 = 1 → each step contributes dt/60
-        let t = vec![43.0; 6];
+        let t = vec![THERMAL_DOSE_REFERENCE_TEMP_C; 6];
         let dt = 10.0; // seconds
         let c = cem43_cumulative(&t, dt);
         let expected: Vec<f64> = (1..=6).map(|i| i as f64 * dt / 60.0).collect();
@@ -213,7 +214,7 @@ mod tests {
     #[test]
     fn cem43_below_threshold_smaller() {
         // Below 43°C (R=0.25), increments are smaller than at 43°C
-        let t_above = vec![43.0; 3];
+        let t_above = vec![THERMAL_DOSE_REFERENCE_TEMP_C; 3];
         let t_below = vec![BODY_TEMPERATURE_C; 3];
         let dt = 1.0;
         let c_above = cem43_cumulative(&t_above, dt);

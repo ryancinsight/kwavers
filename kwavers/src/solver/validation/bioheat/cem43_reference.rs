@@ -37,8 +37,8 @@ pub const R_FACTOR_SUBTHRESHOLD: f64 = 0.25;
 /// Sapareto & Dewey (1984) Table 1: R = 0.5 for T ≥ 43°C
 pub const R_FACTOR_SUPRATHRESHOLD: f64 = 0.5;
 
-/// Temperature threshold in Celsius
-pub const THRESHOLD_TEMP_C: f64 = 43.0;
+/// Temperature threshold in Celsius — delegates to [`crate::core::constants::medical::THERMAL_DOSE_REFERENCE_TEMP_C`].
+pub const THRESHOLD_TEMP_C: f64 = crate::core::constants::medical::THERMAL_DOSE_REFERENCE_TEMP_C;
 
 /// Standard damage threshold (CEM43 = 240 min)
 pub const STANDARD_DAMAGE_THRESHOLD: f64 = 240.0;
@@ -163,7 +163,7 @@ mod tests {
 
     #[test]
     fn test_threshold_case() {
-        let cem43 = analytical_cem43_constant(43.0, 240.0);
+        let cem43 = analytical_cem43_constant(THRESHOLD_TEMP_C, 240.0);
         assert!(
             (cem43 - 240.0).abs() < 0.01,
             "43°C for 240 min should give CEM43 = 240, got {}",
