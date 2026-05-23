@@ -192,7 +192,7 @@ fn calculate_beam_width_at_location(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
     use crate::domain::grid::Grid;
     use ndarray::Array3;
 
