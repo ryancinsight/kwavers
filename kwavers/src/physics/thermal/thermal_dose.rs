@@ -103,11 +103,6 @@ pub mod thresholds {
     /// Threshold for protein denaturation onset
     pub const PROTEIN_DENATURATION: f64 = 1.0;
 
-    /// Threshold for irreversible cell damage — SSOT alias for
-    /// [`crate::core::constants::medical::THERMAL_DOSE_THRESHOLD`]
-    /// (Sapareto & Dewey 1984).
-    pub use crate::core::constants::medical::THERMAL_DOSE_THRESHOLD as CELL_DEATH;
-
     /// Threshold for immediate coagulation
     pub const COAGULATION: f64 = 10000.0;
 
@@ -118,7 +113,6 @@ pub mod thresholds {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::constants::medical::THERMAL_DOSE_THRESHOLD;
 
     #[test]
     fn test_thermal_dose_accumulation() {
@@ -171,6 +165,5 @@ mod tests {
     #[test]
     fn test_thermal_dose_thresholds_use_canonical_constants() {
         assert_eq!(CEM43_REFERENCE_TEMPERATURE_C, 43.0);
-        assert_eq!(thresholds::CELL_DEATH, THERMAL_DOSE_THRESHOLD);
     }
 }

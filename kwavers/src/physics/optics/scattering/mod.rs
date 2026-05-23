@@ -6,7 +6,6 @@
 //! propagation in biological tissues and optical imaging applications.
 
 pub mod calculator;
-pub mod constants;
 pub mod parameters;
 pub mod rayleigh;
 pub mod result;
