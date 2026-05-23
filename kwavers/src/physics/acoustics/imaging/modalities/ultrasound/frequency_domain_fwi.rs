@@ -293,7 +293,8 @@ pub fn complex_l2_objective(predicted: &[Complex64], observed: &[Complex64]) -> 
 /// Root-mean-square error between reconstructed and reference sound speed volumes.
 ///
 /// # Errors
-/// Returns an error when volume shapes differ.
+/// Returns an error when volume shapes differ or when both volumes are empty.
+#[must_use]
 pub fn sound_speed_rmse(
     reconstructed_m_s: &Array3<f64>,
     reference_m_s: &Array3<f64>,
@@ -305,7 +306,12 @@ pub fn sound_speed_rmse(
             reference_m_s.dim()
         )));
     }
-
+    let n = reconstructed_m_s.len();
+    if n == 0 {
+        return Err(KwaversError::InvalidInput(
+            "RMSE requires non-empty volumes".to_owned(),
+        ));
+    }
     let mean = reconstructed_m_s
         .iter()
         .zip(reference_m_s.iter())
@@ -314,14 +320,15 @@ pub fn sound_speed_rmse(
             diff * diff
         })
         .sum::<f64>()
-        / reconstructed_m_s.len() as f64;
+        / n as f64;
     Ok(mean.sqrt())
 }
 
 /// Pearson correlation coefficient between two sound speed volumes.
 ///
 /// # Errors
-/// Returns an error when shapes differ or either volume has zero variance.
+/// Returns an error when shapes differ, volumes are empty, or either volume has zero variance.
+#[must_use]
 pub fn sound_speed_pcc(
     reconstructed_m_s: &Array3<f64>,
     reference_m_s: &Array3<f64>,
@@ -333,8 +340,13 @@ pub fn sound_speed_pcc(
             reference_m_s.dim()
         )));
     }
-
-    let n = reconstructed_m_s.len() as f64;
+    let n_usize = reconstructed_m_s.len();
+    if n_usize == 0 {
+        return Err(KwaversError::InvalidInput(
+            "PCC requires non-empty volumes".to_owned(),
+        ));
+    }
+    let n = n_usize as f64;
     let mean_a = reconstructed_m_s.iter().sum::<f64>() / n;
     let mean_b = reference_m_s.iter().sum::<f64>() / n;
     let mut covariance = 0.0;

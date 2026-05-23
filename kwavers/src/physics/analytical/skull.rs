@@ -4,7 +4,7 @@
 //! Hounsfield unit conversions (Schneider 1996), Strehl ratio, semi-infinite
 //! solid surface temperature rise, and transfer-matrix skull transmission.
 
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use num_complex::Complex64;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
@@ -89,7 +89,7 @@ pub fn hu_to_sound_speed_schneider(hu: &[f64]) -> Vec<f64> {
 /// Schneider et al. (1996), *Phys. Med. Biol.* 41, 111.
 #[must_use]
 pub fn hu_to_density_schneider(hu: &[f64]) -> Vec<f64> {
-    hu.iter().map(|&h| 1000.0 + 0.96 * h).collect()
+    hu.iter().map(|&h| DENSITY_WATER_NOMINAL + 0.96 * h).collect()
 }
 
 // ─── Strehl ratio ─────────────────────────────────────────────────────────────
