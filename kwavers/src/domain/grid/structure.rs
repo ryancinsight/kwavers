@@ -223,35 +223,52 @@ impl Grid {
     /// Convert grid indices to physical coordinates
     #[inline]
     pub fn indices_to_coordinates(&self, i: usize, j: usize, k: usize) -> (f64, f64, f64) {
-        (i as f64 * self.dx, j as f64 * self.dy, k as f64 * self.dz)
+        (
+            (i as f64).mul_add(self.dx, self.origin[0]),
+            (j as f64).mul_add(self.dy, self.origin[1]),
+            (k as f64).mul_add(self.dz, self.origin[2]),
+        )
     }
 
     /// Get an iterator over the coordinates for a specific dimension.
     /// This returns a statically-dispatched iterator with no heap allocation.
     pub fn coordinates(&self, dim: GridDimension) -> impl Iterator<Item = f64> + '_ {
-        let (count, spacing) = match dim {
-            GridDimension::X => (self.nx, self.dx),
-            GridDimension::Y => (self.ny, self.dy),
-            GridDimension::Z => (self.nz, self.dz),
+        let (count, spacing, origin) = match dim {
+            GridDimension::X => (self.nx, self.dx, self.origin[0]),
+            GridDimension::Y => (self.ny, self.dy, self.origin[1]),
+            GridDimension::Z => (self.nz, self.dz, self.origin[2]),
         };
-        (0..count).map(move |i| i as f64 * spacing)
+        (0..count).map(move |i| (i as f64).mul_add(spacing, origin))
     }
 
-    /// Convert position to grid indices
+    /// Convert physical position to grid indices.
+    ///
+    /// # Theorem
+    ///
+    /// For Cartesian grid coordinates `x_i = origin_x + i dx`, the inverse
+    /// cell lookup is `i = floor((x - origin_x) / dx)`. This preserves
+    /// consistency with [`Self::indices_to_coordinates`] for nonzero-origin
+    /// source and sensor grids.
     #[inline]
     pub fn position_to_indices(&self, x: f64, y: f64, z: f64) -> Option<(usize, usize, usize)> {
-        let max_x = self.nx as f64 * self.dx;
-        let max_y = self.ny as f64 * self.dy;
-        let max_z = self.nz as f64 * self.dz;
+        let max_x = (self.nx as f64).mul_add(self.dx, self.origin[0]);
+        let max_y = (self.ny as f64).mul_add(self.dy, self.origin[1]);
+        let max_z = (self.nz as f64).mul_add(self.dz, self.origin[2]);
 
-        if x < 0.0 || y < 0.0 || z < 0.0 || x > max_x || y > max_y || z > max_z {
+        if x < self.origin[0]
+            || y < self.origin[1]
+            || z < self.origin[2]
+            || x > max_x
+            || y > max_y
+            || z > max_z
+        {
             return None;
         }
 
         // Using floor is safer and more predictable than rounding
-        let i = (x / self.dx).floor() as usize;
-        let j = (y / self.dy).floor() as usize;
-        let k = (z / self.dz).floor() as usize;
+        let i = ((x - self.origin[0]) / self.dx).floor() as usize;
+        let j = ((y - self.origin[1]) / self.dy).floor() as usize;
+        let k = ((z - self.origin[2]) / self.dz).floor() as usize;
 
         // Clamp to ensure the index is within bounds, preventing off-by-one due to floating point issues
         Some((i.min(self.nx - 1), j.min(self.ny - 1), k.min(self.nz - 1)))
@@ -261,5 +278,56 @@ impl Grid {
     #[inline]
     pub fn create_field(&self) -> ndarray::Array3<f64> {
         ndarray::Array3::zeros((self.nx, self.ny, self.nz))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Grid, GridDimension};
+
+    #[test]
+    fn coordinate_accessors_use_grid_origin() {
+        let mut grid = Grid::new(4, 5, 6, 0.2, 0.3, 0.4).unwrap();
+        grid.origin = [1.0, -2.0, 0.5];
+
+        let coordinates = grid.indices_to_coordinates(2, 3, 4);
+        assert_close(coordinates.0, 1.4);
+        assert_close(coordinates.1, -1.1);
+        assert_close(coordinates.2, 2.1);
+
+        assert_sequence_close(
+            &grid.coordinates(GridDimension::X).collect::<Vec<_>>(),
+            &[1.0, 1.2, 1.4, 1.6],
+        );
+        assert_sequence_close(
+            &grid.coordinates(GridDimension::Y).collect::<Vec<_>>(),
+            &[-2.0, -1.7, -1.4, -1.1, -0.8],
+        );
+    }
+
+    #[test]
+    fn position_to_indices_is_origin_relative() {
+        let mut grid = Grid::new(4, 5, 6, 0.2, 0.3, 0.4).unwrap();
+        grid.origin = [1.0, -2.0, 0.5];
+
+        assert_eq!(grid.position_to_indices(1.0, -2.0, 0.5), Some((0, 0, 0)));
+        assert_eq!(grid.position_to_indices(1.41, -1.09, 2.11), Some((2, 3, 4)));
+        assert_eq!(grid.position_to_indices(0.99, -2.0, 0.5), None);
+        assert_eq!(grid.position_to_indices(1.0, -2.31, 0.5), None);
+    }
+
+    fn assert_sequence_close(actual: &[f64], expected: &[f64]) {
+        assert_eq!(actual.len(), expected.len());
+        for (&actual, &expected) in actual.iter().zip(expected) {
+            assert_close(actual, expected);
+        }
+    }
+
+    fn assert_close(actual: f64, expected: f64) {
+        let tolerance = 64.0 * f64::EPSILON * expected.abs().max(1.0);
+        assert!(
+            (actual - expected).abs() <= tolerance,
+            "actual {actual}, expected {expected}, tolerance {tolerance}"
+        );
     }
 }
