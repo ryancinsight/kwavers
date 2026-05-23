@@ -20,14 +20,12 @@ mod benefit;
 mod pulse;
 mod regime;
 
+use crate::core::constants::fundamental::ACOUSTIC_IMPEDANCE_WATER_NOMINAL;
 use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 
 pub use benefit::{intrinsic_threshold_pa, BenefitDetriment};
 pub use pulse::PulsePattern;
 pub use regime::HistotripsyRegime;
-
-/// Reference acoustic impedance for water-like tissue (rho * c).
-const Z_TISSUE: f64 = 1.5e6;
 
 /// Abramowitz & Stegun 7.1.26 rational approximation of `erf(x)`. Max
 /// absolute error 1.5e-7, sufficient for the clinical decision-support
@@ -118,7 +116,7 @@ impl HistotripsyScenario {
         let p = self
             .peak_positive_pressure_pa
             .max(self.peak_negative_pressure_pa.abs());
-        p * p / (2.0 * Z_TISSUE)
+        p * p / (2.0 * ACOUSTIC_IMPEDANCE_WATER_NOMINAL)
     }
 
     // ---------------------- Library scenarios ----------------------

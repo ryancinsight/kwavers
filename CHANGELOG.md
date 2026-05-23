@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Changed (2026-05-23) - Breast FWI PSTD CBS Receiver Projection
+
+- [minor] Route `PstdSpectralConvergentBornOperator` receiver sampling and
+  receiver-adjoint projection through exact PSTD grid-cell extraction/injection.
+  Continuous Helmholtz CBS operators retain the BLI receiver projection path.
+
 ### Changed (2026-05-22) - Breast FWI PSTD CBS Source Projection
 
 - [minor] Route `PstdSpectralConvergentBornOperator` source injection through

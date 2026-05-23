@@ -519,6 +519,15 @@ breast-imaging reconstruction.
   residual is `0.5233688602227166` and passive-only residual is
   `0.5434979751472874`, so source-kappa projection alone is not the parity
   repair.
+- **[done] [minor] T8y: PSTD CBS receiver projection — CLOSED 2026-05-23.**
+  Routed `PstdSpectralConvergentBornOperator` receiver sampling through exact
+  centered-grid cell extraction and its Euclidean adjoint through exact cell
+  residual injection. Continuous Helmholtz CBS operators still use the BLI
+  receiver projection/adjoint path. The CBS tests now verify exact PSTD
+  receiver extraction, the receiver projection adjoint identity, and off-grid
+  PSTD receiver rejection. This closes receiver sampling as a hidden
+  interpolation variable; the remaining parity variable is the temporal
+  source/frequency-bin transfer function.
 - **[done] [patch] T8x: focused source adapter compile closure — CLOSED 2026-05-22.**
   Added the explicit `ElementMap` type to the focused bowl source adapter's
   `HashMap` construction. This resolves the unrelated `E0282` inference defect
@@ -569,9 +578,10 @@ breast-imaging reconstruction.
   `0.5435181467026386`. Matching PSTD source-kappa projection in the CBS source
   path changes the all-channel residual to `0.5233688602227166` and passive-only
   residual to `0.5434979751472874`, so source projection/filtering alone is not
-  the repair. Next work should isolate receiver sampling and the temporal
-  source/frequency-bin transfer function between the PSTD acquisition and
-  frequency-domain CBS operators.
+  the repair. Receiver projection is now operator-aware and exact-grid for PSTD
+  CBS, so the next work should isolate the temporal source/frequency-bin
+  transfer function between the PSTD acquisition and frequency-domain CBS
+  operators.
 
 ### Deprecation (T2 prerequisite)
 - **[patch] Mark `solver::forward::helmholtz::born_series::convergent::ConvergentBornSolver`

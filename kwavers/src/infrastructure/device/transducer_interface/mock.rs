@@ -5,6 +5,7 @@ use super::types::{
     DeviceTelemetry, DeviceTransducerSpecification, HardwareCommand, HardwareResponse,
     TransducerDeviceStatus, TransducerState,
 };
+use crate::core::constants::fundamental::ACOUSTIC_IMPEDANCE_WATER_NOMINAL;
 use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::core::error::{KwaversError, KwaversResult};
 use std::time::Instant;
@@ -133,7 +134,7 @@ impl TransducerHardware for MockTransducer {
             timestamp: Instant::now(),
             measured_power_w: self.current_power_percent * self.spec.max_power / 100.0,
             temperature_c: (self.current_power_percent / 100.0).mul_add(10.0, 25.0),
-            acoustic_impedance: 1.5e6,
+            acoustic_impedance: ACOUSTIC_IMPEDANCE_WATER_NOMINAL,
             reflection_coefficient: 0.05,
             current_draw_a: (self.current_power_percent / 100.0).mul_add(4.0, 1.0),
         })

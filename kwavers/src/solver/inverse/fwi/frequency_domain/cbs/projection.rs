@@ -71,7 +71,7 @@ fn source_density_from_pstd_grid_kappa(
     validate_pstd_source_parameters(time_step_s, reference_sound_speed_m_s)?;
     let mut mask = Array3::<Complex64>::zeros(grid.dimensions);
     for &source in sources {
-        let index = exact_grid_index(grid, source)?;
+        let index = exact_grid_index(grid, source, "source")?;
         mask[index] += Complex64::new(1.0 / grid.cell_volume_m3(), 0.0);
     }
 
@@ -129,6 +129,44 @@ pub fn sample_array_with_bli(
         .collect()
 }
 
+/// Sample receivers according to the selected Green-operator discretization.
+///
+/// Continuous Helmholtz operators use BLI. The PSTD spectral operator samples
+/// the same exact grid points recorded by the PSTD acquisition sensor mask.
+///
+/// # Errors
+/// Returns an error when field length, receiver support, or PSTD grid
+/// alignment is invalid.
+pub fn sample_array_for_operator(
+    grid: GridSpec,
+    field: &[Complex64],
+    array: &MultiRowRingArray,
+    operator: GreenOperatorKind,
+) -> KwaversResult<Vec<Complex64>> {
+    match operator {
+        GreenOperatorKind::DenseFreeSpace | GreenOperatorKind::SpectralPeriodic { .. } => {
+            sample_array_with_bli(grid, field, array)
+        }
+        GreenOperatorKind::SpectralPstdPeriodic { .. } => sample_array_on_grid(grid, field, array),
+    }
+}
+
+fn sample_array_on_grid(
+    grid: GridSpec,
+    field: &[Complex64],
+    array: &MultiRowRingArray,
+) -> KwaversResult<Vec<Complex64>> {
+    validate_field_len(grid, field)?;
+    array
+        .elements()
+        .iter()
+        .map(|&receiver| {
+            let (ix, iy, iz) = exact_grid_index(grid, receiver, "receiver")?;
+            Ok(field[grid.linear_index(ix, iy, iz)])
+        })
+        .collect()
+}
+
 /// Apply the Euclidean adjoint of BLI receiver sampling.
 ///
 /// If `p_i = sum_j w_ij u_j`, this returns `R^H r`, i.e.
@@ -156,6 +194,52 @@ pub fn receiver_adjoint_from_bli(
         for contribution in weights {
             adjoint[contribution.linear_index] += value * contribution.weight;
         }
+    }
+    Ok(adjoint)
+}
+
+/// Apply the Euclidean receiver adjoint for the selected operator.
+///
+/// Continuous Helmholtz operators use the BLI adjoint. The PSTD spectral
+/// operator injects residuals into the exact grid cells recorded by the PSTD
+/// sensor mask.
+///
+/// # Errors
+/// Returns an error when residual cardinality or PSTD receiver alignment is
+/// invalid.
+pub fn receiver_adjoint_for_operator(
+    grid: GridSpec,
+    array: &MultiRowRingArray,
+    residual: &[Complex64],
+    operator: GreenOperatorKind,
+) -> KwaversResult<Vec<Complex64>> {
+    match operator {
+        GreenOperatorKind::DenseFreeSpace | GreenOperatorKind::SpectralPeriodic { .. } => {
+            receiver_adjoint_from_bli(grid, array, residual)
+        }
+        GreenOperatorKind::SpectralPstdPeriodic { .. } => {
+            receiver_adjoint_on_grid(grid, array, residual)
+        }
+    }
+}
+
+fn receiver_adjoint_on_grid(
+    grid: GridSpec,
+    array: &MultiRowRingArray,
+    residual: &[Complex64],
+) -> KwaversResult<Vec<Complex64>> {
+    if residual.len() != array.element_count() {
+        return Err(KwaversError::DimensionMismatch(format!(
+            "CBS receiver residual mismatch: residual {}, geometry {}",
+            residual.len(),
+            array.element_count()
+        )));
+    }
+
+    let mut adjoint = vec![Complex64::new(0.0, 0.0); grid.len()];
+    for (&receiver, &value) in array.elements().iter().zip(residual.iter()) {
+        let (ix, iy, iz) = exact_grid_index(grid, receiver, "receiver")?;
+        adjoint[grid.linear_index(ix, iy, iz)] += value;
     }
     Ok(adjoint)
 }
@@ -206,22 +290,23 @@ fn validate_pstd_source_parameters(
 fn exact_grid_index(
     grid: GridSpec,
     point: ElementPosition,
+    role: &str,
 ) -> KwaversResult<(usize, usize, usize)> {
     let nearest = [
-        exact_axis_index(grid.dimensions.0, grid.spacing_m, point.x_m)?,
-        exact_axis_index(grid.dimensions.1, grid.spacing_m, point.y_m)?,
-        exact_axis_index(grid.dimensions.2, grid.spacing_m, point.z_m)?,
+        exact_axis_index(grid.dimensions.0, grid.spacing_m, point.x_m, role)?,
+        exact_axis_index(grid.dimensions.1, grid.spacing_m, point.y_m, role)?,
+        exact_axis_index(grid.dimensions.2, grid.spacing_m, point.z_m, role)?,
     ];
     Ok((nearest[0], nearest[1], nearest[2]))
 }
 
-fn exact_axis_index(n: usize, spacing_m: f64, value_m: f64) -> KwaversResult<usize> {
+fn exact_axis_index(n: usize, spacing_m: f64, value_m: f64, role: &str) -> KwaversResult<usize> {
     let raw = value_m / spacing_m + 0.5 * (n - 1) as f64;
     let rounded = raw.round();
     let tolerance = 1.0e-9;
     if (raw - rounded).abs() > tolerance || rounded < 0.0 || rounded > (n - 1) as f64 {
         return Err(KwaversError::InvalidInput(format!(
-            "PSTD spectral source point coordinate {value_m} is not on the centered grid axis"
+            "PSTD spectral {role} point coordinate {value_m} is not on the centered grid axis"
         )));
     }
     Ok(rounded as usize)

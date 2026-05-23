@@ -5,6 +5,7 @@
 
 use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 use crate::core::error::{ConfigError, KwaversError, KwaversResult};
+use super::{PZT_DIELECTRIC_CONSTANT, PZT_SOUND_SPEED};
 
 /// Piezoelectric material properties
 ///
@@ -61,9 +62,9 @@ impl PiezoMaterial {
             coupling_k33: 0.75,
             coupling_k31: 0.39,
             mechanical_q: 65.0,
-            dielectric_constant: 3400.0,
+            dielectric_constant: PZT_DIELECTRIC_CONSTANT,
             density: 7500.0,
-            sound_speed: 4600.0,
+            sound_speed: PZT_SOUND_SPEED,
             acoustic_impedance: 34.5,
             curie_temperature: 193.0,
         }
@@ -79,7 +80,7 @@ impl PiezoMaterial {
             mechanical_q: 500.0,
             dielectric_constant: 1300.0,
             density: 7500.0,
-            sound_speed: 4600.0,
+            sound_speed: PZT_SOUND_SPEED,
             acoustic_impedance: 34.5,
             curie_temperature: 328.0,
         }

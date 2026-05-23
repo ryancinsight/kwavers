@@ -74,6 +74,18 @@ pub const C_WATER: f64 = SOUND_SPEED_WATER;
 /// K = ρ * c², where ρ = 998.2 kg/m³, c = 1482 m/s
 pub const BULK_MODULUS_WATER: f64 = 2.19e9;
 
+/// Nominal acoustic impedance of water / water-like tissue (Pa·s/m = Rayl).
+///
+/// Derived from simulation-default values: Z = ρ·c = `DENSITY_WATER_NOMINAL` × `SOUND_SPEED_WATER_SIM`
+/// = 1000 kg/m³ × 1500 m/s = 1.5 × 10⁶ Pa·s/m = 1.5 MRayl.
+///
+/// This is the canonical simulation impedance used for water-coupling, tissue-path
+/// intensity estimation (`I = p²/Z`), and reflection-coefficient calculations where
+/// precise tissue heterogeneity is not modelled.
+///
+/// Reference: Duck FA (1990). Physical Properties of Tissue. Academic Press; k-Wave defaults.
+pub const ACOUSTIC_IMPEDANCE_WATER_NOMINAL: f64 = DENSITY_WATER_NOMINAL * SOUND_SPEED_WATER_SIM;
+
 /// Density of soft tissue (kg/m³)
 pub const DENSITY_TISSUE: f64 = 1050.0;
 

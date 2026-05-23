@@ -1,8 +1,8 @@
 //! Discrete adjoint gradient for frequency-domain FWI.
 
 use super::cbs::{
-    apply_shifted_green_adjoint_operator, real_scattering_potential, receiver_adjoint_from_bli,
-    sample_array_with_bli, solve_adjoint_volume_field_with_operator,
+    apply_shifted_green_adjoint_operator, real_scattering_potential, receiver_adjoint_for_operator,
+    sample_array_for_operator, solve_adjoint_volume_field_with_operator,
     solve_volume_field_with_operator, source_density_for_operator, GridSpec,
 };
 use super::forward::{incident_field, outgoing_green, validate_forward_inputs, voxel_centers};
@@ -108,7 +108,7 @@ fn accumulate_dense_cbs_frequency_gradient(
             cbs_config,
             operator,
         )?;
-        let predicted = sample_array_with_bli(grid, &forward_solution.field, array)?;
+        let predicted = sample_array_for_operator(grid, &forward_solution.field, array, operator)?;
         let observed = observation.observed_pressure.row(transmit).to_vec();
         let source_scale = if config.estimate_source_scaling {
             complex_source_scale(&predicted, &observed)?
@@ -129,7 +129,7 @@ fn accumulate_dense_cbs_frequency_gradient(
                 source_scale.conj() * (predicted_value - observed_value)
             })
             .collect::<Vec<_>>();
-        let adjoint_rhs = receiver_adjoint_from_bli(grid, array, &receiver_residual)?;
+        let adjoint_rhs = receiver_adjoint_for_operator(grid, array, &receiver_residual, operator)?;
         let adjoint_solution = solve_adjoint_volume_field_with_operator(
             grid,
             reference_wavenumber,

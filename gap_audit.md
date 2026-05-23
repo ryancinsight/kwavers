@@ -434,10 +434,13 @@ theorems against an external published reconstruction.
    Born is currently closest to PSTD (`0.456575` normalized residual), followed
    by dense CBS (`0.476438`), with absorbed spectral CBS worst (`0.523411`).
    This rules out extra CBS complexity, the PSTD modal denominator alone, and
-   the PSTD source-kappa projection alone as the immediate parity path. The next
-   repair should isolate receiver sampling and the temporal source/frequency-bin
-   transfer function between PSTD acquisition and frequency-domain CBS rather
-   than active-channel exclusion or inversion tuning.
+   the PSTD source-kappa projection alone as the immediate parity path. The PSTD
+   CBS receiver path now uses exact centered-grid extraction/injection and
+   rejects off-grid receiver positions instead of silently applying BLI, closing
+   receiver sampling as a hidden interpolation variable. The next repair should
+   isolate the temporal source/frequency-bin transfer function between PSTD
+   acquisition and frequency-domain CBS rather than active-channel exclusion or
+   inversion tuning.
 4. **MAT5/HDF5 ingest — CLOSED.** The published phantom file is MATLAB 5.0,
    while alternate user-provided sound-speed phantoms may be HDF5/MAT-v7.3.
    The selected boundary supports both under Rust-owned clinical ingest; Python

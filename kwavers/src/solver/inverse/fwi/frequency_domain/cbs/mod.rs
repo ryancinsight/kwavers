@@ -24,8 +24,9 @@ pub use potential::{
     convergence_epsilon, pointwise_preconditioner, real_scattering_potential, shifted_potential,
 };
 pub use projection::{
-    receiver_adjoint_from_bli, sample_array_with_bli, sample_field_with_bli,
-    source_density_for_operator, source_density_from_bli,
+    receiver_adjoint_for_operator, receiver_adjoint_from_bli, sample_array_for_operator,
+    sample_array_with_bli, sample_field_with_bli, source_density_for_operator,
+    source_density_from_bli,
 };
 pub use solve::{
     solve_adjoint_volume_field, solve_adjoint_volume_field_with_operator, solve_volume_field,

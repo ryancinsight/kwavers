@@ -12,8 +12,12 @@ use std::fmt::Debug;
 /// Minimum physical density to prevent numerical instabilities (kg/m³)
 pub const MIN_PHYSICAL_DENSITY: f64 = 1.0;
 
-/// Minimum physical sound speed to prevent numerical instabilities (m/s)
-pub const MIN_PHYSICAL_SOUND_SPEED: f64 = 1.0;
+/// Minimum physical sound speed to prevent numerical instabilities (m/s).
+///
+/// 100.0 m/s is the conservative lower bound: no real acoustic propagation medium
+/// has a sound speed below this value (air ≈ 343 m/s, soft gels ≥ 100 m/s).
+/// Values below this floor indicate degenerate or uninitialized medium data.
+pub const MIN_PHYSICAL_SOUND_SPEED: f64 = 100.0;
 
 /// Core trait that all medium types must implement
 ///

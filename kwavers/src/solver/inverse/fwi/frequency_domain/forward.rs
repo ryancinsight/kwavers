@@ -1,7 +1,7 @@
 //! Matrix-free frequency-domain forward model.
 
 use super::cbs::{
-    real_scattering_potential, sample_array_with_bli, solve_volume_field_with_operator,
+    real_scattering_potential, sample_array_for_operator, solve_volume_field_with_operator,
     source_density_for_operator, CbsConfig, GreenOperatorKind, GridSpec,
 };
 use super::types::{Config, FREQUENCY_DOMAIN_FWI_SOLVER_MODEL};
@@ -118,9 +118,10 @@ pub(super) fn predict_cbs_rows(
             cbs_config,
             operator,
         )?;
-        for (receiver_index, pressure) in sample_array_with_bli(grid, &solution.field, array)?
-            .into_iter()
-            .enumerate()
+        for (receiver_index, pressure) in
+            sample_array_for_operator(grid, &solution.field, array, operator)?
+                .into_iter()
+                .enumerate()
         {
             output[[transmit, receiver_index]] = pressure;
         }
