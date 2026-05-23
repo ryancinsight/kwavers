@@ -43,6 +43,9 @@ impl FallbackRenderer {
         // Calculate field statistics
         let min_val = field.iter().fold(f64::INFINITY, |a, &b| a.min(b));
         let max_val = field.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+        if field.is_empty() {
+            return Ok(());
+        }
         let mean_val = field.iter().sum::<f64>() / field.len() as f64;
 
         info!(

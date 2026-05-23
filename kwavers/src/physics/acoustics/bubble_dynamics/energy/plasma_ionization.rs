@@ -113,7 +113,9 @@ mod tests {
         SURFACE_TENSION_WATER, VAPOR_PRESSURE_WATER, VISCOSITY_WATER,
     };
     use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, C_WATER, DENSITY_WATER};
-    use crate::core::constants::thermodynamic::{SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER};
+    use crate::core::constants::thermodynamic::{
+        HEAT_CAPACITY_RATIO_MONATOMIC, SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER,
+    };
     use crate::physics::acoustics::bubble_dynamics::bubble_state::{
         BubbleParameters, BubbleState, GasSpecies, GasType,
     };
@@ -137,7 +139,7 @@ mod tests {
                 m.insert(GasType::N2, 1.0);
                 m
             },
-            gamma: 5.0 / 3.0,
+            gamma: HEAT_CAPACITY_RATIO_MONATOMIC,
             t0: crate::core::constants::thermodynamic::ROOM_TEMPERATURE_K,
             driving_frequency: 26_500.0,
             driving_amplitude: 1.5e5,

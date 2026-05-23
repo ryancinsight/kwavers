@@ -244,6 +244,18 @@ impl MlConformalPredictor {
             .calibration_scores
             .iter()
             .fold(0.0_f64, |a, &b| a.max(b));
+        if self.calibration_scores.is_empty() {
+            return CalibrationSummary {
+                is_calibrated: false,
+                num_calibration_samples: 0,
+                score_distribution: ScoreDistribution {
+                    min_score: 0.0,
+                    max_score: 0.0,
+                    mean_score: 0.0,
+                    median_score: 0.0,
+                },
+            };
+        }
         let mean_score =
             self.calibration_scores.iter().sum::<f64>() / self.calibration_scores.len() as f64;
 

@@ -289,6 +289,13 @@ impl UncertaintyQuantifier {
             max_conf = max_conf.max(conf);
         }
 
+        if results.is_empty() {
+            return UncertaintyReport {
+                summary,
+                detailed_results: Vec::new(),
+                recommendations: Vec::new(),
+            };
+        }
         summary.mean_confidence = total_confidence / results.len() as f64;
         summary.confidence_range = (min_conf, max_conf);
         summary.reliability_score = self.compute_reliability_score(&summary);

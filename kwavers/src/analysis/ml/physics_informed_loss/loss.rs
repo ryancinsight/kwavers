@@ -116,6 +116,9 @@ impl PhysicsInformedLoss {
             return f64::INFINITY;
         }
 
+        if forward.is_empty() {
+            return 0.0;
+        }
         let diff = forward - reverse;
         diff.iter().map(|x| x * x).sum::<f64>() / (forward.len() as f64)
     }

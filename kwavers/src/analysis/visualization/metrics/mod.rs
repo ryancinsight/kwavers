@@ -84,7 +84,10 @@ impl MetricsTracker {
                 self.fps_history.pop_front();
             }
             self.fps_history.push_back(fps);
-            self.current.fps = self.fps_history.iter().sum::<f64>() / self.fps_history.len() as f64;
+            if !self.fps_history.is_empty() {
+                self.current.fps =
+                    self.fps_history.iter().sum::<f64>() / self.fps_history.len() as f64;
+            }
         }
     }
 
