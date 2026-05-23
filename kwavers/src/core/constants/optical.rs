@@ -41,6 +41,16 @@ pub const LAPLACIAN_CENTER_COEFF: f64 = -2.0;
 // Biological Tissue Refractive Indices (NIR wavelengths, ~700–900 nm)
 // ============================================================================
 
+/// Refractive index of pure water (dimensionless) at ~589 nm (sodium D-line), 20 °C.
+///
+/// Value: 1.333 is the most widely cited approximation; 1.33 is used in photoacoustic
+/// and diffuse-optics models for biological fluids (blood plasma, interstitial fluid).
+///
+/// References:
+/// - Hale G M & Querry M R (1973). Appl. Opt. 12(3), 555–563.
+/// - Daimon M & Masumura A (2007). Appl. Opt. 46(18), 3811–3820.
+pub const REFRACTIVE_INDEX_WATER: f64 = 1.33;
+
 /// Refractive index of soft biological tissue (dimensionless) in the NIR window.
 ///
 /// This value of 1.4 is the widely adopted approximation for soft tissue

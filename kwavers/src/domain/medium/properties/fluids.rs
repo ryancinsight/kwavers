@@ -16,6 +16,7 @@
 
 use super::material::AcousticMaterialProperties;
 use crate::core::constants::acoustic_parameters::BLOOD_VISCOSITY_37C;
+use crate::core::constants::optical::REFRACTIVE_INDEX_WATER;
 use crate::core::constants::fundamental::{
     ATMOSPHERIC_PRESSURE, B_OVER_A_BLOOD, B_OVER_A_CSF, B_OVER_A_WATER, DENSITY_BLOOD,
     DENSITY_TISSUE, DENSITY_WATER_37C, SOUND_SPEED_BLOOD, SOUND_SPEED_WATER, SOUND_SPEED_WATER_37C,
@@ -226,7 +227,7 @@ pub const WATER_37C: FluidProperties = FluidProperties {
     metabolic_heat: 0.0,
     optical_absorption: 0.0,
     optical_scattering: 0.0,
-    refractive_index: 1.33,
+    refractive_index: REFRACTIVE_INDEX_WATER,
     reference_temperature: BODY_TEMPERATURE_C,
     reference_pressure: ATMOSPHERIC_PRESSURE,
 };
@@ -258,7 +259,7 @@ pub const MICROBUBBLE_SUSPENSION: FluidProperties = FluidProperties {
     metabolic_heat: 0.0,
     optical_absorption: 0.2,
     optical_scattering: 30.0,
-    refractive_index: 1.33,
+    refractive_index: REFRACTIVE_INDEX_WATER,
     reference_temperature: BODY_TEMPERATURE_C,
     reference_pressure: ATMOSPHERIC_PRESSURE,
 };

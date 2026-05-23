@@ -1,5 +1,5 @@
 use super::OpticalPropertyData;
-use crate::core::constants::optical::REFRACTIVE_INDEX_SOFT_TISSUE;
+use crate::core::constants::optical::{REFRACTIVE_INDEX_SOFT_TISSUE, REFRACTIVE_INDEX_WATER};
 
 impl OpticalPropertyData {
     /// Construct with validation of physical constraints
@@ -51,7 +51,7 @@ impl OpticalPropertyData {
             absorption_coefficient: 0.01,
             scattering_coefficient: 0.001,
             anisotropy: 0.0,
-            refractive_index: 1.33,
+            refractive_index: REFRACTIVE_INDEX_WATER,
         }
     }
 

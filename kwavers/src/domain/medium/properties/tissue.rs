@@ -10,6 +10,7 @@
 
 use super::material::AcousticMaterialProperties;
 use crate::core::constants::acoustic_parameters::DENSITY_SKULL;
+use crate::core::constants::optical::REFRACTIVE_INDEX_WATER;
 use crate::core::constants::cavitation::VISCOSITY_WATER;
 use crate::core::constants::fundamental::{
     ATMOSPHERIC_PRESSURE, B_OVER_A_BLOOD, B_OVER_A_BONE, B_OVER_A_BRAIN, B_OVER_A_CSF,
@@ -56,7 +57,7 @@ pub const WATER: TissueProperties = TissueProperties {
     metabolic_heat: 0.0,
     optical_absorption: 0.0,
     optical_scattering: 0.0,
-    refractive_index: 1.33,
+    refractive_index: REFRACTIVE_INDEX_WATER,
     reference_temperature: 20.0,
     reference_pressure: ATMOSPHERIC_PRESSURE,
 };
