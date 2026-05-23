@@ -1,5 +1,6 @@
 use super::*;
 use approx::assert_relative_eq;
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_K;
 use ndarray::Array3;
 
 /// At Delta T = T_half, P_open must equal exactly 0.5.
@@ -13,7 +14,7 @@ fn test_boltzmann_half_activation() {
         panic!("MscLG22S must use Boltzmann model");
     };
     let tension = Array3::from_elem((2, 2, 2), bp.half_tension_n_per_m);
-    let p_open = boltzmann_p_open(&tension, bp, BODY_TEMP_K).unwrap();
+    let p_open = boltzmann_p_open(&tension, bp, BODY_TEMPERATURE_K).unwrap();
     for &v in &p_open {
         assert_relative_eq!(v, 0.5, max_relative = 1e-12);
     }
@@ -30,7 +31,7 @@ fn test_boltzmann_deep_closed() {
         panic!("expected Boltzmann");
     };
     let tension = Array3::zeros((2, 2, 2));
-    let p_open = boltzmann_p_open(&tension, bp, BODY_TEMP_K).unwrap();
+    let p_open = boltzmann_p_open(&tension, bp, BODY_TEMPERATURE_K).unwrap();
     for &v in &p_open {
         assert!(
             v < 0.01,
@@ -50,7 +51,7 @@ fn test_boltzmann_deep_open() {
         panic!("expected Boltzmann");
     };
     let tension = Array3::from_elem((2, 2, 2), 10.0 * bp.half_tension_n_per_m);
-    let p_open = boltzmann_p_open(&tension, bp, BODY_TEMP_K).unwrap();
+    let p_open = boltzmann_p_open(&tension, bp, BODY_TEMPERATURE_K).unwrap();
     for &v in &p_open {
         assert!(
             v > 1.0 - 1e-10,
@@ -75,7 +76,7 @@ fn test_boltzmann_monotone() {
     let mut prev = 0.0_f64;
     for &t in &tensions {
         let arr = Array3::from_elem((1, 1, 1), t);
-        let p = boltzmann_p_open(&arr, bp, BODY_TEMP_K).unwrap()[[0, 0, 0]];
+        let p = boltzmann_p_open(&arr, bp, BODY_TEMPERATURE_K).unwrap()[[0, 0, 0]];
         assert!(
             p > prev,
             "P_open must increase with tension: {prev} -> {p} at t={t}"

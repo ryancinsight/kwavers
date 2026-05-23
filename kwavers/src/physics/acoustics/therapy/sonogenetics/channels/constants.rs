@@ -6,6 +6,5 @@
 /// Boltzmann constant [J/K] — re-exported from `crate::core::constants::fundamental`.
 pub(super) use crate::core::constants::fundamental::BOLTZMANN as K_B;
 
-/// Canonical body temperature (K) = 37 °C — re-exported from
-/// `crate::core::constants::thermodynamic`.
-pub use crate::core::constants::thermodynamic::BODY_TEMPERATURE_K as BODY_TEMP_K;
+// Note: use `crate::core::constants::thermodynamic::BODY_TEMPERATURE_K` directly
+// at call sites. The BODY_TEMP_K alias has been removed to enforce SSOT.

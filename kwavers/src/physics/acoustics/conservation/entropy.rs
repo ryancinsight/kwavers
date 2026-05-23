@@ -113,7 +113,7 @@ mod tests {
         let rho0 = DENSITY_WATER_NOMINAL;
         let c0 = SOUND_SPEED_WATER_SIM;
         let a0 = 2.0_f64;
-        let t0 = 310.0_f64;
+        let t0 = BODY_TEMPERATURE_K;
         let p = uniform(s, p0);
         let v = Array3::<f64>::zeros(s);
         let rho = uniform(s, rho0);

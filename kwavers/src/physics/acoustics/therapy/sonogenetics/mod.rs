@@ -85,7 +85,7 @@ pub mod neuron;
 pub use arf_field::VolumetricArfField;
 pub use channels::{
     boltzmann_p_open, compute_p_open, ion_current, pressure_threshold_p_open,
-    BoltzmannGatingParams, GatingModel, MechanoChannel, PressureThresholdParams, BODY_TEMP_K,
+    BoltzmannGatingParams, GatingModel, MechanoChannel, PressureThresholdParams,
 };
 pub use membrane::{compute_membrane_tension, compute_radiation_pressure, CellMembraneParams};
 pub use neuron::{LifNeuron, LifParams};

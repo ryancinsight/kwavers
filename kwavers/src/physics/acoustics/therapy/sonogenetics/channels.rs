@@ -66,7 +66,6 @@ mod params;
 #[cfg(test)]
 mod tests;
 
-pub use constants::BODY_TEMP_K;
 pub use current::ion_current;
 pub use gating::{boltzmann_p_open, compute_p_open, pressure_threshold_p_open};
 pub use identity::MechanoChannel;
