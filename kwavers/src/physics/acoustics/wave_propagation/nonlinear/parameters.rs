@@ -5,7 +5,7 @@ use crate::core::constants::fundamental::{
     DENSITY_TISSUE, DENSITY_WATER, SOUND_SPEED_BRAIN, SOUND_SPEED_FAT, SOUND_SPEED_KIDNEY,
     SOUND_SPEED_LIVER, SOUND_SPEED_TISSUE,
 };
-use crate::core::constants::numerical::CM_TO_M;
+use crate::core::constants::numerical::{CM_TO_M, MHZ_TO_HZ};
 
 /// Parameters defining the nonlinear propagation properties of a medium
 #[derive(Debug, Clone, Copy)]
@@ -146,7 +146,7 @@ impl NonlinearParameters {
     /// Calculate attenuation at a specific frequency [Np/m]
     #[must_use]
     pub fn attenuation_at_frequency(&self, frequency_hz: f64) -> f64 {
-        let f_mhz = frequency_hz / 1e6;
+        let f_mhz = frequency_hz / MHZ_TO_HZ;
         self.attenuation_coeff * f_mhz.powf(self.attenuation_exponent)
     }
 }

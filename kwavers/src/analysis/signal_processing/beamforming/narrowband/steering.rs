@@ -192,11 +192,12 @@ fn validate_frequency_hz(frequency_hz: f64) -> KwaversResult<()> {
 mod tests {
     use super::*;
     use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use crate::core::constants::numerical::MHZ_TO_HZ;
 
     #[test]
     fn steering_from_delays_has_unit_magnitude() {
         let delays = vec![0.0, 1e-6, 2e-6];
-        let f = 1e6;
+        let f = MHZ_TO_HZ; // 1 MHz
         let a = steering_from_delays_s(&delays, f).into_array();
 
         for v in a.iter() {
@@ -214,7 +215,7 @@ mod tests {
         let steering =
             NarrowbandSteering::new(positions, SOUND_SPEED_WATER_SIM).expect("steering init");
         let p = [0.0, 0.0, 0.02];
-        let f = 1e6;
+        let f = MHZ_TO_HZ; // 1 MHz
 
         let a1 = steering
             .steering_vector_point(p, f)

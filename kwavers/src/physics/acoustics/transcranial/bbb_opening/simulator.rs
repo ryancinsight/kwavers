@@ -1,5 +1,6 @@
 use super::models::PermeabilityModels;
 use super::types::{BBBParameters, PermeabilityEnhancement};
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::core::error::KwaversResult;
 use log::info;
 use ndarray::Array3;
@@ -47,7 +48,7 @@ impl BBBOpening {
     ///
     pub fn simulate_opening(&mut self) -> KwaversResult<()> {
         info!("Simulating BBB opening with parameters:");
-        info!("  Frequency: {:.1} MHz", self.parameters.frequency / 1e6);
+        info!("  Frequency: {:.1} MHz", self.parameters.frequency / MHZ_TO_HZ);
         info!("  MI target: {:.2}", self.parameters.target_mi);
         info!("  Duration: {:.1} s", self.parameters.duration);
 

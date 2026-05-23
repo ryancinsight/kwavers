@@ -7,6 +7,7 @@ use super::{
     TransducerDirectivityPattern, TransducerSensitivity,
 };
 use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::core::error::{ConfigError, KwaversError, KwaversResult};
 
 /// Complete transducer design specification
@@ -176,7 +177,7 @@ impl TransducerDesign {
             Beamwidth: {:.1}°\n\
             Sensitivity: {:.1} Pa/V at 1m\n\
             Efficiency: {:.1}%",
-            self.frequency_response.center_frequency / 1e6,
+            self.frequency_response.center_frequency / MHZ_TO_HZ,
             self.frequency_response.fractional_bandwidth,
             self.geometry.width * 1e3,
             self.geometry.height * 1e3,

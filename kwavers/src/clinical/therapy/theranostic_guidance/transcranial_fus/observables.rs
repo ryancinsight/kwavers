@@ -1,3 +1,4 @@
+use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use ndarray::Array3;
 
 /// Compute acoustic observables from a pressure field.
@@ -12,7 +13,7 @@ pub fn acoustic_fus_observables(
     inertial_mi_threshold: f64,
 ) -> (Array3<f32>, Array3<f32>, Array3<f32>) {
     let two_rho_c = 2.0 * density_kg_m3 * sound_speed_m_s;
-    let f_mhz = frequency_hz / 1.0e6;
+    let f_mhz = frequency_hz / MHZ_TO_HZ;
     let sqrt_f = f_mhz.sqrt();
 
     let intensity = pressure_pa.mapv(|p| {
@@ -21,7 +22,7 @@ pub fn acoustic_fus_observables(
     });
     let mi = pressure_pa.mapv(|p| {
         let p64 = p as f64;
-        (p64 / 1.0e6 / sqrt_f) as f32
+        (p64 / MPA_TO_PA / sqrt_f) as f32
     });
     let cavitation = mi.mapv(|m| {
         let m64 = m as f64;

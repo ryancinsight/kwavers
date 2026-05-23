@@ -1,5 +1,6 @@
 use super::types::{AblationTarget, FocalSpot, FocalSpotDoseEstimate};
 use crate::clinical::therapy::parameters::ClinicalTherapyParameters;
+use crate::core::constants::medical::THERMAL_DOSE_THRESHOLD;
 use crate::core::error::{KwaversError, KwaversResult};
 
 /// One planned HIFU focal dwell location.
@@ -114,7 +115,7 @@ impl SonicationSchedule {
 
     #[must_use]
     pub fn all_subspots_reach_ablation(&self) -> bool {
-        self.minimum_subspot_cem43 >= 240.0
+        self.minimum_subspot_cem43 >= THERMAL_DOSE_THRESHOLD
     }
 }
 

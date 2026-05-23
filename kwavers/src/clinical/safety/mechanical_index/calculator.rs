@@ -1,5 +1,6 @@
 //! MechanicalIndexCalculator implementation.
 
+use crate::core::constants::numerical::MPA_TO_PA;
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array3;
 
@@ -131,8 +132,8 @@ impl MechanicalIndexCalculator {
             ));
         }
 
-        // Convert to MPa
-        let peak_rarefactional_mpa = peak_rarefactional_pa / 1e6;
+        // Convert to MPa (1 MPa = MPA_TO_PA Pa)
+        let peak_rarefactional_mpa = peak_rarefactional_pa / MPA_TO_PA;
 
         // Apply attenuation for in-situ pressure
         // P_in_situ = P_measured × 10^(-α × f × z / 20)

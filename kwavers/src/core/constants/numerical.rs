@@ -239,6 +239,15 @@ pub const MPA_TO_PA: f64 = 1e6;
 /// Conversion from cm to m
 pub const CM_TO_M: f64 = 0.01;
 
+/// Conversion from minutes to seconds [s/min].
+///
+/// Used in CEM43 thermal dose computations: the Sapareto-Dewey integral is
+/// defined in minutes while simulation time steps are in seconds.
+///
+/// Reference: Sapareto SA, Dewey WC (1984). *Int. J. Radiat. Oncol. Biol. Phys.*
+/// 10(6):787–800.
+pub const SECONDS_PER_MINUTE: f64 = 60.0;
+
 /// Minimum points per wavelength for accurate simulation
 pub const MIN_PPW: f64 = 6.0;
 

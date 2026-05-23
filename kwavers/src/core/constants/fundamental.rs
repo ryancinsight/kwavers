@@ -463,3 +463,64 @@ pub const WATER_ABSORPTION_POWER_Y: f64 = 2.0;
 ///
 /// Reference: Duck (1990) Table 4.1; Szabo (2004) §4; Goss et al. (1978).
 pub const SOFT_TISSUE_ABSORPTION_POWER_Y: f64 = 1.1;
+
+/// Acoustic absorption coefficient of human brain tissue [dB/(cm·MHz)].
+///
+/// Brain white and grey matter mean value at diagnostic and therapeutic
+/// frequencies.  Used in transcranial ultrasound propagation models.
+///
+/// Reference: Duck, F.A. (1990). *Physical Properties of Tissue*, Table 4.1;
+/// Aubry et al. (2003). J. Acoust. Soc. Am. 113(1):84–93.
+pub const ACOUSTIC_ABSORPTION_BRAIN: f64 = 0.5; // dB/(cm·MHz)
+
+/// Minimum skull bone acoustic absorption coefficient [dB/(cm·MHz)].
+///
+/// Value at bone fraction = 0 (brain–bone boundary, primarily trabecular bone).
+/// Interpolated linearly to `ACOUSTIC_ABSORPTION_SKULL_MIN + ACOUSTIC_ABSORPTION_SKULL_RANGE`
+/// at bone fraction = 1 (pure cortical bone, ≈ 20 dB/(cm·MHz)).
+///
+/// Reference: Aubry et al. (2003). J. Acoust. Soc. Am. 113(1):84–93, Table I.
+pub const ACOUSTIC_ABSORPTION_SKULL_MIN: f64 = 8.0; // dB/(cm·MHz)
+
+/// Acoustic absorption range across skull bone fraction [dB/(cm·MHz)].
+///
+/// The full-bone absorption is
+/// `ACOUSTIC_ABSORPTION_SKULL_MIN + ACOUSTIC_ABSORPTION_SKULL_RANGE` = 20 dB/(cm·MHz).
+/// Linear interpolation over bone fraction ∈ [0, 1] follows Aubry 2003.
+///
+/// Reference: Aubry et al. (2003). J. Acoust. Soc. Am. 113(1):84–93, Table I.
+pub const ACOUSTIC_ABSORPTION_SKULL_RANGE: f64 = 12.0; // dB/(cm·MHz)
+
+/// Hounsfield unit threshold below which tissue is classified as brain [HU].
+///
+/// Below this value the voxel is treated as brain/soft tissue in transcranial
+/// ray-tracing models. Above it, bone fraction is interpolated linearly.
+///
+/// Reference: Aubry et al. (2003). J. Acoust. Soc. Am. 113(1):84–93.
+pub const HU_BONE_THRESHOLD: f64 = 300.0; // Hounsfield units
+
+/// Hounsfield unit range for skull bone-fraction interpolation [HU].
+///
+/// `bone_fraction = (HU − HU_BONE_THRESHOLD) / HU_SKULL_RANGE`, clamped to [0, 1].
+/// At HU = 300 + 1700 = 2000 the voxel is pure cortical bone.
+///
+/// Reference: Aubry et al. (2003). J. Acoust. Soc. Am. 113(1):84–93.
+pub const HU_SKULL_RANGE: f64 = 1700.0; // Hounsfield units
+
+/// Minimum skull/trabecular-bone density used in HU-based interpolation [kg/m³].
+///
+/// Density at bone fraction = 0 (brain–bone boundary).  Increases linearly to
+/// `DENSITY_SKULL_MIN + DENSITY_SKULL_CORTICAL_RANGE` = 1 900 kg/m³ at bone fraction = 1.
+///
+/// Reference: Aubry et al. (2003). J. Acoust. Soc. Am. 113(1):84–93;
+/// Duck (1990) Table 3.8.
+pub const DENSITY_SKULL_MIN: f64 = 1200.0; // kg/m³
+
+/// Density increment from the brain–bone boundary to pure cortical bone [kg/m³].
+///
+/// `density = DENSITY_SKULL_MIN + DENSITY_SKULL_CORTICAL_RANGE × bone_fraction`.
+/// Maximum density (full cortical bone) = 1 900 kg/m³.
+///
+/// Reference: Aubry et al. (2003). J. Acoust. Soc. Am. 113(1):84–93;
+/// Duck (1990) Table 3.8.
+pub const DENSITY_SKULL_CORTICAL_RANGE: f64 = 700.0; // kg/m³

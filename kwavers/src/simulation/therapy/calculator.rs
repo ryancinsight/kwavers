@@ -1,6 +1,7 @@
 //! Therapy calculator orchestration
 
 use crate::core::constants::fundamental::DENSITY_TISSUE;
+use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use crate::core::constants::medical::{BLOOD_SPECIFIC_HEAT, TISSUE_PERFUSION_RATE};
 use crate::core::constants::thermodynamic::{BODY_TEMPERATURE_C, SPECIFIC_HEAT_TISSUE};
 use crate::core::error::KwaversResult;
@@ -180,8 +181,8 @@ impl TherapyCalculator {
              Duration: {:.1} s\n\
              {}",
             self.modality,
-            self.parameters.frequency / 1e6,
-            self.parameters.peak_negative_pressure / 1e6,
+            self.parameters.frequency / MHZ_TO_HZ,
+            self.parameters.peak_negative_pressure / MPA_TO_PA,
             self.parameters.treatment_duration,
             self.metrics.summary()
         )

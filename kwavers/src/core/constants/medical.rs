@@ -87,6 +87,15 @@ pub const STANDARD_BEAM_WIDTH: f64 = 0.01;
 /// Reference: IEC 62127-1:2013, Annex A, Table A.1.
 pub const IEC_TISSUE_SPECIFIC_HEAT: f64 = 3500.0;
 
+/// IEC 62127-1 homogeneous-tissue acoustic absorption coefficient [dB/(cm·MHz)].
+///
+/// The IEC 62127-1 standardised tissue model (Table A.1) uses α = 0.3 dB/(cm·MHz)
+/// for thermal-index compliance calculations.  This value underpins the TIS and
+/// TIB formulae in the Output Display Standard.
+///
+/// Reference: IEC 62127-1:2013, Annex A, Table A.1.
+pub const IEC_TISSUE_ABSORPTION_DB_CM_MHZ: f64 = 0.3;
+
 // ── Mechanical Index safety limits ───────────────────────────────────────────
 //
 // FDA 510(k) guidance for diagnostic ultrasound output display standard (ODS)

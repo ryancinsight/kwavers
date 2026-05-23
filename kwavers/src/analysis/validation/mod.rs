@@ -132,8 +132,8 @@ pub fn validate_absorption_model(
     // Szabo's power law: α = α₀|ω|^y
     // For water: y = 2, α₀ = 0.0022 dB/(cm·MHz²)
 
-    let alpha_theory = constants::WATER_ABSORPTION * (frequency / 1e6).powi(2);
-    let alpha_np_m = alpha_theory * 0.1151; // Convert dB/cm to Np/m
+    let alpha_theory = constants::WATER_ABSORPTION * (frequency / crate::core::constants::MHZ_TO_HZ).powi(2);
+    let alpha_np_m = alpha_theory * crate::core::constants::DB_TO_NP; // Convert dB/cm to Np/cm (DB_TO_NP = ln(10)/20)
 
     // Get implementation's absorption
     use crate::domain::medium::AcousticProperties;

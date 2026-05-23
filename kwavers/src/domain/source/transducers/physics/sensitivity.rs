@@ -3,6 +3,7 @@
 //! Models transmit and receive sensitivity characteristics.
 
 use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 
 /// Transducer sensitivity parameters
 ///
@@ -86,7 +87,7 @@ impl TransducerSensitivity {
         frequency: f64,
     ) -> f64 {
         // Two-way attenuation
-        let freq_mhz = frequency / 1e6;
+        let freq_mhz = frequency / MHZ_TO_HZ;
         let distance_cm = target_distance * 100.0;
         let total_attenuation_db = 2.0 * attenuation * distance_cm * freq_mhz;
         let attenuation_factor = 10.0_f64.powf(-total_attenuation_db / 20.0);

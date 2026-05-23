@@ -3,6 +3,8 @@ use std::time::Instant;
 
 use crate::clinical::therapy::parameters::ClinicalTherapyParameters;
 use crate::core::constants::acoustic_parameters::DB_TO_NP;
+use crate::core::constants::medical::IEC_TISSUE_ABSORPTION_DB_CM_MHZ;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::core::error::{KwaversError, KwaversResult};
 
 use super::{
@@ -158,9 +160,9 @@ impl EnhancedComplianceValidator {
         const TISSUE_DENSITY: f64 = DENSITY_BLOOD;
         const TISSUE_HEAT_CAPACITY: f64 = IEC_TISSUE_SPECIFIC_HEAT;
 
-        // IEC 62127 absorption model: α [Np/m] = 0.3 dB/cm/MHz × f_MHz × 100 × DB_TO_NP
-        let f_mhz = (params.frequency / 1e6).max(1e-3);
-        let alpha_np_per_m = 0.3 * f_mhz * 100.0 * DB_TO_NP;
+        // IEC 62127 absorption model: α [Np/m] = 0.3 dB/(cm·MHz) × f_MHz × 100 cm/m × DB_TO_NP
+        let f_mhz = (params.frequency / MHZ_TO_HZ).max(1e-3);
+        let alpha_np_per_m = IEC_TISSUE_ABSORPTION_DB_CM_MHZ * f_mhz * 100.0 * DB_TO_NP;
 
         let p_rms = params.pressure / std::f64::consts::SQRT_2;
         let i_spta = (p_rms * p_rms) / (RHO_W * SOUND_SPEED_WATER);

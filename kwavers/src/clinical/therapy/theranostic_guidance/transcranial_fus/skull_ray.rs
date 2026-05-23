@@ -3,29 +3,34 @@ use std::f64::consts::PI;
 use ndarray::{Array1, Array2, Array3};
 
 use crate::core::constants::acoustic_parameters::DB_TO_NP;
-use crate::core::constants::fundamental::DENSITY_BRAIN;
+use crate::core::constants::fundamental::{
+    ACOUSTIC_ABSORPTION_BRAIN, ACOUSTIC_ABSORPTION_SKULL_MIN, ACOUSTIC_ABSORPTION_SKULL_RANGE,
+    DENSITY_BRAIN, DENSITY_SKULL_CORTICAL_RANGE, DENSITY_SKULL_MIN, HU_BONE_THRESHOLD,
+    HU_SKULL_RANGE,
+};
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::core::error::{KwaversError, KwaversResult};
 
 /// Map a HU value to (sound_speed_m_s, density_kg_m3, attenuation_np_m).
 ///
-/// Below 300 HU the voxel is treated as brain tissue; above, bone fraction
-/// linearly interpolates between brain and cortical-bone properties following
-/// Aubry et al. 2003.
+/// Below `HU_BONE_THRESHOLD` (300 HU) the voxel is treated as brain tissue;
+/// above it, bone fraction linearly interpolates between brain and cortical-bone
+/// properties following Aubry et al. (2003) J. Acoust. Soc. Am. 113(1):84–93.
 pub fn acoustic_properties_from_hu(
     hu: f64,
     frequency_hz: f64,
     brain_c: f64,
     skull_c: f64,
 ) -> (f64, f64, f64) {
-    if hu <= 300.0 {
-        let alpha_np_m = 0.5 * 100.0 * DB_TO_NP * (frequency_hz / 1.0e6);
+    if hu <= HU_BONE_THRESHOLD {
+        let alpha_np_m = ACOUSTIC_ABSORPTION_BRAIN * 100.0 * DB_TO_NP * (frequency_hz / MHZ_TO_HZ);
         return (brain_c, DENSITY_BRAIN, alpha_np_m);
     }
-    let bone_fraction = ((hu - 300.0) / 1700.0).clamp(0.0, 1.0);
-    let density = 1200.0 + 700.0 * bone_fraction;
+    let bone_fraction = ((hu - HU_BONE_THRESHOLD) / HU_SKULL_RANGE).clamp(0.0, 1.0);
+    let density = DENSITY_SKULL_MIN + DENSITY_SKULL_CORTICAL_RANGE * bone_fraction;
     let c = brain_c + (skull_c - brain_c) * bone_fraction;
-    let alpha_db_cm_mhz = 8.0 + 12.0 * bone_fraction;
-    let alpha_np_m = alpha_db_cm_mhz * 100.0 * DB_TO_NP * (frequency_hz / 1.0e6);
+    let alpha_db_cm_mhz = ACOUSTIC_ABSORPTION_SKULL_MIN + ACOUSTIC_ABSORPTION_SKULL_RANGE * bone_fraction;
+    let alpha_np_m = alpha_db_cm_mhz * 100.0 * DB_TO_NP * (frequency_hz / MHZ_TO_HZ);
     (c, density, alpha_np_m)
 }
 

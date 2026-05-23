@@ -1,6 +1,7 @@
 //! HAS solver configuration.
 
 use crate::core::constants::acoustic_parameters::NP_TO_DB;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::core::constants::fundamental::{B_OVER_A_SOFT_TISSUE, DENSITY_WATER_NOMINAL};
 use crate::core::constants::SOUND_SPEED_WATER_SIM;
 use crate::core::error::{KwaversError, KwaversResult};
@@ -91,7 +92,7 @@ impl HASConfig {
     /// Attenuation at `frequency` Hz using power-law model (Np/m).
     #[must_use]
     pub fn attenuation_at_frequency(&self, frequency: f64) -> f64 {
-        let freq_mhz = frequency / 1e6;
+        let freq_mhz = frequency / MHZ_TO_HZ;
         let db_per_cm = self.attenuation_coeff * freq_mhz.powf(self.power_law_exponent);
         db_per_cm * 100.0 / NP_TO_DB
     }

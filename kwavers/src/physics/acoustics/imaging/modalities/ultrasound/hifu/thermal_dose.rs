@@ -14,13 +14,13 @@
 //! Reference: Sapareto & Dewey (1984), Int. J. Radiat. Oncol. Biol. Phys.
 //! 10(6), 787-800.
 
+use crate::core::constants::medical::{
+    THERMAL_DOSE_REFERENCE_TEMP_C, THERMAL_DOSE_R_ABOVE_43C, THERMAL_DOSE_R_BELOW_43C,
+    THERMAL_DOSE_THRESHOLD,
+};
+use crate::core::constants::numerical::SECONDS_PER_MINUTE;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
-
-const CEM43_PIVOT_C: f64 = 43.0;
-const CEM43_R_AT_OR_ABOVE_PIVOT: f64 = 0.5;
-const CEM43_R_BELOW_PIVOT: f64 = 0.25;
-const SECONDS_PER_MINUTE: f64 = 60.0;
 
 /// Thermal dose calculation in cumulative equivalent minutes at 43 deg C.
 #[derive(Debug, Clone)]
@@ -62,10 +62,10 @@ impl HifuThermalDose {
         self.cem43[[i, j, k]]
     }
 
-    /// Check if ablation threshold reached (CEM43 > 240).
+    /// Check if ablation threshold reached (CEM43 > 240 CEM43 min).
     #[must_use]
     pub fn ablation_threshold_reached(&self) -> Array3<bool> {
-        self.cem43.mapv(|dose| dose > 240.0)
+        self.cem43.mapv(|dose| dose > THERMAL_DOSE_THRESHOLD)
     }
 
     fn update_cem43(&mut self) {
@@ -102,10 +102,10 @@ impl HifuThermalDose {
 
 #[inline]
 pub(super) fn cem43_increment_minutes(temperature_c: f64, dt_min: f64) -> f64 {
-    let r = if temperature_c >= CEM43_PIVOT_C {
-        CEM43_R_AT_OR_ABOVE_PIVOT
+    let r = if temperature_c >= THERMAL_DOSE_REFERENCE_TEMP_C {
+        THERMAL_DOSE_R_ABOVE_43C
     } else {
-        CEM43_R_BELOW_PIVOT
+        THERMAL_DOSE_R_BELOW_43C
     };
-    dt_min * r.powf(CEM43_PIVOT_C - temperature_c)
+    dt_min * r.powf(THERMAL_DOSE_REFERENCE_TEMP_C - temperature_c)
 }

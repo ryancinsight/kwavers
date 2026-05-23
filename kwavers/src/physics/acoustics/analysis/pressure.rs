@@ -1,5 +1,6 @@
 //! Pressure-based calculations (intensity, MI, TI)
 
+use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use ndarray::{Array3, ArrayView3};
 
 #[inline]
@@ -70,8 +71,8 @@ pub fn calculate_mechanical_index(peak_negative_pressure: f64, frequency: f64) -
         return 0.0;
     }
 
-    let p_neg_mpa = peak_negative_pressure.abs() / 1e6;
-    let freq_mhz = frequency / 1e6;
+    let p_neg_mpa = peak_negative_pressure.abs() / MPA_TO_PA;
+    let freq_mhz = frequency / MHZ_TO_HZ;
 
     p_neg_mpa / freq_mhz.sqrt()
 }
@@ -97,7 +98,7 @@ pub fn calculate_thermal_index(acoustic_power: f64, frequency: f64, tissue_absor
         return 0.0;
     }
 
-    let freq_mhz = frequency / 1e6;
+    let freq_mhz = frequency / MHZ_TO_HZ;
     let absorption_factor = tissue_absorption * freq_mhz;
 
     (acoustic_power * absorption_factor) / REFERENCE_POWER
@@ -117,7 +118,7 @@ pub fn calculate_derated_pressure(pressure: f64, frequency: f64, depth: f64) -> 
         return 0.0;
     }
 
-    let freq_mhz = frequency / 1e6;
+    let freq_mhz = frequency / MHZ_TO_HZ;
     let depth_cm = depth * 100.0;
 
     let attenuation_db = DERATING_FACTOR * depth_cm * freq_mhz;

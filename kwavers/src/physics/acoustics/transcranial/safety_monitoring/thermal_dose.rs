@@ -46,6 +46,7 @@ use super::monitor::TranscranialSafetyMonitor;
 use crate::core::constants::medical::{
     THERMAL_DOSE_REFERENCE_TEMP_C, THERMAL_DOSE_R_ABOVE_43C, THERMAL_DOSE_R_BELOW_43C,
 };
+use crate::core::constants::numerical::SECONDS_PER_MINUTE;
 
 impl TranscranialSafetyMonitor {
     /// Update CEM43 thermal dose accumulation at each grid point.
@@ -63,7 +64,6 @@ impl TranscranialSafetyMonitor {
     ///   accumulated `CEM43` is in canonical equivalent-minutes (matching the
     ///   default `max_thermal_dose = 240` threshold from Sapareto & Dewey).
     pub(crate) fn update_thermal_dose(&mut self, dt: f64) {
-        const SECONDS_PER_MINUTE: f64 = 60.0;
         let dt_min = dt / SECONDS_PER_MINUTE;
         let (nx, ny, nz) = self.temperature.dim();
 

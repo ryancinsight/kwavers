@@ -22,6 +22,7 @@
 //! - FDA 510(k) Guidance: "Ultrasound Devices"
 //! - Apfel & Holland (1991): "Gaseous cavitation thresholds"
 
+use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use crate::core::error::KwaversResult;
 
 use super::super::config::{AcousticTherapyParams, TherapyIntegrationSafetyLimits};
@@ -85,14 +86,13 @@ pub fn update_safety_metrics(
     let sum_sq: f64 = acoustic_field.pressure.iter().map(|&p| p * p).sum();
     let pressure_rms = (sum_sq / n).sqrt();
 
-    safety_metrics.thermal_index = pressure_rms * acoustic_params.frequency.sqrt() / 1e6;
+    safety_metrics.thermal_index = pressure_rms * acoustic_params.frequency.sqrt() / MPA_TO_PA;
 
     // Mechanical Index (FDA 510(k) guidance, IEC 62359):
-    // MI = p_neg_peak_derated (MPa) / sqrt(f_center (MHz))
-    //    = (pnp_Pa / 1e6) / sqrt(f_Hz / 1e6)
-    //    = pnp_Pa / (1e3 × sqrt(f_Hz))
+    // MI = p_neg_peak_derated [MPa] / sqrt(f_center [MHz])
+    //    = (pnp_Pa / MPA_TO_PA) / sqrt(f_Hz / MHZ_TO_HZ)
     safety_metrics.mechanical_index =
-        acoustic_params.pnp / (acoustic_params.frequency.sqrt() * 1e3);
+        (acoustic_params.pnp / MPA_TO_PA) / (acoustic_params.frequency / MHZ_TO_HZ).sqrt();
 
     // Update cavitation dose (time-integrated cavitation activity)
     if let Some(cavitation) = cavitation_activity {

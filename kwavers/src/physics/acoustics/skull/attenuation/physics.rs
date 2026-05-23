@@ -1,5 +1,6 @@
 //! Frequency and temperature dependent physics implementations
 
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use super::model::SkullAttenuation;
 
 impl SkullAttenuation {
@@ -16,7 +17,7 @@ impl SkullAttenuation {
     /// Absorption coefficient (Np/m)
     #[must_use]
     pub fn absorption_coefficient(&self, frequency: f64) -> f64 {
-        let freq_mhz = frequency / 1e6;
+        let freq_mhz = frequency / MHZ_TO_HZ;
         self.alpha_0 * freq_mhz.powf(self.exponent)
     }
 
@@ -37,7 +38,7 @@ impl SkullAttenuation {
             return 0.0;
         }
 
-        let freq_mhz = frequency / 1e6;
+        let freq_mhz = frequency / MHZ_TO_HZ;
 
         // Rayleigh scattering for low frequencies (f < 2 MHz typically)
         // Transition to geometric scattering at higher frequencies

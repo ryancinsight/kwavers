@@ -28,6 +28,7 @@
 //! - `hardness > 0`
 //! - `fatigue_exponent > 0` (typical range: 5-15)
 
+use crate::core::constants::numerical::MPA_TO_PA;
 use std::fmt;
 
 /// Canonical mechanical strength properties
@@ -137,9 +138,9 @@ impl fmt::Display for StrengthPropertyData {
         write!(
             f,
             "Strength(σ_y={:.0} MPa, σ_u={:.0} MPa, H={:.0} MPa, b={:.1})",
-            self.yield_strength / 1e6,
-            self.ultimate_strength / 1e6,
-            self.hardness / 1e6,
+            self.yield_strength / MPA_TO_PA,
+            self.ultimate_strength / MPA_TO_PA,
+            self.hardness / MPA_TO_PA,
             self.fatigue_exponent
         )
     }

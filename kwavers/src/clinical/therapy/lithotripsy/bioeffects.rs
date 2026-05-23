@@ -5,8 +5,10 @@
 //! bioeffects evaluation.
 
 use crate::core::constants::acoustic_parameters::NP_TO_DB;
-use crate::core::constants::medical::{MI_LIMIT_SOFT_TISSUE, TI_LIMIT_SOFT_TISSUE};
-use crate::core::constants::numerical::CM_TO_M;
+use crate::core::constants::medical::{
+    IEC_TISSUE_ABSORPTION_DB_CM_MHZ, MI_LIMIT_SOFT_TISSUE, TI_LIMIT_SOFT_TISSUE,
+};
+use crate::core::constants::numerical::{CM_TO_M, MHZ_TO_HZ};
 use crate::core::constants::thermodynamic::THERMAL_CONDUCTIVITY_WATER;
 use ndarray::Array3;
 
@@ -174,7 +176,7 @@ impl BioeffectsModel {
         frequency: f64,
         _dt: f64,
     ) {
-        let f_mhz = frequency / 1e6;
+        let f_mhz = frequency / MHZ_TO_HZ;
         let sqrt_f = f_mhz.sqrt().max(1e-12);
 
         // ── Mechanical Index ───────────────────────────────────────────
@@ -183,17 +185,17 @@ impl BioeffectsModel {
             .iter()
             .map(|&p| if p < 0.0 { -p } else { 0.0 })
             .fold(0.0_f64, f64::max);
-        let pnp_mpa = peak_neg_pressure_pa / 1e6;
+        let pnp_mpa = peak_neg_pressure_pa / MHZ_TO_HZ; // 1e6 Pa = 1 MPa
         let mi = pnp_mpa / sqrt_f;
 
         // ── Thermal Index (simplified SPTA-based estimate) ─────────
         //  I_SPTA = max(intensity)
         //  ΔT ≈ 2 · α · I_SPTA · d / k   (simplified for soft tissue)
-        //  where α=0.3 dB/cm/MHz at the active frequency, d=1cm reference depth,
-        //  k = THERMAL_CONDUCTIVITY_WATER (0.598 W/m/K, soft-tissue surrogate).
+        //  where α = IEC_TISSUE_ABSORPTION_DB_CM_MHZ at the active frequency,
+        //  d = 1 cm reference depth, k = THERMAL_CONDUCTIVITY_WATER (soft-tissue surrogate).
         let i_spta = intensity.iter().copied().fold(0.0_f64, f64::max);
-        // 0.3 dB/(cm·MHz) → Np/m at f_mhz: divide by NP_TO_DB then by CM_TO_M.
-        let alpha_np_per_m = 0.3 * f_mhz / NP_TO_DB / CM_TO_M;
+        // IEC 62127 absorption: α [Np/m] = 0.3 dB/(cm·MHz) / NP_TO_DB / CM_TO_M × f_MHz
+        let alpha_np_per_m = IEC_TISSUE_ABSORPTION_DB_CM_MHZ * f_mhz / NP_TO_DB / CM_TO_M;
         let depth_m = 0.01; // reference depth 1 cm
         let delta_t = 2.0 * alpha_np_per_m * i_spta * depth_m / THERMAL_CONDUCTIVITY_WATER;
         let ti = delta_t; // TI ≈ ΔT / 1°C

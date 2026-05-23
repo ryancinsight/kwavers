@@ -7,7 +7,8 @@ use crate::core::constants::medical::{
     THERMAL_DOSE_REFERENCE_TEMP_C, THERMAL_DOSE_R_ABOVE_43C, THERMAL_DOSE_R_BELOW_43C,
 };
 use crate::core::constants::thermodynamic::{BODY_TEMPERATURE_C, SPECIFIC_HEAT_TISSUE};
-use crate::core::constants::MHZ_TO_HZ;
+use crate::core::constants::medical::THERMAL_DOSE_THRESHOLD;
+use crate::core::constants::{MHZ_TO_HZ, SECONDS_PER_MINUTE};
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::physics::acoustics::analysis::calculate_mechanical_index;
 use std::f64::consts::PI;
@@ -197,8 +198,6 @@ impl FocalSpotDoseEstimate {
     ) -> KwaversResult<Self> {
         let specific_heat = SPECIFIC_HEAT_TISSUE;
         const PERFUSION_RATE: f64 = 0.01;
-        const SECONDS_PER_MINUTE: f64 = 60.0;
-        const ABLATION_DOSE_CEM43_MIN: f64 = 240.0;
 
         validate_nonnegative_finite("focal_spot.peak_pressure_pa", focal_spot.peak_pressure_pa)?;
         validate_positive_finite("frequency_hz", frequency_hz)?;
@@ -224,7 +223,7 @@ impl FocalSpotDoseEstimate {
         let cem43 = (treatment_duration_s / SECONDS_PER_MINUTE) * dose_rate_cem43_per_min;
         let time_to_dose_s = if peak_temperature_c >= THERMAL_DOSE_REFERENCE_TEMP_C {
             if dose_rate_cem43_per_min > 0.0 {
-                ABLATION_DOSE_CEM43_MIN * SECONDS_PER_MINUTE / dose_rate_cem43_per_min
+                THERMAL_DOSE_THRESHOLD * SECONDS_PER_MINUTE / dose_rate_cem43_per_min
             } else {
                 f64::INFINITY
             }
@@ -240,11 +239,11 @@ impl FocalSpotDoseEstimate {
 
     #[must_use]
     pub fn is_sufficient_for_ablation(&self) -> bool {
-        self.cem43 >= 240.0
+        self.cem43 >= THERMAL_DOSE_THRESHOLD
     }
     #[must_use]
     pub fn margin_to_ablation(&self) -> f64 {
-        240.0 - self.cem43
+        THERMAL_DOSE_THRESHOLD - self.cem43
     }
 }
 

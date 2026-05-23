@@ -20,6 +20,8 @@ mod benefit;
 mod pulse;
 mod regime;
 
+use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
+
 pub use benefit::{intrinsic_threshold_pa, BenefitDetriment};
 pub use pulse::PulsePattern;
 pub use regime::HistotripsyRegime;
@@ -66,8 +68,8 @@ impl HistotripsyScenario {
     /// Mechanical Index `MI = |p^-_min(MPa)| / sqrt(f0(MHz))` (AIUM/NEMA).
     #[must_use]
     pub fn mechanical_index(&self) -> f64 {
-        let pnp_mpa = self.peak_negative_pressure_pa.abs() / 1.0e6;
-        let f0_mhz = self.frequency_hz / 1.0e6;
+        let pnp_mpa = self.peak_negative_pressure_pa.abs() / MPA_TO_PA;
+        let f0_mhz = self.frequency_hz / MHZ_TO_HZ;
         pnp_mpa / f0_mhz.sqrt()
     }
 
@@ -127,7 +129,7 @@ impl HistotripsyScenario {
     pub fn intrinsic_threshold_liver_1mhz() -> Self {
         Self {
             regime: HistotripsyRegime::IntrinsicThreshold,
-            frequency_hz: 1.0e6,
+            frequency_hz: MHZ_TO_HZ, // 1 MHz
             peak_negative_pressure_pa: -30.0e6,
             peak_positive_pressure_pa: 80.0e6,
             pulse: PulsePattern::ToneBurst { cycles: 2 },
@@ -157,7 +159,7 @@ impl HistotripsyScenario {
     pub fn shock_scattering_1mhz() -> Self {
         Self {
             regime: HistotripsyRegime::ShockScattering,
-            frequency_hz: 1.0e6,
+            frequency_hz: MHZ_TO_HZ, // 1 MHz
             peak_negative_pressure_pa: -20.0e6,
             peak_positive_pressure_pa: 90.0e6,
             pulse: PulsePattern::ToneBurst { cycles: 5 },
@@ -184,7 +186,7 @@ impl HistotripsyScenario {
     pub fn boiling_histotripsy_liver_1mhz() -> Self {
         Self {
             regime: HistotripsyRegime::Boiling,
-            frequency_hz: 1.0e6,
+            frequency_hz: MHZ_TO_HZ, // 1 MHz
             peak_negative_pressure_pa: -15.0e6,
             peak_positive_pressure_pa: 85.0e6,
             pulse: PulsePattern::ShockFormed {

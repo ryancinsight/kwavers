@@ -1,4 +1,5 @@
 use crate::core::constants::acoustic_parameters::BONE_DENSITY;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::core::error::{KwaversError, KwaversResult};
 
 /// Skull material properties based on literature
@@ -103,7 +104,7 @@ impl AcousticSkullProperties {
     /// Attenuation = α(f) = α₀ × f^n where n ≈ 1 for bone
     #[must_use]
     pub fn attenuation_at_frequency(&self, frequency: f64) -> f64 {
-        let freq_mhz = frequency / 1e6;
+        let freq_mhz = frequency / MHZ_TO_HZ;
         self.attenuation_coeff * freq_mhz
     }
 }

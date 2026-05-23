@@ -2,6 +2,7 @@ use super::*;
 use crate::clinical::safety::mechanical_index::MechanicalIndexTissueType;
 use crate::clinical::therapy::parameters::ClinicalTherapyParameters;
 use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
+use crate::core::constants::medical::THERMAL_DOSE_THRESHOLD;
 use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use crate::core::error::KwaversError;
 use std::f64::consts::PI;
@@ -298,7 +299,7 @@ fn test_hifu_plan_uses_subspot_dose_for_feasibility() {
     assert!(plan.thermal_dose.cem43 > schedule.minimum_subspot_cem43);
     assert_eq!(
         plan.feasibility.thermal_dose_achievable,
-        schedule.minimum_subspot_cem43 >= 240.0
+        schedule.minimum_subspot_cem43 >= THERMAL_DOSE_THRESHOLD
     );
     if !plan.feasibility.thermal_dose_achievable {
         assert!(plan

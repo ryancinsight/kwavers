@@ -13,6 +13,7 @@
 use crate::core::constants::fundamental::{
     SOUND_SPEED_BLOOD, SOUND_SPEED_FAT, SOUND_SPEED_LIVER, SOUND_SPEED_MUSCLE,
 };
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 use crate::math::fft::Complex64;
 use ndarray::{Array3, Zip};
@@ -110,7 +111,7 @@ impl FrequencyDependentProperties {
     pub fn nonlinearity_at_frequency(&self, frequency: f64) -> f64 {
         if self.frequency_dependent_nonlinearity {
             // Empirical model for frequency-dependent B/A
-            let f_mhz = frequency / 1e6;
+            let f_mhz = frequency / MHZ_TO_HZ;
             self.nonlinearity_parameter * 0.1f64.mul_add(f_mhz.ln().max(0.0), 1.0)
         } else {
             self.nonlinearity_parameter
@@ -157,7 +158,7 @@ impl TissueFrequencyModels {
         let mut props = FrequencyDependentProperties::new(SOUND_SPEED_MUSCLE, 7.4);
         props.dispersion_coefficient = 0.0015;
         // Add relaxation processes
-        let _ = props.add_relaxation(1e6, 0.03);
+        let _ = props.add_relaxation(MHZ_TO_HZ, 0.03); // 1 MHz relaxation frequency
         let _ = props.add_relaxation(10e6, 0.04);
         props.frequency_dependent_nonlinearity = true;
         props
@@ -248,13 +249,13 @@ mod tests {
         let props = TissueFrequencyModels::liver();
 
         // Test at different frequencies to validate dispersion model
-        let c_1mhz = props.phase_velocity(1e6);
-        let c_5mhz = props.phase_velocity(5e6);
+        let c_1mhz = props.phase_velocity(MHZ_TO_HZ); // 1 MHz
+        let c_5mhz = props.phase_velocity(5.0 * MHZ_TO_HZ); // 5 MHz
 
         // Validate dispersion formula: c(f) = c₀ * (1 + β * ln(f))
         // For liver: β = 0.002 (dispersion coefficient)
-        let f1: f64 = 1e6;
-        let f2: f64 = 5e6;
+        let f1: f64 = MHZ_TO_HZ; // 1 MHz
+        let f2: f64 = 5.0 * MHZ_TO_HZ; // 5 MHz
         let _expected_c1 = props.c0 * (1.0 + props.dispersion_coefficient * f1.ln());
         let _expected_c5 = props.c0 * (1.0 + props.dispersion_coefficient * f2.ln());
 
@@ -278,8 +279,8 @@ mod tests {
     fn test_frequency_dependent_nonlinearity() {
         let props = TissueFrequencyModels::muscle();
 
-        let beta_1mhz = props.nonlinearity_at_frequency(1e6);
-        let beta_10mhz = props.nonlinearity_at_frequency(10e6);
+        let beta_1mhz = props.nonlinearity_at_frequency(MHZ_TO_HZ); // 1 MHz
+        let beta_10mhz = props.nonlinearity_at_frequency(10.0 * MHZ_TO_HZ); // 10 MHz
 
         // Should increase with frequency
         assert!(beta_10mhz > beta_1mhz);

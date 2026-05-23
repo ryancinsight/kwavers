@@ -1,4 +1,5 @@
 use crate::core::constants::medical::MI_LIMIT_SOFT_TISSUE;
+use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use ndarray::Array3;
 
@@ -143,7 +144,7 @@ impl DomainTherapyParameters {
     pub fn calculate_mechanical_index(&mut self) {
         if self.frequency > 0.0 {
             self.mechanical_index =
-                (self.peak_negative_pressure / 1e6) / (self.frequency / 1e6).sqrt();
+                (self.peak_negative_pressure / MPA_TO_PA) / (self.frequency / MHZ_TO_HZ).sqrt();
         }
     }
 

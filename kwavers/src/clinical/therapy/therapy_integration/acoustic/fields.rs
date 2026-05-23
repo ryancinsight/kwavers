@@ -1,4 +1,5 @@
 use super::AcousticWaveSolver;
+use crate::core::constants::numerical::MPA_TO_PA;
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::source::Source;
 use ndarray::Array3;
@@ -41,7 +42,7 @@ impl AcousticWaveSolver {
     pub fn max_pressure(&self) -> f64 {
         let p = self.pressure_field();
         let p_max = p.iter().cloned().fold(0.0_f64, |a, b| a.max(b.abs()));
-        p_max / 1e6
+        p_max / MPA_TO_PA // Pa → MPa
     }
 
     /// Get spatial peak temporal average intensity (W/cm²).
