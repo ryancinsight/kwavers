@@ -1,3 +1,4 @@
+use crate::core::constants::fundamental::SOUND_SPEED_AIR;
 use crate::core::error::KwaversResult;
 use crate::solver::inverse::pinn::ml::BurnWave2dGeometry;
 use std::sync::Arc;
@@ -107,7 +108,7 @@ impl JitCompiler {
 
         operations.push(Operation::PhysicsConstraints {
             _geometry_type: geometry.geometry_type(),
-            _wave_speed: 343.0,
+            _wave_speed: SOUND_SPEED_AIR,
         });
 
         Ok(ExecutionPlan {

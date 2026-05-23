@@ -1,7 +1,8 @@
 //! Physics parameters for meta-learning task governing equations.
 
 use crate::core::constants::fundamental::{
-    DENSITY_TISSUE, DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM,
+    DENSITY_TISSUE, DENSITY_WATER_NOMINAL, SOUND_SPEED_AIR, SOUND_SPEED_TISSUE,
+    SOUND_SPEED_WATER_SIM,
 };
 
 /// Physics parameters defining the task's governing equations
@@ -57,8 +58,8 @@ pub struct MetaLearningPhysicsParameters {
 impl Default for MetaLearningPhysicsParameters {
     fn default() -> Self {
         Self {
-            wave_speed: 343.0, // Speed of sound in air at 20°C
-            density: 1.2,      // Air density at sea level
+            wave_speed: SOUND_SPEED_AIR, // Speed of sound in air at 20°C
+            density: 1.2,                // Air density at sea level
             viscosity: None,
             absorption: None,
             nonlinearity: None,
@@ -70,7 +71,7 @@ impl MetaLearningPhysicsParameters {
     /// Create parameters for acoustic wave propagation in air
     pub fn acoustic_air() -> Self {
         Self {
-            wave_speed: 343.0,
+            wave_speed: SOUND_SPEED_AIR,
             density: 1.2,
             viscosity: None,
             absorption: Some(0.001),
