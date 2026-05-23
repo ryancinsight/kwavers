@@ -1,5 +1,6 @@
 use super::*;
 use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
+use crate::core::constants::numerical::MPA_TO_PA;
 
 #[test]
 fn test_sound_speed_water_temperature_dependence() {
@@ -109,7 +110,7 @@ fn test_cavitation_threshold() {
         "Cavitation threshold should be negative (tension)"
     );
     assert!(
-        p_thresh.abs() < 1e6,
+        p_thresh.abs() < MPA_TO_PA,
         "Cavitation threshold should be reasonable magnitude"
     );
 }
