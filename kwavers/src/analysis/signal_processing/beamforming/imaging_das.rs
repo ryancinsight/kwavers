@@ -277,7 +277,7 @@ mod tests {
         let (peak_idx, peak_val) = image
             .iter()
             .enumerate()
-            .max_by(|a, b| a.1.partial_cmp(b.1).unwrap())
+            .max_by(|a, b| a.1.total_cmp(b.1))
             .unwrap();
         let peak_depth_idx = peak_idx / 31;
         let peak_lat_idx = peak_idx % 31;

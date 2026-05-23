@@ -231,7 +231,7 @@ impl MechanicalIndexCalculator {
         results
             .into_iter()
             // NaN-safe: treat NaN as equal so the comparison never panics.
-            .max_by(|a, b| a.mi.partial_cmp(&b.mi).unwrap_or(std::cmp::Ordering::Equal))
+            .max_by(|a, b| a.mi.total_cmp(&b.mi))
             .ok_or_else(|| {
                 KwaversError::System(crate::core::error::SystemError::InvalidOperation {
                     operation: "calculate_max_mi".to_owned(),

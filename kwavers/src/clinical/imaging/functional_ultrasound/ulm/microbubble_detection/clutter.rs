@@ -136,7 +136,7 @@ pub(super) fn svht_threshold(sigma: &Array1<f64>, n_rows: usize, n_cols: usize) 
     let omega = 1.82f64.mul_add(beta, 0.56f64.mul_add(beta.powi(3), -(0.95 * beta.powi(2)))) + 1.43;
 
     let mut s_sorted: Vec<f64> = sigma.iter().copied().collect();
-    s_sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    s_sorted.sort_by(|a, b| a.total_cmp(b));
     let s_med = if s_sorted.is_empty() {
         return 0;
     } else if s_sorted.len().is_multiple_of(2) {

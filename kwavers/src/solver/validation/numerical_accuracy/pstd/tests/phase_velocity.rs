@@ -115,7 +115,7 @@ fn test_pstd_phase_velocity_accuracy() {
     let s_peak = xcorr
         .iter()
         .enumerate()
-        .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
+        .max_by(|(_, a), (_, b)| a.total_cmp(b))
         .map(|(i, _)| i)
         .unwrap_or(0);
 

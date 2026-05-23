@@ -64,7 +64,7 @@ impl MlConformalPredictor {
         }
 
         self.calibration_scores
-            .sort_by(|a, b| a.partial_cmp(b).unwrap());
+            .sort_by(|a, b| a.total_cmp(b));
 
         self.is_calibrated = true;
         info!(
@@ -271,7 +271,7 @@ impl MlConformalPredictor {
         let abs_error = error.mapv(|x| x.abs());
 
         let mut errors: Vec<f64> = abs_error.iter().map(|&x| x as f64).collect();
-        errors.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        errors.sort_by(|a, b| a.total_cmp(b));
 
         let mid = errors.len() / 2;
         if errors.len().is_multiple_of(2) {

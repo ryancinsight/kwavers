@@ -58,7 +58,7 @@ fn test_solver_uniform_medium() -> Result<()> {
 
     let max_idx = fluence
         .indexed_iter()
-        .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
+        .max_by(|(_, a), (_, b)| a.total_cmp(b))
         .unwrap()
         .0;
     let dist_from_center = ((max_idx.0 as isize - nx as isize / 2).pow(2)
@@ -113,7 +113,7 @@ fn test_solver_symmetry() -> Result<()> {
         let max_deviation = fluence_values
             .iter()
             .map(|&f| (f - mean).abs() / mean)
-            .max_by(|a, b| a.partial_cmp(b).unwrap())
+            .max_by(|a, b| a.total_cmp(b))
             .unwrap_or(0.0);
 
         assert!(

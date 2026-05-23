@@ -158,9 +158,7 @@ impl QualityMonitor {
             .iter()
             .enumerate()
             .max_by(|(_, a), (_, b)| {
-                a.abs()
-                    .partial_cmp(&b.abs())
-                    .unwrap_or(std::cmp::Ordering::Equal)
+                a.abs().total_cmp(&b.abs())
             })
             .map_or(0, |(idx, _)| idx);
 
@@ -168,9 +166,7 @@ impl QualityMonitor {
             .iter()
             .enumerate()
             .max_by(|(_, a), (_, b)| {
-                a.abs()
-                    .partial_cmp(&b.abs())
-                    .unwrap_or(std::cmp::Ordering::Equal)
+                a.abs().total_cmp(&b.abs())
             })
             .map_or(0, |(idx, _)| idx);
 

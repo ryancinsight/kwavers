@@ -89,7 +89,7 @@ pub(crate) fn compute_robust_bounds(data: ArrayView3<'_, f64>) -> (f64, f64) {
         return (0.0, 0.0);
     }
 
-    values.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    values.sort_by(|a, b| a.total_cmp(b));
 
     let len = values.len();
     let lower_idx = (len as f64 * 0.01).floor() as usize;

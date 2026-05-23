@@ -115,7 +115,7 @@ fn representative_y(power_law_y: &[f64]) -> f64 {
         return 1.05;
     }
     let mut sorted: Vec<f64> = power_law_y.to_vec();
-    sorted.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+    sorted.sort_by(|a, b| a.total_cmp(b));
     let mid = sorted.len() / 2;
     if sorted.len().is_multiple_of(2) {
         0.5 * (sorted[mid - 1] + sorted[mid])

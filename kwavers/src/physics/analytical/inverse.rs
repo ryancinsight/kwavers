@@ -81,7 +81,7 @@ pub fn matrix_singular_values(matrix_flat: &[f64], nrows: usize, ncols: usize) -
     let mut eigs = symmetric_eigenvalues(&ata, k);
     // σ_i = √(λ_i)  (clip negatives from numerical error)
     eigs.iter_mut().for_each(|e| *e = e.max(0.0).sqrt());
-    eigs.sort_by(|a, b| b.partial_cmp(a).unwrap());
+    eigs.sort_by(|a, b| b.total_cmp(a));
     eigs
 }
 
@@ -281,7 +281,7 @@ fn gaussian_elim_flat(mat_flat: &[f64], rhs: &[f64], n: usize) -> Vec<f64> {
     for col in 0..n {
         // Partial pivot
         let pivot = (col..n)
-            .max_by(|&i, &j| aug[i][col].abs().partial_cmp(&aug[j][col].abs()).unwrap())
+            .max_by(|&i, &j| aug[i][col].abs().total_cmp(&aug[j][col].abs()))
             .unwrap();
         aug.swap(col, pivot);
         let diag = aug[col][col];

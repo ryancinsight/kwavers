@@ -171,6 +171,58 @@ fn pstd_source_density_uses_grid_mask_and_source_kappa_symbol() {
 }
 
 #[test]
+fn pstd_temporal_modal_bin_matches_quarter_cycle_recurrence() {
+    let response = pstd_modal_frequency_bin_response(
+        0.0,
+        PstdTemporalBinConfig {
+            frequency_hz: 1.0,
+            time_step_s: 0.25,
+            total_steps: 4,
+            bin_start_step: 0,
+            source_gain: 1.0,
+        },
+    )
+    .unwrap();
+
+    assert!((response - Complex64::new(-0.5, -0.5)).norm() <= 1.0e-15);
+}
+
+#[test]
+fn pstd_temporal_symbols_match_leapfrog_identities() {
+    let sound_speed = 1500.0;
+    let time_step = 1.0e-7;
+    let grid_wavenumber = PI / 1.0e-3;
+    let reference_wavenumber = 2.0 * PI * 200_000.0 / sound_speed;
+    let half_grid_phase = 0.5 * sound_speed * time_step * grid_wavenumber;
+    let half_reference_phase = 0.5 * sound_speed * time_step * reference_wavenumber;
+
+    assert!(
+        (pstd_source_kappa_symbol(grid_wavenumber, time_step, sound_speed) - half_grid_phase.cos())
+            .abs()
+            <= 1.0e-15
+    );
+    assert!(
+        (pstd_modal_theta_squared(grid_wavenumber, time_step, sound_speed)
+            - 4.0 * half_grid_phase.sin().powi(2))
+        .abs()
+            <= 1.0e-15
+    );
+    let expected_denominator = (4.0 * half_reference_phase.sin().powi(2)
+        - 4.0 * half_grid_phase.sin().powi(2))
+        / (sound_speed * time_step).powi(2);
+    assert!(
+        (pstd_leapfrog_symbol(
+            reference_wavenumber,
+            grid_wavenumber,
+            time_step,
+            sound_speed
+        ) - expected_denominator)
+            .abs()
+            <= 1.0e-8
+    );
+}
+
+#[test]
 fn pstd_receiver_projection_uses_exact_grid_cells_and_adjoint() {
     let grid = GridSpec::new((2, 1, 1), 1.0e-3).unwrap();
     let array = MultiRowRingArray::from_ordered_elements(

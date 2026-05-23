@@ -59,8 +59,8 @@ impl KernelCube {
         }
         let mut f0_set: Vec<f64> = kernels.iter().map(|k| k.f0).collect();
         let mut pnp_set: Vec<f64> = kernels.iter().map(|k| k.pnp_realised).collect();
-        f0_set.sort_by(|a, b| a.partial_cmp(b).unwrap());
-        pnp_set.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        f0_set.sort_by(|a, b| a.total_cmp(b));
+        pnp_set.sort_by(|a, b| a.total_cmp(b));
         f0_set.dedup_by(|a, b| (*a - *b).abs() < 1e-3);
         pnp_set.dedup_by(|a, b| (*a - *b).abs() < 1e3);
 

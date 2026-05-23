@@ -129,7 +129,7 @@ impl BlackbodyModel {
         let max_idx = spectrum
             .iter()
             .enumerate()
-            .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
+            .max_by(|(_, a), (_, b)| a.total_cmp(b))
             .map_or(0, |(idx, _)| idx);
 
         let peak_wavelength = wavelengths[max_idx];

@@ -35,7 +35,7 @@ impl FlowKinetics {
         let peak_idx = tic
             .iter()
             .enumerate()
-            .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
+            .max_by(|(_, a), (_, b)| a.total_cmp(b))
             .map_or(0, |(i, _)| i);
 
         let peak_intensity = tic[peak_idx];

@@ -89,8 +89,7 @@ impl MUSIC {
         let mut indices: Vec<usize> = (0..n).collect();
         indices.sort_by(|&i, &j| {
             eigenvalues[j]
-                .partial_cmp(&eigenvalues[i])
-                .unwrap_or(std::cmp::Ordering::Equal)
+                .total_cmp(&eigenvalues[i])
         });
 
         let noise_start = self.num_sources;

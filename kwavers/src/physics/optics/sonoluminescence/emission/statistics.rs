@@ -47,7 +47,7 @@ impl SonoluminescencePulse {
         let (peak_idx, &peak_intensity) = intensities
             .iter()
             .enumerate()
-            .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())?;
+            .max_by(|(_, a), (_, b)| a.total_cmp(b))?;
 
         // Find FWHM duration
         let half_max = peak_intensity / 2.0;

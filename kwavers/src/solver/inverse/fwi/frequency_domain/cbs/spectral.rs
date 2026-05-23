@@ -15,6 +15,7 @@
 
 use super::absorbing::{absorbing_weights, AbsorbingBoundary};
 use super::grid::GridSpec;
+use super::temporal::pstd_leapfrog_symbol;
 use crate::math::fft::{fft_3d_complex_into, ifft_3d_complex_inplace, Complex64};
 use ndarray::Array3;
 use std::f64::consts::TAU;
@@ -218,18 +219,6 @@ fn spectral_denominator(
         ),
     };
     Complex64::new(real, epsilon)
-}
-
-fn pstd_leapfrog_symbol(
-    reference_wavenumber: f64,
-    grid_wavenumber: f64,
-    time_step_s: f64,
-    reference_sound_speed_m_s: f64,
-) -> f64 {
-    let scale = reference_sound_speed_m_s * time_step_s;
-    let temporal = 4.0 * (0.5 * reference_wavenumber * scale).sin().powi(2);
-    let spatial = 4.0 * (0.5 * grid_wavenumber * scale).sin().powi(2);
-    (temporal - spatial) / (scale * scale)
 }
 
 fn angular_mode(index: usize, count: usize, spacing_m: f64) -> f64 {

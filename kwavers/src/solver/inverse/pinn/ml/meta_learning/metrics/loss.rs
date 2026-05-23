@@ -133,7 +133,7 @@ impl MetaLoss {
         self.task_losses
             .iter()
             .copied()
-            .max_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
+            .max_by(|a, b| a.total_cmp(b))
     }
 
     /// Get the best (lowest) task loss
@@ -141,7 +141,7 @@ impl MetaLoss {
         self.task_losses
             .iter()
             .copied()
-            .min_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
+            .min_by(|a, b| a.total_cmp(b))
     }
 
     /// Get the standard deviation of task losses

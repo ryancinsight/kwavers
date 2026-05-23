@@ -197,7 +197,7 @@ impl DelayAndSumPAM {
 
     pub(super) fn noise_threshold(&self, intensity_map: &Array1<f64>) -> f64 {
         let mut sorted = intensity_map.to_vec();
-        sorted.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+        sorted.sort_by(|a, b| a.total_cmp(b));
         let noise_floor = sorted[sorted.len() / 4]; // lower quartile
         noise_floor * self.config.detection_threshold
     }

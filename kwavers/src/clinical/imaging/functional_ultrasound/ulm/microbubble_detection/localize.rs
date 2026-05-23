@@ -115,14 +115,14 @@ impl GaussianLocalizer {
 ///
 fn noise_std_estimate(a: &Array2<f64>) -> f64 {
     let mut vals: Vec<f64> = a.iter().copied().collect();
-    vals.sort_by(|x, y| x.partial_cmp(y).unwrap());
+    vals.sort_by(|x, y| x.total_cmp(y));
     let med = if vals.len().is_multiple_of(2) {
         (vals[vals.len() / 2 - 1] + vals[vals.len() / 2]) / 2.0
     } else {
         vals[vals.len() / 2]
     };
     let mut devs: Vec<f64> = vals.iter().map(|&x| (x - med).abs()).collect();
-    devs.sort_by(|x, y| x.partial_cmp(y).unwrap());
+    devs.sort_by(|x, y| x.total_cmp(y));
     let mad = if devs.len().is_multiple_of(2) {
         (devs[devs.len() / 2 - 1] + devs[devs.len() / 2]) / 2.0
     } else {

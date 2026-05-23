@@ -89,7 +89,7 @@ impl TimeScaleSeparator {
         }
 
         // Sort time scales from fastest to slowest
-        time_scales.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        time_scales.sort_by(|a, b| a.total_cmp(b));
 
         // Store in history
         self.time_scale_history.push(time_scales.clone());

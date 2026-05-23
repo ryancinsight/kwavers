@@ -110,8 +110,7 @@ impl EigenspaceMV {
         let mut indices: Vec<usize> = (0..n).collect();
         indices.sort_by(|&i, &j| {
             eigenvalues[j]
-                .partial_cmp(&eigenvalues[i])
-                .unwrap_or(std::cmp::Ordering::Equal)
+                .total_cmp(&eigenvalues[i])
         });
 
         let mut p_s = Array2::<Complex64>::zeros((n, n));

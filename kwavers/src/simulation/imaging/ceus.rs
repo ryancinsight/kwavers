@@ -291,9 +291,7 @@ impl crate::domain::imaging::CEUSOrchestrator for ContrastEnhancedUltrasound {
         let max_pressure = pressure_field
             .iter()
             .max_by(|a, b| {
-                a.abs()
-                    .partial_cmp(&b.abs())
-                    .unwrap_or(std::cmp::Ordering::Equal)
+                a.abs().total_cmp(&b.abs())
             })
             .copied()
             .unwrap_or(1.0);

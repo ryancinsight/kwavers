@@ -148,7 +148,7 @@ impl ElasticityMap3D {
 
         // Compute true median from collected modulus values
         modulus_values
-            .sort_unstable_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+            .sort_unstable_by(|a, b| a.total_cmp(b));
         let median_modulus = if modulus_values.len() % 2 == 1 {
             modulus_values[modulus_values.len() / 2]
         } else {

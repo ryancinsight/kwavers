@@ -54,7 +54,7 @@ fn test_hermitian_eigendecomposition_diagonal() {
         EigenDecomposition::hermitian_eigendecomposition_complex(&matrix).unwrap();
 
     let mut expected = diag_vals.clone();
-    expected.sort_by(|a, b| b.partial_cmp(a).unwrap());
+    expected.sort_by(|a, b| b.total_cmp(a));
 
     for i in 0..3 {
         assert!(

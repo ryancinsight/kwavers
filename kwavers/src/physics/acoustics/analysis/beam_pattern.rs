@@ -55,6 +55,7 @@ impl Default for BeamPatternConfig {
 /// # Errors
 /// - Returns [`Err`] if an internal constraint is violated.
 ///
+#[must_use]
 pub fn calculate_beam_pattern(
     pressure_field: ArrayView3<f64>,
     grid: &Grid,

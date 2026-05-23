@@ -32,8 +32,7 @@ impl MultiGpuManager {
         let mut sorted_work = work_units;
         sorted_work.sort_by(|a, b| {
             b.complexity
-                .partial_cmp(&a.complexity)
-                .unwrap_or(std::cmp::Ordering::Equal)
+                .total_cmp(&a.complexity)
         });
         for work_unit in sorted_work {
             let best_gpu = self.find_least_loaded_gpu();

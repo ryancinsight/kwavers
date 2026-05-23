@@ -18,7 +18,7 @@ impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
             .map(|(i, &p)| (i, p))
             .collect();
         indexed_priorities
-            .sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+            .sort_by(|a, b| b.1.total_cmp(&a.1));
 
         let refinement_count =
             (self.total_points as f64 * self.strategy.refinement_fraction) as usize;
@@ -179,8 +179,7 @@ impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
 
         regions.sort_by(|a, b| {
             b.residual_magnitude
-                .partial_cmp(&a.residual_magnitude)
-                .unwrap_or(std::cmp::Ordering::Equal)
+                .total_cmp(&a.residual_magnitude)
         });
 
         if !regions.is_empty() {

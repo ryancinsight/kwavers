@@ -136,7 +136,7 @@ impl MultiFrequencyConfig {
     pub fn fundamental_frequency(&self) -> Option<f64> {
         self.frequencies
             .iter()
-            .min_by(|a, b| a.partial_cmp(b).unwrap())
+            .min_by(|a, b| a.total_cmp(b))
             .copied()
     }
 

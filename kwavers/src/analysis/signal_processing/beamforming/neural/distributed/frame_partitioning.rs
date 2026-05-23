@@ -7,7 +7,6 @@ use crate::analysis::signal_processing::beamforming::neural::pinn_interface::{
     DistributedConfig, LoadBalancingStrategy, PinnBeamformingDecompositionStrategy,
 };
 use ndarray::Array3;
-use std::cmp::Ordering;
 use std::ops::Range;
 
 /// Chunk result produced by a distributed worker.
@@ -92,12 +91,10 @@ pub(crate) fn weighted_partition_sizes(
     let mut order: Vec<usize> = (0..weights.len()).collect();
     order.sort_by(|left, right| {
         remainders[*right]
-            .partial_cmp(&remainders[*left])
-            .unwrap_or(Ordering::Equal)
+            .total_cmp(&remainders[*left])
             .then_with(|| {
                 weights[*right]
-                    .partial_cmp(&weights[*left])
-                    .unwrap_or(Ordering::Equal)
+                    .total_cmp(&weights[*left])
             })
             .then_with(|| left.cmp(right))
     });

@@ -93,7 +93,7 @@ pub(super) fn compute_frangi_response(image: &Array3<f64>) -> KwaversResult<Arra
 
                 // Sort by absolute value so |a1| ≤ |a2| ≤ |a3|.
                 let mut sorted = [e1.abs(), e2.abs(), e3.abs()];
-                sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+                sorted.sort_by(|a, b| a.total_cmp(b));
                 let (a1, a2, a3) = (sorted[0], sorted[1], sorted[2]);
 
                 if a3 < 1e-30 {

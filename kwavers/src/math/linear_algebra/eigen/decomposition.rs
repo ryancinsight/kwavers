@@ -102,7 +102,7 @@ impl EigenDecomposition {
         }
 
         let mut indices: Vec<usize> = (0..n).collect();
-        indices.sort_by(|&i, &j| eigenvalues[j].partial_cmp(&eigenvalues[i]).unwrap());
+        indices.sort_by(|&i, &j| eigenvalues[j].total_cmp(&eigenvalues[i]));
 
         let sorted_eigenvals = Array1::from_shape_fn(n, |i| eigenvalues[indices[i]]);
         let sorted_eigenvecs =
@@ -247,7 +247,7 @@ impl EigenDecomposition {
         }
 
         let mut indices: Vec<usize> = (0..n).collect();
-        indices.sort_by(|&i, &j| eigenvals[j].partial_cmp(&eigenvals[i]).unwrap());
+        indices.sort_by(|&i, &j| eigenvals[j].total_cmp(&eigenvals[i]));
 
         let sorted_eigenvals = Array1::from_shape_fn(n, |i| eigenvals[indices[i]]);
         let sorted_eigenvecs = Array2::from_shape_fn((n, n), |(i, j)| v[[i, indices[j]]]);

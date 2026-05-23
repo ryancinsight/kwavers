@@ -2,8 +2,8 @@
 //!
 //! This module owns the CBS algebra and the first real volume-field kernel used
 //! by the frequency-domain FWI path. It is intentionally split by theorem:
-//! scattering potential, grid/source projection, shifted Green operator, and
-//! fixed-point solve.
+//! scattering potential, grid/source projection, shifted Green operator,
+//! PSTD temporal transfer, and fixed-point solve.
 
 mod absorbing;
 mod green;
@@ -12,6 +12,7 @@ mod potential;
 mod projection;
 mod solve;
 mod spectral;
+pub mod temporal;
 
 #[cfg(test)]
 mod tests;
@@ -31,4 +32,8 @@ pub use projection::{
 pub use solve::{
     solve_adjoint_volume_field, solve_adjoint_volume_field_with_operator, solve_volume_field,
     solve_volume_field_with_operator, CbsConfig, CbsSolution,
+};
+pub use temporal::{
+    pstd_leapfrog_symbol, pstd_modal_frequency_bin_response, pstd_modal_theta_squared,
+    pstd_source_kappa_symbol, PstdTemporalBinConfig,
 };

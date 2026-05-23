@@ -55,7 +55,7 @@ impl EmissionSpectrum {
             .intensities
             .iter()
             .enumerate()
-            .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
+            .max_by(|(_, a), (_, b)| a.total_cmp(b))
             .map_or(0, |(idx, _)| idx);
         self.wavelengths[max_idx]
     }
@@ -88,7 +88,7 @@ impl EmissionSpectrum {
             .intensities
             .iter()
             .enumerate()
-            .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
+            .max_by(|(_, a), (_, b)| a.total_cmp(b))
             .unwrap_or((0, &0.0));
 
         let half_max = max_val / 2.0;

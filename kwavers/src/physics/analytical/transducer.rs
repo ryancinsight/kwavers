@@ -102,7 +102,7 @@ pub fn grating_lobe_angles(k: f64, d_m: f64, steer_rad: f64) -> Vec<f64> {
             }
         }
     }
-    angles.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    angles.sort_by(|a, b| a.total_cmp(b));
     angles.dedup_by(|a, b| (*a - *b).abs() < 1e-10);
     angles
 }

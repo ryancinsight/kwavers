@@ -115,7 +115,7 @@ impl BemFemInterface {
                     (dist_sq, idx)
                 })
             })
-            .min_by(|(d1, _), (d2, _)| d1.partial_cmp(d2).unwrap_or(std::cmp::Ordering::Equal))
+            .min_by(|(d1, _), (d2, _)| d1.total_cmp(d2))
             .map(|(_, idx)| idx)
             .ok_or_else(|| {
                 crate::core::error::KwaversError::InvalidInput(

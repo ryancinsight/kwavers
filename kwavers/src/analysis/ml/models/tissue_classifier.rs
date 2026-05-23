@@ -97,7 +97,7 @@ impl TissueClassifierModel {
             .enumerate()
             .max_by(|(_, a), (_, b)| {
                 // Handle NaN gracefully: treat as equal (stable comparison)
-                a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal)
+                a.total_cmp(b)
             })
             .map_or(0, |(idx, _)| idx);
 

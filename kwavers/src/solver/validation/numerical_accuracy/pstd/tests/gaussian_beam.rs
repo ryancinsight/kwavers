@@ -124,7 +124,7 @@ fn test_gaussian_beam_phase_accuracy() {
                 .sum();
             (lag, corr)
         })
-        .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
+        .max_by(|a, b| a.1.total_cmp(&b.1))
         .unwrap_or((1, 0.0));
 
     println!(

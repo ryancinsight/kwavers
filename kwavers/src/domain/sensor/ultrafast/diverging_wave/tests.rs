@@ -152,7 +152,7 @@ fn test_hann_apodization_center_is_one() {
         .element_positions
         .iter()
         .enumerate()
-        .min_by(|(_, a), (_, b)| a.abs().partial_cmp(&b.abs()).unwrap())
+        .min_by(|(_, a), (_, b)| a.abs().total_cmp(&b.abs()))
         .map(|(i, _)| i)
         .unwrap();
     let xc = dw.config.element_positions[center_idx];

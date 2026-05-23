@@ -145,7 +145,7 @@ impl FrequencyProfile {
 
                 // Binary search for interpolation interval
                 let idx = points
-                    .binary_search_by(|p| p.0.partial_cmp(&frequency).unwrap())
+                    .binary_search_by(|p| p.0.total_cmp(&frequency))
                     .unwrap_or_else(|i| i);
 
                 if idx == 0 {

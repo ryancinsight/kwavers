@@ -59,11 +59,11 @@ impl DelayReference {
             })?,
             Self::EarliestArrival => *delays_s
                 .iter()
-                .min_by(|a, b| a.partial_cmp(b).unwrap())
+                .min_by(|a, b| a.total_cmp(b))
                 .unwrap(),
             Self::LatestArrival => *delays_s
                 .iter()
-                .max_by(|a, b| a.partial_cmp(b).unwrap())
+                .max_by(|a, b| a.total_cmp(b))
                 .unwrap(),
         };
 

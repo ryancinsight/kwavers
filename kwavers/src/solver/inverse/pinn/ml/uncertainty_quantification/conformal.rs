@@ -61,7 +61,7 @@ impl<B: Backend> PinnConformalPredictor<B> {
             ));
         }
 
-        scores.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        scores.sort_by(|a, b| a.total_cmp(b));
         let n = scores.len();
         let k = (((n as f64 + 1.0) * (1.0 - self.alpha)).ceil() as usize).clamp(1, n);
         let q_hat = scores[k - 1];

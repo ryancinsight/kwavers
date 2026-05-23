@@ -195,7 +195,7 @@ fn gaussian_elimination(a: &[Vec<f64>], b: &[f64]) -> Vec<f64> {
     for col in 0..n {
         // Partial pivot
         let pivot_row = (col..n)
-            .max_by(|&i, &j| aug[i][col].abs().partial_cmp(&aug[j][col].abs()).unwrap())
+            .max_by(|&i, &j| aug[i][col].abs().total_cmp(&aug[j][col].abs()))
             .unwrap();
         aug.swap(col, pivot_row);
         let diag = aug[col][col];

@@ -2,6 +2,7 @@
 
 use super::green::GreenOperatorKind;
 use super::grid::{bli_weights, BliConfig, GridSpec, GridWeight};
+use super::temporal::pstd_source_kappa_symbol;
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::math::fft::{fft_3d_complex_into, ifft_3d_complex_inplace};
 use crate::physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;
@@ -85,7 +86,8 @@ fn source_density_from_pstd_grid_kappa(
             for iz in 0..nz {
                 let kz = angular_mode(iz, nz, grid.spacing_m);
                 let k = kx.mul_add(kx, ky.mul_add(ky, kz * kz)).sqrt();
-                let source_kappa = (0.5 * reference_sound_speed_m_s * time_step_s * k).cos();
+                let source_kappa =
+                    pstd_source_kappa_symbol(k, time_step_s, reference_sound_speed_m_s);
                 spectrum[[ix, iy, iz]] *= Complex64::new(source_kappa, 0.0);
             }
         }

@@ -133,8 +133,7 @@ impl AdaptiveFilter {
         let mut indices: Vec<usize> = (0..eigenvalues.len()).collect();
         indices.sort_by(|&i, &j| {
             eigenvalues[j]
-                .partial_cmp(&eigenvalues[i])
-                .unwrap_or(std::cmp::Ordering::Equal)
+                .total_cmp(&eigenvalues[i])
         });
 
         let sorted_eigenvalues: Array1<f64> = indices.iter().map(|&i| eigenvalues[i]).collect();

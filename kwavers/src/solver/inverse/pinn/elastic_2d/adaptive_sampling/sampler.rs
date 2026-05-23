@@ -134,7 +134,7 @@ impl AdaptiveSampler {
                 if candidates.is_empty() {
                     return self.resample(&vec![1.0; n_candidates]);
                 }
-                candidates.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+                candidates.sort_by(|a, b| b.1.total_cmp(&a.1));
                 let k = ((top_k_ratio * candidates.len() as f64) as usize)
                     .max(self.n_points)
                     .min(candidates.len());
@@ -194,7 +194,7 @@ impl AdaptiveSampler {
                 (i, key)
             })
             .collect();
-        keys.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+        keys.sort_by(|a, b| b.1.total_cmp(&a.1));
         keys.truncate(n_samples);
         Ok(keys.into_iter().map(|(i, _)| i).collect())
     }

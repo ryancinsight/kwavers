@@ -97,7 +97,7 @@ pub(super) fn volumetric_time_of_flight_inversion(
                     }
 
                     if !speed_estimates.is_empty() {
-                        speed_estimates.sort_by(|a, b| a.partial_cmp(b).unwrap());
+                        speed_estimates.sort_by(|a, b| a.total_cmp(b));
                         let median_idx = speed_estimates.len() / 2;
                         shear_wave_speed[[i, j, k]] = speed_estimates[median_idx];
                     } else {

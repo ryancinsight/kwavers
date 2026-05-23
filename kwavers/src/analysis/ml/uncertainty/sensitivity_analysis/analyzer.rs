@@ -110,7 +110,7 @@ impl SensitivityAnalyzer {
             .iter()
             .map(|(name, &sensitivity)| (name.clone(), sensitivity))
             .collect();
-        parameter_ranking.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+        parameter_ranking.sort_by(|a, b| b.1.total_cmp(&a.1));
 
         Ok(SensitivityIndices {
             first_order,

@@ -80,7 +80,7 @@ impl InterfaceGeometry {
         let interface_dim = overlaps
             .iter()
             .enumerate()
-            .min_by(|a, b| a.1.partial_cmp(b.1).unwrap())
+            .min_by(|a, b| a.1.total_cmp(b.1))
             .map_or(0, |(i, _)| i);
 
         // Interface position is at the boundary between grids

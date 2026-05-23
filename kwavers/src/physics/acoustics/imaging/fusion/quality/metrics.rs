@@ -24,7 +24,7 @@ pub fn calculate_image_metrics(data: &Array3<f64>) -> ImageMetrics {
     let mut values: Vec<f64> = data.iter().copied().filter(|x| !x.is_nan()).collect();
 
     // Sort to determine signal and background regions
-    values.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    values.sort_by(|a, b| a.total_cmp(b));
 
     let count = values.len();
 

@@ -173,7 +173,7 @@ pub fn matrix_eigenvalues(m: &[[f64; 3]; 3]) -> [f64; 3] {
     eigenvalues[2] = a[2][2];
 
     // Sort eigenvalues in ascending order
-    eigenvalues.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    eigenvalues.sort_by(|a, b| a.total_cmp(b));
 
     eigenvalues
 }

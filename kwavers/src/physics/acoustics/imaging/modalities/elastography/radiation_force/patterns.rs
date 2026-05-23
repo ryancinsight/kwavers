@@ -200,7 +200,7 @@ impl MultiDirectionalPush {
                         ),
                     )
                     .sqrt();
-                dist_a.partial_cmp(&dist_b).unwrap()
+                dist_a.total_cmp(&dist_b)
             });
             pushes.truncate(density);
         }

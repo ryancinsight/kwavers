@@ -161,7 +161,7 @@ fn test_cardano_eigenvalues_diagonal_matrix() {
     let h = [3.0_f64, 1.0, 2.0, 0.0, 0.0, 0.0];
     let (e1, e2, e3) = symmetric_3x3_eigenvalues(h);
     let mut eigs = [e1, e2, e3];
-    eigs.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    eigs.sort_by(|a, b| a.total_cmp(b));
     assert!((eigs[0] - 1.0).abs() < 1e-10);
     assert!((eigs[1] - 2.0).abs() < 1e-10);
     assert!((eigs[2] - 3.0).abs() < 1e-10);

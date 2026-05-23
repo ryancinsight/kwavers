@@ -5,6 +5,10 @@ use super::grid::{
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::math::fft::{fft_3d_complex_into, ifft_3d_complex_inplace};
 use crate::physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;
+use crate::solver::inverse::fwi::frequency_domain::cbs::{
+    pstd_modal_frequency_bin_response, pstd_modal_theta_squared, pstd_source_kappa_symbol,
+    PstdTemporalBinConfig,
+};
 use ndarray::Array3;
 use num_complex::Complex64;
 use std::f64::consts::TAU;
@@ -173,8 +177,9 @@ pub(super) fn source_kappa_filtered_source_weights(
     for ix in 0..shape.nx {
         for iy in 0..shape.ny {
             for iz in 0..shape.nz {
+                let k = wavenumber_magnitude(shape, spacing_m, ix, iy, iz);
                 let symbol =
-                    source_kappa_symbol(shape, spacing_m, sound_speed_m_s, time_step_s, ix, iy, iz);
+                    pstd_source_kappa_symbol(k, time_step_s, sound_speed_m_s);
                 spectrum[[ix, iy, iz]] *= Complex64::new(symbol, 0.0);
             }
         }
@@ -199,91 +204,41 @@ fn pstd_periodic_frequency_bin(
     let mask = source_mask(shape, source_indices)?;
     let mut source_hat = Array3::<Complex64>::zeros(shape.dimensions());
     fft_3d_complex_into(&mask, &mut source_hat);
-    let theta_squared = pstd_leapfrog_theta_squared(shape, spacing_m, sound_speed_m_s, time_step_s);
     for ix in 0..shape.nx {
         for iy in 0..shape.ny {
             for iz in 0..shape.nz {
-                let symbol =
-                    source_kappa_symbol(shape, spacing_m, sound_speed_m_s, time_step_s, ix, iy, iz);
+                let k = wavenumber_magnitude(shape, spacing_m, ix, iy, iz);
+                let symbol = pstd_source_kappa_symbol(k, time_step_s, sound_speed_m_s);
                 source_hat[[ix, iy, iz]] *= Complex64::new(symbol, 0.0);
             }
         }
     }
 
-    let mut p_previous = Array3::<Complex64>::zeros(shape.dimensions());
-    let mut p_current = Array3::<Complex64>::zeros(shape.dimensions());
-    let mut p_next = Array3::<Complex64>::zeros(shape.dimensions());
-    let mut real_space = Array3::<Complex64>::zeros(shape.dimensions());
-    let mut bins = vec![Complex64::new(0.0, 0.0); receiver_indices.len()];
-    let angular_step = TAU * frequency_hz * time_step_s;
     let gain = 2.0 * sound_speed_m_s * time_step_s * source_amplitude_pa / spacing_m;
-    let mut previous_signal = 0.0;
-
-    for step in 0..steps {
-        let signal = (angular_step * step as f64).sin();
-        let source_scale = gain * (signal - previous_signal);
-        for ix in 0..shape.nx {
-            for iy in 0..shape.ny {
-                for iz in 0..shape.nz {
-                    p_next[[ix, iy, iz]] = (2.0 - theta_squared[[ix, iy, iz]])
-                        * p_current[[ix, iy, iz]]
-                        - p_previous[[ix, iy, iz]]
-                        + source_scale * source_hat[[ix, iy, iz]];
-                }
+    let temporal_config = PstdTemporalBinConfig {
+        frequency_hz,
+        time_step_s,
+        total_steps: steps,
+        bin_start_step: bin_start,
+        source_gain: gain,
+    };
+    for ix in 0..shape.nx {
+        for iy in 0..shape.ny {
+            for iz in 0..shape.nz {
+                let k = wavenumber_magnitude(shape, spacing_m, ix, iy, iz);
+                let theta_squared = pstd_modal_theta_squared(k, time_step_s, sound_speed_m_s);
+                source_hat[[ix, iy, iz]] *=
+                    pstd_modal_frequency_bin_response(theta_squared, temporal_config)?;
             }
         }
-
-        real_space.assign(&p_next);
-        ifft_3d_complex_inplace(&mut real_space);
-        if step >= bin_start {
-            let phase = -TAU * frequency_hz * step as f64 * time_step_s;
-            let weight = Complex64::new(phase.cos(), phase.sin());
-            for (receiver, &(ix, iy, iz)) in receiver_indices.iter().enumerate() {
-                bins[receiver] += real_space[[ix, iy, iz]].re * weight;
-            }
-        }
-
-        std::mem::swap(&mut p_previous, &mut p_current);
-        std::mem::swap(&mut p_current, &mut p_next);
-        previous_signal = signal;
     }
 
-    let scale = 2.0 / (steps - bin_start) as f64;
-    for value in &mut bins {
-        *value *= scale;
-    }
+    ifft_3d_complex_inplace(&mut source_hat);
+    let bins = receiver_indices
+        .iter()
+        .map(|&(ix, iy, iz)| source_hat[[ix, iy, iz]])
+        .collect();
     Ok(bins)
-}
-
-fn pstd_leapfrog_theta_squared(
-    shape: GridShape,
-    spacing_m: f64,
-    sound_speed_m_s: f64,
-    time_step_s: f64,
-) -> Array3<f64> {
-    Array3::from_shape_fn(shape.dimensions(), |(ix, iy, iz)| {
-        let k = wavenumber_magnitude(shape, spacing_m, ix, iy, iz);
-        if k == 0.0 {
-            0.0
-        } else {
-            let half_phase = 0.5 * sound_speed_m_s * time_step_s * k;
-            let kappa = half_phase.sin() / half_phase;
-            (sound_speed_m_s * time_step_s * k * kappa).powi(2)
-        }
-    })
-}
-
-fn source_kappa_symbol(
-    shape: GridShape,
-    spacing_m: f64,
-    sound_speed_m_s: f64,
-    time_step_s: f64,
-    ix: usize,
-    iy: usize,
-    iz: usize,
-) -> f64 {
-    let k = wavenumber_magnitude(shape, spacing_m, ix, iy, iz);
-    (0.5 * sound_speed_m_s * time_step_s * k).cos()
 }
 
 fn source_indices_for_transmit(
