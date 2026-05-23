@@ -1,7 +1,51 @@
-//! Dense CBS fixed-point volume solver.
+//! CBS fixed-point volume solver — forward and adjoint.
+//!
+//! # Forward CBS system
+//!
+//! Solves `(∇² + k(x)²) u = q` in the Lippmann-Schwinger form
+//! `(I + G_ε diag(Ṽ)) u = G_ε q`
+//! where `Ṽ = V − iε` is the shifted scattering potential and `G_ε` is the
+//! shifted reference Green operator.  A Richardson fixed-point iteration with
+//! the diagonal preconditioner `γ = iε / Ṽ` is used.  Contraction is
+//! guaranteed when `ε ≥ ‖V‖_∞` (Osnabrugge–Leedumrongwatthanakun–Vellekoop
+//! 2016, Theorem 1).
+//!
+//! # Adjoint CBS system (discrete Euclidean adjoint)
+//!
+//! Solves `A^H λ = r` where `A = I + G_ε diag(Ṽ)` and
+//! `A^H = I + diag(Ṽ^*) G_ε^H`.
+//!
+//! The adjoint Richardson iterate is
+//! ```text
+//! residual_k  = λ_k + Ṽ^* · G_ε^H(λ_k) − r   [= A^H λ_k − r]
+//! λ_{k+1}    = λ_k − γ^H · residual_k
+//! ```
+//! with the adjoint preconditioner `γ^H = conj(γ) = −iε / Ṽ^*`.
+//!
+//! ## Convergence
+//!
+//! The iteration matrix of the adjoint update is
+//! `I − γ^H A^H = conj(I − γ A)^T`,
+//! whose spectral radius equals that of the forward update `I − γ A`.
+//! Consequently the adjoint and forward solves converge at the same rate and
+//! require `O(max_iterations × N log N)` work per operator application.
+//!
+//! ## Operator routing
+//!
+//! | `GreenOperatorKind`            | Forward path          | Adjoint path              |
+//! |--------------------------------|-----------------------|---------------------------|
+//! | `DenseFreeSpace`               | O(N²) dense sum       | Exact dense LU (small N)  |
+//! | `SpectralPeriodic`             | FFT fixed-point       | FFT adjoint fixed-point   |
+//! | `SpectralPstdPeriodic`         | FFT fixed-point       | FFT adjoint fixed-point   |
+//!
+//! The dense LU path is kept only for `DenseFreeSpace`, which is the only
+//! operator whose Green kernel is not diagonal in the Fourier domain.  All
+//! spectral operators use the iterative adjoint, which is exact (to solver
+//! tolerance) and avoids the O(N³) cost of LU factorization on large grids.
 
 use super::green::{
-    apply_shifted_green_operator, shifted_outgoing_green, shifted_wavenumber, GreenOperatorKind,
+    apply_shifted_green_adjoint_operator, apply_shifted_green_operator, shifted_outgoing_green,
+    shifted_wavenumber, GreenOperatorKind,
 };
 use super::grid::GridSpec;
 use super::potential::{convergence_epsilon, pointwise_preconditioner, shifted_potential};
@@ -155,9 +199,15 @@ pub fn solve_adjoint_volume_field(
 
 /// Solve the Euclidean adjoint for an explicit Green operator discretization.
 ///
+/// Routes to an exact dense LU solve for `DenseFreeSpace` (small grids only)
+/// and to an iterative Richardson adjoint for all spectral operators.  The
+/// iterative path costs `O(max_iterations × N log N)` — identical to the
+/// forward solve — and avoids the `O(N² log N)` matrix build plus `O(N³)` LU
+/// factorization that would be required for large spectral grids.
+///
 /// # Errors
-/// Returns an error if the discrete system is invalid, singular, or fails the
-/// requested residual tolerance.
+/// Returns an error if the discrete system is invalid, or (for `DenseFreeSpace`)
+/// if the dense operator is singular or the residual exceeds tolerance.
 pub fn solve_adjoint_volume_field_with_operator(
     grid: GridSpec,
     reference_wavenumber: f64,
@@ -176,25 +226,133 @@ pub fn solve_adjoint_volume_field_with_operator(
     )?;
     validate_operator(grid, operator_kind)?;
     let shifted = shifted_potential(real_potential, epsilon)?;
-    let operator =
-        dense_operator_matrix(grid, reference_wavenumber, epsilon, &shifted, operator_kind);
+    match operator_kind {
+        GreenOperatorKind::DenseFreeSpace => solve_adjoint_dense_free_space(
+            grid,
+            reference_wavenumber,
+            epsilon,
+            &shifted,
+            adjoint_rhs,
+            config,
+        ),
+        GreenOperatorKind::SpectralPeriodic { .. }
+        | GreenOperatorKind::SpectralPstdPeriodic { .. } => solve_adjoint_spectral_iterative(
+            grid,
+            reference_wavenumber,
+            epsilon,
+            &shifted,
+            adjoint_rhs,
+            config,
+            operator_kind,
+        ),
+    }
+}
+
+/// Exact dense LU adjoint solve for `DenseFreeSpace`.
+///
+/// Builds the full N×N operator matrix and solves `A^H λ = r` via LU
+/// factorization.  Correct only for small grids (N ≲ 1000) where the O(N³)
+/// cost is acceptable.
+fn solve_adjoint_dense_free_space(
+    grid: GridSpec,
+    reference_wavenumber: f64,
+    epsilon: f64,
+    shifted: &[Complex64],
+    adjoint_rhs: &[Complex64],
+    config: CbsConfig,
+) -> KwaversResult<CbsSolution> {
+    let operator = dense_free_space_operator_matrix(grid, reference_wavenumber, epsilon, shifted);
     let adjoint_operator = operator.adjoint();
     let rhs = DVector::from_column_slice(adjoint_rhs);
     let solution = adjoint_operator.clone().lu().solve(&rhs).ok_or_else(|| {
         KwaversError::InvalidInput("dense CBS adjoint operator is singular".to_owned())
     })?;
-    let residual = &adjoint_operator * &solution - rhs;
-    let relative_residual = residual.norm() / adjoint_rhs_norm(adjoint_rhs).max(f64::EPSILON);
+    let residual = &adjoint_operator * &solution - &rhs;
+    let relative_residual = residual.norm() / norm(adjoint_rhs).max(f64::EPSILON);
     if !relative_residual.is_finite() || relative_residual > config.relative_tolerance {
         return Err(KwaversError::InvalidInput(format!(
             "dense CBS adjoint residual {} exceeds tolerance {}",
             relative_residual, config.relative_tolerance
         )));
     }
-
     Ok(CbsSolution {
         field: solution.iter().copied().collect(),
         iterations: 1,
+        relative_residual,
+        epsilon,
+    })
+}
+
+/// Iterative Richardson adjoint solve for spectral CBS operators.
+///
+/// Solves `A^H λ = r` where `A^H = I + diag(Ṽ^*) G_ε^H` via
+/// ```text
+/// residual_k  = λ_k + Ṽ^* · G_ε^H(λ_k) − r
+/// λ_{k+1}    = λ_k − γ^H · residual_k,  γ^H = −iε / Ṽ^*
+/// ```
+///
+/// `G_ε^H` is applied via `apply_shifted_green_adjoint_operator`, which
+/// conjugates the spectral multiplier.  The spectral radius of the iteration
+/// matrix `I − γ^H A^H = conj(I − γ A)^T` equals that of the forward
+/// iteration, so convergence is guaranteed under the same `ε ≥ ‖V‖_∞`
+/// condition (Osnabrugge et al. 2016 Theorem 1).
+///
+/// Cost: `O(max_iterations × N log N)` — identical to the forward solve.
+fn solve_adjoint_spectral_iterative(
+    grid: GridSpec,
+    reference_wavenumber: f64,
+    epsilon: f64,
+    shifted: &[Complex64],
+    adjoint_rhs: &[Complex64],
+    config: CbsConfig,
+    operator_kind: GreenOperatorKind,
+) -> KwaversResult<CbsSolution> {
+    // γ^H = conj(iε / Ṽ) = conj(iε) / conj(Ṽ) = −iε / Ṽ^*
+    let adjoint_gamma: Vec<Complex64> = shifted
+        .iter()
+        .map(|&v| Complex64::new(0.0, -epsilon) / v.conj())
+        .collect();
+    let rhs_norm = norm(adjoint_rhs).max(f64::EPSILON);
+    let mut field = vec![Complex64::new(0.0, 0.0); grid.len()];
+    let mut relative_residual = f64::INFINITY;
+
+    for iteration in 1..=config.max_iterations {
+        // G_ε^H(λ_k): apply the Hermitian adjoint of the shifted Green operator
+        let green_field = apply_shifted_green_adjoint_operator(
+            grid,
+            reference_wavenumber,
+            epsilon,
+            &field,
+            operator_kind,
+        );
+        // residual_k = A^H λ_k − r = λ_k + Ṽ^* · G_ε^H(λ_k) − r
+        let residual: Vec<Complex64> = field
+            .iter()
+            .zip(shifted.iter().zip(green_field.iter().zip(adjoint_rhs.iter())))
+            .map(|(&lam, (&v, (&g_lam, &rhs)))| lam + v.conj() * g_lam - rhs)
+            .collect();
+        relative_residual = norm(&residual) / rhs_norm;
+        // λ_{k+1} = λ_k − γ^H · residual_k
+        for ((lam, &gam), &res) in field
+            .iter_mut()
+            .zip(adjoint_gamma.iter())
+            .zip(residual.iter())
+        {
+            *lam -= gam * res;
+        }
+        if relative_residual <= config.relative_tolerance {
+            return Ok(CbsSolution {
+                field,
+                iterations: iteration,
+                relative_residual,
+                epsilon,
+            });
+        }
+    }
+
+    Ok(CbsSolution {
+        field,
+        iterations: config.max_iterations,
         relative_residual,
         epsilon,
     })
@@ -269,28 +427,6 @@ fn validate_operator(grid: GridSpec, operator: GreenOperatorKind) -> KwaversResu
     Ok(())
 }
 
-fn dense_operator_matrix(
-    grid: GridSpec,
-    reference_wavenumber: f64,
-    epsilon: f64,
-    shifted_potential: &[Complex64],
-    operator: GreenOperatorKind,
-) -> DMatrix<Complex64> {
-    match operator {
-        GreenOperatorKind::DenseFreeSpace => {
-            dense_free_space_operator_matrix(grid, reference_wavenumber, epsilon, shifted_potential)
-        }
-        GreenOperatorKind::SpectralPeriodic { .. }
-        | GreenOperatorKind::SpectralPstdPeriodic { .. } => operator_matrix_by_columns(
-            grid,
-            reference_wavenumber,
-            epsilon,
-            shifted_potential,
-            operator,
-        ),
-    }
-}
-
 fn dense_free_space_operator_matrix(
     grid: GridSpec,
     reference_wavenumber: f64,
@@ -309,26 +445,6 @@ fn dense_free_space_operator_matrix(
     })
 }
 
-fn operator_matrix_by_columns(
-    grid: GridSpec,
-    reference_wavenumber: f64,
-    epsilon: f64,
-    shifted_potential: &[Complex64],
-    operator: GreenOperatorKind,
-) -> DMatrix<Complex64> {
-    let mut matrix = DMatrix::zeros(grid.len(), grid.len());
-    for column in 0..grid.len() {
-        let mut basis = vec![Complex64::new(0.0, 0.0); grid.len()];
-        basis[column] = shifted_potential[column];
-        let green_column =
-            apply_shifted_green_operator(grid, reference_wavenumber, epsilon, &basis, operator);
-        for row in 0..grid.len() {
-            matrix[(row, column)] = identity_entry(row, column) + green_column[row];
-        }
-    }
-    matrix
-}
-
 #[inline]
 fn identity_entry(row: usize, column: usize) -> Complex64 {
     if row == column {
@@ -344,8 +460,4 @@ fn norm(values: &[Complex64]) -> f64 {
         .map(|value| value.norm_sqr())
         .sum::<f64>()
         .sqrt()
-}
-
-fn adjoint_rhs_norm(values: &[Complex64]) -> f64 {
-    norm(values)
 }

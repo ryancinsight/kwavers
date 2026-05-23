@@ -196,7 +196,7 @@ def run_reduced_replication(args: argparse.Namespace) -> dict[str, Any]:
     )
     reference_speed = float(initial_sound_speed.ravel()[0])
     configs_by_model = make_configs_by_model(kw, args, reference_speed, effective_spacing_m)
-    fwi_config = configs_by_model["spectral_convergent_born"]
+    fwi_config = configs_by_model["pstd_spectral_convergent_born"]
 
     dataset = kw.generate_breast_fwi_pstd_dataset(
         reduced_sound_speed,
@@ -212,7 +212,7 @@ def run_reduced_replication(args: argparse.Namespace) -> dict[str, Any]:
         args.frequencies_hz,
         configs_by_model,
     )
-    truth_forward = forward_predictions["spectral_convergent_born"]
+    truth_forward = forward_predictions["pstd_spectral_convergent_born"]
     operator_equivalence = operator_equivalence_diagnostics(
         forward_predictions,
         observed_pressure,

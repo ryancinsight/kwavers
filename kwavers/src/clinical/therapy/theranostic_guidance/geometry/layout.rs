@@ -1,8 +1,9 @@
-use std::f64::consts::{PI, TAU};
+use std::f64::consts::PI;
 
 use ndarray::Array2;
 
 use crate::core::error::KwaversResult;
+use crate::domain::source::transducers::focused::BowlTransducer;
 
 use super::super::aperture::{
     abdominal_aperture_frame, abdominal_arc_point_2d, abdominal_arc_spec,
@@ -39,7 +40,7 @@ pub fn build_device_layout(
     let focus = centroid_or_center(target_mask, body_mask, spacing_m);
     let layout = match config.anatomy {
         AnatomyKind::Brain => {
-            transcranial_focused_bowl_projection_layout(config, body_mask, spacing_m, focus)
+            transcranial_focused_bowl_projection_layout(config, body_mask, spacing_m, focus)?
         }
         AnatomyKind::Liver | AnatomyKind::Kidney => {
             abdominal_layout(config, body_mask, spacing_m, focus)?
@@ -53,25 +54,39 @@ fn transcranial_focused_bowl_projection_layout(
     body_mask: &Array2<bool>,
     spacing_m: f64,
     focus: Point2,
-) -> DeviceLayout {
-    let radius = body_radius(body_mask, spacing_m) + 0.015;
+) -> KwaversResult<DeviceLayout> {
+    let radius = body_radius_from_focus(body_mask, spacing_m, focus) + 0.015;
     let actual_radius = radius.max(config.focal_radius_m);
-    let elements = (0..config.element_count)
-        .map(|idx| {
-            let theta = TAU * idx as f64 / config.element_count as f64;
-            Point2 {
-                x_m: actual_radius * theta.cos(),
-                y_m: actual_radius * theta.sin(),
-            }
-        })
-        .collect();
-    DeviceLayout {
+    let elements = BowlTransducer::transverse_projection_ring(
+        [focus.x_m, focus.y_m],
+        actual_radius,
+        config.element_count,
+    )?
+    .into_iter()
+    .map(|point| Point2 {
+        x_m: point[0],
+        y_m: point[1],
+    })
+    .collect();
+    Ok(DeviceLayout {
         therapy_elements: elements,
         imaging_receivers: Vec::new(),
         focus_m: focus,
         skin_contact_m: nearest_body_boundary_point(body_mask, spacing_m, focus),
         model_name: "transcranial_focused_bowl_projection".to_owned(),
-    }
+    })
+}
+
+fn body_radius_from_focus(mask: &Array2<bool>, spacing_m: f64, focus: Point2) -> f64 {
+    let center = centered_origin(mask);
+    mask.indexed_iter()
+        .filter(|(_, active)| **active)
+        .map(|((ix, iy), _)| {
+            let x = (ix as f64 - center.0) * spacing_m;
+            let y = (iy as f64 - center.1) * spacing_m;
+            (x - focus.x_m).hypot(y - focus.y_m)
+        })
+        .fold(0.0, f64::max)
 }
 
 fn abdominal_layout(
@@ -180,18 +195,6 @@ fn centroid_or_center(mask: &Array2<bool>, fallback: &Array2<bool>, spacing_m: f
     } else {
         Point2 { x_m: 0.0, y_m: 0.0 }
     }
-}
-
-fn body_radius(mask: &Array2<bool>, spacing_m: f64) -> f64 {
-    let center = centered_origin(mask);
-    mask.indexed_iter()
-        .filter(|(_, active)| **active)
-        .map(|((ix, iy), _)| {
-            let x = (ix as f64 - center.0) * spacing_m;
-            let y = (iy as f64 - center.1) * spacing_m;
-            (x * x + y * y).sqrt()
-        })
-        .fold(0.0, f64::max)
 }
 
 fn nearest_body_point(mask: &Array2<bool>, spacing_m: f64, focus: Point2) -> Point2 {
@@ -322,4 +325,48 @@ pub fn angle_span(layout: &DeviceLayout) -> f64 {
         max_angle = max_angle.max(angle);
     }
     max_angle - min_angle
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ndarray::Array2;
+
+    #[test]
+    fn transcranial_projection_ring_is_focus_relative() {
+        let spacing_m = 0.001;
+        let focus = Point2 {
+            x_m: 0.006,
+            y_m: -0.004,
+        };
+        let mut body_mask = Array2::<bool>::from_elem((31, 29), false);
+        for x in 0..31 {
+            for y in 0..29 {
+                let active =
+                    ((x as f64 - 15.0) / 12.0).powi(2) + ((y as f64 - 14.0) / 10.0).powi(2) <= 1.0;
+                body_mask[[x, y]] = active;
+            }
+        }
+        let mut config = TheranosticInverseConfig::new(AnatomyKind::Brain);
+        config.element_count = 32;
+        config.focal_radius_m = 0.0;
+
+        let layout =
+            transcranial_focused_bowl_projection_layout(&config, &body_mask, spacing_m, focus)
+                .unwrap();
+        let expected_radius = body_radius_from_focus(&body_mask, spacing_m, focus) + 0.015;
+
+        assert_eq!(layout.therapy_elements.len(), config.element_count);
+        for element in &layout.therapy_elements {
+            assert_close(distance(*element, focus), expected_radius);
+        }
+    }
+
+    fn assert_close(actual: f64, expected: f64) {
+        let tolerance = 64.0 * f64::EPSILON * expected.abs().max(1.0);
+        assert!(
+            (actual - expected).abs() <= tolerance,
+            "actual {actual}, expected {expected}, tolerance {tolerance}"
+        );
+    }
 }

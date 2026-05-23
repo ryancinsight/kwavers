@@ -4,8 +4,8 @@
 
 use crate::{
     core::{
-        constants::SOUND_SPEED_WATER,
         constants::numerical::{MHZ_TO_HZ, MPA_TO_PA},
+        constants::SOUND_SPEED_WATER,
         error::{KwaversError, KwaversResult, ValidationError},
     },
     domain::grid::Grid,
@@ -20,6 +20,7 @@ use super::validation::{
 };
 
 mod presets;
+mod projection;
 mod span;
 
 pub use span::BowlAngularBounds;
@@ -71,8 +72,8 @@ impl Default for BowlConfig {
             diameter: 0.064,            // 64mm
             center: [0.0, 0.0, 0.0],
             focus: [0.0, 0.0, 0.064], // Focus at radius
-            frequency: MHZ_TO_HZ, // 1 MHz
-            amplitude: MPA_TO_PA, // 1 MPa
+            frequency: MHZ_TO_HZ,     // 1 MHz
+            amplitude: MPA_TO_PA,     // 1 MPa
             phase: 0.0,
             element_size: None,
             apply_directivity: true,
