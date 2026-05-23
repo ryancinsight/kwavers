@@ -224,6 +224,7 @@ impl UncertaintyQuantifier {
     }
 
     /// Check if prediction is within acceptable uncertainty bounds.
+    #[must_use]
     pub fn is_confident(&self, uncertainty: &impl UncertaintyResult, threshold: f64) -> bool {
         uncertainty.confidence_score() >= threshold
     }
