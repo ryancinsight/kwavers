@@ -18,7 +18,9 @@ pub fn compute_time_step(scenario: &PhotoacousticScenario) -> f64 {
 mod tests {
     use super::compute_time_step;
     use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
-    use crate::core::constants::thermodynamic::{SPECIFIC_HEAT_WATER_37C, THERMAL_CONDUCTIVITY_WATER_37C};
+    use crate::core::constants::thermodynamic::{
+        SPECIFIC_HEAT_WATER_37C, THERMAL_CONDUCTIVITY_WATER_37C,
+    };
     use crate::domain::grid::{Grid, GridDimensions};
     use crate::domain::imaging::photoacoustic::{
         IlluminationGeometry, MonteCarloModelConfig, OpticalModel, PhotoacousticAcousticConfig,

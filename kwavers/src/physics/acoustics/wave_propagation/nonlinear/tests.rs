@@ -172,12 +172,18 @@ fn tissue_beta_ordering_matches_published_consensus() {
     let kidney = NonlinearParameters::kidney().beta;
     let fat = NonlinearParameters::fat().beta;
 
-    assert!(water < brain, "β: water {water} should be less than brain {brain}");
+    assert!(
+        water < brain,
+        "β: water {water} should be less than brain {brain}"
+    );
     assert!(
         brain < liver,
         "β: brain {brain} should be ≤ liver {liver} (Duck 1990 ordering)"
     );
-    assert!(liver < kidney, "β: liver {liver} should be less than kidney {kidney}");
+    assert!(
+        liver < kidney,
+        "β: liver {liver} should be less than kidney {kidney}"
+    );
     assert!(
         kidney < fat,
         "β: fat {fat} should be the largest β among soft tissues"

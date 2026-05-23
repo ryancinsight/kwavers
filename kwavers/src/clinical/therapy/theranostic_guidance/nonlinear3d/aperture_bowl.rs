@@ -182,10 +182,10 @@ fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
 mod tests {
     use ndarray::Array3;
 
-    use crate::clinical::therapy::theranostic_guidance::AnatomyKind;
-    use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
     use super::super::types::Nonlinear3dVolume;
     use super::*;
+    use crate::clinical::therapy::theranostic_guidance::AnatomyKind;
+    use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 
     #[test]
     fn abdominal_bowl_candidates_are_exterior_and_target_facing() {

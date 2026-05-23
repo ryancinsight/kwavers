@@ -61,25 +61,46 @@
   "cases": [
     {
       "anatomy": "brain",
-      "device_model": "insightec_like_1024_element_focused_bowl_projection",
-      "geometry_model": "insightec_like_1024_element_focused_bowl_projection",
-      "placement_context_model": "insightec_like_1024_element_calvarium_focused_bowl_3d",
+      "device_model": "transcranial_focused_bowl_projection",
+      "geometry_model": "transcranial_focused_bowl_projection",
+      "placement_context_model": "focused_bowl_major_cap_3d",
       "operator_model": "finite_frequency_same_aperture_graph_laplacian_pcg",
       "operator_backend": "matrix_free_finite_frequency_same_aperture",
       "operator_storage_values": 307212,
       "dense_operator_values": 23998464,
-      "inverse_model_family": "reduced_born_normal_equation_plus_linear_acoustic_rtm",
+      "inverse_model_family": "reduced_born_normal_equation_plus_linear_acoustic_rtm_plus_iterative_nonlinear_elastic_fwi",
+      "elastic_shear_model": "iterative_nonlinear_elastic_pstd_fwi_residual_migration",
+      "elastic_shear_speed_m_s": 2.5,
+      "elastic_frequencies_hz": [
+        250.0,
+        500.0,
+        750.0
+      ],
+      "elastic_shear_receiver_count": 78,
+      "elastic_shear_time_steps": 377,
+      "elastic_shear_dt_s": 0.00031368660662822647,
+      "elastic_fwi_iterations": 3,
+      "elastic_shear_iteration_count": 2,
+      "elastic_shear_accepted_step_count": 1,
+      "elastic_shear_objective_history": [
+        7.709943308003475e-11,
+        2.0579102035442066e-11,
+        2.0579102035442066e-11
+      ],
+      "elastic_shear_baseline_trace_energy": 6.672949299443415e-09,
+      "elastic_shear_lesion_trace_energy": 6.4431678703602384e-09,
+      "elastic_shear_residual_trace_energy": 4.115820407088413e-11,
       "is_full_wave_inversion": false,
       "uses_nonlinear_wave_propagation": false,
       "waveform_model": "source_encoded_time_domain_acoustic_adjoint_rtm",
       "waveform_misfit": "charbonnier",
-      "waveform_misfit_scale": 110926.078125,
-      "waveform_objective": 126161083782580.36,
+      "waveform_misfit_scale": 44260.46484375,
+      "waveform_objective": 308925503744722.8,
       "waveform_receiver_count": 1024,
-      "waveform_time_steps": 1114,
+      "waveform_time_steps": 990,
       "waveform_dt_s": 3.1548940321804384e-07,
-      "waveform_residual_energy": 229419801277454.3,
-      "waveform_observed_energy": 9.74742699016738e+19,
+      "waveform_residual_energy": 265822225084199.34,
+      "waveform_observed_energy": 1.3791280420180347e+19,
       "element_count": 1024,
       "source_pressure_pa": 28000000.0,
       "target_fraction_xyz": [
@@ -98,94 +119,106 @@
         0.0004043410122394562,
         0.0004043410122394562
       ],
-      "placement_context_skin_gap_m": 0.12005004196938092,
+      "placement_context_skin_gap_m": 0.12001099016332067,
       "placement_context_surface_points": 2959,
       "placement_metrics": {
         "min_body_clearance_m": 0.015004968693174931,
         "mean_body_clearance_m": 0.043928560694799654,
         "max_body_clearance_m": 0.0692524257799314,
-        "skin_contact_to_nearest_aperture_m": 0.0742763221724299
+        "skin_contact_to_nearest_aperture_m": 0.07490696961293578
       },
       "metrics": {
         "anatomy": {
-          "pearson": 0.40459225121576653,
-          "nrmse": 0.3012430214145212,
+          "pearson": 0.4045922055530725,
+          "nrmse": 0.3012430219757777,
           "dice_equal_area": 0.5815217391304348,
-          "cnr": 1.362303500572035
+          "cnr": 1.3623033493861163
         },
         "active_lesion": {
-          "pearson": 0.6533482379332987,
-          "nrmse": 0.043709439737306795,
-          "dice_equal_area": 1.0,
-          "cnr": 22.701246436987674
+          "pearson": 0.676864574588137,
+          "nrmse": 0.06296908775085382,
+          "dice_equal_area": 0.8888888888888888,
+          "cnr": 11.866148430148748
         },
         "waveform_rtm": {
-          "pearson": 0.6140291253685991,
-          "nrmse": 0.04607855605262026,
-          "dice_equal_area": 1.0,
-          "cnr": 25.271220406465694
+          "pearson": 0.6309370975511847,
+          "nrmse": 0.05380747320783355,
+          "dice_equal_area": 0.4444444444444444,
+          "cnr": 10.122722848217588
+        },
+        "elastic_shear": {
+          "pearson": 0.33694743306477654,
+          "nrmse": 0.19880992556322477,
+          "dice_equal_area": 0.3333333333333333,
+          "cnr": 4.929322587408025
         },
         "subharmonic": {
-          "pearson": 0.5428195340759203,
-          "nrmse": 0.04251353153821436,
-          "dice_equal_area": 1.0,
-          "cnr": 26.160211012530556
+          "pearson": 0.47365072846921313,
+          "nrmse": 0.07287270469394536,
+          "dice_equal_area": 0.3333333333333333,
+          "cnr": 6.545444363542594
         },
         "harmonic": {
-          "pearson": 0.5385114038777316,
-          "nrmse": 0.05081653888700681,
-          "dice_equal_area": 1.0,
-          "cnr": 19.77561819320756
+          "pearson": 0.5733420245538963,
+          "nrmse": 0.07230723037448605,
+          "dice_equal_area": 0.5555555555555556,
+          "cnr": 8.929195221199585
         },
         "ultraharmonic": {
-          "pearson": 0.4906013554948832,
-          "nrmse": 0.07171046855551629,
-          "dice_equal_area": 1.0,
-          "cnr": 18.02961799458583
+          "pearson": 0.5440196262550472,
+          "nrmse": 0.07316829131133501,
+          "dice_equal_area": 0.5555555555555556,
+          "cnr": 8.461737934502901
         },
         "fusion": {
-          "pearson": 0.885780015403124,
-          "nrmse": 0.014960941525463232,
-          "dice_equal_area": 1.0,
-          "cnr": 75.09566722258946
+          "pearson": 0.8804216492205333,
+          "nrmse": 0.026830693670004728,
+          "dice_equal_area": 0.8888888888888888,
+          "cnr": 28.36465277079679
         }
       },
       "reconstruction_diagnostics": {
         "active_lesion_reconstruction": {
-          "peak": 1.0,
-          "outside_peak_ratio": 0.4336790000472245,
-          "outside_peak_db": -7.256632141964536,
-          "outside_energy_fraction": 0.6005878121352584
+          "peak": 0.9709291757326826,
+          "outside_peak_ratio": 0.541412115794168,
+          "outside_peak_db": -5.3294405951124,
+          "outside_energy_fraction": 0.5863407364235028
         },
         "waveform_rtm_reconstruction": {
           "peak": 1.0,
-          "outside_peak_ratio": 0.4217475987772779,
-          "outside_peak_db": -7.4989476278056335,
-          "outside_energy_fraction": 0.6887628695348291
+          "outside_peak_ratio": 0.47688438667380617,
+          "outside_peak_db": -6.431737925087021,
+          "outside_energy_fraction": 0.6068699807441051
+        },
+        "elastic_shear_reconstruction": {
+          "peak": 1.0,
+          "outside_peak_ratio": 1.0,
+          "outside_peak_db": 0.0,
+          "outside_energy_fraction": 0.9251740272327047
         },
         "subharmonic_reconstruction": {
           "peak": 1.0,
-          "outside_peak_ratio": 0.3146935620453933,
-          "outside_peak_db": -10.042242834570676,
-          "outside_energy_fraction": 0.7018880726705624
+          "outside_peak_ratio": 0.632688883460428,
+          "outside_peak_db": -3.9761959232465216,
+          "outside_energy_fraction": 0.7444160320806088
         },
         "harmonic_reconstruction": {
           "peak": 1.0,
-          "outside_peak_ratio": 0.6999562113093495,
-          "outside_peak_db": -3.0985825649021987,
-          "outside_energy_fraction": 0.7250298064500343
+          "outside_peak_ratio": 1.0,
+          "outside_peak_db": 0.0,
+          "outside_energy_fraction": 0.6835578552721775
         },
         "ultraharmonic_reconstruction": {
           "peak": 1.0,
-          "outside_peak_ratio": 0.592937591570277,
-          "outside_peak_db": -4.539820300099967,
-          "outside_energy_fraction": 0.7708066944488807
+          "outside_peak_ratio": 1.0,
+          "outside_peak_db": 0.0,
+          "outside_energy_fraction": 0.7151385095495951
         },
         "fused_reconstruction": {
           "peak": 1.0,
-          "outside_peak_ratio": 0.18429066662227048,
-          "outside_peak_db": -14.689933180272519,
-          "outside_energy_fraction": 0.19506151233684996
+          "outside_peak_ratio": 0.2328778409107173,
+          "outside_peak_db": -12.657436680834257,
+          "outside_energy_fraction": 0.1780004606148156
         }
       }
     },
@@ -198,18 +231,39 @@
       "operator_backend": "matrix_free_finite_frequency_same_aperture",
       "operator_storage_values": 118668,
       "dense_operator_values": 8819712,
-      "inverse_model_family": "reduced_born_normal_equation_plus_linear_acoustic_rtm",
+      "inverse_model_family": "reduced_born_normal_equation_plus_linear_acoustic_rtm_plus_iterative_nonlinear_elastic_fwi",
+      "elastic_shear_model": "iterative_nonlinear_elastic_pstd_fwi_residual_migration",
+      "elastic_shear_speed_m_s": 2.5,
+      "elastic_frequencies_hz": [
+        250.0,
+        500.0,
+        750.0
+      ],
+      "elastic_shear_receiver_count": 34,
+      "elastic_shear_time_steps": 179,
+      "elastic_shear_dt_s": 0.000713672772726137,
+      "elastic_fwi_iterations": 3,
+      "elastic_shear_iteration_count": 2,
+      "elastic_shear_accepted_step_count": 1,
+      "elastic_shear_objective_history": [
+        5.0810272538698296e-14,
+        1.5985751812916668e-14,
+        1.5985751812916668e-14
+      ],
+      "elastic_shear_baseline_trace_energy": 1.7578597002369562e-11,
+      "elastic_shear_lesion_trace_energy": 1.7881416940129334e-11,
+      "elastic_shear_residual_trace_energy": 3.1971503625833335e-14,
       "is_full_wave_inversion": false,
       "uses_nonlinear_wave_propagation": false,
       "waveform_model": "source_encoded_time_domain_acoustic_adjoint_rtm",
       "waveform_misfit": "charbonnier",
-      "waveform_misfit_scale": 10768.25390625,
-      "waveform_objective": 4981501159925.229,
+      "waveform_misfit_scale": 7310.11962890625,
+      "waveform_objective": 58220839797335.98,
       "waveform_receiver_count": 320,
-      "waveform_time_steps": 3532,
+      "waveform_time_steps": 804,
       "waveform_dt_s": 7.323821266369732e-07,
-      "waveform_residual_energy": 6069306299852.337,
-      "waveform_observed_energy": 9.101202022312188e+17,
+      "waveform_residual_energy": 4036059756544.013,
+      "waveform_observed_energy": 9.54756172024939e+16,
       "element_count": 256,
       "source_pressure_pa": 28000000.0,
       "target_fraction_xyz": [],
@@ -234,84 +288,96 @@
       },
       "metrics": {
         "anatomy": {
-          "pearson": 0.4503275511843573,
-          "nrmse": 0.16305436556780564,
+          "pearson": 0.4503277235578082,
+          "nrmse": 0.1630543508988571,
           "dice_equal_area": 0.5,
-          "cnr": 2.9559880334592514
+          "cnr": 2.955989429719022
         },
         "active_lesion": {
-          "pearson": 0.8965392991358059,
-          "nrmse": 0.02480620323049922,
-          "dice_equal_area": 1.0,
-          "cnr": 23.68111137794822
+          "pearson": 0.9143374249857404,
+          "nrmse": 0.03380321381767335,
+          "dice_equal_area": 0.9166666666666666,
+          "cnr": 18.60266966511128
         },
         "waveform_rtm": {
-          "pearson": 0.24985273705710698,
-          "nrmse": 0.17742975036440353,
-          "dice_equal_area": 0.5,
-          "cnr": 3.799286638593106
+          "pearson": 0.03190933737728333,
+          "nrmse": 0.09947355779542957,
+          "dice_equal_area": 0.0,
+          "cnr": 0.28797491490245264
+        },
+        "elastic_shear": {
+          "pearson": 0.48350697157489414,
+          "nrmse": 0.12262230600982414,
+          "dice_equal_area": 0.4166666666666667,
+          "cnr": 5.300791541438244
         },
         "subharmonic": {
-          "pearson": 0.7663863439633137,
-          "nrmse": 0.03524882652854183,
-          "dice_equal_area": 0.75,
-          "cnr": 16.872976473087565
+          "pearson": 0.7572975306474535,
+          "nrmse": 0.06746376194947101,
+          "dice_equal_area": 0.8333333333333334,
+          "cnr": 11.131695191805726
         },
         "harmonic": {
-          "pearson": 0.8487671446810564,
-          "nrmse": 0.035658925401132135,
-          "dice_equal_area": 1.0,
-          "cnr": 21.658379285378462
+          "pearson": 0.8714026766779781,
+          "nrmse": 0.054364703473373154,
+          "dice_equal_area": 0.9166666666666666,
+          "cnr": 14.934509477332082
         },
         "ultraharmonic": {
-          "pearson": 0.9011209700255949,
-          "nrmse": 0.03828700801875381,
-          "dice_equal_area": 1.0,
-          "cnr": 25.13647360945446
+          "pearson": 0.9186367435267156,
+          "nrmse": 0.05383314452916705,
+          "dice_equal_area": 0.9166666666666666,
+          "cnr": 18.620514299036817
         },
         "fusion": {
-          "pearson": 0.9726218021036697,
-          "nrmse": 0.010871783676861101,
+          "pearson": 0.9709230075856586,
+          "nrmse": 0.018626215420491105,
           "dice_equal_area": 1.0,
-          "cnr": 48.429652985282566
+          "cnr": 36.06669431553569
         }
       },
       "reconstruction_diagnostics": {
         "active_lesion_reconstruction": {
           "peak": 1.0,
-          "outside_peak_ratio": 0.13450163430553355,
-          "outside_peak_db": -17.425448771883836,
-          "outside_energy_fraction": 0.2216018985191588
+          "outside_peak_ratio": 0.21495807020428875,
+          "outside_peak_db": -13.352924909111326,
+          "outside_energy_fraction": 0.19043443500567286
         },
         "waveform_rtm_reconstruction": {
           "peak": 1.0,
           "outside_peak_ratio": 1.0,
           "outside_peak_db": 0.0,
-          "outside_energy_fraction": 0.9240253009012703
+          "outside_energy_fraction": 0.9936621007473392
+        },
+        "elastic_shear_reconstruction": {
+          "peak": 1.0,
+          "outside_peak_ratio": 0.6365429933351262,
+          "outside_peak_db": -3.9234451587414347,
+          "outside_energy_fraction": 0.7000165429331393
         },
         "subharmonic_reconstruction": {
           "peak": 1.0,
-          "outside_peak_ratio": 0.226913010594761,
-          "outside_peak_db": -12.882812041973605,
-          "outside_energy_fraction": 0.4143469087524108
+          "outside_peak_ratio": 0.5967215617172581,
+          "outside_peak_db": -4.484565384708675,
+          "outside_energy_fraction": 0.4420537177663907
         },
         "harmonic_reconstruction": {
           "peak": 1.0,
-          "outside_peak_ratio": 0.29066569879931553,
-          "outside_peak_db": -10.732124318229266,
-          "outside_energy_fraction": 0.3095395824575214
+          "outside_peak_ratio": 0.32490662852998076,
+          "outside_peak_db": -9.764828567521485,
+          "outside_energy_fraction": 0.2698867136850428
         },
         "ultraharmonic_reconstruction": {
           "peak": 1.0,
-          "outside_peak_ratio": 0.13655964349683758,
-          "outside_peak_db": -17.293552513255783,
-          "outside_energy_fraction": 0.22692146906663907
+          "outside_peak_ratio": 0.18315419492045018,
+          "outside_peak_db": -14.743662598144338,
+          "outside_energy_fraction": 0.18676107987696416
         },
         "fused_reconstruction": {
           "peak": 1.0,
-          "outside_peak_ratio": 0.0323132160810842,
-          "outside_peak_db": -29.812396304358366,
-          "outside_energy_fraction": 0.02751624258963907
+          "outside_peak_ratio": 0.12989295854587513,
+          "outside_peak_db": -17.72828782496867,
+          "outside_energy_fraction": 0.03185372459637593
         }
       }
     },
@@ -324,18 +390,39 @@
       "operator_backend": "matrix_free_finite_frequency_same_aperture",
       "operator_storage_values": 118668,
       "dense_operator_values": 9938880,
-      "inverse_model_family": "reduced_born_normal_equation_plus_linear_acoustic_rtm",
+      "inverse_model_family": "reduced_born_normal_equation_plus_linear_acoustic_rtm_plus_iterative_nonlinear_elastic_fwi",
+      "elastic_shear_model": "iterative_nonlinear_elastic_pstd_fwi_residual_migration",
+      "elastic_shear_speed_m_s": 2.5,
+      "elastic_frequencies_hz": [
+        250.0,
+        500.0,
+        750.0
+      ],
+      "elastic_shear_receiver_count": 29,
+      "elastic_shear_time_steps": 250,
+      "elastic_shear_dt_s": 0.0004762316820390872,
+      "elastic_fwi_iterations": 3,
+      "elastic_shear_iteration_count": 2,
+      "elastic_shear_accepted_step_count": 1,
+      "elastic_shear_objective_history": [
+        2.2427367584881138e-12,
+        4.300372103825384e-13,
+        4.300372103825384e-13
+      ],
+      "elastic_shear_baseline_trace_energy": 1.4485164598381539e-10,
+      "elastic_shear_lesion_trace_energy": 1.4282769914778216e-10,
+      "elastic_shear_residual_trace_energy": 8.600744207650768e-13,
       "is_full_wave_inversion": false,
       "uses_nonlinear_wave_propagation": false,
       "waveform_model": "source_encoded_time_domain_acoustic_adjoint_rtm",
       "waveform_misfit": "charbonnier",
-      "waveform_misfit_scale": 23979.6171875,
-      "waveform_objective": 433482094726.7914,
+      "waveform_misfit_scale": 13305.57421875,
+      "waveform_objective": 2529685021046.5605,
       "waveform_receiver_count": 320,
-      "waveform_time_steps": 4073,
+      "waveform_time_steps": 935,
       "waveform_dt_s": 5.14436409283403e-07,
-      "waveform_residual_energy": 863609492927.0381,
-      "waveform_observed_energy": 5.204588778348482e+18,
+      "waveform_residual_energy": 3405639029310.7524,
+      "waveform_observed_energy": 3.67846275662645e+17,
       "element_count": 256,
       "source_pressure_pa": 28000000.0,
       "target_fraction_xyz": [],
@@ -360,84 +447,96 @@
       },
       "metrics": {
         "anatomy": {
-          "pearson": 0.3691078499630565,
-          "nrmse": 0.1433427398837442,
+          "pearson": 0.3691079705775098,
+          "nrmse": 0.1433427357835526,
           "dice_equal_area": 0.2962962962962963,
-          "cnr": 1.021927427476009
+          "cnr": 1.0219281851358664
         },
         "active_lesion": {
-          "pearson": 0.7478931056131727,
-          "nrmse": 0.028474098126367715,
-          "dice_equal_area": 0.75,
-          "cnr": 19.17367844215924
+          "pearson": 0.686582497973354,
+          "nrmse": 0.07252956008673815,
+          "dice_equal_area": 0.8333333333333334,
+          "cnr": 11.813105173018606
         },
         "waveform_rtm": {
-          "pearson": 0.32648519111271607,
-          "nrmse": 0.16568951839270465,
-          "dice_equal_area": 0.5,
-          "cnr": 5.817866068254724
+          "pearson": 0.07477172105400683,
+          "nrmse": 0.09410535232184951,
+          "dice_equal_area": 0.0,
+          "cnr": 0.9140146734998016
+        },
+        "elastic_shear": {
+          "pearson": 0.4684688626404282,
+          "nrmse": 0.13356932286035272,
+          "dice_equal_area": 0.75,
+          "cnr": 6.540736941272604
         },
         "subharmonic": {
-          "pearson": 0.6205657442839435,
-          "nrmse": 0.05278904351888689,
-          "dice_equal_area": 0.75,
-          "cnr": 13.054358306009554
+          "pearson": 0.6836333524644332,
+          "nrmse": 0.08127287005137908,
+          "dice_equal_area": 1.0,
+          "cnr": 11.47372987270615
         },
         "harmonic": {
-          "pearson": 0.8635447466105625,
-          "nrmse": 0.026063319611502603,
+          "pearson": 0.8510510876896157,
+          "nrmse": 0.055485081620329425,
           "dice_equal_area": 1.0,
-          "cnr": 27.158956860952806
+          "cnr": 20.159522978872655
         },
         "ultraharmonic": {
-          "pearson": 0.8878018172533867,
-          "nrmse": 0.03421738934305827,
+          "pearson": 0.8895721747561539,
+          "nrmse": 0.05710944654543923,
           "dice_equal_area": 1.0,
-          "cnr": 31.571668744161457
+          "cnr": 24.254856879872527
         },
         "fusion": {
-          "pearson": 0.9511506863771196,
-          "nrmse": 0.012058048346540881,
-          "dice_equal_area": 0.75,
-          "cnr": 44.70947448817026
+          "pearson": 0.9697872329600987,
+          "nrmse": 0.022281411450368185,
+          "dice_equal_area": 1.0,
+          "cnr": 53.75125682909127
         }
       },
       "reconstruction_diagnostics": {
         "active_lesion_reconstruction": {
           "peak": 1.0,
-          "outside_peak_ratio": 0.22058706067713346,
-          "outside_peak_db": -13.128399324891408,
-          "outside_energy_fraction": 0.44517195774224916
+          "outside_peak_ratio": 0.6723272812437875,
+          "outside_peak_db": -3.4483853175724577,
+          "outside_energy_fraction": 0.5501788621842215
         },
         "waveform_rtm_reconstruction": {
           "peak": 1.0,
-          "outside_peak_ratio": 0.8881381923375952,
-          "outside_peak_db": -1.0303890740625494,
-          "outside_energy_fraction": 0.8261676945058939
+          "outside_peak_ratio": 1.0,
+          "outside_peak_db": 0.0,
+          "outside_energy_fraction": 0.9884374302086005
+        },
+        "elastic_shear_reconstruction": {
+          "peak": 1.0,
+          "outside_peak_ratio": 0.8695167739418791,
+          "outside_peak_db": -1.2144407111752038,
+          "outside_energy_fraction": 0.8046099287288409
         },
         "subharmonic_reconstruction": {
           "peak": 1.0,
-          "outside_peak_ratio": 0.3524559612849832,
-          "outside_peak_db": -9.057902791365798,
-          "outside_energy_fraction": 0.6285259419994825
+          "outside_peak_ratio": 0.46246422087569655,
+          "outside_peak_db": -6.6984372272480055,
+          "outside_energy_fraction": 0.5598858155064328
         },
         "harmonic_reconstruction": {
           "peak": 1.0,
-          "outside_peak_ratio": 0.19206651610743228,
-          "outside_peak_db": -14.330966824294363,
-          "outside_energy_fraction": 0.2939456988671279
+          "outside_peak_ratio": 0.4675068823683578,
+          "outside_peak_db": -6.604239826199359,
+          "outside_energy_fraction": 0.31794442622216074
         },
         "ultraharmonic_reconstruction": {
           "peak": 1.0,
-          "outside_peak_ratio": 0.23528167465777977,
-          "outside_peak_db": -12.568237946486548,
-          "outside_energy_fraction": 0.24236876012028238
+          "outside_peak_ratio": 0.3208787129510418,
+          "outside_peak_db": -9.873181859681862,
+          "outside_energy_fraction": 0.24478502187977252
         },
         "fused_reconstruction": {
           "peak": 1.0,
-          "outside_peak_ratio": 0.05587718474411663,
-          "outside_peak_db": -25.055309660639974,
-          "outside_energy_fraction": 0.06340751531361973
+          "outside_peak_ratio": 0.16830365281836956,
+          "outside_peak_db": -15.478129162165546,
+          "outside_energy_fraction": 0.07032993184088421
         }
       }
     }
@@ -448,7 +547,7 @@
       "model_family": "westervelt_3d_discrete_adjoint_fwi_plus_rayleigh_plesset_passive_inverse",
       "propagator_model": "heterogeneous_westervelt_fdtd_3d_second_order_discrete_adjoint",
       "cavitation_inverse_model": "rayleigh_plesset_subharmonic_green_projected_gradient_inverse",
-      "aperture_model": "insightec_like_calvarium_focused_bowl_3d_westervelt_sources",
+      "aperture_model": "transcranial_calvarium_focused_bowl_3d_westervelt_sources",
       "is_full_wave_inversion": true,
       "uses_nonlinear_wave_propagation": true,
       "uses_rayleigh_plesset": true,
@@ -486,19 +585,49 @@
       "frequency_hz": 650000.0,
       "source_pressure_pa": 28000000.0,
       "source_scale": 1.0,
+      "source_plan_metrics": {
+        "source_support_min": 1,
+        "source_support_mean": 5.4541015625,
+        "source_support_max": 7,
+        "focused_delay_min_s": 0.0,
+        "focused_delay_max_s": 2.2961962836599806e-05,
+        "focused_delay_span_s": 2.2961962836599806e-05
+      },
       "pressure_diagnostics": {
-        "raw_peak_pressure_pa": 55638580.9246688,
-        "raw_target_peak_pressure_pa": 16861669.461591866,
-        "peak_mechanical_index": 69.0111661791149,
-        "target_peak_mechanical_index": 20.914326963995084,
+        "raw_peak_pressure_pa": 55613959.52902451,
+        "raw_target_peak_pressure_pa": 17538187.945606817,
+        "body_peak_pressure_pa": 55613959.52902451,
+        "coupling_peak_pressure_pa": 48715835.24972624,
+        "peak_mechanical_index": 68.98062709637536,
+        "target_peak_mechanical_index": 21.75344487008996,
+        "body_peak_mechanical_index": 68.98062709637536,
+        "coupling_peak_mechanical_index": 60.424556954913996,
         "inertial_mi_threshold": 1.9,
         "peak_exceeds_inertial_threshold": true,
         "target_exceeds_inertial_threshold": true,
+        "body_peak_exceeds_inertial_threshold": true,
+        "coupling_peak_exceeds_inertial_threshold": true,
+        "raw_peak_is_in_coupling": false,
+        "target_centroid_x_index": 27.5,
+        "target_centroid_y_index": 27.5,
+        "target_centroid_z_index": 27.5,
+        "raw_hotspot_x_index": 10.0,
+        "raw_hotspot_y_index": 12.0,
+        "raw_hotspot_z_index": 13.0,
+        "body_hotspot_x_index": 10.0,
+        "body_hotspot_y_index": 12.0,
+        "body_hotspot_z_index": 13.0,
+        "raw_hotspot_distance_to_target_grid_cells": 27.509089406957838,
+        "body_hotspot_distance_to_target_grid_cells": 27.509089406957838,
         "finite_pressure_fraction": 1.0,
         "source_pressure_pa": 28000000.0,
         "source_scale": 1.0,
         "effective_source_pressure_pa": 28000000.0,
-        "raw_peak_to_effective_source_ratio": 1.9870921758810285
+        "raw_peak_to_effective_source_ratio": 1.986212840322304,
+        "target_to_body_peak_ratio": 0.31535585838756486,
+        "coupling_to_body_peak_ratio": 0.8759641583207506,
+        "points_per_wavelength_min": 1.4347800466200464,
+        "resolution_meets_min_ppw": false
       },
       "inertial_mi_threshold": 1.9,
       "bubble_time_steps_per_period": 64,
@@ -513,52 +642,84 @@
       "nonlinearity_regularization": 0.001,
       "gradient_smoothing_steps": 2,
       "fwi_objective_history": [
-        0.6599853794200186,
-        0.3163495345807576,
-        0.040636175587180814,
-        0.040636175587180814
+        0.004341491735194403,
+        0.004319981366667219,
+        0.00431998021412177,
+        0.00431997930414004
+      ],
+      "fwi_iteration_diagnostics": [
+        {
+          "objective_before": 0.004341491735194403,
+          "objective_after": 0.004319981366667219,
+          "gradient_speed_linf": 2.4777786050734884e-09,
+          "gradient_beta_linf": 1.578793721277102e-09,
+          "gradient_speed_l2": 4.424634533898759e-08,
+          "gradient_beta_l2": 1.1101610010988511e-08,
+          "accepted_scale": 0.125,
+          "accepted_block": "coupled"
+        },
+        {
+          "objective_before": 0.004319981366667219,
+          "objective_after": 0.00431998021412177,
+          "gradient_speed_linf": 2.207219675609726e-09,
+          "gradient_beta_linf": 3.781478047176382e-09,
+          "gradient_speed_l2": 3.9520688541689845e-08,
+          "gradient_beta_l2": 3.452140183318714e-08,
+          "accepted_scale": 0.00390625,
+          "accepted_block": "beta_only"
+        },
+        {
+          "objective_before": 0.00431998021412177,
+          "objective_after": 0.00431997930414004,
+          "gradient_speed_linf": 2.207224136000006e-09,
+          "gradient_beta_linf": 3.1902379699654774e-09,
+          "gradient_speed_l2": 3.952065576070228e-08,
+          "gradient_beta_l2": 2.8305126595251743e-08,
+          "accepted_scale": 0.00390625,
+          "accepted_block": "beta_only"
+        }
       ],
       "cavitation_objective_history": [
-        876256.3139136145,
-        849548.9224124876,
-        823795.4713030686,
-        798959.4491784052,
-        775005.8075752086,
-        751900.9018549739,
-        729612.4171061312,
-        708109.3181744167,
-        687361.8217350688,
-        667341.3069195974,
-        648020.3207362666,
-        629372.4739245665,
-        611372.4058377612,
-        593995.7801913585,
-        577219.1617494095,
-        561020.0983801201,
-        545376.9726939019,
-        530269.0329832612,
-        515676.29980254755,
-        501579.58769947244,
-        487960.4957247254,
-        474801.3271900865,
-        462085.0998852478,
-        449795.4277704187
+        3157615088.424375,
+        3080878961.954896,
+        3006511759.159291,
+        2934431827.4184403,
+        2864560486.567102,
+        2796821922.2765145,
+        2731143092.4032836,
+        2667453642.559415,
+        2605685743.525608,
+        2545774047.3122187,
+        2487655563.551592,
+        2431269622.712004,
+        2376557679.2475266,
+        2323463377.318561,
+        2271932554.022094,
+        2221912796.092695,
+        2173353415.4747305,
+        2126205787.7824967,
+        2080422821.5750046,
+        2035959173.8324673,
+        1992771133.591751,
+        1950816852.8560047,
+        1910055667.9649963,
+        1870448479.227174
       ],
       "metrics": {
         "fwi": {
-          "dice_equal_area": 0.4024390243902439,
-          "cnr": 12.317701146793734,
-          "nrmse": 0.04115672432579925
+          "dice_equal_area": 0.4725609756097561,
+          "cnr": 16.54033915793782,
+          "nrmse": 0.04309602127628477
         },
         "rayleigh_plesset_cavitation": {
-          "dice_equal_area": 0.21646341463414634,
-          "cnr": 6.472361440063056,
-          "nrmse": 0.043792323341504964
+          "dice_equal_area": 0.10060975609756098,
+          "cnr": 4.145138166739936,
+          "nrmse": 0.0470086433138274
         },
         "fusion": {
-          "dice_equal_area": 0.4054878048780488,
-          "cnr": 12.253824798739139,
-          "nrmse": 0.04023182370174108
+          "dice_equal_area": 0.18902439024390244,
+          "cnr": 7.911107516999134,
+          "nrmse": 0.04274311862677346
         }
       }
     },
@@ -567,14 +728,14 @@
       "model_family": "westervelt_3d_discrete_adjoint_fwi_plus_rayleigh_plesset_passive_inverse",
       "propagator_model": "heterogeneous_westervelt_fdtd_3d_second_order_discrete_adjoint",
       "cavitation_inverse_model": "rayleigh_plesset_subharmonic_green_projected_gradient_inverse",
-      "aperture_model": "kidney_histosonics_like_skin_coupled_3d_westervelt_sources",
+      "aperture_model": "kidney_histosonics_like_focused_bowl_slowness_steered_3d_westervelt_sources",
       "is_full_wave_inversion": true,
       "uses_nonlinear_wave_propagation": true,
       "uses_rayleigh_plesset": true,
       "grid_size": 56,
-      "time_steps": 1566,
-      "dt_s": 1.262642399211475e-07,
-      "active_voxels": 175460,
+      "time_steps": 6660,
+      "dt_s": 3.5850407096115585e-07,
+      "active_voxels": 115367,
       "source_dimensions": [
         611,
         512,
@@ -586,16 +747,16 @@
         0.0009199218750000001
       ],
       "crop_bounds_index": [
-        235,
-        395,
-        280,
-        368,
-        132,
-        220
+        76,
+        552,
+        240,
+        500,
+        45,
+        305
       ],
       "treatment_window_radius_m": 0.04,
-      "wavelength_min_m": 0.002906,
-      "points_per_wavelength_min": 1.9876626827930055,
+      "wavelength_min_m": 0.000686,
+      "points_per_wavelength_min": 0.1600002603086284,
       "min_points_per_wavelength": 6.0,
       "resolution_meets_min_ppw": false,
       "element_count": 256,
@@ -605,19 +766,49 @@
       "frequency_hz": 500000.0,
       "source_pressure_pa": 28000000.0,
       "source_scale": 1.0,
+      "source_plan_metrics": {
+        "source_support_min": 13,
+        "source_support_mean": 17.67578125,
+        "source_support_max": 21,
+        "focused_delay_min_s": 0.0,
+        "focused_delay_max_s": 5.673475554338243e-06,
+        "focused_delay_span_s": 5.673475554338243e-06
+      },
       "pressure_diagnostics": {
-        "raw_peak_pressure_pa": 29655444.362677447,
-        "raw_target_peak_pressure_pa": 2144013.4798283945,
-        "peak_mechanical_index": 41.939131615899186,
-        "target_peak_mechanical_index": 3.0320929410840494,
+        "raw_peak_pressure_pa": 1.7690530594177228e+152,
+        "raw_target_peak_pressure_pa": 1.895346487698911e+144,
+        "body_peak_pressure_pa": 1.7690530594177228e+152,
+        "coupling_peak_pressure_pa": 3.2941294039376114e+100,
+        "peak_mechanical_index": 2.50181882918616e+146,
+        "target_peak_mechanical_index": 2.68042470830001e+138,
+        "body_peak_mechanical_index": 2.50181882918616e+146,
+        "coupling_peak_mechanical_index": 4.6586024792605686e+94,
         "inertial_mi_threshold": 1.9,
         "peak_exceeds_inertial_threshold": true,
         "target_exceeds_inertial_threshold": true,
-        "finite_pressure_fraction": 1.0,
+        "body_peak_exceeds_inertial_threshold": true,
+        "coupling_peak_exceeds_inertial_threshold": true,
+        "raw_peak_is_in_coupling": false,
+        "target_centroid_x_index": 27.737373737373737,
+        "target_centroid_y_index": 17.515151515151516,
+        "target_centroid_z_index": 27.616161616161616,
+        "raw_hotspot_x_index": 54.0,
+        "raw_hotspot_y_index": 25.0,
+        "raw_hotspot_z_index": 53.0,
+        "body_hotspot_x_index": 54.0,
+        "body_hotspot_y_index": 25.0,
+        "body_hotspot_z_index": 53.0,
+        "raw_hotspot_distance_to_target_grid_cells": 37.2838805135457,
+        "body_hotspot_distance_to_target_grid_cells": 37.2838805135457,
+        "finite_pressure_fraction": 0.9999943057580175,
         "source_pressure_pa": 28000000.0,
         "source_scale": 1.0,
         "effective_source_pressure_pa": 28000000.0,
-        "raw_peak_to_effective_source_ratio": 1.059123012952766
+        "raw_peak_to_effective_source_ratio": 6.318046640777582e+144,
+        "target_to_body_peak_ratio": 1.071390412858932e-08,
+        "coupling_to_body_peak_ratio": 1.8620862649658808e-52,
+        "points_per_wavelength_min": 0.1600002603086284,
+        "resolution_meets_min_ppw": false
       },
       "inertial_mi_threshold": 1.9,
       "bubble_time_steps_per_period": 64,
@@ -628,50 +819,62 @@
       "nonlinearity_regularization": 0.001,
       "gradient_smoothing_steps": 2,
       "fwi_objective_history": [
-        0.21772077540940996,
-        0.21772077540940996
+        NaN,
+        NaN
+      ],
+      "fwi_iteration_diagnostics": [
+        {
+          "objective_before": NaN,
+          "objective_after": NaN,
+          "gradient_speed_linf": 0.0,
+          "gradient_beta_linf": 0.0,
+          "gradient_speed_l2": NaN,
+          "gradient_beta_l2": NaN,
+          "accepted_scale": 0.0,
+          "accepted_block": "none"
+        }
       ],
       "cavitation_objective_history": [
-        10164695198.659506,
-        10045554637.20546,
-        9928444497.040607,
-        9813321872.182957,
-        9700144893.014677,
-        9588872697.149548,
-        9479465415.509392,
-        9371884137.311428,
-        9266090935.330177,
-        9162048779.030115,
-        9059721459.881128,
-        8959073660.418669,
-        8860070979.54379,
-        8762679980.90713,
-        8666867685.961826,
-        8572602375.658257,
-        8479852547.621729,
-        8388587816.156698,
-        8298778180.069065,
-        8210394308.925009,
-        8123407589.652714,
-        8037790080.243374,
-        7953514520.84498,
-        7870554324.104237
+        344879.2166108003,
+        334997.3457862777,
+        325518.1007264621,
+        316422.7396833441,
+        307693.45391497604,
+        299313.3042239529,
+        291266.1859785221,
+        283536.8168774198,
+        276110.6571282571,
+        268973.89374345506,
+        262113.37587454755,
+        255516.61073849347,
+        249171.70266862054,
+        243067.458787954,
+        237193.12322366697,
+        231538.4685680438,
+        226093.67033358288,
+        220849.52549655992,
+        215797.13952518994,
+        210928.10751391845,
+        206234.42837936134,
+        201708.47766854588,
+        197342.99640076587,
+        193131.06840483562
       ],
       "metrics": {
         "fwi": {
           "dice_equal_area": 0.0,
           "cnr": 0.0,
-          "nrmse": 0.13739030939681238
+          "nrmse": 0.041427792796637254
         },
         "rayleigh_plesset_cavitation": {
-          "dice_equal_area": 0.0370527823149039,
-          "cnr": 0.6351881496506173,
-          "nrmse": 0.13704974794136496
+          "dice_equal_area": 0.2676767676767677,
+          "cnr": 8.99671224295756,
+          "nrmse": 0.04076776737849064
         },
         "fusion": {
-          "dice_equal_area": 0.0370527823149039,
-          "cnr": 0.6351881496495381,
-          "nrmse": 0.13720800289997676
+          "dice_equal_area": 0.2676767676767677,
+          "cnr": 8.996712242985428,
+          "nrmse": 0.0404411126964889
         }
       }
     },
@@ -680,14 +883,14 @@
       "model_family": "westervelt_3d_discrete_adjoint_fwi_plus_rayleigh_plesset_passive_inverse",
       "propagator_model": "heterogeneous_westervelt_fdtd_3d_second_order_discrete_adjoint",
       "cavitation_inverse_model": "rayleigh_plesset_subharmonic_green_projected_gradient_inverse",
-      "aperture_model": "liver_histosonics_like_skin_coupled_3d_westervelt_sources",
+      "aperture_model": "liver_histosonics_like_focused_bowl_slowness_steered_3d_westervelt_sources",
       "is_full_wave_inversion": true,
       "uses_nonlinear_wave_propagation": true,
       "uses_rayleigh_plesset": true,
       "grid_size": 56,
-      "time_steps": 1582,
-      "dt_s": 4.4409465412275836e-07,
-      "active_voxels": 100995,
+      "time_steps": 6627,
+      "dt_s": 3.177180911902833e-07,
+      "active_voxels": 107385,
       "source_dimensions": [
         512,
         512,
@@ -699,16 +902,16 @@
         0.005
       ],
       "crop_bounds_index": [
+        29,
+        329,
         0,
-        406,
-        27,
-        449,
-        31,
+        286,
+        37,
         74
       ],
       "treatment_window_radius_m": 0.04,
-      "wavelength_min_m": 0.002906,
-      "points_per_wavelength_min": 0.5471554504859469,
+      "wavelength_min_m": 0.000686,
+      "points_per_wavelength_min": 0.18151524547803616,
       "min_points_per_wavelength": 6.0,
       "resolution_meets_min_ppw": false,
       "element_count": 256,
@@ -718,19 +921,49 @@
       "frequency_hz": 500000.0,
       "source_pressure_pa": 28000000.0,
       "source_scale": 1.0,
+      "source_plan_metrics": {
+        "source_support_min": 18,
+        "source_support_mean": 22.890625,
+        "source_support_max": 31,
+        "focused_delay_min_s": 0.0,
+        "focused_delay_max_s": 3.948642776134439e-06,
+        "focused_delay_span_s": 3.948642776134439e-06
+      },
       "pressure_diagnostics": {
-        "raw_peak_pressure_pa": 3217808.7259269627,
-        "raw_target_peak_pressure_pa": 1649005.5659574585,
-        "peak_mechanical_index": 4.5506687413283995,
-        "target_peak_mechanical_index": 2.332046035805759,
+        "raw_peak_pressure_pa": 2.702578370783161e+152,
+        "raw_target_peak_pressure_pa": 7.336880284809106e+144,
+        "body_peak_pressure_pa": 2.702578370783161e+152,
+        "coupling_peak_pressure_pa": 6.17642912050744e+144,
+        "peak_mechanical_index": 3.8220229853377295e+146,
+        "target_peak_mechanical_index": 1.0375915604284812e+139,
+        "body_peak_mechanical_index": 3.8220229853377295e+146,
+        "coupling_peak_mechanical_index": 8.734789829257747e+138,
         "inertial_mi_threshold": 1.9,
         "peak_exceeds_inertial_threshold": true,
         "target_exceeds_inertial_threshold": true,
-        "finite_pressure_fraction": 1.0,
+        "body_peak_exceeds_inertial_threshold": true,
+        "coupling_peak_exceeds_inertial_threshold": true,
+        "raw_peak_is_in_coupling": false,
+        "target_centroid_x_index": 28.904761904761905,
+        "target_centroid_y_index": 36.388888888888886,
+        "target_centroid_z_index": 30.58730158730159,
+        "raw_hotspot_x_index": 47.0,
+        "raw_hotspot_y_index": 34.0,
+        "raw_hotspot_z_index": 2.0,
+        "body_hotspot_x_index": 47.0,
+        "body_hotspot_y_index": 34.0,
+        "body_hotspot_z_index": 2.0,
+        "raw_hotspot_distance_to_target_grid_cells": 33.91722635903692,
+        "body_hotspot_distance_to_target_grid_cells": 33.91722635903692,
+        "finite_pressure_fraction": 0.9999943057580175,
         "source_pressure_pa": 28000000.0,
         "source_scale": 1.0,
         "effective_source_pressure_pa": 28000000.0,
-        "raw_peak_to_effective_source_ratio": 0.11492174021167724
+        "raw_peak_to_effective_source_ratio": 9.652065609939862e+144,
+        "target_to_body_peak_ratio": 2.7147705924557526e-08,
+        "coupling_to_body_peak_ratio": 2.2853839086700068e-08,
+        "points_per_wavelength_min": 0.18151524547803616,
+        "resolution_meets_min_ppw": false
       },
       "inertial_mi_threshold": 1.9,
       "bubble_time_steps_per_period": 64,
@@ -741,52 +974,62 @@
       "nonlinearity_regularization": 0.001,
       "gradient_smoothing_steps": 2,
       "fwi_objective_history": [
-        6.931260591418064e-06,
-        5.034232974221595e-06,
-        4.079337109492721e-06,
-        3.942955134888203e-06
+        NaN,
+        NaN
+      ],
+      "fwi_iteration_diagnostics": [
+        {
+          "objective_before": NaN,
+          "objective_after": NaN,
+          "gradient_speed_linf": 0.0,
+          "gradient_beta_linf": 0.0,
+          "gradient_speed_l2": NaN,
+          "gradient_beta_l2": NaN,
+          "accepted_scale": 0.0,
+          "accepted_block": "none"
+        }
       ],
       "cavitation_objective_history": [
-        3039765936.680228,
-        2931201115.9313607,
-        2827523379.820145,
-        2728462978.3070273,
-        2633769320.9203615,
-        2543210030.449011,
-        2456566709.4051027,
-        2373635212.060373,
-        2294224320.550646,
-        2218154734.906231,
-        2145258158.2672703,
-        2075376467.0669947,
-        2008360957.1468995,
-        1944071657.8070223,
-        1882376706.7092733,
-        1823151779.3572588,
-        1766279363.3755143,
-        1711647829.181643,
-        1659151584.1512606,
-        1608690875.3659444,
-        1560171083.753823,
-        1513502532.3825288,
-        1468600434.776767,
-        1425384580.4605713
+        22446.881445027648,
+        21732.83810465987,
+        21044.563790432923,
+        20381.076282564543,
+        19741.43196470795,
+        19124.725317345725,
+        18530.085402995548,
+        17956.67510413323,
+        17403.690181198333,
+        16870.35787137959,
+        16355.935506005077,
+        15859.709318845646,
+        15380.993402783566,
+        14919.128555775489,
+        14473.481183889171,
+        14043.442356624997,
+        13628.426380595385,
+        13227.869830897256,
+        12841.23434535266,
+        12468.000491536019,
+        12107.666171667499,
+        11759.750623920863,
+        11423.792719292256,
+        11099.347824127175
       ],
       "metrics": {
         "fwi": {
-          "dice_equal_area": 0.376984126984127,
-          "cnr": 10.782335990884294,
-          "nrmse": 0.04645094196094623
+          "dice_equal_area": 0.0,
+          "cnr": 0.0,
+          "nrmse": 0.03425417103059764
         },
         "rayleigh_plesset_cavitation": {
-          "dice_equal_area": 0.004977925271859907,
-          "cnr": 0.12722730269912422,
-          "nrmse": 0.05005532005423187
+          "dice_equal_area": 0.1746031746031746,
+          "cnr": 5.606771515592446,
+          "nrmse": 0.034068524430908464
         },
         "fusion": {
-          "dice_equal_area": 0.373015873015873,
-          "cnr": 10.687079022467312,
-          "nrmse": 0.04686837396410605
+          "dice_equal_area": 0.1746031746031746,
+          "cnr": 5.606771515573056,
+          "nrmse": 0.033982546525761555
         }
       }
     }
@@ -797,11 +1040,16 @@
     "field_archive": "D:\\kwavers\\docs\\book\\figures\\ch29\\controlled_comparison_fields.npz",
     "summary": {
       "case_count": 3,
-      "mean_linear_fusion_dice_equal_area": 0.3023889918046464,
-      "mean_nonlinear_fusion_dice_equal_area": 0.5280264179984363,
-      "mean_dice_gap_linear_minus_nonlinear": -0.2256374261937899,
-      "mean_nonlinear_pressure_outside_energy_fraction": 0.8916799439271172,
-      "mean_nonlinear_cavitation_source_outside_energy_fraction": 0.6328783996154677,
+      "mean_linear_fusion_dice_equal_area": 0.7745124916385374,
+      "mean_elastic_shear_dice_equal_area": 0.6008974247278844,
+      "mean_nonlinear_fusion_dice_equal_area": 0.37369127632241866,
+      "mean_dice_gap_linear_minus_nonlinear": 0.40082121531611875,
+      "mean_nonlinear_pressure_outside_energy_fraction": 0.0,
+      "mean_nonlinear_pressure_hotspot_distance_m": 0.0089028749496426,
+      "mean_nonlinear_pressure_hotspot_axis_offset_m": 0.0017800513848400784,
+      "mean_nonlinear_pressure_hotspot_cross_axis_offset_m": 0.00595083726547672,
+      "mean_nonlinear_cavitation_source_outside_energy_fraction": 0.6757386273331618,
+      "mean_planned_to_nonlinear_aperture_axis_angle_deg": 33.505745396011136,
       "dominant_observation": "the matched comparison does not isolate one dominant divergence source"
     },
     "cases": [
@@ -819,154 +1067,285 @@
         ],
         "geometry": {
           "comparison_frame": "full_ct_placement_xy_projection",
-          "linear_focus_to_common_target_centroid_m": 0.013453758295732948,
+          "linear_focus_to_common_target_centroid_m": 0.0004366363339882974,
           "linear_element_count": 1024,
           "nonlinear_element_count": 1024,
-          "median_nearest_projected_element_distance_m": 0.09935282514665303,
+          "median_nearest_projected_element_distance_m": 0.09950801978481552,
           "common_target_voxels": 811,
           "common_target_centroid_m": [
             0.019206198081374172,
             0.00020217050611973095
-          ]
+          ],
+          "planned_skin_contact_m": [
+            0.06247068639099598,
+            -0.016375810995697977
+          ],
+          "planned_skin_to_target_m": 0.046331904983154024,
+          "planned_beam_axis_unit": [
+            -0.9337947214851731,
+            0.35780919234478603
+          ],
+          "nonlinear_aperture_centroid_m": [
+            0.009623789928422777,
+            -0.016831800254422685
+          ],
+          "nonlinear_aperture_centroid_to_target_m": 0.019544275527139995,
+          "nonlinear_aperture_axis_unit": [
+            0.4902923180572677,
+            0.8715580547812241
+          ],
+          "planned_to_nonlinear_aperture_axis_angle_deg": 98.39408476144378,
+          "nonlinear_source_to_target_distance_median_m": 0.030964180221125175,
+          "nonlinear_source_to_target_distance_min_m": 0.009710247514765706,
+          "nonlinear_source_to_target_distance_max_m": 0.05661062978993776
         },
         "comparison_metrics": {
           "linear_exposure": {
             "dice_equal_area": 0.0,
-            "cnr": 2.346267157090257,
-            "nrmse": 1.1611435985302245,
-            "pearson": 0.11510910239994138,
-            "target_peak": 0.14879516621334657,
+            "cnr": -0.04278836386024288,
+            "nrmse": 2.30830297807072,
+            "pearson": -0.001698783461135635,
+            "target_peak": 0.08427430304580211,
             "outside_peak": 1.0,
-            "outside_energy_fraction": 0.9833270021934918,
-            "hotspot_distance_to_target_grid_cells": 33.301651610693426
+            "outside_energy_fraction": 0.9993759900716698,
+            "hotspot_distance_to_target_grid_cells": 231.68297304722245
           },
           "linear_active": {
-            "dice_equal_area": 0.0,
-            "cnr": 0.6497385863832521,
-            "nrmse": 1.186668338758099,
-            "pearson": 0.03766971624118705,
-            "target_peak": 0.16113955917606282,
-            "outside_peak": 1.0,
-            "outside_energy_fraction": 0.993730193901941,
-            "hotspot_distance_to_target_grid_cells": 33.301651610693426
+            "dice_equal_area": 0.812577065351418,
+            "cnr": 3.979417408327857,
+            "nrmse": 0.8461778585361389,
+            "pearson": 0.6697329997220012,
+            "target_peak": 1.0,
+            "outside_peak": 0.7194110266047069,
+            "outside_energy_fraction": 0.5404292851753276,
+            "hotspot_distance_to_target_grid_cells": 5.656854249492381
           },
           "linear_fusion": {
-            "dice_equal_area": 0.0,
-            "cnr": 0.311344293038488,
-            "nrmse": 1.0395734071069436,
-            "pearson": 0.013527860782923456,
-            "target_peak": 0.05659127779223008,
+            "dice_equal_area": 0.7595561035758323,
+            "cnr": 2.205310013385148,
+            "nrmse": 0.7005639326407153,
+            "pearson": 0.7299210744240457,
+            "target_peak": 1.0,
+            "outside_peak": 0.7259908623252836,
+            "outside_energy_fraction": 0.27688048552521305,
+            "hotspot_distance_to_target_grid_cells": 6.4031242374328485
+          },
+          "elastic_shear": {
+            "dice_equal_area": 0.3834771886559803,
+            "cnr": 3.961594851339905,
+            "nrmse": 2.6636038289466493,
+            "pearson": 0.2825805004637833,
+            "target_peak": 0.9862972782046739,
             "outside_peak": 1.0,
-            "outside_energy_fraction": 0.9986151921961903,
-            "hotspot_distance_to_target_grid_cells": 33.301651610693426
+            "outside_energy_fraction": 0.93176614107173,
+            "hotspot_distance_to_target_grid_cells": 18.384776310850235
           },
           "nonlinear_pressure": {
-            "dice_equal_area": 0.7139334155363748,
-            "cnr": 6.355096869104592,
-            "nrmse": 1.4893023454626935,
-            "pearson": 0.4514512110662165,
+            "dice_equal_area": 1.0,
+            "cnr": 5.415046382851594,
+            "nrmse": 0.36322433420144074,
+            "pearson": 0.9674518785868012,
             "target_peak": 1.0,
-            "outside_peak": 0.8496798589968073,
-            "outside_energy_fraction": 0.7928341543556985,
+            "outside_peak": 0.0,
+            "outside_energy_fraction": 0.0,
             "hotspot_distance_to_target_grid_cells": 2.8284271247461903,
-            "raw_peak_pressure_pa": 16861669.461591866,
-            "raw_target_peak_pressure_pa": 16861669.461591866,
-            "peak_mechanical_index": 20.914326963995084,
-            "target_peak_mechanical_index": 20.914326963995084,
+            "window_ct_field_dice_equal_area": 0.6448828606658447,
+            "window_ct_field_cnr": 6.193193995372723,
+            "window_ct_field_nrmse": 0.9181379793677068,
+            "window_ct_field_pearson": 0.6320153160614105,
+            "window_ct_field_target_peak": 1.0,
+            "window_ct_field_outside_peak": 0.8792822604253387,
+            "window_ct_field_outside_energy_fraction": 0.580215131285595,
+            "window_ct_field_hotspot_distance_to_target_grid_cells": 2.8284271247461903,
+            "raw_ct_field_dice_equal_area": 0.6448828606658447,
+            "raw_ct_field_cnr": 5.708500744603978,
+            "raw_ct_field_nrmse": 1.4168210775431593,
+            "raw_ct_field_pearson": 0.4614855075123386,
+            "raw_ct_field_target_peak": 1.0,
+            "raw_ct_field_outside_peak": 0.8792822604253387,
+            "raw_ct_field_outside_energy_fraction": 0.7809722574108311,
+            "raw_ct_field_hotspot_distance_to_target_grid_cells": 2.8284271247461903,
+            "raw_peak_pressure_pa": 17538187.945606817,
+            "raw_target_peak_pressure_pa": 17538187.945606817,
+            "body_peak_pressure_pa": 17538187.945606817,
+            "coupling_peak_pressure_pa": 0.0,
+            "peak_mechanical_index": 21.75344487008996,
+            "target_peak_mechanical_index": 21.75344487008996,
+            "body_peak_mechanical_index": 21.75344487008996,
+            "coupling_peak_mechanical_index": 0.0,
             "inertial_mi_threshold": 1.9,
             "peak_exceeds_inertial_threshold": true,
             "target_exceeds_inertial_threshold": true,
+            "body_peak_exceeds_inertial_threshold": true,
+            "coupling_peak_exceeds_inertial_threshold": false,
+            "raw_peak_is_in_coupling": false,
+            "target_centroid_x_index": 27.5,
+            "target_centroid_y_index": 27.5,
+            "target_centroid_z_index": 0.0,
+            "raw_hotspot_x_index": 28.0,
+            "raw_hotspot_y_index": 28.0,
+            "raw_hotspot_z_index": 0.0,
+            "body_hotspot_x_index": 28.0,
+            "body_hotspot_y_index": 28.0,
+            "body_hotspot_z_index": 0.0,
+            "raw_hotspot_distance_to_target_grid_cells": 0.7071067811865476,
+            "body_hotspot_distance_to_target_grid_cells": 0.7071067811865476,
             "finite_pressure_fraction": 1.0,
             "source_pressure_pa": 28000000.0,
             "source_scale": 1.0,
             "effective_source_pressure_pa": 28000000.0,
-            "raw_peak_to_effective_source_ratio": 0.602202480771138
+            "raw_peak_to_effective_source_ratio": 0.6263638552002434,
+            "target_to_body_peak_ratio": 1.0,
+            "coupling_to_body_peak_ratio": 0.0,
+            "ct_frame_target_centroid_m": [
+              0.019206198081374172,
+              0.00020217050611973095
+            ],
+            "ct_frame_pressure_hotspot_m": [
+              0.02001488010585309,
+              0.001010852530598641
+            ],
+            "ct_frame_pressure_hotspot_distance_m": 0.0011436490866654108,
+            "ct_frame_pressure_hotspot_axis_offset_m": -0.00046578914377581095,
+            "ct_frame_pressure_hotspot_cross_axis_offset_m": 0.0010444968678608975,
+            "pressure_hotspot_is_prefocal": true,
+            "pressure_hotspot_is_postfocal": false,
+            "raw_ct_frame_target_centroid_m": [
+              0.019206198081374172,
+              0.00020217050611973095
+            ],
+            "raw_ct_frame_pressure_hotspot_m": [
+              0.02001488010585309,
+              0.001010852530598641
+            ],
+            "raw_ct_frame_pressure_hotspot_distance_m": 0.0011436490866654108,
+            "raw_ct_frame_pressure_hotspot_axis_offset_m": -0.00046578914377581095,
+            "raw_ct_frame_pressure_hotspot_cross_axis_offset_m": 0.0010444968678608975,
+            "raw_pressure_hotspot_is_prefocal": true,
+            "raw_pressure_hotspot_is_postfocal": false,
+            "window_ct_frame_target_centroid_m": [
+              0.019206198081374172,
+              0.00020217050611973095
+            ],
+            "window_ct_frame_pressure_hotspot_m": [
+              0.02001488010585309,
+              0.001010852530598641
+            ],
+            "window_ct_frame_pressure_hotspot_distance_m": 0.0011436490866654108,
+            "window_ct_frame_pressure_hotspot_axis_offset_m": -0.00046578914377581095,
+            "window_ct_frame_pressure_hotspot_cross_axis_offset_m": 0.0010444968678608975,
+            "window_pressure_hotspot_is_prefocal": true,
+            "window_pressure_hotspot_is_postfocal": false,
+            "electronic_steering_nominal_focus_index": [
+              28,
+              28,
+              28
+            ],
+            "electronic_steering_calibration_hotspot_index": [
+              28,
+              28,
+              28
+            ],
+            "electronic_steering_steering_focus_index": [
+              28,
+              28,
+              28
+            ],
+            "electronic_steering_correction_grid_cells": [
+              0,
+              0,
+              0
+            ],
+            "electronic_steering_calibration_hotspot_distance_grid_cells": 0.0,
+            "electronic_steering_steering_applied": false
           },
           "nonlinear_fwi": {
-            "dice_equal_area": 0.7472256473489519,
-            "cnr": 7.449250792290097,
-            "nrmse": 0.876497456838634,
-            "pearson": 0.6758652563965093,
+            "dice_equal_area": 0.7213316892725031,
+            "cnr": 4.873734839395925,
+            "nrmse": 0.6740159924593759,
+            "pearson": 0.7560135623919236,
             "target_peak": 1.0,
-            "outside_peak": 0.8638145431186119,
-            "outside_energy_fraction": 0.5273478815348249,
-            "hotspot_distance_to_target_grid_cells": 5.0990195135927845
+            "outside_peak": 0.9275713620896813,
+            "outside_energy_fraction": 0.38075506948662075,
+            "hotspot_distance_to_target_grid_cells": 7.810249675906654
           },
           "nonlinear_cavitation_source": {
-            "dice_equal_area": 0.7139334155363748,
-            "cnr": 7.09961224445042,
-            "nrmse": 0.8925814719749369,
-            "pearson": 0.6512597473692219,
+            "dice_equal_area": 0.6448828606658447,
+            "cnr": 6.19743098429608,
+            "nrmse": 0.9125566924501548,
+            "pearson": 0.6345885083433405,
             "target_peak": 1.0,
-            "outside_peak": 0.8496798589968071,
-            "outside_energy_fraction": 0.5596087656204063,
+            "outside_peak": 0.8792822604253386,
+            "outside_energy_fraction": 0.5768114246176329,
             "hotspot_distance_to_target_grid_cells": 2.8284271247461903
           },
           "nonlinear_cavitation": {
-            "dice_equal_area": 0.5782983970406905,
-            "cnr": 2.957958630309709,
-            "nrmse": 0.8305376491647776,
-            "pearson": 0.5930807319541334,
-            "target_peak": 0.9848274892535495,
+            "dice_equal_area": 0.2318125770653514,
+            "cnr": 3.656123712746205,
+            "nrmse": 0.9965144368051617,
+            "pearson": 0.44356543837226736,
+            "target_peak": 0.7159866244584078,
             "outside_peak": 1.0,
-            "outside_energy_fraction": 0.5684489415266454,
-            "hotspot_distance_to_target_grid_cells": 19.235384061671343
+            "outside_energy_fraction": 0.7740163903777326,
+            "hotspot_distance_to_target_grid_cells": 21.93171219946131
           },
           "nonlinear_fusion": {
-            "dice_equal_area": 0.7398273736128237,
-            "cnr": 6.678677348876487,
-            "nrmse": 0.8532266849670797,
-            "pearson": 0.6758132470094447,
-            "target_peak": 1.0,
-            "outside_peak": 0.8021501744947308,
-            "outside_energy_fraction": 0.5234453375263232,
-            "hotspot_distance_to_target_grid_cells": 5.385164807134504
+            "dice_equal_area": 0.374845869297164,
+            "cnr": 4.397990859570262,
+            "nrmse": 0.9577348496784661,
+            "pearson": 0.5245088763532288,
+            "target_peak": 0.8180435564541514,
+            "outside_peak": 1.0,
+            "outside_energy_fraction": 0.6966299120961945,
+            "hotspot_distance_to_target_grid_cells": 21.93171219946131
           }
         },
         "cross_model_metrics": {
-          "linear_fusion_vs_nonlinear_fusion_pearson": 0.196357337370659,
-          "linear_exposure_vs_nonlinear_pressure_pearson": 0.41263542614844645,
-          "linear_fusion_hotspot_distance_grid_cells": 36.05551275463989,
-          "nonlinear_pressure_to_fusion_pearson": 0.6790947593081635,
-          "nonlinear_pressure_to_cavitation_source_pearson": 0.6967590430159037,
-          "nonlinear_cavitation_source_to_reconstruction_pearson": 0.9022169377536959,
-          "nonlinear_cavitation_source_to_reconstruction_hotspot_distance_grid_cells": 21.95449840010015
+          "linear_fusion_vs_nonlinear_fusion_pearson": 0.5245758897426662,
+          "elastic_shear_vs_linear_fusion_pearson": 0.48261789121944615,
+          "elastic_shear_vs_nonlinear_fusion_pearson": 0.49168636497313734,
+          "linear_exposure_vs_nonlinear_pressure_pearson": -0.00121224647138277,
+          "linear_fusion_hotspot_distance_grid_cells": 27.784887978899608,
+          "nonlinear_pressure_to_fusion_pearson": 0.5132904357528569,
+          "nonlinear_pressure_to_cavitation_source_pearson": 0.6463062718827259,
+          "nonlinear_cavitation_source_to_reconstruction_pearson": 0.8015197650904483,
+          "nonlinear_cavitation_source_to_reconstruction_hotspot_distance_grid_cells": 23.08679276123039
         },
         "objective_history": {
           "nonlinear_fwi": [
-            0.6599853794200186,
-            0.3163495345807576,
-            0.040636175587180814,
-            0.040636175587180814
+            0.004341491735194403,
+            0.004319981366667219,
+            0.00431998021412177,
+            0.00431997930414004
           ],
           "nonlinear_cavitation": [
-            876256.3139136145,
-            849548.9224124876,
-            823795.4713030686,
-            798959.4491784052,
-            775005.8075752086,
-            751900.9018549739,
-            729612.4171061312,
-            708109.3181744167,
-            687361.8217350688,
-            667341.3069195974,
-            648020.3207362666,
-            629372.4739245665,
-            611372.4058377612,
-            593995.7801913585,
-            577219.1617494095,
-            561020.0983801201,
-            545376.9726939019,
-            530269.0329832612,
-            515676.29980254755,
-            501579.58769947244,
-            487960.4957247254,
-            474801.3271900865,
-            462085.0998852478,
-            449795.4277704187
+            3157615088.424375,
+            3080878961.954896,
+            3006511759.159291,
+            2934431827.4184403,
+            2864560486.567102,
+            2796821922.2765145,
+            2731143092.4032836,
+            2667453642.559415,
+            2605685743.525608,
+            2545774047.3122187,
+            2487655563.551592,
+            2431269622.712004,
+            2376557679.2475266,
+            2323463377.318561,
+            2271932554.022094,
+            2221912796.092695,
+            2173353415.4747305,
+            2126205787.7824967,
+            2080422821.5750046,
+            2035959173.8324673,
+            1992771133.591751,
+            1950816852.8560047,
+            1910055667.9649963,
+            1870448479.227174
           ]
         },
-        "technical_explanation": "On the full CT placement grid, linear fusion Dice is 0.000 and nonlinear fusion Dice is 0.740. Nonlinear target MI is 20.91 at 16.86 MPa; outside-target energy is 0.793, linear/nonlinear fusion Pearson is 0.196, and nonlinear FWI objective drop is 6.193e-01. The Rayleigh-Plesset source and passive reconstruction hotspots are 2.83 and 19.24 grid cells from the target centroid. The residual projected aperture mismatch from the original runs is 99.35 mm; therefore the matched artifact localizes the remaining channel difference to nonlinear pressure/cavitation spread plus residual 2-D-vs-3-D aperture mismatch, not to image resolution alone."
+        "technical_explanation": "On the full CT placement grid, linear fusion Dice is 0.760, elastic shear Dice is 0.383, and nonlinear fusion Dice is 0.375. Nonlinear target MI is 21.75 at 17.54 MPa; displayed target-pressure outside energy is 0.000, linear/nonlinear fusion Pearson is 0.525, and nonlinear FWI objective drop is 2.151e-05. The Rayleigh-Plesset source and passive reconstruction hotspots are 2.83 and 21.93 grid cells from the target centroid. The residual projected aperture mismatch from the original runs is 99.51 mm; the nonlinear aperture axis differs from the planned beam axis by 98.39 deg; the displayed target-pressure hotspot offset is -0.47 mm along the planned beam axis and 1.04 mm cross-axis; the treatment-window pressure hotspot offset is -0.47 mm along-axis and 1.04 mm cross-axis; the raw body-pressure hotspot offset is -0.47 mm along-axis and 1.04 mm cross-axis; the raw pressure peak is inside the body with coupling/body peak ratio 0.00, and the body pressure hotspot is 0.71 grid cells from target. the measured electronic-steering calibration hotspot is 0.00 grid cells from the nominal focus and selected correction [0, 0, 0]. therefore the matched artifact localizes the remaining channel difference to nonlinear in-body pressure/cavitation spread, source-region dominance in raw peak-pressure display, and residual 2-D-vs-3-D aperture mismatch, not to image resolution alone."
       },
       {
         "anatomy": "kidney",
@@ -982,68 +1361,197 @@
         ],
         "geometry": {
           "comparison_frame": "full_ct_placement_xy_projection",
-          "linear_focus_to_common_target_centroid_m": 0.007077537699070735,
+          "linear_focus_to_common_target_centroid_m": 0.006912589609305144,
           "linear_element_count": 256,
           "nonlinear_element_count": 256,
-          "median_nearest_projected_element_distance_m": 0.14800418346055452,
-          "common_target_voxels": 1292,
+          "median_nearest_projected_element_distance_m": 0.028479658203173133,
+          "common_target_voxels": 1639,
           "common_target_centroid_m": [
-            0.005246130030959758,
-            0.06271061852989551
-          ]
+            0.005303233679072612,
+            0.06153850778390025
+          ],
+          "planned_skin_contact_m": [
+            0.004,
+            0.1485673828125
+          ],
+          "planned_skin_to_target_m": 0.08703863226617194,
+          "planned_beam_axis_unit": [
+            0.014973048692759856,
+            -0.9998878976229506
+          ],
+          "nonlinear_aperture_centroid_m": [
+            -0.00046960227272727133,
+            0.202192033247515
+          ],
+          "nonlinear_aperture_centroid_to_target_m": 0.14077194273103613,
+          "nonlinear_aperture_axis_unit": [
+            0.041008427104182746,
+            -0.9991588006450431
+          ],
+          "planned_to_nonlinear_aperture_axis_angle_deg": 1.4923442941450484,
+          "nonlinear_source_to_target_distance_median_m": 0.14375974357217317,
+          "nonlinear_source_to_target_distance_min_m": 0.13519881234723954,
+          "nonlinear_source_to_target_distance_max_m": 0.14852257242156713
         },
         "comparison_metrics": {
           "linear_exposure": {
-            "dice_equal_area": 0.46671826625387,
-            "cnr": 1.751057885594058,
-            "nrmse": 1.1052363796207345,
-            "pearson": 0.3237572735035241,
-            "target_peak": 1.0,
-            "outside_peak": 0.44500247312791696,
-            "outside_energy_fraction": 0.8554747942376437,
-            "hotspot_distance_to_target_grid_cells": 14.51150389488758
+            "dice_equal_area": 0.0,
+            "cnr": 0.9241782439603043,
+            "nrmse": 1.1776558400901045,
+            "pearson": 0.052523121252607316,
+            "target_peak": 0.09972266106503258,
+            "outside_peak": 1.0,
+            "outside_energy_fraction": 0.9928691038021086,
+            "hotspot_distance_to_target_grid_cells": 156.88848770386403
           },
           "linear_active": {
-            "dice_equal_area": 0.6130030959752322,
-            "cnr": 2.40282937327124,
-            "nrmse": 0.8030307634176462,
-            "pearson": 0.6123111918855629,
+            "dice_equal_area": 0.7211714460036608,
+            "cnr": 2.777132682374614,
+            "nrmse": 0.7912213631365091,
+            "pearson": 0.6368174391684859,
             "target_peak": 1.0,
-            "outside_peak": 0.5312871595449913,
-            "outside_energy_fraction": 0.5314708163010278,
-            "hotspot_distance_to_target_grid_cells": 14.51150389488758
+            "outside_peak": 0.6893904950672219,
+            "outside_energy_fraction": 0.5192646441728155,
+            "hotspot_distance_to_target_grid_cells": 13.946337138548605
           },
           "linear_fusion": {
-            "dice_equal_area": 0.6795665634674922,
-            "cnr": 1.8293106069770737,
-            "nrmse": 0.79365865224536,
-            "pearson": 0.6925671188939778,
+            "dice_equal_area": 0.7352043929225137,
+            "cnr": 2.537236566649383,
+            "nrmse": 0.6932934672329217,
+            "pearson": 0.7351996511966348,
             "target_peak": 1.0,
-            "outside_peak": 0.4419718606508897,
-            "outside_energy_fraction": 0.25407193836731934,
-            "hotspot_distance_to_target_grid_cells": 14.51150389488758
+            "outside_peak": 0.7550738231293984,
+            "outside_energy_fraction": 0.306132788499734,
+            "hotspot_distance_to_target_grid_cells": 31.059096810577614
+          },
+          "elastic_shear": {
+            "dice_equal_area": 0.6638194020744357,
+            "cnr": 4.471904331406888,
+            "nrmse": 1.1293068442331098,
+            "pearson": 0.5195330448656137,
+            "target_peak": 1.0,
+            "outside_peak": 0.7864763120341154,
+            "outside_energy_fraction": 0.720653205716902,
+            "hotspot_distance_to_target_grid_cells": 6.828591856668862
           },
           "nonlinear_pressure": {
-            "dice_equal_area": 0.16021671826625386,
-            "cnr": 3.8176670253384817,
-            "nrmse": 0.9670799122031128,
-            "pearson": 0.27270398277785995,
-            "target_peak": 0.19742444784055757,
-            "outside_peak": 1.0,
-            "outside_energy_fraction": 0.9161840481540778,
-            "hotspot_distance_to_target_grid_cells": 84.87111061555615,
-            "raw_peak_pressure_pa": 11598395.194106469,
-            "raw_target_peak_pressure_pa": 2103344.8499546954,
-            "peak_mechanical_index": 16.40260778526829,
-            "target_peak_mechanical_index": 2.9745788131535327,
+            "dice_equal_area": 1.0,
+            "cnr": 9.99770860658134,
+            "nrmse": 0.16867081855284857,
+            "pearson": 0.9900919471984541,
+            "target_peak": 1.0,
+            "outside_peak": 0.0,
+            "outside_energy_fraction": 0.0,
+            "hotspot_distance_to_target_grid_cells": 31.81135310819282,
+            "window_ct_field_dice_equal_area": 0.6040268456375839,
+            "window_ct_field_cnr": 18.567711230689106,
+            "window_ct_field_nrmse": 0.933201613919412,
+            "window_ct_field_pearson": 0.7041405256656997,
+            "window_ct_field_target_peak": 0.976829386486681,
+            "window_ct_field_outside_peak": 1.0,
+            "window_ct_field_outside_energy_fraction": 0.5013683334067337,
+            "window_ct_field_hotspot_distance_to_target_grid_cells": 49.05313342278608,
+            "raw_ct_field_dice_equal_area": 0.0,
+            "raw_ct_field_cnr": -0.03168796931358581,
+            "raw_ct_field_nrmse": 1.0083975838615296,
+            "raw_ct_field_pearson": -0.001621857640213154,
+            "raw_ct_field_target_peak": 5.984946099266316e-06,
+            "raw_ct_field_outside_peak": 1.0,
+            "raw_ct_field_outside_energy_fraction": 0.9999999980860931,
+            "raw_ct_field_hotspot_distance_to_target_grid_cells": 229.44381118617733,
+            "raw_peak_pressure_pa": 3.7553786095870173e+149,
+            "raw_target_peak_pressure_pa": 1.9725785343672602e+144,
+            "body_peak_pressure_pa": 3.7553786095870173e+149,
+            "coupling_peak_pressure_pa": 2.1526154241930415e+98,
+            "peak_mechanical_index": 5.310907361523776e+143,
+            "target_peak_mechanical_index": 2.7896473161482212e+138,
+            "body_peak_mechanical_index": 5.310907361523776e+143,
+            "coupling_peak_mechanical_index": 3.044257927467312e+92,
             "inertial_mi_threshold": 1.9,
             "peak_exceeds_inertial_threshold": true,
             "target_exceeds_inertial_threshold": true,
+            "body_peak_exceeds_inertial_threshold": true,
+            "coupling_peak_exceeds_inertial_threshold": true,
+            "raw_peak_is_in_coupling": false,
+            "target_centroid_x_index": 27.682926829268293,
+            "target_centroid_y_index": 17.463414634146343,
+            "target_centroid_z_index": 0.0,
+            "raw_hotspot_x_index": 54.0,
+            "raw_hotspot_y_index": 24.0,
+            "raw_hotspot_z_index": 0.0,
+            "body_hotspot_x_index": 54.0,
+            "body_hotspot_y_index": 24.0,
+            "body_hotspot_z_index": 0.0,
+            "raw_hotspot_distance_to_target_grid_cells": 27.116697596107436,
+            "body_hotspot_distance_to_target_grid_cells": 27.116697596107436,
             "finite_pressure_fraction": 1.0,
             "source_pressure_pa": 28000000.0,
             "source_scale": 1.0,
             "effective_source_pressure_pa": 28000000.0,
-            "raw_peak_to_effective_source_ratio": 0.41422839978951675
+            "raw_peak_to_effective_source_ratio": 1.3412066462810778e+142,
+            "target_to_body_peak_ratio": 5.252675534050045e-06,
+            "coupling_to_body_peak_ratio": 5.732086290041916e-52,
+            "ct_frame_target_centroid_m": [
+              0.005303233679072612,
+              0.06153850778390025
+            ],
+            "ct_frame_pressure_hotspot_m": [
+              -0.010499999999999982,
+              0.06485449218750003
+            ],
+            "ct_frame_pressure_hotspot_distance_m": 0.016147382056553045,
+            "ct_frame_pressure_hotspot_axis_offset_m": -0.003552235261245694,
+            "ct_frame_pressure_hotspot_cross_axis_offset_m": 0.01575181170307257,
+            "pressure_hotspot_is_prefocal": true,
+            "pressure_hotspot_is_postfocal": false,
+            "raw_ct_frame_target_centroid_m": [
+              0.005303233679072612,
+              0.06153850778390025
+            ],
+            "raw_ct_frame_pressure_hotspot_m": [
+              0.11900000000000002,
+              0.0896923828125
+            ],
+            "raw_ct_frame_pressure_hotspot_distance_m": 0.11713067638736484,
+            "raw_ct_frame_pressure_hotspot_axis_offset_m": -0.02644833169395331,
+            "raw_ct_frame_pressure_hotspot_cross_axis_offset_m": 0.1141055699848531,
+            "raw_pressure_hotspot_is_prefocal": true,
+            "raw_pressure_hotspot_is_postfocal": false,
+            "window_ct_frame_target_centroid_m": [
+              0.005303233679072612,
+              0.06153850778390025
+            ],
+            "window_ct_frame_pressure_hotspot_m": [
+              -0.01899999999999999,
+              0.0676142578125
+            ],
+            "window_ct_frame_pressure_hotspot_distance_m": 0.025051185713846732,
+            "window_ct_frame_pressure_hotspot_axis_offset_m": -0.0064389624238474575,
+            "window_ct_frame_pressure_hotspot_cross_axis_offset_m": 0.02420953672778393,
+            "window_pressure_hotspot_is_prefocal": true,
+            "window_pressure_hotspot_is_postfocal": false,
+            "electronic_steering_nominal_focus_index": [
+              28,
+              18,
+              28
+            ],
+            "electronic_steering_calibration_hotspot_index": [
+              28,
+              22,
+              29
+            ],
+            "electronic_steering_steering_focus_index": [
+              28,
+              22,
+              28
+            ],
+            "electronic_steering_correction_grid_cells": [
+              0,
+              4,
+              0
+            ],
+            "electronic_steering_calibration_hotspot_distance_grid_cells": 4.123105625617661,
+            "electronic_steering_steering_applied": true
           },
           "nonlinear_fwi": {
             "dice_equal_area": 0.0,
@@ -1053,81 +1561,83 @@
             "target_peak": 0.0,
             "outside_peak": 0.0,
             "outside_energy_fraction": 0.0,
-            "hotspot_distance_to_target_grid_cells": 451.9926043592375
+            "hotspot_distance_to_target_grid_cells": 451.1609605662996
           },
           "nonlinear_cavitation_source": {
-            "dice_equal_area": 0.32894736842105265,
-            "cnr": 0.2902631747989545,
-            "nrmse": 0.9884685499164915,
-            "pearson": 0.1583558552095551,
-            "target_peak": 1.0,
-            "outside_peak": 0.9476935988447605,
-            "outside_energy_fraction": 0.37869276597138946,
-            "hotspot_distance_to_target_grid_cells": 10.576281912817374
+            "dice_equal_area": 0.62660158633313,
+            "cnr": 18.701233225067334,
+            "nrmse": 0.9345106700891312,
+            "pearson": 0.7068940865485193,
+            "target_peak": 0.9865637931981263,
+            "outside_peak": 1.0,
+            "outside_energy_fraction": 0.49750502969592836,
+            "hotspot_distance_to_target_grid_cells": 41.31241574649029
           },
           "nonlinear_cavitation": {
-            "dice_equal_area": 0.2592879256965944,
-            "cnr": 0.5581345569155954,
-            "nrmse": 0.9628932416699042,
-            "pearson": 0.2836447310135076,
-            "target_peak": 1.0,
-            "outside_peak": 0.9538014174584146,
-            "outside_energy_fraction": 0.40231315052318994,
-            "hotspot_distance_to_target_grid_cells": 5.225577050245881
+            "dice_equal_area": 0.5692495424039048,
+            "cnr": 3.2275356449436727,
+            "nrmse": 0.7370569401241601,
+            "pearson": 0.675860749966331,
+            "target_peak": 0.9179311591922241,
+            "outside_peak": 1.0,
+            "outside_energy_fraction": 0.45549431606054724,
+            "hotspot_distance_to_target_grid_cells": 25.532259843899908
           },
           "nonlinear_fusion": {
-            "dice_equal_area": 0.2592879256965944,
-            "cnr": 0.5581345569155955,
-            "nrmse": 0.9628932416699042,
-            "pearson": 0.2836447310135076,
-            "target_peak": 1.0,
-            "outside_peak": 0.9538014174584145,
-            "outside_energy_fraction": 0.40231315052318994,
-            "hotspot_distance_to_target_grid_cells": 5.225577050245881
+            "dice_equal_area": 0.5692495424039048,
+            "cnr": 3.2275356449436727,
+            "nrmse": 0.7370569401241601,
+            "pearson": 0.675860749966331,
+            "target_peak": 0.917931159192224,
+            "outside_peak": 1.0,
+            "outside_energy_fraction": 0.45549431606054724,
+            "hotspot_distance_to_target_grid_cells": 25.532259843899908
           }
         },
         "cross_model_metrics": {
-          "linear_fusion_vs_nonlinear_fusion_pearson": 0.20727269889355854,
-          "linear_exposure_vs_nonlinear_pressure_pearson": 0.29600022147971844,
-          "linear_fusion_hotspot_distance_grid_cells": 19.235384061671343,
-          "nonlinear_pressure_to_fusion_pearson": 0.17289846098341574,
-          "nonlinear_pressure_to_cavitation_source_pearson": 0.0892212846844521,
-          "nonlinear_cavitation_source_to_reconstruction_pearson": 0.6006539143227624,
-          "nonlinear_cavitation_source_to_reconstruction_hotspot_distance_grid_cells": 7.211102550927978
+          "linear_fusion_vs_nonlinear_fusion_pearson": 0.6382588676378604,
+          "elastic_shear_vs_linear_fusion_pearson": 0.5339098090850788,
+          "elastic_shear_vs_nonlinear_fusion_pearson": 0.613493305069139,
+          "linear_exposure_vs_nonlinear_pressure_pearson": 0.05166560502497472,
+          "linear_fusion_hotspot_distance_grid_cells": 52.15361924162119,
+          "nonlinear_pressure_to_fusion_pearson": 0.6777923452476693,
+          "nonlinear_pressure_to_cavitation_source_pearson": 0.70044881306007,
+          "nonlinear_cavitation_source_to_reconstruction_pearson": 0.8870007269694299,
+          "nonlinear_cavitation_source_to_reconstruction_hotspot_distance_grid_cells": 30.4138126514911
         },
         "objective_history": {
           "nonlinear_fwi": [
-            0.21772077540940996,
-            0.21772077540940996
+            NaN,
+            NaN
           ],
           "nonlinear_cavitation": [
-            10164695198.659506,
-            10045554637.20546,
-            9928444497.040607,
-            9813321872.182957,
-            9700144893.014677,
-            9588872697.149548,
-            9479465415.509392,
-            9371884137.311428,
-            9266090935.330177,
-            9162048779.030115,
-            9059721459.881128,
-            8959073660.418669,
-            8860070979.54379,
-            8762679980.90713,
-            8666867685.961826,
-            8572602375.658257,
-            8479852547.621729,
-            8388587816.156698,
-            8298778180.069065,
-            8210394308.925009,
-            8123407589.652714,
-            8037790080.243374,
-            7953514520.84498,
-            7870554324.104237
+            344879.2166108003,
+            334997.3457862777,
+            325518.1007264621,
+            316422.7396833441,
+            307693.45391497604,
+            299313.3042239529,
+            291266.1859785221,
+            283536.8168774198,
+            276110.6571282571,
+            268973.89374345506,
+            262113.37587454755,
+            255516.61073849347,
+            249171.70266862054,
+            243067.458787954,
+            237193.12322366697,
+            231538.4685680438,
+            226093.67033358288,
+            220849.52549655992,
+            215797.13952518994,
+            210928.10751391845,
+            206234.42837936134,
+            201708.47766854588,
+            197342.99640076587,
+            193131.06840483562
           ]
         },
-        "technical_explanation": "On the full CT placement grid, linear fusion Dice is 0.680 and nonlinear fusion Dice is 0.259. Nonlinear target MI is 2.97 at 2.10 MPa; outside-target energy is 0.916, linear/nonlinear fusion Pearson is 0.207, and nonlinear FWI objective drop is 0.000e+00. The Rayleigh-Plesset source and passive reconstruction hotspots are 10.58 and 5.23 grid cells from the target centroid. The residual projected aperture mismatch from the original runs is 148.00 mm; therefore the matched artifact localizes the remaining channel difference to nonlinear pressure/cavitation spread plus residual 2-D-vs-3-D aperture mismatch, not to image resolution alone."
+        "technical_explanation": "On the full CT placement grid, linear fusion Dice is 0.735, elastic shear Dice is 0.664, and nonlinear fusion Dice is 0.569. Nonlinear target MI is 2789647316148221188399025852978334693813209477134690727444488585870913779556610129616977148458405038796019337496236123361973386274504966144.00 at 1972578534367260026818636907625430775563169489583508469782571211192089765466317062573473411358433927128222965999475338410867609505709948928.00 MPa; displayed target-pressure outside energy is 0.000, linear/nonlinear fusion Pearson is 0.638, and nonlinear FWI objective drop is nan. The Rayleigh-Plesset source and passive reconstruction hotspots are 41.31 and 25.53 grid cells from the target centroid. The residual projected aperture mismatch from the original runs is 28.48 mm; the nonlinear aperture axis differs from the planned beam axis by 1.49 deg; the displayed target-pressure hotspot offset is -3.55 mm along the planned beam axis and 15.75 mm cross-axis; the treatment-window pressure hotspot offset is -6.44 mm along-axis and 24.21 mm cross-axis; the raw body-pressure hotspot offset is -26.45 mm along-axis and 114.11 mm cross-axis; the raw pressure peak is inside the body with coupling/body peak ratio 0.00, and the body pressure hotspot is 27.12 grid cells from target. the measured electronic-steering calibration hotspot is 4.12 grid cells from the nominal focus and selected correction [0, 4, 0]. therefore the matched artifact localizes the remaining channel difference to nonlinear in-body pressure/cavitation spread, source-region dominance in raw peak-pressure display, and residual 2-D-vs-3-D aperture mismatch, not to image resolution alone."
       },
       {
         "anatomy": "liver",
@@ -1143,154 +1653,283 @@
         ],
         "geometry": {
           "comparison_frame": "full_ct_placement_xy_projection",
-          "linear_focus_to_common_target_centroid_m": 0.01205741608881518,
+          "linear_focus_to_common_target_centroid_m": 0.012228616064207042,
           "linear_element_count": 256,
           "nonlinear_element_count": 256,
-          "median_nearest_projected_element_distance_m": 0.049293494475989394,
-          "common_target_voxels": 1942,
+          "median_nearest_projected_element_distance_m": 0.027965636789864842,
+          "common_target_voxels": 695,
           "common_target_centroid_m": [
-            -0.04524366793254376,
-            -0.022557567906797103
-          ]
+            -0.0483937162769784,
+            -0.04632885566546761
+          ],
+          "planned_skin_contact_m": [
+            -0.0587109375,
+            -0.12128906249999999
+          ],
+          "planned_skin_to_target_m": 0.07566688616852582,
+          "planned_beam_axis_unit": [
+            0.1363505457333477,
+            0.9906606526345023
+          ],
+          "nonlinear_aperture_centroid_m": [
+            -0.06685280539772731,
+            -0.17032214355468758
+          ],
+          "nonlinear_aperture_centroid_to_target_m": 0.12535977589620498,
+          "nonlinear_aperture_axis_unit": [
+            0.14724890012592726,
+            0.9890994699279264
+          ],
+          "planned_to_nonlinear_aperture_axis_angle_deg": 0.6308071324445864,
+          "nonlinear_source_to_target_distance_median_m": 0.12860287431922007,
+          "nonlinear_source_to_target_distance_min_m": 0.12161445627715071,
+          "nonlinear_source_to_target_distance_max_m": 0.13345468549008643
         },
         "comparison_metrics": {
           "linear_exposure": {
-            "dice_equal_area": 0.25231719876416064,
-            "cnr": 1.6009084040675094,
-            "nrmse": 1.224965048024343,
-            "pearson": 0.26557624120947665,
-            "target_peak": 1.0,
-            "outside_peak": 0.9469503633608668,
-            "outside_energy_fraction": 0.8856253532296342,
-            "hotspot_distance_to_target_grid_cells": 19.672515109677118
+            "dice_equal_area": 0.0,
+            "cnr": 1.8732747158626029,
+            "nrmse": 2.2418915566970017,
+            "pearson": 0.06846786618152263,
+            "target_peak": 0.19850316678069413,
+            "outside_peak": 1.0,
+            "outside_energy_fraction": 0.9927144614916459,
+            "hotspot_distance_to_target_grid_cells": 126.16082469490013
           },
           "linear_active": {
-            "dice_equal_area": 0.1462409886714727,
-            "cnr": 0.8703722715725625,
-            "nrmse": 1.1105662544937374,
-            "pearson": 0.17097288474207073,
-            "target_peak": 0.9536437981974744,
-            "outside_peak": 1.0,
-            "outside_energy_fraction": 0.9040017330392025,
-            "hotspot_distance_to_target_grid_cells": 22.3933707057327
+            "dice_equal_area": 0.3410071942446043,
+            "cnr": 2.059664826394263,
+            "nrmse": 1.1870547885424882,
+            "pearson": 0.3289133537334259,
+            "target_peak": 1.0,
+            "outside_peak": 0.8945505601131456,
+            "outside_energy_fraction": 0.8551822947723863,
+            "hotspot_distance_to_target_grid_cells": 12.939361228139827
           },
           "linear_fusion": {
-            "dice_equal_area": 0.22760041194644695,
-            "cnr": 0.7571321636081576,
-            "nrmse": 0.963489559283714,
-            "pearson": 0.2679008107513926,
+            "dice_equal_area": 0.8287769784172662,
+            "cnr": 4.086443874079479,
+            "nrmse": 0.7059319580566896,
+            "pearson": 0.7202435590383767,
             "target_peak": 1.0,
-            "outside_peak": 0.8425923267766191,
-            "outside_energy_fraction": 0.6901972806044381,
-            "hotspot_distance_to_target_grid_cells": 19.672515109677118
+            "outside_peak": 0.8863113834617933,
+            "outside_energy_fraction": 0.4389220661257459,
+            "hotspot_distance_to_target_grid_cells": 12.939361228139827
+          },
+          "elastic_shear": {
+            "dice_equal_area": 0.7553956834532374,
+            "cnr": 7.441053075321507,
+            "nrmse": 1.7513553897356084,
+            "pearson": 0.42584548675305034,
+            "target_peak": 1.0,
+            "outside_peak": 0.9024637596101954,
+            "outside_energy_fraction": 0.8251189376718668,
+            "hotspot_distance_to_target_grid_cells": 5.507981514057093
           },
           "nonlinear_pressure": {
-            "dice_equal_area": 0.0,
-            "cnr": 2.1519814196193403,
-            "nrmse": 2.222394634841679,
-            "pearson": 0.15984149224589342,
-            "target_peak": 0.6067914106567355,
-            "outside_peak": 1.0,
-            "outside_energy_fraction": 0.9660216292715752,
-            "hotspot_distance_to_target_grid_cells": 30.092282081187534,
-            "raw_peak_pressure_pa": 2939403.1579115144,
-            "raw_target_peak_pressure_pa": 1738372.8245378789,
-            "peak_mechanical_index": 4.156943811200767,
-            "target_peak_mechanical_index": 2.4584304249222924,
+            "dice_equal_area": 1.0,
+            "cnr": 4.024219665106535,
+            "nrmse": 0.692315367280475,
+            "pearson": 0.9433004386953712,
+            "target_peak": 1.0,
+            "outside_peak": 0.0,
+            "outside_energy_fraction": 0.0,
+            "hotspot_distance_to_target_grid_cells": 13.393911048119966,
+            "window_ct_field_dice_equal_area": 0.058992805755395686,
+            "window_ct_field_cnr": 3.5430267527003245,
+            "window_ct_field_nrmse": 0.9820691439870356,
+            "window_ct_field_pearson": 0.19267037751977617,
+            "window_ct_field_target_peak": 0.13855079604265244,
+            "window_ct_field_outside_peak": 1.0,
+            "window_ct_field_outside_energy_fraction": 0.9584143581239656,
+            "window_ct_field_hotspot_distance_to_target_grid_cells": 23.240618528081992,
+            "raw_ct_field_dice_equal_area": 0.0,
+            "raw_ct_field_cnr": -0.024670229002037698,
+            "raw_ct_field_nrmse": 1.0117240235912792,
+            "raw_ct_field_pearson": -0.0008982153992183528,
+            "raw_ct_field_target_peak": 3.5755283748370095e-05,
+            "raw_ct_field_outside_peak": 1.0,
+            "raw_ct_field_outside_energy_fraction": 0.9999999928266285,
+            "raw_ct_field_hotspot_distance_to_target_grid_cells": 99.13192150038853,
+            "raw_peak_pressure_pa": 5.1722196234380815e+149,
+            "raw_target_peak_pressure_pa": 1.753828177511277e+145,
+            "body_peak_pressure_pa": 5.1722196234380815e+149,
+            "coupling_peak_pressure_pa": 8.750047261995669e+138,
+            "peak_mechanical_index": 7.314623139038396e+143,
+            "target_peak_mechanical_index": 2.480287594708536e+139,
+            "body_peak_mechanical_index": 7.314623139038396e+143,
+            "coupling_peak_mechanical_index": 1.237443550931984e+133,
             "inertial_mi_threshold": 1.9,
             "peak_exceeds_inertial_threshold": true,
             "target_exceeds_inertial_threshold": true,
+            "body_peak_exceeds_inertial_threshold": true,
+            "coupling_peak_exceeds_inertial_threshold": true,
+            "raw_peak_is_in_coupling": false,
+            "target_centroid_x_index": 28.92,
+            "target_centroid_y_index": 36.44,
+            "target_centroid_z_index": 0.0,
+            "raw_hotspot_x_index": 47.0,
+            "raw_hotspot_y_index": 34.0,
+            "raw_hotspot_z_index": 0.0,
+            "body_hotspot_x_index": 47.0,
+            "body_hotspot_y_index": 34.0,
+            "body_hotspot_z_index": 0.0,
+            "raw_hotspot_distance_to_target_grid_cells": 18.243903091169937,
+            "body_hotspot_distance_to_target_grid_cells": 18.243903091169937,
             "finite_pressure_fraction": 1.0,
             "source_pressure_pa": 28000000.0,
             "source_scale": 1.0,
             "effective_source_pressure_pa": 28000000.0,
-            "raw_peak_to_effective_source_ratio": 0.10497868421112551
+            "raw_peak_to_effective_source_ratio": 1.847221294085029e+142,
+            "target_to_body_peak_ratio": 3.390861767670784e-05,
+            "coupling_to_body_peak_ratio": 1.6917393109806367e-11,
+            "ct_frame_target_centroid_m": [
+              -0.0483937162769784,
+              -0.04632885566546761
+            ],
+            "ct_frame_pressure_hotspot_m": [
+              -0.04816406249999999,
+              -0.03691406249999998
+            ],
+            "ct_frame_pressure_hotspot_distance_m": 0.009417593705709347,
+            "ct_frame_pressure_hotspot_axis_offset_m": 0.00935817855954174,
+            "ct_frame_pressure_hotspot_cross_axis_offset_m": 0.0010562032254966942,
+            "pressure_hotspot_is_prefocal": false,
+            "pressure_hotspot_is_postfocal": true,
+            "raw_ct_frame_target_centroid_m": [
+              -0.0483937162769784,
+              -0.04632885566546761
+            ],
+            "raw_ct_frame_pressure_hotspot_m": [
+              0.02074218750000001,
+              -0.05519531249999998
+            ],
+            "raw_ct_frame_pressure_hotspot_distance_m": 0.06970213230496068,
+            "raw_ct_frame_pressure_hotspot_axis_offset_m": 0.0006430682955057346,
+            "raw_ct_frame_pressure_hotspot_cross_axis_offset_m": 0.06969916578428725,
+            "raw_pressure_hotspot_is_prefocal": false,
+            "raw_pressure_hotspot_is_postfocal": true,
+            "window_ct_frame_target_centroid_m": [
+              -0.0483937162769784,
+              -0.04632885566546761
+            ],
+            "window_ct_frame_pressure_hotspot_m": [
+              -0.06363281249999998,
+              -0.04042968749999998
+            ],
+            "window_ct_frame_pressure_hotspot_distance_m": 0.016341059902557648,
+            "window_ct_frame_pressure_hotspot_axis_offset_m": 0.003766214698310851,
+            "window_ct_frame_pressure_hotspot_cross_axis_offset_m": 0.015901127808592843,
+            "window_pressure_hotspot_is_prefocal": false,
+            "window_pressure_hotspot_is_postfocal": true,
+            "electronic_steering_nominal_focus_index": [
+              29,
+              36,
+              31
+            ],
+            "electronic_steering_calibration_hotspot_index": [
+              31,
+              32,
+              30
+            ],
+            "electronic_steering_steering_focus_index": [
+              29,
+              36,
+              31
+            ],
+            "electronic_steering_correction_grid_cells": [
+              0,
+              0,
+              0
+            ],
+            "electronic_steering_calibration_hotspot_distance_grid_cells": 4.582575694955841,
+            "electronic_steering_steering_applied": false
           },
           "nonlinear_fwi": {
-            "dice_equal_area": 0.601956745623069,
-            "cnr": 2.878999444657859,
-            "nrmse": 0.8379275973880472,
-            "pearson": 0.6241757828889949,
-            "target_peak": 1.0,
-            "outside_peak": 0.8348924307000896,
-            "outside_energy_fraction": 0.5173846180568971,
-            "hotspot_distance_to_target_grid_cells": 35.41845805549469
+            "dice_equal_area": 0.0,
+            "cnr": 0.0,
+            "nrmse": 1.0,
+            "pearson": 0.0,
+            "target_peak": 0.0,
+            "outside_peak": 0.0,
+            "outside_energy_fraction": 0.0,
+            "hotspot_distance_to_target_grid_cells": 266.0806845039951
           },
           "nonlinear_cavitation_source": {
-            "dice_equal_area": 0.34603501544799176,
-            "cnr": 0.13229392018696315,
-            "nrmse": 1.0046510555268975,
-            "pearson": 0.02006991000492954,
-            "target_peak": 0.43476281890345625,
+            "dice_equal_area": 0.07625899280575539,
+            "cnr": 3.6451862766029377,
+            "nrmse": 0.9785180180328091,
+            "pearson": 0.2053324224636407,
+            "target_peak": 0.14080563207461433,
             "outside_peak": 1.0,
-            "outside_energy_fraction": 0.9603336672546073,
-            "hotspot_distance_to_target_grid_cells": 65.05679704282774
+            "outside_energy_fraction": 0.9528994276859242,
+            "hotspot_distance_to_target_grid_cells": 23.240618528081992
           },
           "nonlinear_cavitation": {
-            "dice_equal_area": 0.3038105046343975,
-            "cnr": 0.4553772633013716,
-            "nrmse": 0.998398656083654,
-            "pearson": 0.08320860269987555,
-            "target_peak": 0.43444730077121047,
+            "dice_equal_area": 0.17697841726618704,
+            "cnr": 2.79369570107633,
+            "nrmse": 0.9512686179184934,
+            "pearson": 0.3285901692197676,
+            "target_peak": 0.386156204244361,
             "outside_peak": 1.0,
-            "outside_energy_fraction": 0.9323150512269323,
-            "hotspot_distance_to_target_grid_cells": 65.05679704282774
+            "outside_energy_fraction": 0.8649527701729897,
+            "hotspot_distance_to_target_grid_cells": 27.15701250110354
           },
           "nonlinear_fusion": {
-            "dice_equal_area": 0.5849639546858908,
-            "cnr": 2.9178686188046354,
-            "nrmse": 0.8287640236132594,
-            "pearson": 0.6136766931769513,
-            "target_peak": 0.9134543548618786,
+            "dice_equal_area": 0.17697841726618704,
+            "cnr": 2.79369570107633,
+            "nrmse": 0.9512686179184934,
+            "pearson": 0.3285901692197676,
+            "target_peak": 0.3861562042443609,
             "outside_peak": 1.0,
-            "outside_energy_fraction": 0.5358433606841916,
-            "hotspot_distance_to_target_grid_cells": 65.05679704282774
+            "outside_energy_fraction": 0.8649527701729897,
+            "hotspot_distance_to_target_grid_cells": 27.15701250110354
           }
         },
         "cross_model_metrics": {
-          "linear_fusion_vs_nonlinear_fusion_pearson": 0.43997703697519447,
-          "linear_exposure_vs_nonlinear_pressure_pearson": 0.5617654929668405,
-          "linear_fusion_hotspot_distance_grid_cells": 84.71717653463199,
-          "nonlinear_pressure_to_fusion_pearson": 0.31264794645819743,
-          "nonlinear_pressure_to_cavitation_source_pearson": 0.06601716271588179,
-          "nonlinear_cavitation_source_to_reconstruction_pearson": 0.9051778351079114,
-          "nonlinear_cavitation_source_to_reconstruction_hotspot_distance_grid_cells": 0.0
+          "linear_fusion_vs_nonlinear_fusion_pearson": 0.43232815906033223,
+          "elastic_shear_vs_linear_fusion_pearson": 0.5019852605491059,
+          "elastic_shear_vs_nonlinear_fusion_pearson": 0.49142073456303,
+          "linear_exposure_vs_nonlinear_pressure_pearson": 0.06440742229298402,
+          "linear_fusion_hotspot_distance_grid_cells": 17.0,
+          "nonlinear_pressure_to_fusion_pearson": 0.2929000244990266,
+          "nonlinear_pressure_to_cavitation_source_pearson": 0.21075081122851363,
+          "nonlinear_cavitation_source_to_reconstruction_pearson": 0.8064045335818795,
+          "nonlinear_cavitation_source_to_reconstruction_hotspot_distance_grid_cells": 26.019223662515376
         },
         "objective_history": {
           "nonlinear_fwi": [
-            6.931260591418064e-06,
-            5.034232974221595e-06,
-            4.079337109492721e-06,
-            3.942955134888203e-06
+            NaN,
+            NaN
           ],
           "nonlinear_cavitation": [
-            3039765936.680228,
-            2931201115.9313607,
-            2827523379.820145,
-            2728462978.3070273,
-            2633769320.9203615,
-            2543210030.449011,
-            2456566709.4051027,
-            2373635212.060373,
-            2294224320.550646,
-            2218154734.906231,
-            2145258158.2672703,
-            2075376467.0669947,
-            2008360957.1468995,
-            1944071657.8070223,
-            1882376706.7092733,
-            1823151779.3572588,
-            1766279363.3755143,
-            1711647829.181643,
-            1659151584.1512606,
-            1608690875.3659444,
-            1560171083.753823,
-            1513502532.3825288,
-            1468600434.776767,
-            1425384580.4605713
+            22446.881445027648,
+            21732.83810465987,
+            21044.563790432923,
+            20381.076282564543,
+            19741.43196470795,
+            19124.725317345725,
+            18530.085402995548,
+            17956.67510413323,
+            17403.690181198333,
+            16870.35787137959,
+            16355.935506005077,
+            15859.709318845646,
+            15380.993402783566,
+            14919.128555775489,
+            14473.481183889171,
+            14043.442356624997,
+            13628.426380595385,
+            13227.869830897256,
+            12841.23434535266,
+            12468.000491536019,
+            12107.666171667499,
+            11759.750623920863,
+            11423.792719292256,
+            11099.347824127175
           ]
         },
-        "technical_explanation": "On the full CT placement grid, linear fusion Dice is 0.228 and nonlinear fusion Dice is 0.585. Nonlinear target MI is 2.46 at 1.74 MPa; outside-target energy is 0.966, linear/nonlinear fusion Pearson is 0.440, and nonlinear FWI objective drop is 2.988e-06. The Rayleigh-Plesset source and passive reconstruction hotspots are 65.06 and 65.06 grid cells from the target centroid. The residual projected aperture mismatch from the original runs is 49.29 mm; therefore the matched artifact localizes the remaining channel difference to nonlinear pressure/cavitation spread plus residual 2-D-vs-3-D aperture mismatch, not to image resolution alone."
+        "technical_explanation": "On the full CT placement grid, linear fusion Dice is 0.829, elastic shear Dice is 0.755, and nonlinear fusion Dice is 0.177. Nonlinear target MI is 24802875947085358976376147843025078740833563056513465454656645380174656970152587646559504665371836738160242528221687170719039925636699258880.00 at 17538281775112769172240046807640013957400162686017834549789372066774334871718638091545953193549643447425916754772827727335879415657190653952.00 MPa; displayed target-pressure outside energy is 0.000, linear/nonlinear fusion Pearson is 0.432, and nonlinear FWI objective drop is nan. The Rayleigh-Plesset source and passive reconstruction hotspots are 23.24 and 27.16 grid cells from the target centroid. The residual projected aperture mismatch from the original runs is 27.97 mm; the nonlinear aperture axis differs from the planned beam axis by 0.63 deg; the displayed target-pressure hotspot offset is 9.36 mm along the planned beam axis and 1.06 mm cross-axis; the treatment-window pressure hotspot offset is 3.77 mm along-axis and 15.90 mm cross-axis; the raw body-pressure hotspot offset is 0.64 mm along-axis and 69.70 mm cross-axis; the raw pressure peak is inside the body with coupling/body peak ratio 0.00, and the body pressure hotspot is 18.24 grid cells from target. the measured electronic-steering calibration hotspot is 4.58 grid cells from the nominal focus and selected correction [0, 0, 0]. therefore the matched artifact localizes the remaining channel difference to nonlinear in-body pressure/cavitation spread, source-region dominance in raw peak-pressure display, and residual 2-D-vs-3-D aperture mismatch, not to image resolution alone."
       }
     ]
   }

@@ -15,7 +15,8 @@ pub mod thresholds {
     pub const BREAKPOINT_TEMPERATURE_C: f64 = 43.0;
     /// Minimum temperature at which dose accumulates [°C] — equals normal body temperature.
     /// SSOT: thermodynamic::BODY_TEMPERATURE_C = 37.0.
-    pub const MIN_DOSE_TEMPERATURE_C: f64 = crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
+    pub const MIN_DOSE_TEMPERATURE_C: f64 =
+        crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
     pub const R_ABOVE_BREAKPOINT: f64 = 0.5;
     pub const R_BELOW_BREAKPOINT: f64 = 0.25;
     pub const NECROSIS_THRESHOLD_CEM43: f64 = 240.0;

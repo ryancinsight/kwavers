@@ -218,8 +218,8 @@ pub use types::{elasticity_map_from_speed, ElasticityMapExt, NonlinearParameterM
 
 #[cfg(test)]
 mod tests {
-    use crate::core::constants::fundamental::DENSITY_TISSUE;
     use super::*;
+    use crate::core::constants::fundamental::DENSITY_TISSUE;
     use crate::domain::grid::Grid;
     use crate::domain::imaging::ultrasound::elastography::{
         InversionMethod, NonlinearInversionMethod,
@@ -299,8 +299,8 @@ mod tests {
 
     #[test]
     fn test_config_validation() {
-        let valid_config =
-            ShearWaveInversionConfig::new(InversionMethod::TimeOfFlight).with_density(DENSITY_TISSUE);
+        let valid_config = ShearWaveInversionConfig::new(InversionMethod::TimeOfFlight)
+            .with_density(DENSITY_TISSUE);
         valid_config.validate().unwrap();
 
         let invalid_config =

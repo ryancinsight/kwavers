@@ -1,12 +1,12 @@
 //! Homogeneous medium implementation with uniform properties
 
-use crate::core::constants::{
-    AIR_POLYTROPIC_INDEX, ATMOSPHERIC_PRESSURE, REFERENCE_FREQUENCY_MHZ, WATER_ABSORPTION_ALPHA_0,
-    WATER_ABSORPTION_POWER, WATER_SPECIFIC_HEAT, WATER_SURFACE_TENSION_20C,
-    WATER_THERMAL_CONDUCTIVITY, WATER_VAPOR_PRESSURE_20C,
-};
-use crate::core::constants::thermodynamic::THERMAL_EXPANSION_WATER_20C;
 use crate::core::constants::fundamental::B_OVER_A_WATER;
+use crate::core::constants::thermodynamic::THERMAL_EXPANSION_WATER_20C;
+use crate::core::constants::{
+    AIR_POLYTROPIC_INDEX, ATMOSPHERIC_PRESSURE, MHZ_TO_HZ, REFERENCE_FREQUENCY_MHZ,
+    WATER_ABSORPTION_ALPHA_0, WATER_ABSORPTION_POWER, WATER_SPECIFIC_HEAT,
+    WATER_SURFACE_TENSION_20C, WATER_THERMAL_CONDUCTIVITY, WATER_VAPOR_PRESSURE_20C,
+};
 use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 use crate::domain::grid::Grid;
 use ndarray::Array3;
@@ -122,8 +122,8 @@ impl HomogeneousMedium {
         self.absorption_power = absorption_power;
         self.nonlinearity = nonlinearity;
 
-        let alpha_at_ref =
-            self.absorption_alpha * (self.reference_frequency / 1e6).powf(self.absorption_power);
+        let alpha_at_ref = self.absorption_alpha
+            * (self.reference_frequency / MHZ_TO_HZ).powf(self.absorption_power);
         self.absorption_cache = Array3::from_elem(self.grid_shape, alpha_at_ref);
         self.nonlinearity_cache = Array3::from_elem(self.grid_shape, self.nonlinearity);
 

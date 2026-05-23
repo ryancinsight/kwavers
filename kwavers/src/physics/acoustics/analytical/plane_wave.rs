@@ -124,7 +124,14 @@ mod tests {
     #[test]
     fn plane_wave_zero_at_origin_t0_x_direction() {
         let grid = water_grid_one_wavelength();
-        let field = PlaneWaveSolution::generate(&grid, 1e6, 10.0, SOUND_SPEED_WATER_SIM, 0.0, (1.0, 0.0, 0.0));
+        let field = PlaneWaveSolution::generate(
+            &grid,
+            1e6,
+            10.0,
+            SOUND_SPEED_WATER_SIM,
+            0.0,
+            (1.0, 0.0, 0.0),
+        );
         assert!(
             field[[0, 0, 0]].abs() < 1e-13,
             "field at origin must be 0 (got {:.3e})",
@@ -139,8 +146,14 @@ mod tests {
     fn plane_wave_bounded_by_amplitude_everywhere() {
         let grid = water_grid_one_wavelength();
         let amplitude = 7.0_f64;
-        let field =
-            PlaneWaveSolution::generate(&grid, 1e6, amplitude, SOUND_SPEED_WATER_SIM, 0.0, (1.0, 0.0, 0.0));
+        let field = PlaneWaveSolution::generate(
+            &grid,
+            1e6,
+            amplitude,
+            SOUND_SPEED_WATER_SIM,
+            0.0,
+            (1.0, 0.0, 0.0),
+        );
         for &v in field.iter() {
             assert!(
                 v.abs() <= amplitude * 1.01,
@@ -153,14 +166,28 @@ mod tests {
     #[test]
     fn plane_wave_shape_matches_grid() {
         let grid = water_grid_one_wavelength();
-        let field = PlaneWaveSolution::generate(&grid, 1e6, 1.0, SOUND_SPEED_WATER_SIM, 0.0, (1.0, 0.0, 0.0));
+        let field = PlaneWaveSolution::generate(
+            &grid,
+            1e6,
+            1.0,
+            SOUND_SPEED_WATER_SIM,
+            0.0,
+            (1.0, 0.0, 0.0),
+        );
         assert_eq!(field.dim(), (grid.nx, grid.ny, grid.nz));
     }
 
     #[test]
     fn plane_wave_rejects_zero_direction_with_zero_field() {
         let grid = water_grid_one_wavelength();
-        let field = PlaneWaveSolution::generate(&grid, 1e6, 1.0, SOUND_SPEED_WATER_SIM, 0.0, (0.0, 0.0, 0.0));
+        let field = PlaneWaveSolution::generate(
+            &grid,
+            1e6,
+            1.0,
+            SOUND_SPEED_WATER_SIM,
+            0.0,
+            (0.0, 0.0, 0.0),
+        );
 
         assert_eq!(field.dim(), (grid.nx, grid.ny, grid.nz));
         assert!(field.iter().all(|value| *value == 0.0));
@@ -171,11 +198,46 @@ mod tests {
         let grid = water_grid_one_wavelength();
 
         let invalid_cases = [
-            PlaneWaveSolution::generate(&grid, 0.0, 1.0, SOUND_SPEED_WATER_SIM, 0.0, (1.0, 0.0, 0.0)),
-            PlaneWaveSolution::generate(&grid, 1e6, f64::NAN, SOUND_SPEED_WATER_SIM, 0.0, (1.0, 0.0, 0.0)),
-            PlaneWaveSolution::generate(&grid, 1e6, 1.0, -SOUND_SPEED_WATER_SIM, 0.0, (1.0, 0.0, 0.0)),
-            PlaneWaveSolution::generate(&grid, 1e6, 1.0, SOUND_SPEED_WATER_SIM, f64::NAN, (1.0, 0.0, 0.0)),
-            PlaneWaveSolution::generate(&grid, 1e6, 1.0, SOUND_SPEED_WATER_SIM, 0.0, (f64::INFINITY, 0.0, 0.0)),
+            PlaneWaveSolution::generate(
+                &grid,
+                0.0,
+                1.0,
+                SOUND_SPEED_WATER_SIM,
+                0.0,
+                (1.0, 0.0, 0.0),
+            ),
+            PlaneWaveSolution::generate(
+                &grid,
+                1e6,
+                f64::NAN,
+                SOUND_SPEED_WATER_SIM,
+                0.0,
+                (1.0, 0.0, 0.0),
+            ),
+            PlaneWaveSolution::generate(
+                &grid,
+                1e6,
+                1.0,
+                -SOUND_SPEED_WATER_SIM,
+                0.0,
+                (1.0, 0.0, 0.0),
+            ),
+            PlaneWaveSolution::generate(
+                &grid,
+                1e6,
+                1.0,
+                SOUND_SPEED_WATER_SIM,
+                f64::NAN,
+                (1.0, 0.0, 0.0),
+            ),
+            PlaneWaveSolution::generate(
+                &grid,
+                1e6,
+                1.0,
+                SOUND_SPEED_WATER_SIM,
+                0.0,
+                (f64::INFINITY, 0.0, 0.0),
+            ),
         ];
 
         for field in invalid_cases {

@@ -295,6 +295,20 @@ theorems against an external published reconstruction.
   passive-only best model `spectral_convergent_born` at normalized residual
   `0.5432880999009375`, so active-channel exclusion is not the next parity
   repair.
+- Added passive direct-field residual deltas: homogeneous direct-field reports
+  now expose source-kappa and finite-grid PSTD passive residual changes relative
+  to the outgoing point Green reference. The determined reduced probe records
+  `source_kappa_filtered_passive_residual_delta = 0.00010581210140714337` and
+  `pstd_periodic_passive_residual_delta = -0.30212499274440036`, making the
+  passive propagation gap explicit in Rust-owned clinical diagnostics.
+- Added the PSTD spectral CBS operator: the frequency-domain FWI solver now has
+  `PstdSpectralConvergentBornOperator` and `GreenOperatorKind::SpectralPstdPeriodic`,
+  using the homogeneous PSTD leapfrog/k-space modal denominator
+  `[4 sin²(ω Δt / 2) - 4 sin²(c0 |k| Δt / 2)] / (c0 Δt)² + iε`. The
+  determined reduced probe reports `pstd_spectral_convergent_born` all-channel
+  residual `0.5227508888630437` and passive-only residual
+  `0.5435181467026386`, so the modal denominator alone is not the parity
+  repair.
 - Completed the transcranial clinical/generic config boundary enough to restore
   compile gates: clinical entrypoints retain `TranscranialUstBornInversionConfig`
   for anatomy fields and pass `&config.linear` to generic linear-Born kernels.
@@ -389,7 +403,13 @@ theorems against an external published reconstruction.
    residuals are scale-absorbed near zero and passive-only ranking selects
    spectral CBS at `0.5432880999009375`, isolating the next dominant mismatch to
    passive PSTD/Helmholtz propagation semantics rather than active-channel
-   exclusion. Source-channel attribution
+   exclusion. Passive direct-field deltas now make that contract gap explicit:
+   source-kappa changes passive residual by `0.00010581210140714337`, while
+   finite-grid PSTD changes passive residual by `-0.30212499274440036`.
+   A frequency-domain PSTD spectral CBS operator now tests the modal denominator
+   hypothesis directly and does not close the residual: all-channel residual is
+   `0.5227508888630437` and passive-only residual is `0.5435181467026386`.
+   Source-channel attribution
    rejects co-located receiver contamination as the dominant root cause:
    active-source receiver channels account for 17.7068% of full-scale residual
    energy, and passive-only row-scaled residual is 0.543288. Source-excitation
@@ -401,9 +421,11 @@ theorems against an external published reconstruction.
    determined reduced gate. Forward-operator comparison shows single-scatter
    Born is currently closest to PSTD (`0.456575` normalized residual), followed
    by dense CBS (`0.476438`), with absorbed spectral CBS worst (`0.523411`).
-   This rules out extra CBS complexity as the immediate parity path and shifts
-   the next repair to active self-channel treatment and receiver exclusion
-   policy rather than source-kappa filtering or inversion tuning.
+   This rules out extra CBS complexity and the PSTD modal denominator alone as
+   the immediate parity path. The next repair should isolate the discrete source
+   injection, source filtering, and receiver projection contract between PSTD
+   acquisition and frequency-domain CBS rather than source-kappa filtering,
+   active-channel exclusion, or inversion tuning.
 4. **MAT5/HDF5 ingest — CLOSED.** The published phantom file is MATLAB 5.0,
    while alternate user-provided sound-speed phantoms may be HDF5/MAT-v7.3.
    The selected boundary supports both under Rust-owned clinical ingest; Python

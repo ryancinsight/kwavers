@@ -258,9 +258,9 @@ fn hb_poly(lam_nm: f64) -> f64 {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
-    use super::*;
 
     #[test]
     fn gruneisen_at_37c() {

@@ -13,8 +13,8 @@ fn test_pstd_plane_wave_accuracy() {
     let n = 64; // Reverted to default power of 2
     let frequency = 1e6;
     let wavelength = SOUND_SPEED_WATER_SIM / frequency; // 1.5mm at 1MHz
-                                         // ADJUSTMENT: Use PPW=16 to ensure periodic boundary conditions
-                                         // n=64, PPW=16 -> L = 4 * wavelength (integer multiple)
+                                                        // ADJUSTMENT: Use PPW=16 to ensure periodic boundary conditions
+                                                        // n=64, PPW=16 -> L = 4 * wavelength (integer multiple)
     let dx = wavelength / 16.0; // 16 points per wavelength
     let ppw = wavelength / dx;
 

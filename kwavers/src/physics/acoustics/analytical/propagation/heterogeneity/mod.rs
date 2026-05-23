@@ -59,8 +59,8 @@ impl HeterogeneityModelTrait for HeterogeneityModel {
 
 #[cfg(test)]
 mod tests {
-    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use super::*;
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
     fn small_grid() -> Grid {
         Grid::new(4, 4, 4, 1e-3, 1e-3, 1e-3).expect("grid creation must succeed")

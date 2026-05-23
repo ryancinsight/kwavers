@@ -1,5 +1,5 @@
-use crate::core::constants::acoustic_parameters::BONE_DENSITY;
 use super::ElasticPropertyData;
+use crate::core::constants::acoustic_parameters::BONE_DENSITY;
 
 impl ElasticPropertyData {
     /// Construct from Lamé parameters with validation.

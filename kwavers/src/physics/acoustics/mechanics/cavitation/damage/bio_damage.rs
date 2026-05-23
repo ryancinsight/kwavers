@@ -121,8 +121,8 @@ impl<T: num_traits::Float + std::fmt::Debug + Clone> BioDamageModel for Empirica
 
 #[cfg(test)]
 mod tests {
-    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use super::*;
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
     fn test_model() -> EmpiricalBioDamageModel<f64> {
         EmpiricalBioDamageModel {
@@ -135,7 +135,8 @@ mod tests {
     #[test]
     fn test_lysis_probability_bounds() {
         let model = test_model();
-        let props = AcousticMaterialProperties::new(SOUND_SPEED_WATER_SIM, 1000.0, 0.0, 4184.0, 0.6);
+        let props =
+            AcousticMaterialProperties::new(SOUND_SPEED_WATER_SIM, 1000.0, 0.0, 4184.0, 0.6);
 
         // Below threshold is zero
         assert_eq!(model.calculate_lysis_probability(50.0, &props), 0.0);

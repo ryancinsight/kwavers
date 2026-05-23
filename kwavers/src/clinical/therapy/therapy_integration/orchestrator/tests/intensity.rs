@@ -1,6 +1,6 @@
+use super::*;
 use crate::core::constants::medical::TI_LIMIT_SOFT_TISSUE;
 use crate::core::constants::thermodynamic::{BODY_TEMPERATURE_C, SPECIFIC_HEAT_TISSUE};
-use super::*;
 
 #[test]
 fn test_intensity_tracker_integration() {
@@ -36,7 +36,13 @@ fn test_intensity_tracker_integration() {
     };
 
     let grid = crate::domain::grid::Grid::new(12, 12, 12, 0.0025, 0.0025, 0.0025).unwrap();
-    let medium = Box::new(HomogeneousMedium::new(1000.0, SOUND_SPEED_TISSUE, 0.5, 1.0, &grid));
+    let medium = Box::new(HomogeneousMedium::new(
+        1000.0,
+        SOUND_SPEED_TISSUE,
+        0.5,
+        1.0,
+        &grid,
+    ));
 
     let mut orchestrator = TherapyIntegrationOrchestrator::new(config, grid, medium).unwrap();
 

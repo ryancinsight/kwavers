@@ -1,8 +1,8 @@
-use crate::core::constants::fundamental::{SOUND_SPEED_AIR, SOUND_SPEED_WATER_SIM};
 use crate::clinical::therapy::theranostic_guidance::nonlinear3d::types::{
     GridIndex, Nonlinear3dAperture, SourceDomain,
 };
 use crate::clinical::therapy::theranostic_guidance::Point3;
+use crate::core::constants::fundamental::{SOUND_SPEED_AIR, SOUND_SPEED_WATER_SIM};
 
 use super::super::TimeSchedule;
 use super::{

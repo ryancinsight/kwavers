@@ -1,7 +1,9 @@
 //! Comprehensive validation suite and report generation.
 
 use super::{TheoremValidation, TheoremValidator};
-use crate::core::constants::fundamental::{SOUND_SPEED_AIR, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM};
+use crate::core::constants::fundamental::{
+    SOUND_SPEED_AIR, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM,
+};
 use crate::core::constants::thermodynamic::ROOM_TEMPERATURE_K;
 use ndarray::Array1;
 use num_complex::Complex64;
@@ -28,7 +30,12 @@ impl TheoremValidator {
             &intensities,
         ));
 
-        results.push(Self::validate_cfl_condition(1e-8, 5e-5, SOUND_SPEED_WATER_SIM, 3));
+        results.push(Self::validate_cfl_condition(
+            1e-8,
+            5e-5,
+            SOUND_SPEED_WATER_SIM,
+            3,
+        ));
 
         // Parseval's theorem with analytical sinusoid DFT
         let n_samples = 128;
@@ -80,13 +87,27 @@ impl TheoremValidator {
             c0,
         ));
 
-        results.push(Self::validate_sa_resolution(5e6, SOUND_SPEED_TISSUE, 30.0, 0.0003));
+        results.push(Self::validate_sa_resolution(
+            5e6,
+            SOUND_SPEED_TISSUE,
+            30.0,
+            0.0003,
+        ));
         results.push(Self::validate_coded_excitation_snr(256, 3.0, 18.0));
         results.push(Self::validate_reciprocity(1.0, 1.0, 1e-10));
         results.push(Self::validate_impedance_reflection(
-            1000.0, SOUND_SPEED_WATER_SIM, 1.2, 340.0, -0.9999,
+            1000.0,
+            SOUND_SPEED_WATER_SIM,
+            1.2,
+            340.0,
+            -0.9999,
         ));
-        results.push(Self::validate_ideal_gas_speed(ROOM_TEMPERATURE_K, 0.02897, 1.4, SOUND_SPEED_AIR));
+        results.push(Self::validate_ideal_gas_speed(
+            ROOM_TEMPERATURE_K,
+            0.02897,
+            1.4,
+            SOUND_SPEED_AIR,
+        ));
 
         // Rayleigh-Sommerfeld spherical wave decay
         let distances = vec![0.01, 0.02, 0.05, 0.1];

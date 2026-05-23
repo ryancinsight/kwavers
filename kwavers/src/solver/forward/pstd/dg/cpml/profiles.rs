@@ -88,9 +88,9 @@ impl DgCpmlAxisProfile {
         if d <= 0.0 || !d.is_finite() {
             return profile;
         }
-        let sigma_max = -(f64::from(axis.polynomial_order) + 1.0) * sound_speed
-            * axis.target_reflection.ln()
-            / (2.0 * d);
+        let sigma_max =
+            -(f64::from(axis.polynomial_order) + 1.0) * sound_speed * axis.target_reflection.ln()
+                / (2.0 * d);
         // Inner-side strip: indices [0, thickness_nodes − 1]. ξ measured from
         // the inner face inward; the inner face sits at node position
         // `node_positions[thickness_nodes]`.
@@ -335,7 +335,8 @@ mod tests {
     #[test]
     fn full_profiles_construct_for_3d_uniform_grid() {
         let cfg = DgCpmlConfig::uniform(4);
-        let profiles = DgCpmlProfiles::new(&cfg, SOUND_SPEED_WATER_SIM, [16, 16, 16], 3, [1.0e-3; 3]).unwrap();
+        let profiles =
+            DgCpmlProfiles::new(&cfg, SOUND_SPEED_WATER_SIM, [16, 16, 16], 3, [1.0e-3; 3]).unwrap();
         for axis in &profiles.axes {
             assert_eq!(axis.sigma.len(), 16 * 3);
             assert!(axis.sigma.iter().any(|s| *s > 0.0));

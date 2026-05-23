@@ -132,12 +132,29 @@ fn test_apply_correction_3d() {
 
 #[test]
 fn test_dispersion_zero_wavenumber() {
-    let dispersion =
-        DispersionAnalysis::fdtd_dispersion_3d(0.0, 0.0, 0.0, 1e-4, 1e-4, 1e-4, 1e-7, SOUND_SPEED_WATER_SIM);
+    let dispersion = DispersionAnalysis::fdtd_dispersion_3d(
+        0.0,
+        0.0,
+        0.0,
+        1e-4,
+        1e-4,
+        1e-4,
+        1e-7,
+        SOUND_SPEED_WATER_SIM,
+    );
     assert_eq!(dispersion, 0.0);
 
-    let dispersion_pstd =
-        DispersionAnalysis::pstd_dispersion_3d(0.0, 0.0, 0.0, 1e-4, 1e-4, 1e-4, 1e-7, SOUND_SPEED_WATER_SIM, 2);
+    let dispersion_pstd = DispersionAnalysis::pstd_dispersion_3d(
+        0.0,
+        0.0,
+        0.0,
+        1e-4,
+        1e-4,
+        1e-4,
+        1e-7,
+        SOUND_SPEED_WATER_SIM,
+        2,
+    );
     assert_eq!(dispersion_pstd, 0.0);
 }
 

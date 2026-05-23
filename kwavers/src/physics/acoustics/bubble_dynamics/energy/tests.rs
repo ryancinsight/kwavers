@@ -1,7 +1,7 @@
 //! Tests for energy balance calculator
 
-use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use super::*;
+use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use crate::physics::acoustics::bubble_dynamics::bubble_state::BubbleState;
 use crate::physics::acoustics::bubble_dynamics::BubbleParameters;
 use uom::si::f64::{Power, Pressure};

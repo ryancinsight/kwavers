@@ -244,7 +244,8 @@ mod tests {
     fn steering_module_exports_accessible() {
         // Verify steering module is correctly exported
         let positions = vec![[0.0, 0.0, 0.0], [0.01, 0.0, 0.0]];
-        let steering = NarrowbandSteering::new(positions, SOUND_SPEED_WATER_SIM).expect("steering init");
+        let steering =
+            NarrowbandSteering::new(positions, SOUND_SPEED_WATER_SIM).expect("steering init");
         assert_eq!(steering.num_sensors(), 2);
         assert_eq!(steering.sound_speed_m_per_s(), SOUND_SPEED_WATER_SIM);
     }

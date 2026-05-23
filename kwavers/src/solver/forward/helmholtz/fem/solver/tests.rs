@@ -22,7 +22,13 @@ fn unit_tet() -> (TetrahedralMesh, [usize; 4]) {
 fn homogeneous_medium() -> (crate::domain::medium::HomogeneousMedium, ()) {
     let grid = crate::domain::grid::Grid::new(2, 2, 2, 1.0, 1.0, 1.0).unwrap();
     (
-        crate::domain::medium::HomogeneousMedium::new(1000.0, SOUND_SPEED_WATER_SIM, 0.0, 0.0, &grid),
+        crate::domain::medium::HomogeneousMedium::new(
+            1000.0,
+            SOUND_SPEED_WATER_SIM,
+            0.0,
+            0.0,
+            &grid,
+        ),
         (),
     )
 }

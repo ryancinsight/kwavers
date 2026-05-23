@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+### Added (2026-05-22) - Breast FWI PSTD Spectral CBS Operator
+
+- [minor] Add `PstdSpectralConvergentBornOperator` to the
+  frequency-domain FWI solver. The operator keeps the CBS solver boundary but
+  replaces the continuous periodic Helmholtz denominator with the homogeneous
+  PSTD leapfrog/k-space modal symbol, exposes
+  `pstd_spectral_convergent_born` through PyO3, and includes it in the Ali 2025
+  operator-equivalence probe.
+
+### Added (2026-05-22) - Breast FWI Passive Direct-Field Residual Deltas
+
+- [minor] Add Rust-owned passive-channel residual deltas to Ali 2025
+  homogeneous direct-field diagnostics. The clinical report now records the
+  source-kappa and finite-grid PSTD passive residual changes relative to the
+  outgoing Helmholtz point Green reference, exposes both values through PyO3,
+  and writes them into the reduced replication report without adding Python
+  formulas.
+
 ### Added (2026-05-21) - Breast FWI Receiver-Policy Operator Equivalence Diagnostics
 
 - [minor] Add Rust-owned receiver-channel policy support to Ali 2025

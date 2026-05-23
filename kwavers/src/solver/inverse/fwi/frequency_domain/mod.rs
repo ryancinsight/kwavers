@@ -13,7 +13,7 @@
 //!
 //! The forward Helmholtz solver is selected via the
 //! [`HelmholtzForwardOperator`] trait carried on [`Config::forward_operator`].
-//! Three impls ship today; adding more (BiCGSTAB-preconditioned Helmholtz,
+//! Four impls ship today; adding more (BiCGSTAB-preconditioned Helmholtz,
 //! sparse-direct, FEM Helmholtz) is `impl HelmholtzForwardOperator` with no
 //! inversion-loop changes.
 //!
@@ -31,6 +31,10 @@
 //!    pseudospectral symbol `(k₀² + iε - |k|²)⁻¹` and optional polynomial
 //!    absorbing weights `W G W`, giving the FFT-accelerated operator boundary
 //!    required for Ali-scale 3-D replication.
+//! 4. [`PstdSpectralConvergentBornOperator`]. Same CBS algebra with the
+//!    homogeneous PSTD leapfrog/k-space modal symbol, giving a frequency-domain
+//!    operator that shares the acquisition generator's discrete propagation
+//!    contract.
 //!
 //! The gradient is the exact discrete adjoint of the selected forward
 //! operator; finite-difference checks against any [`HelmholtzForwardOperator`]
@@ -46,8 +50,8 @@ mod tests;
 mod types;
 
 pub use operator::{
-    DenseConvergentBornOperator, HelmholtzForwardOperator, SingleScatterBornOperator,
-    SpectralConvergentBornOperator,
+    DenseConvergentBornOperator, HelmholtzForwardOperator, PstdSpectralConvergentBornOperator,
+    SingleScatterBornOperator, SpectralConvergentBornOperator,
 };
 
 pub use cbs::AbsorbingBoundary;

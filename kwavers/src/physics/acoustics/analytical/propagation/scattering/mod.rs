@@ -12,8 +12,8 @@ impl ScatteringCalculator {
 
 #[cfg(test)]
 mod tests {
-    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use super::*;
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
     /// ScatteringCalculator::new constructs without panic for physical parameters.
     #[test]

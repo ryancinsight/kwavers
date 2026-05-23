@@ -159,9 +159,11 @@ pub fn gaussian_power_deposition_2d(
 
 #[cfg(test)]
 mod tests {
-    use crate::core::constants::fundamental::{DENSITY_BLOOD, SOUND_SPEED_WATER_SIM};
-    use crate::core::constants::thermodynamic::{BODY_TEMPERATURE_C, SPECIFIC_HEAT_BLOOD, SPECIFIC_HEAT_TISSUE};
     use super::*;
+    use crate::core::constants::fundamental::{DENSITY_BLOOD, SOUND_SPEED_WATER_SIM};
+    use crate::core::constants::thermodynamic::{
+        BODY_TEMPERATURE_C, SPECIFIC_HEAT_BLOOD, SPECIFIC_HEAT_TISSUE,
+    };
 
     #[test]
     fn bioheat_at_t0_is_body_temp() {
@@ -184,7 +186,16 @@ mod tests {
     fn bioheat_monotone_increasing() {
         let tvec: Vec<f64> = (0..10).map(|i| i as f64 * 0.1).collect();
         let temp = bioheat_focal_temperature_rise(
-            &tvec, 10.0, 1e-6, 0.5, DENSITY_BLOOD, SPECIFIC_HEAT_TISSUE, 5.0, DENSITY_BLOOD, SPECIFIC_HEAT_BLOOD, BODY_TEMPERATURE_C,
+            &tvec,
+            10.0,
+            1e-6,
+            0.5,
+            DENSITY_BLOOD,
+            SPECIFIC_HEAT_TISSUE,
+            5.0,
+            DENSITY_BLOOD,
+            SPECIFIC_HEAT_BLOOD,
+            BODY_TEMPERATURE_C,
         );
         for i in 1..temp.len() {
             assert!(
@@ -241,7 +252,17 @@ mod tests {
     fn gaussian_deposition_peak_at_focus() {
         let r = vec![0.0];
         let z: Vec<f64> = vec![-5e-3, 0.0, 5e-3];
-        let q = gaussian_power_deposition_2d(&r, &z, 1e6, 0.0, 1e6, SOUND_SPEED_WATER_SIM, DENSITY_BLOOD, 1.0, 1e-3);
+        let q = gaussian_power_deposition_2d(
+            &r,
+            &z,
+            1e6,
+            0.0,
+            1e6,
+            SOUND_SPEED_WATER_SIM,
+            DENSITY_BLOOD,
+            1.0,
+            1e-3,
+        );
         // Q at focus (z=0) should exceed Q at z=±5mm
         assert!(q[1] > q[0] && q[1] > q[2]);
     }

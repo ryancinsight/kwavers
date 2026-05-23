@@ -1,5 +1,5 @@
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::super::orchestrator::PSTDSolver;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::domain::grid::Grid;
 use crate::domain::medium::HomogeneousMedium;
 use crate::domain::source::{GridSource, SourceMode};

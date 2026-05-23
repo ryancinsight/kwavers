@@ -78,7 +78,11 @@ pub(super) fn time_schedule(
     spacing_m: f64,
     config: &Nonlinear3dConfig,
 ) -> TimeSchedule {
-    let c_max = speed.iter().copied().fold(0.0, f64::max).max(SOUND_SPEED_AIR);
+    let c_max = speed
+        .iter()
+        .copied()
+        .fold(0.0, f64::max)
+        .max(SOUND_SPEED_AIR);
     let c_min = speed
         .iter()
         .copied()

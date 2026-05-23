@@ -1,7 +1,7 @@
 //! GPU PSTD run tests — pressure source, velocity source, multi-source, and benchmark.
 
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::super::{AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays, SolverParams};
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
 fn make_solver_32(nt: usize) -> Option<GpuPstdSolver> {
     let n3 = 32 * 32 * 32;

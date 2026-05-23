@@ -12,8 +12,8 @@ fn test_burton_miller_config_creation() {
 
 #[test]
 fn test_burton_miller_config_custom_alpha() {
-    let cfg =
-        BurtonMillerConfig::new(100_000.0, SOUND_SPEED_WATER_SIM).with_coupling_alpha(Complex64::new(0.0, 1.0));
+    let cfg = BurtonMillerConfig::new(100_000.0, SOUND_SPEED_WATER_SIM)
+        .with_coupling_alpha(Complex64::new(0.0, 1.0));
     assert_eq!(cfg.coupling_alpha, Complex64::new(0.0, 1.0));
 }
 

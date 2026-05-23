@@ -81,15 +81,15 @@ impl Default for PoroelasticMaterial {
     fn default() -> Self {
         // Typical trabecular bone properties
         Self {
-            porosity: 0.3,              // 30% porosity
-            solid_density: 2000.0,      // kg/m³
+            porosity: 0.3,                        // 30% porosity
+            solid_density: 2000.0,                // kg/m³
             fluid_density: DENSITY_WATER_NOMINAL, // SSOT: fundamental::DENSITY_WATER_NOMINAL
-            solid_bulk_modulus: 10e9,   // 10 GPa
-            fluid_bulk_modulus: 2.25e9, // 2.25 GPa
-            shear_modulus: 3.5e9,       // 3.5 GPa
-            permeability: 1e-9,         // 1 nm² (Darcy)
+            solid_bulk_modulus: 10e9,             // 10 GPa
+            fluid_bulk_modulus: 2.25e9,           // 2.25 GPa
+            shear_modulus: 3.5e9,                 // 3.5 GPa
+            permeability: 1e-9,                   // 1 nm² (Darcy)
             fluid_viscosity: VISCOSITY_WATER, // Water at 20°C — SSOT: cavitation::VISCOSITY_WATER
-            tortuosity: 1.5,            // Typical for bone
+            tortuosity: 1.5,                  // Typical for bone
         }
     }
 }
@@ -169,7 +169,7 @@ impl PoroelasticMaterial {
                 tortuosity: 1.2,
             }),
             "liver" => Ok(Self {
-                porosity: 0.15, // 15% vascular space
+                porosity: 0.15,                // 15% vascular space
                 solid_density: DENSITY_TISSUE, // SSOT: fundamental::DENSITY_TISSUE
                 fluid_density: DENSITY_WATER_NOMINAL,
                 solid_bulk_modulus: 2.5e9, // 2.5 GPa

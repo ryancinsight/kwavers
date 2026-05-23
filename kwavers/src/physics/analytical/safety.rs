@@ -164,8 +164,8 @@ pub fn fda_isppa_limit_w_cm2() -> f64 {
 
 #[cfg(test)]
 mod tests {
-    use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
     use super::*;
+    use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 
     #[test]
     fn mi_dimensional_check() {

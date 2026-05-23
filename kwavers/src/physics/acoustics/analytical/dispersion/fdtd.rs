@@ -98,8 +98,8 @@ impl DispersionAnalysis {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::f64::consts::PI;
     use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use std::f64::consts::PI;
 
     /// 1D FDTD dispersion is zero at k=0 (no wave → no error).
     #[test]

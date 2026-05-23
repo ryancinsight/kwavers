@@ -49,8 +49,8 @@ pub fn acoustic_heat_source(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::Array3;
     use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
+    use ndarray::Array3;
 
     fn uniform(s: (usize, usize, usize), val: f64) -> Array3<f64> {
         Array3::from_elem(s, val)

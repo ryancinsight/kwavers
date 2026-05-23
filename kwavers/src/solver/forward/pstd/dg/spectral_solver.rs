@@ -212,8 +212,8 @@ impl RegionPSTDSolver {
 
 #[cfg(test)]
 mod tests {
-    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use super::RegionPSTDSolver;
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use crate::domain::grid::Grid;
     use ndarray::Array3;
     use std::sync::Arc;
@@ -239,7 +239,13 @@ mod tests {
 
         let second_input = output.clone();
         solver
-            .spectral_wave_step_into(&second_input, 1.0e-5, SOUND_SPEED_WATER_SIM, &mask, &mut output)
+            .spectral_wave_step_into(
+                &second_input,
+                1.0e-5,
+                SOUND_SPEED_WATER_SIM,
+                &mask,
+                &mut output,
+            )
             .unwrap();
 
         assert_eq!(solver.prev_field.as_ptr(), prev_ptr);

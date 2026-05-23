@@ -328,13 +328,29 @@ mod tests {
     #[test]
     fn test_acoustic_validation() {
         // Negative density should fail
-        assert!(AcousticPropertyData::new(-DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.5, 1.1, 5.0).is_err());
+        assert!(AcousticPropertyData::new(
+            -DENSITY_WATER_NOMINAL,
+            SOUND_SPEED_WATER_SIM,
+            0.5,
+            1.1,
+            5.0
+        )
+        .is_err());
 
         // Invalid absorption power should fail
-        assert!(AcousticPropertyData::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.5, 5.0, 5.0).is_err());
+        assert!(AcousticPropertyData::new(
+            DENSITY_WATER_NOMINAL,
+            SOUND_SPEED_WATER_SIM,
+            0.5,
+            5.0,
+            5.0
+        )
+        .is_err());
 
         // Valid parameters should succeed
-        let props = AcousticPropertyData::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.5, 1.1, 5.0).unwrap();
+        let props =
+            AcousticPropertyData::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.5, 1.1, 5.0)
+                .unwrap();
         assert!(props.density > 0.0);
     }
 }

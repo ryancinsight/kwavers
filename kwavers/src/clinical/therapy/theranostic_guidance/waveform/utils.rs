@@ -26,4 +26,3 @@ pub(super) fn ricker(frequency_hz: f64, tau_s: f64) -> f64 {
 pub(super) fn energy(values: &[f32]) -> f64 {
     values.iter().map(|value| (*value as f64).powi(2)).sum()
 }
-

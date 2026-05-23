@@ -243,17 +243,16 @@ fn run_pstd_transmit(
     // Falls back to the CPU PSTDSolver path on shape rejection or runtime error.
     #[cfg(feature = "gpu")]
     {
-        if nx.is_power_of_two() && ny.is_power_of_two() && nz.is_power_of_two()
-            && nx <= 256 && ny <= 256 && nz <= 256
+        if nx.is_power_of_two()
+            && ny.is_power_of_two()
+            && nz.is_power_of_two()
+            && nx <= 256
+            && ny <= 256
+            && nz <= 256
         {
-            if let Some(traces) = try_run_gpu_pstd_transmit(
-                &grid,
-                &medium,
-                &source,
-                receiver_indices,
-                steps,
-                config,
-            ) {
+            if let Some(traces) =
+                try_run_gpu_pstd_transmit(&grid, &medium, &source, receiver_indices, steps, config)
+            {
                 return Ok(traces);
             }
         }

@@ -1,9 +1,9 @@
 //! Tests for photoacoustic image reconstruction.
 
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::core::{
     compute_detector_positions, interpolate_detector_signal, time_reversal_reconstruction,
 };
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::domain::grid::Grid;
 use approx::assert_relative_eq;
 use ndarray::Array3;
@@ -153,8 +153,14 @@ fn test_spherical_spreading_correction() {
     let pressure_fields = vec![Array3::<f64>::from_elem((16, 16, 8), 1.0)];
     let time_points = vec![0.0];
 
-    let reconstructed =
-        time_reversal_reconstruction(&grid, &pressure_fields, &time_points, SOUND_SPEED_WATER_SIM, 36).unwrap();
+    let reconstructed = time_reversal_reconstruction(
+        &grid,
+        &pressure_fields,
+        &time_points,
+        SOUND_SPEED_WATER_SIM,
+        36,
+    )
+    .unwrap();
 
     let center_value = reconstructed[[8, 8, 4]];
     let edge_value = reconstructed[[0, 0, 0]];

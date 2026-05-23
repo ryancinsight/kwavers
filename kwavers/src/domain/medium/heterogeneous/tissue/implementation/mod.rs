@@ -1,6 +1,7 @@
 //! `HeterogeneousTissueMedium` implementation
 
 use super::{DomainTissueRegion, TissueMap};
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_K;
 use crate::core::error::{KwaversResult, ValidationError};
 use crate::domain::grid::Grid;
 use crate::domain::medium::absorption::AbsorptionTissueType;
@@ -8,7 +9,6 @@ use crate::domain::medium::{
     absorption::{tissue::AbsorptionTissueProperties, TISSUE_PROPERTIES},
     core::{ArrayAccess, CoreMedium, MIN_PHYSICAL_DENSITY, MIN_PHYSICAL_SOUND_SPEED},
 };
-use crate::core::constants::thermodynamic::BODY_TEMPERATURE_K;
 use ndarray::{Array3, ArrayView3, ArrayViewMut3};
 
 mod acoustic;

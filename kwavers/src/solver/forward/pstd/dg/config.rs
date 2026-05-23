@@ -35,7 +35,6 @@
 /// `‖u⁽¹⁾‖_TV ≤ ‖u^n‖_TV`.
 ///
 /// **CFL condition for DG(p):** `CFL ≤ 1/(2p+1)` (Cockburn & Shu 2001 §4).
-
 use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]

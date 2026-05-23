@@ -490,6 +490,25 @@ breast-imaging reconstruction.
   policy-specific rankings. On the determined 4x4x3/two-frequency probe,
   active-only residuals are scale-absorbed near zero, while passive-only ranking
   selects `spectral_convergent_born` at normalized residual `0.5432880999009375`.
+- **[done] [minor] T8u: passive direct-field residual deltas — CLOSED 2026-05-22.**
+  Extended `BreastUstHomogeneousDirectFieldDiagnostics` with Rust-owned
+  passive residual deltas for the source-kappa Green and finite-grid PSTD Green
+  references relative to the outgoing point Green reference. PyO3 exposes both
+  values, the Rust and Python tests verify the delta arithmetic against the
+  nested passive residual fields, and the determined 4x4x3/two-frequency probe
+  now records `source_kappa_filtered_passive_residual_delta =
+  0.00010581210140714337` and `pstd_periodic_passive_residual_delta =
+  -0.30212499274440036`.
+- **[done] [minor] T8v: PSTD spectral CBS operator — CLOSED 2026-05-22.**
+  Added `PstdSpectralConvergentBornOperator` under
+  `solver::inverse::fwi::frequency_domain`. The CBS Green boundary now supports
+  a `SpectralPstdPeriodic` operator whose denominator is
+  `[4 sin²(ω Δt / 2) - 4 sin²(c0 |k| Δt / 2)] / (c0 Δt)² + iε`, preserving
+  the acquisition generator's homogeneous PSTD leapfrog/k-space propagation
+  symbol. PyO3 exposes `pstd_spectral_convergent_born`, and the Ali 2025
+  reduced probe includes it in operator-equivalence rankings. On the determined
+  4x4x3/two-frequency probe it reports all-channel residual
+  `0.5227508888630437` and passive-only residual `0.5435181467026386`.
 - **[done] [patch] T8n: focused-bowl terminology cleanup — CLOSED 2026-05-21.**
   Removed residual transcranial vendor/helmet labels from book examples and
   documentation, renamed the Chapter 25 phase-correction artifact stem to
@@ -523,8 +542,18 @@ breast-imaging reconstruction.
   residual, `0.956928` rad phase RMS) but worsens all-channel residual to
   `0.741005`. Receiver-policy operator ranking now shows active-only channels
   are scale-absorbed near zero, while passive-only ranking selects
-  `spectral_convergent_born` at `0.5432880999009375`; the next repair is the
-  passive PSTD/Helmholtz propagation contract, not active-channel exclusion.
+  `spectral_convergent_born` at `0.5432880999009375`. Passive direct-field
+  deltas now quantify the reference gap directly: source-kappa changes passive
+  residual by `0.00010581210140714337`, while finite-grid PSTD changes passive
+  residual by `-0.30212499274440036`; the next repair is the passive
+  PSTD/Helmholtz propagation contract, not active-channel exclusion. The
+  frequency-domain PSTD spectral CBS operator closes the modal denominator
+  mismatch as an isolated variable but does not close parity: all-channel
+  residual improves only from `0.5234113936105187` to `0.5227508888630437`,
+  while passive-only residual changes from `0.5432880999009376` to
+  `0.5435181467026386`. Next work should isolate the discrete source injection,
+  source filtering, and receiver projection contract between the PSTD
+  acquisition and frequency-domain CBS operators.
 
 ### Deprecation (T2 prerequisite)
 - **[patch] Mark `solver::forward::helmholtz::born_series::convergent::ConvergentBornSolver`

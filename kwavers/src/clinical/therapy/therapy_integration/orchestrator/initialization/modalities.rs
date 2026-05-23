@@ -103,5 +103,9 @@ pub fn init_cavitation_controller(
         },
         _ => unreachable!("Cavitation controller only for histotripsy/oncotripsy"),
     };
-    Ok(FeedbackController::new(feedback_config, REFERENCE_FREQUENCY_HZ, 1000.0))
+    Ok(FeedbackController::new(
+        feedback_config,
+        REFERENCE_FREQUENCY_HZ,
+        1000.0,
+    ))
 }

@@ -82,7 +82,7 @@ impl Default for PWDConfig {
             sample_volume_length: 0.005, // 5 mm gate
             fft_size: 128,
             c_sound: SOUND_SPEED_TISSUE, // m/s
-            beam_angle: 0.0, // 0° (parallel to flow)
+            beam_angle: 0.0,             // 0° (parallel to flow)
         }
     }
 }

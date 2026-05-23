@@ -1,8 +1,8 @@
 //! Layered heterogeneous medium factory method.
 
+use super::HeterogeneousFactory;
 use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use crate::core::constants::thermodynamic::ROOM_TEMPERATURE_K;
-use super::HeterogeneousFactory;
 use crate::domain::grid::Grid;
 use crate::domain::medium::heterogeneous::core::HeterogeneousMedium;
 use ndarray::Array3;

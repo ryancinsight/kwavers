@@ -1,5 +1,7 @@
-use crate::core::constants::fundamental::{DENSITY_BLOOD, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM};
 use super::*;
+use crate::core::constants::fundamental::{
+    DENSITY_BLOOD, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM,
+};
 use crate::domain::grid::Grid;
 use ndarray::Array3;
 

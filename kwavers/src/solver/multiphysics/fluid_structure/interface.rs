@@ -152,8 +152,8 @@ impl FsiInterface {
 
 #[cfg(test)]
 mod tests {
-    use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
     use super::*;
+    use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
     /// Test material property validation
     /// # Panics
     /// - Panics if an internal invariant assumed to hold at this call site is violated.

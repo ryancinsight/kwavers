@@ -77,7 +77,10 @@ fn test_fwi_pstd_solver_type_accepted_and_produces_nonzero_data() {
     assert_eq!(synthetic.ncols(), nt, "synthetic time length must match nt");
 
     // At least one non-zero receiver sample — any constant-zero output fails.
-    let max_abs = synthetic.iter().copied().fold(0.0_f64, |m, v| m.max(v.abs()));
+    let max_abs = synthetic
+        .iter()
+        .copied()
+        .fold(0.0_f64, |m, v| m.max(v.abs()));
     assert!(
         max_abs > 0.0,
         "PSTD forward model must produce a non-zero receiver trace; got max_abs = {max_abs:e}"

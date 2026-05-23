@@ -204,8 +204,8 @@ impl Configuration {
 
 #[cfg(test)]
 mod tests {
-    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use super::*;
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use crate::domain::boundary::config::BoundaryParameters;
     use crate::domain::grid::config::DomainGridParameters;
     use crate::domain::medium::config::DomainMediumParameters;

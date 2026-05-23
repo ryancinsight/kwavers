@@ -184,8 +184,8 @@ pub fn reconstruct_breast_ust_sound_speed_volume(
 
 #[cfg(test)]
 mod tests {
-    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use super::*;
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use crate::solver::inverse::fwi::frequency_domain::{
         simulate_frequency_observation, SingleScatterBornOperator,
     };

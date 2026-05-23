@@ -1,6 +1,8 @@
-use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
-use crate::core::constants::cavitation::SURFACE_TENSION_WATER;
 use super::*;
+use crate::core::constants::cavitation::SURFACE_TENSION_WATER;
+use crate::core::constants::fundamental::{
+    ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM,
+};
 
 #[test]
 fn test_default_state_is_zero() {
@@ -89,14 +91,26 @@ fn test_inertial_growth_during_collapse() {
 
 #[test]
 fn test_jet_speed_none_far_from_wall() {
-    let speed = jet_speed(3.0, ATMOSPHERIC_PRESSURE, 2340.0, DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM);
+    let speed = jet_speed(
+        3.0,
+        ATMOSPHERIC_PRESSURE,
+        2340.0,
+        DENSITY_WATER_NOMINAL,
+        SOUND_SPEED_WATER_SIM,
+    );
     assert_eq!(speed, None);
 }
 
 #[test]
 fn test_jet_speed_some_near_wall() {
-    let speed = jet_speed(1.0, ATMOSPHERIC_PRESSURE, 2340.0, DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM)
-        .expect("stand-off below critical should form a jet");
+    let speed = jet_speed(
+        1.0,
+        ATMOSPHERIC_PRESSURE,
+        2340.0,
+        DENSITY_WATER_NOMINAL,
+        SOUND_SPEED_WATER_SIM,
+    )
+    .expect("stand-off below critical should form a jet");
 
     assert!(speed > 0.0);
     assert!(speed <= SOUND_SPEED_WATER_SIM);
@@ -104,10 +118,22 @@ fn test_jet_speed_some_near_wall() {
 
 #[test]
 fn test_jet_speed_increases_nearer_wall() {
-    let v_far =
-        jet_speed(1.5, ATMOSPHERIC_PRESSURE, 2340.0, DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM).expect("stand-off 1.5 should form a jet");
-    let v_near =
-        jet_speed(0.8, ATMOSPHERIC_PRESSURE, 2340.0, DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM).expect("stand-off 0.8 should form a jet");
+    let v_far = jet_speed(
+        1.5,
+        ATMOSPHERIC_PRESSURE,
+        2340.0,
+        DENSITY_WATER_NOMINAL,
+        SOUND_SPEED_WATER_SIM,
+    )
+    .expect("stand-off 1.5 should form a jet");
+    let v_near = jet_speed(
+        0.8,
+        ATMOSPHERIC_PRESSURE,
+        2340.0,
+        DENSITY_WATER_NOMINAL,
+        SOUND_SPEED_WATER_SIM,
+    )
+    .expect("stand-off 0.8 should form a jet");
 
     assert!(v_near > v_far);
 }

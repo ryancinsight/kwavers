@@ -14,6 +14,7 @@
 //! Temperature: 37°C (body temperature) unless otherwise noted
 //! Pressure: 1 atm unless otherwise noted
 
+use super::material::AcousticMaterialProperties;
 use crate::core::constants::acoustic_parameters::BLOOD_VISCOSITY_37C;
 use crate::core::constants::fundamental::{
     ATMOSPHERIC_PRESSURE, B_OVER_A_BLOOD, B_OVER_A_CSF, B_OVER_A_WATER, DENSITY_BLOOD,
@@ -21,13 +22,12 @@ use crate::core::constants::fundamental::{
 };
 use crate::core::constants::medical::BLOOD_SPECIFIC_HEAT;
 use crate::core::constants::thermodynamic::{
-    BODY_TEMPERATURE_C, SPECIFIC_HEAT_BLOOD_PLASMA, SPECIFIC_HEAT_CSF,
-    SPECIFIC_HEAT_MINERAL_OIL, SPECIFIC_HEAT_ULTRASOUND_GEL, SPECIFIC_HEAT_URINE,
-    SPECIFIC_HEAT_WATER_37C, THERMAL_CONDUCTIVITY_BLOOD, THERMAL_CONDUCTIVITY_CSF,
-    THERMAL_CONDUCTIVITY_MINERAL_OIL, THERMAL_CONDUCTIVITY_ULTRASOUND_GEL,
-    THERMAL_CONDUCTIVITY_URINE, THERMAL_CONDUCTIVITY_WATER_37C, THERMAL_DIFFUSIVITY_BLOOD,
+    BODY_TEMPERATURE_C, SPECIFIC_HEAT_BLOOD_PLASMA, SPECIFIC_HEAT_CSF, SPECIFIC_HEAT_MINERAL_OIL,
+    SPECIFIC_HEAT_ULTRASOUND_GEL, SPECIFIC_HEAT_URINE, SPECIFIC_HEAT_WATER_37C,
+    THERMAL_CONDUCTIVITY_BLOOD, THERMAL_CONDUCTIVITY_CSF, THERMAL_CONDUCTIVITY_MINERAL_OIL,
+    THERMAL_CONDUCTIVITY_ULTRASOUND_GEL, THERMAL_CONDUCTIVITY_URINE,
+    THERMAL_CONDUCTIVITY_WATER_37C, THERMAL_DIFFUSIVITY_BLOOD,
 };
-use super::material::AcousticMaterialProperties;
 
 /// Fluid material properties type alias
 pub type FluidProperties = AcousticMaterialProperties;
@@ -49,7 +49,7 @@ pub const BLOOD_PLASMA: FluidProperties = FluidProperties {
     shear_viscosity: 1.2e-3,
     bulk_viscosity: 0.0,
     specific_heat: SPECIFIC_HEAT_BLOOD_PLASMA,
-    thermal_conductivity: 0.55,  // plasma thermal conductivity W/(m·K)
+    thermal_conductivity: 0.55, // plasma thermal conductivity W/(m·K)
     // α = k/(ρ·cp) = 0.55 / (1026 × 3840) = 1.396e-7 m²/s
     thermal_diffusivity: 1.396e-7,
     perfusion_rate: 100.0, // Blood circulation rate
@@ -72,7 +72,7 @@ pub const WHOLE_BLOOD: FluidProperties = FluidProperties {
     absorption_coefficient: 0.025,
     absorption_exponent: 1.3,
     nonlinearity_parameter: B_OVER_A_BLOOD, // 6.1 (Duck 1990 Table 4.16)
-    shear_viscosity: BLOOD_VISCOSITY_37C, // Non-Newtonian: shear-thinning
+    shear_viscosity: BLOOD_VISCOSITY_37C,   // Non-Newtonian: shear-thinning
     bulk_viscosity: 0.0,
     specific_heat: BLOOD_SPECIFIC_HEAT,
     thermal_conductivity: THERMAL_CONDUCTIVITY_BLOOD,

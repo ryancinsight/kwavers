@@ -14,13 +14,13 @@
 //! inverts the asymmetry — peaks would *round* while troughs sharpen, which
 //! is non-physical.
 
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::super::encoding::SourceEncoding;
 use super::super::forward::{forward_with_schedule, ForwardInput, TimeSchedule};
 use super::super::types::{GridIndex, Nonlinear3dAperture, SourceDomain};
 use super::super::Nonlinear3dConfig;
 use super::Point3;
 use crate::clinical::therapy::theranostic_guidance::AnatomyKind;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
 #[test]
 fn forward_westervelt_exhibits_physical_forward_steepening_with_corrected_sign() {

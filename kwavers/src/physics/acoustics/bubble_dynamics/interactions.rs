@@ -2,8 +2,8 @@
 //!
 //! Calculates forces between bubbles (Bjerknes forces, etc.)
 
-use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL};
 use super::bubble_state::BubbleState;
+use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL};
 use ndarray::Array3;
 use std::collections::HashMap;
 
@@ -209,8 +209,8 @@ impl CollectiveEffects {
         let (rho, _c) = liquid_properties;
 
         // Minnaert frequency modified for void fraction
-        let f0 =
-            1.0 / (2.0 * std::f64::consts::PI * mean_radius) * (3.0 * 1.4 * ATMOSPHERIC_PRESSURE / rho).sqrt();
+        let f0 = 1.0 / (2.0 * std::f64::consts::PI * mean_radius)
+            * (3.0 * 1.4 * ATMOSPHERIC_PRESSURE / rho).sqrt();
 
         // Correction for bubble-bubble interactions
         f0 * (1.0 - void_fraction).sqrt()
@@ -278,11 +278,11 @@ mod tests {
     #[test]
     fn test_wood_sound_speed() {
         let c_mixture = CollectiveEffects::wood_sound_speed(
-            0.01,   // 1% void fraction
-            1000.0, // water density
+            0.01,                  // 1% void fraction
+            1000.0,                // water density
             SOUND_SPEED_WATER_SIM, // water sound speed
-            1.2,    // air density
-            340.0,  // air sound speed
+            1.2,                   // air density
+            340.0,                 // air sound speed
         );
 
         // Sound speed should be significantly reduced

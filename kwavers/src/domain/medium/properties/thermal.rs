@@ -179,7 +179,7 @@ impl ThermalPropertyData {
         Self {
             conductivity: 0.32,
             specific_heat: SPECIFIC_HEAT_BONE, // 1313 J/(kg·K) (Duck 1990 Table 9.1)
-            density: BONE_DENSITY, // 1900 kg/m³ (Duck 1990)
+            density: BONE_DENSITY,             // 1900 kg/m³ (Duck 1990)
             blood_perfusion: None,
             blood_specific_heat: None,
         }
@@ -205,8 +205,8 @@ impl fmt::Display for ThermalPropertyData {
 
 #[cfg(test)]
 mod tests {
-    use crate::core::constants::fundamental::DENSITY_TISSUE;
     use super::*;
+    use crate::core::constants::fundamental::DENSITY_TISSUE;
 
     #[test]
     fn test_thermal_diffusivity() {
@@ -230,10 +230,20 @@ mod tests {
         use crate::core::constants::medical::BLOOD_SPECIFIC_HEAT;
         use crate::core::constants::thermodynamic::SPECIFIC_HEAT_TISSUE;
         // Negative conductivity should fail
-        assert!(ThermalPropertyData::new(-0.5, SPECIFIC_HEAT_TISSUE, DENSITY_TISSUE, None, None).is_err());
+        assert!(
+            ThermalPropertyData::new(-0.5, SPECIFIC_HEAT_TISSUE, DENSITY_TISSUE, None, None)
+                .is_err()
+        );
 
         // Valid parameters should succeed
-        let tp = ThermalPropertyData::new(0.5, SPECIFIC_HEAT_TISSUE, DENSITY_TISSUE, Some(0.5), Some(BLOOD_SPECIFIC_HEAT)).unwrap();
+        let tp = ThermalPropertyData::new(
+            0.5,
+            SPECIFIC_HEAT_TISSUE,
+            DENSITY_TISSUE,
+            Some(0.5),
+            Some(BLOOD_SPECIFIC_HEAT),
+        )
+        .unwrap();
         assert!(tp.conductivity > 0.0);
     }
 }

@@ -42,10 +42,10 @@
 //! - Dewhirst MW et al. (2003). "Basic principles of thermal dosimetry and thermal thresholds
 //!   for tissue damage from hyperthermia." *Int J Hyperthermia* 19(3):267–294.
 
+use super::monitor::TranscranialSafetyMonitor;
 use crate::core::constants::medical::{
     THERMAL_DOSE_REFERENCE_TEMP_C, THERMAL_DOSE_R_ABOVE_43C, THERMAL_DOSE_R_BELOW_43C,
 };
-use super::monitor::TranscranialSafetyMonitor;
 
 impl TranscranialSafetyMonitor {
     /// Update CEM43 thermal dose accumulation at each grid point.

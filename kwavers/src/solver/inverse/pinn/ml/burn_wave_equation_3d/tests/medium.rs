@@ -18,11 +18,20 @@ fn test_heterogeneous_layered_medium() -> KwaversResult<()> {
     };
 
     let geometry = Geometry3D::rectangular(0.0, 1.0, 0.0, 1.0, 0.0, 1.0);
-    let wave_speed = |_x: f32, _y: f32, z: f32| if z < 0.5 { SOUND_SPEED_WATER_SIM as f32 } else { 3000.0 };
+    let wave_speed = |_x: f32, _y: f32, z: f32| {
+        if z < 0.5 {
+            SOUND_SPEED_WATER_SIM as f32
+        } else {
+            3000.0
+        }
+    };
 
     let mut solver = BurnPINN3DWave::<TestBackend>::new(config, geometry, wave_speed, &device)?;
 
-    assert_eq!(solver.get_wave_speed(0.5, 0.5, 0.3)?, SOUND_SPEED_WATER_SIM as f32);
+    assert_eq!(
+        solver.get_wave_speed(0.5, 0.5, 0.3)?,
+        SOUND_SPEED_WATER_SIM as f32
+    );
     assert_eq!(solver.get_wave_speed(0.5, 0.5, 0.7)?, 3000.0);
 
     let x_data = vec![0.5, 0.5, 0.5, 0.5];
@@ -65,6 +74,9 @@ fn test_radially_varying_medium() -> KwaversResult<()> {
     let solver = BurnPINN3DWave::<TestBackend>::new(config, geometry, wave_speed, &device)?;
 
     assert_eq!(solver.get_wave_speed(0.5, 0.5, 0.5)?, 2500.0);
-    assert_eq!(solver.get_wave_speed(0.9, 0.5, 0.5)?, SOUND_SPEED_WATER_SIM as f32);
+    assert_eq!(
+        solver.get_wave_speed(0.9, 0.5, 0.5)?,
+        SOUND_SPEED_WATER_SIM as f32
+    );
     Ok(())
 }

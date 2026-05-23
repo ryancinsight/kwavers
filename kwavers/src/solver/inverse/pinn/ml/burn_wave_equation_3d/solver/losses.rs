@@ -299,7 +299,9 @@ mod tests {
             ..Default::default()
         };
         let geometry = Geometry3D::rectangular(0.0, 1.0, 0.0, 1.0, 0.0, 1.0);
-        let wave_speed = |_x: f32, _y: f32, _z: f32| crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM as f32;
+        let wave_speed = |_x: f32, _y: f32, _z: f32| {
+            crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM as f32
+        };
 
         let mut solver = BurnPINN3DWave::<TestBackend>::new(config, geometry, wave_speed, &device)?;
 

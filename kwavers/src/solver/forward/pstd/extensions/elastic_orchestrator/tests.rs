@@ -1,8 +1,8 @@
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::orchestrator::ElasticPstdOrchestrator;
 use super::pml::ElasticPmlSpec;
 use super::split_field_pml::ElasticSplitFieldPml;
 use super::types::{ElasticPstdMedium, ElasticPstdSourceMode, ElasticPstdVelocitySource};
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::domain::grid::Grid;
 use ndarray::{Array1, Array3};
 use num_complex::Complex;

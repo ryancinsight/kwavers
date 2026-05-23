@@ -83,9 +83,9 @@ pub fn validate_conservation(
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
     use crate::core::constants::thermodynamic::BODY_TEMPERATURE_K;
-    use super::*;
     use crate::domain::grid::Grid;
     use ndarray::Array3;
 

@@ -188,8 +188,8 @@ pub(super) fn compute_viscoelastic_term_into(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::medium::{AcousticProperties, HomogeneousMedium};
     use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use crate::domain::medium::{AcousticProperties, HomogeneousMedium};
 
     /// **Theorem**: Westervelt explicit-form nonlinear coefficient is `+β/(ρc²)`.
     ///

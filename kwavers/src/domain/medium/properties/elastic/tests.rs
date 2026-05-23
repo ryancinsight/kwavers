@@ -79,12 +79,21 @@ fn test_elastic_from_wave_speeds() {
 fn test_elastic_from_wave_speeds_validation() {
     let density = DENSITY_WATER_NOMINAL;
 
-    assert!(ElasticPropertyData::try_from_wave_speeds(density, SOUND_SPEED_WATER_SIM, 1600.0).is_err());
-    assert!(ElasticPropertyData::try_from_wave_speeds(-1000.0, SOUND_SPEED_WATER_SIM, 1000.0).is_err());
-    assert!(ElasticPropertyData::try_from_wave_speeds(density, -SOUND_SPEED_WATER_SIM, 1000.0).is_err());
-    assert!(ElasticPropertyData::try_from_wave_speeds(density, SOUND_SPEED_WATER_SIM, -1000.0).is_err());
+    assert!(
+        ElasticPropertyData::try_from_wave_speeds(density, SOUND_SPEED_WATER_SIM, 1600.0).is_err()
+    );
+    assert!(
+        ElasticPropertyData::try_from_wave_speeds(-1000.0, SOUND_SPEED_WATER_SIM, 1000.0).is_err()
+    );
+    assert!(
+        ElasticPropertyData::try_from_wave_speeds(density, -SOUND_SPEED_WATER_SIM, 1000.0).is_err()
+    );
+    assert!(
+        ElasticPropertyData::try_from_wave_speeds(density, SOUND_SPEED_WATER_SIM, -1000.0).is_err()
+    );
 
-    let ep = ElasticPropertyData::try_from_wave_speeds(density, SOUND_SPEED_WATER_SIM, 1000.0).unwrap();
+    let ep =
+        ElasticPropertyData::try_from_wave_speeds(density, SOUND_SPEED_WATER_SIM, 1000.0).unwrap();
     assert!(ep.density > 0.0);
 }
 

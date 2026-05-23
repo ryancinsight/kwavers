@@ -38,8 +38,8 @@ pub fn validate_energy_conservation(
 
 #[cfg(test)]
 mod tests {
-    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use super::*;
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use crate::domain::grid::Grid;
     use ndarray::Array3;
 

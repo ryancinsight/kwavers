@@ -411,8 +411,8 @@ fn bessel_j1(x: f64) -> f64 {
 
 #[cfg(test)]
 mod tests {
-    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use super::*;
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
     #[test]
     fn piston_directivity_on_axis() {

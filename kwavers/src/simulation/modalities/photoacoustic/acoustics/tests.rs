@@ -104,8 +104,15 @@ fn test_acoustic_wave_propagation() {
         fluence: pressure.clone(),
     };
 
-    let (pressure_fields, time_points) =
-        propagate_acoustic_wave(&grid, &initial_pressure, SOUND_SPEED_WATER_SIM, 0.3, 100, 10).unwrap();
+    let (pressure_fields, time_points) = propagate_acoustic_wave(
+        &grid,
+        &initial_pressure,
+        SOUND_SPEED_WATER_SIM,
+        0.3,
+        100,
+        10,
+    )
+    .unwrap();
 
     assert!(pressure_fields.len() >= 10);
     assert_eq!(pressure_fields.len(), time_points.len());

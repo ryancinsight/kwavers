@@ -1,7 +1,7 @@
 //! Simulator creation, optical property, and accessor tests.
 
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::super::core::PhotoacousticSimulator;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::domain::grid::Grid;
 use crate::domain::imaging::photoacoustic::PhotoacousticOpticalProperties;
 use crate::domain::medium::homogeneous::HomogeneousMedium;

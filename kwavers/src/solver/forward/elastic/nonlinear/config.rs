@@ -164,7 +164,10 @@ mod tests {
     fn test_sound_speed() {
         let config = NonlinearSWEConfig::default();
         let c = config.sound_speed();
-        assert_eq!(c, crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM);
+        assert_eq!(
+            c,
+            crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM
+        );
     }
 
     #[test]

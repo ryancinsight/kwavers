@@ -1,5 +1,5 @@
-use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE};
 use super::config::{ClinicalPhotoacousticConfig, ElastographyConfig};
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE};
 use crate::core::error::KwaversResult;
 use ndarray::Array3;
 

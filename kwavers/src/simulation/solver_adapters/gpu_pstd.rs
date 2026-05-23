@@ -247,8 +247,7 @@ impl GpuPstdSimulationAdapter {
                 let alpha_0_si = power_law_db_cm_to_np_omega_m(alpha_db_cm, alpha_power);
                 let c0 = self.medium.c0_flat[flat] as f64;
                 tau[flat] = (-2.0 * alpha_0_si * c0.powf(y - 1.0)) as f32;
-                eta[flat] =
-                    (2.0 * alpha_0_si * c0.powf(y) * (PI * y / 2.0).tan()) as f32;
+                eta[flat] = (2.0 * alpha_0_si * c0.powf(y) * (PI * y / 2.0).tan()) as f32;
             }
             (n1, n2, tau, eta)
         } else {
@@ -290,9 +289,7 @@ impl GpuPstdSimulationAdapter {
                 eta: &eta_v,
             },
         )
-        .map_err(|e| {
-            KwaversError::InvalidInput(format!("GPU device init failed: {e}"))
-        })?;
+        .map_err(|e| KwaversError::InvalidInput(format!("GPU device init failed: {e}")))?;
 
         // ── Sensor indices ────────────────────────────────────────────────────
         let sensor_flat = self.sensor_mask.as_slice().ok_or_else(|| {
@@ -310,8 +307,11 @@ impl GpuPstdSimulationAdapter {
         //   scale = 2·Δt / (n_dim · c_ref · Δx_min)
         // Applied to each source signal sample before GPU upload.
         let mass_source_scale = {
-            let n_dim_active =
-                [nx > 1, ny > 1, nz > 1].iter().filter(|&&d| d).count().max(1);
+            let n_dim_active = [nx > 1, ny > 1, nz > 1]
+                .iter()
+                .filter(|&&d| d)
+                .count()
+                .max(1);
             let dx_min = self.grid.dx.min(self.grid.dy).min(self.grid.dz);
             (2.0 * dt / (n_dim_active as f64 * self.medium.c_ref * dx_min)) as f32
         };
@@ -332,7 +332,11 @@ impl GpuPstdSimulationAdapter {
                 let n_sig_cols = p_signal.shape()[1].min(nt);
                 let mut signals = vec![0.0f32; n_src * nt];
                 for src in 0..n_src {
-                    let row = if n_sig_rows == 1 { 0 } else { src.min(n_sig_rows - 1) };
+                    let row = if n_sig_rows == 1 {
+                        0
+                    } else {
+                        src.min(n_sig_rows - 1)
+                    };
                     for step in 0..n_sig_cols {
                         signals[src * nt + step] =
                             (p_signal[[row, step]] * mass_source_scale as f64) as f32;
@@ -345,13 +349,8 @@ impl GpuPstdSimulationAdapter {
 
         // ── Run GPU time loop ─────────────────────────────────────────────────
         let t0 = Instant::now();
-        let sensor_f32 = gpu_solver.run(
-            &sensor_indices,
-            &source_indices,
-            &source_signals,
-            &[],
-            &[],
-        );
+        let sensor_f32 =
+            gpu_solver.run(&sensor_indices, &source_indices, &source_signals, &[], &[]);
         self.computation_time += t0.elapsed();
         self.current_step += nt;
 
@@ -373,7 +372,11 @@ impl Solver for GpuPstdSimulationAdapter {
         "GpuPstd"
     }
 
-    fn initialize(&mut self, grid: &Grid, _medium: &dyn crate::domain::medium::Medium) -> KwaversResult<()> {
+    fn initialize(
+        &mut self,
+        grid: &Grid,
+        _medium: &dyn crate::domain::medium::Medium,
+    ) -> KwaversResult<()> {
         let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
         if (nx, ny, nz) != (self.grid.nx, self.grid.ny, self.grid.nz) {
             return Err(KwaversError::DimensionMismatch(format!(
@@ -438,13 +441,7 @@ impl Solver for GpuPstdSimulationAdapter {
         &self.pressure_zero
     }
 
-    fn velocity_fields(
-        &self,
-    ) -> (
-        &Array3<f64>,
-        &Array3<f64>,
-        &Array3<f64>,
-    ) {
+    fn velocity_fields(&self) -> (&Array3<f64>, &Array3<f64>, &Array3<f64>) {
         (&self.vel_zero, &self.vel_zero, &self.vel_zero)
     }
 

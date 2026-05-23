@@ -51,7 +51,8 @@ pub fn prepare_brain_slice(
             body[[ix, iy]] = in_body;
             if hu >= 300.0 {
                 let phi = (hu / 1000.0).clamp(0.0, 1.0);
-                sound_speed[[ix, iy]] = SOUND_SPEED_WATER_SIM * (1.0 - phi) + SOUND_SPEED_SKULL * phi;
+                sound_speed[[ix, iy]] =
+                    SOUND_SPEED_WATER_SIM * (1.0 - phi) + SOUND_SPEED_SKULL * phi;
                 attenuation[[ix, iy]] = soft_attenuation() * (1.0 - phi) + 70.0 * phi;
                 label[[ix, iy]] = 4;
             } else if in_body {

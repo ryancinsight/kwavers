@@ -583,9 +583,15 @@ finite-frequency inverse, Figure 5 nonlinear branch, and separate CT-derived
 and use the same 1024-element, 650 kHz, 0.150 m focused-bowl definition. The 3-D view
 renders the head surface, dense skull/calvarium surface points, the calvarium
 focused-bowl element cloud, sampled beam paths, and the first dense-bone intersection
-on each sampled beam. The focused-bowl cap is limited to the superior skull support
-determined from the CT axial area profile, so the visualized elements cover the
-calvarium instead of extending down the neck. The
+on each sampled beam. The focused-bowl cap covers the calvarium: polar angles `[θ_min, θ_max] =
+[0.22 rad, 1.18 rad]` from the superior vertex, matching the InSightec ExAblate
+Neuro 4000 aperture geometry (12.6°–67.6° from the skull vertex). These bounds
+are owned by `CANONICAL_BRAIN_SCENE.transducer.cap_min_polar_rad` and
+`cap_max_polar_rad` in `transcranial_planning/scene.py` and are threaded through
+`focused_bowl_pykwavers_kwargs()` into `plan_transcranial_focused_bowl_placement`.
+The axis-projection bounds are `[cos(1.18), cos(0.22)] = [0.381, 0.976]`.
+Superior orientation is detected from the CT axial area profile so the
+cap remains on the calvarium and does not extend to the neck. The
 abdominal cases place a concave 256-element therapy arc outside the nearest
 external skin point to the target centroid, using a local skin-normal aperture
 frame instead of a fixed left/right display axis. Internal gas pockets are

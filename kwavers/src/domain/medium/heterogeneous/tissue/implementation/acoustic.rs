@@ -1,7 +1,7 @@
 //! `AcousticProperties` impl for `HeterogeneousTissueMedium`
 
 use super::HeterogeneousTissueMedium;
-use crate::core::constants::DB_TO_NP;
+use crate::core::constants::{DB_TO_NP, MHZ_TO_HZ};
 use crate::domain::grid::Grid;
 use crate::domain::medium::absorption::AbsorptionTissueType;
 use crate::domain::medium::acoustic::AcousticProperties;
@@ -13,7 +13,7 @@ impl AcousticProperties for HeterogeneousTissueMedium {
         // Power law: α(f) [dB/cm] = α₀ · (f/1 MHz)^y
         // Unit conversion to Np/m: × DB_TO_NP [Np/dB] × 100 [cm/m]
         // Reference: Szabo (1994) J.Acoust.Soc.Am. 96(1), eq. (2), (4)
-        let alpha_db_per_cm = props.alpha_0 * (frequency / 1e6).powf(props.y);
+        let alpha_db_per_cm = props.alpha_0 * (frequency / MHZ_TO_HZ).powf(props.y);
         alpha_db_per_cm * DB_TO_NP * 100.0
     }
 

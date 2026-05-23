@@ -93,8 +93,8 @@ fn peak_pressure_from_harmonic_intensity_field(acoustic_field: &Array3<f64>) -> 
 
 #[cfg(test)]
 mod tests {
-    use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
     use super::*;
+    use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 
     fn default_constraints() -> TranscranialSafetyConstraints {
         TranscranialSafetyConstraints::default()
@@ -103,8 +103,7 @@ mod tests {
     #[test]
     fn mechanical_index_from_intensity_matches_harmonic_pressure_contract() {
         let pressure_pa = 1.0e6_f64;
-        let intensity =
-            pressure_pa.powi(2) / (2.0 * DENSITY_BRAIN * SOUND_SPEED_BRAIN);
+        let intensity = pressure_pa.powi(2) / (2.0 * DENSITY_BRAIN * SOUND_SPEED_BRAIN);
         let field = Array3::from_elem((2, 2, 2), intensity);
 
         let mi = mechanical_index_from_harmonic_intensity_field(&field, 1.0e6);

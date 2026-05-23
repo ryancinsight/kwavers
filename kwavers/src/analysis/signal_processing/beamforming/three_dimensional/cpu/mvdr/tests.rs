@@ -161,7 +161,13 @@ fn mvdr_subarray_exceeds_array_returns_error() {
 #[test]
 fn mvdr_diagonal_loading_ensures_finite_positive_output() {
     // 2 elements at the same position (spacing=0) → delay=0 for origin voxel.
-    let config = make_config((1, 2, 1), (0.0, 0.0, 0.0), (1, 1, 1), SOUND_SPEED_WATER_SIM, 1_000_000.0);
+    let config = make_config(
+        (1, 2, 1),
+        (0.0, 0.0, 0.0),
+        (1, 1, 1),
+        SOUND_SPEED_WATER_SIM,
+        1_000_000.0,
+    );
     // Uncorrelated pulses: ch0 fires at n=0, ch1 fires at n=2.
     let mut rf = Array4::<f32>::zeros((1, 2, 5, 1));
     rf[[0, 0, 0, 0]] = 2.0;

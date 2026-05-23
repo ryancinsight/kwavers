@@ -117,13 +117,7 @@ pub fn plan_transcranial_focused_bowl_placement_from_ritk_ct<'py>(
         "ct_derived_calvarium_1024_element_focused_bowl_with_skull_intersections",
     )?;
     out.set_item("synthetic_phantom", synthetic)?;
-    out.set_item(
-        "cap_min_polar_rad",
-        cap_min_polar_rad.unwrap_or(0.22_f64),
-    )?;
-    out.set_item(
-        "cap_max_polar_rad",
-        cap_max_polar_rad.unwrap_or(1.18_f64),
-    )?;
+    out.set_item("cap_min_polar_rad", cap_min_polar_rad.unwrap_or(0.22_f64))?;
+    out.set_item("cap_max_polar_rad", cap_max_polar_rad.unwrap_or(1.18_f64))?;
     Ok(out)
 }

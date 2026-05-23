@@ -259,12 +259,26 @@ fn placement_excludes_disconnected_ct_bed_from_body_surface() {
         }
     }
 
-    let body_only =
-        plan_abdominal_array_placement(&ct_body_only, &label, [2.0; 3], 64, 2, -400.0, "no-bed".to_owned())
-            .expect("body-only placement");
-    let with_bed =
-        plan_abdominal_array_placement(&ct_with_bed, &label, [2.0; 3], 64, 2, -400.0, "with-bed".to_owned())
-            .expect("with-bed placement");
+    let body_only = plan_abdominal_array_placement(
+        &ct_body_only,
+        &label,
+        [2.0; 3],
+        64,
+        2,
+        -400.0,
+        "no-bed".to_owned(),
+    )
+    .expect("body-only placement");
+    let with_bed = plan_abdominal_array_placement(
+        &ct_with_bed,
+        &label,
+        [2.0; 3],
+        64,
+        2,
+        -400.0,
+        "with-bed".to_owned(),
+    )
+    .expect("with-bed placement");
 
     // The bed adds bed-only voxels to the raw HU-thresholded mask but the
     // largest-CC filter must drop them. Therefore the rendered body surface
@@ -298,7 +312,7 @@ fn placement_excludes_disconnected_ct_bed_from_body_surface() {
     let skin_delta = ((body_only.skin_contact_m.x_m - with_bed.skin_contact_m.x_m).powi(2)
         + (body_only.skin_contact_m.y_m - with_bed.skin_contact_m.y_m).powi(2)
         + (body_only.skin_contact_m.z_m - with_bed.skin_contact_m.z_m).powi(2))
-        .sqrt();
+    .sqrt();
     assert!(
         skin_delta < 5.0e-3,
         "bed-removal should not shift skin contact >5 mm; got {skin_delta:.4} m"

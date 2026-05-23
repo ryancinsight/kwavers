@@ -1,8 +1,8 @@
-use crate::core::constants::medical::TI_LIMIT_SOFT_TISSUE;
 use super::controller::SafetyController;
 use super::types::TherapyAction;
 use crate::clinical::therapy::therapy_integration::config::TherapyIntegrationSafetyLimits;
 use crate::clinical::therapy::therapy_integration::state::SafetyMetrics;
+use crate::core::constants::medical::TI_LIMIT_SOFT_TISSUE;
 use std::collections::HashMap;
 
 fn create_test_controller() -> SafetyController {

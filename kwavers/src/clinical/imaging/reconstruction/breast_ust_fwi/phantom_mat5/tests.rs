@@ -1,5 +1,5 @@
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::*;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use flate2::write::ZlibEncoder;
 use flate2::Compression;
 use std::io::Write;

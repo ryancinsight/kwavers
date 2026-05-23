@@ -1,9 +1,9 @@
-use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 use super::config::RealTimeSirtConfig;
 use super::pipeline::RealTimeSirtPipeline;
 use crate::clinical::imaging::reconstruction::acoustic_projection::{
     backproject_acoustic, project_acoustic, AcousticProjectionGeometry,
 };
+use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 use crate::solver::inverse::reconstruction::unified_sirt::SirtConfig;
 use ndarray::{Array1, Array3};
 

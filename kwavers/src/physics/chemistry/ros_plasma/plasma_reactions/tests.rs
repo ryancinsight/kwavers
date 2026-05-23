@@ -1,6 +1,6 @@
-use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use super::chemistry::PlasmaChemistry;
 use super::reaction::{zeldovich_no_rate, PlasmaReaction};
+use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use approx::assert_relative_eq;
 
 #[test]

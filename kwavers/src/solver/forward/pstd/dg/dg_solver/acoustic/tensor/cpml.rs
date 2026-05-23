@@ -69,11 +69,7 @@ impl DGSolver {
     ) -> KwaversResult<()> {
         let topology = super::validate_tensor_state(self, state, density)?;
         let expected_field = state.dim();
-        let expected_memory = (
-            expected_field.0,
-            expected_field.1,
-            DG_CPML_MEMORY_VARS,
-        );
+        let expected_memory = (expected_field.0, expected_field.1, DG_CPML_MEMORY_VARS);
         if rhs.dim() != expected_field {
             return Err(KwaversError::InvalidInput(format!(
                 "DG CPML field RHS shape {:?} does not match state {:?}",
@@ -210,8 +206,7 @@ impl DGSolver {
                         continue;
                     }
                     let velocity_var = velocity_var(axis);
-                    let global_axis_node =
-                        elem_coords[axis] * self.n_nodes + node_coords[axis];
+                    let global_axis_node = elem_coords[axis] * self.n_nodes + node_coords[axis];
                     let sigma = profiles.axes[axis].sigma[global_axis_node];
                     let kappa = profiles.axes[axis].kappa[global_axis_node];
                     let alpha = profiles.axes[axis].alpha[global_axis_node];
@@ -223,8 +218,7 @@ impl DGSolver {
                     let psi_u = memory_state[(elem, node, vi)];
 
                     // Field RHS: stretched derivative.
-                    rhs[(elem, node, ACOUSTIC_PRESSURE_VAR)] -=
-                        bulk * (raw_du / kappa + psi_p);
+                    rhs[(elem, node, ACOUSTIC_PRESSURE_VAR)] -= bulk * (raw_du / kappa + psi_p);
                     rhs[(elem, node, velocity_var)] -= inv_density * (raw_dp / kappa + psi_u);
 
                     // Memory RHS: first-order auxiliary ODE.

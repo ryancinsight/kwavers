@@ -1,5 +1,5 @@
-use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use super::thermodynamics::update_thermodynamics;
+use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use crate::physics::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};
 use approx::assert_relative_eq;
 
@@ -18,7 +18,11 @@ fn test_update_thermodynamics() {
     // Initial state should match equilibrium
     update_thermodynamics(&mut state, &params);
     assert_relative_eq!(state.temperature, 300.0, epsilon = 1e-6);
-    assert_relative_eq!(state.pressure_internal, ATMOSPHERIC_PRESSURE, epsilon = 1e-6);
+    assert_relative_eq!(
+        state.pressure_internal,
+        ATMOSPHERIC_PRESSURE,
+        epsilon = 1e-6
+    );
 
     // Compress bubble to half radius
     state.radius = 2.5e-6; // R = R0 / 2

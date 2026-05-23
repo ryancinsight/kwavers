@@ -147,8 +147,8 @@ fn sinc2(u: f64) -> f64 {
 
 #[cfg(test)]
 mod tests {
-    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use super::*;
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
     #[test]
     fn lateral_psf_peak_at_zero() {

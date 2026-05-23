@@ -1,8 +1,6 @@
 //! Value-semantic regression tests for the DG-CPML tensor acoustic stepper.
 
-use super::super::{
-    AcousticDgTensorWorkspace, ACOUSTIC_PRESSURE_VAR, ACOUSTIC_VELOCITY_X_VAR,
-};
+use super::super::{AcousticDgTensorWorkspace, ACOUSTIC_PRESSURE_VAR, ACOUSTIC_VELOCITY_X_VAR};
 use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use crate::domain::grid::Grid;
 use crate::solver::forward::pstd::dg::cpml::{
@@ -45,8 +43,7 @@ fn neutral_profile_matches_standard_rhs_bit_for_bit() {
     let mut state = Array3::<f64>::zeros(shape);
     for elem in 0..shape.0 {
         for node in 0..shape.1 {
-            state[(elem, node, ACOUSTIC_PRESSURE_VAR)] =
-                ((elem * N_NODES + node) as f64).sin();
+            state[(elem, node, ACOUSTIC_PRESSURE_VAR)] = ((elem * N_NODES + node) as f64).sin();
             state[(elem, node, ACOUSTIC_VELOCITY_X_VAR)] =
                 0.5 * ((elem * N_NODES + node) as f64).cos();
         }
@@ -55,13 +52,14 @@ fn neutral_profile_matches_standard_rhs_bit_for_bit() {
     let mut rhs_cpml = Array3::<f64>::zeros(shape);
     let mut memory_rhs = Array3::<f64>::zeros((shape.0, shape.1, 6));
     let neutral = DgCpmlConfig::uniform(0);
-    let profiles =
-        DgCpmlProfiles::new(&neutral, solver.config().sound_speed, [nx_elements, 1, 1], N_NODES, [
-            N_NODES as f64 * 1.0e-3,
-            1.0e-3,
-            1.0e-3,
-        ])
-        .unwrap();
+    let profiles = DgCpmlProfiles::new(
+        &neutral,
+        solver.config().sound_speed,
+        [nx_elements, 1, 1],
+        N_NODES,
+        [N_NODES as f64 * 1.0e-3, 1.0e-3, 1.0e-3],
+    )
+    .unwrap();
 
     solver
         .compute_acoustic_tensor_rhs_with_cpml_into(
@@ -106,11 +104,14 @@ fn rhs_shape_mismatches_are_rejected() {
     let shape = solver.acoustic_tensor_state_shape().unwrap();
     let state = Array3::<f64>::zeros(shape);
     let memory_state = Array3::<f64>::zeros((shape.0, shape.1, 6));
-    let profiles =
-        DgCpmlProfiles::new(&DgCpmlConfig::uniform(0), SOUND_SPEED_WATER_SIM, [8, 1, 1], N_NODES, [
-            8.0e-3, 1.0e-3, 1.0e-3,
-        ])
-        .unwrap();
+    let profiles = DgCpmlProfiles::new(
+        &DgCpmlConfig::uniform(0),
+        SOUND_SPEED_WATER_SIM,
+        [8, 1, 1],
+        N_NODES,
+        [8.0e-3, 1.0e-3, 1.0e-3],
+    )
+    .unwrap();
     let mut wrong_field_rhs = Array3::<f64>::zeros((shape.0, shape.1, 3));
     let mut memory_rhs = Array3::<f64>::zeros((shape.0, shape.1, 6));
     assert!(solver
@@ -157,13 +158,14 @@ fn step_with_neutral_profile_matches_standard_step() {
     let mut ws_b = AcousticDgTensorWorkspace::new(shape);
     let mut memory = DgCpmlMemoryWorkspace::new(shape.0, shape.1);
     let neutral = DgCpmlConfig::uniform(0);
-    let profiles =
-        DgCpmlProfiles::new(&neutral, solver.config().sound_speed, [nx_elements, 1, 1], N_NODES, [
-            N_NODES as f64 * 1.0e-3,
-            1.0e-3,
-            1.0e-3,
-        ])
-        .unwrap();
+    let profiles = DgCpmlProfiles::new(
+        &neutral,
+        solver.config().sound_speed,
+        [nx_elements, 1, 1],
+        N_NODES,
+        [N_NODES as f64 * 1.0e-3, 1.0e-3, 1.0e-3],
+    )
+    .unwrap();
     let dt = 1.0e-9;
     solver
         .step_acoustic_tensor_ssp_rk3(&mut state_a, DENSITY_WATER_NOMINAL, dt, &mut ws_a)

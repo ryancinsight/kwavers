@@ -1,7 +1,7 @@
 //! Tests for the FEM Helmholtz frequency-domain backend.
 
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::backend::FemHelmholtzBackend;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::domain::grid::Grid;
 use crate::domain::medium::HomogeneousMedium;
 use crate::simulation::backends::acoustic::FrequencyDomainAcousticBackend;

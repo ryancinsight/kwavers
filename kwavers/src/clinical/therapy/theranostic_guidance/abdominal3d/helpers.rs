@@ -54,7 +54,8 @@ pub(crate) fn keep_largest_connected_component_3d(mask: &Array3<bool>) -> Array3
     for start_iz in 0..nz {
         for start_iy in 0..ny {
             for start_ix in 0..nx {
-                if !mask[[start_ix, start_iy, start_iz]] || labels[[start_ix, start_iy, start_iz]] != 0
+                if !mask[[start_ix, start_iy, start_iz]]
+                    || labels[[start_ix, start_iy, start_iz]] != 0
                 {
                     continue;
                 }

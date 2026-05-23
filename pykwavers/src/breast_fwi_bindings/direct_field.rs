@@ -53,12 +53,20 @@ fn direct_field_report_to_dict<'py>(
         diagnostics.source_kappa_filtered_residual_delta,
     )?;
     out.set_item(
+        "source_kappa_filtered_passive_residual_delta",
+        diagnostics.source_kappa_filtered_passive_residual_delta,
+    )?;
+    out.set_item(
         "pstd_periodic",
         direct_field_metrics_to_dict(py, &diagnostics.pstd_periodic)?,
     )?;
     out.set_item(
         "pstd_periodic_residual_delta",
         diagnostics.pstd_periodic_residual_delta,
+    )?;
+    out.set_item(
+        "pstd_periodic_passive_residual_delta",
+        diagnostics.pstd_periodic_passive_residual_delta,
     )?;
     out.set_item("model_family", diagnostics.model_family)?;
     Ok(out)

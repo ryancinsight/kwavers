@@ -19,8 +19,8 @@ pub struct RefractionAngles {
 
 #[cfg(test)]
 mod tests {
-    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use super::*;
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use std::f64::consts::PI;
 
     /// RefractionAngles stores all fields correctly, including None critical angle.

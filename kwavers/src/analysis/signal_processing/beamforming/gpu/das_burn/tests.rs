@@ -40,7 +40,14 @@ fn test_single_focal_point_beamforming() {
     let sensor_pos = Array2::from_shape_vec((2, 3), vec![0.0, 0.0, 0.0, 0.01, 0.0, 0.0]).unwrap();
     let focal_points = Array2::from_shape_vec((1, 3), vec![0.005, 0.0, 0.01]).unwrap();
 
-    let result = beamformer.beamform(&rf_data, &sensor_pos, &focal_points, None, 1e6, SOUND_SPEED_WATER_SIM);
+    let result = beamformer.beamform(
+        &rf_data,
+        &sensor_pos,
+        &focal_points,
+        None,
+        1e6,
+        SOUND_SPEED_WATER_SIM,
+    );
 
     let output = result.unwrap();
     assert_eq!(output.shape(), &[1, 3, 1]);
@@ -92,7 +99,14 @@ fn test_invalid_input_dimensions() {
     let sensor_pos = Array2::zeros((2, 3));
     let focal_points = Array2::zeros((1, 3));
 
-    let result = beamformer.beamform(&rf_data, &sensor_pos, &focal_points, None, 1e6, SOUND_SPEED_WATER_SIM);
+    let result = beamformer.beamform(
+        &rf_data,
+        &sensor_pos,
+        &focal_points,
+        None,
+        1e6,
+        SOUND_SPEED_WATER_SIM,
+    );
 
     assert!(result.is_err());
 }
@@ -103,7 +117,14 @@ fn test_cpu_wrapper() {
     let sensor_pos = Array2::zeros((2, 3));
     let focal_points = Array2::zeros((1, 3));
 
-    let result = beamform_cpu(&rf_data, &sensor_pos, &focal_points, None, 1e6, SOUND_SPEED_WATER_SIM);
+    let result = beamform_cpu(
+        &rf_data,
+        &sensor_pos,
+        &focal_points,
+        None,
+        1e6,
+        SOUND_SPEED_WATER_SIM,
+    );
     let output = result.unwrap();
     assert_eq!(output.shape(), &[1, 2, 1]);
     assert_eq!(output[[0, 0, 0]], 2.0);
@@ -139,7 +160,14 @@ fn test_multiple_focal_points() {
     )
     .unwrap();
 
-    let result = beamformer.beamform(&rf_data, &sensor_pos, &focal_points, None, 1e6, SOUND_SPEED_WATER_SIM);
+    let result = beamformer.beamform(
+        &rf_data,
+        &sensor_pos,
+        &focal_points,
+        None,
+        1e6,
+        SOUND_SPEED_WATER_SIM,
+    );
 
     let output = result.unwrap();
     assert_eq!(output.shape(), &[3, 5, 1]);

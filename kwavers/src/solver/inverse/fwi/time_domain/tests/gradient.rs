@@ -143,9 +143,7 @@ fn test_fwi_heterogeneous_density_gradient_differs_from_baseline() {
     // around the centre so the gradient is non-trivial.
     let mut model = Array3::from_elem(dims, SOUND_SPEED_WATER_SIM);
     for ((ix, iy, iz), value) in model.indexed_iter_mut() {
-        let r2 = (ix as f64 - 3.5).powi(2)
-            + (iy as f64 - 3.5).powi(2)
-            + (iz as f64 - 3.5).powi(2);
+        let r2 = (ix as f64 - 3.5).powi(2) + (iy as f64 - 3.5).powi(2) + (iz as f64 - 3.5).powi(2);
         *value += 75.0 * (-r2 / 4.0).exp();
     }
 

@@ -16,7 +16,9 @@ use crate::solver::inverse::linear_born_inversion::LinearBornInversionConfig;
 pub const TRANSCRANIAL_FOCUSED_BOWL_ELEMENT_COUNT: usize = 1024;
 
 use crate::core::constants::acoustic_parameters::SOUND_SPEED_SKULL;
-use crate::core::constants::fundamental::{DENSITY_BRAIN, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM};
+use crate::core::constants::fundamental::{
+    DENSITY_BRAIN, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM,
+};
 
 /// Acoustic properties used by the CT-to-speed model.
 pub const C_WATER_M_S: f64 = SOUND_SPEED_WATER_SIM;

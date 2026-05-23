@@ -19,8 +19,8 @@ use kwavers::physics::acoustics::imaging::modalities::ultrasound::frequency_doma
 };
 use kwavers::solver::inverse::fwi::frequency_domain::{
     simulate_frequency_observation, AbsorbingBoundary, Config, DenseConvergentBornOperator,
-    FrequencyObservation, HelmholtzForwardOperator, SingleScatterBornOperator,
-    SpectralConvergentBornOperator,
+    FrequencyObservation, HelmholtzForwardOperator, PstdSpectralConvergentBornOperator,
+    SingleScatterBornOperator, SpectralConvergentBornOperator,
 };
 use kwavers::solver::inverse::linear_born_inversion::ElementPosition;
 use ndarray::{s, Array1, Array2, Array3};
@@ -133,7 +133,8 @@ impl PyFrequencyDomainFwiConfig {
         absorbing_boundary = "disabled",
         absorbing_thickness_cells = 1,
         absorbing_strength_nepers = 1.5,
-        absorbing_order = 2
+        absorbing_order = 2,
+        pstd_time_step_s = 1.0e-7
     ))]
     #[allow(clippy::too_many_arguments)]
     pub fn new(
@@ -152,6 +153,7 @@ impl PyFrequencyDomainFwiConfig {
         absorbing_thickness_cells: usize,
         absorbing_strength_nepers: f64,
         absorbing_order: u32,
+        pstd_time_step_s: f64,
     ) -> PyResult<Self> {
         let forward_operator = parse_forward_operator(
             propagation_model,
@@ -161,6 +163,7 @@ impl PyFrequencyDomainFwiConfig {
             absorbing_thickness_cells,
             absorbing_strength_nepers,
             absorbing_order,
+            pstd_time_step_s,
         )?;
         Ok(Self {
             inner: Config {
@@ -218,6 +221,41 @@ impl PyFrequencyDomainFwiConfig {
                 forward_operator: Arc::new(SpectralConvergentBornOperator {
                     iterations,
                     relative_tolerance,
+                    absorbing_boundary: AbsorbingBoundary::polynomial(
+                        absorbing_thickness_cells,
+                        absorbing_strength_nepers,
+                        absorbing_order,
+                    )
+                    .map_err(kwavers_to_py)?,
+                }),
+                ..Config::default()
+            },
+        })
+    }
+
+    #[staticmethod]
+    #[pyo3(signature = (
+        iterations = 64,
+        relative_tolerance = 1.0e-10,
+        time_step_s = 1.0e-7,
+        absorbing_thickness_cells = 1,
+        absorbing_strength_nepers = 1.5,
+        absorbing_order = 2
+    ))]
+    pub fn pstd_spectral_convergent_born(
+        iterations: usize,
+        relative_tolerance: f64,
+        time_step_s: f64,
+        absorbing_thickness_cells: usize,
+        absorbing_strength_nepers: f64,
+        absorbing_order: u32,
+    ) -> PyResult<Self> {
+        Ok(Self {
+            inner: Config {
+                forward_operator: Arc::new(PstdSpectralConvergentBornOperator {
+                    iterations,
+                    relative_tolerance,
+                    time_step_s,
                     absorbing_boundary: AbsorbingBoundary::polynomial(
                         absorbing_thickness_cells,
                         absorbing_strength_nepers,
@@ -379,6 +417,7 @@ fn parse_forward_operator(
     absorbing_thickness_cells: usize,
     absorbing_strength_nepers: f64,
     absorbing_order: u32,
+    pstd_time_step_s: f64,
 ) -> PyResult<Arc<dyn HelmholtzForwardOperator>> {
     match propagation_model {
         "single_scatter_born" => Ok(Arc::new(SingleScatterBornOperator)),
@@ -389,6 +428,17 @@ fn parse_forward_operator(
         "spectral_convergent_born" => Ok(Arc::new(SpectralConvergentBornOperator {
             iterations: cbs_iterations,
             relative_tolerance: cbs_relative_tolerance,
+            absorbing_boundary: parse_absorbing_boundary(
+                absorbing_boundary,
+                absorbing_thickness_cells,
+                absorbing_strength_nepers,
+                absorbing_order,
+            )?,
+        })),
+        "pstd_spectral_convergent_born" => Ok(Arc::new(PstdSpectralConvergentBornOperator {
+            iterations: cbs_iterations,
+            relative_tolerance: cbs_relative_tolerance,
+            time_step_s: pstd_time_step_s,
             absorbing_boundary: parse_absorbing_boundary(
                 absorbing_boundary,
                 absorbing_thickness_cells,

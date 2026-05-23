@@ -21,9 +21,16 @@ fn test_power_law_initialization() {
     };
 
     let k_mag = zeros_k_mag(32, 32, 32);
-    let kernel = initialize_absorption_operators(&config, &grid, &medium, &k_mag, 1e6, SOUND_SPEED_WATER_SIM)
-        .unwrap()
-        .expect("PowerLaw mode must return Some(AbsorptionKernel)");
+    let kernel = initialize_absorption_operators(
+        &config,
+        &grid,
+        &medium,
+        &k_mag,
+        1e6,
+        SOUND_SPEED_WATER_SIM,
+    )
+    .unwrap()
+    .expect("PowerLaw mode must return Some(AbsorptionKernel)");
 
     let expected_tau = -4.246_711_703_873_091e-8;
     let expected_eta = -6.370_067_555_809_639e-5;
@@ -60,9 +67,16 @@ fn test_nabla_operators_correct_power() {
     let k_mag = test_k_mag(8, 8, 8, dk);
     let k_at_1 = k_mag[[1, 0, 0]];
 
-    let kernel = initialize_absorption_operators(&config, &grid, &medium, &k_mag, 0.0, SOUND_SPEED_WATER_SIM)
-        .unwrap()
-        .expect("PowerLaw mode must return Some(AbsorptionKernel)");
+    let kernel = initialize_absorption_operators(
+        &config,
+        &grid,
+        &medium,
+        &k_mag,
+        0.0,
+        SOUND_SPEED_WATER_SIM,
+    )
+    .unwrap()
+    .expect("PowerLaw mode must return Some(AbsorptionKernel)");
 
     let expected_n1 = k_at_1.powf(y - 2.0);
     let expected_n2 = k_at_1.powf(y - 1.0);
@@ -93,9 +107,16 @@ fn test_absorption_model_physics_validation() {
     let mut medium = HomogeneousMedium::new(SOUND_SPEED_WATER_SIM, 1000.0, 0.0, 0.0, &grid);
     medium.set_acoustic_properties(0.0, 1.5, 0.0).unwrap();
     let k_mag = zeros_k_mag(16, 16, 16);
-    let kernel = initialize_absorption_operators(&config, &grid, &medium, &k_mag, 1e6, SOUND_SPEED_WATER_SIM)
-        .unwrap()
-        .expect("PowerLaw mode must return Some(AbsorptionKernel)");
+    let kernel = initialize_absorption_operators(
+        &config,
+        &grid,
+        &medium,
+        &k_mag,
+        1e6,
+        SOUND_SPEED_WATER_SIM,
+    )
+    .unwrap()
+    .expect("PowerLaw mode must return Some(AbsorptionKernel)");
 
     assert!(
         (kernel.tau[[0, 0, 0]] - (-3.467_425_586_398_137e-8)).abs() < 1e-20,
@@ -133,9 +154,16 @@ fn test_stokes_absorption_tau_matches_classical_formula() {
 
     let dk = 2.0 * std::f64::consts::PI / (8.0 * 1e-3);
     let k_mag = test_k_mag(8, 8, 8, dk);
-    let kernel = initialize_absorption_operators(&config, &grid, &medium, &k_mag, 0.0, SOUND_SPEED_WATER_SIM)
-        .expect("Stokes init must succeed")
-        .expect("Stokes mode must return Some(AbsorptionKernel)");
+    let kernel = initialize_absorption_operators(
+        &config,
+        &grid,
+        &medium,
+        &k_mag,
+        0.0,
+        SOUND_SPEED_WATER_SIM,
+    )
+    .expect("Stokes init must succeed")
+    .expect("Stokes mode must return Some(AbsorptionKernel)");
 
     let eta_s = 1.0e-3_f64;
     let eta_b = 2.5e-3_f64;

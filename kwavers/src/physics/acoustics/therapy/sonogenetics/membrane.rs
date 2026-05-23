@@ -142,8 +142,8 @@ pub fn compute_membrane_tension(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use approx::assert_relative_eq;
     use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use approx::assert_relative_eq;
     use ndarray::Array3;
 
     /// Analytical reference:

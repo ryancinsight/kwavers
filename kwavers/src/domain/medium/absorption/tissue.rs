@@ -120,7 +120,7 @@ impl AbsorptionTissueProperties {
             thermal_expansion: THERMAL_EXPANSION_SOFT_TISSUE,
             viscosity: VISCOSITY_SOFT_TISSUE,
             surface_tension: SURFACE_TENSION_WATER, // Similar to water [N/m]
-            gas_diffusion_coefficient: 2e-9, // Oxygen in tissue [m²/s]
+            gas_diffusion_coefficient: 2e-9,        // Oxygen in tissue [m²/s]
             // Default optical properties for generic soft tissue at ~800nm (NIR)
             // Reference: Jacques (2013) "Optical properties of biological tissues: a review"
             optical_absorption_coeff: 10.0,    // 0.1 cm⁻¹ = 10 m⁻¹
@@ -161,74 +161,170 @@ pub fn tissue_properties() -> HashMap<AbsorptionTissueType, AbsorptionTissueProp
 
     map.insert(
         AbsorptionTissueType::Blood,
-        AbsorptionTissueProperties::new(0.18, 1.21, DENSITY_BLOOD, SOUND_SPEED_BLOOD, B_OVER_A_BLOOD, 0.52, SPECIFIC_HEAT_BLOOD)
-            .with_optical(230.0, 20000.0), // Blood: μ_a≈2.3 cm⁻¹, μ_s≈200 cm⁻¹
+        AbsorptionTissueProperties::new(
+            0.18,
+            1.21,
+            DENSITY_BLOOD,
+            SOUND_SPEED_BLOOD,
+            B_OVER_A_BLOOD,
+            0.52,
+            SPECIFIC_HEAT_BLOOD,
+        )
+        .with_optical(230.0, 20000.0), // Blood: μ_a≈2.3 cm⁻¹, μ_s≈200 cm⁻¹
     );
 
     map.insert(
         AbsorptionTissueType::Brain,
-        AbsorptionTissueProperties::new(0.85, 1.21, DENSITY_BRAIN, SOUND_SPEED_BRAIN, B_OVER_A_BRAIN, 0.51, SPECIFIC_HEAT_BRAIN)
-            .with_optical(20.0, 10000.0), // Brain: μ_a≈0.2 cm⁻¹, μ_s≈100 cm⁻¹
+        AbsorptionTissueProperties::new(
+            0.85,
+            1.21,
+            DENSITY_BRAIN,
+            SOUND_SPEED_BRAIN,
+            B_OVER_A_BRAIN,
+            0.51,
+            SPECIFIC_HEAT_BRAIN,
+        )
+        .with_optical(20.0, 10000.0), // Brain: μ_a≈0.2 cm⁻¹, μ_s≈100 cm⁻¹
     );
 
     map.insert(
         AbsorptionTissueType::Fat,
-        AbsorptionTissueProperties::new(0.63, 1.1, DENSITY_FAT, SOUND_SPEED_FAT, B_OVER_A_FAT, 0.21, SPECIFIC_HEAT_FAT)
-            .with_optical(40.0, 15000.0), // Fat: μ_a≈0.4 cm⁻¹, μ_s≈150 cm⁻¹
+        AbsorptionTissueProperties::new(
+            0.63,
+            1.1,
+            DENSITY_FAT,
+            SOUND_SPEED_FAT,
+            B_OVER_A_FAT,
+            0.21,
+            SPECIFIC_HEAT_FAT,
+        )
+        .with_optical(40.0, 15000.0), // Fat: μ_a≈0.4 cm⁻¹, μ_s≈150 cm⁻¹
     );
 
     map.insert(
         AbsorptionTissueType::Muscle,
-        AbsorptionTissueProperties::new(1.3, 1.1, DENSITY_MUSCLE, SOUND_SPEED_MUSCLE, B_OVER_A_MUSCLE, 0.49, SPECIFIC_HEAT_MUSCLE)
-            .with_optical(30.0, 10000.0), // Muscle: μ_a≈0.3 cm⁻¹, μ_s≈100 cm⁻¹
+        AbsorptionTissueProperties::new(
+            1.3,
+            1.1,
+            DENSITY_MUSCLE,
+            SOUND_SPEED_MUSCLE,
+            B_OVER_A_MUSCLE,
+            0.49,
+            SPECIFIC_HEAT_MUSCLE,
+        )
+        .with_optical(30.0, 10000.0), // Muscle: μ_a≈0.3 cm⁻¹, μ_s≈100 cm⁻¹
     );
 
     map.insert(
         AbsorptionTissueType::Liver,
-        AbsorptionTissueProperties::new(0.94, 1.11, DENSITY_LIVER, SOUND_SPEED_LIVER, B_OVER_A_LIVER, 0.52, SPECIFIC_HEAT_LIVER)
-            .with_optical(70.0, 10000.0), // Liver: μ_a≈0.7 cm⁻¹, μ_s≈100 cm⁻¹
+        AbsorptionTissueProperties::new(
+            0.94,
+            1.11,
+            DENSITY_LIVER,
+            SOUND_SPEED_LIVER,
+            B_OVER_A_LIVER,
+            0.52,
+            SPECIFIC_HEAT_LIVER,
+        )
+        .with_optical(70.0, 10000.0), // Liver: μ_a≈0.7 cm⁻¹, μ_s≈100 cm⁻¹
     );
 
     map.insert(
         AbsorptionTissueType::Kidney,
-        AbsorptionTissueProperties::new(1.0, 1.09, DENSITY_TISSUE, SOUND_SPEED_KIDNEY, B_OVER_A_KIDNEY, 0.53, SPECIFIC_HEAT_KIDNEY)
-            .with_optical(50.0, 12000.0), // Kidney: μ_a≈0.5 cm⁻¹, μ_s≈120 cm⁻¹
+        AbsorptionTissueProperties::new(
+            1.0,
+            1.09,
+            DENSITY_TISSUE,
+            SOUND_SPEED_KIDNEY,
+            B_OVER_A_KIDNEY,
+            0.53,
+            SPECIFIC_HEAT_KIDNEY,
+        )
+        .with_optical(50.0, 12000.0), // Kidney: μ_a≈0.5 cm⁻¹, μ_s≈120 cm⁻¹
     );
 
     map.insert(
         AbsorptionTissueType::Bone,
-        AbsorptionTissueProperties::new(20.0, 1.0, BONE_DENSITY, BONE_SOUND_SPEED, B_OVER_A_BONE, 0.32, SPECIFIC_HEAT_BONE)
-            .with_optical(40.0, 35000.0), // Bone: μ_a≈0.4 cm⁻¹, μ_s≈350 cm⁻¹
+        AbsorptionTissueProperties::new(
+            20.0,
+            1.0,
+            BONE_DENSITY,
+            BONE_SOUND_SPEED,
+            B_OVER_A_BONE,
+            0.32,
+            SPECIFIC_HEAT_BONE,
+        )
+        .with_optical(40.0, 35000.0), // Bone: μ_a≈0.4 cm⁻¹, μ_s≈350 cm⁻¹
     );
 
     map.insert(
         AbsorptionTissueType::Lung,
-        AbsorptionTissueProperties::new(41.0, 1.05, DENSITY_LUNG, SOUND_SPEED_LUNG, B_OVER_A_LUNG, 0.39, SPECIFIC_HEAT_LUNG)
-            .with_optical(100.0, 25000.0), // Lung: μ_a≈1.0 cm⁻¹, μ_s≈250 cm⁻¹
+        AbsorptionTissueProperties::new(
+            41.0,
+            1.05,
+            DENSITY_LUNG,
+            SOUND_SPEED_LUNG,
+            B_OVER_A_LUNG,
+            0.39,
+            SPECIFIC_HEAT_LUNG,
+        )
+        .with_optical(100.0, 25000.0), // Lung: μ_a≈1.0 cm⁻¹, μ_s≈250 cm⁻¹
     );
 
     map.insert(
         AbsorptionTissueType::Skin,
-        AbsorptionTissueProperties::new(2.1, 1.17, DENSITY_SKIN, SOUND_SPEED_SKIN, B_OVER_A_SKIN, 0.37, SPECIFIC_HEAT_SKIN)
-            .with_optical(50.0, 20000.0), // Skin: μ_a≈0.5 cm⁻¹, μ_s≈200 cm⁻¹
+        AbsorptionTissueProperties::new(
+            2.1,
+            1.17,
+            DENSITY_SKIN,
+            SOUND_SPEED_SKIN,
+            B_OVER_A_SKIN,
+            0.37,
+            SPECIFIC_HEAT_SKIN,
+        )
+        .with_optical(50.0, 20000.0), // Skin: μ_a≈0.5 cm⁻¹, μ_s≈200 cm⁻¹
     );
 
     map.insert(
         AbsorptionTissueType::BreastFat,
-        AbsorptionTissueProperties::new(0.75, 1.5, DENSITY_BREAST_FAT, 1479.0, B_OVER_A_FAT, 0.21, SPECIFIC_HEAT_FAT)
-            .with_optical(40.0, 12000.0), // Breast fat: μ_a≈0.4 cm⁻¹, μ_s≈120 cm⁻¹
+        AbsorptionTissueProperties::new(
+            0.75,
+            1.5,
+            DENSITY_BREAST_FAT,
+            1479.0,
+            B_OVER_A_FAT,
+            0.21,
+            SPECIFIC_HEAT_FAT,
+        )
+        .with_optical(40.0, 12000.0), // Breast fat: μ_a≈0.4 cm⁻¹, μ_s≈120 cm⁻¹
     );
 
     map.insert(
         AbsorptionTissueType::BreastGland,
-        AbsorptionTissueProperties::new(0.75, 1.5, DENSITY_BREAST_GLAND, SOUND_SPEED_BREAST_GLAND, B_OVER_A_BREAST_GLAND, 0.48, SPECIFIC_HEAT_BREAST_GLAND)
-            .with_optical(60.0, 15000.0), // Breast gland: μ_a≈0.6 cm⁻¹, μ_s≈150 cm⁻¹
+        AbsorptionTissueProperties::new(
+            0.75,
+            1.5,
+            DENSITY_BREAST_GLAND,
+            SOUND_SPEED_BREAST_GLAND,
+            B_OVER_A_BREAST_GLAND,
+            0.48,
+            SPECIFIC_HEAT_BREAST_GLAND,
+        )
+        .with_optical(60.0, 15000.0), // Breast gland: μ_a≈0.6 cm⁻¹, μ_s≈150 cm⁻¹
     );
 
     map.insert(
         AbsorptionTissueType::SoftTissue,
-        AbsorptionTissueProperties::new(0.75, 1.1, DENSITY_TISSUE, SOUND_SPEED_TISSUE, B_OVER_A_SOFT_TISSUE, 0.50, IEC_TISSUE_SPECIFIC_HEAT)
-            .with_optical(10.0, 10000.0), // Generic soft tissue: μ_a≈0.1 cm⁻¹, μ_s≈100 cm⁻¹
+        AbsorptionTissueProperties::new(
+            0.75,
+            1.1,
+            DENSITY_TISSUE,
+            SOUND_SPEED_TISSUE,
+            B_OVER_A_SOFT_TISSUE,
+            0.50,
+            IEC_TISSUE_SPECIFIC_HEAT,
+        )
+        .with_optical(10.0, 10000.0), // Generic soft tissue: μ_a≈0.1 cm⁻¹, μ_s≈100 cm⁻¹
     );
 
     map

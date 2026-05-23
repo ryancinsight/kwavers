@@ -1,8 +1,8 @@
 # Sprint Checklist - Kwavers Development
 
-## Current State: 2026-05-22 — Calvarium Cap Bounds Fixed; 4111/4111 PASS
+## Current State: 2026-05-22 — Session 3: 4114/4114 PASS; 11 ignored
 
-**Tests**: 4111 / 4111 passing (kwavers lib, `cargo test -p kwavers --lib`)
+**Tests**: 4114 / 4114 passing (kwavers lib, `cargo test -p kwavers --lib`)
 **Architecture health**: ✅ Clean — unidirectional dependencies, SRP, DIP enforced
 **pykwavers parity**: All 29 k-wave-python examples now have compare scripts
 
@@ -56,7 +56,8 @@
 - [x] `render_abdominal_3d()`: verified `_set_equal_3d_limits` stacks full body+organ+element clouds, no cropping; THETA_CUTOUT/THETA_MAX match Rust `BOWL_THETA_CUTOUT_RAD`/`BOWL_THETA_MAX_RAD` (0.175/0.960) — SSOT consistent [patch]
 - [x] `SOFT_TISSUE_HU_BASE_SPEED_M_S = 1480.0`: introduce dedicated SSOT constant for HU tissue model base speed; replaces incorrect `SOUND_SPEED_WATER = 1482` in `abdominal.rs` line 211; ref Schneider et al. 1996 [patch]
 - [x] `properties_liver_organ_speed_at_hu_100` + `properties_tumour_speed_offset_below_organ`: update pre-SSOT hardcoded expected values (1605→1588, 1579→1562) to SSOT-derived `SOUND_SPEED_LIVER=1578` (Duck 1990 Table 4.6); consistent with passing `properties_kidney_organ_speed_differs_from_liver` [patch]
-- [x] 4114/4114 active PASS; 11 ignored; 0 failed (pending)
+- [x] `blake_threshold` + `neppiras_threshold` tests: stale hardcoded values (104339, 64057.5) derived with old `VAPOR_PRESSURE_WATER=2330`; current SSOT uses 2339; replaced with SSOT-derived dynamic + range checks; `got-expected < 1.0` primary assertions already correct [patch]
+- [x] 4114/4114 PASS; 11 ignored; 0 failed
 
 ### Closed 2026-05-10 (prior session)
 

@@ -139,7 +139,10 @@ pub fn run_gpu_pstd(
 
     if pml_inside {
         let exp_half = |sigma: &ndarray::Array1<f64>| -> Vec<f32> {
-            sigma.iter().map(|&s| (-s * dt * 0.5).exp() as f32).collect()
+            sigma
+                .iter()
+                .map(|&s| (-s * dt * 0.5).exp() as f32)
+                .collect()
         };
         let pml_sgx_1d = exp_half(&profiles.sigma_x_sgx);
         let pml_sgy_1d = exp_half(&profiles.sigma_y_sgy);
@@ -249,8 +252,8 @@ pub fn run_gpu_pstd(
     }
 
     let has_nonlinear = medium.nonlinearity(0, 0, 0) > 0.0;
-    let has_absorption = alpha_coeff_db > 0.0
-        || medium.alpha_coefficient(0.0, 0.0, 0.0, grid) > 0.0;
+    let has_absorption =
+        alpha_coeff_db > 0.0 || medium.alpha_coefficient(0.0, 0.0, 0.0, grid) > 0.0;
 
     let bon_a_flat: Vec<f32> = if has_nonlinear {
         (0..total)
@@ -265,49 +268,61 @@ pub fn run_gpu_pstd(
         vec![0.0f32; total]
     };
 
-    let (absorb_nabla1_flat, absorb_nabla2_flat, absorb_tau_flat, absorb_eta_flat) = if has_absorption
-    {
-        let dk_x = 2.0 * PI / (nx as f64 * grid.dx);
-        let dk_y = 2.0 * PI / (ny as f64 * grid.dy);
-        let dk_z = 2.0 * PI / (nz as f64 * grid.dz);
-        let singularity_thresh: f64 = 1e-8;
-        let y = alpha_power;
+    let (absorb_nabla1_flat, absorb_nabla2_flat, absorb_tau_flat, absorb_eta_flat) =
+        if has_absorption {
+            let dk_x = 2.0 * PI / (nx as f64 * grid.dx);
+            let dk_y = 2.0 * PI / (ny as f64 * grid.dy);
+            let dk_z = 2.0 * PI / (nz as f64 * grid.dz);
+            let singularity_thresh: f64 = 1e-8;
+            let y = alpha_power;
 
-        let mut n1 = vec![0.0f32; total];
-        let mut n2 = vec![0.0f32; total];
-        let mut tau_v = vec![0.0f32; total];
-        let mut eta_v = vec![0.0f32; total];
+            let mut n1 = vec![0.0f32; total];
+            let mut n2 = vec![0.0f32; total];
+            let mut tau_v = vec![0.0f32; total];
+            let mut eta_v = vec![0.0f32; total];
 
-        for flat in 0..total {
-            let ix = flat / (ny * nz);
-            let iy = (flat % (ny * nz)) / nz;
-            let iz = flat % nz;
+            for flat in 0..total {
+                let ix = flat / (ny * nz);
+                let iy = (flat % (ny * nz)) / nz;
+                let iz = flat % nz;
 
-            let kix = if ix <= nx / 2 { ix as f64 } else { (nx - ix) as f64 } * dk_x;
-            let kiy = if iy <= ny / 2 { iy as f64 } else { (ny - iy) as f64 } * dk_y;
-            let kiz = if iz <= nz / 2 { iz as f64 } else { (nz - iz) as f64 } * dk_z;
-            let k_mag = (kix * kix + kiy * kiy + kiz * kiz).sqrt();
+                let kix = if ix <= nx / 2 {
+                    ix as f64
+                } else {
+                    (nx - ix) as f64
+                } * dk_x;
+                let kiy = if iy <= ny / 2 {
+                    iy as f64
+                } else {
+                    (ny - iy) as f64
+                } * dk_y;
+                let kiz = if iz <= nz / 2 {
+                    iz as f64
+                } else {
+                    (nz - iz) as f64
+                } * dk_z;
+                let k_mag = (kix * kix + kiy * kiy + kiz * kiz).sqrt();
 
-            if k_mag > singularity_thresh {
-                n1[flat] = k_mag.powf(y - 2.0) as f32;
-                n2[flat] = k_mag.powf(y - 1.0) as f32;
+                if k_mag > singularity_thresh {
+                    n1[flat] = k_mag.powf(y - 2.0) as f32;
+                    n2[flat] = k_mag.powf(y - 1.0) as f32;
+                }
+
+                let alpha_db_cm = medium.absorption(ix, iy, iz);
+                let alpha_0_si = power_law_db_cm_to_np_omega_m(alpha_db_cm, alpha_power);
+                let c0_local = medium.sound_speed(ix, iy, iz);
+                tau_v[flat] = (-2.0 * alpha_0_si * c0_local.powf(y - 1.0)) as f32;
+                eta_v[flat] = (2.0 * alpha_0_si * c0_local.powf(y) * (PI * y / 2.0).tan()) as f32;
             }
-
-            let alpha_db_cm = medium.absorption(ix, iy, iz);
-            let alpha_0_si = power_law_db_cm_to_np_omega_m(alpha_db_cm, alpha_power);
-            let c0_local = medium.sound_speed(ix, iy, iz);
-            tau_v[flat] = (-2.0 * alpha_0_si * c0_local.powf(y - 1.0)) as f32;
-            eta_v[flat] = (2.0 * alpha_0_si * c0_local.powf(y) * (PI * y / 2.0).tan()) as f32;
-        }
-        (n1, n2, tau_v, eta_v)
-    } else {
-        (
-            vec![0.0f32; total],
-            vec![0.0f32; total],
-            vec![0.0f32; total],
-            vec![0.0f32; total],
-        )
-    };
+            (n1, n2, tau_v, eta_v)
+        } else {
+            (
+                vec![0.0f32; total],
+                vec![0.0f32; total],
+                vec![0.0f32; total],
+                vec![0.0f32; total],
+            )
+        };
 
     let mut solver = GpuPstdSolver::with_auto_device(
         grid,

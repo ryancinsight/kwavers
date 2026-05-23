@@ -12,6 +12,7 @@ PROPAGATION_MODELS = (
     "single_scatter_born",
     "dense_convergent_born",
     "spectral_convergent_born",
+    "pstd_spectral_convergent_born",
 )
 
 
@@ -44,6 +45,7 @@ def make_frequency_domain_fwi_config(
         absorbing_thickness_cells=args.absorbing_thickness_cells,
         absorbing_strength_nepers=args.absorbing_strength_nepers,
         absorbing_order=args.absorbing_order,
+        pstd_time_step_s=args.time_step_s,
     )
 
 

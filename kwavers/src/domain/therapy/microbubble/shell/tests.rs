@@ -1,6 +1,6 @@
-use crate::core::constants::cavitation::SURFACE_TENSION_WATER;
 use super::properties::MarmottantShellProperties;
 use super::state::ShellState;
+use crate::core::constants::cavitation::SURFACE_TENSION_WATER;
 
 #[test]
 fn test_create_shell() {

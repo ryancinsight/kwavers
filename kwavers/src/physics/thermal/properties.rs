@@ -175,8 +175,7 @@ pub fn update_properties(
 #[must_use]
 pub fn absorption_vs_temperature(alpha0: f64, temperature: f64) -> f64 {
     alpha0
-        * (SOFT_TISSUE_ABSORPTION_COEFF_PER_C * (temperature - BODY_TEMPERATURE_C).max(0.0))
-            .exp()
+        * (SOFT_TISSUE_ABSORPTION_COEFF_PER_C * (temperature - BODY_TEMPERATURE_C).max(0.0)).exp()
 }
 
 /// Sound speed temperature dependence

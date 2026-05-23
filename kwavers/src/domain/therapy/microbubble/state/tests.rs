@@ -1,7 +1,7 @@
+use super::*;
 use crate::core::constants::cavitation::SURFACE_TENSION_WATER;
 use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use crate::core::constants::thermodynamic::BODY_TEMPERATURE_K;
-use super::*;
 
 const AMBIENT_PRESSURE: f64 = ATMOSPHERIC_PRESSURE;
 // SSOT: 37 °C + 273.15 = 310.15 K (exact Celsius-to-Kelvin conversion).

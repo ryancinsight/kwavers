@@ -1,5 +1,5 @@
-use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use super::*;
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use ndarray::Array3;
 
 #[test]

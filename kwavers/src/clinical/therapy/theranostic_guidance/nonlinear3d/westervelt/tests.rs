@@ -1,6 +1,6 @@
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::clinical::therapy::theranostic_guidance::nonlinear3d::types::{GridIndex, SourceDomain};
 use crate::clinical::therapy::theranostic_guidance::{AnatomyKind, Point3};
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
 use super::calibration::{calibrated_source_scale, SourceCalibrationInput};
 use super::{

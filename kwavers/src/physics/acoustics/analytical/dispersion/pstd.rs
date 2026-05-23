@@ -73,8 +73,8 @@ impl DispersionAnalysis {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::f64::consts::PI;
     use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use std::f64::consts::PI;
 
     /// pstd_dispersion order=2 follows the 0.02·(k·dx)² analytical model.
     ///

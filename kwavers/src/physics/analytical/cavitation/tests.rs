@@ -1,7 +1,9 @@
 use std::f64::consts::PI;
 
-use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use super::*;
+use crate::core::constants::fundamental::{
+    ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM,
+};
 
 #[test]
 fn minnaert_water_air_bubble() {
@@ -11,10 +13,22 @@ fn minnaert_water_air_bubble() {
 
 #[test]
 fn closed_form_cavitation_estimators_reject_invalid_domains() {
-    assert_eq!(minnaert_resonance_hz(0.0, 1.4, ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL), 0.0);
-    assert_eq!(minnaert_resonance_hz(10e-6, -1.0, ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL), 0.0);
-    assert_eq!(blake_threshold_pa(10e-6, ATMOSPHERIC_PRESSURE, f64::NAN), 0.0);
-    assert_eq!(rayleigh_collapse_time_s(100e-6, -ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL), 0.0);
+    assert_eq!(
+        minnaert_resonance_hz(0.0, 1.4, ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL),
+        0.0
+    );
+    assert_eq!(
+        minnaert_resonance_hz(10e-6, -1.0, ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL),
+        0.0
+    );
+    assert_eq!(
+        blake_threshold_pa(10e-6, ATMOSPHERIC_PRESSURE, f64::NAN),
+        0.0
+    );
+    assert_eq!(
+        rayleigh_collapse_time_s(100e-6, -ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL),
+        0.0
+    );
     assert_eq!(
         histotripsy_lesion_radius_m(-1.0, 5e-6, ATMOSPHERIC_PRESSURE, 2000.0),
         0.0
@@ -31,7 +45,17 @@ fn rayleigh_collapse_positive() {
 fn rp_rk4_initial_condition() {
     let t: Vec<f64> = (0..10).map(|i| i as f64 * 1e-9).collect();
     let (r, _) = rayleigh_plesset_rk4(
-        10e-6, 0.0, 0.0, 1e6, &t, ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL, 0.0725, 0.001, 1.4, 2_330.0,
+        10e-6,
+        0.0,
+        0.0,
+        1e6,
+        &t,
+        ATMOSPHERIC_PRESSURE,
+        DENSITY_WATER_NOMINAL,
+        0.0725,
+        0.001,
+        1.4,
+        2_330.0,
     );
     assert!((r[0] - 10e-6).abs() < 1e-15);
     assert!((r[9] - 10e-6).abs() / 10e-6 < 0.01);
@@ -41,7 +65,18 @@ fn rp_rk4_initial_condition() {
 fn km_rk4_length_matches() {
     let t: Vec<f64> = (0..5).map(|i| i as f64 * 1e-9).collect();
     let (r, v) = keller_miksis_rk4(
-        10e-6, 0.0, 0.0, 1e6, &t, ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL, 0.0725, 0.001, 1.4, 2_330.0, SOUND_SPEED_WATER_SIM,
+        10e-6,
+        0.0,
+        0.0,
+        1e6,
+        &t,
+        ATMOSPHERIC_PRESSURE,
+        DENSITY_WATER_NOMINAL,
+        0.0725,
+        0.001,
+        1.4,
+        2_330.0,
+        SOUND_SPEED_WATER_SIM,
     );
     assert_eq!(r.len(), 5);
     assert_eq!(v.len(), 5);
@@ -71,7 +106,17 @@ fn mechanical_index_rejects_invalid_domain() {
 fn icd_zero_driving_gives_zero() {
     let t: Vec<f64> = (0..100).map(|i| i as f64 * 1e-9).collect();
     let (r, rdot) = rayleigh_plesset_rk4(
-        10e-6, 0.0, 0.0, 1e6, &t, ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL, 0.0725, 0.001, 1.4, 2_330.0,
+        10e-6,
+        0.0,
+        0.0,
+        1e6,
+        &t,
+        ATMOSPHERIC_PRESSURE,
+        DENSITY_WATER_NOMINAL,
+        0.0725,
+        0.001,
+        1.4,
+        2_330.0,
     );
     let icd = inertial_cavitation_dose(&r, &rdot, 10e-6);
     assert_eq!(icd, 0.0, "icd={}", icd);
@@ -85,7 +130,17 @@ fn icd_strong_driving_nonzero() {
     let t: Vec<f64> = (0..n_pts).map(|i| i as f64 * dt).collect();
     let r0 = 5e-6;
     let (r, rdot) = rayleigh_plesset_rk4(
-        r0, 0.0, 5e6, f0, &t, ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL, 0.0725, 0.001, 1.4, 2_330.0,
+        r0,
+        0.0,
+        5e6,
+        f0,
+        &t,
+        ATMOSPHERIC_PRESSURE,
+        DENSITY_WATER_NOMINAL,
+        0.0725,
+        0.001,
+        1.4,
+        2_330.0,
     );
     let icd = inertial_cavitation_dose(&r, &rdot, r0);
     assert!(

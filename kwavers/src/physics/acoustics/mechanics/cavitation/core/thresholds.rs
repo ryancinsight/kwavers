@@ -186,7 +186,10 @@ mod tests {
             "Neppiras threshold: got {got:.1} expected {expected:.1}"
         );
         // Range check: threshold must lie in (0, P0) for physically reasonable parameters.
-        assert!(got > 0.0 && got < P0, "Neppiras threshold out of range: {got:.1}");
+        assert!(
+            got > 0.0 && got < P0,
+            "Neppiras threshold out of range: {got:.1}"
+        );
     }
 
     /// Flynn threshold: P_F = α·(P₀ + 2σ/R₀) − Pᵥ, where α=0.83.

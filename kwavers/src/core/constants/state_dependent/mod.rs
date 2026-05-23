@@ -47,7 +47,7 @@ pub struct StateDependentConstants {
 impl Default for StateDependentConstants {
     fn default() -> Self {
         Self {
-            reference_temperature: 20.0,  // 20°C (room temperature)
+            reference_temperature: 20.0, // 20°C (room temperature)
             reference_pressure: ATMOSPHERIC_PRESSURE,
         }
     }

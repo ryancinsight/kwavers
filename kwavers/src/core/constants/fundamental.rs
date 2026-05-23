@@ -355,13 +355,18 @@ pub const OPTICAL_ABSORPTION_TISSUE_NIR: f64 = 10.0; // m⁻¹
 /// DOI: 10.1088/0031-9155/58/11/R37
 pub const REDUCED_SCATTERING_TISSUE_NIR: f64 = 1000.0; // m⁻¹
 
-/// Default acoustic absorption of soft tissue at 1 MHz [Np/m]
+/// Default acoustic absorption coefficient of soft tissue [dB/(cm·MHz)].
 ///
-/// Typical range: 0.3–0.6 Np/m (approximately 3–5 dB/cm) at 1 MHz.
+/// Value: 0.5 dB/(cm·MHz) — mid-range for generic soft tissue at diagnostic
+/// frequencies. To convert to Np/m at frequency f_MHz:
+///   α [Np/m] = 0.5 [dB/(cm·MHz)] × f_MHz [MHz] × 100 [cm/m] × DB_TO_NP [Np/dB]
+///            = 5.756 × f_MHz  [Np/m]
 ///
-/// Reference: Duck, F.A. (1990). Physical Properties of Tissue.
+/// Typical range: 0.3–1.0 dB/(cm·MHz) for most soft tissues.
+///
+/// Reference: Duck, F.A. (1990). *Physical Properties of Tissue.*
 /// Academic Press, London, Chapter 4, Table 4.1.
-pub const ACOUSTIC_ABSORPTION_TISSUE: f64 = 0.5; // Np/m
+pub const ACOUSTIC_ABSORPTION_TISSUE: f64 = 0.5; // dB/(cm·MHz)
 
 /// Density of human skin at body temperature (kg/m³).
 ///

@@ -1,7 +1,7 @@
 //! Tests for CEUS domain definitions.
 
-use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use super::microbubble::Microbubble;
+use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 
 /// Cross-section must be strictly positive for any physical frequency.
 /// # Panics

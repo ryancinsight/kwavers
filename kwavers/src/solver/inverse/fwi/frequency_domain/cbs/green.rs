@@ -69,6 +69,19 @@ pub(super) fn apply_shifted_green_operator(
                 absorbing_boundary,
             )
         }
+        GreenOperatorKind::SpectralPstdPeriodic {
+            time_step_s,
+            reference_sound_speed_m_s,
+            absorbing_boundary,
+        } => super::spectral::apply_shifted_green_pstd_spectral_with_boundary(
+            grid,
+            reference_wavenumber,
+            epsilon,
+            source_density,
+            time_step_s,
+            reference_sound_speed_m_s,
+            absorbing_boundary,
+        ),
     }
 }
 
@@ -118,6 +131,19 @@ pub(crate) fn apply_shifted_green_adjoint_operator(
                 absorbing_boundary,
             )
         }
+        GreenOperatorKind::SpectralPstdPeriodic {
+            time_step_s,
+            reference_sound_speed_m_s,
+            absorbing_boundary,
+        } => super::spectral::apply_shifted_green_pstd_spectral_adjoint_with_boundary(
+            grid,
+            reference_wavenumber,
+            epsilon,
+            field,
+            time_step_s,
+            reference_sound_speed_m_s,
+            absorbing_boundary,
+        ),
     }
 }
 
@@ -128,6 +154,15 @@ pub enum GreenOperatorKind {
     DenseFreeSpace,
     /// Pseudospectral inverse of `∇² + k0² + i epsilon`.
     SpectralPeriodic {
+        /// Absorbing boundary policy applied as `W G W`.
+        absorbing_boundary: AbsorbingBoundary,
+    },
+    /// Pseudospectral inverse using the PSTD leapfrog/k-space modal symbol.
+    SpectralPstdPeriodic {
+        /// PSTD time step [s] used by the acquisition generator.
+        time_step_s: f64,
+        /// Reference homogeneous sound speed [m/s].
+        reference_sound_speed_m_s: f64,
         /// Absorbing boundary policy applied as `W G W`.
         absorbing_boundary: AbsorbingBoundary,
     },

@@ -52,10 +52,10 @@ pub mod tissues {
     #[must_use]
     pub fn liver() -> ThermalPropertyData {
         ThermalPropertyData::new(
-            0.52,           // conductivity (W/m/K)
+            0.52,                // conductivity (W/m/K)
             SPECIFIC_HEAT_LIVER, // specific_heat (J/kg/K)
-            DENSITY_LIVER,  // density (kg/m³) — SSOT; Duck (1990): ρ_liver ≈ 1060 kg/m³
-            Some(16.7),     // blood_perfusion (kg/m³/s) - high perfusion
+            DENSITY_LIVER,       // density (kg/m³) — SSOT; Duck (1990): ρ_liver ≈ 1060 kg/m³
+            Some(16.7),          // blood_perfusion (kg/m³/s) - high perfusion
             Some(BLOOD_SPECIFIC_HEAT),
         )
         .expect("Liver tissue properties are valid")
@@ -75,10 +75,10 @@ pub mod tissues {
     #[must_use]
     pub fn muscle() -> ThermalPropertyData {
         ThermalPropertyData::new(
-            0.49,            // conductivity (W/m/K)
+            0.49,                 // conductivity (W/m/K)
             SPECIFIC_HEAT_MUSCLE, // specific_heat (J/kg/K)
-            DENSITY_MUSCLE,  // density (kg/m³) — SSOT; Duck (1990) upper range / IT'IS
-            Some(0.54),      // blood_perfusion (kg/m³/s)
+            DENSITY_MUSCLE,       // density (kg/m³) — SSOT; Duck (1990) upper range / IT'IS
+            Some(0.54),           // blood_perfusion (kg/m³/s)
             Some(BLOOD_SPECIFIC_HEAT),
         )
         .expect("Muscle tissue properties are valid")
@@ -99,7 +99,7 @@ pub mod tissues {
     pub fn fat() -> ThermalPropertyData {
         ThermalPropertyData::new(
             0.21,               // conductivity (W/m/K)
-            SPECIFIC_HEAT_FAT, // specific_heat (J/kg/K)
+            SPECIFIC_HEAT_FAT,  // specific_heat (J/kg/K)
             DENSITY_BREAST_FAT, // density (kg/m³) — IT'IS Foundation v4.0 breast fat
             Some(0.3),          // blood_perfusion (kg/m³/s) - low perfusion
             Some(BLOOD_SPECIFIC_HEAT),
@@ -121,10 +121,10 @@ pub mod tissues {
     #[must_use]
     pub fn tumor() -> ThermalPropertyData {
         ThermalPropertyData::new(
-            0.55,           // conductivity (W/m/K)
+            0.55,                 // conductivity (W/m/K)
             SPECIFIC_HEAT_TISSUE, // specific_heat (J/kg/K)
-            DENSITY_TISSUE, // density (kg/m³) — SSOT: fundamental::DENSITY_TISSUE
-            Some(0.2),      // blood_perfusion (kg/m³/s) - poor perfusion
+            DENSITY_TISSUE,       // density (kg/m³) — SSOT: fundamental::DENSITY_TISSUE
+            Some(0.2),            // blood_perfusion (kg/m³/s) - poor perfusion
             Some(BLOOD_SPECIFIC_HEAT),
         )
         .expect("Tumor tissue properties are valid")

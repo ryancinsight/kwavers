@@ -310,8 +310,7 @@ mod tests {
         let k_wave = 2.0 * std::f64::consts::PI * setup.frequency / SOUND_SPEED_BRAIN;
 
         let intensity = harmonic_intensity_at_point(point_m, &setup, k_wave);
-        let expected =
-            1.0 / (0.001_f64.powi(2) * 2.0 * DENSITY_BRAIN * SOUND_SPEED_BRAIN);
+        let expected = 1.0 / (0.001_f64.powi(2) * 2.0 * DENSITY_BRAIN * SOUND_SPEED_BRAIN);
 
         assert!((intensity - expected).abs() < expected * 1.0e-12);
     }

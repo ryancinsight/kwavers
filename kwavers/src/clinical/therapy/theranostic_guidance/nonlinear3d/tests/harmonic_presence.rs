@@ -33,13 +33,13 @@
 //! `#[ignore]`'d as Tier-2 (~10 s runtime). Run on demand with
 //! `cargo test --lib --package kwavers -- --ignored harmonic_generation`.
 
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::super::encoding::SourceEncoding;
 use super::super::forward::{forward_with_schedule, ForwardInput, TimeSchedule};
 use super::super::types::{GridIndex, Nonlinear3dAperture, SourceDomain};
 use super::super::Nonlinear3dConfig;
 use super::Point3;
 use crate::clinical::therapy::theranostic_guidance::AnatomyKind;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
 #[test]
 #[ignore = "Tier 2: Harmonic-generation presence check, ~10s runtime"]

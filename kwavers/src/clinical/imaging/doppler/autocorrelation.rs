@@ -51,10 +51,10 @@ pub struct AutocorrelationConfig {
 impl Default for AutocorrelationConfig {
     fn default() -> Self {
         Self {
-            center_frequency: 5.0e6, // 5 MHz
-            prf: 4e3,                // 4 kHz
-            speed_of_sound: SOUND_SPEED_TISSUE,  // m/s
-            beam_angle: 0.0,         // Parallel to beam
+            center_frequency: 5.0e6,            // 5 MHz
+            prf: 4e3,                           // 4 kHz
+            speed_of_sound: SOUND_SPEED_TISSUE, // m/s
+            beam_angle: 0.0,                    // Parallel to beam
             ensemble_size: 10,
             variance_threshold: 0.5, // Reject high-variance estimates
         }

@@ -323,7 +323,10 @@ mod tests {
 
         #[cfg(not(feature = "pinn"))]
         {
-            let result = super::PINN1DWave::new(crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM, ());
+            let result = super::PINN1DWave::new(
+                crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM,
+                (),
+            );
             assert!(result.is_err());
         }
     }

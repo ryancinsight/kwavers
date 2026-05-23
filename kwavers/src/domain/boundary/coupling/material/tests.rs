@@ -1,8 +1,8 @@
+use super::*;
 use crate::core::constants::fundamental::{
     B_OVER_A_SOFT_TISSUE, B_OVER_A_WATER, DENSITY_AIR, DENSITY_TISSUE, DENSITY_WATER_NOMINAL,
     SOUND_SPEED_AIR, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM,
 };
-use super::*;
 use crate::domain::boundary::traits::BoundaryCondition;
 use crate::domain::grid::GridTopologyExt;
 use crate::domain::medium::properties::AcousticPropertyData;
@@ -205,7 +205,7 @@ fn test_material_interface_matched_impedance() {
 #[test]
 fn test_material_interface_large_impedance_mismatch() {
     let material_air = AcousticPropertyData {
-        density: DENSITY_AIR,        // 1.204 kg/m³ (Duck 1990)
+        density: DENSITY_AIR,         // 1.204 kg/m³ (Duck 1990)
         sound_speed: SOUND_SPEED_AIR, // 343 m/s at room temperature
         absorption_coefficient: 0.01,
         absorption_power: 2.0,

@@ -365,11 +365,27 @@ mod tests {
         let medium = MediumBuilder::build(&config, &grid).unwrap();
 
         // x=0 (i=0) and x=1mm (i=1): layer 0 — water-like
-        assert_eq!(medium.sound_speed(0, 0, 0), SOUND_SPEED_WATER_SIM, "x=0 must be layer-0 speed");
-        assert_eq!(medium.sound_speed(1, 0, 0), SOUND_SPEED_WATER_SIM, "x=1mm must be layer-0 speed");
+        assert_eq!(
+            medium.sound_speed(0, 0, 0),
+            SOUND_SPEED_WATER_SIM,
+            "x=0 must be layer-0 speed"
+        );
+        assert_eq!(
+            medium.sound_speed(1, 0, 0),
+            SOUND_SPEED_WATER_SIM,
+            "x=1mm must be layer-0 speed"
+        );
         // x=2mm (i=2) and x=3mm (i=3): layer 1 — tissue-like
-        assert_eq!(medium.sound_speed(2, 0, 0), SOUND_SPEED_TISSUE, "x=2mm must be layer-1 speed");
-        assert_eq!(medium.sound_speed(3, 0, 0), SOUND_SPEED_TISSUE, "x=3mm must be layer-1 speed");
+        assert_eq!(
+            medium.sound_speed(2, 0, 0),
+            SOUND_SPEED_TISSUE,
+            "x=2mm must be layer-1 speed"
+        );
+        assert_eq!(
+            medium.sound_speed(3, 0, 0),
+            SOUND_SPEED_TISSUE,
+            "x=3mm must be layer-1 speed"
+        );
         // Density follows the same step
         assert_eq!(medium.density(0, 0, 0), DENSITY_WATER_NOMINAL);
         assert_eq!(medium.density(3, 0, 0), DENSITY_TISSUE);

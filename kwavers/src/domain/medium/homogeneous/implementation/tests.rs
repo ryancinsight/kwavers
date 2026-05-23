@@ -132,12 +132,20 @@ fn test_elastic_homogeneous_rejects_unstable_speeds() {
     );
 
     // Density / speed positivity
-    assert!(HomogeneousMedium::elastic_homogeneous(0.0, SOUND_SPEED_WATER_SIM, 800.0, &grid).is_none());
+    assert!(
+        HomogeneousMedium::elastic_homogeneous(0.0, SOUND_SPEED_WATER_SIM, 800.0, &grid).is_none()
+    );
     assert!(HomogeneousMedium::elastic_homogeneous(1000.0, 0.0, 800.0, &grid).is_none());
-    assert!(HomogeneousMedium::elastic_homogeneous(1000.0, SOUND_SPEED_WATER_SIM, -1.0, &grid).is_none());
+    assert!(
+        HomogeneousMedium::elastic_homogeneous(1000.0, SOUND_SPEED_WATER_SIM, -1.0, &grid)
+            .is_none()
+    );
 
     // NaN / Inf rejection
-    assert!(HomogeneousMedium::elastic_homogeneous(f64::NAN, SOUND_SPEED_WATER_SIM, 800.0, &grid).is_none());
+    assert!(
+        HomogeneousMedium::elastic_homogeneous(f64::NAN, SOUND_SPEED_WATER_SIM, 800.0, &grid)
+            .is_none()
+    );
     assert!(HomogeneousMedium::elastic_homogeneous(1000.0, f64::INFINITY, 800.0, &grid).is_none());
 }
 

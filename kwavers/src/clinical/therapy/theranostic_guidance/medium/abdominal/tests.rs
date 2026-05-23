@@ -116,8 +116,7 @@ fn square_bbox_empty_mask_errors() {
 fn properties_air_cell_has_default_values() {
     let ct = Array2::<f64>::from_elem((1, 1), -1000.0);
     let label = Array2::<i16>::zeros((1, 1));
-    let (speed, att, body, organ, target) =
-        abdominal_properties(AnatomyKind::Liver, &ct, &label);
+    let (speed, att, body, organ, target) = abdominal_properties(AnatomyKind::Liver, &ct, &label);
     assert!(!body[[0, 0]]);
     assert!(!organ[[0, 0]]);
     assert!(!target[[0, 0]]);
@@ -223,7 +222,5 @@ fn connected_body_floods_contiguous_tissue_block() {
 fn prepare_abdominal_slice_rejects_grid_size_one() {
     let ct = Array3::<f64>::from_elem((5, 5, 1), 0.0);
     let label = Array3::<i16>::zeros((5, 5, 1));
-    assert!(
-        prepare_abdominal_slice(AnatomyKind::Liver, &ct, &label, [1.0, 1.0, 1.0], 1).is_err()
-    );
+    assert!(prepare_abdominal_slice(AnatomyKind::Liver, &ct, &label, [1.0, 1.0, 1.0], 1).is_err());
 }

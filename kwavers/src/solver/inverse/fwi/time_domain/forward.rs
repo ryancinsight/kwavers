@@ -248,13 +248,11 @@ impl FwiProcessor {
                 .assign(solver.pressure_field());
         }
 
-        let recorded = solver
-            .recorded_sensor_pressure()
-            .ok_or_else(|| {
-                KwaversError::Validation(ValidationError::ConstraintViolation {
-                    message: "FWI forward model requires at least one receiver".to_owned(),
-                })
-            })?;
+        let recorded = solver.recorded_sensor_pressure().ok_or_else(|| {
+            KwaversError::Validation(ValidationError::ConstraintViolation {
+                message: "FWI forward model requires at least one receiver".to_owned(),
+            })
+        })?;
         let synthetic = recorded.slice(s![.., 0..self.parameters.nt]).to_owned();
 
         Ok((synthetic, history))
@@ -287,13 +285,11 @@ impl FwiProcessor {
             solver.step_forward()?;
         }
 
-        let recorded = solver
-            .recorded_sensor_pressure()
-            .ok_or_else(|| {
-                KwaversError::Validation(ValidationError::ConstraintViolation {
-                    message: "FWI forward model requires at least one receiver".to_owned(),
-                })
-            })?;
+        let recorded = solver.recorded_sensor_pressure().ok_or_else(|| {
+            KwaversError::Validation(ValidationError::ConstraintViolation {
+                message: "FWI forward model requires at least one receiver".to_owned(),
+            })
+        })?;
         let synthetic = recorded.slice(s![.., 0..self.parameters.nt]).to_owned();
 
         Ok(synthetic)

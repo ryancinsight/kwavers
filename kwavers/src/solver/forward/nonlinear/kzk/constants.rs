@@ -3,7 +3,9 @@
 //! All tissue and medium property values delegate to the canonical SSOT at
 //! `core::constants`.  No numerical literals are defined locally.
 
-use crate::core::constants::acoustic_parameters::{REFERENCE_FREQUENCY_HZ, WATER_ABSORPTION_ALPHA_0};
+use crate::core::constants::acoustic_parameters::{
+    REFERENCE_FREQUENCY_HZ, WATER_ABSORPTION_ALPHA_0,
+};
 use crate::core::constants::fundamental::{
     ACOUSTIC_ABSORPTION_TISSUE, B_OVER_A_SOFT_TISSUE, B_OVER_A_WATER,
     SOFT_TISSUE_ABSORPTION_POWER_Y, WATER_ABSORPTION_POWER_Y,

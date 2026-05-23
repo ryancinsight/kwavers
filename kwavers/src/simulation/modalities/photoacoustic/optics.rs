@@ -255,8 +255,8 @@ pub fn compute_multi_wavelength_fluence(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::medium::homogeneous::HomogeneousMedium;
     use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use crate::domain::medium::homogeneous::HomogeneousMedium;
 
     #[test]
     fn test_optical_property_initialization() {

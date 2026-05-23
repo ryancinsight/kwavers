@@ -309,7 +309,12 @@ mod tests {
         let sensor_data = array![[0.0, 1.0, 0.0], [0.0, 0.5, 0.0]];
         let sensor_positions = array![[0.0, 0.0, 0.0]];
         let grid_points = array![[0.0, 0.0, 0.0]];
-        let cfg = ImagingDasConfig::new(SOUND_SPEED_WATER_SIM, 1e6, ImagingDasApodization::Rectangular).unwrap();
+        let cfg = ImagingDasConfig::new(
+            SOUND_SPEED_WATER_SIM,
+            1e6,
+            ImagingDasApodization::Rectangular,
+        )
+        .unwrap();
         let err = beamform_image_das(
             sensor_data.view(),
             sensor_positions.view(),

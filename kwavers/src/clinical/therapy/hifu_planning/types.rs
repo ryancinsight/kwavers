@@ -1,10 +1,13 @@
 use crate::clinical::safety::mechanical_index::MechanicalIndexTissueType;
 use crate::clinical::therapy::parameters::ClinicalTherapyParameters;
-use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
+use crate::core::constants::fundamental::{
+    ACOUSTIC_ABSORPTION_TISSUE, DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM,
+};
 use crate::core::constants::medical::{
     THERMAL_DOSE_REFERENCE_TEMP_C, THERMAL_DOSE_R_ABOVE_43C, THERMAL_DOSE_R_BELOW_43C,
 };
 use crate::core::constants::thermodynamic::{BODY_TEMPERATURE_C, SPECIFIC_HEAT_TISSUE};
+use crate::core::constants::MHZ_TO_HZ;
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::physics::acoustics::analysis::calculate_mechanical_index;
 use std::f64::consts::PI;
@@ -202,8 +205,9 @@ impl FocalSpotDoseEstimate {
         validate_unit_interval("duty_cycle", duty_cycle)?;
         validate_nonnegative_finite("treatment_duration_s", treatment_duration_s)?;
 
-        let frequency_mhz = frequency_hz / 1e6;
-        let alpha_np_per_m = 0.5 * frequency_mhz * 100.0 * (std::f64::consts::LN_10 / 20.0);
+        let frequency_mhz = frequency_hz / MHZ_TO_HZ;
+        let alpha_np_per_m =
+            ACOUSTIC_ABSORPTION_TISSUE * frequency_mhz * 100.0 * (std::f64::consts::LN_10 / 20.0);
         let intensity_w_m2 = focal_spot.peak_pressure_pa.powi(2)
             / (2.0 * DENSITY_WATER_NOMINAL * SOUND_SPEED_WATER_SIM);
         let heating_w_m3 = 2.0 * alpha_np_per_m * intensity_w_m2 * duty_cycle;

@@ -62,7 +62,7 @@ pub trait HelmholtzForwardOperator: Debug + Send + Sync {
     /// CBS solver descriptor — `Some((cbs_config, kernel))` for CBS impls,
     /// `None` otherwise. The volume-field adjoint gradient needs these to
     /// reconstruct the matching forward and adjoint solves.
-    fn cbs_descriptor(&self) -> Option<(CbsConfig, GreenOperatorKind)> {
+    fn cbs_descriptor(&self, _config: &Config) -> Option<(CbsConfig, GreenOperatorKind)> {
         None
     }
 
@@ -155,7 +155,7 @@ impl HelmholtzForwardOperator for DenseConvergentBornOperator {
         true
     }
 
-    fn cbs_descriptor(&self) -> Option<(CbsConfig, GreenOperatorKind)> {
+    fn cbs_descriptor(&self, _config: &Config) -> Option<(CbsConfig, GreenOperatorKind)> {
         Some((self.cbs_config(), GreenOperatorKind::DenseFreeSpace))
     }
 
@@ -226,7 +226,7 @@ impl HelmholtzForwardOperator for SpectralConvergentBornOperator {
         true
     }
 
-    fn cbs_descriptor(&self) -> Option<(CbsConfig, GreenOperatorKind)> {
+    fn cbs_descriptor(&self, _config: &Config) -> Option<(CbsConfig, GreenOperatorKind)> {
         Some((
             self.cbs_config(),
             GreenOperatorKind::SpectralPeriodic {
@@ -258,6 +258,85 @@ impl SpectralConvergentBornOperator {
     }
 }
 
+/// Spectral convergent Born-series solver whose periodic Green operator uses
+/// the homogeneous PSTD leapfrog/k-space modal symbol instead of the continuous
+/// Helmholtz symbol.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct PstdSpectralConvergentBornOperator {
+    pub iterations: usize,
+    pub relative_tolerance: f64,
+    pub time_step_s: f64,
+    pub absorbing_boundary: AbsorbingBoundary,
+}
+
+impl HelmholtzForwardOperator for PstdSpectralConvergentBornOperator {
+    fn predict_receiver_rows(
+        &self,
+        slowness_s_per_m: &Array3<f64>,
+        array: &MultiRowRingArray,
+        frequency_hz: f64,
+        config: &Config,
+        transmissions: usize,
+    ) -> KwaversResult<Array2<Complex64>> {
+        super::forward::predict_cbs_rows(
+            slowness_s_per_m,
+            array,
+            frequency_hz,
+            config,
+            transmissions,
+            self.cbs_config(),
+            self.green_operator(config.reference_sound_speed_m_s),
+        )
+    }
+
+    fn uses_volume_field_adjoint(&self) -> bool {
+        true
+    }
+
+    fn cbs_descriptor(&self, config: &Config) -> Option<(CbsConfig, GreenOperatorKind)> {
+        Some((
+            self.cbs_config(),
+            self.green_operator(config.reference_sound_speed_m_s),
+        ))
+    }
+
+    fn validate(&self) -> KwaversResult<()> {
+        validate_cbs_parameters(self.iterations, self.relative_tolerance)?;
+        if !self.time_step_s.is_finite() || self.time_step_s <= 0.0 {
+            return Err(KwaversError::InvalidInput(format!(
+                "PSTD spectral Born time_step_s must be positive and finite, got {}",
+                self.time_step_s
+            )));
+        }
+        self.absorbing_boundary.validate()
+    }
+
+    fn validate_for_grid(&self, grid: GridSpec) -> KwaversResult<()> {
+        self.absorbing_boundary.validate_for_grid(grid)
+    }
+
+    fn model_id(&self) -> &'static str {
+        "pstd_spectral_convergent_born"
+    }
+}
+
+impl PstdSpectralConvergentBornOperator {
+    fn cbs_config(&self) -> CbsConfig {
+        CbsConfig {
+            max_iterations: self.iterations,
+            relative_tolerance: self.relative_tolerance,
+        }
+    }
+
+    fn green_operator(self, reference_sound_speed_m_s: f64) -> GreenOperatorKind {
+        GreenOperatorKind::SpectralPstdPeriodic {
+            time_step_s: self.time_step_s,
+            reference_sound_speed_m_s,
+            absorbing_boundary: self.absorbing_boundary,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -274,27 +353,44 @@ mod tests {
             relative_tolerance: 1.0e-8,
             absorbing_boundary: AbsorbingBoundary::disabled(),
         };
+        let pstd_spectral = PstdSpectralConvergentBornOperator {
+            iterations: 16,
+            relative_tolerance: 1.0e-8,
+            time_step_s: 1.0e-7,
+            absorbing_boundary: AbsorbingBoundary::disabled(),
+        };
 
         assert_eq!(born.model_id(), "single_scatter_born");
         assert_eq!(dense.model_id(), "dense_convergent_born");
         assert_eq!(spectral.model_id(), "spectral_convergent_born");
+        assert_eq!(pstd_spectral.model_id(), "pstd_spectral_convergent_born");
     }
 
     #[test]
     fn cbs_descriptor_present_only_for_cbs_impls() {
-        assert!(SingleScatterBornOperator.cbs_descriptor().is_none());
+        let config = Config::default();
+
+        assert!(SingleScatterBornOperator.cbs_descriptor(&config).is_none());
         assert!(DenseConvergentBornOperator {
             iterations: 8,
             relative_tolerance: 1.0e-6,
         }
-        .cbs_descriptor()
+        .cbs_descriptor(&config)
         .is_some());
         assert!(SpectralConvergentBornOperator {
             iterations: 8,
             relative_tolerance: 1.0e-6,
             absorbing_boundary: AbsorbingBoundary::disabled(),
         }
-        .cbs_descriptor()
+        .cbs_descriptor(&config)
+        .is_some());
+        assert!(PstdSpectralConvergentBornOperator {
+            iterations: 8,
+            relative_tolerance: 1.0e-6,
+            time_step_s: 1.0e-7,
+            absorbing_boundary: AbsorbingBoundary::disabled(),
+        }
+        .cbs_descriptor(&config)
         .is_some());
     }
 
@@ -309,6 +405,13 @@ mod tests {
         assert!(SpectralConvergentBornOperator {
             iterations: 8,
             relative_tolerance: 1.0e-6,
+            absorbing_boundary: AbsorbingBoundary::disabled(),
+        }
+        .uses_volume_field_adjoint());
+        assert!(PstdSpectralConvergentBornOperator {
+            iterations: 8,
+            relative_tolerance: 1.0e-6,
+            time_step_s: 1.0e-7,
             absorbing_boundary: AbsorbingBoundary::disabled(),
         }
         .uses_volume_field_adjoint());

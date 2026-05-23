@@ -36,8 +36,8 @@
 //! `#[ignore]`'d (~2 s runtime). Run on demand with
 //! `cargo test --lib --package kwavers -- --ignored fubini_absolute`.
 
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::bessel::{bessel_j1, bessel_j2};
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
 #[test]
 #[ignore = "Tier 2: Literature validation (Aanonsen 1984 Fubini-absolute, 1-D harness), ~2s runtime"]

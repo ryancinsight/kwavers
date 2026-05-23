@@ -305,10 +305,22 @@ mod tests {
     #[test]
     fn ispta_rejects_invalid_duty_cycle_and_impedance() {
         let field = Array3::<f64>::from_elem((2, 2, 2), 2.0_f64);
-        assert_eq!(calculate_ispta(&field, 1000.0, SOUND_SPEED_WATER_SIM, -0.1), 0.0);
-        assert_eq!(calculate_ispta(&field, 1000.0, SOUND_SPEED_WATER_SIM, 1.1), 0.0);
-        assert_eq!(calculate_ispta(&field, 1000.0, SOUND_SPEED_WATER_SIM, f64::NAN), 0.0);
-        assert_eq!(calculate_ispta(&field, 0.0, SOUND_SPEED_WATER_SIM, 0.1), 0.0);
+        assert_eq!(
+            calculate_ispta(&field, 1000.0, SOUND_SPEED_WATER_SIM, -0.1),
+            0.0
+        );
+        assert_eq!(
+            calculate_ispta(&field, 1000.0, SOUND_SPEED_WATER_SIM, 1.1),
+            0.0
+        );
+        assert_eq!(
+            calculate_ispta(&field, 1000.0, SOUND_SPEED_WATER_SIM, f64::NAN),
+            0.0
+        );
+        assert_eq!(
+            calculate_ispta(&field, 0.0, SOUND_SPEED_WATER_SIM, 0.1),
+            0.0
+        );
     }
 
     /// Nonfinite pressure samples do not dominate the spatial peak.

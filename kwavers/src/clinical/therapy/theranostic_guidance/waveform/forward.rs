@@ -58,10 +58,7 @@ pub(super) fn propagate(
     }
 }
 
-pub(super) fn propagate_peak_pressure(
-    grid: &AcousticGrid,
-    speed_m_s: &Array2<f64>,
-) -> Vec<f32> {
+pub(super) fn propagate_peak_pressure(grid: &AcousticGrid, speed_m_s: &Array2<f64>) -> Vec<f32> {
     let n = grid.nx * grid.ny;
     let mut previous = vec![0.0_f32; n];
     let mut current = vec![0.0_f32; n];

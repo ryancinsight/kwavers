@@ -63,7 +63,8 @@ pub(super) fn apply_shifted_green_spectral_with_boundary(
         reference_wavenumber,
         epsilon,
         source_density,
-        false,
+        SpectralApplication::Forward,
+        SpectralSymbol::ContinuousHelmholtz,
         absorbing_boundary,
     )
 }
@@ -80,9 +81,71 @@ pub(super) fn apply_shifted_green_spectral_adjoint_with_boundary(
         reference_wavenumber,
         epsilon,
         field,
-        true,
+        SpectralApplication::Adjoint,
+        SpectralSymbol::ContinuousHelmholtz,
         absorbing_boundary,
     )
+}
+
+pub(super) fn apply_shifted_green_pstd_spectral_with_boundary(
+    grid: GridSpec,
+    reference_wavenumber: f64,
+    epsilon: f64,
+    source_density: &[Complex64],
+    time_step_s: f64,
+    reference_sound_speed_m_s: f64,
+    absorbing_boundary: AbsorbingBoundary,
+) -> Vec<Complex64> {
+    apply_spectral_multiplier(
+        grid,
+        reference_wavenumber,
+        epsilon,
+        source_density,
+        SpectralApplication::Forward,
+        SpectralSymbol::PstdLeapfrog {
+            time_step_s,
+            reference_sound_speed_m_s,
+        },
+        absorbing_boundary,
+    )
+}
+
+pub(super) fn apply_shifted_green_pstd_spectral_adjoint_with_boundary(
+    grid: GridSpec,
+    reference_wavenumber: f64,
+    epsilon: f64,
+    field: &[Complex64],
+    time_step_s: f64,
+    reference_sound_speed_m_s: f64,
+    absorbing_boundary: AbsorbingBoundary,
+) -> Vec<Complex64> {
+    apply_spectral_multiplier(
+        grid,
+        reference_wavenumber,
+        epsilon,
+        field,
+        SpectralApplication::Adjoint,
+        SpectralSymbol::PstdLeapfrog {
+            time_step_s,
+            reference_sound_speed_m_s,
+        },
+        absorbing_boundary,
+    )
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum SpectralApplication {
+    Forward,
+    Adjoint,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum SpectralSymbol {
+    ContinuousHelmholtz,
+    PstdLeapfrog {
+        time_step_s: f64,
+        reference_sound_speed_m_s: f64,
+    },
 }
 
 fn apply_spectral_multiplier(
@@ -90,7 +153,8 @@ fn apply_spectral_multiplier(
     reference_wavenumber: f64,
     epsilon: f64,
     values: &[Complex64],
-    adjoint: bool,
+    application: SpectralApplication,
+    symbol: SpectralSymbol,
     absorbing_boundary: AbsorbingBoundary,
 ) -> Vec<Complex64> {
     let weights =
@@ -110,12 +174,9 @@ fn apply_spectral_multiplier(
             let ky = angular_mode(iy, ny, grid.spacing_m);
             for iz in 0..nz {
                 let kz = angular_mode(iz, nz, grid.spacing_m);
-                let denominator = Complex64::new(
-                    reference_wavenumber
-                        .mul_add(reference_wavenumber, -(kx * kx + ky * ky + kz * kz)),
-                    epsilon,
-                );
-                let multiplier = if adjoint {
+                let denominator =
+                    spectral_denominator(symbol, reference_wavenumber, epsilon, kx, ky, kz);
+                let multiplier = if application == SpectralApplication::Adjoint {
                     Complex64::new(1.0, 0.0) / denominator.conj()
                 } else {
                     Complex64::new(1.0, 0.0) / denominator
@@ -131,6 +192,44 @@ fn apply_spectral_multiplier(
         *value *= weight;
     }
     real_space.iter().copied().collect()
+}
+
+fn spectral_denominator(
+    symbol: SpectralSymbol,
+    reference_wavenumber: f64,
+    epsilon: f64,
+    kx: f64,
+    ky: f64,
+    kz: f64,
+) -> Complex64 {
+    let grid_wavenumber_squared = kx.mul_add(kx, ky.mul_add(ky, kz * kz));
+    let real = match symbol {
+        SpectralSymbol::ContinuousHelmholtz => {
+            reference_wavenumber.mul_add(reference_wavenumber, -grid_wavenumber_squared)
+        }
+        SpectralSymbol::PstdLeapfrog {
+            time_step_s,
+            reference_sound_speed_m_s,
+        } => pstd_leapfrog_symbol(
+            reference_wavenumber,
+            grid_wavenumber_squared.sqrt(),
+            time_step_s,
+            reference_sound_speed_m_s,
+        ),
+    };
+    Complex64::new(real, epsilon)
+}
+
+fn pstd_leapfrog_symbol(
+    reference_wavenumber: f64,
+    grid_wavenumber: f64,
+    time_step_s: f64,
+    reference_sound_speed_m_s: f64,
+) -> f64 {
+    let scale = reference_sound_speed_m_s * time_step_s;
+    let temporal = 4.0 * (0.5 * reference_wavenumber * scale).sin().powi(2);
+    let spatial = 4.0 * (0.5 * grid_wavenumber * scale).sin().powi(2);
+    (temporal - spatial) / (scale * scale)
 }
 
 fn angular_mode(index: usize, count: usize, spacing_m: f64) -> f64 {

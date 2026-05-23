@@ -101,7 +101,7 @@ impl CompositeMaterialProperties {
     pub fn bone() -> Self {
         Self::builder()
             .acoustic(AcousticPropertyData {
-                density: BONE_DENSITY,       // 1900 kg/m³ (Duck 1990)
+                density: BONE_DENSITY,         // 1900 kg/m³ (Duck 1990)
                 sound_speed: BONE_SOUND_SPEED, // 3500 m/s (Hosokawa & Otani 1997)
                 absorption_coefficient: 0.8,
                 absorption_power: 1.2,

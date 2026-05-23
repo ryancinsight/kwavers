@@ -1,6 +1,5 @@
 //! Mathematical invariance property tests for the narrowband pipeline.
 
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::super::{
     capon::{capon_spatial_spectrum_point, CaponSpectrumConfig},
     snapshots::{SnapshotScenario, SnapshotSelection},
@@ -10,6 +9,7 @@ use crate::analysis::signal_processing::beamforming::{
     covariance::{CovarianceEstimator, CovariancePostProcess},
     utils::steering::SteeringVectorMethod,
 };
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use ndarray::Array3;
 
 #[test]

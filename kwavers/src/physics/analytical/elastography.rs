@@ -151,8 +151,8 @@ pub fn mre_displacement_field(
 
 #[cfg(test)]
 mod tests {
-    use crate::core::constants::fundamental::DENSITY_BLOOD;
     use super::*;
+    use crate::core::constants::fundamental::DENSITY_BLOOD;
 
     #[test]
     fn shear_wave_speed_elastic() {

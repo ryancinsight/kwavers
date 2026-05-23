@@ -28,8 +28,8 @@ pub fn latent_heat_water_j_per_kg(t_celsius: f64) -> f64 {
 
 #[cfg(test)]
 mod tests {
-    use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
     use super::*;
+    use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 
     // Antoine constants for verification: A=8.07131, B=1730.63, C=233.426
     // Unit conversion: 1 mmHg = 133.322 Pa

@@ -1,8 +1,8 @@
 //! Elastic heterogeneous medium factory from wave speed arrays.
 
+use super::HeterogeneousFactory;
 use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use crate::core::constants::thermodynamic::ROOM_TEMPERATURE_K;
-use super::HeterogeneousFactory;
 use crate::domain::medium::heterogeneous::core::HeterogeneousMedium;
 use ndarray::{Array3, ArrayView3};
 

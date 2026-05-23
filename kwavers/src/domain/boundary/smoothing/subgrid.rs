@@ -135,8 +135,8 @@ impl SubgridAveraging {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use approx::assert_relative_eq;
     use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
+    use approx::assert_relative_eq;
     use ndarray::{s, Array3};
 
     #[test]

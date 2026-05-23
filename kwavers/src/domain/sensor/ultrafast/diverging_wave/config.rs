@@ -35,7 +35,7 @@ impl Default for DivergingWaveConfig {
         Self {
             element_positions,
             sound_speed: SOUND_SPEED_TISSUE, // Soft tissue
-            virtual_source_depth: 0.010, // 10 mm behind transducer
+            virtual_source_depth: 0.010,     // 10 mm behind transducer
             f_number: 1.5,
             sampling_frequency: 40.0e6, // 40 MHz
         }

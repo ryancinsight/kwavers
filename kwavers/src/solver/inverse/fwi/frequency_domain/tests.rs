@@ -5,7 +5,8 @@ use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::gradient::objective_and_gradient;
 use super::{
     invert, simulate_frequency_observation, AbsorbingBoundary, Config, DenseConvergentBornOperator,
-    FrequencyObservation, SingleScatterBornOperator, SpectralConvergentBornOperator,
+    FrequencyObservation, PstdSpectralConvergentBornOperator, SingleScatterBornOperator,
+    SpectralConvergentBornOperator,
 };
 use crate::physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::{
     sound_speed_to_slowness, MultiRowRingArray,
@@ -134,6 +135,39 @@ fn spectral_cbs_prediction_is_sensitive_to_sound_speed_volume() {
 }
 
 #[test]
+fn pstd_spectral_cbs_prediction_is_sensitive_to_sound_speed_volume() {
+    let array = MultiRowRingArray::new(4, 1, 0.01, 0.0).expect("ring array");
+    let base = Array3::from_elem((3, 3, 1), SOUND_SPEED_WATER_SIM);
+    let mut perturbed = base.clone();
+    perturbed[[1, 1, 0]] = 1510.0;
+    let config = Config {
+        spacing_m: 0.005,
+        forward_operator: Arc::new(PstdSpectralConvergentBornOperator {
+            iterations: 12,
+            relative_tolerance: 1.0e-12,
+            time_step_s: 1.0e-7,
+            absorbing_boundary: AbsorbingBoundary::disabled(),
+        }),
+        ..Config::default()
+    };
+
+    let base_data =
+        simulate_frequency_observation(&base, &array, 180_000.0, &config).expect("base");
+    let perturbed_data =
+        simulate_frequency_observation(&perturbed, &array, 180_000.0, &config).expect("perturbed");
+    let max_difference = base_data
+        .iter()
+        .zip(perturbed_data.iter())
+        .map(|(&lhs, &rhs)| (lhs - rhs).norm())
+        .fold(0.0, f64::max);
+
+    assert!(
+        max_difference > 1.0e-9,
+        "PSTD spectral CBS must respond to sound-speed changes"
+    );
+}
+
+#[test]
 fn dense_cbs_prediction_rejects_ring_outside_inversion_grid() {
     let array = MultiRowRingArray::new(4, 1, 0.10, 0.0).expect("ring array");
     let model = Array3::from_elem((3, 3, 1), SOUND_SPEED_WATER_SIM);
@@ -249,6 +283,53 @@ fn spectral_cbs_adjoint_gradient_matches_finite_difference() {
     let current_slowness = sound_speed_to_slowness(&current_speed).expect("slowness");
     let (_, gradient) = objective_and_gradient(&current_slowness, &observations, &array, &config)
         .expect("spectral objective gradient");
+
+    let epsilon = 1.0e-8;
+    let mut plus = current_slowness.clone();
+    let mut minus = current_slowness.clone();
+    plus[[1, 1, 0]] += epsilon;
+    minus[[1, 1, 0]] -= epsilon;
+    let (objective_plus, _) =
+        objective_and_gradient(&plus, &observations, &array, &config).expect("plus");
+    let (objective_minus, _) =
+        objective_and_gradient(&minus, &observations, &array, &config).expect("minus");
+    let finite_difference = (objective_plus - objective_minus) / (2.0 * epsilon);
+
+    assert!(
+        (finite_difference - gradient[[1, 1, 0]]).abs()
+            <= 5.0e-4 * finite_difference.abs().max(1.0),
+        "finite_difference={finite_difference}, analytic={}",
+        gradient[[1, 1, 0]]
+    );
+}
+
+#[test]
+fn pstd_spectral_cbs_adjoint_gradient_matches_finite_difference() {
+    let array = MultiRowRingArray::new(4, 1, 0.01, 0.0).expect("ring array");
+    let config = Config {
+        spacing_m: 0.005,
+        estimate_source_scaling: false,
+        forward_operator: Arc::new(PstdSpectralConvergentBornOperator {
+            iterations: 128,
+            relative_tolerance: 1.0e-13,
+            time_step_s: 1.0e-7,
+            absorbing_boundary: AbsorbingBoundary::disabled(),
+        }),
+        ..Config::default()
+    };
+    let mut truth = Array3::from_elem((3, 3, 1), SOUND_SPEED_WATER_SIM);
+    truth[[2, 1, 0]] = 1510.0;
+    let observed =
+        simulate_frequency_observation(&truth, &array, 180_000.0, &config).expect("observed");
+    let observations = [FrequencyObservation::new(
+        180_000.0,
+        observed.slice(ndarray::s![0..2, ..]).to_owned(),
+    )];
+    let mut current_speed = Array3::from_elem((3, 3, 1), 1501.0);
+    current_speed[[0, 0, 0]] = 1490.0;
+    let current_slowness = sound_speed_to_slowness(&current_speed).expect("slowness");
+    let (_, gradient) = objective_and_gradient(&current_slowness, &observations, &array, &config)
+        .expect("PSTD spectral objective gradient");
 
     let epsilon = 1.0e-8;
     let mut plus = current_slowness.clone();

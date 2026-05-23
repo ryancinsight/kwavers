@@ -1,6 +1,6 @@
-use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use super::orchestrator::{IntegratedSonoluminescence, SonoluminescenceEmission};
 use super::spectrum::EmissionParameters;
+use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use crate::physics::bubble_dynamics::bubble_state::BubbleParameters;
 use crate::physics::bubble_dynamics::keller_miksis::KellerMiksisModel;
 use ndarray::Array3;
@@ -47,12 +47,12 @@ mod tests {
         let emission = SonoluminescenceEmission::new((1, 1, 1), EmissionParameters::default());
 
         let spectrum = emission.calculate_spectrum_at_point(
-            10000.0,  // 10,000 K
+            10000.0,              // 10,000 K
             ATMOSPHERIC_PRESSURE, // 1 atm
-            5e-6,     // 5 μm radius
-            0.0,      // No velocity
-            0.0,      // No charge density
-            1.0,      // No compression
+            5e-6,                 // 5 μm radius
+            0.0,                  // No velocity
+            0.0,                  // No charge density
+            1.0,                  // No compression
         );
 
         // Should have emission

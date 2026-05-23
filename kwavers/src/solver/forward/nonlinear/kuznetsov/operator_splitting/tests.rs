@@ -24,9 +24,9 @@ fn test_harmonic_generation() -> Result<(), crate::core::error::KwaversError> {
         dx,
         dy,
         dz,
-        1000.0,              // density
+        1000.0,                             // density
         SOUND_SPEED_WATER_SIM,              // sound speed
-        3.5,                 // B/A for water
+        3.5,                                // B/A for water
         dx / (SOUND_SPEED_WATER_SIM * 4.0), // dt from CFL
     );
 
@@ -128,9 +128,9 @@ fn test_shock_steepening() {
         dx,
         dy,
         dz,
-        1000.0,              // density
+        1000.0,                             // density
         SOUND_SPEED_WATER_SIM,              // sound speed
-        3.5,                 // B/A for water
+        3.5,                                // B/A for water
         dx / (SOUND_SPEED_WATER_SIM * 4.0), // dt from CFL
     );
 

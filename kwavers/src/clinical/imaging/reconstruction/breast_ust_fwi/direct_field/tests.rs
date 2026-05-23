@@ -1,8 +1,8 @@
-use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use super::grid::GridShape;
 use super::metrics::diagnostics_for_prediction;
 use super::predict::{point_source_observation_cube, source_kappa_filtered_source_weights};
 use super::*;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use crate::physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;
 use ndarray::Array3;
 use num_complex::Complex64;
@@ -146,4 +146,44 @@ fn homogeneous_diagnostic_rejects_nonuniform_reference_medium() {
         .expect_err("nonuniform model must reject");
 
     assert!(err.to_string().contains("constant sound speed"));
+}
+
+#[test]
+fn homogeneous_diagnostic_reports_passive_residual_deltas() {
+    let array = MultiRowRingArray::new(4, 1, 0.006, 0.0).expect("array");
+    let config = BreastUstPstdDatasetConfig {
+        spacing_m: 1.0e-3,
+        time_step_s: 1.0e-7,
+        cycles_per_frequency: 1,
+        frequency_bin_cycles: 1,
+        source_amplitude_pa: 1.0e3,
+        density_kg_m3: DENSITY_WATER_NOMINAL,
+        cpml_thickness_cells: 0,
+    };
+    let model = Array3::from_elem((12, 12, 3), SOUND_SPEED_WATER_SIM);
+
+    let diagnostics =
+        diagnose_breast_ust_homogeneous_direct_field(&model, &array, &[200_000.0], config)
+            .expect("homogeneous diagnostics");
+
+    let source_kappa_passive_delta = diagnostics
+        .source_kappa_filtered
+        .passive_only_normalized_l2_residual
+        - diagnostics.point_source.passive_only_normalized_l2_residual;
+    let pstd_passive_delta = diagnostics
+        .pstd_periodic
+        .passive_only_normalized_l2_residual
+        - diagnostics.point_source.passive_only_normalized_l2_residual;
+    assert!(diagnostics
+        .source_kappa_filtered_passive_residual_delta
+        .is_finite());
+    assert!(diagnostics.pstd_periodic_passive_residual_delta.is_finite());
+    assert!(
+        (diagnostics.source_kappa_filtered_passive_residual_delta - source_kappa_passive_delta)
+            .abs()
+            <= 1.0e-15
+    );
+    assert!(
+        (diagnostics.pstd_periodic_passive_residual_delta - pstd_passive_delta).abs() <= 1.0e-15
+    );
 }

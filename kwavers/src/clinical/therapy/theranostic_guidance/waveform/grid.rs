@@ -90,8 +90,7 @@ pub(super) fn acoustic_grid(
     };
     // Normalise injected amplitude by √N_unique so total source energy is
     // independent of element count (matched in forward and adjoint replay).
-    let source_scale = config.source_pressure_pa as f32
-        / (source_cells.len().max(1) as f32).sqrt();
+    let source_scale = config.source_pressure_pa as f32 / (source_cells.len().max(1) as f32).sqrt();
     let source_frequency_hz = config.frequencies_hz[0];
     let receiver_cells = layout
         .therapy_elements

@@ -1,8 +1,8 @@
 //! `BubbleProperties` and `BubbleState` impls for `HeterogeneousTissueMedium`
 
+use super::HeterogeneousTissueMedium;
 use crate::core::constants::cavitation::VAPOR_PRESSURE_WATER;
 use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
-use super::HeterogeneousTissueMedium;
 use crate::domain::grid::Grid;
 use crate::domain::medium::bubble::{BubbleProperties, BubbleState};
 use ndarray::Array3;

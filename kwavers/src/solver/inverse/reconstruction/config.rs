@@ -25,7 +25,7 @@ impl Default for ReconstructionConfig {
         use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
         Self {
             sound_speed: SOUND_SPEED_TISSUE, // Typical speed of sound in water/soft tissue
-            sampling_frequency: 40e6, // 40 MHz typical for ultrasound imaging
+            sampling_frequency: 40e6,        // 40 MHz typical for ultrasound imaging
             algorithm: ReconstructionAlgorithm::BackProjection,
             filter: ReconstructionFilterType::Hamming,
             interpolation: ReconstructionInterpolationMethod::Linear,

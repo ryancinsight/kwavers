@@ -39,8 +39,8 @@ impl Default for BrennerSBSLConditions {
         Self {
             freq_hz: 26_500.0,
             p0_pa: ATMOSPHERIC_PRESSURE,
-            p_a_pa: 1.35e5,   // 1.35 atm driving (Brenner 2002 Table I)
-            r0_m: 5.0e-6,     // 5 µm
+            p_a_pa: 1.35e5, // 1.35 atm driving (Brenner 2002 Table I)
+            r0_m: 5.0e-6,   // 5 µm
             temperature_k: ROOM_TEMPERATURE_K,
             sigma: SURFACE_TENSION_WATER,
             mu: VISCOSITY_WATER,

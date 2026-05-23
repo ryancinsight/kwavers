@@ -19,8 +19,8 @@
 //!     .unwrap();
 //! ```
 
-use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 use super::{ApodizationType, TransducerArray2D, TransducerArray2DConfig};
+use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 
 /// Builder for 2D transducer arrays
 ///

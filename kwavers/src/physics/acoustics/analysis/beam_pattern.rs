@@ -34,7 +34,7 @@ pub enum FarFieldMethod {
 impl Default for BeamPatternConfig {
     fn default() -> Self {
         Self {
-            frequency: 1e6,      // 1 MHz
+            frequency: 1e6,                     // 1 MHz
             sound_speed: SOUND_SPEED_WATER_SIM, // Default sound speed
             far_field_method: FarFieldMethod::Fraunhofer,
             angular_resolution: PI / 180.0, // 1 degree

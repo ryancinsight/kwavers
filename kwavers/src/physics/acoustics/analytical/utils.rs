@@ -166,8 +166,8 @@ impl PhysicsTestUtils {
 
 #[cfg(test)]
 mod tests {
-    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use super::*;
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use crate::domain::grid::Grid;
     use ndarray::Array3;
 
@@ -190,8 +190,13 @@ mod tests {
     #[test]
     fn analytical_plane_wave_zero_at_origin_for_t0() {
         let grid = small_grid();
-        let field =
-            PhysicsTestUtils::analytical_plane_wave_with_dispersion(&grid, 1e6, 2.0, SOUND_SPEED_WATER_SIM, 0.0);
+        let field = PhysicsTestUtils::analytical_plane_wave_with_dispersion(
+            &grid,
+            1e6,
+            2.0,
+            SOUND_SPEED_WATER_SIM,
+            0.0,
+        );
         // At t=0 and i=0: phase = k_dispersed·0 = 0 → sin(0) = 0.
         for j in 0..grid.ny {
             for k in 0..grid.nz {
@@ -210,7 +215,11 @@ mod tests {
         let grid = small_grid();
         let amplitude = 5.0_f64;
         let field = PhysicsTestUtils::analytical_plane_wave_with_dispersion(
-            &grid, 1e6, amplitude, SOUND_SPEED_WATER_SIM, 0.0,
+            &grid,
+            1e6,
+            amplitude,
+            SOUND_SPEED_WATER_SIM,
+            0.0,
         );
         for &v in field.iter() {
             assert!(

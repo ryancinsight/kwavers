@@ -162,8 +162,8 @@ impl NonlinearWave {
 
 #[cfg(test)]
 mod tests {
-    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use super::super::wave_model::NonlinearWave;
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use crate::domain::grid::Grid;
     use crate::domain::medium::HomogeneousMedium;
     use crate::physics::traits::AcousticWaveModel;

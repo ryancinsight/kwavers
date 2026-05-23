@@ -6,13 +6,13 @@ use super::*;
 #[test]
 fn test_compute_delay() {
     let delay = compute_delay(
-        32,     // center element
-        64,     // 64-element array
-        512,    // sample index
-        0.0003, // 300 µm pitch
-        0.05,   // 50 mm focal depth
+        32,                 // center element
+        64,                 // 64-element array
+        512,                // sample index
+        0.0003,             // 300 µm pitch
+        0.05,               // 50 mm focal depth
         SOUND_SPEED_TISSUE, // sound speed
-        40e6,   // 40 MHz sampling
+        40e6,               // 40 MHz sampling
     )
     .unwrap();
 
@@ -24,12 +24,12 @@ fn test_compute_delay() {
 #[test]
 fn test_compute_weights() {
     let weights = compute_weights(
-        64,     // 64 elements
-        512,    // sample index
-        0.0003, // 300 µm pitch
-        0.05,   // 50 mm focal depth
+        64,                 // 64 elements
+        512,                // sample index
+        0.0003,             // 300 µm pitch
+        0.05,               // 50 mm focal depth
         SOUND_SPEED_TISSUE, // m/s
-        5e6,    // 5 MHz center frequency
+        5e6,                // 5 MHz center frequency
     )
     .unwrap();
 
@@ -88,12 +88,12 @@ fn test_hanning_apodization() {
 #[test]
 fn test_weight_symmetry() {
     let weights = compute_weights(
-        32,     // 32 elements
-        100,    // sample index
-        0.0003, // pitch
-        0.04,   // focal depth
+        32,                 // 32 elements
+        100,                // sample index
+        0.0003,             // pitch
+        0.04,               // focal depth
         SOUND_SPEED_TISSUE, // sound speed
-        5e6,    // frequency
+        5e6,                // frequency
     )
     .unwrap();
 

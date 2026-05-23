@@ -2,8 +2,8 @@
 
 use ndarray::Array2;
 
-use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 use super::{Beamformer, TimeDomainBeamformer};
+use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 use crate::core::error::KwaversResult;
 
 // Mock beamformer for trait validation

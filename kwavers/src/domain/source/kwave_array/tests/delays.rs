@@ -1,7 +1,7 @@
 //! Focus delay and element setter tests for [`KWaveArray`].
 
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::super::KWaveArray;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
 #[test]
 fn test_kwave_array_setters_preserve_elements() {

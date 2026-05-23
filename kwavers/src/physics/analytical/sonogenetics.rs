@@ -285,7 +285,10 @@ mod tests {
         assert_eq!(ispta_w_cm2(&[], 1e-7, 1000.0, SOUND_SPEED_WATER_SIM), 0.0);
         assert_eq!(ispta_w_cm2(&[1.0], 0.0, 1000.0, SOUND_SPEED_WATER_SIM), 0.0);
         assert_eq!(ispta_w_cm2(&[1.0], 1e-7, 0.0, SOUND_SPEED_WATER_SIM), 0.0);
-        assert_eq!(ispta_w_cm2(&[1.0], 1e-7, 1000.0, -SOUND_SPEED_WATER_SIM), 0.0);
+        assert_eq!(
+            ispta_w_cm2(&[1.0], 1e-7, 1000.0, -SOUND_SPEED_WATER_SIM),
+            0.0
+        );
 
         let ispta = ispta_w_cm2(&[1.0, f64::NAN, 1.0], 1.0, 1.0, 1.0);
         assert!((ispta - (2.0 / 3.0) * 1e-4).abs() < 1e-16);

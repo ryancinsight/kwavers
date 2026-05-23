@@ -66,8 +66,8 @@ impl InterfaceProperties {
 
 #[cfg(test)]
 mod tests {
-    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use super::*;
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use crate::physics::acoustics::analytical::propagation::AnalyticalMediumProperties;
 
     /// Construct an `Interface` between two media with given acoustic impedances.

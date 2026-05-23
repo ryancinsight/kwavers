@@ -1,5 +1,5 @@
-use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL};
 use super::*;
+use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL};
 use crate::domain::imaging::ultrasound::ceus::Microbubble;
 
 fn test_bubble() -> Microbubble {

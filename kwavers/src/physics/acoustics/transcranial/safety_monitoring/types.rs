@@ -58,10 +58,10 @@ impl SafetyThresholds {
 impl Default for SafetyThresholds {
     fn default() -> Self {
         Self {
-            max_temperature: 43.0,     // Brain tissue limit
-            max_thermal_dose: 240.0,   // CEM43 for brain
+            max_temperature: 43.0,                      // Brain tissue limit
+            max_thermal_dose: 240.0,                    // CEM43 for brain
             max_mechanical_index: MI_LIMIT_SOFT_TISSUE, // FDA limit
-            max_power_density: 100.0,  // W/cm²
+            max_power_density: 100.0,                   // W/cm²
         }
     }
 }

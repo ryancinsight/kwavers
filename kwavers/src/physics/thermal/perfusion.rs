@@ -149,7 +149,8 @@ impl VesselCooling {
                 // velocity_factor accounts for flow-speed-dependent boundary
                 // layer thinning (∝ √v for fixed geometry).
                 let diameter = 2.0 * radius;
-                let h_surface = self.nusselt_number(diameter) * THERMAL_CONDUCTIVITY_BLOOD / diameter;
+                let h_surface =
+                    self.nusselt_number(diameter) * THERMAL_CONDUCTIVITY_BLOOD / diameter;
                 let proximity = 2.0 - distance / radius; // ∈ (0, 1]
                 let velocity_factor = (self.velocity / 0.1).sqrt();
                 let h = h_surface * proximity * velocity_factor;

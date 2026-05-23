@@ -203,7 +203,9 @@ fn hybrid_config_from(config: &SolverConfiguration) -> HybridConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::constants::fundamental::{DENSITY_WATER, DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER};
+    use crate::core::constants::fundamental::{
+        DENSITY_WATER, DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER,
+    };
     use crate::domain::medium::homogeneous::HomogeneousMedium;
 
     #[test]
@@ -241,7 +243,8 @@ mod tests {
     #[test]
     fn assembles_kspace_solver_through_full_kspace_pstd() {
         let grid = Grid::new(4, 4, 4, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
-        let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
+        let medium =
+            HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
         let config = SolverConfiguration {
             solver_type: SolverType::KSpace,
             max_steps: 2,
@@ -332,7 +335,8 @@ mod tests {
     #[test]
     fn reports_unavailable_fem_grid_assembly_without_not_implemented() {
         let grid = Grid::new(4, 4, 4, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
-        let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
+        let medium =
+            HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
         let config = SolverConfiguration::default();
 
         let error = SimulationSolverFactory::create_solver(SolverType::FEM, config, &grid, &medium)

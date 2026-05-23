@@ -169,9 +169,8 @@ mod tests {
         w.precompute_k_squared(&grid);
 
         // cos(π·i) alternates ±1: DFT energy concentrated at index N/2 = 6
-        let p_nyquist = Array3::from_shape_fn((n, n, n), |(i, _j, _k)| {
-            1e5_f64 * (PI * i as f64).cos()
-        });
+        let p_nyquist =
+            Array3::from_shape_fn((n, n, n), |(i, _j, _k)| 1e5_f64 * (PI * i as f64).cos());
 
         let term = w
             .compute_nonlinear_term(&p_nyquist, &medium, &grid)

@@ -243,8 +243,28 @@ fn validate_inputs(
 }
 
 fn validate_operator(grid: GridSpec, operator: GreenOperatorKind) -> KwaversResult<()> {
-    if let GreenOperatorKind::SpectralPeriodic { absorbing_boundary } = operator {
-        absorbing_boundary.validate_for_grid(grid)?;
+    match operator {
+        GreenOperatorKind::DenseFreeSpace => {}
+        GreenOperatorKind::SpectralPeriodic { absorbing_boundary } => {
+            absorbing_boundary.validate_for_grid(grid)?;
+        }
+        GreenOperatorKind::SpectralPstdPeriodic {
+            time_step_s,
+            reference_sound_speed_m_s,
+            absorbing_boundary,
+        } => {
+            if !time_step_s.is_finite() || time_step_s <= 0.0 {
+                return Err(KwaversError::InvalidInput(format!(
+                    "PSTD spectral Green time_step_s must be positive and finite, got {time_step_s}"
+                )));
+            }
+            if !reference_sound_speed_m_s.is_finite() || reference_sound_speed_m_s <= 0.0 {
+                return Err(KwaversError::InvalidInput(format!(
+                    "PSTD spectral Green reference sound speed must be positive and finite, got {reference_sound_speed_m_s}"
+                )));
+            }
+            absorbing_boundary.validate_for_grid(grid)?;
+        }
     }
     Ok(())
 }
@@ -260,7 +280,8 @@ fn dense_operator_matrix(
         GreenOperatorKind::DenseFreeSpace => {
             dense_free_space_operator_matrix(grid, reference_wavenumber, epsilon, shifted_potential)
         }
-        GreenOperatorKind::SpectralPeriodic { .. } => operator_matrix_by_columns(
+        GreenOperatorKind::SpectralPeriodic { .. }
+        | GreenOperatorKind::SpectralPstdPeriodic { .. } => operator_matrix_by_columns(
             grid,
             reference_wavenumber,
             epsilon,

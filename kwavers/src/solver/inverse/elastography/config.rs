@@ -27,8 +27,8 @@ impl ShearWaveInversionConfig {
     pub fn new(method: InversionMethod) -> Self {
         Self {
             method,
-            density: DENSITY_WATER_NOMINAL,  // Typical soft tissue density
-            frequency: 100.0, // Typical SWE frequency
+            density: DENSITY_WATER_NOMINAL, // Typical soft tissue density
+            frequency: 100.0,               // Typical SWE frequency
         }
     }
 
@@ -132,9 +132,9 @@ impl NonlinearInversionConfig {
             method,
             density: DENSITY_WATER_NOMINAL, // kg/m³
             acoustic_speed: crate::core::constants::fundamental::SOUND_SPEED_TISSUE, // m/s (typical soft tissue)
-            shear_wave_speed: 3.0,       // m/s (liver-like tissue; Nightingale 2011)
+            shear_wave_speed: 3.0, // m/s (liver-like tissue; Nightingale 2011)
             excitation_frequency: 100.0, // Hz (typical push-pulse SWE)
-            propagation_distance: 0.05,  // m (5 cm focal depth)
+            propagation_distance: 0.05, // m (5 cm focal depth)
             max_iterations: 100,
             tolerance: 1e-6,
         }
@@ -249,8 +249,10 @@ impl Default for NonlinearInversionConfig {
 
 #[cfg(test)]
 mod tests {
-    use crate::core::constants::fundamental::{DENSITY_TISSUE, DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM};
     use super::*;
+    use crate::core::constants::fundamental::{
+        DENSITY_TISSUE, DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM,
+    };
 
     #[test]
     fn test_shear_wave_config_default() {

@@ -1,4 +1,7 @@
 use super::StateDependentConstants;
+use crate::core::constants::fundamental::ACOUSTIC_ABSORPTION_TISSUE;
+use crate::core::constants::numerical::MHZ_TO_HZ;
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use crate::core::constants::water::WaterProperties;
 
 impl StateDependentConstants {
@@ -80,14 +83,14 @@ impl StateDependentConstants {
     /// Attenuation coefficient [Np/m]
     #[must_use]
     pub fn attenuation_coefficient_tissue(&self, frequency: f64, temperature: f64) -> f64 {
-        const ALPHA_0: f64 = 0.5; // dB/(cm·MHz^b)
+        let alpha_0 = ACOUSTIC_ABSORPTION_TISSUE; // dB/(cm·MHz^b)
         const B: f64 = 1.5; // Frequency exponent
-        const T_REF: f64 = 37.0; // Body temperature reference
+        let t_ref = BODY_TEMPERATURE_C; // Body temperature reference [°C]
         const Q10: f64 = 1.3; // Temperature sensitivity
 
-        let f_mhz = frequency / 1e6;
-        let alpha_db_cm = ALPHA_0 * f_mhz.powf(B);
-        let temp_factor = Q10.powf((temperature - T_REF) / 10.0);
+        let f_mhz = frequency / MHZ_TO_HZ;
+        let alpha_db_cm = alpha_0 * f_mhz.powf(B);
+        let temp_factor = Q10.powf((temperature - t_ref) / 10.0);
         let alpha_db_cm_corrected = alpha_db_cm * temp_factor;
 
         alpha_db_cm_corrected * crate::core::constants::DB_TO_NP * 100.0

@@ -1,10 +1,10 @@
 //! Cavitation and bubble-scattering PDE residuals for PINN training.
 
-use crate::core::constants::cavitation::{SURFACE_TENSION_WATER, VAPOR_PRESSURE_WATER};
-use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL};
-use crate::core::constants::acoustic_parameters::AIR_POLYTROPIC_INDEX;
 use super::domain::CavitationCoupledDomain;
 use super::mie_scattering::mie_backscatter_form_function;
+use crate::core::constants::acoustic_parameters::AIR_POLYTROPIC_INDEX;
+use crate::core::constants::cavitation::{SURFACE_TENSION_WATER, VAPOR_PRESSURE_WATER};
+use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL};
 use crate::solver::inverse::pinn::ml::physics::PinnDomainPhysicsParameters;
 use burn::prelude::ElementConversion;
 use burn::tensor::{backend::AutodiffBackend, Tensor};

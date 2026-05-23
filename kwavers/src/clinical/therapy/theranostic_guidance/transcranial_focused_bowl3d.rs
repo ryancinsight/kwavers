@@ -228,8 +228,14 @@ pub fn plan_transcranial_focused_bowl_placement(
     let theta_max = cap_max_polar_rad
         .filter(|v| v.is_finite() && *v > 0.0)
         .unwrap_or(DEFAULT_CAP_MAX_POLAR_RAD);
-    let therapy_elements_m =
-        calvarium_cap_elements(element_count, bowl_radius_m, focus, superior_positive, theta_min, theta_max)?;
+    let therapy_elements_m = calvarium_cap_elements(
+        element_count,
+        bowl_radius_m,
+        focus,
+        superior_positive,
+        theta_min,
+        theta_max,
+    )?;
     let (beam_start_points_m, beam_end_points_m, skull_intersections_m) = sample_beams(
         &therapy_elements_m,
         focus,

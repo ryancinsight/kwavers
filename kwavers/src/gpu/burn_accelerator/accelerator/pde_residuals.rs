@@ -1,8 +1,8 @@
 //! PDE residual computation for physics-informed learning (wave, heat, diffusion, Navier-Stokes).
 
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::super::super::types::{EquationType, GpuPhysicsParameters};
 use super::BurnGpuAccelerator;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use burn::prelude::*;
 use burn::tensor::backend::Backend;
 

@@ -410,7 +410,9 @@ mod tests {
         let p_idx = UnifiedFieldType::Pressure.index();
         let t_idx = UnifiedFieldType::Temperature.index();
         let mut fields = Array4::<f64>::zeros((UnifiedFieldType::COUNT, 4, 3, 2));
-        fields.index_axis_mut(ndarray::Axis(0), t_idx).fill(BODY_TEMPERATURE_C);
+        fields
+            .index_axis_mut(ndarray::Axis(0), t_idx)
+            .fill(BODY_TEMPERATURE_C);
 
         let mut value = 1.0;
         for j in 0..3 {

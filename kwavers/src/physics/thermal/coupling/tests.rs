@@ -1,6 +1,8 @@
-use crate::core::constants::fundamental::{DENSITY_TISSUE, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM};
-use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use super::*;
+use crate::core::constants::fundamental::{
+    DENSITY_TISSUE, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM,
+};
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use ndarray::Array3;
 
 #[test]
@@ -52,11 +54,11 @@ fn test_acoustic_streaming_velocity() {
 #[test]
 fn test_nonlinear_heating() {
     let nl = NonlinearHeating::new(
-        5.0,    // B/A = 5
-        1e5,    // 100 kPa
+        5.0,                   // B/A = 5
+        1e5,                   // 100 kPa
         SOUND_SPEED_WATER_SIM, // m/s
-        DENSITY_TISSUE, // kg/m³
-        1.0e6,  // 1 MHz
+        DENSITY_TISSUE,        // kg/m³
+        1.0e6,                 // 1 MHz
     );
     let power = nl.power();
     assert!(power > 0.0);
@@ -72,7 +74,8 @@ fn test_nonlinear_regime_detection() {
     assert!(!nl_linear.is_nonlinear_significant());
 
     // Nonlinear regime
-    let nl_nonlinear = NonlinearHeating::new(5.0, 5e5, SOUND_SPEED_WATER_SIM, DENSITY_TISSUE, 1.0e6);
+    let nl_nonlinear =
+        NonlinearHeating::new(5.0, 5e5, SOUND_SPEED_WATER_SIM, DENSITY_TISSUE, 1.0e6);
     assert!(nl_nonlinear.is_nonlinear_significant());
 }
 

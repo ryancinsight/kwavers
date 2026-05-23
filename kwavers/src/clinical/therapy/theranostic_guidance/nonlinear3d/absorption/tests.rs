@@ -2,8 +2,8 @@
 //! magnitudes against Treeby-Cox 2010 Eq. 11, zero-attenuation short-circuit,
 //! and the discrete-adjoint transpose identity `⟨A·v, w⟩ = ⟨v, Aᵀ·w⟩`.
 
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::{AbsorptionBuilder, FractionalLaplacianAbsorption};
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
 fn build_homogeneous_operator(
     n: usize,

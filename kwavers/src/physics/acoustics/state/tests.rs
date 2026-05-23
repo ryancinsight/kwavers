@@ -1,6 +1,6 @@
+use super::container::{field_indices, PhysicsState};
 use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use crate::core::constants::thermodynamic::{KELVIN_OFFSET_C, ROOM_TEMPERATURE_K};
-use super::container::{field_indices, PhysicsState};
 use crate::domain::grid::Grid;
 use ndarray::Array3;
 

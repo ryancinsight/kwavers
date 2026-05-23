@@ -1,8 +1,8 @@
 //! Reconstruction algorithm, detector interpolation, and analytical validation tests.
 
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::super::core::PhotoacousticSimulator;
 use super::super::reconstruction;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::domain::grid::Grid;
 use crate::domain::medium::homogeneous::HomogeneousMedium;
 use approx::assert_relative_eq;

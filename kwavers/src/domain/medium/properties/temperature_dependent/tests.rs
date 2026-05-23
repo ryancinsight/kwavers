@@ -1,4 +1,6 @@
-use crate::core::constants::thermodynamic::{BODY_TEMPERATURE_K, KELVIN_OFFSET_C, ROOM_TEMPERATURE_K};
+use crate::core::constants::thermodynamic::{
+    BODY_TEMPERATURE_K, KELVIN_OFFSET_C, ROOM_TEMPERATURE_K,
+};
 
 use super::{
     MaterialPropertiesAtT, TemperatureDependentAcoustic, TemperatureDependentMaterial,
@@ -117,8 +119,13 @@ fn test_validation_physical_constraints() {
         TemperatureDependentAcoustic::new(water.base_properties, 100.0, 0.002, 2.1e-4, 0.02);
     assert!(result.is_err());
 
-    let result =
-        TemperatureDependentAcoustic::new(water.base_properties, ROOM_TEMPERATURE_K, 0.02, 2.1e-4, 0.02);
+    let result = TemperatureDependentAcoustic::new(
+        water.base_properties,
+        ROOM_TEMPERATURE_K,
+        0.02,
+        2.1e-4,
+        0.02,
+    );
     assert!(result.is_err());
 }
 

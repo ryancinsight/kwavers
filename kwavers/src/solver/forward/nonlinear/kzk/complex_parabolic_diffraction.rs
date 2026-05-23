@@ -180,12 +180,12 @@ impl ParabolicDiffractionOperator {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use crate::solver::forward::nonlinear::kzk::constants::{
         DEFAULT_BEAM_WAIST, DEFAULT_FREQUENCY, DEFAULT_GRID_SIZE, DEFAULT_WAVELENGTH,
     };
     use crate::solver::validation::measure_beam_radius;
     use approx::assert_relative_eq;
-    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
     #[test]
     fn test_complex_energy_conservation() {

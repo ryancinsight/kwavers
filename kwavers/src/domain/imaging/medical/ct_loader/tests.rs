@@ -1,5 +1,5 @@
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::loader::CTImageLoader;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::domain::imaging::medical::MedicalImageLoader;
 
 #[test]

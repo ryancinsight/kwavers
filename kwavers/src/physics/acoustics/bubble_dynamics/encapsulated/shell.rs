@@ -92,8 +92,8 @@ impl ShellProperties {
 
 #[cfg(test)]
 mod tests {
-    use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
     use super::*;
+    use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 
     #[test]
     fn test_shell_properties_defaults() {

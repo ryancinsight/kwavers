@@ -57,8 +57,8 @@ pub fn rectified_diffusion_rate(
 
 #[cfg(test)]
 mod tests {
-    use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
     use super::*;
+    use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
     use approx::assert_relative_eq;
 
     // Standard air-in-water parameters (Eller & Flynn 1965 regime)

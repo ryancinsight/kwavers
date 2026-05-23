@@ -1,6 +1,6 @@
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::material::{CavitationDamageMaterialProperties, DamageParameters};
 use super::model::CavitationDamage;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::physics::bubble_dynamics::bubble_field::BubbleStateFields;
 
 #[test]

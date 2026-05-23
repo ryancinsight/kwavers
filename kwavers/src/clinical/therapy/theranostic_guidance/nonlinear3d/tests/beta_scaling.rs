@@ -8,13 +8,13 @@
 //!    forward-steepening signature per leading-order weak-nonlinear theory
 //!    (Hamilton & Blackstock 1998 §4.3: `|P_2| ∝ β · |P_1|² · z`).
 
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::super::encoding::SourceEncoding;
 use super::super::forward::{forward_with_schedule, ForwardInput, TimeSchedule};
 use super::super::types::{GridIndex, Nonlinear3dAperture, SourceDomain};
 use super::super::Nonlinear3dConfig;
 use super::Point3;
 use crate::clinical::therapy::theranostic_guidance::AnatomyKind;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
 /// Linear-baseline negative-control for the Westervelt nonlinearity:
 /// with `β = 0` the Westervelt equation reduces to the linear wave equation,

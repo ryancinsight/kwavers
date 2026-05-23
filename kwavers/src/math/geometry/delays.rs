@@ -264,8 +264,8 @@ pub fn calculate_focal_zone(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use approx::assert_relative_eq;
     use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
+    use approx::assert_relative_eq;
 
     #[test]
     fn focus_phase_delays_are_non_negative_and_symmetric() {
@@ -276,7 +276,8 @@ mod tests {
             [0.75e-3, 0.0, 0.0],
         ];
 
-        let delays = focus_phase_delays(&positions, [0.0, 0.0, 0.05], 1e6, SOUND_SPEED_TISSUE).unwrap();
+        let delays =
+            focus_phase_delays(&positions, [0.0, 0.0, 0.05], 1e6, SOUND_SPEED_TISSUE).unwrap();
 
         for &delay in delays.iter() {
             assert!(delay >= 0.0);
@@ -289,7 +290,8 @@ mod tests {
     #[test]
     fn plane_wave_broadside_has_zero_phase_delays_for_x_array() {
         let positions = vec![[0.0, 0.0, 0.0], [0.001, 0.0, 0.0], [0.002, 0.0, 0.0]];
-        let delays = plane_wave_phase_delays(&positions, [0.0, 0.0, 1.0], 1e6, SOUND_SPEED_TISSUE).unwrap();
+        let delays =
+            plane_wave_phase_delays(&positions, [0.0, 0.0, 1.0], 1e6, SOUND_SPEED_TISSUE).unwrap();
         for &delay in delays.iter() {
             assert_relative_eq!(delay, 0.0, epsilon = 1e-10);
         }

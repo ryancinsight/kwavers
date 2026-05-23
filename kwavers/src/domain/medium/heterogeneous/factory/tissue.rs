@@ -3,15 +3,21 @@
 //! **Factory Pattern**: Encapsulated creation logic per Gang of Four
 //! **Evidence-Based**: Tissue parameters from Hamilton & Blackstock (1998)
 
-use crate::core::constants::acoustic_parameters::{REFERENCE_FREQUENCY_TISSUE_HZ, TISSUE_NONLINEARITY_B_A, VISCOSITY_SOFT_TISSUE};
-use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_TISSUE, SOUND_SPEED_TISSUE};
+use crate::core::constants::acoustic_parameters::{
+    REFERENCE_FREQUENCY_TISSUE_HZ, TISSUE_NONLINEARITY_B_A, VISCOSITY_SOFT_TISSUE,
+};
 use crate::core::constants::cavitation::{
-    GAS_DIFFUSION_COEFFICIENT_TISSUE, POLYTROPIC_EXPONENT_AIR, SURFACE_TENSION_TISSUE, VAPOR_PRESSURE_WATER,
+    GAS_DIFFUSION_COEFFICIENT_TISSUE, POLYTROPIC_EXPONENT_AIR, SURFACE_TENSION_TISSUE,
+    VAPOR_PRESSURE_WATER,
+};
+use crate::core::constants::fundamental::{
+    ACOUSTIC_ABSORPTION_TISSUE, ATMOSPHERIC_PRESSURE, DENSITY_TISSUE, SOUND_SPEED_TISSUE,
 };
 use crate::core::constants::thermodynamic::{
-    BODY_TEMPERATURE_K, SPECIFIC_HEAT_BRAIN, THERMAL_CONDUCTIVITY_BLOOD, THERMAL_DIFFUSIVITY_TISSUE,
-    THERMAL_EXPANSION_SOFT_TISSUE,
+    BODY_TEMPERATURE_K, SPECIFIC_HEAT_BRAIN, THERMAL_CONDUCTIVITY_BLOOD,
+    THERMAL_DIFFUSIVITY_TISSUE, THERMAL_EXPANSION_SOFT_TISSUE,
 };
+use crate::core::constants::MHZ_TO_HZ;
 use crate::domain::grid::Grid;
 use crate::domain::medium::heterogeneous::core::HeterogeneousMedium;
 use log::debug;
@@ -37,17 +43,25 @@ impl TissueFactory {
         let viscosity = Array3::from_elem((grid.nx, grid.ny, grid.nz), VISCOSITY_SOFT_TISSUE);
 
         // Bubble dynamics parameters
-        let surface_tension = Array3::from_elem((grid.nx, grid.ny, grid.nz), SURFACE_TENSION_TISSUE);
+        let surface_tension =
+            Array3::from_elem((grid.nx, grid.ny, grid.nz), SURFACE_TENSION_TISSUE);
         let ambient_pressure = ATMOSPHERIC_PRESSURE;
         let vapor_pressure = Array3::from_elem((grid.nx, grid.ny, grid.nz), VAPOR_PRESSURE_WATER);
-        let polytropic_index = Array3::from_elem((grid.nx, grid.ny, grid.nz), POLYTROPIC_EXPONENT_AIR);
+        let polytropic_index =
+            Array3::from_elem((grid.nx, grid.ny, grid.nz), POLYTROPIC_EXPONENT_AIR);
 
         // Thermal properties
         let specific_heat = Array3::from_elem((grid.nx, grid.ny, grid.nz), SPECIFIC_HEAT_BRAIN);
-        let thermal_conductivity = Array3::from_elem((grid.nx, grid.ny, grid.nz), THERMAL_CONDUCTIVITY_BLOOD);
-        let thermal_expansion = Array3::from_elem((grid.nx, grid.ny, grid.nz), THERMAL_EXPANSION_SOFT_TISSUE);
-        let gas_diffusion_coeff = Array3::from_elem((grid.nx, grid.ny, grid.nz), GAS_DIFFUSION_COEFFICIENT_TISSUE);
-        let thermal_diffusivity = Array3::from_elem((grid.nx, grid.ny, grid.nz), THERMAL_DIFFUSIVITY_TISSUE);
+        let thermal_conductivity =
+            Array3::from_elem((grid.nx, grid.ny, grid.nz), THERMAL_CONDUCTIVITY_BLOOD);
+        let thermal_expansion =
+            Array3::from_elem((grid.nx, grid.ny, grid.nz), THERMAL_EXPANSION_SOFT_TISSUE);
+        let gas_diffusion_coeff = Array3::from_elem(
+            (grid.nx, grid.ny, grid.nz),
+            GAS_DIFFUSION_COEFFICIENT_TISSUE,
+        );
+        let thermal_diffusivity =
+            Array3::from_elem((grid.nx, grid.ny, grid.nz), THERMAL_DIFFUSIVITY_TISSUE);
         let temperature = Array3::from_elem((grid.nx, grid.ny, grid.nz), BODY_TEMPERATURE_K); // 37°C
 
         // Optical properties
@@ -107,7 +121,7 @@ impl TissueFactory {
             lame_mu.mapv(|mu| (2.0_f64 / 3.0).mul_add(-mu, default_bulk_modulus).max(1.0));
 
         // Compute frequency-dependent properties
-        let freq_ratio: f64 = reference_frequency / 1e6;
+        let freq_ratio: f64 = reference_frequency / MHZ_TO_HZ;
         let absorption = alpha0.mapv(|a0| a0 * freq_ratio.powi(1));
         let nonlinearity = b_a.clone();
 

@@ -72,8 +72,18 @@ pub struct BreastUstHomogeneousDirectFieldDiagnostics {
     pub point_source: BreastUstDirectFieldDiagnostics,
     pub source_kappa_filtered: BreastUstDirectFieldDiagnostics,
     pub source_kappa_filtered_residual_delta: f64,
+    /// Passive-channel residual change from point Green to source-kappa Green.
+    ///
+    /// Negative values mean the source-kappa reference explains more passive
+    /// receiver energy after row-wise source scaling.
+    pub source_kappa_filtered_passive_residual_delta: f64,
     pub pstd_periodic: BreastUstDirectFieldDiagnostics,
     pub pstd_periodic_residual_delta: f64,
+    /// Passive-channel residual change from point Green to finite-grid PSTD Green.
+    ///
+    /// This is the direct clinical diagnostic for the passive propagation
+    /// contract because it excludes co-located active source/receiver channels.
+    pub pstd_periodic_passive_residual_delta: f64,
     pub model_family: &'static str,
 }
 
@@ -163,8 +173,13 @@ pub fn diagnose_breast_ust_homogeneous_direct_field(
     Ok(BreastUstHomogeneousDirectFieldDiagnostics {
         source_kappa_filtered_residual_delta: source_kappa_filtered.normalized_l2_residual
             - point_source.normalized_l2_residual,
+        source_kappa_filtered_passive_residual_delta: source_kappa_filtered
+            .passive_only_normalized_l2_residual
+            - point_source.passive_only_normalized_l2_residual,
         pstd_periodic_residual_delta: pstd_periodic.normalized_l2_residual
             - point_source.normalized_l2_residual,
+        pstd_periodic_passive_residual_delta: pstd_periodic.passive_only_normalized_l2_residual
+            - point_source.passive_only_normalized_l2_residual,
         point_source,
         source_kappa_filtered,
         pstd_periodic,

@@ -1,6 +1,5 @@
 //! End-to-end pipeline and diagonal-loading integration tests.
 
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::super::{
     capon::{capon_spatial_spectrum_point, CaponSpectrumConfig},
     snapshots::{extract_narrowband_snapshots, SnapshotScenario, SnapshotSelection},
@@ -10,6 +9,7 @@ use crate::analysis::signal_processing::beamforming::{
     covariance::{CovarianceEstimator, CovariancePostProcess},
     utils::steering::SteeringVectorMethod,
 };
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
 #[test]
 fn end_to_end_pipeline_produces_finite_spectrum() {

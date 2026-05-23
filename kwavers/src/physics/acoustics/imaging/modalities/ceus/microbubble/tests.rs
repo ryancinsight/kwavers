@@ -3,8 +3,8 @@
 //! This file is already gated by `#[cfg(test)] mod tests;` in the parent
 //! `mod.rs`, so an inner `mod tests { ... }` would be redundant nesting.
 
-use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use super::dynamics::BubbleDynamics;
+use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use crate::domain::imaging::ultrasound::ceus::{Microbubble, MicrobubblePopulation};
 
 #[test]

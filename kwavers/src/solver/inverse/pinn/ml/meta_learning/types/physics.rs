@@ -1,6 +1,8 @@
 //! Physics parameters for meta-learning task governing equations.
 
-use crate::core::constants::fundamental::{DENSITY_TISSUE, DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM};
+use crate::core::constants::fundamental::{
+    DENSITY_TISSUE, DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM,
+};
 
 /// Physics parameters defining the task's governing equations
 ///

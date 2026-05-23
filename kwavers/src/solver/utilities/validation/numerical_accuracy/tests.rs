@@ -1,5 +1,5 @@
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::NumericalValidator;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
 fn default_validator() -> NumericalValidator {
     NumericalValidator::new()

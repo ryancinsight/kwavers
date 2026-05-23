@@ -5,8 +5,8 @@ use std::sync::Arc;
 use ndarray::{Array2, Array3};
 use num_complex::Complex64;
 
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::operator::{HelmholtzForwardOperator, SingleScatterBornOperator};
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
 /// Solver model identifier for audit trails.
 pub const FREQUENCY_DOMAIN_FWI_SOLVER_MODEL: &str = "frequency_domain_fwi";
@@ -34,9 +34,10 @@ impl FrequencyObservation {
 ///
 /// The forward-operator selection lives on the dyn-dispatched `forward_operator`
 /// field. Three impls ship in `super::operator`: `SingleScatterBornOperator`,
-/// `DenseConvergentBornOperator`, `SpectralConvergentBornOperator`. Adding a
-/// new operator (BiCGSTAB-preconditioned Helmholtz, sparse-direct, FEM Helmholtz)
-/// is `impl HelmholtzForwardOperator`; no config-enum edit required.
+/// `DenseConvergentBornOperator`, `SpectralConvergentBornOperator`, and
+/// `PstdSpectralConvergentBornOperator`. Adding a new operator
+/// (BiCGSTAB-preconditioned Helmholtz, sparse-direct, FEM Helmholtz) is
+/// `impl HelmholtzForwardOperator`; no config-enum edit required.
 #[derive(Clone, Debug)]
 pub struct Config {
     /// Reference homogeneous sound speed [m/s].

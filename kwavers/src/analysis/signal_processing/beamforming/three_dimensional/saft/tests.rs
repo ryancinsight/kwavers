@@ -1,9 +1,9 @@
 use ndarray::Array4;
 
-use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 use super::super::{Beamforming3dApodizationWindow, BeamformingAlgorithm3D};
 use super::config::SaftConfig;
 use super::processor::{distance3, SaftProcessor};
+use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 
 fn make_processor(nx: usize, ny: usize, nz: usize, ntx: usize, nrx: usize) -> SaftProcessor {
     use super::super::config::BeamformingConfig3D;

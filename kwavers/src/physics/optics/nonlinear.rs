@@ -198,10 +198,10 @@ impl PhotoacousticConversion {
     #[must_use]
     pub fn water() -> Self {
         Self::new(
-            0.13,    // Grüneisen parameter
-            SOUND_SPEED_WATER,  // Speed of sound [m/s] (1482.0 m/s at 20°C, NPL)
-            0.6,     // Thermal conductivity [W/(m·K)]
-            4.186e6, // Volumetric heat capacity [J/(m³·K)]
+            0.13,              // Grüneisen parameter
+            SOUND_SPEED_WATER, // Speed of sound [m/s] (1482.0 m/s at 20°C, NPL)
+            0.6,               // Thermal conductivity [W/(m·K)]
+            4.186e6,           // Volumetric heat capacity [J/(m³·K)]
         )
     }
 

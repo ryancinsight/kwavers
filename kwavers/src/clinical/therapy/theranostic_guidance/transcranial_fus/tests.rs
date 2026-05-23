@@ -1,4 +1,3 @@
-use crate::core::constants::fundamental::{DENSITY_BRAIN, SOUND_SPEED_TISSUE};
 use super::bbb::bbb_opening_dose;
 use super::benchmark::{
     evaluate_pressure_field, run_skull_adaptive_transcranial_benchmark,
@@ -9,6 +8,7 @@ use super::observables::acoustic_fus_observables;
 use super::skull_ray::acoustic_properties_from_hu;
 use super::subspot::gbm_subspot_raster;
 use super::types::TranscranialFusPlanConfig;
+use crate::core::constants::fundamental::{DENSITY_BRAIN, SOUND_SPEED_TISSUE};
 use ndarray::{Array2, Array3};
 
 #[test]
@@ -38,9 +38,16 @@ fn acoustic_properties_brain_branch() {
 
 #[test]
 fn acoustic_properties_bone_branch() {
-    let (c, rho, _alpha) = acoustic_properties_from_hu(2000.0, 650_000.0, SOUND_SPEED_TISSUE, 2800.0);
-    assert!(c > SOUND_SPEED_TISSUE && c <= 2800.0, "sound speed out of range: {c}");
-    assert!(rho > DENSITY_BRAIN && rho <= 1900.0, "density out of range: {rho}");
+    let (c, rho, _alpha) =
+        acoustic_properties_from_hu(2000.0, 650_000.0, SOUND_SPEED_TISSUE, 2800.0);
+    assert!(
+        c > SOUND_SPEED_TISSUE && c <= 2800.0,
+        "sound speed out of range: {c}"
+    );
+    assert!(
+        rho > DENSITY_BRAIN && rho <= 1900.0,
+        "density out of range: {rho}"
+    );
 }
 
 #[test]

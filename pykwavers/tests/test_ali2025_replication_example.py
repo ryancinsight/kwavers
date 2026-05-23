@@ -154,6 +154,60 @@ def test_parse_contracts_and_reduced_geometry():
     assert row_spacing > 0.0
     with pytest.raises(ValueError, match="no larger than"):
         kw.derive_breast_fwi_reduced_array_geometry((10, 10, 4), 1.0e-3, 1, 0.1, None)
+    pstd_spectral = kw.FrequencyDomainFwiConfig(
+        propagation_model="pstd_spectral_convergent_born",
+        pstd_time_step_s=1.0e-7,
+    )
+    assert pstd_spectral.propagation_model == "pstd_spectral_convergent_born"
+
+
+def test_homogeneous_direct_field_reports_passive_residual_deltas():
+    kw = _load_pykwavers()
+    model = np.full((12, 12, 3), 1482.0, dtype=np.float64)
+    array = kw.MultiRowRingArray(4, 1, 0.006, 0.0)
+    config = kw.BreastFwiPstdDatasetConfig(
+        1.0e-3,
+        1.0e-7,
+        1,
+        1,
+        1.0e3,
+        1000.0,
+        0,
+    )
+
+    diagnostics = dict(
+        kw.diagnose_breast_fwi_homogeneous_direct_field(
+            model,
+            array,
+            [200_000.0],
+            config,
+        )
+    )
+    source_kappa = dict(diagnostics["source_kappa_filtered"])
+    pstd_periodic = dict(diagnostics["pstd_periodic"])
+
+    assert np.isfinite(diagnostics["source_kappa_filtered_passive_residual_delta"])
+    assert np.isfinite(diagnostics["pstd_periodic_passive_residual_delta"])
+    assert (
+        abs(
+            diagnostics["source_kappa_filtered_passive_residual_delta"]
+            - (
+                source_kappa["passive_only_normalized_l2_residual"]
+                - diagnostics["passive_only_normalized_l2_residual"]
+            )
+        )
+        <= 1.0e-15
+    )
+    assert (
+        abs(
+            diagnostics["pstd_periodic_passive_residual_delta"]
+            - (
+                pstd_periodic["passive_only_normalized_l2_residual"]
+                - diagnostics["passive_only_normalized_l2_residual"]
+            )
+        )
+        <= 1.0e-15
+    )
 
 
 def test_orthographic_slices_use_center_planes():

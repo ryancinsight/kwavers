@@ -43,11 +43,11 @@
 //! - Santos & Douglas (2008): "Monolithic formulation for coupled multiphase flow"
 //! - Kolski-Andreaco et al. (2015): "Nonlinear acoustic heating in therapeutic ultrasound"
 
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use crate::core::constants::{
     DC_DT_SOFT_TISSUE, DENSITY_WATER_NOMINAL, DRHO_DT_SOFT_TISSUE, SOUND_SPEED_TISSUE,
     THERMAL_DIFFUSIVITY_TISSUE,
 };
-use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use ndarray::Array3;
 
 mod physics;

@@ -1,5 +1,7 @@
 use super::*;
-use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM};
+use crate::core::constants::fundamental::{
+    DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM,
+};
 use crate::solver::inverse::linear_born_inversion::ElementPosition;
 use ndarray::{Array3, ArrayView1};
 use std::f64::consts::PI;

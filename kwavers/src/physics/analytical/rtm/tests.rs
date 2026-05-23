@@ -8,7 +8,18 @@ fn gaussian_beam_size() {
     let x = vec![-1e-3, 0.0, 1e-3];
     let z = vec![0.0, 5e-3, 10e-3];
     let t = Complex64::new(1.0, 0.0);
-    let (re, im) = focused_gaussian_beam_2d(&x, &z, 0.0, 5e-3, 1e6, SOUND_SPEED_WATER_SIM, 1e-3, t, 0.0, 0.1);
+    let (re, im) = focused_gaussian_beam_2d(
+        &x,
+        &z,
+        0.0,
+        5e-3,
+        1e6,
+        SOUND_SPEED_WATER_SIM,
+        1e-3,
+        t,
+        0.0,
+        0.1,
+    );
     assert_eq!(re.len(), 9);
     assert_eq!(im.len(), 9);
 }
@@ -18,7 +29,18 @@ fn gaussian_beam_peak_at_focus() {
     let x = vec![0.0];
     let z: Vec<f64> = vec![-5e-3, 0.0, 5e-3];
     let t = Complex64::new(1.0, 0.0);
-    let (re, _) = focused_gaussian_beam_2d(&x, &z, 0.0, 0.0, 1e6, SOUND_SPEED_WATER_SIM, 1e-3, t, 0.0, 0.1);
+    let (re, _) = focused_gaussian_beam_2d(
+        &x,
+        &z,
+        0.0,
+        0.0,
+        1e6,
+        SOUND_SPEED_WATER_SIM,
+        1e-3,
+        t,
+        0.0,
+        0.1,
+    );
     assert!(re[1].abs() >= re[0].abs().min(re[2].abs()));
 }
 

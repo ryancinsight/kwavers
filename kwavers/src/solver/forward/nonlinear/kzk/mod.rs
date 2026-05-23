@@ -35,6 +35,10 @@
 //! - Strang G (1968). SIAM J. Numer. Anal. 5(3), 506–517. DOI:10.1137/0705041
 //! - Hamilton MF, Blackstock DT (1998). Nonlinear Acoustics. Academic Press.
 
+use crate::core::constants::{
+    ACOUSTIC_ABSORPTION_TISSUE, DENSITY_WATER_NOMINAL, REFERENCE_FREQUENCY_HZ,
+};
+
 pub mod absorption;
 pub mod angular_spectrum_2d;
 pub mod beam_debug;
@@ -119,14 +123,14 @@ impl Default for KZKConfig {
             dt: 10e-9,  // 10 ns
             nt: 1000,
             c0: crate::core::constants::fundamental::SOUND_SPEED_TISSUE, // water/tissue
-            rho0: 1000.0,
-            b_over_a: 5.0, // B/A for water at 25°C (Beyer 1960)
-            alpha0: 0.5,   // dB/cm/MHz
+            rho0: DENSITY_WATER_NOMINAL,
+            b_over_a: 5.0,                      // B/A for water at 25°C (Beyer 1960)
+            alpha0: ACOUSTIC_ABSORPTION_TISSUE, // dB/cm/MHz
             alpha_power: 1.1,
             include_diffraction: true,
             include_absorption: true,
             include_nonlinearity: true,
-            frequency: 1e6, // Default 1 MHz
+            frequency: REFERENCE_FREQUENCY_HZ, // Default 1 MHz
         }
     }
 }

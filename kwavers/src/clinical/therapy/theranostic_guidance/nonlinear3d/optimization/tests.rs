@@ -1,7 +1,7 @@
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::candidate::{fill_candidate_beta, fill_candidate_speed};
 use super::search::{first_descent_block, first_single_parameter_descent_block_test};
 use super::types::{AcceptedBlock, LineSearchWorkspace};
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
 #[test]
 fn line_search_selects_single_parameter_descent_when_coupled_step_increases_objective() {

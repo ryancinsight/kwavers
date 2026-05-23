@@ -1,6 +1,6 @@
-use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use super::solver::EpsteinPlessetStabilitySolver;
 use super::types::{AmplitudeEvolution, OscillationType};
+use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use crate::physics::acoustics::bubble_dynamics::bubble_state::BubbleParameters;
 use approx::assert_relative_eq;
 

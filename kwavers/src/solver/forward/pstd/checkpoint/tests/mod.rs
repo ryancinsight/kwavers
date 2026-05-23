@@ -5,8 +5,8 @@
 
 mod velocity_recording;
 
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::data::PSTDCheckpoint;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::core::error::KwaversError;
 use crate::domain::grid::Grid;
 use crate::domain::medium::HomogeneousMedium;

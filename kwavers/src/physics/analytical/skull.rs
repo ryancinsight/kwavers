@@ -269,7 +269,14 @@ mod tests {
         let z_skull = 7.5e6_f64;
         let z_brain = 1.6e6_f64;
         // Use a very thin layer (d → 0 limit); cos≈1, sin≈0
-        let t = skull_transfer_matrix_transmission(1e6, z_water, z_skull, z_brain, SOUND_SPEED_SKULL, 0.0);
+        let t = skull_transfer_matrix_transmission(
+            1e6,
+            z_water,
+            z_skull,
+            z_brain,
+            SOUND_SPEED_SKULL,
+            0.0,
+        );
         let expected_pressure = 2.0 * z_brain / (z_water + z_brain);
         assert!(
             (t.re - expected_pressure).abs() < 1e-9 && t.im.abs() < 1e-9,
@@ -283,7 +290,8 @@ mod tests {
     #[test]
     fn transfer_matrix_at_matching_impedance() {
         // When Z_skull = Z_water = Z_brain: T → 1 regardless of frequency
-        let t = skull_transfer_matrix_transmission(1e6, 1.5e6, 1.5e6, 1.5e6, SOUND_SPEED_SKULL, 7e-3);
+        let t =
+            skull_transfer_matrix_transmission(1e6, 1.5e6, 1.5e6, 1.5e6, SOUND_SPEED_SKULL, 7e-3);
         // With equal impedances, the 1+Z3/Z1 = 2 and Z3/Z2+Z2/Z1 = 2,
         // so T = 2/(2·cos + i·2·sin) = 1/(cos+i·sin) = exp(-iφ), |T| = 1
         assert!((t.norm() - 1.0).abs() < 1e-8, "|T|={}", t.norm());
@@ -291,7 +299,8 @@ mod tests {
 
     #[test]
     fn surface_temperature_zero_at_t0() {
-        let dt = skull_surface_temperature_rise(&[0.0], 1000.0, 0.5, BONE_DENSITY, SPECIFIC_HEAT_BONE);
+        let dt =
+            skull_surface_temperature_rise(&[0.0], 1000.0, 0.5, BONE_DENSITY, SPECIFIC_HEAT_BONE);
         assert!((dt[0]).abs() < 1e-15);
     }
 }

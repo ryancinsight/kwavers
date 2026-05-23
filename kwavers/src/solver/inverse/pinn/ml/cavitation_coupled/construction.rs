@@ -1,9 +1,9 @@
 //! Constructor, nucleation detection, and coupling-interface factory for
 //! [`CavitationCoupledDomain`].
 
-use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use super::config::{CavitationCouplingConfig, CavitationCouplingType};
 use super::domain::CavitationCoupledDomain;
+use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use crate::physics::bubble_dynamics::{BubbleState, KellerMiksisModel};
 use crate::solver::inverse::pinn::ml::physics::{
     BoundaryPosition, CouplingInterface, CouplingType,

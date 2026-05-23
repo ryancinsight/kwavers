@@ -1,8 +1,8 @@
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::extraction::{extract_stft_bin_snapshots, extract_windowed_snapshots};
 use super::types::{
     SnapshotMethod, SnapshotScenario, SnapshotSelection, StftBinConfig, WindowFunction,
 };
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use approx::assert_relative_eq;
 use ndarray::Array3;
 

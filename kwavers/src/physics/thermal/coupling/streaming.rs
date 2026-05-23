@@ -43,5 +43,4 @@ impl AcousticStreaming {
     pub fn power(&self) -> f64 {
         self.intensity.powi(2) / (self.density * self.sound_speed.powi(3))
     }
-
 }

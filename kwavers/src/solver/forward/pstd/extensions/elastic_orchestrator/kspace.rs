@@ -206,11 +206,11 @@ pub(super) fn spectral_mul_z(
 
 #[cfg(test)]
 mod tests {
-    use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
     use super::super::orchestrator::ElasticPstdOrchestrator;
     use super::super::types::{
         ElasticPstdMedium, ElasticPstdSourceMode, ElasticPstdVelocitySource,
     };
+    use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
     use crate::domain::grid::Grid;
     use ndarray::{Array1, Array3};
     use std::f64::consts::PI;

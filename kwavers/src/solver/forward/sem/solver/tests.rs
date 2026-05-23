@@ -1,6 +1,6 @@
-use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use super::config::SemConfig;
 use super::sem_solver::SemSolver;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use crate::solver::forward::sem::mesh::MeshBuilder;
 use ndarray::Array1;
 use num_complex::Complex64;

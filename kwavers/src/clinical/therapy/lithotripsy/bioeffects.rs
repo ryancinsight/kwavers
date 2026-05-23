@@ -24,9 +24,9 @@ pub struct BioeffectsParameters {
 impl Default for BioeffectsParameters {
     fn default() -> Self {
         Self {
-            thermal_threshold: 240.0,        // 240 CEM43 minutes
+            thermal_threshold: 240.0,                         // 240 CEM43 minutes
             mechanical_index_threshold: MI_LIMIT_SOFT_TISSUE, // FDA guideline
-            max_negative_pressure: 20e6,     // 20 MPa
+            max_negative_pressure: 20e6,                      // 20 MPa
         }
     }
 }

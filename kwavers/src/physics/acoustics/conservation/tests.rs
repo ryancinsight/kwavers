@@ -150,7 +150,8 @@ fn test_second_law_violation_detected() {
     let alpha = uniform_array(shape, -1.0);
     let volume =
         (grid.nx as f64 * grid.dx) * (grid.ny as f64 * grid.dy) * (grid.nz as f64 * grid.dz);
-    let e_init = 1000.0 * 1000.0 / (2.0 * 1000.0 * SOUND_SPEED_WATER_SIM * SOUND_SPEED_WATER_SIM) * volume;
+    let e_init =
+        1000.0 * 1000.0 / (2.0 * 1000.0 * SOUND_SPEED_WATER_SIM * SOUND_SPEED_WATER_SIM) * volume;
     let state = AcousticStateRefs {
         pressure: &p,
         velocity_x: &v,

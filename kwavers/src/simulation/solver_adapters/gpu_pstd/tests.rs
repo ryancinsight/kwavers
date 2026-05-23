@@ -1,15 +1,14 @@
 use super::GpuPstdSimulationAdapter;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER};
 use crate::core::error::KwaversError;
 use crate::domain::grid::Grid;
 use crate::domain::medium::homogeneous::HomogeneousMedium;
 use crate::solver::config::{SolverConfiguration, SolverType};
-use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER};
 
 #[test]
 fn rejects_non_power_of_two_grid() {
     let grid = Grid::new(5, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
-    let medium =
-        HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
+    let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
     let config = SolverConfiguration {
         solver_type: SolverType::PstdGpu,
         dt: 1.0e-7,
@@ -24,8 +23,7 @@ fn rejects_non_power_of_two_grid() {
 #[test]
 fn rejects_axis_exceeding_256() {
     let grid = Grid::new(512, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
-    let medium =
-        HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
+    let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
     let config = SolverConfiguration {
         solver_type: SolverType::PstdGpu,
         dt: 1.0e-7,
@@ -40,8 +38,7 @@ fn rejects_axis_exceeding_256() {
 #[test]
 fn constructs_for_valid_power_of_two_grid() {
     let grid = Grid::new(8, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
-    let medium =
-        HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
+    let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
     let config = SolverConfiguration {
         solver_type: SolverType::PstdGpu,
         dt: 1.0e-7,
@@ -58,8 +55,7 @@ fn constructs_for_valid_power_of_two_grid() {
 #[test]
 fn step_forward_returns_feature_not_available() {
     let grid = Grid::new(8, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
-    let medium =
-        HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
+    let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
     let config = SolverConfiguration {
         solver_type: SolverType::PstdGpu,
         dt: 1.0e-7,
@@ -77,8 +73,7 @@ fn add_sensor_rejects_out_of_bounds_point() {
     use crate::domain::sensor::grid_sampling::{GridPoint, GridSensorSet};
 
     let grid = Grid::new(8, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
-    let medium =
-        HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
+    let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
     let config = SolverConfiguration {
         solver_type: SolverType::PstdGpu,
         dt: 1.0e-7,
@@ -97,8 +92,7 @@ fn add_sensor_valid_points_sets_mask() {
     use crate::domain::sensor::grid_sampling::{GridPoint, GridSensorSet};
 
     let grid = Grid::new(8, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
-    let medium =
-        HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
+    let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
     let config = SolverConfiguration {
         solver_type: SolverType::PstdGpu,
         dt: 1.0e-7,
@@ -106,10 +100,7 @@ fn add_sensor_valid_points_sets_mask() {
     };
 
     let mut adapter = GpuPstdSimulationAdapter::new(&config, &grid, &medium).unwrap();
-    let sensor = GridSensorSet::from_points(vec![
-        GridPoint::new(1, 2, 3),
-        GridPoint::new(4, 5, 6),
-    ]);
+    let sensor = GridSensorSet::from_points(vec![GridPoint::new(1, 2, 3), GridPoint::new(4, 5, 6)]);
     adapter.add_sensor(&sensor).unwrap();
 
     // Mask contains exactly 2 `true` entries at the specified coordinates.
