@@ -127,6 +127,7 @@ impl PhysicsKernel {
     ///
     /// Uses: time = (grid_elements × flops_per_element) / gpu_bandwidth
     /// Typical GPU: 10 TFLOP/s = 10e12 FLOP/s
+    #[must_use]
     pub fn estimate_time_ms(&self, num_elements: usize) -> f64 {
         let total_flops = (num_elements as u64) * self.flops_per_element;
         let gpu_flops_per_sec = 10e12; // Typical modern GPU
@@ -191,6 +192,7 @@ impl PhysicsKernelRegistry {
     }
 
     /// Estimate total execution time for all kernels
+    #[must_use]
     pub fn estimate_total_time_ms(&self, num_elements: usize) -> f64 {
         self.kernels
             .values()

@@ -126,6 +126,7 @@ impl BoundaryLayerManager {
     }
 
     /// Compute the combined absorption at `indices` by summing all active layers.
+    #[must_use]
     pub fn combined_absorption<F>(&self, indices: [usize; 3], profile_fn: F) -> f64
     where
         F: Fn(&BoundaryLayer, usize) -> f64,

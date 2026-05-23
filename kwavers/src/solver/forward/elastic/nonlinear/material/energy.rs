@@ -106,6 +106,7 @@ pub fn ogden_strain_energy(model: &HyperelasticModel, f: &[[f64; 3]; 3]) -> f64 
 /// * `strain_invariant_i2` - Second strain invariant I₂ = tr(C²)
 /// * `volume_ratio_j` - Volume ratio J = det(F)
 /// * `deformation_gradient` - Deformation gradient tensor F (required for Ogden materials)
+#[must_use]
 pub fn compute_strain_energy_derivative_wrt_i1(
     model: &HyperelasticModel,
     _strain_invariant_i1: f64,
@@ -159,6 +160,7 @@ pub fn compute_strain_energy_derivative_wrt_i1(
 /// * `_strain_invariant_i1` - First strain invariant (unused for I₂ derivative)
 /// * `_strain_invariant_i2` - Second strain invariant (unused for derivative)
 /// * `_volume_ratio_j` - Volume ratio (unused for I₂ derivative)
+#[must_use]
 pub fn compute_strain_energy_derivative_wrt_i2(
     model: &HyperelasticModel,
     _strain_invariant_i1: f64,
@@ -188,6 +190,7 @@ pub fn compute_strain_energy_derivative_wrt_i2(
 /// * `_strain_invariant_i1` - First strain invariant (unused for J derivative)
 /// * `_strain_invariant_i2` - Second strain invariant (unused for J derivative)
 /// * `volume_ratio_j` - Volume ratio J = det(F)
+#[must_use]
 pub fn compute_strain_energy_derivative_wrt_j(
     model: &HyperelasticModel,
     _strain_invariant_i1: f64,

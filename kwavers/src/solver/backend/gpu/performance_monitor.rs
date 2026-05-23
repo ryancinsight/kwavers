@@ -268,6 +268,7 @@ impl GpuPerformanceMonitor {
     }
 
     /// Get estimated remaining budget for next step
+    #[must_use]
     pub fn estimated_remaining_budget(&self) -> f64 {
         let avg_time = self.calculate_average(&self.step_times);
         (self.budget_ms - avg_time).max(0.0)

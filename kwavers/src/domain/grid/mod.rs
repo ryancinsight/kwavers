@@ -98,12 +98,14 @@ impl GridDimensions {
 impl Grid {
     /// Get minimum spacing
     #[inline]
+    #[must_use]
     pub fn min_spacing(&self) -> f64 {
         self.dx.min(self.dy).min(self.dz)
     }
 
     /// Get maximum spacing
     #[inline]
+    #[must_use]
     pub fn max_spacing(&self) -> f64 {
         self.dx.max(self.dy).max(self.dz)
     }
@@ -120,6 +122,7 @@ impl Grid {
 
     /// Get grid volume
     #[inline]
+    #[must_use]
     pub fn volume(&self) -> f64 {
         let (lx, ly, lz) = self.physical_size();
         lx * ly * lz
@@ -127,6 +130,7 @@ impl Grid {
 
     /// Get cell volume
     #[inline]
+    #[must_use]
     pub fn cell_volume(&self) -> f64 {
         self.dx * self.dy * self.dz
     }
@@ -180,6 +184,7 @@ impl Grid {
     ///
     /// Uses FDTD stability condition with safety factor
     #[inline]
+    #[must_use]
     pub fn cfl_timestep(&self, max_sound_speed: f64) -> f64 {
         stability::StabilityCalculator::cfl_timestep_fdtd(self, max_sound_speed)
     }
