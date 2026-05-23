@@ -3,7 +3,7 @@
 use super::cbs::{
     apply_shifted_green_adjoint_operator, real_scattering_potential, receiver_adjoint_from_bli,
     sample_array_with_bli, solve_adjoint_volume_field_with_operator,
-    solve_volume_field_with_operator, source_density_from_bli, GridSpec,
+    solve_volume_field_with_operator, source_density_for_operator, GridSpec,
 };
 use super::forward::{incident_field, outgoing_green, validate_forward_inputs, voxel_centers};
 use super::types::{Config, FrequencyObservation};
@@ -98,7 +98,8 @@ fn accumulate_dense_cbs_frequency_gradient(
     let slowness = slowness_s_per_m.iter().copied().collect::<Vec<_>>();
 
     for transmit in 0..rows {
-        let source_density = source_density_from_bli(grid, &array.cylindrical_source(transmit))?;
+        let source_density =
+            source_density_for_operator(grid, &array.cylindrical_source(transmit), operator)?;
         let forward_solution = solve_volume_field_with_operator(
             grid,
             reference_wavenumber,

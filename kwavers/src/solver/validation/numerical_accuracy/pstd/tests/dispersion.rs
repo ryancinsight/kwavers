@@ -1,4 +1,5 @@
 use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use std::f64::consts::PI;
 
 #[test]
@@ -34,7 +35,7 @@ fn test_numerical_dispersion() {
         assert!(
             dispersion_error < expected_error * 10.0,
             "Dispersion error at {} MHz: {:.4} (PPW: {:.1})",
-            freq / 1e6,
+            freq / MHZ_TO_HZ,
             dispersion_error,
             ppw
         );

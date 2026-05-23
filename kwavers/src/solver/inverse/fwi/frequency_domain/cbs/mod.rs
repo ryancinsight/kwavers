@@ -25,7 +25,7 @@ pub use potential::{
 };
 pub use projection::{
     receiver_adjoint_from_bli, sample_array_with_bli, sample_field_with_bli,
-    source_density_from_bli,
+    source_density_for_operator, source_density_from_bli,
 };
 pub use solve::{
     solve_adjoint_volume_field, solve_adjoint_volume_field_with_operator, solve_volume_field,

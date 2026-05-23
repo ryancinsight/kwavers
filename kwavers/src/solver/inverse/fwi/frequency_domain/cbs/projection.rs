@@ -1,10 +1,14 @@
 //! BLI projection helpers for CBS source injection and receiver sampling.
 
+use super::green::GreenOperatorKind;
 use super::grid::{bli_weights, BliConfig, GridSpec, GridWeight};
 use crate::core::error::{KwaversError, KwaversResult};
+use crate::math::fft::{fft_3d_complex_into, ifft_3d_complex_inplace};
 use crate::physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;
 use crate::solver::inverse::linear_born_inversion::ElementPosition;
+use ndarray::Array3;
 use num_complex::Complex64;
+use std::f64::consts::TAU;
 
 /// Project point-source strengths onto cell-centered source density.
 ///
@@ -26,6 +30,69 @@ pub fn source_density_from_bli(
         }
     }
     Ok(source_density)
+}
+
+/// Project sources according to the selected Green-operator discretization.
+///
+/// Continuous Helmholtz operators use bandlimited interpolation. The PSTD
+/// spectral operator uses the same on-grid source mask and k-space source
+/// correction as the time-domain PSTD acquisition generator.
+///
+/// # Errors
+/// Returns an error when source support or operator parameters are invalid.
+pub fn source_density_for_operator(
+    grid: GridSpec,
+    sources: &[ElementPosition],
+    operator: GreenOperatorKind,
+) -> KwaversResult<Vec<Complex64>> {
+    match operator {
+        GreenOperatorKind::DenseFreeSpace | GreenOperatorKind::SpectralPeriodic { .. } => {
+            source_density_from_bli(grid, sources)
+        }
+        GreenOperatorKind::SpectralPstdPeriodic {
+            time_step_s,
+            reference_sound_speed_m_s,
+            ..
+        } => source_density_from_pstd_grid_kappa(
+            grid,
+            sources,
+            time_step_s,
+            reference_sound_speed_m_s,
+        ),
+    }
+}
+
+fn source_density_from_pstd_grid_kappa(
+    grid: GridSpec,
+    sources: &[ElementPosition],
+    time_step_s: f64,
+    reference_sound_speed_m_s: f64,
+) -> KwaversResult<Vec<Complex64>> {
+    validate_pstd_source_parameters(time_step_s, reference_sound_speed_m_s)?;
+    let mut mask = Array3::<Complex64>::zeros(grid.dimensions);
+    for &source in sources {
+        let index = exact_grid_index(grid, source)?;
+        mask[index] += Complex64::new(1.0 / grid.cell_volume_m3(), 0.0);
+    }
+
+    let mut spectrum = Array3::<Complex64>::zeros(grid.dimensions);
+    fft_3d_complex_into(&mask, &mut spectrum);
+    let (nx, ny, nz) = grid.dimensions;
+    for ix in 0..nx {
+        let kx = angular_mode(ix, nx, grid.spacing_m);
+        for iy in 0..ny {
+            let ky = angular_mode(iy, ny, grid.spacing_m);
+            for iz in 0..nz {
+                let kz = angular_mode(iz, nz, grid.spacing_m);
+                let k = kx.mul_add(kx, ky.mul_add(ky, kz * kz)).sqrt();
+                let source_kappa = (0.5 * reference_sound_speed_m_s * time_step_s * k).cos();
+                spectrum[[ix, iy, iz]] *= Complex64::new(source_kappa, 0.0);
+            }
+        }
+    }
+
+    ifft_3d_complex_inplace(&mut spectrum);
+    Ok(spectrum.iter().copied().collect())
 }
 
 /// Sample a cell-centered field at one receiver point through the BLI stencil.
@@ -117,4 +184,54 @@ fn validate_field_len(grid: GridSpec, field: &[Complex64]) -> KwaversResult<()> 
         )));
     }
     Ok(())
+}
+
+fn validate_pstd_source_parameters(
+    time_step_s: f64,
+    reference_sound_speed_m_s: f64,
+) -> KwaversResult<()> {
+    if !time_step_s.is_finite() || time_step_s <= 0.0 {
+        return Err(KwaversError::InvalidInput(format!(
+            "PSTD source projection time_step_s must be positive and finite, got {time_step_s}"
+        )));
+    }
+    if !reference_sound_speed_m_s.is_finite() || reference_sound_speed_m_s <= 0.0 {
+        return Err(KwaversError::InvalidInput(format!(
+            "PSTD source projection reference sound speed must be positive and finite, got {reference_sound_speed_m_s}"
+        )));
+    }
+    Ok(())
+}
+
+fn exact_grid_index(
+    grid: GridSpec,
+    point: ElementPosition,
+) -> KwaversResult<(usize, usize, usize)> {
+    let nearest = [
+        exact_axis_index(grid.dimensions.0, grid.spacing_m, point.x_m)?,
+        exact_axis_index(grid.dimensions.1, grid.spacing_m, point.y_m)?,
+        exact_axis_index(grid.dimensions.2, grid.spacing_m, point.z_m)?,
+    ];
+    Ok((nearest[0], nearest[1], nearest[2]))
+}
+
+fn exact_axis_index(n: usize, spacing_m: f64, value_m: f64) -> KwaversResult<usize> {
+    let raw = value_m / spacing_m + 0.5 * (n - 1) as f64;
+    let rounded = raw.round();
+    let tolerance = 1.0e-9;
+    if (raw - rounded).abs() > tolerance || rounded < 0.0 || rounded > (n - 1) as f64 {
+        return Err(KwaversError::InvalidInput(format!(
+            "PSTD spectral source point coordinate {value_m} is not on the centered grid axis"
+        )));
+    }
+    Ok(rounded as usize)
+}
+
+fn angular_mode(index: usize, count: usize, spacing_m: f64) -> f64 {
+    let signed_index = if index <= count / 2 {
+        index as f64
+    } else {
+        index as f64 - count as f64
+    };
+    TAU * signed_index / (count as f64 * spacing_m)
 }

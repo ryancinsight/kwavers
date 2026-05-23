@@ -8,8 +8,10 @@ use super::spectral::{
     apply_shifted_green_spectral_with_boundary,
 };
 use super::*;
+use crate::solver::inverse::linear_born_inversion::ElementPosition;
 use ndarray::Array3;
 use num_complex::Complex64;
+use std::f64::consts::PI;
 
 #[test]
 fn scattering_potential_matches_slowness_square_contract() {
@@ -137,6 +139,34 @@ fn spectral_green_constant_source_matches_zero_mode_symbol() {
             "value={value}, expected={expected}"
         );
     }
+}
+
+#[test]
+fn pstd_source_density_uses_grid_mask_and_source_kappa_symbol() {
+    let grid = GridSpec::new((2, 1, 1), 1.0e-3).unwrap();
+    let source = [ElementPosition {
+        x_m: -0.5e-3,
+        y_m: 0.0,
+        z_m: 0.0,
+    }];
+    let sound_speed = 1500.0;
+    let time_step = 1.0e-7;
+    let density = source_density_for_operator(
+        grid,
+        &source,
+        GreenOperatorKind::SpectralPstdPeriodic {
+            time_step_s: time_step,
+            reference_sound_speed_m_s: sound_speed,
+            absorbing_boundary: AbsorbingBoundary::disabled(),
+        },
+    )
+    .unwrap();
+    let q = (0.5 * sound_speed * time_step * PI / grid.spacing_m).cos();
+    let scale = 1.0 / grid.cell_volume_m3();
+
+    assert!((density[0].re - 0.5 * (1.0 + q) * scale).abs() <= 1.0e-6);
+    assert!((density[1].re - 0.5 * (1.0 - q) * scale).abs() <= 1.0e-6);
+    assert!(density.iter().all(|value| value.im.abs() <= 1.0e-12));
 }
 
 #[test]

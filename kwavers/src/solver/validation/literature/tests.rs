@@ -1,4 +1,6 @@
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::fundamental::{ACOUSTIC_ABSORPTION_TISSUE, SOUND_SPEED_WATER_SIM};
+use crate::core::constants::fundamental::SOFT_TISSUE_ABSORPTION_POWER_Y;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use super::types::{treeby_2010, pinton_2009, LiteratureValidationResult};
 use super::validator::LiteratureValidator;
 
@@ -52,10 +54,10 @@ fn test_convergence_rate_analysis() {
 
 #[test]
 fn test_absorption_power_law() {
-    let freqs = vec![1e6, 2e6, 3e6, 4e6, 5e6];
+    let freqs = vec![MHZ_TO_HZ, 2.0 * MHZ_TO_HZ, 3.0 * MHZ_TO_HZ, 4.0 * MHZ_TO_HZ, 5.0 * MHZ_TO_HZ];
     let alpha: Vec<f64> = freqs
         .iter()
-        .map(|&f: &f64| 0.5 * (f / 1e6).powf(1.1))
+        .map(|&f: &f64| ACOUSTIC_ABSORPTION_TISSUE * (f / MHZ_TO_HZ).powf(SOFT_TISSUE_ABSORPTION_POWER_Y))
         .collect();
 
     let validator = LiteratureValidator::new();

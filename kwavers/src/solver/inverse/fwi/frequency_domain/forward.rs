@@ -2,7 +2,7 @@
 
 use super::cbs::{
     real_scattering_potential, sample_array_with_bli, solve_volume_field_with_operator,
-    source_density_from_bli, CbsConfig, GreenOperatorKind, GridSpec,
+    source_density_for_operator, CbsConfig, GreenOperatorKind, GridSpec,
 };
 use super::types::{Config, FREQUENCY_DOMAIN_FWI_SOLVER_MODEL};
 use crate::core::error::{KwaversError, KwaversResult};
@@ -108,7 +108,8 @@ pub(super) fn predict_cbs_rows(
     let potential = real_scattering_potential(omega, slowness_s_per_m, reference_slowness)?;
     let mut output = Array2::zeros((transmissions, array.element_count()));
     for transmit in 0..transmissions {
-        let source_density = source_density_from_bli(grid, &array.cylindrical_source(transmit))?;
+        let source_density =
+            source_density_for_operator(grid, &array.cylindrical_source(transmit), operator)?;
         let solution = solve_volume_field_with_operator(
             grid,
             reference_wavenumber,

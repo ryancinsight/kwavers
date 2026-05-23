@@ -27,7 +27,8 @@ use super::super::types::{GridIndex, Nonlinear3dAperture, SourceDomain};
 use super::super::Nonlinear3dConfig;
 use super::Point3;
 use crate::clinical::therapy::theranostic_guidance::AnatomyKind;
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
+use crate::core::constants::numerical::MHZ_TO_HZ;
 
 #[test]
 #[ignore = "Tier 2: Literature validation (Treeby-Cox 2010 plane-wave decay), ~10s runtime"]
@@ -36,8 +37,8 @@ fn fractional_laplacian_absorption_decay_ratio_matches_alpha_omega_y_power_law()
     let cells = n * n * n;
     let spacing_m = 1.5e-4_f64;
     let c0 = SOUND_SPEED_WATER_SIM;
-    let rho0 = 1000.0_f64;
-    let frequency_hz = 1.0e6_f64;
+    let rho0 = DENSITY_WATER_NOMINAL;
+    let frequency_hz = MHZ_TO_HZ; // 1 MHz
     let alpha0_np_per_m_at_1mhz = 5.8_f64;
     let y_exponent = 1.05_f64;
     let wavelength = c0 / frequency_hz; // 1.5 mm
@@ -183,7 +184,7 @@ fn fractional_laplacian_absorption_decay_ratio_matches_alpha_omega_y_power_law()
     let slope = cov_ry / var_r;
     let alpha_fit = -slope;
 
-    let alpha_analytical = alpha0_np_per_m_at_1mhz * (frequency_hz / 1.0e6).powf(y_exponent);
+    let alpha_analytical = alpha0_np_per_m_at_1mhz * (frequency_hz / MHZ_TO_HZ).powf(y_exponent);
     let relative_error = (alpha_fit - alpha_analytical).abs() / alpha_analytical.abs().max(1.0e-12);
 
     assert!(

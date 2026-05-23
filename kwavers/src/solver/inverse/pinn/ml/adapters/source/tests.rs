@@ -1,12 +1,13 @@
 //! Tests for [`PinnAcousticSource`] adapter.
 
 use super::*;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::domain::signal::waveform::SineWave;
 use crate::domain::source::PointSource;
 
 #[test]
 fn test_point_source_adapter() {
-    let signal = Arc::new(SineWave::new(1e6, 1.0, 0.0));
+    let signal = Arc::new(SineWave::new(MHZ_TO_HZ, 1.0, 0.0));
     let position = (0.01, 0.02, 0.03);
     let domain_source = PointSource::new(position, signal);
 
@@ -15,7 +16,7 @@ fn test_point_source_adapter() {
 
     assert_eq!(pinn_source.position, position);
     assert_eq!(pinn_source.source_class, PinnSourceClass::Monopole);
-    assert!((pinn_source.frequency - 1e6).abs() < 1e-6);
+    assert!((pinn_source.frequency - MHZ_TO_HZ).abs() < 1e-6);
     assert!((pinn_source.amplitude - 1.0).abs() < 1e-6);
 }
 
@@ -24,7 +25,7 @@ fn test_source_term_coefficient() {
     let pinn_source = PinnAcousticSource {
         position: (0.0, 0.0, 0.0),
         source_class: PinnSourceClass::Monopole,
-        frequency: 1e6,
+        frequency: MHZ_TO_HZ, // 1 MHz
         amplitude: 100.0,
         phase: 0.0,
         focal_properties: None,
@@ -33,7 +34,7 @@ fn test_source_term_coefficient() {
     let coeff_t0 = pinn_source.source_term_coefficient(0.0);
     assert!((coeff_t0 - 100.0).abs() < 1e-6);
 
-    let t_quarter = 0.25 / 1e6;
+    let t_quarter = 0.25 / MHZ_TO_HZ; // quarter period at 1 MHz
     let coeff_quarter = pinn_source.source_term_coefficient(t_quarter);
     assert!(coeff_quarter.abs() < 1e-6);
 }
@@ -43,7 +44,7 @@ fn test_is_near_position() {
     let pinn_source = PinnAcousticSource {
         position: (0.0, 0.0, 0.0),
         source_class: PinnSourceClass::Monopole,
-        frequency: 1e6,
+        frequency: MHZ_TO_HZ, // 1 MHz
         amplitude: 1.0,
         phase: 0.0,
         focal_properties: None,
@@ -56,8 +57,8 @@ fn test_is_near_position() {
 
 #[test]
 fn test_adapt_multiple_sources() {
-    let signal1 = Arc::new(SineWave::new(1e6, 1.0, 0.0));
-    let signal2 = Arc::new(SineWave::new(2e6, 2.0, 0.0));
+    let signal1 = Arc::new(SineWave::new(MHZ_TO_HZ, 1.0, 0.0));
+    let signal2 = Arc::new(SineWave::new(2.0 * MHZ_TO_HZ, 2.0, 0.0));
 
     let source1: Arc<dyn Source> = Arc::new(PointSource::new((0.0, 0.0, 0.0), signal1));
     let source2: Arc<dyn Source> = Arc::new(PointSource::new((0.01, 0.0, 0.0), signal2));
@@ -66,15 +67,15 @@ fn test_adapt_multiple_sources() {
     let pinn_sources = adapt_sources(&sources, 0.0).expect("Should adapt all sources");
 
     assert_eq!(pinn_sources.len(), 2);
-    assert!((pinn_sources[0].frequency - 1e6).abs() < 1e-6);
-    assert!((pinn_sources[1].frequency - 2e6).abs() < 1e-6);
+    assert!((pinn_sources[0].frequency - MHZ_TO_HZ).abs() < 1e-6);
+    assert!((pinn_sources[1].frequency - 2.0 * MHZ_TO_HZ).abs() < 1e-6);
 }
 
 #[test]
 fn test_focal_properties_extraction() {
     use crate::domain::source::wavefront::gaussian::{GaussianConfig, GaussianSource};
 
-    let signal = Arc::new(SineWave::new(1e6, 1.0, 0.0));
+    let signal = Arc::new(SineWave::new(MHZ_TO_HZ, 1.0, 0.0));
     let config = GaussianConfig {
         focal_point: (0.0, 0.0, 0.05),
         waist_radius: 1e-3,
@@ -116,7 +117,7 @@ fn test_focal_properties_extraction() {
 
 #[test]
 fn test_unfocused_source_no_focal_properties() {
-    let signal = Arc::new(SineWave::new(1e6, 1.0, 0.0));
+    let signal = Arc::new(SineWave::new(MHZ_TO_HZ, 1.0, 0.0));
     let point_source = PointSource::new((0.0, 0.0, 0.0), signal);
 
     let pinn_source = PinnAcousticSource::from_domain_source(&point_source, 0.0)
@@ -127,3 +128,4 @@ fn test_unfocused_source_no_focal_properties() {
         "Point source should not have focal properties"
     );
 }
+
