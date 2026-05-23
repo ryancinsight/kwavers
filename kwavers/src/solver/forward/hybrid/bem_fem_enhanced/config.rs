@@ -1,6 +1,7 @@
 //! Configuration for enhanced BEM-FEM coupling with Burton-Miller support.
 
 use super::super::BemFemCouplingConfig;
+use crate::core::constants::fundamental::SOUND_SPEED_AIR;
 use crate::solver::forward::bem::burton_miller::BurtonMillerConfig;
 
 /// Enhanced BEM-FEM coupling configuration with Burton-Miller support.
@@ -35,7 +36,7 @@ impl Default for EnhancedBemFemConfig {
     fn default() -> Self {
         Self {
             base_config: BemFemCouplingConfig::default(),
-            burton_miller_config: Some(BurtonMillerConfig::new(1000.0, 343.0)),
+            burton_miller_config: Some(BurtonMillerConfig::new(1000.0, SOUND_SPEED_AIR)),
             adaptive_refinement: true,
             max_refinement_level: 5,
             target_interface_error: 1e-4,
@@ -52,10 +53,10 @@ impl EnhancedBemFemConfig {
     pub fn for_sphere_validation(_radius: f64, frequency: f64) -> Self {
         let mut config = Self::default();
 
-        let wavelength = 343.0 / frequency;
+        let wavelength = SOUND_SPEED_AIR / frequency;
         config.min_element_size = wavelength / 10.0;
         config.max_element_size = wavelength / 4.0;
-        config.burton_miller_config = Some(BurtonMillerConfig::new(frequency, 343.0));
+        config.burton_miller_config = Some(BurtonMillerConfig::new(frequency, SOUND_SPEED_AIR));
         config.adaptive_refinement = true;
         config.target_interface_error = 1e-5;
         config.validation_frequencies = Some(vec![frequency]);

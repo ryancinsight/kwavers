@@ -223,13 +223,12 @@ factory** and hardcode their own forward stacks. Correction:
   FWI taxonomy now consistent across both domains
   (`fwi::frequency_domain`, `fwi::time_domain`). 4 example consumers +
   seismic plugin updated. cargo check --lib + --examples clean.
-- **[arch] T15b: time-domain FWI factory migration.** Replace
-  `FdtdSolver::new()` hardcodes in `fwi/time_domain/{forward,adjoint}.rs` with
-  `SimulationSolverFactory::create_solver(SolverType, ...)` so PSTD/Hybrid
-  become config-driven FWI backends. Requires `Solver` trait extension with
-  `step_forward()`, CPML/k-space absorption handling, sensor decoupling,
-  and PSTD adjoint-reciprocity verification. Honest path for the unified
-  "FWI works with any forward solver" principle.
+- **[done] [arch] T15b: time-domain FWI factory migration — CLOSED.**
+  `FwiParameters::build_solver_for_forward` dispatches `SolverType::{FDTD, PSTD}`
+  to `build_fdtd_boxed`/`build_pstd_boxed` and returns `Box<dyn Solver>`.
+  Unsupported types return `KwaversError::InvalidInput`. PSTD forward smoke test
+  and unsupported-type rejection test verified. PSTD adjoint-reciprocity
+  verification remains open (track separately if needed).
 - **[done] [arch] T16: FWI B parallel stack deleted — CLOSED 2026-05-20.**
   Removed `solver/inverse/reconstruction/seismic/fwi/` entirely
   (~1500 LOC across mod, gradient, optimization, regularization, wavefield/*).
@@ -248,12 +247,11 @@ factory** and hardcode their own forward stacks. Correction:
   `DenseConvergentBornOperator`, `SpectralConvergentBornOperator`). Re-exported
   from frequency_domain. 3 unit tests for model_id / cbs_descriptor /
   adjoint-path classification. cargo check --lib exit 0.
-- **[arch] T17b: flip Config to Arc<dyn HelmholtzForwardOperator>.**
-  Per the standards LLM-budget exception, T17a left the
-  `Config.propagation_model: PropagationModel` field intact. T17b removes the
-  enum, replaces the field with `forward_operator: Arc<dyn HelmholtzForwardOperator>`,
-  converts the match blocks in forward.rs + gradient.rs to virtual dispatch,
-  and updates 8 test sites + 1 breast_ust_fwi caller. No compatibility aliases.
+- **[done] [arch] T17b: flip Config to Arc<dyn HelmholtzForwardOperator> — CLOSED.**
+  `Config.forward_operator: Arc<dyn HelmholtzForwardOperator>` is live in
+  `types.rs`. `PropagationModel` enum is fully removed. `forward.rs` and
+  `gradient.rs` dispatch through the trait object. `with_forward_operator` builder
+  method present. No compatibility alias remains.
 
 ## Active Sprint — Ali et al. 2025 Multi-Row Frequency-Domain FWI Replication
 
@@ -549,6 +547,15 @@ breast-imaging reconstruction.
   the hidden formula duplication; the next parity step is to wire the temporal
   transfer into the selectable frequency-domain forward operator and rerun the
   determined probe.
+- **[done] [minor] T8aa: PSTD CBS temporal transfer wiring — CLOSED 2026-05-23.**
+  `PstdSpectralConvergentBornOperator` now carries optional
+  `PstdTemporalTransferConfig` and builds a frequency-specific
+  `PstdTemporalBinConfig` for the selected drive frequency. The CBS descriptor
+  is frequency-aware, so forward prediction and adjoint-gradient reconstruction
+  receive the same finite-window source/bin transfer. PyO3 exposes source
+  amplitude, total cycles, and bin cycles on `FrequencyDomainFwiConfig`, and
+  the Ali 2025 operator-equivalence builder passes the acquisition settings
+  into the Rust operator instead of keeping them only in Python diagnostics.
 - **[done] [patch] T8x: focused source adapter compile closure — CLOSED 2026-05-22.**
   Added the explicit `ElementMap` type to the focused bowl source adapter's
   `HashMap` construction. This resolves the unrelated `E0282` inference defect
@@ -601,9 +608,11 @@ breast-imaging reconstruction.
   residual to `0.5434979751472874`, so source projection/filtering alone is not
   the repair. Receiver projection is now operator-aware and exact-grid for PSTD
   CBS. The PSTD temporal source/frequency-bin transfer formulas are now
-  solver-owned and shared by clinical diagnostics. The next work should wire
-  that temporal transfer into the selectable frequency-domain CBS forward
-  operator and rerun the determined probe.
+  solver-owned, shared by clinical diagnostics, and wired into the selectable
+  PSTD spectral CBS operator. The next work should rerun the determined
+  4x4x3/two-frequency probe and use the new residual ranking to decide whether
+  the remaining gap is CPML/absorbing-boundary alignment or heterogeneous
+  scattering linearization.
 
 ### Deprecation (T2 prerequisite)
 - **[patch] Mark `solver::forward::helmholtz::born_series::convergent::ConvergentBornSolver`

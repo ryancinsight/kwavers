@@ -315,6 +315,13 @@ theorems against an external published reconstruction.
   all-channel residual `0.5233688602227166` and passive-only residual
   `0.5434979751472874`, so source projection/filtering alone is not the parity
   repair.
+- Added PSTD CBS temporal transfer wiring: `PstdSpectralConvergentBornOperator`
+  now accepts `PstdTemporalTransferConfig`, derives the per-frequency
+  finite-window `PstdTemporalBinConfig`, and threads it through the
+  frequency-aware CBS descriptor used by both forward prediction and the
+  adjoint-gradient path. PyO3 exposes the same source amplitude, total cycles,
+  and bin cycles consumed by PSTD acquisition, and the Ali operator-equivalence
+  builder passes those values to Rust.
 - Closed an unrelated focused source adapter compile defect: the focused bowl
   `HashMap` construction now carries the explicit `ElementMap` type, restoring
   full `kwavers` library-test compilation for this verification slice.
@@ -439,10 +446,10 @@ theorems against an external published reconstruction.
    rejects off-grid receiver positions instead of silently applying BLI, closing
    receiver sampling as a hidden interpolation variable. The PSTD temporal
    source/frequency-bin transfer identities now live under the solver CBS
-   theorem boundary and are consumed by the clinical homogeneous direct-field
-   diagnostic. The next repair should wire that temporal transfer into the
-   selectable frequency-domain CBS forward operator rather than active-channel
-   exclusion or inversion tuning.
+   theorem boundary, are consumed by the clinical homogeneous direct-field
+   diagnostic, and are wired into the selectable PSTD spectral CBS forward and
+   adjoint-gradient path. The next repair should rerun the determined probe
+   before changing CPML, boundary, or scattering-linearization assumptions.
 4. **MAT5/HDF5 ingest — CLOSED.** The published phantom file is MATLAB 5.0,
    while alternate user-provided sound-speed phantoms may be HDF5/MAT-v7.3.
    The selected boundary supports both under Rust-owned clinical ingest; Python

@@ -20,7 +20,7 @@ use kwavers::physics::acoustics::imaging::modalities::ultrasound::frequency_doma
 use kwavers::solver::inverse::fwi::frequency_domain::{
     simulate_frequency_observation, AbsorbingBoundary, Config, DenseConvergentBornOperator,
     FrequencyObservation, HelmholtzForwardOperator, PstdSpectralConvergentBornOperator,
-    SingleScatterBornOperator, SpectralConvergentBornOperator,
+    PstdTemporalTransferConfig, SingleScatterBornOperator, SpectralConvergentBornOperator,
 };
 use kwavers::solver::inverse::linear_born_inversion::ElementPosition;
 use ndarray::{s, Array1, Array2, Array3};
@@ -134,7 +134,10 @@ impl PyFrequencyDomainFwiConfig {
         absorbing_thickness_cells = 1,
         absorbing_strength_nepers = 1.5,
         absorbing_order = 2,
-        pstd_time_step_s = 1.0e-7
+        pstd_time_step_s = 1.0e-7,
+        pstd_source_amplitude_pa = 1.0e3,
+        pstd_cycles_per_frequency = 4,
+        pstd_frequency_bin_cycles = 1
     ))]
     #[allow(clippy::too_many_arguments)]
     pub fn new(
@@ -154,6 +157,9 @@ impl PyFrequencyDomainFwiConfig {
         absorbing_strength_nepers: f64,
         absorbing_order: u32,
         pstd_time_step_s: f64,
+        pstd_source_amplitude_pa: f64,
+        pstd_cycles_per_frequency: usize,
+        pstd_frequency_bin_cycles: usize,
     ) -> PyResult<Self> {
         let forward_operator = parse_forward_operator(
             propagation_model,
@@ -164,6 +170,9 @@ impl PyFrequencyDomainFwiConfig {
             absorbing_strength_nepers,
             absorbing_order,
             pstd_time_step_s,
+            pstd_source_amplitude_pa,
+            pstd_cycles_per_frequency,
+            pstd_frequency_bin_cycles,
         )?;
         Ok(Self {
             inner: Config {
@@ -238,6 +247,9 @@ impl PyFrequencyDomainFwiConfig {
         iterations = 64,
         relative_tolerance = 1.0e-10,
         time_step_s = 1.0e-7,
+        source_amplitude_pa = 1.0e3,
+        cycles_per_frequency = 4,
+        frequency_bin_cycles = 1,
         absorbing_thickness_cells = 1,
         absorbing_strength_nepers = 1.5,
         absorbing_order = 2
@@ -246,6 +258,9 @@ impl PyFrequencyDomainFwiConfig {
         iterations: usize,
         relative_tolerance: f64,
         time_step_s: f64,
+        source_amplitude_pa: f64,
+        cycles_per_frequency: usize,
+        frequency_bin_cycles: usize,
         absorbing_thickness_cells: usize,
         absorbing_strength_nepers: f64,
         absorbing_order: u32,
@@ -256,6 +271,11 @@ impl PyFrequencyDomainFwiConfig {
                     iterations,
                     relative_tolerance,
                     time_step_s,
+                    temporal_transfer: Some(PstdTemporalTransferConfig {
+                        source_amplitude_pa,
+                        cycles_per_frequency,
+                        frequency_bin_cycles,
+                    }),
                     absorbing_boundary: AbsorbingBoundary::polynomial(
                         absorbing_thickness_cells,
                         absorbing_strength_nepers,
@@ -418,6 +438,9 @@ fn parse_forward_operator(
     absorbing_strength_nepers: f64,
     absorbing_order: u32,
     pstd_time_step_s: f64,
+    pstd_source_amplitude_pa: f64,
+    pstd_cycles_per_frequency: usize,
+    pstd_frequency_bin_cycles: usize,
 ) -> PyResult<Arc<dyn HelmholtzForwardOperator>> {
     match propagation_model {
         "single_scatter_born" => Ok(Arc::new(SingleScatterBornOperator)),
@@ -439,6 +462,11 @@ fn parse_forward_operator(
             iterations: cbs_iterations,
             relative_tolerance: cbs_relative_tolerance,
             time_step_s: pstd_time_step_s,
+            temporal_transfer: Some(PstdTemporalTransferConfig {
+                source_amplitude_pa: pstd_source_amplitude_pa,
+                cycles_per_frequency: pstd_cycles_per_frequency,
+                frequency_bin_cycles: pstd_frequency_bin_cycles,
+            }),
             absorbing_boundary: parse_absorbing_boundary(
                 absorbing_boundary,
                 absorbing_thickness_cells,

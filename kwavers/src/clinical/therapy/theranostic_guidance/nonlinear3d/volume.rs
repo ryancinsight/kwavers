@@ -2,6 +2,7 @@
 
 use ndarray::Array3;
 
+use crate::core::constants::fundamental::SOUND_SPEED_AIR;
 use crate::core::error::{KwaversError, KwaversResult};
 
 use super::super::scene::target_index_from_mask_fraction_3d;
@@ -112,7 +113,7 @@ pub(crate) fn prepare_volume(
         material::material_maps(anatomy, &ct, &label, &body_mask);
     let true_sound_speed_m_s = Array3::from_shape_fn((n, n, n), |idx| {
         if target_mask[idx] {
-            (background[idx] + config.lesion_delta_c_m_s).max(343.0)
+            (background[idx] + config.lesion_delta_c_m_s).max(SOUND_SPEED_AIR)
         } else {
             background[idx]
         }

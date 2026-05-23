@@ -34,7 +34,9 @@
 //! 4. [`PstdSpectralConvergentBornOperator`]. Same CBS algebra with the
 //!    homogeneous PSTD leapfrog/k-space modal symbol, giving a frequency-domain
 //!    operator that shares the acquisition generator's discrete propagation
-//!    contract.
+//!    contract. When configured with [`PstdTemporalTransferConfig`], the source
+//!    projection also uses the same finite-window source/bin transfer as the
+//!    PSTD acquisition data.
 //!
 //! The gradient is the exact discrete adjoint of the selected forward
 //! operator; finite-difference checks against any [`HelmholtzForwardOperator`]
@@ -54,7 +56,7 @@ pub use operator::{
     SingleScatterBornOperator, SpectralConvergentBornOperator,
 };
 
-pub use cbs::AbsorbingBoundary;
+pub use cbs::{AbsorbingBoundary, PstdTemporalTransferConfig};
 pub use forward::simulate_frequency_observation;
 pub use inversion::invert;
 pub use types::{Config, FrequencyObservation, InversionResult, FREQUENCY_DOMAIN_FWI_SOLVER_MODEL};

@@ -1,6 +1,6 @@
 //! Core data structures for safety monitoring
 
-use crate::core::constants::medical::MI_LIMIT_SOFT_TISSUE;
+use crate::core::constants::medical::{MI_LIMIT_SOFT_TISSUE, THERMAL_DOSE_REFERENCE_TEMP_C};
 use ndarray::Array3;
 
 /// Thermal dose accumulation (CEM43)
@@ -58,7 +58,7 @@ impl SafetyThresholds {
 impl Default for SafetyThresholds {
     fn default() -> Self {
         Self {
-            max_temperature: 43.0,                      // Brain tissue limit
+            max_temperature: THERMAL_DOSE_REFERENCE_TEMP_C, // Brain tissue limit
             max_thermal_dose: 240.0,                    // CEM43 for brain
             max_mechanical_index: MI_LIMIT_SOFT_TISSUE, // FDA limit
             max_power_density: 100.0,                   // W/cm²

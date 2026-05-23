@@ -1,4 +1,4 @@
-use crate::core::constants::medical::MI_LIMIT_SOFT_TISSUE;
+use crate::core::constants::medical::{MI_LIMIT_SOFT_TISSUE, THERMAL_DOSE_REFERENCE_TEMP_C};
 use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use ndarray::Array3;
@@ -16,10 +16,10 @@ impl DomainTreatmentMetrics {
     #[must_use]
     pub fn calculate_thermal_dose(temperature: &Array3<f64>, dt: f64) -> f64 {
         let max_dose_rate = temperature.iter().fold(0.0f64, |acc, &t| {
-            let rate = if t > 43.0 {
-                (t - 43.0).exp2()
+            let rate = if t > THERMAL_DOSE_REFERENCE_TEMP_C {
+                (t - THERMAL_DOSE_REFERENCE_TEMP_C).exp2()
             } else if t > BODY_TEMPERATURE_C {
-                4.0_f64.powf(t - 43.0)
+                4.0_f64.powf(t - THERMAL_DOSE_REFERENCE_TEMP_C)
             } else {
                 0.0
             };

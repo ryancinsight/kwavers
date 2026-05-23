@@ -33,6 +33,13 @@
   UST direct-field diagnostics now consume those modal response functions
   instead of owning a private PSTD recurrence.
 
+### Changed (2026-05-23) - Breast FWI PSTD CBS Temporal Transfer Wiring
+
+- [minor] Expose `PstdTemporalTransferConfig` through the frequency-domain FWI
+  API and PyO3 `FrequencyDomainFwiConfig`, then pass acquisition source
+  amplitude, total cycles, and bin cycles from the Ali 2025 replication config
+  into `PstdSpectralConvergentBornOperator`.
+
 ### Changed (2026-05-23) - Breast FWI PSTD CBS Receiver Projection
 
 - [minor] Route `PstdSpectralConvergentBornOperator` receiver sampling and

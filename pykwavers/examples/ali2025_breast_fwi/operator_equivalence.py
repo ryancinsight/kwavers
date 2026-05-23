@@ -46,6 +46,9 @@ def make_frequency_domain_fwi_config(
         absorbing_strength_nepers=args.absorbing_strength_nepers,
         absorbing_order=args.absorbing_order,
         pstd_time_step_s=args.time_step_s,
+        pstd_source_amplitude_pa=args.source_amplitude_pa,
+        pstd_cycles_per_frequency=args.cycles_per_frequency,
+        pstd_frequency_bin_cycles=args.frequency_bin_cycles,
     )
 
 
