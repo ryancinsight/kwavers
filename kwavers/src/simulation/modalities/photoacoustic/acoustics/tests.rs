@@ -3,6 +3,7 @@
 use super::pressure::{compute_initial_pressure, compute_multi_wavelength_pressure};
 use super::propagation::propagate_acoustic_wave;
 use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::numerical::MPA_TO_PA;
 use crate::domain::grid::Grid;
 use crate::domain::imaging::photoacoustic::InitialPressure;
 use crate::domain::medium::homogeneous::HomogeneousMedium;
@@ -96,11 +97,11 @@ fn test_acoustic_wave_propagation() {
     let grid = Grid::new(16, 16, 8, 0.001, 0.001, 0.001).unwrap();
 
     let mut pressure = Array3::zeros((16, 16, 8));
-    pressure[[8, 8, 4]] = 1e6;
+    pressure[[8, 8, 4]] = MPA_TO_PA;
 
     let initial_pressure = InitialPressure {
         pressure: pressure.clone(),
-        max_pressure: 1e6,
+        max_pressure: MPA_TO_PA,
         fluence: pressure.clone(),
     };
 

@@ -1,4 +1,5 @@
 use crate::core::constants::fundamental::SOUND_SPEED_AIR;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 
 use super::*;
 use ndarray::{Array2, Array3};
@@ -43,7 +44,7 @@ fn test_physics_loss_config_validation() {
         "negative frequency error must mention 'frequency'; got: {err:?}"
     );
 
-    config.frequency = 1_000_000.0;
+    config.frequency = MHZ_TO_HZ;
     config.history_window = 0;
     let err = config.validate().unwrap_err();
     assert!(

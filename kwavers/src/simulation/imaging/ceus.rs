@@ -298,7 +298,7 @@ impl crate::domain::imaging::CEUSOrchestrator for ContrastEnhancedUltrasound {
             .copied()
             .unwrap_or(1.0);
 
-        let frequency = 1.0e6; // Default 1 MHz
+        let frequency = crate::core::constants::numerical::MHZ_TO_HZ; // Default 1 MHz
         self.simulate_acoustic_response(max_pressure, frequency, _time)
     }
 

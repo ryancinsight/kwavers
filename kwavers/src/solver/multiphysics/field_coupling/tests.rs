@@ -1,6 +1,7 @@
 use super::{FieldCouplingStrategy, MultiphysicsFieldCoupler};
 use crate::core::constants::{
     fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE},
+    numerical::MPA_TO_PA,
     thermodynamic::SPECIFIC_HEAT_WATER,
 };
 use crate::core::error::KwaversError;
@@ -105,7 +106,7 @@ fn test_specific_heat_water_within_literature_range() {
 #[test]
 fn weak_coupling_updates_targets_from_source_fields() {
     let coupler = MultiphysicsFieldCoupler::new(FieldCouplingStrategy::Weak);
-    let pressure = 2.0e6_f64;
+    let pressure = 2.0 * MPA_TO_PA;
     let temperature = 37.0_f64;
     let light = 4.0_f64;
     let dt = 0.5_f64;

@@ -6,7 +6,7 @@ use std::collections::HashMap;
 pub mod treeby_2010 {
     pub const SOUND_SPEED: f64 = crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     pub const DENSITY: f64 = crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
-    pub const FREQUENCY: f64 = 1.0e6;
+    pub const FREQUENCY: f64 = crate::core::constants::numerical::MHZ_TO_HZ;
     pub const ABSORPTION_COEF: f64 = 0.0;
     pub const GRID_SIZE: (usize, usize, usize) = (128, 128, 128);
     pub const DX: f64 = 1.0e-4;

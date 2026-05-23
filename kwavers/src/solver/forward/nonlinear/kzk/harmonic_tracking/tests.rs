@@ -1,5 +1,7 @@
 use super::tracker::HarmonicTracker;
 use super::types::{HarmonicAnalysis, HarmonicConfig};
+use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
+use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use ndarray::Array1;
 use std::f64::consts::PI;
 
@@ -62,14 +64,14 @@ fn test_shock_distance_prediction() {
 #[test]
 fn shock_distance_uses_fubini_frequency_dependent_contract() {
     let config = HarmonicConfig {
-        frequency: 1.0e6,
+        frequency: MHZ_TO_HZ,
         b_a: 3.5,
         ..HarmonicConfig::default()
     };
     let tracker = HarmonicTracker::new(config);
-    let pressure_amplitude = 1.0e6;
+    let pressure_amplitude = MPA_TO_PA;
 
-    let rho0: f64 = 1000.0;
+    let rho0: f64 = DENSITY_WATER_NOMINAL;
     let c0: f64 = crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
     let beta = 1.0 + config.b_a / 2.0;
     let omega0 = 2.0 * PI * config.frequency;

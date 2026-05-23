@@ -109,7 +109,7 @@ mod tests {
         let b_over_a = B_OVER_A_WATER_37C;
         let beta = 1.0 + b_over_a / 2.0;
 
-        let frequency = 1.0e6_f64;
+        let frequency = MHZ_TO_HZ;
         let omega = 2.0 * std::f64::consts::PI * frequency;
 
         let p0 = 5.0e4_f64;

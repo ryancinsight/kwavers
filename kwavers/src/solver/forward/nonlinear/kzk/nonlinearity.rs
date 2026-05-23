@@ -292,6 +292,7 @@ mod tests {
     use crate::core::constants::fundamental::{
         B_OVER_A_WATER, DENSITY_TISSUE, DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM,
     };
+    use crate::core::constants::numerical::MHZ_TO_HZ;
     use crate::solver::forward::nonlinear::kzk::KZKConfig;
 
     /// Helper: minimal `KZKConfig` for unit tests of `KzkNonlinearOperator`.
@@ -344,7 +345,7 @@ mod tests {
         let c0 = SOUND_SPEED_WATER_SIM;
         let rho0 = DENSITY_WATER_NOMINAL;
         let b_over_a = 5.0_f64; // water at 25°C (Beyer 1960)
-        let frequency = 1.0e6_f64; // 1 MHz
+        let frequency = MHZ_TO_HZ; // 1 MHz
         let p0 = 1.0e5_f64; // 100 kPa source amplitude
 
         let config = minimal_config(c0, rho0, b_over_a, frequency);
@@ -428,7 +429,7 @@ mod tests {
         let c0 = SOUND_SPEED_WATER_SIM;
         let rho0 = DENSITY_WATER_NOMINAL;
         let b_over_a = B_OVER_A_WATER;
-        let frequency = 1.0e6_f64;
+        let frequency = MHZ_TO_HZ;
 
         let config = minimal_config(c0, rho0, b_over_a, frequency);
         let op = KzkNonlinearOperator::new(&config);

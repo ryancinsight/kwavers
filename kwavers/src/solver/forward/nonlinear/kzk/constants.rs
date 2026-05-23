@@ -6,6 +6,7 @@
 use crate::core::constants::acoustic_parameters::{
     REFERENCE_FREQUENCY_HZ, WATER_ABSORPTION_ALPHA_0,
 };
+use crate::core::constants::numerical::MPA_TO_PA;
 use crate::core::constants::fundamental::{
     ACOUSTIC_ABSORPTION_TISSUE, B_OVER_A_SOFT_TISSUE, B_OVER_A_WATER,
     SOFT_TISSUE_ABSORPTION_POWER_Y, WATER_ABSORPTION_POWER_Y,
@@ -31,7 +32,7 @@ pub const DEFAULT_DT: f64 = 1e-6; // 1 μs
 pub const DEFAULT_BEAM_WAIST: f64 = 5e-3;
 
 /// Default source amplitude: 1 `MPa`
-pub const DEFAULT_AMPLITUDE: f64 = 1e6;
+pub const DEFAULT_AMPLITUDE: f64 = MPA_TO_PA;
 
 /// Threshold factor for beam width measurement (1/e²)
 pub const BEAM_WIDTH_THRESHOLD_FACTOR: f64 = std::f64::consts::E * std::f64::consts::E;

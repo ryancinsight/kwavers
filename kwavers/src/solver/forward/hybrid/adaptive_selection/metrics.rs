@@ -1,5 +1,6 @@
 // adaptive_selection/metrics.rs - Metrics for method selection
 
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::domain::grid::Grid;
 use ndarray::ArrayView3;
 
@@ -247,7 +248,7 @@ impl ComputationalMetrics {
 
     fn compute_resolution_quality(grid: &Grid, sound_speed: f64) -> f64 {
         // Points per wavelength at typical frequency
-        const TYPICAL_FREQUENCY: f64 = 1e6; // 1 MHz
+        const TYPICAL_FREQUENCY: f64 = MHZ_TO_HZ; // 1 MHz
         let wavelength = sound_speed / TYPICAL_FREQUENCY;
         let ppw = wavelength / grid.dx.min(grid.dy).min(grid.dz);
 

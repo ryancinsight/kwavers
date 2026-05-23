@@ -1,4 +1,5 @@
 use super::AcousticSolverBackend;
+use crate::core::constants::numerical::MPA_TO_PA;
 use crate::core::error::KwaversResult;
 use crate::domain::source::Source;
 use ndarray::Array3;
@@ -112,13 +113,13 @@ fn test_backend_intensity_computation() {
     let mut backend = MockBackend::new(3, 3, 3, 1e-7);
 
     // Set non-zero pressure
-    backend.pressure[[1, 1, 1]] = 1e6; // 1 MPa
+    backend.pressure[[1, 1, 1]] = MPA_TO_PA; // 1 MPa
 
     // Compute intensity
     let intensity = backend.get_intensity_field().unwrap();
 
-    // Expected: I = p²/(ρc) = (1e6)² / (1.5e6) ≈ 666.7 kW/m²
-    let expected = (1e6 * 1e6) / 1.5e6;
+    // Expected: I = p²/(ρc) = (1 MPa)² / (1.5 MRayl) ≈ 666.7 kW/m²
+    let expected = (MPA_TO_PA * MPA_TO_PA) / 1.5e6;
     assert!((intensity[[1, 1, 1]] - expected).abs() < 1.0);
 }
 

@@ -4,6 +4,7 @@
 mod tests {
     use super::super::super::*;
     use crate::core::constants::acoustic_parameters::DB_TO_NP;
+    use crate::core::constants::numerical::MHZ_TO_HZ;
     use ndarray::Array2;
 
     /// Test power-law absorption: spectral field amplitude decay.
@@ -52,7 +53,7 @@ mod tests {
         use crate::math::fft::fft_1d_array;
         use ndarray::Array1;
 
-        let frequency = 1.0e6_f64;
+        let frequency = MHZ_TO_HZ;
         // dt chosen so fundamental falls on exact FFT bin: dt = 1/(8·f₀)
         let dt = 1.0 / (8.0 * frequency); // 125 ns
         let nt = 256_usize; // 32 complete periods

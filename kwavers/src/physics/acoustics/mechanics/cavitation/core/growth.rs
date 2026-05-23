@@ -59,13 +59,14 @@ pub fn rectified_diffusion_rate(
 mod tests {
     use super::*;
     use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
+    use crate::core::constants::numerical::MHZ_TO_HZ;
     use approx::assert_relative_eq;
 
     // Standard air-in-water parameters (Eller & Flynn 1965 regime)
     const R0: f64 = 5e-6; // 5 µm bubble radius
     const P0: f64 = ATMOSPHERIC_PRESSURE; // atmospheric pressure [Pa]
     const P_AC: f64 = 120_000.0; // ~1.18 atm acoustic amplitude
-    const FREQ: f64 = 1.0e6; // 1 MHz ultrasound
+    const FREQ: f64 = MHZ_TO_HZ; // 1 MHz ultrasound
     const D_AIR: f64 = 2.0e-9; // O₂ diffusivity in water [m²/s]
     const C_SAT: f64 = 0.26; // dissolved O₂ at saturation [mol/m³]
 
