@@ -619,6 +619,7 @@ fn main() -> KwaversResult<()> {
             smoothness_weight: 0.0,
         },
         source_mute_radius: 0,
+        ..FwiParameters::default()
     };
     println!("  dt              : {:.2} ns", dt * 1e9);
     println!("  f₀              : {:.0} kHz", f0 * 1e-3);

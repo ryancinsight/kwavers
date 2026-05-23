@@ -173,6 +173,7 @@ impl ElasticWaveSolver {
         Ok((history, tracker))
     }
 
+    #[must_use]
     pub fn calculate_volumetric_quality(
         &self,
         tracker: &WaveFrontTracker,

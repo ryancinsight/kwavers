@@ -2,6 +2,7 @@ use super::models::HyperelasticModel;
 use std::f64::consts::PI;
 
 /// Compute strain invariants from deformation gradient
+#[must_use]
 pub fn compute_invariants(_model: &HyperelasticModel, f: &[[f64; 3]; 3]) -> (f64, f64, f64) {
     // Compute right Cauchy-Green tensor C = F^T · F
     let mut c = [[0.0; 3]; 3];

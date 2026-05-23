@@ -42,10 +42,10 @@ fn main() -> KwaversResult<()> {
     let time = Time::new(dt, num_steps);
 
     // Create boundary (using PML for absorption)
-    use kwavers::domain::boundary::pml::{DomainPmlConfig, PMLBoundary};
+    use kwavers::domain::boundary::pml::{DomainPmlConfig, DomainPMLBoundary};
     let pml_config = DomainPmlConfig::default();
     let boundary: Box<dyn kwavers::domain::boundary::Boundary> =
-        Box::new(PMLBoundary::new(pml_config)?);
+        Box::new(DomainPMLBoundary::new(pml_config)?);
 
     // Create solver
     let mut solver = PluginBasedSolver::new(grid.clone(), time, medium.clone(), boundary, source);

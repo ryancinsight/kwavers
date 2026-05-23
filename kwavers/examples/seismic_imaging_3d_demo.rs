@@ -1454,6 +1454,7 @@ fn main() -> KwaversResult<()> {
                 smoothness_weight: 0.0,
             },
             source_mute_radius: 4,
+            ..FwiParameters::default()
         });
         let t0 = Instant::now();
         for &elem_idx in &transmit_indices {
@@ -1492,6 +1493,7 @@ fn main() -> KwaversResult<()> {
                 smoothness_weight: 0.0,
             },
             source_mute_radius: 4,
+            ..FwiParameters::default()
         });
         let mut j = 0.0_f64;
         for (geom, obs) in &shots_fine {
@@ -1535,6 +1537,7 @@ fn main() -> KwaversResult<()> {
                 smoothness_weight: 0.0,
             },
             source_mute_radius: mute_r,
+            ..FwiParameters::default()
         });
 
         let t_scale = Instant::now();
@@ -1601,6 +1604,7 @@ fn main() -> KwaversResult<()> {
                 smoothness_weight: 0.0,
             },
             source_mute_radius: 4,
+            ..FwiParameters::default()
         });
         let mut j = 0.0_f64;
         for (geom, obs) in &shots_fine {
@@ -1706,6 +1710,7 @@ fn main() -> KwaversResult<()> {
                         smoothness_weight: 0.0,
                     },
                     source_mute_radius: 2,
+                    ..FwiParameters::default()
                 });
 
                 let mut brain_shots: Vec<(FwiGeometry, Array2<f64>)> =

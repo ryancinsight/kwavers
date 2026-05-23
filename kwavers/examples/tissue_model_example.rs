@@ -9,7 +9,7 @@
 //! - Azhari (2010) "Basics of Biomedical Ultrasound for Engineers"
 
 use kwavers::{
-    domain::boundary::pml::{DomainPmlConfig, PMLBoundary},
+    domain::boundary::pml::{DomainPmlConfig, DomainPMLBoundary},
     domain::grid::{stability::StabilityCalculator, Grid},
     domain::source::NullSource,
     error::KwaversResult,
@@ -55,7 +55,7 @@ fn main() -> KwaversResult<()> {
     println!("  Simulation time: {:.2} μs", 200.0 * dt * 1e6);
 
     // Boundary conditions (PML for absorption)
-    let boundary = Box::new(PMLBoundary::new(DomainPmlConfig::default())?);
+    let boundary = Box::new(DomainPMLBoundary::new(DomainPmlConfig::default())?);
 
     // Source (null for this demo - in practice would be ultrasound transducer)
     let source = Box::new(NullSource::new());

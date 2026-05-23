@@ -140,6 +140,7 @@ impl GradientFieldUpdater {
     }
 
     /// Compute divergence ∇·v = ∂vx/∂x + ∂vy/∂y + ∂vz/∂z using central differences.
+    #[must_use]
     pub fn compute_divergence(
         vx: &Array3<f64>,
         vy: &Array3<f64>,

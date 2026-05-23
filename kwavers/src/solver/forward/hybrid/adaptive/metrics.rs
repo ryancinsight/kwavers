@@ -19,6 +19,7 @@ pub struct HybridAdaptiveQualityMetrics {
 }
 
 impl DetailedMetrics {
+    #[must_use]
     pub fn compute(field: &Array3<f64>) -> Self {
         Self {
             smoothness: field.std(),

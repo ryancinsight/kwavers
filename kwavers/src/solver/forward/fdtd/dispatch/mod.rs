@@ -105,6 +105,7 @@ impl StencilStrategy {
 }
 
 /// Get global SIMD configuration (thread-safe singleton)
+#[must_use]
 pub fn get_simd_config() -> SimdConfig {
     SIMD_CONFIG.get_or_init(SimdConfig::detect).clone()
 }
