@@ -237,8 +237,9 @@ mod tests {
 
     #[test]
     fn kk_dispersion_no_dispersion_at_y1() {
-        let f = vec![0.5e6, 1e6, 2e6];
-        let c = kramers_kronig_sound_speed(&f, 1.0, 1.0, 1e6, SOUND_SPEED_TISSUE);
+        use crate::core::constants::numerical::MHZ_TO_HZ;
+        let f = vec![0.5 * MHZ_TO_HZ, MHZ_TO_HZ, 2.0 * MHZ_TO_HZ];
+        let c = kramers_kronig_sound_speed(&f, 1.0, 1.0, MHZ_TO_HZ, SOUND_SPEED_TISSUE);
         // At y=1 dispersion is zero; all values equal c_ref
         assert!(c.iter().all(|&v| (v - SOUND_SPEED_TISSUE).abs() < 1.0));
     }

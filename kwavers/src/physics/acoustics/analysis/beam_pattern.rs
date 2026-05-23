@@ -2,6 +2,7 @@
 
 use super::validation::{invalid_parameter, validate_pressure_field_domain};
 use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::{Array2, ArrayView3};
@@ -34,7 +35,7 @@ pub enum FarFieldMethod {
 impl Default for BeamPatternConfig {
     fn default() -> Self {
         Self {
-            frequency: 1e6,                     // 1 MHz
+            frequency: MHZ_TO_HZ,               // 1 MHz
             sound_speed: SOUND_SPEED_WATER_SIM, // Default sound speed
             far_field_method: FarFieldMethod::Fraunhofer,
             angular_resolution: PI / 180.0, // 1 degree
@@ -207,7 +208,7 @@ mod tests {
     #[test]
     fn beam_pattern_config_default_values_match_documentation() {
         let cfg = BeamPatternConfig::default();
-        assert!((cfg.frequency - 1e6).abs() < 1.0, "frequency must be 1 MHz");
+        assert!((cfg.frequency - MHZ_TO_HZ).abs() < 1.0, "frequency must be 1 MHz");
         assert!(
             (cfg.sound_speed - SOUND_SPEED_WATER_SIM).abs() < 1e-10,
             "sound_speed must be 1500 m/s"
@@ -276,7 +277,7 @@ mod tests {
         field[[2, 2, 2]] = 1000.0;
 
         let cfg = BeamPatternConfig {
-            frequency: 1e6,
+            frequency: MHZ_TO_HZ,
             sound_speed: SOUND_SPEED_WATER_SIM,
             far_field_method: FarFieldMethod::Fraunhofer,
             angular_resolution: PI / 6.0, // 30° → n_theta=12, n_phi=6
