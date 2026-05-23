@@ -63,13 +63,13 @@ impl GasType {
     #[must_use]
     pub fn gamma(&self) -> f64 {
         match self {
-            Self::N2 => 1.4,       // Diatomic
-            Self::O2 => 1.4,       // Diatomic
-            Self::Ar => 5.0 / 3.0, // Monatomic
-            Self::He => 5.0 / 3.0, // Monatomic
-            Self::Xe => 5.0 / 3.0, // Monatomic
-            Self::CO2 => 1.289,    // Triatomic
-            Self::H2O => 1.33,     // Triatomic
+            Self::N2 => HEAT_CAPACITY_RATIO_DIATOMIC,  // Diatomic
+            Self::O2 => HEAT_CAPACITY_RATIO_DIATOMIC,  // Diatomic
+            Self::Ar => HEAT_CAPACITY_RATIO_MONATOMIC, // Monatomic
+            Self::He => HEAT_CAPACITY_RATIO_MONATOMIC, // Monatomic
+            Self::Xe => HEAT_CAPACITY_RATIO_MONATOMIC, // Monatomic
+            Self::CO2 => 1.289,                        // Triatomic
+            Self::H2O => 1.33,                         // Triatomic
         }
     }
 }

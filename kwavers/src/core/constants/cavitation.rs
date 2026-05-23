@@ -58,8 +58,11 @@ pub const VAPOR_PRESSURE_WATER: f64 = 2339.0;
 /// Reference: CRC Handbook of Chemistry and Physics, 97th ed., Table 6-5.
 pub const VAPOR_PRESSURE_WATER_25C: f64 = 3169.0;
 
-/// Polytrophic exponent for air
-pub const POLYTROPIC_EXPONENT_AIR: f64 = 1.4;
+/// Polytropic exponent for air [-]
+///
+/// γ = 1.4 for diatomic ideal gas. SSOT: delegates to `HEAT_CAPACITY_RATIO_DIATOMIC`.
+pub const POLYTROPIC_EXPONENT_AIR: f64 =
+    crate::core::constants::thermodynamic::HEAT_CAPACITY_RATIO_DIATOMIC;
 
 /// Van der Waals hard core radius for bubble (m)
 pub const VAN_DER_WAALS_RADIUS: f64 = 8.86e-10;

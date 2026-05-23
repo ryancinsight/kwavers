@@ -10,5 +10,8 @@ pub const MIN_PHYSICAL_VISCOSITY: f64 = 1e-6;
 /// Minimum surface tension (N/m)
 pub const MIN_SURFACE_TENSION: f64 = 1e-6;
 
-/// Default polytropic index for air
-pub const DEFAULT_POLYTROPIC_INDEX: f64 = 1.4;
+/// Default polytropic index for air [-]
+///
+/// γ = 1.4 for diatomic ideal gas. SSOT: delegates to `HEAT_CAPACITY_RATIO_DIATOMIC`.
+pub const DEFAULT_POLYTROPIC_INDEX: f64 =
+    crate::core::constants::thermodynamic::HEAT_CAPACITY_RATIO_DIATOMIC;

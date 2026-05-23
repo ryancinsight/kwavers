@@ -1,4 +1,5 @@
 use super::OpticalPropertyData;
+use crate::core::constants::optical::REFRACTIVE_INDEX_SOFT_TISSUE;
 
 impl OpticalPropertyData {
     /// Construct with validation of physical constraints
@@ -61,7 +62,7 @@ impl OpticalPropertyData {
             absorption_coefficient: 0.5,
             scattering_coefficient: 100.0,
             anisotropy: 0.9,
-            refractive_index: 1.4,
+            refractive_index: REFRACTIVE_INDEX_SOFT_TISSUE,
         }
     }
 
@@ -72,7 +73,7 @@ impl OpticalPropertyData {
             absorption_coefficient: 50.0,
             scattering_coefficient: 200.0,
             anisotropy: 0.95,
-            refractive_index: 1.4,
+            refractive_index: REFRACTIVE_INDEX_SOFT_TISSUE,
         }
     }
 
@@ -83,7 +84,7 @@ impl OpticalPropertyData {
             absorption_coefficient: 80.0,
             scattering_coefficient: 200.0,
             anisotropy: 0.95,
-            refractive_index: 1.4,
+            refractive_index: REFRACTIVE_INDEX_SOFT_TISSUE,
         }
     }
 
@@ -94,7 +95,7 @@ impl OpticalPropertyData {
             absorption_coefficient: 10.0,
             scattering_coefficient: 120.0,
             anisotropy: 0.85,
-            refractive_index: 1.4,
+            refractive_index: REFRACTIVE_INDEX_SOFT_TISSUE,
         }
     }
 
@@ -149,7 +150,7 @@ impl OpticalPropertyData {
             absorption_coefficient: 5.0,
             scattering_coefficient: 300.0,
             anisotropy: 0.8,
-            refractive_index: 1.4,
+            refractive_index: REFRACTIVE_INDEX_SOFT_TISSUE,
         }
     }
 
@@ -160,7 +161,7 @@ impl OpticalPropertyData {
             absorption_coefficient: 1.0,
             scattering_coefficient: 200.0,
             anisotropy: 0.85,
-            refractive_index: 1.4,
+            refractive_index: REFRACTIVE_INDEX_SOFT_TISSUE,
         }
     }
 

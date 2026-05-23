@@ -112,10 +112,12 @@ pub const AIR_SPECIFIC_HEAT_CP: f64 = 1005.0;
 /// Reference: NIST
 pub const AIR_THERMAL_CONDUCTIVITY: f64 = 0.0257;
 
-/// Polytropic index for air
-/// Value: 1.4 (ratio of specific heats)
-/// Reference: Standard thermodynamics
-pub const AIR_POLYTROPIC_INDEX: f64 = 1.4;
+/// Polytropic index for air [-]
+///
+/// γ = Cp/Cv = 7/5 = 1.4 for diatomic ideal gases (Air, N₂, O₂) at ambient conditions.
+/// SSOT: delegates to `HEAT_CAPACITY_RATIO_DIATOMIC` in `thermodynamic` constants.
+pub const AIR_POLYTROPIC_INDEX: f64 =
+    crate::core::constants::thermodynamic::HEAT_CAPACITY_RATIO_DIATOMIC;
 
 /// Classical acoustic absorption coefficient for air (m·s²).
 ///
