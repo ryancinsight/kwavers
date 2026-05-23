@@ -1,6 +1,8 @@
 use super::solver::EpsteinPlessetStabilitySolver;
 use super::types::{AmplitudeEvolution, OscillationType};
+use crate::core::constants::cavitation::{SURFACE_TENSION_WATER, VISCOSITY_WATER};
 use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL};
+use crate::core::constants::thermodynamic::HEAT_CAPACITY_RATIO_DIATOMIC;
 use crate::physics::acoustics::bubble_dynamics::bubble_state::BubbleParameters;
 use approx::assert_relative_eq;
 
@@ -10,9 +12,9 @@ fn test_epstein_plesset_stability_analysis() {
         r0: 1e-3,
         p0: ATMOSPHERIC_PRESSURE,
         rho_liquid: DENSITY_WATER_NOMINAL,
-        sigma: 0.072,
-        mu_liquid: 0.001,
-        gamma: 1.4,
+        sigma: SURFACE_TENSION_WATER,
+        mu_liquid: VISCOSITY_WATER,
+        gamma: HEAT_CAPACITY_RATIO_DIATOMIC,
         ..Default::default()
     };
 
@@ -32,9 +34,9 @@ fn test_stability_boundary_analysis() {
         r0: 1e-4,
         p0: ATMOSPHERIC_PRESSURE,
         rho_liquid: DENSITY_WATER_NOMINAL,
-        sigma: 0.072,
-        mu_liquid: 0.001,
-        gamma: 1.4,
+        sigma: SURFACE_TENSION_WATER,
+        mu_liquid: VISCOSITY_WATER,
+        gamma: HEAT_CAPACITY_RATIO_DIATOMIC,
         ..Default::default()
     };
 
@@ -75,9 +77,9 @@ fn test_validation_against_literature() {
         r0: 1e-3,
         p0: ATMOSPHERIC_PRESSURE,
         rho_liquid: DENSITY_WATER_NOMINAL,
-        sigma: 0.072,
-        mu_liquid: 0.001,
-        gamma: 1.4,
+        sigma: SURFACE_TENSION_WATER,
+        mu_liquid: VISCOSITY_WATER,
+        gamma: HEAT_CAPACITY_RATIO_DIATOMIC,
         ..Default::default()
     };
 
@@ -95,7 +97,7 @@ fn test_epstein_plesset_vs_minnaert_frequency() {
     let r0 = 1e-3;
     let p0 = ATMOSPHERIC_PRESSURE;
     let rho = DENSITY_WATER_NOMINAL;
-    let gamma = 1.4;
+    let gamma = HEAT_CAPACITY_RATIO_DIATOMIC;
 
     let params = BubbleParameters {
         r0,

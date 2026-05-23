@@ -37,6 +37,13 @@ pub const WATER_VISCOSITY_20C: f64 = 1.002e-3;
 /// Reference: Rosenson, R. S., et al. (1996). "Distribution of blood viscosity values"
 pub const BLOOD_VISCOSITY_37C: f64 = 3.5e-3;
 
+/// Blood plasma viscosity at 37°C (Pa·s)
+///
+/// Value: 1.2e-3 Pa·s
+/// Plasma lacks red blood cells, so it behaves as a Newtonian fluid at ~1.2 mPa·s.
+/// Reference: Duck, F. A. (1990). Physical Properties of Tissue, Table 4.1.
+pub const BLOOD_PLASMA_VISCOSITY_37C: f64 = 1.2e-3;
+
 /// Effective shear viscosity of generic soft tissue at 37°C (Pa·s)
 ///
 /// Value: 3.0×10⁻³ Pa·s — empirical effective viscosity for acoustic absorption

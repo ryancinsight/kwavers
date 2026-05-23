@@ -1,4 +1,5 @@
 use super::{test_k_mag, zeros_k_mag};
+use crate::core::constants::cavitation::VISCOSITY_WATER;
 use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::domain::grid::Grid;
@@ -166,8 +167,10 @@ fn test_stokes_absorption_tau_matches_classical_formula() {
     .expect("Stokes init must succeed")
     .expect("Stokes mode must return Some(AbsorptionKernel)");
 
-    let eta_s = 1.0e-3_f64;
-    let eta_b = 2.5e-3_f64;
+    // VISCOSITY_WATER = 1.002e-3 Pa·s (water at 20°C, CRC Handbook) — canonical SSOT value.
+    // HomogeneousMedium::new() sets shear_viscosity = VISCOSITY_WATER, bulk = 2.5 × VISCOSITY_WATER.
+    let eta_s = VISCOSITY_WATER;
+    let eta_b = 2.5 * VISCOSITY_WATER;
     let rho0 = 1000.0_f64;
     let c0 = SOUND_SPEED_WATER_SIM;
     let alpha_si = (4.0 * eta_s / 3.0 + eta_b) / (2.0 * rho0 * c0 * c0 * c0);

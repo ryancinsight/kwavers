@@ -15,7 +15,7 @@
 //! Pressure: 1 atm unless otherwise noted
 
 use super::material::AcousticMaterialProperties;
-use crate::core::constants::acoustic_parameters::BLOOD_VISCOSITY_37C;
+use crate::core::constants::acoustic_parameters::{BLOOD_PLASMA_VISCOSITY_37C, BLOOD_VISCOSITY_37C};
 use crate::core::constants::cavitation::VISCOSITY_WATER;
 use crate::core::constants::optical::REFRACTIVE_INDEX_WATER;
 use crate::core::constants::fundamental::{
@@ -48,7 +48,7 @@ pub const BLOOD_PLASMA: FluidProperties = FluidProperties {
     absorption_coefficient: 0.015,
     absorption_exponent: 1.2,
     nonlinearity_parameter: B_OVER_A_WATER, // 5.2 (Duck 1990 Table 4.16)
-    shear_viscosity: 1.2e-3,
+    shear_viscosity: BLOOD_PLASMA_VISCOSITY_37C,
     bulk_viscosity: 0.0,
     specific_heat: SPECIFIC_HEAT_BLOOD_PLASMA,
     thermal_conductivity: 0.55, // plasma thermal conductivity W/(m·K)

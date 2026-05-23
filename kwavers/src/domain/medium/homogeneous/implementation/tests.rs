@@ -1,3 +1,4 @@
+use crate::core::constants::cavitation::VISCOSITY_WATER;
 use crate::core::constants::fundamental::{
     DENSITY_BLOOD, DENSITY_WATER, DENSITY_WATER_NOMINAL, SOUND_SPEED_AIR, SOUND_SPEED_BLOOD,
     SOUND_SPEED_WATER, SOUND_SPEED_WATER_SIM,
@@ -16,7 +17,8 @@ fn test_water_properties() {
 
     assert_eq!(water.density(0, 0, 0), DENSITY_WATER);
     assert_eq!(water.sound_speed(0, 0, 0), SOUND_SPEED_WATER);
-    assert_eq!(water.viscosity(0.0, 0.0, 0.0, &grid), 1.0e-3);
+    // VISCOSITY_WATER = 1.002e-3 Pa·s (water at 20°C, CRC Handbook) — canonical SSOT value
+    assert_eq!(water.viscosity(0.0, 0.0, 0.0, &grid), VISCOSITY_WATER);
 }
 
 #[test]

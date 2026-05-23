@@ -4,6 +4,7 @@
 //! `mod.rs`, so an inner `mod tests { ... }` would be redundant nesting.
 
 use super::dynamics::BubbleDynamics;
+use crate::core::constants::cavitation::SURFACE_TENSION_WATER;
 use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::domain::imaging::ultrasound::ceus::{Microbubble, MicrobubblePopulation};
@@ -122,7 +123,7 @@ fn test_invalid_microbubble() {
         shell_elasticity: 1000.0,
         shell_viscosity: 0.5,
         polytropic_index: 1.07,
-        surface_tension: 0.072,
+        surface_tension: SURFACE_TENSION_WATER,
     };
 
     assert!(bubble.validate().is_err());
