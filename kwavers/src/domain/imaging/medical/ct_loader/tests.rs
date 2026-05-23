@@ -1,5 +1,5 @@
 use super::loader::CTImageLoader;
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use crate::domain::imaging::medical::MedicalImageLoader;
 
 #[test]
@@ -54,10 +54,10 @@ fn test_hu_to_density_bone() {
 #[test]
 fn test_hu_to_density_soft_tissue() {
     let rho_water = CTImageLoader::hu_to_density(0.0);
-    assert_eq!(rho_water, 1000.0);
+    assert_eq!(rho_water, DENSITY_WATER_NOMINAL);
 
     let rho_tissue = CTImageLoader::hu_to_density(50.0);
-    assert_eq!(rho_tissue, 1000.0);
+    assert_eq!(rho_tissue, DENSITY_WATER_NOMINAL);
 }
 
 #[test]

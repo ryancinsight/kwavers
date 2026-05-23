@@ -1,5 +1,7 @@
 //! Control system types and enums
 
+use crate::core::constants::numerical::MPA_TO_PA;
+
 /// Control strategy for cavitation feedback
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum ControlStrategy {
@@ -63,7 +65,7 @@ impl Default for CavitationSafetyLimits {
         Self {
             max_intensity: 0.9,
             max_temperature: 43.0, // °C
-            max_pressure: 10e6,    // Pa
+            max_pressure: 10.0 * MPA_TO_PA, // Pa
             emergency_stop_threshold: 0.95,
         }
     }

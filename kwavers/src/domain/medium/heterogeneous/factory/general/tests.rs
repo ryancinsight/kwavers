@@ -1,6 +1,6 @@
 use super::*;
 use crate::core::constants::fundamental::{
-    DENSITY_BLOOD, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM,
+    DENSITY_BLOOD, DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM,
 };
 use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::domain::grid::Grid;
@@ -9,12 +9,12 @@ use ndarray::Array3;
 #[test]
 fn test_from_arrays_basic() {
     let c = Array3::from_elem((10, 10, 10), SOUND_SPEED_WATER_SIM);
-    let rho = Array3::from_elem((10, 10, 10), 1000.0);
+    let rho = Array3::from_elem((10, 10, 10), DENSITY_WATER_NOMINAL);
 
     let medium = HeterogeneousFactory::from_arrays(c, rho, None, None, None, MHZ_TO_HZ).unwrap();
 
     assert_eq!(medium.sound_speed[[0, 0, 0]], SOUND_SPEED_WATER_SIM);
-    assert_eq!(medium.density[[0, 0, 0]], 1000.0);
+    assert_eq!(medium.density[[0, 0, 0]], DENSITY_WATER_NOMINAL);
     assert_eq!(medium.reference_frequency, MHZ_TO_HZ);
     assert_eq!(medium.alpha_power[[0, 0, 0]], 1.0);
 }
@@ -22,7 +22,7 @@ fn test_from_arrays_basic() {
 #[test]
 fn test_from_arrays_with_optional() {
     let c = Array3::from_elem((10, 10, 10), SOUND_SPEED_WATER_SIM);
-    let rho = Array3::from_elem((10, 10, 10), 1000.0);
+    let rho = Array3::from_elem((10, 10, 10), DENSITY_WATER_NOMINAL);
     let alpha = Array3::from_elem((10, 10, 10), 0.5);
     let yexp = Array3::from_elem((10, 10, 10), 1.5_f64);
     let ba = Array3::from_elem((10, 10, 10), 6.0);
@@ -42,7 +42,7 @@ fn test_from_functions() {
     let medium = HeterogeneousFactory::from_functions(
         &grid,
         |_x, _y, _z| SOUND_SPEED_WATER_SIM,
-        |_x, _y, _z| 1000.0,
+        |_x, _y, _z| DENSITY_WATER_NOMINAL,
         Some(Box::new(|_x, _y, z| if z > 0.005 { 0.5 } else { 0.0 })),
         Some(Box::new(|_x, _y, _z| 1.5)),
         None,
@@ -50,7 +50,7 @@ fn test_from_functions() {
     );
 
     assert_eq!(medium.sound_speed[[0, 0, 0]], SOUND_SPEED_WATER_SIM);
-    assert_eq!(medium.density[[0, 0, 0]], 1000.0);
+    assert_eq!(medium.density[[0, 0, 0]], DENSITY_WATER_NOMINAL);
     assert_eq!(medium.alpha_power[[0, 0, 0]], 1.5);
 }
 
@@ -59,14 +59,14 @@ fn test_from_layers() {
     let grid = Grid::new(10, 10, 10, 0.001, 0.001, 0.001).unwrap();
 
     let layers = vec![
-        (0.0, 0.005, SOUND_SPEED_WATER_SIM, 1000.0, 0.0, 0.0),
+        (0.0, 0.005, SOUND_SPEED_WATER_SIM, DENSITY_WATER_NOMINAL, 0.0, 0.0),
         (0.005, 0.010, SOUND_SPEED_TISSUE, DENSITY_BLOOD, 0.5, 6.0),
     ];
 
     let medium = HeterogeneousFactory::from_layers(&grid, &layers, MHZ_TO_HZ);
 
     assert_eq!(medium.sound_speed[[0, 0, 0]], SOUND_SPEED_WATER_SIM);
-    assert_eq!(medium.density[[0, 0, 0]], 1000.0);
+    assert_eq!(medium.density[[0, 0, 0]], DENSITY_WATER_NOMINAL);
     assert_eq!(medium.sound_speed[[0, 0, 9]], SOUND_SPEED_TISSUE);
     assert_eq!(medium.density[[0, 0, 9]], DENSITY_BLOOD);
 }
@@ -109,13 +109,13 @@ fn test_from_elastic_arrays_fluid_voxel() {
     let n = 2usize;
     let cp = Array3::from_elem((n, n, n), SOUND_SPEED_WATER_SIM);
     let cs = Array3::zeros((n, n, n));
-    let rho = Array3::from_elem((n, n, n), 1000.0_f64);
+    let rho = Array3::from_elem((n, n, n), DENSITY_WATER_NOMINAL);
 
     let med =
         HeterogeneousFactory::from_elastic_arrays(cp.view(), cs.view(), rho.view(), MHZ_TO_HZ).unwrap();
 
     assert_eq!(med.lame_mu[[0, 0, 0]], 0.0);
-    assert!((med.lame_lambda[[0, 0, 0]] - 1000.0 * SOUND_SPEED_WATER_SIM.powi(2)).abs() < 1.0);
+    assert!((med.lame_lambda[[0, 0, 0]] - DENSITY_WATER_NOMINAL * SOUND_SPEED_WATER_SIM.powi(2)).abs() < 1.0);
 }
 
 #[test]
@@ -124,7 +124,7 @@ fn test_from_elastic_arrays_stability_violation() {
     let n = 2usize;
     let cp = Array3::from_elem((n, n, n), 1000.0_f64);
     let cs = Array3::from_elem((n, n, n), 900.0_f64);
-    let rho = Array3::from_elem((n, n, n), 1000.0_f64);
+    let rho = Array3::from_elem((n, n, n), DENSITY_WATER_NOMINAL);
 
     let result = HeterogeneousFactory::from_elastic_arrays(cp.view(), cs.view(), rho.view(), MHZ_TO_HZ);
     assert!(result.is_err(), "Expected stability error");

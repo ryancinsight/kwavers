@@ -81,7 +81,7 @@ mod tests {
     #[test]
     fn energy_conservation_error_zero_when_initial_matches_computed() {
         let grid = small_grid();
-        let (p, vx, vy, vz, rho, c) = make_fields(100.0, 0.1, 1000.0, SOUND_SPEED_WATER_SIM);
+        let (p, vx, vy, vz, rho, c) = make_fields(100.0, 0.1, DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM);
 
         // Compute what the function computes first, then pass it as initial
         // so the error is exactly 0.
@@ -105,7 +105,7 @@ mod tests {
     #[test]
     fn energy_conservation_zero_error_for_zero_fields_and_zero_initial() {
         let grid = small_grid();
-        let (p, vx, vy, vz, rho, c) = make_fields(0.0, 0.0, 1000.0, SOUND_SPEED_WATER_SIM);
+        let (p, vx, vy, vz, rho, c) = make_fields(0.0, 0.0, DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM);
         let error = validate_energy_conservation(&p, &vx, &vy, &vz, &rho, &c, 0.0, &grid);
         assert_eq!(
             error, 0.0,

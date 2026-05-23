@@ -10,7 +10,7 @@
 use crate::clinical::therapy::theranostic_guidance::{
     run_standing_wave_suppression, StandingWaveOptConfig,
 };
-use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE};
 
 /// Minimal fast configuration for testing: small grid, few elements, few iterations.
 fn small_config() -> StandingWaveOptConfig {
@@ -20,7 +20,7 @@ fn small_config() -> StandingWaveOptConfig {
         dx_m: 1.5e-3,
         pml_cells: 8,
         c_ref_m_s: SOUND_SPEED_TISSUE,
-        rho_ref_kg_m3: 1000.0,
+        rho_ref_kg_m3: DENSITY_WATER_NOMINAL,
         c_layer_m_s: 2000.0,
         rho_layer_kg_m3: 1500.0,
         layer_x_start: 44,

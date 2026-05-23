@@ -44,7 +44,7 @@ impl MockTransducer {
                 calibration_expiry: "2027-01-30".to_owned(),
             },
             state: TransducerState::Idle,
-            current_frequency: 1.5e6,
+            current_frequency: 1.5 * MHZ_TO_HZ,
             current_power_percent: 0.0,
             last_error: None,
             created_at: Instant::now(),

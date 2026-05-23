@@ -115,7 +115,7 @@ fn bowl_source_uses_axis_specific_grid_spacing_and_origin() {
         diameter: 0.04,
         center: [0.0, 0.0, -0.08],
         focus: [0.0, 0.0, 0.0],
-        frequency: 1.25e6,
+        frequency: 1.25 * MHZ_TO_HZ,
         amplitude: 4.0e5,
         phase: 0.31,
         apply_directivity: false,

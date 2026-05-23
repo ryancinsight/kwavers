@@ -209,7 +209,7 @@ mod tests {
             ),
             PlaneWaveSolution::generate(
                 &grid,
-                1e6,
+                MHZ_TO_HZ,
                 f64::NAN,
                 SOUND_SPEED_WATER_SIM,
                 0.0,
@@ -217,7 +217,7 @@ mod tests {
             ),
             PlaneWaveSolution::generate(
                 &grid,
-                1e6,
+                MHZ_TO_HZ,
                 1.0,
                 -SOUND_SPEED_WATER_SIM,
                 0.0,
@@ -225,7 +225,7 @@ mod tests {
             ),
             PlaneWaveSolution::generate(
                 &grid,
-                1e6,
+                MHZ_TO_HZ,
                 1.0,
                 SOUND_SPEED_WATER_SIM,
                 f64::NAN,
@@ -233,7 +233,7 @@ mod tests {
             ),
             PlaneWaveSolution::generate(
                 &grid,
-                1e6,
+                MHZ_TO_HZ,
                 1.0,
                 SOUND_SPEED_WATER_SIM,
                 0.0,

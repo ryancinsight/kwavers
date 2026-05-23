@@ -1,4 +1,4 @@
-use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE};
 use std::f64::consts::PI;
 
 /// Configuration for the 2D linearised-FDTD standing-wave suppression solver.
@@ -67,7 +67,7 @@ impl Default for StandingWaveOptConfig {
             dx_m: 7.5e-4,
             pml_cells: 10,
             c_ref_m_s: SOUND_SPEED_TISSUE,
-            rho_ref_kg_m3: 1000.0,
+            rho_ref_kg_m3: DENSITY_WATER_NOMINAL,
             c_layer_m_s: 2000.0,
             rho_layer_kg_m3: 1500.0,
             layer_x_start: 90,
