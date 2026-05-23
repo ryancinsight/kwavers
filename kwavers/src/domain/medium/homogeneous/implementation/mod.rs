@@ -4,7 +4,7 @@ use crate::core::constants::fundamental::B_OVER_A_WATER;
 use crate::core::constants::thermodynamic::THERMAL_EXPANSION_WATER_20C;
 use crate::core::constants::{
     AIR_POLYTROPIC_INDEX, ATMOSPHERIC_PRESSURE, MHZ_TO_HZ, REFERENCE_FREQUENCY_MHZ,
-    WATER_ABSORPTION_ALPHA_0, WATER_ABSORPTION_POWER, WATER_SPECIFIC_HEAT,
+    VISCOSITY_WATER, WATER_ABSORPTION_ALPHA_0, WATER_ABSORPTION_POWER, WATER_SPECIFIC_HEAT,
     WATER_SURFACE_TENSION_20C, WATER_THERMAL_CONDUCTIVITY, WATER_VAPOR_PRESSURE_20C,
 };
 use crate::core::error::{KwaversError, KwaversResult, ValidationError};
@@ -48,7 +48,7 @@ pub struct HomogeneousMedium {
 impl HomogeneousMedium {
     /// Create a new homogeneous medium with specified properties
     pub fn new(density: f64, sound_speed: f64, mu_a: f64, mu_s_prime: f64, grid: &Grid) -> Self {
-        let viscosity = 1.0e-3;
+        let viscosity = VISCOSITY_WATER;
         Self {
             density,
             sound_speed,

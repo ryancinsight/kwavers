@@ -16,6 +16,7 @@
 
 use super::material::AcousticMaterialProperties;
 use crate::core::constants::acoustic_parameters::BLOOD_VISCOSITY_37C;
+use crate::core::constants::cavitation::VISCOSITY_WATER;
 use crate::core::constants::optical::REFRACTIVE_INDEX_WATER;
 use crate::core::constants::fundamental::{
     ATMOSPHERIC_PRESSURE, B_OVER_A_BLOOD, B_OVER_A_CSF, B_OVER_A_WATER, DENSITY_BLOOD,
@@ -274,7 +275,7 @@ pub const NANOPARTICLE_SUSPENSION: FluidProperties = FluidProperties {
     absorption_coefficient: 0.03,
     absorption_exponent: 1.2,
     nonlinearity_parameter: 5.3,
-    shear_viscosity: 1.0e-3,
+    shear_viscosity: VISCOSITY_WATER, // water-based carrier
     bulk_viscosity: 0.0,
     specific_heat: 4150.0,
     thermal_conductivity: 0.59,
