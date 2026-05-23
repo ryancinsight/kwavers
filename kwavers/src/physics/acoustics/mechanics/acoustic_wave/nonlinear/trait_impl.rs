@@ -164,6 +164,7 @@ impl NonlinearWave {
 mod tests {
     use super::super::wave_model::NonlinearWave;
     use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use crate::core::constants::numerical::MHZ_TO_HZ;
     use crate::domain::grid::Grid;
     use crate::domain::medium::HomogeneousMedium;
     use crate::physics::traits::AcousticWaveModel;
@@ -203,7 +204,7 @@ mod tests {
         let mut w = NonlinearWave::new(&grid, dt_init);
         // Recompute from the actual medium to pick up medium-specific β/c corrections.
         w.dt = w.get_stable_timestep(&medium, &grid);
-        w.source_frequency = 1e6;
+        w.source_frequency = MHZ_TO_HZ;
 
         assert!(
             w.validate_parameters(&medium, &grid).is_ok(),
@@ -255,7 +256,7 @@ mod tests {
         let mut w = NonlinearWave::new(&grid, 1e-7);
         let dt_safe = w.get_stable_timestep(&medium, &grid);
         w.dt = dt_safe;
-        w.source_frequency = 1e6;
+        w.source_frequency = MHZ_TO_HZ;
 
         // Negative scaling
         w.nonlinearity_scaling = -0.1;

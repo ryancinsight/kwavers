@@ -11,7 +11,7 @@ use crate::core::constants::cavitation::{
     VAPOR_PRESSURE_WATER,
 };
 use crate::core::constants::fundamental::{
-    ACOUSTIC_ABSORPTION_TISSUE, ATMOSPHERIC_PRESSURE, DENSITY_TISSUE, SOUND_SPEED_TISSUE,
+    ATMOSPHERIC_PRESSURE, DENSITY_TISSUE, SOUND_SPEED_TISSUE,
 };
 use crate::core::constants::thermodynamic::{
     BODY_TEMPERATURE_K, SPECIFIC_HEAT_BRAIN, THERMAL_CONDUCTIVITY_BLOOD,

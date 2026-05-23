@@ -7,6 +7,7 @@ use super::multi_bowl::MultiBowlArray;
 use super::validation::{
     field_validation_error, validate_finite_vector, validate_positive_finite_field,
 };
+use crate::core::constants::numerical::MPA_TO_PA;
 use crate::core::constants::SOUND_SPEED_WATER;
 use crate::core::error::KwaversResult;
 use std::f64::consts::PI;
@@ -77,7 +78,7 @@ pub fn make_annular_array(
 
     let focus = [vertex[0], vertex[1], vertex[2] + radius_of_curvature];
     let base_config =
-        BowlConfig::from_vertex_focus(vertex, focus, 2.0 * outer_aperture_radius, frequency, 1.0e6);
+        BowlConfig::from_vertex_focus(vertex, focus, 2.0 * outer_aperture_radius, frequency, MPA_TO_PA);
     let mut bowls = Vec::with_capacity(n_rings);
 
     for i in 0..n_rings {
@@ -166,6 +167,7 @@ fn annular_ring_element_count(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::numerical::MHZ_TO_HZ;
     use crate::core::error::{KwaversError, ValidationError};
     use crate::domain::grid::Grid;
 
@@ -186,8 +188,8 @@ mod tests {
             diameter: 0.04,
             center: [0.0, 0.0, 0.0],
             focus: [0.0, 0.0, 0.05],
-            frequency: 1e6,
-            amplitude: 1e6,
+            frequency: MHZ_TO_HZ,
+            amplitude: MPA_TO_PA,
             ..Default::default()
         };
 
@@ -223,7 +225,7 @@ mod tests {
 
     #[test]
     fn annular_array_uses_common_curvature_focus_and_radial_bands() {
-        let array = make_annular_array(0.08, 0.02, 0.04, 2, [0.0, 0.0, 0.0], 1.0e6).unwrap();
+        let array = make_annular_array(0.08, 0.02, 0.04, 2, [0.0, 0.0, 0.0], MHZ_TO_HZ).unwrap();
         let radial_bounds = [(0.02, 0.03), (0.03, 0.04)];
 
         assert_eq!(array.bowls.len(), 2);
@@ -251,7 +253,7 @@ mod tests {
 
     #[test]
     fn annular_array_rejects_invalid_domains() {
-        let error = make_annular_array(0.08, 0.04, 0.02, 2, [0.0, 0.0, 0.0], 1.0e6).unwrap_err();
+        let error = make_annular_array(0.08, 0.04, 0.02, 2, [0.0, 0.0, 0.0], MHZ_TO_HZ).unwrap_err();
         match error {
             KwaversError::Validation(ValidationError::FieldValidation { field, .. }) => {
                 assert_eq!(field, "aperture_radii");
@@ -260,7 +262,7 @@ mod tests {
         }
 
         let excessive_aperture =
-            make_annular_array(0.08, 0.02, 0.09, 2, [0.0, 0.0, 0.0], 1.0e6).unwrap_err();
+            make_annular_array(0.08, 0.02, 0.09, 2, [0.0, 0.0, 0.0], MHZ_TO_HZ).unwrap_err();
         match excessive_aperture {
             KwaversError::Validation(ValidationError::FieldValidation { field, .. }) => {
                 assert_eq!(field, "outer_aperture_radius");
@@ -269,7 +271,7 @@ mod tests {
         }
 
         let zero_rings =
-            make_annular_array(0.08, 0.02, 0.04, 0, [0.0, 0.0, 0.0], 1.0e6).unwrap_err();
+            make_annular_array(0.08, 0.02, 0.04, 0, [0.0, 0.0, 0.0], MHZ_TO_HZ).unwrap_err();
         match zero_rings {
             KwaversError::Validation(ValidationError::FieldValidation { field, .. }) => {
                 assert_eq!(field, "n_rings");
@@ -293,8 +295,8 @@ mod tests {
             diameter: 0.03,
             radius_of_curvature: 0.05,
             focus: [0.0, 0.0, 0.05],
-            frequency: 1e6,
-            amplitude: 1e6,
+            frequency: MHZ_TO_HZ,
+            amplitude: MPA_TO_PA,
             phase: 0.0,
             ..Default::default()
         };
@@ -303,8 +305,8 @@ mod tests {
             diameter: 0.03,
             radius_of_curvature: 0.05,
             focus: [0.0, 0.0, 0.05],
-            frequency: 1e6,
-            amplitude: 1e6,
+            frequency: MHZ_TO_HZ,
+            amplitude: MPA_TO_PA,
             phase: PI / 2.0, // 90 degree phase shift
             ..Default::default()
         };
@@ -339,8 +341,8 @@ mod tests {
             diameter: 0.03,
             radius_of_curvature: 0.05,
             focus: [0.0, 0.0, 0.05],
-            frequency: 1e6,
-            amplitude: 1e6,
+            frequency: MHZ_TO_HZ,
+            amplitude: MPA_TO_PA,
             phase: 0.0,
             ..Default::default()
         };
@@ -349,8 +351,8 @@ mod tests {
             diameter: 0.03,
             radius_of_curvature: 0.05,
             focus: [0.0, 0.0, 0.05],
-            frequency: 1e6,
-            amplitude: 1e6,
+            frequency: MHZ_TO_HZ,
+            amplitude: MPA_TO_PA,
             phase: PI / 2.0, // 90 degree phase shift
             ..Default::default()
         };
@@ -375,10 +377,10 @@ mod tests {
     fn test_oneil_solution() {
         use approx::assert_relative_eq;
 
-        let bowl = make_bowl(0.064, 0.064, [0.0, 0.0, 0.0], 1e6, 1e6).unwrap();
+        let bowl = make_bowl(0.064, 0.064, [0.0, 0.0, 0.0], MHZ_TO_HZ, MPA_TO_PA).unwrap();
 
         let focus_distance = 0.064; // radius of curvature = geometric focus [m]
-        let frequency = 1e6;
+        let frequency = MHZ_TO_HZ;
         let c = crate::core::constants::SOUND_SPEED_WATER;
         let a = bowl.config.diameter / 2.0; // aperture radius = 0.032 m
         let r = bowl.config.radius_of_curvature; // 0.064 m

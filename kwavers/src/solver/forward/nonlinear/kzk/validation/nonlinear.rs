@@ -4,6 +4,7 @@
 mod tests {
     use super::super::super::*;
     use crate::core::constants::fundamental::B_OVER_A_WATER_37C;
+    use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
     use ndarray::Array2;
 
     /// Test harmonic generation in nonlinear propagation
@@ -29,8 +30,8 @@ mod tests {
 
         let mut solver = KZKSolver::new(config.clone()).unwrap();
 
-        let amplitude = 1e6;
-        let frequency = 2e6;
+        let amplitude = MPA_TO_PA; // 1 MPa source pressure
+        let frequency = 2.0 * MHZ_TO_HZ;
         let source = Array2::from_elem((config.nx, config.ny), amplitude);
 
         solver.set_source(source, frequency);

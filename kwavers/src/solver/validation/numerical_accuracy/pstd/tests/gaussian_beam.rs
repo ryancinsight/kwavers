@@ -1,4 +1,5 @@
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::domain::grid::Grid;
 use crate::domain::medium::HomogeneousMedium;
 use crate::solver::pstd::PSTDConfig as PstdConfig;
@@ -27,9 +28,9 @@ fn test_gaussian_beam_phase_accuracy() {
     println!("\n=== Gaussian Beam Phase Accuracy Test ===");
 
     let n = 64;
-    let frequency = 1e6;
+    let frequency = MHZ_TO_HZ;
     let c0 = SOUND_SPEED_WATER_SIM;
-    let rho0 = 1000.0_f64;
+    let rho0 = DENSITY_WATER_NOMINAL;
     let wavelength = c0 / frequency;
     // 16 PPW → < 1% PSTD phase error (Treeby & Cox 2010, Table 1)
     let dx = wavelength / 16.0;

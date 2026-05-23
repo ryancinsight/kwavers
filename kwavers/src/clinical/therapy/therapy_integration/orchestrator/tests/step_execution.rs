@@ -1,5 +1,7 @@
 use super::*;
+use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use crate::core::constants::medical::TI_LIMIT_SOFT_TISSUE;
+use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use crate::core::constants::thermodynamic::SPECIFIC_HEAT_TISSUE;
 
 #[test]
@@ -9,8 +11,8 @@ fn test_therapy_step_execution() {
         secondary_modalities: vec![],
         duration: 10.0,
         acoustic_params: AcousticTherapyParams {
-            frequency: 2e6,
-            pnp: 1e6,
+            frequency: 2.0 * MHZ_TO_HZ,
+            pnp: MPA_TO_PA,
             prf: 100.0,
             duty_cycle: 0.1,
             focal_depth: 0.03,
@@ -37,7 +39,7 @@ fn test_therapy_step_execution() {
 
     let grid = crate::domain::grid::Grid::new(16, 16, 16, 0.002, 0.002, 0.002).unwrap();
     let medium = Box::new(HomogeneousMedium::new(
-        1000.0,
+        DENSITY_WATER_NOMINAL,
         SOUND_SPEED_TISSUE,
         0.5,
         1.0,
@@ -52,10 +54,10 @@ fn test_therapy_step_execution() {
     // TI = ΔT_focal ≈ 0.009 (well within thermal_index_max = TI_LIMIT_SOFT_TISSUE)
     // MI = pnp / (1e3 · √f_Hz) = 1e6 / (1e3 · √2e6) ≈ 0.7071 (< 1.9)
     const DT: f64 = 0.1;
-    const PNP: f64 = 1e6;
+    const PNP: f64 = MPA_TO_PA;
     const DX: f64 = 0.002;
     const FOCAL: f64 = 0.03;
-    const F_HZ: f64 = 2e6;
+    const F_HZ: f64 = 2.0 * MHZ_TO_HZ;
     const ALPHA: f64 = 0.5;
     const RHO: f64 = crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
     const C0: f64 = crate::core::constants::fundamental::SOUND_SPEED_TISSUE;

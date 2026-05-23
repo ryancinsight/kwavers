@@ -3,6 +3,7 @@
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::domain::plugin::{PluginMetadata, PluginState};
 
 use super::solver::KzkSolverPlugin;
@@ -64,7 +65,7 @@ impl crate::domain::plugin::Plugin for KzkSolverPlugin {
     }
 
     fn initialize(&mut self, grid: &Grid, medium: &dyn Medium) -> KwaversResult<()> {
-        let default_freq = 1e6;
+        let default_freq = MHZ_TO_HZ;
         self.initialize_operators(grid, medium, default_freq)?;
         self.state = PluginState::Initialized;
         Ok(())

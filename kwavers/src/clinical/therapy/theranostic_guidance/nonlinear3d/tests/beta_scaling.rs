@@ -15,6 +15,7 @@ use super::super::Nonlinear3dConfig;
 use super::Point3;
 use crate::clinical::therapy::theranostic_guidance::AnatomyKind;
 use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 
 /// Linear-baseline negative-control for the Westervelt nonlinearity:
 /// with `β = 0` the Westervelt equation reduces to the linear wave equation,
@@ -70,7 +71,7 @@ fn linear_westervelt_with_beta_zero_produces_symmetric_pressure_trace_within_fdt
     };
 
     let mut config = Nonlinear3dConfig::new(AnatomyKind::Liver);
-    config.frequency_hz = 1.0e6;
+    config.frequency_hz = MHZ_TO_HZ;
     config.source_pressure_pa = 5.0e6;
     config.cycles = 12.0;
     config.cfl = 0.4;
@@ -178,7 +179,7 @@ fn westervelt_steepening_signature_scales_linearly_with_beta_per_weak_nonlinear_
     };
 
     let mut config = Nonlinear3dConfig::new(AnatomyKind::Liver);
-    config.frequency_hz = 1.0e6;
+    config.frequency_hz = MHZ_TO_HZ;
     // Use the same source pressure as the existing forward-steepening test
     // so the nonlinear contribution dominates the FDTD-dispersion bias.
     config.source_pressure_pa = 5.0e6;

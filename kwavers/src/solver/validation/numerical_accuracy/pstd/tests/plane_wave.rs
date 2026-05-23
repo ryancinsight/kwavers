@@ -1,4 +1,5 @@
 use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::domain::grid::Grid;
 use crate::domain::medium::core::CoreMedium;
 use crate::domain::medium::HomogeneousMedium;
@@ -11,7 +12,7 @@ fn test_pstd_plane_wave_accuracy() {
     // RIGOROUS VALIDATION: k-space method accuracy (Treeby & Cox 2010, Section 3.2)
     // EXACT VALIDATION: Spectral methods should have minimal dispersion error
     let n = 64; // Reverted to default power of 2
-    let frequency = 1e6;
+    let frequency = MHZ_TO_HZ;
     let wavelength = SOUND_SPEED_WATER_SIM / frequency; // 1.5mm at 1MHz
                                                         // ADJUSTMENT: Use PPW=16 to ensure periodic boundary conditions
                                                         // n=64, PPW=16 -> L = 4 * wavelength (integer multiple)

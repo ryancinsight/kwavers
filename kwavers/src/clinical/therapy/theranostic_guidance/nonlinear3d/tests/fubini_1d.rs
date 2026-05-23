@@ -37,7 +37,8 @@
 //! `cargo test --lib --package kwavers -- --ignored fubini_absolute`.
 
 use super::bessel::{bessel_j1, bessel_j2};
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
+use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 
 #[test]
 #[ignore = "Tier 2: Literature validation (Aanonsen 1984 Fubini-absolute, 1-D harness), ~2s runtime"]
@@ -49,11 +50,11 @@ fn westervelt_recurrence_fubini_absolute_at_gamma_half_matches_aanonsen_1984() {
     let nx: usize = 1024;
     let dx: f64 = 5.0e-5; // 0.05 mm → 51.2 mm domain
     let c: f64 = SOUND_SPEED_WATER_SIM;
-    let rho: f64 = 1000.0;
+    let rho: f64 = DENSITY_WATER_NOMINAL;
     let beta: f64 = 10.0;
-    let frequency_hz: f64 = 1.0e6;
+    let frequency_hz: f64 = MHZ_TO_HZ;
     let omega = std::f64::consts::TAU * frequency_hz;
-    let p0: f64 = 1.0e6; // 1 MPa
+    let p0: f64 = MPA_TO_PA; // 1 MPa
     let z_shock = rho * c.powi(3) / (beta * omega * p0);
     let target_gamma = 0.5_f64;
     let target_distance_m = target_gamma * z_shock;

@@ -4,6 +4,7 @@ use super::geometry::FieldCalculatorTransducerGeometry;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::domain::plugin::{PluginMetadata, PluginState};
 use ndarray::Array3;
 use std::collections::HashMap;
@@ -72,7 +73,7 @@ impl crate::domain::plugin::Plugin for TransducerFieldCalculatorPlugin {
     ) -> KwaversResult<()> {
         use crate::domain::field::mapping::UnifiedFieldType;
 
-        let frequency = 1e6;
+        let frequency = MHZ_TO_HZ;
 
         let pressure_field = self.calculate_pressure_field(frequency, grid, medium)?;
 

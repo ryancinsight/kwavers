@@ -20,14 +20,15 @@ use super::super::types::{GridIndex, Nonlinear3dAperture, SourceDomain};
 use super::super::Nonlinear3dConfig;
 use super::Point3;
 use crate::clinical::therapy::theranostic_guidance::AnatomyKind;
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
+use crate::core::constants::numerical::MHZ_TO_HZ;
 
 #[test]
 fn forward_westervelt_exhibits_physical_forward_steepening_with_corrected_sign() {
     let n = 24;
     let spacing_m = 4.0e-4_f64;
     let c0 = SOUND_SPEED_WATER_SIM;
-    let rho0 = 1000.0_f64;
+    let rho0 = DENSITY_WATER_NOMINAL;
     let beta_nl = 10.0_f64;
     let cells = n * n * n;
     let speed = vec![c0; cells];
@@ -63,7 +64,7 @@ fn forward_westervelt_exhibits_physical_forward_steepening_with_corrected_sign()
     };
 
     let mut config = Nonlinear3dConfig::new(AnatomyKind::Liver);
-    config.frequency_hz = 1.0e6;
+    config.frequency_hz = MHZ_TO_HZ;
     config.source_pressure_pa = 20.0e6;
     config.cycles = 12.0;
     config.cfl = 0.4;
