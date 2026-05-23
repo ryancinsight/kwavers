@@ -22,12 +22,23 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
+try:
+    import pykwavers as kw
+    _HAS_KW = True
+except ImportError:
+    _HAS_KW = False
+    raise RuntimeError(
+        "pykwavers not found — build with `maturin develop --release` "
+        "from the pykwavers directory."
+    )
+
 REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 OUT_DIR = os.path.join(REPO_ROOT, "docs", "book", "figures", "ch26")
 
 RHO_BRAIN = 1040.0
 C_BRAIN = 1540.0
 CP_BRAIN = 3600.0
+K_BRAIN = 0.51          # W/(m·K)  Duck 1990 / IT'IS v4.1
 RHO_BLOOD = 1060.0
 CP_BLOOD = 3600.0
 PERFUSION_S = 0.012
@@ -118,21 +129,33 @@ def gaussian_focus(protocol: Protocol, shape: tuple[int, int, int] = (81, 81, 61
 
 
 def pennes_temperature(intensity_spta_w_m2: float, sonication_s: float, dt_s: float = 0.02) -> ThermalResult:
-    steps = int(np.ceil(sonication_s / dt_s)) + 1
-    time_s = np.linspace(0.0, sonication_s, steps)
-    temperature = np.empty(steps, dtype=float)
-    cem43 = np.zeros(steps, dtype=float)
-    temperature[0] = T0_C
-    heat_source = 2.0 * ALPHA_BRAIN_NP_M * intensity_spta_w_m2
-    perfusion_loss = PERFUSION_S * RHO_BLOOD * CP_BLOOD
-    capacity = RHO_BRAIN * CP_BRAIN
-    for idx in range(1, steps):
-        dt = time_s[idx] - time_s[idx - 1]
-        dtemp = (heat_source - perfusion_loss * (temperature[idx - 1] - T0_C)) / capacity
-        temperature[idx] = temperature[idx - 1] + dt * dtemp
-        rate = 0.5 ** (43.0 - temperature[idx]) if temperature[idx] > 43.0 else 0.25 ** (43.0 - temperature[idx])
-        cem43[idx] = cem43[idx - 1] + rate * dt / 60.0
-    return ThermalResult(time_s, temperature, cem43)
+    """Pennes bioheat ODE for a single focal point (pykwavers Rust solver).
+
+    For a 1-point simulation (nx=ny=nz=1) spatial diffusion is zero; the
+    solver integrates only the Pennes perfusion term. Stability: dt_max for
+    perfusion ≈ 2·ρ·cp/(WB·ρB·cpB) ≈ 163 s >> dt_s. CEM43 is accumulated
+    via kw.compute_cem43 on downsampled growing sub-trajectories.
+    """
+    n_steps = int(np.ceil(sonication_s / dt_s))
+    Q_field = np.array([[[2.0 * ALPHA_BRAIN_NP_M * intensity_spta_w_m2]]])
+    sensor_mask = np.ones((1, 1, 1), dtype=bool)
+    res = kw.ThermalSimulation(
+        1, 1, 1, 1e-3, 1e-3, 1e-3,
+        thermal_conductivity=K_BRAIN,
+        density=RHO_BRAIN, specific_heat=CP_BRAIN,
+        enable_bioheat=True, perfusion_rate=PERFUSION_S,
+        blood_density=RHO_BLOOD, blood_specific_heat=CP_BLOOD,
+        arterial_temperature=T0_C, initial_temperature=T0_C,
+        track_thermal_dose=False,
+    ).run(n_steps, dt_s, heat_source=Q_field, sensor_mask=sensor_mask)
+    T_arr = np.asarray(res.temperature_at_sensors)[0]
+    time_arr = np.asarray(res.time)
+    # Cumulative CEM43 via kw.compute_cem43 on 30 downsampled sub-trajectories
+    n_q = min(30, n_steps)
+    q_idx = np.linspace(0, n_steps - 1, n_q, dtype=int)
+    cem43_sp = np.array([kw.compute_cem43(T_arr[: i + 1].astype(float), dt_s) for i in q_idx])
+    cem43_arr = np.interp(np.arange(n_steps), q_idx, cem43_sp)
+    return ThermalResult(time_arr, T_arr, cem43_arr)
 
 
 def pulse_envelope(time_s: np.ndarray, protocol: Protocol) -> np.ndarray:
@@ -175,6 +198,14 @@ def cavitation_risk(mi: np.ndarray | float) -> np.ndarray:
 
 
 def guidance_map() -> dict[str, np.ndarray]:
+    """Thermal safety parameter sweep via batch pykwavers ThermalSimulation.
+
+    Runs a single ThermalSimulation(140, 120, 1) call instead of a 16 800-point
+    serial loop. DX_BATCH=0.1 m → Fourier number Fo = D·t/DX² ≈ 4×10⁻⁴ ≪ 1,
+    so neighbouring grid cells are thermally decoupled and each cell integrates
+    only its own Q and perfusion term — equivalent to 16 800 independent 1-point
+    Pennes ODEs. Stability: dt_max = DX²/(2D) ≈ 37 000 s ≫ dt=0.25 s.
+    """
     pressure_kpa = np.linspace(50.0, 900.0, 140)
     duty_percent = np.linspace(1.0, 30.0, 120)
     p_grid, dc_grid = np.meshgrid(pressure_kpa * 1.0e3, duty_percent / 100.0, indexing="ij")
@@ -182,13 +213,23 @@ def guidance_map() -> dict[str, np.ndarray]:
     ispta = intensity_sppa_w_m2(p_grid) * dc_grid
     mi = mechanical_index(p_grid, protocol.frequency_hz)
     drive = coupled_channel_drive(p_grid)
-    delta_t = np.empty_like(ispta)
-    cem43 = np.empty_like(ispta)
-    for row in range(ispta.shape[0]):
-        for col in range(ispta.shape[1]):
-            thermal = pennes_temperature(float(ispta[row, col]), protocol.sonication_s, dt_s=0.25)
-            delta_t[row, col] = thermal.temperature_c[-1] - T0_C
-            cem43[row, col] = thermal.cem43_min[-1]
+
+    # Batch Pennes bioheat over (140, 120) parameter grid
+    DX_BATCH = 0.1  # m — large enough to decouple neighbouring cells
+    Q_batch = (2.0 * ALPHA_BRAIN_NP_M * ispta)[:, :, np.newaxis].astype(float)  # (140,120,1) W/m³
+    n_steps_g = int(protocol.sonication_s / 0.25)
+    res_g = kw.ThermalSimulation(
+        140, 120, 1, DX_BATCH, DX_BATCH, DX_BATCH,
+        thermal_conductivity=K_BRAIN,
+        density=RHO_BRAIN, specific_heat=CP_BRAIN,
+        enable_bioheat=True, perfusion_rate=PERFUSION_S,
+        blood_density=RHO_BLOOD, blood_specific_heat=CP_BLOOD,
+        arterial_temperature=T0_C, initial_temperature=T0_C,
+        track_thermal_dose=True,
+    ).run(n_steps_g, 0.25, heat_source=Q_batch)
+    delta_t = np.asarray(res_g.temperature)[:, :, 0] - T0_C  # (140,120)
+    cem43 = np.asarray(res_g.thermal_dose)[:, :, 0]           # (140,120)
+
     feasible = (mi <= 1.9) & (ispta <= 7200.0) & (delta_t < 2.0) & (cem43 < 0.25) & (cavitation_risk(mi) < 0.10)
     objective = np.where(feasible, drive, np.nan)
     return {
