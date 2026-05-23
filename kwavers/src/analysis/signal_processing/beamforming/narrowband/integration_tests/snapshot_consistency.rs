@@ -3,6 +3,7 @@
 use super::super::snapshots::{extract_narrowband_snapshots, SnapshotScenario, SnapshotSelection};
 use super::helpers::{compute_sample_covariance, generate_plane_wave_data};
 use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 
 #[test]
 fn snapshot_methods_produce_consistent_covariance_rank() {
@@ -12,7 +13,7 @@ fn snapshot_methods_produce_consistent_covariance_rank() {
     let n_sensors = 4;
     let spacing_m = 0.0075;
     let n_samples = 256;
-    let fs = 1_000_000.0;
+    let fs = MHZ_TO_HZ;
     let f0 = 100_000.0;
     let c = SOUND_SPEED_WATER_SIM;
     let snr_db = 20.0;

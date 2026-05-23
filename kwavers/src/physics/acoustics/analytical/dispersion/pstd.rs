@@ -74,6 +74,7 @@ impl DispersionAnalysis {
 mod tests {
     use super::*;
     use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use crate::core::constants::numerical::MHZ_TO_HZ;
     use std::f64::consts::PI;
 
     /// pstd_dispersion order=2 follows the 0.02·(k·dx)² analytical model.
@@ -82,7 +83,7 @@ mod tests {
     #[test]
     fn pstd_dispersion_order2_matches_analytical_formula() {
         let c = SOUND_SPEED_WATER_SIM;
-        let freq = 1e6_f64;
+        let freq = MHZ_TO_HZ;
         let lambda = c / freq;
         let dx = lambda / 10.0;
         let k = 2.0 * PI / lambda;
@@ -100,7 +101,7 @@ mod tests {
     #[test]
     fn pstd_dispersion_order4_matches_analytical_formula() {
         let c = SOUND_SPEED_WATER_SIM;
-        let freq = 1e6_f64;
+        let freq = MHZ_TO_HZ;
         let lambda = c / freq;
         let dx = lambda / 8.0;
         let k = 2.0 * PI / lambda;
@@ -125,7 +126,7 @@ mod tests {
     #[test]
     fn pstd_order4_lower_than_order2_at_same_resolution() {
         let c = SOUND_SPEED_WATER_SIM;
-        let freq = 2e6_f64;
+        let freq = 2.0 * MHZ_TO_HZ;
         let lambda = c / freq;
         let dx = lambda / 8.0;
         let k = 2.0 * PI / lambda;

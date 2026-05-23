@@ -40,6 +40,7 @@ use super::super::Nonlinear3dConfig;
 use super::Point3;
 use crate::clinical::therapy::theranostic_guidance::AnatomyKind;
 use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 
 #[test]
 #[ignore = "Tier 2: Harmonic-generation presence check, ~10s runtime"]
@@ -54,7 +55,7 @@ fn westervelt_fdtd_point_source_generates_measurable_second_harmonic_content() {
     let c0 = SOUND_SPEED_WATER_SIM;
     let rho0 = 1000.0_f64;
     let beta_nl = 10.0_f64;
-    let frequency_hz = 1.0e6_f64;
+    let frequency_hz = MHZ_TO_HZ;
     let omega = std::f64::consts::TAU * frequency_hz;
     let speed = vec![c0; cells];
     let density = vec![rho0; cells];

@@ -5,6 +5,7 @@
 //! with exact f64 arithmetic — no tolerances tighter than `f64::EPSILON` are
 //! used, and no tolerances are artificially widened.
 
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::domain::grid::Grid;
 use crate::domain::medium::acoustic::AcousticProperties;
 use crate::domain::medium::heterogeneous::core::HeterogeneousMedium;
@@ -37,7 +38,7 @@ fn uniform_medium(alpha0: f64, alpha_power: f64, f_ref: f64) -> HeterogeneousMed
 ///
 #[test]
 fn test_absorption_at_reference_frequency_equals_alpha0() {
-    let f_ref = 1.0e6; // 1 MHz
+    let f_ref = MHZ_TO_HZ; // 1 MHz
     let alpha0 = 0.75_f64;
     let medium = uniform_medium(alpha0, 1.5, f_ref);
     let grid = small_grid();
@@ -78,7 +79,7 @@ fn test_power_law_exponent_y2_doubles_frequency() {
 ///
 #[test]
 fn test_power_law_tissue_exponent_y1_5() {
-    let f_ref = 1.0e6;
+    let f_ref = MHZ_TO_HZ;
     let alpha0 = 0.5_f64;
     let medium = uniform_medium(alpha0, 1.5, f_ref);
     let grid = small_grid();
@@ -141,7 +142,7 @@ fn test_alpha_power_query_returns_stored_exponent() {
 ///
 #[test]
 fn test_spatially_varying_alpha_power() {
-    let f_ref = 1.0e6;
+    let f_ref = MHZ_TO_HZ;
     let alpha0 = 1.0_f64;
     let mut m = HeterogeneousMedium::new(4, 4, 4, false);
     m.absorption = Array3::from_elem((4, 4, 4), alpha0);

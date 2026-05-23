@@ -10,6 +10,7 @@ use crate::analysis::signal_processing::beamforming::{
     utils::steering::SteeringVectorMethod,
 };
 use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use ndarray::Array3;
 
 #[test]
@@ -21,7 +22,7 @@ fn pipeline_is_invariant_to_global_time_shift() {
     let n_sensors = 4;
     let spacing_m = 0.0075;
     let n_samples = 128;
-    let fs = 1_000_000.0;
+    let fs = MHZ_TO_HZ;
     let f0 = 100_000.0;
     let c = SOUND_SPEED_WATER_SIM;
     let snr_db = 25.0;

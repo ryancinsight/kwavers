@@ -244,6 +244,7 @@ pub struct PhaseArrayMetrics {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::numerical::MHZ_TO_HZ;
 
     /// configure_linear produces N elements at the correct positions.
     ///
@@ -253,7 +254,7 @@ mod tests {
     fn configure_linear_produces_correct_element_count_and_positions() {
         let n = 8_usize;
         let spacing = 750e-6_f64; // λ/2 at 1 MHz in water
-        let freq = 1e6_f64;
+        let freq = MHZ_TO_HZ;
         let arr = PhaseArray::configure_linear(n, spacing, freq);
 
         assert_eq!(

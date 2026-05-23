@@ -99,6 +99,7 @@ impl DispersionAnalysis {
 mod tests {
     use super::*;
     use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use crate::core::constants::numerical::MHZ_TO_HZ;
     use std::f64::consts::PI;
 
     /// 1D FDTD dispersion is zero at k=0 (no wave → no error).
@@ -117,7 +118,7 @@ mod tests {
     #[test]
     fn fdtd_dispersion_below_1pct_at_20_ppw() {
         let c = SOUND_SPEED_WATER_SIM;
-        let freq = 1e6_f64;
+        let freq = MHZ_TO_HZ;
         let lambda = c / freq;
         let dx = lambda / 20.0;
         let dt = 0.4 * dx / (c * 3.0_f64.sqrt());
@@ -134,7 +135,7 @@ mod tests {
     #[test]
     fn fdtd_dispersion_symmetric_in_wavenumber() {
         let c = SOUND_SPEED_WATER_SIM;
-        let freq = 1e6_f64;
+        let freq = MHZ_TO_HZ;
         let lambda = c / freq;
         let dx = lambda / 15.0;
         let dt = 0.3 * dx / (c * 3.0_f64.sqrt());

@@ -1,3 +1,4 @@
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::core::constants::thermodynamic::{
     BODY_TEMPERATURE_K, KELVIN_OFFSET_C, ROOM_TEMPERATURE_K,
 };
@@ -50,7 +51,7 @@ fn test_absorption_temperature_and_frequency_dependence() {
     let tissue = TemperatureDependentAcoustic::soft_tissue();
     let t_ref = BODY_TEMPERATURE_K;
     let t_hot = 320.15;
-    let freq = 1e6;
+    let freq = MHZ_TO_HZ;
 
     let alpha_ref = tissue.absorption(t_ref, freq);
     let alpha_hot = tissue.absorption(t_hot, freq);

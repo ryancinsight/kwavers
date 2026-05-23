@@ -1,3 +1,4 @@
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use ndarray::Array3;
 
 use crate::domain::therapy::microbubble::{
@@ -152,7 +153,7 @@ fn test_shell_rupture_detection() {
 fn test_pressure_time_derivative_changes_dynamics() {
     let position = Position3D::zero();
     let acoustic_pressure = 1e5_f64;
-    let frequency = 1e6_f64;
+    let frequency = MHZ_TO_HZ;
     let dp_dt_nonzero = acoustic_pressure * 2.0 * std::f64::consts::PI * frequency;
 
     let mut bubble_zero = MicrobubbleState::sono_vue(position).unwrap();

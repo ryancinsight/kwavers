@@ -1,5 +1,7 @@
 use super::*;
+use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use crate::core::constants::medical::TI_LIMIT_SOFT_TISSUE;
+use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use crate::core::constants::thermodynamic::{BODY_TEMPERATURE_C, SPECIFIC_HEAT_TISSUE};
 
 #[test]
@@ -10,8 +12,8 @@ fn test_intensity_tracker_integration() {
         imaging_data_path: None,
         duration: 10.0,
         acoustic_params: AcousticTherapyParams {
-            frequency: 2.0e6,
-            pnp: 2e6,
+            frequency: 2.0 * MHZ_TO_HZ,
+            pnp: 2.0 * MPA_TO_PA,
             prf: 50.0,
             duty_cycle: 0.02,
             focal_depth: 0.03,
@@ -37,7 +39,7 @@ fn test_intensity_tracker_integration() {
 
     let grid = crate::domain::grid::Grid::new(12, 12, 12, 0.0025, 0.0025, 0.0025).unwrap();
     let medium = Box::new(HomogeneousMedium::new(
-        1000.0,
+        DENSITY_WATER_NOMINAL,
         SOUND_SPEED_TISSUE,
         0.5,
         1.0,
@@ -50,7 +52,7 @@ fn test_intensity_tracker_integration() {
     // Peak voxel i=11: x = 11·0.0025 − 0.03 = −0.0025 m.
     // Gaussian: P_peak = 2e6 · exp(−r²/w²) = 2e6 · exp(−0.25)
     const DT: f64 = 0.2;
-    const PNP: f64 = 2e6;
+    const PNP: f64 = 2.0 * MPA_TO_PA;
     const BEAM_W_SQ: f64 = 0.005 * 0.005; // (5 mm)²
     const L_FOCAL: f64 = 0.01;
     const ALPHA: f64 = 0.5;

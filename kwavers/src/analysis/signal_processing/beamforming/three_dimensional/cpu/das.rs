@@ -180,6 +180,7 @@ mod tests {
         Beamforming3dApodizationWindow, BeamformingConfig3D,
     };
     use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use crate::core::constants::numerical::MHZ_TO_HZ;
     use ndarray::Array4;
 
     fn make_config(
@@ -330,7 +331,7 @@ mod tests {
     fn das_receive_delay_is_geometrically_correct() {
         let sz = 3e-3_f64; // 3 mm element z-spacing
         let c = SOUND_SPEED_WATER_SIM;
-        let fs = 1_000_000.0_f64;
+        let fs = MHZ_TO_HZ;
         // Precondition: τ is exactly 1.0 sample.
         let tau_exact = 0.5 * sz / c * fs;
         assert!(

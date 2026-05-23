@@ -10,6 +10,7 @@ use crate::analysis::signal_processing::beamforming::{
     utils::steering::SteeringVectorMethod,
 };
 use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 
 #[test]
 fn end_to_end_pipeline_produces_finite_spectrum() {
@@ -17,7 +18,7 @@ fn end_to_end_pipeline_produces_finite_spectrum() {
     let n_sensors = 4;
     let spacing_m = 0.0075; // λ/2 at 100 kHz in water
     let n_samples = 128;
-    let fs = 1_000_000.0; // 1 MHz sampling
+    let fs = MHZ_TO_HZ; // 1 MHz sampling
     let f0 = 100_000.0; // 100 kHz signal
     let c = SOUND_SPEED_WATER_SIM; // sound speed
     let snr_db = 20.0;
@@ -74,7 +75,7 @@ fn capon_spectrum_varies_across_candidate_grid() {
     let n_sensors = 8;
     let spacing_m = 0.0075; // λ/2 at 100 kHz
     let n_samples = 256;
-    let fs = 1_000_000.0;
+    let fs = MHZ_TO_HZ;
     let f0 = 100_000.0;
     let c = SOUND_SPEED_WATER_SIM;
     let snr_db = 30.0; // High SNR
@@ -156,7 +157,7 @@ fn diagonal_loading_prevents_covariance_singularity() {
     let n_sensors = 3;
     let spacing_m = 0.0075;
     let n_samples = 32; // Few samples → poorly conditioned covariance
-    let fs = 1_000_000.0;
+    let fs = MHZ_TO_HZ;
     let f0 = 100_000.0;
     let c = SOUND_SPEED_WATER_SIM;
     let snr_db = 10.0; // Low SNR

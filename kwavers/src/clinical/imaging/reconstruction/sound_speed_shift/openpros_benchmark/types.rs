@@ -3,6 +3,7 @@
 use ndarray::Array2;
 
 use super::super::{SoundSpeedShiftConfig, SoundSpeedShiftImage, SoundSpeedShiftSample};
+use crate::core::constants::numerical::MHZ_TO_HZ;
 
 /// Hugging Face and arXiv identifier for the OpenPros structural reference.
 pub const OPENPROS_PAPER_ID: &str = "2505.12261";
@@ -10,7 +11,7 @@ pub const OPENPROS_PAPER_ID: &str = "2505.12261";
 const REFERENCE_SPACING_M: f64 = 0.000_375;
 const REFERENCE_AXIAL_POINTS: usize = 401;
 const REFERENCE_LATERAL_POINTS: usize = 161;
-const REFERENCE_PEAK_FREQUENCY_HZ: f64 = 1.0e6;
+const REFERENCE_PEAK_FREQUENCY_HZ: f64 = MHZ_TO_HZ;
 const REFERENCE_TIME_STEPS: usize = 1_000;
 const REFERENCE_ABSORBING_BOUNDARY_POINTS: usize = 120;
 

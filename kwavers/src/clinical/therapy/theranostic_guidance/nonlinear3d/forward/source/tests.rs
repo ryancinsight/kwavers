@@ -3,6 +3,7 @@ use crate::clinical::therapy::theranostic_guidance::nonlinear3d::types::{
 };
 use crate::clinical::therapy::theranostic_guidance::Point3;
 use crate::core::constants::fundamental::{SOUND_SPEED_AIR, SOUND_SPEED_WATER_SIM};
+use crate::core::constants::numerical::MHZ_TO_HZ;
 
 use super::super::TimeSchedule;
 use super::{
@@ -239,7 +240,7 @@ fn source_injection_imposes_bounded_pressure_without_accumulating_drive() {
         None,
     );
     let mut config = Nonlinear3dConfig::new(AnatomyKind::Liver);
-    config.frequency_hz = 1.0e6;
+    config.frequency_hz = MHZ_TO_HZ;
     config.source_pressure_pa = 28.0e6;
     config.cycles = 2.0;
     let schedule = TimeSchedule {

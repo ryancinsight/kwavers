@@ -207,6 +207,7 @@ mod tests {
     use super::*;
     use crate::clinical::therapy::theranostic_guidance::AnatomyKind;
     use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
+    use crate::core::constants::numerical::MPA_TO_PA;
     use crate::physics::acoustics::analysis::calculate_mechanical_index;
 
     #[test]
@@ -228,7 +229,7 @@ mod tests {
         config.cycles = 2.0;
         config.frequency_hz = 500_000.0;
 
-        let pressure = 2.0e6;
+        let pressure = 2.0 * MPA_TO_PA;
         let optimized = rayleigh_plesset_subharmonic_response(pressure, &config);
         let reference = reference_response_with_full_history(pressure, &config);
 
@@ -265,7 +266,7 @@ mod tests {
         config.inertial_mi_threshold = 1.9;
         config.bubble_time_steps_per_period = 24;
         config.cycles = 2.0;
-        let pressure = 2.0e6;
+        let pressure = 2.0 * MPA_TO_PA;
 
         let value = cavitation_value(true, pressure, pressure, &config);
 
@@ -286,7 +287,7 @@ mod tests {
         let volume = treatment_window_fixture(n, center);
         let mut pressure = Array3::<f64>::zeros((n, n, n));
         pressure[boundary] = 8.0e6;
-        pressure[center] = 2.0e6;
+        pressure[center] = 2.0 * MPA_TO_PA;
 
         let source = cavitation_source(&volume, &pressure, &config);
         let expected = cavitation_value(true, pressure[center], pressure[center], &config);

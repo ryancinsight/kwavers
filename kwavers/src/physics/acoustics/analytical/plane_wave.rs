@@ -106,12 +106,13 @@ fn positive_finite(value: f64) -> bool {
 mod tests {
     use super::*;
     use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use crate::core::constants::numerical::MHZ_TO_HZ;
     use crate::domain::grid::Grid;
     use std::f64::consts::PI;
 
     fn water_grid_one_wavelength() -> Grid {
         // f=1MHz, c=1500 m/s → λ=1.5mm; grid spacing dx=λ/32 → N=32 points per wavelength
-        let f = 1e6_f64;
+        let f = MHZ_TO_HZ;
         let c = SOUND_SPEED_WATER_SIM;
         let lam = c / f;
         let dx = lam / 32.0;
@@ -255,7 +256,7 @@ mod tests {
     #[test]
     fn plane_wave_near_peak_at_quarter_wavelength() {
         let nx = 64usize;
-        let f = 1e6_f64;
+        let f = MHZ_TO_HZ;
         let c = SOUND_SPEED_WATER_SIM;
         let lam = c / f;
         let dx = lam / nx as f64; // N grid points per wavelength
