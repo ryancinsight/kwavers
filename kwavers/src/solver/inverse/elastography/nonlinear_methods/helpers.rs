@@ -7,6 +7,7 @@ use super::super::config::NonlinearInversionConfig;
 use std::f64::consts::PI;
 
 /// μ = ρ c_s²  (Hooke's law for shear waves)
+#[must_use]
 #[inline]
 pub(super) fn shear_modulus(config: &NonlinearInversionConfig) -> f64 {
     let c_s = config.shear_wave_speed.max(1e-3);
@@ -36,12 +37,14 @@ pub(super) fn beta_s_from_amplitudes(
 }
 
 /// B/A = 2(β_s − 1)  [acoustic convention; linear medium → 0]
+#[must_use]
 #[inline]
 pub(super) fn ba_from_beta_s(beta_s: f64) -> f64 {
     2.0 * (beta_s - 1.0)
 }
 
 /// A_L = μ(4 β_s − 3)  (Destrade & Ogden 2010, Eq. 3.8)
+#[must_use]
 #[inline]
 pub(super) fn a_landau(mu: f64, beta_s: f64) -> f64 {
     mu * 4.0f64.mul_add(beta_s, -3.0)
@@ -53,6 +56,7 @@ pub(super) fn a_landau(mu: f64, beta_s: f64) -> f64 {
 /// A₁_pred = a1_obs
 /// A₂_pred = β_s k_s a1² z / 2   [Rénier 2008, Eq. 7]
 /// ```
+#[must_use]
 pub(super) fn forward_model(
     ba_ratio: f64,
     a1_obs: f64,
@@ -73,6 +77,7 @@ pub(super) fn forward_model(
 /// ∂A₁_pred / ∂(B/A) = 0
 /// ∂A₂_pred / ∂(B/A) = k_s A₁² z / 4   (∂β_s/∂(B/A) = 1/2)
 /// ```
+#[must_use]
 pub(super) fn forward_model_derivative(
     _ba_ratio: f64,
     a1_obs: f64,

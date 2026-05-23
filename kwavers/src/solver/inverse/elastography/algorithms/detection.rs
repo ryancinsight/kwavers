@@ -17,6 +17,7 @@ use crate::physics::acoustics::imaging::modalities::elastography::displacement::
 /// 3. Return the accepted voxel centres in physical coordinates.
 ///
 /// Returns a `Vec<[f64; 3]>` of `[x, y, z]` coordinates in metres.
+#[must_use]
 pub fn find_push_locations(displacement: &DisplacementField, grid: &Grid) -> Vec<[f64; 3]> {
     let (nx, ny, nz) = displacement.uz.dim();
     let mut locations = Vec::new();

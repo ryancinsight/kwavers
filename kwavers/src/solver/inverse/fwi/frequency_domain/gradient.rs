@@ -326,10 +326,12 @@ fn apply_tikhonov(
     }
 }
 
+#[must_use]
 pub(super) fn dot(a: &Array3<f64>, b: &Array3<f64>) -> f64 {
     a.iter().zip(b.iter()).map(|(&x, &y)| x * y).sum()
 }
 
+#[must_use]
 pub(super) fn max_abs(a: &Array3<f64>) -> f64 {
     a.iter().map(|value| value.abs()).fold(0.0, f64::max)
 }

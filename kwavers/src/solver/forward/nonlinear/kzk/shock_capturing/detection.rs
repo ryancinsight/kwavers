@@ -1,6 +1,7 @@
 //! Shock detection and harmonic analysis.
 
 use super::{ShockCapture, ShockDetectionResult};
+use crate::core::constants::fundamental::B_OVER_A_WATER;
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::math::fft::fft_1d_array;
 use ndarray::{s, Array1, Array2};
@@ -67,7 +68,8 @@ impl ShockCapture {
         let max_pressure = pressure.iter().map(|x| x.abs()).fold(0.0, f64::max);
 
         if max_pressure > 1.0 && result.max_gradient > 1e-6 {
-            let beta = 3.5;
+            // β = 1 + B/(2A); for water B/A = 5.0 → β = 3.5.
+            let beta = 1.0 + B_OVER_A_WATER / 2.0;
             result.steepness_parameter =
                 1.0 / (beta * c0 * max_pressure * result.max_gradient).max(1e-10);
         }
