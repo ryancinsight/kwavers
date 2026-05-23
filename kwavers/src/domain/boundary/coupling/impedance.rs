@@ -216,14 +216,15 @@ impl BoundaryCondition for ImpedanceBoundary {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::fundamental::ACOUSTIC_IMPEDANCE_WATER_NOMINAL;
     use crate::core::constants::numerical::MHZ_TO_HZ;
 
     #[test]
     fn test_impedance_boundary() {
-        let boundary = ImpedanceBoundary::new(1.5e6, BoundaryDirections::all());
+        let boundary = ImpedanceBoundary::new(ACOUSTIC_IMPEDANCE_WATER_NOMINAL, BoundaryDirections::all());
 
         // Test reflection coefficient
-        let r = boundary.reflection_coefficient(MHZ_TO_HZ, 1.5e6); // Matched impedance
+        let r = boundary.reflection_coefficient(MHZ_TO_HZ, ACOUSTIC_IMPEDANCE_WATER_NOMINAL); // Matched impedance
         assert!(r.abs() < 1e-10); // Perfect match, no reflection
 
         let r = boundary.reflection_coefficient(MHZ_TO_HZ, 3.0e6); // Mismatched
@@ -232,10 +233,10 @@ mod tests {
 
     #[test]
     fn test_impedance_boundary_gaussian_profile() {
-        let boundary = ImpedanceBoundary::new(1.5e6, BoundaryDirections::all())
+        let boundary = ImpedanceBoundary::new(ACOUSTIC_IMPEDANCE_WATER_NOMINAL, BoundaryDirections::all())
             .with_gaussian_profile(MHZ_TO_HZ, 0.5 * MHZ_TO_HZ);
 
-        let medium_impedance = 1.5e6;
+        let medium_impedance = ACOUSTIC_IMPEDANCE_WATER_NOMINAL;
 
         // At center frequency, should have maximum effect
         let z_ratio_center = boundary.impedance_ratio(MHZ_TO_HZ, medium_impedance);
@@ -259,10 +260,10 @@ mod tests {
 
     #[test]
     fn test_impedance_matched() {
-        let boundary = ImpedanceBoundary::new(1.5e6, BoundaryDirections::all());
+        let boundary = ImpedanceBoundary::new(ACOUSTIC_IMPEDANCE_WATER_NOMINAL, BoundaryDirections::all());
 
         // Matched impedances should give zero reflection
-        let r = boundary.reflection_coefficient(MHZ_TO_HZ, 1.5e6);
+        let r = boundary.reflection_coefficient(MHZ_TO_HZ, ACOUSTIC_IMPEDANCE_WATER_NOMINAL);
         assert!(r.abs() < 1e-12);
     }
 
@@ -272,7 +273,7 @@ mod tests {
 
         // Very high target impedance (rigid wall)
         // R → +1 as Z_target → ∞
-        let r = boundary.reflection_coefficient(MHZ_TO_HZ, 1.5e6);
+        let r = boundary.reflection_coefficient(MHZ_TO_HZ, ACOUSTIC_IMPEDANCE_WATER_NOMINAL);
         assert!(r > 0.999, "Rigid wall should have R ≈ 1, got {}", r);
     }
 
@@ -282,7 +283,7 @@ mod tests {
 
         // Very low target impedance (pressure release)
         // R → -1 as Z_target → 0
-        let r = boundary.reflection_coefficient(MHZ_TO_HZ, 1.5e6);
+        let r = boundary.reflection_coefficient(MHZ_TO_HZ, ACOUSTIC_IMPEDANCE_WATER_NOMINAL);
         assert!(r < -0.999, "Pressure release should have R ≈ -1, got {}", r);
     }
 }

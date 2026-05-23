@@ -77,8 +77,13 @@ pub fn make_annular_array(
     )?;
 
     let focus = [vertex[0], vertex[1], vertex[2] + radius_of_curvature];
-    let base_config =
-        BowlConfig::from_vertex_focus(vertex, focus, 2.0 * outer_aperture_radius, frequency, MPA_TO_PA);
+    let base_config = BowlConfig::from_vertex_focus(
+        vertex,
+        focus,
+        2.0 * outer_aperture_radius,
+        frequency,
+        MPA_TO_PA,
+    );
     let mut bowls = Vec::with_capacity(n_rings);
 
     for i in 0..n_rings {
@@ -253,7 +258,8 @@ mod tests {
 
     #[test]
     fn annular_array_rejects_invalid_domains() {
-        let error = make_annular_array(0.08, 0.04, 0.02, 2, [0.0, 0.0, 0.0], MHZ_TO_HZ).unwrap_err();
+        let error =
+            make_annular_array(0.08, 0.04, 0.02, 2, [0.0, 0.0, 0.0], MHZ_TO_HZ).unwrap_err();
         match error {
             KwaversError::Validation(ValidationError::FieldValidation { field, .. }) => {
                 assert_eq!(field, "aperture_radii");

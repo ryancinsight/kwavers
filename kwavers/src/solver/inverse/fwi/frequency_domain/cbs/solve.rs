@@ -433,6 +433,7 @@ fn validate_operator(grid: GridSpec, operator: GreenOperatorKind) -> KwaversResu
             time_step_s,
             reference_sound_speed_m_s,
             absorbing_boundary,
+            temporal_transfer,
         } => {
             if !time_step_s.is_finite() || time_step_s <= 0.0 {
                 return Err(KwaversError::InvalidInput(format!(
@@ -443,6 +444,9 @@ fn validate_operator(grid: GridSpec, operator: GreenOperatorKind) -> KwaversResu
                 return Err(KwaversError::InvalidInput(format!(
                     "PSTD spectral Green reference sound speed must be positive and finite, got {reference_sound_speed_m_s}"
                 )));
+            }
+            if let Some(temporal_transfer) = temporal_transfer {
+                temporal_transfer.validate()?;
             }
             absorbing_boundary.validate_for_grid(grid)?;
         }

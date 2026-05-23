@@ -23,10 +23,10 @@ pub struct LaserConfig {
 impl Default for LaserConfig {
     fn default() -> Self {
         Self {
-            wavelength: 800e-9,   // 800 nm (near-infrared)
-            beam_waist: 1e-3,     // 1 mm beam waist
-            peak_power: 1.0,      // 1 W peak power
-            pulse_duration: 1e-9, // 1 ns pulse
+            wavelength: 800e-9,         // 800 nm (near-infrared)
+            beam_waist: 1e-3,           // 1 mm beam waist
+            peak_power: 1.0,            // 1 W peak power
+            pulse_duration: 1e-9,       // 1 ns pulse
             repetition_rate: MHZ_TO_HZ, // 1 MHz repetition rate
         }
     }

@@ -30,7 +30,9 @@ use num_complex::Complex64;
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;
 
-use super::cbs::{AbsorbingBoundary, CbsConfig, GreenOperatorKind, GridSpec};
+use super::cbs::{
+    AbsorbingBoundary, CbsConfig, GreenOperatorKind, GridSpec, PstdTemporalTransferConfig,
+};
 use super::Config;
 
 /// Helmholtz forward operator: predicts complex receiver pressure rows for one
@@ -62,8 +64,12 @@ pub trait HelmholtzForwardOperator: Debug + Send + Sync {
     /// CBS solver descriptor — `Some((cbs_config, kernel))` for CBS impls,
     /// `None` otherwise. The volume-field adjoint gradient needs these to
     /// reconstruct the matching forward and adjoint solves.
-    fn cbs_descriptor(&self, _config: &Config) -> Option<(CbsConfig, GreenOperatorKind)> {
-        None
+    fn cbs_descriptor(
+        &self,
+        _config: &Config,
+        _frequency_hz: f64,
+    ) -> KwaversResult<Option<(CbsConfig, GreenOperatorKind)>> {
+        Ok(None)
     }
 
     /// Validate operator-specific configuration (e.g. CBS iteration count,
@@ -155,8 +161,12 @@ impl HelmholtzForwardOperator for DenseConvergentBornOperator {
         true
     }
 
-    fn cbs_descriptor(&self, _config: &Config) -> Option<(CbsConfig, GreenOperatorKind)> {
-        Some((self.cbs_config(), GreenOperatorKind::DenseFreeSpace))
+    fn cbs_descriptor(
+        &self,
+        _config: &Config,
+        _frequency_hz: f64,
+    ) -> KwaversResult<Option<(CbsConfig, GreenOperatorKind)>> {
+        Ok(Some((self.cbs_config(), GreenOperatorKind::DenseFreeSpace)))
     }
 
     fn validate(&self) -> KwaversResult<()> {
@@ -226,13 +236,17 @@ impl HelmholtzForwardOperator for SpectralConvergentBornOperator {
         true
     }
 
-    fn cbs_descriptor(&self, _config: &Config) -> Option<(CbsConfig, GreenOperatorKind)> {
-        Some((
+    fn cbs_descriptor(
+        &self,
+        _config: &Config,
+        _frequency_hz: f64,
+    ) -> KwaversResult<Option<(CbsConfig, GreenOperatorKind)>> {
+        Ok(Some((
             self.cbs_config(),
             GreenOperatorKind::SpectralPeriodic {
                 absorbing_boundary: self.absorbing_boundary,
             },
-        ))
+        )))
     }
 
     fn validate(&self) -> KwaversResult<()> {
@@ -266,6 +280,7 @@ pub struct PstdSpectralConvergentBornOperator {
     pub iterations: usize,
     pub relative_tolerance: f64,
     pub time_step_s: f64,
+    pub temporal_transfer: Option<PstdTemporalTransferConfig>,
     pub absorbing_boundary: AbsorbingBoundary,
 }
 
@@ -285,7 +300,11 @@ impl HelmholtzForwardOperator for PstdSpectralConvergentBornOperator {
             config,
             transmissions,
             self.cbs_config(),
-            self.green_operator(config.reference_sound_speed_m_s),
+            self.green_operator(
+                config.reference_sound_speed_m_s,
+                frequency_hz,
+                config.spacing_m,
+            )?,
         )
     }
 
@@ -293,11 +312,19 @@ impl HelmholtzForwardOperator for PstdSpectralConvergentBornOperator {
         true
     }
 
-    fn cbs_descriptor(&self, config: &Config) -> Option<(CbsConfig, GreenOperatorKind)> {
-        Some((
+    fn cbs_descriptor(
+        &self,
+        config: &Config,
+        frequency_hz: f64,
+    ) -> KwaversResult<Option<(CbsConfig, GreenOperatorKind)>> {
+        Ok(Some((
             self.cbs_config(),
-            self.green_operator(config.reference_sound_speed_m_s),
-        ))
+            self.green_operator(
+                config.reference_sound_speed_m_s,
+                frequency_hz,
+                config.spacing_m,
+            )?,
+        )))
     }
 
     fn validate(&self) -> KwaversResult<()> {
@@ -307,6 +334,9 @@ impl HelmholtzForwardOperator for PstdSpectralConvergentBornOperator {
                 "PSTD spectral Born time_step_s must be positive and finite, got {}",
                 self.time_step_s
             )));
+        }
+        if let Some(temporal_transfer) = self.temporal_transfer {
+            temporal_transfer.validate()?;
         }
         self.absorbing_boundary.validate()
     }
@@ -328,12 +358,29 @@ impl PstdSpectralConvergentBornOperator {
         }
     }
 
-    fn green_operator(self, reference_sound_speed_m_s: f64) -> GreenOperatorKind {
-        GreenOperatorKind::SpectralPstdPeriodic {
+    fn green_operator(
+        self,
+        reference_sound_speed_m_s: f64,
+        frequency_hz: f64,
+        spacing_m: f64,
+    ) -> KwaversResult<GreenOperatorKind> {
+        let temporal_transfer = self
+            .temporal_transfer
+            .map(|transfer| {
+                transfer.bin_config(
+                    frequency_hz,
+                    self.time_step_s,
+                    spacing_m,
+                    reference_sound_speed_m_s,
+                )
+            })
+            .transpose()?;
+        Ok(GreenOperatorKind::SpectralPstdPeriodic {
             time_step_s: self.time_step_s,
             reference_sound_speed_m_s,
+            temporal_transfer,
             absorbing_boundary: self.absorbing_boundary,
-        }
+        })
     }
 }
 
@@ -357,6 +404,7 @@ mod tests {
             iterations: 16,
             relative_tolerance: 1.0e-8,
             time_step_s: 1.0e-7,
+            temporal_transfer: None,
             absorbing_boundary: AbsorbingBoundary::disabled(),
         };
 
@@ -370,27 +418,34 @@ mod tests {
     fn cbs_descriptor_present_only_for_cbs_impls() {
         let config = Config::default();
 
-        assert!(SingleScatterBornOperator.cbs_descriptor(&config).is_none());
+        assert!(SingleScatterBornOperator
+            .cbs_descriptor(&config, 200_000.0)
+            .unwrap()
+            .is_none());
         assert!(DenseConvergentBornOperator {
             iterations: 8,
             relative_tolerance: 1.0e-6,
         }
-        .cbs_descriptor(&config)
+        .cbs_descriptor(&config, 200_000.0)
+        .unwrap()
         .is_some());
         assert!(SpectralConvergentBornOperator {
             iterations: 8,
             relative_tolerance: 1.0e-6,
             absorbing_boundary: AbsorbingBoundary::disabled(),
         }
-        .cbs_descriptor(&config)
+        .cbs_descriptor(&config, 200_000.0)
+        .unwrap()
         .is_some());
         assert!(PstdSpectralConvergentBornOperator {
             iterations: 8,
             relative_tolerance: 1.0e-6,
             time_step_s: 1.0e-7,
+            temporal_transfer: None,
             absorbing_boundary: AbsorbingBoundary::disabled(),
         }
-        .cbs_descriptor(&config)
+        .cbs_descriptor(&config, 200_000.0)
+        .unwrap()
         .is_some());
     }
 
@@ -412,6 +467,7 @@ mod tests {
             iterations: 8,
             relative_tolerance: 1.0e-6,
             time_step_s: 1.0e-7,
+            temporal_transfer: None,
             absorbing_boundary: AbsorbingBoundary::disabled(),
         }
         .uses_volume_field_adjoint());

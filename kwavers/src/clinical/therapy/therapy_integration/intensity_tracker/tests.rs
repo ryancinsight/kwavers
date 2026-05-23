@@ -1,4 +1,5 @@
 use super::tracker::IntensityTracker;
+use crate::core::constants::fundamental::ACOUSTIC_IMPEDANCE_WATER_NOMINAL;
 use crate::core::constants::numerical::MPA_TO_PA;
 use ndarray::Array3;
 
@@ -22,7 +23,7 @@ fn test_intensity_recording() {
 
     // Create simple test fields
     let pressure = Array3::from_elem([8, 8, 8], MPA_TO_PA); // 1 MPa
-    let impedance = Array3::from_elem([8, 8, 8], 1.5e6); // Water impedance (1.5 MRayl)
+    let impedance = Array3::from_elem([8, 8, 8], ACOUSTIC_IMPEDANCE_WATER_NOMINAL); // Water impedance (1.5 MRayl)
 
     let metrics = tracker
         .record_intensity(&pressure, &impedance, 0.0)
@@ -39,7 +40,7 @@ fn test_peak_tracking() {
     let mut tracker = IntensityTracker::new(0.01, 1e-6).unwrap();
 
     let pressure = Array3::from_elem([4, 4, 4], MPA_TO_PA);
-    let impedance = Array3::from_elem([4, 4, 4], 1.5e6); // 1.5 MRayl
+    let impedance = Array3::from_elem([4, 4, 4], ACOUSTIC_IMPEDANCE_WATER_NOMINAL); // 1.5 MRayl
 
     tracker
         .record_intensity(&pressure, &impedance, 0.0)
@@ -60,7 +61,7 @@ fn test_peak_tracking() {
 fn test_thermal_dose() {
     let mut tracker = IntensityTracker::new(0.01, 1e-6).unwrap();
     let pressure = Array3::from_elem([4, 4, 4], 0.0);
-    let impedance = Array3::from_elem([4, 4, 4], 1.5e6);
+    let impedance = Array3::from_elem([4, 4, 4], ACOUSTIC_IMPEDANCE_WATER_NOMINAL);
 
     // Record baseline
     tracker
@@ -82,7 +83,7 @@ fn test_spta_units() {
     let mut tracker = IntensityTracker::new(0.01, 1e-6).unwrap();
 
     let pressure = Array3::from_elem([4, 4, 4], MPA_TO_PA); // 1 MPa
-    let impedance = Array3::from_elem([4, 4, 4], 1.5e6);
+    let impedance = Array3::from_elem([4, 4, 4], ACOUSTIC_IMPEDANCE_WATER_NOMINAL);
 
     tracker
         .record_intensity(&pressure, &impedance, 0.0)
@@ -100,7 +101,7 @@ fn test_reset() {
     let mut tracker = IntensityTracker::new(0.01, 1e-6).unwrap();
 
     let pressure = Array3::from_elem([4, 4, 4], MPA_TO_PA);
-    let impedance = Array3::from_elem([4, 4, 4], 1.5e6); // 1.5 MRayl
+    let impedance = Array3::from_elem([4, 4, 4], ACOUSTIC_IMPEDANCE_WATER_NOMINAL); // 1.5 MRayl
 
     tracker
         .record_intensity(&pressure, &impedance, 0.0)

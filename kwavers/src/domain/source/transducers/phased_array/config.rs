@@ -1,7 +1,7 @@
 //! Configuration for phased array transducers
 
-use crate::core::constants::SOUND_SPEED_TISSUE;
 use crate::core::constants::numerical::MHZ_TO_HZ;
+use crate::core::constants::SOUND_SPEED_TISSUE;
 
 /// Configuration for phased array transducer geometry and behavior
 #[derive(Debug, Clone)]

@@ -14,8 +14,8 @@ use crate::domain::source::{
     wavefront::{
         BesselConfig, GaussianConfig, PlaneWaveSourceConfig, SphericalConfig, SphericalWaveType,
     },
-    BesselSource, DomainSourceParameters, EnvelopeType, GaussianSource, PistonSource,
-    PlaneWaveSource, PointSource, PulseType, Source, SourceModel, SphericalSource,
+    BesselSource, DomainSourceParameters, EnvelopeType, FocusedBowlAperture, GaussianSource,
+    PistonSource, PlaneWaveSource, PointSource, PulseType, Source, SourceModel, SphericalSource,
 };
 use std::f64::consts::PI;
 use std::sync::Arc;
@@ -203,12 +203,7 @@ impl SourceFactory {
                     element_size: None, // Auto-calculate
                     apply_directivity: true,
                 };
-                let transducer = match config.num_elements {
-                    Some(element_count) => {
-                        BowlTransducer::with_element_count(bowl_config, element_count)?
-                    }
-                    None => BowlTransducer::new(bowl_config)?,
-                };
+                let transducer = Self::create_focused_bowl_transducer(config, bowl_config)?;
                 Ok(Box::new(FocusedSource::from_transducer(
                     transducer, signal, grid,
                 )))
@@ -258,12 +253,66 @@ impl SourceFactory {
             .into()),
         }
     }
+
+    fn create_focused_bowl_transducer(
+        config: &DomainSourceParameters,
+        bowl_config: BowlConfig,
+    ) -> KwaversResult<BowlTransducer> {
+        match config.focused_bowl_aperture {
+            FocusedBowlAperture::Diameter => match config.num_elements {
+                Some(element_count) => {
+                    BowlTransducer::with_element_count(bowl_config, element_count)
+                }
+                None => BowlTransducer::new(bowl_config),
+            },
+            FocusedBowlAperture::PolarSpan { theta_max_rad } => {
+                let element_count = required_focused_bowl_element_count(config)?;
+                BowlTransducer::with_polar_span(bowl_config, theta_max_rad, element_count)
+            }
+            FocusedBowlAperture::PolarBounds {
+                theta_min_rad,
+                theta_max_rad,
+            } => {
+                let element_count = required_focused_bowl_element_count(config)?;
+                BowlTransducer::with_polar_bounds(
+                    bowl_config,
+                    theta_min_rad,
+                    theta_max_rad,
+                    element_count,
+                )
+            }
+            FocusedBowlAperture::AxisProjectionBounds {
+                axis_projection_min,
+                axis_projection_max,
+            } => {
+                let element_count = required_focused_bowl_element_count(config)?;
+                BowlTransducer::with_axis_projection_bounds(
+                    bowl_config,
+                    axis_projection_min,
+                    axis_projection_max,
+                    element_count,
+                )
+            }
+        }
+    }
+}
+
+fn required_focused_bowl_element_count(config: &DomainSourceParameters) -> KwaversResult<usize> {
+    config.num_elements.ok_or_else(|| {
+        ConfigError::InvalidValue {
+            parameter: "num_elements".to_owned(),
+            value: "None".to_owned(),
+            constraint: "Focused bowl angular aperture modes require a configured element count"
+                .to_owned(),
+        }
+        .into()
+    })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::source::{DomainSourceParameters, SourceModel};
+    use crate::domain::source::{DomainSourceParameters, FocusedBowlAperture, SourceModel};
 
     #[test]
     fn focused_source_factory_honors_configured_element_count() {
@@ -284,5 +333,60 @@ mod tests {
 
         assert_eq!(source.positions().len(), element_count);
         assert_eq!(source.focal_point(), Some((0.0, 0.0, 0.08)));
+    }
+
+    #[test]
+    fn focused_source_factory_accepts_axis_projection_aperture() {
+        let mut grid = Grid::new(40, 40, 28, 0.01, 0.01, 0.01).unwrap();
+        grid.origin = [-0.20, -0.20, -0.08];
+        let element_count = 19;
+        let config = DomainSourceParameters {
+            model: SourceModel::Focused,
+            position: [0.0, 0.0, 0.16],
+            focus: Some([0.0, 0.0, 0.0]),
+            radius: 0.16,
+            frequency: 650.0e3,
+            num_elements: Some(element_count),
+            focused_bowl_aperture: FocusedBowlAperture::AxisProjectionBounds {
+                axis_projection_min: -0.20,
+                axis_projection_max: 0.95,
+            },
+            ..Default::default()
+        };
+
+        let source = SourceFactory::create_source(&config, &grid).unwrap();
+        let positions = source.positions();
+        let min_projection = positions
+            .iter()
+            .map(|position| position.2 / 0.16)
+            .fold(f64::INFINITY, f64::min);
+        let max_projection = positions
+            .iter()
+            .map(|position| position.2 / 0.16)
+            .fold(f64::NEG_INFINITY, f64::max);
+
+        assert_eq!(positions.len(), element_count);
+        assert!((min_projection + 0.20).abs() < 0.08);
+        assert!((max_projection - 0.95).abs() < 0.08);
+    }
+
+    #[test]
+    fn angular_focused_source_factory_requires_element_count() {
+        let grid = Grid::new(8, 8, 8, 0.01, 0.01, 0.01).unwrap();
+        let config = DomainSourceParameters {
+            model: SourceModel::Focused,
+            position: [0.0, 0.0, 0.08],
+            focus: Some([0.0, 0.0, 0.0]),
+            radius: 0.08,
+            frequency: 650.0e3,
+            focused_bowl_aperture: FocusedBowlAperture::PolarSpan { theta_max_rad: 1.0 },
+            ..Default::default()
+        };
+
+        let error = SourceFactory::create_source(&config, &grid).unwrap_err();
+        assert!(
+            format!("{error:?}").contains("num_elements"),
+            "expected num_elements validation, got {error:?}"
+        );
     }
 }

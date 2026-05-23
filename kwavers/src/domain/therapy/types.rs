@@ -138,7 +138,7 @@ impl DomainTherapyParameters {
 
     #[must_use]
     pub fn hifu() -> Self {
-        Self::new(1.5e6, 2.0e6, 5.0)
+        Self::new(1.5 * MHZ_TO_HZ, 2.0 * MPA_TO_PA, 5.0)
     }
 
     pub fn calculate_mechanical_index(&mut self) {

@@ -2,6 +2,7 @@
 
 use super::absorbing::AbsorbingBoundary;
 use super::grid::GridSpec;
+use super::temporal::PstdTemporalBinConfig;
 use crate::solver::inverse::linear_born_inversion::ElementPosition;
 use num_complex::Complex64;
 use std::f64::consts::PI;
@@ -73,6 +74,7 @@ pub(super) fn apply_shifted_green_operator(
             time_step_s,
             reference_sound_speed_m_s,
             absorbing_boundary,
+            ..
         } => super::spectral::apply_shifted_green_pstd_spectral_with_boundary(
             grid,
             reference_wavenumber,
@@ -135,6 +137,7 @@ pub(crate) fn apply_shifted_green_adjoint_operator(
             time_step_s,
             reference_sound_speed_m_s,
             absorbing_boundary,
+            ..
         } => super::spectral::apply_shifted_green_pstd_spectral_adjoint_with_boundary(
             grid,
             reference_wavenumber,
@@ -163,6 +166,8 @@ pub enum GreenOperatorKind {
         time_step_s: f64,
         /// Reference homogeneous sound speed [m/s].
         reference_sound_speed_m_s: f64,
+        /// Optional finite-window source/bin transfer for one drive frequency.
+        temporal_transfer: Option<PstdTemporalBinConfig>,
         /// Absorbing boundary policy applied as `W G W`.
         absorbing_boundary: AbsorbingBoundary,
     },

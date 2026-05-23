@@ -1,4 +1,5 @@
 use super::AcousticSolverBackend;
+use crate::core::constants::fundamental::ACOUSTIC_IMPEDANCE_WATER_NOMINAL;
 use crate::core::constants::numerical::MPA_TO_PA;
 use crate::core::error::KwaversResult;
 use crate::domain::source::Source;
@@ -51,13 +52,13 @@ impl AcousticSolverBackend for MockBackend {
 
     fn get_intensity_field(&self) -> KwaversResult<Array3<f64>> {
         // I = p²/(ρc) with ρc = 1.5 MRayl for water
-        let rho_c = 1.5e6;
+        let rho_c = ACOUSTIC_IMPEDANCE_WATER_NOMINAL;
         Ok(self.pressure.mapv(|p| p * p / rho_c))
     }
 
     fn get_impedance_field(&self) -> KwaversResult<Array3<f64>> {
         // Return constant impedance for mock backend (1.5 MRayl)
-        Ok(Array3::from_elem((self.nx, self.ny, self.nz), 1.5e6))
+        Ok(Array3::from_elem((self.nx, self.ny, self.nz), ACOUSTIC_IMPEDANCE_WATER_NOMINAL))
     }
 
     fn get_dt(&self) -> f64 {
@@ -119,7 +120,7 @@ fn test_backend_intensity_computation() {
     let intensity = backend.get_intensity_field().unwrap();
 
     // Expected: I = p²/(ρc) = (1 MPa)² / (1.5 MRayl) ≈ 666.7 kW/m²
-    let expected = (MPA_TO_PA * MPA_TO_PA) / 1.5e6;
+    let expected = (MPA_TO_PA * MPA_TO_PA) / ACOUSTIC_IMPEDANCE_WATER_NOMINAL;
     assert!((intensity[[1, 1, 1]] - expected).abs() < 1.0);
 }
 

@@ -24,6 +24,132 @@ pub struct PstdTemporalBinConfig {
     pub source_gain: f64,
 }
 
+impl PstdTemporalBinConfig {
+    /// Validate finite-window bin parameters independent of a specific mode.
+    ///
+    /// # Errors
+    /// Returns an error when timing or source-gain parameters are invalid.
+    pub fn validate(self) -> KwaversResult<()> {
+        validate_temporal_bin(0.0, self)
+    }
+}
+
+/// Frequency-independent PSTD acquisition timing/source parameters.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct PstdTemporalTransferConfig {
+    /// Scalar pressure-source amplitude [Pa].
+    pub source_amplitude_pa: f64,
+    /// Number of continuous-wave cycles simulated for each frequency.
+    pub cycles_per_frequency: usize,
+    /// Number of trailing cycles used for the complex frequency bin.
+    pub frequency_bin_cycles: usize,
+}
+
+impl PstdTemporalTransferConfig {
+    /// Validate acquisition transfer parameters.
+    ///
+    /// # Errors
+    /// Returns an error when cycle counts or source amplitude are invalid.
+    pub fn validate(self) -> KwaversResult<()> {
+        validate_temporal_transfer(self)
+    }
+
+    /// Build the finite-window modal-bin config for one drive frequency.
+    ///
+    /// The source gain matches the additive PSTD pressure-source update used
+    /// by the clinical dataset generator: `2 c0 Δt A / Δx`.
+    ///
+    /// # Errors
+    /// Returns an error when frequency, sampling, spacing, or transfer
+    /// parameters violate the PSTD acquisition contract.
+    pub fn bin_config(
+        self,
+        frequency_hz: f64,
+        time_step_s: f64,
+        spacing_m: f64,
+        reference_sound_speed_m_s: f64,
+    ) -> KwaversResult<PstdTemporalBinConfig> {
+        validate_frequency_sampling(frequency_hz, time_step_s)?;
+        validate_temporal_transfer(self)?;
+        if !spacing_m.is_finite() || spacing_m <= 0.0 {
+            return Err(KwaversError::InvalidInput(format!(
+                "PSTD temporal spacing_m must be positive and finite, got {spacing_m}"
+            )));
+        }
+        if !reference_sound_speed_m_s.is_finite() || reference_sound_speed_m_s <= 0.0 {
+            return Err(KwaversError::InvalidInput(format!(
+                "PSTD temporal reference sound speed must be positive and finite, got {reference_sound_speed_m_s}"
+            )));
+        }
+        let total_steps = pstd_time_steps_for_cycles(
+            frequency_hz,
+            time_step_s,
+            self.cycles_per_frequency,
+        )?;
+        let bin_start_step = pstd_frequency_bin_start_step(
+            frequency_hz,
+            time_step_s,
+            self.cycles_per_frequency,
+            self.frequency_bin_cycles,
+        )?;
+        let source_gain =
+            2.0 * reference_sound_speed_m_s * time_step_s * self.source_amplitude_pa / spacing_m;
+        Ok(PstdTemporalBinConfig {
+            frequency_hz,
+            time_step_s,
+            total_steps,
+            bin_start_step,
+            source_gain,
+        })
+    }
+}
+
+/// PSTD time-step count for a continuous-wave drive over `cycles` cycles.
+///
+/// # Errors
+/// Returns an error when sampling parameters are invalid or the count is not
+/// representable.
+pub fn pstd_time_steps_for_cycles(
+    frequency_hz: f64,
+    time_step_s: f64,
+    cycles: usize,
+) -> KwaversResult<usize> {
+    validate_frequency_sampling(frequency_hz, time_step_s)?;
+    if cycles == 0 {
+        return Err(KwaversError::InvalidInput(
+            "PSTD temporal cycles must be positive".to_owned(),
+        ));
+    }
+    let raw = (cycles as f64 / (frequency_hz * time_step_s)).ceil();
+    if !raw.is_finite() || raw > usize::MAX as f64 {
+        return Err(KwaversError::InvalidInput(format!(
+            "PSTD temporal time-step count is not representable for frequency {frequency_hz}"
+        )));
+    }
+    Ok((raw as usize).max(2))
+}
+
+/// First sample of the trailing frequency bin.
+///
+/// # Errors
+/// Returns an error when frequency or cycle parameters are invalid.
+pub fn pstd_frequency_bin_start_step(
+    frequency_hz: f64,
+    time_step_s: f64,
+    cycles_per_frequency: usize,
+    frequency_bin_cycles: usize,
+) -> KwaversResult<usize> {
+    let transfer = PstdTemporalTransferConfig {
+        source_amplitude_pa: 0.0,
+        cycles_per_frequency,
+        frequency_bin_cycles,
+    };
+    validate_temporal_transfer(transfer)?;
+    let total_steps = pstd_time_steps_for_cycles(frequency_hz, time_step_s, cycles_per_frequency)?;
+    let bin_steps = pstd_time_steps_for_cycles(frequency_hz, time_step_s, frequency_bin_cycles)?;
+    Ok(total_steps.saturating_sub(bin_steps))
+}
+
 /// PSTD pressure-source k-space correction `cos(c0 Δt |k| / 2)`.
 #[must_use]
 pub fn pstd_source_kappa_symbol(
@@ -128,6 +254,43 @@ fn validate_temporal_bin(theta_squared: f64, config: PstdTemporalBinConfig) -> K
         return Err(KwaversError::InvalidInput(format!(
             "PSTD temporal source_gain must be finite, got {}",
             config.source_gain
+        )));
+    }
+    Ok(())
+}
+
+fn validate_temporal_transfer(config: PstdTemporalTransferConfig) -> KwaversResult<()> {
+    if config.cycles_per_frequency == 0 {
+        return Err(KwaversError::InvalidInput(
+            "PSTD temporal cycles_per_frequency must be positive".to_owned(),
+        ));
+    }
+    if config.frequency_bin_cycles == 0
+        || config.frequency_bin_cycles > config.cycles_per_frequency
+    {
+        return Err(KwaversError::InvalidInput(format!(
+            "PSTD temporal frequency_bin_cycles must be in 1..={}, got {}",
+            config.cycles_per_frequency, config.frequency_bin_cycles
+        )));
+    }
+    if !config.source_amplitude_pa.is_finite() {
+        return Err(KwaversError::InvalidInput(format!(
+            "PSTD temporal source_amplitude_pa must be finite, got {}",
+            config.source_amplitude_pa
+        )));
+    }
+    Ok(())
+}
+
+fn validate_frequency_sampling(frequency_hz: f64, time_step_s: f64) -> KwaversResult<()> {
+    if !frequency_hz.is_finite() || frequency_hz <= 0.0 {
+        return Err(KwaversError::InvalidInput(format!(
+            "PSTD temporal frequency_hz must be positive and finite, got {frequency_hz}"
+        )));
+    }
+    if !time_step_s.is_finite() || time_step_s <= 0.0 {
+        return Err(KwaversError::InvalidInput(format!(
+            "PSTD temporal time_step_s must be positive and finite, got {time_step_s}"
         )));
     }
     Ok(())

@@ -2,7 +2,7 @@
 
 use super::{TheoremValidation, TheoremValidator};
 use crate::core::constants::fundamental::{
-    SOUND_SPEED_AIR, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM,
+    DENSITY_WATER_NOMINAL, SOUND_SPEED_AIR, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM,
 };
 use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::core::constants::thermodynamic::ROOM_TEMPERATURE_K;
@@ -97,7 +97,7 @@ impl TheoremValidator {
         results.push(Self::validate_coded_excitation_snr(256, 3.0, 18.0));
         results.push(Self::validate_reciprocity(1.0, 1.0, 1e-10));
         results.push(Self::validate_impedance_reflection(
-            1000.0,
+            DENSITY_WATER_NOMINAL,
             SOUND_SPEED_WATER_SIM,
             1.2,
             340.0,

@@ -2,7 +2,10 @@
 
 use super::green::GreenOperatorKind;
 use super::grid::{bli_weights, BliConfig, GridSpec, GridWeight};
-use super::temporal::pstd_source_kappa_symbol;
+use super::temporal::{
+    pstd_leapfrog_symbol, pstd_modal_frequency_bin_response, pstd_modal_theta_squared,
+    pstd_source_kappa_symbol, PstdTemporalBinConfig,
+};
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::math::fft::{fft_3d_complex_into, ifft_3d_complex_inplace};
 use crate::physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;
@@ -44,6 +47,7 @@ pub fn source_density_from_bli(
 pub fn source_density_for_operator(
     grid: GridSpec,
     sources: &[ElementPosition],
+    reference_wavenumber_rad_per_m: f64,
     operator: GreenOperatorKind,
 ) -> KwaversResult<Vec<Complex64>> {
     match operator {
@@ -53,12 +57,15 @@ pub fn source_density_for_operator(
         GreenOperatorKind::SpectralPstdPeriodic {
             time_step_s,
             reference_sound_speed_m_s,
+            temporal_transfer,
             ..
         } => source_density_from_pstd_grid_kappa(
             grid,
             sources,
+            reference_wavenumber_rad_per_m,
             time_step_s,
             reference_sound_speed_m_s,
+            temporal_transfer,
         ),
     }
 }
@@ -66,10 +73,17 @@ pub fn source_density_for_operator(
 fn source_density_from_pstd_grid_kappa(
     grid: GridSpec,
     sources: &[ElementPosition],
+    reference_wavenumber_rad_per_m: f64,
     time_step_s: f64,
     reference_sound_speed_m_s: f64,
+    temporal_transfer: Option<PstdTemporalBinConfig>,
 ) -> KwaversResult<Vec<Complex64>> {
-    validate_pstd_source_parameters(time_step_s, reference_sound_speed_m_s)?;
+    validate_pstd_source_parameters(
+        reference_wavenumber_rad_per_m,
+        time_step_s,
+        reference_sound_speed_m_s,
+        temporal_transfer,
+    )?;
     let mut mask = Array3::<Complex64>::zeros(grid.dimensions);
     for &source in sources {
         let index = exact_grid_index(grid, source, "source")?;
@@ -88,7 +102,22 @@ fn source_density_from_pstd_grid_kappa(
                 let k = kx.mul_add(kx, ky.mul_add(ky, kz * kz)).sqrt();
                 let source_kappa =
                     pstd_source_kappa_symbol(k, time_step_s, reference_sound_speed_m_s);
-                spectrum[[ix, iy, iz]] *= Complex64::new(source_kappa, 0.0);
+                let mut multiplier = Complex64::new(source_kappa, 0.0);
+                if let Some(transfer) = temporal_transfer {
+                    let theta_squared =
+                        pstd_modal_theta_squared(k, time_step_s, reference_sound_speed_m_s);
+                    let modal_response =
+                        pstd_modal_frequency_bin_response(theta_squared, transfer)?;
+                    let denominator = pstd_leapfrog_symbol(
+                        reference_wavenumber_rad_per_m,
+                        k,
+                        time_step_s,
+                        reference_sound_speed_m_s,
+                    );
+                    multiplier *= modal_response
+                        * Complex64::new(denominator * grid.cell_volume_m3(), 0.0);
+                }
+                spectrum[[ix, iy, iz]] *= multiplier;
             }
         }
     }
@@ -273,9 +302,16 @@ fn validate_field_len(grid: GridSpec, field: &[Complex64]) -> KwaversResult<()> 
 }
 
 fn validate_pstd_source_parameters(
+    reference_wavenumber_rad_per_m: f64,
     time_step_s: f64,
     reference_sound_speed_m_s: f64,
+    temporal_transfer: Option<PstdTemporalBinConfig>,
 ) -> KwaversResult<()> {
+    if !reference_wavenumber_rad_per_m.is_finite() || reference_wavenumber_rad_per_m <= 0.0 {
+        return Err(KwaversError::InvalidInput(format!(
+            "PSTD source projection reference wavenumber must be positive and finite, got {reference_wavenumber_rad_per_m}"
+        )));
+    }
     if !time_step_s.is_finite() || time_step_s <= 0.0 {
         return Err(KwaversError::InvalidInput(format!(
             "PSTD source projection time_step_s must be positive and finite, got {time_step_s}"
@@ -285,6 +321,9 @@ fn validate_pstd_source_parameters(
         return Err(KwaversError::InvalidInput(format!(
             "PSTD source projection reference sound speed must be positive and finite, got {reference_sound_speed_m_s}"
         )));
+    }
+    if let Some(transfer) = temporal_transfer {
+        transfer.validate()?;
     }
     Ok(())
 }

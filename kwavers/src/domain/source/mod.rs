@@ -19,7 +19,10 @@ pub mod structs;
 pub mod types;
 
 // Export traits and types
-pub use config::{DomainSourceParameters, EnvelopeType, PulseParameters, PulseType, SourceModel};
+pub use config::{
+    DomainSourceParameters, EnvelopeType, FocusedBowlAperture, PulseParameters, PulseType,
+    SourceModel,
+};
 pub use factory::SourceFactory;
 pub use grid_source::{GridSource, SourceMode};
 pub use injection::SourceInjectionMode;

@@ -8,6 +8,8 @@ use super::spectral::{
     apply_shifted_green_spectral_with_boundary,
 };
 use super::*;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::math::fft::{fft_3d_complex_into, ifft_3d_complex_inplace};
 use crate::physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;
 use crate::solver::inverse::linear_born_inversion::ElementPosition;
 use ndarray::Array3;
@@ -150,14 +152,17 @@ fn pstd_source_density_uses_grid_mask_and_source_kappa_symbol() {
         y_m: 0.0,
         z_m: 0.0,
     }];
-    let sound_speed = 1500.0;
+    let sound_speed = SOUND_SPEED_WATER_SIM;
     let time_step = 1.0e-7;
+    let reference_wavenumber = 2.0 * PI * 200_000.0 / sound_speed;
     let density = source_density_for_operator(
         grid,
         &source,
+        reference_wavenumber,
         GreenOperatorKind::SpectralPstdPeriodic {
             time_step_s: time_step,
             reference_sound_speed_m_s: sound_speed,
+            temporal_transfer: None,
             absorbing_boundary: AbsorbingBoundary::disabled(),
         },
     )
@@ -188,8 +193,75 @@ fn pstd_temporal_modal_bin_matches_quarter_cycle_recurrence() {
 }
 
 #[test]
+fn pstd_temporal_source_transfer_matches_modal_bin_response() {
+    let grid = GridSpec::new((2, 1, 1), 1.0).unwrap();
+    let source = [grid.center_at(0, 0, 0)];
+    let sound_speed = 1.0;
+    let time_step = 0.1;
+    let frequency_hz = 1.0;
+    let reference_wavenumber = 2.0 * PI * frequency_hz / sound_speed;
+    let transfer = PstdTemporalTransferConfig {
+        source_amplitude_pa: 2.0,
+        cycles_per_frequency: 2,
+        frequency_bin_cycles: 1,
+    }
+    .bin_config(frequency_hz, time_step, grid.spacing_m, sound_speed)
+    .unwrap();
+    let density = source_density_for_operator(
+        grid,
+        &source,
+        reference_wavenumber,
+        GreenOperatorKind::SpectralPstdPeriodic {
+            time_step_s: time_step,
+            reference_sound_speed_m_s: sound_speed,
+            temporal_transfer: Some(transfer),
+            absorbing_boundary: AbsorbingBoundary::disabled(),
+        },
+    )
+    .unwrap();
+    let field = apply_shifted_green_pstd_spectral_with_boundary(
+        grid,
+        reference_wavenumber,
+        0.0,
+        &density,
+        time_step,
+        sound_speed,
+        AbsorbingBoundary::disabled(),
+    );
+
+    let mut expected = Array3::<Complex64>::zeros(grid.dimensions);
+    expected[[0, 0, 0]] = Complex64::new(1.0, 0.0);
+    let mut spectrum = Array3::<Complex64>::zeros(grid.dimensions);
+    fft_3d_complex_into(&expected, &mut spectrum);
+    let (nx, ny, nz) = grid.dimensions;
+    for ix in 0..nx {
+        let kx = angular_mode_for_test(ix, nx, grid.spacing_m);
+        for iy in 0..ny {
+            let ky = angular_mode_for_test(iy, ny, grid.spacing_m);
+            for iz in 0..nz {
+                let kz = angular_mode_for_test(iz, nz, grid.spacing_m);
+                let k = kx.mul_add(kx, ky.mul_add(ky, kz * kz)).sqrt();
+                let kappa = pstd_source_kappa_symbol(k, time_step, sound_speed);
+                let theta_squared = pstd_modal_theta_squared(k, time_step, sound_speed);
+                let response = pstd_modal_frequency_bin_response(theta_squared, transfer).unwrap();
+                spectrum[[ix, iy, iz]] *= Complex64::new(kappa, 0.0) * response;
+            }
+        }
+    }
+    ifft_3d_complex_inplace(&mut spectrum);
+    let expected = spectrum.iter().copied().collect::<Vec<_>>();
+
+    for (&actual, &expected_value) in field.iter().zip(expected.iter()) {
+        assert!(
+            (actual - expected_value).norm() <= 1.0e-10 * expected_value.norm().max(1.0),
+            "actual={actual}, expected={expected_value}"
+        );
+    }
+}
+
+#[test]
 fn pstd_temporal_symbols_match_leapfrog_identities() {
-    let sound_speed = 1500.0;
+    let sound_speed = SOUND_SPEED_WATER_SIM;
     let time_step = 1.0e-7;
     let grid_wavenumber = PI / 1.0e-3;
     let reference_wavenumber = 2.0 * PI * 200_000.0 / sound_speed;
@@ -235,7 +307,8 @@ fn pstd_receiver_projection_uses_exact_grid_cells_and_adjoint() {
     .unwrap();
     let operator = GreenOperatorKind::SpectralPstdPeriodic {
         time_step_s: 1.0e-7,
-        reference_sound_speed_m_s: 1500.0,
+        reference_sound_speed_m_s: SOUND_SPEED_WATER_SIM,
+        temporal_transfer: None,
         absorbing_boundary: AbsorbingBoundary::disabled(),
     };
     let field = [Complex64::new(3.0, -1.0), Complex64::new(-2.0, 0.5)];
@@ -272,7 +345,8 @@ fn pstd_receiver_projection_rejects_off_grid_receivers() {
     .unwrap();
     let operator = GreenOperatorKind::SpectralPstdPeriodic {
         time_step_s: 1.0e-7,
-        reference_sound_speed_m_s: 1500.0,
+        reference_sound_speed_m_s: SOUND_SPEED_WATER_SIM,
+        temporal_transfer: None,
         absorbing_boundary: AbsorbingBoundary::disabled(),
     };
     let field = [Complex64::new(1.0, 0.0), Complex64::new(2.0, 0.0)];
@@ -287,7 +361,7 @@ fn pstd_receiver_projection_rejects_off_grid_receivers() {
 fn pstd_spectral_green_constant_source_matches_leapfrog_zero_mode_symbol() {
     let grid = GridSpec::new((4, 4, 2), 0.01).unwrap();
     let source = vec![Complex64::new(2.0, -0.5); grid.len()];
-    let reference_sound_speed = 1500.0;
+    let reference_sound_speed = SOUND_SPEED_WATER_SIM;
     let time_step = 1.0e-7;
     let reference_wavenumber = 11.0;
     let epsilon = 0.25;
@@ -344,10 +418,10 @@ fn pstd_spectral_green_adjoint_satisfies_inner_product_identity() {
         .collect::<Vec<_>>();
     let boundary = AbsorbingBoundary::disabled();
     let gx = apply_shifted_green_pstd_spectral_with_boundary(
-        grid, 11.0, 0.25, &x, 1.0e-7, 1500.0, boundary,
+        grid, 11.0, 0.25, &x, 1.0e-7, SOUND_SPEED_WATER_SIM, boundary,
     );
     let ghy = apply_shifted_green_pstd_spectral_adjoint_with_boundary(
-        grid, 11.0, 0.25, &y, 1.0e-7, 1500.0, boundary,
+        grid, 11.0, 0.25, &y, 1.0e-7, SOUND_SPEED_WATER_SIM, boundary,
     );
     let lhs = inner_product(&gx, &y);
     let rhs = inner_product(&x, &ghy);
@@ -460,4 +534,13 @@ fn norm(values: &[Complex64]) -> f64 {
         .map(|value| value.norm_sqr())
         .sum::<f64>()
         .sqrt()
+}
+
+fn angular_mode_for_test(index: usize, count: usize, spacing_m: f64) -> f64 {
+    let signed_index = if index <= count / 2 {
+        index as f64
+    } else {
+        index as f64 - count as f64
+    };
+    2.0 * PI * signed_index / (count as f64 * spacing_m)
 }

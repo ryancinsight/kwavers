@@ -109,7 +109,12 @@ pub(super) fn predict_cbs_rows(
     let mut output = Array2::zeros((transmissions, array.element_count()));
     for transmit in 0..transmissions {
         let source_density =
-            source_density_for_operator(grid, &array.cylindrical_source(transmit), operator)?;
+            source_density_for_operator(
+                grid,
+                &array.cylindrical_source(transmit),
+                reference_wavenumber,
+                operator,
+            )?;
         let solution = solve_volume_field_with_operator(
             grid,
             reference_wavenumber,

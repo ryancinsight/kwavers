@@ -30,10 +30,47 @@ pub struct DomainSourceParameters {
     pub focus: Option<[f64; 3]>,
     /// Number of elements (for arrays)
     pub num_elements: Option<usize>,
+    /// Aperture parameterization for focused bowl sources.
+    #[serde(default)]
+    pub focused_bowl_aperture: FocusedBowlAperture,
     /// Time delay in seconds
     pub delay: f64,
     /// Pulse parameters
     pub pulse: PulseParameters,
+}
+
+/// Source-domain aperture selector for focused bowl transducers.
+///
+/// `Diameter` preserves the historical meaning of [`DomainSourceParameters::radius`]
+/// as the projected aperture radius. The angular variants route configured
+/// simulations through the same [`crate::domain::source::transducers::focused::BowlTransducer`]
+/// constructors used by direct Rust callers, avoiding duplicated clinical
+/// geometry outside the source boundary.
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum FocusedBowlAperture {
+    /// Use `DomainSourceParameters::radius` as the projected aperture radius.
+    #[default]
+    Diameter,
+    /// Cover `0 <= theta <= theta_max_rad`.
+    PolarSpan {
+        /// Maximum polar angle from the vertex-to-focus axis [rad].
+        theta_max_rad: f64,
+    },
+    /// Cover `theta_min_rad <= theta <= theta_max_rad`.
+    PolarBounds {
+        /// Minimum polar angle from the vertex-to-focus axis [rad].
+        theta_min_rad: f64,
+        /// Maximum polar angle from the vertex-to-focus axis [rad].
+        theta_max_rad: f64,
+    },
+    /// Cover normalized aperture-axis projection bounds.
+    AxisProjectionBounds {
+        /// Lower normalized aperture-axis projection.
+        axis_projection_min: f64,
+        /// Upper normalized aperture-axis projection.
+        axis_projection_max: f64,
+    },
 }
 
 /// Types of acoustic sources (Geometry/Distribution)
@@ -157,6 +194,7 @@ impl Default for DomainSourceParameters {
             radius: 1e-3, // 1mm
             focus: None,
             num_elements: None,
+            focused_bowl_aperture: FocusedBowlAperture::default(),
             delay: 0.0,
             pulse: PulseParameters::default(),
         }

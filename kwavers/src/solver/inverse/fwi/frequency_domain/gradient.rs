@@ -79,15 +79,14 @@ fn accumulate_dense_cbs_frequency_gradient(
     objective: &mut f64,
     gradient: &mut Array3<f64>,
 ) -> KwaversResult<()> {
-    let (cbs_config, operator) =
-        config
-            .forward_operator
-            .cbs_descriptor(config)
-            .ok_or_else(|| {
-                KwaversError::InvalidInput(
-                    "CBS gradient requires a convergent Born forward operator".to_owned(),
-                )
-            })?;
+    let (cbs_config, operator) = config
+        .forward_operator
+        .cbs_descriptor(config, observation.frequency_hz)?
+        .ok_or_else(|| {
+            KwaversError::InvalidInput(
+                "CBS gradient requires a convergent Born forward operator".to_owned(),
+            )
+        })?;
 
     let rows = observation.observed_pressure.nrows();
     let omega = 2.0 * PI * observation.frequency_hz;
@@ -99,7 +98,12 @@ fn accumulate_dense_cbs_frequency_gradient(
 
     for transmit in 0..rows {
         let source_density =
-            source_density_for_operator(grid, &array.cylindrical_source(transmit), operator)?;
+            source_density_for_operator(
+                grid,
+                &array.cylindrical_source(transmit),
+                reference_wavenumber,
+                operator,
+            )?;
         let forward_solution = solve_volume_field_with_operator(
             grid,
             reference_wavenumber,

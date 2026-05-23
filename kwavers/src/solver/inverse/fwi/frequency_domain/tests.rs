@@ -146,6 +146,7 @@ fn pstd_spectral_cbs_prediction_is_sensitive_to_sound_speed_volume() {
             iterations: 12,
             relative_tolerance: 1.0e-12,
             time_step_s: 1.0e-7,
+            temporal_transfer: None,
             absorbing_boundary: AbsorbingBoundary::disabled(),
         }),
         ..Config::default()
@@ -313,6 +314,7 @@ fn pstd_spectral_cbs_adjoint_gradient_matches_finite_difference() {
             iterations: 128,
             relative_tolerance: 1.0e-13,
             time_step_s: 1.0e-7,
+            temporal_transfer: None,
             absorbing_boundary: AbsorbingBoundary::disabled(),
         }),
         ..Config::default()

@@ -3,9 +3,9 @@
 //! Defines piezoelectric materials, backing layers, matching layers,
 //! and acoustic lenses used in transducer construction.
 
+use super::{PZT_DIELECTRIC_CONSTANT, PZT_SOUND_SPEED};
 use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 use crate::core::error::{ConfigError, KwaversError, KwaversResult};
-use super::{PZT_DIELECTRIC_CONSTANT, PZT_SOUND_SPEED};
 
 /// Piezoelectric material properties
 ///
