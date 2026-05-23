@@ -9,18 +9,27 @@ use crate::core::error::KwaversResult;
 use ndarray::{Array3, Zip};
 
 pub mod thresholds {
-    /// CEM43 reference temperature [°C] — Sapareto & Dewey (1984), Eq. 1.
-    pub const REFERENCE_TEMPERATURE_C: f64 = 43.0;
-    /// Piecewise breakpoint for R-factor selection [°C].
-    pub const BREAKPOINT_TEMPERATURE_C: f64 = 43.0;
+    use crate::core::constants::medical::{
+        THERMAL_DOSE_DAMAGE_THRESHOLD_CEM43, THERMAL_DOSE_R_ABOVE_43C, THERMAL_DOSE_R_BELOW_43C,
+        THERMAL_DOSE_REFERENCE_TEMP_C, THERMAL_DOSE_THRESHOLD,
+    };
+    /// CEM43 reference temperature [°C] — delegates to [`THERMAL_DOSE_REFERENCE_TEMP_C`].
+    ///
+    /// Sapareto & Dewey (1984), Eq. 1.
+    pub const REFERENCE_TEMPERATURE_C: f64 = THERMAL_DOSE_REFERENCE_TEMP_C;
+    /// Piecewise breakpoint for R-factor selection [°C] — same as `REFERENCE_TEMPERATURE_C`.
+    pub const BREAKPOINT_TEMPERATURE_C: f64 = THERMAL_DOSE_REFERENCE_TEMP_C;
     /// Minimum temperature at which dose accumulates [°C] — equals normal body temperature.
-    /// SSOT: thermodynamic::BODY_TEMPERATURE_C = 37.0.
     pub const MIN_DOSE_TEMPERATURE_C: f64 =
         crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
-    pub const R_ABOVE_BREAKPOINT: f64 = 0.5;
-    pub const R_BELOW_BREAKPOINT: f64 = 0.25;
-    pub const NECROSIS_THRESHOLD_CEM43: f64 = 240.0;
-    pub const DAMAGE_THRESHOLD_CEM43: f64 = 60.0;
+    /// CEM43 R factor above the 43°C breakpoint — delegates to [`THERMAL_DOSE_R_ABOVE_43C`].
+    pub const R_ABOVE_BREAKPOINT: f64 = THERMAL_DOSE_R_ABOVE_43C;
+    /// CEM43 R factor below the 43°C breakpoint — delegates to [`THERMAL_DOSE_R_BELOW_43C`].
+    pub const R_BELOW_BREAKPOINT: f64 = THERMAL_DOSE_R_BELOW_43C;
+    /// CEM43 threshold for irreversible necrosis — delegates to [`THERMAL_DOSE_THRESHOLD`].
+    pub const NECROSIS_THRESHOLD_CEM43: f64 = THERMAL_DOSE_THRESHOLD;
+    /// CEM43 threshold for reversible damage — delegates to [`THERMAL_DOSE_DAMAGE_THRESHOLD_CEM43`].
+    pub const DAMAGE_THRESHOLD_CEM43: f64 = THERMAL_DOSE_DAMAGE_THRESHOLD_CEM43;
 }
 
 #[derive(Debug)]

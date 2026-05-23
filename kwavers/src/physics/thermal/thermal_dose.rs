@@ -4,14 +4,16 @@
 //! - Sapareto & Dewey (1984) "Thermal dose determination in cancer therapy"
 //! - Dewhirst et al. (2003) "Basic principles of thermal dosimetry"
 
+use crate::core::constants::medical::THERMAL_DOSE_REFERENCE_TEMP_C;
 use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use ndarray::{Array3, Zip};
 
 /// CEM43 reference temperature (°C).
 ///
+/// Delegates to [`crate::core::constants::medical::THERMAL_DOSE_REFERENCE_TEMP_C`].
 /// Sapareto & Dewey (1984) defined the cumulative equivalent minutes at 43 °C
 /// as the canonical thermal-dose metric for hyperthermic therapy.
-pub const CEM43_REFERENCE_TEMPERATURE_C: f64 = 43.0;
+pub const CEM43_REFERENCE_TEMPERATURE_C: f64 = THERMAL_DOSE_REFERENCE_TEMP_C;
 
 /// Thermal dose calculator using cumulative equivalent minutes at 43°C (CEM43)
 #[derive(Debug)]

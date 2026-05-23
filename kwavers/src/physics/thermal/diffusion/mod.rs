@@ -27,7 +27,7 @@
 //!    - Modern perfusion estimation methods
 
 use crate::core::constants::fundamental::DENSITY_BLOOD;
-use crate::core::constants::medical::BLOOD_SPECIFIC_HEAT;
+use crate::core::constants::medical::{BLOOD_SPECIFIC_HEAT, THERMAL_DOSE_REFERENCE_TEMP_C};
 use crate::core::constants::thermodynamic::BODY_TEMPERATURE_K;
 
 pub mod bioheat;
@@ -74,7 +74,7 @@ impl Default for ThermalDiffusionConfig {
             enable_hyperbolic: false,
             relaxation_time: 20.0,
             track_thermal_dose: true,
-            dose_reference_temperature: 43.0,
+            dose_reference_temperature: THERMAL_DOSE_REFERENCE_TEMP_C,
             spatial_order: 4,
         }
     }

@@ -1,6 +1,9 @@
 //! IntensityTracker implementation.
 
 use super::types::{InstantaneousIntensity, IntensityTrackerDose, TemporalIntensityMetrics};
+use crate::core::constants::medical::{
+    THERMAL_DOSE_R_ABOVE_43C, THERMAL_DOSE_R_BELOW_43C, THERMAL_DOSE_REFERENCE_TEMP_C,
+};
 use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array3;
@@ -214,13 +217,17 @@ impl IntensityTracker {
         self.thermal_dose.current_temperature = max_temp;
         self.thermal_dose.temperature_rise = (max_temp - BODY_TEMPERATURE_C).max(0.0);
 
-        // CEM43 accumulation: rate = R^(43-T)
-        // where R = 0.25 for T > 43°C, R = 0.5 for T ≤ 43°C
+        // CEM43 accumulation — Sapareto & Dewey (1984), Eq. 1:
+        //   CEM43 += R^(T_ref − T) · Δt / 60   [convert s → min]
+        // where T_ref = 43°C, R = 0.5 for T ≥ 43°C, R = 0.25 for T < 43°C.
         if max_temp > BODY_TEMPERATURE_C {
-            let r = if max_temp > 43.0 { 0.25 } else { 0.5 };
-            let exponent = r * (43.0 - max_temp);
-            let rate = exponent.exp();
-            self.thermal_dose.cem43 += rate * (dt / 60.0); // Convert to minutes
+            let r = if max_temp >= THERMAL_DOSE_REFERENCE_TEMP_C {
+                THERMAL_DOSE_R_ABOVE_43C // 0.5 for T ≥ 43°C
+            } else {
+                THERMAL_DOSE_R_BELOW_43C // 0.25 for T < 43°C
+            };
+            let rate = r.powf(THERMAL_DOSE_REFERENCE_TEMP_C - max_temp);
+            self.thermal_dose.cem43 += rate * (dt / 60.0); // Convert s → min
         }
 
         Ok(())

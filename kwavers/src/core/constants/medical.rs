@@ -59,6 +59,16 @@ pub const THERMAL_DOSE_R_ABOVE_43C: f64 = 0.5;
 /// Phys. 10(6), 787–800.
 pub const THERMAL_DOSE_R_BELOW_43C: f64 = 0.25;
 
+/// Thermal dose threshold for reversible tissue damage (CEM43 equivalent minutes at 43°C).
+///
+/// Value: 60 CEM43 — corresponds to onset of reversible thermal damage.
+/// Below this threshold tissue typically recovers; above it damage may persist.
+///
+/// Reference: Dewhirst MW et al. (2003). "Basic principles of thermal dosimetry
+/// and thermal thresholds for tissue damage from hyperthermia."
+/// Int. J. Hyperthermia 19(3), 267–294.
+pub const THERMAL_DOSE_DAMAGE_THRESHOLD_CEM43: f64 = 60.0;
+
 /// Perfusion rate in tissue (1/s)
 pub const TISSUE_PERFUSION_RATE: f64 = 5e-4;
 
