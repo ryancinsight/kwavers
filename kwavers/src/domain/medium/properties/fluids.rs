@@ -22,9 +22,10 @@ use crate::core::constants::optical::{
 };
 use crate::core::constants::fundamental::{
     ACOUSTIC_ABSORPTION_BLOOD_PLASMA, ACOUSTIC_ABSORPTION_WHOLE_BLOOD, ATMOSPHERIC_PRESSURE,
-    B_OVER_A_BLOOD, B_OVER_A_CSF, B_OVER_A_WATER, B_OVER_A_WATER_37C, DENSITY_BLOOD,
-    DENSITY_TISSUE, DENSITY_WATER_37C, SOUND_SPEED_BLOOD, SOUND_SPEED_WATER,
-    SOUND_SPEED_WATER_37C, WATER_ABSORPTION_ALPHA_0_DB_CM_MHZ2,
+    B_OVER_A_BLOOD, B_OVER_A_CSF, B_OVER_A_MINERAL_OIL, B_OVER_A_NANOPARTICLE_SUSPENSION,
+    B_OVER_A_URINE, B_OVER_A_WATER, B_OVER_A_WATER_37C, DENSITY_BLOOD, DENSITY_TISSUE,
+    DENSITY_WATER_37C, SOUND_SPEED_BLOOD, SOUND_SPEED_WATER, SOUND_SPEED_WATER_37C,
+    WATER_ABSORPTION_ALPHA_0_DB_CM_MHZ2,
 };
 use crate::core::constants::medical::BLOOD_SPECIFIC_HEAT;
 use crate::core::constants::thermodynamic::{
@@ -128,7 +129,7 @@ pub const URINE: FluidProperties = FluidProperties {
     impedance: 1_548_705.0,
     absorption_coefficient: 0.012,
     absorption_exponent: 1.15,
-    nonlinearity_parameter: 5.1,
+    nonlinearity_parameter: B_OVER_A_URINE, // 5.1 (Duck 1990)
     shear_viscosity: 0.95e-3,
     bulk_viscosity: 0.0,
     specific_heat: SPECIFIC_HEAT_URINE,
@@ -184,7 +185,7 @@ pub const MINERAL_OIL: FluidProperties = FluidProperties {
     impedance: 1261500.0,
     absorption_coefficient: 0.005,
     absorption_exponent: 1.0,
-    nonlinearity_parameter: 4.5,
+    nonlinearity_parameter: B_OVER_A_MINERAL_OIL, // 4.5 (Perry & Green 2007)
     shear_viscosity: 80.0e-3, // Low viscosity
     bulk_viscosity: 0.0,
     specific_heat: SPECIFIC_HEAT_MINERAL_OIL,
@@ -278,7 +279,7 @@ pub const NANOPARTICLE_SUSPENSION: FluidProperties = FluidProperties {
     impedance: 1563450.0,
     absorption_coefficient: 0.03,
     absorption_exponent: 1.2,
-    nonlinearity_parameter: 5.3,
+    nonlinearity_parameter: B_OVER_A_NANOPARTICLE_SUSPENSION, // 5.3 (Stride & Saffari 2003)
     shear_viscosity: VISCOSITY_WATER, // water-based carrier
     bulk_viscosity: 0.0,
     specific_heat: 4150.0,

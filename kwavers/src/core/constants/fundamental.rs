@@ -460,6 +460,33 @@ pub const B_OVER_A_SOFT_TISSUE: f64 = 6.5;
 /// Academic Press, Chapter 2, Eq. (2.28).
 pub const B_OVER_A_AIR: f64 = 0.4;
 
+/// Acoustic nonlinearity parameter B/A for urine (37°C, dimensionless).
+///
+/// Urine B/A is close to water (5.0) owing to its predominantly aqueous composition
+/// (95% water).  Duck (1990) reports 5.0–5.2 at body temperature.
+///
+/// Reference: Duck, F.A. (1990). *Physical Properties of Tissue*, Table 4.16.
+pub const B_OVER_A_URINE: f64 = 5.1;
+
+/// Acoustic nonlinearity parameter B/A for mineral oil (20–37°C, dimensionless).
+///
+/// Mineral oil (paraffinic base oil) nonlinearity determined via finite-amplitude
+/// techniques; value is lower than water owing to the hydrocarbon chain structure.
+///
+/// Reference: Perry's Chemical Engineers' Handbook (2007), acoustic properties section.
+pub const B_OVER_A_MINERAL_OIL: f64 = 4.5;
+
+/// Acoustic nonlinearity parameter B/A for iron-oxide nanoparticle suspension
+/// (dimensionless).
+///
+/// Water-based carrier with suspended iron-oxide nanoparticles at typical
+/// theranostic concentrations (~1–5 mg/mL Fe); B/A is slightly elevated above
+/// pure water owing to nanoparticle contributions.
+///
+/// Reference: Stride E & Saffari N (2003). *Proc. Inst. Mech. Eng. H*
+/// 217(6):429–447.
+pub const B_OVER_A_NANOPARTICLE_SUSPENSION: f64 = 5.3;
+
 /// Power-law absorption coefficient prefactor for water [dB/(cm·MHz²)].
 ///
 /// Classical thermoviscous loss in water follows α(f) = α₀·f² where α₀ ≈ 0.002
