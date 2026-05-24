@@ -242,6 +242,31 @@ pub const THERMAL_CONDUCTIVITY_TISSUE: f64 = 0.5;
 ///   Academic Press, London, Table 9.1.
 pub const THERMAL_CONDUCTIVITY_BLOOD: f64 = 0.52;
 
+/// Thermal conductivity of blood plasma at 37°C [W/(m·K)].
+///
+/// Acellular plasma is ~94% water; thermal conductivity is intermediate between
+/// water and whole blood due to dissolved proteins (albumin, fibrinogen).
+///
+/// Reference: Duck, F.A. (1990). *Physical Properties of Tissue*, Table 9.1;
+/// Cobbold (2007). *Foundations of Biomedical Ultrasound*, Table 3.3.
+pub const THERMAL_CONDUCTIVITY_BLOOD_PLASMA: f64 = 0.55; // W/(m·K)
+
+/// Thermal conductivity of microbubble ultrasound contrast agent [W/(m·K)].
+///
+/// Water-based phospholipid-shell microbubble suspension; thermal conductivity
+/// approximated as slightly sub-water owing to surfactant shell contribution.
+///
+/// Reference: Stride E & Saffari N (2003). *Proc. Inst. Mech. Eng. H* 217(6):429–447.
+pub const THERMAL_CONDUCTIVITY_MICROBUBBLE_SUSPENSION: f64 = 0.60; // W/(m·K)
+
+/// Thermal conductivity of iron-oxide nanoparticle suspension [W/(m·K)].
+///
+/// Water-based carrier at ~1–5 mg/mL Fe₃O₄; slightly lower than pure water
+/// at 37°C (0.623 W/(m·K)) owing to nanoparticle interfacial thermal resistance.
+///
+/// Reference: Stride E & Saffari N (2003). *Proc. Inst. Mech. Eng. H* 217(6):429–447.
+pub const THERMAL_CONDUCTIVITY_NANOPARTICLE_SUSPENSION: f64 = 0.59; // W/(m·K)
+
 /// Thermal conductivity of brain white matter at 37°C (W/(m·K))
 /// Source: Duck (1990) Table 9.1; IT'IS Foundation v4.1
 pub const THERMAL_CONDUCTIVITY_BRAIN: f64 = 0.50;

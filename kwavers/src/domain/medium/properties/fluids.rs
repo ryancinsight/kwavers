@@ -32,9 +32,11 @@ use crate::core::constants::thermodynamic::{
     BODY_TEMPERATURE_C, ROOM_TEMPERATURE_C, SPECIFIC_HEAT_BLOOD_PLASMA, SPECIFIC_HEAT_CSF,
     SPECIFIC_HEAT_MICROBUBBLE_SUSPENSION, SPECIFIC_HEAT_MINERAL_OIL,
     SPECIFIC_HEAT_NANOPARTICLE_SUSPENSION, SPECIFIC_HEAT_ULTRASOUND_GEL, SPECIFIC_HEAT_URINE,
-    SPECIFIC_HEAT_WATER_37C, THERMAL_CONDUCTIVITY_BLOOD, THERMAL_CONDUCTIVITY_CSF,
-    THERMAL_CONDUCTIVITY_MINERAL_OIL, THERMAL_CONDUCTIVITY_ULTRASOUND_GEL,
-    THERMAL_CONDUCTIVITY_URINE, THERMAL_CONDUCTIVITY_WATER_37C, THERMAL_DIFFUSIVITY_BLOOD,
+    SPECIFIC_HEAT_WATER_37C, THERMAL_CONDUCTIVITY_BLOOD, THERMAL_CONDUCTIVITY_BLOOD_PLASMA,
+    THERMAL_CONDUCTIVITY_CSF, THERMAL_CONDUCTIVITY_MICROBUBBLE_SUSPENSION,
+    THERMAL_CONDUCTIVITY_MINERAL_OIL, THERMAL_CONDUCTIVITY_NANOPARTICLE_SUSPENSION,
+    THERMAL_CONDUCTIVITY_ULTRASOUND_GEL, THERMAL_CONDUCTIVITY_URINE,
+    THERMAL_CONDUCTIVITY_WATER_37C, THERMAL_DIFFUSIVITY_BLOOD,
 };
 
 /// Fluid material properties type alias
@@ -57,7 +59,7 @@ pub const BLOOD_PLASMA: FluidProperties = FluidProperties {
     shear_viscosity: BLOOD_PLASMA_VISCOSITY_37C,
     bulk_viscosity: 0.0,
     specific_heat: SPECIFIC_HEAT_BLOOD_PLASMA,
-    thermal_conductivity: 0.55, // plasma thermal conductivity W/(m·K)
+    thermal_conductivity: THERMAL_CONDUCTIVITY_BLOOD_PLASMA, // 0.55 W/(m·K)
     // α = k/(ρ·cp) = 0.55 / (1026 × 3840) = 1.396e-7 m²/s
     thermal_diffusivity: 1.396e-7,
     perfusion_rate: 100.0, // Blood circulation rate
@@ -258,7 +260,7 @@ pub const MICROBUBBLE_SUSPENSION: FluidProperties = FluidProperties {
     shear_viscosity: 0.8e-3,
     bulk_viscosity: 0.0,
     specific_heat: SPECIFIC_HEAT_MICROBUBBLE_SUSPENSION, // 4170.0 J/(kg·K)
-    thermal_conductivity: 0.60,
+    thermal_conductivity: THERMAL_CONDUCTIVITY_MICROBUBBLE_SUSPENSION, // 0.60 W/(m·K)
     // α = k/(ρ·cp) = 0.60 / (1010 × 4170) = 1.425e-7 m²/s
     thermal_diffusivity: 1.425e-7,
     perfusion_rate: 0.0,
@@ -284,7 +286,7 @@ pub const NANOPARTICLE_SUSPENSION: FluidProperties = FluidProperties {
     shear_viscosity: VISCOSITY_WATER, // water-based carrier
     bulk_viscosity: 0.0,
     specific_heat: SPECIFIC_HEAT_NANOPARTICLE_SUSPENSION, // 4150.0 J/(kg·K)
-    thermal_conductivity: 0.59,
+    thermal_conductivity: THERMAL_CONDUCTIVITY_NANOPARTICLE_SUSPENSION, // 0.59 W/(m·K)
     thermal_diffusivity: 1.36e-7,
     perfusion_rate: 0.0,
     arterial_temperature: BODY_TEMPERATURE_C,
