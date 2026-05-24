@@ -35,30 +35,6 @@ pub mod foundations; // Physics specifications and wave equation traits
 pub mod optics; // Optical physics (elevated from electromagnetic)
 pub mod photoacoustics; // Photoacoustic physics (thermoelastic coupling)
 pub mod thermal;
-/// Physical constants re-exported for convenience
-///
-/// SSOT: All constants are defined in `crate::core::constants`
-/// This module re-exports them for backward compatibility.
-pub mod constants {
-    // Re-export all core constants
-    pub use crate::core::constants::*;
-
-    // Explicit re-exports for commonly used constants
-    pub use crate::core::constants::acoustic_parameters::REFERENCE_FREQUENCY_FOR_ABSORPTION_HZ;
-    pub use crate::core::constants::chemistry::BASE_PHOTOCHEMICAL_RATE;
-    pub use crate::core::constants::fundamental::{
-        DENSITY_TISSUE, DENSITY_WATER, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER,
-    };
-    pub use crate::core::constants::numerical::{
-        B_OVER_A_DIVISOR, NONLINEARITY_COEFFICIENT_OFFSET,
-    };
-    pub use crate::core::constants::thermodynamic::{
-        kelvin_to_celsius, WATER_LATENT_HEAT_VAPORIZATION,
-    };
-    pub use crate::core::constants::{
-        BULK_MODULUS_WATER, C_WATER, SURFACE_TENSION_WATER, VAPOR_PRESSURE_WATER, VISCOSITY_WATER,
-    };
-}
 
 // ============================================================================
 // CORE ACOUSTIC PHYSICS RE-EXPORTS

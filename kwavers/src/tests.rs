@@ -51,8 +51,8 @@ fn test_grid_creation_minimal() {
 fn test_medium_basic_properties() {
     let grid = crate::domain::grid::Grid::new(4, 4, 4, 0.001, 0.001, 0.001).expect("Grid creation");
     let medium = crate::domain::medium::HomogeneousMedium::new(
-        crate::physics::constants::DENSITY_WATER,
-        crate::physics::constants::SOUND_SPEED_WATER,
+        crate::core::constants::DENSITY_WATER,
+        crate::core::constants::SOUND_SPEED_WATER,
         0.0,
         0.0,
         &grid,
@@ -60,22 +60,22 @@ fn test_medium_basic_properties() {
 
     assert!(medium.is_homogeneous());
     assert!(
-        (medium.sound_speed(0, 0, 0) - crate::physics::constants::SOUND_SPEED_WATER).abs() < 1e-6
+        (medium.sound_speed(0, 0, 0) - crate::core::constants::SOUND_SPEED_WATER).abs() < 1e-6
     );
-    assert!((medium.density(0, 0, 0) - crate::physics::constants::DENSITY_WATER).abs() < 1e-6);
+    assert!((medium.density(0, 0, 0) - crate::core::constants::DENSITY_WATER).abs() < 1e-6);
 }
 
 #[test]
 fn test_physics_constants_validation() {
     // Physics constants are compile-time verified through const definitions
     // No runtime assertions needed for const values (clippy::assertions_on_constants)
-    use crate::physics::constants::*;
+    use crate::core::constants::*;
 
     // Validate that constants are accessible and have expected types
     let _density: f64 = DENSITY_WATER;
     let _speed: f64 = SOUND_SPEED_WATER;
 
-    // Constants are defined in physics::constants::fundamental
+    // Constants are defined in core::constants::fundamental
     // DENSITY_WATER = 998.2 kg/m³ (valid water density)
     // SOUND_SPEED_WATER = 1482.0 m/s (valid water sound speed)
 }

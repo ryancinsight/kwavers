@@ -7,7 +7,6 @@ pub mod config;
 pub mod factory;
 pub mod feature;
 pub mod forward;
-pub mod progress;
 
 pub mod analytical;
 pub mod integration;

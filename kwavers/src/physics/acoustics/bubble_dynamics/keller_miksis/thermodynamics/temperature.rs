@@ -35,7 +35,7 @@ pub(crate) fn update_temperature(
     let heat_flux_w = surface_area * THERMAL_CONDUCTIVITY_AIR * (t_bubble - t_liquid) / r;
     let n_total = state.n_gas + state.n_vapor;
     let n_moles = if n_total > 0.0 {
-        n_total / crate::physics::constants::AVOGADRO
+        n_total / crate::core::constants::AVOGADRO
     } else {
         return Ok(());
     };

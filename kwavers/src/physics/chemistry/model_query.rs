@@ -40,11 +40,11 @@ impl ChemicalModel {
 
             rates.insert(
                 "OH_production_rate".to_owned(),
-                avg_radical * crate::physics::constants::thermodynamic::SONOCHEMISTRY_BASE_RATE,
+                avg_radical * crate::core::constants::thermodynamic::SONOCHEMISTRY_BASE_RATE,
             );
             rates.insert(
                 "H2O2_production_rate".to_owned(),
-                avg_oh * avg_oh * crate::physics::constants::thermodynamic::SECONDARY_REACTION_RATE,
+                avg_oh * avg_oh * crate::core::constants::thermodynamic::SECONDARY_REACTION_RATE,
             );
             rates.insert("OH_concentration_avg".to_owned(), avg_oh);
             rates.insert("H2O2_concentration_avg".to_owned(), avg_h2o2);

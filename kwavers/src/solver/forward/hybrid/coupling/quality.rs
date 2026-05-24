@@ -46,9 +46,9 @@ impl Default for QualityThresholds {
     fn default() -> Self {
         Self {
             max_interpolation_error:
-                crate::physics::constants::numerical::INTERPOLATION_ERROR_THRESHOLD,
+                crate::core::constants::numerical::INTERPOLATION_ERROR_THRESHOLD,
             max_conservation_error:
-                crate::physics::constants::numerical::CONSERVATION_ERROR_THRESHOLD,
+                crate::core::constants::numerical::CONSERVATION_ERROR_THRESHOLD,
             max_reflection: 0.01,   // 1% reflection
             min_transmission: 0.99, // 99% transmission
         }
@@ -140,7 +140,7 @@ impl QualityMonitor {
         let source_energy: f64 = interpolated.iter().map(|x| x * x).sum();
         let target_energy: f64 = target.iter().map(|x| x * x).sum();
 
-        if source_energy > crate::physics::constants::numerical::ENERGY_THRESHOLD {
+        if source_energy > crate::core::constants::numerical::ENERGY_THRESHOLD {
             let transmission = target_energy / source_energy;
             let reflection = 1.0 - transmission;
             (reflection.max(0.0), transmission.min(1.0))
@@ -183,7 +183,7 @@ impl QualityMonitor {
         let source_max = interpolated.iter().fold(0.0_f64, |a, &b| a.max(b.abs()));
         let target_max = target.iter().fold(0.0_f64, |a, &b| a.max(b.abs()));
 
-        if source_max > crate::physics::constants::numerical::AMPLITUDE_THRESHOLD {
+        if source_max > crate::core::constants::numerical::AMPLITUDE_THRESHOLD {
             (target_max - source_max).abs() / source_max
         } else {
             0.0

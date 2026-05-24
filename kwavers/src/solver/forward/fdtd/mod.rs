@@ -189,7 +189,7 @@ mod tests {
         let source = crate::domain::source::GridSource::default();
         let solver = FdtdSolver::new(config, &grid, &medium, source).unwrap();
 
-        let c_max = crate::physics::constants::SOUND_SPEED_WATER;
+        let c_max = crate::core::constants::SOUND_SPEED_WATER;
         let dt = solver.max_stable_dt(c_max);
 
         // Check that time step is reasonable

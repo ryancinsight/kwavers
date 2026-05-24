@@ -168,7 +168,7 @@ fn unsupported(idx: usize, variant: &str, hint: &str) -> KwaversError {
 mod tests {
     use super::*;
     use crate::domain::medium::HomogeneousMedium;
-    use crate::physics::constants::{DENSITY_WATER, SOUND_SPEED_WATER};
+    use crate::core::constants::{DENSITY_WATER, SOUND_SPEED_WATER};
     use crate::physics::factory::models::{PhysicsBoundaryCondition, PhysicsModelConfig};
 
     fn small_grid() -> Grid {
