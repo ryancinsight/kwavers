@@ -3,7 +3,10 @@
 use super::planner::TreatmentPlanner;
 use super::types::{TranscranialTargetVolume, TransducerSetup};
 use crate::core::constants::tissue_acoustics::{DENSITY_BLOOD, DENSITY_BRAIN, SOUND_SPEED_BRAIN};
-use crate::core::constants::medical::{BLOOD_SPECIFIC_HEAT, THERMAL_DOSE_THRESHOLD};
+use crate::core::constants::fundamental::ACOUSTIC_ABSORPTION_TISSUE;
+use crate::core::constants::medical::{
+    BLOOD_PERFUSION_RATE_BRAIN, BLOOD_SPECIFIC_HEAT, THERMAL_DOSE_THRESHOLD,
+};
 use crate::core::constants::numerical::CM_TO_M;
 use crate::core::constants::{BODY_TEMPERATURE_C, NP_TO_DB};
 use crate::core::error::{KwaversError, KwaversResult, ValidationError};
@@ -12,13 +15,8 @@ use num_complex::Complex;
 
 const MILLIMETERS_TO_METERS: f64 = 1.0e-3;
 // SSOT: SOUND_SPEED_BRAIN and DENSITY_BRAIN imported from core::constants::tissue_acoustics
-const BRAIN_ABSORPTION_DB_PER_MHZ_CM: f64 = 0.5;
 // dB/(cm·MHz) → Np/m at 1 MHz: divide by NP_TO_DB then by CM_TO_M (SSOT).
-const BRAIN_ABSORPTION_NP_PER_M: f64 = BRAIN_ABSORPTION_DB_PER_MHZ_CM / NP_TO_DB / CM_TO_M;
-// Brain-specific high-perfusion estimate (~0.0064 1/s ≈ 50 mL/min/100g),
-// distinct from the canonical TISSUE_PERFUSION_RATE (5e-4 1/s, generic
-// soft-tissue default). Reference: Yarnykh & Yuan, NeuroImage 51(3), 2010.
-const BLOOD_PERFUSION_RATE_PER_S: f64 = 0.0064;
+const BRAIN_ABSORPTION_NP_PER_M: f64 = ACOUSTIC_ABSORPTION_TISSUE / NP_TO_DB / CM_TO_M;
 const ABSORPTION_RATE_PER_INTENSITY: f64 = 0.5;
 
 impl TreatmentPlanner {
@@ -233,7 +231,7 @@ fn steady_state_temperature_from_intensity(intensity: f64) -> Option<f64> {
         return None;
     }
 
-    let perfusion_sink = BLOOD_PERFUSION_RATE_PER_S * DENSITY_BLOOD * BLOOD_SPECIFIC_HEAT;
+    let perfusion_sink = BLOOD_PERFUSION_RATE_BRAIN * DENSITY_BLOOD * BLOOD_SPECIFIC_HEAT;
     let heat_source = 2.0 * BRAIN_ABSORPTION_NP_PER_M * intensity;
     Some(BODY_TEMPERATURE_C + heat_source / perfusion_sink)
 }
@@ -334,7 +332,7 @@ mod tests {
         let intensity = 2.0;
         let temperature = steady_state_temperature_from_intensity(intensity)
             .expect("finite nonnegative intensity must map to temperature");
-        let perfusion_sink = BLOOD_PERFUSION_RATE_PER_S * DENSITY_BLOOD * BLOOD_SPECIFIC_HEAT;
+        let perfusion_sink = BLOOD_PERFUSION_RATE_BRAIN * DENSITY_BLOOD * BLOOD_SPECIFIC_HEAT;
         let expected =
             BODY_TEMPERATURE_C + (2.0 * BRAIN_ABSORPTION_NP_PER_M * intensity) / perfusion_sink;
 

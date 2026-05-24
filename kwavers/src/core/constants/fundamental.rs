@@ -100,6 +100,18 @@ pub const C_WATER: f64 = SOUND_SPEED_WATER;
 /// K = ρ·c² ≈ 998.2 × 1482² ≈ 2.19 GPa.
 pub const BULK_MODULUS_WATER: f64 = 2.19e9;
 
+/// Tait equation B-coefficient for water (Pa).
+///
+/// Used in the Tait EOS: p + B = (p₀ + B)·(ρ/ρ₀)^n.
+/// Reference: Fujikawa & Akamatsu (1980).
+pub const WATER_TAIT_B: f64 = 3.046e8;
+
+/// Tait equation exponent for water (dimensionless).
+///
+/// Used in the Tait EOS: p + B = (p₀ + B)·(ρ/ρ₀)^n.
+/// Reference: Fujikawa & Akamatsu (1980).
+pub const WATER_TAIT_N: f64 = 7.15;
+
 /// Nominal acoustic impedance of water / water-like tissue (Pa·s/m = Rayl).
 ///
 /// Z = ρ·c = DENSITY_WATER_NOMINAL × SOUND_SPEED_WATER_SIM = 1.5 MRayl.

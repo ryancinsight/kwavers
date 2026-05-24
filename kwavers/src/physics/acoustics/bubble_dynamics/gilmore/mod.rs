@@ -9,7 +9,7 @@
 //! California Institute of Technology.
 
 use super::{BubbleParameters, BubbleState};
-use crate::core::constants::ATMOSPHERIC_PRESSURE;
+use crate::core::constants::{ATMOSPHERIC_PRESSURE, WATER_TAIT_B, WATER_TAIT_N};
 use crate::core::error::KwaversResult;
 
 /// Gilmore equation solver for high-amplitude bubble dynamics
@@ -25,14 +25,10 @@ impl GilmoreSolver {
     /// Create a new Gilmore solver
     #[must_use]
     pub fn new(params: BubbleParameters) -> Self {
-        // Tait equation parameters for water (Fujikawa & Akamatsu, 1980)
-        let tait_b = 3.046e8; // Pa
-        let tait_n = 7.15;
-
         Self {
             params,
-            tait_b,
-            tait_n,
+            tait_b: WATER_TAIT_B,
+            tait_n: WATER_TAIT_N,
         }
     }
 

@@ -69,8 +69,17 @@ pub const THERMAL_DOSE_R_BELOW_43C: f64 = 0.25;
 /// Int. J. Hyperthermia 19(3), 267–294.
 pub const THERMAL_DOSE_DAMAGE_THRESHOLD_CEM43: f64 = 60.0;
 
-/// Perfusion rate in tissue (1/s)
+/// Perfusion rate in generic soft tissue (1/s).
+///
+/// Generic default for non-brain soft tissue in Pennes bioheat equation.
 pub const TISSUE_PERFUSION_RATE: f64 = 5e-4;
+
+/// Brain-specific blood perfusion rate (1/s).
+///
+/// High-perfusion estimate for brain parenchyma: ~50 mL/min/100 g.
+/// Reference: Yarnykh & Yuan (2010), *NeuroImage* 51(3).
+/// Distinct from generic `TISSUE_PERFUSION_RATE` (5e-4 1/s).
+pub const BLOOD_PERFUSION_RATE_BRAIN: f64 = 0.0064;
 
 /// Blood specific heat capacity (J/(kg·K))
 pub const BLOOD_SPECIFIC_HEAT: f64 = 3617.0;

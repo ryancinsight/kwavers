@@ -239,6 +239,9 @@ pub const MPA_TO_PA: f64 = 1e6;
 /// Conversion from cm to m
 pub const CM_TO_M: f64 = 0.01;
 
+/// Conversion from mmHg to Pa (1 mmHg = 133.322 Pa, NIST definition).
+pub const MMHG_TO_PA: f64 = 133.322;
+
 /// Conversion from minutes to seconds [s/min].
 ///
 /// Used in CEM43 thermal dose computations: the Sapareto-Dewey integral is

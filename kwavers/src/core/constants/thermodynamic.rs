@@ -201,6 +201,20 @@ pub const T_TRIPLE_WATER: f64 = 273.16;
 /// Latent heat of vaporization of water (J/kg).
 pub const WATER_LATENT_HEAT_VAPORIZATION: f64 = 2.45e6;
 
+// ── Antoine equation coefficients for water (log₁₀-mmHg form) ────────────────
+// Reference: Stull (1947), Ind. Eng. Chem. 39(4):517–540.
+// Valid range: 1–100 °C.
+// log₁₀(P_mmHg) = A − B / (C + T_celsius)
+
+/// Antoine A coefficient for water vapor pressure (dimensionless).
+pub const WATER_ANTOINE_A: f64 = 8.07131;
+
+/// Antoine B coefficient for water vapor pressure (°C).
+pub const WATER_ANTOINE_B: f64 = 1730.63;
+
+/// Antoine C coefficient for water vapor pressure (°C).
+pub const WATER_ANTOINE_C: f64 = 233.426;
+
 /// Emissivity of water vapor in collapsing acoustic cavitation bubbles (dimensionless).
 ///
 /// Value: 0.1 — lower bound per single-bubble sonoluminescence observations.
