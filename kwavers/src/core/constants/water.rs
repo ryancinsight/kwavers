@@ -135,7 +135,7 @@ impl WaterProperties {
     /// the Physical Society. Section B, 2, 129-141.
     #[must_use]
     pub fn absorption_pinkerton(frequency_mhz: f64, temperature: f64) -> f64 {
-        const NEPER2DB: f64 = 8.686;
+        const NEPER2DB: f64 = crate::core::constants::acoustic_parameters::NP_TO_DB;
         const A: [f64; 8] = [
             56.723_531_840_522_71,
             -2.899633796917384,
