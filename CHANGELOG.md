@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+### Fixed (2026-05-24) - Medium Property SSOT Constant Closure
+
+- [patch] Complete the medium-property SSOT extraction by defining the missing
+  fluid/tissue constants in `core::constants::fundamental` and the implant
+  effective nonlinearity constants in `core::constants::implants`. Fluid,
+  tissue, and implant property tables now compile against named constants
+  instead of unresolved literal replacements.
+
+### Changed (2026-05-24) - Abdominal Focused-Bowl Source Routing
+
+- [patch] Add a source-domain axis-reference focused-bowl constructor for
+  placements where the anatomical contact point fixes aperture orientation but
+  the curvature radius is larger than the contact-to-focus distance. Abdominal
+  3-D placement now delegates element positions to `BowlTransducer` rather than
+  constructing a local spherical-cap layout.
+
 ### Changed (2026-05-23) - Focused Bowl Placement Helper Consolidation
 
 - [patch] Consolidate clinical transcranial focused-bowl cap point generation

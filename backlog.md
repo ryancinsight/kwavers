@@ -1,5 +1,23 @@
 # Backlog / Strategy
 
+## Medium property SSOT constant closure - closed (2026-05-24)
+- **[done] [patch]** Completed the in-progress literal-to-constant migration
+  for fluid, tissue, and implant material properties. `fundamental.rs` now
+  owns the referenced fluid/tissue density, sound-speed, and absorption
+  constants; `implants.rs` owns effective per-material implant nonlinearity
+  constants with the exact prior model values. Verification: implant constants
+  tests pass 2/2 and `cargo check -p kwavers --lib --message-format=short -j 1`
+  exits 0.
+
+## Abdominal focused-bowl axis-reference source routing - closed (2026-05-24)
+- **[done] [patch]** Added a source-domain focused-bowl config constructor for
+  non-vertex axis references. Abdominal 3-D placement now passes skin contact as
+  an orientation reference and delegates explicit-radius cap sampling to
+  `BowlTransducer::with_angular_bounds`, preserving outside-body rim geometry
+  without a clinical-local spherical-cap implementation. Verification: source
+  bowl tests pass 16/16, abdominal 3-D tests pass 10/10, and
+  `cargo check -p kwavers --lib --message-format=short -j 1` exits 0.
+
 ## Clinical focused-bowl cap helper consolidation - closed (2026-05-23)
 - **[done] [patch]** Replaced duplicated transcranial cap point samplers in the
   theranostic 2-D context and 3-D placement planner with

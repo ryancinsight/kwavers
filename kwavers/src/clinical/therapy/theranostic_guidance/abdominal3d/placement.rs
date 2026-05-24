@@ -3,27 +3,26 @@
 //! ## Algorithm
 //!
 //! Given a CT volume and a binary organ segmentation, this module computes the
-//! 3-D geometry of a HistoSonics-like focused bowl transducer sitting on the
-//! exterior skin surface of the abdomen, oriented toward the organ centroid.
+//! 3-D geometry of a focused bowl transducer sitting on the exterior skin
+//! surface of the abdomen, oriented toward the organ centroid.
 //!
 //! ### Theorem: Focused Bowl Placement
 //!
 //! Let F be the organ centroid in physical space [m] and S be the exterior skin
 //! point that minimises ‖S − F‖ over all boundary voxels of the body mask.
-//! Define the bowl axis d̂ = (F − S) / ‖F − S‖ and the focal length
-//! R = ‖F − S‖.  Any point on a spherical cap of radius R centered at F with
-//! half-angle θ ∈ [θ_cutout, θ_max] satisfies
+//! Define the bowl axis d̂ = (F − S) / ‖F − S‖, focal depth `D = ‖F − S‖`,
+//! and curvature radius `R = max(D / cos(θ_max), 60 mm)`. Any point on the
+//! generated spherical cap of radius R centered at F with half-angle
+//! θ ∈ [θ_cutout, θ_max] satisfies
 //!
 //! ```text
 //! P(θ, φ) = F − R · [cos(θ)·d̂ + sin(θ)·(cos(φ)·ê₁ + sin(φ)·ê₂)]
 //! ```
 //!
-//! where (ê₁, ê₂) form an orthonormal frame perpendicular to d̂.  At θ = 0
-//! this recovers the skin contact point S; at θ = θ_max it traces the rim of
-//! the bowl.  Elements are distributed using the Fibonacci/golden-spiral
-//! sampling for uniform area density on the spherical cap (Álvarez & González,
-//! 2019, "Measurement of Areas on a Sphere Using Fibonacci and Latitude–
-//! Longitude Lattices").
+//! where (ê₁, ê₂) form an orthonormal frame perpendicular to d̂. The clinical
+//! layer chooses F, S, R, and angular bounds; source-domain `BowlTransducer`
+//! owns equal-area spherical-cap sampling, angular validation, normals, and
+//! weights.
 //!
 //! ### Skin Point Selection
 //!
@@ -35,11 +34,9 @@
 //!
 //! ### Parameter Choices
 //!
-//! - θ_cutout = 0.175 rad (≈ 10°): central cutout for a co-axial imaging probe,
-//!   consistent with HistoSonics H101 specifications.
+//! - θ_cutout = 0.175 rad (≈ 10°): central cutout for a co-axial imaging probe.
 //! - θ_max = 0.960 rad (≈ 55°): aperture half-angle giving an F-number of
-//!   approximately 0.87 at the stated focal length, consistent with the
-//!   histotripsy bowl geometry used in Parsons et al. (2006).
+//!   approximately 0.87 at the stated focal length.
 //! - R = ‖F − S‖ / cos(θ_max): places the rim (θ_max) exactly at skin level
 //!   so all elements are outside the body.  Minimum enforced at 60 mm.
 //!
@@ -48,8 +45,6 @@
 //! - Parsons J E et al. (2006) Cost-effective assembly of a basic fiber-optic
 //!   hydrophone for measurement of high-amplitude therapeutic ultrasound fields.
 //!   J. Acoust. Soc. Am. 119(3): 1432–1440.
-//! - Álvarez D & González-Aranda J M (2019) A simple proof for the Fibonacci
-//!   lattice on the sphere. arXiv:1901.02107.
 //! - Hynynen K & Jones R M (2016) Image-guided ultrasound phased arrays are a
 //!   disruptive technology for non-invasive therapy. Phys. Med. Biol. 61(17):
 //!   R206–R248.
@@ -67,7 +62,7 @@ use super::helpers::{
 };
 use super::types::AbdominalArrayPlacement3D;
 
-/// Compute 3-D HistoSonics-like focused bowl placement on the abdominal skin.
+/// Compute 3-D focused bowl placement on the abdominal skin.
 ///
 /// # Parameters
 ///

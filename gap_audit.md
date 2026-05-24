@@ -1,5 +1,49 @@
 # Gap Audit
 
+## Medium Property SSOT Constant Closure (2026-05-24)
+
+The medium property tables had been partially migrated from literals to named
+constants, but the constants layer was incomplete. This left fluid/tissue
+properties and implant properties referencing unresolved identifiers, blocking
+library verification.
+
+### Closure
+- Defined missing fluid/tissue density, sound-speed, and absorption constants in
+  `core::constants::fundamental`.
+- Defined implant effective nonlinearity constants in
+  `core::constants::implants`, preserving the previous per-material model
+  values.
+- Extended the implant constant positivity regression to cover the new
+  nonlinearity constants.
+
+### Verification summary
+- `cargo test -p kwavers core::constants::implants --lib --message-format=short -j 1`:
+  2/2 pass.
+- `cargo check -p kwavers --lib --message-format=short -j 1`: exit 0.
+
+## Abdominal Focused-Bowl Axis-Reference Source Routing (2026-05-24)
+
+Abdominal 3-D placement still constructed a local spherical-cap layout even
+though focused-bowl source geometry is owned by `BowlTransducer`. The clinical
+planner needs a skin point to define axis orientation, but its curvature radius
+is intentionally larger than the skin-to-focus distance so the rim remains
+outside the body.
+
+### Closure
+- Added `BowlConfig::from_axis_reference_focus` for source-domain construction
+  from an axis reference, acoustic focus, and explicit curvature radius.
+- Routed abdominal 3-D bowl elements through
+  `BowlTransducer::with_angular_bounds`.
+- Removed anatomy/vendor-specific placement wording from the abdominal focused
+  bowl specification.
+
+### Verification summary
+- `cargo test -p kwavers domain::source::transducers::focused::bowl --lib --message-format=short -j 1`:
+  16/16 pass.
+- `cargo test -p kwavers clinical::therapy::theranostic_guidance::abdominal3d --lib --message-format=short -j 1`:
+  10/10 pass.
+- `cargo check -p kwavers --lib --message-format=short -j 1`: exit 0.
+
 ## Clinical Focused-Bowl Cap Helper Consolidation (2026-05-23)
 
 Closed duplicate focused-bowl cap element generation in the theranostic
