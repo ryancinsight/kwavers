@@ -86,7 +86,7 @@ pub fn build_abdominal_placement_context(
         focus_m: focus,
         skin_contact_m: skin,
         model_name: format!(
-            "{}_histosonics_like_256_element_full_patient_skin_arc",
+            "{}_focused_bowl_256_element_full_patient_skin_arc",
             anatomy.label()
         ),
     })

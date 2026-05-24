@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Changed (2026-05-24) - Focused Bowl Model Label Cleanup
+
+- [patch] Remove vendor-like focused-bowl source labels from live Rust and PyO3
+  surfaces. Abdominal placement, nonlinear 3-D aperture metadata, and the
+  therapy plotting fixture now identify the source as `focused_bowl` while
+  anatomy remains target metadata.
+
 ### Fixed (2026-05-24) - Medium Property SSOT Constant Closure
 
 - [patch] Complete the medium-property SSOT extraction by defining the missing

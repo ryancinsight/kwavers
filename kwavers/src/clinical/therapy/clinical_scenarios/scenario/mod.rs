@@ -122,7 +122,7 @@ impl HistotripsyScenario {
     // ---------------------- Library scenarios ----------------------
 
     /// Microsecond intrinsic-threshold liver histotripsy at 1 MHz
-    /// (HistoSonics-style clinical waveform; Smolock 2018, Vlaisavljevich 2015).
+    /// (histotripsy-style clinical waveform; Smolock 2018, Vlaisavljevich 2015).
     #[must_use]
     pub fn intrinsic_threshold_liver_1mhz() -> Self {
         Self {

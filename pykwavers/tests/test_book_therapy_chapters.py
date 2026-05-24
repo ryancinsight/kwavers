@@ -234,7 +234,7 @@ def test_chapter29_ct_context_draws_transducer_locations():
     target[2, 2] = True
     result = {
         "anatomy": "kidney",
-        "device_model": "histosonics_like_256_element_skin_coupled_arc",
+        "device_model": "focused_bowl_256_element_skin_coupled_arc",
         "element_count": 2,
         "placement_ct_hu": np.zeros((5, 5), dtype=float),
         "placement_spacing_m": (0.01, 0.01),

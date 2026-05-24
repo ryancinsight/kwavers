@@ -51,12 +51,8 @@ pub(crate) fn build_aperture(
         .collect();
     let model_name = match volume.anatomy {
         AnatomyKind::Brain => "transcranial_calvarium_focused_bowl_3d_westervelt_sources",
-        AnatomyKind::Liver => {
-            "liver_histosonics_like_focused_bowl_slowness_steered_3d_westervelt_sources"
-        }
-        AnatomyKind::Kidney => {
-            "kidney_histosonics_like_focused_bowl_slowness_steered_3d_westervelt_sources"
-        }
+        AnatomyKind::Liver => "liver_focused_bowl_slowness_steered_3d_westervelt_sources",
+        AnatomyKind::Kidney => "kidney_focused_bowl_slowness_steered_3d_westervelt_sources",
     }
     .to_owned();
     Ok(Nonlinear3dAperture {

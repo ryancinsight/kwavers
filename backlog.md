@@ -1,5 +1,16 @@
 # Backlog / Strategy
 
+## Focused-bowl model-label cleanup - closed (2026-05-24)
+- **[done] [patch]** Removed vendor-like focused-bowl labels from live Rust and
+  PyO3 source/model metadata. Abdominal 2-D layout, abdominal placement
+  context, nonlinear 3-D aperture metadata, the PyO3 abdominal placement docs,
+  and the therapy plotting fixture now use generic `focused_bowl` source
+  labels. Verification: live Rust/PyO3/test source scan has no
+  `HistoSonics`/`InSightec`/`brain_helmet`/`helmet` matches, abdominal
+  theranostic tests pass 4/4, brain focused-bowl tests pass 4/4, nonlinear3d
+  tests pass 57/57 with 3 ignored, `cargo check -p kwavers --lib` exits 0, and
+  the targeted therapy plotting pytest passes 1/1.
+
 ## Medium property SSOT constant closure - closed (2026-05-24)
 - **[done] [patch]** Completed the in-progress literal-to-constant migration
   for fluid, tissue, and implant material properties. `fundamental.rs` now

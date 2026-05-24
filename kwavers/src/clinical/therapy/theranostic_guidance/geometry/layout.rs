@@ -153,7 +153,7 @@ fn abdominal_layout(
         imaging_receivers,
         focus_m: focus,
         skin_contact_m: skin,
-        model_name: "histosonics_like_256_element_skin_coupled_arc".to_owned(),
+        model_name: "focused_bowl_256_element_skin_coupled_arc".to_owned(),
     })
 }
 

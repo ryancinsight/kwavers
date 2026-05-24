@@ -16,12 +16,12 @@ use std::path::Path;
 use super::helpers::{kwavers_to_py, labels_from_volume, points3_to_array};
 use crate::ritk_image::load_ritk_nifti;
 
-/// Plan 3-D HistoSonics-like focused bowl placement on the abdominal skin.
+/// Plan 3-D focused bowl placement on the abdominal skin.
 ///
 /// Loads the CT and label NIfTI volumes via ritk, computes the body surface,
-/// organ surface, and bowl element positions using the Fibonacci golden-spiral
-/// method, and returns all geometry needed for a 3-D visualisation in which the
-/// transducer bowl sits visibly on the skin surface outside the patient body.
+/// organ surface, and bowl element positions through the source-domain bowl
+/// transducer, and returns all geometry needed for a 3-D visualisation in which
+/// the transducer bowl sits visibly on the skin surface outside the patient body.
 ///
 /// When `ct_nifti_path` does not exist on disk a synthetic phantom is used
 /// automatically (no error is raised).  The synthetic phantom has clinically

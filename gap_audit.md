@@ -1,5 +1,29 @@
 # Gap Audit
 
+## Focused-Bowl Model Label Cleanup (2026-05-24)
+
+Live source/model metadata still encoded vendor-like focused-bowl identifiers.
+That fragments the domain model: the source is a focused bowl transducer, while
+brain/liver/kidney are target-placement contexts.
+
+### Closure
+- Renamed abdominal 2-D device layout metadata to
+  `focused_bowl_256_element_skin_coupled_arc`.
+- Renamed full-slice abdominal context metadata to
+  `{anatomy}_focused_bowl_256_element_full_patient_skin_arc`.
+- Renamed nonlinear 3-D liver/kidney aperture metadata to
+  `{anatomy}_focused_bowl_slowness_steered_3d_westervelt_sources`.
+- Updated the PyO3 abdominal placement docstring and the therapy plotting test
+  fixture to use generic focused-bowl source metadata.
+
+### Verification summary
+- `rg -n "HistoSonics|histosonics|InSightec|insightec|brain_helmet|helmet" kwavers/src pykwavers/src pykwavers/python pykwavers/tests -g "*.rs" -g "*.py"`: no matches.
+- `target/debug/deps/kwavers-308f344dea7dce04.exe clinical::therapy::theranostic_guidance::tests::abdominal --nocapture`: 4/4 pass.
+- `target/debug/deps/kwavers-308f344dea7dce04.exe clinical::therapy::theranostic_guidance::tests::brain --nocapture`: 4/4 pass.
+- `target/debug/deps/kwavers-308f344dea7dce04.exe clinical::therapy::theranostic_guidance::nonlinear3d --nocapture`: 57/57 pass, 3 ignored.
+- `cargo check -p kwavers --lib --message-format=short -j 1`: exit 0.
+- `D:/miniforge3/python.exe -m pytest pykwavers/tests/test_book_therapy_chapters.py::test_chapter29_ct_context_draws_transducer_locations -q --timeout=60`: 1/1 pass.
+
 ## Medium Property SSOT Constant Closure (2026-05-24)
 
 The medium property tables had been partially migrated from literals to named
