@@ -1,5 +1,6 @@
 //! Pressure-based calculations (intensity, MI, TI)
 
+use crate::core::constants::medical::{FDA_DERATING_FACTOR, IEC_REFERENCE_ACOUSTIC_POWER_W};
 use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use ndarray::{Array3, ArrayView3};
 
@@ -91,8 +92,6 @@ pub fn calculate_mechanical_index(peak_negative_pressure: f64, frequency: f64) -
 /// - AIUM/NEMA (2004) "Standard for Real-Time Display of Thermal and Mechanical Indices"
 #[must_use]
 pub fn calculate_thermal_index(acoustic_power: f64, frequency: f64, tissue_absorption: f64) -> f64 {
-    const REFERENCE_POWER: f64 = 0.04; // 40 mW reference per IEC 62359:2017
-
     if !nonnegative_finite(acoustic_power)
         || !positive_finite(frequency)
         || !nonnegative_finite(tissue_absorption)
@@ -103,7 +102,7 @@ pub fn calculate_thermal_index(acoustic_power: f64, frequency: f64, tissue_absor
     let freq_mhz = frequency / MHZ_TO_HZ;
     let absorption_factor = tissue_absorption * freq_mhz;
 
-    (acoustic_power * absorption_factor) / REFERENCE_POWER
+    (acoustic_power * absorption_factor) / IEC_REFERENCE_ACOUSTIC_POWER_W
 }
 
 /// Calculate derated pressure (accounting for tissue attenuation).
@@ -113,9 +112,6 @@ pub fn calculate_thermal_index(acoustic_power: f64, frequency: f64, tissue_absor
 /// frequency or depth would invert attenuation into gain and is rejected.
 #[must_use]
 pub fn calculate_derated_pressure(pressure: f64, frequency: f64, depth: f64) -> f64 {
-    // FDA derating: 0.3 dB/cm/MHz
-    const DERATING_FACTOR: f64 = 0.3; // dB/cm/MHz
-
     if !pressure.is_finite() || !nonnegative_finite(frequency) || !nonnegative_finite(depth) {
         return 0.0;
     }
@@ -123,7 +119,7 @@ pub fn calculate_derated_pressure(pressure: f64, frequency: f64, depth: f64) -> 
     let freq_mhz = frequency / MHZ_TO_HZ;
     let depth_cm = depth * 100.0;
 
-    let attenuation_db = DERATING_FACTOR * depth_cm * freq_mhz;
+    let attenuation_db = FDA_DERATING_FACTOR * depth_cm * freq_mhz;
     let attenuation_factor = 10.0_f64.powf(-attenuation_db / 20.0);
 
     pressure * attenuation_factor

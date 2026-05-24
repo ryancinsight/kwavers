@@ -128,6 +128,22 @@ pub const REFRACTIVE_INDEX_CSF: f64 = 1.333;
 /// - Tuchin V V (2007). Tissue Optics. SPIE Press. Table 1.1.
 pub const REFRACTIVE_INDEX_SOFT_TISSUE_NIR: f64 = 1.38;
 
+/// Refractive index of water at 589 nm (sodium D line) at 20°C (dimensionless).
+///
+/// 1.333 is the standard value for liquid water at visible wavelengths.
+/// Use REFRACTIVE_INDEX_WATER (1.33) for broadband or NIR approximations.
+///
+/// Reference: CRC Handbook of Chemistry and Physics, 103rd ed., Table 10-249.
+pub const REFRACTIVE_INDEX_WATER_VIS: f64 = 1.333;
+
+/// Refractive index of borosilicate glass (BK7) at 589 nm (dimensionless).
+///
+/// Common value for standard optical glass; varies ±0.05 by formulation.
+///
+/// Reference: Schott Optical Glass Data Sheet; Palik ED (1998) Handbook of
+/// Optical Constants of Solids. Academic Press.
+pub const REFRACTIVE_INDEX_GLASS: f64 = 1.5;
+
 // ── Electromagnetic free-space constants ──────────────────────────────────────
 
 /// Impedance of free space Z₀ = μ₀c (Ω).

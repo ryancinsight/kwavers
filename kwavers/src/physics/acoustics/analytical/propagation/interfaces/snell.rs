@@ -131,10 +131,8 @@ impl<'a> SnellLawCalculator<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    // Optical constants: refractive indices local; c sourced from SSOT.
-    const WATER_REFRACTIVE_INDEX: f64 = 1.333;
-    const GLASS_REFRACTIVE_INDEX: f64 = 1.5;
     use crate::core::constants::fundamental::SPEED_OF_LIGHT;
+    use crate::core::constants::optical::{REFRACTIVE_INDEX_GLASS, REFRACTIVE_INDEX_WATER_VIS};
     use crate::physics::acoustics::analytical::propagation::{
         AnalyticalMediumProperties, InterfaceType,
     };
@@ -142,12 +140,12 @@ mod tests {
     #[test]
     fn test_snells_law_water_to_glass() {
         let mut medium1 = AnalyticalMediumProperties::water();
-        medium1.refractive_index = WATER_REFRACTIVE_INDEX;
-        medium1.wave_speed = SPEED_OF_LIGHT / WATER_REFRACTIVE_INDEX;
+        medium1.refractive_index = REFRACTIVE_INDEX_WATER_VIS;
+        medium1.wave_speed = SPEED_OF_LIGHT / REFRACTIVE_INDEX_WATER_VIS;
 
         let mut medium2 = AnalyticalMediumProperties::water();
-        medium2.refractive_index = GLASS_REFRACTIVE_INDEX;
-        medium2.wave_speed = SPEED_OF_LIGHT / GLASS_REFRACTIVE_INDEX;
+        medium2.refractive_index = REFRACTIVE_INDEX_GLASS;
+        medium2.wave_speed = SPEED_OF_LIGHT / REFRACTIVE_INDEX_GLASS;
 
         let interface = Interface {
             medium1,
@@ -168,16 +166,16 @@ mod tests {
         let transmitted = calc.calculate_transmitted_angle(incident).unwrap();
 
         // Verify Snell's law
-        let n1_sin_i = WATER_REFRACTIVE_INDEX * incident.sin();
-        let n2_sin_t = GLASS_REFRACTIVE_INDEX * transmitted.sin();
+        let n1_sin_i = REFRACTIVE_INDEX_WATER_VIS * incident.sin();
+        let n2_sin_t = REFRACTIVE_INDEX_GLASS * transmitted.sin();
         assert!((n1_sin_i - n2_sin_t).abs() < 1e-10);
     }
 
     #[test]
     fn test_critical_angle() {
         let mut medium1 = AnalyticalMediumProperties::water();
-        medium1.refractive_index = GLASS_REFRACTIVE_INDEX;
-        medium1.wave_speed = SPEED_OF_LIGHT / GLASS_REFRACTIVE_INDEX;
+        medium1.refractive_index = REFRACTIVE_INDEX_GLASS;
+        medium1.wave_speed = SPEED_OF_LIGHT / REFRACTIVE_INDEX_GLASS;
 
         let mut medium2 = AnalyticalMediumProperties::water();
         medium2.refractive_index = 1.0; // Air

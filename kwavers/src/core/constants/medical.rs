@@ -87,6 +87,14 @@ pub const BLOOD_SPECIFIC_HEAT: f64 = 3617.0;
 /// Typical HIFU focal intensity (W/cm²)
 pub const HIFU_FOCAL_INTENSITY: f64 = 1000.0;
 
+/// IEC 62359:2017 reference acoustic power for TIS computation [W].
+///
+/// The standard defines TIS = W_stp [mW] / (210 · f_MHz), so
+/// W_stp_reference = 40 mW (the lowest acoustic output considered in the standard).
+///
+/// Reference: IEC 62359:2017 §8.3; AIUM/NEMA UD-3:2012.
+pub const IEC_REFERENCE_ACOUSTIC_POWER_W: f64 = 0.040; // W (= 40 mW)
+
 /// IEC 62359 (2017) §8.3.2 — Thermal Index soft tissue (TIS) formula divisor
 /// (mW · MHz)⁻¹.
 ///

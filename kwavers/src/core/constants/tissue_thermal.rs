@@ -232,3 +232,36 @@ pub const RHO_C_SOFT_TISSUE: f64 = 3_780_000.0;
 ///
 /// Reference: Duck FA (1990). Physical Properties of Tissue. Academic Press.
 pub const THERMAL_EXPANSION_SOFT_TISSUE: f64 = 3.0e-4;
+
+// ── Temperature coefficients of tissue acoustic/thermal properties ────────────
+//
+// Reference: Duck FA (1990). Physical Properties of Tissue. Academic Press.
+// Chapters 4 (acoustics) and 3 (thermal).
+
+/// Linear temperature coefficient of thermal conductivity for soft tissue [W/(m·K·°C)].
+///
+/// κ(T) ≈ κ₀ + THERMAL_CONDUCTIVITY_COEFF_PER_C · (T − T_ref)
+///
+/// Reference: Duck FA (1990). Chapter 3; IT'IS Foundation (2022).
+pub const THERMAL_CONDUCTIVITY_COEFF_PER_C: f64 = 0.002; // W/(m·K·°C)
+
+/// Linear temperature coefficient of specific heat for soft tissue [J/(kg·K·°C)].
+///
+/// c_p(T) ≈ c_p0 + SPECIFIC_HEAT_COEFF_PER_C · (T − T_ref)
+///
+/// Reference: Duck FA (1990). Chapter 3.
+pub const SPECIFIC_HEAT_COEFF_PER_C: f64 = 0.001; // J/(kg·K·°C)
+
+/// Linear temperature coefficient of sound speed for soft tissue [m/s/°C].
+///
+/// c(T) ≈ c₀ + SOFT_TISSUE_SOUND_SPEED_COEFF_PER_C · (T − T_ref)
+///
+/// Reference: Duck FA (1990). Chapter 4; Bamber JC (1998). Ultrasound in Med. Biol.
+pub const SOFT_TISSUE_SOUND_SPEED_COEFF_PER_C: f64 = 0.0016; // m/s/°C
+
+/// Linear temperature coefficient of acoustic absorption for soft tissue [dB/(cm·MHz·°C)].
+///
+/// α(T) ≈ α₀ + SOFT_TISSUE_ABSORPTION_COEFF_PER_C · (T − T_ref)
+///
+/// Reference: Duck FA (1990). Chapter 4.
+pub const SOFT_TISSUE_ABSORPTION_COEFF_PER_C: f64 = 0.015; // dB/(cm·MHz·°C)

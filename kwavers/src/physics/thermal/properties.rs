@@ -31,27 +31,11 @@
 //!   thermal strain and short and constant acoustic bursts. *Sensors*, 25(2), 385.
 
 use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
+use crate::core::constants::tissue_thermal::{
+    SOFT_TISSUE_ABSORPTION_COEFF_PER_C, SOFT_TISSUE_SOUND_SPEED_COEFF_PER_C,
+    SPECIFIC_HEAT_COEFF_PER_C, THERMAL_CONDUCTIVITY_COEFF_PER_C,
+};
 use crate::domain::medium::properties::ThermalPropertyData;
-
-/// Soft-tissue thermal-conductivity coefficient [1/°C].
-///
-/// A small positive coefficient preserves the IT'IS/Duck reference value while
-/// allowing moderate hyperthermia updates without changing tissue identity.
-const THERMAL_CONDUCTIVITY_COEFF_PER_C: f64 = 0.002;
-
-/// Soft-tissue specific-heat coefficient [1/°C].
-const SPECIFIC_HEAT_COEFF_PER_C: f64 = 0.001;
-
-/// Soft-tissue sound-speed coefficient [1/°C].
-///
-/// Duck/Szabo tissue coefficients are commonly represented near body
-/// temperature by `dc/(c dT) ≈ 1.6e-3`. Recent ultrasound thermometry papers
-/// still treat the hyperthermia range as locally linear, while warning that
-/// ablation temperatures require tissue-specific validation.
-const SOFT_TISSUE_SOUND_SPEED_COEFF_PER_C: f64 = 0.0016;
-
-/// Pre-coagulation soft-tissue absorption coefficient [1/°C].
-const SOFT_TISSUE_ABSORPTION_COEFF_PER_C: f64 = 0.015;
 
 /// Temperature-dependent thermal conductivity
 ///
