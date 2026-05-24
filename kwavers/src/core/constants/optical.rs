@@ -127,3 +127,38 @@ pub const REFRACTIVE_INDEX_CSF: f64 = 1.333;
 /// - Graaff R et al. (1992). Appl. Opt. 31(10), 1370–1376.
 /// - Tuchin V V (2007). Tissue Optics. SPIE Press. Table 1.1.
 pub const REFRACTIVE_INDEX_SOFT_TISSUE_NIR: f64 = 1.38;
+
+// ── Electromagnetic free-space constants ──────────────────────────────────────
+
+/// Impedance of free space Z₀ = μ₀c (Ω).
+///
+/// Exact value: √(μ₀/ε₀) = 376.730 313 668... Ω.
+/// Optical impedance of a non-magnetic medium: Z = Z₀/n.
+///
+/// Reference: BIPM SI Brochure, 9th ed. (2019); NIST CODATA 2018 (Z₀ is not
+/// exact after the 2019 SI redefinition but deviates from 376.730 313 668 by
+/// < 2×10⁻¹⁰ Ω).
+pub const VACUUM_IMPEDANCE: f64 = 376.730_313_668; // Ω
+
+// ── Gold Drude model parameters ───────────────────────────────────────────────
+//
+// Reference: Johnson PB & Christy RW (1972). "Optical constants of the noble
+// metals." Phys. Rev. B 6(12):4370–4379. DOI: 10.1103/PhysRevB.6.4370.
+// Drude fit values from Sönnichsen C (2001) PhD thesis, LMU München.
+
+/// High-frequency dielectric permittivity ε∞ of gold (dimensionless).
+///
+/// Drude model: ε(ω) = ε∞ − ωₚ²/(ω² + iγω)
+///
+/// Reference: Sönnichsen C (2001). PhD thesis, LMU München.
+pub const GOLD_EPS_INF: f64 = 9.84;
+
+/// Plasma frequency ωₚ of gold [rad/s].
+///
+/// Reference: Sönnichsen C (2001). PhD thesis, LMU München.
+pub const GOLD_PLASMA_FREQUENCY_RAD_S: f64 = 1.369e16; // rad/s
+
+/// Drude damping constant γ of gold [rad/s].
+///
+/// Reference: Sönnichsen C (2001). PhD thesis, LMU München.
+pub const GOLD_DRUDE_DAMPING_RAD_S: f64 = 1.079e14; // rad/s

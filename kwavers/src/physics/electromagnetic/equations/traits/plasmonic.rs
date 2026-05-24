@@ -1,14 +1,13 @@
 use super::super::types::NanoparticleGeometry;
 use super::maxwell::ElectromagneticWaveEquation;
+use crate::core::constants::optical::{
+    GOLD_DRUDE_DAMPING_RAD_S, GOLD_EPS_INF, GOLD_PLASMA_FREQUENCY_RAD_S,
+};
 use num_complex::Complex;
 
 mod geometry;
 
 use geometry::ellipsoid_depolarization_factors;
-
-const GOLD_EPS_INF: f64 = 9.84;
-const GOLD_PLASMA_FREQUENCY_RAD_S: f64 = 1.369e16;
-const GOLD_DRUDE_DAMPING_RAD_S: f64 = 1.079e14;
 
 /// Plasmonic enhancement trait for surface plasmon effects
 ///

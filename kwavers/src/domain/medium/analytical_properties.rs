@@ -5,6 +5,7 @@
 //! primarily for analytical solutions.
 
 use crate::core::constants::{DENSITY_WATER, SOUND_SPEED_WATER};
+use crate::core::constants::optical::VACUUM_IMPEDANCE;
 use ndarray::Array2;
 
 /// Medium properties for wave propagation
@@ -44,7 +45,6 @@ impl AnalyticalMediumProperties {
     /// Calculate optical impedance Z = √(μ/ε) ≈ Z₀/n for non-magnetic media
     #[must_use]
     pub fn optical_impedance(&self) -> f64 {
-        const VACUUM_IMPEDANCE: f64 = 376.730313668; // Ohms
         VACUUM_IMPEDANCE / self.refractive_index
     }
 
