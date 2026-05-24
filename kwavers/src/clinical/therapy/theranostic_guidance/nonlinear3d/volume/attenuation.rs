@@ -51,7 +51,7 @@ pub(super) fn attenuation_power_law_y_from_hu(hu: f64, label: i16, body: bool) -
     if !body {
         return 1.0;
     }
-    if hu >= 300.0 {
+    if hu >= HU_BONE_THRESHOLD {
         2.0
     } else if hu < -700.0 && label == 0 {
         1.0

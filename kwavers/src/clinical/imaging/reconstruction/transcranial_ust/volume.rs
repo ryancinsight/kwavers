@@ -4,12 +4,11 @@ use crate::core::error::{KwaversError, KwaversResult};
 use crate::math::numerics::operators::interpolation::trilinear_index_space;
 use ndarray::Array3;
 
+use crate::core::constants::acoustic_parameters::SKULL_ATTENUATION_MARSAC_MAX_NP_PER_M_MHZ;
+use crate::core::constants::fundamental::HU_BONE_THRESHOLD;
 use super::{
     config::{SOUND_SPEED_SKULL, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM},
-    medium::{
-        soft_tissue_speed, AIR_REJECTION_HU, SKULL_ATTENUATION_NP_PER_M_MHZ, SKULL_HU,
-        SOFT_TISSUE_ATTENUATION_NP_PER_M_MHZ,
-    },
+    medium::{soft_tissue_speed, AIR_REJECTION_HU, SOFT_TISSUE_ATTENUATION_NP_PER_M_MHZ},
 };
 
 /// CT volume resampled to the isotropic cubic transcranial UST inversion domain.
@@ -66,13 +65,13 @@ impl AcousticVolume {
             for iy in 0..ny {
                 for iz in 0..nz {
                     let hu = volume.hu[[ix, iy, iz]];
-                    let skull = hu >= SKULL_HU;
+                    let skull = hu >= HU_BONE_THRESHOLD;
                     skull_mask[[ix, iy, iz]] = skull;
                     sound_speed[[ix, iy, iz]] = if skull {
                         let phi = (hu / 1000.0).clamp(0.0, 1.0);
                         attenuation[[ix, iy, iz]] = SOFT_TISSUE_ATTENUATION_NP_PER_M_MHZ
                             * (1.0 - phi)
-                            + SKULL_ATTENUATION_NP_PER_M_MHZ * phi;
+                            + SKULL_ATTENUATION_MARSAC_MAX_NP_PER_M_MHZ * phi;
                         SOUND_SPEED_WATER_SIM * (1.0 - phi) + SOUND_SPEED_SKULL * phi
                     } else if hu > AIR_REJECTION_HU {
                         attenuation[[ix, iy, iz]] = SOFT_TISSUE_ATTENUATION_NP_PER_M_MHZ;

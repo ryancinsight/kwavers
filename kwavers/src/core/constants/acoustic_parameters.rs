@@ -228,6 +228,21 @@ pub const BONE_SOUND_SPEED: f64 = 3500.0;
 ///   ultrasound beams in the human head." Med. Phys. 39(2), 1141–1149.
 pub const SOUND_SPEED_SKULL: f64 = 2900.0;
 
+/// Skull-bone attenuation upper bound in the Marsac et al. 2017 linear porosity model [Np/(m·MHz)].
+///
+/// The Marsac porosity-blend formula interpolates between soft tissue and this value:
+/// ```text
+/// α(φ) = α_soft·(1 − φ) + 70·φ   [Np/(m·MHz)]
+/// ```
+/// At φ = 1 (fully cortical bone), α = 70 Np/(m·MHz) ≈ 6.1 dB/(cm·MHz).
+///
+/// Conversion: α[dB/(cm·MHz)] = 70 × `NP_TO_DB` / 100 ≈ 6.08.
+///
+/// Reference: Marsac L et al. (2017). "MR-guided adaptive focusing of therapeutic
+/// ultrasound beams in the human head." *Med. Phys.* 39(2), 1141–1149.
+/// DOI: 10.1002/mp.12168.
+pub const SKULL_ATTENUATION_MARSAC_MAX_NP_PER_M_MHZ: f64 = 70.0;
+
 /// Bone density (kg/m³)
 /// Value: 1900 kg/m³
 /// Reference: Duck, F. A. (1990). "Physical properties of tissue"

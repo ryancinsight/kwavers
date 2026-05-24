@@ -15,8 +15,12 @@
 //! Soft tissue: `c ≈ 1510 + 55·HU_norm` (empirical, HU in [−20, 120]).
 //! Attenuation: 0.5 dB/cm/MHz → `α_soft = 0.5 × 100 × ln10/20 Np/m/MHz`.
 
-use crate::core::constants::acoustic_parameters::SOUND_SPEED_SKULL;
-use crate::core::constants::fundamental::{SOUND_SPEED_WATER, SOUND_SPEED_WATER_SIM};
+use crate::core::constants::acoustic_parameters::{
+    NP_TO_DB, SKULL_ATTENUATION_MARSAC_MAX_NP_PER_M_MHZ, SOUND_SPEED_SKULL,
+};
+use crate::core::constants::fundamental::{
+    ACOUSTIC_ABSORPTION_TISSUE, HU_BONE_THRESHOLD, SOUND_SPEED_WATER, SOUND_SPEED_WATER_SIM,
+};
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array2;
 
@@ -49,11 +53,12 @@ pub fn prepare_brain_slice(
             let hu = ct_hu[[ix, iy]];
             let in_body = hu > -300.0;
             body[[ix, iy]] = in_body;
-            if hu >= 300.0 {
+            if hu >= HU_BONE_THRESHOLD {
                 let phi = (hu / 1000.0).clamp(0.0, 1.0);
                 sound_speed[[ix, iy]] =
                     SOUND_SPEED_WATER_SIM * (1.0 - phi) + SOUND_SPEED_SKULL * phi;
-                attenuation[[ix, iy]] = soft_attenuation() * (1.0 - phi) + 70.0 * phi;
+                attenuation[[ix, iy]] = soft_attenuation() * (1.0 - phi)
+                    + SKULL_ATTENUATION_MARSAC_MAX_NP_PER_M_MHZ * phi;
                 label[[ix, iy]] = 4;
             } else if in_body {
                 sound_speed[[ix, iy]] = brain_speed(hu);
@@ -177,9 +182,10 @@ fn brain_speed(hu: f64) -> f64 {
     1510.0 + 55.0 * ((hu + 20.0) / 140.0).clamp(0.0, 1.0)
 }
 
-/// Soft-tissue attenuation in Np/m/MHz.
+/// Soft-tissue attenuation in Np/(m·MHz).
 ///
-/// Converts 0.5 dB/cm/MHz: `α = 0.5 × 100 cm/m × ln(10)/20`.
+/// Converts `ACOUSTIC_ABSORPTION_TISSUE` (0.5 dB/(cm·MHz)) using
+/// `α [Np/(m·MHz)] = α [dB/(cm·MHz)] × 100 / NP_TO_DB`.
 fn soft_attenuation() -> f64 {
-    0.5 * 100.0 * std::f64::consts::LN_10 / 20.0
+    ACOUSTIC_ABSORPTION_TISSUE * 100.0 / NP_TO_DB
 }

@@ -1,6 +1,11 @@
 //! CT slice preparation and CT-to-acoustic property mapping.
 
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_37C;
+use crate::core::constants::acoustic_parameters::{
+    NP_TO_DB, SKULL_ATTENUATION_MARSAC_MAX_NP_PER_M_MHZ,
+};
+use crate::core::constants::fundamental::{
+    ACOUSTIC_ABSORPTION_TISSUE, HU_BONE_THRESHOLD, SOUND_SPEED_WATER_37C,
+};
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::math::numerics::operators::interpolation::bilinear_index_space;
 use ndarray::{s, Array2, Array3};
@@ -8,10 +13,10 @@ use ndarray::{s, Array2, Array3};
 use super::config::{SOUND_SPEED_SKULL, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM};
 
 pub(super) const AIR_REJECTION_HU: f64 = -300.0;
-pub(super) const SKULL_HU: f64 = 300.0;
+/// Soft-tissue attenuation in Np/(m·MHz) derived from `ACOUSTIC_ABSORPTION_TISSUE`
+/// (0.5 dB/(cm·MHz)): α = 0.5 × 100 / NP_TO_DB.
 pub(super) const SOFT_TISSUE_ATTENUATION_NP_PER_M_MHZ: f64 =
-    0.5 * 100.0 * std::f64::consts::LN_10 / 20.0;
-pub(super) const SKULL_ATTENUATION_NP_PER_M_MHZ: f64 = 70.0;
+    ACOUSTIC_ABSORPTION_TISSUE * 100.0 / NP_TO_DB;
 
 /// CT slice resampled to the square transcranial UST inversion domain.
 #[derive(Clone, Debug)]
@@ -51,7 +56,7 @@ pub fn select_head_slice(volume_hu: &Array3<f64>) -> KwaversResult<usize> {
     for z in 0..nz {
         let slice = volume_hu.slice(s![.., .., z]);
         let head_voxels = slice.iter().filter(|v| **v > AIR_REJECTION_HU).count();
-        let skull_voxels = slice.iter().filter(|v| **v > SKULL_HU).count();
+        let skull_voxels = slice.iter().filter(|v| **v > HU_BONE_THRESHOLD).count();
         let score = head_voxels + 4 * skull_voxels;
         if best.is_none_or(|(_, best_score)| score > best_score) {
             best = Some((z, score));
@@ -171,12 +176,12 @@ impl AcousticSlice {
         for ix in 0..nx {
             for iy in 0..ny {
                 let hu = ct_hu[[ix, iy]];
-                let skull = hu >= SKULL_HU;
+                let skull = hu >= HU_BONE_THRESHOLD;
                 skull_mask[[ix, iy]] = skull;
                 sound_speed[[ix, iy]] = if skull {
                     let phi = (hu / 1000.0).clamp(0.0, 1.0);
                     attenuation[[ix, iy]] = SOFT_TISSUE_ATTENUATION_NP_PER_M_MHZ * (1.0 - phi)
-                        + SKULL_ATTENUATION_NP_PER_M_MHZ * phi;
+                        + SKULL_ATTENUATION_MARSAC_MAX_NP_PER_M_MHZ * phi;
                     SOUND_SPEED_WATER_SIM * (1.0 - phi) + SOUND_SPEED_SKULL * phi
                 } else if hu > AIR_REJECTION_HU {
                     attenuation[[ix, iy]] = SOFT_TISSUE_ATTENUATION_NP_PER_M_MHZ;
