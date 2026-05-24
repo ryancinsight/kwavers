@@ -19,6 +19,10 @@
 use super::material::AcousticMaterialProperties;
 use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_TISSUE};
 use crate::core::constants::implants::{
+    ACOUSTIC_ABSORPTION_ALUMINA, ACOUSTIC_ABSORPTION_CFRP, ACOUSTIC_ABSORPTION_HYDROXYAPATITE,
+    ACOUSTIC_ABSORPTION_PLATINUM, ACOUSTIC_ABSORPTION_PMMA, ACOUSTIC_ABSORPTION_POLYURETHANE,
+    ACOUSTIC_ABSORPTION_SILICONE_RUBBER, ACOUSTIC_ABSORPTION_STAINLESS_STEEL_316L,
+    ACOUSTIC_ABSORPTION_TITANIUM, ACOUSTIC_ABSORPTION_UHMWPE, ACOUSTIC_ABSORPTION_ZIRCONIA,
     DENSITY_ALUMINA, DENSITY_CFRP, DENSITY_HYDROXYAPATITE, DENSITY_PLATINUM, DENSITY_PMMA,
     DENSITY_SILICONE_RUBBER, DENSITY_STAINLESS_STEEL_316L, DENSITY_TITANIUM_GRADE5, DENSITY_UHMWPE,
     DENSITY_ZIRCONIA, SOUND_SPEED_ALUMINA, SOUND_SPEED_CFRP, SOUND_SPEED_HYDROXYAPATITE,
@@ -57,7 +61,7 @@ pub const TITANIUM_GRADE5: ImplantProperties = ImplantProperties {
     density: DENSITY_TITANIUM_GRADE5,
     // Z = ρ·c = 4430 × 6070 = 26 890 100 Pa·s/m
     impedance: 26_890_100.0,
-    absorption_coefficient: 0.1,
+    absorption_coefficient: ACOUSTIC_ABSORPTION_TITANIUM,
     absorption_exponent: 1.0,
     nonlinearity_parameter: 1.5,
     shear_viscosity: 0.0,
@@ -83,7 +87,7 @@ pub const STAINLESS_STEEL_316L: ImplantProperties = ImplantProperties {
     density: DENSITY_STAINLESS_STEEL_316L,
     // Z = ρ·c = 8000 × 5960 = 47 680 000 Pa·s/m
     impedance: 47_680_000.0,
-    absorption_coefficient: 0.15,
+    absorption_coefficient: ACOUSTIC_ABSORPTION_STAINLESS_STEEL_316L,
     absorption_exponent: 1.0,
     nonlinearity_parameter: 1.8,
     shear_viscosity: 0.0,
@@ -109,7 +113,7 @@ pub const PLATINUM: ImplantProperties = ImplantProperties {
     density: DENSITY_PLATINUM,
     // Z = ρ·c = 21450 × 3960 = 84 942 000 Pa·s/m
     impedance: 84_942_000.0,
-    absorption_coefficient: 0.5,
+    absorption_coefficient: ACOUSTIC_ABSORPTION_PLATINUM,
     absorption_exponent: 1.1,
     nonlinearity_parameter: 2.0,
     shear_viscosity: 0.0,
@@ -139,7 +143,7 @@ pub const PMMA: ImplantProperties = ImplantProperties {
     density: DENSITY_PMMA,
     // Z = ρ·c = 1190 × 2670 = 3 177 300 Pa·s/m
     impedance: 3_177_300.0,
-    absorption_coefficient: 0.08,
+    absorption_coefficient: ACOUSTIC_ABSORPTION_PMMA,
     absorption_exponent: 1.1,
     nonlinearity_parameter: 3.0,
     shear_viscosity: 0.0,
@@ -165,7 +169,7 @@ pub const UHMWPE: ImplantProperties = ImplantProperties {
     density: DENSITY_UHMWPE,
     // Z = ρ·c = 935 × 2380 = 2 225 300 Pa·s/m
     impedance: 2_225_300.0,
-    absorption_coefficient: 0.05,
+    absorption_coefficient: ACOUSTIC_ABSORPTION_UHMWPE,
     absorption_exponent: 1.0,
     nonlinearity_parameter: 2.8,
     shear_viscosity: 0.0,
@@ -191,7 +195,7 @@ pub const SILICONE_RUBBER: ImplantProperties = ImplantProperties {
     density: DENSITY_SILICONE_RUBBER,
     // Z = ρ·c = 970 × 1050 = 1 018 500 Pa·s/m
     impedance: 1_018_500.0,
-    absorption_coefficient: 0.12,
+    absorption_coefficient: ACOUSTIC_ABSORPTION_SILICONE_RUBBER,
     absorption_exponent: 1.2,
     nonlinearity_parameter: 4.0,
     shear_viscosity: 0.0,
@@ -217,7 +221,7 @@ pub const POLYURETHANE: ImplantProperties = ImplantProperties {
     density: DENSITY_TISSUE,
     // Z = ρ·c = 1050 × 1890 = 1 984 500 Pa·s/m
     impedance: 1_984_500.0,
-    absorption_coefficient: 0.10,
+    absorption_coefficient: ACOUSTIC_ABSORPTION_POLYURETHANE,
     absorption_exponent: 1.1,
     nonlinearity_parameter: 3.5,
     shear_viscosity: 0.0,
@@ -248,7 +252,7 @@ pub const ALUMINA: ImplantProperties = ImplantProperties {
     density: DENSITY_ALUMINA,
     // Z = ρ·c = 3970 × 11100 = 44 067 000 Pa·s/m
     impedance: 44_067_000.0,
-    absorption_coefficient: 0.05,
+    absorption_coefficient: ACOUSTIC_ABSORPTION_ALUMINA,
     absorption_exponent: 1.0,
     nonlinearity_parameter: 1.2,
     shear_viscosity: 0.0,
@@ -274,7 +278,7 @@ pub const ZIRCONIA: ImplantProperties = ImplantProperties {
     density: DENSITY_ZIRCONIA,
     // Z = ρ·c = 6050 × 6000 = 36 300 000 Pa·s/m
     impedance: 36_300_000.0,
-    absorption_coefficient: 0.08,
+    absorption_coefficient: ACOUSTIC_ABSORPTION_ZIRCONIA,
     absorption_exponent: 1.0,
     nonlinearity_parameter: 1.4,
     shear_viscosity: 0.0,
@@ -304,7 +308,7 @@ pub const CFRP: ImplantProperties = ImplantProperties {
     density: DENSITY_CFRP,
     // Z = ρ·c = 1600 × 3100 = 4 960 000 Pa·s/m
     impedance: 4_960_000.0,
-    absorption_coefficient: 0.15,
+    absorption_coefficient: ACOUSTIC_ABSORPTION_CFRP,
     absorption_exponent: 1.2,
     nonlinearity_parameter: 2.5,
     shear_viscosity: 0.0,
@@ -330,7 +334,7 @@ pub const HYDROXYAPATITE: ImplantProperties = ImplantProperties {
     density: DENSITY_HYDROXYAPATITE,
     // Z = ρ·c = 3220 × 3640 = 11 720 800 Pa·s/m
     impedance: 11_720_800.0,
-    absorption_coefficient: 0.2,
+    absorption_coefficient: ACOUSTIC_ABSORPTION_HYDROXYAPATITE,
     absorption_exponent: 1.1,
     nonlinearity_parameter: 1.8,
     shear_viscosity: 0.0,

@@ -21,6 +21,58 @@
 //! - Perry & Green (2007) — Chemical Engineering Handbook (polymer data)
 
 // ============================================================================
+// Acoustic Absorption Coefficients [dB/(cm·MHz^y)]
+// ============================================================================
+//
+// Sources: Szabo TL (2004) *Diagnostic Ultrasound Imaging*. Elsevier, Table A2.
+//          Duck FA (1990) *Physical Properties of Tissue*. Academic Press.
+//          ASTM material handbooks cited per material.
+
+/// Titanium Grade 5 acoustic absorption coefficient [dB/(cm·MHz)].
+/// Source: Szabo (2004) Table A2; Ti alloy bulk attenuation ≈ 0.1.
+pub const ACOUSTIC_ABSORPTION_TITANIUM: f64 = 0.1;
+
+/// Stainless steel 316L acoustic absorption coefficient [dB/(cm·MHz)].
+/// Source: Szabo (2004) Table A2; austenitic steel ≈ 0.15.
+pub const ACOUSTIC_ABSORPTION_STAINLESS_STEEL_316L: f64 = 0.15;
+
+/// Platinum acoustic absorption coefficient [dB/(cm·MHz)].
+/// Source: Szabo (2004) Table A2; dense noble metal ≈ 0.5.
+pub const ACOUSTIC_ABSORPTION_PLATINUM: f64 = 0.5;
+
+/// PMMA (acrylic bone cement) acoustic absorption coefficient [dB/(cm·MHz)].
+/// Source: Duck (1990) p. 92; Szabo (2004) Table A2.
+pub const ACOUSTIC_ABSORPTION_PMMA: f64 = 0.08;
+
+/// UHMWPE acoustic absorption coefficient [dB/(cm·MHz)].
+/// Source: Szabo (2004) Table A2; low-loss semi-crystalline polymer.
+pub const ACOUSTIC_ABSORPTION_UHMWPE: f64 = 0.05;
+
+/// Silicone rubber acoustic absorption coefficient [dB/(cm·MHz)].
+/// Source: Szabo (2004) Table A2; elastomer attenuation ≈ 0.12.
+pub const ACOUSTIC_ABSORPTION_SILICONE_RUBBER: f64 = 0.12;
+
+/// Polyurethane acoustic absorption coefficient [dB/(cm·MHz)].
+/// Source: Szabo (2004) Table A2; flexible elastomer ≈ 0.10.
+pub const ACOUSTIC_ABSORPTION_POLYURETHANE: f64 = 0.10;
+
+/// Alumina (Al₂O₃) ceramic acoustic absorption coefficient [dB/(cm·MHz)].
+/// Source: Szabo (2004) Table A2; low-loss oxide ceramic.
+pub const ACOUSTIC_ABSORPTION_ALUMINA: f64 = 0.05;
+
+/// Zirconia (ZrO₂) ceramic acoustic absorption coefficient [dB/(cm·MHz)].
+/// Source: Szabo (2004) Table A2; zirconia ≈ 0.08.
+pub const ACOUSTIC_ABSORPTION_ZIRCONIA: f64 = 0.08;
+
+/// Carbon fiber reinforced polymer (CFRP) acoustic absorption coefficient [dB/(cm·MHz)].
+/// Source: Szabo (2004) Table A2; anisotropic composite attenuation ≈ 0.15.
+pub const ACOUSTIC_ABSORPTION_CFRP: f64 = 0.15;
+
+/// Hydroxyapatite ceramic acoustic absorption coefficient [dB/(cm·MHz)].
+/// Source: Szabo (2004) Table A2; bone-mimetic mineral ≈ 0.2.
+pub const ACOUSTIC_ABSORPTION_HYDROXYAPATITE: f64 = 0.2;
+
+// ============================================================================
 // Metallic Implants
 // ============================================================================
 
