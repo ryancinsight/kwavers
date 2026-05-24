@@ -2,9 +2,14 @@
 
 use super::planner::TreatmentPlanner;
 use super::types::TranscranialSkullProperties;
+use crate::core::constants::ct_acoustics::{
+    HU_BONE_THRESHOLD, PINTON_SKULL_ALPHA_BASE_DB_CM_MHZ, PINTON_SKULL_ALPHA_SLOPE_DB_CM_MHZ_PER_HU,
+    PINTON_SKULL_DENSITY_BASE_KG_M3, PINTON_SKULL_DENSITY_SLOPE_KG_M3_PER_HU,
+    PINTON_SKULL_SPEED_BASE_M_S, PINTON_SKULL_SPEED_SLOPE_M_S_PER_HU,
+};
 use crate::core::constants::fundamental::{
-    ACOUSTIC_ABSORPTION_TISSUE, DENSITY_AIR, DENSITY_WATER_NOMINAL, HU_BONE_THRESHOLD,
-    SOUND_SPEED_AIR, SOUND_SPEED_WATER_SIM,
+    ACOUSTIC_ABSORPTION_TISSUE, DENSITY_AIR, DENSITY_WATER_NOMINAL, SOUND_SPEED_AIR,
+    SOUND_SPEED_WATER_SIM,
 };
 use crate::core::error::KwaversResult;
 use ndarray::Array3;
@@ -20,18 +25,6 @@ use ndarray::Array3;
 //   ρ    = PINTON_SKULL_DENSITY_BASE + PINTON_SKULL_DENSITY_SLOPE × (HU − HU_BONE_THRESHOLD)
 //   α    = PINTON_SKULL_ALPHA_BASE   + PINTON_SKULL_ALPHA_SLOPE   × (HU − HU_BONE_THRESHOLD)
 
-/// Pinton (2012) skull speed model intercept at `HU = HU_BONE_THRESHOLD` [m/s].
-const PINTON_SKULL_SPEED_BASE_M_S: f64 = 3000.0;
-/// Pinton (2012) skull speed linear slope above bone threshold [m/s per HU].
-const PINTON_SKULL_SPEED_SLOPE_M_S_PER_HU: f64 = 2.0;
-/// Pinton (2012) skull density model intercept at `HU = HU_BONE_THRESHOLD` [kg/m³].
-const PINTON_SKULL_DENSITY_BASE_KG_M3: f64 = 1800.0;
-/// Pinton (2012) skull density linear slope above bone threshold [kg/m³ per HU].
-const PINTON_SKULL_DENSITY_SLOPE_KG_M3_PER_HU: f64 = 0.5;
-/// Pinton (2012) skull attenuation model intercept at `HU = HU_BONE_THRESHOLD` [dB/(cm·MHz)].
-const PINTON_SKULL_ALPHA_BASE_DB_CM_MHZ: f64 = 5.0;
-/// Pinton (2012) skull attenuation linear slope above bone threshold [dB/(cm·MHz) per HU].
-const PINTON_SKULL_ALPHA_SLOPE_DB_CM_MHZ_PER_HU: f64 = 0.01;
 
 impl TreatmentPlanner {
     /// Analyze skull acoustic properties from CT data

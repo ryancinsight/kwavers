@@ -55,6 +55,35 @@ pub const DENSITY_SKULL_MIN: f64 = 1200.0; // kg/m³
 /// Duck (1990) Table 3.8.
 pub const DENSITY_SKULL_CORTICAL_RANGE: f64 = 700.0; // kg/m³
 
+// ── Pinton et al. (2012) empirical skull CT model ────────────────────────────
+//
+// Reference: Pinton G et al. (2012). "Attenuation, scattering, and absorption
+// of ultrasound in the skull bone." *Med. Phys.* 39(1), 299–307.
+// DOI: 10.1118/1.3668316.
+//
+// Linear model above HU_BONE_THRESHOLD:
+//   c(HU) = PINTON_SKULL_SPEED_BASE + PINTON_SKULL_SPEED_SLOPE × (HU − HU_BONE_THRESHOLD)
+//   ρ(HU) = PINTON_SKULL_DENSITY_BASE + PINTON_SKULL_DENSITY_SLOPE × (HU − HU_BONE_THRESHOLD)
+//   α(HU) = PINTON_SKULL_ALPHA_BASE + PINTON_SKULL_ALPHA_SLOPE × (HU − HU_BONE_THRESHOLD)
+
+/// Pinton (2012) skull sound-speed model intercept at HU = HU_BONE_THRESHOLD [m/s].
+pub const PINTON_SKULL_SPEED_BASE_M_S: f64 = 3000.0;
+
+/// Pinton (2012) skull sound-speed linear slope above bone threshold [m/s per HU].
+pub const PINTON_SKULL_SPEED_SLOPE_M_S_PER_HU: f64 = 2.0;
+
+/// Pinton (2012) skull density model intercept at HU = HU_BONE_THRESHOLD [kg/m³].
+pub const PINTON_SKULL_DENSITY_BASE_KG_M3: f64 = 1800.0;
+
+/// Pinton (2012) skull density linear slope above bone threshold [kg/m³ per HU].
+pub const PINTON_SKULL_DENSITY_SLOPE_KG_M3_PER_HU: f64 = 0.5;
+
+/// Pinton (2012) skull attenuation model intercept at HU = HU_BONE_THRESHOLD [dB/(cm·MHz)].
+pub const PINTON_SKULL_ALPHA_BASE_DB_CM_MHZ: f64 = 5.0;
+
+/// Pinton (2012) skull attenuation linear slope above bone threshold [dB/(cm·MHz) per HU].
+pub const PINTON_SKULL_ALPHA_SLOPE_DB_CM_MHZ_PER_HU: f64 = 0.01;
+
 // ── CT-derived acoustic speed ceiling ────────────────────────────────────────
 
 /// Safety ceiling for CT-based soft-tissue sound-speed interpolation (m/s).
