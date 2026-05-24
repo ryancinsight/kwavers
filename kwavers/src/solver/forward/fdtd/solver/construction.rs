@@ -11,6 +11,7 @@ use ndarray::{Array3, Zip};
 
 use super::central_diff::CentralDifferenceOperator;
 use super::{FdtdMetrics, GenericFdtdSolver};
+use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use crate::core::error::{ConfigError, KwaversError, KwaversResult};
 use crate::domain::field::wave::WaveFields;
 use crate::domain::grid::Grid;
@@ -112,7 +113,7 @@ impl GenericFdtdSolver<Array3<f64>> {
             && !source_handler.has_initial_velocity()
             && matches!(config.kspace_correction, KSpaceCorrectionMode::Spectral)
         {
-            let rho0_ref = materials.rho0.mean().unwrap_or(1000.0);
+            let rho0_ref = materials.rho0.mean().unwrap_or(DENSITY_WATER_NOMINAL);
             let Some(kspace_ops) = kspace_ops.as_mut() else {
                 return Err(KwaversError::Config(ConfigError::InvalidValue {
                     parameter: "kspace_correction".to_owned(),

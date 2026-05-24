@@ -16,6 +16,7 @@
 //! Returns `Array2<f64>` of shape `(num_sensors, time_steps)` with the
 //! pressure recorded at each sensor index per step.
 
+use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::boundary::cpml::{CPMLConfig, CPMLProfiles};
 use crate::domain::grid::Grid;
@@ -167,7 +168,7 @@ pub fn run_gpu_pstd(
     }
 
     let mut c0_flat = vec![c_ref as f32; total];
-    let mut rho0_flat = vec![1000.0f32; total];
+    let mut rho0_flat = vec![DENSITY_WATER_NOMINAL as f32; total];
     for ix in 0..nx {
         for iy in 0..ny {
             for iz in 0..nz {

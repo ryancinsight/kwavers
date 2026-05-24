@@ -67,9 +67,8 @@ pub fn train_pinn<B: AutodiffBackend>(
     use crate::solver::inverse::pinn::elastic_2d::config::LossWeights;
 
     // Fixed material parameters for the elastic wave forward problem.
-    // ρ = soft tissue density; λ = first Lamé parameter giving c_p ≈ 1540 m/s
-    // in the fluid limit (μ = 0); μ = shear modulus (fluid-like).
-    let rho = 1000.0_f64;
+    // ρ = water-equivalent density (fluid limit μ=0); λ gives c_p ≈ 1500 m/s.
+    let rho = crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
     let lambda = 2.25e9_f64;
     let mu = 0.0_f64;
 
