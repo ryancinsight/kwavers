@@ -96,9 +96,8 @@ impl EnergyBalanceCalculator {
         // Calculate heat transfer rate
         let heat_transfer_rate = self.calculate_heat_transfer_rate(state, peclet);
 
-        // Calculate latent heat rate from mass transfer
-        const LATENT_HEAT_VAPORIZATION: f64 = 2.26e6; // J/kg for water
-        let latent_heat_rate = Power::new::<watt>(mass_transfer_rate * LATENT_HEAT_VAPORIZATION);
+        // Calculate latent heat rate from mass transfer (H_VAP_WATER_100C = 2.257 MJ/kg at 100°C)
+        let latent_heat_rate = Power::new::<watt>(mass_transfer_rate * H_VAP_WATER_100C);
 
         // Calculate total energy rate
         self.calculate_energy_rate(state, pressure, heat_transfer_rate, latent_heat_rate)
