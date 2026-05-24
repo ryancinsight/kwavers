@@ -18,10 +18,72 @@
 
 use crate::core::constants::acoustic_parameters::SOFT_TISSUE_HU_BASE_SPEED_M_S;
 use crate::core::constants::fundamental::{
-    SOUND_SPEED_AIR, SOUND_SPEED_KIDNEY, SOUND_SPEED_LIVER, SOUND_SPEED_TISSUE,
+    HU_ABDOMEN_BODY_THRESHOLD, SOUND_SPEED_AIR, SOUND_SPEED_KIDNEY, SOUND_SPEED_LIVER,
+    SOUND_SPEED_TISSUE,
 };
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::{s, Array2, Array3, Axis, Zip};
+
+// ── Abdominal CT acoustic property model calibration constants ────────────────
+//
+// Calibrated against Duck (1990) Table 4.6 (organ sound speeds) and
+// Marsac et al. (2017) soft-tissue HU model (slope parameters).
+
+/// Background soft-tissue HU-to-speed slope [m/s/HU].
+///
+/// Matches `CT_SPEED_SLOPE_BACKGROUND_M_S_PER_HU` in the nonlinear 3-D volume model.
+const ABDOM_BG_SPEED_SLOPE_M_S_PER_HU: f64 = 0.18;
+/// HU clamp lower bound for background soft-tissue speed [HU].
+const ABDOM_BG_HU_LOWER: f64 = -150.0;
+/// HU clamp upper bound for background soft-tissue speed [HU].
+const ABDOM_BG_HU_UPPER: f64 = 250.0;
+/// Background soft-tissue attenuation coefficient [dB/(cm·MHz)].
+///
+/// Slightly above `ACOUSTIC_ABSORPTION_TISSUE` (0.5) to account for fibrous
+/// stroma and connective tissue in the abdominal wall (Duck 1990 Table 4.2).
+const ABDOM_BG_ATTENUATION_DB_CM_MHZ: f64 = 0.55;
+
+/// Organ HU-to-speed slope [m/s/HU].
+const ABDOM_ORGAN_SPEED_SLOPE_M_S_PER_HU: f64 = 0.10;
+/// HU clamp lower bound for organ speed correction [HU].
+const ABDOM_ORGAN_HU_LOWER: f64 = -100.0;
+/// HU clamp upper bound for organ speed correction [HU].
+const ABDOM_ORGAN_HU_UPPER: f64 = 200.0;
+/// Organ attenuation coefficient [dB/(cm·MHz)] (Duck 1990 liver/kidney range 0.4–0.9).
+const ABDOM_ORGAN_ATTENUATION_DB_CM_MHZ: f64 = 0.8;
+
+/// Target tumour speed offset from organ baseline [m/s].
+///
+/// Tumour tissue has slightly lower speed than surrounding parenchyma due to
+/// increased water content (Duck 1990 Chapter 4).
+const ABDOM_TARGET_SPEED_OFFSET_M_S: f64 = -22.0;
+/// Target HU-to-speed slope [m/s/HU].
+const ABDOM_TARGET_SPEED_SLOPE_M_S_PER_HU: f64 = 0.12;
+/// HU clamp lower bound for target speed correction [HU].
+const ABDOM_TARGET_HU_LOWER: f64 = -50.0;
+/// HU clamp upper bound for target speed correction [HU].
+const ABDOM_TARGET_HU_UPPER: f64 = 220.0;
+/// Target (tumour) attenuation coefficient [dB/(cm·MHz)] (hypervascular tumour).
+const ABDOM_TARGET_ATTENUATION_DB_CM_MHZ: f64 = 1.05;
+
+/// HU threshold for abdominal calcification/bone classification [HU].
+const ABDOM_CALCIFICATION_HU_THRESHOLD: f64 = 250.0;
+/// Calcified-tissue sound speed base at the classification threshold [m/s].
+///
+/// At HU = 250 (onset of calcification), c ≈ 2450 m/s — between cortical bone
+/// (2900 m/s) and highly mineralised soft tissue.
+const ABDOM_CALC_SPEED_BASE_M_S: f64 = 2450.0;
+/// Calcified-tissue speed slope above `ABDOM_CALCIFICATION_HU_THRESHOLD` [m/s/HU].
+const ABDOM_CALC_SPEED_SLOPE_M_S_PER_HU: f64 = 0.42;
+/// HU range over which calcification speed saturates above threshold [HU].
+const ABDOM_CALC_HU_RANGE: f64 = 1400.0;
+/// Calcified-tissue attenuation coefficient [dB/(cm·MHz)].
+///
+/// Intermediate between soft tissue and cortical bone (Connor & Hynynen 2002).
+const ABDOM_CALC_ATTENUATION_DB_CM_MHZ: f64 = 18.0;
+
+/// Background (air/unclassified) attenuation coefficient [dB/(cm·MHz)].
+const ABDOM_DEFAULT_ATTENUATION_DB_CM_MHZ: f64 = 0.05;
 use std::collections::VecDeque;
 
 use super::{resample, resample_labels_max, validate_masks, AnatomyKind, PreparedTheranosticSlice};
@@ -185,7 +247,7 @@ fn abdominal_properties(
     let (nx, ny) = ct.dim();
     let c_organ = organ_reference_speed(anatomy);
     let mut speed = Array2::<f64>::from_elem((nx, ny), SOUND_SPEED_AIR);
-    let mut attenuation = Array2::<f64>::from_elem((nx, ny), 0.05);
+    let mut attenuation = Array2::<f64>::from_elem((nx, ny), ABDOM_DEFAULT_ATTENUATION_DB_CM_MHZ);
     let mut body = Array2::<bool>::from_elem((nx, ny), false);
     let mut organ = Array2::<bool>::from_elem((nx, ny), false);
     let mut target = Array2::<bool>::from_elem((nx, ny), false);
@@ -209,20 +271,30 @@ fn abdominal_properties(
         .and(ct)
         .for_each(|spd, att, &bod, &org, &tgt, &hu| {
             if bod {
-                *spd = SOFT_TISSUE_HU_BASE_SPEED_M_S + 0.18 * hu.clamp(-150.0, 250.0);
-                *att = 0.55;
+                *spd = SOFT_TISSUE_HU_BASE_SPEED_M_S
+                    + ABDOM_BG_SPEED_SLOPE_M_S_PER_HU
+                        * hu.clamp(ABDOM_BG_HU_LOWER, ABDOM_BG_HU_UPPER);
+                *att = ABDOM_BG_ATTENUATION_DB_CM_MHZ;
             }
             if org {
-                *spd = c_organ + 0.10 * hu.clamp(-100.0, 200.0);
-                *att = 0.8;
+                *spd = c_organ
+                    + ABDOM_ORGAN_SPEED_SLOPE_M_S_PER_HU
+                        * hu.clamp(ABDOM_ORGAN_HU_LOWER, ABDOM_ORGAN_HU_UPPER);
+                *att = ABDOM_ORGAN_ATTENUATION_DB_CM_MHZ;
             }
             if tgt {
-                *spd = c_organ - 22.0 + 0.12 * hu.clamp(-50.0, 220.0);
-                *att = 1.05;
+                *spd = c_organ
+                    + ABDOM_TARGET_SPEED_OFFSET_M_S
+                    + ABDOM_TARGET_SPEED_SLOPE_M_S_PER_HU
+                        * hu.clamp(ABDOM_TARGET_HU_LOWER, ABDOM_TARGET_HU_UPPER);
+                *att = ABDOM_TARGET_ATTENUATION_DB_CM_MHZ;
             }
-            if hu > 250.0 {
-                *spd = 2450.0 + 0.42 * (hu - 250.0).clamp(0.0, 1400.0);
-                *att = 18.0;
+            if hu > ABDOM_CALCIFICATION_HU_THRESHOLD {
+                *spd = ABDOM_CALC_SPEED_BASE_M_S
+                    + ABDOM_CALC_SPEED_SLOPE_M_S_PER_HU
+                        * (hu - ABDOM_CALCIFICATION_HU_THRESHOLD)
+                            .clamp(0.0, ABDOM_CALC_HU_RANGE);
+                *att = ABDOM_CALC_ATTENUATION_DB_CM_MHZ;
             }
         });
     (speed, attenuation, body, organ, target)
@@ -303,7 +375,7 @@ fn connected_body_component(
 }
 
 fn is_abdominal_body_candidate(hu: f64, label: i16) -> bool {
-    hu > -450.0 || label > 0
+    hu > HU_ABDOMEN_BODY_THRESHOLD || label > 0
 }
 
 /// Von-Neumann 4-neighbourhood within `(nx, ny)` bounds.

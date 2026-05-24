@@ -4,7 +4,9 @@ use std::collections::VecDeque;
 
 use ndarray::{s, Array3};
 
-use crate::core::constants::fundamental::{HU_BONE_THRESHOLD, HU_BRAIN_BODY_THRESHOLD};
+use crate::core::constants::fundamental::{
+    HU_ABDOMEN_BODY_THRESHOLD, HU_BONE_THRESHOLD, HU_BRAIN_BODY_THRESHOLD,
+};
 use crate::core::error::{KwaversError, KwaversResult};
 
 use super::super::super::abdominal3d::helpers::exterior_air_mask;
@@ -24,7 +26,9 @@ pub(super) fn body_mask_full(
         let label = label_volume.map_or(0, |labels| labels[idx]);
         match anatomy {
             AnatomyKind::Brain => ct_hu[idx] > HU_BRAIN_BODY_THRESHOLD,
-            AnatomyKind::Liver | AnatomyKind::Kidney => ct_hu[idx] > -450.0 || label > 0,
+            AnatomyKind::Liver | AnatomyKind::Kidney => {
+                ct_hu[idx] > HU_ABDOMEN_BODY_THRESHOLD || label > 0
+            }
         }
     });
     let exterior_air = exterior_air_mask(&anatomical_body);

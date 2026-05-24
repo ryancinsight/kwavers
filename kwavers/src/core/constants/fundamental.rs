@@ -674,6 +674,19 @@ pub const HU_BONE_THRESHOLD: f64 = 300.0; // Hounsfield units
 /// Reference: Aubry et al. (2003). J. Acoust. Soc. Am. 113(1):84–93.
 pub const HU_BRAIN_BODY_THRESHOLD: f64 = -300.0; // Hounsfield units
 
+/// Hounsfield unit threshold separating abdominal organ tissue from background [HU].
+///
+/// Voxels with HU > −450 are classified as potential abdominal body tissue (liver,
+/// kidney, or surrounding structures) in abdominal CT segmentation pipelines.
+/// The lower threshold (vs. brain's −300 HU) accommodates the larger fat fraction
+/// around abdominal organs (perinephric fat: −200 to −100 HU; retroperitoneal fat:
+/// −150 to −50 HU; lower-attenuation fat extends to −450 HU in morbidly obese
+/// patients).
+///
+/// Reference: AAPM Report 96 (2005). "CT Scanner Acceptance Testing."
+/// AAPM, College Park, MD; clinical practice consensus for liver/kidney segmentation.
+pub const HU_ABDOMEN_BODY_THRESHOLD: f64 = -450.0; // Hounsfield units
+
 /// Hounsfield unit range for skull bone-fraction interpolation [HU].
 ///
 /// `bone_fraction = (HU − HU_BONE_THRESHOLD) / HU_SKULL_RANGE`, clamped to [0, 1].

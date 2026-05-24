@@ -2,6 +2,7 @@
 
 use std::collections::VecDeque;
 
+use crate::core::constants::fundamental::HU_ABDOMEN_BODY_THRESHOLD;
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::{s, Array2, Array3};
 
@@ -37,7 +38,7 @@ pub fn build_abdominal_placement_context(
     let label_slice = label_volume.slice(s![.., .., slice_index]).to_owned();
     let target_mask = largest_connected_target_component(&label_slice)?;
     let tissue = Array2::from_shape_fn(ct_slice.dim(), |idx| {
-        ct_slice[idx] > -450.0 || label_slice[idx] > 0
+        ct_slice[idx] > HU_ABDOMEN_BODY_THRESHOLD || label_slice[idx] > 0
     });
     let body_mask = connected_body_component(&tissue, &target_mask)?;
     let sx = spacing_mm[0] * 1.0e-3;
