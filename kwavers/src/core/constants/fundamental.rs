@@ -512,6 +512,16 @@ pub const ACOUSTIC_ABSORPTION_SKULL_MIN: f64 = 8.0; // dB/(cm·MHz)
 /// Reference: Aubry et al. (2003). J. Acoust. Soc. Am. 113(1):84–93, Table I.
 pub const ACOUSTIC_ABSORPTION_SKULL_RANGE: f64 = 12.0; // dB/(cm·MHz)
 
+/// Minimum cortical-bone acoustic absorption for CT-based HIFU planning [dB/(cm·MHz)].
+///
+/// Measured lower bound for dense cortical skull bone in transcranial HIFU experiments.
+/// Used with the CT-HU linear interpolation model (Connor & Hynynen 2002) in which
+/// absorption ranges from `ACOUSTIC_ABSORPTION_SKULL_CORTICAL_MIN` at HU = 300 to
+/// `ACOUSTIC_ABSORPTION_SKULL_MIN + ACOUSTIC_ABSORPTION_SKULL_RANGE` = 20 at HU = 1500.
+///
+/// Reference: Connor CW & Hynynen K (2002). *Phys. Med. Biol.* 47(12):2213–2231.
+pub const ACOUSTIC_ABSORPTION_SKULL_CORTICAL_MIN: f64 = 13.0; // dB/(cm·MHz)
+
 /// Acoustic absorption coefficient of brain white matter [dB/(cm·MHz)].
 ///
 /// White matter absorption measured at diagnostic and therapeutic frequencies (37°C).

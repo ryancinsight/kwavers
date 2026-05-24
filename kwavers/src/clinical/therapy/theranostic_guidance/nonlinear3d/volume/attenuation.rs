@@ -1,5 +1,12 @@
 //! CT-derived attenuation maps for nonlinear 3-D theranostic propagation.
 
+use crate::core::constants::acoustic_parameters::NP_TO_DB;
+use crate::core::constants::fundamental::{
+    ACOUSTIC_ABSORPTION_BRAIN_WHITE, ACOUSTIC_ABSORPTION_SKULL_CORTICAL_MIN,
+    ACOUSTIC_ABSORPTION_SKULL_MIN, ACOUSTIC_ABSORPTION_SKULL_RANGE, ACOUSTIC_ABSORPTION_TISSUE,
+    HU_BONE_THRESHOLD,
+};
+
 /// Per-voxel attenuation coefficient at 1 MHz in Np/m. The frequency
 /// dependence follows the power law `alpha(f) = alpha(1MHz) * f_MHz^y`, where
 /// the per-voxel exponent `y` is returned by `attenuation_power_law_y_from_hu`.
@@ -8,24 +15,28 @@
 ///
 /// Hamilton & Blackstock 1998 Table 4.1 (`alpha_0` in dB / (cm * MHz)):
 /// - soft tissue (liver, kidney, muscle, brain): `0.5 - 0.6`
-/// - skull bone (cortical): `13 - 20` (Connor & Hynynen 2002 measured `13.3`)
+/// - skull bone (cortical): `13 - 20` (Connor & Hynynen 2002)
 /// - lung (air-filled): effectively absorbing
 ///
-/// Conversion: `alpha [Np/m] = alpha_0 [dB/(cm*MHz)] * 100 / 8.685889638`.
+/// Conversion: `alpha [Np/m] = alpha_0 [dB/(cm*MHz)] * 100 / NP_TO_DB`.
 pub(super) fn attenuation_np_per_m_mhz_from_hu(hu: f64, label: i16, body: bool) -> f64 {
+    /// Skull absorption upper bound [dB/(cm·MHz)] = ACOUSTIC_ABSORPTION_SKULL_MIN + RANGE = 20.
+    const SKULL_ABSORPTION_MAX: f64 =
+        ACOUSTIC_ABSORPTION_SKULL_MIN + ACOUSTIC_ABSORPTION_SKULL_RANGE;
     if !body {
         return 0.0;
     }
-    if hu >= 300.0 {
-        let hu_norm = ((hu - 300.0) / 1200.0).clamp(0.0, 1.0);
-        let alpha_db_cm_mhz = 13.0 + (20.0 - 13.0) * hu_norm;
-        alpha_db_cm_mhz * 100.0 / 8.685_889_638_065_036
+    if hu >= HU_BONE_THRESHOLD {
+        let hu_norm = ((hu - HU_BONE_THRESHOLD) / 1200.0).clamp(0.0, 1.0);
+        let alpha_db_cm_mhz = ACOUSTIC_ABSORPTION_SKULL_CORTICAL_MIN
+            + (SKULL_ABSORPTION_MAX - ACOUSTIC_ABSORPTION_SKULL_CORTICAL_MIN) * hu_norm;
+        alpha_db_cm_mhz * 100.0 / NP_TO_DB
     } else if hu < -700.0 && label == 0 {
         1000.0
     } else if label > 0 {
-        0.6 * 100.0 / 8.685_889_638_065_036
+        ACOUSTIC_ABSORPTION_BRAIN_WHITE * 100.0 / NP_TO_DB
     } else {
-        0.5 * 100.0 / 8.685_889_638_065_036
+        ACOUSTIC_ABSORPTION_TISSUE * 100.0 / NP_TO_DB
     }
 }
 
