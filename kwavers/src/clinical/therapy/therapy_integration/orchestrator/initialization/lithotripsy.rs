@@ -1,5 +1,28 @@
 //! Lithotripsy simulator initialization and stone geometry helpers.
 
+// ─── CT Hounsfield unit presets for synthetic phantom generation ─────────────
+
+/// Typical CT Hounsfield value for kidney parenchyma (soft tissue, 37°C) [HU].
+///
+/// Kidney cortex and medulla are typically 30–60 HU on clinical CT.
+const HU_KIDNEY_PARENCHYMA: f64 = 40.0;
+
+/// Synthetic CT Hounsfield value for a calcified kidney stone [HU].
+///
+/// Calcium oxalate monohydrate stones typically measure 800–1800 HU;
+/// 1200 HU is the midrange value used for deterministic phantom generation.
+///
+/// Reference: Williams JC et al. (2003). *J. Urol.* 169(6):2227–2231.
+const HU_KIDNEY_STONE_CALCIUM: f64 = 1200.0;
+
+/// CT Hounsfield value for perirenal connective tissue / fat [HU].
+///
+/// Perinephric fat and connective tissue outside the kidney typically shows
+/// negative HU (−200 to −100).  −200 HU is used as the background default.
+const HU_BACKGROUND_PERINEPHRIC: f64 = -200.0;
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 use crate::clinical::therapy::lithotripsy::stone_fracture::StoneMaterial;
 use crate::clinical::therapy::lithotripsy::{LithotripsyParameters, LithotripsySimulator};
 use crate::core::error::KwaversResult;
@@ -164,7 +187,7 @@ fn generate_synthetic_ct_data(grid: &Grid) -> Array3<f64> {
                 let dz_kidney = (k as f64 - center_z as f64) / kidney_c;
 
                 if dx_kidney * dx_kidney + dy_kidney * dy_kidney + dz_kidney * dz_kidney <= 1.0 {
-                    ct_data[[i, j, k]] = 40.0;
+                    ct_data[[i, j, k]] = HU_KIDNEY_PARENCHYMA;
 
                     let dx_stone = i as f64 - stone_center_x as f64;
                     let dy_stone = j as f64 - stone_center_y as f64;
@@ -173,10 +196,10 @@ fn generate_synthetic_ct_data(grid: &Grid) -> Array3<f64> {
                         (dx_stone * dx_stone + dy_stone * dy_stone + dz_stone * dz_stone).sqrt();
 
                     if dist <= stone_radius {
-                        ct_data[[i, j, k]] = 1200.0;
+                        ct_data[[i, j, k]] = HU_KIDNEY_STONE_CALCIUM;
                     }
                 } else {
-                    ct_data[[i, j, k]] = -200.0;
+                    ct_data[[i, j, k]] = HU_BACKGROUND_PERINEPHRIC;
                 }
             }
         }
