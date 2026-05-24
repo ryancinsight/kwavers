@@ -4,7 +4,8 @@ use crate::core::constants::acoustic_parameters::{
     NP_TO_DB, SKULL_ATTENUATION_MARSAC_MAX_NP_PER_M_MHZ,
 };
 use crate::core::constants::fundamental::{
-    ACOUSTIC_ABSORPTION_TISSUE, HU_BONE_THRESHOLD, SOUND_SPEED_WATER_37C,
+    ACOUSTIC_ABSORPTION_TISSUE, HU_BONE_THRESHOLD, SOUND_SPEED_SOFT_TISSUE_MAX,
+    SOUND_SPEED_WATER_37C,
 };
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::math::numerics::operators::interpolation::bilinear_index_space;
@@ -264,5 +265,6 @@ fn head_centroid(slice: &Array2<f64>) -> Option<(f64, f64)> {
 /// the active inversion set.  A safety floor/ceiling of [1480, 1620] m/s
 /// prevents physically implausible values if the clamp bounds are ever widened.
 pub(super) fn soft_tissue_speed(hu: f64) -> f64 {
-    (SOUND_SPEED_WATER_37C + 0.68 * hu.clamp(-20.0, 120.0)).clamp(SOUND_SPEED_WATER_SIM, 1620.0)
+    (SOUND_SPEED_WATER_37C + 0.68 * hu.clamp(-20.0, 120.0))
+        .clamp(SOUND_SPEED_WATER_SIM, SOUND_SPEED_SOFT_TISSUE_MAX)
 }

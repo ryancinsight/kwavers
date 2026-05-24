@@ -1,4 +1,8 @@
-use crate::core::constants::acoustic_parameters::BONE_DENSITY;
+use crate::core::constants::acoustic_parameters::{
+    BONE_DENSITY, DENSITY_SKULL_SUTURE, DENSITY_SKULL_TRABECULAR, SHEAR_SPEED_SKULL_CORTICAL,
+    SHEAR_SPEED_SKULL_TRABECULAR, SOUND_SPEED_SKULL_CORTICAL, SOUND_SPEED_SKULL_SUTURE,
+    SOUND_SPEED_SKULL_TRABECULAR,
+};
 use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::core::error::{KwaversError, KwaversResult};
 
@@ -22,13 +26,13 @@ pub struct AcousticSkullProperties {
 
 impl Default for AcousticSkullProperties {
     fn default() -> Self {
-        // Typical adult skull properties
+        // Typical adult skull properties — Pinton et al. (2012)
         Self {
-            sound_speed: 3100.0,       // m/s (cortical bone)
-            density: BONE_DENSITY,     // 1900 kg/m³ (Duck 1990)
-            attenuation_coeff: 60.0,   // Np/m/MHz
-            thickness: 0.007,          // 7 mm average
-            shear_speed: Some(1600.0), // m/s
+            sound_speed: SOUND_SPEED_SKULL_CORTICAL, // 3100.0 m/s — Pinton (2012)
+            density: BONE_DENSITY,                   // 1900 kg/m³ — Duck (1990)
+            attenuation_coeff: 60.0,                 // Np/m/MHz
+            thickness: 0.007,                        // 7 mm average
+            shear_speed: Some(SHEAR_SPEED_SKULL_CORTICAL), // 1600.0 m/s — Pinton (2012)
         }
     }
 }
@@ -45,22 +49,22 @@ impl AcousticSkullProperties {
     pub fn from_bone_type(bone_type: &str) -> KwaversResult<Self> {
         match bone_type {
             "cortical" => Ok(Self {
-                sound_speed: 3100.0,
-                density: BONE_DENSITY,
+                sound_speed: SOUND_SPEED_SKULL_CORTICAL, // 3100.0 m/s — Pinton (2012)
+                density: BONE_DENSITY,                   // 1900.0 kg/m³ — Duck (1990)
                 attenuation_coeff: 60.0,
                 thickness: 0.007,
-                shear_speed: Some(1600.0),
+                shear_speed: Some(SHEAR_SPEED_SKULL_CORTICAL), // 1600.0 m/s — Pinton (2012)
             }),
             "trabecular" => Ok(Self {
-                sound_speed: 2400.0,
-                density: 1600.0,
+                sound_speed: SOUND_SPEED_SKULL_TRABECULAR, // 2400.0 m/s — Pinton (2012)
+                density: DENSITY_SKULL_TRABECULAR,         // 1600.0 kg/m³ — Pinton (2012)
                 attenuation_coeff: 40.0,
                 thickness: 0.005,
-                shear_speed: Some(1200.0),
+                shear_speed: Some(SHEAR_SPEED_SKULL_TRABECULAR), // 1200.0 m/s — Pinton (2012)
             }),
             "suture" => Ok(Self {
-                sound_speed: 1800.0,
-                density: 1200.0,
+                sound_speed: SOUND_SPEED_SKULL_SUTURE, // 1800.0 m/s — Pinton (2012)
+                density: DENSITY_SKULL_SUTURE,         // 1200.0 kg/m³ — Pinton (2012)
                 attenuation_coeff: 20.0,
                 thickness: 0.002,
                 shear_speed: None, // Soft tissue-like

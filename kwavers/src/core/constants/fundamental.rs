@@ -793,3 +793,17 @@ pub const DENSITY_SKULL_MIN: f64 = 1200.0; // kg/m³
 /// Reference: Aubry et al. (2003). J. Acoust. Soc. Am. 113(1):84–93;
 /// Duck (1990) Table 3.8.
 pub const DENSITY_SKULL_CORTICAL_RANGE: f64 = 700.0; // kg/m³
+
+/// Safety ceiling for CT-based soft-tissue sound-speed interpolation (m/s).
+///
+/// The linear HU→speed model for brain/soft tissue extrapolates beyond the
+/// calibrated HU range [−20, 120]. A hard upper ceiling of 1620 m/s prevents
+/// physically implausible values from contaminating the inversion target.
+///
+/// Physical basis: the fastest normal soft tissues measured in vivo are uterine
+/// muscle and liver (1580–1610 m/s); 1620 m/s provides a 10 m/s margin above
+/// the highest reported soft-tissue speed before classifying tissue as bone.
+///
+/// Reference: Duck, F.A. (1990). *Physical Properties of Tissue*, Table 4.6;
+/// Mast, T.D. (2000). *Ultrasound Med. Biol.* 26(7):1085–1099.
+pub const SOUND_SPEED_SOFT_TISSUE_MAX: f64 = 1620.0; // m/s

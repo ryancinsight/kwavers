@@ -11,6 +11,21 @@ const MRI_EXTENT_Y_MM: f64 = 340.0;
 const MRI_EXTENT_Z_MM: f64 = 158.4;
 const TISSUE_MAX_SOUND_SPEED_M_S: f64 = 1750.0;
 const BREAST_RADIUS_MAX_MM: f64 = 80.0;
+/// Published MRI-to-sound-speed mapping lower bound for the left breast [m/s].
+///
+/// Ali et al. (2025) calibration constant for left-breast MRI intensity → sound-speed
+/// linear mapping. The intensity range [min, max] within the breast mask is linearly
+/// mapped to [c_min, TISSUE_MAX_SOUND_SPEED_M_S].
+///
+/// Reference: Ali R et al. (2025). *IEEE Trans. Med. Imaging* (in press).
+const BREAST_LEFT_SOUND_SPEED_MIN_M_S: f64 = 1400.0;
+/// Published MRI-to-sound-speed mapping lower bound for the right breast [m/s].
+///
+/// Calibration value for the right breast in the Ali et al. (2025) model;
+/// slightly lower than left due to observed intensity offset between orientations.
+///
+/// Reference: Ali R et al. (2025). *IEEE Trans. Med. Imaging* (in press).
+const BREAST_RIGHT_SOUND_SPEED_MIN_M_S: f64 = 1350.0;
 
 pub(super) struct BreastMriSoundSpeedMapConfig {
     pub output_shape: [usize; 3],
@@ -37,8 +52,8 @@ pub(super) fn mri_to_sound_speed(
     apply_radius_mask(&mut tissue, config.output_shape, config.grid_spacing_m);
     let (min_intensity, max_intensity) = tissue_intensity_bounds(&breast_seg, &tissue)?;
     let c_min = match config.breast_side {
-        BreastUstMriBreastSide::Left => 1400.0,
-        BreastUstMriBreastSide::Right => 1350.0,
+        BreastUstMriBreastSide::Left => BREAST_LEFT_SOUND_SPEED_MIN_M_S,
+        BreastUstMriBreastSide::Right => BREAST_RIGHT_SOUND_SPEED_MIN_M_S,
     };
     let scale = (TISSUE_MAX_SOUND_SPEED_M_S - c_min) / (max_intensity - min_intensity);
     Ok(Array3::from_shape_fn(

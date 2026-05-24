@@ -256,6 +256,67 @@ pub const BONE_DENSITY: f64 = 1900.0;
 /// Reference: Duck (1990) Table 3.3.
 pub const DENSITY_SKULL: f64 = 1920.0;
 
+/// Skull cortical bone longitudinal sound speed [m/s] — Pinton et al. (2012) model.
+///
+/// Value: 3100 m/s — measured longitudinal wave speed for dense cortical skull bone
+/// at body temperature. Used in the 3-layer skull model (cortical/trabecular/cortical)
+/// for transcranial focused ultrasound.
+///
+/// Distinct from `SOUND_SPEED_SKULL = 2900 m/s` (Marsac 2017 mean across porosity range).
+///
+/// Reference: Pinton G et al. (2012). "Attenuation, scattering, and absorption of
+/// ultrasound in the skull bone." *Med. Phys.* 39(1):299–307. DOI: 10.1118/1.3668316.
+pub const SOUND_SPEED_SKULL_CORTICAL: f64 = 3100.0;
+
+/// Skull cortical bone shear wave speed [m/s].
+///
+/// Value: 1600 m/s — measured shear wave speed in cortical skull bone.
+/// Range reported in the literature: 1400–1800 m/s depending on orientation and
+/// bone quality.
+///
+/// Reference: Pinton G et al. (2012). *Med. Phys.* 39(1):299–307.
+pub const SHEAR_SPEED_SKULL_CORTICAL: f64 = 1600.0;
+
+/// Skull trabecular bone longitudinal sound speed [m/s].
+///
+/// Value: 2400 m/s — longitudinal speed in the porous trabecular (diploe) layer of
+/// the skull, which is slower than compact cortical bone due to the higher porosity.
+///
+/// Reference: Pinton G et al. (2012). *Med. Phys.* 39(1):299–307.
+pub const SOUND_SPEED_SKULL_TRABECULAR: f64 = 2400.0;
+
+/// Skull trabecular bone density [kg/m³].
+///
+/// Value: 1600 kg/m³ — lower than cortical skull (1920 kg/m³) due to trabecular
+/// porosity. Used in the 3-layer skull transmission model.
+///
+/// Reference: Pinton G et al. (2012). *Med. Phys.* 39(1):299–307.
+pub const DENSITY_SKULL_TRABECULAR: f64 = 1600.0;
+
+/// Skull trabecular bone shear wave speed [m/s].
+///
+/// Value: 1200 m/s — lower than cortical shear speed due to trabecular porosity.
+///
+/// Reference: Pinton G et al. (2012). *Med. Phys.* 39(1):299–307.
+pub const SHEAR_SPEED_SKULL_TRABECULAR: f64 = 1200.0;
+
+/// Skull suture (fibrous joint) longitudinal sound speed [m/s].
+///
+/// Cranial sutures are connective tissue joints between skull bones; their acoustic
+/// speed is intermediate between soft tissue (~1540 m/s) and trabecular bone (~2400 m/s).
+///
+/// Reference: Pinton G et al. (2012). *Med. Phys.* 39(1):299–307;
+/// Marquet F et al. (2009). *Phys. Med. Biol.* 54(9):2895–2916.
+pub const SOUND_SPEED_SKULL_SUTURE: f64 = 1800.0;
+
+/// Skull suture (fibrous joint) density [kg/m³].
+///
+/// Suture tissue is predominantly fibrous connective tissue; density is close to
+/// soft tissue (~1040–1100 kg/m³) but elevated by mineralisation at suture margins.
+///
+/// Reference: Pinton G et al. (2012). *Med. Phys.* 39(1):299–307.
+pub const DENSITY_SKULL_SUTURE: f64 = 1200.0;
+
 /// Bone nonlinearity parameter (B/A)
 /// Value: 8.0
 /// Reference: Estimated from tissue properties
