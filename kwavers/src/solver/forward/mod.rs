@@ -15,7 +15,6 @@
 //! | Elastic nonlinear           | 4th-order FD          | RK / IMEX           | [`elastic::nonlinear::NonlinearElasticWaveSolver`]                                                                |
 //! | Poroelastic                 | FD                    | Leapfrog            | [`poroelastic`]                                                                                                   |
 //! | Spectral-element            | High-order            | Various             | [`sem`]                                                                                                           |
-//! | Helmholtz / Born series     | Spectral              | Stationary          | [`helmholtz::born_series`]                                                                                        |
 //! | BEM                         | Boundary integral     | —                   | [`bem::BemSolver`]                                                                                                |
 //! | Pennes bioheat              | 2nd / 4th-order FD    | Forward Euler       | [`thermal_diffusion::ThermalDiffusionSolver`]                                                                     |
 //! | Optical (RTE / diffusion)   | FD / Monte Carlo      | Stationary          | [`optical`]                                                                                                       |
@@ -153,12 +152,6 @@ pub mod plugin {
 pub use bem::BemSolver;
 pub use coupled::{ThermalAcousticConfig, ThermalAcousticCoupler};
 pub use fdtd::FdtdSolver;
-pub use helmholtz::born_series::{ConvergentBornSolver, IterativeBornSolver, ModifiedBornSolver};
-
-// Module planned but not yet implemented:
-// - ConvergentBornStats: Convergence statistics for convergent Born approximation
-// - IterativeBornStats: Iteration metrics for iterative Born series
-// - ModifiedBornStats: Performance statistics for modified Born approximation
 pub use hybrid::{
     BemFemCoupler, BemFemCouplingConfig, BemFemInterface, BemFemSolver, FdtdFemCoupler,
     FdtdFemCouplingConfig, FdtdFemSolver, HybridSolver, PstdSemCoupler, PstdSemCouplingConfig,

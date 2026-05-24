@@ -37,7 +37,6 @@
 //! - **Matrix-free FFT implementation**: Efficient for large-scale problems
 //! - **Heterogeneous density support**: Full acoustic parameter variations
 
-pub mod born_series;
 pub mod fem;
 pub mod preconditioners;
 
@@ -109,11 +108,3 @@ pub trait HelmholtzPreconditioner {
 // EXPLICIT RE-EXPORTS (Helmholtz Solver API)
 // ============================================================================
 
-/// Born series solvers for scattering problems
-pub use born_series::{
-    BornConfig,           // Configuration for Born series methods
-    BornWorkspace,        // Workspace for Born series computations
-    ConvergentBornSolver, // Renormalized Born series
-    IterativeBornSolver,  // Fixed-point Born iteration
-    ModifiedBornSolver,   // Born series for viscoacoustic media
-};
