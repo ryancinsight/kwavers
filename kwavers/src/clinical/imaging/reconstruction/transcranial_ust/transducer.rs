@@ -1,9 +1,9 @@
-//! Deterministic 1024-element transcranial focused-bowl acquisition geometry.
+//! Deterministic transcranial focused-bowl acquisition geometry.
 
-use std::f64::consts::{FRAC_PI_2, TAU};
+use std::f64::consts::TAU;
 
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::domain::source::transducers::focused::{BowlConfig, BowlTransducer};
+use crate::domain::source::transducers::focused::{BowlAngularBounds, BowlConfig, BowlTransducer};
 use crate::solver::inverse::linear_born_inversion::{ElementPosition, TransducerGeometry};
 
 const GEOMETRY_UNIT_FREQUENCY_HZ: f64 = 1.0;
@@ -37,8 +37,12 @@ impl TransducerGeometry for TranscranialBowlGeometry {
 }
 
 impl TranscranialBowlGeometry {
-    /// Place `element_count` elements on a deterministic equal-area hemisphere.
-    pub fn uniform(element_count: usize, radius_m: f64) -> KwaversResult<Self> {
+    /// Place `element_count` elements on a deterministic equal-area bowl aperture.
+    pub fn from_aperture(
+        element_count: usize,
+        radius_m: f64,
+        aperture: BowlAngularBounds,
+    ) -> KwaversResult<Self> {
         if element_count < 8 {
             return Err(KwaversError::InvalidInput(
                 "TranscranialBowlGeometry requires at least 8 elements".to_owned(),
@@ -56,7 +60,7 @@ impl TranscranialBowlGeometry {
             GEOMETRY_UNIT_FREQUENCY_HZ,
             GEOMETRY_UNIT_AMPLITUDE_PA,
         );
-        let bowl = BowlTransducer::with_polar_span(config, FRAC_PI_2, element_count)?;
+        let bowl = BowlTransducer::with_angular_bounds(config, aperture, element_count)?;
         let elements = bowl
             .element_positions()
             .iter()

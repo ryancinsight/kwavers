@@ -10,21 +10,22 @@
 //! `&config.linear`.
 
 use crate::core::error::{KwaversError, KwaversResult};
+use crate::domain::source::transducers::focused::BowlAngularBounds;
 use crate::solver::inverse::linear_born_inversion::LinearBornInversionConfig;
 
 /// Reference element count for the transcranial focused-bowl acquisition.
 pub const TRANSCRANIAL_FOCUSED_BOWL_ELEMENT_COUNT: usize = 1024;
 
-use crate::core::constants::fundamental::DENSITY_BRAIN;
 pub use crate::core::constants::acoustic_parameters::SOUND_SPEED_SKULL;
+use crate::core::constants::fundamental::DENSITY_BRAIN;
 pub use crate::core::constants::fundamental::{SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM};
 
 /// Clinical configuration for the transcranial UST finite-frequency Born
 /// inversion.
 ///
 /// = generic [`LinearBornInversionConfig`] + transducer-geometry parameters
-/// (`element_count`, `radius_m`). The clinical adapter constructs the
-/// focused-bowl geometry from `element_count + radius_m`, then passes
+/// (`element_count`, `radius_m`, `aperture`). The clinical adapter constructs
+/// the focused-bowl geometry from those source-domain parameters, then passes
 /// `&self.linear` to every kernel call so the kernels remain anatomy-neutral.
 #[derive(Clone, Debug)]
 pub struct TranscranialUstBornInversionConfig {
@@ -34,6 +35,8 @@ pub struct TranscranialUstBornInversionConfig {
     pub element_count: usize,
     /// Transcranial focused-bowl radius around the CT volume center [m].
     pub radius_m: f64,
+    /// Source-domain focused-bowl aperture.
+    pub aperture: BowlAngularBounds,
 }
 
 impl Default for TranscranialUstBornInversionConfig {
@@ -50,6 +53,7 @@ impl Default for TranscranialUstBornInversionConfig {
             linear,
             element_count: TRANSCRANIAL_FOCUSED_BOWL_ELEMENT_COUNT,
             radius_m: 0.11,
+            aperture: BowlAngularBounds::hemisphere(),
         }
     }
 }

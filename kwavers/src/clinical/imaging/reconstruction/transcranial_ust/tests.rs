@@ -1,5 +1,6 @@
 use ndarray::{Array2, Array3};
 
+use crate::domain::source::transducers::focused::BowlAngularBounds;
 use crate::solver::inverse::linear_born_inversion::{
     LinearBornInversionConfig, TransducerGeometry,
 };
@@ -11,7 +12,8 @@ use super::{
 
 #[test]
 fn transcranial_bowl_geometry_uses_distinct_element_positions() {
-    let geometry = TranscranialBowlGeometry::uniform(64, 0.11).unwrap();
+    let geometry =
+        TranscranialBowlGeometry::from_aperture(64, 0.11, BowlAngularBounds::hemisphere()).unwrap();
     assert_eq!(geometry.len(), 64);
 
     let min_z = geometry
@@ -41,6 +43,27 @@ fn transcranial_bowl_geometry_uses_distinct_element_positions() {
             assert_ne!(receiver_idx, source_idx);
         }
     }
+}
+
+#[test]
+fn transcranial_bowl_geometry_uses_configured_source_aperture() {
+    let aperture = BowlAngularBounds::from_axis_projection_bounds(-0.25, 0.95).unwrap();
+    let geometry = TranscranialBowlGeometry::from_aperture(80, 0.11, aperture).unwrap();
+
+    let min_projection = geometry
+        .elements
+        .iter()
+        .map(|element| element.z_m / 0.11)
+        .fold(f64::INFINITY, f64::min);
+    let max_projection = geometry
+        .elements
+        .iter()
+        .map(|element| element.z_m / 0.11)
+        .fold(f64::NEG_INFINITY, f64::max);
+
+    assert_eq!(geometry.len(), 80);
+    assert!((min_projection + 0.25).abs() < 0.04);
+    assert!((max_projection - 0.95).abs() < 0.04);
 }
 
 #[test]

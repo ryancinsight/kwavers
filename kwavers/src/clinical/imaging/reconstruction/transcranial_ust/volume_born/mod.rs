@@ -59,7 +59,11 @@ pub fn reconstruct_brain_volume(
 ) -> KwaversResult<TranscranialUstBornInversionVolumeResult> {
     config.validate()?;
     let linear = &config.linear;
-    let geometry = TranscranialBowlGeometry::uniform(config.element_count, config.radius_m)?;
+    let geometry = TranscranialBowlGeometry::from_aperture(
+        config.element_count,
+        config.radius_m,
+        config.aperture,
+    )?;
     let receiver_indices = geometry.receiver_indices(&linear.receiver_offsets);
     let active = active_voxels(medium);
     let operator = VolumeOperator::new(

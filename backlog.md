@@ -1,5 +1,14 @@
 # Backlog / Strategy
 
+## Transcranial UST aperture routing - closed (2026-05-23)
+- **[done] [patch]** Removed the remaining hard-coded hemispherical acquisition
+  path from the transcranial UST Born adapter. `TranscranialUstBornInversionConfig`
+  now carries a source-domain `BowlAngularBounds`, and slice/volume
+  reconstruction use `BowlTransducer::with_angular_bounds` for geometry
+  generation. Verification: transcranial UST tests pass 4/4, focused source
+  transducer tests pass 33/33 with 1 ignored, and `cargo check -p pykwavers --lib`
+  exits 0.
+
 ## CBS adjoint O(N log N) iterative solver — closed (2026-05-23)
 - **[done] [minor]** `solve_adjoint_spectral_iterative` now implements the correct
   Richardson adjoint for spectral CBS operators. The iterate uses `λ += γ^H·residual`

@@ -49,6 +49,15 @@ impl BowlAngularBounds {
         Self::new(0.0, theta_max_rad)
     }
 
+    /// Construct the full `0 <= theta <= pi/2` hemispherical aperture.
+    #[must_use]
+    pub fn hemisphere() -> Self {
+        Self {
+            theta_min_rad: 0.0,
+            theta_max_rad: PI / 2.0,
+        }
+    }
+
     /// Construct bounds from normalized aperture-axis projections.
     ///
     /// `axis_projection = dot(position - focus, vertex - focus) / R^2`, so a

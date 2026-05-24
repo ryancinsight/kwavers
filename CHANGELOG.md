@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Changed (2026-05-23) - Transcranial UST Bowl Aperture Routing
+
+- [patch] Move the transcranial UST reconstruction aperture from a hard-coded
+  hemispherical constructor to `TranscranialUstBornInversionConfig::aperture`
+  backed by source-domain `BowlAngularBounds`. Slice and volume Born adapters
+  now build geometry through `BowlTransducer::with_angular_bounds`, preserving
+  the bowl source as the single aperture SSOT.
+
 ### Fixed (2026-05-23) - CBS Adjoint Richardson Iterate Sign
 
 - [minor] Restore correct `+=` sign in `solve_adjoint_spectral_iterative`.

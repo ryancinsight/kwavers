@@ -74,7 +74,11 @@ pub fn reconstruct_brain_slice(
 ) -> KwaversResult<TranscranialUstBornInversionResult> {
     config.validate()?;
     let linear = &config.linear;
-    let geometry = TranscranialBowlGeometry::uniform(config.element_count, config.radius_m)?;
+    let geometry = TranscranialBowlGeometry::from_aperture(
+        config.element_count,
+        config.radius_m,
+        config.aperture,
+    )?;
     let active = active_voxels(medium);
     let matrix = build_sensitivity_matrix(medium, linear, &geometry, &active);
     let nrows = config.measurement_count();

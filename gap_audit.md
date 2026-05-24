@@ -1,5 +1,19 @@
 # Gap Audit
 
+## Transcranial UST Bowl Aperture Routing (2026-05-23)
+
+Closed the remaining hard-coded hemispherical acquisition path in
+`clinical::imaging::reconstruction::transcranial_ust`. The clinical config now
+owns a validated source-domain `BowlAngularBounds`, and both 2-D and 3-D Born
+adapters build acquisition geometry via `BowlTransducer::with_angular_bounds`.
+
+### Verification summary
+- `cargo test -p kwavers transcranial_ust --lib --message-format=short -j 1`:
+  4/4 pass.
+- `cargo test -p kwavers domain::source::transducers::focused --lib --message-format=short -j 1`:
+  33/33 pass, 1 ignored.
+- `cargo check -p pykwavers --lib --message-format=short -j 2`: exit 0.
+
 ## DG CPML finite-3D boundary closure (2026-05-21)
 
 Lands the Roden-Gedney (2000) CPML adapted for first-order acoustic DG
