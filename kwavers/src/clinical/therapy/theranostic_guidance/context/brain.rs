@@ -4,10 +4,13 @@ use std::f64::consts::PI;
 
 use crate::{
     core::error::{KwaversError, KwaversResult},
-    domain::source::transducers::focused::{BowlConfig, BowlTransducer},
+    domain::source::transducers::focused::BowlAngularBounds,
 };
 use ndarray::{s, Array2, Array3};
 
+use super::super::geometry::{
+    focused_bowl_cap_points, FocusedBowlCapSpec, FocusedBowlVertexDirection,
+};
 use super::super::scene::target_index_from_mask_fraction_3d;
 use super::super::TheranosticInverseConfig;
 use super::surface::{nearest_surface_point, surface_points_3d};
@@ -67,14 +70,15 @@ pub fn build_brain_placement_context(
             "brain placement context requires at least one source frequency".to_owned(),
         )
     })?;
-    let therapy_points_m = focused_bowl_cap_points(
-        config.element_count,
-        center,
-        radius.max(config.focal_radius_m),
-        superior_positive,
+    let therapy_points_m = focused_bowl_cap_points(FocusedBowlCapSpec {
+        element_count: config.element_count,
+        focus_m: center,
+        radius_m: radius.max(config.focal_radius_m),
+        vertex_direction: FocusedBowlVertexDirection::from_superior_positive(superior_positive),
+        angular_bounds: BowlAngularBounds::polar_span(FOCUSED_BOWL_POLAR_SPAN_RAD)?,
         frequency_hz,
-        config.source_pressure_pa,
-    )?;
+        amplitude_pa: config.source_pressure_pa,
+    })?;
     let surface_stride = (nx.max(ny).max(nz) / 96).clamp(1, 8);
     let body_surface_points_m =
         surface_points_3d(&body, sx, sy, sz, Some(calvarium_range), surface_stride);
@@ -98,32 +102,6 @@ pub fn build_brain_placement_context(
         skin_contact_m,
         model_name: "focused_bowl_major_cap_3d".to_owned(),
     })
-}
-
-fn focused_bowl_cap_points(
-    count: usize,
-    center: Point3,
-    radius: f64,
-    superior_positive: bool,
-    frequency_hz: f64,
-    amplitude_pa: f64,
-) -> KwaversResult<Vec<Point3>> {
-    let z_sign = if superior_positive { 1.0 } else { -1.0 };
-    let vertex_m = [center.x_m, center.y_m, center.z_m + z_sign * radius];
-    let focus_m = [center.x_m, center.y_m, center.z_m];
-    let config =
-        BowlConfig::from_vertex_focus(vertex_m, focus_m, 2.0 * radius, frequency_hz, amplitude_pa);
-    let bowl = BowlTransducer::with_polar_span(config, FOCUSED_BOWL_POLAR_SPAN_RAD, count)?;
-
-    Ok(bowl
-        .element_positions()
-        .iter()
-        .map(|position| Point3 {
-            x_m: position[0],
-            y_m: position[1],
-            z_m: position[2],
-        })
-        .collect())
 }
 
 fn point_from_index(

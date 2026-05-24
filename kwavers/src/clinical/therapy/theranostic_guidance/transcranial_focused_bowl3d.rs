@@ -25,27 +25,25 @@ use ndarray::{s, Array3};
 
 use crate::{
     core::error::{KwaversError, KwaversResult},
-    domain::source::transducers::focused::{BowlConfig, BowlTransducer},
+    domain::source::transducers::focused::BowlAngularBounds,
 };
 
-use super::geometry::{is_boundary_3d, Point3};
+use super::geometry::{
+    focused_bowl_cap_points, is_boundary_3d, FocusedBowlCapSpec, FocusedBowlVertexDirection, Point3,
+};
 use super::nonlinear3d::volume::centroid_float;
 use super::scene::target_index_from_mask_fraction_3d;
 
 /// Default minimum polar angle from the superior vertex [rad].
 ///
-/// 0.22 rad ≈ 12.6° — avoids element crowding at the vertex while keeping
-/// a small central aperture gap matching the InSightec ExAblate Neuro geometry.
+/// 0.22 rad ≈ 12.6° — avoids element crowding at the superior vertex while
+/// keeping a small central aperture gap.
 const DEFAULT_CAP_MIN_POLAR_RAD: f64 = 0.22;
 /// Default maximum polar angle from the superior vertex [rad].
 ///
 /// 1.18 rad ≈ 67.6° — covers the calvarium without extending past the
-/// temporoparietal junction, matching the InSightec ExAblate Neuro 4000.
+/// temporoparietal junction.
 const DEFAULT_CAP_MAX_POLAR_RAD: f64 = 1.18;
-/// Unit metadata for geometry-only use of `BowlConfig`.
-const BOWL_LAYOUT_UNIT_FREQUENCY_HZ: f64 = 1.0;
-/// Unit metadata for geometry-only use of `BowlConfig`.
-const BOWL_LAYOUT_UNIT_AMPLITUDE_PA: f64 = 1.0;
 /// Clearance gap in metres between skull outer surface and the bowl shell.
 const BOWL_SKIN_MARGIN_M: f64 = 0.015;
 /// Minimum allowed bowl radius in metres (150 mm).
@@ -222,20 +220,25 @@ pub fn plan_transcranial_focused_bowl_placement(
     let bowl_radius_m = (head_radius + BOWL_SKIN_MARGIN_M)
         .max(requested_radius_m)
         .max(BOWL_RADIUS_MIN_M);
-    let theta_min = cap_min_polar_rad
-        .filter(|v| v.is_finite() && *v >= 0.0)
-        .unwrap_or(DEFAULT_CAP_MIN_POLAR_RAD);
-    let theta_max = cap_max_polar_rad
-        .filter(|v| v.is_finite() && *v > 0.0)
-        .unwrap_or(DEFAULT_CAP_MAX_POLAR_RAD);
-    let therapy_elements_m = calvarium_cap_elements(
-        element_count,
-        bowl_radius_m,
-        focus,
-        superior_positive,
-        theta_min,
-        theta_max,
+    let theta_min = configured_polar_bound(
+        "cap_min_polar_rad",
+        cap_min_polar_rad,
+        DEFAULT_CAP_MIN_POLAR_RAD,
+        PolarBoundRole::Minimum,
     )?;
+    let theta_max = configured_polar_bound(
+        "cap_max_polar_rad",
+        cap_max_polar_rad,
+        DEFAULT_CAP_MAX_POLAR_RAD,
+        PolarBoundRole::Maximum,
+    )?;
+    let therapy_elements_m = focused_bowl_cap_points(FocusedBowlCapSpec::geometry_only(
+        element_count,
+        focus,
+        bowl_radius_m,
+        FocusedBowlVertexDirection::from_superior_positive(superior_positive),
+        BowlAngularBounds::new(theta_min, theta_max)?,
+    ))?;
     let (beam_start_points_m, beam_end_points_m, skull_intersections_m) = sample_beams(
         &therapy_elements_m,
         focus,
@@ -331,54 +334,35 @@ fn body_radius(
         .fold(0.0_f64, f64::max)
 }
 
-/// Distribute `count` therapy elements on a focused-bowl calvarium cap.
-///
-/// # Arguments
-///
-/// - `theta_min_rad` — minimum polar angle from the superior vertex [rad].
-///   Avoids element crowding at the vertex; typically 0.2–0.3 rad.
-/// - `theta_max_rad` — maximum polar angle from the superior vertex [rad].
-///   Determines how far the cap extends from the vertex; 1.18 rad ≈ 67.6°
-///   covers the calvarium without reaching the temporoparietal junction.
-///
-/// The `superior_positive` flag flips the z-axis direction so the cap is oriented
-/// toward the anatomical superior pole while the source-domain bowl layout owns
-/// the equal-area sampling.
-///
-/// # Mathematical contract
-///
-/// The source-domain [`BowlTransducer`] owns polar-bound validation and
-/// equal-area spherical-cap sampling. Clinical placement supplies only the
-/// anatomy-derived vertex orientation and requested polar span.
-fn calvarium_cap_elements(
-    count: usize,
-    radius_m: f64,
-    focus: Point3,
-    superior_positive: bool,
-    theta_min_rad: f64,
-    theta_max_rad: f64,
-) -> KwaversResult<Vec<Point3>> {
-    let sign = if superior_positive { 1.0_f64 } else { -1.0_f64 };
-    let vertex_m = [focus.x_m, focus.y_m, focus.z_m + sign * radius_m];
-    let focus_m = [focus.x_m, focus.y_m, focus.z_m];
-    let config = BowlConfig::from_vertex_focus(
-        vertex_m,
-        focus_m,
-        2.0 * radius_m,
-        BOWL_LAYOUT_UNIT_FREQUENCY_HZ,
-        BOWL_LAYOUT_UNIT_AMPLITUDE_PA,
-    );
-    let layout = BowlTransducer::with_polar_bounds(config, theta_min_rad, theta_max_rad, count)?;
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum PolarBoundRole {
+    Minimum,
+    Maximum,
+}
 
-    Ok(layout
-        .element_positions()
-        .iter()
-        .map(|position| Point3 {
-            x_m: position[0],
-            y_m: position[1],
-            z_m: position[2],
-        })
-        .collect())
+fn configured_polar_bound(
+    parameter: &str,
+    configured: Option<f64>,
+    default_value: f64,
+    role: PolarBoundRole,
+) -> KwaversResult<f64> {
+    match configured {
+        None => Ok(default_value),
+        Some(value)
+            if value.is_finite()
+                && value >= 0.0
+                && (role == PolarBoundRole::Minimum || value > 0.0) =>
+        {
+            Ok(value)
+        }
+        Some(value) => Err(KwaversError::InvalidInput(format!(
+            "{parameter} must be finite and {}; received {value}",
+            match role {
+                PolarBoundRole::Minimum => "non-negative",
+                PolarBoundRole::Maximum => "positive",
+            }
+        ))),
+    }
 }
 
 fn axial_areas(mask: &Array3<bool>) -> Vec<usize> {

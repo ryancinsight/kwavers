@@ -25,11 +25,26 @@ impl RtmProcessor {
         Self { settings }
     }
 
-    /// Perform Reverse Time Migration
-    /// Based on Baysal et al. (1983): "Reverse time migration"
+    /// Compute the RTM image for a single pair of pre-accumulated snapshot fields.
+    ///
+    /// # Contract
+    ///
+    /// `source_wavefield` and `receiver_wavefield` must be 3-D arrays of shape
+    /// `(nx, ny, nz)` representing the *pre-accumulated* forward and backward
+    /// pressure fields respectively.  Each field is typically the result of
+    /// summing per-time-step snapshots externally before calling this function,
+    /// or the single snapshot of a time-domain forward/backward solver at the
+    /// desired correlation lag.
+    ///
+    /// For full time-domain multi-shot RTM with internally driven propagation,
+    /// use [`ReverseTimeMigration::migrate_shot`] from the
+    /// `reconstruction::seismic::rtm` module, which performs 4th-order FD
+    /// propagation and time-step accumulation internally.
+    ///
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
+    /// Reference: Baysal et al. (1983), *Geophysics* **48**(11), 1514–1524.
     pub fn migrate(
         &self,
         source_wavefield: &Array3<f64>,
@@ -61,8 +76,16 @@ impl RtmProcessor {
         Ok(image)
     }
 
-    /// Apply zero-lag cross-correlation imaging condition
-    /// I(x) = ∫ S(x,t) * R(x,t) dt
+    /// Apply zero-lag cross-correlation imaging condition.
+    ///
+    /// Accumulates `S(x)·R(x)` into the image buffer (`+=`), consistent with
+    /// the multi-shot definition `I(x) = Σ_{shots} S(x)·R(x)`.
+    ///
+    /// For a freshly initialised zero buffer (as produced by [`migrate`]) a
+    /// single call is equivalent to assignment; using `+=` makes the operation
+    /// compositionally correct if the buffer is pre-loaded or reused.
+    ///
+    /// [`migrate`]: RtmProcessor::migrate
     fn apply_zero_lag_correlation(
         &self,
         image: &mut Array3<f64>,
@@ -75,12 +98,37 @@ impl RtmProcessor {
             .and(source_wavefield)
             .and(receiver_wavefield)
             .par_for_each(|img, &src, &rcv| {
-                *img = src * rcv;
+                *img += src * rcv;
             });
     }
 
-    /// Apply normalized cross-correlation imaging condition
-    /// I(x) = ∫ S(x,t) * R(x,t) dt / √(∫ S²(x,t) dt * ∫ R²(x,t) dt)
+    /// Apply source-illumination-compensated imaging condition.
+    ///
+    /// # Mathematical specification
+    ///
+    /// For pre-accumulated snapshot inputs `S(x)` (forward) and `R(x)` (backward):
+    ///
+    /// ```text
+    /// I_norm(x) = S(x)·R(x) / (S²(x) + ε)
+    /// ```
+    ///
+    /// This is the single-snapshot form of the multi-shot accumulation:
+    ///
+    /// ```text
+    /// I_norm(x) = [Σ_t S(x,t)·R(x,t)] / [Σ_t S²(x,t) + ε]
+    /// ```
+    ///
+    /// Source-only denominator (not `√(Σ S² · Σ R²)`) follows Zhang & Sun (2009):
+    /// normalising by source illumination preserves reflectivity amplitude while
+    /// compensating for uneven illumination.  The `√(Σ S² · Σ R²)` denominator
+    /// collapses the image to normalised cross-correlation (cos θ ∈ [−1,1]) and
+    /// loses all amplitude information — that is a coherence measure, not an
+    /// image.
+    ///
+    /// Reference: Zhang, Y. & Sun, J. (2009).  Practical issues in reverse time
+    /// migration: true amplitude gathers, noise removal and harmonic-source
+    /// encoding.  *The Leading Edge* **28**(4), 446–452.
+    ///
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
@@ -92,28 +140,20 @@ impl RtmProcessor {
     ) -> KwaversResult<()> {
         use ndarray::Zip;
 
-        let mut source_energy = Array3::zeros(source_wavefield.dim());
-        let mut receiver_energy = Array3::zeros(receiver_wavefield.dim());
-
-        // Compute energy terms
-        Zip::from(&mut source_energy)
+        // Source illumination: Φ(x) = S²(x)
+        let mut source_illumination = Array3::zeros(source_wavefield.dim());
+        Zip::from(&mut source_illumination)
             .and(source_wavefield)
-            .par_for_each(|energy, &src| *energy = src * src);
+            .par_for_each(|phi, &src| *phi = src * src);
 
-        Zip::from(&mut receiver_energy)
-            .and(receiver_wavefield)
-            .par_for_each(|energy, &rcv| *energy = rcv * rcv);
-
-        // Apply normalized correlation
+        // I_norm(x) = S(x)·R(x) / (Φ(x) + ε)
         Zip::from(image)
             .and(source_wavefield)
             .and(receiver_wavefield)
-            .and(&source_energy)
-            .and(&receiver_energy)
-            .par_for_each(|img, &src, &rcv, &src_energy, &rcv_energy| {
-                let normalization = (src_energy * rcv_energy).sqrt();
-                *img = if normalization > f64::EPSILON {
-                    src * rcv / normalization
+            .and(&source_illumination)
+            .par_for_each(|img, &src, &rcv, &phi| {
+                *img = if phi > f64::EPSILON {
+                    src * rcv / phi
                 } else {
                     0.0
                 };
@@ -179,41 +219,85 @@ mod tests {
     use crate::domain::grid::Grid;
     use ndarray::Array3;
 
+    /// Zero-lag imaging condition: I(x) = S(x)·R(x).
+    ///
+    /// For S=1, R=1: I = 1.  Image shape must match grid dimensions.
     #[test]
-    fn test_rtm_basic_functionality() {
+    fn zero_lag_unit_fields_produces_unit_image() {
         let grid = Grid::new(10, 10, 10, 1e-3, 1e-3, 1e-3).unwrap();
-        let processor = RtmProcessor::default();
+        let processor = RtmProcessor::default(); // default: ImagingCondition::ZeroLag
 
         let source_field = Array3::ones((10, 10, 10));
         let receiver_field = Array3::ones((10, 10, 10));
 
-        let result = processor.migrate(&source_field, &receiver_field, &grid);
+        let image = processor
+            .migrate(&source_field, &receiver_field, &grid)
+            .unwrap();
 
-        let image = result.unwrap();
         assert_eq!(image.dim(), (10, 10, 10));
-
-        // For unit fields, zero-lag correlation should produce unit image
-        assert!((image[[5, 5, 5]] - 1.0).abs() < f64::EPSILON);
+        // I(x) = 1·1 = 1 everywhere.
+        assert!(
+            image.iter().all(|&v| (v - 1.0).abs() < f64::EPSILON),
+            "centre = {}",
+            image[[5, 5, 5]]
+        );
     }
 
+    /// Normalized (source-illumination-compensated) imaging condition.
+    ///
+    /// Formula: I_norm(x) = S(x)·R(x) / (S²(x) + ε)
+    ///
+    /// Test case:
+    ///   S = 3.0, R = 6.0  →  I_norm = 3·6 / 9 = 18/9 = 2.0
+    ///
+    /// Verifies amplitude is preserved (not collapsed to ±1 as incorrect NCC
+    /// would produce) and that the illumination compensation correctly removes
+    /// the source amplitude envelope.
     #[test]
-    fn test_laplacian_computation() {
+    fn normalized_condition_gives_illumination_compensated_reflectivity() {
+        let settings = RtmSettings {
+            imaging_condition: ImagingCondition::Normalized,
+            ..RtmSettings::default()
+        };
+        let processor = RtmProcessor::new(settings);
+        let grid = Grid::new(5, 5, 5, 1e-3, 1e-3, 1e-3).unwrap();
+
+        let source_field = Array3::from_elem((5, 5, 5), 3.0_f64);
+        let receiver_field = Array3::from_elem((5, 5, 5), 6.0_f64);
+
+        let image = processor
+            .migrate(&source_field, &receiver_field, &grid)
+            .unwrap();
+
+        // I_norm = 3*6 / (3*3) = 18/9 = 2.0 exactly (phi = 9 >> f64::EPSILON)
+        assert!(
+            image.iter().all(|&v| (v - 2.0).abs() < 1e-12),
+            "expected 2.0 everywhere, centre = {}",
+            image[[2, 2, 2]]
+        );
+    }
+
+    /// 2nd-order Laplacian at interior point with unit spacing.
+    ///
+    /// Field: centre = 6, each of 6 face-neighbours = 1.
+    /// Expected per axis: (1 + 1 − 2·6) / 1² = −10.
+    /// Total: −30.
+    #[test]
+    fn laplacian_3d_stencil_matches_analytical_value() {
         let processor = RtmProcessor::default();
         let grid = Grid::new(5, 5, 5, 1.0, 1.0, 1.0).unwrap();
 
-        // Create a field with known Laplacian
         let mut field = Array3::zeros((5, 5, 5));
-        field[[2, 2, 2]] = 6.0; // Center point
-        field[[1, 2, 2]] = 1.0; // Neighbors
+        field[[2, 2, 2]] = 6.0;
+        field[[1, 2, 2]] = 1.0;
         field[[3, 2, 2]] = 1.0;
         field[[2, 1, 2]] = 1.0;
         field[[2, 3, 2]] = 1.0;
         field[[2, 2, 1]] = 1.0;
         field[[2, 2, 3]] = 1.0;
 
-        let laplacian = processor.compute_laplacian_3d(&field, 2, 2, 2, &grid);
-
-        // Expected: (1+1-2*6) + (1+1-2*6) + (1+1-2*6) = -10 + -10 + -10 = -30
-        assert!((laplacian + 30.0).abs() < f64::EPSILON);
+        let lap = processor.compute_laplacian_3d(&field, 2, 2, 2, &grid);
+        // (1+1−12) + (1+1−12) + (1+1−12) = −10 − 10 − 10 = −30
+        assert!((lap + 30.0).abs() < f64::EPSILON);
     }
 }

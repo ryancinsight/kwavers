@@ -135,7 +135,7 @@ fn brain_focused_bowl_3d_uses_calvarium_cap_not_inferior_hemisphere() {
             }
         }
     }
-    // Use the canonical InSightec-like cap bounds: [0.22, 1.18] rad from vertex.
+    // Use the canonical calvarium-cap bounds: [0.22, 1.18] rad from vertex.
     // cos(0.22) ≈ 0.9759  (upper axis-projection limit — near-vertex cutoff)
     // cos(1.18) ≈ 0.3817  (lower axis-projection limit — calvarium boundary)
     let cap_min = 0.22_f64;
@@ -190,4 +190,43 @@ fn brain_focused_bowl_3d_uses_calvarium_cap_not_inferior_hemisphere() {
          does not match actual max_unit_z={max_unit_z:.4}"
     );
     assert!(placement.intersection_fraction > 0.0);
+}
+
+#[test]
+fn brain_focused_bowl_3d_rejects_invalid_configured_polar_bound() {
+    let mut ct = Array3::<f64>::from_elem((24, 24, 14), -1000.0);
+    for x in 0..24 {
+        for y in 0..24 {
+            for z in 0..14 {
+                let r = ((x as f64 - 12.0) / 9.0).powi(2)
+                    + ((y as f64 - 12.0) / 8.0).powi(2)
+                    + ((z as f64 - 5.0) / 7.0).powi(2);
+                if r <= 1.0 {
+                    ct[[x, y, z]] = 40.0;
+                }
+                if (0.72..=1.0).contains(&r) {
+                    ct[[x, y, z]] = 700.0;
+                }
+            }
+        }
+    }
+
+    let error = plan_transcranial_focused_bowl_placement(
+        &ct,
+        [1.0, 1.0, 2.0],
+        64,
+        2,
+        -300.0,
+        300.0,
+        None,
+        None,
+        Some(f64::NAN),
+        Some(1.18),
+    )
+    .unwrap_err();
+
+    assert!(
+        format!("{error:?}").contains("cap_min_polar_rad"),
+        "expected cap_min_polar_rad validation, got {error:?}"
+    );
 }

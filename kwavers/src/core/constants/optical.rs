@@ -74,13 +74,17 @@ pub const REFRACTIVE_INDEX_BIOLOGICAL_FLUID: f64 = 1.335;
 
 /// Refractive index of brain parenchyma (dimensionless, NIR ~700–900 nm).
 ///
-/// Value: 1.37 — applies to both white and gray matter, and broadly to
-/// neurological soft tissue. Frequently used in photoacoustic and transcranial
-/// optical models.
+/// Value: 1.37 — representative mean for brain tissue in the near-infrared.
+/// White matter typically ranges 1.38–1.41 (higher due to myelin lipid content)
+/// while grey matter is closer to 1.36–1.37 (higher water fraction).  The value
+/// 1.37 is used as a bulk-tissue approximation when sub-region differentiation is
+/// not required.  Used in photoacoustic and transcranial optical propagation models.
 ///
 /// References:
-/// - Tuchin V V (2007). Tissue Optics. SPIE Press. Table 1.1.
-/// - Duck, F. A. (1990). Physical Properties of Tissue, §7.
+/// - Tuchin V V (2007). *Tissue Optics*. SPIE Press, Table 1.1.
+/// - Duck, F. A. (1990). *Physical Properties of Tissue*, §7.
+/// - Giannios P et al. (2016). J. Biophotonics 9(1–2):71–78 (white/grey matter
+///   refractive index measured separately at 1064 nm).
 pub const REFRACTIVE_INDEX_BRAIN_TISSUE: f64 = 1.37;
 
 /// Refractive index of cerebrospinal fluid (dimensionless, NIR).

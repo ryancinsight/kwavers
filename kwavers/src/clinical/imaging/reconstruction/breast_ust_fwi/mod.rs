@@ -48,8 +48,9 @@ pub use phantom_types::{
     BreastUstAliPhantom, BreastUstPhantomStorageOrder, BreastUstSoundSpeedUnit,
 };
 pub use reduction::{
-    derive_reduced_breast_ust_array_geometry, prepare_reduced_breast_ust_phantom,
-    BreastUstReducedArrayGeometry, BreastUstReducedPhantom,
+    derive_reduced_breast_ust_array_geometry, derive_reduced_breast_ust_array_plan,
+    prepare_reduced_breast_ust_phantom, BreastUstReducedArrayGeometry, BreastUstReducedArrayPlan,
+    BreastUstReducedArrayRowPolicy, BreastUstReducedPhantom,
 };
 
 use crate::core::error::KwaversError;

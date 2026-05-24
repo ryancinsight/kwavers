@@ -39,9 +39,12 @@ pub const BLOOD_VISCOSITY_37C: f64 = 3.5e-3;
 
 /// Blood plasma viscosity at 37°C (Pa·s)
 ///
-/// Value: 1.2e-3 Pa·s
-/// Plasma lacks red blood cells, so it behaves as a Newtonian fluid at ~1.2 mPa·s.
-/// Reference: Duck, F. A. (1990). Physical Properties of Tissue, Table 4.1.
+/// Value: 1.2e-3 Pa·s.  Plasma lacks red blood cells, so it behaves as a
+/// Newtonian fluid with viscosity ~1.2 mPa·s at body temperature.
+///
+/// Reference: Duck, F. A. (1990). *Physical Properties of Tissue*. Academic Press,
+/// London, Chapter 4 (viscosity section, p. 112); Mills, C. J. (1966) Phys. Med. Biol.
+/// 11(4):641–646 (plasma viscometry at 37°C).
 pub const BLOOD_PLASMA_VISCOSITY_37C: f64 = 1.2e-3;
 
 /// Effective shear viscosity of generic soft tissue at 37°C (Pa·s)
