@@ -106,6 +106,28 @@ pub const GRUNEISEN_WATER_20C: f64 = 0.12;
 /// Duck FA (1990) Physical Properties of Tissue.
 pub const GRUNEISEN_SOFT_TISSUE: f64 = 0.15;
 
+/// Linear temperature coefficient dΓ/dT for liquid water [K⁻¹].
+///
+/// Γ_water(T) = GRUNEISEN_WATER_20C + GRUNEISEN_WATER_TEMP_COEFF·(T − GRUNEISEN_WATER_T_REF_C)
+///
+/// Reference: Sigrist MW (1986). J. Appl. Phys. 60(7), R83. DOI: 10.1063/1.337089
+pub const GRUNEISEN_WATER_TEMP_COEFF: f64 = 0.004; // K⁻¹
+
+/// Reference temperature for the linear water Grüneisen model [°C].
+///
+/// GRUNEISEN_WATER_20C applies at this temperature. At 37°C the model yields
+/// GRUNEISEN_WATER_37C = 0.188.
+///
+/// Reference: Sigrist MW (1986). J. Appl. Phys. 60(7), R83.
+pub const GRUNEISEN_WATER_T_REF_C: f64 = 20.0; // °C
+
+/// Linear temperature coefficient dΓ/dT for generic soft tissue [K⁻¹].
+///
+/// Γ_tissue(T) = GRUNEISEN_SOFT_TISSUE + GRUNEISEN_SOFT_TISSUE_TEMP_COEFF·(T − BODY_TEMPERATURE_C)
+///
+/// Reference: Xu M, Wang LV (2006). Rev. Sci. Instrum. 77, 041101. DOI: 10.1063/1.2195024
+pub const GRUNEISEN_SOFT_TISSUE_TEMP_COEFF: f64 = 0.003; // K⁻¹
+
 // ── Thermal expansion coefficients ────────────────────────────────────────────
 
 /// Isobaric thermal expansion coefficient of liquid water at 20°C (K⁻¹).

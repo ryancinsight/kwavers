@@ -1,5 +1,8 @@
 use super::ConfinementAssessment;
-use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
+use crate::core::constants::thermodynamic::{
+    BODY_TEMPERATURE_C, GRUNEISEN_SOFT_TISSUE, GRUNEISEN_SOFT_TISSUE_TEMP_COEFF,
+    GRUNEISEN_WATER_20C, GRUNEISEN_WATER_T_REF_C, GRUNEISEN_WATER_TEMP_COEFF,
+};
 use crate::core::error::KwaversResult;
 use crate::domain::imaging::photoacoustic::ThermoelasticProperties;
 
@@ -66,17 +69,26 @@ impl GrueneisenModel {
         }
     }
 
-    /// Water model: Γ₀ = 0.12, c_T = 0.004 K⁻¹, T_ref = 20 °C (Sigrist 1986).
+    /// Water model: Γ₀ = GRUNEISEN_WATER_20C, c_T = GRUNEISEN_WATER_TEMP_COEFF K⁻¹,
+    /// T_ref = GRUNEISEN_WATER_T_REF_C °C (Sigrist 1986).
     #[must_use]
     pub fn water() -> Self {
-        Self::with_temperature_coefficient(0.12, 0.004, 20.0)
+        Self::with_temperature_coefficient(
+            GRUNEISEN_WATER_20C,
+            GRUNEISEN_WATER_TEMP_COEFF,
+            GRUNEISEN_WATER_T_REF_C,
+        )
     }
 
-    /// Soft-tissue model: Γ₀ = 0.15, c_T = 0.003 K⁻¹, T_ref = BODY_TEMPERATURE_C
-    /// (37 °C, Xu & Wang 2006).
+    /// Soft-tissue model: Γ₀ = GRUNEISEN_SOFT_TISSUE, c_T = GRUNEISEN_SOFT_TISSUE_TEMP_COEFF K⁻¹,
+    /// T_ref = BODY_TEMPERATURE_C (37 °C, Xu & Wang 2006).
     #[must_use]
     pub fn soft_tissue() -> Self {
-        Self::with_temperature_coefficient(0.15, 0.003, BODY_TEMPERATURE_C)
+        Self::with_temperature_coefficient(
+            GRUNEISEN_SOFT_TISSUE,
+            GRUNEISEN_SOFT_TISSUE_TEMP_COEFF,
+            BODY_TEMPERATURE_C,
+        )
     }
 
     /// Evaluate Γ at the given temperature [°C].
