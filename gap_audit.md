@@ -1,5 +1,32 @@
 # Gap Audit
 
+## Thermal Dose SSOT Constants (2026-05-24)
+
+Thermal-dose code mixed canonical constants with hardcoded Sapareto-Dewey R
+values and test imports that pulled tissue heat capacities from the
+thermodynamic namespace. The body-temperature gate also made 37-43 °C mild
+hyperthermia accumulate zero CEM43 dose, contradicting the CEM43 formula where
+sub-reference temperatures are suppressed by `R^(43-T)` rather than clipped.
+
+### Closure
+- Routed `ThermalCEM43Grid` through `THERMAL_DOSE_R_ABOVE_43C` and
+  `THERMAL_DOSE_R_BELOW_43C`.
+- Removed the body-temperature dose gate and retained a positive-temperature
+  domain guard.
+- Routed analytical thermal tests and thermodynamic soft-tissue invariant tests
+  through `core::constants::tissue_thermal`.
+- Added value-semantic CEM43 checks for above-reference, mild-hyperthermia,
+  threshold, canonical constants, and reset behavior.
+
+### Verification summary
+- `cargo test -p kwavers thermal_dose --lib --message-format=short -j 1`:
+  13/13 pass.
+- `cargo test -p kwavers thermodynamic --lib --message-format=short -j 1`:
+  43/43 pass.
+- `cargo test -p kwavers finite_grid_pstd_prediction_matches_homogeneous_dataset --lib --message-format=short -j 1`:
+  1/1 pass.
+- `cargo check -p kwavers --lib --message-format=short -j 1`: exit 0.
+
 ## Focused Bowl Axis-Reference Aperture Config (2026-05-24)
 
 Config-driven focused sources could request fixed-count polar and

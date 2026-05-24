@@ -1,5 +1,15 @@
 # Backlog / Strategy
 
+## Thermal dose SSOT constants - closed (2026-05-24)
+- **[done] [patch]** Routed CEM43 R factors through `core::constants::medical`,
+  analytical thermal heat-capacity tests through `core::constants::tissue_thermal`,
+  and thermodynamic soft-tissue checks through the same tissue-thermal SSOT.
+  `ThermalCEM43Grid` now applies the Sapareto-Dewey formula for every positive
+  temperature, so mild hyperthermia accumulates the expected nonzero CEM43 dose
+  instead of being gated at body temperature. Verification: thermal-dose tests
+  pass 13/13, thermodynamic tests pass 43/43, the `(4,4,3)` finite-grid PSTD
+  regression passes 1/1, and `cargo check -p kwavers --lib` exits 0.
+
 ## Focused bowl axis-reference aperture config - closed (2026-05-24)
 - **[done] [minor]** Promoted axis-reference focused-bowl construction to the
   public source-domain API and added `FocusedBowlAperture::AxisReferencePolarBounds`

@@ -254,8 +254,10 @@ pub fn celsius_to_kelvin(celsius: f64) -> f64 {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::core::constants::fundamental::DENSITY_TISSUE;
+    use crate::core::constants::tissue_thermal::{
+        DC_DT_SOFT_TISSUE, DRHO_DT_SOFT_TISSUE, RHO_C_SOFT_TISSUE, SPECIFIC_HEAT_TISSUE,
+    };
 
     #[test]
     fn test_rho_c_is_density_times_specific_heat() {

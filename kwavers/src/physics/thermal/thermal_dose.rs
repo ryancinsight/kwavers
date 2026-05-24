@@ -4,8 +4,9 @@
 //! - Sapareto & Dewey (1984) "Thermal dose determination in cancer therapy"
 //! - Dewhirst et al. (2003) "Basic principles of thermal dosimetry"
 
-use crate::core::constants::medical::THERMAL_DOSE_REFERENCE_TEMP_C;
-use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
+use crate::core::constants::medical::{
+    THERMAL_DOSE_R_ABOVE_43C, THERMAL_DOSE_R_BELOW_43C, THERMAL_DOSE_REFERENCE_TEMP_C,
+};
 use ndarray::{Array3, Zip};
 
 /// CEM43 reference temperature (°C).
@@ -49,18 +50,18 @@ impl ThermalCEM43Grid {
         Zip::from(&mut self.dose)
             .and(temperature)
             .par_for_each(|dose, &temp| {
-                // CEM43 formula: t_eq = t * R^(43-T)
-                // where R = 0.5 for T > 43°C, R = 0.25 for T < 43°C
-                let r = if temp >= self.reference_temp {
-                    0.5
-                } else {
-                    0.25
-                };
-
-                if temp > BODY_TEMPERATURE_C {
-                    // Only accumulate dose above body temperature
-                    let r_value: f64 = r;
-                    let equiv_time = dt_minutes * r_value.powf(self.reference_temp - temp);
+                // CEM43 formula: CEM43 = ∫ R^(T_ref − T) dt
+                // Sapareto & Dewey (1984): R = 0.5 for T ≥ 43°C, R = 0.25 for T < 43°C.
+                // Accumulates at all physiological temperatures above 0°C; the R=0.25
+                // exponent naturally suppresses dose at low temperatures (e.g., at 30°C:
+                // 0.25^(43-30) ≈ 1.5e-8 CEM43/min), so no temperature gate is required.
+                if temp > 0.0 {
+                    let r = if temp >= self.reference_temp {
+                        THERMAL_DOSE_R_ABOVE_43C
+                    } else {
+                        THERMAL_DOSE_R_BELOW_43C
+                    };
+                    let equiv_time = dt_minutes * r.powf(self.reference_temp - temp);
                     *dose += equiv_time;
                 }
             });
@@ -101,57 +102,90 @@ impl ThermalCEM43Grid {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::medical::{
+        THERMAL_DOSE_COAGULATION_CEM43, THERMAL_DOSE_DIAGNOSTIC_SAFETY_CEM43,
+        THERMAL_DOSE_PROTEIN_DENATURATION_CEM43,
+    };
 
     #[test]
-    fn test_thermal_dose_accumulation() {
+    fn test_thermal_dose_accumulation_above_reference() {
         let mut dose_calc = ThermalCEM43Grid::new(10, 10, 10);
 
-        // Create temperature field at 45°C
+        // At 45°C with R=0.5: CEM43 = 1 min * 0.5^(43−45) = 1 * 4 = 4 minutes
+        // Sapareto & Dewey (1984), Table 1.
         let temperature = Array3::from_elem((10, 10, 10), 45.0);
-
-        // Update for 60 seconds
         dose_calc.update(&temperature, 60.0);
 
-        // At 45°C with R=0.5: CEM43 = 1 min * 0.5^(43-45) = 1 * 0.5^(-2) = 4 minutes
-        let expected_dose = 4.0;
-        let actual_dose = dose_calc.get_dose()[[5, 5, 5]];
-
+        let expected = 0.5_f64.powf(43.0 - 45.0); // = 4.0 CEM43 per minute × 1 min
+        let actual = dose_calc.get_dose()[[5, 5, 5]];
         assert!(
-            (actual_dose - expected_dose).abs() < 0.01,
-            "Dose calculation error: expected {}, got {}",
-            expected_dose,
-            actual_dose
+            (actual - expected).abs() < 1e-10,
+            "45°C dose: expected {expected}, got {actual}"
         );
     }
 
     #[test]
-    fn test_dose_threshold() {
+    fn test_thermal_dose_accumulation_mild_hyperthermia() {
+        // 40°C is below the 43°C reference but above body temperature.
+        // The prior implementation (guard: temp > 37°C) blocked this range.
+        // Sapareto & Dewey (1984) use R=0.25 for T < 43°C, giving non-zero accumulation.
+        let mut dose_calc = ThermalCEM43Grid::new(5, 5, 5);
+        let temperature = Array3::from_elem((5, 5, 5), 40.0);
+        dose_calc.update(&temperature, 60.0); // 1 minute
+
+        // expected = 0.25^(43 - 40) = 0.25^3 = 0.015625 CEM43
+        let expected = 0.25_f64.powf(43.0 - 40.0);
+        let actual = dose_calc.get_dose()[[2, 2, 2]];
+        assert!(
+            (actual - expected).abs() < 1e-12,
+            "40°C mild hyperthermia dose: expected {expected:.6e}, got {actual:.6e}"
+        );
+        assert!(
+            actual > 0.0,
+            "CEM43 must accumulate at mild-hyperthermic temperatures (40°C > 0°C)"
+        );
+    }
+
+    #[test]
+    fn test_dose_threshold_ablation() {
         let mut dose_calc = ThermalCEM43Grid::new(10, 10, 10);
 
-        // Set half the volume to accumulate dose
-        let mut temperature = Array3::from_elem((10, 10, 10), BODY_TEMPERATURE_C);
+        // Half volume at 50°C (ablative), half at 37°C (body temperature).
+        // At 37°C: 0.25^(43-37) = 0.25^6 ≈ 2.44e-4 CEM43/min — negligible vs 100 CEM43.
+        // At 50°C: 0.5^(43-50) = 0.5^(-7) = 128 CEM43/min × 10 min = 1280 CEM43.
+        let mut temperature = Array3::from_elem((10, 10, 10), 37.0);
         for k in 0..5 {
             for j in 0..10 {
                 for i in 0..10 {
-                    temperature[[i, j, k]] = 50.0; // High temperature
+                    temperature[[i, j, k]] = 50.0;
                 }
             }
         }
+        dose_calc.update(&temperature, 600.0); // 10 minutes
 
-        // Update for 10 minutes (600 seconds)
-        dose_calc.update(&temperature, 600.0);
-
-        // Check fraction above threshold
         let fraction = dose_calc.fraction_above_threshold(100.0);
         assert!(
-            (fraction - 0.5).abs() < 0.1,
-            "Expected ~50% above threshold, got {:.1}%",
+            (fraction - 0.5).abs() < 0.05,
+            "Expected ~50% above 100 CEM43, got {:.1}%",
             fraction * 100.0
         );
     }
 
     #[test]
-    fn test_thermal_dose_thresholds_use_canonical_constants() {
+    fn test_canonical_cem43_constants() {
         assert_eq!(CEM43_REFERENCE_TEMPERATURE_C, 43.0);
+        assert_eq!(THERMAL_DOSE_PROTEIN_DENATURATION_CEM43, 1.0);
+        assert_eq!(THERMAL_DOSE_COAGULATION_CEM43, 10_000.0);
+        assert_eq!(THERMAL_DOSE_DIAGNOSTIC_SAFETY_CEM43, 0.1);
+    }
+
+    #[test]
+    fn test_dose_resets_to_zero() {
+        let mut dose_calc = ThermalCEM43Grid::new(5, 5, 5);
+        let temperature = Array3::from_elem((5, 5, 5), 45.0);
+        dose_calc.update(&temperature, 60.0);
+        assert!(dose_calc.get_max_dose() > 0.0);
+        dose_calc.reset();
+        assert_eq!(dose_calc.get_max_dose(), 0.0);
     }
 }

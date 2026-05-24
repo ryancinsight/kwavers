@@ -9,7 +9,7 @@
 
 use kwavers::analysis::signal_processing::clutter_filter::{
     AdaptiveFilter, AdaptiveFilterConfig, IirFilter, IirFilterConfig, PolynomialFilter,
-    PolynomialFilterConfig, SubspaceSeparationMethod, SvdClutterFilter, SvdClutterFilterConfig,
+    PolynomialFilterConfig, SubspaceSeparationMethod, SignalSvdClutterFilter, SvdClutterFilterConfig,
 };
 use kwavers::core::error::KwaversResult;
 use ndarray::Array2;
@@ -58,7 +58,7 @@ fn test_all_filters_reduce_power() -> KwaversResult<()> {
 
     // Test SVD filter
     let svd_config = SvdClutterFilterConfig::with_fixed_rank(2);
-    let svd_filter = SvdClutterFilter::new(svd_config)?;
+    let svd_filter = SignalSvdClutterFilter::new(svd_config)?;
     let svd_result = svd_filter.filter(&data)?;
     let svd_power: f64 = svd_result.iter().map(|x| x * x).sum();
     assert!(svd_power < original_power, "SVD filter should reduce power");
@@ -131,7 +131,7 @@ fn test_filter_cascading() -> KwaversResult<()> {
 
     // Stage 3: SVD refinement
     let svd_config = SvdClutterFilterConfig::with_fixed_rank(1);
-    let svd_filter = SvdClutterFilter::new(svd_config)?;
+    let svd_filter = SignalSvdClutterFilter::new(svd_config)?;
     let stage3 = svd_filter.filter(&stage2)?;
 
     // Each stage should work without errors
@@ -147,7 +147,7 @@ fn test_output_dimensions_match() -> KwaversResult<()> {
     let (data, _, _) = generate_fus_data(25, 120, 3.0, 0.3, 0.02, 0.15);
 
     let svd_config = SvdClutterFilterConfig::with_fixed_rank(1);
-    let svd_filter = SvdClutterFilter::new(svd_config)?;
+    let svd_filter = SignalSvdClutterFilter::new(svd_config)?;
     let result = svd_filter.filter(&data)?;
 
     assert_eq!(result.dim(), data.dim(), "Output shape must match input");
@@ -160,7 +160,7 @@ fn test_edge_case_single_pixel() -> KwaversResult<()> {
     let (data, _, _) = generate_fus_data(1, 100, 5.0, 1.0, 0.02, 0.15);
 
     let svd_config = SvdClutterFilterConfig::with_fixed_rank(1);
-    let svd_filter = SvdClutterFilter::new(svd_config)?;
+    let svd_filter = SignalSvdClutterFilter::new(svd_config)?;
     let result = svd_filter.filter(&data)?;
 
     assert_eq!(result.dim(), data.dim());
@@ -173,7 +173,7 @@ fn test_edge_case_minimal_frames() -> KwaversResult<()> {
     let data = Array2::<f64>::from_elem((10, 120), 1.0);
 
     let svd_config = SvdClutterFilterConfig::with_fixed_rank(2);
-    let svd_filter = SvdClutterFilter::new(svd_config)?;
+    let svd_filter = SignalSvdClutterFilter::new(svd_config)?;
 
     // Should either work or fail gracefully
     let _ = svd_filter.filter(&data);
@@ -186,7 +186,7 @@ fn test_zero_input_gives_zero_output() -> KwaversResult<()> {
     let data = Array2::<f64>::zeros((20, 120));
 
     let svd_config = SvdClutterFilterConfig::default();
-    let svd_filter = SvdClutterFilter::new(svd_config)?;
+    let svd_filter = SignalSvdClutterFilter::new(svd_config)?;
     let result = svd_filter.filter(&data)?;
 
     let output_power: f64 = result.iter().map(|x| x * x).sum();
@@ -203,7 +203,7 @@ fn test_numerical_stability_small_amplitudes() -> KwaversResult<()> {
     let (data, _, _) = generate_fus_data(20, 120, 1e-8, 1e-9, 0.02, 0.15);
 
     let svd_config = SvdClutterFilterConfig::with_fixed_rank(1);
-    let svd_filter = SvdClutterFilter::new(svd_config)?;
+    let svd_filter = SignalSvdClutterFilter::new(svd_config)?;
     let result = svd_filter.filter(&data)?;
 
     assert!(
@@ -219,7 +219,7 @@ fn test_numerical_stability_large_amplitudes() -> KwaversResult<()> {
     let (data, _, _) = generate_fus_data(20, 120, 1e5, 1e4, 0.02, 0.15);
 
     let svd_config = SvdClutterFilterConfig::with_fixed_rank(1);
-    let svd_filter = SvdClutterFilter::new(svd_config)?;
+    let svd_filter = SignalSvdClutterFilter::new(svd_config)?;
     let result = svd_filter.filter(&data)?;
 
     assert!(
@@ -235,7 +235,7 @@ fn test_power_doppler_computation() -> KwaversResult<()> {
     let (data, _, _) = generate_fus_data(40, 120, 8.0, 0.8, 0.02, 0.18);
 
     let svd_config = SvdClutterFilterConfig::with_fixed_rank(2);
-    let svd_filter = SvdClutterFilter::new(svd_config)?;
+    let svd_filter = SignalSvdClutterFilter::new(svd_config)?;
     let filtered = svd_filter.filter(&data)?;
 
     // Compute Power Doppler: sum of squared magnitudes over time
@@ -290,7 +290,7 @@ fn test_realistic_fus_workflow() -> KwaversResult<()> {
 
     // SVD clutter filtering
     let svd_config = SvdClutterFilterConfig::with_fixed_rank(5);
-    let svd_filter = SvdClutterFilter::new(svd_config)?;
+    let svd_filter = SignalSvdClutterFilter::new(svd_config)?;
     let filtered = svd_filter.filter(&data)?;
 
     // Compute Power Doppler

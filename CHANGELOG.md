@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Fixed (2026-05-24) - Thermal Dose SSOT Constants
+
+- [patch] Route thermal-dose R factors through canonical medical constants,
+  route analytical thermal tests through `tissue_thermal` heat-capacity
+  constants, and keep thermodynamic constant tests on the tissue-thermal SSOT.
+  CEM43 accumulation now follows the Sapareto-Dewey formula for all positive
+  temperatures, with mild-hyperthermia regression coverage.
+
 ### Fixed (2026-05-24) - PSTD Odd-Z R2C Direct-Field Parity
 
 - [patch] Route odd-length 3-D real FFT z-axis transforms through a
