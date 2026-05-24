@@ -15,7 +15,8 @@
 //! - Welch & van Gemert (2011) "Optical-Thermal Response of Laser-Irradiated Tissue"
 
 use super::MultiPhysicsCoupling;
-use crate::core::constants::fundamental::{DENSITY_BLOOD, DENSITY_WATER_NOMINAL};
+use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
+use crate::core::constants::tissue_acoustics::DENSITY_BLOOD;
 use crate::core::constants::medical::{BLOOD_SPECIFIC_HEAT, TISSUE_PERFUSION_RATE};
 use crate::core::constants::thermodynamic::{
     BODY_TEMPERATURE_C, SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER,

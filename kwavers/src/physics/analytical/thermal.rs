@@ -163,7 +163,8 @@ pub fn gaussian_power_deposition_2d(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::constants::fundamental::{DENSITY_BLOOD, SOUND_SPEED_WATER_SIM};
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use crate::core::constants::tissue_acoustics::DENSITY_BLOOD;
     use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
     use crate::core::constants::thermodynamic::{
         BODY_TEMPERATURE_C, SPECIFIC_HEAT_BLOOD, SPECIFIC_HEAT_TISSUE,

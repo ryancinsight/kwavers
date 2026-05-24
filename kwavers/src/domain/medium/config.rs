@@ -1,6 +1,6 @@
 //! Medium properties configuration
 
-use crate::core::constants::fundamental::B_OVER_A_WATER;
+use crate::core::constants::tissue_acoustics::B_OVER_A_WATER;
 use crate::core::constants::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

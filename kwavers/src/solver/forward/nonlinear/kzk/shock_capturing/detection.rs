@@ -1,7 +1,7 @@
 //! Shock detection and harmonic analysis.
 
 use super::{ShockCapture, ShockDetectionResult};
-use crate::core::constants::fundamental::B_OVER_A_WATER_37C;
+use crate::core::constants::tissue_acoustics::B_OVER_A_WATER_37C;
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::math::fft::fft_1d_array;
 use ndarray::{s, Array1, Array2};

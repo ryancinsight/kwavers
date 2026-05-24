@@ -2,7 +2,7 @@
 
 use super::super::types::{BoundaryCouplingPhysicsDomain, BoundaryCouplingType};
 use super::interface::BoundaryMultiPhysicsInterface;
-use crate::core::constants::fundamental::DENSITY_BLOOD;
+use crate::core::constants::tissue_acoustics::DENSITY_BLOOD;
 use crate::core::constants::medical::BLOOD_SPECIFIC_HEAT;
 use crate::core::constants::numerical::MHZ_TO_HZ;
 

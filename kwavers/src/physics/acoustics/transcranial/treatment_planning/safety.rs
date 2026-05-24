@@ -2,7 +2,7 @@
 
 use super::planner::TreatmentPlanner;
 use super::types::TranscranialSafetyConstraints;
-use crate::core::constants::fundamental::{DENSITY_BRAIN, SOUND_SPEED_BRAIN};
+use crate::core::constants::tissue_acoustics::{DENSITY_BRAIN, SOUND_SPEED_BRAIN};
 use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 use crate::physics::acoustics::analysis::calculate_mechanical_index;
 use ndarray::Array3;

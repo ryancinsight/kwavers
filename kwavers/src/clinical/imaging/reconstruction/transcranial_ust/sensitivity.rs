@@ -7,7 +7,7 @@ use super::{
     born::ActiveVoxel, config::SOUND_SPEED_TISSUE, medium::AcousticSlice,
     transducer::TranscranialBowlGeometry,
 };
-use crate::core::constants::fundamental::DENSITY_BRAIN;
+use crate::core::constants::tissue_acoustics::DENSITY_BRAIN;
 use crate::core::constants::numerical::MPA_TO_PA;
 use crate::solver::inverse::linear_born_inversion::{
     LinearBornInversionConfig, TransducerGeometry,

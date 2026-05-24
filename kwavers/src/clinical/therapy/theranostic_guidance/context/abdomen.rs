@@ -2,7 +2,7 @@
 
 use std::collections::VecDeque;
 
-use crate::core::constants::fundamental::HU_ABDOMEN_BODY_THRESHOLD;
+use crate::core::constants::ct_acoustics::HU_ABDOMEN_BODY_THRESHOLD;
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::{s, Array2, Array3};
 

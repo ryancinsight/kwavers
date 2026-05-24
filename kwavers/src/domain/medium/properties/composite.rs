@@ -19,7 +19,7 @@ use super::{
     StrengthPropertyData, ThermalPropertyData,
 };
 use crate::core::constants::acoustic_parameters::{BONE_DENSITY, BONE_SOUND_SPEED};
-use crate::core::constants::fundamental::{ACOUSTIC_ABSORPTION_CORTICAL_BONE, B_OVER_A_BONE};
+use crate::core::constants::tissue_acoustics::{ACOUSTIC_ABSORPTION_CORTICAL_BONE, B_OVER_A_BONE};
 use std::fmt;
 
 /// Composite material properties for multi-physics simulations

@@ -2,7 +2,7 @@
 
 use super::planner::TreatmentPlanner;
 use super::types::{TranscranialTargetVolume, TransducerSetup};
-use crate::core::constants::fundamental::{DENSITY_BLOOD, DENSITY_BRAIN, SOUND_SPEED_BRAIN};
+use crate::core::constants::tissue_acoustics::{DENSITY_BLOOD, DENSITY_BRAIN, SOUND_SPEED_BRAIN};
 use crate::core::constants::medical::{BLOOD_SPECIFIC_HEAT, THERMAL_DOSE_THRESHOLD};
 use crate::core::constants::numerical::CM_TO_M;
 use crate::core::constants::{BODY_TEMPERATURE_C, NP_TO_DB};
@@ -11,7 +11,7 @@ use ndarray::Array3;
 use num_complex::Complex;
 
 const MILLIMETERS_TO_METERS: f64 = 1.0e-3;
-// SSOT: SOUND_SPEED_BRAIN and DENSITY_BRAIN imported from core::constants::fundamental
+// SSOT: SOUND_SPEED_BRAIN and DENSITY_BRAIN imported from core::constants::tissue_acoustics
 const BRAIN_ABSORPTION_DB_PER_MHZ_CM: f64 = 0.5;
 // dB/(cm·MHz) → Np/m at 1 MHz: divide by NP_TO_DB then by CM_TO_M (SSOT).
 const BRAIN_ABSORPTION_NP_PER_M: f64 = BRAIN_ABSORPTION_DB_PER_MHZ_CM / NP_TO_DB / CM_TO_M;

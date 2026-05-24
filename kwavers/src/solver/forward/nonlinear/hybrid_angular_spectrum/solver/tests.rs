@@ -1,5 +1,5 @@
 use super::*;
-use crate::core::constants::fundamental::B_OVER_A_SOFT_TISSUE;
+use crate::core::constants::tissue_acoustics::B_OVER_A_SOFT_TISSUE;
 use crate::core::constants::numerical::MPA_TO_PA;
 use ndarray::Array3;
 use std::f64::consts::PI;

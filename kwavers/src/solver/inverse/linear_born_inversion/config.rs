@@ -14,7 +14,8 @@
 //! has exactly `N·Q·F·H` rows. [`LinearBornInversionConfig::measurement_count`]
 //! is the single implementation of that invariant; geometry supplies only `N`.
 
-use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_BRAIN};
+use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
+use crate::core::constants::tissue_acoustics::SOUND_SPEED_BRAIN;
 use crate::core::error::{KwaversError, KwaversResult};
 
 /// Generic linear Born + PCG inversion settings.

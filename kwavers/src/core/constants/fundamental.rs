@@ -4,14 +4,44 @@
 //! Tissue-specific acoustic properties live in [`super::tissue_acoustics`].
 //! CT Hounsfield-unit thresholds live in [`super::ct_acoustics`].
 //!
-//! # Compatibility shims
-//!
-//! The `pub use` lines below preserve backward compatibility for the ~549 call
-//! sites that import directly from this module path.  A cleanup task
-//! ([backlog.md §CLEAN-001]) will migrate all callers to the canonical submodule
-//! paths and remove these shims.
-pub use crate::core::constants::ct_acoustics::*;
-pub use crate::core::constants::tissue_acoustics::*;
+//! The explicit `pub use` re-exports below expose tissue-acoustics and CT
+//! constants under this path for callers that import them as
+//! `core::constants::fundamental::DENSITY_BLOOD`. The canonical import path
+//! is `core::constants::tissue_acoustics::DENSITY_BLOOD` (or the flat
+//! `core::constants::DENSITY_BLOOD` re-export in `mod.rs`). These re-exports
+//! will be removed once all callers are migrated (backlog §CLEAN-001).
+
+// ── Tissue-acoustics re-exports (explicit; non-wildcard) ────────────────────
+pub use crate::core::constants::tissue_acoustics::{
+    ACOUSTIC_ABSORPTION_BLOOD, ACOUSTIC_ABSORPTION_BLOOD_PLASMA, ACOUSTIC_ABSORPTION_BRAIN,
+    ACOUSTIC_ABSORPTION_BRAIN_GRAY, ACOUSTIC_ABSORPTION_BRAIN_WHITE,
+    ACOUSTIC_ABSORPTION_CORTICAL_BONE, ACOUSTIC_ABSORPTION_CSF, ACOUSTIC_ABSORPTION_FAT,
+    ACOUSTIC_ABSORPTION_KIDNEY_CORTEX, ACOUSTIC_ABSORPTION_LIVER, ACOUSTIC_ABSORPTION_MUSCLE,
+    ACOUSTIC_ABSORPTION_MUSCLE_TRANSVERSE, ACOUSTIC_ABSORPTION_SKULL_BULK,
+    ACOUSTIC_ABSORPTION_SKULL_CORTICAL_MIN, ACOUSTIC_ABSORPTION_SKULL_MIN,
+    ACOUSTIC_ABSORPTION_SKULL_RANGE, ACOUSTIC_ABSORPTION_URINE, ACOUSTIC_ABSORPTION_WHOLE_BLOOD,
+    B_OVER_A_AIR, B_OVER_A_BLOOD, B_OVER_A_BONE, B_OVER_A_BRAIN, B_OVER_A_BREAST_GLAND,
+    B_OVER_A_CSF, B_OVER_A_FAT, B_OVER_A_KIDNEY, B_OVER_A_LIVER, B_OVER_A_LUNG,
+    B_OVER_A_MINERAL_OIL, B_OVER_A_MUSCLE, B_OVER_A_NANOPARTICLE_SUSPENSION, B_OVER_A_SKIN,
+    B_OVER_A_SOFT_TISSUE, B_OVER_A_URINE, B_OVER_A_WATER, B_OVER_A_WATER_37C,
+    DENSITY_AIR, DENSITY_BLOOD, DENSITY_BRAIN, DENSITY_BREAST_FAT, DENSITY_BREAST_GLAND,
+    DENSITY_CSF, DENSITY_FAT, DENSITY_KIDNEY, DENSITY_KIDNEY_MEDULLA,
+    DENSITY_LIVER, DENSITY_LUNG, DENSITY_MICROBUBBLE_SUSPENSION, DENSITY_MINERAL_OIL,
+    DENSITY_MUSCLE, DENSITY_SKIN, DENSITY_ULTRASOUND_GEL, DENSITY_URINE,
+    SOFT_TISSUE_ABSORPTION_POWER_Y, SOUND_SPEED_BLOOD, SOUND_SPEED_BRAIN,
+    SOUND_SPEED_BRAIN_GRAY_MATTER, SOUND_SPEED_BREAST_GLAND, SOUND_SPEED_CSF, SOUND_SPEED_FAT,
+    SOUND_SPEED_KIDNEY, SOUND_SPEED_KIDNEY_MEDULLA, SOUND_SPEED_LIVER, SOUND_SPEED_LUNG,
+    SOUND_SPEED_MINERAL_OIL, SOUND_SPEED_MUSCLE, SOUND_SPEED_NANOPARTICLE_SUSPENSION,
+    SOUND_SPEED_SKIN, SOUND_SPEED_ULTRASOUND_GEL, SOUND_SPEED_URINE,
+    WATER_ABSORPTION_ALPHA_0_DB_CM_MHZ2, WATER_ABSORPTION_POWER_Y,
+};
+
+// ── CT / skull-model re-exports (explicit; non-wildcard) ────────────────────
+pub use crate::core::constants::ct_acoustics::{
+    DENSITY_SKULL_CORTICAL_RANGE, DENSITY_SKULL_MIN,
+    HU_ABDOMEN_BODY_THRESHOLD, HU_BONE_THRESHOLD, HU_BRAIN_BODY_THRESHOLD, HU_SKULL_RANGE,
+    SOUND_SPEED_SOFT_TISSUE_MAX,
+};
 
 // ── Simulation defaults ───────────────────────────────────────────────────────
 

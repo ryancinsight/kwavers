@@ -1,5 +1,5 @@
 use super::*;
-use crate::core::constants::fundamental::B_OVER_A_WATER;
+use crate::core::constants::tissue_acoustics::B_OVER_A_WATER;
 use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::core::constants::SOUND_SPEED_WATER_SIM;
 use crate::domain::grid::Grid;

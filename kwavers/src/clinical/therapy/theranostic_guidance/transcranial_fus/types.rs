@@ -1,4 +1,5 @@
-use crate::core::constants::fundamental::{DENSITY_BRAIN, SOUND_SPEED_TISSUE};
+use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
+use crate::core::constants::tissue_acoustics::DENSITY_BRAIN;
 use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use ndarray::{Array1, Array2, Array3};
 

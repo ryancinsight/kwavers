@@ -2,7 +2,8 @@
 
 use ndarray::Array3;
 
-use crate::core::constants::fundamental::{HU_BONE_THRESHOLD, SOUND_SPEED_AIR};
+use crate::core::constants::ct_acoustics::HU_BONE_THRESHOLD;
+use crate::core::constants::fundamental::SOUND_SPEED_AIR;
 use crate::core::error::{KwaversError, KwaversResult};
 
 use super::super::scene::target_index_from_mask_fraction_3d;

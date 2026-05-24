@@ -1,6 +1,6 @@
 //! Homogeneous medium implementation with uniform properties
 
-use crate::core::constants::fundamental::B_OVER_A_WATER;
+use crate::core::constants::tissue_acoustics::B_OVER_A_WATER;
 use crate::core::constants::thermodynamic::THERMAL_EXPANSION_WATER_20C;
 use crate::core::constants::{
     AIR_POLYTROPIC_INDEX, ATMOSPHERIC_PRESSURE, MHZ_TO_HZ, REFERENCE_FREQUENCY_HZ,

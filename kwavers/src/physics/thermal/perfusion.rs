@@ -5,7 +5,7 @@
 //! - Curra et al. (2000) "Numerical simulations of heating patterns"
 
 use crate::core::constants::acoustic_parameters::BLOOD_VISCOSITY_37C;
-use crate::core::constants::fundamental::DENSITY_BLOOD;
+use crate::core::constants::tissue_acoustics::DENSITY_BLOOD;
 use crate::core::constants::medical::BLOOD_SPECIFIC_HEAT;
 use crate::core::constants::thermodynamic::{BODY_TEMPERATURE_C, THERMAL_CONDUCTIVITY_BLOOD};
 use ndarray::Array3;
@@ -165,7 +165,7 @@ impl VesselCooling {
     ///
     /// `D` is the pipe **diameter** (not radius).
     /// Uses [`crate::core::constants::acoustic_parameters::BLOOD_VISCOSITY_37C`] and
-    /// [`crate::core::constants::fundamental::DENSITY_BLOOD`] as SSOT values.
+    /// [`crate::core::constants::tissue_acoustics::DENSITY_BLOOD`] as SSOT values.
     fn calculate_reynolds_number(&self, diameter: f64) -> f64 {
         (DENSITY_BLOOD * self.velocity * diameter) / BLOOD_VISCOSITY_37C
     }

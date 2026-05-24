@@ -5,7 +5,7 @@ use crate::math::numerics::operators::interpolation::trilinear_index_space;
 use ndarray::Array3;
 
 use crate::core::constants::acoustic_parameters::SKULL_ATTENUATION_MARSAC_MAX_NP_PER_M_MHZ;
-use crate::core::constants::fundamental::HU_BONE_THRESHOLD;
+use crate::core::constants::ct_acoustics::HU_BONE_THRESHOLD;
 use super::{
     config::{SOUND_SPEED_SKULL, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM},
     medium::{soft_tissue_speed, AIR_REJECTION_HU, SOFT_TISSUE_ATTENUATION_NP_PER_M_MHZ},
