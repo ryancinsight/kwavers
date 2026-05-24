@@ -1,5 +1,20 @@
 # Gap Audit
 
+## DG Convergence CPML Config Closure (2026-05-24)
+
+The DG solver configuration now carries an optional CPML configuration. The
+integration convergence tests construct explicit `DGConfig` values, so each
+literal must state whether CPML participates in the boundary contract. The
+periodic convergence and shock-capture tests require CPML disabled.
+
+### Closure
+- Added `cpml: None` to the shared p=1 DG convergence config helper.
+- Added `cpml: None` to the shock-capture roundtrip config literal.
+
+### Verification summary
+- `cargo test -p kwavers --test dg_convergence --message-format=short -j 1`:
+  5/5 pass.
+
 ## Thermal Dose SSOT Constants (2026-05-24)
 
 Thermal-dose code mixed canonical constants with hardcoded Sapareto-Dewey R

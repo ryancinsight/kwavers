@@ -97,6 +97,7 @@ fn config_p1(integrator: DgTimeIntegrator) -> DGConfig {
         },
         sound_speed: 1500.0,
         boundary_conditions: [DgBoundaryCondition::Periodic; 3],
+        cpml: None,
     }
 }
 
@@ -242,6 +243,7 @@ fn test_shock_capture_config_roundtrip() {
         },
         sound_speed: 1500.0,
         boundary_conditions: [DgBoundaryCondition::Periodic; 3],
+        cpml: None,
     };
 
     let mut solver = DGSolver::new(config, Arc::clone(&grid)).expect("solver");

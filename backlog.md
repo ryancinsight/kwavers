@@ -1,5 +1,13 @@
 # Backlog / Strategy
 
+## DG convergence CPML config closure - closed (2026-05-24)
+- **[done] [patch]** Updated `kwavers/tests/dg_convergence.rs` `DGConfig`
+  literals with explicit `cpml: None` after the DG config surface gained CPML
+  support. This preserves the periodic-boundary convergence and shock-capture
+  regressions without making CPML implicit. Verification:
+  `cargo test -p kwavers --test dg_convergence --message-format=short -j 1`
+  passes 5/5.
+
 ## Thermal dose SSOT constants - closed (2026-05-24)
 - **[done] [patch]** Routed CEM43 R factors through `core::constants::medical`,
   analytical thermal heat-capacity tests through `core::constants::tissue_thermal`,

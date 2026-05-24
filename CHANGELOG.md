@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Fixed (2026-05-24) - DG Convergence CPML Config Literals
+
+- [patch] Update DG convergence-test `DGConfig` literals to set `cpml: None`
+  explicitly after the DG CPML configuration field was added, preserving the
+  periodic-boundary convergence and shock-capture test contracts.
+
 ### Fixed (2026-05-24) - Thermal Dose SSOT Constants
 
 - [patch] Route thermal-dose R factors through canonical medical constants,
