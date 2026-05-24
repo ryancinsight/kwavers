@@ -40,11 +40,11 @@
 //! - `nonlinearity > 0` (typically 3-10 for biological media)
 
 use crate::core::constants::fundamental::{
-    B_OVER_A_BRAIN, B_OVER_A_FAT, B_OVER_A_KIDNEY, B_OVER_A_LIVER, B_OVER_A_MUSCLE,
-    B_OVER_A_SOFT_TISSUE, B_OVER_A_WATER, DENSITY_BRAIN, DENSITY_FAT, DENSITY_LIVER,
-    DENSITY_MUSCLE, DENSITY_TISSUE, DENSITY_WATER, SOUND_SPEED_BRAIN, SOUND_SPEED_FAT,
-    SOUND_SPEED_KIDNEY, SOUND_SPEED_LIVER, SOUND_SPEED_MUSCLE, SOUND_SPEED_TISSUE,
-    SOUND_SPEED_WATER,
+    ACOUSTIC_ABSORPTION_TISSUE, B_OVER_A_BRAIN, B_OVER_A_FAT, B_OVER_A_KIDNEY, B_OVER_A_LIVER,
+    B_OVER_A_MUSCLE, B_OVER_A_SOFT_TISSUE, B_OVER_A_WATER, DENSITY_BRAIN, DENSITY_FAT,
+    DENSITY_LIVER, DENSITY_MUSCLE, DENSITY_TISSUE, DENSITY_WATER, SOUND_SPEED_BRAIN,
+    SOUND_SPEED_FAT, SOUND_SPEED_KIDNEY, SOUND_SPEED_LIVER, SOUND_SPEED_MUSCLE,
+    SOUND_SPEED_TISSUE, SOUND_SPEED_WATER, WATER_ABSORPTION_ALPHA_0_DB_CM_MHZ2,
 };
 use std::fmt;
 
@@ -61,10 +61,12 @@ pub struct AcousticPropertyData {
     /// Physical range: 300-6000 m/s (air to solids)
     pub sound_speed: f64,
 
-    /// Absorption coefficient α₀ (Np/(MHz^y m))
+    /// Absorption coefficient α₀ [dB/(cm·MHz^y)]
     ///
-    /// Power-law prefactor for frequency-dependent absorption.
-    /// For water: ~0.002 Np/(MHz² m) with y=2
+    /// Power-law prefactor for the frequency-dependent absorption model
+    /// α(f) = α₀·f^y, where f is in MHz and the result is in dB/cm.
+    /// For water at 20°C: α₀ ≈ 0.002 dB/(cm·MHz²) with y = 2.
+    /// For generic soft tissue: α₀ ≈ 0.5 dB/(cm·MHz) with y ≈ 1.1.
     pub absorption_coefficient: f64,
 
     /// Absorption power exponent y (dimensionless)
@@ -139,7 +141,10 @@ impl AcousticPropertyData {
         self.density * self.sound_speed
     }
 
-    /// Absorption coefficient at frequency f (MHz) → α(f) = α₀ f^y (Np/m)
+    /// Absorption at frequency `freq_mhz` [dB/cm].
+    ///
+    /// Evaluates the power-law model α(f) = α₀·f^y where α₀ is stored in
+    /// dB/(cm·MHz^y) and f is provided in MHz.  The result is in dB/cm.
     ///
     /// # Arguments
     ///
@@ -147,7 +152,7 @@ impl AcousticPropertyData {
     ///
     /// # Returns
     ///
-    /// Absorption coefficient in Np/m (Nepers per meter)
+    /// Absorption coefficient in dB/cm
     #[inline]
     #[must_use]
     pub fn absorption_at_frequency(&self, freq_mhz: f64) -> f64 {
@@ -169,7 +174,7 @@ impl AcousticPropertyData {
         Self {
             density: DENSITY_WATER,
             sound_speed: SOUND_SPEED_WATER, // 1482 m/s at 20°C (Bilaniuk & Wong 1993)
-            absorption_coefficient: 0.002,
+            absorption_coefficient: WATER_ABSORPTION_ALPHA_0_DB_CM_MHZ2, // 0.002 dB/(cm·MHz²)
             absorption_power: 2.0,
             nonlinearity: B_OVER_A_WATER, // 5.2 at 20°C (Duck 1990 Table 4.16)
         }
@@ -181,7 +186,7 @@ impl AcousticPropertyData {
         Self {
             density: DENSITY_TISSUE,
             sound_speed: SOUND_SPEED_TISSUE,
-            absorption_coefficient: 0.5,
+            absorption_coefficient: ACOUSTIC_ABSORPTION_TISSUE, // 0.5 dB/(cm·MHz) — Duck (1990)
             absorption_power: 1.1,
             nonlinearity: B_OVER_A_SOFT_TISSUE, // 6.5 (Duck 1990 Table 4.16 mean)
         }

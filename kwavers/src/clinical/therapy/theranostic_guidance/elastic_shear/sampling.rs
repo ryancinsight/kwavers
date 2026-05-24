@@ -1,7 +1,12 @@
 //! Time-domain sampling, migration, and objective utilities.
+//!
+//! [`migrate_residual`] is parallelised with Rayon: each voxel's contribution
+//! is independent (no shared mutable state), so the entire NX×NY grid is
+//! distributed across available cores.
 
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array2;
+use rayon::prelude::*;
 
 use super::super::geometry::Point2;
 use super::super::medium::PreparedTheranosticSlice;
@@ -50,6 +55,25 @@ pub(super) fn time_steps(
     (duration_s / dt_s).ceil().max(32.0) as usize
 }
 
+/// Backproject receiver residuals onto the 2-D grid via time-of-flight migration.
+///
+/// # Algorithm
+///
+/// For each interior voxel `(ix, iy)` with physical coordinates `p`:
+/// ```text
+/// G(ix, iy) = Σ_r  E_r(t_arrival(p, src, r)) / √d_src(p)
+/// ```
+/// where `t_arrival = (d_src + d_rcv) / v_shear`,
+/// `d_src = min_source distance(p)`, `d_rcv = distance(p, receiver_r)`,
+/// and `E_r` is the windowed residual energy at the arrival sample (RMS within
+/// one half-cycle).  The `1/√d_src` factor applies geometric spreading
+/// compensation in 2-D.
+///
+/// # Parallelism
+///
+/// Each voxel is independent.  The flat index `ix * ny + iy` is mapped in
+/// parallel via Rayon, producing a row-major `Vec<f64>` that is assembled into
+/// an `Array2<f64>` with `from_shape_vec`.
 pub(super) fn migrate_residual(
     prepared: &PreparedTheranosticSlice,
     residual: &Array2<f64>,
@@ -60,28 +84,41 @@ pub(super) fn migrate_residual(
     shear_speed_m_s: f64,
 ) -> Array2<f64> {
     let dims = prepared.ct_hu.dim();
-    Array2::from_shape_fn(dims, |(ix, iy)| {
-        if !prepared.body_mask[[ix, iy]] {
-            return 0.0;
-        }
-        let point = index_point_m(ix, iy, dims, prepared.spacing_m);
-        let source_distance = source_points
-            .iter()
-            .map(|source| distance(point, *source))
-            .fold(f64::INFINITY, f64::min)
-            .max(prepared.spacing_m);
-        receiver_points
-            .iter()
-            .enumerate()
-            .map(|(row, receiver)| {
-                let receiver_distance = distance(point, *receiver).max(prepared.spacing_m);
-                let sample = (source_distance + receiver_distance) / shear_speed_m_s / dt_s;
-                let residual_value =
-                    arrival_residual_energy(residual, row, sample, dt_s, center_frequency_hz);
-                residual_value / source_distance.sqrt()
-            })
-            .sum::<f64>()
-    })
+    let (nx, ny) = dims;
+    let spacing_m = prepared.spacing_m;
+
+    // Flat row-major computation: flat_idx = ix * ny + iy.
+    let flat: Vec<f64> = (0..(nx * ny))
+        .into_par_iter()
+        .map(|flat_idx| {
+            let ix = flat_idx / ny;
+            let iy = flat_idx % ny;
+
+            if !prepared.body_mask[[ix, iy]] {
+                return 0.0;
+            }
+            let point = index_point_m(ix, iy, dims, spacing_m);
+            let source_distance = source_points
+                .iter()
+                .map(|source| distance(point, *source))
+                .fold(f64::INFINITY, f64::min)
+                .max(spacing_m);
+            receiver_points
+                .iter()
+                .enumerate()
+                .map(|(row, receiver)| {
+                    let receiver_distance = distance(point, *receiver).max(spacing_m);
+                    let sample =
+                        (source_distance + receiver_distance) / shear_speed_m_s / dt_s;
+                    let residual_value =
+                        arrival_residual_energy(residual, row, sample, dt_s, center_frequency_hz);
+                    residual_value / source_distance.sqrt()
+                })
+                .sum::<f64>()
+        })
+        .collect();
+
+    Array2::from_shape_vec(dims, flat).expect("flat length equals nx * ny")
 }
 
 pub(super) fn trace_energy(data: &Array2<f64>) -> f64 {

@@ -34,7 +34,7 @@
 //! - Barr, R. G., et al. (2019). "Elastography assessment of liver fibrosis." *Abdominal Radiology*
 
 use kwavers::clinical::therapy::swe_3d_workflows::{
-    ClinicalDecisionSupport, ElasticityMap3D, MultiPlanarReconstruction, VolumetricROI,
+    Swe3dClinicalDecisionSupport, ElasticityMap3D, MultiPlanarReconstruction, VolumetricROI,
 };
 use kwavers::domain::grid::Grid;
 use kwavers::domain::medium::heterogeneous::HeterogeneousMedium;
@@ -213,7 +213,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Step 7: Clinical decision support
     println!("🏥 Step 7: Clinical Decision Support");
-    let cds = ClinicalDecisionSupport::default();
+    let cds = Swe3dClinicalDecisionSupport::default();
     let fibrosis_classification = cds.classify_liver_fibrosis(&stats);
 
     println!("   Liver Fibrosis Assessment (METAVIR Classification):");

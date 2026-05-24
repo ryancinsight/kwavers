@@ -29,6 +29,67 @@ adapters build acquisition geometry via `BowlTransducer::with_angular_bounds`.
   33/33 pass, 1 ignored.
 - `cargo check -p pykwavers --lib --message-format=short -j 2`: exit 0.
 
+## Ali 2025 reduced-array row planning boundary (2026-05-23)
+
+Python orchestration had begun to own clinical row-count policy for the reduced
+Ali 2025 replication path. That violated the project boundary: row placement is
+clinical acquisition planning, so it belongs under `kwavers`, with PyO3 only
+marshalling inputs and outputs.
+
+### Closure
+- Added `BreastUstReducedArrayRowPolicy` and `BreastUstReducedArrayPlan` under
+  `clinical::imaging::reconstruction::breast_ust_fwi::reduction`.
+- `Table1ParityInteriorCoverage` derives `rows = nz - 2` and default
+  `row_spacing_m = spacing_m`, giving row span `(nz - 3)·spacing_m` inside the
+  finite axial extent `(nz - 1)·spacing_m`.
+- `derive_reduced_breast_ust_array_geometry` now rejects multi-row plans whose
+  span exceeds the reduced axial extent.
+- PyO3 exposes `derive_breast_fwi_reduced_array_plan`; the replication script
+  only selects `explicit`, `table1_parity_interior`, or `smoke_single_ring` and
+  reports the Rust-derived result.
+
+### Residual risk
+- The determined 4x4x3 two-frequency probe reran after the PyO3 rebuild and
+  remains formally determined (`informative_dof_to_unknown_ratio = 1.0`), but
+  still fits `single_scatter_born` best on all receiver rows. The zero-absorber
+  rerun confirms the absorber was a contributing boundary mismatch, not the
+  root propagation mismatch: `pstd_spectral_convergent_born` active-only
+  residual is `1.6778886933118932e-16`, passive-only residual improves from
+  `0.7905925502451137` to `0.6007092896747324`, and all-channel residual
+  becomes `0.8646947820594513`. The next gap is passive-channel Green/operator
+  phase and source-scale semantics, not acquisition rank or Python-owned row
+  planning.
+
+## Ali 2025 zero-thickness absorber contract (2026-05-23)
+
+The replication dataset uses no CPML for the determined probe. PyO3 previously
+accepted `absorbing_boundary="polynomial"` only when the polynomial layer had
+nonzero thickness, so Python orchestration could not express a no-absorber PSTD
+spectral CBS configuration through the same CLI path used for nonzero layers.
+
+### Closure
+- `FrequencyDomainFwiConfig(...)`,
+  `FrequencyDomainFwiConfig.spectral_convergent_born(...)`, and
+  `FrequencyDomainFwiConfig.pstd_spectral_convergent_born(...)` now map
+  zero-thickness polynomial requests to `AbsorbingBoundary::disabled()`.
+- `pykwavers/examples/replicate_ali2025_breast_fwi.py` defaults
+  `--absorbing-thickness-cells` to `0`, matching the no-CPML PSTD acquisition
+  configuration used by the reduced determined probe.
+- The canonical determined probe artifact was regenerated with the rebuilt
+  PyO3 extension and zero absorbing cells.
+
+### Verification summary
+- `rustfmt --check --config skip_children=true` on touched Rust files: exit 0.
+- `cargo check -p pykwavers --lib --message-format=short -j 1`: exit 0.
+- `cargo test -p kwavers reduced_array --lib --message-format=short -j 1`:
+  3/3 pass.
+- `maturin develop` in `pykwavers`: exit 0.
+- Targeted pytest binding/example tests: 2/2 pass.
+- Determined reduced probe with zero absorber: exit 0; passive-only PSTD
+  spectral residual `0.6007092896747324`, all-channel residual
+  `0.8646947820594513`, RMSE `57.41245858725676` m/s, PCC
+  `-0.10582280269855178`.
+
 ## DG CPML finite-3D boundary closure (2026-05-21)
 
 Lands the Roden-Gedney (2000) CPML adapted for first-order acoustic DG

@@ -16,11 +16,11 @@ use crate::core::constants::optical::{
 };
 use crate::core::constants::cavitation::VISCOSITY_WATER;
 use crate::core::constants::fundamental::{
-    ATMOSPHERIC_PRESSURE, B_OVER_A_BLOOD, B_OVER_A_BONE, B_OVER_A_BRAIN, B_OVER_A_CSF,
-    B_OVER_A_FAT, B_OVER_A_KIDNEY, B_OVER_A_LIVER, B_OVER_A_MUSCLE, B_OVER_A_WATER, DENSITY_BLOOD,
-    DENSITY_BRAIN, DENSITY_FAT, DENSITY_LIVER, DENSITY_MUSCLE, DENSITY_TISSUE, DENSITY_WATER,
-    SOUND_SPEED_BLOOD, SOUND_SPEED_BRAIN, SOUND_SPEED_FAT, SOUND_SPEED_KIDNEY, SOUND_SPEED_LIVER,
-    SOUND_SPEED_MUSCLE, SOUND_SPEED_WATER,
+    ACOUSTIC_ABSORPTION_TISSUE, ATMOSPHERIC_PRESSURE, B_OVER_A_BLOOD, B_OVER_A_BONE,
+    B_OVER_A_BRAIN, B_OVER_A_CSF, B_OVER_A_FAT, B_OVER_A_KIDNEY, B_OVER_A_LIVER, B_OVER_A_MUSCLE,
+    B_OVER_A_WATER, DENSITY_BLOOD, DENSITY_BRAIN, DENSITY_FAT, DENSITY_LIVER, DENSITY_MUSCLE,
+    DENSITY_TISSUE, DENSITY_WATER, SOUND_SPEED_BLOOD, SOUND_SPEED_BRAIN, SOUND_SPEED_FAT,
+    SOUND_SPEED_KIDNEY, SOUND_SPEED_LIVER, SOUND_SPEED_MUSCLE, SOUND_SPEED_WATER,
 };
 use crate::core::constants::thermodynamic::{
     BODY_TEMPERATURE_C, ROOM_TEMPERATURE_C, SPECIFIC_HEAT_BLOOD, SPECIFIC_HEAT_BONE,
@@ -186,7 +186,7 @@ pub const KIDNEY_CORTEX: TissueProperties = TissueProperties {
     sound_speed: SOUND_SPEED_KIDNEY,
     density: DENSITY_TISSUE,
     impedance: 1638000.0,
-    absorption_coefficient: 0.5,
+    absorption_coefficient: ACOUSTIC_ABSORPTION_TISSUE, // 0.5 dB/(cm·MHz) — Duck (1990)
     absorption_exponent: 1.0,
     nonlinearity_parameter: B_OVER_A_KIDNEY, // 7.2 (Duck 1990 Table 4.16)
     shear_viscosity: VISCOSITY_PARENCHYMAL_TISSUE,
@@ -211,7 +211,7 @@ pub const KIDNEY_MEDULLA: TissueProperties = TissueProperties {
     density: 1055.0,
     // Z = ρ·c = 1055 × 1565 = 1 651 075 Pa·s/m
     impedance: 1_651_075.0,
-    absorption_coefficient: 0.5,
+    absorption_coefficient: ACOUSTIC_ABSORPTION_TISSUE, // 0.5 dB/(cm·MHz) — Duck (1990)
     absorption_exponent: 1.0,
     nonlinearity_parameter: B_OVER_A_KIDNEY, // 7.2 (Duck 1990 Table 4.16)
     shear_viscosity: VISCOSITY_PARENCHYMAL_TISSUE,

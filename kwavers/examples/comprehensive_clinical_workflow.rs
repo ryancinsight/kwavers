@@ -23,7 +23,7 @@
 //! - **Clinical Validation**: Automated quality assurance and standards compliance
 
 use kwavers::analysis::ml::uncertainty::{
-    UncertaintyConfig, UncertaintyMethod, UncertaintyQuantifier,
+    MlUncertaintyConfig, MlUncertaintyMethod, UncertaintyQuantifier,
 };
 use kwavers::analysis::validation::clinical::{
     ClinicalValidator, ImageQualityMetrics, MeasurementAccuracy, SafetyIndices,
@@ -37,12 +37,12 @@ use kwavers::domain::medium::Medium;
 use kwavers::domain::medium::{heterogeneous::HeterogeneousMedium, homogeneous::HomogeneousMedium};
 #[cfg(feature = "gpu")]
 use kwavers::gpu::memory::UnifiedMemoryManager;
-use kwavers::physics::acoustics::imaging::modalities::ceus::PerfusionModel;
+use kwavers::physics::acoustics::imaging::modalities::ceus::CeusPerfusionModel;
 use kwavers::physics::acoustics::imaging::modalities::elastography::radiation_force::PushPulseParameters;
 use kwavers::physics::acoustics::imaging::modalities::elastography::{
     AcousticRadiationForce, DisplacementField, HarmonicDetectionConfig, HarmonicDetector,
 };
-use kwavers::physics::transcranial::safety_monitoring::SafetyMonitor;
+use kwavers::physics::acoustics::transcranial::safety_monitoring::TranscranialSafetyMonitor;
 use kwavers::simulation::imaging::ceus::ContrastEnhancedUltrasound;
 use kwavers::solver::forward::elastic::{ElasticWaveConfig, ElasticWaveField, ElasticWaveSolver};
 use kwavers::solver::inverse::elastography::{
@@ -99,7 +99,7 @@ pub struct LiverAssessmentWorkflow {
     /// CEUS system for perfusion assessment
     ceus_system: ContrastEnhancedUltrasound,
     /// Safety monitoring system
-    safety_monitor: SafetyMonitor,
+    safety_monitor: TranscranialSafetyMonitor,
     /// Multi-GPU memory manager
     #[cfg(feature = "gpu")]
     gpu_memory: UnifiedMemoryManager,
@@ -147,7 +147,7 @@ impl LiverAssessmentWorkflow {
         let ceus_system = ContrastEnhancedUltrasound::new(&grid, &liver_tissue, 5.0e6, 3.0)?;
 
         // Initialize safety monitoring
-        let safety_monitor = SafetyMonitor::new(
+        let safety_monitor = TranscranialSafetyMonitor::new(
             (grid.nx, grid.ny, grid.nz),
             0.01, // liver perfusion rate (1/s)
             2e6,  // 2 MHz imaging frequency
@@ -158,8 +158,8 @@ impl LiverAssessmentWorkflow {
         let gpu_memory = UnifiedMemoryManager::new();
 
         // Initialize uncertainty quantification
-        let uncertainty_config = UncertaintyConfig {
-            method: UncertaintyMethod::Hybrid,
+        let uncertainty_config = MlUncertaintyConfig {
+            method: MlUncertaintyMethod::Hybrid,
             num_samples: 50,
             confidence_level: 0.95,
             dropout_rate: 0.1,
@@ -387,7 +387,7 @@ impl LiverAssessmentWorkflow {
             .simulate_contrast_signal(&injection_profile, 30.0)?; // 30 seconds
 
         // Perform perfusion analysis
-        let perfusion_model = PerfusionModel::gamma_variate_model();
+        let perfusion_model = CeusPerfusionModel::gamma_variate_model();
         let perfusion_map = self
             .ceus_system
             .estimate_perfusion(&contrast_signal, &perfusion_model)?;

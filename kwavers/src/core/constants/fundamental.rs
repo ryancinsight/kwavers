@@ -460,6 +460,15 @@ pub const B_OVER_A_SOFT_TISSUE: f64 = 6.5;
 /// Academic Press, Chapter 2, Eq. (2.28).
 pub const B_OVER_A_AIR: f64 = 0.4;
 
+/// Power-law absorption coefficient prefactor for water [dB/(cm·MHz²)].
+///
+/// Classical thermoviscous loss in water follows α(f) = α₀·f² where α₀ ≈ 0.002
+/// at 20°C.  Pair with `WATER_ABSORPTION_POWER_Y = 2.0`.
+///
+/// Reference: Duck (1990) §2; Szabo (2004) §4.2; Kinsler et al. (2000)
+/// *Fundamentals of Acoustics* (4th ed.), Table B.1.
+pub const WATER_ABSORPTION_ALPHA_0_DB_CM_MHZ2: f64 = 0.002; // dB/(cm·MHz²)
+
 /// Power-law frequency exponent y for water acoustic absorption (dimensionless).
 ///
 /// Water exhibits classical thermoviscous absorption proportional to f²,

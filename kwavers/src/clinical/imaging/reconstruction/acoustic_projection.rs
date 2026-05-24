@@ -34,6 +34,7 @@
 //! - Dines KA, Kak AC (1979). "Ultrasonic attenuation tomography of soft
 //!   tissues." *Ultrasonic Imaging* 1(1):16–33.
 
+use crate::core::constants::fundamental::ACOUSTIC_ABSORPTION_TISSUE;
 use crate::core::constants::numerical::MHZ_TO_HZ;
 use ndarray::{Array1, Array3};
 
@@ -63,7 +64,7 @@ impl Default for AcousticProjectionGeometry {
             element_x: (0..128).map(|i| (i as f64 - 63.5) * 3e-4).collect(),
             element_z: 0.0,
             sound_speed: crate::core::constants::fundamental::SOUND_SPEED_TISSUE,
-            attenuation_db_cm_mhz: 0.5,
+            attenuation_db_cm_mhz: ACOUSTIC_ABSORPTION_TISSUE, // 0.5 dB/(cm·MHz) — Duck (1990)
             center_frequency_hz: 5.0 * MHZ_TO_HZ,
             voxel_spacing: (3e-4, 3e-4, 3e-4),
         }

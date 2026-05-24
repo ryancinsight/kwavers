@@ -17,6 +17,22 @@
   now build geometry through `BowlTransducer::with_angular_bounds`, preserving
   the bowl source as the single aperture SSOT.
 
+### Added (2026-05-23) - Breast FWI Reduced Array Plan Policy
+
+- [minor] Add Rust-owned reduced-array row planning for Ali 2025 breast FWI.
+  `BreastUstReducedArrayPlan` derives smoke, explicit, and Table 1 parity
+  interior-row policies inside the clinical reduction layer, exposes
+  `derive_breast_fwi_reduced_array_plan` through PyO3, and keeps the Python
+  replication script limited to orchestration, reporting, and plotting.
+
+### Changed (2026-05-23) - Breast FWI Zero-Thickness Absorber Contract
+
+- [patch] Treat `absorbing_boundary="polynomial"` with
+  `absorbing_thickness_cells=0` as `AbsorbingBoundary::disabled()` across the
+  PyO3 frequency-domain FWI constructor and the spectral/PSTD spectral
+  convenience constructors. The reduced Ali 2025 replication default now uses
+  zero absorbing cells, matching the no-CPML PSTD dataset configuration.
+
 ### Fixed (2026-05-23) - CBS Adjoint Richardson Iterate Sign
 
 - [minor] Restore correct `+=` sign in `solve_adjoint_spectral_iterative`.

@@ -18,6 +18,37 @@
   transducer tests pass 33/33 with 1 ignored, and `cargo check -p pykwavers --lib`
   exits 0.
 
+## Ali 2025 reduced-array row planning boundary — closed (2026-05-23)
+- **[done] [minor]** `BreastUstReducedArrayPlan` and
+  `BreastUstReducedArrayRowPolicy` now live in the Rust clinical reduction
+  layer. The Table 1 parity policy derives one row per interior z-slice and
+  leaves one grid-cell margin at both axial boundaries; explicit and smoke
+  policies are validated separately. PyO3 exposes
+  `derive_breast_fwi_reduced_array_plan`, and the Python replication script now
+  selects a policy string and reports Rust-derived geometry instead of owning
+  row-count or row-spacing formulas.
+- **[open] [patch]** Determined probe rerun after PyO3 rebuild remains rank
+  sufficient but passive-channel mismatched: all-row best model is still
+  `single_scatter_born`, while `pstd_spectral_convergent_born` matches active
+  source/receiver channels to numerical precision and has passive-only
+  normalized residual `0.7905925502451137` with the prior nonzero absorber.
+  Next increment: align passive receiver Green/operator semantics for the PSTD
+  spectral CBS path.
+
+## Ali 2025 zero-thickness absorber contract — closed (2026-05-23)
+- **[done] [patch]** PyO3 now maps
+  `absorbing_boundary="polynomial", absorbing_thickness_cells=0` to
+  `AbsorbingBoundary::disabled()` for the general frequency-domain FWI
+  constructor and both spectral convenience constructors. The replication
+  example default now uses zero absorbing cells, matching the no-CPML PSTD
+  dataset path.
+- **[open] [patch]** The zero-absorber determined probe improves
+  `pstd_spectral_convergent_born` passive-only residual to
+  `0.6007092896747324` but worsens all-channel residual to
+  `0.8646947820594513`; active-only residual remains numerical zero. Next
+  increment: isolate passive phase/source-scale semantics in the PSTD spectral
+  Green path rather than adding Python-side correction factors.
+
 ## CBS adjoint O(N log N) iterative solver — closed (2026-05-23)
 - **[done] [minor]** `solve_adjoint_spectral_iterative` now implements the correct
   Richardson adjoint for spectral CBS operators. The iterate uses `λ += γ^H·residual`
