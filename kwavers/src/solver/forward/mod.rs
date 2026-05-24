@@ -69,7 +69,6 @@ pub mod elastic;
 pub mod fdtd;
 pub mod helmholtz;
 pub mod hybrid;
-pub mod imex;
 pub mod nonlinear;
 pub mod ode;
 pub mod optical;
@@ -126,9 +125,8 @@ pub mod hybrid_models {
     pub use super::hybrid;
 }
 
-/// ODE integration methods used as inner steppers (explicit / IMEX).
+/// ODE integration methods used as inner steppers (explicit Runge-Kutta).
 pub mod ode_methods {
-    pub use super::imex;
     pub use super::ode;
 }
 
@@ -154,7 +152,6 @@ pub use hybrid::{
     FdtdFemCouplingConfig, FdtdFemSolver, HybridSolver, PstdSemCoupler, PstdSemCouplingConfig,
     PstdSemSolver,
 };
-pub use imex::IMEXIntegrator;
 pub use plugin_based::PluginBasedSolver;
 pub use pstd::PSTDSolver;
 pub use thermal::PennesSolver;
@@ -195,13 +192,6 @@ mod path_equivalence_tests {
             crate::solver::forward::thermal::PennesSolver,
         ) -> crate::solver::forward::thermal_solvers::thermal::PennesSolver =
             std::convert::identity;
-    }
-
-    #[test]
-    fn imex_integrator_path_equivalence() {
-        let _: fn(
-            crate::solver::forward::imex::IMEXIntegrator,
-        ) -> crate::solver::forward::ode_methods::imex::IMEXIntegrator = std::convert::identity;
     }
 
     #[test]
