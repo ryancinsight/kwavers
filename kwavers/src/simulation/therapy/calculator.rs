@@ -3,7 +3,8 @@
 use crate::core::constants::fundamental::DENSITY_TISSUE;
 use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use crate::core::constants::medical::{BLOOD_SPECIFIC_HEAT, TISSUE_PERFUSION_RATE};
-use crate::core::constants::thermodynamic::{BODY_TEMPERATURE_C, SPECIFIC_HEAT_TISSUE};
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
+use crate::core::constants::tissue_thermal::SPECIFIC_HEAT_TISSUE;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::properties::ThermalPropertyData;

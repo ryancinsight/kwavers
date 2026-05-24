@@ -3,13 +3,6 @@
 //! coefficients.
 //!
 //! Tissue- and fluid-specific thermal properties live in [`super::tissue_thermal`].
-//!
-//! # Compatibility shim
-//!
-//! The `pub use` line below preserves backward compatibility for call sites that
-//! import tissue thermal constants via `crate::core::constants::thermodynamic::*`.
-//! See backlog.md §CLEAN-001 for the planned migration.
-pub use super::tissue_thermal::*;
 
 // ── Thermodynamic invariants ──────────────────────────────────────────────────
 

@@ -44,9 +44,8 @@
 use crate::core::constants::acoustic_parameters::BONE_DENSITY;
 use crate::core::constants::fundamental::{DENSITY_TISSUE, DENSITY_WATER};
 use crate::core::constants::medical::BLOOD_SPECIFIC_HEAT;
-use crate::core::constants::thermodynamic::{
-    SPECIFIC_HEAT_BONE, SPECIFIC_HEAT_TISSUE, SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER,
-};
+use crate::core::constants::thermodynamic::{SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER};
+use crate::core::constants::tissue_thermal::{SPECIFIC_HEAT_BONE, SPECIFIC_HEAT_TISSUE};
 use std::fmt;
 
 /// Canonical thermal material properties
@@ -228,7 +227,7 @@ mod tests {
     #[test]
     fn test_thermal_validation() {
         use crate::core::constants::medical::BLOOD_SPECIFIC_HEAT;
-        use crate::core::constants::thermodynamic::SPECIFIC_HEAT_TISSUE;
+        use crate::core::constants::tissue_thermal::SPECIFIC_HEAT_TISSUE;
         // Negative conductivity should fail
         assert!(
             ThermalPropertyData::new(-0.5, SPECIFIC_HEAT_TISSUE, DENSITY_TISSUE, None, None)

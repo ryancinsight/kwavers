@@ -2,7 +2,8 @@ use super::*;
 use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use crate::core::constants::medical::TI_LIMIT_SOFT_TISSUE;
 use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
-use crate::core::constants::thermodynamic::{BODY_TEMPERATURE_C, SPECIFIC_HEAT_TISSUE};
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
+use crate::core::constants::tissue_thermal::SPECIFIC_HEAT_TISSUE;
 
 #[test]
 fn test_intensity_tracker_integration() {

@@ -3,7 +3,7 @@
 //! **Domain Focus**: Pure thermal behavior following Domain-Driven Design
 //! Evidence-based thermal modeling per Hamilton & Blackstock Ch.8
 
-use crate::core::constants::thermodynamic::THERMAL_EXPANSION_SOFT_TISSUE;
+use crate::core::constants::tissue_thermal::THERMAL_EXPANSION_SOFT_TISSUE;
 use crate::domain::grid::Grid;
 use crate::domain::medium::{
     heterogeneous::{core::HeterogeneousMedium, interpolation::HetTrilinearInterpolator},

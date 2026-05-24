@@ -15,11 +15,11 @@ use crate::core::constants::fundamental::{
 };
 use crate::core::constants::medical::IEC_TISSUE_SPECIFIC_HEAT;
 use crate::core::constants::numerical::{CM_TO_M, MHZ_TO_HZ};
-use crate::core::constants::thermodynamic::{
+use crate::core::constants::thermodynamic::{SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER};
+use crate::core::constants::tissue_thermal::{
     SPECIFIC_HEAT_BLOOD, SPECIFIC_HEAT_BONE, SPECIFIC_HEAT_BRAIN, SPECIFIC_HEAT_BREAST_GLAND,
     SPECIFIC_HEAT_FAT, SPECIFIC_HEAT_KIDNEY, SPECIFIC_HEAT_LIVER, SPECIFIC_HEAT_LUNG,
-    SPECIFIC_HEAT_MUSCLE, SPECIFIC_HEAT_SKIN, SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER,
-    THERMAL_EXPANSION_SOFT_TISSUE,
+    SPECIFIC_HEAT_MUSCLE, SPECIFIC_HEAT_SKIN, THERMAL_EXPANSION_SOFT_TISSUE,
 };
 use crate::core::constants::DB_TO_NP;
 use serde::{Deserialize, Serialize};

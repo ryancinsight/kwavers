@@ -2,7 +2,7 @@
 mod tests {
     use super::super::helpers::*;
     use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
-    use crate::core::constants::thermodynamic::THERMAL_DIFFUSIVITY_TISSUE;
+    use crate::core::constants::tissue_thermal::THERMAL_DIFFUSIVITY_TISSUE;
     use ndarray::Array3;
     use std::f64::consts::PI;
 

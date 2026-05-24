@@ -26,7 +26,8 @@
 //! - Nyborg (1981): "Heat generation by ultrasound in a relaxing medium"
 
 use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE};
-use crate::core::constants::thermodynamic::{BODY_TEMPERATURE_C, SPECIFIC_HEAT_TISSUE};
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
+use crate::core::constants::tissue_thermal::SPECIFIC_HEAT_TISSUE;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::{Array3, Zip};

@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use super::super::helpers::*;
-    use crate::core::constants::thermodynamic::THERMAL_DIFFUSIVITY_TISSUE;
+    use crate::core::constants::tissue_thermal::THERMAL_DIFFUSIVITY_TISSUE;
     use ndarray::Array1;
     use std::f64::consts::PI;
 

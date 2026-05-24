@@ -33,7 +33,7 @@ pub mod tissues {
         DENSITY_BREAST_FAT, DENSITY_LIVER, DENSITY_MUSCLE, DENSITY_TISSUE,
     };
     use crate::core::constants::medical::BLOOD_SPECIFIC_HEAT;
-    use crate::core::constants::thermodynamic::{
+    use crate::core::constants::tissue_thermal::{
         SPECIFIC_HEAT_FAT, SPECIFIC_HEAT_LIVER, SPECIFIC_HEAT_MUSCLE, SPECIFIC_HEAT_TISSUE,
     };
     use crate::domain::medium::properties::ThermalPropertyData;

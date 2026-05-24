@@ -7,7 +7,8 @@ use crate::core::constants::fundamental::{
 use crate::core::constants::medical::{
     THERMAL_DOSE_REFERENCE_TEMP_C, THERMAL_DOSE_R_ABOVE_43C, THERMAL_DOSE_R_BELOW_43C,
 };
-use crate::core::constants::thermodynamic::{BODY_TEMPERATURE_C, SPECIFIC_HEAT_TISSUE};
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
+use crate::core::constants::tissue_thermal::SPECIFIC_HEAT_TISSUE;
 use crate::core::constants::medical::THERMAL_DOSE_THRESHOLD;
 use crate::core::constants::{MHZ_TO_HZ, SECONDS_PER_MINUTE};
 use crate::core::error::{KwaversError, KwaversResult};

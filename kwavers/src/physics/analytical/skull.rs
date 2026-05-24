@@ -222,7 +222,7 @@ mod tests {
     use super::*;
     use crate::core::constants::acoustic_parameters::{BONE_DENSITY, SOUND_SPEED_SKULL};
     use crate::core::constants::numerical::MHZ_TO_HZ;
-    use crate::core::constants::thermodynamic::SPECIFIC_HEAT_BONE;
+    use crate::core::constants::tissue_thermal::SPECIFIC_HEAT_BONE;
 
     #[test]
     fn insertion_loss_positive() {

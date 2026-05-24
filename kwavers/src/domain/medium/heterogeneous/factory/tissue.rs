@@ -16,9 +16,10 @@ use crate::core::constants::fundamental::{
 use crate::core::constants::optical::{
     OPTICAL_ABSORPTION_TISSUE_NIR_M, OPTICAL_SCATTERING_REDUCED_TISSUE_NIR_M,
 };
-use crate::core::constants::thermodynamic::{
-    BODY_TEMPERATURE_K, SPECIFIC_HEAT_BRAIN, THERMAL_CONDUCTIVITY_BLOOD,
-    THERMAL_DIFFUSIVITY_TISSUE, THERMAL_EXPANSION_SOFT_TISSUE,
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_K;
+use crate::core::constants::tissue_thermal::{
+    SPECIFIC_HEAT_BRAIN, THERMAL_CONDUCTIVITY_BLOOD, THERMAL_DIFFUSIVITY_TISSUE,
+    THERMAL_EXPANSION_SOFT_TISSUE,
 };
 use crate::core::constants::MHZ_TO_HZ;
 use crate::domain::grid::Grid;
