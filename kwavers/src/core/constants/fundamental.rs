@@ -10,8 +10,8 @@
 //! sites that import directly from this module path.  A cleanup task
 //! ([backlog.md §CLEAN-001]) will migrate all callers to the canonical submodule
 //! paths and remove these shims.
-pub use super::ct_acoustics::*;
-pub use super::tissue_acoustics::*;
+pub use crate::core::constants::ct_acoustics::*;
+pub use crate::core::constants::tissue_acoustics::*;
 
 // ── Simulation defaults ───────────────────────────────────────────────────────
 
