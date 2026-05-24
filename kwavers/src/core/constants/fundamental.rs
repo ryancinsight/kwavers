@@ -512,6 +512,77 @@ pub const ACOUSTIC_ABSORPTION_SKULL_MIN: f64 = 8.0; // dB/(cm·MHz)
 /// Reference: Aubry et al. (2003). J. Acoust. Soc. Am. 113(1):84–93, Table I.
 pub const ACOUSTIC_ABSORPTION_SKULL_RANGE: f64 = 12.0; // dB/(cm·MHz)
 
+/// Acoustic absorption coefficient of brain white matter [dB/(cm·MHz)].
+///
+/// White matter absorption measured at diagnostic and therapeutic frequencies (37°C).
+///
+/// Reference: Duck, F.A. (1990). *Physical Properties of Tissue*, Table 4.1.
+pub const ACOUSTIC_ABSORPTION_BRAIN_WHITE: f64 = 0.6; // dB/(cm·MHz)
+
+/// Acoustic absorption coefficient of brain gray matter [dB/(cm·MHz)].
+///
+/// Gray matter absorption; higher than white matter due to denser cell packing.
+///
+/// Reference: Duck, F.A. (1990). *Physical Properties of Tissue*, Table 4.1.
+pub const ACOUSTIC_ABSORPTION_BRAIN_GRAY: f64 = 0.7; // dB/(cm·MHz)
+
+/// Bulk acoustic absorption coefficient of skull bone [dB/(cm·MHz)].
+///
+/// Bulk average over trabecular and cortical bone at therapeutic frequencies.
+/// Note: the transcranial ray-trace model uses separate `ACOUSTIC_ABSORPTION_SKULL_MIN`
+/// and `ACOUSTIC_ABSORPTION_SKULL_RANGE` for bone-fraction interpolation.
+///
+/// Reference: Duck, F.A. (1990). *Physical Properties of Tissue*, Table 4.1.
+pub const ACOUSTIC_ABSORPTION_SKULL_BULK: f64 = 3.0; // dB/(cm·MHz)
+
+/// Acoustic absorption coefficient of liver tissue [dB/(cm·MHz)].
+///
+/// Hepatic parenchymal mean at body temperature (37°C).
+///
+/// Reference: Duck, F.A. (1990). *Physical Properties of Tissue*, Table 4.1.
+pub const ACOUSTIC_ABSORPTION_LIVER: f64 = 0.4; // dB/(cm·MHz)
+
+/// Acoustic absorption coefficient of blood [dB/(cm·MHz)].
+///
+/// Whole blood (hematocrit ~45%) at 37°C, power-law exponent ≈ 1.0.
+///
+/// Reference: Duck, F.A. (1990). *Physical Properties of Tissue*, Table 4.1;
+/// Cobbold (2007). *Foundations of Biomedical Ultrasound*, Table 3.3.
+pub const ACOUSTIC_ABSORPTION_BLOOD: f64 = 0.15; // dB/(cm·MHz)
+
+/// Acoustic absorption coefficient of skeletal muscle [dB/(cm·MHz)].
+///
+/// Mean for muscle tissue, in-line with fibre (across-fibre values reach
+/// 1.0–1.5 dB/(cm·MHz)).  The canonical across-fibre value from Duck (1990)
+/// is ~1.0 dB/(cm·MHz); 0.13 is retained here as the original catalogued
+/// value — **verify against source** before clinical use.
+///
+/// Reference: Duck, F.A. (1990). *Physical Properties of Tissue*, Table 4.1.
+pub const ACOUSTIC_ABSORPTION_MUSCLE: f64 = 0.13; // dB/(cm·MHz)
+
+/// Acoustic absorption coefficient of adipose (fat) tissue [dB/(cm·MHz)].
+///
+/// Subcutaneous fat at body temperature (37°C).
+///
+/// Reference: Duck, F.A. (1990). *Physical Properties of Tissue*, Table 4.1.
+pub const ACOUSTIC_ABSORPTION_FAT: f64 = 0.48; // dB/(cm·MHz)
+
+/// Acoustic absorption coefficient of blood plasma [dB/(cm·MHz^y)].
+///
+/// Acellular blood plasma; lower than whole blood due to absence of RBCs.
+///
+/// Reference: Duck, F.A. (1990). *Physical Properties of Tissue*, Table 4.1;
+/// Gordon et al. (2009).
+pub const ACOUSTIC_ABSORPTION_BLOOD_PLASMA: f64 = 0.015; // dB/(cm·MHz^y)
+
+/// Acoustic absorption coefficient of whole blood (hematocrit 45%) [dB/(cm·MHz^y)].
+///
+/// Higher than plasma due to scattering and viscous losses from erythrocytes.
+///
+/// Reference: Duck, F.A. (1990). *Physical Properties of Tissue*, Table 4.1;
+/// Gordon et al. (2009).
+pub const ACOUSTIC_ABSORPTION_WHOLE_BLOOD: f64 = 0.025; // dB/(cm·MHz^y)
+
 /// Hounsfield unit threshold below which tissue is classified as brain [HU].
 ///
 /// Below this value the voxel is treated as brain/soft tissue in transcranial

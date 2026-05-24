@@ -16,11 +16,14 @@ use crate::core::constants::optical::{
 };
 use crate::core::constants::cavitation::VISCOSITY_WATER;
 use crate::core::constants::fundamental::{
-    ACOUSTIC_ABSORPTION_TISSUE, ATMOSPHERIC_PRESSURE, B_OVER_A_BLOOD, B_OVER_A_BONE,
-    B_OVER_A_BRAIN, B_OVER_A_CSF, B_OVER_A_FAT, B_OVER_A_KIDNEY, B_OVER_A_LIVER, B_OVER_A_MUSCLE,
-    B_OVER_A_WATER, DENSITY_BLOOD, DENSITY_BRAIN, DENSITY_FAT, DENSITY_LIVER, DENSITY_MUSCLE,
-    DENSITY_TISSUE, DENSITY_WATER, SOUND_SPEED_BLOOD, SOUND_SPEED_BRAIN, SOUND_SPEED_FAT,
-    SOUND_SPEED_KIDNEY, SOUND_SPEED_LIVER, SOUND_SPEED_MUSCLE, SOUND_SPEED_WATER,
+    ACOUSTIC_ABSORPTION_BLOOD, ACOUSTIC_ABSORPTION_BRAIN_GRAY, ACOUSTIC_ABSORPTION_BRAIN_WHITE,
+    ACOUSTIC_ABSORPTION_FAT, ACOUSTIC_ABSORPTION_LIVER, ACOUSTIC_ABSORPTION_MUSCLE,
+    ACOUSTIC_ABSORPTION_SKULL_BULK, ACOUSTIC_ABSORPTION_TISSUE, ATMOSPHERIC_PRESSURE,
+    B_OVER_A_BLOOD, B_OVER_A_BONE, B_OVER_A_BRAIN, B_OVER_A_CSF, B_OVER_A_FAT, B_OVER_A_KIDNEY,
+    B_OVER_A_LIVER, B_OVER_A_MUSCLE, B_OVER_A_WATER, DENSITY_BLOOD, DENSITY_BRAIN, DENSITY_FAT,
+    DENSITY_LIVER, DENSITY_MUSCLE, DENSITY_TISSUE, DENSITY_WATER, SOUND_SPEED_BLOOD,
+    SOUND_SPEED_BRAIN, SOUND_SPEED_FAT, SOUND_SPEED_KIDNEY, SOUND_SPEED_LIVER,
+    SOUND_SPEED_MUSCLE, SOUND_SPEED_WATER, WATER_ABSORPTION_ALPHA_0_DB_CM_MHZ2,
 };
 use crate::core::constants::thermodynamic::{
     BODY_TEMPERATURE_C, ROOM_TEMPERATURE_C, SPECIFIC_HEAT_BLOOD, SPECIFIC_HEAT_BONE,
@@ -47,7 +50,7 @@ pub const WATER: TissueProperties = TissueProperties {
     // Z = ρ·c = DENSITY_WATER × SOUND_SPEED_WATER = 998.2 × 1482.0 = 1 479 332.4 Pa·s/m
     // Derived from canonical constants (SSOT); do not hardcode.
     impedance: DENSITY_WATER * SOUND_SPEED_WATER,
-    absorption_coefficient: 0.002,
+    absorption_coefficient: WATER_ABSORPTION_ALPHA_0_DB_CM_MHZ2, // 0.002 dB/(cm·MHz²) — Duck (1990)
     absorption_exponent: 2.0,
     nonlinearity_parameter: B_OVER_A_WATER, // 5.2 at 20°C (Duck 1990 Table 4.16)
     shear_viscosity: VISCOSITY_WATER,
@@ -76,7 +79,7 @@ pub const BRAIN_WHITE_MATTER: TissueProperties = TissueProperties {
     sound_speed: SOUND_SPEED_BRAIN,
     density: DENSITY_BRAIN,
     impedance: 1_607_840.0,
-    absorption_coefficient: 0.6,
+    absorption_coefficient: ACOUSTIC_ABSORPTION_BRAIN_WHITE, // 0.6 dB/(cm·MHz) — Duck (1990)
     absorption_exponent: 1.0,
     nonlinearity_parameter: B_OVER_A_BRAIN, // 6.55 (Duck 1990 Table 4.16)
     shear_viscosity: VISCOSITY_PARENCHYMAL_TISSUE,
@@ -101,7 +104,7 @@ pub const BRAIN_GRAY_MATTER: TissueProperties = TissueProperties {
     sound_speed: 1545.0,
     density: DENSITY_TISSUE,
     impedance: 1622250.0,
-    absorption_coefficient: 0.7,
+    absorption_coefficient: ACOUSTIC_ABSORPTION_BRAIN_GRAY, // 0.7 dB/(cm·MHz) — Duck (1990)
     absorption_exponent: 1.0,
     nonlinearity_parameter: B_OVER_A_BRAIN, // 6.55 (Duck 1990 Table 4.16 brain mean)
     shear_viscosity: 2.2e-3,
@@ -127,7 +130,7 @@ pub const SKULL: TissueProperties = TissueProperties {
     density: DENSITY_SKULL,
     // Z = ρ·c = 1920 × 4080 = 7 833 600 Pa·s/m
     impedance: 7833600.0,
-    absorption_coefficient: 3.0,
+    absorption_coefficient: ACOUSTIC_ABSORPTION_SKULL_BULK, // 3.0 dB/(cm·MHz) — Duck (1990)
     absorption_exponent: 1.0,
     nonlinearity_parameter: B_OVER_A_BONE, // 8.0 (Duck 1990 Table 4.16)
     shear_viscosity: 5e-3,
@@ -157,7 +160,7 @@ pub const LIVER: TissueProperties = TissueProperties {
     sound_speed: SOUND_SPEED_LIVER,
     density: DENSITY_LIVER,
     impedance: 1_672_680.0,
-    absorption_coefficient: 0.4,
+    absorption_coefficient: ACOUSTIC_ABSORPTION_LIVER, // 0.4 dB/(cm·MHz) — Duck (1990)
     absorption_exponent: 1.0,
     nonlinearity_parameter: B_OVER_A_LIVER, // 6.75 (Duck 1990 Table 4.16 mean)
     shear_viscosity: VISCOSITY_PARENCHYMAL_TISSUE,
@@ -241,7 +244,7 @@ pub const BLOOD: TissueProperties = TissueProperties {
     sound_speed: SOUND_SPEED_BLOOD,
     density: DENSITY_BLOOD,
     impedance: 1_679_040.0,
-    absorption_coefficient: 0.15,
+    absorption_coefficient: ACOUSTIC_ABSORPTION_BLOOD, // 0.15 dB/(cm·MHz) — Duck (1990)
     absorption_exponent: 1.0,
     nonlinearity_parameter: B_OVER_A_BLOOD, // 6.1 (Duck 1990 Table 4.16)
     shear_viscosity: 4e-3,
@@ -267,7 +270,7 @@ pub const MUSCLE: TissueProperties = TissueProperties {
     sound_speed: SOUND_SPEED_MUSCLE,
     density: DENSITY_MUSCLE,
     impedance: 1_722_200.0,
-    absorption_coefficient: 0.13,
+    absorption_coefficient: ACOUSTIC_ABSORPTION_MUSCLE, // 0.13 dB/(cm·MHz) — Duck (1990)
     absorption_exponent: 1.0,
     nonlinearity_parameter: B_OVER_A_MUSCLE, // 7.4 (Duck 1990 Table 4.16)
     shear_viscosity: VISCOSITY_PARENCHYMAL_TISSUE,
@@ -292,7 +295,7 @@ pub const FAT: TissueProperties = TissueProperties {
     sound_speed: SOUND_SPEED_FAT,
     density: DENSITY_FAT,
     impedance: 1_345_600.0,
-    absorption_coefficient: 0.48,
+    absorption_coefficient: ACOUSTIC_ABSORPTION_FAT, // 0.48 dB/(cm·MHz) — Duck (1990)
     absorption_exponent: 1.0,
     nonlinearity_parameter: B_OVER_A_FAT, // 9.6 (Duck 1990 Table 4.16)
     shear_viscosity: VISCOSITY_PARENCHYMAL_TISSUE,

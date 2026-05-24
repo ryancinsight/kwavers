@@ -65,7 +65,10 @@ pub struct AcousticMaterialProperties {
     /// Acoustic impedance Z = ρc [kg/(m²·s)]
     pub impedance: f64,
 
-    /// Absorption coefficient [Np/m/MHz] (frequency-dependent: α = α₀·f^y)
+    /// Absorption coefficient α₀ [dB/(cm·MHz^y)] (frequency-dependent: α = α₀·f^y)
+    ///
+    /// Evaluated at frequency f (MHz) gives α(f) = α₀·f^y in dB/cm.
+    /// Canonical tissue values from Duck (1990) Table 4.1.
     pub absorption_coefficient: f64,
 
     /// Absorption frequency exponent (typically 1.0-2.0)

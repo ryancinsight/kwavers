@@ -21,8 +21,10 @@ use crate::core::constants::optical::{
     REFRACTIVE_INDEX_BIOLOGICAL_FLUID, REFRACTIVE_INDEX_CSF, REFRACTIVE_INDEX_WATER,
 };
 use crate::core::constants::fundamental::{
-    ATMOSPHERIC_PRESSURE, B_OVER_A_BLOOD, B_OVER_A_CSF, B_OVER_A_WATER, DENSITY_BLOOD,
-    DENSITY_TISSUE, DENSITY_WATER_37C, SOUND_SPEED_BLOOD, SOUND_SPEED_WATER, SOUND_SPEED_WATER_37C,
+    ACOUSTIC_ABSORPTION_BLOOD_PLASMA, ACOUSTIC_ABSORPTION_WHOLE_BLOOD, ATMOSPHERIC_PRESSURE,
+    B_OVER_A_BLOOD, B_OVER_A_CSF, B_OVER_A_WATER, DENSITY_BLOOD, DENSITY_TISSUE,
+    DENSITY_WATER_37C, SOUND_SPEED_BLOOD, SOUND_SPEED_WATER, SOUND_SPEED_WATER_37C,
+    WATER_ABSORPTION_ALPHA_0_DB_CM_MHZ2,
 };
 use crate::core::constants::medical::BLOOD_SPECIFIC_HEAT;
 use crate::core::constants::thermodynamic::{
@@ -47,7 +49,7 @@ pub const BLOOD_PLASMA: FluidProperties = FluidProperties {
     sound_speed: SOUND_SPEED_BLOOD,
     density: 1026.0,
     impedance: 1624784.0,
-    absorption_coefficient: 0.015,
+    absorption_coefficient: ACOUSTIC_ABSORPTION_BLOOD_PLASMA, // 0.015 dB/(cm·MHz^y) — Duck (1990)
     absorption_exponent: 1.2,
     nonlinearity_parameter: B_OVER_A_WATER, // 5.2 (Duck 1990 Table 4.16)
     shear_viscosity: BLOOD_PLASMA_VISCOSITY_37C,
@@ -73,7 +75,7 @@ pub const WHOLE_BLOOD: FluidProperties = FluidProperties {
     sound_speed: SOUND_SPEED_BLOOD,
     density: DENSITY_BLOOD,
     impedance: 1_679_040.0, // DENSITY_BLOOD * SOUND_SPEED_BLOOD = 1060.0 × 1584.0
-    absorption_coefficient: 0.025,
+    absorption_coefficient: ACOUSTIC_ABSORPTION_WHOLE_BLOOD, // 0.025 dB/(cm·MHz^y) — Duck (1990)
     absorption_exponent: 1.3,
     nonlinearity_parameter: B_OVER_A_BLOOD, // 6.1 (Duck 1990 Table 4.16)
     shear_viscosity: BLOOD_VISCOSITY_37C,   // Non-Newtonian: shear-thinning
@@ -216,7 +218,7 @@ pub const WATER_37C: FluidProperties = FluidProperties {
     density: DENSITY_WATER_37C,
     // Z = ρ·c = DENSITY_WATER_37C × SOUND_SPEED_WATER_37C = 993.3 × 1524 = 1 513 789 Pa·s/m
     impedance: 1_513_789.0,
-    absorption_coefficient: 0.002,
+    absorption_coefficient: WATER_ABSORPTION_ALPHA_0_DB_CM_MHZ2, // 0.002 dB/(cm·MHz²) — Duck (1990)
     absorption_exponent: 2.0,
     nonlinearity_parameter: 5.0,
     shear_viscosity: 0.7e-3,
