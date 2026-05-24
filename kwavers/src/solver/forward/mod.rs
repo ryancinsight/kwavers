@@ -60,7 +60,6 @@
 //! Until then, both surfaces are stable and `cargo-semver-checks`-clean.
 
 // ── Flat layout (legacy, stable) ─────────────────────────────────────────────
-pub mod acoustic;
 pub mod acoustic_ivp;
 pub mod bem;
 pub mod bubble_dynamics;
@@ -85,9 +84,8 @@ pub mod thermal_diffusion;
 // above; only the navigation path changes.
 
 /// Acoustic-domain solvers: FDTD, PSTD, k-space, IVP, nonlinear (Westervelt /
-/// Kuznetsov / KZK), and Helmholtz / Born-series formulations.
+/// Kuznetsov / KZK), and Helmholtz formulations.
 pub mod acoustic_solvers {
-    pub use super::acoustic;
     pub use super::acoustic_ivp;
     pub use super::fdtd;
     pub use super::helmholtz;
