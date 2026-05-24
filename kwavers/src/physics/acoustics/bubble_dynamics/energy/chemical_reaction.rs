@@ -3,6 +3,9 @@
 use uom::si::f64::Power;
 use uom::si::power::watt;
 
+use crate::core::constants::chemistry::{
+    EA_WATER_DECOMPOSITION_J_MOL, H_WATER_DISSOCIATION_J_MOL, K_WATER_DECOMPOSITION_PRE_EXP,
+};
 use crate::core::constants::fundamental::GAS_CONSTANT as R_GAS;
 use crate::physics::acoustics::bubble_dynamics::bubble_state::BubbleState;
 use crate::physics::acoustics::bubble_dynamics::energy::EnergyBalanceCalculator;
@@ -55,16 +58,9 @@ impl EnergyBalanceCalculator {
             return Power::new::<watt>(0.0);
         }
 
-        // Water dissociation enthalpy (Baulch et al. 2005): ΔH = 498.4 kJ/mol
-        const H_DISSOCIATION: f64 = 498_400.0; // J/mol
-
-        // Arrhenius parameters (Yasui 1997, Table I; Baulch 2005 Reaction R5)
-        const ACTIVATION_ENERGY: f64 = 495_400.0; // J/mol (O−H bond dissociation energy)
-        const PRE_EXPONENTIAL: f64 = 1.912e16; // s⁻¹ (high-pressure limit)
-
         // k(T) = A · exp(−Eₐ / RT)  [s⁻¹]
-        let rate_constant =
-            PRE_EXPONENTIAL * (-ACTIVATION_ENERGY / (R_GAS * state.temperature)).exp();
+        let rate_constant = K_WATER_DECOMPOSITION_PRE_EXP
+            * (-EA_WATER_DECOMPOSITION_J_MOL / (R_GAS * state.temperature)).exp();
 
         // Number of moles of water vapor that can dissociate
         let n_vapor_moles = state.n_vapor / crate::core::constants::AVOGADRO;
@@ -73,6 +69,6 @@ impl EnergyBalanceCalculator {
         let dissociation_rate_mol_per_s = rate_constant * n_vapor_moles;
 
         // Energy absorption rate: Q̇ = −ΔH · ṅ  [W] (negative = endothermic)
-        Power::new::<watt>(-dissociation_rate_mol_per_s * H_DISSOCIATION)
+        Power::new::<watt>(-dissociation_rate_mol_per_s * H_WATER_DISSOCIATION_J_MOL)
     }
 }

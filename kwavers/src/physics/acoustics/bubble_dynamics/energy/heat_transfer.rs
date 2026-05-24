@@ -14,6 +14,7 @@ use uom::si::thermodynamic_temperature::kelvin;
 use uom::si::time::second;
 
 use crate::core::constants::GAS_CONSTANT as R_GAS;
+use crate::core::constants::thermodynamic::H_VAP_WATER_100C;
 use crate::physics::acoustics::bubble_dynamics::bubble_state::BubbleState;
 use crate::physics::acoustics::bubble_dynamics::energy::EnergyBalanceCalculator;
 use crate::physics::acoustics::bubble_dynamics::BubbleParameters;
@@ -201,10 +202,8 @@ pub fn update_temperature_energy_balance(
     // Calculate heat transfer rate
     let heat_transfer_rate = calculator.calculate_heat_transfer_rate(state, peclet);
 
-    // Calculate latent heat rate from mass transfer
-    // L_vap ≈ 2.26 MJ/kg for water at standard conditions
-    const LATENT_HEAT_VAPORIZATION: f64 = 2.26e6; // J/kg
-    let latent_heat_rate = Power::new::<watt>(mass_transfer_rate * LATENT_HEAT_VAPORIZATION);
+    // Calculate latent heat rate from mass transfer (H_VAP_WATER_100C = 2.257 MJ/kg at 100°C)
+    let latent_heat_rate = Power::new::<watt>(mass_transfer_rate * H_VAP_WATER_100C);
 
     // Calculate total energy rate
     let energy_rate =

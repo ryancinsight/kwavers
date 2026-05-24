@@ -26,6 +26,37 @@ pub const BASE_PHOTOCHEMICAL_RATE: f64 = 1e-4;
 /// Reference: NIST Atomic Spectra Database
 pub const ARGON_IONIZATION_ENERGY: f64 = 15.7596;
 
+// ── Water vapor thermal dissociation parameters ───────────────────────────────
+//
+// H₂O → OH + H  (reverse of hydroxyl combination)
+//
+// References:
+// - Baulch DL et al. (2005). "Evaluated kinetic data for combustion modelling:
+//   supplement II." J. Phys. Chem. Ref. Data 34(3):757–1397.
+// - Yasui K (1997). "Alternative model of single-bubble sonoluminescence."
+//   Phys. Rev. E 56(6):6750–6760. Table I.
+
+/// Standard enthalpy of water dissociation (O−H bond) [J/mol].
+///
+/// H₂O → OH + H, ΔH = 498.4 kJ/mol at 298 K.
+///
+/// Reference: Baulch et al. (2005) Reaction R5; JANAF Tables (4th ed.) H₂O entry.
+pub const H_WATER_DISSOCIATION_J_MOL: f64 = 498_400.0; // J/mol
+
+/// Activation energy for H₂O → OH + H at high temperature [J/mol].
+///
+/// Ea = 495.4 kJ/mol (essentially the O−H bond dissociation energy).
+///
+/// Reference: Baulch et al. (2005); Yasui (1997) Table I.
+pub const EA_WATER_DECOMPOSITION_J_MOL: f64 = 495_400.0; // J/mol
+
+/// High-pressure Arrhenius pre-exponential factor for H₂O → OH + H [s⁻¹].
+///
+/// A = 1.912×10¹⁶ s⁻¹ (unimolecular, high-pressure limit).
+///
+/// Reference: Yasui K (1997). Phys. Rev. E 56(6):6750–6760. Table I.
+pub const K_WATER_DECOMPOSITION_PRE_EXP: f64 = 1.912e16; // s⁻¹
+
 // ── Aqueous-phase radical rate constants at 25°C ──────────────────────────────
 //
 // References:
