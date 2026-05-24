@@ -4,7 +4,7 @@
 //! established literature and analytical solutions.
 
 use approx::assert_relative_eq;
-use kwavers::physics::constants::{DENSITY_WATER, SOUND_SPEED_WATER, WATER_NONLINEARITY_B_A};
+use kwavers::core::constants::{DENSITY_WATER, SOUND_SPEED_WATER, WATER_NONLINEARITY_B_A};
 
 #[cfg(test)]
 mod wave_equation_tests {

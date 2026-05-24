@@ -8,7 +8,7 @@ use kwavers::{
     error::GridError,
     grid::Grid,
     medium::{CoreMedium, HomogeneousMedium},
-    physics::constants::{DENSITY_WATER, SOUND_SPEED_WATER},
+    core::constants::{DENSITY_WATER, SOUND_SPEED_WATER},
 };
 
 #[test]

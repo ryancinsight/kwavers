@@ -5,7 +5,7 @@
 
 use kwavers::domain::grid::Grid;
 use kwavers::domain::medium::HomogeneousMedium;
-use kwavers::physics::constants::CFL_SAFETY_FACTOR;
+use kwavers::core::constants::CFL_SAFETY_FACTOR;
 
 #[test]
 fn test_cfl_condition_3d_fdtd() {

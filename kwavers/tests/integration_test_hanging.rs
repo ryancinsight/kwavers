@@ -4,7 +4,7 @@ use kwavers::{
     boundary::PMLBoundary,
     grid::Grid,
     medium::{CoreMedium, HomogeneousMedium},
-    physics::constants::{DENSITY_WATER, SOUND_SPEED_WATER},
+    core::constants::{DENSITY_WATER, SOUND_SPEED_WATER},
     solver::plugin_based::PluginBasedSolver,
     source::PointSource,
     time::Time,

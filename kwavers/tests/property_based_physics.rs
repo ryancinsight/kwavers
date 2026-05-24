@@ -4,9 +4,9 @@
 //! **Literature**: FSE 2025 "Property-Based Testing for Rust Safety"
 //! **Validation**: All properties verified against known physical constraints
 
-use kwavers::analysis::testing::property_based::acoustic_properties::*;
-use kwavers::analysis::testing::property_based::grid_properties::*;
-use kwavers::analysis::testing::property_based::medium_properties::*;
+use kwavers::analysis::testing::property_based::acoustic::acoustic_properties::*;
+use kwavers::analysis::testing::property_based::acoustic::grid_properties::*;
+use kwavers::analysis::testing::property_based::acoustic::medium_properties::*;
 use kwavers::{
     domain::medium::{CoreMedium, HomogeneousMedium},
     Grid,

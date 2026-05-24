@@ -4,7 +4,7 @@
 //! **References**: Hamilton & Blackstock (1998), Pierce (1989), Treeby & Cox (2010)
 //! **Compliance**: All tests verify against known theoretical results
 
-use kwavers::physics::constants::{DENSITY_WATER, SOUND_SPEED_WATER};
+use kwavers::core::constants::{DENSITY_WATER, SOUND_SPEED_WATER};
 use kwavers::{
     medium::{CoreMedium, HomogeneousMedium},
     Grid,
