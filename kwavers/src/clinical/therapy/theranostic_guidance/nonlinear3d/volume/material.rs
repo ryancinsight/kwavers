@@ -6,7 +6,7 @@ use super::super::super::AnatomyKind;
 use super::attenuation::{attenuation_np_per_m_mhz_from_hu, attenuation_power_law_y_from_hu};
 use crate::core::constants::acoustic_parameters::SOUND_SPEED_SKULL;
 use crate::core::constants::fundamental::{
-    B_OVER_A_BONE, B_OVER_A_SOFT_TISSUE, B_OVER_A_WATER_37C, DENSITY_AIR,
+    B_OVER_A_AIR, B_OVER_A_BONE, B_OVER_A_SOFT_TISSUE, B_OVER_A_WATER_37C, DENSITY_AIR,
     DENSITY_WATER_NOMINAL, HU_BONE_THRESHOLD, SOUND_SPEED_AIR, SOUND_SPEED_KIDNEY,
     SOUND_SPEED_LIVER, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER, SOUND_SPEED_WATER_SIM,
 };
@@ -21,8 +21,8 @@ const COUPLING_DENSITY_KG_M3: f64 = DENSITY_WATER_NOMINAL;
 /// is the correct physical choice here.
 const COUPLING_BETA: f64 = 1.0 + B_OVER_A_WATER_37C / 2.0;
 const AIR_DENSITY_KG_M3: f64 = DENSITY_AIR;
-/// Nonlinearity parameter for air (B/A_air ≈ 0.4, β = 1.2).
-const AIR_BETA: f64 = 1.2;
+/// β = 1 + B/(2A) for air. B_OVER_A_AIR = 0.4 → β = 1.2 (classical diatomic gas).
+const AIR_BETA: f64 = 1.0 + B_OVER_A_AIR / 2.0;
 const INTERNAL_GAS_HU_THRESHOLD: f64 = -700.0;
 
 /// CT-to-density linear slope [kg/m³ per HU].
