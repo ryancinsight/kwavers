@@ -13,6 +13,9 @@ use crate::core::constants::cavitation::{
 use crate::core::constants::fundamental::{
     ACOUSTIC_ABSORPTION_TISSUE, ATMOSPHERIC_PRESSURE, DENSITY_TISSUE, SOUND_SPEED_TISSUE,
 };
+use crate::core::constants::optical::{
+    OPTICAL_ABSORPTION_TISSUE_NIR_M, OPTICAL_SCATTERING_REDUCED_TISSUE_NIR_M,
+};
 use crate::core::constants::thermodynamic::{
     BODY_TEMPERATURE_K, SPECIFIC_HEAT_BRAIN, THERMAL_CONDUCTIVITY_BLOOD,
     THERMAL_DIFFUSIVITY_TISSUE, THERMAL_EXPANSION_SOFT_TISSUE,
@@ -64,9 +67,10 @@ impl TissueFactory {
             Array3::from_elem((grid.nx, grid.ny, grid.nz), THERMAL_DIFFUSIVITY_TISSUE);
         let temperature = Array3::from_elem((grid.nx, grid.ny, grid.nz), BODY_TEMPERATURE_K); // 37°C
 
-        // Optical properties
-        let mu_a = Array3::from_elem((grid.nx, grid.ny, grid.nz), 10.0);
-        let mu_s_prime = Array3::from_elem((grid.nx, grid.ny, grid.nz), 100.0);
+        // Optical properties [m⁻¹] — broadband NIR soft tissue initialization
+        let mu_a = Array3::from_elem((grid.nx, grid.ny, grid.nz), OPTICAL_ABSORPTION_TISSUE_NIR_M);
+        let mu_s_prime =
+            Array3::from_elem((grid.nx, grid.ny, grid.nz), OPTICAL_SCATTERING_REDUCED_TISSUE_NIR_M);
 
         // Bubble state
         let bubble_radius = Array3::from_elem((grid.nx, grid.ny, grid.nz), 10e-6);

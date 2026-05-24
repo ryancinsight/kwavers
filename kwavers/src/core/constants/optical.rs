@@ -25,7 +25,29 @@ pub const BOHR_RADIUS: f64 = 5.29177210903e-11;
 // Optical Properties for Tissue
 // ============================================================================
 
+/// Tissue optical absorption coefficient at NIR wavelengths (~700–900 nm) [m⁻¹].
+///
+/// Representative broadband NIR value for generic soft tissue (37°C).
+/// Equivalent to 0.1 cm⁻¹ (× 100 m/cm).  Actual values vary with wavelength:
+/// ~2 m⁻¹ at 700 nm to ~40 m⁻¹ at 900 nm for tissue with normal blood content.
+///
+/// Reference: Tuchin V V (2007). *Tissue Optics*. SPIE Press. Table 1.1;
+/// Cheong W et al. (1990). *IEEE J. Quantum Electron.* 26(12):2166–2185.
+pub const OPTICAL_ABSORPTION_TISSUE_NIR_M: f64 = 10.0; // m⁻¹
+
+/// Tissue optical reduced scattering coefficient at NIR wavelengths [m⁻¹].
+///
+/// Representative broadband NIR value for generic soft tissue.
+/// Equivalent to 1.0 cm⁻¹.  Actual values are wavelength-dependent and
+/// tissue-type-dependent; 100 m⁻¹ is a conservative lower-bound estimate.
+///
+/// Reference: Tuchin V V (2007). *Tissue Optics*. SPIE Press. Table 1.1;
+/// Cheong W et al. (1990). *IEEE J. Quantum Electron.* 26(12):2166–2185.
+pub const OPTICAL_SCATTERING_REDUCED_TISSUE_NIR_M: f64 = 100.0; // m⁻¹
+
 /// Tissue absorption coefficient (1/cm)
+///
+/// Deprecated alias — use `OPTICAL_ABSORPTION_TISSUE_NIR_M` (in m⁻¹) for new code.
 pub const TISSUE_ABSORPTION_COEFFICIENT: f64 = 0.1;
 
 /// Tissue diffusion coefficient (cm)
