@@ -572,6 +572,17 @@ pub const ACOUSTIC_ABSORPTION_BRAIN_GRAY: f64 = 0.7; // dB/(cm·MHz)
 /// Reference: Duck, F.A. (1990). *Physical Properties of Tissue*, Table 4.1.
 pub const ACOUSTIC_ABSORPTION_SKULL_BULK: f64 = 3.0; // dB/(cm·MHz)
 
+/// Acoustic absorption coefficient of long-bone cortical bone [dB/(cm·MHz)].
+///
+/// Representative Duck (1990) longitudinal-wave value for cortical bone such as
+/// femur or tibia cortex.  Duck (1990) Table 4.1 reports 3–10 dB/(cm·MHz) for
+/// cortical bone depending on orientation; 4.0 is the mid-range mean value.
+/// Skull cortical bone has higher absorption (see `ACOUSTIC_ABSORPTION_SKULL_CORTICAL_MIN`).
+///
+/// Reference: Duck, F.A. (1990). *Physical Properties of Tissue*, Table 4.1;
+/// Hosokawa A & Otani T (1997). *J. Acoust. Soc. Am.* 101(1):558–562.
+pub const ACOUSTIC_ABSORPTION_CORTICAL_BONE: f64 = 4.0; // dB/(cm·MHz)
+
 /// Acoustic absorption coefficient of liver tissue [dB/(cm·MHz)].
 ///
 /// Hepatic parenchymal mean at body temperature (37°C).  Duck (1990) Table 4.1
