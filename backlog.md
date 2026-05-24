@@ -1,5 +1,16 @@
 # Backlog / Strategy
 
+## Focused bowl axis-reference aperture config - closed (2026-05-24)
+- **[done] [minor]** Promoted axis-reference focused-bowl construction to the
+  public source-domain API and added `FocusedBowlAperture::AxisReferencePolarBounds`
+  for config-driven focused sources. `position` now acts as the contact/axis
+  reference for that aperture mode, `radius_of_curvature_m` fixes the source
+  radius independently of contact-to-focus distance, and `SourceFactory` still
+  delegates element positions, normals, and weights to `BowlTransducer`.
+  Verification: the axis-reference source factory regression passes 1/1, the
+  bowl axis-reference preset theorem test passes 1/1, and
+  `cargo check -p kwavers --lib --message-format=short -j 1` exits 0.
+
 ## Focused-bowl model-label cleanup - closed (2026-05-24)
 - **[done] [patch]** Removed vendor-like focused-bowl labels from live Rust and
   PyO3 source/model metadata. Abdominal 2-D layout, abdominal placement

@@ -293,6 +293,27 @@ impl SourceFactory {
                     element_count,
                 )
             }
+            FocusedBowlAperture::AxisReferencePolarBounds {
+                radius_of_curvature_m,
+                theta_min_rad,
+                theta_max_rad,
+            } => {
+                let element_count = required_focused_bowl_element_count(config)?;
+                let mut axis_config = BowlConfig::from_axis_reference_focus(
+                    config.position,
+                    bowl_config.focus,
+                    radius_of_curvature_m,
+                    config.frequency,
+                    config.amplitude,
+                )?;
+                axis_config.phase = config.phase;
+                BowlTransducer::with_polar_bounds(
+                    axis_config,
+                    theta_min_rad,
+                    theta_max_rad,
+                    element_count,
+                )
+            }
         }
     }
 }
@@ -388,5 +409,67 @@ mod tests {
             format!("{error:?}").contains("num_elements"),
             "expected num_elements validation, got {error:?}"
         );
+    }
+
+    #[test]
+    fn focused_source_factory_accepts_axis_reference_explicit_radius_aperture() {
+        let mut grid = Grid::new(64, 64, 32, 0.008, 0.008, 0.008).unwrap();
+        grid.origin = [-0.256, -0.256, -0.032];
+        let axis_reference = [0.0, 0.0, 0.04];
+        let focus = [0.0, 0.0, 0.0];
+        let radius = 0.16_f64;
+        let theta_min = 0.20_f64;
+        let theta_max = 0.90_f64;
+        let element_count = 23;
+        let config = DomainSourceParameters {
+            model: SourceModel::Focused,
+            position: axis_reference,
+            focus: Some(focus),
+            radius: 0.01,
+            frequency: 650.0e3,
+            num_elements: Some(element_count),
+            focused_bowl_aperture: FocusedBowlAperture::AxisReferencePolarBounds {
+                radius_of_curvature_m: radius,
+                theta_min_rad: theta_min,
+                theta_max_rad: theta_max,
+            },
+            ..Default::default()
+        };
+
+        let source = SourceFactory::create_source(&config, &grid).unwrap();
+        let axis_norm = ((focus[0] - axis_reference[0]).powi(2)
+            + (focus[1] - axis_reference[1]).powi(2)
+            + (focus[2] - axis_reference[2]).powi(2))
+        .sqrt();
+        let axis_unit = [
+            (focus[0] - axis_reference[0]) / axis_norm,
+            (focus[1] - axis_reference[1]) / axis_norm,
+            (focus[2] - axis_reference[2]) / axis_norm,
+        ];
+
+        assert_eq!(source.positions().len(), element_count);
+        assert_eq!(source.focal_point(), Some((focus[0], focus[1], focus[2])));
+        for position in source.positions() {
+            let vector_focus_to_element = [
+                focus[0] - position.0,
+                focus[1] - position.1,
+                focus[2] - position.2,
+            ];
+            let distance = (vector_focus_to_element[0].powi(2)
+                + vector_focus_to_element[1].powi(2)
+                + vector_focus_to_element[2].powi(2))
+            .sqrt();
+            let axis_projection = axis_unit[0].mul_add(
+                vector_focus_to_element[0],
+                axis_unit[1].mul_add(
+                    vector_focus_to_element[1],
+                    axis_unit[2] * vector_focus_to_element[2],
+                ),
+            ) / radius;
+
+            assert!((distance - radius).abs() < 1.0e-12);
+            assert!(axis_projection <= theta_min.cos() + 1.0e-12);
+            assert!(axis_projection >= theta_max.cos() - 1.0e-12);
+        }
     }
 }

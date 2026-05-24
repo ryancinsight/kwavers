@@ -73,7 +73,7 @@ impl BowlConfig {
     ///
     /// Returns a validation error when coordinates are non-finite, `radius_m`
     /// is not positive finite, or the axis reference equals the focus.
-    pub(crate) fn from_axis_reference_focus(
+    pub fn from_axis_reference_focus(
         axis_reference_m: [f64; 3],
         focus_m: [f64; 3],
         radius_m: f64,

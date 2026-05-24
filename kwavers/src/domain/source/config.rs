@@ -71,6 +71,16 @@ pub enum FocusedBowlAperture {
         /// Upper normalized aperture-axis projection.
         axis_projection_max: f64,
     },
+    /// Use `position` as an axis reference rather than the bowl vertex and
+    /// construct the source vertex from the explicit curvature radius.
+    AxisReferencePolarBounds {
+        /// Curvature radius from the acoustic focus to the bowl surface [m].
+        radius_of_curvature_m: f64,
+        /// Minimum polar angle from the vertex-to-focus axis [rad].
+        theta_min_rad: f64,
+        /// Maximum polar angle from the vertex-to-focus axis [rad].
+        theta_max_rad: f64,
+    },
 }
 
 /// Types of acoustic sources (Geometry/Distribution)

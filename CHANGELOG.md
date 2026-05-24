@@ -9,6 +9,14 @@
   therapy plotting fixture now identify the source as `focused_bowl` while
   anatomy remains target metadata.
 
+### Added (2026-05-24) - Focused Bowl Axis-Reference Aperture
+
+- [minor] Add `FocusedBowlAperture::AxisReferencePolarBounds` and make
+  `BowlConfig::from_axis_reference_focus` public so config-driven focused
+  sources can use an anatomical/contact axis reference with an explicit
+  curvature radius while still generating element layout through
+  `BowlTransducer`.
+
 ### Fixed (2026-05-24) - Medium Property SSOT Constant Closure
 
 - [patch] Complete the medium-property SSOT extraction by defining the missing

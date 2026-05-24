@@ -1,5 +1,27 @@
 # Gap Audit
 
+## Focused Bowl Axis-Reference Aperture Config (2026-05-24)
+
+Config-driven focused sources could request fixed-count polar and
+axis-projection bowl apertures, but they could not express the source-domain
+case where a contact point fixes the aperture axis while an explicit curvature
+radius places the bowl vertex away from that contact point. That kept the
+generic option available only to internal clinical code.
+
+### Closure
+- Made `BowlConfig::from_axis_reference_focus` public at the focused bowl source
+  boundary.
+- Added `FocusedBowlAperture::AxisReferencePolarBounds` with explicit
+  `radius_of_curvature_m`, `theta_min_rad`, and `theta_max_rad` fields.
+- Routed `SourceFactory` through the axis-reference bowl constructor for that
+  aperture mode, preserving `BowlTransducer` as the single owner of element
+  positions, normals, and equal-area weights.
+
+### Verification summary
+- `cargo test -p kwavers focused_source_factory_accepts_axis_reference_explicit_radius_aperture --lib --message-format=short -j 1`: 1/1 pass.
+- `cargo test -p kwavers axis_reference_preset_preserves_focus_axis_and_explicit_radius --lib --message-format=short -j 1`: 1/1 pass.
+- `cargo check -p kwavers --lib --message-format=short -j 1`: exit 0.
+
 ## Focused-Bowl Model Label Cleanup (2026-05-24)
 
 Live source/model metadata still encoded vendor-like focused-bowl identifiers.
