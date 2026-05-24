@@ -160,7 +160,7 @@ pub const LIVER: TissueProperties = TissueProperties {
     sound_speed: SOUND_SPEED_LIVER,
     density: DENSITY_LIVER,
     impedance: 1_672_680.0,
-    absorption_coefficient: ACOUSTIC_ABSORPTION_LIVER, // 0.4 dB/(cm·MHz) — Duck (1990)
+    absorption_coefficient: ACOUSTIC_ABSORPTION_LIVER, // 0.5 dB/(cm·MHz) — Duck (1990)
     absorption_exponent: 1.0,
     nonlinearity_parameter: B_OVER_A_LIVER, // 6.75 (Duck 1990 Table 4.16 mean)
     shear_viscosity: VISCOSITY_PARENCHYMAL_TISSUE,
@@ -270,7 +270,7 @@ pub const MUSCLE: TissueProperties = TissueProperties {
     sound_speed: SOUND_SPEED_MUSCLE,
     density: DENSITY_MUSCLE,
     impedance: 1_722_200.0,
-    absorption_coefficient: ACOUSTIC_ABSORPTION_MUSCLE, // 0.13 dB/(cm·MHz) — Duck (1990)
+    absorption_coefficient: ACOUSTIC_ABSORPTION_MUSCLE, // 0.57 dB/(cm·MHz), longitudinal — Duck (1990)
     absorption_exponent: 1.0,
     nonlinearity_parameter: B_OVER_A_MUSCLE, // 7.4 (Duck 1990 Table 4.16)
     shear_viscosity: VISCOSITY_PARENCHYMAL_TISSUE,

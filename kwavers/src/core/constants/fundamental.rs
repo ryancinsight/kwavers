@@ -547,10 +547,12 @@ pub const ACOUSTIC_ABSORPTION_SKULL_BULK: f64 = 3.0; // dB/(cm·MHz)
 
 /// Acoustic absorption coefficient of liver tissue [dB/(cm·MHz)].
 ///
-/// Hepatic parenchymal mean at body temperature (37°C).
+/// Hepatic parenchymal mean at body temperature (37°C).  Duck (1990) Table 4.1
+/// reports a range of 0.4–0.7 dB/(cm·MHz) with a population mean near 0.5.
 ///
-/// Reference: Duck, F.A. (1990). *Physical Properties of Tissue*, Table 4.1.
-pub const ACOUSTIC_ABSORPTION_LIVER: f64 = 0.4; // dB/(cm·MHz)
+/// Reference: Duck, F.A. (1990). *Physical Properties of Tissue*, Table 4.1;
+/// Goss et al. (1978). *J. Acoust. Soc. Am.* 64(2):423–457.
+pub const ACOUSTIC_ABSORPTION_LIVER: f64 = 0.5; // dB/(cm·MHz)
 
 /// Acoustic absorption coefficient of blood [dB/(cm·MHz)].
 ///
@@ -560,15 +562,35 @@ pub const ACOUSTIC_ABSORPTION_LIVER: f64 = 0.4; // dB/(cm·MHz)
 /// Cobbold (2007). *Foundations of Biomedical Ultrasound*, Table 3.3.
 pub const ACOUSTIC_ABSORPTION_BLOOD: f64 = 0.15; // dB/(cm·MHz)
 
-/// Acoustic absorption coefficient of skeletal muscle [dB/(cm·MHz)].
+/// Acoustic absorption coefficient of skeletal muscle, longitudinal (along-fibre)
+/// direction [dB/(cm·MHz)].
 ///
-/// Mean for muscle tissue, in-line with fibre (across-fibre values reach
-/// 1.0–1.5 dB/(cm·MHz)).  The canonical across-fibre value from Duck (1990)
-/// is ~1.0 dB/(cm·MHz); 0.13 is retained here as the original catalogued
-/// value — **verify against source** before clinical use.
+/// Duck (1990) Table 4.1 reports ~0.57 dB/(cm·MHz) for longitudinal propagation
+/// along muscle fibres at 37°C.  Hamilton & Blackstock (1998) Table 4.1 gives
+/// 0.5–0.6 dB/(cm·MHz) for soft tissue broadly consistent with muscle.
+///
+/// Reference: Duck, F.A. (1990). *Physical Properties of Tissue*, Table 4.1;
+/// Goss et al. (1978). *J. Acoust. Soc. Am.* 64(2):423–457.
+pub const ACOUSTIC_ABSORPTION_MUSCLE: f64 = 0.57; // dB/(cm·MHz)
+
+/// Acoustic absorption coefficient of skeletal muscle, transverse (across-fibre)
+/// direction [dB/(cm·MHz)].
+///
+/// Duck (1990) Table 4.1 reports 1.0–1.5 dB/(cm·MHz) for propagation
+/// perpendicular to muscle fibres at 37°C; 1.15 is adopted as the representative
+/// mid-range value per Hamilton & Blackstock (1998) Table 8.1.
+///
+/// Reference: Duck, F.A. (1990). *Physical Properties of Tissue*, Table 4.1;
+/// Hamilton & Blackstock (1998). *Nonlinear Acoustics*, Table 8.1.
+pub const ACOUSTIC_ABSORPTION_MUSCLE_TRANSVERSE: f64 = 1.15; // dB/(cm·MHz)
+
+/// Acoustic absorption coefficient of renal cortex [dB/(cm·MHz)].
+///
+/// Duck (1990) Table 4.1 reports 0.79–0.84 dB/(cm·MHz) for kidney cortex at 37°C;
+/// 0.81 is the representative Duck (1990) mid-range value.
 ///
 /// Reference: Duck, F.A. (1990). *Physical Properties of Tissue*, Table 4.1.
-pub const ACOUSTIC_ABSORPTION_MUSCLE: f64 = 0.13; // dB/(cm·MHz)
+pub const ACOUSTIC_ABSORPTION_KIDNEY_CORTEX: f64 = 0.81; // dB/(cm·MHz)
 
 /// Acoustic absorption coefficient of adipose (fat) tissue [dB/(cm·MHz)].
 ///
