@@ -40,7 +40,7 @@ pub mod coupler;
 pub mod interface;
 pub mod solver;
 
-pub use config::*;
-pub use coupler::*;
-pub use interface::*;
-pub use solver::*;
+pub use config::BemFemCouplingConfig;
+pub use coupler::BemFemCoupler;
+pub use interface::BemFemInterface;
+pub use solver::BemFemSolver;

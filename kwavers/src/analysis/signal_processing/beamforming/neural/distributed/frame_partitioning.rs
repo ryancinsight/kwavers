@@ -3,7 +3,7 @@
 //! This module owns the scheduling primitives for frame-major RF volumes:
 //! active-processor selection, bounded partition sizing, and chunk metadata.
 
-use crate::analysis::signal_processing::beamforming::neural::pinn_interface::{
+use crate::solver::interface::pinn_beamforming::{
     DistributedConfig, LoadBalancingStrategy, PinnBeamformingDecompositionStrategy,
 };
 use ndarray::Array3;

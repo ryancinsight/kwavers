@@ -72,8 +72,14 @@ pub mod report;
 pub mod runner;
 pub mod validator;
 
-pub use constants::*;
-pub use ieee754::*;
-pub use report::*;
-pub use runner::*;
-pub use validator::*;
+pub use constants::{
+    DEFAULT_ABSOLUTE_TOLERANCE, DEFAULT_RELATIVE_TOLERANCE, F64_MACHINE_EPSILON, F64_UNIT_ROUNDOFF,
+    MAX_DIVERGENT_FRACTION, MEASUREMENT_STEPS, WARMUP_STEPS,
+};
+pub use ieee754::{ulps_diff, verify_ieee754_compliance, within_ulps};
+pub use report::EquivalenceReport;
+pub use runner::{
+    validate_equivalence_config, validate_gpu_cpu_equivalence,
+    validate_gpu_cpu_equivalence_with_config,
+};
+pub use validator::EquivalenceValidator;

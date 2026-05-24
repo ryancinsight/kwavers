@@ -47,8 +47,8 @@ pub mod manager;
 pub mod parameters;
 pub mod transform;
 
-pub use fusion::*;
-pub use image::*;
-pub use manager::*;
-pub use parameters::*;
-pub use transform::*;
+pub use fusion::FusionEngine;
+pub use image::{ImageData, ImageModality};
+pub use manager::{MultimodalityFusionManager, MultimodalitySession};
+pub use parameters::{FusionParameters, MultimodalityFusionMethod};
+pub use transform::{RegistrationTransform, TransformationType};

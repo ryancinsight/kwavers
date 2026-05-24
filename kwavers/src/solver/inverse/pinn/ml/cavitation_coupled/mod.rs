@@ -7,6 +7,6 @@ pub mod residuals;
 #[cfg(test)]
 mod tests;
 
-pub use config::*;
-pub use domain::*;
-pub use mie_scattering::*;
+pub use config::{CavitationCouplingConfig, CavitationCouplingType};
+pub use domain::CavitationCoupledDomain;
+pub use mie_scattering::mie_backscatter_form_function;

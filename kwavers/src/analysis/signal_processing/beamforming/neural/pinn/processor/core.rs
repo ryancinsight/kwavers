@@ -5,7 +5,7 @@ use ndarray::{s, Array3, Array4, ArrayView3, ArrayView4};
 use std::collections::HashMap;
 
 #[cfg(feature = "pinn")]
-use crate::analysis::signal_processing::beamforming::neural::pinn_interface::{
+use crate::solver::interface::pinn_beamforming::{
     PinnBeamformingProvider, PinnBeamformingUncertaintyConfig,
 };
 

@@ -1,5 +1,5 @@
 #[cfg(feature = "pinn")]
-use crate::analysis::signal_processing::beamforming::neural::pinn_interface::{
+use crate::solver::interface::pinn_beamforming::{
     DistributedConfig, LoadBalancingStrategy, PinnBeamformingDecompositionStrategy,
 };
 #[cfg(feature = "pinn")]
