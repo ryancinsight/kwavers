@@ -2,7 +2,9 @@
 
 use crate::core::constants::acoustic_parameters::NP_TO_DB;
 use crate::core::constants::numerical::MHZ_TO_HZ;
-use crate::core::constants::fundamental::{B_OVER_A_SOFT_TISSUE, DENSITY_WATER_NOMINAL};
+use crate::core::constants::fundamental::{
+    ACOUSTIC_ABSORPTION_TISSUE, B_OVER_A_SOFT_TISSUE, DENSITY_WATER_NOMINAL,
+};
 use crate::core::constants::SOUND_SPEED_WATER_SIM;
 use crate::core::error::{KwaversError, KwaversResult};
 
@@ -15,7 +17,9 @@ pub struct HASConfig {
     pub density: f64,
     /// Nonlinearity parameter B/A
     pub nonlinearity: f64,
-    /// Attenuation coefficient (Np/m/MHz^y)
+    /// Attenuation coefficient [dB/(cm·MHz^y)].
+    ///
+    /// Converted to Np/m at a given frequency by `attenuation_at_frequency`.
     pub attenuation_coeff: f64,
     /// Power law exponent (y)
     pub power_law_exponent: f64,
@@ -31,7 +35,7 @@ impl Default for HASConfig {
             sound_speed: SOUND_SPEED_WATER_SIM,
             density: DENSITY_WATER_NOMINAL,
             nonlinearity: B_OVER_A_SOFT_TISSUE, // 6.5 generic soft tissue (Duck 1990)
-            attenuation_coeff: 0.5,
+            attenuation_coeff: ACOUSTIC_ABSORPTION_TISSUE, // 0.5 dB/(cm·MHz) — Duck (1990)
             power_law_exponent: 2.0,
             dz: 0.0001,
             reference_frequency: MHZ_TO_HZ,
