@@ -208,7 +208,8 @@ pub use physics::acoustics::mechanics::elastic_wave::{
     ElasticWave,
 };
 pub use physics::chemistry::ChemicalModel;
-pub use physics::mechanics::{CavitationModel, StreamingModel};
+pub use physics::acoustics::mechanics::cavitation::CavitationModel;
+pub use physics::acoustics::mechanics::streaming::StreamingModel;
 pub use physics::traits::{AcousticWaveModel, CavitationModelBehavior, ChemicalModelTrait};
 
 // --- Simulation factory ---

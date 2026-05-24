@@ -5,7 +5,7 @@
 use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
-use crate::physics::mechanics::poroelastic::{BiotTheory, PoroelasticMaterial};
+use crate::physics::acoustics::mechanics::poroelastic::{BiotTheory, PoroelasticMaterial};
 
 /// Time-domain solver for poroelastic wave equations
 #[derive(Debug)]

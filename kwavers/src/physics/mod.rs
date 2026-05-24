@@ -109,34 +109,6 @@ pub use acoustics::{
     PreviousFields, VelocityFieldRefs,
 };
 
-/// Acoustic mechanics re-exported for backward compatibility
-///
-/// Users should prefer explicit imports: `use crate::physics::acoustics::mechanics::Type;`
-pub mod mechanics {
-    /// Absorption models and modes
-    pub use crate::physics::acoustics::mechanics::absorption::AbsorptionMode;
-    // Note: AbsorptionModel is implemented as a trait, not a struct
-
-    /// Acoustic wave propagation
-    // Note: acoustic_wave module exists but types may be in submodules
-    pub use crate::physics::acoustics::mechanics::acoustic_wave::AcousticSpatialOrder;
-
-    /// Elastic wave propagation
-    pub use crate::physics::acoustics::mechanics::elastic_wave::ElasticWave;
-    // Note: ElasticWaveConfig doesn't exist - configuration is via ElasticBodyForceConfig
-
-    /// Cavitation models
-    pub use crate::physics::acoustics::mechanics::cavitation::CavitationModel;
-
-    /// Acoustic streaming models
-    pub use crate::physics::acoustics::mechanics::streaming::StreamingModel;
-
-    /// Poroelastic tissue modeling
-    pub use crate::physics::acoustics::mechanics::poroelastic;
-
-    /// Radiation force calculations (re-exported from domain::therapy::microbubble)
-    pub use crate::domain::therapy::microbubble::forces::RadiationForce;
-}
 
 // Re-export core physics specifications from foundations
 pub use foundations::{
@@ -179,23 +151,3 @@ pub use crate::domain::sensor::sonoluminescence as sonoluminescence_detector;
 /// as material property definitions belong in the domain layer, not physics.
 pub use crate::domain::medium::properties::{fluids, implants, tissue, AcousticMaterialProperties};
 
-/// Optics compatibility layer for backward compatibility
-///
-/// Optics is now a top-level physics module. This provides re-exports for legacy code.
-pub mod optics_compat {
-    /// Core optical properties
-    pub use crate::physics::optics::DiffusionOpticalProperties;
-
-    /// Sonoluminescence detection
-    pub mod sonoluminescence {
-        pub use crate::domain::sensor::sonoluminescence::SonoluminescenceDetector;
-        /// Sonoluminescence emission and spectrum
-        pub use crate::physics::optics::sonoluminescence::EmissionSpectrum;
-    }
-
-    /// Optical diffusion
-    #[cfg(feature = "advanced-visualization")]
-    pub mod diffusion {
-        pub use crate::physics::optics::diffusion::DiffusionOpticalProperties;
-    }
-}
