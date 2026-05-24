@@ -11,7 +11,7 @@ use crate::core::constants::cavitation::{
     VAPOR_PRESSURE_WATER,
 };
 use crate::core::constants::fundamental::{
-    ATMOSPHERIC_PRESSURE, DENSITY_TISSUE, SOUND_SPEED_TISSUE,
+    ACOUSTIC_ABSORPTION_TISSUE, ATMOSPHERIC_PRESSURE, DENSITY_TISSUE, SOUND_SPEED_TISSUE,
 };
 use crate::core::constants::thermodynamic::{
     BODY_TEMPERATURE_K, SPECIFIC_HEAT_BRAIN, THERMAL_CONDUCTIVITY_BLOOD,
@@ -73,7 +73,7 @@ impl TissueFactory {
         let bubble_velocity = Array3::zeros((grid.nx, grid.ny, grid.nz));
 
         // Acoustic parameters
-        let alpha0 = Array3::from_elem((grid.nx, grid.ny, grid.nz), 0.5);
+        let alpha0 = Array3::from_elem((grid.nx, grid.ny, grid.nz), ACOUSTIC_ABSORPTION_TISSUE);
         let delta = Array3::from_elem((grid.nx, grid.ny, grid.nz), 1.1);
         let b_a = Array3::from_elem((grid.nx, grid.ny, grid.nz), TISSUE_NONLINEARITY_B_A);
         let reference_frequency = REFERENCE_FREQUENCY_TISSUE_HZ; // 180 kHz LIFU reference

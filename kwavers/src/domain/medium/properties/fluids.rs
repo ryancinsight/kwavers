@@ -22,9 +22,9 @@ use crate::core::constants::optical::{
 };
 use crate::core::constants::fundamental::{
     ACOUSTIC_ABSORPTION_BLOOD_PLASMA, ACOUSTIC_ABSORPTION_WHOLE_BLOOD, ATMOSPHERIC_PRESSURE,
-    B_OVER_A_BLOOD, B_OVER_A_CSF, B_OVER_A_WATER, DENSITY_BLOOD, DENSITY_TISSUE,
-    DENSITY_WATER_37C, SOUND_SPEED_BLOOD, SOUND_SPEED_WATER, SOUND_SPEED_WATER_37C,
-    WATER_ABSORPTION_ALPHA_0_DB_CM_MHZ2,
+    B_OVER_A_BLOOD, B_OVER_A_CSF, B_OVER_A_WATER, B_OVER_A_WATER_37C, DENSITY_BLOOD,
+    DENSITY_TISSUE, DENSITY_WATER_37C, SOUND_SPEED_BLOOD, SOUND_SPEED_WATER,
+    SOUND_SPEED_WATER_37C, WATER_ABSORPTION_ALPHA_0_DB_CM_MHZ2,
 };
 use crate::core::constants::medical::BLOOD_SPECIFIC_HEAT;
 use crate::core::constants::thermodynamic::{
@@ -158,7 +158,7 @@ pub const ULTRASOUND_GEL: FluidProperties = FluidProperties {
     impedance: 1581000.0,
     absorption_coefficient: 0.008,
     absorption_exponent: 1.1,
-    nonlinearity_parameter: 5.0,
+    nonlinearity_parameter: B_OVER_A_WATER_37C, // 5.0 at 37°C (water-based gel)
     shear_viscosity: 5.0, // Highly viscous for contact
     bulk_viscosity: 0.0,
     specific_heat: SPECIFIC_HEAT_ULTRASOUND_GEL,
@@ -220,7 +220,7 @@ pub const WATER_37C: FluidProperties = FluidProperties {
     impedance: 1_513_789.0,
     absorption_coefficient: WATER_ABSORPTION_ALPHA_0_DB_CM_MHZ2, // 0.002 dB/(cm·MHz²) — Duck (1990)
     absorption_exponent: 2.0,
-    nonlinearity_parameter: 5.0,
+    nonlinearity_parameter: B_OVER_A_WATER_37C, // 5.0 at 37°C (Duck 1990 Table 4.16)
     shear_viscosity: 0.7e-3,
     bulk_viscosity: 0.0,
     specific_heat: SPECIFIC_HEAT_WATER_37C,
