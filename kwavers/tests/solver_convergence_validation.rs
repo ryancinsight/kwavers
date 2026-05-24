@@ -14,7 +14,7 @@
 //! - Validates wave propagation without instabilities
 //! - Validates solver doesn't produce NaN or Inf values
 
-use kwavers::domain::boundary::{DomainPmlConfig, PMLBoundary};
+use kwavers::domain::boundary::{DomainPMLBoundary, DomainPmlConfig};
 use kwavers::domain::grid::Grid;
 use kwavers::domain::medium::homogeneous::HomogeneousMedium;
 use kwavers::solver::fdtd::{FdtdConfig, FdtdPlugin};
@@ -58,7 +58,7 @@ fn test_cfl_stability_condition() {
     let c = 1500.0;
     let dt = 0.5 * dx / (c * (3.0_f64).sqrt());
 
-    let mut boundary = PMLBoundary::new(DomainPmlConfig::default().with_thickness(2))
+    let mut boundary = DomainPMLBoundary::new(DomainPmlConfig::default().with_thickness(2))
         .expect("Failed to create PML boundary");
     let sources = vec![];
 
@@ -103,7 +103,7 @@ fn test_energy_conservation() {
 
     // Initialize Gaussian pulse
     let center = nx / 2;
-    let sigma = 3.0_f64;
+    let sigma = 3.0_f64 * dx;
     for i in 0..nx {
         for j in 0..nx {
             for k in 0..nx {
@@ -160,11 +160,12 @@ fn test_energy_conservation() {
 
     let initial_energy = energy(&fields);
 
-    let mut boundary = PMLBoundary::new(DomainPmlConfig::default().with_thickness(4))
+    let mut boundary = DomainPMLBoundary::new(DomainPmlConfig::default().with_thickness(4))
         .expect("Failed to create PML boundary");
     let sources = vec![];
 
-    // Run for multiple steps
+    // Run for 50 steps. With CFL=0.3 and sigma=3 cells, the dominant pulse support
+    // remains in the lossless interior before significant PML interaction.
     for step in 0..50 {
         let t = step as f64 * dt;
         plugin_manager
@@ -177,11 +178,11 @@ fn test_energy_conservation() {
 
     let energy_change = (final_energy - initial_energy).abs() / initial_energy;
 
-    // Energy should be conserved within 20% for FDTD
-    // (allows for numerical dissipation and boundary effects)
+    // Energy must be conserved within 5% before significant PML interaction.
+    // CFL=0.3*dx/(c*sqrt(3)) keeps the leapfrog update inside the stable regime.
     assert!(
-        energy_change < 0.2,
-        "Energy not conserved: {:.1}% change",
+        energy_change < 0.05,
+        "Energy not conserved inside lossless interior: {:.2}% change",
         energy_change * 100.0
     );
 }

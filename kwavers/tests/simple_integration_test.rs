@@ -1,6 +1,7 @@
 //! Simple integration tests for core functionality
 
 use kwavers::{
+    core::constants::{DENSITY_WATER, SOUND_SPEED_WATER},
     grid::Grid,
     medium::{ArrayAccess, CoreMedium, HomogeneousMedium},
 };
@@ -21,9 +22,8 @@ fn test_basic_initialization() {
     let i = grid.nx / 2;
     let j = grid.ny / 2;
     let k = grid.nz / 2;
-    // Water at 20°C has specific properties
-    assert_eq!(medium.density(i, j, k), 998.0);
-    assert_eq!(medium.sound_speed(i, j, k), 1482.0);
+    assert_eq!(medium.density(i, j, k), DENSITY_WATER);
+    assert_eq!(medium.sound_speed(i, j, k), SOUND_SPEED_WATER);
 }
 
 /// Test acoustic field propagation
