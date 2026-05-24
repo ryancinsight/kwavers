@@ -6,6 +6,7 @@
 pub mod acoustic_parameters;
 pub mod cavitation;
 pub mod chemistry;
+pub mod ct_acoustics;
 pub mod fundamental;
 pub mod hounsfield;
 pub mod implants;
@@ -14,6 +15,8 @@ pub mod numerical;
 pub mod optical;
 pub mod state_dependent;
 pub mod thermodynamic;
+pub mod tissue_acoustics;
+pub mod tissue_thermal;
 pub mod water;
 
 // ============================================================================

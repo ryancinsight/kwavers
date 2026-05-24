@@ -1,596 +1,222 @@
-//! Thermodynamic constants
+//! Fundamental thermodynamic constants: temperature references, Grüneisen
+//! parameters, water heat capacities, phase transition data, and van der Waals
+//! coefficients.
+//!
+//! Tissue- and fluid-specific thermal properties live in [`super::tissue_thermal`].
+//!
+//! # Compatibility shim
+//!
+//! The `pub use` line below preserves backward compatibility for call sites that
+//! import tissue thermal constants via `crate::core::constants::thermodynamic::*`.
+//! See backlog.md §CLEAN-001 for the planned migration.
+pub use super::tissue_thermal::*;
 
-/// Adiabatic index (heat capacity ratio) of diatomic ideal gases (Air, N₂, O₂) [-]
+// ── Thermodynamic invariants ──────────────────────────────────────────────────
+
+/// Adiabatic index (heat capacity ratio) of diatomic ideal gases (Air, N₂, O₂) [-].
 ///
-/// γ = Cp/Cv = 7/5 = 1.4 for diatomic ideal gases at ambient conditions.
-///
-/// Reference: NIST, *CRC Handbook of Chemistry and Physics*, 104th ed., §2.
+/// γ = Cp/Cv = 7/5 = 1.4. Reference: NIST; CRC Handbook, 104th ed., §2.
 pub const HEAT_CAPACITY_RATIO_DIATOMIC: f64 = 1.4;
 
-/// Adiabatic index (heat capacity ratio) of monatomic ideal gases (Ar, Xe, He, Ne) [-]
+/// Adiabatic index (heat capacity ratio) of monatomic ideal gases (Ar, Xe, He, Ne) [-].
 ///
-/// γ = Cp/Cv = 5/3 ≈ 1.6667 for monatomic ideal gases.
-///
-/// Reference: NIST, *CRC Handbook of Chemistry and Physics*, 104th ed., §2.
+/// γ = Cp/Cv = 5/3 ≈ 1.6667. Reference: NIST; CRC Handbook, 104th ed., §2.
 pub const HEAT_CAPACITY_RATIO_MONATOMIC: f64 = 5.0 / 3.0;
 
-/// Room temperature in Kelvin
+// ── Temperature references ────────────────────────────────────────────────────
+
+/// Room temperature in Kelvin.
 pub const ROOM_TEMPERATURE_K: f64 = 293.15;
 
-/// Bubble-dynamics reference temperature used in Brenner et al. (2002) [K].
+/// Bubble-dynamics reference temperature [K].
 ///
-/// The sonoluminescence and Cherenkov emission models in the sonoluminescence
-/// pipeline initialize the bubble interior at 300 K (≈ 27°C), following the
-/// thermal-equilibrium baseline specified in:
-///
-/// Brenner MP, Hilgenfeldt S, Lohse D (2002). "Single-bubble sonoluminescence."
-/// *Rev. Mod. Phys.* 74(2), 425–484. DOI: 10.1103/RevModPhys.74.425.
-///
-/// Distinct from `ROOM_TEMPERATURE_K` (293.15 K = 20°C) — the 300 K value is
-/// the round reference in the Brenner model, not a measured ambient temperature.
+/// Sonoluminescence and Cherenkov emission models initialize the bubble interior
+/// at 300 K (≈ 27°C) per Brenner et al. (2002) Rev. Mod. Phys. 74(2):425–484.
+/// Distinct from `ROOM_TEMPERATURE_K` (293.15 K = 20°C).
 pub const BUBBLE_REFERENCE_TEMPERATURE_K: f64 = 300.0;
 
-/// Body temperature in Kelvin
+/// Body temperature in Kelvin.
 pub const BODY_TEMPERATURE_K: f64 = 310.15;
 
-/// Room temperature in Celsius
+/// Room temperature in Celsius.
 pub const ROOM_TEMPERATURE_C: f64 = 20.0;
 
-/// Body temperature in Celsius
+/// Body temperature in Celsius.
 pub const BODY_TEMPERATURE_C: f64 = 37.0;
 
-/// Absolute zero in Celsius
+/// Absolute zero in Celsius.
 pub const ABSOLUTE_ZERO_C: f64 = -273.15;
 
 /// Celsius → Kelvin offset (`T[K] = T[°C] + KELVIN_OFFSET_C`).
-///
-/// Numerically equal to `-ABSOLUTE_ZERO_C`; defined separately so callers do
-/// not need to negate a hardcoded literal when converting.
 pub const KELVIN_OFFSET_C: f64 = 273.15;
 
-/// Triple point of water temperature (K)
+/// Triple point of water temperature (K).
 pub const WATER_TRIPLE_POINT_K: f64 = 273.16;
 
-/// Critical temperature of water (K)
+/// Critical temperature of water (K).
 pub const WATER_CRITICAL_TEMP_K: f64 = 647.096;
 
-/// Critical pressure of water (Pa)
+/// Critical pressure of water (Pa).
 pub const WATER_CRITICAL_PRESSURE: f64 = 22.064e6;
 
-/// Specific heat capacity of water at 20°C (J/(kg·K))
+// ── Water heat capacities ─────────────────────────────────────────────────────
+
+/// Specific heat capacity of water at 20°C (J/(kg·K)).
 ///
-/// NIST Chemistry WebBook value at 293.15 K: 4181.8 J/(kg·K).
-/// The rounded value 4182.0 is used here; it differs from the older CRC
-/// Handbook value of 4186.0 J/(kg·K) (which was measured at 15°C).
-///
+/// NIST Chemistry WebBook at 293.15 K: 4181.8 J/(kg·K), rounded to 4182.0.
 /// Reference: NIST Chemistry WebBook, SRD 69.
-/// <https://webbook.nist.gov/cgi/fluid.cgi?Action=Load&ID=C7732185&Type=SatT>
 pub const SPECIFIC_HEAT_WATER: f64 = 4182.0;
 
-/// Specific heat capacity of water at 37°C / body temperature (J/(kg·K))
+/// Specific heat capacity of water at 37°C / body temperature (J/(kg·K)).
 ///
 /// NIST isobaric c_p at 310.15 K: 4179.5 J/(kg·K), rounded to 4180.0.
-/// Distinct from `SPECIFIC_HEAT_WATER` (4182.0 at 20°C) because water c_p
-/// decreases slightly as temperature rises from 0 °C to the minimum at ~35–37 °C
-/// and then increases.  The physiological value is used for photoacoustic and
-/// bioheat calculations at body temperature.
-///
 /// Reference: NIST Chemistry WebBook, SRD 69.
 pub const SPECIFIC_HEAT_WATER_37C: f64 = 4180.0;
 
-/// Grüneisen parameter of water at body temperature (37°C), dimensionless.
-///
-/// ## Definition
-///
-/// `Γ = β·c²/c_p` (dimensionless), where β is the isobaric thermal expansion
-/// coefficient [K⁻¹], c is the speed of sound [m/s], and c_p is the specific
-/// heat at constant pressure [J/(kg·K)].
-///
-/// ## Photoacoustic pressure formula
-///
-/// ```text
-/// p₀ = Γ · H = Γ · μₐ · Φ
-/// ```
-///
-/// where H = μₐ·Φ \[J/m³\] is the absorbed optical energy density (Beer-Lambert law).
-/// There is **no** additional division by c_p at the call site; c_p is already
-/// encoded in the definition of Γ.
-///
-/// ## Value derivation
-///
-/// Water at 37°C (Sigrist 1986 linear model, SSOT: `GrueneisenModel::water()`):
-/// ```text
-/// Γ₀ = 0.12  (reference at T_ref = 20°C, Xu & Wang 2006)
-/// dΓ/dT = 0.004 K⁻¹  (Sigrist 1986)
-/// Γ(37°C) = 0.12 + 0.004 × (37 − 20) = 0.12 + 0.068 = 0.188
-/// ```
-///
-/// First-principles check at 37°C: β ≈ 3.7×10⁻⁴ K⁻¹, c ≈ 1524 m/s,
-/// c_p ≈ 4182 J/(kg·K) → Γ = β·c²/c_p ≈ 0.205 (agrees to within the
-/// uncertainty of β from different sources).
-///
-/// **Note**: the previously stored value 0.12 is the reference value at 20°C,
-/// not 37°C. This has been corrected to 0.188 per the canonical
-/// `GrueneisenModel::water().evaluate(37.0)`.
-///
-/// ## References
-///
-/// - Xu M, Wang LV (2006). "Photoacoustic imaging in biomedicine."
-///   *Rev. Sci. Instrum.* **77**, 041101. DOI: 10.1063/1.2195024
-/// - Sigrist MW (1986). "Laser generation of acoustic waves in liquids and gases."
-///   *J. Appl. Phys.* **60**(7), R83. DOI: 10.1063/1.337089
-pub const GRUNEISEN_WATER_37C: f64 = 0.188;
+// ── Water thermal conductivities ──────────────────────────────────────────────
 
-/// Grüneisen parameter of liquid water at 20°C (dimensionless)
-///
-/// Reference value at 20°C from Xu & Wang (2006).
-/// Use `GRUNEISEN_WATER_37C` (0.188) for 37°C / body-temperature simulations.
-///
-/// Reference: Xu M, Wang LV (2006). Rev. Sci. Instrum. **77**, 041101.
-pub const GRUNEISEN_WATER_20C: f64 = 0.12;
-
-/// Grüneisen parameter of generic soft tissue at 37°C (dimensionless)
-///
-/// Γ = β·c²/c_p where β is the isobaric expansion coefficient.
-/// For soft tissue at body temperature: Γ ≈ 0.15.
-///
-/// References:
-/// - Wang LV, Wu H (2007). *Biomedical Optics*. Wiley-Interscience, p. 287.
-/// - Duck FA (1990). *Physical Properties of Tissue*. Academic Press.
-pub const GRUNEISEN_SOFT_TISSUE: f64 = 0.15;
-
-/// Specific heat capacity of generic soft tissue (J/(kg·K))
-///
-/// Duck (1990) mean for mammalian soft tissue; used in Pennes bioheat and
-/// HIFU heating calculations when a tissue-type-specific value is not available.
-pub const SPECIFIC_HEAT_TISSUE: f64 = 3600.0;
-
-/// Specific heat capacity of human brain tissue (J/(kg·K))
-///
-/// Mean of grey and white matter measured at body temperature.
-///
-/// Reference: Duck (1990), Table 9.1; Bhattacharya & Mahajan (2003).
-pub const SPECIFIC_HEAT_BRAIN: f64 = 3630.0;
-
-/// Specific heat capacity of skeletal muscle (J/(kg·K))
-///
-/// Reference: Duck (1990), Table 9.1.
-pub const SPECIFIC_HEAT_MUSCLE: f64 = 3421.0;
-
-/// Specific heat capacity of human liver parenchyma (J/(kg·K))
-///
-/// Reference: Duck (1990), Table 9.1.
-pub const SPECIFIC_HEAT_LIVER: f64 = 3540.0;
-
-/// Specific heat capacity of human adipose tissue (J/(kg·K))
-///
-/// Reference: Duck (1990), Table 9.1.
-pub const SPECIFIC_HEAT_FAT: f64 = 2348.0;
-
-/// Specific heat capacity of whole blood at 37°C (J/(kg·K))
-///
-/// Reference: Duck (1990), Table 9.1; Gordon et al. (2009).
-pub const SPECIFIC_HEAT_BLOOD: f64 = 3617.0;
-
-/// Specific heat capacity of human renal cortex at body temperature (J/(kg·K))
-///
-/// Reference: Duck (1990), Table 9.1.
-pub const SPECIFIC_HEAT_KIDNEY: f64 = 3763.0;
-
-/// Specific heat capacity of cortical bone at body temperature (J/(kg·K))
-///
-/// Reference: Duck (1990), Table 9.1; Hasgall et al. (2022) IT'IS Foundation.
-pub const SPECIFIC_HEAT_BONE: f64 = 1313.0;
-
-/// Specific heat capacity of human skin at body temperature (J/(kg·K))
-///
-/// Reference: Duck (1990), Table 9.1.
-pub const SPECIFIC_HEAT_SKIN: f64 = 3391.0;
-
-/// Specific heat capacity of lung parenchyma (J/(kg·K))
-///
-/// Reduced heat capacity due to high air fraction (~50% air by volume at FRC).
-///
-/// Reference: Duck (1990), Table 9.1; Hasgall et al. (2022) IT'IS Foundation.
-pub const SPECIFIC_HEAT_LUNG: f64 = 3886.0;
-
-/// Specific heat capacity of breast glandular tissue (J/(kg·K))
-///
-/// Reference: IT'IS Foundation database v4.0 (2022).
-pub const SPECIFIC_HEAT_BREAST_GLAND: f64 = 3600.0;
-
-/// Specific heat of brain white matter at 37°C (J/(kg·K))
-/// Source: Duck (1990) Table 9.1
-pub const SPECIFIC_HEAT_BRAIN_WHITE: f64 = 3650.0;
-
-/// Specific heat of brain gray matter at 37°C (J/(kg·K))
-/// Source: Duck (1990) Table 9.1
-pub const SPECIFIC_HEAT_BRAIN_GRAY: f64 = 3680.0;
-
-/// Specific heat of cerebrospinal fluid at 37°C (J/(kg·K))
-/// Source: Duck (1990)
-pub const SPECIFIC_HEAT_CSF: f64 = 3900.0;
-
-/// Specific heat of blood plasma at 37°C (J/(kg·K))
-///
-/// Plasma (~90% water) has higher specific heat than whole blood because it
-/// lacks red blood cells (which have lower c_p due to haemoglobin content).
-/// Source: Duck (1990); Gordon et al. (2009)
-pub const SPECIFIC_HEAT_BLOOD_PLASMA: f64 = 3840.0;
-
-/// Thermal conductivity of water at 20°C (W/(m·K))
+/// Thermal conductivity of water at 20°C (W/(m·K)).
 pub const THERMAL_CONDUCTIVITY_WATER: f64 = 0.598;
 
-/// Thermal conductivity of water at 37°C / body temperature (W/(m·K))
+/// Thermal conductivity of water at 37°C / body temperature (W/(m·K)).
 ///
 /// NIST value at 310.15 K: 0.6233 W/(m·K), rounded to 0.623.
-/// Distinct from `THERMAL_CONDUCTIVITY_WATER` (0.598 at 20°C) — water
-/// thermal conductivity increases with temperature from 0°C to ~130°C.
-/// Used in photoacoustic and bioheat models at physiological temperature.
-///
 /// Reference: NIST Chemistry WebBook, SRD 69.
 pub const THERMAL_CONDUCTIVITY_WATER_37C: f64 = 0.623;
 
-/// Thermal conductivity of tissue (W/(m·K))
-pub const THERMAL_CONDUCTIVITY_TISSUE: f64 = 0.5;
+// ── Grüneisen parameters ──────────────────────────────────────────────────────
 
-/// Thermal conductivity of whole blood at 37°C and hematocrit 45% (W/(m·K)).
+/// Grüneisen parameter of water at body temperature (37°C), dimensionless.
 ///
-/// Value: 0.52 W/(m·K).
+/// Γ(37°C) = 0.12 + 0.004 × (37 − 20) = 0.188 (Sigrist 1986 linear model).
 ///
-/// Used in the Nusselt → convective heat-transfer coefficient conversion for
-/// intravascular forced-convection models:
-///
-/// ```text
-/// h = Nu · k_blood / D
-/// ```
-///
-/// where `D` is the vessel diameter (not radius).
-///
-/// # References
-/// - Gordon, A.E. et al. (2009). "Acoustic and thermal properties of blood
-///   at body temperature." Phys. Med. Biol. 54(13), 3933–3948.
-///   DOI: 10.1088/0031-9155/54/13/003
-/// - Duck, F.A. (1990). *Physical Properties of Tissue*.
-///   Academic Press, London, Table 9.1.
-pub const THERMAL_CONDUCTIVITY_BLOOD: f64 = 0.52;
+/// Reference: Xu & Wang (2006) Rev. Sci. Instrum. 77, 041101;
+/// Sigrist MW (1986) J. Appl. Phys. 60(7), R83.
+pub const GRUNEISEN_WATER_37C: f64 = 0.188;
 
-/// Thermal conductivity of blood plasma at 37°C [W/(m·K)].
+/// Grüneisen parameter of liquid water at 20°C (dimensionless).
 ///
-/// Acellular plasma is ~94% water; thermal conductivity is intermediate between
-/// water and whole blood due to dissolved proteins (albumin, fibrinogen).
-///
-/// Reference: Duck, F.A. (1990). *Physical Properties of Tissue*, Table 9.1;
-/// Cobbold (2007). *Foundations of Biomedical Ultrasound*, Table 3.3.
-pub const THERMAL_CONDUCTIVITY_BLOOD_PLASMA: f64 = 0.55; // W/(m·K)
+/// Reference value at 20°C from Xu & Wang (2006).
+/// Use `GRUNEISEN_WATER_37C` (0.188) for 37°C simulations.
+pub const GRUNEISEN_WATER_20C: f64 = 0.12;
 
-/// Thermal conductivity of microbubble ultrasound contrast agent [W/(m·K)].
+/// Grüneisen parameter of generic soft tissue at 37°C (dimensionless).
 ///
-/// Water-based phospholipid-shell microbubble suspension; thermal conductivity
-/// approximated as slightly sub-water owing to surfactant shell contribution.
+/// Reference: Wang & Wu (2007) Biomedical Optics, Wiley-Interscience, p. 287;
+/// Duck FA (1990) Physical Properties of Tissue.
+pub const GRUNEISEN_SOFT_TISSUE: f64 = 0.15;
+
+// ── Thermal expansion coefficients ────────────────────────────────────────────
+
+/// Isobaric thermal expansion coefficient of liquid water at 20°C (K⁻¹).
 ///
-/// Reference: Stride E & Saffari N (2003). *Proc. Inst. Mech. Eng. H* 217(6):429–447.
-pub const THERMAL_CONDUCTIVITY_MICROBUBBLE_SUSPENSION: f64 = 0.60; // W/(m·K)
-
-/// Thermal conductivity of iron-oxide nanoparticle suspension [W/(m·K)].
-///
-/// Water-based carrier at ~1–5 mg/mL Fe₃O₄; slightly lower than pure water
-/// at 37°C (0.623 W/(m·K)) owing to nanoparticle interfacial thermal resistance.
-///
-/// Reference: Stride E & Saffari N (2003). *Proc. Inst. Mech. Eng. H* 217(6):429–447.
-pub const THERMAL_CONDUCTIVITY_NANOPARTICLE_SUSPENSION: f64 = 0.59; // W/(m·K)
-
-/// Thermal conductivity of brain white matter at 37°C (W/(m·K))
-/// Source: Duck (1990) Table 9.1; IT'IS Foundation v4.1
-pub const THERMAL_CONDUCTIVITY_BRAIN: f64 = 0.50;
-
-/// Thermal conductivity of brain gray matter at 37°C (W/(m·K))
-/// Source: Duck (1990) Table 9.1; IT'IS Foundation v4.1
-pub const THERMAL_CONDUCTIVITY_BRAIN_GRAY: f64 = 0.52;
-
-/// Thermal conductivity of cortical skull bone at 37°C (W/(m·K))
-/// Source: Duck (1990) Table 9.1
-pub const THERMAL_CONDUCTIVITY_SKULL: f64 = 0.40;
-
-/// Thermal conductivity of liver at 37°C (W/(m·K))
-/// Source: Duck (1990) Table 9.1; IT'IS Foundation v4.1
-pub const THERMAL_CONDUCTIVITY_LIVER: f64 = 0.56;
-
-/// Thermal conductivity of kidney at 37°C (W/(m·K))
-/// Source: IT'IS Foundation v4.1
-pub const THERMAL_CONDUCTIVITY_KIDNEY: f64 = 0.50;
-
-/// Thermal conductivity of skeletal muscle at 37°C (W/(m·K))
-/// Source: IT'IS Foundation v4.1
-pub const THERMAL_CONDUCTIVITY_MUSCLE: f64 = 0.49;
-
-/// Thermal conductivity of adipose (fat) tissue at 37°C (W/(m·K))
-/// Source: IT'IS Foundation v4.1
-pub const THERMAL_CONDUCTIVITY_FAT: f64 = 0.21;
-
-/// Thermal conductivity of cerebrospinal fluid at 37°C (W/(m·K))
-/// Source: Duck (1990)
-pub const THERMAL_CONDUCTIVITY_CSF: f64 = 0.60;
-
-/// Specific heat capacity of urine at 37°C (J/(kg·K))
-///
-/// Value: 3680 J/(kg·K) — similar to blood plasma but lower due to elevated
-/// urea and electrolyte concentrations.
-/// Reference: Duck FA (1990). Physical Properties of Tissue, Table 9.1.
-pub const SPECIFIC_HEAT_URINE: f64 = 3680.0;
-
-/// Thermal conductivity of urine at 37°C (W/(m·K))
-///
-/// Value: 0.61 W/(m·K) — slightly higher than plasma (0.55) due to
-/// dissolved electrolytes increasing ionic thermal transport.
-/// Reference: Duck FA (1990). Physical Properties of Tissue.
-pub const THERMAL_CONDUCTIVITY_URINE: f64 = 0.61;
-
-/// Thermal diffusivity of water (m²/s)
-pub const THERMAL_DIFFUSIVITY_WATER: f64 = 1.43e-7;
-
-/// Thermal diffusivity of tissue (m²/s)
-///
-/// Value: 1.36e-7 m²/s — measured for soft tissue near 37°C.
-/// Equal to k/(ρ·c_p) = 0.5 / (1050 × 3600) ≈ 1.323e-7, rounded to 1.36e-7
-/// which accounts for tissue heterogeneity.
-///
-/// Reference: Duck, F.A. (1990). Physical Properties of Tissue.
-/// Academic Press, London, Table 9.1.
-pub const THERMAL_DIFFUSIVITY_TISSUE: f64 = 1.36e-7;
-
-/// Thermal diffusivity of whole blood at 37°C and hematocrit 45% (m²/s)
-///
-/// Value: 1.35e-7 m²/s — directly measured by Duck (1990), Table 9.1.
-/// Note: the derived value from Duck's own k, ρ, c_p data is
-/// k/(ρ·c_p) = 0.52 / (1050 × 3617) ≈ 1.369e-7 m²/s, which reflects the
-/// small inconsistency between independently measured calorimetric and
-/// conductimetric quantities in the reference.  The directly measured value
-/// (1.35e-7) is used here as the canonical SSOT for heat-transfer models.
-///
-/// Reference: Duck, F.A. (1990). Physical Properties of Tissue.
-/// Academic Press, London, Table 9.1.
-pub const THERMAL_DIFFUSIVITY_BLOOD: f64 = 1.35e-7;
-
-// ============================================================================
-// Tissue Temperature-Coupling Coefficients
-// ============================================================================
-
-/// Temperature coefficient of sound speed in soft tissue near 37°C (m/s per °C)
-///
-/// Measured range for mammalian soft tissue: 1.0–2.5 m/s/°C over 20–60°C.
-/// The value 2.0 m/s/°C matches water near body temperature and is consistent
-/// with in-vitro tissue measurements across multiple tissue types.
-///
-/// References:
-/// - Bamber, J.C. & Hill, C.R. (1979). Ultrasonic attenuation and propagation
-///   speed in mammalian tissues as a function of temperature.
-///   Ultrasound Med. Biol. 5(2), 149–157. DOI: 10.1016/0301-5629(79)90083-X
-/// - Lynch, F.J. (1988). J. Acoust. Soc. Am. 83(2), 735–738.
-///   DOI: 10.1121/1.396163
-pub const DC_DT_SOFT_TISSUE: f64 = 2.0;
-
-/// Temperature coefficient of density in soft tissue near 37°C (kg/m³ per °C)
-///
-/// Nominal value for soft tissue. Pure water is approximately −0.38 kg/(m³·°C)
-/// at 37°C (NIST); soft tissue exhibits a lower effective coefficient due to
-/// bound water and protein content.
-///
-/// References:
-/// - NIST WebBook, Thermophysical properties of water (CAS 7732-18-5).
-///   <https://webbook.nist.gov>
-/// - Duck, F.A. (1990). Physical Properties of Tissue.
-///   Academic Press, London, p. 119.
-pub const DRHO_DT_SOFT_TISSUE: f64 = -0.2;
-
-/// Volumetric heat capacity of soft tissue at 37°C (J per m³ per °C)
-///
-/// Correct coefficient for the Pennes bioheat transfer equation:
-///   ρ c_p ∂T/∂t = k ∇²T + ρ_b c_b ω_b (T_a − T) + Q_met + Q_abs
-///
-/// Computed as ρ · c_p = DENSITY_TISSUE × SPECIFIC_HEAT_TISSUE
-///           = 1050 kg/m³ × 3600 J/(kg·°C) = 3 780 000 J/(m³·°C).
-///
-/// **WARNING — common dimensional error**: `SPECIFIC_HEAT_TISSUE` alone
-/// (3600 J/(kg·°C)) omits the density factor and under-estimates ρ c_p by
-/// a factor of 1050, distorting the thermal time-scale by the same factor.
-/// Always use `RHO_C_SOFT_TISSUE` as the bioheat volumetric coefficient.
-///
-/// References:
-/// - Pennes, H.H. (1948). Analysis of tissue and arterial blood temperatures
-///   in the resting human forearm. J. Appl. Physiol. 1(2), 93–122.
-///   DOI: 10.1152/jappl.1948.1.2.93
-/// - Duck, F.A. (1990). Physical Properties of Tissue.
-///   Academic Press, London, pp. 147–151.
-pub const RHO_C_SOFT_TISSUE: f64 = 3_780_000.0; // = DENSITY_TISSUE(1050) × SPECIFIC_HEAT_TISSUE(3600)
-
-// ============================================================================
-// Coupling Fluids and Contrast Agent Suspensions
-// ============================================================================
-
-/// Specific heat capacity of ultrasound coupling gel (J/(kg·K))
-///
-/// Typical commercial aqueous gel (mineral oil + polymer thickener).
-/// Reference: Perry & Green (2007) — Chemical Engineering Handbook.
-pub const SPECIFIC_HEAT_ULTRASOUND_GEL: f64 = 3300.0;
-
-/// Thermal conductivity of ultrasound coupling gel (W/(m·K))
-///
-/// Lower than water due to polymer additive content.
-/// Reference: Perry & Green (2007).
-pub const THERMAL_CONDUCTIVITY_ULTRASOUND_GEL: f64 = 0.15;
-
-/// Specific heat capacity of mineral oil (J/(kg·K))
-///
-/// Reference: Perry & Green (2007).
-pub const SPECIFIC_HEAT_MINERAL_OIL: f64 = 2100.0;
-
-/// Thermal conductivity of mineral oil (W/(m·K))
-///
-/// Reference: Perry & Green (2007).
-pub const THERMAL_CONDUCTIVITY_MINERAL_OIL: f64 = 0.14;
-
-/// Specific heat capacity of microbubble ultrasound contrast agent [J/(kg·K)].
-///
-/// Effective property of phospholipid-shell microbubble suspension in saline;
-/// approximated as pure water at 37°C given >99% aqueous volume fraction.
-/// Small shell mass contribution (<0.1%) is negligible for bulk thermal properties.
-///
-/// Reference: Stride E & Saffari N (2003). *Proc. Inst. Mech. Eng. H* 217(6):429–447.
-pub const SPECIFIC_HEAT_MICROBUBBLE_SUSPENSION: f64 = 4170.0; // J/(kg·K)
-
-/// Specific heat capacity of iron-oxide nanoparticle suspension [J/(kg·K)].
-///
-/// Water-based carrier with ~1–5 mg/mL Fe₃O₄ nanoparticles; specific heat is
-/// slightly reduced below pure water owing to nanoparticle mass fraction.
-///
-/// Reference: Stride E & Saffari N (2003). *Proc. Inst. Mech. Eng. H* 217(6):429–447.
-pub const SPECIFIC_HEAT_NANOPARTICLE_SUSPENSION: f64 = 4150.0; // J/(kg·K)
-
-// ============================================================================
-// Thermal Expansion Coefficients
-// ============================================================================
-
-/// Isobaric thermal expansion coefficient of generic soft tissue at 37°C (K⁻¹)
-///
-/// Value: 3.0×10⁻⁴ K⁻¹ — typical for mammalian soft tissue (Duck 1990).
-/// Larger than water at 20°C (2.07×10⁻⁴) due to protein and lipid content.
-/// Reference: Duck FA (1990). Physical Properties of Tissue. Academic Press.
-pub const THERMAL_EXPANSION_SOFT_TISSUE: f64 = 3.0e-4;
-
-/// Isobaric thermal expansion coefficient of liquid water at 20°C (K⁻¹)
-///
-/// Value: 2.07×10⁻⁴ K⁻¹.
-/// Used as the default expansion coefficient for water-like media in
-/// homogeneous medium constructors.
 /// Reference: NIST Chemistry WebBook, SRD 69.
 pub const THERMAL_EXPANSION_WATER_20C: f64 = 2.07e-4;
 
-/// Isobaric thermal expansion coefficient of dry air at 20°C (K⁻¹)
+/// Isobaric thermal expansion coefficient of dry air at 20°C (K⁻¹).
 ///
-/// For an ideal gas at temperature T: β = 1/T.
-/// At 20°C (293.15 K): β = 1/293.15 = 3.41×10⁻³ K⁻¹ ≈ 3.43×10⁻³ K⁻¹.
-/// Value: 3.43×10⁻³ K⁻¹ — consistent with DENSITY_AIR at 20°C.
-/// Reference: NIST, ideal gas approximation.
+/// β = 1/T = 1/293.15 ≈ 3.41×10⁻³ K⁻¹. Reference: NIST, ideal gas approximation.
 pub const THERMAL_EXPANSION_AIR_20C: f64 = 3.43e-3;
 
-/// Thermal conductivity of dry air at 20°C, 1 atm (W/(m·K))
+/// Thermal conductivity of dry air at 20°C, 1 atm (W/(m·K)).
 ///
-/// Value: 0.0257 W/(m·K) — consistent with DENSITY_AIR (1.204 kg/m³ at 20°C).
 /// Reference: NIST Chemistry WebBook, SRD 69.
 pub const THERMAL_CONDUCTIVITY_AIR: f64 = 0.0257;
 
-// ============================================================================
-// Van der Waals Constants
-// ============================================================================
+// ── Van der Waals constants ───────────────────────────────────────────────────
 // Format: (a in bar·L²/mol², b in L/mol)
-// References: CRC Handbook of Chemistry and Physics
+// References: CRC Handbook of Chemistry and Physics.
 
-/// Van der Waals arbitrary constants for Air (a, b)
+/// Van der Waals constants for Air (a, b).
 pub const VAN_DER_WAALS_AIR: (f64, f64) = (1.37, 0.0387);
-/// Van der Waals constants for Argon (a, b)
+/// Van der Waals constants for Argon (a, b).
 pub const VAN_DER_WAALS_ARGON: (f64, f64) = (1.355, 0.0320);
-/// Van der Waals constants for Xenon (a, b)
+/// Van der Waals constants for Xenon (a, b).
 pub const VAN_DER_WAALS_XENON: (f64, f64) = (4.250, 0.0510);
-/// Van der Waals constants for Nitrogen (a, b)
+/// Van der Waals constants for Nitrogen (a, b).
 pub const VAN_DER_WAALS_NITROGEN: (f64, f64) = (1.370, 0.0387);
-/// Van der Waals constants for Oxygen (a, b)
+/// Van der Waals constants for Oxygen (a, b).
 pub const VAN_DER_WAALS_OXYGEN: (f64, f64) = (1.382, 0.0319);
 
-/// Molar mass of water (kg/mol)
+/// Molar mass of water (kg/mol).
 pub const M_WATER: f64 = 0.018015;
 
-// ============================================================================
-// Heat Transfer Constants
-// ============================================================================
+// ── Heat transfer / mass transport ────────────────────────────────────────────
 
-/// Nusselt number constant term
+/// Nusselt number constant term.
 pub const NUSSELT_CONSTANT: f64 = 2.0;
 
-/// Nusselt number Peclet coefficient
+/// Nusselt number Peclet coefficient.
 pub const NUSSELT_PECLET_COEFF: f64 = 0.45;
 
-/// Nusselt number Peclet exponent
+/// Nusselt number Peclet exponent.
 pub const NUSSELT_PECLET_EXPONENT: f64 = 0.5;
 
-/// Sherwood number Peclet exponent
+/// Sherwood number Peclet exponent.
 pub const SHERWOOD_PECLET_EXPONENT: f64 = 0.33;
 
-/// Ambient temperature (K)
+/// Ambient temperature (K).
 pub const T_AMBIENT: f64 = 293.15;
 
-/// Vapor diffusion coefficient in air (m²/s)
+/// Vapor diffusion coefficient in air (m²/s).
 pub const VAPOR_DIFFUSION_COEFFICIENT: f64 = 2.5e-5;
 
-// ============================================================================
-// Chemical Reaction Constants
-// ============================================================================
+// ── Chemical reaction constants ───────────────────────────────────────────────
 
-/// Reaction reference temperature (K)
+/// Reaction reference temperature (K).
 pub const REACTION_REFERENCE_TEMPERATURE: f64 = 298.15;
 
-/// Secondary reaction rate constant (1/s)
+/// Secondary reaction rate constant (1/s).
 pub const SECONDARY_REACTION_RATE: f64 = 1e-3;
 
-/// Sonochemistry base reaction rate (1/s)
+/// Sonochemistry base reaction rate (1/s).
 pub const SONOCHEMISTRY_BASE_RATE: f64 = 1e-2;
 
 /// Activation temperature for sonochemical OH-radical generation (K).
 ///
-/// Defined as `Ea / R` where `Ea ≈ 166 kJ/mol` is a representative activation
-/// energy for water-molecule dissociation in acoustic-cavitation plasma
-/// (Suslick 1990; Hart & Henglein 1985).  At cavitation bubble temperatures
-/// (~5000 K) this gives `exp(-T_ACT / 5000) ≈ 0.033`, while at body
-/// temperature (310 K) it gives `exp(-T_ACT / 310) ≈ 10⁻²⁸`, correctly
-/// suppressing thermal dissociation outside bubble collapse events.
+/// Ea / R where Ea ≈ 166 kJ/mol (water-molecule dissociation in cavitation plasma).
+/// Reference: Suslick (1990); Hart & Henglein (1985).
 pub const SONOCHEMISTRY_ACTIVATION_TEMPERATURE: f64 = 20_000.0;
 
-// ============================================================================
-// Water Properties at Specific Conditions
-// ============================================================================
+// ── Water properties at specific conditions ───────────────────────────────────
 
-/// Heat of vaporization of water at 100°C (J/kg)
+/// Heat of vaporization of water at 100°C (J/kg).
 pub const H_VAP_WATER_100C: f64 = 2.257e6;
 
-/// Critical pressure of water (Pa)
+/// Critical pressure of water (Pa).
 pub const P_CRITICAL_WATER: f64 = 22.064e6;
 
-/// Triple point pressure of water (Pa)
+/// Triple point pressure of water (Pa).
 pub const P_TRIPLE_WATER: f64 = 611.657;
 
-/// Boiling temperature of water at 1 atm (K)
+/// Boiling temperature of water at 1 atm (K).
 pub const T_BOILING_WATER: f64 = 373.15;
 
-/// Critical temperature of water (K)
+/// Critical temperature of water (K).
 pub const T_CRITICAL_WATER: f64 = 647.096;
 
-/// Triple point temperature of water (K)
+/// Triple point temperature of water (K).
 pub const T_TRIPLE_WATER: f64 = 273.16;
 
-/// Latent heat of vaporization of water (J/kg)
+/// Latent heat of vaporization of water (J/kg).
 pub const WATER_LATENT_HEAT_VAPORIZATION: f64 = 2.45e6;
 
-/// Emissivity of water vapor in collapsing acoustic cavitation bubbles (dimensionless)
+/// Emissivity of water vapor in collapsing acoustic cavitation bubbles (dimensionless).
 ///
-/// Value: 0.1 — lower bound for hot-water-vapor emissivity used in acoustic cavitation modelling.
-///
-/// At extreme bubble collapse temperatures (T > 10,000 K) the vapor approximates a grey-body
-/// radiator. Measured emissivity for steam at high temperatures spans 0.1–0.3; 0.1 is a
-/// conservative estimate consistent with single-bubble sonoluminescence observations where
-/// radiative losses are secondary to conductive cooling.
-///
-/// Reference: Suslick, K.S. & Flannigan, D.J. (2008). "Inside a collapsing bubble:
-/// sonoluminescence and the conditions during cavitation." Annu. Rev. Phys. Chem. 59:659–683.
+/// Value: 0.1 — lower bound per single-bubble sonoluminescence observations.
+/// Reference: Suslick & Flannigan (2008) Annu. Rev. Phys. Chem. 59:659–683.
 pub const EMISSIVITY_VAPOR: f64 = 0.1;
 
-/// Convert temperature from Kelvin to Celsius
+// ── Temperature conversion functions ─────────────────────────────────────────
+
+/// Convert temperature from Kelvin to Celsius.
 #[inline]
 #[must_use]
 pub fn kelvin_to_celsius(kelvin: f64) -> f64 {
     kelvin + ABSOLUTE_ZERO_C
 }
 
-/// Convert temperature from Celsius to Kelvin
+/// Convert temperature from Celsius to Kelvin.
 #[inline]
 #[must_use]
 pub fn celsius_to_kelvin(celsius: f64) -> f64 {
@@ -604,8 +230,6 @@ mod tests {
 
     #[test]
     fn test_rho_c_is_density_times_specific_heat() {
-        // RHO_C_SOFT_TISSUE must equal ρ·c_p = DENSITY_TISSUE × SPECIFIC_HEAT_TISSUE
-        // Tolerance of 1.0 J/(m³·°C) accounts for the rounded constant definitions.
         let expected = DENSITY_TISSUE * SPECIFIC_HEAT_TISSUE;
         assert!(
             (RHO_C_SOFT_TISSUE - expected).abs() < 1.0,
@@ -616,7 +240,6 @@ mod tests {
 
     #[test]
     fn test_dc_dt_within_literature_range() {
-        // Bamber & Hill (1979) report 1.0–2.5 m/s/°C for mammalian soft tissue.
         assert!(
             DC_DT_SOFT_TISSUE >= 1.0 && DC_DT_SOFT_TISSUE <= 2.5,
             "DC_DT_SOFT_TISSUE ({}) must lie within the measured range [1.0, 2.5] m/s/°C",
@@ -626,7 +249,6 @@ mod tests {
 
     #[test]
     fn test_drho_dt_negative() {
-        // Density decreases with temperature (thermal expansion); coefficient must be negative.
         assert!(
             DRHO_DT_SOFT_TISSUE < 0.0,
             "DRHO_DT_SOFT_TISSUE ({}) must be negative (density decreases with temperature)",
