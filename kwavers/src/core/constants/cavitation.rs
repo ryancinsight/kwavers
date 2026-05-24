@@ -177,3 +177,39 @@ pub const MIN_DUTY_CYCLE: f64 = 0.01;
 
 /// Maximum duty cycle for power modulation
 pub const MAX_DUTY_CYCLE: f64 = 1.0;
+
+// ============================================================================
+// Encapsulated Bubble Shell Material Densities [kg/m³]
+// ============================================================================
+//
+// Sources: Gorce J-M, Arditi M & Schneider M (2000). "Influence of Bubble Size
+//   Distribution on the Echogenicity of Ultrasound Contrast Agents."
+//   *Invest. Radiol.* 35(11):661–671.
+// Stride E & Coussios C (2010). "Nucleation and dynamics of microbubbles."
+//   *Proc. IMechE Pt H: J. Eng. Med.* 224(2):171–191.
+
+/// Density of lipid monolayer / bilayer bubble shell (SonoVue / Definity type) [kg/m³].
+///
+/// Phospholipid shell density; typical range 1000–1200 kg/m³ depending on
+/// lipid composition and packing. 1100 kg/m³ is the standard reference.
+///
+/// Reference: Gorce et al. (2000); Stride & Coussios (2010).
+pub const DENSITY_SHELL_LIPID: f64 = 1100.0;
+
+/// Density of protein shell bubble (Albunex / Optison type) [kg/m³].
+///
+/// Denatured human serum albumin (HSA) shell; higher density than lipid
+/// owing to dense cross-linked protein network.
+///
+/// Reference: Stride & Coussios (2010); Schneider M (1999). *Echocardiography*
+/// 16(7 Pt 2):743–746.
+pub const DENSITY_SHELL_PROTEIN: f64 = 1200.0;
+
+/// Density of polymer shell bubble (PLGA / PLA type) [kg/m³].
+///
+/// Biodegradable polymer (polylactic-co-glycolic acid) shell; intermediate
+/// density between lipid and protein shells.
+///
+/// Reference: Stride & Coussios (2010); Gong P et al. (2011). *Biomaterials*
+/// 32(20):4567–4576.
+pub const DENSITY_SHELL_POLYMER: f64 = 1050.0;

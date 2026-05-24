@@ -73,6 +73,49 @@ pub const ACOUSTIC_ABSORPTION_CFRP: f64 = 0.15;
 pub const ACOUSTIC_ABSORPTION_HYDROXYAPATITE: f64 = 0.2;
 
 // ============================================================================
+// Effective Acoustic Nonlinearity Parameters B/A [-]
+// ============================================================================
+//
+// These constants preserve the implant material model's prior per-material
+// B/A values while moving them into the material SSOT. Literature values for
+// solids are less standardized than biological-fluid B/A; callers should treat
+// them as effective model parameters for the existing nonlinear acoustic
+// material law, not as universal metrology constants.
+
+/// Effective B/A for Titanium Grade 5 in the implant acoustic model.
+pub const NONLINEARITY_TITANIUM: f64 = 1.5;
+
+/// Effective B/A for stainless steel 316L in the implant acoustic model.
+pub const NONLINEARITY_STAINLESS_STEEL_316L: f64 = 1.8;
+
+/// Effective B/A for platinum in the implant acoustic model.
+pub const NONLINEARITY_PLATINUM: f64 = 2.0;
+
+/// Effective B/A for PMMA in the implant acoustic model.
+pub const NONLINEARITY_PMMA: f64 = 3.0;
+
+/// Effective B/A for UHMWPE in the implant acoustic model.
+pub const NONLINEARITY_UHMWPE: f64 = 2.8;
+
+/// Effective B/A for silicone rubber in the implant acoustic model.
+pub const NONLINEARITY_SILICONE_RUBBER: f64 = 4.0;
+
+/// Effective B/A for polyurethane in the implant acoustic model.
+pub const NONLINEARITY_POLYURETHANE: f64 = 3.5;
+
+/// Effective B/A for alumina in the implant acoustic model.
+pub const NONLINEARITY_ALUMINA: f64 = 1.2;
+
+/// Effective B/A for zirconia in the implant acoustic model.
+pub const NONLINEARITY_ZIRCONIA: f64 = 1.4;
+
+/// Effective B/A for carbon-fibre reinforced polymer in the implant acoustic model.
+pub const NONLINEARITY_CFRP: f64 = 2.5;
+
+/// Effective B/A for hydroxyapatite in the implant acoustic model.
+pub const NONLINEARITY_HYDROXYAPATITE: f64 = 1.8;
+
+// ============================================================================
 // Metallic Implants
 // ============================================================================
 
@@ -342,6 +385,17 @@ mod tests {
             SPECIFIC_HEAT_CFRP,
             DENSITY_HYDROXYAPATITE,
             SPECIFIC_HEAT_HYDROXYAPATITE,
+            NONLINEARITY_TITANIUM,
+            NONLINEARITY_STAINLESS_STEEL_316L,
+            NONLINEARITY_PLATINUM,
+            NONLINEARITY_PMMA,
+            NONLINEARITY_UHMWPE,
+            NONLINEARITY_SILICONE_RUBBER,
+            NONLINEARITY_POLYURETHANE,
+            NONLINEARITY_ALUMINA,
+            NONLINEARITY_ZIRCONIA,
+            NONLINEARITY_CFRP,
+            NONLINEARITY_HYDROXYAPATITE,
         ];
         for &v in &values {
             assert!(v > 0.0, "Implant constant must be positive, got {v}");

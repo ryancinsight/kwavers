@@ -23,11 +23,12 @@ impl Default for ShellProperties {
     fn default() -> Self {
         // Typical lipid shell properties (SonoVue/Definity-like)
         // Based on Gorce et al. (2000) and Stride & Coussios (2010)
+        use crate::core::constants::cavitation::DENSITY_SHELL_LIPID;
         Self {
             thickness: 3.0e-9,     // 3 nm (typical lipid shell)
             shear_modulus: 50.0e6, // 50 MPa (lipid)
             shear_viscosity: 0.5,  // 0.5 Pa·s (lipid)
-            density: 1100.0,       // 1100 kg/m³ (lipid)
+            density: DENSITY_SHELL_LIPID, // 1100.0 kg/m³ — Gorce et al. (2000)
             sigma_initial: 0.04,   // 40 mN/m (initial tension)
             r_buckling: 0.0,       // Computed from equilibrium
             r_rupture: 0.0,        // Computed based on shell strain
@@ -46,11 +47,12 @@ impl ShellProperties {
     /// Create properties for protein shell (Albunex type)
     #[must_use]
     pub fn protein_shell() -> Self {
+        use crate::core::constants::cavitation::DENSITY_SHELL_PROTEIN;
         Self {
             thickness: 15.0e-9,     // 15 nm (thicker protein)
             shear_modulus: 100.0e6, // 100 MPa (stiffer)
             shear_viscosity: 1.5,   // 1.5 Pa·s (more viscous)
-            density: 1200.0,        // 1200 kg/m³
+            density: DENSITY_SHELL_PROTEIN, // 1200.0 kg/m³ — Stride & Coussios (2010)
             sigma_initial: 0.056,   // 56 mN/m
             ..Self::default()
         }
@@ -59,11 +61,12 @@ impl ShellProperties {
     /// Create properties for polymer shell
     #[must_use]
     pub fn polymer_shell() -> Self {
+        use crate::core::constants::cavitation::DENSITY_SHELL_POLYMER;
         Self {
             thickness: 200.0e-9,    // 200 nm (much thicker)
             shear_modulus: 500.0e6, // 500 MPa (very stiff)
             shear_viscosity: 5.0,   // 5 Pa·s (highly viscous)
-            density: 1050.0,        // 1050 kg/m³
+            density: DENSITY_SHELL_POLYMER, // 1050.0 kg/m³ — Stride & Coussios (2010)
             sigma_initial: 0.072,   // 72 mN/m
             elastic_modulus: 5.0,   // 5 N/m (stiffer)
             ..Self::default()

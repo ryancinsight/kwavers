@@ -115,11 +115,21 @@ pub const DENSITY_LIVER: f64 = 1060.0;
 /// Reference: Duck (1990) Table 4.1.
 pub const DENSITY_KIDNEY: f64 = 1050.0;
 
+/// Density of human renal medulla at body temperature (kg/m³).
+///
+/// Reference: Duck (1990) Table 4.1.
+pub const DENSITY_KIDNEY_MEDULLA: f64 = 1055.0;
+
 /// Density of human brain (mean of white + grey matter) at body temperature
 /// (kg/m³).
 ///
 /// Reference: Duck (1990) Table 4.1; ICRP-89 (2002) Table 4.4.
 pub const DENSITY_BRAIN: f64 = 1040.0;
+
+/// Density of cerebrospinal fluid at body temperature (kg/m³).
+///
+/// Reference: Duck (1990) Table 4.1.
+pub const DENSITY_CSF: f64 = 1007.0;
 
 /// Density of human adipose tissue at body temperature (kg/m³).
 ///
@@ -137,12 +147,27 @@ pub const SOUND_SPEED_LIVER: f64 = 1578.0;
 /// Reference: Duck (1990) Table 4.6.
 pub const SOUND_SPEED_KIDNEY: f64 = 1560.0;
 
+/// Small-signal sound speed in human renal medulla at body temperature (m/s).
+///
+/// Reference: Duck (1990) Table 4.6.
+pub const SOUND_SPEED_KIDNEY_MEDULLA: f64 = 1565.0;
+
 /// Small-signal sound speed in human brain (mean of grey + white matter) at
 /// body temperature (m/s).
 ///
 /// Reference: Duck (1990) Table 4.6; consistent with brain-mean values
 /// reported in Goldman & Hueter (1956) and subsequent reviews.
 pub const SOUND_SPEED_BRAIN: f64 = 1546.0;
+
+/// Small-signal sound speed in human brain grey matter at body temperature (m/s).
+///
+/// Reference: Duck (1990) Table 4.6.
+pub const SOUND_SPEED_BRAIN_GRAY_MATTER: f64 = 1545.0;
+
+/// Small-signal sound speed in cerebrospinal fluid at body temperature (m/s).
+///
+/// Reference: Duck (1990) Table 4.6.
+pub const SOUND_SPEED_CSF: f64 = 1515.0;
 
 /// Small-signal sound speed in human adipose tissue at body temperature
 /// (m/s).
@@ -264,6 +289,46 @@ pub const SOUND_SPEED_MUSCLE: f64 = 1580.0;
 /// Value: 1.204 kg/m³ (at 20°C, 1 atm)
 /// Reference: NIST Standard Reference Database
 pub const DENSITY_AIR: f64 = 1.204;
+
+/// Density of urine at body temperature (kg/m³).
+///
+/// Reference: Duck (1990) physical property tables.
+pub const DENSITY_URINE: f64 = 1005.0;
+
+/// Density of commercial ultrasound gel at room/body coupling conditions (kg/m³).
+///
+/// Reference: Perry & Green (2007), acoustic coupling material properties.
+pub const DENSITY_ULTRASOUND_GEL: f64 = 1020.0;
+
+/// Density of mineral oil at room/body coupling conditions (kg/m³).
+///
+/// Reference: Perry & Green (2007), liquid mineral-oil property tables.
+pub const DENSITY_MINERAL_OIL: f64 = 870.0;
+
+/// Effective density of an ultrasound microbubble suspension (kg/m³).
+///
+/// Reference: Stride & Saffari (2003), dilute contrast-agent suspensions.
+pub const DENSITY_MICROBUBBLE_SUSPENSION: f64 = 1010.0;
+
+/// Small-signal sound speed in urine at body temperature (m/s).
+///
+/// Reference: Duck (1990) physical property tables.
+pub const SOUND_SPEED_URINE: f64 = 1541.0;
+
+/// Small-signal sound speed in commercial ultrasound gel (m/s).
+///
+/// Reference: Perry & Green (2007), acoustic coupling material properties.
+pub const SOUND_SPEED_ULTRASOUND_GEL: f64 = 1550.0;
+
+/// Small-signal sound speed in mineral oil (m/s).
+///
+/// Reference: Perry & Green (2007), liquid mineral-oil property tables.
+pub const SOUND_SPEED_MINERAL_OIL: f64 = 1450.0;
+
+/// Effective small-signal sound speed in a nanoparticle suspension (m/s).
+///
+/// Reference: Stride & Saffari (2003), water-based theranostic suspensions.
+pub const SOUND_SPEED_NANOPARTICLE_SUSPENSION: f64 = 1490.0;
 
 /// Standard atmospheric pressure (Pa)
 pub const ATMOSPHERIC_PRESSURE: f64 = 101325.0;
@@ -652,6 +717,22 @@ pub const ACOUSTIC_ABSORPTION_BLOOD_PLASMA: f64 = 0.015; // dB/(cm·MHz^y)
 /// Reference: Duck, F.A. (1990). *Physical Properties of Tissue*, Table 4.1;
 /// Gordon et al. (2009).
 pub const ACOUSTIC_ABSORPTION_WHOLE_BLOOD: f64 = 0.025; // dB/(cm·MHz^y)
+
+/// Acoustic absorption coefficient of cerebrospinal fluid [dB/(cm·MHz)].
+///
+/// CSF is water-like with low protein content, giving absorption close to
+/// plasma and above pure water.
+///
+/// Reference: Duck, F.A. (1990). *Physical Properties of Tissue*, Table 4.1.
+pub const ACOUSTIC_ABSORPTION_CSF: f64 = 0.008; // dB/(cm·MHz)
+
+/// Acoustic absorption coefficient of urine [dB/(cm·MHz)].
+///
+/// Urine is predominantly aqueous with dissolved solutes, giving low acoustic
+/// absorption near physiological temperature.
+///
+/// Reference: Duck, F.A. (1990). *Physical Properties of Tissue*, Table 4.1.
+pub const ACOUSTIC_ABSORPTION_URINE: f64 = 0.012; // dB/(cm·MHz)
 
 /// Hounsfield unit threshold below which tissue is classified as brain [HU].
 ///

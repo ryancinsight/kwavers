@@ -21,11 +21,14 @@ use crate::core::constants::optical::{
     REFRACTIVE_INDEX_BIOLOGICAL_FLUID, REFRACTIVE_INDEX_CSF, REFRACTIVE_INDEX_WATER,
 };
 use crate::core::constants::fundamental::{
-    ACOUSTIC_ABSORPTION_BLOOD_PLASMA, ACOUSTIC_ABSORPTION_WHOLE_BLOOD, ATMOSPHERIC_PRESSURE,
-    B_OVER_A_BLOOD, B_OVER_A_CSF, B_OVER_A_MINERAL_OIL, B_OVER_A_NANOPARTICLE_SUSPENSION,
-    B_OVER_A_URINE, B_OVER_A_WATER, B_OVER_A_WATER_37C, DENSITY_BLOOD, DENSITY_TISSUE,
-    DENSITY_WATER_37C, SOUND_SPEED_BLOOD, SOUND_SPEED_WATER, SOUND_SPEED_WATER_37C,
-    WATER_ABSORPTION_ALPHA_0_DB_CM_MHZ2,
+    ACOUSTIC_ABSORPTION_BLOOD_PLASMA, ACOUSTIC_ABSORPTION_CSF, ACOUSTIC_ABSORPTION_URINE,
+    ACOUSTIC_ABSORPTION_WHOLE_BLOOD, ATMOSPHERIC_PRESSURE, B_OVER_A_BLOOD, B_OVER_A_CSF,
+    B_OVER_A_MINERAL_OIL, B_OVER_A_NANOPARTICLE_SUSPENSION, B_OVER_A_URINE, B_OVER_A_WATER,
+    B_OVER_A_WATER_37C, DENSITY_BLOOD, DENSITY_CSF, DENSITY_MICROBUBBLE_SUSPENSION,
+    DENSITY_MINERAL_OIL, DENSITY_TISSUE, DENSITY_ULTRASOUND_GEL, DENSITY_URINE, DENSITY_WATER_37C,
+    SOUND_SPEED_BLOOD, SOUND_SPEED_CSF, SOUND_SPEED_MINERAL_OIL,
+    SOUND_SPEED_NANOPARTICLE_SUSPENSION, SOUND_SPEED_ULTRASOUND_GEL, SOUND_SPEED_URINE,
+    SOUND_SPEED_WATER, SOUND_SPEED_WATER_37C, WATER_ABSORPTION_ALPHA_0_DB_CM_MHZ2,
 };
 use crate::core::constants::medical::BLOOD_SPECIFIC_HEAT;
 use crate::core::constants::thermodynamic::{
@@ -101,10 +104,11 @@ pub const WHOLE_BLOOD: FluidProperties = FluidProperties {
 /// Source: Duck (1990)
 /// Similar to plasma but with slightly different composition
 pub const CSF: FluidProperties = FluidProperties {
-    sound_speed: 1509.0,
-    density: 1007.0,
-    impedance: 1520563.0,
-    absorption_coefficient: 0.008,
+    sound_speed: SOUND_SPEED_CSF,           // 1515.0 m/s — Duck (1990) Table 4.6 at 37°C
+    density: DENSITY_CSF,                   // 1007.0 kg/m³ — Duck (1990) Table 4.1
+    // Z = ρ·c = DENSITY_CSF × SOUND_SPEED_CSF = 1007.0 × 1515.0 = 1 525 605 Pa·s/m
+    impedance: 1_525_605.0,
+    absorption_coefficient: ACOUSTIC_ABSORPTION_CSF, // 0.008 dB/(cm·MHz) — Duck (1990)
     absorption_exponent: 1.1,
     nonlinearity_parameter: B_OVER_A_CSF,
     shear_viscosity: 0.7e-3, // Lower viscosity than blood
@@ -126,11 +130,11 @@ pub const CSF: FluidProperties = FluidProperties {
 /// Urine at 37°C
 /// Source: Duck (1990)
 pub const URINE: FluidProperties = FluidProperties {
-    sound_speed: 1541.0,
-    density: 1005.0,
-    // Z = ρ·c = 1005 × 1541 = 1 548 705 Pa·s/m
+    sound_speed: SOUND_SPEED_URINE,         // 1541.0 m/s — Duck (1990) Table 4.6
+    density: DENSITY_URINE,                 // 1005.0 kg/m³ — Duck (1990)
+    // Z = ρ·c = DENSITY_URINE × SOUND_SPEED_URINE = 1005.0 × 1541.0 = 1 548 705 Pa·s/m
     impedance: 1_548_705.0,
-    absorption_coefficient: 0.012,
+    absorption_coefficient: ACOUSTIC_ABSORPTION_URINE, // 0.012 dB/(cm·MHz) — Duck (1990)
     absorption_exponent: 1.15,
     nonlinearity_parameter: B_OVER_A_URINE, // 5.1 (Duck 1990)
     shear_viscosity: 0.95e-3,
@@ -157,8 +161,9 @@ pub const URINE: FluidProperties = FluidProperties {
 /// Source: Perry & Green (2007)
 /// Typical commercial formulation based on mineral oil and thickening agents
 pub const ULTRASOUND_GEL: FluidProperties = FluidProperties {
-    sound_speed: 1550.0,
-    density: 1020.0,
+    sound_speed: SOUND_SPEED_ULTRASOUND_GEL,   // 1550.0 m/s — Perry & Green (2007)
+    density: DENSITY_ULTRASOUND_GEL,           // 1020.0 kg/m³ — Perry & Green (2007)
+    // Z = ρ·c = DENSITY_ULTRASOUND_GEL × SOUND_SPEED_ULTRASOUND_GEL = 1020 × 1550 = 1 581 000
     impedance: 1581000.0,
     absorption_coefficient: 0.008,
     absorption_exponent: 1.1,
@@ -183,8 +188,9 @@ pub const ULTRASOUND_GEL: FluidProperties = FluidProperties {
 /// Source: Perry & Green (2007)
 /// Pure liquid medium without polymer additives
 pub const MINERAL_OIL: FluidProperties = FluidProperties {
-    sound_speed: 1450.0,
-    density: 870.0,
+    sound_speed: SOUND_SPEED_MINERAL_OIL,   // 1450.0 m/s — Perry & Green (2007)
+    density: DENSITY_MINERAL_OIL,           // 870.0 kg/m³ — Perry & Green (2007)
+    // Z = ρ·c = DENSITY_MINERAL_OIL × SOUND_SPEED_MINERAL_OIL = 870 × 1450 = 1 261 500
     impedance: 1261500.0,
     absorption_coefficient: 0.005,
     absorption_exponent: 1.0,
@@ -251,8 +257,8 @@ pub const WATER_37C: FluidProperties = FluidProperties {
 /// Effective properties depend on bubble concentration
 pub const MICROBUBBLE_SUSPENSION: FluidProperties = FluidProperties {
     sound_speed: SOUND_SPEED_WATER,
-    density: 1010.0,
-    // Z = ρ·c = 1010 × 1482 = 1 496 820 Pa·s/m
+    density: DENSITY_MICROBUBBLE_SUSPENSION,    // 1010.0 kg/m³ — Stride & Saffari (2003)
+    // Z = ρ·c = DENSITY_MICROBUBBLE_SUSPENSION × SOUND_SPEED_WATER = 1010.0 × 1482.0 = 1 496 820
     impedance: 1_496_820.0,
     absorption_coefficient: 0.05, // Higher absorption due to bubble resonance
     absorption_exponent: 1.5,
@@ -277,9 +283,10 @@ pub const MICROBUBBLE_SUSPENSION: FluidProperties = FluidProperties {
 /// Source: Stride & Saffari (2003)
 /// Water-based carrier with suspended nanoparticles for theranostics
 pub const NANOPARTICLE_SUSPENSION: FluidProperties = FluidProperties {
-    sound_speed: 1490.0,
+    sound_speed: SOUND_SPEED_NANOPARTICLE_SUSPENSION, // 1490.0 m/s — Stride & Saffari (2003)
     density: DENSITY_TISSUE,
-    impedance: 1563450.0,
+    // Z = ρ·c = DENSITY_TISSUE × SOUND_SPEED_NANOPARTICLE_SUSPENSION = 1050 × 1490 = 1 564 500
+    impedance: 1_564_500.0,
     absorption_coefficient: 0.03,
     absorption_exponent: 1.2,
     nonlinearity_parameter: B_OVER_A_NANOPARTICLE_SUSPENSION, // 5.3 (Stride & Saffari 2003)
