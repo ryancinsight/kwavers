@@ -661,6 +661,19 @@ pub const ACOUSTIC_ABSORPTION_WHOLE_BLOOD: f64 = 0.025; // dB/(cm·MHz^y)
 /// Reference: Aubry et al. (2003). J. Acoust. Soc. Am. 113(1):84–93.
 pub const HU_BONE_THRESHOLD: f64 = 300.0; // Hounsfield units
 
+/// Hounsfield unit threshold separating in-body tissue from background air [HU].
+///
+/// Voxels with HU > −300 are classified as body tissue (brain, soft tissue, or bone)
+/// in transcranial CT segmentation pipelines. Voxels at or below −300 HU are treated
+/// as air or background and excluded from acoustic property assignment.
+///
+/// The −300 HU boundary is empirically established: fat is −200 to −50 HU,
+/// skin and dura mater are above −100 HU, while scalp air pockets and sinuses
+/// fall below −300 HU.
+///
+/// Reference: Aubry et al. (2003). J. Acoust. Soc. Am. 113(1):84–93.
+pub const HU_BRAIN_BODY_THRESHOLD: f64 = -300.0; // Hounsfield units
+
 /// Hounsfield unit range for skull bone-fraction interpolation [HU].
 ///
 /// `bone_fraction = (HU − HU_BONE_THRESHOLD) / HU_SKULL_RANGE`, clamped to [0, 1].

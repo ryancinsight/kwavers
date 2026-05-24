@@ -41,5 +41,10 @@ pub const MAX_F_NUMBER: f64 = 1.2;
 pub const CLINICAL_FREQ_MIN: f64 = 200e3; // 200 kHz
 pub const CLINICAL_FREQ_MAX: f64 = 2.0 * MHZ_TO_HZ; // 2 MHz
 
-/// Skull attenuation coefficient (Np/m/MHz)
-pub const SKULL_ATTENUATION: f64 = 70.0;
+/// Skull attenuation coefficient [Np/(m·MHz)] — Marsac et al. 2017 porosity model upper bound.
+///
+/// Value: 70 Np/(m·MHz). Canonical SSOT: `acoustic_parameters::SKULL_ATTENUATION_MARSAC_MAX_NP_PER_M_MHZ`.
+/// Use that constant directly for new code; this re-declaration is retained here for the
+/// hemispherical-array configuration namespace.
+pub const SKULL_ATTENUATION: f64 =
+    crate::core::constants::acoustic_parameters::SKULL_ATTENUATION_MARSAC_MAX_NP_PER_M_MHZ;

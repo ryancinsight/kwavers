@@ -3,7 +3,10 @@
 use std::f64::consts::PI;
 
 use crate::{
-    core::error::{KwaversError, KwaversResult},
+    core::{
+        constants::fundamental::{HU_BONE_THRESHOLD, HU_BRAIN_BODY_THRESHOLD},
+        error::{KwaversError, KwaversResult},
+    },
     domain::source::transducers::focused::BowlAngularBounds,
 };
 use ndarray::{s, Array2, Array3};
@@ -36,8 +39,8 @@ pub fn build_brain_placement_context(
     let sx = spacing_mm[0] * 1.0e-3;
     let sy = spacing_mm[1] * 1.0e-3;
     let sz = spacing_mm[2] * 1.0e-3;
-    let body = ct_volume_hu.mapv(|hu| hu > -300.0);
-    let brain = ct_volume_hu.mapv(|hu| hu > -300.0 && hu < 300.0);
+    let body = ct_volume_hu.mapv(|hu| hu > HU_BRAIN_BODY_THRESHOLD);
+    let brain = ct_volume_hu.mapv(|hu| hu > HU_BRAIN_BODY_THRESHOLD && hu < HU_BONE_THRESHOLD);
     let target_support = if brain.iter().any(|active| *active) {
         &brain
     } else {

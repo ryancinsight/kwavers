@@ -175,11 +175,39 @@ fn validate_target_center(center: [f64; 2], nx: usize, ny: usize) -> KwaversResu
     Ok(())
 }
 
+/// Sound speed at the low end of the brain tissue HU range [m/s].
+///
+/// CSF speed at HU = −20, from the linear HU-to-speed model derived from
+/// Mast (2000) and Kremkau et al. (1981).
+const BRAIN_SPEED_CSF_M_S: f64 = 1510.0;
+
+/// Sound speed at the high end of the brain tissue HU range [m/s].
+///
+/// White-matter speed at HU = 120, from the same empirical linear model.
+/// Range span: 1565 − 1510 = 55 m/s over 140 HU.
+const BRAIN_SPEED_WHITE_MATTER_M_S: f64 = 1565.0;
+
+/// HU range over which `brain_speed` interpolates from CSF to white matter [HU].
+///
+/// Spans from HU = −20 (CSF) to HU = 120 (white matter): 120 − (−20) = 140 HU.
+const BRAIN_HU_RANGE: f64 = 140.0;
+
+/// HU lower bound for the brain tissue speed model [HU].
+///
+/// At HU = −20 the model returns `BRAIN_SPEED_CSF_M_S`; the offset shifts the
+/// interpolation variable to [0, 1] over [−20, 120] HU.
+const BRAIN_HU_LOW: f64 = -20.0;
+
 /// Linear HU-to-sound-speed for brain soft tissue.
 ///
-/// Empirical: 1510 m/s at HU = −20 (CSF), 1565 m/s at HU = 120 (white matter).
+/// Empirical: `BRAIN_SPEED_CSF_M_S` (1510 m/s) at HU = −20 (CSF),
+/// `BRAIN_SPEED_WHITE_MATTER_M_S` (1565 m/s) at HU = 120 (white matter).
+///
+/// References: Mast (2000) Biophysical Journal 79:1580–1589;
+/// Kremkau et al. (1981) J. Acoust. Soc. Am. 70(2):597–601.
 fn brain_speed(hu: f64) -> f64 {
-    1510.0 + 55.0 * ((hu + 20.0) / 140.0).clamp(0.0, 1.0)
+    let speed_range = BRAIN_SPEED_WHITE_MATTER_M_S - BRAIN_SPEED_CSF_M_S;
+    BRAIN_SPEED_CSF_M_S + speed_range * ((hu - BRAIN_HU_LOW) / BRAIN_HU_RANGE).clamp(0.0, 1.0)
 }
 
 /// Soft-tissue attenuation in Np/(m·MHz).

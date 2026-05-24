@@ -4,6 +4,7 @@ use std::collections::VecDeque;
 
 use ndarray::{s, Array3};
 
+use crate::core::constants::fundamental::{HU_BONE_THRESHOLD, HU_BRAIN_BODY_THRESHOLD};
 use crate::core::error::{KwaversError, KwaversResult};
 
 use super::super::super::abdominal3d::helpers::exterior_air_mask;
@@ -22,7 +23,7 @@ pub(super) fn body_mask_full(
     let anatomical_body = Array3::from_shape_fn(ct_hu.dim(), |idx| {
         let label = label_volume.map_or(0, |labels| labels[idx]);
         match anatomy {
-            AnatomyKind::Brain => ct_hu[idx] > -300.0,
+            AnatomyKind::Brain => ct_hu[idx] > HU_BRAIN_BODY_THRESHOLD,
             AnatomyKind::Liver | AnatomyKind::Kidney => ct_hu[idx] > -450.0 || label > 0,
         }
     });
@@ -234,7 +235,8 @@ fn synthetic_brain_target(
     target_center_index: Option<[f64; 3]>,
 ) -> KwaversResult<Array3<bool>> {
     let n = body.dim().0;
-    let brain_support = Array3::from_shape_fn(body.dim(), |idx| body[idx] && ct[idx] < 300.0);
+    let brain_support =
+        Array3::from_shape_fn(body.dim(), |idx| body[idx] && ct[idx] < HU_BONE_THRESHOLD);
     let support = if brain_support.iter().any(|active| *active) {
         &brain_support
     } else {
