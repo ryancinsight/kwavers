@@ -9,10 +9,12 @@ pub mod materials;
 pub mod traits;
 pub mod types;
 
-// Re-export for convenient access
-pub use fields::*;
-pub use materials::*;
-pub use traits::*;
-pub use types::*;
-
-// Re-export key items from parent module for backward compatibility
+pub use fields::EMFieldUtils;
+pub use materials::{EMMaterialDistribution, EMMaterialUtils};
+pub use traits::{
+    ElectromagneticWaveEquation, PhotoacousticCoupling, PhysicsEMSource,
+    PlasmonicEnhancementEquation,
+};
+pub use types::{
+    EMDimension, ElectromagneticPolarization, ElectromagneticWaveType, NanoparticleGeometry,
+};
