@@ -30,7 +30,8 @@ use crate::core::constants::fundamental::{
 use crate::core::constants::medical::BLOOD_SPECIFIC_HEAT;
 use crate::core::constants::thermodynamic::{
     BODY_TEMPERATURE_C, ROOM_TEMPERATURE_C, SPECIFIC_HEAT_BLOOD_PLASMA, SPECIFIC_HEAT_CSF,
-    SPECIFIC_HEAT_MINERAL_OIL, SPECIFIC_HEAT_ULTRASOUND_GEL, SPECIFIC_HEAT_URINE,
+    SPECIFIC_HEAT_MICROBUBBLE_SUSPENSION, SPECIFIC_HEAT_MINERAL_OIL,
+    SPECIFIC_HEAT_NANOPARTICLE_SUSPENSION, SPECIFIC_HEAT_ULTRASOUND_GEL, SPECIFIC_HEAT_URINE,
     SPECIFIC_HEAT_WATER_37C, THERMAL_CONDUCTIVITY_BLOOD, THERMAL_CONDUCTIVITY_CSF,
     THERMAL_CONDUCTIVITY_MINERAL_OIL, THERMAL_CONDUCTIVITY_ULTRASOUND_GEL,
     THERMAL_CONDUCTIVITY_URINE, THERMAL_CONDUCTIVITY_WATER_37C, THERMAL_DIFFUSIVITY_BLOOD,
@@ -256,7 +257,7 @@ pub const MICROBUBBLE_SUSPENSION: FluidProperties = FluidProperties {
     nonlinearity_parameter: B_OVER_A_WATER, // 5.2 (Duck 1990 Table 4.16)
     shear_viscosity: 0.8e-3,
     bulk_viscosity: 0.0,
-    specific_heat: 4170.0,
+    specific_heat: SPECIFIC_HEAT_MICROBUBBLE_SUSPENSION, // 4170.0 J/(kg·K)
     thermal_conductivity: 0.60,
     // α = k/(ρ·cp) = 0.60 / (1010 × 4170) = 1.425e-7 m²/s
     thermal_diffusivity: 1.425e-7,
@@ -282,7 +283,7 @@ pub const NANOPARTICLE_SUSPENSION: FluidProperties = FluidProperties {
     nonlinearity_parameter: B_OVER_A_NANOPARTICLE_SUSPENSION, // 5.3 (Stride & Saffari 2003)
     shear_viscosity: VISCOSITY_WATER, // water-based carrier
     bulk_viscosity: 0.0,
-    specific_heat: 4150.0,
+    specific_heat: SPECIFIC_HEAT_NANOPARTICLE_SUSPENSION, // 4150.0 J/(kg·K)
     thermal_conductivity: 0.59,
     thermal_diffusivity: 1.36e-7,
     perfusion_rate: 0.0,

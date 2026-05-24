@@ -3,6 +3,31 @@
 use crate::core::constants::numerical::MPA_TO_PA;
 use crate::domain::medium::properties::{ElasticPropertyData, StrengthPropertyData};
 
+// ============================================================================
+// Kidney stone material constants (Williams et al. 2003; Zohdi & Kuypers 2006)
+// ============================================================================
+
+/// Density of calcium oxalate monohydrate kidney stone [kg/m³].
+///
+/// Most common urinary stone composition (>60% of all stones).
+///
+/// Reference: Williams JC et al. (2003). *J. Urol.* 169(6):2227–2231.
+const DENSITY_STONE_CALCIUM_OXALATE: f64 = 2000.0; // kg/m³
+
+/// Density of uric acid kidney stone [kg/m³].
+///
+/// Second most common stone type; softer and more amenable to dissolution.
+///
+/// Reference: Williams JC et al. (2003). *J. Urol.* 169(6):2227–2231.
+const DENSITY_STONE_URIC_ACID: f64 = 1800.0; // kg/m³
+
+/// Density of cystine kidney stone [kg/m³].
+///
+/// Hardest stone type; associated with cystinuria.
+///
+/// Reference: Williams JC et al. (2003). *J. Urol.* 169(6):2227–2231.
+const DENSITY_STONE_CYSTINE: f64 = 2100.0; // kg/m³
+
 /// Stone material properties composing canonical domain types.
 ///
 /// # References
@@ -72,7 +97,7 @@ impl StoneMaterial {
     ///
     #[must_use]
     pub fn calcium_oxalate_monohydrate() -> Self {
-        let density = 2000.0;
+        let density = DENSITY_STONE_CALCIUM_OXALATE;
         let youngs_modulus = 20e9;
         let poisson_ratio = 0.3;
         let tensile_strength = 5.0 * MPA_TO_PA;
@@ -96,7 +121,7 @@ impl StoneMaterial {
     ///
     #[must_use]
     pub fn uric_acid() -> Self {
-        let density = 1800.0;
+        let density = DENSITY_STONE_URIC_ACID;
         let youngs_modulus = 10e9;
         let poisson_ratio = 0.35;
         let tensile_strength = 3.0 * MPA_TO_PA;
@@ -120,7 +145,7 @@ impl StoneMaterial {
     ///
     #[must_use]
     pub fn cystine() -> Self {
-        let density = 2100.0;
+        let density = DENSITY_STONE_CYSTINE;
         let youngs_modulus = 30e9;
         let poisson_ratio = 0.28;
         let tensile_strength = 8.0 * MPA_TO_PA;

@@ -392,6 +392,23 @@ pub const SPECIFIC_HEAT_MINERAL_OIL: f64 = 2100.0;
 /// Reference: Perry & Green (2007).
 pub const THERMAL_CONDUCTIVITY_MINERAL_OIL: f64 = 0.14;
 
+/// Specific heat capacity of microbubble ultrasound contrast agent [J/(kg·K)].
+///
+/// Effective property of phospholipid-shell microbubble suspension in saline;
+/// approximated as pure water at 37°C given >99% aqueous volume fraction.
+/// Small shell mass contribution (<0.1%) is negligible for bulk thermal properties.
+///
+/// Reference: Stride E & Saffari N (2003). *Proc. Inst. Mech. Eng. H* 217(6):429–447.
+pub const SPECIFIC_HEAT_MICROBUBBLE_SUSPENSION: f64 = 4170.0; // J/(kg·K)
+
+/// Specific heat capacity of iron-oxide nanoparticle suspension [J/(kg·K)].
+///
+/// Water-based carrier with ~1–5 mg/mL Fe₃O₄ nanoparticles; specific heat is
+/// slightly reduced below pure water owing to nanoparticle mass fraction.
+///
+/// Reference: Stride E & Saffari N (2003). *Proc. Inst. Mech. Eng. H* 217(6):429–447.
+pub const SPECIFIC_HEAT_NANOPARTICLE_SUSPENSION: f64 = 4150.0; // J/(kg·K)
+
 // ============================================================================
 // Thermal Expansion Coefficients
 // ============================================================================
