@@ -8,7 +8,7 @@ use crate::core::constants::acoustic_parameters::{
 };
 use crate::core::constants::cavitation::{
     GAS_DIFFUSION_COEFFICIENT_TISSUE, POLYTROPIC_EXPONENT_AIR, SURFACE_TENSION_TISSUE,
-    VAPOR_PRESSURE_WATER,
+    TISSUE_NUCLEATION_RADIUS, VAPOR_PRESSURE_WATER,
 };
 use crate::core::constants::fundamental::{
     ACOUSTIC_ABSORPTION_TISSUE, ATMOSPHERIC_PRESSURE, DENSITY_TISSUE, SOUND_SPEED_TISSUE,
@@ -73,7 +73,7 @@ impl TissueFactory {
             Array3::from_elem((grid.nx, grid.ny, grid.nz), OPTICAL_SCATTERING_REDUCED_TISSUE_NIR_M);
 
         // Bubble state
-        let bubble_radius = Array3::from_elem((grid.nx, grid.ny, grid.nz), 10e-6);
+        let bubble_radius = Array3::from_elem((grid.nx, grid.ny, grid.nz), TISSUE_NUCLEATION_RADIUS);
         let bubble_velocity = Array3::zeros((grid.nx, grid.ny, grid.nz));
 
         // Acoustic parameters

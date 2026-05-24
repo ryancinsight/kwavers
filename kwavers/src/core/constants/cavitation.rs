@@ -133,6 +133,17 @@ pub const MIN_RADIUS: f64 = 1e-9;
 /// Reference: Leighton T. G. (1994). The Acoustic Bubble. Academic Press. §2.1.
 pub const INITIAL_BUBBLE_RADIUS: f64 = 5e-6;
 
+/// Equilibrium nucleation radius for spontaneous cavitation bubbles in soft tissue (m).
+///
+/// Dissolved gas nuclei in vascularised soft tissue are larger than in degassed water
+/// owing to pre-existing micro-stabilised bubble populations and blood-gas
+/// supersaturation.  10 μm is used as the representative upper-end equilibrium
+/// radius for heterogeneous tissue medium initialisation.
+///
+/// Reference: Apfel R E (1984). *Ultrasonics* 22(4):167–173;
+/// Fowlkes J B & Crum L A (1988). *J. Acoust. Soc. Am.* 83(6):2190–2201.
+pub const TISSUE_NUCLEATION_RADIUS: f64 = 10e-6; // m
+
 /// Conversion factor from `bar·L²` to `Pa·m⁶`.
 ///
 /// Derivation: `1 bar = 10⁵ Pa`, `1 L² = (10⁻³ m³)² = 10⁻⁶ m⁶`, so
