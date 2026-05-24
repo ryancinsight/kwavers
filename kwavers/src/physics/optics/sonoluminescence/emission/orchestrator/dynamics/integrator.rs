@@ -1,6 +1,7 @@
 use crate::core::constants::fundamental::{
     ATMOSPHERIC_PRESSURE, BOLTZMANN, ELECTRON_MASS, ELEMENTARY_CHARGE,
 };
+use crate::core::constants::thermodynamic::BUBBLE_REFERENCE_TEMPERATURE_K;
 use crate::core::error::KwaversResult;
 use crate::physics::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};
 use crate::physics::bubble_dynamics::keller_miksis::KellerMiksisModel;
@@ -67,7 +68,7 @@ impl IntegratedSonoluminescence {
             // Initial bubble interior: thermal equilibrium at the Brenner (2002)
             // 300 K baseline used by the Cherenkov & emission models in this
             // submodule; ambient pressure sourced from SSOT.
-            temperature_field: Array3::from_elem(grid_shape, 300.0),
+            temperature_field: Array3::from_elem(grid_shape, BUBBLE_REFERENCE_TEMPERATURE_K),
             pressure_field: Array3::from_elem(grid_shape, ATMOSPHERIC_PRESSURE),
             radius_field: Array3::from_elem(grid_shape, bubble_params.r0),
             wall_velocity_field: Array3::zeros(grid_shape),

@@ -121,7 +121,7 @@ impl CherenkovModel {
     #[must_use]
     pub fn total_power_density(&self, velocity: f64, charge_density: f64, temperature: f64) -> f64 {
         let ft = self.frank_tamm_factor(velocity);
-        let temp_scale = (temperature / 300.0).sqrt().max(0.0);
+        let temp_scale = (temperature / REFERENCE_TEMPERATURE).sqrt().max(0.0);
         self.coherence_factor * charge_density.max(0.0) * ft * temp_scale
     }
 

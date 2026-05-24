@@ -17,6 +17,19 @@ pub const HEAT_CAPACITY_RATIO_MONATOMIC: f64 = 5.0 / 3.0;
 /// Room temperature in Kelvin
 pub const ROOM_TEMPERATURE_K: f64 = 293.15;
 
+/// Bubble-dynamics reference temperature used in Brenner et al. (2002) [K].
+///
+/// The sonoluminescence and Cherenkov emission models in the sonoluminescence
+/// pipeline initialize the bubble interior at 300 K (≈ 27°C), following the
+/// thermal-equilibrium baseline specified in:
+///
+/// Brenner MP, Hilgenfeldt S, Lohse D (2002). "Single-bubble sonoluminescence."
+/// *Rev. Mod. Phys.* 74(2), 425–484. DOI: 10.1103/RevModPhys.74.425.
+///
+/// Distinct from `ROOM_TEMPERATURE_K` (293.15 K = 20°C) — the 300 K value is
+/// the round reference in the Brenner model, not a measured ambient temperature.
+pub const BUBBLE_REFERENCE_TEMPERATURE_K: f64 = 300.0;
+
 /// Body temperature in Kelvin
 pub const BODY_TEMPERATURE_K: f64 = 310.15;
 

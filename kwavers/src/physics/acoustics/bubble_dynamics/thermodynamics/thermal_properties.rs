@@ -4,6 +4,7 @@ use std::f64::consts::PI;
 
 use super::vapor_pressure::ThermodynamicsCalculator;
 use crate::core::constants::fundamental::GAS_CONSTANT as R_GAS;
+use crate::core::constants::thermodynamic::BUBBLE_REFERENCE_TEMPERATURE_K;
 use crate::core::constants::{M_WATER, P_CRITICAL_WATER, T_CRITICAL_WATER};
 
 impl ThermodynamicsCalculator {
@@ -51,7 +52,7 @@ impl ThermodynamicsCalculator {
         let p_reduced = pressure / P_CRITICAL_WATER;
 
         // Base conductivity at low pressure
-        let k0 = 0.0181 * (temperature / 300.0).powf(0.76);
+        let k0 = 0.0181 * (temperature / BUBBLE_REFERENCE_TEMPERATURE_K).powf(0.76);
 
         // Pressure correction
         let k_corr = 1.0 + 0.003 * p_reduced / t_reduced;
