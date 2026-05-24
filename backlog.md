@@ -1,5 +1,16 @@
 # Backlog / Strategy
 
+## Focused bowl hemisphere aperture config - closed (2026-05-24)
+- **[done] [minor]** Added generic `FocusedBowlAperture::Hemisphere` and
+  `FocusedBowlAperture::AxisReferenceHemisphere` variants. Config-driven
+  focused sources can now request fixed-count hemispherical bowl layouts through
+  `BowlTransducer::with_angular_bounds` and `BowlAngularBounds::hemisphere`
+  without naming clinical anatomy or devices in the source model. The
+  axis-reference variant preserves the existing explicit-radius contact-axis
+  contract. Verification: `cargo check -p kwavers --lib --message-format=short -j 1`
+  exits 0 and `cargo test -p kwavers focused_source_factory --lib --message-format=short -j 1`
+  passes 6/6.
+
 ## Solver convergence and water-constant test contract - closed (2026-05-24)
 - **[done] [patch]** Corrected the FDTD solver-convergence Gaussian pulse
   width to dimensional meters (`3*dx`) so the energy fixture represents a

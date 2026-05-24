@@ -9,7 +9,7 @@ use crate::domain::source::{
     basic::{LinearArray, MatrixArray, PistonApodization, PistonConfig},
     transducers::{
         apodization::RectangularApodization,
-        focused::{BowlConfig, BowlTransducer, FocusedSource},
+        focused::{BowlAngularBounds, BowlConfig, BowlTransducer, FocusedSource},
     },
     wavefront::{
         BesselConfig, GaussianConfig, PlaneWaveSourceConfig, SphericalConfig, SphericalWaveType,
@@ -265,6 +265,14 @@ impl SourceFactory {
                 }
                 None => BowlTransducer::new(bowl_config),
             },
+            FocusedBowlAperture::Hemisphere => {
+                let element_count = required_focused_bowl_element_count(config)?;
+                BowlTransducer::with_angular_bounds(
+                    bowl_config,
+                    BowlAngularBounds::hemisphere(),
+                    element_count,
+                )
+            }
             FocusedBowlAperture::PolarSpan { theta_max_rad } => {
                 let element_count = required_focused_bowl_element_count(config)?;
                 BowlTransducer::with_polar_span(bowl_config, theta_max_rad, element_count)
@@ -311,6 +319,24 @@ impl SourceFactory {
                     axis_config,
                     theta_min_rad,
                     theta_max_rad,
+                    element_count,
+                )
+            }
+            FocusedBowlAperture::AxisReferenceHemisphere {
+                radius_of_curvature_m,
+            } => {
+                let element_count = required_focused_bowl_element_count(config)?;
+                let mut axis_config = BowlConfig::from_axis_reference_focus(
+                    config.position,
+                    bowl_config.focus,
+                    radius_of_curvature_m,
+                    config.frequency,
+                    config.amplitude,
+                )?;
+                axis_config.phase = config.phase;
+                BowlTransducer::with_angular_bounds(
+                    axis_config,
+                    BowlAngularBounds::hemisphere(),
                     element_count,
                 )
             }
@@ -392,6 +418,39 @@ mod tests {
     }
 
     #[test]
+    fn focused_source_factory_accepts_hemisphere_aperture() {
+        let mut grid = Grid::new(48, 48, 32, 0.01, 0.01, 0.01).unwrap();
+        grid.origin = [-0.24, -0.24, -0.04];
+        let element_count = 31;
+        let radius = 0.16_f64;
+        let config = DomainSourceParameters {
+            model: SourceModel::Focused,
+            position: [0.0, 0.0, radius],
+            focus: Some([0.0, 0.0, 0.0]),
+            radius: 0.01,
+            frequency: 650.0e3,
+            num_elements: Some(element_count),
+            focused_bowl_aperture: FocusedBowlAperture::Hemisphere,
+            ..Default::default()
+        };
+
+        let source = SourceFactory::create_source(&config, &grid).unwrap();
+        let positions = source.positions();
+        let min_projection = positions
+            .iter()
+            .map(|position| position.2 / radius)
+            .fold(f64::INFINITY, f64::min);
+        let max_projection = positions
+            .iter()
+            .map(|position| position.2 / radius)
+            .fold(f64::NEG_INFINITY, f64::max);
+
+        assert_eq!(positions.len(), element_count);
+        assert!(min_projection >= -1.0e-12);
+        assert!(max_projection <= 1.0 + 1.0e-12);
+    }
+
+    #[test]
     fn angular_focused_source_factory_requires_element_count() {
         let grid = Grid::new(8, 8, 8, 0.01, 0.01, 0.01).unwrap();
         let config = DomainSourceParameters {
@@ -470,6 +529,61 @@ mod tests {
             assert!((distance - radius).abs() < 1.0e-12);
             assert!(axis_projection <= theta_min.cos() + 1.0e-12);
             assert!(axis_projection >= theta_max.cos() - 1.0e-12);
+        }
+    }
+
+    #[test]
+    fn focused_source_factory_accepts_axis_reference_hemisphere_aperture() {
+        let mut grid = Grid::new(64, 64, 40, 0.008, 0.008, 0.008).unwrap();
+        grid.origin = [-0.256, -0.256, -0.064];
+        let axis_reference = [0.0, 0.0, 0.04];
+        let focus = [0.0, 0.0, 0.0];
+        let radius = 0.16_f64;
+        let element_count = 29;
+        let config = DomainSourceParameters {
+            model: SourceModel::Focused,
+            position: axis_reference,
+            focus: Some(focus),
+            radius: 0.01,
+            frequency: 650.0e3,
+            num_elements: Some(element_count),
+            focused_bowl_aperture: FocusedBowlAperture::AxisReferenceHemisphere {
+                radius_of_curvature_m: radius,
+            },
+            ..Default::default()
+        };
+
+        let source = SourceFactory::create_source(&config, &grid).unwrap();
+        let axis_norm = ((focus[0] - axis_reference[0]).powi(2)
+            + (focus[1] - axis_reference[1]).powi(2)
+            + (focus[2] - axis_reference[2]).powi(2))
+        .sqrt();
+        let axis_unit = [
+            (focus[0] - axis_reference[0]) / axis_norm,
+            (focus[1] - axis_reference[1]) / axis_norm,
+            (focus[2] - axis_reference[2]) / axis_norm,
+        ];
+
+        assert_eq!(source.positions().len(), element_count);
+        assert_eq!(source.focal_point(), Some((focus[0], focus[1], focus[2])));
+        for position in source.positions() {
+            let focus_to_element = [
+                focus[0] - position.0,
+                focus[1] - position.1,
+                focus[2] - position.2,
+            ];
+            let distance = (focus_to_element[0].powi(2)
+                + focus_to_element[1].powi(2)
+                + focus_to_element[2].powi(2))
+            .sqrt();
+            let axis_projection = axis_unit[0].mul_add(
+                focus_to_element[0],
+                axis_unit[1].mul_add(focus_to_element[1], axis_unit[2] * focus_to_element[2]),
+            ) / radius;
+
+            assert!((distance - radius).abs() < 1.0e-12);
+            assert!(axis_projection >= -1.0e-12);
+            assert!(axis_projection <= 1.0 + 1.0e-12);
         }
     }
 }

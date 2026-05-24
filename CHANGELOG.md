@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Added (2026-05-24) - Focused Bowl Hemisphere Aperture Config
+
+- [minor] Add generic `FocusedBowlAperture::Hemisphere` and
+  `FocusedBowlAperture::AxisReferenceHemisphere` options so config-driven
+  focused sources can request fixed-count hemispherical bowl layouts without
+  anatomy- or device-specific source names. Both variants delegate element
+  positions, normals, and area weights to `BowlTransducer`.
+
 ### Fixed (2026-05-24) - Solver Convergence And Water Constant Test Contracts
 
 - [patch] Correct the FDTD solver-convergence Gaussian pulse width from grid

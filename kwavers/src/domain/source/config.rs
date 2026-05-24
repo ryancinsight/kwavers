@@ -52,6 +52,8 @@ pub enum FocusedBowlAperture {
     /// Use `DomainSourceParameters::radius` as the projected aperture radius.
     #[default]
     Diameter,
+    /// Cover the full `0 <= theta <= pi/2` hemispherical focused-bowl aperture.
+    Hemisphere,
     /// Cover `0 <= theta <= theta_max_rad`.
     PolarSpan {
         /// Maximum polar angle from the vertex-to-focus axis [rad].
@@ -80,6 +82,12 @@ pub enum FocusedBowlAperture {
         theta_min_rad: f64,
         /// Maximum polar angle from the vertex-to-focus axis [rad].
         theta_max_rad: f64,
+    },
+    /// Use `position` as an axis reference and construct a hemispherical
+    /// focused-bowl aperture from an explicit curvature radius.
+    AxisReferenceHemisphere {
+        /// Curvature radius from the acoustic focus to the bowl surface [m].
+        radius_of_curvature_m: f64,
     },
 }
 

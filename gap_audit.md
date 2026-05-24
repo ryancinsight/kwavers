@@ -1,5 +1,26 @@
 # Gap Audit
 
+## Focused Bowl Hemisphere Aperture Config (2026-05-24)
+
+Focused source configuration already delegated polar spans, polar bounds, and
+axis-projection bounds to `BowlTransducer`, but a caller requesting a
+hemispherical bowl still had to encode that source-domain shape indirectly as
+numeric angular bounds. That preserved the geometry SSOT, but kept a common
+focused-bowl shape out of the explicit config vocabulary.
+
+### Closure
+- Added `FocusedBowlAperture::Hemisphere`.
+- Added `FocusedBowlAperture::AxisReferenceHemisphere` for contact-axis,
+  explicit-radius hemispherical bowls.
+- Routed both variants through `BowlTransducer::with_angular_bounds` and
+  `BowlAngularBounds::hemisphere`.
+- Added value-semantic source-factory tests for both variants.
+
+### Verification summary
+- `cargo check -p kwavers --lib --message-format=short -j 1`: exit 0.
+- `cargo test -p kwavers focused_source_factory --lib --message-format=short -j 1`:
+  6/6 pass.
+
 ## Solver Convergence And Water Constant Test Contracts (2026-05-24)
 
 The FDTD solver-convergence test initialized its Gaussian pulse with
