@@ -1,10 +1,10 @@
 use kwavers::domain::grid::Grid;
-use kwavers::domain::source::{SourceFactory, SourceModel, SourceParameters};
+use kwavers::domain::source::{SourceFactory, SourceModel, DomainSourceParameters};
 
 #[test]
 fn test_create_linear_array() {
     let grid = Grid::new(64, 64, 64, 0.001, 0.001, 0.001).unwrap();
-    let config = SourceParameters {
+    let config = DomainSourceParameters {
         model: SourceModel::LinearArray,
         radius: 0.01,
         num_elements: Some(16),
@@ -25,7 +25,7 @@ fn test_create_linear_array() {
 #[test]
 fn test_create_matrix_array() {
     let grid = Grid::new(64, 64, 64, 0.001, 0.001, 0.001).unwrap();
-    let config = SourceParameters {
+    let config = DomainSourceParameters {
         model: SourceModel::MatrixArray,
         radius: 0.01,
         num_elements: Some(16), // Should result in 4x4=16 elements (sqrt(16)=4)
@@ -40,7 +40,7 @@ fn test_create_matrix_array() {
 #[test]
 fn test_create_focused_source() {
     let grid = Grid::new(64, 64, 64, 0.001, 0.001, 0.001).unwrap();
-    let config = SourceParameters {
+    let config = DomainSourceParameters {
         model: SourceModel::Focused,
         radius: 0.01, // diameter 0.02
         position: [0.032, 0.032, 0.0],

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Fixed (2026-05-24) - Integration Test Domain Type Names
+
+- [patch] Update source-factory and steering-vector integration tests to use
+  the canonical `DomainSourceParameters` and `SensorArrayGeometry` type names
+  after the internal domain API cleanup removed older names.
+
 ### Fixed (2026-05-24) - DG Convergence CPML Config Literals
 
 - [patch] Update DG convergence-test `DGConfig` literals to set `cpml: None`

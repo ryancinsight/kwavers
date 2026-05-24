@@ -1,5 +1,13 @@
 # Backlog / Strategy
 
+## Integration test domain type-name closure - closed (2026-05-24)
+- **[done] [patch]** Updated source-factory and steering-vector integration
+  tests to use canonical domain type names: `DomainSourceParameters` and
+  `SensorArrayGeometry`. This keeps integration coverage aligned with the
+  current domain API after removing older names. Verification:
+  `cargo test -p kwavers --test source_factory_extra --test test_steering_vector --message-format=short -j 1`
+  passes 4/4.
+
 ## DG convergence CPML config closure - closed (2026-05-24)
 - **[done] [patch]** Updated `kwavers/tests/dg_convergence.rs` `DGConfig`
   literals with explicit `cpml: None` after the DG config surface gained CPML

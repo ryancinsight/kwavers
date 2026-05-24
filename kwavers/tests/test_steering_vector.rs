@@ -1,5 +1,5 @@
 use kwavers::domain::sensor::beamforming::sensor_beamformer::SensorBeamformer;
-use kwavers::domain::sensor::{ArrayGeometry, Position, Sensor, SensorArray};
+use kwavers::domain::sensor::{Position, Sensor, SensorArray, SensorArrayGeometry};
 use std::f64::consts::PI;
 
 #[test]
@@ -16,7 +16,7 @@ fn test_calculate_steering() {
     let s2 = Sensor::new(1, Position::new(d, 0.0, 0.0));
     let sensors = vec![s1, s2];
 
-    let array = SensorArray::new(sensors, sound_speed, ArrayGeometry::Linear);
+    let array = SensorArray::new(sensors, sound_speed, SensorArrayGeometry::Linear);
     let beamformer = SensorBeamformer::new(array, sampling_freq);
 
     // Test Angles: (theta, phi)

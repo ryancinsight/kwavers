@@ -1,5 +1,22 @@
 # Gap Audit
 
+## Integration Test Domain Type-Name Closure (2026-05-24)
+
+Integration tests still used older domain type names after the source and
+sensor APIs had converged on `DomainSourceParameters` and
+`SensorArrayGeometry`. Keeping the old names in tests leaves compile coverage
+behind the canonical API surface.
+
+### Closure
+- Replaced `SourceParameters` with `DomainSourceParameters` in the
+  source-factory integration tests.
+- Replaced `ArrayGeometry` with `SensorArrayGeometry` in the steering-vector
+  integration test.
+
+### Verification summary
+- `cargo test -p kwavers --test source_factory_extra --test test_steering_vector --message-format=short -j 1`:
+  4/4 pass.
+
 ## DG Convergence CPML Config Closure (2026-05-24)
 
 The DG solver configuration now carries an optional CPML configuration. The
