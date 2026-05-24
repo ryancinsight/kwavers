@@ -30,6 +30,7 @@ pub fn compute_invariants(_model: &HyperelasticModel, f: &[[f64; 3]; 3]) -> (f64
 }
 
 /// Compute left Cauchy-Green tensor B = F · F^T
+#[must_use]
 pub fn left_cauchy_green(_model: &HyperelasticModel, f: &[[f64; 3]; 3]) -> [[f64; 3]; 3] {
     let mut b = [[0.0; 3]; 3];
     for i in 0..3 {

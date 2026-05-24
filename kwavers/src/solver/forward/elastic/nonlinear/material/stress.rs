@@ -148,6 +148,7 @@ fn cauchy_stress_ogden(model: &HyperelasticModel, f: &[[f64; 3]; 3]) -> [[f64; 3
 ///
 /// For a diagonal matrix `F = diag(a, b, c)`:
 /// `cof(F) = diag(bc, ac, ab)`, confirming `F · cof(F)^T = abc · I`. □
+#[must_use]
 pub fn mat3_cofactor(f: &[[f64; 3]; 3]) -> [[f64; 3]; 3] {
     [
         [
@@ -221,6 +222,7 @@ pub fn mat3_cofactor(f: &[[f64; 3]; 3]) -> [[f64; 3]; 3] {
 ///
 /// # Returns
 /// First Piola-Kirchhoff stress P_{iA} = ∂W/∂F_{iA} (3×3 two-point tensor)
+#[must_use]
 pub fn first_pk_stress(model: &HyperelasticModel, f: &[[f64; 3]; 3]) -> [[f64; 3]; 3] {
     // Right Cauchy-Green tensor C = F^T F
     let mut c = [[0.0_f64; 3]; 3];

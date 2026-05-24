@@ -126,6 +126,7 @@ pub fn compute_nonlinearity_coefficient(b_over_a: f64) -> f64 {
 /// Compute the effective nonlinearity for heterogeneous media
 ///
 /// Takes the local B/A values and computes effective β
+#[must_use]
 pub fn compute_heterogeneous_nonlinearity(b_over_a_field: &Array3<f64>) -> Array3<f64> {
     b_over_a_field.mapv(compute_nonlinearity_coefficient)
 }

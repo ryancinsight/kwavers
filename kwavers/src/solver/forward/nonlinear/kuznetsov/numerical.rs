@@ -39,6 +39,7 @@ use num_complex::Complex64;
 use std::f64::consts::PI;
 
 /// Compute Laplacian using spectral methods
+#[must_use]
 pub fn compute_laplacian(field: &Array3<f64>, grid: &Grid) -> Array3<f64> {
     let fft = get_fft_for_grid(grid.nx, grid.ny, grid.nz);
     let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
