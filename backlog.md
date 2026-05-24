@@ -1,5 +1,17 @@
 # Backlog / Strategy
 
+## Solver convergence and water-constant test contract - closed (2026-05-24)
+- **[done] [patch]** Corrected the FDTD solver-convergence Gaussian pulse
+  width to dimensional meters (`3*dx`) so the energy fixture represents a
+  localized acoustic pulse instead of a nearly uniform pressure field damped by
+  PML every step. The test now uses canonical `DomainPMLBoundary`, preserves the
+  50-step validation horizon, and tightens the pre-PML energy invariant to 5%.
+  `simple_integration_test` now asserts `HomogeneousMedium::water` against
+  `DENSITY_WATER` and `SOUND_SPEED_WATER` instead of duplicating literals.
+  Verification:
+  `cargo test -p kwavers --test simple_integration_test --test solver_convergence_validation --message-format=short -j 1`
+  passes 6/6.
+
 ## Integration test domain type-name closure - closed (2026-05-24)
 - **[done] [patch]** Updated source-factory and steering-vector integration
   tests to use canonical domain type names: `DomainSourceParameters` and

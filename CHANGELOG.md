@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Fixed (2026-05-24) - Solver Convergence And Water Constant Test Contracts
+
+- [patch] Correct the FDTD solver-convergence Gaussian pulse width from grid
+  cells to meters, update the test to use canonical `DomainPMLBoundary`, and
+  tighten the pre-PML energy-conservation assertion to the lossless-interior
+  regime. Simple integration tests now assert `HomogeneousMedium::water`
+  against canonical `DENSITY_WATER` and `SOUND_SPEED_WATER` constants.
+
 ### Fixed (2026-05-24) - Integration Test Domain Type Names
 
 - [patch] Update source-factory and steering-vector integration tests to use

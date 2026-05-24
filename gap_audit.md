@@ -1,5 +1,28 @@
 # Gap Audit
 
+## Solver Convergence And Water Constant Test Contracts (2026-05-24)
+
+The FDTD solver-convergence test initialized its Gaussian pulse with
+`sigma = 3.0` while grid spacing was `1e-3 m`, so the fixture represented an
+almost uniform 3 m pressure distribution instead of a 3-cell localized pulse.
+The PML then removed boundary energy and the test asserted conservation over an
+absorbing-domain contract. The simple integration test also duplicated stale
+water constants instead of checking the material SSOT.
+
+### Closure
+- Replaced `PMLBoundary` with canonical `DomainPMLBoundary` in the convergence
+  validation test.
+- Converted the Gaussian width to `3*dx` and preserved the 50-step validation
+  horizon.
+- Tightened the energy-change bound from 20% to 5% for the lossless-interior
+  pre-PML regime.
+- Replaced duplicated water-property literals with `DENSITY_WATER` and
+  `SOUND_SPEED_WATER`.
+
+### Verification summary
+- `cargo test -p kwavers --test simple_integration_test --test solver_convergence_validation --message-format=short -j 1`:
+  6/6 pass.
+
 ## Integration Test Domain Type-Name Closure (2026-05-24)
 
 Integration tests still used older domain type names after the source and
