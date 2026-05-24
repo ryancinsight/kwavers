@@ -252,3 +252,43 @@ pub const MI_CAVITATION_BRAIN: f64 = 0.55;
 ///
 /// Reference: NEMA UD-3:2012, Table 1; IEC 62359:2010.
 pub const TI_LIMIT_SOFT_TISSUE: f64 = 6.0;
+
+// ── CEM43 biological effect thresholds ───────────────────────────────────────
+//
+// Sapareto SA, Dewey WC (1984). "Thermal dose determination in cancer therapy."
+// Int. J. Radiat. Oncol. Biol. Phys. 10(6), 787–800. DOI: 10.1016/0360-3016(84)90379-1.
+//
+// Dewhirst MW et al. (2003). "Basic principles of thermal dosimetry and thermal
+// thresholds for tissue damage from hyperthermia."
+// Int. J. Hyperthermia 19(3), 267–294. DOI: 10.1080/0265673031000119006.
+//
+// NCRP Report No. 113 (1992). "Exposure criteria for medical diagnostic ultrasound:
+// I. Criteria based on thermal mechanisms." National Council on Radiation Protection.
+
+/// CEM43 thermal dose threshold for onset of protein denaturation (CEM43 min).
+///
+/// Value: 1.0 CEM43 — mild heating sufficient to initiate conformational changes
+/// in heat-sensitive proteins. Below this value no measurable denaturation is expected
+/// in typical in vitro models at thermal-therapy relevant heating rates.
+///
+/// Reference: Sapareto & Dewey (1984); Dewhirst et al. (2003).
+pub const THERMAL_DOSE_PROTEIN_DENATURATION_CEM43: f64 = 1.0;
+
+/// CEM43 thermal dose threshold for immediate tissue coagulation (CEM43 min).
+///
+/// Value: 10 000 CEM43 — corresponds to high-power HIFU ablation conditions
+/// where tissue undergoes immediate coagulative necrosis. Above this level
+/// instantaneous boiling and mechanical tissue disruption may occur.
+///
+/// Reference: Sapareto & Dewey (1984); Dewhirst et al. (2003).
+pub const THERMAL_DOSE_COAGULATION_CEM43: f64 = 10_000.0;
+
+/// CEM43 thermal dose safety threshold for diagnostic ultrasound (CEM43 min).
+///
+/// Value: 0.1 CEM43 — conservative upper bound below which no biologically
+/// significant thermal effects are expected in diagnostic imaging exposures.
+/// Used as the diagnostic safety margin in CEM43-based thermal index models.
+///
+/// Reference: NCRP Report No. 113 (1992); Barnett et al. (2000).
+/// Ultrasound Med. Biol. 26(Suppl. 1), S55–S58.
+pub const THERMAL_DOSE_DIAGNOSTIC_SAFETY_CEM43: f64 = 0.1;

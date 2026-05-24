@@ -98,18 +98,6 @@ impl ThermalCEM43Grid {
     }
 }
 
-/// Thermal dose thresholds for various effects (CEM43 minutes).
-pub mod thresholds {
-    /// Threshold for protein denaturation onset
-    pub const PROTEIN_DENATURATION: f64 = 1.0;
-
-    /// Threshold for immediate coagulation
-    pub const COAGULATION: f64 = 10000.0;
-
-    /// Safety threshold for diagnostic ultrasound
-    pub const DIAGNOSTIC_SAFETY: f64 = 0.1;
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
