@@ -14,7 +14,6 @@
 //! | Elastic isotropic (μ ≥ 0)   | 4th-order FD coll.    | Velocity-Verlet     | [`elastic::swe::ElasticWaveSolver`]                                                                               |
 //! | Elastic nonlinear           | 4th-order FD          | RK / IMEX           | [`elastic::nonlinear::NonlinearElasticWaveSolver`]                                                                |
 //! | Poroelastic                 | FD                    | Leapfrog            | [`poroelastic`]                                                                                                   |
-//! | Spectral-element            | High-order            | Various             | [`sem`]                                                                                                           |
 //! | BEM                         | Boundary integral     | —                   | [`bem::BemSolver`]                                                                                                |
 //! | Pennes bioheat              | 2nd / 4th-order FD    | Forward Euler       | [`thermal_diffusion::ThermalDiffusionSolver`]                                                                     |
 //! | Optical (RTE / diffusion)   | FD / Monte Carlo      | Stationary          | [`optical`]                                                                                                       |
@@ -77,7 +76,6 @@ pub mod optical;
 pub mod plugin_based;
 pub mod poroelastic;
 pub mod pstd;
-pub mod sem;
 pub mod thermal;
 pub mod thermal_diffusion;
 
@@ -103,7 +101,6 @@ pub mod acoustic_solvers {
 pub mod elastic_solvers {
     pub use super::elastic;
     pub use super::poroelastic;
-    pub use super::sem;
 }
 
 /// Thermal-domain solvers: Pennes bioheat and pure thermal diffusion.
@@ -160,7 +157,6 @@ pub use hybrid::{
 pub use imex::IMEXIntegrator;
 pub use plugin_based::PluginBasedSolver;
 pub use pstd::PSTDSolver;
-pub use sem::SemSolver;
 pub use thermal::PennesSolver;
 
 #[cfg(test)]
