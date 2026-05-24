@@ -1,5 +1,34 @@
 # Gap Audit
 
+## Ali 2025 PSTD Operator Boundary Rerun (2026-05-24)
+
+After the odd-z FFT repair, the reduced `(4,4,3)` determined probe needed a
+PyO3 rebuild and a fresh four-cycle replication artifact before interpreting
+the remaining passive-channel residual. A separate Rust boundary invariant was
+also missing: the homogeneous `PstdSpectralConvergentBornOperator` with temporal
+transfer must equal the finite-grid PSTD modal direct-field theorem.
+
+### Closure
+- Rebuilt `pykwavers` with `maturin develop --release` against the repaired
+  Rust FFT path.
+- Regenerated `pykwavers/examples/output/ali2025_breast_fwi_determined_probe/ali2025_breast_fwi_metrics.json`
+  with `--cycles-per-frequency 4`, two frequencies, snapped geometry, and
+  determined-acquisition guard enabled.
+- Added a Rust clinical boundary test comparing homogeneous PSTD spectral CBS
+  with temporal transfer against `pstd_periodic_observation_cube`.
+
+### Verification summary
+- `cargo test -p kwavers pstd_spectral_cbs_matches_homogeneous_finite_grid_modal_prediction --lib -j 1 -- --nocapture`:
+  1/1 pass.
+- Determined probe rerun: `pstd_periodic.normalized_l2_residual =
+  1.6785637589183348e-14`; `pstd_spectral_convergent_born` ranks best with
+  all-channel residual `0.6808491600357303` and passive-only residual
+  `0.6047666981098512`.
+
+### Residual risk
+- Heterogeneous finite-window PSTD scattering remains above tolerance. The next
+  change belongs in the Rust solver/clinical diagnostic path, not in Python.
+
 ## Focused Bowl Hemisphere Aperture Config (2026-05-24)
 
 Focused source configuration already delegated polar spans, polar bounds, and

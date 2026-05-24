@@ -1,5 +1,21 @@
 # Backlog / Strategy
 
+## Ali 2025 PSTD operator-boundary rerun - closed (2026-05-24)
+- **[done] [patch]** Rebuilt `pykwavers` against the Rust odd-z FFT repair,
+  regenerated the canonical four-cycle determined probe, and added a Rust
+  clinical boundary test proving homogeneous `PstdSpectralConvergentBornOperator`
+  plus temporal transfer equals the finite-grid PSTD modal predictor on
+  `(4,4,3)`. The regenerated report ranks `pstd_spectral_convergent_born` best
+  for all-channel and passive-only operator equivalence; homogeneous
+  `pstd_periodic` residuals are at numerical precision
+  (`normalized_l2_residual = 1.6785637589183348e-14`,
+  `passive_only_normalized_l2_residual = 7.81237883846478e-15`).
+- **[open] [patch]** Heterogeneous finite-window scattering remains unresolved:
+  passive-only residual is `0.6047666981098512` on the determined four-cycle
+  probe. Next increment: align the Rust PSTD spectral CBS scattering path with
+  finite-window heterogeneous PSTD semantics instead of changing Python
+  reporting.
+
 ## Focused bowl hemisphere aperture config - closed (2026-05-24)
 - **[done] [minor]** Added generic `FocusedBowlAperture::Hemisphere` and
   `FocusedBowlAperture::AxisReferenceHemisphere` variants. Config-driven

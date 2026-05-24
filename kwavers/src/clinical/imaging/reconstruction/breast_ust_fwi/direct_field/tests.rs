@@ -5,14 +5,19 @@ use super::predict::{
     source_kappa_filtered_source_weights,
 };
 use super::*;
-use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use crate::clinical::imaging::reconstruction::breast_ust_fwi::{
     generate_breast_ust_pstd_frequency_dataset, snap_multi_row_ring_array_to_grid,
 };
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use crate::physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;
+use crate::solver::inverse::fwi::frequency_domain::{
+    simulate_frequency_observation, AbsorbingBoundary, Config as FrequencyDomainFwiConfig,
+    PstdSpectralConvergentBornOperator, PstdTemporalTransferConfig,
+};
 use ndarray::Array3;
 use num_complex::Complex64;
 use std::f64::consts::PI;
+use std::sync::Arc;
 
 #[test]
 fn point_source_prediction_matches_outgoing_green_formula() {
@@ -275,5 +280,86 @@ fn finite_grid_pstd_prediction_matches_homogeneous_dataset() {
          max_reference={max_reference:e}, max_error_index={max_error_index:?}, \
          observed_at_max={max_error_observed:?}, expected_at_max={max_error_expected:?}, \
          global_scale={global_scale:?}, scaled_normalized_error={scaled_normalized_error:e}"
+    );
+}
+
+#[test]
+fn pstd_spectral_cbs_matches_homogeneous_finite_grid_modal_prediction() {
+    let model = Array3::from_elem((4, 4, 3), SOUND_SPEED_WATER_SIM);
+    let acquisition = BreastUstPstdDatasetConfig {
+        spacing_m: 3.2e-3,
+        time_step_s: 1.0e-7,
+        cycles_per_frequency: 4,
+        frequency_bin_cycles: 1,
+        source_amplitude_pa: 1.0e3,
+        density_kg_m3: DENSITY_WATER_NOMINAL,
+        cpml_thickness_cells: 0,
+    };
+    let unsnapped = MultiRowRingArray::new(4, 1, 0.00768, 0.0).expect("array");
+    let array = snap_multi_row_ring_array_to_grid(&unsnapped, model.dim(), acquisition.spacing_m)
+        .expect("snapped array");
+    let frequencies_hz = [200_000.0, 300_000.0];
+    let dataset =
+        generate_breast_ust_pstd_frequency_dataset(&model, &array, &frequencies_hz, acquisition)
+            .expect("homogeneous PSTD dataset");
+    let expected = pstd_periodic_observation_cube(
+        &array,
+        &frequencies_hz,
+        SOUND_SPEED_WATER_SIM,
+        acquisition.spacing_m,
+        model.dim(),
+        acquisition.time_step_s,
+        &dataset.time_steps_per_frequency,
+        &dataset.frequency_bin_start_steps_per_frequency,
+        acquisition.source_amplitude_pa,
+    )
+    .expect("finite-grid PSTD prediction");
+    let fwi = FrequencyDomainFwiConfig {
+        reference_sound_speed_m_s: SOUND_SPEED_WATER_SIM,
+        spacing_m: acquisition.spacing_m,
+        forward_operator: Arc::new(PstdSpectralConvergentBornOperator {
+            iterations: 64,
+            relative_tolerance: 1.0e-12,
+            time_step_s: acquisition.time_step_s,
+            temporal_transfer: Some(PstdTemporalTransferConfig {
+                source_amplitude_pa: acquisition.source_amplitude_pa,
+                cycles_per_frequency: acquisition.cycles_per_frequency,
+                frequency_bin_cycles: acquisition.frequency_bin_cycles,
+            }),
+            absorbing_boundary: AbsorbingBoundary::disabled(),
+        }),
+        ..FrequencyDomainFwiConfig::default()
+    };
+
+    let mut predicted = Array3::<Complex64>::zeros((
+        frequencies_hz.len(),
+        array.circumferential_elements(),
+        array.element_count(),
+    ));
+    for (frequency_index, &frequency_hz) in frequencies_hz.iter().enumerate() {
+        let rows = simulate_frequency_observation(&model, &array, frequency_hz, &fwi)
+            .expect("PSTD spectral CBS homogeneous prediction");
+        for transmit in 0..array.circumferential_elements() {
+            for receiver in 0..array.element_count() {
+                predicted[[frequency_index, transmit, receiver]] = rows[[transmit, receiver]];
+            }
+        }
+    }
+
+    let max_reference = expected
+        .iter()
+        .map(|value| value.norm())
+        .fold(0.0, f64::max);
+    let max_abs_error = expected
+        .iter()
+        .zip(predicted.iter())
+        .map(|(&lhs, &rhs)| (lhs - rhs).norm())
+        .fold(0.0, f64::max);
+    let tolerance = 1.0e-10 * max_reference.max(1.0);
+
+    assert!(
+        max_abs_error <= tolerance,
+        "PSTD spectral CBS homogeneous response must equal modal finite-grid PSTD: \
+         max_abs_error={max_abs_error:e}, tolerance={tolerance:e}, max_reference={max_reference:e}"
     );
 }

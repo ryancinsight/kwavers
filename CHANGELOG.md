@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Changed (2026-05-24) - Ali 2025 PSTD Operator Boundary Rerun
+
+- [patch] Rebuild `pykwavers` against the Rust odd-z FFT repair, regenerate the
+  four-cycle determined Ali 2025 probe, and add a Rust clinical boundary test
+  proving homogeneous `PstdSpectralConvergentBornOperator` with temporal
+  transfer equals the finite-grid PSTD modal predictor. The regenerated probe
+  now ranks `pstd_spectral_convergent_born` best while leaving a heterogeneous
+  passive residual for the next solver refinement.
+
 ### Added (2026-05-24) - Focused Bowl Hemisphere Aperture Config
 
 - [minor] Add generic `FocusedBowlAperture::Hemisphere` and
