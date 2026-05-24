@@ -124,6 +124,7 @@ impl UlmSvdClutterFilter {
 /// # Panics
 /// - Panics if an internal invariant assumed to hold at this call site is violated.
 ///
+#[must_use]
 pub(super) fn svht_threshold(sigma: &Array1<f64>, n_rows: usize, n_cols: usize) -> usize {
     let (n, m) = if n_rows <= n_cols {
         (n_rows, n_cols)

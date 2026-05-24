@@ -92,6 +92,7 @@ impl PinnEMSource {
     /// Get source term coefficient for PINN PDE residual
     ///
     /// Returns time-varying source term: J(t) = J₀ * exp(i(2πft + φ))
+    #[must_use]
     pub fn source_term_coefficient(&self, t: f64) -> [f64; 3] {
         let omega = 2.0 * std::f64::consts::PI * self.frequency;
         let time_factor = (omega * t + self.phase).cos();

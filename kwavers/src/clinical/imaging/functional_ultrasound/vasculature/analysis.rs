@@ -25,6 +25,7 @@ use ritk_core::segmentation::threshold::otsu::compute_otsu_threshold_from_slice;
 /// The `f64` Frangi response is converted to RITK's `f32` thresholding input
 /// because `ritk_core` owns the Otsu implementation and its validated
 /// mathematical specification.
+#[must_use]
 pub(super) fn otsu_threshold(image: &Array3<f64>) -> f64 {
     let values: Vec<f32> = image.iter().map(|value| *value as f32).collect();
     f64::from(compute_otsu_threshold_from_slice(&values, 256))

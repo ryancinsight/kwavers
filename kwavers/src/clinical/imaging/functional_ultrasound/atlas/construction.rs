@@ -185,6 +185,7 @@ impl BrainAtlas {
     /// Compute synthetic MRI-like intensity for a brain region.
     ///
     /// Intensity = base_level · depth_attenuation + 0.2 · vascular_prior
+    #[must_use]
     pub(super) fn region_intensity(region: u32, ap: f64, ml: f64, dv: f64) -> f64 {
         let base = 0.07f64.mul_add(region as f64, 0.15);
         let vascular_prior = (-(ml * ml) / 2.0).exp() * (1.0 - (ap / 4.0).abs()).max(0.0);

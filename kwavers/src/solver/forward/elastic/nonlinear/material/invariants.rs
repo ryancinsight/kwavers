@@ -53,6 +53,7 @@ pub fn left_cauchy_green(_model: &HyperelasticModel, f: &[[f64; 3]; 3]) -> [[f64
 ///
 /// # Returns
 /// Principal stretches [λ₁, λ₂, λ₃] sorted in ascending order
+#[must_use]
 pub fn principal_stretches(_model: &HyperelasticModel, f: &[[f64; 3]; 3]) -> [f64; 3] {
     // Compute right Cauchy-Green tensor C = F^T * F
     let mut c = [[0.0; 3]; 3];
@@ -87,6 +88,7 @@ pub fn principal_stretches(_model: &HyperelasticModel, f: &[[f64; 3]; 3]) -> [f6
 /// # Panics
 /// - Panics if an internal invariant assumed to hold at this call site is violated.
 ///
+#[must_use]
 pub fn matrix_eigenvalues(m: &[[f64; 3]; 3]) -> [f64; 3] {
     // Jacobi eigenvalue algorithm for 3x3 symmetric matrices
     // Based on Golub & Van Loan, Matrix Computations (3rd ed.), Algorithm 8.4.2

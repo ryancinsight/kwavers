@@ -182,6 +182,7 @@ impl FunctionalUltrasoundGPS {
     }
 
     /// Get current tracked position
+    #[must_use]
     pub fn get_tracked_position(&self) -> [f64; 3] {
         self.tracking.get_position()
     }
