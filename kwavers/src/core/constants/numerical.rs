@@ -242,6 +242,14 @@ pub const CM_TO_M: f64 = 0.01;
 /// Conversion from mmHg to Pa (1 mmHg = 133.322 Pa, NIST definition).
 pub const MMHG_TO_PA: f64 = 133.322;
 
+/// Conversion factor from joules to electronvolts [eV/J].
+///
+/// Derived from the exact 2019 SI definition: 1 eV = 1.602 176 634 × 10⁻¹⁹ J.
+/// Value: 1 J = 6.241 509 074 × 10¹⁸ eV.
+///
+/// Reference: BIPM SI Brochure, 9th ed. (2019), Table 4.
+pub const EV_PER_JOULE: f64 = 6.241_509_074e18; // eV/J
+
 /// Conversion from minutes to seconds [s/min].
 ///
 /// Used in CEM43 thermal dose computations: the Sapareto-Dewey integral is

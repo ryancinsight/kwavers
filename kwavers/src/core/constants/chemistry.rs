@@ -25,3 +25,65 @@ pub const BASE_PHOTOCHEMICAL_RATE: f64 = 1e-4;
 /// Value: 15.759 eV
 /// Reference: NIST Atomic Spectra Database
 pub const ARGON_IONIZATION_ENERGY: f64 = 15.7596;
+
+// ── Aqueous-phase radical rate constants at 25°C ──────────────────────────────
+//
+// References:
+// - Buxton GV et al. (1988). "Critical review of rate constants for reactions of
+//   hydrated electrons, hydrogen atoms, and hydroxyl radicals in aqueous solution."
+//   J. Phys. Chem. Ref. Data 17(2):513–886.
+// - Sehested K et al. (1968–1991), various NDRL/NIST compilations.
+
+/// OH self-recombination rate constant in aqueous phase at 25°C [M⁻¹·s⁻¹].
+///
+/// 2·OH → H₂O₂
+///
+/// Reference: Buxton et al. (1988) Table II-B, reaction 1.
+pub const K_OH_SELF_RECOMBINATION: f64 = 5.5e9; // M⁻¹·s⁻¹
+
+/// Superoxide dismutation pseudo-rate constant in aqueous phase at 25°C [M⁻¹·s⁻¹].
+///
+/// 2·O₂⁻ → H₂O₂ + ¹O₂ (pH-dependent; this value applies near neutral pH).
+///
+/// Reference: Bielski BHJ et al. (1985) J. Phys. Chem. Ref. Data 14(4):1041–1100.
+pub const K_SUPEROXIDE_DISMUTATION: f64 = 1e8; // M⁻¹·s⁻¹
+
+/// H₂O₂ + OH rate constant in aqueous phase at 25°C [M⁻¹·s⁻¹].
+///
+/// H₂O₂ + ·OH → ·OOH + H₂O
+///
+/// Reference: Buxton et al. (1988) Table II-B, reaction H₂O₂/OH.
+pub const K_H2O2_OH: f64 = 2.7e7; // M⁻¹·s⁻¹
+
+/// Activation energy for the H₂O₂ + OH reaction [J/mol].
+///
+/// Reference: estimated from Arrhenius fit to Buxton et al. (1988) temperature data.
+pub const EA_H2O2_OH: f64 = 2800.0; // J/mol
+
+/// O₃ + OH rate constant in aqueous phase at 25°C [M⁻¹·s⁻¹].
+///
+/// O₃ + ·OH → ·OOH + O₂
+///
+/// Reference: Sehested K et al. (1984) Int. J. Radiat. Phys. Chem. 16:3;
+/// Staehelin J & Hoigné J (1985) Environ. Sci. Technol. 19:1206.
+pub const K_OZONE_OH: f64 = 1.1e8; // M⁻¹·s⁻¹
+
+/// Singlet oxygen physical quenching rate constant in water at 25°C [s⁻¹].
+///
+/// ¹O₂ → O₂ (ground state), first-order rate in pure water.
+///
+/// Reference: Wilkinson F et al. (1995) J. Phys. Chem. Ref. Data 24(2):663–1021.
+pub const K_SINGLET_OXYGEN_DECAY: f64 = 2.9e5; // s⁻¹
+
+/// Atomic hydrogen self-recombination rate constant in aqueous phase at 25°C [M⁻¹·s⁻¹].
+///
+/// 2·H → H₂
+///
+/// Reference: Buxton et al. (1988) Table II-A, reaction H·/H·.
+pub const K_H_ATOM_RECOMBINATION: f64 = 1e10; // M⁻¹·s⁻¹
+
+/// G-value (radiochemical yield) for ·OH production in water at neutral pH [molecules/(100 eV)].
+///
+/// Reference: Spinks JWT & Woods RJ (1990) "An Introduction to Radiation Chemistry",
+/// Wiley, 3rd ed., Appendix C; ICRU Report 16 (1970).
+pub const G_OH_NEUTRAL_PH: f64 = 2.7; // molecules per 100 eV

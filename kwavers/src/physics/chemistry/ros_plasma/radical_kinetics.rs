@@ -4,7 +4,12 @@
 
 use super::ros_species::ROSSpecies;
 use crate::core::constants::cavitation::L_TO_M3;
+use crate::core::constants::chemistry::{
+    EA_H2O2_OH, G_OH_NEUTRAL_PH, K_H2O2_OH, K_H_ATOM_RECOMBINATION, K_OH_SELF_RECOMBINATION,
+    K_OZONE_OH, K_SINGLET_OXYGEN_DECAY, K_SUPEROXIDE_DISMUTATION,
+};
 use crate::core::constants::fundamental::{AVOGADRO, GAS_CONSTANT};
+use crate::core::constants::numerical::EV_PER_JOULE;
 use std::collections::HashMap;
 
 /// Radical reaction in aqueous phase
@@ -56,7 +61,7 @@ impl RadicalKinetics {
             name: "OH self-recombination".to_owned(),
             reactants: vec![(ROSSpecies::HydroxylRadical, 2.0)],
             products: vec![(ROSSpecies::HydrogenPeroxide, 1.0)],
-            rate_constant: 5.5e9, // M⁻¹·s⁻¹
+            rate_constant: K_OH_SELF_RECOMBINATION,
             activation_energy: 0.0,
             ph_factor: 0.0,
         });
@@ -69,7 +74,7 @@ impl RadicalKinetics {
                 (ROSSpecies::HydrogenPeroxide, 1.0),
                 (ROSSpecies::SingletOxygen, 1.0),
             ],
-            rate_constant: 1e8, // pH dependent
+            rate_constant: K_SUPEROXIDE_DISMUTATION,
             activation_energy: 0.0,
             ph_factor: -1.0, // Faster at low pH
         });
@@ -82,8 +87,8 @@ impl RadicalKinetics {
                 (ROSSpecies::HydroxylRadical, 1.0),
             ],
             products: vec![(ROSSpecies::HydroperoxylRadical, 1.0)],
-            rate_constant: 2.7e7,      // M⁻¹·s⁻¹
-            activation_energy: 2800.0, // J/mol
+            rate_constant: K_H2O2_OH,
+            activation_energy: EA_H2O2_OH,
             ph_factor: 0.0,
         });
 
@@ -92,7 +97,7 @@ impl RadicalKinetics {
             name: "Ozone + OH".to_owned(),
             reactants: vec![(ROSSpecies::Ozone, 1.0), (ROSSpecies::HydroxylRadical, 1.0)],
             products: vec![(ROSSpecies::HydroperoxylRadical, 1.0)],
-            rate_constant: 1.1e8, // M⁻¹·s⁻¹
+            rate_constant: K_OZONE_OH,
             activation_energy: 0.0,
             ph_factor: 0.0,
         });
@@ -101,8 +106,8 @@ impl RadicalKinetics {
         self.reactions.push(RadicalReaction {
             name: "Singlet oxygen decay".to_owned(),
             reactants: vec![(ROSSpecies::SingletOxygen, 1.0)],
-            products: vec![],     // Decays to ground state O2
-            rate_constant: 2.9e5, // s⁻¹ in water
+            products: vec![], // Decays to ground state O2
+            rate_constant: K_SINGLET_OXYGEN_DECAY,
             activation_energy: 0.0,
             ph_factor: 0.0,
         });
@@ -200,9 +205,6 @@ impl RadicalKinetics {
 /// Calculate hydroxyl radical yield (G-value) from energy deposition
 #[must_use]
 pub fn calculate_oh_yield(energy_density: f64, ph: f64) -> f64 {
-    // G-value for OH production (molecules/100 eV)
-    let g_oh_neutral = 2.7; // At neutral pH
-
     // pH correction
     let ph_factor = if ph < 3.0 {
         0.5 // Reduced at very low pH
@@ -212,10 +214,10 @@ pub fn calculate_oh_yield(energy_density: f64, ph: f64) -> f64 {
         1.0
     };
 
-    // Convert energy density (J/m³) to OH concentration (mol/m³)
-    let ev_per_joule = 6.242e18;
-
-    g_oh_neutral * ph_factor * energy_density * ev_per_joule / (100.0 * AVOGADRO)
+    // Convert energy density [J/m³] to OH concentration [mol/m³]:
+    //   G_OH_NEUTRAL_PH [molecules/(100 eV)] × EV_PER_JOULE [eV/J]
+    //   × energy_density [J/m³] / (100 × AVOGADRO [molecules/mol])
+    G_OH_NEUTRAL_PH * ph_factor * energy_density * EV_PER_JOULE / (100.0 * AVOGADRO)
 }
 
 /// Estimate radical diffusion length before recombination
@@ -226,9 +228,9 @@ pub fn radical_diffusion_length(species: ROSSpecies, concentration: f64) -> f64 
 
     // For second-order recombination
     let k_recomb = match species {
-        ROSSpecies::HydroxylRadical => 5.5e9, // M⁻¹·s⁻¹
-        ROSSpecies::AtomicHydrogen => 1e10,
-        _ => 1e8, // Default
+        ROSSpecies::HydroxylRadical => K_OH_SELF_RECOMBINATION,
+        ROSSpecies::AtomicHydrogen => K_H_ATOM_RECOMBINATION,
+        _ => K_SUPEROXIDE_DISMUTATION, // Generic default for unspecified ROS
     };
 
     // Effective lifetime considering recombination.  Aqueous-phase rate
