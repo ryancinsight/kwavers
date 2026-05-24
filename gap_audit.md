@@ -1,5 +1,20 @@
 # Gap Audit
 
+## Clinical Focused-Bowl Cap Helper Consolidation (2026-05-23)
+
+Closed duplicate focused-bowl cap element generation in the theranostic
+transcranial 2-D context and 3-D placement planner. The shared
+`geometry::focused_bowl` helper converts anatomy-derived focus/radius/orientation
+into a `BowlConfig` and delegates validation plus equal-area sampling to
+`BowlTransducer::with_angular_bounds`.
+
+### Verification summary
+- `target/debug/deps/kwavers-308f344dea7dce04.exe geometry::focused_bowl --nocapture`:
+  2/2 pass.
+- `target/debug/deps/kwavers-308f344dea7dce04.exe clinical::therapy::theranostic_guidance::tests::brain --nocapture`:
+  4/4 pass.
+- `cargo check -p kwavers --lib --message-format=short -j 1`: exit 0.
+
 ## Transcranial UST Bowl Aperture Routing (2026-05-23)
 
 Closed the remaining hard-coded hemispherical acquisition path in

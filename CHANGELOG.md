@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Changed (2026-05-23) - Focused Bowl Placement Helper Consolidation
+
+- [patch] Consolidate clinical transcranial focused-bowl cap point generation
+  into `theranostic_guidance::geometry::focused_bowl`, with typed vertex
+  orientation and source-domain `BowlAngularBounds`. The 2-D context and 3-D
+  visual placement planner now delegate all cap sampling to `BowlTransducer`.
+
 ### Changed (2026-05-23) - Transcranial UST Bowl Aperture Routing
 
 - [patch] Move the transcranial UST reconstruction aperture from a hard-coded

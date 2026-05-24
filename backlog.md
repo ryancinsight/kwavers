@@ -1,5 +1,14 @@
 # Backlog / Strategy
 
+## Clinical focused-bowl cap helper consolidation - closed (2026-05-23)
+- **[done] [patch]** Replaced duplicated transcranial cap point samplers in the
+  theranostic 2-D context and 3-D placement planner with
+  `geometry::focused_bowl`. The helper accepts typed vertex direction and
+  `BowlAngularBounds`, then delegates to `BowlTransducer::with_angular_bounds`.
+  Invalid configured polar bounds now fail validation instead of falling back
+  to defaults. Verification: geometry helper tests pass 2/2, brain theranostic
+  tests pass 4/4, and `cargo check -p kwavers --lib` exits 0.
+
 ## Transcranial UST aperture routing - closed (2026-05-23)
 - **[done] [patch]** Removed the remaining hard-coded hemispherical acquisition
   path from the transcranial UST Born adapter. `TranscranialUstBornInversionConfig`
