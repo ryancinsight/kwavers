@@ -152,13 +152,40 @@ def test_parse_contracts_and_reduced_geometry():
     row_spacing = geometry["row_spacing_m"]
     assert abs(diameter - 0.80 * 9.0e-3) < 1.0e-15
     assert row_spacing > 0.0
+    plan = kw.derive_breast_fwi_reduced_array_plan(
+        (24, 24, 12),
+        3.2e-3,
+        "table1_parity_interior",
+        None,
+        None,
+        None,
+    )
+    assert plan["rows"] == 10
+    assert plan["row_policy"] == "table1_parity_interior"
+    assert plan["row_spacing_m"] == 3.2e-3
     with pytest.raises(ValueError, match="no larger than"):
         kw.derive_breast_fwi_reduced_array_geometry((10, 10, 4), 1.0e-3, 1, 0.1, None)
+    with pytest.raises(ValueError, match="unknown breast FWI reduced-array row_policy"):
+        kw.derive_breast_fwi_reduced_array_plan((10, 10, 4), 1.0e-3, "invalid", None, None, None)
     pstd_spectral = kw.FrequencyDomainFwiConfig(
         propagation_model="pstd_spectral_convergent_born",
         pstd_time_step_s=1.0e-7,
+        absorbing_boundary="polynomial",
+        absorbing_thickness_cells=0,
     )
     assert pstd_spectral.propagation_model == "pstd_spectral_convergent_born"
+    assert (
+        kw.FrequencyDomainFwiConfig.spectral_convergent_born(
+            absorbing_thickness_cells=0,
+        ).propagation_model
+        == "spectral_convergent_born"
+    )
+    assert (
+        kw.FrequencyDomainFwiConfig.pstd_spectral_convergent_born(
+            absorbing_thickness_cells=0,
+        ).propagation_model
+        == "pstd_spectral_convergent_born"
+    )
 
 
 def test_homogeneous_direct_field_reports_passive_residual_deltas():

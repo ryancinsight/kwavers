@@ -230,12 +230,11 @@ impl PyFrequencyDomainFwiConfig {
                 forward_operator: Arc::new(SpectralConvergentBornOperator {
                     iterations,
                     relative_tolerance,
-                    absorbing_boundary: AbsorbingBoundary::polynomial(
+                    absorbing_boundary: absorbing_boundary_from_thickness(
                         absorbing_thickness_cells,
                         absorbing_strength_nepers,
                         absorbing_order,
-                    )
-                    .map_err(kwavers_to_py)?,
+                    )?,
                 }),
                 ..Config::default()
             },
@@ -276,12 +275,11 @@ impl PyFrequencyDomainFwiConfig {
                         cycles_per_frequency,
                         frequency_bin_cycles,
                     }),
-                    absorbing_boundary: AbsorbingBoundary::polynomial(
+                    absorbing_boundary: absorbing_boundary_from_thickness(
                         absorbing_thickness_cells,
                         absorbing_strength_nepers,
                         absorbing_order,
-                    )
-                    .map_err(kwavers_to_py)?,
+                    )?,
                 }),
                 ..Config::default()
             },
@@ -488,11 +486,25 @@ fn parse_absorbing_boundary(
 ) -> PyResult<AbsorbingBoundary> {
     match absorbing_boundary {
         "disabled" => Ok(AbsorbingBoundary::disabled()),
+        "polynomial" if thickness_cells == 0 => Ok(AbsorbingBoundary::disabled()),
         "polynomial" => AbsorbingBoundary::polynomial(thickness_cells, strength_nepers, order)
             .map_err(kwavers_to_py),
         other => Err(PyValueError::new_err(format!(
             "unknown breast FWI absorbing_boundary '{other}'"
         ))),
+    }
+}
+
+fn absorbing_boundary_from_thickness(
+    thickness_cells: usize,
+    strength_nepers: f64,
+    order: u32,
+) -> PyResult<AbsorbingBoundary> {
+    if thickness_cells == 0 {
+        Ok(AbsorbingBoundary::disabled())
+    } else {
+        AbsorbingBoundary::polynomial(thickness_cells, strength_nepers, order)
+            .map_err(kwavers_to_py)
     }
 }
 

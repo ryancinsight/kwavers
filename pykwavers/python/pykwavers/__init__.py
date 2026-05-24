@@ -233,6 +233,7 @@ from ._pykwavers import (
     breast_fwi_operator_equivalence_diagnostics,
     prepare_breast_fwi_reduced_phantom,
     derive_breast_fwi_reduced_array_geometry,
+    derive_breast_fwi_reduced_array_plan,
     invert_breast_fwi,
     # Thermal diffusion / Pennes bioheat (KWaveDiffusion equivalent)
     ThermalSimulation,
@@ -349,6 +350,7 @@ __all__ = [
     "breast_fwi_operator_equivalence_diagnostics",
     "prepare_breast_fwi_reduced_phantom",
     "derive_breast_fwi_reduced_array_geometry",
+    "derive_breast_fwi_reduced_array_plan",
     "invert_breast_fwi",
     "passive_acoustic_map_das",
     "beamform_image_delay_and_sum",

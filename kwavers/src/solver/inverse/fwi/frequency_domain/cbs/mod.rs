@@ -22,7 +22,10 @@ pub(super) use green::apply_shifted_green_adjoint_operator;
 pub use green::GreenOperatorKind;
 pub use grid::{bli_weights, BliConfig, GridSpec, GridWeight};
 pub use potential::{
-    convergence_epsilon, pointwise_preconditioner, real_scattering_potential, shifted_potential,
+    convergence_epsilon, pointwise_preconditioner, pstd_temporal_angular_frequency_squared,
+    real_pstd_scattering_potential, real_scattering_potential,
+    real_scattering_potential_for_operator, scattering_slowness_derivative_factor_for_operator,
+    shifted_potential,
 };
 pub use projection::{
     receiver_adjoint_for_operator, receiver_adjoint_from_bli, sample_array_for_operator,

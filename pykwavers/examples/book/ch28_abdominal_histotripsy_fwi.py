@@ -19,6 +19,7 @@ inside the patient.
 
 Figures produced
 ----------------
+fig00  3-D transducer placement on skin surface (kidney & liver)
 fig01  CT anatomy, sound speed, anatomy FWI reconstruction, lesion target
 fig02  Multi-modal reconstructions (subharmonic, harmonic, ultraharmonic, fused)
 fig03  FWI convergence (anatomy objective, elastic shear objective)
@@ -50,6 +51,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
+from mpl_toolkits.mplot3d import Axes3D  # noqa: F401  — registers 3D projection
 
 import pykwavers  # All physics: Rust FDTD/PSTD/FWI via PyO3
 
@@ -105,6 +107,106 @@ def _norm(arr: np.ndarray) -> np.ndarray:
     a = np.clip(np.asarray(arr, dtype=float), 0.0, None)
     mx = float(a.max())
     return a / mx if mx > 0.0 else a
+
+
+# ── Figure 00: 3-D transducer placement on skin surface ──────────────────────
+def fig00_transducer_placement_3d(results: dict[str, dict]) -> None:
+    """
+    3-D visualization of transducer element positions (therapy + imaging)
+    on the abdominal skin surface for kidney and liver histotripsy.
+
+    Physics invariant (verified in Rust before this function is reached):
+    - All therapy_points_m and imaging_points_m lie OUTSIDE the body volume.
+    - skin_contact_m is the nearest skin surface point to the element centroid.
+    - placement_context_skin_gap_m >= 0 for every element.
+
+    The figure shows:
+    - Gray scatter: outer skin surface voxels (body boundary, hip/abdominal region).
+    - Red scatter: therapy transducer elements (outside body, on or above skin).
+    - Blue scatter: passive imaging receiver elements (outside body).
+    - Green star: acoustic focus inside the target organ.
+    - Orange triangle: skin contact point (transducer–skin interface).
+    - Dashed line: beam path from skin contact to acoustic focus.
+
+    References
+    ----------
+    Parsons et al. (2006) Ultrasound Med. Biol. 32(1):115 — transcutaneous placement.
+    Hall et al. (2007) Ultrasound Med. Biol. 33(9):1417 — abdominal targeting.
+    """
+    fig = plt.figure(figsize=(14, 6))
+
+    for col, (name, r) in enumerate(results.items()):
+        ax = fig.add_subplot(1, 2, col + 1, projection="3d")
+
+        # Body skin surface (outer shell, not interior).  Returned by Rust as a
+        # downsampled set of the outermost body voxels in physical coordinates.
+        surf = np.asarray(r["placement_body_surface_points_m"])   # (N, 3) [m]
+        th   = np.asarray(r["placement_therapy_points_m"])        # (M, 3) [m]
+        im   = np.asarray(r["placement_imaging_points_m"])        # (K, 3) [m]
+        foc  = np.asarray(r["placement_focus_m"])                 # (3,)   [m]
+        sk   = np.asarray(r["placement_skin_contact_m"])          # (3,)   [m]
+
+        # --- Invariant: no therapy or imaging element inside the body ----------
+        gap = float(r.get("placement_context_skin_gap_m", 0.0))
+        assert gap >= 0.0, (
+            f"{name}: placement_context_skin_gap_m={gap:.4e} < 0 — "
+            "element inside body! Placement invariant violated."
+        )
+
+        # Body skin surface (cm for axis legibility)
+        if surf.ndim == 2 and surf.shape[1] == 3 and len(surf) > 0:
+            ax.scatter(surf[:, 2] * 100, surf[:, 0] * 100, surf[:, 1] * 100,
+                       c="lightgray", s=1, alpha=0.25, label="Skin surface",
+                       rasterized=True)
+
+        # Therapy elements — red, outside the body on the skin surface
+        if th.ndim == 2 and th.shape[1] == 3 and len(th) > 0:
+            ax.scatter(th[:, 2] * 100, th[:, 0] * 100, th[:, 1] * 100,
+                       c="#d62728", s=10, alpha=0.9,
+                       label=f"Therapy ({len(th)} elem.)", zorder=4)
+
+        # Passive imaging receivers — blue
+        if im.ndim == 2 and im.shape[1] == 3 and len(im) > 0:
+            ax.scatter(im[:, 2] * 100, im[:, 0] * 100, im[:, 1] * 100,
+                       c="#1f77b4", s=5, alpha=0.65,
+                       label=f"Imaging ({len(im)} elem.)", zorder=3)
+
+        # Acoustic focus — inside organ
+        if foc.ndim == 1 and foc.size == 3:
+            ax.scatter(foc[2] * 100, foc[0] * 100, foc[1] * 100,
+                       c="lime", s=80, marker="*", zorder=6,
+                       label="Acoustic focus")
+
+        # Skin contact point (transducer–patient interface) and beam line
+        if sk.ndim == 1 and sk.size == 3:
+            ax.scatter(sk[2] * 100, sk[0] * 100, sk[1] * 100,
+                       c="orange", s=80, marker="^", zorder=6,
+                       label="Skin contact")
+            if foc.ndim == 1 and foc.size == 3:
+                ax.plot(
+                    [sk[2] * 100, foc[2] * 100],
+                    [sk[0] * 100, foc[0] * 100],
+                    [sk[1] * 100, foc[1] * 100],
+                    "k--", lw=0.9, alpha=0.55, label="Beam axis",
+                )
+
+        organ = name.capitalize()
+        ax.set_title(f"{organ} — transducer on abdominal skin")
+        ax.set_xlabel("z [cm]")
+        ax.set_ylabel("x [cm]")
+        ax.set_zlabel("y [cm]")  # type: ignore[attr-defined]
+        ax.legend(fontsize=7, markerscale=2, loc="upper left")
+
+    fig.suptitle(
+        "Figure 00 — 3-D transducer placement: therapy + imaging elements on"
+        " abdominal skin surface\n"
+        "Kidney (left) and liver (right). No element inside patient."
+        " Skin-gap ≥ 0 verified.",
+        fontsize=11,
+    )
+    fig.tight_layout()
+    savefig("fig00_transducer_placement_3d")
+    plt.close(fig)
 
 
 # ── Figure 01: Anatomy + FWI reconstruction ───────────────────────────────────
@@ -320,6 +422,10 @@ def run() -> dict[str, object]:
         print(f"  {name}: skin coupling gap = {gap * 1e3:.2f} mm (transducer outside body ✓)")
 
     print("  Generating figures...")
+    print("  fig00...", end=" ", flush=True)
+    fig00_transducer_placement_3d(results)
+    print("done")
+
     print("  fig01...", end=" ", flush=True)
     fig01_anatomy_fwi(results)
     print("done")
@@ -335,7 +441,12 @@ def run() -> dict[str, object]:
     metrics_path = write_metrics(results)
     print(f"  metrics → {metrics_path}")
 
-    figure_names = ["fig01_anatomy_fwi.png", "fig02_multimodal.png", "fig03_convergence.png"]
+    figure_names = [
+        "fig00_transducer_placement_3d.png",
+        "fig01_anatomy_fwi.png",
+        "fig02_multimodal.png",
+        "fig03_convergence.png",
+    ]
     return {
         "figures": [str(OUT_DIR / n) for n in figure_names],
         "metrics": str(metrics_path),

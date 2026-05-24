@@ -317,23 +317,60 @@ def plot_channels() -> None:
 
 
 def plot_safety(protocol: Protocol) -> dict[str, float]:
+    """Thermal safety sweep: 160 pressures × 4 duty cycles via single batch call.
+
+    Replaces 640 serial ThermalSimulation(1,1,1) invocations with one
+    ThermalSimulation(160, 4, 1).  DX_BATCH = 0.1 m gives Fourier number
+    Fo = D·dt/DX² = (K/(ρ·cp))·dt/DX² = (0.51/3.744e6)·0.10/0.01 ≈ 1.4×10⁻⁶ ≪ 1,
+    so adjacent cells are thermally decoupled — each (i, j) cell integrates only
+    its own Q[i,j,0] and the Pennes perfusion term.
+    """
     pressures = np.linspace(50.0e3, 900.0e3, 160)
     duties = [0.01, 0.05, 0.10, 0.20]
+    DX_BATCH = 0.1  # m — thermal decoupling grid spacing
+
+    # Q[i, j, 0] = 2·α·ISPTA[i,j]  [W/m³]; ISPTA = ISPPA × duty
+    ispta_grid = np.array(
+        [
+            [2.0 * ALPHA_BRAIN_NP_M * float(intensity_sppa_w_m2(p)) * d for d in duties]
+            for p in pressures
+        ],
+        dtype=float,
+    )  # shape (160, 4)
+    Q_batch = ispta_grid[:, :, np.newaxis]  # shape (160, 4, 1)
+
+    dt_s = 0.10
+    n_steps = int(np.ceil(protocol.sonication_s / dt_s))  # 300 steps for 30 s
+
+    res = kw.ThermalSimulation(
+        160, 4, 1, DX_BATCH, DX_BATCH, DX_BATCH,
+        thermal_conductivity=K_BRAIN,
+        density=RHO_BRAIN, specific_heat=CP_BRAIN,
+        enable_bioheat=True, perfusion_rate=PERFUSION_S,
+        blood_density=RHO_BLOOD, blood_specific_heat=CP_BLOOD,
+        arterial_temperature=T0_C, initial_temperature=T0_C,
+        track_thermal_dose=True,
+    ).run(n_steps, dt_s, heat_source=Q_batch)
+
+    # Final-state spatial arrays — shape (160, 4, 1) → slice to (160, 4)
+    delta_t_arr = np.asarray(res.temperature)[:, :, 0] - T0_C  # (160, 4)
+    cem43_arr = np.asarray(res.thermal_dose)[:, :, 0]           # (160, 4)
+
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11.2, 4.6))
     summary: dict[str, float] = {}
-    for duty, color in zip(duties, ["#2166ac", "#4dac26", "#fdae61", "#d6604d"]):
-        delta_t = []
-        cem = []
-        for pressure in pressures:
-            thermal = pennes_temperature(float(intensity_sppa_w_m2(pressure) * duty), protocol.sonication_s, dt_s=0.10)
-            delta_t.append(float(thermal.temperature_c[-1] - T0_C))
-            cem.append(float(thermal.cem43_min[-1]))
+    for j, (duty, color) in enumerate(
+        zip(duties, ["#2166ac", "#4dac26", "#fdae61", "#d6604d"])
+    ):
         label = f"DC {100.0 * duty:.0f}%"
-        ax1.plot(pressures / 1.0e3, delta_t, color=color, label=label)
-        ax2.semilogy(pressures / 1.0e3, np.asarray(cem) + 1.0e-12, color=color, label=label)
+        ax1.plot(pressures / 1.0e3, delta_t_arr[:, j], color=color, label=label)
+        ax2.semilogy(pressures / 1.0e3, cem43_arr[:, j] + 1.0e-12, color=color, label=label)
         if duty == protocol.duty_cycle:
-            summary["default_delta_t_c"] = float(np.interp(protocol.pressure_pa, pressures, delta_t))
-            summary["default_cem43_min"] = float(np.interp(protocol.pressure_pa, pressures, cem))
+            summary["default_delta_t_c"] = float(
+                np.interp(protocol.pressure_pa, pressures, delta_t_arr[:, j])
+            )
+            summary["default_cem43_min"] = float(
+                np.interp(protocol.pressure_pa, pressures, cem43_arr[:, j])
+            )
     ax1.axhline(2.0, color="black", linestyle="--", linewidth=1.0, label="2 C guardrail")
     ax2.axhline(0.25, color="black", linestyle="--", linewidth=1.0, label="0.25 CEM43")
     ax1.set_xlabel("Peak pressure (kPa)")

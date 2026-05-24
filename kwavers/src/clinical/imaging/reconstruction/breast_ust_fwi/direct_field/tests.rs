@@ -1,8 +1,14 @@
 use super::grid::GridShape;
 use super::metrics::diagnostics_for_prediction;
-use super::predict::{point_source_observation_cube, source_kappa_filtered_source_weights};
+use super::predict::{
+    point_source_observation_cube, pstd_periodic_observation_cube,
+    source_kappa_filtered_source_weights,
+};
 use super::*;
 use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
+use crate::clinical::imaging::reconstruction::breast_ust_fwi::{
+    generate_breast_ust_pstd_frequency_dataset, snap_multi_row_ring_array_to_grid,
+};
 use crate::physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;
 use ndarray::Array3;
 use num_complex::Complex64;
@@ -185,5 +191,89 @@ fn homogeneous_diagnostic_reports_passive_residual_deltas() {
     );
     assert!(
         (diagnostics.pstd_periodic_passive_residual_delta - pstd_passive_delta).abs() <= 1.0e-15
+    );
+}
+
+#[test]
+fn finite_grid_pstd_prediction_matches_homogeneous_dataset() {
+    let model = Array3::from_elem((4, 4, 3), SOUND_SPEED_WATER_SIM);
+    let config = BreastUstPstdDatasetConfig {
+        spacing_m: 3.2e-3,
+        time_step_s: 1.0e-7,
+        cycles_per_frequency: 4,
+        frequency_bin_cycles: 1,
+        source_amplitude_pa: 1.0e3,
+        density_kg_m3: DENSITY_WATER_NOMINAL,
+        cpml_thickness_cells: 0,
+    };
+    let unsnapped = MultiRowRingArray::new(4, 1, 0.00768, 0.0).expect("array");
+    let array = snap_multi_row_ring_array_to_grid(&unsnapped, model.dim(), config.spacing_m)
+        .expect("snapped array");
+    let frequencies_hz = [200_000.0, 300_000.0];
+
+    let dataset =
+        generate_breast_ust_pstd_frequency_dataset(&model, &array, &frequencies_hz, config)
+            .expect("homogeneous PSTD dataset");
+    let predicted = pstd_periodic_observation_cube(
+        &array,
+        &frequencies_hz,
+        SOUND_SPEED_WATER_SIM,
+        config.spacing_m,
+        model.dim(),
+        config.time_step_s,
+        &dataset.time_steps_per_frequency,
+        &dataset.frequency_bin_start_steps_per_frequency,
+        config.source_amplitude_pa,
+    )
+    .expect("finite-grid PSTD prediction");
+
+    let mut max_abs_error = 0.0_f64;
+    let mut max_error_index = (0, 0, 0);
+    let mut max_error_observed = Complex64::new(0.0, 0.0);
+    let mut max_error_expected = Complex64::new(0.0, 0.0);
+    let mut max_reference = 0.0_f64;
+    let mut scale_numerator = Complex64::new(0.0, 0.0);
+    let mut scale_denominator = 0.0_f64;
+    for ((frequency, transmit, receiver), &observed) in dataset.observed_pressure.indexed_iter() {
+        let expected = predicted[[frequency, transmit, receiver]];
+        let abs_error = (observed - expected).norm();
+        if abs_error > max_abs_error {
+            max_abs_error = abs_error;
+            max_error_index = (frequency, transmit, receiver);
+            max_error_observed = observed;
+            max_error_expected = expected;
+        }
+        scale_numerator += observed * expected.conj();
+        scale_denominator += expected.norm_sqr();
+        max_reference = max_reference.max(observed.norm().max(expected.norm()));
+    }
+    let global_scale = if scale_denominator > 0.0 {
+        scale_numerator / scale_denominator
+    } else {
+        Complex64::new(0.0, 0.0)
+    };
+    let scaled_error = dataset
+        .observed_pressure
+        .iter()
+        .zip(predicted.iter())
+        .map(|(&observed, &expected)| (observed - global_scale * expected).norm_sqr())
+        .sum::<f64>()
+        .sqrt();
+    let observed_norm = dataset
+        .observed_pressure
+        .iter()
+        .map(|value| value.norm_sqr())
+        .sum::<f64>()
+        .sqrt();
+    let scaled_normalized_error = scaled_error / observed_norm.max(f64::MIN_POSITIVE);
+
+    let tolerance = 1.0e-10 * max_reference.max(1.0);
+    assert!(
+        max_abs_error <= tolerance,
+        "homogeneous PSTD modal predictor must match generated dataset: \
+         max_abs_error={max_abs_error:e}, tolerance={tolerance:e}, \
+         max_reference={max_reference:e}, max_error_index={max_error_index:?}, \
+         observed_at_max={max_error_observed:?}, expected_at_max={max_error_expected:?}, \
+         global_scale={global_scale:?}, scaled_normalized_error={scaled_normalized_error:e}"
     );
 }

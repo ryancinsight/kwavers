@@ -1,8 +1,9 @@
 //! Matrix-free frequency-domain forward model.
 
 use super::cbs::{
-    real_scattering_potential, sample_array_for_operator, solve_volume_field_with_operator,
-    source_density_for_operator, CbsConfig, GreenOperatorKind, GridSpec,
+    real_scattering_potential, real_scattering_potential_for_operator, sample_array_for_operator,
+    solve_volume_field_with_operator, source_density_for_operator, CbsConfig, GreenOperatorKind,
+    GridSpec,
 };
 use super::types::{Config, FREQUENCY_DOMAIN_FWI_SOLVER_MODEL};
 use crate::core::error::{KwaversError, KwaversResult};
@@ -105,7 +106,12 @@ pub(super) fn predict_cbs_rows(
     let reference_slowness = 1.0 / config.reference_sound_speed_m_s;
     let reference_wavenumber = omega * reference_slowness;
     let grid = GridSpec::new(slowness_s_per_m.dim(), config.spacing_m)?;
-    let potential = real_scattering_potential(omega, slowness_s_per_m, reference_slowness)?;
+    let potential = real_scattering_potential_for_operator(
+        omega,
+        slowness_s_per_m,
+        reference_slowness,
+        operator,
+    )?;
     let mut output = Array2::zeros((transmissions, array.element_count()));
     for transmit in 0..transmissions {
         let source_density = source_density_for_operator(

@@ -2,9 +2,9 @@
 
 This script keeps the clinical replication path on the production bindings:
 Rust decodes the published MATLAB-5 MRI phantom or HDF5 sound-speed phantom,
-Rust generates PSTD frequency-domain data, and Rust runs the frequency-domain
-FWI solver. Python owns CLI orchestration, deterministic domain reduction,
-report serialization, and visualization.
+Rust reduces the clinical domain and plans the array geometry, Rust generates
+PSTD frequency-domain data, and Rust runs the frequency-domain FWI solver.
+Python owns CLI orchestration, report serialization, and visualization.
 """
 
 from __future__ import annotations
@@ -153,19 +153,28 @@ def run_reduced_replication(args: argparse.Namespace) -> dict[str, Any]:
     original_shape = tuple(int(axis) for axis in reduced["original_shape"])
     effective_spacing_m = float(reduced["effective_spacing_m"])
     source_spacing_m = float(reduced["source_spacing_m"])
-    geometry = kw.derive_breast_fwi_reduced_array_geometry(
+    row_policy = (
+        "explicit"
+        if args.rows is not None
+        else "table1_parity_interior"
+        if args.require_table1_parity
+        else "smoke_single_ring"
+    )
+    geometry = kw.derive_breast_fwi_reduced_array_plan(
         reduced_shape,
         effective_spacing_m,
+        row_policy,
         args.rows,
         args.diameter_m,
         args.row_spacing_m,
     )
+    effective_rows = int(geometry["rows"])
     diameter_m = float(geometry["diameter_m"])
     row_spacing_m = float(geometry["row_spacing_m"])
 
     array = kw.MultiRowRingArray(
         args.circumferential_elements,
-        args.rows,
+        effective_rows,
         diameter_m,
         row_spacing_m,
     )
@@ -296,7 +305,8 @@ def run_reduced_replication(args: argparse.Namespace) -> dict[str, Any]:
         "frequencies_hz": args.frequencies_hz,
         "array": {
             "circumferential_elements": args.circumferential_elements,
-            "rows": args.rows,
+            "rows": effective_rows,
+            "row_policy": str(geometry["row_policy"]),
             "diameter_m": diameter_m,
             "row_spacing_m": row_spacing_m,
             "element_count": array.element_count,
@@ -359,7 +369,8 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--decimation", type=int, default=8)
     parser.add_argument("--frequencies-hz", type=parse_frequency_list, default=[200_000.0])
     parser.add_argument("--circumferential-elements", type=int, default=4)
-    parser.add_argument("--rows", type=int, default=1)
+    parser.add_argument("--rows", type=int, default=None,
+                        help="ring rows; when omitted, Rust selects smoke or Table 1 parity policy")
     parser.add_argument("--diameter-m", type=float, default=None)
     parser.add_argument("--row-spacing-m", type=float, default=None)
     parser.add_argument("--snap-array-to-grid", dest="snap_array_to_grid", action="store_true", default=True)
@@ -370,14 +381,14 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--source-amplitude-pa", type=float, default=1.0e3)
     parser.add_argument("--density-kg-m3", type=float, default=1000.0)
     parser.add_argument("--cpml-thickness-cells", type=int, default=0)
-    parser.add_argument("--fwi-iterations", type=int, default=2)
-    parser.add_argument("--initial-step-s-per-m", type=float, default=2.0e-6)
+    parser.add_argument("--fwi-iterations", type=int, default=5)
+    parser.add_argument("--initial-step-s-per-m", type=float, default=5.0e-5)
     parser.add_argument("--min-sound-speed-m-s", type=float, default=1350.0)
     parser.add_argument("--max-sound-speed-m-s", type=float, default=1700.0)
     parser.add_argument("--tikhonov-weight", type=float, default=0.0)
-    parser.add_argument("--cbs-iterations", type=int, default=16)
+    parser.add_argument("--cbs-iterations", type=int, default=64)
     parser.add_argument("--cbs-relative-tolerance", type=float, default=1.0e-8)
-    parser.add_argument("--absorbing-thickness-cells", type=int, default=1)
+    parser.add_argument("--absorbing-thickness-cells", type=int, default=0)
     parser.add_argument("--absorbing-strength-nepers", type=float, default=1.5)
     parser.add_argument("--absorbing-order", type=int, default=2)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)

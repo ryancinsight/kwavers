@@ -18,9 +18,45 @@ generic option available only to internal clinical code.
   positions, normals, and equal-area weights.
 
 ### Verification summary
-- `cargo test -p kwavers focused_source_factory_accepts_axis_reference_explicit_radius_aperture --lib --message-format=short -j 1`: 1/1 pass.
-- `cargo test -p kwavers axis_reference_preset_preserves_focus_axis_and_explicit_radius --lib --message-format=short -j 1`: 1/1 pass.
+- `cargo test -p kwavers focused_source_factory_accepts_axis_reference_explicit_radius_aperture --lib --message-format=short -j 1`:
+  1/1 pass.
+- `cargo test -p kwavers axis_reference_preset_preserves_focus_axis_and_explicit_radius --lib --message-format=short -j 1`:
+  1/1 pass.
 - `cargo check -p kwavers --lib --message-format=short -j 1`: exit 0.
+
+## Ali 2025 PSTD Odd-Z R2C Direct-Field Parity (2026-05-24)
+
+The reduced determined probe uses a `(4,4,3)` PSTD grid. The live clinical PSTD
+generator used `apollo-fft` 3-D r2c/c2r transforms, while the modal direct-field
+diagnostic evaluates the same periodic PSTD theorem through full complex modal
+sums. For odd `nz > 1`, the r2c z-row split kernel used `m = nz / 2` pair
+packing and omitted the trailing real sample, so half-spectrum PSTD propagation
+diverged from the full-spectrum theorem.
+
+### Closure
+- Routed odd `nz > 1` 3-D r2c forward transforms through the full real-to-complex
+  path and copied the canonical half-spectrum.
+- Routed odd `nz > 1` c2r inverse transforms through Hermitian full-spectrum
+  reconstruction before the full inverse.
+- Added `apollo-fft` odd-z r2c roundtrip and full-spectrum parity regressions.
+- Added a Rust clinical breast UST direct-field test proving the homogeneous
+  `(4,4,3)` PSTD dataset generator matches the finite-grid modal PSTD predictor.
+
+### Verification summary
+- `cargo test -p apollo-fft r2c_ --lib -j 1 -- --nocapture`: 8/8 pass.
+- `cargo test -p kwavers finite_grid_pstd_prediction_matches_homogeneous_dataset --lib -j 1 -- --nocapture`:
+  1/1 pass.
+- `cargo test -p kwavers pstd_temporal_source_transfer_matches_modal_bin_response --lib -j 1 -- --nocapture`:
+  1/1 pass.
+- `cargo test -p kwavers pstd_spectral_cbs_adjoint_gradient_matches_finite_difference --lib -j 1 -- --nocapture`:
+  1/1 pass.
+- `cargo test -p kwavers homogeneous_diagnostic_reports_passive_residual_deltas --lib -j 1 -- --nocapture`:
+  1/1 pass.
+
+### Residual risk
+- The PyO3 reduced determined-probe metrics have not been regenerated after the
+  FFT primitive repair. Rebuild pykwavers before interpreting the next passive
+  residual report.
 
 ## Focused-Bowl Model Label Cleanup (2026-05-24)
 
@@ -39,12 +75,50 @@ brain/liver/kidney are target-placement contexts.
   fixture to use generic focused-bowl source metadata.
 
 ### Verification summary
-- `rg -n "HistoSonics|histosonics|InSightec|insightec|brain_helmet|helmet" kwavers/src pykwavers/src pykwavers/python pykwavers/tests -g "*.rs" -g "*.py"`: no matches.
-- `target/debug/deps/kwavers-308f344dea7dce04.exe clinical::therapy::theranostic_guidance::tests::abdominal --nocapture`: 4/4 pass.
-- `target/debug/deps/kwavers-308f344dea7dce04.exe clinical::therapy::theranostic_guidance::tests::brain --nocapture`: 4/4 pass.
-- `target/debug/deps/kwavers-308f344dea7dce04.exe clinical::therapy::theranostic_guidance::nonlinear3d --nocapture`: 57/57 pass, 3 ignored.
+- `rg -n "HistoSonics|histosonics|InSightec|insightec|brain_helmet|helmet" kwavers/src pykwavers/src pykwavers/python pykwavers/tests -g "*.rs" -g "*.py"`:
+  no matches.
+- `target/debug/deps/kwavers-308f344dea7dce04.exe clinical::therapy::theranostic_guidance::tests::abdominal --nocapture`:
+  4/4 pass.
+- `target/debug/deps/kwavers-308f344dea7dce04.exe clinical::therapy::theranostic_guidance::tests::brain --nocapture`:
+  4/4 pass.
+- `target/debug/deps/kwavers-308f344dea7dce04.exe clinical::therapy::theranostic_guidance::nonlinear3d --nocapture`:
+  57/57 pass, 3 ignored.
 - `cargo check -p kwavers --lib --message-format=short -j 1`: exit 0.
-- `D:/miniforge3/python.exe -m pytest pykwavers/tests/test_book_therapy_chapters.py::test_chapter29_ct_context_draws_transducer_locations -q --timeout=60`: 1/1 pass.
+- `D:\miniforge3\python.exe -m pytest pykwavers/tests/test_book_therapy_chapters.py::test_chapter29_ct_context_draws_transducer_locations -q --timeout=60`:
+  1/1 pass.
+
+## Ali 2025 PSTD CBS Discrete Contrast Alignment (2026-05-24)
+
+`PstdSpectralConvergentBornOperator` used the PSTD leapfrog/k-space Green
+denominator but still built the model contrast with the continuous Helmholtz
+mass term `ω²(s²-s0²)`. That combines two different frequency-domain equations.
+For the leapfrog PSTD equation, the mass coefficient is
+`4 sin²(ωΔt/2)/Δt²`, so both the forward scattering potential and adjoint
+slowness derivative must use that same symbol.
+
+### Closure
+- Added `real_pstd_scattering_potential`,
+  `pstd_temporal_angular_frequency_squared`,
+  `real_scattering_potential_for_operator`, and
+  `scattering_slowness_derivative_factor_for_operator` under
+  `solver::inverse::fwi::frequency_domain::cbs::potential`.
+- Routed CBS forward prediction through the operator-aware potential helper.
+- Routed CBS adjoint-gradient accumulation through the matching operator-aware
+  derivative factor.
+
+### Verification summary
+- `cargo test -p kwavers operator_scattering_derivative_factor_matches_selected_mass_symbol --lib --message-format=short -j 1`:
+  1/1 pass.
+- `cargo test -p kwavers pstd_scattering_potential_uses_leapfrog_temporal_mass_symbol --lib --message-format=short -j 1`:
+  1/1 pass.
+- `cargo test -p kwavers pstd_spectral_cbs_adjoint_gradient_matches_finite_difference --lib --message-format=short -j 1`:
+  1/1 pass.
+
+### Residual risk
+- The reduced determined-probe artifact has not been regenerated after this
+  Rust-side contrast correction. Passive-channel mismatch may also depend on
+  finite-window source recurrence and phase sampling, which remains the next
+  diagnostic target.
 
 ## Medium Property SSOT Constant Closure (2026-05-24)
 

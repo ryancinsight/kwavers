@@ -51,10 +51,29 @@ slow-timeout = { period = "60s", terminate-after = 5, grace-period = "10s" }
 
 [test-groups]
 integration = { max-threads = 2 }
+# Elastic FWI tests run the full PSTD wave equation for each line-search step.
+# Even with parallel speculative evaluation the 64×64 liver grid exceeds 60 s.
+# 90 s per test is the documented upper bound; see nextest.toml for policy.
+elastic-fwi = { max-threads = 1 }
+
+# ── Elastic FWI tests: genuine full-wave physics, 90 s ceiling ──────────────
+# These tests run the complete elastic PSTD wave equation for each FWI
+# iteration with real grid dimensions (42×42 and 64×64).  The 60 s default is
+# insufficient; 90 s is the upper bound after parallel speculative line-search
+# optimisation.  max-threads=1 prevents inter-test rayon oversubscription.
+[[profile.default.overrides]]
+filter = 'test(abdominal_preprocessing_selects_one_connected_treatment_component) | test(abdominal_theranostic_inverse_recovers_lesion_support)'
+test-group = 'elastic-fwi'
+slow-timeout = { period = "90s", terminate-after = 1, grace-period = "10s" }
 
 [[profile.ci.overrides]]
 filter = 'test(/integration/)'
 test-group = 'integration'
+
+[[profile.ci.overrides]]
+filter = 'test(abdominal_preprocessing_selects_one_connected_treatment_component) | test(abdominal_theranostic_inverse_recovers_lesion_support)'
+test-group = 'elastic-fwi'
+slow-timeout = { period = "90s", terminate-after = 1, grace-period = "10s" }
 
 [[profile.local.overrides]]
 filter = 'test(/integration/)'

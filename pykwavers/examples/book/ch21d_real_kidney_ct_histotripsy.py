@@ -207,30 +207,116 @@ savefig("fig15_thermal_dose")
 plt.close()
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Figure 16: 3-D transducer bowl element placement on kidney surface
+# Figure 16: 3-D transducer bowl element placement on kidney — skin interface
 # ─────────────────────────────────────────────────────────────────────────────
-print("[fig16] 3-D transducer placement")
-fig = plt.figure(figsize=(8, 7))
-ax3 = fig.add_subplot(111, projection="3d")
-# Body surface (downsampled)
-body_idx = np.argwhere(body_mask)
-if len(body_idx) > 5000:
-    body_idx = body_idx[:: len(body_idx) // 5000]
-ax3.scatter(body_idx[:, 2] * sp * 1e3, body_idx[:, 0] * sp * 1e3, body_idx[:, 1] * sp * 1e3,
-            s=0.3, c="lightblue", alpha=0.1)
-# Target (RCC tumour)
+# Extract the body skin surface (outermost voxel shell) via 1-iteration 6-
+# connected morphological erosion.  Showing all interior body voxels as the
+# previous implementation did produces a solid opaque blob that occludes the
+# transducer elements and misrepresents the transducer-to-skin interface.
+# The skin surface is the set of body voxels with at least one 6-connected
+# face-adjacent neighbour that is NOT body tissue.
+#
+# Invariant verified: no therapy element may lie inside the body mask.
+# The HistoSonics-like bowl sits on the anterior or lateral skin surface
+# (hip/abdominal region), external to the patient.
+print("[fig16] 3-D transducer placement on skin surface")
+from scipy.ndimage import binary_erosion, generate_binary_structure as _gbs
+
+_struct6 = _gbs(3, 1)          # 6-connected face-adjacent neighbourhood
+_body_interior = binary_erosion(body_mask, structure=_struct6, iterations=1)
+_body_surface_mask = body_mask & ~_body_interior
+_surface_idx = np.argwhere(_body_surface_mask)
+if len(_surface_idx) > 10_000:
+    _surface_idx = _surface_idx[:: len(_surface_idx) // 10_000]
+_surface_m = _surface_idx * sp          # physical coords (x, y, z) in metres
+
+# Focus: centroid of RCC target voxels.
+_focus_m: np.ndarray | None = None
 if target_mask.any():
-    tgt_idx = np.argwhere(target_mask)
-    ax3.scatter(tgt_idx[:, 2] * sp * 1e3, tgt_idx[:, 0] * sp * 1e3, tgt_idx[:, 1] * sp * 1e3,
-                s=2, c="red", alpha=0.6, label="RCC target")
-# Therapy elements
+    _tgt_idx = np.argwhere(target_mask)
+    _focus_m = _tgt_idx.mean(axis=0) * sp          # shape (3,) in metres
+
+# Skin contact: body surface voxel nearest to the centroid of therapy elements.
+_skin_m: np.ndarray | None = None
+if therapy_pts.size > 0 and len(_surface_m) > 0:
+    _elem_centroid = therapy_pts.mean(axis=0)
+    _skin_m = _surface_m[
+        np.linalg.norm(_surface_m - _elem_centroid, axis=1).argmin()
+    ]
+
+# Invariant check: no element inside body.
 if therapy_pts.size > 0:
-    ax3.scatter(therapy_pts[:, 2] * 1e3, therapy_pts[:, 0] * 1e3, therapy_pts[:, 1] * 1e3,
-                s=10, c="gold", alpha=0.9, label=f"Bowl elements ({len(therapy_pts)})")
-ax3.set_xlabel("z (mm)"); ax3.set_ylabel("x (mm)"); ax3.set_zlabel("y (mm)")
-ax3.set_title("HistoSonics-like Bowl on Kidney\n"
-              "Gold = therapy elements, red = RCC, blue = body")
-ax3.legend(fontsize=8)
+    for _e in therapy_pts:
+        _ix = int(round(_e[0] / sp))
+        _iy = int(round(_e[1] / sp))
+        _iz = int(round(_e[2] / sp))
+        if (0 <= _ix < body_mask.shape[0]
+                and 0 <= _iy < body_mask.shape[1]
+                and 0 <= _iz < body_mask.shape[2]):
+            assert not body_mask[_ix, _iy, _iz], (
+                f"Therapy element at voxel ({_ix},{_iy},{_iz}) is inside the body mask. "
+                "Transducer placement invariant violated."
+            )
+
+fig = plt.figure(figsize=(9, 7))
+ax3 = fig.add_subplot(111, projection="3d")
+
+# Body skin surface — very transparent so elements in front remain visible.
+# Axis ordering (z→X, x→Y, y→Z) matches the original file convention and
+# places superior (z) on the horizontal axis, matching standard axial view.
+ax3.scatter(
+    _surface_m[:, 2] * 1e3, _surface_m[:, 0] * 1e3, _surface_m[:, 1] * 1e3,
+    s=0.5, c="#9eb8d1", alpha=0.12, rasterized=True, label="Skin surface",
+)
+
+# RCC tumour (target)
+if target_mask.any():
+    _tgt_m = np.argwhere(target_mask) * sp
+    ax3.scatter(
+        _tgt_m[:, 2] * 1e3, _tgt_m[:, 0] * 1e3, _tgt_m[:, 1] * 1e3,
+        s=3, c="#d62728", alpha=0.7, label="RCC target",
+    )
+
+# Therapy elements — outside body, at skin coupling interface.
+if therapy_pts.size > 0:
+    ax3.scatter(
+        therapy_pts[:, 2] * 1e3, therapy_pts[:, 0] * 1e3, therapy_pts[:, 1] * 1e3,
+        s=14, c="gold", alpha=0.9, label=f"Bowl elements ({len(therapy_pts)})",
+        zorder=5,
+    )
+
+# Focus marker (target centroid).
+if _focus_m is not None:
+    ax3.scatter(
+        _focus_m[2] * 1e3, _focus_m[0] * 1e3, _focus_m[1] * 1e3,
+        s=90, c="cyan", marker="*", zorder=6, label="Focus (target centroid)",
+    )
+
+# Skin contact marker.
+if _skin_m is not None:
+    ax3.scatter(
+        _skin_m[2] * 1e3, _skin_m[0] * 1e3, _skin_m[1] * 1e3,
+        s=90, c="orange", marker="^", zorder=6, label="Skin contact",
+    )
+    # Beam lines from every 32nd element to focus (sparse, for clarity).
+    if _focus_m is not None and therapy_pts.size > 0:
+        _stride = max(1, len(therapy_pts) // 32)
+        for _e in therapy_pts[::_stride]:
+            ax3.plot(
+                [_e[2] * 1e3, _focus_m[2] * 1e3],
+                [_e[0] * 1e3, _focus_m[0] * 1e3],
+                [_e[1] * 1e3, _focus_m[1] * 1e3],
+                c="#555", lw=0.25, alpha=0.20,
+            )
+
+ax3.set_xlabel("z (mm)")
+ax3.set_ylabel("x (mm)")
+ax3.set_zlabel("y (mm)")
+ax3.set_title(
+    "HistoSonics-like Bowl on Kidney — Elements at Skin Interface\n"
+    "Gold = therapy elements, red = RCC, cyan = focus, orange = skin contact",
+)
+ax3.legend(fontsize=7, markerscale=2, loc="upper right")
 plt.tight_layout()
 savefig("fig16_transducer_placement")
 plt.close()

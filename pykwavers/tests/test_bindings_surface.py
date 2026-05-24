@@ -27,6 +27,7 @@ def test_public_symbols_are_exposed():
     assert hasattr(kw, "snap_breast_fwi_array_to_grid")
     assert hasattr(kw, "load_ali_2025_breast_fwi_phantom")
     assert hasattr(kw, "generate_breast_fwi_pstd_dataset")
+    assert hasattr(kw, "derive_breast_fwi_reduced_array_plan")
     assert hasattr(kw, "invert_breast_fwi")
     assert hasattr(kw, "Sensor")
     assert hasattr(kw, "Simulation")

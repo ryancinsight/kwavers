@@ -1,9 +1,11 @@
 //! Discrete adjoint gradient for frequency-domain FWI.
 
 use super::cbs::{
-    apply_shifted_green_adjoint_operator, real_scattering_potential, receiver_adjoint_for_operator,
-    sample_array_for_operator, solve_adjoint_volume_field_with_operator,
-    solve_volume_field_with_operator, source_density_for_operator, GridSpec,
+    apply_shifted_green_adjoint_operator, real_scattering_potential,
+    real_scattering_potential_for_operator, receiver_adjoint_for_operator,
+    sample_array_for_operator, scattering_slowness_derivative_factor_for_operator,
+    solve_adjoint_volume_field_with_operator, solve_volume_field_with_operator,
+    source_density_for_operator, GridSpec,
 };
 use super::forward::{incident_field, outgoing_green, validate_forward_inputs, voxel_centers};
 use super::types::{Config, FrequencyObservation};
@@ -93,8 +95,15 @@ fn accumulate_dense_cbs_frequency_gradient(
     let reference_slowness = 1.0 / config.reference_sound_speed_m_s;
     let reference_wavenumber = omega * reference_slowness;
     let grid = GridSpec::new(slowness_s_per_m.dim(), config.spacing_m)?;
-    let potential = real_scattering_potential(omega, slowness_s_per_m, reference_slowness)?;
+    let potential = real_scattering_potential_for_operator(
+        omega,
+        slowness_s_per_m,
+        reference_slowness,
+        operator,
+    )?;
     let slowness = slowness_s_per_m.iter().copied().collect::<Vec<_>>();
+    let slowness_derivative_factor =
+        scattering_slowness_derivative_factor_for_operator(omega, operator)?;
 
     for transmit in 0..rows {
         let source_density = source_density_for_operator(
@@ -154,7 +163,7 @@ fn accumulate_dense_cbs_frequency_gradient(
             &forward_solution.field,
             &green_adjoint,
             &slowness,
-            omega,
+            slowness_derivative_factor,
         );
     }
     Ok(())
@@ -165,7 +174,7 @@ fn accumulate_dense_cbs_slowness_gradient(
     forward_field: &[Complex64],
     green_adjoint: &[Complex64],
     slowness: &[f64],
-    omega: f64,
+    slowness_derivative_factor: f64,
 ) {
     let (_, ny, nz) = gradient.dim();
     for (linear_index, ((&forward_value, &adjoint_value), &slowness_value)) in forward_field
@@ -179,7 +188,7 @@ fn accumulate_dense_cbs_slowness_gradient(
         let iy = rem / nz;
         let iz = rem % nz;
         gradient[[ix, iy, iz]] -= (adjoint_value.conj() * forward_value).re
-            * helmholtz_slowness_derivative(omega, slowness_value);
+            * (slowness_derivative_factor * slowness_value);
     }
 }
 

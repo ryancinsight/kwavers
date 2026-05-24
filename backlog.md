@@ -11,6 +11,16 @@
   bowl axis-reference preset theorem test passes 1/1, and
   `cargo check -p kwavers --lib --message-format=short -j 1` exits 0.
 
+## Ali 2025 PSTD odd-z FFT parity - closed (2026-05-24)
+- **[done] [patch]** Repaired odd-length z-axis 3-D r2c/c2r transforms in
+  `apollo-fft` by dispatching odd `nz > 1` through a full-spectrum fallback with
+  Hermitian reconstruction for inverse c2r. This closes the reduced `(4,4,3)`
+  passive-channel direct-field mismatch at the FFT primitive layer.
+  Verification: `cargo test -p apollo-fft r2c_ --lib -j 1 -- --nocapture`
+  passes 8/8; `cargo test -p kwavers finite_grid_pstd_prediction_matches_homogeneous_dataset --lib -j 1 -- --nocapture`
+  passes; PSTD temporal transfer, homogeneous direct-field diagnostics, and
+  PSTD CBS adjoint-gradient tests pass.
+
 ## Focused-bowl model-label cleanup - closed (2026-05-24)
 - **[done] [patch]** Removed vendor-like focused-bowl labels from live Rust and
   PyO3 source/model metadata. Abdominal 2-D layout, abdominal placement
@@ -88,6 +98,22 @@
   `0.8646947820594513`; active-only residual remains numerical zero. Next
   increment: isolate passive phase/source-scale semantics in the PSTD spectral
   Green path rather than adding Python-side correction factors.
+
+## Ali 2025 PSTD CBS discrete contrast alignment — closed (2026-05-24)
+- **[done] [patch]** The PSTD spectral CBS operator now uses the leapfrog
+  temporal mass symbol `4 sin²(ωΔt/2)/Δt²` for the real scattering potential
+  and adjoint slowness derivative, while dense and continuous spectral CBS
+  retain the continuous Helmholtz `ω²` contrast. The theorem lives in
+  `solver::inverse::fwi::frequency_domain::cbs::potential`, and the forward
+  plus adjoint-gradient paths dispatch through `GreenOperatorKind`.
+  Verification: the PSTD contrast theorem tests and
+  `pstd_spectral_cbs_adjoint_gradient_matches_finite_difference` pass through
+  `cargo test`.
+- **[open] [patch]** The determined-probe passive residual has not been rerun
+  after this Rust-side contrast correction and the odd-z FFT repair. Next
+  increment: rebuild pykwavers and regenerate the reduced determined-probe
+  metrics to determine whether any residual mismatch remains in the PyO3-facing
+  PSTD spectral CBS path.
 
 ## CBS adjoint O(N log N) iterative solver — closed (2026-05-23)
 - **[done] [minor]** `solve_adjoint_spectral_iterative` now implements the correct

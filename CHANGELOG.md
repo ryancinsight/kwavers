@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Fixed (2026-05-24) - PSTD Odd-Z R2C Direct-Field Parity
+
+- [patch] Route odd-length 3-D real FFT z-axis transforms through a
+  full-spectrum fallback in `apollo-fft`, preserving half-spectrum/full-spectrum
+  equivalence for `nz > 1` odd grids. Added a Rust clinical breast UST
+  direct-field equivalence test proving the `(4,4,3)` homogeneous PSTD dataset
+  generator matches the finite-grid modal PSTD predictor.
+
 ### Changed (2026-05-24) - Focused Bowl Model Label Cleanup
 
 - [patch] Remove vendor-like focused-bowl source labels from live Rust and PyO3
@@ -16,6 +24,13 @@
   sources can use an anatomical/contact axis reference with an explicit
   curvature radius while still generating element layout through
   `BowlTransducer`.
+
+### Fixed (2026-05-24) - Breast FWI PSTD CBS Discrete Contrast
+
+- [patch] Route `PstdSpectralConvergentBornOperator` scattering potential and
+  adjoint slowness derivative through the PSTD leapfrog temporal mass symbol
+  `4 sin²(ωΔt/2)/Δt²`. Dense and continuous spectral CBS retain the continuous
+  Helmholtz `ω²` contrast.
 
 ### Fixed (2026-05-24) - Medium Property SSOT Constant Closure
 
