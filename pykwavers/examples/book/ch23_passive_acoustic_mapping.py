@@ -286,28 +286,20 @@ plt.close(fig)
 # ── Figure 05: Transcranial attenuation effect on PAM SNR ────────────────────
 print("[fig05] Transcranial attenuation and phase aberration on PAM SNR")
 
-def _skull_transmission_loss(f_MHz: np.ndarray, d_cm: float) -> np.ndarray:
-    """
-    One-way skull insertion loss [dB]:
-        IL(f) = α₀ f^1.2 · d
-    Two-way (transmit + receive) = 2 × IL.
-    Coefficients: Fry & Barger (1978); Connor et al. (2002).
-    """
-    return SKULL_ALPHA * (f_MHz ** 1.2) * d_cm
-
+# Two-way skull insertion loss via kw.skull_insertion_loss_two_way_db
+# IL_two(f) = 2 · α₀ · f^1.2 · d   (Fry & Barger 1978; Connor et al. 2002)
 f_mhz = np.linspace(0.25, 3.0, 300)
 d_cm = SKULL_THICK * 100.0
-il_one = _skull_transmission_loss(f_mhz, d_cm)
-il_two = 2.0 * il_one
+il_two = np.asarray(kw.skull_insertion_loss_two_way_db(f_mhz, d_cm, SKULL_ALPHA))
+il_one = il_two / 2.0
 
-# PAM SNR reduction = two-way skull loss + phase-aberration coherence loss.
-# Phase aberration modelled as Gaussian random phase σ_φ ~ N(0, σ²) per element.
-# Coherence factor due to phase aberration (Maréchal approximation):
-#   CF_phase = exp(-σ_φ²)
-# where σ_φ scales with f:  σ_φ(f) = σ₀ · f/f₀ (linear phase shift growth).
+# Phase aberration coherence loss via kw.strehl_ratio (Maréchal approximation):
+#   SR = exp(-σ_φ²),   CF_phase_dB = 10·log10(SR)  [dB, ≤ 0]
+# σ_φ(f) = σ₀ · f/f₀  (linear phase shift growth with frequency).
 sigma_phi0 = 1.0  # radian RMS at 1 MHz (severe skull aberration)
 sigma_phi = sigma_phi0 * f_mhz / 1.0
-cf_phase_db = -10.0 * np.log10(np.exp(1.0)) * sigma_phi ** 2  # dB, ≤0
+cf_phase_db = np.array([10.0 * np.log10(kw.strehl_ratio(s) + 1e-30)
+                         for s in sigma_phi])  # dB, ≤ 0
 
 snr_reduction = il_two + (-cf_phase_db)
 
