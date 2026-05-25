@@ -33,6 +33,7 @@
 //! - Wang et al. (2009): "Photoacoustic tomography: in vivo imaging from organelles to organs"
 //! - Xu & Wang (2006): "Photoacoustic imaging in biomedicine"
 
+use crate::core::constants::thermodynamic::GRUNEISEN_WATER_20C;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::imaging::photoacoustic::InitialPressure;
@@ -66,7 +67,7 @@ pub fn compute_initial_pressure(
         (operating_wavelength - 800.0).mul_add(-0.0002, 0.8)
     };
 
-    let base_gruneisen = gruneisen_parameters.first().copied().unwrap_or(0.12);
+    let base_gruneisen = gruneisen_parameters.first().copied().unwrap_or(GRUNEISEN_WATER_20C);
     let gruneisen_parameter = base_gruneisen * wavelength_scaling;
 
     for i in 0..nx {
@@ -103,7 +104,7 @@ pub fn compute_multi_wavelength_pressure(
         .iter()
         .enumerate()
         .map(|(idx, fluence)| {
-            let gruneisen = gruneisen_parameters.get(idx).copied().unwrap_or(0.12);
+            let gruneisen = gruneisen_parameters.get(idx).copied().unwrap_or(GRUNEISEN_WATER_20C);
             let wavelength = wavelengths.get(idx).copied().unwrap_or(750.0);
             compute_initial_pressure(
                 grid,
