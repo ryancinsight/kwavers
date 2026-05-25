@@ -222,6 +222,7 @@ impl AnisotropicElasticProperties {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
 
     /// Constructs the isotropic Voigt stiffness tensor from Lamé parameters and
     /// verifies the analytical values:
@@ -272,7 +273,7 @@ mod tests {
     #[test]
     fn isotropic_rejects_zero_shear_modulus() {
         assert!(
-            AnisotropicElasticProperties::isotropic(1000.0, 2.25e9, 0.0).is_err(),
+            AnisotropicElasticProperties::isotropic(DENSITY_WATER_NOMINAL, 2.25e9, 0.0).is_err(),
             "zero shear modulus must be rejected"
         );
     }

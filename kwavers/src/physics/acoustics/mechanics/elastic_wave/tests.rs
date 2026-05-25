@@ -5,6 +5,7 @@
 //! metrics (`ElasticWaveMetrics`), and properties (`AnisotropicElasticProperties`)
 //! are co-located with their respective modules.
 
+use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use crate::domain::grid::Grid;
 use crate::physics::acoustics::mechanics::elastic_wave::{
     mode_conversion::{ModeConversionConfig, ViscoelasticConfig},
@@ -241,7 +242,7 @@ fn pstd_elastic_plugin_reduces_to_acoustic_when_mu_is_zero() {
 
     let lame_lambda = Array3::<f64>::from_elem((nx, ny, nz), 2.25e9);
     let lame_mu = Array3::<f64>::zeros((nx, ny, nz));
-    let density = Array3::<f64>::from_elem((nx, ny, nz), 1000.0);
+    let density = Array3::<f64>::from_elem((nx, ny, nz), DENSITY_WATER_NOMINAL);
     let stress_current = SpectralStressFields::new(nx, ny, nz);
     let unit_kappa = Array3::<f64>::ones((nx, ny, nz));
 

@@ -1,5 +1,7 @@
 use super::material::PoroelasticMaterial;
 use super::simulation::PoroelasticSimulation;
+use crate::core::constants::cavitation::VISCOSITY_WATER;
+use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use crate::domain::grid::Grid;
 
 #[test]
@@ -12,10 +14,10 @@ fn test_poroelastic_material_default() {
 #[test]
 fn test_material_validation() {
     let result =
-        PoroelasticMaterial::new(1.5, 2000.0, 1000.0, 10e9, 2.25e9, 3.5e9, 1e-9, 1e-3, 1.5);
+        PoroelasticMaterial::new(1.5, 2000.0, DENSITY_WATER_NOMINAL, 10e9, 2.25e9, 3.5e9, 1e-9, VISCOSITY_WATER, 1.5);
     assert!(result.is_err()); // Porosity > 1
 
-    let result = PoroelasticMaterial::new(0.3, -1.0, 1000.0, 10e9, 2.25e9, 3.5e9, 1e-9, 1e-3, 1.5);
+    let result = PoroelasticMaterial::new(0.3, -1.0, DENSITY_WATER_NOMINAL, 10e9, 2.25e9, 3.5e9, 1e-9, VISCOSITY_WATER, 1.5);
     assert!(result.is_err()); // Negative density
 }
 

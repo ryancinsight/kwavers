@@ -328,7 +328,7 @@ mod tests {
     fn characteristic_frequency_matches_analytical_biot_formula() {
         let m = PoroelasticMaterial::default();
         // Reference value derived from SSOT VISCOSITY_WATER (1.002e-3 Pa·s):
-        let expected_analytical = 0.3 * VISCOSITY_WATER / (1e-9 * 1000.0 * 1.5);
+        let expected_analytical = 0.3 * VISCOSITY_WATER / (1e-9 * DENSITY_WATER_NOMINAL * 1.5);
         let expected_from_struct =
             m.porosity * m.fluid_viscosity / (m.permeability * m.fluid_density * m.tortuosity);
         let got = m.characteristic_frequency();
@@ -349,7 +349,7 @@ mod tests {
     fn new_rejects_invalid_porosity() {
         let ok = || {
             (
-                0.3, 2000.0, 1000.0, 10e9, 2.25e9, 3.5e9, 1e-9, 1e-3, 1.5_f64,
+                0.3, 2000.0, DENSITY_WATER_NOMINAL, 10e9, 2.25e9, 3.5e9, 1e-9, VISCOSITY_WATER, 1.5_f64,
             )
         };
         let (_, rs, rf, ks, kf, g, k, eta, tor) = ok();
@@ -368,7 +368,7 @@ mod tests {
     #[test]
     fn new_rejects_nonpositive_densities() {
         let (phi, _, rf, ks, kf, g, k, eta, tor) = (
-            0.3, 2000.0, 1000.0, 10e9, 2.25e9, 3.5e9, 1e-9, 1e-3, 1.5_f64,
+            0.3, 2000.0, DENSITY_WATER_NOMINAL, 10e9, 2.25e9, 3.5e9, 1e-9, VISCOSITY_WATER, 1.5_f64,
         );
         assert!(
             PoroelasticMaterial::new(phi, 0.0, rf, ks, kf, g, k, eta, tor).is_err(),
@@ -383,7 +383,7 @@ mod tests {
     /// `new` rejects tortuosity < 1.
     #[test]
     fn new_rejects_tortuosity_below_one() {
-        let r = PoroelasticMaterial::new(0.3, 2000.0, 1000.0, 10e9, 2.25e9, 3.5e9, 1e-9, 1e-3, 0.8);
+        let r = PoroelasticMaterial::new(0.3, 2000.0, DENSITY_WATER_NOMINAL, 10e9, 2.25e9, 3.5e9, 1e-9, VISCOSITY_WATER, 0.8);
         assert!(r.is_err(), "tortuosity=0.8 < 1.0 must be rejected");
     }
 

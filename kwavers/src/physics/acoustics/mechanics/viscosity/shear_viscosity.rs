@@ -61,7 +61,7 @@ mod tests {
     /// the reference (Arrhenius model for liquids: η ∝ exp(−s·ΔT)).
     #[test]
     fn viscosity_decreases_with_temperature_for_positive_sensitivity() {
-        let model = ShearViscosityModel::new(1e-3, ROOM_TEMPERATURE_K, 0.02);
+        let model = ShearViscosityModel::new(VISCOSITY_WATER, ROOM_TEMPERATURE_K, 0.02);
         let eta_cold = model.viscosity(0.0, 0.0, 0.0, 283.15); // 10 K below T_ref
         let eta_hot = model.viscosity(0.0, 0.0, 0.0, 303.15); // 10 K above T_ref
         assert!(
@@ -93,7 +93,7 @@ mod tests {
     /// positions produce the same viscosity value.
     #[test]
     fn viscosity_is_spatially_uniform_for_same_temperature() {
-        let model = ShearViscosityModel::new(1e-3, ROOM_TEMPERATURE_K, 0.02);
+        let model = ShearViscosityModel::new(VISCOSITY_WATER, ROOM_TEMPERATURE_K, 0.02);
         let t = 300.0_f64;
         let eta1 = model.viscosity(0.0, 0.0, 0.0, t);
         let eta2 = model.viscosity(0.1, 0.5, 0.9, t);
@@ -106,7 +106,7 @@ mod tests {
     /// (models with anomalous temperature dependence or gels).
     #[test]
     fn viscosity_increases_with_temperature_for_negative_sensitivity() {
-        let model = ShearViscosityModel::new(1e-3, ROOM_TEMPERATURE_K, -0.02);
+        let model = ShearViscosityModel::new(VISCOSITY_WATER, ROOM_TEMPERATURE_K, -0.02);
         let eta_low = model.viscosity(0.0, 0.0, 0.0, 283.15);
         let eta_high = model.viscosity(0.0, 0.0, 0.0, 303.15);
         assert!(
