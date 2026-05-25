@@ -1,6 +1,6 @@
 use super::{test_k_mag, zeros_k_mag};
 use crate::core::constants::cavitation::VISCOSITY_WATER;
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::domain::grid::Grid;
 use crate::domain::medium::HomogeneousMedium;
@@ -11,7 +11,7 @@ use crate::solver::forward::pstd::physics::absorption::init::initialize_absorpti
 #[test]
 fn test_power_law_initialization() {
     let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).unwrap();
-    let mut medium = HomogeneousMedium::new(1000.0, SOUND_SPEED_WATER_SIM, 0.0, 0.0, &grid);
+    let mut medium = HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.0, 0.0, &grid);
     medium.set_acoustic_properties(0.75, 1.5, 5.0).unwrap();
     let config = PSTDConfig {
         dt: 1e-7,
@@ -55,7 +55,7 @@ fn test_power_law_initialization() {
 #[test]
 fn test_nabla_operators_correct_power() {
     let grid = Grid::new(8, 8, 8, 1e-3, 1e-3, 1e-3).unwrap();
-    let medium = HomogeneousMedium::new(1000.0, SOUND_SPEED_WATER_SIM, 0.0, 0.0, &grid);
+    let medium = HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.0, 0.0, &grid);
     let y = 1.5_f64;
     let config = PSTDConfig {
         absorption_mode: AbsorptionMode::PowerLaw {
@@ -106,7 +106,7 @@ fn test_absorption_model_physics_validation() {
         },
         ..Default::default()
     };
-    let mut medium = HomogeneousMedium::new(SOUND_SPEED_WATER_SIM, 1000.0, 0.0, 0.0, &grid);
+    let mut medium = HomogeneousMedium::new(SOUND_SPEED_WATER_SIM, DENSITY_WATER_NOMINAL, 0.0, 0.0, &grid);
     medium.set_acoustic_properties(0.0, 1.5, 0.0).unwrap();
     let k_mag = zeros_k_mag(16, 16, 16);
     let kernel = initialize_absorption_operators(
@@ -147,7 +147,7 @@ fn test_absorption_model_physics_validation() {
 #[test]
 fn test_stokes_absorption_tau_matches_classical_formula() {
     let grid = Grid::new(8, 8, 8, 1e-3, 1e-3, 1e-3).unwrap();
-    let medium = HomogeneousMedium::new(1000.0, SOUND_SPEED_WATER_SIM, 0.0, 0.0, &grid);
+    let medium = HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.0, 0.0, &grid);
     let config = PSTDConfig {
         absorption_mode: AbsorptionMode::Stokes,
         dt: 1e-7,

@@ -1,5 +1,5 @@
 use super::NumericalValidator;
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 
 fn default_validator() -> NumericalValidator {
     NumericalValidator::new()
@@ -69,12 +69,12 @@ fn test_fdtd_phase_error_decreases_with_finer_grid() {
 
     let dx_coarse = 1e-3_f64;
     let grid_coarse = Grid::new(16, 16, 16, dx_coarse, dx_coarse, dx_coarse).unwrap();
-    let medium_coarse = HomogeneousMedium::from_minimal(1000.0, c0, &grid_coarse);
+    let medium_coarse = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, c0, &grid_coarse);
     let v_coarse = NumericalValidator::with_config(grid_coarse, medium_coarse);
 
     let dx_fine = 0.5e-3_f64;
     let grid_fine = Grid::new(16, 16, 16, dx_fine, dx_fine, dx_fine).unwrap();
-    let medium_fine = HomogeneousMedium::from_minimal(1000.0, c0, &grid_fine);
+    let medium_fine = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, c0, &grid_fine);
     let v_fine = NumericalValidator::with_config(grid_fine, medium_fine);
 
     let dt = 0.3 * dx_coarse / c0;

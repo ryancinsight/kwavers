@@ -1,5 +1,5 @@
 use super::super::orchestrator::PSTDSolver;
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use crate::domain::grid::Grid;
 use crate::domain::medium::HomogeneousMedium;
 use crate::domain::source::{GridSource, SourceMode};
@@ -148,7 +148,7 @@ fn test_anti_aliasing_filter_attenuates_nyquist_checkerboard() {
 
     let n = 16usize;
     let grid = Grid::new(n, n, n, 0.001, 0.001, 0.001).unwrap();
-    let medium = HomogeneousMedium::new(1000.0, SOUND_SPEED_WATER_SIM, 0.0, 0.0, &grid);
+    let medium = HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.0, 0.0, &grid);
     let source = GridSource::new_empty();
 
     let mut solver = PSTDSolver::new(config, grid, &medium, source).unwrap();
@@ -258,7 +258,7 @@ fn test_source_kappa_equals_cosine() {
     let cfl = 0.5_f64;
     let dt = cfl * dx / c0;
     let grid = Grid::new(n, n, n, dx, dx, dx).unwrap();
-    let medium = HomogeneousMedium::from_minimal(1000.0, c0, &grid);
+    let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, c0, &grid);
 
     let source = crate::domain::source::grid_source::GridSource::new_empty();
     let config = PSTDConfig {

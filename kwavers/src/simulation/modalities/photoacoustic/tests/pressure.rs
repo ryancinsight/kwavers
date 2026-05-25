@@ -1,7 +1,7 @@
 //! Initial pressure computation and spherical spreading correction tests.
 
 use super::super::core::PhotoacousticSimulator;
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use crate::domain::grid::Grid;
 use crate::domain::medium::homogeneous::HomogeneousMedium;
 use ndarray::Array3;
@@ -9,7 +9,7 @@ use ndarray::Array3;
 #[test]
 fn test_initial_pressure_computation() {
     let grid = Grid::new(16, 16, 8, 0.001, 0.001, 0.001).unwrap();
-    let medium = HomogeneousMedium::new(1000.0, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
+    let medium = HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
     let parameters = crate::domain::imaging::photoacoustic::PhotoacousticParameters::default();
     let simulator = PhotoacousticSimulator::new(grid, parameters, &medium).unwrap();
 
@@ -27,7 +27,7 @@ fn test_initial_pressure_computation() {
 #[test]
 fn test_spherical_spreading_correction() {
     let grid = Grid::new(16, 16, 8, 0.001, 0.001, 0.001).unwrap();
-    let medium = HomogeneousMedium::new(1000.0, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
+    let medium = HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
     let parameters = crate::domain::imaging::photoacoustic::PhotoacousticParameters::default();
     let simulator = PhotoacousticSimulator::new(grid, parameters, &medium).unwrap();
 

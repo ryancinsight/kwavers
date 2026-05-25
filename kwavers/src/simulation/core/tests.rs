@@ -1,5 +1,5 @@
 use super::*;
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::domain::grid::Grid;
 use crate::domain::medium::HomogeneousMedium;
@@ -11,7 +11,7 @@ use std::sync::Arc;
 #[test]
 fn test_simulation_creation() {
     let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3).unwrap();
-    let medium = HomogeneousMedium::new(1000.0, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
+    let medium = HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
 
     let signal = Arc::new(SineWave::new(MHZ_TO_HZ, 1.0, 0.0));
     let source = PointSource::new((0.032, 0.032, 0.032), signal);
@@ -33,7 +33,7 @@ fn test_simulation_creation() {
 #[test]
 fn test_feature_management() {
     let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).unwrap();
-    let medium = HomogeneousMedium::new(1000.0, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
+    let medium = HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
 
     let mut simulation = CoreSimulation::new(
         grid,
@@ -59,7 +59,7 @@ fn test_feature_management() {
 #[test]
 fn test_simulation_builder() {
     let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).unwrap();
-    let medium = HomogeneousMedium::new(1000.0, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
+    let medium = HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
 
     let signal = Arc::new(SineWave::new(MHZ_TO_HZ, 1.0, 0.0));
     let source = PointSource::new((0.016, 0.016, 0.016), signal);

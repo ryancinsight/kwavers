@@ -2,7 +2,7 @@
 
 use super::pressure::{compute_initial_pressure, compute_multi_wavelength_pressure};
 use super::propagation::propagate_acoustic_wave;
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use crate::core::constants::numerical::MPA_TO_PA;
 use crate::domain::grid::Grid;
 use crate::domain::imaging::photoacoustic::InitialPressure;
@@ -13,7 +13,7 @@ use ndarray::Array3;
 #[test]
 fn test_initial_pressure_computation() {
     let grid = Grid::new(16, 16, 8, 0.001, 0.001, 0.001).unwrap();
-    let medium = HomogeneousMedium::new(1000.0, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
+    let medium = HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
 
     let optical_properties =
         crate::simulation::modalities::photoacoustic::optics::initialize_optical_properties(
@@ -38,7 +38,7 @@ fn test_initial_pressure_computation() {
 #[test]
 fn test_wavelength_dependent_gruneisen() {
     let grid = Grid::new(8, 8, 4, 0.001, 0.001, 0.001).unwrap();
-    let medium = HomogeneousMedium::new(1000.0, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
+    let medium = HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
 
     let optical_properties =
         crate::simulation::modalities::photoacoustic::optics::initialize_optical_properties(
@@ -63,7 +63,7 @@ fn test_wavelength_dependent_gruneisen() {
 #[test]
 fn test_multi_wavelength_pressure() {
     let grid = Grid::new(8, 8, 4, 0.001, 0.001, 0.001).unwrap();
-    let medium = HomogeneousMedium::new(1000.0, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
+    let medium = HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
 
     let optical_properties =
         crate::simulation::modalities::photoacoustic::optics::initialize_optical_properties(

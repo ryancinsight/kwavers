@@ -2,7 +2,7 @@
 
 use super::super::backend::AcousticSolverBackend;
 use super::backend::FdtdBackend;
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use crate::domain::grid::Grid;
 use crate::domain::medium::HomogeneousMedium;
 use crate::physics::acoustics::mechanics::acoustic_wave::AcousticSpatialOrder;
@@ -12,7 +12,7 @@ fn create_test_grid() -> Grid {
 }
 
 fn create_test_medium(grid: &Grid) -> HomogeneousMedium {
-    HomogeneousMedium::new(1000.0, SOUND_SPEED_WATER_SIM, 0.0, 0.0, grid)
+    HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.0, 0.0, grid)
 }
 
 #[test]

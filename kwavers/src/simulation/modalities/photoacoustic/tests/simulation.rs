@@ -1,14 +1,14 @@
 //! Full simulation pipeline and multi-wavelength simulation tests.
 
 use super::super::core::PhotoacousticSimulator;
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use crate::domain::grid::Grid;
 use crate::domain::medium::homogeneous::HomogeneousMedium;
 
 #[test]
 fn test_simulation() {
     let grid = Grid::new(16, 16, 8, 0.001, 0.001, 0.001).unwrap();
-    let medium = HomogeneousMedium::new(1000.0, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
+    let medium = HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
     let parameters = crate::domain::imaging::photoacoustic::PhotoacousticParameters::default();
     let mut simulator = PhotoacousticSimulator::new(grid, parameters, &medium).unwrap();
 
@@ -39,7 +39,7 @@ fn test_simulation() {
 #[test]
 fn test_multi_wavelength_simulation() {
     let grid = Grid::new(8, 8, 4, 0.001, 0.001, 0.001).unwrap();
-    let medium = HomogeneousMedium::new(1000.0, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
+    let medium = HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
     let parameters = crate::domain::imaging::photoacoustic::PhotoacousticParameters {
         wavelengths: vec![700.0, 800.0],
         ..Default::default()

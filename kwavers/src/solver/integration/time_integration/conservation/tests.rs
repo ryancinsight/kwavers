@@ -1,5 +1,5 @@
 use super::*;
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use crate::domain::grid::Grid;
 use crate::domain::medium::HomogeneousMedium;
 use ndarray::Array3;
@@ -35,7 +35,7 @@ fn test_conservation_monitoring() {
 fn test_energy_computation() {
     let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1).unwrap();
     let monitor = ConservationMonitor::new(&grid);
-    let medium = HomogeneousMedium::from_minimal(1000.0, SOUND_SPEED_WATER_SIM, &grid);
+    let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, &grid);
 
     // Create test fields
     let pressure = Array3::from_elem((10, 10, 10), 1e5); // Pa

@@ -11,7 +11,7 @@
 //! The restored state is bit-exact (proven in `test_checkpoint_bit_exact_continuation`),
 //! so the velocity trajectory is identical and the recorded buffers match.
 
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use crate::domain::grid::Grid;
 use crate::domain::medium::HomogeneousMedium;
 use crate::domain::sensor::recorder::fields::{SensorRecordField, SensorRecordSpec};
@@ -29,7 +29,7 @@ fn build_with_velocity(nx: usize, ny: usize, nz: usize, nt: usize, dt: f64) -> P
         ..Default::default()
     };
     let grid = Grid::new(nx, ny, nz, 1e-3, 1e-3, 1e-3).unwrap();
-    let medium = HomogeneousMedium::new(1000.0, SOUND_SPEED_WATER_SIM, 0.0, 0.0, &grid);
+    let medium = HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.0, 0.0, &grid);
     let source = GridSource::new_empty();
     let mut solver = PSTDSolver::new(config, grid.clone(), &medium, source).unwrap();
 

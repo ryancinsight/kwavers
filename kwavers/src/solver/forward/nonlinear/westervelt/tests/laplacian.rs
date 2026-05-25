@@ -1,6 +1,6 @@
 //! Laplacian stencil accuracy and spatial-order validation tests.
 
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use crate::domain::grid::Grid;
 use crate::domain::medium::HomogeneousMedium;
 use crate::solver::forward::nonlinear::westervelt::{WesterveltFdtd, WesterveltFdtdConfig};
@@ -8,7 +8,7 @@ use crate::KwaversError;
 
 fn assert_quadratic_laplacian_exact(spatial_order: usize, radius: usize) {
     let grid = Grid::new(12, 12, 12, 0.2, 0.3, 0.4).unwrap();
-    let medium = HomogeneousMedium::from_minimal(1000.0, SOUND_SPEED_WATER_SIM, &grid);
+    let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, &grid);
     let config = WesterveltFdtdConfig {
         spatial_order,
         enable_absorption: false,
@@ -46,7 +46,7 @@ fn assert_quadratic_laplacian_exact(spatial_order: usize, radius: usize) {
 #[test]
 fn test_westervelt_fdtd_creation() {
     let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).unwrap();
-    let medium = HomogeneousMedium::from_minimal(1000.0, SOUND_SPEED_WATER_SIM, &grid);
+    let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, &grid);
     let config = WesterveltFdtdConfig::default();
     let solver = WesterveltFdtd::new(config, &grid, &medium);
 
@@ -66,7 +66,7 @@ fn westervelt_laplacian_stencils_are_exact_for_quadratic_fields() {
 #[test]
 fn westervelt_laplacian_rejects_unsupported_spatial_order() {
     let grid = Grid::new(8, 8, 8, 1e-3, 1e-3, 1e-3).unwrap();
-    let medium = HomogeneousMedium::from_minimal(1000.0, SOUND_SPEED_WATER_SIM, &grid);
+    let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, &grid);
     let config = WesterveltFdtdConfig {
         spatial_order: 8,
         ..WesterveltFdtdConfig::default()

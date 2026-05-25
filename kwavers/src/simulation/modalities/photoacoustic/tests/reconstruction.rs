@@ -2,7 +2,7 @@
 
 use super::super::core::PhotoacousticSimulator;
 use super::super::reconstruction;
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use crate::domain::grid::Grid;
 use crate::domain::medium::homogeneous::HomogeneousMedium;
 use approx::assert_relative_eq;
@@ -11,7 +11,7 @@ use ndarray::Array3;
 #[test]
 fn test_analytical_validation() {
     let grid = Grid::new(8, 8, 4, 0.001, 0.001, 0.001).unwrap();
-    let medium = HomogeneousMedium::new(1000.0, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
+    let medium = HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
     let parameters = crate::domain::imaging::photoacoustic::PhotoacousticParameters::default();
     let simulator = PhotoacousticSimulator::new(grid, parameters, &medium).unwrap();
 
@@ -22,7 +22,7 @@ fn test_analytical_validation() {
 #[test]
 fn test_universal_back_projection_algorithm() {
     let grid = Grid::new(16, 16, 8, 0.001, 0.001, 0.001).unwrap();
-    let medium = HomogeneousMedium::new(1000.0, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
+    let medium = HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
     let parameters = crate::domain::imaging::photoacoustic::PhotoacousticParameters::default();
 
     let n_time = 40;

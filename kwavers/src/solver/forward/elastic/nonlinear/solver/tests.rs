@@ -1,7 +1,7 @@
 use super::super::config::NonlinearSWEConfig;
 use super::super::material::HyperelasticModel;
 use super::NonlinearElasticWaveSolver;
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use crate::domain::grid::Grid;
 use crate::domain::medium::HomogeneousMedium;
 use ndarray::Array3;
@@ -27,7 +27,7 @@ fn test_nonlinear_solver_creation() {
     let nz = 16_usize;
     let dx = 0.001_f64;
     let grid = Grid::new(nx, ny, nz, dx, dx, dx).unwrap();
-    let medium = HomogeneousMedium::new(1000.0, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
+    let medium = HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
     let material = HyperelasticModel::neo_hookean_soft_tissue();
     let beta = 0.1_f64;
     let config = NonlinearSWEConfig {

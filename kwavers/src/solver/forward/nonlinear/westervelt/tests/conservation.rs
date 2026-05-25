@@ -69,7 +69,7 @@ fn test_conservation_check_interval() {
 fn absorption_causes_amplitude_decay_not_growth() {
     let n = 24usize;
     let grid = Grid::new(n, n, n, 1e-3, 1e-3, 1e-3).unwrap();
-    let mut medium = HomogeneousMedium::from_minimal(1000.0, SOUND_SPEED_WATER_SIM, &grid);
+    let mut medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, &grid);
     medium
         .set_acoustic_properties(5.0, 1.0, medium.nonlinearity)
         .unwrap();

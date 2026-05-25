@@ -194,7 +194,7 @@ fn cfl_violation_causes_divergence_stable_dt_remains_bounded() {
 #[test]
 fn pressure_buffers_stable_set_across_many_steps() {
     let grid = Grid::new(8, 8, 8, 1e-3, 1e-3, 1e-3).unwrap();
-    let medium = HomogeneousMedium::from_minimal(1000.0, SOUND_SPEED_WATER_SIM, &grid);
+    let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, &grid);
     let config = WesterveltFdtdConfig {
         enable_absorption: false,
         artificial_viscosity: 0.0,
