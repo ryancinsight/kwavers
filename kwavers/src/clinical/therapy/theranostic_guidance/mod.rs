@@ -61,9 +61,9 @@ pub use transcranial_focused_bowl3d::{
 };
 pub use transcranial_fus::{
     evaluate_pressure_field, run_skull_adaptive_transcranial_benchmark,
-    run_transcranial_fus_planning, PressureFieldMetrics, SkullAdaptiveBenchmarkConfig,
-    SkullAdaptiveBenchmarkResult, SkullAwareTransducerPlacement, TranscranialFusPlan,
-    TranscranialFusPlanConfig,
+    run_transcranial_fus_planning, transcranial_pennes_thermal_dose, PressureFieldMetrics,
+    SkullAdaptiveBenchmarkConfig, SkullAdaptiveBenchmarkResult, SkullAwareTransducerPlacement,
+    TranscranialFusPlan, TranscranialFusPlanConfig, TranscranialThermalResult,
 };
 pub use transmit_schedule::{
     select_transmit_schedule, TransmitScheduleConfig, TransmitScheduleResult,

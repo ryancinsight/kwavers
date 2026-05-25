@@ -11,6 +11,7 @@ Runnable planning example for:
    coverage, elements at z > 0 / superior).
 4. Skull path phase correction, acoustic field synthesis, Pennes thermal dose,
    and cavitation-risk mapping for essential-tremor VIM ablation.
+   All wave physics delegated to Rust via pykwavers.
 5. CT-space segmentation or GBM segmentation hooks for BBB-opening subspots.
 
 Figures produced
@@ -27,6 +28,14 @@ The default local run uses compact NIfTI volumes already present under
 ``data/mni_icbm152_2009c``. BBB planning executes from CT plus segmentation
 when ``data/ct_segmentation_sample/segmentation.nii.gz`` is present, or from a
 CT-backed CFB-GBM case when available.
+
+Physics contract
+----------------
+All wave propagation (Rayleigh-Sommerfeld integration, skull ray tracing) and
+thermal PDE stepping (Pennes bioheat, CEM43) execute in Rust via
+``pykwavers.run_transcranial_fus_planning_from_arrays`` and
+``pykwavers.transcranial_pennes_thermal_dose_py``.  No NumPy physics loops
+appear in this script.
 """
 
 from __future__ import annotations
@@ -68,16 +77,12 @@ from transcranial_planning.registration import (  # noqa: E402
 from transcranial_planning.modality_bridge import modality_bridge_manifest  # noqa: E402
 from transcranial_planning.scene import CANONICAL_BRAIN_SCENE  # noqa: E402
 from transcranial_planning.simulation import (  # noqa: E402
-    acoustic_observables,
     bbb_opening_from_subspots,
     gbm_subspot_plan,
     pennes_thermal_dose,
-    rayleigh_pressure_field,
+    run_transcranial_fus_from_arrays,
 )
-from transcranial_planning.transducer import (  # noqa: E402
-    TransducerConfig,
-    phase_correction_through_ct,
-)
+from transcranial_planning.transducer import TransducerConfig  # noqa: E402
 
 
 def run() -> dict:
@@ -92,31 +97,27 @@ def run() -> dict:
     registration = register_triplet_with_ritk(triplet, max_iterations=12)
     plot_registration_inputs(triplet, registration)
 
-    print("[ch25] Building 1024-element transducer and skull phase correction")
+    print("[ch25] Building 1024-element transducer; delegating skull ray tracing + Rayleigh to Rust")
     transducer = TransducerConfig.from_scene(scene)
-    phase = phase_correction_through_ct(
-        triplet.ct_hu.data,
-        triplet.ct_hu.spacing_m,
-        triplet.target_index,
+
+    # Single Rust call: skull path phase correction + Rayleigh field synthesis +
+    # acoustic observables. Replaces the Python phase_correction_through_ct +
+    # rayleigh_pressure_field + acoustic_observables chain.
+    phase, acoustic = run_transcranial_fus_from_arrays(
+        triplet,
         transducer,
         samples_per_ray=192,
-        skull_mask=triplet.skull_mask,
+        target_peak_pressure_pa=1.0e6,
+        chunk_size=768,
     )
+
     print("[ch25] fig00: 3-D focused-bowl cap placement over calvarium")
     plot_focused_bowl_calvarium_3d(triplet, phase)
     plot_transducer_phase(triplet, phase)
 
-    print("[ch25] Synthesizing acoustic field and thermal dose")
-    pressure = rayleigh_pressure_field(
-        phase,
-        triplet.ct_hu.data.shape,
-        triplet.ct_hu.spacing_m,
-        triplet.target_index,
-        transducer,
-        target_peak_pressure_pa=1.0e6,
-        chunk_points=768,
-    )
-    acoustic = acoustic_observables(pressure, transducer.frequency_hz)
+    print("[ch25] Computing Pennes thermal dose via Rust")
+    # Heterogeneous Pennes bioheat (skull / brain / water properties) executes
+    # in Rust; only result unpacking happens in Python.
     thermal = pennes_thermal_dose(
         acoustic.intensity_w_m2,
         triplet.skull_mask,
@@ -124,6 +125,7 @@ def run() -> dict:
         triplet.ct_hu.spacing_m,
         sonication_s=12.0,
         dt_s=0.25,
+        frequency_hz=transducer.frequency_hz,
     )
     plot_essential_tremor_result(triplet, acoustic, thermal)
 

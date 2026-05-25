@@ -21,6 +21,7 @@ mod pipeline;
 mod pressure;
 mod skull_ray;
 mod subspot;
+mod thermal;
 pub(super) mod types;
 
 pub use benchmark::{
@@ -28,6 +29,7 @@ pub use benchmark::{
     SkullAdaptiveBenchmarkConfig, SkullAdaptiveBenchmarkResult, SkullAwareTransducerPlacement,
 };
 pub use pipeline::run_transcranial_fus_planning;
+pub use thermal::{transcranial_pennes_thermal_dose, TranscranialThermalResult};
 pub use types::{TranscranialFusPlan, TranscranialFusPlanConfig};
 
 #[cfg(test)]
