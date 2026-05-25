@@ -62,8 +62,8 @@ pub(crate) fn calculate_acceleration(
 
     // Bubble wall pressure (liquid side)
     // p_B = p_gas - 2σ/R - 4μṘ/R
-    let surface_tension = 2.0 * model.params.sigma / r;
-    let viscous_stress = 4.0 * model.params.mu_liquid * v / r;
+    let surface_tension = model.params.surface_tension_pressure(r);
+    let viscous_stress = model.params.viscous_wall_stress(v, r);
     let p_wall = p_gas - surface_tension - viscous_stress;
 
     // Time derivative of wall pressure for radiation damping term

@@ -9,6 +9,30 @@ use crate::core::constants::thermodynamic::{
 };
 use std::collections::HashMap;
 
+/// Young-Laplace spherical-bubble surface tension pressure for an arbitrary σ.
+///
+/// `ΔP = 2σ/R` — Young-Laplace equation for a spherical interface.
+/// Reference: Brennen C. E. (1995) *Cavitation and Bubble Dynamics*, §2.2.
+///
+/// Used by all bubble ODE models; the free-function form accepts variable σ
+/// (e.g., Marmottant state-dependent surface tension) without borrowing `self`.
+#[inline(always)]
+pub fn young_laplace_pressure(sigma: f64, r: f64) -> f64 {
+    2.0 * sigma / r
+}
+
+/// Liquid-side viscous bubble-wall stress.
+///
+/// `τ = 4μṘ/R` — viscous damping term in the Rayleigh-Plesset / Keller-Miksis / Gilmore
+/// equations.
+/// Reference: Brennen C. E. (1995) *Cavitation and Bubble Dynamics*, §2.3, Eq. 2.11.
+///
+/// Accepts variable `mu_liquid` for generality; all standard models pass `params.mu_liquid`.
+#[inline(always)]
+pub fn viscous_bubble_wall_stress(mu_liquid: f64, r_dot: f64, r: f64) -> f64 {
+    4.0 * mu_liquid * r_dot / r
+}
+
 /// Physical parameters for bubble dynamics
 #[derive(Debug, Clone)]
 pub struct BubbleParameters {
@@ -87,6 +111,24 @@ impl BubbleParameters {
         self.gas_composition.clear();
         self.gas_composition.insert(gas_type, 1.0);
         self
+    }
+
+    /// Surface tension pressure at the bubble wall from Young-Laplace equation.
+    ///
+    /// Delegates to [`young_laplace_pressure`] with `self.sigma`.
+    #[inline(always)]
+    #[must_use]
+    pub fn surface_tension_pressure(&self, r: f64) -> f64 {
+        young_laplace_pressure(self.sigma, r)
+    }
+
+    /// Liquid-side viscous wall stress at the bubble wall.
+    ///
+    /// Delegates to [`viscous_bubble_wall_stress`] with `self.mu_liquid`.
+    #[inline(always)]
+    #[must_use]
+    pub fn viscous_wall_stress(&self, r_dot: f64, r: f64) -> f64 {
+        viscous_bubble_wall_stress(self.mu_liquid, r_dot, r)
     }
 
     /// Calculate effective Van der Waals constants for gas mixture

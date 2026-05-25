@@ -131,7 +131,7 @@ mod tests {
 
         monitor.update_fields(&temperature, &pressure, 1.0).unwrap();
 
-        let expected = 0.25_f64.powf(43.0 - BODY_TEMPERATURE_C); // 2.441e-4 CEM43/s
+        let expected = 0.25_f64.powf(THERMAL_DOSE_REFERENCE_TEMP_C - BODY_TEMPERATURE_C); // 2.441e-4 CEM43/s
         let actual = monitor.thermal_dose.dose_rate[[0, 0, 0]];
         let rel_err = (actual - expected).abs() / expected;
         assert!(
@@ -181,7 +181,7 @@ mod tests {
 
         monitor.update_fields(&temperature, &pressure, 1.0).unwrap();
 
-        let expected = 0.5_f64.powf(43.0 - 50.0); // 128 CEM43/s
+        let expected = 0.5_f64.powf(THERMAL_DOSE_REFERENCE_TEMP_C - 50.0); // 128 CEM43/s
         let actual = monitor.thermal_dose.dose_rate[[0, 0, 0]];
         let rel_err = (actual - expected).abs() / expected;
         assert!(

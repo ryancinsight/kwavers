@@ -53,8 +53,8 @@ impl RayleighPlessetSolver {
 
         // Forces on bubble wall (Pa)
         let pressure_diff = p_gas - p_liquid_far;
-        let surface_tension = 2.0 * self.params.sigma / r;
-        let viscous_stress = 4.0 * self.params.mu_liquid * v / r;
+        let surface_tension = self.params.surface_tension_pressure(r);
+        let viscous_stress = self.params.viscous_wall_stress(v, r);
 
         #[cfg(test)]
         if r == self.params.r0 && v == 0.0 && p_acoustic == 0.0 && t == 0.0 {

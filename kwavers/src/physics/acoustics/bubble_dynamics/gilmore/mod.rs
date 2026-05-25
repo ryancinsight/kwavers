@@ -103,8 +103,8 @@ impl GilmoreSolver {
         let p_eq = self.params.p0 + 2.0 * self.params.sigma / self.params.r0 - self.params.pv;
         let p_gas = p_eq * (self.params.r0 / r).powf(3.0 * gamma) + self.params.pv;
 
-        // Pressure at bubble wall (liquid side)
-        let p_wall = p_gas - 2.0 * self.params.sigma / r - 4.0 * self.params.mu_liquid * u / r;
+        // Pressure at bubble wall (liquid side): Young-Laplace + viscous damping
+        let p_wall = p_gas - self.params.surface_tension_pressure(r) - self.params.viscous_wall_stress(u, r);
 
         // Enthalpy at bubble wall and infinity
         let h_wall =

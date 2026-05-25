@@ -50,8 +50,8 @@ impl ChurchModel {
         let p_gas = p_eq * (r0 / r).powf(3.0 * gamma);
 
         // Standard Rayleigh-Plesset terms
-        let surface_tension = 2.0 * self.params.sigma / r;
-        let viscous_stress = 4.0 * self.params.mu_liquid * v / r;
+        let surface_tension = self.params.surface_tension_pressure(r);
+        let viscous_stress = self.params.viscous_wall_stress(v, r);
 
         // Shell elasticity term: 12G(d/R)[(R/R₀)² - 1]
         // This represents the elastic restoring force from shell deformation

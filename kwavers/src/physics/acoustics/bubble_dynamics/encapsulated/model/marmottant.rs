@@ -1,7 +1,9 @@
 use super::super::shell::ShellProperties;
 use crate::core::constants::cavitation::SURFACE_TENSION_WATER;
 use crate::core::error::KwaversResult;
-use crate::physics::acoustics::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};
+use crate::physics::acoustics::bubble_dynamics::bubble_state::{
+    young_laplace_pressure, BubbleParameters, BubbleState,
+};
 
 /// Marmottant model for encapsulated bubbles with buckling/rupture
 ///
@@ -93,12 +95,12 @@ impl MarmottantModel {
         // but enters the pressure balance as just 2σ(R)/R; no separate dσ/dR rate term).
         let sigma = self.surface_tension(r);
 
-        // Surface tension term: 2σ(R)/R
-        let surface_term = 2.0 * sigma / r;
+        // Surface tension term: 2σ(R)/R — variable σ from Marmottant state, free-function form.
+        let surface_term = young_laplace_pressure(sigma, r);
 
         // Viscous damping (liquid + shell). Shell term: 4·κ_s·Ṙ/R² with
         // κ_s = 3·μ_s·d for a thin shell, giving 12·μ_s·d·Ṙ/R².
-        let viscous_liquid = 4.0 * self.params.mu_liquid * v / r;
+        let viscous_liquid = self.params.viscous_wall_stress(v, r);
         let d = self.shell.thickness;
         let mu_s = self.shell.shear_viscosity;
         let viscous_shell = 12.0 * mu_s * (d / r) * v / r;

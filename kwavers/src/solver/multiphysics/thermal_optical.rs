@@ -2,6 +2,8 @@
 //!
 //! This module provides specialized coupling between thermal and optical fields.
 
+use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
+use crate::core::constants::thermodynamic::SPECIFIC_HEAT_WATER;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
@@ -38,8 +40,8 @@ impl ThermalOpticalSolver {
         dt: f64,
     ) -> KwaversResult<()> {
         // Optical absorption generates heat
-        let rho = 1000.0; // kg/m³ (water density)
-        let c = 4186.0; // J/(kg·K) (water specific heat)
+        let rho = DENSITY_WATER_NOMINAL; // kg/m³ — nominal water density (1000 kg/m³)
+        let c = SPECIFIC_HEAT_WATER;     // J/(kg·K) — water isobaric specific heat at 20°C
 
         for ((i, j, k), &i_val) in intensity.indexed_iter() {
             // Heat generated per unit volume (W/m³)
