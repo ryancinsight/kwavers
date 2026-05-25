@@ -1,5 +1,96 @@
 # Gap Audit
 
+## Ali 2025 Finite-Window Report Routing (2026-05-25)
+
+The Rust finite-window PSTD Born predictor existed at the PyO3 boundary, but
+the reduced Ali 2025 comparison report still built its model map only from
+`FrequencyDomainFwiConfig` operators. That excluded the new theorem because it
+is intentionally forward-only until an adjoint-gradient theorem is implemented.
+
+### Closure
+- Added `pstd_finite_window_born` as a report prediction model.
+- Added `simulate_pstd_finite_window_born_stack`, which calls the Rust PyO3
+  finite-window predictor once per frequency and forwards only acquisition
+  parameters.
+- Added `simulate_report_predictions` to combine adjoint-capable
+  `FrequencyDomainFwiConfig` predictions with the finite-window Rust predictor.
+- Updated the reduced replication path to use the finite-window Rust predictor
+  for the homogeneous scattering baseline while leaving inversion on
+  `pstd_spectral_convergent_born`.
+- Added fake-binding routing checks for parameter forwarding and report model
+  membership.
+
+### Verification summary
+- `python -m compileall pykwavers\examples\ali2025_breast_fwi\operator_equivalence.py pykwavers\examples\replicate_ali2025_breast_fwi.py pykwavers\tests\test_ali2025_replication_example.py`:
+  exit 0.
+- Local debug extension import check confirms
+  `simulate_breast_fwi_pstd_finite_window_born_observation` is exported.
+- `D:\miniforge3\Scripts\pytest.exe pykwavers/tests/test_ali2025_replication_example.py -q -k "finite_window_prediction_builder or report_prediction_builder"`:
+  2/2 pass.
+
+### Residual risk
+- The determined `(4,4,3)` metrics artifact has not yet been regenerated with
+  `pstd_finite_window_born`. The next increment is the report rerun, not
+  additional Python propagation code.
+
+## Focused Bowl Aperture Chord Guard (2026-05-25)
+
+Axis-reference focused-bowl construction accepted finite positive aperture
+diameters larger than `2R`. Such a chord cannot exist on a spherical cap and
+would leave invalid source geometry representable before transducer
+construction.
+
+### Closure
+- Added the `aperture_diameter_m <= 2 * radius_m` invariant to
+  `BowlConfig::from_axis_reference_focus`.
+- Added `axis_reference_preset_rejects_excessive_aperture_chord`.
+- Kept Chapter 25 visualization/helper naming on generic focused-bowl cap
+  terminology rather than helmet/vendor terminology.
+
+### Verification summary
+- `cargo test -p kwavers axis_reference_preset --lib --message-format=short -j 1`:
+  3/3 pass.
+- `python -m compileall pykwavers/examples/book/ch25_transcranial_brain_fus_planning.py pykwavers/examples/book/transcranial_planning/figures.py pykwavers/examples/book/transcranial_planning/transducer.py`:
+  exit 0.
+- `rg` checks for `helmet`, vendor labels, and `brain_helmet` in the
+  source-domain and edited Chapter 25 files return no matches.
+
+### Residual risk
+- None for the source-domain aperture invariant. Clinical placement quality
+  still depends on scene-level target and CT support selection.
+
+## Ali 2025 Finite-Window PSTD Born Boundary (2026-05-25)
+
+The scattering-increment report isolated a heterogeneous finite-window gap:
+stationary PSTD spectral CBS over-amplified the calibrated increment by roughly
+`985-989x` even though homogeneous finite-grid PSTD parity was at numerical
+precision. The missing component was a solver-owned time-window scattering
+theorem, not another source-scale or direct-field correction.
+
+### Closure
+- Added `solver::inverse::fwi::frequency_domain::finite_window` with
+  `simulate_pstd_finite_window_born_observation`.
+- Implemented exact-grid PSTD source/receiver projection, source k-space
+  correction, homogeneous modal recurrence, trailing-cycle demodulation, and
+  first-order scattered source `-chi * Δ_t^2 p0`.
+- Added a PyO3 conversion-only wrapper:
+  `simulate_breast_fwi_pstd_finite_window_born_observation`.
+- Added ADR-008 to keep finite-window recurrence semantics separate from
+  stationary CBS operator semantics.
+
+### Verification summary
+- `cargo check -p kwavers --lib --message-format=short -j 1`: exit 0 after
+  waiting on the shared target lock.
+- `cargo check -p pykwavers --lib --message-format=short -j 1`: exit 0 after
+  waiting on the shared target lock.
+- `cargo test -p kwavers --test pstd_finite_window_born --message-format=short -j 1 -- --nocapture`:
+  2/2 pass after waiting on the shared target lock.
+
+### Residual risk
+- The reduced Ali 2025 report still needs a Rust/PyO3-owned comparison step
+  using the new finite-window predictor. Python must remain orchestration and
+  plotting only.
+
 ## Ali 2025 Scattering Policy Report Guard (2026-05-24)
 
 The reduced determined probe exposed a receiver-policy edge case in the new

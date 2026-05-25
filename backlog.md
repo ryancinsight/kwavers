@@ -1,5 +1,57 @@
 # Backlog / Strategy
 
+## Ali 2025 finite-window report routing - closed (2026-05-25)
+- **[done] [patch]** Added `pstd_finite_window_born` to the reduced report
+  prediction map by calling the Rust PyO3 function
+  `simulate_breast_fwi_pstd_finite_window_born_observation`. Python forwards
+  acquisition parameters only; it does not implement propagation math.
+- **[done] [patch]** Kept inversion and `truth_forward` on the adjoint-capable
+  `pstd_spectral_convergent_born` operator. The finite-window Born component is
+  report-only until the adjoint theorem exists.
+- **[done] [patch]** Switched the homogeneous scattering baseline used by the
+  report to the finite-window Rust predictor so candidate increments are
+  measured against the same finite-window direct theorem.
+- **Follow-up [patch]:** rerun the determined `(4,4,3)` report with
+  `pstd_finite_window_born` included and record the finite-window
+  scattering-increment metrics.
+- **Verification:** Python compileall exits 0; the local debug extension exports
+  `simulate_breast_fwi_pstd_finite_window_born_observation`; focused pytest
+  routing checks pass 2/2 for finite-window stack parameters and combined
+  report prediction membership.
+
+## Focused bowl aperture chord guard - closed (2026-05-25)
+- **[done] [patch]** Rejected impossible axis-reference aperture chords at the
+  source-domain constructor boundary: `aperture_diameter_m` must not exceed
+  `2 * radius_m`. This prevents invalid spherical-cap geometry from existing
+  before `BowlTransducer` construction.
+- **[done] [patch]** Kept Chapter 25 transcranial visualization on generic
+  focused-bowl cap terminology. No source-domain API or book helper uses
+  helmet/vendor naming for the transducer model.
+- **Verification:** `cargo test -p kwavers axis_reference_preset --lib
+  --message-format=short -j 1` passes 3/3; Python `compileall` passes for the
+  edited Chapter 25 modules; `rg` finds no `helmet`, vendor, or `brain_helmet`
+  terms in the source-domain and edited book files.
+
+## Ali 2025 finite-window PSTD Born boundary - closed (2026-05-25)
+- **[done] [patch]** Added the solver-owned finite-window PSTD Born forward
+  boundary under `solver::inverse::fwi::frequency_domain`. The theorem uses
+  the homogeneous PSTD leapfrog recurrence and injects first-order scattering as
+  `-chi * (p0[n+1] - 2 p0[n] + p0[n-1])`, with
+  `chi = (s^2 - s0^2) / s0^2`.
+- **[done] [patch]** Exposed
+  `simulate_breast_fwi_pstd_finite_window_born_observation` through PyO3 as a
+  conversion-only wrapper. Stationary CBS remains separate; the finite-window
+  path is not an inversion operator until the adjoint theorem is implemented.
+- **[done] [patch]** Added ADR-008 documenting the architectural boundary and
+  residual report-integration risk.
+- **Follow-up [patch]:** integrate the Rust finite-window prediction into the
+  Ali 2025 reduced comparison artifact and rerun the determined `(4,4,3)`
+  scattering-increment report.
+- **Verification:** `cargo check -p kwavers --lib --message-format=short -j 1`
+  exits 0; `cargo check -p pykwavers --lib --message-format=short -j 1` exits
+  0; `cargo test -p kwavers --test pstd_finite_window_born
+  --message-format=short -j 1 -- --nocapture` passes 2/2.
+
 ## Ali 2025 scattering policy report guard - closed (2026-05-24)
 - **[done] [patch]** Corrected reduced-replication reporting for receiver
   policies whose calibrated observed scattering increment is zero. The Rust

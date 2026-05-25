@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+### Changed (2026-05-25) - Ali 2025 Finite-Window Report Routing
+
+- [patch] Route the Ali 2025 reduced comparison report through the Rust-backed
+  `pstd_finite_window_born` predictor, keep inversion on the adjoint-capable
+  `pstd_spectral_convergent_born` operator, and add routing tests that prove
+  Python only forwards acquisition parameters to PyO3.
+
+### Added (2026-05-25) - Ali 2025 Finite-Window PSTD Born Boundary
+
+- [patch] Add solver-owned finite-window PSTD Born prediction for Ali 2025
+  FWI diagnostics, expose it through PyO3 as a conversion-only wrapper, and
+  document the boundary in ADR-008. The implementation keeps time-window PSTD
+  recurrence semantics separate from stationary CBS operators until the
+  matching adjoint theorem exists.
+
+### Fixed (2026-05-25) - Focused Bowl Aperture Chord Guard
+
+- [patch] Reject axis-reference focused-bowl aperture chords larger than
+  `2 * radius_m`, pin the validation with a value-semantic test, and keep the
+  Chapter 25 visualization surface on generic focused-bowl cap terminology.
+
 ### Changed (2026-05-24) - Ali 2025 Scattering Policy Report Guard
 
 - [patch] Preserve strict Rust rejection for zero-energy calibrated scattering

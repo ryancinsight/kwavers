@@ -32,7 +32,8 @@ from ali2025_breast_fwi.operator_equivalence import (
     operator_equivalence_diagnostics,
     scattering_increment_diagnostics,
     scattering_increment_diagnostics_or_error,
-    simulate_forward_predictions,
+    simulate_pstd_finite_window_born_stack,
+    simulate_report_predictions,
 )
 from ali2025_breast_fwi.visualization import write_orthographic_plot
 
@@ -216,20 +217,25 @@ def run_reduced_replication(args: argparse.Namespace) -> dict[str, Any]:
         dataset_config,
     )
     observed_pressure = np.asarray(dataset["observed_pressure"], dtype=np.complex128)
-    forward_predictions = simulate_forward_predictions(
+    forward_predictions = simulate_report_predictions(
         kw,
         reduced_sound_speed,
         array,
         args.frequencies_hz,
         configs_by_model,
+        args,
+        reference_speed,
+        effective_spacing_m,
     )
-    homogeneous_pstd_baseline = simulate_forward_predictions(
+    homogeneous_pstd_baseline = simulate_pstd_finite_window_born_stack(
         kw,
         initial_sound_speed,
         array,
         args.frequencies_hz,
-        {"pstd_spectral_convergent_born": fwi_config},
-    )["pstd_spectral_convergent_born"]
+        args,
+        reference_speed,
+        effective_spacing_m,
+    )
     truth_forward = forward_predictions["pstd_spectral_convergent_born"]
     operator_equivalence = operator_equivalence_diagnostics(
         forward_predictions,

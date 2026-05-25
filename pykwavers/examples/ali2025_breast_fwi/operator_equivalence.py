@@ -14,6 +14,8 @@ PROPAGATION_MODELS = (
     "spectral_convergent_born",
     "pstd_spectral_convergent_born",
 )
+FINITE_WINDOW_PSTD_BORN_MODEL = "pstd_finite_window_born"
+REPORT_PREDICTION_MODELS = (*PROPAGATION_MODELS, FINITE_WINDOW_PSTD_BORN_MODEL)
 
 
 class ReceiverChannelPolicy(str, Enum):
@@ -94,6 +96,64 @@ def simulate_forward_predictions(
         )
         for model, config in configs_by_model.items()
     }
+
+
+def simulate_pstd_finite_window_born_stack(
+    kw: Any,
+    sound_speed_m_s: np.ndarray,
+    array: Any,
+    frequencies_hz: Sequence[float],
+    args: Any,
+    reference_sound_speed_m_s: float,
+    spacing_m: float,
+) -> np.ndarray:
+    return np.stack(
+        [
+            kw.simulate_breast_fwi_pstd_finite_window_born_observation(
+                sound_speed_m_s,
+                array,
+                frequency_hz,
+                reference_sound_speed_m_s=reference_sound_speed_m_s,
+                spacing_m=spacing_m,
+                time_step_s=args.time_step_s,
+                source_amplitude_pa=args.source_amplitude_pa,
+                cycles_per_frequency=args.cycles_per_frequency,
+                frequency_bin_cycles=args.frequency_bin_cycles,
+                transmissions=args.circumferential_elements,
+            )
+            for frequency_hz in frequencies_hz
+        ],
+        axis=0,
+    )
+
+
+def simulate_report_predictions(
+    kw: Any,
+    sound_speed_m_s: np.ndarray,
+    array: Any,
+    frequencies_hz: Sequence[float],
+    configs_by_model: Mapping[str, Any],
+    args: Any,
+    reference_sound_speed_m_s: float,
+    spacing_m: float,
+) -> dict[str, np.ndarray]:
+    predictions = simulate_forward_predictions(
+        kw,
+        sound_speed_m_s,
+        array,
+        frequencies_hz,
+        configs_by_model,
+    )
+    predictions[FINITE_WINDOW_PSTD_BORN_MODEL] = simulate_pstd_finite_window_born_stack(
+        kw,
+        sound_speed_m_s,
+        array,
+        frequencies_hz,
+        args,
+        reference_sound_speed_m_s,
+        spacing_m,
+    )
+    return predictions
 
 
 def operator_equivalence_diagnostics(

@@ -580,3 +580,97 @@ def test_operator_prediction_builder_uses_all_models_and_frequencies():
     np.testing.assert_array_equal(predictions["b"][:, 0, 0], [40.0 + 0.0j, 60.0 + 0.0j])
     with pytest.raises(ValueError, match="must not be empty"):
         operators.simulate_forward_predictions(FakeKw, np.ones((1, 1, 1)), object(), [2.0], {})
+
+
+def test_finite_window_prediction_builder_uses_rust_binding_parameters():
+    operators = _load_support_module("operator_equivalence")
+    calls = []
+
+    class FakeKw:
+        @staticmethod
+        def simulate_breast_fwi_pstd_finite_window_born_observation(
+            _model,
+            _array,
+            frequency_hz,
+            **kwargs,
+        ):
+            calls.append((frequency_hz, kwargs))
+            value = frequency_hz * 1.0e-6 + kwargs["reference_sound_speed_m_s"] * 1.0e-3
+            return np.full((2, 2), value, dtype=np.complex128)
+
+    args = argparse.Namespace(
+        time_step_s=1.0e-7,
+        source_amplitude_pa=1.0e3,
+        cycles_per_frequency=4,
+        frequency_bin_cycles=1,
+        circumferential_elements=3,
+    )
+
+    stack = operators.simulate_pstd_finite_window_born_stack(
+        FakeKw,
+        np.ones((3, 3, 1), dtype=np.float64) * 1500.0,
+        object(),
+        [200_000.0, 300_000.0],
+        args,
+        1500.0,
+        5.0e-3,
+    )
+
+    assert stack.shape == (2, 2, 2)
+    np.testing.assert_array_equal(stack[:, 0, 0], [1.7 + 0.0j, 1.8 + 0.0j])
+    assert [frequency for frequency, _ in calls] == [200_000.0, 300_000.0]
+    for _, kwargs in calls:
+        assert kwargs == {
+            "reference_sound_speed_m_s": 1500.0,
+            "spacing_m": 5.0e-3,
+            "time_step_s": 1.0e-7,
+            "source_amplitude_pa": 1.0e3,
+            "cycles_per_frequency": 4,
+            "frequency_bin_cycles": 1,
+            "transmissions": 3,
+        }
+
+
+def test_report_prediction_builder_includes_finite_window_model():
+    operators = _load_support_module("operator_equivalence")
+
+    class FakeKw:
+        @staticmethod
+        def simulate_breast_fwi_frequency_observation(_model, _array, frequency_hz, config):
+            return np.full((1, 1), frequency_hz * config, dtype=np.complex128)
+
+        @staticmethod
+        def simulate_breast_fwi_pstd_finite_window_born_observation(
+            _model,
+            _array,
+            frequency_hz,
+            **_kwargs,
+        ):
+            return np.full((1, 1), -frequency_hz, dtype=np.complex128)
+
+    args = argparse.Namespace(
+        time_step_s=1.0e-7,
+        source_amplitude_pa=1.0e3,
+        cycles_per_frequency=4,
+        frequency_bin_cycles=1,
+        circumferential_elements=1,
+    )
+
+    predictions = operators.simulate_report_predictions(
+        FakeKw,
+        np.ones((1, 1, 1), dtype=np.float64),
+        object(),
+        [2.0, 3.0],
+        {"config_model": 10.0},
+        args,
+        1500.0,
+        1.0e-3,
+    )
+
+    assert sorted(predictions) == ["config_model", operators.FINITE_WINDOW_PSTD_BORN_MODEL]
+    np.testing.assert_array_equal(predictions["config_model"][:, 0, 0], [20.0 + 0.0j, 30.0 + 0.0j])
+    np.testing.assert_array_equal(
+        predictions[operators.FINITE_WINDOW_PSTD_BORN_MODEL][:, 0, 0],
+        [-2.0 + 0.0j, -3.0 + 0.0j],
+    )
+    assert operators.FINITE_WINDOW_PSTD_BORN_MODEL in operators.REPORT_PREDICTION_MODELS
