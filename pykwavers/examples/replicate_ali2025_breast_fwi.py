@@ -31,6 +31,7 @@ from ali2025_breast_fwi.operator_equivalence import (
     make_configs_by_model,
     operator_equivalence_diagnostics,
     scattering_increment_diagnostics,
+    scattering_increment_diagnostics_or_error,
     simulate_forward_predictions,
 )
 from ali2025_breast_fwi.visualization import write_orthographic_plot
@@ -258,7 +259,7 @@ def run_reduced_replication(args: argparse.Namespace) -> dict[str, Any]:
         observed_pressure,
     )
     scattering_increment_receiver_policies = {
-        policy.value: scattering_increment_diagnostics(
+        policy.value: scattering_increment_diagnostics_or_error(
             homogeneous_pstd_baseline,
             forward_predictions,
             observed_pressure,

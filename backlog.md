@@ -1,5 +1,26 @@
 # Backlog / Strategy
 
+## Ali 2025 scattering policy report guard - closed (2026-05-24)
+- **[done] [patch]** Corrected reduced-replication reporting for receiver
+  policies whose calibrated observed scattering increment is zero. The Rust
+  diagnostic remains strict and returns the domain error; Python now records
+  that error in the policy report instead of aborting the all/passive
+  diagnostics.
+- **[done] [patch]** Reran the determined `(4,4,3)` probe with the
+  scattering-increment report enabled. The report now shows all-channel
+  observed increment norm `543.939995803908`, passive-only observed increment
+  norm `472.58992417860264`, active-only undefined due zero selected-row
+  increment, and `dense_convergent_born` as the best finite-window increment
+  scorer (`9.63023402424287` all, `8.204307002788537` passive).
+- **Follow-up [patch]:** `pstd_spectral_convergent_born` over-amplifies the
+  calibrated scattering increment by `988.9592621652895x` all-channel and
+  `984.3790568903305x` passive-only. Implement a Rust finite-window PSTD
+  scattering operator/diagnostic instead of changing source or direct-field
+  calibration.
+- **Verification:** dedicated Rust scattering API test passes 1/1; Python
+  compileall exits 0; focused pytest scattering report tests pass 2/2;
+  determined probe rerun exits 0.
+
 ## Ali 2025 scattering-increment diagnostics - closed (2026-05-24)
 - **[done] [minor]** Added `diagnostics::scattering` for Ali 2025 finite-window
   residual decomposition. The diagnostic calibrates each frequency/transmit row
@@ -39,9 +60,11 @@
   `passive_only_normalized_l2_residual = 7.81237883846478e-15`).
 - **[open] [patch]** Heterogeneous finite-window scattering remains unresolved:
   passive-only residual is `0.6047666981098512` on the determined four-cycle
-  probe. Next increment: align the Rust PSTD spectral CBS scattering path with
-  finite-window heterogeneous PSTD semantics instead of changing Python
-  reporting.
+  probe. The scattering-increment rerun shows dense CBS, not PSTD spectral CBS,
+  best matches the finite-window increment, while PSTD spectral CBS overstates
+  increment energy by approximately `985-989x`. Next increment: implement the
+  Rust finite-window PSTD scattering path instead of changing source/direct
+  calibration or Python reporting.
 
 ## Focused bowl hemisphere aperture config - closed (2026-05-24)
 - **[done] [minor]** Added generic `FocusedBowlAperture::Hemisphere` and

@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Changed (2026-05-24) - Ali 2025 Scattering Policy Report Guard
+
+- [patch] Preserve strict Rust rejection for zero-energy calibrated scattering
+  increments while letting the Ali 2025 Python report record receiver-policy
+  diagnostics that are not applicable. The determined probe report now includes
+  scattering-increment metrics showing `dense_convergent_born` best matches the
+  calibrated finite-window increment while `pstd_spectral_convergent_born`
+  over-amplifies that increment by approximately `985-989x`.
+
 ### Added (2026-05-24) - Ali 2025 Scattering Increment Diagnostics
 
 - [minor] Add Rust-owned Ali 2025 scattering-increment diagnostics that compare

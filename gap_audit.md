@@ -1,5 +1,42 @@
 # Gap Audit
 
+## Ali 2025 Scattering Policy Report Guard (2026-05-24)
+
+The reduced determined probe exposed a receiver-policy edge case in the new
+scattering-increment report: active-only channels can have zero calibrated
+observed scattering increment, making normalized increment residual undefined.
+The Rust diagnostic correctly rejects that domain; the Python report
+orchestration incorrectly treated every receiver policy as mandatory.
+
+### Closure
+- Added a report-only `scattering_increment_diagnostics_or_error` helper that
+  records the Rust domain error for non-applicable receiver policies without
+  weakening the strict all-channel or passive-channel diagnostics.
+- Reran the `(4,4,3)` determined probe and wrote
+  `scattering_increment` plus per-policy diagnostics into the canonical JSON
+  artifact.
+- The new diagnostic shows the finite-window scattering gap is not a direct
+  field error: all-channel calibrated observed increment norm is
+  `543.939995803908`, passive-only norm is `472.58992417860264`, and
+  active-only increment is undefined because selected rows have zero increment.
+
+### Verification summary
+- `cargo test -p kwavers --test breast_fwi_scattering_increment --message-format=short -j 1`:
+  1/1 pass.
+- `python -m compileall pykwavers/examples/ali2025_breast_fwi/operator_equivalence.py pykwavers/examples/replicate_ali2025_breast_fwi.py pykwavers/tests/test_ali2025_replication_example.py`:
+  exit 0.
+- `pytest test_scattering_increment_diagnostics_identify_exact_increment_model test_scattering_increment_policy_report_records_zero_increment_error`:
+  2/2 pass.
+- Determined probe rerun: exit 0.
+
+### Residual risk
+- The calibrated increment report ranks `dense_convergent_born` best for
+  scattering increment residual (`9.63023402424287` all-channel,
+  `8.204307002788537` passive-only). `pstd_spectral_convergent_born` has
+  increment energy ratios near `989x` all-channel and `984x` passive-only,
+  so the remaining solver work is a finite-window PSTD scattering operator,
+  not another homogeneous direct-field correction.
+
 ## Ali 2025 Scattering Increment Diagnostics (2026-05-24)
 
 The homogeneous PSTD/CBS boundary now matches the finite-grid modal theorem,

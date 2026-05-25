@@ -144,6 +144,27 @@ def scattering_increment_diagnostics(
     )
 
 
+def scattering_increment_diagnostics_or_error(
+    homogeneous_baseline: np.ndarray,
+    predictions_by_model: Mapping[str, np.ndarray],
+    observed: np.ndarray,
+    receiver_channel_policy: ReceiverChannelPolicy | str = ReceiverChannelPolicy.ALL,
+) -> dict[str, Any]:
+    policy = ReceiverChannelPolicy(receiver_channel_policy).value
+    try:
+        return scattering_increment_diagnostics(
+            homogeneous_baseline,
+            predictions_by_model,
+            observed,
+            policy,
+        )
+    except ValueError as exc:
+        return {
+            "receiver_channel_policy": policy,
+            "error": str(exc),
+        }
+
+
 def _kw() -> Any:
     import pykwavers as kw
 

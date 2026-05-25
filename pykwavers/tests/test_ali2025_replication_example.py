@@ -543,6 +543,22 @@ def test_scattering_increment_diagnostics_identify_exact_increment_model():
     assert abs(by_model["half_increment"]["normalized_increment_residual"] - 0.5) <= 1.0e-14
 
 
+def test_scattering_increment_policy_report_records_zero_increment_error():
+    operators = _load_support_module("operator_equivalence")
+    baseline = np.ones((1, 1, 2), dtype=np.complex128)
+    observed = 2.0 * baseline
+
+    diagnostics = operators.scattering_increment_diagnostics_or_error(
+        baseline,
+        {"baseline": baseline},
+        observed,
+        operators.ReceiverChannelPolicy.ALL,
+    )
+
+    assert diagnostics["receiver_channel_policy"] == "all"
+    assert "zero energy" in diagnostics["error"]
+
+
 def test_operator_prediction_builder_uses_all_models_and_frequencies():
     operators = _load_support_module("operator_equivalence")
 

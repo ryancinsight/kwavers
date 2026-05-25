@@ -307,6 +307,162 @@
     4,
     3
   ],
+  "scattering_increment": {
+    "best_model": "dense_convergent_born",
+    "best_normalized_increment_residual": 9.63023402424287,
+    "direct_field_normalized_l2_residual": 0.10503701522524271,
+    "direct_field_scaled_residual_l2_norm": 543.939995803908,
+    "increment_residual_spread": 979.2725786322108,
+    "model_count": 4,
+    "observed_increment_l2_norm": 543.939995803908,
+    "per_model": [
+      {
+        "increment_energy_ratio": 9.579144499539687,
+        "increment_residual_l2_norm": 5238.269454737319,
+        "model": "dense_convergent_born",
+        "normalized_increment_residual": 9.63023402424287,
+        "predicted_increment_l2_norm": 5210.479818884646,
+        "row_normalized_increment_residual_max": 13.446211026377924,
+        "row_normalized_increment_residual_mean": 10.181054198103844
+      },
+      {
+        "increment_energy_ratio": 9.633465995532509,
+        "increment_residual_l2_norm": 5266.058698080321,
+        "model": "single_scatter_born",
+        "normalized_increment_residual": 9.681322827341328,
+        "predicted_increment_l2_norm": 5240.027453187044,
+        "row_normalized_increment_residual_max": 13.44153697466943,
+        "row_normalized_increment_residual_mean": 10.23547731198299
+      },
+      {
+        "increment_energy_ratio": 37.37865143275196,
+        "increment_residual_l2_norm": 20429.17621502324,
+        "model": "spectral_convergent_born",
+        "normalized_increment_residual": 37.55777543960569,
+        "predicted_increment_l2_norm": 20331.74350348684,
+        "row_normalized_increment_residual_max": 45.69469287418946,
+        "row_normalized_increment_residual_mean": 34.5306548694132
+      },
+      {
+        "increment_energy_ratio": 988.9592621652895,
+        "increment_residual_l2_norm": 537903.7917668242,
+        "model": "pstd_spectral_convergent_born",
+        "normalized_increment_residual": 988.9028126564536,
+        "predicted_increment_l2_norm": 537934.4969124235,
+        "row_normalized_increment_residual_max": 1965.2132003066324,
+        "row_normalized_increment_residual_mean": 592.7175513694441
+      }
+    ],
+    "receiver_channel_policy": "all",
+    "worst_model": "pstd_spectral_convergent_born",
+    "worst_normalized_increment_residual": 988.9028126564536
+  },
+  "scattering_increment_receiver_policies": {
+    "active_only": {
+      "error": "Invalid input: observed scattering increment has zero energy for a selected row",
+      "receiver_channel_policy": "active_only"
+    },
+    "all": {
+      "best_model": "dense_convergent_born",
+      "best_normalized_increment_residual": 9.63023402424287,
+      "direct_field_normalized_l2_residual": 0.10503701522524271,
+      "direct_field_scaled_residual_l2_norm": 543.939995803908,
+      "increment_residual_spread": 979.2725786322108,
+      "model_count": 4,
+      "observed_increment_l2_norm": 543.939995803908,
+      "per_model": [
+        {
+          "increment_energy_ratio": 9.579144499539687,
+          "increment_residual_l2_norm": 5238.269454737319,
+          "model": "dense_convergent_born",
+          "normalized_increment_residual": 9.63023402424287,
+          "predicted_increment_l2_norm": 5210.479818884646,
+          "row_normalized_increment_residual_max": 13.446211026377924,
+          "row_normalized_increment_residual_mean": 10.181054198103844
+        },
+        {
+          "increment_energy_ratio": 9.633465995532509,
+          "increment_residual_l2_norm": 5266.058698080321,
+          "model": "single_scatter_born",
+          "normalized_increment_residual": 9.681322827341328,
+          "predicted_increment_l2_norm": 5240.027453187044,
+          "row_normalized_increment_residual_max": 13.44153697466943,
+          "row_normalized_increment_residual_mean": 10.23547731198299
+        },
+        {
+          "increment_energy_ratio": 37.37865143275196,
+          "increment_residual_l2_norm": 20429.17621502324,
+          "model": "spectral_convergent_born",
+          "normalized_increment_residual": 37.55777543960569,
+          "predicted_increment_l2_norm": 20331.74350348684,
+          "row_normalized_increment_residual_max": 45.69469287418946,
+          "row_normalized_increment_residual_mean": 34.5306548694132
+        },
+        {
+          "increment_energy_ratio": 988.9592621652895,
+          "increment_residual_l2_norm": 537903.7917668242,
+          "model": "pstd_spectral_convergent_born",
+          "normalized_increment_residual": 988.9028126564536,
+          "predicted_increment_l2_norm": 537934.4969124235,
+          "row_normalized_increment_residual_max": 1965.2132003066324,
+          "row_normalized_increment_residual_mean": 592.7175513694441
+        }
+      ],
+      "receiver_channel_policy": "all",
+      "worst_model": "pstd_spectral_convergent_born",
+      "worst_normalized_increment_residual": 988.9028126564536
+    },
+    "passive_only": {
+      "best_model": "dense_convergent_born",
+      "best_normalized_increment_residual": 8.204307002788537,
+      "direct_field_normalized_l2_residual": 0.12200438451177144,
+      "direct_field_scaled_residual_l2_norm": 472.58992417860264,
+      "increment_residual_spread": 976.2007449009731,
+      "model_count": 4,
+      "observed_increment_l2_norm": 472.58992417860264,
+      "per_model": [
+        {
+          "increment_energy_ratio": 8.143793370595164,
+          "increment_residual_l2_norm": 3877.2728243858132,
+          "model": "dense_convergent_born",
+          "normalized_increment_residual": 8.204307002788537,
+          "predicted_increment_l2_norm": 3848.6746915357758,
+          "row_normalized_increment_residual_max": 16.067170962705188,
+          "row_normalized_increment_residual_mean": 8.5511358141497
+        },
+        {
+          "increment_energy_ratio": 8.164511023037809,
+          "increment_residual_l2_norm": 3885.2248497930113,
+          "model": "single_scatter_born",
+          "normalized_increment_residual": 8.221133483846124,
+          "predicted_increment_l2_norm": 3858.4656453328034,
+          "row_normalized_increment_residual_max": 16.05023921601565,
+          "row_normalized_increment_residual_mean": 8.575896148153396
+        },
+        {
+          "increment_energy_ratio": 35.48012979492699,
+          "increment_residual_l2_norm": 16831.475912402264,
+          "model": "spectral_convergent_born",
+          "normalized_increment_residual": 35.61539307393541,
+          "predicted_increment_l2_norm": 16767.551849631527,
+          "row_normalized_increment_residual_max": 45.27655635902012,
+          "row_normalized_increment_residual_mean": 33.082039572344435
+        },
+        {
+          "increment_energy_ratio": 984.3790568903305,
+          "increment_residual_l2_norm": 465219.90884023206,
+          "model": "pstd_spectral_convergent_born",
+          "normalized_increment_residual": 984.4050519037615,
+          "predicted_increment_l2_norm": 465207.6238588057,
+          "row_normalized_increment_residual_max": 1967.2191742214975,
+          "row_normalized_increment_residual_mean": 564.6234054752551
+        }
+      ],
+      "receiver_channel_policy": "passive_only",
+      "worst_model": "pstd_spectral_convergent_born",
+      "worst_normalized_increment_residual": 984.4050519037615
+    }
+  },
   "source_channel_consistency": {
     "active_full_scale_normalized_l2_residual": 0.6853768819997277,
     "active_full_scale_observed_l2_norm": 3437.012642273716,
