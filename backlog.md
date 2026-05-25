@@ -1,5 +1,17 @@
 # Backlog / Strategy
 
+## Source config finite-domain validation - closed (2026-05-24)
+- **[done] [patch]** Tightened `DomainSourceParameters::validate` so the public
+  source configuration boundary rejects non-finite amplitude, frequency,
+  radius, phase, delay, position/focus components, nonpositive pulse cycles,
+  zero configured element counts, and invalid focused-bowl polar/projection
+  aperture domains. This keeps impossible source physics from entering
+  `SourceFactory` and keeps focused-bowl geometry generation delegated to
+  `BowlTransducer`.
+- **Verification:** `cargo check -p kwavers --lib --message-format=short -j 1`
+  exits 0. `cargo test -p kwavers --test domain_source_config_validation --message-format=short -j 1`
+  passes 3/3.
+
 ## Ali 2025 PSTD operator-boundary rerun - closed (2026-05-24)
 - **[done] [patch]** Rebuilt `pykwavers` against the Rust odd-z FFT repair,
   regenerated the canonical four-cycle determined probe, and added a Rust

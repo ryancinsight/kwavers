@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Fixed (2026-05-24) - Source Config Finite-Domain Validation
+
+- [patch] Reject non-finite source amplitude, frequency, radius, phase, delay,
+  position/focus components, pulse cycles, zero configured element counts, and
+  invalid focused-bowl aperture bounds at `DomainSourceParameters::validate`.
+  This prevents `NaN`/infinite values and impossible bowl apertures from
+  reaching source construction while keeping focused bowl geometry generation
+  delegated to `BowlTransducer`.
+
 ### Changed (2026-05-24) - Ali 2025 PSTD Operator Boundary Rerun
 
 - [patch] Rebuild `pykwavers` against the Rust odd-z FFT repair, regenerate the

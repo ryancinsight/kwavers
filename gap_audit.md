@@ -1,5 +1,36 @@
 # Gap Audit
 
+## Source Config Finite-Domain Validation (2026-05-24)
+
+`DomainSourceParameters::validate` rejected negative amplitude, nonpositive
+frequency, and negative radius, but accepted `NaN`/infinite scalar values,
+non-finite position/focus components, nonpositive pulse cycles, zero explicit
+element counts, and impossible focused-bowl aperture bounds. Those invalid
+states could pass the public config boundary and fail later inside specific
+source constructors.
+
+### Closure
+- Added finite-domain checks for source amplitude, frequency, radius, phase,
+  delay, position, focus, and pulse cycles.
+- Added positive-count validation for configured element counts.
+- Added focused-bowl aperture validation for polar spans, polar bounds,
+  axis-projection bounds, and axis-reference curvature radius.
+- Added `kwavers/tests/domain_source_config_validation.rs` to verify the public
+  source configuration contract without compiling the full lib-test harness.
+
+### Verification summary
+- `cargo check -p kwavers --lib --message-format=short -j 1`: exit 0.
+- `cargo test -p kwavers --test domain_source_config_validation --message-format=short -j 1`:
+  3/3 pass.
+- Targeted lib-test harness attempts exceeded the 300 s bounded timeout while
+  compiling the full 4k-test binary; the dedicated integration target is used
+  for executable regression coverage.
+
+### Residual risk
+- Existing concurrent breast-FWI/PyO3 working-tree changes remain outside this
+  source-boundary increment and need separate verification before any separate
+  commit.
+
 ## Ali 2025 PSTD Operator Boundary Rerun (2026-05-24)
 
 After the odd-z FFT repair, the reduced `(4,4,3)` determined probe needed a

@@ -3,7 +3,9 @@
 //! Defines the configuration structures for acoustic sources.
 
 use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
+use crate::core::error::{ConfigError, KwaversResult};
 use serde::{Deserialize, Serialize};
+use std::f64::consts::PI;
 
 use crate::domain::source::types::SourceField;
 
@@ -168,36 +170,170 @@ impl DomainSourceParameters {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub fn validate(&self) -> crate::core::error::KwaversResult<()> {
-        if self.amplitude < 0.0 {
-            return Err(crate::core::error::ConfigError::InvalidValue {
-                parameter: "amplitude".to_owned(),
-                value: self.amplitude.to_string(),
-                constraint: "Must be non-negative".to_owned(),
-            }
-            .into());
+    /// # Theorem
+    ///
+    /// A source configuration accepted by this method contains only finite
+    /// real-valued physical scalars, positive timing/frequency counts, and
+    /// aperture bounds inside the spherical-bowl domain. Therefore downstream
+    /// source constructors cannot receive `NaN`/infinite coordinates or an
+    /// impossible angular aperture through this public configuration boundary.
+    pub fn validate(&self) -> KwaversResult<()> {
+        validate_nonnegative_finite("amplitude", self.amplitude)?;
+        validate_positive_finite("frequency", self.frequency)?;
+        validate_nonnegative_finite("radius", self.radius)?;
+        validate_finite("phase", self.phase)?;
+        validate_finite("delay", self.delay)?;
+        validate_finite_vector("position", self.position)?;
+        if let Some(focus) = self.focus {
+            validate_finite_vector("focus", focus)?;
         }
-
-        if self.frequency <= 0.0 {
-            return Err(crate::core::error::ConfigError::InvalidValue {
-                parameter: "frequency".to_owned(),
-                value: self.frequency.to_string(),
-                constraint: "Must be positive".to_owned(),
+        if let Some(num_elements) = self.num_elements {
+            if num_elements == 0 {
+                return Err(invalid_value(
+                    "num_elements",
+                    num_elements,
+                    "Must be positive when provided",
+                ));
             }
-            .into());
         }
-
-        if self.radius < 0.0 {
-            return Err(crate::core::error::ConfigError::InvalidValue {
-                parameter: "radius".to_owned(),
-                value: self.radius.to_string(),
-                constraint: "Must be non-negative".to_owned(),
-            }
-            .into());
-        }
+        validate_pulse_parameters(&self.pulse)?;
+        validate_focused_bowl_aperture(self.focused_bowl_aperture)?;
 
         Ok(())
     }
+}
+
+fn validate_pulse_parameters(pulse: &PulseParameters) -> KwaversResult<()> {
+    validate_positive_finite("pulse.cycles", pulse.cycles)
+}
+
+fn validate_focused_bowl_aperture(aperture: FocusedBowlAperture) -> KwaversResult<()> {
+    match aperture {
+        FocusedBowlAperture::Diameter | FocusedBowlAperture::Hemisphere => Ok(()),
+        FocusedBowlAperture::PolarSpan { theta_max_rad } => {
+            validate_polar_bounds(0.0, theta_max_rad)
+        }
+        FocusedBowlAperture::PolarBounds {
+            theta_min_rad,
+            theta_max_rad,
+        } => validate_polar_bounds(theta_min_rad, theta_max_rad),
+        FocusedBowlAperture::AxisProjectionBounds {
+            axis_projection_min,
+            axis_projection_max,
+        } => validate_axis_projection_bounds(axis_projection_min, axis_projection_max),
+        FocusedBowlAperture::AxisReferencePolarBounds {
+            radius_of_curvature_m,
+            theta_min_rad,
+            theta_max_rad,
+        } => {
+            validate_positive_finite(
+                "focused_bowl_aperture.radius_of_curvature_m",
+                radius_of_curvature_m,
+            )?;
+            validate_polar_bounds(theta_min_rad, theta_max_rad)
+        }
+        FocusedBowlAperture::AxisReferenceHemisphere {
+            radius_of_curvature_m,
+        } => validate_positive_finite(
+            "focused_bowl_aperture.radius_of_curvature_m",
+            radius_of_curvature_m,
+        ),
+    }
+}
+
+fn validate_polar_bounds(theta_min_rad: f64, theta_max_rad: f64) -> KwaversResult<()> {
+    if theta_min_rad.is_finite()
+        && theta_max_rad.is_finite()
+        && theta_min_rad >= 0.0
+        && theta_min_rad < theta_max_rad
+        && theta_max_rad <= PI
+    {
+        Ok(())
+    } else {
+        Err(invalid_value(
+            "focused_bowl_aperture.polar_bounds",
+            format!("[{theta_min_rad}, {theta_max_rad}]"),
+            "Must satisfy 0 <= theta_min < theta_max <= pi",
+        ))
+    }
+}
+
+fn validate_axis_projection_bounds(
+    axis_projection_min: f64,
+    axis_projection_max: f64,
+) -> KwaversResult<()> {
+    if axis_projection_min.is_finite()
+        && axis_projection_max.is_finite()
+        && axis_projection_min >= -1.0
+        && axis_projection_min < axis_projection_max
+        && axis_projection_max <= 1.0
+    {
+        Ok(())
+    } else {
+        Err(invalid_value(
+            "focused_bowl_aperture.axis_projection_bounds",
+            format!("[{axis_projection_min}, {axis_projection_max}]"),
+            "Must satisfy -1 <= min < max <= 1",
+        ))
+    }
+}
+
+fn validate_finite_vector(parameter: &str, value: [f64; 3]) -> KwaversResult<()> {
+    for (axis, component) in value.into_iter().enumerate() {
+        if !component.is_finite() {
+            return Err(invalid_value(
+                format!("{parameter}[{axis}]"),
+                component,
+                "Must be finite",
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn validate_positive_finite(parameter: &str, value: f64) -> KwaversResult<()> {
+    if value.is_finite() && value > 0.0 {
+        Ok(())
+    } else {
+        Err(invalid_value(
+            parameter,
+            value,
+            "Must be finite and positive",
+        ))
+    }
+}
+
+fn validate_nonnegative_finite(parameter: &str, value: f64) -> KwaversResult<()> {
+    if value.is_finite() && value >= 0.0 {
+        Ok(())
+    } else {
+        Err(invalid_value(
+            parameter,
+            value,
+            "Must be finite and non-negative",
+        ))
+    }
+}
+
+fn validate_finite(parameter: &str, value: f64) -> KwaversResult<()> {
+    if value.is_finite() {
+        Ok(())
+    } else {
+        Err(invalid_value(parameter, value, "Must be finite"))
+    }
+}
+
+fn invalid_value(
+    parameter: impl Into<String>,
+    value: impl ToString,
+    constraint: impl Into<String>,
+) -> crate::core::error::KwaversError {
+    ConfigError::InvalidValue {
+        parameter: parameter.into(),
+        value: value.to_string(),
+        constraint: constraint.into(),
+    }
+    .into()
 }
 
 impl Default for DomainSourceParameters {
