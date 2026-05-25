@@ -100,7 +100,8 @@ impl GilmoreSolver {
         // Thermal damping is still neglected (adiabatic approximation).
         // Full thermal effects require heat diffusion (Prosperetti 1977).
         let gamma = state.gas_species.gamma();
-        let p_eq = self.params.p0 + 2.0 * self.params.sigma / self.params.r0 - self.params.pv;
+        let p_eq =
+            self.params.p0 + self.params.surface_tension_pressure(self.params.r0) - self.params.pv;
         let p_gas = p_eq * (self.params.r0 / r).powf(3.0 * gamma) + self.params.pv;
 
         // Pressure at bubble wall (liquid side): Young-Laplace + viscous damping
@@ -204,12 +205,14 @@ impl GilmoreSolver {
         // ── dp_gas/dt via polytropic law: p_gas = p_eq·(r0/r)^{3γ} + pv ────────
         // Only the non-condensable gas partial pressure undergoes polytropic compression;
         // pv is isothermal. Therefore: dp_gas/dt = −3γ·(p_gas − pv)·U/R
-        let p_eq = self.params.p0 + 2.0 * self.params.sigma / self.params.r0 - self.params.pv;
+        let p_eq =
+            self.params.p0 + self.params.surface_tension_pressure(self.params.r0) - self.params.pv;
         let p_gas = p_eq * (self.params.r0 / r).powf(3.0 * gamma);
         let dp_gas_dt = -3.0 * gamma * p_gas * u / r;
 
         // ── d(−2σ/R)/dt and d(−4μU/R)/dt (surface tension + viscous) ────────
-        let dp_surface_dt = 2.0 * self.params.sigma * u / (r * r);
+        // dp/dt of surface-tension: d(2σ/R)/dt = 2σ·Ṙ/R² = (2σ/R)·(Ṙ/R)
+        let dp_surface_dt = self.params.surface_tension_pressure(r) * u / r;
         // d(−4μU/R)/dt = −4μ·(R̈·R − U·U)/R² = −4μR̈/R + 4μU²/R²
         let dp_viscous_dt = -4.0 * self.params.mu_liquid * r_ddot / r
             + 4.0 * self.params.mu_liquid * u * u / (r * r);

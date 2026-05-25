@@ -47,7 +47,7 @@ impl RayleighPlessetSolver {
             println!("  p_liquid_far: {} Pa", p_liquid_far);
             println!(
                 "  Expected p_gas at eq: {} Pa",
-                self.params.p0 + 2.0 * self.params.sigma / self.params.r0
+                self.params.p0 + self.params.surface_tension_pressure(self.params.r0)
             );
         }
 
@@ -82,7 +82,9 @@ impl RayleighPlessetSolver {
             // Polytropic relation for all states (including equilibrium)
             // The formula naturally handles equilibrium when radius = r0
             let gamma = state.gas_species.gamma();
-            let p_eq = self.params.p0 + 2.0 * self.params.sigma / self.params.r0 - self.params.pv;
+            let p_eq = self.params.p0
+                + self.params.surface_tension_pressure(self.params.r0)
+                - self.params.pv;
             return p_eq * (self.params.r0 / state.radius).powf(3.0 * gamma) + self.params.pv;
         }
 
