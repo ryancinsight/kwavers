@@ -33,6 +33,13 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 
+try:
+    import pykwavers as kw
+    _HAS_PYKWAVERS = True
+except ImportError:
+    kw = None
+    _HAS_PYKWAVERS = False
+
 REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 OUT_DIR = os.path.join(REPO_ROOT, "docs", "book", "figures", "ch12")
 os.makedirs(OUT_DIR, exist_ok=True)
@@ -54,13 +61,14 @@ plt.rcParams.update({
 # ── Figure 01: Speed of sound vs temperature ─────────────────────────────────
 def fig01_sound_speed_temperature() -> None:
     """
-    Water: Del Grosso & Mader (1972) polynomial (simplified):
-      c_water(T) = 1402.7 + 4.88T - 0.0482T² (°C, m/s)
-    Soft tissue: Bamber & Hill (1979):
-      c_tissue(T) = 1540 + 1.8·(T-37) (approximately linear around 37 °C)
+    Water: Del Grosso & Mader (1972) polynomial via kw.water_sound_speed_temperature.
+    Soft tissue: Bamber & Hill (1979) linear approx c = 1540 + 1.8·(T−37) [no kw binding].
     """
+    if not _HAS_PYKWAVERS:
+        raise ImportError("pykwavers is required for fig01 (water sound speed)")
     T = np.linspace(0, 60, 300)
-    c_water = 1402.7 + 4.88 * T - 0.0482 * T**2
+    c_water = np.asarray(kw.water_sound_speed_temperature(T))
+    # Bamber & Hill (1979) linear approximation — no temperature-dependent tissue binding.
     c_tissue = 1540 + 1.8 * (T - 37)
 
     fig, ax = plt.subplots(figsize=(7, 4.5))
@@ -81,19 +89,28 @@ def fig01_sound_speed_temperature() -> None:
 def fig02_impedance_bar() -> None:
     """
     Z = ρ·c   [MRayl = 10⁶ kg/(m²·s)]
-    Data from Duck (1990) and ICRU 61.
+    Computed via kw.tissue_properties(name) → (c, rho, ...) → Z = c*rho/1e6.
+    Air and Cortical bone have no kw binding; Duck (1990) reference values used.
     """
+    if not _HAS_PYKWAVERS:
+        raise ImportError("pykwavers is required for fig02 (tissue impedance)")
+
+    def _z_mrayl(tissue_key: str) -> float:
+        """Acoustic impedance [MRayl] from kw.tissue_properties."""
+        c, rho, *_ = kw.tissue_properties(tissue_key)
+        return c * rho / 1e6
+
     tissues = [
-        ("Air",          0.0004),
-        ("Fat",          1.34),
-        ("Water (37°C)", 1.52),
-        ("Blood",        1.61),
-        ("Brain",        1.56),
-        ("Liver",        1.65),
-        ("Kidney",       1.63),
-        ("Muscle",       1.70),
-        ("Cartilage",    1.76),
-        ("Cortical bone", 7.38),
+        ("Air",           0.0004),           # Duck (1990) — no kw binding for gas phase.
+        ("Fat",           _z_mrayl("fat")),
+        ("Water (37°C)",  _z_mrayl("water")),
+        ("Blood",         _z_mrayl("blood")),
+        ("Brain",         _z_mrayl("brain")),
+        ("Liver",         _z_mrayl("liver")),
+        ("Kidney",        _z_mrayl("kidney")),
+        ("Muscle",        _z_mrayl("muscle")),
+        ("Cartilage",     _z_mrayl("cartilage")),
+        ("Cortical bone", 7.38),             # Duck (1990) — use "skull" bone reference.
     ]
     names = [t for t, _ in tissues]
     Z = np.array([z for _, z in tissues])
@@ -118,18 +135,22 @@ def fig03_ba_parameter() -> None:
     """
     B/A = 2ρc ∂c/∂p|_s  — acoustic nonlinearity.
     β = 1 + B/(2A).
-    Data from Hamilton & Blackstock (1998) and Duck (1990).
+    Computed via kw.ba_parameter(tissue_key) (Hamilton & Blackstock 1998, Rust kernel).
+    Water is not temperature-dependent in the binding (single canonical value).
+    Breast tissue uses "fat" binding (high fat content).
     """
+    if not _HAS_PYKWAVERS:
+        raise ImportError("pykwavers is required for fig03 (B/A parameter)")
     tissues = [
-        ("Water (20°C)", 5.0),
-        ("Water (37°C)", 5.4),
-        ("Blood",        6.0),
-        ("Fat",          10.0),
-        ("Liver",        6.8),
-        ("Muscle",       7.0),
-        ("Brain",        6.6),
-        ("Kidney",       7.0),
-        ("Breast (fat)", 9.6),
+        ("Water (20°C)", kw.ba_parameter("water")),
+        ("Water (37°C)", kw.ba_parameter("water")),
+        ("Blood",        kw.ba_parameter("blood")),
+        ("Fat",          kw.ba_parameter("fat")),
+        ("Liver",        kw.ba_parameter("liver")),
+        ("Muscle",       kw.ba_parameter("muscle")),
+        ("Brain",        kw.ba_parameter("brain")),
+        ("Kidney",       kw.ba_parameter("kidney")),
+        ("Breast (fat)", kw.ba_parameter("fat")),   # high fat content → use fat B/A
     ]
     names = [t for t, _ in tissues]
     BA = np.array([b for _, b in tissues])
@@ -157,22 +178,25 @@ def fig03_ba_parameter() -> None:
 # ── Figure 04: Fractional-Laplacian absorption ───────────────────────────────
 def fig04_fractional_absorption() -> None:
     """
-    Power-law absorption: α(ω) = α₀ |ω|^y  [Np/m]
-    Fractional Laplacian implementation (Treeby & Cox 2010):
-    y ∈ {1.0, 1.5, 2.0} covers tissue (y≈1) to viscous (y=2).
+    Power-law absorption: α(f) = α₀ f^y  [Np/m, f in Hz]
+    Fractional Laplacian (Treeby & Cox 2010): y ∈ {1.0, 1.5, 2.0}.
+    Computed via kw.power_law_attenuation_np_m(f_hz, alpha0, y), normalised at 1 MHz.
     """
+    if not _HAS_PYKWAVERS:
+        raise ImportError("pykwavers is required for fig04 (power-law absorption)")
     f_MHz = np.linspace(0.5, 10.0, 400)
-    omega = 2 * np.pi * f_MHz * 1e6
-    alpha0 = 1.0  # Np/(m·(rad/s)^y) — normalised
+    f_hz = f_MHz * 1e6
+    alpha0 = 1.0  # Np/m at 1 Hz — normalised for shape illustration
+    f_ref_hz = 1.0e6  # normalise at 1 MHz
 
     fig, ax = plt.subplots(figsize=(7, 4.5))
     for y, col, lbl in [(1.0, "#1f77b4", r"$y=1.0$ (tissue-like)"),
                         (1.5, "#ff7f0e", r"$y=1.5$"),
                         (2.0, "#2ca02c", r"$y=2.0$ (thermoviscous)")]:
-        alpha = alpha0 * omega**y
-        # Convert to dB/cm at reference omega_ref = 2π·1MHz
-        omega_ref = 2 * np.pi * 1e6
-        alpha_norm = alpha / (alpha0 * omega_ref**y)
+        alpha = np.asarray(kw.power_law_attenuation_np_m(f_hz, alpha0, y))
+        # Normalise at 1 MHz so curves are dimensionless and comparable
+        alpha_ref = float(np.asarray(kw.power_law_attenuation_np_m(np.array([f_ref_hz]), alpha0, y))[0])
+        alpha_norm = alpha / alpha_ref
         ax.loglog(f_MHz, alpha_norm, color=col, label=lbl)
 
     ax.set_xlabel("Frequency (MHz)")

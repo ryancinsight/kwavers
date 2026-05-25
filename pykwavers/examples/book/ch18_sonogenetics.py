@@ -31,6 +31,13 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
+try:
+    import pykwavers as kw
+    _HAS_PYKWAVERS = True
+except ImportError:
+    kw = None
+    _HAS_PYKWAVERS = False
+
 REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 OUT_DIR = os.path.join(REPO_ROOT, "docs", "book", "figures", "ch18")
 os.makedirs(OUT_DIR, exist_ok=True)
@@ -181,15 +188,17 @@ def fig03_streaming_shear() -> None:
 def fig04_safety_budget() -> None:
     """
     Typical LIFU sonogenetics parameters:
-    f = 0.5 MHz, ISPPA = 5 W/cm², duty cycle DC = 1%
-    T_brain ≈ 37 + dT(I, DC, α, ρ, Cp)
-    dT ≈ 2α I DC / (2 ρ Cp)  per sonication
-    CEM43 ≈ R^(43-T) · t_on << 1 min for DC=1%.
-    Plot CEM43 vs duty cycle and intensity.
+    f = 0.5 MHz, ISPPA = 5 W/cm², duty cycle DC ∈ [0.1%, 50%].
+    Temperature rise: dT = 2α I DC / (2ρCp) [simplified steady-state].
+    CEM43 dose via kw.cem43_at_temperatures(T_arr, t_on_s) [Rust kernel, min].
+    t_on = t_stim · DC (on-time in seconds varies per DC).
     """
+    if not _HAS_PYKWAVERS:
+        raise ImportError("pykwavers is required for fig04 (CEM43 safety budget)")
     DC = np.linspace(0.001, 0.5, 300)  # 0.1% to 50%
     alpha_tissue = 2.0  # Np/m at 0.5 MHz
-    rho_b = 1040.0; Cp_b = 3600.0
+    rho_b = 1040.0
+    Cp_b = 3600.0
     I_vals = [1e4, 5e4, 1e5]   # W/m²  (1, 5, 10 W/cm²)
     t_stim = 30.0  # s total stimulation time
 
@@ -198,10 +207,12 @@ def fig04_safety_budget() -> None:
                                 [r"$I=1\,\mathrm{W/cm^2}$", r"$I=5\,\mathrm{W/cm^2}$",
                                  r"$I=10\,\mathrm{W/cm^2}$"]):
         dT = 2 * alpha_tissue * I_Wm2 * DC / (2 * rho_b * Cp_b)
-        T_total = 37.0 + dT
-        R = np.where(T_total >= 43, 0.5, 0.25)
-        cem43_per_s = R ** (43.0 - T_total)
-        CEM43 = cem43_per_s * t_stim * DC  # on-time only
+        T_total = 37.0 + dT   # temperature [°C] per DC value
+        # CEM43 dose [min] for each DC: temperature T_total[i], on-time t_stim*DC[i]
+        CEM43 = np.array([
+            float(np.asarray(kw.cem43_at_temperatures(np.array([T_total[i]]), t_stim * DC[i]))[0])
+            for i in range(len(DC))
+        ])
         ax.semilogy(DC * 100, CEM43 + 1e-15, color=col, label=lbl)
 
     ax.axhline(0.01, color="r", linestyle="--", linewidth=1.5, label="CEM43 = 0.01 min (safe)")
