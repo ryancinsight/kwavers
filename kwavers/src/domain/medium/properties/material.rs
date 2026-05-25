@@ -287,7 +287,7 @@ impl AcousticMaterialProperties {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
     use crate::core::constants::numerical::MHZ_TO_HZ;
     use crate::core::constants::thermodynamic::SPECIFIC_HEAT_WATER;
 
@@ -295,20 +295,20 @@ mod tests {
     fn test_material_creation() {
         let mat = AcousticMaterialProperties::new(
             SOUND_SPEED_WATER_SIM,
-            1000.0,
+            DENSITY_WATER_NOMINAL,
             0.002,
             SPECIFIC_HEAT_WATER,
             0.6,
         );
         assert_eq!(mat.sound_speed, SOUND_SPEED_WATER_SIM);
-        assert_eq!(mat.impedance, SOUND_SPEED_WATER_SIM * 1000.0);
+        assert_eq!(mat.impedance, SOUND_SPEED_WATER_SIM * DENSITY_WATER_NOMINAL);
     }
 
     #[test]
     fn test_validation_valid() {
         let mat = AcousticMaterialProperties::new(
             SOUND_SPEED_WATER_SIM,
-            1000.0,
+            DENSITY_WATER_NOMINAL,
             0.002,
             SPECIFIC_HEAT_WATER,
             0.6,
@@ -320,7 +320,7 @@ mod tests {
     fn test_validation_invalid_speed() {
         let mut mat = AcousticMaterialProperties::new(
             SOUND_SPEED_WATER_SIM,
-            1000.0,
+            DENSITY_WATER_NOMINAL,
             0.002,
             SPECIFIC_HEAT_WATER,
             0.6,
@@ -333,14 +333,14 @@ mod tests {
     fn test_impedance_match() {
         let mat = AcousticMaterialProperties::new(
             SOUND_SPEED_WATER_SIM,
-            1000.0,
+            DENSITY_WATER_NOMINAL,
             0.002,
             SPECIFIC_HEAT_WATER,
             0.6,
         );
         let same = AcousticMaterialProperties::new(
             SOUND_SPEED_WATER_SIM,
-            1000.0,
+            DENSITY_WATER_NOMINAL,
             0.002,
             SPECIFIC_HEAT_WATER,
             0.6,
@@ -352,7 +352,7 @@ mod tests {
     fn test_attenuation_frequency_dependence() {
         let mat = AcousticMaterialProperties::new(
             SOUND_SPEED_WATER_SIM,
-            1000.0,
+            DENSITY_WATER_NOMINAL,
             0.002,
             SPECIFIC_HEAT_WATER,
             0.6,
