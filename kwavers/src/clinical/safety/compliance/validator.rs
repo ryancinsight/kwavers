@@ -147,24 +147,40 @@ impl EnhancedComplianceValidator {
 
     /// Estimate tissue temperature rise from acoustic therapy parameters.
     ///
-    /// Derived from Pennes bioheat equation (worst-case, no perfusion):
-    /// `ΔT = Q · t_eff / (ρ · c_p)` where `Q = 2α · I_SPTA` [W/m³].
-    /// Reference: Nyborg WL (1988), *Phys. Med. Biol.* 33(7):785–792.
+    /// Derived from the Pennes bioheat equation, worst-case (no blood perfusion):
+    ///
+    /// ```text
+    /// ΔT = Q · t_eff / (ρ_t · c_p)
+    /// Q   = 2α · I_SPTA            [W m⁻³]
+    /// I_SPTA = p_rms² / (ρ_t · c_t)   (local intensity in tissue)
+    /// ```
+    ///
+    /// All tissue parameters follow IEC 62127-1:2013 Table A.1:
+    /// ρ_t = 1060 kg/m³, c_t = 1540 m/s, c_p = 3500 J/(kg·K).
+    ///
+    /// Using tissue acoustic impedance `Z_t = ρ_t · c_t` (not water) is required
+    /// because `params.pressure` is the pressure at the tissue target, and
+    /// `I = p²_rms / Z` uses the local medium impedance per Nyborg (1988)
+    /// *Phys. Med. Biol.* 33(7):785–792, Eq. 4.
     fn estimate_temperature_rise(&self, params: &ClinicalTherapyParameters) -> f64 {
-        use crate::core::constants::fundamental::{DENSITY_WATER, SOUND_SPEED_WATER};
+        use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
         use crate::core::constants::medical::IEC_TISSUE_SPECIFIC_HEAT;
         use crate::core::constants::tissue_acoustics::DENSITY_BLOOD;
 
-        // IEC 62127-1:2013 Table A.1: ρ = 1060 kg/m³, c_p = 3500 J/(kg·K).
+        // IEC 62127-1:2013 Table A.1: ρ_t = 1060 kg/m³, c_t = 1540 m/s, c_p = 3500 J/(kg·K).
         const TISSUE_DENSITY: f64 = DENSITY_BLOOD;
+        const TISSUE_SOUND_SPEED: f64 = SOUND_SPEED_TISSUE;
         const TISSUE_HEAT_CAPACITY: f64 = IEC_TISSUE_SPECIFIC_HEAT;
 
         // IEC 62127 absorption model: α [Np/m] = 0.3 dB/(cm·MHz) × f_MHz × 100 cm/m × DB_TO_NP
         let f_mhz = (params.frequency / MHZ_TO_HZ).max(1e-3);
         let alpha_np_per_m = IEC_TISSUE_ABSORPTION_DB_CM_MHZ * f_mhz * 100.0 * DB_TO_NP;
 
+        // Local acoustic intensity in tissue: I = p_rms² / Z_tissue
+        // p_rms = p_peak / √2 for a sinusoidal driving pressure.
         let p_rms = params.pressure / std::f64::consts::SQRT_2;
-        let i_spta = (p_rms * p_rms) / (DENSITY_WATER * SOUND_SPEED_WATER);
+        let z_tissue = TISSUE_DENSITY * TISSUE_SOUND_SPEED; // ≈ 1.63 MRayl per IEC 62127-1
+        let i_spta = (p_rms * p_rms) / z_tissue;
 
         let q_vol = 2.0 * alpha_np_per_m * i_spta;
         let t_eff = params.treatment_duration * params.duty_cycle;
