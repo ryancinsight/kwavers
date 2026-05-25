@@ -33,17 +33,48 @@ class PhaseCorrection:
 
 
 def fibonacci_hemisphere(config: TransducerConfig) -> np.ndarray:
+    """
+    Fibonacci-lattice hemispherical cap element positions.
+
+    Geometry (hemispherical focused-bowl cap)
+    -----------------------------------------
+    Elements cover a polar-angle band [cap_min_polar_rad, cap_max_polar_rad]
+    measured from the superior pole (+z axis = calvarium apex).  The vertex
+    (apex of the bowl, closest element to the top of the skull) is at
+    z = +radius (superior).  The array opens downward from the calvarium;
+    cap_max_polar_rad approx 68 deg (1.18 rad) limits the array to the parietal
+    region and keeps elements off the neck.
+
+    Coordinate convention
+    ---------------------
+    z > 0 : superior (calvarium / top of skull)
+    z < 0 : inferior (neck / base of skull)
+    x, y  : left-right / anterior-posterior lateral directions
+
+    z = +radius * cos(theta) places the apex at (0, 0, +radius) and
+    elements distributed concentrically downward at smaller z.  The
+    negative-z sign that would invert the array to the neck is
+    intentionally absent.
+
+    The clinical use case selects this generic bowl-cap geometry through scene
+    configuration; the source function itself remains anatomy-agnostic.
+    """
     n = config.element_count
     idx = np.arange(n, dtype=np.float64) + 0.5
     golden = np.pi * (3.0 - np.sqrt(5.0))
-    cos_min = np.cos(config.cap_min_polar_rad)
-    cos_max = np.cos(config.cap_max_polar_rad)
+    # Cosine-uniform sampling within the polar cap.
+    # cap_min_polar_rad (approx 0.22 rad, ~12.6 deg) is near the apex;
+    # cap_max_polar_rad (approx 1.18 rad, ~67.6 deg) is the lower rim, still on
+    # the calvarium, not the neck.
+    cos_min = np.cos(config.cap_min_polar_rad)   # cos(12.6 deg) approx 0.976
+    cos_max = np.cos(config.cap_max_polar_rad)   # cos(67.6 deg) approx 0.381
     cos_theta = cos_min + (cos_max - cos_min) * idx / n
     theta = np.arccos(cos_theta)
     phi = golden * idx
     x = config.radius_m * np.sin(theta) * np.cos(phi)
     y = config.radius_m * np.sin(theta) * np.sin(phi)
-    z = -config.radius_m * np.cos(theta)
+    # Positive sign: vertex at +z (calvarium/superior), NOT at -z (neck).
+    z = config.radius_m * np.cos(theta)
     return np.column_stack([x, y, z]).astype(np.float64)
 
 

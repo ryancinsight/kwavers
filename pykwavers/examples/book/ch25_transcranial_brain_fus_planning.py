@@ -7,10 +7,20 @@ Runnable planning example for:
 1. CT, T1 MRI, and MNI152 atlas ingestion.
 2. RITK-based CT/MRI/atlas registration when the compiled RITK Python
    extension is installed.
-3. 1024-element hemispherical focused-bowl array construction.
+3. 1024-element hemispherical focused-bowl cap construction (calvarium
+   coverage, elements at z > 0 / superior).
 4. Skull path phase correction, acoustic field synthesis, Pennes thermal dose,
    and cavitation-risk mapping for essential-tremor VIM ablation.
 5. CT-space segmentation or GBM segmentation hooks for BBB-opening subspots.
+
+Figures produced
+----------------
+fig00  3-D focused-bowl cap covering the calvarium (skull + elements)
+fig01  CT / T1 MRI / MNI atlas registration (3-plane x 3-modality)
+fig02  Phase-corrected 1024-element hemisphere + skull path histogram
+fig03  Essential-tremor VIM ablation (pressure, MI, temperature, CEM43)
+fig04  GBM subspot tiling coverage
+fig05  GBM BBB-opening permeability and inertial-cavitation risk
 
 The default local run uses compact NIfTI volumes already present under
 ``data/rire_patient_109``, ``data/niivue``, and
@@ -46,6 +56,7 @@ from transcranial_planning.figures import (  # noqa: E402
     plot_gbm_bbb_opening,
     plot_essential_tremor_result,
     plot_gbm_plan,
+    plot_focused_bowl_calvarium_3d,
     plot_registration_inputs,
     plot_transducer_phase,
     write_json,
@@ -91,6 +102,8 @@ def run() -> dict:
         samples_per_ray=192,
         skull_mask=triplet.skull_mask,
     )
+    print("[ch25] fig00: 3-D focused-bowl cap placement over calvarium")
+    plot_focused_bowl_calvarium_3d(triplet, phase)
     plot_transducer_phase(triplet, phase)
 
     print("[ch25] Synthesizing acoustic field and thermal dose")
