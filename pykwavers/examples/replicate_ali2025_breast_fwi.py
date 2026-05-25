@@ -30,6 +30,7 @@ from ali2025_breast_fwi.operator_equivalence import (
     ReceiverChannelPolicy,
     make_configs_by_model,
     operator_equivalence_diagnostics,
+    scattering_increment_diagnostics,
     simulate_forward_predictions,
 )
 from ali2025_breast_fwi.visualization import write_orthographic_plot
@@ -221,6 +222,13 @@ def run_reduced_replication(args: argparse.Namespace) -> dict[str, Any]:
         args.frequencies_hz,
         configs_by_model,
     )
+    homogeneous_pstd_baseline = simulate_forward_predictions(
+        kw,
+        initial_sound_speed,
+        array,
+        args.frequencies_hz,
+        {"pstd_spectral_convergent_born": fwi_config},
+    )["pstd_spectral_convergent_born"]
     truth_forward = forward_predictions["pstd_spectral_convergent_born"]
     operator_equivalence = operator_equivalence_diagnostics(
         forward_predictions,
@@ -240,6 +248,20 @@ def run_reduced_replication(args: argparse.Namespace) -> dict[str, Any]:
             args.time_step_s,
             dataset["time_steps_per_frequency"],
             dataset["frequency_bin_start_steps_per_frequency"],
+            policy,
+        )
+        for policy in ReceiverChannelPolicy
+    }
+    scattering_increment = scattering_increment_diagnostics(
+        homogeneous_pstd_baseline,
+        forward_predictions,
+        observed_pressure,
+    )
+    scattering_increment_receiver_policies = {
+        policy.value: scattering_increment_diagnostics(
+            homogeneous_pstd_baseline,
+            forward_predictions,
+            observed_pressure,
             policy,
         )
         for policy in ReceiverChannelPolicy
@@ -337,6 +359,8 @@ def run_reduced_replication(args: argparse.Namespace) -> dict[str, Any]:
         "source_excitation": source_excitation,
         "operator_equivalence": operator_equivalence,
         "operator_equivalence_receiver_policies": operator_equivalence_receiver_policies,
+        "scattering_increment": scattering_increment,
+        "scattering_increment_receiver_policies": scattering_increment_receiver_policies,
         "homogeneous_direct_field": homogeneous_direct_field,
         "metrics": metrics,
         "table1_parity": parity,

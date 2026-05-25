@@ -239,3 +239,164 @@ fn forward_operator_equivalence_respects_receiver_channel_policy() {
     assert_eq!(active.best_model, "passive_distorted");
     assert!(active.best_normalized_l2_residual <= 1.0e-14);
 }
+
+#[test]
+fn scattering_increment_diagnostics_identify_exact_increment_model() {
+    let baseline = Array3::from_shape_vec(
+        (1, 2, 4),
+        vec![
+            Complex64::new(1.0, 0.0),
+            Complex64::new(1.0, 0.0),
+            Complex64::new(1.0, 0.0),
+            Complex64::new(1.0, 0.0),
+            Complex64::new(2.0, 0.0),
+            Complex64::new(2.0, 0.0),
+            Complex64::new(2.0, 0.0),
+            Complex64::new(2.0, 0.0),
+        ],
+    )
+    .expect("shape");
+    let increment = Array3::from_shape_vec(
+        (1, 2, 4),
+        vec![
+            Complex64::new(1.0, 0.0),
+            Complex64::new(-1.0, 0.0),
+            Complex64::new(0.0, 2.0),
+            Complex64::new(0.0, -2.0),
+            Complex64::new(0.5, 0.0),
+            Complex64::new(-0.5, 0.0),
+            Complex64::new(0.0, 1.0),
+            Complex64::new(0.0, -1.0),
+        ],
+    )
+    .expect("shape");
+    let scale = Complex64::new(2.0, -0.5);
+    let observed = baseline.mapv(|value| scale * value) + &increment;
+    let exact = &baseline + &increment.mapv(|value| value / scale);
+    let half = &baseline + &increment.mapv(|value| value / (2.0 * scale));
+    let predictions = [
+        BreastUstForwardOperatorPrediction {
+            model: "baseline",
+            pressure: &baseline,
+        },
+        BreastUstForwardOperatorPrediction {
+            model: "half_increment",
+            pressure: &half,
+        },
+        BreastUstForwardOperatorPrediction {
+            model: "exact_increment",
+            pressure: &exact,
+        },
+    ];
+
+    let diagnostics = scattering_increment_diagnostics(
+        &baseline,
+        &predictions,
+        &observed,
+        BreastUstReceiverChannelPolicy::All,
+    )
+    .expect("diagnostics");
+
+    assert_eq!(diagnostics.model_count, 3);
+    assert_eq!(diagnostics.best_model, "exact_increment");
+    assert!(diagnostics.best_normalized_increment_residual <= 1.0e-14);
+    assert!(diagnostics.observed_increment_l2_norm > 0.0);
+    let baseline_row = scattering_model(&diagnostics, "baseline");
+    let half_row = scattering_model(&diagnostics, "half_increment");
+    assert!((baseline_row.normalized_increment_residual - 1.0).abs() <= 1.0e-14);
+    assert!((half_row.normalized_increment_residual - 0.5).abs() <= 1.0e-14);
+}
+
+#[test]
+fn scattering_increment_diagnostics_respect_passive_receiver_policy() {
+    let baseline = Array3::from_elem((1, 2, 4), Complex64::new(1.0, 0.0));
+    let passive_increment = Array3::from_shape_vec(
+        (1, 2, 4),
+        vec![
+            Complex64::new(0.0, 0.0),
+            Complex64::new(1.0, 0.0),
+            Complex64::new(0.0, 0.0),
+            Complex64::new(-1.0, 0.0),
+            Complex64::new(2.0, 0.0),
+            Complex64::new(0.0, 0.0),
+            Complex64::new(-2.0, 0.0),
+            Complex64::new(0.0, 0.0),
+        ],
+    )
+    .expect("shape");
+    let active_increment = Array3::from_shape_vec(
+        (1, 2, 4),
+        vec![
+            Complex64::new(4.0, 0.0),
+            Complex64::new(0.0, 0.0),
+            Complex64::new(-4.0, 0.0),
+            Complex64::new(0.0, 0.0),
+            Complex64::new(0.0, 0.0),
+            Complex64::new(3.0, 0.0),
+            Complex64::new(0.0, 0.0),
+            Complex64::new(-3.0, 0.0),
+        ],
+    )
+    .expect("shape");
+    let scale = Complex64::new(3.0, 0.0);
+    let observed = baseline.mapv(|value| scale * value) + &passive_increment + &active_increment;
+    let passive_exact = &baseline + &passive_increment.mapv(|value| value / scale);
+    let active_only = &baseline + &active_increment.mapv(|value| value / scale);
+    let predictions = [
+        BreastUstForwardOperatorPrediction {
+            model: "active_only",
+            pressure: &active_only,
+        },
+        BreastUstForwardOperatorPrediction {
+            model: "passive_exact",
+            pressure: &passive_exact,
+        },
+    ];
+
+    let diagnostics = scattering_increment_diagnostics(
+        &baseline,
+        &predictions,
+        &observed,
+        BreastUstReceiverChannelPolicy::PassiveOnly,
+    )
+    .expect("diagnostics");
+
+    assert_eq!(
+        diagnostics.receiver_channel_policy,
+        BreastUstReceiverChannelPolicy::PassiveOnly
+    );
+    assert_eq!(diagnostics.best_model, "passive_exact");
+    assert!(diagnostics.best_normalized_increment_residual <= 1.0e-14);
+    assert!(scattering_model(&diagnostics, "active_only").normalized_increment_residual > 0.99);
+}
+
+#[test]
+fn scattering_increment_diagnostics_reject_zero_observed_increment() {
+    let baseline = Array3::from_elem((1, 1, 2), Complex64::new(1.0, 0.0));
+    let observed = baseline.mapv(|value| Complex64::new(2.0, 0.0) * value);
+    let predictions = [BreastUstForwardOperatorPrediction {
+        model: "baseline",
+        pressure: &baseline,
+    }];
+
+    let error = scattering_increment_diagnostics(
+        &baseline,
+        &predictions,
+        &observed,
+        BreastUstReceiverChannelPolicy::All,
+    )
+    .unwrap_err();
+
+    assert!(error.to_string().contains("zero energy"));
+}
+
+fn scattering_model<'a>(
+    diagnostics: &'a BreastUstScatteringIncrementDiagnostics,
+    model: &str,
+) -> &'a BreastUstScatteringIncrementModelDiagnostics {
+    diagnostics
+        .per_model
+        .iter()
+        .find(|row| row.model == model)
+        .expect("model diagnostics")
+}

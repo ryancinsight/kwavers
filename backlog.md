@@ -1,5 +1,20 @@
 # Backlog / Strategy
 
+## Ali 2025 scattering-increment diagnostics - closed (2026-05-24)
+- **[done] [minor]** Added `diagnostics::scattering` for Ali 2025 finite-window
+  residual decomposition. The diagnostic calibrates each frequency/transmit row
+  with the homogeneous direct-field complex source scale, subtracts that
+  calibrated baseline from the observation, and compares candidate model
+  scattering increments under the existing receiver-channel policies.
+- **[done] [minor]** Exposed the diagnostic through PyO3 and Python support
+  code, and added `scattering_increment` plus per-policy
+  `scattering_increment_receiver_policies` to the reduced replication report.
+- **Verification:** `cargo check -p kwavers --lib --message-format=short -j 1`
+  and `cargo check -p pykwavers --lib --message-format=short -j 1` exit 0.
+  `cargo test -p kwavers --test breast_fwi_scattering_increment --message-format=short -j 1`
+  passes 1/1; full `kwavers` lib-test linking is currently blocked by an
+  unrelated `consus_hdf5` linker symbol.
+
 ## Source config finite-domain validation - closed (2026-05-24)
 - **[done] [patch]** Tightened `DomainSourceParameters::validate` so the public
   source configuration boundary rejects non-finite amplitude, frequency,

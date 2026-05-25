@@ -1,5 +1,35 @@
 # Gap Audit
 
+## Ali 2025 Scattering Increment Diagnostics (2026-05-24)
+
+The homogeneous PSTD/CBS boundary now matches the finite-grid modal theorem,
+but the reduced Ali 2025 probe still has a heterogeneous passive residual. The
+existing operator-equivalence metric mixed homogeneous direct-field mismatch
+and scattered-field mismatch, which made the next physics correction less
+localized.
+
+### Closure
+- Added `breast_ust_fwi::diagnostics::scattering` to compute row-calibrated
+  observed scattering increments `d_obs - alpha*d0` and candidate increments
+  `alpha*(d_model - d0)`.
+- Reused the existing receiver-channel policy and model-name validation rather
+  than creating a parallel diagnostic convention.
+- Exposed the diagnostic through PyO3 and Python support code.
+- Added scattering-increment summaries to the Ali 2025 reduced replication
+  report.
+
+### Verification summary
+- `cargo check -p kwavers --lib --message-format=short -j 1`: exit 0.
+- `cargo check -p pykwavers --lib --message-format=short -j 1`: exit 0.
+- `cargo test -p kwavers --test breast_fwi_scattering_increment --message-format=short -j 1`:
+  1/1 pass.
+
+### Residual risk
+- `cargo test -p kwavers scattering_increment_diagnostics --lib -j 1` reaches
+  linking but fails in the monolithic lib-test binary on an unrelated
+  `consus_hdf5::file::reader::list_group_v2` undefined symbol. The dedicated
+  integration target avoids that linker path and validates the public API.
+
 ## Source Config Finite-Domain Validation (2026-05-24)
 
 `DomainSourceParameters::validate` rejected negative amplitude, nonpositive

@@ -10,6 +10,7 @@ mod identifiability;
 mod operator;
 mod reconstruction;
 mod residual;
+mod scattering;
 
 #[cfg(test)]
 mod tests;
@@ -36,6 +37,10 @@ pub use residual::{
     BreastUstScaledObservationResidualMetrics, BreastUstSourceChannelResidualDiagnostics,
 };
 pub(crate) use residual::{row_scale, scaled_observation_residual_metrics_by_receiver};
+pub use scattering::{
+    scattering_increment_diagnostics, BreastUstScatteringIncrementDiagnostics,
+    BreastUstScatteringIncrementModelDiagnostics,
+};
 
 use super::BreastUstPstdDatasetConfig;
 use crate::core::error::KwaversResult;

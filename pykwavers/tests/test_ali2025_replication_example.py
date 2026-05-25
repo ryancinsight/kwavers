@@ -511,6 +511,38 @@ def test_operator_equivalence_receiver_policy_changes_ranking():
     assert active["best_normalized_l2_residual"] <= 1.0e-14
 
 
+def test_scattering_increment_diagnostics_identify_exact_increment_model():
+    operators = _load_support_module("operator_equivalence")
+    baseline = np.ones((1, 2, 4), dtype=np.complex128)
+    increment = np.array(
+        [
+            [
+                [1.0 + 0.0j, -1.0 + 0.0j, 0.0 + 2.0j, 0.0 - 2.0j],
+                [0.5 + 0.0j, -0.5 + 0.0j, 0.0 + 1.0j, 0.0 - 1.0j],
+            ]
+        ],
+        dtype=np.complex128,
+    )
+    scale = 2.0 - 0.5j
+    observed = scale * baseline + increment
+    exact = baseline + increment / scale
+    half = baseline + increment / (2.0 * scale)
+
+    diagnostics = operators.scattering_increment_diagnostics(
+        baseline,
+        {"baseline": baseline, "half_increment": half, "exact_increment": exact},
+        observed,
+    )
+
+    assert diagnostics["model_count"] == 3
+    assert diagnostics["receiver_channel_policy"] == "all"
+    assert diagnostics["best_model"] == "exact_increment"
+    assert diagnostics["best_normalized_increment_residual"] <= 1.0e-14
+    by_model = {row["model"]: row for row in diagnostics["per_model"]}
+    assert abs(by_model["baseline"]["normalized_increment_residual"] - 1.0) <= 1.0e-14
+    assert abs(by_model["half_increment"]["normalized_increment_residual"] - 0.5) <= 1.0e-14
+
+
 def test_operator_prediction_builder_uses_all_models_and_frequencies():
     operators = _load_support_module("operator_equivalence")
 

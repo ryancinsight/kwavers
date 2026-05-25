@@ -120,7 +120,7 @@ pub fn forward_operator_equivalence_diagnostics_with_receiver_policy(
     })
 }
 
-fn validate_model_names(
+pub(super) fn validate_model_names(
     predictions_by_model: &[BreastUstForwardOperatorPrediction<'_>],
 ) -> KwaversResult<()> {
     let mut seen = HashSet::with_capacity(predictions_by_model.len());

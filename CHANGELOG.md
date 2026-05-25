@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Added (2026-05-24) - Ali 2025 Scattering Increment Diagnostics
+
+- [minor] Add Rust-owned Ali 2025 scattering-increment diagnostics that compare
+  candidate heterogeneous forward models against the observed finite-window
+  increment after homogeneous direct-field source-scale calibration. Expose the
+  diagnostic through PyO3 and the reduced replication script so the remaining
+  PSTD/CBS mismatch is measured on the scattered field instead of being mixed
+  with homogeneous transfer.
+
 ### Fixed (2026-05-24) - Source Config Finite-Domain Validation
 
 - [patch] Reject non-finite source amplitude, frequency, radius, phase, delay,

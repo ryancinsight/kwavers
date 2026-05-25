@@ -124,6 +124,26 @@ def operator_equivalence_diagnostics(
     )
 
 
+def scattering_increment_diagnostics(
+    homogeneous_baseline: np.ndarray,
+    predictions_by_model: Mapping[str, np.ndarray],
+    observed: np.ndarray,
+    receiver_channel_policy: ReceiverChannelPolicy | str = ReceiverChannelPolicy.ALL,
+) -> dict[str, Any]:
+    predictions = {
+        str(model): np.asarray(predicted, dtype=np.complex128)
+        for model, predicted in predictions_by_model.items()
+    }
+    return dict(
+        _kw().breast_fwi_scattering_increment_diagnostics(
+            np.asarray(homogeneous_baseline, dtype=np.complex128),
+            predictions,
+            np.asarray(observed, dtype=np.complex128),
+            ReceiverChannelPolicy(receiver_channel_policy).value,
+        )
+    )
+
+
 def _kw() -> Any:
     import pykwavers as kw
 
