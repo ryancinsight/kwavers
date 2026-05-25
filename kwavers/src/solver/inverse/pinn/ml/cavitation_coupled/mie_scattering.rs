@@ -203,6 +203,8 @@ pub fn mie_backscatter_form_function(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_AIR};
+    use crate::core::constants::tissue_acoustics::DENSITY_AIR;
 
     #[test]
     fn test_spherical_bessel_j0_known_values() {
@@ -247,9 +249,9 @@ mod tests {
         //
         // Reference: Anderson (1950) J. Acoust. Soc. Am. 22:426, eq. 14-16.
         let c_l = crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM as f32; // water [m/s]
-        let c_b = 340.0_f32; // air [m/s]
-        let rho_l = 1000.0_f32;
-        let rho_b = 1.2_f32;
+        let c_b = SOUND_SPEED_AIR as f32; // 343.0 m/s — air at 20°C
+        let rho_l = DENSITY_WATER_NOMINAL as f32; // ≈ 998.0 kg/m³
+        let rho_b = DENSITY_AIR as f32; // 1.204 kg/m³ — air at 20°C
 
         let f = 1e5_f32; // 100 kHz
         let omega = 2.0 * std::f32::consts::PI * f;
@@ -279,9 +281,9 @@ mod tests {
         // N_max and N_max+5 should agree to < 1e-4 relative error.
         // Verified by comparing mie_backscatter_form_function at ka = 1 with increased truncation.
         let k_l = 100.0_f32;
-        let k_b = 1000.0_f32;
-        let rho_l = 1000.0_f32;
-        let rho_b = 1.2_f32;
+        let k_b = 1000.0_f32; // test wavenumber [m⁻¹] — abstract geometry parameter
+        let rho_l = DENSITY_WATER_NOMINAL as f32; // ≈ 998.0 kg/m³
+        let rho_b = DENSITY_AIR as f32; // 1.204 kg/m³
         let r = 1e-2_f32; // ka ≈ 1
 
         let f_nominal = mie_backscatter_form_function(k_l, k_b, rho_l, rho_b, r);
