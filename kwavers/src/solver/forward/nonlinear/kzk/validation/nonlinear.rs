@@ -3,6 +3,7 @@
 #[cfg(test)]
 mod tests {
     use super::super::super::*;
+    use crate::core::constants::fundamental::DENSITY_WATER;
     use crate::core::constants::tissue_acoustics::B_OVER_A_WATER_37C;
     use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
     use ndarray::Array2;
@@ -102,7 +103,7 @@ mod tests {
         use crate::math::fft::fft_1d_array;
         use ndarray::Array1;
 
-        let rho0 = 998.0_f64;
+        let rho0 = DENSITY_WATER; // 998.2 kg/m³ at 20°C (NIST); Aanonsen 1984 used 998.0
         let c0 = 1481.0_f64;
         // B/A = 5.0 matches Aanonsen et al. (1984) experimental conditions —
         // degassed water near body temperature where B/A drops to ~5.0 (Duck 1990).

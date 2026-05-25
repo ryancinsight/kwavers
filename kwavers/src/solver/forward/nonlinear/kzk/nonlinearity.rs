@@ -292,6 +292,7 @@ mod tests {
     use crate::core::constants::fundamental::{
         DENSITY_TISSUE,
         DENSITY_WATER_NOMINAL,
+        SOUND_SPEED_TISSUE,
         SOUND_SPEED_WATER_SIM,
     };
     use crate::core::constants::tissue_acoustics::B_OVER_A_WATER;
@@ -386,7 +387,7 @@ mod tests {
     /// These are direct consequences of the linear formula Γ = β·ω·p₀·z/(ρ₀c₀³).
     #[test]
     fn goldberg_number_at_shock_distance_equals_one() {
-        let c0 = 1540.0_f64; // tissue
+        let c0 = SOUND_SPEED_TISSUE;
         let rho0 = DENSITY_TISSUE;
         let b_over_a = 6.5_f64; // soft tissue mid-range (Duck 1990)
         let frequency = 500.0e3_f64; // 500 kHz
