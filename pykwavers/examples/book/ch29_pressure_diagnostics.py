@@ -4,6 +4,13 @@ from __future__ import annotations
 
 import numpy as np
 
+try:
+    import pykwavers as kw
+    _HAS_PYKWAVERS = True
+except ImportError:
+    kw = None
+    _HAS_PYKWAVERS = False
+
 
 def pressure_diagnostics(result: dict[str, object]) -> dict[str, float | bool]:
     pressure = np.asarray(result["westervelt_peak_pressure_pa"], dtype=float)
@@ -118,6 +125,9 @@ def _component(values: np.ndarray, index: int) -> float:
 
 
 def _mechanical_index(pressure_pa: float, frequency_mhz: float) -> float:
+    """MI = p_neg [MPa] / sqrt(f [MHz]) via kw.mechanical_index(p_pa, f_hz)."""
     if pressure_pa <= 0.0 or frequency_mhz <= 0.0:
         return 0.0
+    if _HAS_PYKWAVERS:
+        return kw.mechanical_index(pressure_pa, frequency_mhz * 1.0e6)
     return pressure_pa * 1.0e-6 / float(np.sqrt(frequency_mhz))
