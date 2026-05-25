@@ -45,6 +45,13 @@ from scipy.ndimage import (binary_closing, binary_dilation, binary_erosion,
                            distance_transform_edt, label, zoom)
 from scipy.special import erf
 
+try:
+    import pykwavers as kw
+    _HAS_PYKWAVERS = True
+except ImportError:
+    kw = None
+    _HAS_PYKWAVERS = False
+
 REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 CT_PATH = os.path.join(REPO_ROOT, "data", "lits17_sample", "volume-0.nii")
 SEG_PATH = os.path.join(REPO_ROOT, "data", "lits17_sample", "segmentation-0.nii")
@@ -944,8 +951,15 @@ def thermal_maps(p_field, props, sc):
         T_steady = np.minimum(T_steady, 75.0)
     else:
         T_steady = np.minimum(T_steady, 100.0)
-    R = np.where(T_steady >= 43.0, 0.5, 0.25)
-    cem43 = (R ** (43.0 - T_steady)) * (sc.treatment_s / 60.0)
+    # CEM43 thermal dose via kw.cem43_at_temperatures (Sapareto & Dewey 1984).
+    # R = 0.5 for T ≥ 43 °C, R = 0.25 for T < 43 °C; returns [min].
+    if _HAS_PYKWAVERS:
+        cem43 = np.asarray(
+            kw.cem43_at_temperatures(T_steady.ravel(), sc.treatment_s)
+        ).reshape(T_steady.shape)
+    else:
+        R = np.where(T_steady >= 43.0, 0.5, 0.25)
+        cem43 = (R ** (43.0 - T_steady)) * (sc.treatment_s / 60.0)
     cem43[T_steady < 39.0] = 0.0
     return cem43, T_steady, T_transient
 

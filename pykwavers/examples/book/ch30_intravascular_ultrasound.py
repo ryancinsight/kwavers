@@ -19,6 +19,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.patches import Circle, Wedge
 
+try:
+    import pykwavers as kw
+    _HAS_PYKWAVERS = True
+except ImportError:
+    kw = None
+    _HAS_PYKWAVERS = False
+
 
 BOOK_DIR = Path(__file__).resolve().parent
 REPO_ROOT = BOOK_DIR.parents[2]
@@ -282,7 +289,11 @@ def simulate_therapy(phantom: VesselPhantom, design: TransducerDesign) -> dict[s
     deposition = acoustic_radiation_force * radial_band * (0.20 * wall + 0.80 * wall_target)
     deposition /= max(float(deposition.max()), 1.0e-12)
     delivered_fraction = 1.0 - np.exp(-3.0 * deposition)
-    mechanical_index = float(np.max(pressure) / 1.0e6 / np.sqrt(frequency_mhz))
+    # MI = p_neg [MPa] / sqrt(f [MHz]) via kw.mechanical_index(p_neg_pa, f_hz)
+    peak_p_pa = float(np.max(pressure))
+    mechanical_index = (kw.mechanical_index(peak_p_pa, design.therapy_frequency_hz)
+                        if _HAS_PYKWAVERS
+                        else peak_p_pa / 1.0e6 / np.sqrt(frequency_mhz))
 
     return {
         "pressure_pa": pressure,
