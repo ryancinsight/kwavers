@@ -358,6 +358,13 @@ from ._pykwavers import (
     solve_keller_miksis,
     compute_cem43,
     cem43_at_temperatures,
+    # ── Thermal: Beer-Lambert depth profiles ─────────────────────────────────
+    acoustic_intensity_depth_profile,
+    acoustic_power_deposition_depth_profile,
+    # ── BBB permeability, closure kinetics, CEUS ─────────────────────────────
+    bbb_permeability_hill,
+    bbb_closure_kinetics,
+    ceus_backscatter_signal,
 )
 
 # Pure-Python k-Wave parity utilities
@@ -541,6 +548,13 @@ __all__ = [
     "solve_keller_miksis",
     "compute_cem43",
     "cem43_at_temperatures",
+    # ── Thermal: Beer-Lambert depth profiles ─────────────────────────────────
+    "acoustic_intensity_depth_profile",
+    "acoustic_power_deposition_depth_profile",
+    # ── BBB permeability, closure kinetics, CEUS ─────────────────────────────
+    "bbb_permeability_hill",
+    "bbb_closure_kinetics",
+    "ceus_backscatter_signal",
 ]
 
 # Module-level metadata

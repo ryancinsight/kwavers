@@ -11,6 +11,9 @@
 //! `n_acoustic_per_thermal` acoustic steps and passed to
 //! `ThermalDiffusionSolver::update` as Q/(ρ·cp) [K/s].
 
+use kwavers::core::constants::fundamental::{SOUND_SPEED_TISSUE};
+use kwavers::core::constants::medical::THERMAL_DOSE_REFERENCE_TEMP_C;
+use kwavers::core::constants::thermodynamic::{BODY_TEMPERATURE_C, KELVIN_OFFSET_C};
 use kwavers::core::error::{KwaversError, KwaversResult};
 use kwavers::domain::grid::Grid as KwaversGrid;
 use kwavers::domain::medium::HomogeneousMedium;
@@ -34,9 +37,9 @@ const DEFAULT_K: f64 = 0.5;
 const DEFAULT_RHO: f64 = 1000.0;
 const DEFAULT_CP: f64 = 3600.0;
 const DEFAULT_WB: f64 = 5e-3;
-const DEFAULT_RHO_B: f64 = 1050.0;
+const DEFAULT_RHO_B: f64 = 1050.0; // ICRU-44 bioheat blood density (distinct from DENSITY_BLOOD=1060)
 const DEFAULT_CPB: f64 = 3840.0;
-const DEFAULT_TA_C: f64 = 37.0;
+const DEFAULT_TA_C: f64 = BODY_TEMPERATURE_C;
 
 /// Configuration for acoustic→thermal coupling attached to a `Simulation`.
 #[derive(Clone, Debug)]
@@ -67,13 +70,13 @@ impl ThermalCouplingConfig {
         grid: &KwaversGrid,
     ) -> KwaversResult<(ThermalDiffusionSolver, HomogeneousMedium)> {
         let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
-        let mut medium = HomogeneousMedium::new(self.density, 1540.0, 0.0, 0.0, grid);
+        let mut medium = HomogeneousMedium::new(self.density, SOUND_SPEED_TISSUE, 0.0, 0.0, grid);
         medium
             .set_thermal_properties(self.thermal_conductivity, self.specific_heat)
             .map_err(|e| KwaversError::InternalError(e.to_string()))?;
 
-        let arterial_temp_k = self.arterial_temperature_c + 273.15;
-        let initial_temp_k = self.initial_temperature_c + 273.15;
+        let arterial_temp_k = self.arterial_temperature_c + KELVIN_OFFSET_C;
+        let initial_temp_k = self.initial_temperature_c + KELVIN_OFFSET_C;
 
         let config = ThermalDiffusionConfig {
             enable_bioheat: self.enable_bioheat,
@@ -84,7 +87,7 @@ impl ThermalCouplingConfig {
             enable_hyperbolic: false,
             relaxation_time: 20.0,
             track_thermal_dose: self.track_thermal_dose,
-            dose_reference_temperature: 43.0,
+            dose_reference_temperature: THERMAL_DOSE_REFERENCE_TEMP_C,
             spatial_order: 2,
         };
 

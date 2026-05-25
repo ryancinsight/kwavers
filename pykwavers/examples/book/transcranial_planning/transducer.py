@@ -4,6 +4,13 @@ from dataclasses import dataclass
 
 import numpy as np
 
+try:
+    import pykwavers as kw
+    _HAS_PYKWAVERS = True
+except ImportError:
+    kw = None
+    _HAS_PYKWAVERS = False
+
 from .scene import CANONICAL_BRAIN_SCENE, BrainSceneDefinition
 
 
@@ -172,8 +179,6 @@ def skull_path_acoustics_from_ct(
             sound_speed, density, alpha_np_m = acoustic_properties_from_hu(
                 hu,
                 config.frequency_hz,
-                config.brain_sound_speed_m_s,
-                config.skull_sound_speed_m_s,
             )
             impedance = density * sound_speed
         if abs(impedance - prev_impedance) / max(prev_impedance, impedance) > 0.05:
@@ -190,15 +195,27 @@ def skull_path_acoustics_from_ct(
 def acoustic_properties_from_hu(
     hu: float,
     frequency_hz: float,
-    brain_sound_speed_m_s: float,
-    skull_sound_speed_m_s: float,
 ) -> tuple[float, float, float]:
+    """Map a single HU value to (sound_speed [m/s], density [kg/m³], alpha [Np/m]).
+
+    Sound speed and density follow Schneider et al. (1996) *Phys. Med. Biol.* 41, 111
+    via ``kw.hu_to_sound_speed_schneider`` and ``kw.hu_to_density_schneider``.
+    Frequency-dependent attenuation uses a piecewise brain/bone model; no
+    ``kw.*`` binding exists for HU-to-attenuation.
+    """
+    if _HAS_PYKWAVERS:
+        sound_speed = kw.hu_to_sound_speed_schneider([hu])[0]
+        density = kw.hu_to_density_schneider([hu])[0]
+    else:
+        # Schneider 1996 linear approximation (fallback when pykwavers absent).
+        sound_speed = 1500.0 + (0.50 * hu if hu < 0.0 else 0.76 * hu)
+        density = 1000.0 + 0.96 * hu
+    # Attenuation: piecewise brain / bone (no kw.* binding for HU→α).
     if hu <= 300.0:
-        return brain_sound_speed_m_s, 1040.0, 0.5 * 100.0 / 8.686 * (frequency_hz / 1.0e6)
-    bone_fraction = float(np.clip((hu - 300.0) / 1700.0, 0.0, 1.0))
-    density = 1200.0 + 700.0 * bone_fraction
-    sound_speed = brain_sound_speed_m_s + (skull_sound_speed_m_s - brain_sound_speed_m_s) * bone_fraction
-    attenuation_db_cm_mhz = 8.0 + 12.0 * bone_fraction
+        attenuation_db_cm_mhz = 0.5   # soft tissue / brain
+    else:
+        bone_fraction = float(np.clip((hu - 300.0) / 1700.0, 0.0, 1.0))
+        attenuation_db_cm_mhz = 8.0 + 12.0 * bone_fraction
     alpha_np_m = attenuation_db_cm_mhz * 100.0 / 8.686 * (frequency_hz / 1.0e6)
     return sound_speed, density, alpha_np_m
 

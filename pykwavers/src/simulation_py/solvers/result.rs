@@ -1,3 +1,4 @@
+use kwavers::core::constants::thermodynamic::KELVIN_OFFSET_C;
 use numpy::{PyArray1, PyArray2, PyArray3};
 use pyo3::prelude::*;
 
@@ -94,7 +95,7 @@ impl Simulation {
 
         // K → °C conversion for thermal outputs at the Python boundary.
         let thermal_temp_py = thermal_temperature
-            .map(|t| PyArray3::from_owned_array(py, t.mapv(|v| v - 273.15)).into());
+            .map(|t| PyArray3::from_owned_array(py, t.mapv(|v| v - KELVIN_OFFSET_C)).into());
         let thermal_dose_py = thermal_dose.map(|d| PyArray3::from_owned_array(py, d).into());
 
         let n_sensors = sensor_data.nrows();

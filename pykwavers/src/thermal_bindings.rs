@@ -26,6 +26,11 @@ use numpy::{IntoPyArray, PyArray1, PyArray2, PyArray3, PyReadonlyArray3};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
+use kwavers::core::constants::medical::{
+    THERMAL_DOSE_REFERENCE_TEMP_C,
+};
+use kwavers::core::constants::fundamental::{DENSITY_TISSUE, SOUND_SPEED_TISSUE};
+use kwavers::core::constants::thermodynamic::{BODY_TEMPERATURE_C, KELVIN_OFFSET_C};
 use kwavers::domain::grid::Grid as KwaversGrid;
 use kwavers::domain::medium::HomogeneousMedium;
 use kwavers::physics::thermal::diffusion::ThermalDiffusionConfig;
@@ -33,12 +38,12 @@ use kwavers::solver::forward::thermal_diffusion::ThermalDiffusionSolver;
 
 // ── Defaults (soft tissue, ICRU Report 44) ──────────────────────────────────
 const DEFAULT_K: f64 = 0.5; // thermal conductivity [W/(m·K)]
-const DEFAULT_RHO: f64 = 1000.0; // density [kg/m³]
+const DEFAULT_RHO: f64 = DENSITY_TISSUE; // density [kg/m³]
 const DEFAULT_CP: f64 = 3600.0; // specific heat [J/(kg·K)]
 const DEFAULT_WB: f64 = 5e-3; // blood perfusion rate [1/s]
-const DEFAULT_RHO_B: f64 = 1050.0; // blood density [kg/m³]
+const DEFAULT_RHO_B: f64 = 1050.0; // blood density [kg/m³] — ICRU-44 bioheat value (distinct from DENSITY_BLOOD=1060)
 const DEFAULT_CPB: f64 = 3840.0; // blood specific heat [J/(kg·K)]
-const DEFAULT_TA_C: f64 = 37.0; // arterial temperature [°C]
+const DEFAULT_TA_C: f64 = BODY_TEMPERATURE_C; // arterial temperature [°C]
 
 // ── Result ───────────────────────────────────────────────────────────────────
 
@@ -247,14 +252,14 @@ impl ThermalSimulation {
 
         // ── Build HomogeneousMedium with correct thermal properties ───────────
         // sound_speed is irrelevant for the thermal solve; use tissue default.
-        let mut medium = HomogeneousMedium::new(self.density, 1540.0, 0.0, 0.0, &kgrid);
+        let mut medium = HomogeneousMedium::new(self.density, SOUND_SPEED_TISSUE, 0.0, 0.0, &kgrid);
         medium
             .set_thermal_properties(self.thermal_conductivity, self.specific_heat)
             .map_err(|e| PyValueError::new_err(e.to_string()))?;
 
         // ── Unit conversion: °C → K ───────────────────────────────────────────
-        let initial_temp_k = self.initial_temperature_c + 273.15;
-        let arterial_temp_k = self.arterial_temperature_c + 273.15;
+        let initial_temp_k = self.initial_temperature_c + KELVIN_OFFSET_C;
+        let arterial_temp_k = self.arterial_temperature_c + KELVIN_OFFSET_C;
 
         // ── Build ThermalDiffusionConfig ──────────────────────────────────────
         let config = ThermalDiffusionConfig {
@@ -266,7 +271,7 @@ impl ThermalSimulation {
             enable_hyperbolic: false,
             relaxation_time: 20.0,
             track_thermal_dose: self.track_thermal_dose,
-            dose_reference_temperature: 43.0,
+            dose_reference_temperature: THERMAL_DOSE_REFERENCE_TEMP_C,
             spatial_order: self.spatial_order as usize,
         };
 
@@ -334,7 +339,7 @@ impl ThermalSimulation {
             if n_sensors > 0 {
                 let temp = solver.temperature();
                 for (s, &(si, sj, sk)) in sensor_positions.iter().enumerate() {
-                    sensor_data[[s, step]] = temp[[si, sj, sk]] - 273.15;
+                    sensor_data[[s, step]] = temp[[si, sj, sk]] - KELVIN_OFFSET_C;
                 }
             }
 
@@ -345,7 +350,7 @@ impl ThermalSimulation {
 
         // ── Build outputs ─────────────────────────────────────────────────────
         // Convert final temperature field K → °C.
-        let temp_celsius: Array3<f64> = solver.temperature().mapv(|t| t - 273.15);
+        let temp_celsius: Array3<f64> = solver.temperature().mapv(|t| t - KELVIN_OFFSET_C);
 
         let time_vec: Array1<f64> = Array1::linspace(dt, dt * time_steps as f64, time_steps);
 

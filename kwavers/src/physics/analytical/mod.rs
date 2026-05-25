@@ -17,12 +17,14 @@
 //! | [`skull`] | Transcranial, CT-to-medium | ch16, ch25 |
 //! | [`photoacoustics`] | PA signal, spectroscopy | ch13 |
 //! | [`elastography`] | Shear waves, MRE | ch10 |
-//! | [`imaging`] | PSF, Doppler, compounding | ch05 |
-//! | [`thermal`] | Bioheat, HIFU | ch06 |
+//! | [`imaging`] | PSF, Doppler, compounding, CEUS | ch05, ch24 |
+//! | [`thermal`] | Bioheat, HIFU, Beer-Lambert Q(z) | ch06 |
 //! | [`inverse`] | Tikhonov, Born inversion | ch17 |
 //! | [`sonogenetics`] | Hill activation, ARF | ch18 |
 //! | [`rtm`] | Reverse-time migration | ch25 |
+//! | [`bbb`] | BBB permeability, CEUS, closure kinetics | ch24 |
 
+pub mod bbb;
 pub mod cavitation;
 pub mod elastography;
 pub mod imaging;

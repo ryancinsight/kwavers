@@ -169,26 +169,13 @@ plt.close(fig)
 # ── Figure 03: BBB permeability vs acoustic dose ──────────────────────────────
 print("[fig03] BBB permeability vs acoustic dose (Evans blue model)")
 
-def _bbb_permeability(dose: np.ndarray, d50: float, hill_n: float) -> np.ndarray:
-    """
-    Hill-function model for BBB permeability enhancement:
-
-        P(D) = P_max · D^n / (D50^n + D^n)
-
-    where D is the cumulative acoustic dose (MI² × time × PRF),
-    D50 is the dose at half-maximum opening, and n is the Hill coefficient.
-
-    Fit to Evans-blue extravasation data (McDannold 2008, Fig. 6).
-    P_max = 1.0 (normalised maximum opening, ~10× baseline).
-    """
-    return dose**hill_n / (d50**hill_n + dose**hill_n)
-
 dose_range = np.linspace(0.0, 5.0, 400)  # arbitrary dose units: MI²·s
 d50_stable = 1.2   # dose for half-max opening (stable cavitation regime)
 d50_inert  = 0.4   # inertial cavitation: faster opening but irreversible risk
 
-perm_stable = _bbb_permeability(dose_range, d50_stable, hill_n=2.5)
-perm_inert  = _bbb_permeability(dose_range, d50_inert,  hill_n=1.8)
+# P(D) = D^n / (D₅₀^n + D^n) via kw.bbb_permeability_hill (McDannold 2008)
+perm_stable = np.asarray(kw.bbb_permeability_hill(dose_range, d50_stable, 2.5))
+perm_inert  = np.asarray(kw.bbb_permeability_hill(dose_range, d50_inert,  1.8))
 
 # Damage threshold: sigmoid beyond ~ 3.5 dose units
 damage_thresh = 3.5
@@ -314,26 +301,10 @@ plt.close(fig)
 # ── Figure 05: CEUS contrast enhancement vs MB concentration ─────────────────
 print("[fig05] CEUS signal vs microbubble concentration")
 
-def _ceus_signal(c_mb: np.ndarray, sigma_bs: float = 2.5e-8,
-                 thickness: float = 10e-3) -> np.ndarray:
-    """
-    CEUS backscatter signal vs MB concentration (linear regime).
-
-    Single-scattering (low concentration) approximation:
-        I_bs = σ_bs · N_V · V_vox
-    where N_V is number density [m⁻³] and V_vox = A · thickness.
-    Attenuation by MB layer (extinction cross-section σ_ext ≈ 2·σ_bs):
-        I_bs_att = I_bs · exp(-2 · σ_ext · N_V · thickness)
-    At high concentrations the quadratic multiple-scattering regime dominates.
-    """
-    n_v = c_mb * 1e9  # convert µL/mL → m⁻³ (approx, bubble volume ~4/3 π R₀³)
-    sigma_ext = 2.0 * sigma_bs
-    i_linear = sigma_bs * n_v
-    attenuation = np.exp(-2.0 * sigma_ext * n_v * thickness)
-    return i_linear * attenuation
-
 c_range = np.linspace(0.0, 50.0, 400)  # µL(gas)/mL
-signal = _ceus_signal(c_range)
+# I_bs = σ_bs·N_V·exp(−2·σ_ext·N_V·thickness) via kw.ceus_backscatter_signal
+# (de Jong 1991; single-scatter + MB-layer self-attenuation)
+signal = np.asarray(kw.ceus_backscatter_signal(c_range, 2.5e-8, 10e-3))
 signal_db = 20.0 * np.log10(signal / np.max(signal) + 1e-12)
 
 fig, ax = plt.subplots(figsize=(7, 4))
@@ -354,22 +325,6 @@ plt.close(fig)
 # ── Figure 06: BBB opening window — permeability vs time post-sonication ──────
 print("[fig06] BBB opening window: permeability vs time post-sonication")
 
-def _bbb_recovery(t_h: np.ndarray, tau_close: float,
-                  perm_peak: float = 1.0) -> np.ndarray:
-    """
-    BBB closure kinetics (Deffieux & Konofagou 2010 §IV):
-
-    After sonication ends, BBB permeability decays as a bi-exponential:
-        P(t) = A₁ exp(-t/τ_fast) + A₂ exp(-t/τ_slow)
-
-    Fast component (A₁ ~ 0.6): tight-junction re-assembly (~0.5–2 h).
-    Slow component (A₂ ~ 0.4): vesicular transport clearance (~6–24 h).
-    τ_fast = 0.5 × τ_close (closing time constant),  A₁ = 0.6, A₂ = 0.4.
-    """
-    tau_fast = 0.5 * tau_close
-    tau_slow = 3.0 * tau_close
-    return perm_peak * (0.6 * np.exp(-t_h / tau_fast) + 0.4 * np.exp(-t_h / tau_slow))
-
 t_h = np.linspace(0.0, 48.0, 800)  # hours post-sonication
 
 # Three parameter regimes (McDannold 2008 / Tung 2010)
@@ -381,7 +336,9 @@ scenarios = [
 
 fig, ax = plt.subplots(figsize=(8, 4))
 for tau_close, perm_pk, col, lbl in scenarios:
-    p = _bbb_recovery(t_h, tau_close, perm_pk)
+    # P(t) = perm_peak·[0.6·exp(-t/τ_fast)+0.4·exp(-t/τ_slow)]
+    # via kw.bbb_closure_kinetics (Deffieux & Konofagou 2010 §IV)
+    p = np.asarray(kw.bbb_closure_kinetics(t_h, tau_close, perm_pk))
     ax.plot(t_h, p, color=col, lw=1.6, label=lbl)
 
 # Baseline permeability

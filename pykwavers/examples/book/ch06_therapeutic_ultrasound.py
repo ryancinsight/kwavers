@@ -220,8 +220,14 @@ colors_t = ["C0", "C1", "C2"]
 
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 4))
 for (label, alpha_t), col in zip(alpha_tissues.items(), colors_t):
-    I_z = I0 * np.exp(-2 * alpha_t * z_arr)
-    Q_z = 2 * alpha_t * I_z
+    # I(z) = I₀·exp(−2·α·z) via kw.acoustic_intensity_depth_profile (Duck 1990 §2.1)
+    # Q(z) = 2·α·I(z)       via kw.acoustic_power_deposition_depth_profile
+    if _HAS_PYKWAVERS:
+        I_z = np.asarray(kw.acoustic_intensity_depth_profile(z_arr, alpha_t, I0))
+        Q_z = np.asarray(kw.acoustic_power_deposition_depth_profile(z_arr, alpha_t, I0))
+    else:
+        I_z = I0 * np.exp(-2 * alpha_t * z_arr)
+        Q_z = 2 * alpha_t * I_z
     ax1.plot(z_arr * 1e3, I_z, color=col, label=label)
     ax2.plot(z_arr * 1e3, Q_z / (2 * alpha_t * I0), color=col, label=label)
 

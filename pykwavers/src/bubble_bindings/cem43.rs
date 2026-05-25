@@ -20,6 +20,9 @@
 //!
 //! - Sapareto & Dewey (1984) Int. J. Radiat. Oncol. Biol. Phys. 10(6):787
 
+use kwavers::core::constants::medical::{
+    THERMAL_DOSE_R_ABOVE_43C, THERMAL_DOSE_R_BELOW_43C, THERMAL_DOSE_REFERENCE_TEMP_C,
+};
 use ndarray::Array1;
 use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1};
 use pyo3::exceptions::PyValueError;
@@ -46,8 +49,12 @@ pub fn compute_cem43(temperatures_c: PyReadonlyArray1<f64>, dt_s: f64) -> PyResu
     let dose: f64 = temps
         .iter()
         .map(|&t| {
-            let r = if t >= 43.0 { 0.5_f64 } else { 0.25_f64 };
-            r.powf(43.0 - t) * dt_s / 60.0
+            let r = if t >= THERMAL_DOSE_REFERENCE_TEMP_C {
+                THERMAL_DOSE_R_ABOVE_43C
+            } else {
+                THERMAL_DOSE_R_BELOW_43C
+            };
+            r.powf(THERMAL_DOSE_REFERENCE_TEMP_C - t) * dt_s / 60.0
         })
         .sum();
     Ok(dose)
@@ -83,8 +90,12 @@ pub fn cem43_at_temperatures<'py>(
     }
     let temps = temperatures_c.as_array();
     let result: Array1<f64> = temps.mapv(|t| {
-        let r = if t >= 43.0 { 0.5_f64 } else { 0.25_f64 };
-        r.powf(43.0 - t) * duration_s / 60.0
+        let r = if t >= THERMAL_DOSE_REFERENCE_TEMP_C {
+            THERMAL_DOSE_R_ABOVE_43C
+        } else {
+            THERMAL_DOSE_R_BELOW_43C
+        };
+        r.powf(THERMAL_DOSE_REFERENCE_TEMP_C - t) * duration_s / 60.0
     });
     Ok(result.into_pyarray(py).into())
 }

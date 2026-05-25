@@ -158,6 +158,64 @@ pub fn gaussian_power_deposition_2d(
     out
 }
 
+// ─── Beer-Lambert acoustic intensity depth profile ────────────────────────────
+
+/// Acoustic intensity depth profile for a plane wave with Beer-Lambert attenuation.
+///
+/// One-way intensity attenuation of a propagating acoustic beam:
+/// ```text
+/// I(z) = I₀ · exp(−2·α·z)
+/// ```
+/// The factor of 2 arises because intensity is proportional to pressure squared;
+/// amplitude attenuation coefficient α [Np/m] produces intensity attenuation 2α.
+///
+/// # Arguments
+/// * `z_arr` – depth positions [m], z ≥ 0
+/// * `alpha_np_m` – amplitude attenuation coefficient [Np/m]
+/// * `surface_intensity` – I₀ at z = 0 [W/m² or normalised]
+///
+/// # Reference
+/// Duck (1990) *Physical Properties of Tissue*, §2.1. Academic Press.
+#[must_use]
+pub fn acoustic_intensity_depth_profile(
+    z_arr: &[f64],
+    alpha_np_m: f64,
+    surface_intensity: f64,
+) -> Vec<f64> {
+    z_arr
+        .iter()
+        .map(|&z| surface_intensity * (-2.0 * alpha_np_m * z).exp())
+        .collect()
+}
+
+/// Volumetric acoustic power deposition depth profile (Beer-Lambert heat source).
+///
+/// Absorbed power density Q [W/m³] at depth z for a propagating plane wave:
+/// ```text
+/// Q(z) = 2·α · I(z) = 2·α·I₀ · exp(−2·α·z)
+/// ```
+/// This is the thermal source term Q entering the Pennes bioheat equation.
+///
+/// # Arguments
+/// * `z_arr` – depth positions [m], z ≥ 0
+/// * `alpha_np_m` – amplitude attenuation coefficient [Np/m]
+/// * `surface_intensity` – surface intensity I₀ at z = 0 [W/m²]
+///
+/// # Reference
+/// Duck (1990) *Physical Properties of Tissue*, §2.1. Academic Press.
+/// Pennes (1948), *J. Appl. Physiol.* 1, 93.
+#[must_use]
+pub fn acoustic_power_deposition_depth_profile(
+    z_arr: &[f64],
+    alpha_np_m: f64,
+    surface_intensity: f64,
+) -> Vec<f64> {
+    z_arr
+        .iter()
+        .map(|&z| 2.0 * alpha_np_m * surface_intensity * (-2.0 * alpha_np_m * z).exp())
+        .collect()
+}
+
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
@@ -244,6 +302,30 @@ mod tests {
             BODY_TEMPERATURE_C,
         );
         assert!((t[1] - t_half[0]).abs() / t[1].abs() < 0.01);
+    }
+
+    #[test]
+    fn beer_lambert_intensity_at_zero_is_surface() {
+        let i = acoustic_intensity_depth_profile(&[0.0], 7.0, 1.0);
+        assert!((i[0] - 1.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn beer_lambert_intensity_monotone_decreasing() {
+        let z: Vec<f64> = vec![0.0, 0.01, 0.02, 0.04];
+        let i = acoustic_intensity_depth_profile(&z, 7.0, 1.0);
+        for k in 1..i.len() {
+            assert!(i[k] < i[k - 1], "I[{}]={} ≥ I[{}]={}", k, i[k], k - 1, i[k - 1]);
+        }
+    }
+
+    #[test]
+    fn beer_lambert_power_deposition_peak_at_surface() {
+        // Q(0) = 2·α·I₀ is the maximum; Q(z) < Q(0) for z > 0
+        let z: Vec<f64> = vec![0.0, 0.01];
+        let q = acoustic_power_deposition_depth_profile(&z, 7.0, 1.0);
+        assert!((q[0] - 2.0 * 7.0 * 1.0).abs() < 1e-12, "Q(0)={}", q[0]);
+        assert!(q[1] < q[0]);
     }
 
     #[test]

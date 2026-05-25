@@ -21,6 +21,13 @@ from dataclasses import dataclass
 import numpy as np
 from scipy.ndimage import distance_transform_edt
 
+try:
+    import pykwavers as kw
+    _HAS_PYKWAVERS = True
+except ImportError:
+    kw = None
+    _HAS_PYKWAVERS = False
+
 from .transducer import PhaseCorrection, TransducerConfig, index_to_point
 
 
@@ -222,8 +229,12 @@ def acoustic_observables(
     not available.
     """
     intensity = pressure_pa.astype(np.float64) ** 2 / (2.0 * density_kg_m3 * sound_speed_m_s)
-    frequency_mhz = frequency_hz / 1.0e6
-    mi = pressure_pa.astype(np.float64) / 1.0e6 / np.sqrt(frequency_mhz)
+    if _HAS_PYKWAVERS:
+        # MI = p_neg[MPa] / sqrt(f[MHz]) via kw.mechanical_index(p_pa, f_hz).
+        mi = np.vectorize(kw.mechanical_index)(pressure_pa.astype(np.float64), frequency_hz)
+    else:
+        frequency_mhz = frequency_hz / 1.0e6
+        mi = pressure_pa.astype(np.float64) / 1.0e6 / np.sqrt(frequency_mhz)
     cavitation = 1.0 / (1.0 + np.exp(-(mi - inertial_mi_threshold) / 0.10))
     return AcousticResult(
         pressure_pa.astype(np.float32),
