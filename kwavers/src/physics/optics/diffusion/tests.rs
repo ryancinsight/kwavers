@@ -1,4 +1,5 @@
 use super::*;
+use crate::core::constants::optical::REFRACTIVE_INDEX_SOFT_TISSUE;
 use crate::domain::medium::properties::OpticalPropertyData;
 
 #[test]
@@ -7,7 +8,7 @@ fn test_optical_properties_from_domain() {
         10.0,  // absorption_coefficient
         100.0, // scattering_coefficient
         0.9,   // anisotropy
-        1.4,   // refractive_index
+        REFRACTIVE_INDEX_SOFT_TISSUE, // refractive_index — SSOT: optical::REFRACTIVE_INDEX_SOFT_TISSUE
     )
     .unwrap();
 
@@ -20,7 +21,7 @@ fn test_optical_properties_from_domain() {
         "Expected: 10.0, Got: {}",
         props.reduced_scattering_coefficient
     );
-    assert_eq!(props.refractive_index, 1.4);
+    assert_eq!(props.refractive_index, REFRACTIVE_INDEX_SOFT_TISSUE);
 }
 
 #[test]
@@ -28,7 +29,7 @@ fn test_diffusion_coefficient() {
     let props = DiffusionOpticalProperties {
         absorption_coefficient: 10.0,
         reduced_scattering_coefficient: 90.0,
-        refractive_index: 1.4,
+        refractive_index: REFRACTIVE_INDEX_SOFT_TISSUE,
     };
 
     // D = 1 / (3 * (μₐ + μₛ'))
@@ -41,14 +42,14 @@ fn test_diffusion_approximation_validity() {
     let valid_props = DiffusionOpticalProperties {
         absorption_coefficient: 1.0,
         reduced_scattering_coefficient: 15.0, // > 10x absorption
-        refractive_index: 1.4,
+        refractive_index: REFRACTIVE_INDEX_SOFT_TISSUE,
     };
     assert!(valid_props.diffusion_approximation_valid());
 
     let invalid_props = DiffusionOpticalProperties {
         absorption_coefficient: 10.0,
         reduced_scattering_coefficient: 20.0, // < 10x absorption
-        refractive_index: 1.4,
+        refractive_index: REFRACTIVE_INDEX_SOFT_TISSUE,
     };
     assert!(!invalid_props.diffusion_approximation_valid());
 }
@@ -72,7 +73,7 @@ fn uniform_fluence_decays_at_rate_c_mu_a() {
     let props = DiffusionOpticalProperties {
         absorption_coefficient: 10.0,          // m⁻¹
         reduced_scattering_coefficient: 1.0e3, // m⁻¹, μₛ' ≫ μₐ
-        refractive_index: 1.4,
+        refractive_index: REFRACTIVE_INDEX_SOFT_TISSUE,
     };
     let mut solver = LightDiffusion::new(&grid, props, false, false);
 

@@ -1,6 +1,7 @@
 use super::orchestrator::{IntegratedSonoluminescence, SonoluminescenceEmission};
 use super::spectrum::EmissionParameters;
 use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
+use crate::core::constants::thermodynamic::HEAT_CAPACITY_RATIO_DIATOMIC;
 use crate::physics::bubble_dynamics::bubble_state::BubbleParameters;
 use crate::physics::bubble_dynamics::keller_miksis::KellerMiksisModel;
 use ndarray::Array3;
@@ -70,7 +71,7 @@ mod tests {
         let params = BubbleParameters {
             r0: 10e-6,  // 10 μm initial radius
             t0: 300.0,  // 300 K initial temperature
-            gamma: 1.4, // air
+            gamma: HEAT_CAPACITY_RATIO_DIATOMIC, // SSOT: thermodynamic::HEAT_CAPACITY_RATIO_DIATOMIC
             ..Default::default()
         };
 
@@ -84,7 +85,7 @@ mod tests {
         let compressed_radius = 5e-6; // 5 μm
 
         // Calculate expected temperature from adiabatic relation
-        let gamma = 1.4;
+        let gamma = HEAT_CAPACITY_RATIO_DIATOMIC;
         let compression_ratio = params.r0 / compressed_radius;
         let expected_temp = params.t0 * compression_ratio.powf(3.0 * (gamma - 1.0));
 
@@ -109,7 +110,7 @@ mod tests {
             r0: 10e-6,
             initial_gas_pressure: ATMOSPHERIC_PRESSURE, // 1 atm
             t0: 300.0,
-            gamma: 1.4,
+            gamma: HEAT_CAPACITY_RATIO_DIATOMIC, // SSOT: thermodynamic::HEAT_CAPACITY_RATIO_DIATOMIC
             ..Default::default()
         };
 

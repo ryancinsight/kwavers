@@ -4,6 +4,7 @@ use super::MonteCarloSolver;
 use rand::Rng;
 use std::sync::atomic::AtomicU64;
 
+use crate::core::constants::optical::REFRACTIVE_INDEX_SOFT_TISSUE;
 use crate::physics::optics::monte_carlo::config::SimulationConfig;
 use crate::physics::optics::monte_carlo::interfaces::{apply_fresnel, fresnel_reflectance};
 use crate::physics::optics::monte_carlo::photon::Photon;
@@ -105,7 +106,7 @@ impl MonteCarloSolver {
                             let n_tissue = self
                                 .optical_map
                                 .get(ci, cj, 0)
-                                .map_or(1.4, |p| p.refractive_index);
+                                .map_or(REFRACTIVE_INDEX_SOFT_TISSUE, |p| p.refractive_index);
                             let cos_i = (-photon.direction[2]).clamp(0.0, 1.0);
                             let r = fresnel_reflectance(n_tissue, 1.0, cos_i);
                             if rng.gen::<f64>() < r {

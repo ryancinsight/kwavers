@@ -1,4 +1,5 @@
 use super::*;
+use crate::core::constants::optical::REFRACTIVE_INDEX_SOFT_TISSUE;
 use crate::domain::grid::{Grid3D, GridDimensions};
 use crate::domain::medium::optical_map::OpticalPropertyMap;
 use crate::domain::medium::properties::OpticalPropertyData;
@@ -330,7 +331,7 @@ fn test_mcml_semi_infinite_phantom() {
     // Optical properties: a′ = μ_s′/(μ_a+μ_s′) = 100/110 ≈ 0.909; l′ = 9 mm;
     // albedo = 1000/1010 = 0.990; RR terminates at ~687 events (< max_steps 3000).
     // Domain 60×60×120 mm; lateral RMS diffusion ≈ 22 mm — negligible boundary loss.
-    let props = OpticalPropertyData::new(10.0, 1000.0, 0.9, 1.4).unwrap();
+    let props = OpticalPropertyData::new(10.0, 1000.0, 0.9, REFRACTIVE_INDEX_SOFT_TISSUE).unwrap();
     let optical_map = OpticalPropertyMap::homogeneous(&props, dims);
     let solver = MonteCarloSolver::new(grid, optical_map);
 

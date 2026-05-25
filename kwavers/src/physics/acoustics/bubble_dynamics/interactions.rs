@@ -221,7 +221,10 @@ impl CollectiveEffects {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
+    use crate::core::constants::fundamental::{
+        DENSITY_WATER_NOMINAL, SOUND_SPEED_AIR, SOUND_SPEED_WATER_SIM,
+    };
+    use crate::core::constants::tissue_acoustics::DENSITY_AIR;
     use crate::physics::bubble_dynamics::bubble_state::BubbleParameters;
 
     #[test]
@@ -280,10 +283,10 @@ mod tests {
     fn test_wood_sound_speed() {
         let c_mixture = CollectiveEffects::wood_sound_speed(
             0.01,                  // 1% void fraction
-            1000.0,                // water density
+            DENSITY_WATER_NOMINAL, // water density — SSOT: fundamental::DENSITY_WATER_NOMINAL
             SOUND_SPEED_WATER_SIM, // water sound speed
-            1.2,                   // air density
-            340.0,                 // air sound speed
+            DENSITY_AIR,           // air density — SSOT: tissue_acoustics::DENSITY_AIR
+            SOUND_SPEED_AIR,       // air sound speed — SSOT: fundamental::SOUND_SPEED_AIR
         );
 
         // Sound speed should be significantly reduced

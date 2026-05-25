@@ -1,5 +1,6 @@
 use super::thermodynamics::update_thermodynamics;
 use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
+use crate::core::constants::thermodynamic::HEAT_CAPACITY_RATIO_DIATOMIC;
 use crate::physics::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};
 use approx::assert_relative_eq;
 
@@ -7,7 +8,7 @@ use approx::assert_relative_eq;
 fn test_update_thermodynamics() {
     let params = BubbleParameters {
         r0: 5e-6,
-        gamma: 1.4, // Diatomic gas like air
+        gamma: HEAT_CAPACITY_RATIO_DIATOMIC, // diatomic gas (air) — SSOT: thermodynamic::HEAT_CAPACITY_RATIO_DIATOMIC
         t0: 300.0,
         initial_gas_pressure: ATMOSPHERIC_PRESSURE,
         ..Default::default()
