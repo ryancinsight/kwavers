@@ -1,3 +1,4 @@
+use crate::core::constants::optical::REFRACTIVE_INDEX_SOFT_TISSUE;
 use ndarray::{s, Array1, Array3, Array4, Axis, Zip};
 
 /// Parameters for sonoluminescence emission
@@ -33,7 +34,7 @@ impl Default for EmissionParameters {
             ionization_energy: crate::core::constants::chemistry::ARGON_IONIZATION_ENERGY, // eV for argon
             min_temperature: 2000.0,                                                       // K
             opacity_factor: 1.0, // Optically thin
-            cherenkov_refractive_index: 1.4,
+            cherenkov_refractive_index: REFRACTIVE_INDEX_SOFT_TISSUE,
             cherenkov_coherence_factor: 100.0,
         }
     }

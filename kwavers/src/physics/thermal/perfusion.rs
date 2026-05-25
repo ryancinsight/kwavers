@@ -4,6 +4,20 @@
 //! - Kolios et al. (2003) "Blood flow cooling and ultrasonic lesion formation"
 //! - Curra et al. (2000) "Numerical simulations of heating patterns"
 
+/// Temperature threshold at which blood perfusion ceases due to vascular damage [°C].
+///
+/// Above 50 °C, thermal coagulation of vessel walls causes perfusion shutdown.
+/// Reference: Kolios MC et al. (2003) "Blood flow cooling and ultrasonic lesion formation",
+/// *Med. Phys.* 30(6):1511–1521. DOI: 10.1118/1.1571854.
+const PERFUSION_SHUTDOWN_TEMP_C: f64 = 50.0;
+
+/// Temperature for maximum perfusion enhancement during mild hyperthermia [°C].
+///
+/// Vasodilation peaks near 42 °C; above this value vessel compliance decreases.
+/// Reference: Curra FP et al. (2000) "Numerical simulations of heating patterns and
+/// tissue temperature in ultrasonic hyperthermia", *IEEE TUFFC* 47(4):1014–1029.
+const PERFUSION_MAX_TEMP_C: f64 = 42.0;
+
 use crate::core::constants::acoustic_parameters::BLOOD_VISCOSITY_37C;
 use crate::core::constants::tissue_acoustics::DENSITY_BLOOD;
 use crate::core::constants::medical::BLOOD_SPECIFIC_HEAT;
@@ -30,8 +44,8 @@ impl ThermalPerfusionModel {
     pub fn new(baseline_perfusion: f64) -> Self {
         Self {
             w_b0: baseline_perfusion,
-            t_shutdown: 50.0,    // Perfusion stops above 50°C
-            t_max: 42.0,         // Maximum perfusion at mild hyperthermia
+            t_shutdown: PERFUSION_SHUTDOWN_TEMP_C,
+            t_max: PERFUSION_MAX_TEMP_C,
             max_multiplier: 2.0, // Double perfusion at peak
         }
     }

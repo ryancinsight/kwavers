@@ -144,6 +144,14 @@ pub const REFRACTIVE_INDEX_WATER_VIS: f64 = 1.333;
 /// Optical Constants of Solids. Academic Press.
 pub const REFRACTIVE_INDEX_GLASS: f64 = 1.5;
 
+/// Representative frequency of visible light for default optical scattering calculations (Hz).
+///
+/// Value: 5×10¹⁴ Hz ≈ 600 nm green-yellow light, near the peak of photopic sensitivity.
+/// Used as the default when no specific wavelength is given in diffuse-optics models.
+///
+/// Reference: Hecht E (2002) *Optics* (4th ed.), §3.2; CIE photopic V(λ) peak: 555 nm.
+pub const VISIBLE_LIGHT_FREQUENCY_HZ: f64 = 5e14;
+
 // ── Electromagnetic free-space constants ──────────────────────────────────────
 
 /// Impedance of free space Z₀ = μ₀c (Ω).

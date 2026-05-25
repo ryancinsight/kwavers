@@ -2,7 +2,9 @@
 
 use super::properties::DiffusionOpticalProperties;
 use crate::core::constants::fundamental::SPEED_OF_LIGHT;
-use crate::core::constants::optical::{DEFAULT_POLARIZATION_FACTOR, LAPLACIAN_CENTER_COEFF};
+use crate::core::constants::optical::{
+    DEFAULT_POLARIZATION_FACTOR, LAPLACIAN_CENTER_COEFF, VISIBLE_LIGHT_FREQUENCY_HZ,
+};
 use crate::domain::field::indices::LIGHT_IDX;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
@@ -99,8 +101,8 @@ impl LightDiffusion {
                 None
             },
             _scattering: if enable_scattering {
-                // Default optical frequency for scattering
-                let frequency = 5e14; // ~600nm wavelength
+                // Default optical frequency for scattering (~600 nm green-yellow visible light)
+                let frequency = VISIBLE_LIGHT_FREQUENCY_HZ;
                 Some(ScatteringCalculator::new(frequency, SPEED_OF_LIGHT))
             } else {
                 None
