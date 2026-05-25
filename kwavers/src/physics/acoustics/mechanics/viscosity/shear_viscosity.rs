@@ -38,13 +38,14 @@ impl ViscosityModel for ShearViscosityModel {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::cavitation::VISCOSITY_WATER;
     use crate::core::constants::thermodynamic::ROOM_TEMPERATURE_K;
 
     /// At the reference temperature, the Arrhenius exponential is exp(0) = 1,
     /// so viscosity equals the base viscosity exactly.
     #[test]
     fn viscosity_at_reference_temperature_equals_base_viscosity() {
-        let eta_0 = 1e-3_f64; // water at 20°C (Pa·s)
+        let eta_0 = VISCOSITY_WATER; // 1.002e-3 Pa·s — water at 20°C, Duck (1990)
         let t_ref = ROOM_TEMPERATURE_K; // 20°C in K
         let s = 0.02_f64; // 1/K
         let model = ShearViscosityModel::new(eta_0, t_ref, s);
@@ -74,7 +75,7 @@ mod tests {
     /// For s=0.02, ΔT=10: η = η_0 · exp(−0.2) ≈ η_0 · 0.8187.
     #[test]
     fn viscosity_matches_arrhenius_formula_analytically() {
-        let eta_0 = 1e-3_f64;
+        let eta_0 = VISCOSITY_WATER;
         let t_ref = ROOM_TEMPERATURE_K;
         let s = 0.02_f64;
         let model = ShearViscosityModel::new(eta_0, t_ref, s);

@@ -14,12 +14,14 @@ use crate::core::constants::fundamental::{
 use crate::core::constants::tissue_acoustics::{
     DENSITY_BLOOD,
     DENSITY_BRAIN,
+    DENSITY_CARTILAGE,
     DENSITY_FAT,
     DENSITY_KIDNEY,
     DENSITY_LIVER,
     DENSITY_MUSCLE,
     SOUND_SPEED_BLOOD,
     SOUND_SPEED_BRAIN,
+    SOUND_SPEED_CARTILAGE,
     SOUND_SPEED_FAT,
     SOUND_SPEED_KIDNEY,
     SOUND_SPEED_LIVER,
@@ -194,7 +196,7 @@ pub fn tissue_properties(tissue: &str) -> (f64, f64, f64, f64, f64) {
         "blood" => (SOUND_SPEED_BLOOD, DENSITY_BLOOD, 0.14, 1.21, 6.1),
         "brain" => (SOUND_SPEED_BRAIN, DENSITY_BRAIN, 0.43, 1.3, 6.8),
         "kidney" => (SOUND_SPEED_KIDNEY, DENSITY_KIDNEY, 1.0, 1.0, 7.8),
-        "cartilage" => (1700.0, 1100.0, 2.0, 1.5, 8.5),
+        "cartilage" => (SOUND_SPEED_CARTILAGE, DENSITY_CARTILAGE, 2.0, 1.5, 8.5),
         _ => (SOUND_SPEED_TISSUE, DENSITY_TISSUE, 0.5, 1.0, 6.0),
     }
 }

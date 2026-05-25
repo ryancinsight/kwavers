@@ -18,7 +18,7 @@ fn test_zero_energy_field_has_zero_relative_error() {
     let shape = (grid.nx, grid.ny, grid.nz);
     let p = uniform_array(shape, 0.0);
     let v = uniform_array(shape, 0.0);
-    let rho = uniform_array(shape, 1000.0);
+    let rho = uniform_array(shape, DENSITY_WATER_NOMINAL);
     let c = uniform_array(shape, SOUND_SPEED_WATER_SIM);
     let err = validate_energy_conservation(&p, &v, &v, &v, &rho, &c, 0.0, &grid);
     assert!(err < 1e-8, "Zero field energy error: {err:.3e}");
@@ -48,7 +48,7 @@ fn test_entropy_production_zero_absorption() {
     let shape = (grid.nx, grid.ny, grid.nz);
     let p = uniform_array(shape, 1000.0);
     let v = uniform_array(shape, 0.0);
-    let rho = uniform_array(shape, 1000.0);
+    let rho = uniform_array(shape, DENSITY_WATER_NOMINAL);
     let c = uniform_array(shape, SOUND_SPEED_WATER_SIM);
     let alpha = uniform_array(shape, 0.0);
     let ds = entropy_production_rate(&p, &v, &v, &v, &rho, &c, &alpha, BODY_TEMPERATURE_K, &grid);
@@ -61,7 +61,7 @@ fn test_entropy_production_non_negative() {
     let shape = (grid.nx, grid.ny, grid.nz);
     let p = uniform_array(shape, 5000.0);
     let v = uniform_array(shape, 0.1);
-    let rho = uniform_array(shape, 1000.0);
+    let rho = uniform_array(shape, DENSITY_WATER_NOMINAL);
     let c = uniform_array(shape, SOUND_SPEED_WATER_SIM);
     let alpha = uniform_array(shape, 2.0);
     let ds = entropy_production_rate(&p, &v, &v, &v, &rho, &c, &alpha, BODY_TEMPERATURE_K, &grid);
@@ -77,7 +77,7 @@ fn test_entropy_production_scales_linearly_with_absorption() {
     let shape = (grid.nx, grid.ny, grid.nz);
     let p = uniform_array(shape, 2000.0);
     let v = uniform_array(shape, 0.05);
-    let rho = uniform_array(shape, 1000.0);
+    let rho = uniform_array(shape, DENSITY_WATER_NOMINAL);
     let c = uniform_array(shape, SOUND_SPEED_WATER_SIM);
     let alpha1 = uniform_array(shape, 1.0);
     let alpha2 = uniform_array(shape, 2.0);
@@ -132,7 +132,7 @@ fn test_heat_source_zero_absorption() {
     let shape = (grid.nx, grid.ny, grid.nz);
     let p = uniform_array(shape, 5000.0);
     let v = uniform_array(shape, 1.0);
-    let rho = uniform_array(shape, 1000.0);
+    let rho = uniform_array(shape, DENSITY_WATER_NOMINAL);
     let c = uniform_array(shape, SOUND_SPEED_WATER_SIM);
     let alpha = uniform_array(shape, 0.0);
     let q = acoustic_heat_source(&p, &v, &v, &v, &rho, &c, &alpha);
@@ -145,13 +145,15 @@ fn test_second_law_violation_detected() {
     let shape = (grid.nx, grid.ny, grid.nz);
     let p = uniform_array(shape, 1000.0);
     let v = uniform_array(shape, 0.0);
-    let rho = uniform_array(shape, 1000.0);
+    let rho = uniform_array(shape, DENSITY_WATER_NOMINAL);
     let c = uniform_array(shape, SOUND_SPEED_WATER_SIM);
     let alpha = uniform_array(shape, -1.0);
     let volume =
         (grid.nx as f64 * grid.dx) * (grid.ny as f64 * grid.dy) * (grid.nz as f64 * grid.dz);
-    let e_init =
-        1000.0 * 1000.0 / (2.0 * 1000.0 * SOUND_SPEED_WATER_SIM * SOUND_SPEED_WATER_SIM) * volume;
+    let p_init = 1000.0_f64; // test pressure [Pa] — matches p field above
+    let e_init = p_init * p_init
+        / (2.0 * DENSITY_WATER_NOMINAL * SOUND_SPEED_WATER_SIM * SOUND_SPEED_WATER_SIM)
+        * volume;
     let state = AcousticStateRefs {
         pressure: &p,
         velocity_x: &v,

@@ -100,6 +100,11 @@ pub const DENSITY_LUNG: f64 = 400.0;
 /// Reference: IT'IS Foundation database v4.0 (2022); Hasgall et al. (2022).
 pub const DENSITY_BREAST_GLAND: f64 = 1041.0;
 
+/// Density of hyaline cartilage (e.g., articular, tracheal) at body temperature (kg/m³).
+///
+/// Reference: Duck (1990) *Physical Properties of Tissue*, Table 4.1.
+pub const DENSITY_CARTILAGE: f64 = 1100.0;
+
 // ── Tissue / fluid sound speeds ───────────────────────────────────────────────
 
 /// Small-signal sound speed in human liver parenchyma at body temperature (m/s).
@@ -183,6 +188,11 @@ pub const SOUND_SPEED_LUNG: f64 = 650.0;
 ///
 /// Reference: Duck (1990) Table 4.6; Mast (2000) Ultrasound Med. Biol.
 pub const SOUND_SPEED_BREAST_GLAND: f64 = 1510.0;
+
+/// Small-signal sound speed in hyaline cartilage at body temperature (m/s).
+///
+/// Reference: Duck (1990) *Physical Properties of Tissue*, Table 4.6.
+pub const SOUND_SPEED_CARTILAGE: f64 = 1700.0;
 
 // ── B/A nonlinearity parameters ───────────────────────────────────────────────
 
