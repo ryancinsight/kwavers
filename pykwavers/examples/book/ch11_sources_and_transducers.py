@@ -27,11 +27,17 @@ from __future__ import annotations
 
 import os
 import numpy as np
-from scipy.special import j1
 import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+
+try:
+    import pykwavers as kw
+    _HAS_PYKWAVERS = True
+except ImportError:
+    kw = None
+    _HAS_PYKWAVERS = False
 
 REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 OUT_DIR = os.path.join(REPO_ROOT, "docs", "book", "figures", "ch11")
@@ -56,17 +62,19 @@ C0 = 1500.0   # m/s
 # ── Figure 01: Piston directivity ─────────────────────────────────────────────
 def fig01_piston_directivity() -> None:
     """
-    H(θ) = 2 J₁(ka sinθ) / (ka sinθ)
+    H(θ) = 2 J₁(ka sinθ) / (ka sinθ)  — O'Neil (1949).
+    Computed via kw.circular_piston_directivity (Rust kernel, normalised to unity on-axis).
     Sinc-like pattern; first null at ka sinθ = 1.22π.
     """
+    if not _HAS_PYKWAVERS:
+        raise ImportError("pykwavers is required for fig01 (piston directivity)")
     theta = np.linspace(-np.pi / 2 + 1e-6, np.pi / 2 - 1e-6, 3600)
 
     fig, axes = plt.subplots(1, 2, figsize=(11, 4.5))
     ka_values = [(2.0, "#1f77b4"), (5.0, "#ff7f0e"), (10.0, "#2ca02c"), (20.0, "#d62728")]
 
     for ka, col in ka_values:
-        x = ka * np.sin(theta)
-        H = np.where(np.abs(x) < 1e-10, 1.0, 2 * j1(x) / x)
+        H = np.asarray(kw.circular_piston_directivity(theta, ka))
         H_dB = 20 * np.log10(np.abs(H) + 1e-12)
         axes[0].plot(np.degrees(theta), H**2, color=col, label=f"$ka = {ka:.0f}$")
         axes[1].plot(np.degrees(theta), np.clip(H_dB, -60, 0), color=col, label=f"$ka = {ka:.0f}$")
@@ -91,32 +99,25 @@ def fig01_piston_directivity() -> None:
 # ── Figure 02: Focused bowl on-axis pressure ──────────────────────────────────
 def fig02_focused_bowl_onaxis() -> None:
     """
-    On-axis pressure of a focused spherical bowl transducer (O'Neil 1949):
-      p(z) = 2ρcU₀ sin(k/2 · |z·(1/cos α_z - 1)|) · exp(ikz)
-    where z is depth along axis, F is focal length, a is aperture radius,
-    and α_z = arctan(a/z).
-    Simplified (Zemanek 1971 paraxial approximation):
-      |p(z)|/|p_focus| ≈ |sin((ka²/8F)·(z-F)/F·(1+z/F))| — near focus
-    Use exact Rayleigh integral result on axis:
-      p(z) = ρcU₀(exp(ikz) - exp(ik√(z²+a²))) / (1 - cos α)
+    On-axis pressure of a focused spherical bowl transducer (O'Neil 1949).
+    Computed via kw.focused_bowl_onaxis (Rust kernel, exact Rayleigh integral on axis).
+    Args: bowl_radius_m = aperture radius a, focal_length_m = F.
     """
+    if not _HAS_PYKWAVERS:
+        raise ImportError("pykwavers is required for fig02 (focused bowl on-axis pressure)")
     F = 0.06    # 60 mm focal length
     a = 0.015   # 15 mm aperture radius
     f = 1.0e6   # 1 MHz
-    k = 2 * np.pi * f / C0
-    rho = 998.0
 
     z = np.linspace(0.001, 0.12, 3000)  # 1 mm to 120 mm
-    r1 = np.sqrt(z**2 + a**2)           # distance from bowl rim to on-axis point
-
-    # Exact on-axis pressure integral (normalised):
-    # p(z) = rho c U0 (e^{ikz} - e^{ikr1})
-    # |p| = rho c U0 * 2 |sin(k(r1-z)/2)|
-    p_norm = 2 * np.abs(np.sin(k * (r1 - z) / 2))
-    p_focus = 2 * np.abs(np.sin(k * (np.sqrt(F**2 + a**2) - F) / 2))
+    # On-axis pressure [Pa] with unit source amplitude (p0_pa=1.0)
+    p_pa = np.asarray(kw.focused_bowl_onaxis(z, a, F, f, 1.0, C0))
+    # Normalise by pressure at the geometric focus
+    p_focus_val = float(np.asarray(kw.focused_bowl_onaxis(np.array([F]), a, F, f, 1.0, C0))[0])
+    p_norm = p_pa / (p_focus_val if p_focus_val > 0.0 else 1.0)
 
     fig, ax = plt.subplots(figsize=(8, 4.5))
-    ax.plot(z * 1e3, p_norm / p_focus, color="#1f77b4")
+    ax.plot(z * 1e3, p_norm, color="#1f77b4")
     ax.axvline(F * 1e3, color="k", linestyle="--", linewidth=1, label=f"Focus z=F={F*1000:.0f} mm")
     ax.set_xlabel("Axial depth $z$ (mm)")
     ax.set_ylabel("Normalised pressure $|p|/|p_F|$")
@@ -132,9 +133,11 @@ def fig02_focused_bowl_onaxis() -> None:
 # ── Figure 03: Linear phased array beam pattern ───────────────────────────────
 def fig03_array_beam_pattern() -> None:
     """
-    Far-field array factor: AF(θ) = Σ_{n=0}^{N-1} w_n exp(i·n·kd·(sinθ - sinθ_s))
-    Rectangular aperture: w_n = 1.
+    Far-field array factor: AF(θ) = Σ_{n=0}^{N-1} exp(i·n·kd·(sinθ - sinθ_s)).
+    Computed via kw.linear_array_factor (Rust kernel, rectangular apodization).
     """
+    if not _HAS_PYKWAVERS:
+        raise ImportError("pykwavers is required for fig03 (array beam pattern)")
     N = 64          # elements
     d = 0.3e-3      # 0.3 mm pitch (half-wavelength at 2.5 MHz)
     f = 2.5e6
@@ -147,9 +150,7 @@ def fig03_array_beam_pattern() -> None:
     fig, ax = plt.subplots(figsize=(8, 5))
     for ang_deg, col in zip(steer_angles_deg, colors):
         theta_s = np.radians(ang_deg)
-        # Array factor (rectangular apodization)
-        phase = k * d * (np.sin(theta)[:, None] - np.sin(theta_s)) * np.arange(N)[None, :]
-        AF = np.abs(np.sum(np.exp(1j * phase), axis=1)) / N
+        AF = np.asarray(kw.linear_array_factor(theta, k, d, N, theta_s))
         AF_dB = 20 * np.log10(AF + 1e-12)
         ax.plot(np.degrees(theta), np.clip(AF_dB, -60, 0),
                 color=col, label=rf"$\theta_s = {ang_deg:.0f}°$")
@@ -168,25 +169,31 @@ def fig03_array_beam_pattern() -> None:
 # ── Figure 04: Delay law ──────────────────────────────────────────────────────
 def fig04_delay_law() -> None:
     """
-    tau_i = (|r_i - r_f| - min_j |r_j - r_f|) / c
-    For linear array steered to angle theta_s or focused to (x_f, z_f).
+    tau_i = (|r_i - r_f| - min_j |r_j - r_f|) / c.
+    Computed via kw.delay_law_focus_2d (Rust kernel).
+    Steering: focus placed at (z_far · sin θ_s, z_far) with z_far = 1e3 m (far-field limit).
+    Focusing: near-field focus at (x_f, z_f) in the (x, z) plane.
     """
+    if not _HAS_PYKWAVERS:
+        raise ImportError("pykwavers is required for fig04 (delay law)")
     N = 64
     d = 0.3e-3
     elem_x = (np.arange(N) - (N - 1) / 2) * d
+    elem_z_zeros = np.zeros(N)
 
     fig, axes = plt.subplots(1, 2, figsize=(11, 4.5))
 
-    # Steering only (far-field)
+    # Steering (far-field): focus at 1 km in direction θ_s
+    Z_FAR = 1.0e3
     for ang_deg, col, ls in [(0.0, "#1f77b4", "solid"), (15.0, "#ff7f0e", "dashed"), (30.0, "#2ca02c", "dotted")]:
         theta_s = np.radians(ang_deg)
-        tau = elem_x * np.sin(theta_s) / C0
-        tau -= tau.min()
+        x_far = Z_FAR * np.sin(theta_s)
+        tau = np.asarray(kw.delay_law_focus_2d(elem_x, elem_z_zeros, x_far, Z_FAR, C0))
         axes[0].plot(np.arange(N), tau * 1e6, color=col, linestyle=ls, label=rf"$\theta_s={ang_deg:.0f}°$")
 
     axes[0].set_xlabel("Element index")
     axes[0].set_ylabel(r"Delay $\tau_i$ (µs)")
-    axes[0].set_title("Steering delay law (linear)")
+    axes[0].set_title("Steering delay law (far-field focus)")
     axes[0].legend()
 
     # Focused (near-field)
@@ -194,10 +201,7 @@ def fig04_delay_law() -> None:
     for x_f, col, lbl in [(0.0, "#1f77b4", "F=(0, 50mm)"),
                            (0.01, "#ff7f0e", "F=(10, 50mm)"),
                            (0.02, "#2ca02c", "F=(20, 50mm)")]:
-        r_f = np.array([x_f, 0.0, F])
-        r_i = np.stack([elem_x, np.zeros(N), np.zeros(N)], axis=1)
-        dist = np.linalg.norm(r_i - r_f, axis=1)
-        tau = (dist - dist.min()) / C0
+        tau = np.asarray(kw.delay_law_focus_2d(elem_x, elem_z_zeros, x_f, F, C0))
         axes[1].plot(np.arange(N), tau * 1e6, label=lbl)
 
     axes[1].set_xlabel("Element index")

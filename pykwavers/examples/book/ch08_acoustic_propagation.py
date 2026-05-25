@@ -33,6 +33,13 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 
+try:
+    import pykwavers as kw
+    _HAS_PYKWAVERS = True
+except ImportError:
+    kw = None
+    _HAS_PYKWAVERS = False
+
 # ── Output directory ─────────────────────────────────────────────────────────
 REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 OUT_DIR = os.path.join(REPO_ROOT, "docs", "book", "figures", "ch08")
@@ -110,12 +117,15 @@ def fig03_reflection_transmission() -> None:
     Intensity coefficients: R_I = R², T_I = 1 - R² = T·Z1/Z2.
     Sweep Z2/Z1 from 0.1 to 10.
     """
+    if not _HAS_PYKWAVERS:
+        raise ImportError("pykwavers is required for fig03 (reflection/transmission coefficients)")
     Z1 = 1.0  # normalised
     ratio = np.linspace(0.1, 10.0, 800)
     Z2 = ratio * Z1
 
-    R_p = (Z2 - Z1) / (Z2 + Z1)
-    T_p = 2 * Z2 / (Z2 + Z1)
+    # kw.reflection_pressure_coeff / transmission_pressure_coeff: scalar → vectorize.
+    R_p = np.array([kw.reflection_pressure_coeff(Z1, z2) for z2 in Z2])
+    T_p = np.array([kw.transmission_pressure_coeff(Z1, z2) for z2 in Z2])
     R_I = R_p**2
     T_I = 1.0 - R_I  # energy conservation
 
@@ -145,9 +155,12 @@ def fig03_reflection_transmission() -> None:
 # ── Figure 04: Power-law absorption for tissue types ─────────────────────────
 def fig04_power_law_absorption() -> None:
     """
-    α(f) = α₀ · f^y  (Np/m when f in MHz)
-    Tissue data from Duck (1990) Table 4.1
+    α(f) = α₀ · f^y  [dB/cm], f in MHz.
+    Tissue data from Duck (1990) Table 4.1.
+    Computed via kw.absorption_power_law_db_cm (Rust kernel).
     """
+    if not _HAS_PYKWAVERS:
+        raise ImportError("pykwavers is required for fig04 (power-law absorption)")
     f_MHz = np.linspace(0.5, 10.0, 500)
     tissues = [
         ("Water (20 °C)",  0.002, 2.0, "#1f77b4"),
@@ -160,7 +173,7 @@ def fig04_power_law_absorption() -> None:
 
     fig, ax = plt.subplots(figsize=(8, 5))
     for name, alpha0, y, col in tissues:
-        alpha = alpha0 * f_MHz**y  # dB/cm
+        alpha = np.asarray(kw.absorption_power_law_db_cm(f_MHz, alpha0, y))
         ax.semilogy(f_MHz, alpha, label=name, color=col)
 
     ax.set_xlabel("Frequency (MHz)")

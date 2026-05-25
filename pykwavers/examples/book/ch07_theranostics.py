@@ -130,12 +130,14 @@ plt.close()
 print("[fig02] Minnaert resonance frequency")
 
 R0_arr = np.logspace(-7, -4, 300)  # 0.1 μm to 100 μm
-f_minnaert = (1.0 / (2 * np.pi * R0_arr)) * np.sqrt(3 * KAPPA * P0 / RHO_L)
+# kw.minnaert_resonance_hz: Theorem 7.2 — f₀ = (1/2πR₀)·√(3κP₀/ρ)
+f_minnaert = np.array([kw.minnaert_resonance_hz(r0, KAPPA, P0, RHO_L) for r0 in R0_arr])
 
 fig, ax = plt.subplots(figsize=(7, 4.5))
 ax.loglog(R0_arr * 1e6, f_minnaert / 1e6, color="C0", lw=2, label="Minnaert (Eq. 7.3)")
 
 for f_mark, label_m, col_m in [(1, "1 MHz", "C1"), (5, "5 MHz", "C2"), (0.5, "0.5 MHz", "C3")]:
+    # Inverse Minnaert: R₀ = (1/2π f)·√(3κP₀/ρ) — algebraic rearrangement, no binding.
     R_mark = (1.0 / (2 * np.pi * f_mark * 1e6)) * np.sqrt(3 * KAPPA * P0 / RHO_L)
     ax.axvline(R_mark * 1e6, color=col_m, lw=1.0, ls=":", alpha=0.7)
     ax.axhline(f_mark, color=col_m, lw=0.8, ls=":")
