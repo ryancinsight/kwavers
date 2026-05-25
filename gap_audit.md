@@ -1,5 +1,42 @@
 # Gap Audit
 
+## Focused-Bowl Source Label Artifact Closure (2026-05-25)
+
+Active book artifacts still encoded vendor/helmet source identity in Chapter 31
+renderer strings, Chapter 31 prose, and stale Chapter 29/31 metrics metadata
+even though the Rust layout layer now reports generic focused-bowl model names.
+That created documentation drift from the source-domain contract that
+`BowlTransducer` owns geometry and scene/anatomy only configures placement.
+
+### Closure
+- Replaced active Chapter 31 abdominal and transcranial source labels with
+  generic `skin-coupled focused bowl` and `transcranial focused bowl`
+  terminology.
+- Synchronized stale Chapter 29/31 metrics metadata to the current Rust model
+  names: `focused_bowl_256_element_skin_coupled_arc`,
+  `{anatomy}_focused_bowl_256_element_full_patient_skin_arc`,
+  `{anatomy}_focused_bowl_slowness_steered_3d_westervelt_sources`, and
+  `transcranial_focused_bowl_projection`.
+- Added a regression test that rejects vendor/helmet source identity labels in
+  the active book focused-bowl artifacts.
+
+### Verification summary
+- `python -m compileall pykwavers/examples/book/ch31_clinical_device_geometry.py pykwavers/tests/test_book_therapy_chapters.py`:
+  exit 0.
+- `python -m json.tool docs/book/figures/ch31/metrics.json` and
+  `python -m json.tool docs/book/figures/ch29/metrics.json`: exit 0.
+- `rg -n "HistoSonics|InSightec|Exablate|histosonics_like|insightec_like|brain_helmet|helmet" pykwavers/examples/book/ch31_clinical_device_geometry.py docs/book/clinical_device_geometry.md docs/book/figures/ch31/metrics.json docs/book/figures/ch29/metrics.json -S`:
+  no matches.
+- Direct execution of
+  `test_active_book_focused_bowl_artifacts_use_generic_source_labels`: pass.
+- `pytest pykwavers/tests/test_book_therapy_chapters.py -q -k active_book_focused_bowl_artifacts_use_generic_source_labels`:
+  blocked during collection by the pre-existing stale `pykwavers._pykwavers`
+  debug extension missing `acoustic_intensity_depth_profile`.
+
+### Residual risk
+- Historical changelog and audit entries still contain older labels as change
+  history. They are not active source/model surfaces.
+
 ## Ali 2025 Finite-Window Report Routing (2026-05-25)
 
 The Rust finite-window PSTD Born predictor existed at the PyO3 boundary, but

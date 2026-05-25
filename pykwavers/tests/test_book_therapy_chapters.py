@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sys
 import tomllib
 from pathlib import Path
@@ -265,6 +266,40 @@ def test_chapter29_ct_context_draws_transducer_locations():
         assert ax.get_xlim()[1] > 0.03
     finally:
         plt.close(fig)
+
+
+def test_active_book_focused_bowl_artifacts_use_generic_source_labels():
+    checked_paths = [
+        BOOK_DIR / "ch31_clinical_device_geometry.py",
+        DOCS_DIR / "clinical_device_geometry.md",
+        DOCS_DIR / "figures" / "ch31" / "metrics.json",
+        DOCS_DIR / "figures" / "ch29" / "metrics.json",
+    ]
+    forbidden_source_identity_tokens = (
+        "HistoSonics",
+        "InSightec",
+        "Exablate",
+        "histosonics_like",
+        "insightec_like",
+        "brain_helmet",
+        "helmet",
+    )
+
+    for path in checked_paths:
+        text = path.read_text(encoding="utf-8")
+        for token in forbidden_source_identity_tokens:
+            assert token not in text, (path, token)
+
+    ch31_metrics = json.loads((DOCS_DIR / "figures" / "ch31" / "metrics.json").read_text(encoding="utf-8"))
+    assert ch31_metrics["inverse_results"]["brain"]["device_model"] == "transcranial_focused_bowl_projection"
+    assert (
+        ch31_metrics["inverse_results"]["liver"]["device_model"]
+        == "focused_bowl_256_element_skin_coupled_arc"
+    )
+    assert (
+        ch31_metrics["inverse_results"]["kidney"]["device_model"]
+        == "focused_bowl_256_element_skin_coupled_arc"
+    )
 
 
 def test_chapter29_reconstruction_diagnostics_quantify_outside_target_sidelobes():

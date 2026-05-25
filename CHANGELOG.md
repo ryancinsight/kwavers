@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Fixed (2026-05-25) - Focused Bowl Source Label Artifact Closure
+
+- [patch] Replace vendor/helmet source identity labels in active Chapter 31
+  focused-bowl renderer text, Chapter 31 book prose, and stale Chapter 29/31
+  metrics artifacts with generic focused-bowl model names. Added a book test
+  that rejects those labels in active focused-bowl artifacts and asserts the
+  current transcranial source model is `transcranial_focused_bowl_projection`.
+
 ### Changed (2026-05-25) - Ali 2025 Finite-Window Report Routing
 
 - [patch] Route the Ali 2025 reduced comparison report through the Rust-backed

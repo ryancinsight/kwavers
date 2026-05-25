@@ -7,21 +7,19 @@ All geometry is computed by kwavers (Rust) through the PyO3 wrappers:
 
 Python owns only figure rendering and file I/O.  No physics computation is in this file.
 
-Device naming note: the "HistoSonics-like" label refers to the bowl geometry
-(focused hemispherical array, central imaging cutout, anterior skin placement)
-common to research histotripsy systems.  The "InSightec-like" label refers to the
-transcranial phased-array focused-bowl geometry (1024 elements, calvarium coverage,
-CT-planned skull-entry correction) common to Exablate Neuro platforms.  Neither
-label implies proprietary device specifications.
+Device naming note: source geometry is expressed through generic focused-bowl
+parameters. The abdominal cases use a skin-coupled hemispherical bowl with a
+central imaging cutout; the brain case uses a 1024-element transcranial
+calvarium focused-bowl cap with CT-planned skull-entry correction.
 
 Coordinate convention: all physical coordinates are in metres with origin at the
 body centroid of each CT volume.  Positive x is patient right, positive y is
 anterior, positive z is superior (standard LPS orientation).
 
 Figures produced:
-  fig01_liver_array_3d_geometry.png  — HistoSonics-like hemispherical phased array on liver CT
-  fig02_kidney_array_3d_geometry.png — HistoSonics-like hemispherical phased array on kidney CT
-  fig03_brain_focused_bowl_3d_calvarium.png — InSightec-like focused bowl at calvarium level
+  fig01_liver_array_3d_geometry.png  — skin-coupled hemispherical focused bowl on liver CT
+  fig02_kidney_array_3d_geometry.png — skin-coupled hemispherical focused bowl on kidney CT
+  fig03_brain_focused_bowl_3d_calvarium.png — transcranial focused bowl at calvarium level
   fig04_exposure_comparison.png      — simulated pressure for all three anatomies
   fig05_reconstruction_metrics.png   — reconstruction fidelity metrics
   fig06_liver_image_then_treat.png   — liver image-then-treat sequence (recon + focused lesion)
@@ -166,17 +164,16 @@ def _draw_array_scaffold(
     n_lon: int = 16,
     n_arc: int = 80,
 ) -> None:
-    """Render the mechanical scaffold that holds the HistoSonics-like phased-array
+    """Render the mechanical scaffold that holds the skin-coupled phased-array
     elements as a sparse wireframe of latitude / longitude arcs.
 
-    The real HistoSonics applicator is a **phased array of discrete piston
-    transducers mounted on a hemispherical scaffold**, not a continuous
-    radiating bowl surface. Drawing a solid translucent cap overstates the
-    radiating area and visually conflates the scaffold geometry with a
-    classical FUS bowl. The correct depiction is the scaffold support
-    structure — a few latitude rings and a few longitude arcs — with the
-    discrete element scatter (drawn elsewhere) showing where the actual
-    piezo elements sit.
+    The modeled applicator is a **phased array of discrete piston transducers
+    mounted on a hemispherical scaffold**, not a continuous radiating bowl
+    surface. Drawing a solid translucent cap overstates the radiating area and
+    visually conflates the scaffold geometry with a classical FUS bowl. The
+    correct depiction is the scaffold support structure — a few latitude rings
+    and a few longitude arcs — with the discrete element scatter (drawn
+    elsewhere) showing where the actual piezo elements sit.
 
     Geometry: each scaffold point lies on the sphere of radius R centred at
     the focus F with axis d̂ = (F − S) / ‖F − S‖ pointing into the body:
@@ -234,7 +231,7 @@ def render_abdominal_3d(
     anatomy_label: str,
     fig_path: Path,
 ) -> Path:
-    """3-D scatter visualisation showing the HistoSonics-like hemispherical
+    """3-D scatter visualisation showing the skin-coupled hemispherical
     phased-array transducer on the skin surface.
 
     The body skin surface (with CT-bed voxels excluded by the largest-connected-
@@ -258,7 +255,7 @@ def render_abdominal_3d(
 
     fig = plt.figure(figsize=(14.0, 6.0), constrained_layout=True)
     fig.suptitle(
-        f"HistoSonics-like hemispherical phased array on {anatomy_label} CT — "
+        f"Skin-coupled hemispherical focused bowl on {anatomy_label} CT — "
         f"{int(geo['element_count'])} discrete elements, "
         f"focal depth {focal_depth_mm:.0f} mm, aperture radius {aperture_radius_mm:.0f} mm",
         fontsize=11,
@@ -386,7 +383,7 @@ def render_abdominal_3d(
 # ── Brain focused-bowl rendering (calvarium-level) ──────────────────────────────
 
 def render_brain_focused_bowl_3d(geo: dict[str, object], fig_path: Path) -> Path:
-    """Render the 1024-element InSightec-like focused bowl covering the calvarium.
+    """Render the 1024-element transcranial focused bowl covering the calvarium.
 
     The view is tilted to show the elements ring the upper skull (calvarium), not
     the neck.  Skull-beam intersection points (yellow) confirm the beams enter the
@@ -403,7 +400,7 @@ def render_brain_focused_bowl_3d(geo: dict[str, object], fig_path: Path) -> Path
 
     fig = plt.figure(figsize=(14.0, 6.0), constrained_layout=True)
     fig.suptitle(
-        f"InSightec-like focused bowl at calvarium level — {int(geo['element_count'])} elements, "
+        f"Transcranial focused bowl at calvarium level — {int(geo['element_count'])} elements, "
         f"bowl radius {1e3 * float(geo['bowl_radius_m']):.0f} mm, "
         f"skull entry fraction {float(geo['intersection_fraction']):.2f}",
         fontsize=11,
@@ -482,9 +479,9 @@ def render_exposure_comparison(
 ) -> Path:
     """Side-by-side simulated exposure maps for all three anatomies."""
     cases = [
-        (liver_result, "liver (HistoSonics-like)", "#f5a623"),
-        (kidney_result, "kidney (HistoSonics-like)", "#7b68ee"),
-        (brain_result, "brain (InSightec-like)", "#4a9edd"),
+        (liver_result, "liver (skin-coupled bowl)", "#f5a623"),
+        (kidney_result, "kidney (skin-coupled bowl)", "#7b68ee"),
+        (brain_result, "brain (transcranial bowl)", "#4a9edd"),
     ]
     fig, axes = plt.subplots(1, 3, figsize=(16.0, 5.5), constrained_layout=True)
     fig.suptitle("Simulated pressure exposure — CT-derived heterogeneous media", fontsize=12)
@@ -576,7 +573,7 @@ def render_image_then_treat_sequence(
 
     fig, axes = plt.subplots(1, 3, figsize=(15.5, 5.0), constrained_layout=True)
     fig.suptitle(
-        f"{anatomy_label} — image-then-treat sequence on the same HistoSonics-like "
+        f"{anatomy_label} — image-then-treat sequence on the same skin-coupled "
         f"hemispherical phased-array applicator",
         fontsize=11,
     )
@@ -745,8 +742,8 @@ def write_metrics(
     payload: dict[str, object] = {
         "chapter": 31,
         "analysis": (
-            "3-D clinical device geometry: HistoSonics-like hemispherical phased array on liver/kidney skin, "
-            "InSightec-like focused bowl at calvarium; fully simulated exposures and reconstructions "
+            "3-D clinical device geometry: skin-coupled abdominal focused bowls on liver/kidney, "
+            "transcranial focused bowl at calvarium; fully simulated exposures and reconstructions "
             "via kwavers PyO3 API with RITK NIfTI/DICOM ingestion"
         ),
         "figures": [str(p) for p in figures],

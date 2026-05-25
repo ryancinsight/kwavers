@@ -44,10 +44,14 @@
 - [x] `test_therapy_step_execution`: already passing without `#[ignore]`; stale checklist entry closed [patch]
 - [x] 4111/4111 PASS; 12 ignored (down from 14); 0 failed
 
+### Closed 2026-05-25 (focused-bowl source label closure)
+
+- [x] Active Chapter 31 focused-bowl artifacts now use generic source labels; stale Chapter 29/31 metrics use current Rust model names; regression test rejects vendor/helmet source identity labels in active focused-bowl artifacts [patch]
+
 ### Closed 2026-05-22 (session 2 — visualization + tests)
 
 - [x] `WATER.impedance`: fix arithmetic error (`1_479_452` → `DENSITY_WATER * SOUND_SPEED_WATER`); SSOT derived; test_impedance_calculation PASS [patch]
-- [x] `plan_transcranial_focused_bowl_placement`: replace hardcoded `BOWL_CAP_UNIT_Z_MIN=-0.28` (theta_max=106°) with scene-driven `cap_min_polar_rad`/`cap_max_polar_rad` parameters (default 0.22/1.18 rad = 12.6°–67.6°, InSightec ExAblate Neuro 4000 geometry); elements now cover only calvarium [patch]
+- [x] `plan_transcranial_focused_bowl_placement`: replace hardcoded `BOWL_CAP_UNIT_Z_MIN=-0.28` (theta_max=106°) with scene-driven `cap_min_polar_rad`/`cap_max_polar_rad` parameters (default 0.22/1.18 rad = 12.6°–67.6°); elements now cover only calvarium [patch]
 - [x] `focused_bowl_pykwavers_kwargs()`: thread `cap_min_polar_rad`, `cap_max_polar_rad` from scene to PyO3 API [patch]
 - [x] `plan_transcranial_focused_bowl_placement_from_ritk_ct`: expose `cap_min_polar_rad`, `cap_max_polar_rad` as optional parameters [minor]
 - [x] `brain_focused_bowl_3d_uses_calvarium_cap_not_inferior_hemisphere`: assertions updated to cos(0.22)/cos(1.18) = 0.976/0.381 bounds; calvarium-only constraint (min_unit_z > 0) verified [patch]
