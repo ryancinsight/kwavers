@@ -1,5 +1,8 @@
 use super::StateDependentConstants;
-use crate::core::constants::thermodynamic::KELVIN_OFFSET_C;
+use crate::core::constants::numerical::MMHG_TO_PA;
+use crate::core::constants::thermodynamic::{
+    KELVIN_OFFSET_C, WATER_ANTOINE_A, WATER_ANTOINE_B, WATER_ANTOINE_C,
+};
 
 impl StateDependentConstants {
     /// Calculate surface tension of water with temperature dependence
@@ -56,14 +59,11 @@ impl StateDependentConstants {
     /// Vapor pressure (Pa)
     #[must_use]
     pub fn vapor_pressure_water(&self, temperature: f64) -> f64 {
-        const A: f64 = 8.07131;
-        const B: f64 = 1730.63;
-        const C: f64 = 233.426;
-
-        let log_p_mmhg = A - B / (C + temperature);
+        // Antoine equation: log₁₀(P_mmHg) = A − B/(C+T_°C); Stull (1947).
+        let log_p_mmhg =
+            WATER_ANTOINE_A - WATER_ANTOINE_B / (WATER_ANTOINE_C + temperature);
         let p_mmhg = 10.0_f64.powf(log_p_mmhg);
-
-        p_mmhg * 133.322
+        p_mmhg * MMHG_TO_PA
     }
 
     /// Calculate cavitation threshold pressure.

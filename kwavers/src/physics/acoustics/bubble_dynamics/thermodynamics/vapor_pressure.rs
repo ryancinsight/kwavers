@@ -1,7 +1,8 @@
 //! Vapor pressure models for phase equilibrium
 
 use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, GAS_CONSTANT as R_GAS};
-use crate::core::constants::numerical::MPA_TO_PA;
+use crate::core::constants::numerical::{MMHG_TO_PA, MPA_TO_PA};
+use crate::core::constants::thermodynamic::{WATER_ANTOINE_A, WATER_ANTOINE_B, WATER_ANTOINE_C};
 use crate::core::constants::{
     H_VAP_WATER_100C, P_CRITICAL_WATER, P_TRIPLE_WATER, T_BOILING_WATER, T_CRITICAL_WATER,
     T_TRIPLE_WATER,
@@ -86,12 +87,8 @@ impl ThermodynamicsCalculator {
     /// log10(P) = A - B/(C + T)
     /// where P is in mmHg and T is in °C
     fn antoine_equation(&self, temperature: f64) -> f64 {
-        // Antoine coefficients for water (valid 1-100°C)
-        // From NIST Chemistry WebBook
-        const A: f64 = 8.07131;
-        const B: f64 = 1730.63;
-        const C: f64 = 233.426;
-
+        // Antoine equation: log₁₀(P_mmHg) = A − B/(C+T_°C); valid 1–100 °C.
+        // Coefficients: Stull (1947) Ind. Eng. Chem. 39(4):517–540.
         let t_celsius = crate::core::constants::thermodynamic::kelvin_to_celsius(temperature);
 
         if !(1.0..=100.0).contains(&t_celsius) {
@@ -99,11 +96,10 @@ impl ThermodynamicsCalculator {
             return self.wagner_equation(temperature);
         }
 
-        let log10_p_mmhg = A - B / (C + t_celsius);
+        let log10_p_mmhg =
+            WATER_ANTOINE_A - WATER_ANTOINE_B / (WATER_ANTOINE_C + t_celsius);
         let p_mmhg = 10_f64.powf(log10_p_mmhg);
-
-        // Convert mmHg to Pa (1 mmHg = 133.322 Pa)
-        p_mmhg * 133.322
+        p_mmhg * MMHG_TO_PA
     }
 
     /// Clausius-Clapeyron relation
