@@ -3,9 +3,16 @@ use std::f64::consts::PI;
 use ndarray::{Array1, Array2, Array3};
 
 use crate::core::constants::acoustic_parameters::DB_TO_NP;
-use crate::core::constants::fundamental::{
-    ACOUSTIC_ABSORPTION_BRAIN, ACOUSTIC_ABSORPTION_SKULL_MIN, ACOUSTIC_ABSORPTION_SKULL_RANGE,
-    DENSITY_BRAIN, DENSITY_SKULL_CORTICAL_RANGE, DENSITY_SKULL_MIN, HU_BONE_THRESHOLD,
+use crate::core::constants::tissue_acoustics::{
+    ACOUSTIC_ABSORPTION_BRAIN,
+    ACOUSTIC_ABSORPTION_SKULL_MIN,
+    ACOUSTIC_ABSORPTION_SKULL_RANGE,
+    DENSITY_BRAIN,
+};
+use crate::core::constants::ct_acoustics::{
+    DENSITY_SKULL_CORTICAL_RANGE,
+    DENSITY_SKULL_MIN,
+    HU_BONE_THRESHOLD,
     HU_SKULL_RANGE,
 };
 use crate::core::constants::numerical::MHZ_TO_HZ;

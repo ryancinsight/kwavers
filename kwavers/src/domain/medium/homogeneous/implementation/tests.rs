@@ -1,8 +1,12 @@
 use crate::core::constants::cavitation::VISCOSITY_WATER;
 use crate::core::constants::fundamental::{
-    DENSITY_BLOOD, DENSITY_WATER, DENSITY_WATER_NOMINAL, SOUND_SPEED_AIR, SOUND_SPEED_BLOOD,
-    SOUND_SPEED_WATER, SOUND_SPEED_WATER_SIM,
+    DENSITY_WATER,
+    DENSITY_WATER_NOMINAL,
+    SOUND_SPEED_AIR,
+    SOUND_SPEED_WATER,
+    SOUND_SPEED_WATER_SIM,
 };
+use crate::core::constants::tissue_acoustics::{DENSITY_BLOOD, SOUND_SPEED_BLOOD};
 use crate::domain::grid::Grid;
 use crate::domain::medium::{
     core::CoreMedium, elastic::ElasticProperties, viscous::ViscousProperties,

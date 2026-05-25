@@ -1,11 +1,14 @@
 //! CT-derived attenuation maps for nonlinear 3-D theranostic propagation.
 
 use crate::core::constants::acoustic_parameters::NP_TO_DB;
-use crate::core::constants::fundamental::{
-    ACOUSTIC_ABSORPTION_BRAIN_WHITE, ACOUSTIC_ABSORPTION_SKULL_CORTICAL_MIN,
-    ACOUSTIC_ABSORPTION_SKULL_MIN, ACOUSTIC_ABSORPTION_SKULL_RANGE, ACOUSTIC_ABSORPTION_TISSUE,
-    HU_BONE_THRESHOLD,
+use crate::core::constants::fundamental::ACOUSTIC_ABSORPTION_TISSUE;
+use crate::core::constants::tissue_acoustics::{
+    ACOUSTIC_ABSORPTION_BRAIN_WHITE,
+    ACOUSTIC_ABSORPTION_SKULL_CORTICAL_MIN,
+    ACOUSTIC_ABSORPTION_SKULL_MIN,
+    ACOUSTIC_ABSORPTION_SKULL_RANGE,
 };
+use crate::core::constants::ct_acoustics::HU_BONE_THRESHOLD;
 
 /// Per-voxel attenuation coefficient at 1 MHz in Np/m. The frequency
 /// dependence follows the power law `alpha(f) = alpha(1MHz) * f_MHz^y`, where

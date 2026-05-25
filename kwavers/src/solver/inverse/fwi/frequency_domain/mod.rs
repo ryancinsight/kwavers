@@ -38,11 +38,17 @@
 //!    projection also uses the same finite-window source/bin transfer as the
 //!    PSTD acquisition data.
 //!
+//! Finite-window first-order PSTD scattering lives in
+//! [`simulate_pstd_finite_window_born_observation`]. It is a time-recurrence
+//! theorem, not a stationary CBS operator, so it is exposed as a forward
+//! diagnostic until its adjoint is derived.
+//!
 //! The gradient is the exact discrete adjoint of the selected forward
 //! operator; finite-difference checks against any [`HelmholtzForwardOperator`]
 //! impl match the implemented gradient to first order.
 
 pub mod cbs;
+mod finite_window;
 mod forward;
 mod gradient;
 mod inversion;
@@ -57,6 +63,9 @@ pub use operator::{
 };
 
 pub use cbs::{AbsorbingBoundary, PstdTemporalTransferConfig};
+pub use finite_window::{
+    simulate_pstd_finite_window_born_observation, PstdFiniteWindowBornConfig,
+};
 pub use forward::simulate_frequency_observation;
 pub use inversion::invert;
 pub use types::{Config, FrequencyObservation, InversionResult, FREQUENCY_DOMAIN_FWI_SOLVER_MODEL};

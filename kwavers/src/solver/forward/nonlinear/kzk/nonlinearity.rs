@@ -290,8 +290,11 @@ impl KzkNonlinearOperator {
 mod tests {
     use super::*;
     use crate::core::constants::fundamental::{
-        B_OVER_A_WATER, DENSITY_TISSUE, DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM,
+        DENSITY_TISSUE,
+        DENSITY_WATER_NOMINAL,
+        SOUND_SPEED_WATER_SIM,
     };
+    use crate::core::constants::tissue_acoustics::B_OVER_A_WATER;
     use crate::core::constants::numerical::MHZ_TO_HZ;
     use crate::solver::forward::nonlinear::kzk::KZKConfig;
 

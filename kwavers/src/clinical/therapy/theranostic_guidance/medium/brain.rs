@@ -19,8 +19,11 @@ use crate::core::constants::acoustic_parameters::{
     NP_TO_DB, SKULL_ATTENUATION_MARSAC_MAX_NP_PER_M_MHZ, SOUND_SPEED_SKULL,
 };
 use crate::core::constants::fundamental::{
-    ACOUSTIC_ABSORPTION_TISSUE, HU_BONE_THRESHOLD, SOUND_SPEED_WATER, SOUND_SPEED_WATER_SIM,
+    ACOUSTIC_ABSORPTION_TISSUE,
+    SOUND_SPEED_WATER,
+    SOUND_SPEED_WATER_SIM,
 };
+use crate::core::constants::ct_acoustics::HU_BONE_THRESHOLD;
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array2;
 

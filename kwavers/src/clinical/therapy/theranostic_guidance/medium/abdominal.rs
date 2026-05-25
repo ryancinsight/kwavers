@@ -17,10 +17,9 @@
 //! Reference organ sound speeds: liver 1578 m/s, kidney 1560 m/s (Duck 1990 Table 4.6).
 
 use crate::core::constants::acoustic_parameters::SOFT_TISSUE_HU_BASE_SPEED_M_S;
-use crate::core::constants::fundamental::{
-    HU_ABDOMEN_BODY_THRESHOLD, SOUND_SPEED_AIR, SOUND_SPEED_KIDNEY, SOUND_SPEED_LIVER,
-    SOUND_SPEED_TISSUE,
-};
+use crate::core::constants::fundamental::{SOUND_SPEED_AIR, SOUND_SPEED_TISSUE};
+use crate::core::constants::tissue_acoustics::{SOUND_SPEED_KIDNEY, SOUND_SPEED_LIVER};
+use crate::core::constants::ct_acoustics::HU_ABDOMEN_BODY_THRESHOLD;
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::{s, Array2, Array3, Axis, Zip};
 

@@ -1,5 +1,5 @@
 use crate::core::constants::fundamental::{ACOUSTIC_ABSORPTION_TISSUE, SOUND_SPEED_WATER_SIM};
-use crate::core::constants::fundamental::SOFT_TISSUE_ABSORPTION_POWER_Y;
+use crate::core::constants::tissue_acoustics::SOFT_TISSUE_ABSORPTION_POWER_Y;
 use crate::core::constants::numerical::MHZ_TO_HZ;
 use super::types::{treeby_2010, pinton_2009, LiteratureValidationResult};
 use super::validator::LiteratureValidator;

@@ -1,7 +1,10 @@
 use super::*;
 use crate::core::constants::fundamental::{
-    DENSITY_BLOOD, DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM,
+    DENSITY_WATER_NOMINAL,
+    SOUND_SPEED_TISSUE,
+    SOUND_SPEED_WATER_SIM,
 };
+use crate::core::constants::tissue_acoustics::DENSITY_BLOOD;
 use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::domain::grid::Grid;
 use ndarray::Array3;

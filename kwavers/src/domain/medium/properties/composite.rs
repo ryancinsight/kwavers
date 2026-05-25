@@ -231,9 +231,8 @@ impl MaterialPropertiesBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::constants::fundamental::{
-        B_OVER_A_WATER, DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM,
-    };
+    use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
+    use crate::core::constants::tissue_acoustics::B_OVER_A_WATER;
 
     #[test]
     fn test_material_acoustic_only() {

@@ -79,9 +79,18 @@ fn test_burgers_equation() {
 /// - Panics on any assertion failure.
 #[test]
 fn tissue_nonlinear_parameter_factories_route_through_ssot() {
-    use crate::core::constants::fundamental::{
-        B_OVER_A_BRAIN, B_OVER_A_FAT, B_OVER_A_KIDNEY, B_OVER_A_LIVER, DENSITY_BRAIN, DENSITY_FAT,
-        DENSITY_KIDNEY, DENSITY_LIVER, SOUND_SPEED_BRAIN, SOUND_SPEED_FAT, SOUND_SPEED_KIDNEY,
+    use crate::core::constants::tissue_acoustics::{
+        B_OVER_A_BRAIN,
+        B_OVER_A_FAT,
+        B_OVER_A_KIDNEY,
+        B_OVER_A_LIVER,
+        DENSITY_BRAIN,
+        DENSITY_FAT,
+        DENSITY_KIDNEY,
+        DENSITY_LIVER,
+        SOUND_SPEED_BRAIN,
+        SOUND_SPEED_FAT,
+        SOUND_SPEED_KIDNEY,
         SOUND_SPEED_LIVER,
     };
 

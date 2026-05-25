@@ -1,8 +1,12 @@
 use super::*;
 use crate::core::constants::fundamental::{
-    B_OVER_A_SOFT_TISSUE, B_OVER_A_WATER, DENSITY_AIR, DENSITY_TISSUE, DENSITY_WATER_NOMINAL,
-    SOUND_SPEED_AIR, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM,
+    DENSITY_TISSUE,
+    DENSITY_WATER_NOMINAL,
+    SOUND_SPEED_AIR,
+    SOUND_SPEED_TISSUE,
+    SOUND_SPEED_WATER_SIM,
 };
+use crate::core::constants::tissue_acoustics::{B_OVER_A_SOFT_TISSUE, B_OVER_A_WATER, DENSITY_AIR};
 use crate::domain::boundary::traits::BoundaryCondition;
 use crate::domain::grid::GridTopologyExt;
 use crate::domain::medium::properties::AcousticPropertyData;

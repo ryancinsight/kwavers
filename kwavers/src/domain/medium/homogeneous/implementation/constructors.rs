@@ -7,8 +7,18 @@ use crate::core::constants::cavitation::{
 };
 use crate::core::constants::fundamental::ACOUSTIC_ABSORPTION_TISSUE;
 use crate::core::constants::fundamental::{
-    ATMOSPHERIC_PRESSURE, B_OVER_A_AIR, DENSITY_AIR, DENSITY_BLOOD, DENSITY_TISSUE, DENSITY_WATER,
-    SOUND_SPEED_AIR, SOUND_SPEED_BLOOD, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER,
+    ATMOSPHERIC_PRESSURE,
+    DENSITY_TISSUE,
+    DENSITY_WATER,
+    SOUND_SPEED_AIR,
+    SOUND_SPEED_TISSUE,
+    SOUND_SPEED_WATER,
+};
+use crate::core::constants::tissue_acoustics::{
+    B_OVER_A_AIR,
+    DENSITY_AIR,
+    DENSITY_BLOOD,
+    SOUND_SPEED_BLOOD,
 };
 use crate::core::constants::thermodynamic::{
     BODY_TEMPERATURE_K, ROOM_TEMPERATURE_K, THERMAL_CONDUCTIVITY_AIR, THERMAL_EXPANSION_AIR_20C,

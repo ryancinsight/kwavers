@@ -6,10 +6,22 @@ use super::super::super::AnatomyKind;
 use super::attenuation::{attenuation_np_per_m_mhz_from_hu, attenuation_power_law_y_from_hu};
 use crate::core::constants::acoustic_parameters::SOUND_SPEED_SKULL;
 use crate::core::constants::fundamental::{
-    B_OVER_A_AIR, B_OVER_A_BONE, B_OVER_A_SOFT_TISSUE, B_OVER_A_WATER_37C, DENSITY_AIR,
-    DENSITY_WATER_NOMINAL, HU_BONE_THRESHOLD, SOUND_SPEED_AIR, SOUND_SPEED_KIDNEY,
-    SOUND_SPEED_LIVER, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER, SOUND_SPEED_WATER_SIM,
+    DENSITY_WATER_NOMINAL,
+    SOUND_SPEED_AIR,
+    SOUND_SPEED_TISSUE,
+    SOUND_SPEED_WATER,
+    SOUND_SPEED_WATER_SIM,
 };
+use crate::core::constants::tissue_acoustics::{
+    B_OVER_A_AIR,
+    B_OVER_A_BONE,
+    B_OVER_A_SOFT_TISSUE,
+    B_OVER_A_WATER_37C,
+    DENSITY_AIR,
+    SOUND_SPEED_KIDNEY,
+    SOUND_SPEED_LIVER,
+};
+use crate::core::constants::ct_acoustics::HU_BONE_THRESHOLD;
 
 const COUPLING_SOUND_SPEED_M_S: f64 = SOUND_SPEED_WATER;
 const COUPLING_DENSITY_KG_M3: f64 = DENSITY_WATER_NOMINAL;

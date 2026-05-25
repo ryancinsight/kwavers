@@ -8,9 +8,12 @@ use crate::core::constants::ct_acoustics::{
     PINTON_SKULL_SPEED_BASE_M_S, PINTON_SKULL_SPEED_SLOPE_M_S_PER_HU,
 };
 use crate::core::constants::fundamental::{
-    ACOUSTIC_ABSORPTION_TISSUE, DENSITY_AIR, DENSITY_WATER_NOMINAL, SOUND_SPEED_AIR,
+    ACOUSTIC_ABSORPTION_TISSUE,
+    DENSITY_WATER_NOMINAL,
+    SOUND_SPEED_AIR,
     SOUND_SPEED_WATER_SIM,
 };
+use crate::core::constants::tissue_acoustics::DENSITY_AIR;
 use crate::core::error::KwaversResult;
 use ndarray::Array3;
 

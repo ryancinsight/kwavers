@@ -290,9 +290,11 @@ impl MediumBuilder {
 mod tests {
     use super::*;
     use crate::core::constants::fundamental::{
-        B_OVER_A_SOFT_TISSUE, DENSITY_BRAIN, DENSITY_TISSUE, DENSITY_WATER_NOMINAL,
+        DENSITY_TISSUE,
+        DENSITY_WATER_NOMINAL,
         SOUND_SPEED_TISSUE,
     };
+    use crate::core::constants::tissue_acoustics::{B_OVER_A_SOFT_TISSUE, DENSITY_BRAIN};
     use std::collections::HashMap;
 
     fn test_grid() -> Grid {

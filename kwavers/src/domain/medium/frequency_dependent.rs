@@ -10,8 +10,11 @@
 //!   wave propagation in biological tissue" Journal of the Acoustical
 //!   Society of America, 88(3), 1584-1591.
 
-use crate::core::constants::fundamental::{
-    SOUND_SPEED_BLOOD, SOUND_SPEED_FAT, SOUND_SPEED_LIVER, SOUND_SPEED_MUSCLE,
+use crate::core::constants::tissue_acoustics::{
+    SOUND_SPEED_BLOOD,
+    SOUND_SPEED_FAT,
+    SOUND_SPEED_LIVER,
+    SOUND_SPEED_MUSCLE,
 };
 use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::core::error::{KwaversError, KwaversResult, ValidationError};

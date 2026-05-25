@@ -4,7 +4,7 @@ use std::f64::consts::PI;
 
 use crate::{
     core::{
-        constants::fundamental::{HU_BONE_THRESHOLD, HU_BRAIN_BODY_THRESHOLD},
+        constants::ct_acoustics::{HU_BONE_THRESHOLD, HU_BRAIN_BODY_THRESHOLD},
         error::{KwaversError, KwaversResult},
     },
     domain::source::transducers::focused::BowlAngularBounds,

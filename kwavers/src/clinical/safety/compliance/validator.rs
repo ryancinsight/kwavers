@@ -151,10 +151,9 @@ impl EnhancedComplianceValidator {
     /// `ΔT = Q · t_eff / (ρ · c_p)` where `Q = 2α · I_SPTA` [W/m³].
     /// Reference: Nyborg WL (1988), *Phys. Med. Biol.* 33(7):785–792.
     fn estimate_temperature_rise(&self, params: &ClinicalTherapyParameters) -> f64 {
-        use crate::core::constants::fundamental::{
-            DENSITY_BLOOD, DENSITY_WATER_NOMINAL as RHO_W, SOUND_SPEED_WATER,
-        };
+        use crate::core::constants::fundamental::{DENSITY_WATER, SOUND_SPEED_WATER};
         use crate::core::constants::medical::IEC_TISSUE_SPECIFIC_HEAT;
+        use crate::core::constants::tissue_acoustics::DENSITY_BLOOD;
 
         // IEC 62127-1:2013 Table A.1: ρ = 1060 kg/m³, c_p = 3500 J/(kg·K).
         const TISSUE_DENSITY: f64 = DENSITY_BLOOD;
@@ -165,7 +164,7 @@ impl EnhancedComplianceValidator {
         let alpha_np_per_m = IEC_TISSUE_ABSORPTION_DB_CM_MHZ * f_mhz * 100.0 * DB_TO_NP;
 
         let p_rms = params.pressure / std::f64::consts::SQRT_2;
-        let i_spta = (p_rms * p_rms) / (RHO_W * SOUND_SPEED_WATER);
+        let i_spta = (p_rms * p_rms) / (DENSITY_WATER * SOUND_SPEED_WATER);
 
         let q_vol = 2.0 * alpha_np_per_m * i_spta;
         let t_eff = params.treatment_duration * params.duty_cycle;

@@ -29,8 +29,11 @@ pub use crate::domain::medium::properties::ThermalPropertyData;
 /// For Pennes solver simulations, also specify arterial temperature and metabolic heat
 /// as separate simulation parameters.
 pub mod tissues {
-    use crate::core::constants::fundamental::{
-        DENSITY_BREAST_FAT, DENSITY_LIVER, DENSITY_MUSCLE, DENSITY_TISSUE,
+    use crate::core::constants::fundamental::DENSITY_TISSUE;
+    use crate::core::constants::tissue_acoustics::{
+        DENSITY_BREAST_FAT,
+        DENSITY_LIVER,
+        DENSITY_MUSCLE,
     };
     use crate::core::constants::medical::BLOOD_SPECIFIC_HEAT;
     use crate::core::constants::tissue_thermal::{
@@ -147,8 +150,11 @@ pub mod tissues {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::constants::fundamental::{
-        DENSITY_BREAST_FAT, DENSITY_LIVER, DENSITY_MUSCLE, DENSITY_TISSUE,
+    use crate::core::constants::fundamental::DENSITY_TISSUE;
+    use crate::core::constants::tissue_acoustics::{
+        DENSITY_BREAST_FAT,
+        DENSITY_LIVER,
+        DENSITY_MUSCLE,
     };
     use crate::core::constants::medical::BLOOD_SPECIFIC_HEAT;
 
