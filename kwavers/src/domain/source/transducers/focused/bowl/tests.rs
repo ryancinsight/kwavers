@@ -196,9 +196,15 @@ fn axis_reference_preset_preserves_focus_axis_and_explicit_radius() {
 
     // Aperture chord at theta_max = 0.90 rad: 2 R sin(theta_max).
     let aperture_diameter = 2.0 * radius * theta_max.sin();
-    let config =
-        BowlConfig::from_axis_reference_focus(axis_reference, focus, radius, aperture_diameter, 750.0e3, 2.5e5)
-            .unwrap();
+    let config = BowlConfig::from_axis_reference_focus(
+        axis_reference,
+        focus,
+        radius,
+        aperture_diameter,
+        750.0e3,
+        2.5e5,
+    )
+    .unwrap();
 
     assert!((config.radius_of_curvature - radius).abs() < 1.0e-14);
     assert_eq!(config.focus, focus);
@@ -235,6 +241,21 @@ fn axis_reference_preset_rejects_degenerate_axis() {
         [0.0, 0.0, 0.0],
         0.1,
         0.15,
+        500.0e3,
+        1.0e5,
+    )
+    .unwrap_err();
+
+    assert!(matches!(error, KwaversError::Validation(_)));
+}
+
+#[test]
+fn axis_reference_preset_rejects_excessive_aperture_chord() {
+    let error = BowlConfig::from_axis_reference_focus(
+        [0.0, 0.0, 0.04],
+        [0.0, 0.0, 0.0],
+        0.1,
+        0.21,
         500.0e3,
         1.0e5,
     )

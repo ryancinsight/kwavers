@@ -92,6 +92,13 @@ impl BowlConfig {
         validate_finite_vector("focus", focus_m)?;
         validate_positive_finite_field("radius_of_curvature", radius_m)?;
         validate_positive_finite_field("aperture_diameter", aperture_diameter_m)?;
+        if aperture_diameter_m > 2.0 * radius_m {
+            return Err(field_validation_error(
+                "aperture_diameter",
+                aperture_diameter_m.to_string(),
+                "must not exceed 2 * radius_m for a spherical-cap chord",
+            ));
+        }
 
         let axis = [
             focus_m[0] - axis_reference_m[0],
