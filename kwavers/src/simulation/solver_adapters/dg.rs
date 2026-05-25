@@ -238,13 +238,14 @@ fn active_dimensions_are_dg_aligned(grid: &Grid, nodes_per_element: usize) -> bo
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
     use crate::domain::medium::homogeneous::HomogeneousMedium;
     use crate::solver::config::SolverType;
 
     #[test]
     fn dg_adapter_advances_input_sensitive_pressure_field() {
         let grid = Grid::new(3, 3, 1, 1.0e-3, 1.0, 1.0).unwrap();
-        let medium = HomogeneousMedium::from_minimal(1000.0, 10.0, &grid);
+        let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, 10.0, &grid);
         let config = SolverConfiguration {
             solver_type: SolverType::DiscontinuousGalerkin,
             spatial_order: 2,
@@ -273,7 +274,7 @@ mod tests {
     #[test]
     fn dg_adapter_rejects_layout_that_cannot_match_dg_nodes() {
         let grid = Grid::new(3, 4, 1, 1.0e-3, 1.0, 1.0).unwrap();
-        let medium = HomogeneousMedium::from_minimal(1000.0, 10.0, &grid);
+        let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, 10.0, &grid);
         let config = SolverConfiguration {
             solver_type: SolverType::DiscontinuousGalerkin,
             spatial_order: 2,

@@ -118,7 +118,7 @@
 //!
 //! // Create computational grid and medium
 //! let grid = Grid::new(64, 64, 64, 0.001, 0.001, 0.001).unwrap();
-//! let medium = HomogeneousMedium::new(1000.0, 1540.0, 0.5, 1.0, &grid);
+//! let medium = HomogeneousMedium::new(kwavers::core::constants::fundamental::DENSITY_WATER_NOMINAL, kwavers::core::constants::fundamental::SOUND_SPEED_TISSUE, 0.5, 1.0, &grid);
 //!
 //! // Create orchestrator
 //! let mut orchestrator = TherapyIntegrationOrchestrator::new(

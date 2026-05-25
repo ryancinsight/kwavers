@@ -53,6 +53,7 @@
 //! ## Usage Example
 //!
 //! ```rust,no_run
+//! use kwavers::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 //! use kwavers::simulation::modalities::photoacoustic::PhotoacousticSimulator;
 //! use kwavers::domain::grid::Grid;
 //! use kwavers::domain::medium::homogeneous::HomogeneousMedium;
@@ -62,8 +63,8 @@
 //! // Create computational grid
 //! let grid = Grid::new(64, 64, 32, 0.001, 0.001, 0.001)?;
 //!
-//! // Define acoustic medium
-//! let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
+//! // Define acoustic medium (SSOT: DENSITY_WATER_NOMINAL = 1000.0 kg/m³, SOUND_SPEED_WATER_SIM = 1500.0 m/s)
+//! let medium = HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
 //!
 //! // Configure photoacoustic parameters
 //! let parameters = PhotoacousticParameters::default();
@@ -95,7 +96,7 @@
 //! # use kwavers::domain::imaging::photoacoustic::PhotoacousticParameters;
 //! # fn main() -> kwavers::core::error::KwaversResult<()> {
 //! # let grid = Grid::new(32, 32, 16, 0.001, 0.001, 0.001)?;
-//! # let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
+//! # let medium = HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
 //! # let parameters = PhotoacousticParameters::default();
 //! # let simulator = PhotoacousticSimulator::new(grid, parameters, &medium)?;
 //! // Compute fluence for all wavelengths in parallel

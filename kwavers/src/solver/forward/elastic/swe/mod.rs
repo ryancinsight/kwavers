@@ -94,7 +94,7 @@
 //! let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3)?;
 //!
 //! // Define tissue properties
-//! let medium = HomogeneousMedium::new(1000.0, kwavers::core::constants::fundamental::SOUND_SPEED_WATER_SIM, 0.0, 0.0, &grid);
+//! let medium = HomogeneousMedium::new(kwavers::core::constants::fundamental::DENSITY_WATER_NOMINAL, kwavers::core::constants::fundamental::SOUND_SPEED_WATER_SIM, 0.0, 0.0, &grid);
 //!
 //! // Configure solver
 //! let config = ElasticWaveConfig::default();
