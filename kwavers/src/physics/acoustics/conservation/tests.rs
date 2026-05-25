@@ -98,7 +98,7 @@ fn test_entropy_production_analytical() {
     let rho0 = DENSITY_WATER_NOMINAL;
     let c0 = SOUND_SPEED_WATER_SIM;
     let alpha0 = 3.0_f64;
-    let t0 = 310.0_f64;
+    let t0 = BODY_TEMPERATURE_K;
     let p = uniform_array(shape, p0);
     let v = uniform_array(shape, 0.0);
     let rho = uniform_array(shape, rho0);
