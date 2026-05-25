@@ -249,6 +249,7 @@ pub fn apply_fresnel<R: Rng>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::optical::REFRACTIVE_INDEX_SOFT_TISSUE;
 
     /// Test Fresnel reflectance at normal incidence against the analytic formula:
     /// R₀ = [(n₁ − n₂)/(n₁ + n₂)]²
@@ -313,7 +314,7 @@ mod tests {
     #[test]
     fn test_snell_law_refraction() {
         let n1 = 1.0;
-        let n2 = 1.4;
+        let n2 = REFRACTIVE_INDEX_SOFT_TISSUE;
 
         // Incident direction at 30° from normal (into +z half-space)
         let theta_i = 30.0_f64.to_radians();
