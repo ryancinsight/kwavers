@@ -34,6 +34,13 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import Normalize
 from matplotlib.cm import ScalarMappable
 
+try:
+    import pykwavers as kw
+    _HAS_PYKWAVERS = True
+except ImportError:
+    kw = None
+    _HAS_PYKWAVERS = False
+
 REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 OUT_DIR = os.path.join(REPO_ROOT, "docs", "book", "figures", "ch10")
 os.makedirs(OUT_DIR, exist_ok=True)
@@ -57,9 +64,12 @@ RHO = 1060.0   # kg/m³ average soft tissue density
 # ── Figure 01: Shear wave speed vs shear modulus ─────────────────────────────
 def fig01_shear_wave_speed() -> None:
     """
-    c_s = √(G / ρ)  — shear wave phase velocity
+    c_s = √(G / ρ)  — shear wave phase velocity.
+    Computed via kw.shear_wave_speed(g_pa, rho_kg_m3) (Rust kernel).
     Representative tissues from Sinkus 2005 and Deffieux 2011.
     """
+    if not _HAS_PYKWAVERS:
+        raise ImportError("pykwavers is required for fig01 (shear wave speed)")
     tissues = [
         ("Brain (GM)",    2.0e3),
         ("Liver (normal)", 5.0e3),
@@ -71,16 +81,16 @@ def fig01_shear_wave_speed() -> None:
         ("Prostate (normal)", 10e3),
     ]
     G_Pa = np.array([g for _, g in tissues])
-    c_s = np.sqrt(G_Pa / RHO)
+    c_s = np.array([kw.shear_wave_speed(G, RHO) for G in G_Pa])
 
     G_range = np.logspace(2, 6, 300)  # 100 Pa → 1 MPa
-    c_range = np.sqrt(G_range / RHO)
+    c_range = np.array([kw.shear_wave_speed(G, RHO) for G in G_range])
 
     fig, ax = plt.subplots(figsize=(8, 5))
     ax.loglog(G_range, c_range, "k-", linewidth=1.5, label=r"$c_s = \sqrt{G/\rho}$")
     colors = plt.cm.tab10(np.linspace(0, 0.9, len(tissues)))
     for (name, G), col in zip(tissues, colors):
-        cs = np.sqrt(G / RHO)
+        cs = kw.shear_wave_speed(G, RHO)
         ax.scatter(G, cs, s=80, color=col, zorder=5)
         ax.annotate(name, (G, cs), textcoords="offset points", xytext=(5, 3), fontsize=8, color=col)
 
@@ -121,20 +131,24 @@ def fig02_wave_velocity_ratio() -> None:
 # ── Figure 03: Voigt model storage and loss moduli ───────────────────────────
 def fig03_voigt_viscoelastic() -> None:
     """
-    Voigt model: G*(ω) = G_e + iωη
-    Storage modulus: G'(ω) = G_e   (frequency-independent)
-    Loss modulus:   G''(ω) = ω η
-    Loss angle:     tan δ = G''/G' = ωη/G_e
-    Representative values: G_e = 2 kPa, η = 1 Pa·s
+    Voigt model: G*(ω) = G_e + iωη.
+    Storage modulus: G'(ω) = Re G* = G_e   (frequency-independent).
+    Loss modulus:   G''(ω) = Im G* = ω η.
+    Loss angle:     tan δ = G''/G' = ωη/G_e.
+    Computed via kw.voigt_complex_modulus(omega_arr, mu_pa, eta_pa_s) → (real_arr, imag_arr).
+    Representative values: G_e = 2 kPa, η = 1 Pa·s.
     """
+    if not _HAS_PYKWAVERS:
+        raise ImportError("pykwavers is required for fig03 (Voigt viscoelastic model)")
     f_Hz = np.logspace(0, 3, 500)   # 1 Hz → 1 kHz
     omega = 2 * np.pi * f_Hz
 
     G_e = 2e3    # Pa  elastic modulus
     eta = 1.0    # Pa·s viscosity
 
-    G_prime = G_e * np.ones_like(omega)
-    G_dprime = omega * eta
+    G_prime_arr, G_dprime_arr = kw.voigt_complex_modulus(omega, G_e, eta)
+    G_prime = np.asarray(G_prime_arr)
+    G_dprime = np.asarray(G_dprime_arr)
     tan_delta = G_dprime / G_prime
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 4.5))
@@ -162,10 +176,13 @@ def fig03_voigt_viscoelastic() -> None:
 def fig04_shear_dispersion() -> None:
     """
     Complex shear modulus G*(ω) = G_e + iωη.
+    Computed via kw.voigt_complex_modulus(omega_arr, G_e, eta) → (real_arr, imag_arr).
     Complex wavenumber: k_s(ω) = ω √(ρ / G*(ω)).
     Phase velocity: c_ph = ω / Re(k_s).
-    Group velocity: c_gr = dω / d Re(k_s)  ≈ numerical diff.
+    Elastic limit via kw.shear_wave_speed(G_e, RHO).
     """
+    if not _HAS_PYKWAVERS:
+        raise ImportError("pykwavers is required for fig04 (shear wave dispersion)")
     f_Hz = np.logspace(0, 3, 500)
     omega = 2 * np.pi * f_Hz
 
@@ -174,13 +191,14 @@ def fig04_shear_dispersion() -> None:
 
     fig, ax = plt.subplots(figsize=(7, 4.5))
     for eta, lbl in eta_values:
-        G_star = G_e + 1j * omega * eta
+        G_re, G_im = kw.voigt_complex_modulus(omega, G_e, eta)
+        G_star = np.asarray(G_re) + 1j * np.asarray(G_im)
         k_s = omega * np.sqrt(RHO / G_star)
         c_ph = omega / np.real(k_s)
         ax.semilogx(f_Hz, c_ph, label=lbl)
 
-    # Elastic limit c_s = sqrt(G_e / rho)
-    c_elastic = np.sqrt(G_e / RHO)
+    # Elastic limit: c_s = sqrt(G_e / rho) via Rust kernel
+    c_elastic = kw.shear_wave_speed(G_e, RHO)
     ax.axhline(c_elastic, color="k", linestyle=":", linewidth=1,
                label=rf"Elastic limit $c_s={c_elastic:.2f}$ m/s")
 
@@ -199,13 +217,13 @@ def fig04_shear_dispersion() -> None:
 def fig05_mre_displacement() -> None:
     """
     Displacement field of a shear wave propagating in the x-direction
-    with a cylindrical stiff inclusion (radius r_inc, G_inc > G_bg):
-    Outside: plane shear wave u_y = A sin(k_s x - ωt)
-    Inside scatterer: approximate as standing wave with modified amplitude
-    (Born approximation: δu ~ contrast × incident field)
-    Full analytical Mie-type solution is complex; use a representative
-    field illustrating the focusing/shielding effect.
+    with a cylindrical stiff inclusion (radius r_inc, G_inc > G_bg).
+    Outside: plane shear wave u_y = A sin(k_s x - ωt).
+    Inside scatterer: standing wave with modified wavenumber (Born approx).
+    Wavenumbers: k = ω / c_s, c_s via kw.shear_wave_speed(G, rho).
     """
+    if not _HAS_PYKWAVERS:
+        raise ImportError("pykwavers is required for fig05 (MRE displacement field)")
     nx, ny = 300, 300
     x = np.linspace(-0.05, 0.05, nx)   # ±50 mm
     y = np.linspace(-0.05, 0.05, ny)
@@ -218,8 +236,11 @@ def fig05_mre_displacement() -> None:
     f = 100.0     # 100 Hz MRE frequency
     omega = 2 * np.pi * f
 
-    k_bg = omega * np.sqrt(rho / G_bg)
-    k_inc = omega * np.sqrt(rho / G_inc)
+    # k = ω / c_s, c_s from Rust kernel so wavenumbers are consistent with fig01/04
+    c_bg = kw.shear_wave_speed(G_bg, rho)
+    c_inc = kw.shear_wave_speed(G_inc, rho)
+    k_bg = omega / c_bg
+    k_inc = omega / c_inc
 
     # Incident shear wave propagating in +x
     u_incident = np.sin(k_bg * X)

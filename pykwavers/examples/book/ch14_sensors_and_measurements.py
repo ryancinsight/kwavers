@@ -31,6 +31,13 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
+try:
+    import pykwavers as kw
+    _HAS_PYKWAVERS = True
+except ImportError:
+    kw = None
+    _HAS_PYKWAVERS = False
+
 REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 OUT_DIR = os.path.join(REPO_ROOT, "docs", "book", "figures", "ch14")
 os.makedirs(OUT_DIR, exist_ok=True)
@@ -54,8 +61,11 @@ C0 = 1500.0
 # ── Figure 01: Hydrophone directivity ────────────────────────────────────────
 def fig01_hydrophone_directivity() -> None:
     """
-    Rectangular active area a×b: H(θ_x, θ_y) = sinc(ka sinθ_x)·sinc(kb sinθ_y)
-    For square element a=b, azimuth cut: H(θ) = sinc(ka sinθ / π).
+    Rectangular active area a×b: H(θ) = sinc(kd sinθ / π)  (azimuth cut, square element).
+    For circular piston: H(θ) = 2 J₁(ka sinθ) / (ka sinθ) — available via
+    kw.circular_piston_directivity but is a different aperture geometry.
+    No rectangular-aperture sinc binding exists; sinc is closed-form and
+    computed directly from numpy (not physics, pure geometry).
     """
     theta = np.linspace(-np.pi / 2 + 1e-6, np.pi / 2 - 1e-6, 3600)
     f = 5.0e6   # 5 MHz
@@ -65,7 +75,7 @@ def fig01_hydrophone_directivity() -> None:
     for d_um, col in [(100, "#1f77b4"), (200, "#ff7f0e"), (500, "#2ca02c"), (1000, "#d62728")]:
         d = d_um * 1e-6
         ka_sin = k * d * np.sin(theta)
-        H = np.sinc(ka_sin / np.pi)   # numpy sinc already normalised
+        H = np.sinc(ka_sin / np.pi)   # numpy sinc: sinc(x) = sin(πx)/(πx)
         H_dB = 20 * np.log10(np.abs(H) + 1e-12)
         axes[0].plot(np.degrees(theta), H**2, color=col, label=f"$d={d_um}$ µm")
         axes[1].plot(np.degrees(theta), np.clip(H_dB, -60, 0), color=col, label=f"$d={d_um}$ µm")
@@ -89,14 +99,16 @@ def fig01_hydrophone_directivity() -> None:
 def fig02_grating_lobes() -> None:
     """
     Grating lobe appears at θ_g = arcsin(n λ/d) for n = ±1, ±2, ...
-    Main lobe at θ_s: grating lobes at sinθ_g = sinθ_s ± nλ/d.
-    For steering at 0°: first grating lobe at sinθ_g = λ/d.
-    Condition to avoid: d ≤ λ/2.
+    Array factor computed via kw.linear_array_factor(theta, k, d, N, steer_rad).
+    Condition to avoid grating lobes: d ≤ λ/2.
     """
+    if not _HAS_PYKWAVERS:
+        raise ImportError("pykwavers is required for fig02 (grating lobes, linear_array_factor)")
     theta_s = 0.0   # steering angle
     theta = np.linspace(-np.pi / 2 + 1e-4, np.pi / 2 - 1e-4, 3600)
     f = 3.0e6
     lam = C0 / f
+    k = 2 * np.pi / lam
     N = 32
 
     fig, axes = plt.subplots(1, 2, figsize=(11, 4.5))
@@ -104,9 +116,7 @@ def fig02_grating_lobes() -> None:
                                 (1.0, "#ff7f0e", r"$d=\lambda$ (grating lobe at ±90°)"),
                                 (1.5, "#2ca02c", r"$d=1.5\lambda$ (grating lobe at 42°)")]:
         d = d_lambda * lam
-        k = 2 * np.pi / lam
-        phase = k * d * (np.sin(theta)[:, None] - np.sin(theta_s)) * np.arange(N)[None, :]
-        AF = np.abs(np.sum(np.exp(1j * phase), axis=1)) / N
+        AF = np.asarray(kw.linear_array_factor(theta, k, d, N, theta_s))
         AF_dB = 20 * np.log10(AF + 1e-12)
         axes[0].plot(np.degrees(theta), AF**2, color=col, label=lbl)
         axes[1].plot(np.degrees(theta), np.clip(AF_dB, -60, 0), color=col, label=lbl)
@@ -131,11 +141,13 @@ def fig02_grating_lobes() -> None:
 # ── Figure 03: Pressure-velocity plane wave relationship ─────────────────────
 def fig03_pressure_velocity() -> None:
     """
-    For a plane wave: p = ρ c u  (specific acoustic impedance Z = ρc).
-    In time domain: p(x,t) = P0 sin(kx - ωt)
-                    u(x,t) = P0/(ρc) sin(kx - ωt)  (co-phase)
-    Show both at fixed time, plus impedance as function of medium.
+    Plane wave: p = ρ c u  (specific acoustic impedance Z = ρc).
+    p(x,t) = P₀ sin(kx − ωt),  u(x,t) = P₀/(ρc) sin(kx − ωt).
+    Impedance bar: Z = ρc from kw.tissue_properties for Water and Liver;
+    Air (Duck 1990) and Cortical bone (Duck 1990) and Steel kept as reference.
     """
+    if not _HAS_PYKWAVERS:
+        raise ImportError("pykwavers is required for fig03 (tissue impedance via tissue_properties)")
     rho = 998.0
     c = C0
     Z = rho * c
@@ -159,11 +171,20 @@ def fig03_pressure_velocity() -> None:
     ax1.set_title(r"Plane wave: $p = \rho c u$")
     ax1.legend(handles=[l1, l2])
 
-    # Impedance by medium
-    media = [("Air", 1.2, 343), ("Water", 998, 1481), ("Liver", 1060, 1560),
-             ("Bone", 1900, 3500), ("Steel", 7800, 5900)]
+    # Impedance by medium: bindings used for tissues with kw.tissue_properties
+    def _z_mrayl(key: str) -> float:
+        _c, _rho, *_ = kw.tissue_properties(key)
+        return _c * _rho / 1e6
+
+    media = [
+        ("Air",    0.000413),            # Duck (1990) — no kw binding for gas
+        ("Water",  _z_mrayl("water")),   # kw.tissue_properties
+        ("Liver",  _z_mrayl("liver")),   # kw.tissue_properties
+        ("Bone",   7.38),                # Duck (1990) cortical bone — no kw binding
+        ("Steel",  46.1),                # reference value — no kw binding
+    ]
     names = [m[0] for m in media]
-    Z_vals = [m[1] * m[2] / 1e6 for m in media]  # MRayl
+    Z_vals = [m[1] for m in media]  # MRayl
     ax2.bar(names, Z_vals, color=plt.cm.tab10(np.linspace(0, 0.5, len(media))))
     ax2.set_ylabel("Acoustic impedance $Z = \\rho c$ (MRayl)")
     ax2.set_title("Impedance $Z$ for common media")
@@ -177,23 +198,23 @@ def fig03_pressure_velocity() -> None:
 # ── Figure 04: Time-reversal focusing envelope ───────────────────────────────
 def fig04_time_reversal() -> None:
     """
-    Illustrate TR: a point source at origin emits, array records.
-    Time-reversed signal retransmitted focuses back at origin.
-    Show spatial focus quality (array factor) for N elements.
+    TR focus quality: coherent array factor for steering at 0° with d = λ/2.
+    Computed via kw.linear_array_factor(theta, k, d, N, steer_rad=0.0).
+    Coherent gain at broadside = 20 log₁₀(N) dB.
     """
+    if not _HAS_PYKWAVERS:
+        raise ImportError("pykwavers is required for fig04 (TR focus, linear_array_factor)")
     N_arr = [4, 16, 64]
     f = 1e6
     lam = C0 / f
     d = lam / 2  # half-wavelength spacing
-
     theta = np.linspace(-np.pi / 2 + 1e-4, np.pi / 2 - 1e-4, 3600)
     k = 2 * np.pi / lam
 
     fig, ax = plt.subplots(figsize=(7, 4.5))
     colors = ["#1f77b4", "#ff7f0e", "#2ca02c"]
     for N, col in zip(N_arr, colors):
-        phase = k * d * np.sin(theta)[:, None] * np.arange(N)[None, :]
-        AF = np.abs(np.sum(np.exp(1j * phase), axis=1)) / N
+        AF = np.asarray(kw.linear_array_factor(theta, k, d, N, 0.0))
         AF_dB = 20 * np.log10(AF + 1e-12)
         ax.plot(np.degrees(theta), np.clip(AF_dB, -60, 0), color=col, label=f"$N={N}$")
 
@@ -212,21 +233,26 @@ def fig04_time_reversal() -> None:
 # ── Figure 05: Sensor recording: ideal vs noisy signal (side-by-side) ─────────
 def fig05_signal_comparison() -> None:
     """
-    Analytical N-wave photoacoustic signal (reference) vs noisy sensor recording.
-    Demonstrates SNR improvement by averaging.
+    PA sphere N-wave (reference) vs noisy sensor recording.
+    Ideal signal via kw.pa_sphere_pressure_signal (Xu & Wang 2006).
+    Demonstrates SNR improvement by signal averaging (√N law).
     """
-    R = 0.001   # 1 mm sphere
-    r_d = 0.04  # 40 mm
+    if not _HAS_PYKWAVERS:
+        raise ImportError("pykwavers is required for fig05 (PA sphere signal)")
+    R = 0.001    # 1 mm sphere
+    r_d = 0.04   # 40 mm detector
     c = C0
-    t1 = (r_d - R) / c
-    t2 = (r_d + R) / c
-    t = np.linspace(0, 60e-6, 2000)
-    t_c = (t1 + t2) / 2
+    Gamma = 0.2
+    mu_a = 100.0    # m⁻¹
+    Phi = 1.0       # J/m² — initial pressure p₀ = Γ μ_a Φ
+    p0 = Gamma * mu_a * Phi   # 20 Pa
 
-    # Ideal signal
-    p_ideal = np.zeros_like(t)
-    mask = (t >= t1) & (t <= t2)
-    p_ideal[mask] = (t[mask] - t_c) / ((t2 - t1) / 2)
+    t = np.linspace(0, 60e-6, 2000)
+    # Analytical N-wave via Rust kernel (Xu & Wang 2006)
+    p_ideal = np.asarray(kw.pa_sphere_pressure_signal(t, R, Gamma, mu_a, c, r_d, p0))
+    # Normalise to [-1, 1] for comparison with noisy signal
+    p_scale = np.abs(p_ideal).max() + 1e-30
+    p_ideal = p_ideal / p_scale
 
     rng = np.random.default_rng(0)
     noise = rng.standard_normal(len(t)) * 0.3

@@ -10,18 +10,19 @@ Output directory: docs/book/figures/ch13/
 
 Figures produced
 ----------------
-fig01  Optical absorption spectra of HbO₂, Hb, melanin, water (model)
-fig02  Grüneisen parameter Γ vs temperature for water/tissue
-fig03  Photoacoustic signal from a spherical absorber (analytical)
-fig04  PA signal bandwidth vs absorber radius (stress confinement)
+fig01  Optical absorption spectra of HbO₂ and Hb (Prahl 1999 polynomial fits)
+fig02  Grüneisen parameter Γ vs temperature for water (Sigrist & Kneubühl 1978)
+fig03  Photoacoustic signal from a spherical absorber (N-wave, Xu & Wang 2006)
+fig04  PA axial resolution δz vs transducer bandwidth (Xu & Wang 2006)
 fig05  Spectroscopic unmixing: two-chromophore least-squares solution
 
 References
 ----------
-Xu & Wang (2006) Rev. Mod. Phys. 78:1338
-Beard (2011) Interface 8(54):1271
+Xu & Wang (2006) Rev. Sci. Instrum. 77:041101
+Beard (2011) Interface Focus 1:602
 Jacques (2013) Phys. Med. Biol. 58:R37
-Ntziachristos (2010) Nat. Methods 7:603
+Prahl (1999) https://omlc.org/spectra/hemoglobin/
+Sigrist & Kneubühl (1978) J. Acoust. Soc. Am. 64:1652
 """
 
 from __future__ import annotations
@@ -32,6 +33,13 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+
+try:
+    import pykwavers as kw
+    _HAS_PYKWAVERS = True
+except ImportError:
+    kw = None
+    _HAS_PYKWAVERS = False
 
 REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 OUT_DIR = os.path.join(REPO_ROOT, "docs", "book", "figures", "ch13")
@@ -51,42 +59,43 @@ plt.rcParams.update({
 })
 
 
-# ── Figure 01: Optical absorption spectra (analytical models) ─────────────────
+# ── Figure 01: Optical absorption spectra ─────────────────────────────────────
 def fig01_absorption_spectra() -> None:
     """
-    Molar extinction coefficients (cm⁻¹/M):
-    HbO₂ and Hb: Prahl table simplified as Gaussian + exponential models
-    Melanin: μ_a ∝ λ^{-3.48} (Jacques 2013)
-    Water: μ_a absorption coefficient (cm⁻¹), simplified near-IR model.
-    All in arbitrary normalised units for illustration.
+    Molar absorption coefficients ε(λ) [m⁻¹/(mol/L)]:
+    HbO₂ and Hb: kw.hbo2_molar_absorption / kw.hb_molar_absorption
+        6th-order polynomial fits to Prahl (1999) tabulated data, λ ∈ [650, 1000] nm.
+    Melanin: μ_a ∝ λ^{-3.48} (Jacques 2013) — no Rust binding; kept as Python.
+    Water: simplified near-IR model — no Rust binding; kept as Python.
+    All curves normalised to [0, 1] for direct comparison.
     """
-    lam_nm = np.linspace(650, 1000, 500)  # near-IR window
+    if not _HAS_PYKWAVERS:
+        raise ImportError("pykwavers is required for fig01 (HbO2/Hb absorption spectra)")
+    lam_nm = np.linspace(650, 1000, 500)
 
-    # Simplified analytical models (not tabulated data)
-    # HbO2: main peak near 920 nm + shoulder at 760 nm (normalised)
-    HbO2 = (0.5 * np.exp(-((lam_nm - 920) / 30)**2)
-             + 0.3 * np.exp(-((lam_nm - 760) / 20)**2))
+    HbO2 = np.asarray(kw.hbo2_molar_absorption(lam_nm))
+    Hb = np.asarray(kw.hb_molar_absorption(lam_nm))
+    # Normalise to [0, 1] for visualisation
+    HbO2 = HbO2 / (HbO2.max() + 1e-30)
+    Hb = Hb / (Hb.max() + 1e-30)
 
-    # Hb: main peak near 760 nm (isosbestic at ~800 nm)
-    Hb = (0.9 * np.exp(-((lam_nm - 760) / 25)**2)
-          + 0.1 * np.exp(-((lam_nm - 900) / 40)**2))
-
-    # Melanin: power-law decrease
-    melanin = 2.0 * (lam_nm / 650.0)**(-3.48)
+    # Melanin: power-law decrease (Jacques 2013) — no kw binding
+    melanin = (lam_nm / 650.0) ** (-3.48)
     melanin /= melanin.max()
 
-    # Water: low in NIR window, rising at >900 nm
-    water = 0.05 + 0.3 * ((lam_nm - 650) / 350)**3
+    # Water: low in NIR window, rising above 900 nm (simplified) — no kw binding
+    water = 0.05 + 0.3 * ((lam_nm - 650) / 350) ** 3
+    water /= water.max()
 
     fig, ax = plt.subplots(figsize=(8, 5))
-    ax.plot(lam_nm, HbO2, label=r"$\mathrm{HbO_2}$ (oxyhaemoglobin)")
-    ax.plot(lam_nm, Hb, "--", label=r"$\mathrm{Hb}$ (deoxyhaemoglobin)")
-    ax.plot(lam_nm, melanin, "-.", label="Melanin")
-    ax.plot(lam_nm, water, ":", label=r"Water ($\times 0.1$)")
+    ax.plot(lam_nm, HbO2, label=r"$\mathrm{HbO_2}$ (Prahl 1999 poly fit)")
+    ax.plot(lam_nm, Hb, "--", label=r"$\mathrm{Hb}$ (Prahl 1999 poly fit)")
+    ax.plot(lam_nm, melanin, "-.", label=r"Melanin $\propto\lambda^{-3.48}$ (Jacques 2013)")
+    ax.plot(lam_nm, water, ":", label="Water (simplified NIR model)")
     ax.axvline(800, color="k", linewidth=0.5, linestyle="--", label="Isosbestic point ~800 nm")
     ax.set_xlabel(r"Wavelength $\lambda$ (nm)")
-    ax.set_ylabel("Normalised absorption (a.u.)")
-    ax.set_title("Near-IR optical absorption spectra (analytical models)")
+    ax.set_ylabel("Normalised molar absorption (a.u.)")
+    ax.set_title("Near-IR optical absorption spectra\n(kw.hbo2_molar_absorption / kw.hb_molar_absorption)")
     ax.legend()
     ax.grid(True, alpha=0.3)
     ax.set_xlim(650, 1000)
@@ -98,26 +107,27 @@ def fig01_absorption_spectra() -> None:
 # ── Figure 02: Grüneisen parameter vs temperature ────────────────────────────
 def fig02_gruneisen_temperature() -> None:
     """
-    Γ = β c² / Cp
-    For water: β(T) = -0.088 + 0.0122T - 1.5e-4 T² + 9e-7 T³  (10⁻⁴ K⁻¹)
-               c(T) = 1402.7 + 4.88T - 0.048T²  (m/s)
-               Cp = 4182 J/(kg·K)  (weakly temperature-dependent)
-    Gamma has a minimum near 4 °C where β = 0.
+    Grüneisen parameter of water (Sigrist & Kneubühl 1978):
+      Γ(T) = 0.0043 + 0.0053·T    (valid 0–60 °C)
+    Computed via kw.gruneisen_parameter_water(t_celsius_arr) (Rust kernel).
+    Γ = 0 at T ≈ −0.81 °C (where thermal expansion vanishes).
+    At 37 °C: Γ ≈ 0.200.
     """
+    if not _HAS_PYKWAVERS:
+        raise ImportError("pykwavers is required for fig02 (Grüneisen parameter)")
     T = np.linspace(0, 80, 300)
-    # β (thermal expansion, 10⁻⁴ K⁻¹) — simplified polynomial
-    beta = (-0.0882 + 0.0122 * T - 1.54e-4 * T**2 + 9.0e-7 * T**3) * 1e-4  # K⁻¹
-    c = 1402.7 + 4.88 * T - 0.048 * T**2  # m/s
-    Cp = 4182.0  # J/(kg·K)
-    Gamma = beta * c**2 / Cp
+    Gamma = np.asarray(kw.gruneisen_parameter_water(T))
 
     fig, ax = plt.subplots(figsize=(7, 4.5))
     ax.plot(T, Gamma, color="#1f77b4")
     ax.axhline(0, color="k", linewidth=0.5)
     ax.axvline(37, color="r", linestyle="--", linewidth=1, label="Body temp 37°C")
+    ax.scatter([37], [float(np.asarray(kw.gruneisen_parameter_water(np.array([37.0])))[0])],
+               s=60, color="r", zorder=5)
     ax.set_xlabel("Temperature (°C)")
-    ax.set_ylabel(r"Grüneisen parameter $\Gamma = \beta c^2 / C_p$")
-    ax.set_title(r"Grüneisen parameter $\Gamma$ vs temperature (water)")
+    ax.set_ylabel(r"Grüneisen parameter $\Gamma$")
+    ax.set_title(r"Grüneisen parameter vs temperature (water)"
+                 "\n" r"$\Gamma(T) = 0.0043 + 0.0053\,T$ (Sigrist \& Kneubühl 1978)")
     ax.legend()
     ax.grid(True, alpha=0.3)
     fig.tight_layout()
@@ -128,34 +138,28 @@ def fig02_gruneisen_temperature() -> None:
 # ── Figure 03: Photoacoustic signal from spherical absorber ───────────────────
 def fig03_pa_sphere_signal() -> None:
     """
-    Exact photoacoustic signal from a uniformly heated sphere of radius R:
-    p(r, t) = (Γ μ_a Φ / 2) · [r - |r-t c|] / r  for |r-ct| ≤ R
-    Time-domain pressure at detector distance r_d:
-    p(t) = (Γ μ_a Φ R³) / (3 r_d c) · d/dt [N-wave shape]
-    For detector at r_d >> R:
-    p(t) = (Γ H_0 c / 2) · (t-t1)/(t2-t1) for t1 < t < t2 (N-wave)
-    Using Xu & Wang 2006 Eq. 2.
+    Far-field N-wave photoacoustic signal from a uniformly heated sphere.
+    Computed via kw.pa_sphere_pressure_signal(t_arr, r0_m, gamma, mua_per_m,
+        c, r_det_m, initial_pressure_pa).
+    initial_pressure_pa = Γ · μ_a · Φ  [Pa] — absorbed energy rise.
+    Xu & Wang (2006) Rev. Sci. Instrum. 77:041101, eq. (13).
     """
+    if not _HAS_PYKWAVERS:
+        raise ImportError("pykwavers is required for fig03 (PA sphere signal)")
     R = 0.001    # 1 mm sphere radius
     r_d = 0.05  # 50 mm detector distance
     c = 1500.0
     Gamma = 0.2
     mu_a = 100.0   # m⁻¹ absorption coefficient
-    Phi = 1.0      # J/m² fluence (normalised)
+    Phi = 1.0      # J/m² fluence
+    # Initial pressure rise: p₀ = Γ · μ_a · Φ [Pa]
+    p0 = Gamma * mu_a * Phi   # 20 Pa
 
     t_arr = np.linspace(0, 80e-6, 3000)  # 80 µs window
-    t1 = (r_d - R) / c   # arrival of leading edge
-    t2 = (r_d + R) / c   # arrival of trailing edge
+    p = np.asarray(kw.pa_sphere_pressure_signal(t_arr, R, Gamma, mu_a, c, r_d, p0))
 
-    # Analytical N-wave (far-field approximation, Xu & Wang 2006 Eq.8)
-    p = np.zeros_like(t_arr)
-    mask = (t_arr >= t1) & (t_arr <= t2)
-    # N-wave: pressure proportional to time derivative of spherical wave
-    t_centre = (t1 + t2) / 2
-    T_half = (t2 - t1) / 2
-    # Normalised N-wave shape: (t - t_centre) / T_half
-    amplitude = Gamma * mu_a * Phi * c * R / (2 * r_d)
-    p[mask] = amplitude * (t_arr[mask] - t_centre) / T_half
+    t1 = (r_d - R) / c   # leading edge arrival [s]
+    t2 = (r_d + R) / c   # trailing edge arrival [s]
 
     fig, ax = plt.subplots(figsize=(7, 4.5))
     ax.plot(t_arr * 1e6, p, color="#1f77b4")
@@ -163,8 +167,9 @@ def fig03_pa_sphere_signal() -> None:
     ax.axvline(t2 * 1e6, color="gray", linestyle=":", linewidth=1, label=f"$t_2={t2*1e6:.1f}$ µs")
     ax.axhline(0, color="k", linewidth=0.5)
     ax.set_xlabel(r"Time $t$ (µs)")
-    ax.set_ylabel("Photoacoustic pressure (a.u.)")
-    ax.set_title(f"PA signal from spherical absorber ($R={R*1e3:.1f}$ mm, $r_d={r_d*1e3:.0f}$ mm)")
+    ax.set_ylabel("Photoacoustic pressure (Pa)")
+    ax.set_title(f"PA signal from spherical absorber ($R={R*1e3:.1f}$ mm, $r_d={r_d*1e3:.0f}$ mm)\n"
+                 r"(kw.pa_sphere_pressure_signal, Xu \& Wang 2006)")
     ax.legend()
     ax.grid(True, alpha=0.3)
     fig.tight_layout()
@@ -172,31 +177,36 @@ def fig03_pa_sphere_signal() -> None:
     plt.close(fig)
 
 
-# ── Figure 04: Bandwidth vs absorber radius (stress confinement) ──────────────
+# ── Figure 04: PA axial resolution vs transducer bandwidth ────────────────────
 def fig04_bandwidth_vs_radius() -> None:
     """
-    Stress confinement requires τ_L >> τ_stress = R/c.
-    Signal bandwidth B ≈ c/(2R) — half-power bandwidth of N-wave spectrum.
-    For detection: need transducer BW > c/(2R).
+    PA axial resolution: δz = c / (2 · BW)
+    Computed via kw.pa_axial_resolution(bandwidth_hz, c) (Rust kernel).
+    Equivalently: minimum detectable sphere radius R ≈ δz / 2 for transducer BW.
+    Xu & Wang (2006) Rev. Sci. Instrum. 77:041101.
     """
-    R = np.logspace(-4, -2, 200)  # 0.1 mm to 10 mm
+    if not _HAS_PYKWAVERS:
+        raise ImportError("pykwavers is required for fig04 (PA axial resolution)")
     c = 1500.0
-    B_Hz = c / (2 * R)
+    B_Hz = np.logspace(5, 9, 300)   # 0.1 MHz to 1 GHz
+    dz_mm = np.array([kw.pa_axial_resolution(b, c) * 1e3 for b in B_Hz])
 
     fig, ax = plt.subplots(figsize=(7, 4.5))
-    ax.loglog(R * 1e3, B_Hz * 1e-6, color="#1f77b4")
-    ax.set_xlabel("Absorber radius $R$ (mm)")
-    ax.set_ylabel("Signal bandwidth $B$ (MHz)")
-    ax.set_title(r"PA signal bandwidth: $B \approx c/(2R)$")
-    # Annotate typical transducer bandwidths
-    for f_MHz, lbl in [(1, "1 MHz"), (5, "5 MHz"), (20, "20 MHz"), (100, "100 MHz")]:
-        R_at = c / (2 * f_MHz * 1e6) * 1e3  # mm
-        ax.axhline(f_MHz, color="gray", linestyle="--", linewidth=0.8)
-        ax.text(0.12, f_MHz * 1.1, lbl, fontsize=8, color="gray")
+    ax.loglog(B_Hz * 1e-6, dz_mm, color="#1f77b4")
 
+    for f_MHz, col in [(1.0, "#aaa"), (5.0, "#888"), (20.0, "#666"), (100.0, "#444")]:
+        dz = kw.pa_axial_resolution(f_MHz * 1e6, c) * 1e3  # mm
+        ax.axvline(f_MHz, color=col, linestyle="--", linewidth=0.8)
+        ax.axhline(dz, color=col, linestyle=":", linewidth=0.8)
+        ax.text(f_MHz * 1.15, dz * 0.7, f"{f_MHz:.0f} MHz\n→ {dz:.2f} mm",
+                fontsize=8, color=col, va="top")
+
+    ax.set_xlabel("Transducer bandwidth (MHz)")
+    ax.set_ylabel(r"Axial resolution $\delta z$ (mm)")
+    ax.set_title(r"PA axial resolution: $\delta z = c\,/(2\,\mathrm{BW})$"
+                 "\n(kw.pa_axial_resolution)")
     ax.grid(True, which="both", alpha=0.3)
-    ax.set_xlim(0.1, 10)
-    ax.set_ylim(0.05, 200)
+    ax.set_xlim(B_Hz[0] * 1e-6, B_Hz[-1] * 1e-6)
     fig.tight_layout()
     savefig("fig04_bandwidth_vs_radius")
     plt.close(fig)
@@ -205,26 +215,28 @@ def fig04_bandwidth_vs_radius() -> None:
 # ── Figure 05: Spectroscopic unmixing (two chromophores) ──────────────────────
 def fig05_spectroscopic_unmixing() -> None:
     """
-    At N wavelengths, measured PA amplitude p(λ) = Σ_k ε_k(λ) c_k · Γ Φ(λ).
-    Two chromophores (HbO₂, Hb): solve 2×2 system at two wavelengths
-    and show how sO₂ = c_HbO2 / (c_HbO2 + c_Hb) varies vs measured ratios.
+    At N wavelengths, PA amplitude p(λ) = Σ_k ε_k(λ) · c_k · Γ · Φ.
+    Two chromophores (HbO₂, Hb) at 760/850 nm:
+      ε from kw.hbo2_molar_absorption / kw.hb_molar_absorption (Prahl 1999).
+    Unmixing via kw.spectroscopic_unmixing_lstsq(spectra_matrix, measurements)
+      which solves (AᵀA)x = Aᵀb by Gaussian elimination (Beard 2011).
     Plot: sO₂ estimate vs true sO₂ for different noise levels.
     """
-    # Molar extinction at 760 nm and 850 nm (simplified, relative units)
-    eps_HbO2 = np.array([0.30, 0.80])  # [760nm, 850nm]
-    eps_Hb = np.array([0.85, 0.30])    # [760nm, 850nm]
+    if not _HAS_PYKWAVERS:
+        raise ImportError("pykwavers is required for fig05 (spectroscopic unmixing)")
+
+    # Molar extinction at 760 nm and 850 nm from Rust kernel (Prahl 1999 poly fit)
+    lam_unmix = np.array([760.0, 850.0])
+    eps_HbO2 = np.asarray(kw.hbo2_molar_absorption(lam_unmix))  # shape (2,)
+    eps_Hb = np.asarray(kw.hb_molar_absorption(lam_unmix))      # shape (2,)
+    # Extinction matrix: A (n_wavelengths × n_chromophores)
+    E = np.column_stack([eps_HbO2, eps_Hb])   # shape (2, 2)
 
     # True sO₂ sweep
     sO2_true = np.linspace(0.0, 1.0, 100)
     c_HbO2 = sO2_true
     c_Hb = 1.0 - sO2_true
-
-    # Measured PA signal (noiseless)
-    E = np.column_stack([eps_HbO2, eps_Hb])  # 2×2 matrix [wavelength × chrom]
-    C_true = np.column_stack([c_HbO2, c_Hb])  # 100×2
-
-    # sO₂ estimate from least-squares inversion
-    E_inv = np.linalg.pinv(E)  # 2×2 pseudo-inverse
+    C_true = np.column_stack([c_HbO2, c_Hb])  # (100, 2)
 
     fig, ax = plt.subplots(figsize=(7, 4.5))
     for noise_level, col, lbl in [(0.0, "#1f77b4", "No noise"),
@@ -232,19 +244,21 @@ def fig05_spectroscopic_unmixing() -> None:
                                    (0.05, "#2ca02c", "5% noise")]:
         rng = np.random.default_rng(42)
         sO2_est_all = []
-        for i, sO2 in enumerate(sO2_true):
-            PA = E @ C_true[i]  # 2-wavelength measurement
+        for i in range(len(sO2_true)):
+            PA = E @ C_true[i]   # 2-wavelength PA measurement [a.u.]
             PA_noisy = PA + noise_level * rng.standard_normal(2) * PA.max()
-            c_est = E_inv @ PA_noisy
+            # Rust least-squares unmixing: (AᵀA)x = Aᵀb
+            c_est = np.asarray(kw.spectroscopic_unmixing_lstsq(E, PA_noisy))
             c_est = np.clip(c_est, 0, None)
-            s = c_est[0] / (c_est.sum() + 1e-12)
-            sO2_est_all.append(s)
+            s = c_est[0] / (c_est.sum() + 1e-30)
+            sO2_est_all.append(float(s))
         ax.plot(sO2_true, sO2_est_all, color=col, label=lbl)
 
     ax.plot([0, 1], [0, 1], "k--", linewidth=1, label="Ideal")
     ax.set_xlabel(r"True $sO_2$")
     ax.set_ylabel(r"Estimated $sO_2$")
-    ax.set_title("Spectroscopic unmixing: HbO₂/Hb at 760/850 nm")
+    ax.set_title("Spectroscopic unmixing: HbO₂/Hb at 760/850 nm\n"
+                 "(kw.spectroscopic_unmixing_lstsq, Beard 2011)")
     ax.legend()
     ax.grid(True, alpha=0.3)
     ax.set_xlim(0, 1)
