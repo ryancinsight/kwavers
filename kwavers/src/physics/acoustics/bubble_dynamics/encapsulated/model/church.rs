@@ -46,7 +46,7 @@ impl ChurchModel {
 
         // Internal gas pressure (polytropic)
         let gamma = state.gas_species.gamma();
-        let p_eq = self.params.p0 + 2.0 * self.params.sigma / r0;
+        let p_eq = self.params.p0 + self.params.surface_tension_pressure(r0);
         let p_gas = p_eq * (r0 / r).powf(3.0 * gamma);
 
         // Standard Rayleigh-Plesset terms

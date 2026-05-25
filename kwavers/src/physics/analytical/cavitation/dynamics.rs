@@ -1,5 +1,9 @@
 use std::f64::consts::PI;
 
+use crate::physics::acoustics::bubble_dynamics::bubble_state::{
+    viscous_bubble_wall_stress, young_laplace_pressure,
+};
+
 /// Minnaert resonance frequency of a spherical gas bubble.
 ///
 /// ```text
@@ -156,13 +160,17 @@ pub fn rayleigh_plesset_rk4(
     // vapor term in the equilibrium balance at r = r0. The canonical form
     // is already used in physics/.../keller_miksis/equation.rs; this aligns
     // the analytical Rayleigh-Plesset integrator with it.
-    let p_eq = p0_pa + 2.0 * sigma / r0_m - p_v_pa;
+    let p_eq = p0_pa + young_laplace_pressure(sigma, r0_m) - p_v_pa;
 
     let rhs = |r: f64, rdot: f64, t: f64| -> (f64, f64) {
         let r_clamped = r.max(1e-15);
         let p_gas = p_eq * (r0_m / r_clamped).powf(3.0 * kappa) + p_v_pa;
         let p_ac = p_ac_pa * (omega * t).sin();
-        let rddot = (p_gas - p0_pa - p_ac - 2.0 * sigma / r_clamped - 4.0 * mu * rdot / r_clamped)
+        let rddot = (p_gas
+            - p0_pa
+            - p_ac
+            - young_laplace_pressure(sigma, r_clamped)
+            - viscous_bubble_wall_stress(mu, rdot, r_clamped))
             / (rho * r_clamped)
             - 1.5 * rdot * rdot / r_clamped;
         (rdot, rddot)
@@ -236,7 +244,7 @@ pub fn keller_miksis_rk4(
     //   p_nc(r)        = (p0 + 2 sigma / r0 - p_v) * (r0 / r)^(3 kappa)
     // Only the non-condensable partial pressure p_nc compresses
     // polytropically; the saturated vapor pressure p_v is isothermal.
-    let p_eq = p0_pa + 2.0 * sigma / r0_m - p_v_pa;
+    let p_eq = p0_pa + young_laplace_pressure(sigma, r0_m) - p_v_pa;
 
     // Keller-Miksis equation in its canonical form (Brennen 2014 Eq 4.5;
     // Keller & Miksis 1980 Eq 2.3):
@@ -267,7 +275,9 @@ pub fn keller_miksis_rk4(
         let p_ac_ret = p_ac_pa * (omega * t_ret).sin();
 
         // Liquid-side bubble wall pressure and far-field pressure.
-        let p_wall = p_gas - 2.0 * sigma / r_c - 4.0 * mu * rdot / r_c;
+        let p_wall = p_gas
+            - young_laplace_pressure(sigma, r_c)
+            - viscous_bubble_wall_stress(mu, rdot, r_c);
         let p_inf = p0_pa + p_ac_ret;
 
         // Time derivatives at the wall.  Polytropic non-condensable gas:
@@ -280,7 +290,7 @@ pub fn keller_miksis_rk4(
         //   dp_inf/dt = p_ac' (t_ret) * (1 + Rdot/c)
         //             = p_ac * omega * cos(omega t_ret) * (1 + Rdot/c)
         let dp_nc_dt = -3.0 * kappa * p_nc * rdot / r_c;
-        let dp_surface_dt = 2.0 * sigma * rdot / (r_c * r_c);
+        let dp_surface_dt = young_laplace_pressure(sigma, r_c) * rdot / r_c;
         let dp_viscous_dt = 4.0 * mu * rdot * rdot / (r_c * r_c);
         let dp_wall_dt = dp_nc_dt + dp_surface_dt + dp_viscous_dt;
         let dp_inf_dt = p_ac_pa * omega * (omega * t_ret).cos() * (1.0 + rdot / c_liquid);
