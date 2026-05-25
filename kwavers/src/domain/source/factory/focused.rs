@@ -1,0 +1,116 @@
+//! Focused bowl transducer construction for SourceFactory.
+
+use crate::core::error::{ConfigError, KwaversResult};
+use crate::domain::source::{
+    transducers::focused::{BowlAngularBounds, BowlConfig, BowlTransducer},
+    DomainSourceParameters, FocusedBowlAperture,
+};
+
+pub(super) fn create_focused_bowl_transducer(
+    config: &DomainSourceParameters,
+    bowl_config: BowlConfig,
+) -> KwaversResult<BowlTransducer> {
+    match config.focused_bowl_aperture {
+        FocusedBowlAperture::Diameter => match config.num_elements {
+            Some(element_count) => {
+                BowlTransducer::with_element_count(bowl_config, element_count)
+            }
+            None => BowlTransducer::new(bowl_config),
+        },
+        FocusedBowlAperture::Hemisphere => {
+            let element_count = required_focused_bowl_element_count(config)?;
+            BowlTransducer::with_angular_bounds(
+                bowl_config,
+                BowlAngularBounds::hemisphere(),
+                element_count,
+            )
+        }
+        FocusedBowlAperture::PolarSpan { theta_max_rad } => {
+            let element_count = required_focused_bowl_element_count(config)?;
+            BowlTransducer::with_polar_span(bowl_config, theta_max_rad, element_count)
+        }
+        FocusedBowlAperture::PolarBounds {
+            theta_min_rad,
+            theta_max_rad,
+        } => {
+            let element_count = required_focused_bowl_element_count(config)?;
+            BowlTransducer::with_polar_bounds(
+                bowl_config,
+                theta_min_rad,
+                theta_max_rad,
+                element_count,
+            )
+        }
+        FocusedBowlAperture::AxisProjectionBounds {
+            axis_projection_min,
+            axis_projection_max,
+        } => {
+            let element_count = required_focused_bowl_element_count(config)?;
+            BowlTransducer::with_axis_projection_bounds(
+                bowl_config,
+                axis_projection_min,
+                axis_projection_max,
+                element_count,
+            )
+        }
+        FocusedBowlAperture::AxisReferencePolarBounds {
+            radius_of_curvature_m,
+            theta_min_rad,
+            theta_max_rad,
+        } => {
+            let element_count = required_focused_bowl_element_count(config)?;
+            // Aperture chord: 2 R sin(theta_max).
+            let aperture_diameter_m = 2.0 * radius_of_curvature_m * theta_max_rad.sin();
+            let mut axis_config = BowlConfig::from_axis_reference_focus(
+                config.position,
+                bowl_config.focus,
+                radius_of_curvature_m,
+                aperture_diameter_m,
+                config.frequency,
+                config.amplitude,
+            )?;
+            axis_config.phase = config.phase;
+            BowlTransducer::with_polar_bounds(
+                axis_config,
+                theta_min_rad,
+                theta_max_rad,
+                element_count,
+            )
+        }
+        FocusedBowlAperture::AxisReferenceHemisphere {
+            radius_of_curvature_m,
+        } => {
+            let element_count = required_focused_bowl_element_count(config)?;
+            // Full hemisphere: theta_max = pi/2, sin(pi/2) = 1, aperture = 2R.
+            let aperture_diameter_m = 2.0 * radius_of_curvature_m;
+            let mut axis_config = BowlConfig::from_axis_reference_focus(
+                config.position,
+                bowl_config.focus,
+                radius_of_curvature_m,
+                aperture_diameter_m,
+                config.frequency,
+                config.amplitude,
+            )?;
+            axis_config.phase = config.phase;
+            BowlTransducer::with_angular_bounds(
+                axis_config,
+                BowlAngularBounds::hemisphere(),
+                element_count,
+            )
+        }
+    }
+}
+
+pub(super) fn required_focused_bowl_element_count(
+    config: &DomainSourceParameters,
+) -> KwaversResult<usize> {
+    config.num_elements.ok_or_else(|| {
+        ConfigError::InvalidValue {
+            parameter: "num_elements".to_owned(),
+            value: "None".to_owned(),
+            constraint: "Focused bowl angular aperture modes require a configured element count"
+                .to_owned(),
+        }
+        .into()
+    })
+}
