@@ -94,6 +94,14 @@ pub const RAYLEIGH_COLLAPSE_COEFFICIENT: f64 = 0.915;
 /// Reference: NIST
 pub const AIR_SPECIFIC_HEAT_CP: f64 = 1005.0;
 
+/// Mole fraction of molecular oxygen (O₂) in dry air [-].
+///
+/// Standard dry-air composition: 20.946% O₂ by mole (NIST SRM 2659a).
+/// Used for ROS generation models and gas-transport calculations.
+///
+/// Reference: NIST (2020) *Composition of dry air at sea level*.
+pub const AIR_O2_FRACTION: f64 = 0.2095;
+
 /// Air thermal conductivity at 20°C (W/(m·K))
 /// Value: 0.0257
 /// Reference: NIST

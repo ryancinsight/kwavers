@@ -1,6 +1,7 @@
 //! ROS generation models based on physical conditions
 
 use super::types::ROSSpecies;
+use crate::core::constants::acoustic_parameters::AIR_O2_FRACTION;
 use crate::core::constants::fundamental::GAS_CONSTANT;
 use std::collections::HashMap;
 
@@ -25,7 +26,7 @@ pub fn calculate_ros_generation(
         // O₂ dissociation
         if temperature >= 3000.0 {
             // O2 dissociation temperature threshold
-            let o2_fraction = 0.21 * (1.0 - water_vapor_fraction); // Air composition
+            let o2_fraction = AIR_O2_FRACTION * (1.0 - water_vapor_fraction); // dry-air O₂ mole fraction
             let k_o2 = 1e14 * (-6.0e4 / temperature).exp();
             let o_rate = 2.0 * k_o2 * o2_fraction * pressure / (GAS_CONSTANT * temperature);
             generation_rates.insert(ROSSpecies::AtomicOxygen, o_rate);

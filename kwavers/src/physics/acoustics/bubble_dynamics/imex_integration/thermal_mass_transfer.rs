@@ -13,9 +13,10 @@
 
 use super::integrator::BubbleIMEXIntegrator;
 use crate::core::constants::fundamental::GAS_CONSTANT as R_GAS;
+use crate::core::constants::numerical::MMHG_TO_PA;
 use crate::core::constants::thermodynamic::{
     NUSSELT_CONSTANT, NUSSELT_PECLET_COEFF, SHERWOOD_PECLET_EXPONENT, T_AMBIENT,
-    VAPOR_DIFFUSION_COEFFICIENT,
+    VAPOR_DIFFUSION_COEFFICIENT, WATER_ANTOINE_A, WATER_ANTOINE_B, WATER_ANTOINE_C,
 };
 use crate::core::error::KwaversResult;
 use crate::physics::acoustics::bubble_dynamics::BubbleState;
@@ -88,16 +89,12 @@ impl BubbleIMEXIntegrator {
         1.0 + (gamma_gas - 1.0) / (1.0 + PECLET_SCALING_FACTOR / peclet_eff)
     }
 
-    /// Calculate equilibrium vapor pressure at given temperature (Antoine equation)
+    /// Calculate equilibrium vapor pressure at given temperature (Antoine equation).
+    ///
+    /// log₁₀(P_mmHg) = A − B / (C + T_celsius); coefficients from Stull (1947).
     pub(crate) fn calculate_equilibrium_vapor_pressure(&self, temperature: f64) -> f64 {
-        let a = 8.07131;
-        let b = 1730.63;
-        let c = 233.426;
-
         let t_celsius = crate::core::constants::thermodynamic::kelvin_to_celsius(temperature);
-        let log10_p = a - b / (c + t_celsius);
-
-        // Convert from mmHg to Pa
-        10.0_f64.powf(log10_p) * 133.322
+        let log10_p = WATER_ANTOINE_A - WATER_ANTOINE_B / (WATER_ANTOINE_C + t_celsius);
+        10.0_f64.powf(log10_p) * MMHG_TO_PA
     }
 }
