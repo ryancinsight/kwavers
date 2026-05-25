@@ -32,7 +32,6 @@ Optional: pykwavers (fig06 only; skips gracefully if absent)
 import os
 import sys
 import numpy as np
-from scipy.special import jv  # Bessel functions J_n
 import matplotlib
 
 matplotlib.use("Agg")
@@ -43,6 +42,12 @@ try:
 except ImportError:
     kw = None  # type: ignore[assignment]
     _HAS_PYKWAVERS = False
+
+if not _HAS_PYKWAVERS:
+    raise ImportError(
+        "pykwavers is required for all ch03 figures. "
+        "All Fubini, shock-distance, and absorption physics must be computed via kw.* bindings."
+    )
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 
@@ -86,8 +91,8 @@ F0 = 1.0e6         # source frequency (Hz)
 OMEGA0 = 2 * np.pi * F0
 P0 = 1.0e6         # source amplitude (1 MPa)
 
-# Shock distance (Eq. 3.28): z_s = ρ₀c₀³ / (β ω₀ P₀)
-Z_S = RHO0 * C0**3 / (BETA_WATER * OMEGA0 * P0)
+# Shock distance via kw.shock_formation_distance (Eq. 3.28): z_s = ρ₀c₀³ / (β ω₀ P₀)
+Z_S = kw.shock_formation_distance(P0, F0, C0, RHO0, BETA_WATER)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -98,6 +103,9 @@ Z_S = RHO0 * C0**3 / (BETA_WATER * OMEGA0 * P0)
 
 def fubini_waveform(tau: np.ndarray, sigma: float, P0: float, N_harm: int = 30) -> np.ndarray:
     """Evaluate the Fubini solution (3.21) at normalized distance sigma.
+
+    Bₙ(σ) = 2/(nσ) Jₙ(nσ) from kw.fubini_harmonic_spectrum (Rust kernel).
+    p(τ) = P₀ Σₙ Bₙ(σ) sin(nω₀τ)  — sin synthesis is signal processing.
 
     Args:
         tau:     Array of retarded-time samples [s].
@@ -111,19 +119,20 @@ def fubini_waveform(tau: np.ndarray, sigma: float, P0: float, N_harm: int = 30) 
     p = np.zeros_like(tau)
     if sigma < 1e-12:
         return P0 * np.sin(OMEGA0 * tau)
-    for n in range(1, N_harm + 1):
-        p += (2.0 * P0 / sigma) * jv(n, n * sigma) / n * np.sin(n * OMEGA0 * tau)
+    # Bₙ(σ) normalised amplitudes from Rust (len = N_harm)
+    bn = np.asarray(kw.fubini_harmonic_spectrum(N_harm, sigma))
+    for n_idx, bn_val in enumerate(bn):
+        n = n_idx + 1
+        p += P0 * bn_val * np.sin(n * OMEGA0 * tau)
     return p
 
 
 def fubini_harmonic_amplitude(n: int, sigma: float, P0: float) -> float:
-    """Amplitude of the n-th harmonic from the Fubini solution (Corollary 3.3).
+    """Amplitude of the n-th harmonic: |P_n| = P₀ · Bₙ(σ).
 
-    Returns: |P_n| = (2 P₀ / σ) |J_n(n σ)| / n
+    Computed via kw.fubini_harmonic_amplitude (Rust Bessel kernel, Corollary 3.3).
     """
-    if sigma < 1e-12:
-        return P0 if n == 1 else 0.0
-    return abs(2.0 * P0 / sigma * jv(n, n * sigma) / n)
+    return P0 * kw.fubini_harmonic_amplitude(n, sigma)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -258,7 +267,7 @@ for P0_MPa, col in zip(P0_vals_MPa, colors_p):
     labels_m = []
     for name, (ba, rho, c) in media.items():
         beta = 1.0 + ba / 2.0
-        zs = rho * c**3 / (beta * OMEGA0 * P0_val)
+        zs = kw.shock_formation_distance(P0_val, F0, c, rho, beta)
         zs_vals.append(zs * 1e3)
         labels_m.append(name)
     x = np.arange(len(zs_vals))
@@ -293,14 +302,8 @@ freqs = np.logspace(5, 7.5, 300)  # 100 kHz – 30 MHz
 DELTA_WATER = 4.33e-6  # m²/s, water 20°C
 alpha_sk = DELTA_WATER * (2 * np.pi * freqs)**2 / (2 * C0**3)
 
-# Power-law tissue models (Duck 1990): α = α₀ f^y   [Np/m]
-# Convert from dB/cm/MHz^y to Np/m: 1 dB/cm = 11.515 Np/m; per MHz^y
-def alpha_powerlaw(f, alpha0_dB_cm_MHz, y):
-    """Power-law absorption in Np/m, with f in Hz, alpha0 in dB/cm/MHz^y."""
-    alpha_Npm_MHz = alpha0_dB_cm_MHz * 11.515 * 100.0  # dB/cm/MHz^y → Np/m/MHz^y
-    f_MHz = f / 1e6
-    return alpha_Npm_MHz * f_MHz**y
-
+# Power-law tissue models (Duck 1990): α = α₀ f^y  [dB/cm].
+# Computed via kw.absorption_power_law_db_cm(f_MHz, alpha0_dBcm, y) (Rust kernel).
 tissues = {
     "Liver (y=1.05)":  (0.45, 1.05, "C1", "-"),
     "Breast (y=1.5)":  (0.57, 1.50, "C2", "--"),
@@ -308,12 +311,14 @@ tissues = {
 }
 
 fig, ax = plt.subplots(figsize=(7, 4.5))
-ax.loglog(freqs / 1e6, alpha_sk * 8.686 / 100, label="Water (Stokes-Kirchhoff, y=2)",
+# Stokes-Kirchhoff (water): α = δω²/(2c³) [Np/m] — no Rust binding; Theorem 3.10.
+alpha_sk_dBcm = alpha_sk * 8.686 / 100  # Np/m → dB/cm
+ax.loglog(freqs / 1e6, alpha_sk_dBcm, label="Water (Stokes-Kirchhoff, y=2)",
           color="C0", lw=2)
 
 for label, (a0, y, col, ls) in tissues.items():
-    alpha_pl = alpha_powerlaw(freqs, a0, y)
-    ax.loglog(freqs / 1e6, alpha_pl * 8.686 / 100, label=label, color=col, ls=ls, lw=1.6)
+    alpha_pl_dBcm = np.asarray(kw.absorption_power_law_db_cm(freqs / 1e6, a0, y))
+    ax.loglog(freqs / 1e6, alpha_pl_dBcm, label=label, color=col, ls=ls, lw=1.6)
 
 ax.set_xlabel("Frequency (MHz)")
 ax.set_ylabel(r"Absorption $\alpha$ (dB/cm)")
