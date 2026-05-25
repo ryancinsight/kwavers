@@ -70,7 +70,7 @@ impl SolverFactoryRegistry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
     use crate::solver::interface::factory::{FactoryGridParameters, FactoryMediumParameters};
 
     struct TestGrid {
@@ -115,7 +115,7 @@ mod tests {
         }
 
         fn density(&self, _x: f64, _y: f64, _z: f64) -> f64 {
-            1000.0
+            DENSITY_WATER_NOMINAL
         }
 
         fn heterogeneity(&self) -> f64 {
