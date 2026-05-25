@@ -1,4 +1,4 @@
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::domain::grid::Grid;
 use crate::domain::medium::HomogeneousMedium;
@@ -58,7 +58,7 @@ fn test_pstd_phase_velocity_accuracy() {
     // Quantization error ±0.5/160 = 0.31% < 0.5% tolerance. ~8× faster than n=128.
     let n = 64_usize;
     let c0 = SOUND_SPEED_WATER_SIM;
-    let rho0 = 1000.0_f64;
+    let rho0 = DENSITY_WATER_NOMINAL;
     let frequency = MHZ_TO_HZ;
     let wavelength = c0 / frequency;
     let dx = wavelength / 20.0; // 20 PPW

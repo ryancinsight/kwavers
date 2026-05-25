@@ -1,4 +1,4 @@
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::domain::grid::Grid;
 use crate::domain::medium::HomogeneousMedium;
@@ -23,7 +23,7 @@ fn test_linear_array_phase_accuracy() {
     config.dt = super::CFL_NUMBER * dx / c0;
 
     let grid = Grid::new(n, n, 1, dx, dx, dx).unwrap();
-    let medium = HomogeneousMedium::from_minimal(1000.0, c0, &grid);
+    let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, c0, &grid);
 
     // Create linear array source (multiple point sources along x-axis)
     let num_elements = 8;

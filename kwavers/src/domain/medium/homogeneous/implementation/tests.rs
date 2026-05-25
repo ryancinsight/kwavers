@@ -131,7 +131,7 @@ fn test_elastic_homogeneous_fluid_limit_zero_shear_speed() {
 fn test_elastic_homogeneous_rejects_unstable_speeds() {
     let grid = Grid::new(4, 4, 4, 1e-4, 1e-4, 1e-4).unwrap();
     // c_s² · 2 > c_p² ⇒ λ < 0 — must reject
-    let res = HomogeneousMedium::elastic_homogeneous(1000.0, SOUND_SPEED_WATER_SIM, 1200.0, &grid);
+    let res = HomogeneousMedium::elastic_homogeneous(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 1200.0, &grid);
     assert!(
         res.is_none(),
         "Unstable elastic configuration must be rejected"
@@ -141,9 +141,9 @@ fn test_elastic_homogeneous_rejects_unstable_speeds() {
     assert!(
         HomogeneousMedium::elastic_homogeneous(0.0, SOUND_SPEED_WATER_SIM, 800.0, &grid).is_none()
     );
-    assert!(HomogeneousMedium::elastic_homogeneous(1000.0, 0.0, 800.0, &grid).is_none());
+    assert!(HomogeneousMedium::elastic_homogeneous(DENSITY_WATER_NOMINAL, 0.0, 800.0, &grid).is_none());
     assert!(
-        HomogeneousMedium::elastic_homogeneous(1000.0, SOUND_SPEED_WATER_SIM, -1.0, &grid)
+        HomogeneousMedium::elastic_homogeneous(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, -1.0, &grid)
             .is_none()
     );
 
@@ -152,7 +152,7 @@ fn test_elastic_homogeneous_rejects_unstable_speeds() {
         HomogeneousMedium::elastic_homogeneous(f64::NAN, SOUND_SPEED_WATER_SIM, 800.0, &grid)
             .is_none()
     );
-    assert!(HomogeneousMedium::elastic_homogeneous(1000.0, f64::INFINITY, 800.0, &grid).is_none());
+    assert!(HomogeneousMedium::elastic_homogeneous(DENSITY_WATER_NOMINAL, f64::INFINITY, 800.0, &grid).is_none());
 }
 
 /// `set_lame_parameters` must reject non-finite, negative-μ, or negative-λ
