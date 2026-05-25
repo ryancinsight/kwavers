@@ -48,8 +48,9 @@
 //! - Gassmann F. (1951). Vierteljahrschrift Naturf. Ges. Zürich 96, 1–23.
 //! - Wood A.B. (1955). *A Textbook of Sound*. Bell & Hyman, London.
 
-use crate::core::constants::cavitation::VISCOSITY_WATER;
+use crate::core::constants::cavitation::{VISCOSITY_AIR, VISCOSITY_WATER};
 use crate::core::constants::fundamental::{DENSITY_TISSUE, DENSITY_WATER_NOMINAL};
+use crate::core::constants::tissue_acoustics::DENSITY_AIR;
 use crate::core::error::{KwaversError, KwaversResult};
 
 /// Poroelastic material properties
@@ -182,12 +183,12 @@ impl PoroelasticMaterial {
             "lung" => Ok(Self {
                 porosity: 0.8,             // 80% air-filled
                 solid_density: 300.0,      // Low density
-                fluid_density: 1.2,        // Air
+                fluid_density: DENSITY_AIR, // SSOT: tissue_acoustics::DENSITY_AIR
                 solid_bulk_modulus: 1e6,   // Very soft
                 fluid_bulk_modulus: 1.4e5, // Air at 1 atm
                 shear_modulus: 1e3,        // 1 kPa
                 permeability: 1e-8,        // High permeability
-                fluid_viscosity: 1.8e-5,   // Air
+                fluid_viscosity: VISCOSITY_AIR, // SSOT: cavitation::VISCOSITY_AIR
                 tortuosity: 2.0,           // Complex structure
             }),
             _ => Err(KwaversError::InvalidInput(format!(
