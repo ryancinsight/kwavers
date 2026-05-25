@@ -1,4 +1,5 @@
 use super::*;
+use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 
 #[test]
@@ -35,7 +36,7 @@ fn test_safety_limit_checking() {
     };
 
     let grid = crate::domain::grid::Grid::new(8, 8, 8, 0.005, 0.005, 0.005).unwrap();
-    let medium = HomogeneousMedium::new(1000.0, SOUND_SPEED_TISSUE, 0.5, 1.0, &grid);
+    let medium = HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE, 0.5, 1.0, &grid);
 
     let mut orchestrator =
         TherapyIntegrationOrchestrator::new(config, grid, Box::new(medium.clone())).unwrap();
@@ -81,7 +82,7 @@ fn test_safety_controller_integration() {
 
     let grid = crate::domain::grid::Grid::new(16, 16, 16, 0.002, 0.002, 0.002).unwrap();
     let medium = Box::new(HomogeneousMedium::new(
-        1000.0,
+        DENSITY_WATER_NOMINAL,
         SOUND_SPEED_TISSUE,
         0.5,
         1.0,

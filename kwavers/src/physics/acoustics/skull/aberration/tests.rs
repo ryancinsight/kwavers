@@ -1,5 +1,6 @@
 use std::f64::consts::PI;
 
+use crate::core::constants::fundamental::DENSITY_WATER;
 use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::domain::grid::Grid;
 use crate::physics::acoustics::skull::HeterogeneousSkull;
@@ -17,7 +18,7 @@ fn make_test_skull(
     c_bone: f64,
 ) -> HeterogeneousSkull {
     let mut sound_speed = Array3::from_elem((nx, ny, nz), C_WATER_DEFAULT);
-    let density = Array3::from_elem((nx, ny, nz), 998.0_f64);
+    let density = Array3::from_elem((nx, ny, nz), DENSITY_WATER);
     let attenuation = Array3::zeros((nx, ny, nz));
     for i in 0..nx {
         for j in 0..ny {

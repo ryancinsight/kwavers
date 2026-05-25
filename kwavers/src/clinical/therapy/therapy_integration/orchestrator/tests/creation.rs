@@ -1,4 +1,5 @@
 use super::*;
+use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use crate::core::constants::medical::TI_LIMIT_SOFT_TISSUE;
 use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 
@@ -36,7 +37,7 @@ fn test_therapy_orchestrator_creation() {
     };
 
     let grid = crate::domain::grid::Grid::new(32, 32, 32, 0.001, 0.001, 0.001).unwrap();
-    let medium = HomogeneousMedium::new(1000.0, SOUND_SPEED_TISSUE, 0.5, 1.0, &grid);
+    let medium = HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE, 0.5, 1.0, &grid);
 
     let orchestrator =
         TherapyIntegrationOrchestrator::new(config, grid, Box::new(medium.clone())).unwrap();
