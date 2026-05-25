@@ -1,4 +1,5 @@
 use super::StateDependentConstants;
+use crate::core::constants::thermodynamic::{SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER};
 use crate::core::constants::water::WaterProperties;
 
 impl StateDependentConstants {
@@ -130,13 +131,11 @@ impl StateDependentConstants {
     /// Thermal diffusivity [m²/s]
     #[must_use]
     pub fn thermal_diffusivity_water(&self, temperature: f64) -> f64 {
-        const K_THERM: f64 = 0.598; // W/(m·K) at 20°C
-        const CP: f64 = 4182.0; // J/(kg·K)
-
         let rho = WaterProperties::density(temperature);
-        let k_temp = K_THERM * 0.002f64.mul_add(temperature - 20.0, 1.0);
+        // SSOT: THERMAL_CONDUCTIVITY_WATER = 0.598 W/(m·K) at 20°C; linear correction for temperature
+        let k_temp = THERMAL_CONDUCTIVITY_WATER * 0.002f64.mul_add(temperature - 20.0, 1.0);
 
-        k_temp / (rho * CP)
+        k_temp / (rho * SPECIFIC_HEAT_WATER)
     }
 
     /// Calculate Prandtl number Pr = ν/κ (viscous/thermal diffusivity ratio)

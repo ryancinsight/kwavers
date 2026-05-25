@@ -3,6 +3,7 @@
 //! This module defines traits for thermal properties including heat capacity,
 //! thermal conductivity, and temperature-dependent effects.
 
+use crate::core::constants::thermodynamic::SPECIFIC_HEAT_WATER_37C;
 use crate::domain::grid::Grid;
 use crate::domain::medium::core::CoreMedium;
 use ndarray::Array3;
@@ -11,7 +12,8 @@ use ndarray::Array3;
 pub trait ThermalProperties: CoreMedium {
     /// Get specific heat capacity at constant pressure (J/(kg·K))
     fn specific_heat_capacity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        4180.0 // Default for water
+        // SSOT: SPECIFIC_HEAT_WATER_37C = 4180.0 J/(kg·K) — water at body temperature
+        SPECIFIC_HEAT_WATER_37C
     }
 
     /// Get specific heat at constant volume (J/(kg·K))
