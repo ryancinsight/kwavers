@@ -81,6 +81,16 @@ pub const WATER_TAIT_N: f64 = 7.15;
 /// Reference: Duck FA (1990); k-Wave defaults.
 pub const ACOUSTIC_IMPEDANCE_WATER_NOMINAL: f64 = DENSITY_WATER_NOMINAL * SOUND_SPEED_WATER_SIM;
 
+/// Nominal acoustic impedance of soft tissue [Pa·s/m = Rayl].
+///
+/// Z_tissue = ρ_tissue · c_tissue = 1050 kg/m³ × 1540 m/s = 1.617 MRayl.
+///
+/// Used for in-situ intensity calculations at a tissue target:
+///   I_SPPA = p_peak² / (2 · Z_tissue)
+/// per Nyborg (1988) Phys. Med. Biol. 33(7):785, Eq. 4.
+/// IEC 62127-1:2013 uses ρ=1060, c=1540 giving 1.632 MRayl; the difference is <1%.
+pub const ACOUSTIC_IMPEDANCE_TISSUE_NOMINAL: f64 = DENSITY_TISSUE * SOUND_SPEED_TISSUE;
+
 /// Default acoustic absorption coefficient of soft tissue [dB/(cm·MHz)].
 ///
 /// Value: 0.5 dB/(cm·MHz) — mid-range for generic soft tissue.

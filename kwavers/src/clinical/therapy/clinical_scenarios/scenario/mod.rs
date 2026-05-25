@@ -20,7 +20,7 @@ mod benefit;
 mod pulse;
 mod regime;
 
-use crate::core::constants::fundamental::ACOUSTIC_IMPEDANCE_WATER_NOMINAL;
+use crate::core::constants::fundamental::ACOUSTIC_IMPEDANCE_TISSUE_NOMINAL;
 use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 
 pub use benefit::{intrinsic_threshold_pa, BenefitDetriment};
@@ -116,7 +116,7 @@ impl HistotripsyScenario {
         let p = self
             .peak_positive_pressure_pa
             .max(self.peak_negative_pressure_pa.abs());
-        p * p / (2.0 * ACOUSTIC_IMPEDANCE_WATER_NOMINAL)
+        p * p / (2.0 * ACOUSTIC_IMPEDANCE_TISSUE_NOMINAL)
     }
 
     // ---------------------- Library scenarios ----------------------
