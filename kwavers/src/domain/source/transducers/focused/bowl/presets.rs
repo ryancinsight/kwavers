@@ -53,12 +53,16 @@ impl BowlConfig {
         )
     }
 
-    /// Build a spherical-cap bowl from an axis reference, focus, and radius.
+    /// Build a spherical-cap bowl from an axis reference, focus, radius, and
+    /// aperture diameter.
     ///
     /// The axis reference fixes the vertex-to-focus axis but does not have to
     /// be the bowl vertex. This supports clinical placements that choose an
     /// anatomical contact point to orient the aperture while selecting a larger
-    /// curvature radius from an outside-body rim constraint.
+    /// curvature radius from an outside-body rim constraint. `aperture_diameter_m`
+    /// is the chord diameter of the active cap; for a cap bounded by maximum
+    /// polar half-angle theta_max it equals `2 R sin(theta_max)`. This matches the
+    /// `diameter_m` convention of [`Self::from_vertex_focus`].
     ///
     /// # Theorem
     ///
@@ -71,18 +75,23 @@ impl BowlConfig {
     ///
     /// # Errors
     ///
-    /// Returns a validation error when coordinates are non-finite, `radius_m`
-    /// is not positive finite, or the axis reference equals the focus.
+    /// Returns a validation error when:
+    /// - any coordinate or `radius_m` / `aperture_diameter_m` is non-finite or
+    ///   non-positive, or
+    /// - the Euclidean separation `||F - A||` is less than 1 mm (degenerate
+    ///   axis that cannot define a unique bowl orientation).
     pub fn from_axis_reference_focus(
         axis_reference_m: [f64; 3],
         focus_m: [f64; 3],
         radius_m: f64,
+        aperture_diameter_m: f64,
         frequency_hz: f64,
         amplitude_pa: f64,
     ) -> KwaversResult<Self> {
         validate_finite_vector("axis_reference", axis_reference_m)?;
         validate_finite_vector("focus", focus_m)?;
         validate_positive_finite_field("radius_of_curvature", radius_m)?;
+        validate_positive_finite_field("aperture_diameter", aperture_diameter_m)?;
 
         let axis = [
             focus_m[0] - axis_reference_m[0],
@@ -92,11 +101,13 @@ impl BowlConfig {
         let axis_norm = (axis[0])
             .mul_add(axis[0], axis[1].mul_add(axis[1], axis[2] * axis[2]))
             .sqrt();
-        if !positive_finite(axis_norm) {
+        // Guard both non-finite and near-zero: separation < 1 mm cannot define
+        // a unique acoustic axis to geometric precision.
+        if !positive_finite(axis_norm) || axis_norm < 1.0e-3 {
             return Err(field_validation_error(
                 "axis_reference",
                 format!("{axis_reference_m:?}"),
-                "must differ from focus to define the bowl acoustic axis",
+                "must be separated from focus by at least 1 mm to define the bowl acoustic axis",
             ));
         }
 
@@ -109,7 +120,7 @@ impl BowlConfig {
 
         Ok(Self {
             radius_of_curvature: radius_m,
-            diameter: 2.0 * radius_m,
+            diameter: aperture_diameter_m,
             center: vertex_m,
             focus: focus_m,
             frequency: frequency_hz,

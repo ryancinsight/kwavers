@@ -33,10 +33,15 @@ pub(crate) fn bowl_elements(
     focus_m: Point3,
     radius_m: f64,
 ) -> KwaversResult<Vec<Point3>> {
+    // Chord diameter of the active spherical cap:
+    //   aperture = 2 R sin(theta_max), where theta_max = BOWL_THETA_MAX_RAD.
+    // This is the correct cap aperture, not the hemisphere diameter (2R).
+    let aperture_diameter_m = 2.0 * radius_m * BOWL_THETA_MAX_RAD.sin();
     let config = BowlConfig::from_axis_reference_focus(
         [skin_contact_m.x_m, skin_contact_m.y_m, skin_contact_m.z_m],
         [focus_m.x_m, focus_m.y_m, focus_m.z_m],
         radius_m,
+        aperture_diameter_m,
         BOWL_GEOMETRY_FREQUENCY_HZ,
         BOWL_GEOMETRY_AMPLITUDE_PA,
     )?;

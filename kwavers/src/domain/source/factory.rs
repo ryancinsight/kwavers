@@ -307,10 +307,13 @@ impl SourceFactory {
                 theta_max_rad,
             } => {
                 let element_count = required_focused_bowl_element_count(config)?;
+                // Aperture chord: 2 R sin(theta_max).
+                let aperture_diameter_m = 2.0 * radius_of_curvature_m * theta_max_rad.sin();
                 let mut axis_config = BowlConfig::from_axis_reference_focus(
                     config.position,
                     bowl_config.focus,
                     radius_of_curvature_m,
+                    aperture_diameter_m,
                     config.frequency,
                     config.amplitude,
                 )?;
@@ -326,10 +329,13 @@ impl SourceFactory {
                 radius_of_curvature_m,
             } => {
                 let element_count = required_focused_bowl_element_count(config)?;
+                // Full hemisphere: theta_max = pi/2, sin(pi/2) = 1, aperture = 2R.
+                let aperture_diameter_m = 2.0 * radius_of_curvature_m;
                 let mut axis_config = BowlConfig::from_axis_reference_focus(
                     config.position,
                     bowl_config.focus,
                     radius_of_curvature_m,
+                    aperture_diameter_m,
                     config.frequency,
                     config.amplitude,
                 )?;

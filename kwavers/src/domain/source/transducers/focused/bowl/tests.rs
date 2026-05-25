@@ -194,8 +194,10 @@ fn axis_reference_preset_preserves_focus_axis_and_explicit_radius() {
     let axis_unit = normalize3(sub3(focus, axis_reference)).unwrap();
     let expected_vertex = sub3(focus, scale3(axis_unit, radius));
 
+    // Aperture chord at theta_max = 0.90 rad: 2 R sin(theta_max).
+    let aperture_diameter = 2.0 * radius * theta_max.sin();
     let config =
-        BowlConfig::from_axis_reference_focus(axis_reference, focus, radius, 750.0e3, 2.5e5)
+        BowlConfig::from_axis_reference_focus(axis_reference, focus, radius, aperture_diameter, 750.0e3, 2.5e5)
             .unwrap();
 
     assert!((config.radius_of_curvature - radius).abs() < 1.0e-14);
@@ -232,6 +234,7 @@ fn axis_reference_preset_rejects_degenerate_axis() {
         [0.0, 0.0, 0.0],
         [0.0, 0.0, 0.0],
         0.1,
+        0.15,
         500.0e3,
         1.0e5,
     )
