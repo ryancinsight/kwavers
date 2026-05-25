@@ -323,7 +323,11 @@ def bbb_opening_from_subspots(
         d2 = axes_m[0] * axes_m[0] + axes_m[1] * axes_m[1] + axes_m[2] * axes_m[2]
         dose += subspot_dose * np.exp(-0.5 * d2 / radius2)
 
-    permeability = np.power(dose, hill_n) / (np.power(d50, hill_n) + np.power(dose, hill_n))
+    # P(D) = D^n/(D50^n+D^n) via kw.bbb_permeability_hill (McDannold 2008)
+    if _HAS_PYKWAVERS:
+        permeability = np.asarray(kw.bbb_permeability_hill(dose.ravel(), d50, hill_n)).reshape(dose.shape)
+    else:
+        permeability = np.power(dose, hill_n) / (np.power(d50, hill_n) + np.power(dose, hill_n))
     stable_low = logistic((mechanical_index - 0.20) / 0.04)
     stable_high = logistic((0.55 - mechanical_index) / 0.04)
     stable_probability = permeability * stable_low * stable_high
