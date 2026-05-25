@@ -30,7 +30,7 @@
 //! - Brain white matter  : ρ = 1040 kg/m³, cₚ = 3650 J/(kg·K), k = 0.51 W/(m·K),
 //!                         ωb = 0.009 /s.
 //! - Water (background)  : ρ = 998 kg/m³, cₚ = 4182 J/(kg·K), k = 0.598 W/(m·K).
-//! - Blood               : ρb = 1050 kg/m³, cb = 3840 J/(kg·K).
+//! - Blood               : ρb = 1060 kg/m³, cb = 3840 J/(kg·K).
 //!
 //! # Absorption model
 //!
@@ -65,6 +65,15 @@
 
 use ndarray::{Array3, Zip};
 
+use crate::core::constants::fundamental::DENSITY_WATER;
+use crate::core::constants::medical::{
+    THERMAL_DOSE_R_ABOVE_43C, THERMAL_DOSE_R_BELOW_43C, THERMAL_DOSE_REFERENCE_TEMP_C,
+    THERMAL_DOSE_THRESHOLD,
+};
+use crate::core::constants::thermodynamic::{SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER};
+use crate::core::constants::tissue_acoustics::{DENSITY_BLOOD, DENSITY_BRAIN};
+use crate::core::constants::tissue_thermal::{SPECIFIC_HEAT_BLOOD_PLASMA, SPECIFIC_HEAT_BRAIN_WHITE};
+
 // ── Material constants (IT'IS v4.1 / ICRU-44 / Duck 1990) ────────────────────
 
 const SKULL_RHO: f64 = 1908.0; // kg/m³
@@ -73,26 +82,22 @@ const SKULL_K: f64 = 0.32; // W/(m·K)
 const SKULL_PERF: f64 = 0.0; // 1/s (cortical bone: negligible)
 const SKULL_ALPHA_DB_CM_MHZ: f64 = 15.0;
 
-const BRAIN_RHO: f64 = 1040.0; // kg/m³
-const BRAIN_CP: f64 = 3650.0; // J/(kg·K)
-const BRAIN_K: f64 = 0.51; // W/(m·K)
-const BRAIN_PERF: f64 = 0.009; // 1/s
+// SSOT: DENSITY_BRAIN = 1040.0 kg/m³ (tissue_acoustics::DENSITY_BRAIN, Duck 1990 Table 4.1)
+const BRAIN_K: f64 = 0.51; // W/(m·K) — IT'IS v4.1 (differs from Duck 1990 canonical 0.50)
+const BRAIN_PERF: f64 = 0.009; // 1/s — IT'IS v4.1 (differs from canonical BLOOD_PERFUSION_RATE_BRAIN=0.0064)
 const BRAIN_ALPHA_DB_CM_MHZ: f64 = 3.5;
 
-const WATER_RHO: f64 = 998.0; // kg/m³
-const WATER_CP: f64 = 4182.0; // J/(kg·K)
-const WATER_K: f64 = 0.598; // W/(m·K)
+// SSOT: DENSITY_WATER=998.2, SPECIFIC_HEAT_WATER=4182.0, THERMAL_CONDUCTIVITY_WATER=0.598
 const WATER_PERF: f64 = 0.0; // 1/s
 const WATER_ALPHA_DB_CM_MHZ: f64 = 0.002;
 
-const RHO_BLOOD: f64 = 1050.0; // kg/m³ — ICRU-44
-const CP_BLOOD: f64 = 3840.0; // J/(kg·K) — ICRU-44
+// SSOT: DENSITY_BLOOD=1060.0 kg/m³ (ICRU-44/Duck 1990), SPECIFIC_HEAT_BLOOD_PLASMA=3840.0 J/(kg·K)
 
 /// 1 Np/m = 8.686 dB/m; 1 dB/cm = 100 dB/m → α_Np_m = α_dB_cm·100/8.686.
 const DB_CM_TO_NP_M: f64 = 100.0 / 8.686;
 
 /// CEM43 lesion threshold [min] — Dewhirst et al. (2003).
-const CEM43_LESION_THRESHOLD: f64 = 240.0;
+const CEM43_LESION_THRESHOLD: f64 = THERMAL_DOSE_THRESHOLD;
 
 // ── Output type ──────────────────────────────────────────────────────────────
 
@@ -164,13 +169,13 @@ pub fn transcranial_pennes_thermal_dose(
             let (rho, cp, k, perf, alpha) = if is_skull {
                 (SKULL_RHO, SKULL_CP, SKULL_K, SKULL_PERF, alpha_skull)
             } else if is_brain {
-                (BRAIN_RHO, BRAIN_CP, BRAIN_K, BRAIN_PERF, alpha_brain)
+                (DENSITY_BRAIN, SPECIFIC_HEAT_BRAIN_WHITE, BRAIN_K, BRAIN_PERF, alpha_brain)
             } else {
-                (WATER_RHO, WATER_CP, WATER_K, WATER_PERF, alpha_water)
+                (DENSITY_WATER, SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER, WATER_PERF, alpha_water)
             };
             let rho_cp = rho * cp;
             *kap = k / rho_cp;
-            *pc = perf * RHO_BLOOD * CP_BLOOD / rho_cp;
+            *pc = perf * DENSITY_BLOOD * SPECIFIC_HEAT_BLOOD_PLASMA / rho_cp;
             *hr = 2.0 * alpha * f64::from(i_val) / rho_cp;
         });
 
@@ -209,8 +214,12 @@ pub fn transcranial_pennes_thermal_dose(
                     *p = t;
                 }
                 // Sapareto & Dewey (1984) CEM43 integrand, explicit Euler in time [min].
-                let r: f64 = if t >= 43.0 { 0.5 } else { 0.25 };
-                *c += (dt_s / 60.0) * r.powf(43.0 - t);
+                let r: f64 = if t >= THERMAL_DOSE_REFERENCE_TEMP_C {
+                    THERMAL_DOSE_R_ABOVE_43C
+                } else {
+                    THERMAL_DOSE_R_BELOW_43C
+                };
+                *c += (dt_s / 60.0) * r.powf(THERMAL_DOSE_REFERENCE_TEMP_C - t);
             });
     }
 
