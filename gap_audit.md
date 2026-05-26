@@ -1,5 +1,23 @@
 # Gap Audit
 
+## CLOSED: Time-Reversal Solver (2026-05-26)
+
+Root cause: three independent defects in `PhotoacousticTimeReversal` and
+`time_reversal_reconstruction`.
+
+1. Propagator was complex `exp(-i·c·k·dt)` instead of real `cos(c·|k|·dt)`.
+2. Sensor injection was additive soft-source; must be hard Dirichlet replacement.
+3. DAS time index was forward-lookup; must be reversed `n_time−1−floor(delay/dt)`.
+
+All three fixed. 13 TR tests PASS. Commits: c18ddc42b, 0de874123.
+
+## OPEN: us_beam_patterns Pearson 0.983 (target 0.99)
+
+Not a Rust defect in the solver. Gap concentrated at transducer-face cell.
+Likely from k-Wave's `kWaveTransducerSimple` internal normalization differing
+from direct mask injection in `build_pkw_source`. Requires k-wave-python
+transducer model deep-dive; no Rust change warranted without profiling data.
+
 ## Ali 2025 Scattering-Increment Scale Decomposition (2026-05-26)
 
 The finite-window model has low row-scaled full-field residual, but the

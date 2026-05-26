@@ -2,6 +2,32 @@
 
 ## Unreleased
 
+### Fixed (2026-05-26) - Time-Reversal Solver Physics Defects
+
+- [patch] `PhotoacousticTimeReversal` (solver/inverse/reconstruction/photoacoustic):
+  propagator corrected from complex `exp(-i·c·k·dt)` to real `cos(c·|k|·dt)` per
+  Tabei et al. 2002 Eq. 2; spurious imaginary energy was causing Pearson r=0.71 in
+  kspace-vs-PSTD TR comparison.
+- [patch] `inject_sensor_data` changed from additive soft-source (`+=`) to hard
+  Dirichlet replacement (`=`) at sensor sites, applied before and after each
+  propagation step (Treeby et al. 2010, §2.3).
+- [patch] `time_reversal_reconstruction` (simulation/photoacoustic/reconstruction/core):
+  delay-and-sum time index corrected to `n_time − 1 − floor(delay/dt)` (reversed)
+  from incorrect forward-time lookup (Xu & Wang 2005, Eq. 7).
+
+### Fixed (2026-05-26) - SSOT Physics Constants
+
+- [patch] `thermodynamic.rs`: add `DITTUS_BOELTER_COEFFICIENT` (0.023),
+  `DITTUS_BOELTER_VELOCITY_EXPONENT` (0.8), `DITTUS_BOELTER_PRANDTL_EXPONENT_HEATING`
+  (0.4), `NUSSELT_LAMINAR_PIPE_CONST_TEMP` (3.66), and
+  `REYNOLDS_LAMINAR_TURBULENT_THRESHOLD` (2300.0) with literature references
+  (Dittus & Boelter 1930; Incropera & DeWitt 2007, §8.5).
+- [patch] `physics/thermal/perfusion.rs`: replace five inline magic numbers with SSOT
+  constants from `thermodynamic.rs`.
+- [patch] `meta_learning/types/physics.rs`: correct water absorption default from
+  0.025 dB/cm (was ~11× too high) to `WATER_ABSORPTION_ALPHA_0` = 0.0022 dB/cm
+  (Duck 1990); replace B/A literals with `B_OVER_A_WATER` and `B_OVER_A_SOFT_TISSUE`.
+
 ### Changed (2026-05-26) - Ali 2025 Scattering-Increment Scale Decomposition
 
 - [patch] Extend the Rust-owned Ali 2025 scattering-increment diagnostic with
