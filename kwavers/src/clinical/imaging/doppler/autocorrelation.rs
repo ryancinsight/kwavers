@@ -270,6 +270,7 @@ mod tests {
     use super::*;
     use approx::assert_relative_eq;
     use ndarray::Array3;
+    use std::f64::consts::PI;
 
     #[test]
     fn test_autocorrelation_config() {

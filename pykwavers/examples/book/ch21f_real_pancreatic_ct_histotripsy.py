@@ -75,6 +75,7 @@ import matplotlib
 matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 — required for projection="3d"
 import numpy as np
 from scipy.ndimage import (binary_dilation, binary_erosion, binary_closing,
                            distance_transform_edt, label as ndlabel, zoom)
@@ -374,11 +375,24 @@ def _segment_cect(ct_hu: np.ndarray, dx_m: float) -> np.ndarray:
 # ───────────────────────────────────────────────────────────────────────
 
 
-def _load_ct(target_dx_m: float = 1.2e-3) -> tuple[Path, np.ndarray]:
+def _load_ct(
+    target_dx_m: float = 1.2e-3,
+) -> tuple[Path, np.ndarray, np.ndarray, dict]:
     """Download (or load cached) MSD Task07 CT, resample, and auto-segment.
 
-    Returns the NIfTI path and the label volume for visualization only.
-    The Rust pipeline reads the NIfTI directly from disk.
+    Returns
+    -------
+    ct_path
+        NIfTI path — the Rust pipeline reads this directly.
+    label_vol
+        Cropped 1.2 mm label volume for simulation geometry.
+    label_vol_full
+        Full-patient 4 mm label volume for 3D transducer placement
+        visualization.  The full abdominal anatomy (including hip/stomach
+        skin surface) is preserved so the bowl can be shown at the correct
+        skin interface.
+    info_full
+        Axis arrays and shape for label_vol_full.
     """
     ct_path = _download_first_msd_ct(MSD_DIR)
 
@@ -400,6 +414,11 @@ def _load_ct(target_dx_m: float = 1.2e-3) -> tuple[Path, np.ndarray]:
     raw = raw[::-1, :, :].copy()
     zooms = (float(spacing[1]), float(spacing[2]), float(spacing[0]))
 
+    # Preserve the full-patient volume before cropping.  The 3D placement
+    # figure must show the complete abdominal anatomy so the transducer
+    # is visible at the stomach/epigastric skin surface, not inside the crop.
+    _raw_full = raw.copy()
+
     # Crop to pancreatic region (200 AP × 240 RL × 120 SI mm).
     ap_vox = int(round(200.0 / zooms[0]))
     rl_vox = int(round(240.0 / zooms[1]))
@@ -420,12 +439,174 @@ def _load_ct(target_dx_m: float = 1.2e-3) -> tuple[Path, np.ndarray]:
     print(f"  resampled to {ct_hu.shape} ({target_dx_mm:.1f} mm isotropic)")
 
     label_vol = _segment_cect(ct_hu, target_dx_m)
-    return ct_path, label_vol
+
+    # ── Full-patient label volume for 3D placement visualization ─────────
+    # 4 mm isotropic — adequate for skin surface and organ overlay.
+    # Reuses _segment_cect so organ/PDAC labels appear in the 3D figure.
+    _vis_dx_m = 4.0e-3
+    _factors_vis = tuple(z / (_vis_dx_m * 1e3) for z in zooms)
+    _ct_vis = zoom(_raw_full, _factors_vis, order=1, prefilter=False).astype(np.float32)
+    label_vol_full = _segment_cect(_ct_vis, _vis_dx_m)
+    _nxv, _nyv, _nzv = _ct_vis.shape
+    info_full: dict = {
+        "dx": _vis_dx_m,
+        "shape": (_nxv, _nyv, _nzv),
+        "x_axis": np.arange(_nxv) * _vis_dx_m,
+        "y_axis": (np.arange(_nyv) - _nyv / 2) * _vis_dx_m,
+        "z_axis": (np.arange(_nzv) - _nzv / 2) * _vis_dx_m,
+    }
+    print(
+        f"  full-patient vis volume: shape={_ct_vis.shape}, "
+        f"voxel={_vis_dx_m * 1e3:.0f} mm, "
+        f"PDAC vox={int((label_vol_full == PDAC.label).sum())}"
+    )
+    return ct_path, label_vol, label_vol_full, info_full
 
 
 # ───────────────────────────────────────────────────────────────────────
 # Plot helpers (visualization only)
 # ───────────────────────────────────────────────────────────────────────
+
+
+def plot_transducer_placement_3d(label_vol: np.ndarray, info: dict) -> None:
+    """3D scatter: HistoSonics 50 mm / 120 mm-ROC bowl placed anterior to the
+    patient skin (epigastric / sub-costal approach), targeting the PDAC centroid.
+
+    ``label_vol`` must be the FULL-PATIENT volume (label_vol_full from
+    _load_ct) so the skin surface spans the complete abdominal anatomy.
+    The bowl apex is placed at x = x_focus - R_f, ensuring it lies
+    outside the body for all physiologically plausible tumour depths.
+
+    Bowl geometry (HistoSonics Edison class):
+        aperture radius a = 25 mm,  radius of curvature R_f = 120 mm,
+        θ_max = arcsin(a/R_f) ≈ 12°.
+
+    Refs: Vlaisavljevich et al. 2015 JASA 138:1864;
+          Maxwell et al. 2013 JASA 134:1765.
+    """
+    dx      = info["dx"]
+    x_axis  = info["x_axis"]
+    y_axis  = info["y_axis"]
+    z_axis  = info["z_axis"]
+    _nxv, _nyv, _nzv = info["shape"]
+
+    # ── PDAC / pancreas centroid in physical coordinates ──────────────────
+    pdac_coords = np.argwhere(label_vol == PDAC.label)
+    if len(pdac_coords) == 0:
+        pdac_coords = np.argwhere(label_vol == PANCREAS.label)
+    if len(pdac_coords) == 0:
+        # Anatomical fallback: upper-middle abdomen (epigastric region)
+        pdac_coords = np.array([[int(_nxv * 0.35), _nyv // 2, _nzv // 2]])
+    centroid = pdac_coords.mean(axis=0)
+    x_focus = float(x_axis[min(int(centroid[0]), _nxv - 1)])
+    y_focus = float(y_axis[min(int(centroid[1]), _nyv - 1)])
+    z_focus = float(z_axis[min(int(centroid[2]), _nzv - 1)])
+
+    # ── Bowl element positions ────────────────────────────────────────────
+    R_f: float = 120.0e-3
+    a:   float = 25.0e-3
+    theta_max = float(np.arcsin(a / R_f))   # ≈ 12.0°
+
+    ex_list: list[float] = [x_focus - R_f]
+    ey_list: list[float] = [y_focus]
+    ez_list: list[float] = [z_focus]
+    for ring in range(1, 9):
+        th = theta_max * ring / 8.0
+        n_phi = max(8, int(round(40.0 * np.sin(th) / np.sin(theta_max))))
+        phis = np.linspace(0.0, 2.0 * np.pi, n_phi, endpoint=False)
+        ex_list.extend([float(x_focus - R_f * np.cos(th))] * n_phi)
+        ey_list.extend((y_focus + R_f * np.sin(th) * np.cos(phis)).tolist())
+        ez_list.extend((z_focus + R_f * np.sin(th) * np.sin(phis)).tolist())
+    ex = np.array(ex_list)
+    ey = np.array(ey_list)
+    ez = np.array(ez_list)
+
+    # ── Full-patient skin surface (anterior face per lateral/SI column) ───
+    body_bool = label_vol != AIR.label
+    first_ix  = np.argmax(body_bool, axis=0)
+    has_body  = body_bool.any(axis=0)
+    iy_g, iz_g = np.meshgrid(np.arange(_nyv), np.arange(_nzv), indexing="ij")
+    sx = x_axis[first_ix[has_body]]
+    sy = y_axis[iy_g[has_body]]
+    sz = z_axis[iz_g[has_body]]
+    rng = np.random.default_rng(seed=0)
+    if len(sx) > 3000:
+        sel = rng.choice(len(sx), 3000, replace=False)
+        sx, sy, sz = sx[sel], sy[sel], sz[sel]
+
+    # ── Pancreas + PDAC surface voxels ────────────────────────────────────
+    panc_mask = (label_vol == PANCREAS.label) | (label_vol == PDAC.label)
+    pdac_mask =  label_vol == PDAC.label
+    panc_surf = panc_mask & ~binary_erosion(panc_mask, iterations=1)
+    pdac_surf = pdac_mask & ~binary_erosion(pdac_mask, iterations=1)
+    c_panc = np.argwhere(panc_surf)
+    c_pdac = np.argwhere(pdac_surf)
+    step_p = max(1, len(c_panc) // 1000)
+    c_panc = c_panc[::step_p]
+    px = x_axis[c_panc[:, 0]]; py = y_axis[c_panc[:, 1]]; pz = z_axis[c_panc[:, 2]]
+    if len(c_pdac) > 0:
+        tdx = x_axis[c_pdac[:, 0]]
+        tdy = y_axis[c_pdac[:, 1]]
+        tdz = z_axis[c_pdac[:, 2]]
+
+    # ── 3D scatter ────────────────────────────────────────────────────────
+    fig = plt.figure(figsize=(9, 7))
+    ax  = fig.add_subplot(111, projection="3d")
+
+    ax.scatter(sx * 1e3, sy * 1e3, sz * 1e3,
+               c="silver", s=1.5, alpha=0.06, linewidths=0, zorder=1,
+               label="Patient skin surface")
+    if len(c_panc) > 0:
+        ax.scatter(px * 1e3, py * 1e3, pz * 1e3,
+                   c="#5b8db8", s=4, alpha=0.45, linewidths=0, zorder=2,
+                   label="Pancreas")
+    if len(c_pdac) > 0:
+        ax.scatter(tdx * 1e3, tdy * 1e3, tdz * 1e3,
+                   c="#c0392b", s=14, alpha=0.90, linewidths=0, zorder=3,
+                   label="PDAC tumour")
+    ax.scatter(ex * 1e3, ey * 1e3, ez * 1e3,
+               c="#2c3e50", s=18, alpha=0.85, edgecolors="white", linewidths=0.4,
+               zorder=4, label="Transducer bowl (50 mm / 120 mm-ROC)")
+    ax.scatter([(x_focus - R_f) * 1e3], [y_focus * 1e3], [z_focus * 1e3],
+               c="limegreen", s=80, marker="o", zorder=5,
+               label="Bowl apex (epigastric coupling)")
+    ax.scatter([x_focus * 1e3], [y_focus * 1e3], [z_focus * 1e3],
+               c="cyan", s=120, marker="+", linewidths=2.5, zorder=5,
+               label="Focus (PDAC centroid)")
+
+    ax.set_xlabel("Depth AP (mm, anterior →)")
+    ax.set_ylabel("Lateral R-L (mm)")
+    ax.set_zlabel("Sup–Inf (mm)")
+    ax.set_title(
+        "HistoSonics 50 mm / 120 mm-ROC Bowl — Pancreatic PDAC Placement\n"
+        "(MSD Task07 · epigastric sub-costal approach · bowl anterior to skin)",
+        fontsize=9,
+    )
+    ax.legend(fontsize=7, loc="upper right", markerscale=1.3)
+    ax.view_init(elev=18, azim=-65)
+
+    # Equal-aspect bounding cube enclosing all point clouds.
+    parts_x = [ex, sx]
+    parts_y = [ey, sy]
+    parts_z = [ez, sz]
+    if len(c_panc) > 0:
+        parts_x.append(px); parts_y.append(py); parts_z.append(pz)
+    all_x = np.concatenate(parts_x)
+    all_y = np.concatenate(parts_y)
+    all_z = np.concatenate(parts_z)
+    cx_, cy_, cz_ = float(all_x.mean()), float(all_y.mean()), float(all_z.mean())
+    r_eq = float(max(
+        np.abs(all_x - cx_).max(),
+        np.abs(all_y - cy_).max(),
+        np.abs(all_z - cz_).max(),
+    )) * 1.08
+    ax.set_xlim((cx_ - r_eq) * 1e3, (cx_ + r_eq) * 1e3)
+    ax.set_ylim((cy_ - r_eq) * 1e3, (cy_ + r_eq) * 1e3)
+    ax.set_zlim((cz_ - r_eq) * 1e3, (cz_ + r_eq) * 1e3)
+
+    fig.tight_layout()
+    savefig("fig00_transducer_placement_3d")
+    plt.close(fig)
 
 
 def _robust_vmax(*arrays: np.ndarray, percentile: float = 97.0) -> float:
@@ -635,7 +816,12 @@ def main() -> None:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
     # Data I/O: download MSD CT, resample, auto-segment (no physics).
-    ct_path, _label_vol = _load_ct(target_dx_m=1.2e-3)
+    ct_path, _label_vol, label_vol_full, info_full = _load_ct(target_dx_m=1.2e-3)
+
+    # 3D transducer placement figure uses the full-patient anatomy so the
+    # bowl is visible at the epigastric/stomach skin interface, not inside
+    # the pancreatic crop used for simulation.
+    plot_transducer_placement_3d(label_vol_full, info_full)
 
     # All physics delegated to Rust.
     print(

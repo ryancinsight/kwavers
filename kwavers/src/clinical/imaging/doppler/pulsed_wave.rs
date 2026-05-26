@@ -203,6 +203,7 @@ impl PulsedWaveDoppler {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::f64::consts::PI;
 
     /// **Test: zero ensemble produces zero-magnitude waveform**
     /// # Panics

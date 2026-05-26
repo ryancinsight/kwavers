@@ -157,6 +157,7 @@ mod tests {
     use approx::assert_relative_eq;
     use crate::core::constants::numerical::MHZ_TO_HZ;
     use ndarray::arr2;
+    use std::f64::consts::PI;
 
     fn linear_array() -> Array2<f64> {
         arr2(&[[-0.001, 0.0, 0.0], [0.0, 0.0, 0.0], [0.001, 0.0, 0.0]])

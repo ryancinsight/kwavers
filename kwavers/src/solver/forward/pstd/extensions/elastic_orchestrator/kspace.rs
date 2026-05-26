@@ -220,6 +220,7 @@ mod tests {
     use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
     use crate::domain::grid::Grid;
     use ndarray::{Array1, Array3};
+    use std::f64::consts::PI;
 
     /// DC mode kappa (|k|=0) must be exactly 1.0: `sinc(0) = 1` by L'Hôpital.
     ///

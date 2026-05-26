@@ -35,6 +35,7 @@ impl BeamPatterns {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::f64::consts::PI;
 
     // ── beam_width ────────────────────────────────────────────────────────────
 

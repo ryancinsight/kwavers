@@ -375,6 +375,7 @@ mod tests {
     use super::*;
     use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use ndarray::Array3;
+    use std::f64::consts::PI;
 
     #[test]
     fn ali_geometry_matches_paper_counts_and_spacing() {

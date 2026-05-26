@@ -173,3 +173,41 @@ pub fn acoustic_power_deposition_depth_profile(
         thermal::acoustic_power_deposition_depth_profile(z_s, alpha_np_m, surface_intensity);
     Ok(result.into_pyarray(py).unbind())
 }
+
+/// Convert a flattened acoustic pressure field to volumetric heat-source density.
+///
+/// Computes Q(x,y,z) = α·p(x,y,z)²/(ρ·c) [W/m³] — the Pennes bioheat
+/// source term for a CW or time-averaged pressure field.
+///
+/// Derivation:  I = p²/(2ρc),  Q = 2α·I  →  Q = α·p²/(ρ·c).
+///
+/// The input array is accepted and returned in flattened (row-major) order;
+/// reshape back to (nx, ny, nz) on the Python side.
+///
+/// Args:
+///     p_field: Pressure amplitude field [Pa], any shape, passed as 1-D.
+///     alpha_np_m: Amplitude attenuation coefficient [Np/m].
+///     rho: Medium density [kg/m³].
+///     c: Speed of sound [m/s].
+///
+/// Returns:
+///     Heat-source density [W/m³], same length as p_field.
+///
+/// References:
+///     Pennes (1948) J. Appl. Physiol. 1, 93.
+///     Duck (1990) Physical Properties of Tissue, §5.2.
+#[pyfunction]
+#[pyo3(signature = (p_field, alpha_np_m, rho, c))]
+pub fn acoustic_heat_source_density(
+    py: Python<'_>,
+    p_field: PyReadonlyArray1<f64>,
+    alpha_np_m: f64,
+    rho: f64,
+    c: f64,
+) -> PyResult<Py<PyArray1<f64>>> {
+    let p_s = p_field
+        .as_slice()
+        .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+    let result = thermal::acoustic_heat_source_density(p_s, alpha_np_m, rho, c);
+    Ok(result.into_pyarray(py).unbind())
+}

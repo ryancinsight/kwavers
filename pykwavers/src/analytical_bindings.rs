@@ -108,6 +108,7 @@ pub fn register_book(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(thermal::gaussian_power_deposition_2d, m)?)?;
     m.add_function(wrap_pyfunction!(thermal::acoustic_intensity_depth_profile, m)?)?;
     m.add_function(wrap_pyfunction!(thermal::acoustic_power_deposition_depth_profile, m)?)?;
+    m.add_function(wrap_pyfunction!(thermal::acoustic_heat_source_density, m)?)?;
     // bbb
     m.add_function(wrap_pyfunction!(bbb::bbb_permeability_hill, m)?)?;
     m.add_function(wrap_pyfunction!(bbb::bbb_closure_kinetics, m)?)?;

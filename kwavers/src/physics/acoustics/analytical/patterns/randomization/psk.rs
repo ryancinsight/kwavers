@@ -87,6 +87,7 @@ impl PhaseShiftKeying {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::f64::consts::PI;
 
     const DT: f64 = 1e-6; // 1 µs symbol duration for tests
 

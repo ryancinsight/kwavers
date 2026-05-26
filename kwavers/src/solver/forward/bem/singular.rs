@@ -206,6 +206,7 @@ pub fn compute_singular_integrals(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::f64::consts::PI;
 
     /// Integrate G_static = 1/(4πR) over unit right triangle with singularity
     /// at the origin (vertex 0).

@@ -175,6 +175,7 @@ mod tests {
     use crate::core::constants::numerical::MHZ_TO_HZ;
     use crate::core::error::{KwaversError, ValidationError};
     use crate::domain::grid::Grid;
+    use std::f64::consts::PI;
 
     #[test]
     fn test_bowl_transducer_creation() {

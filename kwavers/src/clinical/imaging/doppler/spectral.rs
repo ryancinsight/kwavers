@@ -192,6 +192,7 @@ impl SpectralAnalysis {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::f64::consts::PI;
 
     /// **Test: PSD of a pure tone peaks at the correct frequency bin**
     ///

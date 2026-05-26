@@ -125,6 +125,7 @@ pub fn green_normal_deriv(k: f64, r_src: [f64; 3], r_obs: [f64; 3], normal: [f64
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::f64::consts::PI;
 
     /// G(r, r') → 1/(4πR) as k→0 (static Laplace Green's function).
     /// # Panics

@@ -108,6 +108,7 @@ mod tests {
     use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use crate::core::constants::numerical::MHZ_TO_HZ;
     use crate::domain::grid::Grid;
+    use std::f64::consts::PI;
 
     fn water_grid_one_wavelength() -> Grid {
         // f=1MHz, c=1500 m/s → λ=1.5mm; grid spacing dx=λ/32 → N=32 points per wavelength

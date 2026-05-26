@@ -124,6 +124,7 @@ pub fn compute_laplacian_spectral_into(
 mod tests {
     use super::*;
     use crate::domain::grid::Grid;
+    use std::f64::consts::PI;
 
     /// Helper: uniform spacing grid.
     fn make_grid(n: usize, dx: f64) -> Grid {

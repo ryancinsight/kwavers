@@ -217,6 +217,49 @@ pub fn acoustic_power_deposition_depth_profile(
         .collect()
 }
 
+// ─── Acoustic heat-source density from a 3-D pressure field ──────────────────
+
+/// Convert a 3-D (or arbitrary-shape) acoustic pressure field to the
+/// corresponding volumetric heat-source density for the Pennes bioheat equation.
+///
+/// For a CW or time-averaged pressure field p(x,y,z) in a medium with amplitude
+/// attenuation α [Np/m], density ρ [kg/m³], and speed of sound c [m/s]:
+/// ```text
+/// Q(x,y,z) = α · p(x,y,z)² / (ρ · c)
+/// ```
+/// Derivation:
+///   Time-averaged intensity:  I = p² / (2·ρ·c)
+///   Absorbed power density:   Q = 2α · I = α · p² / (ρ · c)
+///
+/// The factor of 2 in `2α·I` accounts for amplitude (pressure) attenuation
+/// producing intensity attenuation at rate 2α, but when expressed directly in
+/// terms of pressure the factor cancels against the 1/(2) in I = p²/(2ρc).
+///
+/// The input `p_field` is a **flattened, row-major** slice of the pressure
+/// amplitude array in [Pa]; the output is a `Vec<f64>` of the same length,
+/// with the same linear index ordering, in [W/m³].  Reshaping to (nx,ny,nz)
+/// is the caller's responsibility.
+///
+/// # Arguments
+/// * `p_field`    – pressure amplitude field [Pa], arbitrary shape, flattened
+/// * `alpha_np_m` – amplitude attenuation coefficient [Np/m]
+/// * `rho`        – medium density [kg/m³]
+/// * `c`          – medium speed of sound [m/s]
+///
+/// # Reference
+/// Pennes (1948), *J. Appl. Physiol.* 1, 93.
+/// Duck (1990) *Physical Properties of Tissue*, §5.2. Academic Press.
+#[must_use]
+pub fn acoustic_heat_source_density(
+    p_field: &[f64],
+    alpha_np_m: f64,
+    rho: f64,
+    c: f64,
+) -> Vec<f64> {
+    let inv_rhoc = alpha_np_m / (rho * c);
+    p_field.iter().map(|&p| p * p * inv_rhoc).collect()
+}
+
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
@@ -352,5 +395,45 @@ mod tests {
         );
         // Q at focus (z=0) should exceed Q at z=±5mm
         assert!(q[1] > q[0] && q[1] > q[2]);
+    }
+
+    #[test]
+    fn heat_source_density_zero_pressure_is_zero() {
+        let q = acoustic_heat_source_density(&[0.0], 7.0, 1060.0, 1540.0);
+        assert!(q[0].abs() < 1e-30, "Q(0)={}", q[0]);
+    }
+
+    #[test]
+    fn heat_source_density_formula_matches_analytic() {
+        // Q = α·p²/(ρ·c)
+        // For p = 1 MPa, α = 7 Np/m, ρ = 1060 kg/m³, c = 1540 m/s:
+        // Q = 7 × (1e6)² / (1060 × 1540) ≈ 4283.5 W/m³  (per Pascal²)
+        let p = 1.0e6_f64;
+        let alpha = 7.0_f64;
+        let rho = 1060.0_f64;
+        let c = 1540.0_f64;
+        let expected = alpha * p * p / (rho * c);
+        let q = acoustic_heat_source_density(&[p], alpha, rho, c);
+        assert!(
+            (q[0] - expected).abs() / expected < 1e-12,
+            "Q={} expected={}",
+            q[0],
+            expected
+        );
+    }
+
+    #[test]
+    fn heat_source_density_quadratic_in_pressure() {
+        // Doubling pressure → quadrupling Q
+        let alpha = 5.0_f64;
+        let rho = 1040.0_f64;
+        let c = 1543.0_f64;
+        let q1 = acoustic_heat_source_density(&[1.0e5], alpha, rho, c)[0];
+        let q2 = acoustic_heat_source_density(&[2.0e5], alpha, rho, c)[0];
+        assert!(
+            (q2 / q1 - 4.0).abs() < 1e-10,
+            "quadratic scaling violated: q2/q1={}",
+            q2 / q1
+        );
     }
 }
