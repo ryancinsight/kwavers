@@ -1,4 +1,4 @@
-use crate::core::constants::numerical::MHZ_TO_HZ;
+use crate::core::constants::numerical::{MHZ_TO_HZ, SECONDS_PER_HOUR, SECONDS_PER_MINUTE};
 use crate::core::error::{KwaversError, KwaversResult};
 
 use super::super::mechanical_index::MechanicalIndexTissueType;
@@ -10,13 +10,13 @@ impl Default for ComplianceConfig {
             max_power: 50.0,
             max_intensity: 3.0,
             max_temp_rise: 5.0,
-            max_session_time: 3600.0,
+            max_session_time: SECONDS_PER_HOUR,
             max_total_dose: 100_000.0,
             tissue_type: MechanicalIndexTissueType::SoftTissue,
             frequency_range: (0.5 * MHZ_TO_HZ, 10.0 * MHZ_TO_HZ),
             max_bnur: 8.0,
             enable_monitoring: true,
-            history_window: 60.0,
+            history_window: SECONDS_PER_MINUTE,
         }
     }
 }

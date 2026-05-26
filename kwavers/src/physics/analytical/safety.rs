@@ -9,6 +9,7 @@ use crate::core::constants::medical::{
     IEC_TIB_DIVISOR, IEC_TIS_DIVISOR, THERMAL_DOSE_REFERENCE_TEMP_C, THERMAL_DOSE_R_ABOVE_43C,
     THERMAL_DOSE_R_BELOW_43C,
 };
+use crate::core::constants::numerical::SECONDS_PER_MINUTE;
 use crate::core::constants::thermodynamic::KELVIN_OFFSET_C;
 
 /// Mechanical Index (MI).
@@ -90,7 +91,7 @@ pub fn thermal_index_bone(w_mw: f64, f_mhz: f64) -> f64 {
 /// Sapareto & Dewey (1984), *Int. J. Radiat. Oncol. Biol. Phys.* 10, 787.
 #[must_use]
 pub fn cem43_cumulative(t_celsius: &[f64], dt_s: f64) -> Vec<f64> {
-    let dt_min = dt_s / 60.0;
+    let dt_min = dt_s / SECONDS_PER_MINUTE;
     let mut cem = 0.0_f64;
     t_celsius
         .iter()

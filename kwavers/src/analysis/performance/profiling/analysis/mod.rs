@@ -2,6 +2,7 @@
 //!
 //! Provides roofline analysis and performance bounds estimation.
 
+use crate::core::constants::numerical::BYTES_PER_F64;
 use crate::domain::grid::Grid;
 
 /// Performance bound type
@@ -109,7 +110,7 @@ pub fn estimate_fdtd_intensity(grid: &Grid, spatial_order: usize) -> f64 {
     let flops_per_point = f64::from(stencil_points) * 2.0 * interior_ratio;
 
     // Memory: read stencil points + write result
-    let bytes_per_point = f64::from(stencil_points + 1) * 8.0; // f64 = 8 bytes
+    let bytes_per_point = f64::from(stencil_points + 1) * BYTES_PER_F64;
 
     flops_per_point / bytes_per_point
 }
@@ -122,7 +123,7 @@ pub fn estimate_spectral_intensity(grid: &Grid) -> f64 {
     let flops = 5.0 * n * n.log2();
 
     // Memory: read and write full grid
-    let bytes = 2.0 * n * 8.0; // f64 = 8 bytes
+    let bytes = 2.0 * n * BYTES_PER_F64;
 
     flops / bytes
 }
@@ -153,8 +154,8 @@ impl PerformanceAnalyzer {
 
         // Estimate FLOPS and memory
         let intensity = estimate_fdtd_intensity(&self.grid, spatial_order);
-        let flops = points * intensity * 8.0; // Approximate FLOPS
-        let bytes = points * 8.0; // Memory traffic
+        let flops = points * intensity * BYTES_PER_F64; // Approximate FLOPS
+        let bytes = points * BYTES_PER_F64; // Memory traffic
 
         self.roofline.analyze(flops, bytes, elapsed);
     }

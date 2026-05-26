@@ -4,6 +4,7 @@ use super::types::{InstantaneousIntensity, IntensityTrackerDose, TemporalIntensi
 use crate::core::constants::medical::{
     THERMAL_DOSE_R_ABOVE_43C, THERMAL_DOSE_R_BELOW_43C, THERMAL_DOSE_REFERENCE_TEMP_C,
 };
+use crate::core::constants::numerical::SECONDS_PER_MINUTE;
 use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array3;
@@ -227,7 +228,7 @@ impl IntensityTracker {
                 THERMAL_DOSE_R_BELOW_43C // 0.25 for T < 43°C
             };
             let rate = r.powf(THERMAL_DOSE_REFERENCE_TEMP_C - max_temp);
-            self.thermal_dose.cem43 += rate * (dt / 60.0); // Convert s → min
+            self.thermal_dose.cem43 += rate * (dt / SECONDS_PER_MINUTE); // Convert s → min
         }
 
         Ok(())

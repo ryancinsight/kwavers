@@ -1,5 +1,5 @@
 use crate::core::constants::medical::{MI_LIMIT_SOFT_TISSUE, THERMAL_DOSE_REFERENCE_TEMP_C};
-use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
+use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA, SECONDS_PER_HOUR};
 use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use ndarray::Array3;
 
@@ -153,7 +153,7 @@ impl DomainTherapyParameters {
         if self.mechanical_index > MI_LIMIT_SOFT_TISSUE {
             return false;
         }
-        if self.treatment_duration > 3600.0 {
+        if self.treatment_duration > SECONDS_PER_HOUR {
             return false;
         }
         true

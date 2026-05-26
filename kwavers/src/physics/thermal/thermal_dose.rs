@@ -106,6 +106,7 @@ mod tests {
         THERMAL_DOSE_COAGULATION_CEM43, THERMAL_DOSE_DIAGNOSTIC_SAFETY_CEM43,
         THERMAL_DOSE_PROTEIN_DENATURATION_CEM43,
     };
+    use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 
     #[test]
     fn test_thermal_dose_accumulation_above_reference() {
@@ -153,7 +154,7 @@ mod tests {
         // Half volume at 50°C (ablative), half at 37°C (body temperature).
         // At 37°C: 0.25^(43-37) = 0.25^6 ≈ 2.44e-4 CEM43/min — negligible vs 100 CEM43.
         // At 50°C: 0.5^(43-50) = 0.5^(-7) = 128 CEM43/min × 10 min = 1280 CEM43.
-        let mut temperature = Array3::from_elem((10, 10, 10), 37.0);
+        let mut temperature = Array3::from_elem((10, 10, 10), BODY_TEMPERATURE_C);
         for k in 0..5 {
             for j in 0..10 {
                 for i in 0..10 {

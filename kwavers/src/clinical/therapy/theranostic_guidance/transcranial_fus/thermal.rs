@@ -70,6 +70,7 @@ use crate::core::constants::medical::{
     THERMAL_DOSE_R_ABOVE_43C, THERMAL_DOSE_R_BELOW_43C, THERMAL_DOSE_REFERENCE_TEMP_C,
     THERMAL_DOSE_THRESHOLD,
 };
+use crate::core::constants::numerical::SECONDS_PER_MINUTE;
 use crate::core::constants::thermodynamic::{SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER};
 use crate::core::constants::tissue_acoustics::{DENSITY_BLOOD, DENSITY_BRAIN};
 use crate::core::constants::tissue_thermal::{SPECIFIC_HEAT_BLOOD_PLASMA, SPECIFIC_HEAT_BRAIN_WHITE};
@@ -219,7 +220,7 @@ pub fn transcranial_pennes_thermal_dose(
                 } else {
                     THERMAL_DOSE_R_BELOW_43C
                 };
-                *c += (dt_s / 60.0) * r.powf(THERMAL_DOSE_REFERENCE_TEMP_C - t);
+                *c += (dt_s / SECONDS_PER_MINUTE) * r.powf(THERMAL_DOSE_REFERENCE_TEMP_C - t);
             });
     }
 

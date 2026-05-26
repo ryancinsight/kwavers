@@ -1,5 +1,7 @@
 //! Production metrics collector using Prometheus and OpenTelemetry.
 
+use crate::core::constants::numerical::{SECONDS_PER_HOUR, SECONDS_PER_MINUTE};
+
 /// Production metrics collector using Prometheus and OpenTelemetry
 #[derive(Clone, Debug)]
 pub struct MetricsCollector {
@@ -71,7 +73,15 @@ impl MetricsCollector {
             .namespace("kwavers")
             .subsystem("ml")
             .buckets(vec![
-                1.0, 5.0, 10.0, 30.0, 60.0, 300.0, 600.0, 1800.0, 3600.0,
+                1.0,
+                5.0,
+                10.0,
+                30.0,
+                SECONDS_PER_MINUTE,
+                5.0 * SECONDS_PER_MINUTE,
+                10.0 * SECONDS_PER_MINUTE,
+                30.0 * SECONDS_PER_MINUTE,
+                SECONDS_PER_HOUR,
             ]),
         )
         .unwrap();

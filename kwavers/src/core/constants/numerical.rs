@@ -259,6 +259,35 @@ pub const EV_PER_JOULE: f64 = 6.241_509_074e18; // eV/J
 /// 10(6):787–800.
 pub const SECONDS_PER_MINUTE: f64 = 60.0;
 
+/// Seconds per hour [s/h] (exact: 60 min × 60 s/min = 3600 s).
+///
+/// Used for session-duration limits, hour-resolution dose tracking, and
+/// time-unit boundary checks.
+pub const SECONDS_PER_HOUR: f64 = 3_600.0;
+
+/// Seconds per day [s/d] (exact: 24 h × 3600 s/h = 86 400 s).
+pub const SECONDS_PER_DAY: f64 = 86_400.0;
+
+/// 2π (exact, derived from `std::f64::consts::PI`).
+///
+/// Named `TWO_PI` for semantic clarity in angular-frequency and wavenumber
+/// expressions (ω = TWO_PI × f, k = TWO_PI / λ).
+/// Identical in value to `FFT_K_SCALING`; prefer that name in FFT contexts.
+pub const TWO_PI: f64 = 2.0 * std::f64::consts::PI;
+
+/// 4π (exact, derived from `std::f64::consts::PI`).
+///
+/// Appears in spherical-spreading Green's functions (1/(4πr)),
+/// surface-area formulas (A = 4πR²), and directivity integrals.
+pub const FOUR_PI: f64 = 4.0 * std::f64::consts::PI;
+
+/// Size of one `f64` value in bytes (IEEE 754 double-precision: 64 bits = 8 bytes).
+///
+/// Used in arithmetic-intensity and memory-bandwidth estimation to convert
+/// grid-point counts to byte-traffic estimates without embedding the literal
+/// `8.0` in analysis code.
+pub const BYTES_PER_F64: f64 = 8.0;
+
 /// Minimum points per wavelength for accurate simulation
 pub const MIN_PPW: f64 = 6.0;
 
