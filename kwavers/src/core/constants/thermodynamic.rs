@@ -158,6 +158,42 @@ pub const M_WATER: f64 = 0.018015;
 
 // ── Heat transfer / mass transport ────────────────────────────────────────────
 
+/// Dittus-Boelter turbulent-pipe-flow Nusselt correlation coefficient [-].
+///
+/// `Nu = DITTUS_BOELTER_COEFFICIENT · Re^0.8 · Pr^0.4`
+///
+/// Valid for Re > 10 000, 0.7 < Pr < 160 (conservative extension to Re ≥ 2300).
+/// Reference: Dittus FW, Boelter LMK (1930). Univ. Calif. Publ. Eng. 2(13):443–461.
+/// Also: Incropera FP, DeWitt DP (2007). Fundamentals of Heat and Mass Transfer, 6th ed.,
+/// §8.5 (Eq. 8.60).
+pub const DITTUS_BOELTER_COEFFICIENT: f64 = 0.023;
+
+/// Dittus-Boelter velocity exponent (n in Re^n) [-].
+///
+/// Standard value n = 0.8 for both heating and cooling (approximate).
+/// Reference: Dittus & Boelter 1930; Incropera & DeWitt 2007, §8.5.
+pub const DITTUS_BOELTER_VELOCITY_EXPONENT: f64 = 0.8;
+
+/// Dittus-Boelter Prandtl exponent for heating (n in Pr^n) [-].
+///
+/// n = 0.4 when the fluid is being heated (T_wall > T_bulk).
+/// Reference: Dittus & Boelter 1930; Incropera & DeWitt 2007, §8.5.
+pub const DITTUS_BOELTER_PRANDTL_EXPONENT_HEATING: f64 = 0.4;
+
+/// Laminar fully-developed-pipe-flow Nusselt number (constant wall temperature) [-].
+///
+/// Nu₀ = 3.66 (Graetz solution for thermally developing flow at uniform wall temperature,
+/// Pr → 0 limit gives Nu₀ = 3.657 ≈ 3.66).
+/// Reference: Sieder EN, Tate GE (1936). Ind. Eng. Chem. 28(12):1429–1435;
+/// Incropera & DeWitt 2007, §8.4.1.
+pub const NUSSELT_LAMINAR_PIPE_CONST_TEMP: f64 = 3.66;
+
+/// Reynolds number transition from laminar to turbulent flow in a smooth pipe [-].
+///
+/// Re_crit ≈ 2300 (Osborne Reynolds 1883 critical threshold).
+/// Reference: Reynolds O (1883). Phil. Trans. R. Soc. Lond. 174:935–982.
+pub const REYNOLDS_LAMINAR_TURBULENT_THRESHOLD: f64 = 2300.0;
+
 /// Nusselt number constant term.
 pub const NUSSELT_CONSTANT: f64 = 2.0;
 

@@ -1,5 +1,6 @@
 //! Physics parameters for meta-learning task governing equations.
 
+use crate::core::constants::acoustic_parameters::WATER_ABSORPTION_ALPHA_0;
 use crate::core::constants::fundamental::{
     DENSITY_TISSUE,
     DENSITY_WATER_NOMINAL,
@@ -7,7 +8,9 @@ use crate::core::constants::fundamental::{
     SOUND_SPEED_TISSUE,
     SOUND_SPEED_WATER_SIM,
 };
-use crate::core::constants::tissue_acoustics::DENSITY_AIR;
+use crate::core::constants::tissue_acoustics::{
+    ACOUSTIC_ABSORPTION_TISSUE, DENSITY_AIR, B_OVER_A_WATER, B_OVER_A_SOFT_TISSUE,
+};
 
 /// Physics parameters defining the task's governing equations
 ///
@@ -42,12 +45,13 @@ pub struct MetaLearningPhysicsParameters {
     /// - Blood: ~3-4×10⁻³ Pa·s
     pub viscosity: Option<f64>,
 
-    /// Absorption coefficient (Np/m or dB/cm)
+    /// Absorption coefficient (dB/cm at 1 MHz unless noted)
     ///
     /// Acoustic energy loss due to viscous friction and thermal conduction.
     /// - Air at 1 kHz: ~0.001 dB/m
-    /// - Water at 1 MHz: ~0.025 dB/cm
-    /// - Soft tissue at 1 MHz: ~0.5-1.0 dB/cm
+    /// - Water at 1 MHz: `WATER_ABSORPTION_ALPHA_0` ≈ 0.0022 dB/cm
+    ///   (Duck 1990; Szabo 1994)
+    /// - Soft tissue at 1 MHz: `ACOUSTIC_ABSORPTION_TISSUE` = 0.5 dB/cm
     pub absorption: Option<f64>,
 
     /// Nonlinearity parameter (B/A or β)
@@ -83,25 +87,33 @@ impl MetaLearningPhysicsParameters {
         }
     }
 
-    /// Create parameters for acoustic wave propagation in water
+    /// Create parameters for acoustic wave propagation in water.
+    ///
+    /// Absorption: `WATER_ABSORPTION_ALPHA_0` = 0.0022 dB/cm at 1 MHz
+    /// (Duck 1990, Physical Properties of Tissue, Ch. 5).
+    /// Nonlinearity: `B_OVER_A_WATER` = 5.2 (Beyer 1960; Zhu et al. 1983).
     pub fn acoustic_water() -> Self {
         Self {
             wave_speed: SOUND_SPEED_WATER_SIM,
             density: DENSITY_WATER_NOMINAL,
             viscosity: None,
-            absorption: Some(0.025),
-            nonlinearity: Some(5.0), // B/A for water
+            absorption: Some(WATER_ABSORPTION_ALPHA_0),
+            nonlinearity: Some(B_OVER_A_WATER),
         }
     }
 
-    /// Create parameters for acoustic wave propagation in soft tissue
+    /// Create parameters for acoustic wave propagation in soft tissue.
+    ///
+    /// Absorption: `ACOUSTIC_ABSORPTION_TISSUE` = 0.5 dB/(cm·MHz) at 1 MHz
+    /// (Duck 1990, Table 5.1).
+    /// Nonlinearity: `B_OVER_A_SOFT_TISSUE` = 6.5 (Gong et al. 1989).
     pub fn acoustic_tissue() -> Self {
         Self {
             wave_speed: SOUND_SPEED_TISSUE,
             density: DENSITY_TISSUE,
             viscosity: None,
-            absorption: Some(0.5),   // At 1 MHz
-            nonlinearity: Some(7.0), // Typical B/A for tissue
+            absorption: Some(ACOUSTIC_ABSORPTION_TISSUE),
+            nonlinearity: Some(B_OVER_A_SOFT_TISSUE),
         }
     }
 

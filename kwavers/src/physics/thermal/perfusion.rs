@@ -21,7 +21,14 @@ const PERFUSION_MAX_TEMP_C: f64 = 42.0;
 use crate::core::constants::acoustic_parameters::BLOOD_VISCOSITY_37C;
 use crate::core::constants::tissue_acoustics::DENSITY_BLOOD;
 use crate::core::constants::medical::BLOOD_SPECIFIC_HEAT;
-use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
+use crate::core::constants::thermodynamic::{
+    BODY_TEMPERATURE_C,
+    DITTUS_BOELTER_COEFFICIENT,
+    DITTUS_BOELTER_VELOCITY_EXPONENT,
+    DITTUS_BOELTER_PRANDTL_EXPONENT_HEATING,
+    NUSSELT_LAMINAR_PIPE_CONST_TEMP,
+    REYNOLDS_LAMINAR_TURBULENT_THRESHOLD,
+};
 use crate::core::constants::tissue_thermal::THERMAL_CONDUCTIVITY_BLOOD;
 use ndarray::Array3;
 
@@ -206,13 +213,18 @@ impl VesselCooling {
         // Pr from SSOT: μ·c_p/k
         let prandtl = BLOOD_VISCOSITY_37C * BLOOD_SPECIFIC_HEAT / THERMAL_CONDUCTIVITY_BLOOD;
         let reynolds = self.calculate_reynolds_number(diameter);
-        if reynolds < 2300.0 {
-            // Laminar pipe flow, constant wall temperature (Graetz, fully developed)
-            3.66_f64
+        if reynolds < REYNOLDS_LAMINAR_TURBULENT_THRESHOLD {
+            // Laminar pipe flow, constant wall temperature (Graetz, fully developed).
+            // Nu₀ = NUSSELT_LAMINAR_PIPE_CONST_TEMP (Sieder-Tate 1936 / Incropera §8.4.1).
+            NUSSELT_LAMINAR_PIPE_CONST_TEMP
         } else {
             // Turbulent pipe flow, Dittus-Boelter (valid Pr ∈ [0.7, 160], Re > 10000;
-            // used here for Re ≥ 2300 as a conservative transitional estimate).
-            0.023 * reynolds.powf(0.8) * prandtl.powf(0.4)
+            // applied conservatively for Re ≥ REYNOLDS_LAMINAR_TURBULENT_THRESHOLD).
+            // Nu = DITTUS_BOELTER_COEFFICIENT · Re^0.8 · Pr^0.4
+            // (Dittus & Boelter 1930; Incropera & DeWitt 2007, §8.5, Eq. 8.60).
+            DITTUS_BOELTER_COEFFICIENT
+                * reynolds.powf(DITTUS_BOELTER_VELOCITY_EXPONENT)
+                * prandtl.powf(DITTUS_BOELTER_PRANDTL_EXPONENT_HEATING)
         }
     }
 }
