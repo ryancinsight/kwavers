@@ -1,4 +1,4 @@
-use crate::core::constants::fundamental::{ACOUSTIC_ABSORPTION_TISSUE, SOUND_SPEED_WATER_SIM};
+use crate::core::constants::fundamental::{ACOUSTIC_ABSORPTION_TISSUE, DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use crate::core::constants::tissue_acoustics::SOFT_TISSUE_ABSORPTION_POWER_Y;
 use crate::core::constants::numerical::MHZ_TO_HZ;
 use super::types::{treeby_2010, pinton_2009, LiteratureValidationResult};
@@ -30,7 +30,7 @@ fn test_linear_regression() {
 #[test]
 fn test_treeby_parameters() {
     assert_eq!(treeby_2010::SOUND_SPEED, SOUND_SPEED_WATER_SIM);
-    assert_eq!(treeby_2010::DENSITY, 1000.0);
+    assert_eq!(treeby_2010::DENSITY, DENSITY_WATER_NOMINAL);
     assert!(treeby_2010::MAX_PHASE_VELOCITY_ERROR <= 0.001);
 }
 

@@ -365,6 +365,12 @@ from ._pykwavers import (
     bbb_permeability_hill,
     bbb_closure_kinetics,
     ceus_backscatter_signal,
+    # ── Sonogenetics / neuromodulation ───────────────────────────────────────
+    compute_acoustic_membrane_tension_py,
+    boltzmann_open_probability_py,
+    coupled_channel_drive_py,
+    gaussian_beam_pressure_field_py,
+    simulate_lif_neuron_py,
 )
 
 # Pure-Python k-Wave parity utilities
@@ -555,6 +561,12 @@ __all__ = [
     "bbb_permeability_hill",
     "bbb_closure_kinetics",
     "ceus_backscatter_signal",
+    # ── Sonogenetics / neuromodulation ───────────────────────────────────────
+    "compute_acoustic_membrane_tension_py",
+    "boltzmann_open_probability_py",
+    "coupled_channel_drive_py",
+    "gaussian_beam_pressure_field_py",
+    "simulate_lif_neuron_py",
 ]
 
 # Module-level metadata

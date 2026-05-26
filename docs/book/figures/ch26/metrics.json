@@ -5,7 +5,7 @@
     "peak_pressure_pa": 300000.0
   },
   "guidance": {
-    "best_channel_drive": 0.588139692086516,
+    "best_channel_drive": 0.5881396920865158,
     "best_duty_percent": 1.0,
     "best_pressure_kpa": 404.67625899280574,
     "feasible_fraction": 0.37083333333333335
@@ -20,12 +20,12 @@
     "sonication_s": 30.0
   },
   "response": {
-    "peak_response_150_kpa": 0.057234038893296056,
-    "peak_response_300_kpa": 0.06324985539251766,
-    "peak_response_500_kpa": 0.07361653361361888
+    "peak_response_150_kpa": 0.0,
+    "peak_response_300_kpa": 0.0,
+    "peak_response_500_kpa": 0.08961058092247894
   },
   "thermal": {
-    "default_cem43_min": 0.00012911411061619608,
-    "default_delta_t_c": 0.07542334739895588
+    "default_cem43_min": 0.00012911429943490878,
+    "default_delta_t_c": 0.07542624498512396
   }
 }

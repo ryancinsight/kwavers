@@ -40,6 +40,7 @@ use super::types::ElasticPstdMedium;
 use ndarray::{Array3, Zip};
 use num_complex::Complex;
 use crate::core::constants::numerical::{TWO_PI};
+use crate::math::fft::shift_operators::generate_kappa as canonical_generate_kappa;
 
 /// Maximum P-wave speed `c_p = sqrt((λ + 2μ)/ρ)` across the medium.
 ///
@@ -115,25 +116,30 @@ pub(super) fn grid_spacing_from_wavenumber(d_op: &Array3<Complex<f64>>, n: usize
     TWO_PI / (n as f64 * dk)
 }
 
+/// Compute the k-space correction κ = sinc(c_ref·dt·|k|/2) for the elastic PSTD solver.
+///
+/// Delegates to [`crate::math::fft::shift_operators::generate_kappa`] — the single
+/// canonical implementation. The `kx`, `ky`, `kz` broadcast arrays (shape `(n,1,1)`)
+/// are not consumed here; grid spacings are recovered from the derivative operators
+/// at the call site.
+///
+/// # Arguments
+/// * `nx,ny,nz` — grid dimensions
+/// * `dx,dy,dz` — grid spacings (m), recovered from the wavenumber-axis step
+/// * `c_ref`    — maximum P-wave speed (m/s)
+/// * `dt`       — time step (s)
 pub(super) fn build_kappa(
-    kx: &Array3<f64>,
-    ky: &Array3<f64>,
-    kz: &Array3<f64>,
+    _kx: &Array3<f64>,
+    _ky: &Array3<f64>,
+    _kz: &Array3<f64>,
     (nx, ny, nz): (usize, usize, usize),
     c_ref: f64,
     dt: f64,
+    dx: f64,
+    dy: f64,
+    dz: f64,
 ) -> Array3<f64> {
-    Array3::from_shape_fn((nx, ny, nz), |(i, j, k)| {
-        let k_sq = kx[[i, 0, 0]] * kx[[i, 0, 0]]
-            + ky[[j, 0, 0]] * ky[[j, 0, 0]]
-            + kz[[k, 0, 0]] * kz[[k, 0, 0]];
-        let arg = 0.5 * c_ref * dt * k_sq.sqrt();
-        if arg < 1e-12 {
-            1.0
-        } else {
-            arg.sin() / arg
-        }
-    })
+    canonical_generate_kappa(nx, ny, nz, dx, dy, dz, c_ref, dt)
 }
 
 // ─── Spectral derivative helpers ─────────────────────────────────────────────

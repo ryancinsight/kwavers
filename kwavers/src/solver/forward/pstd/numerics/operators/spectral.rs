@@ -14,7 +14,9 @@ use crate::math::fft::KSpaceCalculator;
 use ndarray::Array3;
 
 use crate::solver::forward::pstd::config::PSTDConfig;
-use crate::solver::forward::pstd::numerics::spectral_correction::SpectralCorrectionMethod;
+use crate::solver::forward::pstd::numerics::spectral_correction::{
+    compute_spectral_correction, SpectralCorrectionConfig,
+};
 
 /// Spectral operator collection for k-space methods
 #[derive(Debug, Clone)]
@@ -26,12 +28,15 @@ pub struct SpectralOperators {
     pub k_max: f64,
 }
 
-use crate::solver::pstd::utils::{
-    compute_anti_aliasing_filter, compute_kspace_correction_factors, compute_wavenumbers,
-    CorrectionType,
-};
+use crate::solver::pstd::utils::{compute_anti_aliasing_filter, compute_wavenumbers};
 
-/// Initialize spectral operators and correction factors
+/// Initialize spectral operators and correction factors.
+///
+/// Kappa is computed via [`compute_spectral_correction`] — the single canonical
+/// dispatch path in `numerics::spectral_correction`. This ensures every
+/// [`SpectralCorrectionMethod`] variant reaches its distinct mathematical
+/// formula and the dispatch is non-lossy.
+///
 /// # Errors
 /// - Returns [`Err`] if an internal constraint is violated.
 ///
@@ -52,28 +57,15 @@ pub fn initialize_spectral_operators(
         ));
     }
 
-    let kappa = if config.spectral_correction.enabled {
-        let correction_type = match config.spectral_correction.method {
-            SpectralCorrectionMethod::ExactDispersion
-            | SpectralCorrectionMethod::Treeby2010
-            | SpectralCorrectionMethod::LowDispersionPSTD => CorrectionType::Treeby2010,
-            SpectralCorrectionMethod::LiuPSTD | SpectralCorrectionMethod::SincSpatial => {
-                CorrectionType::Liu1997
-            }
-        };
-
-        compute_kspace_correction_factors(
-            &k_ops.kx,
-            &k_ops.ky,
-            &k_ops.kz,
-            grid,
-            correction_type,
-            config.dt,
-            c_ref,
-        )
-    } else {
-        Array3::from_elem((grid.nx, grid.ny, grid.nz), 1.0)
+    // Route through the unified spectral correction dispatch so every
+    // SpectralCorrectionMethod variant reaches its distinct formula.
+    let correction_config = SpectralCorrectionConfig {
+        enabled: config.spectral_correction.enabled,
+        method: config.spectral_correction.method,
+        cfl_number: config.spectral_correction.cfl_number,
+        max_correction: config.spectral_correction.max_correction,
     };
+    let kappa = compute_spectral_correction(grid, &correction_config, config.dt, c_ref);
 
     Ok((k_ops, kappa, k_max, c_ref))
 }

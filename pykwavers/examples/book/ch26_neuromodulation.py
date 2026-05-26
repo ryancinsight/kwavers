@@ -110,18 +110,21 @@ def acoustic_energy_tension_mn_m(pressure_pa: np.ndarray | float) -> np.ndarray:
 
     Delegates to ``kw.compute_acoustic_membrane_tension_py``.  Radiation-pressure
     derivation (P_rad = I/c) and Laplace thin-shell equilibrium (ΔT = P_rad·R/2)
-    execute in Rust.  Returns tension in mN/m.
+    execute in Rust.  Returns tension in mN/m, same shape as input.
     """
-    pressure = np.atleast_1d(np.asarray(pressure_pa, dtype=np.float64))
-    return np.asarray(
+    arr = np.asarray(pressure_pa, dtype=np.float64)
+    shape = arr.shape
+    flat = np.ascontiguousarray(arr.ravel())
+    result = np.asarray(
         kw.compute_acoustic_membrane_tension_py(
-            pressure,
+            flat,
             density_kg_m3=RHO_BRAIN,
             sound_speed_m_s=C_BRAIN,
             cell_radius_m=CELL_RADIUS_M,
         ),
         dtype=np.float64,
     )
+    return result.reshape(shape) if shape else result[0]
 
 
 def open_probability(tension_mn_m: np.ndarray | float, channel: Channel) -> np.ndarray:
@@ -129,18 +132,21 @@ def open_probability(tension_mn_m: np.ndarray | float, channel: Channel) -> np.n
 
     Delegates to ``kw.boltzmann_open_probability_py``.  The slope parameterisation
     ``σ = k_B·θ / A_gate`` converts to gating area inside Rust.  All exponential
-    evaluation executes in Rust.
+    evaluation executes in Rust.  Returns array of same shape as input.
     """
-    tension = np.atleast_1d(np.asarray(tension_mn_m, dtype=np.float64))
-    return np.asarray(
+    arr = np.asarray(tension_mn_m, dtype=np.float64)
+    shape = arr.shape
+    flat = np.ascontiguousarray(arr.ravel())
+    result = np.asarray(
         kw.boltzmann_open_probability_py(
-            tension,
+            flat,
             half_tension_mn_m=channel.half_tension_mn_m,
             slope_mn_m=channel.slope_mn_m,
             temperature_k=BODY_TEMPERATURE_K,
         ),
         dtype=np.float64,
     )
+    return result.reshape(shape) if shape else result[0]
 
 
 def coupled_channel_drive(pressure_pa: np.ndarray | float) -> np.ndarray:
@@ -155,10 +161,12 @@ def coupled_channel_drive(pressure_pa: np.ndarray | float) -> np.ndarray:
     3. ΔT → P_open,k = Boltzmann(ΔT; T_half,k, slope_k, θ)
     4. drive = clamp(Σ_k w_k·P_open,k / Σ_k |w_k|, −1, 1)
     """
-    pressure = np.atleast_1d(np.asarray(pressure_pa, dtype=np.float64))
-    return np.asarray(
+    arr = np.asarray(pressure_pa, dtype=np.float64)
+    shape = arr.shape
+    flat = np.ascontiguousarray(arr.ravel())
+    result = np.asarray(
         kw.coupled_channel_drive_py(
-            pressure,
+            flat,
             half_tensions_mn_m=[ch.half_tension_mn_m for ch in CHANNELS],
             slopes_mn_m=[ch.slope_mn_m for ch in CHANNELS],
             conductance_weights=[ch.conductance_weight for ch in CHANNELS],
@@ -169,6 +177,7 @@ def coupled_channel_drive(pressure_pa: np.ndarray | float) -> np.ndarray:
         ),
         dtype=np.float64,
     )
+    return result.reshape(shape) if shape else result[0]
 
 
 def gaussian_focus(
