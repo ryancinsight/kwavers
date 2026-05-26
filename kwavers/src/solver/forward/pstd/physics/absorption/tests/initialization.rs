@@ -172,7 +172,7 @@ fn test_stokes_absorption_tau_matches_classical_formula() {
     // HomogeneousMedium::new() sets shear_viscosity = VISCOSITY_WATER, bulk = 2.5 × VISCOSITY_WATER.
     let eta_s = VISCOSITY_WATER;
     let eta_b = 2.5 * VISCOSITY_WATER;
-    let rho0 = 1000.0_f64;
+    let rho0 = DENSITY_WATER_NOMINAL;
     let c0 = SOUND_SPEED_WATER_SIM;
     let alpha_si = (4.0 * eta_s / 3.0 + eta_b) / (2.0 * rho0 * c0 * c0 * c0);
     let expected_tau = -2.0 * alpha_si * c0;
