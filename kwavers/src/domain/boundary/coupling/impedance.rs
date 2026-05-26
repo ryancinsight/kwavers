@@ -3,6 +3,7 @@
 //! Frequency-dependent absorption based on acoustic impedance matching.
 //! Particularly useful for ultrasound transducers and tissue interfaces.
 
+use crate::core::constants::fundamental::ACOUSTIC_IMPEDANCE_WATER_NOMINAL;
 use crate::core::error::KwaversResult;
 use crate::domain::boundary::traits::BoundaryCondition;
 use crate::domain::grid::GridTopology;
@@ -54,6 +55,11 @@ use super::types::{BoundaryDirections, FrequencyProfile};
 pub struct ImpedanceBoundary {
     /// Target impedance Z_target (kg/m²s)
     pub target_impedance: f64,
+    /// Medium impedance Z_medium (kg/m²s) — defaults to water.
+    pub medium_impedance: f64,
+    /// Representative frequency for spatial-domain reflection coefficient (Hz).
+    /// Defaults to the Gaussian center frequency when set, else 1 MHz.
+    pub representative_frequency_hz: f64,
     /// Frequency-dependent profile
     pub frequency_profile: FrequencyProfile,
     /// Boundary directions
@@ -75,9 +81,20 @@ impl ImpedanceBoundary {
     pub fn new(target_impedance: f64, directions: BoundaryDirections) -> Self {
         Self {
             target_impedance,
+            medium_impedance: ACOUSTIC_IMPEDANCE_WATER_NOMINAL,
+            representative_frequency_hz: 1.0e6,
             frequency_profile: FrequencyProfile::Flat,
             directions,
         }
+    }
+
+    /// Set the medium impedance Z_medium for reflection-coefficient computation.
+    ///
+    /// Defaults to `ACOUSTIC_IMPEDANCE_WATER_NOMINAL` (1.5e6 Rayl) when not set.
+    #[must_use]
+    pub fn with_medium_impedance(mut self, medium_impedance: f64) -> Self {
+        self.medium_impedance = medium_impedance;
+        self
     }
 
     /// Set Gaussian frequency profile
@@ -89,13 +106,14 @@ impl ImpedanceBoundary {
     ///
     /// # Returns
     ///
-    /// Self with Gaussian profile applied
+    /// Self with Gaussian profile applied; representative frequency is set to `center_freq`.
     #[must_use]
     pub fn with_gaussian_profile(mut self, center_freq: f64, bandwidth: f64) -> Self {
         self.frequency_profile = FrequencyProfile::Gaussian {
             center_freq,
             bandwidth,
         };
+        self.representative_frequency_hz = center_freq;
         self
     }
 
@@ -181,32 +199,144 @@ impl BoundaryCondition for ImpedanceBoundary {
 
     fn apply_scalar_spatial(
         &mut self,
-        _field: ArrayViewMut3<f64>,
-        _grid: &dyn GridTopology,
+        mut field: ArrayViewMut3<f64>,
+        grid: &dyn GridTopology,
         _time_step: usize,
         _dt: f64,
     ) -> KwaversResult<()> {
-        // Apply impedance boundary condition
-        // This would compute reflection coefficients and apply absorption
+        // Ghost-cell impedance boundary:
+        //   field[boundary_cell] = R · field[interior_neighbour]
+        // where R = (Z_target - Z_medium) / (Z_target + Z_medium) is the
+        // pressure reflection coefficient (Pierce 1989, §3.6). R = +1 is
+        // perfectly rigid (mirror), R = 0 is matched (perfect absorber),
+        // R = -1 is pressure-release (free surface).
+        //
+        // For Flat frequency profile the coefficient is exact and frequency-
+        // independent. For Gaussian/Custom profiles the coefficient is
+        // evaluated at `representative_frequency_hz` (the spectral peak).
+        let r = self.reflection_coefficient(
+            self.representative_frequency_hz,
+            self.medium_impedance,
+        );
+        let dims = grid.dimensions();
+        let (nx, ny, nz) = (dims[0], dims[1], dims[2]);
+        if nx < 2 || ny < 2 || nz < 2 {
+            return Ok(());
+        }
 
-        // Simplified: apply frequency-independent absorption
-        let _absorption = 0.1; // Simplified absorption coefficient
-
-        // Apply to boundary layers
-        // (Real implementation would need proper boundary indexing)
-
+        if self.directions.x_min {
+            for j in 0..ny {
+                for k in 0..nz {
+                    field[[0, j, k]] = r * field[[1, j, k]];
+                }
+            }
+        }
+        if self.directions.x_max {
+            for j in 0..ny {
+                for k in 0..nz {
+                    field[[nx - 1, j, k]] = r * field[[nx - 2, j, k]];
+                }
+            }
+        }
+        if self.directions.y_min {
+            for i in 0..nx {
+                for k in 0..nz {
+                    field[[i, 0, k]] = r * field[[i, 1, k]];
+                }
+            }
+        }
+        if self.directions.y_max {
+            for i in 0..nx {
+                for k in 0..nz {
+                    field[[i, ny - 1, k]] = r * field[[i, ny - 2, k]];
+                }
+            }
+        }
+        if self.directions.z_min {
+            for i in 0..nx {
+                for j in 0..ny {
+                    field[[i, j, 0]] = r * field[[i, j, 1]];
+                }
+            }
+        }
+        if self.directions.z_max {
+            for i in 0..nx {
+                for j in 0..ny {
+                    field[[i, j, nz - 1]] = r * field[[i, j, nz - 2]];
+                }
+            }
+        }
         Ok(())
     }
 
     fn apply_scalar_frequency(
         &mut self,
-        _field: &mut ndarray::Array3<num_complex::Complex<f64>>,
-        _grid: &dyn GridTopology,
+        field: &mut ndarray::Array3<num_complex::Complex<f64>>,
+        grid: &dyn GridTopology,
         _time_step: usize,
         _dt: f64,
     ) -> KwaversResult<()> {
-        // Frequency-dependent impedance boundary
-        // Apply different absorption for different frequency components
+        // Frequency-domain ghost-cell impedance boundary.
+        //
+        // For a pseudospectral solver the field is the complex spatial-domain
+        // representation; the reflection coefficient is applied identically to
+        // the time-domain case at boundary cells using the representative
+        // frequency. Frequency-bin-dependent profiles require k → ω mapping
+        // (k = ω/c) which depends on the medium's sound speed and is therefore
+        // applied at the model level where c is known, not here.
+        let r = self.reflection_coefficient(
+            self.representative_frequency_hz,
+            self.medium_impedance,
+        );
+        let r_complex = num_complex::Complex::new(r, 0.0);
+        let dims = grid.dimensions();
+        let (nx, ny, nz) = (dims[0], dims[1], dims[2]);
+        if nx < 2 || ny < 2 || nz < 2 {
+            return Ok(());
+        }
+
+        if self.directions.x_min {
+            for j in 0..ny {
+                for k in 0..nz {
+                    field[[0, j, k]] = r_complex * field[[1, j, k]];
+                }
+            }
+        }
+        if self.directions.x_max {
+            for j in 0..ny {
+                for k in 0..nz {
+                    field[[nx - 1, j, k]] = r_complex * field[[nx - 2, j, k]];
+                }
+            }
+        }
+        if self.directions.y_min {
+            for i in 0..nx {
+                for k in 0..nz {
+                    field[[i, 0, k]] = r_complex * field[[i, 1, k]];
+                }
+            }
+        }
+        if self.directions.y_max {
+            for i in 0..nx {
+                for k in 0..nz {
+                    field[[i, ny - 1, k]] = r_complex * field[[i, ny - 2, k]];
+                }
+            }
+        }
+        if self.directions.z_min {
+            for i in 0..nx {
+                for j in 0..ny {
+                    field[[i, j, 0]] = r_complex * field[[i, j, 1]];
+                }
+            }
+        }
+        if self.directions.z_max {
+            for i in 0..nx {
+                for j in 0..ny {
+                    field[[i, j, nz - 1]] = r_complex * field[[i, j, nz - 2]];
+                }
+            }
+        }
         Ok(())
     }
 
@@ -285,5 +415,92 @@ mod tests {
         // R → -1 as Z_target → 0
         let r = boundary.reflection_coefficient(MHZ_TO_HZ, ACOUSTIC_IMPEDANCE_WATER_NOMINAL);
         assert!(r < -0.999, "Pressure release should have R ≈ -1, got {}", r);
+    }
+
+    #[test]
+    fn test_impedance_boundary_spatial_apply_matched_zeros_face() {
+        // Matched impedance → R = 0 → boundary cells set to zero (perfect absorption).
+        use crate::domain::grid::{Grid, GridAdapter};
+        use ndarray::Array3;
+
+        let grid = Grid::new(8, 8, 8, 1e-3, 1e-3, 1e-3).unwrap();
+        let mut boundary = ImpedanceBoundary::new(
+            ACOUSTIC_IMPEDANCE_WATER_NOMINAL,
+            BoundaryDirections::all(),
+        )
+        .with_medium_impedance(ACOUSTIC_IMPEDANCE_WATER_NOMINAL);
+
+        let mut field = Array3::<f64>::from_elem((8, 8, 8), 1.0);
+        boundary
+            .apply_scalar_spatial(field.view_mut(), &GridAdapter::new(grid.clone()), 0, 1e-7)
+            .unwrap();
+
+        // x_min, x_max faces zeroed
+        for j in 0..8 {
+            for k in 0..8 {
+                assert_eq!(field[[0, j, k]], 0.0);
+                assert_eq!(field[[7, j, k]], 0.0);
+            }
+        }
+        // Interior unchanged
+        assert_eq!(field[[3, 3, 3]], 1.0);
+    }
+
+    #[test]
+    fn test_impedance_boundary_spatial_apply_rigid_mirrors_face() {
+        // Z_target → ∞ → R = +1 → boundary cells mirror interior (rigid wall).
+        use crate::domain::grid::{Grid, GridAdapter};
+        use ndarray::Array3;
+
+        let grid = Grid::new(8, 8, 8, 1e-3, 1e-3, 1e-3).unwrap();
+        let mut boundary = ImpedanceBoundary::new(1e15, BoundaryDirections::all())
+            .with_medium_impedance(ACOUSTIC_IMPEDANCE_WATER_NOMINAL);
+
+        let mut field = Array3::<f64>::zeros((8, 8, 8));
+        field[[1, 4, 4]] = 3.5; // interior next to x_min face
+        field[[6, 4, 4]] = -2.5; // interior next to x_max face
+
+        boundary
+            .apply_scalar_spatial(field.view_mut(), &GridAdapter::new(grid.clone()), 0, 1e-7)
+            .unwrap();
+
+        // R ≈ 1 → ghost cell value ≈ interior cell value
+        assert!((field[[0, 4, 4]] - 3.5).abs() < 1e-3);
+        assert!((field[[7, 4, 4]] - (-2.5)).abs() < 1e-3);
+    }
+
+    #[test]
+    fn test_impedance_boundary_spatial_respects_directions() {
+        // Only x_min direction enabled → only x_min face updated.
+        use crate::domain::grid::{Grid, GridAdapter};
+        use ndarray::Array3;
+
+        let grid = Grid::new(6, 6, 6, 1e-3, 1e-3, 1e-3).unwrap();
+        let directions = BoundaryDirections {
+            x_min: true,
+            x_max: false,
+            y_min: false,
+            y_max: false,
+            z_min: false,
+            z_max: false,
+        };
+        let mut boundary = ImpedanceBoundary::new(
+            ACOUSTIC_IMPEDANCE_WATER_NOMINAL,
+            directions,
+        )
+        .with_medium_impedance(ACOUSTIC_IMPEDANCE_WATER_NOMINAL);
+
+        let mut field = Array3::<f64>::from_elem((6, 6, 6), 7.0);
+        boundary
+            .apply_scalar_spatial(field.view_mut(), &GridAdapter::new(grid.clone()), 0, 1e-7)
+            .unwrap();
+
+        // x_min face zeroed (matched → R=0)
+        assert_eq!(field[[0, 3, 3]], 0.0);
+        // x_max face untouched
+        assert_eq!(field[[5, 3, 3]], 7.0);
+        // y, z faces untouched
+        assert_eq!(field[[3, 0, 3]], 7.0);
+        assert_eq!(field[[3, 5, 3]], 7.0);
     }
 }

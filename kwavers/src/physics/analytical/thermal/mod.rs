@@ -46,6 +46,7 @@ mod tests;
 /// # Reference
 /// Pennes (1948), *J. Appl. Physiol.* 1, 93.
 #[must_use]
+#[allow(clippy::too_many_arguments)]
 pub fn bioheat_focal_temperature_rise(
     t_arr: &[f64],
     acoustic_power_w: f64,
@@ -131,6 +132,7 @@ pub fn hifu_focal_pressure_gain(aperture_m: f64, f_number: f64, freq_hz: f64, c:
 /// # Reference
 /// O'Neil (1949); Soneson (2011), *J. Acoust. Soc. Am.* 130, EL158.
 #[must_use]
+#[allow(clippy::too_many_arguments)]
 pub fn gaussian_power_deposition_2d(
     r_arr: &[f64],
     z_arr: &[f64],
@@ -286,4 +288,41 @@ pub fn acoustic_heat_source_density(
 pub fn acoustic_intensity_from_amplitude(p_field: &[f64], rho: f64, c: f64) -> Vec<f64> {
     let inv_2rhoc = 0.5 / (rho * c);
     p_field.iter().map(|&p| p * p * inv_2rhoc).collect()
+}
+
+/// Adiabatic (no-perfusion, no-conduction) temperature rise from a heat source.
+///
+/// In the short-pulse limit where heat conduction and blood perfusion are
+/// negligible on the timescale of one pulse, the Pennes bioheat equation
+/// reduces to the adiabatic form:
+///
+/// ```text
+/// ΔT_i = Q_i · τ_i / (ρ · cₚ)   [K]
+/// ```
+///
+/// This is the first law of thermodynamics applied to a fixed tissue element
+/// of density ρ and specific heat cₚ absorbing volumetric heat source Q [W/m³]
+/// over duration τ [s].
+///
+/// # Arguments
+/// * `q_arr` – heat-source density [W/m³], element-wise
+/// * `tau_arr` – pulse durations [s], same length as q_arr
+/// * `density` – tissue density ρ [kg/m³]
+/// * `specific_heat` – tissue specific heat cₚ [J/(kg·K)]
+///
+/// # Reference
+/// Pennes (1948), *J. Appl. Physiol.* 1, 93, eq. 1 (no-perfusion, no-conduction limit).
+/// Hill et al. (1994) *Physical Principles of Medical Ultrasound*, §4.
+#[must_use]
+pub fn adiabatic_temperature_rise_kelvin(
+    q_arr: &[f64],
+    tau_arr: &[f64],
+    density: f64,
+    specific_heat: f64,
+) -> Vec<f64> {
+    let inv_rho_cp = 1.0 / (density * specific_heat).max(f64::MIN_POSITIVE);
+    let n = q_arr.len().min(tau_arr.len());
+    (0..n)
+        .map(|i| q_arr[i] * tau_arr[i] * inv_rho_cp)
+        .collect()
 }
