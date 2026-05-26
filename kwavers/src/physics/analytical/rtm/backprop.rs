@@ -1,14 +1,15 @@
 use rayon::prelude::*;
-use crate::core::constants::numerical::{FOUR_PI};
+use crate::core::constants::numerical::{FOUR_PI, TWO_PI};
 
 /// 2-D Green's function backpropagation from a focal point.
 ///
 /// ```text
 /// P_bwd(x, z) = exp(−i·k·r_f) / √(r_f)
 /// r_f = √((x−x_f)² + (z−z_f)²)
+/// k   = 2π·f / c
 /// ```
 /// Represents the time-reversed Green's function for a point source at (x_f, z_f).
-/// Singularity at r_f = 0 is regularised by a small offset.
+/// Singularity at r_f = 0 is regularised to 1 pm.
 ///
 /// Output: `(real_flat, imag_flat)` for the NX × NZ grid.
 ///
@@ -22,7 +23,8 @@ use crate::core::constants::numerical::{FOUR_PI};
 /// # Arguments
 /// * `x_arr`, `z_arr` – grid coordinates [m]
 /// * `x_f`, `z_f` – focal point [m]
-/// * `k_br` – wavenumber in brain [rad/m]
+/// * `freq_hz` – frequency [Hz]
+/// * `c` – sound speed in the coupling medium [m/s]
 ///
 /// # Reference
 /// Baysal et al. (1983), *Geophysics* 48, 1514 (RTM formulation).
@@ -32,8 +34,10 @@ pub fn backprop_green_function_2d(
     z_arr: &[f64],
     x_f: f64,
     z_f: f64,
-    k_br: f64,
+    freq_hz: f64,
+    c: f64,
 ) -> (Vec<f64>, Vec<f64>) {
+    let k_br = TWO_PI * freq_hz / c;
     let nx = x_arr.len();
     let nz = z_arr.len();
     let mut real_out = vec![0.0_f64; nx * nz];

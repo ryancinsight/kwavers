@@ -121,7 +121,7 @@ impl LinearBornInversionConfig {
             ));
         }
         if self.receiver_offsets.is_empty()
-            || self.receiver_offsets.iter().any(|offset| *offset == 0)
+            || self.receiver_offsets.contains(&0)
         {
             return Err(KwaversError::InvalidInput(
                 "LinearBornInversionConfig.receiver_offsets must be nonempty and nonzero"

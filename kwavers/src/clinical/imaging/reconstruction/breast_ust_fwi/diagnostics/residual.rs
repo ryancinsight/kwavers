@@ -384,7 +384,7 @@ pub(crate) fn validate_ring_channel_policy_shape(
             "receiver channel policy requires positive observation axes".into(),
         ));
     }
-    if receiver_count % transmission_count != 0 {
+    if !receiver_count.is_multiple_of(transmission_count) {
         return Err(KwaversError::DimensionMismatch(format!(
             "receiver count {receiver_count} must be an integer multiple of transmission count {transmission_count}"
         )));

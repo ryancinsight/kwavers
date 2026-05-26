@@ -128,6 +128,7 @@ pub(super) fn grid_spacing_from_wavenumber(d_op: &Array3<Complex<f64>>, n: usize
 /// * `dx,dy,dz` — grid spacings (m), recovered from the wavenumber-axis step
 /// * `c_ref`    — maximum P-wave speed (m/s)
 /// * `dt`       — time step (s)
+#[allow(clippy::too_many_arguments)]
 pub(super) fn build_kappa(
     _kx: &Array3<f64>,
     _ky: &Array3<f64>,

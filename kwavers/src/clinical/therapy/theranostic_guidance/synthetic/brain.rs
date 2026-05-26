@@ -50,6 +50,7 @@ const HU_THALAMUS: f64 = 38.0; // thalamic nuclei — primary histotripsy target
 /// `rz_sup` applies when `iz ≥ cz` (superior half).
 /// Returns ≤ 1.0 when the voxel is inside the half-ellipsoid.
 #[inline]
+#[allow(clippy::too_many_arguments)]
 fn head_r(
     ix: usize,
     iy: usize,

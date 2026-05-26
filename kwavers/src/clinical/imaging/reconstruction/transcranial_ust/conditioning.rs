@@ -100,6 +100,7 @@ fn box_filter_2d_y(data: &mut [f64], nx: usize, ny: usize, r: usize) {
 /// half-width `r`, computed in O(L) via prefix sums.
 ///
 /// `scratch` is reused across calls to avoid repeated heap allocation.
+#[allow(clippy::needless_range_loop)]
 fn apply_box_filter_1d(line: &mut [f64], r: usize, scratch: &mut Vec<f64>) {
     let n = line.len();
     if n == 0 {

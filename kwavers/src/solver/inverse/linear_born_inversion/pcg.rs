@@ -102,6 +102,7 @@ struct StagePcgContext<'a> {
 }
 
 impl StagePcgContext<'_> {
+    #[allow(clippy::ptr_arg)]
     fn solve(&self, stage_iterations: usize, model: &mut Vec<f64>, history: &mut Vec<f64>) {
         let mut residual = self.operator.normal_residual(
             self.data,
@@ -358,6 +359,7 @@ fn box_filter_z(data: &mut [f64], _nx: usize, _ny: usize, nz: usize, r: usize) {
 /// `scratch` must have capacity ≥ `line.len() + 1`; it is resized as needed
 /// so the caller may pass a pre-allocated buffer of the right size to avoid
 /// repeated heap allocation across calls.
+#[allow(clippy::needless_range_loop)]
 fn apply_box_filter_1d_with_scratch(line: &mut [f64], r: usize, scratch: &mut Vec<f64>) {
     let n = line.len();
     if n == 0 {

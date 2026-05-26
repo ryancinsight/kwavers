@@ -50,7 +50,7 @@ pub(super) fn decode_sound_speed_values(
     unit: BreastUstSoundSpeedUnit,
 ) -> KwaversResult<Vec<f64>> {
     let elem_size = fixed_element_size(datatype)?;
-    if raw.len() % elem_size != 0 {
+    if !raw.len().is_multiple_of(elem_size) {
         return Err(KwaversError::InvalidInput(format!(
             "HDF5 payload length {} is not divisible by element size {}",
             raw.len(),

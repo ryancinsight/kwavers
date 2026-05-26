@@ -218,8 +218,16 @@ for ax, r, sc in zip(axes, results, SCENARIOS):
     p_peak = np.asarray(r["westervelt_peak_pressure_pa"])
     sp_r = float(r["spacing_m"])
     nx, ny, nz = p_peak.shape
-    # Heat source Q = 2·α·I, I = p²/(2·ρ·c)
-    Q = ALPHA_LIVER * p_peak ** 2 / (RHO_LIVER * C_LIVER)   # W/m³
+    # Heat source Q = α·p²/(ρ·c) [W/m³] via Pennes bioheat source term.
+    # Derivation: I = p²/(2ρc), Q = 2α·I → Q = α·p²/(ρ·c).
+    Q = np.asarray(
+        kw.acoustic_heat_source_density(
+            p_peak.ravel().astype(np.float64),
+            float(ALPHA_LIVER),
+            float(RHO_LIVER),
+            float(C_LIVER),
+        )
+    ).reshape(p_peak.shape).astype(p_peak.dtype)
     sim_th = kw.ThermalSimulation(
         nx, ny, nz, sp_r, sp_r, sp_r,
         thermal_conductivity=K_LIVER, density=RHO_LIVER,

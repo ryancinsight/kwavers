@@ -55,6 +55,7 @@ pub fn forward_operator_equivalence_diagnostics(
     )
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn forward_operator_equivalence_diagnostics_with_receiver_policy(
     predictions_by_model: &[BreastUstForwardOperatorPrediction<'_>],
     observed: &Array3<Complex64>,

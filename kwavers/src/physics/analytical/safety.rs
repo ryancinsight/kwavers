@@ -34,6 +34,26 @@ pub fn mechanical_index(p_neg_pa: f64, f_hz: f64) -> f64 {
     crate::physics::acoustics::analysis::calculate_mechanical_index(p_neg_pa, f_hz)
 }
 
+/// Mechanical Index over a pressure field (array variant).
+///
+/// Applies [`mechanical_index`] element-wise to every sample in `p_field`:
+/// ```text
+/// MI_i = |p_field[i]| / (1e6 · √(f_MHz))
+/// ```
+///
+/// # Arguments
+/// * `p_field` – peak rarefactional pressures [Pa], any shape passed as 1-D
+/// * `f_hz` – centre frequency [Hz]
+///
+/// # Reference
+/// FDA, *Marketing Clearance of Diagnostic Ultrasound Systems and
+/// Transducers*, Appendix A; IEC 62359 (2017) §7.2.
+#[must_use]
+#[inline]
+pub fn mechanical_index_field(p_field: &[f64], f_hz: f64) -> Vec<f64> {
+    p_field.iter().map(|&p| mechanical_index(p, f_hz)).collect()
+}
+
 /// Thermal Index for soft tissue (TIS).
 ///
 /// Simplified IEC 62359 formula:
@@ -133,6 +153,44 @@ pub fn arrhenius_damage_integral(t_celsius: &[f64], dt_s: f64, a_per_s: f64, ea_
         let t_k = t + KELVIN_OFFSET_C;
         acc + a_per_s * (-ea_j_mol / (r_gas * t_k)).exp() * dt_s
     })
+}
+
+/// Cumulative Arrhenius thermal-damage integral over a temperature time series.
+///
+/// Returns the running sum Ω(t_k) at each discrete time step:
+/// ```text
+/// Ω(t_k) = A · Σ_{i=0}^{k} exp(−Ea / (R_gas · T_K[i])) · dt
+/// ```
+/// The output has the same length as `t_celsius`; element `k` is the
+/// total damage accumulated from t=0 through t=k·dt.
+///
+/// `Ω ≥ 1` indicates irreversible damage (Henriques criterion).
+///
+/// # Arguments
+/// * `t_celsius` – temperature time series [°C]
+/// * `dt_s` – time step [s]
+/// * `a_per_s` – frequency factor A [s⁻¹]
+/// * `ea_j_mol` – activation energy Ea [J/mol]
+///
+/// # Reference
+/// Henriques & Moritz (1947), *Am. J. Pathol.* 23, 531.
+#[must_use]
+pub fn arrhenius_cumulative(
+    t_celsius: &[f64],
+    dt_s: f64,
+    a_per_s: f64,
+    ea_j_mol: f64,
+) -> Vec<f64> {
+    let r_gas = GAS_CONSTANT;
+    let mut acc = 0.0_f64;
+    t_celsius
+        .iter()
+        .map(|&t| {
+            let t_k = t + KELVIN_OFFSET_C;
+            acc += a_per_s * (-ea_j_mol / (r_gas * t_k)).exp() * dt_s;
+            acc
+        })
+        .collect()
 }
 
 /// FDA ISPTA.3 output limit.
@@ -236,5 +294,20 @@ mod tests {
     fn fda_limits_positive() {
         assert!(fda_ispta_limit_mw_cm2() > 0.0);
         assert!(fda_isppa_limit_w_cm2() > 0.0);
+    }
+
+    #[test]
+    fn mechanical_index_field_matches_scalar() {
+        // Field variant must produce the same result as the scalar variant per element.
+        let pressures = [-MPA_TO_PA, -2.0 * MPA_TO_PA, -0.5 * MPA_TO_PA];
+        let f_hz = 3.0 * MHZ_TO_HZ;
+        let field = mechanical_index_field(&pressures, f_hz);
+        for (&p, &mi_field) in pressures.iter().zip(field.iter()) {
+            let mi_scalar = mechanical_index(p, f_hz);
+            assert!(
+                (mi_field - mi_scalar).abs() < 1e-12,
+                "field={mi_field} scalar={mi_scalar}"
+            );
+        }
     }
 }

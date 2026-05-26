@@ -1,3 +1,190 @@
+/// Gaussian error function via Abramowitz & Stegun 7.1.26 rational approximation.
+///
+/// Maximum absolute error: |ε| ≤ 1.5×10⁻⁷.
+///
+/// # Reference
+/// Abramowitz & Stegun (1964) *Handbook of Mathematical Functions*, §7.1.26.
+#[inline]
+fn erf_as(x: f64) -> f64 {
+    const P: f64 = 0.327_591_1_f64;
+    const A: [f64; 5] = [
+        0.254_829_592_f64,
+        -0.284_496_736_f64,
+        1.421_413_741_f64,
+        -1.453_152_027_f64,
+        1.061_405_429_f64,
+    ];
+    let sign = if x >= 0.0 { 1.0_f64 } else { -1.0_f64 };
+    let x_abs = x.abs();
+    let t = 1.0 / (1.0 + P * x_abs);
+    // Horner evaluation of polynomial in t
+    let poly = t * (A[0] + t * (A[1] + t * (A[2] + t * (A[3] + t * A[4]))));
+    sign * (1.0 - poly * (-x_abs * x_abs).exp())
+}
+
+/// Single-pulse intrinsic-threshold cavitation probability (Gaussian erf-CDF model).
+///
+/// Maxwell et al. (2013) showed experimentally that the single-pulse probability
+/// of histotripsy cavitation at pressure magnitude `|p⁻|` follows a Gaussian
+/// cumulative distribution function with threshold `p_T` and width `σ`:
+///
+/// ```text
+/// P_cav(|p⁻|) = ½ · (1 + erf((|p⁻| − p_T) / (σ · √2)))   [Theorem 21.1]
+/// ```
+///
+/// At `|p⁻| = p_T` → `P_cav = 0.5` (50 % probability per pulse).
+/// At `|p⁻| ≪ p_T` → `P_cav → 0` (sub-threshold).
+/// At `|p⁻| ≫ p_T` → `P_cav → 1` (deterministic cavitation).
+///
+/// The erf is evaluated via the Abramowitz & Stegun 7.1.26 rational approximation
+/// (|ε| ≤ 1.5×10⁻⁷).
+///
+/// # Arguments
+/// * `p_arr` – array of |peak negative pressure| values [Pa]
+/// * `p_threshold` – mean intrinsic threshold [Pa] (bovine liver, 1 MHz: 28.2 MPa)
+/// * `sigma_pa` – standard deviation [Pa] (bovine liver, 1 MHz: 0.96 MPa)
+///
+/// # Reference
+/// Maxwell et al. (2013) *Ultrasound Med. Biol.* 39, 449, Table II.
+/// Macoskey et al. (2018) *Phys. Med. Biol.* 63, 175022.
+#[must_use]
+pub fn intrinsic_threshold_cavitation_probability(
+    p_arr: &[f64],
+    p_threshold: f64,
+    sigma_pa: f64,
+) -> Vec<f64> {
+    use std::f64::consts::SQRT_2;
+    let denom = (sigma_pa * SQRT_2).max(f64::MIN_POSITIVE);
+    p_arr
+        .iter()
+        .map(|&p| 0.5 * (1.0 + erf_as((p - p_threshold) / denom)))
+        .collect()
+}
+
+/// Frequency-dependent intrinsic cavitation threshold (Vlaisavljevich 2015 log-linear fit).
+///
+/// Water-rich soft tissue shows a log-linear dependence of the mean intrinsic
+/// threshold peak negative pressure on frequency:
+///
+/// ```text
+/// p_T(f) = p_T(1 MHz) + slope · log₁₀(f / 1 MHz)   [Pa]
+/// ```
+///
+/// Canonical values for bovine liver (Vlaisavljevich et al. 2015 Table I):
+/// * `p_T(1 MHz) = 28.2 MPa`
+/// * `slope = 1.4 MPa per decade` (over 0.25–3 MHz)
+///
+/// # Arguments
+/// * `f_hz` – frequencies [Hz]
+/// * `p_t_1mhz_pa` – threshold at 1 MHz [Pa]
+/// * `slope_pa_per_decade` – slope [Pa] per factor-of-10 increase in frequency
+///
+/// # Reference
+/// Vlaisavljevich et al. (2015), *Ultrasound Med. Biol.* 41, 1251, Table I.
+/// Maxwell et al. (2013), *Ultrasound Med. Biol.* 39, 449, Table II.
+#[must_use]
+pub fn frequency_dependent_intrinsic_threshold_pa(
+    f_hz: &[f64],
+    p_t_1mhz_pa: f64,
+    slope_pa_per_decade: f64,
+) -> Vec<f64> {
+    const F_REF: f64 = 1.0e6; // 1 MHz reference
+    f_hz
+        .iter()
+        .map(|&f| {
+            let f_pos = f.max(f64::MIN_POSITIVE);
+            p_t_1mhz_pa + slope_pa_per_decade * (f_pos / F_REF).log10()
+        })
+        .collect()
+}
+
+/// Cumulative cavitation probability over N independent single-pulse trials.
+///
+/// Each pulse produces cavitation with probability P_single (Maxwell 2013 erf-CDF
+/// model).  Assuming statistical independence across pulses:
+///
+/// ```text
+/// P_cum(N) = 1 − (1 − P_single)^N
+/// ```
+///
+/// For non-integer N (e.g. continuous pulse-duration sweep), the binomial law is
+/// analytically continued via:
+/// ```text
+/// (1 − P_single)^N = exp(N · ln(1 − P_single))
+/// ```
+///
+/// N is clamped to ≥ 1.0 before evaluation; the function returns P_single at N = 1.
+///
+/// # Arguments
+/// * `p_single` – single-pulse cavitation probability ∈ [0, 1]
+/// * `n_pulses_arr` – pulse count array N (may be non-integer, ≥ 0)
+///
+/// # Reference
+/// Maxwell et al. (2013), *Ultrasound Med. Biol.* 39, 449.
+/// Vlaisavljevich et al. (2015), *Ultrasound Med. Biol.* 41, 1251.
+#[must_use]
+pub fn cumulative_cavitation_probability(p_single: f64, n_pulses_arr: &[f64]) -> Vec<f64> {
+    let p_clamped = p_single.clamp(0.0, 1.0);
+    let ln_q = (1.0 - p_clamped).ln(); // ln(1 - P_single); −∞ at P=1 → handled
+    n_pulses_arr
+        .iter()
+        .map(|&n| {
+            let n = n.max(1.0);
+            if p_clamped >= 1.0 {
+                1.0
+            } else if p_clamped <= 0.0 {
+                0.0
+            } else {
+                1.0 - (n * ln_q).exp()
+            }
+        })
+        .collect()
+}
+
+/// PRF efficacy factor — residual-bubble shielding model (Macoskey 2018).
+///
+/// At high PRF, residual bubble clouds from previous pulses have not fully
+/// dissolved before the next pulse arrives, causing acoustic shadowing.  The
+/// per-pulse treatment efficacy decays exponentially once the pulse repetition
+/// period falls below the bubble dissolution time τ_d:
+///
+/// ```text
+/// E(PRF) = exp(−max(0, PRF · τ_d − 1) · g)
+/// ```
+///
+/// where `g` is a dimensionless shielding gain coefficient (Macoskey 2018
+/// fitted g ≈ 1.2 for porcine liver at 1 MHz).
+///
+/// * At PRF·τ_d ≤ 1 (period ≥ τ_d): E = 1 — full efficacy, complete dissolution.
+/// * As PRF·τ_d → ∞: E → 0 — total shielding.
+///
+/// The normalised lesion-volume rate is then proportional to `PRF × E(PRF)`,
+/// yielding an optimum near PRF ≈ 1/τ_d.
+///
+/// # Arguments
+/// * `prf_hz` – pulse repetition frequencies [Hz]
+/// * `bubble_dissolution_time_s` – residual-bubble dissolution time τ_d [s]
+///   (liver: ~5 ms; Vlaisavljevich 2015)
+/// * `shielding_coefficient` – exponential decay gain `g` (dimensionless)
+///
+/// # Reference
+/// Macoskey et al. (2018), *Ultrasound Med. Biol.* 44, 2971.
+/// Vlaisavljevich et al. (2015), *Ultrasound Med. Biol.* 41, 1251.
+#[must_use]
+pub fn prf_efficacy_factor(
+    prf_hz: &[f64],
+    bubble_dissolution_time_s: f64,
+    shielding_coefficient: f64,
+) -> Vec<f64> {
+    prf_hz
+        .iter()
+        .map(|&prf| {
+            let excess = (prf * bubble_dissolution_time_s - 1.0).max(0.0);
+            (-excess * shielding_coefficient).exp()
+        })
+        .collect()
+}
+
 /// FDA mechanical index: peak negative pressure normalised by √(frequency).
 ///
 /// ```text

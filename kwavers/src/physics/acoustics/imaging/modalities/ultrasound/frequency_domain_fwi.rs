@@ -294,7 +294,6 @@ pub fn complex_l2_objective(predicted: &[Complex64], observed: &[Complex64]) -> 
 ///
 /// # Errors
 /// Returns an error when volume shapes differ or when both volumes are empty.
-#[must_use]
 pub fn sound_speed_rmse(
     reconstructed_m_s: &Array3<f64>,
     reference_m_s: &Array3<f64>,
@@ -328,7 +327,6 @@ pub fn sound_speed_rmse(
 ///
 /// # Errors
 /// Returns an error when shapes differ, volumes are empty, or either volume has zero variance.
-#[must_use]
 pub fn sound_speed_pcc(
     reconstructed_m_s: &Array3<f64>,
     reference_m_s: &Array3<f64>,

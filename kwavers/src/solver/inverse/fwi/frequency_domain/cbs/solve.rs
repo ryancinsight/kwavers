@@ -338,7 +338,7 @@ fn solve_adjoint_spectral_iterative(
             .map(|(&lam, (&v, (&g_lam, &rhs)))| lam - (rhs - v.conj() * g_lam))
             .collect();
         // Convergence: ||residual|| / ||target|| mirrors the forward denominator
-        let target_norm = norm_of_target(adjoint_rhs, &shifted, &adj_green);
+        let target_norm = norm_of_target(adjoint_rhs, shifted, &adj_green);
         relative_residual = norm(&residual) / target_norm.max(f64::EPSILON);
         // λ_{k+1} = λ_k + γ^H · residual_k  (same sign as forward += γ · residual)
         for ((lam, &gam), &res) in field

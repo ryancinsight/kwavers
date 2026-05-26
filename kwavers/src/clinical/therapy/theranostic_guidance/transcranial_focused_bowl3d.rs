@@ -83,6 +83,7 @@ pub struct TranscranialFocusedBowlPlacement3D {
 ///
 /// Placement geometry centred at the calvarium centroid. All coordinates are in
 /// metres and expressed relative to the calvarium centroid (origin = focus point).
+#[allow(clippy::too_many_arguments)]
 pub fn plan_transcranial_focused_bowl_placement(
     ct_hu: &Array3<f64>,
     spacing_mm: [f64; 3],

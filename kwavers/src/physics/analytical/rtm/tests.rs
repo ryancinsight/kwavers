@@ -49,7 +49,7 @@ fn gaussian_beam_peak_at_focus() {
 fn backprop_normalisation() {
     let x = vec![0.0];
     let z = vec![0.01, 0.02];
-    let (re, _) = backprop_green_function_2d(&x, &z, 0.0, 0.0, 1000.0);
+    let (re, _) = backprop_green_function_2d(&x, &z, 0.0, 0.0, 1000.0, 1500.0);
     let mag0 = re[0].abs();
     let mag1 = re[1].abs();
     assert!(mag0 > mag1, "mag0={} mag1={}", mag0, mag1);

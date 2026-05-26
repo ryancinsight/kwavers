@@ -21,7 +21,7 @@ use crate::core::constants::numerical::{TWO_PI};
 /// Schafer & Rabiner (1973), *Proc. IEEE* 61, 692.
 #[must_use]
 pub fn bli_stencil_weights(delta: &[f64], n_stencil: usize) -> Vec<Vec<f64>> {
-    assert!(n_stencil % 2 == 0, "n_stencil must be even");
+    assert!(n_stencil.is_multiple_of(2), "n_stencil must be even");
     let half = (n_stencil / 2) as i64;
     let nm1 = (n_stencil - 1) as f64;
     delta

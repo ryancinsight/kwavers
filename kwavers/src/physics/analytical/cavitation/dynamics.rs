@@ -127,6 +127,7 @@ pub fn rayleigh_collapse_time_s(rmax_m: f64, p_inf_pa: f64, rho: f64) -> f64 {
 /// # Reference
 /// Plesset & Prosperetti (1977), *Annu. Rev. Fluid Mech.* 9, 145.
 #[must_use]
+#[allow(clippy::too_many_arguments)]
 pub fn rayleigh_plesset_rk4(
     r0_m: f64,
     rdot0: f64,
@@ -216,6 +217,7 @@ pub fn rayleigh_plesset_rk4(
 /// # Reference
 /// Keller & Miksis (1980), *J. Acoust. Soc. Am.* 68, 628.
 #[must_use]
+#[allow(clippy::too_many_arguments)]
 pub fn keller_miksis_rk4(
     r0_m: f64,
     rdot0: f64,

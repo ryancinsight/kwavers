@@ -106,6 +106,7 @@ pub(super) fn axis_map_for_index(
     })
 }
 
+#[allow(clippy::needless_range_loop)]
 pub(super) fn lagrange_values(solver: &DGSolver, xi: f64) -> Vec<f64> {
     let mut values = vec![1.0; solver.n_nodes];
     for node in 0..solver.n_nodes {

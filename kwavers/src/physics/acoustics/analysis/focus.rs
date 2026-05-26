@@ -9,7 +9,6 @@ use ndarray::{Array1, ArrayView3};
 /// # Errors
 /// - Returns [`Err`] if an internal constraint is violated.
 ///
-#[must_use]
 pub fn find_focus(pressure_field: ArrayView3<f64>, grid: &Grid) -> KwaversResult<[f64; 3]> {
     validate_pressure_field_domain(pressure_field, grid)?;
 
@@ -39,7 +38,6 @@ pub fn find_focus(pressure_field: ArrayView3<f64>, grid: &Grid) -> KwaversResult
 /// # Errors
 /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
 ///
-#[must_use]
 pub fn find_focal_plane(
     pressure_field: ArrayView3<f64>,
     grid: &Grid,
@@ -97,7 +95,6 @@ pub fn find_focal_plane(
 /// # Errors
 /// - Returns [`Err`] if an internal constraint is violated.
 ///
-#[must_use]
 pub fn calculate_beam_width(
     pressure_field: ArrayView3<f64>,
     grid: &Grid,

@@ -50,6 +50,7 @@ pub fn source_excitation_diagnostics(
     )
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn source_excitation_diagnostics_with_receiver_policy(
     predicted: &Array3<Complex64>,
     observed: &Array3<Complex64>,

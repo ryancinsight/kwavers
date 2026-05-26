@@ -28,7 +28,7 @@
 //! Hasgall et al. (2022) IT'IS Foundation database v4.1:
 //! - Skull cortical bone : ρ = 1908 kg/m³, cₚ = 1313 J/(kg·K), k = 0.32 W/(m·K).
 //! - Brain white matter  : ρ = 1040 kg/m³, cₚ = 3650 J/(kg·K), k = 0.51 W/(m·K),
-//!                         ωb = 0.009 /s.
+//!   ωb = 0.009 /s.
 //! - Water (background)  : ρ = 998 kg/m³, cₚ = 4182 J/(kg·K), k = 0.598 W/(m·K).
 //! - Blood               : ρb = 1060 kg/m³, cb = 3840 J/(kg·K).
 //!
@@ -134,6 +134,7 @@ pub struct TranscranialThermalResult {
 ///
 /// # Returns
 /// [`TranscranialThermalResult`] with peak/final temperature, CEM43, and lesion mask.
+#[allow(clippy::too_many_arguments)]
 pub fn transcranial_pennes_thermal_dose(
     intensity_w_m2: &Array3<f32>,
     skull_mask: &Array3<bool>,

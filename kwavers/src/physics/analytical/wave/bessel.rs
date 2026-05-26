@@ -1,4 +1,4 @@
-use std::f64::consts::PI;
+use std::f64::consts::{FRAC_PI_4, PI};
 
 /// Bessel J₀(x) via Horner-evaluated Chebyshev approximation.
 ///
@@ -16,7 +16,7 @@ pub(super) fn bessel_j0(x: f64) -> f64 {
     } else {
         let z = 8.0 / ax;
         let y = z * z;
-        let xx = ax - 0.785_398_163_4_f64;
+        let xx = ax - FRAC_PI_4;
         let p = 1.0
             + y * (-0.001098628627
                 + y * (0.000002734510407 + y * (-2.073370639e-6 + y * 2.093887211e-7)));

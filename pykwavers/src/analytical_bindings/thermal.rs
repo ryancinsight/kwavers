@@ -174,6 +174,74 @@ pub fn acoustic_power_deposition_depth_profile(
     Ok(result.into_pyarray(py).unbind())
 }
 
+/// Acoustic intensity from peak pressure amplitude: I = p² / (2·ρ·c) [W/m²].
+///
+/// Computes the Spatial-Peak Pulse-Average Intensity (ISPPA) for a CW plane
+/// wave, or ISPTA at unity duty cycle.
+///
+/// Args:
+///     p_field: Peak pressure amplitude field [Pa], any shape, passed as 1-D.
+///     rho: Medium density [kg/m³].
+///     c: Speed of sound [m/s].
+///
+/// Returns:
+///     Intensity array [W/m²], same length as p_field.
+///
+/// Reference:
+///     Pierce (1989) Acoustics, §1.11.
+#[pyfunction]
+#[pyo3(signature = (p_field, rho, c))]
+pub fn acoustic_intensity_from_amplitude(
+    py: Python<'_>,
+    p_field: PyReadonlyArray1<f64>,
+    rho: f64,
+    c: f64,
+) -> PyResult<Py<PyArray1<f64>>> {
+    let p_s = p_field
+        .as_slice()
+        .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+    let result = thermal::acoustic_intensity_from_amplitude(p_s, rho, c);
+    Ok(result.into_pyarray(py).unbind())
+}
+
+/// Adiabatic (no-perfusion) single-pulse temperature rise from a heat source.
+///
+/// Short-pulse limit of the Pennes bioheat equation where conduction and
+/// perfusion are negligible:
+///
+///     dT_i = Q_i * tau_i / (density * specific_heat)   [K]
+///
+/// Args:
+///     q_arr: Heat-source density array [W/m3].
+///     tau_arr: Pulse duration array [s], same length as q_arr.
+///     density: Tissue density [kg/m3].
+///     specific_heat: Tissue specific heat [J/(kg*K)].
+///
+/// Returns:
+///     Temperature rise array [K], same length as q_arr.
+///
+/// Reference:
+///     Pennes (1948) J. Appl. Physiol. 1, 93 (no-perfusion limit).
+#[pyfunction]
+#[pyo3(signature = (q_arr, tau_arr, density, specific_heat))]
+pub fn adiabatic_temperature_rise_kelvin(
+    py: Python<'_>,
+    q_arr: PyReadonlyArray1<f64>,
+    tau_arr: PyReadonlyArray1<f64>,
+    density: f64,
+    specific_heat: f64,
+) -> PyResult<Py<PyArray1<f64>>> {
+    let q_s = q_arr
+        .as_slice()
+        .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+    let tau_s = tau_arr
+        .as_slice()
+        .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+    let result =
+        thermal::adiabatic_temperature_rise_kelvin(q_s, tau_s, density, specific_heat);
+    Ok(result.into_pyarray(py).unbind())
+}
+
 /// Convert a flattened acoustic pressure field to volumetric heat-source density.
 ///
 /// Computes Q(x,y,z) = α·p(x,y,z)²/(ρ·c) [W/m³] — the Pennes bioheat

@@ -126,7 +126,7 @@ impl DGSolver {
             Array3::zeros(state.dim()),
             Array3::zeros(state.dim()),
         ];
-        for axis in 0..3 {
+        for (axis, rhs_axis) in surface_rhs_per_axis.iter_mut().enumerate() {
             if !topology.active_axes[axis] {
                 continue;
             }
@@ -139,7 +139,7 @@ impl DGSolver {
                     axis,
                     bulk,
                     inv_density,
-                    &mut surface_rhs_per_axis[axis],
+                    rhs_axis,
                 );
             }
         }
@@ -270,6 +270,7 @@ impl DGSolver {
     ///
     /// # Errors
     /// Returns an error for shape, density, or profile mismatches.
+    #[allow(clippy::too_many_arguments)]
     pub fn step_acoustic_tensor_ssp_rk3_with_cpml_and_source<F>(
         &self,
         state: &mut Array3<f64>,

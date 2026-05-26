@@ -55,10 +55,10 @@ impl TranscranialAberrationCorrection {
     ///
     /// * `initial_correction` – current phase correction estimate.
     /// * `feedback_signal`    – `feedback_signal[i]` = received wavefront phase
-    ///                          at element `i` \[radians\], from back-propagation
-    ///                          or cross-correlation with the target return.
+    ///   at element `i` \[radians\], from back-propagation
+    ///   or cross-correlation with the target return.
     /// * `learning_rate`      – gradient-descent step size η > 0 (dimensionless).
-    ///                          Stable for η ≤ 1; typical value 0.1–0.5.
+    ///   Stable for η ≤ 1; typical value 0.1–0.5.
     pub fn adaptive_correction(
         &mut self,
         initial_correction: &PhaseCorrection,

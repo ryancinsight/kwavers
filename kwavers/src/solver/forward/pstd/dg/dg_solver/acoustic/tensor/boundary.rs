@@ -24,6 +24,7 @@ pub(super) struct NormalState {
     pub(super) velocity_normal: f64,
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(super) fn add_axis_surface_flux(
     solver: &DGSolver,
     topology: DgTopology,
@@ -109,6 +110,7 @@ pub(super) fn add_axis_surface_flux(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn exterior_normal_state(
     solver: &DGSolver,
     topology: DgTopology,
@@ -153,6 +155,7 @@ fn exterior_normal_state(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn periodic_exterior_state(
     topology: DgTopology,
     state: &Array3<f64>,

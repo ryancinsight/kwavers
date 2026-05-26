@@ -14,5 +14,9 @@ pub use dynamics::{
     blake_threshold_pa, keller_miksis_rk4, minnaert_resonance_hz, rayleigh_collapse_time_s,
     rayleigh_plesset_rk4,
 };
-pub use histotripsy::{histotripsy_lesion_radius_m, inertial_cavitation_dose, mechanical_index};
+pub use histotripsy::{
+    cumulative_cavitation_probability, frequency_dependent_intrinsic_threshold_pa,
+    histotripsy_lesion_radius_m, inertial_cavitation_dose,
+    intrinsic_threshold_cavitation_probability, mechanical_index, prf_efficacy_factor,
+};
 pub use power_spectrum::{bubble_power_spectrum, period_doubling_ratio};

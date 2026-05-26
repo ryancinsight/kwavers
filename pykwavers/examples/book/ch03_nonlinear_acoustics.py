@@ -36,18 +36,7 @@ import matplotlib
 
 matplotlib.use("Agg")
 
-try:
-    import pykwavers as kw
-    _HAS_PYKWAVERS = True
-except ImportError:
-    kw = None  # type: ignore[assignment]
-    _HAS_PYKWAVERS = False
-
-if not _HAS_PYKWAVERS:
-    raise ImportError(
-        "pykwavers is required for all ch03 figures. "
-        "All Fubini, shock-distance, and absorption physics must be computed via kw.* bindings."
-    )
+import pykwavers as kw
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 
@@ -299,8 +288,9 @@ print("[fig05] Absorption models: Stokes-Kirchhoff vs power-law")
 freqs = np.logspace(5, 7.5, 300)  # 100 kHz – 30 MHz
 
 # Stokes-Kirchhoff: α = δω²/(2c₀³)  [Np/m]  (Theorem 3.10)
+# Reference: Pierce (1989) Acoustics, §10.1, Eq. 10.1.11.
 DELTA_WATER = 4.33e-6  # m²/s, water 20°C
-alpha_sk = DELTA_WATER * (2 * np.pi * freqs)**2 / (2 * C0**3)
+alpha_sk = np.asarray(kw.stokes_kirchhoff_absorption_np_m(freqs, DELTA_WATER, C0))
 
 # Power-law tissue models (Duck 1990): α = α₀ f^y  [dB/cm].
 # Computed via kw.absorption_power_law_db_cm(f_MHz, alpha0_dBcm, y) (Rust kernel).
@@ -311,7 +301,7 @@ tissues = {
 }
 
 fig, ax = plt.subplots(figsize=(7, 4.5))
-# Stokes-Kirchhoff (water): α = δω²/(2c³) [Np/m] — no Rust binding; Theorem 3.10.
+# Stokes-Kirchhoff (water): α = δω²/(2c³) [Np/m] — kw.stokes_kirchhoff_absorption_np_m; Theorem 3.10.
 alpha_sk_dBcm = alpha_sk * 8.686 / 100  # Np/m → dB/cm
 ax.loglog(freqs / 1e6, alpha_sk_dBcm, label="Water (Stokes-Kirchhoff, y=2)",
           color="C0", lw=2)
@@ -336,10 +326,7 @@ plt.close()
 
 print("[fig06] Westervelt PSTD solver validation (kwavers vs Fubini)")
 
-if not _HAS_PYKWAVERS:
-    print("  [skip] pykwavers not installed; skipping fig06")
-    print("  Install pykwavers to generate Westervelt PSTD solver validation figure.")
-else:
+if True:
     # ── Grid and solver parameters ─────────────────────────────────────────────
     # 12 pts/wavelength at F0 → 6 pts at 2nd harmonic (adequate for PSTD).
     DX_SIM = C0 / (12.0 * F0)       # 0.125 mm grid spacing
@@ -467,10 +454,10 @@ else:
 
 print(
     f"\nChapter 3 figures written to: {os.path.relpath(OUT_DIR)}\n"
-    "  fig01_waveform_evolution.*       — Fubini waveform at σ = 0, 0.25, 0.5, 0.75, 0.99\n"
-    "  fig02_harmonic_spectra_sigma.*   — Harmonics 1–5 vs normalized distance σ\n"
-    "  fig03_second_harmonic_growth.*   — P₂ comparison: Fubini / linearized / Theorem 3.8\n"
-    "  fig04_shock_distance_tissue.*    — z_s for 7 tissue media at 3 source amplitudes\n"
-    "  fig05_absorption_models.*        — Stokes-Kirchhoff (y=2) vs tissue power-law\n"
-    "  fig06_westervelt_pstd_validation.* — kwavers PSTD Westervelt solver vs Fubini\n"
+    "  fig01_waveform_evolution.*       -- Fubini waveform at sigma = 0, 0.25, 0.5, 0.75, 0.99\n"
+    "  fig02_harmonic_spectra_sigma.*   -- Harmonics 1-5 vs normalized distance sigma\n"
+    "  fig03_second_harmonic_growth.*   -- P2 comparison: Fubini / linearized / Theorem 3.8\n"
+    "  fig04_shock_distance_tissue.*    -- z_s for 7 tissue media at 3 source amplitudes\n"
+    "  fig05_absorption_models.*        -- Stokes-Kirchhoff (y=2) vs tissue power-law\n"
+    "  fig06_westervelt_pstd_validation.* -- kwavers PSTD Westervelt solver vs Fubini\n"
 )

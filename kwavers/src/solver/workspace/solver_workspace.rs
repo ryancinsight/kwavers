@@ -64,10 +64,9 @@ impl ScratchArena for SolverWorkspace {
         self.memory_usage()
     }
 
+    #[inline]
     fn clear(&mut self) {
-        self.fft_buffer.fill(Complex::new(0.0, 0.0));
-        self.real_buffer.fill(0.0);
-        self.k_space_buffer.fill(0.0);
-        self.temp_buffer.fill(0.0);
+        // Delegate to the inherent method — single source of truth.
+        SolverWorkspace::clear(self);
     }
 }

@@ -13,7 +13,7 @@ Figures produced (all saved as PNG and PDF):
   fig05_mechanism_phase_map      — (τ_p, |p⁻|) regime map
 
 Output directory: docs/book/figures/ch21/
-Requires: numpy, matplotlib, scipy
+Requires: numpy, matplotlib, pykwavers
 """
 
 import os
@@ -23,14 +23,8 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.special import erf
 
-try:
-    import pykwavers as kw
-    _HAS_PYKWAVERS = True
-except ImportError:
-    kw = None
-    _HAS_PYKWAVERS = False
+import pykwavers as kw
 
 REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 OUT_DIR = os.path.join(REPO_ROOT, "docs", "book", "figures", "ch21")
@@ -56,6 +50,7 @@ plt.rcParams.update({
 # Physical parameters (liver, 1 MHz)  [Khokhlova 2014, Maxwell 2013]
 # ──────────────────────────────────────────────────────────────────────────
 F0      = 1.0e6           # carrier frequency [Hz]
+C0      = 1540.0          # sound speed in liver [m/s]
 RHO0    = 1060.0          # density [kg/m^3]
 CP      = 3600.0          # specific heat [J/kg/K]
 KAPPA   = 0.51            # thermal conductivity [W/m/K]
@@ -88,15 +83,12 @@ print("[fig01] Pulse waveforms (classical vs ms-pulse)")
 
 fig, axes = plt.subplots(1, 2, figsize=(11, 4.0))
 
-# Classical: 5-cycle tone burst, sinusoid with PNP = -28.5 MPa
-n_cycles_c = TAU_C * F0
-t_c = np.linspace(0.0, TAU_C, int(n_cycles_c * 200))
-env_c = np.where(
-    (t_c < 0.5e-6) | (t_c > TAU_C - 0.5e-6),
-    0.5 * (1.0 - np.cos(2 * np.pi * t_c / 1e-6)),
-    1.0,
-)
-p_c = PNP_C * env_c * np.sin(2 * np.pi * F0 * t_c + np.pi / 2)
+# Classical: 5-cycle Hann-windowed tone burst at 1 MHz.
+# kw.tone_burst_waveform computes: p(t) = A·w(t)·sin(2πf₀t)
+# where w(t) = ½(1−cos(2πt/τ)) is the Hann window (Harris 1978).
+n_cycles_c = TAU_C * F0           # = 5.0
+t_c = np.linspace(0.0, TAU_C, int(n_cycles_c * 200), dtype=np.float64)
+p_c = np.asarray(kw.tone_burst_waveform(t_c, PNP_C, F0, n_cycles_c))
 
 axes[0].plot(t_c * 1e6, p_c / 1e6, color="C0", lw=1.2)
 axes[0].axhline(-P_T / 1e6, color="r", lw=0.8, ls="--",
@@ -104,31 +96,28 @@ axes[0].axhline(-P_T / 1e6, color="r", lw=0.8, ls="--",
 axes[0].set_xlabel("time (μs)")
 axes[0].set_ylabel("focal pressure (MPa)")
 axes[0].set_title(f"Classical: $\\tau_p={TAU_C*1e6:.0f}$ μs, "
-                  f"PNP$={-PNP_C/1e6:.1f}$ MPa")
+                  f"PNP$={PNP_C/1e6:.1f}$ MPa")
 axes[0].legend(loc="upper right")
 axes[0].grid(True, alpha=0.3)
 
-# Millisecond: shock-formed envelope. Carrier sine + asymmetric shock
-# (positive peak amplified, negative peak limited by shock formation)
-t_m = np.linspace(0.0, TAU_M, 5000)
-phase = 2 * np.pi * F0 * t_m
-# Asymmetric shock model: positive peak boosted by 3rd-harmonic in-phase,
-# negative half-cycle attenuated. Crude analytical surrogate of Khokhlova
-# 2014 measured shock waveform.
-fund = np.sin(phase)
-shock_pos = np.maximum(fund, 0) ** 2  # peaked
-shock_neg = -np.minimum(fund, 0)
-p_m = PPP_M * shock_pos - PNP_M * shock_neg
+# Millisecond-pulse: nonlinearly distorted Fubini waveform at σ=0.92.
+# kw.fubini_waveform: p(t) = p₀·Σ Bₙ(σ)·sin(nωt) (Hamilton & Blackstock 1998, §3.3).
+# σ=0.92 (pre-shock: 0≤σ<1) gives strong harmonic distortion representative of
+# the initial portion of the ms-pulse propagation path at the focal zone.
+# The waveform is scaled so the positive peak equals PPP_M (Khokhlova 2014).
+t_m_raw = np.linspace(0.0, 50e-6, 3000, dtype=np.float64)  # first 50 μs for display
+p_m_raw = np.asarray(kw.fubini_waveform(t_m_raw, 1.0, F0, 0.92, 30))
+p_m_peak = float(np.max(np.abs(p_m_raw))) if np.max(np.abs(p_m_raw)) > 0.0 else 1.0
+p_m = p_m_raw * (PPP_M / p_m_peak)
 
-# Show only first 50 μs to make shock visible at ms-pulse scale
-mask = t_m < 50e-6
-axes[1].plot(t_m[mask] * 1e6, p_m[mask] / 1e6, color="C3", lw=1.2)
+axes[1].plot(t_m_raw * 1e6, p_m / 1e6, color="C3", lw=1.2)
 axes[1].axhline(-P_T / 1e6, color="r", lw=0.8, ls="--",
                 label=f"intrinsic threshold $-p_t = -{P_T/1e6:.1f}$ MPa")
 axes[1].set_xlabel("time (μs)  —  envelope continues to 10 ms")
 axes[1].set_ylabel("focal pressure (MPa)")
 axes[1].set_title(f"Millisecond: $\\tau_p={TAU_M*1e3:.0f}$ ms, "
-                  f"PNP$={-PNP_M/1e6:.1f}$ MPa, PPP$={PPP_M/1e6:.0f}$ MPa")
+                  f"PNP$={PNP_M/1e6:.1f}$ MPa, PPP$={PPP_M/1e6:.0f}$ MPa\n"
+                  "(Fubini σ=0.92 pre-shock; full shock requires numerical solver)")
 axes[1].legend(loc="upper right")
 axes[1].grid(True, alpha=0.3)
 
@@ -142,17 +131,27 @@ plt.close(fig)
 # ──────────────────────────────────────────────────────────────────────────
 print("[fig02] Cavitation probability vs PNP")
 
-p_minus_scan = np.linspace(20e6, 35e6, 400)
-p_cav = 0.5 * (1.0 + erf((p_minus_scan - P_T) / (SIGMA_T * np.sqrt(2.0))))
+# Gaussian erf-CDF (Maxwell 2013, Theorem 21.1):
+#   P_cav(|p⁻|) = ½·(1 + erf((|p⁻| − p_T) / (σ·√2)))
+# Computed via kw.intrinsic_threshold_cavitation_probability (A&S 7.1.26 erf).
+p_minus_scan = np.linspace(20e6, 35e6, 400, dtype=np.float64)
+p_cav = np.asarray(
+    kw.intrinsic_threshold_cavitation_probability(p_minus_scan, P_T, SIGMA_T)
+)
+
+# Operating-point P_cav values
+p_cav_C = float(np.asarray(
+    kw.intrinsic_threshold_cavitation_probability(np.array([PNP_C]), P_T, SIGMA_T)
+)[0])
+p_cav_M = float(np.asarray(
+    kw.intrinsic_threshold_cavitation_probability(np.array([PNP_M]), P_T, SIGMA_T)
+)[0])
 
 fig, ax = plt.subplots(figsize=(7.5, 4.2))
 ax.plot(p_minus_scan / 1e6, p_cav, color="k", lw=1.6,
         label="erf-CDF, Maxwell 2013")
 ax.axvline(P_T / 1e6, color="gray", lw=0.8, ls=":",
            label=f"$p_t = {P_T/1e6:.1f}$ MPa")
-# Operating points
-p_cav_C = 0.5 * (1.0 + erf((PNP_C - P_T) / (SIGMA_T * np.sqrt(2.0))))
-p_cav_M = 0.5 * (1.0 + erf((PNP_M - P_T) / (SIGMA_T * np.sqrt(2.0))))
 ax.scatter([PNP_C / 1e6], [p_cav_C], s=70, color="C0", zorder=5,
            label=f"classical: |PNP|$={PNP_C/1e6:.1f}$ MPa, "
                  f"$P_\\mathrm{{cav}}={p_cav_C:.3f}$")
@@ -174,43 +173,53 @@ plt.close(fig)
 # ──────────────────────────────────────────────────────────────────────────
 print("[fig03] Bioheat temperature rise during single pulse")
 
-# Classical: at 5 μs, thermal diffusion is negligible → linear ODE is exact.
-I_C = (PNP_C ** 2) / (2.0 * RHO0 * 1540.0)  # cycle-averaged peak [W/m^2]
-Q_C = 2.0 * ALPHA_F * I_C
+# Classical: 5 μs pulse — thermal diffusion length ~ sqrt(D·τ) ≈ 0.3 μm ≪ focal
+# width → diffusion negligible → T(t) rises linearly from Pennes heat source.
+# Intensity via kw.acoustic_intensity_from_amplitude [Pierce 1989 §1.11]:
+#   I = p²/(2ρc)
+# Heat source via kw.acoustic_heat_source_density [Pennes 1948]:
+#   Q = α·p²/(ρc) = 2α·I
+I_C = float(np.asarray(
+    kw.acoustic_intensity_from_amplitude(np.array([PNP_C]), RHO0, C0)
+)[0])
+Q_C = float(np.asarray(
+    kw.acoustic_heat_source_density(np.array([PNP_C]), ALPHA_F, RHO0, C0)
+)[0])
+# dT/dt = Q/(ρ·c_p), constant → T(t) = T₀ + Q·t/(ρ·c_p)
 dT_dt_C = Q_C / (RHO0 * CP)
 t_pulse_C = np.linspace(0.0, TAU_C, 500)
-T_C = T0 + dT_dt_C * t_pulse_C  # ΔT ≈ 5 μ°C; linear exact at this timescale
+T_C = T0 + dT_dt_C * t_pulse_C   # linear exact at 5 μs timescale (ΔT ≈ μ°C)
 
-# Millisecond regime: ThermalDiffusionSolver (Pennes bioheat, includes diffusion
-# and perfusion which influence the temperature trajectory at 10 ms timescale).
-Q_M = 2.0 * ALPHA_S * I_S_M
-if _HAS_PYKWAVERS:
-    # 1-D focused-point thermal simulation; single sensor at focal index.
-    NX_21, DX_21, IX_FOC_21 = 40, 2.5e-4, 20
-    DT_21 = 5e-5   # s; stable (dt_max_1D = DX²/(2D) ≈ 0.23 s)
-    N_21 = int(TAU_M / DT_21)
-    Q21 = np.zeros((NX_21, 1, 1))
-    Q21[IX_FOC_21, 0, 0] = Q_M
-    sensor_21 = np.zeros((NX_21, 1, 1), dtype=bool)
-    sensor_21[IX_FOC_21, 0, 0] = True
-    sim_21 = kw.ThermalSimulation(
-        NX_21, 1, 1, DX_21, DX_21, DX_21,
-        thermal_conductivity=KAPPA, density=RHO0, specific_heat=CP,
-        enable_bioheat=True, perfusion_rate=5e-3,
-        blood_density=1050.0, blood_specific_heat=3840.0,
-        arterial_temperature=T0, initial_temperature=T0,
-        track_thermal_dose=False,
-    )
-    res_21 = sim_21.run(N_21, DT_21, heat_source=Q21, sensor_mask=sensor_21)
-    T_M = np.asarray(res_21.temperature_at_sensors)[0, :]
-    t_pulse_M = np.asarray(res_21.time)
-    t_boil_sim = float(t_pulse_M[T_M >= T_BOIL][0]) if (T_M >= T_BOIL).any() else TAU_M
-    print(f"        ThermalDiffusionSolver t_boil = {t_boil_sim*1e3:.2f} ms")
-else:
-    dT_dt_M = Q_M / (RHO0 * CP)
-    t_pulse_M = np.linspace(0.0, TAU_M, 5000)
-    T_M = np.minimum(T0 + dT_dt_M * t_pulse_M, T_BOIL)
-    t_boil_sim = (T_BOIL - T0) * RHO0 * CP / Q_M
+# Millisecond regime: kwavers ThermalDiffusionSolver with Pennes bioheat.
+# Diffusion timescale D·(Δx)² ≈ 0.23 s ≫ TAU_M → conduction matters at 10 ms.
+# Q_M = 2·α_S·I_S_M where I_S_M is the shock-rich focal intensity.
+# kw.acoustic_heat_source_density requires pressure; invert I_S_M = p²/(2ρc).
+P_S_M = float(np.sqrt(2.0 * RHO0 * C0 * I_S_M))
+Q_M = float(np.asarray(
+    kw.acoustic_heat_source_density(np.array([P_S_M]), ALPHA_S, RHO0, C0)
+)[0])
+
+# 1-D single-point thermal simulation; single sensor at focal index.
+NX_21, DX_21, IX_FOC_21 = 40, 2.5e-4, 20
+DT_21 = 5e-5   # s; stable (dt_max_1D = DX²/(2D) ≈ 0.23 s >> DT_21)
+N_21 = int(TAU_M / DT_21)
+Q21 = np.zeros((NX_21, 1, 1))
+Q21[IX_FOC_21, 0, 0] = Q_M
+sensor_21 = np.zeros((NX_21, 1, 1), dtype=bool)
+sensor_21[IX_FOC_21, 0, 0] = True
+sim_21 = kw.ThermalSimulation(
+    NX_21, 1, 1, DX_21, DX_21, DX_21,
+    thermal_conductivity=KAPPA, density=RHO0, specific_heat=CP,
+    enable_bioheat=True, perfusion_rate=5e-3,
+    blood_density=1050.0, blood_specific_heat=3840.0,
+    arterial_temperature=T0, initial_temperature=T0,
+    track_thermal_dose=False,
+)
+res_21 = sim_21.run(N_21, DT_21, heat_source=Q21, sensor_mask=sensor_21)
+T_M = np.asarray(res_21.temperature_at_sensors)[0, :]
+t_pulse_M = np.asarray(res_21.time)
+t_boil = float(t_pulse_M[T_M >= T_BOIL][0]) if (T_M >= T_BOIL).any() else TAU_M
+print(f"        ThermalDiffusionSolver t_boil = {t_boil*1e3:.2f} ms")
 
 fig, axes = plt.subplots(1, 2, figsize=(11, 4.0))
 
@@ -227,14 +236,13 @@ axes[0].grid(True, alpha=0.3)
 axes[1].plot(t_pulse_M * 1e3, T_M, color="C3", lw=1.6)
 axes[1].axhline(43.0, color="orange", lw=0.7, ls=":", label="43 °C")
 axes[1].axhline(T_BOIL, color="r", lw=0.8, ls="--", label="100 °C")
-axes[1].axvline(t_boil_sim * 1e3, color="k", lw=0.6, ls=":",
-                label=f"$t_{{boil}}={t_boil_sim*1e3:.2f}$ ms")
+axes[1].axvline(t_boil * 1e3, color="k", lw=0.6, ls=":",
+                label=f"$t_{{boil}}={t_boil*1e3:.2f}$ ms")
 axes[1].set_xlabel("time (ms)")
 axes[1].set_ylabel("focal temperature (°C)")
 axes[1].set_title(
     f"Millisecond, peak $T={T_M.max():.0f}$ °C\n"
-    + ("(kwavers ThermalDiffusionSolver + Pennes bioheat)" if _HAS_PYKWAVERS
-       else "(linear ODE approximation)")
+    "(kwavers ThermalDiffusionSolver + Pennes bioheat)"
 )
 axes[1].legend(loc="lower right")
 axes[1].grid(True, alpha=0.3)
@@ -247,28 +255,15 @@ plt.close(fig)
 # ──────────────────────────────────────────────────────────────────────────
 # Figure 21.4 — CEM43 accumulation per single pulse (Theorem 21.3)
 # ──────────────────────────────────────────────────────────────────────────
-print("[fig04] CEM43 accumulation per single pulse (pykwavers.cem43_at_temperatures)")
+print("[fig04] CEM43 accumulation per single pulse (kw.cem43_cumulative)")
 
-# Use pykwavers.cem43_at_temperatures for cumulative CEM43 integration.
-# cem43_at_temperatures(T, dt) gives the per-step contribution R^{43-T}*dt/60.
-# cumsum over steps gives the cumulative CEM43.
+# kw.cem43_cumulative(T_celsius, dt_s) computes the running CEM43 sum
+# Sapareto & Dewey (1984): CEM43[i] = Σ_{j≤i} (dt/60)·R^{43−T[j]}
+# R = 0.5 for T ≥ 43°C, R = 0.25 for T < 43°C.
 dt_C = float(t_pulse_C[1] - t_pulse_C[0])
 dt_M = float(t_pulse_M[1] - t_pulse_M[0])
-if _HAS_PYKWAVERS:
-    cem_C = np.concatenate([
-        [0.0],
-        np.cumsum(np.asarray(kw.cem43_at_temperatures(T_C.astype(float), dt_C))),
-    ])
-    cem_M = np.concatenate([
-        [0.0],
-        np.cumsum(np.asarray(kw.cem43_at_temperatures(T_M.astype(float), dt_M))),
-    ])
-else:
-    def _cem43(T_celsius: np.ndarray, dt_s: float) -> np.ndarray:
-        R = np.where(T_celsius >= 43.0, 0.5, 0.25)
-        return np.concatenate([[0.0], np.cumsum(R ** (43.0 - T_celsius) * dt_s / 60.0)])
-    cem_C = _cem43(T_C, dt_C)
-    cem_M = _cem43(T_M, dt_M)
+cem_C = np.asarray(kw.cem43_cumulative(T_C.astype(np.float64), dt_C))
+cem_M = np.asarray(kw.cem43_cumulative(T_M.astype(np.float64), dt_M))
 
 fig, axes = plt.subplots(1, 2, figsize=(11, 4.0))
 
@@ -352,10 +347,12 @@ plt.close(fig)
 # Summary
 # ──────────────────────────────────────────────────────────────────────────
 print()
-print("─" * 60)
+print("-" * 60)
 print(f"Chapter 21 figures written to: {OUT_DIR}")
 print(f"  classical  P_cav  = {p_cav_C:.4f}")
 print(f"  ms-pulse   P_cav  = {p_cav_M:.3e}  (single-shot, no shock-scatter)")
 print(f"  classical  CEM43  = {cem_C[-1]:.3e} min  per pulse")
 print(f"  ms-pulse   CEM43  = {cem_M[-1]:.3e} min  per pulse")
 print(f"  ms-pulse   t_boil = {t_boil*1e3:.2f} ms")
+print(f"  ms-pulse   Q_M    = {Q_M:.3e} W/m³")
+print(f"  classical  I_C    = {I_C:.3e} W/m²,  Q_C = {Q_C:.3e} W/m³")

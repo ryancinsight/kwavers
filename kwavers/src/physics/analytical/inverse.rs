@@ -274,6 +274,7 @@ pub fn adjoint_gradient_convergence(n_iter: usize, initial_error: f64, decay: f6
 // ─── Internal helpers ─────────────────────────────────────────────────────────
 
 /// Gaussian elimination with partial pivoting for flat square system.
+#[allow(clippy::needless_range_loop)]
 fn gaussian_elim_flat(mat_flat: &[f64], rhs: &[f64], n: usize) -> Vec<f64> {
     let mut aug: Vec<Vec<f64>> = (0..n)
         .map(|i| {
@@ -314,6 +315,7 @@ fn gaussian_elim_flat(mat_flat: &[f64], rhs: &[f64], n: usize) -> Vec<f64> {
 
 /// Compute eigenvalues of a symmetric matrix via Jacobi iteration.
 /// Returns unsorted eigenvalues.
+#[allow(clippy::needless_range_loop)]
 fn symmetric_eigenvalues(mat_flat: &[f64], n: usize) -> Vec<f64> {
     // Copy to working array
     let mut a: Vec<Vec<f64>> = (0..n)

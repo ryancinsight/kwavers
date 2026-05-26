@@ -63,6 +63,7 @@ impl DgCpmlAxisProfile {
     /// entries inside the inner-side band measure ξ from the inner face moving
     /// inward; entries inside the outer-side band measure ξ from the outer
     /// face moving inward.
+    #[allow(clippy::needless_range_loop)]
     fn build(
         axis: DgCpmlAxis,
         sound_speed: f64,

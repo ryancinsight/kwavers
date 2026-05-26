@@ -25,7 +25,7 @@ All wave fields computed by the Rust kwavers FDTD solver (pykwavers).
 Closed-form formulas are used where they are exact solutions:
   • Transfer-matrix skull transmission (Brekhovskikh 1980).
   • 2-D cylindrical Green's function (Kupradze 1965).
-  • Delay-and-sum phase law (geometry).
+  • Delay-and-sum time delay law (geometry).
   • Standing-wave statistics: ⟨|SW|²⟩_M = 1 + R² (exact, M ≥ 2).
 
 RTM image (frequency domain)
@@ -97,7 +97,7 @@ Z_SKULL = RHO_SKULL * C_SKULL   # 5.320 MRayl
 Z_BRAIN = RHO_BRAIN * C_BRAIN   # 1.601 MRayl
 D_SKULL_M = 7e-3
 # Coupling-water side: standing waves form in water between array and skull.
-R_BACK = (Z_SKULL - Z_WATER) / (Z_SKULL + Z_WATER)  # ≈ 0.560
+R_BACK = pykwavers.reflection_pressure_coeff(Z_WATER, Z_SKULL)  # ≈ 0.560
 
 # ── FDTD domain parameters ────────────────────────────────────────────────────
 NX, NY = 250, 160    # 125 mm × 80 mm at 0.5 mm/cell
@@ -126,12 +126,13 @@ _xa = np.arange(NX);  _ya = np.arange(NY)
 F_SUB = 55e3; F0 = 110e3; F2 = 220e3; F4 = 440e3
 FREQS_RTM = [F_SUB, F0, F2, F4]
 
-# Modulation period and analytical suppression statistics
-dF_PERIOD  = C_WATER / (2.0 * D_BACK_M)      # Hz — one full SW period
-GAIN_PEAK  = (1.0 + R_BACK)**2 / (1.0 + R_BACK**2)
-SW2_MEAN   = 1.0 + R_BACK**2                 # ⟨|SW|²⟩_M, exact for M ≥ 2
-SW2_PEAK   = (1.0 + R_BACK)**2
-SW2_TROUGH = (1.0 - R_BACK)**2
+# ── Modulation period and SW statistics (all via Rust) ────────────────────────
+# dF_period = c / (2 · D_BACK):
+dF_PERIOD  = pykwavers.standing_wave_modulation_period_hz(C_WATER, D_BACK_M)
+# (1+R)²/(1+R²) — RTM suppression gain:
+GAIN_PEAK  = pykwavers.standing_wave_suppression_gain(R_BACK)
+# Statistical moments of |1 + R·exp(2ikx)|²:
+SW2_MEAN, SW2_PEAK, SW2_TROUGH = pykwavers.standing_wave_intensity_statistics(R_BACK)
 
 
 # ── Analytical formulas (exact closed-form, not simulation) ───────────────────
@@ -139,12 +140,18 @@ def skull_transmission(freq: float) -> complex:
     """
     Transfer-matrix pressure transmission through skull slab (Brekhovskikh 1980).
 
+    Delegates to pykwavers.skull_transfer_matrix_transmission which implements:
     T = 2 / [(1 + Z3/Z1)cos(k2 d) + i(Z3/Z2 + Z2/Z1)sin(k2 d)]
+
+    Args:
+        freq: Frequency [Hz].
+
+    Returns:
+        Complex pressure transmission coefficient (dimensionless).
     """
-    k2 = 2.0 * np.pi * freq / C_SKULL
-    c2d, s2d = np.cos(k2 * D_SKULL_M), np.sin(k2 * D_SKULL_M)
-    denom = (1.0 + Z_BRAIN / Z_WATER)*c2d + 1j*(Z_BRAIN/Z_SKULL + Z_SKULL/Z_WATER)*s2d
-    return 2.0 / denom
+    return complex(pykwavers.skull_transfer_matrix_transmission(
+        freq, Z_WATER, Z_SKULL, Z_BRAIN, C_SKULL, D_SKULL_M
+    ))
 
 
 def backward_field(freq: float) -> np.ndarray:
@@ -152,40 +159,36 @@ def backward_field(freq: float) -> np.ndarray:
     2-D cylindrical Green's function from focal point (FOCUS_X, FOCUS_Y).
 
     Exact solution of ∇²G + k²G = -δ(r - r_f) in homogeneous medium
-    (Kupradze 1965): G(r) ∝ exp(-ik|r - r_f|) / √|r - r_f|
-    k = 2πf / C_WATER (pre-skull coupling medium).
-    """
-    k = 2.0 * np.pi * freq / C_WATER
-    X, Y = np.meshgrid(_xa, _ya, indexing="ij")
-    r = np.hypot(X - FOCUS_X, Y - FOCUS_Y) + 1e-9
-    return np.exp(-1j * k * r) / np.sqrt(r)
+    (Kupradze 1965): G(r) ∝ exp(-ik|r - r_f|) / √|r - r_f|,  k = 2πf/c.
+    Delegated to pykwavers.backprop_green_function_2d (Rust).
 
-
-def delay_law_rad(freq: float) -> np.ndarray:
+    Returns complex ndarray of shape (NX, NY).
     """
-    Geometric delay-and-sum phase law for N_ELEM elements focusing at FOCUS_X.
-
-    φ_i(f) = k(r_max − r_i),   k = 2πf/C_WATER,  r_i = dist(elem_i → focus).
-    Returns phase delays [rad] of shape (N_ELEM,).
-    """
-    k = 2.0 * np.pi * freq / C_WATER
-    ys = np.linspace(ELEM_Y_MIN, ELEM_Y_MAX, N_ELEM)
-    r = np.hypot(SOURCE_X - FOCUS_X, ys - FOCUS_Y)
-    return k * (r.max() - r)
+    bwd_re, bwd_im = pykwavers.backprop_green_function_2d(
+        _xa * DX_M, _ya * DX_M,
+        FOCUS_X * DX_M, FOCUS_Y * DX_M,
+        freq, C_WATER,
+    )
+    return np.asarray(bwd_re) + 1j * np.asarray(bwd_im)
 
 
 def analytical_sw2_field(freq: float) -> np.ndarray:
     """
-    Analytical |SW(x,y,f)|² on the grid: |1 + R·exp(2ik_w(SKULL_X_START - x)·DX_M)|².
+    Analytical |SW(x,y,f)|² on the grid.
 
-    Standing wave forms between array and skull along x-axis.
-    Valid in the water coupling region (x < SKULL_X_START).
+    Standing-wave intensity |1 + R·exp(2ik_w(SKULL_X_START - x)·DX_M)|²
+    computed by pykwavers.standing_wave_field_1d (Rust).
+    Valid in the water coupling region (x < SKULL_X_START); zeroed beyond.
+
+    Returns shape (NX, NY).
     """
-    k = 2.0 * np.pi * freq / C_WATER
-    x_dist = (SKULL_X_START - _xa) * DX_M    # distance to skull (positive before skull)
-    sw_x = np.abs(1.0 + R_BACK * np.exp(2j * k * x_dist))**2
+    # Distance from each cell to the skull front face [m]; positive = before skull.
+    x_dist = (SKULL_X_START - _xa) * DX_M
+    sw_x = np.asarray(
+        pykwavers.standing_wave_field_1d(x_dist, freq, C_WATER, R_BACK)
+    )
     sw_x[_xa >= SKULL_X_START] = 0.0
-    return np.outer(sw_x, np.ones(NY))       # (NX, NY)
+    return np.outer(sw_x, np.ones(NY))   # broadcast to (NX, NY)
 
 
 # ── FDTD runner (all physics in Rust) ─────────────────────────────────────────
@@ -215,13 +218,22 @@ def rtm_image(P_fwd: np.ndarray, freq: float) -> np.ndarray:
     """
     RTM imaging condition: I = Re[P_fwd · P_bwd*], normalised to [0,1].
 
-    P_fwd: FDTD monochromatic pressure field (NX, NY).
+    P_fwd: FDTD monochromatic pressure field (NX, NY) complex.
     P_bwd: analytical 2-D Green's function from focal point (exact).
+    Delegated to pykwavers.rtm_imaging_condition (Rust, zero-lag cross-correlation).
     """
-    I = np.real(P_fwd * np.conj(backward_field(freq)))
-    I = np.clip(I, 0.0, None)
-    mx = I.max()
-    return I / mx if mx > 0 else I
+    bwd_re, bwd_im = pykwavers.backprop_green_function_2d(
+        _xa * DX_M, _ya * DX_M,
+        FOCUS_X * DX_M, FOCUS_Y * DX_M,
+        freq, C_WATER,
+    )
+    return np.asarray(pykwavers.rtm_imaging_condition(
+        np.ascontiguousarray(P_fwd.real),
+        np.ascontiguousarray(P_fwd.imag),
+        np.asarray(bwd_re),
+        np.asarray(bwd_im),
+        NX, NY,
+    ))
 
 
 # ── Figure helpers ────────────────────────────────────────────────────────────
@@ -292,7 +304,7 @@ def fig11_standing_wave_spectrum(fdtd_by_freq: dict) -> None:
         win = np.hanning(len(axial_crop))
         S = np.abs(np.fft.rfft(axial_crop * win))**2
         kx = np.fft.rfftfreq(len(axial_crop), d=DX_M)  # cycles/m
-        k_sw = 2.0 * freq / C_WATER
+        k_sw = pykwavers.standing_wave_spatial_frequency_cycles_m(freq, C_WATER)
         ax.semilogy(kx, S + 1e-12, color=col, lw=1.4)
         ax.axvline(k_sw, color="k", ls="--", lw=1.0,
                    label=rf"$2f/c_w={k_sw:.0f}$ m$^{{-1}}$")
@@ -313,20 +325,35 @@ def fig11_standing_wave_spectrum(fdtd_by_freq: dict) -> None:
 # ── Figure 12: Delay-law evolution over M modulation steps ───────────────────
 def fig12_delay_law_evolution() -> None:
     """
-    Delay laws φ_i(f_m) for M = 8 steps spanning one SW period.
-    Computed analytically (geometric delay-and-sum, exact):
-      φ_i = k(f_m) · (r_max − r_i)
+    Time delays τ_i for M = 8 modulation steps spanning one SW period.
+
+    Geometric delay-and-sum law (exact, frequency-independent):
+      τ_i = (r_max − r_i) / c,   r_i = dist(elem_i → focus)
+
+    Computed by pykwavers.delay_law_focus_2d (Rust). The geometric time
+    delay is identical at all modulation frequencies; temporal modulation
+    shifts the phase law but preserves the time-delay geometry.
+
+    Modulation frequencies from pykwavers.temporal_modulation_frequencies.
     """
     M = 8
-    freqs_mod = F0 + np.arange(M) * (dF_PERIOD / M)
+    freqs_mod = np.asarray(
+        pykwavers.temporal_modulation_frequencies(F0, M, C_WATER, D_BACK_M)
+    )
+
+    # Element positions in metres (constant x = array face, varying y)
+    elem_x_m = np.full(N_ELEM, SOURCE_X * DX_M)
+    elem_y_m = np.linspace(ELEM_Y_MIN, ELEM_Y_MAX, N_ELEM) * DX_M
+
+    # Geometric time delays [s] — frequency-independent
+    tau = np.asarray(pykwavers.delay_law_focus_2d(
+        elem_x_m, elem_y_m, FOCUS_X * DX_M, FOCUS_Y * DX_M, C_WATER
+    ))  # shape (N_ELEM,)
+
+    # Replicate for M steps (each step uses same geometric delay)
+    tau_all = np.tile(tau[:, np.newaxis], (1, M))  # (N_ELEM, M)
+
     elem_idx = np.arange(N_ELEM)
-    ys = np.linspace(ELEM_Y_MIN, ELEM_Y_MAX, N_ELEM)
-
-    tau_all = np.zeros((N_ELEM, M))
-    for m, freq in enumerate(freqs_mod):
-        phi = delay_law_rad(freq)          # [rad]
-        tau_all[:, m] = phi / (2.0 * np.pi * freq)  # [s]
-
     fig, axes = plt.subplots(1, 2, figsize=(11, 4))
     cmap_steps = plt.get_cmap("viridis")
     ax = axes[0]
@@ -471,28 +498,28 @@ def fig15_convergence(r_opt: dict) -> None:
 # ── Figure 16: Focal-point |SW|² per modulation step, variance vs M ──────────
 def fig16_temporal_pressure_dynamics() -> None:
     """
-    Analytical |SW(x_focus, f_m)|² per step m:
-      SW(x, f) = 1 + R·exp(2ik_w(x_skull − x)Δx)
-    with x = FOCUS_X (fixed).
+    Analytical |SW(x_focus, f_m)|² per step m computed by
+    pykwavers.standing_wave_field_1d (Rust):
+      SW²(x) = |1 + R·exp(2ik·x)|² = 1 + R² + 2R·cos(2kx),  k = 2πf/c
 
-    Exact for a plane wave in 1D; FDTD matches this in steady state.
+    with x = D_BACK_M (distance from focus to skull front face).
+
     Lower panel: temporal SD of |SW|² vs M, confirming variance → 0 (M ≥ 2).
     """
     M_vals = [2, 4, 8, 16]
     colors = ["#d62728", "#ff7f0e", "#1f77b4", "#2ca02c"]
-    x_foc_m = FOCUS_X * DX_M
-    k_f0 = 2.0 * np.pi * F0 / C_WATER
+    d_arr = np.array([D_BACK_M])   # single-element array for focal-point query
 
     fig, axes = plt.subplots(2, 1, figsize=(10, 8))
     ax = axes[0]
     for M, col in zip(M_vals, colors):
-        freqs_m = F0 + np.arange(M) * (dF_PERIOD / M)
-        I_steps = []
-        for freq in freqs_m:
-            k = 2.0 * np.pi * freq / C_WATER
-            d = (SKULL_X_START - FOCUS_X) * DX_M
-            sw2 = abs(1.0 + R_BACK * np.exp(2j * k * d))**2
-            I_steps.append(sw2)
+        freqs_m = np.asarray(
+            pykwavers.temporal_modulation_frequencies(F0, M, C_WATER, D_BACK_M)
+        )
+        I_steps = [
+            float(pykwavers.standing_wave_field_1d(d_arr, float(freq), C_WATER, R_BACK)[0])
+            for freq in freqs_m
+        ]
         ax.plot(np.arange(M) / max(M - 1, 1), I_steps, "o-", color=col,
                 ms=5, lw=1.4, label=f"M = {M}")
     ax.axhline(SW2_MEAN,   color="k", ls="--", lw=1.0,
@@ -509,9 +536,16 @@ def fig16_temporal_pressure_dynamics() -> None:
 
     ax2 = axes[1]
     M_range = np.arange(1, 33)
-    sd = [float(np.std([abs(1.0 + R_BACK*np.exp(2j*2*np.pi*(F0+m*dF_PERIOD/M)/C_WATER
-                                                 * D_BACK_M))**2
-                         for m in range(M)])) for M in M_range]
+    sd = []
+    for M in M_range:
+        freqs_m = np.asarray(
+            pykwavers.temporal_modulation_frequencies(F0, int(M), C_WATER, D_BACK_M)
+        )
+        sw2_steps = [
+            float(pykwavers.standing_wave_field_1d(d_arr, float(f), C_WATER, R_BACK)[0])
+            for f in freqs_m
+        ]
+        sd.append(float(np.std(sw2_steps)))
     ax2.semilogy(M_range, np.array(sd) + 1e-10, "o-", color="#1f77b4", ms=4, lw=1.4)
     ax2.set_xlabel("Number of steps $M$")
     ax2.set_ylabel(r"$\sigma[|SW|^2]$")
@@ -525,15 +559,15 @@ def fig16_temporal_pressure_dynamics() -> None:
 # ── Figure 17: Brain-volume |SW|² histogram ───────────────────────────────────
 def fig17_brain_volume_uniformity() -> None:
     """
-    Analytical standing-wave intensity |SW(x)|² in coupling water (x < skull):
-      |SW|² = |1 + R·exp(2ik_w(x_skull - x)Δx)|²
+    Analytical standing-wave intensity |SW(x)|² in coupling water (x < skull)
+    computed by pykwavers.standing_wave_field_1d (Rust).
 
     Modulation over M steps collapses bimodal → uniform at 1+R² (exact M ≥ 2).
     """
     sw2_static = analytical_sw2_field(F0)
 
     def modulated_sw2(M: int) -> np.ndarray:
-        freqs_m = F0 + np.arange(M) * (dF_PERIOD / M)
+        freqs_m = pykwavers.temporal_modulation_frequencies(F0, M, C_WATER, D_BACK_M)
         return sum(analytical_sw2_field(f) for f in freqs_m) / M
 
     sw2_M8  = modulated_sw2(8)
@@ -605,7 +639,7 @@ if __name__ == "__main__":
     # ── Run all FDTD simulations (Rust, release build) ────────────────────────
     print("\n  Running FDTD simulations (Rust)...")
     M_STEPS = 8
-    freqs_mod = [F0 + m * (dF_PERIOD / M_STEPS) for m in range(M_STEPS)]
+    freqs_mod = list(pykwavers.temporal_modulation_frequencies(F0, M_STEPS, C_WATER, D_BACK_M))
 
     print("  [1/4] Static runs at 4 RTM frequencies (n_opt=0)...")
     fdtd_by_freq = {f: run_fdtd(f, n_opt_iter=0) for f in FREQS_RTM}

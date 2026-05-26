@@ -34,7 +34,6 @@ pub struct FieldMetrics {
 /// # Errors
 /// - Propagates any [`KwaversError`] returned by called functions.
 ///
-#[must_use]
 pub fn calculate_field_metrics(
     pressure_field: ArrayView3<f64>,
     grid: &Grid,
@@ -109,7 +108,6 @@ pub fn calculate_field_metrics(
 /// # Errors
 /// - Returns [`Err`] if an internal constraint is violated.
 ///
-#[must_use]
 pub fn find_peak_pressure(
     pressure_field: ArrayView3<f64>,
     grid: &Grid,

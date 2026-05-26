@@ -97,12 +97,25 @@ def savefig(name: str) -> None:
 
 
 def mechanical_index(pressure_pa: np.ndarray | float, frequency_hz: float) -> np.ndarray:
-    return np.asarray(pressure_pa, dtype=float) / 1.0e6 / np.sqrt(frequency_hz / 1.0e6)
+    """MI = |p| [MPa] / sqrt(f [MHz]) via kw.mechanical_index_field (Rust kernel)."""
+    arr = np.asarray(pressure_pa, dtype=np.float64)
+    shape = arr.shape
+    result = np.asarray(
+        kw.mechanical_index_field(np.ascontiguousarray(arr.ravel()), float(frequency_hz))
+    )
+    return result.reshape(shape) if shape else float(result[0])
 
 
 def intensity_sppa_w_m2(pressure_pa: np.ndarray | float) -> np.ndarray:
-    pressure = np.asarray(pressure_pa, dtype=float)
-    return pressure**2 / (2.0 * RHO_BRAIN * C_BRAIN)
+    """ISPPA = p²/(2ρc) [W/m²] via kw.acoustic_intensity_from_amplitude (Rust kernel)."""
+    arr = np.asarray(pressure_pa, dtype=np.float64)
+    shape = arr.shape
+    result = np.asarray(
+        kw.acoustic_intensity_from_amplitude(
+            np.ascontiguousarray(arr.ravel()), float(RHO_BRAIN), float(C_BRAIN)
+        )
+    )
+    return result.reshape(shape) if shape else float(result[0])
 
 
 def acoustic_energy_tension_mn_m(pressure_pa: np.ndarray | float) -> np.ndarray:
@@ -335,13 +348,21 @@ def guidance_map() -> dict[str, np.ndarray]:
     duty_percent = np.linspace(1.0, 30.0, 120)
     p_grid, dc_grid = np.meshgrid(pressure_kpa * 1.0e3, duty_percent / 100.0, indexing="ij")
     protocol = Protocol()
+    # ISPPA = p²/(2ρc) via Rust kernel; ISPTA = ISPPA × duty_cycle
     ispta = intensity_sppa_w_m2(p_grid) * dc_grid
     mi = mechanical_index(p_grid, protocol.frequency_hz)
     drive = coupled_channel_drive(p_grid)
 
     # Batch Pennes bioheat over (140, 120) parameter grid
+    # Q = α·p²/(ρ·c)·duty [W/m³] via kw.acoustic_heat_source_density (Rust)
     DX_BATCH = 0.1  # m — large enough to decouple neighbouring cells
-    Q_batch = (2.0 * ALPHA_BRAIN_NP_M * ispta)[:, :, np.newaxis].astype(float)  # (140,120,1) W/m³
+    _q_isppa = np.asarray(
+        kw.acoustic_heat_source_density(
+            np.ascontiguousarray(p_grid.ravel().astype(np.float64)),
+            float(ALPHA_BRAIN_NP_M), float(RHO_BRAIN), float(C_BRAIN),
+        )
+    ).reshape(p_grid.shape)
+    Q_batch = (_q_isppa * dc_grid)[:, :, np.newaxis].astype(float)  # (140,120,1) W/m³
     n_steps_g = int(protocol.sonication_s / 0.25)
     res_g = kw.ThermalSimulation(
         140, 120, 1, DX_BATCH, DX_BATCH, DX_BATCH,
@@ -461,15 +482,26 @@ def plot_safety(protocol: Protocol) -> dict[str, float]:
     duties = [0.01, 0.05, 0.10, 0.20]
     DX_BATCH = 0.1  # m — thermal decoupling grid spacing
 
-    # Q[i, j, 0] = 2·α·ISPTA[i,j]  [W/m³]; ISPTA = ISPPA × duty
-    ispta_grid = np.array(
+    # Q[i, j, 0] = α·p²/(ρ·c)·duty [W/m³] — Pennes heat source; Q = 2α·ISPTA = 2α·ISPPA·duty.
+    # Uses kw.acoustic_heat_source_density (Rust) then scales by duty cycle.
+    q_grid = np.array(
         [
-            [2.0 * ALPHA_BRAIN_NP_M * float(intensity_sppa_w_m2(p)) * d for d in duties]
+            [
+                float(
+                    kw.acoustic_heat_source_density(
+                        np.array([p], dtype=np.float64),
+                        float(ALPHA_BRAIN_NP_M),
+                        float(RHO_BRAIN),
+                        float(C_BRAIN),
+                    )[0]
+                ) * d
+                for d in duties
+            ]
             for p in pressures
         ],
         dtype=float,
     )  # shape (160, 4)
-    Q_batch = ispta_grid[:, :, np.newaxis]  # shape (160, 4, 1)
+    Q_batch = q_grid[:, :, np.newaxis]  # shape (160, 4, 1)
 
     dt_s = 0.10
     n_steps = int(np.ceil(protocol.sonication_s / dt_s))  # 300 steps for 30 s

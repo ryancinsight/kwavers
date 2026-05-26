@@ -175,7 +175,7 @@ fn rank3_dims(dims: &[usize]) -> KwaversResult<[usize; 3]> {
             dims
         )));
     }
-    if dims.iter().any(|&dim| dim == 0) {
+    if dims.contains(&0) {
         return Err(KwaversError::InvalidInput(format!(
             "breast phantom dimensions must be nonzero, got {dims:?}"
         )));

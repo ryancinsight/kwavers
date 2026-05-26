@@ -44,6 +44,11 @@ impl GridSpec {
     }
 
     #[must_use]
+    pub fn is_empty(self) -> bool {
+        self.len() == 0
+    }
+
+    #[must_use]
     pub fn cell_volume_m3(self) -> f64 {
         self.spacing_m.powi(3)
     }

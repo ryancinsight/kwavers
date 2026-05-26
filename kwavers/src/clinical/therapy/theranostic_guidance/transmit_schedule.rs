@@ -142,6 +142,7 @@ fn uniform_indices(element_count: usize, budget: usize) -> Vec<usize> {
         .collect()
 }
 
+#[allow(clippy::needless_range_loop)]
 fn patient_adaptive_indices(
     layout: &DeviceLayout,
     prepared: &PreparedTheranosticSlice,

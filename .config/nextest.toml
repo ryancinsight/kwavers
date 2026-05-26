@@ -56,13 +56,12 @@ integration = { max-threads = 2 }
 # 90 s per test is the documented upper bound; see nextest.toml for policy.
 elastic-fwi = { max-threads = 1 }
 
-# ── Elastic FWI tests: genuine full-wave physics, 90 s ceiling ──────────────
-# These tests run the complete elastic PSTD wave equation for each FWI
-# iteration with real grid dimensions (42×42 and 64×64).  The 60 s default is
-# insufficient; 90 s is the upper bound after parallel speculative line-search
-# optimisation.  max-threads=1 prevents inter-test rayon oversubscription.
+# ── Elastic FWI / theranostic integration tests: full-wave physics, 90 s ceiling ─
+# These tests run the complete elastic PSTD wave equation + theranostic inverse
+# solver over real grid dimensions.  The 60 s default is insufficient; 90 s is
+# the upper bound.  max-threads=1 prevents inter-test rayon oversubscription.
 [[profile.default.overrides]]
-filter = 'test(abdominal_preprocessing_selects_one_connected_treatment_component) | test(abdominal_theranostic_inverse_recovers_lesion_support)'
+filter = 'test(abdominal_preprocessing_selects_one_connected_treatment_component) | test(abdominal_theranostic_inverse_recovers_lesion_support) | test(abdominal_preprocessing_keeps_external_skin_between_target_and_aperture) | test(brain_focused_bowl_layout_uses_requested_element_count)'
 test-group = 'elastic-fwi'
 slow-timeout = { period = "90s", terminate-after = 1, grace-period = "10s" }
 
@@ -71,7 +70,7 @@ filter = 'test(/integration/)'
 test-group = 'integration'
 
 [[profile.ci.overrides]]
-filter = 'test(abdominal_preprocessing_selects_one_connected_treatment_component) | test(abdominal_theranostic_inverse_recovers_lesion_support)'
+filter = 'test(abdominal_preprocessing_selects_one_connected_treatment_component) | test(abdominal_theranostic_inverse_recovers_lesion_support) | test(abdominal_preprocessing_keeps_external_skin_between_target_and_aperture) | test(brain_focused_bowl_layout_uses_requested_element_count)'
 test-group = 'elastic-fwi'
 slow-timeout = { period = "90s", terminate-after = 1, grace-period = "10s" }
 

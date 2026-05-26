@@ -43,7 +43,7 @@ pub(super) fn read_mat5_numeric_volume(
             "MAT5 file is shorter than the 128-byte header".to_owned(),
         ));
     }
-    if &bytes[124..126] != &[0x00, 0x01] || &bytes[126..128] != b"IM" {
+    if bytes[124..126] != [0x00, 0x01] || &bytes[126..128] != b"IM" {
         return Err(KwaversError::InvalidInput(
             "only little-endian MATLAB Level-5 files are supported".to_owned(),
         ));
@@ -196,7 +196,7 @@ fn decode_dimensions(element: DataElement<'_>) -> KwaversResult<Vec<usize>> {
             element.data_type
         )));
     }
-    if element.payload.len() % 4 != 0 {
+    if !element.payload.len().is_multiple_of(4) {
         return Err(KwaversError::InvalidInput(
             "MAT5 dimension payload is not 32-bit aligned".to_owned(),
         ));
@@ -259,7 +259,7 @@ fn decode_chunks<F>(payload: &[u8], width: usize, decode: F) -> KwaversResult<Ve
 where
     F: Fn(&[u8]) -> f64,
 {
-    if payload.len() % width != 0 {
+    if !payload.len().is_multiple_of(width) {
         return Err(KwaversError::InvalidInput(format!(
             "MAT5 numeric payload length {} is not divisible by {width}",
             payload.len()

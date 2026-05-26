@@ -132,7 +132,7 @@ fn validate_config(config: &BreastUstAliPhantomMat5Config) -> KwaversResult<()> 
             "mri_variable_name must not be empty".to_owned(),
         ));
     }
-    if config.output_shape.iter().any(|&axis| axis == 0) {
+    if config.output_shape.contains(&0) {
         return Err(KwaversError::InvalidInput(format!(
             "mat5 output_shape entries must be positive, got {:?}",
             config.output_shape

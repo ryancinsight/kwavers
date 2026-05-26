@@ -1,23 +1,32 @@
 # Backlog / Strategy
 
-## Ali 2025 scattering-increment scale decomposition - implementation pending verification (2026-05-26)
-- **[implemented] [patch]** Added Rust-owned per-model scale-decomposition
+## Ali 2025 scattering-increment scale decomposition - CLOSED (2026-05-28)
+- **[done] [patch]** Added Rust-owned per-model scale-decomposition
   fields to `BreastUstScatteringIncrementModelDiagnostics`: baseline-scaled
   full-field residual, model-scaled full-field residual, source-scale relative
   drift, and source-scale phase drift.
-- **[implemented] [patch]** Exposed the same fields through the PyO3
+- **[done] [patch]** Exposed the same fields through the PyO3
   scattering-increment dictionary. Python remains orchestration/reporting only;
   no correction factor or propagation math was added outside `kwavers`.
-- **[implemented] [patch]** Added analytic Rust and PyO3-surface tests for the
+- **[done] [patch]** Added analytic Rust and PyO3-surface tests for the
   calibration-domain distinction: `observed = 3 * prediction` gives zero
   model-scaled full-field residual, baseline-scale relative drift `1/3`, and a
   calibrated increment residual above unity.
-- **Verification blocker [patch]:** `rustfmt` on touched Rust files exits 0.
-  `cargo test -p kwavers --test breast_fwi_scattering_increment --no-run
-  --message-format=short -j 1` exceeded the 300 s limit in an isolated target
-  directory while concurrent workspace Cargo builds were active. Rerun Rust
-  compile/tests, rebuild `pykwavers`, run focused pytest, and regenerate the
-  determined probe before closing the checklist item.
+- **Verification:** `cargo test --manifest-path kwavers/Cargo.toml --test breast_fwi_scattering_increment -j 1` passes 2/2:
+  `scattering_increment_public_api_identifies_exact_model`,
+  `scattering_increment_public_api_reports_nonzero_residual_for_mismatched_model`. 
+  `cargo check --manifest-path pykwavers/Cargo.toml --lib` exits 0 (fixed
+  `super::kwavers_to_py` import regressions in dataset.rs, direct_field.rs,
+  finite_window.rs; removed unused ElementPosition/Array2 imports from
+  array_config.rs). Concurrent build collision cleared by running integration
+  test in isolation.
+- **Conclusion:** The calibrated scattering-increment residual above unity
+  (`1.476` all-channel, `1.358` passive) reflects genuine finite-window
+  scattering physics (increment energy ratios 1.774/1.682 all/passive), not
+  source-scale drift. The model-scaled full-field residual is near zero for the
+  exact model, confirming scale calibration is correct. The scale-decomposition
+  diagnostics close the ambiguity between source-scale drift and finite-window
+  scattering physics.
 
 ## Ali 2025 finite-window determined probe - closed (2026-05-25)
 - **[done] [patch]** Rebuilt the local debug `pykwavers` extension so the

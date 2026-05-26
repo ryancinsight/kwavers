@@ -267,7 +267,7 @@ impl CouplingInterface {
             0 if nx > 0 => Ok(data.slice(s![0..1, .., ..]).to_owned()),
             1 if ny > 0 => Ok(data.slice(s![.., 0..1, ..]).to_owned()),
             2 if nz > 0 => Ok(data.slice(s![.., .., 0..1]).to_owned()),
-            0 | 1 | 2 => Err(KwaversError::Config(ConfigError::InvalidValue {
+            0..=2 => Err(KwaversError::Config(ConfigError::InvalidValue {
                 parameter: "interface_plane".to_owned(),
                 value: format!("{:?}", data.dim()),
                 constraint: "active interface axis must be nonempty".to_owned(),

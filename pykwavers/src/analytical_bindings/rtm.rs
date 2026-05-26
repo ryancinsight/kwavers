@@ -75,6 +75,10 @@ pub fn focused_gaussian_beam_2d(
 
 /// Compute the 2-D back-propagation Green's function.
 ///
+/// Exact solution of the 2-D Helmholtz equation for a point source at
+/// (x_f, z_f) in a homogeneous medium:
+///   P_bwd(x,z) = exp(−ik·r_f) / √r_f,  k = 2π·f/c
+///
 /// Returns (real_field, imag_field) each of shape (len(x_arr), len(z_arr)).
 ///
 /// Args:
@@ -82,19 +86,21 @@ pub fn focused_gaussian_beam_2d(
 ///     z_arr: Axial positions [m].
 ///     x_f: Source x-coordinate [m].
 ///     z_f: Source z-coordinate [m].
-///     k_br: Wave number in brain [rad/m].
+///     freq_hz: Frequency [Hz].
+///     c: Sound speed in the coupling medium [m/s].
 ///
 /// Returns:
 ///     (real_nx_nz, imag_nx_nz) tuple.
 #[pyfunction]
-#[pyo3(signature = (x_arr, z_arr, x_f, z_f, k_br))]
+#[pyo3(signature = (x_arr, z_arr, x_f, z_f, freq_hz, c))]
 pub fn backprop_green_function_2d(
     py: Python<'_>,
     x_arr: PyReadonlyArray1<f64>,
     z_arr: PyReadonlyArray1<f64>,
     x_f: f64,
     z_f: f64,
-    k_br: f64,
+    freq_hz: f64,
+    c: f64,
 ) -> PyResult<(Py<PyArray2<f64>>, Py<PyArray2<f64>>)> {
     let x_s = x_arr
         .as_slice()
@@ -104,7 +110,8 @@ pub fn backprop_green_function_2d(
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let nx = x_s.len();
     let nz = z_s.len();
-    let (real_flat, imag_flat) = rtm_mod::backprop_green_function_2d(x_s, z_s, x_f, z_f, k_br);
+    let (real_flat, imag_flat) =
+        rtm_mod::backprop_green_function_2d(x_s, z_s, x_f, z_f, freq_hz, c);
     let real_arr = Array2::from_shape_vec((nx, nz), real_flat)
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let imag_arr = Array2::from_shape_vec((nx, nz), imag_flat)
@@ -221,17 +228,98 @@ pub fn temporal_modulation_frequencies(
     Ok(result.into_pyarray(py).unbind())
 }
 
-/// Compute the standing-wave suppression gain factor.
+/// Compute the axial spatial frequency of the standing-wave pattern [cycles/m].
 ///
-/// G = 1 - |r_back|²
+/// k_sw = 2·f / c   (= 1 / half-wavelength)
+///
+/// Used to locate the expected FFT peak in an axial spatial-frequency spectrum.
 ///
 /// Args:
-///     r_back: Back-wall reflection coefficient magnitude.
+///     freq_hz: Frequency [Hz].
+///     c: Sound speed [m/s].
 ///
 /// Returns:
-///     Suppression gain factor (0–1).
+///     Spatial frequency [cycles/m].
+#[pyfunction]
+#[pyo3(signature = (freq_hz, c))]
+pub fn standing_wave_spatial_frequency_cycles_m(freq_hz: f64, c: f64) -> PyResult<f64> {
+    Ok(rtm_mod::standing_wave_spatial_frequency_cycles_m(freq_hz, c))
+}
+
+/// Compute the standing-wave suppression gain factor.
+///
+/// G = (1 + R)² / (1 + R²)
+///
+/// Args:
+///     r_back: Back-wall pressure reflection coefficient magnitude.
+///
+/// Returns:
+///     Suppression gain factor (≥ 1).
 #[pyfunction]
 #[pyo3(signature = (r_back,))]
 pub fn standing_wave_suppression_gain(r_back: f64) -> PyResult<f64> {
     Ok(rtm_mod::standing_wave_suppression_gain(r_back))
+}
+
+/// Compute the period of one full standing-wave modulation cycle [Hz].
+///
+/// ΔF_period = c / (2 · d_back_m)
+///
+/// Args:
+///     c: Sound speed [m/s].
+///     d_back_m: Distance from field point to back-reflecting wall [m].
+///
+/// Returns:
+///     Modulation period in frequency units [Hz].
+#[pyfunction]
+#[pyo3(signature = (c, d_back_m))]
+pub fn standing_wave_modulation_period_hz(c: f64, d_back_m: f64) -> PyResult<f64> {
+    Ok(rtm_mod::standing_wave_modulation_period_hz(c, d_back_m))
+}
+
+/// Compute the 1-D standing-wave intensity pattern: |1 + R·exp(2ik·x)|².
+///
+/// Exact result for a plane wave in a lossless 1-D medium:
+///   SW²(x) = 1 + R² + 2R·cos(2kx),   k = 2π·f/c
+///
+/// Args:
+///     x_arr: Distances from the back reflector [m].
+///     freq_hz: Frequency [Hz].
+///     c: Sound speed [m/s].
+///     r_back: Pressure reflection coefficient.
+///
+/// Returns:
+///     SW² array of same length as x_arr.
+#[pyfunction]
+#[pyo3(signature = (x_arr, freq_hz, c, r_back))]
+pub fn standing_wave_field_1d(
+    py: Python<'_>,
+    x_arr: PyReadonlyArray1<f64>,
+    freq_hz: f64,
+    c: f64,
+    r_back: f64,
+) -> PyResult<Py<PyArray1<f64>>> {
+    let x_s = x_arr
+        .as_slice()
+        .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+    let result = rtm_mod::standing_wave_field_1d(x_s, freq_hz, c, r_back);
+    Ok(result.into_pyarray(py).unbind())
+}
+
+/// Compute exact statistical moments of the standing-wave intensity pattern.
+///
+/// Returns (sw2_mean, sw2_peak, sw2_trough):
+///   sw2_mean   = 1 + R²          (spatial average / RTM-modulated mean)
+///   sw2_peak   = (1 + R)²        (antinodal maximum)
+///   sw2_trough = (1 − R)²        (nodal minimum)
+///
+/// Args:
+///     r_back: Pressure reflection coefficient.
+///
+/// Returns:
+///     (sw2_mean, sw2_peak, sw2_trough) tuple of floats.
+#[pyfunction]
+#[pyo3(signature = (r_back,))]
+pub fn standing_wave_intensity_statistics(r_back: f64) -> PyResult<(f64, f64, f64)> {
+    Ok(rtm_mod::standing_wave_intensity_statistics(r_back))
 }

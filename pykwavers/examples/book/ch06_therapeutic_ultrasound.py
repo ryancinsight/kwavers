@@ -26,12 +26,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 
-try:
-    import pykwavers as kw
-    _HAS_PYKWAVERS = True
-except ImportError:
-    kw = None
-    _HAS_PYKWAVERS = False
+import pykwavers as kw
 
 REPO_ROOT = os.path.normpath(
     os.path.join(os.path.dirname(__file__), "..", "..", "..")
@@ -80,9 +75,6 @@ D_LIVER = K_LIVER / (RHO0 * CP)  # ≈ 1.34e-7 m²/s
 
 print("[fig01] Pennes bioheat temperature rise (ThermalDiffusionSolver)")
 
-if not _HAS_PYKWAVERS:
-    raise ImportError("pykwavers is required for fig01 (ThermalDiffusionSolver)")
-
 # 1-D slab: 200 cells × 0.5 mm = 100 mm domain
 NX_T1 = 200
 DX_T1 = 5e-4       # 0.5 mm
@@ -105,19 +97,30 @@ sim1 = kw.ThermalSimulation(
     track_thermal_dose=False,
 )
 
-# Focal heat source: Gaussian in depth, σ = 4 cells (2 mm), Q_peak = 2·α·I
-ix_all = np.arange(NX_T1)
-heat_env = np.exp(-0.5 * ((ix_all - IX_FOC) / 4.0) ** 2)
+# Focal heat source: on-axis Gaussian beam power deposition Q(0,z) [W/m³].
+# Uses kw.gaussian_power_deposition_2d with r_arr=[0] (on-axis only).
+# Beam waist w₀ = 4 × DX_T1 = 2 mm; source pressure p₀ = √(2ρcI) for each I.
+# Reference: O'Neil (1949); Soneson (2011) JASA 130 EL158.
+Z_AX_T1 = np.ascontiguousarray(np.arange(NX_T1, dtype=np.float64) * DX_T1)
+R_ON_AXIS = np.array([0.0], dtype=np.float64)
+Z_FOCUS_T1 = float(IX_FOC * DX_T1)
+W0_T1 = 4.0 * DX_T1  # beam waist 2 mm
 
 sensor_mask1 = np.zeros((NX_T1, 1, 1), dtype=bool)
 sensor_mask1[IX_FOC, 0, 0] = True
 
-intensities = [1e7, 5e7, 1e8, 5e8]  # W/m²
+intensities = [1e7, 5e7, 1e8, 5e8]  # W/m² — focal intensity
 
 fig, ax = plt.subplots(figsize=(7, 4.5))
 for I in intensities:
+    # Source pressure corresponding to focal intensity I = p₀²/(2ρc).
+    p0 = float(np.sqrt(2.0 * RHO0 * C0 * I))
+    # Q shape (1, NX_T1) — axis 0 = radial (r=0), axis 1 = depth z.
+    Q_profile = np.asarray(kw.gaussian_power_deposition_2d(
+        R_ON_AXIS, Z_AX_T1, F0, Z_FOCUS_T1, p0, C0, RHO0, ALPHA_ABS, W0_T1,
+    ))[0, :]  # on-axis profile, shape (NX_T1,)
     Q_field = np.zeros((NX_T1, 1, 1))
-    Q_field[:, 0, 0] = 2.0 * ALPHA_ABS * I * heat_env
+    Q_field[:, 0, 0] = Q_profile
     res1 = sim1.run(N_T1, DT_T1, heat_source=Q_field, sensor_mask=sensor_mask1)
     t_s = np.asarray(res1.time)
     T_t = np.asarray(res1.temperature_at_sensors)[0, :]  # focal sensor, shape (N_T1,)
@@ -177,18 +180,23 @@ plt.close()
 
 print("[fig03] HIFU focal gain vs f-number")
 
-LAM = C0 / F0  # wavelength
-k = 2 * np.pi / LAM
-
+# Focal pressure gain via kw.hifu_focal_pressure_gain (O'Neil 1949; Hynynen 1991):
+#   G = π·D·f / (4·c·F#),  D = 2a (aperture diameter), F# = R_f/D.
+# Note: Python loop over focal lengths is intentional — the Rust function is
+# a single-point analytical formula; the sweep is orchestration, not physics.
 a_vals_mm = [20, 30, 40]    # aperture radii [mm]
 Rf_arr = np.linspace(30e-3, 150e-3, 200)  # focal lengths [m]
 
 fig, ax = plt.subplots(figsize=(7, 4.5))
 for a_mm in a_vals_mm:
     a = a_mm * 1e-3
-    G = k * a ** 2 / (2 * Rf_arr)
-    G_dB = 20 * np.log10(G)
-    F_num = Rf_arr / (2 * a)
+    D = 2.0 * a   # aperture diameter [m]
+    F_num = Rf_arr / D
+    G = np.array([
+        kw.hifu_focal_pressure_gain(D, float(fn), F0, C0)
+        for fn in F_num
+    ])
+    G_dB = 20.0 * np.log10(G)
     ax.plot(F_num, G_dB, label=f"$a = {a_mm}$ mm")
 
 ax.set_xlabel("f-number $F\\# = R_f/(2a)$")
@@ -222,12 +230,8 @@ fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 4))
 for (label, alpha_t), col in zip(alpha_tissues.items(), colors_t):
     # I(z) = I₀·exp(−2·α·z) via kw.acoustic_intensity_depth_profile (Duck 1990 §2.1)
     # Q(z) = 2·α·I(z)       via kw.acoustic_power_deposition_depth_profile
-    if _HAS_PYKWAVERS:
-        I_z = np.asarray(kw.acoustic_intensity_depth_profile(z_arr, alpha_t, I0))
-        Q_z = np.asarray(kw.acoustic_power_deposition_depth_profile(z_arr, alpha_t, I0))
-    else:
-        I_z = I0 * np.exp(-2 * alpha_t * z_arr)
-        Q_z = 2 * alpha_t * I_z
+    I_z = np.asarray(kw.acoustic_intensity_depth_profile(z_arr, alpha_t, I0))
+    Q_z = np.asarray(kw.acoustic_power_deposition_depth_profile(z_arr, alpha_t, I0))
     ax1.plot(z_arr * 1e3, I_z, color=col, label=label)
     ax2.plot(z_arr * 1e3, Q_z / (2 * alpha_t * I0), color=col, label=label)
 
@@ -269,17 +273,21 @@ N_T5 = 20     # → 1 s total sonication
 IX_FOC5 = 120  # depth focus: 60 mm
 IZ_FOC5 = NZ_T5 // 2  # lateral center
 
-# Gaussian focal heat source: Q_peak = 2·α·I; σ_axial = 5 cells (2.5 mm), σ_lat = 2 (1 mm)
-IX5, IZ5 = np.meshgrid(np.arange(NX_T5), np.arange(NZ_T5), indexing="ij")
-I_FOCAL = 5e8   # W/m², focal intensity
-Q_env = (
-    2.0 * ALPHA_ABS * I_FOCAL
-    * np.exp(
-        -0.5 * ((IX5 - IX_FOC5) / 5.0) ** 2
-        - 0.5 * ((IZ5 - IZ_FOC5) / 2.0) ** 2
-    )
-)
-Q_field5 = Q_env[:, np.newaxis, :]  # shape (NX_T5, 1, NZ_T5)
+# Gaussian beam power deposition via kw.gaussian_power_deposition_2d (O'Neil 1949).
+# Beam waist w₀ = 1 mm (lateral σ = 2 cells × 0.5 mm); focal intensity I = 5e8 W/m².
+# Source pressure p₀ = √(2ρcI) so focal intensity I₀ = p₀²/(2ρc) ≡ I_FOCAL.
+I_FOCAL = 5e8   # W/m² focal intensity
+P0_T5 = float(np.sqrt(2.0 * RHO0 * C0 * I_FOCAL))
+W0_T5 = 2.0 * DX_T5  # 1 mm beam waist at focus (lateral)
+Z_DEPTH_T5 = np.ascontiguousarray(np.arange(NX_T5, dtype=np.float64) * DX_T5)
+R_LAT_T5 = np.ascontiguousarray(
+    np.abs(np.arange(NZ_T5, dtype=np.float64) - IZ_FOC5) * DX_T5
+)  # radial distances from focus, shape (NZ_T5,)
+# Returns shape (NZ_T5, NX_T5); transpose to (NX_T5, NZ_T5) for depth × lateral.
+Q_2d = np.asarray(kw.gaussian_power_deposition_2d(
+    R_LAT_T5, Z_DEPTH_T5, F0, IX_FOC5 * DX_T5, P0_T5, C0, RHO0, ALPHA_ABS, W0_T5,
+)).T  # (NX_T5, NZ_T5)
+Q_field5 = Q_2d[:, np.newaxis, :]  # (NX_T5, 1, NZ_T5)
 
 sim5 = kw.ThermalSimulation(
     NX_T5, 1, NZ_T5, DX_T5, DX_T5, DX_T5,

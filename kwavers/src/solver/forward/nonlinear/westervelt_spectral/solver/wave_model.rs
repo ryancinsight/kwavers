@@ -77,13 +77,13 @@ impl AcousticWaveModel for WesterveltWave {
             let k_sq = self.k_squared.as_ref().unwrap();
             let fft_s = self.fft_scratch.as_mut().unwrap();
             let lap_s = self.laplacian_scratch.as_mut().unwrap();
-            compute_laplacian_spectral_into(&pressure_current, k_sq, fft_s, lap_s);
+            compute_laplacian_spectral_into(pressure_current, k_sq, fft_s, lap_s);
         }
         let laplacian_owned: Option<Array3<f64>> = if !has_spectral_scratch {
             if let Some(k_sq) = &self.k_squared {
-                Some(compute_laplacian_spectral(&pressure_current, k_sq))
+                Some(compute_laplacian_spectral(pressure_current, k_sq))
             } else {
-                Some(compute_laplacian_fd(&pressure_current, grid))
+                Some(compute_laplacian_fd(pressure_current, grid))
             }
         } else {
             None
@@ -97,8 +97,8 @@ impl AcousticWaveModel for WesterveltWave {
         let start = Instant::now();
         compute_nonlinear_term_into(
             &mut self.nonlinear_scratch,
-            &pressure_current,
-            &pressure_previous,
+            pressure_current,
+            pressure_previous,
             None,
             medium,
             grid,
@@ -114,8 +114,8 @@ impl AcousticWaveModel for WesterveltWave {
         let start = Instant::now();
         compute_viscoelastic_term_into(
             &mut self.damping_scratch,
-            &pressure_current,
-            &pressure_previous,
+            pressure_current,
+            pressure_previous,
             medium,
             grid,
             dt,

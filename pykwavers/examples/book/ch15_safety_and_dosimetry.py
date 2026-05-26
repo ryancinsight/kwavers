@@ -33,12 +33,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 
-try:
-    import pykwavers as kw
-    _HAS_PYKWAVERS = True
-except ImportError:
-    kw = None
-    _HAS_PYKWAVERS = False
+import pykwavers as kw
 
 REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 OUT_DIR = os.path.join(REPO_ROOT, "docs", "book", "figures", "ch15")
@@ -66,8 +61,7 @@ def fig01_mechanical_index() -> None:
     FDA limit: MI ≤ 1.9 (general imaging).
     Safe threshold for stable cavitation: MI < 0.3.
     """
-    if not _HAS_PYKWAVERS:
-        raise ImportError("pykwavers is required for fig01 (mechanical index)")
+
     f_MHz = np.logspace(-1, 1, 300)  # 0.1–10 MHz
     p_neg_MPa = np.array([0.1, 0.3, 1.0, 1.9, 3.0])
 
@@ -102,8 +96,7 @@ def fig02_thermal_index() -> None:
     X-axis: beam power at surface [mW] = ISPTA.3 [mW/cm²] × aperture area [cm²],
     assuming A_aprt = 1 cm² for equivalence with ISPTA.3 plot.
     """
-    if not _HAS_PYKWAVERS:
-        raise ImportError("pykwavers is required for fig02 (thermal index)")
+
     # Beam power in mW (= ISPTA.3 [mW/cm²] × 1 cm² aperture)
     W_mW = np.linspace(0.0, 1000.0, 400)
     f_vals = [(2.0, "#1f77b4", "TIS 2 MHz"), (3.5, "#ff7f0e", "TIS 3.5 MHz")]
@@ -145,8 +138,6 @@ def fig03_cem43() -> None:
     Computed via kw.cem43_at_temperatures (Rust kernel, returns [min]/step).
     Running accumulation for constant step-function heating.
     """
-    if not _HAS_PYKWAVERS:
-        raise ImportError("pykwavers is required for fig03 (CEM43 dose)")
     t_s = np.linspace(0, 300, 3000)  # 5 min exposure
     dt = float(t_s[1] - t_s[0])      # 0.1 s per step
     T_vals = [(41.0, "#1f77b4", "41°C"), (43.0, "#ff7f0e", "43°C"),
@@ -154,11 +145,11 @@ def fig03_cem43() -> None:
 
     fig, ax = plt.subplots(figsize=(7, 4.5))
     for T, col, lbl in T_vals:
-        # CEM43 contribution per timestep [min] from the Rust kernel
-        per_step_min = float(np.asarray(kw.cem43_at_temperatures(np.array([T]), dt))[0])
-        # Running cumulative sum (constant T → linear accumulation)
-        CEM43 = per_step_min * np.arange(1, len(t_s) + 1)  # [min]
-        ax.semilogy(t_s / 60, CEM43 + 1e-12, color=col, label=lbl)
+        # Running CEM43 accumulation via kw.cem43_cumulative (Sapareto & Dewey 1984).
+        # Passes full constant-T time series to Rust; returns running [min] array.
+        T_series = np.full(len(t_s), T)
+        CEM43 = np.asarray(kw.cem43_cumulative(T_series, dt))  # [min]
+        ax.semilogy(t_s / 60, np.maximum(CEM43, 1e-12), color=col, label=lbl)
 
     ax.axhline(240, color="r", linestyle="--", linewidth=1.5, label="CEM43=240 min (necrosis threshold)")
     ax.axhline(1, color="orange", linestyle=":", linewidth=1, label="CEM43=1 min (reversible)")
@@ -181,8 +172,6 @@ def fig04_arrhenius_damage() -> None:
     Computed via kw.arrhenius_damage_integral(T_arr, dt_s, a_per_s, ea_j_mol).
     Per-step Ω = arrhenius_damage_integral([T], dt, A, Ea); running sum for const T.
     """
-    if not _HAS_PYKWAVERS:
-        raise ImportError("pykwavers is required for fig04 (Arrhenius damage)")
     A_coeff = 3.1e98    # s⁻¹
     Ea = 6.28e5         # J/mol
 
@@ -195,16 +184,15 @@ def fig04_arrhenius_damage() -> None:
 
     fig, ax = plt.subplots(figsize=(7, 4.5))
     for T_c, col in zip(T_celsius, colors):
-        # Arrhenius contribution per timestep from the Rust kernel
-        rate_per_step = kw.arrhenius_damage_integral(np.array([T_c]), dt, A_coeff, Ea)
-        # Running sum (constant T → linear accumulation)
-        Omega = rate_per_step * np.arange(1, len(t) + 1)
+        # Running Arrhenius Ω(t) via kw.arrhenius_cumulative (Henriques & Moritz 1947).
+        # Passes full constant-T time series; Rust returns running sum array.
+        T_series = np.full(len(t), T_c)
+        Omega = np.asarray(kw.arrhenius_cumulative(T_series, dt, A_coeff, Ea))
         ax.semilogy(t, Omega, color=col, label=f"$T = {T_c:.0f}°C$")
-        # Mark time when Omega = 1
-        if rate_per_step > 0:
-            t_threshold = dt / rate_per_step
-            if t_threshold < t_max_s:
-                ax.scatter(t_threshold, 1.0, s=80, color=col, zorder=5)
+        # Mark time when Ω first reaches 1 (damage threshold).
+        idx_thresh = np.searchsorted(Omega, 1.0)
+        if idx_thresh < len(t):
+            ax.scatter(t[idx_thresh], 1.0, s=80, color=col, zorder=5)
 
     ax.axhline(1.0, color="r", linestyle="--", linewidth=1.5, label=r"$\Omega=1$ (damage threshold)")
     ax.set_xlabel("Exposure time $t$ (s)")
@@ -228,8 +216,7 @@ def fig05_fda_parameter_space() -> None:
     Plot ISPTA.3 vs ISPPA.3 with FDA limit boundaries.
     Representative operating points for common imaging modes.
     """
-    if not _HAS_PYKWAVERS:
-        raise ImportError("pykwavers is required for fig05 (FDA safety limits)")
+
     ISPPA = np.logspace(0, 3, 300)   # W/cm²
 
     # FDA limits from kw constants

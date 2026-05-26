@@ -28,7 +28,7 @@ fn brain_focused_bowl_layout_uses_requested_element_count() {
     config.element_count = 64;
     config.receiver_offsets = vec![16, 32];
     config.frequencies_hz = vec![220_000.0];
-    config.iterations = 6;
+    config.iterations = 4; // reduced from 6: layout geometry assertions are CG-count-independent
     let result = run_theranostic_inverse(prepared, &config).unwrap();
     let placement = placement_metrics(
         &result.layout,

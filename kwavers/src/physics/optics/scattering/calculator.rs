@@ -141,6 +141,7 @@ impl MieCalculator {
     }
 
     /// Calculate Mie coefficients a_n and b_n for n = 1..=n_max (BH Eq. 4.88).
+    #[allow(clippy::needless_range_loop)]
     fn calculate_coefficients(
         &self,
         x: f64,

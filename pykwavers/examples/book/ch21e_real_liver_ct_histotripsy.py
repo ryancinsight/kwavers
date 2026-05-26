@@ -933,8 +933,16 @@ def collapse_strength(p, f0):
 
 def thermal_maps(p_field, props, sc):
     heating_amp = max(sc.ppp / max(sc.pnp, 1.0), 1.0)
-    I_eff = (p_field * heating_amp) ** 2 / (2.0 * props["rho"] * props["c"])
-    Q_pulse = 2.0 * props["alpha"] * sc.shock_alpha_gain * I_eff
+    # I = p²/(2ρc) via Rust; Q = α·p²/(ρc)·shock_gain [W/m³]
+    p_eff = np.ascontiguousarray((p_field * heating_amp).ravel().astype(np.float64))
+    I_eff = np.asarray(
+        kw.acoustic_intensity_from_amplitude(p_eff, float(props["rho"]), float(props["c"]))
+    ).reshape(p_field.shape)
+    Q_pulse = sc.shock_alpha_gain * np.asarray(
+        kw.acoustic_heat_source_density(
+            p_eff, float(props["alpha"]), float(props["rho"]), float(props["c"])
+        )
+    ).reshape(p_field.shape)
     dT_p = Q_pulse * sc.pulse_on_s / (props["rho"] * props["cp"])
     T_transient = np.minimum(37.0 + dT_p, 100.0)
 

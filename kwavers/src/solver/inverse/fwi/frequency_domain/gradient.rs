@@ -253,6 +253,7 @@ fn accumulate_frequency_gradient(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 fn predicted_row(
     sources: &[ElementPosition],
     centers: &[(usize, ElementPosition)],
@@ -285,6 +286,7 @@ fn predicted_row(
         .collect()
 }
 
+#[allow(clippy::too_many_arguments)]
 fn accumulate_row_adjoint(
     gradient: &mut Array3<f64>,
     centers: &[(usize, ElementPosition)],

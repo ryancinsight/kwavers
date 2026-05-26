@@ -166,7 +166,7 @@ impl RealTimeSirtPipeline {
             if self
                 .row_norm_sq_cache
                 .as_ref()
-                .map_or(true, |(_, s)| *s != grid_shape)
+                .is_none_or(|(_, s)| *s != grid_shape)
             {
                 let norms = compute_row_norm_sq(geom, nx, ny, nz);
                 self.row_norm_sq_cache = Some((norms, grid_shape));

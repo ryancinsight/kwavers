@@ -287,6 +287,14 @@ from ._pykwavers import (
     __author__,
     __version__,
     # ── Analytical wave physics ───────────────────────────────────────────────
+    tone_burst_waveform,
+    pulse_train_waveform,
+    fubini_waveform,
+    shock_vapor_pulse_waveform,
+    goldberg_shock_parameter_sweep,
+    shock_enhanced_absorption_gain,
+    shock_waveform_pressure,
+    shock_heat_source_density,
     standing_wave_1d,
     plane_wave_pressure_1d,
     spherical_wave_pressure,
@@ -294,6 +302,7 @@ from ._pykwavers import (
     transmission_pressure_coeff,
     power_law_attenuation_np_m,
     absorption_power_law_db_cm,
+    stokes_kirchhoff_absorption_np_m,
     fdtd_phase_error_1d,
     pstd_phase_error,
     kspace_correction_error,
@@ -313,6 +322,10 @@ from ._pykwavers import (
     focused_bowl_onaxis,
     bli_stencil_weights,
     # ── Analytical cavitation physics ────────────────────────────────────────
+    intrinsic_threshold_cavitation_probability,
+    frequency_dependent_intrinsic_threshold_pa,
+    cumulative_cavitation_probability,
+    prf_efficacy_factor,
     minnaert_resonance_hz,
     blake_threshold_pa,
     rayleigh_collapse_time_s,
@@ -328,10 +341,12 @@ from ._pykwavers import (
     tissue_properties,
     # ── Safety / dosimetry ───────────────────────────────────────────────────
     mechanical_index,
+    mechanical_index_field,
     thermal_index_soft_tissue,
     thermal_index_bone,
     cem43_cumulative,
     arrhenius_damage_integral,
+    arrhenius_cumulative,
     fda_ispta_limit_mw_cm2,
     fda_isppa_limit_w_cm2,
     # ── Skull / transcranial ─────────────────────────────────────────────────
@@ -359,6 +374,11 @@ from ._pykwavers import (
     compute_cem43,
     cem43_at_temperatures,
     # ── Thermal: Beer-Lambert depth profiles + 3-D heat-source density ──────────
+    adiabatic_temperature_rise_kelvin,
+    gaussian_power_deposition_2d,
+    bioheat_focal_temperature_rise,
+    hifu_focal_pressure_gain,
+    acoustic_intensity_from_amplitude,
     acoustic_intensity_depth_profile,
     acoustic_power_deposition_depth_profile,
     acoustic_heat_source_density,
@@ -372,6 +392,17 @@ from ._pykwavers import (
     coupled_channel_drive_py,
     gaussian_beam_pressure_field_py,
     simulate_lif_neuron_py,
+    # ── RTM / adaptive beamforming ───────────────────────────────────────────
+    focused_gaussian_beam_2d,
+    backprop_green_function_2d,
+    rtm_imaging_condition,
+    rtm_multi_frequency_fusion,
+    temporal_modulation_frequencies,
+    standing_wave_suppression_gain,
+    standing_wave_spatial_frequency_cycles_m,
+    standing_wave_modulation_period_hz,
+    standing_wave_field_1d,
+    standing_wave_intensity_statistics,
 )
 
 # Pure-Python k-Wave parity utilities
@@ -484,6 +515,14 @@ __all__ = [
     "__version__",
     "__author__",
     # ── Analytical wave physics ───────────────────────────────────────────────
+    "tone_burst_waveform",
+    "pulse_train_waveform",
+    "fubini_waveform",
+    "shock_vapor_pulse_waveform",
+    "goldberg_shock_parameter_sweep",
+    "shock_enhanced_absorption_gain",
+    "shock_waveform_pressure",
+    "shock_heat_source_density",
     "standing_wave_1d",
     "plane_wave_pressure_1d",
     "spherical_wave_pressure",
@@ -491,6 +530,7 @@ __all__ = [
     "transmission_pressure_coeff",
     "power_law_attenuation_np_m",
     "absorption_power_law_db_cm",
+    "stokes_kirchhoff_absorption_np_m",
     "fdtd_phase_error_1d",
     "pstd_phase_error",
     "kspace_correction_error",
@@ -510,6 +550,10 @@ __all__ = [
     "focused_bowl_onaxis",
     "bli_stencil_weights",
     # ── Analytical cavitation physics ────────────────────────────────────────
+    "intrinsic_threshold_cavitation_probability",
+    "frequency_dependent_intrinsic_threshold_pa",
+    "cumulative_cavitation_probability",
+    "prf_efficacy_factor",
     "minnaert_resonance_hz",
     "blake_threshold_pa",
     "rayleigh_collapse_time_s",
@@ -525,10 +569,12 @@ __all__ = [
     "tissue_properties",
     # ── Safety / dosimetry ───────────────────────────────────────────────────
     "mechanical_index",
+    "mechanical_index_field",
     "thermal_index_soft_tissue",
     "thermal_index_bone",
     "cem43_cumulative",
     "arrhenius_damage_integral",
+    "arrhenius_cumulative",
     "fda_ispta_limit_mw_cm2",
     "fda_isppa_limit_w_cm2",
     # ── Skull / transcranial ─────────────────────────────────────────────────
@@ -556,8 +602,13 @@ __all__ = [
     "compute_cem43",
     "cem43_at_temperatures",
     # ── Thermal: Beer-Lambert depth profiles + 3-D heat-source density ──────────
+    "adiabatic_temperature_rise_kelvin",
+    "gaussian_power_deposition_2d",
+    "bioheat_focal_temperature_rise",
+    "hifu_focal_pressure_gain",
     "acoustic_intensity_depth_profile",
     "acoustic_power_deposition_depth_profile",
+    "acoustic_intensity_from_amplitude",
     "acoustic_heat_source_density",
     # ── BBB permeability, closure kinetics, CEUS ─────────────────────────────
     "bbb_permeability_hill",
@@ -569,6 +620,17 @@ __all__ = [
     "coupled_channel_drive_py",
     "gaussian_beam_pressure_field_py",
     "simulate_lif_neuron_py",
+    # ── RTM / adaptive beamforming ───────────────────────────────────────────
+    "focused_gaussian_beam_2d",
+    "backprop_green_function_2d",
+    "rtm_imaging_condition",
+    "rtm_multi_frequency_fusion",
+    "temporal_modulation_frequencies",
+    "standing_wave_suppression_gain",
+    "standing_wave_spatial_frequency_cycles_m",
+    "standing_wave_modulation_period_hz",
+    "standing_wave_field_1d",
+    "standing_wave_intensity_statistics",
 ]
 
 # Module-level metadata

@@ -53,9 +53,9 @@ impl<'a> VolumeOperator<'a> {
                             continue;
                         }
                         let row_context = self.row_context(row);
-                        for col in 0..ncols {
+                        for (col, p) in partial.iter_mut().enumerate() {
                             let value = self.row_value_for_col(&row_context, col) / norm;
-                            partial[col] += value * value;
+                            *p += value * value;
                         }
                     }
                     partial
@@ -98,9 +98,8 @@ impl<'a> VolumeOperator<'a> {
                             continue;
                         }
                         let row_context = self.row_context(row);
-                        for col in 0..ncols {
-                            partial[col] +=
-                                self.row_value_for_col(&row_context, col) * data[row] / norm;
+                        for (col, p) in partial.iter_mut().enumerate() {
+                            *p += self.row_value_for_col(&row_context, col) * data[row] / norm;
                         }
                     }
                     partial

@@ -50,6 +50,7 @@ const HU_TARGET: f64 = 70.0;
 
 /// Ellipsoid radial parameter; inside when ≤ 1.
 #[inline]
+#[allow(clippy::too_many_arguments)]
 fn ell(
     ix: usize,
     iy: usize,

@@ -61,6 +61,7 @@ pub fn delay_law_focus_2d(
 /// * `weights` – apodization weights (length == n_elements)
 /// * `delays` – steering delays [s] (length == n_elements)
 #[must_use]
+#[allow(clippy::too_many_arguments)]
 pub fn beam_pattern_2d(
     x_arr: &[f64],
     z_arr: &[f64],

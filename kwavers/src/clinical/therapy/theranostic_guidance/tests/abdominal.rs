@@ -178,17 +178,20 @@ fn peak_index(
 
 #[test]
 fn abdominal_preprocessing_keeps_external_skin_between_target_and_aperture() {
-    let mut ct = Array3::<f64>::from_elem((96, 96, 3), -950.0);
-    let mut label = Array3::<i16>::zeros((96, 96, 3));
+    // Reduced from 96×96 to 64×64 to keep the test under 30 s.
+    // Tumor placed at x=38 (body far edge x=58): depth=(58-41)*1.5mm=25.5mm>20mm.
+    // roi_voxels=40 ensures the full body skin boundary is visible to the detector.
+    let mut ct = Array3::<f64>::from_elem((64, 64, 3), -950.0);
+    let mut label = Array3::<i16>::zeros((64, 64, 3));
     for z in 0..3 {
-        for x in 0..96 {
-            for y in 0..96 {
+        for x in 0..64 {
+            for y in 0..64 {
                 let body =
-                    ((x as f64 - 48.0) / 39.0).powi(2) + ((y as f64 - 48.0) / 34.0).powi(2) <= 1.0;
+                    ((x as f64 - 32.0) / 26.0).powi(2) + ((y as f64 - 32.0) / 23.0).powi(2) <= 1.0;
                 let organ =
-                    ((x as f64 - 61.0) / 18.0).powi(2) + ((y as f64 - 48.0) / 14.0).powi(2) <= 1.0;
+                    ((x as f64 - 36.0) / 12.0).powi(2) + ((y as f64 - 32.0) / 9.0).powi(2) <= 1.0;
                 let tumor =
-                    ((x as f64 - 70.0) / 4.0).powi(2) + ((y as f64 - 48.0) / 3.0).powi(2) <= 1.0;
+                    ((x as f64 - 38.0) / 3.0).powi(2) + ((y as f64 - 32.0) / 2.0).powi(2) <= 1.0;
                 if body {
                     ct[[x, y, z]] = -35.0;
                 }

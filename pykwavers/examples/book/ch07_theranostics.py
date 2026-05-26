@@ -25,12 +25,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-try:
-    import pykwavers as kw
-    _HAS_PYKWAVERS = True
-except ImportError:
-    kw = None
-    _HAS_PYKWAVERS = False
+import pykwavers as kw
 
 REPO_ROOT = os.path.normpath(
     os.path.join(os.path.dirname(__file__), "..", "..", "..")
@@ -68,9 +63,6 @@ PV = 2338.0          # vapour pressure at 20°C [Pa]
 F0_DRV = 1.0e6       # driving frequency [Hz]
 OMEGA = 2 * np.pi * F0_DRV
 
-if not _HAS_PYKWAVERS:
-    raise ImportError("pykwavers is required for all ch07 figures")
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Helper: run Keller-Miksis integrator (Rust RK4)
 # ─────────────────────────────────────────────────────────────────────────────
@@ -103,7 +95,7 @@ colors_km = ["C0", "C1", "C2", "C3"]
 fig, ax = plt.subplots(figsize=(8, 4.5))
 for p_a, col in zip(driving_pressures, colors_km):
     t_km, R_km, _ = _km(R0, p_a, N_CYC_FIG1, N_PER_FIG1)
-    MI = p_a / (np.sqrt(F0_DRV / 1e6) * 1e6)  # MPa/√MHz
+    MI = kw.mechanical_index(float(p_a), float(F0_DRV))  # kw.mechanical_index(p_Pa, f_Hz)
     ax.plot(
         t_km * 1e6, R_km / R0, color=col,
         label=f"$P_a = {p_a/1e3:.0f}$ kPa (MI={MI:.2f})",
@@ -386,9 +378,9 @@ plt.close()
 
 print(
     f"\nChapter 7 figures written to: {os.path.relpath(OUT_DIR)}\n"
-    "  fig01_keller_miksis_dynamics.*   — R/R₀ vs time (Rust RK4, 4 pressures)\n"
-    "  fig02_minnaert_resonance.*       — f_res vs R₀ [analytical Minnaert formula]\n"
-    "  fig03_pcd_spectrum.*             — KM Rdot FFT: SC (50 kPa) vs IC (400 kPa)\n"
-    "  fig04_pcd_controller_convergence.* — Controller with KM-derived SC/IC signals\n"
-    "  fig05_closed_loop_cem43.*        — pykwavers.compute_cem43 dose accumulation\n"
+    "  fig01_keller_miksis_dynamics.*   -- R/R0 vs time (Rust RK4, 4 pressures)\n"
+    "  fig02_minnaert_resonance.*       -- f_res vs R0 [analytical Minnaert formula]\n"
+    "  fig03_pcd_spectrum.*             -- KM Rdot FFT: SC (50 kPa) vs IC (400 kPa)\n"
+    "  fig04_pcd_controller_convergence.* -- Controller with KM-derived SC/IC signals\n"
+    "  fig05_closed_loop_cem43.*        -- pykwavers.compute_cem43 dose accumulation\n"
 )

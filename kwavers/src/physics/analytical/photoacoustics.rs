@@ -185,6 +185,7 @@ pub fn spectroscopic_unmixing_lstsq(spectra_matrix: &[Vec<f64>], measurements: &
 
 /// Gaussian elimination with partial pivoting for square system A·x = b.
 /// Returns x. Panics if the system is singular.
+#[allow(clippy::needless_range_loop)]
 fn gaussian_elimination(a: &[Vec<f64>], b: &[f64]) -> Vec<f64> {
     let n = b.len();
     // Augmented matrix [A | b]
