@@ -1,7 +1,8 @@
 /// Clinical workflow state
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub enum WorkflowState {
     /// Initializing workflow components
+    #[default]
     Initializing,
     /// Acquiring data from modalities
     Acquiring,
@@ -17,11 +18,4 @@ pub enum WorkflowState {
     Completed,
     /// Workflow failed with error
     Failed(String),
-}
-
-#[allow(clippy::derivable_impls)]
-impl Default for WorkflowState {
-    fn default() -> Self {
-        Self::Initializing
-    }
 }

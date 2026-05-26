@@ -70,6 +70,13 @@ pub(super) struct UpdateCells<'a> {
 ///
 /// O(n³) per time step.  No integer division on the hot path (loop variables
 /// replace `i % n`, `(i / n) % n`, `i / n²`).
+// JUSTIFICATION: `clippy::identity_op` triggers on stencil index expressions
+// such as `i - 1` (z-direction stride-1 neighbor) and `i + 1`, which the lint
+// treats as identity operations on the coefficient. These are intentional
+// unit-stride neighbor offsets in the flat 3-D row-major layout, not
+// algebraic simplifications. Removing them would require a different indexing
+// scheme that defeats auto-vectorization. The suppression is narrowed to this
+// function only.
 #[allow(clippy::identity_op)]
 pub(super) fn update_cells(buffers: UpdateCells<'_>, n: usize, dt: f64, inv_dx2: f64, step: usize) {
     let n2 = n * n;
