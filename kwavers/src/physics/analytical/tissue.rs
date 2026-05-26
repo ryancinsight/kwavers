@@ -223,6 +223,7 @@ fn tissue_absorption_params(tissue: &str) -> (f64, f64) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
 
     #[test]
     fn water_speed_at_20c() {
@@ -236,7 +237,7 @@ mod tests {
         let rho4 = water_density_temperature(&[4.0]);
         let rho10 = water_density_temperature(&[10.0]);
         assert!(rho4[0] > rho10[0]);
-        assert!((rho4[0] - 1000.0).abs() < 0.5);
+        assert!((rho4[0] - DENSITY_WATER_NOMINAL).abs() < 0.5);
     }
 
     #[test]

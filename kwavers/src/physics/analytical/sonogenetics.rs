@@ -286,11 +286,11 @@ mod tests {
 
     #[test]
     fn ispta_rejects_empty_invalid_and_nonfinite_domains() {
-        assert_eq!(ispta_w_cm2(&[], 1e-7, 1000.0, SOUND_SPEED_WATER_SIM), 0.0);
-        assert_eq!(ispta_w_cm2(&[1.0], 0.0, 1000.0, SOUND_SPEED_WATER_SIM), 0.0);
+        assert_eq!(ispta_w_cm2(&[], 1e-7, DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM), 0.0);
+        assert_eq!(ispta_w_cm2(&[1.0], 0.0, DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM), 0.0);
         assert_eq!(ispta_w_cm2(&[1.0], 1e-7, 0.0, SOUND_SPEED_WATER_SIM), 0.0);
         assert_eq!(
-            ispta_w_cm2(&[1.0], 1e-7, 1000.0, -SOUND_SPEED_WATER_SIM),
+            ispta_w_cm2(&[1.0], 1e-7, DENSITY_WATER_NOMINAL, -SOUND_SPEED_WATER_SIM),
             0.0
         );
 

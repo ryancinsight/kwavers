@@ -1,6 +1,6 @@
 use super::domain::AcousticWaveDomain;
 use super::types::{AcousticBoundarySpec, AcousticProblemType, PinnAcousticBoundaryType};
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use crate::solver::inverse::pinn::ml::physics::{BoundaryPosition, SimulationPhysicsDomain};
 use burn::backend::NdArray;
 use std::collections::HashMap;
@@ -21,7 +21,7 @@ fn test_acoustic_wave_domain_creation() {
         "acoustic_wave"
     );
     assert_eq!(domain.wave_speed(), SOUND_SPEED_WATER_SIM);
-    assert_eq!(domain.density(), 1000.0);
+    assert_eq!(domain.density(), DENSITY_WATER_NOMINAL);
     assert!(domain.nonlinearity_coefficient().is_none());
     assert!(<AcousticWaveDomain as SimulationPhysicsDomain<B>>::supports_coupling(&domain));
 }

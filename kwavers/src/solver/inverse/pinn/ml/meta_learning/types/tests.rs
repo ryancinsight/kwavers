@@ -1,7 +1,7 @@
 use super::pde_type::PdeType;
 use super::physics::MetaLearningPhysicsParameters;
 use super::task::{TaskData, TaskDataStatistics};
-use crate::core::constants::fundamental::{SOUND_SPEED_AIR, SOUND_SPEED_WATER_SIM};
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_AIR, SOUND_SPEED_WATER_SIM};
 
 #[test]
 fn test_pde_type_complexity() {
@@ -52,8 +52,8 @@ fn test_physics_parameters_presets() {
 
 #[test]
 fn test_physics_parameters_fluid() {
-    let fluid = MetaLearningPhysicsParameters::fluid(1000.0, 0.001);
-    assert_eq!(fluid.density, 1000.0);
+    let fluid = MetaLearningPhysicsParameters::fluid(DENSITY_WATER_NOMINAL, 0.001);
+    assert_eq!(fluid.density, DENSITY_WATER_NOMINAL);
     assert_eq!(fluid.viscosity, Some(0.001));
 }
 

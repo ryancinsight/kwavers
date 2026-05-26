@@ -1,6 +1,6 @@
 //! Unit tests for the Hybrid Angular Spectrum module.
 
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
@@ -13,22 +13,22 @@ use crate::core::constants::numerical::{TWO_PI};
 fn test_has_config_default() {
     let config = HASConfig::default();
     assert_eq!(config.sound_speed, SOUND_SPEED_WATER_SIM);
-    assert_eq!(config.density, 1000.0);
+    assert_eq!(config.density, DENSITY_WATER_NOMINAL);
     assert!(config.nonlinearity > 0.0);
 }
 
 #[test]
 fn test_has_config_validation() {
-    assert!(HASConfig::new(-1.0, 1000.0, 6.0, 0.5, 2.0, 0.0001, MHZ_TO_HZ).is_err());
+    assert!(HASConfig::new(-1.0, DENSITY_WATER_NOMINAL, 6.0, 0.5, 2.0, 0.0001, MHZ_TO_HZ).is_err());
     assert!(HASConfig::new(SOUND_SPEED_WATER_SIM, -1.0, 6.0, 0.5, 2.0, 0.0001, MHZ_TO_HZ).is_err());
-    assert!(HASConfig::new(SOUND_SPEED_WATER_SIM, 1000.0, 6.0, 0.5, 2.0, -0.0001, MHZ_TO_HZ).is_err());
+    assert!(HASConfig::new(SOUND_SPEED_WATER_SIM, DENSITY_WATER_NOMINAL, 6.0, 0.5, 2.0, -0.0001, MHZ_TO_HZ).is_err());
 }
 
 /// Z = ρ·c (acoustic impedance definition, Pierce 1989 §1.5).
 #[test]
 fn test_impedance_calculation() {
     let config = HASConfig::default();
-    assert_eq!(config.impedance(), SOUND_SPEED_WATER_SIM * 1000.0);
+    assert_eq!(config.impedance(), SOUND_SPEED_WATER_SIM * DENSITY_WATER_NOMINAL);
 }
 
 /// Power-law attenuation α(f) = α₀·(f/MHz)^y; ratio at 2× frequency = 2^y.

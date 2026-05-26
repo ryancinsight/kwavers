@@ -219,7 +219,7 @@ fn test_nonlinear_inversion_processor() {
     let processor = NonlinearInversion::new(config);
 
     assert_eq!(processor.method(), NonlinearInversionMethod::HarmonicRatio);
-    assert_eq!(processor.config().density, 1000.0);
+    assert_eq!(processor.config().density, DENSITY_WATER_NOMINAL);
     assert_eq!(
         processor.config().acoustic_speed,
         crate::core::constants::fundamental::SOUND_SPEED_TISSUE

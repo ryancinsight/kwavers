@@ -11,6 +11,7 @@ use crate::domain::grid::Grid;
 use crate::domain::imaging::ultrasound::elastography::InversionMethod;
 use crate::physics::acoustics::imaging::modalities::elastography::displacement::DisplacementField;
 use crate::solver::inverse::elastography::config::ShearWaveInversionConfig;
+use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use crate::core::constants::numerical::{TWO_PI};
 
 #[test]
@@ -164,5 +165,5 @@ fn test_shear_wave_inversion_processor() {
     let processor = ShearWaveInversion::new(config);
 
     assert_eq!(processor.method(), InversionMethod::TimeOfFlight);
-    assert_eq!(processor.config().density, 1000.0);
+    assert_eq!(processor.config().density, DENSITY_WATER_NOMINAL);
 }
