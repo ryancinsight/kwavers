@@ -1,6 +1,6 @@
 //! PyO3 wrapper for Rust-owned Ali 2025 breast phantom HDF5 ingest.
 
-use super::kwavers_to_py;
+use super::helpers::kwavers_to_py;
 use kwavers::clinical::imaging::reconstruction::breast_ust_fwi::{
     load_ali_2025_breast_phantom_with_config, BreastUstAliPhantomFileFormat,
     BreastUstAliPhantomHdf5Config, BreastUstAliPhantomLoadConfig, BreastUstAliPhantomMat5Config,

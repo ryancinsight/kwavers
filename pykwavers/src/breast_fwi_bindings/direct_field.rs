@@ -1,6 +1,7 @@
 //! PyO3 wrapper for homogeneous direct-field breast-FWI diagnostics.
 
-use super::{kwavers_to_py, PyBreastFwiPstdDatasetConfig, PyMultiRowRingArray};
+use super::{PyBreastFwiPstdDatasetConfig, PyMultiRowRingArray};
+use super::helpers::kwavers_to_py;
 use kwavers::clinical::imaging::reconstruction::breast_ust_fwi::{
     diagnose_breast_ust_homogeneous_direct_field, BreastUstDirectFieldDiagnostics,
     BreastUstHomogeneousDirectFieldDiagnostics,
