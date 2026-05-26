@@ -27,9 +27,9 @@ fn pstd_orchestrator_keeps_shear_stress_zero_when_mu_is_zero() {
     let grid = Grid::new(nx, ny, nz, dx, dx, dx).unwrap();
 
     let medium = ElasticPstdMedium {
-        lame_lambda: Array3::from_elem((nx, ny, nz), 1000.0 * cp * cp),
+        lame_lambda: Array3::from_elem((nx, ny, nz), DENSITY_WATER_NOMINAL * cp * cp),
         lame_mu: Array3::zeros((nx, ny, nz)),
-        density: Array3::from_elem((nx, ny, nz), 1000.0),
+        density: Array3::from_elem((nx, ny, nz), DENSITY_WATER_NOMINAL),
     };
     let mut orch = ElasticPstdOrchestrator::new(&grid, medium, dt).unwrap();
 
@@ -121,9 +121,9 @@ fn split_field_pml_quiescent_state_stays_zero() {
     let dt = 0.3 * dx / cp;
     let grid = Grid::new(nx, nx, nx, dx, dx, dx).unwrap();
     let medium = ElasticPstdMedium {
-        lame_lambda: Array3::from_elem((nx, nx, nx), 1000.0 * cp * cp),
-        lame_mu: Array3::from_elem((nx, nx, nx), 1000.0 * cp * cp * 0.5),
-        density: Array3::from_elem((nx, nx, nx), 1000.0),
+        lame_lambda: Array3::from_elem((nx, nx, nx), DENSITY_WATER_NOMINAL * cp * cp),
+        lame_mu: Array3::from_elem((nx, nx, nx), DENSITY_WATER_NOMINAL * cp * cp * 0.5),
+        density: Array3::from_elem((nx, nx, nx), DENSITY_WATER_NOMINAL),
     };
     let mut orch = ElasticPstdOrchestrator::new(&grid, medium, dt).unwrap();
     orch.set_split_field_pml((2, 2, 2), cp, 1e-4);
@@ -314,7 +314,7 @@ fn quiescent_acoustic_fluid_remains_quiescent() {
     let medium = ElasticPstdMedium {
         lame_lambda: Array3::from_elem((8, 8, 4), 1.5e9),
         lame_mu: Array3::zeros((8, 8, 4)),
-        density: Array3::from_elem((8, 8, 4), 1000.0),
+        density: Array3::from_elem((8, 8, 4), DENSITY_WATER_NOMINAL),
     };
     let mut orch = ElasticPstdOrchestrator::new(&grid, medium, 1e-7).unwrap();
     let _ = orch.propagate(20, None, None).unwrap();
@@ -344,9 +344,9 @@ fn acoustic_fluid_pulse_propagates_finite_field() {
     let grid = Grid::new(nx, ny, nz, dx, dx, dx).unwrap();
 
     let medium = ElasticPstdMedium {
-        lame_lambda: Array3::from_elem((nx, ny, nz), 1000.0 * cp * cp),
+        lame_lambda: Array3::from_elem((nx, ny, nz), DENSITY_WATER_NOMINAL * cp * cp),
         lame_mu: Array3::zeros((nx, ny, nz)),
-        density: Array3::from_elem((nx, ny, nz), 1000.0),
+        density: Array3::from_elem((nx, ny, nz), DENSITY_WATER_NOMINAL),
     };
     let mut orch = ElasticPstdOrchestrator::new(&grid, medium, dt).unwrap();
 
