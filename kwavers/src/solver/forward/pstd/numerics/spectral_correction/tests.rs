@@ -1,5 +1,5 @@
 use super::*;
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use crate::domain::grid::Grid;
 use std::f64::consts::PI;
 use crate::core::constants::numerical::{TWO_PI};
@@ -167,4 +167,131 @@ fn test_correction_methods_consistency() {
             assert!(*val > 0.0);
         }
     }
+}
+
+/// End-to-end k-space dispersion convergence test.
+///
+/// # Theorem (Treeby & Cox 2010, Eq. 18)
+///
+/// With κ = sinc(c_ref·|k|·dt/2) applied to every spectral spatial derivative,
+/// the leapfrog k-PSTD scheme satisfies the exact dispersion relation
+/// ω = c_ref·|k| for all spatial frequencies. As a consequence the numerical
+/// phase velocity equals c_ref to machine precision for the reference wavenumber,
+/// limited in practice only by pulse-tracking resolution (one time-step = O(dt)).
+///
+/// # Test design
+///
+/// Domain: 1D periodic (ny=nz=1), nx=256, dx=1e-3 m.
+/// Medium: homogeneous water, c_ref=SOUND_SPEED_WATER_SIM≈1498 m/s, ρ₀=1000 kg/m³.
+/// CFL=0.25 → dt=CFL·dx/c_ref.  Stable (CFL<1); Nyquist kappa ≈ sinc(π·CFL/2) ≈ 0.983.
+///
+/// Initial pressure: unit-amplitude Gaussian p₀[i] = exp(-((i−i_src)*dx)²/(2·σ²))
+/// with σ=4·dx centered at i_src=32.
+///
+/// Sensor at i_snr=224; separation L=192·dx=0.192 m.
+///
+/// Expected arrival: t_exact = L/c_ref.
+/// k-PSTD dispersion-free → t_numerical = (peak_step)·dt ≈ t_exact.
+///
+/// Acceptance criterion: |c_numerical − c_ref| / c_ref < 1e-3 (0.1 % tolerance),
+/// accounting for the half-step pulse-tracking resolution (±0.5·dt → δc/c ≈ 0.3%).
+///
+/// # Panics
+///
+/// Panics if the solver reports an error during stepping.
+#[test]
+fn kspace_correction_eliminates_numerical_dispersion() {
+    use crate::domain::medium::HomogeneousMedium;
+    use crate::domain::source::GridSource;
+    use crate::solver::forward::pstd::config::{BoundaryConfig, PSTDConfig};
+    use crate::solver::pstd::PSTDSolver;
+    use ndarray::Array3;
+
+    // ── Grid and time step ────────────────────────────────────────────────────
+    let nx: usize = 256;
+    let dx = 1e-3_f64; // 1 mm
+    let c_ref = SOUND_SPEED_WATER_SIM; // ≈1498.0 m/s
+    let rho0 = DENSITY_WATER_NOMINAL; // 1000.0 kg/m³
+    let cfl = 0.25_f64; // CFL < 1 (stable); |k|_max·dt·c/2 = CFL·π/2 ≈ 0.393
+    let dt = cfl * dx / c_ref;
+
+    // ── Source and sensor positions ───────────────────────────────────────────
+    let i_src: usize = 32; // source pulse center (index)
+    let i_snr: usize = 224; // sensor (index)
+    // Separation in terms of indices: note the domain is periodic. Use direct
+    // separation because i_snr > i_src and no wrap-around is needed.
+    let separation = (i_snr as f64 - i_src as f64) * dx; // 0.192 m
+
+    // Expected arrival time and number of steps to run.
+    // Add 20% headroom so the pulse peak passes the sensor with certainty.
+    let t_exact = separation / c_ref; // ≈1.282e-4 s
+    let n_steps = ((1.2 * t_exact) / dt).ceil() as usize;
+
+    // ── Gaussian initial pressure pulse ───────────────────────────────────────
+    // σ = 4·dx: narrow enough to excite mid-to-high wavenumbers where
+    // dispersion correction matters, wide enough to avoid Nyquist aliasing.
+    let sigma = 4.0 * dx;
+    let mut p0 = Array3::<f64>::zeros((nx, 1, 1));
+    for i in 0..nx {
+        let x = (i as f64 - i_src as f64) * dx;
+        p0[[i, 0, 0]] = (-x * x / (2.0 * sigma * sigma)).exp();
+    }
+
+    // ── Build solver (1D: ny=nz=1, no PML — periodic domain) ─────────────────
+    let grid = Grid::new(nx, 1, 1, dx, dx, dx).unwrap();
+    let medium = HomogeneousMedium::new(rho0, c_ref, 0.0, 0.0, &grid);
+
+    // IVP: p0 sets the initial pressure field. p_mask/p_signal remain None.
+    // p_mode is irrelevant when only p0 is set (has_initial_pressure() checks p0.is_some()).
+    let source = GridSource {
+        p0: Some(p0),
+        ..GridSource::new_empty()
+    };
+
+    let config = PSTDConfig {
+        dt,
+        nt: n_steps,
+        boundary: BoundaryConfig::None, // periodic (no PML) → no boundary absorption
+        smooth_sources: false,
+        ..Default::default()
+        // Default spectral_correction uses Treeby2010 (k-space corrected)
+    };
+
+    let mut solver = PSTDSolver::new(config, grid, &medium, source).unwrap();
+
+    // ── Step the solver and track max |p| at the sensor ──────────────────────
+    let mut peak_val = 0.0_f64;
+    let mut peak_step = 0_usize;
+
+    for step in 0..n_steps {
+        solver.step_forward().expect("PSTD step must not error");
+        let p_at_sensor = solver.fields.p[[i_snr, 0, 0]].abs();
+        if p_at_sensor > peak_val {
+            peak_val = p_at_sensor;
+            peak_step = step + 1; // step completed = step+1 time steps elapsed
+        }
+    }
+
+    // ── Compute numerical phase velocity and assert dispersion tolerance ──────
+    // peak_step is the 1-indexed step at which the peak was recorded.
+    // t_numerical = peak_step * dt (time elapsed after peak_step full steps).
+    // Tolerance of 0.5·dt/t_exact ≈ 0.3% accounts for one-step tracking resolution.
+    let t_numerical = peak_step as f64 * dt;
+    let c_numerical = separation / t_numerical;
+    let rel_err = (c_numerical - c_ref).abs() / c_ref;
+
+    assert!(
+        peak_val > 1e-6,
+        "sensor at i={i_snr} recorded no pulse (peak={peak_val:.3e}): \
+         k-space correction may have suppressed all propagation"
+    );
+
+    assert!(
+        rel_err < 1e-3,
+        "k-space correction dispersion test FAILED: \
+         c_numerical={c_numerical:.4} m/s, c_ref={c_ref:.4} m/s, \
+         rel_err={rel_err:.4e} (must be < 1e-3). \
+         peak arrived at step {peak_step}, t_numerical={t_numerical:.4e} s, \
+         t_exact={t_exact:.4e} s"
+    );
 }

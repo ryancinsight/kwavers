@@ -118,7 +118,7 @@ impl ElasticPstdOrchestrator {
             StaggeredDerivativeOps::build(&kx, &ky, &kz, grid.dx, grid.dy, grid.dz);
 
         let c_ref = max_p_wave_speed(&medium);
-        let kappa = build_kappa(&kx, &ky, &kz, (nx, ny, nz), c_ref, dt);
+        let kappa = build_kappa(&kx, &ky, &kz, (nx, ny, nz), c_ref, dt, grid.dx, grid.dy, grid.dz);
 
         Ok(Self {
             plugin: PstdElasticPlugin::default(),
