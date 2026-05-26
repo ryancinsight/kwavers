@@ -186,9 +186,17 @@ fn test_correction_methods_consistency() {
 /// CFL=0.25 → dt=CFL·dx/c_ref.  Stable (CFL<1); Nyquist kappa ≈ sinc(π·CFL/2) ≈ 0.983.
 ///
 /// Initial pressure: unit-amplitude Gaussian p₀[i] = exp(-((i−i_src)*dx)²/(2·σ²))
-/// with σ=4·dx centered at i_src=32.
+/// with σ=4·dx centered at i_src=nx/2=128 (domain centre).
 ///
-/// Sensor at i_snr=224; separation L=192·dx=0.192 m.
+/// Sensor at i_snr=128+96=224; separation L=96·dx=0.096 m.
+///
+/// ## Source and sensor placement rationale
+/// The domain is periodic.  The pulse can reach the sensor via two paths:
+///   - Direct (positive):  96 cells = 0.096 m  ← shorter, pulse arrives here first
+///   - Wrapped (negative): 256−96 = 160 cells = 0.160 m
+/// Placing the source at the domain centre (i_src=128) and the sensor 96 cells
+/// to the right (i_snr=224) guarantees that the direct path is shorter than the
+/// wrapped path (96 < 160), so the recorded peak corresponds to the direct propagation.
 ///
 /// Expected arrival: t_exact = L/c_ref.
 /// k-PSTD dispersion-free → t_numerical = (peak_step)·dt ≈ t_exact.
@@ -216,11 +224,13 @@ fn kspace_correction_eliminates_numerical_dispersion() {
     let dt = cfl * dx / c_ref;
 
     // ── Source and sensor positions ───────────────────────────────────────────
-    let i_src: usize = 32; // source pulse center (index)
-    let i_snr: usize = 224; // sensor (index)
-    // Separation in terms of indices: note the domain is periodic. Use direct
-    // separation because i_snr > i_src and no wrap-around is needed.
-    let separation = (i_snr as f64 - i_src as f64) * dx; // 0.192 m
+    // Source at domain centre; sensor 96 cells to the right.
+    // Direct path (96 cells < 160 cells wrapped) is unambiguously shorter:
+    // the recorded peak always corresponds to direct propagation.
+    let i_src: usize = 128; // source pulse centre (domain midpoint)
+    let i_snr: usize = 224; // sensor (128 + 96 cells)
+    // Direct separation: 96 cells · dx = 0.096 m.
+    let separation = (i_snr as f64 - i_src as f64) * dx; // 0.096 m
 
     // Expected arrival time and number of steps to run.
     // Add 20% headroom so the pulse peak passes the sensor with certainty.
@@ -286,11 +296,16 @@ fn kspace_correction_eliminates_numerical_dispersion() {
          k-space correction may have suppressed all propagation"
     );
 
+    // Tolerance derivation: the pulse peak is tracked at integer-step resolution.
+    // Tracking uncertainty: ±0.5·dt → δc/c = 0.5·dt/t_exact.
+    // With separation=96 cells, t_exact=96·dx/c_ref, dt=CFL·dx/c_ref:
+    //   δc/c = 0.5·CFL/96 = 0.5·0.25/96 ≈ 0.0013 (0.13%).
+    // Use 2e-3 (0.2%) to give 1.5× headroom over the step-quantization uncertainty.
     assert!(
-        rel_err < 1e-3,
+        rel_err < 2e-3,
         "k-space correction dispersion test FAILED: \
          c_numerical={c_numerical:.4} m/s, c_ref={c_ref:.4} m/s, \
-         rel_err={rel_err:.4e} (must be < 1e-3). \
+         rel_err={rel_err:.4e} (must be < 2e-3). \
          peak arrived at step {peak_step}, t_numerical={t_numerical:.4e} s, \
          t_exact={t_exact:.4e} s"
     );
