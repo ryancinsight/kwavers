@@ -1,4 +1,5 @@
 use super::*;
+use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
 
 #[test]
 fn test_default_config_valid() {
@@ -8,7 +9,7 @@ fn test_default_config_valid() {
 
 #[test]
 fn test_forward_problem_config() {
-    let config = Config::forward_problem(1e9, 5e8, 1000.0);
+    let config = Config::forward_problem(1e9, 5e8, DENSITY_WATER_NOMINAL);
     assert!(config.validate().is_ok());
     assert!(!config.optimize_lambda);
     assert!(!config.optimize_mu);
@@ -19,7 +20,7 @@ fn test_forward_problem_config() {
 
 #[test]
 fn test_inverse_problem_config() {
-    let config = Config::inverse_problem(1e9, 5e8, 1000.0);
+    let config = Config::inverse_problem(1e9, 5e8, DENSITY_WATER_NOMINAL);
     assert!(config.validate().is_ok());
     assert!(config.optimize_lambda);
     assert!(config.optimize_mu);

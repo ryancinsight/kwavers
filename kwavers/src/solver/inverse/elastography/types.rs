@@ -99,12 +99,13 @@ pub fn elasticity_map_from_speed(shear_wave_speed: Array3<f64>, density: f64) ->
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
     use ndarray::Array3;
 
     #[test]
     fn test_elasticity_map_from_speed() {
         let speed = Array3::from_elem((10, 10, 10), 3.0); // 3 m/s
-        let density = 1000.0; // kg/m³
+        let density = DENSITY_WATER_NOMINAL; // 1000.0 kg/m³ (SSOT)
 
         let map = elasticity_map_from_speed(speed, density);
 
@@ -121,7 +122,7 @@ mod tests {
         let mut speed = Array3::from_elem((10, 10, 10), 3.0);
         speed[[5, 5, 5]] = 5.0; // Higher stiffness region
 
-        let map = elasticity_map_from_speed(speed, 1000.0);
+        let map = elasticity_map_from_speed(speed, DENSITY_WATER_NOMINAL);
         let (min, max, mean) = map.statistics();
 
         assert!(min < max, "Minimum should be less than maximum");

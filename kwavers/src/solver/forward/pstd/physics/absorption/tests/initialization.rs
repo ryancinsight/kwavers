@@ -7,6 +7,7 @@ use crate::domain::medium::HomogeneousMedium;
 use crate::physics::acoustics::mechanics::absorption::AbsorptionMode;
 use crate::solver::forward::pstd::config::PSTDConfig;
 use crate::solver::forward::pstd::physics::absorption::init::initialize_absorption_operators;
+use crate::core::constants::numerical::{TWO_PI};
 
 #[test]
 fn test_power_law_initialization() {
@@ -65,7 +66,7 @@ fn test_nabla_operators_correct_power() {
         ..PSTDConfig::default()
     };
 
-    let dk = 2.0 * std::f64::consts::PI / (8.0 * 1e-3);
+    let dk = TWO_PI / (8.0 * 1e-3);
     let k_mag = test_k_mag(8, 8, 8, dk);
     let k_at_1 = k_mag[[1, 0, 0]];
 
@@ -154,7 +155,7 @@ fn test_stokes_absorption_tau_matches_classical_formula() {
         ..PSTDConfig::default()
     };
 
-    let dk = 2.0 * std::f64::consts::PI / (8.0 * 1e-3);
+    let dk = TWO_PI / (8.0 * 1e-3);
     let k_mag = test_k_mag(8, 8, 8, dk);
     let kernel = initialize_absorption_operators(
         &config,

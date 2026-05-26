@@ -9,7 +9,7 @@ use super::least_squares::nonlinear_least_squares_inversion;
 use super::processor::NonlinearInversion;
 use crate::domain::imaging::ultrasound::elastography::NonlinearInversionMethod;
 use crate::physics::acoustics::imaging::modalities::elastography::HarmonicDisplacementField;
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 fn test_config() -> NonlinearInversionConfig {
     NonlinearInversionConfig::new(NonlinearInversionMethod::HarmonicRatio)
@@ -26,7 +26,7 @@ fn test_config() -> NonlinearInversionConfig {
 #[test]
 fn test_beta_s_round_trip() {
     let config = test_config();
-    let omega = 2.0 * PI * config.excitation_frequency;
+    let omega = TWO_PI * config.excitation_frequency;
     let c_s = config.shear_wave_speed;
     let k_s = omega / c_s;
     let z = config.propagation_distance;
@@ -80,7 +80,7 @@ fn test_a_landau_sign() {
 #[test]
 fn test_gelatin_phantom_reference_value() {
     let config = test_config();
-    let omega = 2.0 * PI * config.excitation_frequency;
+    let omega = TWO_PI * config.excitation_frequency;
     let c_s = config.shear_wave_speed;
     let k_s = omega / c_s;
     let z = config.propagation_distance;

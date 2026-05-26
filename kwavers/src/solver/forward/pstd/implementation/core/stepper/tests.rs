@@ -23,7 +23,7 @@ fn test_source_injection_sign_matches_kwave() {
     let n = 16usize;
     let dx = 1e-3_f64;
     let c0 = SOUND_SPEED_WATER_SIM;
-    let rho0 = 1000.0_f64;
+    let rho0 = DENSITY_WATER_NOMINAL;
     let dt = 0.3 * dx / c0;
     let src = n / 2;
 
@@ -89,7 +89,7 @@ fn test_nyquist_not_zeroed_propagation_amplitude() {
     let n = 16usize;
     let dx = 1e-3_f64;
     let c0 = SOUND_SPEED_WATER_SIM;
-    let rho0 = 1000.0_f64;
+    let rho0 = DENSITY_WATER_NOMINAL;
     let dt = 0.3 * dx / c0;
     let src = n / 2;
 
@@ -193,7 +193,7 @@ fn test_propagation_amplitude_with_cpml_boundary() {
     let n = 16usize;
     let dx = 1e-3_f64;
     let c0 = SOUND_SPEED_WATER_SIM;
-    let rho0 = 1000.0_f64;
+    let rho0 = DENSITY_WATER_NOMINAL;
     let dt = 0.3 * dx / c0;
     let src = n / 2;
 

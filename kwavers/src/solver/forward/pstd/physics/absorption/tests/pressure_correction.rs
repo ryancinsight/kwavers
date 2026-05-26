@@ -5,6 +5,7 @@ use crate::domain::source::GridSource;
 use crate::physics::acoustics::mechanics::absorption::AbsorptionMode;
 use crate::solver::forward::pstd::config::PSTDConfig;
 use crate::solver::pstd::PSTDSolver;
+use crate::core::constants::numerical::{TWO_PI};
 
 #[test]
 fn test_lossless_mode_no_pressure_correction() {
@@ -151,7 +152,7 @@ fn test_pressure_correction_dispersion_term_matches_analytical() {
     let kx_idx = 1usize;
     let rho_total_amp = 1.0_f64;
     for i in 0..NX {
-        let phase = (kx_idx as f64) * 2.0 * PI * (i as f64) / (NX as f64);
+        let phase = (kx_idx as f64) * TWO_PI * (i as f64) / (NX as f64);
         solver.div_u[[i, 0, 0]] = rho_total_amp * phase.cos();
     }
     solver.fields.p.fill(0.0);
@@ -174,7 +175,7 @@ fn test_pressure_correction_dispersion_term_matches_analytical() {
     let denom = amp.abs().max(1e-30);
     let mut worst_rel: f64 = 0.0;
     for i in 0..NX {
-        let phase = (kx_idx as f64) * 2.0 * PI * (i as f64) / (NX as f64);
+        let phase = (kx_idx as f64) * TWO_PI * (i as f64) / (NX as f64);
         let expected = amp * phase.cos();
         let observed = solver.fields.p[[i, 0, 0]];
         let rel = (observed - expected).abs() / denom;

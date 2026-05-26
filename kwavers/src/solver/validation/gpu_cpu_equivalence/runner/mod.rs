@@ -160,12 +160,13 @@ fn run_simulation_gpu(
 /// ## Example
 ///
 /// ```rust,ignore
+/// use kwavers::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 /// use kwavers::domain::grid::Grid;
 /// use kwavers::domain::medium::HomogeneousMedium;
 /// use kwavers::solver::validation::validate_gpu_cpu_equivalence;
 ///
 /// let grid = Grid::new(128, 128, 128, 0.1e-3, 0.1e-3, 0.1e-3).unwrap();
-/// let medium = HomogeneousMedium::new(1500.0, 1000.0);
+/// let medium = HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.0, 0.0, &grid);
 ///
 /// let report = validate_gpu_cpu_equivalence(&grid, &medium, 100).unwrap();
 /// assert!(report.passed(), "GPU/CPU equivalence failed");

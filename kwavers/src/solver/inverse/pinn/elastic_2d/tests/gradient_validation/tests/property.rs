@@ -1,5 +1,6 @@
 use super::helpers::{autodiff_gradient_x, autodiff_gradient_y};
 use super::TestAutodiffBackend;
+use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use crate::solver::inverse::elastic_2d::Config;
 use crate::solver::inverse::pinn::elastic_2d::model::ElasticPINN2D;
 use burn::tensor::Tensor;
@@ -66,7 +67,7 @@ fn test_gradient_batch_consistency() {
 #[test]
 fn test_pde_residual_components() {
     // Validate that PDE residual computation doesn't produce NaN/Inf
-    let config = Config::forward_problem(1e9, 5e8, 1000.0);
+    let config = Config::forward_problem(1e9, 5e8, DENSITY_WATER_NOMINAL);
     let device = Default::default();
     let model = ElasticPINN2D::<TestAutodiffBackend>::new(&config, &device).unwrap();
 

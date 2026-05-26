@@ -1,6 +1,7 @@
 use super::super::config::BurnPINNConfig;
 use super::trainer_impl::BurnPINNTrainer;
 use burn::backend::{Autodiff, NdArray};
+use crate::core::constants::fundamental::SOUND_SPEED_AIR;
 use ndarray::{Array1, Array2};
 
 type TestBackend = Autodiff<NdArray<f32>>;
@@ -41,7 +42,7 @@ fn test_train_basic() {
     let x_data = Array1::linspace(-1.0, 1.0, n);
     let t_data = Array1::linspace(0.0, 0.1, n);
     let u_data = Array2::zeros((n, 1));
-    let result = trainer.train(&x_data, &t_data, &u_data, 343.0, &device, 10);
+    let result = trainer.train(&x_data, &t_data, &u_data, SOUND_SPEED_AIR, &device, 10);
     let metrics = result.unwrap();
     assert_eq!(metrics.epochs_completed, 10);
     assert_eq!(metrics.total_loss.len(), 10);
@@ -59,7 +60,7 @@ fn test_train_mismatched_dimensions() {
     let x_data = Array1::linspace(-1.0, 1.0, 20);
     let t_data = Array1::linspace(0.0, 0.1, 30);
     let u_data = Array2::zeros((20, 1));
-    let result = trainer.train(&x_data, &t_data, &u_data, 343.0, &device, 10);
+    let result = trainer.train(&x_data, &t_data, &u_data, SOUND_SPEED_AIR, &device, 10);
     assert!(result.is_err());
 }
 
@@ -75,7 +76,7 @@ fn test_train_invalid_u_shape() {
     let x_data = Array1::linspace(-1.0, 1.0, n);
     let t_data = Array1::linspace(0.0, 0.1, n);
     let u_data = Array2::zeros((n, 2));
-    let result = trainer.train(&x_data, &t_data, &u_data, 343.0, &device, 10);
+    let result = trainer.train(&x_data, &t_data, &u_data, SOUND_SPEED_AIR, &device, 10);
     assert!(result.is_err());
 }
 
@@ -94,7 +95,7 @@ fn test_train_metrics_recording() {
     let t_data = Array1::linspace(0.0, 0.1, n);
     let u_data = Array2::zeros((n, 1));
     let metrics = trainer
-        .train(&x_data, &t_data, &u_data, 343.0, &device, 5)
+        .train(&x_data, &t_data, &u_data, SOUND_SPEED_AIR, &device, 5)
         .unwrap();
     assert_eq!(metrics.total_loss.len(), 5);
     assert_eq!(metrics.data_loss.len(), 5);
@@ -171,11 +172,11 @@ fn test_multiple_training_runs() {
     let t_data = Array1::linspace(0.0, 0.1, n);
     let u_data = Array2::zeros((n, 1));
     let metrics1 = trainer
-        .train(&x_data, &t_data, &u_data, 343.0, &device, 5)
+        .train(&x_data, &t_data, &u_data, SOUND_SPEED_AIR, &device, 5)
         .unwrap();
     assert_eq!(metrics1.epochs_completed, 5);
     let metrics2 = trainer
-        .train(&x_data, &t_data, &u_data, 343.0, &device, 5)
+        .train(&x_data, &t_data, &u_data, SOUND_SPEED_AIR, &device, 5)
         .unwrap();
     assert_eq!(metrics2.epochs_completed, 5);
 }

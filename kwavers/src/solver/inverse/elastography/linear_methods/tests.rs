@@ -1,6 +1,5 @@
 //! Value-semantic regression tests for linear elastography inversion methods.
 
-use std::f64::consts::PI;
 
 use super::direct::direct_inversion;
 use super::directional::directional_phase_gradient_inversion;
@@ -12,6 +11,7 @@ use crate::domain::grid::Grid;
 use crate::domain::imaging::ultrasound::elastography::InversionMethod;
 use crate::physics::acoustics::imaging::modalities::elastography::displacement::DisplacementField;
 use crate::solver::inverse::elastography::config::ShearWaveInversionConfig;
+use crate::core::constants::numerical::{TWO_PI};
 
 #[test]
 fn test_time_of_flight_inversion() {
@@ -55,7 +55,7 @@ fn test_direct_inversion_synthetic() {
 
     // Synthetic wave: plane wave along X with speed cs = 3.0 m/s at 100 Hz
     let frequency = 100.0;
-    let k_wave = 2.0 * PI * frequency / 3.0;
+    let k_wave = TWO_PI * frequency / 3.0;
 
     for i in 0..nx {
         let x = i as f64 * dx;
