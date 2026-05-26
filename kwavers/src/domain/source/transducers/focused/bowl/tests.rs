@@ -2,7 +2,6 @@ use super::*;
 use crate::core::constants::numerical::{FOUR_PI, MHZ_TO_HZ, MPA_TO_PA, TWO_PI};
 use crate::core::error::KwaversError;
 use crate::domain::grid::Grid;
-use std::f64::consts::PI;
 
 #[test]
 fn bowl_layout_uses_canonical_equal_area_cap() {

@@ -120,8 +120,6 @@ fn test_pressure_correction_formula_dc_bin_nullification() {
 ///
 #[test]
 fn test_pressure_correction_dispersion_term_matches_analytical() {
-    use std::f64::consts::PI;
-
     const NX: usize = 32;
     const NY: usize = 1;
     const NZ: usize = 1;

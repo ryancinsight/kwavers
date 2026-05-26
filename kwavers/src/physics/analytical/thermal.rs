@@ -260,13 +260,38 @@ pub fn acoustic_heat_source_density(
     p_field.iter().map(|&p| p * p * inv_rhoc).collect()
 }
 
+/// Acoustic intensity from peak pressure amplitude.
+///
+/// For a CW plane wave (or time-averaged over a full cycle):
+/// ```text
+/// I = p² / (2·ρ·c)   [W/m²]
+/// ```
+///
+/// This is the Spatial-Peak Pulse-Average Intensity (ISPPA) when `p` is the
+/// peak pressure amplitude, and the Spatial-Peak Time-Average Intensity
+/// (ISPTA) for a CW exposure (duty cycle = 1).
+///
+/// # Arguments
+/// * `p_field` – peak pressure amplitude field [Pa], any shape passed as 1-D
+/// * `rho` – medium density [kg/m³]
+/// * `c` – speed of sound [m/s]
+///
+/// # Reference
+/// Pierce (1989) *Acoustics*, §1.11.
+#[must_use]
+#[inline]
+pub fn acoustic_intensity_from_amplitude(p_field: &[f64], rho: f64, c: f64) -> Vec<f64> {
+    let inv_2rhoc = 0.5 / (rho * c);
+    p_field.iter().map(|&p| p * p * inv_2rhoc).collect()
+}
+
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
-    use crate::core::constants::numerical::{FOUR_PI, MHZ_TO_HZ, MPA_TO_PA};
+    use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
     use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
     use crate::core::constants::tissue_acoustics::DENSITY_BLOOD;
     use crate::core::constants::tissue_thermal::{SPECIFIC_HEAT_BLOOD, SPECIFIC_HEAT_TISSUE};
@@ -434,6 +459,51 @@ mod tests {
             (q2 / q1 - 4.0).abs() < 1e-10,
             "quadratic scaling violated: q2/q1={}",
             q2 / q1
+        );
+    }
+
+    #[test]
+    fn acoustic_intensity_from_amplitude_formula() {
+        // I = p²/(2ρc)
+        let p = 1.0e6_f64; // 1 MPa
+        let rho = 1000.0_f64;
+        let c = 1500.0_f64;
+        let expected = p * p / (2.0 * rho * c);
+        let i = acoustic_intensity_from_amplitude(&[p], rho, c);
+        assert!(
+            (i[0] - expected).abs() / expected < 1e-12,
+            "I={} expected={expected}",
+            i[0]
+        );
+    }
+
+    #[test]
+    fn acoustic_intensity_quadratic_in_pressure() {
+        // Doubling pressure → 4× intensity
+        let rho = 1060.0_f64;
+        let c = 1540.0_f64;
+        let i1 = acoustic_intensity_from_amplitude(&[5.0e5], rho, c)[0];
+        let i2 = acoustic_intensity_from_amplitude(&[1.0e6], rho, c)[0];
+        assert!(
+            (i2 / i1 - 4.0).abs() < 1e-10,
+            "quadratic violated: i2/i1={}",
+            i2 / i1
+        );
+    }
+
+    #[test]
+    fn acoustic_intensity_heat_source_identity() {
+        // Q = α·p²/(ρc) = 2α·I: acoustic_heat_source_density = 2α · acoustic_intensity_from_amplitude
+        let p = 2.5e5_f64;
+        let alpha = 6.0_f64;
+        let rho = 1050.0_f64;
+        let c = 1580.0_f64;
+        let q = acoustic_heat_source_density(&[p], alpha, rho, c)[0];
+        let i = acoustic_intensity_from_amplitude(&[p], rho, c)[0];
+        assert!(
+            (q - 2.0 * alpha * i).abs() / q < 1e-12,
+            "Q={q} 2αI={}",
+            2.0 * alpha * i
         );
     }
 }

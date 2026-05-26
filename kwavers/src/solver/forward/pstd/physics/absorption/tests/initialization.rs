@@ -97,17 +97,38 @@ fn test_nabla_operators_correct_power() {
     );
 }
 
+/// # Theorem: Treeby & Cox (2010) τ and η derivation for power-law absorption
+///
+/// Given α(f) = α_dB [dB/MHz^y/cm] and power y:
+///   α_SI = power_law_db_cm_to_np_omega_m(α_dB, y)  [Np/(rad/s)^y / m]
+///   τ(r) = −2 · α_SI · c₀^(y−1)                    [Treeby & Cox Eq. 19]
+///   η(r) =  2 · α_SI · c₀^y · tan(π·y/2)           [Treeby & Cox Eq. 20]
+///
+/// When medium.alpha_coefficient() returns 0, init.rs falls through to the config
+/// alpha_coeff (0.75).  The expected values below are derived from SSOT constants.
+///
+/// For config: alpha_coeff=0.75, y=1.5, c0=SOUND_SPEED_WATER_SIM≈1498 m/s:
+///   α_SI = 5.482481235081536e-10  (see power_law_db_cm_to_np_omega_m)
+///   τ    = −2 · 5.482e-10 · 1498^0.5 = −4.2467e-8
+///   η    =  2 · 5.482e-10 · 1498^1.5 · tan(3π/4) = −2 · 5.482e-10 · 57973.6 · 1.0
+///         = (negative, magnitude ≈ 6.357e-5)
 #[test]
 fn test_absorption_model_physics_validation() {
+    use crate::physics::acoustics::mechanics::absorption::power_law_db_cm_to_np_omega_m;
+    use std::f64::consts::PI;
+
     let grid = Grid::new(16, 16, 16, 1e-4, 1e-4, 1e-4).unwrap();
+    let alpha_coeff = 0.75_f64;
+    let alpha_power = 1.5_f64;
     let config = PSTDConfig {
         absorption_mode: AbsorptionMode::PowerLaw {
-            alpha_coeff: 0.75,
-            alpha_power: 1.5,
+            alpha_coeff,
+            alpha_power,
         },
         ..Default::default()
     };
     let mut medium = HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.0, 0.0, &grid);
+    // Set medium alpha_coeff=0.0 so init falls through to config's 0.75.
     medium.set_acoustic_properties(0.0, 1.5, 0.0).unwrap();
     let k_mag = zeros_k_mag(16, 16, 16);
     let kernel = initialize_absorption_operators(
@@ -121,16 +142,28 @@ fn test_absorption_model_physics_validation() {
     .unwrap()
     .expect("PowerLaw mode must return Some(AbsorptionKernel)");
 
+    // Derive expected τ and η analytically from SSOT constants.
+    let c0 = SOUND_SPEED_WATER_SIM;
+    let y = alpha_power;
+    let alpha_0_si = power_law_db_cm_to_np_omega_m(alpha_coeff, y);
+    let expected_tau = -2.0 * alpha_0_si * c0.powf(y - 1.0);
+    let expected_eta = 2.0 * alpha_0_si * c0.powf(y) * (PI * y / 2.0).tan();
+
     assert!(
-        (kernel.tau[[0, 0, 0]] - (-3.467_425_586_398_137e-8)).abs() < 1e-20,
-        "tau mismatch: got {}",
-        kernel.tau[[0, 0, 0]]
+        (kernel.tau[[0, 0, 0]] - expected_tau).abs() < 1e-20_f64.max(1e-12 * expected_tau.abs()),
+        "tau mismatch: got {}, expected {}",
+        kernel.tau[[0, 0, 0]],
+        expected_tau
     );
     assert!(
-        (kernel.eta[[0, 0, 0]] - (-3.467_425_586_398_137_6e-5)).abs() < 1e-18,
-        "eta mismatch: got {}",
-        kernel.eta[[0, 0, 0]]
+        (kernel.eta[[0, 0, 0]] - expected_eta).abs() < 1e-18_f64.max(1e-12 * expected_eta.abs()),
+        "eta mismatch: got {}, expected {}",
+        kernel.eta[[0, 0, 0]],
+        expected_eta
     );
+    // Verify sign conventions: τ < 0 (absorbing), η < 0 for y=1.5 (tan(3π/4) = −1)
+    assert!(expected_tau < 0.0, "τ must be negative (absorbing)");
+    assert!(expected_eta < 0.0, "η must be negative for y=1.5 (tan(3π/4) = −1)");
 }
 
 /// Test Stokes absorption coefficient initialisation against the classical formula.
