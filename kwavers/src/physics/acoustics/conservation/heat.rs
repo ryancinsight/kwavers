@@ -63,7 +63,7 @@ mod tests {
     fn heat_source_zero_for_zero_acoustic_fields() {
         let s = (4, 4, 4);
         let zero = Array3::<f64>::zeros(s);
-        let rho = uniform(s, 1000.0);
+        let rho = uniform(s, DENSITY_WATER_NOMINAL);
         let c = uniform(s, SOUND_SPEED_WATER_SIM);
         let alpha = uniform(s, 5.0);
         let q = acoustic_heat_source(&zero, &zero, &zero, &zero, &rho, &c, &alpha);
@@ -81,7 +81,7 @@ mod tests {
         let s = (4, 4, 4);
         let p = uniform(s, 5000.0);
         let v = uniform(s, 0.1);
-        let rho = uniform(s, 1000.0);
+        let rho = uniform(s, DENSITY_WATER_NOMINAL);
         let c = uniform(s, SOUND_SPEED_WATER_SIM);
         let alpha = Array3::<f64>::zeros(s);
         let q = acoustic_heat_source(&p, &v, &v, &v, &rho, &c, &alpha);
@@ -122,9 +122,9 @@ mod tests {
     #[test]
     fn heat_source_nonnegative_for_physical_fields() {
         let s = (4, 4, 4);
-        let p = uniform(s, 1000.0);
+        let p = uniform(s, 1000.0); // 1000 Pa test pressure
         let v = uniform(s, 0.5);
-        let rho = uniform(s, 1000.0);
+        let rho = uniform(s, DENSITY_WATER_NOMINAL);
         let c = uniform(s, SOUND_SPEED_WATER_SIM);
         let alpha = uniform(s, 2.0);
         let q = acoustic_heat_source(&p, &v, &v, &v, &rho, &c, &alpha);

@@ -21,7 +21,7 @@ use kwavers::analysis::signal_processing::localization::beamforming_search::{
     LocalizationBeamformingMethod, SearchGrid,
 };
 use kwavers::domain::sensor::beamforming::BeamformingCoreConfig;
-use kwavers::domain::sensor::{ArrayGeometry, Position, Sensor, SensorArray};
+use kwavers::domain::sensor::{Position, Sensor, SensorArray, SensorArrayGeometry};
 
 use ndarray::Array3;
 
@@ -35,7 +35,7 @@ fn make_array(sound_speed: f64) -> SensorArray {
         Sensor::new(3, Position::new(0.015, 0.0, 0.0)),
     ];
 
-    SensorArray::new(sensors, sound_speed, ArrayGeometry::Arbitrary)
+    SensorArray::new(sensors, sound_speed, SensorArrayGeometry::Arbitrary)
 }
 
 /// Synthesize transient impulse data consistent with SRP-DAS and an explicit delay reference.

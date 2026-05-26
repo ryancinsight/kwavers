@@ -1,6 +1,6 @@
 use kwavers::domain::grid::Grid;
 use kwavers::domain::sensor::beamforming::SensorBeamformer;
-use kwavers::domain::sensor::{ArrayGeometry, Position, Sensor, SensorArray};
+use kwavers::domain::sensor::{Position, Sensor, SensorArray, SensorArrayGeometry};
 
 #[test]
 fn test_geometric_delay_calculation() {
@@ -12,7 +12,7 @@ fn test_geometric_delay_calculation() {
 
     let sensors = vec![s0, s1];
     let sound_speed = 1500.0;
-    let array = SensorArray::new(sensors, sound_speed, ArrayGeometry::Linear);
+    let array = SensorArray::new(sensors, sound_speed, SensorArrayGeometry::Linear);
 
     let sampling_freq = 1.0e6;
     let beamformer = SensorBeamformer::new(array, sampling_freq);

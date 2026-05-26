@@ -800,7 +800,7 @@ fn validate_multi_modal_fusion_ultrasound_optical() {
     // Theorem: Multi-modal fusion enhances diagnostic accuracy through complementary information
 
     use kwavers::physics::acoustics::imaging::fusion::{
-        FusionConfig, FusionMethod, MultiModalFusion, RegistrationMethod,
+        FusionConfig, ImagingFusionMethod, MultiModalFusion, RegistrationMethod,
     };
     use kwavers::physics::optics::sonoluminescence::{
         EmissionParameters, SonoluminescenceEmission,
@@ -815,7 +815,7 @@ fn validate_multi_modal_fusion_ultrasound_optical() {
 
     let fusion_config = FusionConfig {
         output_resolution: [1e-4, 1e-4, 1e-4],
-        fusion_method: FusionMethod::WeightedAverage,
+        fusion_method: ImagingFusionMethod::WeightedAverage,
         registration_method: RegistrationMethod::RigidBody,
         modality_weights,
         min_quality_threshold: 0.7,
@@ -928,7 +928,7 @@ fn validate_fusion_registration_validation() {
     // Theorem: Accurate spatial registration is critical for meaningful fusion
 
     use kwavers::physics::acoustics::imaging::fusion::{
-        FusionConfig, FusionMethod, MultiModalFusion, RegistrationMethod,
+        FusionConfig, ImagingFusionMethod, MultiModalFusion, RegistrationMethod,
     };
     use ndarray::Array3;
     use std::collections::HashMap;
@@ -940,7 +940,7 @@ fn validate_fusion_registration_validation() {
 
     let fusion_config = FusionConfig {
         output_resolution: [1e-4, 1e-4, 1e-4],
-        fusion_method: FusionMethod::FeatureBased,
+        fusion_method: ImagingFusionMethod::FeatureBased,
         registration_method: RegistrationMethod::RigidBody,
         modality_weights,
         min_quality_threshold: 0.8,
@@ -986,9 +986,9 @@ fn validate_fusion_registration_validation() {
 
     // Test different fusion methods
     let methods = vec![
-        FusionMethod::WeightedAverage,
-        FusionMethod::FeatureBased,
-        FusionMethod::Probabilistic,
+        ImagingFusionMethod::WeightedAverage,
+        ImagingFusionMethod::FeatureBased,
+        ImagingFusionMethod::Probabilistic,
     ];
 
     for method in methods {
@@ -1016,7 +1016,7 @@ fn validate_interdisciplinary_fusion_quality() {
     // Theorem: Fusion quality depends on registration accuracy and modality complementarity
 
     use kwavers::physics::acoustics::imaging::fusion::{
-        FusionConfig, FusionMethod, MultiModalFusion, RegistrationMethod,
+        FusionConfig, ImagingFusionMethod, MultiModalFusion, RegistrationMethod,
     };
     use ndarray::Array3;
     use std::collections::HashMap;
@@ -1051,7 +1051,7 @@ fn validate_interdisciplinary_fusion_quality() {
 
     let fusion_config = FusionConfig {
         output_resolution: [1e-4, 1e-4, 1e-4],
-        fusion_method: FusionMethod::WeightedAverage,
+        fusion_method: ImagingFusionMethod::WeightedAverage,
         registration_method: RegistrationMethod::RigidBody,
         modality_weights,
         min_quality_threshold: 0.6,

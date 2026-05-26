@@ -3,18 +3,19 @@
 //! Tests extracted from filters module to maintain GRASP compliance (<500 lines/module).
 
 use kwavers::solver::reconstruction::photoacoustic::{
-    Filters, PhotoacousticAlgorithm, PhotoacousticConfig,
+    Filters, PhotoacousticAlgorithm, ReconstructionPhotoacousticConfig,
 };
 use kwavers::solver::reconstruction::ReconstructionFilterType;
 use ndarray::Array2;
 use std::f64::consts::PI;
 
 /// Helper to create test configuration
-fn create_test_config() -> PhotoacousticConfig {
-    PhotoacousticConfig {
+fn create_test_config() -> ReconstructionPhotoacousticConfig {
+    ReconstructionPhotoacousticConfig {
         algorithm: PhotoacousticAlgorithm::FilteredBackProjection,
         sensor_positions: vec![[0.0, 0.0, 0.0]],
         grid_size: [64, 64, 64],
+        grid_spacing: [1e-4, 1e-4, 1e-4],
         sound_speed: 1500.0,
         sampling_frequency: 1e6,
         envelope_detection: false,

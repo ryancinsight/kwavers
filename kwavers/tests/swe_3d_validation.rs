@@ -38,7 +38,7 @@
 //!   acoustic radiation force." *Ultrasound in Medicine & Biology*, 37(4), 546-558.
 
 use kwavers::clinical::therapy::swe_3d_workflows::{
-    ClinicalDecisionSupport, ElasticityMap3D, VolumetricROI,
+    ElasticityMap3D, Swe3dClinicalDecisionSupport, VolumetricROI,
 };
 use kwavers::domain::grid::Grid;
 use kwavers::domain::medium::heterogeneous::HeterogeneousMedium;
@@ -242,7 +242,7 @@ fn test_clinical_liver_fibrosis_accuracy() {
     let stats = elasticity_map.volumetric_statistics(&liver_roi);
 
     // Clinical decision support
-    let cds = ClinicalDecisionSupport::default();
+    let cds = Swe3dClinicalDecisionSupport::default();
     let classification = cds.classify_liver_fibrosis(&stats);
 
     println!("Clinical Assessment Results:");

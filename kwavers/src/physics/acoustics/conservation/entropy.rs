@@ -82,7 +82,7 @@ mod tests {
         let grid = small_grid();
         let s = (grid.nx, grid.ny, grid.nz);
         let zero = Array3::<f64>::zeros(s);
-        let rho = uniform(s, 1000.0);
+        let rho = uniform(s, DENSITY_WATER_NOMINAL);
         let c = uniform(s, SOUND_SPEED_WATER_SIM);
         let alpha = uniform(s, 5.0); // non-zero absorption, but zero energy
         let ds = entropy_production_rate(

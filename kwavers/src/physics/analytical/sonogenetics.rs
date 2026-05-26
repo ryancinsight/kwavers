@@ -240,7 +240,7 @@ mod tests {
 
     #[test]
     fn streaming_velocity_positive() {
-        let v = acoustic_streaming_velocity(1000.0, 1e-3, 0.5, SOUND_SPEED_WATER_SIM, 0.05);
+        let v = acoustic_streaming_velocity(DENSITY_WATER_NOMINAL, 1e-3, 0.5, SOUND_SPEED_WATER_SIM, 0.05);
         assert!(v > 0.0);
     }
 

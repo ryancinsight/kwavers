@@ -4,13 +4,13 @@
 //! fields against each other and, where possible, against the analytical
 //! d'Alembert solution. Generates PNG figures for each test scenario.
 
-use kwavers::boundary::{DomainPmlConfig, PMLBoundary};
+use kwavers::boundary::{DomainPMLBoundary, DomainPmlConfig};
 use kwavers::core::error::KwaversResult;
 use kwavers::domain::source::NullSource;
 use kwavers::medium::HomogeneousMedium;
 use kwavers::physics::acoustics::mechanics::absorption::AbsorptionMode;
 use kwavers::solver::forward::nonlinear::westervelt_spectral::WesterveltWave;
-use kwavers::solver::pstd::numerics::spectral_correction::CorrectionMethod;
+use kwavers::solver::pstd::numerics::spectral_correction::SpectralCorrectionMethod;
 use kwavers::{
     AcousticWaveModel, FdtdConfig, FdtdPlugin, Grid, KuznetsovConfig, KuznetsovWave, PSTDConfig,
     PSTDPlugin, PluginManager,
@@ -435,7 +435,7 @@ fn run_fdtd_simulation_with_time(
     plugin_manager.initialize(grid, medium)?;
 
     let sources = Vec::new();
-    let mut boundary = PMLBoundary::new(DomainPmlConfig::default().with_thickness(8))?;
+    let mut boundary = DomainPMLBoundary::new(DomainPmlConfig::default().with_thickness(8))?;
 
     for step in 0..n_steps {
         let t = step as f64 * dt;
@@ -461,7 +461,7 @@ fn run_pstd_simulation_with_time(
 ) -> KwaversResult<Array3<f64>> {
     let mut config = PSTDConfig::default();
     config.spectral_correction.enabled = true;
-    config.spectral_correction.method = CorrectionMethod::SincSpatial;
+    config.spectral_correction.method = SpectralCorrectionMethod::SincSpatial;
     config.anti_aliasing.enabled = true;
     config.absorption_mode = AbsorptionMode::Lossless;
 
@@ -482,7 +482,7 @@ fn run_pstd_simulation_with_time(
     plugin_manager.initialize(grid, medium)?;
 
     let sources = Vec::new();
-    let mut boundary = PMLBoundary::new(DomainPmlConfig::default().with_thickness(8))?;
+    let mut boundary = DomainPMLBoundary::new(DomainPmlConfig::default().with_thickness(8))?;
 
     for step in 0..n_steps {
         let t = step as f64 * dt;

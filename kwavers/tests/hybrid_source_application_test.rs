@@ -5,7 +5,7 @@ use kwavers::domain::plugin::{Plugin, PluginContext, PluginFields};
 use kwavers::domain::signal::SineWave;
 use kwavers::domain::source::{GaussianBuilder, Source};
 use kwavers::solver::forward::hybrid::domain_decomposition::{DomainRegion, DomainType};
-use kwavers::solver::forward::hybrid::{DecompositionStrategy, HybridConfig, HybridPlugin};
+use kwavers::solver::forward::hybrid::{HybridConfig, HybridDecompositionStrategy, HybridPlugin};
 use kwavers::solver::forward::pstd::config::{BoundaryConfig as PSTDBoundaryConfig, PSTDConfig};
 use ndarray::{Array3, Array4};
 use std::sync::Arc;
@@ -33,7 +33,7 @@ fn test_hybrid_source_application() {
     };
 
     let config = HybridConfig {
-        decomposition_strategy: DecompositionStrategy::UserDefined(vec![region]),
+        decomposition_strategy: HybridDecompositionStrategy::UserDefined(vec![region]),
         pstd_config,
         ..Default::default()
     };
@@ -67,7 +67,7 @@ fn test_hybrid_source_application() {
         thickness: 4,
         ..Default::default()
     };
-    let mut boundary = kwavers::domain::boundary::PMLBoundary::new(pml_config).unwrap();
+    let mut boundary = kwavers::domain::boundary::DomainPMLBoundary::new(pml_config).unwrap();
     let sources: Vec<Box<dyn Source>> = vec![Box::new(source)];
     let extra_fields = PluginFields::new(Array3::zeros((1, 1, 1)));
 

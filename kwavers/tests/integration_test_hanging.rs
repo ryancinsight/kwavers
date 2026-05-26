@@ -1,7 +1,7 @@
 //! Integration tests using plugin-based solver
 
 use kwavers::{
-    boundary::PMLBoundary,
+    boundary::DomainPMLBoundary,
     grid::Grid,
     medium::{CoreMedium, HomogeneousMedium},
     core::constants::{DENSITY_WATER, SOUND_SPEED_WATER},
@@ -24,7 +24,7 @@ fn test_point_source_propagation() {
         thickness: 10,
         ..Default::default()
     };
-    let boundary = PMLBoundary::new(pml_config).expect("Failed to create PML boundary");
+    let boundary = DomainPMLBoundary::new(pml_config).expect("Failed to create PML boundary");
 
     // Create source
     let source = PointSource::new(
