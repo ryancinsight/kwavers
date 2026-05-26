@@ -53,6 +53,70 @@ impl BowlConfig {
         )
     }
 
+    /// Build a spherical-cap bowl from focus, vertex-to-focus axis, radius,
+    /// and aperture diameter.
+    ///
+    /// The axis vector fixes the bowl orientation without requiring clinical
+    /// or imaging callers to construct a synthetic vertex. This keeps
+    /// transcranial cap, abdominal skin-coupled cap, and other placement
+    /// adapters on the same source-domain geometry contract.
+    ///
+    /// # Theorem
+    ///
+    /// Let `F` be `focus_m`, `a` be `vertex_to_focus_axis`, and `R > 0`. This
+    /// constructor sets `V = F - R normalize(a)`. Therefore
+    /// `normalize(F - V) = normalize(a)` and `||F - V|| = R`; any
+    /// [`super::BowlTransducer`] generated from the returned config is centered
+    /// on `F` with the requested radius and aperture axis.
+    ///
+    /// # Errors
+    ///
+    /// Returns a validation error when:
+    /// - any coordinate or scalar parameter is non-finite,
+    /// - `radius_m` or `aperture_diameter_m` is non-positive,
+    /// - `aperture_diameter_m > 2 * radius_m`, or
+    /// - `vertex_to_focus_axis` has zero or non-finite norm.
+    pub(crate) fn from_focus_axis(
+        focus_m: [f64; 3],
+        vertex_to_focus_axis: [f64; 3],
+        radius_m: f64,
+        aperture_diameter_m: f64,
+        frequency_hz: f64,
+        amplitude_pa: f64,
+    ) -> KwaversResult<Self> {
+        validate_finite_vector("focus", focus_m)?;
+        validate_finite_vector("vertex_to_focus_axis", vertex_to_focus_axis)?;
+        validate_positive_finite_field("radius_of_curvature", radius_m)?;
+        validate_positive_finite_field("aperture_diameter", aperture_diameter_m)?;
+        validate_aperture_chord(radius_m, aperture_diameter_m)?;
+
+        let axis_norm = norm3(vertex_to_focus_axis);
+        if !positive_finite(axis_norm) {
+            return Err(field_validation_error(
+                "vertex_to_focus_axis",
+                format!("{vertex_to_focus_axis:?}"),
+                "must have positive finite norm to define the bowl acoustic axis",
+            ));
+        }
+
+        let inv_axis_norm = axis_norm.recip();
+        let vertex_m = [
+            focus_m[0] - radius_m * vertex_to_focus_axis[0] * inv_axis_norm,
+            focus_m[1] - radius_m * vertex_to_focus_axis[1] * inv_axis_norm,
+            focus_m[2] - radius_m * vertex_to_focus_axis[2] * inv_axis_norm,
+        ];
+
+        Ok(Self {
+            radius_of_curvature: radius_m,
+            diameter: aperture_diameter_m,
+            center: vertex_m,
+            focus: focus_m,
+            frequency: frequency_hz,
+            amplitude: amplitude_pa,
+            ..Self::default()
+        })
+    }
+
     /// Build a spherical-cap bowl from an axis reference, focus, radius, and
     /// aperture diameter.
     ///
@@ -92,22 +156,14 @@ impl BowlConfig {
         validate_finite_vector("focus", focus_m)?;
         validate_positive_finite_field("radius_of_curvature", radius_m)?;
         validate_positive_finite_field("aperture_diameter", aperture_diameter_m)?;
-        if aperture_diameter_m > 2.0 * radius_m {
-            return Err(field_validation_error(
-                "aperture_diameter",
-                aperture_diameter_m.to_string(),
-                "must not exceed 2 * radius_m for a spherical-cap chord",
-            ));
-        }
+        validate_aperture_chord(radius_m, aperture_diameter_m)?;
 
         let axis = [
             focus_m[0] - axis_reference_m[0],
             focus_m[1] - axis_reference_m[1],
             focus_m[2] - axis_reference_m[2],
         ];
-        let axis_norm = (axis[0])
-            .mul_add(axis[0], axis[1].mul_add(axis[1], axis[2] * axis[2]))
-            .sqrt();
+        let axis_norm = norm3(axis);
         // Guard both non-finite and near-zero: separation < 1 mm cannot define
         // a unique acoustic axis to geometric precision.
         if !positive_finite(axis_norm) || axis_norm < 1.0e-3 {
@@ -118,22 +174,14 @@ impl BowlConfig {
             ));
         }
 
-        let inv_axis_norm = axis_norm.recip();
-        let vertex_m = [
-            focus_m[0] - radius_m * axis[0] * inv_axis_norm,
-            focus_m[1] - radius_m * axis[1] * inv_axis_norm,
-            focus_m[2] - radius_m * axis[2] * inv_axis_norm,
-        ];
-
-        Ok(Self {
-            radius_of_curvature: radius_m,
-            diameter: aperture_diameter_m,
-            center: vertex_m,
-            focus: focus_m,
-            frequency: frequency_hz,
-            amplitude: amplitude_pa,
-            ..Self::default()
-        })
+        Self::from_focus_axis(
+            focus_m,
+            axis,
+            radius_m,
+            aperture_diameter_m,
+            frequency_hz,
+            amplitude_pa,
+        )
     }
 
     /// Return a config using the requested discretization element size [m].
@@ -151,4 +199,25 @@ fn distance3(a: [f64; 3], b: [f64; 3]) -> f64 {
             (a[1] - b[1]).mul_add(a[1] - b[1], (a[2] - b[2]) * (a[2] - b[2])),
         )
         .sqrt()
+}
+
+fn norm3(vector: [f64; 3]) -> f64 {
+    vector[0]
+        .mul_add(
+            vector[0],
+            vector[1].mul_add(vector[1], vector[2] * vector[2]),
+        )
+        .sqrt()
+}
+
+fn validate_aperture_chord(radius_m: f64, aperture_diameter_m: f64) -> KwaversResult<()> {
+    if aperture_diameter_m <= 2.0 * radius_m {
+        Ok(())
+    } else {
+        Err(field_validation_error(
+            "aperture_diameter",
+            aperture_diameter_m.to_string(),
+            "must not exceed 2 * radius_m for a spherical-cap chord",
+        ))
+    }
 }

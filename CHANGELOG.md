@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Changed (2026-05-25) - Focused Bowl Focus-Axis Source Constructor
+
+- [patch] Move clinical focused-bowl vertex construction into the source
+  domain with a crate-internal `BowlConfig::from_focus_axis` constructor.
+  Transcranial clinical cap placement now requests a focus, axis, radius, and
+  angular bounds from `BowlTransducer` instead of constructing a synthetic
+  vertex in the clinical layer. Added value-semantic source tests for radius,
+  axis direction, area weights, angular bounds, and degenerate-axis rejection.
+
 ### Fixed (2026-05-25) - Focused Bowl Source Label Artifact Closure
 
 - [patch] Replace vendor/helmet source identity labels in active Chapter 31

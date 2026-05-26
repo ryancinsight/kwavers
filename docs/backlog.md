@@ -43,6 +43,7 @@
 
 #### P2 — Architecture / API
 - [x] Active focused-bowl book/source artifacts: remove vendor/helmet labels from Chapter 31 renderer/prose and synchronize stale Chapter 29/31 metrics to generic focused-bowl model names. Regression test guards active artifacts. [patch]
+- [x] Focused-bowl source-domain orientation routing: add `BowlConfig::from_focus_axis`, reuse it from axis-reference construction, and route clinical transcranial cap placement through the source-domain focus/axis/radius constructor instead of constructing vertices in the clinical layer. [patch]
 - [ ] cargo-semver-checks: audit new public surface since Sprint 218 [patch]
   Added: from_velocity_mask, checkpointing API, set_pml_alpha_xyz, axisymmetric flag.
 

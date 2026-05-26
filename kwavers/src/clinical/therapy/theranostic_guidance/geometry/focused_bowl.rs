@@ -32,10 +32,10 @@ impl FocusedBowlVertexDirection {
     }
 
     #[must_use]
-    fn sign(self) -> f64 {
+    fn vertex_to_focus_axis(self) -> [f64; 3] {
         match self {
-            Self::PositiveZ => 1.0,
-            Self::NegativeZ => -1.0,
+            Self::PositiveZ => [0.0, 0.0, -1.0],
+            Self::NegativeZ => [0.0, 0.0, 1.0],
         }
     }
 }
@@ -78,30 +78,26 @@ impl FocusedBowlCapSpec {
 /// # Theorem
 ///
 /// For focus `F`, radius `R`, vertex direction `s e_z`, and angular bounds
-/// `[theta_min, theta_max]`, this constructs a bowl vertex
-/// `V = F + s R e_z` and delegates to
-/// [`BowlTransducer::with_angular_bounds`]. Therefore every returned point lies
-/// on `||x - F|| = R`, and equal-area weights and angular-domain validation are
-/// identical to direct source-domain bowl construction.
+/// `[theta_min, theta_max]`, this delegates the axis/radius conversion to
+/// [`BowlConfig::from_focus_axis`] and then calls
+/// [`BowlTransducer::with_angular_bounds`]. Therefore every returned point
+/// lies on `||x - F|| = R`, and equal-area weights plus angular-domain
+/// validation are identical to direct source-domain bowl construction.
 ///
 /// # Errors
 ///
 /// Returns any source-domain validation error for invalid count, radius,
-/// focus/vertex degeneracy, or angular bounds.
+/// focus/axis degeneracy, or angular bounds.
 pub(crate) fn focused_bowl_cap_points(spec: FocusedBowlCapSpec) -> KwaversResult<Vec<Point3>> {
     let focus_m = [spec.focus_m.x_m, spec.focus_m.y_m, spec.focus_m.z_m];
-    let vertex_m = [
-        spec.focus_m.x_m,
-        spec.focus_m.y_m,
-        spec.focus_m.z_m + spec.vertex_direction.sign() * spec.radius_m,
-    ];
-    let config = BowlConfig::from_vertex_focus(
-        vertex_m,
+    let config = BowlConfig::from_focus_axis(
         focus_m,
+        spec.vertex_direction.vertex_to_focus_axis(),
+        spec.radius_m,
         2.0 * spec.radius_m,
         spec.frequency_hz,
         spec.amplitude_pa,
-    );
+    )?;
     let bowl =
         BowlTransducer::with_angular_bounds(config, spec.angular_bounds, spec.element_count)?;
 

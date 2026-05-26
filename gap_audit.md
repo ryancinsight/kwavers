@@ -1,5 +1,37 @@
 # Gap Audit
 
+## Focused-Bowl Focus-Axis Source Constructor (2026-05-25)
+
+The clinical focused-bowl geometry adapter delegated equal-area sampling to
+`BowlTransducer`, but it still constructed a synthetic vertex from focus,
+radius, and a vertical cap direction. That left orientation-to-vertex
+conversion outside the source-domain transducer boundary.
+
+### Closure
+- Added crate-internal `BowlConfig::from_focus_axis`, which validates focus,
+  vertex-to-focus axis, radius, aperture chord, frequency, and amplitude, then
+  constructs the implied source-domain vertex.
+- Reused `from_focus_axis` inside `BowlConfig::from_axis_reference_focus`, so
+  axis-reference and direct-axis focused-bowl construction share the same
+  aperture chord and vertex derivation logic.
+- Routed the clinical transcranial focused-bowl cap adapter through
+  `BowlConfig::from_focus_axis` before calling
+  `BowlTransducer::with_angular_bounds`.
+- Added value-semantic tests proving radius preservation, positive-vertex
+  orientation, angular-bound area weights, and degenerate-axis rejection.
+
+### Verification summary
+- `rustfmt --edition 2021 ... --check` on the three edited Rust files: exit 0.
+- `git diff --check`: exit 0.
+- `cargo test -p kwavers focus_axis_preset --lib --message-format=short -j 1`:
+  blocked by concurrent workspace Cargo builds and exceeded the 300 s bounded
+  verification limit before test output.
+
+### Residual risk
+- Focused Cargo tests need to be rerun once the active `pykwavers`/workspace
+  build lock clears. The source change remains limited to constructor routing
+  and value-semantic tests.
+
 ## Focused-Bowl Source Label Artifact Closure (2026-05-25)
 
 Active book artifacts still encoded vendor/helmet source identity in Chapter 31

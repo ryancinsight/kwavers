@@ -235,6 +235,42 @@ fn axis_reference_preset_preserves_focus_axis_and_explicit_radius() {
 }
 
 #[test]
+fn focus_axis_preset_preserves_axis_radius_and_explicit_aperture() {
+    let focus = [0.02, -0.01, 0.03];
+    let axis = [0.0, 0.0, -2.0];
+    let radius = 0.150;
+    let aperture_diameter = 2.0 * radius;
+    let theta_min = 0.22_f64;
+    let theta_max = 1.18_f64;
+
+    let config =
+        BowlConfig::from_focus_axis(focus, axis, radius, aperture_diameter, 650.0e3, 1.5e5)
+            .unwrap();
+
+    assert_eq!(config.focus, focus);
+    assert_eq!(config.center, [focus[0], focus[1], focus[2] + radius]);
+    assert!((config.radius_of_curvature - radius).abs() < 1.0e-14);
+    assert!((config.diameter - aperture_diameter).abs() < 1.0e-14);
+
+    let bowl = BowlTransducer::with_polar_bounds(config, theta_min, theta_max, 128).unwrap();
+    let expected_area =
+        2.0 * std::f64::consts::PI * radius.powi(2) * (theta_min.cos() - theta_max.cos());
+    let summed_area: f64 = bowl.element_areas().iter().sum();
+
+    assert_eq!(bowl.element_count(), 128);
+    assert!((summed_area - expected_area).abs() < 1.0e-14);
+    for position in bowl.element_positions() {
+        let focus_to_element = sub3(*position, focus);
+        let distance_to_focus = norm3(focus_to_element);
+        let normalized_z = (position[2] - focus[2]) / radius;
+
+        assert!((distance_to_focus - radius).abs() < 1.0e-12);
+        assert!(normalized_z <= theta_min.cos() + 1.0e-12);
+        assert!(normalized_z >= theta_max.cos() - 1.0e-12);
+    }
+}
+
+#[test]
 fn axis_reference_preset_rejects_degenerate_axis() {
     let error = BowlConfig::from_axis_reference_focus(
         [0.0, 0.0, 0.0],
@@ -245,6 +281,15 @@ fn axis_reference_preset_rejects_degenerate_axis() {
         1.0e5,
     )
     .unwrap_err();
+
+    assert!(matches!(error, KwaversError::Validation(_)));
+}
+
+#[test]
+fn focus_axis_preset_rejects_degenerate_axis() {
+    let error =
+        BowlConfig::from_focus_axis([0.0, 0.0, 0.0], [0.0, 0.0, 0.0], 0.1, 0.15, 500.0e3, 1.0e5)
+            .unwrap_err();
 
     assert!(matches!(error, KwaversError::Validation(_)));
 }

@@ -46,6 +46,7 @@
 
 ### Closed 2026-05-25 (focused-bowl source label closure)
 
+- [x] `BowlConfig::from_focus_axis`: source-domain focus/axis/radius constructor added; clinical transcranial cap adapter no longer constructs a synthetic vertex outside `BowlTransducer`; radius/area/bounds/degenerate-axis tests added. Cargo verification blocked by active workspace build lock after 300 s [patch]
 - [x] Active Chapter 31 focused-bowl artifacts now use generic source labels; stale Chapter 29/31 metrics use current Rust model names; regression test rejects vendor/helmet source identity labels in active focused-bowl artifacts [patch]
 
 ### Closed 2026-05-22 (session 2 — visualization + tests)
