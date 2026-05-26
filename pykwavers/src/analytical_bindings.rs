@@ -27,6 +27,14 @@ use pyo3::prelude::*;
 /// Register all book-physics functions into the given Python sub-module.
 pub fn register_book(m: &Bound<'_, PyModule>) -> PyResult<()> {
     // wave
+    m.add_function(wrap_pyfunction!(wave::tone_burst_waveform, m)?)?;
+    m.add_function(wrap_pyfunction!(wave::pulse_train_waveform, m)?)?;
+    m.add_function(wrap_pyfunction!(wave::fubini_waveform, m)?)?;
+    m.add_function(wrap_pyfunction!(wave::shock_vapor_pulse_waveform, m)?)?;
+    m.add_function(wrap_pyfunction!(wave::goldberg_shock_parameter_sweep, m)?)?;
+    m.add_function(wrap_pyfunction!(wave::shock_enhanced_absorption_gain, m)?)?;
+    m.add_function(wrap_pyfunction!(wave::shock_waveform_pressure, m)?)?;
+    m.add_function(wrap_pyfunction!(wave::shock_heat_source_density, m)?)?;
     m.add_function(wrap_pyfunction!(wave::standing_wave_1d, m)?)?;
     m.add_function(wrap_pyfunction!(wave::plane_wave_pressure_1d, m)?)?;
     m.add_function(wrap_pyfunction!(wave::spherical_wave_pressure, m)?)?;
@@ -34,6 +42,7 @@ pub fn register_book(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(wave::transmission_pressure_coeff, m)?)?;
     m.add_function(wrap_pyfunction!(wave::power_law_attenuation_np_m, m)?)?;
     m.add_function(wrap_pyfunction!(wave::absorption_power_law_db_cm, m)?)?;
+    m.add_function(wrap_pyfunction!(wave::stokes_kirchhoff_absorption_np_m, m)?)?;
     m.add_function(wrap_pyfunction!(wave::fdtd_phase_error_1d, m)?)?;
     m.add_function(wrap_pyfunction!(wave::pstd_phase_error, m)?)?;
     m.add_function(wrap_pyfunction!(wave::kspace_correction_error, m)?)?;
@@ -53,6 +62,10 @@ pub fn register_book(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(transducer::focused_bowl_onaxis, m)?)?;
     m.add_function(wrap_pyfunction!(transducer::bli_stencil_weights, m)?)?;
     // cavitation
+    m.add_function(wrap_pyfunction!(cavitation::intrinsic_threshold_cavitation_probability, m)?)?;
+    m.add_function(wrap_pyfunction!(cavitation::frequency_dependent_intrinsic_threshold_pa, m)?)?;
+    m.add_function(wrap_pyfunction!(cavitation::cumulative_cavitation_probability, m)?)?;
+    m.add_function(wrap_pyfunction!(cavitation::prf_efficacy_factor, m)?)?;
     m.add_function(wrap_pyfunction!(cavitation::minnaert_resonance_hz, m)?)?;
     m.add_function(wrap_pyfunction!(cavitation::blake_threshold_pa, m)?)?;
     m.add_function(wrap_pyfunction!(cavitation::rayleigh_collapse_time_s, m)?)?;
@@ -68,10 +81,12 @@ pub fn register_book(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(tissue::tissue_properties, m)?)?;
     // safety
     m.add_function(wrap_pyfunction!(safety::mechanical_index, m)?)?;
+    m.add_function(wrap_pyfunction!(safety::mechanical_index_field, m)?)?;
     m.add_function(wrap_pyfunction!(safety::thermal_index_soft_tissue, m)?)?;
     m.add_function(wrap_pyfunction!(safety::thermal_index_bone, m)?)?;
     m.add_function(wrap_pyfunction!(safety::cem43_cumulative, m)?)?;
     m.add_function(wrap_pyfunction!(safety::arrhenius_damage_integral, m)?)?;
+    m.add_function(wrap_pyfunction!(safety::arrhenius_cumulative, m)?)?;
     m.add_function(wrap_pyfunction!(safety::fda_ispta_limit_mw_cm2, m)?)?;
     m.add_function(wrap_pyfunction!(safety::fda_isppa_limit_w_cm2, m)?)?;
     // skull
@@ -103,11 +118,13 @@ pub fn register_book(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(imaging::pw_compounding_lateral_psf, m)?)?;
     m.add_function(wrap_pyfunction!(imaging::lateral_resolution_m, m)?)?;
     // thermal
+    m.add_function(wrap_pyfunction!(thermal::adiabatic_temperature_rise_kelvin, m)?)?;
     m.add_function(wrap_pyfunction!(thermal::bioheat_focal_temperature_rise, m)?)?;
     m.add_function(wrap_pyfunction!(thermal::hifu_focal_pressure_gain, m)?)?;
     m.add_function(wrap_pyfunction!(thermal::gaussian_power_deposition_2d, m)?)?;
     m.add_function(wrap_pyfunction!(thermal::acoustic_intensity_depth_profile, m)?)?;
     m.add_function(wrap_pyfunction!(thermal::acoustic_power_deposition_depth_profile, m)?)?;
+    m.add_function(wrap_pyfunction!(thermal::acoustic_intensity_from_amplitude, m)?)?;
     m.add_function(wrap_pyfunction!(thermal::acoustic_heat_source_density, m)?)?;
     // bbb
     m.add_function(wrap_pyfunction!(bbb::bbb_permeability_hill, m)?)?;
@@ -131,5 +148,9 @@ pub fn register_book(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(rtm::rtm_multi_frequency_fusion, m)?)?;
     m.add_function(wrap_pyfunction!(rtm::temporal_modulation_frequencies, m)?)?;
     m.add_function(wrap_pyfunction!(rtm::standing_wave_suppression_gain, m)?)?;
+    m.add_function(wrap_pyfunction!(rtm::standing_wave_spatial_frequency_cycles_m, m)?)?;
+    m.add_function(wrap_pyfunction!(rtm::standing_wave_modulation_period_hz, m)?)?;
+    m.add_function(wrap_pyfunction!(rtm::standing_wave_field_1d, m)?)?;
+    m.add_function(wrap_pyfunction!(rtm::standing_wave_intensity_statistics, m)?)?;
     Ok(())
 }
