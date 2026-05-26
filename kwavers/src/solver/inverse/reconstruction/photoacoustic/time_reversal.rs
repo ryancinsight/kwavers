@@ -1,20 +1,64 @@
 //! Time reversal reconstruction for photoacoustic imaging
 //!
-//! This module implements the time reversal algorithm for photoacoustic
-//! image reconstruction based on solving the wave equation backward in time.
+//! Implements the k-space pseudospectral time-reversal method (TR) for
+//! photoacoustic image reconstruction.
 //!
-//! References:
-//! - Xu & Wang (2005) "Time-reversal reconstruction algorithm"
-//! - Treeby et al. (2010) "MATLAB toolbox"
+//! ## Mathematical Foundation
+//!
+//! ### Wave equation time-reversal symmetry
+//!
+//! The lossless scalar wave equation `∂²p/∂t² = c²∇²p` is invariant under
+//! `t → −t` (Fink 1992). Consequently, the initial pressure distribution
+//! `p₀(r)` can be recovered by:
+//!
+//! 1. Recording sensor data `p(r_s, t)` for `t ∈ [0, T]`.
+//! 2. Running the wave equation **forward** from `t = 0` to `t = T` with the
+//!    **time-reversed** sensor signal `p(r_s, T − t)` applied as a **hard**
+//!    (Dirichlet) source at each sensor location at every step.
+//! 3. The field at `t = T` equals `p₀(r)` (Treeby et al. 2010, §2.3).
+//!
+//! ### k-space propagator
+//!
+//! Exact (dispersion-free) propagation via the leapfrog update in k-space:
+//! ```text
+//! p̂(k, t+dt) = 2·cos(c·|k|·dt)·p̂(k, t) − p̂(k, t−dt)
+//! ```
+//! where `cos(c·|k|·dt)` is **real**. After multiplying by this real factor
+//! and inverse-FFTing, the result is a real pressure field.
+//! (Tabei et al. 2002, Eq. 2; Treeby & Cox 2010, Eq. 15.)
+//!
+//! ### Source injection — hard source (Dirichlet)
+//!
+//! At each TR time step `t`, the time-reversed sensor value
+//! `p(r_s, T − t)` **replaces** (not adds to) the field at the nearest
+//! grid node of each sensor location. This imposes a Dirichlet condition
+//! that drives the reconstruction.
+//! (Treeby et al. 2010, §2.3; k-Wave MATLAB source `kspaceFirstOrder3D.m`,
+//! `source.p_mode = 'dirichlet'`.)
+//!
+//! ## References
+//!
+//! - Fink M (1992). "Time reversal of ultrasonic fields — Part I: Basic
+//!   principles." IEEE Trans. UFFC 39(5):555–566. DOI:10.1109/58.156174
+//! - Tabei M, Mast TD, Waag RC (2002). "A k-space method for coupled
+//!   first-order acoustic propagation equations."
+//!   J. Acoust. Soc. Am. 111(1):53–63. DOI:10.1121/1.1421344
+//! - Treeby BE, Zhang EZ, Cox BT (2010). "Photoacoustic tomography in
+//!   absorbing acoustic media using combined photoacoustic and ultrasound
+//!   imaging." New J. Phys. 12, 055008. DOI:10.1088/1367-2630/12/5/055008
 
 use crate::core::error::KwaversResult;
+use crate::core::constants::numerical::TWO_PI;
 use crate::domain::grid::Grid;
 use crate::math::fft::{get_fft_for_grid, Fft3dInOutExt};
 use ndarray::{Array3, ArrayView2, Zip};
 use num_complex::Complex64;
-use crate::core::constants::numerical::{TWO_PI};
 
-/// Time reversal reconstruction algorithm
+/// k-space pseudospectral time-reversal reconstructor.
+///
+/// Propagates a real pressure field via the exact cosine leapfrog update
+/// in the Fourier domain, injecting time-reversed sensor signals as hard
+/// Dirichlet sources.
 #[derive(Debug)]
 pub struct PhotoacousticTimeReversal {
     grid_size: [usize; 3],
@@ -23,7 +67,13 @@ pub struct PhotoacousticTimeReversal {
 }
 
 impl PhotoacousticTimeReversal {
-    /// Create new time reversal reconstructor
+    /// Create a new time-reversal reconstructor.
+    ///
+    /// # Arguments
+    /// * `grid_size`          – `[nx, ny, nz]` grid dimensions
+    /// * `sound_speed`        – homogeneous sound speed `c₀` (m/s)
+    /// * `sampling_frequency` – temporal sampling rate (Hz)
+    /// * `_time_steps`        – (unused; kept for API compatibility)
     pub fn new(
         grid_size: [usize; 3],
         sound_speed: f64,
@@ -37,13 +87,14 @@ impl PhotoacousticTimeReversal {
         }
     }
 
-    /// Perform time reversal reconstruction
+    /// Reconstruct the initial pressure distribution via time reversal.
     ///
-    /// This implements the k-space pseudospectral time reversal method
-    /// which provides accurate reconstruction without numerical dispersion.
+    /// Runs the forward-in-pseudotime loop with time-reversed sensor data
+    /// injected as hard (Dirichlet) sources. Returns the reconstructed
+    /// pressure field `p₀(r)`.
+    ///
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
-    ///
+    /// Returns `Err` if the CFL condition is violated or FFT allocation fails.
     pub fn reconstruct(
         &self,
         sensor_data: ArrayView2<f64>,
@@ -54,15 +105,12 @@ impl PhotoacousticTimeReversal {
         let [nx, ny, nz] = self.grid_size;
         let fft = get_fft_for_grid(nx, ny, nz);
 
-        // Initialize pressure field
-        let mut pressure = Array3::zeros((nx, ny, nz));
-        let mut pressure_prev = Array3::zeros((nx, ny, nz));
-
-        // Time step
+        // Time step from sampling frequency (s).
         let dt = 1.0 / self.sampling_frequency;
         let c0 = self.sound_speed;
 
-        // Stability check (CFL condition)
+        // CFL stability check: c₀·dt/dx_min ≤ 1/√3 for 3-D pseudospectral
+        // (Tabei et al. 2002, Appendix A).
         let dx_min = grid.dx.min(grid.dy).min(grid.dz);
         let cfl = c0 * dt / dx_min;
         if cfl > 1.0 / f64::sqrt(3.0) {
@@ -74,143 +122,131 @@ impl PhotoacousticTimeReversal {
             ));
         }
 
-        // Create k-space operators
-        let kx = self.create_k_vector(nx, grid.dx);
-        let ky = self.create_k_vector(ny, grid.dy);
-        let kz = self.create_k_vector(nz, grid.dz);
+        // ── k-vectors (rad/m) ─────────────────────────────────────────────
+        // Standard DFT frequency ordering: k_n = n·(2π)/(N·dx) for n ≤ N/2,
+        // k_n = (n − N)·(2π)/(N·dx) for n > N/2.
+        let kx = Self::k_vector(nx, grid.dx);
+        let ky = Self::k_vector(ny, grid.dy);
+        let kz = Self::k_vector(nz, grid.dz);
 
-        // Create k-space operator for wave equation
-        let mut k_squared = Array3::zeros((nx, ny, nz));
-        for i in 0..nx {
-            for j in 0..ny {
-                for k in 0..nz {
-                    k_squared[[i, j, k]] =
-                        kz[k].mul_add(kz[k], ky[j].mul_add(ky[j], kx[i].powi(2)));
+        // ── Real cosine propagator cos(c₀·|k|·dt) ─────────────────────────
+        // Tabei et al. 2002, Eq. 2: p̂(t+dt) = 2·cos(c₀·|k|·dt)·p̂(t) − p̂(t−dt).
+        // The propagator is purely real; storing it as f64 avoids spurious
+        // imaginary contributions in the update step.
+        let propagator: Array3<f64> = {
+            let mut prop = Array3::zeros((nx, ny, nz));
+            for i in 0..nx {
+                for j in 0..ny {
+                    for k in 0..nz {
+                        let k2 = kx[i].mul_add(kx[i], ky[j].mul_add(ky[j], kz[k] * kz[k]));
+                        let arg = c0 * dt * k2.sqrt();
+                        prop[[i, j, k]] = arg.cos();
+                    }
                 }
+            }
+            prop
+        };
+
+        // ── Pre-compute sensor grid indices (nearest-neighbour) ────────────
+        let sensor_indices: Vec<[usize; 3]> = sensor_positions
+            .iter()
+            .map(|pos| {
+                [
+                    ((pos[0] / grid.dx).round() as usize).min(nx - 1),
+                    ((pos[1] / grid.dy).round() as usize).min(ny - 1),
+                    ((pos[2] / grid.dz).round() as usize).min(nz - 1),
+                ]
+            })
+            .collect();
+
+        // ── Time-reversal loop ─────────────────────────────────────────────
+        // Forward-time index `s` ∈ [0, n_time) maps to reversed sensor index
+        // `n_time − 1 − s`. At pseudo-time step `s`, inject sensor_data row
+        // `n_time − 1 − s` (Treeby et al. 2010, §2.3).
+        let mut pressure = Array3::<f64>::zeros((nx, ny, nz));
+        let mut pressure_prev = Array3::<f64>::zeros((nx, ny, nz));
+
+        for s in 0..n_time {
+            // Reversed sensor time index.
+            let sensor_t = n_time - 1 - s;
+            let sensor_row = sensor_data.row(sensor_t);
+
+            // Hard Dirichlet source: replace field values at sensor locations.
+            // (Treeby et al. 2010, §2.3; k-Wave `source.p_mode = 'dirichlet'`.)
+            for (idx, &[si, sj, sk]) in sensor_indices.iter().enumerate() {
+                pressure[[si, sj, sk]] = sensor_row[idx];
+            }
+
+            // k-space leapfrog: p_next = 2·cos(c·|k|·dt)·p − p_prev.
+            let pressure_next =
+                self.k_space_step(&pressure, &pressure_prev, &propagator, fft.as_ref())?;
+
+            pressure_prev = pressure;
+            pressure = pressure_next;
+
+            // Re-apply hard source after propagation so the source is active
+            // at every step (overrides what the propagator wrote at sensor sites).
+            for (idx, &[si, sj, sk]) in sensor_indices.iter().enumerate() {
+                pressure[[si, sj, sk]] = sensor_row[idx];
             }
         }
 
-        // Precompute propagator
-        let propagator = self.compute_propagator(&k_squared, c0, dt);
-
-        // Time reversal loop (backward in time)
-        for t_idx in (0..n_time).rev() {
-            // Inject sensor data at sensor positions
-            self.inject_sensor_data(
-                &mut pressure,
-                &sensor_data.row(t_idx),
-                sensor_positions,
-                grid,
-            )?;
-
-            // Apply k-space propagation
-            let pressure_next = self.k_space_step(
-                &pressure,
-                &pressure_prev,
-                &propagator,
-                &k_squared,
-                c0,
-                dt,
-                fft.as_ref(),
-            )?;
-
-            // Update fields
-            pressure_prev = pressure;
-            pressure = pressure_next;
-        }
-
-        // Return the initial pressure distribution (reconstructed image)
+        // At the end of `n_time` steps the field equals p₀(r).
         Ok(pressure)
     }
 
-    /// Create k-space vector
-    fn create_k_vector(&self, n: usize, dx: f64) -> Vec<f64> {
-        let mut k = vec![0.0; n];
+    /// Construct the standard DFT k-vector for `n` points and spacing `dx`.
+    ///
+    /// `k[i] = i·(2π/(n·dx))` for `i ≤ n/2`, and `(i−n)·(2π/(n·dx))` otherwise.
+    fn k_vector(n: usize, dx: f64) -> Vec<f64> {
         let dk = TWO_PI / (n as f64 * dx);
-
-        for (i, k_val) in k.iter_mut().enumerate() {
-            if i <= n / 2 {
-                *k_val = i as f64 * dk;
-            } else {
-                *k_val = f64::from(i as i32 - n as i32) * dk;
-            }
-        }
-
-        k
+        (0..n)
+            .map(|i| {
+                if i <= n / 2 {
+                    i as f64 * dk
+                } else {
+                    f64::from(i as i32 - n as i32) * dk
+                }
+            })
+            .collect()
     }
 
-    /// Compute k-space propagator for wave equation
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
+    /// One k-space leapfrog time step.
     ///
-    fn compute_propagator(&self, k_squared: &Array3<f64>, c0: f64, dt: f64) -> Array3<Complex64> {
-        let omega_dt = c0 * dt;
-        k_squared.mapv(|k2| {
-            let arg = omega_dt * k2.sqrt();
-            Complex64::new(arg.cos(), -arg.sin())
-        })
-    }
-
-    /// Perform one k-space time step
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
+    /// Computes `p_next(r) = IFFT{ 2·cos(c·|k|·dt)·FFT{p}(k) − FFT{p_prev}(k) }`.
     ///
-    #[allow(clippy::too_many_arguments)]
+    /// The propagator `cos(c·|k|·dt)` is real, so the update is exact and
+    /// dispersion-free. (Tabei et al. 2002, Eq. 2.)
     fn k_space_step(
         &self,
         pressure: &Array3<f64>,
         pressure_prev: &Array3<f64>,
-        propagator: &Array3<Complex64>,
-        _k_squared: &Array3<f64>,
-        _c0: f64,
-        _dt: f64,
+        propagator: &Array3<f64>,
         fft: &crate::math::fft::Fft3d,
     ) -> KwaversResult<Array3<f64>> {
         let [nx, ny, nz] = self.grid_size;
 
-        let mut pressure_hat = Array3::<Complex64>::zeros((nx, ny, nz));
-        let mut pressure_prev_hat = Array3::<Complex64>::zeros((nx, ny, nz));
-        fft.forward_into(pressure, &mut pressure_hat);
-        fft.forward_into(pressure_prev, &mut pressure_prev_hat);
+        // Forward FFT of current and previous pressure fields.
+        let mut p_hat = Array3::<Complex64>::zeros((nx, ny, nz));
+        let mut p_prev_hat = Array3::<Complex64>::zeros((nx, ny, nz));
+        fft.forward_into(pressure, &mut p_hat);
+        fft.forward_into(pressure_prev, &mut p_prev_hat);
 
-        // Apply k-space operator (exact solution in Fourier domain)
-        // p(t+dt) = 2*cos(c*k*dt)*p(t) - p(t-dt) + dt²*c²*source
-        let mut pressure_next_hat = Array3::<Complex64>::zeros((nx, ny, nz));
-        Zip::from(&mut pressure_next_hat)
+        // Leapfrog update in k-space: p̂_next = 2·cos·p̂ − p̂_prev.
+        // `propagator` is real (f64); multiply real cosine by complex spectrum.
+        let mut p_next_hat = Array3::<Complex64>::zeros((nx, ny, nz));
+        Zip::from(&mut p_next_hat)
             .and(propagator)
-            .and(&pressure_hat)
-            .and(&pressure_prev_hat)
-            .par_for_each(|pn, &prop, &p, &pp| {
-                *pn = 2.0 * prop * p - pp;
+            .and(&p_hat)
+            .and(&p_prev_hat)
+            .par_for_each(|pn, &cos_val, &p, &pp| {
+                *pn = Complex64::from(2.0 * cos_val) * p - pp;
             });
 
+        // Inverse FFT → real output.
         let mut out = Array3::<f64>::zeros((nx, ny, nz));
         let mut scratch = Array3::<Complex64>::zeros((nx, ny, nz));
-        fft.inverse_into(&pressure_next_hat, &mut out, &mut scratch);
+        fft.inverse_into(&p_next_hat, &mut out, &mut scratch);
         Ok(out)
-    }
-
-    /// Inject sensor data at sensor positions
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
-    fn inject_sensor_data(
-        &self,
-        pressure: &mut Array3<f64>,
-        sensor_values: &ndarray::ArrayView1<f64>,
-        sensor_positions: &[[f64; 3]],
-        grid: &Grid,
-    ) -> KwaversResult<()> {
-        for (sensor_idx, sensor_pos) in sensor_positions.iter().enumerate() {
-            // Find nearest grid point
-            let i = ((sensor_pos[0] / grid.dx) as usize).min(self.grid_size[0] - 1);
-            let j = ((sensor_pos[1] / grid.dy) as usize).min(self.grid_size[1] - 1);
-            let k = ((sensor_pos[2] / grid.dz) as usize).min(self.grid_size[2] - 1);
-
-            // Inject sensor value (additive for multiple sensors at same location)
-            pressure[[i, j, k]] += sensor_values[sensor_idx];
-        }
-
-        Ok(())
     }
 }

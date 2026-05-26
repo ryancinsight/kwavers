@@ -1,15 +1,49 @@
 //! Image reconstruction algorithm implementations.
+//!
+//! ## Time-reversal delay-and-sum (TR-DAS)
+//!
+//! This module provides `time_reversal_reconstruction`, a delay-and-sum
+//! back-projector operating on pressure snapshots from a forward simulation.
+//! It reconstructs `p₀(r)` by summing over detectors the **time-reversed**
+//! signal value at the propagation delay from each grid point to each detector.
+//!
+//! ### Algorithm (Xu & Wang 2005, Eq. 7)
+//!
+//! For grid point `r` and detector `d` at position `r_d`:
+//! ```text
+//! p₀(r) ≈ Σ_d  w(d, r) · p(r_d, T − |r − r_d|/c)
+//! ```
+//! where `T` is the total recording time and `w(d, r) = 1/|r − r_d|` is the
+//! spherical-spreading weight.
+//!
+//! The **time-reversed** index is `n_time − 1 − floor(delay / dt)`, which
+//! maps the forward-recorded signal to the TR convention.
+//!
+//! ### References
+//!
+//! - Xu M, Wang LV (2005). "Universal back-projection algorithm for
+//!   photoacoustic computed tomography."
+//!   Phys. Rev. E 71, 016706. DOI:10.1103/PhysRevE.71.016706
 
+use crate::core::constants::numerical::TWO_PI;
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
 use ndarray::Array3;
 use rayon::prelude::*;
-use crate::core::constants::numerical::{TWO_PI};
-/// Time reversal reconstruction.
-/// # Errors
-/// - Returns [`KwaversError::InternalError`] if the precondition for a InternalError-class constraint is violated.
-/// - Propagates any [`KwaversError`] returned by called functions.
+
+/// Reconstruct initial pressure `p₀(r)` from pressure snapshots via
+/// time-reversed delay-and-sum back-projection.
 ///
+/// # Arguments
+/// * `grid`           – spatial grid
+/// * `pressure_fields`– sequence of 3-D pressure snapshots (forward simulation)
+/// * `time_points`    – physical times corresponding to each snapshot (s)
+/// * `speed_of_sound` – homogeneous sound speed `c₀` (m/s)
+/// * `n_detectors`    – number of virtual ring detectors
+///
+/// # Errors
+/// Returns `Err` if the output buffer is not contiguous (should never occur
+/// for freshly allocated `Array3`).
 pub fn time_reversal_reconstruction(
     grid: &Grid,
     pressure_fields: &[Array3<f64>],
@@ -24,17 +58,23 @@ pub fn time_reversal_reconstruction(
     if n_time == 0 {
         return Ok(reconstructed);
     }
-    let t_start = time_points.first().copied().unwrap_or(0.0);
+
     let dt_time = if n_time >= 2 {
         (time_points[1] - time_points[0]).abs()
     } else {
         0.0
     };
     let inv_dt_time = if dt_time > 0.0 { 1.0 / dt_time } else { 0.0 };
-    let mut detector_positions_m = Vec::with_capacity(detectors.len());
-    for &(dx_idx, dy_idx, dz_idx) in &detectors {
-        detector_positions_m.push((dx_idx * grid.dx, dy_idx * grid.dy, dz_idx * grid.dz));
-    }
+
+    // Convert detector grid-index positions to physical coordinates (m).
+    let detector_positions_m: Vec<(f64, f64, f64)> = detectors
+        .iter()
+        .map(|&(dx_idx, dy_idx, dz_idx)| {
+            (dx_idx * grid.dx, dy_idx * grid.dy, dz_idx * grid.dz)
+        })
+        .collect();
+
+    // Sample detector signals from pressure snapshots.
     let mut signals = vec![0.0f64; detectors.len() * n_time];
     for (d_idx, &(dx, dy, dz)) in detectors.iter().enumerate() {
         let base = d_idx * n_time;
@@ -42,6 +82,7 @@ pub fn time_reversal_reconstruction(
             signals[base + t_idx] = interpolate_detector_signal(grid, field, dx, dy, dz);
         }
     }
+
     let nxy = ny * nz;
     let expected_len = nx * nxy;
     let out = reconstructed.as_slice_mut().ok_or_else(|| {
@@ -52,6 +93,7 @@ pub fn time_reversal_reconstruction(
             "Reconstruction buffer length mismatch".to_owned(),
         ));
     }
+
     out.par_iter_mut().enumerate().for_each(|(idx, out_cell)| {
         let k = idx % nz;
         let j = (idx / nz) % ny;
@@ -60,32 +102,50 @@ pub fn time_reversal_reconstruction(
         let py = j as f64 * grid.dy;
         let pz = k as f64 * grid.dz;
         let mut sum = 0.0;
+
         for (d_idx, &(dx, dy, dz)) in detector_positions_m.iter().enumerate() {
             let rx = px - dx;
             let ry = py - dy;
             let rz = pz - dz;
             let dist = rz.mul_add(rz, rx.mul_add(rx, ry * ry)).sqrt();
-            let delay = dist / speed_of_sound;
-            let mut val = signals[d_idx * n_time];
-            if n_time >= 2 && inv_dt_time > 0.0 {
-                let pos = (delay - t_start) * inv_dt_time;
-                if pos <= 0.0 {
-                    val = signals[d_idx * n_time];
-                } else {
-                    let max_pos = (n_time - 1) as f64;
-                    if pos >= max_pos {
-                        val = signals[d_idx * n_time + (n_time - 1)];
-                    } else {
-                        let i0 = pos.floor() as usize;
-                        let frac = pos - i0 as f64;
-                        let base = d_idx * n_time + i0;
-                        let v0 = signals[base];
-                        let v1 = signals[base + 1];
-                        val = v0.mul_add(1.0 - frac, v1 * frac);
-                    }
-                }
-            }
             let weight = 1.0 / dist.max(grid.dx);
+
+            // Propagation delay in samples.
+            let delay_samples = dist / (speed_of_sound * dt_time.max(f64::MIN_POSITIVE));
+
+            // Time-reversed sample index: TR convention maps forward delay τ
+            // to reversed index `n_time − 1 − round(τ/dt)`.
+            // (Xu & Wang 2005, Eq. 7.)
+            let val = if n_time >= 2 && inv_dt_time > 0.0 {
+                let fwd_pos = delay_samples;
+                if fwd_pos <= 0.0 {
+                    // Zero delay → last recorded sample (fully reversed).
+                    let tr_idx = n_time - 1;
+                    signals[d_idx * n_time + tr_idx]
+                } else if fwd_pos >= (n_time - 1) as f64 {
+                    // Delay beyond recording window → first recorded sample (reversed).
+                    signals[d_idx * n_time]
+                } else {
+                    // Linear interpolation at the time-reversed position.
+                    let i0 = fwd_pos.floor() as usize;
+                    let frac = fwd_pos - i0 as f64;
+                    // Reversed indices: forward i0 → reversed (n_time-1-i0).
+                    let tr_i0 = n_time - 1 - i0;
+                    // Guard against underflow when i0 == n_time-1.
+                    let tr_i1 = if i0 + 1 < n_time {
+                        n_time - 1 - (i0 + 1)
+                    } else {
+                        0
+                    };
+                    let v0 = signals[d_idx * n_time + tr_i0];
+                    let v1 = signals[d_idx * n_time + tr_i1];
+                    // Interpolate in reversed-time direction.
+                    v0.mul_add(1.0 - frac, v1 * frac)
+                }
+            } else {
+                signals[d_idx * n_time]
+            };
+
             sum += val * weight;
         }
         *out_cell = sum;
