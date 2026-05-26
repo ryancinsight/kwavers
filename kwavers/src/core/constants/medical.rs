@@ -72,7 +72,22 @@ pub const THERMAL_DOSE_DAMAGE_THRESHOLD_CEM43: f64 = 60.0;
 /// Perfusion rate in generic soft tissue (1/s).
 ///
 /// Generic default for non-brain soft tissue in Pennes bioheat equation.
+/// Value: 5×10⁻⁴ 1/s (low-perfusion conservative default).
+///
+/// Reference: Pennes, H. H. (1948). *J. Appl. Physiol.* 1(2), 93–122.
 pub const TISSUE_PERFUSION_RATE: f64 = 5e-4;
+
+/// Typical blood perfusion rate for moderately-perfused soft tissue (1/s).
+///
+/// Value: 5×10⁻³ 1/s — represents moderately-perfused tissues such as
+/// skeletal muscle during mild activity or liver parenchyma.  Higher than the
+/// conservative `TISSUE_PERFUSION_RATE` (5×10⁻⁴ 1/s) but lower than the
+/// brain-specific value `BLOOD_PERFUSION_RATE_BRAIN` (6.4×10⁻³ 1/s).
+///
+/// Reference: Pennes, H. H. (1948). "Analysis of tissue and arterial blood
+/// temperatures in the resting human forearm." *J. Appl. Physiol.* 1(2),
+/// 93–122. Table I (representative forearm muscle values).
+pub const BLOOD_PERFUSION_RATE: f64 = 5e-3;
 
 /// Brain-specific blood perfusion rate (1/s).
 ///
@@ -82,6 +97,10 @@ pub const TISSUE_PERFUSION_RATE: f64 = 5e-4;
 pub const BLOOD_PERFUSION_RATE_BRAIN: f64 = 0.0064;
 
 /// Blood specific heat capacity (J/(kg·K))
+///
+/// Duplicated from `SPECIFIC_HEAT_BLOOD` in `tissue_thermal` for use at
+/// `medical`-module call sites that already import this module.  Both
+/// constants have the same value (Duck 1990).
 pub const BLOOD_SPECIFIC_HEAT: f64 = 3617.0;
 
 /// Typical HIFU focal intensity (W/cm²)

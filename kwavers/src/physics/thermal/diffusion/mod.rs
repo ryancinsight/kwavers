@@ -27,7 +27,9 @@
 //!    - Modern perfusion estimation methods
 
 use crate::core::constants::tissue_acoustics::DENSITY_BLOOD;
-use crate::core::constants::medical::{BLOOD_SPECIFIC_HEAT, THERMAL_DOSE_REFERENCE_TEMP_C};
+use crate::core::constants::medical::{
+    BLOOD_SPECIFIC_HEAT, THERMAL_DOSE_REFERENCE_TEMP_C, TISSUE_PERFUSION_RATE,
+};
 use crate::core::constants::thermodynamic::BODY_TEMPERATURE_K;
 
 pub mod bioheat;
@@ -67,7 +69,9 @@ impl Default for ThermalDiffusionConfig {
     fn default() -> Self {
         Self {
             enable_bioheat: true,
-            perfusion_rate: 0.5e-3,
+            // TISSUE_PERFUSION_RATE = 5×10⁻⁴ 1/s — generic soft tissue default
+            // (Pennes 1948; Duck 1990). See `crate::core::constants::medical`.
+            perfusion_rate: TISSUE_PERFUSION_RATE,
             blood_density: DENSITY_BLOOD,
             blood_specific_heat: BLOOD_SPECIFIC_HEAT,
             arterial_temperature: BODY_TEMPERATURE_K,

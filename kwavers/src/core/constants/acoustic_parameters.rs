@@ -399,8 +399,63 @@ pub const DB_TO_NP: f64 = 0.115_129_254_649_702_28; // ln(10) / 20
 /// - NIST SP 330 (2019); ISO 80000-3:2019.
 pub const NP_TO_DB: f64 = 8.685_889_638_065_037; // 20 / ln(10)
 
-/// Water nonlinearity parameter (B/A)
-pub const NONLINEARITY_WATER: f64 = 5.2;
+/// Coefficient of nonlinearity β for water at 20°C (dimensionless).
+///
+/// β = 1 + B/(2A) = 1 + 5.0/2 = 3.5.
+///
+/// B/A = 5.0 is the Beyer (1960) measurement at 20°C.
+/// Delegates to [`crate::core::constants::tissue_acoustics::B_OVER_A_WATER_37C`]
+/// for the 37°C body-temperature value (B/A = 5.0, β = 3.5, same numerical value).
+///
+/// # Reference
+/// Beyer, R. T. (1960). "Parameter of nonlinearity in fluids."
+/// *J. Acoust. Soc. Am.* 32(6), 719–721. DOI: 10.1121/1.1908195.
+pub const NONLINEARITY_COEFFICIENT_WATER: f64 = 3.5; // β = 1 + B/(2A), B/A = 5.0
+
+/// Coefficient of nonlinearity β for soft tissue at 37°C (dimensionless).
+///
+/// β = 1 + B/(2A) = 1 + 6.0/2 = 4.0.
+///
+/// B/A = 6.0 is the Hamilton & Blackstock (1998) midpoint for soft tissue
+/// (reported range: B/A ≈ 5–9, Table 14.1; the soft-tissue mean near 6).
+/// The full SSOT B/A constant is
+/// [`crate::core::constants::tissue_acoustics::B_OVER_A_SOFT_TISSUE`] = 6.5,
+/// which gives β = 4.25; the 4.0 here uses the conservative lower midpoint
+/// B/A = 6 for models that do not differentiate tissue type.
+///
+/// # Reference
+/// Hamilton, M. F., & Blackstock, D. T. (1998). *Nonlinear Acoustics*.
+/// Academic Press. Table 14.1.
+pub const NONLINEARITY_COEFFICIENT_TISSUE: f64 = 4.0; // β = 1 + B/(2A), B/A = 6.0
+
+/// Acoustic nonlinearity parameter B/A for water at 20°C (dimensionless).
+///
+/// B/A = 5.0 is the Beyer (1960) polynomial evaluated at 20°C (≈ 4.965,
+/// rounded to 5.0). Used when a scalar B/A ratio — rather than the derived
+/// β = 1 + B/(2A) — is needed directly.
+///
+/// Note: `WATER_NONLINEARITY_B_A = 5.0` in this module is distinct from
+/// `B_OVER_A_WATER = 5.2` in [`crate::core::constants::tissue_acoustics`],
+/// which is the 20°C value including molecular relaxation corrections
+/// (NIST SRD). Use `BA_RATIO_WATER` for Beyer 1960 comparisons;
+/// use `B_OVER_A_WATER` for general acoustic simulations.
+///
+/// # Reference
+/// Beyer, R. T. (1960). "Parameter of nonlinearity in fluids."
+/// *J. Acoust. Soc. Am.* 32(6), 719–721. DOI: 10.1121/1.1908195.
+pub const BA_RATIO_WATER: f64 = WATER_NONLINEARITY_B_A;
+
+/// Acoustic nonlinearity parameter B/A for soft tissue at 37°C (dimensionless).
+///
+/// B/A = 6.0 — midpoint of the literature range (5–9) for mammalian soft tissue.
+/// The full per-tissue SSOT constants are in
+/// [`crate::core::constants::tissue_acoustics`] (e.g., `B_OVER_A_LIVER` = 6.75,
+/// `B_OVER_A_MUSCLE` = 7.4).
+///
+/// # Reference
+/// Hamilton, M. F., & Blackstock, D. T. (1998). *Nonlinear Acoustics*.
+/// Academic Press. Table 14.1.
+pub const BA_RATIO_TISSUE: f64 = 6.0;
 
 #[cfg(test)]
 mod tests {

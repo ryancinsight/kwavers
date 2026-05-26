@@ -4,7 +4,7 @@
 //! in the resting human forearm." Journal of Applied Physiology, 1(2), 93-122.
 
 use crate::core::constants::tissue_acoustics::DENSITY_BLOOD;
-use crate::core::constants::medical::BLOOD_SPECIFIC_HEAT;
+use crate::core::constants::medical::{BLOOD_SPECIFIC_HEAT, TISSUE_PERFUSION_RATE};
 use crate::core::constants::thermodynamic::BODY_TEMPERATURE_K;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
@@ -27,7 +27,9 @@ pub struct BioheatParameters {
 impl Default for BioheatParameters {
     fn default() -> Self {
         Self {
-            perfusion_rate: 0.5e-3,
+            // TISSUE_PERFUSION_RATE = 5×10⁻⁴ 1/s — generic soft tissue value
+            // (Pennes 1948; Duck 1990). See `crate::core::constants::medical`.
+            perfusion_rate: TISSUE_PERFUSION_RATE,
             blood_density: DENSITY_BLOOD,
             blood_specific_heat: BLOOD_SPECIFIC_HEAT,
             arterial_temperature: BODY_TEMPERATURE_K,

@@ -37,6 +37,17 @@ pub const ROOM_TEMPERATURE_C: f64 = 20.0;
 /// Body temperature in Celsius.
 pub const BODY_TEMPERATURE_C: f64 = 37.0;
 
+/// Arterial blood temperature in Celsius (dimensionless-equivalent to body temperature).
+///
+/// Physiological convention: arterial blood equilibrates with core body temperature
+/// at 37.0°C. Numerically identical to `BODY_TEMPERATURE_C`; provided as a distinct
+/// named constant to make the physical quantity explicit at Pennes bioheat call sites
+/// (`T_b` in `ω_b · ρ_b · c_b · (T_b − T)`).
+///
+/// Reference: Pennes, H. H. (1948). "Analysis of tissue and arterial blood temperatures
+/// in the resting human forearm." *J. Appl. Physiol.* 1(2), 93–122.
+pub const BLOOD_TEMPERATURE_C: f64 = BODY_TEMPERATURE_C;
+
 /// Absolute zero in Celsius.
 pub const ABSOLUTE_ZERO_C: f64 = -273.15;
 
