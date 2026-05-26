@@ -12,7 +12,7 @@ use crate::domain::grid::Grid;
 use crate::math::fft::{get_fft_for_grid, Fft3dInOutExt};
 use ndarray::{Array3, ArrayView2, Zip};
 use num_complex::Complex64;
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Time reversal reconstruction algorithm
 #[derive(Debug)]
@@ -126,7 +126,7 @@ impl PhotoacousticTimeReversal {
     /// Create k-space vector
     fn create_k_vector(&self, n: usize, dx: f64) -> Vec<f64> {
         let mut k = vec![0.0; n];
-        let dk = 2.0 * PI / (n as f64 * dx);
+        let dk = TWO_PI / (n as f64 * dx);
 
         for (i, k_val) in k.iter_mut().enumerate() {
             if i <= n / 2 {

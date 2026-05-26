@@ -1,6 +1,7 @@
 use super::super::{materials::EMMaterialDistribution, types::EMDimension};
 use crate::core::constants::fundamental::{VACUUM_PERMEABILITY, VACUUM_PERMITTIVITY};
 use crate::domain::field::EMFields;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Core electromagnetic wave equation trait
 ///
@@ -31,7 +32,7 @@ pub trait ElectromagneticWaveEquation: Send + Sync {
     /// Compute skin depth δ = √(2/(ωμσ)) (m)
     fn skin_depth(&self, frequency: f64) -> ndarray::ArrayD<f64> {
         let props = self.material_properties();
-        let omega = 2.0 * std::f64::consts::PI * frequency;
+        let omega = TWO_PI * frequency;
 
         let mu = &props.permeability * VACUUM_PERMEABILITY;
         let sigma = &props.conductivity;

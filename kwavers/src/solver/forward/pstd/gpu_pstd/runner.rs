@@ -28,6 +28,7 @@ use crate::solver::forward::pstd::gpu_pstd::{
 };
 use ndarray::{Array2, Array3};
 use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// GPU PSTD acquisition settings.
 #[derive(Clone, Copy, Debug)]
@@ -271,9 +272,9 @@ pub fn run_gpu_pstd(
 
     let (absorb_nabla1_flat, absorb_nabla2_flat, absorb_tau_flat, absorb_eta_flat) =
         if has_absorption {
-            let dk_x = 2.0 * PI / (nx as f64 * grid.dx);
-            let dk_y = 2.0 * PI / (ny as f64 * grid.dy);
-            let dk_z = 2.0 * PI / (nz as f64 * grid.dz);
+            let dk_x = TWO_PI / (nx as f64 * grid.dx);
+            let dk_y = TWO_PI / (ny as f64 * grid.dy);
+            let dk_z = TWO_PI / (nz as f64 * grid.dz);
             let singularity_thresh: f64 = 1e-8;
             let y = alpha_power;
 

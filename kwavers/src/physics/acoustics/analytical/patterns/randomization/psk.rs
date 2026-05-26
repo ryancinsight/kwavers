@@ -4,7 +4,7 @@ use super::constants::DEFAULT_SEED;
 use ndarray::Array1;
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Phase Shift Keying for deterministic phase randomization
 #[derive(Debug)]
@@ -30,7 +30,7 @@ impl PhaseShiftKeying {
         );
 
         let phase_states = (0..modulation_order)
-            .map(|i| 2.0 * PI * i as f64 / modulation_order as f64)
+            .map(|i| TWO_PI * i as f64 / modulation_order as f64)
             .collect();
 
         Self {

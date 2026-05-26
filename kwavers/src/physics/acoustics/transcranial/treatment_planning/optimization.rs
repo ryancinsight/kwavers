@@ -5,6 +5,7 @@ use super::types::{
     TranscranialTargetVolume, TranscranialTransducerSpecification, TransducerSetup,
 };
 use crate::core::error::KwaversResult;
+use crate::core::constants::numerical::{TWO_PI};
 
 impl TreatmentPlanner {
     /// Optimize transducer setup for target focusing using phase conjugation.
@@ -65,7 +66,7 @@ impl TreatmentPlanner {
             // cos(θ) uniformly sampled ∈ (0, 1) — upper hemisphere only
             let z_norm = (i as f64 + 0.5) / num_elements as f64; // ∈ (0, 1)
             let r_xy = (1.0 - z_norm * z_norm).sqrt();
-            let az = 2.0 * std::f64::consts::PI * i as f64 / GOLDEN_RATIO;
+            let az = TWO_PI * i as f64 / GOLDEN_RATIO;
 
             element_positions.push([
                 radius * r_xy * az.cos(),
@@ -76,7 +77,7 @@ impl TreatmentPlanner {
 
         // Phase conjugation: φᵢ = −k · |rᵢ − r_target|
         // Focuses all elements at the first target (can be extended to multi-focus).
-        let k = 2.0 * std::f64::consts::PI * spec.frequency / spec.sound_speed;
+        let k = TWO_PI * spec.frequency / spec.sound_speed;
         let target_center = targets[0].center;
 
         let element_phases: Vec<f64> = element_positions

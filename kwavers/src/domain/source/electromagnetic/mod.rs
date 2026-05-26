@@ -6,6 +6,7 @@
 use super::types::{SourceEMWaveType, SourcePolarization};
 use crate::core::constants::fundamental::SPEED_OF_LIGHT;
 use num_complex::Complex;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Basic electromagnetic source trait
 ///
@@ -92,13 +93,13 @@ impl DomainEMSource for PointEMSource {
         }
 
         // Simplified spherical wave: E ∝ (1/r) sin(kr - ωt + φ)
-        let k = 2.0 * std::f64::consts::PI * self.frequency / SPEED_OF_LIGHT; // Wave number
+        let k = TWO_PI * self.frequency / SPEED_OF_LIGHT; // Wave number
                                                                               //
                                                                               // Not yet implemented: full radiation pattern modeling. Absent: Hertzian dipole
                                                                               // near-field corrections; phased antenna array beamforming; dielectric material
                                                                               // dispersion effects; surface plasmon polariton coupling at metal-dielectric
                                                                               // interfaces; and quantum optical effects for high-intensity sources.
-        let omega = 2.0 * std::f64::consts::PI * self.frequency;
+        let omega = TWO_PI * self.frequency;
         let phase = k * distance - omega * time + self.phase;
 
         let field_magnitude = self.amplitude / distance * phase.sin();
@@ -129,7 +130,7 @@ impl DomainEMSource for PointEMSource {
             return Complex::new(0.0, 0.0);
         }
 
-        let k = 2.0 * std::f64::consts::PI * frequency / SPEED_OF_LIGHT;
+        let k = TWO_PI * frequency / SPEED_OF_LIGHT;
         let phase = k * distance + self.phase;
 
         // E ∝ (1/r) exp(ikr + iφ)
@@ -210,7 +211,7 @@ impl DomainEMSource for PlaneWaveEMSource {
             self.direction[0].mul_add(position[0], self.direction[1] * position[1]),
         );
 
-        let omega = 2.0 * std::f64::consts::PI * self.frequency;
+        let omega = TWO_PI * self.frequency;
         let k = omega / SPEED_OF_LIGHT;
 
         let phase = k * k_dot_r - omega * time + self.phase;
@@ -234,7 +235,7 @@ impl DomainEMSource for PlaneWaveEMSource {
             self.direction[0].mul_add(position[0], self.direction[1] * position[1]),
         );
 
-        let omega = 2.0 * std::f64::consts::PI * frequency;
+        let omega = TWO_PI * frequency;
         let k = omega / SPEED_OF_LIGHT;
 
         let phase = k * k_dot_r + self.phase;

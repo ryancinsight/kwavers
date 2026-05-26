@@ -1,5 +1,6 @@
 use super::*;
 use ndarray::Array2;
+use crate::core::constants::numerical::{TWO_PI};
 
 #[test]
 fn test_config_validation() {
@@ -30,7 +31,7 @@ fn test_filter_with_synthetic_data() {
     for i in 0..n_pixels {
         for t in 0..n_frames {
             // Low-frequency sinusoidal motion (clutter)
-            let clutter = 10.0 * (2.0 * std::f64::consts::PI * (t as f64) / 50.0).sin();
+            let clutter = 10.0 * (TWO_PI * (t as f64) / 50.0).sin();
             // High-frequency noise (blood flow)
             let blood = 0.5 * ((i + t) as f64).sin();
             data[[i, t]] = clutter + blood;

@@ -3,10 +3,10 @@
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::{Array2, Array3};
-use std::f64::consts::PI;
 
 use super::config::{ReconstructionConfig, Reconstructor};
 use super::filters::apply_reconstruction_filter;
+use crate::core::constants::numerical::{FOUR_PI};
 
 /// Universal back-projection for arbitrary geometries
 /// Based on Xu & Wang (2005)
@@ -60,7 +60,7 @@ impl UniversalBackProjection {
                 // Apply weighting
                 let weight = match self.weight_function {
                     WeightFunction::Uniform => 1.0,
-                    WeightFunction::SolidAngle => 1.0 / (4.0 * PI * distance * distance),
+                    WeightFunction::SolidAngle => 1.0 / (FOUR_PI * distance * distance),
                     WeightFunction::Distance { power } => 1.0 / distance.powf(power),
                 };
 

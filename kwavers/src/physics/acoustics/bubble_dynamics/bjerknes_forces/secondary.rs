@@ -3,6 +3,7 @@
 use super::calculator::BjerknesCalculator;
 use super::types::{BjerknesForceData, BjerknesInteractionType};
 use crate::core::error::{KwaversError, KwaversResult};
+use crate::core::constants::numerical::{TWO_PI};
 
 impl BjerknesCalculator {
     /// Calculate secondary Bjerknes force between two bubbles.
@@ -80,7 +81,7 @@ impl BjerknesCalculator {
         // is a downstream label, not a gate that zeroes the force.  Prior
         // to 2026-05-21 this used |cos φ| and zeroed the force whenever
         // |cos φ| < 0.1, producing a discontinuous step at φ = π/2 ± δ.
-        let omega = 2.0 * std::f64::consts::PI * self.config.frequency;
+        let omega = TWO_PI * self.config.frequency;
         let coefficient = (self.config.rho * omega * omega) / (8.0 * std::f64::consts::PI);
         let cos_phase = phase_difference.cos();
 

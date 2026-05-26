@@ -45,7 +45,7 @@
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::math::fft::{fft_1d_array, Complex64};
 use ndarray::{Array1, ArrayView1};
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Spectral analysis configuration
 #[derive(Debug, Clone)]
@@ -120,7 +120,7 @@ impl SpectralAnalysis {
         // ── Hann window ────────────────────────────────────────────────────────
         // w[n] = ½·(1 − cos(2πn/(M−1)))   for n = 0,…,M−1
         let window: Array1<f64> = Array1::from_shape_fn(m, |n| {
-            0.5 * (1.0 - (2.0 * PI * n as f64 / (m - 1) as f64).cos())
+            0.5 * (1.0 - (TWO_PI * n as f64 / (m - 1) as f64).cos())
         });
 
         // Window power normalisation factor: U = (1/M) Σ w[n]²
@@ -192,7 +192,6 @@ impl SpectralAnalysis {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::f64::consts::PI;
 
     /// **Test: PSD of a pure tone peaks at the correct frequency bin**
     ///

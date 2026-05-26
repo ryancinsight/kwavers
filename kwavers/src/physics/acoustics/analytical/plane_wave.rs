@@ -3,7 +3,7 @@
 use super::utils::DISPERSION_CORRECTION_SECOND_ORDER;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Plane wave analytical solutions
 #[derive(Debug)]
@@ -35,8 +35,8 @@ impl PlaneWaveSolution {
         }
 
         let wavelength = sound_speed / frequency;
-        let k = 2.0 * PI / wavelength;
-        let omega = 2.0 * PI * frequency;
+        let k = TWO_PI / wavelength;
+        let omega = TWO_PI * frequency;
 
         // Normalize direction vector
         let norm = direction
@@ -108,7 +108,6 @@ mod tests {
     use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use crate::core::constants::numerical::MHZ_TO_HZ;
     use crate::domain::grid::Grid;
-    use std::f64::consts::PI;
 
     fn water_grid_one_wavelength() -> Grid {
         // f=1MHz, c=1500 m/s → λ=1.5mm; grid spacing dx=λ/32 → N=32 points per wavelength

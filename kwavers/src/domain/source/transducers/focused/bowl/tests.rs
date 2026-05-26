@@ -1,5 +1,5 @@
 use super::*;
-use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
+use crate::core::constants::numerical::{FOUR_PI, MHZ_TO_HZ, MPA_TO_PA, TWO_PI};
 use crate::core::error::KwaversError;
 use crate::domain::grid::Grid;
 use std::f64::consts::PI;
@@ -127,7 +127,7 @@ fn bowl_source_uses_axis_specific_grid_spacing_and_origin() {
 
     let time = 0.37e-6;
     let source = bowl.generate_source(&grid, time).unwrap();
-    let omega = 2.0 * PI * config.frequency;
+    let omega = TWO_PI * config.frequency;
     let focus_delays = bowl.calculate_focus_delays();
     let element_position = bowl.element_positions()[0];
     let element_area = bowl.element_areas()[0];
@@ -151,7 +151,7 @@ fn bowl_source_uses_axis_specific_grid_spacing_and_origin() {
                     )
                     .sqrt();
                 let expected = if distance > 0.0 {
-                    config.amplitude * element_area * phase.sin() / (4.0 * PI * distance)
+                    config.amplitude * element_area * phase.sin() / (FOUR_PI * distance)
                 } else {
                     0.0
                 };
@@ -175,7 +175,7 @@ fn hemispherical_preset_generates_source_domain_fixed_count_layout() {
 
     let bowl = BowlTransducer::with_element_count(config, 1024).unwrap();
     let summed_area: f64 = bowl.element_areas().iter().sum();
-    let expected_hemisphere_area = 2.0 * std::f64::consts::PI * 0.16_f64.powi(2);
+    let expected_hemisphere_area = TWO_PI * 0.16_f64.powi(2);
 
     assert_eq!(bowl.element_count(), 1024);
     assert!((summed_area - expected_hemisphere_area).abs() < 1.0e-14);
@@ -217,7 +217,7 @@ fn axis_reference_preset_preserves_focus_axis_and_explicit_radius() {
     let bowl = BowlTransducer::with_polar_bounds(config, theta_min, theta_max, 96).unwrap();
     let summed_area: f64 = bowl.element_areas().iter().sum();
     let expected_area =
-        2.0 * std::f64::consts::PI * radius.powi(2) * (theta_min.cos() - theta_max.cos());
+        TWO_PI * radius.powi(2) * (theta_min.cos() - theta_max.cos());
 
     assert!((summed_area - expected_area).abs() < 1.0e-14);
     for position in bowl.element_positions() {
@@ -254,7 +254,7 @@ fn focus_axis_preset_preserves_axis_radius_and_explicit_aperture() {
 
     let bowl = BowlTransducer::with_polar_bounds(config, theta_min, theta_max, 128).unwrap();
     let expected_area =
-        2.0 * std::f64::consts::PI * radius.powi(2) * (theta_min.cos() - theta_max.cos());
+        TWO_PI * radius.powi(2) * (theta_min.cos() - theta_max.cos());
     let summed_area: f64 = bowl.element_areas().iter().sum();
 
     assert_eq!(bowl.element_count(), 128);
@@ -317,7 +317,7 @@ fn bowl_polar_span_supports_major_cap_beyond_hemisphere() {
 
     let bowl = BowlTransducer::with_polar_span(config, theta_max, 128).unwrap();
     let summed_area: f64 = bowl.element_areas().iter().sum();
-    let expected_area = 2.0 * std::f64::consts::PI * 0.16_f64.powi(2) * (1.0 - theta_max.cos());
+    let expected_area = TWO_PI * 0.16_f64.powi(2) * (1.0 - theta_max.cos());
     let min_z = bowl
         .element_positions()
         .iter()
@@ -359,7 +359,7 @@ fn bowl_polar_bounds_support_annular_cutout_area() {
     let bowl = BowlTransducer::with_polar_bounds(config, theta_min, theta_max, 96).unwrap();
     let summed_area: f64 = bowl.element_areas().iter().sum();
     let expected_area =
-        2.0 * std::f64::consts::PI * 0.10_f64.powi(2) * (theta_min.cos() - theta_max.cos());
+        TWO_PI * 0.10_f64.powi(2) * (theta_min.cos() - theta_max.cos());
     let max_z = bowl
         .element_positions()
         .iter()
@@ -377,7 +377,7 @@ fn bowl_axis_projection_bounds_support_major_cap_area() {
         BowlConfig::from_vertex_focus([0.0, 0.0, 0.16], [0.0, 0.0, 0.0], 0.32, 650.0e3, MPA_TO_PA);
     let bowl = BowlTransducer::with_axis_projection_bounds(config, -0.28, 0.98, 128).unwrap();
     let summed_area: f64 = bowl.element_areas().iter().sum();
-    let expected_area = 2.0 * std::f64::consts::PI * 0.16_f64.powi(2) * (0.98 - -0.28);
+    let expected_area = TWO_PI * 0.16_f64.powi(2) * (0.98 - -0.28);
     let min_projection = bowl
         .element_positions()
         .iter()

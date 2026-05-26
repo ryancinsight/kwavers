@@ -5,9 +5,9 @@ use crate::domain::source::transducers::rectangular::RectangularTransducer;
 use crate::math::fft::{fft_2d_complex, ifft_2d_complex, Complex64};
 use ndarray::{s, Array2, Array3, Axis};
 use std::collections::HashMap;
-use std::f64::consts::PI;
 
 use super::types::{AngularSpectrumFactors, FNMConfig};
+use crate::core::constants::numerical::{TWO_PI};
 
 #[derive(Debug)]
 pub struct FastNearfieldSolver {
@@ -34,8 +34,8 @@ impl FastNearfieldSolver {
     ///
     pub fn new(config: FNMConfig) -> Result<Self, String> {
         let (n_kx, n_ky) = config.angular_spectrum_size;
-        let dkx = 2.0 * PI / (config.dx * n_kx as f64);
-        let dky = 2.0 * PI / (config.dy * n_ky as f64);
+        let dkx = TWO_PI / (config.dx * n_kx as f64);
+        let dky = TWO_PI / (config.dy * n_ky as f64);
 
         let mut kx = Vec::with_capacity(n_kx);
         let mut ky = Vec::with_capacity(n_ky);
@@ -213,7 +213,7 @@ impl FastNearfieldSolver {
 
         // Scaling factor from Rayleigh-Sommerfeld theory
         let k = transducer.wavenumber(self.c0);
-        let scaling = Complex64::new(0.0, self.rho0 * self.c0 * k / (2.0 * PI));
+        let scaling = Complex64::new(0.0, self.rho0 * self.c0 * k / (TWO_PI));
 
         for val in &mut pressure_spectrum {
             *val *= scaling;

@@ -1,5 +1,5 @@
 use num_complex::Complex64;
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Configuration for Burton-Miller BEM formulation
 #[derive(Debug, Clone, Copy)]
@@ -16,7 +16,7 @@ pub struct BurtonMillerConfig {
 impl BurtonMillerConfig {
     #[must_use]
     pub fn new(frequency: f64, sound_speed: f64) -> Self {
-        let wavenumber = 2.0 * PI * frequency / sound_speed;
+        let wavenumber = TWO_PI * frequency / sound_speed;
         let coupling_alpha = Complex64::new(0.0, -1.0 / wavenumber);
         Self {
             wavenumber,

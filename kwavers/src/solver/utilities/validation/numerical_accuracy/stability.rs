@@ -1,5 +1,6 @@
 use super::{NumericalValidator, StabilityResults};
 use crate::core::constants::SOUND_SPEED_TISSUE;
+use crate::core::constants::numerical::{TWO_PI};
 
 impl NumericalValidator {
     /// Validate stability.
@@ -62,7 +63,7 @@ impl NumericalValidator {
     ///
     pub(super) fn test_stability_pstd(&self, dt: f64) -> Result<f64, Box<dyn std::error::Error>> {
         let f_max = 1.0 / (2.0 * self.grid.dx.min(self.grid.dy).min(self.grid.dz));
-        let omega_max = 2.0 * std::f64::consts::PI * f_max;
+        let omega_max = TWO_PI * f_max;
 
         let c_max = SOUND_SPEED_TISSUE;
         let cfl = c_max * dt / self.grid.dx.min(self.grid.dy).min(self.grid.dz);

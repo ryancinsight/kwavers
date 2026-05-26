@@ -14,6 +14,7 @@
 use crate::core::error::KwaversResult;
 use crate::core::error::{ConfigError, KwaversError};
 use ndarray::Array1;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Compute Gauss-Lobatto-Legendre (GLL) quadrature nodes and weights
 ///
@@ -45,7 +46,7 @@ pub fn gauss_lobatto_quadrature(n: usize) -> KwaversResult<(Array1<f64>, Array1<
     for i in 1..=(n - 1) / 2 {
         // Initial guess (Chebyshev nodes)
         let mut x =
-            -((2.0 * std::f64::consts::PI * i as f64) / 2.0f64.mul_add(p as f64, 1.0)).cos();
+            -((TWO_PI * i as f64) / 2.0f64.mul_add(p as f64, 1.0)).cos();
 
         // Newton iterations
         for _ in 0..100 {

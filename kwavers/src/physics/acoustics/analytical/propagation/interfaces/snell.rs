@@ -5,6 +5,7 @@
 use super::Interface;
 use crate::core::error::{KwaversError, KwaversResult, PhysicsError};
 use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Critical angles for wave propagation
 #[derive(Debug, Clone)]
@@ -121,7 +122,7 @@ impl<'a> SnellLawCalculator<'a> {
 
         let discriminant = (n1 * n1 * sin_i).mul_add(sin_i, -(n2 * n2));
         if discriminant > 0.0 {
-            Some((2.0 * PI / wavelength) * discriminant.sqrt())
+            Some((TWO_PI / wavelength) * discriminant.sqrt())
         } else {
             None
         }

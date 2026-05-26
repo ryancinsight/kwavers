@@ -3,7 +3,7 @@
 use crate::core::constants::cavitation::{SURFACE_TENSION_WATER, VISCOSITY_WATER};
 use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER};
 use crate::core::error::{KwaversError, KwaversResult, ValidationError};
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{FOUR_PI, TWO_PI};
 
 /// Size distribution parameters
 #[derive(Debug, Clone)]
@@ -111,7 +111,7 @@ impl Microbubble {
         if omega_sq <= 0.0 {
             return 0.0;
         }
-        omega_sq.sqrt() / (2.0 * PI)
+        omega_sq.sqrt() / (TWO_PI)
     }
 
     /// Validate microbubble parameters
@@ -172,7 +172,7 @@ impl Microbubble {
         let mu_l = VISCOSITY_WATER; // dynamic viscosity of water at 20°C [Pa·s]
 
         let r = self.radius_eq;
-        let omega = 2.0 * std::f64::consts::PI * frequency;
+        let omega = TWO_PI * frequency;
         let omega0 = 2.0
             * std::f64::consts::PI
             * self.resonance_frequency(
@@ -193,6 +193,6 @@ impl Microbubble {
 
         // σ_s = 4π R² (ωR/c_L)² / denom
         let ka = omega * r / c_l; // dimensionless acoustic size parameter
-        4.0 * std::f64::consts::PI * r * r * ka * ka / denom
+        FOUR_PI * r * r * ka * ka / denom
     }
 }

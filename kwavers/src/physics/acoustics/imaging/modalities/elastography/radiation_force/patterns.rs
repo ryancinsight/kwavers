@@ -1,5 +1,5 @@
 use super::impulse::PushPulseParameters;
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Multi-directional push pulse configuration for 3D SWE
 #[derive(Debug, Clone)]
@@ -95,7 +95,7 @@ impl MultiDirectionalPush {
         let mut pushes = Vec::new();
 
         for i in 0..n_pushes {
-            let angle = 2.0 * PI * (i as f64) / (n_pushes as f64);
+            let angle = TWO_PI * (i as f64) / (n_pushes as f64);
             let x = radius.mul_add(angle.cos(), center[0]);
             let y = radius.mul_add(angle.sin(), center[1]);
             let z = center[2];

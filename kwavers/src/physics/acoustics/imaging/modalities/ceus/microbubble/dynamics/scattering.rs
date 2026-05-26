@@ -2,6 +2,7 @@
 
 use super::BubbleDynamics;
 use crate::domain::imaging::ultrasound::ceus::Microbubble;
+use crate::core::constants::numerical::{TWO_PI};
 
 impl BubbleDynamics {
     /// Compute nonlinear scattering efficiency via Lorentzian resonance response.
@@ -17,7 +18,7 @@ impl BubbleDynamics {
             .resonance_frequency(self.ambient_pressure, self.liquid_density)
             .max(1.0);
         let omega_ratio = frequency / resonance_freq;
-        let omega_res = 2.0 * std::f64::consts::PI * resonance_freq;
+        let omega_res = TWO_PI * resonance_freq;
         let epsilon = pressure_amplitude / (self.liquid_density * r0 * r0 * omega_res * omega_res);
         let delta = self.damping_coefficient;
         let omega_sq = omega_ratio * omega_ratio;

@@ -8,6 +8,7 @@
 
 use ndarray::Array2;
 use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Analytical Gaussian beam parameters
 #[derive(Debug, Clone)]
@@ -26,7 +27,7 @@ impl GaussianBeamParameters {
     #[must_use]
     pub fn new(w0: f64, lambda: f64) -> Self {
         let z_r = PI * w0 * w0 / lambda;
-        let k = 2.0 * PI / lambda;
+        let k = TWO_PI / lambda;
 
         Self { w0, lambda, z_r, k }
     }

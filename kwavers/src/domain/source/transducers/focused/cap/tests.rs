@@ -1,5 +1,6 @@
 use super::{SphericalCapConfig, SphericalCapLayout};
 use std::f64::consts::{FRAC_PI_2, PI};
+use crate::core::constants::numerical::{TWO_PI};
 
 #[test]
 fn hemisphere_layout_places_elements_on_focused_sphere() {
@@ -43,7 +44,7 @@ fn cap_layout_preserves_equal_area_weights() {
     ))
     .unwrap();
 
-    let expected_area = 2.0 * PI * radius * radius * (theta_min.cos() - theta_max.cos());
+    let expected_area = TWO_PI * radius * radius * (theta_min.cos() - theta_max.cos());
     let summed_area: f64 = layout
         .elements()
         .iter()

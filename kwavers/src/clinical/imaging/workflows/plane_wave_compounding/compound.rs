@@ -18,7 +18,7 @@ use super::config::PlaneWaveCompoundingConfig;
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array2;
 use num_complex::Complex;
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{FOUR_PI, TWO_PI};
 
 /// Plane wave compounding processor.
 #[derive(Debug, Clone)]
@@ -64,8 +64,8 @@ impl PlaneWaveCompound {
         }
 
         let wavelength = config.sound_speed / config.frequency;
-        let wavenumber = 2.0 * PI / wavelength;
-        let omega = 2.0 * PI * config.frequency;
+        let wavenumber = TWO_PI / wavelength;
+        let omega = TWO_PI * config.frequency;
 
         let num_axial = (config.depth / config.axial_step).ceil() as usize;
         let num_lateral = (config.aperture_size / config.lateral_step).ceil() as usize;
@@ -150,20 +150,20 @@ impl PlaneWaveCompound {
         match self.config.apodization.as_str() {
             "hann" => {
                 for (i, w) in apod.iter_mut().enumerate() {
-                    *w = 0.5f64.mul_add(-(2.0 * PI * i as f64 / (n as f64 - 1.0)).cos(), 0.5);
+                    *w = 0.5f64.mul_add(-(TWO_PI * i as f64 / (n as f64 - 1.0)).cos(), 0.5);
                 }
             }
             "hamming" => {
                 for (i, w) in apod.iter_mut().enumerate() {
-                    *w = 0.46f64.mul_add(-(2.0 * PI * i as f64 / (n as f64 - 1.0)).cos(), 0.54);
+                    *w = 0.46f64.mul_add(-(TWO_PI * i as f64 / (n as f64 - 1.0)).cos(), 0.54);
                 }
             }
             "blackman" => {
                 for (i, w) in apod.iter_mut().enumerate() {
                     let nn = i as f64 / (n as f64 - 1.0);
                     *w = 0.08f64.mul_add(
-                        (4.0 * PI * nn).cos(),
-                        0.5f64.mul_add(-(2.0 * PI * nn).cos(), 0.42),
+                        (FOUR_PI * nn).cos(),
+                        0.5f64.mul_add(-(TWO_PI * nn).cos(), 0.42),
                     );
                 }
             }

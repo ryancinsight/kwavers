@@ -5,14 +5,14 @@ use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 #[test]
 fn test_fdtd_dispersion_3d_axis_aligned_low_dispersion() {
     let freq = MHZ_TO_HZ;
     let c = SOUND_SPEED_WATER_SIM;
     let wavelength = c / freq;
-    let k = 2.0 * PI / wavelength;
+    let k = TWO_PI / wavelength;
 
     let dx = wavelength / 20.0;
     let dt = 0.4 * dx / (c * 3.0_f64.sqrt());
@@ -35,7 +35,7 @@ fn test_fdtd_dispersion_3d_oblique_propagation() {
     let freq = MHZ_TO_HZ;
     let c = SOUND_SPEED_WATER_SIM;
     let wavelength = c / freq;
-    let k_mag = 2.0 * PI / wavelength;
+    let k_mag = TWO_PI / wavelength;
     let kx = k_mag / 2.0_f64.sqrt();
     let ky = k_mag / 2.0_f64.sqrt();
 
@@ -51,7 +51,7 @@ fn test_fdtd_dispersion_3d_anisotropic_grid() {
     let freq = MHZ_TO_HZ;
     let c = SOUND_SPEED_WATER_SIM;
     let wavelength = c / freq;
-    let k = 2.0 * PI / wavelength;
+    let k = TWO_PI / wavelength;
 
     let dx = wavelength / 20.0;
     let dy = wavelength / 15.0;
@@ -71,7 +71,7 @@ fn test_fdtd_dispersion_3d_cfl_stability() {
     let freq = MHZ_TO_HZ;
     let c = SOUND_SPEED_WATER_SIM;
     let wavelength = c / freq;
-    let k = 2.0 * PI / wavelength;
+    let k = TWO_PI / wavelength;
     let dx = wavelength / 10.0;
     let dt_stable = 0.5 * dx / (c * 3.0_f64.sqrt());
 
@@ -87,7 +87,7 @@ fn test_pstd_dispersion_3d_isotropic() {
     let freq = 2.0 * MHZ_TO_HZ;
     let c = SOUND_SPEED_WATER_SIM;
     let wavelength = c / freq;
-    let k = 2.0 * PI / wavelength;
+    let k = TWO_PI / wavelength;
     let dx = wavelength / 10.0;
     let dt = 0.25 * dx / c;
 
@@ -103,7 +103,7 @@ fn test_pstd_dispersion_3d_fourth_order() {
     let freq = 2.0 * MHZ_TO_HZ;
     let c = SOUND_SPEED_WATER_SIM;
     let wavelength = c / freq;
-    let k = 2.0 * PI / wavelength;
+    let k = TWO_PI / wavelength;
     let dx = wavelength / 8.0;
     let dt = 0.2 * dx / c;
 
@@ -120,7 +120,7 @@ fn test_apply_correction_3d() {
 
     let freq = MHZ_TO_HZ;
     let c = SOUND_SPEED_WATER_SIM;
-    let k = 2.0 * PI * freq / c;
+    let k = TWO_PI * freq / c;
     let dt = 5e-8;
 
     let method = DispersionMethod::FDTD3D { dt };
@@ -164,7 +164,7 @@ fn test_dispersion_symmetry() {
     let freq = MHZ_TO_HZ;
     let c = SOUND_SPEED_WATER_SIM;
     let wavelength = c / freq;
-    let k = 2.0 * PI / wavelength;
+    let k = TWO_PI / wavelength;
     let dx = wavelength / 15.0;
     let dt = 0.3 * dx / (c * 3.0_f64.sqrt());
 

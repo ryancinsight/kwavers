@@ -3,6 +3,7 @@ use ndarray::{Array3, Zip};
 use std::f64::consts::PI;
 
 use super::SpectralCorrectionMethod;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Dispatch to the selected spectral correction method.
 ///
@@ -314,9 +315,9 @@ fn compute_sinc_spatial_correction(grid: &Grid) -> Array3<f64> {
 #[inline]
 pub(super) fn compute_wavenumber_component(index: usize, n: usize, dx: f64) -> f64 {
     if index <= n / 2 {
-        2.0 * PI * index as f64 / (n as f64 * dx)
+        TWO_PI * index as f64 / (n as f64 * dx)
     } else {
-        2.0 * PI * (index as f64 - n as f64) / (n as f64 * dx)
+        TWO_PI * (index as f64 - n as f64) / (n as f64 * dx)
     }
 }
 

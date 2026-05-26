@@ -12,6 +12,7 @@
 //! - Hertzberg et al. (2010): "Ultrasound focusing using magnetic resonance acoustic radiation force imaging"
 //! - Jones et al. (2019): "Transcranial MR-guided focused ultrasound: A review of the technology"
 
+use crate::core::constants::numerical::{TWO_PI};
 mod constants;
 mod element;
 mod geometry;
@@ -21,7 +22,6 @@ mod validation;
 
 // Physical constants needed for array calculations
 pub use crate::core::constants::C_WATER;
-pub use std::f64::consts::PI;
 
 // Explicit re-exports of hemispherical array components
 pub use element::{ElementConfiguration, ElementState};
@@ -124,7 +124,7 @@ impl Source for HemisphericalArray {
 
     fn amplitude(&self, t: f64) -> f64 {
         // Return base amplitude, phase is handled in mask
-        (2.0 * std::f64::consts::PI * 650e3 * t).sin()
+        (TWO_PI * 650e3 * t).sin()
     }
 
     fn positions(&self) -> Vec<(f64, f64, f64)> {

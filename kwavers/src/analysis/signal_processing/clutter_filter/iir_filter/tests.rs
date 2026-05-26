@@ -1,5 +1,6 @@
 use super::*;
 use ndarray::Array2;
+use crate::core::constants::numerical::{TWO_PI};
 
 #[test]
 fn test_config_validation() {
@@ -46,7 +47,7 @@ fn test_filter_removes_dc_component() {
     for i in 0..n_pixels {
         for t in 0..n_frames {
             let dc = 10.0; // DC component (clutter)
-            let ac = 2.0 * (2.0 * std::f64::consts::PI * (t as f64) / 20.0).sin();
+            let ac = 2.0 * (TWO_PI * (t as f64) / 20.0).sin();
             data[[i, t]] = dc + ac;
         }
     }
@@ -74,7 +75,7 @@ fn test_filter_preserves_high_frequency() {
     for i in 0..n_pixels {
         for t in 0..n_frames {
             // High-frequency signal (blood flow)
-            data[[i, t]] = 3.0 * (2.0 * std::f64::consts::PI * (t as f64) / 5.0).sin();
+            data[[i, t]] = 3.0 * (TWO_PI * (t as f64) / 5.0).sin();
         }
     }
 

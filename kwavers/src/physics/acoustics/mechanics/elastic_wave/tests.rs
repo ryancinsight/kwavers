@@ -15,6 +15,7 @@ use crate::physics::acoustics::mechanics::elastic_wave::{
 };
 use ndarray::Array4;
 use std::time::Duration;
+use crate::core::constants::numerical::{TWO_PI};
 
 // ── ElasticWave::new / wavenumber axes ────────────────────────────────────────
 
@@ -39,7 +40,7 @@ fn elastic_wave_wavenumber_axis_dc_and_positive_frequencies() {
     let grid = Grid::new(nx, 2, 2, dx, dx, dx).unwrap();
     let ew = ElasticWave::new(&grid).unwrap();
 
-    let dk = 2.0 * std::f64::consts::PI / (nx as f64 * dx);
+    let dk = TWO_PI / (nx as f64 * dx);
     assert_eq!(ew.kx[[0, 0, 0]], 0.0, "DC bin must be zero");
     assert!((ew.kx[[1, 0, 0]] - dk).abs() < 1e-12, "first positive bin");
     let nyquist_expected = (nx as f64 / 2.0 - nx as f64) * dk;

@@ -5,12 +5,12 @@
 
 use crate::core::error::KwaversResult;
 use ndarray::{Array1, Array2};
-use std::f64::consts::PI;
 
 use crate::physics::phase_modulation::phase_shifting::beam::BeamSteering;
 use crate::core::constants::SOUND_SPEED_WATER;
 use crate::physics::phase_modulation::phase_shifting::core::{calculate_wavelength, wrap_phase};
 use crate::physics::phase_modulation::phase_shifting::focus::DynamicFocusing;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Phased array system
 #[derive(Debug)]
@@ -84,7 +84,7 @@ impl PhaseArray {
         for ring in 0..num_rings {
             let radius = (ring + 1) as f64 * ring_spacing;
             for elem in 0..elements_per_ring {
-                let angle = 2.0 * PI * elem as f64 / elements_per_ring as f64;
+                let angle = TWO_PI * elem as f64 / elements_per_ring as f64;
                 positions[[idx, 0]] = radius * angle.cos();
                 positions[[idx, 1]] = radius * angle.sin();
                 idx += 1;
@@ -137,7 +137,7 @@ impl PhaseArray {
     #[must_use]
     pub fn calculate_field(&self, x: f64, y: f64, z: f64) -> (f64, f64) {
         let wavelength = calculate_wavelength(self.frequency, SOUND_SPEED_WATER);
-        let k = 2.0 * PI / wavelength;
+        let k = TWO_PI / wavelength;
 
         let phases = self.get_phase_distribution();
         let amplitudes = self.dynamic_focusing.get_amplitude_weights();

@@ -4,6 +4,7 @@ use ndarray::Array2;
 
 use super::config::PolynomialFilterConfig;
 use super::filter::PolynomialFilter;
+use crate::core::constants::numerical::{TWO_PI};
 
 #[test]
 fn test_config_validation() {
@@ -41,7 +42,7 @@ fn test_filter_with_linear_trend() {
     for i in 0..n_pixels {
         for t in 0..n_frames {
             let trend = 10.0 * (t as f64) / (n_frames as f64);
-            let blood = 0.5 * (2.0 * std::f64::consts::PI * (t as f64) / 10.0).sin();
+            let blood = 0.5 * (TWO_PI * (t as f64) / 10.0).sin();
             data[[i, t]] = trend + blood;
         }
     }
@@ -67,7 +68,7 @@ fn test_filter_preserves_oscillations() {
         for t in 0..n_frames {
             let t_norm = (t as f64) / (n_frames as f64);
             let trend = 10.0 * t_norm * t_norm;
-            let blood = 2.0 * (2.0 * std::f64::consts::PI * (t as f64) / 5.0).sin();
+            let blood = 2.0 * (TWO_PI * (t as f64) / 5.0).sin();
             data[[i, t]] = trend + blood;
         }
     }

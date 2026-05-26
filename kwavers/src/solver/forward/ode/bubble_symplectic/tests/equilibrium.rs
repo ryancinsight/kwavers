@@ -3,8 +3,8 @@
 use super::super::{BubbleSymplecticIntegrator, SymplecticConfig};
 use super::helpers::{make_model, make_params};
 use crate::physics::acoustics::bubble_dynamics::bubble_state::BubbleState;
-use std::f64::consts::PI;
 use std::sync::Arc;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// **Test D — Exact equilibrium preservation.**
 ///
@@ -26,7 +26,7 @@ fn test_equilibrium_preserved() {
     let gamma = crate::physics::acoustics::bubble_dynamics::bubble_state::GasSpecies::Air.gamma();
     let p_eq = p0 + 2.0 * sigma / r0;
     let omega0 = ((3.0 * gamma * p_eq - 2.0 * sigma / r0) / (rho_l * r0 * r0)).sqrt();
-    let t_period = 2.0 * PI / omega0;
+    let t_period = TWO_PI / omega0;
     let dt = t_period / 200.0;
 
     let config = SymplecticConfig {

@@ -10,6 +10,7 @@ use ndarray::Array3;
 use std::f64::consts::PI;
 use std::fmt::Debug;
 use std::sync::Arc;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Gaussian beam configuration
 #[derive(Debug, Clone)]
@@ -53,7 +54,7 @@ pub struct GaussianSource {
 impl GaussianSource {
     /// Create a new Gaussian beam source
     pub fn new(config: GaussianConfig, signal: Arc<dyn Signal>) -> Self {
-        let wave_number = 2.0 * PI / config.wavelength;
+        let wave_number = TWO_PI / config.wavelength;
         let rayleigh_range = PI * config.waist_radius.powi(2) / config.wavelength;
 
         Self {
@@ -238,7 +239,7 @@ impl Source for GaussianSource {
         // beam parameters. Approximate as the ratio of beam area at large
         // distance to area at waist: gain ≈ (w(z)/w0)² at far field
         // For simplicity, use a conservative estimate based on focusing geometry
-        let gain = 2.0 * PI * self.rayleigh_range / self.config.wavelength;
+        let gain = TWO_PI * self.rayleigh_range / self.config.wavelength;
         Some(gain)
     }
 }

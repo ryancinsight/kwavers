@@ -3,7 +3,7 @@
 //! This module defines the physical properties of a rectangular transducer array,
 //! decoupled from any specific solver implementation.
 
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Rectangular transducer description
 #[derive(Debug, Clone)]
@@ -31,6 +31,6 @@ impl RectangularTransducer {
     /// Get wavenumber
     #[must_use]
     pub fn wavenumber(&self, c0: f64) -> f64 {
-        2.0 * PI * self.frequency / c0
+        TWO_PI * self.frequency / c0
     }
 }

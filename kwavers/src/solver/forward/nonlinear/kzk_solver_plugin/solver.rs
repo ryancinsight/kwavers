@@ -7,6 +7,7 @@ use crate::domain::plugin::{PluginMetadata, PluginState};
 use ndarray::Array3;
 
 use super::frequency_operator::FrequencyOperator;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// KZK Equation Solver Plugin.
 ///
@@ -59,7 +60,6 @@ impl KzkSolverPlugin {
         max_frequency: f64,
     ) -> KwaversResult<()> {
         use crate::domain::medium::AcousticProperties;
-        use std::f64::consts::PI;
 
         const NUM_HARMONICS: usize = 10;
         let fundamental = max_frequency / NUM_HARMONICS as f64;
@@ -73,7 +73,7 @@ impl KzkSolverPlugin {
         let mut diffraction_op = Array3::zeros(shape);
 
         for (f_idx, &freq) in frequencies.iter().enumerate() {
-            let omega = 2.0 * PI * freq;
+            let omega = TWO_PI * freq;
             use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
             let k = omega / SOUND_SPEED_WATER_SIM;
 
@@ -85,8 +85,8 @@ impl KzkSolverPlugin {
                         AcousticProperties::absorption_coefficient(medium, x, y, 0.0, grid, freq);
                     absorption_op[[i, j, f_idx]] = (-alpha * grid.dz).exp();
 
-                    let kx = 2.0 * PI * i as f64 / (grid.nx as f64 * grid.dx);
-                    let ky = 2.0 * PI * j as f64 / (grid.ny as f64 * grid.dy);
+                    let kx = TWO_PI * i as f64 / (grid.nx as f64 * grid.dx);
+                    let ky = TWO_PI * j as f64 / (grid.ny as f64 * grid.dy);
                     diffraction_op[[i, j, f_idx]] = ((kx * kx + ky * ky) / (2.0 * k)).cos();
                 }
             }
@@ -220,14 +220,13 @@ impl KzkSolverPlugin {
         medium: &dyn Medium,
     ) -> KwaversResult<f64> {
         use crate::domain::medium::AcousticProperties;
-        use std::f64::consts::PI;
 
         let grid = Grid::new(1, 1, 1, 1.0, 1.0, 1.0)?;
         let density = crate::domain::medium::density_at(medium, 0.0, 0.0, 0.0, &grid);
         let sound_speed = crate::domain::medium::sound_speed_at(medium, 0.0, 0.0, 0.0, &grid);
         let beta = AcousticProperties::nonlinearity_coefficient(medium, 0.0, 0.0, 0.0, &grid);
 
-        let omega = 2.0 * PI * frequency;
+        let omega = TWO_PI * frequency;
 
         Ok(density * sound_speed.powi(3) / (beta * omega * source_pressure))
     }

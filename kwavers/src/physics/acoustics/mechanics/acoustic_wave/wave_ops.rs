@@ -1,11 +1,11 @@
 //! Free functions for acoustic wave stability and nonlinearity computations.
 
-use std::f64::consts::PI;
 
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 
 use super::spatial_order::AcousticSpatialOrder;
+use crate::core::constants::numerical::{TWO_PI};
 
 // Coefficient relating power-law absorption to acoustic diffusivity for soft tissues.
 // Formula: δ ≈ 2αc³/(ω²). Reference: Szabo (1995) "Time domain wave equations for lossy media" Eq. 14.
@@ -38,7 +38,7 @@ pub fn compute_diffusivity_from_power_law_absorption<M: Medium + ?Sized>(
     );
     let (i, j, k) = crate::domain::medium::continuous_to_discrete(x, y, z, grid);
     let c = medium.sound_speed(i, j, k);
-    let omega = 2.0 * PI * frequency;
+    let omega = TWO_PI * frequency;
 
     POWER_LAW_ABSORPTION_TO_DIFFUSIVITY_FACTOR * alpha * c.powi(3) / (omega * omega)
 }

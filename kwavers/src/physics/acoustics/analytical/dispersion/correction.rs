@@ -6,7 +6,7 @@
 use super::DispersionAnalysis;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Numerical method for dispersion calculation
 #[derive(Debug, Clone, Copy)]
@@ -40,7 +40,7 @@ impl DispersionAnalysis {
         c: f64,
         method: DispersionMethod,
     ) {
-        let k = 2.0 * PI * frequency / c;
+        let k = TWO_PI * frequency / c;
 
         let correction_factor = match method {
             DispersionMethod::FDTD(dt) => 1.0 / (1.0 + Self::fdtd_dispersion(k, grid.dx, dt, c)),

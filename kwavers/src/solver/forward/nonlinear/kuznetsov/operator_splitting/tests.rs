@@ -1,8 +1,7 @@
 use super::OperatorSplittingSolver;
 use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
-use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
+use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA, TWO_PI};
 use ndarray::Array3;
-use std::f64::consts::PI;
 
 #[test]
 fn test_harmonic_generation() -> Result<(), crate::core::error::KwaversError> {
@@ -16,7 +15,7 @@ fn test_harmonic_generation() -> Result<(), crate::core::error::KwaversError> {
 
     let frequency = MHZ_TO_HZ; // 1 MHz
     let wavelength = SOUND_SPEED_WATER_SIM / frequency;
-    let k = 2.0 * PI / wavelength;
+    let k = TWO_PI / wavelength;
 
     let solver = OperatorSplittingSolver::new(
         nx,
@@ -40,7 +39,7 @@ fn test_harmonic_generation() -> Result<(), crate::core::error::KwaversError> {
         let x = i as f64 * dx;
         let amplitude = MPA_TO_PA; // 1 MPa
         pressure[[i, 0, 0]] = amplitude * (k * x).sin();
-        pressure_prev[[i, 0, 0]] = amplitude * (k * x - 2.0 * PI * frequency * solver.dt).sin();
+        pressure_prev[[i, 0, 0]] = amplitude * (k * x - TWO_PI * frequency * solver.dt).sin();
     }
 
     // Propagate for multiple steps
@@ -86,8 +85,8 @@ fn test_harmonic_generation() -> Result<(), crate::core::error::KwaversError> {
     // For spatial FFT: wavenumber k = 2π/λ = 2πf/c
     // FFT bin = k * L / (2π) = k * nx * dx / (2π)
     let wavelength = SOUND_SPEED_WATER_SIM / frequency;
-    let k_fundamental = 2.0 * PI / wavelength;
-    let fundamental_idx = (k_fundamental * nx as f64 * dx / (2.0 * PI)).round() as usize;
+    let k_fundamental = TWO_PI / wavelength;
+    let fundamental_idx = (k_fundamental * nx as f64 * dx / (TWO_PI)).round() as usize;
     let second_harmonic_idx = 2 * fundamental_idx;
 
     // Make sure indices are within bounds
@@ -141,7 +140,7 @@ fn test_shock_steepening() {
     let mut pressure_prev2 = Array3::zeros((nx, ny, nz));
 
     let wavelength = 1.5e-3; // 1.5 mm
-    let k = 2.0 * PI / wavelength;
+    let k = TWO_PI / wavelength;
     let amplitude = 5e6; // 5 MPa (high amplitude for shock formation)
 
     for i in 0..nx {

@@ -7,7 +7,7 @@ use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 #[cfg(test)]
 use crate::domain::grid::Grid;
 #[cfg(test)]
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// **Invariant**: Creating a KuznetsovWave on a 32³ grid allocates exactly
 /// 18 × 32³ × 8 = 4,718,592 bytes in its workspace scratch arena.
@@ -98,7 +98,7 @@ fn spectral_laplacian_of_sine_matches_analytical() {
     let grid = Grid::new(n, n, n, dx, dx, dx).unwrap();
 
     // Fundamental mode: k₁ = 2π/(N·dx)
-    let k1 = 2.0 * PI / (n as f64 * dx);
+    let k1 = TWO_PI / (n as f64 * dx);
     let mut field = ndarray::Array3::<f64>::zeros((n, n, n));
     for i in 0..n {
         let x = i as f64 * dx;

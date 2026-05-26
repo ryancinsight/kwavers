@@ -3,6 +3,7 @@ use ndarray::{Array3, Zip};
 use num_complex::Complex;
 
 use super::SpatiallyVaryingAbsorption;
+use crate::core::constants::numerical::{TWO_PI};
 
 impl SpatiallyVaryingAbsorption {
     #[must_use]
@@ -127,7 +128,7 @@ impl SpatiallyVaryingAbsorption {
         let (nx, ny, nz) = c0_field.dim();
         let mut c_field = Array3::zeros((nx, ny, nz));
 
-        let omega = 2.0 * std::f64::consts::PI * frequency;
+        let omega = TWO_PI * frequency;
 
         Zip::from(&mut c_field)
             .and(c0_field)

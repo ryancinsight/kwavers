@@ -9,6 +9,7 @@ use crate::core::constants::thermodynamic::{HEAT_CAPACITY_RATIO_DIATOMIC, ROOM_T
 use ndarray::Array1;
 use num_complex::Complex64;
 use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 impl TheoremValidator {
     /// Run comprehensive theorem validation suite
@@ -45,7 +46,7 @@ impl TheoremValidator {
 
         let time_signal = Array1::from_vec(
             (0..n_samples)
-                .map(|n| amplitude * (2.0 * PI * k as f64 * n as f64 / n_samples as f64).sin())
+                .map(|n| amplitude * (TWO_PI * k as f64 * n as f64 / n_samples as f64).sin())
                 .collect(),
         );
 

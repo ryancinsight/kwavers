@@ -1,6 +1,7 @@
 //! Literature validation types and reference constants.
 
 use std::collections::HashMap;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Reference values from Treeby et al. (2010) k-Wave paper
 pub mod treeby_2010 {
@@ -12,7 +13,7 @@ pub mod treeby_2010 {
     pub const DX: f64 = 1.0e-4;
 
     pub fn analytical_pressure(t: f64, amplitude: f64) -> f64 {
-        let omega = 2.0 * std::f64::consts::PI * FREQUENCY;
+        let omega = TWO_PI * FREQUENCY;
         let k = omega / SOUND_SPEED;
         let x = 64.0 * DX;
         amplitude * (omega * t - k * x).sin()

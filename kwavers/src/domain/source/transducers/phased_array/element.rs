@@ -1,6 +1,7 @@
 //! Individual transducer element modeling
 
 use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Individual transducer element with physics-based modeling
 #[derive(Debug, Clone)]
@@ -54,7 +55,7 @@ impl TransducerElement {
     /// Apply phase and amplitude to signal
     #[must_use]
     pub fn apply_modulation(&self, signal: f64, time: f64) -> f64 {
-        signal * self.amplitude_weight * (2.0 * PI).mul_add(time, self.phase_delay).cos()
+        signal * self.amplitude_weight * (TWO_PI).mul_add(time, self.phase_delay).cos()
     }
 }
 

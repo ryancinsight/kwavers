@@ -3,6 +3,7 @@
 use super::{config::FDTDConfig, InitialCondition};
 use crate::core::error::KwaversResult;
 use ndarray::{Array1, Array2};
+use crate::core::constants::numerical::{TWO_PI};
 
 /// 1D FDTD solver for wave equation.
 ///
@@ -47,7 +48,7 @@ impl FDTD1DWaveSolver {
             } => {
                 for i in 0..nx {
                     let x = i as f64 * config.dx;
-                    u_current[i] = amplitude * (2.0 * std::f64::consts::PI * frequency * x).sin();
+                    u_current[i] = amplitude * (TWO_PI * frequency * x).sin();
                 }
             }
             InitialCondition::Custom => {}

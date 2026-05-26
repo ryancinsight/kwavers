@@ -3,7 +3,7 @@
 use super::super::*;
 use approx::assert_abs_diff_eq;
 use ndarray::Array3;
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 #[test]
 fn test_operator_consistency_on_quadratic() {
@@ -73,7 +73,7 @@ fn test_all_directions_symmetry() {
 fn test_high_frequency_dispersion() {
     let dx = 0.1;
     let wavelength = 2.0; // 20 points per wavelength
-    let wave_number = 2.0 * PI / wavelength;
+    let wave_number = TWO_PI / wavelength;
 
     let op2 = CentralDifference2::new(dx, dx, dx).unwrap();
     let op4 = CentralDifference4::new(dx, dx, dx).unwrap();

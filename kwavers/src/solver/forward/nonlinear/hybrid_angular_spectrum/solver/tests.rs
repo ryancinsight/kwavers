@@ -2,7 +2,7 @@ use super::*;
 use crate::core::constants::tissue_acoustics::B_OVER_A_SOFT_TISSUE;
 use crate::core::constants::numerical::MPA_TO_PA;
 use ndarray::Array3;
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{FOUR_PI, TWO_PI};
 
 /// Construct a minimal grid suitable for HAS tests.
 /// # Panics
@@ -260,7 +260,7 @@ fn test_harmonic_generation_by_nonlinearity() {
     // Sinusoidal initial field in z (uniform in x,y)
     let amplitude = 0.5 * MPA_TO_PA; // 0.5 MPa — large amplitude to drive nonlinearity
     let initial = Array3::from_shape_fn((4, 4, nz), |(_, _, k)| {
-        amplitude * (2.0 * PI * k as f64 / nz as f64).sin()
+        amplitude * (TWO_PI * k as f64 / nz as f64).sin()
     });
 
     // Propagate many steps to accumulate harmonic generation
@@ -276,13 +276,13 @@ fn test_harmonic_generation_by_nonlinearity() {
         let re: f64 = z_profile
             .iter()
             .enumerate()
-            .map(|(k, &p)| p * (2.0 * PI * k as f64 / n).cos())
+            .map(|(k, &p)| p * (TWO_PI * k as f64 / n).cos())
             .sum::<f64>()
             / n;
         let im: f64 = z_profile
             .iter()
             .enumerate()
-            .map(|(k, &p)| p * (2.0 * PI * k as f64 / n).sin())
+            .map(|(k, &p)| p * (TWO_PI * k as f64 / n).sin())
             .sum::<f64>()
             / n;
         re * re + im * im
@@ -291,13 +291,13 @@ fn test_harmonic_generation_by_nonlinearity() {
         let re: f64 = z_profile
             .iter()
             .enumerate()
-            .map(|(k, &p)| p * (4.0 * PI * k as f64 / n).cos())
+            .map(|(k, &p)| p * (FOUR_PI * k as f64 / n).cos())
             .sum::<f64>()
             / n;
         let im: f64 = z_profile
             .iter()
             .enumerate()
-            .map(|(k, &p)| p * (4.0 * PI * k as f64 / n).sin())
+            .map(|(k, &p)| p * (FOUR_PI * k as f64 / n).sin())
             .sum::<f64>()
             / n;
         re * re + im * im

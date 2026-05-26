@@ -10,6 +10,7 @@ use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 use rand_distr::{Distribution, Normal};
 use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 // ─── Insertion loss ───────────────────────────────────────────────────────────
 
@@ -182,7 +183,7 @@ pub fn skull_transfer_matrix_transmission(
     c_skull: f64,
     d_skull_m: f64,
 ) -> Complex64 {
-    let k2 = 2.0 * PI * f_hz / c_skull;
+    let k2 = TWO_PI * f_hz / c_skull;
     let phase = k2 * d_skull_m;
     let cos_ph = phase.cos();
     let sin_ph = phase.sin();

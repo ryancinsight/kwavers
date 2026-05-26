@@ -13,6 +13,7 @@
 //! └─────────────────┘        └──────────────┘        └──────────────┘
 //! ```
 
+use crate::core::constants::numerical::{TWO_PI};
 #[cfg(test)]
 mod tests;
 
@@ -104,7 +105,7 @@ impl PinnAcousticSource {
         let phase = signal.phase(time_sample);
 
         let t_peak =
-            (std::f64::consts::PI / 2.0 - phase) / (2.0 * std::f64::consts::PI * frequency);
+            (std::f64::consts::PI / 2.0 - phase) / (TWO_PI * frequency);
         let amplitude = signal.amplitude(t_peak).abs();
 
         let focal_properties = Self::extract_focal_properties(source);
@@ -142,7 +143,7 @@ impl PinnAcousticSource {
 
     /// Source term coefficient S(t) = amplitude · cos(ωt + φ).
     pub fn source_term_coefficient(&self, t: f64) -> f64 {
-        let omega = 2.0 * std::f64::consts::PI * self.frequency;
+        let omega = TWO_PI * self.frequency;
         self.amplitude * (omega * t + self.phase).cos()
     }
 

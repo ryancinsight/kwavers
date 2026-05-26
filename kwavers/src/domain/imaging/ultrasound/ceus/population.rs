@@ -3,6 +3,7 @@
 use super::microbubble::{CeusSizeDistribution, Microbubble};
 use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::core::error::{KwaversError, KwaversResult, ValidationError};
+use crate::core::constants::numerical::{FOUR_PI, TWO_PI};
 
 /// Population of microbubbles with size distribution
 #[derive(Debug, Clone)]
@@ -135,8 +136,8 @@ impl MicrobubblePopulation {
                 }));
             }
 
-            let omega = 2.0 * std::f64::consts::PI * frequency;
-            let omega0 = 2.0 * std::f64::consts::PI * f0_hz;
+            let omega = TWO_PI * frequency;
+            let omega0 = TWO_PI * f0_hz;
 
             let effective_viscosity = liquid_viscosity + shell_viscosity;
             let delta_visc =
@@ -156,7 +157,7 @@ impl MicrobubblePopulation {
             }
 
             let ka = omega * radius_eq / sound_speed;
-            let sigma = 4.0 * std::f64::consts::PI * radius_eq * radius_eq * ka * ka / denom;
+            let sigma = FOUR_PI * radius_eq * radius_eq * ka * ka / denom;
             if !sigma.is_finite() || sigma < 0.0 {
                 return Err(KwaversError::Validation(ValidationError::InvalidValue {
                     parameter: "scattering_cross_section".to_owned(),
@@ -183,7 +184,7 @@ impl MicrobubblePopulation {
         let b = 6.0f64.mul_add(sigma_ln, mu_ln);
         let n: usize = 128;
         let h = (b - a) / n as f64;
-        let norm = 1.0 / (sigma_ln * (2.0 * std::f64::consts::PI).sqrt());
+        let norm = 1.0 / (sigma_ln * (TWO_PI).sqrt());
 
         let mut sum = 0.0;
         for i in 0..=n {

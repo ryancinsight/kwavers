@@ -1,7 +1,7 @@
 use super::functions::{generate_kappa, generate_shift_1d, generate_source_kappa};
 use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::math::fft::Complex64;
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Shift operators at k=0 (DC bin) must be exactly zero.
 ///
@@ -12,7 +12,7 @@ use std::f64::consts::PI;
 #[test]
 fn test_shift_dc_bin_is_zero() {
     let n = 16;
-    let dk = 2.0 * PI / (n as f64 * 1e-3);
+    let dk = TWO_PI / (n as f64 * 1e-3);
     let (pos, neg) = generate_shift_1d(n, dk, 1e-3);
     let eps = 1e-15;
     assert!(
@@ -42,7 +42,7 @@ fn test_shift_dc_bin_is_zero() {
 fn test_shift_neg_is_neg_conjugate_of_pos() {
     let n = 32;
     let dx = 5e-4;
-    let dk = 2.0 * PI / (n as f64 * dx);
+    let dk = TWO_PI / (n as f64 * dx);
     let (pos, neg) = generate_shift_1d(n, dk, dx);
     for idx in 0..n {
         let diff = (neg[idx] - (-pos[idx].conj())).norm();
@@ -64,7 +64,7 @@ fn test_shift_neg_is_neg_conjugate_of_pos() {
 fn test_nyquist_bin_not_zeroed() {
     let n = 16;
     let dx = 1e-3;
-    let dk = 2.0 * PI / (n as f64 * dx);
+    let dk = TWO_PI / (n as f64 * dx);
     let (pos, neg) = generate_shift_1d(n, dk, dx);
     let nyq = n / 2;
     assert!(
@@ -127,7 +127,7 @@ fn test_kappa_sinc_not_cos() {
     let kappa = generate_kappa(8, 8, 1, dx, dx, dx, c_ref, dt);
 
     // 1D index: i=1, j=0, k=0  → k_mag = dk_x * 1 = 2π/(8·dx)
-    let dk_x = 2.0 * PI / (8.0 * dx);
+    let dk_x = TWO_PI / (8.0 * dx);
     let k_mag = dk_x;
     let x = 0.5 * c_ref * dt * k_mag;
     let expected_sinc = x.sin() / x;
@@ -159,7 +159,7 @@ fn test_source_kappa_is_cos() {
     let dt = 0.2 * dx / c_ref;
     let src_kappa = generate_source_kappa(8, 8, 1, dx, dx, dx, c_ref, dt);
 
-    let dk_x = 2.0 * PI / (8.0 * dx);
+    let dk_x = TWO_PI / (8.0 * dx);
     let k_mag = dk_x;
     let x = 0.5 * c_ref * dt * k_mag;
     let expected_cos = x.cos();
@@ -182,7 +182,7 @@ fn test_source_kappa_is_cos() {
 fn test_shift_matches_orchestrator_formula() {
     let n = 8usize;
     let dx = 1e-3_f64;
-    let dk = 2.0 * PI / (n as f64 * dx);
+    let dk = TWO_PI / (n as f64 * dx);
 
     let (pos_fn, neg_fn) = generate_shift_1d(n, dk, dx);
 

@@ -3,6 +3,7 @@
 use ndarray::Array3;
 use num_complex::Complex64;
 use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Generate synthetic array data with a plane wave from a known direction.
 ///
@@ -30,7 +31,7 @@ pub(super) fn generate_plane_wave_data(
     let mut data = Array3::<f64>::zeros((n_sensors, 1, n_samples));
 
     let angle_rad = angle_deg * PI / 180.0;
-    let k = 2.0 * PI * signal_frequency_hz / sound_speed_m_per_s;
+    let k = TWO_PI * signal_frequency_hz / sound_speed_m_per_s;
 
     // Signal power (assuming unit amplitude)
     let signal_power = 0.5; // RMS power of cos wave with amplitude 1
@@ -43,7 +44,7 @@ pub(super) fn generate_plane_wave_data(
 
         for sample_idx in 0..n_samples {
             let t = sample_idx as f64 / sampling_frequency_hz;
-            let signal = (2.0 * PI * signal_frequency_hz * t + phase_shift).cos();
+            let signal = (TWO_PI * signal_frequency_hz * t + phase_shift).cos();
 
             // Add white Gaussian noise (simplified: use deterministic pseudo-noise)
             let noise = noise_std

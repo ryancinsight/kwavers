@@ -18,21 +18,22 @@ use ndarray::Array3;
 use num_complex::Complex64;
 use std::f64::consts::PI;
 use std::sync::Arc;
+use crate::core::constants::numerical::{FOUR_PI, TWO_PI};
 
 #[test]
 fn point_source_prediction_matches_outgoing_green_formula() {
     let array = MultiRowRingArray::new(4, 1, 0.006, 0.0).expect("array");
-    let frequency_hz = 1.0 / (2.0 * PI);
+    let frequency_hz = 1.0 / (TWO_PI);
 
     let cube =
         point_source_observation_cube(&array, &[frequency_hz], 1.0, 0.001).expect("prediction");
 
     let self_distance: f64 = 0.5e-3;
     let expected_self =
-        Complex64::new(self_distance.cos(), self_distance.sin()) / (4.0 * PI * self_distance);
+        Complex64::new(self_distance.cos(), self_distance.sin()) / (FOUR_PI * self_distance);
     let remote_distance = 2.0_f64.sqrt() * 0.003;
     let expected_remote =
-        Complex64::new(remote_distance.cos(), remote_distance.sin()) / (4.0 * PI * remote_distance);
+        Complex64::new(remote_distance.cos(), remote_distance.sin()) / (FOUR_PI * remote_distance);
     assert_eq!(cube.dim(), (1, 4, 4));
     assert!((cube[[0, 0, 0]] - expected_self).norm() <= 1.0e-12);
     assert!((cube[[0, 0, 1]] - expected_remote).norm() <= 1.0e-12);

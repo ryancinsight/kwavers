@@ -1,7 +1,7 @@
 use num_complex::Complex64;
-use std::f64::consts::PI;
 
 use super::assembler::BurtonMillerAssembler;
+use crate::core::constants::numerical::{FOUR_PI};
 
 impl BurtonMillerAssembler {
     pub(super) fn distance(&self, p1: &[f64; 3], p2: &[f64; 3]) -> f64 {
@@ -15,7 +15,7 @@ impl BurtonMillerAssembler {
 
     pub(super) fn greens_function_helmholtz(&self, k: f64, r: f64) -> Complex64 {
         let phase = Complex64::new(0.0, k * r);
-        phase.exp() / (4.0 * PI * r)
+        phase.exp() / (FOUR_PI * r)
     }
 
     /// ∂G/∂n_y — full 3D dot product (Colton & Kress 2013, §3.1, Eq. 3.41).

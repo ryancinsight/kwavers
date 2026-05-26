@@ -4,6 +4,7 @@ use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::core::constants::numerical::MHZ_TO_HZ;
 use approx::assert_relative_eq;
 use ndarray::{Array1, Array2};
+use crate::core::constants::numerical::{TWO_PI};
 
 #[test]
 fn test_pam_creation() {
@@ -58,7 +59,7 @@ fn test_beamform_basic() {
     let pam = DelayAndSumPAM::new(sensors, config).unwrap();
 
     let passive_data = Array2::<f64>::from_shape_fn((4, 1000), |(i, t)| {
-        (2.0 * std::f64::consts::PI * t as f64 / 100.0 + i as f64).sin()
+        (TWO_PI * t as f64 / 100.0 + i as f64).sin()
     });
 
     let grid_points = Array2::<f64>::from_shape_fn((5, 3), |(i, j)| match j {
@@ -213,7 +214,7 @@ fn test_event_detection_with_peak_frequency() {
     let mut passive_data = Array2::zeros((3, num_samples));
     for t in 0..num_samples {
         let time = t as f64 / pam.config.sampling_frequency;
-        let sample = (2.0 * std::f64::consts::PI * freq * time).sin();
+        let sample = (TWO_PI * freq * time).sin();
         for sensor in 0..3 {
             passive_data[[sensor, t]] = sample;
         }

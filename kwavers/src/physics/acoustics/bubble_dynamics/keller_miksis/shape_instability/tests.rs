@@ -3,6 +3,7 @@ use crate::core::constants::cavitation::SURFACE_TENSION_WATER;
 use crate::core::constants::fundamental::{
     ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM,
 };
+use crate::core::constants::numerical::{TWO_PI};
 
 #[test]
 fn test_default_state_is_zero() {
@@ -54,7 +55,7 @@ fn test_capillary_oscillation_bounded() {
     modes.seed(2, a0);
 
     let omega2 = (8.0 * sigma / (rho_l * r0.powi(3))).sqrt();
-    let period = 2.0 * std::f64::consts::PI / omega2;
+    let period = TWO_PI / omega2;
     let dt = period / 100.0;
 
     for _ in 0..1000 {

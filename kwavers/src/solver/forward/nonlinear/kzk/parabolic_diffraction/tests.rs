@@ -11,6 +11,7 @@ use crate::solver::validation::measure_beam_radius;
 use approx::assert_relative_eq;
 use ndarray::Array2;
 use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 #[test]
 fn test_kzk_gaussian_beam() {
@@ -56,7 +57,7 @@ fn test_kzk_gaussian_beam() {
     println!("Wavelength: {:.3}mm", wavelength * 1000.0);
     println!("Rayleigh distance: {:.3}mm", z_r * 1000.0);
     println!("Step size: {:.3}mm", dz * 1000.0);
-    println!("k0 = {:.3} rad/mm", 2.0 * PI / wavelength / 1000.0);
+    println!("k0 = {:.3} rad/mm", TWO_PI / wavelength / 1000.0);
 
     // Track beam evolution
     let initial_power: f64 = field.iter().map(|&x| x * x).sum();

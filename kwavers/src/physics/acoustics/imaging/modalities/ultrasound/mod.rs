@@ -4,7 +4,7 @@
 
 use crate::core::constants::acoustic_parameters::NP_TO_DB;
 use crate::core::constants::fundamental::{ACOUSTIC_ABSORPTION_TISSUE, SOUND_SPEED_TISSUE};
-use crate::core::constants::numerical::{CM_TO_M, MHZ_TO_HZ};
+use crate::core::constants::numerical::{CM_TO_M, MHZ_TO_HZ, TWO_PI};
 use ndarray::Array2;
 use num_complex::Complex;
 
@@ -96,7 +96,7 @@ pub fn compute_doppler_shift(iq_data: &Array2<Complex<f64>>, prf: f64) -> Array2
     for i in 0..n_samples {
         for j in 0..n_pulses - 1 {
             let phase_diff = (iq_data[[i, j + 1]] / iq_data[[i, j]]).arg();
-            doppler[[i, j]] = phase_diff * prf / (2.0 * std::f64::consts::PI);
+            doppler[[i, j]] = phase_diff * prf / (TWO_PI);
         }
     }
     doppler

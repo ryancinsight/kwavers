@@ -6,7 +6,7 @@ use crate::math::fft::{
 };
 use ndarray::{Array3, Zip};
 use num_complex::Complex;
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Initialize k-space grids for spectral operations
 pub fn initialize_kspace_grids(
@@ -24,21 +24,21 @@ pub fn initialize_kspace_grids(
         for j in 0..ny {
             for i in 0..nx {
                 let kx_val = if i <= nx / 2 {
-                    2.0 * PI * i as f64 / (nx as f64 * grid.dx)
+                    TWO_PI * i as f64 / (nx as f64 * grid.dx)
                 } else {
-                    2.0 * PI * (i as f64 - nx as f64) / (nx as f64 * grid.dx)
+                    TWO_PI * (i as f64 - nx as f64) / (nx as f64 * grid.dx)
                 };
 
                 let ky_val = if j <= ny / 2 {
-                    2.0 * PI * j as f64 / (ny as f64 * grid.dy)
+                    TWO_PI * j as f64 / (ny as f64 * grid.dy)
                 } else {
-                    2.0 * PI * (j as f64 - ny as f64) / (ny as f64 * grid.dy)
+                    TWO_PI * (j as f64 - ny as f64) / (ny as f64 * grid.dy)
                 };
 
                 let kz_val = if k <= nz / 2 {
-                    2.0 * PI * k as f64 / (nz as f64 * grid.dz)
+                    TWO_PI * k as f64 / (nz as f64 * grid.dz)
                 } else {
-                    2.0 * PI * (k as f64 - nz as f64) / (nz as f64 * grid.dz)
+                    TWO_PI * (k as f64 - nz as f64) / (nz as f64 * grid.dz)
                 };
 
                 kx[[i, j, k]] = kx_val;

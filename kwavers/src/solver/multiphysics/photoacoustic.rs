@@ -12,6 +12,7 @@ use crate::physics::electromagnetic::equations::{
 };
 use crate::physics::electromagnetic::photoacoustic::{GrueneisenModel, OpticalAbsorption};
 use ndarray::ArrayD;
+use crate::core::constants::numerical::{FOUR_PI};
 
 /// Photoacoustic solver implementation
 pub struct PhotoacousticSolver<T: ElectromagneticWaveEquation> {
@@ -103,7 +104,7 @@ impl<T: ElectromagneticWaveEquation> PhotoacousticSolver<T> {
         let mu_s_prime = self.optical_properties.reduced_scattering;
         let mu_eff = (3.0 * mu_a * (mu_a + mu_s_prime)).sqrt();
         let d_coeff = 1.0 / (3.0 * (mu_a + mu_s_prime)); // diffusion coefficient
-        let inv_4pi_d = 1.0 / (4.0 * std::f64::consts::PI * d_coeff);
+        let inv_4pi_d = 1.0 / (FOUR_PI * d_coeff);
 
         let shape = evaluation_points.shape();
         let ndim = shape.len();

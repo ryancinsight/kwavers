@@ -3,6 +3,7 @@
 //! Covers: Pennes bioheat focal temperature rise (lumped ODE model),
 //! HIFU focal pressure gain, and Gaussian acoustic power deposition.
 
+use crate::core::constants::numerical::FOUR_PI;
 use std::f64::consts::PI;
 
 // ─── Bioheat focal temperature ────────────────────────────────────────────────
@@ -55,7 +56,7 @@ pub fn bioheat_focal_temperature_rise(
     t_body_c: f64,
 ) -> Vec<f64> {
     // Effective half-dimension for spherical focal volume
-    let l = (3.0 * focal_volume_m3 / (4.0 * PI)).powf(1.0 / 3.0);
+    let l = (3.0 * focal_volume_m3 / (FOUR_PI)).powf(1.0 / 3.0);
     let perfusion_term = wb_perfusion * rho_blood * cb_blood; // [W/(m³·K)]
     let conduction_term = k_tissue / (l * l); // [W/(m³·K)]
     let loss = perfusion_term + conduction_term;
@@ -222,7 +223,7 @@ pub fn acoustic_power_deposition_depth_profile(
 mod tests {
     use super::*;
     use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
-    use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
+    use crate::core::constants::numerical::{FOUR_PI, MHZ_TO_HZ, MPA_TO_PA};
     use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
     use crate::core::constants::tissue_acoustics::DENSITY_BLOOD;
     use crate::core::constants::tissue_thermal::{SPECIFIC_HEAT_BLOOD, SPECIFIC_HEAT_TISSUE};

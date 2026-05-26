@@ -5,6 +5,7 @@
 
 use crate::domain::signal::Signal;
 use std::fmt::Debug;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Time-varying signal with pre-computed values
 #[derive(Debug, Clone)]
@@ -97,7 +98,7 @@ impl Signal for TimeVaryingSignal {
 
     fn phase(&self, t: f64) -> f64 {
         // Phase estimation based on time index
-        2.0 * std::f64::consts::PI * self.base_frequency * t
+        TWO_PI * self.base_frequency * t
     }
 
     fn duration(&self) -> Option<f64> {

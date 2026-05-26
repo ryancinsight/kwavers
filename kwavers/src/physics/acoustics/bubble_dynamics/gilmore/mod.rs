@@ -11,6 +11,7 @@
 use super::{BubbleParameters, BubbleState};
 use crate::core::constants::{ATMOSPHERIC_PRESSURE, WATER_TAIT_B, WATER_TAIT_N};
 use crate::core::error::KwaversResult;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Gilmore equation solver for high-amplitude bubble dynamics
 #[derive(Debug)]
@@ -88,7 +89,7 @@ impl GilmoreSolver {
         let u = state.wall_velocity;
 
         // Acoustic forcing
-        let omega = 2.0 * std::f64::consts::PI * self.params.driving_frequency;
+        let omega = TWO_PI * self.params.driving_frequency;
         let p_acoustic_inst = p_acoustic * (omega * t).sin();
         let p_inf = self.params.p0 + p_acoustic_inst;
 

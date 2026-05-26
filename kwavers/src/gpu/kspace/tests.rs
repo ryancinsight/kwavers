@@ -2,6 +2,7 @@ use super::shift_gpu::KspaceShiftGpu;
 use approx::assert_abs_diff_eq;
 use ndarray::Array3;
 use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Zero shift must be the identity: output equals input.
 /// # Panics
@@ -44,7 +45,7 @@ fn test_full_cycle_shift_is_identity() {
     let kz = vec![0.0];
     let real_in = Array3::from_elem((nx, 1, 1), 1.0_f64);
     let imag_in = Array3::zeros((nx, 1, 1));
-    let shift = [2.0 * PI, 0.0, 0.0];
+    let shift = [TWO_PI, 0.0, 0.0];
 
     let (re_out, im_out) = gpu
         .apply_shift(&real_in, &imag_in, &kx, &ky, &kz, shift)

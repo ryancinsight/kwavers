@@ -4,6 +4,7 @@ use approx::assert_relative_eq;
 use crate::core::constants::numerical::MHZ_TO_HZ;
 use ndarray::{arr2, Array2};
 use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 fn linear_array() -> Array2<f64> {
     arr2(&[[-0.001, 0.0, 0.0], [0.0, 0.0, 0.0], [0.001, 0.0, 0.0]])
@@ -15,7 +16,7 @@ fn focused_strategy_applies_spherical_phase_law() {
     shifter.set_strategy(ShiftingStrategy::Focused);
 
     let phases = shifter.apply_phases(&[0.0, 0.0, 0.02]).unwrap();
-    let k = 2.0 * PI / shifter.wavelength;
+    let k = TWO_PI / shifter.wavelength;
     let outer_distance = (0.001_f64.powi(2) + 0.02_f64.powi(2)).sqrt();
     let expected_outer = -k * (outer_distance - 0.02);
 
@@ -33,7 +34,7 @@ fn multifocus_strategy_accepts_flat_focal_point_chunks() {
     let phases = shifter
         .apply_phases(&[0.0, 0.0, 0.02, 0.001, 0.0, 0.02])
         .unwrap();
-    let k = 2.0 * PI / shifter.wavelength;
+    let k = TWO_PI / shifter.wavelength;
     let left_to_center_focus = (0.001_f64.powi(2) + 0.02_f64.powi(2)).sqrt();
     let left_to_right_focus = (0.002_f64.powi(2) + 0.02_f64.powi(2)).sqrt();
     let center_to_right_focus = (0.001_f64.powi(2) + 0.02_f64.powi(2)).sqrt();
@@ -68,7 +69,7 @@ fn linear_strategy_accepts_documented_sixty_degree_bound() {
 
     shifter.set_strategy(ShiftingStrategy::Linear);
     let phases = shifter.apply_phases(&[60.0]).unwrap();
-    let k = 2.0 * PI / shifter.wavelength;
+    let k = TWO_PI / shifter.wavelength;
     let expected_left = -k * -0.001 * 60.0_f64.to_radians().sin();
 
     assert_relative_eq!(phases[0], expected_left, epsilon = 1e-12);

@@ -16,6 +16,7 @@ use super::super::types::{
     grid_point_m, Nonlinear3dAperture, Nonlinear3dConfig, Nonlinear3dVolume,
 };
 use super::helpers::grid_index;
+use crate::core::constants::numerical::{FOUR_PI, TWO_PI};
 
 pub(super) struct PassiveOperator {
     pub(super) values: Vec<f64>,
@@ -40,7 +41,7 @@ impl PassiveOperator {
         let subharmonic_hz = 0.5 * config.frequency_hz;
         let subharmonic_mhz = subharmonic_hz * 1.0e-6;
         let c_ref_m_s = SOUND_SPEED_TISSUE;
-        let k_subharmonic = 2.0 * std::f64::consts::PI * subharmonic_hz / c_ref_m_s;
+        let k_subharmonic = TWO_PI * subharmonic_hz / c_ref_m_s;
         let spacing_m = volume.spacing_m;
         let min_distance_m = 0.5 * spacing_m;
         // Path-integrated tissue power-law attenuation. The cavitation source
@@ -91,7 +92,7 @@ impl PassiveOperator {
                         subharmonic_mhz,
                     );
                     row_slice[col] = (-path_alpha).exp() * (k_subharmonic * r).cos()
-                        / (4.0 * std::f64::consts::PI * r);
+                        / (FOUR_PI * r);
                 }
             });
         Self { values, rows, cols }

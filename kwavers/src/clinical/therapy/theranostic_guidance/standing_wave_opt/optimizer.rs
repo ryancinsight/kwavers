@@ -23,6 +23,7 @@ use super::{
     result::StandingWaveOptResult,
     swi::{compute_focal_pressure, compute_swi, superpose},
 };
+use crate::core::constants::numerical::{TWO_PI};
 
 // ---------------------------------------------------------------------------
 // Objective
@@ -106,7 +107,7 @@ fn backtrack(
 fn wrap_phases(phases: Vec<f64>) -> Vec<f64> {
     phases
         .into_iter()
-        .map(|p| (p + std::f64::consts::PI) % (2.0 * std::f64::consts::PI) - std::f64::consts::PI)
+        .map(|p| (p + std::f64::consts::PI) % (TWO_PI) - std::f64::consts::PI)
         .collect()
 }
 

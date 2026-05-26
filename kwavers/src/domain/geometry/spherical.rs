@@ -2,6 +2,7 @@ use ndarray::{Array1, Array2};
 use std::f64::consts::PI;
 
 use super::{GeometricDomain, GeometryDimension, PointLocation};
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Circular/spherical domain
 ///
@@ -165,7 +166,7 @@ impl GeometricDomain for SphericalDomain {
         for i in 0..n_points {
             match dim {
                 2 => {
-                    let theta = rng.gen_range(0.0..(2.0 * PI));
+                    let theta = rng.gen_range(0.0..(TWO_PI));
                     points[[i, 0]] = self.radius.mul_add(theta.cos(), self.center[0]);
                     points[[i, 1]] = self.radius.mul_add(theta.sin(), self.center[1]);
                 }

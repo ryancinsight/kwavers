@@ -6,6 +6,7 @@ use crate::clinical::therapy::theranostic_guidance::{
     abdominal3d::bowl::BOWL_THETA_MAX_RAD,
     nonlinear3d::types::{flat_index, GridIndex, Nonlinear3dAperture, SourceDomain},
 };
+use crate::core::constants::numerical::{TWO_PI};
 
 pub(super) fn finite_source_stencil(
     idx: GridIndex,
@@ -135,7 +136,7 @@ fn exterior_element_radius_cells(aperture: &Nonlinear3dAperture, spacing_m: f64)
         .sum::<f64>()
         / count;
     let cap_area_m2 =
-        2.0 * PI * mean_bowl_radius_m * mean_bowl_radius_m * (1.0 - BOWL_THETA_MAX_RAD.cos());
+        TWO_PI * mean_bowl_radius_m * mean_bowl_radius_m * (1.0 - BOWL_THETA_MAX_RAD.cos());
     let element_radius_m = (cap_area_m2 / (count * PI)).sqrt();
     (element_radius_m / spacing_m).clamp(1.0, 4.0)
 }

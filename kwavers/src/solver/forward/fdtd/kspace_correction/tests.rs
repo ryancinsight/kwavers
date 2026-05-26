@@ -8,7 +8,7 @@ use crate::solver::forward::fdtd::solver::FdtdSolver;
 use crate::solver::forward::pstd::config::PSTDConfig;
 use crate::solver::forward::pstd::implementation::core::orchestrator::PSTDSolver;
 use ndarray::Array3;
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 fn test_grid() -> Grid {
     Grid::new(16, 16, 16, 1e-3, 1e-3, 1e-3).unwrap()
@@ -190,7 +190,7 @@ fn test_spectral_gradient_of_sine_is_cosine() {
     let mut kops = KSpaceFdtdOperators::new(nx, nx, nx, dx, dx, dx, c_ref, dt_small);
 
     let lx = nx as f64 * dx;
-    let k_fund = 2.0 * PI / lx;
+    let k_fund = TWO_PI / lx;
     let mut field = Array3::zeros((nx, nx, nx));
     for i in 0..nx {
         let x = i as f64 * dx;

@@ -7,6 +7,7 @@ use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::{Array2, ArrayView3};
 use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Beam pattern analysis configuration
 #[derive(Debug, Clone)]
@@ -65,10 +66,10 @@ pub fn calculate_beam_pattern(
     validate_pressure_field_domain(pressure_field, grid)?;
 
     let wavelength = config.sound_speed / config.frequency;
-    let k = 2.0 * PI / wavelength;
+    let k = TWO_PI / wavelength;
 
     // Angular sampling
-    let n_theta = ((2.0 * PI) / config.angular_resolution) as usize;
+    let n_theta = ((TWO_PI) / config.angular_resolution) as usize;
     let n_phi = (PI / config.angular_resolution) as usize;
 
     let mut pattern = Array2::zeros((n_theta, n_phi));

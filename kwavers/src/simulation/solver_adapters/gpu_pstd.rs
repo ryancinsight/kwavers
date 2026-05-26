@@ -37,6 +37,7 @@
 //! violated.  `SimulationSolverFactory::create_solver(SolverType::PstdGpu,
 //! ...)` propagates that error to the caller.
 
+use crate::core::constants::numerical::{TWO_PI};
 mod medium;
 
 use medium::GpuMediumSnapshot;
@@ -205,9 +206,9 @@ impl GpuPstdSimulationAdapter {
 
         // ── Absorption operator arrays ────────────────────────────────────────
         let (nabla1, nabla2, tau_v, eta_v) = if self.medium.has_absorption {
-            let dk_x = 2.0 * PI / (nx as f64 * self.grid.dx);
-            let dk_y = 2.0 * PI / (ny as f64 * self.grid.dy);
-            let dk_z = 2.0 * PI / (nz as f64 * self.grid.dz);
+            let dk_x = TWO_PI / (nx as f64 * self.grid.dx);
+            let dk_y = TWO_PI / (ny as f64 * self.grid.dy);
+            let dk_z = TWO_PI / (nz as f64 * self.grid.dz);
             const SINGULARITY: f64 = 1e-8;
             let y = alpha_power;
 

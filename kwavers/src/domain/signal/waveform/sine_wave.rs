@@ -6,6 +6,7 @@ use crate::domain::signal::{
     phase::{ConstantPhase, Phase},
     Signal,
 };
+use crate::core::constants::numerical::{TWO_PI};
 
 #[derive(Debug, Clone)]
 pub struct SineWave {
@@ -62,7 +63,7 @@ impl Signal for SineWave {
         let amp = self.amplitude.amplitude(t);
         let freq = self.frequency_hz_checked(t);
         let phase = self.phase.phase(t);
-        amp * (2.0 * std::f64::consts::PI * freq).mul_add(t, phase).sin()
+        amp * (TWO_PI * freq).mul_add(t, phase).sin()
     }
 
     fn frequency(&self, t: f64) -> f64 {

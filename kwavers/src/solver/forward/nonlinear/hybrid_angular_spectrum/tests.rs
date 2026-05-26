@@ -7,6 +7,7 @@ use ndarray::Array3;
 
 use super::config::HASConfig;
 use super::facade::HybridAngularSpectrum;
+use crate::core::constants::numerical::{TWO_PI};
 
 #[test]
 fn test_has_config_default() {
@@ -88,7 +89,7 @@ fn test_shock_formation_distance_matches_analytical_formula() {
     let has = HybridAngularSpectrum::new(&grid, config).unwrap();
     let p0 = 1.0e5_f64;
     let d_shock = has.shock_formation_distance(p0);
-    let omega = 2.0 * std::f64::consts::PI * f_ref;
+    let omega = TWO_PI * f_ref;
     let z_shock_analytic = rho0 * c0.powi(3) / (beta * omega * p0);
     let rel_err = (d_shock - z_shock_analytic).abs() / z_shock_analytic;
     assert!(

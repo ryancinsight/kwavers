@@ -16,7 +16,7 @@ use crate::physics::acoustics::imaging::modalities::ultrasound::frequency_domain
 use crate::solver::inverse::linear_born_inversion::ElementPosition;
 use ndarray::Array3;
 use num_complex::Complex64;
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 pub(super) fn objective_and_gradient(
     slowness_s_per_m: &Array3<f64>,
@@ -91,7 +91,7 @@ fn accumulate_dense_cbs_frequency_gradient(
         })?;
 
     let rows = observation.observed_pressure.nrows();
-    let omega = 2.0 * PI * observation.frequency_hz;
+    let omega = TWO_PI * observation.frequency_hz;
     let reference_slowness = 1.0 / config.reference_sound_speed_m_s;
     let reference_wavenumber = omega * reference_slowness;
     let grid = GridSpec::new(slowness_s_per_m.dim(), config.spacing_m)?;
@@ -201,7 +201,7 @@ fn accumulate_frequency_gradient(
     gradient: &mut Array3<f64>,
 ) -> KwaversResult<()> {
     let rows = observation.observed_pressure.nrows();
-    let omega = 2.0 * PI * observation.frequency_hz;
+    let omega = TWO_PI * observation.frequency_hz;
     let reference_slowness = 1.0 / config.reference_sound_speed_m_s;
     let reference_wavenumber = omega * reference_slowness;
     let min_distance = 0.5 * config.spacing_m;

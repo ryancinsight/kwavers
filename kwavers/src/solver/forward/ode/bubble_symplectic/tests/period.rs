@@ -3,8 +3,8 @@
 use super::super::{BubbleSymplecticIntegrator, SymplecticConfig};
 use super::helpers::{make_model, make_params};
 use crate::physics::acoustics::bubble_dynamics::bubble_state::BubbleState;
-use std::f64::consts::PI;
 use std::sync::Arc;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// **Test A — Minnaert period accuracy (Störmer-Verlet, O(h²) error).**
 ///
@@ -39,7 +39,7 @@ fn test_minnaert_period() {
     // so ω₀² = [3γ(p0 + 2σ/R0 − pv) − 2σ/R0] / (ρ_L R0²)
     let p_eq_gas = p0 + 2.0 * sigma / r0 - pv;
     let omega0 = ((3.0 * gamma * p_eq_gas - 2.0 * sigma / r0) / (rho_l * r0 * r0)).sqrt();
-    let t_period = 2.0 * PI / omega0;
+    let t_period = TWO_PI / omega0;
     let dt = t_period / 200.0; // 200 steps per period → (hω₀)²/24 ≈ 0.04% error
 
     let config = SymplecticConfig {

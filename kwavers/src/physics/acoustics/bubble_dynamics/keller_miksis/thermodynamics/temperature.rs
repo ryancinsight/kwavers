@@ -8,7 +8,7 @@ use crate::core::constants::thermodynamic::{
 };
 use crate::core::error::{KwaversResult, PhysicsError};
 use crate::physics::acoustics::bubble_dynamics::bubble_state::BubbleState;
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{FOUR_PI, TWO_PI};
 
 /// Update bubble temperature through adiabatic, conductive, latent, and radiative terms.
 /// # Errors
@@ -28,7 +28,7 @@ pub(crate) fn update_temperature(
     // Factor of 3 comes from dV/V = 3·dR/R for a sphere (Brennen 1995 §2.22).
     let adiabatic_term = -3.0 * (gamma - 1.0) * t_bubble * v / r;
 
-    let surface_area = 4.0 * PI * r * r;
+    let surface_area = FOUR_PI * r * r;
     // Total heat flow [W] via Fourier's law with boundary layer thickness ≈ R:
     //   Q = k · A · ΔT / R      [W·m²·K / (m·K·m)] = [W] ✓
     // Using surface_area alone (without /r) gives [W·m], not [W].
@@ -89,7 +89,7 @@ fn latent_temperature_rate(
         0.0
     };
 
-    let sqrt_term = (2.0 * PI * M_WATER * R_GAS * t_liquid_k).sqrt();
+    let sqrt_term = (TWO_PI * M_WATER * R_GAS * t_liquid_k).sqrt();
     // Hertz-Knudsen mass flux [kg/s]: J_mass = α·A·ΔP·M / √(2πMRT)
     let mass_flux_kg_s =
         model.params.accommodation_coeff * surface_area * (p_sat_liq - p_vapor) * M_WATER

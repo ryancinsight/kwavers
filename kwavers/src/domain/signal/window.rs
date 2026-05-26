@@ -1,6 +1,7 @@
 use std::f64::consts::PI;
 
 use crate::core::error::{KwaversError, KwaversResult};
+use crate::core::constants::numerical::{FOUR_PI, TWO_PI};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum SignalWindowType {
@@ -20,11 +21,11 @@ pub fn window_value(window: SignalWindowType, normalized_time: f64) -> f64 {
 
     match window {
         SignalWindowType::Rectangular => 1.0,
-        SignalWindowType::Hann => 0.5 * (1.0 - (2.0 * PI * normalized_time).cos()),
-        SignalWindowType::Hamming => 0.46f64.mul_add(-(2.0 * PI * normalized_time).cos(), 0.54),
+        SignalWindowType::Hann => 0.5 * (1.0 - (TWO_PI * normalized_time).cos()),
+        SignalWindowType::Hamming => 0.46f64.mul_add(-(TWO_PI * normalized_time).cos(), 0.54),
         SignalWindowType::Blackman => 0.08f64.mul_add(
-            (4.0 * PI * normalized_time).cos(),
-            0.5f64.mul_add(-(2.0 * PI * normalized_time).cos(), 0.42),
+            (FOUR_PI * normalized_time).cos(),
+            0.5f64.mul_add(-(TWO_PI * normalized_time).cos(), 0.42),
         ),
         SignalWindowType::Gaussian => {
             let sigma = 0.4;
@@ -35,13 +36,13 @@ pub fn window_value(window: SignalWindowType, normalized_time: f64) -> f64 {
             if alpha <= 0.0 {
                 1.0
             } else if alpha >= 1.0 {
-                0.5 * (1.0 - (2.0 * PI * normalized_time).cos())
+                0.5 * (1.0 - (TWO_PI * normalized_time).cos())
             } else if normalized_time < alpha / 2.0 {
-                0.5 * (1.0 + (2.0 * PI * normalized_time / alpha - PI).cos())
+                0.5 * (1.0 + (TWO_PI * normalized_time / alpha - PI).cos())
             } else if normalized_time <= 1.0 - alpha / 2.0 {
                 1.0
             } else {
-                0.5 * (1.0 + (2.0 * PI * (normalized_time - 1.0) / alpha + PI).cos())
+                0.5 * (1.0 + (TWO_PI * (normalized_time - 1.0) / alpha + PI).cos())
             }
         }
     }

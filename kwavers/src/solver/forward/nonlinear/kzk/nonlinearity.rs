@@ -42,6 +42,7 @@
 use super::KZKConfig;
 use crate::math::fft::{fft_1d_complex_inplace, ifft_1d_complex_inplace, Complex64};
 use ndarray::{Array1, Array3};
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Nonlinear operator for the KZK equation.
 ///
@@ -169,7 +170,7 @@ impl KzkNonlinearOperator {
         let nt = self.config.nt;
         let ny = self.config.ny;
         // Angular-frequency multiplier per FFT bin:  ω[k] = 2πk/(N·Δτ)
-        let two_pi_over_n_dt = 2.0 * std::f64::consts::PI / (nt as f64 * dt);
+        let two_pi_over_n_dt = TWO_PI / (nt as f64 * dt);
 
         // Zero the pre-allocated delta buffer (replaces a 131 MB allocation per step).
         self.delta.fill(0.0);
@@ -260,7 +261,7 @@ impl KzkNonlinearOperator {
     /// Hamilton MF, Blackstock DT (1998). Nonlinear Acoustics §4.3, eq. (4.3.5).
     #[must_use]
     pub fn shock_distance(&self, frequency: f64, amplitude: f64) -> f64 {
-        let omega = 2.0 * std::f64::consts::PI * frequency;
+        let omega = TWO_PI * frequency;
         self.config.rho0 * self.config.c0.powi(3) / (self.beta * omega * amplitude)
     }
 

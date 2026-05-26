@@ -1,6 +1,7 @@
 use super::*;
 use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 use crate::core::constants::numerical::MHZ_TO_HZ;
+use crate::core::constants::numerical::{TWO_PI};
 
 #[test]
 fn test_shock_capture_creation() {
@@ -137,7 +138,7 @@ fn test_harmonic_ratios_pure_sine_is_zero() {
     let f0 = 100.0_f64;
     let mut pressure = ndarray::Array2::zeros((nx, nz));
     for z in 0..nz {
-        let val = (2.0 * std::f64::consts::PI * f0 * z as f64 * dz).sin() * 1000.0;
+        let val = (TWO_PI * f0 * z as f64 * dz).sin() * 1000.0;
         for x in 0..nx {
             pressure[[x, z]] = val;
         }
@@ -177,8 +178,8 @@ fn test_harmonic_ratios_known_second_harmonic() {
     let mut pressure = ndarray::Array2::zeros((nx, nz));
     for z in 0..nz {
         let t = z as f64 * dz;
-        let val = a1 * (2.0 * std::f64::consts::PI * f0 * t).sin()
-            + a2 * (2.0 * std::f64::consts::PI * 2.0 * f0 * t).sin();
+        let val = a1 * (TWO_PI * f0 * t).sin()
+            + a2 * (TWO_PI * 2.0 * f0 * t).sin();
         for x in 0..nx {
             pressure[[x, z]] = val;
         }

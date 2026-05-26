@@ -2,7 +2,7 @@
 
 use ndarray::Array1;
 use num_complex::Complex64;
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Create a steering vector for a uniform linear array (ULA).
 ///
@@ -19,7 +19,7 @@ use std::f64::consts::PI;
 /// - `n`: Number of array elements
 /// - `angle_rad`: Steering angle from broadside (radians)
 pub fn create_steering_vector(n: usize, angle_rad: f64) -> Array1<Complex64> {
-    let k = 2.0 * PI; // Normalized wavenumber (λ = 1, d = 0.5λ)
+    let k = TWO_PI; // Normalized wavenumber (λ = 1, d = 0.5λ)
     Array1::from_vec(
         (0..n)
             .map(|i| {

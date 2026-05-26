@@ -9,6 +9,7 @@ use crate::core::error::KwaversResult;
 use crate::math::geometry::delays;
 use crate::math::geometry::distance3;
 use ndarray::Array1;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Steering vector calculation methods
 #[derive(Debug, Clone, PartialEq)]
@@ -91,7 +92,7 @@ impl SteeringVector {
             ));
         }
 
-        let wavenumber = 2.0 * std::f64::consts::PI * frequency / speed_of_sound;
+        let wavenumber = TWO_PI * frequency / speed_of_sound;
         let num_sensors = sensor_positions.len();
 
         let mut steering_vector = Array1::zeros(num_sensors);

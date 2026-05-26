@@ -11,13 +11,13 @@ use crate::{
     domain::grid::Grid,
 };
 use ndarray::{Array3, Zip};
-use std::f64::consts::PI;
 
 use super::cap::{SphericalCapConfig, SphericalCapLayout};
 use super::validation::{
     field_validation_error, positive_finite, validate_element_count, validate_finite_field,
     validate_finite_vector, validate_positive_finite_field,
 };
+use crate::core::constants::numerical::{FOUR_PI, TWO_PI};
 
 mod presets;
 mod projection;
@@ -265,7 +265,7 @@ impl BowlTransducer {
     ///
     pub fn generate_source(&self, grid: &Grid, time: f64) -> KwaversResult<Array3<f64>> {
         let mut source = Array3::zeros((grid.nx, grid.ny, grid.nz));
-        let omega = 2.0 * PI * self.config.frequency;
+        let omega = TWO_PI * self.config.frequency;
         let focus_delays = self.calculate_focus_delays();
 
         Zip::indexed(&mut source).par_for_each(|(ix, iy, iz), cell| {
@@ -300,7 +300,7 @@ impl BowlTransducer {
                 let phase = omega * (time - focus_delays[i]) + self.config.phase;
                 pressure +=
                     self.config.amplitude * self.element_areas[i] * directivity * phase.sin()
-                        / (4.0 * PI * r);
+                        / (FOUR_PI * r);
             }
         }
 
@@ -368,8 +368,8 @@ impl BowlTransducer {
         // O'Neil's solution for on-axis pressure of a focused bowl transducer
         let r = self.config.radius_of_curvature;
         let a = self.config.diameter / 2.0;
-        let k = 2.0 * PI * self.config.frequency / SOUND_SPEED_WATER; // Wave number
-        let omega = 2.0 * PI * self.config.frequency; // Angular frequency
+        let k = TWO_PI * self.config.frequency / SOUND_SPEED_WATER; // Wave number
+        let omega = TWO_PI * self.config.frequency; // Angular frequency
         let _c = SOUND_SPEED_WATER; // Speed of sound in water
 
         // Geometric parameters
@@ -424,7 +424,7 @@ fn default_or_configured_element_size(config: &BowlConfig) -> KwaversResult<f64>
 }
 
 fn spherical_cap_area(radius_m: f64, theta_max_rad: f64) -> f64 {
-    2.0 * PI * radius_m * radius_m * (1.0 - theta_max_rad.cos())
+    TWO_PI * radius_m * radius_m * (1.0 - theta_max_rad.cos())
 }
 
 fn add3(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {

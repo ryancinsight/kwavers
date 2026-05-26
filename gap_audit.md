@@ -1,5 +1,94 @@
 # Gap Audit
 
+## Ali 2025 Scattering-Increment Scale Decomposition (2026-05-26)
+
+The finite-window model has low row-scaled full-field residual, but the
+homogeneous-baseline calibrated scattering increment remains above unity. The
+diagnostic surface did not report whether this discrepancy came from model
+physics or from changing the least-squares source scale when the full model,
+instead of the homogeneous baseline, owns calibration.
+
+### Implementation
+- Extended `BreastUstScatteringIncrementModelDiagnostics` with
+  baseline-scaled full-field normalized residual, model-scaled full-field
+  normalized residual, source-scale relative drift, and source-scale phase
+  drift.
+- Kept the original scattering-increment theorem unchanged:
+  `d_sc = d_obs - alpha_0 d_0` and
+  `d_model_sc = alpha_0 (d_model - d_0)`, where `alpha_0` is the homogeneous
+  baseline row scale.
+- Added model-scale diagnostics using `alpha_m`, the row least-squares scale
+  minimizing `||alpha_m d_model - d_obs||`, so operator-equivalence residuals
+  can be compared against increment-domain residuals without Python-side
+  correction factors.
+- Exposed all added fields through PyO3 and added analytic Rust/Python fixtures
+  where `observed = 3 * prediction`, the model-scaled full-field residual is
+  zero, the baseline-scale relative drift is exactly `1/3`, and the calibrated
+  increment residual is above unity.
+
+### Verification summary
+- `rustfmt` on the touched Rust files: exit 0.
+- `cargo test -p kwavers --test breast_fwi_scattering_increment --no-run
+  --message-format=short -j 1` with `CARGO_TARGET_DIR=target/codex-scattering-verify`:
+  exceeded the 300 s verification limit while concurrent workspace Cargo builds
+  were active.
+
+### Residual risk
+- The code path still requires Rust compile/test verification, PyO3 rebuild,
+  focused pytest, and a determined-probe rerun before the finite-window
+  scattering-increment refinement item can be closed.
+- The next metrics artifact should compare
+  `model_scaled_full_field_normalized_residual` with
+  `baseline_scaled_full_field_normalized_residual` for
+  `pstd_finite_window_born` to decide whether the next correction belongs in
+  finite-window scattering physics or row-source calibration semantics.
+
+## Ali 2025 Finite-Window Determined Probe (2026-05-25)
+
+The report-routing change required a fresh PyO3 extension before the reduced
+Ali 2025 determined probe could consume `pstd_finite_window_born`. The prior
+debug extension was stale enough to miss active Python package exports.
+
+### Closure
+- Rebuilt `pykwavers` debug library against the current `kwavers` tree.
+- Verified top-level `pykwavers` imports
+  `simulate_breast_fwi_pstd_finite_window_born_observation` and
+  `acoustic_intensity_depth_profile`.
+- Reran the determined `(4,4,3)` reduced report with two frequencies, four
+  cycles per frequency, one frequency-bin cycle, snapped one-row array geometry,
+  and determined-acquisition guard enabled.
+- Updated
+  `pykwavers/examples/output/ali2025_breast_fwi_determined_probe/ali2025_breast_fwi_metrics.json`.
+
+### Verification summary
+- `cargo build -p pykwavers --lib --message-format=short -j 1`: exit 0.
+- Real import check for the finite-window PyO3 symbol and analytical helper:
+  pass.
+- `pytest pykwavers/tests/test_ali2025_replication_example.py -q -k "finite_window_prediction_builder or report_prediction_builder" --timeout=60`:
+  2/2 pass.
+- Determined probe command with `--max-shape 4,4,3 --decimation 8
+  --frequencies-hz 200000,300000 --rows 1 --require-determined-acquisition
+  --cycles-per-frequency 4 --frequency-bin-cycles 1 --no-plot`: exit 0.
+
+### Results
+- Full-field operator equivalence now ranks `pstd_finite_window_born` best:
+  all-channel residual `0.03308952523301831`, passive-only residual
+  `0.03395758947454344`, and active-only residual
+  `7.985341351399759e-17`.
+- The prior stationary `pstd_spectral_convergent_born` remains at
+  `0.6808491600357303` all-channel and `0.6047666981098512` passive-only.
+- Calibrated scattering-increment diagnostics also rank
+  `pstd_finite_window_born` best, but residuals remain above unity:
+  `1.4759860412851549` all-channel and `1.3580035175186627` passive-only.
+  Increment energy ratios are `1.7738258877509765` all-channel and
+  `1.6818009989854836` passive-only.
+
+### Residual risk
+- Full-field finite-window alignment is now strong, but the row-calibrated
+  scattering-increment residual is still not closed. The next work belongs in
+  Rust/PyO3 diagnostics for increment calibration and finite-window scattering
+  phasing; Python must not add correction factors.
+
 ## Focused-Bowl Focus-Axis Source Constructor (2026-05-25)
 
 The clinical focused-bowl geometry adapter delegated equal-area sampling to

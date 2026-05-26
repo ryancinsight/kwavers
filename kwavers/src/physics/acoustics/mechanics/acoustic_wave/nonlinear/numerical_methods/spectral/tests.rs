@@ -2,7 +2,7 @@ use super::super::super::wave_model::NonlinearWave;
 use crate::domain::grid::Grid;
 use crate::domain::medium::HomogeneousMedium;
 use ndarray::Array3;
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// A spatially uniform field has zero spectral gradient in every direction.
 ///
@@ -61,7 +61,7 @@ fn compute_spectral_gradient_x_analytical_for_single_mode_sinusoid() {
 
     let mut field = Array3::<f64>::zeros((n, n, n));
     for i in 0..n {
-        let v = (2.0 * PI * i as f64 / n as f64).sin();
+        let v = (TWO_PI * i as f64 / n as f64).sin();
         for j in 0..n {
             for k in 0..n {
                 field[[i, j, k]] = v;
@@ -71,10 +71,10 @@ fn compute_spectral_gradient_x_analytical_for_single_mode_sinusoid() {
 
     let (grad_x, _gy, _gz) = w.compute_spectral_gradient(&field, &grid).unwrap();
 
-    let k1x = 2.0 * PI / (n as f64 * dx);
+    let k1x = TWO_PI / (n as f64 * dx);
     let tol = 1e-9 * k1x;
     for i in 0..n {
-        let expected = k1x * (2.0 * PI * i as f64 / n as f64).cos();
+        let expected = k1x * (TWO_PI * i as f64 / n as f64).cos();
         let got = grad_x[[i, 0, 0]];
         assert!(
             (got - expected).abs() < tol,
@@ -98,7 +98,7 @@ fn compute_spectral_laplacian_negative_definite_for_single_mode_sinusoid() {
 
     let mut field = Array3::<f64>::zeros((n, n, n));
     for i in 0..n {
-        let v = (2.0 * PI * i as f64 / n as f64).sin();
+        let v = (TWO_PI * i as f64 / n as f64).sin();
         for j in 0..n {
             for k in 0..n {
                 field[[i, j, k]] = v;
@@ -108,7 +108,7 @@ fn compute_spectral_laplacian_negative_definite_for_single_mode_sinusoid() {
 
     let lap = w.compute_spectral_laplacian(&field, &grid).unwrap();
 
-    let k1x = 2.0 * PI / (n as f64 * dx);
+    let k1x = TWO_PI / (n as f64 * dx);
     let factor = -(k1x * k1x);
     let tol = 1e-9 * k1x * k1x;
     for i in 0..n {
@@ -131,7 +131,7 @@ fn compute_spectral_gradient_y_analytical_for_single_mode_sinusoid() {
 
     let mut field = Array3::<f64>::zeros((n, n, n));
     for j in 0..n {
-        let v = (2.0 * PI * j as f64 / n as f64).sin();
+        let v = (TWO_PI * j as f64 / n as f64).sin();
         for i in 0..n {
             for k in 0..n {
                 field[[i, j, k]] = v;
@@ -141,10 +141,10 @@ fn compute_spectral_gradient_y_analytical_for_single_mode_sinusoid() {
 
     let (_gx, grad_y, _gz) = w.compute_spectral_gradient(&field, &grid).unwrap();
 
-    let k1 = 2.0 * PI / (n as f64 * dx);
+    let k1 = TWO_PI / (n as f64 * dx);
     let tol = 1e-9 * k1;
     for j in 0..n {
-        let expected = k1 * (2.0 * PI * j as f64 / n as f64).cos();
+        let expected = k1 * (TWO_PI * j as f64 / n as f64).cos();
         let got = grad_y[[0, j, 0]];
         assert!(
             (got - expected).abs() < tol,

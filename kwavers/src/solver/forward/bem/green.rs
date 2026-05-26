@@ -45,7 +45,7 @@
 //! - `test_green_symmetry`: G(r, r') = G(r', r) (reciprocity).
 
 use num_complex::Complex64;
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{FOUR_PI};
 
 /// The 3D free-space Helmholtz Green's function and its gradient.
 ///
@@ -76,7 +76,7 @@ pub fn green_helmholtz(k: f64, r_src: [f64; 3], r_obs: [f64; 3]) -> (Complex64, 
     }
 
     let r = r_sq.sqrt();
-    let g = Complex64::new(0.0, k * r).exp() / (4.0 * PI * r);
+    let g = Complex64::new(0.0, k * r).exp() / (FOUR_PI * r);
 
     // ∇_r G = (ik − 1/R) · G · (r − r') / R
     let factor = (Complex64::new(0.0, k) - 1.0 / r) * g / r;
@@ -111,7 +111,7 @@ pub fn green_normal_deriv(k: f64, r_src: [f64; 3], r_obs: [f64; 3], normal: [f64
     }
 
     let r = r_sq.sqrt();
-    let g = Complex64::new(0.0, k * r).exp() / (4.0 * PI * r);
+    let g = Complex64::new(0.0, k * r).exp() / (FOUR_PI * r);
 
     // ∇_{r'} G = −∇_r G  (anti-symmetry with respect to source/field swap)
     // = (1/R − ik) · G · (r − r') / R
@@ -125,7 +125,6 @@ pub fn green_normal_deriv(k: f64, r_src: [f64; 3], r_obs: [f64; 3], normal: [f64
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::f64::consts::PI;
 
     /// G(r, r') → 1/(4πR) as k→0 (static Laplace Green's function).
     /// # Panics

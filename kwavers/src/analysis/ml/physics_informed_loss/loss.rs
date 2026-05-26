@@ -6,6 +6,7 @@ use super::{
 use crate::core::error::KwaversResult;
 use ndarray::{Array2, Array3};
 use std::collections::VecDeque;
+use crate::core::constants::numerical::{TWO_PI};
 
 impl PhysicsInformedLoss {
     /// Create new physics-informed loss. Computes wave number `k = 2πf/c`.
@@ -15,7 +16,7 @@ impl PhysicsInformedLoss {
     pub fn new(config: PhysicsLossConfig) -> KwaversResult<Self> {
         config.validate()?;
 
-        let angular_frequency = 2.0 * std::f64::consts::PI * config.frequency;
+        let angular_frequency = TWO_PI * config.frequency;
         let wave_number = angular_frequency / config.sound_speed;
         let history_window = config.history_window;
 

@@ -1,5 +1,6 @@
 use super::*;
 use crate::core::constants::ATMOSPHERIC_PRESSURE;
+use crate::core::constants::numerical::{TWO_PI};
 
 #[test]
 fn test_gilmore_initialization() {
@@ -87,7 +88,7 @@ fn step_rk4_compressive_forcing_contracts_bubble() {
     let solver = GilmoreSolver::new(params.clone());
     let state = BubbleState::new(&params);
 
-    let omega = 2.0 * std::f64::consts::PI * params.driving_frequency;
+    let omega = TWO_PI * params.driving_frequency;
     let t_quarter = 0.25 / params.driving_frequency; // t where sin(ωt) = 1
     let p_acoustic = 200_000.0_f64; // 200 kPa — well above ambient
     let dt = 1e-8;
@@ -136,7 +137,7 @@ fn enthalpy_derivative_uses_state_wall_acceleration() {
     state_b.wall_acceleration = 1.0e6; // non-zero R̈ affects dp_wall/dt
 
     let p_acoustic = 1.0e5; // 100 kPa driving
-    let omega = 2.0 * std::f64::consts::PI * params.driving_frequency;
+    let omega = TWO_PI * params.driving_frequency;
     let t = 0.0;
 
     // Need access to the private method through calculate_acceleration indirectly.

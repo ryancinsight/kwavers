@@ -8,6 +8,7 @@ use crate::domain::plugin::{PluginMetadata, PluginState};
 use crate::math::fft::{Fft3dInOutExt, Shape3D, FFT_CACHE_3D};
 use ndarray::{Array3, Zip};
 use num_complex::Complex64;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Mixed-Domain Propagation Plugin
 /// Combines time-domain and frequency-domain methods for optimal performance
@@ -167,7 +168,7 @@ impl MixedDomainPropagationPlugin {
     ) -> KwaversResult<Array3<Complex64>> {
         // Apply spectral propagator exp(ikz * dz) in frequency domain
         let mut result = field.clone();
-        let k = 2.0 * std::f64::consts::PI
+        let k = TWO_PI
             / (crate::domain::medium::sound_speed_at(medium, 0.0, 0.0, 0.0, grid) * time_step);
 
         Zip::from(&mut result).and(field).par_for_each(|r, &f| {

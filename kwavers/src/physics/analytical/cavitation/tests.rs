@@ -1,10 +1,9 @@
-use std::f64::consts::PI;
 
 use super::*;
 use crate::core::constants::fundamental::{
     ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM,
 };
-use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
+use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA, TWO_PI};
 
 #[test]
 fn minnaert_water_air_bubble() {
@@ -177,7 +176,7 @@ fn period_doubling_ratio_no_subharmonic_is_small() {
     let fs = f0 * n as f64 / 8.0;
     let dt = 1.0 / fs;
     let r: Vec<f64> = (0..n)
-        .map(|i| 1e-7 * (2.0 * PI * f0 * i as f64 * dt).sin())
+        .map(|i| 1e-7 * (TWO_PI * f0 * i as f64 * dt).sin())
         .collect();
     let (f_arr, p_arr) = bubble_power_spectrum(&r, dt, n);
     let pd = period_doubling_ratio(&f_arr, &p_arr, f0);
@@ -193,7 +192,7 @@ fn period_doubling_ratio_dominant_subharmonic_exceeds_one() {
     let r: Vec<f64> = (0..n)
         .map(|i| {
             let t = i as f64 * dt;
-            1e-7 * (2.0 * PI * f0 * t).sin() + 3e-7 * (2.0 * PI * f0 * 0.5 * t).sin()
+            1e-7 * (TWO_PI * f0 * t).sin() + 3e-7 * (TWO_PI * f0 * 0.5 * t).sin()
         })
         .collect();
     let (f_arr, p_arr) = bubble_power_spectrum(&r, dt, n);

@@ -5,7 +5,7 @@ use super::grid::GridSpec;
 use super::temporal::PstdTemporalBinConfig;
 use crate::solver::inverse::linear_born_inversion::ElementPosition;
 use num_complex::Complex64;
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{FOUR_PI};
 
 pub(super) fn shifted_wavenumber(reference_wavenumber: f64, epsilon: f64) -> Complex64 {
     Complex64::new(reference_wavenumber * reference_wavenumber, epsilon).sqrt()
@@ -21,7 +21,7 @@ pub(super) fn shifted_outgoing_green(
     let dy = source.y_m - receiver.y_m;
     let dz = source.z_m - receiver.z_m;
     let distance = (dx * dx + dy * dy + dz * dz).sqrt().max(min_distance_m);
-    (Complex64::new(0.0, 1.0) * shifted_wavenumber * distance).exp() / (4.0 * PI * distance)
+    (Complex64::new(0.0, 1.0) * shifted_wavenumber * distance).exp() / (FOUR_PI * distance)
 }
 
 pub(super) fn apply_shifted_green(

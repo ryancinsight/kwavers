@@ -5,6 +5,7 @@ use ndarray::Array3;
 
 #[cfg(feature = "gpu")]
 use crate::analysis::signal_processing::beamforming::three_dimensional::config::BeamformingConfig3D;
+use crate::core::constants::numerical::{TWO_PI};
 
 #[must_use]
 pub fn generate_realistic_rf_volume(
@@ -41,7 +42,7 @@ pub fn generate_realistic_rf_volume(
                     * 0.5)
                     .exp();
                 let rf_signal = envelope
-                    * (2.0 * std::f64::consts::PI * center_frequency * t).sin()
+                    * (TWO_PI * center_frequency * t).sin()
                     * attenuation
                     * (1.0 + scattering);
 

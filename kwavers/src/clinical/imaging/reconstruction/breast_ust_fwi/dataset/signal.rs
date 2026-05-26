@@ -8,7 +8,7 @@ use crate::solver::forward::pstd::config::BoundaryConfig;
 use crate::solver::inverse::linear_born_inversion::ElementPosition;
 use ndarray::{s, Array2, ArrayView1};
 use num_complex::Complex64;
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 pub(super) fn pstd_boundary(cpml_thickness_cells: usize) -> BoundaryConfig {
     if cpml_thickness_cells == 0 {
@@ -24,7 +24,7 @@ pub(super) fn tone_signal(
     config: BreastUstPstdDatasetConfig,
 ) -> Array2<f64> {
     Array2::from_shape_fn((1, steps), |(_, n)| {
-        let phase = 2.0 * PI * frequency_hz * n as f64 * config.time_step_s;
+        let phase = TWO_PI * frequency_hz * n as f64 * config.time_step_s;
         config.source_amplitude_pa * phase.sin()
     })
 }
@@ -40,7 +40,7 @@ pub(super) fn frequency_bin(
     samples.iter().skip(start_sample).enumerate().fold(
         Complex64::new(0.0, 0.0),
         |acc, (n, &sample)| {
-            let phase = -2.0 * PI * frequency_hz * (start_sample + n) as f64 * dt;
+            let phase = -TWO_PI * frequency_hz * (start_sample + n) as f64 * dt;
             acc + Complex64::new(phase.cos(), phase.sin()) * sample
         },
     ) * scale

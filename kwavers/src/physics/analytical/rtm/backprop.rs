@@ -1,5 +1,5 @@
 use rayon::prelude::*;
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{FOUR_PI};
 
 /// 2-D Green's function backpropagation from a focal point.
 ///
@@ -93,7 +93,7 @@ pub fn backprop_green_function_3d(
     let n = nx * ny * nz;
     let mut real_out = vec![0.0_f64; n];
     let mut imag_out = vec![0.0_f64; n];
-    let scale = 1.0 / (4.0 * PI);
+    let scale = 1.0 / (FOUR_PI);
     let stride = ny * nz;
 
     // Each ix slice is [stride] elements, written independently → race-free.

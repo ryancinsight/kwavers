@@ -4,7 +4,7 @@ use super::detector::HarmonicDetector;
 use super::types::PointHarmonics;
 use crate::core::error::KwaversResult;
 use crate::math::fft::{fft_1d_array, Complex64};
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 impl HarmonicDetector {
     /// Analyze harmonics at a single spatial point
@@ -78,7 +78,7 @@ impl HarmonicDetector {
 
         // Hann window
         for (i, &val) in time_series.iter().enumerate().take(n) {
-            let window = 0.5 * (1.0 - (2.0 * PI * i as f64 / (n - 1) as f64).cos());
+            let window = 0.5 * (1.0 - (TWO_PI * i as f64 / (n - 1) as f64).cos());
             windowed.push(val * window);
         }
 

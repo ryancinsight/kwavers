@@ -1,9 +1,9 @@
 use crate::math::fft::{Complex64, Fft2d, Shape2D, FFT_CACHE_2D};
 use ndarray::{Array2, ArrayViewMut2, Zip};
-use std::f64::consts::PI;
 use std::sync::Arc;
 
 use super::KZKConfig;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Correct 2D angular spectrum operator
 pub struct AngularSpectrum2D {
@@ -36,8 +36,8 @@ impl AngularSpectrum2D {
         let mut kx = Array2::zeros((nx, ny));
         let mut ky = Array2::zeros((nx, ny));
 
-        let dkx = 2.0 * PI / (nx as f64 * config.dx);
-        let dky = 2.0 * PI / (ny as f64 * config.dx);
+        let dkx = TWO_PI / (nx as f64 * config.dx);
+        let dky = TWO_PI / (ny as f64 * config.dx);
 
         for i in 0..nx {
             let kx_val = if i <= nx / 2 {
@@ -84,7 +84,7 @@ impl AngularSpectrum2D {
     /// changing the mathematical operator. This removes one real-to-complex
     /// allocation plus one allocating forward and inverse FFT per propagation.
     pub fn propagate(&mut self, field: &mut ArrayViewMut2<f64>, distance: f64) {
-        let k0 = 2.0 * PI * self.config.frequency / self.config.c0;
+        let k0 = TWO_PI * self.config.frequency / self.config.c0;
 
         Zip::from(&mut self.scratch)
             .and(field.view())

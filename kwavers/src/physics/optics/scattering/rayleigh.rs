@@ -1,6 +1,7 @@
 //! Simplified Mie scattering for small particles (Rayleigh limit)
 
 use std::f64::consts::PI;
+use crate::core::constants::numerical::{FOUR_PI, TWO_PI};
 
 /// Simplified Mie scattering for small particles (Rayleigh limit)
 #[derive(Debug)]
@@ -37,7 +38,7 @@ impl RayleighScattering {
     /// σ_scat = (8π/3) k⁴ |α|²  where k = 2π/λ
     #[must_use]
     pub fn scattering_cross_section(&self) -> f64 {
-        let k = 2.0 * PI / self.wavelength;
+        let k = TWO_PI / self.wavelength;
         (8.0 * PI / 3.0) * k.powi(4) * self.polarizability
     }
 
@@ -46,9 +47,9 @@ impl RayleighScattering {
     /// σ_ext = σ_scat + σ_abs = (8π/3) k⁴ |α|² + 4π k Im(α)
     #[must_use]
     pub fn extinction_cross_section(&self) -> f64 {
-        let k = 2.0 * PI / self.wavelength;
+        let k = TWO_PI / self.wavelength;
         let sigma_scat = (8.0 * PI / 3.0) * k.powi(4) * self.polarizability;
-        let sigma_abs = 4.0 * PI * k * self.polarizability_imag;
+        let sigma_abs = FOUR_PI * k * self.polarizability_imag;
         sigma_scat + sigma_abs
     }
 

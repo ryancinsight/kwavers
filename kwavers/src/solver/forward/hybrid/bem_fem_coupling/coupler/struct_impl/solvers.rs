@@ -12,6 +12,7 @@ use crate::math::linear_algebra::sparse::{
 };
 
 use super::BemFemCoupler;
+use crate::core::constants::numerical::{TWO_PI};
 
 impl BemFemCoupler {
     /// Solve the BEM system via rigid-scattering CFIE for the given `wavenumber`.
@@ -34,7 +35,7 @@ impl BemFemCoupler {
         }
 
         let c = self.bem_solver.config.sound_speed;
-        let f = wavenumber * c / (2.0 * std::f64::consts::PI);
+        let f = wavenumber * c / (TWO_PI);
         self.bem_solver.config.frequency = f;
         self.bem_solver.config.wavenumber = wavenumber;
         self.bem_solver.config.coupling_alpha = num_complex::Complex64::new(0.0, 1.0 / wavenumber);

@@ -21,7 +21,7 @@ use crate::core::error::{KwaversError, KwaversResult};
 use crate::solver::inverse::linear_born_inversion::{ElementPosition, TransducerGeometry};
 use ndarray::Array3;
 use num_complex::Complex64;
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Paper model identifier for audit trails.
 pub const FREQUENCY_DOMAIN_FWI_MODEL: &str = "ali_2025_multi_row_ring_frequency_domain_ust_fwi";
@@ -83,7 +83,7 @@ impl MultiRowRingArray {
         for row in 0..rows {
             let z_m = (row as f64 - row_center) * row_spacing_m;
             for element in 0..circumferential_elements {
-                let theta = 2.0 * PI * element as f64 / circumferential_elements as f64;
+                let theta = TWO_PI * element as f64 / circumferential_elements as f64;
                 elements.push(ElementPosition {
                     x_m: radius * theta.cos(),
                     y_m: radius * theta.sin(),

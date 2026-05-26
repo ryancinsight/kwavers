@@ -15,7 +15,7 @@ use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 use crate::core::constants::numerical::MHZ_TO_HZ;
 use ndarray::{Array2, Array3};
 use num_complex::Complex64;
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Plane wave imaging configuration
 #[derive(Debug, Clone)]
@@ -85,7 +85,7 @@ impl PlaneWaveReconstruction {
                         let rf_sample = rf_data[[sample_idx, elem]];
 
                         let phase_correction =
-                            Complex64::new(0.0, -2.0 * PI * self.config.frequency * rx_delay).exp();
+                            Complex64::new(0.0, -TWO_PI * self.config.frequency * rx_delay).exp();
 
                         sum += rf_sample * phase_correction;
                     }

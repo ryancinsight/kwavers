@@ -4,7 +4,7 @@
 //! on-axis pressure of circular pistons, and focused spherical bowls.
 
 use num_complex::Complex64;
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 // ─── Delay laws ───────────────────────────────────────────────────────────────
 
@@ -71,7 +71,7 @@ pub fn beam_pattern_2d(
     weights: &[f64],
     delays: &[f64],
 ) -> (Vec<f64>, Vec<f64>) {
-    let k = 2.0 * PI * freq_hz / c;
+    let k = TWO_PI * freq_hz / c;
     let n_elem = elem_x.len();
     let nx = x_arr.len();
     let nz = z_arr.len();
@@ -88,7 +88,7 @@ pub fn beam_pattern_2d(
                 let dz = z - elem_z[ie];
                 let r = (dx * dx + dz * dz).sqrt().max(1e-12);
                 // phase from propagation delay, plus steering pre-delay
-                let phase = -k * r + 2.0 * PI * freq_hz * delays[ie];
+                let phase = -k * r + TWO_PI * freq_hz * delays[ie];
                 p += weights[ie] * Complex64::new(phase.cos(), phase.sin());
             }
             real_out[idx] = p.re;
@@ -123,7 +123,7 @@ pub fn circular_piston_onaxis(
     p0_pa: f64,
     c: f64,
 ) -> Vec<f64> {
-    let k = 2.0 * PI * freq_hz / c;
+    let k = TWO_PI * freq_hz / c;
     z_arr
         .iter()
         .map(|&z| {
@@ -162,7 +162,7 @@ pub fn focused_bowl_onaxis(
     p0_pa: f64,
     c: f64,
 ) -> Vec<f64> {
-    let k = 2.0 * PI * freq_hz / c;
+    let k = TWO_PI * freq_hz / c;
     z_arr
         .iter()
         .map(|&z| {

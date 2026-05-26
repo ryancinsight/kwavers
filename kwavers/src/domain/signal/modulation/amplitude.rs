@@ -2,6 +2,7 @@
 
 use super::{Modulation, ModulationParams};
 use crate::core::error::{KwaversError, KwaversResult};
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Amplitude modulation implementation
 #[derive(Debug, Clone)]
@@ -43,7 +44,7 @@ impl Modulation for AmplitudeModulation {
             ));
         }
 
-        let omega_c = 2.0 * std::f64::consts::PI * self.params.carrier_freq;
+        let omega_c = TWO_PI * self.params.carrier_freq;
         let m = self.params.modulation_index;
 
         Ok(t.iter()
@@ -65,7 +66,7 @@ impl Modulation for AmplitudeModulation {
         // Alternative approaches: Hilbert transform or matched filtering (see utils/signal_processing.rs)
         //
         // **Reference**: Lyons (2010) "Understanding Digital Signal Processing" §13.1
-        let omega_c = 2.0 * std::f64::consts::PI * self.params.carrier_freq;
+        let omega_c = TWO_PI * self.params.carrier_freq;
 
         Ok(signal
             .iter()

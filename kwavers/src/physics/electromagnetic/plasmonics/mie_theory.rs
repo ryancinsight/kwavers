@@ -36,6 +36,7 @@
 use crate::core::constants::fundamental::VACUUM_PERMITTIVITY;
 use num_complex::Complex;
 use std::f64::consts::PI;
+use crate::core::constants::numerical::{FOUR_PI, TWO_PI};
 
 /// Johnson-Christy gold optical constants `(wavelength_um, n, k)`.
 const JOHNSON_CHRISTY_GOLD: &[(f64, f64, f64)] = &[
@@ -138,7 +139,7 @@ impl MieTheory {
         let alpha_dimensionless = self.radius * self.radius * self.radius * numerator / denominator;
 
         // Convert to SI units (include 4π ε₀ ε_m factor)
-        alpha_dimensionless * 4.0 * PI * VACUUM_PERMITTIVITY * eps_medium
+        alpha_dimensionless * FOUR_PI * VACUUM_PERMITTIVITY * eps_medium
     }
 
     /// Compute scattering cross-section (σ_scat)
@@ -146,9 +147,9 @@ impl MieTheory {
     pub fn scattering_cross_section(&self, wavelength: f64) -> f64 {
         let alpha_si = self.polarizability(wavelength);
         // Convert SI polarizability to polarizability volume α_vol = R³·K [m³]
-        let alpha_vol = alpha_si / (4.0 * PI * VACUUM_PERMITTIVITY * self.medium_dielectric);
+        let alpha_vol = alpha_si / (FOUR_PI * VACUUM_PERMITTIVITY * self.medium_dielectric);
         let n_medium = self.medium_dielectric.sqrt();
-        let k = 2.0 * PI * n_medium / wavelength; // medium wavenumber k_m = n_m·ω/c
+        let k = TWO_PI * n_medium / wavelength; // medium wavenumber k_m = n_m·ω/c
 
         // σ_scat = (8π/3) k_m⁴ |α_vol|² (quasistatic Mie; Bohren & Huffman 4.61)
         (8.0 * PI / 3.0) * k.powi(4) * alpha_vol.norm_sqr()
@@ -159,12 +160,12 @@ impl MieTheory {
     pub fn absorption_cross_section(&self, wavelength: f64) -> f64 {
         let alpha_si = self.polarizability(wavelength);
         // Convert SI polarizability to polarizability volume α_vol = R³·K [m³]
-        let alpha_vol = alpha_si / (4.0 * PI * VACUUM_PERMITTIVITY * self.medium_dielectric);
+        let alpha_vol = alpha_si / (FOUR_PI * VACUUM_PERMITTIVITY * self.medium_dielectric);
         let n_medium = self.medium_dielectric.sqrt();
-        let k = 2.0 * PI * n_medium / wavelength; // medium wavenumber k_m = n_m·ω/c
+        let k = TWO_PI * n_medium / wavelength; // medium wavenumber k_m = n_m·ω/c
 
         // σ_abs = 4π k_m Im(α_vol) (quasistatic Mie; van de Hulst / Bohren & Huffman)
-        4.0 * PI * k * alpha_vol.im
+        FOUR_PI * k * alpha_vol.im
     }
 
     /// Compute extinction cross-section (σ_ext = σ_scat + σ_abs)

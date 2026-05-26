@@ -3,6 +3,7 @@
 //! Reference: Johnson et al. (1987) "Theory of dynamic permeability"
 
 use crate::physics::acoustics::mechanics::poroelastic::PoroelasticMaterial;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Property calculator for poroelastic materials
 #[derive(Debug)]
@@ -24,7 +25,7 @@ impl PoroelasticProperties {
     /// κ(ω) = κ₀ / (1 + jω/ω_c)
     #[must_use]
     pub fn dynamic_permeability(&self, frequency: f64) -> f64 {
-        let omega = 2.0 * std::f64::consts::PI * frequency;
+        let omega = TWO_PI * frequency;
         let omega_c = self.material.characteristic_frequency();
 
         // Real part of dynamic permeability
@@ -35,7 +36,7 @@ impl PoroelasticProperties {
     /// Dynamic tortuosity
     #[must_use]
     pub fn dynamic_tortuosity(&self, frequency: f64) -> f64 {
-        let omega = 2.0 * std::f64::consts::PI * frequency;
+        let omega = TWO_PI * frequency;
         let omega_c = self.material.characteristic_frequency();
 
         let alpha_inf = self.material.tortuosity;

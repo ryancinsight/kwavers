@@ -5,7 +5,7 @@
 //! direct upload to GPU buffers.
 
 use crate::math::fft::shift_operators::{generate_kappa, generate_shift_1d, generate_source_kappa};
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Precompute kappa, source_kappa, and packed 1-D shift arrays for k-space.
 ///
@@ -30,9 +30,9 @@ pub(in crate::solver::forward::pstd::gpu_pstd) fn precompute_kspace_shifts(
     let source_kappa_3d = generate_source_kappa(nx, ny, nz, dx, dy, dz, c_ref, dt);
     let source_kappa_f32: Vec<f32> = source_kappa_3d.iter().map(|&v| v as f32).collect();
 
-    let dk_x = 2.0 * PI / (nx as f64 * dx);
-    let dk_y = 2.0 * PI / (ny as f64 * dy);
-    let dk_z = 2.0 * PI / (nz as f64 * dz);
+    let dk_x = TWO_PI / (nx as f64 * dx);
+    let dk_y = TWO_PI / (ny as f64 * dy);
+    let dk_z = TWO_PI / (nz as f64 * dz);
     let (sx_pos, sx_neg) = generate_shift_1d(nx, dk_x, dx);
     let (sy_pos, sy_neg) = generate_shift_1d(ny, dk_y, dy);
     let (sz_pos, sz_neg) = generate_shift_1d(nz, dk_z, dz);

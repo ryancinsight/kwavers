@@ -3,8 +3,8 @@ use crate::math::fft::shift_operators::{generate_kappa, generate_shift_1d, gener
 use crate::math::fft::{get_fft_for_grid, Complex64, Fft3d, Fft3dInOutExt};
 use crate::solver::forward::acoustic_ivp::spectral_velocity_scale_from_source_kappa;
 use ndarray::{Array1, Array3, Zip};
-use std::f64::consts::PI;
 use std::sync::Arc;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Pre-computed operators and scratch buffers for k-space corrected FDTD.
 ///
@@ -82,9 +82,9 @@ impl KSpaceFdtdOperators {
     ) -> Self {
         let fft = get_fft_for_grid(nx, ny, nz);
 
-        let dk_x = 2.0 * PI / (nx as f64 * dx);
-        let dk_y = 2.0 * PI / (ny as f64 * dy);
-        let dk_z = 2.0 * PI / (nz as f64 * dz);
+        let dk_x = TWO_PI / (nx as f64 * dx);
+        let dk_y = TWO_PI / (ny as f64 * dy);
+        let dk_z = TWO_PI / (nz as f64 * dz);
 
         let (ddx_k_shift_pos, ddx_k_shift_neg) = generate_shift_1d(nx, dk_x, dx);
         let (ddy_k_shift_pos, ddy_k_shift_neg) = generate_shift_1d(ny, dk_y, dy);

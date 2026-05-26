@@ -39,7 +39,7 @@ use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 use crate::math::fft::utils::{fft_shift_2d, ifft_shift_2d};
 use crate::math::fft::{fft_2d_complex_inplace, ifft_2d_complex_inplace, Complex64};
 use ndarray::{s, Array1, Array2, ArrayView1, ArrayView2, Axis};
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Order of the sensor data axes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -171,7 +171,7 @@ fn validate_scalar(name: &str, value: f64) -> KwaversResult<()> {
 }
 
 fn centered_wavenumber_vector(n: usize, spacing: f64) -> Array1<f64> {
-    let scale = 2.0 * PI / (n as f64 * spacing);
+    let scale = TWO_PI / (n as f64 * spacing);
     Array1::from_shape_fn(n, |idx| (idx as isize - (n as isize / 2)) as f64 * scale)
 }
 

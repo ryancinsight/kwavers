@@ -22,6 +22,7 @@
 
 use super::math::{apply_matrix, euler_xyz_rotation_matrix, DISC_SAMPLE_UPSAMPLING_RATE};
 use super::{ElementShape, KWaveArray};
+use crate::core::constants::numerical::{TWO_PI};
 
 impl KWaveArray {
     // ─── Rect ──────────────────────────────────────────────────────────────
@@ -246,7 +247,7 @@ impl KWaveArray {
                 .round()
                 .max(1.0) as usize;
             for theta_idx in 0..num_theta {
-                let theta = 2.0 * std::f64::consts::PI * theta_idx as f64 / num_theta as f64;
+                let theta = TWO_PI * theta_idx as f64 / num_theta as f64;
                 emit(ring_radius * theta.cos(), ring_radius * theta.sin());
             }
         }

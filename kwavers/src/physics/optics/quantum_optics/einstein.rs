@@ -3,6 +3,7 @@
 use std::f64::consts::PI;
 
 use super::constants::{C, EPS0, E_CHARGE, HBAR, M_E};
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Einstein A and B coefficients for a two-level atomic transition.
 ///
@@ -70,7 +71,7 @@ impl EinsteinCoefficients {
 
         let dipole_sq = 3.0 * HBAR * E_CHARGE * E_CHARGE * f12 / (2.0 * M_E * omega21);
         let a21 = (E_CHARGE * E_CHARGE * omega21 * omega21 * f12 * g1)
-            / (2.0 * PI * EPS0 * M_E * C * C * C * g2);
+            / (TWO_PI * EPS0 * M_E * C * C * C * g2);
         // B12 (absorption) = π|d12|² / (3 ε₀ ℏ²)   [Rybicki & Lightman 1979, §1.6]
         // B21 (stimulated emission) = (g1/g2) B12    [detailed balance: g1 B12 = g2 B21]
         let b12 = (PI * dipole_sq) / (3.0 * EPS0 * HBAR * HBAR);

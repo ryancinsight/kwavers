@@ -2,6 +2,7 @@
 
 use ndarray::{Array3, Zip};
 use num_complex::Complex;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Dispersion model for frequency-dependent phase velocity
 #[derive(Debug, Clone)]
@@ -58,7 +59,7 @@ impl DispersionModel {
             return self.c0;
         }
 
-        let omega = 2.0 * std::f64::consts::PI * frequency;
+        let omega = TWO_PI * frequency;
         let tan_factor = (std::f64::consts::PI * self.y / 2.0).tan();
 
         // y → 2 makes tan(πy/2) → ±∞ (vertical asymptote); no finite dispersion
@@ -83,7 +84,7 @@ impl DispersionModel {
         let vp_plus = self.phase_velocity(frequency + df);
         let dvp_df = (vp_plus - vp) / df;
 
-        let omega = 2.0 * std::f64::consts::PI * frequency;
+        let omega = TWO_PI * frequency;
         vp + omega * dvp_df
     }
 }
@@ -111,7 +112,7 @@ impl AbsorptionDispersionCorrection {
         Zip::from(spectrum).and(k_values).par_for_each(|s, &k| {
             if k != 0.0 {
                 // Frequency corresponding to this k value
-                let freq = k * self.model.c0 / (2.0 * std::f64::consts::PI);
+                let freq = k * self.model.c0 / (TWO_PI);
 
                 // Phase velocity at this frequency
                 let c_phase = self.model.phase_velocity(freq.abs());
@@ -129,6 +130,6 @@ impl AbsorptionDispersionCorrection {
     #[must_use]
     pub fn dispersion_relation(&self, frequency: f64) -> f64 {
         let c_phase = self.model.phase_velocity(frequency);
-        2.0 * std::f64::consts::PI * frequency / c_phase
+        TWO_PI * frequency / c_phase
     }
 }

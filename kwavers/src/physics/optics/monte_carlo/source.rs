@@ -3,6 +3,7 @@ use crate::physics::optics::monte_carlo::utils::{
     get_perpendicular, normalize, sample_isotropic_direction,
 };
 use rand::Rng;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Photon source specification
 #[derive(Clone, Debug)]
@@ -63,7 +64,7 @@ impl PhotonSource {
             } => {
                 // Sample from 2D Gaussian profile
                 let r = beam_waist * (-2.0 * rng.gen::<f64>().ln()).sqrt();
-                let theta = 2.0 * std::f64::consts::PI * rng.gen::<f64>();
+                let theta = TWO_PI * rng.gen::<f64>();
 
                 // Perpendicular directions to beam
                 let dir_norm = normalize(*direction);

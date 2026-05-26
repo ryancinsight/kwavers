@@ -40,6 +40,7 @@
 //! - Szabo (2004): "Diagnostic Ultrasound Imaging: Inside Out"
 
 use crate::core::error::KwaversResult;
+use crate::core::constants::numerical::{TWO_PI};
 
 #[cfg(test)]
 mod tests;
@@ -222,10 +223,10 @@ pub fn compute_weights(
 
         // Phase delay for steering (radians)
         let phase_delay =
-            2.0 * std::f64::consts::PI * reference_frequency * (distance / sound_speed);
+            TWO_PI * reference_frequency * (distance / sound_speed);
 
         // Hanning window apodization (side lobe suppression)
-        let window_pos = 2.0 * std::f64::consts::PI * i as f64 / (n_elements - 1) as f64;
+        let window_pos = TWO_PI * i as f64 / (n_elements - 1) as f64;
         let apodization = 0.5 * (1.0 - window_pos.cos());
 
         // Weight with phase correction
@@ -309,6 +310,6 @@ pub fn hanning_apodization(element_idx: usize, n_elements: usize) -> f64 {
     debug_assert!(element_idx < n_elements, "Element index out of bounds");
     debug_assert!(n_elements > 1, "Need at least 2 elements for window");
 
-    let window_pos = 2.0 * std::f64::consts::PI * element_idx as f64 / (n_elements - 1) as f64;
+    let window_pos = TWO_PI * element_idx as f64 / (n_elements - 1) as f64;
     0.5 * (1.0 - window_pos.cos())
 }

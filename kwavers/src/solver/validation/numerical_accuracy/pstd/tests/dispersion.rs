@@ -1,6 +1,6 @@
 use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::core::constants::numerical::MHZ_TO_HZ;
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 #[test]
 fn test_numerical_dispersion() {
@@ -21,7 +21,7 @@ fn test_numerical_dispersion() {
         let c_theoretical = SOUND_SPEED_WATER_SIM;
 
         // Numerical phase velocity (with dispersion)
-        let k = 2.0 * PI / wavelength;
+        let k = TWO_PI / wavelength;
         let k_dx = k * dx;
 
         // Second-order finite difference dispersion relation

@@ -3,6 +3,7 @@
 use crate::clinical::therapy::theranostic_guidance::nonlinear3d::types::Nonlinear3dConfig;
 
 use super::plan::{DriveContext, SourcePlan};
+use crate::core::constants::numerical::{TWO_PI};
 
 pub(in crate::clinical::therapy::theranostic_guidance::nonlinear3d::forward) fn inject_sources(
     next: &mut [f64],
@@ -31,7 +32,7 @@ fn source_signal(t: f64, config: &Nonlinear3dConfig, source_scale: f64) -> f64 {
     if t < 0.0 || t >= duration {
         return 0.0;
     }
-    let phase = 2.0 * std::f64::consts::PI * config.frequency_hz * t;
+    let phase = TWO_PI * config.frequency_hz * t;
     let window = (std::f64::consts::PI * t / duration).sin().powi(2);
     config.source_pressure_pa * source_scale * phase.sin() * window
 }

@@ -8,6 +8,7 @@ use crate::domain::grid::Grid;
 use crate::math::fft::{fft_2d_complex, ifft_2d_complex, Complex64};
 use ndarray::Array3;
 use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Diffraction operator using FFT-based angular spectrum
 pub struct HybridAsDiffractionOperator {
@@ -36,7 +37,7 @@ impl HybridAsDiffractionOperator {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn new(grid: &Grid, config: &HASConfig) -> KwaversResult<Self> {
-        let k = 2.0 * PI * config.reference_frequency / config.sound_speed;
+        let k = TWO_PI * config.reference_frequency / config.sound_speed;
 
         Ok(Self {
             nx: grid.nx,
@@ -96,15 +97,15 @@ impl HybridAsDiffractionOperator {
         for i in 0..self.nx {
             for j in 0..self.ny {
                 let kx = if i < self.nx / 2 {
-                    2.0 * PI * i as f64 / (self.nx as f64 * self.dx)
+                    TWO_PI * i as f64 / (self.nx as f64 * self.dx)
                 } else {
-                    2.0 * PI * (i as f64 - self.nx as f64) / (self.nx as f64 * self.dx)
+                    TWO_PI * (i as f64 - self.nx as f64) / (self.nx as f64 * self.dx)
                 };
 
                 let ky = if j < self.ny / 2 {
-                    2.0 * PI * j as f64 / (self.ny as f64 * self.dy)
+                    TWO_PI * j as f64 / (self.ny as f64 * self.dy)
                 } else {
-                    2.0 * PI * (j as f64 - self.ny as f64) / (self.ny as f64 * self.dy)
+                    TWO_PI * (j as f64 - self.ny as f64) / (self.ny as f64 * self.dy)
                 };
 
                 if kx.abs() <= kx_max && ky.abs() <= ky_max {

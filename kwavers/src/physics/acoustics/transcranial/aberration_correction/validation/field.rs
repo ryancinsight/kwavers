@@ -2,6 +2,7 @@ use super::super::phase_correction::{PhaseCorrection, TranscranialAberrationCorr
 use crate::core::error::KwaversResult;
 use ndarray::Array3;
 use num_complex::Complex;
+use crate::core::constants::numerical::{TWO_PI};
 
 impl TranscranialAberrationCorrection {
     /// Simulate acoustic field with phase correction applied.
@@ -17,7 +18,7 @@ impl TranscranialAberrationCorrection {
     ) -> KwaversResult<Array3<f64>> {
         let (nx, ny, nz) = self.grid.dimensions();
         let mut field = Array3::zeros((nx, ny, nz));
-        let k_wave = 2.0 * std::f64::consts::PI * self.frequency / self.reference_speed;
+        let k_wave = TWO_PI * self.frequency / self.reference_speed;
 
         for k in 0..nz {
             let z = k as f64 * self.grid.dz;

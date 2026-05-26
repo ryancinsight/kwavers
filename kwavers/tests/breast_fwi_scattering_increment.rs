@@ -49,6 +49,15 @@ fn scattering_increment_public_api_identifies_exact_model() {
     assert_eq!(diagnostics.best_model, "exact_increment");
     assert!(diagnostics.best_normalized_increment_residual <= 1.0e-14);
     assert_eq!(diagnostics.worst_model, "half_increment");
+    let exact_row = diagnostics
+        .per_model
+        .iter()
+        .find(|row| row.model == "exact_increment")
+        .expect("exact row");
+    assert!(exact_row.baseline_scaled_full_field_normalized_residual <= 1.0e-14);
+    assert!(exact_row.model_scaled_full_field_normalized_residual <= 1.0e-14);
+    assert!(exact_row.source_scale_relative_drift_mean <= 1.0e-14);
+    assert!(exact_row.source_scale_phase_drift_max_abs_rad <= 1.0e-14);
     assert!(
         (diagnostics
             .per_model
@@ -60,4 +69,39 @@ fn scattering_increment_public_api_identifies_exact_model() {
             .abs()
             <= 1.0e-14
     );
+}
+
+#[test]
+fn scattering_increment_public_api_reports_model_scale_drift() {
+    let baseline = Array3::from_shape_vec(
+        (1, 1, 2),
+        vec![Complex64::new(1.0, 0.0), Complex64::new(1.0, 0.0)],
+    )
+    .expect("baseline shape");
+    let prediction = Array3::from_shape_vec(
+        (1, 1, 2),
+        vec![Complex64::new(2.0, 0.0), Complex64::new(1.0, 0.0)],
+    )
+    .expect("prediction shape");
+    let model_scale = Complex64::new(3.0, 0.0);
+    let observed = prediction.mapv(|value| model_scale * value);
+    let predictions = [BreastUstForwardOperatorPrediction {
+        model: "model_scaled",
+        pressure: &prediction,
+    }];
+
+    let diagnostics = scattering_increment_diagnostics(
+        &baseline,
+        &predictions,
+        &observed,
+        BreastUstReceiverChannelPolicy::All,
+    )
+    .expect("diagnostics");
+    let row = diagnostics.per_model.first().expect("model row");
+
+    assert!(row.model_scaled_full_field_normalized_residual <= 1.0e-14);
+    assert!(row.baseline_scaled_full_field_normalized_residual > 0.0);
+    assert!(row.normalized_increment_residual > 1.0);
+    assert!((row.source_scale_relative_drift_mean - (1.0 / 3.0)).abs() <= 1.0e-14);
+    assert!(row.source_scale_phase_drift_max_abs_rad <= 1.0e-14);
 }

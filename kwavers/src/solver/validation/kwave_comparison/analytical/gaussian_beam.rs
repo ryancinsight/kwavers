@@ -3,6 +3,7 @@ use std::f64::consts::PI;
 
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Analytical solution for Gaussian beam propagation (paraxial approximation).
 ///
@@ -110,8 +111,8 @@ impl GaussianBeam {
         let w_z = self.beam_width(z);
         let amplitude_factor = self.waist_radius / w_z;
         let gaussian_envelope = (-r.powi(2) / w_z.powi(2)).exp();
-        let k = 2.0 * PI * self.frequency / self.sound_speed;
-        let omega = 2.0 * PI * self.frequency;
+        let k = TWO_PI * self.frequency / self.sound_speed;
+        let omega = TWO_PI * self.frequency;
         let gouy = self.gouy_phase(z);
         let phase = k * z_rel - omega * t + gouy;
         self.amplitude * amplitude_factor * gaussian_envelope * phase.sin()

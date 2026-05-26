@@ -16,10 +16,10 @@
 
 use crate::math::fft::{Complex64, Fft2d, Shape2D, FFT_CACHE_2D};
 use ndarray::{Array2, ArrayViewMut2, Zip};
-use std::f64::consts::PI;
 use std::sync::Arc;
 
 use super::KZKConfig;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Parabolic diffraction operator using complex-valued computations for energy preservation.
 ///
@@ -65,8 +65,8 @@ impl ParabolicDiffractionOperator {
         let mut kx2 = Array2::zeros((nx, ny));
         let mut ky2 = Array2::zeros((nx, ny));
 
-        let dkx = 2.0 * PI / (nx as f64 * config.dx);
-        let dky = 2.0 * PI / (ny as f64 * config.dx);
+        let dkx = TWO_PI / (nx as f64 * config.dx);
+        let dky = TWO_PI / (ny as f64 * config.dx);
 
         // Standard FFT k-space ordering
         for i in 0..nx {
@@ -131,7 +131,7 @@ impl ParabolicDiffractionOperator {
     ///
     /// References: Lee & Hamilton (1995) eq. (4); Aanonsen et al. (1984) §3.
     pub fn apply_complex(&mut self, field: &mut ArrayViewMut2<Complex64>, step_size: f64) {
-        let k0 = 2.0 * PI * self.config.frequency / self.config.c0;
+        let k0 = TWO_PI * self.config.frequency / self.config.c0;
 
         // Step 1: copy field slice into scratch (no heap allocation).
         self.scratch.assign(field);

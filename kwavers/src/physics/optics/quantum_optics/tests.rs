@@ -1,6 +1,6 @@
 use super::*;
 use crate::physics::optics::quantum_optics::constants::{C, E_CHARGE, KB};
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Lyman-alpha: lambda = 121.567 nm, f12 = 0.4162, g1 = 2, g2 = 6.
 /// Reference A21 = 6.265e8 s^-1.
@@ -10,7 +10,7 @@ use std::f64::consts::PI;
 #[test]
 fn test_einstein_a21_hydrogen_lyman_alpha() {
     let lambda = 121.567e-9;
-    let omega21 = 2.0 * PI * C / lambda;
+    let omega21 = TWO_PI * C / lambda;
     let coeff = EinsteinCoefficients::from_oscillator_strength(omega21, 0.4162, 2.0, 6.0);
     let expected = 6.265e8;
     let rel_err = (coeff.a21 - expected).abs() / expected;
@@ -29,7 +29,7 @@ fn test_einstein_a21_hydrogen_lyman_alpha() {
 ///
 #[test]
 fn test_radiative_lifetime_lyman_alpha() {
-    let omega21 = 2.0 * PI * C / 121.567e-9;
+    let omega21 = TWO_PI * C / 121.567e-9;
     let coeff = EinsteinCoefficients::from_oscillator_strength(omega21, 0.4162, 2.0, 6.0);
     let tau = coeff.radiative_lifetime();
     assert!(
@@ -44,7 +44,7 @@ fn test_radiative_lifetime_lyman_alpha() {
 ///
 #[test]
 fn test_einstein_b_degeneracy_relation() {
-    let omega = 2.0 * PI * C / 400e-9;
+    let omega = TWO_PI * C / 400e-9;
     let coeff = EinsteinCoefficients::from_oscillator_strength(omega, 0.5, 1.0, 3.0);
     let ratio = coeff.b12 / coeff.b21;
     assert!(
@@ -71,7 +71,7 @@ fn test_einstein_invalid_degeneracy_is_nonfinite() {
 ///
 #[test]
 fn test_flash_emission_fraction_sbsl() {
-    let omega = 2.0 * PI * C / 300e-9;
+    let omega = TWO_PI * C / 300e-9;
     let coeff = EinsteinCoefficients::from_oscillator_strength(omega, 0.4, 1.0, 1.0);
     let flash_dt = 100e-12;
     let frac = coeff.flash_emission_fraction(flash_dt);
@@ -156,7 +156,7 @@ fn test_lamb_shift_negligible_at_sbsl_temperature() {
 ///
 #[test]
 fn test_classical_bremsstrahlung_adequate_sbsl() {
-    let omega_uv = 2.0 * PI * C / 300e-9;
+    let omega_uv = TWO_PI * C / 300e-9;
     let assessment = QuantumCorrectionAssessment::assess(10_000.0, 100e-12, omega_uv, 0.4);
     assert!(
         assessment.classical_bremsstrahlung_adequate(),

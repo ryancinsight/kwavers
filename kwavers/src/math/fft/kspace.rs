@@ -4,6 +4,7 @@
 
 use ndarray::{Array1, Array3, Zip};
 use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// K-space calculator for spectral methods
 #[derive(Debug)]
@@ -13,7 +14,7 @@ impl KSpaceCalculator {
     /// Generate k-space wavenumbers for one dimension
     #[must_use]
     pub fn generate_k_vector(n: usize, dx: f64) -> Array1<f64> {
-        Array1::from_vec(apollo::fftfreq(n, dx)).mapv(|cycles_per_unit| 2.0 * PI * cycles_per_unit)
+        Array1::from_vec(apollo::fftfreq(n, dx)).mapv(|cycles_per_unit| TWO_PI * cycles_per_unit)
     }
 
     /// Generate 3D k-squared array for Laplacian operations

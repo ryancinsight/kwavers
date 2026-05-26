@@ -3,7 +3,7 @@
 use super::super::*;
 use approx::assert_abs_diff_eq;
 use ndarray::Array3;
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 #[test]
 fn test_staggered_conservation() {
@@ -16,7 +16,7 @@ fn test_staggered_conservation() {
         let x = (i as f64) * dx;
         for j in 0..10 {
             for k in 0..10 {
-                field[[i, j, k]] = (x * 2.0 * PI).sin();
+                field[[i, j, k]] = (x * TWO_PI).sin();
             }
         }
     }

@@ -2,6 +2,7 @@
 
 use super::constants::RICKER_TIME_SHIFT;
 use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Ricker wavelet generator for seismic sources
 #[derive(Debug)]
@@ -85,7 +86,7 @@ impl GaussianWavelet {
     pub fn evaluate(&self, t: f64) -> f64 {
         let t_shifted = t - self.time_shift;
         let arg = -0.5 * (t_shifted / self.sigma).powi(2);
-        arg.exp() / (self.sigma * (2.0 * PI).sqrt())
+        arg.exp() / (self.sigma * (TWO_PI).sqrt())
     }
 
     /// Generate a time series of the wavelet

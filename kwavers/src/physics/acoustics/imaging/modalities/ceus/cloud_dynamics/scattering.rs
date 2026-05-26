@@ -17,6 +17,7 @@ use crate::core::constants::fundamental::{
 use crate::core::error::KwaversResult;
 use ndarray::Array3;
 use std::collections::HashMap;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Scattered acoustic field from bubble cloud
 #[derive(Debug)]
@@ -50,7 +51,7 @@ impl CloudDynamics {
         let mut scattered_pressure = Array3::<f64>::zeros((nx, ny, nz));
         let harmonics = HashMap::new();
 
-        let k: f64 = 2.0 * std::f64::consts::PI * frequency / SOUND_SPEED_WATER_SIM;
+        let k: f64 = TWO_PI * frequency / SOUND_SPEED_WATER_SIM;
 
         for (bubble_idx, bubble) in self.bubbles.iter().enumerate() {
             if bubble_idx >= 1000 {

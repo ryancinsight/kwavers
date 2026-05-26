@@ -7,6 +7,7 @@ use uom::si::thermodynamic_temperature::kelvin;
 use crate::core::constants::fundamental::STEFAN_BOLTZMANN;
 use crate::physics::acoustics::bubble_dynamics::bubble_state::BubbleState;
 use crate::physics::acoustics::bubble_dynamics::energy::EnergyBalanceCalculator;
+use crate::core::constants::numerical::{FOUR_PI};
 
 impl EnergyBalanceCalculator {
     /// Calculate Stefan-Boltzmann radiation losses
@@ -37,7 +38,7 @@ impl EnergyBalanceCalculator {
         const EMISSIVITY: f64 = 1.0;
 
         // Surface area
-        let area = 4.0 * std::f64::consts::PI * state.radius * state.radius;
+        let area = FOUR_PI * state.radius * state.radius;
 
         // Temperature to the fourth power
         let t_bubble_4 = state.temperature.powi(4);

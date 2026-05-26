@@ -1,6 +1,7 @@
 use crate::physics::optics::monte_carlo::photon::Photon;
 use rand::Rng;
 use std::sync::atomic::{AtomicU64, Ordering};
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Normalize vector
 pub(crate) fn normalize(v: [f64; 3]) -> [f64; 3] {
@@ -38,7 +39,7 @@ pub(crate) fn get_perpendicular(v: [f64; 3]) -> [f64; 3] {
 
 /// Sample isotropic direction
 pub(crate) fn sample_isotropic_direction<R: Rng>(rng: &mut R) -> [f64; 3] {
-    let theta = 2.0 * std::f64::consts::PI * rng.gen::<f64>();
+    let theta = TWO_PI * rng.gen::<f64>();
     let z = 2.0f64.mul_add(rng.gen::<f64>(), -1.0);
     let r = (1.0 - z * z).sqrt();
     [r * theta.cos(), r * theta.sin(), z]
@@ -57,7 +58,7 @@ pub(crate) fn scatter_photon<R: Rng>(photon: &mut Photon, g: f64, rng: &mut R) {
     };
 
     let sin_theta = (1.0 - cos_theta * cos_theta).max(0.0).sqrt();
-    let phi = 2.0 * std::f64::consts::PI * rng.gen::<f64>();
+    let phi = TWO_PI * rng.gen::<f64>();
 
     // Get perpendicular basis
     let old_dir = photon.direction;

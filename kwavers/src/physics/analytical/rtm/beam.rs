@@ -1,6 +1,7 @@
 use num_complex::Complex64;
 use rayon::prelude::*;
 use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// 2-D focused Gaussian beam field in the presence of a skull layer and
 /// a back-reflecting surface (e.g. contralateral skull).
@@ -49,7 +50,7 @@ pub fn focused_gaussian_beam_2d(
     r_back: f64,
     z_back: f64,
 ) -> (Vec<f64>, Vec<f64>) {
-    let k_br = 2.0 * PI * freq_hz / c_brain;
+    let k_br = TWO_PI * freq_hz / c_brain;
     let z_r = PI * w0_m * w0_m * freq_hz / c_brain;
     let nx = x_arr.len();
     let nz = z_arr.len();

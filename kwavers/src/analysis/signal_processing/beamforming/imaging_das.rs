@@ -26,6 +26,7 @@
 use ndarray::{Array1, ArrayView2};
 
 use crate::core::error::{KwaversError, KwaversResult};
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Apodization windows supported by the imaging-DAS primitive.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
@@ -187,7 +188,7 @@ fn apodization_weights(n: usize, kind: ImagingDasApodization) -> Vec<f64> {
         ImagingDasApodization::Blackman => (0..n)
             .map(|i| {
                 let phi =
-                    2.0 * std::f64::consts::PI * i as f64 / (n.saturating_sub(1).max(1)) as f64;
+                    TWO_PI * i as f64 / (n.saturating_sub(1).max(1)) as f64;
                 0.42 - 0.5 * phi.cos() + 0.08 * (2.0 * phi).cos()
             })
             .collect(),
@@ -201,7 +202,7 @@ fn cosine_window(n: usize, a0: f64, a1: f64) -> Vec<f64> {
     let denom = (n - 1) as f64;
     (0..n)
         .map(|i| {
-            let phi = 2.0 * std::f64::consts::PI * i as f64 / denom;
+            let phi = TWO_PI * i as f64 / denom;
             a0 - a1 * phi.cos()
         })
         .collect()

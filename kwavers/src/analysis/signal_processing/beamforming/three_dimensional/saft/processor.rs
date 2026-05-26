@@ -7,6 +7,7 @@ use std::f64::consts::PI;
 
 use super::super::{BeamformingAlgorithm3D, BeamformingConfig3D};
 use super::config::SaftConfig;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Euclidean distance between two 3D points.
 pub(super) fn distance3(a: [f64; 3], b: [f64; 3]) -> f64 {
@@ -83,7 +84,7 @@ impl SaftProcessor {
         center_frequency: f64,
         time_of_flight: f64,
     ) -> (f64, f64) {
-        let phase = 2.0 * PI * center_frequency * time_of_flight;
+        let phase = TWO_PI * center_frequency * time_of_flight;
         (sample * phase.cos(), sample * (-phase.sin()))
     }
 

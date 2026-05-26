@@ -8,6 +8,7 @@ use crate::core::constants::fundamental::{
 };
 use crate::physics::acoustics::bubble_dynamics::bubble_state::{BubbleState, GasSpecies};
 use crate::physics::acoustics::bubble_dynamics::energy::EnergyBalanceCalculator;
+use crate::core::constants::numerical::{TWO_PI};
 
 impl EnergyBalanceCalculator {
     /// Calculate plasma ionization energy rate using the full Saha equation.
@@ -78,7 +79,7 @@ impl EnergyBalanceCalculator {
         // Factor 2 accounts for the g_i/g_0 = 1 degeneracy ratio times the
         // electron spin degeneracy (2 spin states).
         let saha_prefactor =
-            2.0 * (2.0 * std::f64::consts::PI * ELECTRON_MASS * kt / (PLANCK * PLANCK)).powf(1.5);
+            2.0 * (TWO_PI * ELECTRON_MASS * kt / (PLANCK * PLANCK)).powf(1.5);
         let boltzmann_factor = (-e_ion_j / kt).exp();
         let phi = saha_prefactor * boltzmann_factor;
 

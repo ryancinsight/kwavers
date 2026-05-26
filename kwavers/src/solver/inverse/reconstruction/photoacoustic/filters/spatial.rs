@@ -5,7 +5,7 @@
 
 use crate::core::error::KwaversResult;
 use ndarray::Array3;
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Apply 3D Gaussian filter for noise reduction
 ///
@@ -202,7 +202,7 @@ pub fn apply_bilateral_filter(
 fn create_gaussian_kernel(radius: usize, sigma: f64) -> Vec<f64> {
     let size = 2 * radius + 1;
     let mut kernel = vec![0.0; size];
-    let norm = 1.0 / (sigma * (2.0 * PI).sqrt());
+    let norm = 1.0 / (sigma * (TWO_PI).sqrt());
     let sigma2 = 2.0 * sigma * sigma;
 
     for (i, kernel_val) in kernel.iter_mut().enumerate().take(size) {

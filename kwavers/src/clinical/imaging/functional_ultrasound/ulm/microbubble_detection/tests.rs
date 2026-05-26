@@ -3,6 +3,7 @@ use super::localize::{gauss_newton_fit_2d, GaussianLocalizer};
 use super::types::{GaussianLocalizationConfig, SvdClutterConfig};
 use crate::math::linear_algebra::LinearAlgebra;
 use ndarray::Array2;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Generate a deterministic pseudo-noise matrix using a simple LCG for portability.
 fn make_noise_matrix(rows: usize, cols: usize, seed: u64) -> Array2<f64> {
@@ -16,7 +17,7 @@ fn make_noise_matrix(rows: usize, cols: usize, seed: u64) -> Array2<f64> {
             .wrapping_mul(6364136223846793005)
             .wrapping_add(1442695040888963407);
         let u2 = (state >> 11) as f64 / (1u64 << 53) as f64;
-        (-2.0 * u1.ln()).sqrt() * (2.0 * std::f64::consts::PI * u2).cos()
+        (-2.0 * u1.ln()).sqrt() * (TWO_PI * u2).cos()
     })
 }
 

@@ -64,6 +64,7 @@
 
 use super::NonlinearParameters;
 use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Calculates the amplitude of the difference frequency (parametric array)
 ///
@@ -90,7 +91,7 @@ pub fn difference_frequency_amplitude(
     params: &NonlinearParameters,
 ) -> f64 {
     let f_diff = (f1 - f2).abs();
-    let omega_diff = 2.0 * PI * f_diff;
+    let omega_diff = TWO_PI * f_diff;
 
     // Need an estimate for primary attenuation (Np/m)
     // Assume f1 and f2 are close, take average attenuation
@@ -127,7 +128,7 @@ pub fn sum_frequency_amplitude(
     params: &NonlinearParameters,
 ) -> f64 {
     let f_sum = f1 + f2;
-    let omega_sum = 2.0 * PI * f_sum;
+    let omega_sum = TWO_PI * f_sum;
 
     let rho_0 = params.density;
     let c_0 = params.sound_speed;

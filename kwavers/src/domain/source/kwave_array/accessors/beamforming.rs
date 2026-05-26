@@ -1,4 +1,5 @@
 use super::super::{KWaveArray, KwaveApodizationWindow};
+use crate::core::constants::numerical::{TWO_PI};
 
 impl KWaveArray {
     /// Calculate focus delays `(s)` for each element to a target point
@@ -81,7 +82,7 @@ impl KWaveArray {
                 }
                 (0..n)
                     .map(|i| {
-                        0.5 * (1.0 - (2.0 * std::f64::consts::PI * i as f64 / (n - 1) as f64).cos())
+                        0.5 * (1.0 - (TWO_PI * i as f64 / (n - 1) as f64).cos())
                     })
                     .collect()
             }
@@ -92,7 +93,7 @@ impl KWaveArray {
                 (0..n)
                     .map(|i| {
                         0.46f64.mul_add(
-                            -(2.0 * std::f64::consts::PI * i as f64 / (n - 1) as f64).cos(),
+                            -(TWO_PI * i as f64 / (n - 1) as f64).cos(),
                             0.54,
                         )
                     })

@@ -66,7 +66,7 @@
 
 use crate::core::error::KwaversResult;
 use crate::physics::acoustics::mechanics::poroelastic::{PoroelasticMaterial, WaveSpeeds};
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Biot theory for poroelastic wave propagation
 #[derive(Debug)]
@@ -187,7 +187,7 @@ impl BiotTheory {
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
     pub fn compute_attenuation(&self, frequency: f64) -> KwaversResult<(f64, f64)> {
-        let omega = 2.0 * PI * frequency;
+        let omega = TWO_PI * frequency;
         let phi = self.material.porosity;
         let kappa = self.material.permeability;
         let eta = self.material.fluid_viscosity;

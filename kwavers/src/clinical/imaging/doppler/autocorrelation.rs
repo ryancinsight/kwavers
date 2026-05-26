@@ -23,7 +23,7 @@ use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::{Array2, ArrayView3};
 use num_complex::Complex64;
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{FOUR_PI};
 
 /// Configuration for autocorrelation velocity estimation
 #[derive(Debug, Clone)]
@@ -241,7 +241,7 @@ impl AutocorrelationEstimator {
         }
 
         (phase * self.config.speed_of_sound)
-            / (4.0 * PI * self.config.center_frequency * t_prf * cos_theta)
+            / (FOUR_PI * self.config.center_frequency * t_prf * cos_theta)
     }
 
     /// Apply variance-based quality filtering

@@ -39,6 +39,7 @@
 
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array2;
+use crate::core::constants::numerical::{TWO_PI};
 
 #[cfg(test)]
 mod tests;
@@ -178,7 +179,7 @@ impl IirFilter {
         // H(z) = (1 - z^-1) / (1 - α·z^-1)
         // where α = exp(-2π·fc)
 
-        let alpha = (-2.0 * std::f64::consts::PI * cutoff).exp();
+        let alpha = (-TWO_PI * cutoff).exp();
 
         let mut b = vec![1.0, -1.0]; // Numerator: [1, -1]
         let mut a = vec![1.0, -alpha]; // Denominator: [1, -α]

@@ -4,7 +4,7 @@ use crate::math::numerics::operators::spectral::filter::{SpectralFilter, Spectra
 use crate::math::numerics::operators::spectral::trait_def::SpectralOperatorTrait;
 use approx::assert_abs_diff_eq;
 use ndarray::Array3;
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 #[test]
 fn test_spectral_filter_sharp_cutoff() {
@@ -54,7 +54,7 @@ fn spectral_filter_preserves_constant_field() {
 fn spectral_filter_removes_rejected_nyquist_mode_and_preserves_low_mode() {
     let nx = 16;
     let dx = 0.1;
-    let low_k = 2.0 * PI / (nx as f64 * dx);
+    let low_k = TWO_PI / (nx as f64 * dx);
     let filter = SpectralFilter::new(0.5, SpectralFilterType::SharpCutoff);
     let mut field = Array3::zeros((nx, 1, 1));
 
@@ -82,7 +82,7 @@ fn spectral_filter_apply_into_reuses_workspaces_and_matches_apply() {
     let mut field = Array3::zeros((nx, ny, nz));
 
     for i in 0..nx {
-        let low_mode = (2.0 * PI * i as f64 / nx as f64).sin();
+        let low_mode = (TWO_PI * i as f64 / nx as f64).sin();
         let rejected_mode = if i.is_multiple_of(2) { 0.25 } else { -0.25 };
         for j in 0..ny {
             for k in 0..nz {

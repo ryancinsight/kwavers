@@ -2,7 +2,6 @@
 //! speed from spatial phase gradients.
 
 use ndarray::Array3;
-use std::f64::consts::PI;
 
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
@@ -11,6 +10,7 @@ use crate::physics::acoustics::imaging::modalities::elastography::displacement::
 
 use super::super::algorithms::fill_boundaries;
 use super::super::types::elasticity_map_from_speed;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Phase gradient inversion (frequency domain method)
 ///
@@ -104,7 +104,7 @@ pub(super) fn compute_phase_gradient_speed(
         let max_amplitude = profile.iter().copied().fold(0.0, f64::max).max(1e-12);
         let wavenumber = phase_gradient / max_amplitude;
 
-        let cs = 2.0 * PI * frequency / wavenumber.abs().max(0.1);
+        let cs = TWO_PI * frequency / wavenumber.abs().max(0.1);
 
         Some(cs.clamp(0.5, 10.0))
     } else {

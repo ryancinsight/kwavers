@@ -6,6 +6,7 @@
 
 use num_complex::Complex64;
 use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 // ─── Shear wave speed ─────────────────────────────────────────────────────────
 
@@ -98,7 +99,7 @@ pub fn voigt_shear_wave_dispersion(f_arr: &[f64], mu_pa: f64, eta_pa_s: f64, rho
     f_arr
         .iter()
         .map(|&f| {
-            let omega = 2.0 * PI * f;
+            let omega = TWO_PI * f;
             let mu2 = mu_pa * mu_pa;
             let ve2 = omega * omega * eta_pa_s * eta_pa_s;
             let norm = (mu2 + ve2).sqrt();
@@ -139,7 +140,7 @@ pub fn mre_displacement_field(
     amplitude: f64,
     penetration_depth_m: f64,
 ) -> Vec<f64> {
-    let k_s = 2.0 * PI * freq_hz / shear_speed;
+    let k_s = TWO_PI * freq_hz / shear_speed;
     let nx = x_arr.len();
     let nz = z_arr.len();
     let mut out = vec![0.0_f64; nx * nz];

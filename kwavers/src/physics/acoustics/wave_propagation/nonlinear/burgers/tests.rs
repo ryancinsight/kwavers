@@ -1,7 +1,6 @@
 use super::*;
-use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
+use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA, TWO_PI};
 use crate::physics::acoustics::wave_propagation::NonlinearParameters;
-use std::f64::consts::PI;
 
 #[test]
 fn bessel_j0_at_zero() {
@@ -105,7 +104,7 @@ fn fubini_b2_at_half_shock() {
 #[test]
 fn fubini_post_shock_sawtooth() {
     let b1 = fubini_harmonic_amplitude(1, 2.0);
-    let expected = 2.0 / (PI * 2.0);
+    let expected = 2.0 / (TWO_PI);
     assert!(
         (b1 - expected).abs() < 1e-14,
         "B1(sigma=2) = {b1}, expected {expected}"

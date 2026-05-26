@@ -8,6 +8,7 @@ use crate::domain::boundary::BoundaryCondition;
 use crate::domain::grid::topology::{GridTopology, TopologyDimension};
 
 use super::{PeriodicBoundaryCondition, PeriodicConfig};
+use crate::core::constants::numerical::{TWO_PI};
 
 struct MockGrid;
 impl GridTopology for MockGrid {
@@ -102,7 +103,7 @@ fn test_standing_wave_resonance() {
     let nx = 10;
     let dx = 0.001;
     let length = (nx as f64) * dx;
-    let k = 2.0 * std::f64::consts::PI / length;
+    let k = TWO_PI / length;
     let amplitude = 1.0;
 
     let mut field = Array3::<f64>::zeros((nx, 1, 1));
@@ -166,9 +167,9 @@ fn test_energy_conservation() {
                 let x = (i as f64) / 16.0;
                 let y = (j as f64) / 16.0;
                 let z = (k as f64) / 16.0;
-                field[[i, j, k]] = (2.0 * std::f64::consts::PI * x).sin()
-                    * (2.0 * std::f64::consts::PI * y).sin()
-                    * (2.0 * std::f64::consts::PI * z).sin();
+                field[[i, j, k]] = (TWO_PI * x).sin()
+                    * (TWO_PI * y).sin()
+                    * (TWO_PI * z).sin();
             }
         }
     }

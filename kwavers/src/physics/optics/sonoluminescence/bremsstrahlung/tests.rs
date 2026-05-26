@@ -3,6 +3,7 @@ use crate::core::constants::fundamental::{
     ATMOSPHERIC_PRESSURE, BOLTZMANN as BOLTZMANN_CONSTANT, PLANCK as PLANCK_CONSTANT,
 };
 use crate::core::constants::numerical::MPA_TO_PA;
+use crate::core::constants::numerical::{FOUR_PI};
 
 #[test]
 fn gaunt_factor_lower_bound() {
@@ -142,7 +143,7 @@ fn emission_coefficient_magnitude_rybicki_lightman() {
 
     // R&L 5.14b gives eps_nu (total, 4pi sr) = 6.8e-51 [W m^-3 Hz^-1 K^{1/2}] in SI.
     // Per-steradian: j_nu = eps_nu / (4pi) => C_ff_per_sr = 6.8e-51 / (4pi).
-    let c_ff_ref = 6.8e-51_f64 / (4.0 * std::f64::consts::PI);
+    let c_ff_ref = 6.8e-51_f64 / (FOUR_PI);
     let h_nu = PLANCK_CONSTANT * frequency;
     let k_t = BOLTZMANN_CONSTANT * temperature;
     let j_reference = c_ff_ref * n_e * n_e * temperature.powf(-0.5) * (-h_nu / k_t).exp();

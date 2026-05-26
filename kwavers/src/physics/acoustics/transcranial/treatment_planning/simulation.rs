@@ -12,6 +12,7 @@ use crate::core::constants::{BODY_TEMPERATURE_C, NP_TO_DB};
 use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 use ndarray::Array3;
 use num_complex::Complex;
+use crate::core::constants::numerical::{TWO_PI};
 
 const MILLIMETERS_TO_METERS: f64 = 1.0e-3;
 // SSOT: SOUND_SPEED_BRAIN and DENSITY_BRAIN imported from core::constants::tissue_acoustics
@@ -64,7 +65,7 @@ impl TreatmentPlanner {
         let mut acoustic_field = Array3::zeros((nx, ny, nz));
 
         // Wavenumber [rad/m]: k = 2π f / c_brain
-        let k_wave = 2.0 * std::f64::consts::PI * setup.frequency / SOUND_SPEED_BRAIN;
+        let k_wave = TWO_PI * setup.frequency / SOUND_SPEED_BRAIN;
 
         for k in 0..nz {
             for j in 0..ny {

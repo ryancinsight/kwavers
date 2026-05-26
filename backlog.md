@@ -1,5 +1,45 @@
 # Backlog / Strategy
 
+## Ali 2025 scattering-increment scale decomposition - implementation pending verification (2026-05-26)
+- **[implemented] [patch]** Added Rust-owned per-model scale-decomposition
+  fields to `BreastUstScatteringIncrementModelDiagnostics`: baseline-scaled
+  full-field residual, model-scaled full-field residual, source-scale relative
+  drift, and source-scale phase drift.
+- **[implemented] [patch]** Exposed the same fields through the PyO3
+  scattering-increment dictionary. Python remains orchestration/reporting only;
+  no correction factor or propagation math was added outside `kwavers`.
+- **[implemented] [patch]** Added analytic Rust and PyO3-surface tests for the
+  calibration-domain distinction: `observed = 3 * prediction` gives zero
+  model-scaled full-field residual, baseline-scale relative drift `1/3`, and a
+  calibrated increment residual above unity.
+- **Verification blocker [patch]:** `rustfmt` on touched Rust files exits 0.
+  `cargo test -p kwavers --test breast_fwi_scattering_increment --no-run
+  --message-format=short -j 1` exceeded the 300 s limit in an isolated target
+  directory while concurrent workspace Cargo builds were active. Rerun Rust
+  compile/tests, rebuild `pykwavers`, run focused pytest, and regenerate the
+  determined probe before closing the checklist item.
+
+## Ali 2025 finite-window determined probe - closed (2026-05-25)
+- **[done] [patch]** Rebuilt the local debug `pykwavers` extension so the
+  Python package imports both `simulate_breast_fwi_pstd_finite_window_born_observation`
+  and the current analytical helper exports.
+- **[done] [patch]** Reran the determined `(4,4,3)` Ali 2025 report with
+  `pstd_finite_window_born` included in the model map.
+- **[done] [patch]** The finite-window model now ranks best for full-field
+  operator equivalence: all-channel normalized residual
+  `0.03308952523301831`, passive-only residual `0.03395758947454344`, and
+  active-only residual `7.985341351399759e-17`.
+- **Residual [patch]:** calibrated scattering-increment residual remains above
+  unity even for the best finite-window model: `1.4759860412851549`
+  all-channel and `1.3580035175186627` passive-only, with increment energy
+  ratios `1.7738258877509765` and `1.6818009989854836`. Next increment:
+  diagnose row-calibrated increment semantics and finite-window scattering
+  source phasing in Rust/PyO3.
+- **Verification:** `cargo build -p pykwavers --lib --message-format=short -j 1`
+  exits 0; real `pykwavers` import confirms finite-window and analytical
+  symbols are exported; focused report-routing pytest passes 2/2; determined
+  probe rerun exits 0.
+
 ## Ali 2025 finite-window report routing - closed (2026-05-25)
 - **[done] [patch]** Added `pstd_finite_window_born` to the reduced report
   prediction map by calling the Rust PyO3 function

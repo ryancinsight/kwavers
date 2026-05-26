@@ -1,6 +1,6 @@
-use std::f64::consts::PI;
 
 use super::bessel::jn;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Evaluate the normalised amplitude of the nth harmonic at nonlinear parameter σ.
 ///
@@ -55,7 +55,7 @@ pub fn fubini_harmonic_spectrum(n_max: u32, sigma: f64) -> Vec<f64> {
 #[must_use]
 #[inline]
 pub fn shock_formation_distance(p0_pa: f64, f0_hz: f64, c0: f64, rho0: f64, beta: f64) -> f64 {
-    let omega = 2.0 * PI * f0_hz;
+    let omega = TWO_PI * f0_hz;
     rho0 * c0.powi(3) / (beta * p0_pa * omega)
 }
 
@@ -95,7 +95,7 @@ pub fn westervelt_harmonic_evolution(
     alpha_np_m: f64,
     n_max: usize,
 ) -> Vec<Vec<f64>> {
-    let omega = 2.0 * PI * f0;
+    let omega = TWO_PI * f0;
     let x_s = rho0 * c0.powi(3) / (beta * p0 * omega);
 
     z_arr

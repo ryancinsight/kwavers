@@ -2,6 +2,7 @@
 
 use super::calculator::BjerknesCalculator;
 use crate::core::error::{KwaversError, KwaversResult};
+use crate::core::constants::numerical::{FOUR_PI};
 
 impl BjerknesCalculator {
     /// Calculate primary Bjerknes force on a bubble in acoustic field.
@@ -45,7 +46,7 @@ impl BjerknesCalculator {
         }
 
         // F_B1 = −(4π/3)R³ · ∂p/∂z
-        let volume = (4.0 * std::f64::consts::PI / 3.0) * bubble_radius.powi(3);
+        let volume = (FOUR_PI / 3.0) * bubble_radius.powi(3);
         Ok(-volume * pressure_gradient)
     }
 }

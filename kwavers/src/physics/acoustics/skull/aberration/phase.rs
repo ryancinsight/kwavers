@@ -1,11 +1,11 @@
 //! Volumetric phase-screen integration.
 
-use std::f64::consts::PI;
 
 use crate::core::error::KwaversResult;
 use ndarray::Array3;
 
 use super::model::AberrationCorrection;
+use crate::core::constants::numerical::{TWO_PI};
 
 impl AberrationCorrection<'_> {
     /// Compute the volumetric running phase integral `Phi(x,y,z)`.
@@ -23,7 +23,7 @@ impl AberrationCorrection<'_> {
     pub fn compute_time_reversal_phases(&self, frequency: f64) -> KwaversResult<Array3<f64>> {
         let (nx, ny, nz) = (self.grid.nx, self.grid.ny, self.grid.nz);
         let dz = self.grid.dz;
-        let k_water = 2.0 * PI * frequency / self.c_water;
+        let k_water = TWO_PI * frequency / self.c_water;
         let mut phases = Array3::zeros((nx, ny, nz));
 
         for i in 0..nx {
@@ -32,7 +32,7 @@ impl AberrationCorrection<'_> {
                 for k in 0..nz {
                     let c_local = self.skull.sound_speed[[i, j, k]];
                     if c_local > 0.0 {
-                        let k_local = 2.0 * PI * frequency / c_local;
+                        let k_local = TWO_PI * frequency / c_local;
                         running_phase += (k_local - k_water) * dz;
                     }
                     phases[[i, j, k]] = running_phase;

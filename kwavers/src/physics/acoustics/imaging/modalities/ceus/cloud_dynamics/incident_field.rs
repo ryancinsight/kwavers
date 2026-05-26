@@ -2,6 +2,7 @@
 
 use super::config::{CloudBubble, CloudConfig};
 use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Incident acoustic field
 #[derive(Debug, Clone)]
@@ -36,13 +37,13 @@ impl IncidentField {
     /// Plane wave: p(x,t) = p₀ cos(k·x − ωt + φ)
     #[must_use]
     pub fn pressure_at(&self, position: [f64; 3], time: f64) -> f64 {
-        let kx = (2.0 * std::f64::consts::PI * self.frequency / self.sound_speed)
+        let kx = (TWO_PI * self.frequency / self.sound_speed)
             * position[2].mul_add(
                 self.direction[2],
                 position[0].mul_add(self.direction[0], position[1] * self.direction[1]),
             );
 
-        let omega_t = 2.0 * std::f64::consts::PI * self.frequency * time;
+        let omega_t = TWO_PI * self.frequency * time;
 
         self.pressure_amplitude * (kx - omega_t + self.phase_offset).cos()
     }

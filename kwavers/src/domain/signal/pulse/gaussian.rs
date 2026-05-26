@@ -1,9 +1,9 @@
 //! Gaussian pulse signal implementation
 
 use crate::domain::signal::Signal;
-use std::f64::consts::PI;
 
 use super::{DEFAULT_GAUSSIAN_Q, MIN_PULSE_WIDTH};
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Gaussian pulse signal
 ///
@@ -71,7 +71,7 @@ impl GaussianPulse {
 impl Signal for GaussianPulse {
     fn amplitude(&self, t: f64) -> f64 {
         let envelope = self.envelope(t);
-        let carrier = (2.0 * PI * self.center_frequency)
+        let carrier = (TWO_PI * self.center_frequency)
             .mul_add(t, self.phase)
             .sin();
         self.amplitude * envelope * carrier

@@ -32,6 +32,7 @@ use crate::core::error::{KwaversError, KwaversResult};
 use crate::math::geometry::distance3;
 use ndarray::Array1;
 use num_complex::Complex64;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Newtype representing a narrowband steering vector (complex phasors).
 ///
@@ -170,7 +171,7 @@ impl NarrowbandSteering {
 pub fn steering_from_delays_s(delays_s: &[f64], frequency_hz: f64) -> NarrowbandSteeringVector {
     // Caller is expected to validate `frequency_hz` and `delays_s` finiteness where needed.
     // We stay total here and propagate non-finite through to output if the caller violates invariants.
-    let omega = -2.0 * std::f64::consts::PI * frequency_hz;
+    let omega = -TWO_PI * frequency_hz;
     let mut a = Array1::<Complex64>::zeros(delays_s.len());
     for (i, &tau) in delays_s.iter().enumerate() {
         let phase = omega * tau;

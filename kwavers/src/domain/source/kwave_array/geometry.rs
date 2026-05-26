@@ -29,6 +29,7 @@
 //! ```
 
 use super::KWaveArray;
+use crate::core::constants::numerical::{TWO_PI};
 
 impl KWaveArray {
     /// Arc length subtended by `[start_angle, end_angle]` (degrees) at radius `radius`.
@@ -57,7 +58,7 @@ impl KWaveArray {
         } else {
             radius
         };
-        2.0 * std::f64::consts::PI * radius * h
+        TWO_PI * radius * h
     }
 
     /// Annular spherical-cap surface area between `inner_diameter` and
@@ -76,6 +77,6 @@ impl KWaveArray {
     ) -> f64 {
         let phi_outer = (outer_diameter / 2.0 / radius).clamp(0.0, 1.0).asin();
         let phi_inner = (inner_diameter / 2.0 / radius).clamp(0.0, 1.0).asin();
-        2.0 * std::f64::consts::PI * radius * radius * (phi_inner.cos() - phi_outer.cos())
+        TWO_PI * radius * radius * (phi_inner.cos() - phi_outer.cos())
     }
 }

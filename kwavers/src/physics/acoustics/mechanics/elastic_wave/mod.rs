@@ -3,6 +3,7 @@
 //! This module implements elastic wave physics in heterogeneous media,
 //! following SOLID/CUPID principles with proper domain separation.
 
+use crate::core::constants::numerical::{TWO_PI};
 pub mod fields;
 pub mod metrics;
 pub mod mode_conversion;
@@ -103,7 +104,7 @@ impl ElasticWave {
     /// Create wavenumber array for spectral methods
     fn create_wavenumber_array(n: usize, dx: f64) -> Array3<f64> {
         let mut k = Array3::zeros((n, 1, 1));
-        let dk = 2.0 * std::f64::consts::PI / (n as f64 * dx);
+        let dk = TWO_PI / (n as f64 * dx);
 
         for i in 0..n / 2 {
             k[[i, 0, 0]] = i as f64 * dk;

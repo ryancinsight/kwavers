@@ -10,6 +10,7 @@ use crate::physics::acoustics::analytical::propagation::{
     AnalyticalPolarization, AnalyticalWaveMode,
 };
 use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Main wave propagation calculator
 #[derive(Debug)]
@@ -40,7 +41,7 @@ impl WavePropagationCalculator {
     /// Get the wave number (k = 2π/λ)
     #[must_use]
     pub fn wave_number(&self) -> f64 {
-        2.0 * PI / self.wavelength
+        TWO_PI / self.wavelength
     }
 
     /// Calculate the Fresnel reflection coefficient for normal incidence

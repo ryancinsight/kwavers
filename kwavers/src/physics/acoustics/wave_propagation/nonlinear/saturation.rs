@@ -8,6 +8,7 @@
 use super::NonlinearParameters;
 use crate::core::constants::numerical::MHZ_TO_HZ;
 use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Calculates the acoustic saturation pressure
 ///
@@ -21,7 +22,7 @@ pub fn acoustic_saturation_pressure(
     distance: f64,
     params: &NonlinearParameters,
 ) -> f64 {
-    let omega = 2.0 * PI * frequency;
+    let omega = TWO_PI * frequency;
 
     // Saturation pressure P_sat = (ρ₀ * c₀³) / (β * ω * z)
     let p_sat = (params.density * params.sound_speed.powi(3)) / (params.beta * omega * distance);

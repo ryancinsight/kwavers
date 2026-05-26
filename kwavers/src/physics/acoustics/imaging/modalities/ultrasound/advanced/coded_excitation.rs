@@ -14,6 +14,7 @@
 use ndarray::Array1;
 use num_complex::Complex64;
 use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Coded excitation configuration
 #[derive(Debug, Clone)]
@@ -110,7 +111,7 @@ impl CodedExcitationProcessor {
 
         for i in 0..length {
             let t = i as f64 * t_step;
-            let phase = 2.0 * PI * start_freq.mul_add(t, 0.5 * k * t * t);
+            let phase = TWO_PI * start_freq.mul_add(t, 0.5 * k * t * t);
             chirp[i] = Complex64::new(phase.cos(), phase.sin());
         }
 

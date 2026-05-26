@@ -4,7 +4,7 @@
 //! Destrade & Ogden (2010) JASA 128(6).
 
 use super::super::config::NonlinearInversionConfig;
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// μ = ρ c_s²  (Hooke's law for shear waves)
 #[must_use]
@@ -30,7 +30,7 @@ pub(super) fn beta_s_from_amplitudes(
     if a1 < 1e-12 {
         return None;
     }
-    let omega = 2.0 * PI * config.excitation_frequency;
+    let omega = TWO_PI * config.excitation_frequency;
     let c_s = config.shear_wave_speed.max(1e-3);
     let z = config.propagation_distance.max(1e-6);
     Some(2.0 * a2 * c_s / (omega * a1 * a1 * z))
@@ -62,7 +62,7 @@ pub(super) fn forward_model(
     a1_obs: f64,
     config: &NonlinearInversionConfig,
 ) -> (f64, f64) {
-    let omega = 2.0 * PI * config.excitation_frequency;
+    let omega = TWO_PI * config.excitation_frequency;
     let c_s = config.shear_wave_speed.max(1e-3);
     let k_s = omega / c_s;
     let z = config.propagation_distance.max(1e-6);
@@ -83,7 +83,7 @@ pub(super) fn forward_model_derivative(
     a1_obs: f64,
     config: &NonlinearInversionConfig,
 ) -> (f64, f64) {
-    let omega = 2.0 * PI * config.excitation_frequency;
+    let omega = TWO_PI * config.excitation_frequency;
     let c_s = config.shear_wave_speed.max(1e-3);
     let k_s = omega / c_s;
     let z = config.propagation_distance.max(1e-6);

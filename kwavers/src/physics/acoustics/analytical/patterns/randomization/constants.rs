@@ -1,9 +1,9 @@
 //! Constants for phase randomization
 
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Maximum phase shift for randomization (radians)
-pub const MAX_PHASE_SHIFT: f64 = 2.0 * PI;
+pub const MAX_PHASE_SHIFT: f64 = TWO_PI;
 
 /// Default number of phase states for discrete randomization
 pub const DEFAULT_PHASE_STATES: usize = 4;

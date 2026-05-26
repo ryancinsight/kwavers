@@ -3,7 +3,7 @@
 use super::mie_theory::MieTheory;
 use super::types::PlasmonicArrayGeometry;
 use crate::core::constants::optical::REFRACTIVE_INDEX_WATER;
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Array of nanoparticles for collective enhancement computations
 #[derive(Debug)]
@@ -109,6 +109,6 @@ impl NanoparticleArray {
     fn medium_wavenumber(&self, wavelength: f64) -> f64 {
         // Assume water host matrix
         let refractive_index = REFRACTIVE_INDEX_WATER;
-        2.0 * PI * refractive_index / wavelength
+        TWO_PI * refractive_index / wavelength
     }
 }

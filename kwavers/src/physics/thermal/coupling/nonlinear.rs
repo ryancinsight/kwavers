@@ -3,6 +3,7 @@
 //! Nonlinear acoustics contribute to heating through shock formation
 //! and generation of higher harmonics that are more readily absorbed.
 
+use crate::core::constants::numerical::{TWO_PI};
 /// Nonlinear acoustic effects generating secondary absorption
 #[derive(Debug, Clone, Copy)]
 pub struct NonlinearHeating {
@@ -46,8 +47,7 @@ impl NonlinearHeating {
     /// §4.3; Sehgal & Greenleaf 1984).
     #[must_use]
     pub fn power(&self) -> f64 {
-        use std::f64::consts::PI;
-        let omega = 2.0 * PI * self.frequency;
+        let omega = TWO_PI * self.frequency;
         let c3 = self.sound_speed.powi(3);
         self.nonlinearity_parameter * self.pressure.powi(2) * omega.powi(2) / (self.density * c3)
     }

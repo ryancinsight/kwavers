@@ -1,8 +1,8 @@
 use ndarray::Array3;
-use std::f64::consts::PI;
 
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Analytical solution for spherical wave from a point source.
 ///
@@ -73,8 +73,8 @@ impl SphericalWave {
             return 0.0;
         }
 
-        let k = 2.0 * PI * self.frequency / self.sound_speed;
-        let omega = 2.0 * PI * self.frequency;
+        let k = TWO_PI * self.frequency / self.sound_speed;
+        let omega = TWO_PI * self.frequency;
         let phase = k * r - omega * t + self.phase;
 
         (self.source_strength / r) * phase.sin()

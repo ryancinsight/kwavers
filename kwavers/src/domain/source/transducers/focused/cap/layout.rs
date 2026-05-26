@@ -11,6 +11,7 @@
 
 use crate::core::error::{KwaversError, KwaversResult};
 use std::f64::consts::{FRAC_PI_2, PI};
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Configuration for equal-area focused spherical-cap element placement.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -120,7 +121,7 @@ impl SphericalCapLayout {
         let (e1, e2) = perpendicular_frame(axis);
         let cos_min = config.theta_min_rad.cos();
         let cos_max = config.theta_max_rad.cos();
-        let cap_area = 2.0 * PI * config.radius_m * config.radius_m * (cos_min - cos_max).abs();
+        let cap_area = TWO_PI * config.radius_m * config.radius_m * (cos_min - cos_max).abs();
         let area_weight = cap_area / config.element_count as f64;
         let golden_angle = PI * (3.0 - 5.0_f64.sqrt());
 

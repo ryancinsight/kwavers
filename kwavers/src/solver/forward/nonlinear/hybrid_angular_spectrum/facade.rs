@@ -3,10 +3,10 @@
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
 use ndarray::Array3;
-use std::f64::consts::PI;
 
 use super::config::HASConfig;
 use super::solver::HybridAngularSpectrumSolver;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Hybrid Angular Spectrum propagator.
 ///
@@ -53,7 +53,7 @@ impl HybridAngularSpectrum {
         let beta = 1.0 + self.config.nonlinearity / 2.0; // β = 1 + B/(2A)
         let c0 = self.config.sound_speed;
         let rho0 = self.config.density;
-        let omega = 2.0 * PI * self.config.reference_frequency;
+        let omega = TWO_PI * self.config.reference_frequency;
         (rho0 * c0.powi(3)) / (beta * omega * p0)
     }
 

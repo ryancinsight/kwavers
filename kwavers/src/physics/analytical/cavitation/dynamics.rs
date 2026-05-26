@@ -1,8 +1,8 @@
-use std::f64::consts::PI;
 
 use crate::physics::acoustics::bubble_dynamics::bubble_state::{
     viscous_bubble_wall_stress, young_laplace_pressure,
 };
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Minnaert resonance frequency of a spherical gas bubble.
 ///
@@ -32,7 +32,7 @@ pub fn minnaert_resonance_hz(r0_m: f64, gamma: f64, p0_pa: f64, rho: f64) -> f64
     {
         return 0.0;
     }
-    1.0 / (2.0 * PI * r0_m) * (3.0 * gamma * p0_pa / rho).sqrt()
+    1.0 / (TWO_PI * r0_m) * (3.0 * gamma * p0_pa / rho).sqrt()
 }
 
 /// Blake threshold pressure (inertial cavitation onset).
@@ -147,7 +147,7 @@ pub fn rayleigh_plesset_rk4(
     r_out[0] = r0_m;
     rdot_out[0] = rdot0;
 
-    let omega = 2.0 * PI * freq_hz;
+    let omega = TWO_PI * freq_hz;
     // Canonical polytropic non-condensable-gas closure with vapor-pressure
     // separation (Brennen 1995 sec 2.4):
     //   p_gas(r) = (p0 + 2 sigma / r0 - p_v) * (r0 / r)^(3 kappa) + p_v
@@ -237,7 +237,7 @@ pub fn keller_miksis_rk4(
     r_out[0] = r0_m;
     rdot_out[0] = rdot0;
 
-    let omega = 2.0 * PI * freq_hz;
+    let omega = TWO_PI * freq_hz;
     // Canonical polytropic gas closure with vapor-pressure separation
     // (Brennen 1995 sec 2.4):
     //   p_gas_total(r) = p_nc(r) + p_v,

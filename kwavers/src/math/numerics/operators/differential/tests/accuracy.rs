@@ -3,7 +3,7 @@
 use super::super::*;
 use approx::assert_abs_diff_eq;
 use ndarray::Array3;
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 #[test]
 fn test_all_operators_linear_function() {
@@ -41,8 +41,8 @@ fn test_all_operators_linear_function() {
 #[test]
 fn test_convergence_order_second_order() {
     // u(x) = sin(2πx), du/dx = 2π·cos(2πx)
-    let test_function = |x: f64| (2.0 * PI * x).sin();
-    let test_derivative = |x: f64| 2.0 * PI * (2.0 * PI * x).cos();
+    let test_function = |x: f64| (TWO_PI * x).sin();
+    let test_derivative = |x: f64| TWO_PI * (TWO_PI * x).cos();
 
     let grid_sizes = vec![20, 40, 80];
     let mut errors = Vec::new();
@@ -94,8 +94,8 @@ fn test_convergence_order_second_order() {
 
 #[test]
 fn test_convergence_order_fourth_order() {
-    let test_function = |x: f64| (2.0 * PI * x).sin();
-    let test_derivative = |x: f64| 2.0 * PI * (2.0 * PI * x).cos();
+    let test_function = |x: f64| (TWO_PI * x).sin();
+    let test_derivative = |x: f64| TWO_PI * (TWO_PI * x).cos();
 
     let grid_sizes = vec![20, 40, 80];
     let mut errors = Vec::new();

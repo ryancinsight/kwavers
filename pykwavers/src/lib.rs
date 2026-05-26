@@ -66,6 +66,7 @@ mod fft_bindings;
 mod field_surrogate_bindings;
 mod imaging_bindings;
 mod ritk_image;
+mod sonogenetics_bindings;
 mod theranostic_bindings;
 mod thermal_bindings;
 mod utils_bindings;
@@ -212,6 +213,7 @@ fn _pykwavers(m: &Bound<'_, PyModule>) -> PyResult<()> {
     fft_bindings::register(m)?;
     analytical_bindings::register_book(m)?;
     bubble_bindings::register_bubble(m)?;
+    sonogenetics_bindings::register_sonogenetics(m)?;
 
     // Module metadata
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;

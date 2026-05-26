@@ -2,6 +2,7 @@ use super::assembler::BurtonMillerAssembler;
 use super::config::BurtonMillerConfig;
 use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use num_complex::Complex64;
+use crate::core::constants::numerical::{FOUR_PI};
 
 #[test]
 fn test_burton_miller_config_creation() {
@@ -107,7 +108,7 @@ fn test_hypersingular_static_limit_matches_dipole_kernel() {
     let ny = [0.0_f64, 0.0, 1.0];
     let result =
         assembler.greens_function_double_normal_derivative(k, r, &collocation, &point, &ny, &nx);
-    let g_static = 1.0 / (4.0 * std::f64::consts::PI * r);
+    let g_static = 1.0 / (FOUR_PI * r);
     let expected = Complex64::new(g_static / (r * r), 0.0);
     let diff = (result - expected).norm();
     assert!(

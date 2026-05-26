@@ -1,7 +1,7 @@
 //! Analytical prediction functions for SBSL benchmarks.
 
 use super::constants::{C_LIGHT, H_PLANCK, KB, WIEN_CONST};
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Compute the Minnaert resonance radius for a given driving frequency.
 ///
@@ -26,7 +26,7 @@ pub fn minnaert_resonance_radius(freq_hz: f64, gamma: f64, p0: f64, rho_l: f64) 
     if freq_hz < 1.0 || rho_l < 1.0 || p0 < 1.0 {
         return 0.0;
     }
-    (1.0 / (2.0 * PI * freq_hz)) * (3.0 * gamma * p0 / rho_l).sqrt()
+    (1.0 / (TWO_PI * freq_hz)) * (3.0 * gamma * p0 / rho_l).sqrt()
 }
 
 /// Compute the Blake threshold pressure for inertial cavitation nucleation.

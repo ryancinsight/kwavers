@@ -3,7 +3,7 @@
 //! Models the nonlinear steepening of acoustic waves into shocks.
 
 use super::NonlinearParameters;
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Calculates the spatial location where a shock wave forms
 ///
@@ -18,7 +18,7 @@ pub fn shock_formation_distance(
     frequency: f64,
     params: &NonlinearParameters,
 ) -> f64 {
-    let omega = 2.0 * PI * frequency;
+    let omega = TWO_PI * frequency;
     let beta = params.beta;
     let rho_0 = params.density;
     let c_0 = params.sound_speed;
@@ -61,7 +61,7 @@ pub fn shock_formation_distance(
 /// Returns thickness (m)
 #[must_use]
 pub fn shock_thickness(shock_pressure: f64, frequency: f64, params: &NonlinearParameters) -> f64 {
-    let omega = 2.0 * PI * frequency;
+    let omega = TWO_PI * frequency;
     // Thermoviscous attenuation at the driving frequency [Np/m]
     let alpha = params.attenuation_at_frequency(frequency);
     // Diffusivity of sound: δ = 2α c₀³ / ω²

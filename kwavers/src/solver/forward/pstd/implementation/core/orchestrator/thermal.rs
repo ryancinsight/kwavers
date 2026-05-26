@@ -13,7 +13,7 @@
 //! ## Usage (standalone — single step caller)
 //!
 //! ```rust,ignore
-//! let omega_c = 2.0 * PI * 1.0e6;   // 1 MHz center frequency
+//! let omega_c = TWO_PI * 1.0e6;   // 1 MHz center frequency
 //! solver.populate_alpha_np_m_at_frequency(omega_c);
 //! // After each acoustic step:
 //! let q = solver.compute_acoustic_heat_source();
@@ -23,7 +23,7 @@
 //! ## Usage (coupled time loop)
 //!
 //! ```rust,ignore
-//! let omega_c = 2.0 * PI * 1.0e6;
+//! let omega_c = TWO_PI * 1.0e6;
 //! let rho_cp = 1000.0 * 3600.0; // kg/m³ × J/(kg·K)
 //! solver.run_orchestrated_with_thermal(ThermalOrchestrationInput {
 //!     acoustic_steps: time_steps,

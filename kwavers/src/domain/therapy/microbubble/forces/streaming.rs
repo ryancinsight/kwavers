@@ -6,6 +6,7 @@
 //! - Marmottant & Hilgenfeldt (2003): "Controlled vesicle deformation"
 
 use crate::core::error::KwaversResult;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Steady acoustic streaming velocity induced by viscous dissipation [m/s].
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -68,7 +69,7 @@ pub fn calculate_acoustic_streaming_velocity(
         return Ok(StreamingVelocity::zero());
     }
 
-    let omega = 2.0 * std::f64::consts::PI * frequency;
+    let omega = TWO_PI * frequency;
     let mach_sq = (wall_velocity_amplitude / SOUND_SPEED_TISSUE).powi(2);
     let re = (radius_equilibrium.powi(2) * omega) / kinematic_viscosity;
     let r_ratio = distance / radius_equilibrium;

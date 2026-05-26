@@ -3,6 +3,7 @@ use super::dataset::{EpochTrainingMetrics, TrainingDataset};
 use super::history::TrainingHistory;
 use super::loss::{Optimizer, PhysicsLoss};
 use ndarray::Array2;
+use crate::core::constants::numerical::{TWO_PI};
 
 #[test]
 fn test_training_config_default() {
@@ -207,7 +208,7 @@ fn physics_loss_coherence_violation_row_jump_exact() {
 fn physics_loss_coherence_violation_wrap_above_pi_exact() {
     let phases = Array2::<f64>::from_shape_vec((2, 1), vec![0.0, 4.0]).unwrap();
     let loss = PhysicsLoss::coherence_violation(&phases);
-    let expected = (2.0 * std::f64::consts::PI - 4.0) / 2.0;
+    let expected = (TWO_PI - 4.0) / 2.0;
     assert!(
         (loss - expected).abs() < 1e-14,
         "wrap coherence_violation = {loss} (expected {expected})"

@@ -3,6 +3,7 @@ use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, STEFAN_BOLTZMANN
 use crate::core::constants::thermodynamic::{
     EMISSIVITY_VAPOR, ROOM_TEMPERATURE_K, THERMAL_CONDUCTIVITY_AIR,
 };
+use crate::core::constants::numerical::{FOUR_PI};
 
 #[test]
 fn test_stefan_boltzmann_ambient_is_zero() {
@@ -21,7 +22,7 @@ fn test_stefan_boltzmann_at_10000k_is_significant() {
     let t = 10_000.0_f64;
     let t0 = ROOM_TEMPERATURE_K;
     let r = 1e-6_f64;
-    let surface_area = 4.0 * std::f64::consts::PI * r * r;
+    let surface_area = FOUR_PI * r * r;
 
     let q_rad = EMISSIVITY_VAPOR * STEFAN_BOLTZMANN * (t.powi(4) - t0.powi(4)) * surface_area;
     let q_cond = surface_area * THERMAL_CONDUCTIVITY_AIR * (t - t0);

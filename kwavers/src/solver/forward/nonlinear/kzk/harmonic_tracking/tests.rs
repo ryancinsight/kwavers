@@ -1,9 +1,8 @@
 use super::tracker::HarmonicTracker;
 use super::types::{HarmonicAnalysis, HarmonicConfig};
 use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
-use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
+use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA, TWO_PI};
 use ndarray::Array1;
-use std::f64::consts::PI;
 
 #[test]
 fn test_harmonic_tracker_creation() {
@@ -21,7 +20,7 @@ fn test_pure_sinusoid_analysis() {
     let mut pressure = Array1::zeros(n);
 
     for i in 0..n {
-        let phase = 2.0 * PI * config.frequency * (i as f64) * dt;
+        let phase = TWO_PI * config.frequency * (i as f64) * dt;
         pressure[i] = 100.0 * phase.sin();
     }
 
@@ -41,7 +40,7 @@ fn test_harmonic_content_distorted_wave() {
     let mut pressure = Array1::zeros(n);
 
     for i in 0..n {
-        let phase = 2.0 * PI * config.frequency * (i as f64) * dt;
+        let phase = TWO_PI * config.frequency * (i as f64) * dt;
         pressure[i] = 100.0 * phase.sin() + 20.0 * (2.0 * phase).sin();
     }
 
@@ -74,7 +73,7 @@ fn shock_distance_uses_fubini_frequency_dependent_contract() {
     let rho0: f64 = DENSITY_WATER_NOMINAL;
     let c0: f64 = crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
     let beta = 1.0 + config.b_a / 2.0;
-    let omega0 = 2.0 * PI * config.frequency;
+    let omega0 = TWO_PI * config.frequency;
     let expected = rho0 * c0.powi(3) / (beta * omega0 * pressure_amplitude);
 
     let distance = tracker.predict_shock_distance(pressure_amplitude).unwrap();

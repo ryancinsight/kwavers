@@ -3,6 +3,7 @@
 use super::constants::{
     DEFAULT_DUTY_CYCLE, DEFAULT_PRF, DEFAULT_RAMP_TIME, MAX_DUTY_CYCLE, MIN_DUTY_CYCLE,
 };
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Modulation schemes
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -85,7 +86,7 @@ impl PowerControl {
                 }
             }
             ModulationScheme::Sinusoidal => {
-                let omega = 2.0 * std::f64::consts::PI * self.prf;
+                let omega = TWO_PI * self.prf;
                 self.amplitude * 0.5f64.mul_add((omega * time).sin(), 0.5)
             }
             _ => self.amplitude, // Default for other schemes

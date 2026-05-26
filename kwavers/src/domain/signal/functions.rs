@@ -7,7 +7,7 @@ use ndarray::Array2;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 use rand_distr::{Distribution, Normal};
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Sample a signal at evenly spaced time points starting at `t0`.
 /// # Errors
@@ -85,7 +85,7 @@ pub(super) fn k_wave_tukey_window(n: usize, alpha: f64) -> Vec<f64> {
 
     for i in 0..taper_len {
         let idx = i as f64;
-        let value = 0.5 * (1.0 + (2.0 * PI / alpha_n * (idx - alpha_n / 2.0)).cos());
+        let value = 0.5 * (1.0 + (TWO_PI / alpha_n * (idx - alpha_n / 2.0)).cos());
         window[i] = value;
         window[n - 1 - i] = value;
     }
@@ -234,7 +234,7 @@ pub fn tone_burst_series(spec: &ToneBurstSpec) -> KwaversResult<Vec<f64>> {
     let mut out = vec![0.0; out_len];
     for i in 0..burst_samples {
         let t = i as f64 * dt;
-        let carrier = (2.0 * PI * signal_freq_hz).mul_add(t, phase).sin();
+        let carrier = (TWO_PI * signal_freq_hz).mul_add(t, phase).sin();
         out[signal_offset + i] = amplitude * win[i] * carrier;
     }
     Ok(out)
@@ -272,7 +272,7 @@ pub fn create_cw_signal(
     }
 
     Ok(t.iter()
-        .map(|&ti| amplitude * (2.0 * PI * frequency_hz).mul_add(ti, phase).sin())
+        .map(|&ti| amplitude * (TWO_PI * frequency_hz).mul_add(ti, phase).sin())
         .collect())
 }
 

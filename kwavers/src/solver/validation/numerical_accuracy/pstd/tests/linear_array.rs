@@ -5,7 +5,7 @@ use crate::domain::medium::HomogeneousMedium;
 use crate::solver::pstd::PSTDConfig as PstdConfig;
 use crate::solver::pstd::PSTDSolver;
 use ndarray::{Array2, Array3};
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 #[test]
 fn test_linear_array_phase_accuracy() {
@@ -47,7 +47,7 @@ fn test_linear_array_phase_accuracy() {
     // All elements driven in phase
     let signal = Array2::from_shape_fn((1, 500), |(_, t)| {
         let t_f64 = t as f64 * config.dt;
-        (2.0 * PI * frequency * t_f64).sin()
+        (TWO_PI * frequency * t_f64).sin()
     });
     source_data.p_signal = Some(signal);
 

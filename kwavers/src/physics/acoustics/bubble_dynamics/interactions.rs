@@ -7,6 +7,7 @@ use crate::core::constants::acoustic_parameters::AIR_POLYTROPIC_INDEX;
 use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL};
 use ndarray::Array3;
 use std::collections::HashMap;
+use crate::core::constants::numerical::{FOUR_PI, TWO_PI};
 
 /// Bubble interaction calculator
 #[derive(Debug)]
@@ -90,11 +91,11 @@ impl BubbleInteractions {
         let r = bubble.radius;
         let r_dot = bubble.wall_velocity;
         let r_ddot = bubble.wall_acceleration;
-        let v_ddot = 4.0 * std::f64::consts::PI * r * r * r_ddot
+        let v_ddot = FOUR_PI * r * r * r_ddot
             + 8.0 * std::f64::consts::PI * r * r_dot * r_dot;
 
         // Monopole acoustic pressure: p = ρ · V̈ / (4π · r)  [Pa]
-        self.liquid_density * v_ddot / (4.0 * std::f64::consts::PI * distance)
+        self.liquid_density * v_ddot / (FOUR_PI * distance)
     }
 }
 
@@ -135,10 +136,10 @@ impl BjerknesForceComputer {
             return 0.0;
         }
 
-        let v1_dot = 4.0 * std::f64::consts::PI * bubble1.radius.powi(2) * bubble1.wall_velocity;
-        let v2_dot = 4.0 * std::f64::consts::PI * bubble2.radius.powi(2) * bubble2.wall_velocity;
+        let v1_dot = FOUR_PI * bubble1.radius.powi(2) * bubble1.wall_velocity;
+        let v2_dot = FOUR_PI * bubble2.radius.powi(2) * bubble2.wall_velocity;
 
-        -liquid_density * v1_dot * v2_dot / (4.0 * std::f64::consts::PI * distance.powi(2))
+        -liquid_density * v1_dot * v2_dot / (FOUR_PI * distance.powi(2))
     }
 
     /// Check if bubbles attract or repel
@@ -210,7 +211,7 @@ impl CollectiveEffects {
         let (rho, _c) = liquid_properties;
 
         // Minnaert frequency modified for void fraction
-        let f0 = 1.0 / (2.0 * std::f64::consts::PI * mean_radius)
+        let f0 = 1.0 / (TWO_PI * mean_radius)
             * (3.0 * AIR_POLYTROPIC_INDEX * ATMOSPHERIC_PRESSURE / rho).sqrt();
 
         // Correction for bubble-bubble interactions

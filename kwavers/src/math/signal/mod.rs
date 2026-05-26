@@ -4,7 +4,7 @@
 //! with no dependencies on domain-specific modules.
 
 use serde::{Deserialize, Serialize};
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Apodization window type for transducer arrays and beamforming.
 ///
@@ -64,14 +64,14 @@ impl ApodizationType {
         match *self {
             Self::Uniform => vec![1.0; n],
             Self::Hamming => (0..n)
-                .map(|i| 0.46f64.mul_add(-(2.0 * PI * i as f64 / denom).cos(), 0.54))
+                .map(|i| 0.46f64.mul_add(-(TWO_PI * i as f64 / denom).cos(), 0.54))
                 .collect(),
             Self::Hanning => (0..n)
-                .map(|i| 0.5 * (1.0 - (2.0 * PI * i as f64 / denom).cos()))
+                .map(|i| 0.5 * (1.0 - (TWO_PI * i as f64 / denom).cos()))
                 .collect(),
             Self::Blackman => (0..n)
                 .map(|i| {
-                    let t = 2.0 * PI * i as f64 / denom;
+                    let t = TWO_PI * i as f64 / denom;
                     0.08f64.mul_add((2.0 * t).cos(), 0.5f64.mul_add(-t.cos(), 0.42))
                 })
                 .collect(),

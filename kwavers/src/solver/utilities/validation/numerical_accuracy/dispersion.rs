@@ -1,4 +1,5 @@
 use super::{DispersionResults, NumericalValidator};
+use crate::core::constants::numerical::{TWO_PI};
 
 impl NumericalValidator {
     /// Validate dispersion.
@@ -15,7 +16,7 @@ impl NumericalValidator {
         use std::f64::consts::PI;
 
         let wavelength = 10.0 * self.grid.dx;
-        let k = 2.0 * PI / wavelength;
+        let k = TWO_PI / wavelength;
         let omega =
             k * crate::domain::medium::sound_speed_at(&self.medium, 0.0, 0.0, 0.0, &self.grid);
         let dt = 0.5 * self.grid.dx
@@ -40,7 +41,7 @@ impl NumericalValidator {
         let kuznetsov_phase_error =
             self.compute_phase_error_kuznetsov(&kuznetsov_solver, k, omega, dt)?;
 
-        let numerical_wavelength = 2.0 * PI / (k * (1.0 + pstd_phase_error));
+        let numerical_wavelength = TWO_PI / (k * (1.0 + pstd_phase_error));
         let group_velocity_error = (pstd_phase_error * omega / k).abs()
             / crate::domain::medium::sound_speed_at(&self.medium, 0.0, 0.0, 0.0, &self.grid);
 

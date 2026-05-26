@@ -14,7 +14,7 @@ use crate::physics::acoustics::imaging::modalities::ultrasound::frequency_domain
 use crate::solver::inverse::linear_born_inversion::ElementPosition;
 use ndarray::Array3;
 use num_complex::Complex64;
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 mod absorbing;
 mod grid_green;
@@ -45,5 +45,5 @@ pub(super) fn angular_mode_for_test(index: usize, count: usize, spacing_m: f64) 
     } else {
         index as f64 - count as f64
     };
-    2.0 * PI * signed_index / (count as f64 * spacing_m)
+    TWO_PI * signed_index / (count as f64 * spacing_m)
 }

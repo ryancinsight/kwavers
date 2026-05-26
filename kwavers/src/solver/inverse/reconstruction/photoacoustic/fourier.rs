@@ -15,6 +15,7 @@ use crate::math::fft::{
 };
 use ndarray::{Array1, Array2, Array3, ArrayView2};
 use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Fourier domain reconstruction algorithm
 #[derive(Debug)]
@@ -94,7 +95,7 @@ impl FourierReconstructor {
             };
 
             // Multiply by iω (derivative in frequency domain)
-            let omega = 2.0 * PI * freq;
+            let omega = TWO_PI * freq;
             *val *= Complex64::new(0.0, omega);
         }
 
@@ -122,7 +123,7 @@ impl FourierReconstructor {
         // Map frequency components to angular components
         for f_idx in 0..n_freq {
             let freq = f_idx as f64 * self.sampling_frequency / n_time as f64;
-            let k = 2.0 * PI * freq / self.sound_speed; // Wave number
+            let k = TWO_PI * freq / self.sound_speed; // Wave number
 
             for angle_idx in 0..n_angles {
                 let theta = angle_idx as f64 * PI / n_angles as f64;
@@ -156,7 +157,7 @@ impl FourierReconstructor {
         // Map angular spectrum to k-space using projection theorem
         for f_idx in 0..n_freq {
             let freq = f_idx as f64 * self.sampling_frequency / (2.0 * n_freq as f64);
-            let k_mag = 2.0 * PI * freq / self.sound_speed;
+            let k_mag = TWO_PI * freq / self.sound_speed;
 
             for angle_idx in 0..n_angles {
                 let theta = angle_idx as f64 * PI / n_angles as f64;
@@ -168,9 +169,9 @@ impl FourierReconstructor {
                 let kz = k_mag * theta.cos();
 
                 // Find nearest k-space grid point
-                let ix = ((kx / (2.0 * PI) + 0.5) * nx as f64) as usize % nx;
-                let iy = ((ky / (2.0 * PI) + 0.5) * ny as f64) as usize % ny;
-                let iz = ((kz / (2.0 * PI) + 0.5) * nz as f64) as usize % nz;
+                let ix = ((kx / (TWO_PI) + 0.5) * nx as f64) as usize % nx;
+                let iy = ((ky / (TWO_PI) + 0.5) * ny as f64) as usize % ny;
+                let iz = ((kz / (TWO_PI) + 0.5) * nz as f64) as usize % nz;
 
                 // Add contribution (with proper weighting for spherical integration)
                 let weight = theta.sin(); // Jacobian for spherical coordinates

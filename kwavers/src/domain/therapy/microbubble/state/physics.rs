@@ -2,6 +2,7 @@ use super::MicrobubbleState;
 use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL};
 use crate::core::constants::thermodynamic::HEAT_CAPACITY_RATIO_DIATOMIC;
 use crate::core::error::{KwaversError, KwaversResult, ValidationError};
+use crate::core::constants::numerical::{FOUR_PI, TWO_PI};
 
 impl MicrobubbleState {
     #[must_use]
@@ -11,7 +12,7 @@ impl MicrobubbleState {
 
     #[must_use]
     pub fn surface_area(&self) -> f64 {
-        4.0 * std::f64::consts::PI * self.radius.powi(2)
+        FOUR_PI * self.radius.powi(2)
     }
 
     #[must_use]
@@ -39,7 +40,7 @@ impl MicrobubbleState {
     #[must_use]
     pub fn kinetic_energy(&self) -> f64 {
         let mass_effective =
-            4.0 * std::f64::consts::PI * DENSITY_WATER_NOMINAL * self.radius.powi(3);
+            FOUR_PI * DENSITY_WATER_NOMINAL * self.radius.powi(3);
         0.5 * mass_effective * self.wall_velocity.powi(2)
     }
 
@@ -73,7 +74,7 @@ impl MicrobubbleState {
     pub fn resonance_frequency(&self) -> f64 {
         let numerator =
             3.0 * HEAT_CAPACITY_RATIO_DIATOMIC * ATMOSPHERIC_PRESSURE / DENSITY_WATER_NOMINAL;
-        numerator.sqrt() / (2.0 * std::f64::consts::PI * self.radius_equilibrium)
+        numerator.sqrt() / (TWO_PI * self.radius_equilibrium)
     }
 
     #[must_use]

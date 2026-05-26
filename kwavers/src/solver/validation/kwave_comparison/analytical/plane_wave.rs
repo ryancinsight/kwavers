@@ -1,8 +1,8 @@
 use ndarray::Array3;
-use std::f64::consts::PI;
 
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Analytical solution for plane wave propagation.
 ///
@@ -86,7 +86,7 @@ impl KwaveAnalyticalPlaneWave {
     /// p(x, t) = A sin(k·x − ωt + φ)
     #[must_use]
     pub fn pressure(&self, x: f64, y: f64, z: f64, t: f64) -> f64 {
-        let omega = 2.0 * PI * self.frequency;
+        let omega = TWO_PI * self.frequency;
         let k = omega / self.sound_speed;
         let k_dot_x =
             k * self.direction[2].mul_add(z, self.direction[0].mul_add(x, self.direction[1] * y));
@@ -112,7 +112,7 @@ impl KwaveAnalyticalPlaneWave {
     /// Wave number k = 2πf/c₀ [rad/m]
     #[must_use]
     pub fn wave_number(&self) -> f64 {
-        2.0 * PI * self.frequency / self.sound_speed
+        TWO_PI * self.frequency / self.sound_speed
     }
 
     /// Wavelength λ = c₀/f (m)
@@ -124,6 +124,6 @@ impl KwaveAnalyticalPlaneWave {
     /// Angular frequency ω = 2πf [rad/s]
     #[must_use]
     pub fn angular_frequency(&self) -> f64 {
-        2.0 * PI * self.frequency
+        TWO_PI * self.frequency
     }
 }

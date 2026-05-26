@@ -2,6 +2,7 @@
 //!
 //! Follows Creator pattern for source instantiation using domain types.
 
+use crate::core::constants::numerical::{TWO_PI};
 mod focused;
 mod signal;
 
@@ -23,7 +24,6 @@ use crate::domain::source::{
     BesselSource, DomainSourceParameters, GaussianSource, PistonSource,
     PlaneWaveSource, PointSource, Source, SourceModel, SphericalSource,
 };
-use std::f64::consts::PI;
 
 /// Factory for creating sources.
 #[derive(Debug)]
@@ -85,7 +85,7 @@ impl SourceFactory {
                     1000.0
                 };
                 let axial_wavenumber = radial_wavenumber
-                    .mul_add(-radial_wavenumber, (2.0 * PI / wavelength).powi(2))
+                    .mul_add(-radial_wavenumber, (TWO_PI / wavelength).powi(2))
                     .sqrt();
 
                 let bessel_config = BesselConfig {

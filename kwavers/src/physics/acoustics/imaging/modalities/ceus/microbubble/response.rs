@@ -1,5 +1,6 @@
 //! Bubble oscillation response data structures and analysis
 
+use crate::core::constants::numerical::{TWO_PI};
 /// Bubble oscillation response data
 #[derive(Debug, Clone)]
 pub struct BubbleResponse {
@@ -38,7 +39,7 @@ impl BubbleResponse {
         let mut imag_sum = 0.0;
 
         for (&time, &pressure) in self.time.iter().zip(self.scattered_pressure.iter()) {
-            let phase = 2.0 * std::f64::consts::PI * harmonic_freq * time;
+            let phase = TWO_PI * harmonic_freq * time;
             real_sum += pressure * phase.cos();
             imag_sum += pressure * phase.sin();
         }

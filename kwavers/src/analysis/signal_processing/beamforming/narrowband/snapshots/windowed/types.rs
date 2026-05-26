@@ -1,5 +1,6 @@
 use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::core::error::{KwaversError, KwaversResult};
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Window function for windowed snapshot extraction.
 ///
@@ -23,7 +24,7 @@ impl WindowFunction {
                     1.0
                 } else {
                     let denom = (len - 1) as f64;
-                    0.5 * (1.0 - (2.0 * std::f64::consts::PI * (n as f64) / denom).cos())
+                    0.5 * (1.0 - (TWO_PI * (n as f64) / denom).cos())
                 }
             }
         }

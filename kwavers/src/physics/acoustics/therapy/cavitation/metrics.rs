@@ -1,7 +1,7 @@
 use super::constants::{AIR_POLYTROPIC_INDEX, CAVITATION_PROBABILITY_STEEPNESS};
 use super::TherapyCavitationDetector;
 use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL};
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 impl TherapyCavitationDetector {
     /// Minnaert resonance frequency for a bubble of radius `r0` (m) (Hz).
@@ -15,7 +15,7 @@ impl TherapyCavitationDetector {
     pub fn minnaert_frequency(&self, r0: f64) -> f64 {
         let pressure_term =
             3.0 * AIR_POLYTROPIC_INDEX * ATMOSPHERIC_PRESSURE / DENSITY_WATER_NOMINAL;
-        pressure_term.sqrt() / (2.0 * PI * r0)
+        pressure_term.sqrt() / (TWO_PI * r0)
     }
 
     /// Cavitation index CI = |P_neg| / P_Blake.

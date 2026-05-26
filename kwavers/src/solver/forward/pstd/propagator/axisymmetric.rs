@@ -11,8 +11,8 @@
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::math::fft::{Complex64, Fft2d, Fft2dInOutExt, Shape2D, FFT_CACHE_2D};
 use ndarray::{s, Array1, Array2, ArrayView2, Zip};
-use std::f64::consts::PI;
 use std::sync::Arc;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Precomputed operators and pre-allocated scratch buffers for WSWA-FFT
 /// axisymmetric propagation.
@@ -91,8 +91,8 @@ impl AsContext {
             ));
         }
         let nr_exp = 4 * nr;
-        let dk_z = 2.0 * PI / (nr_exp as f64 * dr);
-        let dk_x = 2.0 * PI / (nx as f64 * dx);
+        let dk_z = TWO_PI / (nr_exp as f64 * dr);
+        let dk_x = TWO_PI / (nx as f64 * dx);
 
         let r_sg = Array1::from_iter((0..nr).map(|m| (m as f64 + 0.5) * dr));
 

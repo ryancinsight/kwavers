@@ -12,6 +12,7 @@ use super::types::{
     GridIndex, Nonlinear3dAperture, Nonlinear3dConfig, Nonlinear3dVolume, SourceDomain,
 };
 use super::volume::centroid_index;
+use crate::core::constants::numerical::{TWO_PI};
 
 pub(crate) fn build_aperture(
     volume: &Nonlinear3dVolume,
@@ -275,7 +276,7 @@ fn fibonacci_sphere_select(
 /// Squared angular difference on the circle [−π, π), wrapping correctly.
 #[inline]
 fn azimuth_diff_sq(a: f64, b: f64) -> f64 {
-    let diff = ((a - b + 3.0 * PI).rem_euclid(2.0 * PI)) - PI;
+    let diff = ((a - b + 3.0 * PI).rem_euclid(TWO_PI)) - PI;
     diff * diff
 }
 

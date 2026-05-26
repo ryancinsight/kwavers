@@ -4,7 +4,7 @@ use super::functions::{
 use super::window::SignalWindowType;
 use crate::core::constants::numerical::MHZ_TO_HZ;
 use proptest::prelude::*;
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 #[test]
 fn tone_burst_series_respects_offset_and_length() {
@@ -105,7 +105,7 @@ fn add_noise_achieves_target_snr_reasonably() {
     let n = 65_536;
     let dt = 1.0 / sample_rate_hz;
     let clean: Vec<f64> = (0..n)
-        .map(|i| (2.0 * PI * f0 * (i as f64 * dt)).sin())
+        .map(|i| (TWO_PI * f0 * (i as f64 * dt)).sin())
         .collect();
 
     let snr_db_target = 20.0;

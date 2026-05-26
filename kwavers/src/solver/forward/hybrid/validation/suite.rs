@@ -17,8 +17,9 @@
 //! fixture without depending on a concrete PSTD or FDTD implementation.
 
 use crate::core::error::KwaversResult;
+use crate::core::constants::numerical::{TWO_PI};
 
-const MANUFACTURED_WAVENUMBER: f64 = 2.0 * std::f64::consts::PI;
+const MANUFACTURED_WAVENUMBER: f64 = TWO_PI;
 const MIN_MANUFACTURED_POINTS: usize = 16;
 const ACOUSTIC_MODE_SPEED: f64 = 1.0;
 

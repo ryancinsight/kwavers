@@ -3,6 +3,7 @@
 use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::domain::grid::Grid;
 use ndarray::ArrayView3;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Spectral analysis metrics for method selection
 #[derive(Debug, Clone)]
@@ -86,23 +87,23 @@ impl SpectralMetrics {
 
         for k_idx in 0..nz {
             let kz = if k_idx <= nz / 2 {
-                2.0 * PI * k_idx as f64 / (nz as f64 * grid.dz)
+                TWO_PI * k_idx as f64 / (nz as f64 * grid.dz)
             } else {
-                2.0 * PI * (k_idx as f64 - nz as f64) / (nz as f64 * grid.dz)
+                TWO_PI * (k_idx as f64 - nz as f64) / (nz as f64 * grid.dz)
             };
 
             for j in 0..ny {
                 let ky = if j <= ny / 2 {
-                    2.0 * PI * j as f64 / (ny as f64 * grid.dy)
+                    TWO_PI * j as f64 / (ny as f64 * grid.dy)
                 } else {
-                    2.0 * PI * (j as f64 - ny as f64) / (ny as f64 * grid.dy)
+                    TWO_PI * (j as f64 - ny as f64) / (ny as f64 * grid.dy)
                 };
 
                 for i in 0..nx {
                     let kx = if i <= nx / 2 {
-                        2.0 * PI * i as f64 / (nx as f64 * grid.dx)
+                        TWO_PI * i as f64 / (nx as f64 * grid.dx)
                     } else {
-                        2.0 * PI * (i as f64 - nx as f64) / (nx as f64 * grid.dx)
+                        TWO_PI * (i as f64 - nx as f64) / (nx as f64 * grid.dx)
                     };
 
                     let k_mag = kz.mul_add(kz, ky.mul_add(ky, kx.powi(2))).sqrt();

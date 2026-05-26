@@ -24,9 +24,9 @@
 //! frequency component.
 
 use ndarray::{Array2, Zip};
-use std::f64::consts::PI;
 
 use super::config::StandingWaveOptConfig;
+use crate::core::constants::numerical::{TWO_PI};
 
 // ---------------------------------------------------------------------------
 // Complex field superposition
@@ -69,7 +69,7 @@ pub(super) fn superpose(
 /// Windowed DFT power at bin index `k` (0-based, real-valued input).
 fn dft_amplitude(x: &[f64], k: f64) -> f64 {
     let n = x.len() as f64;
-    let omega = 2.0 * PI * k / n;
+    let omega = TWO_PI * k / n;
     let (re, im) = x.iter().enumerate().fold((0.0, 0.0), |(re, im), (j, &v)| {
         (
             re + v * (omega * j as f64).cos(),

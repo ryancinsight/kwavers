@@ -6,8 +6,8 @@ use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::signal::Signal;
 use ndarray::Array3;
-use std::f64::consts::PI;
 use std::sync::Arc;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Focal point specification
 #[derive(Debug, Clone, Copy)]
@@ -72,7 +72,7 @@ impl SteeringController {
 
         for element in elements {
             let distance = calculate_distance(element.position, focal_point.position);
-            let _phase_delay = 2.0 * PI * distance / wavelength;
+            let _phase_delay = TWO_PI * distance / wavelength;
             // Phase would be set on mutable elements
         }
 
@@ -97,7 +97,7 @@ impl SteeringController {
             }
 
             // Apply element contribution with phase delay
-            let phase = (2.0 * PI * self.frequency).mul_add(time, element.phase_offset);
+            let phase = (TWO_PI * self.frequency).mul_add(time, element.phase_offset);
             let amplitude = element.amplitude * phase.sin();
 
             // Point source approximation: Adds field at discrete grid point

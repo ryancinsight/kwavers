@@ -13,7 +13,7 @@ use crate::physics::acoustics::imaging::modalities::ultrasound::frequency_domain
 use crate::solver::inverse::linear_born_inversion::ElementPosition;
 use ndarray::{Array2, Array3};
 use num_complex::Complex64;
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{FOUR_PI, TWO_PI};
 
 /// Simulate complex receiver pressure for all cylindrical-wave transmits.
 ///
@@ -62,7 +62,7 @@ pub(super) fn predict_born_rows(
 ) -> KwaversResult<Array2<Complex64>> {
     let (nx, ny, nz) = slowness_s_per_m.dim();
     let cell_volume = config.spacing_m.powi(3);
-    let omega = 2.0 * PI * frequency_hz;
+    let omega = TWO_PI * frequency_hz;
     let reference_slowness = 1.0 / config.reference_sound_speed_m_s;
     let reference_wavenumber = omega * reference_slowness;
     let min_distance = 0.5 * config.spacing_m;
@@ -102,7 +102,7 @@ pub(super) fn predict_cbs_rows(
     cbs_config: CbsConfig,
     operator: GreenOperatorKind,
 ) -> KwaversResult<Array2<Complex64>> {
-    let omega = 2.0 * PI * frequency_hz;
+    let omega = TWO_PI * frequency_hz;
     let reference_slowness = 1.0 / config.reference_sound_speed_m_s;
     let reference_wavenumber = omega * reference_slowness;
     let grid = GridSpec::new(slowness_s_per_m.dim(), config.spacing_m)?;
@@ -166,7 +166,7 @@ pub(super) fn outgoing_green(
     let dy = source.y_m - receiver.y_m;
     let dz = source.z_m - receiver.z_m;
     let distance = (dx * dx + dy * dy + dz * dz).sqrt().max(min_distance);
-    Complex64::from_polar(1.0 / (4.0 * PI * distance), wavenumber * distance)
+    Complex64::from_polar(1.0 / (FOUR_PI * distance), wavenumber * distance)
 }
 
 pub(super) fn voxel_centers(

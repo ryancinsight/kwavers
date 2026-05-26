@@ -33,6 +33,7 @@
 
 use crate::core::constants::fundamental::{SPEED_OF_LIGHT, VACUUM_IMPEDANCE, VACUUM_PERMEABILITY};
 use std::fmt;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Canonical electromagnetic material properties
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -120,7 +121,7 @@ impl ElectromagneticPropertyData {
         if self.conductivity == 0.0 {
             return f64::INFINITY;
         }
-        let omega = 2.0 * std::f64::consts::PI * frequency_hz;
+        let omega = TWO_PI * frequency_hz;
         let mu = VACUUM_PERMEABILITY * self.permeability;
         (2.0 / (omega * mu * self.conductivity)).sqrt()
     }

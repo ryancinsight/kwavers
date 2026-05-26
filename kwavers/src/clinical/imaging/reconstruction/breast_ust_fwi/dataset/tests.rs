@@ -4,7 +4,7 @@ use crate::core::constants::fundamental::{
 };
 use crate::solver::inverse::linear_born_inversion::ElementPosition;
 use ndarray::{Array3, ArrayView1};
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 #[test]
 fn pstd_dataset_preserves_shape_and_is_input_sensitive() {
@@ -70,8 +70,8 @@ fn pstd_dataset_rejects_unstable_cfl() {
 #[test]
 fn frequency_bin_uses_trailing_steady_state_window() {
     let mut samples = Vec::new();
-    samples.extend((0..10).map(|n| 100.0 * (2.0 * PI * n as f64 / 10.0).sin()));
-    samples.extend((10..20).map(|n| 3.0 * (2.0 * PI * n as f64 / 10.0).sin()));
+    samples.extend((0..10).map(|n| 100.0 * (TWO_PI * n as f64 / 10.0).sin()));
+    samples.extend((10..20).map(|n| 3.0 * (TWO_PI * n as f64 / 10.0).sin()));
     let trace = ArrayView1::from(&samples);
 
     let bin = frequency_bin(trace, 1.0, 0.1, 10);

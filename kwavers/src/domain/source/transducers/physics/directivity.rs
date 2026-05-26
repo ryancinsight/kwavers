@@ -5,6 +5,7 @@
 use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 use ndarray::Array1;
 use std::f64::consts::PI;
+use crate::core::constants::numerical::{FOUR_PI, TWO_PI};
 
 /// Directivity pattern of a transducer element
 ///
@@ -31,7 +32,7 @@ impl TransducerDirectivityPattern {
     #[must_use]
     pub fn rectangular_element(width: f64, height: f64, frequency: f64, num_points: usize) -> Self {
         let wavelength = SOUND_SPEED_TISSUE / frequency; // Assume tissue
-        let k = 2.0 * PI / wavelength;
+        let k = TWO_PI / wavelength;
 
         let angles: Array1<f64> = Array1::linspace(-90.0, 90.0, num_points);
         let mut amplitude = Array1::zeros(num_points);
@@ -78,7 +79,7 @@ impl TransducerDirectivityPattern {
     #[must_use]
     pub fn circular_element(diameter: f64, frequency: f64, num_points: usize) -> Self {
         let wavelength = SOUND_SPEED_TISSUE / frequency;
-        let k = 2.0 * PI / wavelength;
+        let k = TWO_PI / wavelength;
         let radius = diameter / 2.0;
 
         let angles: Array1<f64> = Array1::linspace(-90.0, 90.0, num_points);
@@ -183,7 +184,7 @@ impl TransducerDirectivityPattern {
     pub fn directivity_index(&self) -> f64 {
         // DI = 10 * log10(4π / Ω)
         // where Ω is the beam solid angle
-        let beam_solid_angle = 2.0 * PI * (1.0 - (self.beamwidth_3db.to_radians() / 2.0).cos());
-        10.0 * (4.0 * PI / beam_solid_angle).log10()
+        let beam_solid_angle = TWO_PI * (1.0 - (self.beamwidth_3db.to_radians() / 2.0).cos());
+        10.0 * (FOUR_PI / beam_solid_angle).log10()
     }
 }

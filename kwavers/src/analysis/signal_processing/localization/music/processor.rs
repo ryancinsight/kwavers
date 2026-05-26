@@ -3,6 +3,7 @@ use ndarray::{Array1, Array2};
 use num_complex::Complex;
 
 use super::MUSICConfig;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// MUSIC processor for direction-of-arrival estimation
 #[derive(Debug)]
@@ -112,7 +113,7 @@ impl MUSICProcessor {
         let num_sensors = sensor_positions.len();
         let mut steering = Array1::zeros(num_sensors);
 
-        let k = 2.0 * std::f64::consts::PI * frequency / speed_of_sound;
+        let k = TWO_PI * frequency / speed_of_sound;
 
         for (m, sensor_pos) in sensor_positions.iter().enumerate() {
             let dx = source_position[0] - sensor_pos[0];

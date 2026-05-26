@@ -26,6 +26,7 @@
 
 use super::math::{DISC_SAMPLE_UPSAMPLING_RATE, GOLDEN_ANGLE};
 use super::KWaveArray;
+use crate::core::constants::numerical::{TWO_PI};
 
 impl KWaveArray {
     // ─── Arc ───────────────────────────────────────────────────────────────
@@ -213,11 +214,11 @@ impl KWaveArray {
         let half_aperture = diameter / 2.0;
         let varphi_max = (half_aperture / radius).clamp(-1.0, 1.0).asin();
         let denom = (num_points - 1) as f64;
-        let spiral_scale = 2.0 * std::f64::consts::PI * (1.0 - varphi_max.cos());
+        let spiral_scale = TWO_PI * (1.0 - varphi_max.cos());
 
         for t in 0..num_points {
             let theta = GOLDEN_ANGLE * t as f64;
-            let varphi = (1.0 - spiral_scale * (t as f64) / (denom * 2.0 * std::f64::consts::PI))
+            let varphi = (1.0 - spiral_scale * (t as f64) / (denom * TWO_PI))
                 .clamp(-1.0, 1.0)
                 .acos();
             let radial = radius * varphi.sin();

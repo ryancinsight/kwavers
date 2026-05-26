@@ -46,7 +46,7 @@ use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use log::info;
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Phase correction data for transducer elements
 #[derive(Debug, Clone)]
@@ -184,7 +184,7 @@ impl TranscranialAberrationCorrection {
 
             let num_samples: usize = 100;
             let ds = path_length / num_samples as f64;
-            let k_water = 2.0 * PI * self.frequency / self.reference_speed;
+            let k_water = TWO_PI * self.frequency / self.reference_speed;
             let mut total_aberration = 0.0_f64;
 
             for i in 0..num_samples {
@@ -203,7 +203,7 @@ impl TranscranialAberrationCorrection {
                 let local_speed =
                     crate::domain::imaging::medical::CTImageLoader::hu_to_sound_speed(hu);
 
-                let k_local = 2.0 * PI * self.frequency / local_speed;
+                let k_local = TWO_PI * self.frequency / local_speed;
                 total_aberration += (k_local - k_water) * ds;
             }
 

@@ -1,4 +1,5 @@
 use super::*;
+use crate::core::constants::numerical::{TWO_PI};
 
 #[test]
 fn pstd_source_density_uses_grid_mask_and_source_kappa_symbol() {
@@ -10,7 +11,7 @@ fn pstd_source_density_uses_grid_mask_and_source_kappa_symbol() {
     }];
     let sound_speed = SOUND_SPEED_WATER_SIM;
     let time_step = 1.0e-7;
-    let reference_wavenumber = 2.0 * PI * 200_000.0 / sound_speed;
+    let reference_wavenumber = TWO_PI * 200_000.0 / sound_speed;
     let density = source_density_for_operator(
         grid,
         &source,
@@ -55,7 +56,7 @@ fn pstd_temporal_source_transfer_matches_modal_bin_response() {
     let sound_speed = 1.0;
     let time_step = 0.1;
     let frequency_hz = 1.0;
-    let reference_wavenumber = 2.0 * PI * frequency_hz / sound_speed;
+    let reference_wavenumber = TWO_PI * frequency_hz / sound_speed;
     let transfer = PstdTemporalTransferConfig {
         source_amplitude_pa: 2.0,
         cycles_per_frequency: 2,
@@ -120,7 +121,7 @@ fn pstd_temporal_symbols_match_leapfrog_identities() {
     let sound_speed = SOUND_SPEED_WATER_SIM;
     let time_step = 1.0e-7;
     let grid_wavenumber = PI / 1.0e-3;
-    let reference_wavenumber = 2.0 * PI * 200_000.0 / sound_speed;
+    let reference_wavenumber = TWO_PI * 200_000.0 / sound_speed;
     let half_grid_phase = 0.5 * sound_speed * time_step * grid_wavenumber;
     let half_reference_phase = 0.5 * sound_speed * time_step * reference_wavenumber;
 

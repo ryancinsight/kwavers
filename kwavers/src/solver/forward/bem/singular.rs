@@ -54,9 +54,9 @@
 //! - `test_duffy_nonsingular_cancellation`: Duffy and non-Duffy agree away from singularity.
 
 use num_complex::Complex64;
-use std::f64::consts::PI;
 
 use super::green::green_helmholtz;
+use crate::core::constants::numerical::{TWO_PI};
 
 // ─── 3×3 Gauss-Legendre quadrature on [0, 1]^2 ─────────────────────────────
 
@@ -164,7 +164,7 @@ pub fn compute_singular_integrals(
                 let dir_norm = dir[2]
                     .mul_add(dir[2], dir[0].mul_add(dir[0], dir[1] * dir[1]))
                     .sqrt();
-                Complex64::new(area / (2.0 * PI * dir_norm.max(1e-20)), 0.0)
+                Complex64::new(area / (TWO_PI * dir_norm.max(1e-20)), 0.0)
             } else {
                 let (g_val, _) = green_helmholtz(k, p0, r_field);
                 g_val * jac
@@ -206,7 +206,6 @@ pub fn compute_singular_integrals(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::f64::consts::PI;
 
     /// Integrate G_static = 1/(4πR) over unit right triangle with singularity
     /// at the origin (vertex 0).

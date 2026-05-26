@@ -4,6 +4,7 @@ use crate::core::constants::optical::{
     GOLD_DRUDE_DAMPING_RAD_S, GOLD_EPS_INF, GOLD_PLASMA_FREQUENCY_RAD_S,
 };
 use num_complex::Complex;
+use crate::core::constants::numerical::{TWO_PI};
 
 mod geometry;
 
@@ -149,7 +150,7 @@ pub trait PlasmonicEnhancementEquation: ElectromagneticWaveEquation {
             .sqrt();
 
         if distance > 0.0 {
-            let k = 2.0 * std::f64::consts::PI / wavelength;
+            let k = TWO_PI / wavelength;
             // Coupling strength ∝ 1/r³ exp(ikr)
             (1.0 / distance.powi(3)) * (k * distance).cos()
         } else {
@@ -168,7 +169,7 @@ pub trait PlasmonicEnhancementEquation: ElectromagneticWaveEquation {
         let mode_volume = 15e-9_f64.powi(3) * 10.0;
 
         let lambda_over_n = wavelength / 1.5; // Effective wavelength in medium
-        let base_factor = 3.0 / (2.0 * std::f64::consts::PI * std::f64::consts::PI)
+        let base_factor = 3.0 / (TWO_PI * std::f64::consts::PI)
             * (lambda_over_n / wavelength).powi(3)
             * (quality_factor / mode_volume);
 

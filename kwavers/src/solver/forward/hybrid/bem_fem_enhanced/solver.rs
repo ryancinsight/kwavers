@@ -25,9 +25,9 @@
 use super::config::EnhancedBemFemConfig;
 use super::types::{BemFemValidationResult, InterfaceQuality, RefinementStep};
 use crate::core::error::{KwaversError, KwaversResult};
-use std::f64::consts::PI;
 
 use crate::core::constants::fundamental::SOUND_SPEED_AIR;
+use crate::core::constants::numerical::{TWO_PI};
 const DEFAULT_SOUND_SPEED_M_PER_S: f64 = SOUND_SPEED_AIR;
 const RESONANCE_RELATIVE_BAND: f64 = 1e-6;
 
@@ -248,7 +248,7 @@ impl EnhancedBemFemSolver {
     }
 
     fn estimate_condition_number(&self, frequency: f64, element_size: f64) -> f64 {
-        let k = 2.0 * PI * frequency / self.sound_speed();
+        let k = TWO_PI * frequency / self.sound_speed();
         let kh = k * element_size;
         let burton_miller_factor = if self.config.burton_miller_config.is_some() {
             1.0

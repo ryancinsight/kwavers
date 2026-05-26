@@ -4,6 +4,7 @@ use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
 use ndarray::Array3;
 use rayon::prelude::*;
+use crate::core::constants::numerical::{TWO_PI};
 /// Time reversal reconstruction.
 /// # Errors
 /// - Returns [`KwaversError::InternalError`] if the precondition for a InternalError-class constraint is violated.
@@ -153,7 +154,7 @@ pub fn compute_detector_positions(grid: &Grid, n_detectors: usize) -> Vec<(f64, 
     let radius = ((nx.min(ny)) as f64 / 2.0) * 0.4;
     let mut positions = Vec::with_capacity(n_detectors);
     for i in 0..n_detectors {
-        let angle = 2.0 * std::f64::consts::PI * i as f64 / n_detectors as f64;
+        let angle = TWO_PI * i as f64 / n_detectors as f64;
         let x = center_x + radius * angle.cos();
         let y = center_y + radius * angle.sin();
         positions.push((x, y, center_z));

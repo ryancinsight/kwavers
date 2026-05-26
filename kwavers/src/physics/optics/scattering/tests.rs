@@ -9,10 +9,11 @@
 
 use super::*;
 use num_complex::Complex64;
+use crate::core::constants::numerical::{TWO_PI};
 
 fn params_for(x: f64, m: Complex64) -> MieParameters {
     let wavelength = 1.0_f64;
-    let radius = x * wavelength / (2.0 * std::f64::consts::PI);
+    let radius = x * wavelength / (TWO_PI);
     MieParameters::new(radius, m, 1.0, wavelength)
 }
 

@@ -55,10 +55,10 @@
 
 use crate::math::fft::{Complex64, Fft2d, Shape2D, FFT_CACHE_2D};
 use ndarray::{Array2, ArrayViewMut2, Zip};
-use std::f64::consts::PI;
 use std::sync::Arc;
 
 use super::KZKConfig;
+use crate::core::constants::numerical::{TWO_PI};
 
 #[cfg(test)]
 mod tests;
@@ -127,8 +127,8 @@ impl KzkParabolicDiffractionOperator {
         let mut kx2 = Array2::zeros((nx, ny));
         let mut ky2 = Array2::zeros((nx, ny));
 
-        let dkx = 2.0 * PI / (nx as f64 * config.dx);
-        let dky = 2.0 * PI / (ny as f64 * config.dx);
+        let dkx = TWO_PI / (nx as f64 * config.dx);
+        let dky = TWO_PI / (ny as f64 * config.dx);
 
         // Standard FFT k-space ordering
         for i in 0..nx {
@@ -181,7 +181,7 @@ impl KzkParabolicDiffractionOperator {
     /// `complex -> FFT -> multiply -> IFFT -> real`, but performs no heap
     /// allocation after construction.
     fn apply_with_step(&mut self, field: &mut ArrayViewMut2<f64>, step_size: f64, _step: usize) {
-        let k0 = 2.0 * PI * self.config.frequency / self.config.c0;
+        let k0 = TWO_PI * self.config.frequency / self.config.c0;
 
         Zip::from(&mut self.scratch)
             .and(field.view())

@@ -2,7 +2,7 @@ use super::MetaLearner;
 use crate::core::error::KwaversResult;
 use crate::solver::inverse::pinn::ml::meta_learning::types::{PhysicsTask, TaskData};
 use burn::tensor::backend::AutodiffBackend;
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 impl<B: AutodiffBackend> MetaLearner<B> {
     /// Generate task data.
@@ -101,7 +101,7 @@ impl<B: AutodiffBackend> MetaLearner<B> {
                 let n = base_count.max(100);
                 for i in 0..n {
                     let s = i as f64 / (n - 1) as f64;
-                    let theta = 2.0 * PI * s;
+                    let theta = TWO_PI * s;
                     let x = x_center + radius * theta.cos();
                     let y = y_center + radius * theta.sin();
                     push_point(&mut data, x, y, s);
@@ -239,8 +239,8 @@ impl<B: AutodiffBackend> MetaLearner<B> {
             hash = hash.wrapping_mul(131).wrapping_add(*byte as u64);
         }
         let pattern = (hash % 3) as u8;
-        let kx = 2.0 * PI / span_x;
-        let ky = 2.0 * PI / span_y;
+        let kx = TWO_PI / span_x;
+        let ky = TWO_PI / span_y;
         let k_norm = (kx * kx + ky * ky).sqrt();
         let omega = task.physics_params.wave_speed * k_norm;
         let mut data = Vec::with_capacity(n_ic);

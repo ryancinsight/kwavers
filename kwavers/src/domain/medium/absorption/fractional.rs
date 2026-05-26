@@ -2,6 +2,7 @@
 
 use ndarray::{Array3, Zip};
 use num_complex::Complex;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Fractional Laplacian model for absorption
 ///
@@ -28,7 +29,7 @@ impl FractionalLaplacian {
     #[must_use]
     pub fn absorption_at_frequency(&self, frequency: f64) -> f64 {
         // α(ω) = τ * ω^y / (2 * c₀^3)
-        let omega = 2.0 * std::f64::consts::PI * frequency;
+        let omega = TWO_PI * frequency;
         self.tau * omega.powf(self.y) / (2.0 * self.c0.powi(3))
     }
 
@@ -39,7 +40,7 @@ impl FractionalLaplacian {
         k_squared: &Array3<f64>,
         frequency: f64,
     ) {
-        let omega = 2.0 * std::f64::consts::PI * frequency;
+        let omega = TWO_PI * frequency;
 
         Zip::from(spectrum).and(k_squared).par_for_each(|s, &k2| {
             if k2 > 0.0 {
@@ -116,7 +117,7 @@ impl FractionalDerivative {
         for (s, &freq) in spectrum.iter_mut().zip(frequencies.iter()) {
             if freq != 0.0 {
                 // (iω)^α = |ω|^α * exp(i * α * π/2 * sign(ω))
-                let omega = 2.0 * std::f64::consts::PI * freq;
+                let omega = TWO_PI * freq;
                 let magnitude = omega.abs().powf(self.order);
                 let phase = self.order * std::f64::consts::PI / 2.0 * omega.signum();
 

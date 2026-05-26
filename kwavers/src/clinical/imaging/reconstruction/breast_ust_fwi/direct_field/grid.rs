@@ -2,7 +2,8 @@ use crate::core::error::{KwaversError, KwaversResult};
 use crate::solver::inverse::linear_born_inversion::ElementPosition;
 use ndarray::Array3;
 use num_complex::Complex64;
-use std::f64::consts::{PI, TAU};
+use std::f64::consts::TAU;
+use crate::core::constants::numerical::{FOUR_PI};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) struct GridShape {
@@ -159,7 +160,7 @@ pub(super) fn outgoing_green(
 ) -> Complex64 {
     let distance = distance_m(source, receiver).max(min_distance_m);
     let phase = wavenumber_rad_per_m * distance;
-    Complex64::new(phase.cos(), phase.sin()) / (4.0 * PI * distance)
+    Complex64::new(phase.cos(), phase.sin()) / (FOUR_PI * distance)
 }
 
 #[inline]

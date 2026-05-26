@@ -1,8 +1,8 @@
-use std::f64::consts::PI;
 
 use ndarray::{Array1, Array2, Array3};
 
 use crate::core::error::{KwaversError, KwaversResult};
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Compute the Rayleigh-Sommerfeld pressure field on a 3-D grid.
 ///
@@ -67,7 +67,7 @@ pub(super) fn rayleigh_pressure_field_unscaled(
     }
     let [nx, ny, nz] = shape_nxnynz;
     let total = nx * ny * nz;
-    let k = 2.0 * PI * frequency_hz / brain_c;
+    let k = TWO_PI * frequency_hz / brain_c;
 
     let weight_sum: f64 = (0..n_elem)
         .filter(|&i| active[i])

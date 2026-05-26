@@ -1,7 +1,7 @@
 //! Power-law absorption model
 
 use crate::core::constants::acoustic_parameters::{ABSORPTION_TISSUE, WATER_ABSORPTION_ALPHA_0};
-use crate::core::constants::numerical::{CM_TO_M, MHZ_TO_HZ};
+use crate::core::constants::numerical::{CM_TO_M, MHZ_TO_HZ, TWO_PI};
 use crate::core::constants::{DB_TO_NP, REFERENCE_FREQUENCY_HZ};
 use serde::{Deserialize, Serialize};
 
@@ -95,7 +95,7 @@ impl PowerLawAbsorption {
             return c0;
         }
 
-        let omega = 2.0 * std::f64::consts::PI * frequency;
+        let omega = TWO_PI * frequency;
         let tan_term = (std::f64::consts::PI * self.y / 2.0).tan();
         let alpha = self.absorption_at_frequency(frequency); // Np/m
 

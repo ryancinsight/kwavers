@@ -5,6 +5,7 @@ use super::filters::ExponentialFilter;
 use super::safety::SafetyLimiter;
 use super::schemes::{ModulationScheme, PowerControl};
 use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Power modulator for controlling ultrasound output
 #[derive(Debug)]
@@ -117,7 +118,7 @@ impl PowerModulator {
             }
 
             ModulationScheme::Sinusoidal => {
-                let omega = 2.0 * PI * self.control.prf;
+                let omega = TWO_PI * self.control.prf;
                 0.5 * (1.0 + (omega * self.time).sin())
             }
         };

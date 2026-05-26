@@ -541,6 +541,30 @@ def test_scattering_increment_diagnostics_identify_exact_increment_model():
     by_model = {row["model"]: row for row in diagnostics["per_model"]}
     assert abs(by_model["baseline"]["normalized_increment_residual"] - 1.0) <= 1.0e-14
     assert abs(by_model["half_increment"]["normalized_increment_residual"] - 0.5) <= 1.0e-14
+    assert by_model["exact_increment"]["baseline_scaled_full_field_normalized_residual"] <= 1.0e-14
+    assert by_model["exact_increment"]["model_scaled_full_field_normalized_residual"] <= 1.0e-14
+    assert by_model["exact_increment"]["source_scale_relative_drift_mean"] <= 1.0e-14
+    assert by_model["exact_increment"]["source_scale_phase_drift_max_abs_rad"] <= 1.0e-14
+
+
+def test_scattering_increment_diagnostics_report_model_scale_drift():
+    operators = _load_support_module("operator_equivalence")
+    baseline = np.ones((1, 1, 2), dtype=np.complex128)
+    prediction = np.array([[[2.0 + 0.0j, 1.0 + 0.0j]]], dtype=np.complex128)
+    observed = 3.0 * prediction
+
+    diagnostics = operators.scattering_increment_diagnostics(
+        baseline,
+        {"model_scaled": prediction},
+        observed,
+    )
+    row = diagnostics["per_model"][0]
+
+    assert row["model_scaled_full_field_normalized_residual"] <= 1.0e-14
+    assert row["baseline_scaled_full_field_normalized_residual"] > 0.0
+    assert row["normalized_increment_residual"] > 1.0
+    assert abs(row["source_scale_relative_drift_mean"] - (1.0 / 3.0)) <= 1.0e-14
+    assert row["source_scale_phase_drift_max_abs_rad"] <= 1.0e-14
 
 
 def test_scattering_increment_policy_report_records_zero_increment_error():

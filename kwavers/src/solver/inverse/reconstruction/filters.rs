@@ -5,6 +5,7 @@ use ndarray::Array2;
 use std::f64::consts::PI;
 
 use super::config::ReconstructionFilterType;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Apply reconstruction filter to sensor data
 /// # Errors
@@ -142,7 +143,7 @@ fn apply_hamming_filter(data: &Array2<f64>, _sampling_freq: f64) -> KwaversResul
 
     for sensor_idx in 0..data.dim().0 {
         for i in 0..n {
-            let window = 0.46f64.mul_add(-(2.0 * PI * i as f64 / (n - 1) as f64).cos(), 0.54);
+            let window = 0.46f64.mul_add(-(TWO_PI * i as f64 / (n - 1) as f64).cos(), 0.54);
             filtered[[sensor_idx, i]] *= window;
         }
     }
@@ -160,7 +161,7 @@ fn apply_hann_filter(data: &Array2<f64>, _sampling_freq: f64) -> KwaversResult<A
 
     for sensor_idx in 0..data.dim().0 {
         for i in 0..n {
-            let window = 0.5 * (1.0 - (2.0 * PI * i as f64 / (n - 1) as f64).cos());
+            let window = 0.5 * (1.0 - (TWO_PI * i as f64 / (n - 1) as f64).cos());
             filtered[[sensor_idx, i]] *= window;
         }
     }

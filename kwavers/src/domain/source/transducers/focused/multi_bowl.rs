@@ -6,7 +6,7 @@ use super::bowl::{BowlConfig, BowlTransducer};
 use super::validation::{field_validation_error, validate_finite_field};
 use crate::{core::error::KwaversResult, domain::grid::Grid};
 use ndarray::{Array3, Zip};
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Multi-element bowl array (makeMultiBowl equivalent)
 #[derive(Debug)]
@@ -77,7 +77,7 @@ impl MultiBowlArray {
         for (i, bowl) in self.bowls.iter().enumerate() {
             // Generate source for this bowl at the current time
             // Note: We need to adjust the time to account for the phase offset
-            let omega = 2.0 * PI * bowl.config.frequency;
+            let omega = TWO_PI * bowl.config.frequency;
             validate_finite_field("multi_bowl_amplitude", self.amplitudes[i])?;
             validate_finite_field("multi_bowl_phase", self.phases[i])?;
             let phase_offset = self.phases[i] - bowl.config.phase; // Relative phase

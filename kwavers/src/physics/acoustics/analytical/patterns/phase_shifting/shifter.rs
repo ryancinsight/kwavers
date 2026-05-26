@@ -7,12 +7,12 @@ use super::core::{
     calculate_wavelength, quantize_phase, wrap_phase, ShiftingStrategy, MAX_FOCAL_POINTS,
     MAX_STEERING_ANGLE, MIN_FOCAL_DISTANCE,
 };
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Default quantization levels for phase control
 const DEFAULT_QUANTIZATION_LEVELS: u32 = 256;
 use crate::core::error::KwaversResult;
 use ndarray::{Array1, Array2};
-use std::f64::consts::PI;
 
 /// Phase shifter for beam control
 #[derive(Debug)]
@@ -112,7 +112,7 @@ impl PhaseShifter {
             Self::focal_distance(focal_point)?;
         }
 
-        let k = 2.0 * PI / self.wavelength;
+        let k = TWO_PI / self.wavelength;
         let num_points_f64 = num_points as f64;
         self.phase_offsets.fill(0.0);
 
@@ -162,7 +162,7 @@ impl PhaseShifter {
             )));
         }
 
-        let k = 2.0 * PI / self.wavelength;
+        let k = TWO_PI / self.wavelength;
         let quantization_enabled = self.quantization_enabled;
         self.phase_offsets.fill(0.0);
 
@@ -187,7 +187,7 @@ impl PhaseShifter {
     ) -> KwaversResult<Array1<f64>> {
         let focal_distance = Self::focal_distance(focal_point)?;
 
-        let k = 2.0 * PI / self.wavelength;
+        let k = TWO_PI / self.wavelength;
         let quantization_enabled = self.quantization_enabled;
         self.phase_offsets.fill(0.0);
 

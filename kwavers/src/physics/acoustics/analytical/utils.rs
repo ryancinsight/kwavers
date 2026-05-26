@@ -2,7 +2,7 @@
 
 use crate::domain::grid::Grid;
 use ndarray::Array3;
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 // Physical constants for dispersion correction
 /// Second-order dispersion correction coefficient for k-space methods
@@ -39,8 +39,8 @@ impl PhysicsTestUtils {
     ) -> Array3<f64> {
         let mut field = Array3::zeros((grid.nx, grid.ny, grid.nz));
         let wavelength = sound_speed / frequency;
-        let k = 2.0 * PI / wavelength;
-        let omega = 2.0 * PI * frequency;
+        let k = TWO_PI / wavelength;
+        let omega = TWO_PI * frequency;
 
         // Apply dispersion correction for k-space methods
         let k_dispersed =

@@ -6,6 +6,7 @@ use crate::domain::therapy::microbubble::{
 };
 
 use super::*;
+use crate::core::constants::numerical::{TWO_PI};
 
 #[test]
 fn test_create_service() {
@@ -154,7 +155,7 @@ fn test_pressure_time_derivative_changes_dynamics() {
     let position = Position3D::zero();
     let acoustic_pressure = 1e5_f64;
     let frequency = MHZ_TO_HZ;
-    let dp_dt_nonzero = acoustic_pressure * 2.0 * std::f64::consts::PI * frequency;
+    let dp_dt_nonzero = acoustic_pressure * TWO_PI * frequency;
 
     let mut bubble_zero = MicrobubbleState::sono_vue(position).unwrap();
     let mut shell_zero =

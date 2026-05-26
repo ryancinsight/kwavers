@@ -4,7 +4,7 @@
 //! - **Size Parameter**: x = 2πr/λ
 //! - **Refractive Index**: m = n_particle / n_medium
 
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Mie scattering parameters for a spherical particle
 #[derive(Debug, Clone)]
@@ -39,7 +39,7 @@ impl MieParameters {
     /// Calculate size parameter x = 2πr/λ
     #[must_use]
     pub fn size_parameter(&self) -> f64 {
-        2.0 * PI * self.radius * self.medium_index / self.wavelength
+        TWO_PI * self.radius * self.medium_index / self.wavelength
     }
 
     /// Calculate relative refractive index m = n_particle / n_medium

@@ -4,6 +4,7 @@ use crate::domain::signal::Signal;
 use std::f64::consts::PI;
 
 use super::DEFAULT_DUTY_CYCLE;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Pulse train - periodic sequence of pulses
 #[derive(Debug, Clone)]
@@ -112,7 +113,7 @@ impl PulseTrain {
 impl Signal for PulseTrain {
     fn amplitude(&self, t: f64) -> f64 {
         let envelope = self.envelope(t);
-        let carrier = (2.0 * PI * self.carrier_frequency)
+        let carrier = (TWO_PI * self.carrier_frequency)
             .mul_add(t, self.phase)
             .sin();
         self.amplitude * envelope * carrier

@@ -1,6 +1,6 @@
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array1;
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 /// Focus phase delays.
 /// # Errors
 /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
@@ -40,7 +40,7 @@ pub fn focus_phase_delays(
         )));
     }
 
-    let wavenumber = 2.0 * PI * frequency / sound_speed;
+    let wavenumber = TWO_PI * frequency / sound_speed;
 
     let mut distances = Vec::with_capacity(element_positions.len());
     for (i, pos) in element_positions.iter().enumerate() {
@@ -131,7 +131,7 @@ pub fn plane_wave_phase_delays(
         )));
     }
 
-    let wavenumber = 2.0 * PI * frequency / sound_speed;
+    let wavenumber = TWO_PI * frequency / sound_speed;
 
     let mut phase_delays = Array1::<f64>::zeros(element_positions.len());
 

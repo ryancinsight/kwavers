@@ -1,5 +1,6 @@
 //! Rigorous validation against literature benchmarks
 
+use crate::core::constants::numerical::{TWO_PI};
 pub mod clinical;
 pub mod theorem_validation;
 
@@ -93,13 +94,13 @@ pub fn validate_cfl_condition(grid: &Grid, dt: f64, c_max: f64) -> PhysicsValida
 pub fn validate_fdtd_dispersion(grid: &Grid, dt: f64, frequency: f64, c: f64) -> PhysicsValidation {
     // Numerical wavenumber from FDTD dispersion relation
     // Taflove & Hagness (2005) Eq. 4.110
-    let k_exact = 2.0 * std::f64::consts::PI * frequency / c;
+    let k_exact = TWO_PI * frequency / c;
     let dx = grid.dx;
 
     // Simplified 1D dispersion relation for validation testing
     // Uses basic 1D approximation ω = ck for initial validation.
     // Full 3D dispersion analysis is performed in validation test suite.
-    let omega = 2.0 * std::f64::consts::PI * frequency;
+    let omega = TWO_PI * frequency;
     let k_num = (2.0 / dx) * ((omega * dt / 2.0).sin() / (c * dt / dx)).asin();
 
     let error = (k_num - k_exact).abs() / k_exact;

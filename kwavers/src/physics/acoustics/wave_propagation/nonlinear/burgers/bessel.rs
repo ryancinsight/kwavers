@@ -1,6 +1,6 @@
 //! Bessel function kernel for the Fubini harmonic coefficients.
 
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Bessel function of the first kind, order `n >= 0`, argument `x`.
 ///
@@ -70,6 +70,6 @@ fn factorial(n: u32) -> f64 {
         TABLE[n as usize]
     } else {
         let nf = n as f64;
-        (2.0 * PI * nf).sqrt() * (nf / std::f64::consts::E).powf(nf)
+        (TWO_PI * nf).sqrt() * (nf / std::f64::consts::E).powf(nf)
     }
 }

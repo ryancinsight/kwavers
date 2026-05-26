@@ -7,6 +7,7 @@ use ndarray::{Array1, Array2, ArrayView1};
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Phase randomizer for standing wave suppression
 #[derive(Debug)]
@@ -45,10 +46,10 @@ impl PhaseRandomizer {
     fn generate_phase_states(distribution: &PhaseDistribution) -> Vec<f64> {
         match distribution {
             PhaseDistribution::Binary => vec![0.0, PI],
-            PhaseDistribution::Ternary => vec![-2.0 * PI / 3.0, 0.0, 2.0 * PI / 3.0],
+            PhaseDistribution::Ternary => vec![-TWO_PI / 3.0, 0.0, TWO_PI / 3.0],
             PhaseDistribution::Quadrature => vec![0.0, PI / 2.0, PI, 3.0 * PI / 2.0],
             PhaseDistribution::Discrete { states } => (0..*states)
-                .map(|i| 2.0 * PI * i as f64 / *states as f64)
+                .map(|i| TWO_PI * i as f64 / *states as f64)
                 .collect(),
             _ => vec![], // Continuous distributions don't use discrete states
         }

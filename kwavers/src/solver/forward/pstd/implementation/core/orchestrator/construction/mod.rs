@@ -1,3 +1,4 @@
+use crate::core::constants::numerical::{TWO_PI};
 mod ivp_velocity;
 
 use super::{pstd_source_gain, pstd_source_time_shift_samples, PSTDSolver};
@@ -22,7 +23,6 @@ use crate::solver::forward::pstd::propagator::axisymmetric::AsContext;
 use crate::solver::forward::pstd::utils::compute_k_magnitude;
 use crate::solver::geometry::SolverGeometry;
 use ndarray::{s, Array3, Zip};
-use std::f64::consts::PI;
 use std::sync::Arc;
 
 impl PSTDSolver {
@@ -94,9 +94,9 @@ impl PSTDSolver {
         let field_arrays =
             crate::solver::forward::pstd::data::initialize_field_arrays(&grid, medium)?;
 
-        let dk_x = 2.0 * PI / (grid.nx as f64 * grid.dx);
-        let dk_y = 2.0 * PI / (grid.ny as f64 * grid.dy);
-        let dk_z = 2.0 * PI / (grid.nz as f64 * grid.dz);
+        let dk_x = TWO_PI / (grid.nx as f64 * grid.dx);
+        let dk_y = TWO_PI / (grid.ny as f64 * grid.dy);
+        let dk_z = TWO_PI / (grid.nz as f64 * grid.dz);
         let (ddx_k_shift_pos, ddx_k_shift_neg) = generate_shift_1d(grid.nx, dk_x, grid.dx);
         let (ddy_k_shift_pos, ddy_k_shift_neg) = generate_shift_1d(grid.ny, dk_y, grid.dy);
         // Z-axis: generate full-length shifts, then truncate to nz_c = nz/2+1.

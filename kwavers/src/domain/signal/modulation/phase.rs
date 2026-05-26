@@ -2,6 +2,7 @@
 
 use super::{Modulation, ModulationParams};
 use crate::core::error::{KwaversError, KwaversResult};
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Phase modulation implementation
 #[derive(Debug, Clone)]
@@ -22,7 +23,7 @@ impl PhaseModulation {
 
 impl Modulation for PhaseModulation {
     fn modulate(&self, carrier: &[f64], t: &[f64]) -> KwaversResult<Vec<f64>> {
-        let omega_c = 2.0 * std::f64::consts::PI * self.params.carrier_freq;
+        let omega_c = TWO_PI * self.params.carrier_freq;
         let beta = self.params.modulation_index;
 
         Ok(t.iter()
@@ -51,7 +52,7 @@ impl Modulation for PhaseModulation {
             ));
         }
 
-        let omega_c = 2.0 * std::f64::consts::PI * self.params.carrier_freq;
+        let omega_c = TWO_PI * self.params.carrier_freq;
         let beta = self.params.modulation_index;
 
         let phase_wrapped = instantaneous_phase(&Array1::from_vec(signal.to_vec()));
@@ -61,7 +62,7 @@ impl Modulation for PhaseModulation {
             phase_unwrapped.push(first);
         }
 
-        let two_pi = 2.0 * std::f64::consts::PI;
+        let two_pi = TWO_PI;
         for i in 1..phase_wrapped.len() {
             let prev_wrapped = phase_wrapped[i - 1];
             let curr_wrapped = phase_wrapped[i];

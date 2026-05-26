@@ -21,6 +21,7 @@ use super::simulator::CloudDynamics;
 use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use crate::core::error::KwaversResult;
 use crate::physics::acoustics::imaging::modalities::ceus::microbubble::BubbleResponse;
+use crate::core::constants::numerical::{FOUR_PI, TWO_PI};
 
 impl CloudDynamics {
     /// Handle bubble-bubble interactions (coalescence check)
@@ -72,7 +73,7 @@ impl CloudDynamics {
         let vol2 = (4.0 / 3.0) * std::f64::consts::PI * bubble2.current_radius.powi(3);
         let total_vol = vol1 + vol2;
 
-        let new_radius = ((3.0 * total_vol) / (4.0 * std::f64::consts::PI)).cbrt();
+        let new_radius = ((3.0 * total_vol) / (FOUR_PI)).cbrt();
 
         // Conservation of momentum.  Use the added-mass inertia (1/2)*rho*V
         // for each bubble (Lamb 1932 §92).  The 1/2 factor cancels in the
@@ -144,7 +145,7 @@ impl CloudDynamics {
         response: &BubbleResponse,
     ) -> [f64; 3] {
         if let Some(field) = &self.incident_field {
-            let omega = 2.0 * std::f64::consts::PI * field.frequency;
+            let omega = TWO_PI * field.frequency;
             let k = omega / field.sound_speed;
 
             // Relative volume oscillation amplitude ε from radial pulsation

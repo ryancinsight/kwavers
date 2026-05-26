@@ -3,6 +3,7 @@
 use super::IterativeMethods;
 use crate::core::error::KwaversResult;
 use ndarray::Array2;
+use crate::core::constants::numerical::{FOUR_PI};
 
 impl IterativeMethods {
     /// Build system matrix A where y = Ax (y: measurements, x: image).
@@ -42,16 +43,16 @@ impl IterativeMethods {
                 let distance = self.euclidean_distance(&voxel_pos, sensor_pos);
 
                 if distance > 0.0 {
-                    let green_function = 1.0 / (4.0 * std::f64::consts::PI * distance);
+                    let green_function = 1.0 / (FOUR_PI * distance);
                     let solid_angle_factor =
                         self.compute_solid_angle_factor(&voxel_pos, sensor_pos, dx);
                     matrix[[sensor_idx, voxel_idx]] =
                         green_function * voxel_volume * solid_angle_factor;
                 } else {
                     let effective_radius =
-                        (voxel_volume * 3.0 / (4.0 * std::f64::consts::PI)).cbrt();
+                        (voxel_volume * 3.0 / (FOUR_PI)).cbrt();
                     matrix[[sensor_idx, voxel_idx]] =
-                        1.0 / (4.0 * std::f64::consts::PI * effective_radius);
+                        1.0 / (FOUR_PI * effective_radius);
                 }
             }
         }
@@ -75,7 +76,7 @@ impl IterativeMethods {
 
         if distance > 0.0 {
             let solid_angle = voxel_size * voxel_size / (distance * distance);
-            (solid_angle / (4.0 * std::f64::consts::PI)).min(1.0)
+            (solid_angle / (FOUR_PI)).min(1.0)
         } else {
             1.0
         }

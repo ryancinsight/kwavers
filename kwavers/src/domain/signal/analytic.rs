@@ -16,6 +16,7 @@
 
 use ndarray::{Array1, Array2};
 use num_complex::Complex64;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Compute the Hilbert transform of a real signal using FFT
 ///
@@ -149,7 +150,7 @@ pub fn instantaneous_frequency(signal: &Array1<f64>, dt: f64) -> Array1<f64> {
     }
 
     let mut freq = Array1::zeros(n);
-    let factor = 1.0 / (2.0 * std::f64::consts::PI * dt);
+    let factor = 1.0 / (TWO_PI * dt);
 
     // Forward difference for first point
     freq[0] = (phase[1] - phase[0]) * factor;
@@ -159,10 +160,10 @@ pub fn instantaneous_frequency(signal: &Array1<f64>, dt: f64) -> Array1<f64> {
         // Handle phase wrapping
         let mut dphi = phase[i + 1] - phase[i - 1];
         while dphi > std::f64::consts::PI {
-            dphi -= 2.0 * std::f64::consts::PI;
+            dphi -= TWO_PI;
         }
         while dphi < -std::f64::consts::PI {
-            dphi += 2.0 * std::f64::consts::PI;
+            dphi += TWO_PI;
         }
         freq[i] = dphi / (2.0 * dt) * factor;
     }

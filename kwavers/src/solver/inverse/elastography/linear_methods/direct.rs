@@ -1,7 +1,6 @@
 //! Direct inversion — Gauss-Seidel optimization of `J(k²) = ‖∇²u + k²u‖² + λ‖∇k²‖²`.
 
 use ndarray::Array3;
-use std::f64::consts::PI;
 
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
@@ -10,6 +9,7 @@ use crate::physics::acoustics::imaging::modalities::elastography::displacement::
 
 use super::super::algorithms::{fill_boundaries, spatial_smoothing};
 use super::super::types::elasticity_map_from_speed;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Direct inversion (most accurate method)
 ///
@@ -44,7 +44,7 @@ pub(super) fn direct_inversion(
     let laplacian = compute_laplacian(&displacement.uz, grid);
 
     // 2. Initialize wavenumber squared (theta = k^2)
-    let omega = 2.0 * PI * frequency;
+    let omega = TWO_PI * frequency;
     let initial_k = omega / 3.0;
     let initial_theta = initial_k * initial_k;
 

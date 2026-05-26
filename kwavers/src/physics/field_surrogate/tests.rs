@@ -4,7 +4,7 @@
 
 use ndarray::Array3;
 
-use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
+use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA, TWO_PI};
 use super::{
     helmholtz_residual_field, helmholtz_residual_kernel, helmholtz_residual_stats,
     place_kernel_at_focus, resample_trilinear, FocalKernel, KernelCube, HELMHOLTZ_C0_WATER,
@@ -263,8 +263,8 @@ fn test_helmholtz_residual_zero_on_plane_wave() {
     // be small relative to k²·|p_max|.
     let f0 = MHZ_TO_HZ;
     let c0 = HELMHOLTZ_C0_WATER;
-    let k = 2.0 * std::f64::consts::PI * f0 / c0; // ~4189 m^-1
-    let lam = 2.0 * std::f64::consts::PI / k; // ~1.5 mm
+    let k = TWO_PI * f0 / c0; // ~4189 m^-1
+    let lam = TWO_PI / k; // ~1.5 mm
     let dx = lam / 16.0; // 16 PPW for low FD error
     let n = 32usize;
     let mut p = Array3::<f64>::zeros((n, n, n));
@@ -298,7 +298,7 @@ fn test_helmholtz_residual_nonzero_on_constant_field() {
     let n = 8usize;
     let p = Array3::<f64>::from_elem((n, n, n), 5.0 * MPA_TO_PA);
     let r = helmholtz_residual_field(&p, dx, f0, c0);
-    let k = 2.0 * std::f64::consts::PI * f0 / c0;
+    let k = TWO_PI * f0 / c0;
     let expected = k * k * 5.0 * MPA_TO_PA;
     let interior_value = r[[n / 2, n / 2, n / 2]];
     assert!(

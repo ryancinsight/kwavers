@@ -53,7 +53,7 @@ use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::math::fft::{fft_1d_complex, Complex64};
 use ndarray::{Array1, ArrayView1};
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Pulsed-wave Doppler configuration
 #[derive(Debug, Clone)]
@@ -156,7 +156,7 @@ impl PulsedWaveDoppler {
         let mut windowed = Array1::<Complex64>::zeros(fft_size);
 
         for n in 0..win_len {
-            let w = 0.5 * (1.0 - (2.0 * PI * n as f64 / (win_len - 1).max(1) as f64).cos());
+            let w = 0.5 * (1.0 - (TWO_PI * n as f64 / (win_len - 1).max(1) as f64).cos());
             windowed[n] = filtered[n] * w;
         }
 
@@ -203,7 +203,6 @@ impl PulsedWaveDoppler {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::f64::consts::PI;
 
     /// **Test: zero ensemble produces zero-magnitude waveform**
     /// # Panics

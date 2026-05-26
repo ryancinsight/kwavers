@@ -56,6 +56,7 @@ use crate::math::fft::{Complex64, Fft1d, Shape1D, FFT_CACHE_1D};
 use ndarray::parallel::prelude::*;
 use ndarray::{Array1, Array3, ArrayView3, Axis};
 use std::sync::Arc;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Spectral derivative operator for 3D fields.
 ///
@@ -163,7 +164,7 @@ impl SpectralDerivativeOperator {
     /// Compute wavenumber array: k[n] = 2π·n/(N·Δx) for n < N/2, 2π·(n-N)/(N·Δx) otherwise.
     fn compute_wavenumbers(n: usize, dx: f64) -> Array1<f64> {
         let mut k = Array1::zeros(n);
-        let norm = 2.0 * std::f64::consts::PI / (n as f64 * dx);
+        let norm = TWO_PI / (n as f64 * dx);
         for i in 0..n / 2 {
             k[i] = i as f64 * norm;
         }
@@ -179,7 +180,7 @@ impl SpectralDerivativeOperator {
     ///
     fn compute_dealiasing_filter(n: usize, dx: f64) -> Array1<f64> {
         let mut filter = Array1::ones(n);
-        let cutoff = 2.0 * std::f64::consts::PI / (3.0 * dx);
+        let cutoff = TWO_PI / (3.0 * dx);
         let k = Self::compute_wavenumbers(n, dx);
         for i in 0..n {
             if k[i].abs() > cutoff {

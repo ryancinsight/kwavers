@@ -5,6 +5,7 @@ use super::types::{
 use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use approx::assert_relative_eq;
 use ndarray::Array3;
+use crate::core::constants::numerical::{TWO_PI};
 
 fn sensor_positions_m() -> Vec<[f64; 3]> {
     vec![
@@ -36,7 +37,7 @@ fn synth_narrowband_sensor_data(
 ) -> Array3<f64> {
     let n_sensors = sensor_positions.len();
     let mut data = Array3::<f64>::zeros((n_sensors, 1, n_samples));
-    let omega = 2.0 * std::f64::consts::PI * frequency_hz;
+    let omega = TWO_PI * frequency_hz;
 
     for (i, &pos) in sensor_positions.iter().enumerate() {
         let tau = tof_s(pos, true_source, sound_speed);
@@ -118,7 +119,7 @@ fn stft_bin_picks_correct_bin_for_exact_tone() {
     for s in 0..n_sensors {
         for t in 0..n_samples {
             let ts = (t as f64) / fs;
-            data[(s, 0, t)] = (2.0 * std::f64::consts::PI * f * ts).cos();
+            data[(s, 0, t)] = (TWO_PI * f * ts).cos();
         }
     }
 

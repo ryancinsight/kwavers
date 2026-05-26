@@ -5,6 +5,7 @@ use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_WATER_NO
 use crate::core::constants::thermodynamic::HEAT_CAPACITY_RATIO_DIATOMIC;
 use crate::physics::acoustics::bubble_dynamics::bubble_state::BubbleParameters;
 use approx::assert_relative_eq;
+use crate::core::constants::numerical::{TWO_PI};
 
 #[test]
 fn test_epstein_plesset_stability_analysis() {
@@ -111,7 +112,7 @@ fn test_epstein_plesset_vs_minnaert_frequency() {
     let analysis = solver.analyze_stability();
 
     let minnaert_freq =
-        (1.0 / (2.0 * std::f64::consts::PI * r0)) * ((3.0 * gamma * p0) / rho).sqrt();
+        (1.0 / (TWO_PI * r0)) * ((3.0 * gamma * p0) / rho).sqrt();
 
     assert_relative_eq!(analysis.resonance_frequency, minnaert_freq, epsilon = 1e-10);
 }

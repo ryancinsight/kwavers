@@ -2,7 +2,6 @@
 //! dominant wavenumber component for anisotropic media.
 
 use ndarray::Array3;
-use std::f64::consts::PI;
 
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
@@ -11,6 +10,7 @@ use crate::physics::acoustics::imaging::modalities::elastography::displacement::
 
 use super::super::algorithms::{directional_smoothing, fill_boundaries};
 use super::super::types::elasticity_map_from_speed;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// 3D Directional phase gradient inversion
 ///
@@ -66,7 +66,7 @@ pub(super) fn directional_phase_gradient_inversion(
 
                     let dominant_k = kx.max(ky).max(kz).max(0.1);
 
-                    let angular_freq = 2.0 * PI * frequency;
+                    let angular_freq = TWO_PI * frequency;
                     let cs = angular_freq / dominant_k;
 
                     shear_wave_speed[[i, j, k]] = cs.clamp(0.5, 10.0);

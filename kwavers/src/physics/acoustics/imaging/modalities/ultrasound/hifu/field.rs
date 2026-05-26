@@ -20,6 +20,7 @@ use crate::domain::imaging::ultrasound::hifu::DomainHIFUTransducer;
 use crate::domain::medium::Medium;
 use ndarray::Array3;
 use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 const RADIAL_APERTURE_SAMPLES: usize = 4;
 const ANGULAR_APERTURE_SAMPLES: usize = 16;
@@ -109,9 +110,9 @@ fn validate_field_inputs(
     let aperture_area = PI * transducer.aperture_radius.powi(2);
     let velocity_amplitude =
         (2.0 * transducer.acoustic_power / (density * sound_speed * aperture_area)).sqrt();
-    let wavenumber = 2.0 * PI * transducer.frequency / sound_speed;
+    let wavenumber = TWO_PI * transducer.frequency / sound_speed;
     let source_pressure_factor =
-        density * sound_speed * wavenumber * velocity_amplitude / (2.0 * PI);
+        density * sound_speed * wavenumber * velocity_amplitude / (TWO_PI);
 
     Ok(FieldScale {
         source_pressure_factor,
@@ -137,7 +138,7 @@ fn aperture_samples(radius: f64, focal_length: f64) -> Vec<ApertureSample> {
     for radial in 0..RADIAL_APERTURE_SAMPLES {
         let r = radius * ((radial as f64 + 0.5) / RADIAL_APERTURE_SAMPLES as f64).sqrt();
         for angular in 0..ANGULAR_APERTURE_SAMPLES {
-            let theta = 2.0 * PI * (angular as f64 + 0.5) / ANGULAR_APERTURE_SAMPLES as f64;
+            let theta = TWO_PI * (angular as f64 + 0.5) / ANGULAR_APERTURE_SAMPLES as f64;
             let x = r * theta.cos();
             let y = r * theta.sin();
             let distance_to_focus = (r * r + focal_length * focal_length).sqrt();

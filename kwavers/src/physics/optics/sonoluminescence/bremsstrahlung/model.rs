@@ -1,7 +1,6 @@
 //! Bremsstrahlung emission model.
 
 use ndarray::Array1;
-use std::f64::consts::PI;
 
 use super::constants::c_ff_per_sr;
 use super::gaunt::gaunt_factor_thermal;
@@ -9,6 +8,7 @@ use super::plasma::PlasmaState;
 use crate::core::constants::fundamental::{
     BOLTZMANN as BOLTZMANN_CONSTANT, PLANCK as PLANCK_CONSTANT, SPEED_OF_LIGHT,
 };
+use crate::core::constants::numerical::{FOUR_PI};
 
 /// Bremsstrahlung free-free radiation model for sonoluminescence.
 #[derive(Debug, Clone)]
@@ -90,7 +90,7 @@ impl BremsstrahlungModel {
         // Integrate j_ν ∝ T^{-1/2}·exp(-hν/kT) over ν: ∫exp(-hν/kT)dν = kT/h,
         // so total power ∝ T^{-1/2} · kT/h = (k/h)·T^{1/2}.
         let c_total =
-            c_ff_per_sr() * 4.0 * PI * BOLTZMANN_CONSTANT * temperature.sqrt() / PLANCK_CONSTANT;
+            c_ff_per_sr() * FOUR_PI * BOLTZMANN_CONSTANT * temperature.sqrt() / PLANCK_CONSTANT;
         c_total * self.z_ion.powi(2) * self.fixed_gaunt_factor * n_electron * n_ion * volume
     }
 

@@ -4,6 +4,7 @@
 //! grating-lobe prediction, and apodization windows.
 
 use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 // ─── Directivity ──────────────────────────────────────────────────────────────
 
@@ -92,7 +93,7 @@ pub fn linear_array_factor(
 /// * `steer_rad` – steering angle [rad]
 #[must_use]
 pub fn grating_lobe_angles(k: f64, d_m: f64, steer_rad: f64) -> Vec<f64> {
-    let lambda_over_d = 2.0 * PI / (k * d_m);
+    let lambda_over_d = TWO_PI / (k * d_m);
     let sin_steer = steer_rad.sin();
     let mut angles = Vec::new();
     for m in 1_i32..=10 {
@@ -129,14 +130,14 @@ pub fn apodization_weights(n: usize, window_type: &str) -> Vec<f64> {
     match window_type {
         "uniform" => vec![1.0; n],
         "hamming" => (0..n)
-            .map(|i| 0.54 - 0.46 * (2.0 * PI * i as f64 / nm1).cos())
+            .map(|i| 0.54 - 0.46 * (TWO_PI * i as f64 / nm1).cos())
             .collect(),
         "hann" => (0..n)
-            .map(|i| 0.5 * (1.0 - (2.0 * PI * i as f64 / nm1).cos()))
+            .map(|i| 0.5 * (1.0 - (TWO_PI * i as f64 / nm1).cos()))
             .collect(),
         "blackman" => (0..n)
             .map(|i| {
-                let t = 2.0 * PI * i as f64 / nm1;
+                let t = TWO_PI * i as f64 / nm1;
                 0.42 - 0.5 * t.cos() + 0.08 * (2.0 * t).cos()
             })
             .collect(),
@@ -146,11 +147,11 @@ pub fn apodization_weights(n: usize, window_type: &str) -> Vec<f64> {
                 .map(|i| {
                     let x = i as f64 / nm1;
                     if x < alpha / 2.0 {
-                        0.5 * (1.0 - (2.0 * PI * x / alpha).cos())
+                        0.5 * (1.0 - (TWO_PI * x / alpha).cos())
                     } else if x <= 1.0 - alpha / 2.0 {
                         1.0
                     } else {
-                        0.5 * (1.0 - (2.0 * PI * (x - 1.0 + alpha / 2.0) / alpha).cos())
+                        0.5 * (1.0 - (TWO_PI * (x - 1.0 + alpha / 2.0) / alpha).cos())
                     }
                 })
                 .collect()

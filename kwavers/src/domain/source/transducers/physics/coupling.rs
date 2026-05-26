@@ -4,7 +4,7 @@
 
 use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 use ndarray::{Array1, Array2};
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Element coupling characteristics
 ///
@@ -24,7 +24,7 @@ impl ElementCoupling {
     #[must_use]
     pub fn linear_array(num_elements: usize, pitch: f64, frequency: f64) -> Self {
         let wavelength = SOUND_SPEED_TISSUE / frequency;
-        let k = 2.0 * PI / wavelength;
+        let k = TWO_PI / wavelength;
 
         let mut acoustic_coupling = Array2::eye(num_elements);
         let mut electrical_coupling = Array2::eye(num_elements);

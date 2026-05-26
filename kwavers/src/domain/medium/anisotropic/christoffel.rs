@@ -6,6 +6,7 @@
 use super::stiffness::AnisotropicStiffnessTensor;
 use crate::core::error::KwaversResult;
 use ndarray::{Array1, Array2};
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Christoffel equation solver for anisotropic wave propagation
 #[derive(Debug)]
@@ -175,8 +176,8 @@ impl ChristoffelEquation {
 
             [
                 m * (theta).cos() + offset,
-                m * (theta - 2.0 * std::f64::consts::PI / 3.0).cos() + offset,
-                m * (theta + 2.0 * std::f64::consts::PI / 3.0).cos() + offset,
+                m * (theta - TWO_PI / 3.0).cos() + offset,
+                m * (theta + TWO_PI / 3.0).cos() + offset,
             ]
         } else {
             // Fallback for edge cases

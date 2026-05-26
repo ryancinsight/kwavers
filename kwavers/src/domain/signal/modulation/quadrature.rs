@@ -2,6 +2,7 @@
 
 use super::{Modulation, ModulationParams};
 use crate::core::error::KwaversResult;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// QAM implementation
 #[derive(Debug, Clone)]
@@ -42,7 +43,7 @@ impl Modulation for QuadratureAmplitudeModulation {
             ));
         }
 
-        let omega_c = 2.0 * std::f64::consts::PI * self.params.carrier_freq;
+        let omega_c = TWO_PI * self.params.carrier_freq;
 
         // Convert I component to ndarray
         let i_signal = Array1::from_vec(carrier.to_vec());
@@ -75,7 +76,7 @@ impl Modulation for QuadratureAmplitudeModulation {
             return Ok(Vec::new());
         }
 
-        let omega_c = 2.0 * std::f64::consts::PI * self.params.carrier_freq;
+        let omega_c = TWO_PI * self.params.carrier_freq;
         let mut demodulated = Vec::with_capacity(signal.len());
 
         for (i, &sample) in signal.iter().enumerate() {

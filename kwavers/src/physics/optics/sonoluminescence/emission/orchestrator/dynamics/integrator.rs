@@ -10,6 +10,7 @@ use ndarray::Array3;
 use super::super::emission_calculator::SonoluminescenceEmission;
 use super::thermodynamics::update_thermodynamics;
 use crate::physics::optics::sonoluminescence::emission::spectrum::EmissionParameters;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Integrated bubble dynamics and sonoluminescence emission
 ///
@@ -104,7 +105,7 @@ impl IntegratedSonoluminescence {
         bubble_params: &BubbleParameters,
         bubble_model: &KellerMiksisModel,
     ) -> KwaversResult<()> {
-        let omega = 2.0 * std::f64::consts::PI * bubble_params.driving_frequency;
+        let omega = TWO_PI * bubble_params.driving_frequency;
 
         let (nx, ny, nz) = self.temperature_field.dim();
         for i in 0..nx {

@@ -2,6 +2,7 @@
 
 use super::{Modulation, ModulationParams};
 use crate::core::error::KwaversResult;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Frequency modulation implementation
 #[derive(Debug, Clone)]
@@ -23,7 +24,7 @@ impl FrequencyModulation {
 impl Modulation for FrequencyModulation {
     fn modulate(&self, carrier: &[f64], t: &[f64]) -> KwaversResult<Vec<f64>> {
         // FM modulation: y(t) = A*cos(2π*fc*t + β*∫m(τ)dτ)
-        let omega_c = 2.0 * std::f64::consts::PI * self.params.carrier_freq;
+        let omega_c = TWO_PI * self.params.carrier_freq;
         let beta = self.params.modulation_index;
 
         let mut phase = 0.0;

@@ -1,7 +1,7 @@
 //! Test C — Yoshida4 convergence order via global trajectory error.
 
 use super::super::{YOSHIDA_W1, YOSHIDA_W2};
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// **Test C — Yoshida4 convergence order via global trajectory error.**
 ///
@@ -48,7 +48,7 @@ fn test_yoshida4_order() {
     // Using t_end = 5.7·T ensures no such cancellation.
     let omega = 1.0_f64;
     let x0 = 1.0_f64;
-    let t_end = 5.7 * 2.0 * PI; // 5.7 periods (non-integer → no super-convergence)
+    let t_end = 5.7 * TWO_PI; // 5.7 periods (non-integer → no super-convergence)
 
     // Exact solution at t_end: x = cos(ω·t_end)
     let x_exact = (omega * t_end).cos();

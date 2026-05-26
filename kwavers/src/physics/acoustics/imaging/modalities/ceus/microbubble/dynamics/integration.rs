@@ -4,6 +4,7 @@ use super::BubbleDynamics;
 use crate::core::error::KwaversResult;
 use crate::domain::imaging::ultrasound::ceus::Microbubble;
 use crate::physics::acoustics::imaging::modalities::ceus::microbubble::response::BubbleResponse;
+use crate::core::constants::numerical::{TWO_PI};
 
 impl BubbleDynamics {
     /// Simulate radial oscillation response to acoustic pressure.
@@ -91,7 +92,7 @@ impl BubbleDynamics {
         p_gas0: f64,
         r0: f64,
     ) -> f64 {
-        let p_acoustic = acoustic_pressure * (2.0 * std::f64::consts::PI * frequency * time).sin();
+        let p_acoustic = acoustic_pressure * (TWO_PI * frequency * time).sin();
         let p_gas = p_gas0 * (r0 / radius).powf(3.0 * bubble.polytropic_index);
         let p_surface = 2.0 * bubble.surface_tension / radius;
         let p_shell =

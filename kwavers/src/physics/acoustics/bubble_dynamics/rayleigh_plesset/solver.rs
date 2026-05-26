@@ -3,6 +3,7 @@
 use super::super::bubble_state::{BubbleParameters, BubbleState};
 use crate::core::constants::cavitation::{BAR_L2_TO_PA_M6, L_TO_M3};
 use crate::core::constants::{AVOGADRO, GAS_CONSTANT as R_GAS};
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Rayleigh-Plesset equation solver (incompressible)
 #[derive(Debug)]
@@ -24,7 +25,7 @@ impl RayleighPlessetSolver {
         let v = state.wall_velocity;
 
         // Time-dependent acoustic forcing with proper phase tracking
-        let acoustic_phase = 2.0 * std::f64::consts::PI * self.params.driving_frequency * t;
+        let acoustic_phase = TWO_PI * self.params.driving_frequency * t;
         let p_acoustic_instantaneous = p_acoustic * acoustic_phase.sin();
         let p_liquid_far = self.params.p0 + p_acoustic_instantaneous;
 

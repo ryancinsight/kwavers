@@ -16,7 +16,7 @@ use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 use crate::core::constants::numerical::MHZ_TO_HZ;
 use ndarray::{Array2, Array3};
 use num_complex::Complex64;
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Synthetic Aperture (SA) imaging configuration
 #[derive(Debug, Clone)]
@@ -97,7 +97,7 @@ impl SyntheticApertureReconstruction {
 
                             let phase_correction = Complex64::new(
                                 0.0,
-                                -2.0 * PI * self.config.frequency * total_delay,
+                                -TWO_PI * self.config.frequency * total_delay,
                             )
                             .exp();
 

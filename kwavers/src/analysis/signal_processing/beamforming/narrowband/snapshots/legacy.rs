@@ -6,6 +6,7 @@ use super::config::BasebandSnapshotConfig;
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::math::fft::{fft_1d_array, ifft_1d_complex, Complex64};
 use ndarray::{Array2, Array3};
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Convert a real-valued time series into its analytic signal via Hilbert transform.
 ///
@@ -89,7 +90,7 @@ fn downconvert_to_baseband(
     }
 
     let n = analytic.len();
-    let omega = -2.0 * std::f64::consts::PI * center_frequency_hz;
+    let omega = -TWO_PI * center_frequency_hz;
     let inv_fs = 1.0 / sampling_frequency_hz;
 
     let mut out = Vec::with_capacity(n);

@@ -9,6 +9,7 @@
 //! - Agrawal (2007) "Nonlinear Fiber Optics"
 
 use crate::core::constants::fundamental::{SOUND_SPEED_TISSUE, SOUND_SPEED_WATER, SPEED_OF_LIGHT};
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Kerr effect parameters
 ///
@@ -45,7 +46,7 @@ impl KerrEffect {
         intensity: f64,
         beam_radius: f64,
     ) -> f64 {
-        let k0 = 2.0 * std::f64::consts::PI / wavelength;
+        let k0 = TWO_PI / wavelength;
         k0 * self.n2 * intensity * beam_radius.powi(2)
     }
 
@@ -67,7 +68,7 @@ impl KerrEffect {
     /// φ_nl = (2π/λ) * n₂ * I * L
     #[must_use]
     pub fn phase_shift(&self, wavelength: f64, intensity: f64, distance: f64) -> f64 {
-        (2.0 * std::f64::consts::PI / wavelength) * self.n2 * intensity * distance
+        (TWO_PI / wavelength) * self.n2 * intensity * distance
     }
 
     /// Critical power for self-focusing (approximate)

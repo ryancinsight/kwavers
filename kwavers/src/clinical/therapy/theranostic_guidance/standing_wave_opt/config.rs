@@ -1,5 +1,5 @@
 use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE};
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Configuration for the 2D linearised-FDTD standing-wave suppression solver.
 ///
@@ -99,7 +99,7 @@ impl Default for StandingWaveOptConfig {
 
 impl StandingWaveOptConfig {
     pub fn omega(&self) -> f64 {
-        2.0 * PI * self.frequency_hz
+        TWO_PI * self.frequency_hz
     }
 
     pub fn dt(&self) -> f64 {

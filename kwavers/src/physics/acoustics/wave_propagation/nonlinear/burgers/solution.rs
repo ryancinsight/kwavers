@@ -3,6 +3,7 @@
 use super::bessel::bessel_j;
 use crate::physics::acoustics::wave_propagation::nonlinear::NonlinearParameters;
 use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Normalized amplitude of the nth harmonic from the Fubini-Blackstock solution.
 ///
@@ -45,7 +46,7 @@ pub fn burgers_equation(
     distance: f64,
     params: &NonlinearParameters,
 ) -> f64 {
-    let omega = 2.0 * PI * frequency;
+    let omega = TWO_PI * frequency;
     let z_shock =
         params.density * params.sound_speed.powi(3) / (params.beta * omega * initial_pressure);
     let sigma = distance / z_shock;

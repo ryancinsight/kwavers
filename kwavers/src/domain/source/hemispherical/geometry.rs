@@ -4,7 +4,7 @@ use super::constants::MAX_ELEMENT_DENSITY;
 use super::element::ElementConfiguration;
 use crate::core::error::{ConfigError, KwaversError, KwaversResult};
 use crate::domain::source::transducers::focused::{SphericalCapConfig, SphericalCapLayout};
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{FOUR_PI};
 
 /// Hemisphere geometry definition
 #[derive(Debug, Clone)]
@@ -98,7 +98,7 @@ impl ElementPlacement {
         density_factor: f64,
     ) -> KwaversResult<Vec<ElementConfiguration>> {
         let base_elements =
-            (4.0 * PI * geometry.radius * geometry.radius * MAX_ELEMENT_DENSITY) as usize;
+            (FOUR_PI * geometry.radius * geometry.radius * MAX_ELEMENT_DENSITY) as usize;
         let num_elements = (base_elements as f64 * density_factor) as usize;
         Self::generate_elements(geometry, num_elements)
     }

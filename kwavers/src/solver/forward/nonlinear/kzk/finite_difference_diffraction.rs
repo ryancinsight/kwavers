@@ -5,9 +5,9 @@
 
 use crate::math::fft::{fft_1d_complex, ifft_1d_complex, Complex64};
 use ndarray::{Array1, Array2, ArrayViewMut2};
-use std::f64::consts::PI;
 
 use super::KZKConfig;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Diffraction operator using angular spectrum method
 pub struct KzkDiffractionOperator {
@@ -44,8 +44,8 @@ impl KzkDiffractionOperator {
         let mut ky2 = Array2::zeros((config.nx, config.ny));
 
         // Compute wavenumber arrays
-        let dkx = 2.0 * PI / (config.nx as f64 * config.dx);
-        let dky = 2.0 * PI / (config.ny as f64 * config.dx);
+        let dkx = TWO_PI / (config.nx as f64 * config.dx);
+        let dky = TWO_PI / (config.ny as f64 * config.dx);
 
         for j in 0..config.ny {
             for i in 0..config.nx {
@@ -90,7 +90,7 @@ impl KzkDiffractionOperator {
         let mut transformed = fft_1d_complex(&complex_field);
 
         // Apply diffraction propagator in frequency domain
-        let k0 = 2.0 * PI * self.config.frequency / self.config.c0;
+        let k0 = TWO_PI * self.config.frequency / self.config.c0;
         let factor = -step_size / (2.0 * k0);
 
         for j in 0..ny {

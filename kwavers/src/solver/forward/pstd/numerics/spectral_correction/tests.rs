@@ -2,6 +2,7 @@ use super::*;
 use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::domain::grid::Grid;
 use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 #[test]
 fn test_exact_dispersion_correction() {
@@ -94,9 +95,9 @@ fn test_treeby2010_kappa_equals_sinc() {
     let nx = grid.nx as i64;
     for &i in &[0_usize, 1, 4, 16, (nx as usize - 1)] {
         let kx = if (i as i64) <= nx / 2 {
-            2.0 * PI * (i as f64) / (nx as f64 * dx)
+            TWO_PI * (i as f64) / (nx as f64 * dx)
         } else {
-            2.0 * PI * ((i as f64) - nx as f64) / (nx as f64 * dx)
+            TWO_PI * ((i as f64) - nx as f64) / (nx as f64 * dx)
         };
         let k_mag = kx.abs();
         let arg = 0.5 * c_ref * dt * k_mag;

@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+### Changed (2026-05-26) - Ali 2025 Scattering-Increment Scale Decomposition
+
+- [patch] Extend the Rust-owned Ali 2025 scattering-increment diagnostic with
+  baseline-scaled full-field residual, model-scaled full-field residual,
+  source-scale relative drift, and source-scale phase drift metrics. Expose the
+  same fields through PyO3 and add analytic Rust/Python test fixtures where the
+  model-scaled residual is zero while the baseline-scaled increment residual is
+  above unity. Bounded Cargo verification is currently blocked by concurrent
+  workspace builds exceeding the 300 s limit.
+
+### Changed (2026-05-25) - Ali 2025 Finite-Window Determined Probe
+
+- [patch] Rebuilt the local PyO3 extension and regenerated the determined
+  `(4,4,3)` Ali 2025 report with `pstd_finite_window_born` included. The
+  finite-window model now ranks best for full-field operator equivalence
+  (`0.03308952523301831` all-channel, `0.03395758947454344` passive-only),
+  while calibrated scattering-increment residual remains above unity and is
+  tracked as the next solver diagnostic gap.
+
 ### Changed (2026-05-25) - Focused Bowl Focus-Axis Source Constructor
 
 - [patch] Move clinical focused-bowl vertex construction into the source

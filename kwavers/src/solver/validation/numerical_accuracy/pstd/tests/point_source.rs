@@ -6,6 +6,7 @@ use crate::solver::pstd::PSTDConfig as PstdConfig;
 use crate::solver::pstd::PSTDSolver;
 use ndarray::{Array2, Array3};
 use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 #[test]
 fn test_point_source_phase_accuracy() {
@@ -18,7 +19,7 @@ fn test_point_source_phase_accuracy() {
     let c0 = SOUND_SPEED_WATER_SIM;
     let wavelength = c0 / frequency;
     let dx = wavelength / 16.0; // 16 PPW
-    let k_num: f64 = 2.0 * PI / wavelength;
+    let k_num: f64 = TWO_PI / wavelength;
 
     let mut config = PstdConfig::default();
     config.dt = super::CFL_NUMBER * dx / c0;
@@ -38,7 +39,7 @@ fn test_point_source_phase_accuracy() {
     // Create sine wave signal
     let signal = Array2::from_shape_fn((1, config.nt), |(_, t)| {
         let t_f64 = t as f64 * config.dt;
-        (2.0 * PI * frequency * t_f64).sin()
+        (TWO_PI * frequency * t_f64).sin()
     });
     source_data.p_signal = Some(signal);
 

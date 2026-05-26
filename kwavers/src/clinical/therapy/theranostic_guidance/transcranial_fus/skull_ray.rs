@@ -1,4 +1,3 @@
-use std::f64::consts::PI;
 
 use ndarray::{Array1, Array2, Array3};
 
@@ -17,6 +16,7 @@ use crate::core::constants::ct_acoustics::{
 };
 use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::core::error::{KwaversError, KwaversResult};
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Map a HU value to (sound_speed_m_s, density_kg_m3, attenuation_np_m).
 ///
@@ -164,7 +164,7 @@ pub(super) fn skull_path_phase_correction(
     let mean_delay = delays.sum() / n_elem as f64;
     let phases = Array1::from_shape_fn(n_elem, |i| {
         let relative = delays[i] - mean_delay;
-        let raw = -2.0 * PI * frequency_hz * relative;
+        let raw = -TWO_PI * frequency_hz * relative;
         raw.sin().atan2(raw.cos())
     });
 

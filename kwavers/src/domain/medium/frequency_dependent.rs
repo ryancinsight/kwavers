@@ -20,6 +20,7 @@ use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 use crate::math::fft::Complex64;
 use ndarray::{Array3, Zip};
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Frequency-dependent tissue properties
 #[derive(Debug, Clone)]
@@ -76,7 +77,7 @@ impl FrequencyDependentProperties {
     /// Get phase velocity at a given frequency
     #[must_use]
     pub fn phase_velocity(&self, frequency: f64) -> f64 {
-        let omega = 2.0 * std::f64::consts::PI * frequency;
+        let omega = TWO_PI * frequency;
 
         // Base dispersion
         let mut c_phase = self.c0 * self.dispersion_coefficient.mul_add(frequency.ln(), 1.0);
@@ -86,7 +87,7 @@ impl FrequencyDependentProperties {
             .iter()
             .zip(self.relaxation_strengths.iter())
             .for_each(|(&f_r, &strength)| {
-                let omega_r = 2.0 * std::f64::consts::PI * f_r;
+                let omega_r = TWO_PI * f_r;
                 let relaxation_factor =
                     1.0 + strength * omega.powi(2) / omega.mul_add(omega, omega_r.powi(2));
                 c_phase *= relaxation_factor.sqrt();
@@ -102,11 +103,11 @@ impl FrequencyDependentProperties {
         let df = frequency * 1e-6; // Small frequency step
         let c1 = self.phase_velocity(frequency - df);
         let c2 = self.phase_velocity(frequency + df);
-        let k1 = 2.0 * std::f64::consts::PI * (frequency - df) / c1;
-        let k2 = 2.0 * std::f64::consts::PI * (frequency + df) / c2;
+        let k1 = TWO_PI * (frequency - df) / c1;
+        let k2 = TWO_PI * (frequency + df) / c2;
 
         // Group velocity = dω/dk
-        2.0 * std::f64::consts::PI * 2.0 * df / (k2 - k1)
+        TWO_PI * 2.0 * df / (k2 - k1)
     }
 
     /// Get frequency-dependent nonlinearity parameter
@@ -124,13 +125,13 @@ impl FrequencyDependentProperties {
     /// Get attenuation from relaxation processes
     #[must_use]
     pub fn relaxation_attenuation(&self, frequency: f64) -> f64 {
-        let omega = 2.0 * std::f64::consts::PI * frequency;
+        let omega = TWO_PI * frequency;
 
         self.relaxation_frequencies
             .iter()
             .zip(self.relaxation_strengths.iter())
             .map(|(&f_r, &strength)| {
-                let omega_r = 2.0 * std::f64::consts::PI * f_r;
+                let omega_r = TWO_PI * f_r;
                 let denominator = (omega / omega_r).mul_add(omega / omega_r, 1.0);
                 strength * omega.powi(2) / (2.0 * self.c0 * omega_r * denominator)
             })
@@ -226,11 +227,11 @@ impl FreqDispersionCorrection {
         Zip::from(spectrum).and(k_vec).par_for_each(|s, &k_mag| {
             if k_mag > 0.0 {
                 // Frequency from wavenumber
-                let freq = k_mag * self.properties.c0 / (2.0 * std::f64::consts::PI);
+                let freq = k_mag * self.properties.c0 / (TWO_PI);
                 // Phase velocity at this frequency
                 let c_phase = self.properties.phase_velocity(freq);
                 // Dispersion phase shift
-                let k_dispersive = 2.0 * std::f64::consts::PI * freq / c_phase;
+                let k_dispersive = TWO_PI * freq / c_phase;
                 let phase_shift = (k_dispersive - k_mag) * c_phase * dt;
                 // Apply phase correction
                 let correction = Complex64::new(phase_shift.cos(), phase_shift.sin());

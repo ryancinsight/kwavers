@@ -1,6 +1,7 @@
 use super::KellerMiksisModel;
 use crate::core::error::KwaversResult;
 use crate::physics::acoustics::bubble_dynamics::bubble_state::BubbleState;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Calculate bubble wall acceleration using Keller-Miksis equation.
 ///
@@ -38,7 +39,7 @@ pub(crate) fn calculate_acceleration(
     }
 
     // Acoustic forcing with proper phase
-    let omega = 2.0 * std::f64::consts::PI * model.params.driving_frequency;
+    let omega = TWO_PI * model.params.driving_frequency;
     let p_acoustic_inst = p_acoustic * (omega * t).sin();
     let p_inf = model.params.p0 + p_acoustic_inst;
 

@@ -5,6 +5,7 @@ use crate::domain::grid::Grid;
 use ndarray::Array3;
 use num_complex::Complex;
 use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 fn make_corrector() -> TranscranialAberrationCorrection {
     let grid = Grid::new(32, 32, 32, 0.002, 0.002, 0.002).unwrap();
@@ -143,7 +144,7 @@ fn test_circular_coherence_identical_phases_is_one() {
 #[test]
 fn test_circular_coherence_uniform_distribution_near_zero() {
     let n = 1000_usize;
-    let phases: Vec<f64> = (0..n).map(|i| 2.0 * PI * i as f64 / n as f64).collect();
+    let phases: Vec<f64> = (0..n).map(|i| TWO_PI * i as f64 / n as f64).collect();
     let r = TranscranialAberrationCorrection::circular_coherence(&phases);
     assert!(
         r < 0.01,

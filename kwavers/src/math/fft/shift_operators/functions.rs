@@ -44,7 +44,7 @@
 
 use crate::math::fft::Complex64;
 use ndarray::{Array1, Array3};
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Generate the 1-D staggered-shift operator for one axis.
 ///
@@ -155,9 +155,9 @@ pub fn generate_kappa(
     c_ref: f64,
     dt: f64,
 ) -> Array3<f64> {
-    let dk_x = 2.0 * PI / (nx as f64 * dx);
-    let dk_y = 2.0 * PI / (ny as f64 * dy);
-    let dk_z = 2.0 * PI / (nz as f64 * dz);
+    let dk_x = TWO_PI / (nx as f64 * dx);
+    let dk_y = TWO_PI / (ny as f64 * dy);
+    let dk_z = TWO_PI / (nz as f64 * dz);
 
     let mut kappa = Array3::zeros((nx, ny, nz));
 
@@ -224,9 +224,9 @@ pub fn generate_source_kappa(
     c_ref: f64,
     dt: f64,
 ) -> Array3<f64> {
-    let dk_x = 2.0 * PI / (nx as f64 * dx);
-    let dk_y = 2.0 * PI / (ny as f64 * dy);
-    let dk_z = 2.0 * PI / (nz as f64 * dz);
+    let dk_x = TWO_PI / (nx as f64 * dx);
+    let dk_y = TWO_PI / (ny as f64 * dy);
+    let dk_z = TWO_PI / (nz as f64 * dz);
 
     let mut kappa = Array3::zeros((nx, ny, nz));
 

@@ -4,6 +4,7 @@ use crate::math::numerics::operators::spectral::trait_def::SpectralOperatorTrait
 use approx::assert_abs_diff_eq;
 use ndarray::Array3;
 use std::f64::consts::PI;
+use crate::core::constants::numerical::{FOUR_PI, TWO_PI};
 
 fn assert_arrays_close(actual: &Array3<f64>, expected: &Array3<f64>, epsilon: f64) {
     assert_eq!(actual.dim(), expected.dim());
@@ -60,7 +61,7 @@ fn test_derivative_x_sine_wave() {
     let dz = 0.1;
 
     let op = PseudospectralDerivative::new(nx, ny, nz, dx, dy, dz).unwrap();
-    let k = 2.0 * PI / (nx as f64 * dx);
+    let k = TWO_PI / (nx as f64 * dx);
 
     let mut field = Array3::zeros((nx, ny, nz));
     for i in 0..nx {
@@ -90,7 +91,7 @@ fn test_derivative_y_sine_wave() {
     let dz = 0.1;
 
     let op = PseudospectralDerivative::new(nx, ny, nz, dx, dy, dz).unwrap();
-    let k = 2.0 * PI / (ny as f64 * dy);
+    let k = TWO_PI / (ny as f64 * dy);
 
     let mut field = Array3::zeros((nx, ny, nz));
     for j in 0..ny {
@@ -120,7 +121,7 @@ fn test_derivative_z_sine_wave() {
     let dz = 0.1;
 
     let op = PseudospectralDerivative::new(nx, ny, nz, dx, dy, dz).unwrap();
-    let k = 2.0 * PI / (nz as f64 * dz);
+    let k = TWO_PI / (nz as f64 * dz);
 
     let mut field = Array3::zeros((nx, ny, nz));
     for l in 0..nz {
@@ -151,9 +152,9 @@ fn spectral_derivative_into_reuses_workspace_and_matches_allocating() {
     for i in 0..nx {
         for j in 0..ny {
             for k in 0..nz {
-                field[[i, j, k]] = (2.0 * PI * i as f64 / nx as f64).sin()
-                    + 0.25 * (2.0 * PI * j as f64 / ny as f64).cos()
-                    + 0.125 * (2.0 * PI * k as f64 / nz as f64).sin();
+                field[[i, j, k]] = (TWO_PI * i as f64 / nx as f64).sin()
+                    + 0.25 * (TWO_PI * j as f64 / ny as f64).cos()
+                    + 0.125 * (TWO_PI * k as f64 / nz as f64).sin();
             }
         }
     }
@@ -247,8 +248,8 @@ fn test_spectral_accuracy_exponential() {
 
     let op = PseudospectralDerivative::new(nx, ny, nz, dx, dy, dz).unwrap();
 
-    let k1 = 2.0 * PI / (nx as f64 * dx);
-    let k2 = 4.0 * PI / (nx as f64 * dx);
+    let k1 = TWO_PI / (nx as f64 * dx);
+    let k2 = FOUR_PI / (nx as f64 * dx);
 
     let mut field = Array3::zeros((nx, ny, nz));
     for i in 0..nx {

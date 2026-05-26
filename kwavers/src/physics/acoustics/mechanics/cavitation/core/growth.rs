@@ -31,6 +31,7 @@
 //! - Church, C. C. (1988). "A theoretical study of cavitation generated
 //!   by an acoustic beam". JASA, 83(6), 2210–2216.
 
+use crate::core::constants::numerical::{FOUR_PI};
 /// Rectified diffusion model for bubble growth (Eller & Flynn 1965)
 ///
 /// Returns the molar gas flux rate [mol/s] into the bubble.
@@ -47,7 +48,7 @@ pub fn rectified_diffusion_rate(
     let peclet = radius * radius * frequency / diffusivity;
 
     // Growth rate ∝ R * D * C * (P_ac/P_0) * √Pe
-    4.0 * std::f64::consts::PI
+    FOUR_PI
         * radius
         * diffusivity
         * concentration

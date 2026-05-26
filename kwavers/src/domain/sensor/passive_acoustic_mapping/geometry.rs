@@ -1,5 +1,6 @@
 //! Array geometry definitions for PAM
 
+use crate::core::constants::numerical::{TWO_PI};
 /// Array geometry types for different sensor configurations
 #[derive(Debug, Clone)]
 pub enum PamArrayGeometry {
@@ -113,7 +114,7 @@ impl PamArrayGeometry {
                 let (u, v) = crate::math::geometry::orthogonal_basis_from_normal3(*normal);
 
                 for i in 0..*elements {
-                    let angle = 2.0 * std::f64::consts::PI * i as f64 / *elements as f64;
+                    let angle = TWO_PI * i as f64 / *elements as f64;
                     let cos_a = angle.cos();
                     let sin_a = angle.sin();
 
@@ -138,7 +139,7 @@ impl PamArrayGeometry {
                     let theta =
                         std::f64::consts::PI * 0.5 * i as f64 / (*elements_theta as f64 - 1.0);
                     for j in 0..*elements_phi {
-                        let phi = 2.0 * std::f64::consts::PI * j as f64 / *elements_phi as f64;
+                        let phi = TWO_PI * j as f64 / *elements_phi as f64;
 
                         positions.push([
                             (radius * theta.sin()).mul_add(phi.cos(), center[0]),

@@ -36,7 +36,7 @@
 
 use crate::core::constants::acoustic_parameters::NP_TO_DB;
 use ndarray::Array3;
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Attenuation calculator for wave propagation in absorbing media
 #[derive(Debug)]
@@ -90,7 +90,7 @@ impl AttenuationCalculator {
     /// Calculate wave number (k = 2π/λ = 2πf/c)
     #[must_use]
     pub fn wave_number(&self) -> f64 {
-        2.0 * PI * self.frequency / self.wave_speed
+        TWO_PI * self.frequency / self.wave_speed
     }
 
     /// Calculate penetration depth (distance where amplitude drops to 1/e)
@@ -120,7 +120,7 @@ impl AttenuationCalculator {
         specific_heat_ratio: f64,
         specific_heat_cp: f64,
     ) -> f64 {
-        let omega = 2.0 * PI * frequency;
+        let omega = TWO_PI * frequency;
         let factor1 = omega * omega / (2.0 * density * sound_speed.powi(3));
         let viscous_term = (4.0_f64 / 3.0).mul_add(shear_viscosity, bulk_viscosity);
         let thermal_term = thermal_conductivity * (specific_heat_ratio - 1.0) / specific_heat_cp;

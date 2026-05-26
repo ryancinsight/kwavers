@@ -27,6 +27,7 @@ use super::types::SvdClutterConfig;
 use crate::core::error::{KwaversError, KwaversResult, NumericalError};
 use crate::math::linear_algebra::LinearAlgebra;
 use ndarray::{s, Array1, Array2};
+use crate::core::constants::numerical::{TWO_PI};
 
 /// SVD spatiotemporal clutter filter.
 ///
@@ -188,7 +189,7 @@ fn mp_median(beta: f64) -> f64 {
             let cos_phi = phi.cos();
             let xv = (range * sin_phi).mul_add(sin_phi, lb);
             let sin2 = 2.0 * sin_phi * cos_phi;
-            let integrand = range * range * sin2 * sin2 / (2.0 * std::f64::consts::PI * beta * xv);
+            let integrand = range * range * sin2 * sin2 / (TWO_PI * beta * xv);
             sum += integrand * dphi;
         }
         sum

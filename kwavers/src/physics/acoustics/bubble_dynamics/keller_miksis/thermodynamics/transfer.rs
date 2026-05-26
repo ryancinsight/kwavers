@@ -4,6 +4,7 @@ use super::super::KellerMiksisModel;
 use crate::core::constants::{AVOGADRO, GAS_CONSTANT as R_GAS, M_WATER};
 use crate::core::error::{KwaversResult, PhysicsError};
 use crate::physics::acoustics::bubble_dynamics::bubble_state::BubbleState;
+use crate::core::constants::numerical::{FOUR_PI, TWO_PI};
 
 /// Update vapor content through evaporation or condensation.
 /// # Errors
@@ -23,9 +24,9 @@ pub(crate) fn update_mass_transfer(
         0.0
     };
 
-    let area = 4.0 * std::f64::consts::PI * state.radius * state.radius;
+    let area = FOUR_PI * state.radius * state.radius;
     // Hertz-Knudsen molar flux [mol/s]: J_mol = α·A·ΔP / √(2πMRT)
-    let sqrt_term = (2.0 * std::f64::consts::PI * M_WATER * R_GAS * state.temperature).sqrt();
+    let sqrt_term = (TWO_PI * M_WATER * R_GAS * state.temperature).sqrt();
     let molar_flux = model.params.accommodation_coeff * area * (p_sat - p_vapor) / sqrt_term;
     // Convert mol/s → molecules: ΔN = J_mol · dt · N_A
     let dn_vapor = molar_flux * dt * AVOGADRO;

@@ -1,4 +1,4 @@
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Estimate the power spectrum of the bubble radius time series via DFT.
 ///
@@ -36,7 +36,7 @@ pub fn bubble_power_spectrum(r_arr: &[f64], dt_s: f64, n_fft: usize) -> (Vec<f64
     for k in 0..n_pos {
         let mut re = 0.0_f64;
         let mut im = 0.0_f64;
-        let phase_step = 2.0 * PI * k as f64 / n_f;
+        let phase_step = TWO_PI * k as f64 / n_f;
         for (j, &rj) in padded.iter().enumerate() {
             let phi = phase_step * j as f64;
             re += rj * phi.cos();

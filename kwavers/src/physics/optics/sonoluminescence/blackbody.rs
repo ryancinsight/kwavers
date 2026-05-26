@@ -9,6 +9,7 @@ use crate::core::constants::fundamental::{
     BOLTZMANN as BOLTZMANN_CONSTANT, PLANCK as PLANCK_CONSTANT, SPEED_OF_LIGHT, STEFAN_BOLTZMANN,
 };
 use crate::core::constants::optical::WIEN_CONSTANT;
+use crate::core::constants::numerical::{FOUR_PI};
 
 /// Blackbody radiation model
 #[derive(Debug, Clone)]
@@ -159,7 +160,7 @@ pub fn calculate_blackbody_emission(
         .par_for_each(|out, &temp, &radius| {
             if radius > 0.0 && temp > 0.0 {
                 // Surface area of bubble
-                let surface_area = 4.0 * PI * radius * radius;
+                let surface_area = FOUR_PI * radius * radius;
 
                 // Total power emitted
                 let power = model.total_power(temp, surface_area);

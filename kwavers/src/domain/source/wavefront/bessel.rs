@@ -8,9 +8,9 @@ use crate::domain::grid::Grid;
 use crate::domain::signal::Signal;
 use crate::domain::source::{Source, SourceField};
 use ndarray::Array3;
-use std::f64::consts::PI;
 use std::fmt::Debug;
 use std::sync::Arc;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Bessel beam configuration
 #[derive(Debug, Clone)]
@@ -38,7 +38,7 @@ impl Default for BesselConfig {
         let wavelength = 1.5e-3_f64; // 1mm wavelength
         let radial_wavenumber = 1000.0_f64; // k_r = 1000 rad/m
         let axial_wavenumber = radial_wavenumber
-            .mul_add(-radial_wavenumber, (2.0 * PI / wavelength).powi(2))
+            .mul_add(-radial_wavenumber, (TWO_PI / wavelength).powi(2))
             .sqrt();
 
         Self {
@@ -261,7 +261,7 @@ impl BesselBuilder {
             .radial_wavenumber
             .mul_add(
                 -self.config.radial_wavenumber,
-                (2.0 * PI / wavelength).powi(2),
+                (TWO_PI / wavelength).powi(2),
             )
             .sqrt();
         self
@@ -274,7 +274,7 @@ impl BesselBuilder {
         self.config.axial_wavenumber = radial_wavenumber
             .mul_add(
                 -radial_wavenumber,
-                (2.0 * PI / self.config.wavelength).powi(2),
+                (TWO_PI / self.config.wavelength).powi(2),
             )
             .sqrt();
         self

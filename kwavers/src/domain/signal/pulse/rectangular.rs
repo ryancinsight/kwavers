@@ -4,6 +4,7 @@ use crate::domain::signal::Signal;
 use std::f64::consts::PI;
 
 use super::{DEFAULT_RISE_TIME_FRACTION, MIN_PULSE_WIDTH};
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Rectangular pulse with configurable rise/fall times
 ///
@@ -83,7 +84,7 @@ impl RectangularPulse {
 impl Signal for RectangularPulse {
     fn amplitude(&self, t: f64) -> f64 {
         let envelope = self.envelope(t);
-        let carrier = (2.0 * PI * self.center_frequency)
+        let carrier = (TWO_PI * self.center_frequency)
             .mul_add(t, self.phase)
             .sin();
         self.amplitude * envelope * carrier

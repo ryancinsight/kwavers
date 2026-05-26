@@ -3,6 +3,7 @@ use super::parameters::BubbleParameters;
 use crate::core::constants::fundamental::{AVOGADRO, GAS_CONSTANT};
 use crate::core::constants::thermodynamic::T_AMBIENT;
 use std::f64::consts::PI;
+use crate::core::constants::numerical::{FOUR_PI};
 
 /// Complete state of a single bubble
 #[derive(Debug, Clone)]
@@ -115,7 +116,7 @@ impl BubbleState {
     /// Calculate bubble surface area
     #[must_use]
     pub fn surface_area(&self) -> f64 {
-        4.0 * PI * self.radius.powi(2)
+        FOUR_PI * self.radius.powi(2)
     }
 
     /// Check if bubble is in violent collapse

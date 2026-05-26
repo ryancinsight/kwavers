@@ -1,6 +1,7 @@
 use super::filter::AdaptiveFilter;
 use super::types::{AdaptiveFilterConfig, CbrEstimationMethod, SubspaceSeparationMethod};
 use ndarray::Array2;
+use crate::core::constants::numerical::{TWO_PI};
 
 #[test]
 fn test_adaptive_filter_creation() {
@@ -46,7 +47,7 @@ fn test_filter_removes_low_frequency_component() {
     let dc_component = 10.0;
     let mut data = Array2::<f64>::zeros((1, n_frames));
     for t in 0..n_frames {
-        let oscillation = (2.0 * std::f64::consts::PI * t as f64 / 4.0).cos();
+        let oscillation = (TWO_PI * t as f64 / 4.0).cos();
         data[[0, t]] = dc_component + oscillation;
     }
 
@@ -70,8 +71,8 @@ fn test_adaptive_threshold_method() {
     let n_frames = 16;
     let mut data = Array2::<f64>::zeros((1, n_frames));
     for t in 0..n_frames {
-        let low_freq = 5.0 * (2.0 * std::f64::consts::PI * t as f64 / 16.0).cos();
-        let high_freq = 1.0 * (2.0 * std::f64::consts::PI * t as f64 / 2.0).cos();
+        let low_freq = 5.0 * (TWO_PI * t as f64 / 16.0).cos();
+        let high_freq = 1.0 * (TWO_PI * t as f64 / 2.0).cos();
         data[[0, t]] = low_freq + high_freq;
     }
 
@@ -98,8 +99,8 @@ fn test_cbr_based_separation() {
     let n_frames = 32;
     let mut data = Array2::<f64>::zeros((1, n_frames));
     for t in 0..n_frames {
-        let clutter = 10.0 * (2.0 * std::f64::consts::PI * t as f64 / 32.0).sin();
-        let blood = 0.5 * (2.0 * std::f64::consts::PI * t as f64 / 4.0).sin();
+        let clutter = 10.0 * (TWO_PI * t as f64 / 32.0).sin();
+        let blood = 0.5 * (TWO_PI * t as f64 / 4.0).sin();
         data[[0, t]] = clutter + blood;
     }
 
@@ -124,7 +125,7 @@ fn test_filter_preserves_high_frequency() {
     let n_frames = 16;
     let mut data = Array2::<f64>::zeros((1, n_frames));
     for t in 0..n_frames {
-        data[[0, t]] = (2.0 * std::f64::consts::PI * t as f64 / 2.0).sin();
+        data[[0, t]] = (TWO_PI * t as f64 / 2.0).sin();
     }
 
     let original_power: f64 = data.iter().map(|&x| x * x).sum();
@@ -147,7 +148,7 @@ fn test_cbr_history() {
     let mut filter = AdaptiveFilter::new(config).unwrap();
 
     let data = Array2::<f64>::from_shape_fn((3, 16), |(_, t)| {
-        (2.0 * std::f64::consts::PI * t as f64 / 8.0).sin()
+        (TWO_PI * t as f64 / 8.0).sin()
     });
 
     filter.filter(&data).unwrap();

@@ -1,6 +1,7 @@
 // signal/amplitude/mod.rs
 
 use std::fmt::Debug;
+use crate::core::constants::numerical::{TWO_PI};
 
 pub trait Amplitude: Debug + Send + Sync {
     fn amplitude(&self, t: f64) -> f64;
@@ -70,7 +71,7 @@ impl Amplitude for PowerModulation {
     fn amplitude(&self, t: f64) -> f64 {
         self.base_amplitude
             * self.modulation_depth.mul_add(
-                (2.0 * std::f64::consts::PI * self.modulation_freq * t).sin(),
+                (TWO_PI * self.modulation_freq * t).sin(),
                 1.0,
             )
     }

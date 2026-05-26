@@ -18,6 +18,7 @@ use crate::core::error::{KwaversError, KwaversResult, NumericalError};
 use crate::math::fft::{Complex64, Fft1d, Shape1D, FFT_CACHE_1D};
 use ndarray::{Array1, Array3, ArrayView3};
 use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Pseudospectral derivative operator using FFT
 ///
@@ -71,7 +72,7 @@ impl PseudospectralDerivative {
     /// k[i] = 2π·(i−N) / (N·d)   for i = N/2..N
     pub(super) fn wavenumber_vector(n: usize, d: f64) -> Array1<f64> {
         let mut k = Array1::zeros(n);
-        let dk = 2.0 * PI / ((n as f64) * d);
+        let dk = TWO_PI / ((n as f64) * d);
 
         for i in 0..n / 2 {
             k[i] = (i as f64) * dk;

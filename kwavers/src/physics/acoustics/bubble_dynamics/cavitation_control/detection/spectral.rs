@@ -5,6 +5,7 @@ use super::traits::{CavitationDetector, DetectorParameters};
 use super::types::{CavitationDetectionState, CavitationMetrics, DetectionMethod, HistoryBuffer};
 use crate::math::fft::fft_1d_array;
 use ndarray::{s, Array1, ArrayView1};
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Spectral detector for cavitation using FFT analysis
 pub struct SpectralDetector {
@@ -47,7 +48,7 @@ impl SpectralDetector {
     /// Create Hann window for spectral analysis
     fn create_hann_window(size: usize) -> Array1<f64> {
         Array1::from_shape_fn(size, |i| {
-            0.5 * (1.0 - (2.0 * std::f64::consts::PI * i as f64 / (size - 1) as f64).cos())
+            0.5 * (1.0 - (TWO_PI * i as f64 / (size - 1) as f64).cos())
         })
     }
 

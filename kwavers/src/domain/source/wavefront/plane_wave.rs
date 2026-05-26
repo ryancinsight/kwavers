@@ -7,9 +7,9 @@ use crate::domain::grid::Grid;
 use crate::domain::signal::Signal;
 use crate::domain::source::{Source, SourceField};
 use ndarray::Array3;
-use std::f64::consts::PI;
 use std::fmt::Debug;
 use std::sync::Arc;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Injection mode for plane wave sources
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -59,7 +59,7 @@ pub struct PlaneWaveSource {
 impl PlaneWaveSource {
     /// Create a new plane wave source
     pub fn new(config: PlaneWaveSourceConfig, signal: Arc<dyn Signal>) -> Self {
-        let wave_number = 2.0 * PI / config.wavelength;
+        let wave_number = TWO_PI / config.wavelength;
         Self {
             config,
             signal,

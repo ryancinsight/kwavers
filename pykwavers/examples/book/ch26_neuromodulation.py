@@ -8,6 +8,14 @@ The chapter models microbubble-free transcranial ultrasound stimulation as a
 coupled acoustic, thermal, mechanochemical, and neural-response problem.  The
 script is deterministic and emits figures plus a metrics.json file under
 docs/book/figures/ch26/.
+
+Physics contract
+----------------
+All wave-physics and biophysics computation (membrane tension, channel gating,
+LIF ODE, Gaussian beam envelope, Pennes bioheat) execute in Rust via pykwavers.
+Python contains only orchestration, parameter dataclasses, plotting, and
+thin wrapper functions that marshal arguments to Rust and package the results.
+No physics loops, no ODE steppers, no logistic computations appear in this file.
 """
 
 from __future__ import annotations
@@ -45,6 +53,7 @@ PERFUSION_S = 0.012
 ALPHA_BRAIN_NP_M = 4.0
 T0_C = 37.0
 CELL_RADIUS_M = 10.0e-6
+BODY_TEMPERATURE_K = 310.0  # IT'IS v4.1
 
 
 @dataclass(frozen=True)
@@ -97,35 +106,98 @@ def intensity_sppa_w_m2(pressure_pa: np.ndarray | float) -> np.ndarray:
 
 
 def acoustic_energy_tension_mn_m(pressure_pa: np.ndarray | float) -> np.ndarray:
-    pressure = np.asarray(pressure_pa, dtype=float)
-    energy_density_pa = pressure**2 / (2.0 * RHO_BRAIN * C_BRAIN**2)
-    return 1.0e3 * energy_density_pa * CELL_RADIUS_M / 2.0
+    """Acoustic membrane tension from peak pressure via Rust (Timoshenko 1959; Sarvazyan 2010).
+
+    Delegates to ``kw.compute_acoustic_membrane_tension_py``.  Radiation-pressure
+    derivation (P_rad = I/c) and Laplace thin-shell equilibrium (ΔT = P_rad·R/2)
+    execute in Rust.  Returns tension in mN/m.
+    """
+    pressure = np.atleast_1d(np.asarray(pressure_pa, dtype=np.float64))
+    return np.asarray(
+        kw.compute_acoustic_membrane_tension_py(
+            pressure,
+            density_kg_m3=RHO_BRAIN,
+            sound_speed_m_s=C_BRAIN,
+            cell_radius_m=CELL_RADIUS_M,
+        ),
+        dtype=np.float64,
+    )
 
 
 def open_probability(tension_mn_m: np.ndarray | float, channel: Channel) -> np.ndarray:
-    x = (np.asarray(tension_mn_m, dtype=float) - channel.half_tension_mn_m) / channel.slope_mn_m
-    return 1.0 / (1.0 + np.exp(-np.clip(x, -80.0, 80.0)))
+    """Boltzmann open probability from membrane tension via Rust (Sukharev 1997; Cox 2016).
+
+    Delegates to ``kw.boltzmann_open_probability_py``.  The slope parameterisation
+    ``σ = k_B·θ / A_gate`` converts to gating area inside Rust.  All exponential
+    evaluation executes in Rust.
+    """
+    tension = np.atleast_1d(np.asarray(tension_mn_m, dtype=np.float64))
+    return np.asarray(
+        kw.boltzmann_open_probability_py(
+            tension,
+            half_tension_mn_m=channel.half_tension_mn_m,
+            slope_mn_m=channel.slope_mn_m,
+            temperature_k=BODY_TEMPERATURE_K,
+        ),
+        dtype=np.float64,
+    )
 
 
 def coupled_channel_drive(pressure_pa: np.ndarray | float) -> np.ndarray:
-    tension = acoustic_energy_tension_mn_m(pressure_pa)
-    drive = np.zeros_like(np.asarray(tension, dtype=float), dtype=float)
-    norm = sum(abs(ch.conductance_weight) for ch in CHANNELS)
-    for ch in CHANNELS:
-        drive += ch.conductance_weight * open_probability(tension, ch)
-    return np.clip(drive / norm, -1.0, 1.0)
+    """Normalised mechanochemical channel drive from acoustic pressure via Rust.
+
+    Delegates to ``kw.coupled_channel_drive_py``.  Tension derivation, per-channel
+    Boltzmann gating, and weighted normalisation all execute in Rust.
+
+    Pipeline (Rust):
+    1. p → I = p²/(2ρc)          [W/m²]
+    2. I → ΔT = I·R/(2c)         [N/m]  (Laplace thin-shell)
+    3. ΔT → P_open,k = Boltzmann(ΔT; T_half,k, slope_k, θ)
+    4. drive = clamp(Σ_k w_k·P_open,k / Σ_k |w_k|, −1, 1)
+    """
+    pressure = np.atleast_1d(np.asarray(pressure_pa, dtype=np.float64))
+    return np.asarray(
+        kw.coupled_channel_drive_py(
+            pressure,
+            half_tensions_mn_m=[ch.half_tension_mn_m for ch in CHANNELS],
+            slopes_mn_m=[ch.slope_mn_m for ch in CHANNELS],
+            conductance_weights=[ch.conductance_weight for ch in CHANNELS],
+            density_kg_m3=RHO_BRAIN,
+            sound_speed_m_s=C_BRAIN,
+            cell_radius_m=CELL_RADIUS_M,
+            temperature_k=BODY_TEMPERATURE_K,
+        ),
+        dtype=np.float64,
+    )
 
 
-def gaussian_focus(protocol: Protocol, shape: tuple[int, int, int] = (81, 81, 61)) -> dict[str, np.ndarray]:
-    spacing = np.array([1.0e-3, 1.0e-3, 1.0e-3], dtype=float)
-    axes = [(np.arange(n) - (n - 1) / 2.0) * dx for n, dx in zip(shape, spacing)]
-    x, y, z = np.meshgrid(*axes, indexing="ij")
-    sigma_lat = protocol.lateral_fwhm_m / (2.0 * np.sqrt(2.0 * np.log(2.0)))
-    sigma_ax = protocol.axial_fwhm_m / (2.0 * np.sqrt(2.0 * np.log(2.0)))
-    r2 = x**2 + y**2
-    envelope = np.exp(-0.5 * (r2 / sigma_lat**2 + z**2 / sigma_ax**2))
-    pressure = protocol.pressure_pa * envelope
-    return {"x": x, "y": y, "z": z, "pressure": pressure}
+def gaussian_focus(
+    protocol: Protocol,
+    shape: tuple[int, int, int] = (81, 81, 61),
+    spacing_m: float = 1.0e-3,
+) -> dict[str, np.ndarray]:
+    """Analytical 3-D Gaussian beam pressure field via Rust (Goodman 2005 §3.3).
+
+    Delegates to ``kw.gaussian_beam_pressure_field_py``.  Grid construction,
+    sigma derivation, and Gaussian exponent evaluation execute in Rust.
+    """
+    field = kw.gaussian_beam_pressure_field_py(
+        nx=shape[0],
+        ny=shape[1],
+        nz=shape[2],
+        dx_m=spacing_m,
+        dy_m=spacing_m,
+        dz_m=spacing_m,
+        peak_pressure_pa=protocol.pressure_pa,
+        lateral_fwhm_m=protocol.lateral_fwhm_m,
+        axial_fwhm_m=protocol.axial_fwhm_m,
+    )
+    return {
+        "x": np.asarray(field["x"], dtype=np.float64),
+        "y": np.asarray(field["y"], dtype=np.float64),
+        "z": np.asarray(field["z"], dtype=np.float64),
+        "pressure": np.asarray(field["pressure"], dtype=np.float64),
+    }
 
 
 def pennes_temperature(intensity_spta_w_m2: float, sonication_s: float, dt_s: float = 0.02) -> ThermalResult:
@@ -164,32 +236,76 @@ def pulse_envelope(time_s: np.ndarray, protocol: Protocol) -> np.ndarray:
     return ((time_s % period) < width).astype(float)
 
 
-def neural_response(protocol: Protocol, duration_s: float = 4.0, dt_s: float = 0.001) -> dict[str, np.ndarray]:
+def neural_response(
+    protocol: Protocol,
+    duration_s: float = 4.0,
+    dt_s: float = 0.001,
+    i_max_pa: float = 300.0,
+    smoothing_sigma_s: float = 0.200,
+) -> dict[str, np.ndarray]:
+    """LIF neuron driven by mechanosensitive ion current via Rust (Koch 1999).
+
+    Pipeline (all heavy computation in Rust):
+
+    1. ``coupled_channel_drive_py`` → normalised drive ∈ [−1, 1] per time step.
+    2. Scale to ion current: I_ion = max(drive, 0) × I_max [A].
+       Depolarising channels (drive > 0) drive inward current; inhibitory drive
+       (drive < 0, K⁺ channels) reduces below rheobase (handled by LIF G_leak).
+    3. ``simulate_lif_neuron_py`` → membrane voltage trace V(t) and spike times
+       (forward-Euler LIF, Koch 1999 canonical params).
+    4. Response probability = Gaussian-smoothed instantaneous spike density
+       normalised to theoretical maximum firing rate f_max = 1/(τ_ref + τ_m).
+
+    Parameters
+    ----------
+    protocol:
+        ``Protocol`` dataclass carrying frequency, pressure, duty cycle.
+    duration_s:
+        Simulation duration [s].
+    dt_s:
+        Time step [s]; stable for LIF when dt ≪ τ_m = 10 ms.
+    i_max_pa:
+        Maximum depolarising current at unit channel drive [pA].
+    smoothing_sigma_s:
+        Gaussian kernel σ for spike-density smoothing [s].
+    """
+    from scipy.ndimage import gaussian_filter1d
+
     time_s = np.arange(0.0, duration_s + dt_s, dt_s)
+    n = time_s.size
     envelope = pulse_envelope(time_s, protocol)
     pressure = protocol.pressure_pa * envelope
+
+    # Mechanochemical channel drive → ion current (Rust).
     channel_drive = coupled_channel_drive(pressure)
-    calcium = np.empty_like(time_s)
-    voltage = np.empty_like(time_s)
-    response = np.empty_like(time_s)
-    calcium[0] = 0.05
-    voltage[0] = -68.0
-    for idx in range(1, time_s.size):
-        dt = time_s[idx] - time_s[idx - 1]
-        ca_target = 0.05 + 0.85 * max(channel_drive[idx], 0.0)
-        calcium[idx] = calcium[idx - 1] + dt * (ca_target - calcium[idx - 1]) / 0.18
-        inhibitory = max(-channel_drive[idx], 0.0)
-        v_target = -68.0 + 21.0 * calcium[idx] - 9.0 * inhibitory
-        voltage[idx] = voltage[idx - 1] + dt * (v_target - voltage[idx - 1]) / 0.035
-        response[idx] = 1.0 / (1.0 + np.exp(-(voltage[idx] + 59.0) / 2.8))
-    response[0] = response[1]
+    # Only depolarising (positive) drive generates injected current; inhibitory
+    # drive (negative weights from K⁺ channels) reduces net input toward zero.
+    i_ion_a = np.maximum(channel_drive, 0.0) * (i_max_pa * 1.0e-12)
+
+    # LIF ODE in Rust (Koch 1999 canonical parameters).
+    lif_result = kw.simulate_lif_neuron_py(i_ion_a, dt_s)
+    voltage_v = np.asarray(lif_result["voltage_v"], dtype=np.float64)
+    spike_times_s = np.asarray(lif_result["spike_times_s"], dtype=np.float64)
+
+    # Response probability: Gaussian-smoothed spike density / f_max.
+    # f_max = 1 / (τ_ref + τ_m) = 1 / (2ms + 10ms) ≈ 83 Hz.
+    f_max_hz = 1.0 / (2.0e-3 + 10.0e-3)
+    spike_train = np.zeros(n, dtype=np.float64)
+    if spike_times_s.size > 0:
+        spike_idx = np.rint(spike_times_s / dt_s).astype(int)
+        spike_idx = spike_idx[(spike_idx >= 0) & (spike_idx < n)]
+        spike_train[spike_idx] = 1.0
+    sigma_samples = smoothing_sigma_s / dt_s
+    smoothed = gaussian_filter1d(spike_train / dt_s, sigma=sigma_samples)
+    response = np.clip(smoothed / f_max_hz, 0.0, 1.0)
+
     return {
         "time_s": time_s,
         "envelope": envelope,
-        "calcium": calcium,
-        "voltage_mv": voltage,
+        "voltage_mv": voltage_v * 1.0e3,    # V → mV for plotting
         "response_probability": response,
         "channel_drive": channel_drive,
+        "spike_times_s": spike_times_s,
     }
 
 
@@ -276,20 +392,27 @@ def plot_acoustic_field(protocol: Protocol) -> dict[str, float]:
 
 
 def plot_response(protocol: Protocol) -> dict[str, float]:
+    """LIF neuron response traces for three pressure levels (Koch 1999).
+
+    Three sub-panels:
+    - Mechanochemical channel drive (Rust coupled_channel_drive_py).
+    - Membrane voltage from Rust LIF ODE [mV].
+    - Response probability (Gaussian-smoothed spike density / f_max).
+    """
     fig, axes = plt.subplots(3, 1, figsize=(8.0, 7.2), sharex=True)
     summaries: dict[str, float] = {}
     for pressure_kpa, color in [(150.0, "#2166ac"), (300.0, "#4dac26"), (500.0, "#d6604d")]:
         trial = neural_response(Protocol(pressure_pa=pressure_kpa * 1.0e3))
         label = f"{pressure_kpa:.0f} kPa"
-        axes[0].plot(trial["time_s"], trial["calcium"], color=color, label=label)
+        axes[0].plot(trial["time_s"], trial["channel_drive"], color=color, label=label)
         axes[1].plot(trial["time_s"], trial["voltage_mv"], color=color)
         axes[2].plot(trial["time_s"], trial["response_probability"], color=color)
         summaries[f"peak_response_{int(pressure_kpa)}_kpa"] = float(trial["response_probability"].max())
-    axes[0].set_ylabel("Cytosolic Ca proxy")
+    axes[0].set_ylabel("Mechanochemical channel drive")
     axes[1].set_ylabel("Membrane voltage (mV)")
     axes[2].set_ylabel("Response probability")
     axes[2].set_xlabel("Time (s)")
-    axes[0].set_title("Mechanochemical calcium and membrane response under pulsed tFUS")
+    axes[0].set_title("LIF neuron response to pulsed tFUS (Rust, Koch 1999)")
     axes[0].legend(loc="upper right")
     for ax in axes:
         ax.grid(True, alpha=0.25)

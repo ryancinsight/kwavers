@@ -6,6 +6,7 @@ use crate::core::constants::thermodynamic::{
     ROOM_TEMPERATURE_C, SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER,
 };
 use serde::{Deserialize, Serialize};
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Stokes absorption parameters for viscous fluids
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -127,7 +128,7 @@ impl StokesAbsorption {
     /// Physical Principles and Applications*, §10-7. ASA.
     #[must_use]
     pub fn absorption_at_frequency(&self, frequency: f64) -> f64 {
-        let omega = 2.0 * std::f64::consts::PI * frequency;
+        let omega = TWO_PI * frequency;
         let p = &self.params;
 
         let viscous_term = (4.0 * p.viscosity / 3.0) + p.bulk_viscosity;

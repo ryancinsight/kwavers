@@ -2,6 +2,7 @@
 //!
 //! Implements beam width and directivity calculations
 
+use crate::core::constants::numerical::{TWO_PI};
 /// Beam pattern calculations
 #[derive(Debug)]
 pub struct BeamPatterns;
@@ -21,8 +22,7 @@ impl BeamPatterns {
     /// Calculate directivity pattern
     #[must_use]
     pub fn directivity(theta: f64, aperture: f64, wavelength: f64) -> f64 {
-        use std::f64::consts::PI;
-        let k = 2.0 * PI / wavelength;
+        let k = TWO_PI / wavelength;
         let x = k * aperture * theta.sin() / 2.0;
         if x.abs() < 1e-10 {
             1.0
@@ -35,7 +35,6 @@ impl BeamPatterns {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::f64::consts::PI;
 
     // ── beam_width ────────────────────────────────────────────────────────────
 

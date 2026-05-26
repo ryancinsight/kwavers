@@ -3,9 +3,9 @@
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::signal::window::{window_value, SignalWindowType};
 use crate::domain::signal::Signal;
-use std::f64::consts::PI;
 
 use super::MAX_TONE_BURST_CYCLES;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Tone burst signal - windowed sinusoid with specific number of cycles
 ///
@@ -124,7 +124,7 @@ impl ToneBurst {
 impl Signal for ToneBurst {
     fn amplitude(&self, t: f64) -> f64 {
         let (window, relative_time) = self.window(t);
-        let carrier = (2.0 * PI * self.center_frequency)
+        let carrier = (TWO_PI * self.center_frequency)
             .mul_add(relative_time, self.phase)
             .sin();
         self.amplitude * window * carrier

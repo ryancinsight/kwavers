@@ -4,7 +4,7 @@ use super::types::{HarmonicAnalysis, HarmonicConfig};
 use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::{Array1, Array2};
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Harmonic tracker for nonlinear propagation.
 #[derive(Debug)]
@@ -192,7 +192,7 @@ impl HarmonicTracker {
         let mut sin_acc = 0.0;
 
         for (i, &p) in pressure.iter().enumerate() {
-            let phase = 2.0 * PI * frequency * (i as f64) * dt;
+            let phase = TWO_PI * frequency * (i as f64) * dt;
             cos_acc += p * phase.cos();
             sin_acc += p * phase.sin();
         }
@@ -211,7 +211,7 @@ impl HarmonicTracker {
         // where β = 1 + B/(2A) and ω₀ = 2πf₀.
         let rho0: f64 = DENSITY_WATER_NOMINAL; // kg/m³
         let c0: f64 = crate::core::constants::fundamental::SOUND_SPEED_TISSUE; // m/s
-        let omega0: f64 = 2.0 * PI * self.config.frequency;
+        let omega0: f64 = TWO_PI * self.config.frequency;
         let beta: f64 = 1.0 + self.config.b_a / 2.0; // β = 1 + B/(2A)
 
         let z_shock = rho0 * f64::powi(c0, 3) / (beta * omega0 * pressure_amplitude);

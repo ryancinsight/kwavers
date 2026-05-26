@@ -14,6 +14,7 @@ use super::validation::{
     field_validation_error, validate_finite_field, validate_finite_vector,
     validate_positive_finite_field,
 };
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Configuration for an arc source (2D focused transducer)
 #[derive(Debug, Clone)]
@@ -133,7 +134,7 @@ impl ArcSource {
         time: f64,
     ) -> Array2<f64> {
         let mut source = Array2::zeros((nx, ny));
-        let omega = 2.0 * PI * self.config.frequency;
+        let omega = TWO_PI * self.config.frequency;
 
         // Focus is at the center of curvature
         let focus = self.config.center;
@@ -202,7 +203,7 @@ fn validate_arc_config(config: &ArcConfig) -> KwaversResult<()> {
     validate_finite_field("amplitude", config.amplitude)?;
     validate_finite_field("orientation", config.orientation)?;
     validate_finite_vector("center", config.center)?;
-    if !(config.arc_angle.is_finite() && config.arc_angle > 0.0 && config.arc_angle <= 2.0 * PI) {
+    if !(config.arc_angle.is_finite() && config.arc_angle > 0.0 && config.arc_angle <= TWO_PI) {
         return Err(field_validation_error(
             "arc_angle",
             config.arc_angle.to_string(),

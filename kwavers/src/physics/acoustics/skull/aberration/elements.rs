@@ -1,11 +1,11 @@
 //! Phase correction extraction for planar array elements.
 
-use std::f64::consts::PI;
 
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::{Array1, Array3};
 
 use super::model::AberrationCorrection;
+use crate::core::constants::numerical::{TWO_PI};
 
 impl AberrationCorrection<'_> {
     /// Compute scalar phase correction for each element of a 2D planar array.
@@ -33,7 +33,7 @@ impl AberrationCorrection<'_> {
         let nx = self.grid.nx;
         let ny = self.grid.ny;
         let nz = self.grid.nz;
-        let k_water = 2.0 * PI * frequency / self.c_water;
+        let k_water = TWO_PI * frequency / self.c_water;
         let dz = self.grid.dz;
         let mut corrections = Array1::zeros(element_x_m.len());
 
@@ -45,7 +45,7 @@ impl AberrationCorrection<'_> {
             for k in 0..nz {
                 let c_local = self.skull.sound_speed[[i, j, k]];
                 if c_local > 0.0 {
-                    let k_local = 2.0 * PI * frequency / c_local;
+                    let k_local = TWO_PI * frequency / c_local;
                     total_phase += (k_local - k_water) * dz;
                 }
             }

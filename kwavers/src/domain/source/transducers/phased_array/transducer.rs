@@ -11,6 +11,7 @@ use crate::domain::signal::Signal;
 use crate::domain::source::Source;
 use ndarray::{Array1, Array3, Zip};
 use std::sync::Arc;
+use crate::core::constants::numerical::{FOUR_PI};
 
 /// Phased array transducer with electronic beam control
 #[derive(Debug)]
@@ -181,7 +182,7 @@ impl PhasedArrayTransducer {
                         element.directivity(theta, self.config.frequency, self.sound_speed);
 
                     // Add contribution with spherical spreading
-                    *pressure += signal * directivity / (4.0 * std::f64::consts::PI * distance);
+                    *pressure += signal * directivity / (FOUR_PI * distance);
                 }
             }
         });
@@ -275,7 +276,7 @@ impl Source for PhasedArrayTransducer {
 
                     // Add with spherical spreading
                     total_pressure +=
-                        modulated * directivity / (4.0 * std::f64::consts::PI * distance);
+                        modulated * directivity / (FOUR_PI * distance);
                 }
             }
         }

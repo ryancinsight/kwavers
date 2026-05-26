@@ -14,6 +14,7 @@ use crate::domain::signal::analytic::{
 };
 use crate::math::fft::{fft_1d_array, ifft_1d_complex, Complex64};
 use ndarray::Array2;
+use crate::core::constants::numerical::{TWO_PI};
 
 impl MisfitFunction {
     /// Envelope misfit: 0.5 * ||E_syn − E_obs||² (cycle-skipping mitigation).
@@ -120,10 +121,10 @@ impl MisfitFunction {
                 let mut phase_diff = phase_syn[[i, j]] - phase_obs[[i, j]];
                 // Unwrap to [−π, π]
                 while phase_diff > std::f64::consts::PI {
-                    phase_diff -= 2.0 * std::f64::consts::PI;
+                    phase_diff -= TWO_PI;
                 }
                 while phase_diff < -std::f64::consts::PI {
-                    phase_diff += 2.0 * std::f64::consts::PI;
+                    phase_diff += TWO_PI;
                 }
 
                 let envelope_sq = analytic[j].norm_sqr();

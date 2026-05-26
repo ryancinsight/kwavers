@@ -2,12 +2,12 @@
 
 use super::filter::FrequencyFilter;
 use crate::domain::signal::Filter;
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 fn sine_wave(freq: f64, sample_rate: f64, n_samples: usize) -> Vec<f64> {
     let dt = 1.0 / sample_rate;
     (0..n_samples)
-        .map(|i| (2.0 * PI * freq * i as f64 * dt).sin())
+        .map(|i| (TWO_PI * freq * i as f64 * dt).sin())
         .collect()
 }
 

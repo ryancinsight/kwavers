@@ -1,4 +1,3 @@
-use std::f64::consts::PI;
 
 use crate::core::constants::fundamental::DENSITY_WATER;
 use crate::core::constants::numerical::MHZ_TO_HZ;
@@ -8,6 +7,7 @@ use ndarray::Array3;
 
 use super::constants::C_WATER_DEFAULT;
 use super::AberrationCorrection;
+use crate::core::constants::numerical::{TWO_PI};
 
 fn make_test_skull(
     nx: usize,
@@ -69,8 +69,8 @@ fn test_uniform_bone_slab_phase() {
     let ac = AberrationCorrection::new(&grid, &skull).with_water_speed(C_WATER_DEFAULT);
     let phases = ac.compute_time_reversal_phases(f).unwrap();
 
-    let k_water = 2.0 * PI * f / C_WATER_DEFAULT;
-    let k_bone = 2.0 * PI * f / c_bone;
+    let k_water = TWO_PI * f / C_WATER_DEFAULT;
+    let k_bone = TWO_PI * f / c_bone;
     let expected = (k_bone - k_water) * (n_bone as f64 * dz);
     let phi_computed = phases[[0, 0, nz - 1]];
     let rel_err = (phi_computed - expected).abs() / expected.abs().max(1e-12);

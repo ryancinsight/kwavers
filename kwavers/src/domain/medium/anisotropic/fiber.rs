@@ -5,6 +5,7 @@
 
 use ndarray::Array3;
 use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Fiber orientation in 3D space
 #[derive(Debug, Clone, Default)]
@@ -86,7 +87,7 @@ impl MuscleFiberModel {
 
                     // Helical angle varies with radius
                     let r = (x.hypot(y) / radius).min(1.0);
-                    let helix_angle = -PI / 3.0 + r * 2.0 * PI / 3.0; // -60° to +60°
+                    let helix_angle = -PI / 3.0 + r * TWO_PI / 3.0; // -60° to +60°
 
                     let azimuth = y.atan2(x) + helix_angle;
                     let elevation = (z / pitch).atan();

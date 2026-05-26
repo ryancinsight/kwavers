@@ -9,6 +9,7 @@ use crate::core::constants::fundamental::{
     ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM,
 };
 use crate::core::error::KwaversResult;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Nonlinear scattering model for microbubbles
 #[derive(Debug)]
@@ -144,7 +145,7 @@ impl HarmonicImaging {
         let mut imag = 0.0;
 
         for (i, &sample) in signal.iter().enumerate() {
-            let phase = 2.0 * std::f64::consts::PI * frequency * i as f64 / sample_rate;
+            let phase = TWO_PI * frequency * i as f64 / sample_rate;
             real += sample * phase.cos();
             imag += sample * phase.sin();
         }

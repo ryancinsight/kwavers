@@ -4,7 +4,7 @@ use crate::domain::grid::Grid;
 use crate::domain::medium::HomogeneousMedium;
 use crate::solver::pstd::PSTDConfig as PstdConfig;
 use crate::solver::pstd::PSTDSolver;
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 #[test]
 fn test_pstd_phase_velocity_accuracy() {
@@ -62,7 +62,7 @@ fn test_pstd_phase_velocity_accuracy() {
     let frequency = MHZ_TO_HZ;
     let wavelength = c0 / frequency;
     let dx = wavelength / 20.0; // 20 PPW
-    let k = 2.0 * PI / wavelength;
+    let k = TWO_PI / wavelength;
     let dt = 0.2 * dx / c0; // CFL = 0.2
     let nt = 800_usize;
 

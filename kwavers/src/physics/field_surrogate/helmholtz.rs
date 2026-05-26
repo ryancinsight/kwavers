@@ -35,6 +35,7 @@
 use ndarray::Array3;
 
 use super::kernel::FocalKernel;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Default sound speed for water at body temperature (m/s). The
 /// kernel cube is generated on a homogeneous water-equivalent medium,
@@ -62,7 +63,7 @@ pub fn helmholtz_residual_field(p: &Array3<f64>, dx_m: f64, f0: f64, c0: f64) ->
         return r;
     }
     let inv_dx2 = 1.0 / (dx_m * dx_m);
-    let k = 2.0 * std::f64::consts::PI * f0 / c0;
+    let k = TWO_PI * f0 / c0;
     let k2 = k * k;
     for i in 1..(nx - 1) {
         for j in 1..(ny - 1) {
@@ -133,7 +134,7 @@ pub fn helmholtz_residual_stats(
         0.0
     };
     let p_max_abs = p.iter().fold(0.0_f64, |acc, &v| acc.max(v.abs()));
-    let k = 2.0 * std::f64::consts::PI * f0 / c0;
+    let k = TWO_PI * f0 / c0;
     let scale = k * k * p_max_abs;
     let normalised_ratio = if scale > 0.0 { rms / scale } else { 0.0 };
     HelmholtzResidualStats {

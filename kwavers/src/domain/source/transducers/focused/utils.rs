@@ -10,9 +10,9 @@ use super::validation::{
 use crate::core::constants::numerical::MPA_TO_PA;
 use crate::core::constants::SOUND_SPEED_WATER;
 use crate::core::error::KwaversResult;
-use std::f64::consts::PI;
 
 pub use super::multi_bowl::ApodizationType;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Helper function to create a spherical section bowl
 /// # Errors
@@ -156,7 +156,7 @@ fn annular_ring_element_count(
     frequency: f64,
 ) -> KwaversResult<usize> {
     let area =
-        2.0 * PI * radius_of_curvature * radius_of_curvature * (theta_min.cos() - theta_max.cos());
+        TWO_PI * radius_of_curvature * radius_of_curvature * (theta_min.cos() - theta_max.cos());
     let element_size = SOUND_SPEED_WATER / frequency / 4.0;
     let count = (area / element_size.powi(2)).ceil();
     if !count.is_finite() || count < 1.0 || count > usize::MAX as f64 {

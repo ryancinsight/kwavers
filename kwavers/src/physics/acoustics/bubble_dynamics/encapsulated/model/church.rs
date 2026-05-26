@@ -1,6 +1,7 @@
 use super::super::shell::ShellProperties;
 use crate::core::error::KwaversResult;
 use crate::physics::acoustics::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Church model for encapsulated bubbles with elastic shell
 ///
@@ -40,7 +41,7 @@ impl ChurchModel {
         let r0 = self.params.r0;
 
         // Acoustic forcing
-        let omega = 2.0 * std::f64::consts::PI * self.params.driving_frequency;
+        let omega = TWO_PI * self.params.driving_frequency;
         let p_acoustic_inst = p_acoustic * (omega * t).sin();
         let p_inf = self.params.p0 + p_acoustic_inst;
 

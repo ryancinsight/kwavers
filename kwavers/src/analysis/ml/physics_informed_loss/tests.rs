@@ -3,6 +3,7 @@ use crate::core::constants::numerical::MHZ_TO_HZ;
 
 use super::*;
 use ndarray::{Array2, Array3};
+use crate::core::constants::numerical::{TWO_PI};
 
 #[test]
 fn test_physics_loss_config_default() {
@@ -58,7 +59,7 @@ fn test_physics_loss_creation() {
     // k = 2πf/c = 2π·1e6/343 ≈ 18313 rad/m
     let config = PhysicsLossConfig::default();
     let loss = PhysicsInformedLoss::new(config).unwrap();
-    let k_expected = 2.0 * std::f64::consts::PI * MHZ_TO_HZ / SOUND_SPEED_AIR;
+    let k_expected = TWO_PI * MHZ_TO_HZ / SOUND_SPEED_AIR;
     assert!(
         (loss.wave_number() - k_expected).abs() < 1.0,
         "wave_number = {} (expected ≈ {k_expected})",
@@ -93,7 +94,7 @@ fn test_wave_number_computation() {
     let loss = PhysicsInformedLoss::new(config).unwrap();
 
     // k = 2πf/c = 2π·1e6/343 ≈ 18313
-    let k_expected = 2.0 * std::f64::consts::PI * MHZ_TO_HZ / SOUND_SPEED_AIR;
+    let k_expected = TWO_PI * MHZ_TO_HZ / SOUND_SPEED_AIR;
     assert!((loss.wave_number() - k_expected).abs() < 1.0);
 }
 
@@ -364,7 +365,7 @@ fn coherence_loss_mismatched_dims_is_infinity() {
 fn wave_number_exact_formula_verification() {
     let config = PhysicsLossConfig::default().with_wave_params(SOUND_SPEED_AIR, MHZ_TO_HZ);
     let loss_fn = PhysicsInformedLoss::new(config).unwrap();
-    let expected_k = 2.0 * std::f64::consts::PI * MHZ_TO_HZ / SOUND_SPEED_AIR;
+    let expected_k = TWO_PI * MHZ_TO_HZ / SOUND_SPEED_AIR;
     assert!(
         (loss_fn.wave_number() - expected_k).abs() < 1e-10,
         "wave_number = {} (expected {expected_k})",

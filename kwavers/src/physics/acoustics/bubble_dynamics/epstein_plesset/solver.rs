@@ -18,6 +18,7 @@
 
 use super::types::{OscillationType, StabilityAnalysis};
 use crate::physics::acoustics::bubble_dynamics::bubble_state::BubbleParameters;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Epstein-Plesset stability solver
 #[derive(Debug)]
@@ -115,6 +116,6 @@ impl EpsteinPlessetStabilitySolver {
         let rho = self.params.rho_liquid;
         let gamma = self.params.gamma;
         let omega0 = ((3.0 * gamma * self.params.p0) / (rho * r0 * r0)).sqrt();
-        omega0 / (2.0 * std::f64::consts::PI)
+        omega0 / (TWO_PI)
     }
 }

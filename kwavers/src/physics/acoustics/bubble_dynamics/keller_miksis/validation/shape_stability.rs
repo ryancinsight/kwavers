@@ -6,6 +6,7 @@
 
 use crate::physics::acoustics::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};
 use crate::physics::acoustics::bubble_dynamics::keller_miksis::KellerMiksisModel;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// A freshly constructed model must have shape modes seeded and the bubble
 /// must not be immediately flagged as unstable at equilibrium radius.
@@ -109,7 +110,7 @@ fn test_shape_modes_bounded_at_rest() {
     let a0 = model.shape_modes.amplitude[0].abs();
 
     let omega2 = (8.0 * params.sigma / (params.rho_liquid * state.radius.powi(3))).sqrt();
-    let period = 2.0 * std::f64::consts::PI / omega2;
+    let period = TWO_PI / omega2;
     let dt = period / 100.0;
 
     for _ in 0..1000 {

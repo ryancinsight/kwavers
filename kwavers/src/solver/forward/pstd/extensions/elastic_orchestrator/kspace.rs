@@ -39,6 +39,7 @@
 use super::types::ElasticPstdMedium;
 use ndarray::{Array3, Zip};
 use num_complex::Complex;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Maximum P-wave speed `c_p = sqrt((λ + 2μ)/ρ)` across the medium.
 ///
@@ -86,7 +87,7 @@ pub(super) fn wavenumber_axis(n: usize, dx: f64) -> Array3<f64> {
     if n <= 1 {
         return k;
     }
-    let dk = 2.0 * std::f64::consts::PI / (n as f64 * dx);
+    let dk = TWO_PI / (n as f64 * dx);
     for i in 0..n / 2 {
         k[[i, 0, 0]] = i as f64 * dk;
     }
@@ -111,7 +112,7 @@ pub(super) fn grid_spacing_from_wavenumber(d_op: &Array3<Complex<f64>>, n: usize
     if dk == 0.0 {
         return 1.0;
     }
-    2.0 * std::f64::consts::PI / (n as f64 * dk)
+    TWO_PI / (n as f64 * dk)
 }
 
 pub(super) fn build_kappa(
@@ -213,7 +214,6 @@ mod tests {
     use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
     use crate::domain::grid::Grid;
     use ndarray::{Array1, Array3};
-    use std::f64::consts::PI;
 
     /// DC mode kappa (|k|=0) must be exactly 1.0: `sinc(0) = 1` by L'Hôpital.
     ///

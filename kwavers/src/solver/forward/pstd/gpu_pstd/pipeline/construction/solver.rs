@@ -7,9 +7,9 @@ use super::super::{AbsorptionArrays, MediumArrays, PmlArrays, SolverParams};
 use super::kspace::precompute_kspace_shifts;
 use crate::domain::grid::Grid;
 use crate::math::fft::shift_operators::KSpaceGridParams;
-use std::f64::consts::PI;
 use std::sync::Arc;
 use wgpu::util::DeviceExt;
+use crate::core::constants::numerical::{TWO_PI};
 
 impl GpuPstdSolver {
     /// Create a new GPU PSTD solver.
@@ -132,22 +132,22 @@ impl GpuPstdSolver {
         // Stored in buf_alpha_decay (repurposed as twiddle table; absorption uses fractional-Laplacian).
         let mut twiddle_data: Vec<f32> = vec![0.0f32; total];
         for k in 0usize..128 {
-            let a = -2.0 * PI * k as f64 / 256.0;
+            let a = -TWO_PI * k as f64 / 256.0;
             twiddle_data[k] = a.cos() as f32;
             twiddle_data[128 + k] = a.sin() as f32;
         }
         for k in 0usize..64 {
-            let a = -2.0 * PI * k as f64 / 128.0;
+            let a = -TWO_PI * k as f64 / 128.0;
             twiddle_data[256 + k] = a.cos() as f32;
             twiddle_data[320 + k] = a.sin() as f32;
         }
         for k in 0usize..32 {
-            let a = -2.0 * PI * k as f64 / 64.0;
+            let a = -TWO_PI * k as f64 / 64.0;
             twiddle_data[384 + k] = a.cos() as f32;
             twiddle_data[416 + k] = a.sin() as f32;
         }
         for k in 0usize..16 {
-            let a = -2.0 * PI * k as f64 / 32.0;
+            let a = -TWO_PI * k as f64 / 32.0;
             twiddle_data[448 + k] = a.cos() as f32;
             twiddle_data[464 + k] = a.sin() as f32;
         }

@@ -23,6 +23,7 @@
 //! - `traits`: the physics-layer `KZKSolverTrait` bridge (RMS field,
 //!   peak-pressure delegation, `step_forward(dz)`).
 
+use crate::core::constants::numerical::{TWO_PI};
 mod conservation;
 mod observables;
 mod stepping;
@@ -32,7 +33,6 @@ mod traits;
 mod tests;
 
 use ndarray::{Array2, Array3};
-use std::f64::consts::PI;
 
 use super::absorption::KzkAbsorptionOperator;
 use super::complex_parabolic_diffraction::ParabolicDiffractionOperator;
@@ -200,7 +200,7 @@ impl KZKSolver {
         self.absorption = KzkAbsorptionOperator::new(&self.config);
 
         // Set source as time-harmonic signal (real-valued at z=0).
-        let omega = 2.0 * PI * frequency;
+        let omega = TWO_PI * frequency;
         let dt = self.config.dt;
 
         for t in 0..self.config.nt {

@@ -1,6 +1,6 @@
 use super::operator::SpectralDerivativeOperator;
 use ndarray::Array3;
-use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// **Theorem (spectral derivative exactness for DFT-representable modes):**
 ///
@@ -31,7 +31,7 @@ fn spectral_derivative_x_exact_for_fundamental_mode() {
     let op = SpectralDerivativeOperator::new(n, n, n, dx, dx, dx);
 
     // k₁ = 2π/(N·Δx): fundamental mode, m=1 < N/3 ≈ 10.67 → passes 2/3-rule filter
-    let k1 = 2.0 * PI / (n as f64 * dx);
+    let k1 = TWO_PI / (n as f64 * dx);
 
     let mut field = Array3::<f64>::zeros([n, n, n]);
     for i in 0..n {
@@ -85,7 +85,7 @@ fn test_derivative_sinusoidal_x() {
     let op = create_test_operator();
 
     let mut field = Array3::zeros([32, 32, 32]);
-    let k = 2.0 * PI / (32.0 * 0.001);
+    let k = TWO_PI / (32.0 * 0.001);
 
     for i in 0..32 {
         let x = i as f64 * 0.001;

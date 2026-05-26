@@ -10,6 +10,7 @@ use crate::{
 };
 use ndarray::Array3;
 use std::collections::HashMap;
+use crate::core::constants::numerical::{FOUR_PI};
 
 /// Sonoluminescence detector and analyzer
 #[derive(Debug)]
@@ -159,7 +160,7 @@ impl SonoluminescenceDetector {
         let emission_params = &self.emission_calculator.params;
 
         // Stefan–Boltzmann total radiated power: P = σ·A·T⁴ (SSOT σ).
-        let surface_area = 4.0 * std::f64::consts::PI * radius.powi(2);
+        let surface_area = FOUR_PI * radius.powi(2);
         let power = STEFAN_BOLTZMANN * surface_area * temperature.powi(4);
 
         let efficiency = if emission_params.use_blackbody {

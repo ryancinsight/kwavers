@@ -2,6 +2,7 @@ use super::{GridTopology, TopologyDimension};
 use crate::core::error::{ConfigError, KwaversError, KwaversResult};
 use ndarray::{Array1, Array2, Array3};
 use std::f64::consts::PI;
+use crate::core::constants::numerical::{TWO_PI};
 
 /// Cylindrical grid topology for axisymmetric simulations
 ///
@@ -107,7 +108,7 @@ impl CylindricalTopology {
     /// k[i] = 2π * freq[i] following FFT convention:
     /// [0, 1, 2, ..., N/2, -N/2+1, ..., -1] / (N * d)
     fn compute_fft_wavenumbers(n: usize, d: f64) -> Array1<f64> {
-        let dk = 2.0 * PI / (n as f64 * d);
+        let dk = TWO_PI / (n as f64 * d);
         Array1::from_shape_fn(n, |i| {
             if i <= n / 2 {
                 i as f64 * dk
@@ -236,7 +237,7 @@ impl CylindricalTopology {
     /// Calculate volume of rotation for full 3D: 2π * r * dr * dz
     #[must_use]
     pub fn volume_element(&self, j: usize) -> f64 {
-        2.0 * PI * self.area_element(j)
+        TWO_PI * self.area_element(j)
     }
 }
 

@@ -52,10 +52,10 @@
 //!   the Second Kind*. Cambridge, §4.2 (Gauss quadrature accuracy).
 
 use num_complex::Complex64;
-use std::f64::consts::PI;
 
 use super::geometry::{add, barycentric_coords, cross, norm_sq, scale, sub, triangle_area_normal};
 use super::green::green_helmholtz;
+use crate::core::constants::numerical::{FOUR_PI};
 
 /// Compute boundary integrals for a near-field element using adaptive subdivision.
 ///
@@ -325,9 +325,9 @@ pub(crate) fn compute_singular_integrals(
                 let dir_norm = dir_z
                     .mul_add(dir_z, dir_x.mul_add(dir_x, dir_y * dir_y))
                     .sqrt();
-                Complex64::new(2.0 * area / (4.0 * PI * dir_norm), 0.0)
+                Complex64::new(2.0 * area / (FOUR_PI * dir_norm), 0.0)
             } else {
-                Complex64::new(0.0, k * r_dist).exp() / (4.0 * PI * r_dist) * jac
+                Complex64::new(0.0, k * r_dist).exp() / (FOUR_PI * r_dist) * jac
             };
 
             // Shape functions in collapsed coordinates:

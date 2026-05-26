@@ -2,6 +2,7 @@ use super::*;
 use approx::assert_abs_diff_eq;
 use crate::core::constants::numerical::MHZ_TO_HZ;
 use ndarray::Array3;
+use crate::core::constants::numerical::{TWO_PI};
 
 fn create_test_grid() -> Grid {
     Grid::new(32, 32, 32, 0.001, 0.001, 0.001).unwrap()
@@ -115,7 +116,7 @@ fn test_time_history_recording() {
     let config = PointSensorConfig::new(locations);
     let mut sensor = PointSensor::new(config, &grid).unwrap();
 
-    let omega = 2.0 * std::f64::consts::PI * MHZ_TO_HZ;
+    let omega = TWO_PI * MHZ_TO_HZ;
     let dt = 1e-7;
 
     for t in 0..100 {
