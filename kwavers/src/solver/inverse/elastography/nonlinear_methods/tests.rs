@@ -9,6 +9,7 @@ use super::least_squares::nonlinear_least_squares_inversion;
 use super::processor::NonlinearInversion;
 use crate::domain::imaging::ultrasound::elastography::NonlinearInversionMethod;
 use crate::physics::acoustics::imaging::modalities::elastography::HarmonicDisplacementField;
+use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use crate::core::constants::numerical::{TWO_PI};
 
 fn test_config() -> NonlinearInversionConfig {
@@ -236,7 +237,7 @@ fn test_nonlinear_inversion_processor() {
 fn test_shear_modulus_default() {
     let config = NonlinearInversionConfig::default();
     let mu = shear_modulus(&config);
-    let expected = 1000.0 * 3.0 * 3.0;
+    let expected = DENSITY_WATER_NOMINAL * 3.0 * 3.0;
     assert!(
         (mu - expected).abs() < 1e-10,
         "shear_modulus should be {expected}, got {mu}"
