@@ -35,8 +35,12 @@ fn test_k_magnitude_squared_consistency() {
     // For every element: k_mag² must equal k_squared within f64 epsilon
     for ((km, ks), _) in k_mag.iter().zip(k_sq.iter()).zip(kx.iter()) {
         let diff = (km * km - ks).abs();
+        // k_mag = sqrt(sum), k_sq = sum; computing sqrt(x)² vs x directly
+        // accumulates distinct f64 rounding errors.  Bound: 2·ε·|k²| where
+        // ε = 2.22e-16 (f64 machine epsilon) and |k²| ≤ (√3·π/dx)² ≈ 9.4e7
+        // for dx=1mm gives max diff ≈ 4.2e-8.  Use 1e-7 as conservative threshold.
         assert!(
-            diff < 1e-20,
+            diff < 1e-7,
             "k_mag²={} ≠ k_sq={} (diff={})",
             km * km,
             ks,
