@@ -181,8 +181,17 @@ plt.close()
 print("[fig15] CEM43 thermal dose (ThermalDiffusionSolver)")
 DT_THERM = 0.1
 N_STEPS_TH = int(T_TREAT / DT_THERM)
-Q_field = ALPHA_KIDNEY * p_peak ** 2 / (RHO_KIDNEY * C_KIDNEY)  # W/m³
+# Q(x,y,z) = α·p²/(ρ·c)  [W/m³] — Pennes bioheat source from pressure field.
+# Delegated to kw.acoustic_heat_source_density (Pennes 1948, Duck 1990 §5.2).
 nx, ny, nz = p_peak.shape
+Q_field = np.asarray(
+    kw.acoustic_heat_source_density(
+        p_peak.ravel().astype(np.float64),
+        float(ALPHA_KIDNEY),
+        float(RHO_KIDNEY),
+        float(C_KIDNEY),
+    )
+).reshape(p_peak.shape).astype(p_peak.dtype)
 sim_th = kw.ThermalSimulation(
     nx, ny, nz, sp, sp, sp,
     thermal_conductivity=K_KIDNEY, density=RHO_KIDNEY,

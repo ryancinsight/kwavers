@@ -6,7 +6,10 @@
     "D:\\kwavers\\docs\\book\\figures\\ch31\\fig02_kidney_array_3d_geometry.png",
     "D:\\kwavers\\docs\\book\\figures\\ch31\\fig03_brain_focused_bowl_3d_calvarium.png",
     "D:\\kwavers\\docs\\book\\figures\\ch31\\fig04_exposure_comparison.png",
-    "D:\\kwavers\\docs\\book\\figures\\ch31\\fig05_reconstruction_metrics.png"
+    "D:\\kwavers\\docs\\book\\figures\\ch31\\fig05_reconstruction_metrics.png",
+    "D:\\kwavers\\docs\\book\\figures\\ch31\\fig06_liver_image_then_treat.png",
+    "D:\\kwavers\\docs\\book\\figures\\ch31\\fig07_kidney_image_then_treat.png",
+    "D:\\kwavers\\docs\\book\\figures\\ch31\\fig08_brain_image_then_treat.png"
   ],
   "brain_scene": {
     "name": "rire_ct_aligned_vim_like_scene",
@@ -46,17 +49,17 @@
       "anatomy_label": "liver",
       "geometry_model": "ct_derived_abdominal_256_element_focused_bowl_on_skin",
       "element_count": 256,
-      "transducer_radius_m": 0.14186595631915433,
+      "transducer_radius_m": 0.14186595631915436,
       "body_surface_points": 256,
       "skin_contact_m": [
-        -0.09089992731575314,
-        0.10443948649882115,
-        0.13086178092595302
+        -0.09088411885042412,
+        0.10327172052414815,
+        0.13101653364068963
       ],
       "focus_m": [
-        -0.05299543898659985,
-        0.0324527515774818,
-        0.13190640053375358
+        -0.052979630521270825,
+        0.0312849856028088,
+        0.1320611532484902
       ]
     },
     "kidney": {
@@ -66,14 +69,14 @@
       "transducer_radius_m": 0.1457854926954179,
       "body_surface_points": 256,
       "skin_contact_m": [
-        -0.040229031312823654,
-        0.10901405781891163,
-        -0.012256713267896086
+        -0.04024893000621026,
+        0.11340894804707714,
+        -0.011976757019282122
       ],
       "focus_m": [
-        -0.040392575956732145,
-        0.025501965153263258,
-        -0.008196518223849631
+        -0.040412474650118754,
+        0.02989685538142877,
+        -0.007916561975235669
       ]
     },
     "brain": {
@@ -100,46 +103,52 @@
       "measurements": 5568,
       "metrics": {
         "anatomy": {
-          "pearson": 0.5322725264401825,
-          "nrmse": 0.13990680455375065,
-          "dice_equal_area": 0.46808510638297873,
-          "cnr": 2.585898348126941
+          "pearson": 0.5329963072547104,
+          "nrmse": 0.13907600144013543,
+          "dice_equal_area": 0.48936170212765956,
+          "cnr": 2.792649602823694
         },
         "active_lesion": {
-          "pearson": 0.8117486885027809,
-          "nrmse": 0.027007947371002046,
-          "dice_equal_area": 0.5,
-          "cnr": 24.12981776679125
+          "pearson": 0.8109960801891051,
+          "nrmse": 0.047235637723135576,
+          "dice_equal_area": 1.0,
+          "cnr": 16.64405474798047
         },
         "waveform_rtm": {
-          "pearson": 0.3624278292677,
-          "nrmse": 0.18595339220619034,
+          "pearson": 0.10750543294283572,
+          "nrmse": 0.11654262231042116,
           "dice_equal_area": 0.0,
-          "cnr": 5.200372542240383
+          "cnr": 1.2710213593803508
+        },
+        "elastic_shear": {
+          "pearson": 0.42960422234627094,
+          "nrmse": 0.13001715911007639,
+          "dice_equal_area": 0.5454545454545454,
+          "cnr": 5.8330783286238015
         },
         "subharmonic": {
-          "pearson": 0.6972378379567885,
-          "nrmse": 0.04544256474051291,
-          "dice_equal_area": 0.5,
-          "cnr": 15.472258519682766
+          "pearson": 0.72387150794167,
+          "nrmse": 0.07776415529213018,
+          "dice_equal_area": 1.0,
+          "cnr": 12.391657264429401
         },
         "harmonic": {
-          "pearson": 0.8954540024711246,
-          "nrmse": 0.02409485733459411,
+          "pearson": 0.9006768907958457,
+          "nrmse": 0.042959983961532666,
           "dice_equal_area": 1.0,
-          "cnr": 29.698453511517545
+          "cnr": 24.6513290351899
         },
         "ultraharmonic": {
-          "pearson": 0.8993629854124795,
-          "nrmse": 0.031081147521782575,
+          "pearson": 0.9095554004047183,
+          "nrmse": 0.049619779140050745,
           "dice_equal_area": 1.0,
-          "cnr": 28.75751306660855
+          "cnr": 26.145893472277415
         },
         "fusion": {
-          "pearson": 0.9519869001207653,
-          "nrmse": 0.012051620423430337,
+          "pearson": 0.9754975680000644,
+          "nrmse": 0.020943821690317197,
           "dice_equal_area": 1.0,
-          "cnr": 47.86849677583443
+          "cnr": 65.46752933595506
         }
       }
     },
@@ -152,46 +161,52 @@
       "measurements": 5568,
       "metrics": {
         "anatomy": {
-          "pearson": 0.5425247379428156,
-          "nrmse": 0.1385428441541981,
-          "dice_equal_area": 0.5686274509803921,
-          "cnr": 3.6536096267272278
+          "pearson": 0.5484829377459122,
+          "nrmse": 0.1383649016679786,
+          "dice_equal_area": 0.5882352941176471,
+          "cnr": 3.8429301629746973
         },
         "active_lesion": {
-          "pearson": 0.9556858857095606,
-          "nrmse": 0.017070208784601918,
-          "dice_equal_area": 1.0,
-          "cnr": 26.96766003695059
+          "pearson": 0.9570574189545178,
+          "nrmse": 0.029378314493336093,
+          "dice_equal_area": 0.9444444444444444,
+          "cnr": 20.593517941746832
         },
         "waveform_rtm": {
-          "pearson": 0.3876538653691558,
-          "nrmse": 0.2064682670881838,
-          "dice_equal_area": 0.75,
-          "cnr": 5.0742181057450155
+          "pearson": 0.08703302934254131,
+          "nrmse": 0.15356608260983576,
+          "dice_equal_area": 0.0,
+          "cnr": 0.6952156529946841
+        },
+        "elastic_shear": {
+          "pearson": 0.5982331391380838,
+          "nrmse": 0.1047835569240625,
+          "dice_equal_area": 0.6111111111111112,
+          "cnr": 6.554710288579657
         },
         "subharmonic": {
-          "pearson": 0.8164982097710735,
-          "nrmse": 0.0415124779337114,
-          "dice_equal_area": 1.0,
-          "cnr": 17.82494303191124
+          "pearson": 0.8474388470506692,
+          "nrmse": 0.05969148803982561,
+          "dice_equal_area": 0.9444444444444444,
+          "cnr": 12.487179215158132
         },
         "harmonic": {
-          "pearson": 0.9063123918841165,
-          "nrmse": 0.029392220316084083,
-          "dice_equal_area": 1.0,
-          "cnr": 23.13404029581495
+          "pearson": 0.9052798617087071,
+          "nrmse": 0.05128616305422547,
+          "dice_equal_area": 0.8823529411764706,
+          "cnr": 15.154131688952532
         },
         "ultraharmonic": {
-          "pearson": 0.9492625979120124,
-          "nrmse": 0.035328400863723866,
-          "dice_equal_area": 1.0,
-          "cnr": 29.530649172038196
+          "pearson": 0.939321891162923,
+          "nrmse": 0.05727329909695863,
+          "dice_equal_area": 0.9444444444444444,
+          "cnr": 20.35042765603814
         },
         "fusion": {
-          "pearson": 0.9760419851063328,
-          "nrmse": 0.011234108419370444,
-          "dice_equal_area": 1.0,
-          "cnr": 50.3463912826868
+          "pearson": 0.9794706613143476,
+          "nrmse": 0.01986984870649093,
+          "dice_equal_area": 0.9444444444444444,
+          "cnr": 42.81270526703388
         }
       }
     },
@@ -208,46 +223,52 @@
       "measurements": 14336,
       "metrics": {
         "anatomy": {
-          "pearson": 0.3294807802594022,
-          "nrmse": 0.31668063170941174,
-          "dice_equal_area": 0.4965986394557823,
-          "cnr": 1.0919622298196403
+          "pearson": 0.48135500606130066,
+          "nrmse": 0.3140315446406495,
+          "dice_equal_area": 0.7142857142857143,
+          "cnr": 2.023569889044965
         },
         "active_lesion": {
-          "pearson": 0.7777446094588346,
-          "nrmse": 0.029079571520349304,
-          "dice_equal_area": 1.0,
-          "cnr": 35.68868602513695
+          "pearson": 0.7125273222328613,
+          "nrmse": 0.07445583234876176,
+          "dice_equal_area": 0.8333333333333334,
+          "cnr": 12.172882933501707
         },
         "waveform_rtm": {
-          "pearson": 0.4435211103210762,
-          "nrmse": 0.07569853537047368,
-          "dice_equal_area": 1.0,
-          "cnr": 16.55619183806774
+          "pearson": 0.6681781218151462,
+          "nrmse": 0.05171328350995378,
+          "dice_equal_area": 0.6666666666666666,
+          "cnr": 12.26263349944634
+        },
+        "elastic_shear": {
+          "pearson": 0.4165703171441289,
+          "nrmse": 0.21338046594974505,
+          "dice_equal_area": 0.5,
+          "cnr": 6.1160171019028065
         },
         "subharmonic": {
-          "pearson": 0.6927511094455182,
-          "nrmse": 0.038310663490789855,
-          "dice_equal_area": 1.0,
-          "cnr": 27.707122723762996
+          "pearson": 0.745705345964995,
+          "nrmse": 0.05346091654964957,
+          "dice_equal_area": 0.8333333333333334,
+          "cnr": 13.904734168632952
         },
         "harmonic": {
-          "pearson": 0.5691790737956879,
-          "nrmse": 0.04784118030195737,
-          "dice_equal_area": 1.0,
-          "cnr": 21.813305782298297
+          "pearson": 0.8147427935650691,
+          "nrmse": 0.049637142635085396,
+          "dice_equal_area": 0.8333333333333334,
+          "cnr": 16.43630786746834
         },
         "ultraharmonic": {
-          "pearson": 0.5504594520270767,
-          "nrmse": 0.0633846437480685,
-          "dice_equal_area": 1.0,
-          "cnr": 20.84911675930434
+          "pearson": 0.6348184158734451,
+          "nrmse": 0.07010386658166799,
+          "dice_equal_area": 0.6666666666666666,
+          "cnr": 10.05790027115856
         },
         "fusion": {
-          "pearson": 0.9508701443329408,
-          "nrmse": 0.010807174088473322,
-          "dice_equal_area": 1.0,
-          "cnr": 110.72763660399836
+          "pearson": 0.960457894947807,
+          "nrmse": 0.01738962378233178,
+          "dice_equal_area": 0.8333333333333334,
+          "cnr": 31.68191752093859
         }
       }
     }
