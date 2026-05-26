@@ -7,6 +7,7 @@
 use crate::core::constants::medical::{
     THERMAL_DOSE_R_ABOVE_43C, THERMAL_DOSE_R_BELOW_43C, THERMAL_DOSE_REFERENCE_TEMP_C,
 };
+use crate::core::constants::numerical::SECONDS_PER_MINUTE;
 use ndarray::{Array3, Zip};
 
 /// CEM43 reference temperature (°C).
@@ -45,7 +46,7 @@ impl ThermalCEM43Grid {
     /// Update thermal dose based on current temperature field
     /// dt: time step in seconds
     pub fn update(&mut self, temperature: &Array3<f64>, dt: f64) {
-        let dt_minutes = dt / 60.0;
+        let dt_minutes = dt / SECONDS_PER_MINUTE;
 
         Zip::from(&mut self.dose)
             .and(temperature)

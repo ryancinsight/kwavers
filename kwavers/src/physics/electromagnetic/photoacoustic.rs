@@ -268,6 +268,7 @@ impl PulsedLaser {
 #[allow(deprecated)]
 mod tests {
     use super::*;
+    use crate::core::constants::thermodynamic::GRUNEISEN_WATER_20C;
 
     /// Without coefficients the model reduces to the constant Γ₀ regardless of T, p.
     /// # Panics
@@ -275,14 +276,14 @@ mod tests {
     ///
     #[test]
     fn test_gruneisen_constant_no_coefficients() {
-        let gamma = GruneisenParameter::new(0.12);
+        let gamma = GruneisenParameter::new(GRUNEISEN_WATER_20C);
         // Any T and p should return Γ₀ when coefficients are None
         let v1 = gamma.get_value(BODY_TEMPERATURE_C, ATMOSPHERIC_PRESSURE);
         let v2 = gamma.get_value(20.0, 0.5e5);
         let v3 = gamma.get_value(80.0, 5e5);
-        assert!((v1 - 0.12).abs() < 1e-15);
-        assert!((v2 - 0.12).abs() < 1e-15);
-        assert!((v3 - 0.12).abs() < 1e-15);
+        assert!((v1 - GRUNEISEN_WATER_20C).abs() < 1e-15);
+        assert!((v2 - GRUNEISEN_WATER_20C).abs() < 1e-15);
+        assert!((v3 - GRUNEISEN_WATER_20C).abs() < 1e-15);
     }
 
     /// Γ(T_ref, p_ref) == Γ₀ even when coefficients are set.
@@ -291,12 +292,12 @@ mod tests {
     ///
     #[test]
     fn test_gruneisen_reference_conditions_unchanged() {
-        let gamma = GruneisenParameter::new(0.12)
+        let gamma = GruneisenParameter::new(GRUNEISEN_WATER_20C)
             .with_temperature_dependence(0.005)
             .with_pressure_dependence(1e-6);
         let v = gamma.get_value(BODY_TEMPERATURE_C, ATMOSPHERIC_PRESSURE);
         assert!(
-            (v - 0.12).abs() < 1e-15,
+            (v - GRUNEISEN_WATER_20C).abs() < 1e-15,
             "At reference conditions Γ must equal Γ₀, got {v}"
         );
     }
@@ -307,10 +308,10 @@ mod tests {
     ///
     #[test]
     fn test_gruneisen_temperature_linear() {
-        // Γ₀ = 0.12, α = 0.01 K⁻¹, T = T_ref + 10 K → Γ = 0.12 * 1.1 = 0.132
-        let gamma = GruneisenParameter::new(0.12).with_temperature_dependence(0.01);
+        // Γ₀ = GRUNEISEN_WATER_20C (0.12), α = 0.01 K⁻¹, T = T_ref + 10 K → Γ = Γ₀ * 1.1 = 0.132
+        let gamma = GruneisenParameter::new(GRUNEISEN_WATER_20C).with_temperature_dependence(0.01);
         let v = gamma.get_value(BODY_TEMPERATURE_C + 10.0, ATMOSPHERIC_PRESSURE);
-        let expected = 0.12 * 1.1;
+        let expected = GRUNEISEN_WATER_20C * 1.1;
         assert!((v - expected).abs() < 1e-12, "Expected {expected}, got {v}");
     }
 
@@ -320,10 +321,10 @@ mod tests {
     ///
     #[test]
     fn test_gruneisen_pressure_linear() {
-        // Γ₀ = 0.12, β = 1e-6 Pa⁻¹, p = p_ref + 1e5 Pa → Γ = 0.12 * 1.1 = 0.132
-        let gamma = GruneisenParameter::new(0.12).with_pressure_dependence(1e-6);
+        // Γ₀ = GRUNEISEN_WATER_20C (0.12), β = 1e-6 Pa⁻¹, p = p_ref + 1e5 Pa → Γ = Γ₀ * 1.1 = 0.132
+        let gamma = GruneisenParameter::new(GRUNEISEN_WATER_20C).with_pressure_dependence(1e-6);
         let v = gamma.get_value(BODY_TEMPERATURE_C, ATMOSPHERIC_PRESSURE + 1e5);
-        let expected = 0.12 * 1.1;
+        let expected = GRUNEISEN_WATER_20C * 1.1;
         assert!((v - expected).abs() < 1e-12, "Expected {expected}, got {v}");
     }
 

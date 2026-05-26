@@ -4,6 +4,7 @@
 //! cancer therapy." International Journal of Radiation Oncology Biology Physics,
 //! 10(6), 787-800.
 
+use crate::core::constants::numerical::SECONDS_PER_MINUTE;
 use crate::core::constants::thermodynamic::KELVIN_OFFSET_C;
 use crate::core::error::KwaversResult;
 use ndarray::{Array3, Zip};
@@ -80,7 +81,7 @@ impl ThermalDoseCalculator {
                     };
 
                     let exponent = REFERENCE_TEMPERATURE_C - temp_celsius;
-                    let dose_increment = r.powf(exponent) * dt / 60.0;
+                    let dose_increment = r.powf(exponent) * dt / SECONDS_PER_MINUTE;
                     *dose += dose_increment;
 
                     if *dose > self.max_dose {

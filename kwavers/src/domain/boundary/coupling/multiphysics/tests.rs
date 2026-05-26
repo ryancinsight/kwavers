@@ -5,6 +5,7 @@ use super::interface::BoundaryMultiPhysicsInterface;
 use crate::core::constants::tissue_acoustics::DENSITY_BLOOD;
 use crate::core::constants::medical::BLOOD_SPECIFIC_HEAT;
 use crate::core::constants::numerical::MHZ_TO_HZ;
+use crate::core::constants::thermodynamic::GRUNEISEN_WATER_20C;
 
 const Z_WATER: f64 = 1_479_036.0;
 const Z_SOFT_TISSUE: f64 = 1_632_400.0;
@@ -105,7 +106,7 @@ fn test_acoustic_elastic_water_bone_transmission() {
 ///
 #[test]
 fn test_multiphysics_photoacoustic_monotone() {
-    let gruneisen = 0.12;
+    let gruneisen = GRUNEISEN_WATER_20C;
     let make = |mu_a: f64| {
         BoundaryMultiPhysicsInterface::new(
             [0.0, 0.0, 0.0],

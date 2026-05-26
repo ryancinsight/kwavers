@@ -13,7 +13,6 @@ impl NumericalValidator {
         use crate::solver::fdtd::{FdtdConfig, FdtdSolver};
         use crate::solver::forward::nonlinear::kuznetsov::{KuznetsovConfig, KuznetsovWave};
         use crate::solver::pstd::{PSTDConfig, PSTDSolver};
-        use std::f64::consts::PI;
 
         let wavelength = 10.0 * self.grid.dx;
         let k = TWO_PI / wavelength;

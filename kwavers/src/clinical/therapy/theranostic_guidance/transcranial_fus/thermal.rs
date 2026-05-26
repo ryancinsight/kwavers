@@ -276,11 +276,12 @@ fn laplacian_neumann_3d(arr: &Array3<f64>, dx2: f64, dy2: f64, dz2: f64) -> Arra
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 
     /// Uniform temperature → Laplacian = 0 everywhere.
     #[test]
     fn laplacian_uniform_field_is_zero() {
-        let arr = Array3::from_elem((8, 8, 8), 37.0_f64);
+        let arr = Array3::from_elem((8, 8, 8), BODY_TEMPERATURE_C);
         let lap = laplacian_neumann_3d(&arr, 1e-3_f64.powi(2), 1e-3_f64.powi(2), 1e-3_f64.powi(2));
         for &v in lap.iter() {
             assert!(v.abs() < 1e-10, "expected zero Laplacian, got {v}");
@@ -302,11 +303,11 @@ mod tests {
             650_000.0,
             1.0,
             0.25,
-            37.0,
+            BODY_TEMPERATURE_C,
         );
         for &t in result.peak_temperature_c.iter() {
             assert!(
-                (t as f64 - 37.0).abs() < 0.01,
+                (t as f64 - BODY_TEMPERATURE_C).abs() < 0.01,
                 "expected ~37 °C, got {t}"
             );
         }
@@ -331,7 +332,7 @@ mod tests {
             650_000.0,
             1.0,
             0.25,
-            37.0,
+            BODY_TEMPERATURE_C,
         );
         let skull_peak = result.peak_temperature_c[[0, 0, 0]] as f64;
         let brain_peak = result.peak_temperature_c[[3, 3, 3]] as f64;
@@ -341,7 +342,7 @@ mod tests {
             "skull peak {skull_peak:.2} should exceed brain peak {brain_peak:.2}"
         );
         // Both should rise above baseline.
-        assert!(skull_peak > 37.0, "skull peak {skull_peak:.2} should exceed baseline");
-        assert!(brain_peak > 37.0, "brain peak {brain_peak:.2} should exceed baseline");
+        assert!(skull_peak > BODY_TEMPERATURE_C, "skull peak {skull_peak:.2} should exceed baseline");
+        assert!(brain_peak > BODY_TEMPERATURE_C, "brain peak {brain_peak:.2} should exceed baseline");
     }
 }
