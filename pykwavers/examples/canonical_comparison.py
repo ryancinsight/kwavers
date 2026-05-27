@@ -154,10 +154,54 @@ def save_case_visual(case_name: str, kw_data: np.ndarray | None, kwa_data: np.nd
         candidate_label="pykwavers pressure",
         cmap="seismic",
     )
+    metrics = compute_metrics(ref, test)
+    # Tone-burst / oscillatory comparisons are sensitive to sub-sample time
+    # offsets between k-Wave's pseudospectral propagator and pykwavers' PSTD
+    # update. Compute the lag-aligned Pearson via FFT cross-correlation:
+    # this isolates legitimate amplitude/waveform parity from a fixed global
+    # time shift that does not affect peak / RMS / envelope agreement.
+    ref_f = np.asarray(ref, dtype=float).ravel()
+    test_f = np.asarray(test, dtype=float).ravel()
+    if ref_f.size and test_f.size and np.std(ref_f) > 1e-30 and np.std(test_f) > 1e-30:
+        from scipy.signal import correlate
+        xc = correlate(ref_f - ref_f.mean(), test_f - test_f.mean(), mode="full")
+        lag = int(np.argmax(xc) - (test_f.size - 1))
+        if lag > 0:
+            r2, t2 = ref_f[lag:], test_f[: test_f.size - lag]
+        elif lag < 0:
+            r2, t2 = ref_f[: ref_f.size + lag], test_f[-lag:]
+        else:
+            r2, t2 = ref_f, test_f
+        n = min(r2.size, t2.size)
+        aligned_corr = (
+            float(np.corrcoef(r2[:n], t2[:n])[0, 1]) if n >= 2 else metrics["corr"]
+        )
+    else:
+        lag = 0
+        aligned_corr = metrics["corr"]
+    # PASS criteria: lag-aligned Pearson >= 0.99 (waveform shape parity),
+    # peak amplitude within 5%, RMS within 5%. A non-zero lag is recorded
+    # but not penalized — it reflects propagator phase calibration, not a
+    # parity defect, and is bounded by the |lag| <= 3 samples check below.
+    status = "PASS" if (
+        aligned_corr >= 0.99
+        and abs(lag) <= 3
+        and 0.95 <= metrics["amp_ratio"] <= 1.05
+        and 0.95 <= metrics["rms_ratio"] <= 1.05
+    ) else "FAIL"
     save_text_report(
         DEFAULT_OUTPUT_DIR / f"canonical_{case_name}_metrics.txt",
         f"canonical {case_name} parity metrics",
-        ["parity_status: DIAGNOSTIC", f"figure: {figure_path.name}"],
+        [
+            f"parity_status: {status}",
+            f"pearson_r: {metrics['corr']:.6f}",
+            f"pearson_r_lag_aligned: {aligned_corr:.6f}",
+            f"sample_lag: {lag}",
+            f"rms_ratio: {metrics['rms_ratio']:.6f}",
+            f"peak_ratio: {metrics['amp_ratio']:.6f}",
+            f"max_diff_pa: {metrics['max_diff']:.3e}",
+            f"figure: {figure_path.name}",
+        ],
     )
     print(f"  Visual parity figure: {figure_path}")
 

@@ -340,15 +340,19 @@ if True:
     # Sensor positions: 4 axial cells at sigma ≈ 0.10, 0.20, 0.30, 0.40.
     # Must satisfy PML < ix < NX_SIM - PML.
     SENSOR_IX = [120, 240, 360, 480]
-    SIGMA_SENSOR = [ix * DX_SIM / Z_S for ix in SENSOR_IX]
-
-    # Run long enough to reach steady state at the farthest sensor.
-    N_TRAVEL = int(SENSOR_IX[-1] * DX_SIM / (C0 * DT_SIM)) + 1
-    N_STEADY_PERIODS = 10                               # periods of F0 for FFT
-    N_STEPS_SIM = N_TRAVEL + int(N_STEADY_PERIODS / (F0 * DT_SIM)) + 1
 
     # ── Source: sinusoidal plane wave injected just inside domain ─────────────
     src_ix = PML + 2
+
+    # Propagation distance from source cell to each sensor; σ = z / z_s.
+    # The source is at src_ix, not at cell 0, so the Fubini comparison must
+    # use (ix - src_ix) * DX_SIM as the physical propagation distance.
+    SIGMA_SENSOR = [(ix - src_ix) * DX_SIM / Z_S for ix in SENSOR_IX]
+
+    # Run long enough to reach steady state at the farthest sensor.
+    N_TRAVEL = int((SENSOR_IX[-1] - src_ix) * DX_SIM / (C0 * DT_SIM)) + 1
+    N_STEADY_PERIODS = 10                               # periods of F0 for FFT
+    N_STEPS_SIM = N_TRAVEL + int(N_STEADY_PERIODS / (F0 * DT_SIM)) + 1
     src_mask_f = np.zeros((NX_SIM, NY_SIM, NZ_SIM), dtype=float)
     src_mask_f[src_ix, 0, 0] = 1.0
 
@@ -397,7 +401,8 @@ if True:
 
     fubini_amps = np.zeros((len(SENSOR_IX), N_HARM))
     for i_s, ix in enumerate(SENSOR_IX):
-        z_sens = ix * DX_SIM
+        # Propagation distance is measured from the source cell, not from ix=0.
+        z_sens = (ix - src_ix) * DX_SIM
         sigma_s = z_sens / Z_S
         for n in range(1, N_HARM + 1):
             fubini_amps[i_s, n - 1] = fubini_harmonic_amplitude(n, sigma_s, P0)
@@ -405,7 +410,7 @@ if True:
     # ── Plot: PSTD vs Fubini per harmonic ─────────────────────────────────────
     fig, axes = plt.subplots(1, N_HARM, figsize=(13, 4.5))
     colors_h = ["C0", "C1", "C2"]
-    sigma_pts = [ix * DX_SIM / Z_S for ix in SENSOR_IX]
+    sigma_pts = [(ix - src_ix) * DX_SIM / Z_S for ix in SENSOR_IX]
 
     max_rel_err = 0.0
     for col, (ax, col_h) in enumerate(zip(axes, colors_h)):

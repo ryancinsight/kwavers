@@ -137,7 +137,11 @@ save_text_report(
     report_path,
     "phase_compare_minimal parity metrics",
     [
-        "parity_status: DIAGNOSTIC",
+        "parity_status: " + (
+            "PASS" if (r >= 0.99 and abs(peak_lag) <= 1
+                       and 0.95 <= pkw_max / kw_max <= 1.05)
+            else "FAIL"
+        ),
         f"arrival_step_difference: {pkw_first - kw_first}",
         f"cross_correlation_peak_lag: {peak_lag}",
         f"pearson_r: {r:.6f}",

@@ -488,21 +488,40 @@ def render_exposure_comparison(
 
     for ax, (result, label, _color) in zip(axes, cases):
         exposure = np.asarray(result["exposure"], dtype=float)
-        ct = np.asarray(result["placement_ct_hu"], dtype=float)
+        ct_raw = np.asarray(result["placement_ct_hu"], dtype=float)
+        placement_body = np.asarray(
+            result.get("placement_body_mask", np.ones_like(ct_raw, dtype=bool)),
+            dtype=bool,
+        )
+        ct = (
+            np.where(placement_body, ct_raw, -1000.0)
+            if placement_body.shape == ct_raw.shape else ct_raw
+        )
+        solver_body = np.asarray(
+            result.get("body_mask", np.ones_like(exposure, dtype=bool)),
+            dtype=bool,
+        )
+        if solver_body.shape != exposure.shape:
+            solver_body = np.ones_like(exposure, dtype=bool)
         spacing = tuple(float(v) for v in result["placement_spacing_m"])
         extent = _image_extent_xy(ct, spacing)
+        solver_extent = _solver_extent_in_placement_frame(result) or extent
 
         ax.imshow(ct.T, cmap="gray", origin="lower", extent=extent, vmin=-200, vmax=300, alpha=0.55)
+        exposure_abs = np.where(solver_body, np.abs(exposure), 0.0)
+        exposure_display = np.ma.masked_where(~solver_body, exposure_abs)
         im = ax.imshow(
-            np.abs(exposure).T, cmap="inferno", origin="lower", extent=extent,
-            vmin=0.0, vmax=float(np.max(np.abs(exposure))) or 1.0, alpha=0.80,
+            exposure_display.T, cmap="inferno", origin="lower", extent=solver_extent,
+            vmin=0.0, vmax=float(np.max(exposure_abs)) or 1.0, alpha=0.80,
         )
-        # Target contour.
+        # Target contour (solver-grid frame).
         target = np.asarray(result.get("target_mask", np.zeros_like(ct)), dtype=bool)
         if target.any():
-            x = np.linspace(extent[0], extent[1], target.shape[0])
-            y = np.linspace(extent[2], extent[3], target.shape[1])
+            x = np.linspace(solver_extent[0], solver_extent[1], target.shape[0])
+            y = np.linspace(solver_extent[2], solver_extent[3], target.shape[1])
             ax.contour(x, y, target.T.astype(float), levels=[0.5], colors="white", linewidths=0.9)
+        ax.set_xlim(extent[0], extent[1])
+        ax.set_ylim(extent[2], extent[3])
 
         # Therapy element positions (2D projection).
         for key, color, size in (
@@ -564,12 +583,61 @@ def render_image_then_treat_sequence(
     # soft tissue, ≈ 26-28 MPa across liver/kidney/brain.
     HISTOTRIPSY_INTRINSIC_THRESHOLD_PA = 26.0e6
 
-    ct = np.asarray(result["placement_ct_hu"], dtype=float)
+    ct_raw = np.asarray(result["placement_ct_hu"], dtype=float)
     anatomy_recon = np.asarray(result["anatomy_reconstruction"], dtype=float)
     exposure = np.asarray(result["exposure"], dtype=float)
-    target = np.asarray(result.get("target_mask", np.zeros_like(ct)), dtype=bool)
+    target = np.asarray(result.get("target_mask", np.zeros_like(ct_raw)), dtype=bool)
+    organ = np.asarray(result.get("organ_mask", np.zeros_like(target)), dtype=bool)
     spacing = tuple(float(v) for v in result["placement_spacing_m"])
-    extent = _image_extent_xy(ct, spacing)
+    extent = _image_extent_xy(ct_raw, spacing)
+
+    # Solver-grid arrays live in a body-bbox crop with its own origin.  Display
+    # them at their TRUE physical bbox in placement coordinates instead of
+    # stretching them onto the full-CT extent (the latter mislocates every solver
+    # voxel by the crop offset, e.g. a recon pixel at solver (40,40) gets drawn
+    # ~10 cm off-target).
+    solver_extent = _solver_extent_in_placement_frame(result) or extent
+
+    # Placement-grid body mask (full CT) — used to clip the displayed CT so the
+    # bed/table strip outside the patient is hidden. Solver-grid body mask is
+    # used to clip recon/exposure fields (same shape as `anatomy_recon`).
+    placement_body = np.asarray(
+        result.get("placement_body_mask", np.ones_like(ct_raw, dtype=bool)),
+        dtype=bool,
+    )
+    if placement_body.shape == ct_raw.shape:
+        ct = np.where(placement_body, ct_raw, -1000.0)
+    else:
+        ct = ct_raw
+
+    solver_body = np.asarray(
+        result.get("body_mask", np.ones_like(anatomy_recon, dtype=bool)),
+        dtype=bool,
+    )
+    if solver_body.shape != anatomy_recon.shape:
+        solver_body = np.ones_like(anatomy_recon, dtype=bool)
+
+    def _contour_xy(mask: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        # Solver-grid mask coordinates in placement frame.
+        return (
+            np.linspace(solver_extent[0], solver_extent[1], mask.shape[0]),
+            np.linspace(solver_extent[2], solver_extent[3], mask.shape[1]),
+        )
+
+    def _overlay_anatomy_contours(ax: "plt.Axes", target_color: str) -> None:
+        # Body outline (faint), organ outline (amber), target outline (anatomy-coloured).
+        if solver_body.any():
+            bx, by = _contour_xy(solver_body)
+            ax.contour(bx, by, solver_body.T.astype(float),
+                       levels=[0.5], colors="#8090a0", linewidths=0.5, alpha=0.55)
+        if organ.any():
+            ox, oy = _contour_xy(organ)
+            ax.contour(ox, oy, organ.T.astype(float),
+                       levels=[0.5], colors="#f5a623", linewidths=0.8, alpha=0.85)
+        if target.any():
+            tx, ty = _contour_xy(target)
+            ax.contour(tx, ty, target.T.astype(float),
+                       levels=[0.5], colors=target_color, linewidths=1.1)
 
     fig, axes = plt.subplots(1, 3, figsize=(15.5, 5.0), constrained_layout=True)
     fig.suptitle(
@@ -583,39 +651,39 @@ def render_image_then_treat_sequence(
     ax0.imshow(
         ct.T, cmap="gray", origin="lower", extent=extent, vmin=-200, vmax=300,
     )
-    if target.any():
-        target_t = target.T.astype(float)
-        x = np.linspace(extent[0], extent[1], target_t.shape[1])
-        y = np.linspace(extent[2], extent[3], target_t.shape[0])
-        ax0.contour(x, y, target_t, levels=[0.5], colors="cyan", linewidths=1.1)
-    ax0.set_title("Planning CT slice + target contour", fontsize=10)
+    _overlay_anatomy_contours(ax0, target_color="cyan")
+    ax0.set_title("Planning CT slice + target / organ contour", fontsize=10)
     ax0.set_xlabel("x [m]", fontsize=8)
     ax0.set_ylabel("y [m]", fontsize=8)
     ax0.set_aspect("equal")
 
     # ── Panel 2: imaging reconstruction (image step) ──────────────────────────
     ax1 = axes[1]
-    # Normalise the reconstruction for display only; do not modify the
-    # underlying field (used elsewhere for metrics).
-    recon_peak = float(np.max(np.abs(anatomy_recon))) or 1.0
-    recon_display = np.abs(anatomy_recon) / recon_peak
+    # Clip recon to the body interior — off-body sidelobes are inversion
+    # artefacts of the limited-aperture, monochromatic Born operator and add
+    # no information about the patient anatomy.
+    recon_in_body = np.where(solver_body, np.abs(anatomy_recon), 0.0)
+    recon_peak = float(np.max(recon_in_body)) or 1.0
+    recon_display = np.ma.masked_where(~solver_body, recon_in_body / recon_peak)
     im1 = ax1.imshow(
-        recon_display.T, cmap="bone", origin="lower", extent=extent, vmin=0.0, vmax=1.0,
+        recon_display.T, cmap="magma", origin="lower", extent=solver_extent,
+        vmin=0.0, vmax=1.0,
     )
-    if target.any():
-        target_t = target.T.astype(float)
-        x = np.linspace(extent[0], extent[1], target_t.shape[1])
-        y = np.linspace(extent[2], extent[3], target_t.shape[0])
-        ax1.contour(x, y, target_t, levels=[0.5], colors="white", linewidths=0.9)
+    # Force the recon panel axes to match the placement frame so spatial
+    # comparison with panels 1 and 3 is direct.
+    ax1.set_xlim(extent[0], extent[1])
+    ax1.set_ylim(extent[2], extent[3])
+    _overlay_anatomy_contours(ax1, target_color="white")
     ax1.set_title(
-        "Reconstructed image\n(multi-angle imaging transmit, same aperture)",
-        fontsize=10,
+        "Reconstructed image (linearised Born, single-pass H¹-Tikhonov)\n"
+        f"in-body peak = {recon_peak:.3g} (a.u.), multi-frequency imaging transmit, same aperture",
+        fontsize=9,
     )
     ax1.set_xlabel("x [m]", fontsize=8)
     ax1.set_aspect("equal")
     plt.colorbar(
         im1, ax=ax1, fraction=0.046, pad=0.02,
-        label="reconstructed contrast (norm.)",
+        label="|contrast| / in-body peak",
     )
 
     # ── Panel 3: focused therapy peak-pressure + predicted lesion ─────────────
@@ -623,37 +691,37 @@ def render_image_then_treat_sequence(
     ax2.imshow(
         ct.T, cmap="gray", origin="lower", extent=extent, vmin=-200, vmax=300, alpha=0.50,
     )
-    exposure_abs = np.abs(exposure)
+    exposure_abs_full = np.abs(exposure)
+    exposure_abs = np.where(solver_body, exposure_abs_full, 0.0)
     exposure_peak = float(np.max(exposure_abs))
+    exposure_peak_full = float(np.max(exposure_abs_full))
     if exposure_peak > 0.0:
+        exposure_display = np.ma.masked_where(~solver_body, exposure_abs)
         im2 = ax2.imshow(
-            exposure_abs.T, cmap="inferno", origin="lower", extent=extent,
+            exposure_display.T, cmap="inferno", origin="lower", extent=solver_extent,
             vmin=0.0, vmax=exposure_peak, alpha=0.82,
         )
         plt.colorbar(im2, ax=ax2, fraction=0.046, pad=0.02, label="peak pressure [Pa]")
         # Intrinsic-threshold isoline (predicted cavitation cloud boundary).
         if exposure_peak >= HISTOTRIPSY_INTRINSIC_THRESHOLD_PA:
+            ex, ey = _contour_xy(exposure_abs)
             ax2.contour(
-                np.linspace(extent[0], extent[1], exposure_abs.shape[0]),
-                np.linspace(extent[2], extent[3], exposure_abs.shape[1]),
-                exposure_abs.T,
+                ex, ey, exposure_abs.T,
                 levels=[HISTOTRIPSY_INTRINSIC_THRESHOLD_PA],
                 colors="red", linewidths=1.4,
             )
-    if target.any():
-        target_t = target.T.astype(float)
-        x = np.linspace(extent[0], extent[1], target_t.shape[1])
-        y = np.linspace(extent[2], extent[3], target_t.shape[0])
-        ax2.contour(x, y, target_t, levels=[0.5], colors="white", linewidths=0.9)
-    title_lines = ["Focused-US peak-pressure exposure"]
+    _overlay_anatomy_contours(ax2, target_color="white")
+    title_lines = [
+        f"Focused-US in-body peak pressure = {exposure_peak / 1e6:.1f} MPa",
+    ]
     if exposure_peak >= HISTOTRIPSY_INTRINSIC_THRESHOLD_PA:
         title_lines.append("red: intrinsic-threshold cavitation isoline (26 MPa)")
     else:
         title_lines.append(
-            f"(peak {exposure_peak / 1e6:.1f} MPa < 26 MPa intrinsic threshold;\n"
-            f"increase source_pressure_pa for lesion isoline)"
+            f"(< 26 MPa intrinsic threshold — no cavitation isoline drawn;\n"
+            f"raw-grid peak incl. PML edge = {exposure_peak_full / 1e6:.1f} MPa)"
         )
-    ax2.set_title("\n".join(title_lines), fontsize=10)
+    ax2.set_title("\n".join(title_lines), fontsize=9)
     ax2.set_xlabel("x [m]", fontsize=8)
     ax2.set_aspect("equal")
 
@@ -818,6 +886,38 @@ def _image_extent_xy(image: np.ndarray, spacing_m: tuple[float, float]) -> list[
         0.5 * (nx - 1) * spacing_m[0],
         -0.5 * (ny - 1) * spacing_m[1],
         0.5 * (ny - 1) * spacing_m[1],
+    ]
+
+
+def _solver_extent_in_placement_frame(result: dict[str, object]) -> list[float] | None:
+    """Physical bbox of the solver-grid arrays (anatomy_reconstruction, exposure,
+    body_mask) expressed in placement-frame coordinates (origin = full CT centre).
+
+    The solver grid is a square crop of the source CT around the patient body,
+    resampled from source-index range `[x0..=x1] × [y0..=y1]` (`crop_bounds_index`)
+    of a `source_dimensions = (NX_src, NY_src)` CT at `source_spacing_m = (sx, sy)`
+    onto a `grid_size × grid_size` solver grid. Returns `[x_min, x_max, y_min, y_max]`
+    aligned to the placement extent so solver-grid arrays can be imshow'd at their
+    true physical location instead of being stretched onto the placement extent.
+
+    Returns None if the metadata is missing (back-compat with old result dicts).
+    """
+    bounds = result.get("crop_bounds_index")
+    src_dims = result.get("source_dimensions")
+    src_spacing = result.get("source_spacing_m")
+    if bounds is None or src_dims is None or src_spacing is None:
+        return None
+    x0, x1, y0, y1 = (int(v) for v in bounds)
+    nx_src, ny_src = (int(v) for v in src_dims)
+    sx, sy = (float(v) for v in src_spacing)
+    cx = 0.5 * (nx_src - 1)
+    cy = 0.5 * (ny_src - 1)
+    # Left edge of voxel x0 → right edge of voxel x1, in placement coordinates.
+    return [
+        (x0 - cx - 0.5) * sx,
+        (x1 - cx + 0.5) * sx,
+        (y0 - cy - 0.5) * sy,
+        (y1 - cy + 0.5) * sy,
     ]
 
 

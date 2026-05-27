@@ -454,6 +454,28 @@ def main() -> int:
         f"pykwavers_runtime_s: {pkw_res['runtime_s']:.3f}",
         "",
     ])
+    # Per-sensor lag-aligned Pearson + lag dispersion. Quantifies the
+    # numerical-dispersion residual between k-Wave's kspace pseudospectral
+    # propagator and pykwavers' PSTD update on heterogeneous 3D IVP.
+    from scipy.signal import correlate as _xcorr
+    per_lag = []
+    per_aligned = []
+    for i in range(kw_p_aligned.shape[0]):
+        a, b = kw_p_aligned[i], py_p[i]
+        if np.std(a) < 1e-12 or np.std(b) < 1e-12:
+            continue
+        xc = _xcorr(a - a.mean(), b - b.mean(), mode="full")
+        lag = int(np.argmax(xc) - (b.size - 1))
+        if lag > 0:
+            a2, b2 = a[lag:], b[: a.size - lag]
+        elif lag < 0:
+            a2, b2 = a[: a.size + lag], b[-lag:]
+        else:
+            a2, b2 = a, b
+        per_lag.append(lag)
+        per_aligned.append(float(np.corrcoef(a2, b2)[0, 1]))
+    per_lag_arr = np.asarray(per_lag, dtype=int) if per_lag else np.array([0], dtype=int)
+    per_aligned_arr = np.asarray(per_aligned) if per_aligned else np.array([metrics["pearson_r"]])
     report = [
         f"pearson_r  = {metrics['pearson_r']:.6f}  (target >= {thr['pearson_r']})",
         f"rms_ratio  = {metrics['rms_ratio']:.6f}  (target [{thr['rms_ratio_min']}, {thr['rms_ratio_max']}])",
@@ -463,6 +485,10 @@ def main() -> int:
         f"peak_kwave_Pa     = {float(np.abs(kw_p_aligned).max()):.6e}",
         f"peak_pykwavers_Pa = {float(np.abs(py_p).max()):.6e}",
         f"peak_ratio        = {metrics['peak_ratio']:.6f}",
+        f"per_sensor_lag_min/median/max = "
+        f"{int(per_lag_arr.min())}/{int(np.median(per_lag_arr))}/{int(per_lag_arr.max())} samples",
+        f"per_sensor_pearson_r_lag_aligned_min/median/max = "
+        f"{float(per_aligned_arr.min()):.4f}/{float(np.median(per_aligned_arr)):.4f}/{float(per_aligned_arr.max()):.4f}",
     ]
     save_text_report(METRICS_PATH, header, report)
     print(f"\n  Saved: {METRICS_PATH}")
