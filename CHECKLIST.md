@@ -74,6 +74,10 @@
 - [x] [minor] Focused bowl hemisphere aperture config: add `FocusedBowlAperture::Hemisphere` and `AxisReferenceHemisphere` so config-driven sources can request fixed-count hemispherical bowl layouts through `BowlTransducer` without anatomy- or device-specific source names.
 - [x] [patch] Source config finite-domain validation: reject non-finite source scalars/vectors, nonpositive pulse cycles, zero configured element counts, and invalid focused-bowl angular/projection domains in `DomainSourceParameters::validate`, with a dedicated integration test target for the public config boundary.
 - [x] [patch] Focused bowl aperture chord guard: require `BowlConfig::from_axis_reference_focus` aperture chords to satisfy `aperture_diameter_m <= 2 * radius_m`, preserve generic focused-bowl cap terminology in Chapter 25 visuals, and verify no source-domain helmet/vendor naming remains.
+- [x] [patch] Focused-bowl utility focus-axis routing: route
+  `make_bowl` through `BowlConfig::from_focus_axis`, document the
+  vertex/focus/radius theorem in Rustdoc, and pin value-semantic invariants for
+  generated element radii without anatomy- or device-specific source naming.
 - [x] [patch] Medium property SSOT constant closure: define missing fluid/tissue and implant effective-nonlinearity constants under `core::constants`, keep medium property tables on named constants, and restore `cargo check -p kwavers --lib`.
 - [x] [patch] Hybrid FDTD/PSTD transition correction: replace the interface blend with a raised-cosine FDTD-boundary to PSTD-interior partition, make `DomainRegion` `Copy`, remove per-step region-vector cloning in both hybrid stepping paths, and pin the blend-weight contract with a value-semantic test.
 - [x] [patch] DG memory-efficiency audit: remove redundant per-step dense mass-matrix inversion from DG stepping, preallocate spectral DG previous-field storage, replace first-step `field.clone()` with `assign`, and pin pointer-stable previous-field reuse.

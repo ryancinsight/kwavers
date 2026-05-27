@@ -1,5 +1,19 @@
 # Backlog / Strategy
 
+## Focused-bowl utility constructor routing - CLOSED (2026-05-27)
+
+- **[done] [patch]** Routed
+  `domain::source::transducers::focused::utils::make_bowl` through
+  `BowlConfig::from_focus_axis` instead of manually constructing a
+  `BowlConfig` literal. This keeps standalone bowl helpers on the same
+  source-domain focus-axis geometry contract used by clinical focused-bowl
+  adapters.
+- **Verification:** `rustfmt --edition 2021 --check` and `git diff --check`
+  passed for the touched focused-source utility. A value-semantic unit test now
+  asserts vertex, focus, radius, diameter, and element-to-focus distance
+  invariants. Cargo execution was not started because concurrent workspace
+  `cargo test`, `cargo check`, and benchmark jobs already held build resources.
+
 ## Theranostic waveform padded simulation domain - LANDED (2026-05-26)
 
 - **[done] [major]** `kwavers/src/clinical/therapy/theranostic_guidance/waveform/`

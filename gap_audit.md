@@ -1,5 +1,29 @@
 # Gap Audit
 
+## CLOSED: Focused-Bowl Utility Focus-Axis Routing (2026-05-27)
+
+Root cause: `make_bowl` manually constructed a `BowlConfig` literal with
+`focus = center + radius * e_z`. That duplicated geometry now owned by
+`BowlConfig::from_focus_axis` and left a standalone helper outside the focused
+bowl source-domain SSOT.
+
+Closure:
+- Replaced the manual config literal with
+  `BowlConfig::from_focus_axis(focus=center+radius*e_z, axis=e_z, radius, diameter, ...)`.
+- Added Rustdoc theorem text tying the helper contract to the canonical
+  focus-axis constructor.
+- Added a value-semantic unit test checking vertex, focus, radius, diameter,
+  and each generated element's distance to focus.
+
+Verification:
+- `rustfmt --edition 2021 --check kwavers/src/domain/source/transducers/focused/utils.rs`:
+  PASS.
+- `git diff --check -- kwavers/src/domain/source/transducers/focused/utils.rs`:
+  PASS.
+- Targeted Cargo execution was deferred because pre-existing concurrent
+  `cargo test`, `cargo check`, and benchmark jobs were active in the shared
+  workspace.
+
 ## CLOSED: Transcranial UST Focused-Bowl Source Routing (2026-05-26)
 
 Root cause: `TranscranialBowlGeometry::from_aperture` still constructed a
