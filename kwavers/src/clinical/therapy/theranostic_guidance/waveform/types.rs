@@ -2,6 +2,27 @@
 
 use ndarray::Array2;
 
+/// Padded 2-D simulation domain that encompasses both the body slice and the
+/// transducer aperture, surrounded by coupling water and CPML on the outer ring.
+///
+/// The body slice is embedded centred in a larger grid; `body_offset` and
+/// `body_dims` describe the rectangular sub-region that corresponds to the
+/// caller-visible body grid. Both `speed_baseline` and `speed_true` have
+/// shape `(grid.nx, grid.ny)` (padded). Cells outside the body region carry
+/// `SOUND_SPEED_WATER_SIM` (coupling water).
+///
+/// References:
+/// - Treeby & Cox (2010), J. Acoust. Soc. Am. 128:2741 — k-Wave padded domain.
+/// - Komatitsch & Martin (2007), Geophysics 72:SM155 — CPML outer strip.
+#[derive(Clone, Debug)]
+pub(super) struct PaddedSimulation {
+    pub(super) grid: AcousticGrid,
+    pub(super) speed_baseline: Array2<f64>,
+    pub(super) speed_true: Array2<f64>,
+    pub(super) body_offset: (usize, usize),
+    pub(super) body_dims: (usize, usize),
+}
+
 /// Output of the source-encoded adjoint RTM waveform simulation.
 #[derive(Clone, Debug)]
 pub struct WaveformSimulationResult {

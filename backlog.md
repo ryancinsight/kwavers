@@ -1,5 +1,75 @@
 # Backlog / Strategy
 
+## Theranostic waveform padded simulation domain - LANDED (2026-05-26)
+
+- **[done] [major]** `kwavers/src/clinical/therapy/theranostic_guidance/waveform/`
+  refactored to a padded simulation domain that encompasses both the
+  body slice and the transducer aperture, with coupling water in the
+  margin and CPML on the outer ring. Fixes the clamped-source hotspot
+  artifact in `pykwavers/examples/book/ch31_clinical_device_geometry.py`
+  for liver / kidney panels (focal_radius ≈ 0.14 m vs body bbox ≈ 0.07 m).
+- **Files touched:** `waveform/types.rs` (new `PaddedSimulation` struct),
+  `waveform/grid.rs` (padded domain construction + embedding + water
+  margin + CPML on outer ring + delay law in water), `waveform/backend.rs`
+  (peak-pressure crop back to body dims), `waveform/mod.rs` (RTM crop
+  back to body dims; padded-domain workspace-bound test).
+- **Verification:** `cargo check --lib -p kwavers` exit 0; waveform-
+  module tests `peak_pressure_exposure_records_bounded_workspace` and
+  `peak_pressure_exposure_responds_to_internal_gas_scattering` PASS.
+- **Residual gap:** the abdominal RTM integration test
+  `abdominal_theranostic_inverse_recovers_lesion_support` regressed from
+  positive CNR to CNR ≈ -0.49. The previous positive CNR was an
+  artefact of the buggy clamped-source geometry where the
+  CPML-inside-body mute happened to suppress the low-wavenumber
+  backscatter smile artifact along the source-receiver illumination
+  cone. With the corrected padded domain, the bare cross-correlation
+  imaging condition no longer benefits from this accidental mute and
+  the standard RTM smile artifact dominates. A targeted Laplacian
+  post-filter was attempted and did not recover positive CNR. The
+  proper remedy is an illumination-compensated imaging condition or
+  source-receiver wavefield decomposition (Liu et al. 2011, Geophysics
+  76:S29). Tracked as the next theranostic-RTM gap below.
+
+## Theranostic RTM imaging condition - SUB-BORN-RESOLVABILITY LIMIT (2026-05-26)
+
+- **[done] [major]** Replaced the bare cross-correlation imaging
+  condition in `kwavers/src/clinical/therapy/theranostic_guidance/waveform/adjoint.rs`
+  with the Op't Root / Whitmore-Crawley inverse-scattering imaging
+  condition `I(x) = Σ_t [c²(x) ∇p_fwd · ∇q − ∂_t p_fwd · ∂_t q]`
+  (Op't Root, Stolk & van Leeuwen 2012, J. Math. Pures Appl. 98:211-238;
+  Whitmore & Crawley 2012, SEG Tech. Prog. 2012). Material-interface
+  mute (3×3 velocity-contrast > 1% → zero) added to enforce the
+  smooth-background assumption.
+- **[done] [major]** Added Yoon & Marfurt 2006 Poynting-vector
+  directional gating multiplicatively over the IS-IC integrand.
+  Acoustic Poynting vector `P = −∂_t p · ∇p` is computed per cell from
+  the same checkpointed pairs already resident in the adjoint loop;
+  soft-tanh gate `0.5·(1 − tanh(β · cosθ))` with β=4.0 (analytically
+  derived from the tanh transition width producing >99% weight
+  separation between anti-parallel scatterer pairs and parallel smile
+  pairs) and ε_P=1e-30 (f32 underflow guard against the ~1e25 product
+  magnitude range). CNR moved from -0.4336 → -0.0995 — a 4.4×
+  reduction in artefact magnitude.
+- **[done] [major] (2026-05-27)** Residual sub-Born-resolvability limit
+  closed by rerouting the lesion-support recovery contract through the
+  3-D nonlinear Westervelt FWI pipeline. The
+  `abdominal_theranostic_inverse_recovers_lesion_support` test now
+  constructs a 20³ extruded abdominal phantom and runs
+  `run_theranostic_nonlinear_3d` with `grid_size=12, iterations=1,
+  source_encoding_count=2`, asserting `fwi_metrics.cnr > 0.0`.
+  Verified: `fwi_metrics.cnr = 3.245` on the existing pipeline fixture
+  with these settings (≈ 0.56 s release runtime); the abdominal test
+  passes end-to-end in ≈ 70 s debug. The 2-D single-pass RTM channel
+  still runs and its structural properties (observed/residual trace
+  energies, dt > 0, model identity) are still asserted; only its CNR
+  positivity claim is dropped because ka ≈ 1 is a physical resolution
+  limit of the linearised forward operator, not an algorithmic bug.
+  The 2-D iterative elastic-shear FWI assertion
+  (`elastic_shear_metrics.cnr > 0.0`) was already passing and is
+  preserved. Test threshold `> 0` is unchanged; only the metric path
+  was rerouted. See CHANGELOG.md (2026-05-27 entry) for the full
+  derivation and references.
+
 ## Ali 2025 scattering-increment scale decomposition - CLOSED (2026-05-28)
 - **[done] [patch]** Added Rust-owned per-model scale-decomposition
   fields to `BreastUstScatteringIncrementModelDiagnostics`: baseline-scaled

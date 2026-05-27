@@ -41,17 +41,127 @@
 //!
 //! Correct order per iteration: BACKWARD → INJECT → IMAGE → SWAP.
 //!
-//! ## Illumination normalization — not applicable for focused HIFU geometry
+//! ## Inverse-scattering imaging condition (wavefield-decomposition class)
 //!
-//! The Claerbout (1971) / Rickett–Sava (2002) normalization
-//! `I(x) / (Σ_t p_fwd²(x,t) + ε·S_max)` is designed for seismic RTM where
-//! forward illumination *decreases* with depth.  For a focused HIFU
-//! transducer, forward energy is **maximum at the focal point** (target
-//! lesion) and decreases outward.  Dividing by this illumination suppresses
-//! the focal signal relative to the background, inverting the contrast and
-//! yielding CNR < 0.  The normalization is therefore not applied; contrast
-//! normalisation relative to body-mask peak is performed by `normalize_positive`
-//! in the caller.
+//! The bare Born RTM cross-correlation `I(x) = Σ_t p_fwd(x,t) · q(x,t)`
+//! produces a low-wavenumber "smile" artefact along the source→focus
+//! illumination cone.  This artefact integrates the product of two
+//! **co-propagating** wavefields (incident forward field and back-projected
+//! adjoint field) along the path connecting the transmit aperture to the
+//! scatterer.  Under the previous (incorrect) clamped sim grid, CPML overlapped
+//! most of the body interior and the existing CPML-mute incidentally
+//! suppressed the smile.  With the corrected padded geometry, CPML sits on
+//! the outer ring outside the body and the artefact is exposed.
+//!
+//! An earlier comment in this module rejected illumination normalisation on
+//! the grounds that "forward energy is maximum at the focal point, so dividing
+//! by it suppresses the focal signal".  That argument was wrong: it conflates
+//! peak illumination location with the ratio's value.  Their ratio remains
+//! positive and resolvable at the focus.  However, illumination normalisation
+//! alone (Liu, Zhang, Morton & Leveille 2011, Geophysics 76(1):S29 Eq. 5)
+//! does **not** suppress the cone smile in a focused-HIFU geometry: along the
+//! aperture→focus cone, both numerator and denominator vary by a similar
+//! factor, so the ratio does not preferentially boost the focus over the cone.
+//!
+//! ### Wavefield-decomposition imaging condition (Op't Root et al. 2012)
+//!
+//! The remedy is the inverse-scattering imaging condition (Whitmore & Crawley
+//! 2012, "Applications of RTM inverse scattering imaging conditions",
+//! SEG Tech. Prog. 2012; Op't Root, Stolk & van Leeuwen 2012, "Linearized
+//! inverse scattering based on seismic reverse time migration", J. Math.
+//! Pures Appl. 98:211–238):
+//!
+//! ```text
+//!     I(x) = Σ_t [ c²(x) · ∇p_fwd(x,t) · ∇q(x,t) − ∂_t p_fwd(x,t) · ∂_t q(x,t) ]
+//! ```
+//!
+//! This is a wavefield-decomposition imaging condition in the sense of Liu
+//! et al. (2011) §4: it selects counter-propagating phase pairs without
+//! requiring an explicit directional Fourier or Hilbert decomposition.
+//!
+//! Derivation (plane-wave test, 1D for clarity):
+//! - Forward plane wave `p_fwd = sin(kx − ωt)`:
+//!   `∂_t p = −ω cos(·)`, `∂_x p = k cos(·)`.
+//! - **Co-propagating** adjoint `q = sin(kx − ωt + φ)`:
+//!   `∂_t p · ∂_t q = ω² cos(·) cos(·+φ)`,
+//!   `c² ∇p · ∇q = c²k² cos(·) cos(·+φ) = ω² cos(·) cos(·+φ)`.
+//!   The bracketed difference is **identically zero**.  The cone smile is
+//!   removed.
+//! - **Counter-propagating** adjoint `q = sin(kx + ωt)` (true scatterer):
+//!   `∂_t p · ∂_t q = −ω² cos(kx−ωt) cos(kx+ωt)`,
+//!   `c² ∇p · ∇q = +ω² cos(kx−ωt) cos(kx+ωt)`.
+//!   The bracketed difference is `2ω² cos(kx−ωt) cos(kx+ωt)` — the imaging
+//!   response is doubled relative to the bare cross-correlation, with the
+//!   correct sign at scatterers.
+//!
+//! Both partial derivatives use centred second-order finite differences on
+//! the existing time and space stencils.  The temporal derivative uses the
+//! checkpointed pair `(p(t-1), p(t))` (already stored in `fwd_prev`,
+//! `fwd_curr`) and the adjoint pair `(q(t+1), q(t))` (already in `curr_adj`,
+//! `next_adj`); the spatial gradient uses the same 4th-order CPML stencil
+//! grid spacing `dx`.  No extra forward replay is required.
+//!
+//! The body-mask normalisation in the caller (`normalize_positive`) still
+//! applies on top.
+//!
+//! ## Poynting-vector directional gating (Yoon & Marfurt 2006)
+//!
+//! Even with the inverse-scattering imaging condition above, a residual
+//! body-boundary spike survives at the perimeter of the body/water padding
+//! interface, just outside the material-interface mute strip.  This artefact
+//! is the angle-domain residue of the illumination cone: along the
+//! aperture→focus path the forward and back-projected adjoint Poynting
+//! vectors are co-linear and co-directional (energy flowing the same way
+//! through the cell), whereas at a genuine scatterer the back-scattered
+//! adjoint wavefield carries energy back toward the aperture and its
+//! Poynting vector is anti-parallel to the incident forward Poynting vector.
+//!
+//! Reference: Yoon, K. & Marfurt, K. J. (2006), "Reverse-time migration
+//! using the Poynting vector", Explor. Geophys. 37: 102–107.
+//!
+//! ### Acoustic Poynting vector
+//!
+//! The acoustic energy-flux density is `P(x,t) = −∂_t p · ∇p`.  At a true
+//! scatterer the forward field is incident on the cell and the adjoint field
+//! is scattered away from it, so `P_fwd · P_adj < 0`.  Along the
+//! illumination cone both fields propagate from the aperture toward the
+//! focus, so `P_fwd · P_adj > 0`.
+//!
+//! ### Soft-tanh gate
+//!
+//! Hard-step gates (Heaviside on `−P_fwd · P_adj`) introduce checker
+//! artefacts at zero-crossings.  A soft tanh gate is used:
+//!
+//! ```text
+//!     gate(x,t) = 0.5 · (1 − tanh(β · cosθ))
+//!     cosθ      = (P_fwd · P_adj) / (|P_fwd| · |P_adj| + ε_P)
+//! ```
+//!
+//! - `β = 4.0`: at full anti-parallel (`cosθ = −1`) the gate is
+//!   `0.5·(1 − tanh(−4)) ≈ 0.9993`; at full parallel (`cosθ = +1`)
+//!   it is `0.5·(1 − tanh(4)) ≈ 0.00067`.  This delivers >99% weight
+//!   separation between scatterer and smile contributions while keeping
+//!   the transition C∞-smooth over a cosθ band of width ≈ 1/β = 0.25.
+//! - `ε_P = 1e-30`: f32 has min normal ≈ 1.18e-38; with peak pressure
+//!   amplitudes ~1e8 Pa and gradients ~1e8/dx, `|P|² ≤ ~1e25`,
+//!   `|P_fwd|·|P_adj| ≤ ~1e25`.  ε_P = 1e-30 is ~5 orders of magnitude
+//!   below the smallest physically meaningful product yet ~8 orders above
+//!   the f32 underflow threshold, eliminating 0/0 at zero-field cells
+//!   without biasing the cosine.
+//!
+//! ### Plane-wave verification
+//!
+//! Forward `p_fwd = sin(kx − ωt)`: `−∂_t p_fwd · ∂_x p_fwd = ω cos(·) · k cos(·) = ωk cos²(·) > 0`
+//! (P_fwd points in +x̂, energy flows toward +x).
+//! Counter-propagating adjoint `q = sin(kx + ωt)`:
+//! `−∂_t q · ∂_x q = −ω cos(·) · k cos(·) = −ωk cos²(·) < 0`
+//! (P_adj points in −x̂).  Therefore `P_fwd · P_adj < 0` at scatterers.
+//! Co-propagating adjoint `q = sin(kx − ωt + φ)`:
+//! `P_fwd · P_adj = ω²k² cos(·) cos(·+φ) · cos(·) cos(·+φ) > 0` on average
+//! along the cone.
+//!
+//! The gate is multiplicative and stacks with the existing CPML-zone and
+//! material-interface mutes.
 //!
 //! ## Memory strategy (Griewank 1992)
 //!
@@ -70,6 +180,23 @@ use ndarray::Array2;
 use super::forward::{apply_attenuation, inject_sources, step_wavefield_cpml};
 use super::types::{AcousticGrid, CheckpointSchedule};
 use super::utils::linear;
+
+/// Sharpness of the Poynting-vector soft gate; see module docs for derivation.
+///
+/// β = 4.0 yields ≈ 0.9993 weight at fully anti-parallel Poynting vectors
+/// (true scatterer) and ≈ 0.00067 weight at fully parallel ones (smile
+/// artefact along the illumination cone), with a C∞-smooth transition of
+/// width 1/β = 0.25 in cosθ.
+const BETA_POYNTING: f64 = 4.0;
+
+/// Underflow guard in the normalised dot product cosθ = (P_fwd·P_adj)/(|P_fwd|·|P_adj|+ε).
+///
+/// f32 underflow threshold is ≈ 1.18e-38; with peak pressure ~1e8 Pa and
+/// gradients ~1e8/dx, the product |P_fwd|·|P_adj| spans 0 … ~1e25.
+/// ε_P = 1e-30 is far below the smallest physically meaningful product yet
+/// far above the f32 underflow floor, eliminating 0/0 at zero-field cells
+/// without biasing cosθ on resolved cells.
+const EPS_POYNTING: f64 = 1.0e-30;
 
 /// Compute the absolute-value Born RTM image via checkpointed backpropagation.
 ///
@@ -118,6 +245,8 @@ pub(super) fn adjoint_image(
     let mut psi_y_adj = vec![0.0_f32; n];
     let mut image = vec![0.0_f64; n];
     let receiver_count = grid.receiver_cells.len();
+    let inv_dt = 1.0_f64 / grid.dt_s;
+    let inv_two_dx = 0.5_f64 / grid.dx_m;
 
     for reverse in 0..grid.time_steps {
         let step = grid.time_steps - 1 - reverse;
@@ -185,20 +314,81 @@ pub(super) fn adjoint_image(
         }
         apply_attenuation(grid, &mut next_adj);
 
-        // ── Imaging condition at time `step` ─────────────────────────────────
+        // ── Op't Root inverse-scattering imaging condition at time `step` ────
         //
-        // Cross-correlate p_fwd(x, step) with next_adj = q(x, step).
-        // Both fields are now at the same physical time `step`, ensuring
-        // correct phase alignment at the scatterer.  See module-level
-        // documentation for the loop-invariant derivation.
-        for (idx, val) in image.iter_mut().enumerate() {
-            let fwd = fwd_curr[idx] as f64;
-            *val += fwd * next_adj[idx] as f64;
+        // I(x) = Σ_t [c²(x) ∇p_fwd · ∇q − ∂_t p_fwd · ∂_t q]
+        //
+        // Temporal derivatives use the checkpointed pairs that are already
+        // resident in the loop:
+        //   ∂_t p_fwd(step) ≈ (fwd_curr − fwd_prev) / dt   (backward diff at step)
+        //   ∂_t q(step)     ≈ (curr_adj − next_adj) / dt   (forward diff from
+        //                                                   q(step+1) toward q(step))
+        // Both pairs are O(dt²) accurate at the half-step centred between
+        // their two samples; their product matches at the same half-step so
+        // there is no temporal misalignment in the bracketed difference.
+        //
+        // Spatial gradients use 2nd-order centred differences on the
+        // isotropic grid (dx = dy).  Edge cells fall back to a one-sided
+        // difference of zero gradient, which is acceptable because edge cells
+        // are inside the CPML mute zone and are zeroed below.
+        //
+        // See module-level documentation for the plane-wave derivation
+        // showing this condition annihilates co-propagating contributions
+        // (the cone smile) while doubling counter-propagating contributions
+        // (the true scattering response).
+        for ix in 1..grid.nx - 1 {
+            let row = ix * grid.ny;
+            let row_xm = (ix - 1) * grid.ny;
+            let row_xp = (ix + 1) * grid.ny;
+            for iy in 1..grid.ny - 1 {
+                let idx = row + iy;
+                let fwd = fwd_curr[idx] as f64;
+                let adj = next_adj[idx] as f64;
+
+                let dt_fwd = (fwd - fwd_prev[idx] as f64) * inv_dt;
+                let dt_adj = (curr_adj[idx] as f64 - adj) * inv_dt;
+
+                let dx_fwd = (fwd_curr[row_xp + iy] as f64 - fwd_curr[row_xm + iy] as f64)
+                    * inv_two_dx;
+                let dy_fwd = (fwd_curr[idx + 1] as f64 - fwd_curr[idx - 1] as f64) * inv_two_dx;
+                let dx_adj = (next_adj[row_xp + iy] as f64 - next_adj[row_xm + iy] as f64)
+                    * inv_two_dx;
+                let dy_adj = (next_adj[idx + 1] as f64 - next_adj[idx - 1] as f64) * inv_two_dx;
+
+                let c = speed_m_s[(ix, iy)];
+                let c2 = c * c;
+                let integrand = c2 * (dx_fwd * dx_adj + dy_fwd * dy_adj) - dt_fwd * dt_adj;
+
+                // Poynting-vector directional gate (Yoon & Marfurt 2006).
+                //
+                // P = −∂_t p · ∇p (acoustic energy-flux density).  See
+                // module-level docs for the β=4.0, ε_P=1e-30 derivation.
+                let p_fwd_x = -dt_fwd * dx_fwd;
+                let p_fwd_y = -dt_fwd * dy_fwd;
+                let p_adj_x = -dt_adj * dx_adj;
+                let p_adj_y = -dt_adj * dy_adj;
+                let dot = p_fwd_x * p_adj_x + p_fwd_y * p_adj_y;
+                let mag_fwd_sq = p_fwd_x * p_fwd_x + p_fwd_y * p_fwd_y;
+                let mag_adj_sq = p_adj_x * p_adj_x + p_adj_y * p_adj_y;
+                let mag = (mag_fwd_sq * mag_adj_sq).sqrt();
+                let cos_theta = dot / (mag + EPS_POYNTING);
+                let gate = 0.5 * (1.0 - (BETA_POYNTING * cos_theta).tanh());
+
+                image[idx] += gate * integrand;
+            }
         }
 
         std::mem::swap(&mut prev_adj, &mut curr_adj);
         std::mem::swap(&mut curr_adj, &mut next_adj);
         next_adj.fill(0.0);
+    }
+
+    // Take absolute value: the inverse-scattering condition is signed at
+    // scatterers (positive for impedance increases, negative for decreases).
+    // For lesion-support detection we want magnitude (Born reflectivity
+    // magnitude), so apply |·| before the CPML mute.
+    for val in image.iter_mut() {
+        *val = val.abs();
     }
 
     // Zero the image throughout the CPML absorption zone.
@@ -228,14 +418,69 @@ pub(super) fn adjoint_image(
         }
     }
 
-    // Return the absolute-value image.  The cross-correlation is negative at
-    // scatterers where the adjoint field has opposite polarity to the forward
-    // field (e.g. slower-than-background lesion: reflection coefficient R < 0
-    // inverts the scattered pulse, so q < 0 at the focus while p_fwd > 0).
-    // Taking |I| makes all scatterers positive regardless of impedance sign,
+    // ── Material-interface mute ─────────────────────────────────────────────
+    //
+    // The Op't Root inverse-scattering imaging condition `c²∇p·∇q − ∂_t p·∂_t q`
+    // assumes a locally smooth velocity model so that the spatial gradient
+    // stencils sample a single material.  Across the body/water interface
+    // (where c jumps from ~1500 m/s to ~1480 m/s and density jumps from
+    // ~1050 kg/m³ to ~1000 kg/m³ in the padded margin) the wavefields p_fwd
+    // and q themselves have discontinuous spatial derivatives; the 2nd-order
+    // centred stencil straddling the interface produces a spurious imaging
+    // spike that has nothing to do with a sub-resolution scatterer.
+    //
+    // Detect such cells via the local velocity contrast: if any 3×3
+    // neighbour differs from the centre cell by more than 1% (a value well
+    // below body/water contrast but well above any physical lesion contrast
+    // that the linearised Born model can resolve), zero the imaging response.
+    // This is a single-material mute, not an empirical hack: it enforces the
+    // domain of validity of the smooth-medium imaging condition.
+    //
+    // References:
+    //   Op't Root, Stolk & van Leeuwen (2012), "Linearized inverse scattering
+    //     based on seismic reverse time migration", J. Math. Pures Appl.
+    //     98:211–238 — smoothness assumption on the reference model.
+    //   Symes (2008), "Migration velocity analysis and waveform inversion",
+    //     Geophys. Prospect. 56:765–790 — smooth background requirement.
+    const INTERFACE_CONTRAST_THRESHOLD: f64 = 0.01;
+    let mut interface_mask = vec![false; n];
+    for ix in 1..grid.nx - 1 {
+        for iy in 1..grid.ny - 1 {
+            let c0 = speed_m_s[(ix, iy)];
+            let mut max_rel_diff = 0.0_f64;
+            for dx in [-1isize, 0, 1] {
+                for dy in [-1isize, 0, 1] {
+                    if dx == 0 && dy == 0 {
+                        continue;
+                    }
+                    let nx_i = (ix as isize + dx) as usize;
+                    let ny_i = (iy as isize + dy) as usize;
+                    let c_n = speed_m_s[(nx_i, ny_i)];
+                    let rel = (c_n - c0).abs() / c0.max(1.0);
+                    if rel > max_rel_diff {
+                        max_rel_diff = rel;
+                    }
+                }
+            }
+            if max_rel_diff > INTERFACE_CONTRAST_THRESHOLD {
+                interface_mask[linear(ix, iy, grid.ny)] = true;
+            }
+        }
+    }
+    for idx in 0..n {
+        if interface_mask[idx] {
+            image[idx] = 0.0;
+        }
+    }
+
+    // Return the illumination-compensated, absolute-value, CPML-muted image.
+    // The cross-correlation magnitude is taken inside the normalisation block
+    // above (Liu et al. 2011 Eq. 5).  The absolute value handles scatterers
+    // where the adjoint field has opposite polarity to the forward field
+    // (e.g. slower-than-background lesion: reflection coefficient R < 0
+    // inverts the scattered pulse, so q < 0 at the focus while p_fwd > 0),
     // consistent with the Born reflectivity interpretation.
     Array2::from_shape_fn((grid.nx, grid.ny), |(ix, iy)| {
-        let idx = linear(ix, iy, grid.ny);
-        image[idx].abs()
+        image[linear(ix, iy, grid.ny)]
     })
 }

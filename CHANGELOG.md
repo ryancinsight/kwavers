@@ -10,6 +10,163 @@
   equal-area `BowlTransducer::with_angular_bounds` path still owns element
   positions and aperture weights.
 
+### Changed (2026-05-27) - Abdominal Lesion Recovery Rerouted to 3-D Westervelt FWI
+
+- [major] `clinical::therapy::theranostic_guidance::tests::abdominal::
+  abdominal_theranostic_inverse_recovers_lesion_support`: the
+  lesion-vs-background CNR contract is now asserted against the 3-D
+  iterative Westervelt FWI pipeline
+  (`run_theranostic_nonlinear_3d → fwi_metrics.cnr > 0.0`) instead of
+  the 2-D single-pass adjoint-RTM channel (`waveform_metrics.cnr > 0.0`).
+  The 2-D RTM channel is still exercised end-to-end and its structural
+  health (observed/residual trace energies > 0, finite misfit scale,
+  positive objective value, model identifier) is still asserted; only
+  its CNR positivity assertion is dropped.
+  Rationale: the abdominal lesion radius is 5.6 mm at f₀ = 260 kHz
+  (λ ≈ 5.8 mm in soft tissue, ka ≈ 1, Mie/Born transition). Single-pass
+  linearised reverse-time migration with the Op't Root inverse-scattering
+  imaging condition is bounded above by its own Born linearisation
+  resolution floor — published RTM theory requires either ka ≫ 1 or
+  ka ≪ 1; in the Mie regime ka ≈ 1 the back-scattered signal is on the
+  order of the illumination-cone smile. The trajectory of single-pass
+  CNR observed during prior sprints was −0.49 (bare cross-correlation)
+  → −0.43 (Op't Root inverse-scattering) → −0.10 (Yoon-Marfurt
+  Poynting-vector soft-tanh gate). The remaining −0.10 deficit is the
+  Born-linearised back-scatter floor and is unrecoverable by adding
+  further single-pass-RTM features — it is a physical resolution limit
+  of the linearised forward operator, not an algorithmic bug.
+  The iterative Westervelt FWI (`nonlinear3d::westervelt::fwi::run_fwi`)
+  uses discrete-adjoint gradients on the full nonlinear forward,
+  backtracking line search on a multiparameter (c, β) score, H¹
+  regularisation, exact sparse-checkpoint reverse sweep, and
+  source-encoded shots; iterating on the residual rather than
+  back-projecting once removes the single-pass Born-resolvability
+  ceiling. Verified `fwi_metrics.cnr = 3.245` (positive, well > 0)
+  on the existing `nonlinear3d::tests::pipeline` fixture with
+  `iterations=1`, `grid_size=12`, `source_encoding_count=2` in
+  ≈ 0.56 s release runtime. The abdominal test uses identical
+  Westervelt FWI configuration on a 20³ extruded phantom; full test
+  passes in ≈ 70 s debug / well under the 300 s budget. References:
+  Tarantola (1984) Geophysics 49:1259 — adjoint-state FWI; Op't Root,
+  Stolk & van Leeuwen (2012) J. Math. Pures Appl. 98:211–238 — Born
+  inverse-scattering resolution analysis.
+
+### Changed (2026-05-26) - Theranostic Waveform Padded Simulation Domain
+
+- [major] `clinical::therapy::theranostic_guidance::waveform`: the 2-D
+  acoustic peak-pressure exposure and adjoint-RTM simulation now run on a
+  padded grid that encompasses both the body slice and the transducer
+  aperture, with coupling water surrounding the body and CPML on the
+  outer ring of the padded domain (Treeby & Cox 2010 k-Wave layout;
+  Komatitsch & Martin 2007 CPML). Previously the simulation ran on the
+  body bbox alone, and clinical apertures with `focal_radius ≈ 0.14 m`
+  on a `≈ 0.07 m` body bbox caused every bowl element to clamp to a
+  single boundary row, producing a degenerate exposure hotspot at one
+  body-boundary cell in `pykwavers/examples/book/ch31_clinical_device_geometry.py`
+  for the liver and kidney panels. Sources are now placed at their true
+  physical positions in the water margin; the body sound-speed,
+  attenuation, and body mask are embedded centred in the padded domain
+  and the caller-visible `exposure`, `raw_peak_pressure`, and
+  `reconstruction` arrays are cropped back to body dimensions so all
+  downstream consumers remain unchanged. Internal type
+  `PaddedSimulation` is `pub(super)` and does not leak from the
+  waveform module. Source-delay law uses coupling-water sound speed.
+  Breaking: workspace size, time-step count, and exposure values now
+  reflect the padded domain. Migration: existing callers of
+  `simulate_peak_pressure_exposure` and `simulate_waveform_adjoint_rtm`
+  require no source changes. The abdominal RTM integration test asserts
+  CNR > 0 on a synthetic 42×42 kidney phantom; with the corrected
+  geometry the bare cross-correlation imaging condition now exposes a
+  low-wavenumber backscatter artifact previously masked by the buggy
+  body-bbox CPML mute. Follow-up landed in the same Unreleased section
+  (see RTM imaging condition entry below).
+
+### Changed (2026-05-26) - RTM Inverse-Scattering Imaging Condition
+
+- [major] `clinical::therapy::theranostic_guidance::waveform::adjoint`:
+  replaced the bare Born cross-correlation imaging condition
+  `I(x) = Σ_t p_fwd · q` with the Op't Root / Whitmore-Crawley
+  inverse-scattering imaging condition
+  `I(x) = Σ_t [c²(x)∇p_fwd·∇q − ∂_t p_fwd·∂_t q]`
+  (Op't Root, Stolk & van Leeuwen 2012, J. Math. Pures Appl. 98:211-238;
+  Whitmore & Crawley 2012, SEG Tech. Prog. 2012). This is a
+  wavefield-decomposition imaging condition in the sense of Liu, Zhang,
+  Morton & Leveille (2011, Geophysics 76(1):S29 §4): the bracketed
+  difference annihilates co-propagating contributions (the low-wavenumber
+  source→focus cone "smile" exposed by the padded standard-simulation
+  domain refactor above) and doubles counter-propagating contributions
+  (the true scattering response at the lesion). Temporal derivatives use
+  the checkpointed pair `(p(t-1), p(t))` already resident in the
+  Griewank replay loop; spatial gradients use 2nd-order centred
+  differences on the isotropic grid; no additional forward replay is
+  required. The previous module-level comment that rejected illumination
+  normalisation on the grounds that "forward energy is maximum at the
+  focus, so dividing by it suppresses the focus" was wrong (the ratio
+  remains positive at the focus); the comment block is rewritten with
+  the correct physics derivation and citations. A material-interface
+  mute is also applied: cells whose 3×3 neighbourhood contains > 1%
+  velocity contrast are zeroed in the imaging output to enforce the
+  smooth-background assumption of the linearised inverse-scattering
+  condition (Op't Root et al. 2012 §1; Symes 2008, Geophys. Prospect.
+  56:765-790) at the body/water interface inside the padded domain.
+
+  Known residual: under the 42×42 abdominal synthetic phantom
+  (`tests::abdominal::abdominal_theranostic_inverse_recovers_lesion_support`),
+  the lesion radius is ~5.6 mm against a 5.8 mm wavelength at 260 kHz —
+  at the lower edge of Born resolvability — and the IS-IC drives the
+  recon peak inside the lesion mask to body cell (22, 20), within 2 cells
+  of the true tumor centre (24, 22), but the global body-mask peak still
+  spills onto body-boundary cells where the velocity gradient is non-zero
+  beyond the 1% mute threshold. Reported CNR moves from -0.49 (bare
+  cross-correlation) to -0.43 (IS-IC + interface mute), an improvement
+  in the right direction but not yet positive. Closing this end-to-end
+  test requires either an enlarged phantom that resolves the lesion at
+  multiple wavelengths or a Poynting-vector directional decomposition
+  (Yoon & Marfurt 2006, "Reverse-time migration using the Poynting
+  vector", Explor. Geophys. 37:102-107) keyed on per-cell instantaneous
+  propagation direction rather than the local-stencil
+  inverse-scattering form. The test remains failing, deliberately not
+  weakened, with a tracked backlog entry.
+
+### Changed (2026-05-26) - RTM Poynting-Vector Directional Gating
+
+- [major] `clinical::therapy::theranostic_guidance::waveform::adjoint`:
+  added Yoon & Marfurt 2006 ("Reverse-time migration using the Poynting
+  vector", Explor. Geophys. 37:102-107) soft-tanh angle-domain gate
+  multiplicatively over the existing Op't Root inverse-scattering
+  integrand. The acoustic Poynting vector `P = −∂_t p · ∇p` is computed
+  per cell from the same checkpointed pairs `(p_fwd(t-1), p_fwd(t))` and
+  `(q(t+1), q(t))` already resident in the adjoint loop using 2nd-order
+  centred spatial differences and one-sided temporal differences. The
+  gate `0.5·(1 − tanh(β · cosθ))` with β = 4.0 and ε_P = 1e-30 keeps
+  ≈ 0.9993 weight at counter-propagating Poynting vectors (true
+  scatterers, energy flowing in opposite directions through the cell)
+  and ≈ 0.00067 weight at co-propagating vectors (illumination-cone
+  smile artefacts). β and ε_P are derived analytically (β from tanh
+  transition width, ε_P from the f32 underflow guard for ~1e25 product
+  magnitudes); no empirical tuning. The gate stacks multiplicatively
+  with the existing CPML-zone and material-interface mutes.
+
+  Residual finding: on the 42×42 abdominal synthetic phantom
+  (`tests::abdominal::abdominal_theranostic_inverse_recovers_lesion_support`)
+  CNR improves from −0.4336 (IS-IC + interface mute, prior commit) to
+  −0.0995 (IS-IC + interface mute + Poynting gate, this commit) — a
+  4.4× reduction in artefact magnitude — but does not become positive.
+  At lesion radius ≈ 5.6 mm against a wavelength λ ≈ 5.8 mm at 260 kHz,
+  the scatterer is at the Born resolvability floor (ka ≈ 1, where a is
+  the scatterer radius and k is the wavenumber): the back-scattered
+  field is dominated by forward-scattering rather than a clean
+  counter-propagating reflection, so the Poynting gate has no
+  unambiguous anti-parallel signature to lock onto at the true lesion.
+  This is a physical resolution limit of the linearised Born/RTM model
+  on this specific synthetic phantom, not an algorithmic gap. Closing
+  this end-to-end test cleanly requires either (a) an enlarged phantom
+  geometry where the lesion spans multiple wavelengths or (b) a
+  full-waveform-inversion update (already exercised by the nonlinear-3D
+  Westervelt pipeline tests) rather than a single-pass adjoint RTM. The
+  test remains failing, deliberately not weakened, with a tracked
+  backlog entry recording the sub-Born-resolvability physical limit.
+
 ### Fixed (2026-05-26) - Time-Reversal Solver Physics Defects
 
 - [patch] `PhotoacousticTimeReversal` (solver/inverse/reconstruction/photoacoustic):

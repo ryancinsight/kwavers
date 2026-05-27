@@ -42,27 +42,32 @@ impl PeakPressureBackend for ReferenceFdtdCpmlBackend {
         layout: &DeviceLayout,
         config: &TheranosticInverseConfig,
     ) -> PeakPressureExposureResult {
-        let grid = acoustic_grid(
+        let sim = acoustic_grid(
             prepared,
             layout,
             config,
             &prepared.sound_speed_m_s,
             &prepared.sound_speed_m_s,
         );
-        let peak = propagate_peak_pressure(&grid, &prepared.sound_speed_m_s);
-        let (nx, ny) = prepared.sound_speed_m_s.dim();
-        let raw_peak_pressure =
-            ndarray::Array2::from_shape_fn((nx, ny), |(ix, iy)| peak[linear(ix, iy, ny)] as f64);
+        let peak = propagate_peak_pressure(&sim.grid, &sim.speed_true);
+        let (nx_b, ny_b) = sim.body_dims;
+        let (ox, oy) = sim.body_offset;
+        let padded_ny = sim.grid.ny;
+        // Crop the padded peak field back to the body sub-region so the
+        // caller-visible exposure shape matches `prepared.body_mask`.
+        let raw_peak_pressure = ndarray::Array2::from_shape_fn((nx_b, ny_b), |(ix, iy)| {
+            peak[linear(ix + ox, iy + oy, padded_ny)] as f64
+        });
         let exposure = normalize_positive(&raw_peak_pressure, &prepared.body_mask)
             .mapv(|value| value * config.source_pressure_pa);
 
         PeakPressureExposureResult {
             exposure,
             raw_peak_pressure,
-            source_count: grid.source_cells.len(),
-            time_steps: grid.time_steps,
-            dt_s: grid.dt_s,
-            workspace_values: peak_pressure_workspace_values(nx, ny),
+            source_count: sim.grid.source_cells.len(),
+            time_steps: sim.grid.time_steps,
+            dt_s: sim.grid.dt_s,
+            workspace_values: peak_pressure_workspace_values(sim.grid.nx, sim.grid.ny),
             model_name: THERANOSTIC_WAVE_EXPOSURE_MODEL,
             backend_name: Self::BACKEND_NAME,
             uses_hybrid_pstd_fdtd: Self::USES_HYBRID_PSTD_FDTD,

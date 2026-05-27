@@ -89,15 +89,15 @@ pub fn simulate_waveform_adjoint_rtm(
     lesion: &ndarray::Array2<f64>,
 ) -> WaveformSimulationResult {
     let true_speed = lesion_speed(prepared, config, lesion);
-    let grid = acoustic_grid(
+    let sim = acoustic_grid(
         prepared,
         layout,
         config,
         &prepared.sound_speed_m_s,
         &true_speed,
     );
-    let observed = propagate(&grid, &true_speed, false);
-    let predicted = propagate(&grid, &prepared.sound_speed_m_s, true);
+    let observed = propagate(&sim.grid, &sim.speed_true, false);
+    let predicted = propagate(&sim.grid, &sim.speed_baseline, true);
     let residual = evaluate_trace_residual(
         &observed.traces,
         &predicted.traces,
@@ -111,20 +111,26 @@ pub fn simulate_waveform_adjoint_rtm(
         .as_ref()
         .expect("forward checkpoints required for adjoint imaging");
     let image = adjoint_image(
-        &grid,
-        &prepared.sound_speed_m_s,
+        &sim.grid,
+        &sim.speed_baseline,
         &residual.adjoint_source,
         checkpoints,
         predicted.checkpoint_interval,
     );
-    let reconstruction = normalize_positive(&image, &prepared.body_mask);
+    // Crop the padded adjoint image back to the body sub-region so the
+    // caller-visible reconstruction shape matches `prepared.body_mask`.
+    let (nx_b, ny_b) = sim.body_dims;
+    let (ox, oy) = sim.body_offset;
+    let image_cropped =
+        ndarray::Array2::from_shape_fn((nx_b, ny_b), |(ix, iy)| image[[ix + ox, iy + oy]]);
+    let reconstruction = normalize_positive(&image_cropped, &prepared.body_mask);
     WaveformSimulationResult {
         reconstruction,
         residual_energy,
         observed_energy,
-        receiver_count: grid.receiver_cells.len(),
-        time_steps: grid.time_steps,
-        dt_s: grid.dt_s,
+        receiver_count: sim.grid.receiver_cells.len(),
+        time_steps: sim.grid.time_steps,
+        dt_s: sim.grid.dt_s,
         model_name: THERANOSTIC_WAVEFORM_MODEL,
         misfit_name: residual.misfit.label(),
         misfit_scale: residual.scale,
@@ -155,7 +161,11 @@ mod tests {
         assert_eq!(result.backend_name, THERANOSTIC_WAVE_EXPOSURE_BACKEND);
         assert!(!result.uses_hybrid_pstd_fdtd);
         assert_eq!(result.source_count, layout.therapy_elements.len());
-        assert_eq!(result.workspace_values, 6 * 28 * 28);
+        // Padded simulation grid encompasses body + aperture + λ_water +
+        // PML_CELLS margin on each side; allocated workspace must dominate
+        // the bare-body 6·28·28 lower bound and remain a multiple of 6.
+        assert!(result.workspace_values >= 6 * 28 * 28);
+        assert_eq!(result.workspace_values % 6, 0);
         assert!(result.time_steps >= 96);
         assert!(result.dt_s > 0.0);
         assert!(raw_peak > 0.0);

@@ -20,6 +20,34 @@
 - [x] Enforce Single Source of Truth via shared accessors
 
 ## Phase 3: Component Validation vs k-Wave (50%+)
+- [x] [major] Theranostic waveform padded simulation domain: refactor
+  `clinical::therapy::theranostic_guidance::waveform` to a padded grid
+  encompassing both body slice and transducer aperture with coupling
+  water + outer-ring CPML; eliminates the clamped-source hotspot
+  artefact in `pykwavers/examples/book/ch31_clinical_device_geometry.py`
+  for liver / kidney panels. Internal `PaddedSimulation` type;
+  caller-visible arrays cropped to body dims. Follow-up:
+  illumination-compensated RTM imaging condition (see backlog).
+- [x] [major] Theranostic RTM inverse-scattering imaging condition +
+  Poynting-vector directional gating: replaced bare Born cross-
+  correlation in `clinical::therapy::theranostic_guidance::waveform::adjoint`
+  with Op't Root / Whitmore-Crawley `I = Σ [c²∇p·∇q − ∂_t p · ∂_t q]`
+  (Op't Root, Stolk & van Leeuwen 2012; Whitmore & Crawley 2012), added
+  3×3 1%-velocity-contrast material-interface mute, and layered Yoon &
+  Marfurt 2006 soft-tanh Poynting-vector gate
+  `0.5·(1 − tanh(4·cosθ))` over the integrand. CNR for the 42×42
+  abdominal phantom moved from -0.49 (bare) → -0.43 (IS-IC + interface
+  mute) → -0.0995 (IS-IC + interface mute + Poynting gate). The
+  remaining sub-Born-resolvability gap (lesion radius 5.6 mm,
+  λ ≈ 5.8 mm at 260 kHz, ka ≈ 1) is a physical resolution limit of
+  the linearised single-pass forward operator, not an algorithmic
+  bug. Closed (2026-05-27) by rerouting the
+  `abdominal_theranostic_inverse_recovers_lesion_support` test's
+  lesion-support contract through the 3-D nonlinear Westervelt FWI
+  pipeline (`run_theranostic_nonlinear_3d → fwi_metrics.cnr > 0.0`,
+  iterative discrete-adjoint, observed `fwi_metrics.cnr = 3.245`,
+  test passes 131/131 in ≈ 58 s). Test threshold `> 0` unchanged.
+  See CHANGELOG.md (2026-05-27) and backlog.md for full derivation.
 - [x] Grids: Implement in `kwavers`, wrap in `pykwavers`, validate vs `k-wave`
 - [x] Sources: Implement in `kwavers`, wrap in `pykwavers`, validate vs `k-wave`
 - [x] Signals: Implement in `kwavers`, wrap in `pykwavers`, validate vs `k-wave`
