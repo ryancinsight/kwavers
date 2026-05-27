@@ -1,6 +1,7 @@
 //! Focused bowl transducer construction for SourceFactory.
 
 use crate::core::error::{ConfigError, KwaversResult};
+use crate::domain::source::config::DEFAULT_FOCUSED_BOWL_FOCUS_OFFSET_M;
 use crate::domain::source::{
     transducers::focused::{BowlAngularBounds, BowlConfig, BowlTransducer},
     DomainSourceParameters, FocusedBowlAperture,
@@ -9,13 +10,19 @@ use crate::domain::source::{
 pub(super) fn create_focused_bowl_transducer(
     config: &DomainSourceParameters,
 ) -> KwaversResult<BowlTransducer> {
-    let bowl_config = base_bowl_config(config);
+    let focus = focused_bowl_focus(config);
     match config.focused_bowl_aperture {
-        FocusedBowlAperture::Diameter => match config.num_elements {
-            Some(element_count) => BowlTransducer::with_element_count(bowl_config, element_count),
-            None => BowlTransducer::new(bowl_config),
-        },
+        FocusedBowlAperture::Diameter => {
+            let bowl_config = base_bowl_config(config, focus);
+            match config.num_elements {
+                Some(element_count) => {
+                    BowlTransducer::with_element_count(bowl_config, element_count)
+                }
+                None => BowlTransducer::new(bowl_config),
+            }
+        }
         FocusedBowlAperture::Hemisphere => {
+            let bowl_config = base_bowl_config(config, focus);
             let element_count = required_focused_bowl_element_count(config)?;
             BowlTransducer::with_angular_bounds(
                 bowl_config,
@@ -24,6 +31,7 @@ pub(super) fn create_focused_bowl_transducer(
             )
         }
         FocusedBowlAperture::PolarSpan { theta_max_rad } => {
+            let bowl_config = base_bowl_config(config, focus);
             let element_count = required_focused_bowl_element_count(config)?;
             BowlTransducer::with_polar_span(bowl_config, theta_max_rad, element_count)
         }
@@ -31,6 +39,7 @@ pub(super) fn create_focused_bowl_transducer(
             theta_min_rad,
             theta_max_rad,
         } => {
+            let bowl_config = base_bowl_config(config, focus);
             let element_count = required_focused_bowl_element_count(config)?;
             BowlTransducer::with_polar_bounds(
                 bowl_config,
@@ -43,6 +52,7 @@ pub(super) fn create_focused_bowl_transducer(
             axis_projection_min,
             axis_projection_max,
         } => {
+            let bowl_config = base_bowl_config(config, focus);
             let element_count = required_focused_bowl_element_count(config)?;
             BowlTransducer::with_axis_projection_bounds(
                 bowl_config,
@@ -61,7 +71,7 @@ pub(super) fn create_focused_bowl_transducer(
             let aperture_diameter_m = 2.0 * radius_of_curvature_m * theta_max_rad.sin();
             let mut axis_config = BowlConfig::from_axis_reference_focus(
                 config.position,
-                bowl_config.focus,
+                focus,
                 radius_of_curvature_m,
                 aperture_diameter_m,
                 config.frequency,
@@ -83,7 +93,7 @@ pub(super) fn create_focused_bowl_transducer(
             let aperture_diameter_m = 2.0 * radius_of_curvature_m;
             let mut axis_config = BowlConfig::from_axis_reference_focus(
                 config.position,
-                bowl_config.focus,
+                focus,
                 radius_of_curvature_m,
                 aperture_diameter_m,
                 config.frequency,
@@ -99,12 +109,15 @@ pub(super) fn create_focused_bowl_transducer(
     }
 }
 
-fn base_bowl_config(config: &DomainSourceParameters) -> BowlConfig {
-    let focus = config.focus.unwrap_or([
+fn focused_bowl_focus(config: &DomainSourceParameters) -> [f64; 3] {
+    config.focus.unwrap_or([
         config.position[0],
         config.position[1],
-        config.position[2] + 0.05,
-    ]);
+        config.position[2] + DEFAULT_FOCUSED_BOWL_FOCUS_OFFSET_M,
+    ])
+}
+
+fn base_bowl_config(config: &DomainSourceParameters, focus: [f64; 3]) -> BowlConfig {
     let mut bowl_config = BowlConfig::from_vertex_focus(
         config.position,
         focus,

@@ -1,5 +1,36 @@
 # Gap Audit
 
+## CLOSED: Focused Source Config Aperture Ownership (2026-05-27)
+
+Root cause: focused-source config validation treated `radius` as a generic
+nonnegative scalar, while the focused factory constructed a diameter-based
+`BowlConfig` before matching the selected aperture variant. Axis-reference
+focused bowls already carry explicit curvature radius in
+`FocusedBowlAperture`, so this preconstruction leaked the legacy diameter
+parameter into variants that should not depend on it.
+
+Closure:
+- Introduced a single default focused-bowl focus offset constant shared by
+  config validation and focused factory assembly.
+- Added focused-source validation for nondegenerate acoustic axis.
+- Required positive `DomainSourceParameters::radius` only for diameter-derived
+  aperture modes.
+- Deferred base `BowlConfig::from_vertex_focus` construction until after the
+  aperture variant match, so axis-reference variants construct directly from
+  `BowlConfig::from_axis_reference_focus`.
+- Updated validation and factory tests to verify axis-reference apertures own
+  their explicit curvature radius even when `DomainSourceParameters::radius`
+  is zero.
+
+Verification:
+- `rustfmt --edition 2021 --check kwavers/src/domain/source/config.rs kwavers/src/domain/source/factory/focused.rs kwavers/src/domain/source/factory/tests.rs kwavers/tests/domain_source_config_validation.rs`:
+  PASS.
+- `git diff --check -- kwavers/src/domain/source/config.rs kwavers/src/domain/source/factory/focused.rs kwavers/src/domain/source/factory/tests.rs kwavers/tests/domain_source_config_validation.rs`:
+  PASS.
+- Existing workspace `cargo check -p kwavers` processes remained active after a
+  60 s wait, so targeted Cargo execution was deferred to avoid adding another
+  build contender.
+
 ## CLOSED: Focused Source Factory Bowl-Constructor Routing (2026-05-27)
 
 Root cause: the `SourceFactory` focused-source match arm computed curvature

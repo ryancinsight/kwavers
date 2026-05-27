@@ -82,6 +82,11 @@
   focused-bowl config creation into the focused factory leaf, use
   `BowlConfig::from_vertex_focus` as the geometry SSOT, remove parent-factory
   manual curvature calculation, and pin off-axis element radii.
+- [x] [patch] Focused source aperture ownership validation: resolve the
+  focused-bowl acoustic axis once, reject degenerate focused axes at the source
+  config boundary, require `DomainSourceParameters::radius > 0` only for
+  diameter-derived aperture modes, and let axis-reference modes own curvature
+  through `focused_bowl_aperture.radius_of_curvature_m`.
 - [x] [patch] Medium property SSOT constant closure: define missing fluid/tissue and implant effective-nonlinearity constants under `core::constants`, keep medium property tables on named constants, and restore `cargo check -p kwavers --lib`.
 - [x] [patch] Hybrid FDTD/PSTD transition correction: replace the interface blend with a raised-cosine FDTD-boundary to PSTD-interior partition, make `DomainRegion` `Copy`, remove per-step region-vector cloning in both hybrid stepping paths, and pin the blend-weight contract with a value-semantic test.
 - [x] [patch] DG memory-efficiency audit: remove redundant per-step dense mass-matrix inversion from DG stepping, preallocate spectral DG previous-field storage, replace first-step `field.clone()` with `assign`, and pin pointer-stable previous-field reuse.

@@ -1,5 +1,20 @@
 # Backlog / Strategy
 
+## Focused source config aperture ownership - CLOSED (2026-05-27)
+
+- **[done] [patch]** Split focused-bowl focus resolution from base
+  diameter-config construction in `domain::source::factory::focused`, so
+  axis-reference aperture variants use their explicit source-domain curvature
+  radius without requiring the legacy `DomainSourceParameters::radius` field.
+- **[done] [patch]** Added focused-source model validation for nondegenerate
+  acoustic axis and positive diameter-aperture radius only when that radius is
+  part of the selected aperture parameterization. Axis-reference variants now
+  validate through `focused_bowl_aperture.radius_of_curvature_m`.
+- **Verification:** `rustfmt --edition 2021 --check` and `git diff --check`
+  passed for the touched source config, focused factory, and validation tests.
+  Existing workspace Cargo checks were still running after a 60 s wait, so no
+  new Cargo test process was started.
+
 ## Focused source factory bowl-constructor routing - CLOSED (2026-05-27)
 
 - **[done] [patch]** Routed the public `SourceFactory` focused-source path

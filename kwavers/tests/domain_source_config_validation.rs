@@ -1,4 +1,4 @@
-use kwavers::domain::source::{DomainSourceParameters, FocusedBowlAperture};
+use kwavers::domain::source::{DomainSourceParameters, FocusedBowlAperture, SourceModel};
 
 #[test]
 fn source_parameters_reject_nonfinite_physics_values() {
@@ -95,6 +95,48 @@ fn focused_bowl_aperture_validation_matches_source_domain_bounds() {
         };
     });
     valid.validate().unwrap();
+}
+
+#[test]
+fn focused_source_validation_rejects_degenerate_axis_and_aperture_radius() {
+    let zero_diameter_radius = source_with(|source| {
+        source.model = SourceModel::Focused;
+        source.radius = 0.0;
+        source.focus = Some([0.0, 0.0, 0.05]);
+        source.focused_bowl_aperture = FocusedBowlAperture::Diameter;
+    });
+    assert!(zero_diameter_radius
+        .validate()
+        .unwrap_err()
+        .to_string()
+        .contains("radius"));
+
+    let degenerate_axis = source_with(|source| {
+        source.model = SourceModel::Focused;
+        source.position = [0.01, -0.02, 0.03];
+        source.focus = Some(source.position);
+        source.focused_bowl_aperture = FocusedBowlAperture::Hemisphere;
+    });
+    assert!(degenerate_axis
+        .validate()
+        .unwrap_err()
+        .to_string()
+        .contains("focus"));
+}
+
+#[test]
+fn focused_axis_reference_aperture_owns_curvature_radius() {
+    let config = source_with(|source| {
+        source.model = SourceModel::Focused;
+        source.radius = 0.0;
+        source.position = [0.0, 0.0, 0.04];
+        source.focus = Some([0.0, 0.0, 0.0]);
+        source.focused_bowl_aperture = FocusedBowlAperture::AxisReferenceHemisphere {
+            radius_of_curvature_m: 0.16,
+        };
+    });
+
+    config.validate().unwrap();
 }
 
 fn source_with(mut edit: impl FnMut(&mut DomainSourceParameters)) -> DomainSourceParameters {

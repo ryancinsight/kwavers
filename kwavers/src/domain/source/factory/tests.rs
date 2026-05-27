@@ -219,7 +219,7 @@ fn focused_source_factory_accepts_axis_reference_hemisphere_aperture() {
         model: SourceModel::Focused,
         position: axis_reference,
         focus: Some(focus),
-        radius: 0.01,
+        radius: 0.0,
         frequency: 650.0e3,
         num_elements: Some(element_count),
         focused_bowl_aperture: FocusedBowlAperture::AxisReferenceHemisphere {

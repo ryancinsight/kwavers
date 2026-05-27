@@ -9,6 +9,8 @@ use std::f64::consts::PI;
 
 use crate::domain::source::types::SourceField;
 
+pub(crate) const DEFAULT_FOCUSED_BOWL_FOCUS_OFFSET_M: f64 = 0.05;
+
 /// Source configuration parameters
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DomainSourceParameters {
@@ -198,9 +200,49 @@ impl DomainSourceParameters {
         }
         validate_pulse_parameters(&self.pulse)?;
         validate_focused_bowl_aperture(self.focused_bowl_aperture)?;
+        if self.model == SourceModel::Focused {
+            validate_focused_source_geometry(self)?;
+        }
 
         Ok(())
     }
+}
+
+fn validate_focused_source_geometry(source: &DomainSourceParameters) -> KwaversResult<()> {
+    let focus = focused_source_focus(source);
+    let axis = [
+        focus[0] - source.position[0],
+        focus[1] - source.position[1],
+        focus[2] - source.position[2],
+    ];
+    let axis_norm_squared = axis[0].mul_add(axis[0], axis[1].mul_add(axis[1], axis[2] * axis[2]));
+    if !(axis_norm_squared.is_finite() && axis_norm_squared > 0.0) {
+        return Err(invalid_value(
+            "focus",
+            format!("{:?}", source.focus),
+            "Focused source focus must differ from position to define the bowl acoustic axis",
+        ));
+    }
+
+    match source.focused_bowl_aperture {
+        FocusedBowlAperture::AxisReferencePolarBounds { .. }
+        | FocusedBowlAperture::AxisReferenceHemisphere { .. } => Ok(()),
+        FocusedBowlAperture::Diameter
+        | FocusedBowlAperture::Hemisphere
+        | FocusedBowlAperture::PolarSpan { .. }
+        | FocusedBowlAperture::PolarBounds { .. }
+        | FocusedBowlAperture::AxisProjectionBounds { .. } => {
+            validate_positive_finite("radius", source.radius)
+        }
+    }
+}
+
+fn focused_source_focus(source: &DomainSourceParameters) -> [f64; 3] {
+    source.focus.unwrap_or([
+        source.position[0],
+        source.position[1],
+        source.position[2] + DEFAULT_FOCUSED_BOWL_FOCUS_OFFSET_M,
+    ])
 }
 
 fn validate_pulse_parameters(pulse: &PulseParameters) -> KwaversResult<()> {
