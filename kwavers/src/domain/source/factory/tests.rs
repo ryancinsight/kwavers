@@ -24,6 +24,40 @@ fn focused_source_factory_honors_configured_element_count() {
 }
 
 #[test]
+fn focused_source_factory_routes_base_geometry_through_bowl_constructor() {
+    let mut grid = Grid::new(32, 32, 32, 0.004, 0.004, 0.004).unwrap();
+    grid.origin = [-0.064, -0.064, -0.016];
+    let position = [0.01, -0.015, 0.02];
+    let focus = [0.04, 0.005, 0.09];
+    let element_count = 13;
+    let config = DomainSourceParameters {
+        model: SourceModel::Focused,
+        position,
+        focus: Some(focus),
+        radius: 0.018,
+        frequency: 650.0e3,
+        num_elements: Some(element_count),
+        ..Default::default()
+    };
+    let curvature_radius = ((focus[0] - position[0]).powi(2)
+        + (focus[1] - position[1]).powi(2)
+        + (focus[2] - position[2]).powi(2))
+    .sqrt();
+
+    let source = SourceFactory::create_source(&config, &grid).unwrap();
+
+    assert_eq!(source.positions().len(), element_count);
+    assert_eq!(source.focal_point(), Some((focus[0], focus[1], focus[2])));
+    for element in source.positions() {
+        let distance_to_focus = ((element.0 - focus[0]).powi(2)
+            + (element.1 - focus[1]).powi(2)
+            + (element.2 - focus[2]).powi(2))
+        .sqrt();
+        assert!((distance_to_focus - curvature_radius).abs() < 1.0e-12);
+    }
+}
+
+#[test]
 fn focused_source_factory_accepts_axis_projection_aperture() {
     let mut grid = Grid::new(40, 40, 28, 0.01, 0.01, 0.01).unwrap();
     grid.origin = [-0.20, -0.20, -0.08];

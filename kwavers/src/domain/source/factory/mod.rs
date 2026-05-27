@@ -2,7 +2,7 @@
 //!
 //! Follows Creator pattern for source instantiation using domain types.
 
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 mod focused;
 mod signal;
 
@@ -14,15 +14,12 @@ use crate::core::error::{ConfigError, KwaversResult};
 use crate::domain::grid::Grid;
 use crate::domain::source::{
     basic::{LinearArray, MatrixArray, PistonApodization, PistonConfig},
-    transducers::{
-        apodization::RectangularApodization,
-        focused::{BowlConfig, FocusedSource},
-    },
+    transducers::{apodization::RectangularApodization, focused::FocusedSource},
     wavefront::{
         BesselConfig, GaussianConfig, PlaneWaveSourceConfig, SphericalConfig, SphericalWaveType,
     },
-    BesselSource, DomainSourceParameters, GaussianSource, PistonSource,
-    PlaneWaveSource, PointSource, Source, SourceModel, SphericalSource,
+    BesselSource, DomainSourceParameters, GaussianSource, PistonSource, PlaneWaveSource,
+    PointSource, Source, SourceModel, SphericalSource,
 };
 
 /// Factory for creating sources.
@@ -165,35 +162,7 @@ impl SourceFactory {
                 Ok(Box::new(array))
             }
             SourceModel::Focused => {
-                let focus = match config.focus {
-                    Some(f) => [f[0], f[1], f[2]],
-                    None => [position.0, position.1, position.2 + 0.05],
-                };
-
-                // Radius of curvature: Euclidean distance from center to focus.
-                let r_curv = (focus[2] - position.2).mul_add(
-                    focus[2] - position.2,
-                    (focus[1] - position.1).mul_add(
-                        focus[1] - position.1,
-                        (focus[0] - position.0).powi(2),
-                    ),
-                )
-                .sqrt();
-                let r_curv = if r_curv < 1e-6 { 0.05 } else { r_curv };
-
-                let bowl_config = BowlConfig {
-                    radius_of_curvature: r_curv,
-                    diameter: config.radius * 2.0,
-                    center: config.position,
-                    focus,
-                    frequency: config.frequency,
-                    amplitude: config.amplitude,
-                    phase: config.phase,
-                    element_size: None,
-                    apply_directivity: true,
-                };
-                let transducer =
-                    focused::create_focused_bowl_transducer(config, bowl_config)?;
+                let transducer = focused::create_focused_bowl_transducer(config)?;
                 Ok(Box::new(FocusedSource::from_transducer(
                     transducer,
                     signal_arc,

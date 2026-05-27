@@ -1,5 +1,20 @@
 # Backlog / Strategy
 
+## Focused source factory bowl-constructor routing - CLOSED (2026-05-27)
+
+- **[done] [patch]** Routed the public `SourceFactory` focused-source path
+  through `domain::source::transducers::focused::BowlConfig::from_vertex_focus`
+  in the focused factory leaf module. Removed hand-computed curvature radius
+  and manual `BowlConfig` literals from the parent factory match arm, leaving
+  aperture selection in `factory::focused` and source geometry in the bowl
+  transducer domain.
+- **Verification:** `rustfmt --edition 2021 --check` and `git diff --check`
+  passed for `factory/mod.rs`, `factory/focused.rs`, and `factory/tests.rs`.
+  Added a value-semantic regression asserting generated focused-source
+  elements remain on the sphere centered at the configured focus. Targeted Cargo
+  execution was deferred because concurrent workspace Cargo test/bench jobs
+  were already active.
+
 ## Focused-bowl utility constructor routing - CLOSED (2026-05-27)
 
 - **[done] [patch]** Routed

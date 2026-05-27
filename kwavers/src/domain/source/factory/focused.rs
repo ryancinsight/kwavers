@@ -8,13 +8,11 @@ use crate::domain::source::{
 
 pub(super) fn create_focused_bowl_transducer(
     config: &DomainSourceParameters,
-    bowl_config: BowlConfig,
 ) -> KwaversResult<BowlTransducer> {
+    let bowl_config = base_bowl_config(config);
     match config.focused_bowl_aperture {
         FocusedBowlAperture::Diameter => match config.num_elements {
-            Some(element_count) => {
-                BowlTransducer::with_element_count(bowl_config, element_count)
-            }
+            Some(element_count) => BowlTransducer::with_element_count(bowl_config, element_count),
             None => BowlTransducer::new(bowl_config),
         },
         FocusedBowlAperture::Hemisphere => {
@@ -99,6 +97,23 @@ pub(super) fn create_focused_bowl_transducer(
             )
         }
     }
+}
+
+fn base_bowl_config(config: &DomainSourceParameters) -> BowlConfig {
+    let focus = config.focus.unwrap_or([
+        config.position[0],
+        config.position[1],
+        config.position[2] + 0.05,
+    ]);
+    let mut bowl_config = BowlConfig::from_vertex_focus(
+        config.position,
+        focus,
+        2.0 * config.radius,
+        config.frequency,
+        config.amplitude,
+    );
+    bowl_config.phase = config.phase;
+    bowl_config
 }
 
 pub(super) fn required_focused_bowl_element_count(

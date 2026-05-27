@@ -1,5 +1,31 @@
 # Gap Audit
 
+## CLOSED: Focused Source Factory Bowl-Constructor Routing (2026-05-27)
+
+Root cause: the `SourceFactory` focused-source match arm computed curvature
+radius locally and constructed a `BowlConfig` literal. That duplicated
+source-domain bowl geometry in the assembly boundary and kept aperture option
+routing split between the parent factory and the focused factory leaf.
+
+Closure:
+- Moved base focused-bowl config construction into
+  `domain::source::factory::focused`.
+- Replaced local distance computation and the manual `BowlConfig` literal with
+  `BowlConfig::from_vertex_focus`.
+- Left focused-bowl aperture variants in the source-domain focused factory
+  path, including diameter, hemisphere, polar, axis-projection, and
+  axis-reference options.
+- Added an off-axis value-semantic factory test asserting each generated
+  element lies one curvature radius from the configured focus.
+
+Verification:
+- `rustfmt --edition 2021 --check kwavers/src/domain/source/factory/mod.rs kwavers/src/domain/source/factory/focused.rs kwavers/src/domain/source/factory/tests.rs`:
+  PASS.
+- `git diff --check -- kwavers/src/domain/source/factory/mod.rs kwavers/src/domain/source/factory/focused.rs kwavers/src/domain/source/factory/tests.rs`:
+  PASS.
+- Targeted Cargo execution was deferred because pre-existing concurrent
+  workspace `cargo test` / `cargo bench` jobs were active.
+
 ## CLOSED: Focused-Bowl Utility Focus-Axis Routing (2026-05-27)
 
 Root cause: `make_bowl` manually constructed a `BowlConfig` literal with
