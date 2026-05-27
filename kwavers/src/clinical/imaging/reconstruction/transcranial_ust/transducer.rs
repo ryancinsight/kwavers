@@ -54,12 +54,14 @@ impl TranscranialBowlGeometry {
             ));
         }
 
-        let config = BowlConfig::hemispherical(
-            [0.0, 0.0, radius_m],
+        let config = BowlConfig::from_focus_axis(
             [0.0, 0.0, 0.0],
+            [0.0, 0.0, -1.0],
+            radius_m,
+            2.0 * radius_m,
             GEOMETRY_UNIT_FREQUENCY_HZ,
             GEOMETRY_UNIT_AMPLITUDE_PA,
-        );
+        )?;
         let bowl = BowlTransducer::with_angular_bounds(config, aperture, element_count)?;
         let elements = bowl
             .element_positions()

@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Changed (2026-05-26) - Transcranial UST Focused-Bowl Source Routing
+
+- [patch] Route `TranscranialBowlGeometry::from_aperture` through the
+  source-domain `BowlConfig::from_focus_axis` constructor instead of building
+  a synthetic hemispherical vertex in the clinical imaging layer. The existing
+  equal-area `BowlTransducer::with_angular_bounds` path still owns element
+  positions and aperture weights.
+
 ### Fixed (2026-05-26) - Time-Reversal Solver Physics Defects
 
 - [patch] `PhotoacousticTimeReversal` (solver/inverse/reconstruction/photoacoustic):

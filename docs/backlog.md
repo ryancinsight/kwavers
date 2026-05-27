@@ -3,7 +3,7 @@
 ## SSOT for Tasks, Priorities, Risks, Dependencies, and Retrospectives
 
 **Status**: CURRENT — session 3 complete; 4114/4114 PASS; 11 ignored; all SSOT constants verified
-**Last Updated**: 2026-05-25
+**Last Updated**: 2026-05-26
 **Architecture Compliance**: ✅ Clean architecture maintained
 **Quality Grade**: A+ — 0 files ≥400 lines; 0 kwavers compiler warnings
 **Current Phase**: Closure — file hierarchy + naming fixes + GPU dynamic focus gap closed
@@ -44,6 +44,7 @@
 #### P2 — Architecture / API
 - [x] Active focused-bowl book/source artifacts: remove vendor/helmet labels from Chapter 31 renderer/prose and synchronize stale Chapter 29/31 metrics to generic focused-bowl model names. Regression test guards active artifacts. [patch]
 - [x] Focused-bowl source-domain orientation routing: add `BowlConfig::from_focus_axis`, reuse it from axis-reference construction, and route clinical transcranial cap placement through the source-domain focus/axis/radius constructor instead of constructing vertices in the clinical layer. [patch]
+- [x] Transcranial UST imaging focused-bowl routing: use `BowlConfig::from_focus_axis` for the encoded slice/volume geometry so clinical imaging no longer constructs a synthetic bowl vertex before calling `BowlTransducer`. [patch]
 - [ ] cargo-semver-checks: audit new public surface since Sprint 218 [patch]
   Added: from_velocity_mask, checkpointing API, set_pml_alpha_xyz, axisymmetric flag.
 

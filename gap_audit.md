@@ -1,5 +1,26 @@
 # Gap Audit
 
+## CLOSED: Transcranial UST Focused-Bowl Source Routing (2026-05-26)
+
+Root cause: `TranscranialBowlGeometry::from_aperture` still constructed a
+synthetic hemispherical vertex in the clinical imaging layer before delegating
+to `BowlTransducer::with_angular_bounds`. That duplicated the focus/axis/radius
+mapping now owned by `BowlConfig::from_focus_axis`.
+
+Closure:
+- Replaced clinical imaging hemispherical vertex construction with
+  `BowlConfig::from_focus_axis(focus=[0,0,0], axis=[0,0,-1], radius, 2R, ...)`.
+- Preserved the existing source-domain equal-area angular-bound generation and
+  receiver-indexing contract.
+
+Verification:
+- `rustfmt --edition 2021 kwavers/src/clinical/imaging/reconstruction/transcranial_ust/transducer.rs --check`:
+  PASS.
+- `cargo test -p kwavers transcranial_bowl_geometry_uses_distinct_element_positions --lib --message-format=short -j 1`:
+  blocked by concurrent workspace Cargo jobs and exceeded the 300 s bound
+  before test output. The timed-out Cargo process was stopped; unrelated Cargo
+  jobs were left running.
+
 ## CLOSED: Time-Reversal Solver (2026-05-26)
 
 Root cause: three independent defects in `PhotoacousticTimeReversal` and

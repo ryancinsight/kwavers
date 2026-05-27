@@ -44,6 +44,10 @@
 - [x] `test_therapy_step_execution`: already passing without `#[ignore]`; stale checklist entry closed [patch]
 - [x] 4111/4111 PASS; 12 ignored (down from 14); 0 failed
 
+### Closed 2026-05-26 (focused-bowl source routing)
+
+- [x] `TranscranialBowlGeometry::from_aperture`: route transcranial UST imaging bowl through `BowlConfig::from_focus_axis` instead of constructing a synthetic hemispherical vertex in the clinical layer; rustfmt PASS; targeted Cargo test blocked by concurrent workspace Cargo jobs after 300 s [patch]
+
 ### Closed 2026-05-25 (focused-bowl source label closure)
 
 - [x] `BowlConfig::from_focus_axis`: source-domain focus/axis/radius constructor added; clinical transcranial cap adapter no longer constructs a synthetic vertex outside `BowlTransducer`; radius/area/bounds/degenerate-axis tests added. Cargo verification blocked by active workspace build lock after 300 s [patch]
