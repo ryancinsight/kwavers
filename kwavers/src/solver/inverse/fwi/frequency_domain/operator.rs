@@ -94,6 +94,19 @@ pub trait HelmholtzForwardOperator: Debug + Send + Sync {
     /// Identifier for audit trails (`"single_scatter_born"`,
     /// `"dense_convergent_born"`, `"spectral_convergent_born"`).
     fn model_id(&self) -> &'static str;
+
+    /// Whether this operator drives the finite-window PSTD Born adjoint
+    /// gradient kernel instead of the CBS or explicit sensitivity paths.
+    /// Default: false.
+    fn uses_finite_window_adjoint(&self) -> bool {
+        false
+    }
+
+    /// Finite-window Born configuration, used by the finite-window adjoint
+    /// gradient kernel.  Returns `None` for non-finite-window operators.
+    fn finite_window_adjoint_config(&self) -> Option<super::finite_window::PstdFiniteWindowBornConfig> {
+        None
+    }
 }
 
 /// First Born approximation. Forward operator is the discrete single-scatter
@@ -384,6 +397,116 @@ impl PstdSpectralConvergentBornOperator {
     }
 }
 
+/// Finite-window first-order PSTD Born operator with discrete adjoint gradient.
+///
+/// Unlike the stationary CBS operators, this operator drives the inversion
+/// gradient via time-reversal adjoint of the same finite-window PSTD
+/// acquisition used to generate the observations.  This closes the
+/// operator-equivalence gap between the forward model and the data when
+/// the acquisition uses finite drive cycles with a trailing frequency-bin
+/// window.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct PstdFiniteWindowBornOperator {
+    /// PSTD leapfrog time step [s] — must match the dataset generator.
+    pub time_step_s: f64,
+    /// Scalar pressure-source amplitude [Pa] — must match the dataset generator.
+    pub source_amplitude_pa: f64,
+    /// Number of drive cycles — must match the dataset generator.
+    pub cycles_per_frequency: usize,
+    /// Number of trailing bin cycles — must match the dataset generator.
+    pub frequency_bin_cycles: usize,
+}
+
+impl HelmholtzForwardOperator for PstdFiniteWindowBornOperator {
+    fn predict_receiver_rows(
+        &self,
+        slowness_s_per_m: &Array3<f64>,
+        array: &MultiRowRingArray,
+        frequency_hz: f64,
+        config: &Config,
+        transmissions: usize,
+    ) -> KwaversResult<Array2<Complex64>> {
+        super::finite_window::simulate_pstd_finite_window_born_observation(
+            &crate::physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::slowness_to_sound_speed(slowness_s_per_m)?,
+            array,
+            frequency_hz,
+            self.finite_window_config(config),
+            transmissions,
+        )
+    }
+
+    fn uses_volume_field_adjoint(&self) -> bool {
+        false
+    }
+
+    fn uses_finite_window_adjoint(&self) -> bool {
+        true
+    }
+
+    fn finite_window_adjoint_config(
+        &self,
+    ) -> Option<super::finite_window::PstdFiniteWindowBornConfig> {
+        Some(super::finite_window::PstdFiniteWindowBornConfig {
+            // reference_sound_speed and spacing are filled in by the gradient
+            // accumulator from the inversion Config at call time.
+            reference_sound_speed_m_s: 0.0,
+            spacing_m: 0.0,
+            time_step_s: self.time_step_s,
+            source_amplitude_pa: self.source_amplitude_pa,
+            cycles_per_frequency: self.cycles_per_frequency,
+            frequency_bin_cycles: self.frequency_bin_cycles,
+        })
+    }
+
+    fn validate(&self) -> KwaversResult<()> {
+        if !self.time_step_s.is_finite() || self.time_step_s <= 0.0 {
+            return Err(KwaversError::InvalidInput(format!(
+                "PstdFiniteWindowBornOperator time_step_s must be positive and finite, got {}",
+                self.time_step_s
+            )));
+        }
+        if !self.source_amplitude_pa.is_finite() || self.source_amplitude_pa <= 0.0 {
+            return Err(KwaversError::InvalidInput(format!(
+                "PstdFiniteWindowBornOperator source_amplitude_pa must be positive and finite, got {}",
+                self.source_amplitude_pa
+            )));
+        }
+        if self.cycles_per_frequency == 0 {
+            return Err(KwaversError::InvalidInput(
+                "PstdFiniteWindowBornOperator cycles_per_frequency must be nonzero".to_owned(),
+            ));
+        }
+        if self.frequency_bin_cycles == 0 {
+            return Err(KwaversError::InvalidInput(
+                "PstdFiniteWindowBornOperator frequency_bin_cycles must be nonzero".to_owned(),
+            ));
+        }
+        Ok(())
+    }
+
+    fn model_id(&self) -> &'static str {
+        "pstd_finite_window_born"
+    }
+}
+
+impl PstdFiniteWindowBornOperator {
+    /// Build the [`PstdFiniteWindowBornConfig`] by merging operator fields
+    /// with the inversion `Config`.
+    fn finite_window_config(
+        &self,
+        config: &Config,
+    ) -> super::finite_window::PstdFiniteWindowBornConfig {
+        super::finite_window::PstdFiniteWindowBornConfig {
+            reference_sound_speed_m_s: config.reference_sound_speed_m_s,
+            spacing_m: config.spacing_m,
+            time_step_s: self.time_step_s,
+            source_amplitude_pa: self.source_amplitude_pa,
+            cycles_per_frequency: self.cycles_per_frequency,
+            frequency_bin_cycles: self.frequency_bin_cycles,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -407,11 +530,18 @@ mod tests {
             temporal_transfer: None,
             absorbing_boundary: AbsorbingBoundary::disabled(),
         };
+        let pstd_fw = PstdFiniteWindowBornOperator {
+            time_step_s: 1.0e-7,
+            source_amplitude_pa: 1.0,
+            cycles_per_frequency: 4,
+            frequency_bin_cycles: 1,
+        };
 
         assert_eq!(born.model_id(), "single_scatter_born");
         assert_eq!(dense.model_id(), "dense_convergent_born");
         assert_eq!(spectral.model_id(), "spectral_convergent_born");
         assert_eq!(pstd_spectral.model_id(), "pstd_spectral_convergent_born");
+        assert_eq!(pstd_fw.model_id(), "pstd_finite_window_born");
     }
 
     #[test]

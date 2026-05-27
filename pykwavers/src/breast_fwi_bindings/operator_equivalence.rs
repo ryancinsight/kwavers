@@ -249,6 +249,30 @@ fn scattering_increment_model_to_dict<'py>(
         row.row_normalized_increment_residual_max,
     )?;
     out.set_item("increment_energy_ratio", row.increment_energy_ratio)?;
+    out.set_item(
+        "baseline_scaled_full_field_normalized_residual",
+        row.baseline_scaled_full_field_normalized_residual,
+    )?;
+    out.set_item(
+        "model_scaled_full_field_normalized_residual",
+        row.model_scaled_full_field_normalized_residual,
+    )?;
+    out.set_item(
+        "source_scale_relative_drift_mean",
+        row.source_scale_relative_drift_mean,
+    )?;
+    out.set_item(
+        "source_scale_relative_drift_max",
+        row.source_scale_relative_drift_max,
+    )?;
+    out.set_item(
+        "source_scale_phase_drift_mean_abs_rad",
+        row.source_scale_phase_drift_mean_abs_rad,
+    )?;
+    out.set_item(
+        "source_scale_phase_drift_max_abs_rad",
+        row.source_scale_phase_drift_max_abs_rad,
+    )?;
     Ok(out)
 }
 

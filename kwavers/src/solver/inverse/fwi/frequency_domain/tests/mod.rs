@@ -5,8 +5,8 @@ use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::gradient::objective_and_gradient;
 use super::{
     invert, simulate_frequency_observation, AbsorbingBoundary, Config, DenseConvergentBornOperator,
-    FrequencyObservation, PstdSpectralConvergentBornOperator, SingleScatterBornOperator,
-    SpectralConvergentBornOperator,
+    FrequencyObservation, PstdFiniteWindowBornOperator, PstdSpectralConvergentBornOperator,
+    SingleScatterBornOperator, SpectralConvergentBornOperator,
 };
 use crate::physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::{
     sound_speed_to_slowness, MultiRowRingArray,

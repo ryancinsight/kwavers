@@ -3,8 +3,8 @@
 
 use kwavers::solver::inverse::fwi::frequency_domain::{
     AbsorbingBoundary, Config, DenseConvergentBornOperator, FrequencyObservation,
-    HelmholtzForwardOperator, PstdSpectralConvergentBornOperator, PstdTemporalTransferConfig,
-    SingleScatterBornOperator, SpectralConvergentBornOperator,
+    HelmholtzForwardOperator, PstdFiniteWindowBornOperator, PstdSpectralConvergentBornOperator,
+    PstdTemporalTransferConfig, SingleScatterBornOperator, SpectralConvergentBornOperator,
 };
 use kwavers::solver::inverse::linear_born_inversion::ElementPosition;
 use ndarray::{s, Array2, Array3};
@@ -57,6 +57,12 @@ pub(super) fn parse_forward_operator(
                 absorbing_strength_nepers,
                 absorbing_order,
             )?,
+        })),
+        "pstd_finite_window_born" => Ok(Arc::new(PstdFiniteWindowBornOperator {
+            time_step_s: pstd_time_step_s,
+            source_amplitude_pa: pstd_source_amplitude_pa,
+            cycles_per_frequency: pstd_cycles_per_frequency,
+            frequency_bin_cycles: pstd_frequency_bin_cycles,
         })),
         other => Err(PyValueError::new_err(format!(
             "unknown breast FWI propagation_model '{other}'"

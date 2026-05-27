@@ -61,6 +61,12 @@ fn scattering_increment_public_api_identifies_exact_model() {
     assert!(exact_row.row_normalized_increment_residual_max <= 1.0e-14);
     // Exact model: predicted increment energy equals observed increment energy.
     assert!((exact_row.increment_energy_ratio - 1.0).abs() <= 1.0e-12);
+    assert!(exact_row.baseline_scaled_full_field_normalized_residual <= 1.0e-14);
+    assert!(exact_row.model_scaled_full_field_normalized_residual <= 1.0e-14);
+    assert!(exact_row.source_scale_relative_drift_mean <= 1.0e-14);
+    assert!(exact_row.source_scale_relative_drift_max <= 1.0e-14);
+    assert!(exact_row.source_scale_phase_drift_mean_abs_rad <= 1.0e-14);
+    assert!(exact_row.source_scale_phase_drift_max_abs_rad <= 1.0e-14);
     assert!(
         (diagnostics
             .per_model
@@ -105,6 +111,12 @@ fn scattering_increment_public_api_reports_nonzero_residual_for_mismatched_model
     // The prediction model does not perfectly explain the scattering increment
     // when scaled by the baseline source scale — residual must exceed 1.0.
     assert!(row.normalized_increment_residual > 1.0);
+    assert!(row.model_scaled_full_field_normalized_residual <= 1.0e-14);
+    assert!(row.baseline_scaled_full_field_normalized_residual > 0.0);
+    assert!((row.source_scale_relative_drift_mean - (1.0 / 3.0)).abs() <= 1.0e-14);
+    assert!((row.source_scale_relative_drift_max - (1.0 / 3.0)).abs() <= 1.0e-14);
+    assert!(row.source_scale_phase_drift_mean_abs_rad <= 1.0e-14);
+    assert!(row.source_scale_phase_drift_max_abs_rad <= 1.0e-14);
     // Residual has non-zero L2 norm.
     assert!(row.increment_residual_l2_norm > 0.0);
 }

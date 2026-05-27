@@ -48,7 +48,16 @@ pub(super) fn objective_and_gradient(
             config,
             rows,
         )?;
-        if config.forward_operator.uses_volume_field_adjoint() {
+        if config.forward_operator.uses_finite_window_adjoint() {
+            accumulate_finite_window_frequency_gradient(
+                slowness_s_per_m,
+                observation,
+                array,
+                config,
+                &mut objective,
+                &mut gradient,
+            )?;
+        } else if config.forward_operator.uses_volume_field_adjoint() {
             accumulate_dense_cbs_frequency_gradient(
                 slowness_s_per_m,
                 observation,
@@ -71,6 +80,43 @@ pub(super) fn objective_and_gradient(
 
     apply_tikhonov(slowness_s_per_m, config, &mut objective, &mut gradient);
     Ok((objective, gradient))
+}
+
+fn accumulate_finite_window_frequency_gradient(
+    slowness_s_per_m: &Array3<f64>,
+    observation: &FrequencyObservation,
+    array: &MultiRowRingArray,
+    config: &Config,
+    objective: &mut f64,
+    gradient: &mut Array3<f64>,
+) -> KwaversResult<()> {
+    let fw_config = config
+        .forward_operator
+        .finite_window_adjoint_config()
+        .ok_or_else(|| {
+            KwaversError::InvalidInput(
+                "forward operator reports uses_finite_window_adjoint but \
+                 finite_window_adjoint_config returned None"
+                    .to_owned(),
+            )
+        })
+        .map(|mut c| {
+            c.reference_sound_speed_m_s = config.reference_sound_speed_m_s;
+            c.spacing_m = config.spacing_m;
+            c
+        })?;
+    let rows = observation.observed_pressure.nrows();
+    super::finite_window::finite_window_pstd_born_gradient(
+        &crate::physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::slowness_to_sound_speed(slowness_s_per_m)?,
+        array,
+        observation.frequency_hz,
+        &observation.observed_pressure,
+        fw_config,
+        rows,
+        config.estimate_source_scaling,
+        objective,
+        gradient,
+    )
 }
 
 fn accumulate_dense_cbs_frequency_gradient(

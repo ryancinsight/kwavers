@@ -40,8 +40,9 @@
 //!
 //! Finite-window first-order PSTD scattering lives in
 //! [`simulate_pstd_finite_window_born_observation`]. It is a time-recurrence
-//! theorem, not a stationary CBS operator, so it is exposed as a forward
-//! diagnostic until its adjoint is derived.
+//! theorem, not a stationary CBS operator. The discrete adjoint is also
+//! implemented, exposed via [`finite_window_pstd_born_gradient`] and driven by
+//! [`operator::PstdFiniteWindowBornOperator`].
 //!
 //! The gradient is the exact discrete adjoint of the selected forward
 //! operator; finite-difference checks against any [`HelmholtzForwardOperator`]
@@ -58,13 +59,14 @@ mod tests;
 mod types;
 
 pub use operator::{
-    DenseConvergentBornOperator, HelmholtzForwardOperator, PstdSpectralConvergentBornOperator,
-    SingleScatterBornOperator, SpectralConvergentBornOperator,
+    DenseConvergentBornOperator, HelmholtzForwardOperator, PstdFiniteWindowBornOperator,
+    PstdSpectralConvergentBornOperator, SingleScatterBornOperator, SpectralConvergentBornOperator,
 };
 
 pub use cbs::{AbsorbingBoundary, PstdTemporalTransferConfig};
 pub use finite_window::{
-    simulate_pstd_finite_window_born_observation, PstdFiniteWindowBornConfig,
+    finite_window_pstd_born_gradient, simulate_pstd_finite_window_born_observation,
+    PstdFiniteWindowBornConfig,
 };
 pub use forward::simulate_frequency_observation;
 pub use inversion::invert;

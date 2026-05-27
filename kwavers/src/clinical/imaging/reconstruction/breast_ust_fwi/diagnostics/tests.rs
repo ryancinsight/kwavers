@@ -303,8 +303,13 @@ fn scattering_increment_diagnostics_identify_exact_increment_model() {
     assert!(diagnostics.observed_increment_l2_norm > 0.0);
     let baseline_row = scattering_model(&diagnostics, "baseline");
     let half_row = scattering_model(&diagnostics, "half_increment");
+    let exact_row = scattering_model(&diagnostics, "exact_increment");
     assert!((baseline_row.normalized_increment_residual - 1.0).abs() <= 1.0e-14);
     assert!((half_row.normalized_increment_residual - 0.5).abs() <= 1.0e-14);
+    assert!(exact_row.baseline_scaled_full_field_normalized_residual <= 1.0e-14);
+    assert!(exact_row.model_scaled_full_field_normalized_residual <= 1.0e-14);
+    assert!(exact_row.source_scale_relative_drift_mean <= 1.0e-14);
+    assert!(exact_row.source_scale_phase_drift_max_abs_rad <= 1.0e-14);
 }
 
 #[test]
