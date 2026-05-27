@@ -87,13 +87,13 @@ fn bessel_jn(n: u32, x: f64) -> f64 {
                     bj1 *= 1.0e-100;
                 }
                 if k == n_us {
-                    ans = bjp;
+                    ans = bj;
                 }
                 if k == 1 {
-                    bj1 = bjp;
+                    bj1 = bj;
                 }
                 if k == 0 {
-                    bj0 = bjp;
+                    bj0 = bj;
                 }
             }
             let j0_true = bessel_j0(x);

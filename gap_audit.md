@@ -39,7 +39,7 @@ Likely from k-Wave's `kWaveTransducerSimple` internal normalization differing
 from direct mask injection in `build_pkw_source`. Requires k-wave-python
 transducer model deep-dive; no Rust change warranted without profiling data.
 
-## Ali 2025 Scattering-Increment Scale Decomposition — CLOSED (2026-05-28)
+## Ali 2025 Scattering-Increment Scale Decomposition — REPAIRED, RUNTIME PENDING (2026-05-28)
 
 The finite-window model has low row-scaled full-field residual, but the
 homogeneous-baseline calibrated scattering increment remains above unity. The
@@ -65,23 +65,25 @@ instead of the homogeneous baseline, owns calibration.
   zero, the baseline-scale relative drift is exactly `1/3`, and the calibrated
   increment residual is above unity.
 
-### Verification summary (2026-05-28 closure)
-- `cargo test --manifest-path kwavers/Cargo.toml --test breast_fwi_scattering_increment -j 1`: 2/2 pass.
-  Tests: `scattering_increment_public_api_identifies_exact_model`,
-  `scattering_increment_public_api_reports_nonzero_residual_for_mismatched_model`. Elapsed: 0.00s.
-- `cargo check --manifest-path pykwavers/Cargo.toml --lib`: exit 0.
-  Fixed `super::kwavers_to_py` import regressions in dataset.rs, direct_field.rs,
-  finite_window.rs; removed unused `ElementPosition`/`Array2` imports from array_config.rs.
+### Verification summary (2026-05-28 repair)
+- `rustfmt --check` on the touched Rust files: pass.
+- `D:\miniforge3\python.exe -m py_compile pykwavers\tests\test_ali2025_replication_example.py`:
+  exit 0.
+- `cargo test --manifest-path kwavers/Cargo.toml --test breast_fwi_scattering_increment -j 1 --no-run --message-format=short`:
+  exit 0 and compiles the integration target.
+- `cargo check --manifest-path pykwavers/Cargo.toml --lib --message-format=short -j 1`:
+  exit 0.
 
 ### Conclusion
-The calibrated scattering-increment residual above unity (`1.476` all-channel,
-`1.358` passive) reflects genuine finite-window scattering physics — increment
-energy ratios `1.774` / `1.682` (all/passive) confirm energy in the increment
-domain that exceeds what a source-scale normalization error would produce. The
-model-scaled full-field residual is near zero for the exact analytic model,
-confirming the scale calibration is correct. The scale-decomposition diagnostics
-close the ambiguity: the increment residual arises from finite-window scattering
-source phasing, not from amplitude drift at the calibration boundary.
+The implementation now matches the documented diagnostic contract, but runtime
+closure is still blocked. `cargo test --manifest-path kwavers/Cargo.toml --test
+breast_fwi_scattering_increment -j 1 --message-format=short` compiles, then the
+Windows test executable exits before harness startup with
+`STATUS_ENTRYPOINT_NOT_FOUND`. `cargo build --manifest-path pykwavers/Cargo.toml
+--lib` cannot replace `target\debug\pykwavers.dll` because comparison Python
+processes have the DLL loaded. The residual classification remains pending
+until the Windows loader issue, PyO3 runtime verification, focused pytest, and
+the determined-probe rerun complete.
 
 ## Ali 2025 Finite-Window Determined Probe (2026-05-25)
 
