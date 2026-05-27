@@ -281,21 +281,13 @@ def test_dg_smallest_valid_grid_succeeds():
 
 
 def test_dg_zero_time_steps():
-    """DG solver with ``time_steps=0`` should fail gracefully, not panic.
+    """DG solver with ``time_steps=0`` is rejected early with ValueError.
 
-    With ``time_steps=0`` the solver allocates a 1-column sensor buffer
-    (for the t=0 initial snapshot), then trims it to 0 columns.  The
-    downstream statistics computation accesses column 0 of a 0-column
-    array, which is an out-of-bounds index.
-
-    .. warning::
-
-        As of the current revision, this triggers a Rust-level panic
-        inside ``run_dg_impl`` (index out of bounds in ``p_final``
-        computation).  PyO3 catches the unwind and surfaces it as
-        ``pyo3_runtime.PanicException`` (a ``BaseException`` subclass).
-        The proper fix would be an early ``ValueError`` guard in
-        ``Simulation.run()`` for ``time_steps == 0``.
+    ``Simulation.run()`` validates ``time_steps`` before dispatching to
+    any solver backend.  With ``time_steps=0`` the trim-and-stats
+    pipeline in ``run_dg_impl`` would produce a 0-column array and
+    panic on out-of-bounds index access, so the guard lives in
+    ``run()`` where it protects all solver types uniformly.
     """
     grid = kw.Grid(nx=4, ny=4, nz=4, dx=1.0e-3, dy=1.0e-3, dz=1.0e-3)
     medium = kw.Medium.homogeneous(sound_speed=1500.0, density=1000.0)
@@ -306,12 +298,10 @@ def test_dg_zero_time_steps():
 
     sim = kw.Simulation(grid, medium, source, sensor, solver=kw.SolverType.DG)
 
-    # time_steps=0 should NOT silently produce garbage — it must either
-    # return the trivial t=0 snapshot or raise a descriptive error.
-    # Currently it panics at the Rust level; PyO3 surfaces that as a
-    # PanicException (BaseException), which pytest.raises(Exception)
-    # would miss.
-    with pytest.raises(BaseException, match=r"index out of bounds|panic"):
+    # time_steps=0 is rejected early by Simulation.run() with a
+    # descriptive ValueError before any solver dispatch occurs,
+    # preventing the downstream Rust panic in run_dg_impl.
+    with pytest.raises(ValueError, match="time_steps must be at least 1"):
         sim.run(time_steps=0)
 
 

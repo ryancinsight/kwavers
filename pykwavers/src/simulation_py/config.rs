@@ -1,5 +1,6 @@
 use pyo3::prelude::*;
 
+use kwavers::core::error::KwaversError;
 use kwavers::domain::source::{GridSource, Source as KwaversSource};
 
 use crate::simulation_result_py::SimulationResult;
@@ -37,6 +38,12 @@ impl Simulation {
         time_steps: usize,
         dt: Option<f64>,
     ) -> PyResult<SimulationResult> {
+        if time_steps == 0 {
+            return Err(pyo3::exceptions::PyValueError::new_err(
+                "time_steps must be at least 1, got 0",
+            ));
+        }
+
         // Calculate time step from CFL condition if not provided
         let c_max = self.medium.inner.as_medium().max_sound_speed();
         let dx_min = self
@@ -94,6 +101,8 @@ impl Simulation {
         let alpha_power = self.alpha_power;
         let axisymmetric = self.axisymmetric;
         let thermal_cfg = self.thermal.clone();
+        let helmholtz_frequency = self.helmholtz_frequency;
+        let transducers_for_rs = self.transducers.clone();
 
         let sensor_record_modes: Vec<String> = sensor_opt
             .as_ref()
@@ -214,6 +223,58 @@ impl Simulation {
                     sensor_opt.as_ref(),
                     elastic_velocity_source,
                 ),
+                SolverType::Helmholtz => Simulation::run_helmholtz_impl(
+                    &grid_clone,
+                    &medium_clone,
+                    time_steps,
+                    dt_actual,
+                    helmholtz_frequency,
+                    grid_source,
+                    sensor_opt.as_ref(),
+                    transducer_sensor_opt.as_ref(),
+                    sensor_record_start_index,
+                ),
+                SolverType::BEM => Simulation::run_bem_impl(
+                    &grid_clone,
+                    &medium_clone,
+                    time_steps,
+                    dt_actual,
+                    helmholtz_frequency,
+                    grid_source,
+                    sensor_opt.as_ref(),
+                    transducer_sensor_opt.as_ref(),
+                    sensor_record_start_index,
+                ),
+                SolverType::DG => Simulation::run_dg_impl(
+                    &grid_clone,
+                    &medium_clone,
+                    time_steps,
+                    dt_actual,
+                    grid_source,
+                    sensor_opt.as_ref(),
+                    transducer_sensor_opt.as_ref(),
+                    sensor_record_start_index,
+                ),
+                SolverType::Nonlinear => Err(KwaversError::InvalidInput(
+                    "Simulation.run does not support SolverType.Nonlinear; use the nonlinear propagation APIs or enable_nonlinear with a supported time-domain backend"
+                        .into(),
+                )),
+                SolverType::RayleighSommerfeld => Simulation::run_rs_impl(
+                    &grid_clone,
+                    &medium_clone,
+                    time_steps,
+                    dt_actual,
+                    helmholtz_frequency,
+                    grid_source,
+                    sensor_opt.as_ref(),
+                    transducer_sensor_opt.as_ref(),
+                    sensor_record_start_index,
+                    &transducers_for_rs,
+                ),
+                SolverType::Poroelastic => Err(KwaversError::InvalidInput(
+                    "Simulation.run does not support SolverType.Poroelastic; use the poroelastic solver APIs"
+                        .into(),
+                )),
             })
             .map_err(kwavers_error_to_py_local)?;
 

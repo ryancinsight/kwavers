@@ -1,5 +1,9 @@
+mod bem;
+mod dg;
 mod dispatch;
 mod elastic;
 mod fdtd;
+mod helmholtz;
 mod pstd;
+mod rayleigh_sommerfeld;
 mod result;
