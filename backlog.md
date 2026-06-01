@@ -86,10 +86,23 @@ EXTRACTION PHASE (ADR 009, in progress — leaf-first):
   `kwavers` build green, 4m19s). **PROCESS LESSON: commit verified increments before
   any `git checkout`-based revert** — uncommitted changes under the reverted path are
   unrecoverable. core+math extractions survived (separate `crates/` paths).
-- **[required next] Complete edge re-audit** with a grouped-import-aware tool (parse
-  `use` trees, e.g. `syn`, not line greps) across ALL layers before resuming
-  extraction. The prior "0 upward edges" figures undercount grouped/inline cross-layer
-  refs (the domain→physics sonoluminescence edge proved this).
+- **[DONE] Complete edge re-audit (2026-06-01)** — grouped-import-aware Python scan
+  (collapses multiline `use crate::{…}`, strips comments) over all in-monolith layers.
+  **Authoritative remaining cross-layer edge set = 3** (physics/solver/simulation/
+  clinical are CLEAN — the prep is verified; core/math already extracted):
+  1. `domain → infrastructure`: `domain/imaging/medical/dicom_loader/loader.rs`
+     calls `infrastructure::io::dicom_ritk`. **Fix (known):** move the `dicom_ritk`
+     adapter into domain (it uses domain types + is consumed only by domain; +deps
+     ritk-io, burn["ndarray"]).
+  2. `domain → physics`: `domain/sensor/sonoluminescence/detector/core.rs` uses
+     `physics::bubble_dynamics::BubbleStateFields` + `physics::optics::sonoluminescence`.
+     **Fix (ADR-level decision):** a domain *sensor* depending on physics *models* —
+     move the detector up to a higher layer, OR move the shared emission types down,
+     OR invert via a trait.
+  3. `analysis → infrastructure`: `analysis/plotting/mod.rs`. **Fix:** plotting is a
+     presentation concern; move it to the facade/a viz crate, or invert.
+  Resolve these 3 → domain + analysis become extractable. (Earlier "0 edges
+  everywhere" was wrong: line-greps missed grouped imports + inline refs.)
 - Then resume: `kwavers-domain` (after physics-edge fix) → `physics` → `solver` →
   `analysis` → `simulation` → `clinical`.
 - Bump to 4.0.0 ([arch] post-1.0) at release; run cargo-semver-checks on the facade.
