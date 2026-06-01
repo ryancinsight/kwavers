@@ -103,6 +103,27 @@ EXTRACTION PHASE (ADR 009, in progress — leaf-first):
      presentation concern; move it to the facade/a viz crate, or invert.
   Resolve these 3 → domain + analysis become extractable. (Earlier "0 edges
   everywhere" was wrong: line-greps missed grouped imports + inline refs.)
+- **[DONE — all 3 edges resolved, 2026-06-01]** Grouped-import-aware re-audit now
+  reports **every layer CLEAN** (domain/physics/solver/analysis/simulation/clinical
+  = 0 upward edges). The DAG is genuinely acyclic.
+  1. domain→physics (sonoluminescence detector): per user direction ("detectors/
+     transducers belong outside physics"), decoupled the detector — it imported
+     `BubbleStateFields` via a physics *re-export* (canonical type is already
+     `domain::field::BubbleStateFields`; fixed the import path) and stored a
+     vestigial `physics::optics::SonoluminescenceEmission` only to read one bool
+     (`use_blackbody`); replaced with a domain-local flag. Detector now physics-free;
+     emission physics stays inline (Stefan-Boltzmann/Wien/Planck). Zero behaviour change.
+  2. domain→infrastructure (dicom_ritk): relocated the adapter
+     `infrastructure/io/dicom_ritk.rs` → `domain/imaging/medical/dicom_loader/`
+     (intra-crate; it uses domain types + is domain-only-consumed). Removed the
+     unused infra re-export aliases.
+  3. analysis→infrastructure: removed the dead `pub use infrastructure::io::save_data_csv`
+     re-export in `analysis/plotting` (no consumers).
+- **[next] Resume extraction** (`kwavers-domain` → physics → solver → analysis →
+  simulation → clinical). Domain extraction needs a **grouped-import-aware path
+  rewriter** (line-sed misses `use crate::{ core::, domain:: }`) + deps
+  (ritk-io, burn["ndarray"], gaia, nifti, ritk-registration, rand*). Commit after
+  each verified crate.
 - Then resume: `kwavers-domain` (after physics-edge fix) → `physics` → `solver` →
   `analysis` → `simulation` → `clinical`.
 - Bump to 4.0.0 ([arch] post-1.0) at release; run cargo-semver-checks on the facade.

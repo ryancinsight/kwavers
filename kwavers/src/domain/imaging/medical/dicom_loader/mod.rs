@@ -1,5 +1,6 @@
 //! DICOM image loader.
 
+mod dicom_ritk;
 pub mod loader;
 #[cfg(test)]
 mod tests;

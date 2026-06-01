@@ -3,22 +3,22 @@
 use super::constants;
 use super::types::{DetectorConfig, SonoluminescenceEvent, SonoluminescenceStatistics};
 use crate::core::constants::fundamental::{PLANCK, SPEED_OF_LIGHT, STEFAN_BOLTZMANN};
+use crate::core::constants::numerical::FOUR_PI;
 use crate::core::constants::optical::WIEN_CONSTANT;
-use crate::{
-    physics::bubble_dynamics::BubbleStateFields,
-    physics::optics::sonoluminescence::{EmissionParameters, SonoluminescenceEmission},
-};
+use crate::domain::field::BubbleStateFields;
 use ndarray::Array3;
 use std::collections::HashMap;
-use crate::core::constants::numerical::{FOUR_PI};
 
 /// Sonoluminescence detector and analyzer
 #[derive(Debug)]
 pub struct SonoluminescenceDetector {
     /// Detector configuration
     config: DetectorConfig,
-    /// Emission calculator
-    emission_calculator: SonoluminescenceEmission,
+    /// Treat the emitter as an ideal blackbody (efficiency 1.0) vs. grey
+    /// (0.5) when converting radiated power to photon count. Domain-local flag;
+    /// the detector computes emission inline (Stefan-Boltzmann / Wien / Planck)
+    /// rather than depending on the physics::optics emission model.
+    use_blackbody: bool,
     /// Detected events
     events: Vec<SonoluminescenceEvent>,
     /// Event history for time-resolved analysis
@@ -37,17 +37,10 @@ impl SonoluminescenceDetector {
         grid_spacing: (f64, f64, f64),
         config: DetectorConfig,
     ) -> Self {
-        let emission_params = EmissionParameters {
-            use_blackbody: true,
-            use_bremsstrahlung: true,
-            use_molecular_lines: false,
-            min_temperature: config.temperature_threshold,
-            ..Default::default()
-        };
-
+        let _ = grid_shape; // retained for API symmetry; inline emission needs no grid
         Self {
             config,
-            emission_calculator: SonoluminescenceEmission::new(grid_shape, emission_params),
+            use_blackbody: true,
             events: Vec::new(),
             event_history: HashMap::new(),
             grid_spacing,
@@ -157,17 +150,11 @@ impl SonoluminescenceDetector {
         radius: f64,
         dt: f64,
     ) -> (f64, f64, f64) {
-        let emission_params = &self.emission_calculator.params;
-
         // Stefan–Boltzmann total radiated power: P = σ·A·T⁴ (SSOT σ).
         let surface_area = FOUR_PI * radius.powi(2);
         let power = STEFAN_BOLTZMANN * surface_area * temperature.powi(4);
 
-        let efficiency = if emission_params.use_blackbody {
-            1.0
-        } else {
-            0.5
-        };
+        let efficiency = if self.use_blackbody { 1.0 } else { 0.5 };
         let energy = power * dt * efficiency;
 
         // Wien displacement: λ_peak = b/T (SSOT WIEN_CONSTANT, CODATA b ≈ 2.898 mm·K).

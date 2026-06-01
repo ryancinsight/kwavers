@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+### Changed (2026-06-01) - Resolve remaining cross-layer edges (crate-split prep, ADR 009)
+
+- [patch] Made the module DAG fully acyclic (grouped-import-aware audit: every
+  layer 0 upward edges) by resolving the last 3 cross-layer edges. No behaviour
+  change.
+  - **domain→physics** (sonoluminescence detector): per "detectors/transducers
+    belong outside physics" — decoupled `domain/sensor/sonoluminescence/detector`
+    from physics. `BubbleStateFields` is canonically a domain type
+    (`domain::field`); fixed the detector to import it directly instead of via a
+    `physics::bubble_dynamics` re-export. Replaced the vestigial
+    `physics::optics::SonoluminescenceEmission` field (only its `use_blackbody`
+    flag was read) with a domain-local bool; emission physics stays inline
+    (Stefan-Boltzmann/Wien/Planck).
+  - **domain→infrastructure** (DICOM): relocated the `dicom_ritk` ritk-io adapter
+    from `infrastructure::io` to `domain::imaging::medical::dicom_loader` (it uses
+    domain types and is consumed only by the domain DICOM loader). Removed the
+    unused infra re-export aliases.
+  - **analysis→infrastructure**: removed the dead `pub use
+    infrastructure::io::save_data_csv` re-export from `analysis::plotting`.
+
 ### Changed (2026-06-01) - Extract `kwavers-math` workspace crate (ADR 009) [arch]
 
 - [major] Extracted the `math` layer (FFT, linear algebra, numerics, geometry,

@@ -1,7 +1,7 @@
 //! `DicomImageLoader` — DICOM series loading and metadata extraction.
 //!
-//! Delegates pixel-data decoding to `infrastructure::io::dicom_ritk`
-//! (the canonical SSOT adapter wrapping `ritk_io`). HU-conversion helpers
+//! Delegates pixel-data decoding to the sibling `dicom_ritk` adapter
+//! (the canonical SSOT wrapper over `ritk_io`). HU-conversion helpers
 //! and the affine-from-IPP/IOP helper remain here for callers that work with
 //! raw DICOM-derived spatial metadata directly.
 
@@ -50,13 +50,13 @@ impl DicomImageLoader {
         self.metadata.as_ref()
     }
 
-    /// Internal series-load: delegates to `infrastructure::io::dicom_ritk`.
+    /// Internal series-load: delegates to the sibling `dicom_ritk` adapter.
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     fn load_series_internal(&mut self, dir_path: &str) -> KwaversResult<Array3<f64>> {
         let volume =
-            crate::infrastructure::io::dicom_ritk::load_series_from_dir(Path::new(dir_path))?;
+            super::dicom_ritk::load_series_from_dir(Path::new(dir_path))?;
 
         let modality = match volume.metadata.modality.as_str() {
             "CT" => DicomModality::CT,
