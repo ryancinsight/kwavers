@@ -1,5 +1,85 @@
 # Project Checklist
 
+> Target version: 4.0.0 at next release — CLD-13 changed a public field type
+> (`PhotoacousticResult`/`PhotoacousticSimulation::pressure_fields`), a SemVer
+> breaking change ([major], `cargo-semver-checks` authoritative). Practical
+> impact internal-only (no external/pykwavers consumer; all in-repo call sites
+> updated in-change). Prior audit-revision work (Sprints A–E excl. CLD-13) is
+> [patch]/[minor]. Formal ADR advisable before an external 4.0.0 release; the
+> decision rationale + migration guide are recorded in CHANGELOG.md.
+> Gap inventory: [gap_audit.md](gap_audit.md) · Strategy: [backlog.md](backlog.md).
+
+## Sprint A (verify C-tier suspicions) — COMPLETE (2026-05-31)
+- [x] SOL-4 Westervelt `d²(p²)/dt²` FMA — FALSE POSITIVE (exact + FMA precision gain)
+- [x] PHY-1 Gilmore vapor correction — FALSE POSITIVE (`p_eq` subtracts pv, line 211)
+- [x] PHY-3 IAPWS-IF97 Region-4 — FALSE POSITIVE (matches standard K→MPa→Pa)
+- [x] AMC-1 6th-order central difference — FALSE POSITIVE (exact Fornberg expansion)
+- [x] AMC-2 MVDR imag-part guard — REAL, downgraded C→L (happy-path correct; add guard)
+- [x] AMC-4 `acoustic_field.wgsl` BC — REAL, downgraded C→M (persistence BC, undocumented)
+- **Outcome:** 0 confirmed physics bugs; 4 false positives closed, 2 downgraded.
+  Verify-first gate validated (automated audit over-rated severity 6/6).
+
+## Sprint B (confirmed correctness) — COMPLETE (2026-05-31)
+- [x] SOL-1/2/3 — VERIFIED FALSE POSITIVES: all three panics are inside `#[test]`
+      (one is an intentional should-panic). Audit mislabeled them "production". No change.
+- [x] PHY-5 — FIXED: removed dead `thermal_wave_speed` field (never read; flux law
+      uses only τ). Physics unchanged; 2 thermal tests pass. CHANGELOG updated.
+- **Outcome:** 3 false positives closed, 1 real dead-field removed. Pattern from
+  Sprint A held — automated audit over-rated severity; verify-gate prevented
+  "fixing" correct code (would have broken the intentional should-panic test).
+
+## Sprint C (approximation-validity bounds) — COMPLETE (2026-06-01)
+- [x] PHY-2 — already documented (Prosperetti 1977 cited). No change.
+- [x] PHY-4 — FALSE POSITIVE: shell-viscosity term present (`marmottant.rs:107`).
+- [x] PHY-8 — added `Δf/f̄≪1` validity bound to existing comment.
+- [x] CLD-2 — documented orchestrator linear-only limitation. **Open [minor]:** wire KZK.
+- [x] CLD-3 — "Theorem"→approximation + validity regime + refs; named/flagged 0.7 const.
+- [x] CLD-6 — documented Pennes-perfusion omission + conservative-bias direction.
+- **Outcome:** 0 physics changed (doc + 1 behavior-preserving const). 2 already
+  handled / false-positive, 4 validity docs. Build clean.
+
+## Sprint D (literature validation) — COMPLETE (2026-06-01)
+Add value-semantic tests vs analytical/published references (NO is_ok()-only).
+Verify each gap is real first.
+- [x] PHY-9 — FALSE POSITIVE: `<1.0 m/s²` is relative ~1.7e-7 vs ≈5.8e6 m/s²
+      characteristic accel (at FP floor). Documented scale in-place. No change.
+- [x] PHY-10 — DONE: added `test_minnaert_constant_matches_literature_value`
+      (`f₀·R₀≈3.26 m·Hz`, Minnaert 1933/Leighton 1994, max_rel=0.02). PASSED.
+- [x] PHY-11 — ADEQUATE: analytical differential check already present
+      (rel_err<1e-10). Lauterborn collapse regression → backlog (won't fabricate ref).
+- [x] CLD-11 — DONE: added reflection-decay property test (Collino&Tsogka 2001).
+      Courant-stability sub-item remains open (distinct from reflection model).
+- [x] SOL-7 — DONE: added geometry-invariant amplitude-conservation test. PASSED.
+- **Outcome:** 3 genuine tests added (PHY-10/SOL-7/CLD-11), 1 false positive
+  closed (PHY-9), 1 adequate (PHY-11). 0 physics behavior changed. Pattern from
+  A–C held: "missing validation" items were mostly already-covered or mislabeled.
+- **Deferred to backlog:** CLD-9/10 (need k-wave/analytic field baselines),
+  PHY-13 (de Jong 1991 scattering), PHY-11 Lauterborn regression, CLD-11 Courant.
+
+## Sprint E (CT-derived params + DRY/SSOT) — IN PROGRESS (2026-06-01)
+- [x] CLD-4 — `TISSUE_IMPEDANCE` is matching-layer design load (not CT-derivable);
+      documented. Dead `BACKING_IMPEDANCE` removed.
+- [x] CLD-5 — SSOT dedup of `2.5 MHz` → `DEFAULT_CENTER_FREQUENCY_HZ`. "Ignores
+      user freq" was false (Default is correctly nominal).
+- [x] CLD-12 — local `AIR_REJECTION_HU` was verbatim dup of canonical
+      `HU_BRAIN_BODY_THRESHOLD`; deleted, 8 call sites switched.
+- [x] AMC-9 — removed identity Complex round-trip casts (2 Array2 + 1 Array1
+      clone eliminated; value-identical). signal_processing tests green.
+- [x] AMC-10 — `DEFAULT_DIAGONAL_LOADING=1e-6` (Carlson 1988); Capon+MVDR share it.
+- [x] AMC-11 — named `fs/4` → `DEFAULT_CENTER_FREQUENCY_NYQUIST_FRACTION` (dup claim
+      was false; single site).
+- [x] CLD-13 [major] — `PressureFieldSeries` newtype (own leaf `pressure_series.rs`),
+      validating ctor (non-empty + uniform dims) + `Deref<[Array3<f64>]>` (zero
+      consumer churn). 2 struct fields + 3 ctor sites wrapped; 4 value-semantic
+      tests. Breaking public-field-type change (target → 4.0.0); no external/pykwavers
+      consumer (verified). Migration recorded in CHANGELOG.
+- [x] CLD-14 — real defect was DUPLICATION (not uncited magic numbers): two A&S
+      7.1.26 `erf` copies hoisted to canonical `math::statistics::erf` (named consts,
+      cite, error bound, 3 tests); both sites delegate. Other flagged numbers were
+      already named/cited.
+  - [ ] SOL-10/11 — Rustdoc sweep (~30% public fns); CI-wire k-wave validators.
+- **Open [minor]:** CLD-2 wire `kzk_solver_plugin` into HIFU path.
+
 ## Phase 1: Foundation (0-10%)
 - [ ] 100% Audit/Planning/Gap Analysis
 - [x] Detect Root/VCS & initialize formal artifacts (`checklist.md`, `backlog.md`, `gap_audit.md`)
@@ -20,6 +100,7 @@
 - [x] Enforce Single Source of Truth via shared accessors
 
 ## Phase 3: Component Validation vs k-Wave (50%+)
+- [x] [patch] Chapter 31 image-then-treat figure clarity: add a fused lesion-localization panel beside the anatomy reconstruction, draw the Dice equal-area fused-support contour, keep abdominal histotripsy therapy contours tied to target-derived treatment support, replace the transcranial therapy contour with an explicit skull-corrected focus marker, remove table/bed components from abdominal body masks after resampling, render maps over the full CT frame, regenerate ch31 figures/metrics, and pin the display threshold/body-mask helpers with value-semantic pytest coverage.
 - [x] [major] Theranostic waveform padded simulation domain: refactor
   `clinical::therapy::theranostic_guidance::waveform` to a padded grid
   encompassing both body slice and transducer aperture with coupling
@@ -165,7 +246,11 @@
 - [x] [patch] Ali 2025 heterogeneous finite-window PSTD alignment: add solver-owned `simulate_pstd_finite_window_born_observation`, deriving the scattered source from `-chi * (p0[n+1] - 2 p0[n] + p0[n-1])`, expose it through PyO3 as a conversion-only wrapper, and verify contrast-linearity plus off-grid rejection.
 - [x] [patch] Ali 2025 finite-window clinical comparison routing: route the new Rust finite-window PSTD Born predictor into the reduced replication comparison/report path without adding Python-owned propagation math, keep inversion on `pstd_spectral_convergent_born`, and pin PyO3 parameter forwarding with fake-binding routing tests.
 - [x] [patch] Ali 2025 finite-window determined-probe rerun: rerun the determined `(4,4,3)` report with `pstd_finite_window_born` included, record best full-field residual `0.03308952523301831`, passive-only residual `0.03395758947454344`, and best scattering-increment residuals `1.4759860412851549` all / `1.3580035175186627` passive.
-- [x] [patch] Ali 2025 finite-window scattering-increment refinement: Rust/PyO3 scale-decomposition diagnostics verified (2026-05-28). `cargo test --manifest-path kwavers/Cargo.toml --test breast_fwi_scattering_increment -j 1` passes 2/2 (scattering_increment_public_api_identifies_exact_model, scattering_increment_public_api_reports_nonzero_residual_for_mismatched_model). pykwavers `cargo check --manifest-path pykwavers/Cargo.toml --lib` exits 0 (fixed super::kwavers_to_py import regressions in dataset.rs, direct_field.rs, finite_window.rs; removed unused ElementPosition/Array2 imports from array_config.rs). The calibrated scattering-increment residual above unity (all-channel 1.476, passive 1.358) is confirmed to reflect genuine finite-window scattering physics — the exact-model test confirms normalized increment residual is numerically zero for a correctly-scaled prediction, while the mismatch test confirms residual exceeds 1.0 when the model is scaled relative to the homogeneous baseline without the true heterogeneous contrast.
+- [x] [patch] Ali 2025 finite-window scattering-increment refinement: restore and verify Rust/PyO3 scale-decomposition diagnostics, rebuild `pykwavers`, pass focused scattering pytest 3/3, rerun the determined `(4,4,3)` probe, and record `pstd_finite_window_born` model-scaled full-field residual `0.03308952523301831`, baseline-scaled full-field residual `0.15503316829071445`, source-scale relative drift mean `0.13107868920036708`, and all-channel increment residual `1.4759860412851549`; this isolated the source-phasing hypothesis that is now closed below.
+- [x] [patch] Ali 2025 finite-window scattering source-phasing theorem: pin the Rust finite-window Born source term as the Frechet derivative of the production PSTD acquisition map by comparing `pstd_finite_window_born` increments against a small-contrast PSTD finite difference with CPML disabled; source phasing is verified and is not the remaining calibrated-increment residual source.
+- [x] [patch] Ali 2025 finite-window nonlinear/calibration-domain residual: add Rust/PyO3 model-scaled increment diagnostics normalized by the homogeneous observed increment energy, verify analytic scale-drift cases, rerun the determined probe, and record `pstd_finite_window_born` baseline-calibrated increment residual `1.4759860412851549` versus model-scaled increment residual `0.3150272802598277`; the remaining residual is now localized beyond scalar calibration.
+- [x] [patch] Ali 2025 finite-window second-order scattering theorem: derive and implement the next finite-window Born-series correction term in Rust, then verify whether it reduces the `pstd_finite_window_born` model-scaled increment residual below the first-order `0.3150272802598277` determined-probe value.
+- [x] [patch] PyO3 Rayleigh-Sommerfeld wrapper compile closure: replace the invalid `Medium::ambient_density` call with trait-based center-cell density sampling and preserve the moved rectangular-transducer width before `FastNearfieldSolver::set_transducer`, restoring `pykwavers` debug library compilation.
 - [x] [patch] Thermal dose SSOT constants: route Sapareto-Dewey R factors through `medical`, route heat capacities and soft-tissue thermo-acoustic checks through `tissue_thermal`, and pin mild-hyperthermia CEM43 accumulation without a body-temperature gate.
 - [x] [patch] Focused source adapter compile closure: annotate the focused bowl `HashMap` as `ElementMap` so full `kwavers` lib-test compilation can infer `Vec<usize>` for grouped element indices.
 - [x] [arch] Transcranial linear Born config boundary completion: keep clinical anatomy fields on `TranscranialUstBornInversionConfig`, pass `&config.linear` to generic linear-Born kernels, and restore `cargo check -p kwavers --lib`, focused `transcranial_ust` tests, plus `cargo check -p pykwavers --lib`.
@@ -174,7 +259,7 @@
 - [x] [arch] Transcranial linear Born kernel relocation (T13b-Phase-3): generalise `VolumeOperator::new` over `<G: TransducerGeometry + ?Sized>`, move `volume_operator{.rs,/}` and `volume_born/pcg.rs` into `solver::inverse::linear_born_inversion`, replace hardcoded `C_BRAIN_REF_M_S` / `C_TISSUE_DENSITY_KG_M3` with validated `reference_sound_speed_m_s` / `reference_density_kg_m3` config fields (brain-overridden in the clinical config default), update the clinical adapter to consume `pcg_invert` + `VolumeOperator` via the public solver path with no compatibility alias, and verify `cargo check -p {kwavers,pykwavers} --lib` exit 0 plus `cargo test -p kwavers {transcranial_ust,linear_born_inversion} --lib` 11/11 pass.
 - [x] [patch] Transcranial focused-bowl terminology cleanup: remove residual vendor/helmet labels from book examples/docs, rename the Chapter 25 phase-correction figure stem, and keep generated docs tied to generic bowl-transducer geometry.
 - [x] [patch] Bioheat blood specific-heat SSOT test: assert perfused thermal tissue constructors use `BLOOD_SPECIFIC_HEAT` rather than only checking positive values.
-- [ ] [patch] Ali 2025 Table 1 parity gate: execute the reduced-grid replication against the published phantom and assert RMSE within 2x the Table 1 3-D FWI RMSE plus PCC at least 95% of the Table 1 3-D FWI PCC.
+- [~] [patch] Ali 2025 Table 1 parity gate: execute the reduced-grid replication against the published phantom and assert RMSE within 2x the Table 1 3-D FWI RMSE plus PCC at least 95% of the Table 1 3-D FWI PCC.
 - [x] [patch] Clinical safety mechanical-index correction: compute MI from rarefactional-pressure magnitude, reject nonpositive/nonfinite frequency with `0.0`, and pin signed-pressure plus invalid-frequency value tests.
 - [x] [patch] Clinical safety thermal-index domain correction: reject nonfinite/negative acoustic power and invalid frequency domains for TIS/TIB, preserve nonnegative exposure-ratio outputs, and correct the FDA diagnostic-ultrasound reference text.
 - [x] [patch] Mechanical-index contract unification: align book histotripsy and transcranial BBB-opening MI helpers with `|p_r|_MPa / sqrt(f_MHz)`, reject invalid domains with `0.0`, and pin signed-pressure plus invalid-frequency tests.

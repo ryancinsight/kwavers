@@ -1,5 +1,47 @@
 # Gap Audit
 
+## CLOSED: Chapter 31 Image Reconstruction and Therapy Panels (2026-05-27)
+
+Root cause: `render_image_then_treat_sequence` collapsed the figure sequence to
+CT, anatomical Born reconstruction, and therapy pressure. The higher-fidelity
+fused lesion-localization channel was computed by Rust and included in metrics,
+but it was not rendered in the per-anatomy image-then-treat figures. The
+abdominal solver body mask also re-thresholded HU values after crop/resample,
+which could re-admit CT table/bed voxels that the target-connected crop
+selection had already removed. The therapy panel used raw waveform near-field
+pressure for liver/kidney display and used abdominal histotripsy contour
+language for the transcranial low-pressure focused-ultrasound case.
+
+Closure:
+- Added reusable masked display, equal-area support threshold, and pressure
+  unit helpers in the ch31 renderer.
+- Added target-connected body support and a two-cell FDTD stencil halo
+  exclusion for therapy display masks.
+- Expanded each image-then-treat figure to four panels: CT, anatomy
+  reconstruction, fused lesion-localization reconstruction, and therapy
+  pressure.
+- Drew the fused equal-area support contour from the same threshold used by
+  the Dice metric.
+- Kept abdominal therapy contours tied to the 26 MPa histotripsy intrinsic
+  threshold on target-derived treatment support and changed the brain therapy
+  annotation to a skull-corrected focus marker.
+- Routed abdominal `PreparedTheranosticSlice::body_mask` through the
+  target-connected body component after resampling instead of a second
+  HU-threshold pass over the crop.
+- Regenerated the ch31 figure PNG/PDF artifacts and `metrics.json`.
+
+Verification:
+- `python -m py_compile pykwavers\examples\book\ch31_clinical_device_geometry.py pykwavers\tests\test_book_therapy_chapters.py`:
+  PASS.
+- `D:\miniforge3\Scripts\pytest.exe pykwavers\tests\test_book_therapy_chapters.py -k "chapter31_image_then_treat_helpers or active_book_focused_bowl" -q`:
+  PASS, 2 selected tests.
+- `cargo check --manifest-path kwavers\Cargo.toml --lib --message-format=short -j 1`:
+  PASS.
+- `D:\miniforge3\python.exe pykwavers\examples\book\ch31_clinical_device_geometry.py`:
+  PASS; regenerated ch31 image artifacts.
+- `cargo test --manifest-path kwavers\Cargo.toml medium::abdominal --lib --message-format=short -j 1`:
+  TIMED OUT at the 300 s bound before test result emission.
+
 ## CLOSED: Focused Source Config Aperture Ownership (2026-05-27)
 
 Root cause: focused-source config validation treated `radius` as a generic
@@ -120,7 +162,80 @@ Likely from k-Wave's `kWaveTransducerSimple` internal normalization differing
 from direct mask injection in `build_pkw_source`. Requires k-wave-python
 transducer model deep-dive; no Rust change warranted without profiling data.
 
-## Ali 2025 Scattering-Increment Scale Decomposition — REPAIRED, RUNTIME PENDING (2026-05-28)
+## Ali 2025 Finite-Window Source Phasing — CLOSED (2026-05-27)
+
+The candidate source-phasing defect is rejected by a Rust differential theorem.
+`finite_window_born_matches_pstd_first_variation` compares the
+`pstd_finite_window_born` scattering increment against a small-contrast finite
+difference of the production PSTD acquisition generator with CPML disabled.
+The test passes, so the implemented source term
+`-chi * (p0[n+1] - 2p0[n] + p0[n-1])` is the correct discrete Frechet
+derivative at the homogeneous reference model.
+
+### Verification summary
+- `cargo test --manifest-path kwavers/Cargo.toml --test pstd_finite_window_born`
+  with `D:\msys64\ucrt64\bin` first on `PATH`: 3/3 pass.
+- `cargo test --manifest-path kwavers/Cargo.toml --test breast_fwi_scattering_increment`
+  with `D:\msys64\ucrt64\bin` first on `PATH`: 2/2 pass.
+- Running the same integration executable without the UCRT path prefix fails
+  before Rust test startup with `STATUS_ENTRYPOINT_NOT_FOUND`, consistent with
+  mixed MinGW/UCRT dynamic-library resolution rather than Rust test failure.
+
+### Residual gap
+The remaining Ali 2025 residual is not source phasing. A subsequent
+model-scaled increment diagnostic closes the calibration-domain decomposition;
+the remaining executable gap is second-order finite-window scattering beyond
+the first-order Born theorem.
+
+## Ali 2025 Model-Scaled Increment Diagnostic — CLOSED (2026-05-27)
+
+The prior diagnostic compared full-field model-scaled residuals against
+homogeneous-baseline scattering-increment residuals, but did not expose the
+increment residual obtained when the model-owned source scale also calibrates
+the increment decomposition. The new diagnostic separates scalar calibration
+drift from nonlinear finite-window scattering error without adding Python-side
+correction logic.
+
+### Implementation
+- Extended `BreastUstScatteringIncrementModelDiagnostics` with model-scaled
+  observed increment norm, model-scaled increment residual norm,
+  model-scaled normalized increment residual, and model-scaled increment energy
+  ratio.
+- Normalized model-scaled increment residuals by the homogeneous-baseline
+  observed increment energy so models remain comparable when source-scale drift
+  changes the calibrated increment magnitude.
+- Exposed the new top-level and per-model fields through PyO3 while keeping
+  propagation and diagnostic math in `kwavers`.
+- Repaired the Rust PyO3 Rayleigh-Sommerfeld wrapper compile break by sampling
+  medium density through the `Medium` trait and preserving transducer width
+  before ownership transfer.
+
+### Verification summary
+- `cargo test --manifest-path kwavers/Cargo.toml --test breast_fwi_scattering_increment`
+  with `D:\msys64\ucrt64\bin` first on `PATH`: 2/2 pass.
+- `cargo test --manifest-path kwavers/Cargo.toml --test pstd_finite_window_born`
+  with `D:\msys64\ucrt64\bin` first on `PATH`: 3/3 pass.
+- `cargo check --manifest-path pykwavers/Cargo.toml --lib --message-format=short -j 1`:
+  exit 0.
+- `cargo build --manifest-path pykwavers/Cargo.toml --lib --message-format=short -j 1`:
+  exit 0.
+- `pytest pykwavers/tests/test_ali2025_replication_example.py -q -k "scattering_increment" --timeout=60`:
+  3/3 pass against the rebuilt PyO3 extension.
+- Determined probe command with `--max-shape 4,4,3 --decimation 8
+  --frequencies-hz 200000,300000 --rows 1 --require-determined-acquisition
+  --cycles-per-frequency 4 --frequency-bin-cycles 1 --no-plot`: exit 0.
+
+### Conclusion
+For `pstd_finite_window_born`, the determined probe now reports
+baseline-calibrated increment residual `1.4759860412851549`, model-scaled
+increment residual `0.3150272802598277`, model-scaled full-field residual
+`0.03308952523301831`, and model-scaled increment energy ratio
+`1.6474240255480932`. Passive-only data reports model-scaled increment residual
+`0.27833089450377235`. Scalar calibration explains most of the prior
+increment-domain mismatch, but a nonzero model-scaled increment residual
+remains. The next correction belongs in finite-window second-order scattering.
+
+## Ali 2025 Scattering-Increment Scale Decomposition — CLOSED (2026-05-27)
 
 The finite-window model has low row-scaled full-field residual, but the
 homogeneous-baseline calibrated scattering increment remains above unity. The
@@ -146,7 +261,7 @@ instead of the homogeneous baseline, owns calibration.
   zero, the baseline-scale relative drift is exactly `1/3`, and the calibrated
   increment residual is above unity.
 
-### Verification summary (2026-05-28 repair)
+### Verification summary (2026-05-27 closure)
 - `rustfmt --check` on the touched Rust files: pass.
 - `D:\miniforge3\python.exe -m py_compile pykwavers\tests\test_ali2025_replication_example.py`:
   exit 0.
@@ -154,17 +269,27 @@ instead of the homogeneous baseline, owns calibration.
   exit 0 and compiles the integration target.
 - `cargo check --manifest-path pykwavers/Cargo.toml --lib --message-format=short -j 1`:
   exit 0.
+- `cargo build --manifest-path pykwavers/Cargo.toml --lib --message-format=short -j 1`:
+  exit 0 after adding explicit unsupported solver-type arms for `Simulation.run`.
+- `pytest pykwavers/tests/test_ali2025_replication_example.py -q -k "scattering_increment" --timeout=60`:
+  3/3 pass against the rebuilt PyO3 extension.
+- Determined probe command with `--max-shape 4,4,3 --decimation 8
+  --frequencies-hz 200000,300000 --rows 1 --require-determined-acquisition
+  --cycles-per-frequency 4 --frequency-bin-cycles 1 --no-plot`: exit 0.
 
 ### Conclusion
-The implementation now matches the documented diagnostic contract, but runtime
-closure is still blocked. `cargo test --manifest-path kwavers/Cargo.toml --test
-breast_fwi_scattering_increment -j 1 --message-format=short` compiles, then the
-Windows test executable exits before harness startup with
-`STATUS_ENTRYPOINT_NOT_FOUND`. `cargo build --manifest-path pykwavers/Cargo.toml
---lib` cannot replace `target\debug\pykwavers.dll` because comparison Python
-processes have the DLL loaded. The residual classification remains pending
-until the Windows loader issue, PyO3 runtime verification, focused pytest, and
-the determined-probe rerun complete.
+The calibrated scattering-increment residual above unity is not a Python
+normalization defect or a missing row scalar. For `pstd_finite_window_born`, the
+determined probe reports model-scaled full-field residual
+`0.03308952523301831`, baseline-scaled full-field residual
+`0.15503316829071445`, all-channel scattering-increment residual
+`1.4759860412851549`, source-scale relative drift mean
+`0.13107868920036708`, and source-scale phase drift mean
+`0.11773155883377012` rad. Passive-only model-scaled full-field residual is
+`0.03395758947454345` with increment residual `1.3580035175186627`. Subsequent
+source-phasing and model-scaled increment diagnostics close phasing and scalar
+calibration as explanations; the remaining gap is finite-window second-order
+scattering.
 
 ## Ali 2025 Finite-Window Determined Probe (2026-05-25)
 

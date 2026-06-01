@@ -2,6 +2,543 @@
 
 ## Unreleased
 
+### Changed (2026-06-01) - Extract `kwavers-math` workspace crate (ADR 009) [arch]
+
+- [major] Extracted the `math` layer (FFT, linear algebra, numerics, geometry,
+  statistics, SIMD) into `kwavers-math` (depends on `kwavers-core` only).
+  Re-exported by the facade: `pub use kwavers_math as math` — `crate::math::…`
+  paths resolve unchanged. No behavioural change; verified isolated + full
+  `kwavers` build green, tests pass.
+- Promoted cross-module helpers from `pub(crate)` to `pub` (now a genuine
+  cross-crate API): `math::geometry::{distance3, normalize3,
+  orthogonal_basis_from_normal3}` and `StaggeredGridOperator::{dx, dy, dz}`.
+
+### Changed (2026-06-01) - Extract `kwavers-core` workspace crate (ADR 009) [arch]
+
+- [major] Began the workspace crate split: extracted the `core` layer
+  (constants, error types, arena allocator, time/logging utils) into a new
+  `kwavers-core` crate (`crates/kwavers-core/`). The `kwavers` crate re-exports
+  it as `pub use kwavers_core as core`, so all `crate::core::…` / `kwavers::core::…`
+  paths (3,377 sites) resolve unchanged — `kwavers` is now the facade over the
+  layered crates. Motivation: per-crate incremental compilation (see ADR 009).
+- Foundation error decoupling: `KwaversError`'s integrations with higher-layer
+  crates are now optional + feature-gated in `kwavers-core` so the default build
+  is a clean leaf — `gpu` (wgpu), `channels` (flume), `registration`
+  (ritk-registration), `nifti`. `anyhow` remains a normal dep (the `Other`
+  aggregation variant). The `kwavers` facade enables `channels`+`registration`
+  unconditionally and forwards `gpu`/`nifti`, so the effective feature matrix and
+  all behaviour are **identical** to the pre-split monolith.
+- No behavioural change. Verified: `kwavers-core` compiles as a clean leaf and
+  with all features; 54 unit tests + doctests pass; full `kwavers` build green.
+- Part of the [arch] split targeting `4.0.0`; remaining layers
+  (`math`/`domain`/`physics`/`solver`/`analysis`/`simulation`/`clinical`) pending.
+
+### Changed (2026-06-01) - Dependency-layering cleanup (workspace crate-split prep) [arch-prep]
+
+- [patch] Broke all 11 real `physics → solver` upward (cycle-forming) library
+  dependency edges so the crate can be split into a layered workspace. After this
+  the full module DAG is acyclic and linear:
+  `core → math → domain → physics → solver → analysis → simulation → clinical`
+  (verified: 0 upward library edges at every layer). No behavioral change — pure
+  relocation + dead-code removal; all moved code's tests pass.
+  - Moved the capability→plugin dispatcher `PhysicsCatalog` from
+    `physics::factory::catalog` to `solver::plugin::catalog` (it constructs solver
+    plugins, so it belongs in the solver layer). `physics::factory` now holds only
+    the solver-independent capability descriptors. Consumers (`lib`, `simulation::
+    factory`/`manager`) rewired.
+  - Moved the `bubble_symplectic` ODE integrator from `solver::forward::ode` to
+    `physics::acoustics::bubble_dynamics::symplectic_integration` (it is a bubble-
+    dynamics integrator consumed only by physics; its `adaptive`/`imex` siblings
+    already live there).
+  - Removed the dead `impl RegistrationEngine for RitkRegistrationEngine` (the only
+    `solver` import in the fusion registration adapter) and its two private helpers;
+    the live fusion path uses the inherent `register_for_method`. (`RegistrationEngine`
+    in `solver::interface::factory` now has zero implementors — flagged for a
+    follow-up dead-trait cleanup.)
+  - Moved the transducer acquisition-geometry types `ElementPosition` /
+    `TransducerGeometry` from `solver::inverse::linear_born_inversion::geometry` to
+    `domain::source::transducers::acquisition_geometry` (they are domain geometry
+    concepts used by solver, clinical, and physics — all downward). 13 import sites
+    updated.
+- Note: a single *test-only* `physics → solver` import remains (`elastic_wave`
+  tests use `PstdElasticPlugin`); it is not a crate-extraction blocker because Cargo
+  permits dev-dependency cycles. The 6 `analysis → solver` edges are downward
+  (analysis sits above solver) and were never blockers.
+
+### Added (2026-06-01) - `PressureFieldSeries` newtype (physics audit Sprint E, CLD-13)
+
+- [major] `domain::imaging::photoacoustic::PressureFieldSeries`: a validated
+  newtype over `Vec<Array3<f64>>` for photoacoustic pressure-snapshot series.
+  The constructor enforces the series invariants at construction — non-empty and
+  dimensionally uniform (every snapshot shares the first's spatial dims, since
+  they sample one fixed grid over time) — so a ragged or empty series is no
+  longer a representable state. The type is immutable after construction (no
+  `DerefMut`) and exposes `Deref<Target = [Array3<f64>]>`, so every read-only
+  slice/`iter`/index/`last` consumer is unchanged. Re-exported through the
+  `clinical::imaging::photoacoustic` facade. 4 value-semantic constructor tests
+  (uniform-accept, empty-reject, ragged-reject, `into_inner` round-trip).
+
+#### Breaking
+- `PhotoacousticResult::pressure_fields` and
+  `PhotoacousticSimulation::pressure_fields` change type from
+  `Vec<Array3<f64>>` to `PressureFieldSeries`. This is a breaking change to a
+  public field type per SemVer (`cargo-semver-checks` will flag it), hence the
+  [major] classification, even though it is additive in spirit (the field still
+  derefs to `[Array3<f64>]`). All in-repo construction sites
+  (`simulation/modalities/photoacoustic/core/acoustic.rs`,
+  `clinical/imaging/workflows/orchestrator/workflow/mod.rs`,
+  `solver/photoacoustics/pipeline.rs`) were updated in the same change. No
+  external or pykwavers/PyO3 consumer references these fields (verified
+  repo-wide), so practical impact is internal-only.
+
+#### Migration
+- Read access is unchanged: `result.pressure_fields.iter()`, `.len()`,
+  `[i]`, `.last()`, slicing, and `&result.pressure_fields` → `&[Array3<f64>]`
+  coercion all still work via `Deref`.
+- To obtain an owned `Vec<Array3<f64>>`, call `.into_inner()`.
+- To construct, replace `pressure_fields: my_vec` with
+  `pressure_fields: PressureFieldSeries::new(my_vec)?` (returns
+  `KwaversError::InvalidInput` for an empty or dimensionally-ragged series).
+- `for field in &result.pressure_fields` must become
+  `for field in result.pressure_fields.iter()` (a `for`-loop over `&Newtype`
+  does not auto-deref to the slice iterator).
+
+### Changed (2026-06-01) - Canonical `erf` SSOT (physics audit Sprint E, CLD-14)
+
+- [patch] Hoisted the duplicated Abramowitz & Stegun 7.1.26 `erf` approximation
+  into a single canonical `math::statistics::erf` (named coefficient consts,
+  A&S citation, documented `|ε| ≤ 1.5e-7` bound, 3 value-semantic tests:
+  reference values, oddness, saturation). Removed the two copies in
+  `physics/analytical/cavitation/histotripsy.rs` (`erf_as`) and
+  `clinical/therapy/clinical_scenarios/scenario/mod.rs` (`erf_as7_1_26`); both
+  now delegate. Placed in `math::statistics` (domain-free; both physics and
+  clinical layers import it without depending on each other). The histotripsy
+  call may shift ≤1 ULP (its old copy used plain-multiply Horner; the canonical
+  uses `mul_add`), far below the A&S approximation error — no meaningful
+  behavioral change. The audit's "uncited magic numbers" framing was inaccurate
+  (both copies were already cited; `LENS_CURVATURE_FACTOR`/crosstalk were already
+  named/commented) — the real defect was duplication.
+
+### Changed (2026-06-01) - SSOT/DRY consolidation + dead-code removal (physics audit Sprint E)
+
+- [patch] CT-derived/parameter audit (CLD-4/5/12):
+  - `domain/source/transducers/physics/mod.rs`: removed the dead `pub const
+    BACKING_IMPEDANCE` (no references repo-wide). Documented `TISSUE_IMPEDANCE`
+    as the nominal matching-layer *design load* (`Z_match=√(Z_pzt·Z_load)`,
+    Szabo 2014/Cobbold 2007) — fixed manufactured hardware, not a per-voxel
+    propagation medium, so it must not be replaced by a CT-derived value.
+  - `domain/source/transducers/phased_array/config.rs`: removed the duplicated
+    `2.5` magic (previously in both the wavelength-derived geometry and the
+    `frequency` field) by introducing a single `DEFAULT_CENTER_FREQUENCY_HZ`
+    const so geometry and frequency cannot drift apart.
+  - `clinical/imaging/reconstruction/transcranial_ust/{medium,volume}.rs`:
+    removed the local `AIR_REJECTION_HU=-300` constant — a verbatim SSOT
+    duplicate of the canonical `core::constants::ct_acoustics::
+    HU_BRAIN_BODY_THRESHOLD=-300` (Aubry 2003). Switched all 8 call sites to the
+    canonical constant.
+- [patch] Beamforming DRY/perf (AMC-9/10/11):
+  - `analysis/.../beamforming/adaptive/subspace/{esmv,music}.rs`: removed four
+    identity `mapv(|z| Complex::new(z.re, z.im))` round-trips and two
+    per-element complex reconstructions — confirmed `Complex64 ≡
+    num_complex::Complex<f64>` and that the eigendecomposition / linear-solve
+    APIs take and return exactly that type. Eliminates two `Array2` clones and
+    one `Array1` clone per call with value-identical results.
+  - `core/constants/numerical.rs`: added `DEFAULT_DIAGONAL_LOADING = 1e-6`
+    (Carlson 1988); the Capon and MVDR `Default` impls now share it (was
+    duplicated).
+  - `analysis/.../localization/music/mod.rs`: named the `fs/4` default carrier
+    `DEFAULT_CENTER_FREQUENCY_NYQUIST_FRACTION = 0.25` with justification
+    (midpoint of the baseband Nyquist range). (The audit's claimed duplication
+    in `processor.rs` was a false positive — that site takes `frequency` as a
+    parameter.)
+
+### Tests (2026-06-01) - Literature/property validation (physics audit Sprint D)
+
+- [patch] Added external-reference and qualitative-property tests (no behavior
+  change; all additive):
+  - `acoustics/bubble_dynamics/epstein_plesset/tests.rs`:
+    `test_minnaert_constant_matches_literature_value` pins the Minnaert constant
+    `f₀·R₀ ≈ 3.26 m·Hz` (Minnaert 1933; Leighton 1994, *The Acoustic Bubble*
+    §3.2.1) across R₀∈[1e-6,1e-3] at `max_relative=0.02`. Independent of the
+    code's own resonance formula — guards a self-consistent-but-wrong stiffness/
+    density/γ grouping that the pre-existing circular `validate_implementation()`
+    would miss.
+  - `solver/forward/pstd/implementation/core/source_injection.rs`:
+    `interior_source_conserves_total_amplitude_across_geometry` asserts the 1/N
+    interior-source scale is *amplitude*-normalizing — N·scale=1 invariant to
+    voxel geometry and resolution (clustered vs dispersed masks give equal scale).
+    Documents that energy Σscale²=1/N is deliberately not conserved.
+  - `domain/boundary/cpml/config/tests.rs`:
+    `theoretical_reflection_decays_monotonically_with_thickness` validates the
+    Collino & Tsogka (2001) reflection model qualitatively — strictly decreasing
+    in thickness and bounded in (0, target]. Parameters are derived from the
+    actual `σ_max = σ_factor·(m+1)·c/(150π·dx)` so the coefficient stays in the
+    f64-representable range (at fine dx it correctly underflows to 0).
+- Verified two audit flags as **false positives / adequate** (no change):
+  - PHY-9: the K-M equilibrium tolerance `<1.0 m/s²` is already a *relative*
+    ~1.7×10⁻⁷ bound against the ≈5.8×10⁶ m/s² characteristic acceleration —
+    at the FP cancellation floor, not loose. Documented the scale in-place.
+  - PHY-11: the Gilmore suite already has an analytical differential check
+    (rel_err<1e-10 vs the closed-form RHS); a published Lauterborn collapse
+    regression is deferred pending a citable reference (not fabricated).
+
+### Documentation (2026-06-01) - Approximation-validity bounds (physics audit Sprint C)
+
+- [patch] Documented the validity regimes of several closed-form physics
+  approximations (no behavior change):
+  - `clinical/therapy/hifu_planning/types.rs`: rewrote the O'Neil focal-geometry
+    "Theorem" as a **closed-form approximation** with its validity regime
+    (linear, paraxial `F# ≳ 1`, homogeneous water-like medium) + references
+    (O'Neil 1949, Cobbold 2007). Named the previously-magic `0.7` −6 dB volume
+    factor `MINUS6DB_ELLIPSOID_FILL_FACTOR` and flagged it as an unvalidated
+    empirical fill factor (value preserved; feeds reporting/tests only, not the
+    MI safety path).
+  - `clinical/therapy/therapy_integration/orchestrator/methods.rs`: documented
+    at `execute_therapy_step` that the acoustic field is the **linear**
+    Gaussian-beam estimator for all modalities incl. HIFU (no KZK nonlinearity
+    wired). Follow-up tracked (gap_audit CLD-2): wire `kzk_solver_plugin`.
+  - `clinical/therapy/lithotripsy/bioeffects.rs`: documented that the Thermal
+    Index omits Pennes perfusion and therefore **over-estimates** heating — a
+    conservative bias appropriate for a safety index (Pennes 1948).
+  - `acoustics/wave_propagation/nonlinear/parametric.rs`: added the explicit
+    `Δf/f̄ ≪ 1` closely-spaced-primaries validity bound on the average-attenuation
+    approximation.
+- Verified two audit flags as **non-issues** (no change): Gilmore adiabatic
+  approximation (PHY-2) was already documented with the Prosperetti 1977
+  reference; the Marmottant shell-viscosity term (PHY-4) is in fact present
+  (`encapsulated/model/marmottant.rs:107`).
+
+### Removed (2026-05-31) - Dead `thermal_wave_speed` field (Cattaneo-Vernotte)
+
+- [patch] `physics::thermal::diffusion::hyperbolic::HyperbolicParameters`: removed
+  the `thermal_wave_speed` field. It was vestigial state — never read by the
+  flux-relaxation update (which uses only the relaxation time `τ`), while its
+  default (10 m/s vs the consistency relation `c=√(α/τ)≈10⁻⁴ m/s`) falsely
+  implied an independent, physically-inconsistent input. The thermal wave speed
+  is a derived quantity, so it is no longer stored (SSOT/SRP). `τ`-only physics
+  is unchanged; the value-semantic `update_temperature` and divergence tests
+  pass. Updated 4 construction sites. Found via the module physics-audit (PHY-5).
+
+### Added (2026-05-31) - Wired-in GPU/CPU equivalence validation module
+
+- [minor] `solver::validation::gpu_cpu_equivalence` (7 files, ~1262 lines) was
+  present on disk but undeclared in `solver/validation/mod.rs` — never compiled.
+  Declared it (`pub mod gpu_cpu_equivalence;`), compiled clean with no drift, and
+  its tests pass (21 passed, 1 ignored — a 512 MB+ matrix case). Re-exported the
+  public API (`validate_gpu_cpu_equivalence`, `EquivalenceValidator`,
+  `EquivalenceReport`) to match the sibling validation modules. The harness
+  validates GPU vs CPU results to IEEE 754 bounded-error tolerances (bitwise for
+  deterministic ops; `(n−1)·ε·κ` for reductions), supporting the project's
+  differential-validation mandate.
+
+### Removed (2026-05-31) - Orphaned duplicate symplectic bubble integrator
+
+- [patch] Removed `physics::acoustics::bubble_dynamics::symplectic_integration`
+  (5 files, ~400 lines): an undeclared, never-compiled byte-for-byte duplicate of
+  the live `solver::forward::ode::bubble_symplectic` module (Störmer-Verlet /
+  Yoshida4 symplectic integrators). `bubble_dynamics::integration` imports
+  `BubbleSymplecticIntegrator`/`SymplecticConfig` from the live `ode` copy, not
+  the duplicate. Verified by forced recompile of `bubble_dynamics` (clean). SSOT
+  restored: one symplectic-integrator implementation.
+
+### Performance (2026-05-31) - Theranostic FDTD + spectral hot-path optimization
+
+- [patch] `kwavers/src/clinical/therapy/theranostic_guidance/waveform/forward.rs`,
+  `adjoint.rs`: hoisted the loop-invariant stencil coefficient `c²·dt²` out of the
+  per-cell inner body of `step_wavefield_cpml`. The speed field is constant over
+  the whole time loop, so the previous per-cell `powi(2)` + `f64→f32` cast +
+  strided `Array2<f64>` access is now a single precompute (`c2dt2_field`) reused
+  as a contiguous `f32` slice (half the memory traffic of the `f64` field). This
+  removes `nx·ny` redundant `powi`/cast operations per timestep across the entire
+  FWI forward pass, the adjoint advance, and the per-checkpoint Griewank replay
+  (the dominant ~58s passive-acoustic-mapping cost). The stencil value is computed
+  from the identical expression, so results are bit-for-bit unchanged (13 waveform
+  tests pass, including focus-localization).
+- [patch] `kwavers/src/clinical/therapy/theranostic_guidance/waveform/eikonal.rs`:
+  removed the per-sweep `Vec<usize>` index allocations in the fast-sweeping loop
+  (4 allocations × up to 64 outer iterations × per receiver). Replaced with
+  in-place forward/reverse index arithmetic over the same traversal order; no
+  behavior change.
+- [patch] `kwavers/src/solver/forward/nonlinear/westervelt_spectral/spectral.rs`:
+  exploited the separability of the k-space wavenumbers in
+  `initialize_kspace_grids`. Each axis (`kx[i]`, `ky[j]`, `kz[k]`) is now
+  precomputed once (O(N) total branch+divisions instead of O(N³)) and the dense
+  `kx/ky/kz/k²` fields are filled with a parallel `Zip::indexed` (was a sequential
+  triple loop). Values are identical to the prior dense form (13 Westervelt tests
+  pass).
+- [patch] `kwavers/src/clinical/therapy/theranostic_guidance/waveform/forward.rs`:
+  parallelized the two CPML auxiliary memory-variable pre-passes (`psi_x`, `psi_y`)
+  in `step_wavefield_cpml` with `par_chunks_mut(ny)`. Each cell's `psi` update reads
+  only its own prior value and read-only `current` neighbours, so rows are
+  independent and the per-cell arithmetic is unchanged — bit-exact (13 waveform
+  tests pass, including focus-localization). Removes two sequential O(nx·ny) passes
+  per timestep that previously ran single-threaded while the main stencil was
+  already parallel.
+- [patch] `kwavers/src/solver/forward/fdtd/simd_stencil/pressure.rs`: replaced the
+  `Array3::zeros((ni,nj,nk))` + `assign(&pres_scratch)` result construction with a
+  direct `pres_scratch.clone()`, dropping the redundant zero-fill pass over the
+  full grid each pressure update. Bit-identical (10 SIMD-stencil tests pass,
+  including `test_tiling_matches_naive`).
+
+### Changed (2026-05-31) - Ch29 Fig 6: Born and FWI side-by-side
+
+- [patch] `pykwavers/examples/book/ch29_controlled_comparison.py`: reordered the
+  controlled-comparison columns so the **Born inverse** reconstruction
+  (`active_lesion_reconstruction` / `ct_frame_linear_active`) sits directly
+  beside the FWI reconstructions (Westervelt target pressure, iterative
+  elastic-shear FWI, Westervelt+cavitation FWI fusion) on the shared CT grid,
+  instead of Born and FWI living in separate figures. Redefined the final
+  difference panel as `nonlinear_fusion − linear_active` (FWI fusion − Born) and
+  updated the panel theorem and last-column Dice label accordingly. Field
+  computation, metrics, and archives are unchanged (display reorder only;
+  `fusion_difference` now references the Born channel). Synced the Figure 6
+  description in `docs/book/theranostic_fwi_platforms.md`.
+- [patch] Figure 6 readability: each reconstruction panel now underlays the CT
+  anatomy and overlays the field as a signal-proportional translucent map
+  (`alpha = sqrt(|value| / peak)`, bilinear), so the lesion/focus stands out
+  over visible anatomy instead of a hard-edged crop square. Removed the dense
+  per-element therapy-aperture scatter (1024 dots for brain) from the data
+  panels — the "dotted square" clutter — keeping the full transducer context in
+  the first CT column only. The matched-target panel now shows a translucent
+  target fill over CT.
+
+### Documentation (2026-05-30) - Book Chapter Consolidation
+
+- [patch] `docs/book/theranostics.md`: consolidated the two duplicate
+  `Corollary 7.1` blocks (`Irreversibility` and `Safety Constraint`) — which
+  shared a number and stated the same fact — into one
+  `Corollary 7.1 (Irreversibility and Safety Constraint)`.
+- [patch] `docs/book/theranostic_fwi_platforms.md`: documented the same-device
+  send/receive **passive acoustic mapping** reconstruction mode
+  (`PassiveReconstructionMode::PassiveAcousticMapping`) added to
+  `theranostic_guidance`: same-array transmit/receive aperture (Sukovich et al.
+  2020), broadband emission line-resolution bound, single-solve all-band
+  propagation, eikonal aberration-corrected delays, and spectral PAM. States
+  explicitly that PAM is forward-simulated beamforming, not FWI.
+
+### Removed (2026-05-30) - Architecture Review: Dead Code
+
+- [patch] Removed the orphaned `solver::forward::fdtd::simd` subtree (9 files,
+  ~900 lines: `simd/generic/` `GenericSimdStencilProcessor` and `simd/avx512/`
+  `SimdAvx512StencilProcessor`). It had no `pub mod simd;` declaration in
+  `fdtd/mod.rs` (never compiled) and zero external references — a stale parallel
+  duplicate of the live `fdtd::simd_stencil` (`FdtdSimdStencilProcessor`) and
+  `fdtd::avx512_stencil` (`FdtdAvx512StencilProcessor`) backends used by the
+  dispatcher. Build verified identical after removal. This resolves most of the
+  "Laplacian stencil duplicated across 3 backends" finding — there were only 2
+  live backends plus this dead copy.
+- [patch] Removed stale `.backup`/`.bak` artifacts across the tree
+  (`fdtd/scalar/mod.rs.backup{,2}`, `cbs/operator/scattering.rs.backup`,
+  `elastic/nonlinear/material.rs.bak`, and `benches`/`tests` `.backup` files);
+  all verified unreferenced.
+
+### Added (2026-05-30) - Phase-Wrap SSOT (`math::signal::wrap_to_pi`)
+
+- [minor] New `math::signal::wrap_to_pi` — branch-free `rem_euclid` wrap of a
+  phase angle to the principal interval `(−π, π]`, with value-semantic tests
+  (principal-interval membership + modulo-2π invariance). Single source of truth
+  for phase-difference wrapping.
+- [patch] Routed four duplicate wrap sites through it: the seismic
+  instantaneous-phase misfit adjoint (`seismic::misfit::envelope_phase`) and the
+  two ML phase losses (`ml::training::loss` `coherence_violation`,
+  `ml::physics_informed_loss::loss` `coherence_loss`). The ML migration also
+  fixes a latent correctness bug: those used `|Δφ|` with a single π-fold, which
+  is wrong once a phase gradient exceeds 2π; `wrap_to_pi` gives the correct
+  shortest-arc difference.
+
+### Added (2026-05-30) - PAM Sparsity: Exact Eikonal Dedup
+
+- [minor] `clinical::therapy::theranostic_guidance::waveform::emission::eikonal_delay_matrix`:
+  exact dedup — the eikonal travel-time field is solved once per *unique* refined
+  source cell (receivers mapping to the same cell share the column), removing the
+  redundant solves of a dense array with **no accuracy loss**. Test:
+  `eikonal_delay_matrix_dedups_coincident_receivers`.
+- **Three further sparsity ideas were implemented, evaluated against a
+  convergence test, and rejected to keep the result honest:**
+  - *Coarse-grid eikonal, stride-sampled medium* — 13.6-sample delay error at
+    the ultraharmonic band vs the ⅛-period coherence bound (6.3 samples).
+  - *Coarse-grid eikonal, slowness-(harmonic-)averaged medium* — identical
+    13.6-sample error: the refined speed map is a nearest-neighbour upsample of
+    the body map (uniform blocks), so any block average equals the stride
+    sample; the limit is the first-order Godunov truncation of the eikonal solve
+    at body resolution, which the refined grid genuinely resolves. Full refined
+    resolution is therefore required for the high-frequency correction; grid
+    coarsening is not used (rationale documented in `eikonal_delay_matrix`).
+  - *Spatial-Nyquist aperture subsampling* — to stay alias-free across all bands
+    the limiting wavelength is the ultraharmonic 3f₀/2 (λ_min/2 ≈ 0.8 mm); the
+    clinical apertures are already at/below that spacing (the brain helmet is in
+    fact undersampled at the ultraharmonic), so decimation is either a no-op or
+    aliases the band the correction just recovered. Not applied; rationale
+    documented inline in `solver::passive_pam_channels`.
+
+### Added (2026-05-30) - Aberration-Corrected Passive Acoustic Mapping (Eikonal Receive Delays)
+
+- [minor] `analysis::signal_processing::pam`:
+  `DelayAndSumPAM::beamform_signals_with_delays` beamforms using an externally
+  supplied `[n_points × n_sensors]` propagation-delay matrix instead of the
+  internal homogeneous-speed model — the hook for aberration correction. Tests:
+  supplied delays re-align impulses coherently; shape/sign validation.
+- [minor] `clinical::therapy::theranostic_guidance::waveform::emission`:
+  the passive-acoustic-mapping receive delays are now **eikonal first-arrival
+  travel times through the heterogeneous medium** (`eikonal_delay_matrix`).
+  By acoustic reciprocity `T(receiver→pixel) = T(pixel→receiver)`, one eikonal
+  solve per receiver (parallel over receivers via Rayon) yields that receiver's
+  delay to every candidate pixel; the multistencils fast-sweeping solver
+  (`waveform::eikonal`) refracts correctly through skull/rib/water contrasts.
+  This replaces the constant-speed delay model that lost coherence at the higher
+  cavitation bands. Integration test: with a skull-like high-speed slab between
+  source and receivers, the eikonal delays differ from the homogeneous model by
+  > 2% along slab-crossing paths AND still localize the source within 1.5 λ.
+  `grid::point_to_padded_cell_2d` exposed for pixel→cell mapping.
+
+### Added (2026-05-29) - Frequency-Weighted Broadband Cavitation Emission + fig05 PAM-vs-Operator Panel
+
+- [minor] `clinical::therapy::theranostic_guidance::waveform::cavitation` (new):
+  a frequency-weighted bubble-cloud emission source — the subharmonic (f₀/2),
+  driven fundamental (f₀), and ultraharmonic (3f₀/2) cavitation lines
+  (Neppiras 1980; Leighton 1994) with physically-ordered weights under a common
+  Gaussian burst envelope sized so the lines are spectrally resolved. Replaces
+  the previous single-band tone emission. Test: the three lines are present,
+  ordered (fundamental > subharmonic > ultraharmonic), and dominate the
+  inter-line gap by > 50×.
+- [minor] `waveform`: `AcousticGrid` gains an optional `source_waveform` (a
+  precomputed per-step amplitude injected simultaneously at all source cells);
+  `passive_emission_grid` now emits the broadband spectrum (refinement sized for
+  the highest line, window spanning the full burst); `passive_acoustic_maps`
+  (replaces `passive_acoustic_map`) runs **one** forward solve serving both
+  passive channels, halving the FDTD cost.
+- [minor] `analysis::signal_processing::pam`:
+  `DelayAndSumPAM::beamform_signals_view` returns the per-pixel delay-and-sum
+  time series. The theranostic passive channels now use **spectral PAM**:
+  beamform the *broadband* emission (full bandwidth → fine range resolution),
+  then per band take the energy of a zero-phase Gaussian band-pass of each
+  pixel's beamformed series. This replaces band-pass-then-beamform, which
+  collapsed the bandwidth to a single line and destroyed range resolution
+  (≈ c/Δf ≈ 48 mm) — the subharmonic Dice recovered from 0.0 to ≈ 0.4. The
+  high-frequency ultraharmonic channel remains aberration-limited under the
+  homogeneous-speed delay model (a real physical limit; the low-frequency
+  subharmonic is the robust primary marker). `solver::passive_pam_channels`
+  returns both maps from one emission.
+- [patch] `ch31_clinical_device_geometry.py`: fig05 gains a third panel
+  quantitatively comparing the subharmonic/ultraharmonic Dice of the
+  finite-frequency operator inverse versus genuine PAM, per anatomy (the
+  operator baseline is run alongside the PAM showcase when
+  `KWAVERS_CH31_PASSIVE_RECON=pam`).
+
+### Added (2026-05-29) - PAM Reconstruction Exposed Through PyO3
+
+- [minor] `PassiveReconstructionMode::from_name` parses `"operator"` /
+  `"pam"`; re-exported from `clinical::therapy::theranostic_guidance`.
+- [minor] `pykwavers.run_theranostic_inverse_from_ritk` gains a
+  `passive_reconstruction` keyword (default `"operator"`); `"pam"` selects the
+  genuine passive-acoustic-mapping cavitation reconstruction for the
+  subharmonic/ultraharmonic channels.
+- [patch] `ch31_clinical_device_geometry.py` runs the liver/kidney/brain cases
+  with `passive_reconstruction="pam"` by default (env
+  `KWAVERS_CH31_PASSIVE_RECON`), so the passive panels are genuine cavitation
+  maps rather than the finite-frequency operator surrogate. The image-then-treat
+  titles now name the applicator per anatomy (histotripsy bowl vs InsightEC
+  helmet) and note "same-array transmit + passive-cavitation receive".
+- [patch] `clinical::therapy::theranostic_guidance::solver::passive_pam_channel`:
+  the PAM receive aperture is the therapy array itself (therapy elements in
+  receive mode ∪ any dedicated imaging receivers), not a separate imaging array.
+  Required for the transcranial helmet, which has no separate imaging receivers
+  (it would otherwise fail with "needs at least 3 receivers, got 0"); matches
+  same-array ACE mapping (Sukovich et al. 2020). Verified end-to-end: abdomen
+  (operator-vs-PAM map difference confirms distinct methods) and brain
+  (subharmonic Dice 1.0).
+
+### Changed (2026-05-29) - Chapter 31 Device Identities: Histotripsy vs InsightEC Helmet
+
+- [patch] `ch31_clinical_device_geometry.py`: liver/kidney figures relabeled as
+  a skin-coupled **histotripsy focused bowl (HistoSonics-like)** with a central
+  imaging window; the transcranial figure relabeled as an **InsightEC-like
+  hemispherical helmet**. The brain helmet now covers the full calvarium dome
+  including the vertex (`cap_min_polar_rad` 0.22 → 0.0, elements on top of the
+  head) out to ~80° (`cap_max_polar_rad` 1.18 → 1.40, a near-complete
+  hemisphere) via the `transcranial_planning.scene` pose block. Radius of
+  curvature stays head-clearance-driven (≈169 mm for this CT; the 150 mm =
+  15 cm scene radius is the requested minimum, raised to clear the skull).
+  Regenerated fig01–03.
+
+### Changed (2026-05-29) - Chapter 31 Patient-Skin Visibility in 3-D Geometry Figures
+
+- [patch] `pykwavers/examples/book/ch31_clinical_device_geometry.py`: the
+  abdominal 3-D geometry figures (fig01 liver, fig02 kidney) rendered the
+  patient skin point cloud at `alpha=0.07` (effectively invisible), so the
+  array could not be confirmed to sit on the skin rather than inside the
+  patient. Raised the skin opacity/size to `alpha=0.18, s=1.3` and added a
+  "patient skin surface" legend entry; raised the transcranial scalp surface to
+  `alpha=0.18` (fig03). Array elements remain on the camera side and stay in
+  front of the skin cloud. Regenerated fig01–03: the torso/abdominal
+  cross-section and the bowl-outside-skin interface are now clearly visible, and
+  the transcranial cap visibly covers the calvarium (skull-entry fraction 1.00).
+  Pure plotting change; reconstruction metrics and fig04–08 are unaffected.
+
+### Added (2026-05-29) - Seismic FWI/RTM Cycle-Skipping, Multiscale, Encoded Sources, PAM DMAS
+
+- [minor] `solver::inverse::fwi::time_domain` — wired the existing
+  envelope (Bozdağ et al. 2011), instantaneous-phase (Fichtner et al. 2008),
+  and 1-Wasserstein optimal-transport (Engquist & Froese 2014; Métivier et al.
+  2016) misfits — previously dead code — into the FWI inversion loop via
+  `FwiProcessor::with_misfit(MisfitType)`. The selected functional now drives
+  objective evaluation, the convergence test, the Armijo line search, and the
+  adjoint source consistently (single SSOT dispatch through `MisfitFunction`).
+  Value-semantic tests: dispatch equivalence per misfit; L2 cycle-skips a
+  half-period-shifted wavelet while the envelope misfit stays monotone; the OT
+  distance is convex in shift on a positive distribution.
+- [minor] `solver::inverse::fwi::time_domain::frequency_continuation` —
+  added multiscale frequency-continuation FWI (Bunks et al. 1995):
+  `FwiProcessor::with_band_limit` plus `invert_multiscale(corner_hz_ascending)`
+  apply a zero-phase Butterworth-magnitude low-pass to both observed and
+  synthetic traces inside the misfit/adjoint path (`Fᵀ = F` preserves the
+  discrete adjoint identity per stage). Tests: zero-phase symmetry, low/high
+  tone pass/reject, filtered-objective composition, and the period→basin
+  theorem.
+- [minor] `solver::inverse::fwi::time_domain::encoded_source` —
+  added source-encoded simultaneous-shot FWI (Krebs et al. 2009):
+  `encode_shots`, `hadamard_codes`, and `FwiProcessor::invert_encoded`. A
+  Hadamard-orthogonal code sweep makes the averaged encoded gradient reproduce
+  the summed per-shot gradient exactly (crosstalk cancellation) — verified by a
+  differential test on a finite-difference grid. Extracted the shared
+  `descent_update` step used by `invert`, `invert_multiscale`, and
+  `invert_encoded`.
+- [minor] `analysis::signal_processing::pam` — added the sign-preserving
+  delay-multiply-and-sum (DMAS) passive-acoustic-mapping imaging mode
+  (Matrone et al. 2015) as `PamImagingMode::DelayMultiplyAndSum`, evaluated via
+  the `O(N)` closed form `y = ½[(Σŝᵢ)² − Σŝᵢ²]`. New `beamform_with_mode[_view]`
+  selects DAS or DMAS; `beamform` retains DAS. Test: DMAS improves
+  source-to-sidelobe contrast over DAS on an 8-element point-source field.
+- [minor] `clinical::therapy::theranostic_guidance` — genuine passive acoustic
+  mapping for the subharmonic (f₀/2) and ultraharmonic (3f₀/2) cavitation
+  channels, behind the new `PassiveReconstructionMode` config flag
+  (default `FiniteFrequencyOperator`, preserving existing figure/parity
+  contracts; opt-in `PassiveAcousticMapping`). The new path simulates the
+  cavitation acoustic emission through the heterogeneous CT-derived medium
+  (`waveform::grid::passive_emission_grid`: omnidirectional sources at the
+  target cells, zero delay, refinement sized for the emission band; receivers
+  on the imaging aperture), records per-receiver traces with the existing
+  4th-order-FD/CPML forward solver, and DMAS-beamforms them
+  (`waveform::passive_acoustic_map`). Value-semantic test: a point cavitation
+  source in homogeneous water localizes to within one wavelength. Refactored
+  `build_padded_alpha_field_refined` to accept an explicit frequency
+  (attenuation now scales with the emission band, not f₀).
+
+### Changed (2026-05-27) - Chapter 31 Image-Then-Treat Panels
+
+- [patch] `pykwavers/examples/book/ch31_clinical_device_geometry.py`: expanded
+  the ch31 image-then-treat figures from CT/reconstruction/therapy to
+  CT/anatomy reconstruction/fused lesion-localization/therapy. The fused panel
+  now renders the same-aperture fused reconstruction and its Dice equal-area
+  support contour, while the therapy panel uses target-derived liver/kidney
+  treatment support with 26 MPa histotripsy contours and a skull-corrected
+  focus marker for the transcranial focused-ultrasound case. Regenerated ch31
+  PNG/PDF figures and metrics.
+- [patch] `clinical::therapy::theranostic_guidance::medium::abdominal`: keep
+  abdominal solver body masks on the target-connected body component after
+  resampling, preventing CT table/bed voxels from re-entering the prepared
+  slice through a second HU-threshold pass.
+
 ### Changed (2026-05-26) - Transcranial UST Focused-Bowl Source Routing
 
 - [patch] Route `TranscranialBowlGeometry::from_aperture` through the
@@ -200,8 +737,38 @@
   source-scale relative drift, and source-scale phase drift metrics. Expose the
   same fields through PyO3 and add analytic Rust/Python test fixtures where the
   model-scaled residual is zero while the baseline-scaled increment residual is
-  above unity. Bounded Cargo verification is currently blocked by concurrent
-  workspace builds exceeding the 300 s limit.
+  above unity. Rebuilt `pykwavers`, passed focused scattering pytest 3/3, and
+  regenerated the determined `(4,4,3)` probe. The finite-window model retains
+  low model-scaled full-field residual (`0.03308952523301831`) while the
+  baseline-scaled increment residual remains high (`1.4759860412851549`),
+  which prompted the finite-window source-phasing proof below.
+
+### Changed (2026-05-27) - Ali 2025 Finite-Window Source-Phasing Proof
+
+- [patch] Pin the finite-window Born source term against the production PSTD
+  acquisition generator with a Rust first-variation theorem test. The test
+  verifies that `-chi * (p0[n+1] - 2p0[n] + p0[n-1])`, including the
+  pressure-source contribution to the reference-field acceleration, matches the
+  small-contrast finite difference of real PSTD data. Source phasing is closed
+  as the cause of the remaining calibrated increment residual; the subsequent
+  model-scaled increment diagnostic narrows the active gap to finite-window
+  second-order scattering.
+
+### Changed (2026-05-27) - Ali 2025 Model-Scaled Increment Diagnostic
+
+- [patch] Extend the Rust-owned Ali 2025 scattering-increment diagnostic with
+  model-scaled observed increment norm, model-scaled increment residual norm,
+  model-scaled normalized increment residual, and model-scaled increment energy
+  ratio. Expose the same fields through PyO3 and add analytic Rust/Python tests
+  for scalar source drift. The determined `(4,4,3)` probe now ranks
+  `pstd_finite_window_born` best for model-scaled increment residual
+  (`0.3150272802598277`) while preserving the baseline-calibrated increment
+  residual (`1.4759860412851549`) and low model-scaled full-field residual
+  (`0.03308952523301831`). The remaining Ali 2025 gap is now narrowed to
+  finite-window second-order scattering beyond scalar calibration.
+- [patch] Repair the PyO3 Rayleigh-Sommerfeld wrapper build by using
+  `Medium::density` for center-cell density sampling and preserving rectangular
+  aperture width before transducer ownership transfer.
 
 ### Changed (2026-05-25) - Ali 2025 Finite-Window Determined Probe
 

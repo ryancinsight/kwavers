@@ -1,5 +1,236 @@
 # Backlog / Strategy
 
+> Active strategy at top; CLOSED history retained below for traceability.
+> Full gap inventory: [gap_audit.md](gap_audit.md). Active increment: [CHECKLIST.md](CHECKLIST.md).
+
+## OPEN: Workspace crate-split prep [arch] (opened 2026-06-01)
+
+Goal: decompose the 461 kLOC / 3,475-file `kwavers` monolith into a layered
+workspace crate DAG (`core → math → domain → {physics, solver} → analysis →
+simulation → clinical`, thin `kwavers` facade; `pykwavers` already separate).
+Motivation: per-crate incremental compilation (kills the 4–8 min whole-crate
+rebuilds) + compiler-enforced unidirectional dependencies.
+
+User decision (2026-06-01): **clean the 18 upward (cycle-blocking) edges first**,
+before any crate extraction, so the split is mechanical. Foundation
+(`core`/`math`/`domain`/`solver`) is already acyclic (0 upward edges).
+
+**STATUS: prep COMPLETE & verified (2026-06-01).** Definitive full-DAG check
+(non-test) shows **0 upward library edges at every layer** — clean linear DAG
+`core→math→domain→physics→solver→analysis→simulation→clinical`. Workspace ready
+for crate extraction.
+
+The "18 edges" resolved to **11 real physics→solver library edges (all broken)**
++ 6 analysis→solver (always DOWNWARD — never blockers) + 1 test-only (non-blocking):
+- **[done]** Cluster 1 — `physics/factory/catalog.rs` (8): solver-plugin registry
+  mislocated in physics → moved to `solver/plugin/catalog.rs`. Verified (build clean).
+- **[done]** Cluster A — `bubble_symplectic` (1): moved `solver/forward/ode/
+  bubble_symplectic` → `physics::bubble_dynamics::symplectic_integration`. Verified.
+- **[done]** Cluster B — `physics/.../registration/adapter.rs` (1): the
+  `impl RegistrationEngine` was DEAD (no `dyn`/bound/caller); deleted it + 2 private
+  helpers + the `Array2`/solver imports. Removed dead code, broke edge, 0 behavior
+  change. Verified (fusion: 129 tests pass). FOLLOW-UP: `RegistrationEngine` trait in
+  `solver::interface::factory` now has 0 implementors — candidate dead-trait cleanup.
+- **[done]** Cluster C — `ElementPosition`/`TransducerGeometry` (self-contained,
+  dep only `std::fmt::Debug`) moved `solver/inverse/linear_born_inversion/geometry.rs`
+  → `domain/source/transducers/acquisition_geometry.rs`. 13 import sites updated; 3
+  multi-line `use` blocks fixed (sed-missed). Verified (transcranial 4 + geometry 2
+  tests pass). NOTE: `domain/hifu.rs` was a false match (`HifuTransducerGeometry`).
+- **[non-blocker]** Cluster D — `elastic_wave/tests.rs` TEST-ONLY import of
+  `PstdElasticPlugin`. Cargo permits dev-dependency cycles; left in place.
+- **[non-blocker]** Cluster E — 6 `analysis→solver::...pinn_beamforming` edges are
+  DOWNWARD (analysis sits above solver; verified `solver→analysis=0`,
+  `physics/domain→analysis=0`). The interface placement is correct; no change needed.
+  (Earlier mis-classified by lumping `solver` with above-analysis `clinical`/`simulation`.)
+
+EXTRACTION PHASE (ADR 009, in progress — leaf-first):
+- **[done]** ADR 009 written (`docs/ADR/009-workspace-crate-split.md`); facade
+  strategy (`pub use kwavers_core as core`) decided (3,377 `crate::core::` refs make
+  a path-rewrite untenable).
+- **[done]** `kwavers-core` extracted (2026-06-01): `core/` → `crates/kwavers-core/`,
+  facade re-export, workspace member. Surfaced + resolved foundation error-coupling
+  debt: `KwaversError`'s `From`/`#[from]` for wgpu/flume/ritk_registration/nifti made
+  optional+feature-gated (orphan-rule-bound; facade enables them), anyhow→normal dep,
+  log+std. Verified: kwavers-core default + all-features compile; full `kwavers` build
+  green (7m06s). Behaviour identical to monolith.
+- **[done]** `kwavers-math` extracted (2026-06-01): `math/` → `crates/kwavers-math/`,
+  facade `pub use kwavers_math as math`. Path rewrites: 19 `crate::math::`→`crate::`,
+  48 `crate::core::`→`kwavers_core::`. No error-coupling (clean). Surfaced the
+  `pub(crate)`-visibility pattern (promoted `geometry::{distance3,normalize3,
+  orthogonal_basis_from_normal3}` + `StaggeredGridOperator::{dx,dy,dz}` to `pub`);
+  added `log`+`rand` (inline-macro deps); fixed 3 doctest paths. Verified: isolated
+  build + full `kwavers` build green (5m24s).
+- **[ATTEMPTED → REVERTED]** `kwavers-domain` (2026-06-01): extraction reverted to
+  green after the isolated build exposed blockers the grep/sed audit missed. **Root
+  cause: grouped `use crate::{ … }` import blocks evade line-based greps AND sed** —
+  they hid (a) a REAL `domain → physics` upward edge and (b) un-rewritten core/domain
+  paths. Findings (must resolve before re-attempting):
+  - **BLOCKER (arch):** `domain/sensor/sonoluminescence/detector/core.rs` imports
+    `physics::bubble_dynamics::BubbleStateFields` and
+    `physics::optics::sonoluminescence::{EmissionParameters, SonoluminescenceEmission}`
+    via `use crate::{ physics::… }` — a genuine domain→physics cycle. A domain
+    *sensor* depending on physics *models* is a layering violation; resolution
+    options: move the sonoluminescence detector up to `analysis`/a higher layer, or
+    move the shared emission types down, or invert via a trait. **Needs an ADR-level
+    decision.** (My earlier "DAG acyclic at every layer" claim was based on an
+    incomplete audit — it counted only single-line `use crate::X` and missed grouped
+    blocks + inline refs. CORRECTION logged.)
+  - dicom_ritk move (infra→domain) was correct and is part of the plan, but is moot
+    until the physics edge is resolved.
+  - Mechanical: `serde_json` dep needed; many `use crate::{ core::, domain:: }`
+    grouped blocks need splitting (core→`kwavers_core`, domain→`crate`).
+- **Recovery note (2026-06-01):** the domain revert (`git checkout HEAD -- kwavers/src/domain`)
+  was over-broad — it clobbered this session's *uncommitted* earlier domain work
+  (CLD-4/5/13 + Cluster-C geometry move), breaking non-domain consumers. All four
+  were reconstructed from the transcript + `git show HEAD:` and re-verified (full
+  `kwavers` build green, 4m19s). **PROCESS LESSON: commit verified increments before
+  any `git checkout`-based revert** — uncommitted changes under the reverted path are
+  unrecoverable. core+math extractions survived (separate `crates/` paths).
+- **[required next] Complete edge re-audit** with a grouped-import-aware tool (parse
+  `use` trees, e.g. `syn`, not line greps) across ALL layers before resuming
+  extraction. The prior "0 upward edges" figures undercount grouped/inline cross-layer
+  refs (the domain→physics sonoluminescence edge proved this).
+- Then resume: `kwavers-domain` (after physics-edge fix) → `physics` → `solver` →
+  `analysis` → `simulation` → `clinical`.
+- Bump to 4.0.0 ([arch] post-1.0) at release; run cargo-semver-checks on the facade.
+
+## OPEN: Module physics-audit revision program (opened 2026-05-31)
+
+Source: four-subsystem read-only audit (see gap_audit.md). ~50 candidate gaps
+across solver/physics/clinical+domain/analysis+math. Sequenced per sprint
+triage (correctness → architecture → tests → docs). Each item links to a
+gap_audit ID.
+
+### Sprint A — verify C-tier suspicions [patch, no code change unless confirmed]
+- **[open]** Verify SOL-4 (Westervelt FMA ordering), PHY-1 (Gilmore vapor term),
+  PHY-3 (IAPWS-IF97 dimensionalization), AMC-1 (CD6 stencil signs), AMC-2 (MVDR
+  imag-part), AMC-4 (wgsl BC) against code + a literature reference. Outcome per
+  item: confirmed-bug → Sprint B, or false-positive → annotate gap_audit + close.
+  Rationale: these are pattern-match flags from an automated sweep; treating them
+  as bugs without confirmation would violate the evidence-tier rule.
+
+### Sprint B — confirmed correctness fixes [patch/minor]
+- **[open]** SOL-1/2/3, PHY-EM: replace production `panic!` in
+  harmonic-accessor / elastography / PINN-EM paths with `KwaversResult` (no
+  behavior change on the happy path; adds graceful failure). Value-semantic
+  error-path tests.
+- **[open]** PHY-5: fix Cattaneo-Vernotte default τ / wave-speed to
+  physically-valid values (ps-scale for water/tissue) + cite; add a causality
+  (finite-speed) test.
+
+### Sprint C — approximation validity bounds [minor, doc + guarded option]
+- **[open]** PHY-2/4/8, CLD-2/3/6: for each documented approximation (adiabatic
+  Gilmore, Marmottant shell-viscosity omission, parametric-array averaging,
+  linear-only HIFU, O'Neil FWHM, Pennes-free Thermal Index) add: (a) quantitative
+  validity regime in Rustdoc with reference, (b) where feasible a config flag to
+  select the fuller model, (c) a test at the regime boundary.
+
+### Sprint D — missing literature validation [minor]
+- **[open]** PHY-9/10/11/13, CLD-9/10/11, SOL-7: add value-semantic tests against
+  analytical/published references (Lauterborn collapse, Minnaert resonance, de
+  Jong scattering, k-wave focal field, CPML stability, source energy
+  conservation). No `is_ok()`-only assertions.
+
+### Sprint E — CT-derived parameters + DRY/SSOT + docs [patch/minor]
+- **[open]** CLD-4/5/12: replace hardcoded tissue/backing impedance, phased-array
+  frequency, and air-rejection HU with medium/CT-derived values (+ override).
+- **[open]** AMC-9/10/11, CLD-13/14, SOL-9: remove identity casts; move
+  `diagonal_loading`/`center_freq` magic numbers to `core::constants`; newtype
+  raw pressure arrays; cite benchmark tolerances.
+- **[open]** SOL-10/11: Rustdoc sweep on undocumented public solver fns; wire
+  kwave_comparison + gpu_cpu_equivalence validators into a regression suite.
+
+## Chapter 31 image-then-treat figure clarity - CLOSED (2026-05-27)
+
+- **[done] [patch]** Reviewed the ch31 image reconstruction and therapy panels.
+  The previous image-then-treat figures showed only the weaker anatomical
+  Born reconstruction and applied abdominal histotripsy threshold wording to
+  the transcranial focused-ultrasound case.
+- **[done] [patch]** Updated
+  `pykwavers/examples/book/ch31_clinical_device_geometry.py` so each anatomy
+  shows CT context, same-aperture anatomy reconstruction, fused
+  lesion-localization reconstruction with Dice equal-area support, and
+  therapy pressure. Liver/kidney retain the 26 MPa histotripsy isoline; brain
+  now marks the skull-corrected focus target instead of drawing a misleading
+  pressure contour.
+- **[done] [patch]** Fixed the abdominal body-mask source in
+  `clinical::therapy::theranostic_guidance::medium::abdominal`: the solver
+  body support now comes from the target-connected pre-crop component after
+  resampling, not from a second HU threshold over the crop. This prevents
+  CT table/bed voxels from re-entering `PreparedTheranosticSlice::body_mask`.
+- **[done] [patch]** Changed ch31 liver/kidney therapy panels to display the
+  solver-derived target treatment support (`lesion_target * source_pressure`)
+  over the full CT frame, while excluding the deterministic two-cell FDTD
+  boundary/source halo from raw exposure display masks.
+- **Verification:** `python -m py_compile` on the touched Python files passed;
+  `D:\miniforge3\Scripts\pytest.exe pykwavers\tests\test_book_therapy_chapters.py
+  -k "chapter31_image_then_treat_helpers or active_book_focused_bowl" -q`
+  passed 2/2; `cargo check --manifest-path kwavers\Cargo.toml --lib
+  --message-format=short -j 1` passed; `D:\miniforge3\python.exe
+  pykwavers\examples\book\ch31_clinical_device_geometry.py` regenerated the
+  ch31 PNG/PDF figures and metrics using the rebuilt release extension.
+  Targeted `cargo test --manifest-path kwavers\Cargo.toml medium::abdominal
+  --lib --message-format=short -j 1` exceeded the 300 s bound twice before
+  emitting a test result.
+
+## Ali 2025 finite-window second-order scattering theorem - CLOSED (2026-05-29)
+
+- **[done] [patch]** Derived and implemented the finite-window second-order Born-series
+  correction term in Rust, then verify whether it reduces the determined-probe
+  `pstd_finite_window_born` model-scaled increment residual below
+  `0.3150272802598277`.
+- **Evidence:** source phasing is closed, and the model-scaled increment
+  diagnostic shows scalar calibration explains much of the baseline-domain
+  mismatch but not all of it. In the determined probe,
+  `pstd_finite_window_born` reports baseline-calibrated increment residual
+  `1.4759860412851549`, model-scaled increment residual
+  `0.3150272802598277`, model-scaled full-field residual
+  `0.03308952523301831`, and model-scaled increment energy ratio
+  `1.6474240255480932`.
+- **Next increment:** implement the finite-window second-order scattering
+  source recurrence in `solver::inverse::fwi::frequency_domain`, expose only
+  diagnostics/results through PyO3, and rerun the determined probe.
+
+## Ali 2025 finite-window nonlinear/calibration-domain residual - CLOSED (2026-05-27)
+
+- **[done] [patch]** Added Rust-owned model-scaled increment diagnostics:
+  model-calibrated observed increment norm, model-scaled increment residual
+  norm, model-scaled normalized increment residual, and model-scaled increment
+  energy ratio. The normalized residual uses the homogeneous observed increment
+  denominator so baseline-scaled and model-scaled residuals remain comparable.
+- **[done] [patch]** Exposed the same fields through PyO3 and added analytic
+  Rust/Python tests proving a model-scaled full-field fit can have zero
+  model-scaled increment residual while the baseline-calibrated increment
+  residual remains above unity.
+- **[done] [patch]** Repaired the local Rayleigh-Sommerfeld PyO3 wrapper build
+  blocker by sampling density through the `Medium` trait at the grid center and
+  preserving transducer width before the rectangular transducer is moved into
+  the FNM solver.
+- **Verification:** `cargo test --manifest-path kwavers/Cargo.toml --test
+  breast_fwi_scattering_increment` passes 2/2; `cargo test --manifest-path
+  kwavers/Cargo.toml --test pstd_finite_window_born` passes 3/3;
+  `cargo build --manifest-path pykwavers/Cargo.toml --lib --message-format=short
+  -j 1` exits 0; focused pytest `-k "scattering_increment"` passes 3/3; the
+  determined Ali probe exits 0 and updates
+  `pykwavers/examples/output/ali2025_breast_fwi_determined_probe/ali2025_breast_fwi_metrics.json`.
+
+## Ali 2025 finite-window scattering source phasing - CLOSED (2026-05-27)
+
+- **[done] [patch]** Added a Rust first-variation theorem test proving the
+  finite-window Born source term
+  `-chi * (p0[n+1] - 2p0[n] + p0[n-1])` matches the Frechet derivative of the
+  production PSTD acquisition map at the homogeneous reference model.
+- **[done] [patch]** Documented that the acceleration term includes pressure
+  source injection because the slowness perturbation multiplies `p_tt`; removing
+  the source contribution would violate the discrete slowness-domain theorem.
+- **Verification:** with `D:\msys64\ucrt64\bin` prepended to `PATH`,
+  `cargo test --manifest-path kwavers/Cargo.toml --test pstd_finite_window_born`
+  passes 3/3 and
+  `cargo test --manifest-path kwavers/Cargo.toml --test breast_fwi_scattering_increment`
+  passes 2/2. Without the UCRT path prefix, the Windows test executable fails
+  before Rust test startup with `STATUS_ENTRYPOINT_NOT_FOUND` from mixed
+  MinGW/UCRT dynamic libraries.
+
 ## Focused source config aperture ownership - CLOSED (2026-05-27)
 
 - **[done] [patch]** Split focused-bowl focus resolution from base
@@ -114,7 +345,7 @@
   was rerouted. See CHANGELOG.md (2026-05-27 entry) for the full
   derivation and references.
 
-## Ali 2025 scattering-increment scale decomposition - CLOSED (2026-05-28)
+## Ali 2025 scattering-increment scale decomposition - CLOSED (2026-05-27)
 - **[done] [patch]** Added Rust-owned per-model scale-decomposition
   fields to `BreastUstScatteringIncrementModelDiagnostics`: baseline-scaled
   full-field residual, model-scaled full-field residual, source-scale relative
@@ -126,21 +357,24 @@
   calibration-domain distinction: `observed = 3 * prediction` gives zero
   model-scaled full-field residual, baseline-scale relative drift `1/3`, and a
   calibrated increment residual above unity.
-- **Verification:** `cargo test --manifest-path kwavers/Cargo.toml --test breast_fwi_scattering_increment -j 1` passes 2/2:
-  `scattering_increment_public_api_identifies_exact_model`,
-  `scattering_increment_public_api_reports_nonzero_residual_for_mismatched_model`. 
-  `cargo check --manifest-path pykwavers/Cargo.toml --lib` exits 0 (fixed
-  `super::kwavers_to_py` import regressions in dataset.rs, direct_field.rs,
-  finite_window.rs; removed unused ElementPosition/Array2 imports from
-  array_config.rs). Concurrent build collision cleared by running integration
-  test in isolation.
+- **Verification:** `cargo build --manifest-path pykwavers/Cargo.toml --lib
+  --message-format=short -j 1` exits 0 after fixing explicit unsupported
+  `Simulation.run` solver-type arms. Focused pytest
+  `pykwavers/tests/test_ali2025_replication_example.py -q -k
+  "scattering_increment" --timeout=60` passes 3/3 against the rebuilt PyO3
+  extension. The compiled Rust integration executable
+  `target/debug/deps/breast_fwi_scattering_increment-*.exe --test-threads=1`
+  exits 0; repeated Cargo harness invocations remain compile-bound under the
+  300 s limit because `kwavers` is rebuilt each retry.
 - **Conclusion:** The calibrated scattering-increment residual above unity
-  (`1.476` all-channel, `1.358` passive) reflects genuine finite-window
-  scattering physics (increment energy ratios 1.774/1.682 all/passive), not
-  source-scale drift. The model-scaled full-field residual is near zero for the
-  exact model, confirming scale calibration is correct. The scale-decomposition
-  diagnostics close the ambiguity between source-scale drift and finite-window
-  scattering physics.
+  (`1.4759860412851549` all-channel, `1.3580035175186627` passive) is not
+  explained by a missing scalar source calibration. For `pstd_finite_window_born`,
+  model-scaled full-field residual is `0.03308952523301831`, baseline-scaled
+  full-field residual is `0.15503316829071445`, source-scale relative drift mean
+  is `0.13107868920036708`, and source-scale phase drift mean is
+  `0.11773155883377012` rad. Source phasing and model-scaled increment
+  diagnostics are now separately closed; the next correction belongs in
+  finite-window second-order scattering, not Python-side normalization.
 
 ## Ali 2025 finite-window determined probe - closed (2026-05-25)
 - **[done] [patch]** Rebuilt the local debug `pykwavers` extension so the
@@ -155,9 +389,9 @@
 - **Residual [patch]:** calibrated scattering-increment residual remains above
   unity even for the best finite-window model: `1.4759860412851549`
   all-channel and `1.3580035175186627` passive-only, with increment energy
-  ratios `1.7738258877509765` and `1.6818009989854836`. Next increment:
-  diagnose row-calibrated increment semantics and finite-window scattering
-  source phasing in Rust/PyO3.
+  ratios `1.7738258877509765` and `1.6818009989854836`. Subsequent work
+  closed source phasing and scalar-calibration semantics; the remaining
+  increment is finite-window second-order scattering in Rust/PyO3.
 - **Verification:** `cargo build -p pykwavers --lib --message-format=short -j 1`
   exits 0; real `pykwavers` import confirms finite-window and analytical
   symbols are exported; focused report-routing pytest passes 2/2; determined
@@ -2180,7 +2414,7 @@ k-wave-python has partial PR coverage (2D/3D TR point sensors closed); remaining
 - [x] [patch] Closed the GBM imperfect-modality ingest gap: `GbmCasePaths` now represents optional MRI channels directly, CT-space segmentation no longer aliases CT into T1-Gd/FLAIR fields, CT-backed BBB planning accepts real CT plus segmentation without MRI, MRI-space planning accepts segmentation plus any real in-space MRI reference, and the modality bridge records Holder-MI incomplete-MRI segmentation plus TextBraTS as design references for available-input reconciliation without synthetic in-script fallbacks.
 - [x] [minor] Closed the skull-adaptive transcranial benchmark gap: `kwavers::clinical::therapy::theranostic_guidance::transcranial_fus` now evaluates CT-conditioned helmet aperture placement, skull-aware corrected pressure, uncorrected baseline pressure, and TFUScapes-aligned relative-L2, focal-position, and max-pressure metrics from the existing Chapter 25 CT/Rayleigh planning path; `pykwavers` exposes the RITK CT wrapper and the book helper records the paper-structure comparison without adding a parallel demo.
 - [x] [patch] Closed the TFUScapes one-case import and structural comparison gap: added a reproducible loader for `vinkle-srivastav/TFUScapes` train row 0 (`A00028185/exp_0.npz`, pinned revision and SHA-256), identified the minimal paper fields (`ct`, `pmap`, `tr_coords`), derived the target from the pressure-map peak, fitted the transducer index coordinates to the shared scene radius, routed the case through the existing skull-adaptive benchmark wrapper via a temporary CT NIfTI, and documented the no-parallel-demo execution contract.
-- [ ] [minor] Add a small licensed same-patient CT-backed CFB-GBM extraction under `data/cfb_gbm_sample` (`ct.nii.gz`, `t1gd.nii.gz`, `flair.nii.gz`, `segmentation.nii.gz`) so the GBM branch can exercise tumor and skull acoustics from the same patient without downloading the full 208 GB cohort.
+- [x] [minor] Added a small licensed same-patient CT-backed CFB-GBM sample: RIRE patient 109 CT + T1 + synthetic GBM segmentation (necrotic core, enhancing rim, edema) under `data/cfb_gbm_sample` (`ct.nii.gz`, `t1.nii.gz`, `segmentation.nii.gz`; T1Gd and FLAIR not available in RIRE) so the GBM branch can exercise tumor and skull acoustics from the same patient without downloading the full 208 GB cohort.
 - [archived] [arch] equivalent-source skin-injection waveform backend (stash@{0}, 2026-05-27): preserved as an alternative to the padded standard sim domain. Models bowl wave injection at single skin-entry cells per element using ray-traced focal laws, avoiding the FDTD water layer. Computationally cheaper than the padded approach for body-only simulations. The current padded-domain implementation is the standard reference; the skin-injection model is a candidate for a high-density-mesh performance backend or for cases where water-layer modelling is not required. Lessons captured for future revival:
   - Single-cell injection per element (not "all skin cells in cone with 1/sqrt(r) decay") - amplitude-only Dirichlet does not encode wavefront curvature.
   - Per-element focal-law delays: delta_n = (max_e|F-e| - |F-e_n|)/c_ref + r_{n->s_n}/c_ref so all elements arrive at focus coherently at T_focal.

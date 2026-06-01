@@ -2336,7 +2336,7 @@ checksum = "245097e9a4535ee1e3e3931fcfcd55a796a44c643e8596ff6566d68f09b87bbc"
 [[package]]
 name = "consus-compression"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/consus#1e5cb6802a17a7256cc7ed19f4662f478fa9cf8b"
+source = "git+https://github.com/ryancinsight/consus#a9ac02ac205a91bc2c29b364ea014303f38c7cb7"
 dependencies = [
  "byteorder",
  "consus-core",
@@ -2346,7 +2346,7 @@ dependencies = [
 [[package]]
 name = "consus-core"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/consus#1e5cb6802a17a7256cc7ed19f4662f478fa9cf8b"
+source = "git+https://github.com/ryancinsight/consus#a9ac02ac205a91bc2c29b364ea014303f38c7cb7"
 dependencies = [
  "byteorder",
  "smallvec",
@@ -2356,7 +2356,7 @@ dependencies = [
 [[package]]
 name = "consus-hdf5"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/consus#1e5cb6802a17a7256cc7ed19f4662f478fa9cf8b"
+source = "git+https://github.com/ryancinsight/consus#a9ac02ac205a91bc2c29b364ea014303f38c7cb7"
 dependencies = [
  "byteorder",
  "consus-compression",
@@ -2367,7 +2367,7 @@ dependencies = [
 [[package]]
 name = "consus-io"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/consus#1e5cb6802a17a7256cc7ed19f4662f478fa9cf8b"
+source = "git+https://github.com/ryancinsight/consus#a9ac02ac205a91bc2c29b364ea014303f38c7cb7"
 dependencies = [
  "consus-core",
 ]
@@ -5817,6 +5817,8 @@ dependencies = [
  "hmac",
  "image 0.24.9",
  "jsonwebtoken",
+ "kwavers-core",
+ "kwavers-math",
  "log",
  "loom",
  "nalgebra 0.32.6",
@@ -5860,6 +5862,40 @@ dependencies = [
  "uom",
  "uuid",
  "wgpu 26.0.1",
+]
+
+[[package]]
+name = "kwavers-core"
+version = "3.0.0"
+dependencies = [
+ "anyhow",
+ "flume",
+ "libc",
+ "log",
+ "ndarray",
+ "nifti",
+ "rayon",
+ "ritk-registration",
+ "serde",
+ "thiserror 1.0.69",
+ "wgpu 26.0.1",
+]
+
+[[package]]
+name = "kwavers-math"
+version = "3.0.0"
+dependencies = [
+ "apollo-fft",
+ "apollo-fft-wgpu",
+ "approx",
+ "kwavers-core",
+ "log",
+ "nalgebra 0.32.6",
+ "ndarray",
+ "num-complex",
+ "num-traits",
+ "rand 0.8.5",
+ "serde",
 ]
 
 [[package]]
@@ -8213,7 +8249,6 @@ dependencies = [
  "burn",
  "burn-ndarray",
  "bytemuck",
- "criterion 0.5.1",
  "gaia",
  "nalgebra 0.33.3",
  "proptest",
@@ -8410,7 +8445,6 @@ dependencies = [
  "anyhow",
  "burn",
  "burn-ndarray",
- "criterion 0.5.1",
  "image 0.24.9",
  "nalgebra 0.33.3",
  "ndarray",
