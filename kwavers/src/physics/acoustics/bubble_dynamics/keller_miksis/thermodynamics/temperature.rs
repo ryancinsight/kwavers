@@ -3,12 +3,12 @@
 use super::super::KellerMiksisModel;
 use super::phase::{latent_heat_water_j_per_kg, p_sat_water_pa};
 use crate::core::constants::fundamental::{GAS_CONSTANT as R_GAS, STEFAN_BOLTZMANN};
+use crate::core::constants::numerical::{FOUR_PI, TWO_PI};
 use crate::core::constants::thermodynamic::{
     EMISSIVITY_VAPOR, KELVIN_OFFSET_C, M_WATER, ROOM_TEMPERATURE_K, THERMAL_CONDUCTIVITY_AIR,
 };
 use crate::core::error::{KwaversResult, PhysicsError};
 use crate::physics::acoustics::bubble_dynamics::bubble_state::BubbleState;
-use crate::core::constants::numerical::{FOUR_PI, TWO_PI};
 
 /// Update bubble temperature through adiabatic, conductive, latent, and radiative terms.
 /// # Errors

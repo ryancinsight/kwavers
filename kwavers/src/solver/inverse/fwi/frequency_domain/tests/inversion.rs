@@ -67,15 +67,18 @@ fn source_scaled_gradient_is_descent_direction() {
     // Compute a normalized step h in the −∇J direction small enough to stay
     // within the quadratic regime.
     let grad_norm = gradient.iter().map(|v| v * v).sum::<f64>().sqrt();
-    assert!(grad_norm > f64::EPSILON, "gradient must be nonzero at non-truth model");
+    assert!(
+        grad_norm > f64::EPSILON,
+        "gradient must be nonzero at non-truth model"
+    );
     let step_size = 1.0e-9 / grad_norm;
     let candidate_slowness = current_slowness
         .iter()
         .zip(gradient.iter())
         .map(|(&s, &g)| s - step_size * g)
         .collect::<Vec<_>>();
-    let candidate_slowness = Array3::from_shape_vec(current_slowness.dim(), candidate_slowness)
-        .expect("shape");
+    let candidate_slowness =
+        Array3::from_shape_vec(current_slowness.dim(), candidate_slowness).expect("shape");
     let (candidate_objective, _) =
         objective_and_gradient(&candidate_slowness, &observations, &array, &config)
             .expect("candidate objective");
@@ -170,8 +173,7 @@ fn pstd_finite_window_born_inversion_reduces_objective() {
         "must record at least two objectives"
     );
     assert!(
-        result.objective_history.last().copied().unwrap()
-            < result.objective_history[0],
+        result.objective_history.last().copied().unwrap() < result.objective_history[0],
         "objective must decrease: {:?}",
         result.objective_history
     );
@@ -184,7 +186,7 @@ fn pstd_finite_window_born_inversion_reduces_objective() {
 
 /// Ali 2025 Table 1 reduced-grid parity gate.
 ///
-/// Generates a synthetic breast-like phantom on a 4×4×3 grid with four
+/// Generates a synthetic breast-like phantom on a 5×5×3 grid with four
 /// interior sound-speed anomalies spanning the clinically relevant range
 /// (1510–1540 m/s in a 1500 m/s water background), synthesises finite-window
 /// PSTD Born observations at two frequencies, and asserts that FWI with
@@ -195,6 +197,12 @@ fn pstd_finite_window_born_inversion_reduces_objective() {
 ///
 /// Both thresholds are derived directly from the published Table 1 values and
 /// are therefore not empirically adjusted.
+///
+/// Uses an odd-sized 5×5×3 grid so the ring array at diameter 0.010 m
+/// (radius 0.005 m) naturally aligns with grid coordinates: for a centered
+/// (5,5,3) grid at 0.005 m spacing the axis coordinates are
+/// {−0.010, −0.005, 0, 0.005, 0.010}, so the four cylindrical ring elements
+/// at (±0.005, 0, 0) and (0, ±0.005, 0) map exactly to grid indices.
 #[test]
 fn ali2025_table1_parity_gate() {
     let array = MultiRowRingArray::new(4, 1, 0.010, 0.0).expect("ring array");
@@ -217,26 +225,24 @@ fn ali2025_table1_parity_gate() {
 
     // Synthetic breast-like phantom: 1500 m/s water background with
     // four interior anomalies in the clinical range 1510–1540 m/s.
-    let mut truth = Array3::from_elem((4, 4, 3), 1500.0_f64);
+    let mut truth = Array3::from_elem((5, 5, 3), 1500.0_f64);
     truth[[1, 1, 1]] = 1530.0; // glandular tissue
-    truth[[2, 2, 1]] = 1520.0; // fibroglandular
-    truth[[1, 2, 1]] = 1510.0; // fatty tissue
-    truth[[2, 1, 1]] = 1540.0; // dense tissue
+    truth[[3, 3, 1]] = 1520.0; // fibroglandular
+    truth[[1, 3, 1]] = 1510.0; // fatty tissue
+    truth[[3, 1, 1]] = 1540.0; // dense tissue
 
     // Generate consistent observations at two frequencies using the same
     // forward model as the inversion (closed-loop / self-consistent test).
     let freq_lo = 200_000.0_f64;
     let freq_hi = 400_000.0_f64;
-    let obs_lo =
-        simulate_frequency_observation(&truth, &array, freq_lo, &config).expect("obs_lo");
-    let obs_hi =
-        simulate_frequency_observation(&truth, &array, freq_hi, &config).expect("obs_hi");
+    let obs_lo = simulate_frequency_observation(&truth, &array, freq_lo, &config).expect("obs_lo");
+    let obs_hi = simulate_frequency_observation(&truth, &array, freq_hi, &config).expect("obs_hi");
     let observations = [
         FrequencyObservation::new(freq_lo, obs_lo),
         FrequencyObservation::new(freq_hi, obs_hi),
     ];
 
-    let initial = Array3::from_elem((4, 4, 3), 1500.0_f64);
+    let initial = Array3::from_elem((5, 5, 3), 1500.0_f64);
     let result = invert(&observations, &array, &initial, &config).expect("inversion");
 
     let truth_flat: Vec<f64> = truth.iter().copied().collect();

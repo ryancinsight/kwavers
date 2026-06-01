@@ -175,12 +175,7 @@ pub fn arrhenius_damage_integral(t_celsius: &[f64], dt_s: f64, a_per_s: f64, ea_
 /// # Reference
 /// Henriques & Moritz (1947), *Am. J. Pathol.* 23, 531.
 #[must_use]
-pub fn arrhenius_cumulative(
-    t_celsius: &[f64],
-    dt_s: f64,
-    a_per_s: f64,
-    ea_j_mol: f64,
-) -> Vec<f64> {
+pub fn arrhenius_cumulative(t_celsius: &[f64], dt_s: f64, a_per_s: f64, ea_j_mol: f64) -> Vec<f64> {
     let r_gas = GAS_CONSTANT;
     let mut acc = 0.0_f64;
     t_celsius

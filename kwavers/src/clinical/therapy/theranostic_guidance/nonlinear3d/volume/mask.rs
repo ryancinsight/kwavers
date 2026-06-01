@@ -5,9 +5,7 @@ use std::collections::VecDeque;
 use ndarray::{s, Array3};
 
 use crate::core::constants::ct_acoustics::{
-    HU_ABDOMEN_BODY_THRESHOLD,
-    HU_BONE_THRESHOLD,
-    HU_BRAIN_BODY_THRESHOLD,
+    HU_ABDOMEN_BODY_THRESHOLD, HU_BONE_THRESHOLD, HU_BRAIN_BODY_THRESHOLD,
 };
 use crate::core::error::{KwaversError, KwaversResult};
 

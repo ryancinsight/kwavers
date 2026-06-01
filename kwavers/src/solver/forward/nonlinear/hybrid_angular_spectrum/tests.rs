@@ -7,7 +7,7 @@ use ndarray::Array3;
 
 use super::config::HASConfig;
 use super::facade::HybridAngularSpectrum;
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 
 #[test]
 fn test_has_config_default() {
@@ -19,16 +19,46 @@ fn test_has_config_default() {
 
 #[test]
 fn test_has_config_validation() {
-    assert!(HASConfig::new(-1.0, DENSITY_WATER_NOMINAL, 6.0, 0.5, 2.0, 0.0001, MHZ_TO_HZ).is_err());
-    assert!(HASConfig::new(SOUND_SPEED_WATER_SIM, -1.0, 6.0, 0.5, 2.0, 0.0001, MHZ_TO_HZ).is_err());
-    assert!(HASConfig::new(SOUND_SPEED_WATER_SIM, DENSITY_WATER_NOMINAL, 6.0, 0.5, 2.0, -0.0001, MHZ_TO_HZ).is_err());
+    assert!(HASConfig::new(
+        -1.0,
+        DENSITY_WATER_NOMINAL,
+        6.0,
+        0.5,
+        2.0,
+        0.0001,
+        MHZ_TO_HZ
+    )
+    .is_err());
+    assert!(HASConfig::new(
+        SOUND_SPEED_WATER_SIM,
+        -1.0,
+        6.0,
+        0.5,
+        2.0,
+        0.0001,
+        MHZ_TO_HZ
+    )
+    .is_err());
+    assert!(HASConfig::new(
+        SOUND_SPEED_WATER_SIM,
+        DENSITY_WATER_NOMINAL,
+        6.0,
+        0.5,
+        2.0,
+        -0.0001,
+        MHZ_TO_HZ
+    )
+    .is_err());
 }
 
 /// Z = ρ·c (acoustic impedance definition, Pierce 1989 §1.5).
 #[test]
 fn test_impedance_calculation() {
     let config = HASConfig::default();
-    assert_eq!(config.impedance(), SOUND_SPEED_WATER_SIM * DENSITY_WATER_NOMINAL);
+    assert_eq!(
+        config.impedance(),
+        SOUND_SPEED_WATER_SIM * DENSITY_WATER_NOMINAL
+    );
 }
 
 /// Power-law attenuation α(f) = α₀·(f/MHz)^y; ratio at 2× frequency = 2^y.

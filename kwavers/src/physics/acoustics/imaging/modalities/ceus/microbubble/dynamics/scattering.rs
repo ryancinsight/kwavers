@@ -1,8 +1,8 @@
 //! Nonlinear scattering efficiency for CEUS microbubbles.
 
 use super::BubbleDynamics;
+use crate::core::constants::numerical::TWO_PI;
 use crate::domain::imaging::ultrasound::ceus::Microbubble;
-use crate::core::constants::numerical::{TWO_PI};
 
 impl BubbleDynamics {
     /// Compute nonlinear scattering efficiency via Lorentzian resonance response.

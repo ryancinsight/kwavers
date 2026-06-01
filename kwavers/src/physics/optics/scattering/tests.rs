@@ -8,8 +8,8 @@
 //! machine precision.
 
 use super::*;
+use crate::core::constants::numerical::TWO_PI;
 use num_complex::Complex64;
-use crate::core::constants::numerical::{TWO_PI};
 
 fn params_for(x: f64, m: Complex64) -> MieParameters {
     let wavelength = 1.0_f64;

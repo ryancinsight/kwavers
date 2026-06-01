@@ -4,7 +4,7 @@ use ndarray::Array2;
 
 use super::config::PolynomialFilterConfig;
 use super::filter::PolynomialFilter;
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 
 #[test]
 fn test_config_validation() {

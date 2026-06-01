@@ -3,7 +3,7 @@
 use crate::clinical::therapy::theranostic_guidance::nonlinear3d::types::Nonlinear3dConfig;
 
 use super::plan::{DriveContext, SourcePlan};
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 
 pub(in crate::clinical::therapy::theranostic_guidance::nonlinear3d::forward) fn inject_sources(
     next: &mut [f64],

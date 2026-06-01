@@ -2,8 +2,8 @@
 
 use super::mie_theory::MieTheory;
 use super::types::PlasmonicArrayGeometry;
+use crate::core::constants::numerical::TWO_PI;
 use crate::core::constants::optical::REFRACTIVE_INDEX_WATER;
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Array of nanoparticles for collective enhancement computations
 #[derive(Debug)]

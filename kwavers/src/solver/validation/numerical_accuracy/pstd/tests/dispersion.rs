@@ -1,6 +1,6 @@
 use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::core::constants::numerical::MHZ_TO_HZ;
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 
 #[test]
 fn test_numerical_dispersion() {

@@ -1,9 +1,9 @@
 use super::*;
 use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, STEFAN_BOLTZMANN};
+use crate::core::constants::numerical::FOUR_PI;
 use crate::core::constants::thermodynamic::{
     EMISSIVITY_VAPOR, ROOM_TEMPERATURE_K, THERMAL_CONDUCTIVITY_AIR,
 };
-use crate::core::constants::numerical::{FOUR_PI};
 
 #[test]
 fn test_stefan_boltzmann_ambient_is_zero() {

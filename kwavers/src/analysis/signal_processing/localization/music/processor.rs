@@ -3,7 +3,7 @@ use ndarray::{Array1, Array2};
 use num_complex::Complex;
 
 use super::MUSICConfig;
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 
 /// MUSIC processor for direction-of-arrival estimation
 #[derive(Debug)]

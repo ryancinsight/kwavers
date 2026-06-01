@@ -19,8 +19,18 @@ pub(super) struct PaddedSimulation {
     pub(super) grid: AcousticGrid,
     pub(super) speed_baseline: Array2<f64>,
     pub(super) speed_true: Array2<f64>,
+    /// Body sub-region offset (in REFINED padded-grid cell units).
     pub(super) body_offset: (usize, usize),
+    /// Body sub-region dimensions in REFINED cells:
+    /// `body_dims = (nx_body * refinement, ny_body * refinement)`.
     pub(super) body_dims: (usize, usize),
+    /// Caller-visible body dimensions (matches `prepared.sound_speed_m_s.dim()`).
+    pub(super) body_dims_coarse: (usize, usize),
+    /// Internal grid-refinement factor (refined cells per body cell along
+    /// each axis).  Chosen so `λ / dx_refined ≥ 4` at the highest configured
+    /// transmit frequency, which is the minimum for the 4th-order FD stencil
+    /// to propagate without destructive numerical dispersion.
+    pub(super) refinement: usize,
 }
 
 /// Output of the source-encoded adjoint RTM waveform simulation.
@@ -95,6 +105,13 @@ pub(super) struct AcousticGrid {
     /// Dividing by √N ensures the total injected energy is independent of
     /// the element count so the forward and adjoint replay are amplitude-matched.
     pub(super) source_scale: f32,
+    /// Optional precomputed per-time-step source amplitude (unit-normalised).
+    ///
+    /// When `Some`, every source cell injects `source_scale · waveform[step]`
+    /// *simultaneously* (zero electronic delay) — used for the broadband
+    /// passive cavitation emission. When `None`, the per-cell Ricker wavelet
+    /// with `source_delays_s` focal-law delays is injected instead.
+    pub(super) source_waveform: Option<Vec<f32>>,
 }
 
 /// Checkpoint schedule for memory-efficient adjoint (Griewank 1992).

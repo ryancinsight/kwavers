@@ -126,4 +126,5 @@ pub mod types;
 
 pub use types::{
     InitialPressure, PhotoacousticOpticalProperties, PhotoacousticParameters, PhotoacousticResult,
+    PressureFieldSeries,
 };

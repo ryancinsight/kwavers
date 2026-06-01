@@ -30,10 +30,7 @@ impl MultiGpuManager {
 
     fn assign_work_dynamic(&mut self, work_units: Vec<WorkUnit>) -> KwaversResult<()> {
         let mut sorted_work = work_units;
-        sorted_work.sort_by(|a, b| {
-            b.complexity
-                .total_cmp(&a.complexity)
-        });
+        sorted_work.sort_by(|a, b| b.complexity.total_cmp(&a.complexity));
         for work_unit in sorted_work {
             let best_gpu = self.find_least_loaded_gpu();
             let mut assigned_work = work_unit;

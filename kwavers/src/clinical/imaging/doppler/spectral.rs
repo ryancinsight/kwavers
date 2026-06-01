@@ -42,10 +42,10 @@
 //! - Evans DH, McDicken WN (2000). *Doppler Ultrasound: Physics, Instrumentation and
 //!   Signal Processing* (2nd ed.). Wiley.
 
+use crate::core::constants::numerical::TWO_PI;
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::math::fft::{fft_1d_array, Complex64};
 use ndarray::{Array1, ArrayView1};
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Spectral analysis configuration
 #[derive(Debug, Clone)]

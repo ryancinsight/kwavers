@@ -10,7 +10,7 @@ use crate::physics::acoustics::imaging::modalities::elastography::displacement::
 
 use super::super::algorithms::fill_boundaries;
 use super::super::types::elasticity_map_from_speed;
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 
 /// Phase gradient inversion (frequency domain method)
 ///

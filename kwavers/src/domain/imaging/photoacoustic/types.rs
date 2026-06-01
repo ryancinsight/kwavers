@@ -1,6 +1,7 @@
 use crate::core::constants::{GRUNEISEN_WATER_20C, SOUND_SPEED_WATER_SIM};
 use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::core::constants::optical::REFRACTIVE_INDEX_SOFT_TISSUE;
+use super::pressure_series::PressureFieldSeries;
 use crate::domain::medium::properties::OpticalPropertyData;
 use ndarray::{Array2, Array3};
 
@@ -18,7 +19,7 @@ impl WavelengthBand {
 
 #[derive(Debug, Clone)]
 pub struct PhotoacousticResult {
-    pub pressure_fields: Vec<Array3<f64>>,
+    pub pressure_fields: PressureFieldSeries,
     pub time: Vec<f64>,
     pub reconstructed_image: Array3<f64>,
     pub snr: f64,
@@ -124,7 +125,7 @@ pub struct PhotoacousticSignalSet {
 pub struct PhotoacousticSimulation {
     pub optical_fluence: Array3<f64>,
     pub initial_pressure: InitialPressure,
-    pub pressure_fields: Vec<Array3<f64>>,
+    pub pressure_fields: PressureFieldSeries,
     pub time_points: Vec<f64>,
     pub signals: PhotoacousticSignalSet,
     pub reconstruction: Array3<f64>,

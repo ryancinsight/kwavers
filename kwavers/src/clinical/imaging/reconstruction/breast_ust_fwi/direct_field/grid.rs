@@ -1,9 +1,9 @@
+use crate::core::constants::numerical::FOUR_PI;
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::solver::inverse::linear_born_inversion::ElementPosition;
+use crate::domain::source::transducers::ElementPosition;
 use ndarray::Array3;
 use num_complex::Complex64;
 use std::f64::consts::TAU;
-use crate::core::constants::numerical::{FOUR_PI};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) struct GridShape {

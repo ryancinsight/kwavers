@@ -3,7 +3,7 @@
 //! Models the nonlinear steepening of acoustic waves into shocks.
 
 use super::NonlinearParameters;
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 
 /// Calculates the spatial location where a shock wave forms
 ///

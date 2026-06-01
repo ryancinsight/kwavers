@@ -14,9 +14,9 @@
 
 use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 use crate::core::constants::numerical::MHZ_TO_HZ;
+use crate::core::constants::numerical::TWO_PI;
 use ndarray::{Array2, Array3};
 use num_complex::Complex64;
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Synthetic Aperture (SA) imaging configuration
 #[derive(Debug, Clone)]
@@ -95,11 +95,9 @@ impl SyntheticApertureReconstruction {
                         if sample_idx < n_samples {
                             let rf_sample = rf_data[[sample_idx, rx, tx]];
 
-                            let phase_correction = Complex64::new(
-                                0.0,
-                                -TWO_PI * self.config.frequency * total_delay,
-                            )
-                            .exp();
+                            let phase_correction =
+                                Complex64::new(0.0, -TWO_PI * self.config.frequency * total_delay)
+                                    .exp();
 
                             sum += rf_sample * phase_correction;
                         }

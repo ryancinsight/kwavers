@@ -37,7 +37,7 @@
 //! violated.  `SimulationSolverFactory::create_solver(SolverType::PstdGpu,
 //! ...)` propagates that error to the caller.
 
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 mod medium;
 
 use medium::GpuMediumSnapshot;

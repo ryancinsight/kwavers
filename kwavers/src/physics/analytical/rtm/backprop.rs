@@ -1,5 +1,5 @@
-use rayon::prelude::*;
 use crate::core::constants::numerical::{FOUR_PI, TWO_PI};
+use rayon::prelude::*;
 
 /// 2-D Green's function backpropagation from a focal point.
 ///

@@ -1,7 +1,8 @@
 //! Numerical configuration for linear Born + PCG inversion.
 //!
 //! Anatomy- and transducer-neutral knobs only. The number and physical layout
-//! of array elements live on the [`TransducerGeometry`](super::TransducerGeometry)
+//! of array elements live on the
+//! [`TransducerGeometry`](crate::domain::source::transducers::TransducerGeometry)
 //! impl passed alongside this config; clinical adapters
 //! (`clinical::imaging::reconstruction::*`) compose this struct with
 //! anatomy-specific parameters into their own configs.
@@ -25,7 +26,7 @@ pub struct LinearBornInversionConfig {
     pub frequencies_hz: Vec<f64>,
     /// Receiver offsets from each emitting element. Semantics depend on the
     /// transducer geometry (cyclic for rings; azimuthal for bowls); see
-    /// [`TransducerGeometry::receiver_indices`](super::TransducerGeometry::receiver_indices).
+    /// [`TransducerGeometry::receiver_indices`](crate::domain::source::transducers::TransducerGeometry::receiver_indices).
     pub receiver_offsets: Vec<usize>,
     /// Maximum outer PCG / Landweber iterations.
     pub iterations: usize,
@@ -120,9 +121,7 @@ impl LinearBornInversionConfig {
                 "LinearBornInversionConfig.frequencies_hz must contain positive values".to_owned(),
             ));
         }
-        if self.receiver_offsets.is_empty()
-            || self.receiver_offsets.contains(&0)
-        {
+        if self.receiver_offsets.is_empty() || self.receiver_offsets.contains(&0) {
             return Err(KwaversError::InvalidInput(
                 "LinearBornInversionConfig.receiver_offsets must be nonempty and nonzero"
                     .to_owned(),

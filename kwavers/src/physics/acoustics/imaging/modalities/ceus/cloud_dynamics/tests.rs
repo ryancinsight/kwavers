@@ -1,7 +1,7 @@
 //! Tests for cloud dynamics
 
-use crate::core::constants::numerical::MHZ_TO_HZ;
 use super::*;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 
 #[test]
 fn test_cloud_initialization() {

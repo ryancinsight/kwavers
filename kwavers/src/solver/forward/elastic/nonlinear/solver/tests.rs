@@ -27,7 +27,13 @@ fn test_nonlinear_solver_creation() {
     let nz = 16_usize;
     let dx = 0.001_f64;
     let grid = Grid::new(nx, ny, nz, dx, dx, dx).unwrap();
-    let medium = HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
+    let medium = HomogeneousMedium::new(
+        DENSITY_WATER_NOMINAL,
+        SOUND_SPEED_WATER_SIM,
+        0.5,
+        1.0,
+        &grid,
+    );
     let material = HyperelasticModel::neo_hookean_soft_tissue();
     let beta = 0.1_f64;
     let config = NonlinearSWEConfig {

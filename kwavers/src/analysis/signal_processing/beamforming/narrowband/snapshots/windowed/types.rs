@@ -1,6 +1,6 @@
 use crate::core::constants::numerical::MHZ_TO_HZ;
+use crate::core::constants::numerical::TWO_PI;
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Window function for windowed snapshot extraction.
 ///

@@ -163,7 +163,13 @@ mod tests {
     fn linear_round_trips_within_clamp_range() {
         let scale = 30.0 * MPA_TO_PA as f32;
         let t = TargetTransform::linear(scale).unwrap();
-        for &p in &[-30.0 * MPA_TO_PA as f32, -MPA_TO_PA as f32, 0.0, MPA_TO_PA as f32, 30.0 * MPA_TO_PA as f32] {
+        for &p in &[
+            -30.0 * MPA_TO_PA as f32,
+            -MPA_TO_PA as f32,
+            0.0,
+            MPA_TO_PA as f32,
+            30.0 * MPA_TO_PA as f32,
+        ] {
             let n = t.forward(p);
             assert!(n.abs() <= 1.0 + 1e-6);
             let back = t.inverse(n);

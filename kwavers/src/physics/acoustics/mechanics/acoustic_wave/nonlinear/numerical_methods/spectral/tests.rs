@@ -1,8 +1,8 @@
 use super::super::super::wave_model::NonlinearWave;
+use crate::core::constants::numerical::TWO_PI;
 use crate::domain::grid::Grid;
 use crate::domain::medium::HomogeneousMedium;
 use ndarray::Array3;
-use crate::core::constants::numerical::{TWO_PI};
 
 /// A spatially uniform field has zero spectral gradient in every direction.
 ///

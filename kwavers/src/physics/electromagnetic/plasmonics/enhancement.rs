@@ -52,9 +52,9 @@
 use super::mie_theory::MieTheory;
 use super::types::CouplingModel;
 use crate::core::constants::fundamental::VACUUM_PERMITTIVITY;
+use crate::core::constants::numerical::FOUR_PI;
 use num_complex::Complex;
 use std::f64::consts::PI;
-use crate::core::constants::numerical::{FOUR_PI};
 
 /// Plasmonic enhancement calculator for homogeneous nanoparticle dispersions
 #[derive(Debug)]

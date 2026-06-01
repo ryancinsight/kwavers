@@ -8,11 +8,11 @@
 use crate::core::error::KwaversResult;
 use ndarray::{Array1, Array2};
 
+use crate::core::constants::numerical::TWO_PI;
 use crate::core::constants::SOUND_SPEED_WATER;
 use crate::physics::acoustics::analytical::patterns::phase_shifting::core::{
     calculate_wavelength, wrap_phase, MAX_STEERING_ANGLE,
 };
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Beam steering controller
 #[derive(Debug)]
@@ -154,8 +154,8 @@ impl BeamSteering {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use approx::assert_relative_eq;
     use crate::core::constants::numerical::MHZ_TO_HZ;
+    use approx::assert_relative_eq;
     use ndarray::arr2;
     use std::f64::consts::PI;
 

@@ -1,8 +1,8 @@
 use super::MetaLearner;
+use crate::core::constants::numerical::TWO_PI;
 use crate::core::error::KwaversResult;
 use crate::solver::inverse::pinn::ml::meta_learning::types::{PhysicsTask, TaskData};
 use burn::tensor::backend::AutodiffBackend;
-use crate::core::constants::numerical::{TWO_PI};
 
 impl<B: AutodiffBackend> MetaLearner<B> {
     /// Generate task data.

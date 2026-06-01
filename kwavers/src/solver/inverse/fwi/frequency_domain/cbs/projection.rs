@@ -9,7 +9,7 @@ use super::temporal::{
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::math::fft::{fft_3d_complex_into, ifft_3d_complex_inplace};
 use crate::physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;
-use crate::solver::inverse::linear_born_inversion::ElementPosition;
+use crate::domain::source::transducers::ElementPosition;
 use ndarray::Array3;
 use num_complex::Complex64;
 use std::f64::consts::TAU;

@@ -11,7 +11,8 @@ use crate::solver::forward::nonlinear::westervelt::{WesterveltFdtd, WesterveltFd
 #[test]
 fn westervelt_update_reuses_pressure_and_nonlinear_workspaces() {
     let grid = Grid::new(8, 8, 8, 1e-3, 1e-3, 1e-3).unwrap();
-    let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, &grid);
+    let medium =
+        HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, &grid);
     let config = WesterveltFdtdConfig {
         spatial_order: 2,
         enable_absorption: false,
@@ -46,7 +47,8 @@ fn westervelt_update_reuses_pressure_and_nonlinear_workspaces() {
 #[test]
 fn test_linear_wave_propagation() {
     let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3).unwrap();
-    let mut medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, &grid);
+    let mut medium =
+        HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, &grid);
     medium.nonlinearity = 0.0;
 
     let config = WesterveltFdtdConfig {
@@ -79,7 +81,8 @@ fn test_linear_wave_propagation() {
 #[test]
 fn test_conservation_diagnostics_integration() {
     let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).unwrap();
-    let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, &grid);
+    let medium =
+        HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, &grid);
     let config = WesterveltFdtdConfig::default();
     let mut solver = WesterveltFdtd::new(config, &grid, &medium);
 

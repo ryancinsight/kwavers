@@ -9,6 +9,7 @@ use crate::clinical::imaging::reconstruction::breast_ust_fwi::{
     generate_breast_ust_pstd_frequency_dataset, snap_multi_row_ring_array_to_grid,
 };
 use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
+use crate::core::constants::numerical::{FOUR_PI, TWO_PI};
 use crate::physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;
 use crate::solver::inverse::fwi::frequency_domain::{
     simulate_frequency_observation, AbsorbingBoundary, Config as FrequencyDomainFwiConfig,
@@ -18,7 +19,6 @@ use ndarray::Array3;
 use num_complex::Complex64;
 use std::f64::consts::PI;
 use std::sync::Arc;
-use crate::core::constants::numerical::{FOUR_PI, TWO_PI};
 
 #[test]
 fn point_source_prediction_matches_outgoing_green_formula() {

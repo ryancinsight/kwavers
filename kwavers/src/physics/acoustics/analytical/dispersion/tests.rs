@@ -3,9 +3,9 @@
 use super::*;
 use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::core::constants::numerical::MHZ_TO_HZ;
+use crate::core::constants::numerical::TWO_PI;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
-use crate::core::constants::numerical::{TWO_PI};
 
 #[test]
 fn test_fdtd_dispersion_3d_axis_aligned_low_dispersion() {

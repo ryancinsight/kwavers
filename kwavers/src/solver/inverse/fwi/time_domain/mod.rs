@@ -52,7 +52,9 @@
 mod adjoint;
 pub mod adjoint_state;
 mod constraints;
+mod encoded_source;
 mod forward;
+mod frequency_continuation;
 mod gradient;
 mod inversion;
 mod search;
@@ -62,6 +64,7 @@ pub mod geometry;
 pub use adjoint_state::{
     accumulate_signed_correlation, l2_objective, l2_residual, reverse_time_axis,
 };
+pub use encoded_source::{encode_shots, hadamard_codes};
 pub use geometry::FwiGeometry;
 
 #[cfg(test)]
@@ -69,6 +72,7 @@ mod tests;
 
 use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 use crate::domain::grid::Grid;
+use crate::solver::inverse::reconstruction::seismic::MisfitType;
 use crate::solver::inverse::seismic::parameters::FwiParameters;
 use ndarray::Array3;
 
@@ -101,21 +105,81 @@ pub(super) const RHO_SEISMIC_REF: f64 = 2000.0; // kg/m³
 /// scalar that is absorbed into the line-search step-size and therefore
 /// produces a descent direction identical to the heterogeneous formulation
 /// up to a uniform rescaling.
-#[derive(Debug)]
+///
+/// ## Misfit selection and cycle-skipping
+///
+/// `misfit_type` selects the data-misfit functional `J(d_syn, d_obs)` and the
+/// matching adjoint source (Fréchet derivative `∂J/∂d_syn`) injected through the
+/// receiver mask. The default [`MisfitType::L2Norm`] is the classical
+/// least-squares functional `J = (dt/2)‖d_syn − d_obs‖²`, whose non-convexity in
+/// the model is the source of *cycle skipping*: when the initial model
+/// mispredicts an arrival by more than half a period, the L2 gradient pushes
+/// toward the nearest cycle rather than the true one (Virieux & Operto 2009 §4).
+///
+/// The alternative misfits trade pointwise amplitude matching for a more convex
+/// objective with respect to time shifts:
+/// - [`MisfitType::Envelope`] — instantaneous-envelope L2 (Bozdağ et al. 2011),
+/// - [`MisfitType::Phase`] — instantaneous-phase L2 (Fichtner et al. 2008),
+/// - [`MisfitType::Wasserstein`] — 1-Wasserstein optimal transport
+///   (Engquist & Froese 2014; Métivier et al. 2016), convex in the time shift
+///   for *positive* distributions; on raw oscillatory traces the
+///   non-negativity transform weakens that guarantee, so it is most effective
+///   on envelope- or amplitude-like quantities,
+/// - [`MisfitType::Correlation`], [`MisfitType::L1Norm`] — auxiliary norms.
+///
+/// All adjoint sources are computed by the canonical
+/// [`MisfitFunction`](crate::solver::inverse::reconstruction::seismic::MisfitFunction)
+/// dispatcher (SSOT); the time-domain FWI driver only routes the selected
+/// functional into the objective evaluation and the adjoint-source construction.
+#[derive(Debug, Clone)]
 pub struct FwiProcessor {
     pub(super) parameters: FwiParameters,
     pub(super) density_model: Option<Array3<f64>>,
+    pub(super) misfit_type: MisfitType,
+    /// Optional zero-phase low-pass corner [Hz] applied to both observed and
+    /// synthetic traces before the misfit/adjoint evaluation. `None` (default)
+    /// uses the full recorded bandwidth. Set by the frequency-continuation
+    /// driver per multiscale stage; see [`Self::with_band_limit`] and
+    /// [`Self::invert_multiscale`].
+    pub(super) band_limit_hz: Option<f64>,
 }
 
 impl FwiProcessor {
-    /// Create new FWI processor with specified parameters and constant
-    /// reference density.
+    /// Create new FWI processor with specified parameters, constant reference
+    /// density, the default [`MisfitType::L2Norm`] data misfit, and full
+    /// bandwidth.
     #[must_use]
     pub fn new(parameters: FwiParameters) -> Self {
         Self {
             parameters,
             density_model: None,
+            misfit_type: MisfitType::L2Norm,
+            band_limit_hz: None,
         }
+    }
+
+    /// Select the data-misfit functional used by the inversion driver.
+    ///
+    /// Replaces the default L2 least-squares misfit with a cycle-skipping-robust
+    /// alternative (envelope, phase, or Wasserstein optimal transport). The same
+    /// functional is used consistently for objective evaluation, the convergence
+    /// test, the Armijo line search, and the adjoint-source construction.
+    #[must_use]
+    pub fn with_misfit(mut self, misfit_type: MisfitType) -> Self {
+        self.misfit_type = misfit_type;
+        self
+    }
+
+    /// Apply a zero-phase low-pass with the given corner frequency [Hz] to the
+    /// data before every misfit and adjoint-source evaluation.
+    ///
+    /// `None` restores full-bandwidth inversion. This is the primitive the
+    /// multiscale [`Self::invert_multiscale`] driver toggles per stage; setting
+    /// it directly inverts a single band.
+    #[must_use]
+    pub fn with_band_limit(mut self, corner_hz: Option<f64>) -> Self {
+        self.band_limit_hz = corner_hz;
+        self
     }
 
     /// Supply a heterogeneous density field [kg/m³] used by both the forward
@@ -170,5 +234,14 @@ impl FwiProcessor {
 impl Default for FwiProcessor {
     fn default() -> Self {
         Self::new(FwiParameters::default())
+    }
+}
+
+#[cfg(test)]
+impl FwiProcessor {
+    /// Read back the configured misfit type (test introspection of the wiring).
+    #[must_use]
+    pub(super) fn misfit_type(&self) -> MisfitType {
+        self.misfit_type
     }
 }

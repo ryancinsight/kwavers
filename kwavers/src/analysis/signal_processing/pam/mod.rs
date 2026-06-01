@@ -28,7 +28,7 @@ pub mod processor;
 mod tests;
 
 pub use config::{PAMConfig, PamBeamformingConfig};
-pub use delay_and_sum::{DelayAndSumConfig, DelayAndSumPAM, PamCavitationEvent};
+pub use delay_and_sum::{DelayAndSumConfig, DelayAndSumPAM, PamCavitationEvent, PamImagingMode};
 pub use mapper::PassiveAcousticMapper;
 pub use processor::PAMProcessor;
 

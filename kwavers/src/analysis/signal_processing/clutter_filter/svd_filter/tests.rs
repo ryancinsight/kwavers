@@ -1,6 +1,6 @@
 use super::*;
+use crate::core::constants::numerical::TWO_PI;
 use ndarray::Array2;
-use crate::core::constants::numerical::{TWO_PI};
 
 #[test]
 fn test_config_validation() {

@@ -62,7 +62,7 @@
 mod density_as;
 mod density_cartesian;
 
-use crate::core::error::KwaversResult;
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::solver::forward::pstd::implementation::core::orchestrator::PSTDSolver;
 use crate::solver::geometry::SolverGeometry;
 use ndarray::Zip;
@@ -95,7 +95,9 @@ impl PSTDSolver {
         //   Both passes use par_for_each (Rayon parallelism preserved).
         if self.config.nonlinearity {
             // SAFETY: `bon.is_some() ↔ config.nonlinearity` — enforced at construction.
-            let bon = self.bon.as_ref().expect("bon populated iff nonlinearity");
+            let bon = self.bon.as_ref().ok_or_else(|| {
+                KwaversError::InternalError("bon must be populated when nonlinearity is enabled".into())
+            })?;
             // Pass 1: accumulate split densities → ρ_total.
             Zip::from(&mut self.div_u)
                 .and(&self.rhox)

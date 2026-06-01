@@ -28,11 +28,11 @@
 //!
 //! This file provides explicit, jargon-aligned helpers to avoid silent convention mismatches.
 
+use crate::core::constants::numerical::TWO_PI;
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::math::geometry::distance3;
 use ndarray::Array1;
 use num_complex::Complex64;
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Newtype representing a narrowband steering vector (complex phasors).
 ///

@@ -3,9 +3,9 @@
 //! This module provides utility functions used across different
 //! reconstruction algorithms.
 
+use crate::core::constants::numerical::FOUR_PI;
 use crate::core::error::KwaversResult;
 use ndarray::Array2;
-use crate::core::constants::numerical::{FOUR_PI};
 
 /// Utility functions for photoacoustic reconstruction
 #[derive(Debug)]
@@ -84,8 +84,7 @@ impl Utils {
 
                 if time_idx < n_time_samples {
                     let row_idx = sensor_idx * n_time_samples + time_idx;
-                    forward_model[[row_idx, voxel_idx]] =
-                        1.0 / (FOUR_PI * distance.max(1e-10));
+                    forward_model[[row_idx, voxel_idx]] = 1.0 / (FOUR_PI * distance.max(1e-10));
                 }
             }
         }

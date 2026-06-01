@@ -1,4 +1,4 @@
-use crate::core::error::KwaversResult;
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::solver::forward::pstd::implementation::core::orchestrator::PSTDSolver;
 use ndarray::Zip;
 
@@ -112,13 +112,14 @@ impl PSTDSolver {
                 });
 
             if use_fused {
-                let pml_dx = self
-                    .pml_exp
-                    .as_ref()
-                    .unwrap()
-                    .den_x
-                    .as_slice()
-                    .expect("pml_den_x contiguous");
+                let pml_exp = self.pml_exp.as_ref().ok_or_else(|| {
+                    KwaversError::InternalError(
+                        "pml_exp unexpectedly None in nonlinear density fused path".into(),
+                    )
+                })?;
+                let pml_dx = pml_exp.den_x.as_slice().ok_or_else(|| {
+                    KwaversError::InternalError("pml_den_x must be contiguous".into())
+                })?;
                 Zip::indexed(self.rhox.view_mut())
                     .and(&self.div_ux)
                     .and(&self.div_u)
@@ -128,13 +129,9 @@ impl PSTDSolver {
                     });
 
                 if has_y {
-                    let pml_dy = self
-                        .pml_exp
-                        .as_ref()
-                        .unwrap()
-                        .den_y
-                        .as_slice()
-                        .expect("pml_den_y contiguous");
+                    let pml_dy = pml_exp.den_y.as_slice().ok_or_else(|| {
+                        KwaversError::InternalError("pml_den_y must be contiguous".into())
+                    })?;
                     Zip::indexed(self.rhoy.view_mut())
                         .and(&self.div_uy)
                         .and(&self.div_u)
@@ -145,13 +142,9 @@ impl PSTDSolver {
                 }
 
                 if has_z {
-                    let pml_dz = self
-                        .pml_exp
-                        .as_ref()
-                        .unwrap()
-                        .den_z
-                        .as_slice()
-                        .expect("pml_den_z contiguous");
+                    let pml_dz = pml_exp.den_z.as_slice().ok_or_else(|| {
+                        KwaversError::InternalError("pml_den_z must be contiguous".into())
+                    })?;
                     Zip::indexed(self.rhoz.view_mut())
                         .and(&self.div_uz)
                         .and(&self.div_u)
@@ -194,13 +187,14 @@ impl PSTDSolver {
         } else {
             // Linear case
             if use_fused {
-                let pml_dx = self
-                    .pml_exp
-                    .as_ref()
-                    .unwrap()
-                    .den_x
-                    .as_slice()
-                    .expect("pml_den_x contiguous");
+                let pml_exp = self.pml_exp.as_ref().ok_or_else(|| {
+                    KwaversError::InternalError(
+                        "pml_exp unexpectedly None in linear density fused path".into(),
+                    )
+                })?;
+                let pml_dx = pml_exp.den_x.as_slice().ok_or_else(|| {
+                    KwaversError::InternalError("pml_den_x must be contiguous".into())
+                })?;
                 Zip::indexed(self.rhox.view_mut())
                     .and(&self.div_ux)
                     .and(&self.materials.rho0)
@@ -210,13 +204,9 @@ impl PSTDSolver {
                     });
 
                 if has_y {
-                    let pml_dy = self
-                        .pml_exp
-                        .as_ref()
-                        .unwrap()
-                        .den_y
-                        .as_slice()
-                        .expect("pml_den_y contiguous");
+                    let pml_dy = pml_exp.den_y.as_slice().ok_or_else(|| {
+                        KwaversError::InternalError("pml_den_y must be contiguous".into())
+                    })?;
                     Zip::indexed(self.rhoy.view_mut())
                         .and(&self.div_uy)
                         .and(&self.materials.rho0)
@@ -227,13 +217,9 @@ impl PSTDSolver {
                 }
 
                 if has_z {
-                    let pml_dz = self
-                        .pml_exp
-                        .as_ref()
-                        .unwrap()
-                        .den_z
-                        .as_slice()
-                        .expect("pml_den_z contiguous");
+                    let pml_dz = pml_exp.den_z.as_slice().ok_or_else(|| {
+                        KwaversError::InternalError("pml_den_z must be contiguous".into())
+                    })?;
                     Zip::indexed(self.rhoz.view_mut())
                         .and(&self.div_uz)
                         .and(&self.materials.rho0)

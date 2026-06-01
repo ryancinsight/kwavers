@@ -2,8 +2,8 @@
 
 use super::super::bubble_state::{BubbleParameters, BubbleState};
 use crate::core::constants::cavitation::{BAR_L2_TO_PA_M6, L_TO_M3};
+use crate::core::constants::numerical::TWO_PI;
 use crate::core::constants::{AVOGADRO, GAS_CONSTANT as R_GAS};
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Rayleigh-Plesset equation solver (incompressible)
 #[derive(Debug)]
@@ -83,8 +83,7 @@ impl RayleighPlessetSolver {
             // Polytropic relation for all states (including equilibrium)
             // The formula naturally handles equilibrium when radius = r0
             let gamma = state.gas_species.gamma();
-            let p_eq = self.params.p0
-                + self.params.surface_tension_pressure(self.params.r0)
+            let p_eq = self.params.p0 + self.params.surface_tension_pressure(self.params.r0)
                 - self.params.pv;
             return p_eq * (self.params.r0 / state.radius).powf(3.0 * gamma) + self.params.pv;
         }

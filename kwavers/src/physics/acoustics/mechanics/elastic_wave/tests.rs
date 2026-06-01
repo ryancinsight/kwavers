@@ -6,6 +6,7 @@
 //! are co-located with their respective modules.
 
 use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
+use crate::core::constants::numerical::TWO_PI;
 use crate::domain::grid::Grid;
 use crate::physics::acoustics::mechanics::elastic_wave::{
     mode_conversion::{ModeConversionConfig, ViscoelasticConfig},
@@ -15,7 +16,6 @@ use crate::physics::acoustics::mechanics::elastic_wave::{
 };
 use ndarray::Array4;
 use std::time::Duration;
-use crate::core::constants::numerical::{TWO_PI};
 
 // ── ElasticWave::new / wavenumber axes ────────────────────────────────────────
 

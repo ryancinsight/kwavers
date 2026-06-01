@@ -3,7 +3,7 @@
 //! This module implements elastic wave physics in heterogeneous media,
 //! following SOLID/CUPID principles with proper domain separation.
 
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 pub mod fields;
 pub mod metrics;
 pub mod mode_conversion;

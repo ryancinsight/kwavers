@@ -3,7 +3,7 @@
 use std::f64::consts::PI;
 
 use super::constants::{C, EPS0, E_CHARGE, HBAR, M_E};
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 
 /// Einstein A and B coefficients for a two-level atomic transition.
 ///

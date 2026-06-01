@@ -13,8 +13,8 @@ use uom::si::thermal_conductivity::watt_per_meter_kelvin;
 use uom::si::thermodynamic_temperature::kelvin;
 use uom::si::time::second;
 
-use crate::core::constants::GAS_CONSTANT as R_GAS;
 use crate::core::constants::thermodynamic::H_VAP_WATER_100C;
+use crate::core::constants::GAS_CONSTANT as R_GAS;
 use crate::physics::acoustics::bubble_dynamics::bubble_state::BubbleState;
 use crate::physics::acoustics::bubble_dynamics::energy::EnergyBalanceCalculator;
 use crate::physics::acoustics::bubble_dynamics::BubbleParameters;

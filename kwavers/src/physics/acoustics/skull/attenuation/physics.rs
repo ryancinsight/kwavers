@@ -1,7 +1,7 @@
 //! Frequency and temperature dependent physics implementations
 
-use crate::core::constants::numerical::MHZ_TO_HZ;
 use super::model::SkullAttenuation;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 
 impl SkullAttenuation {
     /// Compute absorption coefficient at given frequency

@@ -1,6 +1,6 @@
 use super::*;
-use approx::assert_relative_eq;
 use crate::core::constants::thermodynamic::BODY_TEMPERATURE_K;
+use approx::assert_relative_eq;
 use ndarray::Array3;
 
 /// At Delta T = T_half, P_open must equal exactly 0.5.

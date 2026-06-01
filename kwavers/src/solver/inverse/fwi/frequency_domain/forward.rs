@@ -6,14 +6,14 @@ use super::cbs::{
     GridSpec,
 };
 use super::types::{Config, FREQUENCY_DOMAIN_FWI_SOLVER_MODEL};
+use crate::core::constants::numerical::{FOUR_PI, TWO_PI};
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::{
     sound_speed_to_slowness, MultiRowRingArray,
 };
-use crate::solver::inverse::linear_born_inversion::ElementPosition;
+use crate::domain::source::transducers::ElementPosition;
 use ndarray::{Array2, Array3};
 use num_complex::Complex64;
-use crate::core::constants::numerical::{FOUR_PI, TWO_PI};
 
 /// Simulate complex receiver pressure for all cylindrical-wave transmits.
 ///

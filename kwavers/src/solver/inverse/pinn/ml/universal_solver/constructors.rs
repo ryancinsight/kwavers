@@ -4,12 +4,10 @@
 
 use super::solver::UniversalPINNSolver;
 use crate::core::constants::fundamental::{
-    SOUND_SPEED_AIR,
-    VACUUM_PERMEABILITY,
-    VACUUM_PERMITTIVITY,
+    SOUND_SPEED_AIR, VACUUM_PERMEABILITY, VACUUM_PERMITTIVITY,
 };
-use crate::core::constants::tissue_acoustics::DENSITY_AIR;
 use crate::core::constants::numerical::MHZ_TO_HZ;
+use crate::core::constants::tissue_acoustics::DENSITY_AIR;
 use crate::core::error::KwaversResult;
 use crate::solver::inverse::pinn::ml::physics::PhysicsDomainRegistry;
 use burn::tensor::backend::AutodiffBackend;

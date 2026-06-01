@@ -1,11 +1,10 @@
 //! Volumetric phase-screen integration.
 
-
 use crate::core::error::KwaversResult;
 use ndarray::Array3;
 
 use super::model::AberrationCorrection;
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 
 impl AberrationCorrection<'_> {
     /// Compute the volumetric running phase integral `Phi(x,y,z)`.

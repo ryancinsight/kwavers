@@ -9,8 +9,8 @@ use ndarray::Array3;
 
 use super::super::emission_calculator::SonoluminescenceEmission;
 use super::thermodynamics::update_thermodynamics;
+use crate::core::constants::numerical::TWO_PI;
 use crate::physics::optics::sonoluminescence::emission::spectrum::EmissionParameters;
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Integrated bubble dynamics and sonoluminescence emission
 ///

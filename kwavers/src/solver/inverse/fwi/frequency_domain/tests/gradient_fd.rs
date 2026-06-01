@@ -210,9 +210,8 @@ fn pstd_finite_window_born_adjoint_gradient_matches_finite_difference() {
     let mut current_speed = Array3::from_elem((3, 3, 1), 1501.0);
     current_speed[[0, 0, 0]] = 1490.0;
     let current_slowness = sound_speed_to_slowness(&current_speed).expect("slowness");
-    let (_, gradient) =
-        objective_and_gradient(&current_slowness, &observations, &array, &config)
-            .expect("finite-window objective gradient");
+    let (_, gradient) = objective_and_gradient(&current_slowness, &observations, &array, &config)
+        .expect("finite-window objective gradient");
 
     let epsilon = 1.0e-8;
     let mut plus = current_slowness.clone();

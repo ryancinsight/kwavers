@@ -323,9 +323,9 @@ impl KernelCubeSampler {
                 debug_assert_eq!(self.cumulative_weights.len(), self.n);
                 let total = *self.cumulative_weights.last().unwrap_or(&0.0);
                 let target = u * total;
-                let result = self.cumulative_weights.binary_search_by(|w| {
-                    w.total_cmp(&target)
-                });
+                let result = self
+                    .cumulative_weights
+                    .binary_search_by(|w| w.total_cmp(&target));
                 let idx = match result {
                     Ok(i) | Err(i) => i,
                 };

@@ -5,7 +5,7 @@ use ndarray::Array2;
 use std::f64::consts::PI;
 
 use super::config::ReconstructionFilterType;
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 
 /// Apply reconstruction filter to sensor data
 /// # Errors

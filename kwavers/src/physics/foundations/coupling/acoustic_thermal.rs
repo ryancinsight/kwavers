@@ -18,9 +18,9 @@
 
 use super::MultiPhysicsCoupling;
 use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
+use crate::core::constants::numerical::TWO_PI;
 use crate::core::constants::thermodynamic::{SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER};
 use ndarray::ArrayD;
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Acoustic-thermal coupling for thermoacoustic effects
 pub trait AcousticThermalCoupling: MultiPhysicsCoupling {

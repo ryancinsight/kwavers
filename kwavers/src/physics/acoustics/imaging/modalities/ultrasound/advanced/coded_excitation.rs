@@ -11,10 +11,10 @@
 //! - O'Donnell (1992), "Coded excitation system for improving penetration"
 //! - Misaridis & Jensen (2005), "Use of modulated excitation signals"
 
+use crate::core::constants::numerical::TWO_PI;
 use ndarray::Array1;
 use num_complex::Complex64;
 use std::f64::consts::PI;
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Coded excitation configuration
 #[derive(Debug, Clone)]

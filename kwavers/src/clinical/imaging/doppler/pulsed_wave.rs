@@ -50,10 +50,10 @@
 
 use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 use crate::core::constants::numerical::MHZ_TO_HZ;
+use crate::core::constants::numerical::TWO_PI;
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::math::fft::{fft_1d_complex, Complex64};
 use ndarray::{Array1, ArrayView1};
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Pulsed-wave Doppler configuration
 #[derive(Debug, Clone)]
@@ -78,9 +78,9 @@ impl Default for PWDConfig {
     fn default() -> Self {
         Self {
             center_frequency: 5.0 * MHZ_TO_HZ, // 5 MHz
-            prf: 4e3,                    // 4 kHz PRF
-            sample_volume_depth: 0.05,   // 5 cm
-            sample_volume_length: 0.005, // 5 mm gate
+            prf: 4e3,                          // 4 kHz PRF
+            sample_volume_depth: 0.05,         // 5 cm
+            sample_volume_length: 0.005,       // 5 mm gate
             fft_size: 128,
             c_sound: SOUND_SPEED_TISSUE, // m/s
             beam_angle: 0.0,             // 0° (parallel to flow)

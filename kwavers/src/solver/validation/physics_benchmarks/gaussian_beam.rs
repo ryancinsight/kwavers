@@ -6,9 +6,9 @@
 //! - Siegman, A.E. (1986) "Lasers", University Science Books
 //! - Saleh & Teich (2007) "Fundamentals of Photonics", Ch. 3
 
+use crate::core::constants::numerical::TWO_PI;
 use ndarray::Array2;
 use std::f64::consts::PI;
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Analytical Gaussian beam parameters
 #[derive(Debug, Clone)]

@@ -34,9 +34,9 @@
 //!   constants. *Scientific Data*, 11, 94.
 
 use crate::core::constants::fundamental::VACUUM_PERMITTIVITY;
+use crate::core::constants::numerical::{FOUR_PI, TWO_PI};
 use num_complex::Complex;
 use std::f64::consts::PI;
-use crate::core::constants::numerical::{FOUR_PI, TWO_PI};
 
 /// Johnson-Christy gold optical constants `(wavelength_um, n, k)`.
 const JOHNSON_CHRISTY_GOLD: &[(f64, f64, f64)] = &[

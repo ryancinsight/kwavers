@@ -16,8 +16,8 @@
 //! the smooth acoustic eigenmode and supplies an input-sensitive validation
 //! fixture without depending on a concrete PSTD or FDTD implementation.
 
+use crate::core::constants::numerical::TWO_PI;
 use crate::core::error::KwaversResult;
-use crate::core::constants::numerical::{TWO_PI};
 
 const MANUFACTURED_WAVENUMBER: f64 = TWO_PI;
 const MIN_MANUFACTURED_POINTS: usize = 16;

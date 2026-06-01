@@ -14,14 +14,14 @@ mod transducer;
 mod volume;
 mod volume_born;
 
-pub use crate::solver::inverse::linear_born_inversion::ElementPosition;
+pub use crate::domain::source::transducers::ElementPosition;
 pub use born::{
     reconstruct_brain_slice, TranscranialUstBornInversionMetrics,
     TranscranialUstBornInversionResult,
 };
 pub use config::{
-    TranscranialUstBornInversionConfig, SOUND_SPEED_SKULL, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM,
-    TRANSCRANIAL_FOCUSED_BOWL_ELEMENT_COUNT,
+    TranscranialUstBornInversionConfig, SOUND_SPEED_SKULL, SOUND_SPEED_TISSUE,
+    SOUND_SPEED_WATER_SIM, TRANSCRANIAL_FOCUSED_BOWL_ELEMENT_COUNT,
 };
 pub use medium::{resample_head_slice, select_head_slice, AcousticSlice, CtResampledSlice};
 pub use transducer::TranscranialBowlGeometry;

@@ -1,7 +1,7 @@
 use num_complex::Complex64;
 
 use super::assembler::BurtonMillerAssembler;
-use crate::core::constants::numerical::{FOUR_PI};
+use crate::core::constants::numerical::FOUR_PI;
 
 impl BurtonMillerAssembler {
     pub(super) fn distance(&self, p1: &[f64; 3], p2: &[f64; 3]) -> f64 {

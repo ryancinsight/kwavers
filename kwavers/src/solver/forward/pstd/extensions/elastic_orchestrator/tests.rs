@@ -4,11 +4,11 @@ use super::split_field_pml::ElasticSplitFieldPml;
 use super::types::{ElasticPstdMedium, ElasticPstdSourceMode, ElasticPstdVelocitySource};
 use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use crate::core::constants::numerical::MHZ_TO_HZ;
+use crate::core::constants::numerical::TWO_PI;
 use crate::domain::grid::Grid;
 use ndarray::{Array1, Array3};
 use num_complex::Complex;
 use std::f64::consts::PI;
-use crate::core::constants::numerical::{TWO_PI};
 
 /// `μ ≡ 0` ⇒ persistent shear stress stays zero through propagation.
 ///
@@ -34,9 +34,8 @@ fn pstd_orchestrator_keeps_shear_stress_zero_when_mu_is_zero() {
     let mut orch = ElasticPstdOrchestrator::new(&grid, medium, dt).unwrap();
 
     let amp = 1e-6;
-    let signal: Array1<f64> = Array1::from_iter(
-        (0..n_steps).map(|n| amp * (TWO_PI * MHZ_TO_HZ * (n as f64) * dt).sin()),
-    );
+    let signal: Array1<f64> =
+        Array1::from_iter((0..n_steps).map(|n| amp * (TWO_PI * MHZ_TO_HZ * (n as f64) * dt).sin()));
     let mut src_mask = Array3::<bool>::from_elem((nx, ny, nz), false);
     src_mask[[3, 5, nz / 2]] = true;
     let source = ElasticPstdVelocitySource {
@@ -351,9 +350,8 @@ fn acoustic_fluid_pulse_propagates_finite_field() {
     let mut orch = ElasticPstdOrchestrator::new(&grid, medium, dt).unwrap();
 
     let amp = 1e-6;
-    let signal: Array1<f64> = Array1::from_iter(
-        (0..n_steps).map(|n| amp * (TWO_PI * MHZ_TO_HZ * (n as f64) * dt).sin()),
-    );
+    let signal: Array1<f64> =
+        Array1::from_iter((0..n_steps).map(|n| amp * (TWO_PI * MHZ_TO_HZ * (n as f64) * dt).sin()));
     let mut src_mask = Array3::<bool>::from_elem((nx, ny, nz), false);
     src_mask[[3, ny / 2, nz / 2]] = true;
     let source = ElasticPstdVelocitySource {

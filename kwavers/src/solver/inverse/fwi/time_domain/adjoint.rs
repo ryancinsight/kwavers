@@ -7,6 +7,7 @@ use crate::domain::source::{GridSource, SourceMode};
 use crate::solver::inverse::fwi::time_domain::{
     accumulate_signed_correlation, l2_objective, l2_residual, reverse_time_axis,
 };
+use crate::solver::inverse::reconstruction::seismic::{MisfitFunction, MisfitType};
 use ndarray::{Array2, Array3, Array4, ArrayView3, ArrayViewMut3, Axis, Zip};
 
 /// Apply the Plessix (2006) eq. (12) per-voxel scaling
@@ -78,19 +79,94 @@ impl FwiProcessor {
         l2_objective(self.parameters.dt, observed, synthetic)
     }
 
-    /// Compute the discrete adjoint source for L2 misfit.
+    /// Compute the data misfit for the configured [`MisfitType`].
     ///
-    /// Returns `d_syn - d_obs`; time reversal is applied when constructing
-    /// the pressure source signal.
+    /// ## Theorem
+    /// For `MisfitType::L2Norm` this returns the discrete least-squares objective
+    /// `J = (dt/2)‖d_syn − d_obs‖²` (the `dt` measure keeps the objective a
+    /// Riemann discretisation of `½∫‖r‖² dt`, consistent with the adjoint-source
+    /// scaling). For the envelope, phase, Wasserstein, correlation, and L1
+    /// alternatives the value is delegated to the canonical [`MisfitFunction`]
+    /// dispatcher, which is the single source of truth for every misfit and its
+    /// matching adjoint source.
+    ///
+    /// The same functional is used for the convergence test and the Armijo line
+    /// search, so the objective the driver minimises always matches the gradient
+    /// produced by [`Self::compute_adjoint_source`].
     /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by the misfit evaluation.
+    ///
+    pub(super) fn compute_misfit_objective(
+        &self,
+        observed: &Array2<f64>,
+        synthetic: &Array2<f64>,
+    ) -> KwaversResult<f64> {
+        match self.band_limit_hz {
+            None => self.misfit_objective_on(observed, synthetic),
+            Some(corner_hz) => {
+                let obs = self.band_limit(observed, corner_hz);
+                let syn = self.band_limit(synthetic, corner_hz);
+                self.misfit_objective_on(&obs, &syn)
+            }
+        }
+    }
+
+    /// Evaluate the selected misfit on already-prepared traces (no band limit).
+    fn misfit_objective_on(
+        &self,
+        observed: &Array2<f64>,
+        synthetic: &Array2<f64>,
+    ) -> KwaversResult<f64> {
+        match self.misfit_type {
+            MisfitType::L2Norm => self.compute_l2_objective(observed, synthetic),
+            other => MisfitFunction::new(other).compute(observed, synthetic),
+        }
+    }
+
+    /// Compute the discrete adjoint source `∂J/∂d_syn` for the configured misfit.
+    ///
+    /// For `MisfitType::L2Norm` this is the data residual `d_syn − d_obs`; for the
+    /// other functionals it is the misfit-specific Fréchet derivative (e.g. the
+    /// Hilbert-transform envelope/phase adjoint of Bozdağ et al. 2011 and
+    /// Fichtner et al. 2008, or the CDF-difference optimal-transport adjoint of
+    /// Métivier et al. 2016). The returned trace matrix is subsequently reversed
+    /// in time and injected through the receiver mask by
+    /// [`Self::build_adjoint_source`]; the time-reversal adjoint theorem holds for
+    /// an arbitrary receiver-side forcing, so the same injection path is valid
+    /// for every misfit type.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by the adjoint-source evaluation.
     ///
     pub(super) fn compute_adjoint_source(
         &self,
         observed: &Array2<f64>,
         synthetic: &Array2<f64>,
     ) -> KwaversResult<Array2<f64>> {
-        l2_residual(observed, synthetic)
+        match self.band_limit_hz {
+            None => self.adjoint_source_on(observed, synthetic),
+            Some(corner_hz) => {
+                // Multiscale data-domain filtering. With a zero-phase low-pass F
+                // (Fᵀ = F), the misfit becomes J(F·d_syn, F·d_obs); its adjoint
+                // source is Fᵀ·∂J/∂(F·d_syn) = F·g̃, i.e. apply the same filter to
+                // the band-limited adjoint source. (Bunks et al. 1995, §"Multiscale".)
+                let obs = self.band_limit(observed, corner_hz);
+                let syn = self.band_limit(synthetic, corner_hz);
+                let band_limited_adjoint = self.adjoint_source_on(&obs, &syn)?;
+                Ok(self.band_limit(&band_limited_adjoint, corner_hz))
+            }
+        }
+    }
+
+    /// Adjoint source for the selected misfit on already-prepared traces.
+    fn adjoint_source_on(
+        &self,
+        observed: &Array2<f64>,
+        synthetic: &Array2<f64>,
+    ) -> KwaversResult<Array2<f64>> {
+        match self.misfit_type {
+            MisfitType::L2Norm => l2_residual(observed, synthetic),
+            other => MisfitFunction::new(other).compute_adjoint_source(observed, synthetic),
+        }
     }
 
     /// Build the time-reversed pressure source used in the adjoint run.

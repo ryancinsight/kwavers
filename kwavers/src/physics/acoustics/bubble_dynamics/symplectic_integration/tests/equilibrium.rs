@@ -2,9 +2,9 @@
 
 use super::super::{BubbleSymplecticIntegrator, SymplecticConfig};
 use super::helpers::{make_model, make_params};
+use crate::core::constants::numerical::TWO_PI;
 use crate::physics::acoustics::bubble_dynamics::bubble_state::BubbleState;
 use std::sync::Arc;
-use crate::core::constants::numerical::{TWO_PI};
 
 /// **Test D — Exact equilibrium preservation.**
 ///

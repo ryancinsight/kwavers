@@ -1,10 +1,10 @@
+use crate::core::constants::numerical::TWO_PI;
 use crate::core::error::KwaversResult;
 use crate::math::fft::shift_operators::{generate_kappa, generate_shift_1d, generate_source_kappa};
 use crate::math::fft::{get_fft_for_grid, Complex64, Fft3d, Fft3dInOutExt};
 use crate::solver::forward::acoustic_ivp::spectral_velocity_scale_from_source_kappa;
 use ndarray::{Array1, Array3, Zip};
 use std::sync::Arc;
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Pre-computed operators and scratch buffers for k-space corrected FDTD.
 ///

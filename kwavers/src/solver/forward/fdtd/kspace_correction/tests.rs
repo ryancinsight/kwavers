@@ -1,5 +1,6 @@
 use super::operators::KSpaceFdtdOperators;
 use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::numerical::TWO_PI;
 use crate::domain::grid::Grid;
 use crate::domain::medium::HomogeneousMedium;
 use crate::domain::source::GridSource;
@@ -8,7 +9,6 @@ use crate::solver::forward::fdtd::solver::FdtdSolver;
 use crate::solver::forward::pstd::config::PSTDConfig;
 use crate::solver::forward::pstd::implementation::core::orchestrator::PSTDSolver;
 use ndarray::Array3;
-use crate::core::constants::numerical::{TWO_PI};
 
 fn test_grid() -> Grid {
     Grid::new(16, 16, 16, 1e-3, 1e-3, 1e-3).unwrap()

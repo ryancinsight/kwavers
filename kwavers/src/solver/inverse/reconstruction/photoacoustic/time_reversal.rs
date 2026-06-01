@@ -47,8 +47,8 @@
 //!   absorbing acoustic media using combined photoacoustic and ultrasound
 //!   imaging." New J. Phys. 12, 055008. DOI:10.1088/1367-2630/12/5/055008
 
-use crate::core::error::KwaversResult;
 use crate::core::constants::numerical::TWO_PI;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::math::fft::{get_fft_for_grid, Fft3dInOutExt};
 use ndarray::{Array3, ArrayView2, Zip};

@@ -108,8 +108,7 @@ pub(super) fn migrate_residual(
                 .enumerate()
                 .map(|(row, receiver)| {
                     let receiver_distance = distance(point, *receiver).max(spacing_m);
-                    let sample =
-                        (source_distance + receiver_distance) / shear_speed_m_s / dt_s;
+                    let sample = (source_distance + receiver_distance) / shear_speed_m_s / dt_s;
                     let residual_value =
                         arrival_residual_energy(residual, row, sample, dt_s, center_frequency_hz);
                     residual_value / source_distance.sqrt()

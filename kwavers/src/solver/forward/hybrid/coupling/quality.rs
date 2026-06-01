@@ -47,8 +47,7 @@ impl Default for QualityThresholds {
         Self {
             max_interpolation_error:
                 crate::core::constants::numerical::INTERPOLATION_ERROR_THRESHOLD,
-            max_conservation_error:
-                crate::core::constants::numerical::CONSERVATION_ERROR_THRESHOLD,
+            max_conservation_error: crate::core::constants::numerical::CONSERVATION_ERROR_THRESHOLD,
             max_reflection: 0.01,   // 1% reflection
             min_transmission: 0.99, // 99% transmission
         }
@@ -157,17 +156,13 @@ impl QualityMonitor {
         let interp_peak_idx = interpolated
             .iter()
             .enumerate()
-            .max_by(|(_, a), (_, b)| {
-                a.abs().total_cmp(&b.abs())
-            })
+            .max_by(|(_, a), (_, b)| a.abs().total_cmp(&b.abs()))
             .map_or(0, |(idx, _)| idx);
 
         let target_peak_idx = target
             .iter()
             .enumerate()
-            .max_by(|(_, a), (_, b)| {
-                a.abs().total_cmp(&b.abs())
-            })
+            .max_by(|(_, a), (_, b)| a.abs().total_cmp(&b.abs()))
             .map_or(0, |(idx, _)| idx);
 
         // Calculate phase shift as normalized position difference

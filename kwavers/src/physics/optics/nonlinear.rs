@@ -9,7 +9,7 @@
 //! - Agrawal (2007) "Nonlinear Fiber Optics"
 
 use crate::core::constants::fundamental::{SOUND_SPEED_TISSUE, SOUND_SPEED_WATER, SPEED_OF_LIGHT};
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 
 /// Kerr effect parameters
 ///

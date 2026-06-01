@@ -1,4 +1,4 @@
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 
 /// Estimate the power spectrum of the bubble radius time series via DFT.
 ///

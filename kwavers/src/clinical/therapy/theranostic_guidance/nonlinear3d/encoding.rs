@@ -15,7 +15,7 @@
 //! of `W^T W` retain each element's sensitivity; additional off-diagonal terms
 //! are deterministic cross-talk rather than lost information.
 
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 #[derive(Clone, Copy, Debug)]
 pub(super) struct SourceEncoding {
     pub index: usize,
@@ -37,8 +37,8 @@ impl SourceEncoding {
         if self.count == 1 || self.index == 0 {
             return 1.0;
         }
-        let angle = TWO_PI * (self.index as f64) * (source_index as f64 + 0.5)
-            / source_count.max(1) as f64;
+        let angle =
+            TWO_PI * (self.index as f64) * (source_index as f64 + 0.5) / source_count.max(1) as f64;
         if angle.sin() >= 0.0 {
             1.0
         } else {

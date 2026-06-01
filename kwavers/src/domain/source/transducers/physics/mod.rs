@@ -43,11 +43,15 @@ pub const ELECTRICAL_Q: f64 = 50.0;
 /// Standard acoustic impedance of PZT (`MRayl`)
 pub const PZT_IMPEDANCE: f64 = 30.0;
 
-/// Acoustic impedance of water/tissue (`MRayl`)
+/// Nominal soft-tissue/water *load* impedance for transducer matching-layer
+/// design (`MRayl`).
+///
+/// This is a fixed manufacturing target: the quarter-wave matching layer is cut
+/// for `Z_match = √(Z_pzt · Z_load)` against this nominal load (Szabo 2014 §5;
+/// Cobbold 2007 §6). It is NOT the per-voxel propagation medium — a patient CT
+/// does not change a manufactured matching layer, so this constant is correctly
+/// frequency-/scan-independent and must not be replaced by a CT-derived value.
 pub const TISSUE_IMPEDANCE: f64 = 1.5;
-
-/// Acoustic impedance of backing material (`MRayl`)
-pub const BACKING_IMPEDANCE: f64 = 5.0;
 
 /// Minimum kerf width as fraction of element width
 pub const MIN_KERF_RATIO: f64 = 0.05;

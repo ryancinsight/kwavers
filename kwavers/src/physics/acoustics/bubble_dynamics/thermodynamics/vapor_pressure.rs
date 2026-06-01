@@ -96,8 +96,7 @@ impl ThermodynamicsCalculator {
             return self.wagner_equation(temperature);
         }
 
-        let log10_p_mmhg =
-            WATER_ANTOINE_A - WATER_ANTOINE_B / (WATER_ANTOINE_C + t_celsius);
+        let log10_p_mmhg = WATER_ANTOINE_A - WATER_ANTOINE_B / (WATER_ANTOINE_C + t_celsius);
         let p_mmhg = 10_f64.powf(log10_p_mmhg);
         p_mmhg * MMHG_TO_PA
     }

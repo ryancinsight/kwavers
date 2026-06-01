@@ -14,13 +14,13 @@
 //! References: O'Neil (1949), J. Acoust. Soc. Am. 21(5), 516-526;
 //! Rayleigh (1896), *The Theory of Sound*, Vol. II.
 
+use crate::core::constants::numerical::TWO_PI;
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
 use crate::domain::imaging::ultrasound::hifu::DomainHIFUTransducer;
 use crate::domain::medium::Medium;
 use ndarray::Array3;
 use std::f64::consts::PI;
-use crate::core::constants::numerical::{TWO_PI};
 
 const RADIAL_APERTURE_SAMPLES: usize = 4;
 const ANGULAR_APERTURE_SAMPLES: usize = 16;
@@ -111,8 +111,7 @@ fn validate_field_inputs(
     let velocity_amplitude =
         (2.0 * transducer.acoustic_power / (density * sound_speed * aperture_area)).sqrt();
     let wavenumber = TWO_PI * transducer.frequency / sound_speed;
-    let source_pressure_factor =
-        density * sound_speed * wavenumber * velocity_amplitude / (TWO_PI);
+    let source_pressure_factor = density * sound_speed * wavenumber * velocity_amplitude / (TWO_PI);
 
     Ok(FieldScale {
         source_pressure_factor,

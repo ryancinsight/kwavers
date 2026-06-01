@@ -9,7 +9,7 @@
 //! - Azhari (2010) "Basics of Biomedical Ultrasound for Engineers"
 
 use kwavers::{
-    domain::boundary::pml::{DomainPmlConfig, DomainPMLBoundary},
+    domain::boundary::pml::{DomainPMLBoundary, DomainPmlConfig},
     domain::grid::{stability::StabilityCalculator, Grid},
     domain::source::NullSource,
     error::KwaversResult,

@@ -1,11 +1,10 @@
 //! Phase correction extraction for planar array elements.
 
-
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::{Array1, Array3};
 
 use super::model::AberrationCorrection;
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 
 impl AberrationCorrection<'_> {
     /// Compute scalar phase correction for each element of a 2D planar array.

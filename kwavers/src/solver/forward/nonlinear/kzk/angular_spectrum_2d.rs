@@ -3,7 +3,7 @@ use ndarray::{Array2, ArrayViewMut2, Zip};
 use std::sync::Arc;
 
 use super::KZKConfig;
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 
 /// Correct 2D angular spectrum operator
 pub struct AngularSpectrum2D {

@@ -1,7 +1,7 @@
 use super::constants::{AIR_POLYTROPIC_INDEX, CAVITATION_PROBABILITY_STEEPNESS};
 use super::TherapyCavitationDetector;
 use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL};
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 
 impl TherapyCavitationDetector {
     /// Minnaert resonance frequency for a bubble of radius `r0` (m) (Hz).

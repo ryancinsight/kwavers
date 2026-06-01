@@ -1,7 +1,7 @@
 use super::ConfinementAssessment;
 use crate::core::constants::thermodynamic::{
     BODY_TEMPERATURE_C, GRUNEISEN_SOFT_TISSUE, GRUNEISEN_SOFT_TISSUE_TEMP_COEFF,
-    GRUNEISEN_WATER_20C, GRUNEISEN_WATER_T_REF_C, GRUNEISEN_WATER_TEMP_COEFF,
+    GRUNEISEN_WATER_20C, GRUNEISEN_WATER_TEMP_COEFF, GRUNEISEN_WATER_T_REF_C,
 };
 use crate::core::error::KwaversResult;
 use crate::domain::imaging::photoacoustic::ThermoelasticProperties;

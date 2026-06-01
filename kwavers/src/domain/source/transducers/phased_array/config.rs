@@ -3,6 +3,13 @@
 use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::core::constants::SOUND_SPEED_TISSUE;
 
+/// Default center frequency of the standard medical-ultrasound linear array [Hz].
+///
+/// Single source of truth for the nominal 2.5 MHz default: both the array
+/// geometry (element pitch/width are derived from the corresponding wavelength)
+/// and the `frequency` field read this constant, so they cannot drift apart.
+const DEFAULT_CENTER_FREQUENCY_HZ: f64 = 2.5 * MHZ_TO_HZ;
+
 /// Configuration for phased array transducer geometry and behavior
 #[derive(Debug, Clone)]
 pub struct PhasedArrayConfig {
@@ -27,7 +34,7 @@ pub struct PhasedArrayConfig {
 impl Default for PhasedArrayConfig {
     fn default() -> Self {
         // Standard linear array for medical ultrasound
-        let wavelength = SOUND_SPEED_TISSUE / (2.5 * MHZ_TO_HZ); // λ at 2.5 MHz
+        let wavelength = SOUND_SPEED_TISSUE / DEFAULT_CENTER_FREQUENCY_HZ;
 
         Self {
             num_elements: 64,
@@ -35,7 +42,7 @@ impl Default for PhasedArrayConfig {
             element_width: wavelength * 0.45,  // ~0.45λ width
             element_height: 10e-3,             // 10mm elevation
             center_position: (0.0, 0.0, 0.0),
-            frequency: 2.5 * MHZ_TO_HZ, // 2.5 MHz center frequency
+            frequency: DEFAULT_CENTER_FREQUENCY_HZ,
             enable_crosstalk: true,
             crosstalk_coefficient: 0.1, // 10% coupling (typical)
         }

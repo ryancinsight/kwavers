@@ -7,10 +7,10 @@ use super::helpers::{
 };
 use super::least_squares::nonlinear_least_squares_inversion;
 use super::processor::NonlinearInversion;
+use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
+use crate::core::constants::numerical::TWO_PI;
 use crate::domain::imaging::ultrasound::elastography::NonlinearInversionMethod;
 use crate::physics::acoustics::imaging::modalities::elastography::HarmonicDisplacementField;
-use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
-use crate::core::constants::numerical::{TWO_PI};
 
 fn test_config() -> NonlinearInversionConfig {
     NonlinearInversionConfig::new(NonlinearInversionMethod::HarmonicRatio)

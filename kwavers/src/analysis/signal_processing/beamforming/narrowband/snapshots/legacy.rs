@@ -3,10 +3,10 @@
 //! Prefer windowed snapshots via `SnapshotSelection` for MVDR/MUSIC pipelines.
 
 use super::config::BasebandSnapshotConfig;
+use crate::core::constants::numerical::TWO_PI;
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::math::fft::{fft_1d_array, ifft_1d_complex, Complex64};
 use ndarray::{Array2, Array3};
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Convert a real-valued time series into its analytic signal via Hilbert transform.
 ///

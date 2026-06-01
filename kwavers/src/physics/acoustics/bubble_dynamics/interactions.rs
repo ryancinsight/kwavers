@@ -5,9 +5,9 @@
 use super::bubble_state::BubbleState;
 use crate::core::constants::acoustic_parameters::AIR_POLYTROPIC_INDEX;
 use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL};
+use crate::core::constants::numerical::{FOUR_PI, TWO_PI};
 use ndarray::Array3;
 use std::collections::HashMap;
-use crate::core::constants::numerical::{FOUR_PI, TWO_PI};
 
 /// Bubble interaction calculator
 #[derive(Debug)]
@@ -91,8 +91,7 @@ impl BubbleInteractions {
         let r = bubble.radius;
         let r_dot = bubble.wall_velocity;
         let r_ddot = bubble.wall_acceleration;
-        let v_ddot = FOUR_PI * r * r * r_ddot
-            + 8.0 * std::f64::consts::PI * r * r_dot * r_dot;
+        let v_ddot = FOUR_PI * r * r * r_ddot + 8.0 * std::f64::consts::PI * r * r_dot * r_dot;
 
         // Monopole acoustic pressure: p = ρ · V̈ / (4π · r)  [Pa]
         self.liquid_density * v_ddot / (FOUR_PI * distance)

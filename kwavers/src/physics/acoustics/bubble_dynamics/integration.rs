@@ -14,7 +14,7 @@
 //! |---|---|
 //! | Undriven, long-time (`integrate_bubble_dynamics_stable`) | Störmer-Verlet (h² global error, symplectic) |
 //! | Driven + thermal coupling | IMEX Euler in `physics::acoustics::bubble_dynamics::imex_integration` |
-//! | Highest accuracy, long-time | Yoshida 4th-order in `solver::forward::ode::bubble_symplectic` |
+//! | Highest accuracy, long-time | Yoshida 4th-order in `physics::acoustics::bubble_dynamics::symplectic_integration` |
 //!
 //! ## Theorem — Störmer-Verlet Symplecticity
 //!
@@ -45,10 +45,8 @@ use std::sync::Arc;
 
 use super::bubble_state::{BubbleParameters, BubbleState};
 use super::keller_miksis::KellerMiksisModel;
+use super::symplectic_integration::{BubbleSymplecticIntegrator, SymplecticConfig};
 use crate::core::error::{KwaversError, KwaversResult, PhysicsError};
-use crate::solver::forward::ode::bubble_symplectic::{
-    BubbleSymplecticIntegrator, SymplecticConfig,
-};
 
 /// Integrate bubble dynamics using the Störmer-Verlet symplectic integrator.
 ///

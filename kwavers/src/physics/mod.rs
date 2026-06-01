@@ -43,19 +43,33 @@ pub mod thermal;
 // a clean public API. Users needing specialized types should import directly
 // from the acoustics submodules.
 
-/// Core acoustic wave propagation models
+/// Core acoustic wave propagation, cavitation, traits, and conservation validation.
+///
+/// Consolidated single source of truth (SSOT) for acoustics re-exports.
+/// Types are grouped logically; bubble dynamics items use the nested path
+/// `acoustics::bubble_dynamics` for namespace clarity.
 pub use acoustics::{
-    AcousticWaveModel, // Primary wave propagation interface
-    HasPhysicsState,   // State access trait
-    PhysicsState,      // Physics state container
+    // ── Conservation validation ───────────────────────────────────────
+    validate_conservation,
+    AcousticConservationMetrics,
+    AcousticStateRefs,
+    // ── Wave propagation ───────────────────────────────────────────────
+    AcousticWaveModel,
+    // ── Cavitation ────────────────────────────────────────────────────
+    CavitationModelBehavior,
+    // ── Physics traits ────────────────────────────────────────────────
+    ChemicalModelTrait,
+    ConservationParams,
+    HasPhysicsState,
+    HeterogeneityModelTrait,
+    PhysicsState,
+    PreviousFields,
+    StreamingModelTrait,
+    ThermalModelTrait,
+    VelocityFieldRefs,
 };
 
-/// Cavitation and bubble dynamics
-pub use acoustics::{
-    CavitationModelBehavior, // Bubble cavitation interface
-};
-
-/// Bubble dynamics types (from acoustics::bubble_dynamics)
+/// Bubble dynamics types (namespace:`acoustics::bubble_dynamics`).
 pub use acoustics::bubble_dynamics::{
     BubbleParameters,      // Bubble physical parameters
     BubbleState,           // Bubble state representation
@@ -63,28 +77,13 @@ pub use acoustics::bubble_dynamics::{
     RayleighPlessetSolver, // Rayleigh-Plesset equation solver
 };
 
-/// Core acoustic traits
-pub use acoustics::{
-    ChemicalModelTrait,      // Chemical kinetics interface
-    HeterogeneityModelTrait, // Heterogeneous media modeling
-    StreamingModelTrait,     // Acoustic streaming interface
-    ThermalModelTrait,       // Thermal effects interface
-};
-
-/// Backward-compatible traits re-export module
+/// Backward-compatible traits re-export module (deprecated path — prefer `crate::physics::`).
 pub mod traits {
     pub use crate::physics::acoustics::{
         AcousticWaveModel, CavitationModelBehavior, ChemicalModelTrait, HeterogeneityModelTrait,
         StreamingModelTrait, ThermalModelTrait,
     };
 }
-
-/// Conservation validation
-pub use acoustics::{
-    validate_conservation, AcousticConservationMetrics, AcousticStateRefs, ConservationParams,
-    PreviousFields, VelocityFieldRefs,
-};
-
 
 // Re-export core physics specifications from foundations
 pub use foundations::{
@@ -126,4 +125,3 @@ pub use crate::domain::sensor::sonoluminescence as sonoluminescence_detector;
 /// This was previously in physics::materials but has been moved to domain::medium::properties
 /// as material property definitions belong in the domain layer, not physics.
 pub use crate::domain::medium::properties::{fluids, implants, tissue, AcousticMaterialProperties};
-

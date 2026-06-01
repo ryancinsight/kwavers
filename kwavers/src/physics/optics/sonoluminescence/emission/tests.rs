@@ -69,8 +69,8 @@ mod tests {
         // Test that temperature scales correctly with compression ratio
         // For adiabatic process: T ∝ R^(3(1-γ))
         let params = BubbleParameters {
-            r0: 10e-6,  // 10 μm initial radius
-            t0: 300.0,  // 300 K initial temperature
+            r0: 10e-6,                           // 10 μm initial radius
+            t0: 300.0,                           // 300 K initial temperature
             gamma: HEAT_CAPACITY_RATIO_DIATOMIC, // SSOT: thermodynamic::HEAT_CAPACITY_RATIO_DIATOMIC
             ..Default::default()
         };

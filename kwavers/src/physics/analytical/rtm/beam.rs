@@ -1,7 +1,7 @@
+use crate::core::constants::numerical::TWO_PI;
 use num_complex::Complex64;
 use rayon::prelude::*;
 use std::f64::consts::PI;
-use crate::core::constants::numerical::{TWO_PI};
 
 /// 2-D focused Gaussian beam field in the presence of a skull layer and
 /// a back-reflecting surface (e.g. contralateral skull).

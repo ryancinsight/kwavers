@@ -1,8 +1,7 @@
 use super::{resample_to_target_grid, validate_registration_compatibility};
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::imaging::fusion::{AffineTransform, RegistrationMethod};
-use crate::solver::interface::factory::{FactoryError, RegistrationEngine};
-use ndarray::{Array2, Array3};
+use ndarray::Array3;
 use ritk_registration::ImageRegistration;
 
 /// Fusion-local validation case for registration dispatch.
@@ -112,82 +111,8 @@ impl RitkRegistrationEngine {
     }
 }
 
-impl RegistrationEngine for RitkRegistrationEngine {
-    fn register_rigid(
-        &self,
-        fixed: &Array3<f64>,
-        moving: &Array3<f64>,
-    ) -> Result<Array2<f64>, FactoryError> {
-        let result = self
-            .inner
-            .rigid_registration_mutual_info(fixed, moving, &identity_transform())
-            .map_err(|e| FactoryError::InvalidConfiguration(e.to_string()))?;
-        homogeneous_to_array2(&result.transform)
-    }
-
-    fn register_affine(
-        &self,
-        fixed: &Array3<f64>,
-        moving: &Array3<f64>,
-    ) -> Result<Array2<f64>, FactoryError> {
-        let result = self
-            .inner
-            .affine_registration_mutual_info(fixed, moving, &identity_transform())
-            .map_err(|e| FactoryError::InvalidConfiguration(e.to_string()))?;
-        homogeneous_to_array2(&result.transform)
-    }
-
-    fn register_deformable(
-        &self,
-        _fixed: &Array3<f64>,
-        _moving: &Array3<f64>,
-    ) -> Result<Array3<[f64; 3]>, FactoryError> {
-        Err(FactoryError::InvalidConfiguration(
-            "deformable registration is not implemented in the retained fusion path".to_owned(),
-        ))
-    }
-
-    fn resample(
-        &self,
-        moving: &Array3<f64>,
-        transform: &Array2<f64>,
-        target_shape: [usize; 3],
-    ) -> Result<Array3<f64>, FactoryError> {
-        let homogeneous = array2_to_homogeneous(transform)?;
-        Ok(resample_to_target_grid(
-            moving,
-            &homogeneous,
-            (target_shape[0], target_shape[1], target_shape[2]),
-        ))
-    }
-}
-
 fn identity_transform() -> [f64; 16] {
     [
         1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
     ]
-}
-
-fn homogeneous_to_array2(matrix: &[f64; 16]) -> Result<Array2<f64>, FactoryError> {
-    Array2::from_shape_vec((4, 4), matrix.to_vec()).map_err(|error| {
-        FactoryError::Internal(format!(
-            "failed to materialize homogeneous registration matrix: {error}"
-        ))
-    })
-}
-
-fn array2_to_homogeneous(matrix: &Array2<f64>) -> Result<[f64; 16], FactoryError> {
-    if matrix.shape() != [4, 4] {
-        return Err(FactoryError::InvalidConfiguration(
-            "registration transform must be a 4x4 homogeneous matrix".to_owned(),
-        ));
-    }
-
-    let mut homogeneous = [0.0; 16];
-    for i in 0..4 {
-        for j in 0..4 {
-            homogeneous[i * 4 + j] = matrix[[i, j]];
-        }
-    }
-    Ok(homogeneous)
 }

@@ -1,4 +1,3 @@
-
 use super::*;
 use crate::core::constants::fundamental::{
     ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM,

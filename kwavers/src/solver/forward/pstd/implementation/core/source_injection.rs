@@ -197,4 +197,79 @@ mod tests {
             _ => panic!("Expected Additive"),
         }
     }
+
+    fn interior_point_scale(mask: &Array3<f64>) -> f64 {
+        match determine_injection_mode(mask) {
+            SourceInjectionMode::Additive { scale } => scale,
+            other => panic!("expected Additive, got {other:?}"),
+        }
+    }
+
+    /// **Amplitude-conservation invariant** for interior (point/volume) sources.
+    ///
+    /// The `1/N` normalisation (line 94) is an *amplitude* normaliser, not an
+    /// energy one: the total injected amplitude `N · scale = 1` is invariant to
+    /// how many voxels discretise the source and to their spatial arrangement
+    /// (uniform vs clustered), so a point source samples the same total drive
+    /// regardless of mask resolution (Treeby & Cox 2010, k-Wave `source.p`
+    /// distributed-source scaling). This is the physically meaningful property
+    /// the per-geometry scale tests above do not assert directly.
+    ///
+    /// Note: total *energy* `Σ scale² = N·(1/N)² = 1/N` is deliberately NOT
+    /// conserved under amplitude normalisation — asserting energy conservation
+    /// here would be physically wrong. gap_audit SOL-7.
+    #[test]
+    fn interior_source_conserves_total_amplitude_across_geometry() {
+        // Clustered 2×2×2 block (8 voxels) and a dispersed 8-voxel set, same N,
+        // both interior, both must give scale = 1/8 → total amplitude 8·(1/8)=1.
+        let mut clustered = Array3::<f64>::zeros((16, 16, 16));
+        for i in 4..6 {
+            for j in 4..6 {
+                for k in 4..6 {
+                    clustered[[i, j, k]] = 1.0;
+                }
+            }
+        }
+        let mut dispersed = Array3::<f64>::zeros((16, 16, 16));
+        for (n, &(i, j, k)) in [
+            (2, 2, 2), (12, 2, 2), (2, 12, 2), (2, 2, 12),
+            (12, 12, 2), (12, 2, 12), (2, 12, 12), (12, 12, 12),
+        ]
+        .iter()
+        .enumerate()
+        {
+            let _ = n;
+            dispersed[[i, j, k]] = 1.0;
+        }
+
+        let s_clustered = interior_point_scale(&clustered);
+        let s_dispersed = interior_point_scale(&dispersed);
+
+        // Geometry-independent: both 8-voxel interior sources share one scale.
+        assert!(
+            (s_clustered - s_dispersed).abs() < 1e-12,
+            "interior scale must be geometry-independent: clustered={s_clustered}, dispersed={s_dispersed}"
+        );
+        // Total injected amplitude = N · scale = 1 (amplitude conservation).
+        assert!(
+            (8.0 * s_clustered - 1.0).abs() < 1e-12,
+            "total amplitude N·scale must equal 1, got {}",
+            8.0 * s_clustered
+        );
+
+        // Resolution-independence: a 1-voxel and a 64-voxel interior source both
+        // carry total amplitude 1, even though per-voxel scale differs 64×.
+        let mut one = Array3::<f64>::zeros((16, 16, 16));
+        one[[8, 8, 8]] = 1.0;
+        let mut many = Array3::<f64>::zeros((16, 16, 16));
+        for i in 4..8 {
+            for j in 4..8 {
+                for k in 4..8 {
+                    many[[i, j, k]] = 1.0;
+                }
+            }
+        }
+        assert!((1.0 * interior_point_scale(&one) - 1.0).abs() < 1e-12);
+        assert!((64.0 * interior_point_scale(&many) - 1.0).abs() < 1e-12);
+    }
 }

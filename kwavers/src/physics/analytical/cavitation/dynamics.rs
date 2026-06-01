@@ -1,8 +1,7 @@
-
+use crate::core::constants::numerical::TWO_PI;
 use crate::physics::acoustics::bubble_dynamics::bubble_state::{
     viscous_bubble_wall_stress, young_laplace_pressure,
 };
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Minnaert resonance frequency of a spherical gas bubble.
 ///
@@ -277,9 +276,8 @@ pub fn keller_miksis_rk4(
         let p_ac_ret = p_ac_pa * (omega * t_ret).sin();
 
         // Liquid-side bubble wall pressure and far-field pressure.
-        let p_wall = p_gas
-            - young_laplace_pressure(sigma, r_c)
-            - viscous_bubble_wall_stress(mu, rdot, r_c);
+        let p_wall =
+            p_gas - young_laplace_pressure(sigma, r_c) - viscous_bubble_wall_stress(mu, rdot, r_c);
         let p_inf = p0_pa + p_ac_ret;
 
         // Time derivatives at the wall.  Polytropic non-condensable gas:

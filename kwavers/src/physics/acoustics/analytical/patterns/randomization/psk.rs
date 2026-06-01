@@ -1,10 +1,10 @@
 //! Phase Shift Keying (PSK) implementation
 
 use super::constants::DEFAULT_SEED;
+use crate::core::constants::numerical::TWO_PI;
 use ndarray::Array1;
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Phase Shift Keying for deterministic phase randomization
 #[derive(Debug)]

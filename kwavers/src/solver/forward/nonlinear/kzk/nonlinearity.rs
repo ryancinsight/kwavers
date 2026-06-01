@@ -40,9 +40,9 @@
 //!   §4.2.1, eq. (4.2.3).
 
 use super::KZKConfig;
+use crate::core::constants::numerical::TWO_PI;
 use crate::math::fft::{fft_1d_complex_inplace, ifft_1d_complex_inplace, Complex64};
 use ndarray::{Array1, Array3};
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Nonlinear operator for the KZK equation.
 ///
@@ -291,13 +291,10 @@ impl KzkNonlinearOperator {
 mod tests {
     use super::*;
     use crate::core::constants::fundamental::{
-        DENSITY_TISSUE,
-        DENSITY_WATER_NOMINAL,
-        SOUND_SPEED_TISSUE,
-        SOUND_SPEED_WATER_SIM,
+        DENSITY_TISSUE, DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM,
     };
-    use crate::core::constants::tissue_acoustics::B_OVER_A_WATER;
     use crate::core::constants::numerical::MHZ_TO_HZ;
+    use crate::core::constants::tissue_acoustics::B_OVER_A_WATER;
     use crate::solver::forward::nonlinear::kzk::KZKConfig;
 
     /// Helper: minimal `KZKConfig` for unit tests of `KzkNonlinearOperator`.

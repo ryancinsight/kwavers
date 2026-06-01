@@ -2,8 +2,8 @@ use super::config::PhysicsNNTrainingConfig;
 use super::dataset::{EpochTrainingMetrics, TrainingDataset};
 use super::history::TrainingHistory;
 use super::loss::{Optimizer, PhysicsLoss};
+use crate::core::constants::numerical::TWO_PI;
 use ndarray::Array2;
-use crate::core::constants::numerical::{TWO_PI};
 
 #[test]
 fn test_training_config_default() {

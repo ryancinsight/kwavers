@@ -64,9 +64,9 @@
 //! - Gassmann F. (1951). "Elasticity of porous media." Vierteljahrschrift
 //!   der Naturforschenden Gesellschaft in Zürich 96, 1–23.
 
+use crate::core::constants::numerical::TWO_PI;
 use crate::core::error::KwaversResult;
 use crate::physics::acoustics::mechanics::poroelastic::{PoroelasticMaterial, WaveSpeeds};
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Biot theory for poroelastic wave propagation
 #[derive(Debug)]

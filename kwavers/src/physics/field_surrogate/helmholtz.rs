@@ -35,7 +35,7 @@
 use ndarray::Array3;
 
 use super::kernel::FocalKernel;
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 
 /// Default sound speed for water at body temperature (m/s). The
 /// kernel cube is generated on a homogeneous water-equivalent medium,

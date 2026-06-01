@@ -2,9 +2,9 @@
 //! Replaces hanging solver test with production-ready alternatives
 
 use kwavers::{
+    core::constants::{DENSITY_WATER, SOUND_SPEED_WATER},
     grid::Grid,
     medium::{CoreMedium, HomogeneousMedium},
-    core::constants::{DENSITY_WATER, SOUND_SPEED_WATER},
 };
 
 #[test]

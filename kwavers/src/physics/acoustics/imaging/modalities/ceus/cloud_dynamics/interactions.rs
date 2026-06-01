@@ -19,9 +19,9 @@
 use super::config::CloudBubble;
 use super::simulator::CloudDynamics;
 use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
+use crate::core::constants::numerical::{FOUR_PI, TWO_PI};
 use crate::core::error::KwaversResult;
 use crate::physics::acoustics::imaging::modalities::ceus::microbubble::BubbleResponse;
-use crate::core::constants::numerical::{FOUR_PI, TWO_PI};
 
 impl CloudDynamics {
     /// Handle bubble-bubble interactions (coalescence check)

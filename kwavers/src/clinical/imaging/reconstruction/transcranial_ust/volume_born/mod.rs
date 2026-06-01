@@ -6,8 +6,9 @@
 
 use crate::core::error::KwaversResult;
 use crate::math::statistics::{normalized_rmse, pearson, percentile_range};
+use crate::domain::source::transducers::TransducerGeometry;
 use crate::solver::inverse::linear_born_inversion::{
-    high_pass_enhance_volume, pcg_invert, TransducerGeometry, VolumeOperator, VolumeVoxel,
+    high_pass_enhance_volume, pcg_invert, VolumeOperator, VolumeVoxel,
 };
 use ndarray::Array3;
 

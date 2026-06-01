@@ -44,6 +44,7 @@
 //! - Van Trees, H. L. (2002). *Optimum Array Processing*. Wiley. Chapter 6.
 //! - Li, J., Stoica, P., & Wang, Z. (2003). "On robust Capon beamforming." *IEEE TSP*, 51(7).
 
+use crate::core::constants::numerical::DEFAULT_DIAGONAL_LOADING;
 use num_complex::Complex64;
 
 /// Minimum Variance Distortionless Response (MVDR / Capon) beamformer.
@@ -59,7 +60,7 @@ pub struct MinimumVariance {
 impl Default for MinimumVariance {
     fn default() -> Self {
         Self {
-            diagonal_loading: 1e-6,
+            diagonal_loading: DEFAULT_DIAGONAL_LOADING,
         }
     }
 }

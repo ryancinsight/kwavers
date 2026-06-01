@@ -67,7 +67,10 @@ pub fn compute_initial_pressure(
         (operating_wavelength - 800.0).mul_add(-0.0002, 0.8)
     };
 
-    let base_gruneisen = gruneisen_parameters.first().copied().unwrap_or(GRUNEISEN_WATER_20C);
+    let base_gruneisen = gruneisen_parameters
+        .first()
+        .copied()
+        .unwrap_or(GRUNEISEN_WATER_20C);
     let gruneisen_parameter = base_gruneisen * wavelength_scaling;
 
     for i in 0..nx {
@@ -104,7 +107,10 @@ pub fn compute_multi_wavelength_pressure(
         .iter()
         .enumerate()
         .map(|(idx, fluence)| {
-            let gruneisen = gruneisen_parameters.get(idx).copied().unwrap_or(GRUNEISEN_WATER_20C);
+            let gruneisen = gruneisen_parameters
+                .get(idx)
+                .copied()
+                .unwrap_or(GRUNEISEN_WATER_20C);
             let wavelength = wavelengths.get(idx).copied().unwrap_or(750.0);
             compute_initial_pressure(
                 grid,

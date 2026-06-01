@@ -1,6 +1,6 @@
 use super::*;
+use crate::core::constants::numerical::TWO_PI;
 use crate::core::constants::ATMOSPHERIC_PRESSURE;
-use crate::core::constants::numerical::{TWO_PI};
 
 #[test]
 fn test_gilmore_initialization() {

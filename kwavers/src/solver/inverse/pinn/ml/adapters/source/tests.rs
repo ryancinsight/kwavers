@@ -128,4 +128,3 @@ fn test_unfocused_source_no_focal_properties() {
         "Point source should not have focal properties"
     );
 }
-

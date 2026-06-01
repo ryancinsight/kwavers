@@ -2,9 +2,9 @@
 
 use super::detector::HarmonicDetector;
 use super::types::PointHarmonics;
+use crate::core::constants::numerical::TWO_PI;
 use crate::core::error::KwaversResult;
 use crate::math::fft::{fft_1d_array, Complex64};
-use crate::core::constants::numerical::{TWO_PI};
 
 impl HarmonicDetector {
     /// Analyze harmonics at a single spatial point

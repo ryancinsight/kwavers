@@ -15,6 +15,12 @@ categories = ["science", "simulation", "medical"]
 # CORE PRODUCTION DEPENDENCIES ONLY
 # Following minimalist production architecture per ADR-011
 
+# Foundation layer (ADR 009): re-exported as `crate::core`. `channels`+`registration`
+# are always-on (flume/ritk-registration are unconditional kwavers deps); `gpu` and
+# `nifti` are forwarded from this crate's features below.
+kwavers-core = { path = "../crates/kwavers-core", features = ["channels", "registration"] }
+kwavers-math = { path = "../crates/kwavers-math" }
+
 # Essential numerical computing
 ndarray = { version = "0.16", features = ["rayon", "serde"] }
 ndarray-npy = { version = "0.9", default-features = false, features = ["compressed_npz"] }
@@ -158,7 +164,7 @@ loom = "0.7"
 default = ["minimal"]  # PRODUCTION DEFAULT
 minimal = []           # Core functionality only
 parallel = ["ndarray/rayon"] # Add back parallel feature
-gpu = ["dep:wgpu", "dep:bytemuck", "dep:pollster", "dep:apollofft-wgpu"]
+gpu = ["dep:wgpu", "dep:bytemuck", "dep:pollster", "dep:apollofft-wgpu", "kwavers-core/gpu", "kwavers-math/gpu"]
 # Explicit-opt-in flag for the bit-rotted `solver::backend::gpu` subtree.
 # See solver/backend/mod.rs for repair list. Implies `gpu`. Do not enable in
 # production builds — currently produces 32 compile errors against wgpu v26.
@@ -166,7 +172,7 @@ solver_backend_gpu_unstable = ["gpu"]
 plotting = ["dep:plotly"]
 # Additional features referenced in code
 dicom = []             # No-op alias retained for back-compat; DICOM I/O is unconditional via ritk-io.
-nifti = []             # Medical imaging support
+nifti = ["kwavers-core/nifti"]   # Medical imaging support (forwards to kwavers-core)
 nightly = []           # Nightly Rust features
 simd = []              # SIMD acceleration support
 fpu = []               # FPU acceleration support

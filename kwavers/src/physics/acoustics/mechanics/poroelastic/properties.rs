@@ -2,8 +2,8 @@
 //!
 //! Reference: Johnson et al. (1987) "Theory of dynamic permeability"
 
+use crate::core::constants::numerical::TWO_PI;
 use crate::physics::acoustics::mechanics::poroelastic::PoroelasticMaterial;
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Property calculator for poroelastic materials
 #[derive(Debug)]

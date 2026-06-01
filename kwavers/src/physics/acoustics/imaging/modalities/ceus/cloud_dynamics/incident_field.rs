@@ -2,7 +2,7 @@
 
 use super::config::{CloudBubble, CloudConfig};
 use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 
 /// Incident acoustic field
 #[derive(Debug, Clone)]

@@ -17,6 +17,7 @@
 //! pressure recorded at each sensor index per step.
 
 use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
+use crate::core::constants::numerical::TWO_PI;
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::boundary::cpml::{CPMLConfig, CPMLProfiles};
 use crate::domain::grid::Grid;
@@ -28,7 +29,6 @@ use crate::solver::forward::pstd::gpu_pstd::{
 };
 use ndarray::{Array2, Array3};
 use std::f64::consts::PI;
-use crate::core::constants::numerical::{TWO_PI};
 
 /// GPU PSTD acquisition settings.
 #[derive(Clone, Copy, Debug)]

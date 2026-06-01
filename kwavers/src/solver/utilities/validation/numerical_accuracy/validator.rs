@@ -14,7 +14,8 @@ impl NumericalValidator {
     #[must_use]
     pub fn new() -> Self {
         let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).expect("Failed to create test grid");
-        let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, &grid);
+        let medium =
+            HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, &grid);
         Self { grid, medium }
     }
 

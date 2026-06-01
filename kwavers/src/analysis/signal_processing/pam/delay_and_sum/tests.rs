@@ -1,10 +1,10 @@
 use super::processor::DelayAndSumPAM;
-use super::types::{ApodizationType, DelayAndSumConfig};
+use super::types::{ApodizationType, DelayAndSumConfig, PamImagingMode};
 use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::core::constants::numerical::MHZ_TO_HZ;
+use crate::core::constants::numerical::TWO_PI;
 use approx::assert_relative_eq;
 use ndarray::{Array1, Array2};
-use crate::core::constants::numerical::{TWO_PI};
 
 #[test]
 fn test_pam_creation() {
@@ -131,6 +131,145 @@ fn beamform_view_localizes_analytic_impulse_source() {
         intensity[0],
         intensity[1]
     );
+}
+
+#[test]
+fn dmas_sharpens_localization_relative_to_das() {
+    // A broadband (impulsive) point source recorded on an 8-element aperture.
+    // DMAS replaces the coherent sum with the pairwise signal correlation, so
+    // its source-to-sidelobe contrast must exceed delay-and-sum's
+    // (Matrone et al. 2015).
+    let sound_speed = SOUND_SPEED_WATER_SIM;
+    let sampling_frequency = 2.0 * MHZ_TO_HZ;
+    let sensors: Vec<[f64; 3]> = (0..8)
+        .map(|i| [(i as f64 - 3.5) * 0.004, 0.0, 0.0])
+        .collect();
+    let source = [0.0, 0.0, 0.030];
+
+    let config = DelayAndSumConfig {
+        sound_speed,
+        sampling_frequency,
+        window_size: 128,
+        apodization: ApodizationType::Uniform,
+        ..Default::default()
+    };
+    let pam = DelayAndSumPAM::new(sensors.clone(), config).unwrap();
+
+    // Impulse arrival per sensor at the true-source travel time.
+    let n_samples = 256;
+    let mut passive_data = Array2::<f64>::zeros((sensors.len(), n_samples));
+    for (sensor_idx, sensor) in sensors.iter().enumerate() {
+        let dx = source[0] - sensor[0];
+        let dy = source[1] - sensor[1];
+        let dz = source[2] - sensor[2];
+        let sample = ((dx * dx + dy * dy + dz * dz).sqrt() / sound_speed * sampling_frequency)
+            .round() as usize;
+        passive_data[[sensor_idx, sample]] = 1.0;
+    }
+
+    // Axial scan line through the source; off-source pixels are sidelobes.
+    let n_pixels = 41;
+    let grid_points = Array2::from_shape_fn((n_pixels, 3), |(i, j)| match j {
+        2 => 0.030 + (i as f64 - 20.0) * 0.0006,
+        _ => 0.0,
+    });
+    let source_pixel = 20;
+
+    let das = pam
+        .beamform_with_mode_view(
+            passive_data.view(),
+            grid_points.view(),
+            PamImagingMode::DelayAndSum,
+        )
+        .unwrap();
+    let dmas = pam
+        .beamform_with_mode_view(
+            passive_data.view(),
+            grid_points.view(),
+            PamImagingMode::DelayMultiplyAndSum,
+        )
+        .unwrap();
+
+    // Source-pixel value is positive for both imaging conditions.
+    assert!(das[source_pixel] > 0.0, "DAS source intensity must be positive");
+    assert!(dmas[source_pixel] > 0.0, "DMAS source intensity must be positive");
+
+    // Source-to-max-sidelobe contrast (sidelobes = pixels >2 bins from source).
+    let max_sidelobe = |map: &Array1<f64>| -> f64 {
+        map.iter()
+            .enumerate()
+            .filter(|(i, _)| i.abs_diff(source_pixel) > 2)
+            .map(|(_, &v)| v)
+            .fold(0.0_f64, f64::max)
+    };
+    let das_contrast = das[source_pixel] / max_sidelobe(&das).max(f64::MIN_POSITIVE);
+    let dmas_contrast = dmas[source_pixel] / max_sidelobe(&dmas).max(f64::MIN_POSITIVE);
+
+    assert!(
+        dmas_contrast > das_contrast,
+        "DMAS must improve source-to-sidelobe contrast over DAS: dmas={dmas_contrast:.4e} das={das_contrast:.4e}"
+    );
+}
+
+#[test]
+fn beamform_with_delays_aligns_on_supplied_delays() {
+    // Three sensors, an impulse in each at distinct samples. A delay row equal
+    // to those arrival samples coherently re-aligns the impulses to t = 0
+    // (energy ≈ N²); a zero-delay row leaves them outside the window (≈ 0).
+    let sensors = vec![[0.0, 0.0, 0.0], [0.01, 0.0, 0.0], [0.0, 0.01, 0.0]];
+    let config = DelayAndSumConfig {
+        sound_speed: 1.0,
+        sampling_frequency: 1.0,
+        window_size: 8,
+        apodization: ApodizationType::Uniform,
+        ..Default::default()
+    };
+    let pam = DelayAndSumPAM::new(sensors, config).unwrap();
+
+    let nt = 16;
+    let arrivals = [10usize, 12, 14];
+    let mut data = Array2::<f64>::zeros((3, nt));
+    for (sensor, &arrival) in arrivals.iter().enumerate() {
+        data[[sensor, arrival]] = 1.0;
+    }
+
+    let delays = Array2::from_shape_vec(
+        (2, 3),
+        vec![10.0, 12.0, 14.0, /* aligned */ 0.0, 0.0, 0.0 /* mis-aligned */],
+    )
+    .unwrap();
+    let signals = pam
+        .beamform_signals_with_delays(data.view(), delays.view())
+        .unwrap();
+
+    let energy_aligned: f64 = signals.row(0).iter().map(|&x| x * x).sum();
+    let energy_misaligned: f64 = signals.row(1).iter().map(|&x| x * x).sum();
+    assert!(
+        energy_aligned > 8.0,
+        "aligned delays must coherently sum impulses (energy ≈ 9): {energy_aligned}"
+    );
+    assert!(
+        energy_misaligned < 1e-9,
+        "mis-aligned delays must leave the impulses outside the window: {energy_misaligned}"
+    );
+}
+
+#[test]
+fn beamform_signals_with_delays_rejects_bad_shapes() {
+    let sensors = vec![[0.0, 0.0, 0.0], [0.01, 0.0, 0.0], [0.0, 0.01, 0.0]];
+    let pam = DelayAndSumPAM::new(sensors, DelayAndSumConfig::default()).unwrap();
+    let data = Array2::<f64>::zeros((3, 16));
+    // Delay matrix with the wrong number of sensor columns.
+    let bad = Array2::<f64>::zeros((4, 2));
+    assert!(pam
+        .beamform_signals_with_delays(data.view(), bad.view())
+        .is_err());
+    // Negative delay.
+    let mut neg = Array2::<f64>::zeros((1, 3));
+    neg[[0, 0]] = -1.0;
+    assert!(pam
+        .beamform_signals_with_delays(data.view(), neg.view())
+        .is_err());
 }
 
 #[test]

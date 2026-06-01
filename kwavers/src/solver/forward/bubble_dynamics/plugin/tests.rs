@@ -1,12 +1,12 @@
 use super::engine::BubbleEngine;
 use super::*;
+use crate::core::constants::{DENSITY_WATER, SOUND_SPEED_WATER};
 use crate::domain::field::mapping::UnifiedFieldType;
 use crate::domain::grid::Grid;
 use crate::domain::medium::HomogeneousMedium;
 use crate::domain::plugin::test_support::{make_context, null_plugin_fields, NullBoundary};
 use crate::domain::plugin::{Plugin, PluginState};
 use crate::physics::acoustics::bubble_dynamics::BubbleParameters;
-use crate::core::constants::{DENSITY_WATER, SOUND_SPEED_WATER};
 use crate::physics::factory::models::BubbleModel;
 use ndarray::{Array4, Axis};
 

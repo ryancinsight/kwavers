@@ -2,14 +2,11 @@
 
 use crate::core::constants::acoustic_parameters::WATER_ABSORPTION_ALPHA_0;
 use crate::core::constants::fundamental::{
-    DENSITY_TISSUE,
-    DENSITY_WATER_NOMINAL,
-    SOUND_SPEED_AIR,
-    SOUND_SPEED_TISSUE,
+    DENSITY_TISSUE, DENSITY_WATER_NOMINAL, SOUND_SPEED_AIR, SOUND_SPEED_TISSUE,
     SOUND_SPEED_WATER_SIM,
 };
 use crate::core::constants::tissue_acoustics::{
-    ACOUSTIC_ABSORPTION_TISSUE, DENSITY_AIR, B_OVER_A_WATER, B_OVER_A_SOFT_TISSUE,
+    ACOUSTIC_ABSORPTION_TISSUE, B_OVER_A_SOFT_TISSUE, B_OVER_A_WATER, DENSITY_AIR,
 };
 
 /// Physics parameters defining the task's governing equations

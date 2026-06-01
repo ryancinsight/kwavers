@@ -26,11 +26,11 @@
 //!    *IEEE Transactions on Biomedical Engineering*, 46(9), 1037-1043.
 //!    - Modern perfusion estimation methods
 
-use crate::core::constants::tissue_acoustics::DENSITY_BLOOD;
 use crate::core::constants::medical::{
     BLOOD_SPECIFIC_HEAT, THERMAL_DOSE_REFERENCE_TEMP_C, TISSUE_PERFUSION_RATE,
 };
 use crate::core::constants::thermodynamic::BODY_TEMPERATURE_K;
+use crate::core::constants::tissue_acoustics::DENSITY_BLOOD;
 
 pub mod bioheat;
 pub mod dose;

@@ -8,6 +8,10 @@
 //! The scale-decomposition diagnostics report both calibration domains:
 //! homogeneous-baseline scale for the scattering increment theorem and
 //! model-specific least-squares scale for full-field operator equivalence.
+//! The model-scale increment residual uses the same model-specific scale but
+//! normalizes by the homogeneous-baseline observed increment energy. This keeps
+//! all increment residuals in one denominator domain while exposing the
+//! model-calibrated increment norm separately for source-drift diagnosis.
 
 use super::operator::{validate_model_names, BreastUstForwardOperatorPrediction};
 use super::residual::{
@@ -30,6 +34,10 @@ pub struct BreastUstScatteringIncrementModelDiagnostics {
     pub increment_energy_ratio: f64,
     pub baseline_scaled_full_field_normalized_residual: f64,
     pub model_scaled_full_field_normalized_residual: f64,
+    pub model_scaled_observed_increment_l2_norm: f64,
+    pub model_scaled_increment_residual_l2_norm: f64,
+    pub model_scaled_normalized_increment_residual: f64,
+    pub model_scaled_increment_energy_ratio: f64,
     pub source_scale_relative_drift_mean: f64,
     pub source_scale_relative_drift_max: f64,
     pub source_scale_phase_drift_mean_abs_rad: f64,
@@ -46,6 +54,8 @@ pub struct BreastUstScatteringIncrementDiagnostics {
     pub observed_increment_l2_norm: f64,
     pub best_model: String,
     pub best_normalized_increment_residual: f64,
+    pub best_model_scaled_increment_model: String,
+    pub best_model_scaled_normalized_increment_residual: f64,
     pub worst_model: String,
     pub worst_normalized_increment_residual: f64,
     pub increment_residual_spread: f64,
@@ -112,6 +122,14 @@ pub fn scattering_increment_diagnostics(
     });
     let best = per_model.first().expect("nonempty scattering diagnostics");
     let worst = per_model.last().expect("nonempty scattering diagnostics");
+    let best_model_scaled = per_model
+        .iter()
+        .min_by(|left, right| {
+            left.model_scaled_normalized_increment_residual
+                .total_cmp(&right.model_scaled_normalized_increment_residual)
+                .then_with(|| left.model.cmp(&right.model))
+        })
+        .expect("nonempty scattering diagnostics");
 
     Ok(BreastUstScatteringIncrementDiagnostics {
         model_count: per_model.len(),
@@ -121,6 +139,9 @@ pub fn scattering_increment_diagnostics(
         observed_increment_l2_norm: direct_field.scaled_residual_l2_norm,
         best_model: best.model.clone(),
         best_normalized_increment_residual: best.normalized_increment_residual,
+        best_model_scaled_increment_model: best_model_scaled.model.clone(),
+        best_model_scaled_normalized_increment_residual: best_model_scaled
+            .model_scaled_normalized_increment_residual,
         worst_model: worst.model.clone(),
         worst_normalized_increment_residual: worst.normalized_increment_residual,
         increment_residual_spread: worst.normalized_increment_residual
@@ -142,6 +163,9 @@ fn scattering_increment_model_diagnostics(
     let mut residual_norm_sq = 0.0;
     let mut baseline_scaled_full_field_residual_sq = 0.0;
     let mut model_scaled_full_field_residual_sq = 0.0;
+    let mut model_scaled_observed_increment_norm_sq = 0.0;
+    let mut model_scaled_predicted_increment_norm_sq = 0.0;
+    let mut model_scaled_increment_residual_sq = 0.0;
     let mut row_residual_sum = 0.0;
     let mut row_residual_max = 0.0;
     let mut scale_relative_drift_sum = 0.0;
@@ -205,6 +229,10 @@ fn scattering_increment_model_diagnostics(
                     baseline_scale * prediction_value - observed_value;
                 let model_scaled_full_field_residual =
                     model_scale * prediction_value - observed_value;
+                let model_scaled_observed_increment = observed_value - model_scale * baseline;
+                let model_scaled_predicted_increment = model_scale * (prediction_value - baseline);
+                let model_scaled_increment_residual =
+                    model_scaled_predicted_increment - model_scaled_observed_increment;
                 observed_full_field_norm_sq += observed_value.norm_sqr();
                 row_observed_increment_sq += observed_increment.norm_sqr();
                 predicted_increment_norm_sq += predicted_increment.norm_sqr();
@@ -212,6 +240,11 @@ fn scattering_increment_model_diagnostics(
                 baseline_scaled_full_field_residual_sq +=
                     baseline_scaled_full_field_residual.norm_sqr();
                 model_scaled_full_field_residual_sq += model_scaled_full_field_residual.norm_sqr();
+                model_scaled_observed_increment_norm_sq +=
+                    model_scaled_observed_increment.norm_sqr();
+                model_scaled_predicted_increment_norm_sq +=
+                    model_scaled_predicted_increment.norm_sqr();
+                model_scaled_increment_residual_sq += model_scaled_increment_residual.norm_sqr();
             }
             if row_observed_increment_sq <= f64::EPSILON {
                 return Err(KwaversError::InvalidInput(
@@ -232,9 +265,9 @@ fn scattering_increment_model_diagnostics(
             "selected observed full field has zero energy".into(),
         ));
     }
-
     let observed_increment_l2_norm = observed_increment_norm_sq.sqrt();
     let observed_full_field_l2_norm = observed_full_field_norm_sq.sqrt();
+    let model_scaled_observed_increment_l2_norm = model_scaled_observed_increment_norm_sq.sqrt();
     Ok(BreastUstScatteringIncrementModelDiagnostics {
         model: prediction.model.to_owned(),
         predicted_increment_l2_norm: predicted_increment_norm_sq.sqrt(),
@@ -248,6 +281,12 @@ fn scattering_increment_model_diagnostics(
             / observed_full_field_l2_norm,
         model_scaled_full_field_normalized_residual: model_scaled_full_field_residual_sq.sqrt()
             / observed_full_field_l2_norm,
+        model_scaled_observed_increment_l2_norm,
+        model_scaled_increment_residual_l2_norm: model_scaled_increment_residual_sq.sqrt(),
+        model_scaled_normalized_increment_residual: model_scaled_increment_residual_sq.sqrt()
+            / observed_increment_l2_norm,
+        model_scaled_increment_energy_ratio: model_scaled_predicted_increment_norm_sq.sqrt()
+            / observed_increment_l2_norm,
         source_scale_relative_drift_mean: scale_relative_drift_sum / row_count as f64,
         source_scale_relative_drift_max: scale_relative_drift_max,
         source_scale_phase_drift_mean_abs_rad: scale_phase_drift_sum / row_count as f64,

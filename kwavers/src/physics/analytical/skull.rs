@@ -5,12 +5,12 @@
 //! solid surface temperature rise, and transfer-matrix skull transmission.
 
 use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
+use crate::core::constants::numerical::TWO_PI;
 use num_complex::Complex64;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 use rand_distr::{Distribution, Normal};
 use std::f64::consts::PI;
-use crate::core::constants::numerical::{TWO_PI};
 
 // ─── Insertion loss ───────────────────────────────────────────────────────────
 
@@ -90,7 +90,9 @@ pub fn hu_to_sound_speed_schneider(hu: &[f64]) -> Vec<f64> {
 /// Schneider et al. (1996), *Phys. Med. Biol.* 41, 111.
 #[must_use]
 pub fn hu_to_density_schneider(hu: &[f64]) -> Vec<f64> {
-    hu.iter().map(|&h| DENSITY_WATER_NOMINAL + 0.96 * h).collect()
+    hu.iter()
+        .map(|&h| DENSITY_WATER_NOMINAL + 0.96 * h)
+        .collect()
 }
 
 // ─── Strehl ratio ─────────────────────────────────────────────────────────────
@@ -297,8 +299,14 @@ mod tests {
     #[test]
     fn transfer_matrix_at_matching_impedance() {
         // When Z_skull = Z_water = Z_brain: T → 1 regardless of frequency
-        let t =
-            skull_transfer_matrix_transmission(MHZ_TO_HZ, 1.5e6, 1.5e6, 1.5e6, SOUND_SPEED_SKULL, 7e-3);
+        let t = skull_transfer_matrix_transmission(
+            MHZ_TO_HZ,
+            1.5e6,
+            1.5e6,
+            1.5e6,
+            SOUND_SPEED_SKULL,
+            7e-3,
+        );
         // With equal impedances, the 1+Z3/Z1 = 2 and Z3/Z2+Z2/Z1 = 2,
         // so T = 2/(2·cos + i·2·sin) = 1/(cos+i·sin) = exp(-iφ), |T| = 1
         assert!((t.norm() - 1.0).abs() < 1e-8, "|T|={}", t.norm());

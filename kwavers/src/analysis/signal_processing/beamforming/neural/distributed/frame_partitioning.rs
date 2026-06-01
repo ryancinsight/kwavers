@@ -92,10 +92,7 @@ pub(crate) fn weighted_partition_sizes(
     order.sort_by(|left, right| {
         remainders[*right]
             .total_cmp(&remainders[*left])
-            .then_with(|| {
-                weights[*right]
-                    .total_cmp(&weights[*left])
-            })
+            .then_with(|| weights[*right].total_cmp(&weights[*left]))
             .then_with(|| left.cmp(right))
     });
 

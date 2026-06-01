@@ -40,6 +40,7 @@ pub mod integration; // NEW: Stable integration utilities extracted from monolit
 pub mod interactions;
 pub mod keller_miksis; // NEW: Extracted Keller-Miksis solver for modularity
 pub mod rayleigh_plesset;
+pub mod symplectic_integration; // Störmer-Verlet / Yoshida symplectic ODE (relocated from solver)
 pub mod thermodynamics;
 
 pub use adaptive_integration::{
@@ -61,6 +62,10 @@ pub use imex_integration::{
     integrate_bubble_dynamics_imex, BubbleIMEXConfig, BubbleIMEXIntegrator,
 };
 pub use integration::integrate_bubble_dynamics_stable; // NEW: Extracted integration utilities
+pub use symplectic_integration::{
+    integrate_bubble_dynamics_symplectic, stormer_verlet_step, yoshida4_step,
+    BubbleSymplecticIntegrator, SymplecticConfig,
+};
 pub use interactions::{BjerknesForceComputer, BubbleInteractions, CollectiveEffects};
 pub use keller_miksis::KellerMiksisModel; // NEW: Modular Keller-Miksis solver
 pub use rayleigh_plesset::RayleighPlessetSolver;

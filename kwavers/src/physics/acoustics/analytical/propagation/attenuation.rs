@@ -35,8 +35,8 @@
 //! - Beer, A. (1852): "Bestimmung der Absorption des rothen Lichts in farbigen Flüssigkeiten"
 
 use crate::core::constants::acoustic_parameters::NP_TO_DB;
+use crate::core::constants::numerical::TWO_PI;
 use ndarray::Array3;
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Attenuation calculator for wave propagation in absorbing media
 #[derive(Debug)]

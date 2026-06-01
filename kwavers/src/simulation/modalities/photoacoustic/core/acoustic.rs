@@ -1,7 +1,9 @@
 //! Acoustic propagation and reconstruction methods for PhotoacousticSimulator.
 
 use crate::core::error::KwaversResult;
-use crate::domain::imaging::photoacoustic::{InitialPressure, PhotoacousticResult};
+use crate::domain::imaging::photoacoustic::{
+    InitialPressure, PhotoacousticResult, PressureFieldSeries,
+};
 use crate::solver::inverse::reconstruction::photoacoustic::{
     PhotoacousticAlgorithm, PhotoacousticReconstructor, ReconstructionPhotoacousticConfig,
 };
@@ -102,7 +104,7 @@ impl PhotoacousticSimulator {
         let snr = 10.0 * (signal_power / noise_power).log10();
 
         Ok(PhotoacousticResult {
-            pressure_fields,
+            pressure_fields: PressureFieldSeries::new(pressure_fields)?,
             time: time_points,
             reconstructed_image,
             snr,

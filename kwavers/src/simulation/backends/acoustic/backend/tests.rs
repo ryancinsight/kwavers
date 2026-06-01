@@ -58,7 +58,10 @@ impl AcousticSolverBackend for MockBackend {
 
     fn get_impedance_field(&self) -> KwaversResult<Array3<f64>> {
         // Return constant impedance for mock backend (1.5 MRayl)
-        Ok(Array3::from_elem((self.nx, self.ny, self.nz), ACOUSTIC_IMPEDANCE_WATER_NOMINAL))
+        Ok(Array3::from_elem(
+            (self.nx, self.ny, self.nz),
+            ACOUSTIC_IMPEDANCE_WATER_NOMINAL,
+        ))
     }
 
     fn get_dt(&self) -> f64 {

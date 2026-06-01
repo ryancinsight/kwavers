@@ -112,7 +112,10 @@ mod tests {
         let alpha = uniform(s, 0.0);
         let dv = grid.dx * grid.dy * grid.dz;
         let n = (s.0 * s.1 * s.2) as f64;
-        let init = 1000.0_f64.powi(2) / (2.0 * DENSITY_WATER_NOMINAL * SOUND_SPEED_WATER_SIM.powi(2)) * dv * n;
+        let init = 1000.0_f64.powi(2)
+            / (2.0 * DENSITY_WATER_NOMINAL * SOUND_SPEED_WATER_SIM.powi(2))
+            * dv
+            * n;
 
         let state = AcousticStateRefs {
             pressure: &p,

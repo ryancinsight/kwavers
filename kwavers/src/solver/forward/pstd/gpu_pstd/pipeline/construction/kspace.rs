@@ -4,8 +4,8 @@
 //! dimensions and physical parameters. All outputs are f32-packed for
 //! direct upload to GPU buffers.
 
+use crate::core::constants::numerical::TWO_PI;
 use crate::math::fft::shift_operators::{generate_kappa, generate_shift_1d, generate_source_kappa};
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Precompute kappa, source_kappa, and packed 1-D shift arrays for k-space.
 ///

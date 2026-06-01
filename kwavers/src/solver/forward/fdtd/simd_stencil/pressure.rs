@@ -76,8 +76,11 @@ impl FdtdSimdStencilProcessor {
             }
         }
 
-        let mut result = Array3::zeros((ni, nj, nk));
-        result.assign(&self.pres_scratch);
+        // `pres_scratch` already holds the boundary rows (copied from
+        // `pressure_prev` above) and the freshly-computed interior, so cloning
+        // it directly is bit-identical to allocating a zeroed array and
+        // assigning, while skipping the redundant zero-fill pass.
+        let mut result = self.pres_scratch.clone();
         self.apply_boundary_conditions_pressure(&mut result)?;
         Ok(result)
     }

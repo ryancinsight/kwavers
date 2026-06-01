@@ -341,7 +341,8 @@ mod tests {
     #[test]
     fn update_reuses_source_mask_scratch_for_pressure_source() {
         let grid = Grid::new(6, 6, 6, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
-        let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, &grid);
+        let medium =
+            HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, &grid);
         let mut config = HybridConfig::default();
         config.decomposition_strategy = HybridDecompositionStrategy::Static;
         config.validation.enable_validation = false;

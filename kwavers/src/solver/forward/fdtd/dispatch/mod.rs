@@ -105,6 +105,10 @@ impl StencilStrategy {
 }
 
 /// Get global SIMD configuration (thread-safe singleton)
+///
+/// Returns a clone of `SimdConfig` — the struct is small (a few Copy fields),
+/// so the clone is a trivial stack copy.  The `OnceLock` guarantees detection
+/// runs once.
 #[must_use]
 pub fn get_simd_config() -> SimdConfig {
     SIMD_CONFIG.get_or_init(SimdConfig::detect).clone()
@@ -121,7 +125,11 @@ pub fn init_simd() {
 /// Dispatcher for FDTD stencil operations
 ///
 /// Routes pressure and velocity updates to optimal implementation.
-/// Pre-allocates a scratch buffer for the scalar path to avoid per-step heap allocation.
+/// Pre-allocates a scratch buffer for the scalar path to avoid per-step
+/// heap allocation.  The scalar fallback still incurs one `Array3::zeros`
+/// allocation per step because the buffer must be returned to the caller
+/// by ownership — acceptable since the scalar path is only taken when
+/// no SIMD implementation is available (essentially never on modern x86_64).
 #[derive(Debug)]
 pub struct FdtdStencilDispatcher {
     /// Selected strategy
@@ -138,7 +146,10 @@ pub struct FdtdStencilDispatcher {
     /// Coefficient for velocity update
     _velocity_coeff: f64,
 
-    /// Pre-allocated scratch buffer for scalar pressure update (avoids per-step allocation)
+    /// Pre-allocated scratch buffer for scalar pressure update.
+    /// Filled each step, then returned via std::mem::replace with a fresh
+    /// zero buffer.  The zero-initialisation is a fast memset; the heap
+    /// allocation is amortised by the allocator.
     p_scratch: Array3<f64>,
 }
 
@@ -280,11 +291,16 @@ impl FdtdStencilDispatcher {
     /// ## Allocation strategy
     ///
     /// Fills `self.p_scratch` in-place, then returns it to the caller via
-    /// `std::mem::replace`. The returned value is transferred without copying
+    /// `std::mem::replace`.  The returned value is transferred without copying
     /// the computed interior field, but a fresh zero-initialized scratch buffer
-    /// is still allocated for the next invocation because this API returns
-    /// ownership. The write-pass itself remains the only per-cell work in the
-    /// steady state.
+    /// is still allocated for the next invocation because this API must return
+    /// ownership.  The write-pass itself remains the only per-cell work in the
+    /// steady state; the zero-initialisation is a fast `memset` amortised across
+    /// the computational work of the stencil.
+    ///
+    /// This path is the last-resort fallback and is only taken when no SIMD
+    /// implementation is available (essentially never on modern x86\_64 or ARM
+    /// hardware).  The per-step allocation is therefore acceptable.
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///

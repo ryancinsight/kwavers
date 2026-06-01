@@ -5,11 +5,11 @@ use super::super::bind_groups::{
 };
 use super::super::{AbsorptionArrays, MediumArrays, PmlArrays, SolverParams};
 use super::kspace::precompute_kspace_shifts;
+use crate::core::constants::numerical::TWO_PI;
 use crate::domain::grid::Grid;
 use crate::math::fft::shift_operators::KSpaceGridParams;
 use std::sync::Arc;
 use wgpu::util::DeviceExt;
-use crate::core::constants::numerical::{TWO_PI};
 
 impl GpuPstdSolver {
     /// Create a new GPU PSTD solver.

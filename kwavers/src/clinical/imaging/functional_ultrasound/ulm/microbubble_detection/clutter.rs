@@ -24,10 +24,10 @@
 //! ```
 
 use super::types::SvdClutterConfig;
+use crate::core::constants::numerical::TWO_PI;
 use crate::core::error::{KwaversError, KwaversResult, NumericalError};
 use crate::math::linear_algebra::LinearAlgebra;
 use ndarray::{s, Array1, Array2};
-use crate::core::constants::numerical::{TWO_PI};
 
 /// SVD spatiotemporal clutter filter.
 ///

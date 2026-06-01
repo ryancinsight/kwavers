@@ -4,8 +4,8 @@ use super::planner::TreatmentPlanner;
 use super::types::{
     TranscranialTargetVolume, TranscranialTransducerSpecification, TransducerSetup,
 };
+use crate::core::constants::numerical::TWO_PI;
 use crate::core::error::KwaversResult;
-use crate::core::constants::numerical::{TWO_PI};
 
 impl TreatmentPlanner {
     /// Optimize transducer setup for target focusing using phase conjugation.

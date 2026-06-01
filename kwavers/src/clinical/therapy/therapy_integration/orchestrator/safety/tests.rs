@@ -13,8 +13,8 @@ fn test_thermal_index_calculation() {
     };
 
     let acoustic_params = AcousticTherapyParams {
-        frequency: MHZ_TO_HZ,   // 1 MHz
-        pnp: MPA_TO_PA,         // 1 MPa
+        frequency: MHZ_TO_HZ,  // 1 MHz
+        pnp: MPA_TO_PA,        // 1 MPa
         prf: 100.0,            // 100 Hz
         duty_cycle: 0.1,       // 10%
         focal_depth: 0.05,     // 5 cm
@@ -54,8 +54,8 @@ fn test_mechanical_index_calculation() {
     };
 
     let acoustic_params = AcousticTherapyParams {
-        frequency: MHZ_TO_HZ,   // 1 MHz
-        pnp: 0.5 * MPA_TO_PA,  // 0.5 MPa
+        frequency: MHZ_TO_HZ, // 1 MHz
+        pnp: 0.5 * MPA_TO_PA, // 0.5 MPa
         prf: 100.0,
         duty_cycle: 0.1,
         focal_depth: 0.03,

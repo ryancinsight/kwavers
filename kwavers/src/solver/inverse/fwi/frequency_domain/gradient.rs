@@ -9,14 +9,14 @@ use super::cbs::{
 };
 use super::forward::{incident_field, outgoing_green, validate_forward_inputs, voxel_centers};
 use super::types::{Config, FrequencyObservation};
+use crate::core::constants::numerical::TWO_PI;
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::{
     complex_l2_objective, complex_source_scale, helmholtz_slowness_derivative, MultiRowRingArray,
 };
-use crate::solver::inverse::linear_born_inversion::ElementPosition;
+use crate::domain::source::transducers::ElementPosition;
 use ndarray::Array3;
 use num_complex::Complex64;
-use crate::core::constants::numerical::{TWO_PI};
 
 pub(super) fn objective_and_gradient(
     slowness_s_per_m: &Array3<f64>,

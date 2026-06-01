@@ -9,7 +9,8 @@
 
 use kwavers::analysis::signal_processing::clutter_filter::{
     AdaptiveFilter, AdaptiveFilterConfig, IirFilter, IirFilterConfig, PolynomialFilter,
-    PolynomialFilterConfig, SubspaceSeparationMethod, SignalSvdClutterFilter, SvdClutterFilterConfig,
+    PolynomialFilterConfig, SignalSvdClutterFilter, SubspaceSeparationMethod,
+    SvdClutterFilterConfig,
 };
 use kwavers::core::error::KwaversResult;
 use ndarray::Array2;

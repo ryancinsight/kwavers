@@ -46,7 +46,7 @@
 //! - Liu (1998). Geophysics 63(6), 2082–2089. (k-space PSTD method)
 //! - Berenger (1994). J. Comput. Phys. 114(2), 185–200. (split-field PML)
 
-use crate::core::error::KwaversResult;
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::solver::forward::pstd::implementation::core::orchestrator::PSTDSolver;
 use crate::solver::geometry::SolverGeometry;
 use ndarray::{s, Zip};
@@ -126,13 +126,12 @@ impl PSTDSolver {
                 .inverse_c2r_into(&self.grad_k, &mut self.dpx, &mut self.ux_k);
             // Fused: u = pml * (pml * u - (dt/rho) * dp)
             // pml_vel_x[i] = exp(-sigma_x_sgx[i] * dt/2)
-            let pml_vx = self
-                .pml_exp
-                .as_ref()
-                .unwrap()
-                .vel_x
-                .as_slice()
-                .expect("pml_vel_x must be contiguous");
+            let pml_exp = self.pml_exp.as_ref().ok_or_else(|| {
+                KwaversError::InternalError("pml_exp unexpectedly None in fused velocity path".into())
+            })?;
+            let pml_vx = pml_exp.vel_x.as_slice().ok_or_else(|| {
+                KwaversError::InternalError("pml_vel_x must be contiguous".into())
+            })?;
             Zip::indexed(self.fields.ux.view_mut())
                 .and(&self.dpx)
                 .and(&self.materials.rho0)
@@ -154,13 +153,9 @@ impl PSTDSolver {
                 // dpx is free to overwrite before y-axis Zip reads it.
                 self.fft
                     .inverse_c2r_into(&self.grad_k, &mut self.dpx, &mut self.ux_k);
-                let pml_vy = self
-                    .pml_exp
-                    .as_ref()
-                    .unwrap()
-                    .vel_y
-                    .as_slice()
-                    .expect("pml_vel_y must be contiguous");
+                let pml_vy = pml_exp.vel_y.as_slice().ok_or_else(|| {
+                    KwaversError::InternalError("pml_vel_y must be contiguous".into())
+                })?;
                 Zip::indexed(self.fields.uy.view_mut())
                     .and(&self.dpx)
                     .and(&self.materials.rho0)
@@ -183,13 +178,9 @@ impl PSTDSolver {
                 // Reuse dpx for z-gradient IFFT (Opt-12): y-axis Zip has completed.
                 self.fft
                     .inverse_c2r_into(&self.grad_k, &mut self.dpx, &mut self.ux_k);
-                let pml_vz = self
-                    .pml_exp
-                    .as_ref()
-                    .unwrap()
-                    .vel_z
-                    .as_slice()
-                    .expect("pml_vel_z must be contiguous");
+                let pml_vz = pml_exp.vel_z.as_slice().ok_or_else(|| {
+                    KwaversError::InternalError("pml_vel_z must be contiguous".into())
+                })?;
                 Zip::indexed(self.fields.uz.view_mut())
                     .and(&self.dpx)
                     .and(&self.materials.rho0)
@@ -293,9 +284,8 @@ impl PSTDSolver {
     ///
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
-    ///
-    /// # Panics
-    /// - Panics if `AsContext must be Some for CylindricalAS`.
+    /// - Returns [`KwaversError::InternalError`] if `AsContext` is unexpectedly `None`
+    ///   for `CylindricalAS` geometry.
     ///
     pub(crate) fn update_velocity_as(&mut self, dt: f64) -> KwaversResult<()> {
         let use_fused = self.pml_exp.is_some() && self.dirichlet_pml_bypass_x.is_empty();
@@ -307,30 +297,24 @@ impl PSTDSolver {
         // Take AsContext out of the Option so we hold an owned value while
         // also mutably borrowing self.fields / self.materials (disjoint fields).
         // No heap allocation: take/replace are pointer moves only.
-        let mut ctx = self
-            .as_ctx
-            .take()
-            .expect("AsContext must be Some for CylindricalAS");
+        let mut ctx = self.as_ctx.take().ok_or_else(|| {
+            KwaversError::InternalError("AsContext unexpectedly None for CylindricalAS".into())
+        })?;
 
         ctx.compute_vel_grads(self.fields.p.slice(s![.., 0, ..]));
 
         if use_fused {
             // Fused: ux = pml_x[i] · (pml_x[i] · ux − (dt/ρ₀) · ∂p/∂x)
             // In the 2-D slice (nx, nr), indexed returns (i, k).
-            let pml_vx = self
-                .pml_exp
-                .as_ref()
-                .unwrap()
-                .vel_x
-                .as_slice()
-                .expect("pml_vel_x contiguous");
-            let pml_vz = self
-                .pml_exp
-                .as_ref()
-                .unwrap()
-                .vel_z
-                .as_slice()
-                .expect("pml_vel_z contiguous");
+            let pml_exp = self.pml_exp.as_ref().ok_or_else(|| {
+                KwaversError::InternalError("pml_exp unexpectedly None in fused AS velocity path".into())
+            })?;
+            let pml_vx = pml_exp.vel_x.as_slice().ok_or_else(|| {
+                KwaversError::InternalError("pml_vel_x contiguous".into())
+            })?;
+            let pml_vz = pml_exp.vel_z.as_slice().ok_or_else(|| {
+                KwaversError::InternalError("pml_vel_z contiguous".into())
+            })?;
 
             Zip::indexed(self.fields.ux.slice_mut(s![.., 0, ..]))
                 .and(self.materials.rho0.slice(s![.., 0, ..]))

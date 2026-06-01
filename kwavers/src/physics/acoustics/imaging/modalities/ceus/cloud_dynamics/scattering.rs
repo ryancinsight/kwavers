@@ -14,10 +14,10 @@ use super::simulator::CloudDynamics;
 use crate::core::constants::fundamental::{
     ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM,
 };
+use crate::core::constants::numerical::TWO_PI;
 use crate::core::error::KwaversResult;
 use ndarray::Array3;
 use std::collections::HashMap;
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Scattered acoustic field from bubble cloud
 #[derive(Debug)]

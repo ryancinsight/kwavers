@@ -1,6 +1,6 @@
 use super::operator::SpectralDerivativeOperator;
+use crate::core::constants::numerical::TWO_PI;
 use ndarray::Array3;
-use crate::core::constants::numerical::{TWO_PI};
 
 /// **Theorem (spectral derivative exactness for DFT-representable modes):**
 ///

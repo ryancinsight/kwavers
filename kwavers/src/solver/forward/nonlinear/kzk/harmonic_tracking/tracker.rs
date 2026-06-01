@@ -2,9 +2,9 @@
 
 use super::types::{HarmonicAnalysis, HarmonicConfig};
 use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
+use crate::core::constants::numerical::TWO_PI;
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::{Array1, Array2};
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Harmonic tracker for nonlinear propagation.
 #[derive(Debug)]

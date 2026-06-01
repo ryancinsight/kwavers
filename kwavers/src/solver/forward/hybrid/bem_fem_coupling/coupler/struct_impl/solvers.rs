@@ -12,7 +12,7 @@ use crate::math::linear_algebra::sparse::{
 };
 
 use super::BemFemCoupler;
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 
 impl BemFemCoupler {
     /// Solve the BEM system via rigid-scattering CFIE for the given `wavenumber`.

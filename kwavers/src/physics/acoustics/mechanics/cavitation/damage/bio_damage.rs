@@ -136,8 +136,13 @@ mod tests {
     #[test]
     fn test_lysis_probability_bounds() {
         let model = test_model();
-        let props =
-            AcousticMaterialProperties::new(SOUND_SPEED_WATER_SIM, DENSITY_WATER_NOMINAL, 0.0, SPECIFIC_HEAT_WATER, 0.6);
+        let props = AcousticMaterialProperties::new(
+            SOUND_SPEED_WATER_SIM,
+            DENSITY_WATER_NOMINAL,
+            0.0,
+            SPECIFIC_HEAT_WATER,
+            0.6,
+        );
 
         // Below threshold is zero
         assert_eq!(model.calculate_lysis_probability(50.0, &props), 0.0);

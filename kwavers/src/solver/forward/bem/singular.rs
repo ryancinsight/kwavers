@@ -56,7 +56,7 @@
 use num_complex::Complex64;
 
 use super::green::green_helmholtz;
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 
 // ─── 3×3 Gauss-Legendre quadrature on [0, 1]^2 ─────────────────────────────
 

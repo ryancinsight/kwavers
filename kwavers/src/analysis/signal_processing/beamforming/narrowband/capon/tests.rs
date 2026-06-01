@@ -2,9 +2,9 @@ use super::*;
 use crate::analysis::signal_processing::beamforming::covariance::CovariancePostProcess;
 use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::core::constants::numerical::MHZ_TO_HZ;
+use crate::core::constants::numerical::TWO_PI;
 use approx::assert_abs_diff_eq;
 use ndarray::Array3;
-use crate::core::constants::numerical::{TWO_PI};
 
 fn sensor_positions_m() -> Vec<[f64; 3]> {
     vec![

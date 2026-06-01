@@ -19,11 +19,11 @@
 //!   *IEEE Transactions on Ultrasonics, Ferroelectrics and Frequency Control*, 42(4), 672-688.
 
 use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
+use crate::core::constants::numerical::FOUR_PI;
 use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::{Array2, ArrayView3};
 use num_complex::Complex64;
-use crate::core::constants::numerical::{FOUR_PI};
 
 /// Configuration for autocorrelation velocity estimation
 #[derive(Debug, Clone)]
@@ -52,7 +52,7 @@ pub struct AutocorrelationConfig {
 impl Default for AutocorrelationConfig {
     fn default() -> Self {
         Self {
-            center_frequency: 5.0 * MHZ_TO_HZ,    // 5 MHz
+            center_frequency: 5.0 * MHZ_TO_HZ,  // 5 MHz
             prf: 4e3,                           // 4 kHz
             speed_of_sound: SOUND_SPEED_TISSUE, // m/s
             beam_angle: 0.0,                    // Parallel to beam

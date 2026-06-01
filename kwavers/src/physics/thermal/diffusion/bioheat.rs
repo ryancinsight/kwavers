@@ -3,9 +3,9 @@
 //! Reference: Pennes, H. H. (1948). "Analysis of tissue and arterial blood temperatures
 //! in the resting human forearm." Journal of Applied Physiology, 1(2), 93-122.
 
-use crate::core::constants::tissue_acoustics::DENSITY_BLOOD;
 use crate::core::constants::medical::{BLOOD_SPECIFIC_HEAT, TISSUE_PERFUSION_RATE};
 use crate::core::constants::thermodynamic::BODY_TEMPERATURE_K;
+use crate::core::constants::tissue_acoustics::DENSITY_BLOOD;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;

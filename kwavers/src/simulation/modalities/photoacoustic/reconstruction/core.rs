@@ -69,9 +69,7 @@ pub fn time_reversal_reconstruction(
     // Convert detector grid-index positions to physical coordinates (m).
     let detector_positions_m: Vec<(f64, f64, f64)> = detectors
         .iter()
-        .map(|&(dx_idx, dy_idx, dz_idx)| {
-            (dx_idx * grid.dx, dy_idx * grid.dy, dz_idx * grid.dz)
-        })
+        .map(|&(dx_idx, dy_idx, dz_idx)| (dx_idx * grid.dx, dy_idx * grid.dy, dz_idx * grid.dz))
         .collect();
 
     // Sample detector signals from pressure snapshots.

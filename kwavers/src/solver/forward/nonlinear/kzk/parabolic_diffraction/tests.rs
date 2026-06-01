@@ -1,6 +1,7 @@
 use super::KzkParabolicDiffractionOperator;
 use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::core::constants::numerical::MHZ_TO_HZ;
+use crate::core::constants::numerical::TWO_PI;
 use crate::core::constants::SOUND_SPEED_WATER;
 use crate::math::fft::Complex64;
 use crate::solver::forward::nonlinear::kzk::constants::{
@@ -11,7 +12,6 @@ use crate::solver::validation::measure_beam_radius;
 use approx::assert_relative_eq;
 use ndarray::Array2;
 use std::f64::consts::PI;
-use crate::core::constants::numerical::{TWO_PI};
 
 #[test]
 fn test_kzk_gaussian_beam() {

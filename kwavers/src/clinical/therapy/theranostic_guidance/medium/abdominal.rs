@@ -17,9 +17,9 @@
 //! Reference organ sound speeds: liver 1578 m/s, kidney 1560 m/s (Duck 1990 Table 4.6).
 
 use crate::core::constants::acoustic_parameters::SOFT_TISSUE_HU_BASE_SPEED_M_S;
+use crate::core::constants::ct_acoustics::HU_ABDOMEN_BODY_THRESHOLD;
 use crate::core::constants::fundamental::{SOUND_SPEED_AIR, SOUND_SPEED_TISSUE};
 use crate::core::constants::tissue_acoustics::{SOUND_SPEED_KIDNEY, SOUND_SPEED_LIVER};
-use crate::core::constants::ct_acoustics::HU_ABDOMEN_BODY_THRESHOLD;
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::{s, Array2, Array3, Axis, Zip};
 
@@ -116,6 +116,9 @@ pub fn prepare_abdominal_slice(
     let ct_crop = ct_slice
         .slice(s![bbox.0..=bbox.1, bbox.2..=bbox.3])
         .to_owned();
+    let body_crop = body_component
+        .slice(s![bbox.0..=bbox.1, bbox.2..=bbox.3])
+        .to_owned();
     let mut label_crop = label_slice
         .slice(s![bbox.0..=bbox.1, bbox.2..=bbox.3])
         .to_owned();
@@ -129,11 +132,12 @@ pub fn prepare_abdominal_slice(
     }
     let ct = resample(&ct_crop, grid_size);
     let label = resample_labels_max(&label_crop, grid_size);
+    let body_support = resample_mask_any(&body_crop, grid_size);
     let spacing_m = ((bbox.1 - bbox.0 + 1) as f64 * spacing_mm[0] * 1.0e-3)
         .max((bbox.3 - bbox.2 + 1) as f64 * spacing_mm[1] * 1.0e-3)
         / grid_size as f64;
     let (sound_speed, attenuation, body, organ, target) =
-        abdominal_properties(anatomy, &ct, &label);
+        abdominal_properties(anatomy, &ct, &label, &body_support);
     validate_masks(&body, &target)?;
     Ok(PreparedTheranosticSlice {
         anatomy,
@@ -236,6 +240,7 @@ fn abdominal_properties(
     anatomy: AnatomyKind,
     ct: &Array2<f64>,
     label: &Array2<i16>,
+    body_support: &Array2<bool>,
 ) -> (
     Array2<f64>,
     Array2<f64>,
@@ -254,12 +259,12 @@ fn abdominal_properties(
     Zip::from(&mut body)
         .and(&mut organ)
         .and(&mut target)
-        .and(ct)
+        .and(body_support)
         .and(label)
-        .for_each(|bod, org, tgt, &hu, &lab| {
-            *bod = hu > -450.0 || lab > 0;
+        .for_each(|bod, org, tgt, &support, &lab| {
             *org = lab == 1 || lab == 2;
             *tgt = lab == 2;
+            *bod = support || *org || *tgt;
         });
     // Pass 2: map masks + HU to acoustic properties.
     Zip::from(&mut speed)
@@ -291,8 +296,7 @@ fn abdominal_properties(
             if hu > ABDOM_CALCIFICATION_HU_THRESHOLD {
                 *spd = ABDOM_CALC_SPEED_BASE_M_S
                     + ABDOM_CALC_SPEED_SLOPE_M_S_PER_HU
-                        * (hu - ABDOM_CALCIFICATION_HU_THRESHOLD)
-                            .clamp(0.0, ABDOM_CALC_HU_RANGE);
+                        * (hu - ABDOM_CALCIFICATION_HU_THRESHOLD).clamp(0.0, ABDOM_CALC_HU_RANGE);
                 *att = ABDOM_CALC_ATTENUATION_DB_CM_MHZ;
             }
         });
@@ -375,6 +379,24 @@ fn connected_body_component(
 
 fn is_abdominal_body_candidate(hu: f64, label: i16) -> bool {
     hu > HU_ABDOMEN_BODY_THRESHOLD || label > 0
+}
+
+fn resample_mask_any(input: &Array2<bool>, size: usize) -> Array2<bool> {
+    let (nx, ny) = input.dim();
+    Array2::from_shape_fn((size, size), |(ix, iy)| {
+        let x0 = (ix * nx) / size;
+        let x1 = (((ix + 1) * nx).saturating_sub(1)) / size;
+        let y0 = (iy * ny) / size;
+        let y1 = (((iy + 1) * ny).saturating_sub(1)) / size;
+        for x in x0..=x1.min(nx - 1) {
+            for y in y0..=y1.min(ny - 1) {
+                if input[[x, y]] {
+                    return true;
+                }
+            }
+        }
+        false
+    })
 }
 
 /// Von-Neumann 4-neighbourhood within `(nx, ny)` bounds.

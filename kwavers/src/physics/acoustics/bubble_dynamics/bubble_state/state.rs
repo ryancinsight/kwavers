@@ -1,12 +1,12 @@
 use super::gas_dynamics::GasSpecies;
 use super::parameters::BubbleParameters;
 use crate::core::constants::fundamental::{AVOGADRO, GAS_CONSTANT};
+use crate::core::constants::numerical::FOUR_PI;
 use crate::core::constants::thermodynamic::T_AMBIENT;
 use std::f64::consts::PI;
-use crate::core::constants::numerical::{FOUR_PI};
 
 /// Complete state of a single bubble
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct BubbleState {
     // Geometric properties
     pub radius: f64,            // Current radius [m]

@@ -23,7 +23,7 @@
 //! - `traits`: the physics-layer `KZKSolverTrait` bridge (RMS field,
 //!   peak-pressure delegation, `step_forward(dz)`).
 
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 mod conservation;
 mod observables;
 mod stepping;

@@ -1,9 +1,9 @@
 #[cfg(feature = "pinn")]
+use crate::analysis::signal_processing::beamforming::neural::types::PINNBeamformingConfig;
+#[cfg(feature = "pinn")]
 use crate::solver::interface::pinn_beamforming::{
     DistributedConfig, LoadBalancingStrategy, PinnBeamformingDecompositionStrategy,
 };
-#[cfg(feature = "pinn")]
-use crate::analysis::signal_processing::beamforming::neural::types::PINNBeamformingConfig;
 
 #[cfg(feature = "pinn")]
 use super::processor::{DistributedNeuralBeamformingProcessor, FaultToleranceState};

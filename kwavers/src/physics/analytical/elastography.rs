@@ -4,9 +4,9 @@
 //! viscoelastic complex moduli, Voigt dispersion relation, and a synthetic
 //! 2-D MRE displacement field.
 
+use crate::core::constants::numerical::TWO_PI;
 use num_complex::Complex64;
 use std::f64::consts::PI;
-use crate::core::constants::numerical::{TWO_PI};
 
 // ─── Shear wave speed ─────────────────────────────────────────────────────────
 

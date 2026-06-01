@@ -7,7 +7,7 @@ use std::f64::consts::PI;
 
 use super::super::{BeamformingAlgorithm3D, BeamformingConfig3D};
 use super::config::SaftConfig;
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 
 /// Euclidean distance between two 3D points.
 pub(super) fn distance3(a: [f64; 3], b: [f64; 3]) -> f64 {

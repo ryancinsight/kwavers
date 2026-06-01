@@ -1,8 +1,8 @@
 use super::super::phase_correction::{PhaseCorrection, TranscranialAberrationCorrection};
+use crate::core::constants::numerical::TWO_PI;
 use crate::core::error::KwaversResult;
 use ndarray::Array3;
 use num_complex::Complex;
-use crate::core::constants::numerical::{TWO_PI};
 
 impl TranscranialAberrationCorrection {
     /// Simulate acoustic field with phase correction applied.

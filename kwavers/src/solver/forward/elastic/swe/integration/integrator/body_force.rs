@@ -1,7 +1,7 @@
 use super::super::super::types::ElasticBodyForceConfig;
+use crate::core::constants::numerical::TWO_PI;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Evaluate a single body force configuration at grid cell `(i, j, k)` and time `t`.
 ///
@@ -53,8 +53,8 @@ pub(super) fn evaluate(
             .exp();
 
             let dt = time - *t0_s;
-            let temporal_factor = (-(dt * dt) / (2.0 * sigma_t_s * sigma_t_s)).exp()
-                / (sigma_t_s * (TWO_PI).sqrt());
+            let temporal_factor =
+                (-(dt * dt) / (2.0 * sigma_t_s * sigma_t_s)).exp() / (sigma_t_s * (TWO_PI).sqrt());
 
             let dir_norm = direction[2]
                 .mul_add(

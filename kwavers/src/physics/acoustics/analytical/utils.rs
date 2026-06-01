@@ -1,8 +1,8 @@
 //! Utilities for physics validation and testing
 
+use crate::core::constants::numerical::TWO_PI;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
-use crate::core::constants::numerical::{TWO_PI};
 
 // Physical constants for dispersion correction
 /// Second-order dispersion correction coefficient for k-space methods

@@ -112,11 +112,17 @@ fn square_bbox_empty_mask_errors() {
 
 // ── abdominal_properties ─────────────────────────────────────────────────
 
+fn body_support(shape: (usize, usize), active: bool) -> Array2<bool> {
+    Array2::<bool>::from_elem(shape, active)
+}
+
 #[test]
 fn properties_air_cell_has_default_values() {
     let ct = Array2::<f64>::from_elem((1, 1), -1000.0);
     let label = Array2::<i16>::zeros((1, 1));
-    let (speed, att, body, organ, target) = abdominal_properties(AnatomyKind::Liver, &ct, &label);
+    let support = body_support((1, 1), false);
+    let (speed, att, body, organ, target) =
+        abdominal_properties(AnatomyKind::Liver, &ct, &label, &support);
     assert!(!body[[0, 0]]);
     assert!(!organ[[0, 0]]);
     assert!(!target[[0, 0]]);
@@ -129,7 +135,8 @@ fn properties_soft_tissue_speed_matches_formula() {
     // HU = 0, no label → body tissue.
     let ct = Array2::<f64>::from_elem((1, 1), 0.0);
     let label = Array2::<i16>::zeros((1, 1));
-    let (speed, att, body, _, _) = abdominal_properties(AnatomyKind::Liver, &ct, &label);
+    let support = body_support((1, 1), true);
+    let (speed, att, body, _, _) = abdominal_properties(AnatomyKind::Liver, &ct, &label, &support);
     assert!(body[[0, 0]]);
     // c = 1480 + 0.18 × clamp(0, −150, 250) = 1480
     assert!((speed[[0, 0]] - 1480.0).abs() < 1.0e-10);
@@ -141,7 +148,9 @@ fn properties_liver_organ_speed_at_hu_100() {
     let ct = Array2::<f64>::from_elem((1, 1), 100.0);
     let mut label = Array2::<i16>::zeros((1, 1));
     label[[0, 0]] = 1;
-    let (speed, att, _, organ, target) = abdominal_properties(AnatomyKind::Liver, &ct, &label);
+    let support = body_support((1, 1), true);
+    let (speed, att, _, organ, target) =
+        abdominal_properties(AnatomyKind::Liver, &ct, &label, &support);
     assert!(organ[[0, 0]]);
     assert!(!target[[0, 0]]);
     // c = SOUND_SPEED_LIVER + 0.10 × clamp(100, −100, 200) = 1578 + 10 = 1588
@@ -157,7 +166,9 @@ fn properties_tumour_speed_offset_below_organ() {
     let ct = Array2::<f64>::from_elem((1, 1), 50.0);
     let mut label = Array2::<i16>::zeros((1, 1));
     label[[0, 0]] = 2;
-    let (speed, att, _, _, target) = abdominal_properties(AnatomyKind::Liver, &ct, &label);
+    let support = body_support((1, 1), true);
+    let (speed, att, _, _, target) =
+        abdominal_properties(AnatomyKind::Liver, &ct, &label, &support);
     assert!(target[[0, 0]]);
     // c = (SOUND_SPEED_LIVER − 22) + 0.12 × clamp(50, −50, 220)
     //   = (1578 − 22) + 0.12 × 50 = 1556 + 6 = 1562
@@ -173,7 +184,8 @@ fn properties_bone_overrides_organ_label() {
     let ct = Array2::<f64>::from_elem((1, 1), 700.0);
     let mut label = Array2::<i16>::zeros((1, 1));
     label[[0, 0]] = 1;
-    let (speed, att, _, _, _) = abdominal_properties(AnatomyKind::Liver, &ct, &label);
+    let support = body_support((1, 1), true);
+    let (speed, att, _, _, _) = abdominal_properties(AnatomyKind::Liver, &ct, &label, &support);
     // c = 2450 + 0.42 × clamp(700 − 250, 0, 1400) = 2450 + 0.42 × 450 = 2639
     assert!((speed[[0, 0]] - 2639.0).abs() < 1.0e-10);
     assert_eq!(att[[0, 0]], 18.0);
@@ -184,13 +196,30 @@ fn properties_kidney_organ_speed_differs_from_liver() {
     let ct = Array2::<f64>::from_elem((1, 1), 0.0);
     let mut label = Array2::<i16>::zeros((1, 1));
     label[[0, 0]] = 1;
-    let (speed_liver, _, _, _, _) = abdominal_properties(AnatomyKind::Liver, &ct, &label);
-    let (speed_kidney, _, _, _, _) = abdominal_properties(AnatomyKind::Kidney, &ct, &label);
+    let support = body_support((1, 1), true);
+    let (speed_liver, _, _, _, _) = abdominal_properties(AnatomyKind::Liver, &ct, &label, &support);
+    let (speed_kidney, _, _, _, _) =
+        abdominal_properties(AnatomyKind::Kidney, &ct, &label, &support);
     // Liver organ baseline: SOUND_SPEED_LIVER = 1578 m/s; kidney: SOUND_SPEED_KIDNEY = 1560 m/s
     // Both at HU=0 so the HU-offset contribution is zero.
     use crate::core::constants::tissue_acoustics::{SOUND_SPEED_KIDNEY, SOUND_SPEED_LIVER};
     assert!((speed_liver[[0, 0]] - SOUND_SPEED_LIVER).abs() < 1.0e-10);
     assert!((speed_kidney[[0, 0]] - SOUND_SPEED_KIDNEY).abs() < 1.0e-10);
+}
+
+#[test]
+fn properties_rejects_bed_hu_when_body_support_excludes_cell() {
+    let ct = Array2::<f64>::from_elem((1, 1), 50.0);
+    let label = Array2::<i16>::zeros((1, 1));
+    let support = body_support((1, 1), false);
+    let (speed, att, body, organ, target) =
+        abdominal_properties(AnatomyKind::Liver, &ct, &label, &support);
+
+    assert!(!body[[0, 0]]);
+    assert!(!organ[[0, 0]]);
+    assert!(!target[[0, 0]]);
+    assert_eq!(speed[[0, 0]], SOUND_SPEED_AIR);
+    assert_eq!(att[[0, 0]], 0.05);
 }
 
 // ── connected_body_component ──────────────────────────────────────────────

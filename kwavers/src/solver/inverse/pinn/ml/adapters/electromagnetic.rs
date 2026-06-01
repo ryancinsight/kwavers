@@ -3,9 +3,9 @@
 //! Adapts `domain::source::electromagnetic` types to PINN-specific representations,
 //! eliminating duplication while maintaining SSOT principles.
 
+use crate::core::constants::numerical::TWO_PI;
 use crate::domain::source::electromagnetic::PointEMSource;
 use std::fmt::Debug;
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Electromagnetic source specification for PINN training
 ///

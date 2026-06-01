@@ -3,8 +3,8 @@
 //! Covers: circular-piston directivity (O'Neil 1949), linear array factor,
 //! grating-lobe prediction, and apodization windows.
 
+use crate::core::constants::numerical::TWO_PI;
 use std::f64::consts::PI;
-use crate::core::constants::numerical::{TWO_PI};
 
 // ─── Directivity ──────────────────────────────────────────────────────────────
 
@@ -77,6 +77,55 @@ pub fn linear_array_factor(
             }
         })
         .collect()
+}
+
+/// Full far-field beam-pattern magnitude via the pattern-multiplication theorem.
+///
+/// The radiation pattern of an array of identical directional elements is the
+/// product of the element directivity and the array factor:
+/// ```text
+/// |P(θ)| = |D(θ)| · |AF(θ)|
+/// ```
+/// where `D` is the baffled circular-piston directivity ([`circular_piston_directivity`])
+/// with parameter `ka_elem = k·a_elem`, and `AF` is the linear array factor
+/// ([`linear_array_factor`]). The returned magnitude is normalised to its peak
+/// across the supplied angle set.
+///
+/// # Arguments
+/// * `theta_rad` – observation angles [rad]
+/// * `k` – wavenumber [rad/m]
+/// * `d_m` – element pitch [m]
+/// * `n` – number of elements
+/// * `steer_rad` – steering angle [rad]
+/// * `ka_elem` – element directivity parameter k·a_elem (dimensionless)
+///
+/// # Returns
+/// Normalised pattern magnitude (linear), peak = 1.
+///
+/// # Reference
+/// Steinberg (1976) *Principles of Aperture and Array System Design*, §2 (pattern
+/// multiplication); Van Trees (2002) §2.2.
+#[must_use]
+pub fn beam_pattern_magnitude(
+    theta_rad: &[f64],
+    k: f64,
+    d_m: f64,
+    n: usize,
+    steer_rad: f64,
+    ka_elem: f64,
+) -> Vec<f64> {
+    let af = linear_array_factor(theta_rad, k, d_m, n, steer_rad);
+    let d = circular_piston_directivity(theta_rad, ka_elem);
+    let mut mag: Vec<f64> = af
+        .iter()
+        .zip(d.iter())
+        .map(|(&a, &de)| (a * de).abs())
+        .collect();
+    let peak = mag.iter().cloned().fold(0.0_f64, f64::max).max(1e-300);
+    for m in &mut mag {
+        *m /= peak;
+    }
+    mag
 }
 
 /// Grating-lobe angles for a linear array steered to `steer_rad`.
@@ -166,7 +215,9 @@ pub fn apodization_weights(n: usize, window_type: &str) -> Vec<f64> {
 /// Error < 2e-9 for |x| ≤ 8; Hankel expansion elsewhere.
 pub(super) fn bessel_j1(x: f64) -> f64 {
     let ax = x.abs();
-    let r = if ax < 8.0 {
+    if ax < 8.0 {
+        // Small-argument rational approximation; the numerator carries the
+        // signed `x` factor, so the result already has the correct (odd) sign.
         let y = x * x;
         let num = x
             * (72_362_614_232.0
@@ -187,7 +238,11 @@ pub(super) fn bessel_j1(x: f64) -> f64 {
         let q = 0.046_874_999_95
             + y * (-2.002_690_873e-4
                 + y * (8.449_199_096e-5 + y * (-8.822_898_7e-5 + y * 1.050_343_160e-6)));
-        (2.0 / (PI * ax)).sqrt() * (p * xx.cos() - z * q * xx.sin())
-    };
-    if x < 0.0 { -r } else { r }
+        let r = (2.0 / (PI * ax)).sqrt() * (p * xx.cos() - z * q * xx.sin());
+        if x < 0.0 {
+            -r
+        } else {
+            r
+        }
+    }
 }

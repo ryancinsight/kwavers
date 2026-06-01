@@ -102,6 +102,22 @@ pub enum SolverType {
     FEM,
     /// Automatically selected
     Auto,
+    /// Elastic-wave solver (4th-order FD with velocity-Verlet integration)
+    Elastic,
+    /// Pseudospectral elastic solver
+    ElasticPSTD,
+    /// Frequency-domain Helmholtz FEM solver
+    Helmholtz,
+    /// Boundary Element Method solver
+    BEM,
+    /// Discontinuous Galerkin / Hybrid Spectral-DG solver
+    DG,
+    /// Nonlinear acoustic wave solvers (Westervelt, Kuznetsov, KZK)
+    Nonlinear,
+    /// Biot poroelastic wave solver
+    Poroelastic,
+    /// Rayleigh-Sommerfeld angular-spectrum solver
+    RayleighSommerfeld,
 }
 
 /// Time integration schemes

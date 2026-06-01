@@ -1,7 +1,7 @@
 use super::filter::AdaptiveFilter;
 use super::types::{AdaptiveFilterConfig, CbrEstimationMethod, SubspaceSeparationMethod};
+use crate::core::constants::numerical::TWO_PI;
 use ndarray::Array2;
-use crate::core::constants::numerical::{TWO_PI};
 
 #[test]
 fn test_adaptive_filter_creation() {
@@ -147,9 +147,7 @@ fn test_cbr_history() {
     let config = AdaptiveFilterConfig::default();
     let mut filter = AdaptiveFilter::new(config).unwrap();
 
-    let data = Array2::<f64>::from_shape_fn((3, 16), |(_, t)| {
-        (TWO_PI * t as f64 / 8.0).sin()
-    });
+    let data = Array2::<f64>::from_shape_fn((3, 16), |(_, t)| (TWO_PI * t as f64 / 8.0).sin());
 
     filter.filter(&data).unwrap();
     assert_eq!(filter.cbr_history().len(), 3);

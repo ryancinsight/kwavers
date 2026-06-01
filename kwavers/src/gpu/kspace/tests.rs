@@ -1,8 +1,8 @@
 use super::shift_gpu::KspaceShiftGpu;
+use crate::core::constants::numerical::TWO_PI;
 use approx::assert_abs_diff_eq;
 use ndarray::Array3;
 use std::f64::consts::PI;
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Zero shift must be the identity: output equals input.
 /// # Panics

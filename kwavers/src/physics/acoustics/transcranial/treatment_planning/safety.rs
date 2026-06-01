@@ -121,7 +121,9 @@ mod tests {
         assert!(mechanical_index_from_harmonic_intensity_field(&valid, 0.0).is_infinite());
         assert!(mechanical_index_from_harmonic_intensity_field(&valid, f64::NAN).is_infinite());
         assert!(mechanical_index_from_harmonic_intensity_field(&negative, MHZ_TO_HZ).is_infinite());
-        assert!(mechanical_index_from_harmonic_intensity_field(&nonfinite, MHZ_TO_HZ).is_infinite());
+        assert!(
+            mechanical_index_from_harmonic_intensity_field(&nonfinite, MHZ_TO_HZ).is_infinite()
+        );
     }
 
     #[test]

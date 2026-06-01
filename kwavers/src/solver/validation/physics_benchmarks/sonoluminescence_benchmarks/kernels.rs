@@ -1,7 +1,7 @@
 //! Analytical prediction functions for SBSL benchmarks.
 
 use super::constants::{C_LIGHT, H_PLANCK, KB, WIEN_CONST};
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 
 /// Compute the Minnaert resonance radius for a given driving frequency.
 ///

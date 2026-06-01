@@ -1,9 +1,9 @@
 //! FDTD1DWaveSolver: time-stepping, full solve, and field accessors.
 
 use super::{config::FDTDConfig, InitialCondition};
+use crate::core::constants::numerical::TWO_PI;
 use crate::core::error::KwaversResult;
 use ndarray::{Array1, Array2};
-use crate::core::constants::numerical::{TWO_PI};
 
 /// 1D FDTD solver for wave equation.
 ///

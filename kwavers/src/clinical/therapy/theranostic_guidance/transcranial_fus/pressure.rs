@@ -1,8 +1,7 @@
-
 use ndarray::{Array1, Array2, Array3};
 
+use crate::core::constants::numerical::TWO_PI;
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Compute the Rayleigh-Sommerfeld pressure field on a 3-D grid.
 ///

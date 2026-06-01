@@ -322,7 +322,5 @@ pub fn adiabatic_temperature_rise_kelvin(
 ) -> Vec<f64> {
     let inv_rho_cp = 1.0 / (density * specific_heat).max(f64::MIN_POSITIVE);
     let n = q_arr.len().min(tau_arr.len());
-    (0..n)
-        .map(|i| q_arr[i] * tau_arr[i] * inv_rho_cp)
-        .collect()
+    (0..n).map(|i| q_arr[i] * tau_arr[i] * inv_rho_cp).collect()
 }

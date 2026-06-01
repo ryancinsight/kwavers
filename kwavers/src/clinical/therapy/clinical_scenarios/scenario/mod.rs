@@ -22,28 +22,11 @@ mod regime;
 
 use crate::core::constants::fundamental::ACOUSTIC_IMPEDANCE_TISSUE_NOMINAL;
 use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
+use crate::math::statistics::erf;
 
 pub use benefit::{intrinsic_threshold_pa, BenefitDetriment};
 pub use pulse::PulsePattern;
 pub use regime::HistotripsyRegime;
-
-/// Abramowitz & Stegun 7.1.26 rational approximation of `erf(x)`. Max
-/// absolute error 1.5e-7, sufficient for the clinical decision-support
-/// probabilities consumed here.
-fn erf_as7_1_26(x: f64) -> f64 {
-    let sign = if x < 0.0 { -1.0 } else { 1.0 };
-    let ax = x.abs();
-    let p = 0.327_591_1;
-    let a1 = 0.254_829_592;
-    let a2 = -0.284_496_736;
-    let a3 = 1.421_413_741;
-    let a4 = -1.453_152_027;
-    let a5 = 1.061_405_429;
-    let t = 1.0 / (1.0 + p * ax);
-    let y = ((a5 * t + a4).mul_add(t, a3).mul_add(t, a2).mul_add(t, a1) * t)
-        .mul_add(-(-ax * ax).exp(), 1.0);
-    sign * y
-}
 
 /// Histotripsy exposure scenario.
 ///
@@ -105,7 +88,7 @@ impl HistotripsyScenario {
         let pnp_abs = self.peak_negative_pressure_pa.abs();
         let pt = self.intrinsic_threshold_pa();
         let arg = (pnp_abs - pt) / (SIGMA_T_PA * std::f64::consts::SQRT_2);
-        0.5 * (1.0 + erf_as7_1_26(arg))
+        0.5 * (1.0 + erf(arg))
     }
 
     /// In-situ spatial-peak pulse-average intensity (W m⁻²) at the focus,

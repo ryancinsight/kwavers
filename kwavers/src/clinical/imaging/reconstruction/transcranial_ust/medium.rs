@@ -3,15 +3,16 @@
 use crate::core::constants::acoustic_parameters::{
     NP_TO_DB, SKULL_ATTENUATION_MARSAC_MAX_NP_PER_M_MHZ,
 };
+use crate::core::constants::ct_acoustics::{
+    HU_BONE_THRESHOLD, HU_BRAIN_BODY_THRESHOLD, SOUND_SPEED_SOFT_TISSUE_MAX,
+};
 use crate::core::constants::fundamental::{ACOUSTIC_ABSORPTION_TISSUE, SOUND_SPEED_WATER_37C};
-use crate::core::constants::ct_acoustics::{HU_BONE_THRESHOLD, SOUND_SPEED_SOFT_TISSUE_MAX};
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::math::numerics::operators::interpolation::bilinear_index_space;
 use ndarray::{s, Array2, Array3};
 
 use super::config::{SOUND_SPEED_SKULL, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM};
 
-pub(super) const AIR_REJECTION_HU: f64 = -300.0;
 /// Soft-tissue attenuation in Np/(m·MHz) derived from `ACOUSTIC_ABSORPTION_TISSUE`
 /// (0.5 dB/(cm·MHz)): α = 0.5 × 100 / NP_TO_DB.
 pub(super) const SOFT_TISSUE_ATTENUATION_NP_PER_M_MHZ: f64 =
@@ -54,7 +55,7 @@ pub fn select_head_slice(volume_hu: &Array3<f64>) -> KwaversResult<usize> {
     let mut best = None;
     for z in 0..nz {
         let slice = volume_hu.slice(s![.., .., z]);
-        let head_voxels = slice.iter().filter(|v| **v > AIR_REJECTION_HU).count();
+        let head_voxels = slice.iter().filter(|v| **v > HU_BRAIN_BODY_THRESHOLD).count();
         let skull_voxels = slice.iter().filter(|v| **v > HU_BONE_THRESHOLD).count();
         let score = head_voxels + 4 * skull_voxels;
         if best.is_none_or(|(_, best_score)| score > best_score) {
@@ -182,7 +183,7 @@ impl AcousticSlice {
                     attenuation[[ix, iy]] = SOFT_TISSUE_ATTENUATION_NP_PER_M_MHZ * (1.0 - phi)
                         + SKULL_ATTENUATION_MARSAC_MAX_NP_PER_M_MHZ * phi;
                     SOUND_SPEED_WATER_SIM * (1.0 - phi) + SOUND_SPEED_SKULL * phi
-                } else if hu > AIR_REJECTION_HU {
+                } else if hu > HU_BRAIN_BODY_THRESHOLD {
                     attenuation[[ix, iy]] = SOFT_TISSUE_ATTENUATION_NP_PER_M_MHZ;
                     soft_tissue_speed(hu)
                 } else {
@@ -227,7 +228,7 @@ fn head_bbox(slice: &Array2<f64>) -> KwaversResult<(usize, usize, usize, usize)>
     let mut bbox: Option<(usize, usize, usize, usize)> = None;
     for ix in 0..nx {
         for iy in 0..ny {
-            if slice[[ix, iy]] > AIR_REJECTION_HU {
+            if slice[[ix, iy]] > HU_BRAIN_BODY_THRESHOLD {
                 bbox = Some(match bbox {
                     None => (ix, ix, iy, iy),
                     Some((x0, x1, y0, y1)) => (x0.min(ix), x1.max(ix), y0.min(iy), y1.max(iy)),
@@ -245,7 +246,7 @@ fn head_centroid(slice: &Array2<f64>) -> Option<(f64, f64)> {
     let mut sy = 0.0;
     let mut n = 0.0;
     for ((ix, iy), hu) in slice.indexed_iter() {
-        if *hu > AIR_REJECTION_HU {
+        if *hu > HU_BRAIN_BODY_THRESHOLD {
             sx += ix as f64;
             sy += iy as f64;
             n += 1.0;

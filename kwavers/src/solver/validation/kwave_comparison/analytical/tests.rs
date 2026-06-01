@@ -8,8 +8,9 @@ use super::{GaussianBeam, KwaveAnalyticalPlaneWave, KwaveErrorMetrics, Spherical
 
 #[test]
 fn test_plane_wave_creation() {
-    let wave = KwaveAnalyticalPlaneWave::new(1e5, MHZ_TO_HZ, SOUND_SPEED_WATER_SIM, [1.0, 0.0, 0.0], 0.0)
-        .unwrap();
+    let wave =
+        KwaveAnalyticalPlaneWave::new(1e5, MHZ_TO_HZ, SOUND_SPEED_WATER_SIM, [1.0, 0.0, 0.0], 0.0)
+            .unwrap();
     assert_eq!(wave.amplitude, 1e5);
     assert_eq!(wave.frequency, MHZ_TO_HZ);
     assert!((wave.wavelength() - 1.5e-3).abs() < 1e-10);
@@ -17,8 +18,9 @@ fn test_plane_wave_creation() {
 
 #[test]
 fn test_plane_wave_direction_normalization() {
-    let wave = KwaveAnalyticalPlaneWave::new(1e5, MHZ_TO_HZ, SOUND_SPEED_WATER_SIM, [3.0, 4.0, 0.0], 0.0)
-        .unwrap();
+    let wave =
+        KwaveAnalyticalPlaneWave::new(1e5, MHZ_TO_HZ, SOUND_SPEED_WATER_SIM, [3.0, 4.0, 0.0], 0.0)
+            .unwrap();
     let norm =
         (wave.direction[0].powi(2) + wave.direction[1].powi(2) + wave.direction[2].powi(2)).sqrt();
     assert!((norm - 1.0).abs() < 1e-10);
@@ -26,8 +28,9 @@ fn test_plane_wave_direction_normalization() {
 
 #[test]
 fn test_plane_wave_pressure_temporal_periodicity() {
-    let wave = KwaveAnalyticalPlaneWave::new(1e5, MHZ_TO_HZ, SOUND_SPEED_WATER_SIM, [1.0, 0.0, 0.0], 0.0)
-        .unwrap();
+    let wave =
+        KwaveAnalyticalPlaneWave::new(1e5, MHZ_TO_HZ, SOUND_SPEED_WATER_SIM, [1.0, 0.0, 0.0], 0.0)
+            .unwrap();
     let period = 1.0 / wave.frequency;
     let p1 = wave.pressure(0.0, 0.0, 0.0, 0.0);
     let p2 = wave.pressure(0.0, 0.0, 0.0, period);
@@ -65,7 +68,8 @@ fn test_gaussian_beam_width_at_rayleigh() {
 
 #[test]
 fn test_spherical_wave_geometric_spreading() {
-    let wave = SphericalWave::new(1e3, MHZ_TO_HZ, SOUND_SPEED_WATER_SIM, [0.0, 0.0, 0.0], 0.0).unwrap();
+    let wave =
+        SphericalWave::new(1e3, MHZ_TO_HZ, SOUND_SPEED_WATER_SIM, [0.0, 0.0, 0.0], 0.0).unwrap();
     let r1 = 0.01;
     let r2 = 0.02;
     let p1 = wave.pressure(r1, 0.0, 0.0, 0.0);
@@ -77,8 +81,9 @@ fn test_spherical_wave_geometric_spreading() {
 #[test]
 fn test_error_metrics_perfect_match() {
     let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).unwrap();
-    let wave = KwaveAnalyticalPlaneWave::new(1e5, MHZ_TO_HZ, SOUND_SPEED_WATER_SIM, [1.0, 0.0, 0.0], 0.0)
-        .unwrap();
+    let wave =
+        KwaveAnalyticalPlaneWave::new(1e5, MHZ_TO_HZ, SOUND_SPEED_WATER_SIM, [1.0, 0.0, 0.0], 0.0)
+            .unwrap();
     let field1 = wave.pressure_field(&grid, 0.0);
     let field2 = wave.pressure_field(&grid, 0.0);
     let metrics = KwaveErrorMetrics::compute(field1.view(), field2.view());
@@ -95,9 +100,14 @@ fn test_error_metrics_phase_shifted() {
     let wave1 =
         KwaveAnalyticalPlaneWave::new(1e5, MHZ_TO_HZ, SOUND_SPEED_WATER_SIM, [1.0, 0.0, 0.0], 0.0)
             .unwrap();
-    let wave2 =
-        KwaveAnalyticalPlaneWave::new(1e5, MHZ_TO_HZ, SOUND_SPEED_WATER_SIM, [1.0, 0.0, 0.0], PI / 4.0)
-            .unwrap();
+    let wave2 = KwaveAnalyticalPlaneWave::new(
+        1e5,
+        MHZ_TO_HZ,
+        SOUND_SPEED_WATER_SIM,
+        [1.0, 0.0, 0.0],
+        PI / 4.0,
+    )
+    .unwrap();
     let field1 = wave1.pressure_field(&grid, 0.0);
     let field2 = wave2.pressure_field(&grid, 0.0);
     let metrics = KwaveErrorMetrics::compute(field1.view(), field2.view());

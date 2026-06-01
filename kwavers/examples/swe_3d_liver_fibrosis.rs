@@ -34,7 +34,7 @@
 //! - Barr, R. G., et al. (2019). "Elastography assessment of liver fibrosis." *Abdominal Radiology*
 
 use kwavers::clinical::therapy::swe_3d_workflows::{
-    Swe3dClinicalDecisionSupport, ElasticityMap3D, MultiPlanarReconstruction, VolumetricROI,
+    ElasticityMap3D, MultiPlanarReconstruction, Swe3dClinicalDecisionSupport, VolumetricROI,
 };
 use kwavers::domain::grid::Grid;
 use kwavers::domain::medium::heterogeneous::HeterogeneousMedium;

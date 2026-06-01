@@ -17,8 +17,8 @@ use crate::solver::inverse::linear_born_inversion::LinearBornInversionConfig;
 pub const TRANSCRANIAL_FOCUSED_BOWL_ELEMENT_COUNT: usize = 1024;
 
 pub use crate::core::constants::acoustic_parameters::SOUND_SPEED_SKULL;
-use crate::core::constants::tissue_acoustics::DENSITY_BRAIN;
 pub use crate::core::constants::fundamental::{SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM};
+use crate::core::constants::tissue_acoustics::DENSITY_BRAIN;
 
 /// Clinical configuration for the transcranial UST finite-frequency Born
 /// inversion.

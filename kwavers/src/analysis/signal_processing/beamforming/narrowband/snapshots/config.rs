@@ -1,7 +1,7 @@
 //! BasebandSnapshotConfig — legacy analytic-signal snapshot parameters
 
-use crate::core::error::{KwaversError, KwaversResult};
 use crate::core::constants::numerical::MHZ_TO_HZ;
+use crate::core::error::{KwaversError, KwaversResult};
 
 /// Snapshot extraction configuration for **legacy** analytic-signal complex baseband.
 ///

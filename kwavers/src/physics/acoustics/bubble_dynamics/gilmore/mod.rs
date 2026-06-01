@@ -9,9 +9,9 @@
 //! California Institute of Technology.
 
 use super::{BubbleParameters, BubbleState};
+use crate::core::constants::numerical::TWO_PI;
 use crate::core::constants::{ATMOSPHERIC_PRESSURE, WATER_TAIT_B, WATER_TAIT_N};
 use crate::core::error::KwaversResult;
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Gilmore equation solver for high-amplitude bubble dynamics
 #[derive(Debug)]
@@ -106,7 +106,8 @@ impl GilmoreSolver {
         let p_gas = p_eq * (self.params.r0 / r).powf(3.0 * gamma) + self.params.pv;
 
         // Pressure at bubble wall (liquid side): Young-Laplace + viscous damping
-        let p_wall = p_gas - self.params.surface_tension_pressure(r) - self.params.viscous_wall_stress(u, r);
+        let p_wall =
+            p_gas - self.params.surface_tension_pressure(r) - self.params.viscous_wall_stress(u, r);
 
         // Enthalpy at bubble wall and infinity
         let h_wall =
@@ -288,7 +289,7 @@ impl GilmoreSolver {
             .unwrap_or(0.0);
 
         // ── k₂ : evaluated at (t + dt/2, y_n + dt/2·k₁) ───────────────────
-        let mut s2 = state.clone();
+        let mut s2 = *state;
         s2.radius = (0.5 * dt)
             .mul_add(k1_r, state.radius)
             .max(f64::MIN_POSITIVE);
@@ -299,7 +300,7 @@ impl GilmoreSolver {
             .unwrap_or(0.0);
 
         // ── k₃ : evaluated at (t + dt/2, y_n + dt/2·k₂) ───────────────────
-        let mut s3 = state.clone();
+        let mut s3 = *state;
         s3.radius = (0.5 * dt)
             .mul_add(k2_r, state.radius)
             .max(f64::MIN_POSITIVE);
@@ -310,7 +311,7 @@ impl GilmoreSolver {
             .unwrap_or(0.0);
 
         // ── k₄ : evaluated at (t + dt, y_n + dt·k₃) ───────────────────────
-        let mut s4 = state.clone();
+        let mut s4 = *state;
         s4.radius = dt.mul_add(k3_r, state.radius).max(f64::MIN_POSITIVE);
         s4.wall_velocity = dt.mul_add(k3_v, state.wall_velocity);
         let k4_r = s4.wall_velocity;
@@ -319,7 +320,7 @@ impl GilmoreSolver {
             .unwrap_or(0.0);
 
         // ── Combine via standard Butcher weights ────────────────────────────
-        let mut out = state.clone();
+        let mut out = *state;
         out.radius = (dt / 6.0)
             .mul_add(
                 2.0f64.mul_add(k3_r, 2.0f64.mul_add(k2_r, k1_r)) + k4_r,

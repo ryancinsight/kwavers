@@ -7,7 +7,7 @@ use crate::domain::plugin::{PluginMetadata, PluginState};
 use ndarray::Array3;
 
 use super::frequency_operator::FrequencyOperator;
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 
 /// KZK Equation Solver Plugin.
 ///

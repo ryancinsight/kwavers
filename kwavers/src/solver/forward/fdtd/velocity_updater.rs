@@ -4,7 +4,7 @@
 //! - `update_velocity` (dispatch to staggered or collocated)
 //! - `update_velocity_staggered`
 
-use crate::core::error::KwaversResult;
+use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::{s, Zip};
 
 use super::solver::FdtdSolver;
@@ -21,15 +21,15 @@ impl FdtdSolver {
     /// # Reference
     /// Treeby & Cox (2010), §II.A (k-space corrected FDTD velocity update).
     /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
-    /// # Panics
-    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    /// - Returns [`KwaversError::InternalError`] if `kspace_ops` is unexpectedly `None`
+    ///   despite the caller having confirmed its presence.
     ///
     fn update_velocity_kspace(&mut self, dt: f64) -> KwaversResult<()> {
         // Compute spectral gradients of pressure (fills kops.grad_x/y/z)
         {
-            let kops = self.kspace_ops.as_mut().unwrap();
+            let kops = self.kspace_ops.as_mut().ok_or_else(|| {
+                KwaversError::InternalError("kspace_ops unexpectedly None".into())
+            })?;
             kops.compute_grad_pos(&self.fields.p);
         }
 
@@ -37,7 +37,9 @@ impl FdtdSolver {
         // Borrows: kspace_ops (kops.grad_*) and fields.u*/materials.rho0 are disjoint fields.
         {
             let (nx, _ny, _nz) = self.fields.p.dim();
-            let kops = self.kspace_ops.as_ref().unwrap();
+            let kops = self.kspace_ops.as_ref().ok_or_else(|| {
+                KwaversError::InternalError("kspace_ops unexpectedly None".into())
+            })?;
 
             // ux
             Zip::from(&mut self.fields.ux)

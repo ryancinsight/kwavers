@@ -44,8 +44,8 @@
 //! - `test_green_gradient_fd`: ∇G matches finite-difference gradient to < 10⁻⁷.
 //! - `test_green_symmetry`: G(r, r') = G(r', r) (reciprocity).
 
+use crate::core::constants::numerical::FOUR_PI;
 use num_complex::Complex64;
-use crate::core::constants::numerical::{FOUR_PI};
 
 /// The 3D free-space Helmholtz Green's function and its gradient.
 ///

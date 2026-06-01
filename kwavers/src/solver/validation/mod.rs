@@ -1,5 +1,6 @@
 pub mod config;
 pub mod contract;
+pub mod gpu_cpu_equivalence;
 pub mod kwave_comparison;
 pub mod numerical_accuracy;
 pub mod physics_benchmarks;
@@ -23,6 +24,11 @@ pub use physics_benchmarks::{measure_beam_radius, GaussianBeamParameters};
 /// k-Wave comparison and analytical solutions
 pub use kwave_comparison::{
     GaussianBeam, KwaveAnalyticalPlaneWave, KwaveErrorMetrics, SphericalWave,
+};
+
+/// GPU/CPU numerical-equivalence validation (IEEE 754 bounded-error harness)
+pub use gpu_cpu_equivalence::{
+    validate_gpu_cpu_equivalence, EquivalenceReport, EquivalenceValidator,
 };
 
 // Module planned but not yet implemented:

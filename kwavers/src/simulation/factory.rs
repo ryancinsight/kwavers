@@ -1,15 +1,17 @@
 //! Simulation-layer entry point for building a populated plugin manager.
 //!
-//! This module is a thin façade over [`crate::physics::factory::PhysicsCatalog`].
+//! This module is a thin façade over [`crate::solver::plugin::PhysicsCatalog`].
 //! Capability types ([`PhysicsConfig`], [`PhysicsModelConfig`],
-//! [`PhysicsModelType`]) live in `crate::physics::factory` (SSOT) and are
-//! re-exported here so callers in the simulation layer can keep a single
-//! `crate::simulation::factory` import surface.
+//! [`PhysicsModelType`]) live in `crate::physics::factory` (SSOT); the catalog
+//! that turns them into a `PluginManager` lives in `crate::solver::plugin`
+//! (it constructs solver plugins). Both are re-exported here so callers in the
+//! simulation layer can keep a single `crate::simulation::factory` import surface.
 
 pub use crate::physics::factory::{
-    AcousticSolver, BubbleModel, NonlinearEquation, PhysicsCatalog, PhysicsConfig,
-    PhysicsModelConfig, PhysicsModelType,
+    AcousticSolver, BubbleModel, NonlinearEquation, PhysicsConfig, PhysicsModelConfig,
+    PhysicsModelType,
 };
+pub use crate::solver::plugin::PhysicsCatalog;
 
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;

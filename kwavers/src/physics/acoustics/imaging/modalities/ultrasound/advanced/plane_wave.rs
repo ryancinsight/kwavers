@@ -13,9 +13,9 @@
 
 use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 use crate::core::constants::numerical::MHZ_TO_HZ;
+use crate::core::constants::numerical::TWO_PI;
 use ndarray::{Array2, Array3};
 use num_complex::Complex64;
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Plane wave imaging configuration
 #[derive(Debug, Clone)]

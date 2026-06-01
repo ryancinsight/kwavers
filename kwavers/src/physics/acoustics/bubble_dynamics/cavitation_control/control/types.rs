@@ -66,7 +66,7 @@ impl Default for CavitationSafetyLimits {
         Self {
             max_intensity: 0.9,
             max_temperature: THERMAL_DOSE_REFERENCE_TEMP_C, // °C
-            max_pressure: 10.0 * MPA_TO_PA, // Pa
+            max_pressure: 10.0 * MPA_TO_PA,                 // Pa
             emergency_stop_threshold: 0.95,
         }
     }

@@ -2,13 +2,13 @@
 //! for the breast UST PSTD acquisition pipeline.
 
 use super::BreastUstPstdDatasetConfig;
+use crate::core::constants::numerical::TWO_PI;
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::boundary::CPMLConfig;
 use crate::solver::forward::pstd::config::BoundaryConfig;
-use crate::solver::inverse::linear_born_inversion::ElementPosition;
+use crate::domain::source::transducers::ElementPosition;
 use ndarray::{s, Array2, ArrayView1};
 use num_complex::Complex64;
-use crate::core::constants::numerical::{TWO_PI};
 
 pub(super) fn pstd_boundary(cpml_thickness_cells: usize) -> BoundaryConfig {
     if cpml_thickness_cells == 0 {

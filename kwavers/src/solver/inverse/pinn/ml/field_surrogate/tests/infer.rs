@@ -22,7 +22,9 @@ fn test_infer_grid_shape_and_finiteness() {
         f0_range: (0.5 * MHZ_TO_HZ, MHZ_TO_HZ),
         pnp_range: (15.0 * MPA_TO_PA, 30.0 * MPA_TO_PA),
         output_transforms: super::super::target_transform::OutputTransforms::linear(
-            30.0 * MPA_TO_PA as f32, 30.0 * MPA_TO_PA as f32, 21.0 * MPA_TO_PA as f32,
+            30.0 * MPA_TO_PA as f32,
+            30.0 * MPA_TO_PA as f32,
+            21.0 * MPA_TO_PA as f32,
         )
         .unwrap(),
         batch_size: 64,
@@ -70,7 +72,9 @@ fn test_infer_grid_batch_size_invariance() {
         f0_range: (0.5 * MHZ_TO_HZ, MHZ_TO_HZ),
         pnp_range: (15.0 * MPA_TO_PA, 30.0 * MPA_TO_PA),
         output_transforms: super::super::target_transform::OutputTransforms::linear(
-            30.0 * MPA_TO_PA as f32, 30.0 * MPA_TO_PA as f32, 21.0 * MPA_TO_PA as f32,
+            30.0 * MPA_TO_PA as f32,
+            30.0 * MPA_TO_PA as f32,
+            21.0 * MPA_TO_PA as f32,
         )
         .unwrap(),
         batch_size: bs,

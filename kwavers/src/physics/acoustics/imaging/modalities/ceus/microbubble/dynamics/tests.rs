@@ -72,7 +72,9 @@ fn test_linear_oscillation_bounded() {
         damping_coefficient: 0.1,
     };
 
-    let result = sim.simulate_oscillation(&bubble, 1e3, MHZ_TO_HZ, 500e-9).unwrap();
+    let result = sim
+        .simulate_oscillation(&bubble, 1e3, MHZ_TO_HZ, 500e-9)
+        .unwrap();
 
     let r0 = bubble.radius_eq;
     let max_r = result

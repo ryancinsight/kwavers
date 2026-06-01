@@ -3,7 +3,7 @@
 //! Nonlinear acoustics contribute to heating through shock formation
 //! and generation of higher harmonics that are more readily absorbed.
 
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 /// Nonlinear acoustic effects generating secondary absorption
 #[derive(Debug, Clone, Copy)]
 pub struct NonlinearHeating {

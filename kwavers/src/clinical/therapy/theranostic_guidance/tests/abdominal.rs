@@ -253,8 +253,16 @@ fn abdominal_theranostic_inverse_recovers_lesion_support() {
     assert!(fwi_result.is_full_wave_inversion);
     assert!(fwi_result.uses_nonlinear_wave_propagation);
     assert!(
-        fwi_result.fwi_objective_history.last().copied().unwrap_or(0.0)
-            <= fwi_result.fwi_objective_history.first().copied().unwrap_or(0.0),
+        fwi_result
+            .fwi_objective_history
+            .last()
+            .copied()
+            .unwrap_or(0.0)
+            <= fwi_result
+                .fwi_objective_history
+                .first()
+                .copied()
+                .unwrap_or(0.0),
         "Westervelt FWI objective must be non-increasing; history={:?}",
         fwi_result.fwi_objective_history
     );

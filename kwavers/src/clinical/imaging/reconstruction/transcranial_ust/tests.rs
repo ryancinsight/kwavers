@@ -1,9 +1,8 @@
 use ndarray::{Array2, Array3};
 
 use crate::domain::source::transducers::focused::BowlAngularBounds;
-use crate::solver::inverse::linear_born_inversion::{
-    LinearBornInversionConfig, TransducerGeometry,
-};
+use crate::domain::source::transducers::TransducerGeometry;
+use crate::solver::inverse::linear_born_inversion::LinearBornInversionConfig;
 
 use super::{
     reconstruct_brain_slice, reconstruct_brain_volume, transducer::TranscranialBowlGeometry,

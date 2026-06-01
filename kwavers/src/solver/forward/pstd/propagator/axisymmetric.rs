@@ -8,11 +8,11 @@
 //!   k-Wave MATLAB source kspaceFirstOrderAS.m, WSWA-FFT case.
 //!   Treeby et al. (2012). k-Wave axisymmetric documentation.
 
+use crate::core::constants::numerical::TWO_PI;
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::math::fft::{Complex64, Fft2d, Fft2dInOutExt, Shape2D, FFT_CACHE_2D};
 use ndarray::{s, Array1, Array2, ArrayView2, Zip};
 use std::sync::Arc;
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Precomputed operators and pre-allocated scratch buffers for WSWA-FFT
 /// axisymmetric propagation.

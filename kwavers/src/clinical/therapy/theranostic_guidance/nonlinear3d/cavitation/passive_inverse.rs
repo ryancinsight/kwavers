@@ -91,8 +91,8 @@ impl PassiveOperator {
                         spacing_m,
                         subharmonic_mhz,
                     );
-                    row_slice[col] = (-path_alpha).exp() * (k_subharmonic * r).cos()
-                        / (FOUR_PI * r);
+                    row_slice[col] =
+                        (-path_alpha).exp() * (k_subharmonic * r).cos() / (FOUR_PI * r);
                 }
             });
         Self { values, rows, cols }

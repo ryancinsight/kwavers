@@ -21,7 +21,7 @@ impl FwiProcessor {
         grid: &Grid,
     ) -> KwaversResult<(f64, Array3<f64>)> {
         let (synthetic_data, forward_history) = self.forward_model(model, geometry, grid)?;
-        let objective = self.compute_l2_objective(observed_data, &synthetic_data)?;
+        let objective = self.compute_misfit_objective(observed_data, &synthetic_data)?;
         let residual = self.compute_adjoint_source(observed_data, &synthetic_data)?;
         let adjoint_source = self.build_adjoint_source(&residual, geometry)?;
         let mut gradient = self.adjoint_model(

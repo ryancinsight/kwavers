@@ -219,11 +219,7 @@ fn polynomial_projector(basis: &[Vec<f64>]) -> Vec<Vec<f64>> {
 /// Returns `x - V (VᵀV)⁻¹ Vᵀ x` — the residual after subtracting the best
 /// least-squares polynomial fit. The projection is linear so it operates
 /// independently on the real and imaginary parts of the IQ signal.
-fn project_out(
-    signal: &[Complex64],
-    basis: &[Vec<f64>],
-    projector: &[Vec<f64>],
-) -> Vec<Complex64> {
+fn project_out(signal: &[Complex64], basis: &[Vec<f64>], projector: &[Vec<f64>]) -> Vec<Complex64> {
     let n = signal.len();
     let k = projector.len();
     if k == 0 || n == 0 {
@@ -254,7 +250,6 @@ fn project_out(
     }
     residual
 }
-
 
 #[cfg(test)]
 mod tests;

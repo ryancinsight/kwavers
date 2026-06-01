@@ -4,9 +4,9 @@
 //! computed dispersion errors from FDTD or PSTD methods.
 
 use super::DispersionAnalysis;
+use crate::core::constants::numerical::TWO_PI;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Numerical method for dispersion calculation
 #[derive(Debug, Clone, Copy)]

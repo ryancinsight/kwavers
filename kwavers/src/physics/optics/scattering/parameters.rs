@@ -4,7 +4,7 @@
 //! - **Size Parameter**: x = 2πr/λ
 //! - **Refractive Index**: m = n_particle / n_medium
 
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 
 /// Mie scattering parameters for a spherical particle
 #[derive(Debug, Clone)]

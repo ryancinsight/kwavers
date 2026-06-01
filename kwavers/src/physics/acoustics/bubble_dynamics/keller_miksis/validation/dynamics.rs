@@ -40,6 +40,11 @@ fn test_keller_miksis_equilibrium() {
     //   p_gas = p0 + 2σ/R₀,  p_wall = p_gas − 2σ/R₀ = p0,  p_inf = p0
     //   → pressure_term = 0,  radiation_term = 0,  nonlinear_term = 0
     //   → acceleration = 0 exactly.
+    // The 1.0 m/s² bound is tight, not loose: the characteristic K-M
+    // acceleration for the default R₀=5 µm bubble is (2σ/R₀)/(ρR₀) ≈ 5.8×10⁶
+    // m/s², so 1.0 m/s² is a *relative* residual of ~1.7×10⁻⁷ — at the f64
+    // round-off floor of the 2σ/R₀≈2.9×10⁴ Pa cancellation. Tightening the
+    // absolute value further would test floating-point noise, not physics.
     assert!(
         accel.abs() < 1.0,
         "K-M acceleration at mechanical equilibrium must be zero; got {accel} m/s²"

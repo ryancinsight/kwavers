@@ -46,7 +46,10 @@
 // Bubble ODE integrators
 pub mod bubble_adaptive;
 pub mod bubble_imex;
-pub mod bubble_symplectic;
+// NOTE: the symplectic bubble integrator lives in
+// `physics::acoustics::bubble_dynamics::symplectic_integration` (alongside its
+// adaptive/imex siblings) — it is a physics ODE consumed only by physics, so it
+// must not sit above physics in the solver layer.
 
 // Re-exports for convenience
 pub use bubble_adaptive::{
@@ -54,7 +57,3 @@ pub use bubble_adaptive::{
     IntegrationStatistics,
 };
 pub use bubble_imex::{integrate_bubble_dynamics_imex, BubbleIMEXConfig, BubbleIMEXIntegrator};
-pub use bubble_symplectic::{
-    integrate_bubble_dynamics_symplectic, stormer_verlet_step, yoshida4_step,
-    BubbleSymplecticIntegrator, SymplecticConfig,
-};

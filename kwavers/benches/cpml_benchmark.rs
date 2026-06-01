@@ -71,7 +71,8 @@ fn pml_apply_benchmark(c: &mut Criterion) {
         let grid =
             Grid::new(*size, *size, *size, 1e-3, 1e-3, 1e-3).expect("Grid creation should succeed");
         let config = DomainPmlConfig::default();
-        let mut boundary = DomainPMLBoundary::new(config).expect("PML boundary creation should succeed");
+        let mut boundary =
+            DomainPMLBoundary::new(config).expect("PML boundary creation should succeed");
         let mut field = grid.create_field();
 
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, _| {
@@ -95,7 +96,8 @@ fn pml_freq_domain_benchmark(c: &mut Criterion) {
         let grid =
             Grid::new(*size, *size, *size, 1e-3, 1e-3, 1e-3).expect("Grid creation should succeed");
         let config = DomainPmlConfig::default();
-        let mut boundary = DomainPMLBoundary::new(config).expect("PML boundary creation should succeed");
+        let mut boundary =
+            DomainPMLBoundary::new(config).expect("PML boundary creation should succeed");
         let mut field_freq = Array3::from_elem(
             (grid.nx, grid.ny, grid.nz),
             kwavers::math::fft::Complex64::new(0.0, 0.0),
@@ -144,7 +146,8 @@ fn cpml_vs_pml_thickness_comparison(c: &mut Criterion) {
 
         // Standard PML for comparison (uses internal thickness from config)
         let config = DomainPmlConfig::default();
-        let mut boundary = DomainPMLBoundary::new(config).expect("PML boundary creation should succeed");
+        let mut boundary =
+            DomainPMLBoundary::new(config).expect("PML boundary creation should succeed");
         let mut field = grid.create_field();
 
         group.bench_with_input(

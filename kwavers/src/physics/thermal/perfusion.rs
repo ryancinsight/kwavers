@@ -19,16 +19,13 @@ const PERFUSION_SHUTDOWN_TEMP_C: f64 = 50.0;
 const PERFUSION_MAX_TEMP_C: f64 = 42.0;
 
 use crate::core::constants::acoustic_parameters::BLOOD_VISCOSITY_37C;
-use crate::core::constants::tissue_acoustics::DENSITY_BLOOD;
 use crate::core::constants::medical::BLOOD_SPECIFIC_HEAT;
 use crate::core::constants::thermodynamic::{
-    BODY_TEMPERATURE_C,
-    DITTUS_BOELTER_COEFFICIENT,
-    DITTUS_BOELTER_VELOCITY_EXPONENT,
-    DITTUS_BOELTER_PRANDTL_EXPONENT_HEATING,
-    NUSSELT_LAMINAR_PIPE_CONST_TEMP,
+    BODY_TEMPERATURE_C, DITTUS_BOELTER_COEFFICIENT, DITTUS_BOELTER_PRANDTL_EXPONENT_HEATING,
+    DITTUS_BOELTER_VELOCITY_EXPONENT, NUSSELT_LAMINAR_PIPE_CONST_TEMP,
     REYNOLDS_LAMINAR_TURBULENT_THRESHOLD,
 };
+use crate::core::constants::tissue_acoustics::DENSITY_BLOOD;
 use crate::core::constants::tissue_thermal::THERMAL_CONDUCTIVITY_BLOOD;
 use ndarray::Array3;
 

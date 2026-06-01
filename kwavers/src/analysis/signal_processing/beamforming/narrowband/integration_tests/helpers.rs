@@ -1,9 +1,9 @@
 //! Shared helper functions for narrowband integration tests.
 
+use crate::core::constants::numerical::TWO_PI;
 use ndarray::Array3;
 use num_complex::Complex64;
 use std::f64::consts::PI;
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Generate synthetic array data with a plane wave from a known direction.
 ///

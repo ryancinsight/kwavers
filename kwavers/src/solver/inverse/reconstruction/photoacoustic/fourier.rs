@@ -7,6 +7,7 @@
 //! - Norton (1980) "Reconstruction from projections"
 //! - Kostli et al. (2001) "Temporal backward projection of optoacoustic pressure"
 
+use crate::core::constants::numerical::TWO_PI;
 use crate::core::error::KwaversResult;
 use crate::domain::signal::window_value;
 use crate::domain::signal::SignalWindowType;
@@ -15,7 +16,6 @@ use crate::math::fft::{
 };
 use ndarray::{Array1, Array2, Array3, ArrayView2};
 use std::f64::consts::PI;
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Fourier domain reconstruction algorithm
 #[derive(Debug)]

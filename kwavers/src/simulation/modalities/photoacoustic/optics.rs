@@ -261,7 +261,13 @@ mod tests {
     #[test]
     fn test_optical_property_initialization() {
         let grid = Grid::new(32, 32, 16, 0.001, 0.001, 0.001).unwrap();
-        let medium = HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
+        let medium = HomogeneousMedium::new(
+            DENSITY_WATER_NOMINAL,
+            SOUND_SPEED_WATER_SIM,
+            0.5,
+            1.0,
+            &grid,
+        );
 
         let properties = initialize_optical_properties(&grid, &medium).unwrap();
 
@@ -282,7 +288,13 @@ mod tests {
     #[test]
     fn test_fluence_computation_basic() {
         let grid = Grid::new(16, 16, 8, 0.001, 0.001, 0.001).unwrap();
-        let medium = HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
+        let medium = HomogeneousMedium::new(
+            DENSITY_WATER_NOMINAL,
+            SOUND_SPEED_WATER_SIM,
+            0.5,
+            1.0,
+            &grid,
+        );
         let properties = initialize_optical_properties(&grid, &medium).unwrap();
 
         let fluence = compute_fluence_at_wavelength(&grid, &properties, 1e6, 750.0).unwrap();
@@ -307,7 +319,13 @@ mod tests {
     #[test]
     fn test_multi_wavelength_fluence() {
         let grid = Grid::new(8, 8, 4, 0.001, 0.001, 0.001).unwrap();
-        let medium = HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
+        let medium = HomogeneousMedium::new(
+            DENSITY_WATER_NOMINAL,
+            SOUND_SPEED_WATER_SIM,
+            0.5,
+            1.0,
+            &grid,
+        );
         let properties = initialize_optical_properties(&grid, &medium).unwrap();
 
         let wavelengths = vec![700.0, 750.0, 800.0];

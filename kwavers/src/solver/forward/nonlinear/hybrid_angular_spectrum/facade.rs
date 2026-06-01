@@ -6,7 +6,7 @@ use ndarray::Array3;
 
 use super::config::HASConfig;
 use super::solver::HybridAngularSpectrumSolver;
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 
 /// Hybrid Angular Spectrum propagator.
 ///

@@ -7,8 +7,8 @@
 
 use super::NonlinearParameters;
 use crate::core::constants::numerical::MHZ_TO_HZ;
+use crate::core::constants::numerical::TWO_PI;
 use std::f64::consts::PI;
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Calculates the acoustic saturation pressure
 ///

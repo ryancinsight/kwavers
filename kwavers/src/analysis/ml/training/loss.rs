@@ -54,15 +54,14 @@ impl PhysicsLoss {
         if phases.is_empty() || phases.dim().0 < 2 {
             return 0.0;
         }
+        // Shortest-arc magnitude of each adjacent-element phase difference
+        // (SSOT wrap; see `math::signal::wrap_to_pi`). Correct for any gradient
+        // magnitude, unlike a single π-fold of |Δφ|.
         let mut violation = 0.0;
         for i in 0..phases.dim().0 - 1 {
             for j in 0..phases.dim().1 {
-                let phase_diff = (phases[[i + 1, j]] - phases[[i, j]]).abs();
-                let normalized = if phase_diff > std::f64::consts::PI {
-                    2.0f64.mul_add(std::f64::consts::PI, -phase_diff)
-                } else {
-                    phase_diff
-                };
+                let normalized =
+                    crate::math::signal::wrap_to_pi(phases[[i + 1, j]] - phases[[i, j]]).abs();
                 violation += normalized;
             }
         }

@@ -22,7 +22,7 @@ impl FwiProcessor {
         grid: &Grid,
     ) -> KwaversResult<f64> {
         let synthetic_data = self.forward_model_sensor_only(model, geometry, grid)?;
-        self.compute_l2_objective(observed_data, &synthetic_data)
+        self.compute_misfit_objective(observed_data, &synthetic_data)
     }
 
     /// Evaluate the joint objective `J = Σᵢ Jᵢ(model)` across all shots.

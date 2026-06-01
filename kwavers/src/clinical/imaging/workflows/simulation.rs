@@ -5,7 +5,7 @@ use ndarray::Array3;
 
 #[cfg(feature = "gpu")]
 use crate::analysis::signal_processing::beamforming::three_dimensional::config::BeamformingConfig3D;
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 
 #[must_use]
 pub fn generate_realistic_rf_volume(

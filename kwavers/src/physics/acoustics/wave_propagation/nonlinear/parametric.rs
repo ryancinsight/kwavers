@@ -63,8 +63,8 @@
 //!   Academic Press, §5 (parametric arrays).
 
 use super::NonlinearParameters;
+use crate::core::constants::numerical::TWO_PI;
 use std::f64::consts::PI;
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Calculates the amplitude of the difference frequency (parametric array)
 ///
@@ -93,8 +93,11 @@ pub fn difference_frequency_amplitude(
     let f_diff = (f1 - f2).abs();
     let omega_diff = TWO_PI * f_diff;
 
-    // Need an estimate for primary attenuation (Np/m)
-    // Assume f1 and f2 are close, take average attenuation
+    // Primary attenuation (Np/m) approximated by the value at the mean primary
+    // frequency. VALID REGIME: closely-spaced primaries, Δf/f̄ = |f1−f2|/f_avg ≪ 1
+    // — the defining parametric-array condition (f_diff ≪ f1,f2). For widely
+    // separated primaries α(f1) and α(f2) differ at O(1) and a single average is
+    // not meaningful; that case is outside the parametric-array model. gap_audit PHY-8.
     let f_avg = (f1 + f2) / 2.0;
     let alpha_t = params.attenuation_at_frequency(f_avg);
 

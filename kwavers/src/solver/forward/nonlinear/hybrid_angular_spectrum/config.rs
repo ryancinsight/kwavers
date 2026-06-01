@@ -1,8 +1,8 @@
 //! HAS solver configuration.
 
 use crate::core::constants::acoustic_parameters::NP_TO_DB;
-use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::core::constants::fundamental::{ACOUSTIC_ABSORPTION_TISSUE, DENSITY_WATER_NOMINAL};
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::core::constants::tissue_acoustics::B_OVER_A_SOFT_TISSUE;
 use crate::core::constants::SOUND_SPEED_WATER_SIM;
 use crate::core::error::{KwaversError, KwaversResult};

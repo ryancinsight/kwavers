@@ -1,8 +1,8 @@
 //! Steering vector generator for uniform linear arrays.
 
+use crate::core::constants::numerical::TWO_PI;
 use ndarray::Array1;
 use num_complex::Complex64;
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Create a steering vector for a uniform linear array (ULA).
 ///

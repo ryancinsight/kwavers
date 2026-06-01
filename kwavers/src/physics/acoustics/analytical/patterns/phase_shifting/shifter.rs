@@ -2,12 +2,12 @@
 //!
 //! Core phase shifting functionality for beam control.
 
-use crate::core::constants::SOUND_SPEED_WATER;
 use super::core::{
     calculate_wavelength, quantize_phase, wrap_phase, ShiftingStrategy, MAX_FOCAL_POINTS,
     MAX_STEERING_ANGLE, MIN_FOCAL_DISTANCE,
 };
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
+use crate::core::constants::SOUND_SPEED_WATER;
 
 /// Default quantization levels for phase control
 const DEFAULT_QUANTIZATION_LEVELS: u32 = 256;

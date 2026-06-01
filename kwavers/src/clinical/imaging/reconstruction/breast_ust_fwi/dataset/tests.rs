@@ -2,9 +2,9 @@ use super::*;
 use crate::core::constants::fundamental::{
     DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM,
 };
-use crate::solver::inverse::linear_born_inversion::ElementPosition;
+use crate::core::constants::numerical::TWO_PI;
+use crate::domain::source::transducers::ElementPosition;
 use ndarray::{Array3, ArrayView1};
-use crate::core::constants::numerical::{TWO_PI};
 
 #[test]
 fn pstd_dataset_preserves_shape_and_is_input_sensitive() {

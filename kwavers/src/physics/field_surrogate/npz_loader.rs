@@ -246,7 +246,8 @@ mod tests {
             w.add_array("p_min", &p_min).unwrap();
             w.add_array("dx", &array![5.0e-4_f64]).unwrap();
             w.add_array("f0", &array![MHZ_TO_HZ]).unwrap();
-            w.add_array("pnp_realised", &array![10.0 * MPA_TO_PA]).unwrap();
+            w.add_array("pnp_realised", &array![10.0 * MPA_TO_PA])
+                .unwrap();
             w.add_array("source_pa", &array![1.5 * MPA_TO_PA]).unwrap();
             w.add_array("fwhm_lat_m", &array![2.0e-3_f64]).unwrap();
             w.add_array("fwhm_ax_m", &array![6.0e-3_f64]).unwrap();
@@ -304,7 +305,8 @@ mod tests {
             let p_min = ndarray::Array3::<f64>::zeros((2, 2, 2));
             w.add_array("p_min", &p_min).unwrap();
             w.add_array("dx", &array![5.0e-4_f64]).unwrap();
-            w.add_array("pnp_realised", &array![10.0 * MPA_TO_PA]).unwrap();
+            w.add_array("pnp_realised", &array![10.0 * MPA_TO_PA])
+                .unwrap();
             w.add_array("source_pa", &array![MPA_TO_PA]).unwrap();
             w.add_array("fwhm_lat_m", &array![2.0e-3_f64]).unwrap();
             w.add_array("fwhm_ax_m", &array![6.0e-3_f64]).unwrap();
@@ -327,7 +329,8 @@ mod tests {
             w.add_array("p_min", &p_min).unwrap();
             w.add_array("dx", &array![1.0e-3_f64]).unwrap();
             w.add_array("f0", &array![MHZ_TO_HZ]).unwrap();
-            w.add_array("pnp_realised", &array![10.0 * MPA_TO_PA]).unwrap();
+            w.add_array("pnp_realised", &array![10.0 * MPA_TO_PA])
+                .unwrap();
             w.add_array("source_pa", &array![MPA_TO_PA]).unwrap();
             w.add_array("fwhm_lat_m", &array![2.0e-3_f64]).unwrap();
             w.add_array("fwhm_ax_m", &array![6.0e-3_f64]).unwrap();

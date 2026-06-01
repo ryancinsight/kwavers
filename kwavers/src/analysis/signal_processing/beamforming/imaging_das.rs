@@ -25,8 +25,8 @@
 
 use ndarray::{Array1, ArrayView2};
 
+use crate::core::constants::numerical::TWO_PI;
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Apodization windows supported by the imaging-DAS primitive.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
@@ -187,8 +187,7 @@ fn apodization_weights(n: usize, kind: ImagingDasApodization) -> Vec<f64> {
         ImagingDasApodization::Hanning => cosine_window(n, 0.5, 0.5),
         ImagingDasApodization::Blackman => (0..n)
             .map(|i| {
-                let phi =
-                    TWO_PI * i as f64 / (n.saturating_sub(1).max(1)) as f64;
+                let phi = TWO_PI * i as f64 / (n.saturating_sub(1).max(1)) as f64;
                 0.42 - 0.5 * phi.cos() + 0.08 * (2.0 * phi).cos()
             })
             .collect(),
@@ -333,7 +332,9 @@ mod tests {
     #[test]
     fn rejects_non_positive_sound_speed() {
         assert!(ImagingDasConfig::new(0.0, MHZ_TO_HZ, ImagingDasApodization::Rectangular).is_err());
-        assert!(ImagingDasConfig::new(-1.0, MHZ_TO_HZ, ImagingDasApodization::Rectangular).is_err());
+        assert!(
+            ImagingDasConfig::new(-1.0, MHZ_TO_HZ, ImagingDasApodization::Rectangular).is_err()
+        );
         assert!(
             ImagingDasConfig::new(f64::NAN, MHZ_TO_HZ, ImagingDasApodization::Rectangular).is_err()
         );

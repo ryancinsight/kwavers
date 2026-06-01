@@ -3,9 +3,9 @@
 use super::constants::{BROADBAND_THRESHOLD_DB, MIN_SPECTRAL_POWER, SPECTRAL_WINDOW_SIZE};
 use super::traits::{CavitationDetector, DetectorParameters};
 use super::types::{CavitationDetectionState, CavitationMetrics, DetectionMethod, HistoryBuffer};
+use crate::core::constants::numerical::TWO_PI;
 use crate::math::fft::fft_1d_array;
 use ndarray::{s, Array1, ArrayView1};
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Spectral detector for cavitation using FFT analysis
 pub struct SpectralDetector {

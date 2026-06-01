@@ -48,7 +48,10 @@ impl BBBOpening {
     ///
     pub fn simulate_opening(&mut self) -> KwaversResult<()> {
         info!("Simulating BBB opening with parameters:");
-        info!("  Frequency: {:.1} MHz", self.parameters.frequency / MHZ_TO_HZ);
+        info!(
+            "  Frequency: {:.1} MHz",
+            self.parameters.frequency / MHZ_TO_HZ
+        );
         info!("  MI target: {:.2}", self.parameters.target_mi);
         info!("  Duration: {:.1} s", self.parameters.duration);
 

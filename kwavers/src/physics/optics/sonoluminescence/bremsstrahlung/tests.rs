@@ -2,8 +2,8 @@ use super::*;
 use crate::core::constants::fundamental::{
     ATMOSPHERIC_PRESSURE, BOLTZMANN as BOLTZMANN_CONSTANT, PLANCK as PLANCK_CONSTANT,
 };
+use crate::core::constants::numerical::FOUR_PI;
 use crate::core::constants::numerical::MPA_TO_PA;
-use crate::core::constants::numerical::{FOUR_PI};
 
 #[test]
 fn gaunt_factor_lower_bound() {

@@ -29,25 +29,28 @@ impl PSTDSolver {
                 (Some(view.to_owned()), ns, es)
             });
 
-        let ckpt = PSTDCheckpoint {
-            nx: self.grid.nx,
-            ny: self.grid.ny,
-            nz: self.grid.nz,
-            time_step_index: self.time_step_index,
-            total_steps: self.config.nt,
-            dt: self.config.dt,
-            p: self.fields.p.clone(),
-            ux: self.fields.ux.clone(),
-            uy: self.fields.uy.clone(),
-            uz: self.fields.uz.clone(),
-            rhox: self.rhox.clone(),
-            rhoy: self.rhoy.clone(),
-            rhoz: self.rhoz.clone(),
-            sensor_data,
+        // Zero-clone: serialize directly from borrowed solver field references.
+        // Avoids 6 × Array3<f64>::clone() — for a 256³ grid this saves ~768 MiB
+        // of intermediate allocations per checkpoint.
+        PSTDCheckpoint::save_borrowed(
+            path,
+            self.grid.nx,
+            self.grid.ny,
+            self.grid.nz,
+            self.time_step_index,
+            self.config.nt,
+            self.config.dt,
+            &self.fields.p,
+            &self.fields.ux,
+            &self.fields.uy,
+            &self.fields.uz,
+            &self.rhox,
+            &self.rhoy,
+            &self.rhoz,
+            sensor_data.as_ref(),
             sensor_next_step,
             sensor_expected_steps,
-        };
-        ckpt.save(path)
+        )
     }
 
     /// Restore state from `path` and run `remaining_steps` steps to completion.

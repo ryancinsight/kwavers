@@ -1,22 +1,16 @@
-
 use ndarray::{Array1, Array2, Array3};
 
 use crate::core::constants::acoustic_parameters::DB_TO_NP;
-use crate::core::constants::tissue_acoustics::{
-    ACOUSTIC_ABSORPTION_BRAIN,
-    ACOUSTIC_ABSORPTION_SKULL_MIN,
-    ACOUSTIC_ABSORPTION_SKULL_RANGE,
-    DENSITY_BRAIN,
-};
 use crate::core::constants::ct_acoustics::{
-    DENSITY_SKULL_CORTICAL_RANGE,
-    DENSITY_SKULL_MIN,
-    HU_BONE_THRESHOLD,
-    HU_SKULL_RANGE,
+    DENSITY_SKULL_CORTICAL_RANGE, DENSITY_SKULL_MIN, HU_BONE_THRESHOLD, HU_SKULL_RANGE,
 };
 use crate::core::constants::numerical::MHZ_TO_HZ;
+use crate::core::constants::numerical::TWO_PI;
+use crate::core::constants::tissue_acoustics::{
+    ACOUSTIC_ABSORPTION_BRAIN, ACOUSTIC_ABSORPTION_SKULL_MIN, ACOUSTIC_ABSORPTION_SKULL_RANGE,
+    DENSITY_BRAIN,
+};
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Map a HU value to (sound_speed_m_s, density_kg_m3, attenuation_np_m).
 ///
@@ -36,7 +30,8 @@ pub fn acoustic_properties_from_hu(
     let bone_fraction = ((hu - HU_BONE_THRESHOLD) / HU_SKULL_RANGE).clamp(0.0, 1.0);
     let density = DENSITY_SKULL_MIN + DENSITY_SKULL_CORTICAL_RANGE * bone_fraction;
     let c = brain_c + (skull_c - brain_c) * bone_fraction;
-    let alpha_db_cm_mhz = ACOUSTIC_ABSORPTION_SKULL_MIN + ACOUSTIC_ABSORPTION_SKULL_RANGE * bone_fraction;
+    let alpha_db_cm_mhz =
+        ACOUSTIC_ABSORPTION_SKULL_MIN + ACOUSTIC_ABSORPTION_SKULL_RANGE * bone_fraction;
     let alpha_np_m = alpha_db_cm_mhz * 100.0 * DB_TO_NP * (frequency_hz / MHZ_TO_HZ);
     (c, density, alpha_np_m)
 }

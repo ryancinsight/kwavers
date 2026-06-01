@@ -4,8 +4,8 @@ use super::constants::{MAX_DUTY_CYCLE, MIN_DUTY_CYCLE};
 use super::filters::ExponentialFilter;
 use super::safety::SafetyLimiter;
 use super::schemes::{ModulationScheme, PowerControl};
+use crate::core::constants::numerical::TWO_PI;
 use std::f64::consts::PI;
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Power modulator for controlling ultrasound output
 #[derive(Debug)]

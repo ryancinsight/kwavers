@@ -103,15 +103,11 @@ impl EigenspaceMV {
             r_loaded[(i, i)] += Complex64::new(self.diagonal_loading, 0.0);
         }
 
-        let r_for_eig = r_loaded.mapv(|z| num_complex::Complex::new(z.re, z.im));
         let (eigenvalues, eigenvectors) =
-            EigenDecomposition::hermitian_eigendecomposition_complex(&r_for_eig)?;
+            EigenDecomposition::hermitian_eigendecomposition_complex(&r_loaded)?;
 
         let mut indices: Vec<usize> = (0..n).collect();
-        indices.sort_by(|&i, &j| {
-            eigenvalues[j]
-                .total_cmp(&eigenvalues[i])
-        });
+        indices.sort_by(|&i, &j| eigenvalues[j].total_cmp(&eigenvalues[i]));
 
         let mut p_s = Array2::<Complex64>::zeros((n, n));
         for &idx in indices.iter().take(self.num_sources) {
@@ -119,20 +115,12 @@ impl EigenspaceMV {
 
             for i in 0..n {
                 for j in 0..n {
-                    let e_i = eigenvec[i];
-                    let e_j = eigenvec[j];
-                    let e_i_c64 = Complex64::new(e_i.re, e_i.im);
-                    let e_j_c64 = Complex64::new(e_j.re, e_j.im);
-                    p_s[(i, j)] += e_i_c64 * e_j_c64.conj();
+                    p_s[(i, j)] += eigenvec[i] * eigenvec[j].conj();
                 }
             }
         }
 
-        let r_for_solve = r_loaded.mapv(|z| num_complex::Complex::new(z.re, z.im));
-        let a_for_solve = steering.mapv(|z| num_complex::Complex::new(z.re, z.im));
-        let r_inv_a_raw =
-            ComplexLinearAlgebra::solve_linear_system_complex(&r_for_solve, &a_for_solve)?;
-        let r_inv_a = r_inv_a_raw.mapv(|z| Complex64::new(z.re, z.im));
+        let r_inv_a = ComplexLinearAlgebra::solve_linear_system_complex(&r_loaded, steering)?;
 
         let mut ps_r_inv_a = Array1::<Complex64>::zeros(n);
         for i in 0..n {

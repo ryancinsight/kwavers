@@ -108,7 +108,6 @@ pub fn compute_k_magnitude(kx: &Array3<f64>, ky: &Array3<f64>, kz: &Array3<f64>)
     k_mag
 }
 
-
 /// Spectral derivative of `field` along `axis` (0=x, 1=y, 2=z).
 ///
 /// Implements ∂f/∂x_axis = IFFT(i · k_axis · FFT(f)).

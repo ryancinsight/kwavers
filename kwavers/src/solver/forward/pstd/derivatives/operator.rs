@@ -51,12 +51,12 @@
 //! - Canuto C et al. (2006). Spectral Methods: Fundamentals in Single Domains.
 //!   Springer. §2.3.
 
+use crate::core::constants::numerical::TWO_PI;
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::math::fft::{Complex64, Fft1d, Shape1D, FFT_CACHE_1D};
 use ndarray::parallel::prelude::*;
 use ndarray::{Array1, Array3, ArrayView3, Axis};
 use std::sync::Arc;
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Spectral derivative operator for 3D fields.
 ///

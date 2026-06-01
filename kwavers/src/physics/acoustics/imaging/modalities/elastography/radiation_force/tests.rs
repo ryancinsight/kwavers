@@ -33,7 +33,13 @@ mod tests {
     #[test]
     fn test_radiation_force_creation() {
         let grid = Grid::new(50, 50, 50, 0.001, 0.001, 0.001).unwrap();
-        let medium = HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
+        let medium = HomogeneousMedium::new(
+            DENSITY_WATER_NOMINAL,
+            SOUND_SPEED_WATER_SIM,
+            0.5,
+            1.0,
+            &grid,
+        );
 
         let _arf = AcousticRadiationForce::new(&grid, &medium).unwrap();
     }
@@ -41,7 +47,13 @@ mod tests {
     #[test]
     fn test_push_pulse_generation() {
         let grid = Grid::new(50, 50, 50, 0.001, 0.001, 0.001).unwrap();
-        let medium = HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
+        let medium = HomogeneousMedium::new(
+            DENSITY_WATER_NOMINAL,
+            SOUND_SPEED_WATER_SIM,
+            0.5,
+            1.0,
+            &grid,
+        );
         let arf = AcousticRadiationForce::new(&grid, &medium).unwrap();
 
         let push_location = [0.025, 0.025, 0.025];
@@ -185,7 +197,13 @@ mod tests {
     #[test]
     fn test_multi_directional_push_application() {
         let grid = Grid::new(30, 30, 30, 0.001, 0.001, 0.001).unwrap();
-        let medium = HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
+        let medium = HomogeneousMedium::new(
+            DENSITY_WATER_NOMINAL,
+            SOUND_SPEED_WATER_SIM,
+            0.5,
+            1.0,
+            &grid,
+        );
         let arf = AcousticRadiationForce::new(&grid, &medium).unwrap();
 
         let center = [0.015, 0.015, 0.015];

@@ -40,18 +40,20 @@ use crate::solver::inverse::same_aperture::{
 };
 use ndarray::Array2;
 
-use super::config::TheranosticInverseConfig;
+use super::config::{PassiveReconstructionMode, TheranosticInverseConfig};
 use super::elastic_shear::{
     reconstruct_elastic_shear, ElasticShearReconstructionResult, THERANOSTIC_ELASTIC_SHEAR_MODEL,
 };
 use super::exposure::normalize_positive;
-use super::geometry::{angle_span, build_device_layout, DeviceLayout};
+use super::geometry::{angle_span, build_device_layout, DeviceLayout, Point2};
 use super::medium::{target_contrast, PreparedTheranosticSlice};
 use super::metrics::{metrics_for, ReconstructionMetrics};
 use super::transmit_schedule::{select_transmit_schedule, TransmitScheduleResult};
 use super::waveform::{
-    simulate_peak_pressure_exposure, simulate_waveform_adjoint_rtm, WaveformSimulationResult,
+    passive_acoustic_maps, simulate_peak_pressure_exposure, simulate_waveform_adjoint_rtm,
+    WaveformSimulationResult,
 };
+use crate::solver::inverse::same_aperture::ActiveGrid;
 
 /// Canonical model identifier exported through PyO3 and figure metadata.
 ///
@@ -254,14 +256,8 @@ pub fn run_theranostic_inverse(
     let elastic_shear = reconstruct_elastic_shear(&prepared, &layout, config, &lesion_target)?;
     let elastic_shear_reconstruction = elastic_shear.reconstruction.clone();
 
-    let sub_target_vec = vector_from_image(&lesion_target, &active);
-    let sub_result = solve_tikhonov_h1(&passive, &sub_target_vec, &active, inverse_settings);
-    history.extend(sub_result.objective_history);
-    let subharmonic_reconstruction = normalize_positive(
-        &image_from_vector(&sub_result.model, &active, active_mask.dim()),
-        active_mask,
-    );
-
+    // Harmonic (2·f₀) is an active-transmit tissue-nonlinearity inverse and is
+    // unaffected by the passive-reconstruction mode.
     let harmonic_target = harmonic_target(&prepared, &lesion_target);
     let harmonic_vec = vector_from_image(&harmonic_target, &active);
     let harmonic_result = solve_tikhonov_h1(&harmonic, &harmonic_vec, &active, inverse_settings);
@@ -271,19 +267,40 @@ pub fn run_theranostic_inverse(
         active_mask,
     );
 
+    // Metric reference for the ultraharmonic channel (lesion-derived); also the
+    // inversion target in the finite-frequency-operator mode.
     let ultraharmonic_target = ultraharmonic_target(&prepared, &lesion_target);
-    let ultraharmonic_vec = vector_from_image(&ultraharmonic_target, &active);
-    let ultra_result = solve_tikhonov_h1(
-        &ultraharmonic,
-        &ultraharmonic_vec,
-        &active,
-        inverse_settings,
-    );
-    history.extend(ultra_result.objective_history);
-    let ultraharmonic_reconstruction = normalize_positive(
-        &image_from_vector(&ultra_result.model, &active, active_mask.dim()),
-        active_mask,
-    );
+
+    // Subharmonic (f₀/2) and ultraharmonic (3·f₀/2) are passive cavitation
+    // channels. They are reconstructed either by the finite-frequency operator
+    // inverse against a synthetic target (default) or by genuine passive
+    // acoustic mapping of a simulated cavitation emission (config flag).
+    let (subharmonic_reconstruction, ultraharmonic_reconstruction) =
+        match config.passive_reconstruction {
+            PassiveReconstructionMode::FiniteFrequencyOperator => {
+                let sub_target_vec = vector_from_image(&lesion_target, &active);
+                let sub_result =
+                    solve_tikhonov_h1(&passive, &sub_target_vec, &active, inverse_settings);
+                history.extend(sub_result.objective_history);
+                let subharmonic = normalize_positive(
+                    &image_from_vector(&sub_result.model, &active, active_mask.dim()),
+                    active_mask,
+                );
+
+                let ultraharmonic_vec = vector_from_image(&ultraharmonic_target, &active);
+                let ultra_result =
+                    solve_tikhonov_h1(&ultraharmonic, &ultraharmonic_vec, &active, inverse_settings);
+                history.extend(ultra_result.objective_history);
+                let ultraharmonic = normalize_positive(
+                    &image_from_vector(&ultra_result.model, &active, active_mask.dim()),
+                    active_mask,
+                );
+                (subharmonic, ultraharmonic)
+            }
+            PassiveReconstructionMode::PassiveAcousticMapping => {
+                passive_pam_channels(&prepared, &acquisition_layout, config, &active, active_mask)?
+            }
+        };
 
     let fused_reconstruction = fuse_maps(
         &active_lesion_reconstruction,
@@ -418,6 +435,121 @@ fn ultraharmonic_target(prepared: &PreparedTheranosticSlice, lesion: &Array2<f64
     })
 }
 
+/// Genuine passive-acoustic-mapping reconstruction of the subharmonic (f₀/2) and
+/// ultraharmonic (3f₀/2) cavitation channels.
+///
+/// Simulates a single broadband bubble-cloud emission at the target region
+/// through the prepared heterogeneous medium, records the receiver traces on the
+/// same-device receive aperture, band-passes them to each cavitation band, and
+/// DMAS-beamforms each into an intensity over the active grid. One forward solve
+/// serves both bands. Each map is body-mask-normalized to match the other
+/// reconstruction channels. Returns `(subharmonic_map, ultraharmonic_map)`.
+///
+/// ## Same-array send/receive
+///
+/// The receive aperture is the therapy array itself (the elements switch from
+/// transmit to receive between therapy bursts), together with any dedicated
+/// imaging receivers. This mirrors clinical practice — e.g. transcranial
+/// histotripsy ACE mapping uses the 256-element hemispherical histotripsy
+/// transducer's own elements as passive receivers (Sukovich et al. 2020) — and
+/// is required for the transcranial helmet, which has no separate imaging array.
+fn passive_pam_channels(
+    prepared: &PreparedTheranosticSlice,
+    layout: &DeviceLayout,
+    config: &TheranosticInverseConfig,
+    active: &ActiveGrid,
+    active_mask: &Array2<bool>,
+) -> KwaversResult<(Array2<f64>, Array2<f64>)> {
+    let grid_points: Vec<Point2> = active
+        .points_m
+        .iter()
+        .map(|p| Point2 {
+            x_m: p.x_m,
+            y_m: p.y_m,
+        })
+        .collect();
+    let emission_points = target_emission_points(prepared);
+    let pam_speed = mean_body_sound_speed(prepared);
+    let f0 = config.frequencies_hz[0];
+    let band_centers = [0.5 * f0, 1.5 * f0]; // subharmonic, ultraharmonic
+
+    // Same-array receive aperture: therapy elements (in receive mode) plus any
+    // dedicated imaging receivers. `passive_acoustic_maps` reads the receive
+    // aperture from `imaging_receivers`, so route the combined set there.
+    //
+    // Aperture subsampling was analysed and is intentionally NOT applied here.
+    // To remain alias-free across all reconstructed bands the limiting
+    // wavelength is the ultraharmonic 3f₀/2 (λ_min/2 ≈ 0.8 mm at f₀ = 650 kHz);
+    // the clinical apertures are already at or below this spacing (the brain
+    // helmet is in fact undersampled at the ultraharmonic), so spatial-Nyquist
+    // decimation would either be a no-op or alias the high-frequency band the
+    // aberration correction just recovered. The eikonal redundancy is instead
+    // removed losslessly by `eikonal_delay_matrix`, which solves once per unique
+    // refined source cell (coincident dense-array elements share a solve).
+    let mut receive_aperture = layout.imaging_receivers.clone();
+    receive_aperture.extend(layout.therapy_elements.iter().copied());
+    let receive_layout = DeviceLayout {
+        imaging_receivers: receive_aperture,
+        ..layout.clone()
+    };
+
+    let maps = passive_acoustic_maps(
+        prepared,
+        &receive_layout,
+        config,
+        &grid_points,
+        &emission_points,
+        f0,
+        &band_centers,
+        pam_speed,
+    )?;
+    let to_image = |intensity: &[f64]| -> Array2<f64> {
+        let model: Vec<f32> = intensity.iter().map(|&v| v as f32).collect();
+        normalize_positive(&image_from_vector(&model, active, active_mask.dim()), active_mask)
+    };
+    Ok((to_image(&maps[0]), to_image(&maps[1])))
+}
+
+/// Body-centred physical coordinates of the cavitation emission cells (the
+/// target/lesion region), using the same origin convention as `active_grid`.
+fn target_emission_points(prepared: &PreparedTheranosticSlice) -> Vec<Point2> {
+    let (nx, ny) = prepared.target_mask.dim();
+    let cx = (nx.saturating_sub(1)) as f64 * 0.5;
+    let cy = (ny.saturating_sub(1)) as f64 * 0.5;
+    prepared
+        .target_mask
+        .indexed_iter()
+        .filter_map(|((ix, iy), &active)| {
+            active.then_some(Point2 {
+                x_m: (ix as f64 - cx) * prepared.spacing_m,
+                y_m: (iy as f64 - cy) * prepared.spacing_m,
+            })
+        })
+        .collect()
+}
+
+/// Mean sound speed over the body mask — the homogeneous steering speed for the
+/// PAM delay model. Falls back to the reference speed when the body is empty.
+fn mean_body_sound_speed(prepared: &PreparedTheranosticSlice) -> f64 {
+    let mut sum = 0.0;
+    let mut count = 0usize;
+    for (speed, active) in prepared
+        .sound_speed_m_s
+        .iter()
+        .zip(prepared.body_mask.iter())
+    {
+        if *active {
+            sum += *speed;
+            count += 1;
+        }
+    }
+    if count == 0 {
+        C_REF_M_S
+    } else {
+        sum / count as f64
+    }
+}
+
 fn fuse_maps(
     a: &Array2<f64>,
     s: &Array2<f64>,
@@ -451,3 +583,4 @@ fn inverse_settings(config: &TheranosticInverseConfig) -> PcgSettings {
         noise_fraction: config.noise_fraction,
     }
 }
+

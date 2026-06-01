@@ -255,9 +255,15 @@ mod tests {
         let mut field = Array3::<f64>::zeros((8, 8, 8));
         field[[4, 4, 4]] = 1e5;
 
-        let metrics =
-            calculate_field_metrics(field.view(), &grid, DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM).unwrap();
-        let expected_intensity = 1e5_f64.powi(2) / (2.0 * DENSITY_WATER_NOMINAL * SOUND_SPEED_WATER_SIM);
+        let metrics = calculate_field_metrics(
+            field.view(),
+            &grid,
+            DENSITY_WATER_NOMINAL,
+            SOUND_SPEED_WATER_SIM,
+        )
+        .unwrap();
+        let expected_intensity =
+            1e5_f64.powi(2) / (2.0 * DENSITY_WATER_NOMINAL * SOUND_SPEED_WATER_SIM);
         let expected_energy =
             expected_intensity / SOUND_SPEED_WATER_SIM * grid.dx * grid.dy * grid.dz;
 
@@ -303,8 +309,13 @@ mod tests {
         let mut field = Array3::<f64>::zeros((8, 8, 8));
         field[[1, 2, 3]] = f64::NAN;
 
-        let err = calculate_field_metrics(field.view(), &grid, DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM)
-            .unwrap_err();
+        let err = calculate_field_metrics(
+            field.view(),
+            &grid,
+            DENSITY_WATER_NOMINAL,
+            SOUND_SPEED_WATER_SIM,
+        )
+        .unwrap_err();
         let message = err.to_string();
 
         assert!(message.contains("nonfinite"), "unexpected error: {message}");

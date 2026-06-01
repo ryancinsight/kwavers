@@ -17,11 +17,11 @@
 //!    the least-squares source scale is
 //!    `gamma = <p, d> / <p, p>` for predicted pressure `p` and data `d`.
 
+use crate::core::constants::numerical::TWO_PI;
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::solver::inverse::linear_born_inversion::{ElementPosition, TransducerGeometry};
+use crate::domain::source::transducers::{ElementPosition, TransducerGeometry};
 use ndarray::Array3;
 use num_complex::Complex64;
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Paper model identifier for audit trails.
 pub const FREQUENCY_DOMAIN_FWI_MODEL: &str = "ali_2025_multi_row_ring_frequency_domain_ust_fwi";

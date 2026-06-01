@@ -44,10 +44,7 @@ impl DelayAndSumPAM {
             }
         }
 
-        events.sort_by(|a, b| {
-            b.intensity
-                .total_cmp(&a.intensity)
-        });
+        events.sort_by(|a, b| b.intensity.total_cmp(&a.intensity));
 
         Ok(events)
     }
@@ -106,10 +103,7 @@ impl DelayAndSumPAM {
             }
         }
 
-        events.sort_by(|a, b| {
-            b.intensity
-                .total_cmp(&a.intensity)
-        });
+        events.sort_by(|a, b| b.intensity.total_cmp(&a.intensity));
 
         Ok(events)
     }

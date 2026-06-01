@@ -1,7 +1,7 @@
+use crate::core::constants::numerical::TWO_PI;
 use crate::physics::optics::monte_carlo::photon::Photon;
 use rand::Rng;
 use std::sync::atomic::{AtomicU64, Ordering};
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Normalize vector
 pub(crate) fn normalize(v: [f64; 3]) -> [f64; 3] {

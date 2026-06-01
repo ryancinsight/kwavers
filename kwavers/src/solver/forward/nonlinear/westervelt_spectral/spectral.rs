@@ -1,12 +1,12 @@
 //! Spectral operations for Westervelt solver
 
+use crate::core::constants::numerical::TWO_PI;
 use crate::domain::grid::Grid;
 use crate::math::fft::{
     fft_3d_array, fft_3d_array_into, ifft_3d_array, ifft_3d_array_into, Complex64,
 };
 use ndarray::{Array3, Zip};
 use num_complex::Complex;
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Initialize k-space grids for spectral operations
 pub fn initialize_kspace_grids(
@@ -14,40 +14,57 @@ pub fn initialize_kspace_grids(
 ) -> (Array3<f64>, Array3<f64>, Array3<f64>, Array3<f64>) {
     let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
 
+    // The k-space wavenumbers are separable: kx depends only on i, ky on j,
+    // kz on k. Precompute each 1-D axis once (O(N) FFT-shifted divisions in
+    // total) instead of recomputing the branch and division per cell, which
+    // costs O(N³) divisions. The per-cell values are formed from the same
+    // expressions, so the result is identical to the dense triple loop.
+    let kx_axis: Vec<f64> = (0..nx)
+        .map(|i| {
+            if i <= nx / 2 {
+                TWO_PI * i as f64 / (nx as f64 * grid.dx)
+            } else {
+                TWO_PI * (i as f64 - nx as f64) / (nx as f64 * grid.dx)
+            }
+        })
+        .collect();
+    let ky_axis: Vec<f64> = (0..ny)
+        .map(|j| {
+            if j <= ny / 2 {
+                TWO_PI * j as f64 / (ny as f64 * grid.dy)
+            } else {
+                TWO_PI * (j as f64 - ny as f64) / (ny as f64 * grid.dy)
+            }
+        })
+        .collect();
+    let kz_axis: Vec<f64> = (0..nz)
+        .map(|k| {
+            if k <= nz / 2 {
+                TWO_PI * k as f64 / (nz as f64 * grid.dz)
+            } else {
+                TWO_PI * (k as f64 - nz as f64) / (nz as f64 * grid.dz)
+            }
+        })
+        .collect();
+
     let mut kx = Array3::<f64>::zeros((nx, ny, nz));
     let mut ky = Array3::<f64>::zeros((nx, ny, nz));
     let mut kz = Array3::<f64>::zeros((nx, ny, nz));
     let mut k_squared = Array3::<f64>::zeros((nx, ny, nz));
 
-    // Create k-space grids
-    for k in 0..nz {
-        for j in 0..ny {
-            for i in 0..nx {
-                let kx_val = if i <= nx / 2 {
-                    TWO_PI * i as f64 / (nx as f64 * grid.dx)
-                } else {
-                    TWO_PI * (i as f64 - nx as f64) / (nx as f64 * grid.dx)
-                };
-
-                let ky_val = if j <= ny / 2 {
-                    TWO_PI * j as f64 / (ny as f64 * grid.dy)
-                } else {
-                    TWO_PI * (j as f64 - ny as f64) / (ny as f64 * grid.dy)
-                };
-
-                let kz_val = if k <= nz / 2 {
-                    TWO_PI * k as f64 / (nz as f64 * grid.dz)
-                } else {
-                    TWO_PI * (k as f64 - nz as f64) / (nz as f64 * grid.dz)
-                };
-
-                kx[[i, j, k]] = kx_val;
-                ky[[i, j, k]] = ky_val;
-                kz[[i, j, k]] = kz_val;
-                k_squared[[i, j, k]] = kx_val * kx_val + ky_val * ky_val + kz_val * kz_val;
-            }
-        }
-    }
+    Zip::indexed(&mut kx)
+        .and(&mut ky)
+        .and(&mut kz)
+        .and(&mut k_squared)
+        .par_for_each(|(i, j, k), kx_v, ky_v, kz_v, k2| {
+            let kx_val = kx_axis[i];
+            let ky_val = ky_axis[j];
+            let kz_val = kz_axis[k];
+            *kx_v = kx_val;
+            *ky_v = ky_val;
+            *kz_v = kz_val;
+            *k2 = kx_val * kx_val + ky_val * ky_val + kz_val * kz_val;
+        });
 
     (k_squared, kx, ky, kz)
 }

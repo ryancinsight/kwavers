@@ -3,11 +3,11 @@
 use super::validation::{invalid_parameter, validate_pressure_field_domain};
 use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::core::constants::numerical::MHZ_TO_HZ;
+use crate::core::constants::numerical::TWO_PI;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::{Array2, ArrayView3};
 use std::f64::consts::PI;
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Beam pattern analysis configuration
 #[derive(Debug, Clone)]
@@ -209,7 +209,10 @@ mod tests {
     #[test]
     fn beam_pattern_config_default_values_match_documentation() {
         let cfg = BeamPatternConfig::default();
-        assert!((cfg.frequency - MHZ_TO_HZ).abs() < 1.0, "frequency must be 1 MHz");
+        assert!(
+            (cfg.frequency - MHZ_TO_HZ).abs() < 1.0,
+            "frequency must be 1 MHz"
+        );
         assert!(
             (cfg.sound_speed - SOUND_SPEED_WATER_SIM).abs() < 1e-10,
             "sound_speed must be 1500 m/s"

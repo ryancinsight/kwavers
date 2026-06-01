@@ -6,7 +6,7 @@ use crate::domain::therapy::microbubble::{
 };
 
 use super::*;
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 
 #[test]
 fn test_create_service() {

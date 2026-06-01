@@ -1,9 +1,9 @@
 //! Fubini-Blackstock analytical Burgers solution.
 
 use super::bessel::bessel_j;
+use crate::core::constants::numerical::TWO_PI;
 use crate::physics::acoustics::wave_propagation::nonlinear::NonlinearParameters;
 use std::f64::consts::PI;
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Normalized amplitude of the nth harmonic from the Fubini-Blackstock solution.
 ///

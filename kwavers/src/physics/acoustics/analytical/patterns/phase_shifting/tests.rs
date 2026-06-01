@@ -1,10 +1,10 @@
 use super::core::ShiftingStrategy;
 use super::shifter::PhaseShifter;
-use approx::assert_relative_eq;
 use crate::core::constants::numerical::MHZ_TO_HZ;
+use crate::core::constants::numerical::TWO_PI;
+use approx::assert_relative_eq;
 use ndarray::{arr2, Array2};
 use std::f64::consts::PI;
-use crate::core::constants::numerical::{TWO_PI};
 
 fn linear_array() -> Array2<f64> {
     arr2(&[[-0.001, 0.0, 0.0], [0.0, 0.0, 0.0], [0.001, 0.0, 0.0]])

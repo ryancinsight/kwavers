@@ -1,9 +1,9 @@
 //! Plane wave analytical solutions for validation
 
 use super::utils::DISPERSION_CORRECTION_SECOND_ORDER;
+use crate::core::constants::numerical::TWO_PI;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Plane wave analytical solutions
 #[derive(Debug)]

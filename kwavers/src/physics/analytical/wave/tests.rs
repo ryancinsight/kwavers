@@ -53,7 +53,16 @@ fn pstd_error_is_zero() {
 #[test]
 fn westervelt_length_consistency() {
     let z = vec![0.0, 0.01, 0.02];
-    let w = westervelt_harmonic_evolution(&z, 1e5, MHZ_TO_HZ, SOUND_SPEED_WATER_SIM, 1000.0, 3.5, 1.0, 3);
+    let w = westervelt_harmonic_evolution(
+        &z,
+        1e5,
+        MHZ_TO_HZ,
+        SOUND_SPEED_WATER_SIM,
+        1000.0,
+        3.5,
+        1.0,
+        3,
+    );
     assert_eq!(w.len(), 3);
     assert_eq!(w[0].len(), 3);
 }

@@ -2,8 +2,8 @@ use crate::core::constants::fundamental::SOUND_SPEED_AIR;
 use crate::core::constants::numerical::MHZ_TO_HZ;
 
 use super::*;
+use crate::core::constants::numerical::TWO_PI;
 use ndarray::{Array2, Array3};
-use crate::core::constants::numerical::{TWO_PI};
 
 #[test]
 fn test_physics_loss_config_default() {

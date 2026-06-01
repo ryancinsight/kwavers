@@ -41,7 +41,7 @@ impl ThermalOpticalSolver {
     ) -> KwaversResult<()> {
         // Optical absorption generates heat
         let rho = DENSITY_WATER_NOMINAL; // kg/m³ — nominal water density (1000 kg/m³)
-        let c = SPECIFIC_HEAT_WATER;     // J/(kg·K) — water isobaric specific heat at 20°C
+        let c = SPECIFIC_HEAT_WATER; // J/(kg·K) — water isobaric specific heat at 20°C
 
         for ((i, j, k), &i_val) in intensity.indexed_iter() {
             // Heat generated per unit volume (W/m³)

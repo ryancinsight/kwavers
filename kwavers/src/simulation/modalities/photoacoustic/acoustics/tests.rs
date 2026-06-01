@@ -14,7 +14,13 @@ use ndarray::Array3;
 #[test]
 fn test_initial_pressure_computation() {
     let grid = Grid::new(16, 16, 8, 0.001, 0.001, 0.001).unwrap();
-    let medium = HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
+    let medium = HomogeneousMedium::new(
+        DENSITY_WATER_NOMINAL,
+        SOUND_SPEED_WATER_SIM,
+        0.5,
+        1.0,
+        &grid,
+    );
 
     let optical_properties =
         crate::simulation::modalities::photoacoustic::optics::initialize_optical_properties(
@@ -24,8 +30,14 @@ fn test_initial_pressure_computation() {
 
     let fluence = Array3::from_elem((16, 16, 8), 1e6);
 
-    let initial_pressure =
-        compute_initial_pressure(&grid, &optical_properties, &fluence, &[GRUNEISEN_WATER_20C], &[750.0]).unwrap();
+    let initial_pressure = compute_initial_pressure(
+        &grid,
+        &optical_properties,
+        &fluence,
+        &[GRUNEISEN_WATER_20C],
+        &[750.0],
+    )
+    .unwrap();
 
     assert_eq!(initial_pressure.pressure.dim(), (16, 16, 8));
     assert!(initial_pressure.max_pressure > 0.0);
@@ -39,7 +51,13 @@ fn test_initial_pressure_computation() {
 #[test]
 fn test_wavelength_dependent_gruneisen() {
     let grid = Grid::new(8, 8, 4, 0.001, 0.001, 0.001).unwrap();
-    let medium = HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
+    let medium = HomogeneousMedium::new(
+        DENSITY_WATER_NOMINAL,
+        SOUND_SPEED_WATER_SIM,
+        0.5,
+        1.0,
+        &grid,
+    );
 
     let optical_properties =
         crate::simulation::modalities::photoacoustic::optics::initialize_optical_properties(
@@ -49,11 +67,23 @@ fn test_wavelength_dependent_gruneisen() {
 
     let fluence = Array3::from_elem((8, 8, 4), 1e6);
 
-    let pressure_visible =
-        compute_initial_pressure(&grid, &optical_properties, &fluence, &[GRUNEISEN_WATER_20C], &[550.0]).unwrap();
+    let pressure_visible = compute_initial_pressure(
+        &grid,
+        &optical_properties,
+        &fluence,
+        &[GRUNEISEN_WATER_20C],
+        &[550.0],
+    )
+    .unwrap();
 
-    let pressure_nir =
-        compute_initial_pressure(&grid, &optical_properties, &fluence, &[GRUNEISEN_WATER_20C], &[750.0]).unwrap();
+    let pressure_nir = compute_initial_pressure(
+        &grid,
+        &optical_properties,
+        &fluence,
+        &[GRUNEISEN_WATER_20C],
+        &[750.0],
+    )
+    .unwrap();
 
     assert!(
         pressure_visible.max_pressure > pressure_nir.max_pressure,
@@ -64,7 +94,13 @@ fn test_wavelength_dependent_gruneisen() {
 #[test]
 fn test_multi_wavelength_pressure() {
     let grid = Grid::new(8, 8, 4, 0.001, 0.001, 0.001).unwrap();
-    let medium = HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
+    let medium = HomogeneousMedium::new(
+        DENSITY_WATER_NOMINAL,
+        SOUND_SPEED_WATER_SIM,
+        0.5,
+        1.0,
+        &grid,
+    );
 
     let optical_properties =
         crate::simulation::modalities::photoacoustic::optics::initialize_optical_properties(

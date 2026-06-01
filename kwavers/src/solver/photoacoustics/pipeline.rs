@@ -10,6 +10,7 @@ use super::{
 use crate::core::error::KwaversResult;
 use crate::domain::imaging::photoacoustic::{
     OpticalModel, PhotoacousticScenario, PhotoacousticSimulation, PhotoacousticValidationReport,
+    PressureFieldSeries,
 };
 use ndarray::Array3;
 
@@ -150,7 +151,7 @@ impl PhotoacousticPipeline {
         let simulation = PhotoacousticSimulation {
             optical_fluence: optical.fluence,
             initial_pressure,
-            pressure_fields,
+            pressure_fields: PressureFieldSeries::new(pressure_fields)?,
             time_points,
             signals,
             reconstruction,

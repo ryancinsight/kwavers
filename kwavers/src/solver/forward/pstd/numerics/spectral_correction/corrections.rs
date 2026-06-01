@@ -3,7 +3,7 @@ use ndarray::{Array3, Zip};
 use std::f64::consts::PI;
 
 use super::SpectralCorrectionMethod;
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 
 /// Dispatch to the selected spectral correction method.
 ///

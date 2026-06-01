@@ -1,5 +1,5 @@
+use crate::core::constants::numerical::TWO_PI;
 use num_complex::Complex64;
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Configuration for Burton-Miller BEM formulation
 #[derive(Debug, Clone, Copy)]

@@ -30,7 +30,7 @@ mod transmit_schedule;
 mod waveform;
 
 pub use abdominal3d::{plan_abdominal_array_placement, AbdominalArrayPlacement3D};
-pub use config::{AnatomyKind, TheranosticInverseConfig};
+pub use config::{AnatomyKind, PassiveReconstructionMode, TheranosticInverseConfig};
 pub use context::{
     build_abdominal_placement_context, build_brain_placement_context, PlacementContext,
 };

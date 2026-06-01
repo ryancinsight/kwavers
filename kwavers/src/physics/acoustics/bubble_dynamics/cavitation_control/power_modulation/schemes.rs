@@ -3,7 +3,7 @@
 use super::constants::{
     DEFAULT_DUTY_CYCLE, DEFAULT_PRF, DEFAULT_RAMP_TIME, MAX_DUTY_CYCLE, MIN_DUTY_CYCLE,
 };
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 
 /// Modulation schemes
 #[derive(Debug, Clone, Copy, PartialEq)]

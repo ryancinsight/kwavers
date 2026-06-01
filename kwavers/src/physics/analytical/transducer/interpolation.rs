@@ -1,7 +1,7 @@
 //! Bandlimited interpolation stencil for transducer grid-to-field mapping.
 
+use crate::core::constants::numerical::TWO_PI;
 use std::f64::consts::PI;
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Compute bandlimited interpolation (BLI) stencil weights for fractional
 /// grid offsets δ ∈ [0, 1).

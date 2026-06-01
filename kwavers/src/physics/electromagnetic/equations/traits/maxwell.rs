@@ -1,7 +1,7 @@
 use super::super::{materials::EMMaterialDistribution, types::EMDimension};
 use crate::core::constants::fundamental::{VACUUM_PERMEABILITY, VACUUM_PERMITTIVITY};
+use crate::core::constants::numerical::TWO_PI;
 use crate::domain::field::EMFields;
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Core electromagnetic wave equation trait
 ///

@@ -10,7 +10,7 @@
 //! - Hamilton & Blackstock (1998) "Nonlinear Acoustics"
 
 use approx::assert_relative_eq;
-use kwavers::{grid::Grid, core::constants::SOUND_SPEED_WATER};
+use kwavers::{core::constants::SOUND_SPEED_WATER, grid::Grid};
 use std::f64::consts::PI;
 
 /// Test precision bounds for numerical validation

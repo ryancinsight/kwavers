@@ -4,8 +4,8 @@
 mod tests {
     use super::super::super::*;
     use crate::core::constants::fundamental::DENSITY_WATER;
-    use crate::core::constants::tissue_acoustics::B_OVER_A_WATER_37C;
     use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
+    use crate::core::constants::tissue_acoustics::B_OVER_A_WATER_37C;
     use ndarray::Array2;
 
     /// Test harmonic generation in nonlinear propagation

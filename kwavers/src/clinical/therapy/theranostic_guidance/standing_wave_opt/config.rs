@@ -1,5 +1,5 @@
 use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE};
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 
 /// Configuration for the 2D linearised-FDTD standing-wave suppression solver.
 ///

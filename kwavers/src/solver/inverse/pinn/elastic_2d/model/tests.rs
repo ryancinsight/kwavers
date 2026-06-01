@@ -1,7 +1,7 @@
 use super::*;
+use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use burn::backend::NdArray;
 use burn::tensor::Tensor;
-use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
 
 type TestBackend = NdArray<f32>;
 
@@ -48,8 +48,11 @@ fn test_model_batch_forward() {
 
 #[test]
 fn test_inverse_problem_parameters() {
-    let config =
-        crate::solver::inverse::pinn::elastic_2d::Config::inverse_problem(1e9, 5e8, DENSITY_WATER_NOMINAL);
+    let config = crate::solver::inverse::pinn::elastic_2d::Config::inverse_problem(
+        1e9,
+        5e8,
+        DENSITY_WATER_NOMINAL,
+    );
     let device = Default::default();
     let model = ElasticPINN2D::<TestBackend>::new(&config, &device).unwrap();
 
@@ -62,8 +65,11 @@ fn test_inverse_problem_parameters() {
 
 #[test]
 fn test_forward_problem_no_learnable_params() {
-    let config =
-        crate::solver::inverse::pinn::elastic_2d::Config::forward_problem(1e9, 5e8, DENSITY_WATER_NOMINAL);
+    let config = crate::solver::inverse::pinn::elastic_2d::Config::forward_problem(
+        1e9,
+        5e8,
+        DENSITY_WATER_NOMINAL,
+    );
     let device = Default::default();
     let model = ElasticPINN2D::<TestBackend>::new(&config, &device).unwrap();
 

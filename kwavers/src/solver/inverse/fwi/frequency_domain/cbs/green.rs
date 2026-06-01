@@ -3,9 +3,9 @@
 use super::absorbing::AbsorbingBoundary;
 use super::grid::GridSpec;
 use super::temporal::PstdTemporalBinConfig;
-use crate::solver::inverse::linear_born_inversion::ElementPosition;
+use crate::core::constants::numerical::FOUR_PI;
+use crate::domain::source::transducers::ElementPosition;
 use num_complex::Complex64;
-use crate::core::constants::numerical::{FOUR_PI};
 
 pub(super) fn shifted_wavenumber(reference_wavenumber: f64, epsilon: f64) -> Complex64 {
     Complex64::new(reference_wavenumber * reference_wavenumber, epsilon).sqrt()

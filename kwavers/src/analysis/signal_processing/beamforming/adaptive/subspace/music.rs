@@ -82,15 +82,11 @@ impl MUSIC {
             }
         }
 
-        let cov_for_eig = covariance.mapv(|z| num_complex::Complex::new(z.re, z.im));
         let (eigenvalues, eigenvectors) =
-            EigenDecomposition::hermitian_eigendecomposition_complex(&cov_for_eig)?;
+            EigenDecomposition::hermitian_eigendecomposition_complex(covariance)?;
 
         let mut indices: Vec<usize> = (0..n).collect();
-        indices.sort_by(|&i, &j| {
-            eigenvalues[j]
-                .total_cmp(&eigenvalues[i])
-        });
+        indices.sort_by(|&i, &j| eigenvalues[j].total_cmp(&eigenvalues[i]));
 
         let noise_start = self.num_sources;
 
@@ -100,9 +96,7 @@ impl MUSIC {
 
             let mut e_h_a = Complex64::zero();
             for j in 0..n {
-                let e_val = eigenvec[j];
-                let e_c64 = Complex64::new(e_val.re, e_val.im);
-                e_h_a += e_c64.conj() * steering[j];
+                e_h_a += eigenvec[j].conj() * steering[j];
             }
 
             en_h_a_norm_sq += e_h_a.norm_sqr();

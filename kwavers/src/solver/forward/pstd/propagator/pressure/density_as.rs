@@ -1,4 +1,4 @@
-use crate::core::error::KwaversResult;
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::solver::forward::pstd::implementation::core::orchestrator::PSTDSolver;
 use ndarray::{s, Zip};
 
@@ -30,9 +30,8 @@ impl PSTDSolver {
     ///
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
-    ///
-    /// # Panics
-    /// - Panics if `AsContext must be Some for CylindricalAS`.
+    /// - Returns [`KwaversError::InternalError`] if `AsContext` is unexpectedly `None`
+    ///   for `CylindricalAS` geometry.
     ///
     pub(crate) fn update_density_as(&mut self, dt: f64) -> KwaversResult<()> {
         let use_fused = self.pml_exp.is_some() && self.dirichlet_pml_bypass_x.is_empty();
@@ -44,10 +43,9 @@ impl PSTDSolver {
         // Take AsContext out of the Option to enable split borrows with
         // self.fields / self.materials / self.rhox / self.rhoz.
         // No heap allocation: take/replace are pointer moves only.
-        let mut ctx = self
-            .as_ctx
-            .take()
-            .expect("AsContext must be Some for CylindricalAS");
+        let mut ctx = self.as_ctx.take().ok_or_else(|| {
+            KwaversError::InternalError("AsContext unexpectedly None for CylindricalAS".into())
+        })?;
 
         ctx.compute_density_divs(
             self.fields.ux.slice(s![.., 0, ..]),
@@ -74,20 +72,15 @@ impl PSTDSolver {
             // Fused: rhox = pml_x[i]·(pml_x[i]·rhox − dt·coef·duxdx)
             //        rhoz = pml_z[k]·(pml_z[k]·rhoz − dt·coef·duzdr)
             // In the 2-D slice (nx, nr), Zip::indexed returns (i, k).
-            let pml_dx = self
-                .pml_exp
-                .as_ref()
-                .unwrap()
-                .den_x
-                .as_slice()
-                .expect("pml_den_x contiguous");
-            let pml_dz = self
-                .pml_exp
-                .as_ref()
-                .unwrap()
-                .den_z
-                .as_slice()
-                .expect("pml_den_z contiguous");
+            let pml_exp = self.pml_exp.as_ref().ok_or_else(|| {
+                KwaversError::InternalError("pml_exp unexpectedly None in fused AS density path".into())
+            })?;
+            let pml_dx = pml_exp.den_x.as_slice().ok_or_else(|| {
+                KwaversError::InternalError("pml_den_x must be contiguous".into())
+            })?;
+            let pml_dz = pml_exp.den_z.as_slice().ok_or_else(|| {
+                KwaversError::InternalError("pml_den_z must be contiguous".into())
+            })?;
 
             Zip::indexed(self.rhox.slice_mut(s![.., 0, ..]))
                 .and(&ctx.duxdx)

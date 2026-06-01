@@ -6,7 +6,7 @@ use ndarray::{Array2, Array3};
 
 use super::config::{ReconstructionConfig, Reconstructor};
 use super::filters::apply_reconstruction_filter;
-use crate::core::constants::numerical::{FOUR_PI};
+use crate::core::constants::numerical::FOUR_PI;
 
 /// Universal back-projection for arbitrary geometries
 /// Based on Xu & Wang (2005)

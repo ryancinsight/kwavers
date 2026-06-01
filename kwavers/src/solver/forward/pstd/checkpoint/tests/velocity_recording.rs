@@ -29,7 +29,13 @@ fn build_with_velocity(nx: usize, ny: usize, nz: usize, nt: usize, dt: f64) -> P
         ..Default::default()
     };
     let grid = Grid::new(nx, ny, nz, 1e-3, 1e-3, 1e-3).unwrap();
-    let medium = HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.0, 0.0, &grid);
+    let medium = HomogeneousMedium::new(
+        DENSITY_WATER_NOMINAL,
+        SOUND_SPEED_WATER_SIM,
+        0.0,
+        0.0,
+        &grid,
+    );
     let source = GridSource::new_empty();
     let mut solver = PSTDSolver::new(config, grid.clone(), &medium, source).unwrap();
 

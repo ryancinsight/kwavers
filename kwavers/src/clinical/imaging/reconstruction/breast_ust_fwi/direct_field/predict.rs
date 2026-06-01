@@ -178,8 +178,7 @@ pub(super) fn source_kappa_filtered_source_weights(
         for iy in 0..shape.ny {
             for iz in 0..shape.nz {
                 let k = wavenumber_magnitude(shape, spacing_m, ix, iy, iz);
-                let symbol =
-                    pstd_source_kappa_symbol(k, time_step_s, sound_speed_m_s);
+                let symbol = pstd_source_kappa_symbol(k, time_step_s, sound_speed_m_s);
                 spectrum[[ix, iy, iz]] *= Complex64::new(symbol, 0.0);
             }
         }

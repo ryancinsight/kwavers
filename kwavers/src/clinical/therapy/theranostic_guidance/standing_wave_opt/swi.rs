@@ -26,7 +26,7 @@
 use ndarray::{Array2, Zip};
 
 use super::config::StandingWaveOptConfig;
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 
 // ---------------------------------------------------------------------------
 // Complex field superposition

@@ -3,12 +3,12 @@
 //! Reference: Goodman (2005) "Introduction to Fourier Optics"
 
 use super::HASConfig;
+use crate::core::constants::numerical::TWO_PI;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::math::fft::{fft_2d_complex, ifft_2d_complex, Complex64};
 use ndarray::Array3;
 use std::f64::consts::PI;
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Diffraction operator using FFT-based angular spectrum
 pub struct HybridAsDiffractionOperator {

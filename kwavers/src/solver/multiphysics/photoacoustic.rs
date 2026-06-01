@@ -4,6 +4,7 @@
 //! electromagnetic (optical) and acoustic physics.
 
 use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
+use crate::core::constants::numerical::FOUR_PI;
 use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use crate::core::error::KwaversResult;
 use crate::domain::field::EMFields;
@@ -12,7 +13,6 @@ use crate::physics::electromagnetic::equations::{
 };
 use crate::physics::electromagnetic::photoacoustic::{GrueneisenModel, OpticalAbsorption};
 use ndarray::ArrayD;
-use crate::core::constants::numerical::{FOUR_PI};
 
 /// Photoacoustic solver implementation
 pub struct PhotoacousticSolver<T: ElectromagneticWaveEquation> {

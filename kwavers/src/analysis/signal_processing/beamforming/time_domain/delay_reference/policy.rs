@@ -57,14 +57,8 @@ impl DelayReference {
                     delays_s.len()
                 ))
             })?,
-            Self::EarliestArrival => *delays_s
-                .iter()
-                .min_by(|a, b| a.total_cmp(b))
-                .unwrap(),
-            Self::LatestArrival => *delays_s
-                .iter()
-                .max_by(|a, b| a.total_cmp(b))
-                .unwrap(),
+            Self::EarliestArrival => *delays_s.iter().min_by(|a, b| a.total_cmp(b)).unwrap(),
+            Self::LatestArrival => *delays_s.iter().max_by(|a, b| a.total_cmp(b)).unwrap(),
         };
 
         if !tau_ref.is_finite() {

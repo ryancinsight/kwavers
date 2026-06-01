@@ -1,8 +1,8 @@
 use super::*;
 use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
+use crate::core::constants::numerical::TWO_PI;
 use crate::domain::grid::Grid;
 use std::f64::consts::PI;
-use crate::core::constants::numerical::{TWO_PI};
 
 #[test]
 fn test_exact_dispersion_correction() {
@@ -229,7 +229,7 @@ fn kspace_correction_eliminates_numerical_dispersion() {
     // the recorded peak always corresponds to direct propagation.
     let i_src: usize = 128; // source pulse centre (domain midpoint)
     let i_snr: usize = 224; // sensor (128 + 96 cells)
-    // Direct separation: 96 cells · dx = 0.096 m.
+                            // Direct separation: 96 cells · dx = 0.096 m.
     let separation = (i_snr as f64 - i_src as f64) * dx; // 0.096 m
 
     // Expected arrival time and number of steps to run.
@@ -263,8 +263,7 @@ fn kspace_correction_eliminates_numerical_dispersion() {
         nt: n_steps,
         boundary: BoundaryConfig::None, // periodic (no PML) → no boundary absorption
         smooth_sources: false,
-        ..Default::default()
-        // Default spectral_correction uses Treeby2010 (k-space corrected)
+        ..Default::default() // Default spectral_correction uses Treeby2010 (k-space corrected)
     };
 
     let mut solver = PSTDSolver::new(config, grid, &medium, source).unwrap();

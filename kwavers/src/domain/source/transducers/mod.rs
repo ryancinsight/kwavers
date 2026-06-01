@@ -2,12 +2,14 @@
 //!
 //! This module contains transducer source definitions.
 
+pub mod acquisition_geometry;
 pub mod apodization;
 pub mod focused;
 pub mod phased_array;
 pub mod physics;
 pub mod rectangular;
 
+pub use acquisition_geometry::{ElementPosition, TransducerGeometry};
 pub use apodization::{
     Apodization, BlackmanApodization, GaussianApodization, HammingApodization, HanningApodization,
     RectangularApodization,

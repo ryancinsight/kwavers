@@ -164,6 +164,9 @@ impl SimulationSolverFactory {
             SolverType::PstdGpu => Err(KwaversError::FeatureNotAvailable(
                 "SolverType::PstdGpu requires the `gpu` Cargo feature".to_owned(),
             )),
+            _ => Err(KwaversError::FeatureNotAvailable(format!(
+                "SolverType::{selected_type:?} not supported by SimulationSolverFactory"
+            ))),
         }
     }
 }

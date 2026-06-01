@@ -7,7 +7,7 @@
 //! [`PhysicsCatalog`].
 //!
 //! [`Plugin`]: crate::domain::plugin::Plugin
-//! [`PhysicsCatalog`]: crate::physics::factory::catalog::PhysicsCatalog
+//! [`PhysicsCatalog`]: crate::solver::plugin::catalog::PhysicsCatalog
 //! [`BubbleModel::KellerMiksis`]: crate::physics::factory::models::BubbleModel::KellerMiksis
 //! [`BubbleModel::RayleighPlesset`]: crate::physics::factory::models::BubbleModel::RayleighPlesset
 //! [`BubbleModel::Gilmore`]: crate::physics::factory::models::BubbleModel::Gilmore

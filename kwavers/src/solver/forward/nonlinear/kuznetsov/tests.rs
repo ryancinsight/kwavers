@@ -5,9 +5,9 @@ use super::*;
 #[cfg(test)]
 use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 #[cfg(test)]
-use crate::domain::grid::Grid;
+use crate::core::constants::numerical::TWO_PI;
 #[cfg(test)]
-use crate::core::constants::numerical::{TWO_PI};
+use crate::domain::grid::Grid;
 
 /// **Invariant**: Creating a KuznetsovWave on a 32³ grid allocates exactly
 /// 18 × 32³ × 8 = 4,718,592 bytes in its workspace scratch arena.

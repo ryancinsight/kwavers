@@ -2,17 +2,23 @@ use super::{test_k_mag, zeros_k_mag};
 use crate::core::constants::cavitation::VISCOSITY_WATER;
 use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use crate::core::constants::numerical::MHZ_TO_HZ;
+use crate::core::constants::numerical::TWO_PI;
 use crate::domain::grid::Grid;
 use crate::domain::medium::HomogeneousMedium;
 use crate::physics::acoustics::mechanics::absorption::AbsorptionMode;
 use crate::solver::forward::pstd::config::PSTDConfig;
 use crate::solver::forward::pstd::physics::absorption::init::initialize_absorption_operators;
-use crate::core::constants::numerical::{TWO_PI};
 
 #[test]
 fn test_power_law_initialization() {
     let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).unwrap();
-    let mut medium = HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.0, 0.0, &grid);
+    let mut medium = HomogeneousMedium::new(
+        DENSITY_WATER_NOMINAL,
+        SOUND_SPEED_WATER_SIM,
+        0.0,
+        0.0,
+        &grid,
+    );
     medium.set_acoustic_properties(0.75, 1.5, 5.0).unwrap();
     let config = PSTDConfig {
         dt: 1e-7,
@@ -56,7 +62,13 @@ fn test_power_law_initialization() {
 #[test]
 fn test_nabla_operators_correct_power() {
     let grid = Grid::new(8, 8, 8, 1e-3, 1e-3, 1e-3).unwrap();
-    let medium = HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.0, 0.0, &grid);
+    let medium = HomogeneousMedium::new(
+        DENSITY_WATER_NOMINAL,
+        SOUND_SPEED_WATER_SIM,
+        0.0,
+        0.0,
+        &grid,
+    );
     let y = 1.5_f64;
     let config = PSTDConfig {
         absorption_mode: AbsorptionMode::PowerLaw {
@@ -127,7 +139,13 @@ fn test_absorption_model_physics_validation() {
         },
         ..Default::default()
     };
-    let mut medium = HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.0, 0.0, &grid);
+    let mut medium = HomogeneousMedium::new(
+        DENSITY_WATER_NOMINAL,
+        SOUND_SPEED_WATER_SIM,
+        0.0,
+        0.0,
+        &grid,
+    );
     // Set medium alpha_coeff=0.0 so init falls through to config's 0.75.
     medium.set_acoustic_properties(0.0, 1.5, 0.0).unwrap();
     let k_mag = zeros_k_mag(16, 16, 16);
@@ -163,7 +181,10 @@ fn test_absorption_model_physics_validation() {
     );
     // Verify sign conventions: τ < 0 (absorbing), η < 0 for y=1.5 (tan(3π/4) = −1)
     assert!(expected_tau < 0.0, "τ must be negative (absorbing)");
-    assert!(expected_eta < 0.0, "η must be negative for y=1.5 (tan(3π/4) = −1)");
+    assert!(
+        expected_eta < 0.0,
+        "η must be negative for y=1.5 (tan(3π/4) = −1)"
+    );
 }
 
 /// Test Stokes absorption coefficient initialisation against the classical formula.
@@ -181,7 +202,13 @@ fn test_absorption_model_physics_validation() {
 #[test]
 fn test_stokes_absorption_tau_matches_classical_formula() {
     let grid = Grid::new(8, 8, 8, 1e-3, 1e-3, 1e-3).unwrap();
-    let medium = HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.0, 0.0, &grid);
+    let medium = HomogeneousMedium::new(
+        DENSITY_WATER_NOMINAL,
+        SOUND_SPEED_WATER_SIM,
+        0.0,
+        0.0,
+        &grid,
+    );
     let config = PSTDConfig {
         absorption_mode: AbsorptionMode::Stokes,
         dt: 1e-7,

@@ -4,7 +4,7 @@ use std::f64::consts::TAU;
 
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::source::transducers::focused::{BowlAngularBounds, BowlConfig, BowlTransducer};
-use crate::solver::inverse::linear_born_inversion::{ElementPosition, TransducerGeometry};
+use crate::domain::source::transducers::{ElementPosition, TransducerGeometry};
 
 const GEOMETRY_UNIT_FREQUENCY_HZ: f64 = 1.0;
 const GEOMETRY_UNIT_AMPLITUDE_PA: f64 = 1.0;

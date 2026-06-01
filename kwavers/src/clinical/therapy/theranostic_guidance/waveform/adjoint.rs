@@ -177,7 +177,7 @@
 
 use ndarray::Array2;
 
-use super::forward::{apply_attenuation, inject_sources, step_wavefield_cpml};
+use super::forward::{apply_attenuation, c2dt2_field, inject_sources, step_wavefield_cpml};
 use super::types::{AcousticGrid, CheckpointSchedule};
 use super::utils::linear;
 
@@ -248,6 +248,10 @@ pub(super) fn adjoint_image(
     let inv_dt = 1.0_f64 / grid.dt_s;
     let inv_two_dx = 0.5_f64 / grid.dx_m;
 
+    // Loop-invariant stencil coefficient, shared by the forward replay and the
+    // backward adjoint advance (both use the same `c²·dt²` field).
+    let c2dt2 = c2dt2_field(grid, speed_m_s);
+
     for reverse in 0..grid.time_steps {
         let step = grid.time_steps - 1 - reverse;
 
@@ -268,7 +272,7 @@ pub(super) fn adjoint_image(
         for fwd_step in ck_step..step {
             step_wavefield_cpml(
                 grid,
-                speed_m_s,
+                &c2dt2,
                 &fwd_prev,
                 &fwd_curr,
                 &mut fwd_next,
@@ -291,7 +295,7 @@ pub(super) fn adjoint_image(
         // which is q(step) without the adjoint source term.
         step_wavefield_cpml(
             grid,
-            speed_m_s,
+            &c2dt2,
             &prev_adj,
             &curr_adj,
             &mut next_adj,
@@ -348,11 +352,11 @@ pub(super) fn adjoint_image(
                 let dt_fwd = (fwd - fwd_prev[idx] as f64) * inv_dt;
                 let dt_adj = (curr_adj[idx] as f64 - adj) * inv_dt;
 
-                let dx_fwd = (fwd_curr[row_xp + iy] as f64 - fwd_curr[row_xm + iy] as f64)
-                    * inv_two_dx;
+                let dx_fwd =
+                    (fwd_curr[row_xp + iy] as f64 - fwd_curr[row_xm + iy] as f64) * inv_two_dx;
                 let dy_fwd = (fwd_curr[idx + 1] as f64 - fwd_curr[idx - 1] as f64) * inv_two_dx;
-                let dx_adj = (next_adj[row_xp + iy] as f64 - next_adj[row_xm + iy] as f64)
-                    * inv_two_dx;
+                let dx_adj =
+                    (next_adj[row_xp + iy] as f64 - next_adj[row_xm + iy] as f64) * inv_two_dx;
                 let dy_adj = (next_adj[idx + 1] as f64 - next_adj[idx - 1] as f64) * inv_two_dx;
 
                 let c = speed_m_s[(ix, iy)];

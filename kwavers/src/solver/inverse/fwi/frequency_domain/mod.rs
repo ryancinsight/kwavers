@@ -60,13 +60,14 @@ mod types;
 
 pub use operator::{
     DenseConvergentBornOperator, HelmholtzForwardOperator, PstdFiniteWindowBornOperator,
-    PstdSpectralConvergentBornOperator, SingleScatterBornOperator, SpectralConvergentBornOperator,
+    PstdFiniteWindowBornSecondOrderOperator, PstdSpectralConvergentBornOperator,
+    SingleScatterBornOperator, SpectralConvergentBornOperator,
 };
 
 pub use cbs::{AbsorbingBoundary, PstdTemporalTransferConfig};
 pub use finite_window::{
     finite_window_pstd_born_gradient, simulate_pstd_finite_window_born_observation,
-    PstdFiniteWindowBornConfig,
+    simulate_pstd_finite_window_born_second_order_observation, PstdFiniteWindowBornConfig,
 };
 pub use forward::simulate_frequency_observation;
 pub use inversion::invert;

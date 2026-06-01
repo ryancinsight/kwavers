@@ -1,8 +1,8 @@
 use super::*;
-use crate::core::constants::tissue_acoustics::B_OVER_A_SOFT_TISSUE;
 use crate::core::constants::numerical::MPA_TO_PA;
-use ndarray::Array3;
 use crate::core::constants::numerical::{FOUR_PI, TWO_PI};
+use crate::core::constants::tissue_acoustics::B_OVER_A_SOFT_TISSUE;
+use ndarray::Array3;
 
 /// Construct a minimal grid suitable for HAS tests.
 /// # Panics

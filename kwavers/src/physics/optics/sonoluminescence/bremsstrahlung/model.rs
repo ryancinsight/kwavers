@@ -8,7 +8,7 @@ use super::plasma::PlasmaState;
 use crate::core::constants::fundamental::{
     BOLTZMANN as BOLTZMANN_CONSTANT, PLANCK as PLANCK_CONSTANT, SPEED_OF_LIGHT,
 };
-use crate::core::constants::numerical::{FOUR_PI};
+use crate::core::constants::numerical::FOUR_PI;
 
 /// Bremsstrahlung free-free radiation model for sonoluminescence.
 #[derive(Debug, Clone)]

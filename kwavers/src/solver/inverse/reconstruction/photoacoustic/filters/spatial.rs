@@ -3,9 +3,9 @@
 //! This module provides spatial filtering operations including
 //! Gaussian and bilateral filters for noise reduction and edge preservation.
 
+use crate::core::constants::numerical::TWO_PI;
 use crate::core::error::KwaversResult;
 use ndarray::Array3;
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Apply 3D Gaussian filter for noise reduction
 ///

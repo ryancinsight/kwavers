@@ -87,23 +87,80 @@ pub struct PSTDCheckpoint {
 
 impl PSTDCheckpoint {
     /// Serialize to a binary file at `path`.
+    ///
+    /// Prefer [`save_borrowed`] in hot paths — it writes directly from borrowed
+    /// field slices without cloning the arrays into a `PSTDCheckpoint` struct first.
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     pub fn save(&self, path: &Path) -> KwaversResult<()> {
+        Self::save_borrowed(
+            path,
+            self.nx,
+            self.ny,
+            self.nz,
+            self.time_step_index,
+            self.total_steps,
+            self.dt,
+            &self.p,
+            &self.ux,
+            &self.uy,
+            &self.uz,
+            &self.rhox,
+            &self.rhoy,
+            &self.rhoz,
+            self.sensor_data.as_ref(),
+            self.sensor_next_step,
+            self.sensor_expected_steps,
+        )
+    }
+
+    /// Serialize directly from borrowed field references — zero-clone path.
+    ///
+    /// Writes the KWCP binary header and 7 acoustic field arrays without
+    /// allocating intermediate `Array3<f64>` copies.  Accepts all fields as
+    /// borrowed references so the caller (e.g. `PSTDSolver::run_to_checkpoint`)
+    /// can pass `&self.fields.p`, `&self.fields.ux`, etc. directly.
+    ///
+    /// # Memory savings
+    /// For a 256³ grid, this avoids 7 × 256³ × 8 = 896 MiB of intermediate
+    /// allocations and copies per checkpoint vs. the struct-based `save()` path.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
+    #[allow(clippy::too_many_arguments)]
+    pub fn save_borrowed(
+        path: &Path,
+        nx: usize,
+        ny: usize,
+        nz: usize,
+        time_step_index: usize,
+        total_steps: usize,
+        dt: f64,
+        p: &Array3<f64>,
+        ux: &Array3<f64>,
+        uy: &Array3<f64>,
+        uz: &Array3<f64>,
+        rhox: &Array3<f64>,
+        rhoy: &Array3<f64>,
+        rhoz: &Array3<f64>,
+        sensor_data: Option<&Array2<f64>>,
+        _sensor_next_step: usize,
+        sensor_expected_steps: usize,
+    ) -> KwaversResult<()> {
         let file = std::fs::File::create(path)?;
         let mut w = BufWriter::new(file);
 
         w.write_all(&MAGIC)?;
         w.write_all(&FORMAT_VERSION.to_le_bytes())?;
-        w.write_all(&(self.nx as u64).to_le_bytes())?;
-        w.write_all(&(self.ny as u64).to_le_bytes())?;
-        w.write_all(&(self.nz as u64).to_le_bytes())?;
-        w.write_all(&(self.time_step_index as u64).to_le_bytes())?;
-        w.write_all(&(self.total_steps as u64).to_le_bytes())?;
-        w.write_all(&self.dt.to_le_bytes())?;
+        w.write_all(&(nx as u64).to_le_bytes())?;
+        w.write_all(&(ny as u64).to_le_bytes())?;
+        w.write_all(&(nz as u64).to_le_bytes())?;
+        w.write_all(&(time_step_index as u64).to_le_bytes())?;
+        w.write_all(&(total_steps as u64).to_le_bytes())?;
+        w.write_all(&dt.to_le_bytes())?;
 
-        match &self.sensor_data {
+        match sensor_data {
             None => {
                 w.write_all(&[0u8])?;
             }
@@ -112,16 +169,14 @@ impl PSTDCheckpoint {
                 let (n_sensors, n_recorded) = data.dim();
                 w.write_all(&(n_sensors as u64).to_le_bytes())?;
                 w.write_all(&(n_recorded as u64).to_le_bytes())?;
-                w.write_all(&(self.sensor_expected_steps as u64).to_le_bytes())?;
+                w.write_all(&(sensor_expected_steps as u64).to_le_bytes())?;
                 for &v in data {
                     w.write_all(&v.to_le_bytes())?;
                 }
             }
         }
 
-        for arr in [
-            &self.p, &self.ux, &self.uy, &self.uz, &self.rhox, &self.rhoy, &self.rhoz,
-        ] {
+        for arr in [p, ux, uy, uz, rhox, rhoy, rhoz] {
             for &v in arr {
                 w.write_all(&v.to_le_bytes())?;
             }

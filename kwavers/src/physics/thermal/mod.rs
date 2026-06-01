@@ -30,12 +30,10 @@ pub use crate::domain::medium::properties::ThermalPropertyData;
 /// as separate simulation parameters.
 pub mod tissues {
     use crate::core::constants::fundamental::DENSITY_TISSUE;
-    use crate::core::constants::tissue_acoustics::{
-        DENSITY_BREAST_FAT,
-        DENSITY_LIVER,
-        DENSITY_MUSCLE,
-    };
     use crate::core::constants::medical::BLOOD_SPECIFIC_HEAT;
+    use crate::core::constants::tissue_acoustics::{
+        DENSITY_BREAST_FAT, DENSITY_LIVER, DENSITY_MUSCLE,
+    };
     use crate::core::constants::tissue_thermal::{
         SPECIFIC_HEAT_FAT, SPECIFIC_HEAT_LIVER, SPECIFIC_HEAT_MUSCLE, SPECIFIC_HEAT_TISSUE,
     };
@@ -151,12 +149,10 @@ pub mod tissues {
 mod tests {
     use super::*;
     use crate::core::constants::fundamental::DENSITY_TISSUE;
-    use crate::core::constants::tissue_acoustics::{
-        DENSITY_BREAST_FAT,
-        DENSITY_LIVER,
-        DENSITY_MUSCLE,
-    };
     use crate::core::constants::medical::BLOOD_SPECIFIC_HEAT;
+    use crate::core::constants::tissue_acoustics::{
+        DENSITY_BREAST_FAT, DENSITY_LIVER, DENSITY_MUSCLE,
+    };
 
     #[test]
     fn test_tissue_constructors() {

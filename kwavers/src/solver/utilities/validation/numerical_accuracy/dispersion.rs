@@ -1,5 +1,5 @@
 use super::{DispersionResults, NumericalValidator};
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 
 impl NumericalValidator {
     /// Validate dispersion.

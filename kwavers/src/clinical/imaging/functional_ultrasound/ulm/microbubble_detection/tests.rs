@@ -1,9 +1,9 @@
 use super::clutter::{svht_threshold, UlmSvdClutterFilter};
 use super::localize::{gauss_newton_fit_2d, GaussianLocalizer};
 use super::types::{GaussianLocalizationConfig, SvdClutterConfig};
+use crate::core::constants::numerical::TWO_PI;
 use crate::math::linear_algebra::LinearAlgebra;
 use ndarray::Array2;
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Generate a deterministic pseudo-noise matrix using a simple LCG for portability.
 fn make_noise_matrix(rows: usize, cols: usize, seed: u64) -> Array2<f64> {

@@ -115,7 +115,12 @@ impl Default for PAMConfig {
     fn default() -> Self {
         Self {
             beamforming: PamBeamformingConfig::default(),
-            frequency_bands: vec![(20e3, 100e3), (100e3, 500e3), (500e3, 2.0 * MHZ_TO_HZ), (2.0 * MHZ_TO_HZ, 10.0 * MHZ_TO_HZ)],
+            frequency_bands: vec![
+                (20e3, 100e3),
+                (100e3, 500e3),
+                (500e3, 2.0 * MHZ_TO_HZ),
+                (2.0 * MHZ_TO_HZ, 10.0 * MHZ_TO_HZ),
+            ],
             integration_time: 0.1,
             threshold: 1e-6,
             enable_harmonic_analysis: true,

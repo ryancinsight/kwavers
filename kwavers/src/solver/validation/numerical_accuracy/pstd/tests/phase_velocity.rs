@@ -1,10 +1,10 @@
 use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use crate::core::constants::numerical::MHZ_TO_HZ;
+use crate::core::constants::numerical::TWO_PI;
 use crate::domain::grid::Grid;
 use crate::domain::medium::HomogeneousMedium;
 use crate::solver::pstd::PSTDConfig as PstdConfig;
 use crate::solver::pstd::PSTDSolver;
-use crate::core::constants::numerical::{TWO_PI};
 
 #[test]
 fn test_pstd_phase_velocity_accuracy() {

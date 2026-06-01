@@ -1,4 +1,3 @@
-
 use crate::core::constants::fundamental::DENSITY_WATER;
 use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::domain::grid::Grid;
@@ -7,7 +6,7 @@ use ndarray::Array3;
 
 use super::constants::C_WATER_DEFAULT;
 use super::AberrationCorrection;
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 
 fn make_test_skull(
     nx: usize,

@@ -120,12 +120,7 @@ pub fn standing_wave_modulation_period_hz(c: f64, d_back_m: f64) -> f64 {
 /// # Reference
 /// Brekhovskikh & Godin (1990) *Acoustics of Layered Media I*, §1.2.
 #[must_use]
-pub fn standing_wave_field_1d(
-    x_arr: &[f64],
-    freq_hz: f64,
-    c: f64,
-    r_back: f64,
-) -> Vec<f64> {
+pub fn standing_wave_field_1d(x_arr: &[f64], freq_hz: f64, c: f64, r_back: f64) -> Vec<f64> {
     use std::f64::consts::PI;
     let k = 2.0 * PI * freq_hz / c;
     let two_k = 2.0 * k;

@@ -5,10 +5,10 @@
 //! Heavy integration tests are separated into dedicated test files.
 
 use kwavers::{
+    core::constants::{DENSITY_WATER, SOUND_SPEED_WATER},
     error::GridError,
     grid::Grid,
     medium::{CoreMedium, HomogeneousMedium},
-    core::constants::{DENSITY_WATER, SOUND_SPEED_WATER},
 };
 
 #[test]

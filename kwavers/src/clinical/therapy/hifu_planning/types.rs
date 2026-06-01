@@ -4,12 +4,12 @@ use crate::core::constants::acoustic_parameters::DB_TO_NP;
 use crate::core::constants::fundamental::{
     ACOUSTIC_ABSORPTION_TISSUE, DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM,
 };
+use crate::core::constants::medical::THERMAL_DOSE_THRESHOLD;
 use crate::core::constants::medical::{
     THERMAL_DOSE_REFERENCE_TEMP_C, THERMAL_DOSE_R_ABOVE_43C, THERMAL_DOSE_R_BELOW_43C,
 };
 use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use crate::core::constants::tissue_thermal::SPECIFIC_HEAT_TISSUE;
-use crate::core::constants::medical::THERMAL_DOSE_THRESHOLD;
 use crate::core::constants::{MHZ_TO_HZ, SECONDS_PER_MINUTE};
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::physics::acoustics::analysis::calculate_mechanical_index;
@@ -58,12 +58,27 @@ pub struct FocalSpot {
 impl FocalSpot {
     /// Estimate the FWHM ellipsoid and focal pressure from a focused aperture.
     ///
-    /// Theorem: for a circular focused source with f-number `F# = F/D`,
-    /// O'Neil's harmonic piston approximation gives
-    /// `FWHM_lat = 1.02 lambda F#` and the Gaussian axial approximation gives
-    /// `FWHM_ax = (8/pi) lambda F#^2`. Acoustic output power is
-    /// `P_ac = P_drive eta`; the harmonic peak pressure follows
-    /// `p = sqrt(2 rho c P_ac / A_f)`. No empirical pressure ceiling is applied.
+    /// ## Closed-form focal-geometry approximation (NOT a full-wave solution)
+    ///
+    /// For a circular focused source with f-number `F# = F/D`, the linear,
+    /// paraxial, time-harmonic field of a spherically-focused piston (O'Neil
+    /// 1949) has focal-plane FWHM
+    /// `FWHM_lat ≈ 1.02·λ·F#` (the −6 dB width of the focal jinc/Airy pattern)
+    /// and axial FWHM `FWHM_ax ≈ (8/π)·λ·F#²` (Gaussian-beam paraxial estimate,
+    /// e.g. Cobbold 2007 §6; Kino 1987). Acoustic output power is
+    /// `P_ac = P_drive·η`; the harmonic peak pressure follows
+    /// `p = √(2·ρ·c·P_ac / A_f)`. No empirical pressure ceiling is applied.
+    ///
+    /// ## Validity regime (when this estimate is trustworthy)
+    /// - **Linear**: no Westervelt/shock nonlinearity — peak pressures below the
+    ///   shock-formation threshold; for high-amplitude HIFU use the nonlinear
+    ///   forward solver (`solver::forward::nonlinear`) instead.
+    /// - **Paraxial / weakly-focused**: `F# ≳ 1` (half-angle ≲ 30°); tighter
+    ///   foci require the Rayleigh–Sommerfeld / full-wave field.
+    /// - **Homogeneous water-like medium**: uses `SOUND_SPEED_WATER_SIM` and
+    ///   `DENSITY_WATER_NOMINAL`; no tissue heterogeneity or aberration.
+    /// Outside this regime treat the result as a planning sanity-check only and
+    /// validate against the FDTD/k-space field (see `gap_audit.md` CLD-3).
     ///
     /// # Errors
     /// Returns [`KwaversError::InvalidInput`] when the transducer frequency,
@@ -91,10 +106,20 @@ impl FocalSpot {
         let peak_pressure_pa =
             (2.0 * DENSITY_WATER_NOMINAL * SOUND_SPEED_WATER_SIM * intensity_w_m2).sqrt();
         let mechanical_index = calculate_mechanical_index(peak_pressure_pa, transducer.frequency);
+        // Focal ellipsoid volume from the FWHM half-widths as semi-axes.
         let lateral_semi = lateral_width_mm / 2.0;
         let axial_semi = axial_width_mm / 2.0;
         let focal_volume_mm3 = (4.0 / 3.0) * PI * lateral_semi * lateral_semi * axial_semi;
-        let volume_minus6db_mm3 = focal_volume_mm3 * 0.7;
+        // APPROXIMATION (unvalidated): the −6 dB iso-pressure volume is taken as
+        // 0.7× the FWHM ellipsoid. This 0.7 is an empirical fill factor, NOT a
+        // derived constant — the exact ratio depends on the focal-field shape
+        // (jinc² laterally, sinc²-like axially) and the −6 dB-pressure vs
+        // −3 dB-intensity convention. It feeds only reporting/tests, not the
+        // safety (MI) path. Replace with a field-integrated −6 dB volume from the
+        // FDTD/k-space solver when this estimate is used quantitatively
+        // (gap_audit.md CLD-3).
+        const MINUS6DB_ELLIPSOID_FILL_FACTOR: f64 = 0.7;
+        let volume_minus6db_mm3 = focal_volume_mm3 * MINUS6DB_ELLIPSOID_FILL_FACTOR;
         Ok(Self {
             location_mm: (0.0, 0.0, transducer.focal_length_mm),
             lateral_width_mm,

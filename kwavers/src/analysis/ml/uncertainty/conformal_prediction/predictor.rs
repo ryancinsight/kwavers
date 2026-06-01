@@ -63,8 +63,7 @@ impl MlConformalPredictor {
             self.calibration_scores.push(score);
         }
 
-        self.calibration_scores
-            .sort_by(|a, b| a.total_cmp(b));
+        self.calibration_scores.sort_by(|a, b| a.total_cmp(b));
 
         self.is_calibrated = true;
         info!(

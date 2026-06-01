@@ -1,27 +1,13 @@
 use crate::core::constants::acoustic_parameters::{NP_TO_DB, WATER_ABSORPTION_ALPHA_0};
 use crate::core::constants::fundamental::{
-    C_WATER,
-    DENSITY_TISSUE,
-    DENSITY_WATER,
-    SOUND_SPEED_TISSUE,
-};
-use crate::core::constants::tissue_acoustics::{
-    B_OVER_A_BRAIN,
-    B_OVER_A_FAT,
-    B_OVER_A_KIDNEY,
-    B_OVER_A_LIVER,
-    B_OVER_A_SOFT_TISSUE,
-    B_OVER_A_WATER,
-    DENSITY_BRAIN,
-    DENSITY_FAT,
-    DENSITY_KIDNEY,
-    DENSITY_LIVER,
-    SOUND_SPEED_BRAIN,
-    SOUND_SPEED_FAT,
-    SOUND_SPEED_KIDNEY,
-    SOUND_SPEED_LIVER,
+    C_WATER, DENSITY_TISSUE, DENSITY_WATER, SOUND_SPEED_TISSUE,
 };
 use crate::core::constants::numerical::{CM_TO_M, MHZ_TO_HZ};
+use crate::core::constants::tissue_acoustics::{
+    B_OVER_A_BRAIN, B_OVER_A_FAT, B_OVER_A_KIDNEY, B_OVER_A_LIVER, B_OVER_A_SOFT_TISSUE,
+    B_OVER_A_WATER, DENSITY_BRAIN, DENSITY_FAT, DENSITY_KIDNEY, DENSITY_LIVER, SOUND_SPEED_BRAIN,
+    SOUND_SPEED_FAT, SOUND_SPEED_KIDNEY, SOUND_SPEED_LIVER,
+};
 
 /// Parameters defining the nonlinear propagation properties of a medium
 #[derive(Debug, Clone, Copy)]

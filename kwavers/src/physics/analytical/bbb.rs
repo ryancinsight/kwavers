@@ -91,11 +91,7 @@ pub fn bbb_closure_kinetics(t_h: &[f64], tau_close: f64, perm_peak: f64) -> Vec<
 /// # Reference
 /// de Jong et al. (1991) *Ultrasound Med. Biol.* 17(2), 157–169.
 #[must_use]
-pub fn ceus_backscatter_signal(
-    c_mb_ul_ml: &[f64],
-    sigma_bs_m2: f64,
-    thickness_m: f64,
-) -> Vec<f64> {
+pub fn ceus_backscatter_signal(c_mb_ul_ml: &[f64], sigma_bs_m2: f64, thickness_m: f64) -> Vec<f64> {
     let sigma_ext = 2.0 * sigma_bs_m2;
     c_mb_ul_ml
         .iter()
@@ -141,7 +137,14 @@ mod tests {
         let d: Vec<f64> = (0..=10).map(|i| i as f64 * 0.5).collect();
         let p = bbb_permeability_hill(&d, 1.2, 2.5);
         for k in 1..p.len() {
-            assert!(p[k] >= p[k - 1], "P[{}]={} < P[{}]={}", k, p[k], k - 1, p[k - 1]);
+            assert!(
+                p[k] >= p[k - 1],
+                "P[{}]={} < P[{}]={}",
+                k,
+                p[k],
+                k - 1,
+                p[k - 1]
+            );
         }
     }
 
@@ -158,7 +161,14 @@ mod tests {
         let t: Vec<f64> = (0..20).map(|i| i as f64).collect();
         let p = bbb_closure_kinetics(&t, 2.0, 1.0);
         for k in 1..p.len() {
-            assert!(p[k] <= p[k - 1], "P[{}]={} > P[{}]={}", k, p[k], k - 1, p[k - 1]);
+            assert!(
+                p[k] <= p[k - 1],
+                "P[{}]={} > P[{}]={}",
+                k,
+                p[k],
+                k - 1,
+                p[k - 1]
+            );
         }
     }
 
@@ -183,10 +193,10 @@ mod tests {
         // Values below and above the peak must bracket the maximum.
         let sigma_bs = 2.5e-8_f64;
         let thickness = 10e-3_f64;
-        let low  = ceus_backscatter_signal(&[1e-4], sigma_bs, thickness)[0]; // well below peak
-        let peak = ceus_backscatter_signal(&[1.0],  sigma_bs, thickness)[0]; // at analytical peak
+        let low = ceus_backscatter_signal(&[1e-4], sigma_bs, thickness)[0]; // well below peak
+        let peak = ceus_backscatter_signal(&[1.0], sigma_bs, thickness)[0]; // at analytical peak
         let high = ceus_backscatter_signal(&[100.0], sigma_bs, thickness)[0]; // well above peak
-        assert!(peak > low,  "no rise:  peak={} low={}",  peak, low);
+        assert!(peak > low, "no rise:  peak={} low={}", peak, low);
         assert!(peak > high, "no fall:  peak={} high={}", peak, high);
     }
 }

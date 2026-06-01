@@ -27,7 +27,7 @@ use super::types::{BemFemValidationResult, InterfaceQuality, RefinementStep};
 use crate::core::error::{KwaversError, KwaversResult};
 
 use crate::core::constants::fundamental::SOUND_SPEED_AIR;
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 const DEFAULT_SOUND_SPEED_M_PER_S: f64 = SOUND_SPEED_AIR;
 const RESONANCE_RELATIVE_BAND: f64 = 1e-6;
 

@@ -3,10 +3,10 @@
 use super::{
     PhysicsInformedLoss, PhysicsInformedLossComponents, PhysicsLossConfig, WeightSchedule,
 };
+use crate::core::constants::numerical::TWO_PI;
 use crate::core::error::KwaversResult;
 use ndarray::{Array2, Array3};
 use std::collections::VecDeque;
-use crate::core::constants::numerical::{TWO_PI};
 
 impl PhysicsInformedLoss {
     /// Create new physics-informed loss. Computes wave number `k = 2πf/c`.
@@ -131,29 +131,23 @@ impl PhysicsInformedLoss {
             return f64::INFINITY;
         }
 
+        // Squared shortest-arc adjacent-pixel phase difference
+        // |wrap_to_pi(Δφ)|² (SSOT wrap; see `math::signal::wrap_to_pi`).
+        // Correct for any gradient magnitude, unlike a single π-fold of |Δφ|.
+        use crate::math::signal::wrap_to_pi;
         let (nx, ny) = phases.dim();
         let mut loss = 0.0;
 
         for i in 0..nx - 1 {
             for j in 0..ny {
-                let phase_diff = (phases[[i + 1, j]] - phases[[i, j]]).abs();
-                let normalized = if phase_diff > std::f64::consts::PI {
-                    2.0f64.mul_add(std::f64::consts::PI, -phase_diff)
-                } else {
-                    phase_diff
-                };
+                let normalized = wrap_to_pi(phases[[i + 1, j]] - phases[[i, j]]);
                 loss += normalized * normalized;
             }
         }
 
         for i in 0..nx {
             for j in 0..ny - 1 {
-                let phase_diff = (phases[[i, j + 1]] - phases[[i, j]]).abs();
-                let normalized = if phase_diff > std::f64::consts::PI {
-                    2.0f64.mul_add(std::f64::consts::PI, -phase_diff)
-                } else {
-                    phase_diff
-                };
+                let normalized = wrap_to_pi(phases[[i, j + 1]] - phases[[i, j]]);
                 loss += normalized * normalized;
             }
         }

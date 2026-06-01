@@ -8,8 +8,8 @@ use crate::core::constants::cavitation::VISCOSITY_WATER;
 use crate::core::constants::fundamental::{
     ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM,
 };
+use crate::core::constants::numerical::TWO_PI;
 use crate::core::error::KwaversResult;
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Nonlinear scattering model for microbubbles
 #[derive(Debug)]

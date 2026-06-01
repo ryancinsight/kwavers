@@ -1,8 +1,8 @@
 //! Primary Bjerknes force calculation
 
 use super::calculator::BjerknesCalculator;
+use crate::core::constants::numerical::FOUR_PI;
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::core::constants::numerical::{FOUR_PI};
 
 impl BjerknesCalculator {
     /// Calculate primary Bjerknes force on a bubble in acoustic field.

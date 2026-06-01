@@ -23,7 +23,7 @@ use super::{
     result::StandingWaveOptResult,
     swi::{compute_focal_pressure, compute_swi, superpose},
 };
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 
 // ---------------------------------------------------------------------------
 // Objective

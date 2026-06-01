@@ -64,9 +64,15 @@ impl Default for GridQueryParams {
             f0_range: (0.5 * MHZ_TO_HZ, MHZ_TO_HZ),
             pnp_range: (15.0 * MPA_TO_PA, 30.0 * MPA_TO_PA),
             output_transforms: OutputTransforms {
-                p_min: TargetTransform::Linear { scale_pa: 30.0 * MPA_TO_PA as f32 },
-                p_max: TargetTransform::Linear { scale_pa: 30.0 * MPA_TO_PA as f32 },
-                p_rms: TargetTransform::Linear { scale_pa: 21.0 * MPA_TO_PA as f32 },
+                p_min: TargetTransform::Linear {
+                    scale_pa: 30.0 * MPA_TO_PA as f32,
+                },
+                p_max: TargetTransform::Linear {
+                    scale_pa: 30.0 * MPA_TO_PA as f32,
+                },
+                p_rms: TargetTransform::Linear {
+                    scale_pa: 21.0 * MPA_TO_PA as f32,
+                },
             },
             batch_size: 65_536,
         }

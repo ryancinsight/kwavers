@@ -1,6 +1,6 @@
 //! Constants for phase randomization
 
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 
 /// Maximum phase shift for randomization (radians)
 pub const MAX_PHASE_SHIFT: f64 = TWO_PI;

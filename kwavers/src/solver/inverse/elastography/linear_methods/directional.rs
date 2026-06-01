@@ -10,7 +10,7 @@ use crate::physics::acoustics::imaging::modalities::elastography::displacement::
 
 use super::super::algorithms::{directional_smoothing, fill_boundaries};
 use super::super::types::elasticity_map_from_speed;
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 
 /// 3D Directional phase gradient inversion
 ///

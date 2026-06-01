@@ -7,7 +7,7 @@ use ndarray::{s, Array2, Array3, Axis};
 use std::collections::HashMap;
 
 use super::types::{AngularSpectrumFactors, FNMConfig};
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 
 #[derive(Debug)]
 pub struct FastNearfieldSolver {

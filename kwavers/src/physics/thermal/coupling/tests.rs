@@ -71,7 +71,8 @@ fn test_nonlinear_heating() {
 #[test]
 fn test_nonlinear_regime_detection() {
     // Linear regime
-    let nl_linear = NonlinearHeating::new(5.0, 1e4, SOUND_SPEED_WATER_SIM, DENSITY_TISSUE, MHZ_TO_HZ);
+    let nl_linear =
+        NonlinearHeating::new(5.0, 1e4, SOUND_SPEED_WATER_SIM, DENSITY_TISSUE, MHZ_TO_HZ);
     assert!(!nl_linear.is_nonlinear_significant());
 
     // Nonlinear regime

@@ -2,9 +2,9 @@
 
 use kwavers::{
     boundary::DomainPMLBoundary,
+    core::constants::{DENSITY_WATER, SOUND_SPEED_WATER},
     grid::Grid,
     medium::{CoreMedium, HomogeneousMedium},
-    core::constants::{DENSITY_WATER, SOUND_SPEED_WATER},
     solver::plugin_based::PluginBasedSolver,
     source::PointSource,
     time::Time,

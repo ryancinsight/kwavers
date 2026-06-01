@@ -148,7 +148,13 @@ mod tests {
     ///
     fn build_solver(kspace_correction: KSpaceCorrectionMode) -> FdtdSolver {
         let grid = Grid::new(16, 16, 16, 1e-3, 1e-3, 1e-3).unwrap();
-        let medium = HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.0, 0.0, &grid);
+        let medium = HomogeneousMedium::new(
+            DENSITY_WATER_NOMINAL,
+            SOUND_SPEED_WATER_SIM,
+            0.0,
+            0.0,
+            &grid,
+        );
         let source = GridSource::new_empty();
         let config = FdtdConfig {
             kspace_correction,

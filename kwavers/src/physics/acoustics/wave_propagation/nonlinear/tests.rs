@@ -80,17 +80,8 @@ fn test_burgers_equation() {
 #[test]
 fn tissue_nonlinear_parameter_factories_route_through_ssot() {
     use crate::core::constants::tissue_acoustics::{
-        B_OVER_A_BRAIN,
-        B_OVER_A_FAT,
-        B_OVER_A_KIDNEY,
-        B_OVER_A_LIVER,
-        DENSITY_BRAIN,
-        DENSITY_FAT,
-        DENSITY_KIDNEY,
-        DENSITY_LIVER,
-        SOUND_SPEED_BRAIN,
-        SOUND_SPEED_FAT,
-        SOUND_SPEED_KIDNEY,
+        B_OVER_A_BRAIN, B_OVER_A_FAT, B_OVER_A_KIDNEY, B_OVER_A_LIVER, DENSITY_BRAIN, DENSITY_FAT,
+        DENSITY_KIDNEY, DENSITY_LIVER, SOUND_SPEED_BRAIN, SOUND_SPEED_FAT, SOUND_SPEED_KIDNEY,
         SOUND_SPEED_LIVER,
     };
 
@@ -218,8 +209,8 @@ fn test_parametric_array() {
     let params = NonlinearParameters::water();
 
     // Two high-frequency primaries
-    let p1 = MPA_TO_PA;       // 1 MPa
-    let p2 = MPA_TO_PA;       // 1 MPa
+    let p1 = MPA_TO_PA; // 1 MPa
+    let p2 = MPA_TO_PA; // 1 MPa
     let f1 = 2.0 * MHZ_TO_HZ;
     let f2 = 2.1 * MHZ_TO_HZ;
     let z = 1.0; // 1 meter far-field

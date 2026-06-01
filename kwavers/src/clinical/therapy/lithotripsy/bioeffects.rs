@@ -193,6 +193,13 @@ impl BioeffectsModel {
         //  ΔT ≈ 2 · α · I_SPTA · d / k   (simplified for soft tissue)
         //  where α = IEC_TISSUE_ABSORPTION_DB_CM_MHZ at the active frequency,
         //  d = 1 cm reference depth, k = THERMAL_CONDUCTIVITY_WATER (soft-tissue surrogate).
+        //
+        //  APPROXIMATION — conduction-only steady state; OMITS Pennes perfusion
+        //  (the −w·ρ_b·c_b·(T−T_a) blood-flow cooling term, Pennes 1948). Perfusion
+        //  lowers the true equilibrium ΔT, so this TI OVER-estimates heating — a
+        //  conservative bias appropriate for a safety index, but not a predictive
+        //  temperature. For quantitative dose use the Pennes bioheat solver
+        //  (`solver::forward::thermal_diffusion`). gap_audit CLD-6.
         let i_spta = intensity.iter().copied().fold(0.0_f64, f64::max);
         // IEC 62127 absorption: α [Np/m] = 0.3 dB/(cm·MHz) / NP_TO_DB / CM_TO_M × f_MHz
         let alpha_np_per_m = IEC_TISSUE_ABSORPTION_DB_CM_MHZ * f_mhz / NP_TO_DB / CM_TO_M;

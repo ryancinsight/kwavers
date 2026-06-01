@@ -50,6 +50,49 @@ impl AnatomyKind {
     }
 }
 
+/// Reconstruction strategy for the passive cavitation channels (subharmonic and
+/// ultraharmonic).
+///
+/// The therapy aperture also serves as a passive receive array: cavitation at
+/// the focus emits broadband acoustic energy whose subharmonic (f₀/2) and
+/// ultraharmonic (3f₀/2) content is recorded and mapped (Gyöngy & Coussios 2010;
+/// real-time transcranial histotripsy ACE mapping, Sukovich et al. 2020).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PassiveReconstructionMode {
+    /// Solve the finite-frequency same-aperture operator against a synthetic
+    /// lesion target (linearised normal-equation inverse). Default; preserves
+    /// the established subharmonic/ultraharmonic figure and parity contracts.
+    FiniteFrequencyOperator,
+    /// Genuine passive acoustic mapping: simulate the cavitation acoustic
+    /// emission through the heterogeneous medium, record per-receiver time
+    /// traces on the imaging aperture, and beamform them with the
+    /// delay-multiply-and-sum (DMAS) passive-acoustic-mapping imaging condition.
+    PassiveAcousticMapping,
+}
+
+impl PassiveReconstructionMode {
+    /// Parse a passive-reconstruction mode name (case-insensitive).
+    ///
+    /// Accepts `"operator"`/`"finite_frequency"` for
+    /// [`Self::FiniteFrequencyOperator`] and `"pam"`/`"passive_acoustic_mapping"`
+    /// for [`Self::PassiveAcousticMapping`].
+    ///
+    /// # Errors
+    /// Returns [`KwaversError::InvalidInput`] for any other name.
+    pub fn from_name(name: &str) -> KwaversResult<Self> {
+        match name.to_ascii_lowercase().as_str() {
+            "operator" | "finite_frequency" | "finite_frequency_operator" => {
+                Ok(Self::FiniteFrequencyOperator)
+            }
+            "pam" | "passive_acoustic_mapping" => Ok(Self::PassiveAcousticMapping),
+            other => Err(KwaversError::InvalidInput(format!(
+                "unsupported passive_reconstruction '{other}', expected \
+                 'operator' or 'pam'"
+            ))),
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct TheranosticInverseConfig {
     pub anatomy: AnatomyKind,
@@ -73,6 +116,9 @@ pub struct TheranosticInverseConfig {
     pub transmit_schedule: TransmitScheduleConfig,
     pub waveform_misfit: WaveformMisfit,
     pub waveform_misfit_scale_fraction: f64,
+    /// Reconstruction strategy for the subharmonic / ultraharmonic passive
+    /// cavitation channels. Defaults to [`PassiveReconstructionMode::FiniteFrequencyOperator`].
+    pub passive_reconstruction: PassiveReconstructionMode,
 }
 
 impl TheranosticInverseConfig {
@@ -112,6 +158,7 @@ impl TheranosticInverseConfig {
             transmit_schedule: TransmitScheduleConfig::full(),
             waveform_misfit: WaveformMisfit::Charbonnier,
             waveform_misfit_scale_fraction: 0.012,
+            passive_reconstruction: PassiveReconstructionMode::FiniteFrequencyOperator,
         }
     }
 

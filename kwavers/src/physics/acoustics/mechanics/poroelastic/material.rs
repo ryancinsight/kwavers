@@ -181,15 +181,15 @@ impl PoroelasticMaterial {
                 tortuosity: 1.3,
             }),
             "lung" => Ok(Self {
-                porosity: 0.8,             // 80% air-filled
-                solid_density: 300.0,      // Low density
-                fluid_density: DENSITY_AIR, // SSOT: tissue_acoustics::DENSITY_AIR
-                solid_bulk_modulus: 1e6,   // Very soft
-                fluid_bulk_modulus: 1.4e5, // Air at 1 atm
-                shear_modulus: 1e3,        // 1 kPa
-                permeability: 1e-8,        // High permeability
+                porosity: 0.8,                  // 80% air-filled
+                solid_density: 300.0,           // Low density
+                fluid_density: DENSITY_AIR,     // SSOT: tissue_acoustics::DENSITY_AIR
+                solid_bulk_modulus: 1e6,        // Very soft
+                fluid_bulk_modulus: 1.4e5,      // Air at 1 atm
+                shear_modulus: 1e3,             // 1 kPa
+                permeability: 1e-8,             // High permeability
                 fluid_viscosity: VISCOSITY_AIR, // SSOT: cavitation::VISCOSITY_AIR
-                tortuosity: 2.0,           // Complex structure
+                tortuosity: 2.0,                // Complex structure
             }),
             _ => Err(KwaversError::InvalidInput(format!(
                 "Unknown tissue type: {}",
@@ -350,7 +350,15 @@ mod tests {
     fn new_rejects_invalid_porosity() {
         let ok = || {
             (
-                0.3, 2000.0, DENSITY_WATER_NOMINAL, 10e9, 2.25e9, 3.5e9, 1e-9, VISCOSITY_WATER, 1.5_f64,
+                0.3,
+                2000.0,
+                DENSITY_WATER_NOMINAL,
+                10e9,
+                2.25e9,
+                3.5e9,
+                1e-9,
+                VISCOSITY_WATER,
+                1.5_f64,
             )
         };
         let (_, rs, rf, ks, kf, g, k, eta, tor) = ok();
@@ -369,7 +377,15 @@ mod tests {
     #[test]
     fn new_rejects_nonpositive_densities() {
         let (phi, _, rf, ks, kf, g, k, eta, tor) = (
-            0.3, 2000.0, DENSITY_WATER_NOMINAL, 10e9, 2.25e9, 3.5e9, 1e-9, VISCOSITY_WATER, 1.5_f64,
+            0.3,
+            2000.0,
+            DENSITY_WATER_NOMINAL,
+            10e9,
+            2.25e9,
+            3.5e9,
+            1e-9,
+            VISCOSITY_WATER,
+            1.5_f64,
         );
         assert!(
             PoroelasticMaterial::new(phi, 0.0, rf, ks, kf, g, k, eta, tor).is_err(),
@@ -384,7 +400,17 @@ mod tests {
     /// `new` rejects tortuosity < 1.
     #[test]
     fn new_rejects_tortuosity_below_one() {
-        let r = PoroelasticMaterial::new(0.3, 2000.0, DENSITY_WATER_NOMINAL, 10e9, 2.25e9, 3.5e9, 1e-9, VISCOSITY_WATER, 0.8);
+        let r = PoroelasticMaterial::new(
+            0.3,
+            2000.0,
+            DENSITY_WATER_NOMINAL,
+            10e9,
+            2.25e9,
+            3.5e9,
+            1e-9,
+            VISCOSITY_WATER,
+            0.8,
+        );
         assert!(r.is_err(), "tortuosity=0.8 < 1.0 must be rejected");
     }
 

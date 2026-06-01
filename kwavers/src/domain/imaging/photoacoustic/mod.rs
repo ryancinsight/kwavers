@@ -2,6 +2,7 @@
 
 mod config;
 mod materials;
+mod pressure_series;
 mod references;
 mod scenario;
 mod state;
@@ -14,6 +15,7 @@ pub use config::{
     ThermoelasticProperties,
 };
 pub use materials::{PhotoacousticMaterialLibrary, SpectralSample};
+pub use pressure_series::PressureFieldSeries;
 pub use references::PHOTOACOUSTIC_PRIMARY_REFERENCES;
 pub use scenario::PhotoacousticScenario;
 pub use state::PhotoacousticState;

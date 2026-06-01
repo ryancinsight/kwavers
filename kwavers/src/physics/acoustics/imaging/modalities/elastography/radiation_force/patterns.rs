@@ -1,5 +1,5 @@
 use super::impulse::PushPulseParameters;
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 
 /// Multi-directional push pulse configuration for 3D SWE
 #[derive(Debug, Clone)]

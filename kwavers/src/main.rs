@@ -13,7 +13,13 @@ fn main() {
         ..Default::default()
     };
     let grid = Grid::new(32, 32, 32, 0.001, 0.001, 0.001).unwrap();
-    let medium = HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.0, 0.0, &grid);
+    let medium = HomogeneousMedium::new(
+        DENSITY_WATER_NOMINAL,
+        SOUND_SPEED_WATER_SIM,
+        0.0,
+        0.0,
+        &grid,
+    );
     let source = GridSource::new_empty();
     let mut solver = PSTDSolver::new(config, grid, &medium, source).unwrap();
     for _ in 0..10 {

@@ -1,6 +1,6 @@
 //! Bessel function kernel for the Fubini harmonic coefficients.
 
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 
 /// Bessel function of the first kind, order `n >= 0`, argument `x`.
 ///

@@ -25,14 +25,14 @@ impl Default for ShellProperties {
         // Based on Gorce et al. (2000) and Stride & Coussios (2010)
         use crate::core::constants::cavitation::DENSITY_SHELL_LIPID;
         Self {
-            thickness: 3.0e-9,     // 3 nm (typical lipid shell)
-            shear_modulus: 50.0e6, // 50 MPa (lipid)
-            shear_viscosity: 0.5,  // 0.5 Pa·s (lipid)
+            thickness: 3.0e-9,            // 3 nm (typical lipid shell)
+            shear_modulus: 50.0e6,        // 50 MPa (lipid)
+            shear_viscosity: 0.5,         // 0.5 Pa·s (lipid)
             density: DENSITY_SHELL_LIPID, // 1100.0 kg/m³ — Gorce et al. (2000)
-            sigma_initial: 0.04,   // 40 mN/m (initial tension)
-            r_buckling: 0.0,       // Computed from equilibrium
-            r_rupture: 0.0,        // Computed based on shell strain
-            elastic_modulus: 0.5,  // 0.5 N/m (Church model)
+            sigma_initial: 0.04,          // 40 mN/m (initial tension)
+            r_buckling: 0.0,              // Computed from equilibrium
+            r_rupture: 0.0,               // Computed based on shell strain
+            elastic_modulus: 0.5,         // 0.5 N/m (Church model)
         }
     }
 }
@@ -49,11 +49,11 @@ impl ShellProperties {
     pub fn protein_shell() -> Self {
         use crate::core::constants::cavitation::DENSITY_SHELL_PROTEIN;
         Self {
-            thickness: 15.0e-9,     // 15 nm (thicker protein)
-            shear_modulus: 100.0e6, // 100 MPa (stiffer)
-            shear_viscosity: 1.5,   // 1.5 Pa·s (more viscous)
+            thickness: 15.0e-9,             // 15 nm (thicker protein)
+            shear_modulus: 100.0e6,         // 100 MPa (stiffer)
+            shear_viscosity: 1.5,           // 1.5 Pa·s (more viscous)
             density: DENSITY_SHELL_PROTEIN, // 1200.0 kg/m³ — Stride & Coussios (2010)
-            sigma_initial: 0.056,   // 56 mN/m
+            sigma_initial: 0.056,           // 56 mN/m
             ..Self::default()
         }
     }
@@ -63,12 +63,12 @@ impl ShellProperties {
     pub fn polymer_shell() -> Self {
         use crate::core::constants::cavitation::DENSITY_SHELL_POLYMER;
         Self {
-            thickness: 200.0e-9,    // 200 nm (much thicker)
-            shear_modulus: 500.0e6, // 500 MPa (very stiff)
-            shear_viscosity: 5.0,   // 5 Pa·s (highly viscous)
+            thickness: 200.0e-9,            // 200 nm (much thicker)
+            shear_modulus: 500.0e6,         // 500 MPa (very stiff)
+            shear_viscosity: 5.0,           // 5 Pa·s (highly viscous)
             density: DENSITY_SHELL_POLYMER, // 1050.0 kg/m³ — Stride & Coussios (2010)
-            sigma_initial: 0.072,   // 72 mN/m
-            elastic_modulus: 5.0,   // 5 N/m (stiffer)
+            sigma_initial: 0.072,           // 72 mN/m
+            elastic_modulus: 5.0,           // 5 N/m (stiffer)
             ..Self::default()
         }
     }

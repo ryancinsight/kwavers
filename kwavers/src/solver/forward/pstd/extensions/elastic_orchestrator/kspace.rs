@@ -37,10 +37,10 @@
 //!   Opt. 15(2), 021314.
 
 use super::types::ElasticPstdMedium;
+use crate::core::constants::numerical::TWO_PI;
+use crate::math::fft::shift_operators::generate_kappa as canonical_generate_kappa;
 use ndarray::{Array3, Zip};
 use num_complex::Complex;
-use crate::core::constants::numerical::{TWO_PI};
-use crate::math::fft::shift_operators::generate_kappa as canonical_generate_kappa;
 
 /// Maximum P-wave speed `c_p = sqrt((λ + 2μ)/ρ)` across the medium.
 ///

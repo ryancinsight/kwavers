@@ -9,17 +9,26 @@ use crate::domain::medium::Medium;
 use ndarray::{Array3, Zip};
 use std::ops::Range;
 
+/// Parameters for the Cattaneo-Vernotte hyperbolic heat update.
+///
+/// Only the thermal relaxation time `τ` enters the flux relaxation law
+/// (`q + τ ∂q/∂t = −k∇T`); the thermal wave speed `c = √(α/τ)` is a *derived*
+/// quantity (α = thermal diffusivity from the medium), not an independent input,
+/// so it is intentionally not a field here — storing it would invite the
+/// physically-inconsistent `(τ, c)` pairs the previous default carried.
+///
+/// Reference: Cattaneo (1958); Mitra et al. (1995), J. Heat Transfer 117, 568
+/// (measured τ ≈ 16 s in processed tissue — the basis for the 20 s default).
 #[derive(Debug, Clone)]
 pub struct HyperbolicParameters {
+    /// Thermal relaxation time `τ` [s].
     pub relaxation_time: f64,
-    pub thermal_wave_speed: f64,
 }
 
 impl Default for HyperbolicParameters {
     fn default() -> Self {
         Self {
             relaxation_time: 20.0,
-            thermal_wave_speed: 10.0,
         }
     }
 }
@@ -267,7 +276,6 @@ mod tests {
         let mut solver = CattaneoVernotte::new(
             HyperbolicParameters {
                 relaxation_time: 1.0,
-                thermal_wave_speed: 1.0,
             },
             &grid,
         );

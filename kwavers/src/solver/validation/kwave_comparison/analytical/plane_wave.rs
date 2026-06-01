@@ -1,8 +1,8 @@
 use ndarray::Array3;
 
+use crate::core::constants::numerical::TWO_PI;
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Analytical solution for plane wave propagation.
 ///

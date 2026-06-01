@@ -37,9 +37,9 @@
 //! - Brands, P. J., Hoeks, A. P., Reneman, R. S., et al. (1995). "A noninvasive method to estimate wall shear rate"
 //!   *Ultrasound in Medicine & Biology*, 21(2), 171-185.
 
+use crate::core::constants::numerical::TWO_PI;
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array2;
-use crate::core::constants::numerical::{TWO_PI};
 
 #[cfg(test)]
 mod tests;

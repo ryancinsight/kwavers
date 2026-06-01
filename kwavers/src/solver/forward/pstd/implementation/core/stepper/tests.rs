@@ -148,7 +148,13 @@ fn test_anti_aliasing_filter_attenuates_nyquist_checkerboard() {
 
     let n = 16usize;
     let grid = Grid::new(n, n, n, 0.001, 0.001, 0.001).unwrap();
-    let medium = HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.0, 0.0, &grid);
+    let medium = HomogeneousMedium::new(
+        DENSITY_WATER_NOMINAL,
+        SOUND_SPEED_WATER_SIM,
+        0.0,
+        0.0,
+        &grid,
+    );
     let source = GridSource::new_empty();
 
     let mut solver = PSTDSolver::new(config, grid, &medium, source).unwrap();

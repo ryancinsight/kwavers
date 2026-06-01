@@ -1,26 +1,4 @@
-/// Gaussian error function via Abramowitz & Stegun 7.1.26 rational approximation.
-///
-/// Maximum absolute error: |ε| ≤ 1.5×10⁻⁷.
-///
-/// # Reference
-/// Abramowitz & Stegun (1964) *Handbook of Mathematical Functions*, §7.1.26.
-#[inline]
-fn erf_as(x: f64) -> f64 {
-    const P: f64 = 0.327_591_1_f64;
-    const A: [f64; 5] = [
-        0.254_829_592_f64,
-        -0.284_496_736_f64,
-        1.421_413_741_f64,
-        -1.453_152_027_f64,
-        1.061_405_429_f64,
-    ];
-    let sign = if x >= 0.0 { 1.0_f64 } else { -1.0_f64 };
-    let x_abs = x.abs();
-    let t = 1.0 / (1.0 + P * x_abs);
-    // Horner evaluation of polynomial in t
-    let poly = t * (A[0] + t * (A[1] + t * (A[2] + t * (A[3] + t * A[4]))));
-    sign * (1.0 - poly * (-x_abs * x_abs).exp())
-}
+use crate::math::statistics::erf;
 
 /// Single-pulse intrinsic-threshold cavitation probability (Gaussian erf-CDF model).
 ///
@@ -57,7 +35,7 @@ pub fn intrinsic_threshold_cavitation_probability(
     let denom = (sigma_pa * SQRT_2).max(f64::MIN_POSITIVE);
     p_arr
         .iter()
-        .map(|&p| 0.5 * (1.0 + erf_as((p - p_threshold) / denom)))
+        .map(|&p| 0.5 * (1.0 + erf((p - p_threshold) / denom)))
         .collect()
 }
 
@@ -89,8 +67,7 @@ pub fn frequency_dependent_intrinsic_threshold_pa(
     slope_pa_per_decade: f64,
 ) -> Vec<f64> {
     const F_REF: f64 = 1.0e6; // 1 MHz reference
-    f_hz
-        .iter()
+    f_hz.iter()
         .map(|&f| {
             let f_pos = f.max(f64::MIN_POSITIVE);
             p_t_1mhz_pa + slope_pa_per_decade * (f_pos / F_REF).log10()

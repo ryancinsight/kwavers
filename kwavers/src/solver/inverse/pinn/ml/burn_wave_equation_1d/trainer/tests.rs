@@ -1,7 +1,7 @@
 use super::super::config::BurnPINNConfig;
 use super::trainer_impl::BurnPINNTrainer;
-use burn::backend::{Autodiff, NdArray};
 use crate::core::constants::fundamental::SOUND_SPEED_AIR;
+use burn::backend::{Autodiff, NdArray};
 use ndarray::{Array1, Array2};
 
 type TestBackend = Autodiff<NdArray<f32>>;

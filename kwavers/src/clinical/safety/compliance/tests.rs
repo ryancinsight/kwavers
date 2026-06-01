@@ -2,9 +2,7 @@ use crate::clinical::safety::mechanical_index::MechanicalIndexTissueType;
 use crate::clinical::therapy::parameters::ClinicalTherapyParameters;
 use crate::core::constants::acoustic_parameters::DB_TO_NP;
 use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
-use crate::core::constants::medical::{
-    IEC_TISSUE_ABSORPTION_DB_CM_MHZ, IEC_TISSUE_SPECIFIC_HEAT,
-};
+use crate::core::constants::medical::{IEC_TISSUE_ABSORPTION_DB_CM_MHZ, IEC_TISSUE_SPECIFIC_HEAT};
 use crate::core::constants::tissue_acoustics::DENSITY_BLOOD;
 
 use super::*;
@@ -118,13 +116,13 @@ fn test_temperature_rise_uses_tissue_impedance_not_water() {
     let mut validator = EnhancedComplianceValidator::new(config).unwrap();
 
     let params = ClinicalTherapyParameters {
-        frequency: 1.0e6,             // 1 MHz
-        pressure: 1.0e5,              // 100 kPa peak (sinusoidal)
+        frequency: 1.0e6, // 1 MHz
+        pressure: 1.0e5,  // 100 kPa peak (sinusoidal)
         duration: 1.0,
         peak_negative_pressure: 1.0e5,
-        mechanical_index: 0.1,        // well below any limit
+        mechanical_index: 0.1, // well below any limit
         treatment_duration: 1.0,
-        duty_cycle: 1.0,              // 100% duty — t_eff = 1.0 s
+        duty_cycle: 1.0, // 100% duty — t_eff = 1.0 s
         prf: 1.0,
     };
 

@@ -15,10 +15,10 @@
 //!   *IEEE UFFC*, 56(3), 489–506.
 
 use super::config::PlaneWaveCompoundingConfig;
+use crate::core::constants::numerical::{FOUR_PI, TWO_PI};
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array2;
 use num_complex::Complex;
-use crate::core::constants::numerical::{FOUR_PI, TWO_PI};
 
 /// Plane wave compounding processor.
 #[derive(Debug, Clone)]

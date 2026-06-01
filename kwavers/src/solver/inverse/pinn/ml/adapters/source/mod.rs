@@ -13,7 +13,7 @@
 //! └─────────────────┘        └──────────────┘        └──────────────┘
 //! ```
 
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 #[cfg(test)]
 mod tests;
 
@@ -104,8 +104,7 @@ impl PinnAcousticSource {
         let frequency = signal.frequency(time_sample);
         let phase = signal.phase(time_sample);
 
-        let t_peak =
-            (std::f64::consts::PI / 2.0 - phase) / (TWO_PI * frequency);
+        let t_peak = (std::f64::consts::PI / 2.0 - phase) / (TWO_PI * frequency);
         let amplitude = signal.amplitude(t_peak).abs();
 
         let focal_properties = Self::extract_focal_properties(source);

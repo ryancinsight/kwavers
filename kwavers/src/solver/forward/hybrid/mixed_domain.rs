@@ -1,6 +1,7 @@
 //! Mixed-Domain Propagation Plugin
 //! Based on Pinton et al. (2009): "A heterogeneous nonlinear attenuating full-wave model"
 
+use crate::core::constants::numerical::TWO_PI;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
@@ -8,7 +9,6 @@ use crate::domain::plugin::{PluginMetadata, PluginState};
 use crate::math::fft::{Fft3dInOutExt, Shape3D, FFT_CACHE_3D};
 use ndarray::{Array3, Zip};
 use num_complex::Complex64;
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Mixed-Domain Propagation Plugin
 /// Combines time-domain and frequency-domain methods for optimal performance

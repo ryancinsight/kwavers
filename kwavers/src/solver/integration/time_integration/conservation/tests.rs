@@ -35,7 +35,8 @@ fn test_conservation_monitoring() {
 fn test_energy_computation() {
     let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1).unwrap();
     let monitor = ConservationMonitor::new(&grid);
-    let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, &grid);
+    let medium =
+        HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, &grid);
 
     // Create test fields
     let pressure = Array3::from_elem((10, 10, 10), 1e5); // Pa

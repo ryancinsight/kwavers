@@ -1,11 +1,10 @@
 //! Aperture-plane phase maps.
 
-
 use crate::core::error::KwaversResult;
 use ndarray::Array2;
 
 use super::model::AberrationCorrection;
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 
 impl AberrationCorrection<'_> {
     /// Compute the 2D phase aberration map at the aperture plane `z = z_max`.

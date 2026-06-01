@@ -43,9 +43,10 @@ fn test_bubble_dynamics() {
 
     let response = dynamics
         .simulate_oscillation(
-            &bubble, 50_000.0,        // 50 kPa
+            &bubble,
+            50_000.0,        // 50 kPa
             2.0 * MHZ_TO_HZ, // 2 MHz
-            1e-6,             // 1 μs
+            1e-6,            // 1 μs
         )
         .unwrap();
 
@@ -80,7 +81,8 @@ fn test_nonlinear_scattering() {
 
     // 1. Non-negative at typical CEUS drive (100 kPa, 3 MHz)
     let eff_nominal = dynamics.nonlinear_scattering_efficiency(
-        &bubble, 100_000.0,       // 100 kPa
+        &bubble,
+        100_000.0,       // 100 kPa
         3.0 * MHZ_TO_HZ, // 3 MHz
     );
     assert!(
@@ -90,7 +92,8 @@ fn test_nonlinear_scattering() {
 
     // 2. Linear scaling with pressure amplitude (perturbation regime)
     let eff_double = dynamics.nonlinear_scattering_efficiency(
-        &bubble, 200_000.0,       // 200 kPa (2× drive)
+        &bubble,
+        200_000.0, // 200 kPa (2× drive)
         3.0 * MHZ_TO_HZ,
     );
     let ratio = eff_double / eff_nominal.max(f64::EPSILON);
@@ -107,8 +110,8 @@ fn test_nonlinear_scattering() {
         100_000.0,
         f_res * 10.0, // Ω = 10 >> 1
     );
-    let eff_res =
-        dynamics.nonlinear_scattering_efficiency(&bubble, 100_000.0, f_res /* Ω = 1 (resonance) */);
+    let eff_res = dynamics
+        .nonlinear_scattering_efficiency(&bubble, 100_000.0, f_res /* Ω = 1 (resonance) */);
     assert!(
         eff_res > eff_off,
         "η_NL at resonance ({eff_res:.3}) should exceed far off-resonance ({eff_off:.3})"

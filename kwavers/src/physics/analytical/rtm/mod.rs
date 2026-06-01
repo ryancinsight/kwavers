@@ -19,7 +19,7 @@ pub use condition::{
     rtm_source_normalized_condition,
 };
 pub use temporal::{
-    standing_wave_field_1d, standing_wave_intensity_statistics,
-    standing_wave_modulation_period_hz, standing_wave_spatial_frequency_cycles_m,
-    standing_wave_suppression_gain, temporal_modulation_frequencies,
+    standing_wave_field_1d, standing_wave_intensity_statistics, standing_wave_modulation_period_hz,
+    standing_wave_spatial_frequency_cycles_m, standing_wave_suppression_gain,
+    temporal_modulation_frequencies,
 };

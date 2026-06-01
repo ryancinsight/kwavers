@@ -1,6 +1,6 @@
 //! Rigorous validation against literature benchmarks
 
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 pub mod clinical;
 pub mod theorem_validation;
 

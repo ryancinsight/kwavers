@@ -2,17 +2,17 @@
 
 use super::planner::TreatmentPlanner;
 use super::types::{TranscranialTargetVolume, TransducerSetup};
-use crate::core::constants::tissue_acoustics::{DENSITY_BLOOD, DENSITY_BRAIN, SOUND_SPEED_BRAIN};
 use crate::core::constants::fundamental::ACOUSTIC_ABSORPTION_TISSUE;
 use crate::core::constants::medical::{
     BLOOD_PERFUSION_RATE_BRAIN, BLOOD_SPECIFIC_HEAT, THERMAL_DOSE_THRESHOLD,
 };
 use crate::core::constants::numerical::CM_TO_M;
+use crate::core::constants::numerical::TWO_PI;
+use crate::core::constants::tissue_acoustics::{DENSITY_BLOOD, DENSITY_BRAIN, SOUND_SPEED_BRAIN};
 use crate::core::constants::{BODY_TEMPERATURE_C, NP_TO_DB};
 use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 use ndarray::Array3;
 use num_complex::Complex;
-use crate::core::constants::numerical::{TWO_PI};
 
 const MILLIMETERS_TO_METERS: f64 = 1.0e-3;
 // SSOT: SOUND_SPEED_BRAIN and DENSITY_BRAIN imported from core::constants::tissue_acoustics

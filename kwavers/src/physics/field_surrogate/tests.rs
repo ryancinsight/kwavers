@@ -4,11 +4,11 @@
 
 use ndarray::Array3;
 
-use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA, TWO_PI};
 use super::{
     helmholtz_residual_field, helmholtz_residual_kernel, helmholtz_residual_stats,
     place_kernel_at_focus, resample_trilinear, FocalKernel, KernelCube, HELMHOLTZ_C0_WATER,
 };
+use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA, TWO_PI};
 
 /// Build a synthetic Gaussian focal kernel for testing.
 fn synthetic_gaussian_kernel(
@@ -144,7 +144,13 @@ fn test_cube_query_corner_returns_normalized_envelope() {
     .map(|&(f0, pnp)| synthetic_gaussian_kernel(40, 30, 30, 0.5e-3, f0, pnp))
     .collect();
     let cube = KernelCube::new(kernels).unwrap();
-    let env = cube.query(MHZ_TO_HZ, 30.0 * MPA_TO_PA, (60, 40, 40), (45, 20, 20), 0.5e-3);
+    let env = cube.query(
+        MHZ_TO_HZ,
+        30.0 * MPA_TO_PA,
+        (60, 40, 40),
+        (45, 20, 20),
+        0.5e-3,
+    );
     let max = env.iter().copied().fold(f64::NEG_INFINITY, f64::max);
     assert!(
         (max - 1.0).abs() < 1e-9,
@@ -166,8 +172,20 @@ fn test_cube_query_clamps_outside_sweep() {
     let cube = KernelCube::new(kernels).unwrap();
     let target_shape = (60, 40, 40);
     let target_focus = (45, 20, 20);
-    let env_below = cube.query(0.1 * MHZ_TO_HZ, 20.0 * MPA_TO_PA, target_shape, target_focus, 0.5e-3);
-    let env_at_lo = cube.query(0.5 * MHZ_TO_HZ, 20.0 * MPA_TO_PA, target_shape, target_focus, 0.5e-3);
+    let env_below = cube.query(
+        0.1 * MHZ_TO_HZ,
+        20.0 * MPA_TO_PA,
+        target_shape,
+        target_focus,
+        0.5e-3,
+    );
+    let env_at_lo = cube.query(
+        0.5 * MHZ_TO_HZ,
+        20.0 * MPA_TO_PA,
+        target_shape,
+        target_focus,
+        0.5e-3,
+    );
     let max_diff = env_below
         .iter()
         .zip(env_at_lo.iter())
@@ -191,8 +209,20 @@ fn test_cube_query_pnp_amplitude_invariant() {
     .map(|&(f0, pnp)| synthetic_gaussian_kernel(40, 30, 30, 0.5e-3, f0, pnp))
     .collect();
     let cube = KernelCube::new(kernels).unwrap();
-    let env_15 = cube.query(MHZ_TO_HZ, 15.0 * MPA_TO_PA, (60, 40, 40), (45, 20, 20), 0.5e-3);
-    let env_30 = cube.query(MHZ_TO_HZ, 30.0 * MPA_TO_PA, (60, 40, 40), (45, 20, 20), 0.5e-3);
+    let env_15 = cube.query(
+        MHZ_TO_HZ,
+        15.0 * MPA_TO_PA,
+        (60, 40, 40),
+        (45, 20, 20),
+        0.5e-3,
+    );
+    let env_30 = cube.query(
+        MHZ_TO_HZ,
+        30.0 * MPA_TO_PA,
+        (60, 40, 40),
+        (45, 20, 20),
+        0.5e-3,
+    );
     let max_diff = env_15
         .iter()
         .zip(env_30.iter())
@@ -248,8 +278,20 @@ fn test_cube_blend_in_place_zero_extra_allocation() {
     .map(|&(f0, pnp)| synthetic_gaussian_kernel(40, 30, 30, 0.5e-3, f0, pnp))
     .collect();
     let cube = KernelCube::new(kernels).unwrap();
-    let env_a = cube.query(0.6 * MHZ_TO_HZ, 20.0 * MPA_TO_PA, (60, 40, 40), (45, 20, 20), 0.5e-3);
-    let env_b = cube.query(0.6 * MHZ_TO_HZ, 20.0 * MPA_TO_PA, (60, 40, 40), (45, 20, 20), 0.5e-3);
+    let env_a = cube.query(
+        0.6 * MHZ_TO_HZ,
+        20.0 * MPA_TO_PA,
+        (60, 40, 40),
+        (45, 20, 20),
+        0.5e-3,
+    );
+    let env_b = cube.query(
+        0.6 * MHZ_TO_HZ,
+        20.0 * MPA_TO_PA,
+        (60, 40, 40),
+        (45, 20, 20),
+        0.5e-3,
+    );
     assert_eq!(env_a, env_b, "deterministic");
     let max_a = env_a.iter().copied().fold(f64::NEG_INFINITY, f64::max);
     assert!((max_a - 1.0).abs() < 1e-9);
@@ -358,7 +400,13 @@ fn test_cube_query_midpoint_blends_and_renormalizes() {
     .map(|&(f0, pnp)| synthetic_gaussian_kernel(40, 30, 30, 0.5e-3, f0, pnp))
     .collect();
     let cube = KernelCube::new(kernels).unwrap();
-    let env_mid = cube.query(0.75 * MHZ_TO_HZ, 20.0 * MPA_TO_PA, (60, 40, 40), (45, 20, 20), 0.5e-3);
+    let env_mid = cube.query(
+        0.75 * MHZ_TO_HZ,
+        20.0 * MPA_TO_PA,
+        (60, 40, 40),
+        (45, 20, 20),
+        0.5e-3,
+    );
     let max = env_mid.iter().copied().fold(f64::NEG_INFINITY, f64::max);
     assert!(
         (max - 1.0).abs() < 1e-9,

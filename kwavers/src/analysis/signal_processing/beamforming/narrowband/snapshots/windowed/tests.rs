@@ -3,9 +3,9 @@ use super::types::{
     SnapshotMethod, SnapshotScenario, SnapshotSelection, StftBinConfig, WindowFunction,
 };
 use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::numerical::TWO_PI;
 use approx::assert_relative_eq;
 use ndarray::Array3;
-use crate::core::constants::numerical::{TWO_PI};
 
 fn sensor_positions_m() -> Vec<[f64; 3]> {
     vec![

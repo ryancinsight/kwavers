@@ -6,6 +6,27 @@
 //! contrast `chi = (s^2 - s0^2) / s0^2`, the first-order scattered PSTD field
 //! satisfies the same homogeneous leapfrog recurrence as the direct field with
 //! source term `-chi * (p0[n+1] - 2 p0[n] + p0[n-1])`.
+//! The acceleration term is the full reference-field second difference,
+//! including pressure-source injection. This is the discrete Frechet derivative
+//! of the production PSTD acquisition equation because the slowness perturbation
+//! multiplies `p_tt`, not only the propagated field after source support is
+//! removed.
+//!
+//! ## Second-order Born-series correction
+//!
+//! The Born series expands the total PSTD field as `p = p0 + ps1 + ps2 + ...`
+//! where each order sources the next via the same scattering potential:
+//!
+//! ```text
+//! ps1[n+1] − (2−θ)ps1[n] + ps1[n−1] = −χ · (p0[n+1] − 2p0[n] + p0[n−1])
+//! ps2[n+1] − (2−θ)ps2[n] + ps2[n−1] = −χ · (ps1[n+1] − 2ps1[n] + ps1[n−1])
+//! ```
+//!
+//! The second-order functions below add `ps2` to the receivers alongside
+//! `p0 + ps1`, sharing the existing config, contrast, modal symbols, and
+//! validation.  The adjoint gradient is the first-order adjoint applied to
+//! the second-order residual (a valid descent direction, not the exact
+//! second-order adjoint).
 //!
 //! The discrete adjoint of the finite-window Born forward operator is also
 //! implemented here.  The adjoint runs the same homogeneous PSTD backward in
@@ -21,7 +42,7 @@ use crate::math::fft::{fft_3d_complex_into, ifft_3d_complex_inplace};
 use crate::physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::{
     complex_l2_objective, complex_source_scale, sound_speed_to_slowness, MultiRowRingArray,
 };
-use crate::solver::inverse::linear_born_inversion::ElementPosition;
+use crate::domain::source::transducers::ElementPosition;
 use ndarray::{Array2, Array3};
 use num_complex::Complex64;
 use std::f64::consts::TAU;
@@ -258,8 +279,11 @@ pub fn finite_window_pstd_born_gradient(
     let reference_slowness_sq = reference_slowness * reference_slowness;
 
     for transmit in 0..transmissions {
-        let source_hat =
-            source_spectrum_on_grid(grid, &array.cylindrical_source(transmit), &symbols.source_kappa)?;
+        let source_hat = source_spectrum_on_grid(
+            grid,
+            &array.cylindrical_source(transmit),
+            &symbols.source_kappa,
+        )?;
         let (d_model, accel_history) = simulate_transmit_with_accel(
             grid,
             &source_hat,
@@ -297,9 +321,7 @@ pub fn finite_window_pstd_born_gradient(
 
         // Convert chi gradient to slowness gradient: dchi/ds = 2s/s0².
         let (_, ny, nz) = gradient.dim();
-        for (linear_idx, (&chi_grad, &s)) in
-            chi_gradient.iter().zip(slowness.iter()).enumerate()
-        {
+        for (linear_idx, (&chi_grad, &s)) in chi_gradient.iter().zip(slowness.iter()).enumerate() {
             let ix = linear_idx / (ny * nz);
             let rem = linear_idx % (ny * nz);
             let iy = rem / nz;
@@ -338,8 +360,7 @@ fn simulate_transmit_with_accel(
     let mut scatter_source = Array3::<Complex64>::zeros(grid.dimensions);
     let mut scatter_source_hat = Array3::<Complex64>::zeros(grid.dimensions);
     let mut receivers = vec![Complex64::new(0.0, 0.0); receiver_indices.len()];
-    let mut accel_history: Vec<Array3<Complex64>> =
-        Vec::with_capacity(bin_config.total_steps);
+    let mut accel_history: Vec<Array3<Complex64>> = Vec::with_capacity(bin_config.total_steps);
     let angular_step = TAU * bin_config.frequency_hz * bin_config.time_step_s;
     let mut previous_signal = 0.0;
 
@@ -417,7 +438,7 @@ fn simulate_transmit_with_accel(
 ///
 /// Runs the homogeneous PSTD leapfrog backward in time.  At each step `n`
 /// where `n ≥ bin_start`, injects the time-reversed demodulated residual
-/// `(2/N_bin) · r[recv].conj() · exp(+i·ω·n·Δt)` at the receiver cells as
+/// `(2/N_bin) · r[recv] · exp(+i·ω·n·Δt)` at the receiver cells as
 /// the adjoint source.  Accumulates the chi gradient via cross-correlation of
 /// the adjoint field with the stored reference-field acceleration.
 ///
@@ -473,7 +494,7 @@ fn adjoint_backward_pass(
             let demod = Complex64::new(phase.cos(), phase.sin());
             for (recv_idx, &(ix, iy, iz)) in receiver_indices.iter().enumerate() {
                 pa_source_spatial[[ix, iy, iz]] +=
-                    adj_scale * receiver_residual[recv_idx].conj() * demod;
+                    adj_scale * receiver_residual[recv_idx] * demod;
             }
         }
         fft_3d_complex_into(&pa_source_spatial, &mut pa_source_hat);
@@ -505,6 +526,211 @@ fn adjoint_backward_pass(
         pa_curr.assign(&pa_prev);
     }
     chi_gradient
+}
+
+/// Simulate finite-window second-order PSTD Born receiver rows.
+///
+/// Extends the first-order model (p0 + ps1) with the second-order Born-series
+/// correction term ps2 whose source is `-chi * accel(ps1)`.  The total
+/// receiver pressure is `p0 + ps1 + ps2`, where the second-order term captures
+/// the first re-scattering of the first-order field through the heterogeneous
+/// slowness-squared contrast.
+///
+/// # Errors
+/// Returns an error when the grid, acquisition parameters, ring geometry, or
+/// sound-speed values violate the finite-window PSTD contract.
+pub fn simulate_pstd_finite_window_born_second_order_observation(
+    sound_speed_m_s: &Array3<f64>,
+    array: &MultiRowRingArray,
+    frequency_hz: f64,
+    config: PstdFiniteWindowBornConfig,
+    transmissions: usize,
+) -> KwaversResult<Array2<Complex64>> {
+    let slowness = sound_speed_to_slowness(sound_speed_m_s)?;
+    validate_inputs(&slowness, array, frequency_hz, config, transmissions)?;
+    let grid = GridSpec::new(slowness.dim(), config.spacing_m)?;
+    let bin_config = config.temporal_transfer().bin_config(
+        frequency_hz,
+        config.time_step_s,
+        config.spacing_m,
+        config.reference_sound_speed_m_s,
+    )?;
+    let contrast = normalized_slowness_squared_contrast(&slowness, config)?;
+    let symbols = ModalSymbols::new(grid, config);
+    let receiver_indices = receiver_indices_on_grid(grid, array)?;
+    let mut output = Array2::zeros((transmissions, array.element_count()));
+
+    for transmit in 0..transmissions {
+        let source_hat = source_spectrum_on_grid(
+            grid,
+            &array.cylindrical_source(transmit),
+            &symbols.source_kappa,
+        )?;
+        let row = simulate_transmit_second_order(
+            grid,
+            &source_hat,
+            &contrast,
+            &symbols.theta_squared,
+            &receiver_indices,
+            bin_config,
+        );
+        for (receiver_index, pressure) in row.into_iter().enumerate() {
+            output[[transmit, receiver_index]] = pressure;
+        }
+    }
+
+    Ok(output)
+}
+
+/// Per-transmit forward PSTD pass with second-order Born-series correction.
+///
+/// At each time step this computes:
+/// 1. `p0[n+1]` — homogeneous reference field (leapfrog + source).
+/// 2. `ps1_source = −χ · (p0[n+1] − 2·p0[n] + p0[n−1])`.
+/// 3. `ps1[n+1]` — first-order scattered field (leapfrog + ps1_source).
+/// 4. `ps2_source = −χ · (ps1[n+1] − 2·ps1[n] + ps1[n−1])`.
+/// 5. `ps2[n+1]` — second-order scattered field (leapfrog + ps2_source).
+/// 6. Record `p0[n+1] + ps1[n+1] + ps2[n+1]` at receiver positions during the
+///    frequency-bin window, demodulated by `exp(−i·ω·n·Δt)`.
+fn simulate_transmit_second_order(
+    grid: GridSpec,
+    source_hat: &Array3<Complex64>,
+    contrast: &Array3<f64>,
+    theta_squared: &Array3<f64>,
+    receiver_indices: &[(usize, usize, usize)],
+    bin_config: super::cbs::PstdTemporalBinConfig,
+) -> Vec<Complex64> {
+    // --- direct (p0) fields in spectral and spatial domain ---
+    let mut direct_prev_hat = Array3::<Complex64>::zeros(grid.dimensions);
+    let mut direct_curr_hat = Array3::<Complex64>::zeros(grid.dimensions);
+    let mut direct_next_hat = Array3::<Complex64>::zeros(grid.dimensions);
+    let mut direct_prev = Array3::<Complex64>::zeros(grid.dimensions);
+    let mut direct_curr = Array3::<Complex64>::zeros(grid.dimensions);
+    let mut direct_next = Array3::<Complex64>::zeros(grid.dimensions);
+
+    // --- first-order scattered (ps1) fields ---
+    let mut scat1_prev_hat = Array3::<Complex64>::zeros(grid.dimensions);
+    let mut scat1_curr_hat = Array3::<Complex64>::zeros(grid.dimensions);
+    let mut scat1_next_hat = Array3::<Complex64>::zeros(grid.dimensions);
+    let mut scat1_prev = Array3::<Complex64>::zeros(grid.dimensions);
+    let mut scat1_curr = Array3::<Complex64>::zeros(grid.dimensions);
+    let mut scat1_next = Array3::<Complex64>::zeros(grid.dimensions);
+
+    // --- second-order scattered (ps2) fields (spectral only; spatial domain
+    //     only needed for receiver sampling via scat2_next) ---
+    let mut scat2_prev_hat = Array3::<Complex64>::zeros(grid.dimensions);
+    let mut scat2_curr_hat = Array3::<Complex64>::zeros(grid.dimensions);
+    let mut scat2_next_hat = Array3::<Complex64>::zeros(grid.dimensions);
+    let mut scat2_next = Array3::<Complex64>::zeros(grid.dimensions);
+
+    // --- work buffers ---
+    let mut scat1_source = Array3::<Complex64>::zeros(grid.dimensions);
+    let mut scat1_source_hat = Array3::<Complex64>::zeros(grid.dimensions);
+    let mut scat2_source = Array3::<Complex64>::zeros(grid.dimensions);
+    let mut scat2_source_hat = Array3::<Complex64>::zeros(grid.dimensions);
+
+    let mut receivers = vec![Complex64::new(0.0, 0.0); receiver_indices.len()];
+    let angular_step = TAU * bin_config.frequency_hz * bin_config.time_step_s;
+    let mut previous_signal = 0.0;
+
+    for step in 0..bin_config.total_steps {
+        let signal = (angular_step * step as f64).sin();
+        let source_scale = bin_config.source_gain * (signal - previous_signal);
+
+        // 1. Advance p0: p0[n+1] = (2−θ)·p0[n] − p0[n−1] + src·signal
+        for (((next, &current), &previous), (&theta, &source)) in direct_next_hat
+            .iter_mut()
+            .zip(direct_curr_hat.iter())
+            .zip(direct_prev_hat.iter())
+            .zip(theta_squared.iter().zip(source_hat.iter()))
+        {
+            *next = current * (2.0 - theta) - previous + source * source_scale;
+        }
+        direct_next.assign(&direct_next_hat);
+        ifft_3d_complex_inplace(&mut direct_next);
+
+        // 2. Compute ps1 source: −χ · (p0[n+1] − 2·p0[n] + p0[n−1])
+        for (((dst, &next), &current), (&previous, &chi)) in scat1_source
+            .iter_mut()
+            .zip(direct_next.iter())
+            .zip(direct_curr.iter())
+            .zip(direct_prev.iter().zip(contrast.iter()))
+        {
+            *dst = -(next - current * 2.0 + previous) * chi;
+        }
+        fft_3d_complex_into(&scat1_source, &mut scat1_source_hat);
+
+        // 3. Advance ps1: ps1[n+1] = (2−θ)·ps1[n] − ps1[n−1] + ps1_source
+        for (((next, &current), &previous), (&theta, &source)) in scat1_next_hat
+            .iter_mut()
+            .zip(scat1_curr_hat.iter())
+            .zip(scat1_prev_hat.iter())
+            .zip(theta_squared.iter().zip(scat1_source_hat.iter()))
+        {
+            *next = current * (2.0 - theta) - previous + source;
+        }
+        scat1_next.assign(&scat1_next_hat);
+        ifft_3d_complex_inplace(&mut scat1_next);
+
+        // 4. Compute ps2 source: −χ · (ps1[n+1] − 2·ps1[n] + ps1[n−1])
+        for (((dst, &next), &current), (&previous, &chi)) in scat2_source
+            .iter_mut()
+            .zip(scat1_next.iter())
+            .zip(scat1_curr.iter())
+            .zip(scat1_prev.iter().zip(contrast.iter()))
+        {
+            *dst = -(next - current * 2.0 + previous) * chi;
+        }
+        fft_3d_complex_into(&scat2_source, &mut scat2_source_hat);
+
+        // 5. Advance ps2: ps2[n+1] = (2−θ)·ps2[n] − ps2[n−1] + ps2_source
+        for (((next, &current), &previous), (&theta, &source)) in scat2_next_hat
+            .iter_mut()
+            .zip(scat2_curr_hat.iter())
+            .zip(scat2_prev_hat.iter())
+            .zip(theta_squared.iter().zip(scat2_source_hat.iter()))
+        {
+            *next = current * (2.0 - theta) - previous + source;
+        }
+        scat2_next.assign(&scat2_next_hat);
+        ifft_3d_complex_inplace(&mut scat2_next);
+
+        // 6. Accumulate  p0 + ps1 + ps2  at receivers during the bin window.
+        if step >= bin_config.bin_start_step {
+            let phase = -angular_step * step as f64;
+            let demodulation = Complex64::new(phase.cos(), phase.sin());
+            for (dst, &(ix, iy, iz)) in receivers.iter_mut().zip(receiver_indices.iter()) {
+                let total = direct_next[[ix, iy, iz]]
+                    + scat1_next[[ix, iy, iz]]
+                    + scat2_next[[ix, iy, iz]];
+                *dst += total * demodulation;
+            }
+        }
+
+        // Rotate direct buffers.
+        direct_prev_hat.assign(&direct_curr_hat);
+        direct_curr_hat.assign(&direct_next_hat);
+        direct_prev.assign(&direct_curr);
+        direct_curr.assign(&direct_next);
+
+        // Rotate first-order scattered buffers.
+        scat1_prev_hat.assign(&scat1_curr_hat);
+        scat1_curr_hat.assign(&scat1_next_hat);
+        scat1_prev.assign(&scat1_curr);
+        scat1_curr.assign(&scat1_next);
+
+        // Rotate second-order scattered buffers.
+        scat2_prev_hat.assign(&scat2_curr_hat);
+        scat2_curr_hat.assign(&scat2_next_hat);
+
+        previous_signal = signal;
+    }
+
+    let scale = 2.0 / (bin_config.total_steps - bin_config.bin_start_step) as f64;
+    for pressure in &mut receivers {
+        *pressure *= scale;
+    }
+    receivers
 }
 
 fn normalized_slowness_squared_contrast(

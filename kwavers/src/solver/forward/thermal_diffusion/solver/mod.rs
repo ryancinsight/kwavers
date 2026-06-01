@@ -57,7 +57,6 @@ impl ThermalDiffusionSolver {
             Some(CattaneoVernotte::new(
                 HyperbolicParameters {
                     relaxation_time: config.relaxation_time,
-                    thermal_wave_speed: 10.0,
                 },
                 grid,
             ))

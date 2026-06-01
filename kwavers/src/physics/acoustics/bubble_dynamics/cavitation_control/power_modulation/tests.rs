@@ -3,9 +3,9 @@
 #[cfg(test)]
 use super::*;
 #[cfg(test)]
-use crate::core::constants::{MAX_DUTY_CYCLE, MIN_DUTY_CYCLE};
-#[cfg(test)]
 use crate::core::constants::numerical::MHZ_TO_HZ;
+#[cfg(test)]
+use crate::core::constants::{MAX_DUTY_CYCLE, MIN_DUTY_CYCLE};
 
 #[test]
 fn test_modulation_schemes() {
@@ -51,10 +51,10 @@ fn test_safety_limiter() {
 #[test]
 fn test_pulse_sequence() {
     let mut generator = PulseSequenceGenerator::create_burst_sequence(
-        3,     // num_pulses
-        0.001, // pulse_duration
-        0.001, // pulse_delay
-        1.0,   // amplitude
+        3,         // num_pulses
+        0.001,     // pulse_duration
+        0.001,     // pulse_delay
+        1.0,       // amplitude
         MHZ_TO_HZ, // frequency
     );
 

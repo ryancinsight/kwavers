@@ -1,8 +1,8 @@
 //! Source wavelet implementations for seismic imaging
 
 use super::constants::RICKER_TIME_SHIFT;
+use crate::core::constants::numerical::TWO_PI;
 use std::f64::consts::PI;
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Ricker wavelet generator for seismic sources
 #[derive(Debug)]

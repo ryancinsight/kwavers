@@ -1,9 +1,9 @@
 use super::*;
-use crate::core::constants::tissue_acoustics::B_OVER_A_WATER;
 use crate::core::constants::numerical::MHZ_TO_HZ;
+use crate::core::constants::numerical::TWO_PI;
+use crate::core::constants::tissue_acoustics::B_OVER_A_WATER;
 use crate::core::constants::SOUND_SPEED_WATER_SIM;
 use crate::domain::grid::Grid;
-use crate::core::constants::numerical::{TWO_PI};
 
 #[test]
 fn test_spatial_order_cfl_limits() {

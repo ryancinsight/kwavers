@@ -1,6 +1,6 @@
 //! Bubble oscillation response data structures and analysis
 
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 /// Bubble oscillation response data
 #[derive(Debug, Clone)]
 pub struct BubbleResponse {

@@ -10,10 +10,10 @@ use ndarray::Array4;
 use crate::domain::imaging::ultrasound::ceus::MicrobubblePopulation;
 
 // Physics imports
+use crate::core::constants::numerical::TWO_PI;
 use crate::physics::acoustics::imaging::modalities::ceus::{
     CEUSReconstruction, CeusPerfusionModel, ContrastImage, FlowKinetics, NonlinearScattering,
 };
-use crate::core::constants::numerical::{TWO_PI};
 
 // Orchestrator
 #[derive(Debug)]
@@ -245,8 +245,7 @@ impl ContrastEnhancedUltrasound {
             for j in 0..ny {
                 for k in 0..nz {
                     let concentration = self.perfusion.concentration(i, j, k);
-                    let local_pressure =
-                        acoustic_pressure * (TWO_PI * frequency * time).cos();
+                    let local_pressure = acoustic_pressure * (TWO_PI * frequency * time).cos();
                     let scattering_response = self.scattering.compute_scattering(
                         &self.microbubbles,
                         concentration,
@@ -291,9 +290,7 @@ impl crate::domain::imaging::CEUSOrchestrator for ContrastEnhancedUltrasound {
         // Simplified: use max pressure as representative
         let max_pressure = pressure_field
             .iter()
-            .max_by(|a, b| {
-                a.abs().total_cmp(&b.abs())
-            })
+            .max_by(|a, b| a.abs().total_cmp(&b.abs()))
             .copied()
             .unwrap_or(1.0);
 

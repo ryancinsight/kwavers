@@ -7,8 +7,8 @@
 #[cfg(test)]
 mod tests {
     use super::super::{AcousticEquationMode, KuznetsovConfig, KuznetsovWave};
-    use crate::core::constants::{DENSITY_WATER, SOUND_SPEED_WATER};
     use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
+    use crate::core::constants::{DENSITY_WATER, SOUND_SPEED_WATER};
     use crate::domain::grid::Grid;
     use crate::domain::medium::HomogeneousMedium;
     use crate::domain::source::PointSource;

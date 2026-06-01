@@ -45,6 +45,14 @@ mod tests;
 
 pub use processor::MUSICProcessor;
 
+/// Default steering-vector center frequency as a fraction of the sampling rate.
+///
+/// `fs/4` is the midpoint of the baseband Nyquist range `[0, fs/2]`, the
+/// least-biased default carrier when none is specified — it maximizes the
+/// margin to both DC and the aliasing edge. Callers with a known carrier should
+/// set `center_frequency` explicitly.
+const DEFAULT_CENTER_FREQUENCY_NYQUIST_FRACTION: f64 = 0.25;
+
 /// MUSIC configuration
 #[derive(Debug, Clone)]
 pub struct MUSICConfig {
@@ -83,7 +91,8 @@ impl MUSICConfig {
     /// Create new MUSIC configuration
     #[must_use]
     pub fn new(config: AcousticLocalizationConfig, num_sources: Option<usize>) -> Self {
-        let center_frequency = config.sampling_frequency / 4.0;
+        let center_frequency =
+            config.sampling_frequency * DEFAULT_CENTER_FREQUENCY_NYQUIST_FRACTION;
         Self {
             config,
             num_sources,

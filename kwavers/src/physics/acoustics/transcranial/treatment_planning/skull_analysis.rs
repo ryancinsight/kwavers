@@ -3,15 +3,13 @@
 use super::planner::TreatmentPlanner;
 use super::types::TranscranialSkullProperties;
 use crate::core::constants::ct_acoustics::{
-    HU_BONE_THRESHOLD, PINTON_SKULL_ALPHA_BASE_DB_CM_MHZ, PINTON_SKULL_ALPHA_SLOPE_DB_CM_MHZ_PER_HU,
-    PINTON_SKULL_DENSITY_BASE_KG_M3, PINTON_SKULL_DENSITY_SLOPE_KG_M3_PER_HU,
-    PINTON_SKULL_SPEED_BASE_M_S, PINTON_SKULL_SPEED_SLOPE_M_S_PER_HU,
+    HU_BONE_THRESHOLD, PINTON_SKULL_ALPHA_BASE_DB_CM_MHZ,
+    PINTON_SKULL_ALPHA_SLOPE_DB_CM_MHZ_PER_HU, PINTON_SKULL_DENSITY_BASE_KG_M3,
+    PINTON_SKULL_DENSITY_SLOPE_KG_M3_PER_HU, PINTON_SKULL_SPEED_BASE_M_S,
+    PINTON_SKULL_SPEED_SLOPE_M_S_PER_HU,
 };
 use crate::core::constants::fundamental::{
-    ACOUSTIC_ABSORPTION_TISSUE,
-    DENSITY_WATER_NOMINAL,
-    SOUND_SPEED_AIR,
-    SOUND_SPEED_WATER_SIM,
+    ACOUSTIC_ABSORPTION_TISSUE, DENSITY_WATER_NOMINAL, SOUND_SPEED_AIR, SOUND_SPEED_WATER_SIM,
 };
 use crate::core::constants::tissue_acoustics::DENSITY_AIR;
 use crate::core::error::KwaversResult;
@@ -27,7 +25,6 @@ use ndarray::Array3;
 //   c    = PINTON_SKULL_SPEED_BASE   + PINTON_SKULL_SPEED_SLOPE   × (HU − HU_BONE_THRESHOLD)
 //   ρ    = PINTON_SKULL_DENSITY_BASE + PINTON_SKULL_DENSITY_SLOPE × (HU − HU_BONE_THRESHOLD)
 //   α    = PINTON_SKULL_ALPHA_BASE   + PINTON_SKULL_ALPHA_SLOPE   × (HU − HU_BONE_THRESHOLD)
-
 
 impl TreatmentPlanner {
     /// Analyze skull acoustic properties from CT data
@@ -61,7 +58,8 @@ impl TreatmentPlanner {
                         // Soft-tissue / water-like baseline (sourced from SSOT)
                         speed_map[[i, j, k]] = SOUND_SPEED_WATER_SIM;
                         density_map[[i, j, k]] = DENSITY_WATER_NOMINAL;
-                        attenuation_map[[i, j, k]] = ACOUSTIC_ABSORPTION_TISSUE; // 0.5 dB/(cm·MHz)
+                        attenuation_map[[i, j, k]] = ACOUSTIC_ABSORPTION_TISSUE;
+                    // 0.5 dB/(cm·MHz)
                     } else {
                         // Air (sourced from SSOT)
                         speed_map[[i, j, k]] = SOUND_SPEED_AIR;

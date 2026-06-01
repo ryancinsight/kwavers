@@ -12,7 +12,7 @@ use super::types::{
     GridIndex, Nonlinear3dAperture, Nonlinear3dConfig, Nonlinear3dVolume, SourceDomain,
 };
 use super::volume::centroid_index;
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 
 pub(crate) fn build_aperture(
     volume: &Nonlinear3dVolume,

@@ -158,7 +158,8 @@ mod tests {
     #[test]
     fn absorption_compensation_toggle_changes_gain() -> KwaversResult<()> {
         let grid = Grid::new(10, 10, 10, 1.0, 1.0, 1.0)?;
-        let mut medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, &grid);
+        let mut medium =
+            HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, &grid);
         medium.set_acoustic_properties(0.5, 0.0, 5.0)?;
         let medium: Arc<dyn Medium> = Arc::new(medium);
 

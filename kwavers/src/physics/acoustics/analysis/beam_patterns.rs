@@ -2,7 +2,7 @@
 //!
 //! Implements beam width and directivity calculations
 
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 /// Beam pattern calculations
 #[derive(Debug)]
 pub struct BeamPatterns;

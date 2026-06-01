@@ -265,7 +265,8 @@ mod tests {
     /// `fundamental_frequency` returns the minimum frequency.
     #[test]
     fn fundamental_frequency_returns_minimum() {
-        let cfg = MultiFrequencyConfig::new(vec![3.0 * MHZ_TO_HZ, MHZ_TO_HZ, 2.0 * MHZ_TO_HZ], None);
+        let cfg =
+            MultiFrequencyConfig::new(vec![3.0 * MHZ_TO_HZ, MHZ_TO_HZ, 2.0 * MHZ_TO_HZ], None);
         let f0 = cfg.fundamental_frequency().unwrap();
         assert!((f0 - MHZ_TO_HZ).abs() < 1.0);
     }

@@ -1,6 +1,6 @@
 use super::{NumericalValidator, StabilityResults};
+use crate::core::constants::numerical::TWO_PI;
 use crate::core::constants::SOUND_SPEED_TISSUE;
-use crate::core::constants::numerical::{TWO_PI};
 
 impl NumericalValidator {
     /// Validate stability.

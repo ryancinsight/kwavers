@@ -1,11 +1,11 @@
 //! Tests for aberration correction
 
 use super::*;
+use crate::core::constants::numerical::TWO_PI;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
 use num_complex::Complex;
 use std::f64::consts::PI;
-use crate::core::constants::numerical::{TWO_PI};
 
 fn make_corrector() -> TranscranialAberrationCorrection {
     let grid = Grid::new(32, 32, 32, 0.002, 0.002, 0.002).unwrap();

@@ -8,8 +8,8 @@ use std::f64::consts::PI;
 use crate::core::constants::fundamental::{
     BOLTZMANN as BOLTZMANN_CONSTANT, PLANCK as PLANCK_CONSTANT, SPEED_OF_LIGHT, STEFAN_BOLTZMANN,
 };
+use crate::core::constants::numerical::FOUR_PI;
 use crate::core::constants::optical::WIEN_CONSTANT;
-use crate::core::constants::numerical::{FOUR_PI};
 
 /// Blackbody radiation model
 #[derive(Debug, Clone)]

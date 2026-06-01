@@ -1,0 +1,45 @@
+[package]
+name = "kwavers-core"
+version = "3.0.0"
+edition = "2021"
+authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
+description = "Foundation layer for kwavers: constants, error types, arena allocation, time and logging utilities"
+license = "MIT"
+repository = "https://github.com/ryancinsight/kwavers"
+
+# Leaf crate: the default build depends only on lightweight external crates.
+# Integrations whose error types feed `KwaversError` (orphan-rule-bound to this
+# crate) are optional + feature-gated so the foundation stays a clean leaf; the
+# `kwavers` facade enables the features it needs (see features below).
+[dependencies]
+ndarray = { version = "0.16", features = ["rayon", "serde"] }
+rayon = "1.10"
+serde = { version = "1.0", features = ["derive"] }
+thiserror = "1.0"
+# `std` feature so `log::SetLoggerError` implements `std::error::Error`
+# (used via `?` in `log::init_logging`).
+log = { version = "0.4", features = ["std"] }
+libc = "0.2"
+# anyhow backs the `KwaversError::Other` aggregation variant (always present).
+anyhow = "1.0"
+
+# Optional integrations (off by default → clean leaf). Each is referenced only by
+# a `#[cfg(feature = …)]`-gated `From<…>`/variant on `KwaversError` (orphan-rule-
+# bound to this crate); the `kwavers` facade enables the ones it needs.
+wgpu = { version = "26.0", features = ["wgsl"], optional = true }
+flume = { version = "0.11", optional = true }
+ritk-registration = { path = "../../ritk/crates/ritk-registration", optional = true }
+nifti = { version = "0.17.0", optional = true }
+
+[features]
+# `From<wgpu::BufferAsyncError>` for KwaversError.
+gpu = ["dep:wgpu"]
+# `From<flume::RecvError>` for KwaversError.
+channels = ["dep:flume"]
+# `From<ritk_registration::…RegistrationError>` for KwaversError.
+registration = ["dep:ritk-registration"]
+# `KwaversError::Nifti(#[from] nifti::error::NiftiError)` variant.
+nifti = ["dep:nifti"]
+
+[lints]
+workspace = true

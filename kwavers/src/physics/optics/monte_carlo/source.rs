@@ -1,9 +1,9 @@
+use crate::core::constants::numerical::TWO_PI;
 use crate::physics::optics::monte_carlo::photon::Photon;
 use crate::physics::optics::monte_carlo::utils::{
     get_perpendicular, normalize, sample_isotropic_direction,
 };
 use rand::Rng;
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Photon source specification
 #[derive(Clone, Debug)]

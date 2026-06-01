@@ -132,8 +132,7 @@ fn wall_filter_polynomial_linear_ramp_outputs_zero() {
     let mut iq = Array3::<Complex64>::zeros((ensemble, 1, 1));
     for n in 0..ensemble {
         // x[n] = (2.0 + 3.0·n) + i·(−1.0 + 0.5·n)
-        iq[[n, 0, 0]] =
-            Complex64::new(2.0 + 3.0 * n as f64, -1.0 + 0.5 * n as f64);
+        iq[[n, 0, 0]] = Complex64::new(2.0 + 3.0 * n as f64, -1.0 + 0.5 * n as f64);
     }
     let out = wf.apply(&iq.view()).unwrap();
     for v in out.iter() {
@@ -160,10 +159,7 @@ fn wall_filter_polynomial_quadratic_outputs_zero() {
     let mut iq = Array3::<Complex64>::zeros((ensemble, 1, 1));
     for n in 0..ensemble {
         let nf = n as f64;
-        iq[[n, 0, 0]] = Complex64::new(
-            1.0 + 2.0 * nf + 0.5 * nf * nf,
-            -2.0 - nf + 0.25 * nf * nf,
-        );
+        iq[[n, 0, 0]] = Complex64::new(1.0 + 2.0 * nf + 0.5 * nf * nf, -2.0 - nf + 0.25 * nf * nf);
     }
     let out = wf.apply(&iq.view()).unwrap();
     for v in out.iter() {

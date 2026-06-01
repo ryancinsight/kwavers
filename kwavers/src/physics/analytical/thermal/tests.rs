@@ -93,7 +93,14 @@ fn beer_lambert_intensity_monotone_decreasing() {
     let z: Vec<f64> = vec![0.0, 0.01, 0.02, 0.04];
     let i = acoustic_intensity_depth_profile(&z, 7.0, 1.0);
     for k in 1..i.len() {
-        assert!(i[k] < i[k - 1], "I[{}]={} ≥ I[{}]={}", k, i[k], k - 1, i[k - 1]);
+        assert!(
+            i[k] < i[k - 1],
+            "I[{}]={} ≥ I[{}]={}",
+            k,
+            i[k],
+            k - 1,
+            i[k - 1]
+        );
     }
 }
 

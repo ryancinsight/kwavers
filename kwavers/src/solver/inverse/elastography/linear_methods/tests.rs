@@ -1,18 +1,17 @@
 //! Value-semantic regression tests for linear elastography inversion methods.
 
-
 use super::direct::direct_inversion;
 use super::directional::directional_phase_gradient_inversion;
 use super::phase_gradient::{compute_phase_gradient_speed, phase_gradient_inversion};
 use super::time_of_flight::time_of_flight_inversion;
 use super::volumetric::volumetric_time_of_flight_inversion;
 use super::ShearWaveInversion;
+use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
+use crate::core::constants::numerical::TWO_PI;
 use crate::domain::grid::Grid;
 use crate::domain::imaging::ultrasound::elastography::InversionMethod;
 use crate::physics::acoustics::imaging::modalities::elastography::displacement::DisplacementField;
 use crate::solver::inverse::elastography::config::ShearWaveInversionConfig;
-use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
-use crate::core::constants::numerical::{TWO_PI};
 
 #[test]
 fn test_time_of_flight_inversion() {

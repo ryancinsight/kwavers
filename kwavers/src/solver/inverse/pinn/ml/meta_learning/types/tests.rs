@@ -1,7 +1,9 @@
 use super::pde_type::PdeType;
 use super::physics::MetaLearningPhysicsParameters;
 use super::task::{TaskData, TaskDataStatistics};
-use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_AIR, SOUND_SPEED_WATER_SIM};
+use crate::core::constants::fundamental::{
+    DENSITY_WATER_NOMINAL, SOUND_SPEED_AIR, SOUND_SPEED_WATER_SIM,
+};
 
 #[test]
 fn test_pde_type_complexity() {

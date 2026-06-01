@@ -35,11 +35,11 @@
 //! scaling factor is the same `2·2/c` compensation used by the reference
 //! implementation to account for the one-sided detector line.
 
+use crate::core::constants::numerical::TWO_PI;
 use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 use crate::math::fft::utils::{fft_shift_2d, ifft_shift_2d};
 use crate::math::fft::{fft_2d_complex_inplace, ifft_2d_complex_inplace, Complex64};
 use ndarray::{s, Array1, Array2, ArrayView1, ArrayView2, Axis};
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Order of the sensor data axes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -3,10 +3,11 @@
 use rayon::prelude::*;
 use std::f64::consts::TAU;
 
-use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
-use super::super::{LinearBornInversionConfig, TransducerGeometry};
+use super::super::LinearBornInversionConfig;
 use super::helpers::distance;
 use super::{RowContext, VolumeOperator, VolumeVoxel};
+use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
+use crate::domain::source::transducers::TransducerGeometry;
 
 impl<'a> VolumeOperator<'a> {
     /// Construct the matrix-free operator over `active` voxels for the given

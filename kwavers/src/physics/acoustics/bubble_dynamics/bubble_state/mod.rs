@@ -10,5 +10,5 @@ mod state;
 mod tests;
 
 pub use gas_dynamics::{GasSpecies, GasType};
-pub use parameters::{young_laplace_pressure, viscous_bubble_wall_stress, BubbleParameters};
+pub use parameters::{viscous_bubble_wall_stress, young_laplace_pressure, BubbleParameters};
 pub use state::BubbleState;

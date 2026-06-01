@@ -1,6 +1,6 @@
 use super::*;
+use crate::core::constants::numerical::TWO_PI;
 use crate::physics::optics::quantum_optics::constants::{C, E_CHARGE, KB};
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Lyman-alpha: lambda = 121.567 nm, f12 = 0.4162, g1 = 2, g2 = 6.
 /// Reference A21 = 6.265e8 s^-1.

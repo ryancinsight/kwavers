@@ -19,7 +19,7 @@ use ndarray::{Array2, ArrayViewMut2, Zip};
 use std::sync::Arc;
 
 use super::KZKConfig;
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 
 /// Parabolic diffraction operator using complex-valued computations for energy preservation.
 ///
@@ -181,12 +181,12 @@ impl ParabolicDiffractionOperator {
 mod tests {
     use super::*;
     use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
-    use std::f64::consts::PI;
     use crate::solver::forward::nonlinear::kzk::constants::{
         DEFAULT_BEAM_WAIST, DEFAULT_FREQUENCY, DEFAULT_GRID_SIZE, DEFAULT_WAVELENGTH,
     };
     use crate::solver::validation::measure_beam_radius;
     use approx::assert_relative_eq;
+    use std::f64::consts::PI;
 
     #[test]
     fn test_complex_energy_conservation() {

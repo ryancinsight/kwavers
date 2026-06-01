@@ -1,12 +1,12 @@
 use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use crate::core::constants::numerical::MHZ_TO_HZ;
+use crate::core::constants::numerical::TWO_PI;
 use crate::domain::grid::Grid;
 use crate::domain::medium::core::CoreMedium;
 use crate::domain::medium::HomogeneousMedium;
 use crate::solver::pstd::PSTDConfig as PstdConfig;
 use crate::solver::pstd::PSTDSolver;
 use std::f64::consts::PI;
-use crate::core::constants::numerical::{TWO_PI};
 
 #[test]
 fn test_pstd_plane_wave_accuracy() {
@@ -36,7 +36,8 @@ fn test_pstd_plane_wave_accuracy() {
 
     let grid = Grid::new(n, n, 1, dx, dx, dx).unwrap();
 
-    let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, &grid);
+    let medium =
+        HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, &grid);
     let source_data = crate::domain::source::GridSource::default();
     let mut solver = PSTDSolver::new(config, grid.clone(), &medium, source_data).unwrap();
 

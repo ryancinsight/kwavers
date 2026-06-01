@@ -27,6 +27,8 @@ pub(super) fn propagate(
     let mut checkpoints: Option<Vec<f32>> =
         keep_history.then(|| vec![0.0_f32; schedule.slot_count() * 2 * n]);
 
+    let c2dt2 = c2dt2_field(grid, speed_m_s);
+
     for step in 0..grid.time_steps {
         if keep_history && schedule.is_checkpoint(step) {
             if let Some(ref mut buf) = checkpoints {
@@ -38,7 +40,7 @@ pub(super) fn propagate(
             }
         }
         step_wavefield_cpml(
-            grid, speed_m_s, &previous, &current, &mut next, &mut psi_x, &mut psi_y,
+            grid, &c2dt2, &previous, &current, &mut next, &mut psi_x, &mut psi_y,
         );
         inject_sources(grid, step, &mut next);
         apply_attenuation(grid, &mut next);
@@ -67,9 +69,11 @@ pub(super) fn propagate_peak_pressure(grid: &AcousticGrid, speed_m_s: &Array2<f6
     let mut psi_y = vec![0.0_f32; n];
     let mut peak = vec![0.0_f32; n];
 
+    let c2dt2 = c2dt2_field(grid, speed_m_s);
+
     for step in 0..grid.time_steps {
         step_wavefield_cpml(
-            grid, speed_m_s, &previous, &current, &mut next, &mut psi_x, &mut psi_y,
+            grid, &c2dt2, &previous, &current, &mut next, &mut psi_x, &mut psi_y,
         );
         inject_sources(grid, step, &mut next);
         apply_attenuation_and_update_peak(grid, &mut next, &mut peak);
@@ -86,6 +90,32 @@ pub(super) const fn peak_pressure_workspace_values(nx: usize, ny: usize) -> usiz
     6 * nx * ny
 }
 
+/// Precompute the loop-invariant stencil coefficient `c²·dt²` (f32) in
+/// `linear(ix, iy, ny)` index order.
+///
+/// The speed field is constant across the entire time loop, so `c²·dt²`
+/// is loop-invariant. Hoisting it out of [`step_wavefield_cpml`] removes,
+/// per cell per timestep, an `f64` `powi(2)`, an `f64 → f32` cast, and the
+/// strided `Array2<f64>` element access, replacing them with a single
+/// contiguous `f32` slice load (half the memory traffic of the `f64`
+/// field). The per-cell value is computed identically to the previous
+/// inline form (`(dt as f32)² * (c.powi(2) as f32)`), so the stencil
+/// result is bit-for-bit unchanged.
+pub(super) fn c2dt2_field(grid: &AcousticGrid, speed_m_s: &Array2<f64>) -> Vec<f32> {
+    let nx = grid.nx;
+    let ny = grid.ny;
+    let dt = grid.dt_s as f32;
+    let dt2 = dt * dt;
+    let mut field = vec![0.0_f32; nx * ny];
+    for ix in 0..nx {
+        for iy in 0..ny {
+            let c2 = speed_m_s[[ix, iy]].powi(2) as f32;
+            field[linear(ix, iy, ny)] = dt2 * c2;
+        }
+    }
+    field
+}
+
 /// Advance the pressure field by one time step using the 4th-order FD stencil
 /// with CPML absorbing boundaries.
 ///
@@ -100,7 +130,7 @@ pub(super) const fn peak_pressure_workspace_values(nx: usize, ny: usize) -> usiz
 /// `p^{n+1} = 2p^n - p^{n-1} + dt²·c²·(Lx + Ly + ψx_ix + ψy_iy)`
 pub(super) fn step_wavefield_cpml(
     grid: &AcousticGrid,
-    speed_m_s: &Array2<f64>,
+    c2dt2: &[f32],
     previous: &[f32],
     current: &[f32],
     next: &mut [f32],
@@ -110,37 +140,46 @@ pub(super) fn step_wavefield_cpml(
     let nx = grid.nx;
     let ny = grid.ny;
     let dx = grid.dx_m as f32;
-    let dt = grid.dt_s as f32;
     let inv12dx2 = 1.0_f32 / (12.0 * dx * dx);
-    let dt2 = dt * dt;
 
-    for ix in 1..nx - 1 {
-        let ax = grid.cpml.a_x[ix];
-        let bx = grid.cpml.b_x[ix];
-        if ax == 0.0 && bx == 1.0 {
-            continue;
-        }
-        for iy in 0..ny {
-            let idx = linear(ix, iy, ny);
-            let dpx =
-                (current[linear(ix + 1, iy, ny)] - current[linear(ix - 1, iy, ny)]) / (2.0 * dx);
-            psi_x[idx] = bx * psi_x[idx] + ax * dpx;
-        }
-    }
-
-    for ix in 0..nx {
-        for iy in 1..ny - 1 {
-            let ay = grid.cpml.a_y[iy];
-            let by_ = grid.cpml.b_y[iy];
-            if ay == 0.0 && by_ == 1.0 {
-                continue;
+    // CPML auxiliary memory-variable updates. Each cell's `psi` update reads
+    // only its own prior `psi` value and the read-only `current` neighbours, so
+    // rows are independent and the per-cell arithmetic is identical to the
+    // sequential form — parallelising over rows is bit-exact.
+    psi_x
+        .par_chunks_mut(ny)
+        .enumerate()
+        .for_each(|(ix, psi_row)| {
+            if ix == 0 || ix + 1 >= nx {
+                return;
             }
-            let idx = linear(ix, iy, ny);
-            let dpy =
-                (current[linear(ix, iy + 1, ny)] - current[linear(ix, iy - 1, ny)]) / (2.0 * dx);
-            psi_y[idx] = by_ * psi_y[idx] + ay * dpy;
-        }
-    }
+            let ax = grid.cpml.a_x[ix];
+            let bx = grid.cpml.b_x[ix];
+            if ax == 0.0 && bx == 1.0 {
+                return;
+            }
+            for iy in 0..ny {
+                let dpx = (current[linear(ix + 1, iy, ny)] - current[linear(ix - 1, iy, ny)])
+                    / (2.0 * dx);
+                psi_row[iy] = bx * psi_row[iy] + ax * dpx;
+            }
+        });
+
+    psi_y
+        .par_chunks_mut(ny)
+        .enumerate()
+        .for_each(|(ix, psi_row)| {
+            for iy in 1..ny - 1 {
+                let ay = grid.cpml.a_y[iy];
+                let by_ = grid.cpml.b_y[iy];
+                if ay == 0.0 && by_ == 1.0 {
+                    continue;
+                }
+                let dpy = (current[linear(ix, iy + 1, ny)] - current[linear(ix, iy - 1, ny)])
+                    / (2.0 * dx);
+                psi_row[iy] = by_ * psi_row[iy] + ay * dpy;
+            }
+        });
 
     next.par_chunks_mut(ny)
         .enumerate()
@@ -162,9 +201,8 @@ pub(super) fn step_wavefield_cpml(
                     - current[linear(ix, iy + 2, ny)])
                     * inv12dx2;
                 let cpml_correction = psi_x[idx] + psi_y[idx];
-                let c2 = speed_m_s[[ix, iy]].powi(2) as f32;
-                row[iy] =
-                    2.0 * current[idx] - previous[idx] + dt2 * c2 * (lx + ly + cpml_correction);
+                row[iy] = 2.0 * current[idx] - previous[idx]
+                    + c2dt2[idx] * (lx + ly + cpml_correction);
             }
         });
 }
@@ -207,6 +245,16 @@ pub(super) fn apply_attenuation_and_update_peak(
 /// `step` index as in the forward pass. Any discrepancy introduces a
 /// systematic phase error in the imaging condition.
 pub(super) fn inject_sources(grid: &AcousticGrid, step: usize, pressure: &mut [f32]) {
+    // Broadband passive-emission path: inject a precomputed waveform
+    // simultaneously (zero delay) at every source cell.
+    if let Some(waveform) = grid.source_waveform.as_ref() {
+        let amplitude = grid.source_scale * waveform.get(step).copied().unwrap_or(0.0);
+        for &cell in &grid.source_cells {
+            pressure[cell] += amplitude;
+        }
+        return;
+    }
+    // Default focused-transmit path: per-cell Ricker wavelet with focal-law delays.
     let t = step as f64 * grid.dt_s;
     for (cell, delay_s) in grid.source_cells.iter().zip(grid.source_delays_s.iter()) {
         let tau = t - *delay_s;

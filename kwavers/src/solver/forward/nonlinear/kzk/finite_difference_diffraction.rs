@@ -7,7 +7,7 @@ use crate::math::fft::{fft_1d_complex, ifft_1d_complex, Complex64};
 use ndarray::{Array1, Array2, ArrayViewMut2};
 
 use super::KZKConfig;
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 
 /// Diffraction operator using angular spectrum method
 pub struct KzkDiffractionOperator {

@@ -2,8 +2,8 @@
 
 use super::calculator::BjerknesCalculator;
 use super::types::{BjerknesForceData, BjerknesInteractionType};
+use crate::core::constants::numerical::TWO_PI;
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::core::constants::numerical::{TWO_PI};
 
 impl BjerknesCalculator {
     /// Calculate secondary Bjerknes force between two bubbles.

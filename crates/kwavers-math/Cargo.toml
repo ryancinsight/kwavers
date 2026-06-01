@@ -1,0 +1,30 @@
+[package]
+name = "kwavers-math"
+version = "3.0.0"
+edition = "2021"
+authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
+description = "Mathematical primitives for kwavers: FFT, linear algebra, numerics, geometry, statistics, SIMD"
+license = "MIT"
+repository = "https://github.com/ryancinsight/kwavers"
+
+[dependencies]
+kwavers-core = { path = "../kwavers-core" }
+ndarray = { version = "0.16", features = ["rayon", "serde"] }
+nalgebra = { version = "0.32" }
+num-complex = "0.4"
+num-traits = "0.2"
+serde = { version = "1.0", features = ["derive"] }
+log = "0.4"
+rand = "0.8"
+apollo = { path = "../../apollo/crates/apollo-fft", package = "apollo-fft" }
+# Optional GPU FFT backend (the `apollofft_wgpu`-backed path is `gpu`-gated).
+apollofft-wgpu = { path = "../../apollo/crates/apollo-fft-wgpu", package = "apollo-fft-wgpu", optional = true }
+
+[features]
+gpu = ["dep:apollofft-wgpu"]
+
+[dev-dependencies]
+approx = "0.5"
+
+[lints]
+workspace = true

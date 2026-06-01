@@ -5,9 +5,9 @@ use crate::domain::medium::properties::OpticalPropertyData;
 #[test]
 fn test_optical_properties_from_domain() {
     let domain_props = OpticalPropertyData::new(
-        10.0,  // absorption_coefficient
-        100.0, // scattering_coefficient
-        0.9,   // anisotropy
+        10.0,                         // absorption_coefficient
+        100.0,                        // scattering_coefficient
+        0.9,                          // anisotropy
         REFRACTIVE_INDEX_SOFT_TISSUE, // refractive_index — SSOT: optical::REFRACTIVE_INDEX_SOFT_TISSUE
     )
     .unwrap();

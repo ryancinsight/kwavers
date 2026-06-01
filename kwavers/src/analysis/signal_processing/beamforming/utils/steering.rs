@@ -5,11 +5,11 @@
 //! **Spherical Wave**: a(r) = exp(j k |r - r₀|) / |r - r₀| for near-field sources
 //! **Focused Beam**: Combines phase delays for beam focusing at specific point
 
+use crate::core::constants::numerical::TWO_PI;
 use crate::core::error::KwaversResult;
 use crate::math::geometry::delays;
 use crate::math::geometry::distance3;
 use ndarray::Array1;
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Steering vector calculation methods
 #[derive(Debug, Clone, PartialEq)]

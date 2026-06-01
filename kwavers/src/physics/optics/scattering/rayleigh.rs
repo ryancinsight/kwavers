@@ -1,7 +1,7 @@
 //! Simplified Mie scattering for small particles (Rayleigh limit)
 
-use std::f64::consts::PI;
 use crate::core::constants::numerical::{FOUR_PI, TWO_PI};
+use std::f64::consts::PI;
 
 /// Simplified Mie scattering for small particles (Rayleigh limit)
 #[derive(Debug)]

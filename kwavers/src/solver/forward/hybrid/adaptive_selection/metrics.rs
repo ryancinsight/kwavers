@@ -1,9 +1,9 @@
 // adaptive_selection/metrics.rs - Metrics for method selection
 
 use crate::core::constants::numerical::MHZ_TO_HZ;
+use crate::core::constants::numerical::TWO_PI;
 use crate::domain::grid::Grid;
 use ndarray::ArrayView3;
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Spectral analysis metrics for method selection
 #[derive(Debug, Clone)]

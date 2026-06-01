@@ -67,13 +67,15 @@ use ndarray::{Array3, Zip};
 
 use crate::core::constants::fundamental::DENSITY_WATER;
 use crate::core::constants::medical::{
-    THERMAL_DOSE_R_ABOVE_43C, THERMAL_DOSE_R_BELOW_43C, THERMAL_DOSE_REFERENCE_TEMP_C,
+    THERMAL_DOSE_REFERENCE_TEMP_C, THERMAL_DOSE_R_ABOVE_43C, THERMAL_DOSE_R_BELOW_43C,
     THERMAL_DOSE_THRESHOLD,
 };
 use crate::core::constants::numerical::SECONDS_PER_MINUTE;
 use crate::core::constants::thermodynamic::{SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER};
 use crate::core::constants::tissue_acoustics::{DENSITY_BLOOD, DENSITY_BRAIN};
-use crate::core::constants::tissue_thermal::{SPECIFIC_HEAT_BLOOD_PLASMA, SPECIFIC_HEAT_BRAIN_WHITE};
+use crate::core::constants::tissue_thermal::{
+    SPECIFIC_HEAT_BLOOD_PLASMA, SPECIFIC_HEAT_BRAIN_WHITE,
+};
 
 // ── Material constants (IT'IS v4.1 / ICRU-44 / Duck 1990) ────────────────────
 
@@ -171,9 +173,21 @@ pub fn transcranial_pennes_thermal_dose(
             let (rho, cp, k, perf, alpha) = if is_skull {
                 (SKULL_RHO, SKULL_CP, SKULL_K, SKULL_PERF, alpha_skull)
             } else if is_brain {
-                (DENSITY_BRAIN, SPECIFIC_HEAT_BRAIN_WHITE, BRAIN_K, BRAIN_PERF, alpha_brain)
+                (
+                    DENSITY_BRAIN,
+                    SPECIFIC_HEAT_BRAIN_WHITE,
+                    BRAIN_K,
+                    BRAIN_PERF,
+                    alpha_brain,
+                )
             } else {
-                (DENSITY_WATER, SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER, WATER_PERF, alpha_water)
+                (
+                    DENSITY_WATER,
+                    SPECIFIC_HEAT_WATER,
+                    THERMAL_CONDUCTIVITY_WATER,
+                    WATER_PERF,
+                    alpha_water,
+                )
             };
             let rho_cp = rho * cp;
             *kap = k / rho_cp;
@@ -259,12 +273,36 @@ fn laplacian_neumann_3d(arr: &Array3<f64>, dx2: f64, dy2: f64, dz2: f64) -> Arra
         for iy in 0..ny {
             for iz in 0..nz {
                 let center = arr[[ix, iy, iz]];
-                let xp = if ix + 1 < nx { arr[[ix + 1, iy, iz]] } else { center };
-                let xm = if ix > 0 { arr[[ix - 1, iy, iz]] } else { center };
-                let yp = if iy + 1 < ny { arr[[ix, iy + 1, iz]] } else { center };
-                let ym = if iy > 0 { arr[[ix, iy - 1, iz]] } else { center };
-                let zp = if iz + 1 < nz { arr[[ix, iy, iz + 1]] } else { center };
-                let zm = if iz > 0 { arr[[ix, iy, iz - 1]] } else { center };
+                let xp = if ix + 1 < nx {
+                    arr[[ix + 1, iy, iz]]
+                } else {
+                    center
+                };
+                let xm = if ix > 0 {
+                    arr[[ix - 1, iy, iz]]
+                } else {
+                    center
+                };
+                let yp = if iy + 1 < ny {
+                    arr[[ix, iy + 1, iz]]
+                } else {
+                    center
+                };
+                let ym = if iy > 0 {
+                    arr[[ix, iy - 1, iz]]
+                } else {
+                    center
+                };
+                let zp = if iz + 1 < nz {
+                    arr[[ix, iy, iz + 1]]
+                } else {
+                    center
+                };
+                let zm = if iz > 0 {
+                    arr[[ix, iy, iz - 1]]
+                } else {
+                    center
+                };
                 lap[[ix, iy, iz]] = (xp + xm - 2.0 * center) / dx2
                     + (yp + ym - 2.0 * center) / dy2
                     + (zp + zm - 2.0 * center) / dz2;
@@ -343,7 +381,13 @@ mod tests {
             "skull peak {skull_peak:.2} should exceed brain peak {brain_peak:.2}"
         );
         // Both should rise above baseline.
-        assert!(skull_peak > BODY_TEMPERATURE_C, "skull peak {skull_peak:.2} should exceed baseline");
-        assert!(brain_peak > BODY_TEMPERATURE_C, "brain peak {brain_peak:.2} should exceed baseline");
+        assert!(
+            skull_peak > BODY_TEMPERATURE_C,
+            "skull peak {skull_peak:.2} should exceed baseline"
+        );
+        assert!(
+            brain_peak > BODY_TEMPERATURE_C,
+            "brain peak {brain_peak:.2} should exceed baseline"
+        );
     }
 }

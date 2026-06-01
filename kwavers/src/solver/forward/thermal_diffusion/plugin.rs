@@ -127,7 +127,8 @@ mod tests {
     #[test]
     fn test_heat_diffusion() {
         let grid = Grid::new(16, 16, 16, 1e-3, 1e-3, 1e-3).unwrap();
-        let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, &grid);
+        let medium =
+            HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, &grid);
 
         let config = ThermalDiffusionConfig {
             enable_bioheat: false,

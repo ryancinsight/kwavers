@@ -9,7 +9,7 @@ use crate::physics::acoustics::imaging::modalities::elastography::displacement::
 
 use super::super::algorithms::{fill_boundaries, spatial_smoothing};
 use super::super::types::elasticity_map_from_speed;
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 
 /// Direct inversion (most accurate method)
 ///

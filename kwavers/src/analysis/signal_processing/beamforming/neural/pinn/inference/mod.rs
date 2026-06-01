@@ -39,8 +39,8 @@
 //! - Harris (1978): "On the use of windows for harmonic analysis with the discrete Fourier transform"
 //! - Szabo (2004): "Diagnostic Ultrasound Imaging: Inside Out"
 
+use crate::core::constants::numerical::TWO_PI;
 use crate::core::error::KwaversResult;
-use crate::core::constants::numerical::{TWO_PI};
 
 #[cfg(test)]
 mod tests;
@@ -222,8 +222,7 @@ pub fn compute_weights(
         .sqrt();
 
         // Phase delay for steering (radians)
-        let phase_delay =
-            TWO_PI * reference_frequency * (distance / sound_speed);
+        let phase_delay = TWO_PI * reference_frequency * (distance / sound_speed);
 
         // Hanning window apodization (side lobe suppression)
         let window_pos = TWO_PI * i as f64 / (n_elements - 1) as f64;

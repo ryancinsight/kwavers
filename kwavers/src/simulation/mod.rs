@@ -2,30 +2,34 @@
 //!
 //! Provides the core simulation loop and orchestration of components.
 
-pub mod backends; // Solver backend adapters (simulation → solver interface)
+pub mod backends;
 pub mod builder;
 pub mod configuration;
+pub mod configs;
 pub mod core;
-pub mod factory; // Moved from physics
-pub mod manager; // Moved from physics/factory
-pub mod multi_physics; // Multi-physics coupling orchestration
-pub mod parameters;
-pub mod setup; // New setup module
-               // pub mod components; // Removed, moved to domain
-               // pub mod environment; // (Removed, moved to domain)
-               // pub mod factory; // Removed
+pub mod dispatch;
+pub mod factory;
 pub mod imaging;
+pub mod manager;
 pub mod modalities;
+pub mod multi_physics;
+pub mod parameters;
 pub mod photoacoustics;
+pub mod runner;
+pub mod setup;
 pub mod solver_adapters;
 pub mod solver_factory;
-pub mod therapy; // Keep this as it's re-exported below
+pub mod therapy;
+pub mod types;
 
 // Re-exports
 pub use crate::domain::sensor::recorder;
 pub use builder::ConfigurationBuilder;
+pub use configs::{HelmholtzConfig, NonlinearConfig, PmlConfig, PoroelasticConfig, ThermalConfig};
 pub use configuration::Configuration;
 pub use core::{CoreSimulation, CoreSimulationStatistics, SimulationBuilder, SimulationResult};
+pub use runner::{SimulationRunner};
+pub use types::{extract_full_grid_stats, FullGridStats, SimulationRunRequest, SimulationRunResult};
 pub use manager::PhysicsManager;
 pub use modalities::{PhotoacousticParameters, PhotoacousticResult, PhotoacousticSimulator};
 pub use multi_physics::{

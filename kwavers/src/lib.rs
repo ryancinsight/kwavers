@@ -51,11 +51,19 @@ use std::collections::HashMap;
 /// Architecture validation and layer enforcement
 pub mod architecture;
 
-/// Core infrastructure: errors, logging, time, arena allocator
-pub mod core;
+/// Core infrastructure: errors, logging, time, arena allocator.
+///
+/// Extracted to the `kwavers-core` workspace crate (ADR 009); re-exported here
+/// under the original `core` name so `crate::core::…` / `kwavers::core::…` paths
+/// resolve unchanged. This `kwavers` crate is the facade over the layered
+/// `kwavers-*` crates.
+pub use kwavers_core as core;
 
-/// Pure mathematical primitives: FFT, geometry, linear algebra, SIMD
-pub mod math;
+/// Pure mathematical primitives: FFT, geometry, linear algebra, SIMD.
+///
+/// Extracted to the `kwavers-math` workspace crate (ADR 009); re-exported here
+/// under the original `math` name so `crate::math::…` paths resolve unchanged.
+pub use kwavers_math as math;
 
 /// Domain model: grid, medium, source, sensor, boundary, field, signal
 pub mod domain;
@@ -185,11 +193,11 @@ pub mod plugin {
     };
     pub use crate::physics::acoustics::state::{PluginFieldAccess, PluginFieldAccessMut};
     pub use crate::physics::factory::{
-        AcousticSolver, BubbleModel, NonlinearEquation, PhysicsBoundaryCondition, PhysicsCatalog,
-        PhysicsConfig, PhysicsModelConfig, PhysicsModelType,
+        AcousticSolver, BubbleModel, NonlinearEquation, PhysicsBoundaryCondition, PhysicsConfig,
+        PhysicsModelConfig, PhysicsModelType,
     };
     pub use crate::solver::plugin::{
-        ExecutionStrategy, ParallelStrategy, PluginManager, SequentialStrategy,
+        ExecutionStrategy, ParallelStrategy, PhysicsCatalog, PluginManager, SequentialStrategy,
     };
 }
 
@@ -203,13 +211,13 @@ pub use solver::pstd::{PSTDConfig, PSTDPlugin, PSTDSolver};
 // --- Physics model re-exports ---
 pub use domain::medium::AnisotropicStiffnessTensor;
 pub use physics::acoustics::mechanics::acoustic_wave::nonlinear::NonlinearWave;
+pub use physics::acoustics::mechanics::cavitation::CavitationModel;
 pub use physics::acoustics::mechanics::elastic_wave::{
     mode_conversion::{MaterialSymmetry, ModeConversionConfig, ViscoelasticConfig},
     ElasticWave,
 };
-pub use physics::chemistry::ChemicalModel;
-pub use physics::acoustics::mechanics::cavitation::CavitationModel;
 pub use physics::acoustics::mechanics::streaming::StreamingModel;
+pub use physics::chemistry::ChemicalModel;
 pub use physics::traits::{AcousticWaveModel, CavitationModelBehavior, ChemicalModelTrait};
 
 // --- Simulation factory ---

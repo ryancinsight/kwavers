@@ -4,12 +4,12 @@ use crate::core::error::{KwaversError, KwaversResult};
 use crate::math::numerics::operators::interpolation::trilinear_index_space;
 use ndarray::Array3;
 
-use crate::core::constants::acoustic_parameters::SKULL_ATTENUATION_MARSAC_MAX_NP_PER_M_MHZ;
-use crate::core::constants::ct_acoustics::HU_BONE_THRESHOLD;
 use super::{
     config::{SOUND_SPEED_SKULL, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM},
-    medium::{soft_tissue_speed, AIR_REJECTION_HU, SOFT_TISSUE_ATTENUATION_NP_PER_M_MHZ},
+    medium::{soft_tissue_speed, SOFT_TISSUE_ATTENUATION_NP_PER_M_MHZ},
 };
+use crate::core::constants::acoustic_parameters::SKULL_ATTENUATION_MARSAC_MAX_NP_PER_M_MHZ;
+use crate::core::constants::ct_acoustics::{HU_BONE_THRESHOLD, HU_BRAIN_BODY_THRESHOLD};
 
 /// CT volume resampled to the isotropic cubic transcranial UST inversion domain.
 #[derive(Clone, Debug)]
@@ -73,7 +73,7 @@ impl AcousticVolume {
                             * (1.0 - phi)
                             + SKULL_ATTENUATION_MARSAC_MAX_NP_PER_M_MHZ * phi;
                         SOUND_SPEED_WATER_SIM * (1.0 - phi) + SOUND_SPEED_SKULL * phi
-                    } else if hu > AIR_REJECTION_HU {
+                    } else if hu > HU_BRAIN_BODY_THRESHOLD {
                         attenuation[[ix, iy, iz]] = SOFT_TISSUE_ATTENUATION_NP_PER_M_MHZ;
                         soft_tissue_speed(hu)
                     } else {
@@ -202,7 +202,7 @@ fn head_centroid3(volume: &Array3<f64>) -> Option<(f64, f64, f64)> {
     let mut sz = 0.0;
     let mut n = 0.0;
     for ((ix, iy, iz), hu) in volume.indexed_iter() {
-        if *hu > AIR_REJECTION_HU {
+        if *hu > HU_BRAIN_BODY_THRESHOLD {
             sx += ix as f64;
             sy += iy as f64;
             sz += iz as f64;
@@ -218,7 +218,7 @@ fn head_bbox3(volume: &Array3<f64>) -> KwaversResult<(usize, usize, usize, usize
     for ix in 0..nx {
         for iy in 0..ny {
             for iz in 0..nz {
-                if volume[[ix, iy, iz]] > AIR_REJECTION_HU {
+                if volume[[ix, iy, iz]] > HU_BRAIN_BODY_THRESHOLD {
                     bbox = Some(match bbox {
                         None => (ix, ix, iy, iy, iz, iz),
                         Some((x0, x1, y0, y1, z0, z1)) => (

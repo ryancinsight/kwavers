@@ -134,6 +134,17 @@ impl TherapyIntegrationOrchestrator {
     /// Advances the therapy session by one time step, including acoustic field generation,
     /// real-time intensity monitoring, safety evaluation, and modality-specific updates.
     ///
+    /// ## Acoustic-field fidelity (applies to ALL modalities, incl. HIFU)
+    ///
+    /// The acoustic field is currently produced by the **linear Gaussian-beam
+    /// estimator** [`execution::generate_acoustic_field`], valid only at
+    /// low/diagnostic intensity. For high-intensity HIFU this does **not** model
+    /// shock formation, nonlinear harmonic heating, or cavitation — the KZK
+    /// nonlinear solver (`solver::forward::nonlinear::kzk_solver_plugin`) exists
+    /// but is **not yet wired into this orchestration path**. Treat HIFU
+    /// intensity/dose from this loop as a planning estimate, not a nonlinear
+    /// prediction. Tracked: gap_audit.md CLD-2 → backlog Sprint C.
+    ///
     /// # Errors
     ///
     /// Returns error if any physics subsystem fails

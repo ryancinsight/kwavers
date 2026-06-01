@@ -9,12 +9,12 @@ use super::spectral::{
 };
 use super::*;
 use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::numerical::TWO_PI;
 use crate::math::fft::{fft_3d_complex_into, ifft_3d_complex_inplace};
 use crate::physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;
-use crate::solver::inverse::linear_born_inversion::ElementPosition;
+use crate::domain::source::transducers::ElementPosition;
 use ndarray::Array3;
 use num_complex::Complex64;
-use crate::core::constants::numerical::{TWO_PI};
 
 mod absorbing;
 mod grid_green;

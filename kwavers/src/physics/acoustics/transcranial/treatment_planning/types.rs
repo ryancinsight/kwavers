@@ -88,11 +88,11 @@ pub struct TranscranialSafetyConstraints {
 impl Default for TranscranialSafetyConstraints {
     fn default() -> Self {
         Self {
-            max_skull_temp: 42.0,         // °C
+            max_skull_temp: 42.0,                          // °C
             max_brain_temp: THERMAL_DOSE_REFERENCE_TEMP_C, // °C
-            max_mi: MI_LIMIT_SOFT_TISSUE, // Mechanical index limit
-            max_thermal_dose: 240.0,      // CEM43 for brain tissue
-            min_skull_distance: 5.0,      // mm
+            max_mi: MI_LIMIT_SOFT_TISSUE,                  // Mechanical index limit
+            max_thermal_dose: 240.0,                       // CEM43 for brain tissue
+            min_skull_distance: 5.0,                       // mm
         }
     }
 }

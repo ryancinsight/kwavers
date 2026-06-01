@@ -55,7 +55,7 @@ use num_complex::Complex64;
 
 use super::geometry::{add, barycentric_coords, cross, norm_sq, scale, sub, triangle_area_normal};
 use super::green::green_helmholtz;
-use crate::core::constants::numerical::{FOUR_PI};
+use crate::core::constants::numerical::FOUR_PI;
 
 /// Compute boundary integrals for a near-field element using adaptive subdivision.
 ///

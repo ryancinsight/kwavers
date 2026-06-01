@@ -19,7 +19,7 @@ use super::super::simulation::{
 };
 use super::super::state::WorkflowState;
 use super::monitor::WorkflowPerformanceMonitor;
-use crate::clinical::imaging::photoacoustic::PhotoacousticResult;
+use crate::clinical::imaging::photoacoustic::{PhotoacousticResult, PressureFieldSeries};
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::imaging::fusion::{FusedImageResult, FusionConfig};
 use crate::domain::imaging::ultrasound::elastography::ElasticityMap;
@@ -248,7 +248,7 @@ impl ClinicalWorkflowOrchestrator {
         let snr = compute_pa_snr(&reconstructed_image);
 
         Ok(PhotoacousticResult {
-            pressure_fields,
+            pressure_fields: PressureFieldSeries::new(pressure_fields)?,
             time: time_points,
             reconstructed_image,
             snr,

@@ -43,10 +43,10 @@
 //!   IEEE Trans. UFFC 39(5):555–566.
 
 use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::numerical::TWO_PI;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use log::info;
-use crate::core::constants::numerical::{TWO_PI};
 
 /// Phase correction data for transducer elements
 #[derive(Debug, Clone)]

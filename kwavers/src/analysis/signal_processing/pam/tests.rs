@@ -1,6 +1,6 @@
 use super::*;
-use crate::core::constants::{SAMPLING_FREQUENCY_DEFAULT, SOUND_SPEED_TISSUE};
 use crate::core::constants::numerical::MHZ_TO_HZ;
+use crate::core::constants::{SAMPLING_FREQUENCY_DEFAULT, SOUND_SPEED_TISSUE};
 
 #[test]
 fn pam_policy_to_core_capon_loading_and_midpoint_frequency() {

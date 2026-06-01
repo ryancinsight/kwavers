@@ -7,11 +7,10 @@ use super::{
     born::ActiveVoxel, config::SOUND_SPEED_TISSUE, medium::AcousticSlice,
     transducer::TranscranialBowlGeometry,
 };
-use crate::core::constants::tissue_acoustics::DENSITY_BRAIN;
 use crate::core::constants::numerical::MPA_TO_PA;
-use crate::solver::inverse::linear_born_inversion::{
-    LinearBornInversionConfig, TransducerGeometry,
-};
+use crate::core::constants::tissue_acoustics::DENSITY_BRAIN;
+use crate::domain::source::transducers::TransducerGeometry;
+use crate::solver::inverse::linear_born_inversion::LinearBornInversionConfig;
 
 /// Build the row-normalized Born sensitivity matrix.
 ///

@@ -2,7 +2,7 @@
 
 use super::types::{InstantaneousIntensity, IntensityTrackerDose, TemporalIntensityMetrics};
 use crate::core::constants::medical::{
-    THERMAL_DOSE_R_ABOVE_43C, THERMAL_DOSE_R_BELOW_43C, THERMAL_DOSE_REFERENCE_TEMP_C,
+    THERMAL_DOSE_REFERENCE_TEMP_C, THERMAL_DOSE_R_ABOVE_43C, THERMAL_DOSE_R_BELOW_43C,
 };
 use crate::core::constants::numerical::SECONDS_PER_MINUTE;
 use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;

@@ -1,8 +1,8 @@
 use super::assembler::BurtonMillerAssembler;
 use super::config::BurtonMillerConfig;
 use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::numerical::FOUR_PI;
 use num_complex::Complex64;
-use crate::core::constants::numerical::{FOUR_PI};
 
 #[test]
 fn test_burton_miller_config_creation() {

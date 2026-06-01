@@ -4,7 +4,7 @@
 //! Destrade & Ogden (2010) JASA 128(6).
 
 use super::super::config::NonlinearInversionConfig;
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 
 /// μ = ρ c_s²  (Hooke's law for shear waves)
 #[must_use]

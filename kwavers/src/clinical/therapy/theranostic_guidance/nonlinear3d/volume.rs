@@ -155,8 +155,9 @@ fn brain_target_center_index(
     ct_hu: &Array3<f64>,
     target_fraction_xyz: Option<[f64; 3]>,
 ) -> KwaversResult<[f64; 3]> {
-    let brain_support =
-        Array3::from_shape_fn(body.dim(), |idx| body[idx] && ct_hu[idx] < HU_BONE_THRESHOLD);
+    let brain_support = Array3::from_shape_fn(body.dim(), |idx| {
+        body[idx] && ct_hu[idx] < HU_BONE_THRESHOLD
+    });
     let support = if brain_support.iter().any(|active| *active) {
         &brain_support
     } else {

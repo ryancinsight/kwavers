@@ -2,9 +2,9 @@ use crate::core::error::KwaversResult;
 use crate::physics::acoustics::skull::AcousticSkullProperties;
 use ndarray::Array3;
 
-use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use super::constants::ALPHA_WATER;
 use super::model::HeterogeneousSkull;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 
 impl HeterogeneousSkull {
     /// Create heterogeneous skull from CT data using the legacy CTImageLoader

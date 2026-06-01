@@ -1,6 +1,5 @@
-
 use super::bessel::jn;
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 
 /// Evaluate the normalised amplitude of the nth harmonic at nonlinear parameter σ.
 ///
@@ -105,13 +104,10 @@ pub fn fubini_waveform(
     t_arr
         .iter()
         .map(|&t| {
-            b_n.iter()
-                .enumerate()
-                .fold(0.0_f64, |acc, (i, &b)| {
-                    let n = (i + 1) as f64;
-                    acc + b * (n * omega * t).sin()
-                })
-                * p0_pa
+            b_n.iter().enumerate().fold(0.0_f64, |acc, (i, &b)| {
+                let n = (i + 1) as f64;
+                acc + b * (n * omega * t).sin()
+            }) * p0_pa
         })
         .collect()
 }
@@ -314,13 +310,10 @@ pub fn shock_vapor_pulse_waveform(
             if t_rel < 0.0 || t_rel >= duration_s {
                 return 0.0;
             }
-            b_n.iter()
-                .enumerate()
-                .fold(0.0_f64, |acc, (i, &b)| {
-                    let n = (i + 1) as f64;
-                    acc + b * (n * omega * t_rel).sin()
-                })
-                * p0_pa
+            b_n.iter().enumerate().fold(0.0_f64, |acc, (i, &b)| {
+                let n = (i + 1) as f64;
+                acc + b * (n * omega * t_rel).sin()
+            }) * p0_pa
         })
         .collect()
 }

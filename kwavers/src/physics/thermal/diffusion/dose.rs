@@ -11,8 +11,8 @@ use ndarray::{Array3, Zip};
 
 pub mod thresholds {
     use crate::core::constants::medical::{
-        THERMAL_DOSE_DAMAGE_THRESHOLD_CEM43, THERMAL_DOSE_R_ABOVE_43C, THERMAL_DOSE_R_BELOW_43C,
-        THERMAL_DOSE_REFERENCE_TEMP_C, THERMAL_DOSE_THRESHOLD,
+        THERMAL_DOSE_DAMAGE_THRESHOLD_CEM43, THERMAL_DOSE_REFERENCE_TEMP_C,
+        THERMAL_DOSE_R_ABOVE_43C, THERMAL_DOSE_R_BELOW_43C, THERMAL_DOSE_THRESHOLD,
     };
     /// CEM43 reference temperature [°C] — delegates to [`THERMAL_DOSE_REFERENCE_TEMP_C`].
     ///

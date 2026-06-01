@@ -1,7 +1,7 @@
 //! Test C — Yoshida4 convergence order via global trajectory error.
 
 use super::super::{YOSHIDA_W1, YOSHIDA_W2};
-use crate::core::constants::numerical::{TWO_PI};
+use crate::core::constants::numerical::TWO_PI;
 
 /// **Test C — Yoshida4 convergence order via global trajectory error.**
 ///

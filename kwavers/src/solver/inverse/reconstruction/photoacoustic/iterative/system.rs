@@ -1,9 +1,9 @@
 //! System matrix construction and geometric helpers for [`IterativeMethods`].
 
 use super::IterativeMethods;
+use crate::core::constants::numerical::FOUR_PI;
 use crate::core::error::KwaversResult;
 use ndarray::Array2;
-use crate::core::constants::numerical::{FOUR_PI};
 
 impl IterativeMethods {
     /// Build system matrix A where y = Ax (y: measurements, x: image).
@@ -49,10 +49,8 @@ impl IterativeMethods {
                     matrix[[sensor_idx, voxel_idx]] =
                         green_function * voxel_volume * solid_angle_factor;
                 } else {
-                    let effective_radius =
-                        (voxel_volume * 3.0 / (FOUR_PI)).cbrt();
-                    matrix[[sensor_idx, voxel_idx]] =
-                        1.0 / (FOUR_PI * effective_radius);
+                    let effective_radius = (voxel_volume * 3.0 / (FOUR_PI)).cbrt();
+                    matrix[[sensor_idx, voxel_idx]] = 1.0 / (FOUR_PI * effective_radius);
                 }
             }
         }
