@@ -132,10 +132,7 @@ pub mod clinical {
         InterlockSystem, SafetyAuditLogger, SafetyComplianceReport, SafetyViolation,
         SystemConfiguration, TreatmentRecord,
     };
-    pub use therapy::{
-        ClinicalTherapyMechanism, ClinicalTherapyModality, ClinicalTherapyParameters,
-        ClinicalTreatmentMetrics,
-    };
+    pub use therapy::ClinicalTherapyParameters;
 }
 
 /// Infrastructure: I/O, API, cloud, device abstraction, runtime

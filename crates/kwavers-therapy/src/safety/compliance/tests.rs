@@ -1,5 +1,5 @@
 use crate::safety::mechanical_index::MechanicalIndexTissueType;
-use crate::therapy::parameters::ClinicalTherapyParameters;
+use crate::therapy::domain_types::ClinicalTherapyParameters;
 use kwavers_core::constants::acoustic_parameters::DB_TO_NP;
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use kwavers_core::constants::medical::{IEC_TISSUE_ABSORPTION_DB_CM_MHZ, IEC_TISSUE_SPECIFIC_HEAT};

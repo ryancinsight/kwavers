@@ -3,7 +3,7 @@ use super::types::{
     AblationTarget, ClinicalHIFUTransducer, ClinicalHIFUTreatmentPlan, FocalSpot,
     FocalSpotDoseEstimate, TreatmentFeasibility,
 };
-use crate::therapy::parameters::ClinicalTherapyParameters;
+use crate::therapy::domain_types::ClinicalTherapyParameters;
 use kwavers_core::error::KwaversResult;
 
 /// HIFU Treatment Planner.

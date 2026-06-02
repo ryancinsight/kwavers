@@ -1,6 +1,6 @@
 use super::*;
 use crate::safety::mechanical_index::MechanicalIndexTissueType;
-use crate::therapy::parameters::ClinicalTherapyParameters;
+use crate::therapy::domain_types::ClinicalTherapyParameters;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_core::constants::medical::THERMAL_DOSE_THRESHOLD;
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};

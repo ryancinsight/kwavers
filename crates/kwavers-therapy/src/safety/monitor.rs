@@ -1,4 +1,4 @@
-use crate::therapy::parameters::ClinicalTherapyParameters;
+use crate::therapy::domain_types::ClinicalTherapyParameters;
 use kwavers_core::constants::medical::MI_LIMIT_SOFT_TISSUE;
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use std::time::{Duration, Instant};

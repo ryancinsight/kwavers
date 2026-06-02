@@ -1,5 +1,5 @@
 use super::types::{AblationTarget, FocalSpot, FocalSpotDoseEstimate};
-use crate::therapy::parameters::ClinicalTherapyParameters;
+use crate::therapy::domain_types::ClinicalTherapyParameters;
 use kwavers_core::constants::medical::THERMAL_DOSE_THRESHOLD;
 use kwavers_core::error::{KwaversError, KwaversResult};
 

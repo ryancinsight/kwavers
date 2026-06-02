@@ -1,45 +1,13 @@
-//! Therapy domain types
+//! Therapy application parameter type.
 //!
-//! Core types for therapeutic ultrasound applications.
+//! The application-level acoustic exposure parameters used by the therapy
+//! planning and safety workflows. The canonical domain value types
+//! (`DomainTreatmentMetrics`, `DomainTherapyMechanism`, `DomainTherapyModality`)
+//! live in `kwavers_domain::therapy::types` (SSOT) — workflows import those
+//! directly. This module holds only `ClinicalTherapyParameters`, which extends
+//! the domain parameter set with planning-convenience fields and constructors.
 
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
-
-/// Treatment metrics for therapy monitoring
-#[derive(Debug, Clone, Default)]
-pub struct ClinicalTreatmentMetrics {
-    /// Thermal dose in CEM43
-    pub thermal_dose: f64,
-    /// Cavitation dose
-    pub cavitation_dose: f64,
-    /// Peak temperature reached (°C)
-    pub peak_temperature: f64,
-    /// Safety index (0-1)
-    pub safety_index: f64,
-    /// Treatment efficiency (0-1)
-    pub efficiency: f64,
-}
-
-/// Therapy mechanism
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ClinicalTherapyMechanism {
-    /// Thermal mechanism
-    Thermal,
-    /// Mechanical mechanism
-    Mechanical,
-    /// Combined thermal and mechanical
-    Combined,
-}
-
-/// Therapy modality
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ClinicalTherapyModality {
-    /// High-intensity focused ultrasound
-    HIFU,
-    /// Low-intensity focused ultrasound
-    LIFU,
-    /// Histotripsy
-    Histotripsy,
-}
 
 /// Therapy parameters
 #[derive(Debug, Clone, Copy, Default)]

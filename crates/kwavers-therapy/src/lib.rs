@@ -33,7 +33,4 @@ pub use safety::{
     InterlockSystem, SafetyAuditLogger, SafetyComplianceReport, SafetyViolation,
     SystemConfiguration, TreatmentRecord,
 };
-pub use therapy::{
-    ClinicalTherapyMechanism, ClinicalTherapyModality, ClinicalTherapyParameters,
-    ClinicalTreatmentMetrics,
-};
+pub use therapy::ClinicalTherapyParameters;

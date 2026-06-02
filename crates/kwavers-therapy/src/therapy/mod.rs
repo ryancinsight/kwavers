@@ -7,10 +7,7 @@ pub mod clinical_scenarios;
 pub mod domain_types;
 pub mod hifu_planning;
 pub mod lithotripsy;
-pub mod metrics;
 pub mod microbubble_dynamics;
-pub mod modalities;
-pub mod parameters;
 pub mod swe_3d_workflows;
 pub mod theranostic_guidance;
 
@@ -20,10 +17,7 @@ pub mod therapy_integration;
 pub use clinical_scenarios::{
     intrinsic_threshold_pa, BenefitDetriment, HistotripsyRegime, HistotripsyScenario, PulsePattern,
 };
-pub use domain_types::{
-    ClinicalTherapyMechanism, ClinicalTherapyModality, ClinicalTherapyParameters,
-    ClinicalTreatmentMetrics,
-};
+pub use domain_types::ClinicalTherapyParameters;
 pub use hifu_planning::{
     AblationTarget, ClinicalHIFUTransducer, ClinicalHIFUTreatmentPlan, FocalSpot,
     FocalSpotDoseEstimate, HIFUPlanner, SonicationSchedule, SonicationSubspot,

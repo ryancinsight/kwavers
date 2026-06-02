@@ -2,7 +2,7 @@ use super::{
     ClinicalSafetyLevel, ClinicalSafetyLimits, ClinicalSafetyMonitor, ComplianceValidator,
     DoseController, Interlock, InterlockSystem, SystemConfiguration,
 };
-use crate::therapy::parameters::ClinicalTherapyParameters;
+use crate::therapy::domain_types::ClinicalTherapyParameters;
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 
 #[test]

@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+### Changed (2026-06-02) - kwavers-therapy type SSOT cleanup (remove re-export shims + dead duplicates) [patch]
+
+- Removed three pure re-export shim modules in `kwavers-therapy`: `therapy::metrics` and
+  `therapy::modalities` (dead — forwarded `domain::therapy` types with 0 consumers) and
+  `therapy::parameters` (2-hop forward to `domain_types::ClinicalTherapyParameters`); the
+  9 consumers now import `ClinicalTherapyParameters` from `therapy::domain_types` directly.
+- Removed three dead duplicate types from `therapy::domain_types`: `ClinicalTreatmentMetrics`,
+  `ClinicalTherapyMechanism`, `ClinicalTherapyModality` — byte-identical (or a strict subset,
+  for Modality) to the canonical `kwavers_domain::therapy::types::{DomainTreatmentMetrics,
+  DomainTherapyMechanism,DomainTherapyModality}` and never used in any therapy logic (only
+  re-exported up through `therapy/mod.rs` → crate `lib.rs` → the `kwavers::clinical` facade).
+  Dropped those re-exports at all three layers. `domain::therapy::types` remains the SSOT.
+- Kept `ClinicalTherapyParameters` (a genuinely richer app type: extra `pressure`/`duration`
+  fields + `new()`/`hifu()` builders, actively used by the HIFU/safety workflows).
+- Verification: full kwavers build green; kwavers-therapy lib green.
+
 ### Changed (2026-06-02) - Split `clinical` into `kwavers-diagnostics` + `kwavers-therapy` (ADR 009) [arch]
 
 - [arch] The clinical application layer (462 files / ~67k lines — the largest module,

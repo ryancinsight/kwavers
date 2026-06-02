@@ -1,5 +1,5 @@
 use super::{ClinicalSafetyLimits, SafetyViolation};
-use crate::therapy::parameters::ClinicalTherapyParameters;
+use crate::therapy::domain_types::ClinicalTherapyParameters;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use std::time::Instant;
 
