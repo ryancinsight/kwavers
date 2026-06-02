@@ -85,22 +85,30 @@ impl PropertyStats {
     }
 }
 
-impl OpticalPropertyMap {
-    /// Compute statistics for absorption coefficient distribution
-    #[must_use]
-    pub fn absorption_stats(&self) -> PropertyStats {
+/// Physics-layer statistical analysis over a domain [`OpticalPropertyMap`].
+///
+/// Implemented as an extension trait because the map type now lives in the
+/// `kwavers-domain` crate (ADR 009); inherent `impl`s cannot cross crate
+/// boundaries. Bring this trait into scope to call `*_stats()` on a map.
+pub trait OpticalPropertyMapAnalysis {
+    /// Statistics for the absorption-coefficient distribution.
+    fn absorption_stats(&self) -> PropertyStats;
+    /// Statistics for the reduced-scattering-coefficient distribution.
+    fn scattering_stats(&self) -> PropertyStats;
+    /// Statistics for the refractive-index distribution.
+    fn refractive_index_stats(&self) -> PropertyStats;
+}
+
+impl OpticalPropertyMapAnalysis for OpticalPropertyMap {
+    fn absorption_stats(&self) -> PropertyStats {
         PropertyStats::from_array(&self.mu_a)
     }
 
-    /// Compute statistics for scattering coefficient distribution
-    #[must_use]
-    pub fn scattering_stats(&self) -> PropertyStats {
+    fn scattering_stats(&self) -> PropertyStats {
         PropertyStats::from_array(&self.mu_s_prime)
     }
 
-    /// Compute statistics for refractive index distribution
-    #[must_use]
-    pub fn refractive_index_stats(&self) -> PropertyStats {
+    fn refractive_index_stats(&self) -> PropertyStats {
         PropertyStats::from_array(&self.refractive_index)
     }
 }

@@ -20,6 +20,7 @@ mod tests {
     use super::*;
     use crate::domain::grid::GridDimensions;
     use crate::domain::medium::properties::OpticalPropertyData;
+    use crate::physics::optics::OpticalPropertyMapAnalysis;
 
     #[test]
     fn test_blood_oxygenation_phantom() {

@@ -25,7 +25,7 @@ pub use crate::domain::medium::optical_map::{
 };
 
 // Re-export physics-specific analysis types
-pub use map_builder::PropertyStats;
+pub use map_builder::{OpticalPropertyMapAnalysis, PropertyStats};
 
 pub use monte_carlo::{MCResult, MonteCarloSolver, PhotonSource, SimulationConfig};
 pub use nonlinear::{KerrEffect, PhotoacousticConversion};

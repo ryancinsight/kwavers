@@ -20,6 +20,7 @@ categories = ["science", "simulation", "medical"]
 # `nifti` are forwarded from this crate's features below.
 kwavers-core = { path = "../crates/kwavers-core", features = ["channels", "registration"] }
 kwavers-math = { path = "../crates/kwavers-math" }
+kwavers-domain = { path = "../crates/kwavers-domain" }
 
 # Essential numerical computing
 ndarray = { version = "0.16", features = ["rayon", "serde"] }

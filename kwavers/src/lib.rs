@@ -65,8 +65,11 @@ pub use kwavers_core as core;
 /// under the original `math` name so `crate::math::…` paths resolve unchanged.
 pub use kwavers_math as math;
 
-/// Domain model: grid, medium, source, sensor, boundary, field, signal
-pub mod domain;
+/// Domain model: grid, medium, source, sensor, boundary, field, signal.
+///
+/// Extracted to the `kwavers-domain` workspace crate (ADR 009); re-exported here
+/// under the original `domain` name so `crate::domain::…` paths resolve unchanged.
+pub use kwavers_domain as domain;
 
 /// Physics models: acoustics, optics, thermal, chemistry, electromagnetic
 pub mod physics;
