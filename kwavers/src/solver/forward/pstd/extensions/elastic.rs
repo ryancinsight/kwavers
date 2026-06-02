@@ -246,3 +246,91 @@ impl PstdElasticPlugin {
             });
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::PstdElasticPlugin;
+    use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
+    use crate::physics::acoustics::mechanics::elastic_wave::parameters::StressUpdateParams;
+    use crate::physics::acoustics::mechanics::elastic_wave::spectral_fields::SpectralStressFields;
+    use ndarray::Array3;
+    use num_complex::Complex;
+
+    /// When μ ≡ 0, the spectral stress kernel produces zero shear stress for any
+    /// non-trivial velocity field — the executable counterpart of the
+    /// acoustic-fluid-limit theorem. (Integration test spanning physics +
+    /// solver; relocated here from `physics` on the kwavers-physics extraction
+    /// since it consumes the solver plugin.)
+    #[test]
+    fn pstd_elastic_plugin_reduces_to_acoustic_when_mu_is_zero() {
+        let (nx, ny, nz) = (8usize, 8, 8);
+        let make_v = || {
+            let mut v = Array3::<Complex<f64>>::zeros((nx, ny, nz));
+            for ((i, j, k), x) in v.indexed_iter_mut() {
+                *x = Complex::new((i + j + k) as f64 + 1.0, (i * j + 1) as f64);
+            }
+            v
+        };
+        let vx_fft = make_v();
+        let vy_fft = make_v();
+        let vz_fft = make_v();
+
+        let mut dkx_op = Array3::<Complex<f64>>::zeros((nx, 1, 1));
+        let mut dky_op = Array3::<Complex<f64>>::zeros((ny, 1, 1));
+        let mut dkz_op = Array3::<Complex<f64>>::zeros((nz, 1, 1));
+        for i in 0..nx {
+            dkx_op[[i, 0, 0]] = Complex::new(0.0, (i + 1) as f64 * 0.1);
+        }
+        for j in 0..ny {
+            dky_op[[j, 0, 0]] = Complex::new(0.0, (j + 1) as f64 * 0.1);
+        }
+        for k in 0..nz {
+            dkz_op[[k, 0, 0]] = Complex::new(0.0, (k + 1) as f64 * 0.1);
+        }
+
+        let lame_lambda = Array3::<f64>::from_elem((nx, ny, nz), 2.25e9);
+        let lame_mu = Array3::<f64>::zeros((nx, ny, nz));
+        let density = Array3::<f64>::from_elem((nx, ny, nz), DENSITY_WATER_NOMINAL);
+        let stress_current = SpectralStressFields::new(nx, ny, nz);
+        let unit_kappa = Array3::<f64>::ones((nx, ny, nz));
+
+        let params = StressUpdateParams {
+            vx_fft: &vx_fft,
+            vy_fft: &vy_fft,
+            vz_fft: &vz_fft,
+            txx_fft: &stress_current.txx,
+            tyy_fft: &stress_current.tyy,
+            tzz_fft: &stress_current.tzz,
+            txy_fft: &stress_current.txy,
+            txz_fft: &stress_current.txz,
+            tyz_fft: &stress_current.tyz,
+            dkx_op: &dkx_op,
+            dky_op: &dky_op,
+            dkz_op: &dkz_op,
+            lame_lambda: &lame_lambda,
+            lame_mu: &lame_mu,
+            density: density.view(),
+            dt: 1e-7,
+            kappa: &unit_kappa,
+        };
+
+        let mut out = SpectralStressFields::new(nx, ny, nz);
+        let plugin = PstdElasticPlugin::default();
+        plugin.apply_stress_update_in_place(&params, &mut out);
+
+        let zero = Complex::new(0.0, 0.0);
+        for x in out.txy.iter().chain(out.txz.iter()).chain(out.tyz.iter()) {
+            assert_eq!(*x, zero, "shear stress must be zero when μ = 0");
+        }
+        let any_normal_nonzero = out
+            .txx
+            .iter()
+            .chain(out.tyy.iter())
+            .chain(out.tzz.iter())
+            .any(|x| *x != zero);
+        assert!(
+            any_normal_nonzero,
+            "normal stresses must be non-zero for a non-trivial velocity field"
+        );
+    }
+}

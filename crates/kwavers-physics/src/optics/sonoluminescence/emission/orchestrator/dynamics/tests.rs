@@ -1,0 +1,41 @@
+use super::thermodynamics::update_thermodynamics;
+use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
+use kwavers_core::constants::thermodynamic::HEAT_CAPACITY_RATIO_DIATOMIC;
+use crate::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};
+use approx::assert_relative_eq;
+
+#[test]
+fn test_update_thermodynamics() {
+    let params = BubbleParameters {
+        r0: 5e-6,
+        gamma: HEAT_CAPACITY_RATIO_DIATOMIC, // diatomic gas (air) — SSOT: thermodynamic::HEAT_CAPACITY_RATIO_DIATOMIC
+        t0: 300.0,
+        initial_gas_pressure: ATMOSPHERIC_PRESSURE,
+        ..Default::default()
+    };
+
+    let mut state = BubbleState::new(&params);
+
+    // Initial state should match equilibrium
+    update_thermodynamics(&mut state, &params);
+    assert_relative_eq!(state.temperature, 300.0, epsilon = 1e-6);
+    assert_relative_eq!(
+        state.pressure_internal,
+        ATMOSPHERIC_PRESSURE,
+        epsilon = 1e-6
+    );
+
+    // Compress bubble to half radius
+    state.radius = 2.5e-6; // R = R0 / 2
+    update_thermodynamics(&mut state, &params);
+
+    // Radius ratio = 2
+    // Compression ratio = 8
+    // T = T0 * 2^(0.4 * 3) = T0 * 2^1.2 ≈ 2.297 * 300
+    let expected_t = 300.0 * 2.0_f64.powf(1.2);
+    // P = P0 * 8^1.4 ≈ 18.379 * 101325
+    let expected_p = ATMOSPHERIC_PRESSURE * 8.0_f64.powf(1.4);
+
+    assert_relative_eq!(state.temperature, expected_t, epsilon = 1e-2);
+    assert_relative_eq!(state.pressure_internal, expected_p, epsilon = 1e-2);
+}

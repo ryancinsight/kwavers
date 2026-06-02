@@ -21,6 +21,7 @@ categories = ["science", "simulation", "medical"]
 kwavers-core = { path = "../crates/kwavers-core", features = ["channels", "registration"] }
 kwavers-math = { path = "../crates/kwavers-math" }
 kwavers-domain = { path = "../crates/kwavers-domain" }
+kwavers-physics = { path = "../crates/kwavers-physics" }
 
 # Essential numerical computing
 ndarray = { version = "0.16", features = ["rayon", "serde"] }

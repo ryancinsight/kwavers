@@ -71,8 +71,11 @@ pub use kwavers_math as math;
 /// under the original `domain` name so `crate::domain::…` paths resolve unchanged.
 pub use kwavers_domain as domain;
 
-/// Physics models: acoustics, optics, thermal, chemistry, electromagnetic
-pub mod physics;
+/// Physics models: acoustics, optics, thermal, chemistry, electromagnetic.
+///
+/// Extracted to the `kwavers-physics` workspace crate (ADR 009); re-exported here
+/// under the original `physics` name so `crate::physics::…` paths resolve unchanged.
+pub use kwavers_physics as physics;
 
 /// Numerical solvers: forward (FDTD/PSTD/elastic), inverse (PINN), analytical
 pub mod solver;

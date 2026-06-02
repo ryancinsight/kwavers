@@ -1,0 +1,32 @@
+[package]
+name = "kwavers-physics"
+version = "3.0.0"
+edition = "2021"
+authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
+description = "Physics for kwavers: nonlinear acoustics, bubble dynamics, thermal, optics, chemistry, elastic waves"
+license = "MIT"
+repository = "https://github.com/ryancinsight/kwavers"
+
+[dependencies]
+kwavers-core = { path = "../kwavers-core", features = ["registration"] }
+kwavers-math = { path = "../kwavers-math" }
+kwavers-domain = { path = "../kwavers-domain" }
+ndarray = { version = "0.16", features = ["rayon", "serde"] }
+ndarray-npy = { version = "0.9", default-features = false, features = ["compressed_npz"] }
+num-complex = "0.4"
+num-traits = "0.2"
+serde = { version = "1.0", features = ["derive"] }
+log = "0.4"
+rayon = "1.10"
+rand = "0.8"
+rand_distr = "0.4"
+rand_chacha = "0.3"
+anyhow = "1.0"
+uom = { version = "0.36", default-features = false, features = ["f64", "si", "std"] }
+ritk-registration = { path = "../../ritk/crates/ritk-registration" }
+
+[dev-dependencies]
+approx = "0.5"
+
+[lints]
+workspace = true
