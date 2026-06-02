@@ -113,6 +113,16 @@ resolution; current state is a sound mitigation, not a full fix.
 - **DEBT-2 (L):** `solver::interface::factory::RegistrationEngine` trait now has
   zero implementors (its only impl was the dead one removed in CLD-14-adjacent
   cleanup). Candidate removal once confirmed no external/plugin consumer.
+- **DEBT-3 (M, SSOT):** Photoacoustic implementation is fragmented. After lifting
+  the imaging vertical out of solver (2026-06-01: `solver/photoacoustics` →
+  `simulation/photoacoustics/vertical`), there are still TWO parallel
+  photoacoustic impls — `simulation/photoacoustics/vertical/` (optical/source/
+  acoustic/reconstruction "solver vertical", consumed by the orchestrator) and
+  `simulation/modalities/photoacoustic/` (acoustics/optics/core/reconstruction/
+  types, owns `PhotoacousticResult`/`PressureFieldSeries`) — plus a coupled-solver
+  touch `solver/multiphysics/photoacoustic.rs`. **Consolidate to one canonical
+  photoacoustic modality** (determine the live impl, merge, delete the parallel
+  one). Deferred: merging two parallel impls is careful SSOT work, not a move.
 
 **Severity:** `C` correctness/physics-incorrect · `H` simplification/approximation
 presented as exact · `M` missing validation/test · `L` doc/cleanup.

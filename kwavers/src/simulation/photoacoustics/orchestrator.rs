@@ -2,7 +2,7 @@ use crate::core::error::KwaversResult;
 use crate::domain::imaging::photoacoustic::{
     PhotoacousticScenario, PhotoacousticSimulation, PhotoacousticValidationReport,
 };
-use crate::solver::photoacoustics::PhotoacousticPipeline;
+use super::vertical::PhotoacousticPipeline;
 
 /// Thin orchestration layer that owns the canonical photoacoustic pipeline.
 #[derive(Debug, Default)]

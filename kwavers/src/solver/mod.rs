@@ -61,5 +61,4 @@ pub use integration::time_integration;
 pub use inverse::reconstruction;
 pub use inverse::time_reversal;
 pub use utilities::amr;
-pub mod photoacoustics;
 pub mod validation;

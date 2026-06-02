@@ -1,5 +1,6 @@
 // Canonical photoacoustic simulation orchestration.
 
+mod vertical;
 mod orchestrator;
 mod runner;
 
