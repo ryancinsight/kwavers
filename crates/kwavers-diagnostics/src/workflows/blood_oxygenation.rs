@@ -1,5 +1,5 @@
-use crate::chromophores::HemoglobinDatabase;
-use crate::spectroscopy::{SpectralUnmixer, SpectralUnmixingConfig};
+use kwavers_domain::optics::chromophores::HemoglobinDatabase;
+use kwavers_analysis::signal_processing::spectroscopy::{SpectralUnmixer, SpectralUnmixingConfig};
 use anyhow::{Context, Result};
 use ndarray::{Array2, Array3};
 

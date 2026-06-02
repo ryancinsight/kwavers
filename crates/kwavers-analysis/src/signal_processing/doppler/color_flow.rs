@@ -2,7 +2,7 @@
 //!
 //! Generates 2D velocity maps for real-time flow visualization.
 
-use crate::doppler::{
+use crate::signal_processing::doppler::{
     AutocorrelationConfig, AutocorrelationEstimator, DopplerResult, WallFilter, WallFilterConfig,
 };
 use kwavers_core::error::KwaversResult;
@@ -123,7 +123,7 @@ impl ColorFlowImaging {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::doppler::{
+    use crate::signal_processing::doppler::{
         AutocorrelationConfig, WallFilterConfig, WallFilterType,
     };
     use ndarray::{Array2, Array3};

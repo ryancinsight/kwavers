@@ -2,6 +2,28 @@
 
 ## Unreleased
 
+### Changed (2026-06-02) - Re-home misplaced diagnostic code to its proper layer [patch]
+
+Moved code that lived in the diagnostics crate but conceptually belongs in lower
+layers, so each algorithm/datum sits in the layer that owns it (SoC):
+
+- **Signal/imaging algorithms → `kwavers-analysis::signal_processing`**: `doppler`
+  (Kasai/PW velocity estimation), `spectroscopy` (Tikhonov spectral unmixing), and the
+  functional-US `ulm` (super-resolution localization microscopy) + `vasculature` (Frangi
+  vesselness, Otsu via `ritk_core`) algorithms. The fUS neuronavigation workflow stays in
+  diagnostics and now imports the vessel types from analysis (real usage, not a re-export).
+  Added `anyhow`/`tracing`/`ritk-core` deps to analysis.
+- **Reference data → `kwavers-domain`**: `chromophores` (hemoglobin extinction spectra) into
+  a new `domain::optics` module (parallel to `domain::medium`); `phantoms` (synthetic tissue
+  optical-property fixtures) into `domain::phantoms`. Dropped phantoms' single test-only
+  `kwavers_physics::optics::OpticalPropertyMapAnalysis` coupling (inlined the min/max check)
+  so it carries no upward dependency.
+- **lithotripsy cavitation — verified, no change**: confirmed `cavitation_cloud`'s inline
+  `p_crit = p0 − 2σ/R0` is a *different* (simpler, static) criterion than physics's full
+  acoustic-amplitude `blake_threshold(σ,r0,p0,pv)`; it is not a duplicated SSOT and routing
+  it through physics would alter the coarse cloud model's calibrated behavior. Left as-is.
+- Verification: full kwavers build green; domain/analysis/diagnostics + facade green.
+
 ### Changed (2026-06-02) - kwavers-therapy type SSOT cleanup (remove re-export shims + dead duplicates) [patch]
 
 - Removed three pure re-export shim modules in `kwavers-therapy`: `therapy::metrics` and

@@ -18,9 +18,8 @@ pub use types::{LayerSpec, PhantomTissueType, PhantomType, TumorSpec, VesselSpec
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kwavers_domain::grid::GridDimensions;
-    use kwavers_domain::medium::properties::OpticalPropertyData;
-    use kwavers_physics::optics::OpticalPropertyMapAnalysis;
+    use crate::grid::GridDimensions;
+    use crate::medium::properties::OpticalPropertyData;
 
     #[test]
     fn test_blood_oxygenation_phantom() {
@@ -33,8 +32,12 @@ mod tests {
             .build();
 
         assert_eq!(phantom.mu_a.len(), 27000);
-        let stats = phantom.absorption_stats();
-        assert!(stats.max > stats.min);
+        // Vessels (oxy/deoxy hemoglobin) raise absorption above the background, so
+        // the map must span a non-trivial range. Computed inline to keep phantom
+        // fixtures free of any physics-layer dependency.
+        let max = phantom.mu_a.iter().copied().fold(f64::MIN, f64::max);
+        let min = phantom.mu_a.iter().copied().fold(f64::MAX, f64::min);
+        assert!(max > min);
     }
 
     #[test]
@@ -90,8 +93,9 @@ mod tests {
         let phantom = ClinicalPhantoms::standard_blood_oxygenation(dims);
 
         assert_eq!(phantom.mu_a.len(), 27000);
-        let stats = phantom.absorption_stats();
-        assert!(stats.mean > 0.0);
+        // Non-trivial mean absorption (inlined to keep fixtures physics-free).
+        let mean = phantom.mu_a.iter().copied().sum::<f64>() / phantom.mu_a.len() as f64;
+        assert!(mean > 0.0);
     }
 
     #[test]

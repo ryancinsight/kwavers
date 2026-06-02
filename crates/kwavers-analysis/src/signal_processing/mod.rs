@@ -161,6 +161,10 @@
 //! - `reconstruction`: Advanced image reconstruction algorithms
 
 pub mod beamforming;
+pub mod doppler;
+pub mod ulm;
+pub mod vasculature;
+pub mod spectroscopy;
 pub mod filtering;
 pub mod localization;
 pub mod pam;

@@ -1,5 +1,5 @@
 use super::types::{BubbleTrack, TrackingConfig};
-use crate::functional_ultrasound::ulm::microbubble_detection::BubbleDetection;
+use crate::signal_processing::ulm::microbubble_detection::BubbleDetection;
 
 /// Multi-frame microbubble tracker using the Hungarian (Munkres) algorithm.
 ///

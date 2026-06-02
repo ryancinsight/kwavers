@@ -27,13 +27,15 @@
 pub mod atlas;
 pub mod targeting;
 pub mod tracking;
-pub mod ulm;
-pub mod vasculature;
+
+// ULM super-resolution and vessel-filtering algorithms moved to the `analysis`
+// layer (`kwavers_analysis::signal_processing::{ulm,vasculature}`); the
+// neuronavigation workflow imports the vessel types it needs from there.
+use kwavers_analysis::signal_processing::vasculature::{VesselClassification, VesselSegmentation};
 
 pub use atlas::BrainAtlas;
 pub use targeting::{StereotacticCoordinates, TargetingSystem};
 pub use tracking::TrackingFilter;
-pub use vasculature::{VesselClassification, VesselSegmentation};
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_domain::grid::Grid;

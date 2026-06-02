@@ -1,7 +1,7 @@
 //! Core Spectral Unmixer Implementation
 
 use super::tikhonov::{estimate_condition_number, tikhonov_solve};
-use crate::spectroscopy::types::{
+use crate::signal_processing::spectroscopy::types::{
     SpectralUnmixingConfig, UnmixingResult, VolumetricUnmixingResult,
 };
 use anyhow::Result;

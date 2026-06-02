@@ -1,8 +1,8 @@
 use super::super::types::{LayerSpec, PhantomTissueType};
 use super::super::utils::get_tissue_properties;
-use kwavers_domain::grid::GridDimensions;
-use kwavers_domain::medium::optical_map::{Layer, OpticalPropertyMap, OpticalPropertyMapBuilder};
-use kwavers_domain::medium::properties::OpticalPropertyData;
+use crate::grid::GridDimensions;
+use crate::medium::optical_map::{Layer, OpticalPropertyMap, OpticalPropertyMapBuilder};
+use crate::medium::properties::OpticalPropertyData;
 
 /// Layered tissue phantom builder
 ///

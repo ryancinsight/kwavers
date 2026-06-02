@@ -2,8 +2,8 @@
 
 use super::reconstructor::SuperResReconstructor;
 use super::types::{RenderMode, SuperResConfig};
-use crate::functional_ultrasound::ulm::microbubble_detection::BubbleDetection;
-use crate::functional_ultrasound::ulm::tracking::BubbleTrack;
+use crate::signal_processing::ulm::microbubble_detection::BubbleDetection;
+use crate::signal_processing::ulm::tracking::BubbleTrack;
 
 fn make_track(positions: &[(f64, f64)]) -> BubbleTrack {
     let dets: Vec<BubbleDetection> = positions

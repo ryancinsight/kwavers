@@ -1,7 +1,7 @@
 //! `SuperResReconstructor` — accumulates bubble localizations into SR images.
 
 use super::types::{RenderMode, SuperResConfig};
-use crate::functional_ultrasound::ulm::tracking::BubbleTrack;
+use crate::signal_processing::ulm::tracking::BubbleTrack;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use ndarray::Array2;
 

@@ -5651,6 +5651,7 @@ dependencies = [
 name = "kwavers-analysis"
 version = "3.0.0"
 dependencies = [
+ "anyhow",
  "approx",
  "burn",
  "chrono",
@@ -5667,8 +5668,10 @@ dependencies = [
  "plotly",
  "rand 0.8.5",
  "rayon",
+ "ritk-core",
  "serde",
  "tokio",
+ "tracing",
  "wgpu",
 ]
 

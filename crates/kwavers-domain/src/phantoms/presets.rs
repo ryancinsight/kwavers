@@ -1,7 +1,7 @@
 use super::builder::PhantomBuilder;
-use kwavers_domain::grid::GridDimensions;
-use kwavers_domain::medium::optical_map::OpticalPropertyMap;
-use kwavers_domain::medium::properties::OpticalPropertyData;
+use crate::grid::GridDimensions;
+use crate::medium::optical_map::OpticalPropertyMap;
+use crate::medium::properties::OpticalPropertyData;
 
 /// Predefined clinical phantoms
 #[derive(Debug)]

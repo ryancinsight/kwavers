@@ -3,12 +3,8 @@
 //! This module provides application-level imaging workflows that combine
 //! physics models and solvers for clinical imaging applications.
 
-pub mod chromophores;
-pub mod doppler;
-pub mod phantoms;
 pub mod photoacoustic;
 pub mod reconstruction;
-pub mod spectroscopy;
 pub mod workflows;
 
 // Functional ultrasound imaging (fUS) with brain GPS neuronavigation

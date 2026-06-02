@@ -1,20 +1,20 @@
-use super::super::types::VesselGeometry;
-use super::super::utils::compute_blood_properties;
-use crate::chromophores::HemoglobinDatabase;
-use kwavers_domain::grid::GridDimensions;
-use kwavers_domain::medium::optical_map::{OpticalPropertyMap, OpticalPropertyMapBuilder, Region};
-use kwavers_domain::medium::properties::OpticalPropertyData;
+use super::super::types::TumorSpec;
+use super::super::utils::compute_tumor_properties;
+use crate::optics::chromophores::HemoglobinDatabase;
+use crate::grid::GridDimensions;
+use crate::medium::optical_map::{OpticalPropertyMap, OpticalPropertyMapBuilder, Region};
+use crate::medium::properties::OpticalPropertyData;
 
-/// Vascular phantom builder
+/// Tumor detection phantom builder
 #[derive(Debug)]
-pub struct VascularPhantomBuilder {
+pub struct TumorDetectionPhantomBuilder {
     pub(super) dimensions: Option<GridDimensions>,
     pub(super) background: OpticalPropertyData,
-    pub(super) vessels: Vec<VesselGeometry>,
+    pub(super) tumors: Vec<TumorSpec>,
     pub(super) wavelength_nm: f64,
 }
 
-impl VascularPhantomBuilder {
+impl TumorDetectionPhantomBuilder {
     /// Set grid dimensions
     #[must_use]
     pub fn dimensions(mut self, dims: GridDimensions) -> Self {
@@ -36,12 +36,11 @@ impl VascularPhantomBuilder {
         self
     }
 
-    /// Add vessel segment (cylinder)
+    /// Add tumor lesion
     #[must_use]
-    pub fn add_vessel(mut self, start: [f64; 3], end: [f64; 3], radius: f64, so2: f64) -> Self {
-        self.vessels.push(VesselGeometry {
-            start,
-            end,
+    pub fn add_tumor(mut self, center: [f64; 3], radius: f64, so2: f64) -> Self {
+        self.tumors.push(TumorSpec {
+            center,
             radius,
             so2,
         });
@@ -63,12 +62,9 @@ impl VascularPhantomBuilder {
 
         let hb_db = HemoglobinDatabase::default();
 
-        for vessel in &self.vessels {
-            let props = compute_blood_properties(&hb_db, self.wavelength_nm, vessel.so2);
-            builder.add_region(
-                Region::cylinder(vessel.start, vessel.end, vessel.radius),
-                props,
-            );
+        for tumor in &self.tumors {
+            let props = compute_tumor_properties(&hb_db, self.wavelength_nm, tumor.so2);
+            builder.add_region(Region::sphere(tumor.center, tumor.radius), props);
         }
 
         builder.build()

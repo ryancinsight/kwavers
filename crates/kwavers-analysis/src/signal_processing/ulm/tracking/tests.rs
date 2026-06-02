@@ -1,6 +1,6 @@
 use super::tracker::{hungarian, HungarianTracker};
 use super::types::TrackingConfig;
-use crate::functional_ultrasound::ulm::microbubble_detection::BubbleDetection;
+use crate::signal_processing::ulm::microbubble_detection::BubbleDetection;
 
 fn make_det(x: f64, z: f64, frame: usize) -> BubbleDetection {
     BubbleDetection {

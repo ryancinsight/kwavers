@@ -1,7 +1,7 @@
 use super::types::PhantomTissueType;
-use crate::chromophores::HemoglobinDatabase;
+use crate::optics::chromophores::HemoglobinDatabase;
 use kwavers_core::constants::optical::REFRACTIVE_INDEX_SOFT_TISSUE;
-use kwavers_domain::medium::properties::OpticalPropertyData;
+use crate::medium::properties::OpticalPropertyData;
 
 /// Compute blood optical properties from hemoglobin database
 /// # Panics
