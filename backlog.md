@@ -154,11 +154,25 @@ EXTRACTION PHASE (ADR 009, in progress — leaf-first):
   207 files codemod'd. 0 upward edges, 0 back-edges. Full build green FIRST try (clean
   public API). Added `chrono` (timestamps) + dev `tokio` (async beamforming tests).
   kwavers lib 692/0, analysis lib 522/0, doctests 1/0 (2059 total — baseline preserved).
+- **[done] Remote git deps + apollo FFT port (2026-06-02)** — replaced the
+  apollo/ritk/gaia **submodules** (repo root) with remote git deps tracking each repo's
+  default branch (SSOT in `[workspace.dependencies]`; members use `{ workspace = true }`).
+  Removed submodule dirs + `.gitmodules` + ritk path scaffolding. apollo `main` had a
+  redesigned FFT API (generic plans, `PlanCacheProvider` replacing global caches, public
+  half-spectrum r2c removed); ported entirely inside the `math::fft` ACL (type aliases +
+  cache adapters + `forward_r2c_into`/`inverse_c2r_into` half-spectrum emulation via
+  full-transform + Hermitian expansion). PSTD core untouched; 2059 baseline preserved.
+  gaia/ritk latest compatible. DEBT: emulation does a full z-FFT (~2× z-axis spectral
+  cost) — revisit if apollo restores a public half-spectrum API.
+- **[done] `pykwavers` → `kwavers-python` (2026-06-02)** — moved to `crates/kwavers-python`,
+  Cargo package renamed; Python module name unchanged (`import pykwavers` still works).
+  Fixed a solver-extraction leftover (`ElementPosition` stale re-export path → canonical
+  domain path).
 - **[next] Resume extraction**: `simulation` → `clinical`. Reuse the codemod adding
   `analysis=kwavers_analysis` to the depmap. Commit after each verified crate.
 - **6 of 8 crates extracted** (core, math, domain, physics, solver, analysis). Facade +
   codemod proven; DAG verified acyclic. Remaining facade modules: simulation, clinical
-  (+ gpu/infrastructure stay in the facade crate).
+  (+ gpu/infrastructure stay in the facade crate). Binding crate is now `kwavers-python`.
 - **DEBT (coupling smell, logged)**: clinical/simulation reconstruction reaches into
   solver's `linear_born_inversion` internals (forced the pub(crate)→pub cascade). A
   cleaner narrow public inversion API would re-seal these; deferred (non-blocking).
