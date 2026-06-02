@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+### Changed (2026-06-02) - Rename `pykwavers` crate to `kwavers-python` under `crates/` [arch]
+
+- [arch] Moved the PyO3 binding crate `pykwavers/` → `crates/kwavers-python/` and
+  renamed the Cargo package `pykwavers` → `kwavers-python` for workspace-naming
+  consistency with the `kwavers-*` layer crates. The Python-importable module name is
+  unchanged (`[lib] name = "pykwavers"`, maturin `module-name = "pykwavers._pykwavers"`,
+  `python/pykwavers/` package) so `import pykwavers` and all Python consumers/examples
+  keep working — only the Rust crate/dir is renamed. Updated workspace `members` and the
+  in-crate `kwavers` path dep (`../kwavers` → `../../kwavers`; `ritk-io` already inherits
+  via `{ workspace = true }`, so no other path fixups).
+- Fixed a solver-extraction leftover surfaced by building this crate:
+  `breast_fwi_bindings::helpers` imported `ElementPosition` via the stale
+  `kwavers::solver::inverse::linear_born_inversion::` re-export path; repointed to the
+  canonical domain path `kwavers::domain::source::transducers::ElementPosition` (the
+  module comment already directs callers there). `cargo check -p kwavers-python` green.
+
 ### Changed (2026-06-02) - Remote git dependencies + apollo FFT API port [arch]
 
 - [arch] Replaced the `apollo`, `ritk`, and `gaia` git **submodules** (in the repo

@@ -1,0 +1,731 @@
+{
+  "array": {
+    "circumferential_elements": 4,
+    "diameter_m": 0.007680000000000001,
+    "element_count": 4,
+    "row_policy": "explicit",
+    "row_spacing_m": 0.0,
+    "rows": 1,
+    "snapped_to_grid": true
+  },
+  "dataset": {
+    "frequency_bin_start_steps_per_frequency": [
+      150,
+      100
+    ],
+    "model_family": "clinical_breast_ust_multi_row_ring_pstd_frequency_dataset",
+    "receivers": 4,
+    "time_steps_per_frequency": [
+      200,
+      134
+    ],
+    "transmissions": 4
+  },
+  "dataset_path": "breast_mri",
+  "effective_spacing_m": 0.0032,
+  "forward_consistency": {
+    "frequency_count": 2,
+    "max_abs_scaled_residual": 1235.011339177503,
+    "normalized_l2_residual": 0.6808491600357303,
+    "observed_l2_norm": 5178.555337253978,
+    "receiver_count": 4,
+    "row_count": 8,
+    "row_normalized_l2_residual_max": 0.9106509228962728,
+    "row_normalized_l2_residual_mean": 0.6931706797933679,
+    "scaled_residual_l2_norm": 3525.8150515679185,
+    "selected_receiver_count": 32,
+    "source_scale_magnitude_max": 0.10987008005259431,
+    "source_scale_magnitude_min": 0.002355489664436472,
+    "transmission_count": 4
+  },
+  "frequencies_hz": [
+    200000.0,
+    300000.0
+  ],
+  "homogeneous_direct_field": {
+    "active_only_normalized_l2_residual": 7.340836683732561e-17,
+    "active_pair_count": 8,
+    "active_self_channel_log_amplitude_error_rms": 0.2241297785255974,
+    "active_self_channel_phase_error_max_abs_rad": 0.29797334653677027,
+    "active_self_channel_phase_error_rms_rad": 0.16175853477226768,
+    "model_family": "clinical_breast_ust_homogeneous_direct_field_diagnostic",
+    "normalized_l2_residual": 0.7436049675712215,
+    "passive_log_amplitude_error_rms": 1.1616031666611164,
+    "passive_only_normalized_l2_residual": 0.7986121776150455,
+    "passive_pair_count": 24,
+    "passive_phase_error_max_abs_rad": 2.964813170608865,
+    "passive_phase_error_rms_rad": 1.41327377424321,
+    "passive_range_max_m": 0.010119288512538814,
+    "passive_range_min_m": 0.004525483399593905,
+    "pstd_periodic": {
+      "active_only_normalized_l2_residual": 1.3535834031879765e-16,
+      "active_pair_count": 8,
+      "active_self_channel_log_amplitude_error_rms": 7.619297310097169e-15,
+      "active_self_channel_phase_error_max_abs_rad": 3.435665741014524e-14,
+      "active_self_channel_phase_error_rms_rad": 1.8453699545534316e-14,
+      "normalized_l2_residual": 1.6785637589183348e-14,
+      "passive_log_amplitude_error_rms": 9.068360066740881e-15,
+      "passive_only_normalized_l2_residual": 7.81237883846478e-15,
+      "passive_pair_count": 24,
+      "passive_phase_error_max_abs_rad": 4.988251997634708e-14,
+      "passive_phase_error_rms_rad": 1.8195988906336557e-14,
+      "passive_range_max_m": 0.010119288512538814,
+      "passive_range_min_m": 0.004525483399593905,
+      "row_normalized_l2_residual_mean": 1.288592458227367e-14,
+      "source_scale_magnitude_coefficient_of_variation": 4.011548038196377e-15,
+      "source_scale_phase_span_rad": 2.19824158875781e-14
+    },
+    "pstd_periodic_passive_residual_delta": -0.7986121776150378,
+    "pstd_periodic_residual_delta": -0.7436049675712048,
+    "row_normalized_l2_residual_mean": 0.633125772933879,
+    "source_kappa_filtered": {
+      "active_only_normalized_l2_residual": 1.7526007370140863e-16,
+      "active_pair_count": 8,
+      "active_self_channel_log_amplitude_error_rms": 0.2239548326070241,
+      "active_self_channel_phase_error_max_abs_rad": 0.29763665065423595,
+      "active_self_channel_phase_error_rms_rad": 0.16191256364668347,
+      "normalized_l2_residual": 0.7435098008650379,
+      "passive_log_amplitude_error_rms": 1.1609337731284244,
+      "passive_only_normalized_l2_residual": 0.7987152117793369,
+      "passive_pair_count": 24,
+      "passive_phase_error_max_abs_rad": 2.9610366109421093,
+      "passive_phase_error_rms_rad": 1.4123148328984882,
+      "passive_range_max_m": 0.010119288512538814,
+      "passive_range_min_m": 0.004525483399593905,
+      "row_normalized_l2_residual_mean": 0.6329828593190029,
+      "source_scale_magnitude_coefficient_of_variation": 0.20432702097682148,
+      "source_scale_phase_span_rad": 0.2618889497836723
+    },
+    "source_kappa_filtered_passive_residual_delta": 0.00010303416429136014,
+    "source_kappa_filtered_residual_delta": -9.516670618359147e-05,
+    "source_scale_magnitude_coefficient_of_variation": 0.20418879714846308,
+    "source_scale_phase_span_rad": 0.263353028250775
+  },
+  "identifiability": {
+    "complex_observations": 32,
+    "estimated_source_scale_real_dof": 16,
+    "frequency_count": 2,
+    "informative_dof_to_unknown_ratio": 1.0,
+    "informative_real_dof_upper_bound": 48,
+    "real_observation_dof": 64,
+    "source_scaling_policy": "estimated",
+    "underdetermined_by_rank_upper_bound": false,
+    "unknown_voxels": 48
+  },
+  "inversion": {
+    "frequencies_used": 2,
+    "model_family": "clinical_breast_ust_multi_row_ring_fwi",
+    "objective_history": [
+      147935.35951757772,
+      146179.14643183816,
+      106828.67949421788,
+      104816.9108073361,
+      78243.50875618853,
+      68711.9685863965
+    ],
+    "receivers_used": 4,
+    "solver_model_family": "frequency_domain_fwi",
+    "transmissions_used": 4
+  },
+  "metrics": {
+    "estimate_max_m_s": 1577.3354895207835,
+    "estimate_min_m_s": 1524.104193807939,
+    "normalized_rmse": 0.0344721198774886,
+    "pearson_correlation": 0.20320858275175954,
+    "reference_max_m_s": 1651.2794914548547,
+    "reference_min_m_s": 1442.0054909468518,
+    "rmse_m_s": 53.63534187999847
+  },
+  "model_family": "ali_2025_reduced_grid_breast_ust_fwi_replication",
+  "operator_equivalence": {
+    "best_model": "pstd_finite_window_born",
+    "best_normalized_l2_residual": 0.03308952523301831,
+    "model_count": 5,
+    "per_model": [
+      {
+        "model": "pstd_finite_window_born",
+        "normalized_l2_residual": 0.03308952523301831,
+        "row_normalized_l2_residual_mean": 0.031609631770076176,
+        "source_scale_magnitude_coefficient_of_variation": 0.048386722993127344,
+        "source_scale_phase_span_rad": 0.06069734134728133
+      },
+      {
+        "model": "pstd_spectral_convergent_born",
+        "normalized_l2_residual": 0.6808491600357303,
+        "row_normalized_l2_residual_mean": 0.6931706797933679,
+        "source_scale_magnitude_coefficient_of_variation": 0.6975547505752613,
+        "source_scale_phase_span_rad": 2.9767676176862463
+      },
+      {
+        "model": "spectral_convergent_born",
+        "normalized_l2_residual": 0.6822438375533909,
+        "row_normalized_l2_residual_mean": 0.6944013257840128,
+        "source_scale_magnitude_coefficient_of_variation": 0.35501847209670406,
+        "source_scale_phase_span_rad": 3.449416669826596
+      },
+      {
+        "model": "dense_convergent_born",
+        "normalized_l2_residual": 0.7378580354888682,
+        "row_normalized_l2_residual_mean": 0.6665350372871391,
+        "source_scale_magnitude_coefficient_of_variation": 0.18746603872356915,
+        "source_scale_phase_span_rad": 0.187292130147803
+      },
+      {
+        "model": "single_scatter_born",
+        "normalized_l2_residual": 0.7570086914733306,
+        "row_normalized_l2_residual_mean": 0.6720687532870937,
+        "source_scale_magnitude_coefficient_of_variation": 0.2788489856107172,
+        "source_scale_phase_span_rad": 0.8725186171776897
+      }
+    ],
+    "receiver_channel_policy": "all",
+    "residual_spread": 0.7239191662403123,
+    "worst_model": "single_scatter_born",
+    "worst_normalized_l2_residual": 0.7570086914733306
+  },
+  "operator_equivalence_receiver_policies": {
+    "active_only": {
+      "best_model": "pstd_finite_window_born",
+      "best_normalized_l2_residual": 7.985341351399759e-17,
+      "model_count": 5,
+      "per_model": [
+        {
+          "model": "pstd_finite_window_born",
+          "normalized_l2_residual": 7.985341351399759e-17,
+          "row_normalized_l2_residual_mean": 5.4878855483758714e-17,
+          "source_scale_magnitude_coefficient_of_variation": 0.04049240621262421,
+          "source_scale_phase_span_rad": 0.06482393799453234
+        },
+        {
+          "model": "dense_convergent_born",
+          "normalized_l2_residual": 1.154745746520899e-16,
+          "row_normalized_l2_residual_mean": 9.604408519111307e-17,
+          "source_scale_magnitude_coefficient_of_variation": 0.11781069103636958,
+          "source_scale_phase_span_rad": 0.16094291255872917
+        },
+        {
+          "model": "single_scatter_born",
+          "normalized_l2_residual": 1.2568257079540585e-16,
+          "row_normalized_l2_residual_mean": 1.0592794265476174e-16,
+          "source_scale_magnitude_coefficient_of_variation": 0.098073352922214,
+          "source_scale_phase_span_rad": 0.645736209532686
+        },
+        {
+          "model": "spectral_convergent_born",
+          "normalized_l2_residual": 1.339142563562263e-16,
+          "row_normalized_l2_residual_mean": 1.0961143803242988e-16,
+          "source_scale_magnitude_coefficient_of_variation": 0.9507497436632165,
+          "source_scale_phase_span_rad": 2.456248184319265
+        },
+        {
+          "model": "pstd_spectral_convergent_born",
+          "normalized_l2_residual": 1.476945286168661e-16,
+          "row_normalized_l2_residual_mean": 1.0711758243088461e-16,
+          "source_scale_magnitude_coefficient_of_variation": 1.0847773433507448,
+          "source_scale_phase_span_rad": 2.016260663039944
+        }
+      ],
+      "receiver_channel_policy": "active_only",
+      "residual_spread": 6.784111510286852e-17,
+      "worst_model": "pstd_spectral_convergent_born",
+      "worst_normalized_l2_residual": 1.476945286168661e-16
+    },
+    "all": {
+      "best_model": "pstd_finite_window_born",
+      "best_normalized_l2_residual": 0.03308952523301831,
+      "model_count": 5,
+      "per_model": [
+        {
+          "model": "pstd_finite_window_born",
+          "normalized_l2_residual": 0.03308952523301831,
+          "row_normalized_l2_residual_mean": 0.031609631770076176,
+          "source_scale_magnitude_coefficient_of_variation": 0.048386722993127344,
+          "source_scale_phase_span_rad": 0.06069734134728133
+        },
+        {
+          "model": "pstd_spectral_convergent_born",
+          "normalized_l2_residual": 0.6808491600357303,
+          "row_normalized_l2_residual_mean": 0.6931706797933679,
+          "source_scale_magnitude_coefficient_of_variation": 0.6975547505752613,
+          "source_scale_phase_span_rad": 2.9767676176862463
+        },
+        {
+          "model": "spectral_convergent_born",
+          "normalized_l2_residual": 0.6822438375533909,
+          "row_normalized_l2_residual_mean": 0.6944013257840128,
+          "source_scale_magnitude_coefficient_of_variation": 0.35501847209670406,
+          "source_scale_phase_span_rad": 3.449416669826596
+        },
+        {
+          "model": "dense_convergent_born",
+          "normalized_l2_residual": 0.7378580354888682,
+          "row_normalized_l2_residual_mean": 0.6665350372871391,
+          "source_scale_magnitude_coefficient_of_variation": 0.18746603872356915,
+          "source_scale_phase_span_rad": 0.187292130147803
+        },
+        {
+          "model": "single_scatter_born",
+          "normalized_l2_residual": 0.7570086914733306,
+          "row_normalized_l2_residual_mean": 0.6720687532870937,
+          "source_scale_magnitude_coefficient_of_variation": 0.2788489856107172,
+          "source_scale_phase_span_rad": 0.8725186171776897
+        }
+      ],
+      "receiver_channel_policy": "all",
+      "residual_spread": 0.7239191662403123,
+      "worst_model": "single_scatter_born",
+      "worst_normalized_l2_residual": 0.7570086914733306
+    },
+    "passive_only": {
+      "best_model": "pstd_finite_window_born",
+      "best_normalized_l2_residual": 0.03395758947454344,
+      "model_count": 5,
+      "per_model": [
+        {
+          "model": "pstd_finite_window_born",
+          "normalized_l2_residual": 0.03395758947454344,
+          "row_normalized_l2_residual_mean": 0.037395559744910704,
+          "source_scale_magnitude_coefficient_of_variation": 0.047888585026342266,
+          "source_scale_phase_span_rad": 0.06043055955542864
+        },
+        {
+          "model": "pstd_spectral_convergent_born",
+          "normalized_l2_residual": 0.6047666981098512,
+          "row_normalized_l2_residual_mean": 0.6641375110626636,
+          "source_scale_magnitude_coefficient_of_variation": 0.6578139771239792,
+          "source_scale_phase_span_rad": 5.918870187123954
+        },
+        {
+          "model": "spectral_convergent_born",
+          "normalized_l2_residual": 0.6071369312028143,
+          "row_normalized_l2_residual_mean": 0.6657549314135456,
+          "source_scale_magnitude_coefficient_of_variation": 0.47102324688050234,
+          "source_scale_phase_span_rad": 3.4349248222127744
+        },
+        {
+          "model": "single_scatter_born",
+          "normalized_l2_residual": 0.830210832093574,
+          "row_normalized_l2_residual_mean": 0.7649095045842507,
+          "source_scale_magnitude_coefficient_of_variation": 0.65162156592233,
+          "source_scale_phase_span_rad": 2.6627315343316544
+        },
+        {
+          "model": "dense_convergent_born",
+          "normalized_l2_residual": 0.8630140501292006,
+          "row_normalized_l2_residual_mean": 0.779087424331692,
+          "source_scale_magnitude_coefficient_of_variation": 0.787253827461698,
+          "source_scale_phase_span_rad": 2.5813527631883106
+        }
+      ],
+      "receiver_channel_policy": "passive_only",
+      "residual_spread": 0.8290564606546572,
+      "worst_model": "dense_convergent_born",
+      "worst_normalized_l2_residual": 0.8630140501292006
+    }
+  },
+  "original_shape": [
+    32,
+    32,
+    24
+  ],
+  "phantom_path": "D:\\3D-FWI-MultiRowRingArrayUST\\phantoms\\BreastPhantomFromMRI.mat",
+  "phantom_url": "https://github.com/rehmanali1994/3D-FWI-MultiRowRingArrayUST/releases/download/v1.0.0/BreastPhantomFromMRI.mat",
+  "reduced_shape": [
+    4,
+    4,
+    3
+  ],
+  "scattering_increment": {
+    "best_model": "pstd_finite_window_born",
+    "best_model_scaled_increment_model": "pstd_finite_window_born",
+    "best_model_scaled_normalized_increment_residual": 0.3150272802598277,
+    "best_normalized_increment_residual": 1.4759860412851549,
+    "direct_field_normalized_l2_residual": 0.10503701522524264,
+    "direct_field_scaled_residual_l2_norm": 543.9399958039077,
+    "increment_residual_spread": 987.4268266151673,
+    "model_count": 5,
+    "observed_increment_l2_norm": 543.9399958039077,
+    "per_model": [
+      {
+        "baseline_scaled_full_field_normalized_residual": 0.15503316829071445,
+        "increment_energy_ratio": 1.7738258877509765,
+        "increment_residual_l2_norm": 802.8478411032734,
+        "model": "pstd_finite_window_born",
+        "model_scaled_full_field_normalized_residual": 0.03308952523301831,
+        "model_scaled_increment_energy_ratio": 1.6474240255480932,
+        "model_scaled_increment_residual_l2_norm": 171.35593750264712,
+        "model_scaled_normalized_increment_residual": 0.3150272802598277,
+        "model_scaled_observed_increment_l2_norm": 899.5398285181226,
+        "normalized_increment_residual": 1.4759860412851549,
+        "predicted_increment_l2_norm": 964.8548459401289,
+        "row_normalized_increment_residual_max": 2.4756377144430006,
+        "row_normalized_increment_residual_mean": 1.4149648173207467,
+        "source_scale_phase_drift_max_abs_rad": 0.1991674188030113,
+        "source_scale_phase_drift_mean_abs_rad": 0.11773155883377012,
+        "source_scale_relative_drift_max": 0.21870124389963344,
+        "source_scale_relative_drift_mean": 0.13107868920036708
+      },
+      {
+        "baseline_scaled_full_field_normalized_residual": 1.0115310378270488,
+        "increment_energy_ratio": 9.579144499539694,
+        "increment_residual_l2_norm": 5238.269454737319,
+        "model": "dense_convergent_born",
+        "model_scaled_full_field_normalized_residual": 0.7378580354888682,
+        "model_scaled_increment_energy_ratio": 314.3217791540879,
+        "model_scaled_increment_residual_l2_norm": 3821.0386678166187,
+        "model_scaled_normalized_increment_residual": 7.0247429813823015,
+        "model_scaled_observed_increment_l2_norm": 173026.0101263934,
+        "normalized_increment_residual": 9.630234024242878,
+        "predicted_increment_l2_norm": 5210.479818884646,
+        "row_normalized_increment_residual_max": 13.446211026377629,
+        "row_normalized_increment_residual_mean": 10.181054198103823,
+        "source_scale_phase_drift_max_abs_rad": 2.824635200911189,
+        "source_scale_phase_drift_mean_abs_rad": 2.551365531778491,
+        "source_scale_relative_drift_max": 43.671054147892754,
+        "source_scale_relative_drift_mean": 34.10579577963687
+      },
+      {
+        "baseline_scaled_full_field_normalized_residual": 1.0168972532159408,
+        "increment_energy_ratio": 9.633465995532516,
+        "increment_residual_l2_norm": 5266.05869808032,
+        "model": "single_scatter_born",
+        "model_scaled_full_field_normalized_residual": 0.7570086914733306,
+        "model_scaled_increment_energy_ratio": 203.0236596656894,
+        "model_scaled_increment_residual_l2_norm": 3920.211399576862,
+        "model_scaled_normalized_increment_residual": 7.207065907670654,
+        "model_scaled_observed_increment_l2_norm": 112733.84641821278,
+        "normalized_increment_residual": 9.681322827341333,
+        "predicted_increment_l2_norm": 5240.027453187044,
+        "row_normalized_increment_residual_max": 13.441536974669138,
+        "row_normalized_increment_residual_mean": 10.235477311982969,
+        "source_scale_phase_drift_max_abs_rad": 2.9256912394805688,
+        "source_scale_phase_drift_mean_abs_rad": 2.6615438171817427,
+        "source_scale_relative_drift_max": 27.920603731133905,
+        "source_scale_relative_drift_mean": 22.371995225495237
+      },
+      {
+        "baseline_scaled_full_field_normalized_residual": 3.9449566306761055,
+        "increment_energy_ratio": 37.37865143275194,
+        "increment_residual_l2_norm": 20429.176215023217,
+        "model": "spectral_convergent_born",
+        "model_scaled_full_field_normalized_residual": 0.6822438375533909,
+        "model_scaled_increment_energy_ratio": 5.883331117375897,
+        "model_scaled_increment_residual_l2_norm": 3533.0374662707486,
+        "model_scaled_normalized_increment_residual": 6.495270606179917,
+        "model_scaled_observed_increment_l2_norm": 4473.928113587244,
+        "normalized_increment_residual": 37.55777543960568,
+        "predicted_increment_l2_norm": 20331.743503486818,
+        "row_normalized_increment_residual_max": 45.694692874188505,
+        "row_normalized_increment_residual_mean": 34.53065486941309,
+        "source_scale_phase_drift_max_abs_rad": 1.836187051584278,
+        "source_scale_phase_drift_mean_abs_rad": 0.7578988733459403,
+        "source_scale_relative_drift_max": 1.0530224697246473,
+        "source_scale_relative_drift_mean": 0.8691004920076494
+      },
+      {
+        "baseline_scaled_full_field_normalized_residual": 103.87139978928109,
+        "increment_energy_ratio": 988.9592621652884,
+        "increment_residual_l2_norm": 537903.7917668233,
+        "model": "pstd_spectral_convergent_born",
+        "model_scaled_full_field_normalized_residual": 0.6808491600357303,
+        "model_scaled_increment_energy_ratio": 7.040252053007615,
+        "model_scaled_increment_residual_l2_norm": 3525.8150515679185,
+        "model_scaled_normalized_increment_residual": 6.481992643980877,
+        "model_scaled_observed_increment_l2_norm": 5227.864562660784,
+        "normalized_increment_residual": 988.9028126564525,
+        "predicted_increment_l2_norm": 537934.4969124226,
+        "row_normalized_increment_residual_max": 1965.2132003066401,
+        "row_normalized_increment_residual_mean": 592.7175513694451,
+        "source_scale_phase_drift_max_abs_rad": 2.8472391597429634,
+        "source_scale_phase_drift_mean_abs_rad": 1.8906684730364107,
+        "source_scale_relative_drift_max": 1.0794541278500562,
+        "source_scale_relative_drift_mean": 1.0085997719986053
+      }
+    ],
+    "receiver_channel_policy": "all",
+    "worst_model": "pstd_spectral_convergent_born",
+    "worst_normalized_increment_residual": 988.9028126564525
+  },
+  "scattering_increment_receiver_policies": {
+    "active_only": {
+      "error": "Invalid input: observed scattering increment has zero energy for a selected row",
+      "receiver_channel_policy": "active_only"
+    },
+    "all": {
+      "best_model": "pstd_finite_window_born",
+      "best_model_scaled_increment_model": "pstd_finite_window_born",
+      "best_model_scaled_normalized_increment_residual": 0.3150272802598277,
+      "best_normalized_increment_residual": 1.4759860412851549,
+      "direct_field_normalized_l2_residual": 0.10503701522524264,
+      "direct_field_scaled_residual_l2_norm": 543.9399958039077,
+      "increment_residual_spread": 987.4268266151673,
+      "model_count": 5,
+      "observed_increment_l2_norm": 543.9399958039077,
+      "per_model": [
+        {
+          "baseline_scaled_full_field_normalized_residual": 0.15503316829071445,
+          "increment_energy_ratio": 1.7738258877509765,
+          "increment_residual_l2_norm": 802.8478411032734,
+          "model": "pstd_finite_window_born",
+          "model_scaled_full_field_normalized_residual": 0.03308952523301831,
+          "model_scaled_increment_energy_ratio": 1.6474240255480932,
+          "model_scaled_increment_residual_l2_norm": 171.35593750264712,
+          "model_scaled_normalized_increment_residual": 0.3150272802598277,
+          "model_scaled_observed_increment_l2_norm": 899.5398285181226,
+          "normalized_increment_residual": 1.4759860412851549,
+          "predicted_increment_l2_norm": 964.8548459401289,
+          "row_normalized_increment_residual_max": 2.4756377144430006,
+          "row_normalized_increment_residual_mean": 1.4149648173207467,
+          "source_scale_phase_drift_max_abs_rad": 0.1991674188030113,
+          "source_scale_phase_drift_mean_abs_rad": 0.11773155883377012,
+          "source_scale_relative_drift_max": 0.21870124389963344,
+          "source_scale_relative_drift_mean": 0.13107868920036708
+        },
+        {
+          "baseline_scaled_full_field_normalized_residual": 1.0115310378270488,
+          "increment_energy_ratio": 9.579144499539694,
+          "increment_residual_l2_norm": 5238.269454737319,
+          "model": "dense_convergent_born",
+          "model_scaled_full_field_normalized_residual": 0.7378580354888682,
+          "model_scaled_increment_energy_ratio": 314.3217791540879,
+          "model_scaled_increment_residual_l2_norm": 3821.0386678166187,
+          "model_scaled_normalized_increment_residual": 7.0247429813823015,
+          "model_scaled_observed_increment_l2_norm": 173026.0101263934,
+          "normalized_increment_residual": 9.630234024242878,
+          "predicted_increment_l2_norm": 5210.479818884646,
+          "row_normalized_increment_residual_max": 13.446211026377629,
+          "row_normalized_increment_residual_mean": 10.181054198103823,
+          "source_scale_phase_drift_max_abs_rad": 2.824635200911189,
+          "source_scale_phase_drift_mean_abs_rad": 2.551365531778491,
+          "source_scale_relative_drift_max": 43.671054147892754,
+          "source_scale_relative_drift_mean": 34.10579577963687
+        },
+        {
+          "baseline_scaled_full_field_normalized_residual": 1.0168972532159408,
+          "increment_energy_ratio": 9.633465995532516,
+          "increment_residual_l2_norm": 5266.05869808032,
+          "model": "single_scatter_born",
+          "model_scaled_full_field_normalized_residual": 0.7570086914733306,
+          "model_scaled_increment_energy_ratio": 203.0236596656894,
+          "model_scaled_increment_residual_l2_norm": 3920.211399576862,
+          "model_scaled_normalized_increment_residual": 7.207065907670654,
+          "model_scaled_observed_increment_l2_norm": 112733.84641821278,
+          "normalized_increment_residual": 9.681322827341333,
+          "predicted_increment_l2_norm": 5240.027453187044,
+          "row_normalized_increment_residual_max": 13.441536974669138,
+          "row_normalized_increment_residual_mean": 10.235477311982969,
+          "source_scale_phase_drift_max_abs_rad": 2.9256912394805688,
+          "source_scale_phase_drift_mean_abs_rad": 2.6615438171817427,
+          "source_scale_relative_drift_max": 27.920603731133905,
+          "source_scale_relative_drift_mean": 22.371995225495237
+        },
+        {
+          "baseline_scaled_full_field_normalized_residual": 3.9449566306761055,
+          "increment_energy_ratio": 37.37865143275194,
+          "increment_residual_l2_norm": 20429.176215023217,
+          "model": "spectral_convergent_born",
+          "model_scaled_full_field_normalized_residual": 0.6822438375533909,
+          "model_scaled_increment_energy_ratio": 5.883331117375897,
+          "model_scaled_increment_residual_l2_norm": 3533.0374662707486,
+          "model_scaled_normalized_increment_residual": 6.495270606179917,
+          "model_scaled_observed_increment_l2_norm": 4473.928113587244,
+          "normalized_increment_residual": 37.55777543960568,
+          "predicted_increment_l2_norm": 20331.743503486818,
+          "row_normalized_increment_residual_max": 45.694692874188505,
+          "row_normalized_increment_residual_mean": 34.53065486941309,
+          "source_scale_phase_drift_max_abs_rad": 1.836187051584278,
+          "source_scale_phase_drift_mean_abs_rad": 0.7578988733459403,
+          "source_scale_relative_drift_max": 1.0530224697246473,
+          "source_scale_relative_drift_mean": 0.8691004920076494
+        },
+        {
+          "baseline_scaled_full_field_normalized_residual": 103.87139978928109,
+          "increment_energy_ratio": 988.9592621652884,
+          "increment_residual_l2_norm": 537903.7917668233,
+          "model": "pstd_spectral_convergent_born",
+          "model_scaled_full_field_normalized_residual": 0.6808491600357303,
+          "model_scaled_increment_energy_ratio": 7.040252053007615,
+          "model_scaled_increment_residual_l2_norm": 3525.8150515679185,
+          "model_scaled_normalized_increment_residual": 6.481992643980877,
+          "model_scaled_observed_increment_l2_norm": 5227.864562660784,
+          "normalized_increment_residual": 988.9028126564525,
+          "predicted_increment_l2_norm": 537934.4969124226,
+          "row_normalized_increment_residual_max": 1965.2132003066401,
+          "row_normalized_increment_residual_mean": 592.7175513694451,
+          "source_scale_phase_drift_max_abs_rad": 2.8472391597429634,
+          "source_scale_phase_drift_mean_abs_rad": 1.8906684730364107,
+          "source_scale_relative_drift_max": 1.0794541278500562,
+          "source_scale_relative_drift_mean": 1.0085997719986053
+        }
+      ],
+      "receiver_channel_policy": "all",
+      "worst_model": "pstd_spectral_convergent_born",
+      "worst_normalized_increment_residual": 988.9028126564525
+    },
+    "passive_only": {
+      "best_model": "pstd_finite_window_born",
+      "best_model_scaled_increment_model": "pstd_finite_window_born",
+      "best_model_scaled_normalized_increment_residual": 0.27833089450377235,
+      "best_normalized_increment_residual": 1.3580035175186627,
+      "direct_field_normalized_l2_residual": 0.12200438451177106,
+      "direct_field_scaled_residual_l2_norm": 472.5899241786012,
+      "increment_residual_spread": 983.047048386243,
+      "model_count": 5,
+      "observed_increment_l2_norm": 472.5899241786012,
+      "per_model": [
+        {
+          "baseline_scaled_full_field_normalized_residual": 0.16568238331968466,
+          "increment_energy_ratio": 1.6818009989854836,
+          "increment_residual_l2_norm": 641.7787793784186,
+          "model": "pstd_finite_window_born",
+          "model_scaled_full_field_normalized_residual": 0.03395758947454345,
+          "model_scaled_increment_energy_ratio": 1.5269555064173537,
+          "model_scaled_increment_residual_l2_norm": 131.53637633010004,
+          "model_scaled_normalized_increment_residual": 0.27833089450377235,
+          "model_scaled_observed_increment_l2_norm": 731.2773714050894,
+          "normalized_increment_residual": 1.3580035175186627,
+          "predicted_increment_l2_norm": 794.8022065940455,
+          "row_normalized_increment_residual_max": 1.9136263344368165,
+          "row_normalized_increment_residual_mean": 1.2302914471564854,
+          "source_scale_phase_drift_max_abs_rad": 0.17921643821857344,
+          "source_scale_phase_drift_mean_abs_rad": 0.11059527798433902,
+          "source_scale_relative_drift_max": 0.21885732740895414,
+          "source_scale_relative_drift_mean": 0.13695676451857874
+        },
+        {
+          "baseline_scaled_full_field_normalized_residual": 1.000961426220832,
+          "increment_energy_ratio": 8.143793370595189,
+          "increment_residual_l2_norm": 3877.2728243858137,
+          "model": "dense_convergent_born",
+          "model_scaled_full_field_normalized_residual": 0.8630140501292008,
+          "model_scaled_increment_energy_ratio": 1020.761939408755,
+          "model_scaled_increment_residual_l2_norm": 3342.926946008864,
+          "model_scaled_normalized_increment_residual": 7.073631440236768,
+          "model_scaled_observed_increment_l2_norm": 482782.4828790215,
+          "normalized_increment_residual": 8.204307002788562,
+          "predicted_increment_l2_norm": 3848.6746915357753,
+          "row_normalized_increment_residual_max": 16.067170962705095,
+          "row_normalized_increment_residual_mean": 8.551135814149703,
+          "source_scale_phase_drift_max_abs_rad": 2.9940528121931,
+          "source_scale_phase_drift_mean_abs_rad": 2.0495423683746994,
+          "source_scale_relative_drift_max": 181.18273654014357,
+          "source_scale_relative_drift_mean": 102.65071963294119
+        },
+        {
+          "baseline_scaled_full_field_normalized_residual": 1.003014330685762,
+          "increment_energy_ratio": 8.164511023037834,
+          "increment_residual_l2_norm": 3885.2248497930113,
+          "model": "single_scatter_born",
+          "model_scaled_full_field_normalized_residual": 0.830210832093574,
+          "model_scaled_increment_energy_ratio": 428.3872290707837,
+          "model_scaled_increment_residual_l2_norm": 3215.8620836573373,
+          "model_scaled_normalized_increment_residual": 6.80476226666652,
+          "model_scaled_observed_increment_l2_norm": 202300.76733675489,
+          "normalized_increment_residual": 8.221133483846149,
+          "predicted_increment_l2_norm": 3858.4656453328034,
+          "row_normalized_increment_residual_max": 16.05023921601556,
+          "row_normalized_increment_residual_mean": 8.575896148153399,
+          "source_scale_phase_drift_max_abs_rad": 3.0437709342239176,
+          "source_scale_phase_drift_mean_abs_rad": 2.027185935310607,
+          "source_scale_relative_drift_max": 83.43455471915256,
+          "source_scale_relative_drift_mean": 36.55123973329655
+        },
+        {
+          "baseline_scaled_full_field_normalized_residual": 4.345234111130294,
+          "increment_energy_ratio": 35.48012979492706,
+          "increment_residual_l2_norm": 16831.47591240225,
+          "model": "spectral_convergent_born",
+          "model_scaled_full_field_normalized_residual": 0.6071369312028144,
+          "model_scaled_increment_energy_ratio": 5.15480844671526,
+          "model_scaled_increment_residual_l2_norm": 2351.7744663961953,
+          "model_scaled_normalized_increment_residual": 4.976353379695443,
+          "model_scaled_observed_increment_l2_norm": 3311.2855671772227,
+          "normalized_increment_residual": 35.615393073935486,
+          "predicted_increment_l2_norm": 16767.55184963151,
+          "row_normalized_increment_residual_max": 45.27655635902,
+          "row_normalized_increment_residual_mean": 33.08203957234447,
+          "source_scale_phase_drift_max_abs_rad": 2.2908181534973635,
+          "source_scale_phase_drift_mean_abs_rad": 1.1061116943834153,
+          "source_scale_relative_drift_max": 1.0731294064792585,
+          "source_scale_relative_drift_mean": 0.8958321410051273
+        },
+        {
+          "baseline_scaled_full_field_normalized_residual": 120.10173246779652,
+          "increment_energy_ratio": 984.3790568903304,
+          "increment_residual_l2_norm": 465219.9088402307,
+          "model": "pstd_spectral_convergent_born",
+          "model_scaled_full_field_normalized_residual": 0.6047666981098513,
+          "model_scaled_increment_energy_ratio": 6.57417602942902,
+          "model_scaled_increment_residual_l2_norm": 2342.5932530965947,
+          "model_scaled_normalized_increment_residual": 4.956925937784661,
+          "model_scaled_observed_increment_l2_norm": 3895.0782940124527,
+          "normalized_increment_residual": 984.4050519037617,
+          "predicted_increment_l2_norm": 465207.62385880423,
+          "row_normalized_increment_residual_max": 1967.2191742214986,
+          "row_normalized_increment_residual_mean": 564.623405475256,
+          "source_scale_phase_drift_max_abs_rad": 2.7180527020627805,
+          "source_scale_phase_drift_mean_abs_rad": 1.5208221897331957,
+          "source_scale_relative_drift_max": 1.0668461999725012,
+          "source_scale_relative_drift_mean": 1.0060748679660778
+        }
+      ],
+      "receiver_channel_policy": "passive_only",
+      "worst_model": "pstd_spectral_convergent_born",
+      "worst_normalized_increment_residual": 984.4050519037617
+    }
+  },
+  "source_channel_consistency": {
+    "active_full_scale_normalized_l2_residual": 0.6853768819997277,
+    "active_full_scale_observed_l2_norm": 3437.012642273716,
+    "active_full_scale_residual_energy_fraction": 0.4463773064453039,
+    "active_full_scale_residual_l2_norm": 2355.649008155205,
+    "active_receiver_count_per_row": 1,
+    "all_channel_normalized_l2_residual": 0.6808491600357303,
+    "passive_full_scale_normalized_l2_residual": 0.6772631554410673,
+    "passive_full_scale_observed_l2_norm": 3873.5486931045934,
+    "passive_full_scale_residual_energy_fraction": 0.5536226935546961,
+    "passive_full_scale_residual_l2_norm": 2623.4118106466394,
+    "passive_only_normalized_l2_residual": 0.6047666981098512,
+    "passive_only_scaled_residual_l2_norm": 2342.5932530965947,
+    "passive_receiver_count_per_row": 3
+  },
+  "source_excitation": {
+    "frequency_count": 2,
+    "max_source_scale_magnitude_coefficient_of_variation": 0.6975547505752613,
+    "max_source_scale_phase_circular_variance": 0.5067572795055154,
+    "max_source_scale_phase_span_rad": 2.9767676176862463,
+    "per_frequency": [
+      {
+        "frequency_hz": 200000.0,
+        "mean_source_scale_magnitude": 5.500323698422932e-05,
+        "source_scale_magnitude_coefficient_of_variation": 0.6069883817379298,
+        "source_scale_phase_circular_variance": 0.14654511967656614,
+        "source_scale_phase_span_rad": 1.4882124986270315,
+        "tone_bin_magnitude": 1.0000000000000004,
+        "tone_bin_phase_rad": -1.5707963267948966
+      },
+      {
+        "frequency_hz": 300000.0,
+        "mean_source_scale_magnitude": 8.793041877266539e-06,
+        "source_scale_magnitude_coefficient_of_variation": 0.6975547505752613,
+        "source_scale_phase_circular_variance": 0.5067572795055154,
+        "source_scale_phase_span_rad": 2.9767676176862463,
+        "tone_bin_magnitude": 0.9803670299338938,
+        "tone_bin_phase_rad": -1.5720563151750495
+      }
+    ],
+    "source_amplitude_pa": 1000.0,
+    "transmission_count": 4
+  },
+  "source_spacing_m": 0.0004,
+  "table1_parity": {
+    "passes": false,
+    "pcc_pass": false,
+    "pcc_threshold": 0.84056,
+    "phantom_index": 1.0,
+    "rmse_pass": false,
+    "rmse_threshold_m_s": 31.0,
+    "table1_3d_pearson_correlation": 0.8848,
+    "table1_3d_rmse_m_s": 15.5
+  }
+}

@@ -5754,6 +5754,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "kwavers-python"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "burn",
+ "kwavers",
+ "ndarray 0.16.1",
+ "num-complex",
+ "numpy",
+ "pyo3",
+ "ritk-io",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+]
+
+[[package]]
 name = "kwavers-solver"
 version = "3.0.0"
 dependencies = [
@@ -7371,23 +7388,6 @@ dependencies = [
  "num-traits",
  "pest",
  "pest_derive",
-]
-
-[[package]]
-name = "pykwavers"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "burn",
- "kwavers",
- "ndarray 0.16.1",
- "num-complex",
- "numpy",
- "pyo3",
- "ritk-io",
- "serde",
- "serde_json",
- "thiserror 1.0.69",
 ]
 
 [[package]]

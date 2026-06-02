@@ -1,5 +1,5 @@
 [workspace]
-members = ["kwavers", "xtask", "pykwavers", "crates/kwavers-core", "crates/kwavers-math", "crates/kwavers-domain", "crates/kwavers-physics", "crates/kwavers-solver", "crates/kwavers-analysis"]
+members = ["kwavers", "xtask", "crates/kwavers-python", "crates/kwavers-core", "crates/kwavers-math", "crates/kwavers-domain", "crates/kwavers-physics", "crates/kwavers-solver", "crates/kwavers-analysis"]
 resolver = "2"
 
 [workspace.dependencies]
