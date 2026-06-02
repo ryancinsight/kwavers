@@ -113,7 +113,18 @@ resolution; current state is a sound mitigation, not a full fix.
 - **DEBT-2 (L):** `solver::interface::factory::RegistrationEngine` trait now has
   zero implementors (its only impl was the dead one removed in CLD-14-adjacent
   cleanup). Candidate removal once confirmed no external/plugin consumer.
-- **DEBT-4 (C, correctness — PRE-EXISTING WIP):** FWI adjoint-gradient mismatch.
+- **DEBT-4 (C) — RESOLVED (2026-06-01):** FWI finite-window Born adjoint-gradient
+  mismatch FIXED. Root cause: a discrete-adjoint **off-by-one** in
+  `finite_window::adjoint_backward_pass`. The forward source `s[m] = −χ·accel[m]`
+  drives `ps1[m+1]`, so the adjoint-state gradient must pair `accel[m]` with the
+  adjoint field at the SAME source index, `ν[m]` (= `pa_prev`, just computed). The
+  code paired it with `ν[m+1]` (= `pa_curr`), a one-leapfrog-step bias → 3.7% error.
+  Fix: cross-correlate against `pa_prev`. Now matches central finite-difference to
+  5e-4 (gradient_fd: 6/6 pass). Verified by derivation (transpose of the discrete
+  leapfrog) + value-semantic FD test. The other CBS adjoints (separate paths) were
+  already correct.
+
+  ~~PRE-EXISTING WIP — original finding:~~
   `solver::inverse::fwi::frequency_domain::tests::gradient_fd::pstd_finite_window_
   born_adjoint_gradient_matches_finite_difference` FAILS: analytic adjoint gradient
   57.88 vs central-difference 55.72 = **3.7% error** (tolerance 5e-4). Magnitude

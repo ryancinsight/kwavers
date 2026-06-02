@@ -481,9 +481,12 @@ fn adjoint_backward_pass(
     // where adj_src[step+1] is non-zero for step+1 ≥ bin_start+1, i.e., step
     // ≥ bin_start.
     //
-    // Cross-correlation: ∂J/∂chi[j] = −∑_step Re[pa[step+1][j] · accel[step][j]]
-    //                                = −∑_step Re[pa_curr[j] · accel[step][j]]
-    // (pa_curr = pa[step+1] before the shift).
+    // Cross-correlation: the forward source s[m] = −χ·accel[m] sources ps1[m+1],
+    // so the discrete adjoint gradient pairs accel[m] with the adjoint field at
+    // the SAME source index m: ∂J/∂chi[j] = −∑_m Re[ν[m][j] · accel[m][j]],
+    // where ν[m] = pa[m] is the field just computed at backward iteration `step=m`
+    // (pa_prev). Using pa_curr (= ν[m+1]) here is an off-by-one that biases the
+    // gradient by one leapfrog step.
 
     for step in (0..bin_config.total_steps).rev() {
         // Adjoint source at time step+1 (only when step ≥ bin_start, so that
@@ -511,11 +514,13 @@ fn adjoint_backward_pass(
         pa_prev.assign(&pa_prev_hat);
         ifft_3d_complex_inplace(&mut pa_prev);
 
-        // Cross-correlation: grad_chi[j] −= Re[pa_curr[j] · accel_history[step][j]].
-        // pa_curr = pa[step+1], accel_history[step] = accel at step.
+        // Cross-correlation: grad_chi[j] −= Re[ν[step][j] · accel_history[step][j]],
+        // ν[step] = pa_prev (just computed this iteration), accel_history[step] =
+        // accel at step. This pairs accel[m] with the adjoint field at the same
+        // source index m = step (the source s[m] drives ps1[m+1]).
         for (grad, (&pa_val, &accel_val)) in chi_gradient
             .iter_mut()
-            .zip(pa_curr.iter().zip(accel_history[step].iter()))
+            .zip(pa_prev.iter().zip(accel_history[step].iter()))
         {
             *grad -= (pa_val * accel_val.conj()).re;
         }
