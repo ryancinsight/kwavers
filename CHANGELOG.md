@@ -2,6 +2,29 @@
 
 ## Unreleased
 
+### Changed (2026-06-01) - Extract `kwavers-solver` workspace crate (ADR 009) [arch]
+
+- [major] Extracted the `solver` layer (forward FDTD/PSTD/k-space/Helmholtz/BEM,
+  inverse FWI/RTM/CBS/elastography/PINN, analytical transducer models, GPU backend)
+  into `kwavers-solver` (depends on core+math+domain+physics). Facade
+  `pub use kwavers_solver as solver`; `crate::solver::…` paths resolve unchanged.
+  No error From-coupling (clean); 0 real upward edges (only doc-comment refs).
+- Relocated the photoacoustics modality pipeline out of `solver/` into
+  `simulation/photoacoustics/vertical/` (it is a multi-physics orchestration, not a
+  solver); `solver` retains only forward+inverse acoustic solving.
+- Cross-crate visibility cascade resolved by promoting `pub(crate)`→`pub` on the
+  items the higher layers (clinical/simulation reconstruction) reach into:
+  `GenericFdtdSolver::{config,materials}`, `linear_born_inversion` `dense`/`schedule`
+  modules and their fns, `pcg::{invert, InversionState}` + all its fields.
+- Solver doctests rewritten `kwavers::solver::…`→`kwavers_solver::…` (and
+  cross-layer refs to `kwavers_{core,domain,physics}::…`); `pinn`-gated ml doctests
+  repointed to `kwavers_solver::inverse::pinn::ml::…`.
+- kwavers-solver dev-dep on `kwavers-domain` with `test-util` feature (plugin
+  `test_support` access for solver's own tests).
+- Verification: kwavers build green; kwavers lib 1214/0, kwavers-solver lib 845/0,
+  solver doctests 5/0 (2059 total — matches pre-extraction baseline).
+- 5 of 8 layer crates extracted (core, math, domain, physics, solver).
+
 ### Changed (2026-06-01) - Extract `kwavers-physics` workspace crate (ADR 009) [arch]
 
 - [major] Extracted the `physics` layer (nonlinear acoustics, bubble dynamics,

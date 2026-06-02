@@ -1,0 +1,373 @@
+//! Elastography Inversion Configuration
+//!
+//! Configuration types for elasticity reconstruction algorithms, including
+//! linear and nonlinear inversion method selection.
+
+use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
+use kwavers_domain::imaging::ultrasound::elastography::{InversionMethod, NonlinearInversionMethod};
+
+/// Configuration for shear wave inversion
+#[derive(Debug, Clone)]
+pub struct ShearWaveInversionConfig {
+    /// Selected inversion method
+    pub method: InversionMethod,
+    /// Tissue density for elasticity calculation (kg/m³)
+    pub density: f64,
+    /// Excitation frequency (Hz)
+    pub frequency: f64,
+}
+
+impl ShearWaveInversionConfig {
+    /// Create new configuration with default parameters
+    ///
+    /// # Arguments
+    ///
+    /// * `method` - Inversion algorithm to use
+    #[must_use]
+    pub fn new(method: InversionMethod) -> Self {
+        Self {
+            method,
+            density: DENSITY_WATER_NOMINAL, // Typical soft tissue density
+            frequency: 100.0,               // Typical SWE frequency
+        }
+    }
+
+    /// Set tissue density
+    ///
+    /// # Arguments
+    ///
+    /// * `density` - Tissue density in kg/m³
+    #[must_use]
+    pub fn with_density(mut self, density: f64) -> Self {
+        self.density = density;
+        self
+    }
+
+    /// Set excitation frequency
+    ///
+    /// # Arguments
+    ///
+    /// * `frequency` - Frequency in Hz
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use]
+    pub fn with_frequency(mut self, frequency: f64) -> Self {
+        self.frequency = frequency;
+        self
+    }
+
+    /// Validate configuration parameters
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` if configuration is valid, `Err` with message otherwise
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    pub fn validate(&self) -> Result<(), String> {
+        if self.density <= 0.0 {
+            return Err(format!(
+                "Density must be positive, got: {} kg/m³",
+                self.density
+            ));
+        }
+
+        if self.density < 100.0 || self.density > 10000.0 {
+            return Err(format!(
+                "Density outside physiological range (100-10000 kg/m³): {} kg/m³",
+                self.density
+            ));
+        }
+
+        if self.frequency <= 0.0 {
+            return Err(format!(
+                "Frequency must be positive, got: {} Hz",
+                self.frequency
+            ));
+        }
+
+        Ok(())
+    }
+}
+
+impl Default for ShearWaveInversionConfig {
+    fn default() -> Self {
+        Self::new(InversionMethod::TimeOfFlight)
+    }
+}
+
+/// Configuration for nonlinear parameter inversion
+#[derive(Debug, Clone)]
+pub struct NonlinearInversionConfig {
+    /// Selected nonlinear inversion method
+    pub method: NonlinearInversionMethod,
+    /// Tissue density (kg/m³)
+    pub density: f64,
+    /// Compressional (acoustic) wave speed in tissue (m/s)
+    pub acoustic_speed: f64,
+    /// Shear wave speed (m/s).  Used to compute shear modulus μ = ρ c_s².
+    /// Typical values: liver 1–3 m/s, muscle 3–12 m/s (Nightingale 2011).
+    pub shear_wave_speed: f64,
+    /// Shear wave excitation frequency (Hz) used for k_s = ω/c_s and second-harmonic accumulation.
+    pub excitation_frequency: f64,
+    /// Effective propagation distance over which second harmonics accumulate (m).
+    /// For focused ARFI/SWE this is typically the focal depth (0.02–0.10 m).
+    pub propagation_distance: f64,
+    /// Maximum iterations for iterative methods
+    pub max_iterations: usize,
+    /// Convergence tolerance
+    pub tolerance: f64,
+}
+
+impl NonlinearInversionConfig {
+    /// Create new configuration with default parameters
+    ///
+    /// # Arguments
+    ///
+    /// * `method` - Nonlinear inversion algorithm to use
+    #[must_use]
+    pub fn new(method: NonlinearInversionMethod) -> Self {
+        Self {
+            method,
+            density: DENSITY_WATER_NOMINAL, // kg/m³
+            acoustic_speed: kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE, // m/s (typical soft tissue)
+            shear_wave_speed: 3.0, // m/s (liver-like tissue; Nightingale 2011)
+            excitation_frequency: 100.0, // Hz (typical push-pulse SWE)
+            propagation_distance: 0.05, // m (5 cm focal depth)
+            max_iterations: 100,
+            tolerance: 1e-6,
+        }
+    }
+
+    /// Set tissue properties
+    ///
+    /// # Arguments
+    ///
+    /// * `density`        - Tissue density [kg/m³]
+    /// * `acoustic_speed` - Compressional wave speed (m/s)
+    #[must_use]
+    pub fn with_tissue_properties(mut self, density: f64, acoustic_speed: f64) -> Self {
+        self.density = density;
+        self.acoustic_speed = acoustic_speed;
+        self
+    }
+
+    /// Set shear-wave properties used for nonlinear parameter estimation
+    ///
+    /// # Arguments
+    ///
+    /// * `shear_wave_speed`    - Shear wave speed (m/s)
+    /// * `excitation_frequency` - SWE push-pulse frequency (Hz)
+    /// * `propagation_distance` - Effective harmonic-accumulation depth (m)
+    #[must_use]
+    pub fn with_shear_properties(
+        mut self,
+        shear_wave_speed: f64,
+        excitation_frequency: f64,
+        propagation_distance: f64,
+    ) -> Self {
+        self.shear_wave_speed = shear_wave_speed;
+        self.excitation_frequency = excitation_frequency;
+        self.propagation_distance = propagation_distance;
+        self
+    }
+
+    /// Set convergence parameters
+    ///
+    /// # Arguments
+    ///
+    /// * `max_iterations` - Maximum number of iterations
+    /// * `tolerance` - Convergence tolerance
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use]
+    pub fn with_convergence(mut self, max_iterations: usize, tolerance: f64) -> Self {
+        self.max_iterations = max_iterations;
+        self.tolerance = tolerance;
+        self
+    }
+
+    /// Validate configuration parameters
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` if configuration is valid, `Err` with message otherwise
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    pub fn validate(&self) -> Result<(), String> {
+        if self.density <= 0.0 {
+            return Err(format!(
+                "Density must be positive, got: {} kg/m³",
+                self.density
+            ));
+        }
+
+        if self.density < 100.0 || self.density > 10000.0 {
+            return Err(format!(
+                "Density outside physiological range (100-10000 kg/m³): {} kg/m³",
+                self.density
+            ));
+        }
+
+        if self.acoustic_speed <= 0.0 {
+            return Err(format!(
+                "Acoustic speed must be positive, got: {} m/s",
+                self.acoustic_speed
+            ));
+        }
+
+        if self.acoustic_speed < 300.0 || self.acoustic_speed > 4000.0 {
+            return Err(format!(
+                "Acoustic speed outside reasonable range (300-4000 m/s): {} m/s",
+                self.acoustic_speed
+            ));
+        }
+
+        if self.max_iterations == 0 {
+            return Err("Max iterations must be at least 1".to_owned());
+        }
+
+        if self.tolerance <= 0.0 {
+            return Err(format!(
+                "Tolerance must be positive, got: {}",
+                self.tolerance
+            ));
+        }
+
+        Ok(())
+    }
+}
+
+impl Default for NonlinearInversionConfig {
+    fn default() -> Self {
+        Self::new(NonlinearInversionMethod::HarmonicRatio)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use kwavers_core::constants::fundamental::{
+        DENSITY_TISSUE, DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM,
+    };
+
+    #[test]
+    fn test_shear_wave_config_default() {
+        let config = ShearWaveInversionConfig::default();
+        assert_eq!(config.density, DENSITY_WATER_NOMINAL);
+        assert_eq!(config.frequency, 100.0);
+        assert!(matches!(config.method, InversionMethod::TimeOfFlight));
+    }
+
+    #[test]
+    fn test_shear_wave_config_builder() {
+        let config = ShearWaveInversionConfig::new(InversionMethod::PhaseGradient)
+            .with_density(DENSITY_TISSUE)
+            .with_frequency(150.0);
+
+        assert_eq!(config.density, DENSITY_TISSUE);
+        assert_eq!(config.frequency, 150.0);
+        assert!(matches!(config.method, InversionMethod::PhaseGradient));
+    }
+
+    #[test]
+    fn test_shear_wave_config_validation() {
+        let config = ShearWaveInversionConfig::default();
+        config.validate().unwrap();
+
+        let invalid_config =
+            ShearWaveInversionConfig::new(InversionMethod::TimeOfFlight).with_density(-100.0);
+        assert!(invalid_config.validate().is_err());
+
+        let invalid_config2 =
+            ShearWaveInversionConfig::new(InversionMethod::TimeOfFlight).with_density(20000.0);
+        assert!(invalid_config2.validate().is_err());
+
+        let invalid_config3 =
+            ShearWaveInversionConfig::new(InversionMethod::TimeOfFlight).with_frequency(-10.0);
+        assert!(invalid_config3.validate().is_err());
+    }
+
+    #[test]
+    fn test_nonlinear_config_default() {
+        let config = NonlinearInversionConfig::default();
+        assert_eq!(config.density, DENSITY_WATER_NOMINAL);
+        assert_eq!(config.acoustic_speed, SOUND_SPEED_TISSUE);
+        assert_eq!(config.max_iterations, 100);
+        assert_eq!(config.tolerance, 1e-6);
+        assert!(matches!(
+            config.method,
+            NonlinearInversionMethod::HarmonicRatio
+        ));
+    }
+
+    #[test]
+    fn test_nonlinear_config_builder() {
+        let config = NonlinearInversionConfig::new(NonlinearInversionMethod::NonlinearLeastSquares)
+            .with_tissue_properties(DENSITY_TISSUE, SOUND_SPEED_WATER_SIM)
+            .with_convergence(200, 1e-8);
+
+        assert_eq!(config.density, DENSITY_TISSUE);
+        assert_eq!(config.acoustic_speed, SOUND_SPEED_WATER_SIM);
+        assert_eq!(config.max_iterations, 200);
+        assert_eq!(config.tolerance, 1e-8);
+    }
+
+    #[test]
+    fn test_nonlinear_config_validation() {
+        let config = NonlinearInversionConfig::default();
+        config.validate().unwrap();
+
+        let invalid_density =
+            NonlinearInversionConfig::default().with_tissue_properties(-100.0, SOUND_SPEED_TISSUE);
+        assert!(invalid_density.validate().is_err());
+
+        let invalid_speed =
+            NonlinearInversionConfig::default().with_tissue_properties(1000.0, -1540.0);
+        assert!(invalid_speed.validate().is_err());
+
+        let invalid_iterations = NonlinearInversionConfig {
+            method: NonlinearInversionMethod::HarmonicRatio,
+            density: DENSITY_WATER_NOMINAL,
+            acoustic_speed: SOUND_SPEED_TISSUE,
+            shear_wave_speed: 3.0,
+            excitation_frequency: 100.0,
+            propagation_distance: 0.05,
+            max_iterations: 0,
+            tolerance: 1e-6,
+        };
+        assert!(invalid_iterations.validate().is_err());
+
+        let invalid_tolerance = NonlinearInversionConfig::default().with_convergence(100, -1e-6);
+        assert!(invalid_tolerance.validate().is_err());
+    }
+
+    #[test]
+    fn test_all_inversion_methods() {
+        for method in [
+            InversionMethod::TimeOfFlight,
+            InversionMethod::PhaseGradient,
+            InversionMethod::DirectInversion,
+            InversionMethod::VolumetricTimeOfFlight,
+            InversionMethod::DirectionalPhaseGradient,
+        ] {
+            let config = ShearWaveInversionConfig::new(method);
+            config.validate().unwrap();
+        }
+    }
+
+    #[test]
+    fn test_all_nonlinear_methods() {
+        for method in [
+            NonlinearInversionMethod::HarmonicRatio,
+            NonlinearInversionMethod::NonlinearLeastSquares,
+            NonlinearInversionMethod::BayesianInversion,
+        ] {
+            let config = NonlinearInversionConfig::new(method);
+            config.validate().unwrap();
+        }
+    }
+}

@@ -1,0 +1,53 @@
+[package]
+name = "kwavers-solver"
+version = "3.0.0"
+edition = "2021"
+authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
+description = "Forward and inverse solvers for kwavers: FDTD/PSTD/k-space/Helmholtz, BEM, FWI/RTM/CBS, PINN"
+license = "MIT"
+repository = "https://github.com/ryancinsight/kwavers"
+
+[dependencies]
+kwavers-core = { path = "../kwavers-core" }
+kwavers-math = { path = "../kwavers-math" }
+kwavers-domain = { path = "../kwavers-domain" }
+kwavers-physics = { path = "../kwavers-physics" }
+ndarray = { version = "0.16", features = ["rayon", "serde"] }
+ndarray-npy = { version = "0.9", default-features = false, features = ["compressed_npz"] }
+nalgebra = { version = "0.32" }
+num-complex = "0.4"
+num-traits = "0.2"
+serde = { version = "1.0", features = ["derive"] }
+log = "0.4"
+rayon = "1.10"
+rand = "0.8"
+rand_chacha = "0.3"
+anyhow = "1.0"
+bitflags = "2.4"
+parking_lot = "0.12"
+tracing = { version = "0.1", features = ["attributes"] }
+apollo = { path = "../../apollo/crates/apollo-fft", package = "apollo-fft" }
+burn = { version = "0.19", features = ["ndarray", "autodiff", "wgpu"] }
+
+# Optional GPU stack (the `backend::gpu` subtree + gpu_pstd are feature-gated).
+wgpu = { version = "26.0", features = ["wgsl"], optional = true }
+bytemuck = { version = "1.19", features = ["derive"], optional = true }
+pollster = { version = "0.4", optional = true }
+apollofft-wgpu = { path = "../../apollo/crates/apollo-fft-wgpu", package = "apollo-fft-wgpu", optional = true }
+# Optional async runtime (PINN distributed training / persistence).
+tokio = { version = "1.42", features = ["rt-multi-thread", "macros", "sync", "time", "fs", "io-util"], optional = true }
+
+[features]
+gpu = ["dep:wgpu", "dep:bytemuck", "dep:pollster", "dep:apollofft-wgpu", "kwavers-core/gpu", "kwavers-math/gpu"]
+solver_backend_gpu_unstable = ["gpu"]
+pinn = []
+pinn-gpu = ["pinn", "gpu"]
+burn-wgpu = ["pinn"]
+async-runtime = ["dep:tokio"]
+
+[dev-dependencies]
+approx = "0.5"
+kwavers-domain = { path = "../kwavers-domain", features = ["test-util"] }
+
+[lints]
+workspace = true

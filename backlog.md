@@ -137,16 +137,26 @@ EXTRACTION PHASE (ADR 009, in progress — leaf-first):
   fixes. Relocated the lone physics→solver test edge (`pstd_elastic_plugin_reduces_
   to_acoustic_when_mu_is_zero`) into `solver::forward::pstd::extensions::elastic`.
   Isolated 2m20s + full 3m54s green.
-- **[next] Resume extraction**: `kwavers-solver` (deps core+math+domain+physics) →
-  `analysis` → `simulation` → `clinical`. Reuse the codemod with
-  `core=kwavers_core math=kwavers_math domain=kwavers_domain physics=kwavers_physics`.
-  Solver is the largest layer (1130 files); audit error From-coupling first; expect
-  pub(crate)/inherent-impl boundary fixes. Commit after each verified crate.
-- **4 of 8 crates extracted** (core, math, domain, physics). Facade + codemod
-  proven; DAG verified acyclic. Remaining facade modules: solver, analysis,
-  simulation, clinical (+ gpu/infrastructure stay in the facade crate).
-- Then resume: `kwavers-domain` (after physics-edge fix) → `physics` → `solver` →
-  `analysis` → `simulation` → `clinical`.
+- **[done] `kwavers-solver` extracted (2026-06-01)** — `solver/` →
+  `crates/kwavers-solver` (forward FDTD/PSTD/k-space/Helmholtz/BEM, inverse
+  FWI/RTM/CBS/elastography/PINN, analytical transducer, GPU backend; deps
+  core+math+domain+physics). 708 files codemod'd. **No error From-coupling**; 0 real
+  upward edges. Relocated the photoacoustics modality out to
+  `simulation/photoacoustics/vertical/` (multi-physics orchestration, not a solver).
+  Cross-crate visibility cascade (clinical/simulation reconstruction reaching into
+  solver inversion internals) resolved by promoting `GenericFdtdSolver::{config,
+  materials}`, `linear_born_inversion::{dense,schedule}` fns, `pcg::{invert,
+  InversionState+fields}`. Isolated 2m46s + full 1m24s green. kwavers lib 1214/0,
+  solver lib 845/0, solver doctests 5/0 (2059 total — baseline preserved).
+- **[next] Resume extraction**: `analysis` (deps through physics+solver) →
+  `simulation` → `clinical`. Reuse the codemod adding
+  `solver=kwavers_solver` to the depmap. Commit after each verified crate.
+- **5 of 8 crates extracted** (core, math, domain, physics, solver). Facade + codemod
+  proven; DAG verified acyclic. Remaining facade modules: analysis, simulation,
+  clinical (+ gpu/infrastructure stay in the facade crate).
+- **DEBT (coupling smell, logged)**: clinical/simulation reconstruction reaches into
+  solver's `linear_born_inversion` internals (forced the pub(crate)→pub cascade). A
+  cleaner narrow public inversion API would re-seal these; deferred (non-blocking).
 - Bump to 4.0.0 ([arch] post-1.0) at release; run cargo-semver-checks on the facade.
 
 ## OPEN: Module physics-audit revision program (opened 2026-05-31)

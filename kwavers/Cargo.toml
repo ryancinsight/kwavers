@@ -22,6 +22,7 @@ kwavers-core = { path = "../crates/kwavers-core", features = ["channels", "regis
 kwavers-math = { path = "../crates/kwavers-math" }
 kwavers-domain = { path = "../crates/kwavers-domain" }
 kwavers-physics = { path = "../crates/kwavers-physics" }
+kwavers-solver = { path = "../crates/kwavers-solver" }
 
 # Essential numerical computing
 ndarray = { version = "0.16", features = ["rayon", "serde"] }
@@ -169,11 +170,11 @@ loom = "0.7"
 default = ["minimal"]  # PRODUCTION DEFAULT
 minimal = []           # Core functionality only
 parallel = ["ndarray/rayon"] # Add back parallel feature
-gpu = ["dep:wgpu", "dep:bytemuck", "dep:pollster", "dep:apollofft-wgpu", "kwavers-core/gpu", "kwavers-math/gpu"]
+gpu = ["dep:wgpu", "dep:bytemuck", "dep:pollster", "dep:apollofft-wgpu", "kwavers-core/gpu", "kwavers-math/gpu", "kwavers-solver/gpu"]
 # Explicit-opt-in flag for the bit-rotted `solver::backend::gpu` subtree.
 # See solver/backend/mod.rs for repair list. Implies `gpu`. Do not enable in
 # production builds — currently produces 32 compile errors against wgpu v26.
-solver_backend_gpu_unstable = ["gpu"]
+solver_backend_gpu_unstable = ["gpu", "kwavers-solver/solver_backend_gpu_unstable"]
 plotting = ["dep:plotly"]
 # Additional features referenced in code
 dicom = []             # No-op alias retained for back-compat; DICOM I/O is unconditional via ritk-io.
@@ -186,14 +187,14 @@ web-visualization = ["plotting"]      # Web-based visualization
 gpu-visualization = ["gpu", "plotting", "dep:egui"] # GPU-accelerated visualization
 vr-support = []        # VR headset support (future)
 # Sprint 138 - Persona Requirements
-async-runtime = ["dep:tokio"]        # Async I/O with tokio
+async-runtime = ["dep:tokio", "kwavers-solver/async-runtime"]        # Async I/O with tokio
 structured-logging = ["dep:tracing-subscriber"]  # Tracing infrastructure
 zero-copy = ["dep:rkyv"]             # Zero-copy serialization
 # Sprint 142-143 - Physics-Informed Neural Networks
 # Sprint 143: Added burn 0.18 integration (bincode compatibility resolved)
-pinn = []                            # Physics-informed neural networks (burn is now mandatory via ritk-io transitive dep)
+pinn = ["kwavers-solver/pinn"]                            # Physics-informed neural networks (burn is now mandatory via ritk-io transitive dep)
 pinn-gpu = ["pinn", "gpu"]           # PINN with GPU acceleration via WGPU
-burn-wgpu = ["pinn"]                 # Burn WGPU backend support (for cfg checks)
+burn-wgpu = ["pinn", "kwavers-solver/burn-wgpu"]                 # Burn WGPU backend support (for cfg checks)
 burn-cuda = ["pinn"]                 # Burn CUDA backend support (for cfg checks)
 experimental_neural = ["pinn"]        # Gate experimental neural beamforming atop PINN deps
 # Adaptive Beamforming Refactor - Sprint ADR-001

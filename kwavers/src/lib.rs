@@ -77,8 +77,11 @@ pub use kwavers_domain as domain;
 /// under the original `physics` name so `crate::physics::…` paths resolve unchanged.
 pub use kwavers_physics as physics;
 
-/// Numerical solvers: forward (FDTD/PSTD/elastic), inverse (PINN), analytical
-pub mod solver;
+/// Numerical solvers: forward (FDTD/PSTD/elastic), inverse (FWI/PINN), analytical.
+///
+/// Extracted to the `kwavers-solver` workspace crate (ADR 009); re-exported here
+/// under the original `solver` name so `crate::solver::…` paths resolve unchanged.
+pub use kwavers_solver as solver;
 
 /// High-level simulation orchestration, backends, and modality workflows
 pub mod simulation;
