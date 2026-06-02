@@ -29,8 +29,8 @@
 //! ```
 //!
 //! with `L_a(p) = IFFT( |k|^a · FFT(p) )` evaluated on the 3-D periodic
-//! spatial grid via real-to-complex FFTs (`apollo::fft_3d_r2c_into` /
-//! `apollo::ifft_3d_r2c_into`).
+//! spatial grid via full-spectrum complex FFTs through the kwavers FFT facade
+//! (`math::fft::fft_3d_array_into` / `ifft_3d_array_into`).
 //!
 //! # Why η is omitted (Kramers-Kronig dispersion)
 //!

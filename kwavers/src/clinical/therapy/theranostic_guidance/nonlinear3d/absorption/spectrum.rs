@@ -1,24 +1,27 @@
-//! Real-to-complex spectral kernels for fractional-Laplacian absorption.
+//! Spectral kernels for fractional-Laplacian absorption.
 //!
-//! `build_k_power_spectrum` constructs the half-spectrum `|k|^p` weight array
+//! `build_k_power_spectrum` constructs the full-spectrum `|k|^p` weight array
 //! consumed by `spectral_filter`, which evaluates `IFFT( weights · FFT(field) )`
-//! on the periodic 3-D grid via Apollo's cached real-FFT plans.
+//! on the periodic 3-D grid via the kwavers FFT facade (apollo-backed, plan-cached).
+//!
+//! Apollo dropped its public real-to-complex (half-spectrum) transforms, so this
+//! uses the full-spectrum complex round-trip. The result is identical: the weights
+//! `|k|^p` are real and radially symmetric, hence Hermitian-symmetry-preserving, so
+//! `IFFT(weights · FFT(real_field))` is real-valued and equals the half-spectrum
+//! computation. The cost is a full `(n,n,n)` complex grid instead of `(n,n,n/2+1)`.
 
-use apollo::{fft_3d_r2c_into, ifft_3d_r2c_into, Complex64};
+use crate::math::fft::{fft_3d_array_into, fftfreq, ifft_3d_array_into, Complex64};
 use ndarray::Array3;
 
-/// Build the `|k|^power` spectral-filter array of shape `(n, n, n/2 + 1)`
-/// matching the R2C FFT output layout. `k_x` and `k_y` use the full-range
-/// `apollo::fftfreq`; `k_z` uses the positive half-range `apollo::rfftfreq`.
-/// Apollo returns frequencies in cycles per metre, so we multiply by `2π`
-/// to convert to angular wavenumbers in rad/m.
+/// Build the `|k|^power` spectral-filter array of full-spectrum shape `(n, n, n)`
+/// matching the complex FFT output layout. All three axes use `fftfreq` (cycles
+/// per metre), scaled by `2π` to angular wavenumbers in rad/m.
 pub(super) fn build_k_power_spectrum(n: usize, spacing_m: f64, power: f64) -> Array3<f64> {
-    let nz_c = n / 2 + 1;
-    let kx = apollo::fftfreq(n, spacing_m);
-    let ky = apollo::fftfreq(n, spacing_m);
-    let kz = apollo::rfftfreq(n, spacing_m);
+    let kx = fftfreq(n, spacing_m);
+    let ky = fftfreq(n, spacing_m);
+    let kz = fftfreq(n, spacing_m);
     let two_pi = std::f64::consts::TAU;
-    Array3::from_shape_fn((n, n, nz_c), |(ix, iy, iz)| {
+    Array3::from_shape_fn((n, n, n), |(ix, iy, iz)| {
         let kx_v = two_pi * kx[ix];
         let ky_v = two_pi * ky[iy];
         let kz_v = two_pi * kz[iz];
@@ -32,22 +35,20 @@ pub(super) fn build_k_power_spectrum(n: usize, spacing_m: f64, power: f64) -> Ar
 }
 
 /// Compute `IFFT( weights · FFT(field) )` on the periodic 3-D grid.
-/// Allocates the FFT and IFFT scratch buffers per call; the FFT plan
-/// itself is cached globally by Apollo's `FFT_CACHE_3D`.
+/// Allocates the complex spectrum buffer per call; the FFT plan itself is cached
+/// per shape by the apollo-backed `PlanCacheProvider` behind the kwavers facade.
 pub(super) fn spectral_filter(n: usize, field: &[f64], weights: &Array3<f64>) -> Vec<f64> {
-    let nz_c = n / 2 + 1;
     let mut spatial = Array3::<f64>::zeros((n, n, n));
     spatial
         .as_slice_mut()
         .expect("Array3<f64>::zeros is contiguous")
         .copy_from_slice(field);
-    let mut spectrum = Array3::<Complex64>::zeros((n, n, nz_c));
-    fft_3d_r2c_into(&spatial, &mut spectrum);
+    let mut spectrum = Array3::<Complex64>::zeros((n, n, n));
+    fft_3d_array_into(&spatial, &mut spectrum);
     spectrum.iter_mut().zip(weights.iter()).for_each(|(z, &w)| {
         *z *= w;
     });
-    let mut scratch = Array3::<Complex64>::zeros((n, n, nz_c));
-    ifft_3d_r2c_into(&spectrum, &mut spatial, &mut scratch);
+    ifft_3d_array_into(&mut spectrum, &mut spatial);
     spatial
         .as_slice()
         .expect("Array3<f64>::zeros is contiguous")

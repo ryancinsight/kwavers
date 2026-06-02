@@ -2,7 +2,7 @@
 
 use super::super::orchestrator::PSTDSolver;
 use kwavers_core::error::KwaversResult;
-use kwavers_math::fft::Complex64;
+use kwavers_math::fft::{Complex64, Fft3dInOutExt};
 use ndarray::Zip;
 
 impl PSTDSolver {

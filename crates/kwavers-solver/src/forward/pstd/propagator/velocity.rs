@@ -46,6 +46,7 @@
 //! - Liu (1998). Geophysics 63(6), 2082–2089. (k-space PSTD method)
 //! - Berenger (1994). J. Comput. Phys. 114(2), 185–200. (split-field PML)
 
+use kwavers_math::fft::Fft3dInOutExt;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use crate::forward::pstd::implementation::core::orchestrator::PSTDSolver;
 use crate::geometry::SolverGeometry;

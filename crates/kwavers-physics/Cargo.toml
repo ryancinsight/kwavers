@@ -23,7 +23,7 @@ rand_distr = "0.4"
 rand_chacha = "0.3"
 anyhow = "1.0"
 uom = { version = "0.36", default-features = false, features = ["f64", "si", "std"] }
-ritk-registration = { path = "../../ritk/crates/ritk-registration" }
+ritk-registration = { workspace = true }
 
 [dev-dependencies]
 approx = "0.5"

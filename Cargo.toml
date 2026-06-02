@@ -1,25 +1,18 @@
 [workspace]
-members = ["kwavers", "xtask", "pykwavers", "gaia", "crates/kwavers-core", "crates/kwavers-math", "crates/kwavers-domain", "crates/kwavers-physics", "crates/kwavers-solver", "crates/kwavers-analysis"]
+members = ["kwavers", "xtask", "pykwavers", "crates/kwavers-core", "crates/kwavers-math", "crates/kwavers-domain", "crates/kwavers-physics", "crates/kwavers-solver", "crates/kwavers-analysis"]
 resolver = "2"
 
 [workspace.dependencies]
-# Required so Cargo can parse ritk-io/Cargo.toml (which inherits from its own workspace).
-ritk-core = { path = "ritk/crates/ritk-core" }
-ritk-dicom = { path = "ritk/crates/ritk-dicom" }
-ritk-codecs = { path = "ritk/crates/ritk-codecs" }
-ritk-nifti = { path = "ritk/crates/ritk-nifti" }
-ritk-nrrd = { path = "ritk/crates/ritk-nrrd" }
-ritk-metaimage = { path = "ritk/crates/ritk-metaimage" }
-ritk-mgh = { path = "ritk/crates/ritk-mgh" }
-ritk-analyze = { path = "ritk/crates/ritk-analyze" }
-ritk-png = { path = "ritk/crates/ritk-png" }
-ritk-jpeg = { path = "ritk/crates/ritk-jpeg" }
-ritk-tiff = { path = "ritk/crates/ritk-tiff" }
-ritk-minc = { path = "ritk/crates/ritk-minc" }
-ritk-vtk = { path = "ritk/crates/ritk-vtk" }
-ritk-io = { path = "ritk/crates/ritk-io" }
-ritk-model = { path = "ritk/crates/ritk-model" }
-ritk-registration = { path = "ritk/crates/ritk-registration" }
+# External git submodules replaced by remote git dependencies (always-latest on the
+# default branch; `cargo update -p <crate>` refreshes the pinned commit in Cargo.lock).
+# These repos carry their own [workspace], so Cargo resolves their internal
+# inheritance against THEIR roots — no path scaffolding needed here. SSOT: members
+# inherit via `{ workspace = true }`.
+ritk-core = { git = "https://github.com/ryancinsight/ritk" }
+ritk-io = { git = "https://github.com/ryancinsight/ritk" }
+ritk-registration = { git = "https://github.com/ryancinsight/ritk" }
+apollo = { git = "https://github.com/ryancinsight/apollo", package = "apollo-fft" }
+apollofft-wgpu = { git = "https://github.com/ryancinsight/apollo", package = "apollo-fft-wgpu" }
 burn = { version = "0.19", features = ["wgpu", "autodiff"] }
 burn-ndarray = "0.19"
 pyo3 = { version = "0.22", features = ["extension-module", "abi3-py39"] }
@@ -36,7 +29,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 rayon = "1.9"
 ndarray = { version = "0.16", features = ["rayon"] }
-gaia = { path = "gaia", default-features = false }
+gaia = { git = "https://github.com/ryancinsight/gaia", default-features = false }
 tempfile = "3.10"
 proptest = "1.0"
 tokio = { version = "1.0", features = ["full"] }
@@ -66,13 +59,8 @@ consus-hdf5 = { git = "https://github.com/ryancinsight/consus", features = ["std
 consus-core = { git = "https://github.com/ryancinsight/consus", features = ["std"] }
 consus-compression = { git = "https://github.com/ryancinsight/consus", features = ["std", "deflate"] }
 consus-io = { git = "https://github.com/ryancinsight/consus", features = ["std"] }
-# Required so Cargo can parse apollo-fft/Cargo.toml (workspace-inherited deps).
-# rustfft pinned to apollo's workspace version (apollo/Cargo.toml). Kwavers
-# source code uses apollo, not rustfft; this declaration exists only because
-# apollo-fft's bench harness inherits rustfft via `workspace = true`.
 rand = "0.9"
 criterion = "0.5"
-rustfft = "6.4.1"
 
 [workspace.lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }

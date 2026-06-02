@@ -26,14 +26,14 @@ anyhow = "1.0"
 bitflags = "2.4"
 parking_lot = "0.12"
 tracing = { version = "0.1", features = ["attributes"] }
-apollo = { path = "../../apollo/crates/apollo-fft", package = "apollo-fft" }
+apollo = { workspace = true }
 burn = { version = "0.19", features = ["ndarray", "autodiff", "wgpu"] }
 
 # Optional GPU stack (the `backend::gpu` subtree + gpu_pstd are feature-gated).
 wgpu = { version = "26.0", features = ["wgsl"], optional = true }
 bytemuck = { version = "1.19", features = ["derive"], optional = true }
 pollster = { version = "0.4", optional = true }
-apollofft-wgpu = { path = "../../apollo/crates/apollo-fft-wgpu", package = "apollo-fft-wgpu", optional = true }
+apollofft-wgpu = { workspace = true, optional = true }
 # Optional async runtime (PINN distributed training / persistence).
 tokio = { version = "1.42", features = ["rt-multi-thread", "macros", "sync", "time", "fs", "io-util"], optional = true }
 

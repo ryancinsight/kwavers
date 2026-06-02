@@ -1,5 +1,6 @@
 //! Pressure and velocity source injection for `PSTDSolver`.
 
+use kwavers_math::fft::Fft3dInOutExt;
 use super::super::orchestrator::PSTDSolver;
 use kwavers_core::error::KwaversResult;
 use kwavers_domain::source::{SourceField, SourceInjectionMode};

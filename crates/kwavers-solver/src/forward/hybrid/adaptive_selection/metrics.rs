@@ -58,7 +58,7 @@ impl SpectralMetrics {
     }
 
     fn compute_spectral_features(field: ArrayView3<f64>, grid: &Grid) -> (f64, f64) {
-        use kwavers_math::fft::{Fft3d, Shape3D};
+        use kwavers_math::fft::{Fft3d, Fft3dInOutExt, Shape3D};
         use std::f64::consts::PI;
 
         let (nx, ny, nz) = field.dim();

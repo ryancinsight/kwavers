@@ -1,9 +1,0 @@
-[submodule "ritk"]
-	path = ritk
-	url = https://github.com/ryancinsight/ritk
-[submodule "gaia"]
-	path = gaia
-	url = https://github.com/ryancinsight/gaia
-[submodule "apollo"]
-	path = apollo
-	url = https://github.com/ryancinsight/apollo.git

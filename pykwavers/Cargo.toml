@@ -17,7 +17,7 @@ crate-type = ["cdylib"]  # Dynamic library for Python import
 # Core kwavers library
 kwavers = { path = "../kwavers", default-features = false, features = ["minimal"] }
 burn = { version = "0.19", features = ["ndarray"] }
-ritk-io = { path = "../ritk/crates/ritk-io" }
+ritk-io = { workspace = true }
 
 # PyO3 for Python bindings
 pyo3 = { version = "0.27", features = ["extension-module", "abi3-py38", "multiple-pymethods"] }

@@ -2,6 +2,42 @@
 
 ## Unreleased
 
+### Changed (2026-06-02) - Remote git dependencies + apollo FFT API port [arch]
+
+- [arch] Replaced the `apollo`, `ritk`, and `gaia` git **submodules** (in the repo
+  root) with remote **git dependencies** tracking each repo's default branch
+  (`https://github.com/ryancinsight/{apollo,ritk,gaia}`). Centralized as SSOT in the
+  workspace `[workspace.dependencies]` (git); members inherit via `{ workspace = true }`.
+  Removed the submodule directories, `.gitmodules`, and the now-unneeded ritk path
+  scaffolding (16 entries) + the apollo-bench `rustfft` shim. `cargo update -p <crate>`
+  advances the pinned commit; Cargo.lock keeps builds reproducible between updates.
+- Tracking `main` pulled apollo's redesigned FFT API. Ported kwavers to it:
+  - `FftPlan{1,2,3}D` are now generic over `F: MixedRadixScalar`; the kwavers spectral
+    layer binds `F = f64` via `pub type Fft{1,2,3}d = FftPlan{N}D<f64>` aliases.
+  - Apollo removed its global `FFT_CACHE_*` statics + `get_fft_for_grid`; re-bound to
+    the new `PlanCacheProvider` trait (`f64::get_{1,2,3}d_plan`) behind zero-sized
+    `FftCache{1,2,3}d` adapters + `FFT_CACHE_{1,2,3}D` statics in the `math::fft` ACL,
+    so all ~16 call sites are unchanged.
+  - Apollo removed its public half-spectrum r2c/c2r transforms (which the PSTD core
+    depends on via `nz_c = nz/2+1` buffers + truncated k-space operators). Emulated
+    `forward_r2c_into`/`inverse_c2r_into` on `Fft3dInOutExt` over apollo's full-spectrum
+    complex plan: forward truncates z to `nz_c`; inverse reconstructs the upper half by
+    Hermitian symmetry `F[i,j,k]=conj(F[(nx-i)%nx,(ny-j)%ny,nz-k])` in a per-thread
+    reused full scratch, then inverse-transforms. The entire PSTD core (37 call sites,
+    `nz_c` buffers, truncated operators) is unchanged — the impedance mismatch is fully
+    localized in the `math::fft` anti-corruption layer.
+  - Added full-spectrum `forward`/`inverse` (alloc) to `Fft3dInOutExt` for the 3 sites
+    that used apollo's removed plan `.forward()`/`.inverse()`.
+  - Rewrote the clinical fractional-Laplacian `spectrum.rs` (the only direct apollo
+    importer) from half-spectrum r2c to full-spectrum c2c through the `math::fft`
+    facade — mathematically identical (real radial weights preserve Hermitian symmetry).
+- gaia and ritk latest are API-compatible (no port needed); only apollo had drifted.
+- Verification: full kwavers build green; math 214/0, solver 845/0 (PSTD r2c emulation
+  oracle), kwavers 692/0 (clinical absorption), analysis 522/0 — 2059 baseline preserved.
+- Note: the half-spectrum emulation does a full `(nx,ny,nz)` z-FFT instead of the
+  half-length transform (a bounded ~2× z-axis spectral cost); revisit if apollo restores
+  a public half-spectrum API.
+
 ### Changed (2026-06-02) - Extract `kwavers-analysis` workspace crate (ADR 009) [arch]
 
 - [major] Extracted the `analysis` layer (signal processing, beamforming,

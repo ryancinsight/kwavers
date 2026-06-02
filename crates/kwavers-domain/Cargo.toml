@@ -22,11 +22,11 @@ rand = "0.8"
 rand_distr = "0.4"
 rand_chacha = "0.3"
 anyhow = "1.0"
-gaia = { path = "../../gaia" }
+gaia = { workspace = true }
 nifti = "0.17.0"
 # Medical imaging I/O: DICOM via ritk-io (NdArray-backed burn tensors), registration.
-ritk-registration = { path = "../../ritk/crates/ritk-registration" }
-ritk-io = { path = "../../ritk/crates/ritk-io" }
+ritk-registration = { workspace = true }
+ritk-io = { workspace = true }
 burn = { version = "0.19", features = ["ndarray"] }
 
 [features]

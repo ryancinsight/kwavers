@@ -16,9 +16,9 @@ num-traits = "0.2"
 serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
 rand = "0.8"
-apollo = { path = "../../apollo/crates/apollo-fft", package = "apollo-fft" }
+apollo = { workspace = true }
 # Optional GPU FFT backend (the `apollofft_wgpu`-backed path is `gpu`-gated).
-apollofft-wgpu = { path = "../../apollo/crates/apollo-fft-wgpu", package = "apollo-fft-wgpu", optional = true }
+apollofft-wgpu = { workspace = true, optional = true }
 
 [features]
 gpu = ["dep:apollofft-wgpu"]

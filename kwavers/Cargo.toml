@@ -31,7 +31,7 @@ ndarray-npy = { version = "0.9", default-features = false, features = ["compress
 rayon = "1.10"
 num-complex = "0.4"
 num-traits = "0.2"
-apollo = { path = "../apollo/crates/apollo-fft", package = "apollo-fft" }
+apollo = { workspace = true }
 
 # Error handling (production critical)
 thiserror = "1.0"
@@ -47,7 +47,7 @@ uom = { version = "0.36", default-features = false, features = ["f64", "si", "st
 
 # Linear algebra
 nalgebra = { version = "0.32" }
-gaia = { path = "../gaia" }
+gaia = { workspace = true }
 
 # Essential utilities
 log = "0.4"
@@ -92,7 +92,7 @@ approx = "0.5"
 wgpu = { version = "26.0", features = ["wgsl"], optional = true }
 bytemuck = { version = "1.19", features = ["derive"], optional = true }
 pollster = { version = "0.4", optional = true }
-apollofft-wgpu = { path = "../apollo/crates/apollo-fft-wgpu", package = "apollo-fft-wgpu", optional = true }
+apollofft-wgpu = { workspace = true, optional = true }
 
 # Machine Learning (Sprint 143 - PINNs with burn integration)
 # Updated to burn 0.18.0 (bincode compatibility resolved)
@@ -131,9 +131,9 @@ aws-config = { version = "1.0", optional = true }
 # Medical image registration toolkit (mandatory — owns DICOM I/O via ritk-io
 # and registration via ritk-registration; no optional gating because the
 # kwavers domain layer relies on these as the single source of truth).
-ritk-registration = { path = "../ritk/crates/ritk-registration" }
-ritk-core = { path = "../ritk/crates/ritk-core" }
-ritk-io = { path = "../ritk/crates/ritk-io" }
+ritk-registration = { workspace = true }
+ritk-core = { workspace = true }
+ritk-io = { workspace = true }
 consus-core = { workspace = true }
 consus-hdf5 = { workspace = true }
 consus-io = { workspace = true }

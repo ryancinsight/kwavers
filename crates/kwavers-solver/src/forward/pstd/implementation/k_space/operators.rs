@@ -2,7 +2,7 @@
 
 use super::grid::PSTDKSGrid;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_math::fft::{Complex64, Fft3d, Shape3D};
+use kwavers_math::fft::{Complex64, Fft3d, Fft3dInOutExt, Shape3D};
 use ndarray::{Array3, Zip};
 
 /// k-Space operators for PSTD spectral computations
