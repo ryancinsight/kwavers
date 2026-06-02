@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+### Changed (2026-06-02) - Extract `kwavers-analysis` workspace crate (ADR 009) [arch]
+
+- [major] Extracted the `analysis` layer (signal processing, beamforming,
+  validation, ML/uncertainty, performance, conservation, plotting/visualization)
+  into `kwavers-analysis` (depends on core+math+domain+solver). Facade
+  `pub use kwavers_analysis as analysis`; `crate::analysis::…` paths resolve unchanged.
+  207 files codemod'd. 0 upward edges, 0 back-edges (the `crate::acoustics::analysis`
+  refs are physics's internal module, not this layer). Full kwavers build green on
+  the FIRST try — analysis has a clean public API, no pub(crate)/inherent-impl fixes.
+- New external deps for the crate: `chrono` (validation report timestamps), dev-only
+  `tokio` (async beamforming tests). Feature wiring mirrors kwavers:
+  `gpu`/`plotting`/`gpu-visualization`/`pinn` forward to the analysis crate.
+- Doctests rewritten `kwavers::analysis::…`→`kwavers_analysis::…` (+ cross-layer to
+  `kwavers_{core,domain,math}::…`, `kwavers::testing::`→`kwavers_analysis::testing::`).
+- Verification: kwavers build green; kwavers lib 692/0, kwavers-analysis lib 522/0
+  (692+522=1214, the prior facade count incl. analysis), analysis doctests 1/0.
+  Total across kwavers+analysis+solver = 2059 — matches pre-extraction baseline.
+- 6 of 8 layer crates extracted (core, math, domain, physics, solver, analysis).
+
 ### Changed (2026-06-01) - Extract `kwavers-solver` workspace crate (ADR 009) [arch]
 
 - [major] Extracted the `solver` layer (forward FDTD/PSTD/k-space/Helmholtz/BEM,

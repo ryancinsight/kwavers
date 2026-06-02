@@ -5817,6 +5817,7 @@ dependencies = [
  "hmac",
  "image 0.24.9",
  "jsonwebtoken",
+ "kwavers-analysis",
  "kwavers-core",
  "kwavers-domain",
  "kwavers-math",
@@ -5864,6 +5865,31 @@ dependencies = [
  "tracing-subscriber",
  "uom",
  "uuid",
+ "wgpu 26.0.1",
+]
+
+[[package]]
+name = "kwavers-analysis"
+version = "3.0.0"
+dependencies = [
+ "approx",
+ "burn",
+ "chrono",
+ "egui",
+ "kwavers-core",
+ "kwavers-domain",
+ "kwavers-math",
+ "kwavers-solver",
+ "log",
+ "nalgebra 0.32.6",
+ "ndarray",
+ "num-complex",
+ "num-traits",
+ "plotly",
+ "rand 0.8.5",
+ "rayon",
+ "serde",
+ "tokio",
  "wgpu 26.0.1",
 ]
 

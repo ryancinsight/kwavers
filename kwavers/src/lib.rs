@@ -86,8 +86,11 @@ pub use kwavers_solver as solver;
 /// High-level simulation orchestration, backends, and modality workflows
 pub mod simulation;
 
-/// Analysis tools: signal processing, beamforming, validation, ML, performance
-pub mod analysis;
+/// Analysis tools: signal processing, beamforming, validation, ML, performance.
+///
+/// Extracted to the `kwavers-analysis` workspace crate (ADR 009); re-exported here
+/// under the original `analysis` name so `crate::analysis::…` paths resolve unchanged.
+pub use kwavers_analysis as analysis;
 
 /// GPU profiling and allocation tracking
 pub mod profiling;

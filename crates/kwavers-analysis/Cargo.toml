@@ -1,0 +1,43 @@
+[package]
+name = "kwavers-analysis"
+version = "3.0.0"
+edition = "2021"
+authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
+description = "Analysis layer for kwavers: signal processing, beamforming, validation, ML/uncertainty, performance, plotting/visualization"
+license = "MIT"
+repository = "https://github.com/ryancinsight/kwavers"
+
+[dependencies]
+kwavers-core = { path = "../kwavers-core" }
+kwavers-math = { path = "../kwavers-math" }
+kwavers-domain = { path = "../kwavers-domain" }
+kwavers-solver = { path = "../kwavers-solver" }
+ndarray = { version = "0.16", features = ["rayon", "serde"] }
+num-complex = "0.4"
+num-traits = "0.2"
+nalgebra = { version = "0.32" }
+rand = "0.8"
+rayon = "1.10"
+log = "0.4"
+chrono = { version = "0.4", features = ["serde"] }
+serde = { version = "1.0", features = ["derive"] }
+burn = { version = "0.19", features = ["ndarray", "autodiff", "wgpu"] }
+
+# Optional GPU compute (the `visualization` subtree is `gpu`-gated).
+wgpu = { version = "26.0", features = ["wgsl"], optional = true }
+# Optional plotting / immediate-mode UI surfaces.
+plotly = { version = "0.8", optional = true }
+egui = { version = "0.25", optional = true }
+
+[features]
+gpu = ["dep:wgpu", "kwavers-core/gpu", "kwavers-math/gpu", "kwavers-solver/gpu"]
+plotting = ["dep:plotly"]
+gpu-visualization = ["gpu", "plotting", "dep:egui"]
+pinn = ["kwavers-solver/pinn"]
+
+[dev-dependencies]
+approx = "0.5"
+tokio = { version = "1.42", features = ["rt-multi-thread", "macros", "time"] }
+
+[lints]
+workspace = true

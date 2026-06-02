@@ -1,0 +1,120 @@
+//! Tissue classification model
+
+use super::{MLModel, MlModelMetadata};
+use crate::ml::inference::InferenceEngine;
+use kwavers_core::error::KwaversResult;
+use ndarray::{Array1, Array2};
+
+/// Tissue classification model for acoustic simulations
+#[derive(Debug)]
+pub struct TissueClassifierModel {
+    pub(crate) engine: InferenceEngine,
+    metadata: MlModelMetadata,
+}
+
+impl TissueClassifierModel {
+    /// Load model from path
+    ///
+    /// **Implementation Status**: Template model with random initialization
+    /// **Rationale**: Full neural network loading requires ML framework selection (burn/candle).
+    /// Template provides functional inference API for integration testing and development.
+    /// Production ML models would deserialize trained weights from checkpoint files.
+    ///
+    /// **Future**: Sprint 127+ ML infrastructure with proper model serialization
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    pub fn load(_path: &std::path::Path) -> KwaversResult<Self> {
+        Ok(Self::with_random_weights(128, 10))
+    }
+
+    /// Create from weights
+    #[must_use]
+    pub fn from_weights(weights: Array2<f32>, bias: Option<Array1<f32>>) -> Self {
+        let (features, classes) = weights.dim();
+        let engine = InferenceEngine::from_weights(weights, bias, 32, false);
+
+        let metadata = MlModelMetadata {
+            name: "TissueClassifier".to_owned(),
+            version: "1.0.0".to_owned(),
+            input_shape: vec![features],
+            output_shape: vec![classes],
+            accuracy: 0.0_f64,
+            inference_time_ms: 0.0_f64,
+        };
+
+        Self { engine, metadata }
+    }
+
+    /// Get metadata
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use]
+    pub fn metadata(&self) -> &MlModelMetadata {
+        &self.metadata
+    }
+
+    /// Run inference
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    pub fn infer(&self, input: &Array2<f32>) -> KwaversResult<Array2<f32>> {
+        self.predict(input)
+    }
+
+    /// Create a classifier with random weights
+    #[must_use]
+    pub fn with_random_weights(features: usize, classes: usize) -> Self {
+        use rand::Rng;
+        let mut rng = rand::thread_rng();
+        let weights = Array2::from_shape_fn((features, classes), |_| rng.gen_range(-0.05..0.05));
+        let engine = InferenceEngine::from_weights(weights, None, 32, false);
+
+        let metadata = MlModelMetadata {
+            name: "TissueClassifier".to_owned(),
+            version: "1.0.0".to_owned(),
+            input_shape: vec![features],
+            output_shape: vec![classes],
+            accuracy: 0.0_f64,
+            inference_time_ms: 0.0_f64,
+        };
+
+        Self { engine, metadata }
+    }
+
+    /// Classify tissue types
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
+    pub fn classify(&self, features: &Array1<f32>) -> KwaversResult<usize> {
+        let input = features.clone().insert_axis(ndarray::Axis(0));
+        let output = self.engine.forward(&input)?;
+
+        // Find class with highest probability
+        let class = output
+            .iter()
+            .enumerate()
+            .max_by(|(_, a), (_, b)| {
+                // Handle NaN gracefully: treat as equal (stable comparison)
+                a.total_cmp(b)
+            })
+            .map_or(0, |(idx, _)| idx);
+
+        Ok(class)
+    }
+}
+
+impl MLModel for TissueClassifierModel {
+    fn predict(&self, input: &Array2<f32>) -> KwaversResult<Array2<f32>> {
+        self.engine.forward(input)
+    }
+
+    fn accuracy(&self) -> f64 {
+        self.metadata.accuracy
+    }
+
+    fn name(&self) -> &str {
+        &self.metadata.name
+    }
+}

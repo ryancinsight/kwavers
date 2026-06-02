@@ -148,12 +148,17 @@ EXTRACTION PHASE (ADR 009, in progress — leaf-first):
   materials}`, `linear_born_inversion::{dense,schedule}` fns, `pcg::{invert,
   InversionState+fields}`. Isolated 2m46s + full 1m24s green. kwavers lib 1214/0,
   solver lib 845/0, solver doctests 5/0 (2059 total — baseline preserved).
-- **[next] Resume extraction**: `analysis` (deps through physics+solver) →
-  `simulation` → `clinical`. Reuse the codemod adding
-  `solver=kwavers_solver` to the depmap. Commit after each verified crate.
-- **5 of 8 crates extracted** (core, math, domain, physics, solver). Facade + codemod
-  proven; DAG verified acyclic. Remaining facade modules: analysis, simulation,
-  clinical (+ gpu/infrastructure stay in the facade crate).
+- **[done] `kwavers-analysis` extracted (2026-06-02)** — `analysis/` →
+  `crates/kwavers-analysis` (signal processing, beamforming, validation,
+  ML/uncertainty, performance, plotting/visualization; deps core+math+domain+solver).
+  207 files codemod'd. 0 upward edges, 0 back-edges. Full build green FIRST try (clean
+  public API). Added `chrono` (timestamps) + dev `tokio` (async beamforming tests).
+  kwavers lib 692/0, analysis lib 522/0, doctests 1/0 (2059 total — baseline preserved).
+- **[next] Resume extraction**: `simulation` → `clinical`. Reuse the codemod adding
+  `analysis=kwavers_analysis` to the depmap. Commit after each verified crate.
+- **6 of 8 crates extracted** (core, math, domain, physics, solver, analysis). Facade +
+  codemod proven; DAG verified acyclic. Remaining facade modules: simulation, clinical
+  (+ gpu/infrastructure stay in the facade crate).
 - **DEBT (coupling smell, logged)**: clinical/simulation reconstruction reaches into
   solver's `linear_born_inversion` internals (forced the pub(crate)→pub cascade). A
   cleaner narrow public inversion API would re-seal these; deferred (non-blocking).
