@@ -44,6 +44,11 @@ pinn = []
 pinn-gpu = ["pinn", "gpu"]
 burn-wgpu = ["pinn"]
 async-runtime = ["dep:tokio"]
+# Nightly-only code paths (portable `std::simd`); WIP, off by default.
+nightly = []
+# SIMD-accelerated PINN inference (WIP, nightly-only — implies `nightly` so the
+# engine and `SimdExecutor` cfg-gates activate together).
+simd = ["nightly"]
 
 [dev-dependencies]
 approx = "0.5"

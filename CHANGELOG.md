@@ -2,6 +2,34 @@
 
 ## Unreleased
 
+### Changed (2026-06-02) - Feature-flag / cfg cleanup (gate only the incomplete) [patch]
+
+Audited every `cfg(feature=…)` against the declaring crate's manifest. Code gated on
+features the crate never declares is permanently dead; fixed each per "gate only what is
+not yet complete":
+
+- **Ungated complete code wrongly hidden behind a non-existent feature**:
+  - `domain::imaging::medical::ct_loader` was `#[cfg(feature="nifti")]`-gated, but `nifti`
+    is an *unconditional* domain dependency and no `nifti` feature exists — so the complete
+    NIfTI CT loader was always replaced by a "support not enabled" error. Removed the gates
+    and the dead error-fallback; CT loading now works.
+  - `solver::workspace::pool` toggled `parking_lot::Mutex` vs `std::sync::Mutex` on an
+    undeclared `parallel` feature (so it always used the std path with poison-handling).
+    Both paths were complete; switched to `parking_lot` unconditionally (it's always a dep).
+- **Removed dead orphan/aspirational code that was gated off**:
+  - `domain::sensor::beamforming::shaders` (WGSL GPU shaders, 0 consumers — the beamforming
+    algorithms had already migrated to `analysis`/`clinical`).
+  - `TensorBackend::{BurnWgpu, BurnCuda}` variants (gated on undeclared `burn-wgpu`/`burn-cuda`,
+    never constructed).
+- **Declared features for genuinely-incomplete WIP** (so the gate is real, not dead):
+  - `solver` now declares `nightly = []` and `simd = ["nightly"]` for the nightly-only
+    `std::simd` PINN-inference path (`simd` implies `nightly` so the engine and `SimdExecutor`
+    cfg-gates activate together).
+- Left as-is: the optional-capability features (`gpu`, `pinn`, `nifti` where forwarding an
+  optional dep, `plotting`, `async-runtime`, …) are legitimately gated; the
+  `analysis::…beamforming::experimental` module is a doc-only placeholder.
+- Verification: domain builds with **0** `unexpected_cfg` warnings; full build green.
+
 ### Changed (2026-06-02) - Codebase review + dead/deprecated cleanup [patch]
 
 Workspace-wide review (clippy + 4 parallel crate audits, all findings grep-verified):

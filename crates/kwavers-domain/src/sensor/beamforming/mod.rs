@@ -125,10 +125,6 @@ pub mod sensor_beamformer;
 mod config;
 pub use config::{BeamformingConfig, BeamformingCoreConfig};
 
-// GPU shaders (hardware-accelerated implementations)
-#[cfg(feature = "gpu")]
-pub mod shaders;
-
 pub use sensor_beamformer::{BeamformerWindowType, SensorBeamformer, SensorProcessingParams};
 
 // NOTE: All beamforming algorithms have been migrated to:

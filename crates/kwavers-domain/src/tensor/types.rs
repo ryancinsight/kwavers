@@ -67,10 +67,4 @@ pub enum TensorBackend {
     NdArray,
     /// Burn with NdArray backend (autodiff on CPU).
     BurnNdArray,
-    /// Burn with WGPU backend (autodiff on GPU).
-    #[cfg(feature = "burn-wgpu")]
-    BurnWgpu,
-    /// Burn with CUDA backend (autodiff on GPU).
-    #[cfg(feature = "burn-cuda")]
-    BurnCuda,
 }

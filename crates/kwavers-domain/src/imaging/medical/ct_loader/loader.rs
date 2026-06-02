@@ -7,7 +7,6 @@ use crate::imaging::medical::{MedicalImageLoader, MedicalImageMetadata};
 use log::warn;
 use ndarray::Array3;
 
-#[cfg(feature = "nifti")]
 use nifti::{InMemNiftiObject, IntoNdArray, NiftiObject, NiftiVolume, ReaderOptions};
 
 /// CT Image Loader — loads NIFTI format CT scans.
@@ -71,7 +70,6 @@ impl Default for CTImageLoader {
 
 impl MedicalImageLoader for CTImageLoader {
     fn load(&mut self, path: &str) -> KwaversResult<Array3<f64>> {
-        #[cfg(feature = "nifti")]
         {
             use std::path::Path;
 
@@ -125,14 +123,6 @@ impl MedicalImageLoader for CTImageLoader {
             self.data = Some(hounsfield.clone());
             Ok(hounsfield)
         }
-
-        #[cfg(not(feature = "nifti"))]
-        {
-            Err(KwaversError::InvalidInput(format!(
-                "NIFTI support not enabled. Rebuild with --features nifti. Path: {}",
-                path
-            )))
-        }
     }
 
     fn metadata(&self) -> MedicalImageMetadata {
@@ -171,7 +161,6 @@ impl MedicalImageLoader for CTImageLoader {
 // ==================== Private Implementation ====================
 
 impl CTImageLoader {
-    #[cfg(feature = "nifti")]
     fn extract_affine_matrix(nifti_obj: &InMemNiftiObject) -> KwaversResult<[[f64; 4]; 4]> {
         let header = nifti_obj.header();
 
@@ -210,7 +199,6 @@ impl CTImageLoader {
         Ok(Self::identity_affine())
     }
 
-    #[cfg(feature = "nifti")]
     fn extract_hounsfield_units<V: NiftiVolume + IntoNdArray>(
         volume: V,
         nx: usize,
