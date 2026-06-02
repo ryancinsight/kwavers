@@ -2,6 +2,42 @@
 
 ## Unreleased
 
+### Changed (2026-06-02) - Split `clinical` into `kwavers-diagnostics` + `kwavers-therapy` (ADR 009) [arch]
+
+- [arch] The clinical application layer (462 files / ~67k lines — the largest module,
+  spanning distinct diagnostic-imaging and therapeutic concerns) was split into TWO
+  independent top crates instead of one monolithic `kwavers-clinical`:
+  - **`kwavers-diagnostics`** ← `clinical/imaging/` (reconstruction pipelines, multi-modal
+    fusion/decision-support, Doppler, spectroscopy, functional ultrasound, phantoms).
+    Deps: core→analysis. 125 files codemod'd.
+  - **`kwavers-therapy`** ← `clinical/{therapy,safety,regulatory,patient_management}/`
+    (HIFU/histotripsy/lithotripsy planning, theranostic guidance, dose & safety, FDA/IEC
+    compliance, patient management). Deps: core→simulation. 170 files codemod'd.
+- Dependency analysis (verified) drove the boundary: `imaging` is fully independent
+  (0 edges to therapy/safety/etc.); `therapy↔safety` are mutually coupled (co-located);
+  and critically `therapy→imaging = 0` — theranostics does its imaging via *solver*
+  primitives (`same_aperture`/PAM), not clinical/imaging — so the two crates are parallel
+  and independent, not a stack.
+- Facade: `kwavers::clinical` is now a module re-exporting `kwavers_diagnostics as imaging`
+  and `kwavers_therapy::{therapy,safety,regulatory,patient_management}` plus the original
+  top-level type re-exports, so every `crate::clinical::{imaging,therapy,safety,…}::…`
+  path (used by `infrastructure/api/clinical` and `kwavers-python` bindings) resolves
+  unchanged.
+- Per-crate codemod self-collapse: `crate::clinical::imaging::`→`crate::` (diagnostics, a
+  single sub-root) vs `crate::clinical::`→`crate::` keeping `therapy/safety/…` as named
+  submodules (therapy). Fixed pre-existing stale doctest type names
+  (`TissueType`→`TherapyTissueType`, `TreatmentMetrics`/`TherapyModality`→`Domain*`).
+- Verification: full kwavers build green; kwavers lib 38/0, diagnostics 271/0 (+1 doc),
+  therapy 301/0 (+10 doc) — 38+271+301 = 610, the prior facade count preserved.
+- Workspace layer crates complete: core, math, domain, physics, solver, analysis,
+  simulation, **diagnostics + therapy** (clinical layer as two crates). gpu/infrastructure
+  remain in the `kwavers` facade.
+- DEBT (logged, follow-ups): lower-layer cleanups deferred — `imaging/{doppler,spectroscopy}`
+  + functional-US ULM/vesselness → `analysis`; `imaging/{chromophores,phantoms}` → `domain`;
+  `therapy/lithotripsy/cavitation_cloud` reimplements Blake/bubble dynamics → should
+  delegate to `physics::bubble_dynamics` (SSOT); reconcile `therapy/{domain_types,modalities,
+  parameters}` with the existing `domain::therapy`.
+
 ### Changed (2026-06-02) - Extract `kwavers-simulation` workspace crate (ADR 009) [arch]
 
 - [major] Extracted the `simulation` layer (orchestration builders/runners,

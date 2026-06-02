@@ -5595,11 +5595,13 @@ dependencies = [
  "jsonwebtoken",
  "kwavers-analysis",
  "kwavers-core",
+ "kwavers-diagnostics",
  "kwavers-domain",
  "kwavers-math",
  "kwavers-physics",
  "kwavers-simulation",
  "kwavers-solver",
+ "kwavers-therapy",
  "log",
  "loom",
  "nalgebra 0.32.6",
@@ -5685,6 +5687,35 @@ dependencies = [
  "serde",
  "thiserror 1.0.69",
  "wgpu",
+]
+
+[[package]]
+name = "kwavers-diagnostics"
+version = "3.0.0"
+dependencies = [
+ "anyhow",
+ "approx",
+ "chrono",
+ "consus-core",
+ "consus-hdf5",
+ "consus-io",
+ "flate2",
+ "kwavers-analysis",
+ "kwavers-core",
+ "kwavers-domain",
+ "kwavers-math",
+ "kwavers-physics",
+ "kwavers-solver",
+ "log",
+ "ndarray 0.16.1",
+ "num-complex",
+ "rand 0.8.5",
+ "rayon",
+ "ritk-core",
+ "ritk-registration",
+ "serde",
+ "tempfile",
+ "tracing",
 ]
 
 [[package]]
@@ -5820,6 +5851,25 @@ dependencies = [
  "tokio",
  "tracing",
  "wgpu",
+]
+
+[[package]]
+name = "kwavers-therapy"
+version = "3.0.0"
+dependencies = [
+ "approx",
+ "kwavers-analysis",
+ "kwavers-core",
+ "kwavers-domain",
+ "kwavers-math",
+ "kwavers-physics",
+ "kwavers-simulation",
+ "kwavers-solver",
+ "log",
+ "ndarray 0.16.1",
+ "num-complex",
+ "rayon",
+ "serde",
 ]
 
 [[package]]

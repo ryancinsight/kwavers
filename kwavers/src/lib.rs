@@ -98,8 +98,45 @@ pub use kwavers_analysis as analysis;
 /// GPU profiling and allocation tracking
 pub mod profiling;
 
-/// Clinical workflows: imaging, therapy planning, safety, regulatory
-pub mod clinical;
+/// Clinical application layer (ADR 009): split into `kwavers-diagnostics`
+/// (diagnostic imaging workflows) and `kwavers-therapy` (therapy planning,
+/// theranostic guidance, safety, regulatory, patient management). Re-exported
+/// here under the original `clinical::{imaging,therapy,safety,regulatory,
+/// patient_management}` paths so `crate::clinical::…` resolves unchanged.
+pub mod clinical {
+    pub use kwavers_diagnostics as imaging;
+    pub use kwavers_therapy::{patient_management, regulatory, safety, therapy};
+
+    pub use imaging::{
+        ClinicalApplication, ClinicalExaminationResult, ClinicalProtocol, ClinicalWorkflowConfig,
+        ClinicalWorkflowOrchestrator, DiagnosticRecommendation, DiagnosticUrgency,
+        QualityPreference, WorkflowPriority, WorkflowState, WorkflowTimingMetrics,
+    };
+    pub use patient_management::{
+        ClinicalEncounter, ClinicalNote, ConsentRecord, ConsentType, EncounterId, EncounterType,
+        MedicalHistoryEntry, MedicationRecord, PatientDemographics, PatientId,
+        PatientManagementSystem, PatientMedicalProfile, PatientTreatmentPlan, TreatmentStatus,
+        VitalSigns,
+    };
+    pub use regulatory::{
+        ClinicalEvidence, DeviceClass, DeviceDescription, PerformanceTest, PredicateDevice,
+        RiskRecord, SubmissionDocument,
+    };
+    pub use safety::{
+        mechanical_index::{
+            MechanicalIndexCalculator, MechanicalIndexResult, MechanicalIndexSafetyStatus,
+            MechanicalIndexTissueType,
+        },
+        AuditEntry, AuditSafetyEventType, ClinicalSafetyLevel, ClinicalSafetyLimits,
+        ClinicalSafetyMonitor, ComplianceResult, ComplianceValidator, DoseController, Interlock,
+        InterlockSystem, SafetyAuditLogger, SafetyComplianceReport, SafetyViolation,
+        SystemConfiguration, TreatmentRecord,
+    };
+    pub use therapy::{
+        ClinicalTherapyMechanism, ClinicalTherapyModality, ClinicalTherapyParameters,
+        ClinicalTreatmentMetrics,
+    };
+}
 
 /// Infrastructure: I/O, API, cloud, device abstraction, runtime
 pub mod infrastructure;

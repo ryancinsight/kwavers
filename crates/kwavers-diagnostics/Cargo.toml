@@ -1,0 +1,42 @@
+[package]
+name = "kwavers-diagnostics"
+version = "3.0.0"
+edition = "2021"
+authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
+description = "Clinical diagnostic imaging workflows for kwavers: reconstruction pipelines, multi-modal fusion, Doppler, spectroscopy, functional ultrasound, decision support"
+license = "MIT"
+repository = "https://github.com/ryancinsight/kwavers"
+
+[dependencies]
+kwavers-core = { path = "../kwavers-core", features = ["registration"] }
+kwavers-math = { path = "../kwavers-math" }
+kwavers-domain = { path = "../kwavers-domain" }
+kwavers-physics = { path = "../kwavers-physics" }
+kwavers-solver = { path = "../kwavers-solver" }
+kwavers-analysis = { path = "../kwavers-analysis" }
+ndarray = { version = "0.16", features = ["rayon", "serde"] }
+num-complex = "0.4"
+rayon = "1.10"
+serde = { version = "1.0", features = ["derive"] }
+anyhow = "1.0"
+log = "0.4"
+rand = "0.8"
+chrono = { version = "0.4", features = ["serde"] }
+tracing = { version = "0.1", features = ["attributes"] }
+consus-hdf5 = { workspace = true }
+consus-core = { workspace = true }
+consus-io = { workspace = true }
+flate2 = { workspace = true }
+ritk-registration = { workspace = true }
+ritk-core = { workspace = true }
+
+[features]
+gpu = ["kwavers-core/gpu", "kwavers-math/gpu", "kwavers-solver/gpu", "kwavers-analysis/gpu"]
+pinn = ["kwavers-solver/pinn", "kwavers-analysis/pinn"]
+
+[dev-dependencies]
+approx = "0.5"
+tempfile = { workspace = true }
+
+[lints]
+workspace = true

@@ -174,11 +174,21 @@ EXTRACTION PHASE (ADR 009, in progress — leaf-first):
   codemod'd. 0 upward/back edges; full build green FIRST try. `simulation::core` vs `core`
   layer collision handled by the codemod. Added `toml`. kwavers lib 610/0, simulation lib
   82/0, doctests 4/0 (692 preserved).
-- **[next] Resume extraction**: `clinical` (last layer crate). Reuse the codemod adding
-  `simulation=kwavers_simulation` to the depmap. Commit after verification.
-- **7 of 8 crates extracted** (core, math, domain, physics, solver, analysis, simulation).
-  Facade + codemod proven; DAG verified acyclic. Remaining facade module: clinical
-  (+ gpu/infrastructure stay in the facade crate). Binding crate is now `kwavers-python`.
+- **[done] clinical SPLIT into `kwavers-diagnostics` + `kwavers-therapy` (2026-06-02)** —
+  the 462-file clinical layer was split (not extracted as one crate) by verified dependency
+  analysis: imaging is fully independent → `kwavers-diagnostics`; therapy↔safety coupled +
+  regulatory/patient_management → `kwavers-therapy`; therapy→imaging=0 so the two are
+  parallel/independent. Facade `kwavers::clinical` re-exports both under the original paths.
+  kwavers lib 38/0, diagnostics 271/0 (+1 doc), therapy 301/0 (+10 doc) = 610 preserved.
+- **WORKSPACE SPLIT COMPLETE** — all layer crates extracted: core, math, domain, physics,
+  solver, analysis, simulation, diagnostics, therapy (clinical layer = 2 crates). The
+  `kwavers` crate is the facade (+ gpu/infrastructure/profiling/architecture). Binding crate
+  is `kwavers-python`. apollo/ritk/gaia are remote git deps.
+- **[next] Lower-layer cleanups (post-split, independent)**: `imaging/{doppler,spectroscopy}`
+  + functional-US ULM/vesselness → `analysis`; `imaging/{chromophores,phantoms}` → `domain`;
+  `therapy/lithotripsy/cavitation_cloud` SSOT → `physics::bubble_dynamics`; reconcile
+  `therapy/{domain_types,modalities,parameters}` with `domain::therapy`. Each is a small
+  independent verifiable move; none blocks the (now-complete) workspace split.
 - **DEBT (coupling smell, logged)**: clinical/simulation reconstruction reaches into
   solver's `linear_born_inversion` internals (forced the pub(crate)→pub cascade). A
   cleaner narrow public inversion API would re-seal these; deferred (non-blocking).
