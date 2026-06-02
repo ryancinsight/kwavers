@@ -50,7 +50,7 @@ fn nonlinear_term_increases_waveform_asymmetry() {
     let grid = Grid::new(n, n, n, 1e-3, 1e-3, 1e-3).unwrap();
     let mut medium =
         HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, &grid);
-    medium.nonlinearity = B_OVER_A_WATER;
+    medium.set_nonlinearity(B_OVER_A_WATER);
 
     let config_nl = WesterveltFdtdConfig {
         spatial_order: 2,
@@ -59,7 +59,7 @@ fn nonlinear_term_increases_waveform_asymmetry() {
         ..WesterveltFdtdConfig::default()
     };
     let mut medium_linear = medium.clone();
-    medium_linear.nonlinearity = 0.0;
+    medium_linear.set_nonlinearity(0.0);
 
     let mut solver_nl = WesterveltFdtd::new(config_nl.clone(), &grid, &medium);
     let mut solver_lin = WesterveltFdtd::new(config_nl, &grid, &medium_linear);

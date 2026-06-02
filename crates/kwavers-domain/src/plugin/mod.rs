@@ -182,7 +182,10 @@ pub trait Plugin: Debug + Send + Sync {
 /// let mut ctx = PluginContext { extra_fields: &extra, sources: &[], boundary: &mut boundary };
 /// plugin.update(&mut fields, &grid, &medium, dt, t, &mut ctx)?;
 /// ```
-#[cfg(test)]
+/// Plugin test helpers (`make_context`, `null_plugin_fields`, `NullBoundary`).
+/// Exposed under the `test-util` feature so downstream crates' tests (e.g. the
+/// solver plugin tests) can reuse them across the crate boundary.
+#[cfg(any(test, feature = "test-util"))]
 pub mod test_support {
     use super::fields::PluginFields;
     use super::PluginContext;

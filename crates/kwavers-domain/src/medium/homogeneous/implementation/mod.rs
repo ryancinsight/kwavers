@@ -131,6 +131,20 @@ impl HomogeneousMedium {
         Ok(())
     }
 
+    /// Scalar acoustic nonlinearity coefficient `B/A`.
+    #[must_use]
+    pub fn nonlinearity_coefficient(&self) -> f64 {
+        self.nonlinearity
+    }
+
+    /// Set the scalar acoustic nonlinearity coefficient `B/A`, refreshing the
+    /// per-voxel cache so trait accessors stay consistent. (Public accessor for
+    /// cross-crate callers; the field itself is crate-private.)
+    pub fn set_nonlinearity(&mut self, b_over_a: f64) {
+        self.nonlinearity = b_over_a;
+        self.nonlinearity_cache = Array3::from_elem(self.grid_shape, b_over_a);
+    }
+
     /// Set thermal properties on an existing homogeneous medium.
     ///
     /// `thermal_conductivity` [W/(m·K)] and `specific_heat` [J/(kg·K)] must be

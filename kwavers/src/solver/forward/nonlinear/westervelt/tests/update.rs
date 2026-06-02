@@ -49,7 +49,7 @@ fn test_linear_wave_propagation() {
     let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3).unwrap();
     let mut medium =
         HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, &grid);
-    medium.nonlinearity = 0.0;
+    medium.set_nonlinearity(0.0);
 
     let config = WesterveltFdtdConfig {
         artificial_viscosity: 0.0,

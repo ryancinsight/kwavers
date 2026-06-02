@@ -74,7 +74,7 @@ fn absorption_causes_amplitude_decay_not_growth() {
     let mut medium =
         HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, &grid);
     medium
-        .set_acoustic_properties(5.0, 1.0, medium.nonlinearity)
+        .set_acoustic_properties(5.0, 1.0, medium.nonlinearity_coefficient())
         .unwrap();
 
     let config = WesterveltFdtdConfig {

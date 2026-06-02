@@ -29,6 +29,10 @@ ritk-registration = { path = "../../ritk/crates/ritk-registration" }
 ritk-io = { path = "../../ritk/crates/ritk-io" }
 burn = { version = "0.19", features = ["ndarray"] }
 
+[features]
+# Exposes `plugin::test_support` for downstream crates' tests.
+test-util = []
+
 [dev-dependencies]
 approx = "0.5"
 proptest = "1.2"

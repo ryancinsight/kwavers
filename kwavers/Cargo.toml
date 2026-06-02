@@ -139,6 +139,9 @@ flate2 = { workspace = true }
 
 [dev-dependencies]
 # Minimal dev dependencies for testing only
+# Enable kwavers-domain's `test-util` feature so cross-crate test helpers
+# (domain::plugin::test_support) are available to kwavers' own tests.
+kwavers-domain = { path = "../crates/kwavers-domain", features = ["test-util"] }
 criterion = "0.4"
 # GIF animation support for example outputs (e.g. liver_theranostic_reconstruction)
 image = { version = "0.24", default-features = false, features = ["gif"] }
