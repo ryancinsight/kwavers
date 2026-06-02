@@ -13,10 +13,10 @@ use super::properties::AcousticSkullProperties;
 /// # Example
 ///
 /// ```no_run
-/// use kwavers::physics::acoustics::skull::{TranscranialSimulation, AcousticSkullProperties};
-/// use kwavers::domain::grid::Grid;
+/// use kwavers_physics::acoustics::skull::{TranscranialSimulation, AcousticSkullProperties};
+/// use kwavers_domain::grid::Grid;
 ///
-/// # fn example() -> kwavers::core::error::KwaversResult<()> {
+/// # fn example() -> kwavers_core::error::KwaversResult<()> {
 /// let grid = Grid::new(200, 200, 200, 0.5e-3, 0.5e-3, 0.5e-3)?;
 /// let skull_props = AcousticSkullProperties::default();
 ///

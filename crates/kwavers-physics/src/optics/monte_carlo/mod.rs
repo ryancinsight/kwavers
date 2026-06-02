@@ -53,11 +53,11 @@
 //! # Example
 //!
 //! ```rust,no_run
-//! use kwavers::physics::optics::monte_carlo::{MonteCarloSolver, PhotonSource, SimulationConfig};
-//! use kwavers::domain::grid::Grid3D;
-//! use kwavers::domain::grid::GridDimensions;
-//! use kwavers::domain::medium::properties::OpticalPropertyData;
-//! use kwavers::physics::optics::map_builder::OpticalPropertyMapBuilder;
+//! use kwavers_physics::optics::monte_carlo::{MonteCarloSolver, PhotonSource, SimulationConfig};
+//! use kwavers_domain::grid::Grid3D;
+//! use kwavers_domain::grid::GridDimensions;
+//! use kwavers_domain::medium::properties::OpticalPropertyData;
+//! use kwavers_physics::optics::map_builder::OpticalPropertyMapBuilder;
 //!
 //! // Create solver
 //! let grid = Grid3D::new(50, 50, 50, 0.001, 0.001, 0.001)?;

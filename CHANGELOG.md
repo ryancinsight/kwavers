@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### Changed (2026-06-01) - Extract `kwavers-physics` workspace crate (ADR 009) [arch]
+
+- [major] Extracted the `physics` layer (nonlinear acoustics, bubble dynamics,
+  thermal, optics, chemistry, elastic waves) into `kwavers-physics` (depends on
+  core+math+domain). Facade `pub use kwavers_physics as physics`; `crate::physics::…`
+  paths resolve unchanged. No error From-coupling (clean). Full kwavers build green
+  on the first try — physics has a clean public API, so no `pub(crate)`/inherent-impl
+  cross-boundary fixes were needed.
+- Relocated `pstd_elastic_plugin_reduces_to_acoustic_when_mu_is_zero` (a
+  physics+solver integration test) into `solver::forward::pstd::extensions::elastic`.
+- `scripts/crate_path_rewrite.py`: now also rewrites bare crate-root re-exports
+  (`crate::KwaversResult`/`KwaversError` → `kwavers_core::error::…`,
+  `crate::Grid`/`Medium` → `kwavers_domain::…`) that the kwavers `lib.rs` exposed.
+- 4 of 8 layer crates extracted (core, math, domain, physics).
+
 ### Changed (2026-06-01) - Extract `kwavers-domain` workspace crate (ADR 009) [arch]
 
 - [major] Extracted the `domain` layer (grid, medium, source, sensor, boundary,

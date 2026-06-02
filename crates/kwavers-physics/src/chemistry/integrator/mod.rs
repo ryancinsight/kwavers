@@ -52,8 +52,8 @@ use std::collections::HashMap;
 ///
 /// ```rust,no_run
 /// use std::collections::HashMap;
-/// use kwavers::physics::chemistry::integrator::RadicalIntegrator;
-/// use kwavers::physics::chemistry::ros_plasma::{RadicalKinetics, ROSSpecies};
+/// use kwavers_physics::chemistry::integrator::RadicalIntegrator;
+/// use kwavers_physics::chemistry::ros_plasma::{RadicalKinetics, ROSSpecies};
 ///
 /// let kinetics = RadicalKinetics::new(7.0, 310.0);
 /// let integrator = RadicalIntegrator::new(kinetics);

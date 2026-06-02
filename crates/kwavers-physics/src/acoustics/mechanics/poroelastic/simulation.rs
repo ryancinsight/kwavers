@@ -10,12 +10,12 @@ use super::waves::WaveSpeeds;
 /// # Example
 ///
 /// ```no_run
-/// use kwavers::physics::acoustics::mechanics::poroelastic::{
+/// use kwavers_physics::acoustics::mechanics::poroelastic::{
 ///     PoroelasticSimulation, PoroelasticMaterial
 /// };
-/// use kwavers::domain::grid::Grid;
+/// use kwavers_domain::grid::Grid;
 ///
-/// # fn example() -> kwavers::core::error::KwaversResult<()> {
+/// # fn example() -> kwavers_core::error::KwaversResult<()> {
 /// let grid = Grid::new(128, 128, 64, 1e-3, 1e-3, 1e-3)?;
 /// let material = PoroelasticMaterial::from_tissue_type("trabecular_bone")?;
 ///

@@ -10,7 +10,7 @@ use kwavers_domain::medium::homogeneous::HomogeneousMedium;
 use ndarray::Array3;
 
 #[test]
-fn hifu_pressure_field_is_centered_at_geometric_focus_depth() -> crate::KwaversResult<()> {
+fn hifu_pressure_field_is_centered_at_geometric_focus_depth() -> kwavers_core::error::KwaversResult<()> {
     let grid = Grid::new(9, 9, 17, 0.001, 0.001, 0.001)?;
     let medium = HomogeneousMedium::new(
         DENSITY_WATER_NOMINAL,
@@ -39,7 +39,7 @@ fn hifu_pressure_field_is_centered_at_geometric_focus_depth() -> crate::KwaversR
 }
 
 #[test]
-fn hifu_pressure_field_is_laterally_symmetric() -> crate::KwaversResult<()> {
+fn hifu_pressure_field_is_laterally_symmetric() -> kwavers_core::error::KwaversResult<()> {
     let grid = Grid::new(9, 9, 13, 0.001, 0.001, 0.001)?;
     let medium = HomogeneousMedium::new(
         DENSITY_WATER_NOMINAL,
@@ -62,7 +62,7 @@ fn hifu_pressure_field_is_laterally_symmetric() -> crate::KwaversResult<()> {
 }
 
 #[test]
-fn hifu_intensity_uses_peak_pressure_half_impedance_formula() -> crate::KwaversResult<()> {
+fn hifu_intensity_uses_peak_pressure_half_impedance_formula() -> kwavers_core::error::KwaversResult<()> {
     let grid = Grid::new(5, 5, 9, 0.001, 0.001, 0.001)?;
     let medium = HomogeneousMedium::new(
         DENSITY_WATER_NOMINAL,
@@ -110,7 +110,7 @@ fn thermal_dose_uses_seconds_and_detects_ablation_threshold() {
 }
 
 #[test]
-fn treatment_plan_validation_accepts_target_inside_focal_access_region() -> crate::KwaversResult<()>
+fn treatment_plan_validation_accepts_target_inside_focal_access_region() -> kwavers_core::error::KwaversResult<()>
 {
     let target = TreatmentTarget {
         center: [0.0, 0.0, 0.08],

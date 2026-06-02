@@ -84,6 +84,22 @@ def simple_prefix(text, selflayer, depmap):
         text = text.replace(f"crate::{dep}::", f"{crate}::")
     return text
 
+# kwavers crate-root re-exports (lib.rs): code that used `crate::<Ident>` relied on
+# these. After extraction `crate::` is the layer root, so they must be re-pointed at
+# the owning extracted crate. Only applied when that crate is an extracted dep.
+ROOT_REEXPORTS = {
+    "KwaversResult": ("core", "kwavers_core::error::KwaversResult"),
+    "KwaversError": ("core", "kwavers_core::error::KwaversError"),
+    "Grid": ("domain", "kwavers_domain::grid::Grid"),
+    "Medium": ("domain", "kwavers_domain::medium::traits::Medium"),
+}
+
+def root_rewrite(text, selflayer, depmap):
+    for ident, (dep, target) in ROOT_REEXPORTS.items():
+        if dep == selflayer or dep in depmap:
+            text = re.sub(rf"\bcrate::{ident}\b", target, text)
+    return text
+
 def main():
     src, selflayer = sys.argv[1], sys.argv[2]
     depmap = dict(kv.split("=") for kv in sys.argv[3:])
@@ -95,6 +111,7 @@ def main():
             orig = open(p, encoding="utf-8").read()
             t = rewrite_use_crate_groups(orig, selflayer, depmap)
             t = simple_prefix(t, selflayer, depmap)
+            t = root_rewrite(t, selflayer, depmap)
             if t != orig:
                 open(p, "w", encoding="utf-8", newline="").write(t)
                 changed += 1

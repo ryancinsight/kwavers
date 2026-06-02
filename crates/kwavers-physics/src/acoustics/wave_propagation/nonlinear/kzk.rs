@@ -77,7 +77,7 @@
 ///
 /// ```ignore
 /// use kwavers::solver::forward::nonlinear::kzk::{KZKConfig, KZKSolver};
-/// use kwavers::physics::acoustics::wave_propagation::nonlinear::kzk::KZKSolverTrait;
+/// use kwavers_physics::acoustics::wave_propagation::nonlinear::kzk::KZKSolverTrait;
 /// use ndarray::Array2;
 ///
 /// let config = KZKConfig::default();

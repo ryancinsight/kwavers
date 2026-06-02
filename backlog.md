@@ -129,14 +129,22 @@ EXTRACTION PHASE (ADR 009, in progress — leaf-first):
   (`OpticalPropertyMapAnalysis`). Removed orphaned `sedsTbfPU` sed temp. deps:
   core[registration,nifti]+math+gaia+ritk-io+ritk-registration+burn[ndarray]+
   nifti+serde_json+rand*.
-- **[next] Resume extraction**: `kwavers-physics` (deps core+math+domain) →
-  `solver` → `analysis` → `simulation` → `clinical`. Reuse the codemod
-  (`crate_path_rewrite.py <src> <layer> core=kwavers_core math=kwavers_math
-  domain=kwavers_domain`). Expect: pub(crate)→pub promotions + inherent-impl→
-  extension-trait conversions at each boundary; audit error From-coupling first.
-  Commit after each verified crate.
-- **3 of 8 crates extracted** (core, math, domain). Facade pattern proven; codemod
-  reusable. DAG verified acyclic.
+- **[done] `kwavers-physics` extracted (2026-06-01)** — `physics/` →
+  `crates/kwavers-physics` (nonlinear acoustics, bubble dynamics, thermal, optics,
+  chemistry, elastic waves). Codemod-driven (744 core + 240 domain + 19 math + 212
+  physics refs). **No error From-coupling** (clean). Full kwavers build green on the
+  FIRST try — physics exposes a clean public API; zero pub(crate)/inherent-impl
+  fixes. Relocated the lone physics→solver test edge (`pstd_elastic_plugin_reduces_
+  to_acoustic_when_mu_is_zero`) into `solver::forward::pstd::extensions::elastic`.
+  Isolated 2m20s + full 3m54s green.
+- **[next] Resume extraction**: `kwavers-solver` (deps core+math+domain+physics) →
+  `analysis` → `simulation` → `clinical`. Reuse the codemod with
+  `core=kwavers_core math=kwavers_math domain=kwavers_domain physics=kwavers_physics`.
+  Solver is the largest layer (1130 files); audit error From-coupling first; expect
+  pub(crate)/inherent-impl boundary fixes. Commit after each verified crate.
+- **4 of 8 crates extracted** (core, math, domain, physics). Facade + codemod
+  proven; DAG verified acyclic. Remaining facade modules: solver, analysis,
+  simulation, clinical (+ gpu/infrastructure stay in the facade crate).
 - Then resume: `kwavers-domain` (after physics-edge fix) → `physics` → `solver` →
   `analysis` → `simulation` → `clinical`.
 - Bump to 4.0.0 ([arch] post-1.0) at release; run cargo-semver-checks on the facade.

@@ -32,7 +32,7 @@
 //! ## Example Usage
 //!
 //! ```rust,ignore
-//! use kwavers::physics::acoustics::imaging::fusion::{FusionConfig, MultiModalFusion};
+//! use kwavers_physics::acoustics::imaging::fusion::{FusionConfig, MultiModalFusion};
 //!
 //! // Create fusion processor with default configuration
 //! let config = FusionConfig::default();

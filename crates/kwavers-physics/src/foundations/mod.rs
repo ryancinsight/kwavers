@@ -51,7 +51,7 @@
 //! # Usage Example
 //!
 //! ```rust,ignore
-//! use kwavers::physics::foundations::{
+//! use kwavers_physics::foundations::{
 //!     WaveEquation, AcousticWaveEquation, WaveEquationBoundary, Domain
 //! };
 //!
@@ -100,7 +100,7 @@ pub use coupling::{
 /// # Example
 ///
 /// ```rust,ignore
-/// use kwavers::physics::foundations::prelude::*;
+/// use kwavers_physics::foundations::prelude::*;
 ///
 /// // Now have access to all core physics traits and types
 /// let domain = Domain::new_1d(0.0, 1.0, 101, WaveEquationBoundary::Periodic);
