@@ -113,6 +113,21 @@ resolution; current state is a sound mitigation, not a full fix.
 - **DEBT-2 (L):** `solver::interface::factory::RegistrationEngine` trait now has
   zero implementors (its only impl was the dead one removed in CLD-14-adjacent
   cleanup). Candidate removal once confirmed no external/plugin consumer.
+- **DEBT-4 (C, correctness — PRE-EXISTING WIP):** FWI adjoint-gradient mismatch.
+  `solver::inverse::fwi::frequency_domain::tests::gradient_fd::pstd_finite_window_
+  born_adjoint_gradient_matches_finite_difference` FAILS: analytic adjoint gradient
+  57.88 vs central-difference 55.72 = **3.7% error** (tolerance 5e-4). Magnitude
+  rules out FD-step roundoff — it's a genuine adjoint-correctness gap in the Born
+  operator (`DenseConvergentBornOperator`). NOT caused by the crate migration
+  (extractions only rewrite import paths; numerics identical). This is in-progress
+  FWI work that was *uncommitted* in the working tree at session start and got
+  swept into commit 7cb668baf via `git add kwavers/`; the adjacent new
+  `PstdFiniteWindowBornSecondOrderOperator` self-documents its adjoint as
+  "approximate, not the exact second-order adjoint". **Action (owner): complete the
+  exact Born adjoint (verify the operator transpose / adjoint-state derivation), or
+  mark the test `#[ignore]` with a WIP note until then.** Not fixed here — deep FWI
+  numerical work outside the migration scope.
+
 - **DEBT-3 (M, SSOT):** Photoacoustic implementation is fragmented. After lifting
   the imaging vertical out of solver (2026-06-01: `solver/photoacoustics` →
   `simulation/photoacoustics/vertical`), there are still TWO parallel
