@@ -54,7 +54,7 @@
 //! ## Usage Example
 //!
 //! ```rust,no_run
-//! use kwavers::domain::therapy::microbubble::{
+//! use kwavers_domain::therapy::microbubble::{
 //!     MicrobubbleState, Position3D, MarmottantShellProperties,
 //!     calculate_primary_bjerknes_force,
 //! };

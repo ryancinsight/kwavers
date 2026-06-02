@@ -42,8 +42,8 @@ mod tests;
 /// # Example
 ///
 /// ```no_run
-/// use kwavers::domain::boundary::coupling::ImpedanceBoundary;
-/// use kwavers::domain::boundary::traits::BoundaryDirections;
+/// use kwavers_domain::boundary::coupling::ImpedanceBoundary;
+/// use kwavers_domain::boundary::traits::BoundaryDirections;
 ///
 /// // Create impedance boundary matching water-tissue interface
 /// let boundary = ImpedanceBoundary::new(

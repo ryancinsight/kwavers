@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+### Changed (2026-06-01) - Extract `kwavers-domain` workspace crate (ADR 009) [arch]
+
+- [major] Extracted the `domain` layer (grid, medium, source, sensor, boundary,
+  field, signal, imaging, therapy) into `kwavers-domain` (depends on
+  `kwavers-core` + `kwavers-math`). Re-exported by the facade:
+  `pub use kwavers_domain as domain` — `crate::domain::…` paths resolve unchanged.
+- New tooling `scripts/crate_path_rewrite.py`: a grouped-import-aware path
+  rewriter that correctly splits `use crate::{ core::, domain::, math:: }` blocks
+  (with visibility propagation) — line-based sed cannot, which is what broke the
+  first domain-extraction attempt.
+- Cross-boundary API adjustments (standard crate-split patterns; no behaviour
+  change): promoted `BowlConfig::from_focus_axis` and
+  `BowlTransducer::transverse_projection_ring` `pub(crate)`→`pub`; converted the
+  physics inherent `impl OpticalPropertyMap { *_stats }` (illegal across crates)
+  into the `physics::optics::OpticalPropertyMapAnalysis` extension trait.
+- Cleanup: removed an orphaned committed `sed` temp file
+  (`domain/boundary/sedsTbfPU`).
+- 3 of 8 layer crates now extracted (core, math, domain).
+
 ### Changed (2026-06-01) - Resolve remaining cross-layer edges (crate-split prep, ADR 009)
 
 - [patch] Made the module DAG fully acyclic (grouped-import-aware audit: every

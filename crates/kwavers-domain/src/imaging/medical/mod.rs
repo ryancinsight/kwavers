@@ -73,12 +73,12 @@ pub struct MedicalImageMetadata {
 /// # Example
 ///
 /// ```no_run
-/// # use kwavers::domain::imaging::medical::{MedicalImageLoader, CTImageLoader};
-/// # use kwavers::core::error::KwaversResult;
+/// # use kwavers_domain::imaging::medical::{MedicalImageLoader, CTImageLoader};
+/// # use kwavers_core::error::KwaversResult;
 /// let mut loader = CTImageLoader::new();
 /// let image = loader.load("patient_ct.nii.gz")?;
 /// let metadata = loader.metadata();
-/// # Ok::<(), kwavers::core::error::KwaversError>(())
+/// # Ok::<(), kwavers_core::error::KwaversError>(())
 /// ```
 pub trait MedicalImageLoader: Send + Sync {
     /// Load image from file
@@ -110,9 +110,9 @@ pub trait MedicalImageLoader: Send + Sync {
 /// # Example
 ///
 /// ```no_run
-/// # use kwavers::domain::imaging::medical::create_loader;
+/// # use kwavers_domain::imaging::medical::create_loader;
 /// let loader = create_loader("patient_ct.nii.gz")?;
-/// # Ok::<(), kwavers::core::error::KwaversError>(())
+/// # Ok::<(), kwavers_core::error::KwaversError>(())
 /// ```
 /// # Errors
 /// - Returns [`Err`] if an internal constraint is violated.

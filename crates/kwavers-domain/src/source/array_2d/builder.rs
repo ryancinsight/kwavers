@@ -6,7 +6,7 @@
 //! # Example
 //!
 //! ```rust
-//! use kwavers::domain::source::array_2d::{TransducerArray2DBuilder, ApodizationType};
+//! use kwavers_domain::source::array_2d::{TransducerArray2DBuilder, ApodizationType};
 //!
 //! let array = TransducerArray2DBuilder::new()
 //!     .with_elements(64)

@@ -45,8 +45,8 @@ use super::types::BoundaryDirections;
 /// # Example
 ///
 /// ```no_run
-/// use kwavers::domain::boundary::coupling::AdaptiveBoundary;
-/// use kwavers::domain::boundary::traits::BoundaryDirections;
+/// use kwavers_domain::boundary::coupling::AdaptiveBoundary;
+/// use kwavers_domain::boundary::traits::BoundaryDirections;
 ///
 /// let mut boundary = AdaptiveBoundary::new(
 ///     0.1,   // Base absorption coefficient

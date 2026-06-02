@@ -53,7 +53,7 @@
 //! ## Example Usage
 //!
 //! ```no_run
-//! use kwavers::domain::boundary::coupling::{
+//! use kwavers_domain::boundary::coupling::{
 //!     MaterialInterface,
 //!     ImpedanceBoundary,
 //!     AdaptiveBoundary,
@@ -63,8 +63,8 @@
 //!     BoundaryCouplingType,
 //!     BoundaryTransmissionCondition,
 //! };
-//! use kwavers::domain::boundary::traits::BoundaryDirections;
-//! use kwavers::domain::medium::properties::AcousticPropertyData;
+//! use kwavers_domain::boundary::traits::BoundaryDirections;
+//! use kwavers_domain::medium::properties::AcousticPropertyData;
 //!
 //! // Material interface example
 //! let water = AcousticPropertyData {

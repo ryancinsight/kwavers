@@ -67,9 +67,9 @@
 //! **For Beamforming Algorithms:** Use `crate::analysis::signal_processing::beamforming`
 //! ```rust,ignore
 //! // OLD (deprecated):
-//! use kwavers::domain::sensor::beamforming::adaptive::MinimumVariance;
-//! use kwavers::domain::sensor::beamforming::neural::AIEnhancedBeamformingProcessor;
-//! use kwavers::domain::sensor::beamforming::beamforming_3d::BeamformingProcessor3D;
+//! use kwavers_domain::sensor::beamforming::adaptive::MinimumVariance;
+//! use kwavers_domain::sensor::beamforming::neural::AIEnhancedBeamformingProcessor;
+//! use kwavers_domain::sensor::beamforming::beamforming_3d::BeamformingProcessor3D;
 //!
 //! // NEW (recommended):
 //! use kwavers::analysis::signal_processing::beamforming::adaptive::MinimumVariance;
@@ -80,7 +80,7 @@
 //! **For Clinical Decision Support:** Use `crate::clinical::imaging::workflows::neural`
 //! ```rust,ignore
 //! // OLD (deprecated):
-//! use kwavers::domain::sensor::beamforming::neural::{NeuralClinicalDecisionSupport, DiagnosisAlgorithm};
+//! use kwavers_domain::sensor::beamforming::neural::{NeuralClinicalDecisionSupport, DiagnosisAlgorithm};
 //!
 //! // NEW (recommended):
 //! use kwavers::clinical::imaging::workflows::neural::{NeuralClinicalDecisionSupport, DiagnosisAlgorithm};
@@ -88,14 +88,14 @@
 //!
 //! **For Sensor Interface (unchanged):** Keep using domain layer
 //! ```rust,ignore
-//! use kwavers::domain::sensor::beamforming::SensorBeamformer;  // ✅ Still in domain
-//! use kwavers::domain::sensor::beamforming::BeamformingConfig;  // ✅ Configuration
+//! use kwavers_domain::sensor::beamforming::SensorBeamformer;  // ✅ Still in domain
+//! use kwavers_domain::sensor::beamforming::BeamformingConfig;  // ✅ Configuration
 //! ```
 //!
 //! ## Usage Example
 //!
 //! ```rust,ignore
-//! use kwavers::domain::sensor::{GridSensorSet, beamforming::SensorBeamformer};
+//! use kwavers_domain::sensor::{GridSensorSet, beamforming::SensorBeamformer};
 //! use kwavers::analysis::signal_processing::beamforming::time_domain::delay_and_sum;
 //!
 //! // 1. Configure sensor array (domain layer)

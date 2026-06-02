@@ -39,7 +39,7 @@
 //! # Usage
 //!
 //! ```rust,ignore
-//! use kwavers::domain::source::transducers::phased_array::beamforming::{
+//! use kwavers_domain::source::transducers::phased_array::beamforming::{
 //!     BeamformingCalculator, BeamformingMode
 //! };
 //!

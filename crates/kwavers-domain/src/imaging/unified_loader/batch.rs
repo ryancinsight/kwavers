@@ -11,13 +11,13 @@ use std::path::Path;
 /// # Example
 ///
 /// ```no_run
-/// # use kwavers::domain::imaging::unified_loader::MedicalImageBatchLoader;
-/// # use kwavers::core::error::KwaversResult;
+/// # use kwavers_domain::imaging::unified_loader::MedicalImageBatchLoader;
+/// # use kwavers_core::error::KwaversResult;
 /// let mut batch = MedicalImageBatchLoader::new();
 /// batch.add("patient1.nii.gz")?;
 /// batch.add("patient2.dcm")?;
 /// batch.load_all()?;
-/// # Ok::<(), kwavers::core::error::KwaversError>(())
+/// # Ok::<(), kwavers_core::error::KwaversError>(())
 /// ```
 #[derive(Debug)]
 pub struct MedicalImageBatchLoader {

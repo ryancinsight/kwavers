@@ -37,7 +37,7 @@
 //! ## Usage
 //!
 //! ```rust,no_run
-//! use kwavers::domain::therapy::microbubble::{MicrobubbleState, Position3D};
+//! use kwavers_domain::therapy::microbubble::{MicrobubbleState, Position3D};
 //!
 //! // Create therapeutic microbubble
 //! let position = Position3D::new(0.01, 0.02, 0.03);

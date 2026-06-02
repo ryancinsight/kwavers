@@ -46,7 +46,7 @@
 //! # Examples
 //!
 //! ```text
-//! use kwavers::domain::medium::properties::*;
+//! use kwavers_domain::medium::properties::*;
 //!
 //! // Create acoustic properties for water
 //! let water = AcousticPropertyData::water();

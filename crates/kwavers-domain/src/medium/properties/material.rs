@@ -25,7 +25,7 @@
 //! # Examples
 //!
 //! ```rust,ignore
-//! use kwavers::domain::medium::properties::{AcousticMaterialProperties, tissue, fluids, implants};
+//! use kwavers_domain::medium::properties::{AcousticMaterialProperties, tissue, fluids, implants};
 //!
 //! // Tissue properties
 //! let brain = tissue::BRAIN_WHITE_MATTER;

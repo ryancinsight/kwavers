@@ -21,7 +21,7 @@
 //!
 //! ### Time-Domain Solver
 //! ```rust,ignore
-//! use kwavers::domain::boundary::{DomainPMLBoundary, DomainPmlConfig};
+//! use kwavers_domain::boundary::{DomainPMLBoundary, DomainPmlConfig};
 //!
 //! let pml_config = DomainPmlConfig { thickness: 20, alpha: 2.0 };
 //! let mut boundary = DomainPMLBoundary::new(pml_config)?;
@@ -32,7 +32,7 @@
 //!
 //! ### FEM Solver
 //! ```rust,ignore
-//! use kwavers::domain::boundary::FemBoundaryManager;
+//! use kwavers_domain::boundary::FemBoundaryManager;
 //!
 //! let mut bc_manager = FemBoundaryManager::new();
 //! bc_manager.add_dirichlet(vec![(node_id, pressure_value)]);
@@ -44,7 +44,7 @@
 //!
 //! ### BEM Solver
 //! ```rust,ignore
-//! use kwavers::domain::boundary::BemBoundaryManager;
+//! use kwavers_domain::boundary::BemBoundaryManager;
 //!
 //! let mut bc_manager = BemBoundaryManager::new();
 //! bc_manager.add_dirichlet(vec![(node_id, pressure_value)]);

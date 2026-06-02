@@ -35,7 +35,7 @@ use ndarray::Array3;
 /// # Example
 ///
 /// ```ignore
-/// use kwavers::domain::boundary::{CPMLBoundary, FieldUpdater};
+/// use kwavers_domain::boundary::{CPMLBoundary, FieldUpdater};
 ///
 /// let boundary = CPMLBoundary::new(config, &grid, sound_speed)?;
 /// let mut updater = FieldUpdater::new(boundary);

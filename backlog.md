@@ -119,11 +119,24 @@ EXTRACTION PHASE (ADR 009, in progress — leaf-first):
      unused infra re-export aliases.
   3. analysis→infrastructure: removed the dead `pub use infrastructure::io::save_data_csv`
      re-export in `analysis/plotting` (no consumers).
-- **[next] Resume extraction** (`kwavers-domain` → physics → solver → analysis →
-  simulation → clinical). Domain extraction needs a **grouped-import-aware path
-  rewriter** (line-sed misses `use crate::{ core::, domain:: }`) + deps
-  (ritk-io, burn["ndarray"], gaia, nifti, ritk-registration, rand*). Commit after
-  each verified crate.
+- **[done] `kwavers-domain` extracted (2026-06-01)** — `domain/` →
+  `crates/kwavers-domain` (grid, medium, source, sensor, boundary, field, signal,
+  imaging, therapy). Used the new **`scripts/crate_path_rewrite.py`** (grouped-
+  import-aware: splits `use crate::{ core::, domain:: }` blocks, propagates
+  visibility) — the tooling gap that broke the first attempt is closed. Isolated
+  build 1m13s + full kwavers build 4m03s green. Cross-boundary fixes: 2
+  pub(crate)→pub (bowl ctors), 1 inherent-impl→extension-trait
+  (`OpticalPropertyMapAnalysis`). Removed orphaned `sedsTbfPU` sed temp. deps:
+  core[registration,nifti]+math+gaia+ritk-io+ritk-registration+burn[ndarray]+
+  nifti+serde_json+rand*.
+- **[next] Resume extraction**: `kwavers-physics` (deps core+math+domain) →
+  `solver` → `analysis` → `simulation` → `clinical`. Reuse the codemod
+  (`crate_path_rewrite.py <src> <layer> core=kwavers_core math=kwavers_math
+  domain=kwavers_domain`). Expect: pub(crate)→pub promotions + inherent-impl→
+  extension-trait conversions at each boundary; audit error From-coupling first.
+  Commit after each verified crate.
+- **3 of 8 crates extracted** (core, math, domain). Facade pattern proven; codemod
+  reusable. DAG verified acyclic.
 - Then resume: `kwavers-domain` (after physics-edge fix) → `physics` → `solver` →
   `analysis` → `simulation` → `clinical`.
 - Bump to 4.0.0 ([arch] post-1.0) at release; run cargo-semver-checks on the facade.

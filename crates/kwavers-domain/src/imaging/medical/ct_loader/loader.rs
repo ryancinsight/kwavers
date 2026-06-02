@@ -19,12 +19,12 @@ use nifti::{InMemNiftiObject, IntoNdArray, NiftiObject, NiftiVolume, ReaderOptio
 /// # Example
 ///
 /// ```no_run
-/// # use kwavers::domain::imaging::medical::{CTImageLoader, MedicalImageLoader};
+/// # use kwavers_domain::imaging::medical::{CTImageLoader, MedicalImageLoader};
 /// let mut loader = CTImageLoader::new();
 /// let ct_data = loader.load("patient_ct.nii.gz")?;
 /// let metadata = loader.metadata();
 /// println!("CT dimensions: {:?}", metadata.dimensions);
-/// # Ok::<(), kwavers::core::error::KwaversError>(())
+/// # Ok::<(), kwavers_core::error::KwaversError>(())
 /// ```
 #[derive(Debug)]
 pub struct CTImageLoader {
