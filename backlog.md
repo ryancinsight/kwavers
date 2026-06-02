@@ -184,11 +184,21 @@ EXTRACTION PHASE (ADR 009, in progress — leaf-first):
   solver, analysis, simulation, diagnostics, therapy (clinical layer = 2 crates). The
   `kwavers` crate is the facade (+ gpu/infrastructure/profiling/architecture). Binding crate
   is `kwavers-python`. apollo/ritk/gaia are remote git deps.
-- **[next] Lower-layer cleanups (post-split, independent)**: `imaging/{doppler,spectroscopy}`
-  + functional-US ULM/vesselness → `analysis`; `imaging/{chromophores,phantoms}` → `domain`;
-  `therapy/lithotripsy/cavitation_cloud` SSOT → `physics::bubble_dynamics`; reconcile
-  `therapy/{domain_types,modalities,parameters}` with `domain::therapy`. Each is a small
-  independent verifiable move; none blocks the (now-complete) workspace split.
+- **[done] Lower-layer cleanups (2026-06-02)**:
+  - **therapy type SSOT**: removed 3 dead re-export shim modules (`metrics`/`modalities`/
+    `parameters`) + 3 dead duplicate types (`Clinical{TreatmentMetrics,TherapyMechanism,
+    TherapyModality}` ≡ `domain::therapy::types::Domain*`); kept the real
+    `ClinicalTherapyParameters`. (commit d97620b75)
+  - **re-homing**: `doppler`/`spectroscopy`/ULM(`ulm`)/vesselness(`vasculature`) →
+    `analysis::signal_processing`; `chromophores` → new `domain::optics`; `phantoms` →
+    `domain::phantoms` (dropped its lone test-only physics coupling). (commit 8cb5232b3)
+  - **lithotripsy `cavitation_cloud`**: VERIFIED not an SSOT violation — its inline
+    `p_crit = p0−2σ/R0` is a different (simpler) criterion than physics's full
+    `blake_threshold`; left unchanged (swapping would alter calibrated behavior).
+  - **reconcile `domain_types`**: the `Domain*`/`Clinical*` overlap was the dead-duplicate
+    removal above; `domain::therapy::types` is the SSOT. `ClinicalTherapyParameters` remains
+    a genuinely richer app type (extra fields + builders).
+  - Verification: domain 654/0, analysis 598/0, diagnostics 175/0, therapy 301/0; full green.
 - **DEBT (coupling smell, logged)**: clinical/simulation reconstruction reaches into
   solver's `linear_born_inversion` internals (forced the pub(crate)→pub cascade). A
   cleaner narrow public inversion API would re-seal these; deferred (non-blocking).

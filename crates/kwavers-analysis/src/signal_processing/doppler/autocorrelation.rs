@@ -127,7 +127,7 @@ impl AutocorrelationEstimator {
     /// # Example
     ///
     /// ```ignore
-    /// use kwavers_diagnostics::doppler::{AutocorrelationEstimator, AutocorrelationConfig};
+    /// use kwavers_analysis::signal_processing::doppler::{AutocorrelationEstimator, AutocorrelationConfig};
     /// use ndarray::Array3;
     /// use num_complex::Complex64;
     ///
