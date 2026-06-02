@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+### Changed (2026-06-02) - Extract `kwavers-simulation` workspace crate (ADR 009) [arch]
+
+- [major] Extracted the `simulation` layer (orchestration builders/runners,
+  multi-physics coupling, modality pipelines, backends, solver adapters, photoacoustics)
+  into `kwavers-simulation` (depends on core+math+domain+physics+solver — no analysis).
+  Facade `pub use kwavers_simulation as simulation`; `crate::simulation::…` paths resolve
+  unchanged. 84 files codemod'd. 0 upward edges, 0 back-edges; full kwavers build green on
+  the FIRST try — clean public API, no pub(crate)/inherent-impl fixes. The `simulation::core`
+  submodule (name-collides with the `core` layer) was disambiguated correctly by the codemod.
+- New crate deps: `toml` (config (de)serialization). Feature wiring: `gpu`/`nifti` forward
+  to the layer crates.
+- Doctests repointed `kwavers::simulation::…`→`kwavers_simulation::…` (+ cross-layer);
+  added a missing hidden constant import to the multi-wavelength photoacoustic doctest.
+- Verification: kwavers build green; kwavers lib 610/0, kwavers-simulation lib 82/0
+  (610+82=692, the prior facade count incl. simulation), simulation doctests 4/0.
+- 7 of 8 layer crates extracted (core, math, domain, physics, solver, analysis, simulation).
+
 ### Changed (2026-06-02) - Rename `pykwavers` crate to `kwavers-python` under `crates/` [arch]
 
 - [arch] Moved the PyO3 binding crate `pykwavers/` → `crates/kwavers-python/` and

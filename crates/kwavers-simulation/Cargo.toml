@@ -1,0 +1,32 @@
+[package]
+name = "kwavers-simulation"
+version = "3.0.0"
+edition = "2021"
+authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
+description = "Simulation orchestration for kwavers: builders, runners, multi-physics coupling, modality pipelines, backends"
+license = "MIT"
+repository = "https://github.com/ryancinsight/kwavers"
+
+[dependencies]
+kwavers-core = { path = "../kwavers-core" }
+kwavers-math = { path = "../kwavers-math" }
+kwavers-domain = { path = "../kwavers-domain" }
+kwavers-physics = { path = "../kwavers-physics" }
+kwavers-solver = { path = "../kwavers-solver" }
+ndarray = { version = "0.16", features = ["rayon", "serde"] }
+num-complex = "0.4"
+rayon = "1.10"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8"
+log = "0.4"
+
+[features]
+gpu = ["kwavers-core/gpu", "kwavers-math/gpu", "kwavers-solver/gpu"]
+nifti = ["kwavers-core/nifti"]
+
+[dev-dependencies]
+approx = "0.5"
+
+[lints]
+workspace = true

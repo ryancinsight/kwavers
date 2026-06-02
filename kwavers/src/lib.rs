@@ -83,8 +83,11 @@ pub use kwavers_physics as physics;
 /// under the original `solver` name so `crate::solver::…` paths resolve unchanged.
 pub use kwavers_solver as solver;
 
-/// High-level simulation orchestration, backends, and modality workflows
-pub mod simulation;
+/// High-level simulation orchestration, backends, and modality workflows.
+///
+/// Extracted to the `kwavers-simulation` workspace crate (ADR 009); re-exported here
+/// under the original `simulation` name so `crate::simulation::…` paths resolve unchanged.
+pub use kwavers_simulation as simulation;
 
 /// Analysis tools: signal processing, beamforming, validation, ML, performance.
 ///

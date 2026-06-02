@@ -168,10 +168,16 @@ EXTRACTION PHASE (ADR 009, in progress — leaf-first):
   Cargo package renamed; Python module name unchanged (`import pykwavers` still works).
   Fixed a solver-extraction leftover (`ElementPosition` stale re-export path → canonical
   domain path).
-- **[next] Resume extraction**: `simulation` → `clinical`. Reuse the codemod adding
-  `analysis=kwavers_analysis` to the depmap. Commit after each verified crate.
-- **6 of 8 crates extracted** (core, math, domain, physics, solver, analysis). Facade +
-  codemod proven; DAG verified acyclic. Remaining facade modules: simulation, clinical
+- **[done] `kwavers-simulation` extracted (2026-06-02)** — `simulation/` →
+  `crates/kwavers-simulation` (orchestration, multi-physics coupling, modality pipelines,
+  backends, solver adapters; deps core+math+domain+physics+solver, no analysis). 84 files
+  codemod'd. 0 upward/back edges; full build green FIRST try. `simulation::core` vs `core`
+  layer collision handled by the codemod. Added `toml`. kwavers lib 610/0, simulation lib
+  82/0, doctests 4/0 (692 preserved).
+- **[next] Resume extraction**: `clinical` (last layer crate). Reuse the codemod adding
+  `simulation=kwavers_simulation` to the depmap. Commit after verification.
+- **7 of 8 crates extracted** (core, math, domain, physics, solver, analysis, simulation).
+  Facade + codemod proven; DAG verified acyclic. Remaining facade module: clinical
   (+ gpu/infrastructure stay in the facade crate). Binding crate is now `kwavers-python`.
 - **DEBT (coupling smell, logged)**: clinical/simulation reconstruction reaches into
   solver's `linear_born_inversion` internals (forced the pub(crate)→pub cascade). A
