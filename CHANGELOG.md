@@ -2,6 +2,29 @@
 
 ## Unreleased
 
+### Changed (2026-06-02) - Codebase review + dead/deprecated cleanup [patch]
+
+Workspace-wide review (clippy + 4 parallel crate audits, all findings grep-verified):
+
+- **Deprecated removal (ADR 005 Phase 3)**: deleted the 7 `#[deprecated(since="0.7.0")]`
+  flat-path re-exports in `solver::forward` (`forward::FdtdSolver`, `PSTDSolver`, `BemSolver`,
+  hybrid variants, `PluginBasedSolver`, `PennesSolver`, `ThermalAcoustic*`) — 0 consumers
+  workspace-wide. Module paths (flat `forward::fdtd::…` and grouped
+  `forward::acoustic_solvers::fdtd::…`) remain, and `path_equivalence_tests` still guards them.
+- **Dead re-export shim**: removed `simulation::photoacoustics::vertical::api` (a module that
+  `pub use super::{…}` re-exported its own parent's items, 0 consumers; also cleared the
+  associated clippy unused-import warnings).
+- **Misleading lint suppression**: removed a false `#![allow(dead_code)]` on
+  `physics::…power_modulation::constants` (all 11 constants are actually used).
+- **Reviewed, intentionally left unchanged** (verified NOT defects): the three `blake_threshold*`
+  variants in physics are *distinct* approximations (rigorous acoustic-amplitude / Blake-1949
+  closed-form / minimal static) for different contexts, not a mergeable SSOT duplication
+  (same finding as lithotripsy's cloud threshold); the feature-gated `solver::backend::gpu`
+  bit-rot subtree is tracked for a separate repair sprint; a handful of unused math/`utils`
+  primitive helpers and ~25 `unexpected_cfg` feature warnings are logged as low-priority.
+- Verification: full kwavers build green; affected-crate tests green. Confirmed no cross-crate
+  layer violations, no god files >900 lines, and diagnostics/therapy remain independent.
+
 ### Changed (2026-06-02) - Re-home misplaced diagnostic code to its proper layer [patch]
 
 Moved code that lived in the diagnostics crate but conceptually belongs in lower

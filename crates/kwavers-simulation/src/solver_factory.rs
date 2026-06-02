@@ -15,7 +15,7 @@ use kwavers_solver::forward::fdtd::FdtdConfig;
 use kwavers_solver::forward::hybrid::config::HybridConfig;
 use kwavers_solver::forward::pstd::config::KSpaceMethod;
 use kwavers_solver::forward::pstd::{PSTDConfig, PSTDSolver};
-use kwavers_solver::forward::{FdtdSolver, HybridSolver};
+use kwavers_solver::{FdtdSolver, HybridSolver};
 use kwavers_solver::interface::factory::{
     FactoryConfiguration, FactoryGridParameters, FactoryMediumParameters,
 };

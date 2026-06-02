@@ -29,7 +29,10 @@ pub use kwavers_domain::field::indices::{
 
 // Re-export commonly used types from hierarchical modules
 pub use config::{SolverConfiguration, SolverType};
-pub use forward::{FdtdSolver, HybridSolver, PSTDSolver, PluginBasedSolver};
+pub use forward::fdtd::FdtdSolver;
+pub use forward::hybrid::HybridSolver;
+pub use forward::plugin_based::PluginBasedSolver;
+pub use forward::pstd::PSTDSolver;
 pub use interface::Solver;
 pub use inverse::{
     ReconstructionConfig, Reconstructor, TimeReversalConfig, TimeReversalReconstructor,

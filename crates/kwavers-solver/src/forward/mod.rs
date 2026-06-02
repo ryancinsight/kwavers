@@ -142,29 +142,11 @@ pub mod plugin {
 // These are the curated public-API entry points. Both flat and grouped paths
 // also expose them via their own `pub use`s.
 //
-// ADR 005 Phase 2: these flat-path re-exports are **deprecated** in favour of
-// the domain-grouped paths (e.g. prefer `acoustic_solvers::fdtd::FdtdSolver`
-// over `fdtd::FdtdSolver`).  Phase 3 will remove them entirely.
-
-#[deprecated(since = "0.7.0", note = "use acoustic_solvers::fdtd::FdtdSolver")]
-pub use fdtd::FdtdSolver;
-#[deprecated(since = "0.7.0", note = "use acoustic_solvers::pstd::PSTDSolver")]
-pub use pstd::PSTDSolver;
-#[deprecated(since = "0.7.0", note = "use boundary_element::bem::BemSolver")]
-pub use bem::BemSolver;
-#[deprecated(since = "0.7.0", note = "use hybrid_models::hybrid::...")]
-pub use hybrid::{
-    BemFemCoupler, BemFemCouplingConfig, BemFemInterface, BemFemSolver, FdtdFemCoupler,
-    FdtdFemCouplingConfig, FdtdFemSolver, HybridSolver, PstdSemCoupler, PstdSemCouplingConfig,
-    PstdSemSolver,
-};
-#[deprecated(since = "0.7.0", note = "use plugin::plugin_based::PluginBasedSolver")]
-pub use plugin_based::PluginBasedSolver;
-#[deprecated(since = "0.7.0", note = "use thermal_solvers::thermal::PennesSolver")]
-pub use thermal::PennesSolver;
-
-#[deprecated(since = "0.7.0", note = "use hybrid_models::coupled::ThermalAcousticCoupler")]
-pub use coupled::{ThermalAcousticConfig, ThermalAcousticCoupler};
+// ADR 005 Phase 3 (2026-06-02): the deprecated flat-item re-exports
+// (`forward::FdtdSolver`, `forward::PSTDSolver`, …) have been removed. Use the
+// module paths — flat (`forward::fdtd::FdtdSolver`) or domain-grouped
+// (`forward::acoustic_solvers::fdtd::FdtdSolver`); the equivalence of those two
+// module groupings is still guaranteed by `path_equivalence_tests` below.
 
 #[cfg(test)]
 mod path_equivalence_tests {

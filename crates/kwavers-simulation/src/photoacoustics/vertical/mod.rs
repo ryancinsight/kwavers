@@ -7,7 +7,6 @@
 //! that consumes them.
 
 pub mod acoustic;
-pub mod api;
 pub mod optical;
 mod pipeline;
 pub mod reconstruction;
