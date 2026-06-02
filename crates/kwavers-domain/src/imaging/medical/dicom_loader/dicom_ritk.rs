@@ -26,22 +26,12 @@
 
 use std::path::Path;
 
-use burn::backend::NdArray;
-use burn::tensor::TensorData;
 use ndarray::Array3;
 use ritk_io::{load_dicom_series, scan_dicom_directory, DicomSeriesInfo};
 
 use kwavers_core::error::{KwaversError, KwaversResult};
+use crate::imaging::medical::ritk_bridge::{image_to_volume, AdapterBackend};
 use crate::imaging::medical::MedicalImageMetadata;
-
-/// CPU backend used by the adapter.
-///
-/// ritk-io's `load_dicom_series` is generic over `Backend`. For host-side
-/// kwavers consumers (which need an `Array3<f64>` on the CPU regardless),
-/// `NdArray` is the cheapest choice — it avoids GPU staging round-trips for a
-/// pure CPU consumer, and the conversion to `f64` happens during the
-/// host-side copy.
-type AdapterBackend = NdArray;
 
 /// Result of loading a DICOM series via the ritk-io bridge.
 #[derive(Debug, Clone)]
@@ -157,92 +147,24 @@ pub fn load_series(info: &DicomSeriesInfo) -> KwaversResult<DicomSeriesVolume> {
         ))
     })?;
 
-    let [depth, rows, cols] = image.shape();
-    let spacing_mm = image.spacing().to_vec();
-    if spacing_mm.len() != 3 {
-        return Err(KwaversError::InternalError(format!(
-            "ritk-io returned spacing rank {} (expected 3)",
-            spacing_mm.len()
-        )));
-    }
-    let origin_mm = image.origin().to_vec();
-    if origin_mm.len() != 3 {
-        return Err(KwaversError::InternalError(format!(
-            "ritk-io returned origin rank {} (expected 3)",
-            origin_mm.len()
-        )));
-    }
-
-    let tensor_data: TensorData = image.data().clone().into_data();
-    let values = tensor_data.as_slice::<f32>().map_err(|err| {
-        KwaversError::InternalError(format!(
-            "ritk-io tensor data is not contiguous f32: {err:?}"
-        ))
-    })?;
-    let expected_len = depth * rows * cols;
-    if values.len() != expected_len {
-        return Err(KwaversError::InternalError(format!(
-            "ritk-io tensor length {} does not match {depth}×{rows}×{cols} = {expected_len}",
-            values.len()
-        )));
-    }
-
-    // Repack ritk-io's [depth, rows, cols] (z, y, x) layout into kwavers'
-    // (x, y, z) Array3 indexing convention while tracking the intensity range
-    // for `MedicalImageMetadata::intensity_range`.
-    let mut voxels = Array3::<f64>::zeros((cols, rows, depth));
-    let mut min_val = f64::INFINITY;
-    let mut max_val = f64::NEG_INFINITY;
-    for z in 0..depth {
-        for y in 0..rows {
-            for x in 0..cols {
-                let src = z * rows * cols + y * cols + x;
-                let v = f64::from(values[src]);
-                voxels[[x, y, z]] = v;
-                if v < min_val {
-                    min_val = v;
-                }
-                if v > max_val {
-                    max_val = v;
-                }
-            }
-        }
-    }
-    if !min_val.is_finite() || !max_val.is_finite() {
-        min_val = 0.0;
-        max_val = 0.0;
-    }
-
-    // ritk-io's `direction` is a row-major 3×3 matrix; the affine combines
-    // direction × diag(spacing_mm) for the linear part and origin_mm for the
-    // translation column. kwavers convention stores spacing in metres but the
-    // affine uses millimetres to stay consistent with NIFTI/DICOM literature.
-    let direction = image.direction();
-    let mut affine = [[0.0_f64; 4]; 4];
-    for i in 0..3 {
-        for j in 0..3 {
-            affine[i][j] = direction.0[(i, j)] * spacing_mm[j];
-        }
-        affine[i][3] = origin_mm[i];
-    }
-    affine[3] = [0.0, 0.0, 0.0, 1.0];
+    let vol = image_to_volume(&image)?;
 
     let metadata = MedicalImageMetadata {
-        dimensions: (cols, rows, depth),
+        dimensions: vol.dimensions,
         voxel_spacing_m: (
-            spacing_mm[0] * 1e-3,
-            spacing_mm[1] * 1e-3,
-            spacing_mm[2] * 1e-3,
+            vol.voxel_spacing_mm.0 * 1e-3,
+            vol.voxel_spacing_mm.1 * 1e-3,
+            vol.voxel_spacing_mm.2 * 1e-3,
         ),
-        voxel_spacing_mm: (spacing_mm[0], spacing_mm[1], spacing_mm[2]),
-        affine,
+        voxel_spacing_mm: vol.voxel_spacing_mm,
+        affine: vol.affine,
         data_type: format!("{} via ritk-io (f32 → f64)", info.modality),
-        intensity_range: (min_val, max_val),
+        intensity_range: vol.intensity_range,
         modality: info.modality.clone(),
     };
 
     Ok(DicomSeriesVolume {
-        voxels,
+        voxels: vol.voxels,
         metadata,
         series_info: info.clone(),
     })

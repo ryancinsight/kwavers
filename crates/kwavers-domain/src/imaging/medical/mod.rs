@@ -36,6 +36,8 @@
 
 pub mod ct_loader;
 pub mod dicom_loader;
+/// Shared ritk-io → kwavers volume bridge used by every format loader.
+pub(crate) mod ritk_bridge;
 
 pub use ct_loader::{CTImageLoader, CTMetadata};
 pub use dicom_loader::{DicomImageLoader, DicomMetadata, DicomModality};

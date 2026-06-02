@@ -23,10 +23,12 @@ rand_distr = "0.4"
 rand_chacha = "0.3"
 anyhow = "1.0"
 gaia = { workspace = true }
-nifti = "0.17.0"
-# Medical imaging I/O: DICOM via ritk-io (NdArray-backed burn tensors), registration.
-ritk-registration = { workspace = true }
+# Medical imaging I/O (DICOM, NIfTI, …) is owned by ritk: ritk-io decodes every
+# format into ritk-core `Image`s (NdArray-backed burn tensors); kwavers bridges
+# them in `imaging::medical::ritk_bridge`. No direct format-crate deps.
+ritk-core = { workspace = true }
 ritk-io = { workspace = true }
+ritk-registration = { workspace = true }
 burn = { version = "0.19", features = ["ndarray"] }
 
 [features]

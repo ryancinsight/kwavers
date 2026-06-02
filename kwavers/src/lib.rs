@@ -17,7 +17,7 @@
 //! - [`simulation`]: High-level simulation orchestration, backends, modalities
 //! - [`analysis`]: Signal processing, beamforming, validation, performance, ML
 //! - [`clinical`]: Imaging workflows, therapy planning, safety, regulatory
-//! - [`infrastructure`]: I/O (DICOM, NIfTI), API, cloud, device abstraction
+//! - [`infrastructure`]: result/data I/O (CSV, pressure-field export)
 //! - `gpu` (feature `"gpu"`): WGPU compute shaders, GPU-accelerated kernels
 
 // Strict warning configuration for code quality
@@ -135,7 +135,7 @@ pub mod clinical {
     pub use therapy::ClinicalTherapyParameters;
 }
 
-/// Infrastructure: I/O, API, cloud, device abstraction, runtime
+/// Infrastructure: result/data I/O (CSV, pressure-field export)
 pub mod infrastructure;
 
 /// GPU compute acceleration (WGPU)
@@ -289,9 +289,6 @@ pub use analysis::performance::{
     PerformanceOptimizer, PerformanceProfiler, ProfileReport, RooflineAnalysis, TimingScope,
 };
 
-// --- Feature-gated API ---
-#[cfg(feature = "api")]
-pub use crate::infrastructure::api;
 
 #[cfg(all(
     feature = "gpu",

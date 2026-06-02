@@ -2,6 +2,51 @@
 
 ## Unreleased
 
+### Removed (2026-06-02) - Disabled/incomplete enterprise infrastructure [major]
+
+Removed the entire off-by-default, unused, incomplete "enterprise" infrastructure surface
+in the `kwavers` facade (none of it had real consumers):
+
+- **REST API** (`infrastructure::api`, ~32 files behind the `api` feature): clinical/device/
+  mobile/job/auth handlers, models, router, state. It reimplemented PACS and referenced a
+  phantom `infrastructure::io::Dicom*` API that never existed. Dropped the `api` feature and
+  its exclusive deps: `axum`, `tower`, `tower-http`, `jsonwebtoken`, `bcrypt`, `sha2`, `hmac`,
+  `redis`, `deadpool-redis`, `prometheus`, `opentelemetry(-prometheus-text-exporter)`.
+- **Cloud deployment** (`infrastructure::cloud`, `cloud`/`cloud-aws` features): AWS/Azure/GCP
+  orchestration, 0 consumers. Dropped the features and `reqwest`, `uuid`, and all seven
+  `aws-sdk-*`/`aws-config` deps.
+- **Device & runtime** (`infrastructure::{device,runtime}`): the transducer hardware-interface
+  abstraction (which shipped a `mock.rs`) and an async-I/O runtime, both orphaned (0 consumers).
+- Removed the facade's now-dead direct `nifti` crate dependency (medical I/O is ritk's job).
+- `infrastructure` now contains only `io` (CSV / pressure-field / summary output). The `full`
+  feature no longer includes `api`/`cloud`/`cloud-aws`.
+- Verification: default build green; facade lib tests green.
+
+### Changed (2026-06-02) - Route all medical-image I/O through ritk (SSOT) [patch]
+
+ritk is the single source of truth for medical image I/O (DICOM, NIfTI, and the other
+formats ritk-io decodes). Removed kwavers' hand-rolled format parsing:
+
+- `domain::imaging::medical::ct_loader` now decodes NIfTI via `ritk_io::read_nifti`
+  instead of the `nifti` crate directly. Dropped the bespoke NIfTI header/affine/volume
+  extraction (`extract_affine_matrix`, `extract_hounsfield_units`) and the direct
+  `nifti = "0.17.0"` dependency; added `ritk-core` to name the bridged image type.
+- Extracted a single `imaging::medical::ritk_bridge::image_to_volume` that converts a
+  ritk-core `Image<NdArray,3>` into kwavers' `(x,y,z)` `Array3<f64>` + spacing/affine.
+  Both the DICOM loader (`dicom_ritk`) and the new NIfTI path share it — the conversion
+  is now defined once instead of duplicated.
+- Removed `infrastructure::io::nifti` (a second `nifti`-crate `NiftiReader`, fully dead —
+  re-exported but with zero consumers — that duplicated the domain loader and bypassed ritk).
+- Removed the redundant custom DICOM/PACS pathway: `infrastructure::api::clinical::dicom`
+  (`DICOMService`/`DICOMNode`/`dicom_integrate`) and `api::models::dicom`
+  (`DICOMIntegration{Request,Response}`, `DICOMStudyInfo`, `DICOMValue`), plus their wiring
+  in api `state`/`router`/`handlers`/`mod`. The service referenced a phantom
+  `infrastructure::io::{DicomReader,DicomStudy,DicomSeries,DicomObject,DicomValue}` API that
+  never existed — dead, broken, `api`-feature-gated code reimplementing PACS. ritk-io already
+  provides DICOM (`load_dicom_series`, `scan_dicom_directory`) and PACS/DICOMweb
+  (`DicomWebClient`); any future PACS surface routes through ritk.
+- Verification: domain 654/0; default build green; `--features api` build verified.
+
 ### Changed (2026-06-02) - Feature-flag / cfg cleanup (gate only the incomplete) [patch]
 
 Audited every `cfg(feature=…)` against the declaring crate's manifest. Code gated on
