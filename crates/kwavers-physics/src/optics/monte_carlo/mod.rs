@@ -42,7 +42,7 @@
 //!
 //! - Domain layer: `OpticalPropertyData` canonical representation
 //! - Physics layer (this module): Monte Carlo transport solver
-//! - Execution: CPU (parallel via Rayon) with optional GPU acceleration placeholder
+//! - Execution: CPU, parallelised across photon packets via Rayon
 //!
 //! # Performance
 //!
