@@ -148,10 +148,6 @@ default = ["minimal"]  # PRODUCTION DEFAULT
 minimal = []           # Core functionality only
 parallel = ["ndarray/rayon"] # Add back parallel feature
 gpu = ["kwavers-gpu/gpu", "dep:wgpu", "dep:bytemuck", "dep:pollster", "dep:apollofft-wgpu", "kwavers-core/gpu", "kwavers-math/gpu", "kwavers-solver/gpu", "kwavers-analysis/gpu", "kwavers-simulation/gpu", "kwavers-diagnostics/gpu"]
-# Explicit-opt-in flag for the bit-rotted `solver::backend::gpu` subtree.
-# See solver/backend/mod.rs for repair list. Implies `gpu`. Do not enable in
-# production builds — currently produces 32 compile errors against wgpu v26.
-solver_backend_gpu_unstable = ["gpu", "kwavers-solver/solver_backend_gpu_unstable"]
 plotting = ["dep:plotly", "kwavers-analysis/plotting"]
 # Additional features referenced in code
 dicom = []             # No-op alias retained for back-compat; DICOM I/O is unconditional via ritk-io.

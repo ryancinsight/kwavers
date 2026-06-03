@@ -51,8 +51,8 @@ impl super::PipelineManager {
             cache: None,
         });
 
-        layouts.insert(PipelineType::FFT3D, layout);
-        layouts.insert(PipelineType::IFFT3D, layout.clone());
+        layouts.insert(PipelineType::FFT3D, layout.clone());
+        layouts.insert(PipelineType::IFFT3D, layout);
         pipelines.insert(PipelineType::FFT3D, pipeline);
 
         Ok(())
@@ -181,7 +181,7 @@ impl super::PipelineManager {
             label: Some("derivative-pipeline"),
             layout: Some(&pipeline_layout),
             module: &shader,
-            entry_point: "spatial_derivative",
+            entry_point: Some("spatial_derivative"),
             compilation_options: Default::default(),
             cache: None,
         });

@@ -39,7 +39,6 @@ tokio = { version = "1.42", features = ["rt-multi-thread", "macros", "sync", "ti
 
 [features]
 gpu = ["dep:wgpu", "dep:bytemuck", "dep:pollster", "dep:apollofft-wgpu", "kwavers-core/gpu", "kwavers-math/gpu"]
-solver_backend_gpu_unstable = ["gpu"]
 pinn = []
 pinn-gpu = ["pinn", "gpu"]
 burn-wgpu = ["pinn"]

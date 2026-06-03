@@ -22,10 +22,7 @@ impl super::PipelineManager {
         buffer_manager: &GpuBackendBufferManager,
     ) -> KwaversResult<()> {
         let pipeline = self.pipelines.get(&PipelineType::FFT3D).ok_or_else(|| {
-            KwaversError::ConfigError(kwavers_core::error::ConfigError::MissingFeature {
-                feature: "FFT3D pipeline".to_string(),
-                help: "Pipeline not compiled".to_string(),
-            })
+            KwaversError::GpuError(format!("{}: {}", "FFT3D pipeline".to_string(), "Pipeline not compiled".to_string()))
         })?;
 
         let shape = data.shape();
@@ -77,6 +74,7 @@ impl super::PipelineManager {
 
         *data = buffer_manager.read_buffer_to_array_sync(
             context.device(),
+            context.queue(),
             &buffer,
             (shape[0], shape[1], shape[2]),
         )?;
@@ -123,10 +121,7 @@ impl super::PipelineManager {
             .pipelines
             .get(&PipelineType::ElementWiseMultiply)
             .ok_or_else(|| {
-                KwaversError::ConfigError(kwavers_core::error::ConfigError::MissingFeature {
-                    feature: "ElementWiseMultiply pipeline".to_string(),
-                    help: "Pipeline not compiled".to_string(),
-                })
+                KwaversError::GpuError(format!("{}: {}", "ElementWiseMultiply pipeline".to_string(), "Pipeline not compiled".to_string()))
             })?;
 
         let shape = a.shape();
@@ -204,6 +199,7 @@ impl super::PipelineManager {
 
         *out = buffer_manager.read_buffer_to_array_sync(
             context.device(),
+            context.queue(),
             &buffer_out,
             (shape[0], shape[1], shape[2]),
         )?;
@@ -231,10 +227,7 @@ impl super::PipelineManager {
             .pipelines
             .get(&PipelineType::SpatialDerivative)
             .ok_or_else(|| {
-                KwaversError::ConfigError(kwavers_core::error::ConfigError::MissingFeature {
-                    feature: "SpatialDerivative pipeline".to_string(),
-                    help: "Pipeline not compiled".to_string(),
-                })
+                KwaversError::GpuError(format!("{}: {}", "SpatialDerivative pipeline".to_string(), "Pipeline not compiled".to_string()))
             })?;
 
         let (nx, ny, nz) = field.dim();

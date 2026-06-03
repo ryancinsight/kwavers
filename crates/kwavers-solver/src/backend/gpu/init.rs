@@ -37,7 +37,7 @@ impl WGPUContext {
     ///
     pub fn new() -> KwaversResult<Self> {
         // Create instance with all available backends
-        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
             backends: wgpu::Backends::all(),
             ..Default::default()
         });
@@ -66,7 +66,7 @@ impl WGPUContext {
     ///
     async fn request_adapter(instance: &wgpu::Instance) -> KwaversResult<wgpu::Adapter> {
         // Try high-performance GPU first
-        if let Some(adapter) = instance
+        if let Ok(adapter) = instance
             .request_adapter(&wgpu::RequestAdapterOptions {
                 power_preference: wgpu::PowerPreference::HighPerformance,
                 compatible_surface: None,
@@ -78,7 +78,7 @@ impl WGPUContext {
         }
 
         // Try any available adapter
-        if let Some(adapter) = instance
+        if let Ok(adapter) = instance
             .request_adapter(&wgpu::RequestAdapterOptions {
                 power_preference: wgpu::PowerPreference::default(),
                 compatible_surface: None,
@@ -90,11 +90,8 @@ impl WGPUContext {
         }
 
         // No suitable adapter found
-        Err(KwaversError::ConfigError(
-            kwavers_core::error::ConfigError::MissingFeature {
-                feature: "GPU".to_string(),
-                help: "No suitable GPU adapter found. GPU backend unavailable.".to_string(),
-            },
+        Err(KwaversError::GpuError(
+            "GPU: No suitable GPU adapter found. GPU backend unavailable.".to_string(),
         ))
     }
 
@@ -122,21 +119,16 @@ impl WGPUContext {
         };
 
         adapter
-            .request_device(
-                &wgpu::DeviceDescriptor {
-                    label: Some("kwavers-gpu-device"),
-                    required_features: features,
-                    required_limits: limits,
-                    memory_hints: Default::default(),
-                },
-                None, // Trace path for debugging
-            )
+            .request_device(&wgpu::DeviceDescriptor {
+                label: Some("kwavers-gpu-device"),
+                required_features: features,
+                required_limits: limits,
+                memory_hints: Default::default(),
+                trace: wgpu::Trace::Off,
+            })
             .await
             .map_err(|e| {
-                KwaversError::ConfigError(kwavers_core::error::ConfigError::MissingFeature {
-                    feature: "GPU device".to_string(),
-                    help: format!("Failed to request GPU device: {}", e),
-                })
+                KwaversError::GpuError(format!("GPU device: Failed to request GPU device: {}", e))
             })
     }
 

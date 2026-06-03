@@ -58,30 +58,20 @@ impl WorkgroupConfig {
     /// Create workgroup config for problem size
     pub fn new(nx: u32, ny: u32, nz: u32) -> Self {
         // Optimal for most GPUs: 8×8×8 = 512 threads
-        let config = match (nx, ny, nz) {
+        let (workgroup_x, workgroup_y, workgroup_z) = match (nx, ny, nz) {
             // Small problems: use smaller workgroups
-            (x, y, z) if x <= 64 && y <= 64 && z <= 64 => Self {
-                workgroup_x: 4,
-                workgroup_y: 4,
-                workgroup_z: 4,
-            },
+            (x, y, z) if x <= 64 && y <= 64 && z <= 64 => (4, 4, 4),
             // Medium problems: balanced workgroup
-            (x, y, z) if x <= 256 && y <= 256 && z <= 256 => Self {
-                workgroup_x: 8,
-                workgroup_y: 8,
-                workgroup_z: 8,
-            },
+            (x, y, z) if x <= 256 && y <= 256 && z <= 256 => (8, 8, 8),
             // Large problems: larger workgroups
-            _ => Self {
-                workgroup_x: 16,
-                workgroup_y: 8,
-                workgroup_z: 4,
-            },
+            _ => (16, 8, 4),
         };
 
         Self {
-            total_threads: config.workgroup_x * config.workgroup_y * config.workgroup_z,
-            ..config
+            workgroup_x,
+            workgroup_y,
+            workgroup_z,
+            total_threads: workgroup_x * workgroup_y * workgroup_z,
         }
     }
 }

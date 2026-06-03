@@ -6,21 +6,13 @@
 //!
 //! ## Submodule status
 //!
-//! - `traits` — **stable**, unconditional, the public Backend trait surface.
-//! - `gpu`    — **unstable / bit-rotted**: this subtree was orphaned from the
-//!   crate module graph (no `pub mod backend;` existed in `solver/mod.rs` until
-//!   2026-05-05). When wired in under `--features gpu` it surfaces 32 compile
-//!   errors against current `wgpu` v26 (e.g. `wgpu::Device::queue()` no longer
-//!   exists), the current `KwaversError`/`ConfigError` variants, and a few
-//!   `wgpu::Instance`/`DeviceDescriptor` field shapes that have shifted upstream.
-//!   Tracked for repair in a separate sprint; until then it stays gated behind
-//!   the explicit-opt-in `solver_backend_gpu_unstable` feature so the rest of
-//!   the codebase can consume the trait without dragging in the broken impl.
-//!
-//! Once the `gpu` submodule is repaired, drop the extra feature gate and gate
-//! it on `feature = "gpu"` alone (its real dependency).
+//! - `traits` — **stable**, unconditional, the public `ComputeBackend` surface.
+//! - `gpu`    — the wgpu-backed `ComputeBackend` implementation. Repaired against
+//!   wgpu v26 (device/queue split, `DeviceDescriptor.trace`, `request_adapter`
+//!   returning `Result`, current `KwaversError` variants) and gated on its real
+//!   dependency, `feature = "gpu"`.
 
-#[cfg(all(feature = "gpu", feature = "solver_backend_gpu_unstable"))]
+#[cfg(feature = "gpu")]
 pub mod gpu;
 pub mod traits;
 

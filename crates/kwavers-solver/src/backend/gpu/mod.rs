@@ -199,12 +199,10 @@ impl ComputeBackend for GPUBackend {
         if device_id == 0 {
             Ok(())
         } else {
-            Err(KwaversError::ConfigError(
-                kwavers_core::error::ConfigError::InvalidParameter {
-                    param_name: "device_id".to_string(),
-                    reason: format!("GPU backend only has device 0, got {}", device_id),
-                },
-            ))
+            Err(KwaversError::GpuError(format!(
+                "device_id: GPU backend only has device 0, got {}",
+                device_id
+            )))
         }
     }
 

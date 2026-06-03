@@ -100,7 +100,7 @@ impl GpuBackendBufferManager {
     ) -> KwaversResult<wgpu::Buffer> {
         // Convert f64 to f32 for GPU (most GPUs don't support f64 efficiently)
         let data_f32: Vec<f32> = data.iter().map(|&x| x as f32).collect();
-        let byte_data = bytemuck::cast_slice(&data_f32);
+        let byte_data: &[u8] = bytemuck::cast_slice(&data_f32);
 
         let buffer = self.get_buffer(
             device,
@@ -145,6 +145,7 @@ impl GpuBackendBufferManager {
     pub async fn read_buffer_to_array(
         &self,
         device: &wgpu::Device,
+        queue: &wgpu::Queue,
         buffer: &wgpu::Buffer,
         shape: (usize, usize, usize),
     ) -> KwaversResult<Array3<f64>> {
@@ -165,8 +166,8 @@ impl GpuBackendBufferManager {
         encoder.copy_buffer_to_buffer(buffer, 0, &staging_buffer, 0, size);
 
         // Submit and wait
-        let submission_index = device.queue().submit(std::iter::once(encoder.finish()));
-        device.queue().on_submitted_work_done(move || {
+        let submission_index = queue.submit(std::iter::once(encoder.finish()));
+        queue.on_submitted_work_done(move || {
             // Work done
         });
 
@@ -181,16 +182,10 @@ impl GpuBackendBufferManager {
 
         rx.recv()
             .map_err(|e| {
-                KwaversError::ConfigError(kwavers_core::error::ConfigError::InvalidParameter {
-                    param_name: "buffer_map".to_string(),
-                    reason: format!("Failed to map buffer: {}", e),
-                })
+                KwaversError::GpuError(format!("{}: {}", "buffer_map".to_string(), format!("Failed to map buffer: {}", e)))
             })?
             .map_err(|e| {
-                KwaversError::ConfigError(kwavers_core::error::ConfigError::InvalidParameter {
-                    param_name: "buffer_map".to_string(),
-                    reason: format!("Buffer mapping error: {:?}", e),
-                })
+                KwaversError::GpuError(format!("{}: {}", "buffer_map".to_string(), format!("Buffer mapping error: {:?}", e)))
             })?;
 
         // Read data
@@ -202,10 +197,7 @@ impl GpuBackendBufferManager {
 
         // Reshape to Array3
         let array = Array3::from_shape_vec(shape, data_f64).map_err(|e| {
-            KwaversError::ConfigError(kwavers_core::error::ConfigError::InvalidParameter {
-                param_name: "shape".to_string(),
-                reason: format!("Failed to reshape array: {}", e),
-            })
+            KwaversError::GpuError(format!("{}: {}", "shape".to_string(), format!("Failed to reshape array: {}", e)))
         })?;
 
         // Unmap buffer
@@ -222,10 +214,11 @@ impl GpuBackendBufferManager {
     pub fn read_buffer_to_array_sync(
         &self,
         device: &wgpu::Device,
+        queue: &wgpu::Queue,
         buffer: &wgpu::Buffer,
         shape: (usize, usize, usize),
     ) -> KwaversResult<Array3<f64>> {
-        pollster::block_on(self.read_buffer_to_array(device, buffer, shape))
+        pollster::block_on(self.read_buffer_to_array(device, queue, buffer, shape))
     }
 
     /// Get total allocated memory
