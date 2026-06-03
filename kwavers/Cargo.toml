@@ -27,8 +27,9 @@ kwavers-analysis = { path = "../crates/kwavers-analysis" }
 kwavers-simulation = { path = "../crates/kwavers-simulation" }
 kwavers-diagnostics = { path = "../crates/kwavers-diagnostics" }
 kwavers-therapy = { path = "../crates/kwavers-therapy" }
-# Concrete GPU backend (consolidated wgpu/WGSL). Optional: pulled in by `gpu`.
-kwavers-gpu = { path = "../crates/kwavers-gpu", optional = true }
+# Consolidated GPU backend. Regular dep (tiny without the `gpu` feature — just
+# allocation profiling); the heavy wgpu/WGSL paths activate via `kwavers-gpu/gpu`.
+kwavers-gpu = { path = "../crates/kwavers-gpu" }
 
 # Essential numerical computing
 ndarray = { version = "0.16", features = ["rayon", "serde"] }
@@ -146,7 +147,7 @@ loom = "0.7"
 default = ["minimal"]  # PRODUCTION DEFAULT
 minimal = []           # Core functionality only
 parallel = ["ndarray/rayon"] # Add back parallel feature
-gpu = ["dep:kwavers-gpu", "kwavers-gpu/gpu", "dep:wgpu", "dep:bytemuck", "dep:pollster", "dep:apollofft-wgpu", "kwavers-core/gpu", "kwavers-math/gpu", "kwavers-solver/gpu", "kwavers-analysis/gpu", "kwavers-simulation/gpu", "kwavers-diagnostics/gpu"]
+gpu = ["kwavers-gpu/gpu", "dep:wgpu", "dep:bytemuck", "dep:pollster", "dep:apollofft-wgpu", "kwavers-core/gpu", "kwavers-math/gpu", "kwavers-solver/gpu", "kwavers-analysis/gpu", "kwavers-simulation/gpu", "kwavers-diagnostics/gpu"]
 # Explicit-opt-in flag for the bit-rotted `solver::backend::gpu` subtree.
 # See solver/backend/mod.rs for repair list. Implies `gpu`. Do not enable in
 # production builds — currently produces 32 compile errors against wgpu v26.

@@ -26,7 +26,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use tracing::{debug, info, trace};
 
-use crate::core::error::gpu::GpuError;
+use kwavers_core::error::gpu::GpuError;
 
 use super::config::GpuAllocationConfig;
 use super::stats::GpuAllocationStats;

@@ -21,7 +21,7 @@
 
 pub mod gpu_allocator;
 
-pub use crate::core::error::gpu::GpuError;
+pub use kwavers_core::error::gpu::GpuError;
 pub use gpu_allocator::{GpuAllocationConfig, GpuAllocationStats, GpuAllocationTracker};
 
 /// Version constant for this module

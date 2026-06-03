@@ -20,6 +20,10 @@
 
 #![allow(clippy::module_inception)]
 
+// GPU allocation profiling/tracking. Pure bookkeeping over the (ungated)
+// kwavers_core GpuError; no wgpu dependency, so it is available unconditionally.
+pub mod profiling;
+
 // The consolidated GPU implementation. Gated behind `gpu` while the wgpu-v26
 // repair is in progress; the default build compiles this crate to (effectively)
 // empty so the workspace stays green.

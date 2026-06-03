@@ -4973,6 +4973,7 @@ dependencies = [
  "log",
  "ndarray 0.16.1",
  "pollster",
+ "tracing",
  "wgpu",
 ]
 

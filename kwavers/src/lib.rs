@@ -95,8 +95,9 @@ pub use kwavers_simulation as simulation;
 /// under the original `analysis` name so `crate::analysis::…` paths resolve unchanged.
 pub use kwavers_analysis as analysis;
 
-/// GPU profiling and allocation tracking
-pub mod profiling;
+/// GPU profiling and allocation tracking — consolidated in `kwavers-gpu`;
+/// re-exported so existing `kwavers::profiling::*` paths keep working.
+pub use kwavers_gpu::profiling;
 
 /// Clinical application layer (ADR 009): split into `kwavers-diagnostics`
 /// (diagnostic imaging workflows) and `kwavers-therapy` (therapy planning,
