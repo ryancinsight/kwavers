@@ -19,3 +19,12 @@
 //! into one repaired, wgpu-v26-correct backend.
 
 #![allow(clippy::module_inception)]
+
+// The consolidated GPU implementation. Gated behind `gpu` while the wgpu-v26
+// repair is in progress; the default build compiles this crate to (effectively)
+// empty so the workspace stays green.
+#[cfg(feature = "gpu")]
+pub mod gpu;
+
+#[cfg(feature = "gpu")]
+pub use gpu::*;

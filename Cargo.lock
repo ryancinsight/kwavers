@@ -4817,6 +4817,7 @@ dependencies = [
  "kwavers-core",
  "kwavers-diagnostics",
  "kwavers-domain",
+ "kwavers-gpu",
  "kwavers-math",
  "kwavers-physics",
  "kwavers-simulation",
@@ -4963,7 +4964,7 @@ name = "kwavers-gpu"
 version = "3.0.0"
 dependencies = [
  "apollo-fft-wgpu",
- "bitflags 2.10.0",
+ "burn",
  "bytemuck",
  "kwavers-core",
  "kwavers-domain",
@@ -4972,7 +4973,6 @@ dependencies = [
  "log",
  "ndarray 0.16.1",
  "pollster",
- "thiserror 2.0.17",
  "wgpu",
 ]
 

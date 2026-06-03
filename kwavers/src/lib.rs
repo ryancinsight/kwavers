@@ -138,9 +138,10 @@ pub mod clinical {
 /// Infrastructure: result/data I/O (CSV, pressure-field export)
 pub mod infrastructure;
 
-/// GPU compute acceleration (WGPU)
+/// GPU compute acceleration (WGPU) — consolidated in the `kwavers-gpu` leaf
+/// crate; re-exported so existing `kwavers::gpu::*` paths keep working.
 #[cfg(feature = "gpu")]
-pub mod gpu;
+pub use kwavers_gpu::gpu;
 
 // ============================================================================
 // Public API re-exports
