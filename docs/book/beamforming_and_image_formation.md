@@ -495,6 +495,218 @@ lobe level drops by 18.3 dB (Theorem 4.6).
 
 ---
 
+## 4.12 Electronic Steering
+
+**Scope.** This section consolidates the steering physics distributed through §4.2
+(array factor and grating lobes) and §4.3 (focusing) into a single treatment of *electronic
+steering*: the redirection of the transmit/receive beam by applying per-element time delays
+(or, for narrowband excitation, phase shifts) rather than by mechanically rotating the
+transducer. Steering and focusing are the two degrees of freedom of the same delay law;
+both are realised in kwavers without any moving part.
+
+### 4.12.1 Steering Principle
+
+A wavefront launched by an aperture is normal to the surfaces of constant emission time. By
+delaying each element so that the emission times form a linear ramp across the aperture, the
+composite wavefront is tilted, and the beam points along the ramp normal. A *quadratic*
+(curved) delay profile superimposes focusing; the sum of a linear ramp and a curvature
+steers and focuses simultaneously. The canonical delay law (Theorem 4.3, Eq. 4.11)
+
+```
+τ_n = (|r_n − r_f| − min_m |r_m − r_f|) / c₀
+```
+
+already expresses both behaviours: choosing `r_f` at a finite focal point produces a curved
+profile (steer + focus); pushing `r_f` to infinity along the steering direction `θ_s`
+produces a pure linear ramp.
+
+**Far-field (pure steering) limit.** As `|r_f| → ∞` along `θ_s`, Eq. 4.11 reduces for a
+linear array with element coordinates `x_n` to the steering ramp
+
+```
+τ_n = (x_max − x_n) sin θ_s / c₀,                                        (4.22)
+```
+
+a linear function of element index. Figure 4.12 shows the delay laws computed by
+`delay_law_focus_2d` for a 64-element, `d = λ/2`, 2 MHz array at four steering angles: the
+profiles are straight lines whose slope is proportional to `sin θ_s`, confirming Eq. 4.22.
+
+![Linear-array steering delay laws τ_n versus element index for θ_s = 0°, 10°, 20°, 30°; slope ∝ sin θ_s.](figures/ch04/fig07_steering_delays.png)
+
+For narrowband (single-frequency) excitation the time delay is equivalent to a phase shift
+
+```
+φ_n = ω₀ τ_n = k₀ (x_max − x_n) sin θ_s,                                 (4.23)
+```
+
+which is how phase-only steering hardware (analog phase shifters) approximates true time
+delay. The equivalence holds only at `ω₀`; the consequences of its breakdown over a finite
+bandwidth are treated in §4.12.4.
+
+### 4.12.2 Beam Pattern Versus Steering Angle
+
+Substituting the steering ramp into the array factor (Eq. 4.7) shifts the main-lobe peak
+from broadside to `θ_s`, because the array factor depends only on the difference
+`sin θ − sin θ_s`. Figure 4.13 overlays the full beam pattern `|AF(θ)·D(θ)|` (array factor
+times element directivity, Eq. 4.10) for `θ_s ∈ {0°, 15°, 30°, 45°}` at `d = λ/2`: the main
+lobe tracks the commanded angle exactly and no grating lobe enters the visible region.
+
+![Beam pattern for θ_s = 0°, 15°, 30°, 45° at d = λ/2; the main lobe tracks θ_s with no grating lobes.](figures/ch04/fig08_beam_vs_steer.png)
+
+Two angle-dependent penalties accompany steering, both visible in Figure 4.13:
+
+1. **Main-lobe broadening (beam spreading).** The projected aperture shrinks by `cos θ_s`,
+   so the steered −6 dB beamwidth widens as
+
+   ```
+   Δθ(θ_s) ≈ Δθ(0) / cos θ_s.                                            (4.24)
+   ```
+
+2. **Steering loss (element-factor roll-off).** The composite pattern is the array factor
+   *modulated by the fixed element directivity* `D(θ)` (Eq. 4.3/4.6). Because `D(θ)` peaks
+   at broadside, steering the array factor into the element-pattern skirt reduces the
+   on-axis sensitivity by `D(θ_s)`. This sets the practical steering range: elements with a
+   wider individual beam (smaller width-to-wavelength ratio) steer further before the loss
+   becomes prohibitive.
+
+### 4.12.3 Grating Lobes and the Design Rule
+
+Steering moves not only the main lobe but every grating lobe (Theorem 4.2, Eq. 4.8):
+
+```
+sin θ_GL = sin θ_s + m λ/d,    m ∈ ℤ \ {0}.
+```
+
+A lobe that is evanescent at broadside can be swept into the visible region `|sin θ| ≤ 1`
+as `θ_s` increases. The grating-lobe-free condition over a maximum steering angle
+`θ_s,max` is Corollary 4.1,
+
+```
+d ≤ λ / (1 + |sin θ_s,max|),                                            (4.25)
+```
+
+with the `d = λ/2` design (Corollary 4.2) remaining grating-lobe-free across the entire
+half-space. Figure 4.14 contrasts `d = λ/2` and `d = λ` at `θ_s = 30°`: the half-wavelength
+array is clean, while the full-wavelength array produces a full-amplitude grating lobe at
+`θ_GL = arcsin(sin 30° − λ/d) = −30°`, exactly as predicted by `grating_lobe_angles`.
+
+![Grating-lobe onset at θ_s = 30°: d = λ/2 is grating-lobe-free; d = λ produces a full-amplitude grating lobe at −30°.](figures/ch04/fig09_grating_lobe_onset.png)
+
+The steering sweep is shown dynamically in the animation below, which sweeps `θ_s` from 0°
+to 60° and back for both pitches simultaneously. The `d = λ/2` main lobe glides smoothly
+across the field of view; the `d = λ` pattern grows a second, equal-height lobe that marches
+in from the opposite side as the steering angle increases — the visual signature of the
+constraint in Eq. 4.25.
+
+![Animated steering sweep θ_s = 0°→60°→0°, comparing d = λ/2 (grating-lobe-free) and d = λ (grating lobe enters the field of view).](figures/ch04/anim_beam_steering.gif)
+
+### 4.12.4 Beam Squint Under Finite Bandwidth
+
+Phase-only steering (Eq. 4.23) is exact only at the design frequency `ω₀`. A pulse of
+fractional bandwidth `B` contains components at `ω₀(1 ± B/2)`; for a fixed phase ramp the
+effective steering angle satisfies `k(ω) sin θ(ω) = const`, so the beam direction drifts
+with frequency — **beam squint**:
+
+```
+sin θ(ω) = (ω₀/ω) sin θ_s   ⟹   Δθ_squint ≈ −tan θ_s · (Δω/ω₀).        (4.26)
+```
+
+Squint is zero at broadside, grows with steering angle, and is eliminated by *true
+time delay* (TTD), which is the representation kwavers uses internally: delays are stored in
+seconds (Eq. 4.11/4.22) and applied to the broadband signal, not as a single-frequency
+phase. This is why the kwavers delay law is frequency-independent and squint-free by
+construction; phase-domain steering is provided only as an explicit narrowband convenience.
+
+### 4.12.5 Two-Dimensional and Volumetric Steering
+
+For a planar (matrix) array the steering direction is the unit vector
+`û = (sin θ_s cos φ_s, sin θ_s sin φ_s, cos θ_s)` and the ramp generalises to the inner
+product
+
+```
+τ_{mn} = (R_max − r_{mn} · û) / c₀,                                      (4.27)
+```
+
+where `r_{mn}` is the position of element `(m, n)`. Azimuth and elevation steering are the
+two components of `û`; combined with a finite focal range they give full 3-D
+steer-and-focus, the basis of volumetric (4-D) imaging (§4.7.2). Figure 4.15 shows the
+2-D steered-and-focused continuous-wave field computed by `beam_pattern_2d_magnitude` for a
+focus placed on the **natural-focus arc** (the near-field transition range `N`, §4.12.6)
+steered to 0°, +20°, and −20°: the focal spot (cyan ✚) translates along the arc and the
+beam axis tilts while the aperture (cyan bar) stays fixed.
+
+![Steered + focused 2-D CW pressure field with the focus on the natural-focus arc N = 197 mm for θ_s = 0°, +20°, −20°; the focal spot translates while the aperture is fixed.](figures/ch04/fig10_steered_focused_field.png)
+
+The continuous sweep of the focal spot along the natural-focus arc is shown in the animation
+below; the focus traces the dashed arc of constant range `N` while the near-field beam tilts
+coherently, demonstrating electronic (zero-motion) repositioning of the focus.
+
+![Animated steered + focused field: the focus sweeps along the natural-focus arc from −30° to +30° and back under pure electronic steering.](figures/ch04/anim_field_steering.gif)
+
+### 4.12.6 Focusing Around the Natural Focus
+
+An unfocused aperture of full width `D` already concentrates energy on-axis without any
+applied delays. The deepest such concentration — the last axial pressure maximum, where the
+field transitions from the near (Fresnel) zone to the far (Fraunhofer) zone — defines the
+**natural focus**
+
+```
+N = D² / (4λ),        λ = c / f.                                         (4.28)
+```
+
+`N` is the *natural focal length* of the aperture and sets the depth limit of useful
+electronic focusing: for a focal range `z_f ≲ N` the delay law (Eq. 4.11) tightens the beam
+and increases on-axis gain, but as `z_f → N` the achievable focal gain saturates, and
+focusing beyond `N` cannot produce a tighter waist than the unfocused beam already has there.
+Figure 4.16 shows the on-axis pressure for focal ranges `0.5 N`, `N`, and `1.5 N`: the
+`0.5 N` focus produces a clear, tight on-axis peak, while the `N` and `1.5 N` settings yield
+progressively broader, lower-contrast maxima — the focal gain has saturated. kwavers computes
+`N` with `near_field_distance(D, f, c)` and places the focus on the arc of constant range `N`
+with `steering_focus_point(N, θ_s)` feeding `delay_law_steer_2d`.
+
+![On-axis CW pressure for focal ranges 0.5 N, N, and 1.5 N; the focal gain saturates as the focal range approaches the natural focus N = 197 mm.](figures/ch04/fig11_natural_focus_sweep.png)
+
+For the 64-element, `d = λ/2` array at 2 MHz used throughout this section the aperture is
+`D = Nd = 24.6 mm`, giving `N = D²/(4λ) ≈ 197 mm`. Steering at fixed range `N` therefore
+traces the focus along the arc shown in Figures 4.15–4.16, which is exactly the regime in
+which electronic steer-and-focus is physically effective.
+
+### 4.12.7 Steering in kwavers
+
+| Steering concept | kwavers module | Key item |
+|------------------|----------------|----------|
+| Linear/matrix steer + focus delays (Eq. 4.11/4.22/4.27) | `domain::source::transducers::phased_array::beamforming` | `BeamformingMode` |
+| Delay-law accessor (k-Wave parity) | `domain::source::kwave_array::accessors::beamforming` | `compute_delays()` |
+| Hemispherical / focused-bowl steering | `domain::source::hemispherical::steering` | `SteeringController`, `SteeringMode`, `FocalPoint` |
+| Aberration-corrected focal law (heterogeneous media) | `clinical::therapy::theranostic_guidance::waveform` | Eikonal travel-time delays |
+| Apodization (steered sidelobe control, §4.4) | `domain::source::transducers::apodization` | window enum |
+
+In homogeneous media the steering delay is the geometric path law (Eq. 4.11). In
+heterogeneous media — for example transcranial focusing through the skull — the constant
+sound speed `c₀` is no longer valid and the straight-ray path length must be replaced by the
+true acoustic travel time. kwavers computes this with an Eikonal solver
+(`theranostic_guidance::waveform`): the per-element delay becomes
+`τ_n = (T(r_n) − min_m T(r_m))`, where `T` solves `|∇T| = 1/c(r)`. This is *aberration-corrected
+electronic steering*; it reduces to Eq. 4.11 when `c(r) = c₀` is uniform.
+
+### 4.12.8 Validation
+
+The figures in this section are generated by `pykwavers/examples/book/ch04_electronic_steering.py`,
+which computes every quantity through the kwavers Rust core (`linear_array_positions`,
+`near_field_distance`, `steering_focus_point`, `delay_law_steer_2d`, `beam_pattern_magnitude`,
+`grating_lobe_angles`, `beam_pattern_2d_magnitude`); the script performs only rendering. The
+grating-lobe prediction (Figure 4.14, `θ_GL = −30°` at `θ_s = 30°`, `d = λ`) matches Eq. 4.8
+exactly, and the `d = λ/2` array is grating-lobe-free for all `θ_s`, confirming Corollary 4.2.
+The steered delay profiles (Figure 4.12) are linear in element index with slope `∝ sin θ_s`,
+confirming the far-field ramp of Eq. 4.22. The natural-focus length `N = D²/(4λ)` (Figure 4.16)
+and the on-axis focal-gain saturation as `z_f → N` are verified by Rust unit tests in
+`physics::analytical::transducer` (`near_field_natural_focus_formula`,
+`steering_focus_point_traces_natural_focus_arc`, `delay_law_steer_focuses_on_arc`). The
+grating-lobe acceptance test of Algorithm 4.2 provides the corresponding numerical
+(field-solver) cross-check.
+
+---
+
 ## Appendix 4A: Original Scope (Advanced Beamforming)
 
 This chapter's original scope note included MVDR, subspace methods, plane-wave
@@ -533,3 +745,6 @@ deeper treatment in `kwavers::analysis::signal_processing::beamforming`,
 
 7. Capon, J. (1969). High-resolution frequency-wavenumber spectrum analysis.
    *Proc. IEEE*, **57**(8), 1408–1418. https://doi.org/10.1109/PROC.1969.7278
+
+8. Steinberg, B. D. (1976). *Principles of Aperture and Array System Design*.
+   Wiley. Chapters 2–4 (array steering, grating lobes, beam squint).

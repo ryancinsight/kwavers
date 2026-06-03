@@ -11,6 +11,7 @@ use kwavers_math::fft::{Complex64, Fft3d};
 use crate::fdtd::SourceHandler;
 use crate::forward::pstd::implementation::k_space::PSTDKSOperators;
 use crate::forward::pstd::physics::absorption::AbsorptionKernel;
+use crate::forward::pstd::physics::residual_gas_absorption::ResidualGasAbsorption;
 use crate::forward::pstd::propagator::axisymmetric::AsContext;
 use ndarray::{Array1, Array2, Array3, ArrayView2};
 use std::env;
@@ -93,6 +94,14 @@ pub struct PSTDSolver {
     pub(crate) bon: Option<Array3<f64>>,
     /// Precomputed absorption kernel — `None` for lossless simulations.
     pub(crate) absorption: Option<AbsorptionKernel>,
+    /// Raw spectral wavenumber magnitude `|k|` in r2c half-spectrum order
+    /// `(nx, ny, nz_c)`, captured before the kappa cosine transform. Used to
+    /// build the broadband residual-gas absorption operator's spectral shape.
+    pub(crate) k_mag_half: Array3<f64>,
+    /// Broadband residual-gas (bubble-cloud) absorption operator — `None` until
+    /// installed via `set_residual_gas_absorption`. Applies the true frequency-
+    /// dependent Commander–Prosperetti attenuation spectrum each step.
+    pub(crate) residual_gas_absorption: Option<ResidualGasAbsorption>,
     pub(crate) kspace_operators: Option<PSTDKSOperators>,
     pub(crate) ddx_k_shift_pos: Array1<Complex64>,
     pub(crate) ddy_k_shift_pos: Array1<Complex64>,

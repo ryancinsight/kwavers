@@ -1,6 +1,6 @@
-//! PyO3 bindings for `kwavers::physics::analytical::transducer`.
+//! PyO3 bindings for `kwavers_physics::analytical::transducer`.
 
-use kwavers::physics::analytical::transducer;
+use kwavers_physics::analytical::transducer;
 use ndarray::Array2;
 use numpy::{IntoPyArray, PyArray1, PyArray2, PyReadonlyArray1};
 use pyo3::exceptions::PyRuntimeError;
@@ -453,8 +453,7 @@ pub fn beam_pattern_2d_magnitude(
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let nx = x_s.len();
     let nz = z_s.len();
-    let flat =
-        transducer::beam_pattern_2d_magnitude(x_s, z_s, ex, ez, freq_hz, c, w_s, d_s);
+    let flat = transducer::beam_pattern_2d_magnitude(x_s, z_s, ex, ez, freq_hz, c, w_s, d_s);
     let arr = Array2::from_shape_vec((nx, nz), flat)
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     Ok(arr.into_pyarray(py).unbind())
@@ -565,9 +564,7 @@ pub fn multi_focus_field_magnitude_2d(
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let nx = x_s.len();
     let nz = z_s.len();
-    let flat = transducer::multi_focus_field_magnitude_2d(
-        x_s, z_s, ex, ez, sx, sz, sa, freq_hz, c,
-    );
+    let flat = transducer::multi_focus_field_magnitude_2d(x_s, z_s, ex, ez, sx, sz, sa, freq_hz, c);
     let arr = Array2::from_shape_vec((nx, nz), flat)
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     Ok(arr.into_pyarray(py).unbind())
@@ -715,4 +712,38 @@ pub fn safe_steering_halfangle(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     Ok(transducer::safe_steering_halfangle(st, g, threshold))
+}
+
+/// Electronic-steering off-focus efficiency for a focused phased array.
+///
+/// ε(Δ_lat, Δ_ax) = exp[-(Δ_lat/R_lat)^2 - (Δ_ax/R_ax)^2], with the 1/e
+/// ranges scaling linearly with wavelength λ = c / f0. Models the focal-pressure
+/// derating when the focus is steered electronically off the mechanical focus
+/// (element directivity + projected-aperture loss + grating-lobe roll-off).
+///
+/// Args:
+///     dr_lat_m: Lateral steering offset from the mechanical focus [m].
+///     dr_ax_m: Axial steering offset from the mechanical focus [m].
+///     f0_hz: Drive frequency [Hz].
+///     c_m_s: Medium sound speed [m/s].
+///     apodized: Whether cos-theta apodization is applied (wider window).
+///
+/// Returns:
+///     Efficiency in (0, 1]; 1.0 at zero offset.
+///
+/// Reference:
+///     Pernot et al. (2003) Ultrasound Med. Biol. 29, 1525; Hand et al. (2009)
+///     Med. Phys. 36, 2107.
+#[pyfunction]
+#[pyo3(signature = (dr_lat_m, dr_ax_m, f0_hz, c_m_s, apodized=true))]
+pub fn electronic_steering_efficiency(
+    dr_lat_m: f64,
+    dr_ax_m: f64,
+    f0_hz: f64,
+    c_m_s: f64,
+    apodized: bool,
+) -> PyResult<f64> {
+    Ok(transducer::electronic_steering_efficiency(
+        dr_lat_m, dr_ax_m, f0_hz, c_m_s, apodized,
+    ))
 }

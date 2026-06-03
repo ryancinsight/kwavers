@@ -1,4 +1,4 @@
-use kwavers::domain::grid::Grid as KwaversGrid;
+use kwavers_domain::grid::Grid as KwaversGrid;
 
 use super::super::super::Simulation;
 use crate::sensor_py::Sensor;
@@ -82,7 +82,7 @@ impl Simulation {
     /// Build an ordered list of sensor grid indices for a transducer, element by element.
     pub(crate) fn create_transducer_ordered_indices(
         grid: &KwaversGrid,
-        trans: &kwavers::domain::source::array_2d::TransducerArray2D,
+        trans: &kwavers_domain::source::array_2d::TransducerArray2D,
     ) -> Vec<(usize, usize, usize)> {
         let nx = grid.nx;
         let ny = grid.ny;

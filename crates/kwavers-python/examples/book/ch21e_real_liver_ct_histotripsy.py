@@ -52,7 +52,36 @@ except ImportError:
     kw = None
     _HAS_PYKWAVERS = False
 
-REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+try:
+    from cavitation_dose_monitor import (BubbleMedium, per_spot_dose,
+                                          plot_cavitation_monitor,
+                                          simulate_population_emission,
+                                          simulate_raster_pulsing,
+                                          simulated_monitor_timeseries)
+except ImportError:
+    import sys as _sys
+    _sys.path.insert(0, os.path.dirname(__file__))
+    from cavitation_dose_monitor import (BubbleMedium, per_spot_dose,
+                                          plot_cavitation_monitor,
+                                          simulate_population_emission,
+                                          simulate_raster_pulsing,
+                                          simulated_monitor_timeseries)
+
+
+def _find_repo_root(start: str) -> str:
+    """Walk up to the directory containing ``docs/book`` (robust to crate depth;
+    the crate move to crates/kwavers-python/ changed the relative depth)."""
+    d = os.path.abspath(start)
+    while True:
+        if os.path.isdir(os.path.join(d, "docs", "book")):
+            return d
+        parent = os.path.dirname(d)
+        if parent == d:
+            return os.path.normpath(os.path.join(start, "..", "..", ".."))
+        d = parent
+
+
+REPO_ROOT = _find_repo_root(os.path.dirname(__file__))
 CT_PATH = os.path.join(REPO_ROOT, "data", "lits17_sample", "volume-0.nii")
 SEG_PATH = os.path.join(REPO_ROOT, "data", "lits17_sample", "segmentation-0.nii")
 OUT_DIR = os.path.join(REPO_ROOT, "docs", "book", "figures", "ch21e")
@@ -933,14 +962,24 @@ def collapse_strength(p, f0):
 
 def thermal_maps(p_field, props, sc):
     heating_amp = max(sc.ppp / max(sc.pnp, 1.0), 1.0)
-    # I = p²/(2ρc) via Rust; Q = α·p²/(ρc)·shock_gain [W/m³]
+    # I = p²/(2ρc) via Rust; Q = α·p²/(ρc)·shock_gain [W/m³].
+    # The Rust intensity/heat kernels take homogeneous (scalar) ρ, c, α, so use
+    # the focal-tissue properties — the tissue at the peak-pressure voxel — as
+    # the representative medium for the focal thermal estimate (standard
+    # homogeneous-focal approximation; the per-voxel ρ, cp arrays still scale
+    # the dT spatial pattern below). props["rho"] etc. are per-voxel maps, so a
+    # bare float() of the whole array is invalid.
+    focus_flat = int(np.argmax(np.abs(p_field)))
+    rho_focal = float(props["rho"].ravel()[focus_flat])
+    c_focal = float(props["c"].ravel()[focus_flat])
+    alpha_focal = float(props["alpha"].ravel()[focus_flat])
     p_eff = np.ascontiguousarray((p_field * heating_amp).ravel().astype(np.float64))
     I_eff = np.asarray(
-        kw.acoustic_intensity_from_amplitude(p_eff, float(props["rho"]), float(props["c"]))
+        kw.acoustic_intensity_from_amplitude(p_eff, rho_focal, c_focal)
     ).reshape(p_field.shape)
     Q_pulse = sc.shock_alpha_gain * np.asarray(
         kw.acoustic_heat_source_density(
-            p_eff, float(props["alpha"]), float(props["rho"]), float(props["c"])
+            p_eff, alpha_focal, rho_focal, c_focal
         )
     ).reshape(p_field.shape)
     dT_p = Q_pulse * sc.pulse_on_s / (props["rho"] * props["cp"])
@@ -3062,6 +3101,288 @@ def plot_dvh_and_volumes(ct, label_vol, info, results, gtv, ctv, ptv,
     return b64
 
 
+def plot_passive_cavitation_dose(label_vol, info, results, scenarios) -> str:
+    """Passive-cavitation emission-dose monitoring over the tumour volume V_s.
+
+    Histotripsy is intrinsic-threshold *inertial* cavitation, so its passive
+    acoustic signature is broadband (the InsighTec stable sub/ultraharmonic
+    "harmonic dose" used for BBB opening, ch24 fig09, is by contrast absent
+    here). This figure ports the same receiver-integration-over-V_s machinery
+    to histotripsy monitoring:
+
+      • per-voxel broadband emission ∝ P_cav(x)·collapse_strength(x), built from
+        the chapter's own cavitation physics (Maxwell-2013 erf-CDF probability ×
+        Rayleigh collapse-violence factor);
+      • integrated over the HCC tumour V_s with the Rust
+        ``emission_energy_in_volume`` (the passive-detector array integral);
+      • accumulated over the raster sonication with the Rust
+        ``cumulative_cavitation_dose`` to give the inertial-cavitation-dose
+        (ICD) monitoring curve per clinical regime.
+
+    Panel C contrasts the emission band breakdown of a Keller–Miksis-driven
+    microbubble population (Rust ``bubble_acoustic_emission_pressure`` →
+    ``hann_windowed_power_spectrum`` → ``integrate_receiver_array_psd`` →
+    ``cavitation_emission_bands``) at a tractable drive, showing the
+    broadband-leaning emission characteristic of inertial cavitation.
+    """
+    print("[fig18] Passive-cavitation inertial dose over V_s (Rust core)")
+    dx = info["dx"]
+    dv = dx ** 3
+    tumour = (label_vol == HCC.label)
+    tumour_f = tumour.ravel().astype(float)
+    fx = info["focus_idx"][0]
+
+    # ── Per-scenario inertial-emission map + V_s-integrated ICD(t) ──────────
+    icd_curves = {}
+    emission_slice = None
+    slice_label = None
+    for sc in scenarios:
+        p_field = results[sc.name]["p_field"]
+        pcav = cav_probability_tissue(np.abs(p_field), label_vol, sc.f0)
+        cs = collapse_strength(np.abs(p_field), sc.f0)
+        emission_map = (pcav * cs).astype(float)          # per-pulse broadband proxy
+        per_pulse_e = float(kw.emission_energy_in_volume(
+            emission_map.ravel(), tumour_f, dv))
+        eff_prf = sc.prf * max(sc.interleave_subspots, 1)
+        # Constant emission-energy rate during treatment; cumulative dose over
+        # time = per-pulse emission × pulses delivered (Rust trapezoid).
+        n_t = 200
+        t_axis = np.linspace(0.0, max(sc.treatment_s, 1e-6), n_t)
+        dt = t_axis[1] - t_axis[0]
+        power = np.full(n_t, per_pulse_e * eff_prf, dtype=float)
+        icd = np.asarray(kw.cumulative_cavitation_dose(power, dt), dtype=float)
+        icd_curves[sc.name] = (t_axis, icd, sc)
+        if emission_slice is None:
+            emission_slice = emission_map[fx]
+            slice_label = sc.label
+
+    # ── Emission band breakdown (TRUE adaptive bubble-population simulation) ──
+    # A polydisperse free-bubble population in water driven into the INERTIAL
+    # regime (~1 MPa) by the true adaptive Keller–Miksis solver → genuine
+    # broadband-dominated emission, the inertial-cavitation fingerprint. (KM is
+    # too stiff at the 30-MPa intrinsic-threshold drive, so the population is
+    # simulated at the highest tractable inertial amplitude; the broadband
+    # dominance is the physical point and is EMERGENT, not imposed.)
+    med = BubbleMedium(rho=998.0, sigma=0.072, gamma=1.4, mu=1.0e-3, pv=2330.0,
+                       c_l=1500.0, p0=101_325.0, xi_s=0.0)
+    r = simulate_population_emission(
+        kw, drive_pa=1.0e6, f0=1.0e6, medium=med, n_bubbles=60,
+        rng=np.random.default_rng(5), r0_median_m=2.5e-6, r0_sigma_ln=0.4,
+        n_cycles=12.0, n_out=8192, max_nucleation_cycles=0.0)
+    band_vals = np.array([r["fundamental"], r["stable"], r["broadband"]])
+    band_total = band_vals.sum() + 1e-30
+    band_frac = band_vals / band_total
+
+    fig, axes = plt.subplots(1, 3, figsize=(15, 4.4))
+
+    # Panel A: inertial-emission source map over the focal slice.
+    axA = axes[0]
+    ny, nz = emission_slice.shape
+    extent = [(-(nz / 2)) * dx * 1e3, (nz / 2) * dx * 1e3,
+              (-(ny / 2)) * dx * 1e3, (ny / 2) * dx * 1e3]
+    im = axA.imshow(emission_slice, origin="lower", extent=extent,
+                    cmap="inferno", aspect="equal")
+    tum_slice = tumour[fx].astype(float)
+    if tum_slice.any():
+        axA.contour(tum_slice, levels=[0.5], colors=["#39ff14"], linewidths=1.0,
+                    extent=extent)
+    axA.set_xlabel("z (mm)")
+    axA.set_ylabel("y (mm)")
+    axA.set_title("(A) Per-pulse broadband emission source\n"
+                  f"focal slice — {slice_label}; green = HCC $V_s$")
+    fig.colorbar(im, ax=axA, fraction=0.046, pad=0.04, label="emission (a.u.)")
+
+    # Panel B: V_s-integrated inertial cavitation dose vs treatment time.
+    axB = axes[1]
+    for name, (t_axis, icd, sc) in icd_curves.items():
+        axB.plot(t_axis / 60.0, icd + 1e-30, color=sc.color, lw=1.8,
+                 label=f"{sc.regime} ({sc.f0/1e6:.2g} MHz)")
+    axB.set_xlabel("Treatment time (min)")
+    axB.set_ylabel("Inertial cavitation dose (a.u.)")
+    axB.set_yscale("log")
+    axB.set_title("(B) $V_s$-integrated inertial dose accumulation\n"
+                  "passive-detector dose over the HCC tumour")
+    axB.legend(loc="lower right", fontsize=8)
+
+    # Panel C: emission band breakdown (inertial signature).
+    axC = axes[2]
+    labels = ["Harmonic\n($n f_0$)", "Stable\n(sub+ultra)", "Broadband\n(inertial)"]
+    colors_b = ["#555", "#4dac26", "#d6604d"]
+    axC.bar(labels, band_frac, color=colors_b)
+    axC.set_ylabel("Fraction of emission energy")
+    axC.set_ylim(0, 1.0)
+    nonharm = 100.0 * (band_frac[1] + band_frac[2])
+    axC.set_title("(C) Simulated population emission band split (short pulses)\n"
+                  f"{nonharm:.0f}% non-harmonic (sub/ultra + broadband) → inertial-leaning")
+    for i, v in enumerate(band_frac):
+        axC.text(i, v + 0.02, f"{v*100:.0f}%", ha="center", fontsize=9)
+
+    fig.tight_layout()
+    b64 = save_fig(fig, "fig18_passive_cavitation_dose")
+    plt.close(fig)
+    print("  saved fig18_passive_cavitation_dose")
+    return b64
+
+
+def plot_cavitation_monitor_fig(scenarios) -> str:
+    """Clinical real-time cavitation monitor for histotripsy (ch21e fig19).
+
+    Mirrors the InsighTec sonication screen adapted to intrinsic-threshold
+    *inertial* histotripsy: the broadband-leaning emission spectrum and its
+    cavitation filter, the live per-pulse cavitation/power trace, the cumulative
+    inertial-cavitation dose climbing to the prescribed goal, and the per-subspot
+    dose distribution across the electronically-steered raster — which shrinks
+    with steering offset and liver attenuation. The cavitation-vs-pressure
+    response uses the chapter's own intrinsic-threshold physics
+    (Rust ``intrinsic_threshold_cavitation_probability`` × ``collapse_strength``);
+    steering uses the Rust ``electronic_steering_efficiency`` SSOT.
+    """
+    print("[fig19] Real-time cavitation monitor + per-spot dose (simulated population)")
+    sc = next((s for s in scenarios if s.regime == "intrinsic"), scenarios[0])
+
+    # Per-spot dose driven by the 30-MPa intrinsic-threshold regime: inertial
+    # nucleation probability × collapse violence, swept through the HCC threshold.
+    p_sweep = np.linspace(0.0, 35.0e6, 80)
+    pt = float(intrinsic_threshold_tissue_pa(HCC, sc.f0))
+    pcav = np.asarray(kw.intrinsic_threshold_cavitation_probability(
+        p_sweep, pt, HCC.pt_sigma_pa))
+    cav_power = pcav * collapse_strength(p_sweep, sc.f0)
+    spot = per_spot_dose(
+        kw, lateral_offsets_m=np.linspace(-12e-3, 12e-3, 41),
+        axial_offsets_m=np.linspace(-12e-3, 12e-3, 33),
+        p_target_pa=sc.pnp, f0_hz=sc.f0, c_m_s=LIVER.c,
+        pressures_pa=p_sweep, cavitation_power=cav_power,
+        n_pulses_per_spot=sc.pulses_per_point, goal_pressure_pa=pt,
+        attenuation_np_m=LIVER.alpha0 * (sc.f0 / 1e6) ** LIVER.y_pow, apodized=True)
+
+    # Acoustic spectrum + live signal: a TRUE adaptive-Keller–Miksis simulation
+    # of a polydisperse free-bubble population driven into the inertial regime
+    # (~1 MPa) → genuine broadband-dominated emission, the inertial-cavitation
+    # fingerprint. (KM is too stiff at the 30-MPa intrinsic drive, so the
+    # population is simulated at the highest tractable inertial amplitude; the
+    # broadband dominance is EMERGENT, not imposed.)
+    med = BubbleMedium(rho=998.0, sigma=0.072, gamma=1.4, mu=1.0e-3, pv=2330.0,
+                       c_l=1500.0, p0=101_325.0, xi_s=0.0)
+    HISTO_SIM = dict(r0_median_m=2.5e-6, r0_sigma_ln=0.4, n_cycles=12.0,
+                     n_out=8192, max_nucleation_cycles=0.0, r_obs_m=5.0e-2)
+    demo = simulate_population_emission(
+        kw, drive_pa=1.0e6, f0=1.0e6, medium=med, n_bubbles=60,
+        rng=np.random.default_rng(5), **HISTO_SIM)
+    # Open-loop fixed-amplitude pulse train (histotripsy does not throttle power):
+    # targets above range so power stays at full; the per-pulse signal is the
+    # genuinely simulated broadband-dominated population emission.
+    ts = simulated_monitor_timeseries(
+        kw, f0=1.0e6, medium=med, n_bubbles=12, n_pulses=70,
+        prf_hz=max(sc.prf, 1.0), p_start_pa=1.0e6,
+        p_lo_pa=0.8e6, p_hi_pa=1.0e6,
+        target_signal=1e30, inertial_cap=1e30, gain=0.02, seed=21,
+        sim_kwargs=HISTO_SIM)
+
+    fig = plot_cavitation_monitor(
+        spectrum=(demo["freqs"], demo["psd"]), f0_hz=1.0e6, rel_halfwidth=0.18,
+        timeseries=ts, spot=spot,
+        title=f"Histotripsy real-time cavitation monitor — {sc.label}",
+        modality_note="Simulated polydisperse-population emission (short pulses → "
+                      "broadband-dominated); per-spot dose set by steering + liver attenuation.")
+    b64 = save_fig(fig, "fig19_cavitation_monitor")
+    plt.close(fig)
+    print(f"  saved fig19_cavitation_monitor; "
+          f"{100.0 * (spot['dose'] >= spot['goal']).mean():.0f}% of raster reaches goal")
+    return b64
+
+
+def plot_raster_pulsing_fig(scenarios) -> str:
+    """Subspot-grid pulsing: SEQUENTIAL vs INTERLEAVED (ch21e fig20).
+
+    Simulates the electronically-steered subspot raster fired over time under
+    the two clinical pulsing orders, using the time-resolved
+    ``simulate_raster_pulsing`` (Rust ``electronic_steering_efficiency`` +
+    ``prf_efficacy_factor`` residual-bubble shielding + thermal relaxation). The
+    per-spot cavitation-vs-pressure response is the chapter's intrinsic-threshold
+    physics. Shows why interleaving is used: each subspot rests between pulses
+    (Δt = N/PRF instead of 1/PRF), avoiding residual-bubble shielding and heat
+    concentration at the same total throughput.
+    """
+    print("[fig20] Subspot-grid pulsing: sequential vs interleaved (Rust core)")
+    sc = next((s for s in scenarios if s.regime == "intrinsic"), scenarios[0])
+    lat = np.linspace(-10e-3, 10e-3, 7)
+    axl = np.linspace(-8e-3, 8e-3, 5)
+    LAT, AX = np.meshgrid(lat, axl, indexing="xy")
+    spot_lat = LAT.ravel()
+    spot_ax = AX.ravel()
+    p_sweep = np.linspace(0.0, 35.0e6, 80)
+    pt = float(intrinsic_threshold_tissue_pa(HCC, sc.f0))
+    cav_dose = np.asarray(kw.intrinsic_threshold_cavitation_probability(
+        p_sweep, pt, HCC.pt_sigma_pa)) * collapse_strength(p_sweep, sc.f0)
+    atten = LIVER.alpha0 * (sc.f0 / 1e6) ** LIVER.y_pow
+
+    # Residual-bubble dissolution time τ_d from FIRST PRINCIPLES: the complete
+    # Epstein–Plesset gas-diffusion model (kwavers-physics) for a ~1 µm residual
+    # nucleus in partially-degassed liquid — replaces the literature value.
+    tau_d = float(kw.epstein_plesset_dissolution_time(1.0e-6, 0.5))
+    # Choose PRF above 1/τ_d so consecutive same-spot pulses shield (sequential),
+    # while interleaving (Δt = N/PRF ≫ τ_d) lets the cloud dissolve.
+    prf = max(2.0 / tau_d, 200.0)
+    pulses = 40
+    print(f"  Epstein-Plesset tau_d = {tau_d*1e3:.1f} ms (1 um nucleus); PRF = {prf:.0f} Hz")
+    central_dose = float(np.interp(sc.pnp, p_sweep, cav_dose))
+    goal = 0.6 * central_dose * pulses
+
+    common = dict(
+        kw=kw, spot_lateral_m=spot_lat, spot_axial_m=spot_ax,
+        p_target_pa=sc.pnp, f0_hz=sc.f0, c_m_s=LIVER.c,
+        cav_pressures_pa=p_sweep, cav_dose_per_pulse=cav_dose,
+        pulses_per_spot=pulses, prf_hz=prf, attenuation_np_m=atten,
+        tau_dissolution_s=tau_d, shielding_g=1.2,
+        tau_thermal_s=0.5, thermal_gain_k_per_pulse=1.5, goal_dose=goal)
+    seq = simulate_raster_pulsing(schedule="sequential", **common)
+    inter = simulate_raster_pulsing(schedule="interleaved", **common)
+    print(f"  sequential : dt_spot={seq['dt_spot_s']*1e3:.1f}ms eff={seq['efficacy']:.2f} "
+          f"peakT={seq['per_spot_peak_temp'].max():.1f}K cover={seq['coverage'][-1]*100:.0f}%")
+    print(f"  interleaved: dt_spot={inter['dt_spot_s']*1e3:.1f}ms eff={inter['efficacy']:.2f} "
+          f"peakT={inter['per_spot_peak_temp'].max():.1f}K cover={inter['coverage'][-1]*100:.0f}%")
+
+    fig, axes = plt.subplots(1, 3, figsize=(15, 4.4))
+    ny, nx = LAT.shape
+    extent = [lat.min() * 1e3, lat.max() * 1e3, axl.min() * 1e3, axl.max() * 1e3]
+
+    axA = axes[0]
+    axA.plot(seq["time"], seq["coverage"] * 100, color="#d62728", lw=1.8, label="Sequential")
+    axA.plot(inter["time"], inter["coverage"] * 100, color="#2ca02c", lw=1.8, label="Interleaved")
+    axA.set_xlabel("Treatment time (s)")
+    axA.set_ylabel("Subspots reaching cavitation goal (%)")
+    axA.set_ylim(0, 105)
+    axA.set_title("(A) Coverage vs time\n"
+                  f"shielding efficacy: seq={seq['efficacy']:.2f}, inter={inter['efficacy']:.2f}")
+    axA.legend(loc="lower right", fontsize=8)
+
+    vmax = max(seq["per_spot_peak_temp"].max(), inter["per_spot_peak_temp"].max(), 1e-9)
+    axB = axes[1]
+    im = axB.imshow(seq["per_spot_peak_temp"].reshape(ny, nx), origin="lower",
+                    extent=extent, aspect="auto", cmap="inferno", vmin=0, vmax=vmax)
+    axB.set_xlabel("Lateral offset (mm)")
+    axB.set_ylabel("Axial offset (mm)")
+    axB.set_title(f"(B) Peak ΔT/subspot — SEQUENTIAL\nmax {seq['per_spot_peak_temp'].max():.1f} K")
+    fig.colorbar(im, ax=axB, fraction=0.046, pad=0.04, label="peak ΔT (K)")
+
+    axC = axes[2]
+    im2 = axC.imshow(inter["per_spot_peak_temp"].reshape(ny, nx), origin="lower",
+                     extent=extent, aspect="auto", cmap="inferno", vmin=0, vmax=vmax)
+    axC.set_xlabel("Lateral offset (mm)")
+    axC.set_ylabel("Axial offset (mm)")
+    axC.set_title(f"(C) Peak ΔT/subspot — INTERLEAVED\nmax {inter['per_spot_peak_temp'].max():.1f} K")
+    fig.colorbar(im2, ax=axC, fraction=0.046, pad=0.04, label="peak ΔT (K)")
+
+    fig.suptitle(f"Subspot-grid pulsing — sequential vs interleaved ({sc.label}; "
+                 f"{spot_lat.size} spots, {pulses} pulses/spot, PRF {prf:.0f} Hz)",
+                 fontsize=12, y=1.02)
+    fig.tight_layout()
+    b64 = save_fig(fig, "fig20_subspot_pulsing")
+    plt.close(fig)
+    print("  saved fig20_subspot_pulsing")
+    return b64
+
+
 def main():
     if not os.path.exists(CT_PATH):
         raise SystemExit(f"CT not found: {CT_PATH}. Download KiTS19 case_00000 first.")
@@ -3190,6 +3511,9 @@ def main():
                                   gtv, ctv, ptv, oar_masks=oar_masks)
     b64_dvh = plot_dvh_and_volumes(ct, label_vol, info, results,
                                    gtv, ctv, ptv, sized_scenarios)
+    b64_pcd = plot_passive_cavitation_dose(label_vol, info, results, sized_scenarios)
+    b64_mon = plot_cavitation_monitor_fig(sized_scenarios)
+    b64_puls = plot_raster_pulsing_fig(sized_scenarios)
     b64_anim = make_sonication_animation(ct, label_vol, info, results, sized_scenarios,
                                          gtv, ctv, ptv, oar_masks=oar_masks)
     # Strategy-comparison animation: pick the shock-vapor scenario
@@ -3541,6 +3865,83 @@ def main():
             "the planning volumes only.\n\n"
         )
         f.write(f"![DVH and volumes](data:image/png;base64,{b64_dvh})\n\n")
+        f.write("### Figure 21.22b — Passive-cavitation inertial dose over $V_s$\n\n")
+        f.write(
+            "Real-time passive-cavitation-emission dose monitoring over the "
+            "tumour sonication volume $V_s$, the histotripsy analogue of the "
+            "InsighTec Exablate harmonic-dose controller used for BBB opening "
+            "(ch24 fig09). The receive aperture integrates the acoustic emission "
+            "from the focal volume; the dose is decomposed into harmonic, "
+            "stable (sub- + ultraharmonic) and broadband (inertial) bands in the "
+            "kwavers Rust core. Histotripsy operates by intrinsic-threshold "
+            "*inertial* cavitation, so its emission is broadband-dominated and "
+            "the stable sub/ultraharmonic signature that gates reversible BBB "
+            "opening is essentially absent — the controllable quantity here is "
+            "the inertial cavitation dose (ICD), not a stable harmonic dose.\n\n"
+            "Panel A shows the per-pulse broadband emission source over the focal "
+            "slice (∝ Maxwell-2013 cavitation probability × Rayleigh collapse "
+            "violence), with the native HCC segmentation $V_s$ outlined. Panel B "
+            "accumulates the $V_s$-integrated ICD over the raster sonication for "
+            "all three clinical regimes (Rust `emission_energy_in_volume` over "
+            "$V_s$ × `cumulative_cavitation_dose` over the pulse train). Panel C "
+            "shows the emission band split of a polydisperse free-bubble "
+            "population driven into the inertial regime (~1 MPa) by the TRUE "
+            "adaptive Keller–Miksis solver — a large broadband fraction (from the "
+            "emergent inertial collapses) versus the near-pure-harmonic spectrum "
+            "of the same population at sub-threshold drive. The intrinsic-threshold "
+            "histotripsy regime (15–30 MPa) is beyond fixed-step ODE stability, so "
+            "the population is simulated at the highest tractable inertial "
+            "amplitude; the broadband dominance is emergent, not imposed.\n\n"
+        )
+        f.write(f"![Passive cavitation dose](data:image/png;base64,{b64_pcd})\n\n")
+        f.write("### Figure 21.22c — Real-time cavitation monitor (clinical sonication screen)\n\n")
+        f.write(
+            "The operational view during a sonication, mirroring the clinical "
+            "real-time monitor (e.g. the InsighTec Exablate sonication screen) "
+            "adapted to intrinsic-threshold inertial histotripsy. Panel A shows "
+            "the acoustic spectrum received by the transducer with the cavitation "
+            "lines marked — the subharmonic $f_0/2$ (stable-cavitation marker), the "
+            "fundamental $f_0$, and the ultraharmonics — and the inter-peak floor "
+            "being the broadband (inertial) signal. Histotripsy emission is "
+            "broadband-dominated, so the floor sits high relative to the lines "
+            "(contrast the BBB monitor ch24 fig10, where a sharp subharmonic rises "
+            "over a low floor). Panel B is the live feedback: the per-pulse "
+            "cavitation signal (orange, spiky from stochastic nucleation) and the "
+            "applied power (green). Panel C is the cumulative cavitation dose "
+            "climbing toward the prescribed goal (yellow). Panel D adds the spatial "
+            "dimension the single-point monitor cannot show — the per-subspot dose "
+            "distribution across the electronically-steered raster, which contracts "
+            "with steering offset (Rust `electronic_steering_efficiency`) and liver "
+            "attenuation; only the inner envelope reaches the goal, which is why "
+            "peripheral targets require mechanical repositioning. The "
+            "cavitation-versus-pressure response uses the chapter's own "
+            "intrinsic-threshold physics (`intrinsic_threshold_cavitation_probability` "
+            "× `collapse_strength`); all dose, spectral and steering computation runs "
+            "in the kwavers Rust core.\n\n"
+        )
+        f.write(f"![Cavitation monitor](data:image/png;base64,{b64_mon})\n\n")
+        f.write("### Figure 21.22d — Subspot-grid pulsing: sequential vs interleaved\n\n")
+        f.write(
+            "The focal raster is not a single spot — it is a grid of electronically-"
+            "steered subspots, and the ORDER they are fired in matters. This figure "
+            "simulates the subspot grid over time under the two clinical pulsing "
+            "schedules. **Sequential**: all pulses at one subspot, then the next — "
+            "consecutive pulses at a spot are 1/PRF apart. **Interleaved**: round-"
+            "robin across the grid — a spot rests N/PRF between its pulses while the "
+            "others fire. Two emergent effects differentiate them, both from the "
+            "per-spot inter-pulse interval Δt: (1) residual-bubble shielding "
+            "(Macoskey 2018, Rust `prf_efficacy_factor`) desensitises a spot when "
+            "Δt < bubble dissolution time τ_d — sequential (short Δt) is shielded, "
+            "interleaved (long Δt) is not; (2) thermal accumulation — sequential "
+            "concentrates heat at one spot, interleaved lets each cool. Panel A is "
+            "the fraction of subspots reaching the cavitation goal versus treatment "
+            "time (interleaved reaches more, at equal throughput); panels B and C "
+            "are the peak per-subspot temperature rise on a common scale "
+            "(sequential concentrates heat, interleaved spreads it). Steering "
+            "efficiency (`electronic_steering_efficiency`), shielding and the "
+            "cavitation-vs-pressure response all run in the kwavers Rust core.\n\n"
+        )
+        f.write(f"![Subspot pulsing](data:image/png;base64,{b64_puls})\n\n")
         f.write("### Figure 21.23 — Sonication animation (real-time, synchronised)\n\n")
         f.write(
             "Animated GIF of the raster scan progressing in **real treatment "

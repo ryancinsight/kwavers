@@ -1,6 +1,6 @@
-//! PyO3 bindings for `kwavers::physics::analytical::thermal`.
+//! PyO3 bindings for `kwavers_physics::analytical::thermal`.
 
-use kwavers::physics::analytical::thermal;
+use kwavers_physics::analytical::thermal;
 use ndarray::Array2;
 use numpy::{IntoPyArray, PyArray1, PyArray2, PyReadonlyArray1};
 use pyo3::exceptions::PyRuntimeError;
@@ -237,8 +237,7 @@ pub fn adiabatic_temperature_rise_kelvin(
     let tau_s = tau_arr
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-    let result =
-        thermal::adiabatic_temperature_rise_kelvin(q_s, tau_s, density, specific_heat);
+    let result = thermal::adiabatic_temperature_rise_kelvin(q_s, tau_s, density, specific_heat);
     Ok(result.into_pyarray(py).unbind())
 }
 

@@ -2,7 +2,7 @@ use numpy::{PyArray1, PyArray2, PyReadonlyArray1};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
-use kwavers::domain::signal::SignalWindowType;
+use kwavers_domain::signal::SignalWindowType;
 
 #[pyfunction]
 #[pyo3(signature = (sample_rate_hz, signal_freq_hz, num_cycles, signal_offset=0, signal_length=None, window="Gaussian", amplitude=1.0, phase=0.0))]
@@ -32,7 +32,7 @@ fn tone_burst(
         }
     };
     let signal =
-        kwavers::domain::signal::tone_burst_series(&kwavers::domain::signal::ToneBurstSpec {
+        kwavers_domain::signal::tone_burst_series(&kwavers_domain::signal::ToneBurstSpec {
             sample_rate_hz,
             signal_freq_hz,
             num_cycles,
@@ -64,7 +64,7 @@ fn create_cw_signals(
         .as_slice()
         .map_err(|_| PyValueError::new_err("Failed to read phases"))?;
     let signals =
-        kwavers::domain::signal::create_cw_signals(t_slice, frequency_hz, amp_slice, phase_slice)
+        kwavers_domain::signal::create_cw_signals(t_slice, frequency_hz, amp_slice, phase_slice)
             .map_err(|e| PyRuntimeError::new_err(format!("{:?}", e)))?;
     Ok(PyArray2::from_owned_array(py, signals).into())
 }
@@ -90,7 +90,7 @@ fn get_win(
             )))
         }
     };
-    let window = kwavers::domain::signal::window::get_win(wtype, n, symmetric);
+    let window = kwavers_domain::signal::window::get_win(wtype, n, symmetric);
     Ok(PyArray1::from_vec(py, window).into())
 }
 

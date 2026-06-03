@@ -1,13 +1,13 @@
 //! Internal helpers: operator parsing, boundary parsing, array conversion,
 //! observation stack construction, and error conversion for breast FWI bindings.
 
-use kwavers::solver::inverse::fwi::frequency_domain::{
+use kwavers_solver::inverse::fwi::frequency_domain::{
     AbsorbingBoundary, Config, DenseConvergentBornOperator, FrequencyObservation,
     HelmholtzForwardOperator, PstdFiniteWindowBornOperator, PstdFiniteWindowBornSecondOrderOperator,
     PstdSpectralConvergentBornOperator,
     PstdTemporalTransferConfig, SingleScatterBornOperator, SpectralConvergentBornOperator,
 };
-use kwavers::domain::source::transducers::ElementPosition;
+use kwavers_domain::source::transducers::ElementPosition;
 use ndarray::{s, Array2, Array3};
 use num_complex::Complex64;
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
@@ -139,7 +139,7 @@ pub(super) fn observations_from_stack(
         .collect())
 }
 
-pub(super) fn kwavers_to_py(err: kwavers::core::error::KwaversError) -> PyErr {
+pub(super) fn kwavers_to_py(err: kwavers_core::error::KwaversError) -> PyErr {
     PyRuntimeError::new_err(format!("kwavers breast FWI failed: {err}"))
 }
 

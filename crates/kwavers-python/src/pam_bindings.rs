@@ -2,13 +2,13 @@
 //!
 //! These functions keep the Python boundary thin: NumPy arrays are borrowed as
 //! read-only ndarray views and the authoritative validation/beamforming contract
-//! lives in `kwavers::analysis::signal_processing::pam`.
+//! lives in `kwavers_analysis::signal_processing::pam`.
 
-use kwavers::analysis::signal_processing::beamforming::{
+use kwavers_analysis::signal_processing::beamforming::{
     beamform_image_das, ImagingDasApodization, ImagingDasConfig,
 };
-use kwavers::analysis::signal_processing::pam::delay_and_sum::ApodizationType;
-use kwavers::analysis::signal_processing::pam::{DelayAndSumConfig, DelayAndSumPAM};
+use kwavers_analysis::signal_processing::pam::delay_and_sum::ApodizationType;
+use kwavers_analysis::signal_processing::pam::{DelayAndSumConfig, DelayAndSumPAM};
 use numpy::{PyArray1, PyReadonlyArray2};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;

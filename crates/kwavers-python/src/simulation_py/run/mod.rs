@@ -1,7 +1,7 @@
 mod helpers;
 pub(crate) mod sources;
 
-use kwavers::core::error::KwaversError;
+use kwavers_core::error::KwaversError;
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 

@@ -14,8 +14,19 @@ name = "pykwavers"
 crate-type = ["cdylib"]  # Dynamic library for Python import
 
 [dependencies]
-# Core kwavers library
-kwavers = { path = "../../kwavers", default-features = false, features = ["minimal"] }
+# Layered kwavers crates — depended on directly (no facade; ADR 011 amendment).
+# kwavers-core keeps `channels`+`registration` (flume/ritk-registration were
+# always-on in the former facade).
+kwavers-core = { path = "../kwavers-core", features = ["channels", "registration"] }
+kwavers-math = { path = "../kwavers-math" }
+kwavers-domain = { path = "../kwavers-domain" }
+kwavers-physics = { path = "../kwavers-physics" }
+kwavers-solver = { path = "../kwavers-solver" }
+kwavers-analysis = { path = "../kwavers-analysis" }
+kwavers-simulation = { path = "../kwavers-simulation" }
+kwavers-diagnostics = { path = "../kwavers-diagnostics" }
+kwavers-therapy = { path = "../kwavers-therapy" }
+kwavers-gpu = { path = "../kwavers-gpu" }
 burn = { version = "0.19", features = ["ndarray"] }
 ritk-io = { workspace = true }
 
@@ -43,8 +54,17 @@ serde_json = "1.0"
 [features]
 default = ["minimal"]
 minimal = []
-gpu = ["kwavers/gpu"]
-plotting = ["kwavers/plotting"]
-full = ["kwavers/full"]
+gpu = [
+    "kwavers-gpu/gpu",
+    "kwavers-core/gpu",
+    "kwavers-math/gpu",
+    "kwavers-solver/gpu",
+    "kwavers-analysis/gpu",
+    "kwavers-simulation/gpu",
+    "kwavers-diagnostics/gpu",
+]
+plotting = ["kwavers-analysis/plotting"]
+pinn = ["kwavers-solver/pinn", "kwavers-analysis/pinn", "kwavers-diagnostics/pinn"]
+full = ["gpu", "plotting", "pinn"]
 
 # Profiles are defined at workspace root (Cargo.toml)

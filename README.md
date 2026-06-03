@@ -31,131 +31,59 @@
 
 ## 📊 Current Development Status
 
-**Current Sprint**: Sprint 218 Session 2 ✅ Complete (2026-02-22)  
-**Next Focus**: Sprint 219 - Performance Profiling and Research GPU integrations (BURN)
+**Recently completed:** the workspace crate split (ADR-011) — the ~460k-LOC
+`kwavers` monolith is decomposed into per-layer crates to cut incremental build
+times. There is **no facade**: consumers (including the Python bindings) depend on
+the layer crates directly (`kwavers_core`, `kwavers_domain`, `kwavers_solver`, …).
+The `kwavers` crate is now only a thin top-level **app/integration** crate — it
+hosts the binary and the cross-cutting tests/examples/benches, and re-exports
+nothing.
 
-The library is under active development with exceptional architectural health. Sprint 218 Session 2 achieved a major milestone: **1-to-1 validation parity with k-Wave (MATLAB/Python).** We built `pykwavers` wrappers mirroring the `k-wave-python` API, validating Grids, Signals, Utilities, Sources, Sensors, and Solvers across full 3D end-to-end PSTD execution pipelines. 
+### Workspace layout
 
-| Component | Status | Notes |
-|-----------|--------|-------|
-| **Core Library** | ✅ Compiles Clean | Zero compilation errors, zero warnings, 9.80s build time |
-| **Architecture** | ✅ Exceptional (98/100) | Zero circular deps, 100% layer compliance, SSOT verified |
-| **Test Suite** | ✅ 100% Pass | 2040/2040 tests passing (Sprint 218 Session 1 verified) |
-| **PSTD Solver** | ✅ Validated | Simulated and cross-validated against k-wave-python |
-| **Documentation** | ✅ Current | API docs complete, comprehensive audit docs |
-| **Physics Models** | ✅ Implemented | Core models validated, research integration ready |
-| **Code Quality** | ✅ Excellent | Zero warnings, architectural excellence, 100% pass rate |
+| Crate | Layer / responsibility |
+|-------|------------------------|
+| `kwavers-core` | Constants, error types, arena allocation, time/logging utilities |
+| `kwavers-math` | FFT, linear algebra, numerics, geometry, statistics, SIMD |
+| `kwavers-domain` | Grid, medium, source, sensor, boundary, field, signal, imaging, therapy models |
+| `kwavers-physics` | Nonlinear acoustics, bubble dynamics, thermal, optics, chemistry, elastic waves |
+| `kwavers-solver` | FDTD / PSTD / k-space / Helmholtz, BEM, FWI / RTM / CBS, PINN |
+| `kwavers-analysis` | Signal processing, beamforming, validation, ML/uncertainty, plotting |
+| `kwavers-simulation` | Builders, runners, multi-physics coupling, modality pipelines, backends |
+| `kwavers-diagnostics` | Reconstruction, multi-modal fusion, Doppler, spectroscopy, decision support |
+| `kwavers-therapy` | HIFU / histotripsy / lithotripsy planning, theranostic guidance, dose & safety |
+| `kwavers-gpu` | wgpu/WGSL compute backend (leaf above solver); concrete `ComputeBackend` impls |
+| `kwavers` | Thin top-level app/integration crate: binary + cross-cutting tests/examples/benches (no re-exports) |
+| `kwavers-python` | PyO3 bindings (`pykwavers`); depends on the layer crates directly; no domain logic |
 
-### Recent Achievements
+Layer crates are at `3.0.0`; the completed split targets `4.0.0` (see
+[RELEASE_v4.0.0 notes in CHANGELOG](CHANGELOG.md)). `kwavers-python` is `0.1.0`.
 
-**Sprint 218 Session 2** (2026-02-22 - Complete):
-- ✅ **Structural Parity**: Established zero-overhead bindings in `pykwavers` for `Grid`, `Source`, `Sensor`, `Medium`, and `Simulation`.
-- ✅ **Validation Suite**: Implemented `validate_against_kwave.py` and `test_sim.py` cross-verifying outputs with `kspaceFirstOrder3D`.
-- ✅ **Grid & Array Alignments**: Unified array slicing, type casting, floating-point geometry boundaries (`1e-10` relative tolerance).
-- ✅ **Engine Cross-Validation**: Confirmed execution of boundary conditions, exact signal inputs, point/mask sources, and solver extraction.
-- 🎯 **Next**: GPU translation mapping (Burn) framework execution.
+Validation status: `pykwavers` reaches 1-to-1 PSTD parity with k-Wave /
+k-wave-python / KWave.jl on the homogeneous-water IVP benchmark (Pearson
+r ≥ 0.9999 across 1-D/2-D/3-D; see [Reference Benchmark Coverage](#reference-benchmark-coverage)).
 
-**Sprint 218 Session 1** (2026-02-05 - Complete):
-- ✅ **Unsafe Code Documentation Framework** (3/116 blocks documented, framework complete)
-- ✅ **Mandatory SAFETY Template** created with INVARIANTS/ALTERNATIVES/PERFORMANCE requirements
-- ✅ **Verification Checklists** established for SIMD, GPU, and arena allocators
-- ✅ **coupling/types.rs Implementation** (204 lines with comprehensive tests)
-- ✅ **Shared Type Extraction** (PhysicsDomain, CouplingType, FrequencyProfile, TransmissionCondition)
-
-**Sprint 217 Session 1** (2026-02-04 - Complete):
-- ✅ **Comprehensive Architectural Audit** (98/100 Architecture Health Score)
-- ✅ **Zero Circular Dependencies Confirmed** across all 1,303 source files
-- ✅ **100% Layer Compliance** verified through all 9 Clean Architecture layers
-- ✅ **1 SSOT Violation Fixed** (`SOUND_SPEED_WATER` duplication eliminated)
-- ✅ **Large File Analysis** identified 30 files > 800 lines for refactoring
-- ✅ **116 Unsafe Blocks Audited** (documentation required in next session)
-- ✅ **Foundation Validated** for research integration (k-Wave, jwave, BURN)
-- 📊 Import pattern analysis: 1,565 internal imports verified correct flow
-- 📊 Bounded context verification: All 8 domain contexts properly isolated
-- 📊 Build metrics: 32.88s compilation, 2009/2009 tests passing
-
-**Sprint 216 Sessions 1-4** (2026-01-27 to 2026-01-31 - Complete):
-- ✅ **Temperature-Dependent Properties** (Duck 1990 implementation)
-- ✅ **Energy Conservation Framework** (complete bubble energy balance)
-- ✅ **Conservation Diagnostics** (real-time energy/momentum/mass tracking)
-- ✅ **KZK & Westervelt Integration** (conservation law enforcement)
-- ✅ 11 compilation fixes, 2 GPU fixes
-- ✅ 20 new tests added (1990/1990 total, 100% pass rate)
-- ✅ Mathematical specifications documented with literature references
-
-**Sprint 214 Sessions 1-2** (2026-02-01 to 2026-02-02 - Complete):
-- ✅ **Complex Hermitian Eigendecomposition** (Golub & Van Loan algorithm)
-- ✅ **AIC/MDL Model Order Selection** (Wax & Kailath 1985)
-- ✅ **MUSIC Algorithm** (Schmidt 1986 super-resolution DOA)
-- ✅ Unblocked subspace-based localization pipeline
-- ✅ 21 new tests (13 AIC/MDL + 8 MUSIC)
-- ✅ 1969/1969 tests passing (zero regressions)
-
-**Sprint 213 Sessions 1-3** (2026-01-31 - Complete):
-- ✅ **100% Compilation Cleanup** (Zero errors across all files)
-- ✅ Fixed 10/10 example/test/benchmark files (7 examples, 1 benchmark, 3 tests)
-- ✅ Zero circular dependencies validated (architectural audit complete)
-- ✅ Enhanced module exports (localization, uncertainty)
-- ✅ Removed placeholder tests (upholds "no placeholders" principle)
-- ✅ 1947/1947 tests passing (regression-free)
-- ✅ Clean baseline for Phase 2 research integration
-- 📊 Build time: 12.73s (stable), zero compilation errors
-
-**Sprint 212 Phase 2** (2025-01-15 - Complete):
-- ✅ **Boundary Condition Loss Implementation** (P1 blocker resolved)
-- ✅ Implemented Dirichlet BC enforcement (u=0 on all 6 domain faces)
-- ✅ Integrated BC loss into training loop with proper weighting
-- ✅ Mathematical specification documented (Raissi et al. 2019)
-
-**Sprint 212 Phase 1** (2025-01-15 - Complete):
-- ✅ **Elastic Shear Speed Implementation** (P0 blocker resolved)
-- ✅ Implemented c_s = sqrt(μ / ρ) for all medium types
-- ✅ Mathematical specification documented with literature references
-
-**Sprint 213 Key Improvements**:
-- ✅ **Session 1**: Architectural validation, AVX-512/BEM clippy fixes, optical map enhancements
-- ✅ **Session 2**: 9/10 files fixed (sonoluminescence, elastography, uncertainty modules)
-- ✅ **Session 3**: Final test cleanup, removed placeholder tests for unimplemented MUSIC
-- ✅ Total effort: 5 hours → 100% compilation cleanup
-- ✅ Research integration roadmap created (1035 lines, 6-phase plan)
-
-**Quality Improvements (Sprints 207-213)**:
-- Zero compilation errors (100% clean build)
-- Zero circular dependencies (architectural validation complete)
-- Zero deprecated code (100% technical debt elimination)
-- Zero placeholder tests (test integrity enforced)
-- Zero unsafe defaults (type-system enforced correctness)
-- Mathematical correctness enforced across all implementations
-- Clean Architecture compliance (DDD bounded contexts, Strategy Pattern)
-- 1947/1947 tests passing (Sprint 213 complete, regression-free)
-
-**Refactoring Success Pattern (Sprints 203-213)**:
-- ✅ Differential operators (Sprint 203)
-- ✅ Fusion module (Sprint 204)
-- ✅ Photoacoustic module (Sprint 205)
-- ✅ Burn Wave Equation 3D (Sprint 206)
-- ✅ Build artifacts cleanup (Sprint 207)
-- ✅ Deprecated code elimination (Sprint 208)
-- ✅ Clinical acoustic solver (Sprint 211)
-- ✅ Elastic shear speed (Sprint 212 Phase 1)
-- ✅ PINN BC loss enforcement (Sprint 212 Phase 2)
-- ✅ Compilation cleanup (Sprint 213 Sessions 1-3)
-- **Pattern**: 100% API compatibility, mathematical correctness first, zero technical debt, no placeholders, no regressions
+Detailed history lives in [`CHANGELOG.md`](CHANGELOG.md); current work and gaps
+are tracked in [`backlog.md`](backlog.md), [`CHECKLIST.md`](CHECKLIST.md), and
+[`gap_audit.md`](gap_audit.md).
 
 ### Architecture Overview
 
 Kwavers follows a layered architecture designed for scientific computing:
 
 ```
-Clinical Layer     → Research applications, safety compliance
-Analysis Layer     → Signal processing, imaging algorithms
-Simulation Layer   → Multi-physics orchestration
-Solver Layer       → Numerical methods (FDTD, PSTD, PINN)
-Physics Layer      → Mathematical specifications
-Domain Layer       → Problem geometry, materials, sources
-Math Layer         → Linear algebra, FFT, numerical primitives
-Core Layer         → Fundamental types, error handling
+Therapy / Diagnostics → Clinical planning, theranostic guidance, dose & safety
+Simulation Layer      → Multi-physics orchestration, modality pipelines
+Analysis Layer        → Signal processing, beamforming, imaging algorithms
+Solver Layer          → Numerical methods (FDTD, PSTD, k-space, FWI, PINN)
+Physics Layer         → Wave equations, bubble dynamics, constitutive relations
+Domain Layer          → Problem geometry, materials, sources, sensors
+Math Layer            → Linear algebra, FFT, numerical primitives
+Core Layer            → Fundamental types, error handling
 ```
+
+The module DAG is acyclic and linear (`core → math → domain → physics → solver →
+analysis → simulation → diagnostics/therapy`); each layer is now its own crate.
 
 Key architectural decisions:
 - **Layer Separation**: Unidirectional dependencies prevent circular imports
@@ -259,7 +187,9 @@ fn main() {
 
 - **[API Reference](https://docs.rs/kwavers)** - Generated Rust documentation
 - **[Examples](examples/)** - Basic usage examples
-- **Development Docs** - See `docs/` directory for planning and design documents
+- **[The Kwavers book](docs/book/)** - Chapters, figures, validation narratives
+- **[Architecture Decision Records](docs/ADR/)** - Design decisions (incl. ADR-011 crate split)
+- **[Documentation index](docs/README.md)** - What lives under `docs/`
 
 ### 🎯 Basic Usage
 
@@ -310,18 +240,19 @@ This is an active research project under development. Contributions are welcome!
 
 ### 🚀 Getting Started
 
-1. **Check Status**: Review `checklist.md` for current sprint status
-2. **Review Plans**: See `backlog.md` for planned work
-3. **Build Project**: `cargo check` (builds in ~12s)
-4. **Run Tests**: `cargo test` (comprehensive test suite)
-5. **Read Docs**: See `docs/sprints/` for sprint summaries
+1. **Check Status**: Review [`CHECKLIST.md`](CHECKLIST.md) for current task status
+2. **Review Plans**: See [`backlog.md`](backlog.md) for planned work and [`gap_audit.md`](gap_audit.md) for known gaps
+3. **Build a crate**: `cargo check -p kwavers-core` (per-crate checks are fast post-split)
+4. **Run Tests**: `cargo test -p <crate>` or `cargo nextest run`
+5. **Read Docs**: [`docs/book/`](docs/book/) for narratives, [`docs/ADR/`](docs/ADR/) for design decisions
 
 ### 📊 Development Approach
 
-**Sprint-Based Development**:
-- Sprint 207 (Current): Comprehensive cleanup & enhancement
-- Sprint 208 (Next): Large file refactoring & deprecated code removal
-- Future: Research integration from k-Wave, jwave, and related projects
+**Artifact-driven sprints** (see [`CLAUDE.md`](CLAUDE.md) governance):
+- `backlog.md` — strategy and prioritized work
+- `CHECKLIST.md` — tactical tasks with change-class tags
+- `gap_audit.md` — physics/numerics gap findings
+- `CHANGELOG.md` — version history
 
 **Quality Standards**:
 - Zero compilation errors (enforced)
@@ -342,21 +273,11 @@ Kwavers is being enhanced with methods from leading ultrasound simulation projec
 - **dbua**: Neural beamforming, real-time inference
 - **simsonic**: Advanced tissue models, multi-modal integration
 
-### 📊 Sprint History
+### 📊 History
 
-Recent sprint documentation can be found in `docs/sprints/`:
-- Sprints 193-206: Large file refactoring campaign (all successful)
-- Sprint 207: Comprehensive cleanup (Phase 1 complete)
-- Sprint 208: Deprecated code elimination (Phase 1 complete - 17 items removed)
-- Pattern: Deep vertical hierarchy, Clean Architecture, 100% compatibility, zero technical debt
-
-**Recent Sprint Highlights**:
-- **Sprint 217**: Comprehensive architectural audit (98/100 score), zero circular deps confirmed, SSOT compliance
-- **Sprint 216**: Temperature-dependent properties, energy conservation, conservation diagnostics
-- **Sprint 214**: Complex eigendecomposition, AIC/MDL, MUSIC algorithm (super-resolution localization)
-- **Sprint 213**: 100% compilation cleanup (10/10 files), zero errors, zero placeholder tests
-- **Sprint 212**: PINN BC loss, elastic shear speed, mathematical correctness
-- **Pattern**: Architectural excellence, mathematical rigor, zero technical debt
+Per-version history is consolidated in [`CHANGELOG.md`](CHANGELOG.md). The
+historical per-sprint/per-phase reports formerly under `docs/` were pruned
+during the workspace-split docs cleanup and remain recoverable from git history.
 
 ## 📄 License
 

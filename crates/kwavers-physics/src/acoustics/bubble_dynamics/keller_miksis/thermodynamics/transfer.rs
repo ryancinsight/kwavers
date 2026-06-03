@@ -31,7 +31,25 @@ pub(crate) fn update_mass_transfer(
     // Convert mol/s → molecules: ΔN = J_mol · dt · N_A
     let dn_vapor = molar_flux * dt * AVOGADRO;
 
-    state.n_vapor = (state.n_vapor + dn_vapor).max(0.0);
+    // Equilibrium clamp. The Hertz-Knudsen flux drives the vapor partial pressure
+    // toward saturation `p_sat`; the corresponding equilibrium vapor content at
+    // the current volume and temperature (ideal gas) is
+    //   N_eq = p_sat · V · N_A / (R · T).
+    // An explicit Euler step must not OVERSHOOT this equilibrium — overshooting
+    // adds vapor beyond saturation, which raises the internal pressure, expands
+    // the bubble, enlarges the interfacial area, and evaporates still more,
+    // producing a non-physical runaway (a 3 µm bubble blowing up to ~mm scale).
+    // Clamping the step at `N_eq` keeps evaporation/condensation equilibrium-
+    // limited (the kinetics set only how fast saturation is approached).
+    let volume = state.volume();
+    let n_vapor_eq = if state.temperature > 0.0 {
+        p_sat * volume * AVOGADRO / (R_GAS * state.temperature)
+    } else {
+        state.n_vapor
+    };
+    let proposed = state.n_vapor + dn_vapor;
+    let overshoots = (state.n_vapor - n_vapor_eq) * (proposed - n_vapor_eq) < 0.0;
+    state.n_vapor = if overshoots { n_vapor_eq } else { proposed }.max(0.0);
 
     let n_total_new = state.n_gas + state.n_vapor;
     if n_total_new < 0.0 || n_total_new.is_nan() || n_total_new.is_infinite() {

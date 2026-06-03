@@ -2,11 +2,11 @@
 //! (`ali_2025_breast_fwi_frequency_sweep_hz`, `simulate_breast_fwi_frequency_observation`,
 //! `snap_breast_fwi_array_to_grid`, `invert_breast_fwi`).
 
-use kwavers::clinical::imaging::reconstruction::breast_ust_fwi::{
+use kwavers_diagnostics::reconstruction::breast_ust_fwi::{
     reconstruct_breast_ust_sound_speed_volume, snap_multi_row_ring_array_to_grid,
 };
-use kwavers::physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::ali_2025_frequency_sweep_hz;
-use kwavers::solver::inverse::fwi::frequency_domain::{
+use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::ali_2025_frequency_sweep_hz;
+use kwavers_solver::inverse::fwi::frequency_domain::{
     simulate_frequency_observation, FrequencyObservation,
 };
 use ndarray::Array1;

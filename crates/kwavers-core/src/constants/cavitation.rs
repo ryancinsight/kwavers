@@ -43,6 +43,29 @@ pub const GAS_DIFFUSION_COEFFICIENT_TISSUE: f64 = 1.8e-9;
 /// *Transport Phenomena*, 2nd ed. Wiley, Appendix A.
 pub const GAS_DIFFUSION_COEFFICIENT_AIR: f64 = 2.0e-5;
 
+/// Diffusion coefficient of air (O₂/N₂) dissolved in water at ~20°C (m²/s).
+///
+/// Representative value for the Epstein–Plesset gas-diffusion dissolution model
+/// of a free air bubble in water. O₂: 2.0×10⁻⁹, N₂: 1.9×10⁻⁹ m²/s; the air
+/// value is taken as 2.0×10⁻⁹ m²/s.
+///
+/// Reference: Cussler EL (2009). *Diffusion: Mass Transfer in Fluid Systems*,
+/// 3rd ed. Cambridge, Table 5.2-1.
+pub const GAS_DIFFUSION_COEFFICIENT_WATER: f64 = 2.0e-9;
+
+/// Ostwald solubility coefficient of air in water at ~20°C (dimensionless).
+///
+/// `L = C_s / ρ_g` — the volume of gas (at the local partial pressure) that
+/// dissolves per unit volume of liquid at saturation; equivalently the ratio of
+/// the saturation mass concentration `C_s` to the gas density `ρ_g`. It is the
+/// dimensionless grouping that, with the diffusivity `D`, sets the
+/// Epstein–Plesset dissolution rate `dR/dt ∝ D·L`. Air ≈ 0.017 (O₂ ≈ 0.031,
+/// N₂ ≈ 0.015; air weighted ≈ 0.017).
+///
+/// Reference: Battino R, Clever HL (1966). *Chem. Rev.* 66, 395 (gas
+/// solubilities); Epstein PS, Plesset MS (1950). *J. Chem. Phys.* 18, 1505.
+pub const OSTWALD_SOLUBILITY_AIR_WATER: f64 = 0.017;
+
 /// Viscosity of water at 20°C (Pa·s)
 pub const VISCOSITY_WATER: f64 = 1.002e-3;
 

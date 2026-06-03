@@ -1,7 +1,7 @@
-use kwavers_core::constants::numerical::TWO_PI;
 use crate::acoustics::bubble_dynamics::bubble_state::{
     viscous_bubble_wall_stress, young_laplace_pressure,
 };
+use kwavers_core::constants::numerical::TWO_PI;
 
 /// Minnaert resonance frequency of a spherical gas bubble.
 ///

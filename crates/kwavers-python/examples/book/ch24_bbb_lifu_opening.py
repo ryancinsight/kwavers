@@ -58,7 +58,29 @@ except ImportError:
         "from the pykwavers directory."
     )
 
-REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+try:
+    from cavitation_dose_monitor import (BubbleMedium, closed_loop_sonication,
+                                          dose_vs_pressure, vs_emission_spectrum)
+except ImportError:
+    import sys as _sys
+    _sys.path.insert(0, os.path.dirname(__file__))
+    from cavitation_dose_monitor import (BubbleMedium, closed_loop_sonication,
+                                          dose_vs_pressure, vs_emission_spectrum)
+
+def _find_repo_root(start: str) -> str:
+    """Walk up to the directory containing ``docs/book`` (robust to crate depth;
+    the crate move to crates/kwavers-python/ changed the relative depth)."""
+    d = os.path.abspath(start)
+    while True:
+        if os.path.isdir(os.path.join(d, "docs", "book")):
+            return d
+        parent = os.path.dirname(d)
+        if parent == d:
+            return os.path.normpath(os.path.join(start, "..", "..", ".."))
+        d = parent
+
+
+REPO_ROOT = _find_repo_root(os.path.dirname(__file__))
 OUT_DIR = os.path.join(REPO_ROOT, "docs", "book", "figures", "ch24")
 os.makedirs(OUT_DIR, exist_ok=True)
 
@@ -586,5 +608,229 @@ savefig("fig08_sparse_treatment_envelope")
 plt.close(fig)
 print(f"  -6 dB safe steering half-angle: dense={np.degrees(ha_dense):.1f} deg, "
       f"sparse={np.degrees(ha_sparse):.1f} deg, ratio={ratio:.2f}x")
+
+# ── Figure 09: Passive-cavitation harmonic dose (InsighTec Exablate-style) ───
+# Real-time BBB-opening controllers (InsighTec Exablate Neuro; O'Reilly &
+# Hynynen 2012; Arvanitis 2012) listen to microbubble acoustic emission and
+# steer drive pressure from the integrated cavitation dose:
+#   • harmonic comb (n·f0)            — nonlinear oscillation / propagation
+#   • sub- + ultraharmonics (f0/2 …)  — STABLE cavitation → reversible BBB open
+#   • broadband floor                 — INERTIAL cavitation → damage risk
+# The receive elements over the focal sonication volume V_s are integrated
+# (incoherent power sum) into one emission spectrum; the stable dose grows the
+# therapeutic effect while the inertial dose is held below a safety limit.
+# All physics is in the kwavers Rust core (Keller–Miksis emission →
+# Hann-windowed PSD → V_s receiver integration → band decomposition → dose +
+# closed-loop controller); this script only orchestrates and plots.
+print("[fig09] Passive-cavitation harmonic dose + closed-loop controller (Rust core)")
+
+# Focal V_s: a polydisperse SonoVue-like MB population (1–2.5 µm).
+R0_POP = np.array([1.0, 1.25, 1.5, 1.75, 2.0, 2.5]) * 1e-6
+MEDIUM = BubbleMedium(rho=RHO_L, sigma=SIGMA, gamma=KAPPA, mu=MU_L, pv=PV,
+                      c_l=C_L, p0=P0, xi_s=XI_S)
+F0_PCD = 1.0e6
+SPEC_KW = dict(n_cycles=24.0, steps_per_cycle=4000, n_fft=4096,
+               r_obs_m=5.0e-2, transient_fraction=0.35)
+
+# Drive-pressure sweep across the KM-stable stable-cavitation window (MI ≤ ~0.22
+# at 1 MHz; above ~0.25 MPa the fixed-step Keller–Miksis solver is too stiff for
+# the violent inertial collapse — that regime is bounded analytically in fig02).
+p_sweep = np.linspace(20e3, 230e3, 22)
+mi_sweep = (p_sweep / 1e6) / np.sqrt(F0_PCD / 1e6)
+dose = dose_vs_pressure(kw, pressures_pa=p_sweep, f0=F0_PCD,
+                        r0_population_m=R0_POP, medium=MEDIUM,
+                        rel_halfwidth=0.18, noise_floor=0.0, **SPEC_KW)
+
+# Representative therapeutic-window spectrum (V_s-integrated) for panel A.
+P_DEMO = 170e3
+freqs_demo, psd_demo = vs_emission_spectrum(
+    kw, drive_pa=P_DEMO, f0=F0_PCD, r0_population_m=R0_POP, medium=MEDIUM, **SPEC_KW)
+
+# Inertial-onset indicator: broadband / harmonic emission ratio. The therapeutic
+# ceiling is where it first exceeds 0.1 (broadband becomes 10 % of harmonic).
+bh_ratio = dose["inertial"] / (dose["harmonic"] + 1e-30)
+onset_idx = int(np.argmax(bh_ratio > 0.1)) if np.any(bh_ratio > 0.1) else len(bh_ratio) - 1
+mi_inertial = mi_sweep[onset_idx]
+# Stable-cavitation onset: where sub+ultra emission first exceeds 1 % of harmonic.
+sh_ratio = dose["stable"] / (dose["harmonic"] + 1e-30)
+stab_idx = int(np.argmax(sh_ratio > 0.01)) if np.any(sh_ratio > 0.01) else 0
+mi_stable = mi_sweep[stab_idx]
+print(f"  stable-cavitation onset  MI~{mi_stable:.2f}; "
+      f"inertial-onset ceiling MI~{mi_inertial:.2f}")
+
+# Closed-loop sonication: the controller maximises stable cavitation (target
+# set above the achievable maximum so it always seeks more) while capping the
+# inertial dose CONSERVATIVELY below the hard inertial onset — clinically the
+# controller backs off before broadband emission reaches the damage edge. The
+# cap is the broadband level where it first reaches 4 % of the harmonic dose.
+cap_idx = int(np.argmax(bh_ratio > 0.04)) if np.any(bh_ratio > 0.04) else onset_idx
+p_ceiling = float(p_sweep[onset_idx])           # hard inertial-onset (display)
+p_cap = float(p_sweep[cap_idx])                 # conservative controller cap
+loop = closed_loop_sonication(
+    kw,
+    pressures_pa=p_sweep,
+    stable_power=dose["stable"],
+    inertial_power=dose["inertial"],
+    n_bursts=60, burst_duration_s=0.1,
+    p_start_pa=40e3,
+    stable_target=float(dose["stable"].max()) * 10.0,  # always seek more stable
+    inertial_limit=float(dose["inertial"][cap_idx]),   # conservative safety cap
+    gain=0.06,
+)
+burst_t = np.arange(loop["pressure"].size) * 0.1
+
+fig, axes = plt.subplots(1, 3, figsize=(16, 4.6))
+
+# Panel A: the V_s-integrated emission spectrum the receivers see.
+axA = axes[0]
+f_mhz_demo = np.asarray(freqs_demo) / 1e6
+psd_demo = np.asarray(psd_demo)
+psd_db = 10.0 * np.log10(psd_demo / (psd_demo.max() + 1e-300) + 1e-12)
+axA.plot(f_mhz_demo, psd_db, color="#2166ac", lw=0.9)
+for n in range(1, 6):
+    axA.axvline(n * 1.0, color="#999", lw=0.6, ls=":", alpha=0.6)
+axA.axvline(0.5, color="#4dac26", lw=1.0, ls="--", alpha=0.8, label="$f_0/2$ subharmonic")
+for m in (1.5, 2.5, 3.5):
+    axA.axvline(m, color="#4dac26", lw=0.8, ls=":", alpha=0.6)
+axA.set_xlim(0, 5.2)
+axA.set_ylim(-80, 2)
+axA.set_xlabel("Frequency / $f_0$")
+axA.set_ylabel("$V_s$-integrated emission PSD (dB re peak)")
+axA.set_title(f"(A) PCD emission spectrum over $V_s$\n"
+              f"|p| = {P_DEMO/1e3:.0f} kPa (MI = {P_DEMO/1e6:.2f})")
+axA.legend(loc="upper right", fontsize=8)
+
+# Panel B: cavitation-dose components vs MI, with the therapeutic window.
+axB = axes[1]
+axB.semilogy(mi_sweep, dose["harmonic"] + 1e-30, color="#555", lw=1.6,
+             label="Harmonic dose ($n f_0$)")
+axB.semilogy(mi_sweep, dose["stable"] + 1e-30, color="#4dac26", lw=1.8,
+             label="Stable dose (sub + ultraharmonic)")
+axB.semilogy(mi_sweep, dose["inertial"] + 1e-30, color="#d6604d", lw=1.8, ls="--",
+             label="Inertial dose (broadband)")
+axB.axvspan(mi_stable, mi_inertial, alpha=0.15, color="#4dac26")
+axB.axvline(mi_stable, color="#4dac26", lw=0.8, ls=":")
+axB.axvline(mi_inertial, color="#d6604d", lw=0.9, ls=":")
+axB.set_xlabel("Mechanical Index (MI)")
+axB.set_ylabel("Emission energy (a.u.)")
+axB.set_ylim(1e-4, None)
+axB.set_title("(B) Cavitation dose vs MI\n"
+              f"green band = stable-cavitation BBB window (MI {mi_stable:.2f}–{mi_inertial:.2f})")
+axB.legend(loc="lower right", fontsize=8)
+
+# Panel C: closed-loop controller trajectory.
+axC = axes[2]
+axC.plot(burst_t, loop["pressure"] / 1e3, color="#2166ac", lw=1.8,
+         label="Drive pressure")
+axC.axhline(p_ceiling / 1e3, color="#d6604d", lw=0.9, ls=":",
+            label=f"Inertial-onset ceiling ({p_ceiling/1e3:.0f} kPa)")
+axC.axhline(p_cap / 1e3, color="#4dac26", lw=0.9, ls="--",
+            label=f"Controller safety cap ({p_cap/1e3:.0f} kPa)")
+axC.set_xlabel("Sonication time (s)")
+axC.set_ylabel("Drive pressure (kPa)", color="#2166ac")
+axC.tick_params(axis="y", labelcolor="#2166ac")
+axC2 = axC.twinx()
+axC2.plot(burst_t, loop["stable_dose"], color="#4dac26", lw=1.6,
+          label="Cumulative stable dose")
+axC2.plot(burst_t, loop["inertial_dose"], color="#d6604d", lw=1.4, ls="--",
+          label="Cumulative inertial dose")
+axC2.set_ylabel("Cumulative cavitation dose (a.u.·s)")
+axC.set_title("(C) Closed-loop dose controller\n"
+              "pressure parks below inertial onset; stable dose accrues")
+lines1, lab1 = axC.get_legend_handles_labels()
+lines2, lab2 = axC2.get_legend_handles_labels()
+axC.legend(lines1 + lines2, lab1 + lab2, loc="lower right", fontsize=7)
+
+fig.tight_layout()
+savefig("fig09_cavitation_harmonic_dose")
+plt.close(fig)
+print(f"  closed-loop: final stable dose = {loop['stable_dose'][-1]:.3g}, "
+      f"final inertial dose = {loop['inertial_dose'][-1]:.3g} (a.u.*s)")
+
+
+# ── Figure 10: Real-time cavitation monitor (clinical sonication screen) ──────
+# The operational view a clinician sees during a BBB-opening sonication, mirroring
+# the InsighTec Exablate monitor: the acoustic spectrum and the band filter that
+# extracts the cavitation signal, the live cavitation/power feedback trace with
+# its pulse-related peaks, the cumulative dose climbing toward the prescribed
+# goal, and the per-subspot dose distribution across the electronically-steered
+# raster (which falls off with steering offset + tissue attenuation).
+print("[fig10] Real-time cavitation monitor + per-spot dose distribution (simulated population)")
+from cavitation_dose_monitor import (per_spot_dose, plot_cavitation_monitor,  # noqa: E402
+                                     population_dose_vs_pressure,
+                                     simulate_population_emission,
+                                     simulated_monitor_timeseries)
+
+# Realistic polydisperse CLINICAL contrast agent: lipid-encapsulated
+# microbubbles (~2 µm median, SonoVue/Definity range) simulated with the TRUE
+# Marmottant shell model. The shell's buckling/rupture is what lets a clinical
+# microbubble emit a subharmonic at low drive — physics a free bubble lacks.
+# Every band below is EMERGENT from the simulated nonlinear shell dynamics;
+# nothing is tuned. (The subharmonic is a small peak — only the f0/2-resonant
+# subset of the size distribution period-doubles — which is the real clinical
+# signature, a narrowband marker just above the noise floor.)
+POP_SIM = dict(medium=MEDIUM, r0_median_m=2.0e-6, r0_sigma_ln=0.35,
+               max_nucleation_cycles=0.5, r_obs_m=5.0e-2,
+               coated=True, chi=0.5, shell_viscosity=0.5, shell_thickness=3.0e-9,
+               sigma_initial=0.04, steps_per_cycle=2000)
+
+# Drive sweep from sub-threshold to inertial (MI ~0.08–0.35).
+p_mon = np.linspace(80e3, 350e3, 12)
+pop = population_dose_vs_pressure(
+    kw, pressures_pa=p_mon, f0=F0_PCD, n_bubbles=24, seed=3,
+    n_cycles=16.0, n_out=8192, **POP_SIM)
+cav_power = pop["signal"]
+inert = pop["inertial"]
+stable = pop["stable"]
+total = pop["harmonic"] + stable + inert
+broad_frac = inert / (total + 1e-30)
+# Inertial onset = first drive where broadband exceeds 40 % of the emission.
+# The sonication operates one step BELOW it, in the stable-cavitation window
+# (the clinical safe regime). The operating point is chosen by this physical
+# criterion, NOT to shape the spectrum — whatever bands emerge there are shown.
+onset_i = int(np.argmax(broad_frac > 0.4)) if np.any(broad_frac > 0.4) else p_mon.size - 1
+onset_i = max(onset_i, 1)
+oper_i = onset_i - 1
+p_oper = float(p_mon[oper_i])
+p_inertial_cap = float(inert[onset_i])      # controller backs off above this
+p_demo = p_oper
+demo = simulate_population_emission(
+    kw, drive_pa=p_demo, f0=F0_PCD, n_bubbles=60, rng=np.random.default_rng(7),
+    n_cycles=16.0, n_out=8192, **POP_SIM)
+print(f"  demo drive {p_demo/1e3:.0f} kPa: emergent bands "
+      f"harm={demo['fundamental']/max(demo['total'],1e-30):.2f} "
+      f"sub={demo['subharmonic']/max(demo['total'],1e-30):.2f} "
+      f"ultra={demo['ultraharmonic']/max(demo['total'],1e-30):.2f} "
+      f"broad={demo['broadband']/max(demo['total'],1e-30):.2f}; "
+      f"maxC={demo['max_compression']:.1f} maxMach={demo['max_mach']:.2f}")
+# Per-pulse simulated trace: each pulse drives a fresh small bubble population
+# through the TRUE solver; the controller raises power until the cavitation
+# target is met. Genuine per-pulse stochasticity from the finite population.
+ts = simulated_monitor_timeseries(
+    kw, f0=F0_PCD, medium=MEDIUM, n_bubbles=10, n_pulses=60, prf_hz=1.0,
+    p_start_pa=40e3, p_lo_pa=float(p_mon.min()), p_hi_pa=float(p_mon.max()),
+    target_signal=float(stable[oper_i]) * 2.0,   # keep recruiting toward window
+    inertial_cap=p_inertial_cap, gain=0.07, seed=11,   # back off above inertial onset
+    sim_kwargs=dict(n_cycles=8.0, n_out=2048, **POP_SIM))
+spot = per_spot_dose(
+    kw, lateral_offsets_m=np.linspace(-12e-3, 12e-3, 41),
+    axial_offsets_m=np.linspace(-10e-3, 14e-3, 33),
+    p_target_pa=p_oper, f0_hz=F0_PCD, c_m_s=C_L,
+    pressures_pa=p_mon, cavitation_power=cav_power,
+    n_pulses_per_spot=80, goal_pressure_pa=0.8 * p_oper,
+    attenuation_np_m=8.0, apodized=True)  # ~brain soft tissue at 1 MHz
+fig = plot_cavitation_monitor(
+    spectrum=(demo["freqs"], demo["psd"]), f0_hz=F0_PCD, rel_halfwidth=0.18,
+    timeseries=ts, spot=spot,
+    title="BBB-opening real-time cavitation monitor (simulated MB population)",
+    modality_note="True Marmottant coated-microbubble population (~2 um median); bands "
+                  "are EMERGENT from the shell dynamics — sub/ultraharmonics mark stable "
+                  "cavitation, the broadband floor marks inertial onset.")
+savefig("fig10_cavitation_monitor")
+plt.close(fig)
+print(f"  monitor: dose goal reached={ts['cumulative_dose'][-1] >= ts['goal']}; "
+      f"subharmonic fraction at demo={demo['subharmonic']/max(demo['total'],1e-30):.2f}; "
+      f"{100.0 * (spot['dose'] >= spot['goal']).mean():.0f}% of raster reaches goal")
+
 
 print("[ch24] All figures complete.")

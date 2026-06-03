@@ -1,7 +1,7 @@
 //! PyO3 bindings: basic wave propagation (standing, plane, spherical,
 //! reflection/transmission, power-law attenuation, Stokes–Kirchhoff absorption).
 
-use kwavers::physics::analytical::wave;
+use kwavers_physics::analytical::wave;
 use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;

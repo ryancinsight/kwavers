@@ -20,7 +20,7 @@ This chapter covers: the Keller–Miksis microbubble dynamics under LIFU
 driving, the MI parameter space separating stable from inertial cavitation,
 the Hill-function permeability enhancement model, thermal safety analysis via
 Pennes bioheat + CEM43, CEUS contrast enhancement, and the BBB closure
-kinetics.  A kwavers `PhysicsCatalog` simulation workflow is given in §24.7.
+kinetics.  A kwavers `PhysicsCatalog` simulation workflow is given in §24.9.
 
 ---
 
@@ -173,7 +173,187 @@ for the stable-cavitation dose range.
 
 ---
 
-## 24.7 Simulation workflow
+## 24.7 Multi-spot targeting
+
+A clinically useful BBB-opening volume is larger than a single diffraction-
+limited focus, so the array addresses several focal **sub-spots** — either by
+rapid electronic switching between them or by synthesising them simultaneously.
+The same multi-spot delay-law machinery underlies *multi-focus histotripsy*,
+where a cluster of foci enlarges the ablated volume per pulse.
+
+For an array with element positions $\mathbf{r}_i$ and a set of sub-spots
+$\mathbf{r}_f^{(j)}$ in a homogeneous medium of speed $c$, the geometric
+ray-path/delay-to-target law that brings every element in phase at sub-spot
+$j$ is
+
+$$
+\tau_{ij} = \frac{\max_i r_{ij} - r_{ij}}{c}, \qquad
+r_{ij} = \lVert \mathbf{r}_i - \mathbf{r}_f^{(j)} \rVert ,
+$$
+
+with all delays non-negative (the farthest element fires first). Sequential
+treatment applies row $j$ of $\tau_{ij}$ per shot. For **simultaneous**
+multi-spot delivery the elements are driven with the phase-conjugate
+(time-reversal) superposition
+
+$$
+w_i = \sum_j a_j\, e^{+\mathrm{i}\,k\,r_{ij}}, \qquad
+p(\mathbf{r}) = \sum_i w_i\, e^{-\mathrm{i}\,k\,r_i(\mathbf{r})},
+$$
+
+which is the exact narrowband focusing solution and places a focus at every
+$\mathbf{r}_f^{(j)}$ at once (Fink 1992; Ebbini & Cain 1989). Figure 4.16
+illustrates a six sub-spot montage: panel (A) the straight-ray paths to each
+sub-spot, panel (B) the per-sub-spot delay-to-target laws, and panel (C) the
+synthesised simultaneous multi-focus field with all six foci formed coherently.
+
+All array geometry, delay laws and the synthesised field are computed in the
+kwavers Rust core (`linear_array_positions`, `multi_focus_delay_laws_2d`,
+`multi_focus_field_magnitude_2d`); the Python script only renders.
+
+![Multi-spot ray paths, delay-to-target laws, and synthesised simultaneous multi-focus field for six sub-spots of a 48-element 0.5 MHz array — the model for multi-target BBB opening and multi-focus histotripsy.](figures/ch24/fig07_multispot_ray_paths_delays.png)
+
+---
+
+## 24.8 Sparse (aperiodic) arrays and the treatment envelope
+
+Electronic steering of the foci in §24.7 is not free: as the commanded focus
+moves away from broadside, a periodic aperture can radiate a second, coherent
+**grating lobe** — an unintended focus that deposits energy off-target. The
+practical **treatment envelope** is the range of steering angles the array can
+reach while that grating lobe stays safely below the main focus, the limit of
+the volume an implant-free transcranial system can treat without physically
+moving the helmet.
+
+The key point is that the *dense* and *sparse* apertures of Insightec's design
+operate at the **same frequency**, over the **same aperture**, with the **same
+number of elements**; they differ only in element *placement*. The "dense"
+array places its elements on a coarse **periodic** grid of pitch $d$; the
+"sparse" array re-lays the identical number of elements on an **aperiodic**
+grid. Steering changes neither the frequency nor the aperture — only whether a
+grating lobe forms.
+
+For a linear array of elements at positions $x_i$ radiating broadside and
+phased to steer the main lobe to angle $\theta_s$, the far-field beam pattern at
+observation angle $\theta$ is the product of the element directivity and the
+array factor,
+
+$$
+P(\theta) = D(\theta)\,
+            \left| \frac{1}{N} \sum_{i=1}^{N}
+            \exp\!\big[\,\mathrm{i}\,k\,x_i\,(\sin\theta - \sin\theta_s)\,\big]
+            \right|,
+$$
+
+where $D(\theta) = 2 J_1(ka\sin\theta)/(ka\sin\theta)$ is the baffled
+circular-piston element factor with parameter $ka = k\,a_{\text{elem}}$. At
+$\theta = \theta_s$ the array factor is unity and $P = D(\theta_s)$ (the main
+lobe). A **periodic** array of pitch $d$ returns the array factor to unity
+whenever $\sin\theta - \sin\theta_s = m\lambda/d$ for integer $m \ne 0$; once
+such a $\theta$ enters the visible range $[-90^\circ, 90^\circ]$ a full-height
+grating lobe appears. An **aperiodic** array has no such repeat, so the energy
+that would have piled into one coherent grating lobe is scattered into a low
+pedestal instead.
+
+Define the **grating-lobe ratio** at steering angle $\theta_s$ as the strongest
+secondary lobe relative to the main lobe,
+
+$$
+G(\theta_s) = \frac{\displaystyle\max_{|\theta - \theta_s| > \Delta} P(\theta)}
+                   {P(\theta_s)},
+$$
+
+with $\Delta$ a small main-lobe exclusion window. The **grating-lobe-safe
+steering envelope** is the contiguous range of steering angles about broadside
+for which no secondary lobe exceeds half ($-6\,\text{dB}$) the main focus,
+$\{\,\theta_s : G(\theta_s) \le 0.5\,\}$, summarised by its half-angle. At fixed
+frequency, aperture and element count, the periodic array's $G$ jumps up once
+$\theta_s$ exceeds the pitch-set threshold, while the aperiodic array keeps $G$
+low over a much wider range — enlarging the safe steering half-angle several-fold
+in this model. This is the mechanism behind Insightec's sparse $220\,\text{kHz}$
+transducer: not a lower frequency, but aperiodic element placement that
+suppresses grating lobes and so widens the steerable treatment envelope. In the
+clinic the net gain is trimmed below the pure beam-pattern prediction by skull
+heating, cavitation limits, and residual side-lobe energy, but grating-lobe
+suppression is the dominant mechanism.
+
+The element layouts, the steered far-field beam patterns, the grating-lobe
+ratio, and the safe half-angle are all computed in the kwavers Rust core
+(`linear_array_positions`, `linear_array_aperiodic_positions`,
+`steered_beam_pattern_1d`, `steering_grating_lobe_ratio_1d`,
+`safe_steering_halfangle`); the Python script only renders. Panel (A) contrasts
+the periodic (dense) and aperiodic (sparse) element layouts at identical
+aperture, element count and frequency; panel (B) shows the steered beam patterns
+at an off-axis angle, where the periodic array raises a grating lobe and the
+aperiodic array does not; and panel (C) plots the grating-lobe ratio versus
+steering angle with the $-6\,\text{dB}$ limit and the safe steering half-angles
+marked.
+
+![Sparse aperiodic arrays widen the steering treatment envelope: at one fixed frequency, aperture and element count, a periodic (dense) layout versus an aperiodic (sparse) layout, the steered far-field beam patterns at an off-axis angle where the periodic array raises a grating lobe, and the grating-lobe ratio versus steering angle whose −6 dB-safe steering half-angle widens several-fold for the aperiodic layout — the grating-lobe-suppression basis of the enlarged clinical treatment envelope.](figures/ch24/fig08_sparse_treatment_envelope.png)
+
+---
+
+## 24.9 Passive-cavitation harmonic-dose monitoring
+
+Clinical BBB-opening systems do not dose by mechanical index alone — they
+listen. The receive elements over the focal sonication volume $V_s$ record the
+microbubble acoustic emission, and a closed-loop controller steers drive
+pressure from the *integrated cavitation dose* (InsighTec Exablate Neuro;
+O'Reilly & Hynynen 2012; Arvanitis 2012). The emission spectrum carries three
+diagnostic signatures:
+
+- **harmonic comb** $n f_0$ — nonlinear oscillation and propagation;
+- **subharmonic** $f_0/2$ and **ultraharmonics** $(2k{+}1)f_0/2$ — the
+  fingerprint of *stable* (non-inertial) cavitation that drives reversible BBB
+  permeabilisation;
+- **broadband** inharmonic floor — the fingerprint of *inertial* cavitation and
+  its associated tissue-damage risk.
+
+> **Definition 24.2 (stable / inertial cavitation dose).**
+> For an emission power spectrum $S(f)$ over the sonication, with line windows
+> of half-width $\delta = \texttt{rel\_halfwidth}\cdot f_0$ around each
+> half-harmonic $k f_0/2$ and a baseline noise floor $S_0$,
+> $$
+>   \text{SCD} = \int \!\Big[\textstyle\sum_{\text{sub,ultra}} (S-S_0)_+\Big]\,dt,
+>   \qquad
+>   \text{ICD} = \int \big(S_\text{broadband}-S_0\big)_+\,dt .
+> $$
+> The controller maximises SCD while holding ICD below a safety cap.
+
+The full pipeline runs in the kwavers Rust core and is exercised end-to-end in
+the figure below: a Keller–Miksis bubble population is driven across $V_s$
+(`bubble_acoustic_emission_pressure` gives the far-field signal each receiver
+detects), the per-bubble spectra are estimated with a Hann window
+(`hann_windowed_power_spectrum`, leakage-suppressed so the broadband band is
+genuine), incoherently power-summed across the receive aperture
+(`integrate_receiver_array_psd` — the array integral over $V_s$), decomposed
+into bands (`cavitation_emission_bands`), time-integrated into SCD/ICD
+(`cumulative_cavitation_dose`), and fed to the closed-loop pressure law
+(`cavitation_controller_pressure`). Sub- and ultraharmonic emission emerges
+sharply near $\text{MI}\approx0.15$ and the broadband floor rises toward
+$\text{MI}\approx0.2$, bracketing the stable-cavitation BBB window; the
+controller parks drive pressure conservatively below the inertial onset while
+the stable dose accumulates.
+
+![Passive-cavitation harmonic-dose monitoring: (A) the $V_s$-integrated microbubble emission spectrum the receive aperture detects, with the harmonic comb and the stable-cavitation subharmonic/ultraharmonic lines marked; (B) harmonic, stable (sub+ultraharmonic) and inertial (broadband) cavitation dose versus mechanical index, with the green stable-cavitation BBB therapeutic window; (C) the closed-loop dose controller parking drive pressure below the inertial-onset ceiling while the cumulative stable cavitation dose accrues. All emission, spectral, receiver-integration and dose physics run in the kwavers Rust core.](figures/ch24/fig09_cavitation_harmonic_dose.png)
+
+The same machinery drives the **operational real-time monitor** a clinician
+watches during the sonication, laid out like the device console: (A) the
+acoustic spectrum received by the transducer and the band filter that extracts
+the cavitation signal; (B) the live cavitation-emission trace with its
+pulse-related peaks and the applied power that tracks it; (C) the cumulative
+cavitation dose climbing to the prescribed goal; and (D) the spatial dimension a
+single-point console cannot show — the per-subspot dose across the
+electronically-steered raster. The per-spot dose contracts with steering offset
+(`electronic_steering_efficiency`, Pernot 2003 / Hand 2009) and tissue
+attenuation, so only an inner envelope reaches the goal; peripheral targets need
+mechanical repositioning.
+
+![Real-time cavitation monitor for BBB opening, driven by a TRUE simulation of a polydisperse lipid-coated microbubble population (Marmottant shell model, adaptive Keller–Miksis): (A) the emergent acoustic spectrum (dB) with the cavitation lines marked — sub- and ultraharmonics (stable-cavitation markers) and the fundamental, over the broadband (inertial) floor. The band content is not imposed: as the drive climbs from MI≈0.1 the population goes from purely harmonic (sub-threshold) through an ultraharmonic stable-cavitation regime to a broadband inertial regime, and the operating point is the stable window just below inertial onset. (B) live cavitation signal and applied power versus time (each pulse re-simulates the focal population); (C) cumulative cavitation dose climbing to the prescribed goal; (D) per-subspot cavitation dose across the electronically-steered raster, contracting with steering offset and brain-tissue attenuation. All bubble dynamics, spectral, dose and steering physics run in the kwavers Rust core.](figures/ch24/fig10_cavitation_monitor.png)
+
+---
+
+## 24.10 Simulation workflow
 
 ```rust
 use kwavers::plugin::*;
@@ -213,7 +393,7 @@ Chapter 22 §4, Theorem 22.1).
 
 ---
 
-## 24.8 Figure sources
+## 24.11 Figure sources
 
 ```bash
 python pykwavers/examples/book/ch24_bbb_lifu_opening.py
@@ -229,10 +409,14 @@ Outputs to `docs/book/figures/ch24/` (PDF and PNG).
 | fig04  | LIFU thermal safety: temperature rise + CEM43 |
 | fig05  | CEUS backscatter signal vs MB concentration |
 | fig06  | BBB opening window: bi-exponential closure kinetics |
+| fig07  | Multi-spot ray paths, delay-to-target laws, and synthesised simultaneous six-focus field |
+| fig08  | Sparse aperiodic array treatment envelope: periodic (dense) vs aperiodic (sparse) layout at one frequency, grating-lobe-safe steering half-angle |
+| fig09  | Passive-cavitation harmonic-dose monitoring: $V_s$-integrated emission spectrum, stable/inertial cavitation dose vs MI, and the closed-loop dose controller |
+| fig10  | Real-time cavitation monitor: acoustic spectrum + filter, live cavitation/power trace, cumulative dose-to-goal, and per-subspot dose vs electronic steering + attenuation |
 
 ---
 
-## 24.9 References
+## 24.11 References
 
 - Hynynen K., McDannold N., Vykhodtseva N., Jolesz F.A. *Noninvasive MR
   imaging-guided focal opening of the blood-brain barrier in rabbits.*

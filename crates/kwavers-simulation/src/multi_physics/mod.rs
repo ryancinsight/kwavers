@@ -41,11 +41,13 @@ pub mod conservation;
 pub mod coupler;
 pub mod interface;
 mod residual;
+pub mod residual_gas;
 pub mod schwarz;
 pub mod solver;
 
 pub use conservation::MultiPhysicsConservationEnforcer;
 pub use coupler::MultiPhysicsFieldCoupler;
+pub use residual_gas::ResidualGasField;
 pub use interface::SimulationMultiPhysicsInterface;
 pub use schwarz::SchwarzCoupling;
 pub use solver::SimulationMultiPhysicsSolver;

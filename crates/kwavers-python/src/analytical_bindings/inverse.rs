@@ -1,6 +1,6 @@
-//! PyO3 bindings for `kwavers::physics::analytical::inverse`.
+//! PyO3 bindings for `kwavers_physics::analytical::inverse`.
 
-use kwavers::physics::analytical::inverse as inverse_mod;
+use kwavers_physics::analytical::inverse as inverse_mod;
 use ndarray::Array2;
 use numpy::{IntoPyArray, PyArray1, PyArray2, PyReadonlyArray1, PyReadonlyArray2};
 use pyo3::exceptions::PyRuntimeError;

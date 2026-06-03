@@ -1,7 +1,7 @@
 //! Serialization of `TheranosticInverseResult` into a Python dict, plus
 //! private geometry helpers used by `run_theranostic_inverse_from_ritk`.
 
-use kwavers::clinical::therapy::theranostic_guidance::{
+use kwavers_therapy::therapy::theranostic_guidance::{
     placement_metrics, target_index_from_mask_fraction_3d, PlacementContext,
     TheranosticInverseConfig, TheranosticInverseResult, THERANOSTIC_OPERATOR_MODEL,
     TRANSMIT_SCHEDULE_MODEL,
@@ -18,7 +18,7 @@ use super::super::helpers::{
 pub(super) fn brain_target_index(
     ct_volume_hu: &Array3<f64>,
     fraction: [f64; 3],
-) -> kwavers::core::error::KwaversResult<[usize; 3]> {
+) -> kwavers_core::error::KwaversResult<[usize; 3]> {
     let brain = ct_volume_hu.mapv(|hu| hu > -300.0 && hu < 300.0);
     if brain.iter().any(|active| *active) {
         target_index_from_mask_fraction_3d(&brain, fraction)
@@ -293,7 +293,7 @@ pub(super) fn result_to_dict<'py>(
     // (the latter is false — see [`THERANOSTIC_FULL_WAVE_INVERSION`]).
     out.set_item(
         "iterative_elastic_fwi",
-        kwavers::clinical::therapy::theranostic_guidance::THERANOSTIC_ITERATIVE_ELASTIC_FWI,
+        kwavers_therapy::therapy::theranostic_guidance::THERANOSTIC_ITERATIVE_ELASTIC_FWI,
     )?;
     out.set_item("waveform_model", result.waveform.model_name)?;
     out.set_item("waveform_misfit", result.waveform.misfit_name)?;

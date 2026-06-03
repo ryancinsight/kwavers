@@ -51,31 +51,31 @@ pub enum SolverType {
     /// Currently velocity-source + sensor-mask only; no PML yet (short-
     /// propagation diagnostics + cross-engine parity validation against
     /// KWave.jl's `pstd_elastic_2d`). Adds boundary absorption in a follow-
-    /// up step. See `kwavers::solver::forward::pstd::extensions` and the
+    /// up step. See `kwavers_solver::forward::pstd::extensions` and the
     /// canonical solver matrix in `solver::forward` module docs.
     ElasticPSTD,
     /// Frequency-domain Helmholtz FEM solver for steady-state monochromatic fields.
     /// Supports FEM preconditioner types (Jacobi, ILU, AMG) and mesh-based domains.
-    /// Canonical path: `kwavers::solver::forward::helmholtz::FemHelmholtzSolver`.
+    /// Canonical path: `kwavers_solver::forward::helmholtz::FemHelmholtzSolver`.
     Helmholtz,
     /// Boundary Element Method solver for exterior scattering and radiation problems.
-    /// Canonical path: `kwavers::solver::forward::bem::BemSolver`.
+    /// Canonical path: `kwavers_solver::forward::bem::BemSolver`.
     BEM,
     /// Discontinuous Galerkin / Hybrid Spectral-DG solver for high-order accuracy
     /// with shock-capturing in heterogeneous media. Canonical path:
-    /// `kwavers::solver::forward::pstd::dg::HybridSpectralDGSolver`.
+    /// `kwavers_solver::forward::pstd::dg::HybridSpectralDGSolver`.
     DG,
     /// Nonlinear acoustic wave solvers supporting Westervelt, Kuznetsov, and KZK
     /// formulations for finite-amplitude propagation. Canonical path:
-    /// `kwavers::solver::forward::nonlinear`.
+    /// `kwavers_solver::forward::nonlinear`.
     Nonlinear,
     /// Biot poroelastic wave solver for fluid-saturated porous elastic media.
-    /// Canonical path: `kwavers::solver::forward::poroelastic`.
+    /// Canonical path: `kwavers_solver::forward::poroelastic`.
     Poroelastic,
     /// Rayleigh-Sommerfeld angular-spectrum solver for transducer field computation.
     /// Uses the Fast Nearfield Method (FNM) to compute pressure fields from
     /// rectangular transducer velocity distributions via the angular spectrum.
-    /// Canonical path: `kwavers::solver::analytical::transducer::FastNearfieldSolver`.
+    /// Canonical path: `kwavers_solver::analytical::transducer::FastNearfieldSolver`.
     RayleighSommerfeld,
 }
 

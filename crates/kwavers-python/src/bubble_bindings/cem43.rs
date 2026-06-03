@@ -20,7 +20,7 @@
 //!
 //! - Sapareto & Dewey (1984) Int. J. Radiat. Oncol. Biol. Phys. 10(6):787
 
-use kwavers::core::constants::medical::{
+use kwavers_core::constants::medical::{
     THERMAL_DOSE_R_ABOVE_43C, THERMAL_DOSE_R_BELOW_43C, THERMAL_DOSE_REFERENCE_TEMP_C,
 };
 use ndarray::Array1;

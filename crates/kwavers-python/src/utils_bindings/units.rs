@@ -28,12 +28,12 @@ fn freq2wavenumber(frequency: f64, sound_speed: f64) -> PyResult<f64> {
 
 #[pyfunction]
 fn hounsfield2density(hu: f64) -> f64 {
-    kwavers::core::constants::hounsfield::HounsfieldUnits::to_density(hu)
+    kwavers_core::constants::hounsfield::HounsfieldUnits::to_density(hu)
 }
 
 #[pyfunction]
 fn hounsfield2soundspeed(hu: f64) -> f64 {
-    kwavers::core::constants::hounsfield::HounsfieldUnits::to_sound_speed(hu)
+    kwavers_core::constants::hounsfield::HounsfieldUnits::to_sound_speed(hu)
 }
 
 pub(super) fn register(m: &Bound<'_, pyo3::types::PyModule>) -> PyResult<()> {

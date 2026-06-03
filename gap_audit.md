@@ -2,7 +2,8 @@
 
 Module-by-module audit of physics/numerics implementations, marking items for
 future revision. Compact + link-navigable per agent-artifact policy; closed
-history archived in [`docs/pm_archive/gap_audit_closed_through_2026-05-29.md`](docs/pm_archive/gap_audit_closed_through_2026-05-29.md).
+history (pre-2026-05-29) was pruned from `docs/` during the workspace-split
+docs cleanup and remains recoverable from git history.
 
 **Method:** four parallel read-only module audits (2026-05-31) over `solver/`,
 `physics/`, `clinical/`+`domain/`, `analysis/`+`math/`+`core/`+`gpu/`. Findings
@@ -95,7 +96,7 @@ that was already tight; refused to fabricate a reference where none is sourced.
   for_dimension` is circular (recomputes the same formula).
 
 ### Technical debt log (crate-split, 2026-06-01)
-Debt surfaced by the workspace extraction (ADR 009). Logged for proper future
+Debt surfaced by the workspace extraction (ADR 011). Logged for proper future
 resolution; current state is a sound mitigation, not a full fix.
 - **DEBT-1 (M, arch):** `KwaversError` is a kitchen-sink foundation error coupled
   to 5 higher-layer crates via `From`/`#[from]`: `wgpu`, `flume`, `ritk_registration`,

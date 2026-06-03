@@ -7,6 +7,7 @@
 pub mod array_factor;
 pub mod beam;
 pub mod interpolation;
+pub mod steering;
 
 pub use array_factor::{
     apodization_weights, beam_pattern_magnitude, circular_piston_directivity, grating_lobe_angles,
@@ -20,6 +21,7 @@ pub use beam::{
     steering_focus_point, steering_grating_lobe_ratio_1d,
 };
 pub use interpolation::bli_stencil_weights;
+pub use steering::electronic_steering_efficiency;
 
 #[cfg(test)]
 mod tests {

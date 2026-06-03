@@ -18,7 +18,7 @@
 //!
 //! No physics — wave propagation, membrane mechanics, channel gating, or ODE
 //! stepping — is implemented in this file.  Every computation is delegated to
-//! `kwavers::physics::acoustics::therapy::sonogenetics`.
+//! `kwavers_physics::acoustics::therapy::sonogenetics`.
 //!
 //! # References
 //!
@@ -30,8 +30,8 @@
 //! - Goodman, J.W. (2005). *Introduction to Fourier Optics*, 3rd ed. §3.3.
 //! - Koch, C. (1999). *Biophysics of Computation*. Oxford University Press.
 
-use kwavers::core::constants::fundamental::BOLTZMANN as K_B;
-use kwavers::physics::acoustics::therapy::sonogenetics::{
+use kwavers_core::constants::fundamental::BOLTZMANN as K_B;
+use kwavers_physics::acoustics::therapy::sonogenetics::{
     boltzmann_p_open, compute_membrane_tension, BoltzmannGatingParams, CellMembraneParams,
     LifNeuron, LifParams,
 };

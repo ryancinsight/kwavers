@@ -6,7 +6,7 @@
 //! regulatory, patient management). Orchestrates the lower layers
 //! (`physics`/`solver`/`simulation`/`analysis`); contains no numerical kernels.
 //!
-//! Extracted from the former `clinical` module (ADR 009); the sibling diagnostic
+//! Extracted from the former `clinical` module (ADR 011); the sibling diagnostic
 //! imaging workflows live in the `kwavers-diagnostics` crate.
 
 pub mod patient_management; // Electronic health record and clinical workflow management

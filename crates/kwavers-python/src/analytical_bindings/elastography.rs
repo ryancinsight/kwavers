@@ -1,6 +1,6 @@
-//! PyO3 bindings for `kwavers::physics::analytical::elastography`.
+//! PyO3 bindings for `kwavers_physics::analytical::elastography`.
 
-use kwavers::physics::analytical::elastography;
+use kwavers_physics::analytical::elastography;
 use ndarray::Array2;
 use numpy::{IntoPyArray, PyArray1, PyArray2, PyReadonlyArray1};
 use pyo3::exceptions::PyRuntimeError;

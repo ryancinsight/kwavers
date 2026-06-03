@@ -1,6 +1,6 @@
-//! PyO3 bindings for `kwavers::physics::analytical::safety`.
+//! PyO3 bindings for `kwavers_physics::analytical::safety`.
 
-use kwavers::physics::analytical::safety;
+use kwavers_physics::analytical::safety;
 use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;

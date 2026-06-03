@@ -1,6 +1,6 @@
 //! PyO3 wrapper for Ali 2025 forward-operator equivalence diagnostics.
 
-use kwavers::clinical::imaging::reconstruction::breast_ust_fwi::{
+use kwavers_diagnostics::reconstruction::breast_ust_fwi::{
     forward_operator_equivalence_diagnostics_with_receiver_policy as breast_ust_forward_operator_equivalence_diagnostics_with_receiver_policy,
     scattering_increment_diagnostics as breast_ust_scattering_increment_diagnostics,
     BreastUstForwardOperatorEquivalenceDiagnostics, BreastUstForwardOperatorModelDiagnostics,
@@ -300,6 +300,6 @@ fn scattering_increment_model_to_dict<'py>(
     Ok(out)
 }
 
-fn kwavers_to_value_py(err: kwavers::core::error::KwaversError) -> PyErr {
+fn kwavers_to_value_py(err: kwavers_core::error::KwaversError) -> PyErr {
     PyValueError::new_err(err.to_string())
 }

@@ -28,6 +28,7 @@
 
 pub mod dispersion;
 pub mod fractional;
+pub mod histotripsy;
 pub mod power_law;
 pub mod spatially_varying;
 pub mod stokes;
@@ -35,6 +36,10 @@ pub mod tissue;
 
 pub use dispersion::{AbsorptionDispersionCorrection, DispersionModel};
 pub use fractional::{FractionalDerivative, FractionalLaplacian};
+pub use histotripsy::{
+    histotripsy_tissue_properties, histotripsy_tissue_properties_by_name,
+    HistotripsyTissueProperties,
+};
 pub use power_law::{PowerLawAbsorption, PowerLawModel};
 pub use spatially_varying::{AbsorptionStatistics, SpatiallyVaryingAbsorption};
 pub use stokes::{StokesAbsorption, StokesParameters};

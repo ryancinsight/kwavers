@@ -2,6 +2,57 @@
 
 ## Unreleased
 
+### Removed (2026-06-03) - Re-export facade eliminated; `kwavers` is now a thin app crate (ADR 011 amendment) [arch]
+
+Completed the workspace split by removing the `kwavers` re-export facade entirely.
+There is no longer a unified `kwavers::…` Rust surface; consumers depend on the
+layer crates directly.
+
+- **`crates/kwavers/src/lib.rs`** no longer re-exports any layer crate (`pub use
+  kwavers_core as core;` and all root re-exports removed). The crate is now a thin
+  top-level **app/integration** crate: `main.rs` (binary), `tests.rs`, and the
+  cross-cutting integration tests / examples / benches (which depend on all layer
+  crates), plus `init_logging`/`get_version_info`. Nothing depends on it.
+- **`kwavers-python`** now depends on the layer crates directly
+  (`kwavers-core`/`-math`/`-domain`/`-physics`/`-solver`/`-analysis`/`-simulation`/
+  `-diagnostics`/`-therapy`/`-gpu`) instead of the `kwavers` facade; all 230
+  `kwavers::<layer>::…` paths across 76 files rewritten to `kwavers_<layer>::…`,
+  and the `gpu`/`plotting`/`pinn`/`full` features re-mapped to the layer crates.
+- Rewrote the app crate's tests/examples/benches off the facade (`kwavers::<layer>`
+  → `kwavers_<layer>`; facade root re-exports → origin crates; grouped
+  `use kwavers::{…}` imports split per crate). Fixed stale moved-module paths in
+  examples (`clinical::imaging::{chromophores,phantoms,doppler,spectroscopy}` →
+  `kwavers_domain::optics`/`kwavers_domain::phantoms`/`kwavers_analysis::signal_processing`).
+- **Removed** stale, already-broken artifacts referencing deleted/renamed APIs:
+  examples `wave_simulation.rs`, `tissue_model_example.rs` (removed
+  `AcousticWavePlugin`); test `apollo_math_compat.rs` and `tests/archive/`; bench
+  `fwi_spectral_cbs` (removed `PropagationModel` / `Config` schema drift).
+- **Relocated the crate from `kwavers/` to `crates/kwavers/`** so all workspace
+  members live under `crates/`. Updated the root `Cargo.toml` member path and the
+  crate's layer-dependency paths (`../crates/kwavers-*` → `../kwavers-*`).
+- Verification: all workspace libraries, `kwavers-python`, and every default-feature
+  `kwavers` target (tests, examples, benches) compile green from the new location.
+  (The `pinn` feature has pre-existing breakage in `kwavers-solver`, unrelated.)
+
+### Changed (2026-06-03) - Facade reduced to a pure re-export surface (ADR 011) [arch]
+
+Completed the workspace crate split by emptying the `kwavers` facade of all
+remaining layer code, so `crates/kwavers/src/` now holds only `lib.rs` (re-exports +
+`init_logging`/`get_version_info`), `main.rs` (smoke binary), and `tests.rs`:
+
+- **GPU** was already consolidated into the `kwavers-gpu` leaf crate (wgpu/WGSL
+  backend implementing the `ComputeBackend`/`FdtdGpuAccelerator` surfaces); the
+  facade re-exports `kwavers::gpu` (feature-gated) and `kwavers::profiling`.
+- **I/O** — relocated the output writers (`save_pressure_data`, `save_data_csv`,
+  `save_light_data`, `generate_summary`) from `kwavers::infrastructure::io` to
+  `kwavers_simulation::io`, where run output belongs. The facade re-export at the
+  crate root is unchanged, so `kwavers::save_pressure_data` etc. still resolve.
+- **Removed** the `kwavers::architecture` runtime layer-dependency validator
+  (`ArchitectureValidator` + the 9-layer model): zero consumers, and crate
+  boundaries now enforce the dependency DAG at compile time, making it redundant.
+- Verification: `cargo check -p kwavers-simulation`, `cargo check -p kwavers`,
+  and the facade `--lib`/`comparative_solver_tests` test targets compile green.
+
 ### Removed (2026-06-02) - Disabled/incomplete enterprise infrastructure [major]
 
 Removed the entire off-by-default, unused, incomplete "enterprise" infrastructure surface
@@ -136,7 +187,7 @@ layers, so each algorithm/datum sits in the layer that owns it (SoC):
   fields + `new()`/`hifu()` builders, actively used by the HIFU/safety workflows).
 - Verification: full kwavers build green; kwavers-therapy lib green.
 
-### Changed (2026-06-02) - Split `clinical` into `kwavers-diagnostics` + `kwavers-therapy` (ADR 009) [arch]
+### Changed (2026-06-02) - Split `clinical` into `kwavers-diagnostics` + `kwavers-therapy` (ADR 011) [arch]
 
 - [arch] The clinical application layer (462 files / ~67k lines — the largest module,
   spanning distinct diagnostic-imaging and therapeutic concerns) was split into TWO
@@ -172,7 +223,7 @@ layers, so each algorithm/datum sits in the layer that owns it (SoC):
   delegate to `physics::bubble_dynamics` (SSOT); reconcile `therapy/{domain_types,modalities,
   parameters}` with the existing `domain::therapy`.
 
-### Changed (2026-06-02) - Extract `kwavers-simulation` workspace crate (ADR 009) [arch]
+### Changed (2026-06-02) - Extract `kwavers-simulation` workspace crate (ADR 011) [arch]
 
 - [major] Extracted the `simulation` layer (orchestration builders/runners,
   multi-physics coupling, modality pipelines, backends, solver adapters, photoacoustics)
@@ -241,7 +292,7 @@ layers, so each algorithm/datum sits in the layer that owns it (SoC):
   half-length transform (a bounded ~2× z-axis spectral cost); revisit if apollo restores
   a public half-spectrum API.
 
-### Changed (2026-06-02) - Extract `kwavers-analysis` workspace crate (ADR 009) [arch]
+### Changed (2026-06-02) - Extract `kwavers-analysis` workspace crate (ADR 011) [arch]
 
 - [major] Extracted the `analysis` layer (signal processing, beamforming,
   validation, ML/uncertainty, performance, conservation, plotting/visualization)
@@ -260,7 +311,7 @@ layers, so each algorithm/datum sits in the layer that owns it (SoC):
   Total across kwavers+analysis+solver = 2059 — matches pre-extraction baseline.
 - 6 of 8 layer crates extracted (core, math, domain, physics, solver, analysis).
 
-### Changed (2026-06-01) - Extract `kwavers-solver` workspace crate (ADR 009) [arch]
+### Changed (2026-06-01) - Extract `kwavers-solver` workspace crate (ADR 011) [arch]
 
 - [major] Extracted the `solver` layer (forward FDTD/PSTD/k-space/Helmholtz/BEM,
   inverse FWI/RTM/CBS/elastography/PINN, analytical transducer models, GPU backend)
@@ -283,7 +334,7 @@ layers, so each algorithm/datum sits in the layer that owns it (SoC):
   solver doctests 5/0 (2059 total — matches pre-extraction baseline).
 - 5 of 8 layer crates extracted (core, math, domain, physics, solver).
 
-### Changed (2026-06-01) - Extract `kwavers-physics` workspace crate (ADR 009) [arch]
+### Changed (2026-06-01) - Extract `kwavers-physics` workspace crate (ADR 011) [arch]
 
 - [major] Extracted the `physics` layer (nonlinear acoustics, bubble dynamics,
   thermal, optics, chemistry, elastic waves) into `kwavers-physics` (depends on
@@ -298,7 +349,7 @@ layers, so each algorithm/datum sits in the layer that owns it (SoC):
   `crate::Grid`/`Medium` → `kwavers_domain::…`) that the kwavers `lib.rs` exposed.
 - 4 of 8 layer crates extracted (core, math, domain, physics).
 
-### Changed (2026-06-01) - Extract `kwavers-domain` workspace crate (ADR 009) [arch]
+### Changed (2026-06-01) - Extract `kwavers-domain` workspace crate (ADR 011) [arch]
 
 - [major] Extracted the `domain` layer (grid, medium, source, sensor, boundary,
   field, signal, imaging, therapy) into `kwavers-domain` (depends on
@@ -317,7 +368,7 @@ layers, so each algorithm/datum sits in the layer that owns it (SoC):
   (`domain/boundary/sedsTbfPU`).
 - 3 of 8 layer crates now extracted (core, math, domain).
 
-### Changed (2026-06-01) - Resolve remaining cross-layer edges (crate-split prep, ADR 009)
+### Changed (2026-06-01) - Resolve remaining cross-layer edges (crate-split prep, ADR 011)
 
 - [patch] Made the module DAG fully acyclic (grouped-import-aware audit: every
   layer 0 upward edges) by resolving the last 3 cross-layer edges. No behaviour
@@ -337,7 +388,7 @@ layers, so each algorithm/datum sits in the layer that owns it (SoC):
   - **analysis→infrastructure**: removed the dead `pub use
     infrastructure::io::save_data_csv` re-export from `analysis::plotting`.
 
-### Changed (2026-06-01) - Extract `kwavers-math` workspace crate (ADR 009) [arch]
+### Changed (2026-06-01) - Extract `kwavers-math` workspace crate (ADR 011) [arch]
 
 - [major] Extracted the `math` layer (FFT, linear algebra, numerics, geometry,
   statistics, SIMD) into `kwavers-math` (depends on `kwavers-core` only).
@@ -348,14 +399,14 @@ layers, so each algorithm/datum sits in the layer that owns it (SoC):
   cross-crate API): `math::geometry::{distance3, normalize3,
   orthogonal_basis_from_normal3}` and `StaggeredGridOperator::{dx, dy, dz}`.
 
-### Changed (2026-06-01) - Extract `kwavers-core` workspace crate (ADR 009) [arch]
+### Changed (2026-06-01) - Extract `kwavers-core` workspace crate (ADR 011) [arch]
 
 - [major] Began the workspace crate split: extracted the `core` layer
   (constants, error types, arena allocator, time/logging utils) into a new
   `kwavers-core` crate (`crates/kwavers-core/`). The `kwavers` crate re-exports
   it as `pub use kwavers_core as core`, so all `crate::core::…` / `kwavers::core::…`
   paths (3,377 sites) resolve unchanged — `kwavers` is now the facade over the
-  layered crates. Motivation: per-crate incremental compilation (see ADR 009).
+  layered crates. Motivation: per-crate incremental compilation (see ADR 011).
 - Foundation error decoupling: `KwaversError`'s integrations with higher-layer
   crates are now optional + feature-gated in `kwavers-core` so the default build
   is a clean leaf — `gpu` (wgpu), `channels` (flume), `registration`

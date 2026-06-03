@@ -12,9 +12,9 @@
 //!
 //! No wave physics, no Rayleigh integrals, and no finite-difference PDE solvers
 //! exist in this file. All computation is delegated to
-//! `kwavers::clinical::therapy::theranostic_guidance`.
+//! `kwavers_therapy::therapy::theranostic_guidance`.
 
-use kwavers::clinical::therapy::theranostic_guidance::{
+use kwavers_therapy::therapy::theranostic_guidance::{
     run_transcranial_fus_planning, target_index_from_mask_fraction_3d,
     transcranial_pennes_thermal_dose, TranscranialFusPlanConfig,
 };
@@ -329,7 +329,7 @@ pub fn transcranial_pennes_thermal_dose_py<'py>(
 /// Serialize a `TranscranialFusPlan` into a Python dict.
 fn plan_to_pydict<'py>(
     py: Python<'py>,
-    plan: &kwavers::clinical::therapy::theranostic_guidance::TranscranialFusPlan,
+    plan: &kwavers_therapy::therapy::theranostic_guidance::TranscranialFusPlan,
     target_fraction_xyz: Option<(f64, f64, f64)>,
 ) -> PyResult<Bound<'py, PyDict>> {
     let out = PyDict::new(py);

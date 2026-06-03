@@ -1,11 +1,11 @@
 //! Python bindings for kwavers FFT utilities.
 //!
 //! Wraps the apollo-backed 1-D and 3-D real↔complex DFT functions exported
-//! under `kwavers::math::fft`.  The forward transforms accept f64 real arrays
+//! under `kwavers_math::fft`.  The forward transforms accept f64 real arrays
 //! and return complex128 arrays; the inverse transforms accept complex128 and
 //! return f64.
 
-use kwavers::math::fft::{fft_1d_array, fft_3d_array, ifft_1d_array, ifft_3d_array};
+use kwavers_math::fft::{fft_1d_array, fft_3d_array, ifft_1d_array, ifft_3d_array};
 use ndarray::{Array1, Array3};
 use num_complex::Complex64;
 use numpy::{IntoPyArray, PyArray1, PyArray3, PyReadonlyArray1, PyReadonlyArray3};

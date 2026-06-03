@@ -2,9 +2,9 @@
 //!
 //! When `ct_nifti_path` does not exist on disk the function falls back to a
 //! built-in synthetic abdominal CT phantom with clinically realistic dimensions
-//! (see `kwavers::clinical::therapy::theranostic_guidance::synthetic`).
+//! (see `kwavers_therapy::therapy::theranostic_guidance::synthetic`).
 
-use kwavers::clinical::therapy::theranostic_guidance::{
+use kwavers_therapy::therapy::theranostic_guidance::{
     plan_abdominal_array_placement,
     synthetic::{synthetic_abdominal_kidney_phantom, synthetic_abdominal_liver_phantom},
 };

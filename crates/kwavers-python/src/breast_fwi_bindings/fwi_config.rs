@@ -1,6 +1,6 @@
 //! PyO3 binding: `FrequencyDomainFwiConfig` Python class.
 
-use kwavers::solver::inverse::fwi::frequency_domain::{
+use kwavers_solver::inverse::fwi::frequency_domain::{
     Config, DenseConvergentBornOperator, PstdSpectralConvergentBornOperator,
     PstdTemporalTransferConfig, SpectralConvergentBornOperator,
 };

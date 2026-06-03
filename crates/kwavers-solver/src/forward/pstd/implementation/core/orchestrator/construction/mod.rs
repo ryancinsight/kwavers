@@ -73,6 +73,10 @@ impl PSTDSolver {
             abs.nabla1 = abs.nabla1.slice(s![.., .., ..nz_c]).to_owned();
             abs.nabla2 = abs.nabla2.slice(s![.., .., ..nz_c]).to_owned();
         }
+        // Capture the raw |k| half-spectrum (r2c z-axis: nz_c = nz/2+1) BEFORE the
+        // kappa cosine transform overwrites k_mag. Needed to build the broadband
+        // residual-gas absorption spectral shape ĝ(c·|k|) on demand.
+        let k_mag_half = k_mag.slice(s![.., .., ..nz_c]).to_owned();
         k_mag.par_mapv_inplace(|k| (0.5 * c_ref * config.dt * k).cos());
         // source_kappa still has shape (nx, ny, nz) here — set_velocity_source_kappa
         // needs the full array to perform ifftshift indexing (kk = (k+nz/2)%nz).
@@ -206,6 +210,8 @@ impl PSTDSolver {
             materials: MaterialFields { rho0, c0 },
             bon,
             absorption,
+            k_mag_half,
+            residual_gas_absorption: None,
             kspace_operators: None,
             ddx_k_shift_pos,
             ddy_k_shift_pos,

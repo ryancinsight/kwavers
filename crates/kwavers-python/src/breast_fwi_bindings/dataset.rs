@@ -2,7 +2,7 @@
 
 use super::PyMultiRowRingArray;
 use super::helpers::kwavers_to_py;
-use kwavers::clinical::imaging::reconstruction::breast_ust_fwi::{
+use kwavers_diagnostics::reconstruction::breast_ust_fwi::{
     generate_breast_ust_pstd_frequency_dataset, BreastUstPstdDatasetConfig,
 };
 use ndarray::Array1;

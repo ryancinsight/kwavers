@@ -1,6 +1,6 @@
-//! PyO3 bindings for `kwavers::physics::analytical::photoacoustics`.
+//! PyO3 bindings for `kwavers_physics::analytical::photoacoustics`.
 
-use kwavers::physics::analytical::photoacoustics;
+use kwavers_physics::analytical::photoacoustics;
 use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1, PyReadonlyArray2};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;

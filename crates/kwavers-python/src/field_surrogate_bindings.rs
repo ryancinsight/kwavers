@@ -1,11 +1,11 @@
-//! pyo3 thin wrappers around `kwavers::physics::field_surrogate`.
+//! pyo3 thin wrappers around `kwavers_physics::field_surrogate`.
 //!
 //! Exposes [`FocalKernel`] and [`KernelCube`] to Python so treatment
 //! planners can build a kernel cube from `.npz`-loaded numpy arrays
 //! and query normalized focal envelopes at arbitrary `(f0, pnp)`
 //! within the sweep — all interpolation logic lives in kwavers Rust.
 
-use kwavers::physics::field_surrogate::{
+use kwavers_physics::field_surrogate::{
     place_kernel_at_focus as kwavers_place_kernel_at_focus, resample_trilinear,
     FocalKernel as KwaversFocalKernel, KernelCube as KwaversKernelCube,
 };
@@ -16,7 +16,7 @@ use pyo3::wrap_pyfunction;
 
 /// A cached focal-pressure kernel from a single PSTD pulse.
 ///
-/// Wraps [`kwavers::physics::field_surrogate::FocalKernel`]. Construct
+/// Wraps [`kwavers_physics::field_surrogate::FocalKernel`]. Construct
 /// from a numpy `(nx, ny, nz)` float64 array of per-voxel peak
 /// rarefactional pressure (positive Pa), plus geometry + source
 /// metadata.
@@ -150,7 +150,7 @@ impl FocalKernel {
 
 /// Bilinear interpolator across a sparse `(f0, pnp)` kernel sweep.
 ///
-/// Wraps [`kwavers::physics::field_surrogate::KernelCube`]. Construct
+/// Wraps [`kwavers_physics::field_surrogate::KernelCube`]. Construct
 /// from a list of [`FocalKernel`] whose `(f0, pnp_realised)` pairs
 /// form a Cartesian grid; query returns a normalized focal envelope
 /// (`env.max() == 1`) on the planner grid.
@@ -263,7 +263,7 @@ impl KernelCube {
 /// (Pa) without normalization — the caller-facing absolute amplitude
 /// is preserved.
 ///
-/// Wraps `kwavers::physics::field_surrogate::place_kernel_at_focus`.
+/// Wraps `kwavers_physics::field_surrogate::place_kernel_at_focus`.
 #[pyfunction]
 #[pyo3(signature = (kernel, target_shape, target_focus_idx, target_dx_m=None))]
 fn place_kernel_at_focus<'py>(

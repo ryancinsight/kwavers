@@ -6,7 +6,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyModule;
 use pyo3::wrap_pyfunction;
 
-pub(crate) fn kwavers_to_py(err: kwavers::core::error::KwaversError) -> PyErr {
+pub(crate) fn kwavers_to_py(err: kwavers_core::error::KwaversError) -> PyErr {
     PyRuntimeError::new_err(format!("kwavers transcranial UST inversion failed: {err}"))
 }
 

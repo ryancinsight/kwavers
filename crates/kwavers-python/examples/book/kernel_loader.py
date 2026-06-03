@@ -33,7 +33,21 @@ import numpy as np
 
 import pykwavers as kw
 
-REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+def _find_repo_root(start: str) -> str:
+    """Walk up to the directory containing ``data/kernels`` (robust to crate
+    depth; the crate move to crates/kwavers-python/ changed the relative depth)."""
+    d = os.path.abspath(start)
+    while True:
+        if os.path.isdir(os.path.join(d, "data", "kernels")) or \
+                os.path.isdir(os.path.join(d, "docs", "book")):
+            return d
+        parent = os.path.dirname(d)
+        if parent == d:
+            return os.path.normpath(os.path.join(start, "..", "..", ".."))
+        d = parent
+
+
+REPO_ROOT = _find_repo_root(os.path.dirname(__file__))
 KERNEL_DIR = os.path.join(REPO_ROOT, "data", "kernels")
 
 _KERNEL_FILE_RE = re.compile(

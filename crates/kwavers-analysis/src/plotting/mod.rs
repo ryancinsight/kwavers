@@ -226,7 +226,7 @@ pub use plotting_impl::{
 
 // NOTE: CSV output (`infrastructure::io::save_data_csv`) is an I/O/facade concern;
 // the dead re-export here was removed (no consumers) to keep `analysis` from
-// depending upward on `infrastructure` (ADR 009 layering). Import it directly
+// depending upward on `infrastructure` (ADR 011 layering). Import it directly
 // from `infrastructure::io` at the call site if needed.
 
 // Provide fallback implementations when plotly feature is disabled

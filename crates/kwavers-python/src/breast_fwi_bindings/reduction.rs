@@ -1,6 +1,6 @@
 //! PyO3 wrappers for Ali 2025 reduced-domain preparation.
 
-use kwavers::clinical::imaging::reconstruction::breast_ust_fwi::{
+use kwavers_diagnostics::reconstruction::breast_ust_fwi::{
     derive_reduced_breast_ust_array_geometry, derive_reduced_breast_ust_array_plan,
     prepare_reduced_breast_ust_phantom, BreastUstReducedArrayGeometry, BreastUstReducedArrayPlan,
     BreastUstReducedArrayRowPolicy, BreastUstReducedPhantom,
@@ -138,6 +138,6 @@ fn row_policy_name(policy: BreastUstReducedArrayRowPolicy) -> &'static str {
     }
 }
 
-fn kwavers_to_value_py(err: kwavers::core::error::KwaversError) -> PyErr {
+fn kwavers_to_value_py(err: kwavers_core::error::KwaversError) -> PyErr {
     PyValueError::new_err(err.to_string())
 }

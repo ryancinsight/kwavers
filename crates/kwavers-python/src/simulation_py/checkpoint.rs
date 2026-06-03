@@ -1,7 +1,7 @@
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
-use kwavers::core::error::KwaversError;
+use kwavers_core::error::KwaversError;
 
 use crate::simulation_result_py::SimulationResult;
 use crate::solver_type_bindings::SolverType;
@@ -121,7 +121,7 @@ impl Simulation {
             .as_ref()
             .map(|s| s.record_modes.clone())
             .unwrap_or_default();
-        let checkpoint = kwavers::solver::forward::pstd::checkpoint::PSTDCheckpoint::load(&path)
+        let checkpoint = kwavers_solver::forward::pstd::checkpoint::PSTDCheckpoint::load(&path)
             .map_err(kwavers_error_to_py_local)?;
         checkpoint
             .validate_restore_contract(

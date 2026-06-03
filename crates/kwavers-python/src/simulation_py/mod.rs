@@ -30,16 +30,16 @@ use pyo3::prelude::*;
 use pyo3::types::PyAny;
 
 
-use kwavers::domain::source::GridSource;
-use kwavers::simulation::{
+use kwavers_domain::source::GridSource;
+use kwavers_simulation::{
     HelmholtzConfig as KwaversHelmholtzConfig, NonlinearConfig as KwaversNonlinearConfig,
     PmlConfig as KwaversPmlConfig, PoroelasticConfig as KwaversPoroelasticConfig,
     ThermalConfig as KwaversThermalConfig,
     SimulationRunRequest, SimulationRunner,
 };
-use kwavers::solver::forward::fdtd::config::KSpaceCorrectionMode;
-use kwavers::solver::forward::pstd::config::CompatibilityMode;
-use kwavers::solver::forward::pstd::extensions::{ElasticPstdSourceMode, ElasticPstdVelocitySource};
+use kwavers_solver::forward::fdtd::config::KSpaceCorrectionMode;
+use kwavers_solver::forward::pstd::config::CompatibilityMode;
+use kwavers_solver::forward::pstd::extensions::{ElasticPstdSourceMode, ElasticPstdVelocitySource};
 
 use crate::config_builders::{
     HelmholtzConfig as PyHelmholtzConfig, NonlinearConfig as PyNonlinearConfig,
@@ -658,17 +658,17 @@ impl Simulation {
 
         // ── Resolve solver_type to kwavers SolverType ───────────────────────
         let solver_type = match self.solver_type {
-            SolverType::FDTD => kwavers::solver::config::SolverType::FDTD,
-            SolverType::PSTD => kwavers::solver::config::SolverType::PSTD,
-            SolverType::Hybrid => kwavers::solver::config::SolverType::Hybrid,
-            SolverType::Elastic => kwavers::solver::config::SolverType::Elastic,
-            SolverType::ElasticPSTD => kwavers::solver::config::SolverType::ElasticPSTD,
-            SolverType::Helmholtz => kwavers::solver::config::SolverType::Helmholtz,
-            SolverType::BEM => kwavers::solver::config::SolverType::BEM,
-            SolverType::DG => kwavers::solver::config::SolverType::DG,
-            SolverType::RayleighSommerfeld => kwavers::solver::config::SolverType::RayleighSommerfeld,
-            SolverType::Poroelastic => kwavers::solver::config::SolverType::Poroelastic,
-            SolverType::PstdGpu => kwavers::solver::config::SolverType::PstdGpu,
+            SolverType::FDTD => kwavers_solver::config::SolverType::FDTD,
+            SolverType::PSTD => kwavers_solver::config::SolverType::PSTD,
+            SolverType::Hybrid => kwavers_solver::config::SolverType::Hybrid,
+            SolverType::Elastic => kwavers_solver::config::SolverType::Elastic,
+            SolverType::ElasticPSTD => kwavers_solver::config::SolverType::ElasticPSTD,
+            SolverType::Helmholtz => kwavers_solver::config::SolverType::Helmholtz,
+            SolverType::BEM => kwavers_solver::config::SolverType::BEM,
+            SolverType::DG => kwavers_solver::config::SolverType::DG,
+            SolverType::RayleighSommerfeld => kwavers_solver::config::SolverType::RayleighSommerfeld,
+            SolverType::Poroelastic => kwavers_solver::config::SolverType::Poroelastic,
+            SolverType::PstdGpu => kwavers_solver::config::SolverType::PstdGpu,
             other => {
                 return Err(PyValueError::new_err(format!(
                     "Unsupported solver type: {:?}", other
@@ -679,7 +679,7 @@ impl Simulation {
         // ── Process sources ─────────────────────────────────────────────────
         let c_max = self.medium.inner.as_medium().max_sound_speed();
         let mut grid_source = GridSource::new_empty();
-        let mut dynamic_sources: Vec<Box<dyn kwavers::domain::source::Source>> = Vec::new();
+        let mut dynamic_sources: Vec<Box<dyn kwavers_domain::source::Source>> = Vec::new();
         let mut has_mask_source = false;
         let mut elastic_ivp_axis: Option<String> = None;
         let mut elastic_velocity_source = None;
@@ -712,7 +712,7 @@ impl Simulation {
 
         // ── Config references (moved from config builders, no clone) ────────
         // ── Extract transducer refs for RS solver ───────────────────────────
-        let kwavers_transducers: Vec<kwavers::domain::source::array_2d::TransducerArray2D> =
+        let kwavers_transducers: Vec<kwavers_domain::source::array_2d::TransducerArray2D> =
             self.transducers.iter().map(|t| t.inner.clone()).collect();
 
         // ── Convert elastic velocity source ─────────────────────────────────

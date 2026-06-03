@@ -169,13 +169,13 @@ is strictly positive.  Therefore `φ(T) = R^(T−43) > 0` for all finite `T`.  W
 `Δt > 0`, `D_{k+1} − D_k = φ(T_k) Δt > 0`.  By induction the sequence {D_k} is
 strictly increasing. □
 
-**Corollary 7.1 (Irreversibility).** Because φ > 0, dose is strictly monotone — it
-cannot be reduced by decreasing power.  Safety constraints `D_k ≤ D_max` must be
-enforced by pre-treatment planning (Chapter 6) rather than post-onset power reduction.
-
-**Corollary 7.1 (Safety Constraint).** A bounded safety constraint D_k ≤ D_max cannot be
-enforced by reducing u_k alone once violated, since dose is non-decreasing. This motivates
-the need for pre-treatment planning (Chapter 6) to predict the dose evolution.
+**Corollary 7.1 (Irreversibility and Safety Constraint).** Because φ > 0, dose is
+strictly monotone — it cannot be reduced by decreasing power. Consequently a bounded
+safety constraint `D_k ≤ D_max` cannot be enforced by reducing `u_k` once the bound is
+approached, since `D_k` is non-decreasing in `k` regardless of `u_k`. Safety must
+therefore be guaranteed by pre-treatment planning (Chapter 6), which predicts the dose
+evolution `{D_k}` and selects an exposure schedule that keeps the trajectory below
+`D_max` for the entire treatment.
 
 ---
 

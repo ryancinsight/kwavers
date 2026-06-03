@@ -119,6 +119,59 @@ at `1.5f0`. Fusion gates the active lesion inverse by passive subharmonic
 support plus harmonic and ultraharmonic contrast; the generated metrics report
 the fused map separately from the individual channels.
 
+### Same-Device Send/Receive Passive Acoustic Mapping
+
+The passive cavitation channels (subharmonic `f0/2`, ultraharmonic `3f0/2`)
+support a second, forward-simulated reconstruction mode selected by
+`TheranosticInverseConfig::passive_reconstruction`:
+
+- `FiniteFrequencyOperator` (default): the reduced finite-frequency operator
+  inverse described above, fitting a receiver-only subharmonic/ultraharmonic
+  sensitivity against a synthetic target.
+- `PassiveAcousticMapping`: a genuine passive-acoustic-mapping (PAM) pipeline
+  that simulates the cavitation emission and beamforms the recorded receiver
+  traces, with no synthetic inversion target.
+
+In PAM mode the therapy array doubles as a passive receive aperture: between
+therapy bursts the transmit elements switch to receive and join any dedicated
+imaging receivers to form the same-device send/receive aperture. This mirrors
+clinical practice — transcranial histotripsy acoustic-cavitation-emission (ACE)
+mapping reuses the elements of the same hemispherical histotripsy transducer as
+passive receivers (Sukovich et al. 2020) — and is required for the transcranial
+helmet, which carries no separate imaging array.
+
+The pipeline runs one broadband forward solve through the heterogeneous
+CT-derived medium with the same fourth-order-FD / CPML solver used for the
+active channels:
+
+1. **Emission model.** The bubble cloud at the target radiates a deterministic
+   broadband spectrum with the three PAM-relevant lines — subharmonic `f0/2`,
+   driven fundamental `f0`, and ultraharmonic `3f0/2` — under a common Gaussian
+   burst envelope. With an envelope of `N = 2.5` fundamental periods the
+   spectral standard deviation is `Δf = f0 / (2πN) ≈ 0.064 f0`, far below the
+   inter-line spacing `f0/2`, so the three lines are resolvable and the
+   per-band filter rejects the fundamental (Neppiras 1980; Leighton 1994).
+2. **One forward solve, all bands.** A single broadband emission is propagated
+   and recorded at every receiver; the same trace set serves every imaged band.
+3. **Aberration-corrected delays.** Receive delays are the eikonal
+   first-arrival travel times solved through the *actual* heterogeneous medium
+   (by reciprocity, one solve per unique receiver cell on the refined grid),
+   not a constant-speed straight-line model. This keeps the coherent sum
+   aligned through skull, rib, and water/tissue speed contrasts — the limiting
+   factor for the higher-frequency cavitation band.
+4. **Spectral PAM.** The *broadband* traces are delay-and-summed to a per-pixel
+   time series (full bandwidth → fine range resolution), then a zero-phase
+   Gaussian band-pass attributes each pixel's energy to a cavitation band.
+   Band-passing the raw traces first would collapse the bandwidth to a single
+   line and destroy range resolution (Gyöngy & Coussios 2010; Haworth et al.
+   2012).
+
+PAM mode is a forward-simulated beamforming reconstruction, not a full-waveform
+inversion: it localizes cavitation from simulated emission physics and does not
+update a medium model. It is implemented in
+`theranostic_guidance::waveform::emission` and
+`theranostic_guidance::solver::passive_pam_channels`.
+
 The current kwavers implementation is a reduced finite-frequency Born inverse
 plus a separate source-encoded linear acoustic time-domain RTM image. The RTM
 image is computed from pressure-amplitude source injection, CT-derived
@@ -781,8 +834,19 @@ projected 2-D-vs-3-D aperture residual from the source wrappers.
 The controlled grid now includes the iterative nonlinear ElasticPSTD FWI shear
 reconstruction and stores `ct_frame_elastic_shear` beside the linear and
 nonlinear fields so all reported comparison channels use the full CT placement
-pixel grid. Figure 6 also prints the CT-frame comparison theorem and caption
-directly above and below the panel grid.
+pixel grid. The panel order places the **Born inverse** reconstruction
+(`active_lesion_reconstruction`) directly beside the FWI reconstructions — the
+Westervelt target-pressure field, the iterative elastic-shear FWI estimate, and
+the Westervelt-plus-cavitation FWI fusion — so the linearized reduced-Born and
+the nonlinear full-waveform reconstructions are read side by side on one
+physical grid rather than in separate figures. The final panel is the
+FWI-fusion-minus-Born difference on the same CT frame. Each reconstruction is
+drawn as a signal-proportional translucent overlay (opacity scales with the
+square root of the normalized field magnitude) on top of its CT anatomy, so the
+focus and lesion stand out against visible tissue rather than as a hard-edged
+crop square; the white contour is the matched target and the full transducer
+placement context is carried in the first CT column. Figure 6 also prints the
+CT-frame comparison theorem and caption directly above and below the panel grid.
 The controlled metrics also convert nonlinear pressure hotspots into CT-frame
 physical coordinates and decompose their target offset into planned beam-axis
 and cross-axis terms. The geometry block records the planned-to-realized

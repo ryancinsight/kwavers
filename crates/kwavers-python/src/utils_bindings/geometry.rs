@@ -11,7 +11,7 @@ fn make_disc(
     radius: f64,
 ) -> PyResult<Py<PyArray3<bool>>> {
     let center_arr = [center.0, center.1, center.2];
-    let mask = kwavers::math::geometry::make_disc(
+    let mask = kwavers_math::geometry::make_disc(
         (grid.inner.nx, grid.inner.ny, grid.inner.nz),
         (grid.inner.dx, grid.inner.dy, grid.inner.dz),
         center_arr,
@@ -29,7 +29,7 @@ fn make_ball(
     radius: f64,
 ) -> PyResult<Py<PyArray3<bool>>> {
     let center_arr = [center.0, center.1, center.2];
-    let mask = kwavers::math::geometry::make_ball(
+    let mask = kwavers_math::geometry::make_ball(
         (grid.inner.nx, grid.inner.ny, grid.inner.nz),
         (grid.inner.dx, grid.inner.dy, grid.inner.dz),
         center_arr,
@@ -59,7 +59,7 @@ fn make_circle(
     thickness: usize,
 ) -> PyResult<Py<PyArray3<bool>>> {
     let center_arr = [center.0, center.1, center.2];
-    let mask = kwavers::math::geometry::make_circle(
+    let mask = kwavers_math::geometry::make_circle(
         (grid.inner.nx, grid.inner.ny, grid.inner.nz),
         (grid.inner.dx, grid.inner.dy, grid.inner.dz),
         center_arr,
@@ -79,7 +79,7 @@ fn make_line(
 ) -> PyResult<Py<PyArray3<bool>>> {
     let start_arr = [start.0, start.1, start.2];
     let end_arr = [end.0, end.1, end.2];
-    let mask = kwavers::math::geometry::make_line(
+    let mask = kwavers_math::geometry::make_line(
         (grid.inner.nx, grid.inner.ny, grid.inner.nz),
         (grid.inner.dx, grid.inner.dy, grid.inner.dz),
         start_arr,

@@ -5,7 +5,17 @@
 # will have compiled files and executables
 debug/
 target/
+target_opt/
 external/
+
+# Regenerable caches, reports, and local environments (not version-controlled)
+kwave_cache/
+.pytest_cache/
+.benchmarks/
+.venv-msys/
+
+# Local dev run scripts (hardcoded absolute paths; not portable)
+run_*.bat
 
 # Binary executables without extensions
 fft_demo
@@ -45,6 +55,7 @@ api-ms-*.lib
 # These are fetched into the working tree from public dataset mirrors; the
 # data/<dataset>/README.md inside each sample directory documents the source.
 data/kits19_sample/case_*.nii.gz
+data/cfb_gbm_sample/*.nii.gz
 # Core dumps (be specific to avoid excluding src files)
 /core
 /core.*

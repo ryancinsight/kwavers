@@ -49,9 +49,9 @@ impl GpuPstdSession {
 
         #[cfg(feature = "gpu")]
         {
-            use kwavers::domain::boundary::cpml::{CPMLConfig, CPMLProfiles};
-            use kwavers::physics::acoustics::mechanics::absorption::power_law_db_cm_to_np_omega_m;
-            use kwavers::solver::forward::pstd::gpu_pstd::{
+            use kwavers_domain::boundary::cpml::{CPMLConfig, CPMLProfiles};
+            use kwavers_physics::acoustics::mechanics::absorption::power_law_db_cm_to_np_omega_m;
+            use kwavers_solver::forward::pstd::gpu_pstd::{
                 AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays, SolverParams,
             };
 
@@ -190,7 +190,7 @@ fn build_absorption_kernels(
     dz: f64,
     alpha_power: f64,
 ) -> PyResult<(Vec<f32>, Vec<f32>, Vec<f32>, Vec<f32>)> {
-    use kwavers::physics::acoustics::mechanics::absorption::power_law_db_cm_to_np_omega_m;
+    use kwavers_physics::acoustics::mechanics::absorption::power_law_db_cm_to_np_omega_m;
     let total = nx * ny * nz;
     if !has_absorption {
         return Ok((
@@ -260,14 +260,14 @@ fn build_absorption_kernels(
 #[cfg(feature = "gpu")]
 fn build_pml_arrays(
     pml_size_xyz: Option<(usize, usize, usize)>,
-    kgrid: &kwavers::domain::grid::Grid,
+    kgrid: &kwavers_domain::grid::Grid,
     c_ref: f64,
     dt: f64,
     nx: usize,
     ny: usize,
     nz: usize,
 ) -> PyResult<(Vec<f32>, Vec<f32>, Vec<f32>, Vec<f32>, Vec<f32>, Vec<f32>)> {
-    use kwavers::domain::boundary::cpml::{CPMLConfig, CPMLProfiles};
+    use kwavers_domain::boundary::cpml::{CPMLConfig, CPMLProfiles};
     use pyo3::exceptions::PyRuntimeError;
 
     let total = nx * ny * nz;

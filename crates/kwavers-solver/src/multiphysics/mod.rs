@@ -9,6 +9,7 @@ pub mod field_coupling;
 pub mod fluid_structure;
 pub mod monolithic;
 pub mod photoacoustic;
+pub mod residual_gas_coupling;
 pub mod thermal_optical;
 
 pub use acoustic_optical::AcousticOpticalSolver;
@@ -18,6 +19,9 @@ pub use monolithic::{
     CouplingConvergenceInfo, MonolithicCoupler, NewtonKrylovConfig, PhysicsCoefficients,
 };
 pub use photoacoustic::PhotoacousticSolver;
+pub use residual_gas_coupling::{
+    apply_residual_gas_shielding, two_way_transmission, BubblyMediumProps, ShieldedMedium,
+};
 pub use thermal_optical::ThermalOpticalSolver;
 
 /// Multi-physics field indices

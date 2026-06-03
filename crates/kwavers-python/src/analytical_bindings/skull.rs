@@ -1,6 +1,6 @@
-//! PyO3 bindings for `kwavers::physics::analytical::skull`.
+//! PyO3 bindings for `kwavers_physics::analytical::skull`.
 
-use kwavers::physics::analytical::skull as skull_mod;
+use kwavers_physics::analytical::skull as skull_mod;
 use num_complex::Complex64;
 use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1};
 use pyo3::exceptions::PyRuntimeError;

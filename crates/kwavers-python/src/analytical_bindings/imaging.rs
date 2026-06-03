@@ -1,6 +1,6 @@
-//! PyO3 bindings for `kwavers::physics::analytical::imaging`.
+//! PyO3 bindings for `kwavers_physics::analytical::imaging`.
 
-use kwavers::physics::analytical::imaging;
+use kwavers_physics::analytical::imaging;
 use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Grouped-import-aware path rewriter for kwavers crate extraction (ADR 009).
+"""Grouped-import-aware path rewriter for kwavers crate extraction (ADR 011).
 
 For a layer being extracted into its own crate, rewrites cross-crate paths,
 correctly handling grouped/multiline `use crate::{ ... }` blocks that line-based

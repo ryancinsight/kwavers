@@ -1,66 +1,43 @@
-# Documentation Index - Kwavers Acoustic Simulation Library
+# Documentation Index — Kwavers
 
-## Core Documentation
+`docs/` was pruned during the workspace-crate-split refactor (ADR-011) to remove
+~465 historical sprint/phase/audit reports and stale duplicate PM artifacts that
+were a merge-conflict surface and no longer reflected the codebase. The pruned
+files remain recoverable from git history.
 
-| Document | Purpose | Audience |
-|----------|---------|----------|
-| [`README.md`](../README.md) | Project overview, quick start, installation | All users |
-| [`prd.md`](prd.md) | Product requirements and feature specifications | Product managers, architects |
-| [`srs.md`](srs.md) | Software requirements with verification criteria | Engineers, testers |
-| [`adr.md`](adr.md) | Architecture decisions and design trade-offs | Senior engineers, architects |
-| [`checklist.md`](checklist.md) | Development progress and status tracking | Development team |
-| [`backlog.md`](backlog.md) | Sprint priorities and development tasks | Scrum masters, developers |
+## What lives here
 
-## Technical Documentation
+| Path | Contents |
+|------|----------|
+| [`book/`](book/) | The Kwavers book — chapters, figures, validation narratives. |
+| [`ADR/`](ADR/) | Architecture Decision Records (the architecture SSOT). |
+| [`gpu/pstd_shader_abi.md`](gpu/pstd_shader_abi.md) | WGSL storage-buffer ABI for `pstd.wgsl` (referenced by the shader). |
 
-| Document | Focus Area | Complexity |
-|----------|------------|------------|
-| [`technical/amr_usage.md`](technical/amr_usage.md) | Adaptive Mesh Refinement usage patterns | Advanced |
-| [`technical/hybrid_spectral_dg.md`](technical/hybrid_spectral_dg.md) | Spectral-DG hybrid method implementation | Expert |
-| [`technical/multi_rate_time_integration.md`](technical/multi_rate_time_integration.md) | Temporal coupling algorithms | Advanced |
-| [`technical/plugin_architecture.md`](technical/plugin_architecture.md) | Extensibility and plugin system | Intermediate |
+## Architecture Decision Records
 
-## User Guides
+Numbered chronologically by decision date; rewritten to current reality and
+audited 2026-06-03.
 
-| Document | Target | Skill Level |
-|----------|--------|-------------|
-| [`guides/advanced_features.md`](guides/advanced_features.md) | Performance optimization, benchmarking | Advanced |
+| ADR | Topic | Status |
+|-----|-------|--------|
+| [001](ADR/001-adaptive-beamforming-consolidation.md) | Adaptive-beamforming consolidation | Implemented |
+| [002](ADR/002-sensor-array-processing-consolidation.md) | Sensor array-processing consolidation | Implemented |
+| [003](ADR/003-signal-processing-analysis-layer.md) | Signal processing → analysis layer | Implemented |
+| [004](ADR/004-domain-material-property-ssot.md) | Domain material-property SSOT | Implemented |
+| [005](ADR/005-pinn-training-stabilization.md) | PINN training stabilization | Implemented (1 limitation) |
+| [006](ADR/006-workspace-pyo3-bindings-architecture.md) | Workspace + PyO3 bindings architecture | Implemented (partly superseded by 011) |
+| [007](ADR/007-solver-forward-domain-grouping.md) | `solver::forward` domain grouping | Phase 1 done; Phase 2 open |
+| [008](ADR/008-compute-backend-trait-wiring.md) | `ComputeBackend` trait wiring | Implemented |
+| [009](ADR/009-pykwavers-elastic-bindings.md) | pykwavers elastic-wave bindings | A.1–A.4 done; A.3.5 open |
+| [010](ADR/010-fwi-finite-window-pstd-born.md) | Finite-window PSTD Born forward | Implemented |
+| [011](ADR/011-workspace-crate-split.md) | **Workspace crate split** | Implemented; facade is pure re-export |
 
-## Document Hierarchy
+## Project-management SSOT (repo root, not under `docs/`)
 
-```
-docs/
-├── README.md                    # This index
-├── Core Development Documents
-│   ├── prd.md                   # Product requirements  
-│   ├── srs.md                   # Software requirements
-│   ├── adr.md                   # Architecture decisions
-│   ├── checklist.md             # Progress tracking
-│   └── backlog.md               # Sprint planning
-├── technical/                   # Technical implementation guides
-│   ├── amr_usage.md
-│   ├── hybrid_spectral_dg.md
-│   ├── multi_rate_time_integration.md
-│   └── plugin_architecture.md
-└── guides/                      # User-focused guides
-    └── advanced_features.md
-```
-
-## Navigation by Role
-
-### **New Users**
-Start with: [`README.md`](../README.md) → [`guides/advanced_features.md`](guides/advanced_features.md)
-
-### **Contributors** 
-Review: [`checklist.md`](checklist.md) → [`backlog.md`](backlog.md) → [`adr.md`](adr.md)
-
-### **Architects**
-Study: [`adr.md`](adr.md) → [`prd.md`](prd.md) → [`technical/`](technical/)
-
-### **Researchers**
-Reference: [`srs.md`](srs.md) → [`technical/`](technical/) → API documentation
-
----
-
-*Documentation maintained following bonsai-pruned hierarchy principles*  
-*All documents verified for accuracy and completeness*
+| File | Purpose |
+|------|---------|
+| [`../README.md`](../README.md) | Project overview, install, status. |
+| [`../backlog.md`](../backlog.md) | Strategy / prioritized work. |
+| [`../CHECKLIST.md`](../CHECKLIST.md) | Tactical task tracking. |
+| [`../gap_audit.md`](../gap_audit.md) | Physics/numerics gap audit. |
+| [`../CHANGELOG.md`](../CHANGELOG.md) | Version history. |

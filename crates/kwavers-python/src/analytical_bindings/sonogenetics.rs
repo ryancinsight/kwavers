@@ -1,6 +1,6 @@
-//! PyO3 bindings for `kwavers::physics::analytical::sonogenetics`.
+//! PyO3 bindings for `kwavers_physics::analytical::sonogenetics`.
 
-use kwavers::physics::analytical::sonogenetics;
+use kwavers_physics::analytical::sonogenetics;
 use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
@@ -94,12 +94,7 @@ pub fn acoustic_streaming_velocity(
 ///     ISPTA [W/cm²].
 #[pyfunction]
 #[pyo3(signature = (p_pa, dt_s, rho, c))]
-pub fn ispta_w_cm2(
-    p_pa: PyReadonlyArray1<f64>,
-    dt_s: f64,
-    rho: f64,
-    c: f64,
-) -> PyResult<f64> {
+pub fn ispta_w_cm2(p_pa: PyReadonlyArray1<f64>, dt_s: f64, rho: f64, c: f64) -> PyResult<f64> {
     let p_s = p_pa
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;

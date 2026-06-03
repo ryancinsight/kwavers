@@ -1,7 +1,7 @@
 //! PyO3 wrappers for Ali 2025 breast-FWI diagnostic metrics.
 
 use super::{PyBreastFwiPstdDatasetConfig, PyMultiRowRingArray};
-use kwavers::clinical::imaging::reconstruction::breast_ust_fwi::{
+use kwavers_diagnostics::reconstruction::breast_ust_fwi::{
     acquisition_identifiability as breast_ust_acquisition_identifiability,
     diagnose_breast_ust_observation_pair,
     passive_receiver_mask as breast_ust_passive_receiver_mask,
@@ -481,6 +481,6 @@ fn table1_parity_to_dict<'py>(
     Ok(out)
 }
 
-fn kwavers_to_value_py(err: kwavers::core::error::KwaversError) -> PyErr {
+fn kwavers_to_value_py(err: kwavers_core::error::KwaversError) -> PyErr {
     PyValueError::new_err(err.to_string())
 }

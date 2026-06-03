@@ -3,7 +3,7 @@ use numpy::{PyReadonlyArray1, PyReadonlyArray2};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
-use kwavers::domain::source::array_2d::ApodizationType as KwaversApodizationType;
+use kwavers_domain::source::array_2d::ApodizationType as KwaversApodizationType;
 
 /// Convert a Python 1D or 2D signal array to a 2D signal matrix (rows = sources).
 pub(crate) fn pressure_signal_to_matrix(signal: &Bound<'_, PyAny>) -> PyResult<Array2<f64>> {

@@ -132,6 +132,10 @@ impl PSTDSolver {
         }
 
         self.apply_absorption_to_pressure()?;
+        // Broadband residual-gas (bubble-cloud) attenuation: applies the true
+        // frequency-dependent Commander–Prosperetti spectrum when a residual
+        // cloud is installed. No-op (single branch) otherwise.
+        self.apply_residual_gas_absorption()?;
         Ok(())
     }
 

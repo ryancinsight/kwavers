@@ -1,4 +1,4 @@
-use kwavers::core::constants::thermodynamic::KELVIN_OFFSET_C;
+use kwavers_core::constants::thermodynamic::KELVIN_OFFSET_C;
 use numpy::{PyArray1, PyArray2, PyArray3};
 use pyo3::prelude::*;
 

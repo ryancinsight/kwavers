@@ -1,6 +1,6 @@
-//! PyO3 bindings for `kwavers::physics::analytical::bbb`.
+//! PyO3 bindings for `kwavers_physics::analytical::bbb`.
 
-use kwavers::physics::analytical::bbb as bbb_mod;
+use kwavers_physics::analytical::bbb as bbb_mod;
 use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;

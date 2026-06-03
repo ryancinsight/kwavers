@@ -1,8 +1,8 @@
-use kwavers::clinical::imaging::reconstruction::transcranial_ust::{
+use kwavers_diagnostics::reconstruction::transcranial_ust::{
     reconstruct_brain_slice, resample_head_slice, select_head_slice, AcousticSlice,
     TranscranialUstBornInversionConfig,
 };
-use kwavers::solver::inverse::linear_born_inversion::LinearBornInversionConfig;
+use kwavers_solver::inverse::linear_born_inversion::LinearBornInversionConfig;
 use ndarray::Array1;
 use numpy::IntoPyArray;
 use pyo3::prelude::*;

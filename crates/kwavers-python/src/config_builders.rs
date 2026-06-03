@@ -9,7 +9,7 @@
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
-use kwavers::simulation::{
+use kwavers_simulation::{
     HelmholtzConfig as KwaversHelmholtzConfig,
     NonlinearConfig as KwaversNonlinearConfig,
     PmlConfig as KwaversPmlConfig,

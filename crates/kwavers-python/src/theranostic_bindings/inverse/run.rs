@@ -1,9 +1,9 @@
 //! `run_theranostic_inverse_from_ritk` pyfunction.
 
-use kwavers::clinical::imaging::reconstruction::transcranial_ust::{
+use kwavers_diagnostics::reconstruction::transcranial_ust::{
     resample_head_slice, select_head_slice,
 };
-use kwavers::clinical::therapy::theranostic_guidance::{
+use kwavers_therapy::therapy::theranostic_guidance::{
     build_abdominal_placement_context, build_brain_placement_context, prepare_abdominal_slice,
     prepare_brain_slice, run_theranostic_inverse,
     synthetic::{

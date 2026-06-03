@@ -27,10 +27,12 @@ pub mod adaptive_integration; // NEW: Adaptive time-stepping for stiff ODEs
 pub mod bjerknes_forces; // NEW: Bjerknes forces for bubble-bubble interactions
 pub mod bubble_field;
 pub mod bubble_state;
+pub mod bubbly_medium; // Void-fraction → sound speed (Wood) + attenuation (Commander–Prosperetti)
 pub mod cavitation_control;
+pub mod dissolution; // Gas-diffusion dissolution (Epstein–Plesset 1950 + shelled extension)
 pub mod encapsulated; // NEW: Encapsulated bubbles with shell dynamics (Church, Marmottant)
 pub mod energy;
-pub mod epstein_plesset; // NEW: Epstein-Plesset stability theorem implementation
+pub mod epstein_plesset; // Epstein-Plesset oscillation-STABILITY theorem (distinct from dissolution)
 pub mod gilmore; // Gilmore equation for violent collapse // NEW: Comprehensive energy balance model
 pub mod heterogeneous_nucleation;
 pub mod imex_integration;
@@ -48,6 +50,14 @@ pub use adaptive_integration::{
     IntegrationStatistics,
 };
 pub use bjerknes_forces::{BjerknesCalculator, BjerknesConfig, BjerknesInteractionType}; // NEW: Bubble-bubble interaction forces
+pub use bubbly_medium::{
+    commander_prosperetti_attenuation, commander_prosperetti_phase_velocity,
+    commander_prosperetti_wavenumber, mixture_density, wood_sound_speed,
+};
+pub use dissolution::{
+    dissolution_time_numeric, integrate_dissolution, DissolutionModel, DissolutionTrajectory,
+    EpsteinPlessetDissolution, GasDiffusionParams, ShellPermeationDissolution,
+};
 pub use bubble_field::{BubbleCloud, BubbleField, BubbleStateFields};
 pub use bubble_state::{BubbleParameters, BubbleState, GasSpecies};
 pub use cavitation_control::{

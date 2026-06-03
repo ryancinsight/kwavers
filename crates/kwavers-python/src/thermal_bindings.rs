@@ -1,7 +1,7 @@
 //! Thermal diffusion / Pennes bioheat Python bindings.
 //!
-//! Wraps `kwavers::solver::forward::thermal_diffusion::ThermalDiffusionSolver`
-//! and `kwavers::domain::medium::HomogeneousMedium`.  All physics (Laplacian,
+//! Wraps `kwavers_solver::forward::thermal_diffusion::ThermalDiffusionSolver`
+//! and `kwavers_domain::medium::HomogeneousMedium`.  All physics (Laplacian,
 //! bioheat perfusion, CEM43 dose) are delegated to the kwavers core; this
 //! module only handles PyO3 marshalling, unit conversion (°C ↔ K), and sensor
 //! extraction (Python-specific concern with no kwavers equivalent).
@@ -26,15 +26,15 @@ use numpy::{IntoPyArray, PyArray1, PyArray2, PyArray3, PyReadonlyArray3};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
-use kwavers::core::constants::medical::{
+use kwavers_core::constants::medical::{
     THERMAL_DOSE_REFERENCE_TEMP_C,
 };
-use kwavers::core::constants::fundamental::{DENSITY_TISSUE, SOUND_SPEED_TISSUE};
-use kwavers::core::constants::thermodynamic::{BODY_TEMPERATURE_C, KELVIN_OFFSET_C};
-use kwavers::domain::grid::Grid as KwaversGrid;
-use kwavers::domain::medium::HomogeneousMedium;
-use kwavers::physics::thermal::diffusion::ThermalDiffusionConfig;
-use kwavers::solver::forward::thermal_diffusion::ThermalDiffusionSolver;
+use kwavers_core::constants::fundamental::{DENSITY_TISSUE, SOUND_SPEED_TISSUE};
+use kwavers_core::constants::thermodynamic::{BODY_TEMPERATURE_C, KELVIN_OFFSET_C};
+use kwavers_domain::grid::Grid as KwaversGrid;
+use kwavers_domain::medium::HomogeneousMedium;
+use kwavers_physics::thermal::diffusion::ThermalDiffusionConfig;
+use kwavers_solver::forward::thermal_diffusion::ThermalDiffusionSolver;
 
 // ── Defaults (soft tissue, ICRU Report 44) ──────────────────────────────────
 const DEFAULT_K: f64 = 0.5; // thermal conductivity [W/(m·K)]

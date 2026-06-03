@@ -88,7 +88,7 @@ impl PropertyStats {
 /// Physics-layer statistical analysis over a domain [`OpticalPropertyMap`].
 ///
 /// Implemented as an extension trait because the map type now lives in the
-/// `kwavers-domain` crate (ADR 009); inherent `impl`s cannot cross crate
+/// `kwavers-domain` crate (ADR 011); inherent `impl`s cannot cross crate
 /// boundaries. Bring this trait into scope to call `*_stats()` on a map.
 pub trait OpticalPropertyMapAnalysis {
     /// Statistics for the absorption-coefficient distribution.

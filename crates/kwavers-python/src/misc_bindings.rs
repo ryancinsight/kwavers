@@ -1,7 +1,7 @@
 //! Phase 22 wrappers: PID controller, resampling, reconstruction, and bubble field.
 
-use kwavers::core::error::KwaversError;
-use kwavers::solver::inverse::reconstruction::photoacoustic::{
+use kwavers_core::error::KwaversError;
+use kwavers_solver::inverse::reconstruction::photoacoustic::{
     kspace_line_recon as kwavers_kspace_line_recon, LineReconDataOrder, LineReconInterpolation,
 };
 use ndarray::{Array2, Array3, Axis};
@@ -19,7 +19,7 @@ use crate::grid_py::Grid;
 
 #[pyclass(name = "PIDController")]
 pub struct PyPIDController {
-    inner: kwavers::physics::acoustics::bubble_dynamics::cavitation_control::pid_controller::PIDController,
+    inner: kwavers_physics::acoustics::bubble_dynamics::cavitation_control::pid_controller::PIDController,
 }
 
 #[pymethods]
@@ -37,16 +37,16 @@ impl PyPIDController {
         output_max: f64,
         integral_limit: f64,
     ) -> Self {
-        let gains = kwavers::physics::acoustics::bubble_dynamics::cavitation_control::pid_controller::PIDGains { kp, ki, kd };
-        let config = kwavers::physics::acoustics::bubble_dynamics::cavitation_control::pid_controller::PIDConfig {
+        let gains = kwavers_physics::acoustics::bubble_dynamics::cavitation_control::pid_controller::PIDGains { kp, ki, kd };
+        let config = kwavers_physics::acoustics::bubble_dynamics::cavitation_control::pid_controller::PIDConfig {
             gains,
             sample_time,
             output_min,
             output_max,
             integral_limit,
-            ..kwavers::physics::acoustics::bubble_dynamics::cavitation_control::pid_controller::PIDConfig::default()
+            ..kwavers_physics::acoustics::bubble_dynamics::cavitation_control::pid_controller::PIDConfig::default()
         };
-        let mut controller = kwavers::physics::acoustics::bubble_dynamics::cavitation_control::pid_controller::PIDController::new(config);
+        let mut controller = kwavers_physics::acoustics::bubble_dynamics::cavitation_control::pid_controller::PIDController::new(config);
         controller.set_setpoint(setpoint);
         Self { inner: controller }
     }
@@ -77,7 +77,7 @@ fn resample_to_target_grid<'py>(
     transform: [f64; 16],
     target_dims: (usize, usize, usize),
 ) -> Py<PyArray3<f64>> {
-    use kwavers::physics::acoustics::imaging::fusion::registration::resample_to_target_grid as kwavers_resample;
+    use kwavers_physics::acoustics::imaging::fusion::registration::resample_to_target_grid as kwavers_resample;
     let arr = source_image.as_array().to_owned();
     let resampled = py.detach(|| kwavers_resample(&arr, &transform, target_dims));
     PyArray3::from_owned_array(py, resampled).into()
@@ -175,22 +175,22 @@ fn time_reversal_reconstruction<'py>(
 pub(crate) fn time_reversal_reconstruction_impl(
     sensor_data: Array2<f64>,
     sensor_positions: Array2<f64>,
-    grid: &kwavers::domain::grid::Grid,
+    grid: &kwavers_domain::grid::Grid,
     sound_speed: f64,
     sampling_frequency: f64,
     pml_size: Option<usize>,
-) -> kwavers::core::error::KwaversResult<Array3<f64>> {
-    use kwavers::domain::boundary::cpml::CPMLConfig;
-    use kwavers::domain::medium::HomogeneousMedium;
-    use kwavers::domain::source::grid_source::SourceMode;
-    use kwavers::domain::source::GridSource;
-    use kwavers::solver::forward::pstd::config::{BoundaryConfig, CompatibilityMode, PSTDConfig};
-    use kwavers::solver::forward::pstd::implementation::core::orchestrator::PSTDSolver;
-    use kwavers::solver::interface::solver::Solver as SolverTrait;
+) -> kwavers_core::error::KwaversResult<Array3<f64>> {
+    use kwavers_domain::boundary::cpml::CPMLConfig;
+    use kwavers_domain::medium::HomogeneousMedium;
+    use kwavers_domain::source::grid_source::SourceMode;
+    use kwavers_domain::source::GridSource;
+    use kwavers_solver::forward::pstd::config::{BoundaryConfig, CompatibilityMode, PSTDConfig};
+    use kwavers_solver::forward::pstd::implementation::core::orchestrator::PSTDSolver;
+    use kwavers_solver::interface::solver::Solver as SolverTrait;
 
     if sound_speed <= 0.0 || !sound_speed.is_finite() {
         return Err(KwaversError::Validation(
-            kwavers::core::error::ValidationError::FieldValidation {
+            kwavers_core::error::ValidationError::FieldValidation {
                 field: "sound_speed".to_string(),
                 value: sound_speed.to_string(),
                 constraint: "must be a positive finite scalar".to_string(),
@@ -199,7 +199,7 @@ pub(crate) fn time_reversal_reconstruction_impl(
     }
     if sampling_frequency <= 0.0 || !sampling_frequency.is_finite() {
         return Err(KwaversError::Validation(
-            kwavers::core::error::ValidationError::FieldValidation {
+            kwavers_core::error::ValidationError::FieldValidation {
                 field: "sampling_frequency".to_string(),
                 value: sampling_frequency.to_string(),
                 constraint: "must be a positive finite scalar".to_string(),
@@ -208,7 +208,7 @@ pub(crate) fn time_reversal_reconstruction_impl(
     }
     if sensor_positions.ncols() != 3 || sensor_positions.nrows() == 0 {
         return Err(KwaversError::Validation(
-            kwavers::core::error::ValidationError::FieldValidation {
+            kwavers_core::error::ValidationError::FieldValidation {
                 field: "sensor_positions".to_string(),
                 value: format!("{:?}", sensor_positions.dim()),
                 constraint: "must have shape (n_sensors, 3) and contain at least one sensor"
@@ -223,7 +223,7 @@ pub(crate) fn time_reversal_reconstruction_impl(
         (_rows, cols) if cols == n_sensors => sensor_data.reversed_axes().to_owned(),
         (rows, cols) => {
             return Err(KwaversError::Validation(
-                kwavers::core::error::ValidationError::FieldValidation {
+                kwavers_core::error::ValidationError::FieldValidation {
                     field: "sensor_data".to_string(),
                     value: format!("shape=({rows}, {cols})"),
                     constraint: format!(
@@ -237,7 +237,7 @@ pub(crate) fn time_reversal_reconstruction_impl(
 
     if sensor_data.ncols() == 0 {
         return Err(KwaversError::Validation(
-            kwavers::core::error::ValidationError::FieldValidation {
+            kwavers_core::error::ValidationError::FieldValidation {
                 field: "sensor_data".to_string(),
                 value: "0 time samples".to_string(),
                 constraint: "must contain at least one time sample".to_string(),
@@ -255,7 +255,7 @@ pub(crate) fn time_reversal_reconstruction_impl(
     let expand_x = if grid.nx > 1 { pml } else { 0 };
     let expand_y = if grid.ny > 1 { pml } else { 0 };
     let expand_z = if grid.nz > 1 { pml } else { 0 };
-    let expanded_grid = kwavers::domain::grid::Grid::new(
+    let expanded_grid = kwavers_domain::grid::Grid::new(
         grid.nx + 2 * expand_x,
         grid.ny + 2 * expand_y,
         grid.nz + 2 * expand_z,
@@ -280,7 +280,7 @@ pub(crate) fn time_reversal_reconstruction_impl(
             || k >= expanded_grid.nz as isize
         {
             return Err(KwaversError::Validation(
-                kwavers::core::error::ValidationError::FieldValidation {
+                kwavers_core::error::ValidationError::FieldValidation {
                     field: "sensor_positions".to_string(),
                     value: format!("[{x}, {y}, {z}]"),
                     constraint: "must map to a grid node inside the expanded domain".to_string(),
@@ -290,7 +290,7 @@ pub(crate) fn time_reversal_reconstruction_impl(
         let (i, j, k) = (i as usize, j as usize, k as usize);
         if p_mask[[i, j, k]] != 0.0 {
             return Err(KwaversError::Validation(
-                kwavers::core::error::ValidationError::FieldValidation {
+                kwavers_core::error::ValidationError::FieldValidation {
                     field: "sensor_positions".to_string(),
                     value: format!("duplicate grid node ({i}, {j}, {k})"),
                     constraint: "sensor positions must map to unique grid nodes".to_string(),
@@ -353,7 +353,7 @@ pub(crate) fn time_reversal_reconstruction_impl(
 
 #[pyclass(name = "BubbleField")]
 pub struct PyBubbleField {
-    inner: kwavers::physics::acoustics::bubble_dynamics::bubble_field::BubbleField,
+    inner: kwavers_physics::acoustics::bubble_dynamics::bubble_field::BubbleField,
 }
 
 #[pymethods]
@@ -361,9 +361,9 @@ impl PyBubbleField {
     #[new]
     fn new(nx: usize, ny: usize, nz: usize) -> Self {
         let params =
-            kwavers::physics::acoustics::bubble_dynamics::bubble_state::BubbleParameters::default();
+            kwavers_physics::acoustics::bubble_dynamics::bubble_state::BubbleParameters::default();
         Self {
-            inner: kwavers::physics::acoustics::bubble_dynamics::bubble_field::BubbleField::new(
+            inner: kwavers_physics::acoustics::bubble_dynamics::bubble_field::BubbleField::new(
                 (nx, ny, nz),
                 params,
             ),
@@ -372,7 +372,7 @@ impl PyBubbleField {
 
     fn add_center_bubble(&mut self) {
         let params =
-            kwavers::physics::acoustics::bubble_dynamics::bubble_state::BubbleParameters::default();
+            kwavers_physics::acoustics::bubble_dynamics::bubble_state::BubbleParameters::default();
         self.inner.add_center_bubble(&params);
     }
 

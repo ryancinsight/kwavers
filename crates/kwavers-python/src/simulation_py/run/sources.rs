@@ -1,12 +1,12 @@
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
-use kwavers::domain::source::custom::FunctionSource;
-use kwavers::domain::source::grid_source::SourceMode;
-use kwavers::domain::source::wavefront::plane_wave::{
+use kwavers_domain::source::custom::FunctionSource;
+use kwavers_domain::source::grid_source::SourceMode;
+use kwavers_domain::source::wavefront::plane_wave::{
     InjectionMode, PlaneWaveSource, PlaneWaveSourceConfig,
 };
-use kwavers::domain::source::{GridSource, Source as KwaversSource, SourceField};
+use kwavers_domain::source::{GridSource, Source as KwaversSource, SourceField};
 
 use std::sync::Arc;
 

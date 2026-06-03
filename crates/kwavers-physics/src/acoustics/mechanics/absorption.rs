@@ -61,9 +61,30 @@ pub fn power_law_db_cm_to_np_omega_m(alpha_db_cm: f64, alpha_power: f64) -> f64 
     alpha_db_cm * DB_TO_NP / CM_TO_M * (1.0 / (TWO_PI * REFERENCE_FREQUENCY_HZ)).powf(alpha_power)
 }
 
+/// Inverse of [`power_law_db_cm_to_np_omega_m`] at a specific frequency: the
+/// `dB/(MHz^y·cm)` power-law prefactor that reproduces a given amplitude
+/// attenuation `α(f)` [Np/m] at frequency `f` for power-law exponent `y`.
+///
+/// From `α(f) [Np/m] = α_db · (ln10/20)·100 · (f/1 MHz)^y`:
+/// ```text
+///   α_db = α_Np_m · (CM_TO_M / DB_TO_NP) · (f_ref / f)^y
+/// ```
+/// Used to inject a non-power-law excess attenuation (e.g. a resonant
+/// bubble-cloud α from Commander–Prosperetti) into a power-law medium's
+/// prefactor so it produces that attenuation at the drive frequency. Exact at
+/// `f`; off-frequency it then scales as the medium's `f^y`.
+#[must_use]
+#[inline]
+pub fn np_m_to_power_law_db_cm(alpha_np_m: f64, freq_hz: f64, alpha_power: f64) -> f64 {
+    if !freq_hz.is_finite() || freq_hz <= 0.0 {
+        return 0.0;
+    }
+    alpha_np_m * (CM_TO_M / DB_TO_NP) * (REFERENCE_FREQUENCY_HZ / freq_hz).powf(alpha_power)
+}
+
 #[cfg(test)]
 mod tests {
-    use super::power_law_db_cm_to_np_omega_m;
+    use super::{np_m_to_power_law_db_cm, power_law_db_cm_to_np_omega_m};
 
     #[test]
     fn test_power_law_db_cm_to_np_omega_m_matches_kwave_reference() {
@@ -73,5 +94,28 @@ mod tests {
             (got - expected).abs() < 1e-24,
             "conversion mismatch: got {got}, expected {expected}"
         );
+    }
+
+    #[test]
+    fn np_m_to_db_cm_round_trips_at_frequency() {
+        // A target attenuation [Np/m] at a drive frequency must convert to a
+        // power-law prefactor that reproduces exactly that attenuation at f.
+        let alpha_target_np_m = 37.0;
+        let f = 0.5e6;
+        let y = 1.1;
+        let db_cm = np_m_to_power_law_db_cm(alpha_target_np_m, f, y);
+        let alpha_si = power_law_db_cm_to_np_omega_m(db_cm, y);
+        let omega = 2.0 * std::f64::consts::PI * f;
+        let recovered = alpha_si * omega.powf(y);
+        assert!(
+            (recovered - alpha_target_np_m).abs() <= 1e-9 * alpha_target_np_m,
+            "round-trip: target={alpha_target_np_m} Np/m, recovered={recovered} Np/m"
+        );
+    }
+
+    #[test]
+    fn np_m_to_db_cm_guards_nonpositive_frequency() {
+        assert_eq!(np_m_to_power_law_db_cm(10.0, 0.0, 1.1), 0.0);
+        assert_eq!(np_m_to_power_law_db_cm(10.0, -1.0, 1.1), 0.0);
     }
 }

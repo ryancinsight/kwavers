@@ -1,13 +1,13 @@
-use kwavers::core::error::{KwaversError, KwaversResult};
-use kwavers::domain::boundary::cpml::CPMLConfig;
-use kwavers::domain::grid::Grid as KwaversGrid;
-use kwavers::domain::sensor::recorder::simple::SensorRecorder;
-use kwavers::domain::source::{GridSource, Source as KwaversSource};
-use kwavers::physics::acoustics::mechanics::absorption::AbsorptionMode;
-use kwavers::solver::forward::pstd::config::{BoundaryConfig, CompatibilityMode, PSTDConfig};
-use kwavers::solver::forward::pstd::implementation::core::orchestrator::PSTDSolver;
-use kwavers::solver::geometry::SolverGeometry;
-use kwavers::solver::interface::solver::Solver as SolverTrait;
+use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_domain::boundary::cpml::CPMLConfig;
+use kwavers_domain::grid::Grid as KwaversGrid;
+use kwavers_domain::sensor::recorder::simple::SensorRecorder;
+use kwavers_domain::source::{GridSource, Source as KwaversSource};
+use kwavers_physics::acoustics::mechanics::absorption::AbsorptionMode;
+use kwavers_solver::forward::pstd::config::{BoundaryConfig, CompatibilityMode, PSTDConfig};
+use kwavers_solver::forward::pstd::implementation::core::orchestrator::PSTDSolver;
+use kwavers_solver::geometry::SolverGeometry;
+use kwavers_solver::interface::solver::Solver as SolverTrait;
 
 use crate::medium_py::MediumInner;
 use crate::sensor_py::Sensor;
@@ -39,7 +39,7 @@ impl Simulation {
         axisymmetric: bool,
         record_modes: &[String],
     ) -> KwaversResult<(PSTDSolver, KwaversGrid, ndarray::Array3<bool>)> {
-        use kwavers::core::error::ValidationError;
+        use kwavers_core::error::ValidationError;
 
         let sensor_mask = Self::create_sensor_mask(grid, sensor, transducer_sensor);
         let transducer_ordered_indices = transducer_sensor
@@ -258,7 +258,7 @@ impl Simulation {
         pml_size_xyz: Option<(usize, usize, usize)>,
         pml_inside: bool,
         pml_alpha_xyz: Option<(f64, f64, f64)>,
-        checkpoint: kwavers::solver::forward::pstd::checkpoint::PSTDCheckpoint,
+        checkpoint: kwavers_solver::forward::pstd::checkpoint::PSTDCheckpoint,
         remaining_steps: usize,
         checkpoint_path: &std::path::Path,
         record_modes: &[String],

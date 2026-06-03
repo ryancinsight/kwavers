@@ -2,7 +2,7 @@
 //! tone burst, pulse train, Goldberg parameter, shock waveform,
 //! Westervelt harmonic evolution).
 
-use kwavers::physics::analytical::wave;
+use kwavers_physics::analytical::wave;
 use ndarray::Array2;
 use numpy::{IntoPyArray, PyArray1, PyArray2, PyReadonlyArray1};
 use pyo3::exceptions::PyRuntimeError;

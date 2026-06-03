@@ -1,6 +1,6 @@
-//! PyO3 bindings for `kwavers::physics::analytical::rtm`.
+//! PyO3 bindings for `kwavers_physics::analytical::rtm`.
 
-use kwavers::physics::analytical::rtm as rtm_mod;
+use kwavers_physics::analytical::rtm as rtm_mod;
 use ndarray::Array2;
 use num_complex::Complex64;
 use numpy::{IntoPyArray, PyArray1, PyArray2, PyReadonlyArray1, PyReadonlyArray2};
@@ -243,7 +243,9 @@ pub fn temporal_modulation_frequencies(
 #[pyfunction]
 #[pyo3(signature = (freq_hz, c))]
 pub fn standing_wave_spatial_frequency_cycles_m(freq_hz: f64, c: f64) -> PyResult<f64> {
-    Ok(rtm_mod::standing_wave_spatial_frequency_cycles_m(freq_hz, c))
+    Ok(rtm_mod::standing_wave_spatial_frequency_cycles_m(
+        freq_hz, c,
+    ))
 }
 
 /// Compute the standing-wave suppression gain factor.

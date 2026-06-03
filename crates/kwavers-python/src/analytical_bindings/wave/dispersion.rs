@@ -1,7 +1,7 @@
 //! PyO3 bindings: numerical dispersion analysis (FDTD/PSTD phase error,
 //! k-space correction error, CFL stability limit).
 
-use kwavers::physics::analytical::wave;
+use kwavers_physics::analytical::wave;
 use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;

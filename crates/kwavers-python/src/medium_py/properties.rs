@@ -1,4 +1,4 @@
-use kwavers::domain::medium::core::CoreMedium;
+use kwavers_domain::medium::core::CoreMedium;
 use pyo3::prelude::*;
 
 use super::{Medium, MediumInner};

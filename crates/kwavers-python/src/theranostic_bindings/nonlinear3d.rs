@@ -1,6 +1,6 @@
 //! `run_theranostic_nonlinear_3d_from_ritk` pyfunction and result serialization.
 
-use kwavers::clinical::therapy::theranostic_guidance::{
+use kwavers_therapy::therapy::theranostic_guidance::{
     run_theranostic_nonlinear_3d, AnatomyKind, Nonlinear3dConfig,
 };
 use numpy::IntoPyArray;
@@ -129,7 +129,7 @@ pub fn run_theranostic_nonlinear_3d_from_ritk<'py>(
 
 pub(super) fn nonlinear3d_result_to_dict<'py>(
     py: Python<'py>,
-    result: kwavers::clinical::therapy::theranostic_guidance::Nonlinear3dResult,
+    result: kwavers_therapy::therapy::theranostic_guidance::Nonlinear3dResult,
     config: &Nonlinear3dConfig,
     target_fraction_xyz: Option<(f64, f64, f64)>,
 ) -> PyResult<Bound<'py, PyDict>> {

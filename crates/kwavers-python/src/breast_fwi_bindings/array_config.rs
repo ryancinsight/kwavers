@@ -1,6 +1,6 @@
 //! PyO3 binding: `MultiRowRingArray` Python class.
 
-use kwavers::physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;
+use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;
 use numpy::{IntoPyArray, PyArray2};
 use pyo3::prelude::*;
 

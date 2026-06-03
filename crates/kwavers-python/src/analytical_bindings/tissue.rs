@@ -1,6 +1,6 @@
-//! PyO3 bindings for `kwavers::physics::analytical::tissue`.
+//! PyO3 bindings for `kwavers_physics::analytical::tissue`.
 
-use kwavers::physics::analytical::tissue;
+use kwavers_physics::analytical::tissue;
 use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
@@ -123,4 +123,25 @@ pub fn kramers_kronig_sound_speed(
 #[pyo3(signature = (tissue,))]
 pub fn tissue_properties(tissue: String) -> PyResult<(f64, f64, f64, f64, f64)> {
     Ok(tissue::tissue_properties(&tissue))
+}
+
+/// Histotripsy mechanical / cavitation-threshold tissue characterization, from
+/// the kwavers-domain tissue database (Maxwell 2013; Vlaisavljevich 2014/2015).
+///
+/// Args:
+///     tissue: Tissue name string (e.g. "liver", "kidney", "brain").
+///
+/// Returns:
+///     (tensile_yield_stress_pa, intrinsic_threshold_1mhz_pa,
+///      threshold_slope_pa_per_decade, threshold_sigma_pa) — all f64.
+#[pyfunction]
+#[pyo3(signature = (tissue,))]
+pub fn histotripsy_tissue_properties(tissue: String) -> PyResult<(f64, f64, f64, f64)> {
+    let p = kwavers_domain::medium::absorption::histotripsy_tissue_properties_by_name(&tissue);
+    Ok((
+        p.tensile_yield_stress_pa,
+        p.intrinsic_threshold_1mhz_pa,
+        p.threshold_slope_pa_per_decade,
+        p.threshold_sigma_pa,
+    ))
 }
