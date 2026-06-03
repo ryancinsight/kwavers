@@ -25,7 +25,6 @@ pub mod analysis;
 pub mod analytical;
 pub mod bubble_dynamics;
 pub mod conservation;
-pub mod functional;
 pub mod imaging;
 pub mod mechanics;
 pub mod skull;
