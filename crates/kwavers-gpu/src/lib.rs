@@ -40,3 +40,9 @@ pub mod backend;
 // CPU-vs-GPU differential equivalence validation (moved out of solver with the
 // backend it exercises).
 pub mod validation;
+
+// GPU-resident PSTD solver (k-space corrected pseudospectral, wgpu). Consolidated
+// out of `kwavers_solver::forward::pstd::gpu_pstd` — solver keeps only the CPU
+// PSTD; the GPU concretion lives here.
+#[cfg(feature = "gpu")]
+pub mod pstd_gpu;

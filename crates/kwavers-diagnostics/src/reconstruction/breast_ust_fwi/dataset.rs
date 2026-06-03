@@ -282,7 +282,7 @@ fn try_run_gpu_pstd_transmit(
     steps: usize,
     config: BreastUstPstdDatasetConfig,
 ) -> Option<Array2<f64>> {
-    use kwavers_solver::forward::pstd::gpu_pstd::{run_gpu_pstd, GpuPstdRunConfig};
+    use kwavers_gpu::pstd_gpu::{run_gpu_pstd, GpuPstdRunConfig};
     let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
     let mut sensor_mask = Array3::<bool>::from_elem((nx, ny, nz), false);
     for &(i, j, k) in receiver_indices {

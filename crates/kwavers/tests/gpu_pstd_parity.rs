@@ -33,7 +33,7 @@ use kwavers_domain::medium::HomogeneousMedium;
 use kwavers_domain::signal::SineWave;
 use kwavers_domain::source::{InjectionMode, PlaneWaveSource, PlaneWaveSourceConfig, SourceField};
 use kwavers_solver::forward::pstd::config::{BoundaryConfig, KSpaceMethod, PSTDConfig};
-use kwavers_solver::forward::pstd::gpu_pstd::GpuPstdSolver;
+use kwavers_gpu::pstd_gpu::GpuPstdSolver;
 use kwavers_solver::forward::pstd::implementation::core::orchestrator::PSTDSolver;
 use kwavers_solver::interface::Solver;
 use std::sync::Arc;

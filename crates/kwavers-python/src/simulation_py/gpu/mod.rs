@@ -25,7 +25,7 @@ use crate::transducer_array_py::TransducerArray2D;
 /// This is a thin Python-binding adapter: it builds the sensor mask from
 /// the pykwavers `Sensor` / `TransducerArray2D` wrappers and the GPU PSTD
 /// run config from the per-call knobs, then delegates to the canonical
-/// kwavers-side entry [`kwavers_solver::forward::pstd::gpu_pstd::run_gpu_pstd`].
+/// kwavers-side entry [`kwavers_gpu::pstd_gpu::run_gpu_pstd`].
 /// All buffer preparation, CPML profile evaluation, source / sensor indexing,
 /// and `GpuPstdSolver` dispatch live in the kwavers crate so non-Python
 /// callers (clinical adapters, examples, benches) can drive the GPU path
@@ -47,7 +47,7 @@ pub(crate) fn run_gpu_pstd_impl(
     pml_inside: bool,
     pml_alpha_xyz: Option<(f64, f64, f64)>,
 ) -> KwaversResult<(ndarray::Array2<f64>, Option<SampledStatistics>)> {
-    use kwavers_solver::forward::pstd::gpu_pstd::{run_gpu_pstd, GpuPstdRunConfig};
+    use kwavers_gpu::pstd_gpu::{run_gpu_pstd, GpuPstdRunConfig};
 
     let sensor_mask = Simulation::create_sensor_mask(grid, sensor, transducer_sensor);
     let config = GpuPstdRunConfig {

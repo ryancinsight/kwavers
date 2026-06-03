@@ -15,6 +15,7 @@ workspace = true
 kwavers-core = { path = "../kwavers-core" }
 kwavers-math = { path = "../kwavers-math" }
 kwavers-domain = { path = "../kwavers-domain" }
+kwavers-physics = { path = "../kwavers-physics" }
 kwavers-solver = { path = "../kwavers-solver" }
 
 ndarray = { workspace = true }

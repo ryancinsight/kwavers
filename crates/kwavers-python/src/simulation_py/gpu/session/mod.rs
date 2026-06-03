@@ -15,7 +15,7 @@ use pyo3::prelude::*;
 #[pyclass(unsendable)]
 pub struct GpuPstdSession {
     #[cfg(feature = "gpu")]
-    pub(crate) solver: kwavers_solver::forward::pstd::gpu_pstd::GpuPstdSolver,
+    pub(crate) solver: kwavers_gpu::pstd_gpu::GpuPstdSolver,
 
     pub(crate) nx: usize,
     pub(crate) ny: usize,

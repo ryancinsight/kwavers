@@ -13,6 +13,8 @@ kwavers-math = { path = "../kwavers-math" }
 kwavers-domain = { path = "../kwavers-domain" }
 kwavers-physics = { path = "../kwavers-physics" }
 kwavers-solver = { path = "../kwavers-solver" }
+# Concrete GPU backend (the breast-UST FWI adapter's GPU path routes through it).
+kwavers-gpu = { path = "../kwavers-gpu", optional = true }
 kwavers-analysis = { path = "../kwavers-analysis" }
 ndarray = { version = "0.16", features = ["rayon", "serde"] }
 num-complex = "0.4"
@@ -31,7 +33,7 @@ ritk-registration = { workspace = true }
 ritk-core = { workspace = true }
 
 [features]
-gpu = ["kwavers-core/gpu", "kwavers-math/gpu", "kwavers-solver/gpu", "kwavers-analysis/gpu"]
+gpu = ["dep:kwavers-gpu", "kwavers-gpu/gpu", "kwavers-core/gpu", "kwavers-math/gpu", "kwavers-solver/gpu", "kwavers-analysis/gpu"]
 pinn = ["kwavers-solver/pinn", "kwavers-analysis/pinn"]
 
 [dev-dependencies]

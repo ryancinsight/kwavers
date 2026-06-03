@@ -13,6 +13,9 @@ kwavers-math = { path = "../kwavers-math" }
 kwavers-domain = { path = "../kwavers-domain" }
 kwavers-physics = { path = "../kwavers-physics" }
 kwavers-solver = { path = "../kwavers-solver" }
+# Concrete GPU backend (the GPU-PSTD adapter routes through it). Optional —
+# only pulled by the `gpu` feature.
+kwavers-gpu = { path = "../kwavers-gpu", optional = true }
 ndarray = { version = "0.16", features = ["rayon", "serde"] }
 num-complex = "0.4"
 rayon = "1.10"
@@ -22,7 +25,7 @@ toml = "0.8"
 log = "0.4"
 
 [features]
-gpu = ["kwavers-core/gpu", "kwavers-math/gpu", "kwavers-solver/gpu"]
+gpu = ["dep:kwavers-gpu", "kwavers-gpu/gpu", "kwavers-core/gpu", "kwavers-math/gpu", "kwavers-solver/gpu"]
 nifti = ["kwavers-core/nifti"]
 
 [dev-dependencies]
