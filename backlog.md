@@ -19,11 +19,23 @@ Progress (all green, gated so default `--workspace` build stays clean):
   re-exports `kwavers_gpu::gpu`. (2c5acc444)
 - **[done]** Move `profiling/gpu_allocator` → `kwavers-gpu` (unconditional; 9
   tests pass); kwavers-gpu now a regular facade dep.
-- **[todo] repair** wgpu-v26 bit-rot so `--features gpu` builds (broken shader
-  paths from the split, `wgpu::Device::queue()` removal, moved `KSpaceGridParams`,
-  `crate::backend::gpu` gated off). This is the load-bearing remaining step.
+- **[done] repair** wgpu-v26 bit-rot — `cargo check --features gpu` green for
+  `kwavers-solver` (gpu_pstd struct-refactor completion + pstd.wgsl relocation;
+  backend/gpu device/queue split, DeviceDescriptor.trace, request_adapter
+  Result, KwaversError::GpuError migration; backend::gpu ungated onto `gpu`,
+  redundant `solver_backend_gpu_unstable` dropped) and `kwavers-gpu` (carry
+  flume/rayon/rand/once_cell deps; CoreGpuContext dead-field drop; Shape1D via
+  kwavers_math re-export).
+- **[blocked] analysis gpu** — bytemuck dep added (clears 23 errors); 2 trivial
+  errors remain (dynamic_focus_dispatch visibility, missing KwaversError import).
+  **Genuine blocker:** `three_dimensional` GPU beamformers reference
+  `BEAMFORMING_3D_SHADER` / `DYNAMIC_FOCUS_3D_SHADER` WGSL constants that were
+  **never written** (no source, no git history) — incomplete WIP, not bit-rot;
+  fabricating shaders is prohibited. Decision: gate as incomplete vs. author.
+- **[todo] simulation/diagnostics gpu** — unchecked under `--features gpu`.
 - **[todo] consolidate** `solver::backend::gpu` + `solver::forward::{fdtd,pstd}`
-  GPU kernels + `*.wgsl` into kwavers-gpu; leave only the traits in solver.
+  GPU kernels + `*.wgsl` into kwavers-gpu; leave only the traits in solver
+  (deferred — repaired in place first to get the feature building).
 - **[todo] re-home** remaining facade code: `architecture/layer_validation`
   (dev tooling — evaluate keep/delete), `infrastructure/io` (CSV output — facade
   concern, candidate `kwavers-io` or stays).
@@ -76,8 +88,8 @@ The "18 edges" resolved to **11 real physics→solver library edges (all broken)
   `physics/domain→analysis=0`). The interface placement is correct; no change needed.
   (Earlier mis-classified by lumping `solver` with above-analysis `clinical`/`simulation`.)
 
-EXTRACTION PHASE (ADR 009, in progress — leaf-first):
-- **[done]** ADR 009 written (`docs/ADR/009-workspace-crate-split.md`); facade
+EXTRACTION PHASE (ADR 011, complete — leaf-first):
+- **[done]** ADR 011 written (`docs/ADR/011-workspace-crate-split.md`); facade
   strategy (`pub use kwavers_core as core`) decided (3,377 `crate::core::` refs make
   a path-rewrite untenable).
 - **[done]** `kwavers-core` extracted (2026-06-01): `core/` → `crates/kwavers-core/`,
