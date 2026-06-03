@@ -230,7 +230,7 @@ impl BubbleIMEXIntegrator {
             .into());
         }
 
-        let mut state = template.clone();
+        let mut state = *template;
         state.radius = y[0];
         state.wall_velocity = y[1];
         state.temperature = y[2];

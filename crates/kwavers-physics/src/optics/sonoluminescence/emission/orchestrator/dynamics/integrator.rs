@@ -129,7 +129,7 @@ impl IntegratedSonoluminescence {
                     // k2
                     let t_k2 = 0.5f64.mul_add(dt, time);
                     let dp_dt_k2 = p_amp * omega * (omega * t_k2).cos();
-                    let mut state_k2 = state.clone();
+                    let mut state_k2 = state;
                     state_k2.radius += 0.5 * dt * k1_r;
                     state_k2.wall_velocity += 0.5 * dt * k1_v;
                     update_thermodynamics(&mut state_k2, bubble_params);
@@ -143,7 +143,7 @@ impl IntegratedSonoluminescence {
 
                     // k3
                     let dp_dt_k3 = dp_dt_k2;
-                    let mut state_k3 = state.clone();
+                    let mut state_k3 = state;
                     state_k3.radius += 0.5 * dt * k2_r;
                     state_k3.wall_velocity += 0.5 * dt * k2_v;
                     update_thermodynamics(&mut state_k3, bubble_params);
@@ -158,7 +158,7 @@ impl IntegratedSonoluminescence {
                     // k4
                     let t_k4 = time + dt;
                     let dp_dt_k4 = p_amp * omega * (omega * t_k4).cos();
-                    let mut state_k4 = state.clone();
+                    let mut state_k4 = state;
                     state_k4.radius += dt * k3_r;
                     state_k4.wall_velocity += dt * k3_v;
                     update_thermodynamics(&mut state_k4, bubble_params);

@@ -146,11 +146,11 @@ impl<'a> AdaptiveBubbleIntegrator<'a> {
         t: f64,
     ) -> KwaversResult<(bool, f64)> {
         // Store original state
-        let state_orig = state.clone();
+        let state_orig = *state;
 
         // ── Full step (auxiliary; used only for Richardson error estimation) ──
         // Errors here are soft: reject the step and reduce dt.
-        let mut state_full = state_orig.clone();
+        let mut state_full = state_orig;
         let full_ok = self
             .step_rk4(&mut state_full, p_acoustic, dp_dt, dt, t)
             .is_ok();
@@ -225,7 +225,7 @@ impl<'a> AdaptiveBubbleIntegrator<'a> {
         let r0 = self.solver.params().r0;
 
         // RK4 integration
-        let state0 = state.clone();
+        let state0 = *state;
 
         // k1
         // Note: calculate_acceleration requires mutable state, but doesn't mutate solver

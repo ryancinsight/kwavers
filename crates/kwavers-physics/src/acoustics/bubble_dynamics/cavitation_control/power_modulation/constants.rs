@@ -24,15 +24,6 @@ pub const MECHANICAL_INDEX_LIMIT: f64 = kwavers_core::constants::medical::MI_LIM
 /// Default filter time constant (seconds)
 pub const DEFAULT_FILTER_TIME_CONSTANT: f64 = 0.1;
 
-/// Maximum allowed pressure (Pa)
-pub const MAX_PRESSURE_PA: f64 = 10e6;
-
-/// Minimum modulation frequency (Hz)
-pub const MIN_MODULATION_FREQ: f64 = 0.1;
-
-/// Maximum modulation frequency (Hz)
-pub const MAX_MODULATION_FREQ: f64 = 1000.0;
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -58,23 +49,10 @@ mod tests {
         );
     }
 
-    /// Modulation frequency range is valid.
-    #[test]
-    fn modulation_freq_ordering() {
-        assert!(MIN_MODULATION_FREQ > 0.0);
-        assert!(
-            MIN_MODULATION_FREQ < MAX_MODULATION_FREQ,
-            "MIN_MODULATION_FREQ ({}) must be < MAX_MODULATION_FREQ ({})",
-            MIN_MODULATION_FREQ,
-            MAX_MODULATION_FREQ
-        );
-    }
-
     /// Safety-critical constants are positive.
     #[test]
     fn safety_constants_positive() {
         assert!(MECHANICAL_INDEX_LIMIT > 0.0);
-        assert!(MAX_PRESSURE_PA > 0.0);
         assert!(MAX_AMPLITUDE_RATE > 0.0);
     }
 }
