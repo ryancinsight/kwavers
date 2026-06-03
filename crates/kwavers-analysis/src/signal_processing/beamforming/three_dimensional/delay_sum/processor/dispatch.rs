@@ -204,6 +204,8 @@ impl<'a> DelaySumGPU<'a> {
             compute_pass.set_pipeline(self.pipeline);
             compute_pass.set_bind_group(0, &bind_group, &[]);
 
+            // Must match @workgroup_size in beamforming_3d.wgsl (8³ = 512; the
+            // device is created with the adapter's compute limits to admit it).
             let workgroup_size = 8_usize;
             let dispatch_x = vol_x.div_ceil(workgroup_size);
             let dispatch_y = vol_y.div_ceil(workgroup_size);
@@ -232,13 +234,15 @@ impl<'a> DelaySumGPU<'a> {
 
         let _ = self.device.poll(wgpu::PollType::Wait);
 
-        let data = buffer_slice.get_mapped_range();
-        let result_f32: &[f32] = bytemuck::cast_slice(&data);
-
-        let result_volume = Array3::from_shape_fn((vol_x, vol_y, vol_z), |(x, y, z)| {
-            let idx = x + y * vol_x + z * vol_x * vol_y;
-            result_f32[idx]
-        });
+        // Scope the mapped view so it is dropped before `unmap` (wgpu rejects
+        // unmapping a buffer that still has an accessible mapped view).
+        let result_volume = {
+            let data = buffer_slice.get_mapped_range();
+            let result_f32: &[f32] = bytemuck::cast_slice(&data);
+            Array3::from_shape_fn((vol_x, vol_y, vol_z), |(x, y, z)| {
+                result_f32[x + y * vol_x + z * vol_x * vol_y]
+            })
+        };
 
         staging_buffer.unmap();
 

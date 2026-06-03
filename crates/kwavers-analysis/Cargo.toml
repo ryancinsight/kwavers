@@ -28,12 +28,13 @@ burn = { version = "0.19", features = ["ndarray", "autodiff", "wgpu"] }
 
 # Optional GPU compute (the `visualization` subtree is `gpu`-gated).
 wgpu = { version = "26.0", features = ["wgsl"], optional = true }
+bytemuck = { version = "1.19", features = ["derive"], optional = true }
 # Optional plotting / immediate-mode UI surfaces.
 plotly = { version = "0.8", optional = true }
 egui = { version = "0.25", optional = true }
 
 [features]
-gpu = ["dep:wgpu", "kwavers-core/gpu", "kwavers-math/gpu", "kwavers-solver/gpu"]
+gpu = ["dep:wgpu", "dep:bytemuck", "kwavers-core/gpu", "kwavers-math/gpu", "kwavers-solver/gpu"]
 plotting = ["dep:plotly"]
 gpu-visualization = ["gpu", "plotting", "dep:egui"]
 pinn = ["kwavers-solver/pinn"]
@@ -41,6 +42,8 @@ pinn = ["kwavers-solver/pinn"]
 [dev-dependencies]
 approx = "0.5"
 tokio = { version = "1.42", features = ["rt-multi-thread", "macros", "time"] }
+# Block-on for GPU-feature tests that drive wgpu adapter/device requests.
+pollster = "0.4"
 
 [lints]
 workspace = true

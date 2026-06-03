@@ -49,6 +49,8 @@ mod mvdr;
 mod processing;
 mod processor;
 mod saft;
+#[cfg(feature = "gpu")]
+pub(crate) mod shaders;
 mod streaming;
 
 // Public API re-exports

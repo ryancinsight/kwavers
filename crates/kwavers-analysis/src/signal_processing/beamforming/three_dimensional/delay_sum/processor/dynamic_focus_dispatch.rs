@@ -24,7 +24,7 @@ use super::super::params::DynamicFocusParams;
 #[cfg(feature = "gpu")]
 use crate::signal_processing::beamforming::three_dimensional::config::Beamforming3dApodizationWindow;
 #[cfg(feature = "gpu")]
-use kwavers_core::error::KwaversResult;
+use kwavers_core::error::{KwaversError, KwaversResult};
 #[cfg(feature = "gpu")]
 use ndarray::{Array3, Array4};
 #[cfg(feature = "gpu")]
@@ -43,11 +43,11 @@ const DEFAULT_NUM_FOCUS_ZONES: u32 = 32;
 /// `BeamformingProcessor3D` owns for the dynamic-focus path.
 #[cfg(feature = "gpu")]
 pub struct DynamicFocusGPU<'a> {
-    pub(super) config: &'a crate::signal_processing::beamforming::three_dimensional::config::BeamformingConfig3D,
-    pub(super) device: &'a wgpu::Device,
-    pub(super) queue: &'a wgpu::Queue,
-    pub(super) pipeline: &'a wgpu::ComputePipeline,
-    pub(super) bind_group_layout: &'a wgpu::BindGroupLayout,
+    pub(crate) config: &'a crate::signal_processing::beamforming::three_dimensional::config::BeamformingConfig3D,
+    pub(crate) device: &'a wgpu::Device,
+    pub(crate) queue: &'a wgpu::Queue,
+    pub(crate) pipeline: &'a wgpu::ComputePipeline,
+    pub(crate) bind_group_layout: &'a wgpu::BindGroupLayout,
 }
 
 #[cfg(feature = "gpu")]
@@ -273,6 +273,7 @@ impl<'a> DynamicFocusGPU<'a> {
             });
             pass.set_pipeline(self.pipeline);
             pass.set_bind_group(0, &bind_group, &[]);
+            // Must match @workgroup_size in dynamic_focus_3d.wgsl (8³ = 512).
             let ws = 8_usize;
             pass.dispatch_workgroups(
                 vol_x.div_ceil(ws) as u32,

@@ -16,7 +16,7 @@
 use super::config::{BeamformingConfig3D, BeamformingMetrics};
 use kwavers_core::error::{KwaversError, KwaversResult};
 #[cfg(feature = "gpu")]
-use kwavers_domain::sensor::beamforming::shaders;
+use super::shaders;
 
 #[cfg(feature = "gpu")]
 use wgpu;
@@ -103,11 +103,23 @@ impl BeamformingProcessor3D {
                 })?;
 
             // Create logical device and queue
+            // The beamforming kernels dispatch 8×8×8 (512) workgroups; the default
+            // limit caps invocations-per-workgroup at 256. Request the adapter's
+            // actual compute limits (always satisfiable, since they are what the
+            // hardware reports) so the 512-invocation workgroup is admitted.
+            let adapter_limits = adapter.limits();
             let (device, queue) = adapter
                 .request_device(&wgpu::DeviceDescriptor {
                     label: Some("3D Beamforming Device"),
                     required_features: wgpu::Features::empty(),
-                    required_limits: wgpu::Limits::default(),
+                    required_limits: wgpu::Limits {
+                        max_compute_invocations_per_workgroup: adapter_limits
+                            .max_compute_invocations_per_workgroup,
+                        max_compute_workgroup_size_x: adapter_limits.max_compute_workgroup_size_x,
+                        max_compute_workgroup_size_y: adapter_limits.max_compute_workgroup_size_y,
+                        max_compute_workgroup_size_z: adapter_limits.max_compute_workgroup_size_z,
+                        ..wgpu::Limits::default()
+                    },
                     memory_hints: wgpu::MemoryHints::default(),
                     trace: wgpu::Trace::Off,
                 })

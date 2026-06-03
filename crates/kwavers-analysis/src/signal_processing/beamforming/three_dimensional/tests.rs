@@ -111,3 +111,66 @@ async fn test_processor_creation_cpu_only() {
     // Should fail with FeatureNotAvailable error
     assert!(result.is_err());
 }
+
+/// Differential validation: the static-DAS GPU shader (`beamforming_3d.wgsl`)
+/// must agree with the analytically-specified CPU reference
+/// (`cpu::delay_and_sum_cpu`) within a mixed absolute/relative tolerance.
+///
+/// Skips when no GPU adapter is present (the shader still compiles via
+/// `create_shader_module` inside `BeamformingProcessor3D::new`, and this test
+/// runs the value-semantic comparison wherever a GPU exists).
+#[cfg(feature = "gpu")]
+#[tokio::test]
+async fn das_gpu_matches_cpu_reference() {
+    use ndarray::Array4;
+
+    let config = BeamformingConfig3D {
+        num_elements_3d: (2, 1, 2),
+        element_spacing_3d: (1.0e-3, 1.0e-3, 1.0e-3),
+        volume_dims: (4, 1, 4),
+        voxel_spacing: (1.0e-3, 1.0e-3, 1.0e-3),
+        sound_speed: 1500.0,
+        sampling_frequency: 10.0e6,
+        ..BeamformingConfig3D::default()
+    };
+
+    // Deterministic RF: 1 frame, 4 channels (= 2·1·2), 64 samples.
+    let mut rf = Array4::<f32>::zeros((1, 4, 64, 1));
+    for ch in 0..4 {
+        for s in 0..64 {
+            rf[[0, ch, s, 0]] = (((ch * 13 + s * 7) % 17) as f32) - 8.0;
+        }
+    }
+
+    let cpu = super::cpu::delay_and_sum_cpu(
+        &rf,
+        &config,
+        &Beamforming3dApodizationWindow::Rectangular,
+    )
+    .expect("CPU DAS reference");
+
+    let mut processor = match BeamformingProcessor3D::new(config.clone()).await {
+        Ok(p) => p,
+        Err(_) => return, // no GPU adapter in this environment — skip
+    };
+
+    let gpu = processor
+        .process_volume(
+            &rf,
+            &BeamformingAlgorithm3D::DelayAndSum {
+                dynamic_focusing: false,
+                apodization: Beamforming3dApodizationWindow::Rectangular,
+                sub_volume_size: None,
+            },
+        )
+        .expect("GPU DAS reconstruction");
+
+    assert_eq!(cpu.dim(), gpu.dim(), "CPU/GPU volume dimensions differ");
+    for (c, g) in cpu.iter().zip(gpu.iter()) {
+        let tol = 1.0e-3f32.mul_add(c.abs(), 1.0e-2);
+        assert!(
+            (c - g).abs() <= tol,
+            "GPU DAS diverges from CPU reference: cpu={c}, gpu={g}, tol={tol}"
+        );
+    }
+}
