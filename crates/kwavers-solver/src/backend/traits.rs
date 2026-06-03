@@ -99,17 +99,9 @@ pub trait ComputeBackend {
     ///
     fn select_device(&mut self, device_id: usize) -> KwaversResult<()>;
 
-    /// Execute 3D FFT
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
-    fn fft_3d(&self, data: &mut Array3<f64>) -> KwaversResult<()>;
-
-    /// Execute 3D inverse FFT
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
-    fn ifft_3d(&self, data: &mut Array3<f64>) -> KwaversResult<()>;
+    // NOTE: 3D FFT is intentionally NOT part of this trait. GPU FFT is owned by
+    // Apollo (`kwavers_math::fft::gpu_fft`, backed by `apollofft-wgpu`) — the
+    // single source of truth — so the backend does not reimplement it.
 
     /// Element-wise multiplication
     /// # Errors

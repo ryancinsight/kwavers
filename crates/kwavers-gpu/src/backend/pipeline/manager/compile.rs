@@ -6,57 +6,6 @@ use std::collections::HashMap;
 use wgpu;
 
 impl super::PipelineManager {
-    /// Compile fft pipeline.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
-    pub(super) fn compile_fft_pipeline(
-        device: &wgpu::Device,
-        pipelines: &mut HashMap<PipelineType, wgpu::ComputePipeline>,
-        layouts: &mut HashMap<PipelineType, wgpu::BindGroupLayout>,
-    ) -> KwaversResult<()> {
-        let shader_source = include_str!("../../shaders/fft.wgsl");
-
-        let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("fft-shader"),
-            source: wgpu::ShaderSource::Wgsl(shader_source.into()),
-        });
-
-        let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("fft-layout"),
-            entries: &[wgpu::BindGroupLayoutEntry {
-                binding: 0,
-                visibility: wgpu::ShaderStages::COMPUTE,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Storage { read_only: false },
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            }],
-        });
-
-        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("fft-pipeline-layout"),
-            bind_group_layouts: &[&layout],
-            push_constant_ranges: &[],
-        });
-
-        let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-            label: Some("fft-pipeline"),
-            layout: Some(&pipeline_layout),
-            module: &shader,
-            entry_point: Some("fft_main"),
-            compilation_options: Default::default(),
-            cache: None,
-        });
-
-        layouts.insert(PipelineType::FFT3D, layout.clone());
-        layouts.insert(PipelineType::IFFT3D, layout);
-        pipelines.insert(PipelineType::FFT3D, pipeline);
-
-        Ok(())
-    }
     /// Compile elementwise pipeline.
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.

@@ -24,7 +24,6 @@ impl PipelineManager {
         let mut pipelines = HashMap::new();
         let mut layouts = HashMap::new();
 
-        Self::compile_fft_pipeline(device, &mut pipelines, &mut layouts)?;
         Self::compile_elementwise_pipeline(device, &mut pipelines, &mut layouts)?;
         Self::compile_derivative_pipeline(device, &mut pipelines, &mut layouts)?;
 

@@ -206,18 +206,6 @@ impl ComputeBackend for GPUBackend {
         }
     }
 
-    fn fft_3d(&self, data: &mut Array3<f64>) -> KwaversResult<()> {
-        // Implementation delegated to pipeline manager
-        self.pipeline_manager
-            .execute_fft_3d(data, &self.context, &self.buffer_manager)
-    }
-
-    fn ifft_3d(&self, data: &mut Array3<f64>) -> KwaversResult<()> {
-        // Implementation delegated to pipeline manager
-        self.pipeline_manager
-            .execute_ifft_3d(data, &self.context, &self.buffer_manager)
-    }
-
     fn element_wise_multiply(
         &self,
         a: &Array3<f64>,
