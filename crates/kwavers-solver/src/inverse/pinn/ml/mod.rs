@@ -113,13 +113,6 @@ pub use burn_wave_equation_1d::{
     SimpleOptimizer,
 };
 
-#[cfg(all(feature = "pinn", feature = "api"))]
-pub mod trainer;
-
-#[cfg(all(feature = "pinn", feature = "api"))]
-pub use trainer::{
-    BurnPinnTrainingConfig, PINNConfig, PINNTrainer, PhysicsParams, PinnTrainerGeometry,
-};
 
 #[cfg(feature = "pinn")]
 pub use burn_wave_equation_2d::{
@@ -141,8 +134,9 @@ pub use gpu_accelerator::{GpuMemoryManager, TrainingStats};
 #[cfg(feature = "pinn")]
 pub mod multi_gpu_manager;
 
-#[cfg(all(feature = "pinn", feature = "api"))]
+#[cfg(feature = "pinn")]
 pub mod distributed_training;
+
 
 // Sprint 153: Real-Time Inference & Optimization
 #[cfg(feature = "pinn")]
@@ -198,10 +192,11 @@ pub use multi_gpu_manager::{
     PinnMultiGpuCommunicationChannel, PinnMultiGpuTransferStatus, WorkUnit,
 };
 
-#[cfg(all(feature = "pinn", feature = "api"))]
+#[cfg(feature = "pinn")]
 pub use distributed_training::{
     CheckpointManager, DistributedPinnTrainer, GradientAggregation, TrainingCoordinator,
 };
+
 
 // Sprint 153: Real-Time Inference & Optimization
 #[cfg(feature = "pinn")]
