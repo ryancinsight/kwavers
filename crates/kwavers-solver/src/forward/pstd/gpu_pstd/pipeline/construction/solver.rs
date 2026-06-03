@@ -4,10 +4,9 @@ use super::super::bind_groups::{
     build_bg_absorb, build_bg_fields, build_bg_kspace, AbsorbBuffers, FieldBuffers, KspaceBuffers,
 };
 use super::super::{AbsorptionArrays, MediumArrays, PmlArrays, SolverParams};
-use super::kspace::precompute_kspace_shifts;
+use super::kspace::{precompute_kspace_shifts, KSpaceGridParams};
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_domain::grid::Grid;
-use kwavers_math::fft::shift_operators::KSpaceGridParams;
 use std::sync::Arc;
 use wgpu::util::DeviceExt;
 
@@ -172,7 +171,7 @@ impl GpuPstdSolver {
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("pstd_shader"),
             source: wgpu::ShaderSource::Wgsl(
-                include_str!("../../../../../../gpu/shaders/pstd.wgsl").into(),
+                include_str!("../../shaders/pstd.wgsl").into(),
             ),
         });
 

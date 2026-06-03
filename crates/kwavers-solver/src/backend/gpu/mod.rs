@@ -63,7 +63,7 @@ pub mod physics_kernels;
 pub mod pipeline;
 pub mod realtime_loop;
 
-use super::traits::{Backend, BackendCapabilities, BackendType, ComputeDevice};
+use super::traits::{BackendCapabilities, BackendType, ComputeBackend, ComputeDevice};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use buffers::GpuBackendBufferManager;
 use init::WGPUContext;

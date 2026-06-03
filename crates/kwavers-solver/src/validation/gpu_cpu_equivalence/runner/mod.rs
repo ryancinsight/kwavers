@@ -86,7 +86,10 @@ fn run_simulation_gpu(
     nt: usize,
     config: &FdtdConfig,
 ) -> Result<Array3<f64>, KwaversError> {
-    #[cfg(feature = "gpu")]
+    // The GPU comparison path needs the wgpu `GPUBackend`, which lives behind the
+    // `solver_backend_gpu_unstable` gate (the backend::gpu subtree). Under plain
+    // `gpu` this falls through to the CPU reference below.
+    #[cfg(feature = "solver_backend_gpu_unstable")]
     {
         use kwavers_domain::signal::ToneBurst;
         use kwavers_domain::source::grid_source::GridSource;

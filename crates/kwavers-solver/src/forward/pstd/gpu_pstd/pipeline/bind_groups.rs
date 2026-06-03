@@ -1,167 +1,135 @@
 //! Bind group assembly for `GpuPstdSolver`.
 //!
 //! SRP: changes when the binding slot assignment within a group changes.
+//!
+//! Each builder takes a small `*Buffers` struct (rather than a long positional
+//! buffer list) so call sites name every binding explicitly.
+
+/// Group(0) field buffers, in binding-slot order.
+pub(super) struct FieldBuffers<'a> {
+    pub p: &'a wgpu::Buffer,
+    pub ux: &'a wgpu::Buffer,
+    pub uy: &'a wgpu::Buffer,
+    pub uz: &'a wgpu::Buffer,
+    pub rhox: &'a wgpu::Buffer,
+    pub rhoy: &'a wgpu::Buffer,
+    pub rhoz: &'a wgpu::Buffer,
+    pub source_kappa: &'a wgpu::Buffer,
+}
+
+/// Group(1) k-space + medium buffers, in binding-slot order.
+pub(super) struct KspaceBuffers<'a> {
+    pub kspace_re: &'a wgpu::Buffer,
+    pub kspace_im: &'a wgpu::Buffer,
+    pub kappa: &'a wgpu::Buffer,
+    pub rho0_inv: &'a wgpu::Buffer,
+    pub c0_sq: &'a wgpu::Buffer,
+    pub rho0: &'a wgpu::Buffer,
+    pub bon_a: &'a wgpu::Buffer,
+    pub alpha_decay: &'a wgpu::Buffer,
+}
+
+/// Group(2) absorption operator + scratch buffers, in binding-slot order.
+pub(super) struct AbsorbBuffers<'a> {
+    pub nabla1: &'a wgpu::Buffer,
+    pub nabla2: &'a wgpu::Buffer,
+    pub tau: &'a wgpu::Buffer,
+    pub eta: &'a wgpu::Buffer,
+    pub scratch_kre: &'a wgpu::Buffer,
+    pub scratch_kim: &'a wgpu::Buffer,
+    pub scratch_l1: &'a wgpu::Buffer,
+    pub scratch_l2: &'a wgpu::Buffer,
+}
+
+/// Assemble an 8-binding bind group whose slots are filled in array order.
+fn bind_group(
+    device: &wgpu::Device,
+    label: &str,
+    layout: &wgpu::BindGroupLayout,
+    buffers: [&wgpu::Buffer; 8],
+) -> wgpu::BindGroup {
+    let entries: Vec<wgpu::BindGroupEntry> = buffers
+        .iter()
+        .enumerate()
+        .map(|(i, b)| wgpu::BindGroupEntry {
+            binding: i as u32,
+            resource: b.as_entire_binding(),
+        })
+        .collect();
+    device.create_bind_group(&wgpu::BindGroupDescriptor {
+        label: Some(label),
+        layout,
+        entries: &entries,
+    })
+}
 
 /// Build group(0): field buffers (p, ux, uy, uz, rhox, rhoy, rhoz, source_kappa).
-#[allow(clippy::too_many_arguments)]
 pub(super) fn build_bg_fields(
     device: &wgpu::Device,
     layout: &wgpu::BindGroupLayout,
-    buf_p: &wgpu::Buffer,
-    buf_ux: &wgpu::Buffer,
-    buf_uy: &wgpu::Buffer,
-    buf_uz: &wgpu::Buffer,
-    buf_rhox: &wgpu::Buffer,
-    buf_rhoy: &wgpu::Buffer,
-    buf_rhoz: &wgpu::Buffer,
-    buf_source_kappa: &wgpu::Buffer,
+    f: &FieldBuffers,
 ) -> wgpu::BindGroup {
-    device.create_bind_group(&wgpu::BindGroupDescriptor {
-        label: Some("bg_fields"),
+    bind_group(
+        device,
+        "bg_fields",
         layout,
-        entries: &[
-            wgpu::BindGroupEntry {
-                binding: 0,
-                resource: buf_p.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 1,
-                resource: buf_ux.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 2,
-                resource: buf_uy.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 3,
-                resource: buf_uz.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 4,
-                resource: buf_rhox.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 5,
-                resource: buf_rhoy.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 6,
-                resource: buf_rhoz.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 7,
-                resource: buf_source_kappa.as_entire_binding(),
-            },
+        [
+            f.p,
+            f.ux,
+            f.uy,
+            f.uz,
+            f.rhox,
+            f.rhoy,
+            f.rhoz,
+            f.source_kappa,
         ],
-    })
+    )
 }
 
 /// Build group(1): k-space + medium (kspace_re, kspace_im, kappa, rho0_inv,
-/// c0_sq, rho0, bon_a, alpha_decay/twiddle).
-#[allow(clippy::too_many_arguments)]
+/// c0_sq, rho0, bon_a, alpha_decay).
 pub(super) fn build_bg_kspace(
     device: &wgpu::Device,
     layout: &wgpu::BindGroupLayout,
-    buf_kspace_re: &wgpu::Buffer,
-    buf_kspace_im: &wgpu::Buffer,
-    buf_kappa: &wgpu::Buffer,
-    buf_rho0_inv: &wgpu::Buffer,
-    buf_c0_sq: &wgpu::Buffer,
-    buf_rho0: &wgpu::Buffer,
-    buf_bon_a: &wgpu::Buffer,
-    buf_alpha_decay: &wgpu::Buffer,
+    k: &KspaceBuffers,
 ) -> wgpu::BindGroup {
-    device.create_bind_group(&wgpu::BindGroupDescriptor {
-        label: Some("bg_kspace"),
+    bind_group(
+        device,
+        "bg_kspace",
         layout,
-        entries: &[
-            wgpu::BindGroupEntry {
-                binding: 0,
-                resource: buf_kspace_re.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 1,
-                resource: buf_kspace_im.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 2,
-                resource: buf_kappa.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 3,
-                resource: buf_rho0_inv.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 4,
-                resource: buf_c0_sq.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 5,
-                resource: buf_rho0.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 6,
-                resource: buf_bon_a.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 7,
-                resource: buf_alpha_decay.as_entire_binding(),
-            },
+        [
+            k.kspace_re,
+            k.kspace_im,
+            k.kappa,
+            k.rho0_inv,
+            k.c0_sq,
+            k.rho0,
+            k.bon_a,
+            k.alpha_decay,
         ],
-    })
+    )
 }
 
-/// Build group(3): fractional-Laplacian absorption (nabla1, nabla2, tau, eta,
-/// scratch_kre, scratch_kim, l1, l2).
-#[allow(clippy::too_many_arguments)]
+/// Build group(2): absorption operators + scratch (nabla1, nabla2, tau, eta,
+/// scratch_kre, scratch_kim, scratch_l1, scratch_l2).
 pub(super) fn build_bg_absorb(
     device: &wgpu::Device,
     layout: &wgpu::BindGroupLayout,
-    buf_absorb_nabla1: &wgpu::Buffer,
-    buf_absorb_nabla2: &wgpu::Buffer,
-    buf_absorb_tau: &wgpu::Buffer,
-    buf_absorb_eta: &wgpu::Buffer,
-    buf_absorb_scratch_kre: &wgpu::Buffer,
-    buf_absorb_scratch_kim: &wgpu::Buffer,
-    buf_absorb_scratch_l1: &wgpu::Buffer,
-    buf_absorb_scratch_l2: &wgpu::Buffer,
+    a: &AbsorbBuffers,
 ) -> wgpu::BindGroup {
-    device.create_bind_group(&wgpu::BindGroupDescriptor {
-        label: Some("bg_absorb"),
+    bind_group(
+        device,
+        "bg_absorb",
         layout,
-        entries: &[
-            wgpu::BindGroupEntry {
-                binding: 0,
-                resource: buf_absorb_nabla1.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 1,
-                resource: buf_absorb_nabla2.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 2,
-                resource: buf_absorb_tau.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 3,
-                resource: buf_absorb_eta.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 4,
-                resource: buf_absorb_scratch_kre.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 5,
-                resource: buf_absorb_scratch_kim.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 6,
-                resource: buf_absorb_scratch_l1.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 7,
-                resource: buf_absorb_scratch_l2.as_entire_binding(),
-            },
+        [
+            a.nabla1,
+            a.nabla2,
+            a.tau,
+            a.eta,
+            a.scratch_kre,
+            a.scratch_kim,
+            a.scratch_l1,
+            a.scratch_l2,
         ],
-    })
+    )
 }

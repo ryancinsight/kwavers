@@ -14,16 +14,31 @@ use kwavers_math::fft::shift_operators::{generate_kappa, generate_shift_1d, gene
 /// `[x_pos_re, x_pos_im, x_neg_re, x_neg_im (nx each),
 ///   y_pos_re, y_pos_im, y_neg_re, y_neg_im (ny each),
 ///   z_pos_re, z_pos_im, z_neg_re, z_neg_im (nz each)]`
+/// Grid spacing + reference parameters for k-space shift precomputation.
+pub(in crate::forward::pstd::gpu_pstd) struct KSpaceGridParams {
+    pub nx: usize,
+    pub ny: usize,
+    pub nz: usize,
+    pub dx: f64,
+    pub dy: f64,
+    pub dz: f64,
+    pub c_ref: f64,
+    pub dt: f64,
+}
+
 pub(in crate::forward::pstd::gpu_pstd) fn precompute_kspace_shifts(
-    nx: usize,
-    ny: usize,
-    nz: usize,
-    dx: f64,
-    dy: f64,
-    dz: f64,
-    c_ref: f64,
-    dt: f64,
+    params: KSpaceGridParams,
 ) -> (Vec<f32>, Vec<f32>, Vec<f32>) {
+    let KSpaceGridParams {
+        nx,
+        ny,
+        nz,
+        dx,
+        dy,
+        dz,
+        c_ref,
+        dt,
+    } = params;
     let kappa_3d = generate_kappa(nx, ny, nz, dx, dy, dz, c_ref, dt);
     let kappa_f32: Vec<f32> = kappa_3d.iter().map(|&v| v as f32).collect();
 
