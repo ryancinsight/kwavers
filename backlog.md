@@ -3,6 +3,39 @@
 > Active strategy at top; CLOSED history retained below for traceability.
 > Full gap inventory: [gap_audit.md](gap_audit.md). Active increment: [CHECKLIST.md](CHECKLIST.md).
 
+## OPEN: kwavers-gpu extraction + internal-folder teardown [arch] (opened 2026-06-03)
+
+Goal: dissolve the leftover internal `kwavers/src` code (post-split) into the
+layered crates, leaving `kwavers` a thin facade. The bulk is GPU. Decision
+(user 2026-06-03): **new `kwavers-gpu` leaf crate** (depends on solver,
+implements the `ComputeBackend`/`FdtdGpuAccelerator` trait surfaces that stay in
+solver), **consolidating all three scattered GPU paths**, with **wgpu-v26
+bit-rot repaired as part of the move**.
+
+Progress (all green, gated so default `--workspace` build stays clean):
+- **[done]** Scaffold `crates/kwavers-gpu` + workspace member. (462ab1939)
+- **[done]** Move facade `kwavers::gpu` monolith (~5000 L) → `kwavers-gpu/src/gpu`,
+  behind `kwavers-gpu/gpu` feature (+`pinn` for burn accelerator); facade
+  re-exports `kwavers_gpu::gpu`. (2c5acc444)
+- **[done]** Move `profiling/gpu_allocator` → `kwavers-gpu` (unconditional; 9
+  tests pass); kwavers-gpu now a regular facade dep.
+- **[todo] repair** wgpu-v26 bit-rot so `--features gpu` builds (broken shader
+  paths from the split, `wgpu::Device::queue()` removal, moved `KSpaceGridParams`,
+  `crate::backend::gpu` gated off). This is the load-bearing remaining step.
+- **[todo] consolidate** `solver::backend::gpu` + `solver::forward::{fdtd,pstd}`
+  GPU kernels + `*.wgsl` into kwavers-gpu; leave only the traits in solver.
+- **[todo] re-home** remaining facade code: `architecture/layer_validation`
+  (dev tooling — evaluate keep/delete), `infrastructure/io` (CSV output — facade
+  concern, candidate `kwavers-io` or stays).
+- **[todo] dead test** `kwavers/tests/recovery_stress_tests.rs` imports a
+  `gpu::recovery` module that never existed — remove/repair.
+- **[todo] cfg debt** `solver/inverse/pinn/ml/mod.rs` gates `trainer` +
+  `distributed_training` on a non-existent `api` feature (dead gates; needs
+  pinn-feature verification to remove cleanly).
+
+Status: internal `kwavers/src` down to ~1300 L (from 8799). Facade re-exports
++ `architecture` + `infrastructure/io` + `main.rs` remain.
+
 ## OPEN: Workspace crate-split prep [arch] (opened 2026-06-01)
 
 Goal: decompose the 461 kLOC / 3,475-file `kwavers` monolith into a layered
