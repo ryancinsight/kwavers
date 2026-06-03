@@ -187,9 +187,9 @@ pub mod adaptive_sampling;
 
 #[cfg(feature = "pinn")]
 pub use multi_gpu_manager::{
-    DataTransfer, FaultTolerance, GpuDeviceInfo, LoadBalancingAlgorithm,
-    MultiGpuDecompositionStrategy, MultiGpuManager, MultiGpuPerformanceMonitor, PerformanceSummary,
-    PinnMultiGpuCommunicationChannel, PinnMultiGpuTransferStatus, WorkUnit,
+    DataTransfer, FaultTolerance, LoadBalancingAlgorithm, MultiGpuDecompositionStrategy,
+    MultiGpuManager, MultiGpuPerformanceMonitor, PerformanceSummary,
+    PinnMultiGpuCommunicationChannel, PinnMultiGpuDeviceInfo, PinnMultiGpuTransferStatus, WorkUnit,
 };
 
 #[cfg(feature = "pinn")]
@@ -213,7 +213,7 @@ pub use quantization::{
 #[cfg(feature = "pinn")]
 pub use edge_runtime::{
     Architecture, DataType, EdgeRuntime, ExecutionKernel, HardwareCapabilities, IOSpecification,
-    MemoryAllocator, MultiGpuPerformanceMonitor as EdgePerformanceMonitor,
+    MemoryAllocator, EdgeRuntimePerformanceMonitor as EdgePerformanceMonitor,
 };
 
 // Sprint 154: Meta-Learning & Transfer Learning

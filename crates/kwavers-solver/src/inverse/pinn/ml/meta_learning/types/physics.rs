@@ -5,8 +5,9 @@ use kwavers_core::constants::fundamental::{
     DENSITY_TISSUE, DENSITY_WATER_NOMINAL, SOUND_SPEED_AIR, SOUND_SPEED_TISSUE,
     SOUND_SPEED_WATER_SIM,
 };
+use kwavers_core::constants::fundamental::ACOUSTIC_ABSORPTION_TISSUE;
 use kwavers_core::constants::tissue_acoustics::{
-    ACOUSTIC_ABSORPTION_TISSUE, B_OVER_A_SOFT_TISSUE, B_OVER_A_WATER, DENSITY_AIR,
+    B_OVER_A_SOFT_TISSUE, B_OVER_A_WATER, DENSITY_AIR,
 };
 
 /// Physics parameters defining the task's governing equations

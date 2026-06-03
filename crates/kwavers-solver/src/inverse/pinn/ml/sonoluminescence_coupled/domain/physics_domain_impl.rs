@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use burn::tensor::{backend::AutodiffBackend, Tensor};
 
 use crate::inverse::pinn::ml::physics::{
-    BoundaryPosition, CouplingInterface, InitialConditionSpec, PhysicsLossWeights,
+    BoundaryPosition, PinnCouplingInterface, InitialConditionSpec, PhysicsLossWeights,
     PhysicsValidationMetric, PinnBoundaryComponent, PinnBoundaryConditionSpec,
     PinnDomainPhysicsParameters, SimulationPhysicsDomain,
 };
@@ -130,7 +130,7 @@ impl<B: AutodiffBackend> SimulationPhysicsDomain<B> for SonoluminescenceCoupledD
         true
     }
 
-    fn coupling_interfaces(&self) -> Vec<CouplingInterface> {
+    fn coupling_interfaces(&self) -> Vec<PinnCouplingInterface> {
         self.coupling_interfaces.clone()
     }
 }

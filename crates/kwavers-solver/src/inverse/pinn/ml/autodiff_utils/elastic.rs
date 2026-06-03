@@ -38,7 +38,7 @@ pub fn compute_strain_tensor_2d<B, F>(
         Tensor<B::InnerBackend, 2>,
         Tensor<B::InnerBackend, 2>,
     ),
-    crate::error::KwaversError,
+    kwavers_core::error::KwaversError,
 >
 where
     B: AutodiffBackend,
@@ -85,7 +85,7 @@ pub fn compute_elastic_wave_residual_2d<B, F>(
     rho: f64,
     lambda: f64,
     mu: f64,
-) -> Result<(Tensor<B::InnerBackend, 2>, Tensor<B::InnerBackend, 2>), crate::error::KwaversError>
+) -> Result<(Tensor<B::InnerBackend, 2>, Tensor<B::InnerBackend, 2>), kwavers_core::error::KwaversError>
 where
     B: AutodiffBackend,
     F: Fn(Tensor<B, 2>) -> Tensor<B, 2> + Clone,

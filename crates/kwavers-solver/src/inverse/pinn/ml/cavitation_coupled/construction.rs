@@ -7,7 +7,7 @@ use kwavers_core::constants::cavitation::SURFACE_TENSION_WATER;
 use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use kwavers_physics::bubble_dynamics::{BubbleState, KellerMiksisModel};
 use crate::inverse::pinn::ml::physics::{
-    BoundaryPosition, CouplingInterface, CouplingType,
+    BoundaryPosition, PinnCouplingInterface, PinnPhysicsCouplingType,
 };
 use burn::tensor::{backend::AutodiffBackend, Tensor};
 use std::collections::HashMap;
@@ -139,7 +139,7 @@ impl<B: AutodiffBackend> CavitationCoupledDomain<B> {
     fn create_coupling_interfaces(
         config: &CavitationCouplingConfig,
         coupling_type: &CavitationCouplingType,
-    ) -> Vec<CouplingInterface> {
+    ) -> Vec<PinnCouplingInterface> {
         let mut interfaces = Vec::new();
 
         let rect = BoundaryPosition::CustomRectangular {
@@ -150,9 +150,9 @@ impl<B: AutodiffBackend> CavitationCoupledDomain<B> {
         };
 
         let acoustic_coupling_type = match coupling_type {
-            CavitationCouplingType::Weak => CouplingType::FluxContinuity,
-            CavitationCouplingType::Strong => CouplingType::Conjugate,
-            CavitationCouplingType::MultiBubble => CouplingType::Custom("multi_bubble".to_string()),
+            CavitationCouplingType::Weak => PinnPhysicsCouplingType::FluxContinuity,
+            CavitationCouplingType::Strong => PinnPhysicsCouplingType::Conjugate,
+            CavitationCouplingType::MultiBubble => PinnPhysicsCouplingType::Custom("multi_bubble".to_string()),
         };
 
         let mut acoustic_params = HashMap::new();
@@ -166,7 +166,7 @@ impl<B: AutodiffBackend> CavitationCoupledDomain<B> {
             if config.nonlinear_acoustic { 1.0 } else { 0.0 },
         );
 
-        interfaces.push(CouplingInterface {
+        interfaces.push(PinnCouplingInterface {
             name: "acoustic_bubble_coupling".to_string(),
             position: rect.clone(),
             coupled_domains: vec!["acoustic".to_string(), "cavitation".to_string()],
@@ -179,11 +179,11 @@ impl<B: AutodiffBackend> CavitationCoupledDomain<B> {
             mb_params.insert("enable_bjerknes".to_string(), 1.0);
             mb_params.insert("collective_effects".to_string(), 1.0);
 
-            interfaces.push(CouplingInterface {
+            interfaces.push(PinnCouplingInterface {
                 name: "multi_bubble_interactions".to_string(),
                 position: rect,
                 coupled_domains: vec!["cavitation".to_string()],
-                coupling_type: CouplingType::Custom("bjerknes_forces".to_string()),
+                coupling_type: PinnPhysicsCouplingType::Custom("bjerknes_forces".to_string()),
                 coupling_params: mb_params,
             });
         }

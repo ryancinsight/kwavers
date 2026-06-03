@@ -5,7 +5,7 @@ use super::residuals::{
 };
 use super::types::{EMProblemType, ElectromagneticBoundarySpec};
 use crate::inverse::pinn::ml::physics::{
-    BoundaryPosition, CouplingInterface, InitialConditionSpec, PhysicsLossWeights,
+    BoundaryPosition, PinnCouplingInterface, InitialConditionSpec, PhysicsLossWeights,
     PhysicsValidationMetric, PinnBoundaryComponent, PinnBoundaryConditionSpec,
     PinnDomainPhysicsParameters, SimulationPhysicsDomain,
 };
@@ -359,7 +359,7 @@ impl<B: AutodiffBackend> SimulationPhysicsDomain<B> for ElectromagneticDomain<B>
         false
     }
 
-    fn coupling_interfaces(&self) -> Vec<CouplingInterface> {
+    fn coupling_interfaces(&self) -> Vec<PinnCouplingInterface> {
         Vec::new()
     }
 }

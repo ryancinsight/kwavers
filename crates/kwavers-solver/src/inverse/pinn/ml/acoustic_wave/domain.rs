@@ -3,7 +3,7 @@
 use super::types::{AcousticBoundarySpec, AcousticProblemType, PinnAcousticBoundaryType};
 use crate::inverse::pinn::ml::adapters::source::PinnAcousticSource;
 use crate::inverse::pinn::ml::physics::{
-    BoundaryPosition, CouplingType, InitialConditionSpec, PhysicsLossWeights,
+    BoundaryPosition, PinnPhysicsCouplingType, InitialConditionSpec, PhysicsLossWeights,
     PhysicsValidationMetric, PinnBoundaryComponent, PinnBoundaryConditionSpec,
     PinnCouplingInterface, PinnDomainPhysicsParameters, SimulationPhysicsDomain,
 };
@@ -266,7 +266,7 @@ impl<B: AutodiffBackend> SimulationPhysicsDomain<B> for AcousticWaveDomain {
                     y_max: 1.0,
                 },
                 coupled_domains: vec!["acoustic".to_string(), "solid".to_string()],
-                coupling_type: CouplingType::Conjugate,
+                coupling_type: PinnPhysicsCouplingType::Conjugate,
                 coupling_params: {
                     let mut params = HashMap::new();
                     params.insert("pressure_continuity".to_string(), 1.0);
@@ -283,7 +283,7 @@ impl<B: AutodiffBackend> SimulationPhysicsDomain<B> for AcousticWaveDomain {
                     y_max: 1.0,
                 },
                 coupled_domains: vec!["acoustic".to_string(), "thermal".to_string()],
-                coupling_type: CouplingType::FluxContinuity,
+                coupling_type: PinnPhysicsCouplingType::FluxContinuity,
                 coupling_params: {
                     let mut params = HashMap::new();
                     params.insert("heat_generation".to_string(), 1.0);

@@ -17,8 +17,8 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult, SystemError};
 use crate::interface::pinn_beamforming::{
-    ModelInfo, NeuralPinnBeamformingResult, PinnBeamformingConfig, PinnBeamformingProvider,
-    PinnBeamformingUncertaintyConfig, TrainingMetrics,
+    ModelInfo, InterfacePinnBeamformingResult, PinnBeamformingConfig, PinnBeamformingProvider,
+    PinnBeamformingUncertaintyConfig, BeamformingTrainingMetrics,
 };
 use burn::tensor::backend::AutodiffBackend;
 use ndarray::{Array1, Array2, Array3};
@@ -133,7 +133,7 @@ where
         &self,
         rf_data: &Array3<f32>,
         _config: &PinnBeamformingConfig,
-    ) -> KwaversResult<NeuralPinnBeamformingResult> {
+    ) -> KwaversResult<InterfacePinnBeamformingResult> {
         use std::time::Instant;
         let t_start = Instant::now();
 
@@ -185,12 +185,12 @@ where
             }
         }
 
-        Ok(NeuralPinnBeamformingResult {
+        Ok(InterfacePinnBeamformingResult {
             image,
             uncertainty: None,
             confidence: None,
             inference_time: t_start.elapsed().as_secs_f64(),
-            metrics: TrainingMetrics {
+            metrics: BeamformingTrainingMetrics {
                 total_loss: 0.0,
                 physics_loss: 0.0,
                 data_loss: 0.0,
@@ -204,7 +204,7 @@ where
         &mut self,
         training_data: &[(Array3<f32>, Array3<f32>)],
         _config: &PinnBeamformingConfig,
-    ) -> KwaversResult<TrainingMetrics> {
+    ) -> KwaversResult<BeamformingTrainingMetrics> {
         self.ensure_model_initialized()?;
 
         if training_data.is_empty() {
@@ -261,7 +261,7 @@ where
         self.is_trained = true;
         self.metadata.is_trained = true;
 
-        Ok(TrainingMetrics {
+        Ok(BeamformingTrainingMetrics {
             total_loss: burn_metrics.total_loss.last().copied().unwrap_or(0.0),
             physics_loss: burn_metrics.pde_loss.last().copied().unwrap_or(0.0),
             data_loss: burn_metrics.data_loss.last().copied().unwrap_or(0.0),

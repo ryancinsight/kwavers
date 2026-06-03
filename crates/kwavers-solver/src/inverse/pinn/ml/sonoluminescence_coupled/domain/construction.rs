@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use kwavers_physics::optics::sonoluminescence::SonoluminescenceEmission;
 use crate::inverse::pinn::ml::physics::{
-    BoundaryPosition, CouplingInterface, CouplingType,
+    BoundaryPosition, PinnCouplingInterface, PinnPhysicsCouplingType,
 };
 use burn::tensor::backend::AutodiffBackend;
 
@@ -39,10 +39,10 @@ impl<B: AutodiffBackend> SonoluminescenceCoupledDomain<B> {
     pub(super) fn create_coupling_interfaces(
         config: &SonoluminescenceCouplingConfig,
         coupling_type: &SonoluminescenceCouplingType,
-    ) -> Vec<CouplingInterface> {
+    ) -> Vec<PinnCouplingInterface> {
         let mut interfaces = Vec::new();
 
-        let em_sl_coupling = CouplingInterface {
+        let em_sl_coupling = PinnCouplingInterface {
             name: "electromagnetic_sonoluminescence".to_string(),
             position: BoundaryPosition::CustomRectangular {
                 x_min: 0.0,
@@ -55,10 +55,10 @@ impl<B: AutodiffBackend> SonoluminescenceCoupledDomain<B> {
                 "sonoluminescence".to_string(),
             ],
             coupling_type: match coupling_type {
-                SonoluminescenceCouplingType::StaticEmission => CouplingType::SolutionContinuity,
-                SonoluminescenceCouplingType::DynamicEmission => CouplingType::FluxContinuity,
+                SonoluminescenceCouplingType::StaticEmission => PinnPhysicsCouplingType::SolutionContinuity,
+                SonoluminescenceCouplingType::DynamicEmission => PinnPhysicsCouplingType::FluxContinuity,
                 SonoluminescenceCouplingType::SpectralCoupling => {
-                    CouplingType::Custom("spectral".to_string())
+                    PinnPhysicsCouplingType::Custom("spectral".to_string())
                 }
             },
             coupling_params: {
@@ -84,7 +84,7 @@ impl<B: AutodiffBackend> SonoluminescenceCoupledDomain<B> {
                 SonoluminescenceCouplingType::SpectralCoupling
             )
         {
-            let spectral_coupling = CouplingInterface {
+            let spectral_coupling = PinnCouplingInterface {
                 name: "spectral_propagation".to_string(),
                 position: BoundaryPosition::CustomRectangular {
                     x_min: 0.0,
@@ -93,7 +93,7 @@ impl<B: AutodiffBackend> SonoluminescenceCoupledDomain<B> {
                     y_max: config.grid_shape.1 as f64 * config.grid_spacing.1,
                 },
                 coupled_domains: vec!["electromagnetic".to_string()],
-                coupling_type: CouplingType::Custom("wavelength_dependent".to_string()),
+                coupling_type: PinnPhysicsCouplingType::Custom("wavelength_dependent".to_string()),
                 coupling_params: {
                     let mut params = HashMap::new();
                     params.insert("min_wavelength".to_string(), config.wavelength_range.0);

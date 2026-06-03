@@ -29,7 +29,7 @@ pub fn compute_time_derivative<B, F>(
     forward_fn: F,
     input: &Tensor<B, 2>,
     output_component: usize,
-) -> Result<Tensor<B::InnerBackend, 2>, crate::error::KwaversError>
+) -> Result<Tensor<B::InnerBackend, 2>, kwavers_core::error::KwaversError>
 where
     B: AutodiffBackend,
     F: Fn(Tensor<B, 2>) -> Tensor<B, 2>,
@@ -43,7 +43,7 @@ where
     let dt_grad = input_grad
         .grad(&grads)
         .ok_or_else(|| {
-            crate::error::KwaversError::InternalError(
+            kwavers_core::error::KwaversError::InternalError(
                 "Failed to compute time derivative gradient".into(),
             )
         })?
@@ -75,7 +75,7 @@ pub fn compute_second_time_derivative<B, F>(
     forward_fn: F,
     input: &Tensor<B, 2>,
     output_component: usize,
-) -> Result<Tensor<B::InnerBackend, 2>, crate::error::KwaversError>
+) -> Result<Tensor<B::InnerBackend, 2>, kwavers_core::error::KwaversError>
 where
     B: AutodiffBackend,
     F: Fn(Tensor<B, 2>) -> Tensor<B, 2> + Clone,

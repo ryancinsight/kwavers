@@ -226,8 +226,8 @@ pub use inference::ElasticPinnPredictor;
 
 #[cfg(feature = "pinn")]
 pub use loss::{
-    BoundaryData, BoundaryType, CollocationData, ElasticPinnLossComponents, InitialData,
-    LossComputer, ObservationData,
+    BoundaryData, CollocationData, ElasticPinnLossComponents, InitialData, LossComputer,
+    ObservationData,
 };
 
 pub use model::ElasticPINN2D;

@@ -2,7 +2,7 @@
 
 use super::domain::CavitationCoupledDomain;
 use crate::inverse::pinn::ml::physics::{
-    BoundaryPosition, CouplingInterface, InitialConditionSpec, PhysicsLossWeights,
+    BoundaryPosition, PinnCouplingInterface, InitialConditionSpec, PhysicsLossWeights,
     PhysicsValidationMetric, PinnBoundaryComponent, PinnBoundaryConditionSpec,
     PinnDomainPhysicsParameters, SimulationPhysicsDomain,
 };
@@ -137,7 +137,7 @@ impl<B: AutodiffBackend> SimulationPhysicsDomain<B> for CavitationCoupledDomain<
         true
     }
 
-    fn coupling_interfaces(&self) -> Vec<CouplingInterface> {
+    fn coupling_interfaces(&self) -> Vec<PinnCouplingInterface> {
         self.coupling_interfaces.clone()
     }
 }

@@ -32,13 +32,13 @@ pub fn compute_second_derivative_2d<B, F>(
     input: &Tensor<B, 2>,
     output_component: usize,
     spatial_dim: usize,
-) -> Result<Tensor<B::InnerBackend, 2>, crate::error::KwaversError>
+) -> Result<Tensor<B::InnerBackend, 2>, kwavers_core::error::KwaversError>
 where
     B: AutodiffBackend,
     F: Fn(Tensor<B, 2>) -> Tensor<B, 2>,
 {
     if !(1..=2).contains(&spatial_dim) {
-        return Err(crate::error::KwaversError::InvalidInput(format!(
+        return Err(kwavers_core::error::KwaversError::InvalidInput(format!(
             "spatial_dim must be 1 (x) or 2 (y), got {}",
             spatial_dim
         )));
@@ -109,7 +109,7 @@ pub fn compute_laplacian_2d<B, F>(
     forward_fn: F,
     input: &Tensor<B, 2>,
     output_component: usize,
-) -> Result<Tensor<B::InnerBackend, 2>, crate::error::KwaversError>
+) -> Result<Tensor<B::InnerBackend, 2>, kwavers_core::error::KwaversError>
 where
     B: AutodiffBackend,
     F: Fn(Tensor<B, 2>) -> Tensor<B, 2> + Clone,
@@ -141,7 +141,7 @@ where
 pub fn compute_gradient_of_divergence_2d<B, F>(
     forward_fn: F,
     input: &Tensor<B, 2>,
-) -> Result<(Tensor<B::InnerBackend, 2>, Tensor<B::InnerBackend, 2>), crate::error::KwaversError>
+) -> Result<(Tensor<B::InnerBackend, 2>, Tensor<B::InnerBackend, 2>), kwavers_core::error::KwaversError>
 where
     B: AutodiffBackend,
     F: Fn(Tensor<B, 2>) -> Tensor<B, 2> + Clone,

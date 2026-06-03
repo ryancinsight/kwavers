@@ -36,10 +36,12 @@ pollster = { version = "0.4", optional = true }
 apollofft-wgpu = { workspace = true, optional = true }
 # Optional async runtime (PINN distributed training / persistence).
 tokio = { version = "1.42", features = ["rt-multi-thread", "macros", "sync", "time", "fs", "io-util"], optional = true }
+# Typed errors for the PINN training/distributed subsystem.
+thiserror = { workspace = true, optional = true }
 
 [features]
 gpu = ["dep:wgpu", "dep:bytemuck", "dep:pollster", "dep:apollofft-wgpu", "kwavers-core/gpu", "kwavers-math/gpu"]
-pinn = []
+pinn = ["dep:tokio", "dep:thiserror"]
 pinn-gpu = ["pinn", "gpu"]
 burn-wgpu = ["pinn"]
 async-runtime = ["dep:tokio"]
