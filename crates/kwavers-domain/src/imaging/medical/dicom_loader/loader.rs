@@ -50,14 +50,40 @@ impl DicomImageLoader {
         self.metadata.as_ref()
     }
 
-    /// Internal series-load: delegates to the sibling `dicom_ritk` adapter.
+    /// Internal series-load (unique series): delegates to the sibling
+    /// `dicom_ritk` adapter. Errors (listing available UIDs) when the directory
+    /// holds more than one series — use [`Self::load_series_by_uid`] then.
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     fn load_series_internal(&mut self, dir_path: &str) -> KwaversResult<Array3<f64>> {
-        let volume =
-            super::dicom_ritk::load_series_from_dir(Path::new(dir_path))?;
+        let volume = super::dicom_ritk::load_series_from_dir(Path::new(dir_path))?;
+        Ok(self.apply_volume(volume))
+    }
 
+    /// Load a specific DICOM series from a directory by its `SeriesInstanceUID`.
+    ///
+    /// The [`MedicalImageLoader::load`] entry point requires a unique series and
+    /// errors (listing the available UIDs) when a directory holds several; this
+    /// method is the explicit-selection counterpart for that multi-series case.
+    ///
+    /// # Errors
+    /// - Propagates [`KwaversError`] when scanning fails, no series matches
+    ///   `series_uid`, or ritk-io fails to decode the selected series.
+    pub fn load_series_by_uid(
+        &mut self,
+        dir_path: &str,
+        series_uid: &str,
+    ) -> KwaversResult<Array3<f64>> {
+        let volume =
+            super::dicom_ritk::load_series_with_uid(Path::new(dir_path), series_uid)?;
+        Ok(self.apply_volume(volume))
+    }
+
+    /// Populate loader state (metadata + voxel data) from a decoded series
+    /// volume; returns the voxel grid. Shared by the unique-series and
+    /// UID-selected load paths (SSOT for metadata mapping).
+    fn apply_volume(&mut self, volume: super::dicom_ritk::DicomSeriesVolume) -> Array3<f64> {
         let modality = match volume.metadata.modality.as_str() {
             "CT" => DicomModality::CT,
             "MR" | "MRI" => DicomModality::MR,
@@ -100,7 +126,7 @@ impl DicomImageLoader {
 
         let voxels = volume.voxels.clone();
         self.data = Some(volume.voxels);
-        Ok(voxels)
+        voxels
     }
 
     pub(super) fn identity_affine() -> [[f64; 4]; 4] {
