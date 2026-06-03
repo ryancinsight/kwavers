@@ -127,15 +127,10 @@ impl MultiGpuContext {
             supports_atomics: true,
         };
 
-        let compute = crate::gpu::GpuCompute::new(&device);
-        let buffer_manager = crate::gpu::GpuBufferManager::new(&device);
-
         Ok(CoreGpuContext {
             device,
             queue,
             capabilities,
-            compute,
-            buffer_manager,
         })
     }
 

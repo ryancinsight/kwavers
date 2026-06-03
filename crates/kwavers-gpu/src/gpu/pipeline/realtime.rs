@@ -1,7 +1,6 @@
 use kwavers_core::error::{KwaversError, KwaversResult};
 use crate::gpu::memory::GpuMemoryPoolType;
-use kwavers_math::fft::{Complex64, FFT_CACHE_1D};
-use apollo::types::Shape1D;
+use kwavers_math::fft::{Complex64, Shape1D, FFT_CACHE_1D};
 use log::{debug, info, warn};
 use ndarray::{Array1, Array3, Array4};
 use rayon::prelude::*;
@@ -187,7 +186,8 @@ impl RealtimeImagingPipeline {
                     return;
                 }
 
-                let plan = FFT_CACHE_1D.get_or_create(Shape1D { n: len });
+                let plan = FFT_CACHE_1D
+                    .get_or_create(Shape1D::new(len).expect("non-zero FFT length"));
 
                 HILBERT_SPECTRUM.with(|spectrum_cell| {
                     let mut spectrum = spectrum_cell.borrow_mut();

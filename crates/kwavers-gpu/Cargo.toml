@@ -29,6 +29,10 @@ wgpu = { version = "26.0", features = ["wgsl"], optional = true }
 pollster = { version = "0.4", optional = true }
 apollofft-wgpu = { workspace = true, optional = true }
 burn = { version = "0.19", features = ["ndarray", "autodiff", "wgpu"], optional = true }
+rayon = { version = "1.10", optional = true }
+rand = { version = "0.8", optional = true }
+once_cell = { version = "1.19", optional = true }
+flume = { version = "0.11", optional = true }
 
 [features]
 default = []
@@ -39,6 +43,10 @@ gpu = [
     "dep:bytemuck",
     "dep:pollster",
     "dep:apollofft-wgpu",
+    "dep:rayon",
+    "dep:rand",
+    "dep:once_cell",
+    "dep:flume",
     "kwavers-core/gpu",
     "kwavers-math/gpu",
     "kwavers-solver/gpu",
