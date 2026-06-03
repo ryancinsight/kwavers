@@ -1,6 +1,5 @@
 pub mod config;
 pub mod contract;
-pub mod gpu_cpu_equivalence;
 pub mod kwave_comparison;
 pub mod numerical_accuracy;
 pub mod physics_benchmarks;
@@ -26,10 +25,8 @@ pub use kwave_comparison::{
     GaussianBeam, KwaveAnalyticalPlaneWave, KwaveErrorMetrics, SphericalWave,
 };
 
-/// GPU/CPU numerical-equivalence validation (IEEE 754 bounded-error harness)
-pub use gpu_cpu_equivalence::{
-    validate_gpu_cpu_equivalence, EquivalenceReport, EquivalenceValidator,
-};
+// GPU/CPU numerical-equivalence validation moved to `kwavers_gpu::validation`
+// (it exercises the concrete GPUBackend, which now lives in the kwavers-gpu crate).
 
 // Module planned but not yet implemented:
 // - StandingWaveSolution: Analytical solution for standing wave patterns

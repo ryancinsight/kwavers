@@ -4,8 +4,8 @@ use kwavers_core::error::{KwaversError, ValidationError};
 use kwavers_domain::grid::Grid;
 use kwavers_domain::medium::Medium;
 use kwavers_domain::signal::traits::Signal;
-use crate::forward::fdtd::{FdtdConfig, FdtdSolver, KSpaceCorrectionMode};
-use crate::interface::Solver;
+use kwavers_solver::forward::fdtd::{FdtdConfig, FdtdSolver, KSpaceCorrectionMode};
+use kwavers_solver::interface::Solver;
 use ndarray::{Array2, Array3};
 
 /// Calculate stable timestep based on CFL condition
@@ -90,8 +90,8 @@ fn run_simulation_gpu(
     {
         use kwavers_domain::signal::ToneBurst;
         use kwavers_domain::source::grid_source::GridSource;
-        use crate::backend::gpu::GPUBackend;
-        use crate::backend::traits::ComputeBackend;
+        use crate::backend::GPUBackend;
+        use kwavers_solver::backend::traits::ComputeBackend;
 
         if let Ok(backend) = GPUBackend::new() {
             let nx = grid.nx;

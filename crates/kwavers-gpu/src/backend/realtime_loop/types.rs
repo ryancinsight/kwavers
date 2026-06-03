@@ -1,6 +1,6 @@
 //! Plain data types for the realtime simulation loop.
 
-use crate::backend::gpu::performance_monitor::GpuStepMetrics;
+use crate::backend::performance_monitor::GpuStepMetrics;
 
 /// Real-time simulation configuration.
 #[derive(Debug, Clone)]

@@ -2,10 +2,10 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_domain::grid::Grid;
-use crate::backend::gpu::performance_monitor::{
+use crate::backend::performance_monitor::{
     BudgetAnalysis, GpuPerformanceMonitor, GpuStepMetrics,
 };
-use crate::backend::gpu::physics_kernels::PhysicsKernelRegistry;
+use crate::backend::physics_kernels::PhysicsKernelRegistry;
 use log::debug;
 use ndarray::Array3;
 use std::collections::HashMap;

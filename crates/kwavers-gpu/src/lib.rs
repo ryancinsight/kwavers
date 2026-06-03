@@ -24,11 +24,19 @@
 // kwavers_core GpuError; no wgpu dependency, so it is available unconditionally.
 pub mod profiling;
 
-// The consolidated GPU implementation. Gated behind `gpu` while the wgpu-v26
-// repair is in progress; the default build compiles this crate to (effectively)
-// empty so the workspace stays green.
+// The consolidated GPU implementation (kernels, buffers, devices). Gated on `gpu`.
 #[cfg(feature = "gpu")]
 pub mod gpu;
 
 #[cfg(feature = "gpu")]
 pub use gpu::*;
+
+// Concrete `ComputeBackend` implementation (the wgpu `GPUBackend`), consolidated
+// out of `kwavers_solver::backend::gpu` so the algorithm crate holds only the
+// trait. Implements `kwavers_solver::backend::ComputeBackend`.
+#[cfg(feature = "gpu")]
+pub mod backend;
+
+// CPU-vs-GPU differential equivalence validation (moved out of solver with the
+// backend it exercises).
+pub mod validation;

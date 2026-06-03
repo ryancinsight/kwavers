@@ -6,14 +6,11 @@
 //!
 //! ## Submodule status
 //!
-//! - `traits` — **stable**, unconditional, the public `ComputeBackend` surface.
-//! - `gpu`    — the wgpu-backed `ComputeBackend` implementation. Repaired against
-//!   wgpu v26 (device/queue split, `DeviceDescriptor.trace`, `request_adapter`
-//!   returning `Result`, current `KwaversError` variants) and gated on its real
-//!   dependency, `feature = "gpu"`.
+//! - `traits` — the public `ComputeBackend` trait surface (this crate owns the
+//!   abstraction). The concrete wgpu `GPUBackend` implementation lives in the
+//!   `kwavers-gpu` leaf crate (`kwavers_gpu::backend`), downstream of solver,
+//!   per the dependency-inversion rule — algorithm crates never import wgpu.
 
-#[cfg(feature = "gpu")]
-pub mod gpu;
 pub mod traits;
 
 // Re-export main trait + capability/device types so callers consume them via the
