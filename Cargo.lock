@@ -4959,6 +4959,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "kwavers-gpu"
+version = "3.0.0"
+dependencies = [
+ "apollo-fft-wgpu",
+ "bitflags 2.10.0",
+ "bytemuck",
+ "kwavers-core",
+ "kwavers-domain",
+ "kwavers-math",
+ "kwavers-solver",
+ "log",
+ "ndarray 0.16.1",
+ "pollster",
+ "thiserror 2.0.17",
+ "wgpu",
+]
+
+[[package]]
 name = "kwavers-math"
 version = "3.0.0"
 dependencies = [

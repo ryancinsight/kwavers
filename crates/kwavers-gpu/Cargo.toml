@@ -1,0 +1,34 @@
+[package]
+name = "kwavers-gpu"
+version = "3.0.0"
+edition = "2021"
+description = "wgpu-backed compute backend for kwavers: concrete ComputeBackend / FdtdGpuAccelerator implementations and WGSL kernels"
+license = "MIT OR Apache-2.0"
+
+[lints]
+workspace = true
+
+[dependencies]
+# Layered kwavers crates. kwavers-gpu is a leaf above solver: it implements the
+# ComputeBackend / FdtdGpuAccelerator trait surfaces that live in kwavers-solver,
+# so the wgpu/WGSL concretions never sit in the algorithm crates (DIP).
+kwavers-core = { path = "../kwavers-core" }
+kwavers-math = { path = "../kwavers-math" }
+kwavers-domain = { path = "../kwavers-domain" }
+kwavers-solver = { path = "../kwavers-solver" }
+
+# GPU stack. Unconditional here — this crate exists only to provide the GPU
+# backend, so consumers gate on the *presence* of the kwavers-gpu dependency
+# (an optional dep behind their own `gpu` feature) rather than a feature inside.
+wgpu = { version = "26.0", features = ["wgsl"] }
+bytemuck = { version = "1.19", features = ["derive"] }
+pollster = { version = "0.4" }
+apollofft-wgpu = { workspace = true }
+
+ndarray = { workspace = true }
+bitflags = "2.6"
+log = "0.4"
+thiserror = { workspace = true }
+
+[dev-dependencies]
+kwavers-domain = { path = "../kwavers-domain", features = ["test-util"] }
