@@ -48,6 +48,10 @@ impl ReactionKinetics {
                 let t_safe = t.max(1.0);
                 let k1 = SONOCHEMISTRY_BASE_RATE
                     * (-SONOCHEMISTRY_ACTIVATION_TEMPERATURE / t_safe).exp();
+                // k2: bimolecular OH + OH -> H2O2 recombination. This step is
+                // barrierless (diffusion-limited), so it is NOT Arrhenius — the
+                // weak temperature dependence enters through the collision rate,
+                // modelled as linear in T relative to a reference (Buxton 1988).
                 let k2 = SECONDARY_REACTION_RATE * (t / REACTION_REFERENCE_TEMPERATURE);
 
                 *oh += k1 * r_init * dt;

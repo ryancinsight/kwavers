@@ -11,11 +11,17 @@ fn detector() -> TherapyCavitationDetector {
 #[test]
 fn test_blake_threshold_1um_value() {
     let det = detector();
-    let expected =
-        (ATMOSPHERIC_PRESSURE + VAPOR_PRESSURE_WATER - 2.0 * SURFACE_TENSION_WATER / 1e-6).abs();
+    // The detector must use the rigorous SSOT Blake threshold (Blake 1949), not a
+    // local approximation.
+    let expected = crate::acoustics::mechanics::cavitation::core::thresholds::blake_threshold(
+        SURFACE_TENSION_WATER,
+        1e-6,
+        ATMOSPHERIC_PRESSURE,
+        VAPOR_PRESSURE_WATER,
+    );
     assert!(
         (det.blake_threshold - expected).abs() < 1.0,
-        "Blake threshold {:.1} Pa ≠ expected {expected:.1} Pa",
+        "Blake threshold {:.1} Pa ≠ rigorous SSOT value {expected:.1} Pa",
         det.blake_threshold
     );
 }
@@ -31,12 +37,18 @@ fn test_blake_threshold_positive() {
 }
 
 #[test]
-fn test_blake_threshold_larger_nucleus_higher_pressure() {
+fn test_blake_threshold_smaller_nucleus_higher_pressure() {
+    // Smaller nuclei are more strongly surface-tension-stabilised (2σ/R larger),
+    // so the Blake acoustic-amplitude threshold DECREASES monotonically with R₀
+    // (Blake 1949). A 1 µm nucleus therefore has a higher threshold than 10 µm.
     let det_1um = TherapyCavitationDetector::new_with_radius(MHZ_TO_HZ, 1e-6);
     let det_10um = TherapyCavitationDetector::new_with_radius(MHZ_TO_HZ, 10e-6);
     assert!(
-        det_10um.blake_threshold > det_1um.blake_threshold,
-        "10 µm nucleus should have higher Blake threshold than 1 µm"
+        det_1um.blake_threshold > det_10um.blake_threshold,
+        "1 µm nucleus should have higher Blake threshold than 10 µm \
+         (more surface-tension-stabilised): got 1µm={:.1} Pa, 10µm={:.1} Pa",
+        det_1um.blake_threshold,
+        det_10um.blake_threshold
     );
 }
 
