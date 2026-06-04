@@ -27,11 +27,10 @@
 //! - Use `physics::foundations::{WaveEquation, AcousticWaveEquation, ElasticWaveEquation}`
 //! - Domain layer now contains only entities, not physics specifications
 //!
-//! ### 4. **Computational Primitives** (`tensor/`, `grid/`)
-//! **Ubiquitous Language**: Arrays, grids, discretization, numerical representation
+//! ### 4. **Computational Primitives** (`grid/`)
+//! **Ubiquitous Language**: Grids, discretization, numerical representation
 //! - Defines **how** data is stored and accessed
-//! - Provides unified CPU/GPU tensor abstractions
-//! - Ensures zero-copy interoperability between frameworks
+//! - (The unified CPU/GPU tensor abstraction now lives in `kwavers_math::tensor`.)
 //!
 //! ### 5. **Imaging & Sensing** (`imaging/`, `sensor/`, `signal/`)
 //! **Ubiquitous Language**: Transducers, beamforming, image reconstruction, signal processing
@@ -113,13 +112,8 @@ pub mod sensor;
 pub mod signal;
 
 pub mod source;
-pub mod tensor;
 pub mod therapy;
 
 // Re-export key domain types for convenience
 pub use geometry::{GeometricDomain, PointLocation, RectangularDomain, SphericalDomain};
 pub use grid::GridDimension;
-
-pub use tensor::{
-    convert, DType, NdArrayTensor, Shape as TensorShape, TensorBackend, TensorMut, TensorView,
-};

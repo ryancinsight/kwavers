@@ -33,6 +33,7 @@ pub mod signal;
 pub mod simd;
 pub mod simd_safe;
 pub mod statistics;
+pub mod tensor;
 pub mod vector3;
 
 // ============================================================================
@@ -64,3 +65,6 @@ pub use simd::{
 
 /// Safe SIMD operations with runtime feature detection
 pub use simd_safe::SimdOps;
+
+/// Unified CPU/GPU tensor abstraction (ndarray-backed; Burn-ready)
+pub use tensor::{convert, DType, NdArrayTensor, Shape as TensorShape, TensorBackend, TensorMut, TensorView};

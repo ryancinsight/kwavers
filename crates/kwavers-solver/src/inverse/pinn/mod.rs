@@ -107,7 +107,7 @@
 //!
 //! ## Tensor Interoperability
 //!
-//! The `domain::tensor` module provides conversion between ndarray (used by
+//! The `kwavers_math::tensor` module provides conversion between ndarray (used by
 //! forward solvers) and Burn tensors (used by PINNs):
 //!
 //! ```rust,ignore
