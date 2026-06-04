@@ -1,0 +1,14 @@
+[package]
+name = "kwavers-optics"
+version = "3.0.0"
+edition = "2021"
+authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
+description = "Optical-material reference data for kwavers: chromophore extinction spectra (hemoglobin, etc.)"
+license = "MIT"
+repository = "https://github.com/ryancinsight/kwavers"
+
+[dependencies]
+anyhow = "1.0"
+
+[lints]
+workspace = true

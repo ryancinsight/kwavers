@@ -102,7 +102,6 @@ pub mod boundary;
 pub mod imaging;
 pub mod medium;
 pub mod mesh;
-pub mod optics;
 pub mod phantoms;
 pub mod plugin;
 pub mod sensor;

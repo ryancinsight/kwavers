@@ -1,7 +1,7 @@
 //! Optical domain primitives.
 //!
 //! Reference optical-material data shared across the stack (e.g. chromophore
-//! extinction spectra), parallel to the acoustic [`crate::medium`] primitives.
+//! extinction spectra), parallel to the acoustic `kwavers-medium` primitives.
 
 pub mod chromophores;
 

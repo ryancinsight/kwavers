@@ -1,5 +1,5 @@
 use super::types::PhantomTissueType;
-use crate::optics::chromophores::HemoglobinDatabase;
+use kwavers_optics::chromophores::HemoglobinDatabase;
 use kwavers_core::constants::optical::REFRACTIVE_INDEX_SOFT_TISSUE;
 use crate::medium::properties::OpticalPropertyData;
 

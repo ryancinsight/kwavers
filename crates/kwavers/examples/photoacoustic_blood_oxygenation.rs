@@ -21,7 +21,7 @@
 //! - Brain functional imaging (hemodynamic response)
 
 use anyhow::Result;
-use kwavers_domain::optics::chromophores::HemoglobinDatabase;
+use kwavers_optics::chromophores::HemoglobinDatabase;
 use kwavers_analysis::signal_processing::spectroscopy::SpectralUnmixingConfig;
 use kwavers_diagnostics::workflows::blood_oxygenation::{
     estimate_oxygenation, OxygenationConfig,

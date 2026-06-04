@@ -1,6 +1,6 @@
 use super::super::types::{PhantomVesselType, TumorSpec, VesselSpec};
 use super::super::utils::{compute_blood_properties, compute_tumor_properties};
-use crate::optics::chromophores::HemoglobinDatabase;
+use kwavers_optics::chromophores::HemoglobinDatabase;
 use kwavers_grid::GridDimensions;
 use crate::medium::optical_map::{OpticalPropertyMap, OpticalPropertyMapBuilder, Region};
 use crate::medium::properties::OpticalPropertyData;

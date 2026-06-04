@@ -4821,6 +4821,7 @@ dependencies = [
  "kwavers-gpu",
  "kwavers-grid",
  "kwavers-math",
+ "kwavers-optics",
  "kwavers-physics",
  "kwavers-signal",
  "kwavers-simulation",
@@ -4928,6 +4929,7 @@ dependencies = [
  "kwavers-gpu",
  "kwavers-grid",
  "kwavers-math",
+ "kwavers-optics",
  "kwavers-physics",
  "kwavers-solver",
  "log",
@@ -4954,6 +4956,7 @@ dependencies = [
  "kwavers-field",
  "kwavers-grid",
  "kwavers-math",
+ "kwavers-optics",
  "kwavers-signal",
  "log",
  "nalgebra 0.32.6",
@@ -5039,6 +5042,13 @@ dependencies = [
  "num-traits",
  "rand 0.8.5",
  "serde",
+]
+
+[[package]]
+name = "kwavers-optics"
+version = "3.0.0"
+dependencies = [
+ "anyhow",
 ]
 
 [[package]]

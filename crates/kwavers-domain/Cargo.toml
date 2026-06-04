@@ -9,6 +9,7 @@ repository = "https://github.com/ryancinsight/kwavers"
 
 [dependencies]
 kwavers-core = { path = "../kwavers-core", features = ["registration", "nifti"] }
+kwavers-optics = { path = "../kwavers-optics" }
 kwavers-math = { path = "../kwavers-math" }
 kwavers-grid = { path = "../kwavers-grid" }
 kwavers-field = { path = "../kwavers-field" }

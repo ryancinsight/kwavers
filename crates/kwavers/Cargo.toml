@@ -19,6 +19,7 @@ categories = ["science", "simulation", "medical"]
 # Foundation layer. `channels`+`registration` are always-on (flume/
 # ritk-registration); `gpu` and `nifti` are forwarded from this crate's features.
 kwavers-core = { path = "../kwavers-core", features = ["channels", "registration"] }
+kwavers-optics = { path = "../kwavers-optics" }
 kwavers-math = { path = "../kwavers-math" }
 kwavers-grid = { path = "../kwavers-grid" }
 kwavers-field = { path = "../kwavers-field" }
