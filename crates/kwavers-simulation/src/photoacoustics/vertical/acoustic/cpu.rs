@@ -1,6 +1,6 @@
 use super::{compute_time_step, AcousticValidationCase, AcousticWorkspace};
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::imaging::photoacoustic::{InitialPressure, PhotoacousticScenario};
+use kwavers_imaging::photoacoustic::{InitialPressure, PhotoacousticScenario};
 use ndarray::Array3;
 
 /// Canonical acoustic forward model for photoacoustic propagation.

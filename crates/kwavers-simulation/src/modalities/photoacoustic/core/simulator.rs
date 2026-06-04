@@ -2,7 +2,7 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use kwavers_domain::imaging::photoacoustic::PhotoacousticParameters;
+use kwavers_imaging::photoacoustic::PhotoacousticParameters;
 use kwavers_medium::properties::OpticalPropertyData;
 use kwavers_medium::Medium;
 use kwavers_source::GridSource;

@@ -1,6 +1,6 @@
 use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::imaging::photoacoustic::{
+use kwavers_imaging::photoacoustic::{
     PhotoacousticScenario, PhotoacousticSimulation, PhotoacousticValidationReport,
 };
 use kwavers_physics::photoacoustics::thermoelasticity::GrueneisenModel;

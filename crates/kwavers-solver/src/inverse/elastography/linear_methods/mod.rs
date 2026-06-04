@@ -65,7 +65,7 @@ use volumetric::volumetric_time_of_flight_inversion;
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use kwavers_domain::imaging::ultrasound::elastography::ElasticityMap;
+use kwavers_imaging::ultrasound::elastography::ElasticityMap;
 use kwavers_physics::acoustics::imaging::modalities::elastography::displacement::DisplacementField;
 
 use super::config::ShearWaveInversionConfig;
@@ -88,7 +88,7 @@ impl ShearWaveInversion {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     #[must_use]
-    pub fn method(&self) -> kwavers_domain::imaging::ultrasound::elastography::InversionMethod {
+    pub fn method(&self) -> kwavers_imaging::ultrasound::elastography::InversionMethod {
         self.config.method
     }
 
@@ -111,7 +111,7 @@ impl ShearWaveInversion {
         displacement: &DisplacementField,
         grid: &Grid,
     ) -> KwaversResult<ElasticityMap> {
-        use kwavers_domain::imaging::ultrasound::elastography::InversionMethod;
+        use kwavers_imaging::ultrasound::elastography::InversionMethod;
 
         match self.config.method {
             InversionMethod::TimeOfFlight => time_of_flight_inversion(

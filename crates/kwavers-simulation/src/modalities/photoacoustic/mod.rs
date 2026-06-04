@@ -57,7 +57,7 @@
 //! use kwavers_simulation::modalities::photoacoustic::PhotoacousticSimulator;
 //! use kwavers_grid::Grid;
 //! use kwavers_medium::homogeneous::HomogeneousMedium;
-//! use kwavers_domain::imaging::photoacoustic::PhotoacousticParameters;
+//! use kwavers_imaging::photoacoustic::PhotoacousticParameters;
 //!
 //! # fn main() -> kwavers_core::error::KwaversResult<()> {
 //! // Create computational grid
@@ -93,7 +93,7 @@
 //! # use kwavers_simulation::modalities::photoacoustic::PhotoacousticSimulator;
 //! # use kwavers_grid::Grid;
 //! # use kwavers_medium::homogeneous::HomogeneousMedium;
-//! # use kwavers_domain::imaging::photoacoustic::PhotoacousticParameters;
+//! # use kwavers_imaging::photoacoustic::PhotoacousticParameters;
 //! # use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 //! # fn main() -> kwavers_core::error::KwaversResult<()> {
 //! # let grid = Grid::new(32, 32, 16, 0.001, 0.001, 0.001)?;
@@ -187,7 +187,7 @@ pub mod types;
 // Re-export main simulator
 pub use core::PhotoacousticSimulator;
 
-pub use kwavers_domain::imaging::photoacoustic::{
+pub use kwavers_imaging::photoacoustic::{
     InitialPressure, PhotoacousticOpticalProperties, PhotoacousticParameters, PhotoacousticResult,
 };
 

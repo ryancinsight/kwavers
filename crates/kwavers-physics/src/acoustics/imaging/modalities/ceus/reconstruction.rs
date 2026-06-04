@@ -30,7 +30,7 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use kwavers_domain::imaging::ultrasound::ceus::CEUSImagingParameters;
+use kwavers_imaging::ultrasound::ceus::CEUSImagingParameters;
 use ndarray::Array3;
 
 /// CEUS image reconstruction

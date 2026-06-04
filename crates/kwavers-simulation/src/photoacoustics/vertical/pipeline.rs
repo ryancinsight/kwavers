@@ -8,7 +8,7 @@ use super::{
     PhotoacousticReconstructionModel, PhotoacousticSourceModel,
 };
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::imaging::photoacoustic::{
+use kwavers_imaging::photoacoustic::{
     OpticalModel, PhotoacousticScenario, PhotoacousticSimulation, PhotoacousticValidationReport,
     PressureFieldSeries,
 };

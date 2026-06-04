@@ -21,8 +21,8 @@ use super::super::state::WorkflowState;
 use super::monitor::WorkflowPerformanceMonitor;
 use crate::photoacoustic::{PhotoacousticResult, PressureFieldSeries};
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_domain::imaging::fusion::{FusedImageResult, FusionConfig};
-use kwavers_domain::imaging::ultrasound::elastography::ElasticityMap;
+use kwavers_imaging::fusion::{FusedImageResult, FusionConfig};
+use kwavers_imaging::ultrasound::elastography::ElasticityMap;
 use kwavers_physics::acoustics::imaging::fusion::MultiModalFusion;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
@@ -50,7 +50,7 @@ impl ClinicalWorkflowOrchestrator {
                     ("elastography".to_owned(), 0.3),
                 ]
                 .into(),
-                fusion_method: kwavers_domain::imaging::fusion::ImagingFusionMethod::Probabilistic,
+                fusion_method: kwavers_imaging::fusion::ImagingFusionMethod::Probabilistic,
                 uncertainty_quantification: true,
                 ..Default::default()
             },

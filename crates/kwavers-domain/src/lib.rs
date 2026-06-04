@@ -98,6 +98,5 @@
 //! - **Property-based tests**: Mathematical correctness (Proptest)
 //! - **Validation functions**: Runtime invariant checking
 
-pub mod imaging;
 pub mod plugin;
 pub mod therapy;

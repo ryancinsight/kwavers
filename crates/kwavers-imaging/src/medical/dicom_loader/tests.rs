@@ -1,6 +1,6 @@
 use super::loader::DicomImageLoader;
 use super::types::DicomModality;
-use crate::imaging::medical::MedicalImageLoader;
+use crate::medical::MedicalImageLoader;
 
 #[test]
 fn test_dicom_loader_creation() {

@@ -4,7 +4,7 @@ use kwavers_core::constants::thermodynamic::{
     GRUNEISEN_WATER_20C, GRUNEISEN_WATER_TEMP_COEFF, GRUNEISEN_WATER_T_REF_C,
 };
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::imaging::photoacoustic::ThermoelasticProperties;
+use kwavers_imaging::photoacoustic::ThermoelasticProperties;
 
 /// Temperature-dependent Grüneisen parameter Γ(T) = Γ₀ + c_T · (T − T_ref).
 ///
@@ -248,7 +248,7 @@ mod tests {
     ///
     #[test]
     fn test_thermoelastic_report_temperature_sensitivity() -> KwaversResult<()> {
-        use kwavers_domain::imaging::photoacoustic::ThermoelasticProperties;
+        use kwavers_imaging::photoacoustic::ThermoelasticProperties;
         let thermoelastic = ThermoelasticProperties {
             density_kg_m3: DENSITY_WATER_NOMINAL,
             sound_speed_m_s: SOUND_SPEED_WATER_SIM,

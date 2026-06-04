@@ -1,6 +1,6 @@
 use super::{resample_to_target_grid, validate_registration_compatibility};
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_domain::imaging::fusion::{AffineTransform, RegistrationMethod};
+use kwavers_imaging::fusion::{AffineTransform, RegistrationMethod};
 use ndarray::Array3;
 use ritk_registration::ImageRegistration;
 

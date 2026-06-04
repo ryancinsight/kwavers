@@ -1,6 +1,6 @@
 use super::MultiModalFusion;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_domain::imaging::fusion::AffineTransform;
+use kwavers_imaging::fusion::AffineTransform;
 use crate::acoustics::imaging::fusion::types::RegisteredModality;
 use ndarray::ArrayView3;
 use std::collections::HashMap;

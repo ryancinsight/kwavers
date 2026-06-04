@@ -1,5 +1,5 @@
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_domain::imaging::fusion::RegistrationMethod;
+use kwavers_imaging::fusion::RegistrationMethod;
 use crate::acoustics::imaging::fusion::algorithms::MultiModalFusion;
 use crate::acoustics::imaging::fusion::registration::{
     generate_coordinate_arrays, FusionBenchmarkCase, FusionValidationCase, RitkRegistrationEngine,

@@ -66,7 +66,7 @@ impl TranscranialSimulation {
     ///
     /// Returns error if file cannot be loaded or format is invalid
     pub fn load_ct_geometry(&mut self, ct_path: &str) -> KwaversResult<()> {
-        use kwavers_domain::imaging::medical::{CTImageLoader, MedicalImageLoader};
+        use kwavers_imaging::medical::{CTImageLoader, MedicalImageLoader};
         let mut loader = CTImageLoader::new();
         let ct_data = loader.load(ct_path)?;
 

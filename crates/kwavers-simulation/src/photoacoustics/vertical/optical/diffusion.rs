@@ -1,7 +1,7 @@
 use super::{validate_diffusion_regime, OpticalForwardModel, OpticalSolveResult, OpticalWorkspace};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::GridDimensions;
-use kwavers_domain::imaging::photoacoustic::{
+use kwavers_imaging::photoacoustic::{
     IlluminationGeometry, OpticalModel, PhotoacousticScenario,
 };
 use kwavers_medium::optical_map::OpticalPropertyMap;

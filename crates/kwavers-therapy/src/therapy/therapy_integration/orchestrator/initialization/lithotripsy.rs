@@ -28,7 +28,7 @@ use crate::therapy::lithotripsy::{LithotripsyParameters, LithotripsySimulator};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 #[cfg(feature = "nifti")]
-use kwavers_domain::imaging::medical::{CTImageLoader, MedicalImageLoader};
+use kwavers_imaging::medical::{CTImageLoader, MedicalImageLoader};
 #[cfg(feature = "nifti")]
 use log::info;
 use log::warn;

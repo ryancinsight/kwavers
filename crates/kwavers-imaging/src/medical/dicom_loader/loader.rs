@@ -6,7 +6,7 @@
 //! raw DICOM-derived spatial metadata directly.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use crate::imaging::medical::{MedicalImageLoader, MedicalImageMetadata};
+use crate::medical::{MedicalImageLoader, MedicalImageMetadata};
 use ndarray::Array3;
 use std::path::Path;
 

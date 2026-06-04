@@ -20,7 +20,7 @@
 //!
 //! ```rust
 //! use kwavers_solver::inverse::elastography::{ShearWaveInversion, ShearWaveInversionConfig};
-//! use kwavers_domain::imaging::ultrasound::elastography::InversionMethod;
+//! use kwavers_imaging::ultrasound::elastography::InversionMethod;
 //! use kwavers_grid::Grid;
 //! use kwavers_physics::acoustics::imaging::modalities::elastography::displacement::DisplacementField;
 //!
@@ -48,7 +48,7 @@
 //! ```rust
 //! use kwavers_solver::inverse::elastography::{NonlinearInversion, NonlinearInversionConfig};
 //! use kwavers_solver::inverse::elastography::NonlinearParameterMapExt;
-//! use kwavers_domain::imaging::ultrasound::elastography::NonlinearInversionMethod;
+//! use kwavers_imaging::ultrasound::elastography::NonlinearInversionMethod;
 //! use kwavers_grid::Grid;
 //! use kwavers_physics::acoustics::imaging::modalities::elastography::HarmonicDisplacementField;
 //!
@@ -221,7 +221,7 @@ mod tests {
     use super::*;
     use kwavers_core::constants::fundamental::DENSITY_TISSUE;
     use kwavers_grid::Grid;
-    use kwavers_domain::imaging::ultrasound::elastography::{
+    use kwavers_imaging::ultrasound::elastography::{
         InversionMethod, NonlinearInversionMethod,
     };
     use kwavers_physics::acoustics::imaging::modalities::elastography::displacement::DisplacementField;

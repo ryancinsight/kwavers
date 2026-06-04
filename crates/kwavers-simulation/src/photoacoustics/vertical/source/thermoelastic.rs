@@ -1,7 +1,7 @@
 use super::{validate_source_generation, SourceWorkspace};
 use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::imaging::photoacoustic::{InitialPressure, PhotoacousticScenario};
+use kwavers_imaging::photoacoustic::{InitialPressure, PhotoacousticScenario};
 use kwavers_physics::photoacoustics::thermoelasticity::GrueneisenModel;
 use kwavers_physics::photoacoustics::PhotoacousticGoverningEquations;
 use ndarray::Array3;

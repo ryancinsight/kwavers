@@ -7,7 +7,7 @@
 //! - End-to-end NL-SWE workflow
 
 pub use kwavers_grid::Grid;
-pub use kwavers_domain::imaging::ultrasound::elastography::{
+pub use kwavers_imaging::ultrasound::elastography::{
     InversionMethod, NonlinearInversionMethod, NonlinearParameterMap,
 };
 pub use kwavers_medium::HomogeneousMedium;

@@ -1,5 +1,5 @@
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
-use kwavers_domain::imaging::photoacoustic::ThermoelasticProperties;
+use kwavers_imaging::photoacoustic::ThermoelasticProperties;
 
 #[derive(Debug, Clone, Copy)]
 pub struct ConfinementAssessment {

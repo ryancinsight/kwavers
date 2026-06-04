@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/kwavers", "xtask", "crates/kwavers-python", "crates/kwavers-core", "crates/kwavers-math", "crates/kwavers-signal", "crates/kwavers-grid", "crates/kwavers-field", "crates/kwavers-optics", "crates/kwavers-medium", "crates/kwavers-mesh", "crates/kwavers-phantom", "crates/kwavers-boundary", "crates/kwavers-source", "crates/kwavers-receiver", "crates/kwavers-transducer", "crates/kwavers-domain", "crates/kwavers-physics", "crates/kwavers-solver", "crates/kwavers-analysis", "crates/kwavers-simulation", "crates/kwavers-diagnostics", "crates/kwavers-therapy", "crates/kwavers-gpu"]
+members = ["crates/kwavers", "xtask", "crates/kwavers-python", "crates/kwavers-core", "crates/kwavers-math", "crates/kwavers-signal", "crates/kwavers-grid", "crates/kwavers-field", "crates/kwavers-optics", "crates/kwavers-medium", "crates/kwavers-mesh", "crates/kwavers-phantom", "crates/kwavers-boundary", "crates/kwavers-source", "crates/kwavers-receiver", "crates/kwavers-transducer", "crates/kwavers-imaging", "crates/kwavers-domain", "crates/kwavers-physics", "crates/kwavers-solver", "crates/kwavers-analysis", "crates/kwavers-simulation", "crates/kwavers-diagnostics", "crates/kwavers-therapy", "crates/kwavers-gpu"]
 resolver = "2"
 
 [workspace.dependencies]

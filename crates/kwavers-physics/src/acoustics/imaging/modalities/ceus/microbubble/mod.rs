@@ -34,4 +34,4 @@ pub use dynamics::BubbleDynamics;
 pub use response::BubbleResponse;
 
 // Re-export standard domain models for convenience
-pub use kwavers_domain::imaging::ultrasound::ceus::{Microbubble, MicrobubblePopulation};
+pub use kwavers_imaging::ultrasound::ceus::{Microbubble, MicrobubblePopulation};

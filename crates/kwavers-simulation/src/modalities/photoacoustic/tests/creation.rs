@@ -3,7 +3,7 @@
 use super::super::core::PhotoacousticSimulator;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_grid::Grid;
-use kwavers_domain::imaging::photoacoustic::PhotoacousticOpticalProperties;
+use kwavers_imaging::photoacoustic::PhotoacousticOpticalProperties;
 use kwavers_medium::homogeneous::HomogeneousMedium;
 
 #[test]
@@ -16,7 +16,7 @@ fn test_photoacoustic_creation() {
         1.0,
         &grid,
     );
-    let parameters = kwavers_domain::imaging::photoacoustic::PhotoacousticParameters::default();
+    let parameters = kwavers_imaging::photoacoustic::PhotoacousticParameters::default();
 
     let _simulator = PhotoacousticSimulator::new(grid, parameters, &medium).unwrap();
 }
@@ -50,7 +50,7 @@ fn test_accessor_methods() {
         1.0,
         &grid,
     );
-    let parameters = kwavers_domain::imaging::photoacoustic::PhotoacousticParameters::default();
+    let parameters = kwavers_imaging::photoacoustic::PhotoacousticParameters::default();
     let simulator = PhotoacousticSimulator::new(grid.clone(), parameters.clone(), &medium).unwrap();
 
     assert_eq!(simulator.grid().dimensions(), (16, 16, 8));

@@ -3,7 +3,7 @@
 use super::BubbleDynamics;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::imaging::ultrasound::ceus::Microbubble;
+use kwavers_imaging::ultrasound::ceus::Microbubble;
 use crate::acoustics::imaging::modalities::ceus::microbubble::response::BubbleResponse;
 
 impl BubbleDynamics {

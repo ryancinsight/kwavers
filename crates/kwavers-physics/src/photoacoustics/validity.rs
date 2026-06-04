@@ -1,5 +1,5 @@
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::imaging::photoacoustic::{PhotoacousticScenario, ThermoelasticProperties};
+use kwavers_imaging::photoacoustic::{PhotoacousticScenario, ThermoelasticProperties};
 
 /// Validity report for retained photoacoustic physics assumptions.
 #[derive(Debug, Clone, Copy)]

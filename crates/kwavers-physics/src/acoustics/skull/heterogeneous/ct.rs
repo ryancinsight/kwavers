@@ -14,7 +14,7 @@ impl HeterogeneousSkull {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn from_ct(ct_data: &Array3<f64>, props: &AcousticSkullProperties) -> KwaversResult<Self> {
-        use kwavers_domain::imaging::medical::CTImageLoader;
+        use kwavers_imaging::medical::CTImageLoader;
 
         let sound_speed = ct_data.mapv(CTImageLoader::hu_to_sound_speed);
         let density = ct_data.mapv(CTImageLoader::hu_to_density);

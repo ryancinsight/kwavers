@@ -6,7 +6,7 @@ use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WA
 use kwavers_core::constants::numerical::MPA_TO_PA;
 use kwavers_core::constants::thermodynamic::GRUNEISEN_WATER_20C;
 use kwavers_grid::Grid;
-use kwavers_domain::imaging::photoacoustic::InitialPressure;
+use kwavers_imaging::photoacoustic::InitialPressure;
 use kwavers_medium::homogeneous::HomogeneousMedium;
 use approx::assert_relative_eq;
 use ndarray::Array3;

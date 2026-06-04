@@ -1,7 +1,7 @@
 //! Acoustic propagation and reconstruction methods for PhotoacousticSimulator.
 
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::imaging::photoacoustic::{
+use kwavers_imaging::photoacoustic::{
     InitialPressure, PhotoacousticResult, PressureFieldSeries,
 };
 use kwavers_solver::inverse::reconstruction::photoacoustic::{

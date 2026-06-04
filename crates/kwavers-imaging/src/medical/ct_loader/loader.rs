@@ -3,7 +3,7 @@
 use super::types::CTMetadata;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
-use crate::imaging::medical::{MedicalImageLoader, MedicalImageMetadata};
+use crate::medical::{MedicalImageLoader, MedicalImageMetadata};
 use log::warn;
 use ndarray::Array3;
 
@@ -16,7 +16,7 @@ use ndarray::Array3;
 /// # Example
 ///
 /// ```no_run
-/// # use kwavers_domain::imaging::medical::{CTImageLoader, MedicalImageLoader};
+/// # use kwavers_imaging::medical::{CTImageLoader, MedicalImageLoader};
 /// let mut loader = CTImageLoader::new();
 /// let ct_data = loader.load("patient_ct.nii.gz")?;
 /// let metadata = loader.metadata();
@@ -68,7 +68,7 @@ impl Default for CTImageLoader {
 
 impl MedicalImageLoader for CTImageLoader {
     fn load(&mut self, path: &str) -> KwaversResult<Array3<f64>> {
-        use crate::imaging::medical::ritk_bridge::{image_to_volume, AdapterBackend};
+        use crate::medical::ritk_bridge::{image_to_volume, AdapterBackend};
 
         if !std::path::Path::new(path).exists() {
             return Err(KwaversError::InvalidInput(format!(

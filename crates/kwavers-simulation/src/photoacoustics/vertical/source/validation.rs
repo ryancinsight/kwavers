@@ -1,5 +1,5 @@
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_domain::imaging::photoacoustic::{InitialPressure, PhotoacousticScenario};
+use kwavers_imaging::photoacoustic::{InitialPressure, PhotoacousticScenario};
 
 /// Deterministic validation descriptor for thermoelastic source generation.
 #[derive(Debug, Clone)]

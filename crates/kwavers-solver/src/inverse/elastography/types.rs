@@ -3,7 +3,7 @@
 //! Domain types for elastography inversion results, including elasticity maps
 //! and nonlinear parameter characterization.
 
-use kwavers_domain::imaging::ultrasound::elastography::{ElasticityMap, NonlinearParameterMap};
+use kwavers_imaging::ultrasound::elastography::{ElasticityMap, NonlinearParameterMap};
 use ndarray::Array3;
 
 /// Extension trait for `ElasticityMap` statistics

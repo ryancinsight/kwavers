@@ -29,8 +29,8 @@ use kwavers_analysis::validation::clinical::{
     ClinicalValidator, ImageQualityMetrics, MeasurementAccuracy, SafetyIndices,
 };
 use kwavers_grid::Grid;
-use kwavers_domain::imaging::ultrasound::elastography::InversionMethod;
-use kwavers_domain::imaging::ultrasound::elastography::{
+use kwavers_imaging::ultrasound::elastography::InversionMethod;
+use kwavers_imaging::ultrasound::elastography::{
     NonlinearInversionMethod, NonlinearParameterMap,
 };
 use kwavers_medium::Medium;

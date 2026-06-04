@@ -7,7 +7,7 @@ use super::dynamics::BubbleDynamics;
 use kwavers_core::constants::cavitation::SURFACE_TENSION_WATER;
 use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
-use kwavers_domain::imaging::ultrasound::ceus::{Microbubble, MicrobubblePopulation};
+use kwavers_imaging::ultrasound::ceus::{Microbubble, MicrobubblePopulation};
 
 #[test]
 fn test_microbubble_creation() {

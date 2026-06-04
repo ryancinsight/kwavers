@@ -6,7 +6,7 @@ use super::harmonic_ratio::harmonic_ratio_inversion;
 use super::least_squares::nonlinear_least_squares_inversion;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use kwavers_domain::imaging::ultrasound::elastography::NonlinearParameterMap;
+use kwavers_imaging::ultrasound::elastography::NonlinearParameterMap;
 use kwavers_physics::acoustics::imaging::modalities::elastography::HarmonicDisplacementField;
 
 /// Nonlinear parameter inversion processor
@@ -28,7 +28,7 @@ impl NonlinearInversion {
     #[must_use]
     pub fn method(
         &self,
-    ) -> kwavers_domain::imaging::ultrasound::elastography::NonlinearInversionMethod {
+    ) -> kwavers_imaging::ultrasound::elastography::NonlinearInversionMethod {
         self.config.method
     }
 
@@ -49,7 +49,7 @@ impl NonlinearInversion {
         harmonic_field: &HarmonicDisplacementField,
         grid: &Grid,
     ) -> KwaversResult<NonlinearParameterMap> {
-        use kwavers_domain::imaging::ultrasound::elastography::NonlinearInversionMethod;
+        use kwavers_imaging::ultrasound::elastography::NonlinearInversionMethod;
 
         match self.config.method {
             NonlinearInversionMethod::HarmonicRatio => {

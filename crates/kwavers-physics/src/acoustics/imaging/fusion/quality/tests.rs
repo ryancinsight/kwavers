@@ -1,7 +1,7 @@
 //! Tests for multi-modal fusion quality assessment
 
 use super::*;
-use kwavers_domain::imaging::ultrasound::elastography::ElasticityMap;
+use kwavers_imaging::ultrasound::elastography::ElasticityMap;
 use ndarray::Array3;
 
 #[test]

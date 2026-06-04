@@ -1,6 +1,6 @@
 use super::results::{DiagnosticRecommendation, DiagnosticUrgency};
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::imaging::fusion::FusedImageResult;
+use kwavers_imaging::fusion::FusedImageResult;
 use ndarray::Array3;
 use std::collections::HashMap;
 /// Generate diagnostic recommendations.

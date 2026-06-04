@@ -20,7 +20,7 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use kwavers_domain::imaging::photoacoustic::InitialPressure;
+use kwavers_imaging::photoacoustic::InitialPressure;
 use ndarray::Array3;
 
 /// Propagate acoustic wave using second-order finite difference method.

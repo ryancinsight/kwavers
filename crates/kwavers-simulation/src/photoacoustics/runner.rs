@@ -1,6 +1,6 @@
 use super::PhotoacousticOrchestrator;
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::imaging::photoacoustic::{
+use kwavers_imaging::photoacoustic::{
     PhotoacousticScenario, PhotoacousticSimulation, PhotoacousticValidationReport,
 };
 

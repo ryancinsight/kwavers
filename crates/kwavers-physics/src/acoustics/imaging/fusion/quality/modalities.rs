@@ -1,7 +1,7 @@
 //! Modality-specific quality score computations
 
 use super::metrics::calculate_image_metrics;
-use kwavers_domain::imaging::ultrasound::elastography::ElasticityMap;
+use kwavers_imaging::ultrasound::elastography::ElasticityMap;
 use ndarray::Array3;
 
 /// Compute photoacoustic image quality score

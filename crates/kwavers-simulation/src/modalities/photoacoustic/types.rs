@@ -6,7 +6,7 @@
 //!
 //! ## Design Philosophy
 //!
-//! - **Single Source of Truth**: Core types defined in `kwavers_domain::imaging::photoacoustic`
+//! - **Single Source of Truth**: Core types defined in `kwavers_imaging::photoacoustic`
 //! - **Domain-Driven Design**: Types follow ubiquitous language from photoacoustic imaging domain
 //! - **Separation of Concerns**: Domain models separated from simulation infrastructure
 //!
@@ -30,7 +30,7 @@
 //! println!("Wavelengths: {:?}", params.wavelengths);
 //! ```
 
-pub use kwavers_domain::imaging::photoacoustic::{
+pub use kwavers_imaging::photoacoustic::{
     InitialPressure, PhotoacousticOpticalProperties, PhotoacousticParameters, PhotoacousticResult,
 };
 

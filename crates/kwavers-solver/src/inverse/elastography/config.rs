@@ -4,7 +4,7 @@
 //! linear and nonlinear inversion method selection.
 
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
-use kwavers_domain::imaging::ultrasound::elastography::{InversionMethod, NonlinearInversionMethod};
+use kwavers_imaging::ultrasound::elastography::{InversionMethod, NonlinearInversionMethod};
 
 /// Configuration for shear wave inversion
 #[derive(Debug, Clone)]

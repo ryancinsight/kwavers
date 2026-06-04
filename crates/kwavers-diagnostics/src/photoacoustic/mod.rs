@@ -80,7 +80,7 @@
 //!
 //! ### Old Import (No Longer Valid)
 //! ```rust,ignore
-//! use kwavers_domain::imaging::photoacoustic::{PhotoacousticParameters, PhotoacousticResult};
+//! use kwavers_imaging::photoacoustic::{PhotoacousticParameters, PhotoacousticResult};
 //! ```
 //!
 //! ### New Import (Correct Location)

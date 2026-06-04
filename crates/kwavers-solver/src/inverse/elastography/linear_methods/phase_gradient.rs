@@ -5,7 +5,7 @@ use ndarray::Array3;
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use kwavers_domain::imaging::ultrasound::elastography::ElasticityMap;
+use kwavers_imaging::ultrasound::elastography::ElasticityMap;
 use kwavers_physics::acoustics::imaging::modalities::elastography::displacement::DisplacementField;
 
 use super::super::algorithms::fill_boundaries;

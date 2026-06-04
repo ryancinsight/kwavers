@@ -9,7 +9,7 @@ use super::least_squares::nonlinear_least_squares_inversion;
 use super::processor::NonlinearInversion;
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use kwavers_core::constants::numerical::TWO_PI;
-use kwavers_domain::imaging::ultrasound::elastography::NonlinearInversionMethod;
+use kwavers_imaging::ultrasound::elastography::NonlinearInversionMethod;
 use kwavers_physics::acoustics::imaging::modalities::elastography::HarmonicDisplacementField;
 
 fn test_config() -> NonlinearInversionConfig {

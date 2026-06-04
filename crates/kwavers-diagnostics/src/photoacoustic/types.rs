@@ -1,4 +1,4 @@
-pub use kwavers_domain::imaging::photoacoustic::{
+pub use kwavers_imaging::photoacoustic::{
     InitialPressure, PhotoacousticOpticalProperties, PhotoacousticParameters, PhotoacousticResult,
     PressureFieldSeries,
 };

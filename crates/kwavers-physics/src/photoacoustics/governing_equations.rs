@@ -1,7 +1,7 @@
 use super::thermoelasticity::GrueneisenModel;
 use super::ThermoelasticReport;
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::imaging::photoacoustic::ThermoelasticProperties;
+use kwavers_imaging::photoacoustic::ThermoelasticProperties;
 
 #[derive(Debug)]
 pub struct PhotoacousticGoverningEquations;

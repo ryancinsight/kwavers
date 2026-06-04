@@ -26,7 +26,7 @@ mod tests;
 pub use batch::MedicalImageBatchLoader;
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use crate::imaging::medical::{
+use crate::medical::{
     create_loader, CTImageLoader, DicomImageLoader, MedicalImageLoader, MedicalImageMetadata,
 };
 use ndarray::Array3;

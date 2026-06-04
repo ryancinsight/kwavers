@@ -4821,6 +4821,7 @@ dependencies = [
  "kwavers-field",
  "kwavers-gpu",
  "kwavers-grid",
+ "kwavers-imaging",
  "kwavers-math",
  "kwavers-medium",
  "kwavers-optics",
@@ -4953,6 +4954,7 @@ dependencies = [
  "kwavers-domain",
  "kwavers-gpu",
  "kwavers-grid",
+ "kwavers-imaging",
  "kwavers-math",
  "kwavers-medium",
  "kwavers-optics",
@@ -5063,6 +5065,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "kwavers-imaging"
+version = "3.0.0"
+dependencies = [
+ "approx",
+ "burn",
+ "kwavers-core",
+ "kwavers-grid",
+ "kwavers-medium",
+ "log",
+ "ndarray 0.16.1",
+ "ritk-core",
+ "ritk-io",
+ "ritk-registration",
+]
+
+[[package]]
 name = "kwavers-math"
 version = "3.0.0"
 dependencies = [
@@ -5137,6 +5155,7 @@ dependencies = [
  "kwavers-domain",
  "kwavers-field",
  "kwavers-grid",
+ "kwavers-imaging",
  "kwavers-math",
  "kwavers-medium",
  "kwavers-receiver",
@@ -5236,6 +5255,7 @@ dependencies = [
  "kwavers-field",
  "kwavers-gpu",
  "kwavers-grid",
+ "kwavers-imaging",
  "kwavers-math",
  "kwavers-medium",
  "kwavers-mesh",
@@ -5270,6 +5290,7 @@ dependencies = [
  "kwavers-domain",
  "kwavers-field",
  "kwavers-grid",
+ "kwavers-imaging",
  "kwavers-math",
  "kwavers-medium",
  "kwavers-mesh",
@@ -5323,6 +5344,7 @@ dependencies = [
  "kwavers-core",
  "kwavers-domain",
  "kwavers-grid",
+ "kwavers-imaging",
  "kwavers-math",
  "kwavers-medium",
  "kwavers-physics",

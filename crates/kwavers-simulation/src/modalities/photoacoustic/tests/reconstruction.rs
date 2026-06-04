@@ -18,7 +18,7 @@ fn test_analytical_validation() {
         1.0,
         &grid,
     );
-    let parameters = kwavers_domain::imaging::photoacoustic::PhotoacousticParameters::default();
+    let parameters = kwavers_imaging::photoacoustic::PhotoacousticParameters::default();
     let simulator = PhotoacousticSimulator::new(grid, parameters, &medium).unwrap();
 
     let error = simulator.validate_analytical().unwrap();
@@ -35,7 +35,7 @@ fn test_universal_back_projection_algorithm() {
         1.0,
         &grid,
     );
-    let parameters = kwavers_domain::imaging::photoacoustic::PhotoacousticParameters::default();
+    let parameters = kwavers_imaging::photoacoustic::PhotoacousticParameters::default();
 
     let n_time = 40;
     let dt = 1e-7;

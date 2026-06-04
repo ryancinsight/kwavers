@@ -7,7 +7,7 @@
 use ndarray::Array3;
 
 // Re-export domain types for backwards compatibility
-pub use kwavers_domain::imaging::fusion::{AffineTransform, FusedImageResult};
+pub use kwavers_imaging::fusion::{AffineTransform, FusedImageResult};
 
 /// Internal representation of a registered imaging modality
 #[derive(Debug, Clone)]

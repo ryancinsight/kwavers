@@ -15,7 +15,7 @@ fn test_simulation() {
         1.0,
         &grid,
     );
-    let parameters = kwavers_domain::imaging::photoacoustic::PhotoacousticParameters::default();
+    let parameters = kwavers_imaging::photoacoustic::PhotoacousticParameters::default();
     let mut simulator = PhotoacousticSimulator::new(grid, parameters, &medium).unwrap();
 
     let fluence = simulator.compute_fluence().unwrap();
@@ -52,7 +52,7 @@ fn test_multi_wavelength_simulation() {
         1.0,
         &grid,
     );
-    let parameters = kwavers_domain::imaging::photoacoustic::PhotoacousticParameters {
+    let parameters = kwavers_imaging::photoacoustic::PhotoacousticParameters {
         wavelengths: vec![700.0, 800.0],
         ..Default::default()
     };

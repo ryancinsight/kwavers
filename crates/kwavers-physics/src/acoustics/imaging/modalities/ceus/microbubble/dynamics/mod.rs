@@ -7,7 +7,7 @@ mod scattering;
 mod tests;
 
 use kwavers_core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL};
-use kwavers_domain::imaging::ultrasound::ceus::Microbubble;
+use kwavers_imaging::ultrasound::ceus::Microbubble;
 
 /// Linearized total damping constant for micron-scale bubbles at resonance.
 ///

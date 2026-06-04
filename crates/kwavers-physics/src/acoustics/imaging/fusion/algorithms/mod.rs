@@ -121,7 +121,7 @@ impl MultiModalFusion {
     ///
     pub fn register_elastography(
         &mut self,
-        elasticity_map: &kwavers_domain::imaging::ultrasound::elastography::ElasticityMap,
+        elasticity_map: &kwavers_imaging::ultrasound::elastography::ElasticityMap,
     ) -> KwaversResult<()> {
         let registered_data = RegisteredModality {
             data: elasticity_map.shear_modulus.clone(),

@@ -13,7 +13,7 @@ pub mod frequency_domain_fwi;
 pub mod hifu;
 
 // Re-export domain types for convenience
-pub use kwavers_domain::imaging::ultrasound::{UltrasoundConfig, UltrasoundMode};
+pub use kwavers_imaging::ultrasound::{UltrasoundConfig, UltrasoundMode};
 
 /// Compute B-mode image from RF data
 #[must_use]

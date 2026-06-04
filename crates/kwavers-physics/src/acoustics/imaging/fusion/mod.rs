@@ -90,7 +90,7 @@ pub use config::RegistrationMethod;
 pub use properties::extract_tissue_properties;
 
 // Re-export domain types (moved to domain layer for clean architecture)
-pub use kwavers_domain::imaging::fusion::{
+pub use kwavers_imaging::fusion::{
     AffineTransform, FusedImageResult, FusionConfig, ImagingFusionMethod,
 };
 // pub use types::RegisteredModality; // Made crate-public only - use types module directly

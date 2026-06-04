@@ -1,5 +1,5 @@
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_domain::imaging::photoacoustic::PhotoacousticScenario;
+use kwavers_imaging::photoacoustic::PhotoacousticScenario;
 
 /// Deterministic validation case descriptor for the optical stage.
 #[derive(Debug, Clone)]
@@ -39,7 +39,7 @@ pub fn validate_diffusion_regime(scenario: &PhotoacousticScenario) -> KwaversRes
 mod tests {
     use super::validate_diffusion_regime;
     use kwavers_grid::{Grid, GridDimensions};
-    use kwavers_domain::imaging::photoacoustic::{
+    use kwavers_imaging::photoacoustic::{
         IlluminationGeometry, MonteCarloModelConfig, OpticalModel, PhotoacousticAcousticConfig,
         PhotoacousticScenario, PhotoacousticSolverConfig, ThermoelasticProperties,
     };

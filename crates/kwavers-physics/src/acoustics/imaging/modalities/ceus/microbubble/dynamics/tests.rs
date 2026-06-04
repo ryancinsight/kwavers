@@ -1,7 +1,7 @@
 use super::*;
 use kwavers_core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL};
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
-use kwavers_domain::imaging::ultrasound::ceus::Microbubble;
+use kwavers_imaging::ultrasound::ceus::Microbubble;
 
 fn test_bubble() -> Microbubble {
     Microbubble::new(2.0, 1.0, 0.5)

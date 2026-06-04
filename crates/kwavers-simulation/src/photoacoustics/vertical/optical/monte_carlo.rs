@@ -1,6 +1,6 @@
 use super::{OpticalForwardModel, OpticalSolveResult, OpticalWorkspace};
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_domain::imaging::photoacoustic::{
+use kwavers_imaging::photoacoustic::{
     IlluminationGeometry, MonteCarloModelConfig, OpticalModel, PhotoacousticScenario,
 };
 use kwavers_physics::optics::monte_carlo::config::SimulationConfig;

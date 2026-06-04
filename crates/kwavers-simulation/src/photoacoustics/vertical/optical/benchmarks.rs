@@ -1,4 +1,4 @@
-use kwavers_domain::imaging::photoacoustic::OpticalModel;
+use kwavers_imaging::photoacoustic::OpticalModel;
 
 /// Benchmark descriptor for retained optical solvers.
 #[derive(Debug, Clone)]

@@ -1,4 +1,4 @@
-use kwavers_domain::imaging::photoacoustic::PhotoacousticScenario;
+use kwavers_imaging::photoacoustic::PhotoacousticScenario;
 
 /// Validation descriptor for acoustic propagation.
 #[derive(Debug, Clone)]
@@ -22,7 +22,7 @@ mod tests {
         SPECIFIC_HEAT_WATER_37C, THERMAL_CONDUCTIVITY_WATER_37C,
     };
     use kwavers_grid::{Grid, GridDimensions};
-    use kwavers_domain::imaging::photoacoustic::{
+    use kwavers_imaging::photoacoustic::{
         IlluminationGeometry, MonteCarloModelConfig, OpticalModel, PhotoacousticAcousticConfig,
         PhotoacousticScenario, PhotoacousticSolverConfig, ThermoelasticProperties,
     };

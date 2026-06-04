@@ -75,7 +75,7 @@ pub struct MedicalImageMetadata {
 /// # Example
 ///
 /// ```no_run
-/// # use kwavers_domain::imaging::medical::{MedicalImageLoader, CTImageLoader};
+/// # use kwavers_imaging::medical::{MedicalImageLoader, CTImageLoader};
 /// # use kwavers_core::error::KwaversResult;
 /// let mut loader = CTImageLoader::new();
 /// let image = loader.load("patient_ct.nii.gz")?;
@@ -112,7 +112,7 @@ pub trait MedicalImageLoader: Send + Sync {
 /// # Example
 ///
 /// ```no_run
-/// # use kwavers_domain::imaging::medical::create_loader;
+/// # use kwavers_imaging::medical::create_loader;
 /// let loader = create_loader("patient_ct.nii.gz")?;
 /// # Ok::<(), kwavers_core::error::KwaversError>(())
 /// ```

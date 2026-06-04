@@ -7,7 +7,7 @@ use ndarray::Array3;
 use ndarray::Array4;
 
 // Domain imports
-use kwavers_domain::imaging::ultrasound::ceus::MicrobubblePopulation;
+use kwavers_imaging::ultrasound::ceus::MicrobubblePopulation;
 
 // Physics imports
 use kwavers_core::constants::numerical::TWO_PI;
@@ -285,7 +285,7 @@ impl ContrastEnhancedUltrasound {
 }
 
 // Implement domain CEUS orchestration interface
-impl kwavers_domain::imaging::CEUSOrchestrator for ContrastEnhancedUltrasound {
+impl kwavers_imaging::CEUSOrchestrator for ContrastEnhancedUltrasound {
     fn update(&mut self, pressure_field: &Array3<f64>, _time: f64) -> KwaversResult<Array3<f64>> {
         // Simplified: use max pressure as representative
         let max_pressure = pressure_field

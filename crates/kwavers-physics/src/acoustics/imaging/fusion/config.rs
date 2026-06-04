@@ -9,7 +9,7 @@
 //! registration strategies, and quality parameters.
 
 // Re-export from domain layer (SSOT for data models)
-pub use kwavers_domain::imaging::fusion::{FusionConfig, ImagingFusionMethod, RegistrationMethod};
+pub use kwavers_imaging::fusion::{FusionConfig, ImagingFusionMethod, RegistrationMethod};
 
 #[cfg(test)]
 mod tests {

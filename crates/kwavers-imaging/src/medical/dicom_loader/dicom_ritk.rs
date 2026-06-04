@@ -30,8 +30,8 @@ use ndarray::Array3;
 use ritk_io::{load_dicom_series, scan_dicom_directory, DicomSeriesInfo};
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use crate::imaging::medical::ritk_bridge::{image_to_volume, AdapterBackend};
-use crate::imaging::medical::MedicalImageMetadata;
+use crate::medical::ritk_bridge::{image_to_volume, AdapterBackend};
+use crate::medical::MedicalImageMetadata;
 
 /// Result of loading a DICOM series via the ritk-io bridge.
 #[derive(Debug, Clone)]

@@ -15,7 +15,7 @@ impl PhotoacousticMaterialLibrary {
         SpectralSample {
             wavelength_nm,
             properties:
-                crate::imaging::photoacoustic::PhotoacousticOpticalProperties::soft_tissue(
+                crate::photoacoustic::PhotoacousticOpticalProperties::soft_tissue(
                     wavelength_nm,
                 ),
         }
@@ -26,7 +26,7 @@ impl PhotoacousticMaterialLibrary {
         SpectralSample {
             wavelength_nm,
             properties:
-                crate::imaging::photoacoustic::PhotoacousticOpticalProperties::blood(
+                crate::photoacoustic::PhotoacousticOpticalProperties::blood(
                     wavelength_nm,
                 ),
         }
@@ -37,7 +37,7 @@ impl PhotoacousticMaterialLibrary {
         SpectralSample {
             wavelength_nm,
             properties:
-                crate::imaging::photoacoustic::PhotoacousticOpticalProperties::tumor(
+                crate::photoacoustic::PhotoacousticOpticalProperties::tumor(
                     wavelength_nm,
                 ),
         }

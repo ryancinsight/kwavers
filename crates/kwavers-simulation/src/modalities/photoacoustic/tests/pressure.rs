@@ -16,7 +16,7 @@ fn test_initial_pressure_computation() {
         1.0,
         &grid,
     );
-    let parameters = kwavers_domain::imaging::photoacoustic::PhotoacousticParameters::default();
+    let parameters = kwavers_imaging::photoacoustic::PhotoacousticParameters::default();
     let simulator = PhotoacousticSimulator::new(grid, parameters, &medium).unwrap();
 
     let fluence = simulator.compute_fluence().unwrap();
@@ -40,7 +40,7 @@ fn test_spherical_spreading_correction() {
         1.0,
         &grid,
     );
-    let parameters = kwavers_domain::imaging::photoacoustic::PhotoacousticParameters::default();
+    let parameters = kwavers_imaging::photoacoustic::PhotoacousticParameters::default();
     let simulator = PhotoacousticSimulator::new(grid, parameters, &medium).unwrap();
 
     let mut pressure_fields = vec![Array3::<f64>::zeros((16, 16, 8))];

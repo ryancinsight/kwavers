@@ -1,6 +1,6 @@
 use super::UnifiedMedicalImageLoader;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use crate::imaging::medical::MedicalImageMetadata;
+use crate::medical::MedicalImageMetadata;
 use ndarray::Array3;
 use std::path::Path;
 
@@ -11,7 +11,7 @@ use std::path::Path;
 /// # Example
 ///
 /// ```no_run
-/// # use kwavers_domain::imaging::unified_loader::MedicalImageBatchLoader;
+/// # use kwavers_imaging::unified_loader::MedicalImageBatchLoader;
 /// # use kwavers_core::error::KwaversResult;
 /// let mut batch = MedicalImageBatchLoader::new();
 /// batch.add("patient1.nii.gz")?;

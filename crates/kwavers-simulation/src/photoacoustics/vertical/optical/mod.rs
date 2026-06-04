@@ -1,5 +1,5 @@
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::imaging::photoacoustic::{OpticalModel, PhotoacousticScenario};
+use kwavers_imaging::photoacoustic::{OpticalModel, PhotoacousticScenario};
 use ndarray::Array3;
 
 mod benchmarks;

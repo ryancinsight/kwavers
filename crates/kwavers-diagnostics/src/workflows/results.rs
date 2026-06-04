@@ -1,6 +1,6 @@
 use crate::photoacoustic::PhotoacousticResult;
-use kwavers_domain::imaging::fusion::FusedImageResult;
-use kwavers_domain::imaging::ultrasound::elastography::ElasticityMap;
+use kwavers_imaging::fusion::FusedImageResult;
+use kwavers_imaging::ultrasound::elastography::ElasticityMap;
 use ndarray::Array3;
 use std::collections::HashMap;
 use std::time::Duration;
