@@ -235,6 +235,10 @@ fn test_module_imports() {
 /// across all standard configurations.
 #[test]
 fn test_grid_validation_suite() {
+    if !should_run_python_validation() {
+        println!("Skipping grid validation suite (set KWAVERS_RUN_PYTHON=1 with a built pykwavers)");
+        return;
+    }
     let results = generate_grid_validation_report();
 
     let passed = results.iter().filter(|r| r.passed).count();
@@ -268,6 +272,10 @@ fn test_grid_validation_suite() {
 /// Validates tone burst and sinusoid generation against mathematical specifications.
 #[test]
 fn test_signal_validation_suite() {
+    if !should_run_python_validation() {
+        println!("Skipping signal validation suite (set KWAVERS_RUN_PYTHON=1 with a built pykwavers)");
+        return;
+    }
     let results = generate_signal_validation_report();
 
     let passed = results.iter().filter(|r| r.passed).count();
@@ -294,6 +302,10 @@ fn test_signal_validation_suite() {
 /// Validates point, line, and area source definitions.
 #[test]
 fn test_source_validation_suite() {
+    if !should_run_python_validation() {
+        println!("Skipping source validation suite (set KWAVERS_RUN_PYTHON=1 with a built pykwavers)");
+        return;
+    }
     let results = generate_source_validation_report();
 
     let passed = results.iter().filter(|r| r.passed).count();
@@ -320,6 +332,10 @@ fn test_source_validation_suite() {
 /// Validates point sensors, area sensors, and beamforming configurations.
 #[test]
 fn test_sensor_validation_suite() {
+    if !should_run_python_validation() {
+        println!("Skipping sensor validation suite (set KWAVERS_RUN_PYTHON=1 with a built pykwavers)");
+        return;
+    }
     let results = generate_sensor_validation_report();
 
     let passed = results.iter().filter(|r| r.passed).count();
@@ -343,6 +359,10 @@ fn test_sensor_validation_suite() {
 /// Validates FDTD/PSTD solvers against analytical solutions.
 #[test]
 fn test_solver_validation_suite() {
+    if !should_run_python_validation() {
+        println!("Skipping solver validation suite (set KWAVERS_RUN_PYTHON=1 with a built pykwavers)");
+        return;
+    }
     let results = generate_solver_validation_report();
 
     let passed = results.iter().filter(|r| r.passed).count();
@@ -370,6 +390,10 @@ fn test_solver_validation_suite() {
 /// Runs all validation modules and generates a comprehensive report.
 #[test]
 fn test_full_validation_suite() {
+    if !should_run_python_validation() {
+        println!("Skipping full validation suite (set KWAVERS_RUN_PYTHON=1 with a built pykwavers)");
+        return;
+    }
     println!("\\n========================================");
     println!("Running Full Validation Suite");
     println!("========================================\\n");
@@ -608,6 +632,10 @@ fn test_mathematical_specifications() {
 /// This test generates a validation report that can be consumed by CI systems.
 #[test]
 fn test_generate_ci_report() {
+    if !should_run_python_validation() {
+        println!("Skipping CI report (set KWAVERS_RUN_PYTHON=1 with a built pykwavers)");
+        return;
+    }
     let mut report = ComprehensiveValidationReport::new();
 
     report.grid_results = generate_grid_validation_report();

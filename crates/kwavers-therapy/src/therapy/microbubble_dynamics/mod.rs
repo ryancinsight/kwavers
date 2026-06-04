@@ -84,10 +84,11 @@
 //! ## Usage Example
 //!
 //! ```rust,no_run
-//! use kwavers_therapy::therapy::microbubble_dynamics::MicrobubbleDynamicsService;
+//! use kwavers_therapy::therapy::microbubble_dynamics::{
+//!     MicrobubbleDynamicsService, DrugPayload, DrugLoadingMode,
+//! };
 //! use kwavers_physics::therapy::microbubble::{
-//!     MicrobubbleState, MarmottantShellProperties, DrugPayload,
-//!     DrugLoadingMode, Position3D,
+//!     MicrobubbleState, MarmottantShellProperties, Position3D,
 //! };
 //!
 //! // Create microbubble with drug payload
