@@ -4,7 +4,7 @@ use super::{
     constants::{MIN_SWEEP_DURATION, TWO_PI},
     FrequencySweep, SweepDirection,
 };
-use crate::signal::Signal;
+use crate::Signal;
 
 /// Linear frequency sweep (chirp signal)
 ///

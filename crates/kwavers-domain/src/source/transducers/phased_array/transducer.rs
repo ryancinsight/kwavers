@@ -7,7 +7,7 @@ use super::element::TransducerElement;
 use kwavers_core::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::Medium;
-use crate::signal::Signal;
+use kwavers_signal::Signal;
 use crate::source::Source;
 use ndarray::{Array1, Array3, Zip};
 use std::sync::Arc;

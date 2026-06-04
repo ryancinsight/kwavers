@@ -1,6 +1,6 @@
 //! Pulse train signal implementation
 
-use crate::signal::Signal;
+use crate::Signal;
 use std::f64::consts::PI;
 
 use super::DEFAULT_DUTY_CYCLE;

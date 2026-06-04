@@ -4820,6 +4820,7 @@ dependencies = [
  "kwavers-gpu",
  "kwavers-math",
  "kwavers-physics",
+ "kwavers-signal",
  "kwavers-simulation",
  "kwavers-solver",
  "kwavers-therapy",
@@ -4871,6 +4872,7 @@ dependencies = [
  "kwavers-core",
  "kwavers-domain",
  "kwavers-math",
+ "kwavers-signal",
  "kwavers-solver",
  "log",
  "nalgebra 0.32.6",
@@ -4945,6 +4947,7 @@ dependencies = [
  "gaia",
  "kwavers-core",
  "kwavers-math",
+ "kwavers-signal",
  "log",
  "nalgebra 0.32.6",
  "ndarray 0.16.1",
@@ -4974,6 +4977,7 @@ dependencies = [
  "kwavers-domain",
  "kwavers-math",
  "kwavers-physics",
+ "kwavers-signal",
  "kwavers-solver",
  "log",
  "ndarray 0.16.1",
@@ -5038,6 +5042,7 @@ dependencies = [
  "kwavers-gpu",
  "kwavers-math",
  "kwavers-physics",
+ "kwavers-signal",
  "kwavers-simulation",
  "kwavers-solver",
  "kwavers-therapy",
@@ -5052,6 +5057,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "kwavers-signal"
+version = "3.0.0"
+dependencies = [
+ "anyhow",
+ "approx",
+ "kwavers-core",
+ "kwavers-math",
+ "log",
+ "ndarray 0.16.1",
+ "num-complex",
+ "proptest",
+ "rand 0.8.5",
+ "rand_chacha 0.3.1",
+ "rand_distr 0.4.3",
+ "serde",
+]
+
+[[package]]
 name = "kwavers-simulation"
 version = "3.0.0"
 dependencies = [
@@ -5061,6 +5084,7 @@ dependencies = [
  "kwavers-gpu",
  "kwavers-math",
  "kwavers-physics",
+ "kwavers-signal",
  "kwavers-solver",
  "log",
  "ndarray 0.16.1",
@@ -5086,6 +5110,7 @@ dependencies = [
  "kwavers-domain",
  "kwavers-math",
  "kwavers-physics",
+ "kwavers-signal",
  "log",
  "nalgebra 0.32.6",
  "ndarray 0.16.1",

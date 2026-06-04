@@ -40,7 +40,7 @@
 use kwavers_core::error::KwaversResult;
 use kwavers_domain::grid::Grid;
 use kwavers_domain::medium::HomogeneousMedium;
-use kwavers_domain::signal::SineWave;
+use kwavers_signal::SineWave;
 use kwavers_domain::source::{
     GridSource, InjectionMode, PlaneWaveSource, PlaneWaveSourceConfig, SourceField,
 };

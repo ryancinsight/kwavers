@@ -1,7 +1,7 @@
 //! Signal construction for SourceFactory.
 
 use kwavers_core::error::{ConfigError, KwaversResult};
-use crate::signal::{Signal, SignalWindowType, SineWave, ToneBurst};
+use kwavers_signal::{Signal, SignalWindowType, SineWave, ToneBurst};
 use crate::source::{EnvelopeType, PulseType};
 use std::sync::Arc;
 

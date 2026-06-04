@@ -178,7 +178,7 @@ pub use beamforming::{
     alignment_shifts_s, delay_and_sum, relative_delays_s, DelayReference, DEFAULT_DELAY_REFERENCE,
 };
 // Re-export FrequencyFilter from domain (moved back to fix layer violations)
-pub use kwavers_domain::signal::FrequencyFilter;
+pub use kwavers_signal::FrequencyFilter;
 
 // Future re-exports (will be populated as modules are implemented)
 // pub use beamforming::{Beamformer, BeamformingConfig, MinimumVariance, MUSIC};

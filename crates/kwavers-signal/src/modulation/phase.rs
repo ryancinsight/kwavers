@@ -33,7 +33,7 @@ impl Modulation for PhaseModulation {
     }
 
     fn demodulate(&self, signal: &[f64], t: &[f64]) -> KwaversResult<Vec<f64>> {
-        use crate::signal::analytic::instantaneous_phase;
+        use crate::analytic::instantaneous_phase;
         use ndarray::Array1;
 
         if signal.is_empty() {

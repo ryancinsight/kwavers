@@ -1,7 +1,7 @@
 //! `FrequencyFilter` — FFT-based frequency-domain filter.
 
 use kwavers_core::error::KwaversResult;
-use crate::signal::Filter;
+use crate::Filter;
 use kwavers_math::fft::{fft_1d_array, ifft_1d_array, Complex64};
 
 /// Frequency-domain filter using ideal (brick-wall) FFT-based frequency responses.

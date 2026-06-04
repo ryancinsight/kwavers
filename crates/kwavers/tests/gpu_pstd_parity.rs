@@ -30,7 +30,7 @@
 
 use kwavers_domain::grid::Grid;
 use kwavers_domain::medium::HomogeneousMedium;
-use kwavers_domain::signal::SineWave;
+use kwavers_signal::SineWave;
 use kwavers_domain::source::{InjectionMode, PlaneWaveSource, PlaneWaveSourceConfig, SourceField};
 use kwavers_solver::forward::pstd::config::{BoundaryConfig, KSpaceMethod, PSTDConfig};
 use kwavers_gpu::pstd_gpu::GpuPstdSolver;

@@ -5,7 +5,7 @@ use kwavers_core::error::KwaversResult;
 use crate::grid::Grid;
 use crate::sensor::array::SensorArray;
 use crate::sensor::grid_sampling::GridSensorSet;
-use crate::signal::window as signal_window;
+use kwavers_signal::window as signal_window;
 use ndarray::{Array1, Array2};
 use num_complex::Complex;
 

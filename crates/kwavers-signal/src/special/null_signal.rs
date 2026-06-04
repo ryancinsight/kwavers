@@ -3,7 +3,7 @@
 //! This signal always returns zero amplitude, useful for testing
 //! and as a placeholder in composite sources.
 
-use crate::signal::Signal;
+use crate::Signal;
 use std::fmt::Debug;
 
 /// Null signal that always returns zero
@@ -43,7 +43,7 @@ impl Signal for NullSignal {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::signal::Signal;
+    use crate::Signal;
 
     #[test]
     fn test_null_signal_amplitude() {

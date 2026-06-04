@@ -1,8 +1,8 @@
 //! Tone burst signal implementation
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use crate::signal::window::{window_value, SignalWindowType};
-use crate::signal::Signal;
+use crate::window::{window_value, SignalWindowType};
+use crate::Signal;
 
 use super::MAX_TONE_BURST_CYCLES;
 use kwavers_core::constants::numerical::{TWO_PI};

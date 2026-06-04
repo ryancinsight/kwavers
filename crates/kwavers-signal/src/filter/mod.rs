@@ -27,7 +27,7 @@
 //! The `Filter` trait can be used to write filter-agnostic code:
 //!
 //! ```rust,no_run
-//! use kwavers_domain::signal::{Filter, FrequencyFilter};
+//! use kwavers_signal::{Filter, FrequencyFilter};
 //! use kwavers_core::error::KwaversResult;
 //!
 //! fn process_signal(filter: &dyn Filter, signal: &[f64], dt: f64) -> KwaversResult<Vec<f64>> {
@@ -70,7 +70,7 @@ use std::fmt::Debug;
 /// # Examples
 ///
 /// ```rust,no_run
-/// use kwavers_domain::signal::Filter;
+/// use kwavers_signal::Filter;
 /// use kwavers_core::error::KwaversResult;
 ///
 /// #[derive(Debug)]

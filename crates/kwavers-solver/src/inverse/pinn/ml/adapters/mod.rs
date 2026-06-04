@@ -55,7 +55,7 @@
 //!
 //! ```ignore
 //! use kwavers_domain::source::PointSource;
-//! use kwavers_domain::signal::waveform::SineWave;
+//! use kwavers_signal::waveform::SineWave;
 //! use kwavers_solver::inverse::pinn::ml::adapters::source::PinnAcousticSource;
 //! use std::sync::Arc;
 //!

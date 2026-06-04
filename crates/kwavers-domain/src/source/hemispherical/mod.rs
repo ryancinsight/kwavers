@@ -32,7 +32,7 @@ pub use validation::{ArrayValidator, HemisphericalArrayMetrics};
 
 use kwavers_core::error::KwaversResult;
 use crate::grid::Grid;
-use crate::signal::{Signal, SineWave};
+use kwavers_signal::{Signal, SineWave};
 use crate::source::Source;
 use ndarray::Array3;
 use std::sync::Arc;

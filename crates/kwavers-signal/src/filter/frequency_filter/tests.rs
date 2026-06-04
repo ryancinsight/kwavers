@@ -1,7 +1,7 @@
 //! Tests for `FrequencyFilter`.
 
 use super::filter::FrequencyFilter;
-use crate::signal::Filter;
+use crate::Filter;
 use kwavers_core::constants::numerical::{TWO_PI};
 
 fn sine_wave(freq: f64, sample_rate: f64, n_samples: usize) -> Vec<f64> {

@@ -5,7 +5,7 @@
 
 use kwavers_core::error::KwaversResult;
 use crate::grid::Grid;
-use crate::signal::Signal;
+use kwavers_signal::Signal;
 use crate::source::Source;
 use ndarray::{Array3, ArrayView2};
 use std::sync::Arc;

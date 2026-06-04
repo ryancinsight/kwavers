@@ -7,7 +7,7 @@ pub mod hyperbolic;
 pub mod logarithmic;
 pub mod stepped;
 
-use crate::signal::Signal;
+use crate::Signal;
 use std::fmt::Debug;
 
 // Re-export main types

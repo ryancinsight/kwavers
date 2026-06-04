@@ -9,8 +9,8 @@
 
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::signal::window_value;
-use kwavers_domain::signal::SignalWindowType;
+use kwavers_signal::window_value;
+use kwavers_signal::SignalWindowType;
 use kwavers_math::fft::{
     fft_1d_array, ifft_1d_array, Complex64, Fft3dInOutExt, Shape3D, FFT_CACHE_3D,
 };

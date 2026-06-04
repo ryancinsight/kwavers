@@ -1,4 +1,4 @@
-use kwavers_domain::signal::Signal;
+use kwavers_signal::Signal;
 use ndarray::Array1;
 
 /// Simple sine wave signal for testing

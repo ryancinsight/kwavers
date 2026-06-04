@@ -50,7 +50,7 @@ impl Modulation for FrequencyModulation {
         // References:
         // - Boashash (1992): "Estimating and interpreting the instantaneous frequency"
         // - Marple (1999): "Computing the discrete-time analytic signal via FFT"
-        use crate::signal::analytic::instantaneous_frequency;
+        use crate::analytic::instantaneous_frequency;
         use ndarray::Array1;
 
         if signal.len() < 2 {

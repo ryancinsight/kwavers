@@ -23,7 +23,7 @@
 use kwavers_core::error::KwaversResult;
 use kwavers_domain::grid::Grid;
 use kwavers_domain::medium::HomogeneousMedium;
-use kwavers_domain::signal::Signal;
+use kwavers_signal::Signal;
 use kwavers_domain::source::custom::FunctionSource;
 use kwavers_domain::source::{GridSource, SourceField};
 use kwavers_solver::forward::fdtd::config::{FdtdConfig, KSpaceCorrectionMode};

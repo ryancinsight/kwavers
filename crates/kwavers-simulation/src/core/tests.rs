@@ -3,7 +3,7 @@ use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WA
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_domain::grid::Grid;
 use kwavers_domain::medium::HomogeneousMedium;
-use kwavers_domain::signal::SineWave;
+use kwavers_signal::SineWave;
 use kwavers_domain::source::{PointSource, Source};
 use kwavers_solver::feature::SolverFeature;
 use std::sync::Arc;

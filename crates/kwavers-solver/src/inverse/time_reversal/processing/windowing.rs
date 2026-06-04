@@ -4,7 +4,7 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_domain::grid::Grid;
-use kwavers_domain::signal::window::{window_value, SignalWindowType};
+use kwavers_signal::window::{window_value, SignalWindowType};
 use ndarray::Array3;
 
 /// Tukey window function (tapered cosine window)

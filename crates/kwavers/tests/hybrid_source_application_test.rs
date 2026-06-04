@@ -2,7 +2,7 @@ use kwavers_domain::boundary::DomainPmlConfig;
 use kwavers_domain::grid::Grid;
 use kwavers_domain::medium::homogeneous::HomogeneousMedium;
 use kwavers_domain::plugin::{Plugin, PluginContext, PluginFields};
-use kwavers_domain::signal::SineWave;
+use kwavers_signal::SineWave;
 use kwavers_domain::source::{GaussianBuilder, Source};
 use kwavers_solver::forward::hybrid::domain_decomposition::{DomainRegion, DomainType};
 use kwavers_solver::forward::hybrid::{HybridConfig, HybridDecompositionStrategy, HybridPlugin};

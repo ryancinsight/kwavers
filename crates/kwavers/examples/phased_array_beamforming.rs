@@ -17,7 +17,7 @@ use kwavers_domain::{
     };
 use kwavers_domain::source::Source;
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::signal::SineWave;
+use kwavers_signal::SineWave;
 use std::sync::Arc;
 
 fn main() -> KwaversResult<()> {

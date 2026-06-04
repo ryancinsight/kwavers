@@ -1,5 +1,5 @@
 use crate::grid::Grid;
-use crate::signal::Signal;
+use kwavers_signal::Signal;
 use crate::source::transducers::focused::bowl::{BowlConfig, BowlTransducer};
 use crate::source::Source;
 use ndarray::Array3;

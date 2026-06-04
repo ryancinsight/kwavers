@@ -3,7 +3,7 @@
 //! This module provides Gaussian laser beam sources for optical simulations.
 
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
-use crate::signal::{Signal, TimeVaryingSignal};
+use kwavers_signal::{Signal, TimeVaryingSignal};
 
 /// Laser configuration
 #[derive(Debug, Clone)]

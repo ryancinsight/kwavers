@@ -1,7 +1,7 @@
 //! `TransducerArray2D` struct and impl.
 
 use super::types::{ApodizationType, Array2dElement, TransducerArray2DConfig};
-use crate::signal::Signal;
+use kwavers_signal::Signal;
 use ndarray::Array3;
 use std::fmt::Debug;
 use std::sync::Arc;

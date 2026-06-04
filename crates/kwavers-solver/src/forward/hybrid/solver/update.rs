@@ -311,7 +311,7 @@ mod tests {
     use kwavers_domain::field::mapping::UnifiedFieldType;
     use kwavers_domain::grid::Grid;
     use kwavers_domain::medium::HomogeneousMedium;
-    use kwavers_domain::signal::Signal;
+    use kwavers_signal::Signal;
     use kwavers_domain::source::PointSource;
     use crate::forward::hybrid::config::{HybridConfig, HybridDecompositionStrategy};
     use ndarray::Array4;

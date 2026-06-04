@@ -1,5 +1,5 @@
 use crate::grid::Grid;
-use crate::signal::{NullSignal, Signal, TimeVaryingSignal};
+use kwavers_signal::{NullSignal, Signal, TimeVaryingSignal};
 use crate::source::types::Source;
 use ndarray::Array3;
 use std::fmt::Debug;

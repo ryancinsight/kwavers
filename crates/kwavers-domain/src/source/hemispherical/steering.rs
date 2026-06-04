@@ -4,7 +4,7 @@ use super::element::ElementConfiguration;
 use kwavers_core::constants::SOUND_SPEED_WATER_SIM;
 use kwavers_core::error::KwaversResult;
 use crate::grid::Grid;
-use crate::signal::Signal;
+use kwavers_signal::Signal;
 use ndarray::Array3;
 use std::sync::Arc;
 use kwavers_core::constants::numerical::{TWO_PI};

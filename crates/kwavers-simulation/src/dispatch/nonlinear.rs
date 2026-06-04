@@ -91,7 +91,7 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
 /// layer.  Each non-zero node in `p0` becomes a constant-amplitude point
 /// source at that cell's physical coordinates.
 fn build_sources(gs: &kwavers_domain::source::GridSource, grid: &Grid) -> Vec<Box<dyn Source>> {
-    use kwavers_domain::signal::{NullSignal, Signal};
+    use kwavers_signal::{NullSignal, Signal};
     use kwavers_domain::source::PointSource;
     use std::sync::Arc;
 

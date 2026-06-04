@@ -4,7 +4,7 @@
 //! Commonly used for testing and validation against analytical solutions.
 
 use crate::grid::Grid;
-use crate::signal::Signal;
+use kwavers_signal::Signal;
 use crate::source::{Source, SourceField};
 use ndarray::Array3;
 use std::fmt::Debug;

@@ -109,7 +109,6 @@ pub mod optics;
 pub mod phantoms;
 pub mod plugin;
 pub mod sensor;
-pub mod signal;
 
 pub mod source;
 pub mod therapy;

@@ -5,7 +5,7 @@
 // GridSource moved to parent module
 
 use crate::grid::Grid;
-use crate::signal::Signal;
+use kwavers_signal::Signal;
 use ndarray::{Array3, Zip};
 use std::fmt::Debug;
 

@@ -1,6 +1,6 @@
 // source/apodization/mod.rs
 
-use crate::signal::{window_value, SignalWindowType};
+use kwavers_signal::{window_value, SignalWindowType};
 use std::fmt::Debug;
 
 pub trait Apodization: Debug + Sync + Send {

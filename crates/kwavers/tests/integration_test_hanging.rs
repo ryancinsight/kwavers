@@ -27,7 +27,7 @@ fn test_point_source_propagation() {
     // Create source
     let source = PointSource::new(
         (32.0, 32.0, 32.0),
-        Arc::new(kwavers_domain::signal::SineWave::new(1e6, 1.0, 0.0)),
+        Arc::new(kwavers_signal::SineWave::new(1e6, 1.0, 0.0)),
     );
 
     // Create time settings

@@ -1,6 +1,6 @@
 //! Ricker wavelet implementation
 
-use crate::signal::Signal;
+use crate::Signal;
 use std::f64::consts::PI;
 
 /// Ricker wavelet (Mexican hat wavelet)

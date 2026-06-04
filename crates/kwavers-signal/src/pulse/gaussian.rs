@@ -1,6 +1,6 @@
 //! Gaussian pulse signal implementation
 
-use crate::signal::Signal;
+use crate::Signal;
 
 use super::{DEFAULT_GAUSSIAN_Q, MIN_PULSE_WIDTH};
 use kwavers_core::constants::numerical::{TWO_PI};

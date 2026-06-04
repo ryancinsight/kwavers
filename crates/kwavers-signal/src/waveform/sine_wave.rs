@@ -1,6 +1,6 @@
 // signal/sine_wave.rs
 
-use crate::signal::{
+use crate::{
     amplitude::{Amplitude, ConstantAmplitude},
     frequency::{ConstantFrequency, Frequency},
     phase::{ConstantPhase, Phase},

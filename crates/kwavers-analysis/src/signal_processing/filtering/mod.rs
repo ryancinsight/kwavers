@@ -51,8 +51,8 @@
 //!
 //! ### New Location (Use This)
 //! ```rust,ignore
-//! use kwavers_domain::signal::FrequencyFilter;
+//! use kwavers_signal::FrequencyFilter;
 //! ```
 
 // Re-export from domain for backward compatibility during migration
-pub use kwavers_domain::signal::{Filter, FrequencyFilter};
+pub use kwavers_signal::{Filter, FrequencyFilter};

@@ -1,24 +1,25 @@
-// frequency_sweep/hyperbolic.rs - Hyperbolic frequency sweep
+// frequency_sweep/exponential.rs - Exponential frequency sweep
 
 use super::{
-    constants::{EPSILON, MIN_FREQUENCY, MIN_SWEEP_DURATION, SINGULARITY_AVOIDANCE_FACTOR, TWO_PI},
+    constants::{EPSILON, MIN_FREQUENCY, MIN_SWEEP_DURATION, TWO_PI},
     FrequencySweep,
 };
-use crate::signal::Signal;
+use crate::Signal;
 
-/// Hyperbolic frequency sweep
+/// Exponential frequency sweep
 ///
-/// Frequency varies hyperbolically with time
+/// Frequency varies exponentially with time
 #[derive(Debug, Clone)]
-pub struct HyperbolicSweep {
+pub struct ExponentialSweep {
     start_frequency: f64,
     stop_frequency: f64,
     duration: f64,
     amplitude: f64,
+    exp_rate: f64,
 }
 
-impl HyperbolicSweep {
-    /// Create new hyperbolic sweep - USING all parameters
+impl ExponentialSweep {
+    /// Create new exponential sweep - USING all parameters
     /// # Panics
     /// - Panics if assertion fails: `Start frequency too low`.
     /// - Panics if assertion fails: `Stop frequency too low`.
@@ -32,16 +33,20 @@ impl HyperbolicSweep {
         assert!(duration > MIN_SWEEP_DURATION, "Duration too short");
         assert!(amplitude >= 0.0, "Amplitude must be non-negative");
 
+        // Calculate exponential rate
+        let exp_rate = (stop_freq / start_freq).ln() / duration;
+
         Self {
             start_frequency: start_freq,
             stop_frequency: stop_freq,
             duration,
             amplitude,
+            exp_rate,
         }
     }
 }
 
-impl Signal for HyperbolicSweep {
+impl Signal for ExponentialSweep {
     fn amplitude(&self, t: f64) -> f64 {
         if t < 0.0 || t > self.duration {
             return 0.0;
@@ -68,21 +73,13 @@ impl Signal for HyperbolicSweep {
     }
 }
 
-impl FrequencySweep for HyperbolicSweep {
+impl FrequencySweep for ExponentialSweep {
     fn instantaneous_frequency(&self, t: f64) -> f64 {
         if t < 0.0 || t > self.duration {
             return 0.0;
         }
 
-        // Avoid singularity at t = duration
-        let t_safe = t.min(self.duration * SINGULARITY_AVOIDANCE_FACTOR);
-        let denominator = 1.0 - t_safe / self.duration;
-
-        if denominator.abs() < EPSILON {
-            self.stop_frequency
-        } else {
-            self.start_frequency / denominator
-        }
+        self.start_frequency * (self.exp_rate * t).exp()
     }
 
     fn phase(&self, t: f64) -> f64 {
@@ -90,14 +87,10 @@ impl FrequencySweep for HyperbolicSweep {
             return 0.0;
         }
 
-        // Integral of 1/(1-t/T) is -T*ln(1-t/T)
-        let t_safe = t.min(self.duration * SINGULARITY_AVOIDANCE_FACTOR);
-        let normalized = t_safe / self.duration;
-
-        if (1.0 - normalized).abs() < EPSILON {
-            TWO_PI * self.stop_frequency * t_safe
+        if self.exp_rate.abs() < EPSILON {
+            TWO_PI * self.start_frequency * t
         } else {
-            -TWO_PI * self.start_frequency * self.duration * (1.0 - normalized).ln()
+            TWO_PI * self.start_frequency / self.exp_rate * (self.exp_rate * t).exp_m1()
         }
     }
 
@@ -106,8 +99,7 @@ impl FrequencySweep for HyperbolicSweep {
             return 0.0;
         }
 
-        let freq = self.instantaneous_frequency(t);
-        freq * freq / (self.start_frequency * self.duration)
+        self.instantaneous_frequency(t) * self.exp_rate
     }
 
     fn start_frequency(&self) -> f64 {

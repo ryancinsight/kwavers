@@ -1,5 +1,5 @@
 use crate::grid::Grid;
-use crate::signal::Signal;
+use kwavers_signal::Signal;
 use crate::source::{Apodization, Source};
 use log::debug;
 use ndarray::Array3;

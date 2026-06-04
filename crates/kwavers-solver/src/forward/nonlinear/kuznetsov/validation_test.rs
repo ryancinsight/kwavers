@@ -39,7 +39,7 @@ mod tests {
         let medium = HomogeneousMedium::new(DENSITY_WATER, SOUND_SPEED_WATER, 0.0, 0.0, &grid);
 
         // Point source at center
-        use kwavers_domain::signal::{Signal, SineWave};
+        use kwavers_signal::{Signal, SineWave};
         use std::sync::Arc;
         let signal: Arc<dyn Signal> = Arc::new(SineWave::new(MHZ_TO_HZ, 1.0, 0.0));
         let position = grid.indices_to_coordinates(grid.nx / 2, grid.ny / 2, grid.nz / 2);
@@ -79,7 +79,7 @@ mod tests {
         let mut solver = KuznetsovWave::new(config, &grid).unwrap();
 
         let medium = HomogeneousMedium::new(DENSITY_WATER, SOUND_SPEED_WATER, 0.0, 0.0, &grid);
-        use kwavers_domain::signal::{Signal, SineWave};
+        use kwavers_signal::{Signal, SineWave};
         use std::sync::Arc;
         let signal: Arc<dyn Signal> = Arc::new(SineWave::new(MHZ_TO_HZ, 1.0, 0.0));
         let position = grid.indices_to_coordinates(16, 16, 16);
@@ -286,7 +286,7 @@ mod tests {
 
         // Sinusoidal source
         let frequency = MHZ_TO_HZ; // 1 MHz
-        use kwavers_domain::signal::{Signal, SineWave};
+        use kwavers_signal::{Signal, SineWave};
         use std::sync::Arc;
         let signal: Arc<dyn Signal> = Arc::new(SineWave::new(frequency, MPA_TO_PA, 0.0));
         let position = grid.indices_to_coordinates(10, grid.ny / 2, grid.nz / 2);
@@ -341,7 +341,7 @@ mod tests {
 
         // Sinusoidal source
         let frequency = MHZ_TO_HZ; // 1 MHz
-        use kwavers_domain::signal::{Signal, SineWave};
+        use kwavers_signal::{Signal, SineWave};
         use std::sync::Arc;
         let signal: Arc<dyn Signal> = Arc::new(SineWave::new(frequency, MPA_TO_PA, 0.0));
         let position = grid.indices_to_coordinates(5, grid.ny / 2, grid.nz / 2);

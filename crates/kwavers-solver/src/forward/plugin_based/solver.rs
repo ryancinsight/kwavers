@@ -332,7 +332,7 @@ mod tests {
     use kwavers_core::constants::numerical::MHZ_TO_HZ;
     use kwavers_domain::boundary::DomainPMLBoundary;
     use kwavers_domain::medium::homogeneous::HomogeneousMedium;
-    use kwavers_domain::signal::SineWave;
+    use kwavers_signal::SineWave;
     use kwavers_domain::source::PointSource;
 
     #[test]

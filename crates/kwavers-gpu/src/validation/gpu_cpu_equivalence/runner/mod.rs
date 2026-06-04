@@ -3,7 +3,7 @@ use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::error::{KwaversError, ValidationError};
 use kwavers_domain::grid::Grid;
 use kwavers_domain::medium::Medium;
-use kwavers_domain::signal::traits::Signal;
+use kwavers_signal::traits::Signal;
 use kwavers_solver::forward::fdtd::{FdtdConfig, FdtdSolver, KSpaceCorrectionMode};
 use kwavers_solver::interface::Solver;
 use ndarray::{Array2, Array3};
@@ -30,7 +30,7 @@ fn run_simulation_cpu(
     nt: usize,
     config: &FdtdConfig,
 ) -> Result<Array3<f64>, KwaversError> {
-    use kwavers_domain::signal::ToneBurst;
+    use kwavers_signal::ToneBurst;
     use kwavers_domain::source::grid_source::GridSource;
 
     // Create a simple plane wave source mask at x=0 boundary
@@ -88,7 +88,7 @@ fn run_simulation_gpu(
 ) -> Result<Array3<f64>, KwaversError> {
     #[cfg(feature = "gpu")]
     {
-        use kwavers_domain::signal::ToneBurst;
+        use kwavers_signal::ToneBurst;
         use kwavers_domain::source::grid_source::GridSource;
         use crate::backend::GPUBackend;
         use kwavers_solver::backend::traits::ComputeBackend;

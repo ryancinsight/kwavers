@@ -4,7 +4,7 @@ use super::{
     constants::{MIN_FREQUENCY, MIN_SWEEP_DURATION, TWO_PI},
     FrequencySweep,
 };
-use crate::signal::Signal;
+use crate::Signal;
 
 /// Stepped frequency sweep
 ///

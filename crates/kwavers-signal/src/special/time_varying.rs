@@ -3,7 +3,7 @@
 //! This signal uses pre-computed amplitude values, useful for
 //! arbitrary waveform generation and experimental signal patterns.
 
-use crate::signal::Signal;
+use crate::Signal;
 use std::fmt::Debug;
 use kwavers_core::constants::numerical::{TWO_PI};
 
@@ -117,7 +117,7 @@ impl Signal for TimeVaryingSignal {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::signal::Signal;
+    use crate::Signal;
 
     #[test]
     fn test_time_varying_signal_creation() {

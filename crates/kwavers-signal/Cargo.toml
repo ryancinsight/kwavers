@@ -1,0 +1,27 @@
+[package]
+name = "kwavers-signal"
+version = "3.0.0"
+edition = "2021"
+authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
+description = "Excitation signal generation and processing for kwavers: waveforms, pulses, frequency sweeps, modulation, windowing, filters"
+license = "MIT"
+repository = "https://github.com/ryancinsight/kwavers"
+
+[dependencies]
+kwavers-core = { path = "../kwavers-core" }
+kwavers-math = { path = "../kwavers-math" }
+ndarray = { version = "0.16", features = ["rayon", "serde"] }
+num-complex = "0.4"
+serde = { version = "1.0", features = ["derive"] }
+log = "0.4"
+anyhow = "1.0"
+rand = "0.8"
+rand_distr = "0.4"
+rand_chacha = "0.3"
+
+[dev-dependencies]
+approx = "0.5"
+proptest = "1.2"
+
+[lints]
+workspace = true

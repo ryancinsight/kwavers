@@ -2,7 +2,7 @@
 
 use super::*;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
-use kwavers_domain::signal::waveform::SineWave;
+use kwavers_signal::waveform::SineWave;
 use kwavers_domain::source::PointSource;
 
 #[test]

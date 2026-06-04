@@ -10,6 +10,7 @@ repository = "https://github.com/ryancinsight/kwavers"
 [dependencies]
 kwavers-core = { path = "../kwavers-core", features = ["registration", "nifti"] }
 kwavers-math = { path = "../kwavers-math" }
+kwavers-signal = { path = "../kwavers-signal" }
 ndarray = { version = "0.16", features = ["rayon", "serde"] }
 nalgebra = { version = "0.32" }
 num-complex = "0.4"
