@@ -1,7 +1,7 @@
 use super::{ApodizationType, PamBeamformingMethod};
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_domain::sensor::beamforming::BeamformingCoreConfig;
+use kwavers_transducer::beamforming::BeamformingCoreConfig;
 
 #[derive(Debug, Clone)]
 pub struct PamBeamformingConfig {

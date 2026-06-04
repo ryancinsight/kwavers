@@ -8,8 +8,8 @@ use kwavers_field::wave::WaveFields;
 use kwavers_grid::Grid;
 use kwavers_medium::MaterialFields;
 use kwavers_medium::Medium;
-use kwavers_domain::sensor::recorder::simple::SensorRecorder;
-use kwavers_domain::source::GridSource;
+use kwavers_receiver::recorder::simple::SensorRecorder;
+use kwavers_source::GridSource;
 use kwavers_math::fft::shift_operators::generate_shift_1d;
 use crate::fdtd::SourceHandler;
 use crate::forward::pstd::config::{

@@ -1,4 +1,4 @@
-use kwavers_domain::source::{DomainSourceParameters, FocusedBowlAperture, SourceModel};
+use kwavers_source::{DomainSourceParameters, FocusedBowlAperture, SourceModel};
 
 #[test]
 fn source_parameters_reject_nonfinite_physics_values() {

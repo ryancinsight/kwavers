@@ -3,7 +3,7 @@
 use super::super::backend::AcousticSolverBackend;
 use super::backend::FdtdBackend;
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::source::Source;
+use kwavers_source::Source;
 use ndarray::Array3;
 use std::sync::Arc;
 

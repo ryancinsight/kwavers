@@ -54,7 +54,7 @@
 //! ## Usage Example
 //!
 //! ```ignore
-//! use kwavers_domain::source::PointSource;
+//! use kwavers_source::PointSource;
 //! use kwavers_signal::waveform::SineWave;
 //! use kwavers_solver::inverse::pinn::ml::adapters::source::PinnAcousticSource;
 //! use std::sync::Arc;

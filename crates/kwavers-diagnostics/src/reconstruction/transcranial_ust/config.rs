@@ -10,7 +10,7 @@
 //! `&config.linear`.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_domain::source::transducers::focused::BowlAngularBounds;
+use kwavers_transducer::transducers::focused::BowlAngularBounds;
 use kwavers_solver::inverse::linear_born_inversion::LinearBornInversionConfig;
 
 /// Reference element count for the transcranial focused-bowl acquisition.

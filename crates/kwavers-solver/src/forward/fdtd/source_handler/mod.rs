@@ -1,6 +1,6 @@
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
-use kwavers_domain::source::{GridSource, SourceMode};
+use kwavers_source::{GridSource, SourceMode};
 use ndarray::Array3;
 
 mod inject;

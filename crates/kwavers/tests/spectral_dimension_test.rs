@@ -1,6 +1,6 @@
 use kwavers_grid::Grid;
 use kwavers_medium::homogeneous::HomogeneousMedium;
-use kwavers_domain::source::GridSource;
+use kwavers_source::GridSource;
 use kwavers_solver::forward::pstd::config::BoundaryConfig;
 use kwavers_solver::forward::pstd::{PSTDConfig, PSTDSolver};
 use ndarray::Array3;

@@ -32,11 +32,11 @@ pub use delay_and_sum::{DelayAndSumConfig, DelayAndSumPAM, PamCavitationEvent, P
 pub use mapper::PassiveAcousticMapper;
 pub use processor::PAMProcessor;
 
-pub use kwavers_domain::sensor::passive_acoustic_mapping::geometry::{
+pub use kwavers_transducer::passive_acoustic_mapping::geometry::{
     PamArrayElement, PamArrayGeometry, PamDirectivityPattern,
 };
 
-pub use kwavers_domain::sensor::beamforming::BeamformingCoreConfig;
+pub use kwavers_transducer::beamforming::BeamformingCoreConfig;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum PamBeamformingMethod {

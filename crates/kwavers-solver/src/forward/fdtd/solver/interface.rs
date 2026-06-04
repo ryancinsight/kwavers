@@ -12,8 +12,8 @@ use super::GenericFdtdSolver;
 use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use kwavers_domain::sensor::GridSensorSet;
-use kwavers_domain::source::Source;
+use kwavers_receiver::GridSensorSet;
+use kwavers_source::Source;
 use crate::interface::{Solver, SolverFeature, SolverStatistics};
 
 impl Solver for GenericFdtdSolver<Array3<f64>> {

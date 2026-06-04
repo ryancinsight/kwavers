@@ -12,10 +12,8 @@
 
 use kwavers_grid::Grid;
 use kwavers_medium::homogeneous::HomogeneousMedium;
-use kwavers_domain::{
-        source::{BeamformingMode, PhasedArrayConfig, PhasedArrayTransducer},
-    };
-use kwavers_domain::source::Source;
+use kwavers_transducer::{BeamformingMode, PhasedArrayConfig, PhasedArrayTransducer};
+use kwavers_source::Source;
 use kwavers_core::error::KwaversResult;
 use kwavers_signal::SineWave;
 use std::sync::Arc;

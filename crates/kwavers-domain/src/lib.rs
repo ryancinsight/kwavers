@@ -100,7 +100,4 @@
 
 pub mod imaging;
 pub mod plugin;
-pub mod sensor;
-
-pub mod source;
 pub mod therapy;

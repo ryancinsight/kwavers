@@ -1,8 +1,8 @@
 use super::search::BeamformSearch;
 use super::types::{LocalizationBeamformSearchConfig, LocalizationBeamformingMethod};
 use crate::signal_processing::beamforming::time_domain::DelayReference;
-use kwavers_domain::sensor::beamforming::processor::BeamformingProcessor;
-use kwavers_domain::sensor::beamforming::BeamformingCoreConfig;
+use kwavers_transducer::beamforming::processor::BeamformingProcessor;
+use kwavers_transducer::beamforming::BeamformingCoreConfig;
 
 fn make_processor(n: usize) -> BeamformingProcessor {
     let cfg = BeamformingCoreConfig::default();

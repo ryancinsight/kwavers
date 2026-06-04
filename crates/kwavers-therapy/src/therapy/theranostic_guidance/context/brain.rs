@@ -6,7 +6,7 @@ use kwavers_core::{
         constants::ct_acoustics::{HU_BONE_THRESHOLD, HU_BRAIN_BODY_THRESHOLD},
         error::{KwaversError, KwaversResult},
     };
-use kwavers_domain::source::transducers::focused::BowlAngularBounds;
+use kwavers_transducer::transducers::focused::BowlAngularBounds;
 use ndarray::{s, Array2, Array3};
 
 use super::super::geometry::{

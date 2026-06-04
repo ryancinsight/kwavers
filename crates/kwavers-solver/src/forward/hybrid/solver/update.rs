@@ -2,7 +2,7 @@ use super::HybridSolver;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_boundary::Boundary;
 use kwavers_medium::Medium;
-use kwavers_domain::source::{Source, SourceField};
+use kwavers_source::{Source, SourceField};
 use crate::forward::hybrid::config::HybridDecompositionStrategy;
 use crate::forward::hybrid::domain_decomposition::{DomainRegion, DomainType};
 use crate::forward::hybrid::metrics::{HybridMetrics, HybridValidationResults};
@@ -312,7 +312,7 @@ mod tests {
     use kwavers_grid::Grid;
     use kwavers_medium::HomogeneousMedium;
     use kwavers_signal::Signal;
-    use kwavers_domain::source::PointSource;
+    use kwavers_source::PointSource;
     use crate::forward::hybrid::config::{HybridConfig, HybridDecompositionStrategy};
     use ndarray::Array4;
     use std::sync::Arc;

@@ -7,9 +7,9 @@ use kwavers_core::error::KwaversResult;
 #[cfg(feature = "gpu")]
 use kwavers_grid::Grid as KwaversGrid;
 #[cfg(feature = "gpu")]
-use kwavers_domain::sensor::recorder::SampledStatistics;
+use kwavers_receiver::recorder::SampledStatistics;
 #[cfg(feature = "gpu")]
-use kwavers_domain::source::GridSource;
+use kwavers_source::GridSource;
 
 #[cfg(feature = "gpu")]
 use crate::medium_py::MediumInner;

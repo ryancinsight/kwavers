@@ -8,7 +8,7 @@ use std::sync::Arc;
 use super::GenericFdtdSolver;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use kwavers_domain::source::{Source, SourceField, SourceInjectionMode};
+use kwavers_source::{Source, SourceField, SourceInjectionMode};
 
 impl GenericFdtdSolver<Array3<f64>> {
     pub(super) fn apply_dynamic_pressure_sources(&mut self, dt: f64) {

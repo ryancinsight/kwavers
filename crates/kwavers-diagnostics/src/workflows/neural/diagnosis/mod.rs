@@ -46,7 +46,7 @@ use std::collections::HashMap;
 /// # Example
 ///
 /// ```ignore
-/// use kwavers_domain::sensor::beamforming::neural::diagnosis::DiagnosisAlgorithm;
+/// use kwavers_transducer::beamforming::neural::diagnosis::DiagnosisAlgorithm;
 ///
 /// let algorithm = DiagnosisAlgorithm::new();
 /// let diagnosis = algorithm.diagnose(&features, &clinical_analysis)?;

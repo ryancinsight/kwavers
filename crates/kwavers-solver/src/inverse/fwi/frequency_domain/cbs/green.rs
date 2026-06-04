@@ -4,7 +4,7 @@ use super::absorbing::AbsorbingBoundary;
 use super::grid::GridSpec;
 use super::temporal::PstdTemporalBinConfig;
 use kwavers_core::constants::numerical::FOUR_PI;
-use kwavers_domain::source::transducers::ElementPosition;
+use kwavers_transducer::transducers::ElementPosition;
 use num_complex::Complex64;
 
 pub(super) fn shifted_wavenumber(reference_wavenumber: f64, epsilon: f64) -> Complex64 {

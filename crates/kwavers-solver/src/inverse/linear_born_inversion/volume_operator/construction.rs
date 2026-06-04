@@ -7,7 +7,7 @@ use super::super::LinearBornInversionConfig;
 use super::helpers::distance;
 use super::{RowContext, VolumeOperator, VolumeVoxel};
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
-use kwavers_domain::source::transducers::TransducerGeometry;
+use kwavers_transducer::transducers::TransducerGeometry;
 
 impl<'a> VolumeOperator<'a> {
     /// Construct the matrix-free operator over `active` voxels for the given

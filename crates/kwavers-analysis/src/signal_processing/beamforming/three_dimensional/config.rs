@@ -5,7 +5,7 @@
 
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
-use kwavers_domain::sensor::beamforming::BeamformingConfig;
+use kwavers_transducer::beamforming::BeamformingConfig;
 
 /// 3D beamforming algorithm types optimized for volumetric imaging
 #[derive(Debug, Clone)]

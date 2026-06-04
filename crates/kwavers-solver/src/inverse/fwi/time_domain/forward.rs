@@ -20,7 +20,7 @@ use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_boundary::cpml::{CPMLConfig, PerDimensionPML};
 use kwavers_grid::Grid;
 use kwavers_medium::heterogeneous::HeterogeneousFactory;
-use kwavers_domain::source::GridSource;
+use kwavers_source::GridSource;
 use crate::config::SolverType;
 use crate::interface::Solver;
 use ndarray::{s, Array2, Array3, Array4};

@@ -11,7 +11,7 @@ use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criteri
 use kwavers_grid::Grid;
 use kwavers_medium::homogeneous::HomogeneousMedium;
 use kwavers_solver::fdtd::{FdtdConfig, FdtdSolver};
-use kwavers_domain::source::GridSource;
+use kwavers_source::GridSource;
 use ndarray::{Array1, Array2};
 
 #[cfg(feature = "pinn")]

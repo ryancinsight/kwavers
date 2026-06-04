@@ -30,7 +30,7 @@ fn test_point_source_phase_accuracy() {
 
     // Create point source at center
     let source_pos = (n / 2, n / 2, 0);
-    let mut source_data = kwavers_domain::source::GridSource::default();
+    let mut source_data = kwavers_source::GridSource::default();
     source_data.p_mask = Some(Array3::zeros((n, n, 1)));
     if let Some(ref mut mask) = source_data.p_mask {
         mask[[source_pos.0, source_pos.1, source_pos.2]] = 1.0;

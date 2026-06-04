@@ -7,7 +7,7 @@
 //! 2. Delete this file if the functionality is no longer needed
 
 #[cfg(all(feature = "pinn", feature = "ai_integration_module_exists"))]
-use kwavers_domain::sensor::beamforming::ai_integration::{
+use kwavers_transducer::beamforming::ai_integration::{
     ClinicalDecisionSupport, ClinicalThresholds, DiagnosisAlgorithm, FeatureConfig,
     FeatureExtractor, FeatureMap, RealTimeWorkflow,
 };
@@ -77,10 +77,10 @@ fn test_diagnosis_algorithm() {
 
     // Create dummy clinical analysis
     let clinical_analysis =
-        kwavers_domain::sensor::beamforming::ai_integration::ClinicalAnalysis {
+        kwavers_transducer::beamforming::ai_integration::ClinicalAnalysis {
             lesions: vec![],
             tissue_classification:
-                kwavers_domain::sensor::beamforming::ai_integration::TissueClassification {
+                kwavers_transducer::beamforming::ai_integration::TissueClassification {
                     probabilities: std::collections::HashMap::new(),
                     dominant_tissue: ndarray::Array3::from_elem((32, 32, 16), "Muscle".to_string()),
                     boundary_confidence: ndarray::Array3::from_elem((32, 32, 16), 0.8),

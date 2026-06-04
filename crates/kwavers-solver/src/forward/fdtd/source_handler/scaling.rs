@@ -1,6 +1,6 @@
 use super::SourceHandler;
 use kwavers_grid::Grid;
-use kwavers_domain::source::SourceMode;
+use kwavers_source::SourceMode;
 use ndarray::Array3;
 
 impl SourceHandler {

@@ -321,23 +321,29 @@ def build_geometry():
     # spots use this to shorten their pulse (shrink the lesion) for conformality.
     edt_ptv_m = distance_transform_edt(ptv) * dx
 
-    # Mechanical sonication-region centres tiling the PTV (the treated volume).
-    rp = vox(4e-3)
-    rpz = vox(4e-3)
-    rx = range(cmin[0], cmax[0] + 1, rp)
-    ry = range(cmin[1], cmax[1] + 1, rp)
-    rz = range(cmin[2], cmax[2] + 1, rpz)
+    # Sonication-region lattice tiling the 3-D PTV, with spacing set by the LESION
+    # FWHM so the focal lesions tile the whole volume across every image slice:
+    #   * beam-axis / depth (axis 0): spacing = axial lesion extent les_ax (the focus
+    #     is elongated along the beam, so one row of spots covers a depth band);
+    #   * lateral (axis 1) and SI / image-slice (axis 2): spacing = lateral lesion
+    #     diameter (2·les_lat), with electronic sub-spots stepping by the lesion radius
+    #     so adjacent lesions overlap — covering multiple image slices in elevation.
+    so = max(vox(les_lat), 1)              # in-plane sub-spot step ≈ lateral lesion radius
+    rx_step = max(vox(les_ax), 1)          # depth spacing ≈ axial lesion extent
+    rpl = max(2 * so, 1)                    # lateral / SI region spacing ≈ lesion diameter
+    rx = range(cmin[0], cmax[0] + 1, rx_step)
+    ry = range(cmin[1], cmax[1] + 1, rpl)
+    rz = range(cmin[2], cmax[2] + 1, rpl)
     region_centers = [(ix, iy, iz) for iz in rz for iy in ry for ix in rx
                       if ptv[ix, iy, iz] or _near_tumour(ptv, ix, iy, iz, vox(2e-3))]
     # Fire regions in a multi-pass interleaved-lattice order (spread for the whole
     # treatment, not just the first half), so consecutive sonications stay far
     # apart — residual bubbles dissolve / heat diffuses before nearby tissue.
-    region_centers = [region_centers[i] for i in _interleaved_lattice_order(region_centers, rp, rpz)]
+    region_centers = [region_centers[i] for i in _interleaved_lattice_order(region_centers, rpl, rpl)]
     # Electronic sub-spot offsets within a region (voxels). The focal spot is a
     # narrow TRANSVERSE dot elongated along the beam (depth, axis 0), so the raster
     # steps in the transverse lateral (axis 1) × SI (axis 2) plane; the beam-axis
     # extent is covered by the elongated focus. Interleave them too.
-    so = vox(2e-3)
     subspot_offsets = [(0, oy, oz) for oz in (-so, 0, so) for oy in (-so, 0, so)]
     subspot_offsets = [subspot_offsets[i] for i in _farthest_point_order(subspot_offsets)]
 
@@ -1286,6 +1292,75 @@ def compute_bioeffect_progress(geom, plan, mon, n_steps=80):
             "dose_slices": dose_slices, "dose_peak": max(dose_peak, 1e-30)}
 
 
+def _final_kill_volume(geom, plan):
+    """Final 3-D cell-kill field over the whole grid: cumulative cavitation dose
+    (∝ p_focal³·pulses) deposited into every fired sub-spot's lesion ellipsoid, mapped
+    to cell kill by the Rust Weibull dose–response. The ellipsoids tile the PTV in 3-D
+    (lattice spacing set by the lesion FWHM), so this is the 3-D lesioned volume."""
+    dx = geom["dx"]; shape = geom["tumour"].shape
+    dose = np.zeros(int(np.prod(shape)))
+    for s in plan["spots"]:
+        ix, iy, iz = s["idx"]; ll, la = s["les_lat"], s["les_ax"]
+        tmp = np.zeros(shape, dtype=bool)
+        _mark_ellipsoid(tmp, ix, iy, iz, ll, la, dx,
+                        int(np.ceil(ll / dx)) + 1, int(np.ceil(la / dx)) + 1)
+        w = (float(s["delivered"]) / P_TARGET_FOCAL_PA) ** 3
+        dose[np.flatnonzero(tmp)] += w * max(int(s["pulses"]), 1)
+    d0 = max(KILL_D0_FRAC * float(dose.max()), 1e-30)
+    kf = np.asarray(kw.delivered_histotripsy_progress(
+        np.ascontiguousarray(dose), d0, KILL_WEIBULL_K), float)
+    return kf.reshape(shape)
+
+
+def figure_volume_slices(geom, plan, n_slices=9):
+    """Multi-slice montage of the final 3-D lesioned volume — the LD25/50/75/100
+    cell-kill map (with GTV/CTV/PTV contours) on a stack of beam-axis depth slices
+    spanning the tumour, demonstrating that the lesion FWHM-spaced raster fractionates
+    the segmented tumour across every image slice (not just the focal plane)."""
+    from matplotlib.colors import ListedColormap
+    kill = _final_kill_volume(geom, plan)
+    gtv = geom["gtv"]; ctv = geom["ctv"]; ptv = geom["ptv"]; ct = geom["ct"]
+    info = geom["info"]; dx = geom["dx"]
+    coords = np.argwhere(ptv); cmin, cmax = coords.min(0), coords.max(0)
+    pad = int(round(6e-3 / dx))
+    y0 = max(0, cmin[1] - pad); y1 = min(ct.shape[1], cmax[1] + pad)
+    z0 = max(0, cmin[2] - pad); z1 = min(ct.shape[2], cmax[2] + pad)
+    xs = np.unique(np.linspace(cmin[0], cmax[0], n_slices).round().astype(int))
+    tier_cmap = ListedColormap([(0, 0, 0, 0), (0.30, 0.82, 1.0, 0.50),
+                                (1.0, 0.70, 0.30, 0.58), (1.0, 0.48, 0.24, 0.66),
+                                (0.82, 0.07, 0.07, 0.78)])
+    ld = np.asarray(LD_LEVELS)
+    ext = [info["z_axis"][z0] * 1e3, info["z_axis"][z1 - 1] * 1e3,
+           info["y_axis"][y1 - 1] * 1e3, info["y_axis"][y0] * 1e3]
+    ncol = 3; nrow = int(np.ceil(len(xs) / ncol))
+    fig, ax = plt.subplots(nrow, ncol, figsize=(3.5 * ncol, 3.2 * nrow))
+    ax = np.atleast_1d(ax).ravel()
+    for a in ax:
+        a.axis("off")
+    for k, xk in enumerate(xs):
+        a = ax[k]; a.axis("on")
+        ctsl = ct[xk, y0:y1, z0:z1]
+        a.imshow(ctsl, cmap="gray", extent=ext, aspect="equal",
+                 vmin=np.percentile(ctsl, 2), vmax=np.percentile(ctsl, 98))
+        ksl = kill[xk, y0:y1, z0:z1]
+        a.imshow(np.digitize(ksl, ld).astype(float), cmap=tier_cmap, extent=ext,
+                 aspect="equal", origin="upper", vmin=0, vmax=4, interpolation="nearest")
+        for m, c in ((ptv, "white"), (ctv, "yellow"), (gtv, "cyan")):
+            a.contour(m[xk, y0:y1, z0:z1].astype(float), levels=[0.5], colors=c,
+                      linewidths=1.0, extent=ext, origin="upper")
+        gm = gtv[xk, y0:y1, z0:z1]
+        cov = 100.0 * float(np.mean(ksl[gm] >= 0.5)) if gm.any() else 0.0
+        a.set_title(f"depth {info['x_axis'][xk] * 1e3:.0f} mm | GTV≥LD50 {cov:.0f}%", fontsize=8)
+        a.set_xticks([]); a.set_yticks([])
+        a.set_xlabel("SI [mm]", fontsize=6); a.set_ylabel("lateral [mm]", fontsize=6)
+    cov3 = 100.0 * float(np.mean(kill[gtv] >= 0.5)) if gtv.any() else 0.0
+    fig.suptitle("ch21e — 3-D lesioned volume across depth slices "
+                 f"(LD25/50/75/100 cell-kill; whole-GTV ≥LD50 = {cov3:.0f}%)", fontsize=12)
+    fig.tight_layout(rect=(0, 0, 1, 0.96))
+    _save(fig, "fig26_volume_slices")
+    return cov3
+
+
 def make_treatment_gif(geom, plan, mon, prog, bmode=None, n_frames=80, fps=12):
     info, dx, fx = geom["info"], geom["dx"], geom["fx"]
     ct = geom["ct"]
@@ -1530,6 +1605,9 @@ def main():
     figure_raster_equality(mon)
     print("Fig D — resolved standing-wave/shadow field through a lacuna (full-3D PSTD)…")
     figure_lacuna_field(ffm)
+    print("Fig E — 3-D lesioned volume across image slices…")
+    cov3 = figure_volume_slices(geom, plan)
+    print(f"  3-D volume coverage: whole-GTV ≥LD50 = {cov3:.0f}%")
     print("Reconstructing real-time B-mode frames (simulated receive → DAS)…")
     bmode = reconstruct_bmode_frames(geom, plan, mon["t"])
     print("Fig C — animated treatment console (GIF, PSTD-nonlinear field + B-mode PIP)…")

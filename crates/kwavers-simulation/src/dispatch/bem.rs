@@ -6,7 +6,7 @@ use std::f64::consts::TAU;
 
 use kwavers_core::error::KwaversResult;
 use kwavers_mesh::tetrahedral::TetrahedralMesh;
-use kwavers_domain::sensor::recorder::pressure_statistics::SampledStatistics;
+use kwavers_receiver::recorder::pressure_statistics::SampledStatistics;
 use crate::dispatch::shared::trim_initial_recorder_sample;
 use crate::types::{SimulationRunRequest, SimulationRunResult};
 use kwavers_solver::forward::bem::{BemConfig, BemSolver, BemSolution};

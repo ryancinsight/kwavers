@@ -42,7 +42,7 @@ use super::WesterveltFdtd;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use kwavers_domain::source::Source;
+use kwavers_source::Source;
 use crate::forward::nonlinear::conservation::{ConservationDiagnostics, ViolationSeverity};
 
 impl WesterveltFdtd {

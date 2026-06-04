@@ -9,7 +9,7 @@ use std::collections::HashMap;
 
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
-use kwavers_domain::source::GridSource;
+use kwavers_source::GridSource;
 use ndarray::Array3;
 
 /// Source and receiver geometry used by acoustic FWI.

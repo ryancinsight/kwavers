@@ -14,7 +14,7 @@ mod transducer;
 mod volume;
 mod volume_born;
 
-pub use kwavers_domain::source::transducers::ElementPosition;
+pub use kwavers_transducer::transducers::ElementPosition;
 pub use born::{
     reconstruct_brain_slice, TranscranialUstBornInversionMetrics,
     TranscranialUstBornInversionResult,

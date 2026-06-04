@@ -9,7 +9,7 @@ use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_domain::plugin::{PluginContext, PluginMetadata, PluginState};
-use kwavers_domain::source::GridSource;
+use kwavers_source::GridSource;
 
 /// FDTD solver plugin
 #[derive(Debug)]

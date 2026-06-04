@@ -6,8 +6,9 @@
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::{Medium, MediumBuilder};
-use kwavers_domain::sensor::GridSensorSet;
-use kwavers_domain::source::{Source, SourceFactory};
+use kwavers_receiver::GridSensorSet;
+use kwavers_source::Source;
+use kwavers_transducer::SourceFactory;
 use crate::configuration::Configuration;
 use std::sync::Arc;
 

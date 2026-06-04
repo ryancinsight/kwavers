@@ -10,8 +10,8 @@ use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WA
 use kwavers_core::error::KwaversError;
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
-use kwavers_domain::sensor::recorder::simple::SensorRecorder;
-use kwavers_domain::source::GridSource;
+use kwavers_receiver::recorder::simple::SensorRecorder;
+use kwavers_source::GridSource;
 use crate::forward::pstd::config::{CompatibilityMode, PSTDConfig};
 use crate::forward::pstd::PSTDSolver;
 use ndarray::Array3;

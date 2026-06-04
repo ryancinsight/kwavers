@@ -19,7 +19,7 @@ use crate::grid_py::Grid;
 #[pyclass]
 #[derive(Clone)]
 pub struct KWaveArray {
-    pub(crate) inner: kwavers_domain::source::kwave_array::KWaveArray,
+    pub(crate) inner: kwavers_transducer::kwave_array::KWaveArray,
 }
 
 #[pymethods]
@@ -27,7 +27,7 @@ impl KWaveArray {
     #[new]
     fn new() -> Self {
         KWaveArray {
-            inner: kwavers_domain::source::kwave_array::KWaveArray::new(),
+            inner: kwavers_transducer::kwave_array::KWaveArray::new(),
         }
     }
 
@@ -260,7 +260,7 @@ impl KWaveArray {
     ///
     /// Reference: Harris (1978) Proc. IEEE 66(1):51–83.
     fn get_apodization(&self, window: &str) -> PyResult<Vec<f64>> {
-        use kwavers_domain::source::kwave_array::KwaveApodizationWindow;
+        use kwavers_transducer::kwave_array::KwaveApodizationWindow;
         let w = match window {
             "Rectangular" => KwaveApodizationWindow::Rectangular,
             "Hann" => KwaveApodizationWindow::Hann,

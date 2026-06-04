@@ -2,7 +2,7 @@
 
 use super::super::orchestrator::PSTDSolver;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_domain::source::{SourceField, SourceInjectionMode};
+use kwavers_source::{SourceField, SourceInjectionMode};
 use crate::forward::pstd::config::KSpaceMethod;
 use crate::forward::pstd::implementation::k_space::PSTDKSOperators;
 use ndarray::{Array3, Zip};
@@ -52,7 +52,7 @@ impl PSTDSolver {
         // the normal density→pressure update rather than pre-setting density.
         // Density evolves naturally at sensor locations; apply_pressure_sources
         // is a no-op for Dirichlet mode.
-        if self.source_handler.pressure_mode() == kwavers_domain::source::SourceMode::Dirichlet {
+        if self.source_handler.pressure_mode() == kwavers_source::SourceMode::Dirichlet {
             self.source_handler
                 .enforce_pressure_dirichlet(self.time_step_index, &mut self.fields.p);
         }

@@ -1,7 +1,7 @@
 use kwavers_boundary::DomainPmlConfig;
 use kwavers_grid::Grid;
 use kwavers_medium::homogeneous::HomogeneousMedium;
-use kwavers_domain::source::GridSource;
+use kwavers_source::GridSource;
 use kwavers_solver::forward::pstd::{PSTDConfig, PSTDSolver};
 use kwavers_solver::interface::Solver;
 use kwavers_solver::pstd::config::BoundaryConfig;

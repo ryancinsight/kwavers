@@ -3,7 +3,7 @@ use kwavers_core::error::KwaversResult;
 use kwavers_field::wave::WaveFields;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use kwavers_domain::source::GridSource;
+use kwavers_source::GridSource;
 use crate::forward::fdtd::FdtdSolver;
 use crate::forward::hybrid::adaptive_selection::AdaptiveSelector;
 use crate::forward::hybrid::config::HybridConfig;

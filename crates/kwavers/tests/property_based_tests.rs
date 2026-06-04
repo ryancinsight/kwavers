@@ -44,8 +44,8 @@
 
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
-use kwavers_domain::source::GridSource;
-use kwavers_domain::source::SourceMode;
+use kwavers_source::GridSource;
+use kwavers_source::SourceMode;
 use kwavers_solver::forward::fdtd::{FdtdConfig, FdtdSolver};
 use kwavers_solver::forward::pstd::{PSTDConfig, PSTDSolver};
 use kwavers_solver::interface::solver::Solver;

@@ -2,8 +2,8 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_boundary::cpml::CPMLConfig;
-use kwavers_domain::sensor::recorder::simple::SensorRecorder;
-use kwavers_domain::source::Source as KwaversSource;
+use kwavers_receiver::recorder::simple::SensorRecorder;
+use kwavers_source::Source as KwaversSource;
 use crate::dispatch::shared::{recording_modes_from_strings, trim_initial_recorder_sample};
 use crate::types::extract_full_grid_stats;
 use crate::types::{SimulationRunRequest, SimulationRunResult};

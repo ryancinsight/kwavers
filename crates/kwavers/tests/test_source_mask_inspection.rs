@@ -8,7 +8,7 @@
 
 use kwavers_grid::Grid;
 use kwavers_signal::SineWave;
-use kwavers_domain::source::{
+use kwavers_source::{
     InjectionMode, PlaneWaveSource, PlaneWaveSourceConfig, PointSource, Source, SourceField,
 };
 use std::sync::Arc;

@@ -70,7 +70,7 @@ fn step_forward_returns_feature_not_available() {
 
 #[test]
 fn add_sensor_rejects_out_of_bounds_point() {
-    use kwavers_domain::sensor::grid_sampling::{GridPoint, GridSensorSet};
+    use kwavers_receiver::grid_sampling::{GridPoint, GridSensorSet};
 
     let grid = Grid::new(8, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
     let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
@@ -89,7 +89,7 @@ fn add_sensor_rejects_out_of_bounds_point() {
 
 #[test]
 fn add_sensor_valid_points_sets_mask() {
-    use kwavers_domain::sensor::grid_sampling::{GridPoint, GridSensorSet};
+    use kwavers_receiver::grid_sampling::{GridPoint, GridSensorSet};
 
     let grid = Grid::new(8, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
     let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);

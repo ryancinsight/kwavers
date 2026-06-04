@@ -9,8 +9,8 @@ use kwavers_analysis::signal_processing::pam::{
     ApodizationType, PAMConfig, PamBeamformingConfig, PamBeamformingMethod, PassiveAcousticMapper,
 };
 use kwavers_core::constants::SOUND_SPEED_WATER;
-use kwavers_domain::sensor::beamforming::BeamformingCoreConfig;
-use kwavers_domain::sensor::passive_acoustic_mapping::PamArrayGeometry as ArrayGeometry;
+use kwavers_transducer::beamforming::BeamformingCoreConfig;
+use kwavers_transducer::passive_acoustic_mapping::PamArrayGeometry as ArrayGeometry;
 use ndarray::{Array3, Axis};
 
 fn linear_array_positions(elements: usize, pitch_m: f64) -> ArrayGeometry {

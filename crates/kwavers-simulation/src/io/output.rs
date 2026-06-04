@@ -2,7 +2,7 @@
 use kwavers_core::time::Time;
 use kwavers_field::indices::LIGHT_IDX;
 use kwavers_field::mapping::UnifiedFieldType;
-use kwavers_domain::sensor::recorder::Recorder;
+use kwavers_receiver::recorder::Recorder;
 use log::info;
 use ndarray::{Array3, Axis};
 use std::fs::File;

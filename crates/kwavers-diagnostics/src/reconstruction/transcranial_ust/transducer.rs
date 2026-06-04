@@ -3,8 +3,8 @@
 use std::f64::consts::TAU;
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_domain::source::transducers::focused::{BowlAngularBounds, BowlConfig, BowlTransducer};
-use kwavers_domain::source::transducers::{ElementPosition, TransducerGeometry};
+use kwavers_transducer::transducers::focused::{BowlAngularBounds, BowlConfig, BowlTransducer};
+use kwavers_transducer::transducers::{ElementPosition, TransducerGeometry};
 
 const GEOMETRY_UNIT_FREQUENCY_HZ: f64 = 1.0;
 const GEOMETRY_UNIT_AMPLITUDE_PA: f64 = 1.0;

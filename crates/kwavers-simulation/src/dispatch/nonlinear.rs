@@ -4,7 +4,7 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
-use kwavers_domain::source::Source;
+use kwavers_source::Source;
 use crate::dispatch::shared::trim_initial_recorder_sample;
 use crate::types::{SimulationRunRequest, SimulationRunResult};
 use kwavers_solver::forward::nonlinear::westervelt::{WesterveltFdtd, WesterveltFdtdConfig};
@@ -90,9 +90,9 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
 /// Uses the existing `PointSource` and `NullSignal` types from the domain
 /// layer.  Each non-zero node in `p0` becomes a constant-amplitude point
 /// source at that cell's physical coordinates.
-fn build_sources(gs: &kwavers_domain::source::GridSource, grid: &Grid) -> Vec<Box<dyn Source>> {
+fn build_sources(gs: &kwavers_source::GridSource, grid: &Grid) -> Vec<Box<dyn Source>> {
     use kwavers_signal::{NullSignal, Signal};
-    use kwavers_domain::source::PointSource;
+    use kwavers_source::PointSource;
     use std::sync::Arc;
 
     let p0 = match gs.p0.as_ref() {

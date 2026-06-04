@@ -96,7 +96,7 @@
 //! use kwavers_analysis::signal_processing::beamforming::time_domain::{
 //!     delay_and_sum, DelayReference, DEFAULT_DELAY_REFERENCE
 //! };
-//! use kwavers_domain::sensor::GridSensorSet;
+//! use kwavers_receiver::GridSensorSet;
 //! use ndarray::Array3;
 //!
 //! // 1. Define sensor geometry (domain layer)

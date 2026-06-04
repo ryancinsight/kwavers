@@ -12,7 +12,7 @@ use ndarray::Array3;
 mod plotting_impl {
 
     use kwavers_grid::Grid;
-    use kwavers_domain::sensor::recorder::Recorder;
+    use kwavers_receiver::recorder::Recorder;
     use log::info;
     use ndarray::{Array2, Array3};
     use plotly::{
@@ -280,10 +280,10 @@ pub fn plot_field_comparison(
 }
 
 #[cfg(not(feature = "plotting"))]
-pub fn plot_recorder_data(_recorder: &kwavers_domain::sensor::recorder::Recorder, _filename: &str) {
+pub fn plot_recorder_data(_recorder: &kwavers_receiver::recorder::Recorder, _filename: &str) {
     log::warn!("Plotting functionality not available - compile with 'plotly' feature");
 }
 
 // Re-export types for compatibility
 pub use kwavers_grid::Grid;
-pub use kwavers_domain::sensor::recorder::Recorder;
+pub use kwavers_receiver::recorder::Recorder;

@@ -210,7 +210,7 @@ fn test_correction_methods_consistency() {
 #[test]
 fn kspace_correction_eliminates_numerical_dispersion() {
     use kwavers_medium::HomogeneousMedium;
-    use kwavers_domain::source::GridSource;
+    use kwavers_source::GridSource;
     use crate::forward::pstd::config::{BoundaryConfig, PSTDConfig};
     use crate::pstd::PSTDSolver;
     use ndarray::Array3;

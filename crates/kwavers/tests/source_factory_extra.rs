@@ -1,5 +1,6 @@
 use kwavers_grid::Grid;
-use kwavers_domain::source::{DomainSourceParameters, SourceFactory, SourceModel};
+use kwavers_source::{DomainSourceParameters, SourceModel};
+use kwavers_transducer::SourceFactory;
 
 #[test]
 fn test_create_linear_array() {

@@ -123,7 +123,7 @@ mod tests {
         let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).unwrap();
         let config = FdtdConfig::default();
         let medium = kwavers_medium::HomogeneousMedium::water(&grid);
-        let source = kwavers_domain::source::GridSource::default();
+        let source = kwavers_source::GridSource::default();
         let _solver = FdtdSolver::new(config, &grid, &medium, source).unwrap();
     }
 
@@ -186,7 +186,7 @@ mod tests {
         let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).unwrap();
         let config = FdtdConfig::default();
         let medium = kwavers_medium::HomogeneousMedium::water(&grid);
-        let source = kwavers_domain::source::GridSource::default();
+        let source = kwavers_source::GridSource::default();
         let solver = FdtdSolver::new(config, &grid, &medium, source).unwrap();
 
         let c_max = kwavers_core::constants::SOUND_SPEED_WATER;

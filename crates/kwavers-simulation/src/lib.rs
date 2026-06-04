@@ -24,7 +24,7 @@ pub mod therapy;
 pub mod types;
 
 // Re-exports
-pub use kwavers_domain::sensor::recorder;
+pub use kwavers_receiver::recorder;
 pub use builder::ConfigurationBuilder;
 pub use configs::{HelmholtzConfig, NonlinearConfig, PmlConfig, PoroelasticConfig, ThermalConfig};
 pub use configuration::Configuration;

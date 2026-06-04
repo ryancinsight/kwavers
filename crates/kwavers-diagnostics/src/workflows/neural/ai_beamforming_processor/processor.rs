@@ -4,7 +4,7 @@ use ndarray::{Array3, ArrayView4};
 use std::time::Instant;
 
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::sensor::beamforming::processor::BeamformingProcessor;
+use kwavers_transducer::beamforming::processor::BeamformingProcessor;
 
 use super::super::feature_extraction::FeatureExtractor;
 use super::super::{

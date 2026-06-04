@@ -9,7 +9,7 @@ impl NumericalValidator {
     pub(super) fn validate_dispersion(
         &self,
     ) -> Result<DispersionResults, Box<dyn std::error::Error>> {
-        use kwavers_domain::source::GridSource;
+        use kwavers_source::GridSource;
         use crate::fdtd::{FdtdConfig, FdtdSolver};
         use crate::forward::nonlinear::kuznetsov::{KuznetsovConfig, KuznetsovWave};
         use crate::pstd::{PSTDConfig, PSTDSolver};

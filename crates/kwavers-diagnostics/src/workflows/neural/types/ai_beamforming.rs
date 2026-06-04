@@ -1,7 +1,7 @@
 //! AI-enhanced beamforming configuration, result, and supporting types.
 
 use kwavers_analysis::signal_processing::beamforming::neural::config::FeatureConfig;
-use kwavers_domain::sensor::beamforming::BeamformingConfig;
+use kwavers_transducer::beamforming::BeamformingConfig;
 use ndarray::Array3;
 use std::collections::HashMap;
 

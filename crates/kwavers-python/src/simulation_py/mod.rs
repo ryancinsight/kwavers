@@ -30,7 +30,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyAny;
 
 
-use kwavers_domain::source::GridSource;
+use kwavers_source::GridSource;
 use kwavers_simulation::{
     HelmholtzConfig as KwaversHelmholtzConfig, NonlinearConfig as KwaversNonlinearConfig,
     PmlConfig as KwaversPmlConfig, PoroelasticConfig as KwaversPoroelasticConfig,
@@ -689,7 +689,7 @@ impl Simulation {
         // ── Process sources ─────────────────────────────────────────────────
         let c_max = self.medium.inner.as_medium().max_sound_speed();
         let mut grid_source = GridSource::new_empty();
-        let mut dynamic_sources: Vec<Box<dyn kwavers_domain::source::Source>> = Vec::new();
+        let mut dynamic_sources: Vec<Box<dyn kwavers_source::Source>> = Vec::new();
         let mut has_mask_source = false;
         let mut elastic_ivp_axis: Option<String> = None;
         let mut elastic_velocity_source = None;
@@ -722,7 +722,7 @@ impl Simulation {
 
         // ── Config references (moved from config builders, no clone) ────────
         // ── Extract transducer refs for RS solver ───────────────────────────
-        let kwavers_transducers: Vec<kwavers_domain::source::array_2d::TransducerArray2D> =
+        let kwavers_transducers: Vec<kwavers_transducer::array_2d::TransducerArray2D> =
             self.transducers.iter().map(|t| t.inner.clone()).collect();
 
         // ── Convert elastic velocity source ─────────────────────────────────

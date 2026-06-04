@@ -17,7 +17,7 @@ use kwavers_boundary::Boundary;
 use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use crate::source::Source;
+use kwavers_source::Source;
 use ndarray::Array4;
 use std::any::Any;
 use std::fmt::Debug;

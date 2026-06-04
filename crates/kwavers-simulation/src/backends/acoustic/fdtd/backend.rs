@@ -3,7 +3,7 @@
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use kwavers_domain::source::GridSource;
+use kwavers_source::GridSource;
 use kwavers_physics::acoustics::mechanics::acoustic_wave::AcousticSpatialOrder;
 use kwavers_solver::forward::fdtd::{FdtdConfig, FdtdSolver, KSpaceCorrectionMode};
 

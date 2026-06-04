@@ -3,7 +3,7 @@
 use super::*;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_signal::waveform::SineWave;
-use kwavers_domain::source::PointSource;
+use kwavers_source::PointSource;
 
 #[test]
 fn test_point_source_adapter() {
@@ -73,7 +73,7 @@ fn test_adapt_multiple_sources() {
 
 #[test]
 fn test_focal_properties_extraction() {
-    use kwavers_domain::source::wavefront::gaussian::{GaussianConfig, GaussianSource};
+    use kwavers_source::wavefront::gaussian::{GaussianConfig, GaussianSource};
 
     let signal = Arc::new(SineWave::new(MHZ_TO_HZ, 1.0, 0.0));
     let config = GaussianConfig {

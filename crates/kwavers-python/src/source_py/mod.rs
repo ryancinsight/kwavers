@@ -42,7 +42,7 @@ pub struct Source {
     /// Propagation direction for plane wave sources
     pub(crate) direction: Option<(f64, f64, f64)>,
     /// KWaveArray for custom transducer geometry sources
-    pub(crate) kwave_array: Option<kwavers_domain::source::kwave_array::KWaveArray>,
+    pub(crate) kwave_array: Option<kwavers_transducer::kwave_array::KWaveArray>,
     /// Per-axis 1-D velocity-signal time series for the elastic
     /// velocity-source path (Phase A.3 of ADR 007). Each entry is `Some`
     /// when the corresponding component is to be driven; `None` otherwise.

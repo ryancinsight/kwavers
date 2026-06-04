@@ -10,9 +10,9 @@ use std::f64::consts::PI;
 use kwavers_analysis::signal_processing::beamforming::adaptive::MinimumVariance;
 
 #[cfg(feature = "legacy_algorithms")]
-use kwavers_domain::sensor::beamforming::adaptive::legacy::LCMV;
+use kwavers_transducer::beamforming::adaptive::legacy::LCMV;
 #[cfg(feature = "legacy_algorithms")]
-use kwavers_domain::sensor::beamforming::adaptive::{
+use kwavers_transducer::beamforming::adaptive::{
     LegacyMinimumVariance, SourceEstimationCriterion, MUSIC,
 };
 

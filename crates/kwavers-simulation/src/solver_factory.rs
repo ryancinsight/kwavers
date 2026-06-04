@@ -7,7 +7,7 @@
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
 use kwavers_medium::{density_at, sound_speed_at, AcousticProperties, CoreMedium, Medium};
-use kwavers_domain::source::GridSource;
+use kwavers_source::GridSource;
 use crate::solver_adapters::DgSimulationSolver;
 use kwavers_solver::config::{SolverConfiguration, SolverType};
 use kwavers_solver::factory::SolverFactoryRegistry;

@@ -15,7 +15,7 @@
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_signal::SineWave;
-use kwavers_domain::source::{
+use kwavers_source::{
     InjectionMode, PlaneWaveSource, PlaneWaveSourceConfig, Source, SourceField,
 };
 use kwavers_physics::acoustics::mechanics::acoustic_wave::AcousticSpatialOrder;

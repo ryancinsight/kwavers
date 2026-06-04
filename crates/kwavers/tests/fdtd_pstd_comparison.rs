@@ -6,7 +6,7 @@
 
 use kwavers_boundary::{DomainPMLBoundary, DomainPmlConfig};
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::source::NullSource;
+use kwavers_source::NullSource;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_physics::acoustics::mechanics::absorption::AbsorptionMode;
 use kwavers_solver::forward::nonlinear::westervelt_spectral::WesterveltWave;

@@ -13,11 +13,11 @@ impl crate::interface::Solver for PSTDSolver {
         Ok(())
     }
 
-    fn add_source(&mut self, source: Box<dyn kwavers_domain::source::Source>) -> KwaversResult<()> {
+    fn add_source(&mut self, source: Box<dyn kwavers_source::Source>) -> KwaversResult<()> {
         self.add_source_arc(Arc::from(source))
     }
 
-    fn add_sensor(&mut self, _sensor: &kwavers_domain::sensor::GridSensorSet) -> KwaversResult<()> {
+    fn add_sensor(&mut self, _sensor: &kwavers_receiver::GridSensorSet) -> KwaversResult<()> {
         Ok(())
     }
 

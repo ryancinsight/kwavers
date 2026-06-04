@@ -54,7 +54,7 @@
 //! use kwavers_analysis::signal_processing::beamforming::{
 //!     delay_and_sum, DelayReference, DEFAULT_DELAY_REFERENCE
 //! };
-//! use kwavers_domain::sensor::GridSensorSet;
+//! use kwavers_receiver::GridSensorSet;
 //! use ndarray::Array3;
 //!
 //! // Sensor geometry (domain primitive)

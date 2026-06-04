@@ -16,7 +16,7 @@
 //!
 //! This is the kernel cache; the per-voxel pressure-statistics
 //! accumulator lives in
-//! [`kwavers_domain::sensor::recorder::pressure_statistics`] and feeds
+//! [`kwavers_receiver::recorder::pressure_statistics`] and feeds
 //! kernel construction.
 //!
 //! ## Module layout

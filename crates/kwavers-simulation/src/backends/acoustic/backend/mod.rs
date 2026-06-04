@@ -60,7 +60,7 @@ mod tests;
 
 use kwavers_core::error::KwaversResult;
 use kwavers_mesh::MeshBoundaryType;
-use kwavers_domain::source::Source;
+use kwavers_source::Source;
 use ndarray::Array3;
 use ndarray::{Array1, ArrayView2};
 use num_complex::Complex64;

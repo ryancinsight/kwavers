@@ -1,4 +1,4 @@
-use kwavers_domain::sensor::recorder::fields::{SensorRecordField, SensorRecordSpec};
+use kwavers_receiver::recorder::fields::{SensorRecordField, SensorRecordSpec};
 
 use super::super::super::Simulation;
 

@@ -4,7 +4,7 @@ use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_signal::SineWave;
-use kwavers_domain::source::{PointSource, Source};
+use kwavers_source::{PointSource, Source};
 use kwavers_solver::feature::SolverFeature;
 use std::sync::Arc;
 

@@ -14,7 +14,7 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::{
     complex_l2_objective, complex_source_scale, helmholtz_slowness_derivative, MultiRowRingArray,
 };
-use kwavers_domain::source::transducers::ElementPosition;
+use kwavers_transducer::transducers::ElementPosition;
 use ndarray::Array3;
 use num_complex::Complex64;
 

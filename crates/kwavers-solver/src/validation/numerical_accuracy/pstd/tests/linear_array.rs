@@ -28,7 +28,7 @@ fn test_linear_array_phase_accuracy() {
     // Create linear array source (multiple point sources along x-axis)
     let num_elements = 8;
     let element_spacing = wavelength; // λ spacing
-    let mut source_data = kwavers_domain::source::GridSource::default();
+    let mut source_data = kwavers_source::GridSource::default();
     source_data.p_mask = Some(Array3::zeros((n, n, 1)));
 
     let center_x = n / 2;

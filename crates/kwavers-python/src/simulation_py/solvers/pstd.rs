@@ -1,8 +1,8 @@
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_boundary::cpml::CPMLConfig;
 use kwavers_grid::Grid as KwaversGrid;
-use kwavers_domain::sensor::recorder::simple::SensorRecorder;
-use kwavers_domain::source::{GridSource, Source as KwaversSource};
+use kwavers_receiver::recorder::simple::SensorRecorder;
+use kwavers_source::{GridSource, Source as KwaversSource};
 use kwavers_physics::acoustics::mechanics::absorption::AbsorptionMode;
 use kwavers_solver::forward::pstd::config::{BoundaryConfig, CompatibilityMode, PSTDConfig};
 use kwavers_solver::forward::pstd::implementation::core::orchestrator::PSTDSolver;

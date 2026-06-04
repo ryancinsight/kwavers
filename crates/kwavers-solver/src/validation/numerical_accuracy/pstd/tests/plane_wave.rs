@@ -38,7 +38,7 @@ fn test_pstd_plane_wave_accuracy() {
 
     let medium =
         HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, &grid);
-    let source_data = kwavers_domain::source::GridSource::default();
+    let source_data = kwavers_source::GridSource::default();
     let mut solver = PSTDSolver::new(config, grid.clone(), &medium, source_data).unwrap();
 
     // Initialize plane wave in the solver

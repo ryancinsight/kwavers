@@ -5,7 +5,7 @@ use super::super::super::types::{ElasticWaveConfig, VolumetricWaveConfig};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use kwavers_domain::sensor::recorder::simple::SensorRecorder;
+use kwavers_receiver::recorder::simple::SensorRecorder;
 use ndarray::Array3;
 
 /// 3D Elastic Wave Solver.

@@ -3,8 +3,8 @@
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use kwavers_domain::sensor::GridSensorSet;
-use kwavers_domain::source::Source;
+use kwavers_receiver::GridSensorSet;
+use kwavers_source::Source;
 use crate::solver_factory::SimulationSolverFactory;
 use kwavers_solver::config::SolverConfiguration;
 use kwavers_solver::feature::{FeatureManager, SolverFeature};

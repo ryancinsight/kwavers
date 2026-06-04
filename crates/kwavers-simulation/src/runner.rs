@@ -5,7 +5,7 @@
 //! [`types`](super::types).
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_domain::source::Source as KwaversSource;
+use kwavers_source::Source as KwaversSource;
 use crate::dispatch;
 use kwavers_solver::config::SolverType;
 

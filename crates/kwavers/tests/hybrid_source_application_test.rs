@@ -3,7 +3,7 @@ use kwavers_grid::Grid;
 use kwavers_medium::homogeneous::HomogeneousMedium;
 use kwavers_domain::plugin::{Plugin, PluginContext, PluginFields};
 use kwavers_signal::SineWave;
-use kwavers_domain::source::{GaussianBuilder, Source};
+use kwavers_source::{GaussianBuilder, Source};
 use kwavers_solver::forward::hybrid::domain_decomposition::{DomainRegion, DomainType};
 use kwavers_solver::forward::hybrid::{HybridConfig, HybridDecompositionStrategy, HybridPlugin};
 use kwavers_solver::forward::pstd::config::{BoundaryConfig as PSTDBoundaryConfig, PSTDConfig};

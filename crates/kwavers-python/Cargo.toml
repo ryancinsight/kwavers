@@ -20,6 +20,9 @@ crate-type = ["cdylib"]  # Dynamic library for Python import
 kwavers-core = { path = "../kwavers-core", features = ["channels", "registration"] }
 kwavers-math = { path = "../kwavers-math" }
 kwavers-grid = { path = "../kwavers-grid" }
+kwavers-transducer = { path = "../kwavers-transducer" }
+kwavers-receiver = { path = "../kwavers-receiver" }
+kwavers-source = { path = "../kwavers-source" }
 kwavers-boundary = { path = "../kwavers-boundary" }
 kwavers-medium = { path = "../kwavers-medium" }
 kwavers-signal = { path = "../kwavers-signal" }

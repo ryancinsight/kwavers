@@ -4826,10 +4826,13 @@ dependencies = [
  "kwavers-optics",
  "kwavers-phantom",
  "kwavers-physics",
+ "kwavers-receiver",
  "kwavers-signal",
  "kwavers-simulation",
  "kwavers-solver",
+ "kwavers-source",
  "kwavers-therapy",
+ "kwavers-transducer",
  "log",
  "loom",
  "nalgebra 0.32.6",
@@ -4881,8 +4884,10 @@ dependencies = [
  "kwavers-grid",
  "kwavers-math",
  "kwavers-medium",
+ "kwavers-receiver",
  "kwavers-signal",
  "kwavers-solver",
+ "kwavers-transducer",
  "log",
  "nalgebra 0.32.6",
  "ndarray 0.16.1",
@@ -4952,7 +4957,10 @@ dependencies = [
  "kwavers-medium",
  "kwavers-optics",
  "kwavers-physics",
+ "kwavers-receiver",
  "kwavers-solver",
+ "kwavers-source",
+ "kwavers-transducer",
  "log",
  "ndarray 0.16.1",
  "num-complex",
@@ -4981,6 +4989,7 @@ dependencies = [
  "kwavers-medium",
  "kwavers-optics",
  "kwavers-signal",
+ "kwavers-source",
  "log",
  "nalgebra 0.32.6",
  "ndarray 0.16.1",
@@ -5026,6 +5035,7 @@ dependencies = [
  "kwavers-physics",
  "kwavers-signal",
  "kwavers-solver",
+ "kwavers-source",
  "log",
  "ndarray 0.16.1",
  "once_cell",
@@ -5129,6 +5139,9 @@ dependencies = [
  "kwavers-grid",
  "kwavers-math",
  "kwavers-medium",
+ "kwavers-receiver",
+ "kwavers-source",
+ "kwavers-transducer",
  "log",
  "ndarray 0.16.1",
  "ndarray-npy",
@@ -5159,10 +5172,13 @@ dependencies = [
  "kwavers-math",
  "kwavers-medium",
  "kwavers-physics",
+ "kwavers-receiver",
  "kwavers-signal",
  "kwavers-simulation",
  "kwavers-solver",
+ "kwavers-source",
  "kwavers-therapy",
+ "kwavers-transducer",
  "ndarray 0.16.1",
  "num-complex",
  "numpy",
@@ -5171,6 +5187,24 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror 1.0.69",
+]
+
+[[package]]
+name = "kwavers-receiver"
+version = "3.0.0"
+dependencies = [
+ "approx",
+ "kwavers-core",
+ "kwavers-field",
+ "kwavers-grid",
+ "kwavers-math",
+ "kwavers-signal",
+ "log",
+ "ndarray 0.16.1",
+ "num-complex",
+ "rayon",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -5206,8 +5240,11 @@ dependencies = [
  "kwavers-medium",
  "kwavers-mesh",
  "kwavers-physics",
+ "kwavers-receiver",
  "kwavers-signal",
  "kwavers-solver",
+ "kwavers-source",
+ "kwavers-transducer",
  "log",
  "ndarray 0.16.1",
  "num-complex",
@@ -5237,7 +5274,10 @@ dependencies = [
  "kwavers-medium",
  "kwavers-mesh",
  "kwavers-physics",
+ "kwavers-receiver",
  "kwavers-signal",
+ "kwavers-source",
+ "kwavers-transducer",
  "log",
  "nalgebra 0.32.6",
  "ndarray 0.16.1",
@@ -5257,6 +5297,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "kwavers-source"
+version = "3.0.0"
+dependencies = [
+ "approx",
+ "kwavers-core",
+ "kwavers-grid",
+ "kwavers-math",
+ "kwavers-medium",
+ "kwavers-signal",
+ "log",
+ "nalgebra 0.32.6",
+ "ndarray 0.16.1",
+ "num-complex",
+ "rayon",
+ "serde",
+]
+
+[[package]]
 name = "kwavers-therapy"
 version = "3.0.0"
 dependencies = [
@@ -5270,11 +5328,35 @@ dependencies = [
  "kwavers-physics",
  "kwavers-simulation",
  "kwavers-solver",
+ "kwavers-source",
+ "kwavers-transducer",
  "log",
  "ndarray 0.16.1",
  "num-complex",
  "rayon",
  "serde",
+]
+
+[[package]]
+name = "kwavers-transducer"
+version = "3.0.0"
+dependencies = [
+ "approx",
+ "kwavers-core",
+ "kwavers-field",
+ "kwavers-grid",
+ "kwavers-math",
+ "kwavers-medium",
+ "kwavers-receiver",
+ "kwavers-signal",
+ "kwavers-source",
+ "log",
+ "nalgebra 0.32.6",
+ "ndarray 0.16.1",
+ "num-complex",
+ "rayon",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

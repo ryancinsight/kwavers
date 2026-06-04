@@ -49,7 +49,7 @@ fn test_gaussian_beam_phase_accuracy() {
         config.clone(),
         grid.clone(),
         &medium,
-        kwavers_domain::source::GridSource::default(),
+        kwavers_source::GridSource::default(),
     )
     .unwrap();
 

@@ -7,7 +7,7 @@ use kwavers_solver::inverse::fwi::frequency_domain::{
     PstdSpectralConvergentBornOperator,
     PstdTemporalTransferConfig, SingleScatterBornOperator, SpectralConvergentBornOperator,
 };
-use kwavers_domain::source::transducers::ElementPosition;
+use kwavers_transducer::transducers::ElementPosition;
 use ndarray::{s, Array2, Array3};
 use num_complex::Complex64;
 use pyo3::exceptions::{PyRuntimeError, PyValueError};

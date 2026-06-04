@@ -12,7 +12,7 @@ use kwavers_grid::config::DomainGridParameters;
 use kwavers_medium::config::DomainMediumParameters;
 
 // Import relocated parameters
-use kwavers_domain::source::DomainSourceParameters;
+use kwavers_source::DomainSourceParameters;
 use crate::parameters::{
     OutputParameters, PerformanceParameters, SimulationParameters,
 };
@@ -209,7 +209,7 @@ mod tests {
     use kwavers_boundary::config::BoundaryParameters;
     use kwavers_grid::config::DomainGridParameters;
     use kwavers_medium::config::DomainMediumParameters;
-    use kwavers_domain::source::config::DomainSourceParameters;
+    use kwavers_source::config::DomainSourceParameters;
     use crate::parameters::SimulationParameters;
     use kwavers_solver::config::SolverConfiguration;
 

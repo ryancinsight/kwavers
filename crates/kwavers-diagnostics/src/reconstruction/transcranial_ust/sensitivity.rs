@@ -9,7 +9,7 @@ use super::{
 };
 use kwavers_core::constants::numerical::MPA_TO_PA;
 use kwavers_core::constants::tissue_acoustics::DENSITY_BRAIN;
-use kwavers_domain::source::transducers::TransducerGeometry;
+use kwavers_transducer::transducers::TransducerGeometry;
 use kwavers_solver::inverse::linear_born_inversion::LinearBornInversionConfig;
 
 /// Build the row-normalized Born sensitivity matrix.

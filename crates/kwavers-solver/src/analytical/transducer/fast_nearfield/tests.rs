@@ -2,7 +2,7 @@ use super::core::FastNearfieldSolver;
 use super::types::FNMConfig;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
-use kwavers_domain::source::transducers::rectangular::RectangularTransducer;
+use kwavers_transducer::transducers::rectangular::RectangularTransducer;
 use kwavers_math::fft::Complex64;
 use ndarray::Array2;
 

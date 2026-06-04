@@ -13,7 +13,7 @@
 //! - The scorer for method **B** is point-dependent and peaks near the true source for a narrowband
 //!   propagation-delayed tone when using near-field steering.
 //! - We do **not** re-implement MVDR math here; we use SSOT beamforming primitives:
-//!   `kwavers_domain::sensor::beamforming::capon_spatial_spectrum_point_complex_baseband`.
+//!   `kwavers_transducer::beamforming::capon_spatial_spectrum_point_complex_baseband`.
 //!
 //! # Signal model (narrowband, real-valued)
 //! We synthesize a narrowband real sinusoid observed at each sensor with a propagation delay:
@@ -37,7 +37,7 @@ use kwavers_analysis::signal_processing::beamforming::narrowband::capon::{
     capon_spatial_spectrum_point_complex_baseband, CaponSpectrumConfig,
 };
 use kwavers_analysis::signal_processing::beamforming::utils::steering::SteeringVectorMethod;
-use kwavers_domain::sensor::Position;
+use kwavers_receiver::Position;
 use ndarray::Array3;
 
 /// Construct a small 2D array (xy-plane, z=0) with modest aperture.

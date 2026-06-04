@@ -3,7 +3,7 @@ use kwavers_core::constants::fundamental::{
     DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM,
 };
 use kwavers_core::constants::numerical::TWO_PI;
-use kwavers_domain::source::transducers::ElementPosition;
+use kwavers_transducer::transducers::ElementPosition;
 use ndarray::{Array3, ArrayView1};
 
 #[test]

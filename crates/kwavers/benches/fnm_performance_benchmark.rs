@@ -5,7 +5,7 @@
 //! the O(n) vs O(n²) complexity advantage.
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use kwavers_domain::source::RectangularTransducer;
+use kwavers_transducer::RectangularTransducer;
 use kwavers_solver::analytical::transducer::{FNMConfig, FastNearfieldSolver};
 use ndarray::Array2;
 use num_complex::Complex64;

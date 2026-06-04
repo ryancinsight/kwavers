@@ -11,7 +11,7 @@ mod tests {
     use kwavers_core::constants::{DENSITY_WATER, SOUND_SPEED_WATER};
     use kwavers_grid::Grid;
     use kwavers_medium::HomogeneousMedium;
-    use kwavers_domain::source::PointSource;
+    use kwavers_source::PointSource;
     use kwavers_physics::traits::AcousticWaveModel;
     use ndarray::Array4;
 
@@ -119,7 +119,7 @@ mod tests {
         let medium = HomogeneousMedium::new(DENSITY_WATER, SOUND_SPEED_WATER, 0.0, 0.0, &grid);
 
         // No source (zero amplitude)
-        use kwavers_domain::source::NullSource;
+        use kwavers_source::NullSource;
         let source = NullSource::new();
 
         // Initialize with Gaussian pulse
@@ -213,7 +213,7 @@ mod tests {
         let medium = HomogeneousMedium::new(DENSITY_WATER, SOUND_SPEED_WATER, 0.0, 0.0, &grid);
 
         // No source (zero amplitude)
-        use kwavers_domain::source::NullSource;
+        use kwavers_source::NullSource;
         let source = NullSource::new();
 
         // Initialize with Gaussian pulse

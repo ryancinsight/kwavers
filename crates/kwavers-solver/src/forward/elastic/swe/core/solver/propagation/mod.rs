@@ -5,8 +5,8 @@ use super::super::super::scratch::ElasticStepScratch;
 use super::super::super::types::{ElasticBodyForceConfig, ElasticWaveField};
 use super::definition::ElasticWaveSolver;
 use kwavers_core::error::{KwaversResult, NumericalError};
-use kwavers_domain::sensor::recorder::fields::{SensorRecordField, SensorRecordSpec};
-use kwavers_domain::sensor::recorder::simple::SensorRecorder;
+use kwavers_receiver::recorder::fields::{SensorRecordField, SensorRecordSpec};
+use kwavers_receiver::recorder::simple::SensorRecorder;
 
 mod sensors;
 

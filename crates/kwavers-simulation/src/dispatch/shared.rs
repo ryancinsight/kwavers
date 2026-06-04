@@ -3,8 +3,8 @@
 //! Contains utilities used across multiple per-solver dispatch modules:
 //! recording mode parsing, data trimming, and common utilities.
 
-use kwavers_domain::sensor::recorder::config::RecordingMode;
-use kwavers_domain::sensor::recorder::fields::{SensorRecordField, SensorRecordSpec};
+use kwavers_receiver::recorder::config::RecordingMode;
+use kwavers_receiver::recorder::fields::{SensorRecordField, SensorRecordSpec};
 
 // ── Recording mode helpers ────────────────────────────────────────────────────
 

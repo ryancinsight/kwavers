@@ -50,7 +50,7 @@ use ndarray::ArrayView4;
 /// # Example
 ///
 /// ```ignore
-/// use kwavers_domain::sensor::beamforming::neural::workflow::RealTimeWorkflow;
+/// use kwavers_transducer::beamforming::neural::workflow::RealTimeWorkflow;
 ///
 /// let mut workflow = RealTimeWorkflow::new();
 /// let result = workflow.execute_workflow(&mut processor, rf_data, &angles)?;

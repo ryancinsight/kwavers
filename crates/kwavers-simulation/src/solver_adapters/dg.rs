@@ -21,8 +21,8 @@
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
 use kwavers_medium::{density_at, sound_speed_at, Medium};
-use kwavers_domain::sensor::GridSensorSet;
-use kwavers_domain::source::Source;
+use kwavers_receiver::GridSensorSet;
+use kwavers_source::Source;
 use kwavers_solver::config::SolverConfiguration;
 use kwavers_solver::feature::SolverFeature;
 use kwavers_solver::forward::pstd::dg::dg_solver::acoustic::AcousticDgTensorWorkspace;

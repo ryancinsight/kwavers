@@ -1,7 +1,7 @@
 use ndarray::{Array2, Array3};
 
-use kwavers_domain::source::transducers::focused::BowlAngularBounds;
-use kwavers_domain::source::transducers::TransducerGeometry;
+use kwavers_transducer::transducers::focused::BowlAngularBounds;
+use kwavers_transducer::transducers::TransducerGeometry;
 use kwavers_solver::inverse::linear_born_inversion::LinearBornInversionConfig;
 
 use super::{

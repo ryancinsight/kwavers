@@ -13,7 +13,7 @@
 //! - **Image Formation**: Reconstruction algorithms and pipelines
 //! - **Performance Optimization**: SIMD, parallelization, caching strategies
 //!
-//! ### Domain Layer Responsibilities ([`kwavers_domain::sensor::beamforming`])
+//! ### Domain Layer Responsibilities ([`kwavers_transducer::beamforming`])
 //! - **Hardware Coupling**: Sensor-specific optimizations and constraints
 //! - **Geometry Integration**: Array-specific delay calculations and positioning
 //! - **Real-time Interfaces**: Hardware-accelerated processing pipelines
@@ -83,7 +83,7 @@
 //!
 //! ```rust,ignore
 //! use kwavers_analysis::signal_processing::beamforming::DelayAndSum;
-//! use kwavers_domain::sensor::GridSensorSet;
+//! use kwavers_receiver::GridSensorSet;
 //! use ndarray::Array2;
 //!
 //! // 1. Define sensor geometry (domain layer)

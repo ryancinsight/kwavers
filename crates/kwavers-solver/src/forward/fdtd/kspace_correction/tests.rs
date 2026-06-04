@@ -3,7 +3,7 @@ use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
-use kwavers_domain::source::GridSource;
+use kwavers_source::GridSource;
 use crate::forward::fdtd::config::{FdtdConfig, KSpaceCorrectionMode};
 use crate::forward::fdtd::solver::FdtdSolver;
 use crate::forward::pstd::config::PSTDConfig;

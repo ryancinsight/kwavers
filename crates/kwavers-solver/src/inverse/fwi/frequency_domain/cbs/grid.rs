@@ -1,7 +1,7 @@
 //! CBS grid and bandlimited point projection.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_domain::source::transducers::ElementPosition;
+use kwavers_transducer::transducers::ElementPosition;
 use std::f64::consts::PI;
 
 /// Default BLI tolerance used by the canonical k-Wave-compatible source path.

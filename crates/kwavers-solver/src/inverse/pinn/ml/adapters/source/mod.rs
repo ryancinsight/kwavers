@@ -17,7 +17,7 @@ use kwavers_core::constants::numerical::TWO_PI;
 #[cfg(test)]
 mod tests;
 
-use kwavers_domain::source::{
+use kwavers_source::{
     types::SourceFocalProperties as DomainFocalProperties, Source, SourceField,
 };
 use std::sync::Arc;

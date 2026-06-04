@@ -2,7 +2,7 @@ use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WA
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
-use kwavers_domain::source::GridSource;
+use kwavers_source::GridSource;
 use kwavers_physics::acoustics::mechanics::absorption::AbsorptionMode;
 use crate::forward::pstd::config::PSTDConfig;
 use crate::pstd::PSTDSolver;

@@ -2,7 +2,7 @@ use super::super::orchestrator::PSTDSolver;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
-use kwavers_domain::source::{GridSource, SourceMode};
+use kwavers_source::{GridSource, SourceMode};
 use crate::forward::pstd::config::{AntiAliasingConfig, BoundaryConfig, PSTDConfig};
 
 const CPML_REFERENCE_STEP2: f64 = 5.344_360e-1;
@@ -266,7 +266,7 @@ fn test_source_kappa_equals_cosine() {
     let grid = Grid::new(n, n, n, dx, dx, dx).unwrap();
     let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, c0, &grid);
 
-    let source = kwavers_domain::source::grid_source::GridSource::new_empty();
+    let source = kwavers_source::grid_source::GridSource::new_empty();
     let config = PSTDConfig {
         dt,
         nt: 1,

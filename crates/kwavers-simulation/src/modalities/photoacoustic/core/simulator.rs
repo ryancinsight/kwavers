@@ -5,7 +5,7 @@ use kwavers_grid::Grid;
 use kwavers_domain::imaging::photoacoustic::PhotoacousticParameters;
 use kwavers_medium::properties::OpticalPropertyData;
 use kwavers_medium::Medium;
-use kwavers_domain::source::GridSource;
+use kwavers_source::GridSource;
 use kwavers_solver::forward::fdtd::{FdtdConfig, FdtdSolver, KSpaceCorrectionMode};
 use ndarray::Array3;
 

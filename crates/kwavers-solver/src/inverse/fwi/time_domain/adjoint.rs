@@ -3,7 +3,7 @@
 use super::{geometry::FwiGeometry, FwiProcessor};
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
-use kwavers_domain::source::{GridSource, SourceMode};
+use kwavers_source::{GridSource, SourceMode};
 use crate::inverse::fwi::time_domain::{
     accumulate_signed_correlation, l2_objective, l2_residual, reverse_time_axis,
 };

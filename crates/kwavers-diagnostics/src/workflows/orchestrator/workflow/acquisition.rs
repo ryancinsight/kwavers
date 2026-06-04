@@ -43,7 +43,7 @@ impl ClinicalWorkflowOrchestrator {
             };
 
             let beamforming_config = BeamformingConfig3D {
-                base_config: kwavers_domain::sensor::beamforming::BeamformingConfig {
+                base_config: kwavers_transducer::beamforming::BeamformingConfig {
                     sound_speed: SOUND_SPEED_TISSUE,
                     sampling_frequency: config.sampling_frequency,
                     reference_frequency: config.frequency,

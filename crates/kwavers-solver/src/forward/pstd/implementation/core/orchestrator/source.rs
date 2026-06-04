@@ -1,7 +1,7 @@
 use super::super::source_injection;
 use super::PSTDSolver;
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::source::{Source, SourceField};
+use kwavers_source::{Source, SourceField};
 use std::sync::Arc;
 
 impl PSTDSolver {

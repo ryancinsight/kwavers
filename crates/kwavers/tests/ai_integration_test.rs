@@ -1,7 +1,7 @@
 //! Tests for AI-enhanced beamforming integration
 
 #[cfg(feature = "pinn")]
-use kwavers_domain::sensor::beamforming::{
+use kwavers_transducer::beamforming::{
     AIBeamformingConfig, AIBeamformingResult, AIEnhancedBeamformingProcessor,
     ClinicalDecisionSupport, DiagnosisAlgorithm, FeatureExtractor, RealTimeWorkflow,
 };
@@ -13,10 +13,10 @@ use std::collections::HashMap;
 #[cfg(feature = "pinn")]
 mod pinn_tests {
     use super::*;
-    use kwavers_domain::sensor::beamforming::ai_integration::ClinicalDecisionSupport;
-    use kwavers_domain::sensor::beamforming::ai_integration::DiagnosisAlgorithm;
-    use kwavers_domain::sensor::beamforming::ai_integration::FeatureExtractor;
-    use kwavers_domain::sensor::beamforming::ai_integration::RealTimeWorkflow;
+    use kwavers_transducer::beamforming::ai_integration::ClinicalDecisionSupport;
+    use kwavers_transducer::beamforming::ai_integration::DiagnosisAlgorithm;
+    use kwavers_transducer::beamforming::ai_integration::FeatureExtractor;
+    use kwavers_transducer::beamforming::ai_integration::RealTimeWorkflow;
 
     #[test]
     fn test_ai_enhanced_beamforming_creation() {
@@ -37,7 +37,7 @@ mod pinn_tests {
 
     #[test]
     fn test_feature_extractor_creation() {
-        let config = kwavers_domain::sensor::beamforming::ai_integration::FeatureConfig::default();
+        let config = kwavers_transducer::beamforming::ai_integration::FeatureConfig::default();
         let extractor = FeatureExtractor::new(config);
 
         // Test with dummy data
@@ -53,7 +53,7 @@ mod pinn_tests {
     #[test]
     fn test_clinical_decision_support() {
         let thresholds =
-            kwavers_domain::sensor::beamforming::ai_integration::ClinicalThresholds::default();
+            kwavers_transducer::beamforming::ai_integration::ClinicalThresholds::default();
         let support = ClinicalDecisionSupport::new(thresholds);
 
         // Create dummy features
@@ -79,7 +79,7 @@ mod pinn_tests {
             Array3::from_elem((32, 32, 16), 0.7),
         );
 
-        let features = kwavers_domain::sensor::beamforming::ai_integration::FeatureMap {
+        let features = kwavers_transducer::beamforming::ai_integration::FeatureMap {
             morphological,
             spectral,
             texture,
@@ -108,10 +108,10 @@ mod pinn_tests {
 
         // Create dummy clinical analysis
         let clinical_analysis =
-            kwavers_domain::sensor::beamforming::ai_integration::ClinicalAnalysis {
+            kwavers_transducer::beamforming::ai_integration::ClinicalAnalysis {
                 lesions: vec![],
                 tissue_classification:
-                    kwavers_domain::sensor::beamforming::ai_integration::TissueClassification {
+                    kwavers_transducer::beamforming::ai_integration::TissueClassification {
                         probabilities: HashMap::new(),
                         dominant_tissue: Array3::from_elem((32, 32, 16), "Muscle".to_string()),
                         boundary_confidence: Array3::from_elem((32, 32, 16), 0.8),
@@ -120,7 +120,7 @@ mod pinn_tests {
                 diagnostic_confidence: 0.85,
             };
 
-        let features = kwavers_domain::sensor::beamforming::ai_integration::FeatureMap {
+        let features = kwavers_transducer::beamforming::ai_integration::FeatureMap {
             morphological: HashMap::new(),
             spectral: HashMap::new(),
             texture: HashMap::new(),
@@ -142,7 +142,7 @@ mod pinn_tests {
 
     #[test]
     fn test_feature_extraction_comprehensive() {
-        let config = kwavers_domain::sensor::beamforming::ai_integration::FeatureConfig {
+        let config = kwavers_transducer::beamforming::ai_integration::FeatureConfig {
             morphological_features: true,
             spectral_features: true,
             texture_features: true,
@@ -209,7 +209,7 @@ mod pinn_tests {
 
     #[test]
     fn test_clinical_analysis_with_lesions() {
-        let thresholds = kwavers_domain::sensor::beamforming::ai_integration::ClinicalThresholds {
+        let thresholds = kwavers_transducer::beamforming::ai_integration::ClinicalThresholds {
             lesion_confidence_threshold: 0.7,
             tissue_uncertainty_threshold: 0.2,
             contrast_abnormality_threshold: 2.0,
@@ -233,7 +233,7 @@ mod pinn_tests {
             Array3::from_elem((16, 16, 8), 2.0), // High variance
         );
 
-        let features = kwavers_domain::sensor::beamforming::ai_integration::FeatureMap {
+        let features = kwavers_transducer::beamforming::ai_integration::FeatureMap {
             morphological,
             spectral: HashMap::new(),
             texture,

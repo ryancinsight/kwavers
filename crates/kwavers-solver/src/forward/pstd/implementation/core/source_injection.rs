@@ -24,7 +24,7 @@
 //! *Journal of Biomedical Optics*, 15(2), 021314.
 //! <https://doi.org/10.1117/1.3360308>
 
-use kwavers_domain::source::SourceInjectionMode;
+use kwavers_source::SourceInjectionMode;
 use ndarray::Array3;
 use tracing::debug;
 

@@ -78,7 +78,7 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use kwavers_domain::source::{GridSource, SourceMode};
+use kwavers_source::{GridSource, SourceMode};
 use kwavers_solver::inverse::fwi::time_domain::{FwiGeometry, FwiProcessor};
 use kwavers_solver::inverse::seismic::parameters::{FwiParameters, RegularizationParameters};
 use ndarray::{Array2, Array3};

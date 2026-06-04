@@ -50,7 +50,7 @@
 use super::{geometry::FwiGeometry, FwiProcessor};
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
-use kwavers_domain::source::GridSource;
+use kwavers_source::GridSource;
 use ndarray::{Array2, Array3, Zip};
 
 /// Generate the `n × n` Sylvester–Hadamard code matrix (`n` a power of two).
@@ -271,7 +271,7 @@ impl FwiProcessor {
 mod tests {
     use super::*;
     use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
-    use kwavers_domain::source::SourceMode;
+    use kwavers_source::SourceMode;
     use crate::inverse::seismic::parameters::FwiParameters;
     use ndarray::Array2;
 

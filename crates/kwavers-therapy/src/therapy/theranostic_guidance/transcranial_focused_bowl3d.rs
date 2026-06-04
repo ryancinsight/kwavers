@@ -24,7 +24,7 @@
 use ndarray::{s, Array3};
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_domain::source::transducers::focused::BowlAngularBounds;
+use kwavers_transducer::transducers::focused::BowlAngularBounds;
 
 use super::geometry::{
     focused_bowl_cap_points, is_boundary_3d, FocusedBowlCapSpec, FocusedBowlVertexDirection, Point3,

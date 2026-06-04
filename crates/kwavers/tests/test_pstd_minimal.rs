@@ -9,7 +9,7 @@ use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_signal::{Signal, SineWave};
-use kwavers_domain::source::{InjectionMode, PlaneWaveSource, PlaneWaveSourceConfig, SourceField};
+use kwavers_source::{InjectionMode, PlaneWaveSource, PlaneWaveSourceConfig, SourceField};
 use kwavers_solver::forward::pstd::config::{KSpaceMethod, PSTDConfig};
 use kwavers_solver::forward::pstd::implementation::core::orchestrator::PSTDSolver;
 use kwavers_solver::interface::Solver;

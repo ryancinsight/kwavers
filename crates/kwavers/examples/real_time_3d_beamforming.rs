@@ -17,7 +17,7 @@
 //! - Memory efficiency: Streaming processing
 
 #[cfg(feature = "gpu")]
-use kwavers_domain::sensor::beamforming::{
+use kwavers_transducer::beamforming::{
         ApodizationWindow, BeamformingAlgorithm3D, BeamformingConfig3D, BeamformingProcessor3D,
     };
 use kwavers_core::error::KwaversResult;

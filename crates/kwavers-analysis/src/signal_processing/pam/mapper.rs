@@ -2,9 +2,9 @@ use super::config::{PAMConfig, PamBeamformingConfig};
 use super::processor::PAMProcessor;
 use super::PamBeamformingMethod;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_domain::sensor::beamforming::processor::BeamformingProcessor;
-use kwavers_domain::sensor::beamforming::BeamformingCoreConfig;
-use kwavers_domain::sensor::passive_acoustic_mapping::geometry::PamArrayGeometry;
+use kwavers_transducer::beamforming::processor::BeamformingProcessor;
+use kwavers_transducer::beamforming::BeamformingCoreConfig;
+use kwavers_transducer::passive_acoustic_mapping::geometry::PamArrayGeometry;
 use ndarray::{Array3, Axis};
 
 #[derive(Debug)]

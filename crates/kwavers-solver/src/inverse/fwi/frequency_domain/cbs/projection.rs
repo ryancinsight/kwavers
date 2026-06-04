@@ -9,7 +9,7 @@ use super::temporal::{
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::{fft_3d_complex_into, ifft_3d_complex_inplace};
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;
-use kwavers_domain::source::transducers::ElementPosition;
+use kwavers_transducer::transducers::ElementPosition;
 use ndarray::Array3;
 use num_complex::Complex64;
 use std::f64::consts::TAU;

@@ -82,7 +82,7 @@ impl Simulation {
     /// Build an ordered list of sensor grid indices for a transducer, element by element.
     pub(crate) fn create_transducer_ordered_indices(
         grid: &KwaversGrid,
-        trans: &kwavers_domain::source::array_2d::TransducerArray2D,
+        trans: &kwavers_transducer::array_2d::TransducerArray2D,
     ) -> Vec<(usize, usize, usize)> {
         let nx = grid.nx;
         let ny = grid.ny;

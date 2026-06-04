@@ -1,7 +1,7 @@
 use super::{collect_pressure_indices_fortran, SourceHandler};
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
-use kwavers_domain::source::{Source, SourceField};
+use kwavers_source::{Source, SourceField};
 use ndarray::Array2;
 
 impl SourceHandler {

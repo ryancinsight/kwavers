@@ -3,7 +3,7 @@
 use kwavers_math::fft::Fft3dInOutExt;
 use super::super::orchestrator::PSTDSolver;
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::source::{SourceField, SourceInjectionMode};
+use kwavers_source::{SourceField, SourceInjectionMode};
 use crate::geometry::SolverGeometry;
 use ndarray::Zip;
 
@@ -99,14 +99,14 @@ impl PSTDSolver {
         let has_z = self.grid.nz > 1;
 
         match p_mode {
-            kwavers_domain::source::SourceMode::Dirichlet => {
+            kwavers_source::SourceMode::Dirichlet => {
                 // Density evolves naturally at sensor locations. The direct pressure
                 // override p[sensor] = data[t] is applied post-EOS in step_forward
                 // via enforce_pressure_dirichlet, matching KWave.jl's
                 // time_reversal_boundary_data which sets p after the density→pressure
                 // update rather than pre-setting density components.
             }
-            kwavers_domain::source::SourceMode::Additive => {
+            kwavers_source::SourceMode::Additive => {
                 // R2C: dpx (nx,ny,nz) → p_k (nx,ny,nz_c); source_kappa pre-truncated to nz_c.
                 self.fft.forward_r2c_into(&self.dpx, &mut self.p_k);
                 Zip::from(&mut self.p_k)
@@ -170,7 +170,7 @@ impl PSTDSolver {
                     }
                 }
             }
-            kwavers_domain::source::SourceMode::AdditiveNoCorrection => {
+            kwavers_source::SourceMode::AdditiveNoCorrection => {
                 if is_axisymmetric {
                     Zip::from(&mut self.rhox)
                         .and(&mut self.rhoz)

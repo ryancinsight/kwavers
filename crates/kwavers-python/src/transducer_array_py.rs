@@ -3,7 +3,7 @@ use numpy::PyReadonlyArray1;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
-use kwavers_domain::source::array_2d::{
+use kwavers_transducer::array_2d::{
     TransducerArray2D as KwaversTransducerArray2D, TransducerArray2DConfig,
 };
 

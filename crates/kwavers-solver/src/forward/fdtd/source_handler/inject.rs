@@ -1,5 +1,5 @@
 use super::SourceHandler;
-use kwavers_domain::source::SourceMode;
+use kwavers_source::SourceMode;
 use ndarray::{Array3, Zip};
 
 impl SourceHandler {

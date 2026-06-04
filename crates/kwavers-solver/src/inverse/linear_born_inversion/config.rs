@@ -2,7 +2,7 @@
 //!
 //! Anatomy- and transducer-neutral knobs only. The number and physical layout
 //! of array elements live on the
-//! [`TransducerGeometry`](kwavers_domain::source::transducers::TransducerGeometry)
+//! [`TransducerGeometry`](kwavers_transducer::transducers::TransducerGeometry)
 //! impl passed alongside this config; clinical adapters
 //! (`clinical::imaging::reconstruction::*`) compose this struct with
 //! anatomy-specific parameters into their own configs.
@@ -26,7 +26,7 @@ pub struct LinearBornInversionConfig {
     pub frequencies_hz: Vec<f64>,
     /// Receiver offsets from each emitting element. Semantics depend on the
     /// transducer geometry (cyclic for rings; azimuthal for bowls); see
-    /// [`TransducerGeometry::receiver_indices`](kwavers_domain::source::transducers::TransducerGeometry::receiver_indices).
+    /// [`TransducerGeometry::receiver_indices`](kwavers_transducer::transducers::TransducerGeometry::receiver_indices).
     pub receiver_offsets: Vec<usize>,
     /// Maximum outer PCG / Landweber iterations.
     pub iterations: usize,

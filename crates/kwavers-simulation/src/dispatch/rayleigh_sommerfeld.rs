@@ -4,8 +4,8 @@ use ndarray::{Array1, Array2, Array3};
 use num_complex::Complex64;
 
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::sensor::recorder::pressure_statistics::SampledStatistics;
-use kwavers_domain::source::transducers::rectangular::RectangularTransducer;
+use kwavers_receiver::recorder::pressure_statistics::SampledStatistics;
+use kwavers_transducer::transducers::rectangular::RectangularTransducer;
 use crate::dispatch::shared::{next_pow2, trim_initial_recorder_sample};
 use crate::types::{SimulationRunRequest, SimulationRunResult};
 use kwavers_solver::analytical::transducer::{FNMConfig, FastNearfieldSolver};

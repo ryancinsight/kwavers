@@ -75,7 +75,7 @@ impl kwavers_domain::plugin::Plugin for HybridPlugin {
         // Hybrid solver requires a single source and boundary for its update method.
         // We use the first source from the context or a NullSource if none are provided.
         // The boundary is taken from the context.
-        use kwavers_domain::source::{NullSource, Source};
+        use kwavers_source::{NullSource, Source};
         let null_source = NullSource::new();
         let source: &dyn Source = context.sources.first().map_or(&null_source, |s| s.as_ref());
         let boundary = &mut *context.boundary;

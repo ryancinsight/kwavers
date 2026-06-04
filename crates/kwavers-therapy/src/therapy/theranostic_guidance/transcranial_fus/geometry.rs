@@ -1,7 +1,7 @@
 use ndarray::Array2;
 
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::source::transducers::focused::{SphericalCapConfig, SphericalCapLayout};
+use kwavers_transducer::transducers::focused::{SphericalCapConfig, SphericalCapLayout};
 
 /// Generate focused spherical-cap element positions.
 ///

@@ -119,7 +119,7 @@ pub use acoustics::transcranial;
 pub use acoustics::analytical::patterns as phase_modulation;
 
 /// Re-export sonoluminescence_detector from its new location in sensor module
-pub use kwavers_domain::sensor::sonoluminescence as sonoluminescence_detector;
+pub use kwavers_receiver::sonoluminescence as sonoluminescence_detector;
 
 /// Re-export material properties from domain layer (SSOT for material specifications)
 /// This was previously in physics::materials but has been moved to domain::medium::properties

@@ -5,7 +5,7 @@
 //! sampling, and element placement.
 
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::source::transducers::focused::{BowlAngularBounds, BowlConfig, BowlTransducer};
+use kwavers_transducer::transducers::focused::{BowlAngularBounds, BowlConfig, BowlTransducer};
 
 use super::Point3;
 

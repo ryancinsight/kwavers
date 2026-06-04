@@ -1,6 +1,6 @@
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
-use kwavers_domain::source::GridSource;
+use kwavers_source::GridSource;
 use kwavers_solver::forward::pstd::config::{CompatibilityMode, PSTDConfig};
 use kwavers_solver::forward::pstd::PSTDSolver;
 

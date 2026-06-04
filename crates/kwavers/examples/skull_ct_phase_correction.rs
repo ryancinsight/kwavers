@@ -25,7 +25,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{bail, Context, Result};
 use burn::backend::NdArray;
 use kwavers_grid::Grid;
-use kwavers_domain::source::transducers::focused::{BowlConfig, BowlTransducer};
+use kwavers_transducer::transducers::focused::{BowlConfig, BowlTransducer};
 use kwavers_physics::acoustics::skull::{AberrationCorrection, HeterogeneousSkull};
 use kwavers_physics::skull::heterogeneous::SkullLayer;
 use ndarray::{Array1, Array2, Array3};

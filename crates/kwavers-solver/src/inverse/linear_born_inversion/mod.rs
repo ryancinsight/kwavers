@@ -30,7 +30,7 @@ pub mod volume_operator;
 pub mod voxel;
 
 // `ElementPosition` / `TransducerGeometry` are domain geometry types
-// (`kwavers_domain::source::transducers`); import them from there directly.
+// (`kwavers_transducer::transducers`); import them from there directly.
 
 pub use config::LinearBornInversionConfig;
 pub use enhancement::{high_pass_enhance_slice, high_pass_enhance_volume};

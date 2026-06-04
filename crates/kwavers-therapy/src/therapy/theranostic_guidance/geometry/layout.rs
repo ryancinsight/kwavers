@@ -3,7 +3,7 @@ use std::f64::consts::PI;
 use ndarray::Array2;
 
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::source::transducers::focused::BowlTransducer;
+use kwavers_transducer::transducers::focused::BowlTransducer;
 
 use super::super::aperture::{
     abdominal_aperture_frame, abdominal_arc_point_2d, abdominal_arc_spec,

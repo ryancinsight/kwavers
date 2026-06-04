@@ -31,7 +31,7 @@ fn run_simulation_cpu(
     config: &FdtdConfig,
 ) -> Result<Array3<f64>, KwaversError> {
     use kwavers_signal::ToneBurst;
-    use kwavers_domain::source::grid_source::GridSource;
+    use kwavers_source::grid_source::GridSource;
 
     // Create a simple plane wave source mask at x=0 boundary
     let nx = grid.nx;
@@ -61,10 +61,10 @@ fn run_simulation_cpu(
         u0: None,
         p_mask: Some(p_mask),
         p_signal: Some(signal_array),
-        p_mode: kwavers_domain::source::grid_source::SourceMode::Additive,
+        p_mode: kwavers_source::grid_source::SourceMode::Additive,
         u_mask: None,
         u_signal: None,
-        u_mode: kwavers_domain::source::grid_source::SourceMode::Additive,
+        u_mode: kwavers_source::grid_source::SourceMode::Additive,
     };
 
     let mut solver = FdtdSolver::new(config.clone(), grid, medium, grid_source)?;
@@ -89,7 +89,7 @@ fn run_simulation_gpu(
     #[cfg(feature = "gpu")]
     {
         use kwavers_signal::ToneBurst;
-        use kwavers_domain::source::grid_source::GridSource;
+        use kwavers_source::grid_source::GridSource;
         use crate::backend::GPUBackend;
         use kwavers_solver::backend::traits::ComputeBackend;
 
@@ -118,10 +118,10 @@ fn run_simulation_gpu(
                 u0: None,
                 p_mask: Some(p_mask),
                 p_signal: Some(signal_array),
-                p_mode: kwavers_domain::source::grid_source::SourceMode::Additive,
+                p_mode: kwavers_source::grid_source::SourceMode::Additive,
                 u_mask: None,
                 u_signal: None,
-                u_mode: kwavers_domain::source::grid_source::SourceMode::Additive,
+                u_mode: kwavers_source::grid_source::SourceMode::Additive,
             };
 
             let mut solver = FdtdSolver::new(config.clone(), grid, medium, grid_source)?;

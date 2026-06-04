@@ -47,8 +47,8 @@ use std::collections::HashMap;
 /// # Example
 ///
 /// ```ignore
-/// use kwavers_domain::sensor::beamforming::neural::config::FeatureConfig;
-/// use kwavers_domain::sensor::beamforming::neural::features::FeatureExtractor;
+/// use kwavers_transducer::beamforming::neural::config::FeatureConfig;
+/// use kwavers_transducer::beamforming::neural::features::FeatureExtractor;
 /// use ndarray::Array3;
 ///
 /// let config = FeatureConfig::default();

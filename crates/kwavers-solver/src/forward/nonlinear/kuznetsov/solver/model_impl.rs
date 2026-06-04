@@ -4,7 +4,7 @@ use super::wave::KuznetsovWave;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use kwavers_domain::source::Source;
+use kwavers_source::Source;
 use kwavers_physics::traits::AcousticWaveModel;
 use crate::forward::nonlinear::conservation::{ConservationDiagnostics, ViolationSeverity};
 use ndarray::{Array3, Array4, Zip};

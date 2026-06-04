@@ -6,8 +6,8 @@
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use kwavers_domain::sensor::GridSensorSet;
-use kwavers_domain::source::Source;
+use kwavers_receiver::GridSensorSet;
+use kwavers_source::Source;
 use crate::feature::SolverFeature;
 use std::fmt::Debug;
 

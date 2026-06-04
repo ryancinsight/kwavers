@@ -3,7 +3,7 @@
 use crate::signal_processing::beamforming::time_domain::DelayReference;
 use crate::signal_processing::beamforming::utils::steering::SteeringVectorMethod;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_domain::sensor::beamforming::BeamformingCoreConfig;
+use kwavers_transducer::beamforming::BeamformingCoreConfig;
 use ndarray::Array3;
 
 /// Covariance / snapshot domain policy for narrowband MVDR/Capon scoring.

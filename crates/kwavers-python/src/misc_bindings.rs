@@ -182,8 +182,8 @@ pub(crate) fn time_reversal_reconstruction_impl(
 ) -> kwavers_core::error::KwaversResult<Array3<f64>> {
     use kwavers_boundary::cpml::CPMLConfig;
     use kwavers_medium::HomogeneousMedium;
-    use kwavers_domain::source::grid_source::SourceMode;
-    use kwavers_domain::source::GridSource;
+    use kwavers_source::grid_source::SourceMode;
+    use kwavers_source::GridSource;
     use kwavers_solver::forward::pstd::config::{BoundaryConfig, CompatibilityMode, PSTDConfig};
     use kwavers_solver::forward::pstd::implementation::core::orchestrator::PSTDSolver;
     use kwavers_solver::interface::solver::Solver as SolverTrait;

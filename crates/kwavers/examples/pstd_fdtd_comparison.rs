@@ -31,7 +31,7 @@
 
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
-use kwavers_domain::source::{GridSource, SourceMode};
+use kwavers_source::{GridSource, SourceMode};
 use kwavers_solver::forward::fdtd::{FdtdConfig, FdtdSolver, KSpaceCorrectionMode};
 use kwavers_solver::forward::pstd::config::{BoundaryConfig, KSpaceMethod};
 use kwavers_solver::forward::pstd::{PSTDConfig, PSTDSolver};

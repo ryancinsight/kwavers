@@ -96,7 +96,7 @@ mod tests {
     use super::*;
     use kwavers_grid::Grid;
     use kwavers_medium::homogeneous::HomogeneousMedium;
-    use kwavers_domain::source::grid_source::GridSource;
+    use kwavers_source::grid_source::GridSource;
     use crate::configs::PoroelasticConfig;
     use kwavers_solver::config::SolverType;
     use kwavers_solver::forward::fdtd::config::KSpaceCorrectionMode;

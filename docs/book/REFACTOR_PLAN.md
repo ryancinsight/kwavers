@@ -138,8 +138,19 @@ in Rust where a real computation applies, embedded with a descriptive caption.
      **embedded 6 figures incl. a genuine PSTD Westervelt-vs-Fubini solver validation
      (≤2% error)**. Verified impls: westervelt, westervelt_spectral, kuznetsov, kzk,
      HarmonicTracker, ShockCapture, ConservationTracker all present.
-   - ⬜ Ch4 (media), Ch5/6 (sources/beamforming residual paths), Ch7 sensors, … +
-     the deferred transcranial §10.9/§10.10 ↔ neuro/BBB de-dup.
+   - ✅ **Ch4 Media and Tissue Models**: physics audited (EOS/B-A/Voigt/Biot/skull sound).
+     Fixed all stale paths; **Liver B/A 3-way inconsistency** (table 6.5 / text 6.5 / code
+     7.0 → SSOT `B_OVER_A_LIVER = 6.75`) + Liver α₀ 0.40→0.50; fixed the **Voigt dispersion
+     coefficient** ((ωτ)²/4 → 3(ωτ)²/8, binomial 3/8). Re-wired the 2 broken `ch_media`
+     embeds → existing `ch12` figures, removed the orphan skull embed, fixed the `ch12`
+     script REPO_ROOT, and embedded **5 figures** (was 0 working). Verified impls:
+     `TissueProperties`/`LIVER`, `solver/forward/thermal/pennes.rs`, `medium/elastic.rs`,
+     transcranial aberration (skull), anisotropic stiffness.
+   - ⬜ Ch5/6 (sources/beamforming residual paths), Ch7 sensors, … + the deferred
+     transcranial §10.9/§10.10 ↔ neuro/BBB de-dup.
+   - ⚠️ NOTE: a code refactor is in flight (CPML moved to a new `kwavers_boundary` crate,
+     seen in `dispatch/fdtd.rs`). The final path-verification pass (item 7) must re-check
+     all `kwavers_*::` module paths against the then-current crate layout.
    Recurring fix: figure scripts use `parents[3]`/3×`..` (→ `crates/`); needs +1. Fixed in
    ch01, ch02, ch03, ch08.
 6. ✅ **D4** — README reordered to canonical Part-grouped order + one-line

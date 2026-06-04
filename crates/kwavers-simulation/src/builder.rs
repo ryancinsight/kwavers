@@ -7,7 +7,7 @@ use super::{Configuration, SimulationParameters};
 use kwavers_core::error::KwaversResult;
 use kwavers_boundary::config::BoundaryParameters;
 use kwavers_medium::config::DomainMediumParameters;
-use kwavers_domain::source::config::DomainSourceParameters;
+use kwavers_source::config::DomainSourceParameters;
 use crate::parameters::{OutputParameters, PerformanceParameters};
 use kwavers_solver::config::SolverConfiguration;
 use kwavers_solver::validation::ValidationParameters;

@@ -3,7 +3,7 @@
 use kwavers_boundary::{DomainPMLBoundary, DomainPmlConfig};
 use kwavers_grid::Grid;
 use kwavers_medium::homogeneous::HomogeneousMedium;
-use kwavers_domain::source::Source;
+use kwavers_source::Source;
 use kwavers_solver::fdtd::{FdtdConfig, FdtdPlugin};
 use kwavers_solver::pstd::config::BoundaryConfig;
 use kwavers_solver::pstd::{PSTDConfig, PSTDPlugin};

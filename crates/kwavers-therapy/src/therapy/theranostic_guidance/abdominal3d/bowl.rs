@@ -2,7 +2,7 @@
 
 use super::super::geometry::Point3;
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::source::transducers::focused::{BowlAngularBounds, BowlConfig, BowlTransducer};
+use kwavers_transducer::transducers::focused::{BowlAngularBounds, BowlConfig, BowlTransducer};
 
 pub(crate) const BOWL_THETA_CUTOUT_RAD: f64 = 0.175;
 pub(crate) const BOWL_THETA_MAX_RAD: f64 = 0.960;

@@ -16,8 +16,8 @@ use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
 use kwavers_field::wave::WaveFields;
 use kwavers_grid::Grid;
 use kwavers_medium::{MaterialFields, Medium};
-use kwavers_domain::sensor::recorder::simple::SensorRecorder;
-use kwavers_domain::source::grid_source::GridSource;
+use kwavers_receiver::recorder::simple::SensorRecorder;
+use kwavers_source::grid_source::GridSource;
 use kwavers_math::numerics::operators::StaggeredGridOperator;
 use kwavers_physics::acoustics::mechanics::acoustic_wave::AcousticSpatialOrder;
 

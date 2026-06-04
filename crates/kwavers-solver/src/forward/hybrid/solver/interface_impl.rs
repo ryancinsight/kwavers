@@ -2,7 +2,7 @@ use super::HybridSolver;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use kwavers_domain::source::Source;
+use kwavers_source::Source;
 use std::sync::Arc;
 
 impl crate::interface::Solver for HybridSolver {
@@ -21,7 +21,7 @@ impl crate::interface::Solver for HybridSolver {
         Ok(())
     }
 
-    fn add_sensor(&mut self, _sensor: &kwavers_domain::sensor::GridSensorSet) -> KwaversResult<()> {
+    fn add_sensor(&mut self, _sensor: &kwavers_receiver::GridSensorSet) -> KwaversResult<()> {
         Ok(())
     }
 

@@ -10,7 +10,7 @@
 
 use ndarray::Array3;
 
-use kwavers_domain::sensor::beamforming::BeamformingConfig;
+use kwavers_transducer::beamforming::BeamformingConfig;
 
 // Use solver-agnostic interface instead of direct solver imports
 #[cfg(feature = "pinn")]

@@ -42,7 +42,7 @@ use kwavers_math::fft::{fft_3d_complex_into, ifft_3d_complex_inplace};
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::{
     complex_l2_objective, complex_source_scale, sound_speed_to_slowness, MultiRowRingArray,
 };
-use kwavers_domain::source::transducers::ElementPosition;
+use kwavers_transducer::transducers::ElementPosition;
 use ndarray::{Array2, Array3};
 use num_complex::Complex64;
 use std::f64::consts::TAU;

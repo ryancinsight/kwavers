@@ -4,7 +4,7 @@
 //! eliminating duplication while maintaining SSOT principles.
 
 use kwavers_core::constants::numerical::TWO_PI;
-use kwavers_domain::source::electromagnetic::PointEMSource;
+use kwavers_source::electromagnetic::PointEMSource;
 use std::fmt::Debug;
 
 /// Electromagnetic source specification for PINN training
@@ -67,7 +67,7 @@ impl PinnEMSource {
 
     /// Compute current density vector from source polarization
     fn compute_current_density(source: &PointEMSource, amplitude: f64) -> [f64; 3] {
-        use kwavers_domain::source::SourcePolarization;
+        use kwavers_source::SourcePolarization;
 
         match source.polarization {
             SourcePolarization::LinearX => [amplitude, 0.0, 0.0],
@@ -151,7 +151,7 @@ pub fn adapt_em_sources(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kwavers_domain::source::SourcePolarization;
+    use kwavers_source::SourcePolarization;
 
     #[test]
     fn test_point_em_source_adapter() {

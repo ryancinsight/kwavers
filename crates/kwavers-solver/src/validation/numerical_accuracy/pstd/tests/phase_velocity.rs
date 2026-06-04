@@ -79,7 +79,7 @@ fn test_pstd_phase_velocity_accuracy() {
         config.clone(),
         grid.clone(),
         &medium,
-        kwavers_domain::source::GridSource::default(),
+        kwavers_source::GridSource::default(),
     )
     .unwrap();
 

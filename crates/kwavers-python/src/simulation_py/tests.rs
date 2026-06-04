@@ -3,7 +3,7 @@ mod simulation_contract_tests {
     use super::super::Simulation;
     use crate::grid_py::Grid;
     use crate::misc_bindings::time_reversal_reconstruction_impl;
-    use kwavers_domain::sensor::recorder::fields::SensorRecordField;
+    use kwavers_receiver::recorder::fields::SensorRecordField;
     use ndarray::{array, Array2};
 
     #[test]

@@ -10,8 +10,8 @@ use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_domain::plugin::Plugin;
-use kwavers_domain::sensor::recorder::traits::RecorderTrait;
-use kwavers_domain::source::{Source, SourceField};
+use kwavers_receiver::recorder::traits::RecorderTrait;
+use kwavers_source::{Source, SourceField};
 use crate::plugin::PluginManager;
 use log::{debug, info};
 use ndarray::Array3;
@@ -333,7 +333,7 @@ mod tests {
     use kwavers_boundary::DomainPMLBoundary;
     use kwavers_medium::homogeneous::HomogeneousMedium;
     use kwavers_signal::SineWave;
-    use kwavers_domain::source::PointSource;
+    use kwavers_source::PointSource;
 
     #[test]
     fn test_solver_creation() {
