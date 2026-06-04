@@ -20,7 +20,7 @@ The progression follows the increasing complexity of the medium model:
 1. Measured parameters and their sources (§4.2)
 2. Equation of state and nonlinearity (§4.3)
 3. Power-law absorption and memory effects (§4.4)
-4. Fractional Laplacian implementation (§4.5)
+4. Causal dispersion and the fractional-Laplacian model (§4.4.3; full derivation in Foundations §1.9.3)
 5. Heterogeneous media and the variable-coefficient wave equation (§4.6)
 6. Thermal properties and bioheat transfer (§4.7)
 7. Viscoelastic tissue model (§4.8)
@@ -211,7 +211,7 @@ $$
 
 Typical values: water $y = 2$, soft tissue $y \approx 1.0$–$1.5$, bone $y \approx 1.0$.
 
-The kwavers implementation is `kwavers::domain::medium::absorption::power_law::PowerLawAbsorption`:
+The kwavers implementation is `kwavers_domain::medium::absorption::power_law::PowerLawAbsorption`:
 
 ```rust
 // PowerLawAbsorption::absorption_at_frequency
@@ -261,121 +261,29 @@ integral evaluates (via Mellin transform) to $\alpha \propto \omega^y$ with $0 <
 
 **Corollary 4.1 (y < 2 implies memory effects).** Any power-law exponent $y < 2$ requires
 a distribution of relaxation times; the medium carries memory of its acoustic history. This
-is the physical mechanism encoded by the fractional derivative operators of §4.5.
+is the physical mechanism encoded by the fractional-derivative operators of §4.4.3
+(full treatment in Foundations §1.9.3).
 
-### 4.4.3 Kramers–Kronig dispersion relation
+### 4.4.3 Causal dispersion and the fractional-Laplacian model
 
-Causality requires that absorption and dispersion are linked by the Kramers–Kronig relation.
-For a power-law medium:
+Causality links this absorption to a specific phase-velocity dispersion (Kramers–Kronig),
+and Treeby & Cox (2010) cast the causal power-law absorbing equations exactly in terms of
+two **fractional-Laplacian** operators $(-\nabla^2)^s$ (Fourier symbol $|\mathbf k|^{2s}$),
+with absorption coefficient $\tau = -2\alpha_0 c_0^{y-1}$ and dispersion coefficient
+$\eta = 2\alpha_0 c_0^{y}\tan(\pi y/2)$. The $\tan(\pi y/2)$ factor vanishes at $y = 2$
+(viscothermal media — e.g. water — are exactly non-dispersive) and is handled by a
+logarithmic limit at $y = 1$ (soft tissue shows negligible MHz-band dispersion). The full
+operator form, the power-law correspondence proof, and the k-space evaluation are derived
+in **Foundations §1.9.3 (Theorem 1.7)** — the canonical home for the absorption model — so
+they are not repeated here.
 
-$$
-c(\omega) = \frac{c_0}{1 + \alpha_0 \tan(\pi y/2)\,\omega^{y-1} c_0 / \omega},
-$$
-
-which reduces for $y = 1$ to $c(\omega) = c_0/(1 + \alpha_0 c_0 \tan(\pi/2)) = c_0$ (no
-dispersion at $y = 1$, as observed empirically in soft tissue in the MHz range).
-
-The kwavers implementation uses this relation in
-`kwavers::domain::medium::absorption::power_law::PowerLawAbsorption::phase_velocity`.
-
----
-
-## 4.5 Fractional Laplacian Absorption (Treeby & Cox 2010)
-
-### 4.5.1 Modified wave equation
-
-Treeby & Cox (2010) showed that the causal, power-law absorbing wave equation can be written
-exactly as
-
-$$
-\frac{\partial^2 p}{\partial t^2} - c_0^2 \nabla^2 p
-= -\tau_\alpha \bigl(-\nabla^2\bigr)^{(\gamma+1)/2}
-  \frac{\partial p}{\partial t}
-  - \eta_\alpha \bigl(-\nabla^2\bigr)^{\gamma/2+1/2}
-  \frac{\partial^2 p}{\partial t^2},
-\tag{4.TC}
-$$
-
-where $\gamma = y - 1$ and the coefficients are
-
-$$
-\tau_\alpha = -2\alpha_0 c_0^{y-1}, \qquad
-\eta_\alpha = 2\alpha_0 c_0^y \tan\!\left(\frac{\pi y}{2}\right).
-$$
-
-The operator $(-\nabla^2)^s$ is the fractional Laplacian of order $s$, defined in Fourier
-space as multiplication by $|\mathbf{k}|^{2s}$.
-
-### 4.5.2 Proof of power-law correspondence
-
-**Theorem 4.3 (Equation (4.TC) implements $\alpha \propto \omega^y$).** For a plane wave
-$p \propto e^{\mathrm{i}(\mathbf{k}\cdot\mathbf{x} - \omega t)}$ propagating in the medium
-governed by Eq.~(4.TC), the spatial absorption coefficient satisfies
-$\alpha(\omega) = \alpha_0 |\omega/c_0|^y$ to leading order.
-
-*Proof.* Substitute $p = e^{\mathrm{i}(k x - \omega t)}$ into Eq.~(4.TC). In Fourier space:
-
-$$
--\omega^2 + c_0^2 k^2
-= \tau_\alpha |k|^{\gamma+1} (-\mathrm{i}\omega)
-  + \eta_\alpha |k|^{\gamma+1} (-\mathrm{i}\omega)^2.
-$$
-
-Divide by $c_0^2$ and use $|k| \approx \omega/c_0$ (zeroth-order approximation):
-
-$$
-k^2 \approx \frac{\omega^2}{c_0^2}
-  - \frac{\tau_\alpha}{c_0^2} \left(\frac{\omega}{c_0}\right)^{\gamma+1}(-\mathrm{i}\omega)
-  - \frac{\eta_\alpha}{c_0^2} \left(\frac{\omega}{c_0}\right)^{\gamma+1}\omega^2 \cdot (-1).
-$$
-
-Expanding $k = k_r + \mathrm{i}\alpha$ and isolating $\alpha$ to first order in the
-absorption terms:
-
-$$
-\alpha = -\frac{\tau_\alpha}{2c_0^2}
-  \cdot \frac{\omega^{\gamma+2}}{c_0^{\gamma+1}}
-  = -\frac{\tau_\alpha}{2c_0^{3+\gamma}} \omega^{y+1}.
-$$
-
-Substituting $\tau_\alpha = -2\alpha_0 c_0^{y-1}$:
-
-$$
-\alpha = \frac{2\alpha_0 c_0^{y-1}}{2 c_0^{y+2}} \omega^{y+1}
-       = \frac{\alpha_0}{c_0^3} \omega^{y+1}.
-$$
-
-Converting to $f = \omega/(2\pi)$ and absorbing the $(2\pi)^y$ factor into the convention
-for $\alpha_0$:
-
-$$
-\alpha(f) = \alpha_0 f^y,
-$$
-
-which is the stated power law. $\square$
-
-The dispersion term proportional to $\eta_\alpha$ enforces causality: it shifts the real part
-of $k$ to satisfy the Kramers–Kronig relation, producing the phase velocity dispersion
-derived in §4.4.3.
-
-### 4.5.3 k-space implementation
-
-In the PSTD solver the fractional Laplacian is evaluated exactly in wavenumber space.
-For a 3D grid with wavenumber vectors $\mathbf{k}$, the operator $(-\nabla^2)^s$ becomes
-multiplication by $|\mathbf{k}|^{2s}$. The per-step update in the kwavers PSTD propagator
-is (see `kwavers::solver::forward::pstd::implementation::core::stepper::step`):
-
-```
-// For each Fourier mode k:
-absorption_factor = exp(-tau_alpha * |k|^(gamma+1) * omega * dt / 2)
-dispersion_shift  = eta_alpha * |k|^(gamma+1) * omega^2 * dt
-```
-
-The coupling between the two fractional terms ensures that the accumulated phase error stays
-below $10^{-4}$ radians over a 1000-step simulation for soft tissue at 1 MHz (verified in
-the PSTD absorption regression suite).
-
-![Fractional Laplacian k-space operator](figures/ch_media/fig02_fractional_laplacian_kspace.png)
+kwavers implements the power law in
+`kwavers_domain::medium::absorption::power_law::PowerLawAbsorption` and applies the
+fractional-Laplacian correction on the **pressure side** of the equation of state,
+$p \mathrel{+}= c_0^2\bigl(\tau\,\mathcal{L}_1[\rho_0\nabla\!\cdot\!\mathbf u]
+- \eta\,\mathcal{L}_2[\rho]\bigr)$ with $\mathcal{L}_1 = (-\nabla^2)^{(y-2)/2}$ and
+$\mathcal{L}_2 = (-\nabla^2)^{(y-1)/2}$, in
+`kwavers_solver::forward::pstd::physics::absorption` (the same $\tau$, $\eta$ as above).
 
 ---
 
@@ -653,7 +561,7 @@ $$
 
 reproduces an arbitrary power-law $\alpha \propto \omega^y$ when the weights follow
 $E_j \propto \tau_j^{1-y}$ (Fung 1993). This is the discrete analog of the fractional
-Laplacian operator of §4.5.
+Laplacian operator of §4.4.3.
 
 ---
 
@@ -783,7 +691,8 @@ $$
 
 For the 10 mm fat layer: $\Delta t = 10^{-2}(1/1450 - 1/1540) = 10^{-2} \times 4.03\times10^{-5}
 = 0.403$ ns. This is the quantity that adaptive beamforming algorithms must estimate and
-compensate (see Chapter 8, Beamforming).
+compensate (see the *Beamforming and Image Formation* and *Transcranial
+Ultrasound* chapters).
 
 ### 4.10.3 Defocusing mechanism
 
@@ -1055,8 +964,8 @@ This chapter established:
    ($y=2$) or a distribution of relaxation times ($y<2$); memory effects are mandatory for
    $y<2$.
 
-4. **Fractional Laplacian** (§4.5, Theorem 4.3): Treeby & Cox (2010) Eq.~(4.TC) is the
-   unique causal, power-law absorbing wave equation implementable exactly in k-space; the
+4. **Fractional Laplacian** (§4.4.3; Foundations §1.9.3, Theorem 1.7): Treeby & Cox (2010)
+   give the unique causal, power-law absorbing form implementable exactly in k-space; the
    PSTD solver applies this operator per time step.
 
 5. **Heterogeneous wave equation** (§4.6, Theorem 4.4): $\nabla\cdot(1/\rho_0\,\nabla p)$
@@ -1112,6 +1021,3 @@ This chapter established:
   acoustic propagation using the fractional Laplacian." *J. Acoust. Soc. Am.* 127(5),
   2712–2719.
 
----
-
-*Next chapter: Chapter 5 — Numerical Methods for Acoustic Propagation*

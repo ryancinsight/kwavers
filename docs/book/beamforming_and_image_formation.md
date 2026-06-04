@@ -1,86 +1,36 @@
 # Chapter 4: Transducer Arrays and Beamforming
 
-**Scope.** This chapter derives the physics of ultrasound transducer arrays from first
-principles: element directivity, array factor, grating lobe conditions, delay-and-sum (DAS)
-beamforming, apodization, and Fourier-domain beamforming. Theorems establish spatial
-resolution and grating-lobe positions. All derivations connect to
-`kwavers::domain::source::transducers` and the BLI rasterizer in
-`kwavers::domain::source::kwave_array`.
+**Scope.** This chapter covers **multi-element beam formation and image formation**: the
+array factor and grating-lobe theorem, transmit/receive focusing and steering,
+apodization, delay-and-sum (DAS) and adaptive (MVDR) receive beamforming, and the spatial
+resolution they achieve. The **single-element** physics it builds on — element
+directivity, focused-bowl gain, and BLI source rasterization onto the grid — is derived in
+the companion **Sources and Transducers** chapter (§3, §4, §6, §8) and only summarised
+here; this chapter cross-references it rather than repeating the derivations. Code
+connects to `kwavers_domain::source::transducers` and the BLI rasterizer in
+`kwavers_domain::source::kwave_array`.
 
 ---
 
 ## 4.1 Single-Element Radiation
 
-### 4.1.1 Baffled Circular Piston
-
-A circular piston of radius a vibrating in an infinite rigid baffle is the canonical
-transducer element model. The on-axis pressure at distance z from the piston face,
-driven at angular frequency ω, is (O'Neil 1949):
+The radiation pattern of a single element is the building block of every array beam
+pattern in this chapter. The far-field **element directivity** of a baffled circular
+piston of radius `a` is
 
 ```
-p(z, ω) = 2ρ₀c₀u₀ sin[(k/2)(√(z²+a²) − z)]                             (4.1)
+D(θ) = 2J₁(ka sin θ) / (ka sin θ)                                        (4.1)
 ```
 
-where k = ω/c₀, u₀ is the piston face velocity, and the source pressure P₀ = ρ₀c₀u₀.
+with first null at `sin θ = 0.61 λ/a` (Rayleigh diffraction limit) and a −6 dB
+half-angle `sin θ ≈ 0.257 λ/a`; a rectangular element of half-widths `aₓ, a_y` has the
+separable form `D = sinc(kaₓ sin θₓ)·sinc(ka_y sin θ_y)`.
 
-**Theorem 4.1 (Far-Field Directivity of a Baffled Piston).** In the far field (kr ≫ 1),
-the pressure radiated at angle θ from the piston axis at distance r is
-
-```
-p(r, θ, ω) = (ikaP₀/r) exp(ikr) D(θ)                                    (4.2)
-```
-
-where the element directivity factor is
-
-```
-D(θ) = 2J₁(ka sin θ) / (ka sin θ)                                        (4.3)
-```
-
-and J₁ is the Bessel function of the first kind of order 1.
-
-*Proof.* The pressure field of a baffled piston is the Rayleigh integral:
-
-```
-p(r, θ, ω) = (ikρ₀c₀u₀/2π) ∫∫_S exp(ik|r−r'|)/|r−r'| dS'             (4.4)
-```
-
-In the far field, |r−r'| ≈ r − r'·r̂ (paraxial approximation):
-
-```
-p ≈ (ikρ₀c₀u₀ exp(ikr))/(2πr) ∫∫_S exp(−ikr'·r̂) dS'
-```
-
-Converting to polar coordinates on the piston face (r', φ') with r̂ = (sin θ, 0, cos θ):
-
-```
-∫∫_S exp(−ikr' sin θ cos φ') r'dr'dφ'
-  = ∫₀^a r' J₀(kr' sin θ) · 2π dr'   [Jacobi-Anger expansion]
-  = 2π a J₁(ka sin θ)/(k sin θ)
-```
-
-Substituting and simplifying gives (4.2)–(4.3). □
-
-**Definition 4.1 (−6 dB Half-Angle).** The −6 dB beam half-angle θ₆dB is defined by the
-first maximum of D(θ) below 0.5. The half-power point occurs at ka sin θ ≈ 1.616,
-giving the approximate half-angle:
-
-```
-sin θ₋₆dB ≈ 0.257 λ / a                                                   (4.5)
-```
-
-The first null (zero of J₁) is at ka sin θ = 3.832, giving sin θ_null = 0.61 λ/a
-(Rayleigh criterion).
-
-### 4.1.2 Rectangular Element Directivity
-
-For a rectangular element of width w (in the steering plane) and height h:
-
-```
-D(θ, φ) = sinc(kw sin θ / 2) · sinc(kh sin φ / 2)                       (4.6)
-```
-
-where sinc(x) = sin(x)/x. This separable form is used in the `kwave_array` element
-models for linear and matrix arrays in `kwavers::domain::source::transducers::rectangular`.
+> The full Huygens–Fresnel derivation of (4.1), the on-axis near-field pressure, the
+> first-null/half-pressure table, and CMUT directivity are given in **Sources and
+> Transducers §3 (Piston Directivity Function)** — the canonical home for
+> single-element radiation. This chapter uses `D(θ)` as the element factor that
+> multiplies the array factor (§4.2) to form the array beam pattern.
 
 ---
 
@@ -144,7 +94,7 @@ The full radiation pattern of the phased array is
 P(θ) = D(θ) · AF(θ)                                                       (4.10)
 ```
 
-where D(θ) is the single-element directivity (4.3) or (4.6). D(θ) modulates the envelope
+where D(θ) is the single-element directivity (4.1) (Sources §3). D(θ) modulates the envelope
 of AF(θ), attenuating grating lobes that fall in the D(θ) sidelobe structure.
 
 ---
@@ -167,7 +117,7 @@ to arrive simultaneously, element n must be fired earlier by the excess path
 non-negative. □
 
 This is the canonical delay law implemented in
-`kwavers::domain::source::kwave_array::accessors::beamforming`.
+`kwavers_domain::source::kwave_array::accessors::beamforming`.
 
 ### 4.3.2 Lateral Resolution at Focus
 
@@ -240,9 +190,9 @@ to a uniform transmit-uniform receive combination.
 
 ### 4.4.2 kwavers Apodization Implementation
 
-Apodization is implemented in `kwavers::domain::source::transducers::apodization`.
+Apodization is implemented in `kwavers_domain::source::transducers::apodization`.
 The `PhasedArrayConfig` stores weight arrays computed at construction time; the beamforming
-module in `kwavers::domain::source::transducers::phased_array::beamforming` applies them
+module in `kwavers_domain::source::transducers::phased_array::beamforming` applies them
 when computing transmit delays and signals.
 
 ---
@@ -311,47 +261,12 @@ In clinical applications R_xx is regularized: R_xx → R_xx + ε·I with ε ~ 1/
 
 ## 4.6 Bandlimited Interpolation (BLI) Source Rasterization
 
-### 4.6.1 Mathematical Basis
-
-Continuous-domain transducer surfaces must be projected onto the discrete computational
-grid. Nearest-neighbor rasterization introduces error proportional to the grid spacing;
-BLI rasterization, following Wise et al. (2019), achieves spectral accuracy.
-
-**Theorem 4.8 (BLI Rasterization Accuracy — Wise 2019).** For a continuous source
-distribution p_s(r) with highest spatial frequency k_max, the BLI representation on a
-grid with spacing Δx satisfies
-
-```
-‖p_s − p_BLI‖₂ / ‖p_s‖₂ ≤ C (k_max Δx)^(2N_sub)                       (4.17)
-```
-
-where N_sub = ⌈1/(π ε_BLI)⌉ is the stencil half-width and ε_BLI is the BLI tolerance.
-
-*Proof sketch.* The BLI kernel is the ideal (sinc-based) interpolation kernel truncated
-to a window of width 2N_sub. The truncation error in the Fourier domain is bounded by the
-energy in the spectral tail beyond k_max, which decays faster than any polynomial in Δx
-for a band-limited function. □
-
-**Definition 4.5 (BLI Stencil Weight).** For a surface sample at continuous coordinate x,
-the weight at grid index i is
-
-```
-w_i = sinc(π(x_i − x) / Δx)                                             (4.18)
-```
-
-where sinc(u) = sin(u)/u. The 3-D weight is the tensor product w_x · w_y · w_z.
-
-In kwavers, `KWaveArray::map_surface_sample()` in
-`kwavers::domain::source::kwave_array::bli_kernel` implements (4.18) with a window of
-N_sub = ⌈1/(π × 0.05)⌉ = 7 grid cells (default `DISC_BLI_TOLERANCE = 0.05`).
-
-### 4.6.2 Disc Packing for Curved Surfaces
-
-For a curved transducer element (focused bowl, arc, annular ring), the surface is
-discretized into a set of point samples. kwavers uses a hexagonal close-packing of discs
-on the element surface with packing number `DISC_PACKING_NUMBER = 3`, ensuring sub-grid
-coverage without oversampling. Each disc contributes one BLI-stencil call. The element
-area is preserved: the number of discs × disc area ≈ element area.
+Mapping a continuous transducer surface onto the discrete grid with spectral accuracy
+(the Wise 2019 BLI rasterization, with sinc-stencil weight `w_i = sinc(π(x_i−x)/Δx)`
+and hexagonal disc-packing of curved surfaces) is a **source-representation** topic and
+is derived in **Sources and Transducers §6 (BLI Rasterization Accuracy)** and §8
+(Focused Bowl Discretization). It is summarised here only because the same machinery
+maps array-element apertures onto the grid before the beamforming operations below.
 
 ---
 
@@ -392,42 +307,21 @@ dynamic 2-D steering and focusing for volumetric imaging.
 An annular array consists of N concentric rings centered on the acoustic axis. Each ring
 generates a spherically symmetric beam at its own focal depth, enabling dynamic depth
 focusing with electronic switching. The kwavers annular array implementation in
-`kwavers::domain::source::kwave_array` places rings at half-cell-offset grid origins
+`kwavers_domain::source::kwave_array` places rings at half-cell-offset grid origins
 with centering convention matching k-Wave (integer N/2 centering).
 
 ---
 
 ## 4.8 Focused Transducer (Bowl / Arc / Hemispherical)
 
-### 4.8.1 Geometric Focus
-
-**Definition 4.6 (Focal Length and F-Number).** For a spherically focused transducer with
-aperture radius a and radius of curvature R (focal length), the f-number is F# = R/(2a).
-
-**Theorem 4.9 (On-Axis Pressure Enhancement at Focus).** For a continuous spherically
-focused aperture of aperture radius a and focal radius R_f in a lossless medium, the
-on-axis pressure gain at the geometric focus relative to the piston face pressure P₀ is
-
-```
-G = k a² / (2 R_f)  =  π a² / (λ R_f)                                   (4.20)
-```
-
-*Proof.* Every surface element contributes amplitude P₀ dS/(4πR_f) and travels path R_f
-to the focus. Integrating over the aperture area πa² and multiplying by the coherence
-factor k (from the i·k·exp(ikR_f)/R_f prefactor in the Rayleigh integral) gives G in (4.20).
-For HIFU with a = 30 mm, R_f = 60 mm, f = 1 MHz: G = π(0.03)²/(1.5×10⁻³ × 0.06) ≈ 31. □
-
-### 4.8.2 HIFU Focused Bowl
-
-For HIFU applications, a single-element focused bowl of aperture diameter 2a and focal
-length R_f produces a focal pressure:
-
-```
-p_focus = G × P₀ = (πa²/λR_f) × ρ₀c₀u₀                                 (4.21)
-```
-
-Focal gains of 10–50 are typical for therapy transducers. The HIFU bowl in kwavers is
-defined in `kwavers::domain::source::transducers::focused::bowl`.
+A fixed-geometry spherically focused transducer (aperture radius `a`, focal length
+`R_f`, f-number `F# = R_f/(2a)`) produces an on-axis focal pressure gain
+`G = π a²/(λ R_f)`, with focal gains of 10–50 typical for therapy bowls. The full O'Neil
+derivation of `G`, the near-focus axial pressure profile, and the focal-zone dimensions
+are given in **Sources and Transducers §4 (Focusing Gain of a Spherical Bowl)** and its
+grid discretization in §8 (Focused Bowl Discretization) — the canonical home for
+single-transducer focusing. Beamforming uses `G` as the transmit focusing gain; the
+*dynamic* receive focusing that complements it is §4.3 and §4.5.
 
 ---
 

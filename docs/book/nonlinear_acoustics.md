@@ -6,7 +6,7 @@ Khokhlov-Zabolotskaya-Kuznetsov (KZK) equation, and the Burgers equation as a 1-
 Every equation emerges from the same mass-momentum-energy system introduced in Chapter 1,
 retaining second-order perturbation terms that are discarded in the linear theory. Rigorous
 theorems establish harmonic generation, shock formation, and operator-splitting accuracy.
-All derivations connect directly to code in `kwavers::solver::forward::nonlinear`.
+All derivations connect directly to code in `kwavers_solver::forward::nonlinear`.
 
 ---
 
@@ -64,7 +64,7 @@ propagate at c₀ + β·p/(ρ₀c₀) > c₀ while rarefactions propagate at a l
 
 | Medium            | B/A  | β = 1 + B/(2A) | Temperature (°C) | Reference              |
 |-------------------|------|-----------------|-----------------|------------------------|
-| Water             | 5.2  | 3.60            | 20              | Beyer (1960)           |
+| Water             | 5.0  | 3.50            | 20              | Beyer (1960)           |
 | Water             | 5.4  | 3.70            | 37              | Beyer (1960)           |
 | Blood             | 6.1  | 4.05            | 37              | Law et al. (1985)      |
 | Fat               | 9.6  | 5.80            | 37              | Sehgal et al. (1984)   |
@@ -136,9 +136,9 @@ For a thermoviscous Newtonian fluid the diffusivity is
 For water at 20 °C: μ ≈ 1.002 × 10⁻³ Pa·s, μ_B ≈ 3.0 × 10⁻³ Pa·s,
 κ ≈ 0.598 W/(m·K), giving δ_water ≈ 4.33 × 10⁻⁶ m² s⁻¹.
 
-In `kwavers::solver::forward::nonlinear::westervelt`, when power-law absorption
+In `kwavers_solver::forward::nonlinear::westervelt`, when power-law absorption
 (Treeby-Cox, 2010) is enabled the diffusivity term in (3.5) is replaced by fractional
-Laplacian operators L₁, L₂ (see Chapter 2, Theorem 2.8) to reproduce α ∝ f^y. The
+Laplacian operators L₁, L₂ (see Chapter 1, §1.9.3, Theorem 1.7) to reproduce α ∝ f^y. The
 conversion is:
 
 ```
@@ -251,7 +251,7 @@ U(Δz) ≈ D(Δz/2) · A(Δz/2) · N(Δz) · A(Δz/2) · D(Δz/2)               
 
 where D = diffraction sub-step, A = absorption sub-step, N = nonlinearity sub-step.
 This is the canonical form implemented in
-`kwavers::solver::forward::nonlinear::kuznetsov::operator_splitting`.
+`kwavers_solver::forward::nonlinear::kuznetsov::operator_splitting`.
 
 ---
 
@@ -290,7 +290,7 @@ acts slowly compared to (∂/∂z − (1/c₀)∂/∂t). Applying the approximat
 Multiply through by c₀/2 to obtain (3.17). □
 
 **Remark 3.1.** The KZK equation is valid when the diffraction angle θ ≲ 0.3 rad (~17°).
-The `validate_config` function in `kwavers::solver::forward::nonlinear::kzk` enforces this
+The `validate_config` function in `kwavers_solver::forward::nonlinear::kzk` enforces this
 limit: it computes θ_max = arctan(N_x Δx / (2 N_z Δz)) and returns an error if θ_max > 0.3.
 
 ### 3.4.2 Frequency-Domain KZK (Aanonsen et al. 1984)
@@ -305,7 +305,7 @@ dP_n/dz = (i c₀/(4π n f₀))∇⊥²P_n
 
 where α_n = α(n f₀) is the frequency-dependent absorption coefficient and the sum
 implements discrete harmonic coupling. This formulation is implemented in
-`kwavers::solver::forward::nonlinear::kzk::harmonic_tracking` for tracking individual
+`kwavers_solver::forward::nonlinear::kzk::harmonic_tracking` for tracking individual
 harmonic amplitudes.
 
 ---
@@ -444,6 +444,18 @@ Integrating: P₂(z) ∝ βω₀P₁²z/(ρ₀c₀³).  Since k₀ = ω₀/c₀ 
 f₀ = ω₀/(2π), the proportionality constant gives P₂ ∝ βf₀²P₀²z/(ρ₀c₀⁴),
 which is (3.27). □
 
+![Fubini harmonic spectra vs normalised distance](figures/ch03/fig02_harmonic_spectra_sigma.png)
+
+**Figure 3.1.** Fubini harmonic amplitudes |Pₙ|/P₀ versus normalised distance σ = z/z_s
+for n = 1–5 (lossless plane wave). The fundamental depletes as energy cascades into the
+harmonics — the exact (pre-shock) form of Corollary 3.3.
+
+![Second-harmonic growth: Fubini vs quasi-linear](figures/ch03/fig03_second_harmonic_growth.png)
+
+**Figure 3.2.** Second-harmonic growth P₂/P₀: the exact Fubini J₂(2σ)/σ versus the
+quasi-linear tangent σ/2 (Corollary 3.4 / Theorem 3.8). They agree near the source and
+diverge as σ → 1, where the exact series saturates.
+
 ---
 
 ## 3.7 Shock Formation
@@ -484,9 +496,19 @@ where [·] denotes the jump across the discontinuity.
 | Entropy production  | Zero             | Positive (irreversible) |
 
 **Shock-capturing in kwavers.** The `ShockCapture` struct in
-`kwavers::solver::forward::nonlinear::kzk::shock_capturing` detects the onset of
+`kwavers_solver::forward::nonlinear::kzk::shock_capturing` detects the onset of
 gradient blowup by monitoring ∂p/∂τ and applying artificial viscosity proportional to
 |∂p/∂τ| Δτ when the gradient-to-amplitude ratio exceeds the detection threshold.
+
+![Waveform evolution sinusoid to sawtooth](figures/ch03/fig01_waveform_evolution.png)
+
+**Figure 3.3.** Fubini time-domain waveform at σ = 0, 0.25, 0.5, 0.75, 0.99: nonlinear
+steepening carries an initial sinusoid toward the sawtooth shock at σ → 1.
+
+![Shock distance for tissues](figures/ch03/fig04_shock_distance_tissue.png)
+
+**Figure 3.4.** Shock-formation distance z_s = ρ₀c₀³/(βω₀P₀) (3.28) for seven tissues at
+three source amplitudes; higher β and source pressure shorten z_s.
 
 ---
 
@@ -509,8 +531,7 @@ gives the absorption coefficient. □
 
 The quadratic frequency dependence (α ∝ ω²) matches viscothermal theory but not
 biological tissue, where α ∝ f^y with y ≈ 1.0–1.5 (Duck 1990). The power-law model
-(Treeby-Cox 2010) and fractional-Laplacian operators resolve this discrepancy (see
-Chapter 2, §2.9 and Theorem 2.8).
+(Treeby-Cox 2010) and fractional-Laplacian operators resolve this discrepancy (see Chapter 1, §1.9.3, Theorem 1.7).
 
 ### 3.8.2 Acoustic Diffusivity Values
 
@@ -526,6 +547,12 @@ In kwavers:
 - Default: 4.5 × 10⁻⁶ m² s⁻¹ (water at 20 °C).
 - For power-law tissue absorption the Westervelt/Kuznetsov diffusivity term is replaced
   by fractional Laplacian operators via (3.9).
+
+![Absorption models: Stokes-Kirchhoff vs power-law](figures/ch03/fig05_absorption_models.png)
+
+**Figure 3.5.** Classical Stokes–Kirchhoff absorption α ∝ ω² (y = 2) versus the tissue
+power law α ∝ fʸ (y ≈ 1–1.5); the discrepancy at MHz frequencies motivates the
+fractional-Laplacian model (Ch1 §1.9.3).
 
 ---
 
@@ -579,8 +606,15 @@ At z = z_s/4 = 38.5 mm, the Fubini solution predicts σ = 0.25:
 ### 3.9.3 Parity with k-Wave
 
 For end-to-end validation, the Python comparison scripts in
-`pykwavers/examples/book/` use `k-wave-python` to generate reference fields and
+`crates/kwavers-python/examples/book/` use `k-wave-python` to generate reference fields and
 compare against kwavers outputs with Pearson ρ ≥ 0.99 and L2 < 2% as pass criteria.
+
+![kwavers PSTD Westervelt solver vs Fubini](figures/ch03/fig06_westervelt_pstd_validation.png)
+
+**Figure 3.6.** Genuine solver validation: the kwavers PSTD Westervelt solver
+(`kwavers_solver::forward::nonlinear::westervelt`) versus the analytic Fubini harmonic
+amplitudes for water at f₀ = 1 MHz, P₀ = 1 MPa — maximum relative error 2.0% across the
+first three harmonics, confirming the nonlinear-propagation implementation.
 
 ---
 
@@ -645,10 +679,10 @@ Above MI ~ 1.9 inertial cavitation (Chapter 7) becomes likely.
 
 | Equation | kwavers module | Config struct | Key computation |
 |----------|---------------|---------------|-----------------|
-| Westervelt FDTD | `solver::forward::nonlinear::westervelt` | `WesterveltFdtdConfig` | `update.rs::step()` |
-| Westervelt spectral | `solver::forward::nonlinear::westervelt_spectral` | (WesterveltSpectral) | FFT Laplacian |
-| Kuznetsov FDTD | `solver::forward::nonlinear::kuznetsov` | `KuznetsovConfig` | `nonlinear::compute_nonlinear_term_workspace()` |
-| KZK | `solver::forward::nonlinear::kzk` | `KZKConfig` | `solver::KZKSolver::step_z()` |
+| Westervelt FDTD | `kwavers_solver::forward::nonlinear::westervelt` | `WesterveltFdtdConfig` | `update.rs::step()` |
+| Westervelt spectral | `kwavers_solver::forward::nonlinear::westervelt_spectral` | (WesterveltSpectral) | FFT Laplacian |
+| Kuznetsov FDTD | `kwavers_solver::forward::nonlinear::kuznetsov` | `KuznetsovConfig` | `nonlinear::compute_nonlinear_term_workspace()` |
+| KZK | `kwavers_solver::forward::nonlinear::kzk` | `KZKConfig` | `solver::KZKSolver::step_z()` |
 | Harmonic tracking | `kzk::harmonic_tracking` | `HarmonicConfig` | `HarmonicTracker::update()` |
 | Shock capturing | `kzk::shock_capturing` | `ShockCapturingConfig` | `ShockCapture::apply()` |
 | Operator splitting | `kuznetsov::operator_splitting` | — | Strang split (3.16) |

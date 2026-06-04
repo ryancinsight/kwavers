@@ -145,3 +145,30 @@ pub fn histotripsy_tissue_properties(tissue: String) -> PyResult<(f64, f64, f64,
         p.threshold_sigma_pa,
     ))
 }
+
+/// Thermal/acoustic tissue properties from the kwavers-domain tissue database,
+/// for shock-heating / boiling-histotripsy models.
+///
+/// Args:
+///     tissue: Tissue name string.
+///
+/// Returns:
+///     (specific_heat_J_per_kgK, thermal_conductivity_W_per_mK, density_kg_m3).
+#[pyfunction]
+#[pyo3(signature = (tissue,))]
+pub fn tissue_thermal_properties(tissue: String) -> PyResult<(f64, f64, f64)> {
+    use kwavers_domain::medium::absorption::{
+        tissue_thermal_properties as thermal, AbsorptionTissueType as T,
+    };
+    let t = match tissue.to_ascii_lowercase().as_str() {
+        "liver" => T::Liver,
+        "kidney" => T::Kidney,
+        "brain" => T::Brain,
+        "muscle" => T::Muscle,
+        "fat" => T::Fat,
+        "blood" => T::Blood,
+        "water" => T::Water,
+        _ => T::SoftTissue,
+    };
+    Ok(thermal(t))
+}

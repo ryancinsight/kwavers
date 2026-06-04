@@ -294,96 +294,36 @@ Implemented in `kwavers::clinical::imaging::functional_ultrasound::ulm`.
 
 ## 5.5 Photoacoustic Imaging
 
-### 5.5.1 Photoacoustic Wave Generation
+Photoacoustic (PA) imaging forms an ultrasound image from optical absorption: a
+nanosecond laser pulse absorbed by chromophores (chiefly hemoglobin) deposits, under
+thermal and stress confinement, an initial pressure `p₀(r) = Γ μ_a(r) Φ(r)` — where
+Γ = βc₀²/C_p is the Grüneisen parameter, μ_a the optical absorption coefficient, and Φ
+the local fluence. Reconstructing the acoustic field recovers `p₀(r)`
+(spherical-Radon / universal back-projection or time-reversal), and multi-wavelength
+acquisition unmixes oxy/deoxy-hemoglobin to map blood oxygen saturation `sO₂`.
 
-**Theorem 5.7 (Photoacoustic Wave Equation).** Under thermal confinement (τ_pulse ≪ τ_th)
-and stress confinement (τ_pulse ≪ τ_s), optical absorption generates an initial pressure:
-
-```
-p₀(r) = Γ μ_a(r) Φ(r)                                                     (5.18)
-```
-
-where Γ = β c₀²/C_p is the Grüneisen parameter (dimensionless), μ_a(r) is the optical
-absorption coefficient [m⁻¹], and Φ(r) is the local fluence [J m⁻²].
-
-*Proof.* Under stress confinement, the thermoelastic stress is p₀ = −K β ΔT where K is
-the bulk modulus, β is the thermal expansion coefficient, and ΔT = μ_a Φ / (ρ C_p).
-Substituting K = ρ c₀² and Γ = β K/(ρ C_p) = β c₀²/C_p gives (5.18). □
-
-**Definition 5.7 (Grüneisen Parameter).** Γ = β c₀²/C_p, with β [K⁻¹] the thermal
-expansion coefficient, c₀ [m/s] the sound speed, C_p [J/(kg·K)] the specific heat capacity.
-
-| Tissue | Γ | Notes |
-|--------|---|-------|
-| Water (37°C) | 0.12 | Baseline |
-| Whole blood | 0.18 | Hemoglobin-dominant |
-| Fat | 0.70 | Elevated β |
-| Breast tissue | 0.15 | Mixed |
-
-### 5.5.2 Reconstruction
-
-The received photoacoustic signal at sensor position r_s is:
-
-```
-p(r_s, t) = ∂/∂t [t/(4πc₀²) ∫_{|r−r_s|=c₀t} p₀(r) dΩ]                (5.19)
-```
-
-(spherical Radon transform). Time-reversal reconstruction recovers p₀(r) by running the
-acoustic propagation backward in time, implemented in
-`kwavers::clinical::imaging::reconstruction::acoustic_projection`.
-
-### 5.5.3 Spectroscopic PA Imaging
-
-The absorption spectrum of hemoglobin (HbO₂ / Hb) enables blood oxygen saturation
-measurement. At two wavelengths λ₁, λ₂:
-
-```
-[μ_a(λ₁)]   [ε_HbO₂(λ₁)  ε_Hb(λ₁)] [c_HbO₂]
-[μ_a(λ₂)] = [ε_HbO₂(λ₂)  ε_Hb(λ₂)] [c_Hb  ]                           (5.20)
-```
-
-Solving this 2×2 system via Tikhonov regularization gives c_HbO₂ and c_Hb, hence
-sO₂ = c_HbO₂/(c_HbO₂ + c_Hb). Implemented in
-`kwavers::clinical::imaging::spectroscopy::solvers::tikhonov`.
+The thermoelastic derivation, reconstruction operators, and spectroscopic unmixing are
+developed in full in the dedicated **Photoacoustic Imaging** chapter — the canonical home.
+kwavers models PA generation in `kwavers_diagnostics::photoacoustic` and reconstructs in
+`kwavers_diagnostics::reconstruction::acoustic_projection`.
 
 ---
 
 ## 5.6 Shear-Wave Elastography
 
-### 5.6.1 Shear Wave Generation and Speed
+Elastography maps tissue stiffness. An acoustic radiation force impulse (ARFI, body force
+`F = 2αI/c₀`) displaces tissue at the focus and launches a shear wave whose phase speed
+gives the shear modulus `μ = ρ c_s²` (Young's modulus `E ≈ 3μ` for nearly-incompressible
+tissue) — e.g. normal liver `c_s ≈ 1` m/s versus advanced cirrhosis `≈ 3` m/s, and a
+20–200 kPa stiffness contrast for breast cancer. Ultrafast (plane-wave) imaging tracks the
+shear-wave propagation to map `c_s(r)`.
 
-**Theorem 5.8 (Shear Wave Speed and Stiffness).** In a linear elastic incompressible medium
-the shear wave phase velocity c_s and Young's modulus E are related by:
-
-```
-c_s = √(μ/ρ)    E = 3μ    G = μ                                           (5.21)
-```
-
-where μ is the shear modulus, G = μ the shear modulus, and E = 3G for incompressible tissue.
-
-*Proof.* In an incompressible Kelvin-Voigt viscoelastic solid, the shear wave dispersion
-relation is k² = ρω²/(μ + iωη) where η is the shear viscosity. In the purely elastic
-limit (η = 0): c_s = ω/k = √(μ/ρ). □
-
-| Tissue type | Shear modulus μ (kPa) | c_s (m/s) | Stiffness class |
-|-------------|----------------------|-----------|-----------------|
-| Normal liver | 0.8–2 | 0.9–1.4 | Soft |
-| Early fibrosis | 2–5 | 1.4–2.2 | Moderate |
-| Advanced cirrhosis | 5–15 | 2.2–3.9 | Stiff |
-| Breast fat | 0.5–1.5 | 0.7–1.2 | Very soft |
-| Breast cancer | 20–200 | 4.5–14 | Hard |
-
-### 5.6.2 Acoustic Radiation Force Impulse (ARFI)
-
-High-intensity focused ultrasound creates an acoustic radiation force F = 2α I/c₀ [N/m³]
-that displaces tissue axially. The subsequent shear wave propagation is tracked with
-ultrafast imaging. The peak displacement at the focus is
-
-```
-u_peak = F Δt / (2ρ c_s)   ≈ α I₀ Δt / (ρ c₀ c_s)                      (5.22)
-```
-
-where Δt is the push pulse duration (~1 ms) and I₀ is the focal intensity.
+The full elasticity theory (Helmholtz P/S decomposition, shear/strain/MR elastography,
+viscoelastic models, and the inversion kernels) is in the dedicated **Elastography**
+chapter — the canonical home. kwavers implements the forward shear-wave solver in
+`kwavers_solver::forward::elastic::swe`, stiffness inversion in
+`kwavers_solver::inverse::elastography`, and tissue mechanics in
+`kwavers_domain::imaging::ultrasound::elastography`.
 
 ---
 

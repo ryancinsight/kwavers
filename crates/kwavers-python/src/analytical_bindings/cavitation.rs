@@ -1,7 +1,7 @@
 //! PyO3 bindings for `kwavers_physics::analytical::cavitation`.
 
 use kwavers_physics::analytical::cavitation;
-use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1, PyReadonlyArray2};
+use numpy::{IntoPyArray, PyArray1, PyArray2, PyReadonlyArray1, PyReadonlyArray2};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -598,6 +598,330 @@ pub fn received_signal_fraction(
 #[pyo3(signature = (z1, z2))]
 pub fn pressure_transmission_coefficient(z1: f64, z2: f64) -> PyResult<f64> {
     Ok(kwavers_physics::analytical::cavitation::pressure_transmission_coefficient(z1, z2))
+}
+
+/// Local peak-pressure enhancement `1 + |（z2−z1)/(z2+z1)|` at an acoustic interface
+/// between impedances `z1` and `z2` [Pa·s/m] — the incident+reflected superposition
+/// that makes cavitation nucleate preferentially at tissue boundaries (mild for
+/// soft-tissue contrasts, approaching 2 against a gas-filled lacuna).
+#[pyfunction]
+#[pyo3(signature = (z1, z2))]
+pub fn interface_pressure_enhancement(z1: f64, z2: f64) -> PyResult<f64> {
+    Ok(kwavers_physics::analytical::cavitation::interface_pressure_enhancement(z1, z2))
+}
+
+/// Cavitation-susceptibility multiplier of already-fractionated tissue ("lesion
+/// memory"): `S = 1 + k_immediate·f + k_lacuna·f·(1 − exp(−t_since/τ_lacuna))`, with
+/// `f` the local fractionation, `time_since_lesion_s` the elapsed time, and
+/// `tau_lacuna_s` the gas-evolution (lacuna formation) time constant. The delayed
+/// lacuna term is negligible during the first procedure (`t ≪ τ`) and saturates on
+/// re-treatment (`t ≫ τ`).
+///
+/// Args:
+///     fractionation, time_since_lesion_s, tau_lacuna_s, k_immediate, k_lacuna.
+#[pyfunction]
+#[pyo3(signature = (fractionation, time_since_lesion_s, tau_lacuna_s, k_immediate=0.5, k_lacuna=4.0))]
+pub fn lacuna_cavitation_susceptibility(
+    fractionation: f64,
+    time_since_lesion_s: f64,
+    tau_lacuna_s: f64,
+    k_immediate: f64,
+    k_lacuna: f64,
+) -> PyResult<f64> {
+    Ok(
+        kwavers_physics::analytical::cavitation::lacuna_cavitation_susceptibility(
+            fractionation,
+            time_since_lesion_s,
+            tau_lacuna_s,
+            k_immediate,
+            k_lacuna,
+        ),
+    )
+}
+
+/// Histotripsy mechanical cell-kill fraction from cumulative cavitation dose via the
+/// Weibull survival dose–response `kill = 1 − exp(−(dose/d0)^k)` (the cumulative
+/// cell-survival form underlying radiobiology's biologically-effective dose, but the
+/// mechanism here is mechanical fractionation). `d0` = characteristic dose (≈63 % kill),
+/// `weibull_k` > 1 the threshold/shoulder exponent.
+#[pyfunction]
+#[pyo3(signature = (dose, d0, weibull_k=2.5))]
+pub fn histotripsy_kill_fraction(dose: f64, d0: f64, weibull_k: f64) -> PyResult<f64> {
+    Ok(kwavers_physics::analytical::cavitation::histotripsy_kill_fraction(dose, d0, weibull_k))
+}
+
+/// Lethal cumulative cavitation dose LD_x for cell-kill `fraction` (LD50 ⇒ 0.5):
+/// `D = d0·(−ln(1−fraction))^(1/k)`. Inverse of `histotripsy_kill_fraction`.
+#[pyfunction]
+#[pyo3(signature = (fraction, d0, weibull_k=2.5))]
+pub fn histotripsy_lethal_dose(fraction: f64, d0: f64, weibull_k: f64) -> PyResult<f64> {
+    Ok(kwavers_physics::analytical::cavitation::histotripsy_lethal_dose(fraction, d0, weibull_k))
+}
+
+/// Lateral semi-axis that keeps an anisotropic focal ellipsoid within a clearance
+/// constraint.
+#[pyfunction]
+#[pyo3(signature = (natural_lateral_radius_m, clearance_m, axial_to_lateral_ratio))]
+pub fn clipped_lateral_radius_for_clearance(
+    natural_lateral_radius_m: f64,
+    clearance_m: f64,
+    axial_to_lateral_ratio: f64,
+) -> PyResult<f64> {
+    Ok(
+        kwavers_physics::analytical::cavitation::clipped_lateral_radius_for_clearance(
+            natural_lateral_radius_m,
+            clearance_m,
+            axial_to_lateral_ratio,
+        ),
+    )
+}
+
+/// Check whether a beam-axis elongated focal ellipsoid remains inside an allowed mask.
+#[pyfunction]
+#[pyo3(signature = (allowed_mask, nx, ny, nz, center_x, center_y, center_z, lateral_radius_m, axial_radius_m, dx_m))]
+#[allow(clippy::too_many_arguments)]
+pub fn ellipsoid_respects_allowed_mask(
+    allowed_mask: PyReadonlyArray1<bool>,
+    nx: usize,
+    ny: usize,
+    nz: usize,
+    center_x: usize,
+    center_y: usize,
+    center_z: usize,
+    lateral_radius_m: f64,
+    axial_radius_m: f64,
+    dx_m: f64,
+) -> PyResult<bool> {
+    let mask = allowed_mask
+        .as_slice()
+        .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+    Ok(
+        kwavers_physics::analytical::cavitation::ellipsoid_respects_allowed_mask(
+            mask,
+            nx,
+            ny,
+            nz,
+            center_x,
+            center_y,
+            center_z,
+            lateral_radius_m,
+            axial_radius_m,
+            dx_m,
+        ),
+    )
+}
+
+/// Apply receive-path and tissue-state scaling to a passive cavitation PSD.
+#[pyfunction]
+#[pyo3(signature = (psd, receive_fraction, susceptibility))]
+pub fn scale_measured_emission_spectrum(
+    py: Python<'_>,
+    psd: PyReadonlyArray1<f64>,
+    receive_fraction: f64,
+    susceptibility: f64,
+) -> PyResult<Py<PyArray1<f64>>> {
+    let p = psd
+        .as_slice()
+        .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+    let out = kwavers_physics::analytical::cavitation::scale_measured_emission_spectrum(
+        p,
+        receive_fraction,
+        susceptibility,
+    );
+    Ok(out.into_pyarray(py).unbind())
+}
+
+/// Convert delivered cumulative histotripsy dose samples to kill fractions.
+#[pyfunction]
+#[pyo3(signature = (dose, d0, weibull_k))]
+pub fn delivered_histotripsy_progress(
+    py: Python<'_>,
+    dose: PyReadonlyArray1<f64>,
+    d0: f64,
+    weibull_k: f64,
+) -> PyResult<Py<PyArray1<f64>>> {
+    let d = dose
+        .as_slice()
+        .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+    let out =
+        kwavers_physics::analytical::cavitation::delivered_histotripsy_progress(d, d0, weibull_k);
+    Ok(out.into_pyarray(py).unbind())
+}
+
+/// Size boiling-histotripsy lesion and pulse count from a resolved pressure
+/// profile. Returns `(pulses, lateral_radius_m, axial_radius_m, pulse_ms)`, or
+/// `None` when the focus does not boil within the pulse limit.
+#[pyfunction]
+#[pyo3(signature = (
+    radius_m, normalized_pressure, focal_pressure_pa, focal_depth_m, freq_hz,
+    c_m_s, rho_kg_m3, beta_nonlinearity, alpha_np_m, heat_capacity_j_kg_k,
+    delta_t_k, tau_max_s, axial_to_lateral_ratio, clearance_m, coverage_target
+))]
+#[allow(clippy::too_many_arguments)]
+pub fn boiling_lesion_from_pressure_profile(
+    radius_m: PyReadonlyArray1<f64>,
+    normalized_pressure: PyReadonlyArray1<f64>,
+    focal_pressure_pa: f64,
+    focal_depth_m: f64,
+    freq_hz: f64,
+    c_m_s: f64,
+    rho_kg_m3: f64,
+    beta_nonlinearity: f64,
+    alpha_np_m: f64,
+    heat_capacity_j_kg_k: f64,
+    delta_t_k: f64,
+    tau_max_s: f64,
+    axial_to_lateral_ratio: f64,
+    clearance_m: f64,
+    coverage_target: f64,
+) -> PyResult<Option<(usize, f64, f64, f64)>> {
+    let r = radius_m
+        .as_slice()
+        .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+    let b = normalized_pressure
+        .as_slice()
+        .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+    Ok(
+        kwavers_physics::analytical::cavitation::boiling_lesion_from_pressure_profile(
+            r,
+            b,
+            focal_pressure_pa,
+            focal_depth_m,
+            freq_hz,
+            c_m_s,
+            rho_kg_m3,
+            beta_nonlinearity,
+            alpha_np_m,
+            heat_capacity_j_kg_k,
+            delta_t_k,
+            tau_max_s,
+            axial_to_lateral_ratio,
+            clearance_m,
+            coverage_target,
+        )
+        .map(|p| (p.pulses, p.lateral_radius_m, p.axial_radius_m, p.pulse_ms)),
+    )
+}
+
+/// Boiling-onset time samples from normalized pressure samples.
+#[pyfunction]
+#[pyo3(signature = (
+    normalized_pressure, focal_pressure_pa, focal_depth_m, freq_hz, c_m_s,
+    rho_kg_m3, beta_nonlinearity, alpha_np_m, heat_capacity_j_kg_k, delta_t_k
+))]
+#[allow(clippy::too_many_arguments)]
+pub fn boiling_time_profile_from_pressure(
+    py: Python<'_>,
+    normalized_pressure: PyReadonlyArray1<f64>,
+    focal_pressure_pa: f64,
+    focal_depth_m: f64,
+    freq_hz: f64,
+    c_m_s: f64,
+    rho_kg_m3: f64,
+    beta_nonlinearity: f64,
+    alpha_np_m: f64,
+    heat_capacity_j_kg_k: f64,
+    delta_t_k: f64,
+) -> PyResult<Py<PyArray1<f64>>> {
+    let b = normalized_pressure
+        .as_slice()
+        .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+    let out = py.detach(|| {
+        kwavers_physics::analytical::cavitation::boiling_time_profile_from_pressure(
+            b,
+            focal_pressure_pa,
+            focal_depth_m,
+            freq_hz,
+            c_m_s,
+            rho_kg_m3,
+            beta_nonlinearity,
+            alpha_np_m,
+            heat_capacity_j_kg_k,
+            delta_t_k,
+        )
+    });
+    Ok(out.into_pyarray(py).unbind())
+}
+
+/// Propagate one cavitation source PSD to passive receiver-channel PSDs.
+#[pyfunction]
+#[pyo3(signature = (source_psd, source_xyz, receiver_xyz, alpha_np_m))]
+pub fn receiver_channel_psd_from_source(
+    py: Python<'_>,
+    source_psd: PyReadonlyArray1<f64>,
+    source_xyz: PyReadonlyArray1<f64>,
+    receiver_xyz: PyReadonlyArray2<f64>,
+    alpha_np_m: f64,
+) -> PyResult<Py<PyArray2<f64>>> {
+    let psd = source_psd
+        .as_slice()
+        .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+    let src = source_xyz
+        .as_slice()
+        .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+    let recv = receiver_xyz.as_array();
+    if src.len() != 3 || recv.ncols() != 3 {
+        return Err(PyRuntimeError::new_err(
+            "source_xyz must have length 3 and receiver_xyz shape (n, 3)",
+        ));
+    }
+    let recv_flat: Vec<f64> = recv.iter().copied().collect();
+    let flat = py.detach(|| {
+        kwavers_physics::analytical::cavitation::receiver_channel_psd_from_source(
+            psd,
+            [src[0], src[1], src[2]],
+            &recv_flat,
+            alpha_np_m,
+        )
+    });
+    let arr = ndarray::Array2::from_shape_vec((recv.nrows(), psd.len()), flat)
+        .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+    Ok(arr.into_pyarray(py).unbind())
+}
+
+/// Sum receiver-channel PSDs into the measured array spectrum.
+#[pyfunction]
+#[pyo3(signature = (channel_psd))]
+pub fn integrate_channel_psd(
+    py: Python<'_>,
+    channel_psd: PyReadonlyArray2<f64>,
+) -> PyResult<Py<PyArray1<f64>>> {
+    let arr = channel_psd.as_array();
+    let flat: Vec<f64> = arr.iter().copied().collect();
+    let out = py.detach(|| {
+        kwavers_physics::analytical::cavitation::integrate_channel_psd(
+            &flat,
+            arr.nrows(),
+            arr.ncols(),
+        )
+    });
+    Ok(out.into_pyarray(py).unbind())
+}
+
+/// Lacuna gas void fraction in fractionated tissue from first-order gas-evolution
+/// growth: `β = β_max·f·(1 − exp(−t_since/τ_lacuna))`. Feeds the Wood/Commander–
+/// Prosperetti medium coupling so the growing lacuna geometry shields and aberrates
+/// subsequent pulses (the persistent gas cavity, distinct from the fast residual
+/// bubble-cloud dissolution).
+///
+/// Args:
+///     fractionation, time_since_lesion_s, tau_lacuna_s, beta_max.
+#[pyfunction]
+#[pyo3(signature = (fractionation, time_since_lesion_s, tau_lacuna_s, beta_max))]
+pub fn lacuna_void_fraction(
+    fractionation: f64,
+    time_since_lesion_s: f64,
+    tau_lacuna_s: f64,
+    beta_max: f64,
+) -> PyResult<f64> {
+    Ok(
+        kwavers_physics::analytical::cavitation::lacuna_void_fraction(
+            fractionation,
+            time_since_lesion_s,
+            tau_lacuna_s,
+            beta_max,
+        ),
+    )
 }
 
 /// Pulse count needed to grow a histotripsy lesion to `target_radius_m` via the

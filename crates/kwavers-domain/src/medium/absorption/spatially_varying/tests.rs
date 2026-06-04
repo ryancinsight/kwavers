@@ -85,7 +85,8 @@ fn test_validation() -> KwaversResult<()> {
 
     let mut bad_alpha = Array3::from_elem((3, 3, 3), 0.5);
     bad_alpha[[1, 1, 1]] = -0.1;
-    let bad = SpatiallyVaryingAbsorption::new(bad_alpha, Array3::from_elem((3, 3, 3), 1.0), MHZ_TO_HZ);
+    let bad =
+        SpatiallyVaryingAbsorption::new(bad_alpha, Array3::from_elem((3, 3, 3), 1.0), MHZ_TO_HZ);
     assert!(bad.is_err());
 
     Ok(())

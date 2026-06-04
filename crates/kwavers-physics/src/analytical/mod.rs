@@ -30,6 +30,7 @@ pub mod elastography;
 pub mod imaging;
 pub mod inverse;
 pub mod photoacoustics;
+pub mod pulse_echo;
 pub mod rtm;
 pub mod safety;
 pub mod skull;

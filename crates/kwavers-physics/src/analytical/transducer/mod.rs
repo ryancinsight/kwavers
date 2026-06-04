@@ -15,10 +15,11 @@ pub use array_factor::{
 };
 pub use beam::{
     beam_pattern_2d, beam_pattern_2d_magnitude, circular_piston_onaxis, delay_law_focus_2d,
-    delay_law_steer_2d, focused_bowl_onaxis, linear_array_aperiodic_positions,
+    delay_law_focus_3d, delay_law_steer_2d, focused_bowl_element_positions_3d, focused_bowl_onaxis,
+    focused_bowl_steered_pressure_profile, linear_array_aperiodic_positions,
     linear_array_positions, multi_focus_delay_laws_2d, multi_focus_field_magnitude_2d,
-    near_field_distance, safe_steering_halfangle, steered_beam_pattern_1d,
-    steering_focus_point, steering_grating_lobe_ratio_1d,
+    near_field_distance, safe_steering_halfangle, steered_aperture_pressure_3d,
+    steered_beam_pattern_1d, steering_focus_point, steering_grating_lobe_ratio_1d,
 };
 pub use interpolation::bli_stencil_weights;
 pub use steering::electronic_steering_efficiency;
@@ -139,9 +140,7 @@ mod tests {
         let (ex, ez) = linear_array_positions(8, 0.5e-3);
         let c = SOUND_SPEED_WATER_SIM;
         let n_spots = 6;
-        let spot_x: Vec<f64> = (0..n_spots)
-            .map(|j| (j as f64 - 2.5) * 4.0e-3)
-            .collect();
+        let spot_x: Vec<f64> = (0..n_spots).map(|j| (j as f64 - 2.5) * 4.0e-3).collect();
         let spot_z = vec![40.0e-3; n_spots];
         let d = multi_focus_delay_laws_2d(&ex, &ez, &spot_x, &spot_z, c);
         assert_eq!(d.len(), n_spots * ex.len());
@@ -152,6 +151,70 @@ mod tests {
             let rmin = row.iter().cloned().fold(f64::INFINITY, f64::min);
             assert!(rmin.abs() < 1e-15, "row {j} min delay = {rmin}, expected 0");
         }
+    }
+
+    #[test]
+    fn focused_bowl_elements_lie_on_spherical_surface() {
+        let focus = 30.0e-3;
+        let roc = 30.0e-3;
+        let elem = focused_bowl_element_positions_3d(3, 8, 10.0e-3, roc, focus);
+        assert!(!elem.is_empty());
+        for p in elem.chunks_exact(3) {
+            let dx = p[0] - focus;
+            let r = (dx * dx + p[1] * p[1] + p[2] * p[2]).sqrt();
+            assert!((r - roc).abs() < 1.0e-12, "surface radius {r}");
+        }
+    }
+
+    #[test]
+    fn steered_aperture_pressure_is_focus_normalized() {
+        let elem = focused_bowl_element_positions_3d(4, 12, 10.0e-3, 30.0e-3, 30.0e-3);
+        let focus = [30.0e-3, 1.0e-3, -0.5e-3];
+        let delays = delay_law_focus_3d(&elem, focus, SOUND_SPEED_WATER_SIM);
+        let weights = vec![1.0; delays.len()];
+        let points = vec![
+            focus[0],
+            focus[1],
+            focus[2],
+            focus[0],
+            focus[1] + 3.0e-3,
+            focus[2],
+        ];
+        let p = steered_aperture_pressure_3d(
+            &points,
+            &elem,
+            &weights,
+            &delays,
+            focus,
+            1.0 * MHZ_TO_HZ,
+            SOUND_SPEED_WATER_SIM,
+            0.0,
+            2.5e6,
+        );
+        assert_eq!(p.len(), 2);
+        assert!((p[0] - 2.5e6).abs() / 2.5e6 < 1.0e-12);
+        assert!(p[1].is_finite() && p[1] >= 0.0);
+    }
+
+    #[test]
+    fn focused_bowl_profile_is_source_assembled_in_rust() {
+        let r = [0.0, 1.0e-3, 2.0e-3];
+        let profile = focused_bowl_steered_pressure_profile(
+            &r,
+            [30.0e-3, 0.0, 0.0],
+            2.0e6,
+            4,
+            12,
+            10.0e-3,
+            30.0e-3,
+            30.0e-3,
+            1.0 * MHZ_TO_HZ,
+            SOUND_SPEED_WATER_SIM,
+            0.0,
+        );
+        assert_eq!(profile.len(), r.len());
+        assert!((profile[0] - 1.0).abs() < 1.0e-12);
+        assert!(profile.iter().all(|v| v.is_finite() && *v >= 0.0));
     }
 
     #[test]
@@ -169,9 +232,8 @@ mod tests {
         // Evaluation grid: include the three sub-spots and two midpoints.
         let x_arr = vec![-6.0e-3, -3.0e-3, 0.0, 3.0e-3, 6.0e-3];
         let z_arr = vec![40.0e-3];
-        let mag = multi_focus_field_magnitude_2d(
-            &x_arr, &z_arr, &ex, &ez, &spot_x, &spot_z, &amp, f, c,
-        );
+        let mag =
+            multi_focus_field_magnitude_2d(&x_arr, &z_arr, &ex, &ez, &spot_x, &spot_z, &amp, f, c);
         // Layout is row-major NX×NZ with NZ=1 → mag[ix].
         let at_spot_left = mag[0];
         let at_mid_left = mag[1];
@@ -199,7 +261,10 @@ mod tests {
         assert_eq!(xa.len(), n);
         // Endpoints anchored → identical aperture.
         assert!((xa[0] - xu[0]).abs() < 1e-12, "left endpoint moved");
-        assert!((xa[n - 1] - xu[n - 1]).abs() < 1e-12, "right endpoint moved");
+        assert!(
+            (xa[n - 1] - xu[n - 1]).abs() < 1e-12,
+            "right endpoint moved"
+        );
         // Spacing is uniform for the periodic array, non-uniform here.
         let gaps: Vec<f64> = xa.windows(2).map(|w| w[1] - w[0]).collect();
         let mean = gaps.iter().sum::<f64>() / gaps.len() as f64;
@@ -227,8 +292,15 @@ mod tests {
         let peak = pat.iter().cloned().fold(0.0_f64, f64::max);
         // Broadside sample (centre) is the global peak ≈ 1.
         let centre = nobs / 2;
-        assert!((pat[centre] - peak).abs() < 1e-9, "steer angle not the peak");
-        assert!((pat[centre] - 1.0).abs() < 1e-6, "peak != 1: {}", pat[centre]);
+        assert!(
+            (pat[centre] - peak).abs() < 1e-9,
+            "steer angle not the peak"
+        );
+        assert!(
+            (pat[centre] - 1.0).abs() < 1e-6,
+            "peak != 1: {}",
+            pat[centre]
+        );
     }
 
     #[test]
@@ -255,10 +327,8 @@ mod tests {
         let steer = vec![30.0_f64.to_radians()];
         let halfwidth = 5.0_f64.to_radians();
 
-        let glr_u =
-            steering_grating_lobe_ratio_1d(&xu, &steer, &obs, k, ka, halfwidth)[0];
-        let glr_a =
-            steering_grating_lobe_ratio_1d(&xa, &steer, &obs, k, ka, halfwidth)[0];
+        let glr_u = steering_grating_lobe_ratio_1d(&xu, &steer, &obs, k, ka, halfwidth)[0];
+        let glr_a = steering_grating_lobe_ratio_1d(&xa, &steer, &obs, k, ka, halfwidth)[0];
         assert!(
             glr_a < glr_u,
             "aperiodic GLR {glr_a:.3} not below uniform GLR {glr_u:.3}"

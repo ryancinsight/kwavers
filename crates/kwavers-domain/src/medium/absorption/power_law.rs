@@ -22,7 +22,7 @@ impl Default for PowerLawAbsorption {
     fn default() -> Self {
         Self {
             alpha_0: ABSORPTION_TISSUE, // 0.75 dB/(MHz^y·cm) — Duck (1990) Table 4.1
-            y: 1.1,        // Typical soft tissue exponent
+            y: 1.1,                     // Typical soft tissue exponent
             f_ref: REFERENCE_FREQUENCY_HZ,
             dispersion_correction: true,
         }
@@ -35,7 +35,7 @@ impl PowerLawAbsorption {
     pub fn water() -> Self {
         Self {
             alpha_0: WATER_ABSORPTION_ALPHA_0, // 0.0022 dB/(MHz^y·cm) — Duck (1990) Table 4.1
-            y: 2.0,          // Quadratic frequency dependence
+            y: 2.0,                            // Quadratic frequency dependence
             f_ref: REFERENCE_FREQUENCY_HZ,
             dispersion_correction: false,
         }

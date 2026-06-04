@@ -38,8 +38,7 @@ impl HistotripsyTissueProperties {
     pub fn intrinsic_threshold_at(&self, freq_hz: f64) -> f64 {
         const F_REF: f64 = 1.0e6;
         let f = freq_hz.max(f64::MIN_POSITIVE);
-        self.intrinsic_threshold_1mhz_pa
-            + self.threshold_slope_pa_per_decade * (f / F_REF).log10()
+        self.intrinsic_threshold_1mhz_pa + self.threshold_slope_pa_per_decade * (f / F_REF).log10()
     }
 }
 
@@ -150,7 +149,10 @@ mod tests {
 
     #[test]
     fn unknown_name_falls_back_to_soft_tissue() {
-        assert_eq!(histotripsy_tissue_properties_by_name("unobtanium"), SOFT_TISSUE);
+        assert_eq!(
+            histotripsy_tissue_properties_by_name("unobtanium"),
+            SOFT_TISSUE
+        );
     }
 
     #[test]

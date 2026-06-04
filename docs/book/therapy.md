@@ -256,39 +256,22 @@ The stone fracture model in kwavers is in
 
 ## 6.7 Transcranial Focused Ultrasound Neuromodulation
 
-### 6.7.1 Skull Transmission
+Low-intensity transcranial focused ultrasound (tFUS) modulates neural activity
+non-thermally. Two physics constraints dominate, both with canonical homes elsewhere:
 
-**Theorem 6.7 (Skull Insertion Loss).** For a plane wave at normal incidence through a
-skull layer of thickness d, density ρ_s, speed c_s (longitudinal), the transmission
-coefficient in pressure is
+- **Skull transmission.** The skull is the principal attenuator and aberrator; the
+  normal-incidence pressure transmission through a layer of impedance `Z_s = ρ_s c_s`
+  gives `|T|² ≈ 20–40 %` (intensity) for human temporal bone at 0.5 MHz (transfer-matrix
+  method). The full skull-acoustics, aberration, and phase-correction treatment is in the
+  **Transcranial Ultrasound** chapter (§10.2–10.5).
+- **Safety envelope.** tFUS operates at MI ≈ 0.5–1.0 and TI < 2 (0.25–1 MHz, pulsed,
+  30–120 s). The Mechanical Index, Thermal Index, and FDA limits are derived in the
+  **Safety and Dosimetry** chapter (§9.3–9.7).
 
-```
-T_skull = 4Z_s Z_f exp(ikd) / [(Z_s + Z_f)² − (Z_s − Z_f)² exp(2iαd)]   (6.13)
-```
-
-where Z_s = ρ_s c_s is the skull impedance and k = ω/c_s + iα_s is the complex wave
-number (α_s skull absorption).
-
-For human temporal bone at 0.5 MHz: typical |T_skull|² ≈ 20–40% intensity.
-
-*Proof.* Layer transfer-matrix method (TMM): apply the 2×2 boundary condition matrix
-at the brain-skull and skull-transducer interfaces and solve for the transmitted field.
-Result (6.13) follows from the standard TMM for a single layer. □
-
-### 6.7.2 Safety: MI, TI, and Regulatory Limits
-
-**Definition 6.3 (Mechanical Index).** MI = P_neg [MPa] / √f₀ [MHz]. FDA limit: MI ≤ 1.9.
-
-**Definition 6.4 (Thermal Index).** TI = W/(W_deg), the power required for 1 °C
-temperature rise. TI_soft tissue (TIS), TI_bone (TIB), TI_cranium (TIC) are mode-specific.
-FDA limit: TI ≤ 6 for transient, TI ≤ 2 for prolonged exposures.
-
-| Application | f₀ | MI limit | TI limit | Typical exposure |
-|-------------|-----|----------|----------|-----------------|
-| Diagnostic B-mode | 5–15 MHz | 1.9 | 6 | Single pulse |
-| CEUS | 2–5 MHz | 0.4 | 2 | CW ≤ 5 min |
-| tFUS neuromod. | 0.25–1 MHz | 0.5–1.0 | < 2 | Pulsed, 30–120 s |
-| HIFU ablation | 1–3 MHz | ≫ 1 (therapeutic) | — | ≤ 10 s/sonication |
+The neuromodulation *mechanism* (intramembrane cavitation / NICE sonophore model,
+dose–response, and protocols) is the subject of the dedicated **Neuromodulation** chapter;
+kwavers models it in `kwavers_physics::acoustics::therapy` (with the sonogenetics channel
+models in `kwavers_physics::acoustics::therapy::sonogenetics`).
 
 ---
 

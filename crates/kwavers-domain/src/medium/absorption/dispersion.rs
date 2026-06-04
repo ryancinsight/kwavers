@@ -1,8 +1,8 @@
 //! Dispersion correction models
 
+use kwavers_core::constants::numerical::TWO_PI;
 use ndarray::{Array3, Zip};
 use num_complex::Complex;
-use kwavers_core::constants::numerical::{TWO_PI};
 
 /// Dispersion model for frequency-dependent phase velocity
 #[derive(Debug, Clone)]

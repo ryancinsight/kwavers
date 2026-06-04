@@ -264,9 +264,204 @@ pub fn histotripsy_pulses_for_lesion_radius(
     ratio * ratio * ratio * tissue_yield_stress_pa / (p0_pa * icd_per_pulse)
 }
 
+/// Histotripsy mechanical cell-kill fraction from cumulative cavitation dose, via a
+/// Weibull (multi-hit) survival dose–response:
+/// ```text
+///   kill = 1 − exp(−(dose / d0)^k)
+/// ```
+/// The kill mechanism is mechanical fractionation (cavitation liquefies tissue to an
+/// acellular homogenate), not DNA damage — but the cumulative dose–response is the
+/// same sigmoidal cell-survival form used in radiobiology (the iso-effect basis of
+/// biologically-effective dose). `d0` is the characteristic dose (kill = 1−1/e ≈ 63 %)
+/// and the Weibull exponent `k > 1` reproduces the threshold/shoulder of measured
+/// histotripsy fractionation curves (Vlaisavljevich 2015; Maxwell 2013). Iso-lethal
+/// levels LD25/LD50/LD75/LD100 are the inverse, [`histotripsy_lethal_dose`].
+#[must_use]
+#[inline]
+pub fn histotripsy_kill_fraction(dose: f64, d0: f64, weibull_k: f64) -> f64 {
+    if !(dose.is_finite() && d0 > 0.0 && weibull_k > 0.0) || dose <= 0.0 {
+        return 0.0;
+    }
+    (1.0 - (-(dose / d0).powf(weibull_k)).exp()).clamp(0.0, 1.0)
+}
+
+/// Lethal cumulative cavitation dose for a target cell-kill `fraction` (the LD_x of the
+/// Weibull dose–response): `D = d0·(−ln(1 − fraction))^(1/k)`. LD50 ⇒ fraction = 0.5,
+/// LD100 is asymptotic so callers use e.g. 0.99. Inverse of [`histotripsy_kill_fraction`].
+#[must_use]
+#[inline]
+pub fn histotripsy_lethal_dose(fraction: f64, d0: f64, weibull_k: f64) -> f64 {
+    let f = fraction.clamp(0.0, 1.0 - 1e-9);
+    if !(d0 > 0.0 && weibull_k > 0.0) || f <= 0.0 {
+        return 0.0;
+    }
+    d0 * (-(1.0 - f).ln()).powf(1.0 / weibull_k)
+}
+
+/// Local peak-pressure enhancement at a planar acoustic interface between media of
+/// specific impedance `z1` and `z2`, from superposition of the incident and reflected
+/// waves: `E = 1 + |R|`, `R = (z2 − z1)/(z2 + z1)`.
+///
+/// Cavitation nucleates preferentially at interfaces because (a) the peak
+/// rarefactional pressure is locally raised by up to a factor of two at a strong
+/// reflector, and (b) interfaces trap stabilising gas nuclei. The enhancement is
+/// `1` for impedance-matched media (no boundary), `≈1.05–1.1` for soft-tissue
+/// boundaries (liver/fat/tumour), and approaches `2` against a gas void — which is
+/// why a liquefied **lacuna** (a gas-filled cavity) is such a strong cavitation site.
+///
+/// The caller multiplies the *effective* focal peak pressure by this factor (with a
+/// spatial proximity weight) so the existing supralinear emission-vs-pressure curve
+/// produces the enhanced cavitation; the function itself is the exact reflection law.
+#[must_use]
+#[inline]
+pub fn interface_pressure_enhancement(z1: f64, z2: f64) -> f64 {
+    let denom = z1 + z2;
+    if denom > 0.0 && z1.is_finite() && z2.is_finite() {
+        1.0 + ((z2 - z1) / denom).abs()
+    } else {
+        1.0
+    }
+}
+
+/// Cavitation-susceptibility multiplier of tissue that has already been (partly)
+/// fractionated by previous histotripsy pulses — the genuine "lesion memory" that
+/// makes re-insonation of a forming or pre-existing lesion cavitate more readily.
+///
+/// `fractionation ∈ [0, 1]` is the local lesion completeness; `time_since_lesion_s`
+/// is the elapsed time since that tissue was first fractionated; `tau_lacuna_s` is
+/// the gas-evolution time constant over which dissolved gas diffuses out of the
+/// surrounding tissue into the liquefied void to form a **lacuna** (a macroscopic
+/// gas/fluid cavity, essentially zero cavitation threshold).
+///
+/// ```text
+///   S = 1 + k_immediate·f + k_lacuna·f·(1 − exp(−t_since/τ_lacuna))
+/// ```
+/// * `k_immediate·f` — the prompt threshold reduction from residual bubble nuclei in
+///   freshly fractionated tissue (present within one procedure).
+/// * `k_lacuna·f·(1 − e^{−t/τ})` — the *delayed* enhancement as the lacuna degasses;
+///   negligible at `t ≪ τ` (not apparent during the first procedure) and saturating
+///   to `k_lacuna·f` at `t ≫ τ` (full cavity formed — strong cavitation on
+///   re-treatment days later). `τ_lacuna` follows gas-diffusion scaling
+///   `a²/(2·D·ζ)` for a void of radius `a` (tens of seconds to minutes intra-op,
+///   hours–days post-op).
+#[must_use]
+#[inline]
+pub fn lacuna_cavitation_susceptibility(
+    fractionation: f64,
+    time_since_lesion_s: f64,
+    tau_lacuna_s: f64,
+    k_immediate: f64,
+    k_lacuna: f64,
+) -> f64 {
+    let f = fractionation.clamp(0.0, 1.0);
+    if f <= 0.0 || !f.is_finite() {
+        return 1.0;
+    }
+    let t = time_since_lesion_s.max(0.0);
+    let tau = tau_lacuna_s.max(f64::EPSILON);
+    let lacuna = (1.0 - (-t / tau).exp()).clamp(0.0, 1.0);
+    (1.0 + k_immediate.max(0.0) * f + k_lacuna.max(0.0) * f * lacuna).max(1.0)
+}
+
+/// Local lacuna gas void fraction at fractionated tissue: the persistent gas/fluid
+/// cavity that forms as dissolved gas diffuses out of the surrounding tissue into a
+/// liquefied lesion. First-order gas-evolution growth toward a fractionation-scaled
+/// saturation void fraction:
+/// ```text
+///   β_lacuna = β_max · fractionation · (1 − exp(−t_since_lesion/τ_lacuna))
+/// ```
+/// Distinct from the fast residual *bubble-cloud* dissolution (which only shrinks β
+/// between pulses); this is the slow void *growth* that, once formed, both shields
+/// and aberrates subsequent pulses (a strong gas/tissue impedance interface) and is
+/// why a re-treated lesion (`t_since ≫ τ`) cavitates very differently from a virgin
+/// one. `τ_lacuna ~ a²/(2 D ζ)` for a void of radius `a` (tens of seconds to minutes
+/// intra-procedure; hours–days post-procedure).
+#[must_use]
+#[inline]
+pub fn lacuna_void_fraction(
+    fractionation: f64,
+    time_since_lesion_s: f64,
+    tau_lacuna_s: f64,
+    beta_max: f64,
+) -> f64 {
+    let f = fractionation.clamp(0.0, 1.0);
+    if f <= 0.0 || !f.is_finite() || beta_max <= 0.0 {
+        return 0.0;
+    }
+    let t = time_since_lesion_s.max(0.0);
+    let tau = tau_lacuna_s.max(f64::EPSILON);
+    (beta_max.max(0.0) * f * (1.0 - (-t / tau).exp())).clamp(0.0, 1.0 - 1e-9)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn lacuna_void_growth_saturates() {
+        let bmax = 5e-3;
+        assert_eq!(lacuna_void_fraction(0.0, 1e9, 120.0, bmax), 0.0); // unlesioned
+        assert!(lacuna_void_fraction(1.0, 0.0, 120.0, bmax).abs() < 1e-12); // t=0 no void
+        let mid = lacuna_void_fraction(1.0, 120.0, 120.0, bmax);
+        let inf = lacuna_void_fraction(1.0, 1e6, 120.0, bmax);
+        assert!((inf - bmax).abs() < 1e-9, "saturates to beta_max: {inf}");
+        assert!(mid > 0.0 && mid < inf); // monotone growth
+                                         // scales with fractionation
+        assert!((lacuna_void_fraction(0.5, 1e6, 120.0, bmax) - 0.5 * bmax).abs() < 1e-9);
+    }
+
+    #[test]
+    fn kill_fraction_dose_response_and_inverse() {
+        let (d0, k) = (1.0, 2.5);
+        // No dose → no kill; characteristic dose → 1 − 1/e.
+        assert_eq!(histotripsy_kill_fraction(0.0, d0, k), 0.0);
+        assert!((histotripsy_kill_fraction(d0, d0, k) - (1.0 - (-1.0f64).exp())).abs() < 1e-9);
+        // Monotone increasing and bounded in [0,1].
+        assert!(histotripsy_kill_fraction(0.5, d0, k) < histotripsy_kill_fraction(1.5, d0, k));
+        assert!(histotripsy_kill_fraction(1e6, d0, k) <= 1.0);
+        // LD_x inverts the dose-response: kill(LD_x) == x.
+        for x in [0.25, 0.5, 0.75, 0.9] {
+            let ld = histotripsy_lethal_dose(x, d0, k);
+            assert!(
+                (histotripsy_kill_fraction(ld, d0, k) - x).abs() < 1e-6,
+                "LD{x}"
+            );
+        }
+        // Iso-lethal levels are ordered LD25 < LD50 < LD75.
+        let (a, b, c) = (
+            histotripsy_lethal_dose(0.25, d0, k),
+            histotripsy_lethal_dose(0.50, d0, k),
+            histotripsy_lethal_dose(0.75, d0, k),
+        );
+        assert!(a < b && b < c);
+    }
+
+    #[test]
+    fn interface_enhancement_bounds() {
+        // Matched media → no enhancement.
+        assert!((interface_pressure_enhancement(1.65e6, 1.65e6) - 1.0).abs() < 1e-12);
+        // Soft-tissue (liver/fat) interface is mild.
+        let e_soft = interface_pressure_enhancement(1.65e6, 1.38e6);
+        assert!(e_soft > 1.0 && e_soft < 1.15, "liver/fat E={e_soft}");
+        // Tissue/gas (lacuna) interface approaches the pressure-doubling limit.
+        let e_gas = interface_pressure_enhancement(1.65e6, 0.0004e6);
+        assert!(e_gas > 1.95 && e_gas <= 2.0, "tissue/gas E={e_gas}");
+    }
+
+    #[test]
+    fn lacuna_susceptibility_delay_and_limits() {
+        // Unlesioned tissue is unaffected.
+        assert!((lacuna_cavitation_susceptibility(0.0, 1e9, 120.0, 0.5, 4.0) - 1.0).abs() < 1e-12);
+        // Immediately after lesioning: only the prompt term (no lacuna yet).
+        let s0 = lacuna_cavitation_susceptibility(1.0, 0.0, 120.0, 0.5, 4.0);
+        assert!((s0 - 1.5).abs() < 1e-9, "prompt S={s0}");
+        // Long after lesioning: full lacuna enhancement.
+        let s_inf = lacuna_cavitation_susceptibility(1.0, 1e6, 120.0, 0.5, 4.0);
+        assert!((s_inf - 5.5).abs() < 1e-3, "lacuna S={s_inf}");
+        // Monotonic growth with elapsed time.
+        let s_mid = lacuna_cavitation_susceptibility(1.0, 120.0, 120.0, 0.5, 4.0);
+        assert!(s0 < s_mid && s_mid < s_inf);
+    }
 
     #[test]
     fn interleaved_schedule_timing_matches_diagram() {

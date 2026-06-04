@@ -36,7 +36,7 @@ import matplotlib.ticker as mticker
 import pykwavers as kw
 
 # ── Output directory ─────────────────────────────────────────────────────────
-REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
 OUT_DIR = os.path.join(REPO_ROOT, "docs", "book", "figures", "ch08")
 os.makedirs(OUT_DIR, exist_ok=True)
 

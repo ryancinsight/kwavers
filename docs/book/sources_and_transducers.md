@@ -10,6 +10,14 @@ arbitrary aperture geometries, capacitive micromachined ultrasound transducers (
 the source contract that governs how all geometric descriptions are converted to
 grid-compatible excitation fields inside kwavers.
 
+**Scope boundary.** This chapter is the canonical home for **single-source and
+single-transducer** physics and for putting a source onto the computational grid. The
+*multi-element beam pattern* — array factor, grating lobes, transmit/receive steering and
+focusing delays, apodization, and delay-and-sum image formation — is derived in the
+companion **Beamforming and Image Formation** chapter; the phased-array delay law (§5) and
+grating-lobe condition (§9) below are stated for completeness and cross-reference that
+chapter for the full beam-pattern analysis.
+
 ### Notation
 
 | Symbol | Meaning | Units |
@@ -169,6 +177,16 @@ Normalizing:
 ```
 H(θ) = 2 J_1(ka sinθ) / (ka sinθ).       □
 ```
+
+### On-Axis Near-Field Pressure
+
+Along the axis the exact (all-distance) on-axis pressure of a baffled circular
+piston driven at face velocity `U_0` is (O'Neil 1949)
+```
+p(z) = 2 ρ c U_0 · sin[(k/2)(√(z² + a²) − z)],
+```
+which oscillates between `0` and `2 ρ c U_0` in the near field and rolls off as
+`a²/(2z)` beyond the last axial maximum at `z = N = a²/λ`.
 
 ### First Null and Half-Pressure Angle
 

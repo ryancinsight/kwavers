@@ -43,7 +43,9 @@ pub use histotripsy::{
 pub use power_law::{PowerLawAbsorption, PowerLawModel};
 pub use spatially_varying::{AbsorptionStatistics, SpatiallyVaryingAbsorption};
 pub use stokes::{StokesAbsorption, StokesParameters};
-pub use tissue::{AbsorptionTissueType, TissueAbsorption, TISSUE_PROPERTIES};
+pub use tissue::{
+    tissue_thermal_properties, AbsorptionTissueType, TissueAbsorption, TISSUE_PROPERTIES,
+};
 
 use kwavers_core::error::KwaversResult;
 use ndarray::Array3;

@@ -54,7 +54,11 @@ pub fn run(
     let (default_thickness, max_allowed) = pml.effective_thickness(req.grid.nx, req.grid.ny, req.grid.nz);
     let thickness = pml.size.unwrap_or(default_thickness).min(max_allowed);
 
-    if thickness > 0 && max_allowed > 0 {
+    // A zero PML alpha means a transparent boundary: skip CPML entirely rather
+    // than constructing one with sigma_factor = 0 (which the CPML profile builder
+    // rejects). Mirrors the PSTD dispatch's `!pml.alpha_is_zero()` guard so
+    // `set_pml_alpha(0.0)` / `pml_size = 0` behave consistently across solvers.
+    if thickness > 0 && max_allowed > 0 && !pml.alpha_is_zero() {
         let mut cpml_config = if let Some((px, py, pz)) = pml.size_xyz {
             CPMLConfig::with_per_dimension_thickness(px, py, pz)
         } else {

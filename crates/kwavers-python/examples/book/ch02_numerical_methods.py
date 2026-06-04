@@ -26,7 +26,7 @@ import numpy as np
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
+REPO_ROOT = Path(__file__).resolve().parents[4]
 OUT_DIR = REPO_ROOT / "docs" / "book" / "figures" / "ch02"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -85,7 +85,8 @@ theta = np.linspace(1.0e-6, np.pi, 700)
 plt.figure(figsize=(7.2, 4.8))
 for order in (2, 4, 6):
     ratio = fd_symbol(theta, order) / theta
-    plt.plot(theta / np.pi, ratio, label=f"{order}th-order centered")
+    _ord = {2: "2nd", 4: "4th", 6: "6th"}.get(order, f"{order}th")
+    plt.plot(theta / np.pi, ratio, label=f"{_ord}-order centered")
 plt.axhline(1.0, color="k", linewidth=0.9, linestyle=":")
 plt.xlabel("k dx / pi")
 plt.ylabel("k* / k")

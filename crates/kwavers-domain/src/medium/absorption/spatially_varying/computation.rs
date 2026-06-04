@@ -3,7 +3,7 @@ use ndarray::{Array3, Zip};
 use num_complex::Complex;
 
 use super::SpatiallyVaryingAbsorption;
-use kwavers_core::constants::numerical::{TWO_PI};
+use kwavers_core::constants::numerical::TWO_PI;
 
 impl SpatiallyVaryingAbsorption {
     #[must_use]

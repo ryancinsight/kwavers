@@ -5,103 +5,50 @@ theranostics: systems where diagnostic imaging estimates biological state and ac
 therapy updates exposure in response. Topics include bubble dynamics (Rayleigh-Plesset),
 passive cavitation detection, ARFI-based treatment monitoring, MR thermometry integration,
 and formal closed-loop stability theorems. Code ownership spans
-`kwavers::clinical::imaging`, `kwavers::clinical::therapy`, and the shared cavitation
-and bubble dynamics physics modules.
+`kwavers_diagnostics` (imaging workflows), `kwavers_therapy` (therapy integration,
+microbubble dynamics), and the shared `kwavers_physics::acoustics::bubble_dynamics`
+cavitation modules.
 
 ---
 
-## 7.1 Rayleigh-Plesset Bubble Dynamics
+## 7.1 Bubble Dynamics (recap)
 
-### 7.1.1 Full Nonlinear ODE
+Theranostic cavitation control rests on the single-bubble physics derived in full in the
+**Cavitation and Bubble Dynamics** chapter; the results reused in this chapter are:
 
-**Theorem 7.1 (Rayleigh-Plesset Equation).** For a spherical gas bubble of radius R(t)
-in an incompressible Newtonian liquid of density ρ_l and viscosity μ_l, with internal
-gas pressure p_g(R) and external acoustic pressure p_∞(t), the bubble wall dynamics satisfy
+- **Rayleigh–Plesset** wall dynamics
+  `ρ_l(R R̈ + 3/2 Ṙ²) = p_g(R) − p_∞(t) − p_0 − 4μ_l Ṙ/R − 2σ/R`
+  with polytropic gas law `p_g = (p_0 + 2σ/R_0)(R_0/R)^{3κ}` — *Cavitation §7.2*, and the
+  Keller–Miksis compressible extension for high-amplitude drive — *Cavitation §7.3*.
+- **Minnaert resonance** `f_M = (1/2πR_0)√(3κp_0/ρ_l)` (1 μm → 3.3 MHz, 5 μm → 0.65 MHz)
+  — *Cavitation §7.5*.
+- **Blake threshold** for the onset of inertial collapse — *Cavitation §7.4*.
 
-```
-ρ_l (R R̈ + 3/2 Ṙ²) = p_g(R) − p_∞(t) − p_0 − 4μ_l Ṙ/R − 2σ/R         (7.1)
-```
-
-where p_0 is the ambient hydrostatic pressure, σ is the surface tension [N m⁻¹], and
-the gas pressure follows the polytropic law:
-
-```
-p_g(R) = (p_0 + 2σ/R_0)(R_0/R)^{3κ}                                     (7.2)
-```
-
-with κ = 1 (isothermal) or κ = γ = C_p/C_v (adiabatic).
-
-*Proof.* Applying Newton's second law to a spherical shell of liquid at radius r > R,
-using conservation of mass (∂_t(4πr²ρ) = 0), and integrating the momentum equation from
-R to ∞ yields (7.1). □
-
-### 7.1.2 Minnaert Resonance
-
-**Theorem 7.2 (Minnaert Resonance Frequency).** Linearizing (7.1) about equilibrium R₀:
-
-```
-f_Minnaert = (1/2πR₀) √(3κ p_0 / ρ_l)                                   (7.3)
-```
-
-neglecting surface tension (valid for R₀ > 1 μm).
-
-*Proof.* Set R = R₀(1 + x), |x| ≪ 1. Expand (7.1) to first order:
-the gas restoring force coefficient is 3κ p_0/R₀², the inertial coefficient is ρ_l R₀.
-Natural frequency: ω₀ = √(3κ p_0/(ρ_l R₀²)), yielding (7.3). □
-
-| R₀ (μm) | f_Minnaert (MHz, water, κ=1.4) |
-|---------|-------------------------------|
-| 1 | 3.26 |
-| 2 | 1.63 |
-| 3 | 1.09 |
-| 5 | 0.65 |
-| 10 | 0.33 |
-
-### 7.1.3 Blake Threshold
-
-**Theorem 7.3 (Blake Threshold Pressure).** The minimum acoustic pressure required to
-drive an unbounded bubble collapse (inertial cavitation) is
-
-```
-p_Blake = p_0 + 2σ/R_0 · (R_0/R_Blake)³                                  (7.4)
-```
-
-with R_Blake = R_0 (4/3 + 4σ/(3R_0 p_0))^{1/3} (critical radius at which the net
-restoring force vanishes). For water at p_0 = 101 kPa:
-
-```
-P_Blake ≈ p_0 − 0.77 (2σ/(R_0))^3 / p_0²                               (7.5)
-```
-
-Numerically: R₀ = 1 μm → P_Blake ≈ 79 kPa (0.079 MPa); R₀ = 5 μm → 5 kPa (0.005 MPa).
+These ODEs are integrated in kwavers by
+`kwavers_physics::acoustics::bubble_dynamics::rayleigh_plesset` (`RayleighPlesset`), with
+adaptive time-stepping and the Keller–Miksis model in the same `bubble_dynamics` tree.
 
 ---
 
 ## 7.2 Passive Cavitation Detection (PCD)
 
-### 7.2.1 Broadband Noise Signature
+### 7.2.1 Cavitation signatures (recap)
 
-**Definition 7.1 (Inertial Cavitation Dose, ICD).** The ICD is the integrated broadband
-noise power in the received PCD signal over a frequency band excluding harmonics and
-sub-harmonics:
+The acoustic-emission discriminants used by the controller below are derived in
+*Cavitation §7.6 (Acoustic Emission and Passive Cavitation Detection)*:
 
-```
-ICD = ∫_{f_low}^{f_high} S(f) df    [Pa² s]                              (7.6)
-```
+- **Stable cavitation (SC):** sub-harmonic (½f₀) and ultra-harmonic (3/2 f₀) spectral
+  peaks with low broadband noise (period-2 bubble oscillation; the Floquet multiplier of
+  the linearized RP equation crosses −1).
+- **Inertial cavitation (IC):** broadband noise from violent aperiodic collapse,
+  quantified by the **inertial cavitation dose**
+  `ICD = ∫ S(f) df  [Pa² s]` integrated over a band that excludes ±Δf around nf₀
+  (n = 1, 2, 3) and ½f₀.
 
-where S(f) is the power spectral density of the received passband signal and the
-integration band excludes ±Δf around nf₀ for n = 1, 2, 3 and ½f₀.
-
-**Theorem 7.4 (Stable vs Inertial Cavitation Signatures).**
-- Stable cavitation (SC): generates sub-harmonic (f₀/2) and ultra-harmonic (3f₀/2)
-  peaks in the spectrum; broadband noise is low.
-- Inertial cavitation (IC): generates broadband noise across all frequencies;
-  characteristically observed when R(t) collapses violently.
-
-*Proof.* SC corresponds to period-2 bubble oscillation (parametric instability at f₀/2);
-the Floquet multiplier for the linearized RP equation crosses −1. IC corresponds to
-aperiodic collapse; the resulting pressure pulse from Gilmore/modified RP has a
-broad Fourier transform. □
+kwavers computes both discriminants from the received spectrum in
+`kwavers_physics::acoustics::bubble_dynamics::cavitation_control::detection`
+(`broadband`, `spectral`, `subharmonic` sub-modules), which drive the closed-loop
+controller of §7.2.2.
 
 ### 7.2.2 Cavitation Control for BBB Opening
 
@@ -114,7 +61,7 @@ Input:  S(f): PCD spectrum; P_n: current pressure amplitude; thresholds SC_min, 
 Output: P_{n+1}
 
 1. Compute SC_n = peak power at ½f₀ (sub-harmonic)
-2. Compute IC_n = broadband ICD from (7.6)
+2. Compute IC_n = broadband ICD (§7.2.1)
 3. If IC_n > IC_thresh: reduce P_{n+1} = γ_down × P_n   (γ_down < 1)
 4. Elif SC_n < SC_target: increase P_{n+1} = γ_up × P_n  (γ_up > 1)
 5. Else: maintain P_{n+1} = P_n
@@ -269,25 +216,15 @@ within 4–6 hours.
 
 ---
 
-## 7.6 Histotripsy
+## 7.6 Histotripsy (cross-reference)
 
-**Definition 7.2 (Histotripsy).** Histotripsy is mechanical tissue liquefaction driven
-by dense bubble clouds generated at high negative pressure (P_neg > 15–30 MPa, MI > 5–10).
-Unlike HIFU thermal ablation, histotripsy is a non-thermal modality that creates
-homogeneous liquefied zones (acellular debris) without coagulative necrosis.
-
-**Theorem 7.8 (Intrinsic Threshold).** Histotripsy initiates when the peak negative
-pressure exceeds the intrinsic threshold for cavitation in the absence of nuclei:
-
-```
-P_neg,intrinsic = √(16πσ³/(3k_B T))    ≈ 26–30 MPa (water, 37°C)        (7.12)
-```
-
-*Derivation.* Classical nucleation theory: the free energy barrier for nucleation of a
-vapour nucleus of critical radius r_c = 2σ/P_neg is ΔG = 16πσ³/(3P_neg²). Setting
-ΔG = k_B T (thermal nucleation condition) and solving for P_neg gives (7.12). □
-
-Implemented in `kwavers::clinical::therapy::lithotripsy::cavitation_cloud`.
+In the theranostic loop, histotripsy is the high-amplitude mechanical-ablation mode
+(P_neg > 15–30 MPa, MI > 5–10): dense bubble clouds liquefy tissue without coagulative
+necrosis, initiated above the intrinsic cavitation threshold
+`P_neg,intrinsic = √(16πσ³/(3 k_B T)) ≈ 26–30 MPa` (water, 37 °C, classical nucleation
+theory). The full mechanism, derivation, and the classical-vs-millisecond-pulse regimes
+are in the **Histotripsy** chapter and *Cavitation §7.9*. kwavers models the bubble-cloud
+dynamics in `kwavers_therapy::therapy::lithotripsy::cavitation_cloud` (`CavitationCloud`).
 
 ---
 
@@ -295,13 +232,14 @@ Implemented in `kwavers::clinical::therapy::lithotripsy::cavitation_cloud`.
 
 | Concept | kwavers module | Key struct |
 |---------|---------------|------------|
-| Bubble ODE (RP) | `physics::acoustics::bubble_dynamics` | `RayleighPlesset` |
-| Microbubble service | `clinical::therapy::microbubble_dynamics` | `MicrobubbleService` |
-| Cavitation cloud | `clinical::therapy::lithotripsy::cavitation_cloud` | `CavitationCloud` |
-| Therapy orchestrator | `therapy_integration::orchestrator` | `TherapyOrchestrator` |
-| Safety controller | `therapy_integration::safety_controller` | `SafetyController` |
-| ULM (diagnostic) | `clinical::imaging::functional_ultrasound::ulm` | `MicrobubbleDetector` |
-| Plane-wave compounding | `clinical::imaging::workflows::plane_wave_compounding` | `PlaneWaveCompounding` |
+| Bubble ODE (Rayleigh–Plesset, Keller–Miksis) | `kwavers_physics::acoustics::bubble_dynamics::rayleigh_plesset` | `RayleighPlesset` |
+| Passive cavitation detection (SC/IC) | `kwavers_physics::acoustics::bubble_dynamics::cavitation_control::detection` | `broadband` / `spectral` / `subharmonic` |
+| Microbubble dynamics | `kwavers_therapy::therapy::microbubble_dynamics::service` | `MicrobubbleDynamicsService` |
+| Cavitation cloud (histotripsy) | `kwavers_therapy::therapy::lithotripsy::cavitation_cloud` | `CavitationCloud` |
+| Therapy orchestrator | `kwavers_therapy::therapy::therapy_integration::orchestrator` | `TherapyIntegrationOrchestrator` |
+| Safety controller | `kwavers_therapy::therapy::therapy_integration::safety_controller` | `SafetyController` |
+| ULM microbubble detection | `kwavers_analysis::signal_processing::ulm::microbubble_detection` | `UlmDetector` |
+| Plane-wave compounding | `kwavers_diagnostics::workflows::plane_wave_compounding` | `PlaneWaveCompounding` |
 | Registration | via RITK crate | `DeformableRegistration` |
 
 ---

@@ -8,9 +8,14 @@
 pub const WATER_ABSORPTION_ALPHA_0: f64 = 0.0022;
 
 /// Water absorption frequency power law exponent
-/// Value: 1.05 (slightly superlinear)
-/// Reference: Szabo, T. L. (1994). "Time domain wave equations for lossy media"
-pub const WATER_ABSORPTION_POWER: f64 = 1.05;
+/// Value: 2.0 (viscothermal / classical absorption: α ∝ f²)
+/// Water is the canonical thermoviscous fluid; its small-signal absorption
+/// obeys the Stokes–Kirchhoff f² law over the diagnostic/therapeutic band.
+/// The companion coefficient `WATER_ABSORPTION_ALPHA_0 = 0.0022 dB/(cm·MHz^y)`
+/// is calibrated for y = 2 (i.e. dB/(cm·MHz²)); pairing it with y ≠ 2 yields a
+/// physically wrong attenuation.
+/// Reference: Pinkerton (1949) Proc. Phys. Soc. B 62, 129; Duck (1990) §4.
+pub const WATER_ABSORPTION_POWER: f64 = 2.0;
 
 /// Nonlinearity parameter B/A for water at 20°C
 /// Value: 5.0 (Beyer 1960 polynomial evaluated at 20°C ≈ 4.965)

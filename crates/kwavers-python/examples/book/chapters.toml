@@ -46,10 +46,10 @@ number = 7
 script = "ch07_theranostics.py"
 title  = "Theranostics"
 
-[[chapter]]
-number = 8
-script = "ch08_acoustic_propagation.py"
-title  = "Acoustic Propagation"
+# Chapter 8 (Acoustic Propagation) deprecated 2026-06-04: ~90% redundant with
+# Foundations + Numerical Methods; unique HIFU focal worked example grafted into
+# numerical_methods.md §2.14. Script ch08_acoustic_propagation.py and its figures
+# retained for possible reuse in Ch1/Ch2/Ch4. See docs/book/REFACTOR_PLAN.md.
 
 [[chapter]]
 number = 9

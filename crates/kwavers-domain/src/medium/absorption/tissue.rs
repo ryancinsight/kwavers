@@ -5,45 +5,19 @@ use kwavers_core::constants::acoustic_parameters::{
 };
 use kwavers_core::constants::cavitation::SURFACE_TENSION_WATER;
 use kwavers_core::constants::fundamental::{
-    DENSITY_TISSUE,
-    DENSITY_WATER_NOMINAL,
-    SOUND_SPEED_TISSUE,
-    SOUND_SPEED_WATER,
-};
-use kwavers_core::constants::tissue_acoustics::{
-    B_OVER_A_BLOOD,
-    B_OVER_A_BONE,
-    B_OVER_A_BRAIN,
-    B_OVER_A_BREAST_GLAND,
-    B_OVER_A_FAT,
-    B_OVER_A_KIDNEY,
-    B_OVER_A_LIVER,
-    B_OVER_A_LUNG,
-    B_OVER_A_MUSCLE,
-    B_OVER_A_SKIN,
-    B_OVER_A_SOFT_TISSUE,
-    DENSITY_BLOOD,
-    DENSITY_BRAIN,
-    DENSITY_BREAST_FAT,
-    DENSITY_BREAST_GLAND,
-    DENSITY_FAT,
-    DENSITY_LIVER,
-    DENSITY_LUNG,
-    DENSITY_MUSCLE,
-    DENSITY_SKIN,
-    SOUND_SPEED_BLOOD,
-    SOUND_SPEED_BRAIN,
-    SOUND_SPEED_BREAST_GLAND,
-    SOUND_SPEED_FAT,
-    SOUND_SPEED_KIDNEY,
-    SOUND_SPEED_LIVER,
-    SOUND_SPEED_LUNG,
-    SOUND_SPEED_MUSCLE,
-    SOUND_SPEED_SKIN,
+    DENSITY_TISSUE, DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER,
 };
 use kwavers_core::constants::medical::IEC_TISSUE_SPECIFIC_HEAT;
 use kwavers_core::constants::numerical::{CM_TO_M, MHZ_TO_HZ};
 use kwavers_core::constants::thermodynamic::{SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER};
+use kwavers_core::constants::tissue_acoustics::{
+    B_OVER_A_BLOOD, B_OVER_A_BONE, B_OVER_A_BRAIN, B_OVER_A_BREAST_GLAND, B_OVER_A_FAT,
+    B_OVER_A_KIDNEY, B_OVER_A_LIVER, B_OVER_A_LUNG, B_OVER_A_MUSCLE, B_OVER_A_SKIN,
+    B_OVER_A_SOFT_TISSUE, DENSITY_BLOOD, DENSITY_BRAIN, DENSITY_BREAST_FAT, DENSITY_BREAST_GLAND,
+    DENSITY_FAT, DENSITY_LIVER, DENSITY_LUNG, DENSITY_MUSCLE, DENSITY_SKIN, SOUND_SPEED_BLOOD,
+    SOUND_SPEED_BRAIN, SOUND_SPEED_BREAST_GLAND, SOUND_SPEED_FAT, SOUND_SPEED_KIDNEY,
+    SOUND_SPEED_LIVER, SOUND_SPEED_LUNG, SOUND_SPEED_MUSCLE, SOUND_SPEED_SKIN,
+};
 use kwavers_core::constants::tissue_thermal::{
     SPECIFIC_HEAT_BLOOD, SPECIFIC_HEAT_BONE, SPECIFIC_HEAT_BRAIN, SPECIFIC_HEAT_BREAST_GLAND,
     SPECIFIC_HEAT_FAT, SPECIFIC_HEAT_KIDNEY, SPECIFIC_HEAT_LIVER, SPECIFIC_HEAT_LUNG,
@@ -413,4 +387,17 @@ impl TissueAbsorption {
         let f_mhz = frequency / MHZ_TO_HZ;
         self.properties.alpha_0 * f_mhz.powf(self.properties.y) * distance_cm
     }
+}
+
+/// Thermal/acoustic properties needed for shock-heating / boiling-histotripsy
+/// models: `(specific_heat [J/(kg·K)], thermal_conductivity [W/(m·K)],
+/// density [kg/m³])` for a tissue type, from the canonical tissue table.
+#[must_use]
+pub fn tissue_thermal_properties(t: AbsorptionTissueType) -> (f64, f64, f64) {
+    let map = tissue_properties();
+    let p = map
+        .get(&t)
+        .copied()
+        .unwrap_or_else(|| map[&AbsorptionTissueType::SoftTissue]);
+    (p.specific_heat, p.thermal_conductivity, p.density)
 }

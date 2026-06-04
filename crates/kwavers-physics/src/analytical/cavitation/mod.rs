@@ -11,6 +11,7 @@ mod power_spectrum;
 mod sonication;
 #[cfg(test)]
 mod tests;
+mod therapy_delivery;
 
 pub use dynamics::{
     blake_threshold_pa, keller_miksis_rk4, minnaert_resonance_hz, rayleigh_collapse_time_s,
@@ -30,7 +31,14 @@ pub use passive_dose::{
 };
 pub use power_spectrum::{bubble_power_spectrum, period_doubling_ratio};
 pub use sonication::{
-    build_sonication_schedule, forward_delivery_fraction, histotripsy_pulses_for_lesion_radius,
-    pressure_transmission_coefficient, received_signal_fraction, SonicationOrder,
-    SonicationSchedule,
+    build_sonication_schedule, forward_delivery_fraction, histotripsy_kill_fraction,
+    histotripsy_lethal_dose, histotripsy_pulses_for_lesion_radius, interface_pressure_enhancement,
+    lacuna_cavitation_susceptibility, lacuna_void_fraction, pressure_transmission_coefficient,
+    received_signal_fraction, SonicationOrder, SonicationSchedule,
+};
+pub use therapy_delivery::{
+    boiling_lesion_from_pressure_profile, boiling_time_profile_from_pressure,
+    clipped_lateral_radius_for_clearance, delivered_histotripsy_progress,
+    ellipsoid_respects_allowed_mask, integrate_channel_psd, receiver_channel_psd_from_source,
+    scale_measured_emission_spectrum, BoilingLesionPlan,
 };

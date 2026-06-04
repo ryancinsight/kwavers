@@ -2,11 +2,11 @@
 
 use kwavers_core::constants::cavitation::VISCOSITY_WATER;
 use kwavers_core::constants::fundamental::{DENSITY_WATER, SOUND_SPEED_WATER};
+use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::constants::thermodynamic::{
     ROOM_TEMPERATURE_C, SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER,
 };
 use serde::{Deserialize, Serialize};
-use kwavers_core::constants::numerical::{TWO_PI};
 
 /// Stokes absorption parameters for viscous fluids
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]

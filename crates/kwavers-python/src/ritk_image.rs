@@ -2,9 +2,29 @@
 
 use burn::backend::NdArray as NdArrayBackend;
 use ndarray::Array3;
+use numpy::{IntoPyArray, PyArray3};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 use std::path::Path;
+
+/// Load a NIfTI volume (CT, segmentation, …) via RITK (`ritk-io`) — the kwavers
+/// medical-image I/O path, the supported alternative to `nibabel`. Returns the
+/// volume as a `(x, y, z)` float64 array and voxel spacing `(dx, dy, dz)` in mm.
+///
+/// Args:
+///     path: NIfTI file path (.nii / .nii.gz).
+///
+/// Returns:
+///     (volume, (dx_mm, dy_mm, dz_mm)).
+#[pyfunction]
+#[pyo3(signature = (path,))]
+pub fn load_ct_nifti(py: Python<'_>, path: &str) -> PyResult<(Py<PyArray3<f64>>, (f64, f64, f64))> {
+    let (volume, spacing) = load_ritk_nifti(Path::new(path))?;
+    Ok((
+        volume.into_pyarray(py).unbind(),
+        (spacing[0], spacing[1], spacing[2]),
+    ))
+}
 
 pub fn load_ritk_nifti(path: &Path) -> PyResult<(Array3<f64>, [f64; 3])> {
     type Backend = NdArrayBackend<f32>;

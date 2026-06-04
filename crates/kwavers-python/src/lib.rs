@@ -65,6 +65,7 @@ mod bubble_bindings;
 mod fft_bindings;
 mod field_surrogate_bindings;
 mod imaging_bindings;
+mod residual_gas_py;
 mod ritk_image;
 mod sonogenetics_bindings;
 mod theranostic_bindings;
@@ -209,6 +210,7 @@ fn _pykwavers(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<HelmholtzConfig>()?;
     m.add_class::<NonlinearConfig>()?;
     m.add_class::<ThermalConfig>()?;
+    m.add_class::<residual_gas_py::PyResidualGasField>()?;
 
     // Phase 22 bindings
     misc_bindings::register(m)?;

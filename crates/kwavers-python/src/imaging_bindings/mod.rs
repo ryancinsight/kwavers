@@ -19,5 +19,6 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
         transcranial_volume_inversion::run_transcranial_ust_volume_inversion_from_ritk_ct,
         m
     )?)?;
+    m.add_function(wrap_pyfunction!(crate::ritk_image::load_ct_nifti, m)?)?;
     Ok(())
 }

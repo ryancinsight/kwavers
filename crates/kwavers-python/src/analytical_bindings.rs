@@ -65,6 +65,19 @@ pub fn register_book(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(transducer::focused_bowl_onaxis, m)?)?;
     m.add_function(wrap_pyfunction!(transducer::bli_stencil_weights, m)?)?;
     m.add_function(wrap_pyfunction!(transducer::linear_array_positions, m)?)?;
+    m.add_function(wrap_pyfunction!(
+        transducer::focused_bowl_element_positions_3d,
+        m
+    )?)?;
+    m.add_function(wrap_pyfunction!(transducer::delay_law_focus_3d, m)?)?;
+    m.add_function(wrap_pyfunction!(
+        transducer::steered_aperture_pressure_3d,
+        m
+    )?)?;
+    m.add_function(wrap_pyfunction!(
+        transducer::focused_bowl_steered_pressure_profile,
+        m
+    )?)?;
     m.add_function(wrap_pyfunction!(transducer::near_field_distance, m)?)?;
     m.add_function(wrap_pyfunction!(transducer::steering_focus_point, m)?)?;
     m.add_function(wrap_pyfunction!(transducer::delay_law_steer_2d, m)?)?;
@@ -156,6 +169,46 @@ pub fn register_book(m: &Bound<'_, PyModule>) -> PyResult<()> {
         m
     )?)?;
     m.add_function(wrap_pyfunction!(
+        cavitation::interface_pressure_enhancement,
+        m
+    )?)?;
+    m.add_function(wrap_pyfunction!(
+        cavitation::lacuna_cavitation_susceptibility,
+        m
+    )?)?;
+    m.add_function(wrap_pyfunction!(cavitation::lacuna_void_fraction, m)?)?;
+    m.add_function(wrap_pyfunction!(cavitation::histotripsy_kill_fraction, m)?)?;
+    m.add_function(wrap_pyfunction!(cavitation::histotripsy_lethal_dose, m)?)?;
+    m.add_function(wrap_pyfunction!(
+        cavitation::clipped_lateral_radius_for_clearance,
+        m
+    )?)?;
+    m.add_function(wrap_pyfunction!(
+        cavitation::ellipsoid_respects_allowed_mask,
+        m
+    )?)?;
+    m.add_function(wrap_pyfunction!(
+        cavitation::scale_measured_emission_spectrum,
+        m
+    )?)?;
+    m.add_function(wrap_pyfunction!(
+        cavitation::delivered_histotripsy_progress,
+        m
+    )?)?;
+    m.add_function(wrap_pyfunction!(
+        cavitation::boiling_lesion_from_pressure_profile,
+        m
+    )?)?;
+    m.add_function(wrap_pyfunction!(
+        cavitation::boiling_time_profile_from_pressure,
+        m
+    )?)?;
+    m.add_function(wrap_pyfunction!(
+        cavitation::receiver_channel_psd_from_source,
+        m
+    )?)?;
+    m.add_function(wrap_pyfunction!(cavitation::integrate_channel_psd, m)?)?;
+    m.add_function(wrap_pyfunction!(
         cavitation::histotripsy_pulses_for_lesion_radius,
         m
     )?)?;
@@ -172,6 +225,7 @@ pub fn register_book(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(tissue::kramers_kronig_sound_speed, m)?)?;
     m.add_function(wrap_pyfunction!(tissue::tissue_properties, m)?)?;
     m.add_function(wrap_pyfunction!(tissue::histotripsy_tissue_properties, m)?)?;
+    m.add_function(wrap_pyfunction!(tissue::tissue_thermal_properties, m)?)?;
     // safety
     m.add_function(wrap_pyfunction!(safety::mechanical_index, m)?)?;
     m.add_function(wrap_pyfunction!(safety::mechanical_index_field, m)?)?;
@@ -228,6 +282,9 @@ pub fn register_book(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(imaging::doppler_frequency_shift, m)?)?;
     m.add_function(wrap_pyfunction!(imaging::pw_compounding_lateral_psf, m)?)?;
     m.add_function(wrap_pyfunction!(imaging::lateral_resolution_m, m)?)?;
+    m.add_function(wrap_pyfunction!(imaging::simulate_receive_rf, m)?)?;
+    m.add_function(wrap_pyfunction!(imaging::bmode_db_fixed_reference, m)?)?;
+    m.add_function(wrap_pyfunction!(imaging::delta_bmode_db, m)?)?;
     // thermal
     m.add_function(wrap_pyfunction!(
         thermal::adiabatic_temperature_rise_kelvin,

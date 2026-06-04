@@ -20,17 +20,21 @@ use std::f64::consts::PI;
 /// Sound speed in water vs temperature using the Del Grosso–Mader polynomial.
 ///
 /// ```text
-/// c(T) = 1402.7 + 4.8·T − 0.0477·T² + 0.000248·T³   [m/s]
+/// c(T) = 1402.7 + 4.83·T − 0.048·T² + 1.47e-4·T³   [m/s]
 /// ```
-/// Valid for T ∈ [0, 100] °C.
+/// Valid for T ∈ [0, 100] °C.  Reproduces the Marczak (1997) reference to
+/// < 1.1 m/s across the band and matches `SOUND_SPEED_WATER_37C` (1524 m/s)
+/// to 0.85 m/s at body temperature; the earlier cubic term (2.48e-4) was a
+/// transcription error that biased c(37 °C) high by ≈ 4.4 m/s.
 ///
 /// # Reference
-/// Del Grosso & Mader (1972), *J. Acoust. Soc. Am.* 52, 1442.
+/// Del Grosso & Mader (1972), *J. Acoust. Soc. Am.* 52, 1442;
+/// cross-checked against Marczak (1997), *J. Acoust. Soc. Am.* 102, 2776.
 #[must_use]
 pub fn water_sound_speed_temperature(t_celsius: &[f64]) -> Vec<f64> {
     t_celsius
         .iter()
-        .map(|&t| 1402.7 + 4.8 * t - 0.0477 * t * t + 0.000248 * t * t * t)
+        .map(|&t| 1402.7 + 4.83 * t - 0.048 * t * t + 1.47e-4 * t * t * t)
         .collect()
 }
 

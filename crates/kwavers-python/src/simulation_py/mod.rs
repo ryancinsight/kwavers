@@ -190,6 +190,16 @@ impl Simulation {
             ));
         }
 
+        // Sync the constructor's `pml_size` into `pml_config` so the run path —
+        // which reads `self.pml_config`, not `self.pml_size` — actually honours it.
+        // In particular `pml_size = Some(0)` yields `size = Some(0)`, which the
+        // dispatch maps to a zero-thickness boundary (`BoundaryConfig::None`),
+        // i.e. a transparent/periodic boundary. Leaving it `None` (the previous
+        // behaviour) silently fell back to the default ~20-cell absorbing PML
+        // regardless of the requested `pml_size`.
+        let mut pml_config = KwaversPmlConfig::default();
+        pml_config.size = pml_size;
+
         Ok(Simulation {
             grid,
             medium,
@@ -210,7 +220,7 @@ impl Simulation {
             axisymmetric: false,
             thermal: None,
             helmholtz_frequency: None,
-            pml_config: Some(KwaversPmlConfig::default()),
+            pml_config: Some(pml_config),
             helmholtz_config: None,
             nonlinear_config: Some(KwaversNonlinearConfig::default()),
             poroelastic: None,
