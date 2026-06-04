@@ -244,31 +244,56 @@ fn test_fft_absorption_energy_dissipation() {
         }
     }
 
-    // The previous "energy must change" assertion was cosmetic — a 10⁻¹¹
-    // correction satisfied it just as well as a physically correct one.
-    // The pressure-side correction is now exercised quantitatively in
-    // `test_pressure_correction_matches_analytical_single_mode`. Here we
-    // simply assert that with a non-trivial input the L1/L2 buffers are
-    // populated and the correction is non-negligible.
+    // The input is a single Fourier mode along x: sin(2π·i/16) (mode index 1),
+    // identical in every divergence component and in ρ_total. For a single mode
+    // the spectral operators act as exact scalar multipliers, so the full
+    // Treeby & Cox correction has a closed form (this exercises the τ·L1
+    // *absorbing* term, which the dispersion-only test zeroes out):
+    //
+    //   ∇·u = div_ux+div_uy+div_uz = 3·sin   ⇒ L1 = 3·ρ₀·|k|^(y−2)·sin
+    //   ρ_total = div_u = sin                ⇒ L2 = 1·|k|^(y−1)·sin
+    //   Δp(x) = c₀²·(τ·L1 − η·L2)
+    //         = c₀²·(τ·3ρ₀·n1 − η·n2)·sin     ⇒ max|Δp| = c₀²·|τ·3ρ₀·n1 − η·n2|
+    //
+    // where n1=|k|^(y−2), n2=|k|^(y−1) at mode 1. We read τ, η, n1, n2, ρ₀, c₀
+    // from the kernel/materials so the test pins the formula without re-deriving
+    // the grid's wavenumber convention.
+    let kx_idx = 1usize;
+    let abs = solver.absorption.as_ref().unwrap();
+    let tau = abs.tau[[0, 0, 0]];
+    let eta = abs.eta[[0, 0, 0]];
+    let n1 = abs.nabla1[[kx_idx, 0, 0]];
+    let n2 = abs.nabla2[[kx_idx, 0, 0]];
+    let rho0 = solver.materials.rho0[[0, 0, 0]];
+    let c0 = solver.materials.c0[[0, 0, 0]];
+    let expected_amp = c0 * c0 * (tau * 3.0 * rho0).mul_add(n1, -(eta * n2));
+
+    // Sanity: the analytical amplitude must be physically non-trivial, otherwise
+    // the comparison below could not discriminate a no-op collapse.
+    assert!(
+        expected_amp.abs() > 1e-6,
+        "analytical reference amplitude {expected_amp} too small to discriminate \
+         a no-op regression; test inputs are unsound"
+    );
+
     solver.fields.p.fill(0.0);
     solver.div_u.assign(&solver.rhox);
     solver.div_u.scaled_add(1.0, &solver.rhoy);
     solver.div_u.scaled_add(1.0, &solver.rhoz);
     solver.apply_absorption_to_pressure().unwrap();
 
-    let max_correction: f64 = solver
-        .fields
-        .p
-        .iter()
-        .map(|x| x.abs())
-        .fold(0.0_f64, f64::max);
-
+    // Pointwise comparison against the closed-form reference.
+    let denom = expected_amp.abs().max(1e-30);
+    let mut worst_rel: f64 = 0.0;
+    for i in 0..16usize {
+        let expected = expected_amp * (i as f64 * std::f64::consts::PI / 8.0).sin();
+        let observed = solver.fields.p[[i, 0, 0]];
+        worst_rel = worst_rel.max((observed - expected).abs() / denom);
+    }
     assert!(
-        max_correction > 1e-3,
-        "Pressure-side absorption correction collapsed to {} (no-op regression);\
-         the bug closed in this fix made this < 1e-9. Threshold 1e-3 catches \
-         off-by-orders regressions while remaining insensitive to FFT noise.",
-        max_correction
+        worst_rel < 1e-9,
+        "pressure-side absorption (τ·L1 − η·L2) mismatch vs closed-form reference: \
+         worst peak-relative error = {worst_rel:e} (reference peak amp = {denom:e})"
     );
 }
 
