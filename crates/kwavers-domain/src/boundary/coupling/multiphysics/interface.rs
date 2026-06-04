@@ -2,7 +2,7 @@
 
 use kwavers_core::error::KwaversResult;
 use crate::boundary::traits::BoundaryCondition;
-use crate::grid::GridTopology;
+use kwavers_grid::GridTopology;
 use ndarray::ArrayViewMut3;
 
 use super::super::types::{

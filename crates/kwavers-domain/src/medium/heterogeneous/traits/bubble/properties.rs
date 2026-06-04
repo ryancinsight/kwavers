@@ -1,6 +1,6 @@
 //! Bubble dynamics properties implementation for heterogeneous media
 
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use crate::medium::{
     bubble::{BubbleProperties, BubbleState},
     heterogeneous::{core::HeterogeneousMedium, interpolation::HetTrilinearInterpolator},

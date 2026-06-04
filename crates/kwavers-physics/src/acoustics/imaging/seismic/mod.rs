@@ -8,7 +8,7 @@
 //! 2. **Baysal, E., et al. (1983)**. "Reverse time migration." *Geophysics*,
 //!    48(11), 1514-1524.
 
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::Array3;
 
 /// Seismic imaging method types

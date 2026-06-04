@@ -3,7 +3,7 @@
 //! This module provides utilities for detecting interfaces and boundaries
 //! between different media based on property discontinuities.
 
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use crate::medium::core::{ArrayAccess, CoreMedium};
 use ndarray::ArrayView3;
 

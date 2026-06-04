@@ -1,6 +1,6 @@
 use super::{collect_pressure_indices_fortran, SourceHandler};
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::source::{Source, SourceField};
 use ndarray::Array2;
 

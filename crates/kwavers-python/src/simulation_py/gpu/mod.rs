@@ -5,7 +5,7 @@ pub use session::GpuPstdSession;
 #[cfg(feature = "gpu")]
 use kwavers_core::error::KwaversResult;
 #[cfg(feature = "gpu")]
-use kwavers_domain::grid::Grid as KwaversGrid;
+use kwavers_grid::Grid as KwaversGrid;
 #[cfg(feature = "gpu")]
 use kwavers_domain::sensor::recorder::SampledStatistics;
 #[cfg(feature = "gpu")]

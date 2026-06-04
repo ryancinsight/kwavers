@@ -10,7 +10,7 @@ use super::super::KWaveArray;
 ///
 #[test]
 fn test_annulus_is_subset_of_bowl_same_outer_diameter() {
-    use crate::grid::Grid;
+    use kwavers_grid::Grid;
 
     let dx = 2.0e-4;
     let grid = Grid::new(81, 81, 81, dx, dx, dx).expect("grid");
@@ -56,7 +56,7 @@ fn test_build_per_element_source_superposition() {
     // Theorem: for two elements with per-element signals s1, s2 and a
     // per-cell signal built as Σᵢ Wᵢ[c] · sᵢ[t], setting s1 = s2 = s
     // must reproduce the shared-signal result (W_sum[c] · s[t]).
-    use crate::grid::Grid;
+    use kwavers_grid::Grid;
     use ndarray::Array2;
 
     let dx = 5.0e-4;

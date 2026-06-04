@@ -1,7 +1,7 @@
 //! Simple tests to verify FDTD and PSTD solvers are working correctly
 
 use kwavers_domain::boundary::{DomainPMLBoundary, DomainPmlConfig};
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::homogeneous::HomogeneousMedium;
 use kwavers_domain::source::Source;
 use kwavers_solver::fdtd::{FdtdConfig, FdtdPlugin};

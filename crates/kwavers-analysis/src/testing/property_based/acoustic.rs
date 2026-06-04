@@ -67,7 +67,7 @@ pub mod acoustic_properties {
 /// **Testing Strategy**: Verify fundamental acoustic relationships hold
 /// **Safety**: All tests ensure no panics or undefined behavior per ICSE 2020
 pub mod medium_properties {
-    use kwavers_domain::grid::Grid;
+    use kwavers_grid::Grid;
     use kwavers_domain::medium::CoreMedium;
 
     /// Verify all medium properties return physically valid values
@@ -131,7 +131,7 @@ pub mod medium_properties {
 ///
 /// **Focus**: Ensure grid operations never panic or produce invalid results
 pub mod grid_properties {
-    use kwavers_domain::grid::Grid;
+    use kwavers_grid::Grid;
 
     /// Verify grid indexing operations are safe and bounded
     ///

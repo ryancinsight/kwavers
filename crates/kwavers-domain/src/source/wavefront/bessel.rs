@@ -4,7 +4,7 @@
 //! their shape over long distances, useful for applications requiring
 //! extended depth of field.
 
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_signal::Signal;
 use crate::source::{Source, SourceField};
 use ndarray::Array3;

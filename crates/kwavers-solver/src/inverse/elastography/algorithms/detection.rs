@@ -4,7 +4,7 @@
 //! - Bercoff et al. (2004). *Supersonic shear imaging*.
 //! - Palmeri et al. (2008). *Quantifying hepatic shear modulus in vivo*.
 
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_physics::acoustics::imaging::modalities::elastography::displacement::DisplacementField;
 
 /// Find push locations (27-neighbourhood local maxima) in a displacement field.

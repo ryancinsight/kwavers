@@ -1,6 +1,6 @@
 #![cfg(feature = "gpu")]
 
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_gpu::gpu::FdtdGpu;
 use kwavers_gpu::profiling::{GpuAllocationConfig, GpuAllocationTracker};
 use ndarray::Array3;

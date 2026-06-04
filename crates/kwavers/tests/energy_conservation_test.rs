@@ -5,7 +5,7 @@
 //!
 //! Reference: LeVeque, "Finite Volume Methods for Hyperbolic Problems", 2002
 
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::HomogeneousMedium;
 use ndarray::{Array3, Zip};
 

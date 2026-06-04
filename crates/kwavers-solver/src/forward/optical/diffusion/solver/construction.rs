@@ -8,7 +8,7 @@ use ndarray::Array3;
 use super::{
     DiffusionBoundaryCondition, DiffusionBoundaryConditions, DiffusionSolver, DiffusionSolverConfig,
 };
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::properties::OpticalPropertyData;
 
 impl DiffusionSolver {

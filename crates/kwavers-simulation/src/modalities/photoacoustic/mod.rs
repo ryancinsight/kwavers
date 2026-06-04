@@ -55,7 +55,7 @@
 //! ```rust,no_run
 //! use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 //! use kwavers_simulation::modalities::photoacoustic::PhotoacousticSimulator;
-//! use kwavers_domain::grid::Grid;
+//! use kwavers_grid::Grid;
 //! use kwavers_domain::medium::homogeneous::HomogeneousMedium;
 //! use kwavers_domain::imaging::photoacoustic::PhotoacousticParameters;
 //!
@@ -91,7 +91,7 @@
 //!
 //! ```rust,no_run
 //! # use kwavers_simulation::modalities::photoacoustic::PhotoacousticSimulator;
-//! # use kwavers_domain::grid::Grid;
+//! # use kwavers_grid::Grid;
 //! # use kwavers_domain::medium::homogeneous::HomogeneousMedium;
 //! # use kwavers_domain::imaging::photoacoustic::PhotoacousticParameters;
 //! # use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};

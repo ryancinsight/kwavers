@@ -6,7 +6,7 @@
 use kwavers_core::constants::fundamental::ACOUSTIC_IMPEDANCE_WATER_NOMINAL;
 use kwavers_core::error::KwaversResult;
 use crate::boundary::traits::BoundaryCondition;
-use crate::grid::GridTopology;
+use kwavers_grid::GridTopology;
 use ndarray::ArrayViewMut3;
 
 use super::types::{BoundaryDirections, FrequencyProfile};

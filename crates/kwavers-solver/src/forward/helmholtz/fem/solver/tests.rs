@@ -2,7 +2,7 @@ use super::config::{FemHelmholtzConfig, FemPreconditionerType};
 use super::core::FemHelmholtzSolver;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::error::KwaversError;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::mesh::{MeshBoundaryType, TetrahedralMesh};
 use approx::assert_relative_eq;
 use ndarray::{arr2, Array2};
@@ -20,7 +20,7 @@ fn unit_tet() -> (TetrahedralMesh, [usize; 4]) {
 }
 
 fn homogeneous_medium() -> (kwavers_domain::medium::HomogeneousMedium, ()) {
-    let grid = kwavers_domain::grid::Grid::new(2, 2, 2, 1.0, 1.0, 1.0).unwrap();
+    let grid = kwavers_grid::Grid::new(2, 2, 2, 1.0, 1.0, 1.0).unwrap();
     (
         kwavers_domain::medium::HomogeneousMedium::new(
             1000.0,

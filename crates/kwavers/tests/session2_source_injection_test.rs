@@ -21,7 +21,7 @@
 //! Sprint: 217 Session 2 - k-Wave Validation
 
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::HomogeneousMedium;
 use kwavers_signal::Signal;
 use kwavers_domain::source::custom::FunctionSource;

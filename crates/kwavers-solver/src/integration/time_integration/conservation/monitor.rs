@@ -1,7 +1,8 @@
 //! `ConservationMonitor` — check and accumulate conservation errors over time.
 
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
-use kwavers_domain::{grid::Grid, medium::Medium};
+use kwavers_grid::Grid;
+use kwavers_domain::medium::Medium;
 use log::warn;
 use ndarray::{Array3, Zip};
 

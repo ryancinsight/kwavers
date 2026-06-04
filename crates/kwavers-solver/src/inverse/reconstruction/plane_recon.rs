@@ -4,7 +4,7 @@
 //! commonly used in photoacoustic and ultrasound imaging.
 
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use crate::reconstruction::{
     ReconstructionConfig, Reconstructor, UniversalBackProjection, WeightFunction,
 };

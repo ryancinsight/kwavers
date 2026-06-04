@@ -3,7 +3,7 @@ use super::device::GPUDevice;
 use super::memory::GPUMemoryPool;
 use super::metrics::SweGpuStepMetrics;
 use super::solver::GPUElasticWaveSolver3D;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::Array3;
 
 #[test]

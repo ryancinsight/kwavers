@@ -311,7 +311,7 @@ mod tests {
 
     #[test]
     fn in_place_shielding_modifies_heterogeneous_medium_pstd_inputs() {
-        use kwavers_domain::grid::Grid;
+        use kwavers_grid::Grid;
         use kwavers_domain::medium::heterogeneous::tissue::{
             AbsorptionTissueType, HeterogeneousTissueMedium,
         };
@@ -387,7 +387,7 @@ mod tests {
 
     #[test]
     fn wood_only_changes_sound_speed_but_not_absorption() {
-        use kwavers_domain::grid::Grid;
+        use kwavers_grid::Grid;
         use kwavers_domain::medium::heterogeneous::tissue::{
             AbsorptionTissueType, HeterogeneousTissueMedium,
         };

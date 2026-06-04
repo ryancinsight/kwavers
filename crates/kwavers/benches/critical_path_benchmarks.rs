@@ -14,7 +14,7 @@ use kwavers_math::numerics::operators::{
         CentralDifference2, CentralDifference4, CentralDifference6, DifferentialOperator,
     };
 use kwavers_domain::medium::{CoreMedium, HomogeneousMedium};
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::Array3;
 
 /// Benchmark FDTD finite difference operations (critical inner loop)

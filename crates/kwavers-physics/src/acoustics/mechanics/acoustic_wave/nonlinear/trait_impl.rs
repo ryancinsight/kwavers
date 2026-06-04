@@ -3,7 +3,7 @@
 //! This module contains implementations of various traits for the `NonlinearWave` struct.
 
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::Medium;
 use kwavers_domain::source::Source;
 use crate::traits::AcousticWaveModel;
@@ -165,7 +165,7 @@ mod tests {
     use super::super::wave_model::NonlinearWave;
     use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use kwavers_core::constants::numerical::MHZ_TO_HZ;
-    use kwavers_domain::grid::Grid;
+    use kwavers_grid::Grid;
     use kwavers_domain::medium::HomogeneousMedium;
     use crate::traits::AcousticWaveModel;
 

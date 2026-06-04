@@ -1,6 +1,6 @@
 //! Acoustic intensity and power flux.
 
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::{Array3, Zip};
 
 /// Compute acoustic intensity vector field `I = p v` [W/m^2].
@@ -45,7 +45,7 @@ pub fn acoustic_power_through_z_plane(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kwavers_domain::grid::Grid;
+    use kwavers_grid::Grid;
     use ndarray::Array3;
 
     fn uniform(val: f64) -> Array3<f64> {

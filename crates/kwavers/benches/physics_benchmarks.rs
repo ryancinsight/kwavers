@@ -1,7 +1,7 @@
 // benches/physics_benchmarks.rs
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use kwavers_domain::medium::homogeneous::HomogeneousMedium;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 
 fn grid_creation_benchmark(c: &mut Criterion) {
     c.bench_function("grid_creation", |b| {

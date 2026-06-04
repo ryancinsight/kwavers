@@ -1,7 +1,7 @@
 //! `AcousticFieldKernel`: GPU compute pipeline for acoustic field propagation.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_domain::grid;
+use kwavers_grid;
 use ndarray::Array3;
 use wgpu::util::DeviceExt;
 

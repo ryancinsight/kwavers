@@ -28,7 +28,7 @@ use kwavers_analysis::ml::uncertainty::{
 use kwavers_analysis::validation::clinical::{
     ClinicalValidator, ImageQualityMetrics, MeasurementAccuracy, SafetyIndices,
 };
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::imaging::ultrasound::elastography::InversionMethod;
 use kwavers_domain::imaging::ultrasound::elastography::{
     NonlinearInversionMethod, NonlinearParameterMap,

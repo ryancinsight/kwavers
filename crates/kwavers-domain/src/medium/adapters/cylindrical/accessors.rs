@@ -3,7 +3,7 @@
 use ndarray::ArrayView2;
 
 use super::CylindricalMediumProjection;
-use crate::grid::{CylindricalTopology, Grid};
+use kwavers_grid::{CylindricalTopology, Grid};
 use crate::medium::Medium;
 
 impl<'a, M: Medium> CylindricalMediumProjection<'a, M> {

@@ -12,7 +12,7 @@ fn test_kwave_array_creation() {
 
 #[test]
 fn test_kwave_array_binary_mask() {
-    let grid = crate::grid::Grid::new(32, 32, 32, 0.001, 0.001, 0.001).unwrap();
+    let grid = kwavers_grid::Grid::new(32, 32, 32, 0.001, 0.001, 0.001).unwrap();
     let mut array = KWaveArray::new();
     array.add_disc_element((0.016, 0.016, 0.016), 0.005, None);
     let mask = array.get_array_binary_mask(&grid);
@@ -22,7 +22,7 @@ fn test_kwave_array_binary_mask() {
 
 #[test]
 fn test_kwave_array_disc_focus_mask_is_planar_and_matches_kwave_python_reference_mass() {
-    let grid = crate::grid::Grid::new(32, 32, 32, 0.001, 0.001, 0.001).unwrap();
+    let grid = kwavers_grid::Grid::new(32, 32, 32, 0.001, 0.001, 0.001).unwrap();
     let mut array = KWaveArray::new();
     array.add_disc_element((0.016, 0.016, 0.016), 0.006, Some((0.016, 0.016, 0.024)));
     let weights = array.get_array_weighted_mask(&grid);

@@ -12,7 +12,7 @@ use kwavers_domain::plugin::{PluginMetadata, PluginState};
 // So this plugin calling into solver is OK, because it lives in solver now?
 // Yes, Plugin implementation in Solver is fine.
 
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::{Array2, Array3};
 
 use super::parameters::{FwiParameters, MigrationAperture, RtmSettings};

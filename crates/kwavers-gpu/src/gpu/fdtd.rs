@@ -12,7 +12,7 @@
 //! which dispatches `fdtd_pressure.wgsl` (three-buffer leapfrog, correct staggering).
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::Array3;
 
 /// GPU-accelerated FDTD solver: two-pass collocated Euler split.

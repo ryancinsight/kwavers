@@ -39,7 +39,7 @@
 //! [`BubbleDynamicsPlugin`]: crate::forward::bubble_dynamics::plugin::BubbleDynamicsPlugin
 
 use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::Medium;
 use kwavers_domain::plugin::Plugin;
 use kwavers_physics::factory::config::PhysicsConfig;

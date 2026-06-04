@@ -1,5 +1,5 @@
 use super::{BoundaryResults, NumericalValidator};
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 
 impl NumericalValidator {
     /// Validate boundaries.

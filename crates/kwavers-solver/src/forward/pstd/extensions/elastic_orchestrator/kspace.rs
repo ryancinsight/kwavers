@@ -219,7 +219,7 @@ mod tests {
         ElasticPstdMedium, ElasticPstdSourceMode, ElasticPstdVelocitySource,
     };
     use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
-    use kwavers_domain::grid::Grid;
+    use kwavers_grid::Grid;
     use ndarray::{Array1, Array3};
     use std::f64::consts::PI;
 

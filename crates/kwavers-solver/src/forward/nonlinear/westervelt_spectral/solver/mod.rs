@@ -39,7 +39,7 @@
 //! - Westervelt, P.J. (1963). Parametric acoustic array. J. Acoust. Soc. Am. 35(4), 535–537.
 //! - Hamilton, M.F. & Blackstock, D.T. (1998). Nonlinear Acoustics. Academic Press, Ch. 3.
 
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::Medium;
 use kwavers_math::fft::Complex64;
 use crate::forward::nonlinear::conservation::{

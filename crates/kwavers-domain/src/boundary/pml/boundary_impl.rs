@@ -1,7 +1,7 @@
 use super::DomainPMLBoundary;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use crate::boundary::Boundary;
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use log::trace;
 use ndarray::{Array3, ArrayViewMut3};
 

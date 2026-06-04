@@ -1,7 +1,7 @@
 //! Octree data structure for 3D adaptive mesh refinement
 
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Bounds;
+use kwavers_grid::Bounds;
 use ndarray::Array3;
 
 /// Octree node for spatial subdivision

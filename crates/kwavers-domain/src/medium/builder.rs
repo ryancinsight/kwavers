@@ -5,7 +5,7 @@
 use super::{DomainMediumParameters, InterfaceTypeParameters, LayerParameters, MediumType};
 use kwavers_core::constants::{REFERENCE_FREQUENCY_HZ, SOUND_SPEED_WATER_SIM};
 use kwavers_core::error::{KwaversError, KwaversResult};
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use crate::medium::heterogeneous::HeterogeneousFactory;
 use crate::medium::{homogeneous::HomogeneousMedium, Medium};
 

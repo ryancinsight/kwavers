@@ -100,8 +100,6 @@
 
 pub mod boundary;
 pub mod field;
-pub mod geometry;
-pub mod grid;
 pub mod imaging;
 pub mod medium;
 pub mod mesh;
@@ -112,7 +110,3 @@ pub mod sensor;
 
 pub mod source;
 pub mod therapy;
-
-// Re-export key domain types for convenience
-pub use geometry::{GeometricDomain, PointLocation, RectangularDomain, SphericalDomain};
-pub use grid::GridDimension;

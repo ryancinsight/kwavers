@@ -5,7 +5,7 @@ use super::propagation::propagate_acoustic_wave;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_core::constants::numerical::MPA_TO_PA;
 use kwavers_core::constants::thermodynamic::GRUNEISEN_WATER_20C;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::imaging::photoacoustic::InitialPressure;
 use kwavers_domain::medium::homogeneous::HomogeneousMedium;
 use approx::assert_relative_eq;

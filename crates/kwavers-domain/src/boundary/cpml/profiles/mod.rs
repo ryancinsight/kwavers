@@ -49,7 +49,7 @@ mod tests;
 
 use super::config::CPMLConfig;
 use kwavers_core::error::KwaversResult;
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::Array1;
 
 /// CPML absorption and stretching profiles.

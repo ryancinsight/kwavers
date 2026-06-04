@@ -14,7 +14,7 @@ use kwavers_solver::pstd::numerics::spectral_correction::SpectralCorrectionMetho
 use kwavers_physics::traits::AcousticWaveModel;
 use kwavers_solver::fdtd::FdtdConfig;
 use kwavers_solver::fdtd::FdtdPlugin;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_solver::forward::nonlinear::kuznetsov::KuznetsovConfig;
 use kwavers_solver::forward::nonlinear::kuznetsov::KuznetsovWave;
 use kwavers_solver::pstd::PSTDConfig;

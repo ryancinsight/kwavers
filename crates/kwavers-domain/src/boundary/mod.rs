@@ -59,7 +59,7 @@
 //! This module must not depend on crate-root re-exports; use direct imports only.
 
 use kwavers_core::error::KwaversResult;
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::{Array1, Array3, ArrayViewMut3};
 use std::any::Any;
 use std::fmt::Debug;

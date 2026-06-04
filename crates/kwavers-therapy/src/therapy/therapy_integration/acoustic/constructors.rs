@@ -1,6 +1,6 @@
 use super::AcousticWaveSolver;
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::Medium;
 use kwavers_physics::acoustics::mechanics::acoustic_wave::AcousticSpatialOrder;
 use kwavers_simulation::backends::acoustic::{AcousticSolverBackend, FdtdBackend};

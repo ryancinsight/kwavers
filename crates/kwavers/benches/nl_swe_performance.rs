@@ -27,7 +27,7 @@
 //! - **Memory efficiency**: < 8 bytes per grid point for storage
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::imaging::ultrasound::elastography::{
     InversionMethod, NonlinearInversionMethod,
 };

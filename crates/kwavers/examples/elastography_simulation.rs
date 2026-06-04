@@ -1,6 +1,6 @@
 use kwavers_domain::medium::heterogeneous::tissue::HeterogeneousTissueMedium;
 use kwavers_domain::medium::AbsorptionTissueType;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers::init_logging;
 use log::info;
 use ndarray::Array3;

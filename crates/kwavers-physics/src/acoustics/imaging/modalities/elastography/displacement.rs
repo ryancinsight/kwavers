@@ -17,7 +17,7 @@
 //!   using an autocorrelation technique." *IEEE Trans. Sonics Ultrason.*, 32(3), 458-464.
 
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::Array3;
 
 /// Displacement field for shear wave tracking

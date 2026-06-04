@@ -1,7 +1,7 @@
 use super::config::FdtdFemCouplingConfig;
 use super::interface::FdtdFemInterface;
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::HomogeneousMedium;
 use kwavers_domain::mesh::tetrahedral::TetrahedralMesh;
 use crate::forward::helmholtz::fem::solver::{FemHelmholtzConfig, FemHelmholtzSolver};

@@ -32,7 +32,7 @@
 //! - Canuto C et al. (2006). Spectral Methods: Fundamentals in Single Domains.
 //!   Springer.
 
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_math::fft::{get_fft_for_grid, Fft3dInOutExt};
 use ndarray::{Array3, Zip};
 use num_complex::Complex64;

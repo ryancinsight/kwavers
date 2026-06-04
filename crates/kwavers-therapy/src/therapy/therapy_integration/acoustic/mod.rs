@@ -75,7 +75,7 @@ pub struct AcousticWaveSolver {
     /// Solver backend (FDTD, PSTD, etc.)
     backend: Box<dyn AcousticSolverBackend>,
     /// Computational grid
-    grid: kwavers_domain::grid::Grid,
+    grid: kwavers_grid::Grid,
     /// Accumulated squared pressure for temporal averaging (Pa²)
     accumulated_p_squared: Array3<f64>,
 }

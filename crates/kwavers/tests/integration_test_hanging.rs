@@ -2,7 +2,7 @@
 
 use kwavers_domain::boundary::DomainPMLBoundary;
 use kwavers_core::constants::{DENSITY_WATER, SOUND_SPEED_WATER};
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::{CoreMedium, HomogeneousMedium};
 use kwavers_solver::plugin_based::PluginBasedSolver;
 use kwavers_domain::source::PointSource;

@@ -2,7 +2,7 @@
 
 use super::HeterogeneousTissueMedium;
 use kwavers_core::constants::{DB_TO_NP, MHZ_TO_HZ};
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use crate::medium::absorption::AbsorptionTissueType;
 use crate::medium::acoustic::AcousticProperties;
 

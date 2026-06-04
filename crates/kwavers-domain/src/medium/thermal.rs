@@ -4,7 +4,7 @@
 //! thermal conductivity, and temperature-dependent effects.
 
 use kwavers_core::constants::thermodynamic::SPECIFIC_HEAT_WATER_37C;
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use crate::medium::core::CoreMedium;
 use ndarray::Array3;
 

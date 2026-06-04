@@ -1,7 +1,7 @@
 //! `KzkSolverPlugin`: core KZK solver logic and operator methods.
 
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::Medium;
 use kwavers_domain::plugin::{PluginMetadata, PluginState};
 use ndarray::Array3;

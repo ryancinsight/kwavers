@@ -1,5 +1,5 @@
 use super::SourceHandler;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::source::SourceMode;
 use ndarray::Array3;
 

@@ -1,7 +1,7 @@
 //! `ThermalProperties` and `ThermalField` impls for `HeterogeneousTissueMedium`
 
 use super::HeterogeneousTissueMedium;
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use crate::medium::thermal::{ThermalField, ThermalProperties};
 use ndarray::Array3;
 

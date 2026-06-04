@@ -4,7 +4,7 @@ use super::core::{
     compute_detector_positions, interpolate_detector_signal, time_reversal_reconstruction,
 };
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use approx::assert_relative_eq;
 use ndarray::Array3;
 

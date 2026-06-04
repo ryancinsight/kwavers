@@ -29,7 +29,7 @@
 //! - Westervelt (1963). J. Acoust. Soc. Am. 35(4), 535–537.
 //! - Hamilton & Blackstock (1998). Nonlinear Acoustics. Academic Press.
 
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::HomogeneousMedium;
 use kwavers_signal::SineWave;
 use kwavers_domain::source::{PointSource, Source};

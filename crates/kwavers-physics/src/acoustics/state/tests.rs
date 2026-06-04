@@ -1,7 +1,7 @@
 use super::container::{field_indices, PhysicsState};
 use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use kwavers_core::constants::thermodynamic::{KELVIN_OFFSET_C, ROOM_TEMPERATURE_K};
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::Array3;
 
 #[test]

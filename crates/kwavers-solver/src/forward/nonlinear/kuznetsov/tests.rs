@@ -7,7 +7,7 @@ use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 #[cfg(test)]
 use kwavers_core::constants::numerical::TWO_PI;
 #[cfg(test)]
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 
 /// **Invariant**: Creating a KuznetsovWave on a 32³ grid allocates exactly
 /// 18 × 32³ × 8 = 4,718,592 bytes in its workspace scratch arena.

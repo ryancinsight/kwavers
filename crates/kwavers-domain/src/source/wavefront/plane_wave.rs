@@ -3,7 +3,7 @@
 //! This source generates a plane wave propagating in a specified direction.
 //! Commonly used for testing and validation against analytical solutions.
 
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_signal::Signal;
 use crate::source::{Source, SourceField};
 use ndarray::Array3;

@@ -1,6 +1,6 @@
 use super::PSTDSolver;
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::Medium;
 use std::sync::Arc;
 

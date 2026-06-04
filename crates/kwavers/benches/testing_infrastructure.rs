@@ -10,7 +10,7 @@ use kwavers_analysis::testing::acoustic_properties::*;
 use kwavers_analysis::testing::grid_properties::*;
 use kwavers_analysis::testing::medium_properties::*;
 use kwavers_domain::medium::HomogeneousMedium;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 
 /// Benchmark grid creation for various sizes
 fn bench_grid_creation(c: &mut Criterion) {

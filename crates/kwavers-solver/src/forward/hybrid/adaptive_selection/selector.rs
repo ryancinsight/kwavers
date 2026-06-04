@@ -4,7 +4,7 @@ use super::criteria::HybridSelectionCriteria;
 use super::metrics::{ComputationalMetrics, MaterialMetrics, SpectralMetrics};
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::{Array3, Array4};
 
 /// Method selection result

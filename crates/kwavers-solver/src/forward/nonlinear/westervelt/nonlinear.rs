@@ -61,7 +61,7 @@
 
 use ndarray::Zip;
 
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 
 use super::WesterveltFdtd;
 

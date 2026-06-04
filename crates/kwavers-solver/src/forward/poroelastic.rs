@@ -4,7 +4,7 @@
 
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_physics::acoustics::mechanics::poroelastic::{BiotTheory, PoroelasticMaterial};
 
 /// Time-domain solver for poroelastic wave equations

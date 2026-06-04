@@ -5,7 +5,7 @@ use super::config::PhasedArrayConfig;
 use super::crosstalk::CrosstalkModel;
 use super::element::TransducerElement;
 use kwavers_core::error::KwaversResult;
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use crate::medium::Medium;
 use kwavers_signal::Signal;
 use crate::source::Source;

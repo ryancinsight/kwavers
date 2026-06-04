@@ -4,7 +4,7 @@
 //! Evidence-based thermal modeling per Hamilton & Blackstock Ch.8
 
 use kwavers_core::constants::tissue_thermal::THERMAL_EXPANSION_SOFT_TISSUE;
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use crate::medium::{
     heterogeneous::{core::HeterogeneousMedium, interpolation::HetTrilinearInterpolator},
     thermal::{ThermalField, ThermalProperties},

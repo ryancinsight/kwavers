@@ -3,7 +3,7 @@
 use super::model::SkullAttenuation;
 use kwavers_core::constants::acoustic_parameters::NP_TO_DB;
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::Array3;
 
 impl SkullAttenuation {

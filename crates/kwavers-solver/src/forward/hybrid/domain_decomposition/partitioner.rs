@@ -3,7 +3,7 @@
 use super::analyzer::DomainDecompQualityMetrics;
 use super::region::{DomainRegion, DomainType};
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use crate::hybrid::config::HybridDecompositionStrategy;
 
 /// Partitions domain into regions for different solvers

@@ -1,6 +1,6 @@
 //! Interface detector iterator.
 
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use crate::medium::Medium;
 
 /// Iterator that finds interfaces in the medium

@@ -4,7 +4,7 @@
 //! experiments, integrating wave propagation and inversion algorithms.
 
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::imaging::ultrasound::elastography::{ElasticityMap, InversionMethod};
 use kwavers_domain::medium::Medium;
 

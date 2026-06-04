@@ -40,7 +40,7 @@ mod recording;
 mod tests;
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::{Array1, Array2, ArrayView3};
 use serde::{Deserialize, Serialize};
 

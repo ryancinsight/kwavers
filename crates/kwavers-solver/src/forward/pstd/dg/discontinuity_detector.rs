@@ -1,6 +1,6 @@
 use kwavers_core::error::KwaversError;
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::Array3;
 
 #[derive(Debug)]
@@ -108,7 +108,7 @@ fn axis_gradient(
 #[cfg(test)]
 mod tests {
     use super::DiscontinuityDetector;
-    use kwavers_domain::grid::Grid;
+    use kwavers_grid::Grid;
     use crate::forward::pstd::dg::traits::DiscontinuityDetection;
     use ndarray::Array3;
 

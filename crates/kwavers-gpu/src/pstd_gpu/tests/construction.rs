@@ -52,7 +52,7 @@ fn test_gpu_pstd_solver_new() {
     let dt = 0.3 * dx / c0;
     let nt = 10;
 
-    let grid = kwavers_domain::grid::Grid::new(n, n, n, dx, dx, dx).unwrap();
+    let grid = kwavers_grid::Grid::new(n, n, n, dx, dx, dx).unwrap();
     let c0v: Vec<f32> = vec![c0 as f32; n * n * n];
     let rho0v: Vec<f32> = vec![rho0 as f32; n * n * n];
     let ones: Vec<f32> = vec![1.0f32; n * n * n];

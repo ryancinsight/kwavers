@@ -4,7 +4,7 @@
 //! Runs in release mode to get accurate performance measurements.
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::HomogeneousMedium;
 use kwavers_domain::source::GridSource;
 use kwavers_solver::forward::fdtd::{FdtdConfig, FdtdSolver};

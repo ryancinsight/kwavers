@@ -1,12 +1,16 @@
-//! Grid module for spatial discretization
+//! Spatial discretization for kwavers.
 //!
-//! This module provides the core grid structures and utilities for
-//! defining computational domains and spatial discretization.
+//! This crate provides the core grid structures and utilities for defining
+//! computational domains and spatial discretization (Cartesian/cylindrical
+//! grids, coordinates, topology, operators, k-space FFT helpers), plus the
+//! geometric-domain primitives (rectangular/spherical regions, point
+//! classification) previously co-located in `kwavers-domain`.
 
 pub mod adapter;
 pub mod config;
 pub mod coordinates;
 pub mod error;
+pub mod geometry;
 // field_ops moved to domain/field/operations.rs
 use kwavers_math::fft::kspace;
 pub mod operators;
@@ -43,6 +47,9 @@ pub use validation::GridValidator;
 /// FFT utilities for k-space operations
 pub use fft_utils::{fft_shift_2d, get_optimal_fft_size, ifft_shift_2d, is_optimal_fft_size};
 pub use kspace::KSpaceCalculator;
+
+/// Geometric-domain primitives
+pub use geometry::{GeometricDomain, PointLocation, RectangularDomain, SphericalDomain};
 
 pub type Grid3D = Grid;
 

@@ -3,7 +3,7 @@
 //! **Design Principle**: Extract interpolation logic following GRASP Information Expert
 //! Per TSE 2025 "Modular Scientific Computing Architecture"
 
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::Array3;
 
 /// Trilinear interpolation implementation

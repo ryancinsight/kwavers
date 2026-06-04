@@ -5,7 +5,7 @@
 use super::HASConfig;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_math::fft::{fft_2d_complex, ifft_2d_complex, Complex64};
 use ndarray::Array3;
 use std::f64::consts::PI;

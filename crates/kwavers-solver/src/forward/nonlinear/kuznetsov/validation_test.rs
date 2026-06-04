@@ -9,7 +9,7 @@ mod tests {
     use super::super::{AcousticEquationMode, KuznetsovConfig, KuznetsovWave};
     use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
     use kwavers_core::constants::{DENSITY_WATER, SOUND_SPEED_WATER};
-    use kwavers_domain::grid::Grid;
+    use kwavers_grid::Grid;
     use kwavers_domain::medium::HomogeneousMedium;
     use kwavers_domain::source::PointSource;
     use kwavers_physics::traits::AcousticWaveModel;

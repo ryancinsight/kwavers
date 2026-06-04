@@ -3,7 +3,7 @@
 use super::CPMLBoundary;
 use kwavers_core::error::KwaversResult;
 use crate::boundary::{Boundary, PmlExpFactors};
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::{Array3, ArrayViewMut3, Zip};
 
 impl Boundary for CPMLBoundary {

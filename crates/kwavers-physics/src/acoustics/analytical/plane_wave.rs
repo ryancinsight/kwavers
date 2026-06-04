@@ -2,7 +2,7 @@
 
 use super::utils::DISPERSION_CORRECTION_SECOND_ORDER;
 use kwavers_core::constants::numerical::TWO_PI;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::Array3;
 
 /// Plane wave analytical solutions
@@ -107,7 +107,7 @@ mod tests {
     use super::*;
     use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use kwavers_core::constants::numerical::MHZ_TO_HZ;
-    use kwavers_domain::grid::Grid;
+    use kwavers_grid::Grid;
     use std::f64::consts::PI;
 
     fn water_grid_one_wavelength() -> Grid {

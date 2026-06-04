@@ -1,7 +1,7 @@
 //! `FdtdBackend` struct definition and construction.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::Medium;
 use kwavers_domain::source::GridSource;
 use kwavers_physics::acoustics::mechanics::acoustic_wave::AcousticSpatialOrder;

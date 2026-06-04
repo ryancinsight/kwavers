@@ -1,7 +1,7 @@
 //! `RealtimeSimulationOrchestrator`: realtime-budgeted GPU multiphysics loop.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use crate::backend::performance_monitor::{
     BudgetAnalysis, GpuPerformanceMonitor, GpuStepMetrics,
 };

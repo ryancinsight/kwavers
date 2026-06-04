@@ -31,7 +31,7 @@
 //! - Peak emissions occur at different collapse phases
 //! - Spectral signatures provide experimental discrimination
 
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_physics::acoustics::bubble_dynamics::keller_miksis::KellerMiksisModel;
 use kwavers_physics::bubble_dynamics::bubble_state::BubbleParameters;
 use kwavers_physics::optics::sonoluminescence::{EmissionParameters, IntegratedSonoluminescence};

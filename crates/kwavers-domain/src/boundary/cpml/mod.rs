@@ -29,7 +29,7 @@ pub use profiles::CPMLProfiles;
 pub use update::CPMLUpdater;
 
 use kwavers_core::error::KwaversResult;
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 
 /// Main CPML boundary struct that coordinates all components
 #[derive(Debug)]

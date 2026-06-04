@@ -40,7 +40,7 @@
 use kwavers_therapy::therapy::swe_3d_workflows::{
     ElasticityMap3D, Swe3dClinicalDecisionSupport, VolumetricROI,
 };
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::heterogeneous::HeterogeneousMedium;
 use kwavers_domain::medium::HomogeneousMedium;
 use kwavers_physics::acoustics::imaging::modalities::elastography::{

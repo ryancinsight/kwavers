@@ -32,7 +32,7 @@
 //! - **Expected Error**: < 5% before shock formation
 
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::{CoreMedium, HomogeneousMedium};
 use ndarray::{Array2, Array3};
 use std::f64::consts::PI;

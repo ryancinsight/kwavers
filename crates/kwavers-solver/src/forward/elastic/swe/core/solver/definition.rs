@@ -3,7 +3,7 @@
 use super::super::super::boundary::{ElasticSwePMLBoundary, SwePmlConfig};
 use super::super::super::types::{ElasticWaveConfig, VolumetricWaveConfig};
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::Medium;
 use kwavers_domain::sensor::recorder::simple::SensorRecorder;
 use ndarray::Array3;

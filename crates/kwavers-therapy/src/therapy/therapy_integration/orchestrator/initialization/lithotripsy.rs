@@ -26,7 +26,7 @@ const HU_BACKGROUND_PERINEPHRIC: f64 = -200.0;
 use crate::therapy::lithotripsy::stone_fracture::StoneMaterial;
 use crate::therapy::lithotripsy::{LithotripsyParameters, LithotripsySimulator};
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 #[cfg(feature = "nifti")]
 use kwavers_domain::imaging::medical::{CTImageLoader, MedicalImageLoader};
 #[cfg(feature = "nifti")]

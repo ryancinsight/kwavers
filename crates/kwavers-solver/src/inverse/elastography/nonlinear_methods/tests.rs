@@ -150,7 +150,7 @@ fn test_forward_model_jacobian_numerical() {
 
 #[test]
 fn test_harmonic_ratio_inversion() {
-    let grid = kwavers_domain::grid::Grid::new(10, 10, 10, 0.001, 0.001, 0.001).unwrap();
+    let grid = kwavers_grid::Grid::new(10, 10, 10, 0.001, 0.001, 0.001).unwrap();
     let harmonic_field = HarmonicDisplacementField::new(10, 10, 10, 2, 10);
 
     let config = NonlinearInversionConfig::new(NonlinearInversionMethod::HarmonicRatio);
@@ -164,7 +164,7 @@ fn test_harmonic_ratio_inversion() {
 
 #[test]
 fn test_nonlinear_least_squares_inversion() {
-    let grid = kwavers_domain::grid::Grid::new(10, 10, 10, 0.001, 0.001, 0.001).unwrap();
+    let grid = kwavers_grid::Grid::new(10, 10, 10, 0.001, 0.001, 0.001).unwrap();
     let harmonic_field = HarmonicDisplacementField::new(10, 10, 10, 2, 10);
 
     let config = NonlinearInversionConfig::new(NonlinearInversionMethod::NonlinearLeastSquares);
@@ -178,7 +178,7 @@ fn test_nonlinear_least_squares_inversion() {
 
 #[test]
 fn test_bayesian_inversion() {
-    let grid = kwavers_domain::grid::Grid::new(10, 10, 10, 0.001, 0.001, 0.001).unwrap();
+    let grid = kwavers_grid::Grid::new(10, 10, 10, 0.001, 0.001, 0.001).unwrap();
     let harmonic_field = HarmonicDisplacementField::new(10, 10, 10, 2, 10);
 
     let config = NonlinearInversionConfig::new(NonlinearInversionMethod::BayesianInversion);
@@ -192,7 +192,7 @@ fn test_bayesian_inversion() {
 
 #[test]
 fn test_all_nonlinear_methods() {
-    let grid = kwavers_domain::grid::Grid::new(10, 10, 10, 0.001, 0.001, 0.001).unwrap();
+    let grid = kwavers_grid::Grid::new(10, 10, 10, 0.001, 0.001, 0.001).unwrap();
     let harmonic_field = HarmonicDisplacementField::new(10, 10, 10, 2, 10);
 
     for method in [

@@ -1,7 +1,7 @@
 use super::super::types::TumorSpec;
 use super::super::utils::compute_tumor_properties;
 use crate::optics::chromophores::HemoglobinDatabase;
-use crate::grid::GridDimensions;
+use kwavers_grid::GridDimensions;
 use crate::medium::optical_map::{OpticalPropertyMap, OpticalPropertyMapBuilder, Region};
 use crate::medium::properties::OpticalPropertyData;
 

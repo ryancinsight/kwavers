@@ -40,7 +40,7 @@ fn test_version_info() {
 
 #[test]
 fn test_grid_creation_minimal() {
-    let grid = kwavers_domain::grid::Grid::new(8, 8, 8, 0.001, 0.001, 0.001).expect("Grid creation");
+    let grid = kwavers_grid::Grid::new(8, 8, 8, 0.001, 0.001, 0.001).expect("Grid creation");
     assert_eq!(grid.nx, 8);
     assert_eq!(grid.ny, 8);
     assert_eq!(grid.nz, 8);
@@ -49,7 +49,7 @@ fn test_grid_creation_minimal() {
 
 #[test]
 fn test_medium_basic_properties() {
-    let grid = kwavers_domain::grid::Grid::new(4, 4, 4, 0.001, 0.001, 0.001).expect("Grid creation");
+    let grid = kwavers_grid::Grid::new(4, 4, 4, 0.001, 0.001, 0.001).expect("Grid creation");
     let medium = kwavers_domain::medium::HomogeneousMedium::new(
         kwavers_core::constants::DENSITY_WATER,
         kwavers_core::constants::SOUND_SPEED_WATER,
@@ -80,7 +80,7 @@ fn test_physics_constants_validation() {
 
 #[test]
 fn test_cfl_calculation_basic() {
-    let grid = kwavers_domain::grid::Grid::new(8, 8, 8, 1e-3, 1e-3, 1e-3).expect("Grid creation");
+    let grid = kwavers_grid::Grid::new(8, 8, 8, 1e-3, 1e-3, 1e-3).expect("Grid creation");
     let sound_speed = SOUND_SPEED_WATER_SIM;
     let cfl = 0.4; // Conservative CFL for 3D
     let min_dx = grid.dx.min(grid.dy).min(grid.dz);

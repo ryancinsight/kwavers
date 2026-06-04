@@ -1,7 +1,7 @@
 //! `ElasticProperties` and `ElasticArrayAccess` impls for `HeterogeneousTissueMedium`
 
 use super::HeterogeneousTissueMedium;
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use crate::medium::absorption::TISSUE_PROPERTIES;
 use crate::medium::elastic::{ElasticArrayAccess, ElasticProperties};
 use ndarray::Array3;

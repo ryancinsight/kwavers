@@ -1,6 +1,6 @@
 use super::config::FdtdFemCouplingConfig;
 use super::solver::FdtdFemSolver;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::mesh::tetrahedral::TetrahedralMesh;
 use kwavers_domain::mesh::MeshBoundaryType;
 

@@ -6,7 +6,7 @@ use kwavers_core::constants::optical::{
     DEFAULT_POLARIZATION_FACTOR, LAPLACIAN_CENTER_COEFF, VISIBLE_LIGHT_FREQUENCY_HZ,
 };
 use kwavers_domain::field::indices::LIGHT_IDX;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::Medium;
 use crate::acoustics::traits::LightDiffusionModelTrait;
 use crate::optics::polarization::LinearPolarization;

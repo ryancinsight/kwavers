@@ -1,5 +1,5 @@
 use super::*;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::Array3;
 
 /// fd1_x on a linear field f = A*x gives the constant A at all interior points.

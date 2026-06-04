@@ -2,7 +2,7 @@
 
 use super::CylindricalMediumProjection;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
-use crate::grid::{CylindricalTopology, Grid};
+use kwavers_grid::{CylindricalTopology, Grid};
 use crate::medium::heterogeneous::HeterogeneousMedium;
 use crate::medium::{CoreMedium, HomogeneousMedium};
 

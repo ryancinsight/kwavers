@@ -3,7 +3,7 @@ use super::AxialField;
 use super::SolverField;
 use anyhow::Result;
 use kwavers_domain::boundary::cpml::CPMLConfig;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_solver::forward::fdtd::{FdtdConfig, FdtdSolver, KSpaceCorrectionMode};
 use kwavers_solver::forward::pstd::config::{BoundaryConfig, KSpaceMethod, PSTDConfig};
 use kwavers_solver::forward::pstd::dg::dg_solver::acoustic::{

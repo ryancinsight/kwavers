@@ -25,7 +25,7 @@ use kwavers_core::constants::thermodynamic::{
 };
 use kwavers_core::constants::BLOOD_VISCOSITY_37C;
 use kwavers_core::constants::MHZ_TO_HZ;
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::Array3;
 
 use super::HomogeneousMedium;

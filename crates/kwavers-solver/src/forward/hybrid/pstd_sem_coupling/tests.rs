@@ -1,5 +1,5 @@
 use super::*;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::mesh::TetrahedralMesh;
 
 #[test]

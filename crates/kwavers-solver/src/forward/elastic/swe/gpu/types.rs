@@ -1,6 +1,6 @@
 //! Result types for GPU SWE operations.
 
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 
 /// GPU propagation result
 #[derive(Debug, Clone)]

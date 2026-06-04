@@ -5,7 +5,7 @@ use super::types::{ElasticPstdMedium, ElasticPstdSourceMode, ElasticPstdVelocity
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::numerical::TWO_PI;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::{Array1, Array3};
 use num_complex::Complex;
 use std::f64::consts::PI;

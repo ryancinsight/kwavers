@@ -94,7 +94,7 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kwavers_domain::grid::Grid;
+    use kwavers_grid::Grid;
     use kwavers_domain::medium::homogeneous::HomogeneousMedium;
     use kwavers_domain::source::grid_source::GridSource;
     use crate::configs::PoroelasticConfig;

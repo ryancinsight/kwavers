@@ -5,7 +5,7 @@
 
 use super::parameters::{ImagingCondition, RtmSettings};
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::Array3;
 
 /// Reverse Time Migration processor
@@ -216,7 +216,7 @@ impl Default for RtmProcessor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kwavers_domain::grid::Grid;
+    use kwavers_grid::Grid;
     use ndarray::Array3;
 
     /// Zero-lag imaging condition: I(x) = S(x)·R(x).

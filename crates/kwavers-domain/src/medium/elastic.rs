@@ -3,7 +3,7 @@
 //! This module defines traits for elastic wave propagation in solid media,
 //! including Lamé parameters and wave speeds.
 
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use crate::medium::core::{ArrayAccess, CoreMedium};
 use ndarray::Array3;
 

@@ -1,6 +1,6 @@
 use ndarray::Array3;
 
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use crate::medium::{
     acoustic::AcousticProperties,
     bubble::{BubbleProperties, BubbleState},

@@ -3,8 +3,8 @@
 //! Core time-reversal reconstruction implementation.
 
 use kwavers_core::error::KwaversResult;
+use kwavers_grid::Grid;
 use kwavers_domain::{
-        grid::Grid,
         medium::Medium,
         sensor::recorder::Recorder,
         source::{Source, TimeVaryingSource},

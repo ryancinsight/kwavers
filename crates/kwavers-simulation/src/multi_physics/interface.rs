@@ -1,5 +1,5 @@
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 
 /// Simplified coupling interface definition
 #[derive(Debug, Clone)]

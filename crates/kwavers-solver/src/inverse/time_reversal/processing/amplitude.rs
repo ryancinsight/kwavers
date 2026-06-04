@@ -3,7 +3,8 @@
 //! Implements amplitude correction for geometric spreading and absorption compensation.
 
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::{grid::Grid, medium::Medium};
+use kwavers_grid::Grid;
+use kwavers_domain::medium::Medium;
 use log::debug;
 use std::sync::Arc;
 
@@ -149,7 +150,7 @@ mod tests {
     use super::*;
     use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
     use kwavers_core::constants::numerical::MHZ_TO_HZ;
-    use kwavers_domain::grid::Grid;
+    use kwavers_grid::Grid;
     use kwavers_domain::medium::homogeneous::HomogeneousMedium;
     use std::sync::Arc;
 

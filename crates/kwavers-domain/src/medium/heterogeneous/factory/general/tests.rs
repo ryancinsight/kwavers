@@ -6,7 +6,7 @@ use kwavers_core::constants::fundamental::{
 };
 use kwavers_core::constants::tissue_acoustics::DENSITY_BLOOD;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::Array3;
 
 #[test]

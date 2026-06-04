@@ -1,7 +1,7 @@
 use super::{EquivalenceReport, EquivalenceValidator};
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::error::{KwaversError, ValidationError};
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::Medium;
 use kwavers_signal::traits::Signal;
 use kwavers_solver::forward::fdtd::{FdtdConfig, FdtdSolver, KSpaceCorrectionMode};
@@ -161,7 +161,7 @@ fn run_simulation_gpu(
 ///
 /// ```rust,ignore
 /// use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
-/// use kwavers_domain::grid::Grid;
+/// use kwavers_grid::Grid;
 /// use kwavers_domain::medium::HomogeneousMedium;
 /// use kwavers_solver::validation::validate_gpu_cpu_equivalence;
 ///

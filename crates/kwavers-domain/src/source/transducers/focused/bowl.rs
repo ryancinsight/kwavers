@@ -7,7 +7,7 @@ use kwavers_core::{
         constants::SOUND_SPEED_WATER,
         error::{KwaversError, KwaversResult, ValidationError},
     };
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::{Array3, Zip};
 
 use super::cap::{SphericalCapConfig, SphericalCapLayout};

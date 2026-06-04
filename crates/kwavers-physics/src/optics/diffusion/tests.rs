@@ -69,7 +69,7 @@ fn uniform_fluence_decays_at_rate_c_mu_a() {
     use crate::acoustics::traits::LightDiffusionModelTrait;
     use ndarray::Array4;
 
-    let grid = kwavers_domain::grid::Grid::new(8, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
+    let grid = kwavers_grid::Grid::new(8, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
     let props = DiffusionOpticalProperties {
         absorption_coefficient: 10.0,          // m⁻¹
         reduced_scattering_coefficient: 1.0e3, // m⁻¹, μₛ' ≫ μₐ
@@ -97,7 +97,7 @@ fn uniform_fluence_decays_at_rate_c_mu_a() {
 
 #[test]
 fn test_light_diffusion_solver_initialization() {
-    let grid = kwavers_domain::grid::Grid::new(10, 10, 10, 0.001, 0.001, 0.001).unwrap();
+    let grid = kwavers_grid::Grid::new(10, 10, 10, 0.001, 0.001, 0.001).unwrap();
 
     let props = DiffusionOpticalProperties::biological_tissue();
 

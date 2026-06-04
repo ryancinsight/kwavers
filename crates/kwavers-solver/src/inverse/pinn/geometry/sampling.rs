@@ -1,6 +1,6 @@
 use ndarray::Array2;
 
-use kwavers_domain::geometry::{GeometricDomain, PointLocation};
+use kwavers_grid::geometry::{GeometricDomain, PointLocation};
 
 /// Sampling strategy for PINN collocation points
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

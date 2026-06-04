@@ -1,5 +1,5 @@
 use kwavers_domain::boundary::DomainPmlConfig;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::homogeneous::HomogeneousMedium;
 use kwavers_domain::source::GridSource;
 use kwavers_solver::forward::pstd::{PSTDConfig, PSTDSolver};

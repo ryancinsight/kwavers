@@ -1,4 +1,4 @@
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_signal::Signal;
 use crate::source::{Apodization, Source};
 use log::debug;

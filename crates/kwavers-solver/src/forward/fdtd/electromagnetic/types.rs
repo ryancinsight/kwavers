@@ -1,7 +1,7 @@
 //! ElectromagneticFdtdSolver struct definition.
 
 use kwavers_domain::field::EMFields;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_physics::electromagnetic::equations::EMMaterialDistribution;
 use ndarray::Array3;
 

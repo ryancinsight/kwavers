@@ -4,7 +4,7 @@
 //! absorption, attenuation, and nonlinear effects.
 
 use kwavers_core::constants::acoustic_parameters::{WATER_ABSORPTION_ALPHA_0, WATER_NONLINEARITY_B_A};
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use crate::medium::absorption::AbsorptionTissueType;
 use crate::medium::core::CoreMedium;
 

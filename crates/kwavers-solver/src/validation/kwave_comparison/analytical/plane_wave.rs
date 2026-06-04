@@ -2,7 +2,7 @@ use ndarray::Array3;
 
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 
 /// Analytical solution for plane wave propagation.
 ///

@@ -73,7 +73,7 @@ fn test_impedance_zero_reflector() {
 #[test]
 fn test_impedance_boundary_spatial_apply_matched_zeros_face() {
     // Matched impedance → R = 0 → boundary cells set to zero (perfect absorption).
-    use crate::grid::{Grid, GridAdapter};
+    use kwavers_grid::{Grid, GridAdapter};
     use ndarray::Array3;
 
     let grid = Grid::new(8, 8, 8, 1e-3, 1e-3, 1e-3).unwrap();
@@ -102,7 +102,7 @@ fn test_impedance_boundary_spatial_apply_matched_zeros_face() {
 #[test]
 fn test_impedance_boundary_spatial_apply_rigid_mirrors_face() {
     // Z_target → ∞ → R = +1 → boundary cells mirror interior (rigid wall).
-    use crate::grid::{Grid, GridAdapter};
+    use kwavers_grid::{Grid, GridAdapter};
     use ndarray::Array3;
 
     let grid = Grid::new(8, 8, 8, 1e-3, 1e-3, 1e-3).unwrap();
@@ -125,7 +125,7 @@ fn test_impedance_boundary_spatial_apply_rigid_mirrors_face() {
 #[test]
 fn test_impedance_boundary_spatial_respects_directions() {
     // Only x_min direction enabled → only x_min face updated.
-    use crate::grid::{Grid, GridAdapter};
+    use kwavers_grid::{Grid, GridAdapter};
     use ndarray::Array3;
 
     let grid = Grid::new(6, 6, 6, 1e-3, 1e-3, 1e-3).unwrap();

@@ -1,7 +1,7 @@
 use super::*;
 use kwavers_core::constants::numerical::{FOUR_PI, MHZ_TO_HZ, MPA_TO_PA, TWO_PI};
 use kwavers_core::error::KwaversError;
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 
 #[test]
 fn bowl_layout_uses_canonical_equal_area_cap() {

@@ -1,7 +1,7 @@
 //! Utilities for physics validation and testing
 
 use kwavers_core::constants::numerical::TWO_PI;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::Array3;
 
 // Physical constants for dispersion correction
@@ -169,7 +169,7 @@ mod tests {
     use super::*;
     use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use kwavers_core::constants::numerical::MHZ_TO_HZ;
-    use kwavers_domain::grid::Grid;
+    use kwavers_grid::Grid;
     use ndarray::Array3;
 
     fn small_grid() -> Grid {

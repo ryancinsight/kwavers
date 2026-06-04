@@ -38,7 +38,7 @@ fn test_intensity_tracker_integration() {
         },
     };
 
-    let grid = kwavers_domain::grid::Grid::new(12, 12, 12, 0.0025, 0.0025, 0.0025).unwrap();
+    let grid = kwavers_grid::Grid::new(12, 12, 12, 0.0025, 0.0025, 0.0025).unwrap();
     let medium = Box::new(HomogeneousMedium::new(
         DENSITY_WATER_NOMINAL,
         SOUND_SPEED_TISSUE,

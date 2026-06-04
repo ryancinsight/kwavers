@@ -1,4 +1,4 @@
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_signal::{NullSignal, Signal, TimeVaryingSignal};
 use crate::source::types::Source;
 use ndarray::Array3;

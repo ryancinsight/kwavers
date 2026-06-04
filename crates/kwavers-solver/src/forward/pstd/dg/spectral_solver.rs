@@ -6,7 +6,7 @@
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::error::KwaversResult;
 use kwavers_core::error::{KwaversError, ValidationError};
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_math::fft::{Fft3d, Fft3dInOutExt, Shape3D};
 use crate::pstd::utils::{compute_anti_aliasing_filter, compute_wavenumbers};
 use ndarray::{Array3, Zip};
@@ -214,7 +214,7 @@ impl RegionPSTDSolver {
 mod tests {
     use super::RegionPSTDSolver;
     use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
-    use kwavers_domain::grid::Grid;
+    use kwavers_grid::Grid;
     use ndarray::Array3;
     use std::sync::Arc;
 

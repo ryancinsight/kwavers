@@ -3,7 +3,7 @@
 //! Validates input data and sensor configurations.
 
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::Array2;
 
 /// Validator for time-reversal inputs

@@ -38,7 +38,7 @@ pub fn validate_diffusion_regime(scenario: &PhotoacousticScenario) -> KwaversRes
 #[cfg(test)]
 mod tests {
     use super::validate_diffusion_regime;
-    use kwavers_domain::grid::{Grid, GridDimensions};
+    use kwavers_grid::{Grid, GridDimensions};
     use kwavers_domain::imaging::photoacoustic::{
         IlluminationGeometry, MonteCarloModelConfig, OpticalModel, PhotoacousticAcousticConfig,
         PhotoacousticScenario, PhotoacousticSolverConfig, ThermoelasticProperties,

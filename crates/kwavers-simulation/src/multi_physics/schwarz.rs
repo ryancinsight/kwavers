@@ -155,7 +155,7 @@ impl SchwarzCoupling {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kwavers_domain::grid::Grid;
+    use kwavers_grid::Grid;
     use ndarray::ArrayView3;
 
     // Mock physics solver for testing

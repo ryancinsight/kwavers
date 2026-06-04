@@ -40,7 +40,7 @@ impl Reconstructor for PhotoacousticReconstructor {
         &self,
         sensor_data: &Array2<f64>,
         sensor_positions: &[[f64; 3]],
-        _grid: &kwavers_domain::grid::Grid,
+        _grid: &kwavers_grid::Grid,
         _config: &crate::reconstruction::ReconstructionConfig,
     ) -> KwaversResult<Array3<f64>> {
         // Dispatch to appropriate algorithm

@@ -3,7 +3,7 @@
 //! This source models a planar piston transducer that generates
 //! acoustic waves from a flat surface.
 
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_signal::Signal;
 use crate::source::{Source, SourceField};
 use ndarray::Array3;

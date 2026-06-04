@@ -3,7 +3,7 @@
 //! Provides roofline analysis and performance bounds estimation.
 
 use kwavers_core::constants::numerical::BYTES_PER_F64;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 
 /// Performance bound type
 #[derive(Debug, Clone, Copy, PartialEq)]

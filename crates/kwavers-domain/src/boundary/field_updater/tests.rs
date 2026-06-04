@@ -1,7 +1,7 @@
 use super::*;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::boundary::cpml::{CPMLBoundary, CPMLConfig};
-use crate::grid::{CartesianTopology, Grid};
+use kwavers_grid::{CartesianTopology, Grid};
 use ndarray::Array3;
 
 #[test]

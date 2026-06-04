@@ -6,7 +6,7 @@
 
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::heterogeneous::HeterogeneousFactory;
 use kwavers_domain::sensor::recorder::simple::SensorRecorder;
 use kwavers_domain::source::{GridSource, SourceMode};

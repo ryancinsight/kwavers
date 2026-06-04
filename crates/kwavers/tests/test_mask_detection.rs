@@ -3,7 +3,7 @@
 //! This test verifies that boundary plane detection works correctly.
 
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_signal::SineWave;
 use kwavers_domain::source::{
     InjectionMode, PlaneWaveSource, PlaneWaveSourceConfig, Source, SourceField,

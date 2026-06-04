@@ -29,7 +29,7 @@ use ndarray::Array3;
 /// # Example
 ///
 /// ```ignore
-/// use kwavers_domain::grid::{Grid, GridAdapter, GridTopology};
+/// use kwavers_grid::{Grid, GridAdapter, GridTopology};
 ///
 /// let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3)?;
 /// let adapter = GridAdapter::new(grid);

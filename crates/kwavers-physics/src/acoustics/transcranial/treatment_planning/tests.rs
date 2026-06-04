@@ -1,5 +1,5 @@
 use super::*;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::Array3;
 
 #[test]

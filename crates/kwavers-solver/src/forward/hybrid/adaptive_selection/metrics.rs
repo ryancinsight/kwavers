@@ -2,7 +2,7 @@
 
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::numerical::TWO_PI;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::ArrayView3;
 
 /// Spectral analysis metrics for method selection

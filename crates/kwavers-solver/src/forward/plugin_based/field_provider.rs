@@ -91,7 +91,7 @@ impl<'a> FieldProvider<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kwavers_domain::grid::Grid;
+    use kwavers_grid::Grid;
 
     #[test]
     fn test_field_provider_access_control() {

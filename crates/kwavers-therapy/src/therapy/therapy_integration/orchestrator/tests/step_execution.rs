@@ -37,7 +37,7 @@ fn test_therapy_step_execution() {
         imaging_data_path: None,
     };
 
-    let grid = kwavers_domain::grid::Grid::new(16, 16, 16, 0.002, 0.002, 0.002).unwrap();
+    let grid = kwavers_grid::Grid::new(16, 16, 16, 0.002, 0.002, 0.002).unwrap();
     let medium = Box::new(HomogeneousMedium::new(
         DENSITY_WATER_NOMINAL,
         SOUND_SPEED_TISSUE,

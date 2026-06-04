@@ -1,6 +1,6 @@
 use super::types::ElectromagneticFdtdSolver;
 use kwavers_domain::field::EMFields;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_physics::electromagnetic::equations::{
     EMDimension, EMMaterialDistribution, ElectromagneticWaveEquation,
 };

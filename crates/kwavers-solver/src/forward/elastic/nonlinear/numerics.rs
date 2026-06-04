@@ -24,7 +24,7 @@
 //! - Fornberg, B. (1988). "Generation of finite difference formulas on arbitrarily
 //!   spaced grids", Mathematics of Computation, 51(184), 699-706.
 
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::Array3;
 
 /// Numerical operators for nonlinear wave propagation

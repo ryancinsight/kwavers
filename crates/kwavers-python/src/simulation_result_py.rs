@@ -4,7 +4,7 @@
 //! helper from the kwavers simulation runner so old solver files can still
 //! import them from here while they are gradually migrated.
 
-use kwavers_domain::grid::Grid as KwaversGrid;
+use kwavers_grid::Grid as KwaversGrid;
 use kwavers_simulation::SimulationRunResult as KwaversSimulationRunResult;
 use numpy::{PyArray1, PyArray2, PyArray3};
 use pyo3::prelude::*;

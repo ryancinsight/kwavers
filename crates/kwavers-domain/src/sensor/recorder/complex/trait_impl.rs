@@ -2,7 +2,7 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use crate::field::indices::{LIGHT_IDX, PRESSURE_IDX, TEMPERATURE_IDX};
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use log::info;
 use ndarray::{Array4, Axis};
 

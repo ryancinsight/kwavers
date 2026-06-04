@@ -7,7 +7,7 @@
 //! - Image reconstruction and validation
 
 use kwavers_diagnostics::photoacoustic::PhotoacousticOpticalProperties as OpticalProperties;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::homogeneous::HomogeneousMedium;
 use kwavers_simulation::modalities::photoacoustic::{
     PhotoacousticParameters, PhotoacousticSimulator,

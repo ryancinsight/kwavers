@@ -4,7 +4,7 @@
 //! This allows clinical layer to depend on domain abstractions rather than simulation internals.
 
 use kwavers_core::error::KwaversResult;
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use crate::medium::Medium;
 use ndarray::Array3;
 

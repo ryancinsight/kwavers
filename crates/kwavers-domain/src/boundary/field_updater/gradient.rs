@@ -13,7 +13,7 @@
 //! ∇p → ∇p + ψ (memory correction)
 //! ```
 
-use crate::grid::GridTopology;
+use kwavers_grid::GridTopology;
 use ndarray::{Array3, ArrayView3, ArrayViewMut3};
 
 /// Gradient-based field updater for FDTD solvers.

@@ -2,7 +2,7 @@
 
 use kwavers_core::constants::REFERENCE_FREQUENCY_HZ;
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::Medium;
 use kwavers_physics::cavitation_control::{ControlStrategy, FeedbackConfig, FeedbackController};
 use kwavers_physics::chemistry::ChemicalModel;

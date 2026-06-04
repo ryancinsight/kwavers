@@ -62,7 +62,7 @@ fn test_pstd_phase_error_smaller_than_fdtd() {
 ///
 #[test]
 fn test_fdtd_phase_error_decreases_with_finer_grid() {
-    use kwavers_domain::grid::Grid;
+    use kwavers_grid::Grid;
     use kwavers_domain::medium::HomogeneousMedium;
 
     let c0 = SOUND_SPEED_WATER_SIM;

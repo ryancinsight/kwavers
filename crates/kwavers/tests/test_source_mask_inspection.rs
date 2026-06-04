@@ -6,7 +6,7 @@
 //! Author: Ryan Clanton (@ryancinsight)
 //! Date: 2025-01-20
 
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_signal::SineWave;
 use kwavers_domain::source::{
     InjectionMode, PlaneWaveSource, PlaneWaveSourceConfig, PointSource, Source, SourceField,

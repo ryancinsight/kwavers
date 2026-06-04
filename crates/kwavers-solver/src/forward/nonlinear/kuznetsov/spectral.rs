@@ -4,7 +4,7 @@
 //! workspaces and pre-computes wavenumber vectors for efficient spectral
 //! derivative calculations.
 
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_math::fft::{get_fft_for_grid, Fft3d, Fft3dInOutExt};
 use ndarray::{Array1, Array3, Zip};
 use num_complex::Complex64;

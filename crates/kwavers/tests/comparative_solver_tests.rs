@@ -24,7 +24,7 @@
 //! performance regressions and optimization opportunities.
 
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::core::CoreMedium;
 use kwavers_domain::medium::HomogeneousMedium;
 use kwavers_domain::source::GridSource;

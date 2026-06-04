@@ -1,5 +1,5 @@
 use super::PointSensor;
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::ArrayView3;
 
 impl PointSensor {

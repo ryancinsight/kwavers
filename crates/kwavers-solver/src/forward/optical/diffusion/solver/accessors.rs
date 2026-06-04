@@ -3,7 +3,7 @@
 use ndarray::Array3;
 
 use super::DiffusionSolver;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 
 impl DiffusionSolver {
     /// Get grid reference.

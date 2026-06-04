@@ -1,7 +1,7 @@
 //! Simple integration tests for core functionality
 
 use kwavers_core::constants::{DENSITY_WATER, SOUND_SPEED_WATER};
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::{ArrayAccess, CoreMedium, HomogeneousMedium};
 use ndarray::Array3;
 

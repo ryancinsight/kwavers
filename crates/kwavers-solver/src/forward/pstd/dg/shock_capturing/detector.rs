@@ -38,7 +38,7 @@
 //! - Ducros et al. (1999). J. Comput. Phys. 152(2):517-549.  (Pressure sensor)
 
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::{Array3, Array4};
 
 use kwavers_core::constants::acoustic_parameters::AIR_POLYTROPIC_INDEX;

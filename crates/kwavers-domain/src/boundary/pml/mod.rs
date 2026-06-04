@@ -209,7 +209,7 @@ impl DomainPMLBoundary {
     pub fn apply_acoustic_with_factor(
         &mut self,
         mut field: ArrayViewMut3<f64>,
-        grid: &crate::grid::Grid,
+        grid: &kwavers_grid::Grid,
         time_step: usize,
         damping_factor: f64,
     ) {

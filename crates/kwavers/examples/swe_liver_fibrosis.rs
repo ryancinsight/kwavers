@@ -27,7 +27,7 @@
 //! - Tissue: Viscoelastic model (E = 2-12 kPa, η = 1-5 Pa·s)
 //! - Reconstruction: Time-of-flight method with phase gradient refinement
 
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::imaging::ultrasound::elastography::{ElasticityMap, InversionMethod};
 use kwavers_domain::medium::homogeneous::HomogeneousMedium;
 use kwavers_physics::acoustics::imaging::modalities::elastography::displacement::DisplacementEstimator;

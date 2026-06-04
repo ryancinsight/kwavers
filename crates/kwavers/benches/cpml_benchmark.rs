@@ -12,7 +12,7 @@ use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criteri
 use kwavers_domain::boundary::cpml::{CPMLBoundary, CPMLConfig};
 use kwavers_domain::boundary::pml::{DomainPMLBoundary, DomainPmlConfig};
 use kwavers_domain::boundary::Boundary;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::Array3;
 
 /// Benchmark CPML gradient correction for various grid sizes

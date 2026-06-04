@@ -16,7 +16,7 @@ use dg_acoustic_common::{
     exact_gaussian_pressure, gaussian_profile, physical_coordinate, relative_l2, weighted_mass,
     DENSITY, DT, ELEMENTS, SOUND_SPEED, STEPS,
 };
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_solver::forward::pstd::dg::dg_solver::acoustic::AcousticDg1DWorkspace;
 use kwavers_solver::forward::pstd::dg::quadrature::gauss_lobatto_quadrature;
 use kwavers_solver::forward::pstd::dg::{DGConfig, DGSolver};

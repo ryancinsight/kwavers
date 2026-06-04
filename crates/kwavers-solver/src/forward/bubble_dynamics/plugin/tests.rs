@@ -2,7 +2,7 @@ use super::engine::BubbleEngine;
 use super::*;
 use kwavers_core::constants::{DENSITY_WATER, SOUND_SPEED_WATER};
 use kwavers_domain::field::mapping::UnifiedFieldType;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::HomogeneousMedium;
 use kwavers_domain::plugin::test_support::{make_context, null_plugin_fields, NullBoundary};
 use kwavers_domain::plugin::{Plugin, PluginState};

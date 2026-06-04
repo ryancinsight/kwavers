@@ -43,7 +43,7 @@
 //! - Collino, F. & Tsogka, C. (2001). Geophysics 66(1), 294–307.
 
 use super::config::CPMLConfig;
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::Array3;
 
 /// CPML memory variables for field updates

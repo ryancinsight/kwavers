@@ -3,7 +3,7 @@
 use super::types::ElectromagneticFdtdSolver;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_domain::field::EMFields;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_physics::electromagnetic::equations::EMMaterialDistribution;
 use ndarray::{Array3, Array4, ArrayD, Ix4};
 

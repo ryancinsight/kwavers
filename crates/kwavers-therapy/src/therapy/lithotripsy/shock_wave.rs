@@ -6,7 +6,7 @@
 
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::Array3;
 
 /// Shock wave parameters for lithotripsy.
@@ -91,7 +91,7 @@ impl ShockWaveGenerator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kwavers_domain::grid::Grid;
+    use kwavers_grid::Grid;
 
     #[test]
     fn test_bipolar_shock_field_contains_negative_phase() {

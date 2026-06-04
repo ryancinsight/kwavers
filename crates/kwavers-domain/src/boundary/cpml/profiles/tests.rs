@@ -1,7 +1,7 @@
 use super::*;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::boundary::cpml::config::CPMLConfig;
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 
 /// The k-Wave wall value is `sigma_max = pml_alpha * c0 / dx`.
 /// # Panics

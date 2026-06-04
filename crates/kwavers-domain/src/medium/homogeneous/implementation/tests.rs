@@ -7,7 +7,7 @@ use kwavers_core::constants::fundamental::{
     SOUND_SPEED_WATER_SIM,
 };
 use kwavers_core::constants::tissue_acoustics::{DENSITY_BLOOD, SOUND_SPEED_BLOOD};
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use crate::medium::{
     core::CoreMedium, elastic::ElasticProperties, viscous::ViscousProperties,
 };

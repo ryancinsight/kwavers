@@ -175,7 +175,7 @@ fn time_reversal_reconstruction<'py>(
 pub(crate) fn time_reversal_reconstruction_impl(
     sensor_data: Array2<f64>,
     sensor_positions: Array2<f64>,
-    grid: &kwavers_domain::grid::Grid,
+    grid: &kwavers_grid::Grid,
     sound_speed: f64,
     sampling_frequency: f64,
     pml_size: Option<usize>,
@@ -255,7 +255,7 @@ pub(crate) fn time_reversal_reconstruction_impl(
     let expand_x = if grid.nx > 1 { pml } else { 0 };
     let expand_y = if grid.ny > 1 { pml } else { 0 };
     let expand_z = if grid.nz > 1 { pml } else { 0 };
-    let expanded_grid = kwavers_domain::grid::Grid::new(
+    let expanded_grid = kwavers_grid::Grid::new(
         grid.nx + 2 * expand_x,
         grid.ny + 2 * expand_y,
         grid.nz + 2 * expand_z,

@@ -29,7 +29,7 @@
 //! - Anderson, V.C. (1950): "Sound scattering from a fluid sphere"
 
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::imaging::ultrasound::ceus::CEUSImagingParameters;
 use ndarray::Array3;
 

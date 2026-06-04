@@ -3,7 +3,7 @@
 use super::HeterogeneousFactory;
 use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use kwavers_core::constants::thermodynamic::ROOM_TEMPERATURE_K;
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use crate::medium::heterogeneous::core::HeterogeneousMedium;
 use ndarray::Array3;
 

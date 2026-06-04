@@ -10,7 +10,7 @@
 //! - Carcione, "Wave Fields in Real Media", 2007
 
 use approx::assert_relative_eq;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 
 /// Test P-wave velocity in isotropic elastic medium.
 ///

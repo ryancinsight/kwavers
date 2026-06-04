@@ -58,7 +58,7 @@ pub use renderer::Renderer3D;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kwavers_domain::grid::Grid;
+    use kwavers_grid::Grid;
     use ndarray::{Array3, Array4};
 
     fn create_test_grid() -> Grid {

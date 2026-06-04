@@ -4,7 +4,7 @@
 //! Reference: Taflove & Hagness, "Computational Electrodynamics", 2005
 
 use kwavers_core::constants::CFL_SAFETY_FACTOR;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::HomogeneousMedium;
 
 #[test]

@@ -3,7 +3,7 @@ use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::constants::tissue_acoustics::B_OVER_A_WATER;
 use kwavers_core::constants::SOUND_SPEED_WATER_SIM;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 
 #[test]
 fn test_spatial_order_cfl_limits() {

@@ -34,7 +34,7 @@
 //!   Wiley-Interscience. ISBN: 978-0-471-74304-0
 
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::properties::OpticalPropertyData;
 use kwavers_domain::medium::Medium;
 use kwavers_solver::forward::optical::diffusion::{
@@ -215,7 +215,7 @@ pub fn compute_fluence_at_wavelength(
 ///
 /// ```rust,no_run
 /// # use kwavers_simulation::modalities::photoacoustic::optics::*;
-/// # use kwavers_domain::grid::Grid;
+/// # use kwavers_grid::Grid;
 /// # use ndarray::Array3;
 /// # use kwavers_domain::medium::properties::OpticalPropertyData;
 /// # fn main() -> kwavers_core::error::KwaversResult<()> {

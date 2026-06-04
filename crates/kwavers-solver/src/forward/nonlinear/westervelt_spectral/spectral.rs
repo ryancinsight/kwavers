@@ -1,7 +1,7 @@
 //! Spectral operations for Westervelt solver
 
 use kwavers_core::constants::numerical::TWO_PI;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_math::fft::{
     fft_3d_array, fft_3d_array_into, ifft_3d_array, ifft_3d_array_into, Complex64,
 };
@@ -140,7 +140,7 @@ pub fn compute_laplacian_spectral_into(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kwavers_domain::grid::Grid;
+    use kwavers_grid::Grid;
     use std::f64::consts::PI;
 
     /// Helper: uniform spacing grid.

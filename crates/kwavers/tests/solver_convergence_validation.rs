@@ -15,7 +15,7 @@
 //! - Validates solver doesn't produce NaN or Inf values
 
 use kwavers_domain::boundary::{DomainPMLBoundary, DomainPmlConfig};
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::homogeneous::HomogeneousMedium;
 use kwavers_solver::fdtd::{FdtdConfig, FdtdPlugin};
 use kwavers_solver::plugin::PluginManager;

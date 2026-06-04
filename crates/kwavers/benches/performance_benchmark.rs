@@ -45,7 +45,7 @@
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::HomogeneousMedium;
 use ndarray::Array3;
 use std::time::{Duration, Instant};

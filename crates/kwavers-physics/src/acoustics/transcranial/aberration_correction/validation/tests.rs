@@ -1,5 +1,5 @@
 use super::super::phase_correction::TranscranialAberrationCorrection;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_math::numerics::operators::interpolation::trilinear_index_space;
 use ndarray::Array3;
 

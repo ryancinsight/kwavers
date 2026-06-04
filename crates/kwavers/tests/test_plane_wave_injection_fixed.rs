@@ -7,7 +7,7 @@
 //! 4. Amplitudes are correct and not accumulated
 
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::HomogeneousMedium;
 use kwavers_signal::SineWave;
 use kwavers_domain::source::{

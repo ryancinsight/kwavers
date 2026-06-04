@@ -3,7 +3,7 @@
 //! These tests validate our implementations against known analytical solutions
 //! and published results from peer-reviewed literature.
 
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::HomogeneousMedium;
 use kwavers_physics::bubble_dynamics::{BubbleParameters, BubbleState, KellerMiksisModel};
 
@@ -198,7 +198,7 @@ fn test_cfl_stability_condition() {
 
     // Calculate CFL timestep
     let dt_cfl =
-        kwavers_domain::grid::stability::StabilityCalculator::cfl_timestep_fdtd(&grid, c_max);
+        kwavers_grid::stability::StabilityCalculator::cfl_timestep_fdtd(&grid, c_max);
 
     // For 3D FDTD: dt <= dx / (c * sqrt(3))
     let dx_min = grid.min_spacing();

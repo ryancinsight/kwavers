@@ -2,7 +2,7 @@ use super::model::{ChemicalModel, ChemicalModelState};
 use super::reactions::{
     ChemicalReactionConfig, LightDependence, PressureDependence, ReactionType, ThermalDependence,
 };
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 
 /// Default rate constant used in tests
 const DEFAULT_REACTION_RATE: f64 = 1e-3;

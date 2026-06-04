@@ -2,7 +2,7 @@
 
 use super::coefficients::{FDCoefficients, FdAccuracyOrder};
 use kwavers_core::error::KwaversResult;
-use crate::grid::Grid;
+use crate::Grid;
 use ndarray::{Array3, ArrayView3};
 use num_traits::Float;
 

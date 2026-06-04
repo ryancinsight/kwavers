@@ -1,4 +1,4 @@
-use kwavers_domain::grid::GridDimensions;
+use kwavers_grid::GridDimensions;
 use ndarray::Array3;
 
 /// Reusable optical stage workspace.

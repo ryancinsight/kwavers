@@ -133,7 +133,7 @@ mod tests {
     use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
     use kwavers_core::error::KwaversError;
     use kwavers_domain::boundary::cpml::CPMLConfig;
-    use kwavers_domain::grid::Grid;
+    use kwavers_grid::Grid;
     use kwavers_domain::medium::HomogeneousMedium;
     use kwavers_domain::source::GridSource;
     use crate::forward::fdtd::config::{FdtdConfig, KSpaceCorrectionMode};

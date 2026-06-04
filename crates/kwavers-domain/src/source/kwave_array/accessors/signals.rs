@@ -51,7 +51,7 @@ impl KWaveArray {
     /// Returns `Err` if `per_element_signals.shape()[0] != n_elements`.
     pub fn build_per_element_source(
         &self,
-        grid: &crate::grid::Grid,
+        grid: &kwavers_grid::Grid,
         per_element_signals: &Array2<f64>,
     ) -> Result<(Array3<f64>, Array2<f64>), String> {
         let n_elements = self.elements.len();

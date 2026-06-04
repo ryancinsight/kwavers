@@ -4,7 +4,7 @@ use super::super::super::quadrature::fourier_periodic_nodes;
 use super::super::super::traits::{DGOperations, NumericalSolver};
 use super::super::core::DGSolver;
 use super::super::topology::CoefficientLayout;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::Array3;
 use std::sync::Arc;
 

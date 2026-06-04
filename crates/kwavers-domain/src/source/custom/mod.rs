@@ -3,7 +3,7 @@
 //! This module provides interfaces for creating custom source implementations
 //! that can be defined by users for specialized applications.
 
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_signal::Signal;
 use crate::source::{Source, SourceField};
 use ndarray::Array3;

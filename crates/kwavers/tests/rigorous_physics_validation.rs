@@ -11,7 +11,7 @@
 
 use approx::assert_relative_eq;
 use kwavers_core::constants::SOUND_SPEED_WATER;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use std::f64::consts::PI;
 
 /// Test precision bounds for numerical validation

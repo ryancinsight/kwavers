@@ -3,7 +3,7 @@
 //! This module provides different execution strategies for running plugins.
 
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::Medium;
 use kwavers_domain::plugin::{Plugin, PluginContext};
 use ndarray::Array4;

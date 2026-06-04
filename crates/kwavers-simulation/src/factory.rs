@@ -14,7 +14,7 @@ pub use kwavers_physics::factory::{
 pub use kwavers_solver::plugin::PhysicsCatalog;
 
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::Medium;
 use kwavers_solver::plugin::PluginManager;
 

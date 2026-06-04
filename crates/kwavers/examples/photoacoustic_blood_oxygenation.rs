@@ -26,7 +26,7 @@ use kwavers_analysis::signal_processing::spectroscopy::SpectralUnmixingConfig;
 use kwavers_diagnostics::workflows::blood_oxygenation::{
     estimate_oxygenation, OxygenationConfig,
 };
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::properties::OpticalPropertyData;
 use kwavers_solver::forward::optical::diffusion::{DiffusionSolver, DiffusionSolverConfig};
 use ndarray::Array3;

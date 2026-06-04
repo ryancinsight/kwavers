@@ -2,7 +2,7 @@
 //!
 //! This module handles physical coordinate generation and position-to-index conversions.
 
-use crate::grid::structure::{Grid, GridDimension};
+use crate::structure::{Grid, GridDimension};
 use ndarray::{Array1, Array3};
 
 /// Coordinate system operations

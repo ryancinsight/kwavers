@@ -4,7 +4,7 @@
 
 use super::super::GpuPstdSolver;
 use super::{AbsorptionArrays, MediumArrays, PmlArrays, SolverParams};
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use std::sync::Arc;
 
 impl GpuPstdSolver {

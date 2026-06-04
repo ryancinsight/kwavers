@@ -2,7 +2,7 @@ use std::f64::consts::PI;
 
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 
 use super::{GaussianBeam, KwaveAnalyticalPlaneWave, KwaveErrorMetrics, SphericalWave};
 

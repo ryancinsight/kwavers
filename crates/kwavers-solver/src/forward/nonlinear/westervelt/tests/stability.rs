@@ -2,7 +2,7 @@
 
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_core::constants::tissue_acoustics::B_OVER_A_WATER;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::HomogeneousMedium;
 use crate::forward::nonlinear::westervelt::{WesterveltFdtd, WesterveltFdtdConfig};
 

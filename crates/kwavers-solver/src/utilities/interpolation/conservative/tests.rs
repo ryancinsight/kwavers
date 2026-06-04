@@ -1,6 +1,6 @@
 use super::interpolator::UtilConservativeInterpolator;
 use super::mode::ConservationMode;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use approx::assert_relative_eq;
 use ndarray::Array3;
 

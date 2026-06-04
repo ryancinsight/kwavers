@@ -22,7 +22,7 @@
 //! criteria are "first-improving in order 0→3".  ∎
 
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_solver::forward::pstd::extensions::ElasticPstdVelocitySource;
 use ndarray::{Array2, Array3};
 use rayon::prelude::*;

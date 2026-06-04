@@ -21,7 +21,7 @@
 //! ```rust
 //! use kwavers_solver::inverse::elastography::{ShearWaveInversion, ShearWaveInversionConfig};
 //! use kwavers_domain::imaging::ultrasound::elastography::InversionMethod;
-//! use kwavers_domain::grid::Grid;
+//! use kwavers_grid::Grid;
 //! use kwavers_physics::acoustics::imaging::modalities::elastography::displacement::DisplacementField;
 //!
 //! # fn example() -> Result<(), Box<dyn std::error::Error>> {
@@ -49,7 +49,7 @@
 //! use kwavers_solver::inverse::elastography::{NonlinearInversion, NonlinearInversionConfig};
 //! use kwavers_solver::inverse::elastography::NonlinearParameterMapExt;
 //! use kwavers_domain::imaging::ultrasound::elastography::NonlinearInversionMethod;
-//! use kwavers_domain::grid::Grid;
+//! use kwavers_grid::Grid;
 //! use kwavers_physics::acoustics::imaging::modalities::elastography::HarmonicDisplacementField;
 //!
 //! # fn example() -> Result<(), Box<dyn std::error::Error>> {
@@ -220,7 +220,7 @@ pub use types::{elasticity_map_from_speed, ElasticityMapExt, NonlinearParameterM
 mod tests {
     use super::*;
     use kwavers_core::constants::fundamental::DENSITY_TISSUE;
-    use kwavers_domain::grid::Grid;
+    use kwavers_grid::Grid;
     use kwavers_domain::imaging::ultrasound::elastography::{
         InversionMethod, NonlinearInversionMethod,
     };

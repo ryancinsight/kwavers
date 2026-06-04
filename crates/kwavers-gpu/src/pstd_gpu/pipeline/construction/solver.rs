@@ -6,7 +6,7 @@ use super::super::bind_groups::{
 use super::super::{AbsorptionArrays, MediumArrays, PmlArrays, SolverParams};
 use super::kspace::{precompute_kspace_shifts, KSpaceGridParams};
 use kwavers_core::constants::numerical::TWO_PI;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use std::sync::Arc;
 use wgpu::util::DeviceExt;
 

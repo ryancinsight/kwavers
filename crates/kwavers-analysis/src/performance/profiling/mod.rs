@@ -14,7 +14,7 @@ pub use cache::{CacheProfile, CacheProfiler, CacheStatistics};
 pub use memory::{MemoryEvent, MemoryEventType, MemoryProfile, MemoryProfiler};
 pub use timing::{TimingProfiler, TimingScope, TimingSummary};
 
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use std::fmt;
 use std::time::Duration;
 

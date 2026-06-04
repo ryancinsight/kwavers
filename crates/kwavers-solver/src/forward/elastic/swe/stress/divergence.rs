@@ -23,7 +23,7 @@
 use super::super::scratch::ElasticStepScratch;
 use super::super::types::ElasticWaveField;
 use super::fd_stencils::{fd1_x, fd1_y, fd1_z};
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::{Array3, Zip};
 
 /// Fill `scratch.{sxx,…,syz,div_x,div_y,div_z}` with the elastic stress

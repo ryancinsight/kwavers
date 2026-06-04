@@ -260,7 +260,7 @@ fn build_absorption_kernels(
 #[cfg(feature = "gpu")]
 fn build_pml_arrays(
     pml_size_xyz: Option<(usize, usize, usize)>,
-    kgrid: &kwavers_domain::grid::Grid,
+    kgrid: &kwavers_grid::Grid,
     c_ref: f64,
     dt: f64,
     nx: usize,

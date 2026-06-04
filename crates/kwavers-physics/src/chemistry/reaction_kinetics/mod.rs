@@ -1,5 +1,5 @@
 // physics/chemistry/reaction_kinetics/mod.rs
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::Medium;
 use log::debug;
 use ndarray::{Array3, Zip};

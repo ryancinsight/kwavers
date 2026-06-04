@@ -116,7 +116,7 @@ impl OpticalPropertyMapAnalysis for OpticalPropertyMap {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kwavers_domain::grid::GridDimensions;
+    use kwavers_grid::GridDimensions;
     use kwavers_domain::medium::properties::OpticalPropertyData;
 
     #[test]

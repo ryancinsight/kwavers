@@ -8,7 +8,7 @@ use kwavers_core::constants::fundamental::{
 };
 use kwavers_core::constants::tissue_acoustics::{B_OVER_A_SOFT_TISSUE, B_OVER_A_WATER, DENSITY_AIR};
 use crate::boundary::traits::BoundaryCondition;
-use crate::grid::GridTopologyExt;
+use kwavers_grid::GridTopologyExt;
 use crate::medium::properties::AcousticPropertyData;
 use ndarray::Array3;
 
@@ -76,7 +76,7 @@ fn test_material_interface_normal_incidence_water_tissue() {
         nonlinearity: B_OVER_A_SOFT_TISSUE,
     };
 
-    let grid = crate::grid::Grid::new(32, 32, 32, 0.001, 0.001, 0.001)
+    let grid = kwavers_grid::Grid::new(32, 32, 32, 0.001, 0.001, 0.001)
         .expect("Failed to create grid");
     let grid_adapter = grid.as_topology();
 
@@ -270,7 +270,7 @@ fn test_material_interface_field_continuity() {
         nonlinearity: B_OVER_A_SOFT_TISSUE,
     };
 
-    let grid = crate::grid::Grid::new(64, 64, 64, 0.001, 0.001, 0.001)
+    let grid = kwavers_grid::Grid::new(64, 64, 64, 0.001, 0.001, 0.001)
         .expect("Failed to create grid");
     let grid_adapter = grid.as_topology();
 
@@ -326,7 +326,7 @@ fn test_material_interface_zero_thickness() {
         nonlinearity: B_OVER_A_SOFT_TISSUE,
     };
 
-    let grid = crate::grid::Grid::new(32, 32, 32, 0.001, 0.001, 0.001)
+    let grid = kwavers_grid::Grid::new(32, 32, 32, 0.001, 0.001, 0.001)
         .expect("Failed to create grid");
     let grid_adapter = grid.as_topology();
 

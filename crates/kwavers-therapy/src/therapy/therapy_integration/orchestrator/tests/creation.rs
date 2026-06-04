@@ -36,7 +36,7 @@ fn test_therapy_orchestrator_creation() {
         imaging_data_path: None,
     };
 
-    let grid = kwavers_domain::grid::Grid::new(32, 32, 32, 0.001, 0.001, 0.001).unwrap();
+    let grid = kwavers_grid::Grid::new(32, 32, 32, 0.001, 0.001, 0.001).unwrap();
     let medium = HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE, 0.5, 1.0, &grid);
 
     let orchestrator =

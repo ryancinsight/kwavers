@@ -37,7 +37,7 @@ impl KWaveArray {
     #[allow(clippy::too_many_arguments)]
     pub(super) fn map_surface_sample<F>(
         &self,
-        grid: &crate::grid::Grid,
+        grid: &kwavers_grid::Grid,
         x_vec: &ndarray::Array1<f64>,
         y_vec: &ndarray::Array1<f64>,
         z_vec: &ndarray::Array1<f64>,

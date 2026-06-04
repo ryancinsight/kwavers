@@ -18,7 +18,7 @@ pub use types::{LayerSpec, PhantomTissueType, PhantomType, TumorSpec, VesselSpec
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::grid::GridDimensions;
+    use kwavers_grid::GridDimensions;
     use crate::medium::properties::OpticalPropertyData;
 
     #[test]

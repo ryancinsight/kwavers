@@ -4,7 +4,7 @@ use super::super::coefficients::FdAccuracyOrder;
 use super::cache::GradientCache;
 use super::functions::{gradient_optimized, gradient_with_strategy};
 use kwavers_core::error::KwaversResult;
-use crate::grid::Grid;
+use crate::Grid;
 use ndarray::{Array3, ArrayView3};
 use num_traits::Float;
 

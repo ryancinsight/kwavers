@@ -1,7 +1,7 @@
 use super::properties::AcousticSkullProperties;
 use super::simulation::TranscranialSimulation;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 
 #[test]
 fn test_skull_properties_default() {

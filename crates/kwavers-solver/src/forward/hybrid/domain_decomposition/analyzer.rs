@@ -1,7 +1,7 @@
 //! Domain analysis for optimal solver selection
 
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::Medium;
 use ndarray::Array3;
 

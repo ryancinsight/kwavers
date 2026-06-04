@@ -4,7 +4,7 @@
 //! integrates configuration, geometry, and calibration components.
 
 use kwavers_core::error::KwaversResult;
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_signal::Signal;
 use crate::source::Source;
 use ndarray::{Array3, ArrayView2};

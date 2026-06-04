@@ -124,7 +124,7 @@
 //!
 //! ```rust,ignore
 //! use kwavers_solver::inverse::pinn::elastic_2d::{Config, ElasticPINN2D};
-//! use kwavers_domain::geometry::RectangularDomain;
+//! use kwavers_grid::geometry::RectangularDomain;
 //!
 //! // Define domain and material properties
 //! let domain = RectangularDomain::new_2d(0.0, 1.0, 0.0, 1.0);

@@ -5,7 +5,7 @@
 
 use super::spectral::KuznetsovSpectralOperator;
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use crate::workspace::ScratchArena;
 use ndarray::Array3;
 
@@ -155,7 +155,7 @@ impl KuznetsovWorkspace {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kwavers_domain::grid::Grid;
+    use kwavers_grid::Grid;
     use crate::workspace::ScratchArena;
 
     /// Workspace must allocate exactly 18 Array3<f64> buffers.

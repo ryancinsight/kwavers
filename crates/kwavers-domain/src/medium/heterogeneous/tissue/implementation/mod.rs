@@ -3,7 +3,7 @@
 use super::{DomainTissueRegion, TissueMap};
 use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_K;
 use kwavers_core::error::{KwaversResult, ValidationError};
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use crate::medium::absorption::AbsorptionTissueType;
 use crate::medium::{
     absorption::{tissue::AbsorptionTissueProperties, TISSUE_PROPERTIES},

@@ -86,7 +86,7 @@
 //! use kwavers_solver::forward::elastic::swe::{
 //!     ElasticWaveSolver, ElasticWaveConfig
 //! };
-//! use kwavers_domain::grid::Grid;
+//! use kwavers_grid::Grid;
 //! use kwavers_domain::medium::HomogeneousMedium;
 //!
 //! # fn main() -> kwavers_core::error::KwaversResult<()> {

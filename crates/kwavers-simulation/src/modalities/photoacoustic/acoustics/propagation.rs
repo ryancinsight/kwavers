@@ -19,7 +19,7 @@
 //! - Cox & Beard (2005): "Fast calculation of pulsed photoacoustic fields"
 
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::imaging::photoacoustic::InitialPressure;
 use ndarray::Array3;
 

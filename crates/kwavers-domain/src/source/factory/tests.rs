@@ -1,5 +1,5 @@
 use super::SourceFactory;
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use crate::source::{DomainSourceParameters, FocusedBowlAperture, SourceModel};
 
 #[test]

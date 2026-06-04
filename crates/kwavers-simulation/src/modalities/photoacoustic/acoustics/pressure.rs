@@ -35,7 +35,7 @@
 
 use kwavers_core::constants::thermodynamic::GRUNEISEN_WATER_20C;
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::imaging::photoacoustic::InitialPressure;
 use kwavers_domain::medium::properties::OpticalPropertyData;
 use ndarray::Array3;

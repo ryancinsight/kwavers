@@ -2,7 +2,7 @@
 //!
 //! This module defines traits for viscous properties including shear and bulk viscosity.
 
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use crate::medium::core::CoreMedium;
 
 /// Trait for viscous medium properties

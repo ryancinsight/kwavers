@@ -1,6 +1,6 @@
 // benches/grid_benchmarks.rs
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 
 fn grid_dimensions_benchmark(c: &mut Criterion) {
     let grid = Grid::new(64, 64, 64, 1e-4, 1e-4, 1e-4)

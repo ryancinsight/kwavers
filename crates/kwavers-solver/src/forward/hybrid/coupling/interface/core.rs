@@ -2,7 +2,7 @@
 
 use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
 use kwavers_domain::field::mapping::UnifiedFieldType;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use crate::forward::hybrid::coupling::{
     HybridCouplingConservationEnforcer, HybridInterpolationScheme, InterfaceGeometry,
     InterfaceQualityMetrics, InterpolationManager, QualityMonitor, TransferOperators,

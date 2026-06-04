@@ -65,7 +65,7 @@
 //!
 //! ```rust,no_run
 //! use kwavers_solver::validation::kwave_comparison::analytical::{KwaveAnalyticalPlaneWave, KwaveErrorMetrics};
-//! use kwavers_domain::grid::Grid;
+//! use kwavers_grid::Grid;
 //!
 //! // Create analytical solution
 //! let wave = KwaveAnalyticalPlaneWave::new(1e5, 1e6, 1500.0, [1.0, 0.0, 0.0], 0.0).unwrap();

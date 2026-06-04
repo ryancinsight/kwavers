@@ -1,7 +1,7 @@
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use ndarray::Array1;
 
-use kwavers_domain::geometry::RectangularDomain;
+use kwavers_grid::geometry::RectangularDomain;
 
 use super::sampling::sobol_unit_hypercube_points;
 use super::*;
@@ -35,9 +35,9 @@ fn test_interface_condition_debug() {
 
 #[test]
 fn test_multi_region_locate() {
-    let region1: Box<dyn kwavers_domain::geometry::GeometricDomain> =
+    let region1: Box<dyn kwavers_grid::geometry::GeometricDomain> =
         Box::new(RectangularDomain::new_2d(0.0, 1.0, 0.0, 1.0));
-    let region2: Box<dyn kwavers_domain::geometry::GeometricDomain> =
+    let region2: Box<dyn kwavers_grid::geometry::GeometricDomain> =
         Box::new(RectangularDomain::new_2d(1.0, 2.0, 0.0, 1.0));
 
     let multi = MultiRegionDomain::new(

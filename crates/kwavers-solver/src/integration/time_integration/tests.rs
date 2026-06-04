@@ -11,7 +11,7 @@ use super::time_scale_separation::TimeScaleSeparator;
 use super::time_stepper::{AdamsBashforth, AdamsBashforthConfig, RK4Config, RungeKutta4};
 use super::traits::{MultiRateConfig, TimeStepper};
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::{Array3, Array4};
 use std::collections::HashMap;
 

@@ -21,7 +21,7 @@ use kwavers_analysis::visualization::stream::{
     BufferPolicy, FrameMetadata, FramePool, StagePipeline, StreamStatistics, SyncCoordinator,
     SyncStatistics, VizFrame, VizStream,
 };
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::Array3;
 
 /// Create a test grid with specified dimensions

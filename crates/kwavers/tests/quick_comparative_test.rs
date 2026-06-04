@@ -3,7 +3,7 @@
 //! Fast test to identify significant differences between solver implementations.
 //! Focuses on core functionality with minimal computational overhead.
 
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::HomogeneousMedium;
 use kwavers_domain::source::GridSource;
 use kwavers_solver::forward::fdtd::{FdtdConfig, FdtdSolver};

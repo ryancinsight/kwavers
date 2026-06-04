@@ -2,7 +2,7 @@
 
 use super::types::{BeamformerWindowType, SensorProcessingParams};
 use kwavers_core::error::KwaversResult;
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use crate::sensor::array::SensorArray;
 use crate::sensor::grid_sampling::GridSensorSet;
 use kwavers_signal::window as signal_window;
@@ -92,13 +92,13 @@ impl SensorBeamformer {
         let mut delays = Array2::zeros((self.sensor_positions.len(), image_grid.size()));
 
         let x_coords: Vec<f64> = image_grid
-            .coordinates(crate::grid::GridDimension::X)
+            .coordinates(kwavers_grid::GridDimension::X)
             .collect();
         let y_coords: Vec<f64> = image_grid
-            .coordinates(crate::grid::GridDimension::Y)
+            .coordinates(kwavers_grid::GridDimension::Y)
             .collect();
         let z_coords: Vec<f64> = image_grid
-            .coordinates(crate::grid::GridDimension::Z)
+            .coordinates(kwavers_grid::GridDimension::Z)
             .collect();
 
         for (sensor_idx, sensor_pos) in self.sensor_positions.iter().enumerate() {

@@ -47,7 +47,7 @@ pub(super) fn make_small_test_solver() -> Option<GpuPstdSolver> {
         return None;
     };
 
-    let grid = kwavers_domain::grid::Grid::new(nx, ny, nz, dx, dx, dx).ok()?;
+    let grid = kwavers_grid::Grid::new(nx, ny, nz, dx, dx, dx).ok()?;
     let c0_flat = vec![c0 as f32; total];
     let rho0_flat = vec![1000.0f32; total];
     let pml = vec![0.0f32; total];

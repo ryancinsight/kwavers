@@ -3,7 +3,7 @@
 use super::super::config::NonlinearInversionConfig;
 use super::helpers::{a_landau, ba_from_beta_s, beta_s_from_amplitudes, shear_modulus};
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::imaging::ultrasound::elastography::NonlinearParameterMap;
 use kwavers_physics::acoustics::imaging::modalities::elastography::HarmonicDisplacementField;
 use ndarray::Array3;

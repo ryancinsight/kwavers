@@ -13,7 +13,7 @@
 //! - `test_solver_validation_suite`: FDTD/PSTD solver comparisons
 //! - `test_full_workflow_validation`: End-to-end simulation validation
 
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 
 // Import validation modules using path attribute
 #[path = "validation/python/grid_validation.rs"]

@@ -1,6 +1,6 @@
 use super::super::super::wave_model::NonlinearWave;
 use kwavers_core::constants::numerical::TWO_PI;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::HomogeneousMedium;
 use ndarray::Array3;
 

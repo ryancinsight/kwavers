@@ -5,7 +5,7 @@ use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::{Array2, ArrayView3};
 use std::f64::consts::PI;
 
@@ -200,7 +200,7 @@ fn calculate_far_field_distance(grid: &Grid, wavelength: f64, method: &FarFieldM
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kwavers_domain::grid::Grid;
+    use kwavers_grid::Grid;
     use ndarray::{Array2, Array3};
 
     // ── BeamPatternConfig::default ────────────────────────────────────────────

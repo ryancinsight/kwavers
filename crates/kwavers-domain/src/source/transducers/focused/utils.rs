@@ -189,7 +189,7 @@ mod tests {
     use super::*;
     use kwavers_core::constants::numerical::MHZ_TO_HZ;
     use kwavers_core::error::{KwaversError, ValidationError};
-    use crate::grid::Grid;
+    use kwavers_grid::Grid;
     use std::f64::consts::PI;
 
     #[test]

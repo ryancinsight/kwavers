@@ -5,7 +5,7 @@ use ndarray::Array3;
 
 #[test]
 fn test_octree_creation() {
-    let bounds = kwavers_domain::grid::Bounds::new([0.0, 0.0, 0.0], [1.0, 1.0, 1.0]);
+    let bounds = kwavers_grid::Bounds::new([0.0, 0.0, 0.0], [1.0, 1.0, 1.0]);
     let octree = Octree::new(bounds, 3).unwrap();
 
     assert_eq!(octree.node_count(), 1);

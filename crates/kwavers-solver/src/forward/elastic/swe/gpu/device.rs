@@ -1,6 +1,6 @@
 //! `GPUDevice` struct and capability methods.
 
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 
 /// GPU device information and capabilities
 #[derive(Debug, Clone)]

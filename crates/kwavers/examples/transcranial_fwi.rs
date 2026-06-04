@@ -77,7 +77,7 @@
 //! - BabelBrain dataset: Pineda-Pardo, J.A. et al. (2023). Zenodo 7894431.
 
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::source::{GridSource, SourceMode};
 use kwavers_solver::inverse::fwi::time_domain::{FwiGeometry, FwiProcessor};
 use kwavers_solver::inverse::seismic::parameters::{FwiParameters, RegularizationParameters};

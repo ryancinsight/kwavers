@@ -5,7 +5,7 @@ use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use crate::boundary::traits::BoundaryFieldType;
 use crate::boundary::BoundaryCondition;
-use crate::grid::topology::{GridTopology, TopologyDimension};
+use kwavers_grid::topology::{GridTopology, TopologyDimension};
 
 use super::{PeriodicBoundaryCondition, PeriodicConfig};
 use kwavers_core::constants::numerical::{TWO_PI};

@@ -64,7 +64,7 @@ use time_of_flight::time_of_flight_inversion;
 use volumetric::volumetric_time_of_flight_inversion;
 
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::imaging::ultrasound::elastography::ElasticityMap;
 use kwavers_physics::acoustics::imaging::modalities::elastography::displacement::DisplacementField;
 

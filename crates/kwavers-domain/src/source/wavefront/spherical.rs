@@ -4,7 +4,7 @@
 //! or converging (toward a point), useful for modeling point sources and
 //! focused wave fields.
 
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_signal::Signal;
 use crate::source::{Source, SourceField};
 use ndarray::Array3;

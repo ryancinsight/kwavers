@@ -6,7 +6,7 @@
 //! used, and no tolerances are artificially widened.
 
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use crate::medium::acoustic::AcousticProperties;
 use crate::medium::heterogeneous::core::HeterogeneousMedium;
 use ndarray::Array3;

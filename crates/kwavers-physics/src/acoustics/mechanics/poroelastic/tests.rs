@@ -2,7 +2,7 @@ use super::material::PoroelasticMaterial;
 use super::simulation::PoroelasticSimulation;
 use kwavers_core::constants::cavitation::VISCOSITY_WATER;
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 
 #[test]
 fn test_poroelastic_material_default() {

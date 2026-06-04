@@ -22,7 +22,7 @@ use kwavers_core::constants::tissue_thermal::{
     THERMAL_EXPANSION_SOFT_TISSUE,
 };
 use kwavers_core::constants::MHZ_TO_HZ;
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use crate::medium::heterogeneous::core::HeterogeneousMedium;
 use log::debug;
 use ndarray::Array3;

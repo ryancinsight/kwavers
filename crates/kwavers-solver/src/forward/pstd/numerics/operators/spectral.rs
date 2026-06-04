@@ -8,7 +8,7 @@
 //! - Liu, Q. H. (1997) "The PSTD algorithm" MOTL 15(3)
 
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::Medium;
 use kwavers_math::fft::KSpaceCalculator;
 use ndarray::Array3;

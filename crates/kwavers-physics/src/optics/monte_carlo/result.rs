@@ -1,4 +1,4 @@
-use kwavers_domain::grid::GridDimensions;
+use kwavers_grid::GridDimensions;
 use std::fmt;
 
 /// Monte Carlo simulation result

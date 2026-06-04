@@ -2,7 +2,7 @@
 
 use ndarray::Array3;
 
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_physics::acoustics::imaging::modalities::elastography::displacement::DisplacementField;
 
 use super::{

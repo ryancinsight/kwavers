@@ -5,7 +5,7 @@
 
 use approx::assert_relative_eq;
 use kwavers_physics::acoustics::bubble_dynamics::epstein_plesset::OscillationType;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_physics::acoustics::bubble_dynamics::{
         BubbleParameters, EpsteinPlessetStabilitySolver, KellerMiksisModel,
     };

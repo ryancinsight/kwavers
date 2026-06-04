@@ -1,4 +1,4 @@
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::HomogeneousMedium;
 use kwavers_domain::source::{GridSource, SourceMode};
 use ndarray::{Array2, Array3};

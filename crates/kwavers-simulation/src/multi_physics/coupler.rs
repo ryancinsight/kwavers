@@ -1,5 +1,5 @@
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_math::numerics::operators::NumericsTrilinearInterpolator;
 use ndarray::ArrayView3;
 use std::collections::HashMap;

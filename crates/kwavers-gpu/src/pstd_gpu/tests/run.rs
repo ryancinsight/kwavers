@@ -10,7 +10,7 @@ fn make_solver_32(nt: usize) -> Option<GpuPstdSolver> {
     let ones = vec![1.0f32; n3];
     let zeros = vec![0.0f32; n3];
     GpuPstdSolver::with_auto_device(
-        &kwavers_domain::grid::Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).unwrap(),
+        &kwavers_grid::Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).unwrap(),
         MediumArrays {
             c0_flat: &c0v,
             rho0_flat: &rho0v,
@@ -132,7 +132,7 @@ fn test_gpu_pstd_multi_velocity_source_plane_produces_output() {
     let ones = vec![1.0f32; total];
     let zeros = vec![0.0f32; total];
     let solver = GpuPstdSolver::with_auto_device(
-        &kwavers_domain::grid::Grid::new(nx, ny, nz, 1e-4, 1e-4, 1e-4).unwrap(),
+        &kwavers_grid::Grid::new(nx, ny, nz, 1e-4, 1e-4, 1e-4).unwrap(),
         MediumArrays {
             c0_flat: &c0v,
             rho0_flat: &rho0v,
@@ -209,7 +209,7 @@ fn bench_gpu_pstd_bmode_grid() {
     let ones = vec![1.0f32; total];
     let zeros = vec![0.0f32; total];
     let solver = GpuPstdSolver::with_auto_device(
-        &kwavers_domain::grid::Grid::new(nx, ny, nz, dx, dx, dx).unwrap(),
+        &kwavers_grid::Grid::new(nx, ny, nz, dx, dx, dx).unwrap(),
         MediumArrays {
             c0_flat: &c0v,
             rho0_flat: &rho0v,

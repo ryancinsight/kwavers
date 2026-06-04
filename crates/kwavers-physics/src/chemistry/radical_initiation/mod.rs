@@ -1,6 +1,6 @@
 // physics/chemistry/radical_initiation/mod.rs
 use kwavers_core::constants::numerical::MPA_TO_PA;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::Medium;
 use log::debug;
 use ndarray::{Array3, Zip};

@@ -69,7 +69,7 @@ mod tests;
 
 use ndarray::Array3;
 
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 
 /// Configuration for diffusion solver
 #[derive(Debug, Clone)]

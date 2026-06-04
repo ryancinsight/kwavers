@@ -11,7 +11,7 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_domain::boundary::cpml::CPMLConfig;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::heterogeneous::HeterogeneousMedium;
 use kwavers_domain::medium::HomogeneousMedium;
 use kwavers_domain::source::grid_source::SourceMode;

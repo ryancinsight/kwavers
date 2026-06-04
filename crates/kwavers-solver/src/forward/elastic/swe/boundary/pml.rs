@@ -1,7 +1,7 @@
 //! `ElasticSwePMLBoundary` — pre-computed PML attenuation field and damping application.
 
 use super::config::SwePmlConfig;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::{Array1, Array3, Zip};
 
 /// PML boundary condition calculator.

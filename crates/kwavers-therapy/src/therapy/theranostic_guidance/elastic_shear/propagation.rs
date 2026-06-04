@@ -1,7 +1,7 @@
 //! Single-pass elastic PSTD propagation for trace collection.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_solver::forward::pstd::extensions::{
     ElasticPstdMedium, ElasticPstdOrchestrator, ElasticPstdVelocitySource,
 };

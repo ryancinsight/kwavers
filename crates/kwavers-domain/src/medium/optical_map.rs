@@ -7,7 +7,7 @@
 //! all layers according to clean architecture principles.
 
 use super::properties::OpticalPropertyData;
-use crate::grid::GridDimensions;
+use kwavers_grid::GridDimensions;
 use ndarray::Array3;
 
 /// 3D optical property map

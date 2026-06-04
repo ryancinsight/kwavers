@@ -1,7 +1,7 @@
 //! Reconstruction configuration types and traits
 
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::{Array2, Array3};
 use serde::{Deserialize, Serialize};
 

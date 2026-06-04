@@ -18,7 +18,7 @@
 use anyhow::Context as _;
 use burn::backend::NdArray as NdArrayBackend;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::source::{GridSource, SourceMode};
 use kwavers_solver::inverse::fwi::time_domain::{FwiGeometry, FwiProcessor};
 use kwavers_solver::inverse::seismic::parameters::{FwiParameters, RegularizationParameters};

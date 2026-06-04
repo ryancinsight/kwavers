@@ -10,6 +10,7 @@ repository = "https://github.com/ryancinsight/kwavers"
 [dependencies]
 kwavers-core = { path = "../kwavers-core", features = ["registration"] }
 kwavers-math = { path = "../kwavers-math" }
+kwavers-grid = { path = "../kwavers-grid" }
 kwavers-domain = { path = "../kwavers-domain" }
 kwavers-physics = { path = "../kwavers-physics" }
 kwavers-solver = { path = "../kwavers-solver" }

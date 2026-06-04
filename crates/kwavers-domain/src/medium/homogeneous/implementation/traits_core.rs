@@ -1,7 +1,7 @@
 use ndarray::{ArrayView3, ArrayViewMut3};
 
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use crate::medium::core::{ArrayAccess, CoreMedium};
 
 use super::HomogeneousMedium;

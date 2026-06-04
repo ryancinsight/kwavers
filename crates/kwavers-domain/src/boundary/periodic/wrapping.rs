@@ -4,7 +4,7 @@ use kwavers_core::error::KwaversResult;
 use crate::boundary::traits::{
     BoundaryCondition, BoundaryDirections, BoundaryFieldType, PeriodicBoundary,
 };
-use crate::grid::topology::GridTopology;
+use kwavers_grid::topology::GridTopology;
 
 use super::{PeriodicBoundaryCondition, PeriodicConfig};
 

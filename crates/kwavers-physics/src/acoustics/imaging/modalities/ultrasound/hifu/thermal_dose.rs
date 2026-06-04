@@ -19,7 +19,7 @@ use kwavers_core::constants::medical::{
     THERMAL_DOSE_THRESHOLD,
 };
 use kwavers_core::constants::numerical::SECONDS_PER_MINUTE;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::Array3;
 
 /// Thermal dose calculation in cumulative equivalent minutes at 43 deg C.

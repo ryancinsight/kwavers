@@ -4,7 +4,7 @@
 //! the paradox of instantaneous propagation." Comptes Rendus, 247, 431-433.
 
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::Medium;
 use ndarray::{Array3, Zip};
 use std::ops::Range;

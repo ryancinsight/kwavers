@@ -6,7 +6,7 @@ use log::{debug, warn};
 use ndarray::Array3;
 
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 
 use super::types::{AnalysisConservationLaw, ConservationResult, ConservedQuantity};
 

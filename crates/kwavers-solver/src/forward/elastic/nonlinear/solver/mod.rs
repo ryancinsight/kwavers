@@ -18,7 +18,7 @@ use super::config::NonlinearSWEConfig;
 use super::material::HyperelasticModel;
 use super::numerics::NumericsOperators;
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::Medium;
 
 mod harmonics;

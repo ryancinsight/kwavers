@@ -207,7 +207,7 @@ fn test_calculate_delays_logic() {
     let array = SensorArray::new(sensors, SOUND_SPEED_TISSUE, SensorArrayGeometry::Linear);
     let beamformer = SensorBeamformer::new(array, MHZ_TO_HZ);
 
-    let grid = crate::grid::Grid::new(2, 1, 1, 1.0, 1.0, 1.0).unwrap();
+    let grid = kwavers_grid::Grid::new(2, 1, 1, 1.0, 1.0, 1.0).unwrap();
     let delays = beamformer.calculate_delays(&grid, 1.0).unwrap();
 
     // Sensor 0 at origin: d[0,0]=0, d[0,1]=1

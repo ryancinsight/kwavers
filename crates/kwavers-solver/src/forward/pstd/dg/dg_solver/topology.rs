@@ -1,7 +1,7 @@
 //! Tensor-product DG element topology for Cartesian grids.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::Array1;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

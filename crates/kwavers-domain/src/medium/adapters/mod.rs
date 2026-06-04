@@ -22,7 +22,7 @@
 //!
 //! ```rust
 //! use kwavers_domain::medium::{HomogeneousMedium, adapters::CylindricalMediumProjection};
-//! use kwavers_domain::grid::{Grid, CylindricalTopology};
+//! use kwavers_grid::{Grid, CylindricalTopology};
 //!
 //! # fn example() -> kwavers_core::error::KwaversResult<()> {
 //! // Create 3D medium and grid

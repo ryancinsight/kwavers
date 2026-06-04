@@ -8,7 +8,7 @@ use super::volumetric::volumetric_time_of_flight_inversion;
 use super::ShearWaveInversion;
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use kwavers_core::constants::numerical::TWO_PI;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::imaging::ultrasound::elastography::InversionMethod;
 use kwavers_physics::acoustics::imaging::modalities::elastography::displacement::DisplacementField;
 use crate::inverse::elastography::config::ShearWaveInversionConfig;

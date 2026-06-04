@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use ndarray::Array2;
 
-use kwavers_domain::geometry::{GeometricDomain, PointLocation};
+use kwavers_grid::geometry::{GeometricDomain, PointLocation};
 
 /// Interface condition specification for multi-region PINN training
 ///

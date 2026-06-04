@@ -7,7 +7,7 @@ use super::super::scratch::ElasticStepScratch;
 use super::super::stress::stress_divergence_into;
 use super::super::types::{ElasticBodyForceConfig, ElasticWaveField};
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::{Array1, Zip};
 
 /// Time integration engine for elastic waves.

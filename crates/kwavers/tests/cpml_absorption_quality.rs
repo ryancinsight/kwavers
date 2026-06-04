@@ -17,7 +17,7 @@
 //! - Treeby & Cox (2010). J. Biomed. Opt. 15(2), 021314.
 
 use kwavers_domain::boundary::cpml::{CPMLConfig, CPMLProfiles};
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::HomogeneousMedium;
 use kwavers_domain::source::GridSource;
 use kwavers_solver::fdtd::{FdtdConfig, FdtdSolver};

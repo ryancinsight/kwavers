@@ -1,6 +1,6 @@
 use super::mesh::TetrahedralMesh;
 use super::types::MeshBoundaryType;
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 
 #[test]
 fn tetrahedron_volume_unit_is_one_sixth() {

@@ -21,7 +21,7 @@
 //! - Taflove & Hagness (2005). Computational Electrodynamics, 3rd ed. Artech House.
 //! - Treeby & Cox (2010). J. Biomed. Opt. 15(2), 021314.
 
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::HomogeneousMedium;
 use kwavers_domain::source::GridSource;
 use kwavers_solver::fdtd::{FdtdConfig, FdtdSolver};

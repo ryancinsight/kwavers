@@ -29,7 +29,7 @@ pub use flux::{FluxType, LimiterType};
 pub use traits::{DGOperations, DiscontinuityDetection, NumericalSolver, SolutionCoupling};
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use crate::constants::{
     CONSERVATION_TOLERANCE, DEFAULT_POLYNOMIAL_ORDER, DISCONTINUITY_THRESHOLD,
 };
@@ -263,7 +263,7 @@ impl NumericalSolver for HybridSpectralDGSolver {
 #[cfg(test)]
 mod tests {
     use super::{HybridSpectralDGConfig, HybridSpectralDGSolver};
-    use kwavers_domain::grid::Grid;
+    use kwavers_grid::Grid;
     use ndarray::Array3;
     use std::sync::Arc;
 

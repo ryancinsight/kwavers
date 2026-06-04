@@ -11,7 +11,7 @@ use super::SchwarzBoundary;
 use kwavers_core::error::KwaversResult;
 use crate::boundary::coupling::types::BoundaryDirections;
 use crate::boundary::traits::BoundaryCondition;
-use crate::grid::GridTopology;
+use kwavers_grid::GridTopology;
 
 impl BoundaryCondition for SchwarzBoundary {
     fn name(&self) -> &str {

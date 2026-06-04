@@ -49,7 +49,7 @@
 //! - Nyborg WL (1953). *J. Acoust. Soc. Am.* 25, 68–75.
 
 use kwavers_core::constants::acoustic_parameters::REFERENCE_FREQUENCY_HZ;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::Medium;
 use ndarray::{Array3, Zip};
 

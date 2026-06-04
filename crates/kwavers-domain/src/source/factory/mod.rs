@@ -11,7 +11,7 @@ mod tests;
 
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::error::{ConfigError, KwaversResult};
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use crate::source::{
     basic::{LinearArray, MatrixArray, PistonApodization, PistonConfig},
     transducers::{apodization::RectangularApodization, focused::FocusedSource},

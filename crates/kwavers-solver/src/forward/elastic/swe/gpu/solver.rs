@@ -5,7 +5,7 @@ use super::memory::{GPUMemoryPool, SweGpuMemoryStats};
 use super::metrics::SweGpuStepMetrics;
 use super::types::{GPUInversionResult, GPUPropagationResult};
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::Array3;
 use std::collections::HashMap;
 

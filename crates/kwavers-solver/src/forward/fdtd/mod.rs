@@ -116,7 +116,7 @@ pub mod source_handler;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kwavers_domain::grid::Grid;
+    use kwavers_grid::Grid;
 
     #[test]
     fn test_fdtd_creation() {

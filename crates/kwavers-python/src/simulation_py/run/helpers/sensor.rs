@@ -1,4 +1,4 @@
-use kwavers_domain::grid::Grid as KwaversGrid;
+use kwavers_grid::Grid as KwaversGrid;
 
 use super::super::super::Simulation;
 use crate::sensor_py::Sensor;

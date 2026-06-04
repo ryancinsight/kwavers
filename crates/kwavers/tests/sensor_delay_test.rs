@@ -1,4 +1,4 @@
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::sensor::beamforming::SensorBeamformer;
 use kwavers_domain::sensor::{Position, Sensor, SensorArray, SensorArrayGeometry};
 

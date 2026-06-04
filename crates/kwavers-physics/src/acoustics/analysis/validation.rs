@@ -1,7 +1,7 @@
 //! Shared validation for acoustic field-analysis routines.
 
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::ArrayView3;
 
 pub(super) fn validate_pressure_field_domain(

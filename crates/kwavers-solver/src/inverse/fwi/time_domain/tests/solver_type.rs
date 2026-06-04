@@ -1,6 +1,6 @@
 use super::super::{FwiGeometry, FwiProcessor};
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::source::{GridSource, SourceMode};
 use crate::config::SolverType;
 use crate::inverse::seismic::parameters::FwiParameters;

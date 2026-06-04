@@ -1,6 +1,6 @@
 //! `Grid` pyclass — computational domain wrapper.
 
-use kwavers_domain::grid::Grid as KwaversGrid;
+use kwavers_grid::Grid as KwaversGrid;
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 

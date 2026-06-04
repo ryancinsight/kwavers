@@ -14,6 +14,7 @@ workspace = true
 # so the wgpu/WGSL concretions never sit in the algorithm crates (DIP).
 kwavers-core = { path = "../kwavers-core" }
 kwavers-math = { path = "../kwavers-math" }
+kwavers-grid = { path = "../kwavers-grid" }
 kwavers-signal = { path = "../kwavers-signal" }
 kwavers-domain = { path = "../kwavers-domain" }
 kwavers-physics = { path = "../kwavers-physics" }

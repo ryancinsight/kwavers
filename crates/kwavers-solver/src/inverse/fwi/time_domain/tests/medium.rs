@@ -1,5 +1,5 @@
 use super::super::{FwiProcessor, RHO_SEISMIC_REF};
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::Array3;
 
 /// Verify that the FWI forward-model medium is built with seismic (non-water) density.

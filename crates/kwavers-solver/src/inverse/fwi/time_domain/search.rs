@@ -2,7 +2,7 @@
 
 use super::{geometry::FwiGeometry, FwiProcessor};
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::{Array2, Array3, Zip};
 use rayon::prelude::*;
 

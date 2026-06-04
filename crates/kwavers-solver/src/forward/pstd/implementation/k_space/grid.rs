@@ -1,7 +1,7 @@
 //! PSTD k-Space Grid Implementation
 
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_math::fft::KSpaceCalculator;
 use ndarray::Array1;
 

@@ -42,7 +42,7 @@
 //! - Multi-physics coupling consistency
 //! - Clinical safety property verification
 
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::HomogeneousMedium;
 use kwavers_domain::source::GridSource;
 use kwavers_domain::source::SourceMode;

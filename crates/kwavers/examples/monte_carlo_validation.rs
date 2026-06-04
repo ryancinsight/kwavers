@@ -28,7 +28,7 @@
 
 use anyhow::Result;
 use kwavers_domain::phantoms::PhantomBuilder;
-use kwavers_domain::grid::{Grid3D, GridDimensions};
+use kwavers_grid::{Grid3D, GridDimensions};
 use kwavers_domain::medium::properties::OpticalPropertyData;
 use kwavers_physics::optics::map_builder::OpticalPropertyMap;
 use kwavers_physics::optics::monte_carlo::{MonteCarloSolver, PhotonSource, SimulationConfig};

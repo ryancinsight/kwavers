@@ -2,7 +2,7 @@
 
 use super::super::{AcousticDgTensorWorkspace, ACOUSTIC_PRESSURE_VAR, ACOUSTIC_VELOCITY_X_VAR};
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use crate::forward::pstd::dg::cpml::{
     DgCpmlAxis, DgCpmlConfig, DgCpmlMemoryWorkspace, DgCpmlProfiles,
 };

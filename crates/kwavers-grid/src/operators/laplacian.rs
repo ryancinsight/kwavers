@@ -4,7 +4,7 @@
 
 use super::coefficients::{FDCoefficients, FdAccuracyOrder};
 use kwavers_core::error::KwaversResult;
-use crate::grid::Grid;
+use crate::Grid;
 use ndarray::{s, Array3, ArrayView3, ArrayViewMut3, Zip};
 
 /// Configuration for Laplacian computation
@@ -281,7 +281,7 @@ pub fn laplacian(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::grid::Grid;
+    use crate::Grid;
     use approx::assert_relative_eq;
 
     #[test]

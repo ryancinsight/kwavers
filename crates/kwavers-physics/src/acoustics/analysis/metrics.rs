@@ -3,7 +3,7 @@
 use super::pressure::{acoustic_impedance, harmonic_peak_intensity};
 use super::validation::{validate_pressure_field_domain, validation_error};
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::ArrayView3;
 
 /// Field analysis metrics
@@ -191,7 +191,7 @@ fn calculate_beam_width_at_location(
 mod tests {
     use super::*;
     use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
-    use kwavers_domain::grid::Grid;
+    use kwavers_grid::Grid;
     use ndarray::Array3;
 
     fn small_grid() -> Grid {

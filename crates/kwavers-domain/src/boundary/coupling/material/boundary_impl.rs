@@ -2,7 +2,7 @@ use super::MaterialInterface;
 use kwavers_core::error::KwaversResult;
 use crate::boundary::coupling::types::BoundaryDirections;
 use crate::boundary::traits::BoundaryCondition;
-use crate::grid::GridTopology;
+use kwavers_grid::GridTopology;
 use ndarray::ArrayViewMut3;
 
 impl BoundaryCondition for MaterialInterface {

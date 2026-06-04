@@ -329,7 +329,7 @@ impl GPUBackend {
         fields: &mut HashMap<String, Array3<f64>>,
         dt: f64,
         time: f64,
-        grid: &kwavers_domain::grid::Grid,
+        grid: &kwavers_grid::Grid,
         orchestrator: &mut RealtimeSimulationOrchestrator,
     ) -> KwaversResult<StepResult> {
         orchestrator.step(fields, dt, time, grid)

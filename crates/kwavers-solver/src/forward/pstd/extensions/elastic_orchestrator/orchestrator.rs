@@ -27,7 +27,7 @@ use super::split_field_step::{propagate_split_field_step, SpectralOperators, Spe
 use super::staggered_ops::StaggeredDerivativeOps;
 use super::types::{ElasticPstdMedium, ElasticPstdSensorData, ElasticPstdVelocitySource};
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_math::fft::{fft_3d_array_into, ifft_3d_array_into};
 use kwavers_physics::acoustics::mechanics::elastic_wave::{
     fields::VelocityFields,

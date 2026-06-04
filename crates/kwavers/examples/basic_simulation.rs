@@ -5,7 +5,7 @@
 use kwavers_domain::medium::CoreMedium;
 use kwavers_domain::medium::HomogeneousMedium;
 use kwavers_core::time::Time;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_core::error::KwaversResult;
 use std::time::Instant;
 

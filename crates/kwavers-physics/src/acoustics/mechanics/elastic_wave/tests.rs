@@ -7,7 +7,7 @@
 
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use kwavers_core::constants::numerical::TWO_PI;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use crate::acoustics::mechanics::elastic_wave::{
     mode_conversion::{ModeConversionConfig, ViscoelasticConfig},
     properties::AnisotropicElasticProperties,

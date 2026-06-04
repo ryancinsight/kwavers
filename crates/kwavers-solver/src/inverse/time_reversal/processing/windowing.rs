@@ -3,7 +3,7 @@
 //! Implements spatial windowing functions for time-reversal reconstruction.
 
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_signal::window::{window_value, SignalWindowType};
 use ndarray::Array3;
 

@@ -132,7 +132,7 @@ mod tests {
     use super::*;
     use crate::therapy::swe_3d_workflows::decision_support::Swe3dClinicalDecisionSupport;
     use crate::therapy::swe_3d_workflows::statistics::VolumetricStatistics;
-    use kwavers_domain::grid::Grid;
+    use kwavers_grid::Grid;
 
     #[test]
     fn test_multi_planar_reconstruction() {

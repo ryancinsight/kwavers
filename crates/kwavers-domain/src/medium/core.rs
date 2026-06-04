@@ -5,7 +5,7 @@
 
 use kwavers_core::constants::REFERENCE_FREQUENCY_HZ;
 use kwavers_core::error::KwaversResult;
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::{Array3, ArrayView3, ArrayViewMut3};
 use std::fmt::Debug;
 

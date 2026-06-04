@@ -1,6 +1,6 @@
 //! 3D interpolation utilities for reconstruction
 
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::Array3;
 
 use super::config::ReconstructionInterpolationMethod;

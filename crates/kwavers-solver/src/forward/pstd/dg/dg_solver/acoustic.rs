@@ -314,7 +314,7 @@ fn lax_friedrichs_acoustic_flux(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kwavers_domain::grid::Grid;
+    use kwavers_grid::Grid;
     use crate::forward::pstd::dg::DGConfig;
     use std::sync::Arc;
 

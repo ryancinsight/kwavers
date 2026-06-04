@@ -19,7 +19,7 @@
 //! integrator. No projection, flux, or CFL logic is duplicated here.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::{density_at, sound_speed_at, Medium};
 use kwavers_domain::sensor::GridSensorSet;
 use kwavers_domain::source::Source;

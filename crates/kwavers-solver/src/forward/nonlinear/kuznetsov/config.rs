@@ -4,7 +4,7 @@
 //! including numerical parameters, physical constants, and equation mode selection.
 
 use kwavers_core::error::{KwaversError, ValidationError};
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 
 // Physical constants and numerical parameters
 /// Default CFL factor for Kuznetsov equation stability

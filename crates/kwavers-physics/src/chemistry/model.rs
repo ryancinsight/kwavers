@@ -1,7 +1,7 @@
 //! ChemicalModel struct and core lifecycle methods
 
 use kwavers_core::error::{KwaversResult, ValidationError};
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use log::debug;
 use std::collections::HashMap;
 

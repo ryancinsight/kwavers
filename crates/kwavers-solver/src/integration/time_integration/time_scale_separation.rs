@@ -12,7 +12,7 @@
 //!   28(2-4), 327-341.
 
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::{Array4, ArrayView3, Axis};
 use std::collections::HashMap;
 

@@ -1,6 +1,6 @@
 //! `BoundaryLayer` and `BoundaryLayerManager` for multi-sided boundary geometry.
 
-use crate::grid::GridTopology;
+use kwavers_grid::GridTopology;
 
 use super::types::BoundaryDirections;
 

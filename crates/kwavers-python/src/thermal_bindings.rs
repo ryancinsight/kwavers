@@ -31,7 +31,7 @@ use kwavers_core::constants::medical::{
 };
 use kwavers_core::constants::fundamental::{DENSITY_TISSUE, SOUND_SPEED_TISSUE};
 use kwavers_core::constants::thermodynamic::{BODY_TEMPERATURE_C, KELVIN_OFFSET_C};
-use kwavers_domain::grid::Grid as KwaversGrid;
+use kwavers_grid::Grid as KwaversGrid;
 use kwavers_domain::medium::HomogeneousMedium;
 use kwavers_physics::thermal::diffusion::ThermalDiffusionConfig;
 use kwavers_solver::forward::thermal_diffusion::ThermalDiffusionSolver;

@@ -40,7 +40,7 @@ fn zero_amplitude_bowl_generates_finite_zero_field() {
     };
     let bowl = BowlTransducer::with_element_count(config, 1).unwrap();
     let array = MultiBowlArray::from_bowls(vec![bowl]).unwrap();
-    let grid = crate::grid::Grid::new(2, 2, 2, 0.004, 0.005, 0.006).unwrap();
+    let grid = kwavers_grid::Grid::new(2, 2, 2, 0.004, 0.005, 0.006).unwrap();
     let source = array.generate_source(&grid, 0.37e-6).unwrap();
 
     for value in source {
@@ -62,7 +62,7 @@ fn hamming_apodization_preserves_pressure_units() {
     shifted.center = [0.002, 0.0, -0.08];
     shifted.focus = [0.002, 0.0, 0.0];
     let bowl_b = BowlTransducer::with_element_count(shifted, 1).unwrap();
-    let grid = crate::grid::Grid::new(2, 2, 2, 0.004, 0.005, 0.006).unwrap();
+    let grid = kwavers_grid::Grid::new(2, 2, 2, 0.004, 0.005, 0.006).unwrap();
 
     let mut array = MultiBowlArray::from_bowls(vec![bowl_a, bowl_b]).unwrap();
     let untapered = array.generate_source(&grid, 0.37e-6).unwrap();

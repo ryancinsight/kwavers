@@ -2,7 +2,7 @@
 
 use rayon::prelude::*;
 
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use crate::medium::{AcousticProperties, CoreMedium, Medium};
 
 use super::property::MediumProperties;

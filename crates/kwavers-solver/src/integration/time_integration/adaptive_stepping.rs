@@ -57,7 +57,7 @@ impl<T: TimeStepper> AdaptiveTimeStepper<T> {
         &mut self,
         field: &Array3<f64>,
         rhs_fn: F,
-        grid: &kwavers_domain::grid::Grid,
+        grid: &kwavers_grid::Grid,
     ) -> kwavers_core::error::KwaversResult<(Array3<f64>, f64)>
     where
         F: Fn(&Array3<f64>) -> kwavers_core::error::KwaversResult<Array3<f64>> + Clone,

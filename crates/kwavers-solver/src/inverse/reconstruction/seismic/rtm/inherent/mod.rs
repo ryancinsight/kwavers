@@ -41,7 +41,7 @@ impl ReverseTimeMigration {
         shot_data: &ndarray::Array2<f64>,
         source_position: (usize, usize, usize),
         receiver_positions: &[(usize, usize, usize)],
-        grid: &kwavers_domain::grid::Grid,
+        grid: &kwavers_grid::Grid,
     ) -> KwaversResult<()> {
         let n_time_steps = shot_data.shape()[1];
 

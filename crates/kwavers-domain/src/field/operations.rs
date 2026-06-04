@@ -2,7 +2,7 @@
 //!
 //! This module provides utilities for creating and manipulating field arrays.
 
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::{Array3, Array4};
 
 /// Field operations for grid-based arrays

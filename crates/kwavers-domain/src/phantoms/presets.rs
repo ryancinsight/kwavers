@@ -1,5 +1,5 @@
 use super::builder::PhantomBuilder;
-use crate::grid::GridDimensions;
+use kwavers_grid::GridDimensions;
 use crate::medium::optical_map::OpticalPropertyMap;
 use crate::medium::properties::OpticalPropertyData;
 

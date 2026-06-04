@@ -1,5 +1,5 @@
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::absorption::PowerLawAbsorption;
 use kwavers_domain::medium::Medium;
 use crate::acoustics::mechanics::elastic_wave::ElasticBodyForceConfig;

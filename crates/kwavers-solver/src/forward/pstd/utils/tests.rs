@@ -1,6 +1,6 @@
 use super::*;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 
 #[test]
 fn test_wavenumber_computation() {

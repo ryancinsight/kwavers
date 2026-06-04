@@ -1,5 +1,5 @@
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 
 use super::biot::BiotTheory;
 use super::material::PoroelasticMaterial;
@@ -13,7 +13,7 @@ use super::waves::WaveSpeeds;
 /// use kwavers_physics::acoustics::mechanics::poroelastic::{
 ///     PoroelasticSimulation, PoroelasticMaterial
 /// };
-/// use kwavers_domain::grid::Grid;
+/// use kwavers_grid::Grid;
 ///
 /// # fn example() -> kwavers_core::error::KwaversResult<()> {
 /// let grid = Grid::new(128, 128, 64, 1e-3, 1e-3, 1e-3)?;
@@ -69,7 +69,7 @@ impl PoroelasticSimulation {
 mod tests {
     use super::*;
     use kwavers_core::constants::numerical::MHZ_TO_HZ;
-    use kwavers_domain::grid::Grid;
+    use kwavers_grid::Grid;
     use crate::acoustics::mechanics::poroelastic::PoroelasticMaterial;
 
     fn make_sim() -> PoroelasticSimulation {

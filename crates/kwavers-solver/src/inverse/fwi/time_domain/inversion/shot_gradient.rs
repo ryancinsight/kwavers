@@ -2,7 +2,7 @@
 
 use super::super::{geometry::FwiGeometry, gradient::mute_gradient_near_sources, FwiProcessor};
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::{Array2, Array3};
 
 impl FwiProcessor {

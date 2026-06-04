@@ -22,7 +22,7 @@
 use super::mesh::TetrahedralMesh;
 use super::types::MeshBoundaryType;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 
 impl TetrahedralMesh {
     /// Build a tetrahedral mesh from the grid's Cartesian vertex lattice.

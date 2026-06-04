@@ -1,6 +1,6 @@
 use kwavers_core::constants::fundamental::DENSITY_WATER;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use crate::acoustics::skull::HeterogeneousSkull;
 use ndarray::Array3;
 

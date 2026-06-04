@@ -13,7 +13,7 @@
 //!   matches KWave.jl to 1.0000 across four sensors with Pearson 0.974;
 //!   requires Julia + KWave.jl on the runner.
 
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_solver::forward::pstd::extensions::{
     ElasticPml, ElasticPmlSpec, ElasticPstdMedium, ElasticPstdOrchestrator, ElasticPstdSourceMode,
     ElasticPstdVelocitySource,

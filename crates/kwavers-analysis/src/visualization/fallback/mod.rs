@@ -4,7 +4,7 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_domain::field::mapping::UnifiedFieldType;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use log::{info, warn};
 use ndarray::Array3;
 

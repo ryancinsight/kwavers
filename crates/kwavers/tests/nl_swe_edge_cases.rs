@@ -6,7 +6,7 @@
 //! - Large deformation hyperelastic behavior
 //! - Harmonic generation under extreme conditions
 
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::HomogeneousMedium;
 use kwavers_solver::forward::elastic::{
     HyperelasticModel, NonlinearElasticWaveSolver, NonlinearSWEConfig,

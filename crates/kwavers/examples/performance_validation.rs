@@ -3,7 +3,7 @@
 //! This script validates core performance characteristics to provide
 //! evidence-based metrics for production readiness evaluation.
 
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::HomogeneousMedium;
 use ndarray::Array3;
 use std::time::Instant;

@@ -34,7 +34,7 @@
 
 use kwavers_analysis::performance::SafeVectorOps;
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::{Array1, Array3, Zip};
 use std::time::Instant;
 

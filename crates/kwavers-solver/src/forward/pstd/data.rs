@@ -4,7 +4,7 @@
 //! following GRASP principle of cohesive, focused modules.
 
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::Medium;
 use kwavers_math::fft::Complex64;
 use ndarray::Array3;

@@ -4,7 +4,7 @@
 
 use ndarray::Array3;
 
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::traits::Medium as MediumTrait;
 use kwavers_domain::sensor::recorder::pressure_statistics::SampledStatistics;
 use kwavers_domain::sensor::recorder::simple::SensorRecorder;

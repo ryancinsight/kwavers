@@ -5,7 +5,7 @@
 use super::bowl::{BowlConfig, BowlTransducer};
 use super::validation::{field_validation_error, validate_finite_field};
 use kwavers_core::error::KwaversResult;
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::{Array3, Zip};
 use kwavers_core::constants::numerical::{TWO_PI};
 

@@ -56,7 +56,7 @@ pub trait Validatable {
 // - published benchmarks for accuracy
 
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use log::info;
 
 /// Physical constants for validation

@@ -1,6 +1,6 @@
 //! Linearised momentum residual checks.
 
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::Array3;
 
 /// Compute maximum linearised Euler residual per axis.
@@ -52,7 +52,7 @@ pub fn validate_momentum_conservation(
 mod tests {
     use super::*;
     use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
-    use kwavers_domain::grid::Grid;
+    use kwavers_grid::Grid;
     use ndarray::Array3;
 
     fn small_grid() -> Grid {

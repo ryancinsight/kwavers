@@ -6,7 +6,7 @@ use rayon::prelude::*;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
-use kwavers_domain::grid::{Grid3D, GridDimensions};
+use kwavers_grid::{Grid3D, GridDimensions};
 use crate::optics::monte_carlo::config::SimulationConfig;
 use crate::optics::monte_carlo::interfaces::fresnel_reflectance;
 use crate::optics::monte_carlo::result::MCResult;

@@ -26,7 +26,7 @@
 //! - Treeby, B. E., & Cox, B. T. (2010). "MATLAB toolbox for the simulation and
 //!   reconstruction of photoacoustic wave fields." Journal of Biomedical Optics, 15(2).
 
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::Array3;
 use serde::{Deserialize, Serialize};
 

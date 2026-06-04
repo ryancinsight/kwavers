@@ -309,7 +309,7 @@ mod tests {
     use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
     use kwavers_domain::boundary::{DomainPMLBoundary, DomainPmlConfig};
     use kwavers_domain::field::mapping::UnifiedFieldType;
-    use kwavers_domain::grid::Grid;
+    use kwavers_grid::Grid;
     use kwavers_domain::medium::HomogeneousMedium;
     use kwavers_signal::Signal;
     use kwavers_domain::source::PointSource;

@@ -3,7 +3,7 @@
 //! This example shows that despite compilation warnings, the library
 //! delivers scientifically accurate acoustic simulations.
 
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_core::constants::{DENSITY_WATER, SOUND_SPEED_WATER};
 use ndarray::Array3;
 

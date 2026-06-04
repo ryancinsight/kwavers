@@ -3,7 +3,7 @@
 
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::error::KwaversResult;
-use crate::grid::GridTopology;
+use kwavers_grid::GridTopology;
 use ndarray::{Array3, ArrayViewMut3};
 use std::fmt::Debug;
 

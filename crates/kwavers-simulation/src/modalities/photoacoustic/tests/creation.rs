@@ -2,7 +2,7 @@
 
 use super::super::core::PhotoacousticSimulator;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::imaging::photoacoustic::PhotoacousticOpticalProperties;
 use kwavers_domain::medium::homogeneous::HomogeneousMedium;
 

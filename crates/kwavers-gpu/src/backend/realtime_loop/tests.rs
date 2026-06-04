@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use ndarray::Array3;
 
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use crate::backend::physics_kernels::{
     GpuKernelPhysicsDomain, PhysicsKernel, PhysicsKernelRegistry, WorkgroupConfig,
 };

@@ -1,7 +1,7 @@
 //! Legacy linear polarization model (deprecated — use JonesPolarizationModel)
 
 use super::PolarizationModel;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::Medium;
 use log::debug;
 use ndarray::{Array3, Array4, Zip};

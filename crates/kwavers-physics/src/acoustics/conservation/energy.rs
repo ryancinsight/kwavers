@@ -1,6 +1,6 @@
 //! Acoustic energy conservation checks.
 
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::{Array3, Zip};
 
 /// Compute total acoustic energy and relative error against `initial_energy`.
@@ -40,7 +40,7 @@ pub fn validate_energy_conservation(
 mod tests {
     use super::*;
     use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
-    use kwavers_domain::grid::Grid;
+    use kwavers_grid::Grid;
     use ndarray::Array3;
 
     fn small_grid() -> Grid {

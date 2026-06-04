@@ -50,7 +50,7 @@ impl FiberOrientation {
     }
 }
 
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 /// Muscle fiber model for anisotropic wave propagation
 #[derive(Debug)]
 pub struct MuscleFiberModel {

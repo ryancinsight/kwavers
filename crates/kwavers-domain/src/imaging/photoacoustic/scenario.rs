@@ -2,7 +2,7 @@ use super::config::{
     PhotoacousticExecutionConfig, PhotoacousticReconstructionConfig, PhotoacousticSolverConfig,
 };
 use kwavers_core::error::{KwaversError, KwaversResult};
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use crate::medium::optical_map::OpticalPropertyMap;
 
 #[derive(Debug, Clone)]

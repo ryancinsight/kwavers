@@ -1,7 +1,7 @@
 //! `MediumOpticalProperties` impl for `HeterogeneousTissueMedium`
 
 use super::HeterogeneousTissueMedium;
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use crate::medium::optical::MediumOpticalProperties;
 
 impl MediumOpticalProperties for HeterogeneousTissueMedium {

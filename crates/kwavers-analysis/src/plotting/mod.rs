@@ -11,7 +11,7 @@ use ndarray::Array3;
 #[cfg(feature = "plotting")]
 mod plotting_impl {
 
-    use kwavers_domain::grid::Grid;
+    use kwavers_grid::Grid;
     use kwavers_domain::sensor::recorder::Recorder;
     use log::info;
     use ndarray::{Array2, Array3};
@@ -285,5 +285,5 @@ pub fn plot_recorder_data(_recorder: &kwavers_domain::sensor::recorder::Recorder
 }
 
 // Re-export types for compatibility
-pub use kwavers_domain::grid::Grid;
+pub use kwavers_grid::Grid;
 pub use kwavers_domain::sensor::recorder::Recorder;

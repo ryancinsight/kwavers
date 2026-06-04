@@ -5,7 +5,7 @@ use super::super::KWaveArray;
 #[test]
 fn test_set_array_position_matches_manual_position_rotation() {
     use super::super::math::{apply_matrix, euler_xyz_rotation_matrix};
-    use crate::grid::Grid;
+    use kwavers_grid::Grid;
 
     let grid = Grid::new(41, 41, 11, 5.0e-4, 5.0e-4, 5.0e-4).expect("grid");
     let translation = (5.0e-3, 0.0, 2.0e-3);
@@ -63,7 +63,7 @@ fn test_set_array_position_matches_manual_position_rotation() {
 
 #[test]
 fn test_rect_rotation_90_swaps_width_and_height() {
-    use crate::grid::Grid;
+    use kwavers_grid::Grid;
 
     let grid = Grid::new(41, 41, 5, 1.0e-4, 1.0e-4, 1.0e-4).expect("grid");
     let mut unrot = KWaveArray::new();
@@ -113,7 +113,7 @@ fn test_rect_rotation_90_swaps_width_and_height() {
 
 #[test]
 fn test_rect_weighted_mask_matches_kwave_python_reference_mass() {
-    use crate::grid::Grid;
+    use kwavers_grid::Grid;
 
     let grid = Grid::new(41, 41, 5, 1.0e-4, 1.0e-4, 1.0e-4).expect("grid");
     let mut array = KWaveArray::new();

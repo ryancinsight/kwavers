@@ -1,5 +1,5 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_solver::inverse::reconstruction::photoacoustic::{
     IterativeAlgorithm, PhotoacousticAlgorithm, ReconstructionPhotoacousticConfig, PhotoacousticReconstructor,
 };

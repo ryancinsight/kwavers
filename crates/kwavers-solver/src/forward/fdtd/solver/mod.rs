@@ -85,7 +85,7 @@ pub(crate) use central_diff::CentralDifferenceOperator;
 pub use gpu_accelerator::FdtdGpuAccelerator;
 
 use kwavers_domain::boundary::cpml::CPMLBoundary;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::source::{Source, SourceInjectionMode};
 use kwavers_math::numerics::operators::StaggeredGridOperator;
 use kwavers_physics::acoustics::mechanics::acoustic_wave::AcousticSpatialOrder;

@@ -81,7 +81,7 @@
 //!     AcousticTherapyParams, TherapyIntegrationSafetyLimits, PatientParameters, TissuePropertyMap,
 //!     TherapyTargetVolume, TherapyTissueType, TherapyIntegrationSafetyStatus,
 //! };
-//! use kwavers_domain::grid::Grid;
+//! use kwavers_grid::Grid;
 //! use kwavers_domain::medium::homogeneous::HomogeneousMedium;
 //!
 //! // Create therapy configuration

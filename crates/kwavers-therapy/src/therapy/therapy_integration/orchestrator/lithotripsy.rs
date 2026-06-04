@@ -86,7 +86,7 @@ mod tests {
     use crate::therapy::lithotripsy::stone_fracture::StoneMaterial;
     use crate::therapy::lithotripsy::LithotripsyParameters;
     use kwavers_core::constants::numerical::MPA_TO_PA;
-    use kwavers_domain::grid::Grid;
+    use kwavers_grid::Grid;
     use ndarray::Array3;
 
     #[test]

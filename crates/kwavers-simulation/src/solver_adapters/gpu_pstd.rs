@@ -44,7 +44,7 @@ use medium::GpuMediumSnapshot;
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_domain::boundary::cpml::{CPMLConfig, CPMLProfiles};
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::Medium;
 use kwavers_domain::sensor::GridSensorSet;
 use kwavers_domain::source::{GridSource, Source};

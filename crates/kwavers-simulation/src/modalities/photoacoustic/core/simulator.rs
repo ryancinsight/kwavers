@@ -1,7 +1,7 @@
 //! Core Photoacoustic Simulator — struct definition, construction, and optical methods.
 
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::imaging::photoacoustic::PhotoacousticParameters;
 use kwavers_domain::medium::properties::OpticalPropertyData;
 use kwavers_domain::medium::Medium;

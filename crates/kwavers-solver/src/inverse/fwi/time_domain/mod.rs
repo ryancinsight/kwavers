@@ -71,7 +71,7 @@ pub use geometry::FwiGeometry;
 mod tests;
 
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use crate::inverse::reconstruction::seismic::MisfitType;
 use crate::inverse::seismic::parameters::FwiParameters;
 use ndarray::Array3;

@@ -1,6 +1,6 @@
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::Array3;
 
 use super::aberration::AberrationCorrection;
@@ -14,7 +14,7 @@ use super::properties::AcousticSkullProperties;
 ///
 /// ```no_run
 /// use kwavers_physics::acoustics::skull::{TranscranialSimulation, AcousticSkullProperties};
-/// use kwavers_domain::grid::Grid;
+/// use kwavers_grid::Grid;
 ///
 /// # fn example() -> kwavers_core::error::KwaversResult<()> {
 /// let grid = Grid::new(200, 200, 200, 0.5e-3, 0.5e-3, 0.5e-3)?;

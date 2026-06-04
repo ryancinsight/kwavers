@@ -3,7 +3,7 @@
 use super::model::ChemicalModel;
 use super::parameters::ChemicalUpdateParams;
 use super::reactions::ReactionType;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use crate::traits::ChemicalModelTrait;
 use ndarray::Array3;
 

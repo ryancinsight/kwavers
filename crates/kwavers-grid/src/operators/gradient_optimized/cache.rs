@@ -1,7 +1,7 @@
 //! Gradient cache for performance optimization.
 
 use super::super::coefficients::{FDCoefficients, FdAccuracyOrder};
-use crate::grid::Grid;
+use crate::Grid;
 use num_traits::Float;
 use std::sync::{Arc, RwLock};
 

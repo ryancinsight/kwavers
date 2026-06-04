@@ -2,7 +2,7 @@
 
 use super::solver_workspace::SolverWorkspace;
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use parking_lot::Mutex;
 use std::sync::Arc;
 

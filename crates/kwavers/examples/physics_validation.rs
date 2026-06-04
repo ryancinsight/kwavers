@@ -5,7 +5,7 @@
 
 use kwavers_domain::medium::AcousticProperties;
 use kwavers_domain::medium::HomogeneousMedium;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::Array3;
 use std::f64::consts::PI;
 

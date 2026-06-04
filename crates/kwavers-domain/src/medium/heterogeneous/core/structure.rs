@@ -4,7 +4,7 @@
 //! to achieve optimal cohesion per senior engineering standards.
 
 use kwavers_core::constants::REFERENCE_FREQUENCY_HZ;
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use crate::medium::homogeneous::HomogeneousMedium;
 use crate::medium::{
     acoustic::AcousticProperties,

@@ -1,7 +1,7 @@
 use super::super::super::types::ElasticBodyForceConfig;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 
 /// Evaluate a single body force configuration at grid cell `(i, j, k)` and time `t`.
 ///

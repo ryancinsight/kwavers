@@ -4,7 +4,7 @@ use super::super::state_vector::{flatten_fields, sorted_field_keys, unflatten_fi
 use super::MonolithicCoupler;
 use kwavers_core::error::KwaversResult;
 use kwavers_domain::field::UnifiedFieldType;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use crate::integration::nonlinear::GMRESSolver;
 use log::{debug, warn};
 use ndarray::Array3;

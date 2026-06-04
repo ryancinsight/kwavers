@@ -1,5 +1,5 @@
 use super::*;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use crate::forward::pstd::dg::config::{DGConfig, ShockCaptureConfig, WenoDegree};
 use crate::forward::pstd::dg::flux::LimiterType;
 use ndarray::Array3;

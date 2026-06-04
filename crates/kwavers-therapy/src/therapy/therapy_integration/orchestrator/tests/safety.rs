@@ -35,7 +35,7 @@ fn test_safety_limit_checking() {
         },
     };
 
-    let grid = kwavers_domain::grid::Grid::new(8, 8, 8, 0.005, 0.005, 0.005).unwrap();
+    let grid = kwavers_grid::Grid::new(8, 8, 8, 0.005, 0.005, 0.005).unwrap();
     let medium = HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE, 0.5, 1.0, &grid);
 
     let mut orchestrator =
@@ -80,7 +80,7 @@ fn test_safety_controller_integration() {
         },
     };
 
-    let grid = kwavers_domain::grid::Grid::new(16, 16, 16, 0.002, 0.002, 0.002).unwrap();
+    let grid = kwavers_grid::Grid::new(16, 16, 16, 0.002, 0.002, 0.002).unwrap();
     let medium = Box::new(HomogeneousMedium::new(
         DENSITY_WATER_NOMINAL,
         SOUND_SPEED_TISSUE,

@@ -17,7 +17,7 @@
 //! - **SWE Standards**: Bamber et al. (2013), "EFSUMB guidelines on elastography"
 //! - **CEUS Standards**: Claudon et al. (2013), "Guidelines for CEUS in liver imaging"
 
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::imaging::ultrasound::elastography::InversionMethod;
 use kwavers_domain::medium::homogeneous::HomogeneousMedium;
 use kwavers_core::error::KwaversResult;

@@ -3,7 +3,7 @@
 //! This module provides compatibility functions that convert continuous
 //! coordinates to discrete indices before calling `CoreMedium` methods.
 
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use crate::medium::{continuous_to_discrete, CoreMedium, Medium};
 
 /// Get density at continuous coordinates

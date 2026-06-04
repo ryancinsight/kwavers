@@ -4,7 +4,7 @@
 //! k-space corrections, and spectral derivatives used by multiple solvers.
 
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_math::fft::{fft_3d_array_into, ifft_3d_complex_inplace, KSpaceCalculator};
 use ndarray::{s, Array3, Axis, Zip};
 use num_complex::Complex64;

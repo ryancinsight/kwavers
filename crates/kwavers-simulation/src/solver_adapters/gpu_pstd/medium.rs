@@ -4,7 +4,7 @@
 //! to capture the data the GPU solver needs at construction time, avoiding the
 //! need to store a `&dyn Medium` reference (lifetime / object-safety issue).
 
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::Medium;
 
 /// Per-voxel medium data extracted once at construction time.

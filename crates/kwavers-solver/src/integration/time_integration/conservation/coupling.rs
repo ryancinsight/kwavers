@@ -1,7 +1,7 @@
 //! Conservative coupling interface for multi-rate integration.
 
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::Array3;
 use std::collections::HashMap;
 

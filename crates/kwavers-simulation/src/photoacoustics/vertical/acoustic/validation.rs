@@ -21,7 +21,7 @@ mod tests {
     use kwavers_core::constants::thermodynamic::{
         SPECIFIC_HEAT_WATER_37C, THERMAL_CONDUCTIVITY_WATER_37C,
     };
-    use kwavers_domain::grid::{Grid, GridDimensions};
+    use kwavers_grid::{Grid, GridDimensions};
     use kwavers_domain::imaging::photoacoustic::{
         IlluminationGeometry, MonteCarloModelConfig, OpticalModel, PhotoacousticAcousticConfig,
         PhotoacousticScenario, PhotoacousticSolverConfig, ThermoelasticProperties,

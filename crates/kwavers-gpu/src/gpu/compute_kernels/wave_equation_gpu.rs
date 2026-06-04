@@ -2,7 +2,7 @@
 
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_domain::grid;
+use kwavers_grid;
 use ndarray::Array3;
 
 use super::AcousticFieldKernel;

@@ -31,7 +31,7 @@ impl KWaveArray {
     pub(super) fn rasterize_rect(
         &self,
         mask: &mut ndarray::Array3<bool>,
-        grid: &crate::grid::Grid,
+        grid: &kwavers_grid::Grid,
         center: (f64, f64, f64),
         width: f64,
         height: f64,
@@ -69,7 +69,7 @@ impl KWaveArray {
     pub(super) fn rasterize_rect_weighted(
         &self,
         mask: &mut ndarray::Array3<f64>,
-        grid: &crate::grid::Grid,
+        grid: &kwavers_grid::Grid,
         center: (f64, f64, f64),
         width: f64,
         height: f64,
@@ -106,7 +106,7 @@ impl KWaveArray {
     /// Emit the canonical rectangle integration lattice used by k-wave-python.
     pub(super) fn rasterize_rect_points<F>(
         &self,
-        grid: &crate::grid::Grid,
+        grid: &kwavers_grid::Grid,
         center: (f64, f64, f64),
         width: f64,
         height: f64,
@@ -152,7 +152,7 @@ impl KWaveArray {
     pub(super) fn rasterize_disc(
         &self,
         mask: &mut ndarray::Array3<bool>,
-        grid: &crate::grid::Grid,
+        grid: &kwavers_grid::Grid,
         center: (f64, f64, f64),
         diameter: f64,
         focus_position: Option<(f64, f64, f64)>,
@@ -179,7 +179,7 @@ impl KWaveArray {
     pub(super) fn rasterize_disc_weighted(
         &self,
         mask: &mut ndarray::Array3<f64>,
-        grid: &crate::grid::Grid,
+        grid: &kwavers_grid::Grid,
         center: (f64, f64, f64),
         diameter: f64,
         focus_position: Option<(f64, f64, f64)>,
@@ -206,7 +206,7 @@ impl KWaveArray {
     /// Emit oriented Fibonacci disc samples.
     pub(super) fn rasterize_disc_points<F>(
         &self,
-        grid: &crate::grid::Grid,
+        grid: &kwavers_grid::Grid,
         center: (f64, f64, f64),
         diameter: f64,
         focus_position: Option<(f64, f64, f64)>,
@@ -263,7 +263,7 @@ impl KWaveArray {
         &self,
         element: &ElementShape,
         mask: &mut ndarray::Array3<f64>,
-        grid: &crate::grid::Grid,
+        grid: &kwavers_grid::Grid,
     ) {
         match element {
             ElementShape::Bowl {

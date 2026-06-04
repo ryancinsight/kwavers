@@ -1,6 +1,6 @@
 //! Optical properties implementation for heterogeneous media
 
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use crate::medium::heterogeneous::{
     core::HeterogeneousMedium, interpolation::HetTrilinearInterpolator,
 };

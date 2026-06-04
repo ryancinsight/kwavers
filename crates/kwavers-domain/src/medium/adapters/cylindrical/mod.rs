@@ -35,7 +35,7 @@
 //!
 //! ```rust
 //! use kwavers_domain::medium::{HomogeneousMedium, adapters::CylindricalMediumProjection};
-//! use kwavers_domain::grid::{Grid, CylindricalTopology};
+//! use kwavers_grid::{Grid, CylindricalTopology};
 //!
 //! # fn example() -> kwavers_core::error::KwaversResult<()> {
 //! let grid = Grid::new(128, 128, 128, 0.0001, 0.0001, 0.0001)?;
@@ -61,7 +61,7 @@ mod tests;
 use ndarray::Array2;
 use std::fmt;
 
-use crate::grid::{CylindricalTopology, Grid};
+use kwavers_grid::{CylindricalTopology, Grid};
 use crate::medium::Medium;
 
 /// Cylindrical projection of a 3D medium for axisymmetric solvers

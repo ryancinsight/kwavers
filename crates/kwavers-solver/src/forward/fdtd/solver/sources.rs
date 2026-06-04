@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use super::GenericFdtdSolver;
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::source::{Source, SourceField, SourceInjectionMode};
 
 impl GenericFdtdSolver<Array3<f64>> {

@@ -28,7 +28,7 @@
 
 #![cfg(feature = "gpu")]
 
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::HomogeneousMedium;
 use kwavers_signal::SineWave;
 use kwavers_domain::source::{InjectionMode, PlaneWaveSource, PlaneWaveSourceConfig, SourceField};

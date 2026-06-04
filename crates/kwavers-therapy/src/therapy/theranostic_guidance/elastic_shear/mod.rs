@@ -18,7 +18,7 @@ mod types;
 pub use types::{ElasticShearReconstructionResult, THERANOSTIC_ELASTIC_SHEAR_MODEL};
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_solver::inverse::same_aperture::C_REF_M_S;
 use ndarray::Array2;
 

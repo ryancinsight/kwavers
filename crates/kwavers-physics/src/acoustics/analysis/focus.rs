@@ -2,7 +2,7 @@
 
 use super::validation::{invalid_parameter, validate_pressure_field_domain};
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::{Array1, ArrayView3};
 
 /// Find focus location using maximum pressure
@@ -173,7 +173,7 @@ fn axis_slice_count(grid: &Grid, axis: usize) -> KwaversResult<usize> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kwavers_domain::grid::Grid;
+    use kwavers_grid::Grid;
     use ndarray::Array3;
 
     fn small_grid() -> Grid {

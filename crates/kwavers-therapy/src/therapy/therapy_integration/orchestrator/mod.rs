@@ -26,7 +26,7 @@
 //! - FDA 510(k) Guidance: "Ultrasound Devices"
 
 use crate::therapy::lithotripsy::LithotripsySimulator;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::Medium;
 use kwavers_physics::cavitation_control::FeedbackController;
 use kwavers_physics::chemistry::ChemicalModel;

@@ -16,7 +16,7 @@ use dg_acoustic_common::{
     physical_coordinate, weighted_mass, DENSITY, DT, ELEMENTS, EMBEDDED_NY, EMBEDDED_NZ,
     POLYNOMIAL_ORDER, SOUND_SPEED, STEPS,
 };
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::HomogeneousMedium;
 use kwavers_domain::source::{GridSource, SourceMode};
 use kwavers_solver::forward::fdtd::{FdtdConfig, FdtdSolver, KSpaceCorrectionMode};

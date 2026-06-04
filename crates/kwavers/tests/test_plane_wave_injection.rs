@@ -12,7 +12,7 @@
 //! Author: Ryan Clanton (@ryancinsight)
 //! Date: 2025-01-20
 
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::HomogeneousMedium;
 use kwavers_signal::SineWave;
 use kwavers_domain::source::{

@@ -7,7 +7,7 @@
 //! - Test harmonic generation accuracy
 //! - Analyze numerical convergence rates
 
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::HomogeneousMedium;
 use kwavers_solver::forward::elastic::nonlinear::{
     HyperelasticModel, NonlinearElasticWaveSolver, NonlinearSWEConfig,

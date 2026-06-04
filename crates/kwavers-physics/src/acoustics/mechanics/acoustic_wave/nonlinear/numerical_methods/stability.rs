@@ -1,4 +1,4 @@
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::Medium;
 use log::warn;
 use ndarray::Array3;
@@ -80,7 +80,7 @@ impl NonlinearWave {
 #[cfg(test)]
 mod tests {
     use super::super::super::wave_model::NonlinearWave;
-    use kwavers_domain::grid::Grid;
+    use kwavers_grid::Grid;
     use kwavers_domain::medium::HomogeneousMedium;
     use ndarray::Array3;
 

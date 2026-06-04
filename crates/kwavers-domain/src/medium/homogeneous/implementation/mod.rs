@@ -9,7 +9,7 @@ use kwavers_core::constants::{
 use kwavers_core::constants::cavitation::SURFACE_TENSION_WATER;
 use kwavers_core::constants::thermodynamic::{SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER};
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::Array3;
 
 /// Medium with uniform properties throughout the spatial domain

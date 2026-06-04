@@ -5,7 +5,7 @@
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_domain::field::UnifiedFieldType;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use log::{debug, info, warn};
 use ndarray::{Array3, Array4};
 use std::collections::HashMap;

@@ -1,6 +1,6 @@
 use super::{PstdSemCouplingConfig, SpectralCouplingInterface};
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::mesh::tetrahedral::TetrahedralMesh;
 use ndarray::Array2;
 

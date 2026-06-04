@@ -1,7 +1,7 @@
 // domain/sensor/recorder/traits.rs - Core recorder traits
 
 use kwavers_core::error::KwaversResult;
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::Array4;
 
 /// Trait for data recording (Dependency Inversion Principle)

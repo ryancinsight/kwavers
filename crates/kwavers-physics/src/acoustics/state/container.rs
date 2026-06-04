@@ -5,7 +5,7 @@
 //! at the application level if needed.
 
 use kwavers_core::error::{KwaversResult, PhysicsError};
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::{Array3, Array4, ArrayView3, ArrayViewMut3, Axis};
 
 pub use kwavers_domain::field::indices as field_indices;

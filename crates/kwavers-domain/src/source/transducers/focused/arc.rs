@@ -4,7 +4,7 @@
 
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use kwavers_core::{constants::SOUND_SPEED_WATER, error::KwaversResult};
-use crate::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::{s, Array2, Array3, Zip};
 use std::f64::consts::PI;
 

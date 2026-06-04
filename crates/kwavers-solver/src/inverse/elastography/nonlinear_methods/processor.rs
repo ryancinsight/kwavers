@@ -5,7 +5,7 @@ use super::bayesian::bayesian_inversion;
 use super::harmonic_ratio::harmonic_ratio_inversion;
 use super::least_squares::nonlinear_least_squares_inversion;
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::imaging::ultrasound::elastography::NonlinearParameterMap;
 use kwavers_physics::acoustics::imaging::modalities::elastography::HarmonicDisplacementField;
 

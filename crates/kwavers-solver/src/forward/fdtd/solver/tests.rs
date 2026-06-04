@@ -48,7 +48,7 @@
 //! - Taflove A, Hagness SC (2005). Computational Electrodynamics, 3rd ed. §3.4.
 
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::HomogeneousMedium;
 use kwavers_domain::source::GridSource;
 use kwavers_physics::acoustics::mechanics::acoustic_wave::AcousticSpatialOrder;

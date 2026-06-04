@@ -26,7 +26,7 @@
 use rayon::prelude::*;
 
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 
 use super::WesterveltFdtd;
 

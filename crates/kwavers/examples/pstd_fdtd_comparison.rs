@@ -29,7 +29,7 @@
 //! - Treeby & Cox (2010). J. Biomed. Opt. 15(2), 021314.
 //! - Liu (1998). Geophysics 63(6), 2082-2089.
 
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::HomogeneousMedium;
 use kwavers_domain::source::{GridSource, SourceMode};
 use kwavers_solver::forward::fdtd::{FdtdConfig, FdtdSolver, KSpaceCorrectionMode};

@@ -35,7 +35,7 @@ impl KWaveArray {
     pub(super) fn rasterize_arc(
         &self,
         mask: &mut ndarray::Array3<bool>,
-        grid: &crate::grid::Grid,
+        grid: &kwavers_grid::Grid,
         center: (f64, f64, f64),
         radius: f64,
         _diameter: f64,
@@ -72,7 +72,7 @@ impl KWaveArray {
     pub(super) fn rasterize_arc_weighted(
         &self,
         mask: &mut ndarray::Array3<f64>,
-        grid: &crate::grid::Grid,
+        grid: &kwavers_grid::Grid,
         center: (f64, f64, f64),
         radius: f64,
         _diameter: f64,
@@ -108,7 +108,7 @@ impl KWaveArray {
     /// Emit arc centerline points at half-step angular offsets.
     pub(super) fn rasterize_arc_points<F>(
         &self,
-        grid: &crate::grid::Grid,
+        grid: &kwavers_grid::Grid,
         center: (f64, f64, f64),
         radius: f64,
         start_angle: f64,
@@ -139,7 +139,7 @@ impl KWaveArray {
     pub(super) fn rasterize_bowl(
         &self,
         mask: &mut ndarray::Array3<bool>,
-        grid: &crate::grid::Grid,
+        grid: &kwavers_grid::Grid,
         center: (f64, f64, f64),
         radius: f64,
         diameter: f64,
@@ -166,7 +166,7 @@ impl KWaveArray {
     pub(super) fn rasterize_bowl_weighted(
         &self,
         mask: &mut ndarray::Array3<f64>,
-        grid: &crate::grid::Grid,
+        grid: &kwavers_grid::Grid,
         center: (f64, f64, f64),
         radius: f64,
         diameter: f64,
@@ -193,7 +193,7 @@ impl KWaveArray {
     /// Emit golden-angle spiral surface samples for a bowl element.
     pub(super) fn rasterize_bowl_points<F>(
         &self,
-        grid: &crate::grid::Grid,
+        grid: &kwavers_grid::Grid,
         center: (f64, f64, f64),
         radius: f64,
         diameter: f64,
@@ -239,7 +239,7 @@ impl KWaveArray {
     pub(super) fn rasterize_annulus(
         &self,
         mask: &mut ndarray::Array3<bool>,
-        grid: &crate::grid::Grid,
+        grid: &kwavers_grid::Grid,
         center: (f64, f64, f64),
         radius: f64,
         inner_diameter: f64,
@@ -274,7 +274,7 @@ impl KWaveArray {
     pub(super) fn rasterize_annulus_weighted(
         &self,
         mask: &mut ndarray::Array3<f64>,
-        grid: &crate::grid::Grid,
+        grid: &kwavers_grid::Grid,
         center: (f64, f64, f64),
         radius: f64,
         inner_diameter: f64,
@@ -312,7 +312,7 @@ impl KWaveArray {
     /// remains consistent with a co-located bowl element.
     pub(super) fn rasterize_annulus_points<F>(
         &self,
-        grid: &crate::grid::Grid,
+        grid: &kwavers_grid::Grid,
         center: (f64, f64, f64),
         radius: f64,
         inner_diameter: f64,

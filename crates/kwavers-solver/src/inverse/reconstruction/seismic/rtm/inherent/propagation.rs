@@ -16,7 +16,7 @@
 //! Reference: Claerbout (1985), *Imaging the Earth's Interior*, Ch. 3.
 
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use ndarray::{s, Array3, Array4, Zip};
 
 use super::super::super::constants::RTM_STORAGE_DECIMATION;

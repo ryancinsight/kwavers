@@ -5,7 +5,7 @@ use ndarray::Array2;
 
 use super::CylindricalMediumProjection;
 use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
-use crate::grid::{CylindricalTopology, Grid};
+use kwavers_grid::{CylindricalTopology, Grid};
 use crate::medium::Medium;
 
 impl<'a, M: Medium> CylindricalMediumProjection<'a, M> {

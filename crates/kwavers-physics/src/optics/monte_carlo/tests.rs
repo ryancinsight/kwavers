@@ -1,6 +1,6 @@
 use super::*;
 use kwavers_core::constants::optical::REFRACTIVE_INDEX_SOFT_TISSUE;
-use kwavers_domain::grid::{Grid3D, GridDimensions};
+use kwavers_grid::{Grid3D, GridDimensions};
 use kwavers_domain::medium::optical_map::OpticalPropertyMap;
 use kwavers_domain::medium::properties::OpticalPropertyData;
 use crate::optics::monte_carlo::config::SimulationConfig;

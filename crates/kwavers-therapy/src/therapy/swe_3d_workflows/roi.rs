@@ -1,4 +1,4 @@
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 
 #[derive(Debug, Clone)]
 pub struct VolumetricROI {

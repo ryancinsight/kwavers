@@ -1,6 +1,6 @@
 //! Free functions for acoustic wave stability and nonlinearity computations.
 
-use kwavers_domain::grid::Grid;
+use kwavers_grid::Grid;
 use kwavers_domain::medium::Medium;
 
 use super::spatial_order::AcousticSpatialOrder;
