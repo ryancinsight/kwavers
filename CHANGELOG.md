@@ -2,6 +2,35 @@
 
 ## Unreleased
 
+### Architecture (2026-06-04) - Decompose kwavers-domain into domain-specific crates
+
+- [arch] Replaced the monolithic ~63K-line `kwavers-domain` mega-crate (15
+  unrelated concepts) with a set of single-responsibility crates forming a clean
+  DAG, then removed `kwavers-domain` entirely. Naming now disambiguates the
+  previously-conflated concepts (transducers/sources, mediums/phantoms,
+  sensors/receivers). All ~1,720 `kwavers_domain::*` call sites were updated in
+  place — no compatibility shims or re-export aliases.
+
+  **New crates** (layer order):
+  - Foundation: `kwavers-grid` (grid + geometry + topology + operators + k-space),
+    `kwavers-signal`, `kwavers-field` (component-index SSOT), `kwavers-optics`,
+    `kwavers-mesh`.
+  - Models: `kwavers-medium`, `kwavers-phantom` (→medium), `kwavers-boundary`
+    (→grid+medium), `kwavers-source` (low-level excitation), `kwavers-receiver`
+    (low-level recording).
+  - Devices/workflow: `kwavers-transducer` (high-level device layer over source +
+    receiver), `kwavers-imaging` (→grid+medium).
+
+  **Relocations:**
+  - `tensor` → `kwavers-math::tensor` (math primitive, no domain semantics).
+  - `plugin` contracts + `test_support` → `kwavers-solver::plugin` (the
+    `test-util` feature moved from kwavers-domain to kwavers-solver).
+  - `therapy` split: microbubble dynamics (state/shell/forces) + modality types →
+    `kwavers-physics::therapy`; drug-payload delivery models → `kwavers-therapy`.
+
+  Each extraction kept `cargo check --workspace` green; per-crate value-semantic
+  test suites pass.
+
 ### Documentation (2026-06-01) - Approximation-validity bounds (physics audit Sprint C)
 
 - [patch] Documented the validity regimes of several closed-form physics

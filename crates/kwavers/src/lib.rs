@@ -5,9 +5,12 @@
 //! layer crates directly:
 //!
 //! - `kwavers_core` — error types, logging, time, arena allocator
-//! - `kwavers_math` — FFT, geometry, linear algebra, SIMD, numerics
-//! - `kwavers_domain` — grid, medium, source, sensor, boundary, field, signal
-//! - `kwavers_physics` — acoustics, optics, thermal, chemistry, electromagnetic
+//! - `kwavers_math` — FFT, geometry, linear algebra, SIMD, numerics, tensor
+//! - `kwavers_grid` / `kwavers_field` / `kwavers_signal` — discretization, field indices, signals
+//! - `kwavers_medium` / `kwavers_phantom` / `kwavers_optics` — materials, phantoms, optical data
+//! - `kwavers_source` / `kwavers_receiver` / `kwavers_transducer` — excitation, recording, devices
+//! - `kwavers_boundary` / `kwavers_mesh` / `kwavers_imaging` — boundaries, meshes, medical imaging
+//! - `kwavers_physics` — acoustics, optics, thermal, chemistry, electromagnetic, therapy
 //! - `kwavers_solver` — forward (FDTD/PSTD/elastic), inverse (FWI/PINN), analytical
 //! - `kwavers_simulation` — orchestration, backends, modalities, result I/O (`io`)
 //! - `kwavers_analysis` — signal processing, beamforming, validation, ML, performance

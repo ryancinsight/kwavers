@@ -16,7 +16,6 @@ kwavers-receiver = { path = "../kwavers-receiver" }
 kwavers-medium = { path = "../kwavers-medium" }
 kwavers-field = { path = "../kwavers-field" }
 kwavers-signal = { path = "../kwavers-signal" }
-kwavers-domain = { path = "../kwavers-domain" }
 kwavers-solver = { path = "../kwavers-solver" }
 ndarray = { version = "0.16", features = ["rayon", "serde"] }
 num-complex = "0.4"

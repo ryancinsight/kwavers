@@ -15,7 +15,6 @@ kwavers-imaging = { path = "../kwavers-imaging" }
 kwavers-transducer = { path = "../kwavers-transducer" }
 kwavers-source = { path = "../kwavers-source" }
 kwavers-medium = { path = "../kwavers-medium" }
-kwavers-domain = { path = "../kwavers-domain" }
 kwavers-physics = { path = "../kwavers-physics" }
 kwavers-solver = { path = "../kwavers-solver" }
 kwavers-analysis = { path = "../kwavers-analysis" }

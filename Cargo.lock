@@ -4817,7 +4817,6 @@ dependencies = [
  "kwavers-boundary",
  "kwavers-core",
  "kwavers-diagnostics",
- "kwavers-domain",
  "kwavers-field",
  "kwavers-gpu",
  "kwavers-grid",
@@ -4880,7 +4879,6 @@ dependencies = [
  "chrono",
  "egui",
  "kwavers-core",
- "kwavers-domain",
  "kwavers-field",
  "kwavers-grid",
  "kwavers-math",
@@ -4951,7 +4949,6 @@ dependencies = [
  "kwavers-analysis",
  "kwavers-boundary",
  "kwavers-core",
- "kwavers-domain",
  "kwavers-gpu",
  "kwavers-grid",
  "kwavers-imaging",
@@ -4976,40 +4973,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "kwavers-domain"
-version = "3.0.0"
-dependencies = [
- "anyhow",
- "approx",
- "burn",
- "gaia",
- "kwavers-boundary",
- "kwavers-core",
- "kwavers-field",
- "kwavers-grid",
- "kwavers-math",
- "kwavers-medium",
- "kwavers-optics",
- "kwavers-signal",
- "kwavers-source",
- "log",
- "nalgebra 0.32.6",
- "ndarray 0.16.1",
- "num-complex",
- "num-traits",
- "proptest",
- "rand 0.8.5",
- "rand_chacha 0.3.1",
- "rand_distr 0.4.3",
- "rayon",
- "ritk-core",
- "ritk-io",
- "ritk-registration",
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "kwavers-field"
 version = "3.0.0"
 dependencies = [
@@ -5030,7 +4993,6 @@ dependencies = [
  "flume",
  "kwavers-boundary",
  "kwavers-core",
- "kwavers-domain",
  "kwavers-grid",
  "kwavers-math",
  "kwavers-medium",
@@ -5152,7 +5114,6 @@ dependencies = [
  "anyhow",
  "approx",
  "kwavers-core",
- "kwavers-domain",
  "kwavers-field",
  "kwavers-grid",
  "kwavers-imaging",
@@ -5185,7 +5146,6 @@ dependencies = [
  "kwavers-boundary",
  "kwavers-core",
  "kwavers-diagnostics",
- "kwavers-domain",
  "kwavers-gpu",
  "kwavers-grid",
  "kwavers-math",
@@ -5251,7 +5211,6 @@ dependencies = [
  "approx",
  "kwavers-boundary",
  "kwavers-core",
- "kwavers-domain",
  "kwavers-field",
  "kwavers-gpu",
  "kwavers-grid",
@@ -5287,7 +5246,6 @@ dependencies = [
  "bytemuck",
  "kwavers-boundary",
  "kwavers-core",
- "kwavers-domain",
  "kwavers-field",
  "kwavers-grid",
  "kwavers-imaging",
@@ -5342,7 +5300,6 @@ dependencies = [
  "approx",
  "kwavers-analysis",
  "kwavers-core",
- "kwavers-domain",
  "kwavers-grid",
  "kwavers-imaging",
  "kwavers-math",

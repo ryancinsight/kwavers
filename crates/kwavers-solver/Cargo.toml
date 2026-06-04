@@ -20,7 +20,6 @@ kwavers-mesh = { path = "../kwavers-mesh" }
 kwavers-medium = { path = "../kwavers-medium" }
 kwavers-field = { path = "../kwavers-field" }
 kwavers-signal = { path = "../kwavers-signal" }
-kwavers-domain = { path = "../kwavers-domain" }
 kwavers-physics = { path = "../kwavers-physics" }
 ndarray = { version = "0.16", features = ["rayon", "serde"] }
 ndarray-npy = { version = "0.9", default-features = false, features = ["compressed_npz"] }

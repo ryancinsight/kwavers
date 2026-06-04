@@ -44,7 +44,7 @@
 //!
 //! ```rust,ignore
 //! use kwavers_solver::inverse::pinn::elastic_2d::{Config, ElasticPINN2D, ElasticPINN2DSolver};
-//! use kwavers_domain::physics::{Domain, ElasticWaveEquation};
+//! use kwavers_physics::foundations::{Domain, ElasticWaveEquation};
 //!
 //! // Define physics domain
 //! let domain = Domain::new_2d(0.0, 1.0, 0.0, 1.0, 101, 101, WaveEquationBoundary::Absorbing { damping: 0.1 });
