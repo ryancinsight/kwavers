@@ -179,11 +179,11 @@ fn hemoglobin_typical_blood_parameters_are_plausible() {
         "total Hb {total_mm} M outside physiological range"
     );
     assert!(
-        arterial_so2 >= 0.95 && arterial_so2 <= 1.0,
+        (0.95..=1.0).contains(&arterial_so2),
         "arterial SO₂ {arterial_so2} outside 0.95–1.0"
     );
     assert!(
-        venous_so2 >= 0.6 && venous_so2 <= 0.95,
+        (0.6..=0.95).contains(&venous_so2),
         "venous SO₂ {venous_so2} outside 0.6–0.95"
     );
 }

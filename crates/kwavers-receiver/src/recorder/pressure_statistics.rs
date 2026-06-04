@@ -269,6 +269,32 @@ impl SampledStatistics {
     }
 }
 
+fn fill_field_at_positions(
+    field: &Array3<f64>,
+    positions: &[(usize, usize, usize)],
+    out: &mut Array1<f64>,
+) -> KwaversResult<()> {
+    validate_sample_output_len(positions, out)?;
+    for (row, &(i, j, k)) in positions.iter().enumerate() {
+        out[row] = field[[i, j, k]];
+    }
+    Ok(())
+}
+
+fn validate_sample_output_len(
+    positions: &[(usize, usize, usize)],
+    out: &Array1<f64>,
+) -> KwaversResult<()> {
+    if out.len() != positions.len() {
+        return Err(KwaversError::DimensionMismatch(format!(
+            "pressure-stat output length {} != sensor count {}",
+            out.len(),
+            positions.len()
+        )));
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -319,30 +345,4 @@ mod tests {
         let final_pressure = stats.sample_p_final(&positions);
         assert!(final_pressure.iter().all(|&v| v == 0.0));
     }
-}
-
-fn fill_field_at_positions(
-    field: &Array3<f64>,
-    positions: &[(usize, usize, usize)],
-    out: &mut Array1<f64>,
-) -> KwaversResult<()> {
-    validate_sample_output_len(positions, out)?;
-    for (row, &(i, j, k)) in positions.iter().enumerate() {
-        out[row] = field[[i, j, k]];
-    }
-    Ok(())
-}
-
-fn validate_sample_output_len(
-    positions: &[(usize, usize, usize)],
-    out: &Array1<f64>,
-) -> KwaversResult<()> {
-    if out.len() != positions.len() {
-        return Err(KwaversError::DimensionMismatch(format!(
-            "pressure-stat output length {} != sensor count {}",
-            out.len(),
-            positions.len()
-        )));
-    }
-    Ok(())
 }

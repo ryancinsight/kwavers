@@ -13,7 +13,12 @@ use rand_distr::{Distribution, Normal};
 /// # Errors
 /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
 ///
-pub fn sample_signal(signal: &dyn Signal, dt: f64, n: usize, t0: f64) -> KwaversResult<Vec<f64>> {
+pub fn sample_signal<S: Signal + ?Sized>(
+    signal: &S,
+    dt: f64,
+    n: usize,
+    t0: f64,
+) -> KwaversResult<Vec<f64>> {
     if !dt.is_finite() || dt <= 0.0 {
         return Err(KwaversError::InvalidInput(format!(
             "dt must be finite and > 0, got {dt}"
