@@ -14,7 +14,7 @@
 //! - Validates wave propagation without instabilities
 //! - Validates solver doesn't produce NaN or Inf values
 
-use kwavers_domain::boundary::{DomainPMLBoundary, DomainPmlConfig};
+use kwavers_boundary::{DomainPMLBoundary, DomainPmlConfig};
 use kwavers_grid::Grid;
 use kwavers_medium::homogeneous::HomogeneousMedium;
 use kwavers_solver::fdtd::{FdtdConfig, FdtdPlugin};

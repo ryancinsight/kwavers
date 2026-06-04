@@ -4,7 +4,7 @@
 //! fields against each other and, where possible, against the analytical
 //! d'Alembert solution. Generates PNG figures for each test scenario.
 
-use kwavers_domain::boundary::{DomainPMLBoundary, DomainPmlConfig};
+use kwavers_boundary::{DomainPMLBoundary, DomainPmlConfig};
 use kwavers_core::error::KwaversResult;
 use kwavers_domain::source::NullSource;
 use kwavers_medium::HomogeneousMedium;

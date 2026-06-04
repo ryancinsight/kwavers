@@ -16,7 +16,7 @@
 //! - Roden & Gedney (2000). Microwave Opt. Tech. Lett. 27(5), 334–339.
 //! - Treeby & Cox (2010). J. Biomed. Opt. 15(2), 021314.
 
-use kwavers_domain::boundary::cpml::{CPMLConfig, CPMLProfiles};
+use kwavers_boundary::cpml::{CPMLConfig, CPMLProfiles};
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_domain::source::GridSource;

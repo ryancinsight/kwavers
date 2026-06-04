@@ -19,7 +19,7 @@
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_domain::boundary::cpml::{CPMLConfig, CPMLProfiles};
+use kwavers_boundary::cpml::{CPMLConfig, CPMLProfiles};
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_domain::source::GridSource;

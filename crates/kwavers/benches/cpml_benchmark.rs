@@ -9,9 +9,9 @@
 //! - Komatitsch & Martin (2007) "An unsplit convolutional PML"
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use kwavers_domain::boundary::cpml::{CPMLBoundary, CPMLConfig};
-use kwavers_domain::boundary::pml::{DomainPMLBoundary, DomainPmlConfig};
-use kwavers_domain::boundary::Boundary;
+use kwavers_boundary::cpml::{CPMLBoundary, CPMLConfig};
+use kwavers_boundary::pml::{DomainPMLBoundary, DomainPmlConfig};
+use kwavers_boundary::Boundary;
 use kwavers_grid::Grid;
 use ndarray::Array3;
 

@@ -1,6 +1,6 @@
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
-use kwavers_domain::mesh::tetrahedral::TetrahedralMesh;
+use kwavers_mesh::tetrahedral::TetrahedralMesh;
 
 /// Interface definition between FDTD and FEM domains
 #[derive(Debug, Clone)]

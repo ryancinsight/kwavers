@@ -531,9 +531,9 @@ $$
 For the Voigt model:
 
 $$
-c(\omega) = \text{Re}\!\left[\frac{\omega}{k^*(\omega)}\right]
-= c_0\sqrt{\frac{1 + (\omega\tau)^2}{1 + \sqrt{1 + (\omega\tau)^2}}/\,2}^{-1}
-\approx c_0 \left[1 + \frac{(\omega\tau)^2}{4}\right]
+c(\omega) = \frac{\omega}{\text{Re}\,k^*(\omega)}
+= c_0\,\frac{\bigl(1 + (\omega\tau)^2\bigr)^{1/4}}{\cos\!\bigl(\tfrac{1}{2}\arctan\omega\tau\bigr)}
+\approx c_0 \left[1 + \tfrac{3}{8}(\omega\tau)^2\right]
 \quad (\omega\tau \ll 1),
 $$
 
@@ -552,11 +552,11 @@ k^* = \frac{\omega}{c_0}(1 + \mathrm{i}\omega\tau)^{-1/2}.
 $$
 
 Expand $(1 + \mathrm{i}\omega\tau)^{-1/2} = 1 - \frac{\mathrm{i}\omega\tau}{2}
-- \frac{(\omega\tau)^2}{8} + \cdots$:
+- \frac{3(\omega\tau)^2}{8} + \cdots$ (binomial series, coefficient $\binom{-1/2}{2}=3/8$):
 
 $$
 k^* \approx \frac{\omega}{c_0}
-\left(1 - \frac{(\omega\tau)^2}{8}\right)
+\left(1 - \frac{3(\omega\tau)^2}{8}\right)
 + \mathrm{i}\frac{\omega^2\tau}{2c_0}.
 $$
 

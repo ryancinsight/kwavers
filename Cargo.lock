@@ -4814,6 +4814,7 @@ dependencies = [
  "gaia",
  "image 0.24.9",
  "kwavers-analysis",
+ "kwavers-boundary",
  "kwavers-core",
  "kwavers-diagnostics",
  "kwavers-domain",
@@ -4823,6 +4824,7 @@ dependencies = [
  "kwavers-math",
  "kwavers-medium",
  "kwavers-optics",
+ "kwavers-phantom",
  "kwavers-physics",
  "kwavers-signal",
  "kwavers-simulation",
@@ -4898,6 +4900,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "kwavers-boundary"
+version = "3.0.0"
+dependencies = [
+ "approx",
+ "kwavers-core",
+ "kwavers-grid",
+ "kwavers-math",
+ "kwavers-medium",
+ "log",
+ "ndarray 0.16.1",
+ "num-complex",
+ "serde",
+]
+
+[[package]]
 name = "kwavers-core"
 version = "3.0.0"
 dependencies = [
@@ -4926,6 +4943,7 @@ dependencies = [
  "consus-io",
  "flate2",
  "kwavers-analysis",
+ "kwavers-boundary",
  "kwavers-core",
  "kwavers-domain",
  "kwavers-gpu",
@@ -4955,6 +4973,7 @@ dependencies = [
  "approx",
  "burn",
  "gaia",
+ "kwavers-boundary",
  "kwavers-core",
  "kwavers-field",
  "kwavers-grid",
@@ -4998,6 +5017,7 @@ dependencies = [
  "burn",
  "bytemuck",
  "flume",
+ "kwavers-boundary",
  "kwavers-core",
  "kwavers-domain",
  "kwavers-grid",
@@ -5067,10 +5087,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "kwavers-mesh"
+version = "3.0.0"
+dependencies = [
+ "approx",
+ "gaia",
+ "kwavers-core",
+ "kwavers-grid",
+ "nalgebra 0.32.6",
+]
+
+[[package]]
 name = "kwavers-optics"
 version = "3.0.0"
 dependencies = [
  "anyhow",
+]
+
+[[package]]
+name = "kwavers-phantom"
+version = "3.0.0"
+dependencies = [
+ "anyhow",
+ "approx",
+ "kwavers-core",
+ "kwavers-grid",
+ "kwavers-medium",
+ "kwavers-optics",
+ "ndarray 0.16.1",
 ]
 
 [[package]]
@@ -5106,6 +5150,7 @@ dependencies = [
  "anyhow",
  "burn",
  "kwavers-analysis",
+ "kwavers-boundary",
  "kwavers-core",
  "kwavers-diagnostics",
  "kwavers-domain",
@@ -5151,6 +5196,7 @@ name = "kwavers-simulation"
 version = "3.0.0"
 dependencies = [
  "approx",
+ "kwavers-boundary",
  "kwavers-core",
  "kwavers-domain",
  "kwavers-field",
@@ -5158,6 +5204,7 @@ dependencies = [
  "kwavers-grid",
  "kwavers-math",
  "kwavers-medium",
+ "kwavers-mesh",
  "kwavers-physics",
  "kwavers-signal",
  "kwavers-solver",
@@ -5181,12 +5228,14 @@ dependencies = [
  "bitflags 2.10.0",
  "burn",
  "bytemuck",
+ "kwavers-boundary",
  "kwavers-core",
  "kwavers-domain",
  "kwavers-field",
  "kwavers-grid",
  "kwavers-math",
  "kwavers-medium",
+ "kwavers-mesh",
  "kwavers-physics",
  "kwavers-signal",
  "log",

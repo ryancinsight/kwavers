@@ -1,6 +1,6 @@
 use super::{BemFemCoupler, BemFemCouplingConfig, BemFemInterface};
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::mesh::tetrahedral::TetrahedralMesh;
+use kwavers_mesh::tetrahedral::TetrahedralMesh;
 use num_complex::Complex64;
 
 /// BEM-FEM Coupled Solver for Helmholtz problems
@@ -82,7 +82,7 @@ mod tests {
     use super::*;
     use kwavers_core::constants::fundamental::SOUND_SPEED_WATER;
     use kwavers_core::constants::numerical::MHZ_TO_HZ;
-    use kwavers_domain::mesh::tetrahedral::MeshBoundaryType;
+    use kwavers_mesh::tetrahedral::MeshBoundaryType;
 
     #[test]
     fn test_bem_fem_solver_creation() {

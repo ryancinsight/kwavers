@@ -1,7 +1,7 @@
 use super::{PstdSemCouplingConfig, SpectralCouplingInterface};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
-use kwavers_domain::mesh::tetrahedral::TetrahedralMesh;
+use kwavers_mesh::tetrahedral::TetrahedralMesh;
 use ndarray::Array3;
 
 /// PSTD-SEM Spectral Coupler

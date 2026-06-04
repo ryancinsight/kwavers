@@ -1,6 +1,6 @@
 use super::*;
 use kwavers_grid::Grid;
-use kwavers_domain::mesh::TetrahedralMesh;
+use kwavers_mesh::TetrahedralMesh;
 
 #[test]
 fn test_pstd_sem_coupling_creation() {
@@ -13,7 +13,7 @@ fn test_pstd_sem_coupling_creation() {
                 let (x, y, z) = pstd_grid.indices_to_coordinates(i, j, k);
                 sem_mesh.add_node(
                     [x, y, z],
-                    kwavers_domain::mesh::tetrahedral::MeshBoundaryType::Interior,
+                    kwavers_mesh::tetrahedral::MeshBoundaryType::Interior,
                 );
             }
         }
@@ -44,7 +44,7 @@ fn test_spectral_coupling_convergence() {
                 let (x, y, z) = pstd_grid.indices_to_coordinates(i, j, k);
                 sem_mesh.add_node(
                     [x, y, z],
-                    kwavers_domain::mesh::tetrahedral::MeshBoundaryType::Interior,
+                    kwavers_mesh::tetrahedral::MeshBoundaryType::Interior,
                 );
             }
         }
@@ -76,7 +76,7 @@ fn test_interface_detection() {
                 let (x, y, z) = pstd_grid.indices_to_coordinates(i, j, k);
                 sem_mesh.add_node(
                     [x, y, z],
-                    kwavers_domain::mesh::tetrahedral::MeshBoundaryType::Interior,
+                    kwavers_mesh::tetrahedral::MeshBoundaryType::Interior,
                 );
             }
         }

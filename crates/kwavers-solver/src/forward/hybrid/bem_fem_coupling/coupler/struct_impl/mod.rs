@@ -10,7 +10,7 @@ mod interface;
 mod solvers;
 
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::mesh::tetrahedral::TetrahedralMesh;
+use kwavers_mesh::tetrahedral::TetrahedralMesh;
 use kwavers_math::numerics::operators::NumericsTrilinearInterpolator;
 use crate::forward::bem::solver::{BemConfig, BemSolver};
 

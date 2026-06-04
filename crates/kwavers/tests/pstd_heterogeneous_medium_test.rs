@@ -10,7 +10,7 @@
 //! Expected: sensor amplitude >> 3.7e-10 Pa (the ~0 failure value seen in Python)
 
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::boundary::cpml::CPMLConfig;
+use kwavers_boundary::cpml::CPMLConfig;
 use kwavers_grid::Grid;
 use kwavers_medium::heterogeneous::HeterogeneousMedium;
 use kwavers_medium::HomogeneousMedium;

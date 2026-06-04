@@ -15,7 +15,7 @@
 //! cargo run --example boundary_smoothing
 //! ```
 
-use kwavers_domain::boundary::smoothing::{
+use kwavers_boundary::smoothing::{
     BoundarySmoothing, BoundarySmoothingConfig, GhostCellConfig, IIMConfig, JumpConditionType,
     SmoothingMethod, SubgridConfig,
 };

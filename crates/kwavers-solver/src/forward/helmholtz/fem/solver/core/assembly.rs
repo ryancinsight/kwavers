@@ -1,7 +1,7 @@
 use super::FemHelmholtzSolver;
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
 use kwavers_medium::Medium;
-use kwavers_domain::mesh::MeshBoundaryType;
+use kwavers_mesh::MeshBoundaryType;
 use kwavers_math::linear_algebra::sparse::csr::CompressedSparseRowMatrix;
 use crate::forward::helmholtz::fem::assembly::FemAssembly;
 use ndarray::Array1;

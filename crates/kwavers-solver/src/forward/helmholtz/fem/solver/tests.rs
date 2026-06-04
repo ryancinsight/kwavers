@@ -3,7 +3,7 @@ use super::core::FemHelmholtzSolver;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::error::KwaversError;
 use kwavers_grid::Grid;
-use kwavers_domain::mesh::{MeshBoundaryType, TetrahedralMesh};
+use kwavers_mesh::{MeshBoundaryType, TetrahedralMesh};
 use approx::assert_relative_eq;
 use ndarray::{arr2, Array2};
 use num_complex::Complex64;

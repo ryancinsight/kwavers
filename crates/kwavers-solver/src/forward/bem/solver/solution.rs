@@ -1,6 +1,6 @@
 use super::BemSolver;
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::boundary::BemBoundaryManager;
+use kwavers_boundary::BemBoundaryManager;
 use kwavers_math::linear_algebra::sparse::{
     solver::SparsePreconditioner, CompressedSparseRowMatrix,
 };

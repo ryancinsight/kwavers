@@ -1,5 +1,5 @@
 use super::*;
-use kwavers_domain::mesh::tetrahedral::MeshBoundaryType;
+use kwavers_mesh::tetrahedral::MeshBoundaryType;
 
 #[test]
 fn test_bem_fem_interface_creation() {

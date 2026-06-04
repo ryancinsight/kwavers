@@ -49,7 +49,7 @@ impl GpuPstdSession {
 
         #[cfg(feature = "gpu")]
         {
-            use kwavers_domain::boundary::cpml::{CPMLConfig, CPMLProfiles};
+            use kwavers_boundary::cpml::{CPMLConfig, CPMLProfiles};
             use kwavers_physics::acoustics::mechanics::absorption::power_law_db_cm_to_np_omega_m;
             use kwavers_gpu::pstd_gpu::{
                 AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays, SolverParams,
@@ -267,7 +267,7 @@ fn build_pml_arrays(
     ny: usize,
     nz: usize,
 ) -> PyResult<(Vec<f32>, Vec<f32>, Vec<f32>, Vec<f32>, Vec<f32>, Vec<f32>)> {
-    use kwavers_domain::boundary::cpml::{CPMLConfig, CPMLProfiles};
+    use kwavers_boundary::cpml::{CPMLConfig, CPMLProfiles};
     use pyo3::exceptions::PyRuntimeError;
 
     let total = nx * ny * nz;

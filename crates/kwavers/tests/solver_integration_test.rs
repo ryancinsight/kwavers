@@ -1,4 +1,4 @@
-use kwavers_domain::boundary::DomainPmlConfig;
+use kwavers_boundary::DomainPmlConfig;
 use kwavers_grid::Grid;
 use kwavers_medium::homogeneous::HomogeneousMedium;
 use kwavers_domain::source::GridSource;

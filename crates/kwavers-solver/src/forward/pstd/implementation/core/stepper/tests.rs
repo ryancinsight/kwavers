@@ -195,7 +195,7 @@ fn test_anti_aliasing_filter_attenuates_nyquist_checkerboard() {
 ///
 #[test]
 fn test_propagation_amplitude_with_cpml_boundary() {
-    use kwavers_domain::boundary::cpml::CPMLConfig;
+    use kwavers_boundary::cpml::CPMLConfig;
     let n = 16usize;
     let dx = 1e-3_f64;
     let c0 = SOUND_SPEED_WATER_SIM;

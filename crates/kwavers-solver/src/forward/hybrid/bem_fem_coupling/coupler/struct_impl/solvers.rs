@@ -5,7 +5,7 @@ use ndarray::Array1;
 use num_complex::Complex64;
 
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::mesh::tetrahedral::TetrahedralMesh;
+use kwavers_mesh::tetrahedral::TetrahedralMesh;
 use kwavers_math::linear_algebra::sparse::solver::SparsePreconditioner;
 use kwavers_math::linear_algebra::sparse::{
     CompressedSparseRowMatrix, CoordinateMatrix, IterativeSolver, SolverConfig,

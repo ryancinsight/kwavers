@@ -1,7 +1,7 @@
 use super::{BemConfig, BemSolver};
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_domain::boundary::BemBoundaryManager;
-use kwavers_domain::mesh::tetrahedral::TetrahedralMesh;
+use kwavers_boundary::BemBoundaryManager;
+use kwavers_mesh::tetrahedral::TetrahedralMesh;
 use std::collections::HashMap;
 
 impl BemSolver {

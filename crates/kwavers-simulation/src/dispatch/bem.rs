@@ -5,7 +5,7 @@ use num_complex::Complex64;
 use std::f64::consts::TAU;
 
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::mesh::tetrahedral::TetrahedralMesh;
+use kwavers_mesh::tetrahedral::TetrahedralMesh;
 use kwavers_domain::sensor::recorder::pressure_statistics::SampledStatistics;
 use crate::dispatch::shared::trim_initial_recorder_sample;
 use crate::types::{SimulationRunRequest, SimulationRunResult};

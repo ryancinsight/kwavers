@@ -32,7 +32,7 @@ mod solution;
 #[cfg(test)]
 mod tests;
 
-use kwavers_domain::boundary::BemBoundaryManager;
+use kwavers_boundary::BemBoundaryManager;
 use kwavers_math::linear_algebra::sparse::CompressedSparseRowMatrix;
 use num_complex::Complex64;
 use std::collections::HashMap;

@@ -5,7 +5,7 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_core::time::Time;
-use kwavers_domain::boundary::Boundary;
+use kwavers_boundary::Boundary;
 use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
@@ -330,7 +330,7 @@ mod tests {
     use super::*;
     use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use kwavers_core::constants::numerical::MHZ_TO_HZ;
-    use kwavers_domain::boundary::DomainPMLBoundary;
+    use kwavers_boundary::DomainPMLBoundary;
     use kwavers_medium::homogeneous::HomogeneousMedium;
     use kwavers_signal::SineWave;
     use kwavers_domain::source::PointSource;

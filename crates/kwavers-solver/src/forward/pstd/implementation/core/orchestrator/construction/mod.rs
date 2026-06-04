@@ -3,7 +3,7 @@ mod ivp_velocity;
 
 use super::{pstd_source_gain, pstd_source_time_shift_samples, PSTDSolver};
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_domain::boundary::{CPMLBoundary, DomainPMLBoundary};
+use kwavers_boundary::{CPMLBoundary, DomainPMLBoundary};
 use kwavers_field::wave::WaveFields;
 use kwavers_grid::Grid;
 use kwavers_medium::MaterialFields;
@@ -48,7 +48,7 @@ impl PSTDSolver {
         let mut k_mag = compute_k_magnitude(&k_ops.kx, &k_ops.ky, &k_ops.kz);
 
         let _x_max: f64 = 0.0;
-        let boundary: Option<Box<dyn kwavers_domain::boundary::Boundary>> = match &config.boundary {
+        let boundary: Option<Box<dyn kwavers_boundary::Boundary>> = match &config.boundary {
             BoundaryConfig::PML(pml_config) => {
                 Some(Box::new(DomainPMLBoundary::new(pml_config.clone())?))
             }

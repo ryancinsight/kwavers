@@ -12,7 +12,7 @@
 //! - Higher-order polynomial basis functions
 //! - Sparse matrix assembly with CSR format
 //! - ILU preconditioned iterative solvers
-//! - Boundary conditions via [`kwavers_domain::boundary::FemBoundaryManager`]
+//! - Boundary conditions via [`kwavers_boundary::FemBoundaryManager`]
 //!
 //! ## Applications
 //!
@@ -28,7 +28,7 @@
 //! FEM boundary conditions are managed through the domain boundary system:
 //!
 //! ```rust,ignore
-//! use kwavers_domain::boundary::FemBoundaryManager;
+//! use kwavers_boundary::FemBoundaryManager;
 //!
 //! let mut boundary_manager = FemBoundaryManager::new();
 //! boundary_manager.add_dirichlet(vec![(node_id, Complex64::new(0.0, 0.0))]);

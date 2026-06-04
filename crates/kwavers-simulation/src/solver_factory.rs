@@ -291,7 +291,7 @@ mod tests {
 
     #[test]
     fn assembles_fdtd_with_cpml_via_absorbing_boundary_config() {
-        use kwavers_domain::boundary::cpml::CPMLConfig;
+        use kwavers_boundary::cpml::CPMLConfig;
         use kwavers_solver::config::AbsorbingBoundaryConfig;
 
         // Grid must be large enough for the CPML thickness.

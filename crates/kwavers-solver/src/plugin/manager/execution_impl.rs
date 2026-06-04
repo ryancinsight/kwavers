@@ -2,7 +2,7 @@
 
 use super::PluginManager;
 use kwavers_core::error::{KwaversError, KwaversResult, PhysicsError, ValidationError};
-use kwavers_domain::boundary::Boundary;
+use kwavers_boundary::Boundary;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_domain::plugin::{Plugin, PluginContext};

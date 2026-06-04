@@ -30,7 +30,7 @@
 //! ## Usage
 //!
 //! ```rust,ignore
-//! use kwavers_domain::boundary::BemBoundaryManager;
+//! use kwavers_boundary::BemBoundaryManager;
 //! use kwavers_solver::forward::BemSolver;
 //!
 //! // Create BEM solver

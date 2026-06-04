@@ -2,7 +2,7 @@ use super::config::FdtdFemCouplingConfig;
 use super::coupler::FdtdFemCoupler;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use kwavers_domain::mesh::tetrahedral::TetrahedralMesh;
+use kwavers_mesh::tetrahedral::TetrahedralMesh;
 use ndarray::{Array3, ArrayView3};
 
 /// FDTD-FEM Coupled Solver

@@ -13,7 +13,7 @@ pub use metadata::PluginMetadata;
 
 use kwavers_core::error::KwaversResult;
 use kwavers_core::time::StabilityConstraints;
-use crate::boundary::Boundary;
+use kwavers_boundary::Boundary;
 use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
@@ -190,7 +190,7 @@ pub mod test_support {
     use super::fields::PluginFields;
     use super::PluginContext;
     use kwavers_core::error::KwaversResult;
-    use crate::boundary::Boundary;
+    use kwavers_boundary::Boundary;
     use kwavers_grid::Grid;
     use ndarray::Array3;
 

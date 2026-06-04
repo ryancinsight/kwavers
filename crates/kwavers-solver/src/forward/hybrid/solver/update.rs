@@ -1,6 +1,6 @@
 use super::HybridSolver;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_domain::boundary::Boundary;
+use kwavers_boundary::Boundary;
 use kwavers_medium::Medium;
 use kwavers_domain::source::{Source, SourceField};
 use crate::forward::hybrid::config::HybridDecompositionStrategy;
@@ -307,7 +307,7 @@ impl HybridSolver {
 mod tests {
     use super::*;
     use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
-    use kwavers_domain::boundary::{DomainPMLBoundary, DomainPmlConfig};
+    use kwavers_boundary::{DomainPMLBoundary, DomainPmlConfig};
     use kwavers_field::mapping::UnifiedFieldType;
     use kwavers_grid::Grid;
     use kwavers_medium::HomogeneousMedium;

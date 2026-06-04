@@ -1,7 +1,7 @@
 //! PSTD Solver Orchestrator
 
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::boundary::{Boundary, PmlExpFactors};
+use kwavers_boundary::{Boundary, PmlExpFactors};
 use kwavers_field::wave::WaveFields;
 use kwavers_grid::Grid;
 use kwavers_medium::MaterialFields;

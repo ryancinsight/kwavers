@@ -1,6 +1,6 @@
 //! Integration tests using plugin-based solver
 
-use kwavers_domain::boundary::DomainPMLBoundary;
+use kwavers_boundary::DomainPMLBoundary;
 use kwavers_core::constants::{DENSITY_WATER, SOUND_SPEED_WATER};
 use kwavers_grid::Grid;
 use kwavers_medium::{CoreMedium, HomogeneousMedium};
@@ -18,7 +18,7 @@ fn test_point_source_propagation() {
     let medium = HomogeneousMedium::new(DENSITY_WATER, SOUND_SPEED_WATER, 0.0, 0.0, &grid);
 
     // Create boundary
-    let pml_config = kwavers_domain::boundary::DomainPmlConfig {
+    let pml_config = kwavers_boundary::DomainPmlConfig {
         thickness: 10,
         ..Default::default()
     };

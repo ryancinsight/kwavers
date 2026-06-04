@@ -2,7 +2,7 @@
 
 use super::backend::FemHelmholtzBackend;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_domain::mesh::MeshBoundaryType;
+use kwavers_mesh::MeshBoundaryType;
 use crate::backends::acoustic::backend::FrequencyDomainAcousticBackend;
 use ndarray::{Array1, ArrayView2};
 use num_complex::Complex64;

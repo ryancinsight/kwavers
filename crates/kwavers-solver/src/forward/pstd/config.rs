@@ -7,7 +7,7 @@ use super::numerics::spectral_correction::SpectralCorrectionConfig;
 use ndarray::Array3;
 use serde::{Deserialize, Serialize};
 
-use kwavers_domain::boundary::{CPMLConfig, DomainPmlConfig};
+use kwavers_boundary::{CPMLConfig, DomainPmlConfig};
 
 /// Compatibility modes for the spectral solver
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

@@ -98,10 +98,7 @@
 //! - **Property-based tests**: Mathematical correctness (Proptest)
 //! - **Validation functions**: Runtime invariant checking
 
-pub mod boundary;
 pub mod imaging;
-pub mod mesh;
-pub mod phantoms;
 pub mod plugin;
 pub mod sensor;
 

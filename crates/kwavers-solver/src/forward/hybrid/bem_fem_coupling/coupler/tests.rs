@@ -1,7 +1,7 @@
 use num_complex::Complex64;
 
-use kwavers_domain::mesh::tetrahedral::TetrahedralMesh;
-use kwavers_domain::mesh::MeshBoundaryType;
+use kwavers_mesh::tetrahedral::TetrahedralMesh;
+use kwavers_mesh::MeshBoundaryType;
 
 use super::super::BemFemCouplingConfig;
 use super::struct_impl::BemFemCoupler;
@@ -21,7 +21,7 @@ fn test_bem_fem_coupler_creation() {
 
 #[test]
 fn test_solve_fem_system_single_element() {
-    use kwavers_domain::mesh::tetrahedral::MeshBoundaryType;
+    use kwavers_mesh::tetrahedral::MeshBoundaryType;
 
     let mut fem_mesh = TetrahedralMesh::new();
     let n0 = fem_mesh.add_node([0.0, 0.0, 0.0], MeshBoundaryType::Interior);
@@ -66,7 +66,7 @@ fn test_solve_fem_system_single_element() {
 
 #[test]
 fn test_solve_coupled_run() {
-    use kwavers_domain::mesh::tetrahedral::MeshBoundaryType;
+    use kwavers_mesh::tetrahedral::MeshBoundaryType;
 
     let mut fem_mesh = TetrahedralMesh::new();
     let n0 = fem_mesh.add_node([0.0, 0.0, 0.0], MeshBoundaryType::Interior);

@@ -14,7 +14,7 @@
 //! Author: Ryan Clanton (@ryancinsight)
 //! Date: 2025-01-20
 
-use kwavers_domain::boundary::cpml::CPMLConfig;
+use kwavers_boundary::cpml::CPMLConfig;
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_signal::{Signal, SineWave};

@@ -1,7 +1,7 @@
 //! FDTD solver dispatch.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_domain::boundary::cpml::CPMLConfig;
+use kwavers_boundary::cpml::CPMLConfig;
 use kwavers_domain::sensor::recorder::simple::SensorRecorder;
 use kwavers_domain::source::Source as KwaversSource;
 use crate::dispatch::shared::{recording_modes_from_strings, trim_initial_recorder_sample};

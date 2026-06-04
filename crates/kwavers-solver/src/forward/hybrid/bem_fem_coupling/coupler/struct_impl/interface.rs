@@ -3,7 +3,7 @@
 use num_complex::{Complex64, ComplexFloat};
 
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::mesh::tetrahedral::TetrahedralMesh;
+use kwavers_mesh::tetrahedral::TetrahedralMesh;
 
 use super::BemFemCoupler;
 

@@ -20,7 +20,7 @@ Numbering today is broken: duplicate headers (two each of Ch4/5/6/7, two Ch10),
 | 1 | foundations.md | Wave Physics Fundamentals | 906 | 5 | ✅ audited |
 | 2 | numerical_methods.md | Numerical Methods: FDTD & PSTD | 646 | 5 | ✅ audited |
 | 3 | nonlinear_acoustics.md | Nonlinear Acoustics | 778 | 6 | ✅ audited (physics sound; figs added) |
-| 4 | media_and_tissue_models.md | Media and Tissue Models | 1117 | 3 | ⬜ (strip absorption dup) |
+| 4 | media_and_tissue_models.md | Media and Tissue Models | 1045 | 5 | ✅ audited (absorption de-duped; figs fixed) |
 | 5 | sources_and_transducers.md | Sources and Transducers | 737 | 0 | ✂️ merge w/ beamforming |
 | 6 | beamforming_and_image_formation.md | Beamforming and Image Formation | 750 | 7 | ✂️ merge w/ sources |
 | 7 | sensors_and_measurements.md | Sensors and Measurements | 834 | 0 | ⬜ (needs figs) |

@@ -1,5 +1,5 @@
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_domain::boundary::cpml::CPMLConfig;
+use kwavers_boundary::cpml::CPMLConfig;
 use kwavers_grid::Grid as KwaversGrid;
 use kwavers_domain::sensor::recorder::simple::SensorRecorder;
 use kwavers_domain::source::{GridSource, Source as KwaversSource};

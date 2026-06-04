@@ -4,7 +4,7 @@
 //! Supports linear (P1) and quadratic (P2) Lagrange basis functions.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_domain::mesh::Tetrahedron;
+use kwavers_mesh::Tetrahedron;
 use ndarray::Array2;
 
 /// Gauss quadrature points and weights for tetrahedral elements

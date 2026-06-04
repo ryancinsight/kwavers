@@ -1,4 +1,4 @@
-use kwavers_domain::boundary::DomainPmlConfig;
+use kwavers_boundary::DomainPmlConfig;
 use kwavers_grid::Grid;
 use kwavers_medium::homogeneous::HomogeneousMedium;
 use kwavers_domain::plugin::{Plugin, PluginContext, PluginFields};
@@ -67,7 +67,7 @@ fn test_hybrid_source_application() {
         thickness: 4,
         ..Default::default()
     };
-    let mut boundary = kwavers_domain::boundary::DomainPMLBoundary::new(pml_config).unwrap();
+    let mut boundary = kwavers_boundary::DomainPMLBoundary::new(pml_config).unwrap();
     let sources: Vec<Box<dyn Source>> = vec![Box::new(source)];
     let extra_fields = PluginFields::new(Array3::zeros((1, 1, 1)));
 

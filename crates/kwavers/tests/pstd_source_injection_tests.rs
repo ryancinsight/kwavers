@@ -25,7 +25,7 @@
 //! - Treeby, Jaros, Rendell & Cox (2012), J. Acoust. Soc. Am. 131(6).
 
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::boundary::CPMLConfig;
+use kwavers_boundary::CPMLConfig;
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_signal::SineWave;

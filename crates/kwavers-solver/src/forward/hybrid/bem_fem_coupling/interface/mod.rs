@@ -1,5 +1,5 @@
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::mesh::tetrahedral::TetrahedralMesh;
+use kwavers_mesh::tetrahedral::TetrahedralMesh;
 use nalgebra::Vector3;
 use std::collections::HashMap;
 
@@ -66,7 +66,7 @@ impl BemFemInterface {
 
     /// Check if a FEM node lies on the BEM interface
     fn is_node_on_interface(
-        node: &kwavers_domain::mesh::tetrahedral::MeshNode,
+        node: &kwavers_mesh::tetrahedral::MeshNode,
         bem_boundary: &[usize],
         fem_mesh: &TetrahedralMesh,
     ) -> bool {
@@ -99,7 +99,7 @@ impl BemFemInterface {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     fn find_corresponding_bem_element(
-        node: &kwavers_domain::mesh::tetrahedral::MeshNode,
+        node: &kwavers_mesh::tetrahedral::MeshNode,
         bem_boundary: &[usize],
         fem_mesh: &TetrahedralMesh,
     ) -> KwaversResult<usize> {

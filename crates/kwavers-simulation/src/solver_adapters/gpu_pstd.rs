@@ -43,7 +43,7 @@ mod medium;
 use medium::GpuMediumSnapshot;
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_domain::boundary::cpml::{CPMLConfig, CPMLProfiles};
+use kwavers_boundary::cpml::{CPMLConfig, CPMLProfiles};
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_domain::sensor::GridSensorSet;

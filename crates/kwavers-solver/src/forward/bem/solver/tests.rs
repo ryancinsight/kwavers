@@ -1,5 +1,5 @@
 use super::*;
-use kwavers_domain::mesh::tetrahedral::{MeshBoundaryType, TetrahedralMesh};
+use kwavers_mesh::tetrahedral::{MeshBoundaryType, TetrahedralMesh};
 use crate::forward::bem::field::BemSolution;
 use ndarray::Array1;
 use num_complex::Complex64;

@@ -67,7 +67,7 @@ fn test_pstd_plane_wave_accuracy() {
     }
 
     // Propagate one wavelength
-    use kwavers_domain::boundary::pml::{DomainPMLBoundary, DomainPmlConfig};
+    use kwavers_boundary::pml::{DomainPMLBoundary, DomainPmlConfig};
 
     let pml_config = DomainPmlConfig::default();
     let mut _boundary = DomainPMLBoundary::new(pml_config).unwrap();

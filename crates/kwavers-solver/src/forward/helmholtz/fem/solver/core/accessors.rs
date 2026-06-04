@@ -1,6 +1,6 @@
 use super::FemHelmholtzSolver;
-use kwavers_domain::boundary::FemBoundaryManager;
-use kwavers_domain::mesh::TetrahedralMesh;
+use kwavers_boundary::FemBoundaryManager;
+use kwavers_mesh::TetrahedralMesh;
 use ndarray::Array1;
 use num_complex::Complex64;
 

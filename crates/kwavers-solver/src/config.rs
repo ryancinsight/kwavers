@@ -2,7 +2,7 @@
 //!
 //! Consolidated configuration for all solver types.
 
-use kwavers_domain::boundary::cpml::CPMLConfig;
+use kwavers_boundary::cpml::CPMLConfig;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 

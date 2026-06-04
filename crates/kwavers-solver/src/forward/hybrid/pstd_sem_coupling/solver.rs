@@ -1,7 +1,7 @@
 use super::{coupler::PstdSemCoupler, PstdSemCouplingConfig};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use kwavers_domain::mesh::tetrahedral::TetrahedralMesh;
+use kwavers_mesh::tetrahedral::TetrahedralMesh;
 use ndarray::{Array3, ArrayView3};
 
 /// PSTD-SEM Coupled Solver

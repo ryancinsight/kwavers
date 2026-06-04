@@ -1,8 +1,8 @@
 use super::config::FdtdFemCouplingConfig;
 use super::solver::FdtdFemSolver;
 use kwavers_grid::Grid;
-use kwavers_domain::mesh::tetrahedral::TetrahedralMesh;
-use kwavers_domain::mesh::MeshBoundaryType;
+use kwavers_mesh::tetrahedral::TetrahedralMesh;
+use kwavers_mesh::MeshBoundaryType;
 
 #[test]
 fn test_fdtd_fem_coupling_creation() {

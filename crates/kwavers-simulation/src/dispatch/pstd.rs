@@ -5,7 +5,7 @@
 use ndarray::Array3;
 
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
-use kwavers_domain::boundary::cpml::CPMLConfig;
+use kwavers_boundary::cpml::CPMLConfig;
 use kwavers_grid::Grid;
 use kwavers_domain::sensor::recorder::simple::SensorRecorder;
 use kwavers_domain::source::{GridSource, Source as KwaversSource};

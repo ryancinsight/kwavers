@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use super::{FdtdGpuAccelerator, FdtdMetrics, GenericFdtdSolver};
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_domain::boundary::cpml::{CPMLBoundary, CPMLConfig};
+use kwavers_boundary::cpml::{CPMLBoundary, CPMLConfig};
 use crate::forward::fdtd::config::KSpaceCorrectionMode;
 
 impl GenericFdtdSolver<Array3<f64>> {
@@ -132,7 +132,7 @@ impl GenericFdtdSolver<Array3<f64>> {
 mod tests {
     use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
     use kwavers_core::error::KwaversError;
-    use kwavers_domain::boundary::cpml::CPMLConfig;
+    use kwavers_boundary::cpml::CPMLConfig;
     use kwavers_grid::Grid;
     use kwavers_medium::HomogeneousMedium;
     use kwavers_domain::source::GridSource;
