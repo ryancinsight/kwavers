@@ -5,7 +5,7 @@
 //! (1997), "Photon migration through a turbid slab", *Applied Optics*.
 
 #[cfg(test)]
-use kwavers_domain::medium::properties::OpticalPropertyData;
+use kwavers_medium::properties::OpticalPropertyData;
 
 /// Infinite medium Green's function solution.
 ///

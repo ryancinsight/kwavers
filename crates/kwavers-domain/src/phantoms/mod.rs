@@ -19,7 +19,7 @@ pub use types::{LayerSpec, PhantomTissueType, PhantomType, TumorSpec, VesselSpec
 mod tests {
     use super::*;
     use kwavers_grid::GridDimensions;
-    use crate::medium::properties::OpticalPropertyData;
+    use kwavers_medium::properties::OpticalPropertyData;
 
     #[test]
     fn test_blood_oxygenation_phantom() {

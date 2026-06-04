@@ -92,7 +92,7 @@ impl TestElasticMedium {
 }
 
 // Implement required traits for TestElasticMedium
-use kwavers_domain::medium::{
+use kwavers_medium::{
     AcousticProperties, ArrayAccess, BubbleProperties, BubbleState, CoreMedium, ElasticArrayAccess,
     ElasticProperties, OpticalProperties, ThermalField, ThermalProperties, ViscousProperties,
 };

@@ -4,7 +4,7 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use kwavers_domain::medium::Medium;
+use kwavers_medium::Medium;
 use log::debug;
 use std::sync::Arc;
 
@@ -43,8 +43,8 @@ impl AmplitudeCorrector {
         absorption_compensation: bool,
     ) -> KwaversResult<Vec<f64>> {
         let [sx, sy, sz] = sensor_position_meters;
-        let c0 = kwavers_domain::medium::sound_speed_at(medium.as_ref(), sx, sy, sz, grid);
-        let alpha = kwavers_domain::medium::AcousticProperties::absorption_coefficient(
+        let c0 = kwavers_medium::sound_speed_at(medium.as_ref(), sx, sy, sz, grid);
+        let alpha = kwavers_medium::AcousticProperties::absorption_coefficient(
             medium.as_ref(),
             sx,
             sy,
@@ -107,7 +107,7 @@ impl AmplitudeCorrector {
         let cy = grid.ny as f64 / 2.0 * grid.dy;
         let cz = grid.nz as f64 / 2.0 * grid.dz;
 
-        let actual_speed = kwavers_domain::medium::sound_speed_at(medium.as_ref(), cx, cy, cz, grid);
+        let actual_speed = kwavers_medium::sound_speed_at(medium.as_ref(), cx, cy, cz, grid);
 
         // Calculate phase correction factor
         let phase_factor = reference_speed / actual_speed;
@@ -151,7 +151,7 @@ mod tests {
     use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
     use kwavers_core::constants::numerical::MHZ_TO_HZ;
     use kwavers_grid::Grid;
-    use kwavers_domain::medium::homogeneous::HomogeneousMedium;
+    use kwavers_medium::homogeneous::HomogeneousMedium;
     use std::sync::Arc;
 
     #[test]

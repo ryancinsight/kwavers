@@ -11,8 +11,8 @@
 //! Showcases the proper use of kwavers factory patterns with advanced transducer modeling.
 
 use kwavers_grid::Grid;
+use kwavers_medium::homogeneous::HomogeneousMedium;
 use kwavers_domain::{
-        medium::homogeneous::HomogeneousMedium,
         source::{BeamformingMode, PhasedArrayConfig, PhasedArrayTransducer},
     };
 use kwavers_domain::source::Source;

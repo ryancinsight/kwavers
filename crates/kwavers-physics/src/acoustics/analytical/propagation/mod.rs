@@ -8,7 +8,7 @@ pub mod interfaces;
 
 pub mod scattering;
 
-pub use kwavers_domain::medium::AnalyticalMediumProperties;
+pub use kwavers_medium::AnalyticalMediumProperties;
 pub use attenuation::AttenuationCalculator;
 pub use calculator::WavePropagationCalculator;
 pub use coefficients::PropagationCoefficients;

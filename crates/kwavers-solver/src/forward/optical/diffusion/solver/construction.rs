@@ -9,7 +9,7 @@ use super::{
     DiffusionBoundaryCondition, DiffusionBoundaryConditions, DiffusionSolver, DiffusionSolverConfig,
 };
 use kwavers_grid::Grid;
-use kwavers_domain::medium::properties::OpticalPropertyData;
+use kwavers_medium::properties::OpticalPropertyData;
 
 impl DiffusionSolver {
     /// Resolve the boundary-condition record (configured override or

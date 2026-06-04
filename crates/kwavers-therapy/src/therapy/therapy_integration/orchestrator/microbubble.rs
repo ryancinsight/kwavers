@@ -219,7 +219,7 @@ mod tests {
     use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE};
     use kwavers_core::constants::numerical::MHZ_TO_HZ;
     use kwavers_grid::Grid;
-    use kwavers_domain::medium::homogeneous::HomogeneousMedium;
+    use kwavers_medium::homogeneous::HomogeneousMedium;
 
     fn create_test_grid() -> Grid {
         Grid::new(8, 8, 8, 0.001, 0.001, 0.001).unwrap()

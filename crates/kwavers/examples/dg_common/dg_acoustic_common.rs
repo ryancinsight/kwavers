@@ -1,7 +1,7 @@
 //! Shared 1-D acoustic DG/FDTD/PSTD comparison fixture for examples.
 #![allow(dead_code)] // Shared example fixture: each example target uses a subset.
 use kwavers_grid::Grid;
-use kwavers_domain::medium::HomogeneousMedium;
+use kwavers_medium::HomogeneousMedium;
 use kwavers_domain::source::{GridSource, SourceMode};
 use kwavers_solver::forward::fdtd::{FdtdConfig, FdtdSolver, KSpaceCorrectionMode};
 use kwavers_solver::forward::pstd::config::{BoundaryConfig, KSpaceMethod};

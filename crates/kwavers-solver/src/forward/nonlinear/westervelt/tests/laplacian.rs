@@ -2,7 +2,7 @@
 
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_grid::Grid;
-use kwavers_domain::medium::HomogeneousMedium;
+use kwavers_medium::HomogeneousMedium;
 use crate::forward::nonlinear::westervelt::{WesterveltFdtd, WesterveltFdtdConfig};
 use kwavers_core::error::KwaversError;
 

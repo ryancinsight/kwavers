@@ -8,7 +8,7 @@
 //! - Analyze numerical convergence rates
 
 use kwavers_grid::Grid;
-use kwavers_domain::medium::HomogeneousMedium;
+use kwavers_medium::HomogeneousMedium;
 use kwavers_solver::forward::elastic::nonlinear::{
     HyperelasticModel, NonlinearElasticWaveSolver, NonlinearSWEConfig,
 };

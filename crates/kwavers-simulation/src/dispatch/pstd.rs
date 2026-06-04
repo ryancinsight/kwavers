@@ -39,7 +39,7 @@ pub fn run_with_thermal(
     use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
     use kwavers_core::constants::medical::THERMAL_DOSE_REFERENCE_TEMP_C;
     use kwavers_core::constants::thermodynamic::KELVIN_OFFSET_C;
-    use kwavers_domain::medium::HomogeneousMedium;
+    use kwavers_medium::HomogeneousMedium;
     use kwavers_physics::thermal::diffusion::ThermalDiffusionConfig;
     use kwavers_solver::forward::thermal_diffusion::ThermalDiffusionSolver;
 

@@ -64,7 +64,7 @@
 //!     BoundaryTransmissionCondition,
 //! };
 //! use kwavers_domain::boundary::traits::BoundaryDirections;
-//! use kwavers_domain::medium::properties::AcousticPropertyData;
+//! use kwavers_medium::properties::AcousticPropertyData;
 //!
 //! // Material interface example
 //! let water = AcousticPropertyData {

@@ -4,7 +4,7 @@
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use kwavers_domain::medium::Medium;
+use kwavers_medium::Medium;
 use kwavers_domain::plugin::{PluginMetadata, PluginState};
 use kwavers_math::fft::{Fft3dInOutExt, Shape3D, FFT_CACHE_3D};
 use ndarray::{Array3, Zip};
@@ -169,7 +169,7 @@ impl MixedDomainPropagationPlugin {
         // Apply spectral propagator exp(ikz * dz) in frequency domain
         let mut result = field.clone();
         let k = TWO_PI
-            / (kwavers_domain::medium::sound_speed_at(medium, 0.0, 0.0, 0.0, grid) * time_step);
+            / (kwavers_medium::sound_speed_at(medium, 0.0, 0.0, 0.0, grid) * time_step);
 
         Zip::from(&mut result).and(field).par_for_each(|r, &f| {
             *r = f * Complex64::from_polar(1.0, k * grid.dx);

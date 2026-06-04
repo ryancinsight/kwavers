@@ -1,7 +1,7 @@
 // physics/chemistry/radical_initiation/mod.rs
 use kwavers_core::constants::numerical::MPA_TO_PA;
 use kwavers_grid::Grid;
-use kwavers_domain::medium::Medium;
+use kwavers_medium::Medium;
 use log::debug;
 use ndarray::{Array3, Zip};
 
@@ -39,7 +39,7 @@ impl RadicalInitiation {
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
-                let alpha = kwavers_domain::medium::AcousticProperties::absorption_coefficient(
+                let alpha = kwavers_medium::AcousticProperties::absorption_coefficient(
                     medium, x, y, z, grid, frequency,
                 );
 

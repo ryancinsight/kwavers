@@ -1,7 +1,7 @@
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::error::{self};
-use kwavers_domain::medium::core::CoreMedium;
+use kwavers_medium::core::CoreMedium;
 
 #[test]
 fn test_default_config_creation() {
@@ -50,7 +50,7 @@ fn test_grid_creation_minimal() {
 #[test]
 fn test_medium_basic_properties() {
     let grid = kwavers_grid::Grid::new(4, 4, 4, 0.001, 0.001, 0.001).expect("Grid creation");
-    let medium = kwavers_domain::medium::HomogeneousMedium::new(
+    let medium = kwavers_medium::HomogeneousMedium::new(
         kwavers_core::constants::DENSITY_WATER,
         kwavers_core::constants::SOUND_SPEED_WATER,
         0.0,

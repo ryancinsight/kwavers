@@ -6,7 +6,7 @@ use super::jones_matrix::JonesMatrix;
 use super::jones_vector::JonesVector;
 use super::PolarizationModel;
 use kwavers_grid::Grid;
-use kwavers_domain::medium::Medium;
+use kwavers_medium::Medium;
 use log::debug;
 use ndarray::{Array3, Array4};
 use num_complex::Complex64;

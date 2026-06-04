@@ -29,7 +29,7 @@
 
 use kwavers_grid::Grid;
 use kwavers_domain::imaging::ultrasound::elastography::{ElasticityMap, InversionMethod};
-use kwavers_domain::medium::homogeneous::HomogeneousMedium;
+use kwavers_medium::homogeneous::HomogeneousMedium;
 use kwavers_physics::acoustics::imaging::modalities::elastography::displacement::DisplacementEstimator;
 use kwavers_physics::acoustics::imaging::modalities::elastography::radiation_force::PushPulseParameters;
 use kwavers_physics::acoustics::imaging::modalities::elastography::AcousticRadiationForce;

@@ -56,7 +56,7 @@
 //! use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 //! use kwavers_simulation::modalities::photoacoustic::PhotoacousticSimulator;
 //! use kwavers_grid::Grid;
-//! use kwavers_domain::medium::homogeneous::HomogeneousMedium;
+//! use kwavers_medium::homogeneous::HomogeneousMedium;
 //! use kwavers_domain::imaging::photoacoustic::PhotoacousticParameters;
 //!
 //! # fn main() -> kwavers_core::error::KwaversResult<()> {
@@ -92,7 +92,7 @@
 //! ```rust,no_run
 //! # use kwavers_simulation::modalities::photoacoustic::PhotoacousticSimulator;
 //! # use kwavers_grid::Grid;
-//! # use kwavers_domain::medium::homogeneous::HomogeneousMedium;
+//! # use kwavers_medium::homogeneous::HomogeneousMedium;
 //! # use kwavers_domain::imaging::photoacoustic::PhotoacousticParameters;
 //! # use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 //! # fn main() -> kwavers_core::error::KwaversResult<()> {
@@ -192,7 +192,7 @@ pub use kwavers_domain::imaging::photoacoustic::{
 };
 
 // Re-export optical property data from domain
-pub use kwavers_domain::medium::properties::OpticalPropertyData;
+pub use kwavers_medium::properties::OpticalPropertyData;
 
 #[cfg(test)]
 mod tests;

@@ -124,4 +124,4 @@ pub use kwavers_domain::sensor::sonoluminescence as sonoluminescence_detector;
 /// Re-export material properties from domain layer (SSOT for material specifications)
 /// This was previously in physics::materials but has been moved to domain::medium::properties
 /// as material property definitions belong in the domain layer, not physics.
-pub use kwavers_domain::medium::properties::{fluids, implants, tissue, AcousticMaterialProperties};
+pub use kwavers_medium::properties::{fluids, implants, tissue, AcousticMaterialProperties};

@@ -18,7 +18,7 @@
 
 use kwavers_domain::boundary::cpml::{CPMLConfig, CPMLProfiles};
 use kwavers_grid::Grid;
-use kwavers_domain::medium::HomogeneousMedium;
+use kwavers_medium::HomogeneousMedium;
 use kwavers_domain::source::GridSource;
 use kwavers_solver::fdtd::{FdtdConfig, FdtdSolver};
 use kwavers_core::error::KwaversResult;

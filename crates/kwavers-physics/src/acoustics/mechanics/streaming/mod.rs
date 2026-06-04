@@ -50,7 +50,7 @@
 
 use kwavers_core::constants::acoustic_parameters::REFERENCE_FREQUENCY_HZ;
 use kwavers_grid::Grid;
-use kwavers_domain::medium::Medium;
+use kwavers_medium::Medium;
 use ndarray::{Array3, Zip};
 
 /// Eckart steady-streaming velocity field driven by acoustic absorption.
@@ -93,8 +93,8 @@ impl StreamingModel {
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
-                let rho = kwavers_domain::medium::density_at(medium, x, y, z, grid);
-                let c = kwavers_domain::medium::sound_speed_at(medium, x, y, z, grid);
+                let rho = kwavers_medium::density_at(medium, x, y, z, grid);
+                let c = kwavers_medium::sound_speed_at(medium, x, y, z, grid);
                 let alpha = medium.absorption_coefficient(x, y, z, grid, REFERENCE_FREQUENCY_HZ);
                 let mu = medium.viscosity(x, y, z, grid);
                 if rho <= 0.0 || c <= 0.0 || mu <= 0.0 {

@@ -122,7 +122,7 @@ mod tests {
     fn test_fdtd_creation() {
         let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).unwrap();
         let config = FdtdConfig::default();
-        let medium = kwavers_domain::medium::HomogeneousMedium::water(&grid);
+        let medium = kwavers_medium::HomogeneousMedium::water(&grid);
         let source = kwavers_domain::source::GridSource::default();
         let _solver = FdtdSolver::new(config, &grid, &medium, source).unwrap();
     }
@@ -185,7 +185,7 @@ mod tests {
     fn test_cfl_condition() {
         let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).unwrap();
         let config = FdtdConfig::default();
-        let medium = kwavers_domain::medium::HomogeneousMedium::water(&grid);
+        let medium = kwavers_medium::HomogeneousMedium::water(&grid);
         let source = kwavers_domain::source::GridSource::default();
         let solver = FdtdSolver::new(config, &grid, &medium, source).unwrap();
 

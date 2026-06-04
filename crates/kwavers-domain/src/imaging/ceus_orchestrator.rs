@@ -5,7 +5,7 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use crate::medium::Medium;
+use kwavers_medium::Medium;
 use ndarray::Array3;
 
 /// CEUS orchestration interface
@@ -122,7 +122,7 @@ impl Default for CEUSOrchestrators {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::medium::homogeneous::HomogeneousMedium;
+    use kwavers_medium::homogeneous::HomogeneousMedium;
 
     #[test]
     fn test_ceus_orchestrators_creation() {

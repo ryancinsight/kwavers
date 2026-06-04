@@ -1,7 +1,7 @@
 use super::PSTDSolver;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use kwavers_domain::medium::Medium;
+use kwavers_medium::Medium;
 use std::sync::Arc;
 
 impl crate::interface::Solver for PSTDSolver {

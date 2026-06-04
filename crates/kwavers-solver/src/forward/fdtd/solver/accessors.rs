@@ -134,7 +134,7 @@ mod tests {
     use kwavers_core::error::KwaversError;
     use kwavers_domain::boundary::cpml::CPMLConfig;
     use kwavers_grid::Grid;
-    use kwavers_domain::medium::HomogeneousMedium;
+    use kwavers_medium::HomogeneousMedium;
     use kwavers_domain::source::GridSource;
     use crate::forward::fdtd::config::{FdtdConfig, KSpaceCorrectionMode};
     use crate::forward::fdtd::FdtdSolver;

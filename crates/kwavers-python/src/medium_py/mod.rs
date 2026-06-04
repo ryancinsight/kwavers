@@ -5,9 +5,9 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
 use kwavers_grid::Grid as KwaversGrid;
-use kwavers_domain::medium::heterogeneous::{HeterogeneousFactory, HeterogeneousMedium};
-use kwavers_domain::medium::traits::Medium as MediumTrait;
-use kwavers_domain::medium::HomogeneousMedium;
+use kwavers_medium::heterogeneous::{HeterogeneousFactory, HeterogeneousMedium};
+use kwavers_medium::traits::Medium as MediumTrait;
+use kwavers_medium::HomogeneousMedium;
 
 use crate::grid_py::Grid;
 

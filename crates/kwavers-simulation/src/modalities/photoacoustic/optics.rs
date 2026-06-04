@@ -35,8 +35,8 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use kwavers_domain::medium::properties::OpticalPropertyData;
-use kwavers_domain::medium::Medium;
+use kwavers_medium::properties::OpticalPropertyData;
+use kwavers_medium::Medium;
 use kwavers_solver::forward::optical::diffusion::{
     DiffusionBoundaryCondition, DiffusionBoundaryConditions, DiffusionSolver, DiffusionSolverConfig,
 };
@@ -217,7 +217,7 @@ pub fn compute_fluence_at_wavelength(
 /// # use kwavers_simulation::modalities::photoacoustic::optics::*;
 /// # use kwavers_grid::Grid;
 /// # use ndarray::Array3;
-/// # use kwavers_domain::medium::properties::OpticalPropertyData;
+/// # use kwavers_medium::properties::OpticalPropertyData;
 /// # fn main() -> kwavers_core::error::KwaversResult<()> {
 /// # let grid = Grid::new(32, 32, 16, 0.001, 0.001, 0.001)?;
 /// # let optical_properties = Array3::from_elem((32, 32, 16), OpticalPropertyData::soft_tissue());
@@ -256,7 +256,7 @@ pub fn compute_multi_wavelength_fluence(
 mod tests {
     use super::*;
     use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
-    use kwavers_domain::medium::homogeneous::HomogeneousMedium;
+    use kwavers_medium::homogeneous::HomogeneousMedium;
 
     #[test]
     fn test_optical_property_initialization() {

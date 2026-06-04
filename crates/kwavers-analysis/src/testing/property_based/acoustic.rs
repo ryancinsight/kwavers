@@ -68,7 +68,7 @@ pub mod acoustic_properties {
 /// **Safety**: All tests ensure no panics or undefined behavior per ICSE 2020
 pub mod medium_properties {
     use kwavers_grid::Grid;
-    use kwavers_domain::medium::CoreMedium;
+    use kwavers_medium::CoreMedium;
 
     /// Verify all medium properties return physically valid values
     ///

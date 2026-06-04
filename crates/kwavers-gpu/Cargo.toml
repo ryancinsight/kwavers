@@ -15,6 +15,7 @@ workspace = true
 kwavers-core = { path = "../kwavers-core" }
 kwavers-math = { path = "../kwavers-math" }
 kwavers-grid = { path = "../kwavers-grid" }
+kwavers-medium = { path = "../kwavers-medium" }
 kwavers-signal = { path = "../kwavers-signal" }
 kwavers-domain = { path = "../kwavers-domain" }
 kwavers-physics = { path = "../kwavers-physics" }

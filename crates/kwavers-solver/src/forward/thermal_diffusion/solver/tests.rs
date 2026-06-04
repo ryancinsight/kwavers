@@ -1,6 +1,6 @@
 use super::*;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
-use kwavers_domain::medium::HomogeneousMedium;
+use kwavers_medium::HomogeneousMedium;
 use kwavers_core::error::KwaversError;
 
 fn config(spatial_order: usize) -> ThermalDiffusionConfig {

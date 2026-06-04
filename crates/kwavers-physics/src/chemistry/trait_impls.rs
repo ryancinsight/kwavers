@@ -17,7 +17,7 @@ impl ChemicalModelTrait for ChemicalModel {
         temperature: &Array3<f64>,
         grid: &Grid,
         dt: f64,
-        medium: &dyn kwavers_domain::medium::Medium,
+        medium: &dyn kwavers_medium::Medium,
         frequency: f64,
     ) {
         let params_result = ChemicalUpdateParams::new(

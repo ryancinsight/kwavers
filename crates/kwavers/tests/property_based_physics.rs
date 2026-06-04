@@ -7,7 +7,7 @@
 use kwavers_analysis::testing::property_based::acoustic::acoustic_properties::*;
 use kwavers_analysis::testing::property_based::acoustic::grid_properties::*;
 use kwavers_analysis::testing::property_based::acoustic::medium_properties::*;
-use kwavers_domain::medium::{CoreMedium, HomogeneousMedium};
+use kwavers_medium::{CoreMedium, HomogeneousMedium};
 use kwavers_grid::Grid;
 use proptest::prelude::*;
 

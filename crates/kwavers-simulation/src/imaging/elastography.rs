@@ -6,7 +6,7 @@
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_domain::imaging::ultrasound::elastography::{ElasticityMap, InversionMethod};
-use kwavers_domain::medium::Medium;
+use kwavers_medium::Medium;
 
 // Physics imports
 use kwavers_physics::acoustics::imaging::modalities::elastography::displacement::DisplacementField;

@@ -22,7 +22,7 @@
 //! - Treeby & Cox (2010). J. Biomed. Opt. 15(2), 021314.
 
 use kwavers_grid::Grid;
-use kwavers_domain::medium::HomogeneousMedium;
+use kwavers_medium::HomogeneousMedium;
 use kwavers_domain::source::GridSource;
 use kwavers_solver::fdtd::{FdtdConfig, FdtdSolver};
 use kwavers_core::error::KwaversResult;

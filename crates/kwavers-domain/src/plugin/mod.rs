@@ -16,7 +16,7 @@ use kwavers_core::time::StabilityConstraints;
 use crate::boundary::Boundary;
 use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;
-use crate::medium::Medium;
+use kwavers_medium::Medium;
 use crate::source::Source;
 use ndarray::Array4;
 use std::any::Any;

@@ -17,7 +17,7 @@
 //! This type is used in treatment planning where patient-specific tissue properties are
 //! obtained from pre-treatment imaging (CT, MRI, ultrasound) and mapped to computational grids.
 
-use kwavers_domain::medium::properties::AcousticPropertyData;
+use kwavers_medium::properties::AcousticPropertyData;
 use ndarray::Array3;
 
 #[cfg(test)]
@@ -48,7 +48,7 @@ mod tests;
 ///
 /// ```
 /// use kwavers_therapy::therapy::therapy_integration::TissuePropertyMap;
-/// use kwavers_domain::medium::properties::AcousticPropertyData;
+/// use kwavers_medium::properties::AcousticPropertyData;
 ///
 /// // Create uniform liver tissue properties
 /// let liver_props = AcousticPropertyData::liver();
@@ -86,7 +86,7 @@ impl TissuePropertyMap {
     ///
     /// ```
     /// use kwavers_therapy::therapy::therapy_integration::TissuePropertyMap;
-    /// use kwavers_domain::medium::properties::AcousticPropertyData;
+    /// use kwavers_medium::properties::AcousticPropertyData;
     ///
     /// let water = AcousticPropertyData::water();
     /// let tissue = TissuePropertyMap::uniform((32, 32, 32), water);

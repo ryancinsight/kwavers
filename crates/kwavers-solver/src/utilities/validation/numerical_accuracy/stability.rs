@@ -11,7 +11,7 @@ impl NumericalValidator {
         &self,
     ) -> Result<StabilityResults, Box<dyn std::error::Error>> {
         let sound_speed =
-            kwavers_domain::medium::sound_speed_at(&self.medium, 0.0, 0.0, 0.0, &self.grid);
+            kwavers_medium::sound_speed_at(&self.medium, 0.0, 0.0, 0.0, &self.grid);
         let dt_max = self.grid.dx / (sound_speed * (3.0_f64).sqrt());
 
         let cfl_numbers = vec![0.1, 0.5, 0.9, 1.0, 1.1];

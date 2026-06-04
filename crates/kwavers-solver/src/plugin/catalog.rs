@@ -40,7 +40,7 @@
 
 use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
 use kwavers_grid::Grid;
-use kwavers_domain::medium::Medium;
+use kwavers_medium::Medium;
 use kwavers_domain::plugin::Plugin;
 use kwavers_physics::factory::config::PhysicsConfig;
 use kwavers_physics::factory::models::{AcousticSolver, NonlinearEquation, PhysicsModelType};
@@ -168,7 +168,7 @@ fn unsupported(idx: usize, variant: &str, hint: &str) -> KwaversError {
 mod tests {
     use super::*;
     use kwavers_core::constants::{DENSITY_WATER, SOUND_SPEED_WATER};
-    use kwavers_domain::medium::HomogeneousMedium;
+    use kwavers_medium::HomogeneousMedium;
     use kwavers_physics::factory::models::{PhysicsBoundaryCondition, PhysicsModelConfig};
 
     fn small_grid() -> Grid {

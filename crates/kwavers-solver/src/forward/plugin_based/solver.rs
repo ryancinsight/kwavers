@@ -8,7 +8,7 @@ use kwavers_core::time::Time;
 use kwavers_domain::boundary::Boundary;
 use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;
-use kwavers_domain::medium::Medium;
+use kwavers_medium::Medium;
 use kwavers_domain::plugin::Plugin;
 use kwavers_domain::sensor::recorder::traits::RecorderTrait;
 use kwavers_domain::source::{Source, SourceField};
@@ -331,7 +331,7 @@ mod tests {
     use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use kwavers_core::constants::numerical::MHZ_TO_HZ;
     use kwavers_domain::boundary::DomainPMLBoundary;
-    use kwavers_domain::medium::homogeneous::HomogeneousMedium;
+    use kwavers_medium::homogeneous::HomogeneousMedium;
     use kwavers_signal::SineWave;
     use kwavers_domain::source::PointSource;
 

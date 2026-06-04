@@ -10,7 +10,7 @@ use crate::therapy::therapy_integration::state::{
 use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use kwavers_domain::medium::Medium;
+use kwavers_medium::Medium;
 use ndarray::Array3;
 
 use super::super::config::TherapySessionConfig;

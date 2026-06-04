@@ -11,6 +11,7 @@ repository = "https://github.com/ryancinsight/kwavers"
 kwavers-core = { path = "../kwavers-core", features = ["registration"] }
 kwavers-math = { path = "../kwavers-math" }
 kwavers-grid = { path = "../kwavers-grid" }
+kwavers-medium = { path = "../kwavers-medium" }
 kwavers-field = { path = "../kwavers-field" }
 kwavers-domain = { path = "../kwavers-domain" }
 ndarray = { version = "0.16", features = ["rayon", "serde"] }

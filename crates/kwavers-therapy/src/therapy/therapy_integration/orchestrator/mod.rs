@@ -27,7 +27,7 @@
 
 use crate::therapy::lithotripsy::LithotripsySimulator;
 use kwavers_grid::Grid;
-use kwavers_domain::medium::Medium;
+use kwavers_medium::Medium;
 use kwavers_physics::cavitation_control::FeedbackController;
 use kwavers_physics::chemistry::ChemicalModel;
 use kwavers_physics::transcranial::TranscranialAberrationCorrection;

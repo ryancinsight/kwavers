@@ -4,7 +4,7 @@
 //! and published results from peer-reviewed literature.
 
 use kwavers_grid::Grid;
-use kwavers_domain::medium::HomogeneousMedium;
+use kwavers_medium::HomogeneousMedium;
 use kwavers_physics::bubble_dynamics::{BubbleParameters, BubbleState, KellerMiksisModel};
 
 use ndarray::Array3;

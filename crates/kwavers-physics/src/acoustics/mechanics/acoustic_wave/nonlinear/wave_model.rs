@@ -5,7 +5,7 @@
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, PRESSURE_LIMIT};
 use kwavers_grid::Grid;
-use kwavers_domain::medium::Medium;
+use kwavers_medium::Medium;
 
 use ndarray::{Array3, Zip};
 use std::f64;
@@ -226,7 +226,7 @@ impl NonlinearWave {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kwavers_domain::medium::HomogeneousMedium;
+    use kwavers_medium::HomogeneousMedium;
 
     #[test]
     fn new_initialises_with_sensible_defaults() {

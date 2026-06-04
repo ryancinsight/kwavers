@@ -19,4 +19,4 @@ pub use core::CavitationModel;
 pub use damage::{cavitation_intensity, CavitationDamage, DamageParameters};
 
 // Re-export AcousticMaterialProperties from domain layer (SSOT location)
-pub use kwavers_domain::medium::properties::AcousticMaterialProperties;
+pub use kwavers_medium::properties::AcousticMaterialProperties;

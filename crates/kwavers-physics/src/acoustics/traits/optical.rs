@@ -1,5 +1,5 @@
 use kwavers_grid::Grid;
-use kwavers_domain::medium::Medium;
+use kwavers_medium::Medium;
 use ndarray::{Array3, Array4};
 use std::fmt::Debug;
 

@@ -137,7 +137,7 @@ pub fn tissue_properties(tissue: String) -> PyResult<(f64, f64, f64, f64, f64)> 
 #[pyfunction]
 #[pyo3(signature = (tissue,))]
 pub fn histotripsy_tissue_properties(tissue: String) -> PyResult<(f64, f64, f64, f64)> {
-    let p = kwavers_domain::medium::absorption::histotripsy_tissue_properties_by_name(&tissue);
+    let p = kwavers_medium::absorption::histotripsy_tissue_properties_by_name(&tissue);
     Ok((
         p.tensile_yield_stress_pa,
         p.intrinsic_threshold_1mhz_pa,
@@ -157,7 +157,7 @@ pub fn histotripsy_tissue_properties(tissue: String) -> PyResult<(f64, f64, f64,
 #[pyfunction]
 #[pyo3(signature = (tissue,))]
 pub fn tissue_thermal_properties(tissue: String) -> PyResult<(f64, f64, f64)> {
-    use kwavers_domain::medium::absorption::{
+    use kwavers_medium::absorption::{
         tissue_thermal_properties as thermal, AbsorptionTissueType as T,
     };
     let t = match tissue.to_ascii_lowercase().as_str() {

@@ -38,7 +38,7 @@ fn test_spatial_order_from_usize() {
 
 #[test]
 fn test_acoustic_diffusivity_zero_frequency() {
-    use kwavers_domain::medium::HomogeneousMedium;
+    use kwavers_medium::HomogeneousMedium;
 
     let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1).unwrap();
     let medium = HomogeneousMedium::water(&grid);
@@ -140,14 +140,14 @@ fn compute_max_stable_timestep_uses_minimum_spacing_for_anisotropic_grid() {
 /// For water: B/A = B_OVER_A_WATER = 5.2 (Duck 1990 Table 4.16) → β = 1 + 5.2/2 = 3.6.
 #[test]
 fn compute_nonlinearity_coefficient_matches_ba_formula() {
-    use kwavers_domain::medium::HomogeneousMedium;
+    use kwavers_medium::HomogeneousMedium;
     let grid = Grid::new(10, 10, 10, 0.001, 0.001, 0.001).unwrap();
     let medium = HomogeneousMedium::water(&grid);
 
     let beta = compute_nonlinearity_coefficient(&medium, 0.0, 0.0, 0.0, &grid);
 
     // nonlinearity_parameter returns B/A directly; β = 1 + B/(2A)
-    let b_over_a = kwavers_domain::medium::AcousticProperties::nonlinearity_parameter(
+    let b_over_a = kwavers_medium::AcousticProperties::nonlinearity_parameter(
         &medium, 0.0, 0.0, 0.0, &grid,
     );
     let expected = 1.0 + b_over_a / 2.0;
@@ -169,9 +169,9 @@ fn compute_nonlinearity_coefficient_matches_ba_formula() {
 
 #[test]
 fn test_heterogeneous_medium_position_dependence() {
-    use kwavers_domain::medium::heterogeneous::tissue::DomainTissueRegion;
-    use kwavers_domain::medium::heterogeneous::tissue::HeterogeneousTissueMedium;
-    use kwavers_domain::medium::AbsorptionTissueType;
+    use kwavers_medium::heterogeneous::tissue::DomainTissueRegion;
+    use kwavers_medium::heterogeneous::tissue::HeterogeneousTissueMedium;
+    use kwavers_medium::AbsorptionTissueType;
 
     let grid = Grid::new(20, 20, 20, 0.001, 0.001, 0.001).unwrap();
     let mut medium = HeterogeneousTissueMedium::new(grid.clone(), AbsorptionTissueType::Muscle);
@@ -187,11 +187,11 @@ fn test_heterogeneous_medium_position_dependence() {
     );
     medium.set_tissue_region(&region).unwrap();
 
-    let density1 = kwavers_domain::medium::density_at(&medium, 0.0, 0.0, 0.0, &grid);
-    let speed1 = kwavers_domain::medium::sound_speed_at(&medium, 0.0, 0.0, 0.0, &grid);
+    let density1 = kwavers_medium::density_at(&medium, 0.0, 0.0, 0.0, &grid);
+    let speed1 = kwavers_medium::sound_speed_at(&medium, 0.0, 0.0, 0.0, &grid);
 
-    let density2 = kwavers_domain::medium::density_at(&medium, 0.01, 0.01, 0.01, &grid);
-    let speed2 = kwavers_domain::medium::sound_speed_at(&medium, 0.01, 0.01, 0.01, &grid);
+    let density2 = kwavers_medium::density_at(&medium, 0.01, 0.01, 0.01, &grid);
+    let speed2 = kwavers_medium::sound_speed_at(&medium, 0.01, 0.01, 0.01, &grid);
 
     assert_ne!(
         density1, density2,

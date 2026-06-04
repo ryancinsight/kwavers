@@ -118,7 +118,7 @@ pub fn validate_fdtd_dispersion(grid: &Grid, dt: f64, frequency: f64, c: f64) ->
 pub fn validate_absorption_model(
     frequency: f64,
     measured_alpha: f64,
-    medium: &dyn kwavers_domain::medium::Medium,
+    medium: &dyn kwavers_medium::Medium,
     grid: &Grid,
 ) -> PhysicsValidation {
     // Szabo's power law: α = α₀|ω|^y
@@ -129,7 +129,7 @@ pub fn validate_absorption_model(
     let alpha_np_m = alpha_theory * kwavers_core::constants::DB_TO_NP; // Convert dB/cm to Np/cm (DB_TO_NP = ln(10)/20)
 
     // Get implementation's absorption
-    use kwavers_domain::medium::AcousticProperties;
+    use kwavers_medium::AcousticProperties;
     let alpha_impl =
         AcousticProperties::absorption_coefficient(medium, 0.0, 0.0, 0.0, grid, frequency);
 
@@ -171,7 +171,7 @@ pub fn validate_cpml_reflection(reflection_coefficient: f64) -> PhysicsValidatio
 pub fn validate_all(
     grid: &Grid,
     dt: f64,
-    medium: &dyn kwavers_domain::medium::Medium,
+    medium: &dyn kwavers_medium::Medium,
 ) -> Vec<PhysicsValidation> {
     let mut reports = Vec::new();
 
@@ -182,7 +182,7 @@ pub fn validate_all(
         for j in 0..grid.ny {
             for k in 0..grid.nz {
                 let (x, y, z) = grid.indices_to_coordinates(i, j, k);
-                let speed = kwavers_domain::medium::sound_speed_at(medium, x, y, z, grid);
+                let speed = kwavers_medium::sound_speed_at(medium, x, y, z, grid);
                 if speed > c_max {
                     c_max = speed;
                 }

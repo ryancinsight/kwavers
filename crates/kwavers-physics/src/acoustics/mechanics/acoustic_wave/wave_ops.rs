@@ -1,7 +1,7 @@
 //! Free functions for acoustic wave stability and nonlinearity computations.
 
 use kwavers_grid::Grid;
-use kwavers_domain::medium::Medium;
+use kwavers_medium::Medium;
 
 use super::spatial_order::AcousticSpatialOrder;
 use kwavers_core::constants::numerical::TWO_PI;
@@ -32,10 +32,10 @@ pub fn compute_diffusivity_from_power_law_absorption<M: Medium + ?Sized>(
         return 0.0;
     }
 
-    let alpha = kwavers_domain::medium::AcousticProperties::absorption_coefficient(
+    let alpha = kwavers_medium::AcousticProperties::absorption_coefficient(
         medium, x, y, z, grid, frequency,
     );
-    let (i, j, k) = kwavers_domain::medium::continuous_to_discrete(x, y, z, grid);
+    let (i, j, k) = kwavers_medium::continuous_to_discrete(x, y, z, grid);
     let c = medium.sound_speed(i, j, k);
     let omega = TWO_PI * frequency;
 
@@ -67,6 +67,6 @@ pub fn compute_nonlinearity_coefficient<M: Medium + ?Sized>(
 ) -> f64 {
     // nonlinearity_parameter returns B/A; β = 1 + B/(2A)
     let b_over_a =
-        kwavers_domain::medium::AcousticProperties::nonlinearity_parameter(medium, x, y, z, grid);
+        kwavers_medium::AcousticProperties::nonlinearity_parameter(medium, x, y, z, grid);
     1.0 + b_over_a / 2.0
 }

@@ -31,7 +31,7 @@ use kwavers_grid::Grid;
 use kwavers_domain::imaging::ultrasound::elastography::{
     InversionMethod, NonlinearInversionMethod,
 };
-use kwavers_domain::medium::HomogeneousMedium;
+use kwavers_medium::HomogeneousMedium;
 use kwavers_physics::acoustics::imaging::modalities::elastography::{
     HarmonicDetectionConfig, HarmonicDetector, HarmonicDisplacementField,
 };

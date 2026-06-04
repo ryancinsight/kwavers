@@ -26,8 +26,8 @@ mod tests {
         IlluminationGeometry, MonteCarloModelConfig, OpticalModel, PhotoacousticAcousticConfig,
         PhotoacousticScenario, PhotoacousticSolverConfig, ThermoelasticProperties,
     };
-    use kwavers_domain::medium::optical_map::OpticalPropertyMap;
-    use kwavers_domain::medium::properties::OpticalPropertyData;
+    use kwavers_medium::optical_map::OpticalPropertyMap;
+    use kwavers_medium::properties::OpticalPropertyData;
 
     #[test]
     fn computes_cfl_time_step_from_minimum_spacing() {

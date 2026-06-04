@@ -5,7 +5,7 @@
 //! need to store a `&dyn Medium` reference (lifetime / object-safety issue).
 
 use kwavers_grid::Grid;
-use kwavers_domain::medium::Medium;
+use kwavers_medium::Medium;
 
 /// Per-voxel medium data extracted once at construction time.
 ///

@@ -35,4 +35,4 @@ pub use kwavers_domain::imaging::photoacoustic::{
 };
 
 // Re-export optical property data from domain layer
-pub use kwavers_domain::medium::properties::OpticalPropertyData;
+pub use kwavers_medium::properties::OpticalPropertyData;

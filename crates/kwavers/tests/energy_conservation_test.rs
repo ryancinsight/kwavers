@@ -6,7 +6,7 @@
 //! Reference: LeVeque, "Finite Volume Methods for Hyperbolic Problems", 2002
 
 use kwavers_grid::Grid;
-use kwavers_domain::medium::HomogeneousMedium;
+use kwavers_medium::HomogeneousMedium;
 use ndarray::{Array3, Zip};
 
 /// Parameters for acoustic energy calculation

@@ -13,7 +13,7 @@ use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criteri
 use kwavers_math::numerics::operators::{
         CentralDifference2, CentralDifference4, CentralDifference6, DifferentialOperator,
     };
-use kwavers_domain::medium::{CoreMedium, HomogeneousMedium};
+use kwavers_medium::{CoreMedium, HomogeneousMedium};
 use kwavers_grid::Grid;
 use ndarray::Array3;
 

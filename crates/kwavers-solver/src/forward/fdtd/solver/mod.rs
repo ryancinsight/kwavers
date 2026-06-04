@@ -139,7 +139,7 @@ pub struct GenericFdtdSolver<T> {
     pub fields: kwavers_field::wave::GenericWaveFields<T>,
 
     // Material Properties (rho0, c0)
-    pub materials: kwavers_domain::medium::material_fields::GenericMaterialFields<T>,
+    pub materials: kwavers_medium::material_fields::GenericMaterialFields<T>,
 
     // Precomputed fields
     pub(crate) rho_c_squared: T,

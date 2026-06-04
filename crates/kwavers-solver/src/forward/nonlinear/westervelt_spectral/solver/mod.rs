@@ -40,7 +40,7 @@
 //! - Hamilton, M.F. & Blackstock, D.T. (1998). Nonlinear Acoustics. Academic Press, Ch. 3.
 
 use kwavers_grid::Grid;
-use kwavers_domain::medium::Medium;
+use kwavers_medium::Medium;
 use kwavers_math::fft::Complex64;
 use crate::forward::nonlinear::conservation::{
     ConservationDiagnostics, ConservationTolerances, ConservationTracker, ViolationSeverity,
@@ -131,9 +131,9 @@ impl WesterveltWave {
             let center_y = grid.dy * (grid.ny as f64) / 2.0;
             let center_z = grid.dz * (grid.nz as f64) / 2.0;
             let rho0 =
-                kwavers_domain::medium::density_at(medium, center_x, center_y, center_z, grid);
+                kwavers_medium::density_at(medium, center_x, center_y, center_z, grid);
             let c0 =
-                kwavers_domain::medium::sound_speed_at(medium, center_x, center_y, center_z, grid);
+                kwavers_medium::sound_speed_at(medium, center_x, center_y, center_z, grid);
             self.medium_properties = Some(MediumProperties { rho0, c0 });
         }
 

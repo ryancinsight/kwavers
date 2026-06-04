@@ -3,7 +3,7 @@
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use kwavers_domain::medium::Medium;
+use kwavers_medium::Medium;
 use kwavers_domain::plugin::{PluginMetadata, PluginState};
 
 use super::solver::KzkSolverPlugin;
@@ -47,9 +47,9 @@ impl kwavers_domain::plugin::Plugin for KzkSolverPlugin {
         if let Some(operators) = &self.frequency_operators {
             self.apply_linear_step(&mut pressure_array, operators, dt / 2.0)?;
 
-            let density = kwavers_domain::medium::density_at(medium, 0.0, 0.0, 0.0, grid);
-            let c0 = kwavers_domain::medium::sound_speed_at(medium, 0.0, 0.0, 0.0, grid);
-            let beta = kwavers_domain::medium::AcousticProperties::nonlinearity_coefficient(
+            let density = kwavers_medium::density_at(medium, 0.0, 0.0, 0.0, grid);
+            let c0 = kwavers_medium::sound_speed_at(medium, 0.0, 0.0, 0.0, grid);
+            let beta = kwavers_medium::AcousticProperties::nonlinearity_coefficient(
                 medium, 0.0, 0.0, 0.0, grid,
             );
 

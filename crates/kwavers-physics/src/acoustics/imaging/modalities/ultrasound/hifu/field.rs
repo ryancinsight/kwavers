@@ -18,7 +18,7 @@ use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
 use kwavers_domain::imaging::ultrasound::hifu::DomainHIFUTransducer;
-use kwavers_domain::medium::Medium;
+use kwavers_medium::Medium;
 use ndarray::Array3;
 use std::f64::consts::PI;
 

@@ -82,7 +82,7 @@
 //!     TherapyTargetVolume, TherapyTissueType, TherapyIntegrationSafetyStatus,
 //! };
 //! use kwavers_grid::Grid;
-//! use kwavers_domain::medium::homogeneous::HomogeneousMedium;
+//! use kwavers_medium::homogeneous::HomogeneousMedium;
 //!
 //! // Create therapy configuration
 //! let config = TherapySessionConfig {

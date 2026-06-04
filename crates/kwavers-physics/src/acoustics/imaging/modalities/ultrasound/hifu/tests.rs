@@ -6,7 +6,7 @@ use kwavers_domain::imaging::ultrasound::hifu::{
     DomainHIFUTransducer, DomainHIFUTreatmentPlan, HifuTargetShape, HifuTreatmentProtocol,
     TreatmentPhase, TreatmentTarget,
 };
-use kwavers_domain::medium::homogeneous::HomogeneousMedium;
+use kwavers_medium::homogeneous::HomogeneousMedium;
 use ndarray::Array3;
 
 #[test]

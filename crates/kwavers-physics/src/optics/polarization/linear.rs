@@ -2,7 +2,7 @@
 
 use super::PolarizationModel;
 use kwavers_grid::Grid;
-use kwavers_domain::medium::Medium;
+use kwavers_medium::Medium;
 use log::debug;
 use ndarray::{Array3, Array4, Zip};
 use num_complex::Complex64;

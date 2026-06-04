@@ -1,7 +1,7 @@
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_grid::Grid;
-use kwavers_domain::medium::HomogeneousMedium;
+use kwavers_medium::HomogeneousMedium;
 use crate::pstd::PSTDConfig as PstdConfig;
 use crate::pstd::PSTDSolver;
 use std::f64::consts::PI;

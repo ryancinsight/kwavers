@@ -19,7 +19,7 @@
 
 use kwavers_grid::Grid;
 use kwavers_domain::imaging::ultrasound::elastography::InversionMethod;
-use kwavers_domain::medium::homogeneous::HomogeneousMedium;
+use kwavers_medium::homogeneous::HomogeneousMedium;
 use kwavers_core::error::KwaversResult;
 use ndarray::Array1;
 use std::f64::consts::PI;
@@ -363,7 +363,7 @@ pub mod swe_validation {
 
         // Expected elasticity values (from homogeneous medium)
         // For isotropic materials: E = μ(3λ + 2μ)/(λ + μ), cs = sqrt(μ/ρ)
-        use kwavers_domain::medium::{CoreMedium, ElasticProperties};
+        use kwavers_medium::{CoreMedium, ElasticProperties};
         let lame_mu = medium.lame_mu(0.0, 0.0, 0.0, grid);
         let density = medium.density(0, 0, 0);
         let lame_lambda = medium.lame_lambda(0.0, 0.0, 0.0, grid);

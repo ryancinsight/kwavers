@@ -5,7 +5,7 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use kwavers_domain::medium::{Medium, MediumBuilder};
+use kwavers_medium::{Medium, MediumBuilder};
 use kwavers_domain::sensor::GridSensorSet;
 use kwavers_domain::source::{Source, SourceFactory};
 use crate::configuration::Configuration;

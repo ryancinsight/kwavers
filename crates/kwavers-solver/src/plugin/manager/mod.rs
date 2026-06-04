@@ -6,7 +6,7 @@ mod execution_impl;
 use super::execution::{ExecutionStrategy, SequentialStrategy};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use kwavers_domain::medium::Medium;
+use kwavers_medium::Medium;
 use kwavers_domain::plugin::{Plugin, PluginFields};
 use ndarray::Array3;
 use std::collections::HashMap;
@@ -94,7 +94,7 @@ impl PluginManager {
     pub fn initialize_all(
         &mut self,
         grid: &kwavers_grid::Grid,
-        medium: &dyn kwavers_domain::medium::Medium,
+        medium: &dyn kwavers_medium::Medium,
     ) -> kwavers_core::error::KwaversResult<()> {
         for plugin in &mut self.plugins {
             plugin.initialize(grid, medium)?;

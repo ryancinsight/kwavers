@@ -1,6 +1,6 @@
 use kwavers_grid::Grid;
-use kwavers_domain::medium::heterogeneous::HeterogeneousMedium;
-use kwavers_domain::medium::viscous::ViscousProperties;
+use kwavers_medium::heterogeneous::HeterogeneousMedium;
+use kwavers_medium::viscous::ViscousProperties;
 
 #[test]
 fn test_heterogeneous_viscous_properties_interpolated() {

@@ -25,8 +25,8 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use kwavers_domain::medium::core::CoreMedium;
-use kwavers_domain::medium::HomogeneousMedium;
+use kwavers_medium::core::CoreMedium;
+use kwavers_medium::HomogeneousMedium;
 use kwavers_domain::source::GridSource;
 use kwavers_solver::forward::fdtd::{FdtdConfig, FdtdSolver};
 use kwavers_solver::forward::pstd::{PSTDConfig, PSTDSolver};

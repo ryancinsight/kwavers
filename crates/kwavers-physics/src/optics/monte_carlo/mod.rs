@@ -56,7 +56,7 @@
 //! use kwavers_physics::optics::monte_carlo::{MonteCarloSolver, PhotonSource, SimulationConfig};
 //! use kwavers_grid::Grid3D;
 //! use kwavers_grid::GridDimensions;
-//! use kwavers_domain::medium::properties::OpticalPropertyData;
+//! use kwavers_medium::properties::OpticalPropertyData;
 //! use kwavers_physics::optics::map_builder::OpticalPropertyMapBuilder;
 //!
 //! // Create solver

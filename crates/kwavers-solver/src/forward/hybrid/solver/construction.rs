@@ -2,7 +2,7 @@ use super::HybridSolver;
 use kwavers_core::error::KwaversResult;
 use kwavers_field::wave::WaveFields;
 use kwavers_grid::Grid;
-use kwavers_domain::medium::Medium;
+use kwavers_medium::Medium;
 use kwavers_domain::source::GridSource;
 use crate::forward::fdtd::FdtdSolver;
 use crate::forward::hybrid::adaptive_selection::AdaptiveSelector;
@@ -42,7 +42,7 @@ impl HybridSolver {
             crate::hybrid::coupling::HybridInterpolationScheme::Linear,
         )?;
 
-        let default_medium = kwavers_domain::medium::homogeneous::HomogeneousMedium::water(grid);
+        let default_medium = kwavers_medium::homogeneous::HomogeneousMedium::water(grid);
         let regions =
             decomposer.decompose(grid, &default_medium, config.decomposition_strategy.clone())?;
 

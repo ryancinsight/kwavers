@@ -29,11 +29,11 @@
 //! - Catheline et al., Ultrasound Med. Biol. 30(11), 1461-1469 (2004)
 
 use kwavers_grid::Grid;
-use kwavers_domain::medium::elastic::{ElasticArrayAccess, ElasticProperties};
-use kwavers_domain::medium::heterogeneous::tissue::HeterogeneousTissueMedium;
-use kwavers_domain::medium::homogeneous::HomogeneousMedium;
-use kwavers_domain::medium::AbsorptionTissueType;
-use kwavers_domain::medium::ArrayAccess;
+use kwavers_medium::elastic::{ElasticArrayAccess, ElasticProperties};
+use kwavers_medium::heterogeneous::tissue::HeterogeneousTissueMedium;
+use kwavers_medium::homogeneous::HomogeneousMedium;
+use kwavers_medium::AbsorptionTissueType;
+use kwavers_medium::ArrayAccess;
 
 /// Relative tolerance for floating-point comparisons
 const REL_TOL: f64 = 1e-12;

@@ -217,7 +217,7 @@ use ndarray::Array3;
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use kwavers_domain::medium::Medium;
+use kwavers_medium::Medium;
 use crate::forward::nonlinear::conservation::{
     ConservationDiagnostics, ConservationTolerances, ConservationTracker,
 };
@@ -290,8 +290,8 @@ impl WesterveltFdtd {
         let center_x = grid.dx * (grid.nx as f64) / 2.0;
         let center_y = grid.dy * (grid.ny as f64) / 2.0;
         let center_z = grid.dz * (grid.nz as f64) / 2.0;
-        let rho0 = kwavers_domain::medium::density_at(medium, center_x, center_y, center_z, grid);
-        let c0 = kwavers_domain::medium::sound_speed_at(medium, center_x, center_y, center_z, grid);
+        let rho0 = kwavers_medium::density_at(medium, center_x, center_y, center_z, grid);
+        let c0 = kwavers_medium::sound_speed_at(medium, center_x, center_y, center_z, grid);
 
         Self {
             config,

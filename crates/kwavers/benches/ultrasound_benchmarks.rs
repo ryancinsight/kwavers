@@ -20,7 +20,7 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use kwavers_domain::imaging::ultrasound::elastography::InversionMethod;
 use kwavers_grid::Grid;
-use kwavers_domain::medium::homogeneous::HomogeneousMedium;
+use kwavers_medium::homogeneous::HomogeneousMedium;
 use kwavers_simulation::imaging::elastography::ShearWaveElastography;
 use kwavers_solver::forward::elastic::ElasticWaveConfig;
 // Simple finite difference derivative for benchmarking

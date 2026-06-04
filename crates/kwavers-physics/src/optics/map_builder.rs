@@ -22,13 +22,13 @@
 //!
 //! **New (recommended)**:
 //! ```rust,ignore
-//! use kwavers_domain::medium::optical_map::{OpticalPropertyMap, Region};
+//! use kwavers_medium::optical_map::{OpticalPropertyMap, Region};
 //! ```
 
 use ndarray::Array3;
 
 // Re-export domain types for backwards compatibility
-pub use kwavers_domain::medium::optical_map::{
+pub use kwavers_medium::optical_map::{
     Layer, OpticalPropertyMap, OpticalPropertyMapBuilder, Region,
 };
 
@@ -117,7 +117,7 @@ impl OpticalPropertyMapAnalysis for OpticalPropertyMap {
 mod tests {
     use super::*;
     use kwavers_grid::GridDimensions;
-    use kwavers_domain::medium::properties::OpticalPropertyData;
+    use kwavers_medium::properties::OpticalPropertyData;
 
     #[test]
     fn test_property_stats() {

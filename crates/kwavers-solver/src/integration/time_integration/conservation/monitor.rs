@@ -2,7 +2,7 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
-use kwavers_domain::medium::Medium;
+use kwavers_medium::Medium;
 use log::warn;
 use ndarray::{Array3, Zip};
 
@@ -149,7 +149,7 @@ impl ConservationMonitor {
                 let y = j as f64 * self.grid.dy;
                 let z = k as f64 * self.grid.dz;
 
-                let density = kwavers_domain::medium::density_at(medium, x, y, z, &self.grid);
+                let density = kwavers_medium::density_at(medium, x, y, z, &self.grid);
                 let gamma = medium.gamma(x, y, z, &self.grid);
 
                 // Kinetic energy density
@@ -203,9 +203,9 @@ impl ConservationMonitor {
                         let z = k as f64 * self.grid.dz;
 
                         let density =
-                            kwavers_domain::medium::density_at(medium, x, y, z, &self.grid);
+                            kwavers_medium::density_at(medium, x, y, z, &self.grid);
                         let sound_speed =
-                            kwavers_domain::medium::sound_speed_at(medium, x, y, z, &self.grid);
+                            kwavers_medium::sound_speed_at(medium, x, y, z, &self.grid);
 
                         // Potential energy density: Ep = p²/(2ρc²)
                         let potential_energy = p * p / (2.0 * density * sound_speed * sound_speed);
@@ -226,9 +226,9 @@ impl ConservationMonitor {
                 let y = j as f64 * self.grid.dy;
                 let z = k as f64 * self.grid.dz;
 
-                let density = kwavers_domain::medium::density_at(medium, x, y, z, &self.grid);
+                let density = kwavers_medium::density_at(medium, x, y, z, &self.grid);
                 let sound_speed =
-                    kwavers_domain::medium::sound_speed_at(medium, x, y, z, &self.grid);
+                    kwavers_medium::sound_speed_at(medium, x, y, z, &self.grid);
 
                 // Acoustic potential energy density: E = p²/(2ρc²)
                 let energy_density = p * p / (2.0 * density * sound_speed * sound_speed);

@@ -1,5 +1,5 @@
-use kwavers_domain::medium::heterogeneous::tissue::HeterogeneousTissueMedium;
-use kwavers_domain::medium::AbsorptionTissueType;
+use kwavers_medium::heterogeneous::tissue::HeterogeneousTissueMedium;
+use kwavers_medium::AbsorptionTissueType;
 use kwavers_grid::Grid;
 use kwavers::init_logging;
 use log::info;

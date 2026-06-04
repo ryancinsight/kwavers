@@ -20,7 +20,7 @@ pub mod sonoluminescence;
 pub use diffusion::{DiffusionOpticalProperties, LightDiffusion};
 
 // Re-export domain types for backwards compatibility
-pub use kwavers_domain::medium::optical_map::{
+pub use kwavers_medium::optical_map::{
     Layer, OpticalPropertyMap, OpticalPropertyMapBuilder, Region,
 };
 

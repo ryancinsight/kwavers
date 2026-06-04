@@ -7,7 +7,7 @@ use kwavers_core::constants::optical::{
 };
 use kwavers_field::indices::LIGHT_IDX;
 use kwavers_grid::Grid;
-use kwavers_domain::medium::Medium;
+use kwavers_medium::Medium;
 use crate::acoustics::traits::LightDiffusionModelTrait;
 use crate::optics::polarization::LinearPolarization;
 use crate::optics::PolarizationModel as PolarizationModelTrait;

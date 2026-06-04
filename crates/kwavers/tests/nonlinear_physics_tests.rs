@@ -30,7 +30,7 @@
 //! - Hamilton & Blackstock (1998). Nonlinear Acoustics. Academic Press.
 
 use kwavers_grid::Grid;
-use kwavers_domain::medium::HomogeneousMedium;
+use kwavers_medium::HomogeneousMedium;
 use kwavers_signal::SineWave;
 use kwavers_domain::source::{PointSource, Source};
 use kwavers_physics::acoustics::bubble_dynamics::{

@@ -145,8 +145,8 @@ fn elastic_wave_set_stiffness_tensors_stores_array() {
 /// mask is set at boundary-adjacent cells while interior cells remain clear.
 #[test]
 fn elastic_wave_detect_interfaces_marks_density_jump() {
-    use kwavers_domain::medium::heterogeneous::HeterogeneousMedium;
-    use kwavers_domain::medium::HomogeneousMedium;
+    use kwavers_medium::heterogeneous::HeterogeneousMedium;
+    use kwavers_medium::HomogeneousMedium;
 
     let (nx, ny, nz) = (10usize, 4, 4);
     let grid = Grid::new(nx, ny, nz, 0.001, 0.001, 0.001).unwrap();

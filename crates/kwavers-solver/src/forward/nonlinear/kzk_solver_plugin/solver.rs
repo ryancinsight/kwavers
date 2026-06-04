@@ -2,7 +2,7 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use kwavers_domain::medium::Medium;
+use kwavers_medium::Medium;
 use kwavers_domain::plugin::{PluginMetadata, PluginState};
 use ndarray::Array3;
 
@@ -59,7 +59,7 @@ impl KzkSolverPlugin {
         medium: &dyn Medium,
         max_frequency: f64,
     ) -> KwaversResult<()> {
-        use kwavers_domain::medium::AcousticProperties;
+        use kwavers_medium::AcousticProperties;
 
         const NUM_HARMONICS: usize = 10;
         let fundamental = max_frequency / NUM_HARMONICS as f64;
@@ -115,7 +115,7 @@ impl KzkSolverPlugin {
         medium: &dyn Medium,
         time_steps: usize,
     ) -> KwaversResult<Array3<f64>> {
-        use kwavers_domain::medium::AcousticProperties;
+        use kwavers_medium::AcousticProperties;
 
         let operators =
             self.frequency_operators
@@ -131,8 +131,8 @@ impl KzkSolverPlugin {
 
         let mut field = initial_field.clone();
         let dz = grid.dz;
-        let density = kwavers_domain::medium::density_at(medium, 0.0, 0.0, 0.0, grid);
-        let c0 = kwavers_domain::medium::sound_speed_at(medium, 0.0, 0.0, 0.0, grid);
+        let density = kwavers_medium::density_at(medium, 0.0, 0.0, 0.0, grid);
+        let c0 = kwavers_medium::sound_speed_at(medium, 0.0, 0.0, 0.0, grid);
         let beta = AcousticProperties::nonlinearity_coefficient(medium, 0.0, 0.0, 0.0, grid);
 
         // Strang splitting: L(dz/2) · N(dz) · L(dz/2)
@@ -219,11 +219,11 @@ impl KzkSolverPlugin {
         frequency: f64,
         medium: &dyn Medium,
     ) -> KwaversResult<f64> {
-        use kwavers_domain::medium::AcousticProperties;
+        use kwavers_medium::AcousticProperties;
 
         let grid = Grid::new(1, 1, 1, 1.0, 1.0, 1.0)?;
-        let density = kwavers_domain::medium::density_at(medium, 0.0, 0.0, 0.0, &grid);
-        let sound_speed = kwavers_domain::medium::sound_speed_at(medium, 0.0, 0.0, 0.0, &grid);
+        let density = kwavers_medium::density_at(medium, 0.0, 0.0, 0.0, &grid);
+        let sound_speed = kwavers_medium::sound_speed_at(medium, 0.0, 0.0, 0.0, &grid);
         let beta = AcousticProperties::nonlinearity_coefficient(medium, 0.0, 0.0, 0.0, &grid);
 
         let omega = TWO_PI * frequency;

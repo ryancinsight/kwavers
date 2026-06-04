@@ -28,7 +28,7 @@
 //! - Duck, F. A. (1990). Physical Properties of Tissue. Academic Press.
 //! - Apfel, R. E., & Holland, C. K. (1991). Gauging the likelihood of cavitation from short-pulse, low-duty cycle diagnostic ultrasound.
 
-use kwavers_domain::medium::properties::AcousticMaterialProperties;
+use kwavers_medium::properties::AcousticMaterialProperties;
 
 /// Trait defining the contract for calculating cavitation-induced biological damage.
 pub trait BioDamageModel {

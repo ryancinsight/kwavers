@@ -15,7 +15,7 @@ pub use kwavers_solver::plugin::PhysicsCatalog;
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use kwavers_domain::medium::Medium;
+use kwavers_medium::Medium;
 use kwavers_solver::plugin::PluginManager;
 
 /// Simulation-layer factory entry point.

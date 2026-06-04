@@ -1,7 +1,7 @@
 use kwavers_core::error::KwaversResult;
 use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;
-use kwavers_domain::medium::Medium;
+use kwavers_medium::Medium;
 use kwavers_domain::source::Source;
 use kwavers_physics::traits::AcousticWaveModel;
 use ndarray::{Array3, Array4, Axis};

@@ -1,7 +1,7 @@
 use kwavers_core::error::KwaversResult;
 use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;
-use kwavers_domain::medium::Medium;
+use kwavers_medium::Medium;
 use kwavers_domain::plugin::{PluginContext, PluginMetadata, PluginState};
 use kwavers_physics::thermal::diffusion::ThermalDiffusionConfig;
 use ndarray::Array4;
@@ -113,7 +113,7 @@ mod tests {
     use super::*;
     use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
     use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_K;
-    use kwavers_domain::medium::HomogeneousMedium;
+    use kwavers_medium::HomogeneousMedium;
     use ndarray::Array3;
 
     #[test]

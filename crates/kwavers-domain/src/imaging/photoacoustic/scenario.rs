@@ -3,7 +3,7 @@ use super::config::{
 };
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
-use crate::medium::optical_map::OpticalPropertyMap;
+use kwavers_medium::optical_map::OpticalPropertyMap;
 
 #[derive(Debug, Clone)]
 pub struct PhotoacousticScenario {

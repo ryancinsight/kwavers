@@ -1,6 +1,6 @@
 use kwavers_domain::boundary::DomainPmlConfig;
 use kwavers_grid::Grid;
-use kwavers_domain::medium::homogeneous::HomogeneousMedium;
+use kwavers_medium::homogeneous::HomogeneousMedium;
 use kwavers_domain::plugin::{Plugin, PluginContext, PluginFields};
 use kwavers_signal::SineWave;
 use kwavers_domain::source::{GaussianBuilder, Source};

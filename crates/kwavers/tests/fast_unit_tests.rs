@@ -7,7 +7,7 @@
 use kwavers_core::constants::{DENSITY_WATER, SOUND_SPEED_WATER};
 use kwavers_core::error::GridError;
 use kwavers_grid::Grid;
-use kwavers_domain::medium::{CoreMedium, HomogeneousMedium};
+use kwavers_medium::{CoreMedium, HomogeneousMedium};
 
 #[test]
 fn test_grid_creation_basic() {

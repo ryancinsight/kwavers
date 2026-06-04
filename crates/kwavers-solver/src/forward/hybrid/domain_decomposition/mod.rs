@@ -37,7 +37,7 @@ pub use region::{DomainRegion, DomainType};
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use kwavers_domain::medium::Medium;
+use kwavers_medium::Medium;
 use crate::hybrid::config::HybridDecompositionStrategy;
 
 /// Main domain decomposer that coordinates analysis and partitioning

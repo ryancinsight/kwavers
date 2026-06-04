@@ -21,7 +21,7 @@ pub use diffusion::ThermalDiffusionConfig;
 pub use thermal_dose::ThermalCEM43Grid;
 
 // Re-export canonical domain type
-pub use kwavers_domain::medium::properties::ThermalPropertyData;
+pub use kwavers_medium::properties::ThermalPropertyData;
 
 /// Common tissue types with thermal properties
 ///
@@ -37,7 +37,7 @@ pub mod tissues {
     use kwavers_core::constants::tissue_thermal::{
         SPECIFIC_HEAT_FAT, SPECIFIC_HEAT_LIVER, SPECIFIC_HEAT_MUSCLE, SPECIFIC_HEAT_TISSUE,
     };
-    use kwavers_domain::medium::properties::ThermalPropertyData;
+    use kwavers_medium::properties::ThermalPropertyData;
 
     /// Liver tissue properties
     ///

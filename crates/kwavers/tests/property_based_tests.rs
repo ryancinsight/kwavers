@@ -43,7 +43,7 @@
 //! - Clinical safety property verification
 
 use kwavers_grid::Grid;
-use kwavers_domain::medium::HomogeneousMedium;
+use kwavers_medium::HomogeneousMedium;
 use kwavers_domain::source::GridSource;
 use kwavers_domain::source::SourceMode;
 use kwavers_solver::forward::fdtd::{FdtdConfig, FdtdSolver};

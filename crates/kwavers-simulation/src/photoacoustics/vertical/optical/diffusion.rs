@@ -4,8 +4,8 @@ use kwavers_grid::GridDimensions;
 use kwavers_domain::imaging::photoacoustic::{
     IlluminationGeometry, OpticalModel, PhotoacousticScenario,
 };
-use kwavers_domain::medium::optical_map::OpticalPropertyMap;
-use kwavers_domain::medium::properties::OpticalPropertyData;
+use kwavers_medium::optical_map::OpticalPropertyMap;
+use kwavers_medium::properties::OpticalPropertyData;
 use kwavers_solver::forward::optical::diffusion::{
     DiffusionBoundaryCondition, DiffusionBoundaryConditions, DiffusionSolver, DiffusionSolverConfig,
 };

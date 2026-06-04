@@ -102,7 +102,7 @@ fn test_jones_polarization_model() {
 
     let grid = Grid::new(2, 2, 2, 1.0, 1.0, 1.0).unwrap();
 
-    let medium = kwavers_domain::medium::HomogeneousMedium::new(
+    let medium = kwavers_medium::HomogeneousMedium::new(
         1000.0,
         SOUND_SPEED_WATER_SIM,
         0.5,

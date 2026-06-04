@@ -6,7 +6,7 @@ use super::crosstalk::CrosstalkModel;
 use super::element::TransducerElement;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use crate::medium::Medium;
+use kwavers_medium::Medium;
 use kwavers_signal::Signal;
 use crate::source::Source;
 use ndarray::{Array1, Array3, Zip};
@@ -56,7 +56,7 @@ impl PhasedArrayTransducer {
 
         // Get sound speed at array center
         let (cx, cy, cz) = config.center_position;
-        let sound_speed = crate::medium::sound_speed_at(medium, cx, cy, cz, grid);
+        let sound_speed = kwavers_medium::sound_speed_at(medium, cx, cy, cz, grid);
 
         // Create elements
         let elements = Self::create_elements(&config);

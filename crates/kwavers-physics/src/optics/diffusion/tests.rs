@@ -1,6 +1,6 @@
 use super::*;
 use kwavers_core::constants::optical::REFRACTIVE_INDEX_SOFT_TISSUE;
-use kwavers_domain::medium::properties::OpticalPropertyData;
+use kwavers_medium::properties::OpticalPropertyData;
 
 #[test]
 fn test_optical_properties_from_domain() {
@@ -80,7 +80,7 @@ fn uniform_fluence_decays_at_rate_c_mu_a() {
     let phi0 = 1.0_f64;
     let mut fields: Array4<f64> = Array4::from_elem((LIGHT_IDX + 1, 8, 8, 8), phi0);
     let source: ndarray::Array3<f64> = ndarray::Array3::zeros((8, 8, 8));
-    let medium = kwavers_domain::medium::homogeneous::HomogeneousMedium::water(&grid);
+    let medium = kwavers_medium::homogeneous::HomogeneousMedium::water(&grid);
     let dt = 1.0e-12_f64; // 1 ps; chosen so dt·c·μₐ ≪ 1 (≈ 2.14e-3).
 
     solver.update_light(&mut fields, &source, &grid, &medium, dt);

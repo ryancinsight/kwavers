@@ -4,7 +4,7 @@
 //! by comparing against analytical solutions and known results.
 
 use kwavers_grid::Grid;
-use kwavers_domain::medium::{core::CoreMedium, homogeneous::HomogeneousMedium};
+use kwavers_medium::{core::CoreMedium, homogeneous::HomogeneousMedium};
 use std::f64::consts::PI;
 
 #[test]

@@ -2,8 +2,8 @@ use super::super::types::TumorSpec;
 use super::super::utils::compute_tumor_properties;
 use kwavers_optics::chromophores::HemoglobinDatabase;
 use kwavers_grid::GridDimensions;
-use crate::medium::optical_map::{OpticalPropertyMap, OpticalPropertyMapBuilder, Region};
-use crate::medium::properties::OpticalPropertyData;
+use kwavers_medium::optical_map::{OpticalPropertyMap, OpticalPropertyMapBuilder, Region};
+use kwavers_medium::properties::OpticalPropertyData;
 
 /// Tumor detection phantom builder
 #[derive(Debug)]

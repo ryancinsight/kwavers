@@ -17,9 +17,9 @@ impl NumericalValidator {
         let wavelength = 10.0 * self.grid.dx;
         let k = TWO_PI / wavelength;
         let omega =
-            k * kwavers_domain::medium::sound_speed_at(&self.medium, 0.0, 0.0, 0.0, &self.grid);
+            k * kwavers_medium::sound_speed_at(&self.medium, 0.0, 0.0, 0.0, &self.grid);
         let dt = 0.5 * self.grid.dx
-            / kwavers_domain::medium::sound_speed_at(&self.medium, 0.0, 0.0, 0.0, &self.grid);
+            / kwavers_medium::sound_speed_at(&self.medium, 0.0, 0.0, 0.0, &self.grid);
 
         let pstd_config = PSTDConfig::default();
         let pstd_source = GridSource::default();
@@ -42,7 +42,7 @@ impl NumericalValidator {
 
         let numerical_wavelength = TWO_PI / (k * (1.0 + pstd_phase_error));
         let group_velocity_error = (pstd_phase_error * omega / k).abs()
-            / kwavers_domain::medium::sound_speed_at(&self.medium, 0.0, 0.0, 0.0, &self.grid);
+            / kwavers_medium::sound_speed_at(&self.medium, 0.0, 0.0, 0.0, &self.grid);
 
         Ok(DispersionResults {
             pstd_phase_error,
@@ -77,7 +77,7 @@ impl NumericalValidator {
         dt: f64,
     ) -> Result<f64, Box<dyn std::error::Error>> {
         use std::f64::consts::PI;
-        let c0 = kwavers_domain::medium::sound_speed_at(&self.medium, 0.0, 0.0, 0.0, &self.grid);
+        let c0 = kwavers_medium::sound_speed_at(&self.medium, 0.0, 0.0, 0.0, &self.grid);
         let dx = self.grid.dx;
         let k_nyq = PI / dx;
         let k_max = if k > 0.0 { k.min(k_nyq) } else { k_nyq };
@@ -120,7 +120,7 @@ impl NumericalValidator {
         dt: f64,
     ) -> Result<f64, Box<dyn std::error::Error>> {
         use std::f64::consts::PI;
-        let c0 = kwavers_domain::medium::sound_speed_at(&self.medium, 0.0, 0.0, 0.0, &self.grid);
+        let c0 = kwavers_medium::sound_speed_at(&self.medium, 0.0, 0.0, 0.0, &self.grid);
         let dx = self.grid.dx;
         let cfl = c0 * dt / dx;
         let k_nyq = PI / dx;

@@ -41,7 +41,7 @@ use tracing::warn;
 use super::WesterveltFdtd;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use kwavers_domain::medium::Medium;
+use kwavers_medium::Medium;
 use kwavers_domain::source::Source;
 use crate::forward::nonlinear::conservation::{ConservationDiagnostics, ViolationSeverity};
 

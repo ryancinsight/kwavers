@@ -449,7 +449,7 @@ fn validate_photoacoustic_wave_equation() {
     // Theorem: ∂²p/∂t² - c²∇²p = Γμ_a Φ(r,t) ∂H/∂t
 
     use kwavers_grid::Grid;
-    use kwavers_domain::medium::homogeneous::HomogeneousMedium;
+    use kwavers_medium::homogeneous::HomogeneousMedium;
     use kwavers_simulation::modalities::photoacoustic::{
         PhotoacousticParameters, PhotoacousticSimulator,
     };

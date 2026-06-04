@@ -11,7 +11,7 @@ use std::sync::Arc;
 use super::GenericFdtdSolver;
 use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
 use kwavers_grid::Grid;
-use kwavers_domain::medium::Medium;
+use kwavers_medium::Medium;
 use kwavers_domain::sensor::GridSensorSet;
 use kwavers_domain::source::Source;
 use crate::interface::{Solver, SolverFeature, SolverStatistics};

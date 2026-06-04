@@ -1,7 +1,7 @@
 //! Nonlinear term computation for Westervelt equation
 
 use kwavers_grid::Grid;
-use kwavers_domain::medium::Medium;
+use kwavers_medium::Medium;
 use ndarray::{Array3, Zip};
 
 /// Compute the nonlinear term for the Westervelt equation
@@ -75,7 +75,7 @@ pub(super) fn compute_nonlinear_term_into(
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
-                let beta = kwavers_domain::medium::AcousticProperties::nonlinearity_coefficient(
+                let beta = kwavers_medium::AcousticProperties::nonlinearity_coefficient(
                     medium, x, y, z, grid,
                 );
 
@@ -189,7 +189,7 @@ pub(super) fn compute_viscoelastic_term_into(
 mod tests {
     use super::*;
     use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
-    use kwavers_domain::medium::{AcousticProperties, HomogeneousMedium};
+    use kwavers_medium::{AcousticProperties, HomogeneousMedium};
 
     /// **Theorem**: Westervelt explicit-form nonlinear coefficient is `+β/(ρc²)`.
     ///
@@ -274,7 +274,7 @@ mod tests {
     /// Viscosities are queried from the medium to avoid hardcoding defaults.
     #[test]
     fn viscoelastic_term_into_matches_direct_quadratic_laplacian() {
-        use kwavers_domain::medium::ViscousProperties;
+        use kwavers_medium::ViscousProperties;
 
         const RHO: f64 = kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
         const C: f64 = SOUND_SPEED_WATER_SIM;

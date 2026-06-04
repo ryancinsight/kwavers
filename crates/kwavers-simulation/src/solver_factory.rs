@@ -6,7 +6,7 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
-use kwavers_domain::medium::{density_at, sound_speed_at, AcousticProperties, CoreMedium, Medium};
+use kwavers_medium::{density_at, sound_speed_at, AcousticProperties, CoreMedium, Medium};
 use kwavers_domain::source::GridSource;
 use crate::solver_adapters::DgSimulationSolver;
 use kwavers_solver::config::{SolverConfiguration, SolverType};
@@ -209,7 +209,7 @@ mod tests {
     use kwavers_core::constants::fundamental::{
         DENSITY_WATER, DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER,
     };
-    use kwavers_domain::medium::homogeneous::HomogeneousMedium;
+    use kwavers_medium::homogeneous::HomogeneousMedium;
 
     #[test]
     fn grid_descriptor_preserves_grid_dimensions_and_spacing() {

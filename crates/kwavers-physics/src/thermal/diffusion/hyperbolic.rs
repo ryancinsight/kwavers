@@ -5,7 +5,7 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use kwavers_domain::medium::Medium;
+use kwavers_medium::Medium;
 use ndarray::{Array3, Zip};
 use std::ops::Range;
 
@@ -130,7 +130,7 @@ impl CattaneoVernotte {
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
 
-                let rho = kwavers_domain::medium::density_at(medium, x, y, z, grid);
+                let rho = kwavers_medium::density_at(medium, x, y, z, grid);
                 let cp = medium.specific_heat(x, y, z, grid);
 
                 *t -= dt * div / (rho * cp);
@@ -259,7 +259,7 @@ impl CattaneoVernotte {
 mod tests {
     use super::*;
     use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
-    use kwavers_domain::medium::homogeneous::HomogeneousMedium;
+    use kwavers_medium::homogeneous::HomogeneousMedium;
 
     fn homogeneous_unit_medium(grid: &Grid) -> HomogeneousMedium {
         let mut medium = HomogeneousMedium::new(1.0, SOUND_SPEED_WATER_SIM, 0.0, 0.0, grid);

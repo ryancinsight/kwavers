@@ -2,7 +2,7 @@
 
 use super::{analytical, DiffusionSolver, DiffusionSolverConfig};
 use kwavers_grid::Grid;
-use kwavers_domain::medium::properties::OpticalPropertyData;
+use kwavers_medium::properties::OpticalPropertyData;
 use anyhow::Result;
 use ndarray::Array3;
 

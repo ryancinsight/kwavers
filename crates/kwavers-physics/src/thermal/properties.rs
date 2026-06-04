@@ -35,7 +35,7 @@ use kwavers_core::constants::tissue_thermal::{
     SOFT_TISSUE_ABSORPTION_COEFF_PER_C, SOFT_TISSUE_SOUND_SPEED_COEFF_PER_C,
     SPECIFIC_HEAT_COEFF_PER_C, THERMAL_CONDUCTIVITY_COEFF_PER_C,
 };
-use kwavers_domain::medium::properties::ThermalPropertyData;
+use kwavers_medium::properties::ThermalPropertyData;
 
 /// Temperature-dependent thermal conductivity
 ///

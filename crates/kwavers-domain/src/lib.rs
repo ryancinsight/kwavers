@@ -100,7 +100,6 @@
 
 pub mod boundary;
 pub mod imaging;
-pub mod medium;
 pub mod mesh;
 pub mod phantoms;
 pub mod plugin;

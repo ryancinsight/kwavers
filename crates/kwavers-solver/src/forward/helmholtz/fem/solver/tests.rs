@@ -19,10 +19,10 @@ fn unit_tet() -> (TetrahedralMesh, [usize; 4]) {
     (mesh, [n0, n1, n2, n3])
 }
 
-fn homogeneous_medium() -> (kwavers_domain::medium::HomogeneousMedium, ()) {
+fn homogeneous_medium() -> (kwavers_medium::HomogeneousMedium, ()) {
     let grid = kwavers_grid::Grid::new(2, 2, 2, 1.0, 1.0, 1.0).unwrap();
     (
-        kwavers_domain::medium::HomogeneousMedium::new(
+        kwavers_medium::HomogeneousMedium::new(
             1000.0,
             SOUND_SPEED_WATER_SIM,
             0.0,

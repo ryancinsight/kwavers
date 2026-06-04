@@ -45,7 +45,7 @@ use medium::GpuMediumSnapshot;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_domain::boundary::cpml::{CPMLConfig, CPMLProfiles};
 use kwavers_grid::Grid;
-use kwavers_domain::medium::Medium;
+use kwavers_medium::Medium;
 use kwavers_domain::sensor::GridSensorSet;
 use kwavers_domain::source::{GridSource, Source};
 use kwavers_physics::acoustics::mechanics::absorption::power_law_db_cm_to_np_omega_m;
@@ -376,7 +376,7 @@ impl Solver for GpuPstdSimulationAdapter {
     fn initialize(
         &mut self,
         grid: &Grid,
-        _medium: &dyn kwavers_domain::medium::Medium,
+        _medium: &dyn kwavers_medium::Medium,
     ) -> KwaversResult<()> {
         let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
         if (nx, ny, nz) != (self.grid.nx, self.grid.ny, self.grid.nz) {

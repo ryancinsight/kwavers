@@ -7,8 +7,8 @@ use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use kwavers_core::constants::tissue_thermal::SPECIFIC_HEAT_TISSUE;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use kwavers_domain::medium::properties::ThermalPropertyData;
-use kwavers_domain::medium::Medium;
+use kwavers_medium::properties::ThermalPropertyData;
+use kwavers_medium::Medium;
 use kwavers_domain::therapy::types::{
     DomainTherapyModality, DomainTherapyParameters, DomainTreatmentMetrics,
 };
@@ -134,9 +134,9 @@ impl TherapyCalculator {
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
 
-                let rho = kwavers_domain::medium::density_at(medium.as_ref(), x, y, z, grid);
-                let c = kwavers_domain::medium::sound_speed_at(medium.as_ref(), x, y, z, grid);
-                let alpha = kwavers_domain::medium::AcousticProperties::absorption_coefficient(
+                let rho = kwavers_medium::density_at(medium.as_ref(), x, y, z, grid);
+                let c = kwavers_medium::sound_speed_at(medium.as_ref(), x, y, z, grid);
+                let alpha = kwavers_medium::AcousticProperties::absorption_coefficient(
                     medium.as_ref(),
                     x,
                     y,

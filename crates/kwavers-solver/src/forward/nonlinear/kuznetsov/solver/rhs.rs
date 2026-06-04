@@ -20,7 +20,7 @@
 
 use super::wave::KuznetsovWave;
 use kwavers_core::constants::numerical::{B_OVER_A_DIVISOR, NONLINEARITY_COEFFICIENT_OFFSET};
-use kwavers_domain::medium::Medium;
+use kwavers_medium::Medium;
 use kwavers_domain::source::Source;
 use crate::forward::nonlinear::kuznetsov::config::AcousticEquationMode;
 use crate::forward::nonlinear::kuznetsov::diffusion::compute_diffusive_term_workspace;
@@ -49,13 +49,13 @@ impl KuznetsovWave {
                 let center_y = self.grid.dy * (self.grid.ny as f64) / 2.0;
                 let center_z = self.grid.dz * (self.grid.nz as f64) / 2.0;
                 (
-                    kwavers_domain::medium::density_at(
+                    kwavers_medium::density_at(
                         medium, center_x, center_y, center_z, &self.grid,
                     ),
-                    kwavers_domain::medium::sound_speed_at(
+                    kwavers_medium::sound_speed_at(
                         medium, center_x, center_y, center_z, &self.grid,
                     ),
-                    kwavers_domain::medium::nonlinearity_at(
+                    kwavers_medium::nonlinearity_at(
                         medium, center_x, center_y, center_z, &self.grid,
                     ),
                     self.config.acoustic_diffusivity,
@@ -125,12 +125,12 @@ impl KuznetsovWave {
                     for i in 0..nx {
                         let (x, y, z) = self.grid.indices_to_coordinates(i, j, k);
                         self.workspace.cache_density[[i, j, k]] =
-                            kwavers_domain::medium::density_at(medium, x, y, z, &self.grid);
+                            kwavers_medium::density_at(medium, x, y, z, &self.grid);
                         self.workspace.cache_sound_speed[[i, j, k]] =
-                            kwavers_domain::medium::sound_speed_at(medium, x, y, z, &self.grid);
+                            kwavers_medium::sound_speed_at(medium, x, y, z, &self.grid);
                         if include_nonlinearity {
                             self.workspace.cache_nonlinearity[[i, j, k]] =
-                                kwavers_domain::medium::nonlinearity_at(medium, x, y, z, &self.grid);
+                                kwavers_medium::nonlinearity_at(medium, x, y, z, &self.grid);
                         }
                         self.workspace.cache_source[[i, j, k]] =
                             source.get_source_term(t, x, y, z, &self.grid);

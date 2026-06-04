@@ -9,7 +9,7 @@ use kwavers_core::constants::fundamental::{
 use kwavers_core::constants::tissue_acoustics::{B_OVER_A_SOFT_TISSUE, B_OVER_A_WATER, DENSITY_AIR};
 use crate::boundary::traits::BoundaryCondition;
 use kwavers_grid::GridTopologyExt;
-use crate::medium::properties::AcousticPropertyData;
+use kwavers_medium::properties::AcousticPropertyData;
 use ndarray::Array3;
 
 #[test]

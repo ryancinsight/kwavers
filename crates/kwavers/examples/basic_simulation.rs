@@ -2,8 +2,8 @@
 //!
 //! This example shows the simplest way to set up and run a simulation.
 
-use kwavers_domain::medium::CoreMedium;
-use kwavers_domain::medium::HomogeneousMedium;
+use kwavers_medium::CoreMedium;
+use kwavers_medium::HomogeneousMedium;
 use kwavers_core::time::Time;
 use kwavers_grid::Grid;
 use kwavers_core::error::KwaversResult;

@@ -5,7 +5,7 @@
 //! **Compliance**: All tests verify against known theoretical results
 
 use kwavers_core::constants::{DENSITY_WATER, SOUND_SPEED_WATER};
-use kwavers_domain::medium::{CoreMedium, HomogeneousMedium};
+use kwavers_medium::{CoreMedium, HomogeneousMedium};
 use kwavers_grid::Grid;
 
 const PI: f64 = std::f64::consts::PI;

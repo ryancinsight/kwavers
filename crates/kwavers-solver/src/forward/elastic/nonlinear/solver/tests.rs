@@ -3,7 +3,7 @@ use super::super::material::HyperelasticModel;
 use super::NonlinearElasticWaveSolver;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_grid::Grid;
-use kwavers_domain::medium::HomogeneousMedium;
+use kwavers_medium::HomogeneousMedium;
 use ndarray::Array3;
 
 /// CFL stability factor used internally by [`NonlinearElasticWaveSolver::calculate_time_step_for_amplitude`].

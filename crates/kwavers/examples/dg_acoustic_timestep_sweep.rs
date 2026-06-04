@@ -17,7 +17,7 @@ use dg_acoustic_common::{
     POLYNOMIAL_ORDER, SOUND_SPEED, STEPS,
 };
 use kwavers_grid::Grid;
-use kwavers_domain::medium::HomogeneousMedium;
+use kwavers_medium::HomogeneousMedium;
 use kwavers_domain::source::{GridSource, SourceMode};
 use kwavers_solver::forward::fdtd::{FdtdConfig, FdtdSolver, KSpaceCorrectionMode};
 use kwavers_solver::forward::pstd::config::{BoundaryConfig, KSpaceMethod};

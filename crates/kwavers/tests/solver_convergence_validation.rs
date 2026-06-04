@@ -16,7 +16,7 @@
 
 use kwavers_domain::boundary::{DomainPMLBoundary, DomainPmlConfig};
 use kwavers_grid::Grid;
-use kwavers_domain::medium::homogeneous::HomogeneousMedium;
+use kwavers_medium::homogeneous::HomogeneousMedium;
 use kwavers_solver::fdtd::{FdtdConfig, FdtdPlugin};
 use kwavers_solver::plugin::PluginManager;
 use ndarray::{s, Array4};

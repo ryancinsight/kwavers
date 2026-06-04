@@ -1,6 +1,6 @@
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use kwavers_domain::medium::Medium;
+use kwavers_medium::Medium;
 use kwavers_math::fft::Complex64 as Complex;
 use kwavers_math::fft::{fft_3d_array, ifft_3d_array};
 use ndarray::{Array3, Zip};
@@ -93,9 +93,9 @@ impl NonlinearWave {
                     let y = j as f64 * grid.dy;
                     let z = k as f64 * grid.dz;
 
-                    let density = kwavers_domain::medium::density_at(medium, x, y, z, grid);
+                    let density = kwavers_medium::density_at(medium, x, y, z, grid);
                     let b_over_a =
-                        kwavers_domain::medium::AcousticProperties::nonlinearity_parameter(
+                        kwavers_medium::AcousticProperties::nonlinearity_parameter(
                             medium, x, y, z, grid,
                         );
 
@@ -121,7 +121,7 @@ impl NonlinearWave {
 mod tests {
     use super::super::super::wave_model::NonlinearWave;
     use kwavers_grid::Grid;
-    use kwavers_domain::medium::HomogeneousMedium;
+    use kwavers_medium::HomogeneousMedium;
     use ndarray::Array3;
 
     /// A spatially uniform (constant) pressure field has zero gradient and zero

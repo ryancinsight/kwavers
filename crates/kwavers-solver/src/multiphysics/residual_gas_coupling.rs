@@ -11,7 +11,7 @@
 //! absorption-operator re-initialisation, so the subsequent pulse is physically
 //! shielded rather than empirically derated.
 
-use kwavers_domain::medium::Medium;
+use kwavers_medium::Medium;
 use kwavers_physics::acoustics::bubble_dynamics::{
     commander_prosperetti_attenuation, wood_sound_speed,
 };
@@ -312,10 +312,10 @@ mod tests {
     #[test]
     fn in_place_shielding_modifies_heterogeneous_medium_pstd_inputs() {
         use kwavers_grid::Grid;
-        use kwavers_domain::medium::heterogeneous::tissue::{
+        use kwavers_medium::heterogeneous::tissue::{
             AbsorptionTissueType, HeterogeneousTissueMedium,
         };
-        use kwavers_domain::medium::{ArrayAccess, CoreMedium};
+        use kwavers_medium::{ArrayAccess, CoreMedium};
         use kwavers_physics::acoustics::bubble_dynamics::commander_prosperetti_attenuation;
         use kwavers_physics::acoustics::mechanics::absorption::power_law_db_cm_to_np_omega_m;
 
@@ -388,10 +388,10 @@ mod tests {
     #[test]
     fn wood_only_changes_sound_speed_but_not_absorption() {
         use kwavers_grid::Grid;
-        use kwavers_domain::medium::heterogeneous::tissue::{
+        use kwavers_medium::heterogeneous::tissue::{
             AbsorptionTissueType, HeterogeneousTissueMedium,
         };
-        use kwavers_domain::medium::{ArrayAccess, CoreMedium};
+        use kwavers_medium::{ArrayAccess, CoreMedium};
 
         let nx = 9usize;
         let grid = Grid::new(nx, 1, 1, 0.5e-3, 0.5e-3, 0.5e-3).expect("valid grid");

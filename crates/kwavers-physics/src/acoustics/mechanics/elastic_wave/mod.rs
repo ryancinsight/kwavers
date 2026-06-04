@@ -15,7 +15,7 @@ mod tests;
 
 use kwavers_core::error::{KwaversResult, PhysicsError};
 use kwavers_grid::Grid;
-use kwavers_domain::medium::Medium;
+use kwavers_medium::Medium;
 
 use metrics::ElasticWaveMetrics;
 use ndarray::{Array3, Array4};

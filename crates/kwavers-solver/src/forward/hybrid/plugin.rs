@@ -3,7 +3,7 @@
 use kwavers_core::error::KwaversResult;
 use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;
-use kwavers_domain::medium::Medium;
+use kwavers_medium::Medium;
 use kwavers_domain::plugin::{PluginMetadata, PluginState};
 use crate::hybrid::{HybridConfig, HybridSolver};
 use ndarray::Array4;

@@ -12,6 +12,7 @@ kwavers-core = { path = "../kwavers-core", features = ["registration"] }
 kwavers-optics = { path = "../kwavers-optics" }
 kwavers-math = { path = "../kwavers-math" }
 kwavers-grid = { path = "../kwavers-grid" }
+kwavers-medium = { path = "../kwavers-medium" }
 kwavers-domain = { path = "../kwavers-domain" }
 kwavers-physics = { path = "../kwavers-physics" }
 kwavers-solver = { path = "../kwavers-solver" }

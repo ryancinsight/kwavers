@@ -1,4 +1,4 @@
-use crate::medium::optical_map::OpticalPropertyMap;
+use kwavers_medium::optical_map::OpticalPropertyMap;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OpticalModel {

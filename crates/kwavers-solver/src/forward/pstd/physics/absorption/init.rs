@@ -30,7 +30,7 @@ use super::kernel::AbsorptionKernel;
 use kwavers_core::constants::ABSORPTION_SINGULARITY_THRESHOLD;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
-use kwavers_domain::medium::Medium;
+use kwavers_medium::Medium;
 use kwavers_physics::acoustics::mechanics::absorption::{
     power_law_db_cm_to_np_omega_m, AbsorptionMode,
 };

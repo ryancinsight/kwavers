@@ -62,7 +62,7 @@
 //! - Holzapfel G.A. (2000). *Nonlinear Solid Mechanics*. Wiley, §6.4.
 
 use kwavers_core::error::{KwaversResult, PhysicsError};
-use kwavers_domain::medium::properties::ElasticPropertyData;
+use kwavers_medium::properties::ElasticPropertyData;
 
 /// Anisotropic elastic properties using Voigt notation
 /// Follows SOLID principles with clear separation of concerns

@@ -10,7 +10,7 @@ pub use kwavers_grid::Grid;
 pub use kwavers_domain::imaging::ultrasound::elastography::{
     InversionMethod, NonlinearInversionMethod, NonlinearParameterMap,
 };
-pub use kwavers_domain::medium::HomogeneousMedium;
+pub use kwavers_medium::HomogeneousMedium;
 pub use kwavers_physics::acoustics::imaging::modalities::elastography::{
     HarmonicDetectionConfig, HarmonicDetector, HarmonicDisplacementField,
 };

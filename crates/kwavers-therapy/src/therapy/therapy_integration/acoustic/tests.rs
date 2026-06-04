@@ -1,7 +1,7 @@
 use super::AcousticWaveSolver;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_grid::Grid;
-use kwavers_domain::medium::HomogeneousMedium;
+use kwavers_medium::HomogeneousMedium;
 
 fn create_test_grid() -> Grid {
     Grid::new(32, 32, 32, 0.0005, 0.0005, 0.0005).expect("Failed to create grid")

@@ -23,7 +23,7 @@ use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_TI
 use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_K;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use kwavers_domain::medium::Medium;
+use kwavers_medium::Medium;
 use kwavers_physics::chemistry::ChemicalModel;
 use kwavers_physics::traits::ChemicalModelTrait;
 use ndarray::Array3;

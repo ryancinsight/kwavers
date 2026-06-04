@@ -8,7 +8,7 @@ use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_K;
 use kwavers_core::constants::tissue_acoustics::DENSITY_BLOOD;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use kwavers_domain::medium::Medium;
+use kwavers_medium::Medium;
 use ndarray::{Array3, ArrayView3, Zip};
 
 /// Pennes bioheat equation parameters
@@ -71,7 +71,7 @@ impl PennesBioheat {
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
 
-                let rho = kwavers_domain::medium::density_at(medium, x, y, z, grid);
+                let rho = kwavers_medium::density_at(medium, x, y, z, grid);
                 let cp = medium.specific_heat(x, y, z, grid);
 
                 let perfusion_coeff = self.params.perfusion_rate
@@ -113,7 +113,7 @@ impl PennesBioheat {
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
 
-                let rho = kwavers_domain::medium::density_at(medium, x, y, z, grid);
+                let rho = kwavers_medium::density_at(medium, x, y, z, grid);
                 let cp = medium.specific_heat(x, y, z, grid);
                 let alpha = medium.thermal_diffusivity(x, y, z, grid);
                 let perfusion = self.params.perfusion_rate

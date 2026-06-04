@@ -10,7 +10,7 @@ mod tests {
     use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
     use kwavers_core::constants::{DENSITY_WATER, SOUND_SPEED_WATER};
     use kwavers_grid::Grid;
-    use kwavers_domain::medium::HomogeneousMedium;
+    use kwavers_medium::HomogeneousMedium;
     use kwavers_domain::source::PointSource;
     use kwavers_physics::traits::AcousticWaveModel;
     use ndarray::Array4;

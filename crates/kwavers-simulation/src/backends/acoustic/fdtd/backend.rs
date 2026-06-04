@@ -2,7 +2,7 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
-use kwavers_domain::medium::Medium;
+use kwavers_medium::Medium;
 use kwavers_domain::source::GridSource;
 use kwavers_physics::acoustics::mechanics::acoustic_wave::AcousticSpatialOrder;
 use kwavers_solver::forward::fdtd::{FdtdConfig, FdtdSolver, KSpaceCorrectionMode};
@@ -104,7 +104,7 @@ impl FdtdBackend {
             for j in (0..grid.ny).step_by(dj.max(1)) {
                 for i in (0..grid.nx).step_by(di.max(1)) {
                     let (x, y, z) = grid.indices_to_coordinates(i, j, k);
-                    let c = kwavers_domain::medium::sound_speed_at(medium, x, y, z, grid);
+                    let c = kwavers_medium::sound_speed_at(medium, x, y, z, grid);
                     if c > c_max {
                         c_max = c;
                     }

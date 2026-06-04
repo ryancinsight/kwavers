@@ -2,7 +2,7 @@ use super::GpuPstdSimulationAdapter;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER};
 use kwavers_core::error::KwaversError;
 use kwavers_grid::Grid;
-use kwavers_domain::medium::homogeneous::HomogeneousMedium;
+use kwavers_medium::homogeneous::HomogeneousMedium;
 use kwavers_solver::config::{SolverConfiguration, SolverType};
 
 #[test]

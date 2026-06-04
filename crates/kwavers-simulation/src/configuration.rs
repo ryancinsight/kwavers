@@ -9,7 +9,7 @@ use std::path::Path;
 // Import domain configurations
 use kwavers_domain::boundary::config::BoundaryParameters;
 use kwavers_grid::config::DomainGridParameters;
-use kwavers_domain::medium::config::DomainMediumParameters;
+use kwavers_medium::config::DomainMediumParameters;
 
 // Import relocated parameters
 use kwavers_domain::source::DomainSourceParameters;
@@ -208,7 +208,7 @@ mod tests {
     use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use kwavers_domain::boundary::config::BoundaryParameters;
     use kwavers_grid::config::DomainGridParameters;
-    use kwavers_domain::medium::config::DomainMediumParameters;
+    use kwavers_medium::config::DomainMediumParameters;
     use kwavers_domain::source::config::DomainSourceParameters;
     use crate::parameters::SimulationParameters;
     use kwavers_solver::config::SolverConfiguration;

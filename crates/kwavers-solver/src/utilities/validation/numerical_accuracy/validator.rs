@@ -1,7 +1,7 @@
 use super::{ConvergenceResults, NumericalAccuracyResults, NumericalValidator};
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_grid::Grid;
-use kwavers_domain::medium::HomogeneousMedium;
+use kwavers_medium::HomogeneousMedium;
 
 impl NumericalValidator {
     /// Create new validator with default test configuration

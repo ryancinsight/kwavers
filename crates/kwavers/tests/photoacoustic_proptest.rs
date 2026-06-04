@@ -4,7 +4,7 @@
 //! correct dimensionality, and finite energy across randomized small grids.
 
 use kwavers_grid::Grid;
-use kwavers_domain::medium::homogeneous::HomogeneousMedium;
+use kwavers_medium::homogeneous::HomogeneousMedium;
 use kwavers_simulation::modalities::photoacoustic::{PhotoacousticParameters, PhotoacousticSimulator};
 use proptest::prelude::*;
 

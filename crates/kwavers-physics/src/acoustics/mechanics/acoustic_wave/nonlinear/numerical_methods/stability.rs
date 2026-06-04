@@ -1,5 +1,5 @@
 use kwavers_grid::Grid;
-use kwavers_domain::medium::Medium;
+use kwavers_medium::Medium;
 use log::warn;
 use ndarray::Array3;
 use std::f64;
@@ -44,7 +44,7 @@ impl NonlinearWave {
             for j in 0..grid.ny {
                 for i in 0..grid.nx {
                     let (x, y, z) = grid.indices_to_coordinates(i, j, k);
-                    let c = kwavers_domain::medium::sound_speed_at(medium, x, y, z, grid);
+                    let c = kwavers_medium::sound_speed_at(medium, x, y, z, grid);
                     max_c = max_c.max(c);
                 }
             }
@@ -81,7 +81,7 @@ impl NonlinearWave {
 mod tests {
     use super::super::super::wave_model::NonlinearWave;
     use kwavers_grid::Grid;
-    use kwavers_domain::medium::HomogeneousMedium;
+    use kwavers_medium::HomogeneousMedium;
     use ndarray::Array3;
 
     /// Values beyond `max_pressure` are clamped to ±max_pressure.

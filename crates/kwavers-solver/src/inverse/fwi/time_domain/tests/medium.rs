@@ -8,8 +8,8 @@ use ndarray::Array3;
 ///
 #[test]
 fn test_fwi_medium_density_not_water() {
-    use kwavers_domain::medium::heterogeneous::HeterogeneousFactory;
-    use kwavers_domain::medium::CoreMedium;
+    use kwavers_medium::heterogeneous::HeterogeneousFactory;
+    use kwavers_medium::CoreMedium;
 
     let (nx, ny, nz) = (8usize, 8, 8);
     let sound_speed = Array3::from_elem((nx, ny, nz), 2000.0_f64);
@@ -35,8 +35,8 @@ fn test_fwi_medium_density_not_water() {
 ///
 #[test]
 fn test_fwi_forward_medium_sound_speed_matches_model() {
-    use kwavers_domain::medium::heterogeneous::HeterogeneousFactory;
-    use kwavers_domain::medium::CoreMedium;
+    use kwavers_medium::heterogeneous::HeterogeneousFactory;
+    use kwavers_medium::CoreMedium;
 
     let (nx, ny, nz) = (6usize, 6, 6);
     let mut model = Array3::from_elem((nx, ny, nz), 1800.0_f64);

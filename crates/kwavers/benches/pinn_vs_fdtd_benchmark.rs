@@ -9,7 +9,7 @@
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use kwavers_grid::Grid;
-use kwavers_domain::medium::homogeneous::HomogeneousMedium;
+use kwavers_medium::homogeneous::HomogeneousMedium;
 use kwavers_solver::fdtd::{FdtdConfig, FdtdSolver};
 use kwavers_domain::source::GridSource;
 use ndarray::{Array1, Array2};

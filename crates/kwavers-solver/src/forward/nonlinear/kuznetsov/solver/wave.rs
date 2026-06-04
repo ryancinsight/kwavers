@@ -3,7 +3,7 @@
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use kwavers_domain::medium::Medium;
+use kwavers_medium::Medium;
 use crate::forward::nonlinear::conservation::{
     ConservationDiagnostics, ConservationTolerances, ConservationTracker,
 };
@@ -79,9 +79,9 @@ impl KuznetsovWave {
         let center_y = self.grid.dy * (self.grid.ny as f64) / 2.0;
         let center_z = self.grid.dz * (self.grid.nz as f64) / 2.0;
         self.medium_properties.rho0 =
-            kwavers_domain::medium::density_at(medium, center_x, center_y, center_z, &self.grid);
+            kwavers_medium::density_at(medium, center_x, center_y, center_z, &self.grid);
         self.medium_properties.c0 =
-            kwavers_domain::medium::sound_speed_at(medium, center_x, center_y, center_z, &self.grid);
+            kwavers_medium::sound_speed_at(medium, center_x, center_y, center_z, &self.grid);
 
         // ConservationDiagnostics trait is in scope — impl is in diagnostics_impl.rs
         let initial_energy = self.calculate_total_energy();

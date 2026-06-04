@@ -23,7 +23,7 @@
 use anyhow::Result;
 use kwavers_domain::phantoms::{ClinicalPhantoms, PhantomBuilder};
 use kwavers_grid::GridDimensions;
-use kwavers_domain::medium::properties::OpticalPropertyData;
+use kwavers_medium::properties::OpticalPropertyData;
 use kwavers_physics::optics::map_builder::{OpticalPropertyMapAnalysis, OpticalPropertyMapBuilder, Region};
 
 fn main() -> Result<()> {

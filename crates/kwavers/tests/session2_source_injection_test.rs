@@ -22,7 +22,7 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use kwavers_domain::medium::HomogeneousMedium;
+use kwavers_medium::HomogeneousMedium;
 use kwavers_signal::Signal;
 use kwavers_domain::source::custom::FunctionSource;
 use kwavers_domain::source::{GridSource, SourceField};

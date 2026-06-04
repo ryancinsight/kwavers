@@ -13,7 +13,7 @@
 
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_grid::Grid;
-use kwavers_domain::medium::HomogeneousMedium;
+use kwavers_medium::HomogeneousMedium;
 use kwavers_domain::sensor::recorder::fields::{SensorRecordField, SensorRecordSpec};
 use kwavers_domain::sensor::recorder::simple::SensorRecorder;
 use kwavers_domain::source::GridSource;

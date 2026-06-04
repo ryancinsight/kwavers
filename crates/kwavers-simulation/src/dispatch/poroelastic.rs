@@ -95,7 +95,7 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
 mod tests {
     use super::*;
     use kwavers_grid::Grid;
-    use kwavers_domain::medium::homogeneous::HomogeneousMedium;
+    use kwavers_medium::homogeneous::HomogeneousMedium;
     use kwavers_domain::source::grid_source::GridSource;
     use crate::configs::PoroelasticConfig;
     use kwavers_solver::config::SolverType;
@@ -105,7 +105,7 @@ mod tests {
     /// Build a minimal `SimulationRunRequest` for poroelastic dispatch testing.
     fn make_request<'a>(
         grid: &'a Grid,
-        medium: &'a dyn kwavers_domain::medium::traits::Medium,
+        medium: &'a dyn kwavers_medium::traits::Medium,
         poroelastic: Option<&'a PoroelasticConfig>,
     ) -> SimulationRunRequest<'a> {
         SimulationRunRequest {

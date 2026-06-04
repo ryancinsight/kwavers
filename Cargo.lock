@@ -4821,6 +4821,7 @@ dependencies = [
  "kwavers-gpu",
  "kwavers-grid",
  "kwavers-math",
+ "kwavers-medium",
  "kwavers-optics",
  "kwavers-physics",
  "kwavers-signal",
@@ -4877,6 +4878,7 @@ dependencies = [
  "kwavers-field",
  "kwavers-grid",
  "kwavers-math",
+ "kwavers-medium",
  "kwavers-signal",
  "kwavers-solver",
  "log",
@@ -4929,6 +4931,7 @@ dependencies = [
  "kwavers-gpu",
  "kwavers-grid",
  "kwavers-math",
+ "kwavers-medium",
  "kwavers-optics",
  "kwavers-physics",
  "kwavers-solver",
@@ -4956,6 +4959,7 @@ dependencies = [
  "kwavers-field",
  "kwavers-grid",
  "kwavers-math",
+ "kwavers-medium",
  "kwavers-optics",
  "kwavers-signal",
  "log",
@@ -4998,6 +5002,7 @@ dependencies = [
  "kwavers-domain",
  "kwavers-grid",
  "kwavers-math",
+ "kwavers-medium",
  "kwavers-physics",
  "kwavers-signal",
  "kwavers-solver",
@@ -5045,6 +5050,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "kwavers-medium"
+version = "3.0.0"
+dependencies = [
+ "approx",
+ "kwavers-core",
+ "kwavers-grid",
+ "kwavers-math",
+ "log",
+ "nalgebra 0.32.6",
+ "ndarray 0.16.1",
+ "num-complex",
+ "proptest",
+ "rayon",
+ "serde",
+]
+
+[[package]]
 name = "kwavers-optics"
 version = "3.0.0"
 dependencies = [
@@ -5062,6 +5084,7 @@ dependencies = [
  "kwavers-field",
  "kwavers-grid",
  "kwavers-math",
+ "kwavers-medium",
  "log",
  "ndarray 0.16.1",
  "ndarray-npy",
@@ -5089,6 +5112,7 @@ dependencies = [
  "kwavers-gpu",
  "kwavers-grid",
  "kwavers-math",
+ "kwavers-medium",
  "kwavers-physics",
  "kwavers-signal",
  "kwavers-simulation",
@@ -5133,6 +5157,7 @@ dependencies = [
  "kwavers-gpu",
  "kwavers-grid",
  "kwavers-math",
+ "kwavers-medium",
  "kwavers-physics",
  "kwavers-signal",
  "kwavers-solver",
@@ -5161,6 +5186,7 @@ dependencies = [
  "kwavers-field",
  "kwavers-grid",
  "kwavers-math",
+ "kwavers-medium",
  "kwavers-physics",
  "kwavers-signal",
  "log",
@@ -5191,6 +5217,7 @@ dependencies = [
  "kwavers-domain",
  "kwavers-grid",
  "kwavers-math",
+ "kwavers-medium",
  "kwavers-physics",
  "kwavers-simulation",
  "kwavers-solver",

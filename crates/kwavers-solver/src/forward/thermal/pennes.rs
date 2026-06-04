@@ -5,7 +5,7 @@
 //!
 //! Where Q is the heat source from ultrasound absorption.
 
-use kwavers_domain::medium::properties::ThermalPropertyData;
+use kwavers_medium::properties::ThermalPropertyData;
 use ndarray::Array3;
 
 /// Pennes bioheat equation solver

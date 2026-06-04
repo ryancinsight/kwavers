@@ -16,7 +16,7 @@
 
 use kwavers_domain::boundary::cpml::CPMLConfig;
 use kwavers_grid::Grid;
-use kwavers_domain::medium::HomogeneousMedium;
+use kwavers_medium::HomogeneousMedium;
 use kwavers_signal::{Signal, SineWave};
 use kwavers_solver::forward::pstd::config::BoundaryConfig;
 use kwavers_solver::forward::pstd::config::{KSpaceMethod, PSTDConfig};

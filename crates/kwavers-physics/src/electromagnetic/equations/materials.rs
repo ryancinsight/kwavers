@@ -21,7 +21,7 @@ impl EMMaterialUtils {
     #[must_use]
     pub fn create_uniform_distribution(
         shape: &[usize],
-        props: kwavers_domain::medium::properties::ElectromagneticPropertyData,
+        props: kwavers_medium::properties::ElectromagneticPropertyData,
     ) -> EMMaterialDistribution {
         let grid_shape = ndarray::IxDyn(shape);
         EMMaterialDistribution {
@@ -56,7 +56,7 @@ impl EMMaterialDistribution {
     #[inline]
     #[must_use]
     pub fn vacuum(shape: &[usize]) -> Self {
-        let props = kwavers_domain::medium::properties::ElectromagneticPropertyData::vacuum();
+        let props = kwavers_medium::properties::ElectromagneticPropertyData::vacuum();
         EMMaterialUtils::create_uniform_distribution(shape, props)
     }
 
@@ -75,7 +75,7 @@ impl EMMaterialDistribution {
     pub fn at(
         &self,
         index: &[usize],
-    ) -> Result<kwavers_domain::medium::properties::ElectromagneticPropertyData, String> {
+    ) -> Result<kwavers_medium::properties::ElectromagneticPropertyData, String> {
         // Validate index bounds
         if index.len() != self.permittivity.ndim() {
             return Err(format!(
@@ -103,7 +103,7 @@ impl EMMaterialDistribution {
         let relaxation_time = self.relaxation_time.as_ref().map(|arr| arr[index]);
 
         // Construct canonical domain property with validation
-        kwavers_domain::medium::properties::ElectromagneticPropertyData::new(
+        kwavers_medium::properties::ElectromagneticPropertyData::new(
             permittivity,
             permeability,
             conductivity,
@@ -132,7 +132,7 @@ mod tests {
 
     #[test]
     fn test_uniform_material_creation() {
-        let vacuum_props = kwavers_domain::medium::properties::ElectromagneticPropertyData::vacuum();
+        let vacuum_props = kwavers_medium::properties::ElectromagneticPropertyData::vacuum();
         let material = EMMaterialUtils::create_uniform_distribution(&[10, 10], vacuum_props);
 
         assert_eq!(material.shape(), &[10, 10]);
@@ -152,7 +152,7 @@ mod tests {
 
     #[test]
     fn test_at_method() {
-        let tissue_props = kwavers_domain::medium::properties::ElectromagneticPropertyData::tissue();
+        let tissue_props = kwavers_medium::properties::ElectromagneticPropertyData::tissue();
         let material = EMMaterialUtils::create_uniform_distribution(&[3, 3], tissue_props);
         let props = material.at(&[1, 1]).unwrap();
 

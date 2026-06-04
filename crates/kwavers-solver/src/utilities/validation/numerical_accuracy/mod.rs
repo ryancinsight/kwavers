@@ -3,7 +3,7 @@
 //! Comprehensive validation for PSTD, FDTD, and Kuznetsov equation implementations.
 
 use kwavers_grid::Grid;
-use kwavers_domain::medium::HomogeneousMedium;
+use kwavers_medium::HomogeneousMedium;
 use log::info;
 
 mod boundaries;

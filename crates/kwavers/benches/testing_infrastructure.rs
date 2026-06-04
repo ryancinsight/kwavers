@@ -9,7 +9,7 @@ use kwavers_core::constants::{DENSITY_WATER, SOUND_SPEED_WATER};
 use kwavers_analysis::testing::acoustic_properties::*;
 use kwavers_analysis::testing::grid_properties::*;
 use kwavers_analysis::testing::medium_properties::*;
-use kwavers_domain::medium::HomogeneousMedium;
+use kwavers_medium::HomogeneousMedium;
 use kwavers_grid::Grid;
 
 /// Benchmark grid creation for various sizes

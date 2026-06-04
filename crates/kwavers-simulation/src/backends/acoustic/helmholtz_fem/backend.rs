@@ -2,7 +2,7 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
-use kwavers_domain::medium::Medium;
+use kwavers_medium::Medium;
 use kwavers_solver::forward::helmholtz::fem::{FemHelmholtzConfig, FemHelmholtzSolver};
 use num_complex::Complex64;
 

@@ -7,7 +7,7 @@ use super::{FdtdConfig, FdtdSolver};
 use kwavers_core::error::{KwaversError, KwaversResult, PhysicsError};
 use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;
-use kwavers_domain::medium::Medium;
+use kwavers_medium::Medium;
 use kwavers_domain::plugin::{PluginContext, PluginMetadata, PluginState};
 use kwavers_domain::source::GridSource;
 

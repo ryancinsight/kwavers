@@ -6,8 +6,8 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_domain::boundary::{CPMLBoundary, DomainPMLBoundary};
 use kwavers_field::wave::WaveFields;
 use kwavers_grid::Grid;
-use kwavers_domain::medium::MaterialFields;
-use kwavers_domain::medium::Medium;
+use kwavers_medium::MaterialFields;
+use kwavers_medium::Medium;
 use kwavers_domain::sensor::recorder::simple::SensorRecorder;
 use kwavers_domain::source::GridSource;
 use kwavers_math::fft::shift_operators::generate_shift_1d;
@@ -131,12 +131,12 @@ impl PSTDSolver {
                 for j in 0..grid.ny {
                     for i in 0..grid.nx {
                         let (x, y, z) = grid.indices_to_coordinates(i, j, k);
-                        rho0[[i, j, k]] = kwavers_domain::medium::density_at(medium, x, y, z, &grid);
+                        rho0[[i, j, k]] = kwavers_medium::density_at(medium, x, y, z, &grid);
                         c0[[i, j, k]] =
-                            kwavers_domain::medium::sound_speed_at(medium, x, y, z, &grid);
+                            kwavers_medium::sound_speed_at(medium, x, y, z, &grid);
                         if let Some(ref mut b) = bon {
                             b[[i, j, k]] =
-                                kwavers_domain::medium::nonlinearity_at(medium, x, y, z, &grid);
+                                kwavers_medium::nonlinearity_at(medium, x, y, z, &grid);
                         }
                     }
                 }

@@ -1,8 +1,8 @@
 # Chapter 4: Media and Tissue Models
 
-**Module ownership:** `kwavers::domain::medium`, `kwavers::domain::medium::absorption`,
-`kwavers::domain::medium::heterogeneous`, `kwavers::domain::medium::homogeneous`,
-`kwavers::physics::acoustics`, `kwavers::physics::thermal`
+**Module ownership:** `kwavers_domain::medium`, `kwavers_domain::medium::absorption`,
+`kwavers_domain::medium::heterogeneous`, `kwavers_domain::medium::homogeneous`,
+`kwavers_physics::acoustics`, `kwavers_physics::thermal`
 
 ---
 
@@ -63,7 +63,10 @@ $$
 The following table consolidates values from Duck (1990), Goss et al. (1978), and ICRU Report
 61. The nonlinearity parameter $B/A$ is from Bjørnø (1986) and Everbach & Apfel (1995).
 
-![Tissue parameter summary](figures/ch_media/fig01_tissue_sound_speed.png)
+![Sound speed in water vs temperature](figures/ch12/fig01_sound_speed_temperature.png)
+
+**Figure 4.1.** Sound speed in water versus temperature (Del Grosso–Mader); the basis for
+the temperature-dependent `c₀(T)` correction in coupled thermal–acoustic runs.
 
 **Table 4.1 — Acoustic parameters of biological tissues at 37 °C**
 
@@ -71,7 +74,7 @@ The following table consolidates values from Duck (1990), Goss et al. (1978), an
 |------------------|-------------------------|---------------------|---------------|---------------------------------------|------|-------|
 | Water (20 °C)    | 998                     | 1480                | 1.48          | 0.002                                 | 2.0  | 5.0   |
 | Blood            | 1060                    | 1584                | 1.68          | 0.15                                  | 1.0  | 5.5   |
-| Liver            | 1070                    | 1570                | 1.68          | 0.40                                  | 1.0  | 6.5   |
+| Liver            | 1070                    | 1570                | 1.68          | 0.50                                  | 1.0  | 6.75  |
 | Kidney (cortex)  | 1050                    | 1560                | 1.64          | 0.50                                  | 1.0  | 6.8   |
 | Fat (adipose)    | 900                     | 1450                | 1.31          | 0.48                                  | 1.0  | 10.0  |
 | Cortical bone    | 1920                    | 4080                | 7.83          | 3.0                                   | 1.0  | 8.0   |
@@ -82,24 +85,30 @@ The following table consolidates values from Duck (1990), Goss et al. (1978), an
 
 Sources: Duck (1990), ICRU Report 61 (1998), Goss et al. (1978), Szabo (1994).
 
-These values are encoded directly in `kwavers::domain::medium::properties::tissue` as
+These values are encoded directly in `kwavers_domain::medium::properties::tissue` as
 compile-time constants of type `TissueProperties`. The canonical definitions are, for
 example:
 
 ```rust
 // kwavers/src/domain/medium/properties/tissue.rs
 pub const LIVER: TissueProperties = TissueProperties {
-    sound_speed: 1570.0,
-    density:     1070.0,
-    absorption_coefficient: 0.4,   // dB/(MHz cm)
+    sound_speed: SOUND_SPEED_LIVER,              // 1570 m/s
+    density: DENSITY_LIVER,                      // 1070 kg/m³
+    absorption_coefficient: ACOUSTIC_ABSORPTION_LIVER, // 0.5 dB/(cm·MHz)
     absorption_exponent:    1.0,
-    nonlinearity_parameter: 7.0,
+    nonlinearity_parameter: B_OVER_A_LIVER,      // 6.75
     ..
 };
 ```
 
 The module also exposes `WATER`, `BLOOD`, `BRAIN_WHITE_MATTER`, `BRAIN_GRAY_MATTER`,
 `SKULL`, `KIDNEY_CORTEX`, `FAT`, `MUSCLE`, and `CSF`.
+
+![Acoustic impedance by tissue](figures/ch12/fig02_impedance_bar.png)
+
+**Figure 4.2.** Acoustic impedance Z₀ = ρ₀c₀ across tissues, from ~1.3 MRayl (fat) to
+~7.8 MRayl (cortical bone); the large tissue–bone and tissue–air mismatches drive the
+reflections of §4.2.1.
 
 ---
 
@@ -187,6 +196,11 @@ The measured values in Table 4.1 reflect the molecular structure of the tissue:
 The nonlinearity parameter is stored per voxel in `HomogeneousMedium::nonlinearity` and in
 the per-voxel `nonlinearity_cache: Array3<f64>` field, so that the PSTD solver can apply the
 correct second-order correction at every grid point without per-call allocation.
+
+![Nonlinearity parameter B/A by tissue](figures/ch12/fig03_ba_parameter.png)
+
+**Figure 4.3.** Nonlinearity parameter B/A by tissue (Table 4.1); fat's high B/A ≈ 10
+makes subcutaneous layers a dominant source of harmonic generation.
 
 ---
 
@@ -285,6 +299,11 @@ $p \mathrel{+}= c_0^2\bigl(\tau\,\mathcal{L}_1[\rho_0\nabla\!\cdot\!\mathbf u]
 $\mathcal{L}_2 = (-\nabla^2)^{(y-1)/2}$, in
 `kwavers_solver::forward::pstd::physics::absorption` (the same $\tau$, $\eta$ as above).
 
+![Power-law absorption and fractional-Laplacian fit](figures/ch12/fig04_fractional_absorption.png)
+
+**Figure 4.4.** Power-law absorption α(f) = α₀fʸ for representative tissues, reproduced by
+the fractional-Laplacian operator used in the PSTD solver (§4.4.3).
+
 ---
 
 ## 4.6 Heterogeneous Media
@@ -378,7 +397,7 @@ an $O(10\%)$ correction to the wave operator at 1 MHz.
 
 ### 4.6.3 kwavers implementation
 
-Spatial heterogeneity is managed by `kwavers::domain::medium::heterogeneous::HeterogeneousMedium`.
+Spatial heterogeneity is managed by `kwavers_domain::medium::heterogeneous::HeterogeneousMedium`.
 Properties are stored as `Array3<f64>` voxel grids and accessed through the
 `HeterogeneousAcousticProperties` trait:
 
@@ -394,7 +413,7 @@ pub trait HeterogeneousAcousticProperties {
 
 The solver evaluates the density-weighted divergence $\nabla \cdot (1/\rho_0 \,\nabla p)$
 by staggered-grid finite differences with spatially varying $1/\rho_0$ co-located at the
-half-integer grid nodes (see `kwavers::solver::forward::pstd::implementation`).
+half-integer grid nodes (see `kwavers_solver::forward::pstd::implementation`).
 
 ---
 
@@ -479,9 +498,14 @@ longer than a typical HIFU sonication ($\sim$5–30 s), justifying the adiabatic
 during sonication.
 
 The thermal properties are stored in
-`kwavers::domain::medium::properties::thermal::ThermalProperties` and per-voxel in
+`kwavers_domain::medium::properties::thermal::ThermalProperties` and per-voxel in
 `HeterogeneousMedium` through the `HeterogeneousThermalProperties` trait
-(`kwavers::domain::medium::heterogeneous::traits::thermal`).
+(`kwavers_domain::medium::heterogeneous::traits::thermal`).
+
+![Pennes bioheat temperature profile](figures/ch12/fig05_bioheat.png)
+
+**Figure 4.5.** Pennes bioheat steady-state temperature rise around an absorbing focus —
+the balance of acoustic heating, thermal conduction, and blood perfusion (§4.7).
 
 ---
 
@@ -630,10 +654,8 @@ For propagation perpendicular to the axis:
 $v_L = \sqrt{C_{11}/\rho} \approx 3800$ m s$^{-1}$.
 
 The anisotropy tensors are implemented in
-`kwavers::domain::medium::anisotropic::christoffel` (Christoffel matrix construction) and
-`kwavers::domain::medium::anisotropic::stiffness` (stiffness tensor storage).
-
-![Skull layer model](figures/ch_media/fig03_skull_layers.png)
+`kwavers_domain::medium::anisotropic::christoffel` (Christoffel matrix construction) and
+`kwavers_domain::medium::anisotropic::stiffness` (stiffness tensor storage).
 
 ---
 
@@ -709,7 +731,7 @@ where $\sigma_L$ is the standard deviation of fat layer thickness across the ape
 Measured values of $\sigma_L$ for abdominal imaging range from 2 to 8 mm (Liu & Waag 1998),
 giving $\sigma_{\Delta t} \approx 1.4$–5.5 ns.
 
-The `kwavers::physics::acoustics::analytical::patterns::aberration_correction` module
+The `kwavers_physics::acoustics::analytical::patterns::aberration_correction` module
 implements phase-screen aberration models for simulation.
 
 ---
@@ -801,7 +823,7 @@ Output: (c₀, ρ₀, α₀, y, B/A) with uncertainties
 
 ### 4.12.1 Architecture
 
-`kwavers::domain::medium::homogeneous::HomogeneousMedium` is the canonical representation
+`kwavers_domain::medium::homogeneous::HomogeneousMedium` is the canonical representation
 for spatially uniform media. Its internal layout is:
 
 ```rust
@@ -904,8 +926,8 @@ ultrasound simulation targeting a 30 mm deep liver lesion through 10 mm of subcu
 **Step 1 — Medium construction.**
 
 ```rust
-use kwavers::domain::medium::heterogeneous::{HeterogeneousFactory, TissueFactory};
-use kwavers::domain::medium::properties::tissue::{FAT, LIVER};
+use kwavers_domain::medium::heterogeneous::{HeterogeneousFactory, TissueFactory};
+use kwavers_domain::medium::properties::tissue::{FAT, LIVER};
 
 let medium = TissueFactory::two_layer(
     &grid,

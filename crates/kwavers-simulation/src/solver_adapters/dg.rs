@@ -20,7 +20,7 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
-use kwavers_domain::medium::{density_at, sound_speed_at, Medium};
+use kwavers_medium::{density_at, sound_speed_at, Medium};
 use kwavers_domain::sensor::GridSensorSet;
 use kwavers_domain::source::Source;
 use kwavers_solver::config::SolverConfiguration;
@@ -239,7 +239,7 @@ fn active_dimensions_are_dg_aligned(grid: &Grid, nodes_per_element: usize) -> bo
 mod tests {
     use super::*;
     use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
-    use kwavers_domain::medium::homogeneous::HomogeneousMedium;
+    use kwavers_medium::homogeneous::HomogeneousMedium;
     use kwavers_solver::config::SolverType;
 
     #[test]

@@ -10,7 +10,7 @@
 //! - Gradient tissues (skin layers, vessel walls)
 //! - Temperature-dependent absorption for HIFU simulations
 
-use kwavers_domain::medium::absorption::SpatiallyVaryingAbsorption;
+use kwavers_medium::absorption::SpatiallyVaryingAbsorption;
 use ndarray::Array3;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

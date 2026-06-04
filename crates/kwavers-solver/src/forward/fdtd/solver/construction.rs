@@ -15,7 +15,7 @@ use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
 use kwavers_field::wave::WaveFields;
 use kwavers_grid::Grid;
-use kwavers_domain::medium::{MaterialFields, Medium};
+use kwavers_medium::{MaterialFields, Medium};
 use kwavers_domain::sensor::recorder::simple::SensorRecorder;
 use kwavers_domain::source::grid_source::GridSource;
 use kwavers_math::numerics::operators::StaggeredGridOperator;
@@ -64,9 +64,9 @@ impl GenericFdtdSolver<Array3<f64>> {
                 for i in 0..grid.nx {
                     let (x, y, z) = grid.indices_to_coordinates(i, j, k);
                     materials.rho0[[i, j, k]] =
-                        kwavers_domain::medium::density_at(medium, x, y, z, grid);
+                        kwavers_medium::density_at(medium, x, y, z, grid);
                     materials.c0[[i, j, k]] =
-                        kwavers_domain::medium::sound_speed_at(medium, x, y, z, grid);
+                        kwavers_medium::sound_speed_at(medium, x, y, z, grid);
                 }
             }
         }
@@ -141,8 +141,8 @@ impl GenericFdtdSolver<Array3<f64>> {
                 for j in 0..grid.ny {
                     for i in 0..grid.nx {
                         let (x, y, z) = grid.indices_to_coordinates(i, j, k);
-                        let bn = kwavers_domain::medium::nonlinearity_at(medium, x, y, z, grid);
-                        let c = kwavers_domain::medium::sound_speed_at(medium, x, y, z, grid);
+                        let bn = kwavers_medium::nonlinearity_at(medium, x, y, z, grid);
+                        let c = kwavers_medium::sound_speed_at(medium, x, y, z, grid);
                         // β = 1 + B/(2A) where B/A is returned by nonlinearity_at
                         beta[[i, j, k]] = bn.mul_add(0.5, 1.0);
                         c2[[i, j, k]] = c.powi(2);

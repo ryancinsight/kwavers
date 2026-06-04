@@ -8,7 +8,7 @@
 use super::factory::PhysicsConfig;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use kwavers_domain::medium::Medium;
+use kwavers_medium::Medium;
 use kwavers_solver::plugin::{PhysicsCatalog, PluginManager};
 
 /// Specialized physics manager following the Manager pattern from GRASP.

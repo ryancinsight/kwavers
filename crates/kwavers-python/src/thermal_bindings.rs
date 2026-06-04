@@ -1,7 +1,7 @@
 //! Thermal diffusion / Pennes bioheat Python bindings.
 //!
 //! Wraps `kwavers_solver::forward::thermal_diffusion::ThermalDiffusionSolver`
-//! and `kwavers_domain::medium::HomogeneousMedium`.  All physics (Laplacian,
+//! and `kwavers_medium::HomogeneousMedium`.  All physics (Laplacian,
 //! bioheat perfusion, CEM43 dose) are delegated to the kwavers core; this
 //! module only handles PyO3 marshalling, unit conversion (°C ↔ K), and sensor
 //! extraction (Python-specific concern with no kwavers equivalent).
@@ -32,7 +32,7 @@ use kwavers_core::constants::medical::{
 use kwavers_core::constants::fundamental::{DENSITY_TISSUE, SOUND_SPEED_TISSUE};
 use kwavers_core::constants::thermodynamic::{BODY_TEMPERATURE_C, KELVIN_OFFSET_C};
 use kwavers_grid::Grid as KwaversGrid;
-use kwavers_domain::medium::HomogeneousMedium;
+use kwavers_medium::HomogeneousMedium;
 use kwavers_physics::thermal::diffusion::ThermalDiffusionConfig;
 use kwavers_solver::forward::thermal_diffusion::ThermalDiffusionSolver;
 

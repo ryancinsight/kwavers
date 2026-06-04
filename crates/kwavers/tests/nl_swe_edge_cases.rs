@@ -7,7 +7,7 @@
 //! - Harmonic generation under extreme conditions
 
 use kwavers_grid::Grid;
-use kwavers_domain::medium::HomogeneousMedium;
+use kwavers_medium::HomogeneousMedium;
 use kwavers_solver::forward::elastic::{
     HyperelasticModel, NonlinearElasticWaveSolver, NonlinearSWEConfig,
 };

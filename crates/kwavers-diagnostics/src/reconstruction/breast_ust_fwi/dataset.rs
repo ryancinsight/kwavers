@@ -7,7 +7,7 @@
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
-use kwavers_domain::medium::heterogeneous::HeterogeneousFactory;
+use kwavers_medium::heterogeneous::HeterogeneousFactory;
 use kwavers_domain::sensor::recorder::simple::SensorRecorder;
 use kwavers_domain::source::{GridSource, SourceMode};
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;
@@ -276,7 +276,7 @@ fn run_pstd_transmit(
 #[cfg(feature = "gpu")]
 fn try_run_gpu_pstd_transmit(
     grid: &Grid,
-    medium: &kwavers_domain::medium::heterogeneous::HeterogeneousMedium,
+    medium: &kwavers_medium::heterogeneous::HeterogeneousMedium,
     source: &GridSource,
     receiver_indices: &[(usize, usize, usize)],
     steps: usize,

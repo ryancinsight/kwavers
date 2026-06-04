@@ -33,8 +33,8 @@ use kwavers_domain::imaging::ultrasound::elastography::InversionMethod;
 use kwavers_domain::imaging::ultrasound::elastography::{
     NonlinearInversionMethod, NonlinearParameterMap,
 };
-use kwavers_domain::medium::Medium;
-use kwavers_domain::medium::{heterogeneous::HeterogeneousMedium, homogeneous::HomogeneousMedium};
+use kwavers_medium::Medium;
+use kwavers_medium::{heterogeneous::HeterogeneousMedium, homogeneous::HomogeneousMedium};
 #[cfg(feature = "gpu")]
 use kwavers_gpu::gpu::memory::UnifiedMemoryManager;
 use kwavers_physics::acoustics::imaging::modalities::ceus::CeusPerfusionModel;

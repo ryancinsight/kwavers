@@ -27,7 +27,7 @@
 use kwavers_core::error::KwaversResult;
 use kwavers_domain::boundary::CPMLConfig;
 use kwavers_grid::Grid;
-use kwavers_domain::medium::HomogeneousMedium;
+use kwavers_medium::HomogeneousMedium;
 use kwavers_signal::SineWave;
 use kwavers_domain::source::{
     GridSource, InjectionMode, PlaneWaveSource, PlaneWaveSourceConfig, SourceField,

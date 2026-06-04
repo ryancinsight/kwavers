@@ -1,6 +1,6 @@
 //! Optical properties for light diffusion calculations
 
-use kwavers_domain::medium::properties::OpticalPropertyData;
+use kwavers_medium::properties::OpticalPropertyData;
 
 /// Physics-layer optical properties bridge for photon diffusion calculations
 ///

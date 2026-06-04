@@ -1,4 +1,4 @@
-use crate::medium::properties::OpticalPropertyData;
+use kwavers_medium::properties::OpticalPropertyData;
 
 #[derive(Debug, Clone, Copy)]
 pub struct SpectralSample {

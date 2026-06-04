@@ -4,7 +4,7 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use kwavers_domain::medium::Medium;
+use kwavers_medium::Medium;
 use kwavers_domain::source::Source;
 use crate::traits::AcousticWaveModel;
 use log::info;
@@ -166,7 +166,7 @@ mod tests {
     use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use kwavers_core::constants::numerical::MHZ_TO_HZ;
     use kwavers_grid::Grid;
-    use kwavers_domain::medium::HomogeneousMedium;
+    use kwavers_medium::HomogeneousMedium;
     use crate::traits::AcousticWaveModel;
 
     /// `set_nonlinearity_scaling` stores the supplied value verbatim.

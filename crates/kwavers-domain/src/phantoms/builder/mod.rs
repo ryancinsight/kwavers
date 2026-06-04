@@ -9,12 +9,12 @@ pub use tumor_detection::TumorDetectionPhantomBuilder;
 pub use vascular::VascularPhantomBuilder;
 
 use super::types::PhantomType;
-use crate::medium::properties::OpticalPropertyData;
+use kwavers_medium::properties::OpticalPropertyData;
 
 /// Clinical phantom builder with domain-specific presets
 #[derive(Debug)]
 pub struct PhantomBuilder {
-    pub builder: crate::medium::optical_map::OpticalPropertyMapBuilder,
+    pub builder: kwavers_medium::optical_map::OpticalPropertyMapBuilder,
     pub phantom_type: PhantomType,
     pub wavelength_nm: f64,
 }

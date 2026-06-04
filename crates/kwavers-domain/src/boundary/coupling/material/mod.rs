@@ -7,7 +7,7 @@ mod boundary_impl;
 #[cfg(test)]
 mod tests;
 
-use crate::medium::properties::AcousticPropertyData;
+use kwavers_medium::properties::AcousticPropertyData;
 
 /// Material interface boundary condition for wave reflection and transmission.
 ///

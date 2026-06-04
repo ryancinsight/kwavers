@@ -1,7 +1,7 @@
 //! Stone material properties composing canonical domain types.
 
 use kwavers_core::constants::numerical::MPA_TO_PA;
-use kwavers_domain::medium::properties::{ElasticPropertyData, StrengthPropertyData};
+use kwavers_medium::properties::{ElasticPropertyData, StrengthPropertyData};
 
 // ============================================================================
 // Kidney stone material constants (Williams et al. 2003; Zohdi & Kuypers 2006)
