@@ -31,7 +31,7 @@ impl StabilityAnalyzer {
     ///
     pub fn compute_stable_dt(
         &self,
-        _physics: &dyn kwavers_domain::plugin::Plugin,
+        _physics: &dyn crate::plugin::Plugin,
         _field: &Array3<f64>,
         grid: &Grid,
     ) -> KwaversResult<f64> {

@@ -21,7 +21,7 @@ impl TimeCoupling for SubcyclingStrategy {
     fn advance_coupled_system(
         &self,
         fields: &mut HashMap<String, Array3<f64>>,
-        physics_components: &HashMap<String, Box<dyn kwavers_domain::plugin::Plugin>>,
+        physics_components: &HashMap<String, Box<dyn crate::plugin::Plugin>>,
         subcycles: &HashMap<String, usize>,
         global_dt: f64,
         _grid: &Grid,

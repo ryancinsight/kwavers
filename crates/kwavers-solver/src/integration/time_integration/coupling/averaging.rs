@@ -31,7 +31,7 @@ impl TimeCoupling for AveragingStrategy {
     fn advance_coupled_system(
         &self,
         fields: &mut HashMap<String, Array3<f64>>,
-        physics_components: &HashMap<String, Box<dyn kwavers_domain::plugin::Plugin>>,
+        physics_components: &HashMap<String, Box<dyn crate::plugin::Plugin>>,
         subcycles: &HashMap<String, usize>,
         global_dt: f64,
         _grid: &Grid,
@@ -61,7 +61,7 @@ impl TimeCoupling for AveragingStrategy {
             // Subcycle this component
             for _ in 0..n_subcycles {
                 // Update physics component using plugin interface
-                // kwavers_domain::plugin::Plugin uses update method with fields array
+                // crate::plugin::Plugin uses update method with fields array
             }
         }
 

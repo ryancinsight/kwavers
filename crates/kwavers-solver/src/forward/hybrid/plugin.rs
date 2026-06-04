@@ -4,7 +4,7 @@ use kwavers_core::error::KwaversResult;
 use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use kwavers_domain::plugin::{PluginMetadata, PluginState};
+use crate::plugin::{PluginMetadata, PluginState};
 use crate::hybrid::{HybridConfig, HybridSolver};
 use ndarray::Array4;
 
@@ -41,7 +41,7 @@ impl HybridPlugin {
     }
 }
 
-impl kwavers_domain::plugin::Plugin for HybridPlugin {
+impl crate::plugin::Plugin for HybridPlugin {
     fn metadata(&self) -> &PluginMetadata {
         &self.metadata
     }
@@ -64,7 +64,7 @@ impl kwavers_domain::plugin::Plugin for HybridPlugin {
         medium: &dyn Medium,
         dt: f64,
         t: f64,
-        context: &mut kwavers_domain::plugin::PluginContext<'_>,
+        context: &mut crate::plugin::PluginContext<'_>,
     ) -> KwaversResult<()> {
         let solver = self.solver.as_mut().ok_or_else(|| {
             kwavers_core::error::KwaversError::InternalError(

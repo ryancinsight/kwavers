@@ -4,11 +4,11 @@ use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use kwavers_domain::plugin::{PluginMetadata, PluginState};
+use crate::plugin::{PluginMetadata, PluginState};
 
 use super::solver::KzkSolverPlugin;
 
-impl kwavers_domain::plugin::Plugin for KzkSolverPlugin {
+impl crate::plugin::Plugin for KzkSolverPlugin {
     fn metadata(&self) -> &PluginMetadata {
         &self.metadata
     }
@@ -36,7 +36,7 @@ impl kwavers_domain::plugin::Plugin for KzkSolverPlugin {
         medium: &dyn Medium,
         dt: f64,
         _t: f64,
-        _context: &mut kwavers_domain::plugin::PluginContext<'_>,
+        _context: &mut crate::plugin::PluginContext<'_>,
     ) -> KwaversResult<()> {
         use kwavers_field::mapping::UnifiedFieldType;
 

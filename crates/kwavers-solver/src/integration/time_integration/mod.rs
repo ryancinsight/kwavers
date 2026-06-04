@@ -81,7 +81,7 @@ impl MultiRateTimeIntegrator {
     pub fn advance(
         &mut self,
         fields: &mut HashMap<String, Array3<f64>>,
-        physics_components: &HashMap<String, Box<dyn kwavers_domain::plugin::Plugin>>,
+        physics_components: &HashMap<String, Box<dyn crate::plugin::Plugin>>,
         global_time: f64,
         target_time: f64,
         grid: &Grid,
@@ -140,7 +140,7 @@ impl MultiRateTimeIntegrator {
     fn compute_component_time_steps(
         &self,
         fields: &HashMap<String, Array3<f64>>,
-        physics_components: &HashMap<String, Box<dyn kwavers_domain::plugin::Plugin>>,
+        physics_components: &HashMap<String, Box<dyn crate::plugin::Plugin>>,
         grid: &Grid,
     ) -> KwaversResult<HashMap<String, f64>> {
         physics_components

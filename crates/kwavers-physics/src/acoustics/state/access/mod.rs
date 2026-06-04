@@ -7,7 +7,7 @@
 //! them preserves the `domain → physics` dependency direction.
 //!
 //! For an accessor that operates directly on the simulation `Array4<f64>`
-//! buffer without a `PhysicsState`, see [`kwavers_domain::plugin::access::DirectPluginFieldAccess`].
+//! buffer without a `PhysicsState`, see [`kwavers_solver::plugin::access::DirectPluginFieldAccess`].
 
 pub mod mutable;
 pub mod readonly;

@@ -3,7 +3,7 @@
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use kwavers_domain::plugin::{PluginMetadata, PluginState};
+use crate::plugin::{PluginMetadata, PluginState};
 use ndarray::Array3;
 
 use super::frequency_operator::FrequencyOperator;

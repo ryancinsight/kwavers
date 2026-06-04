@@ -1,7 +1,7 @@
 use kwavers_boundary::DomainPmlConfig;
 use kwavers_grid::Grid;
 use kwavers_medium::homogeneous::HomogeneousMedium;
-use kwavers_domain::plugin::{Plugin, PluginContext, PluginFields};
+use kwavers_solver::plugin::{Plugin, PluginContext, PluginFields};
 use kwavers_signal::SineWave;
 use kwavers_source::{GaussianBuilder, Source};
 use kwavers_solver::forward::hybrid::domain_decomposition::{DomainRegion, DomainType};

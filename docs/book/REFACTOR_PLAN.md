@@ -23,7 +23,7 @@ Numbering today is broken: duplicate headers (two each of Ch4/5/6/7, two Ch10),
 | 4 | media_and_tissue_models.md | Media and Tissue Models | 1045 | 5 | ✅ audited (absorption de-duped; figs fixed) |
 | 5 | sources_and_transducers.md | Sources and Transducers | 737 | 0 | ✂️ merge w/ beamforming |
 | 6 | beamforming_and_image_formation.md | Beamforming and Image Formation | 750 | 7 | ✂️ merge w/ sources |
-| 7 | sensors_and_measurements.md | Sensors and Measurements | 834 | 0 | ⬜ (needs figs) |
+| 7 | sensors_and_measurements.md | Sensors and Measurements | 853 | 5 | ✅ audited (physics sound; figs embedded) |
 | 8 | diagnostics.md | Diagnostic Ultrasound Imaging | 647 | 0 | ⬜ (strip PA/elasto dup) |
 | 9 | photoacoustics.md | Photoacoustic Imaging | 947 | 5 | ⬜ |
 | 10 | elastography.md | Elastography | 1246 | 9 | ⬜ |
@@ -146,8 +146,16 @@ in Rust where a real computation applies, embedded with a descriptive caption.
      script REPO_ROOT, and embedded **5 figures** (was 0 working). Verified impls:
      `TissueProperties`/`LIVER`, `solver/forward/thermal/pennes.rs`, `medium/elastic.rs`,
      transcranial aberration (skull), anisotropic stiffness.
-   - ⬜ Ch5/6 (sources/beamforming residual paths), Ch7 sensors, … + the deferred
-     transcranial §10.9/§10.10 ↔ neuro/BBB de-dup.
+   - ✅ **Ch7 Sensors and Measurements**: physics audited (hydrophone directivity,
+     spatial Nyquist, pressure–velocity, time-reversal — all sound; directivity correctly
+     cross-refs Sources/Ch5). Embedded **5 figures** (ch14 script; was 0) at their sections,
+     replaced the placeholder §11 "Figure References" table (which cited fictional scripts)
+     with a correct generation note, fixed stale paths. Verified impls: `kwavers_domain::
+     sensor::recorder`, `kwavers_solver::inverse::reconstruction` (back-projection/TR).
+     NOTE: ch14 regen currently blocked by the in-flight pykwavers refactor; used the
+     existing root figures.
+   - ⬜ Ch5/6 (sources/beamforming residual paths), … + the deferred transcranial
+     §10.9/§10.10 ↔ neuro/BBB de-dup.
    - ⚠️ NOTE: a code refactor is in flight (CPML moved to a new `kwavers_boundary` crate,
      seen in `dispatch/fdtd.rs`). The final path-verification pass (item 7) must re-check
      all `kwavers_*::` module paths against the then-current crate layout.

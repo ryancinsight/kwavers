@@ -6,14 +6,14 @@
 //! 3. Adapt existing components as plugins
 
 use kwavers_field::mapping::UnifiedFieldType;
-use kwavers_domain::plugin::PluginState;
+use kwavers_solver::plugin::PluginState;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_grid::Grid;
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::plugin::Plugin;
-use kwavers_domain::plugin::PluginContext;
+use kwavers_solver::plugin::Plugin;
+use kwavers_solver::plugin::PluginContext;
 use kwavers_solver::plugin::PluginManager;
-use kwavers_domain::plugin::PluginMetadata;
+use kwavers_solver::plugin::PluginMetadata;
 use ndarray::Array4;
 use std::collections::HashMap;
 

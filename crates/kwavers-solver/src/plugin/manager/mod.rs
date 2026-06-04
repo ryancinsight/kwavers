@@ -7,7 +7,7 @@ use super::execution::{ExecutionStrategy, SequentialStrategy};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use kwavers_domain::plugin::{Plugin, PluginFields};
+use crate::plugin::{Plugin, PluginFields};
 use ndarray::Array3;
 use std::collections::HashMap;
 

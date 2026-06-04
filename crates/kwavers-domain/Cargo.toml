@@ -38,10 +38,6 @@ ritk-io = { workspace = true }
 ritk-registration = { workspace = true }
 burn = { version = "0.19", features = ["ndarray"] }
 
-[features]
-# Exposes `plugin::test_support` for downstream crates' tests.
-test-util = []
-
 [dev-dependencies]
 approx = "0.5"
 proptest = "1.2"

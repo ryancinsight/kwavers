@@ -5,7 +5,7 @@ use kwavers_core::error::{KwaversError, KwaversResult, PhysicsError, ValidationE
 use kwavers_boundary::Boundary;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use kwavers_domain::plugin::{Plugin, PluginContext};
+use crate::plugin::{Plugin, PluginContext};
 use kwavers_source::Source;
 use ndarray::Array4;
 use std::time::Instant;

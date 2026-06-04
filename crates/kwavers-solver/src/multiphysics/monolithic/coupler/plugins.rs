@@ -1,7 +1,7 @@
 use super::super::config::PhysicsCoefficients;
 use super::MonolithicCoupler;
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::plugin::Plugin;
+use crate::plugin::Plugin;
 
 impl MonolithicCoupler {
     /// Replace physical coefficients used by coupled residual evaluation.

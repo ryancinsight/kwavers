@@ -5,7 +5,7 @@ use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use kwavers_domain::plugin::{PluginMetadata, PluginState};
+use crate::plugin::{PluginMetadata, PluginState};
 use kwavers_math::fft::{Fft3dInOutExt, Shape3D, FFT_CACHE_3D};
 use ndarray::{Array3, Zip};
 use num_complex::Complex64;
@@ -219,7 +219,7 @@ pub enum DomainSelection {
 }
 
 // Plugin trait implementation
-impl kwavers_domain::plugin::Plugin for MixedDomainPropagationPlugin {
+impl crate::plugin::Plugin for MixedDomainPropagationPlugin {
     fn metadata(&self) -> &PluginMetadata {
         &self.metadata
     }
@@ -247,7 +247,7 @@ impl kwavers_domain::plugin::Plugin for MixedDomainPropagationPlugin {
         medium: &dyn Medium,
         dt: f64,
         _t: f64,
-        _context: &mut kwavers_domain::plugin::PluginContext<'_>,
+        _context: &mut crate::plugin::PluginContext<'_>,
     ) -> KwaversResult<()> {
         use kwavers_field::mapping::UnifiedFieldType;
 

@@ -8,7 +8,7 @@ use kwavers_core::error::KwaversResult;
 use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use kwavers_domain::plugin::{PluginContext, PluginMetadata, PluginState};
+use crate::plugin::{PluginContext, PluginMetadata, PluginState};
 use kwavers_source::GridSource;
 
 /// PSTD solver plugin
@@ -42,7 +42,7 @@ impl PSTDPlugin {
     }
 }
 
-impl kwavers_domain::plugin::Plugin for PSTDPlugin {
+impl crate::plugin::Plugin for PSTDPlugin {
     fn metadata(&self) -> &PluginMetadata {
         &self.metadata
     }

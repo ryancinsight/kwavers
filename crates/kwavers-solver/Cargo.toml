@@ -50,6 +50,9 @@ tokio = { version = "1.42", features = ["rt-multi-thread", "macros", "sync", "ti
 thiserror = { workspace = true, optional = true }
 
 [features]
+# Exposes `plugin::test_support` (NullBoundary + context helpers) for downstream
+# crates' tests.
+test-util = []
 gpu = ["dep:wgpu", "dep:bytemuck", "dep:pollster", "dep:apollofft-wgpu", "kwavers-core/gpu", "kwavers-math/gpu"]
 pinn = ["dep:tokio", "dep:thiserror"]
 pinn-gpu = ["pinn", "gpu"]
@@ -63,7 +66,6 @@ simd = ["nightly"]
 
 [dev-dependencies]
 approx = "0.5"
-kwavers-domain = { path = "../kwavers-domain", features = ["test-util"] }
 
 [lints]
 workspace = true

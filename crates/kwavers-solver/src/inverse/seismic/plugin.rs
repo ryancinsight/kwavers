@@ -5,7 +5,7 @@
 //! Based on Claerbout (1985): "Imaging the Earth's Interior"
 
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::plugin::{PluginMetadata, PluginState};
+use crate::plugin::{PluginMetadata, PluginState};
 // Note: Keeping Plugin dependency here, which is in physics. Cycle?
 // Solver -> Physics (traits/plugins) is OK.
 // Physics (modules) -> Solver is BAD.

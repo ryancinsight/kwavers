@@ -9,7 +9,7 @@ use kwavers_boundary::Boundary;
 use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use kwavers_domain::plugin::Plugin;
+use crate::plugin::Plugin;
 use kwavers_receiver::recorder::traits::RecorderTrait;
 use kwavers_source::{Source, SourceField};
 use crate::plugin::PluginManager;

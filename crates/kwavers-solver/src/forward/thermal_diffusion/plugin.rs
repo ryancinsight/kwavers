@@ -2,7 +2,7 @@ use kwavers_core::error::KwaversResult;
 use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use kwavers_domain::plugin::{PluginContext, PluginMetadata, PluginState};
+use crate::plugin::{PluginContext, PluginMetadata, PluginState};
 use kwavers_physics::thermal::diffusion::ThermalDiffusionConfig;
 use ndarray::Array4;
 
@@ -37,7 +37,7 @@ impl ThermalDiffusionPlugin {
     }
 }
 
-impl kwavers_domain::plugin::Plugin for ThermalDiffusionPlugin {
+impl crate::plugin::Plugin for ThermalDiffusionPlugin {
     fn metadata(&self) -> &PluginMetadata {
         &self.metadata
     }

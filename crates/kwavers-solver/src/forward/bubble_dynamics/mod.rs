@@ -6,7 +6,7 @@
 //! [`BubbleModel::Gilmore`]) to the unified [`Plugin`] API consumed by
 //! [`PhysicsCatalog`].
 //!
-//! [`Plugin`]: kwavers_domain::plugin::Plugin
+//! [`Plugin`]: crate::plugin::Plugin
 //! [`PhysicsCatalog`]: crate::plugin::catalog::PhysicsCatalog
 //! [`BubbleModel::KellerMiksis`]: kwavers_physics::factory::models::BubbleModel::KellerMiksis
 //! [`BubbleModel::RayleighPlesset`]: kwavers_physics::factory::models::BubbleModel::RayleighPlesset

@@ -61,4 +61,4 @@ gpu = [
 pinn = ["gpu", "dep:burn"]
 
 [dev-dependencies]
-kwavers-domain = { path = "../kwavers-domain", features = ["test-util"] }
+kwavers-solver = { path = "../kwavers-solver", features = ["test-util"] }

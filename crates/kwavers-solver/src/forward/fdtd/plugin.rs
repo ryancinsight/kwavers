@@ -8,7 +8,7 @@ use kwavers_core::error::{KwaversError, KwaversResult, PhysicsError};
 use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use kwavers_domain::plugin::{PluginContext, PluginMetadata, PluginState};
+use crate::plugin::{PluginContext, PluginMetadata, PluginState};
 use kwavers_source::GridSource;
 
 /// FDTD solver plugin
@@ -43,7 +43,7 @@ impl FdtdPlugin {
     }
 }
 
-impl kwavers_domain::plugin::Plugin for FdtdPlugin {
+impl crate::plugin::Plugin for FdtdPlugin {
     fn metadata(&self) -> &PluginMetadata {
         &self.metadata
     }

@@ -41,7 +41,7 @@
 use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use kwavers_domain::plugin::Plugin;
+use crate::plugin::Plugin;
 use kwavers_physics::factory::config::PhysicsConfig;
 use kwavers_physics::factory::models::{AcousticSolver, NonlinearEquation, PhysicsModelType};
 use kwavers_physics::thermal::diffusion::ThermalDiffusionConfig;
