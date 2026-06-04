@@ -1,6 +1,6 @@
 use super::HybridSolver;
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::field::wave::WaveFields;
+use kwavers_field::wave::WaveFields;
 use kwavers_grid::Grid;
 use kwavers_domain::medium::Medium;
 use kwavers_domain::source::GridSource;

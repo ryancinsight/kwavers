@@ -2,7 +2,7 @@ use super::super::super::config::NewtonKrylovConfig;
 use super::super::super::residual_metric::norm;
 use super::super::*;
 use kwavers_core::error::{KwaversError, ValidationError};
-use kwavers_domain::field::UnifiedFieldType;
+use kwavers_field::UnifiedFieldType;
 use crate::integration::nonlinear::GMRESConfig;
 use ndarray::Array3;
 

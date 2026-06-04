@@ -65,7 +65,7 @@ fn uniform_fluence_decays_at_rate_c_mu_a() {
     // dimensional consistency: without it the predicted decay would be
     // ~9 orders of magnitude too slow.
     use kwavers_core::constants::fundamental::SPEED_OF_LIGHT;
-    use kwavers_domain::field::indices::LIGHT_IDX;
+    use kwavers_field::indices::LIGHT_IDX;
     use crate::acoustics::traits::LightDiffusionModelTrait;
     use ndarray::Array4;
 

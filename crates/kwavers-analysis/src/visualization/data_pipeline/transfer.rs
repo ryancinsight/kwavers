@@ -2,7 +2,7 @@
 
 use super::{ProcessingOperation, ProcessingStage, TransferStatistics};
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_domain::field::UnifiedFieldType;
+use kwavers_field::UnifiedFieldType;
 use log::{debug, info};
 use ndarray::Array3;
 use std::collections::hash_map::Entry;

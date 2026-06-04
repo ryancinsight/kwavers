@@ -24,7 +24,7 @@ impl AcousticWaveModel for NonlinearWave {
         t: f64,
     ) -> KwaversResult<()> {
         // Extract pressure field from the 4D array
-        use kwavers_domain::field::indices::PRESSURE_IDX;
+        use kwavers_field::indices::PRESSURE_IDX;
 
         // Get a view of the current pressure field (avoid cloning)
         let pressure_view = fields.index_axis(Axis(0), PRESSURE_IDX);

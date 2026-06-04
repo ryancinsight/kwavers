@@ -21,6 +21,7 @@ categories = ["science", "simulation", "medical"]
 kwavers-core = { path = "../kwavers-core", features = ["channels", "registration"] }
 kwavers-math = { path = "../kwavers-math" }
 kwavers-grid = { path = "../kwavers-grid" }
+kwavers-field = { path = "../kwavers-field" }
 kwavers-signal = { path = "../kwavers-signal" }
 kwavers-domain = { path = "../kwavers-domain" }
 kwavers-physics = { path = "../kwavers-physics" }

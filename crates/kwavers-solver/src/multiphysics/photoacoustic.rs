@@ -7,7 +7,7 @@ use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WA
 use kwavers_core::constants::numerical::FOUR_PI;
 use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::field::EMFields;
+use kwavers_field::EMFields;
 use kwavers_physics::electromagnetic::equations::{
     EMMaterialDistribution, ElectromagneticWaveEquation, PhotoacousticCoupling,
 };

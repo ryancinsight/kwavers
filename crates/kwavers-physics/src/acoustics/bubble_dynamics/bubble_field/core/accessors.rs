@@ -3,9 +3,9 @@ use super::model::BubbleField;
 impl BubbleField {
     /// Get bubble state fields for physics modules.
     #[must_use]
-    pub fn get_state_fields(&self) -> kwavers_domain::field::BubbleStateFields {
+    pub fn get_state_fields(&self) -> kwavers_field::BubbleStateFields {
         let shape = self.grid_shape;
-        let mut fields = kwavers_domain::field::BubbleStateFields::new(shape);
+        let mut fields = kwavers_field::BubbleStateFields::new(shape);
 
         for ((i, j, k), state) in &self.bubbles {
             fields.radius[[*i, *j, *k]] = state.radius;

@@ -4,7 +4,7 @@
 //! and their indices in the global fields array. This prevents data corruption
 //! from incorrect field indexing.
 
-use crate::field::indices as field_indices;
+use crate::indices as field_indices;
 use std::fmt;
 
 /// Unified field type enum that maps directly to field indices

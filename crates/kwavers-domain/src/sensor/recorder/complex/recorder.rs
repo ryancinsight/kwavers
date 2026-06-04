@@ -2,8 +2,8 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_core::time::Time;
-use crate::field::indices::{BUBBLE_RADIUS_IDX, LIGHT_IDX, PRESSURE_IDX, TEMPERATURE_IDX};
-use crate::field::BubbleStateFields;
+use kwavers_field::indices::{BUBBLE_RADIUS_IDX, LIGHT_IDX, PRESSURE_IDX, TEMPERATURE_IDX};
+use kwavers_field::BubbleStateFields;
 use kwavers_grid::Grid;
 use crate::sensor::sonoluminescence::{SonoluminescenceDetector, SonoluminescenceEvent};
 use crate::sensor::GridSensorSet;

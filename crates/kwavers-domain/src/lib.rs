@@ -99,7 +99,6 @@
 //! - **Validation functions**: Runtime invariant checking
 
 pub mod boundary;
-pub mod field;
 pub mod imaging;
 pub mod medium;
 pub mod mesh;

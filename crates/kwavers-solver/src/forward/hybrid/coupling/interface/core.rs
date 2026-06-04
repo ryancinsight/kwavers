@@ -1,7 +1,7 @@
 //! CouplingInterface implementation
 
 use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
-use kwavers_domain::field::mapping::UnifiedFieldType;
+use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;
 use crate::forward::hybrid::coupling::{
     HybridCouplingConservationEnforcer, HybridInterpolationScheme, InterfaceGeometry,

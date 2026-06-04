@@ -2,7 +2,7 @@ use super::super::coupler::MonolithicCoupler;
 use super::super::spatial_operator::laplacian_3d_into;
 use super::super::state_vector::field_block_view;
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::field::UnifiedFieldType;
+use kwavers_field::UnifiedFieldType;
 use ndarray::{s, Array3};
 
 impl MonolithicCoupler {

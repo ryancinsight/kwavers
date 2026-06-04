@@ -1,7 +1,7 @@
 use super::super::{materials::EMMaterialDistribution, types::EMDimension};
 use kwavers_core::constants::fundamental::{VACUUM_PERMEABILITY, VACUUM_PERMITTIVITY};
 use kwavers_core::constants::numerical::TWO_PI;
-use kwavers_domain::field::EMFields;
+use kwavers_field::EMFields;
 
 /// Core electromagnetic wave equation trait
 ///

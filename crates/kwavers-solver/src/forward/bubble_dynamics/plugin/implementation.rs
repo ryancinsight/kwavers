@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use ndarray::{Array3, Array4, Axis};
 
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::field::mapping::UnifiedFieldType;
+use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;
 use kwavers_domain::medium::Medium;
 use kwavers_domain::plugin::{Plugin, PluginContext, PluginMetadata, PluginState};

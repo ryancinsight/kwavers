@@ -1,5 +1,5 @@
 use kwavers_core::error::{KwaversResult, PhysicsError};
-use crate::field::mapping::UnifiedFieldType;
+use kwavers_field::mapping::UnifiedFieldType;
 use ndarray::{Array4, ArrayView3, ArrayViewMut3};
 use std::collections::HashSet;
 

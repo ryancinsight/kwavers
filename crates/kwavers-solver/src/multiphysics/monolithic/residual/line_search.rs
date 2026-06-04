@@ -1,7 +1,7 @@
 use super::super::coupler::MonolithicCoupler;
 use super::super::residual_metric::norm_squared;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
-use kwavers_domain::field::UnifiedFieldType;
+use kwavers_field::UnifiedFieldType;
 use ndarray::Array3;
 
 impl MonolithicCoupler {

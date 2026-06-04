@@ -4,7 +4,7 @@
 //! Follows SOLID principles with single responsibility for field storage.
 
 use kwavers_core::error::{FieldError, KwaversResult};
-use kwavers_domain::field::mapping::UnifiedFieldType;
+use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;
 use log::{debug, info};
 use ndarray::{Array3, Array4, ArrayView3, ArrayViewMut3, Axis};

@@ -3,7 +3,7 @@
 //! This module provides utilities for working with electromagnetic fields
 //! and computing energy-related quantities like the Poynting vector.
 
-use kwavers_domain::field::PoyntingVector;
+use kwavers_field::PoyntingVector;
 
 /// Electromagnetic field utilities for physics computations
 ///

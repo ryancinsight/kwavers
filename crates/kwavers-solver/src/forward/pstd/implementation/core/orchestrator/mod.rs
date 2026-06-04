@@ -2,7 +2,7 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_domain::boundary::{Boundary, PmlExpFactors};
-use kwavers_domain::field::wave::WaveFields;
+use kwavers_field::wave::WaveFields;
 use kwavers_grid::Grid;
 use kwavers_domain::medium::MaterialFields;
 use kwavers_domain::sensor::recorder::simple::SensorRecorder;

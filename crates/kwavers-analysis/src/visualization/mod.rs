@@ -45,7 +45,7 @@ pub use engine::VisualizationEngine;
 pub use metrics::{MetricsTracker, VisualizationMetrics};
 
 // Re-export field types
-pub use kwavers_domain::field::mapping::UnifiedFieldType;
+pub use kwavers_field::mapping::UnifiedFieldType;
 
 // GPU-specific re-exports
 #[cfg(feature = "gpu-visualization")]

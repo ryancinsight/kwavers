@@ -1,6 +1,6 @@
 //! Core hybrid PSTD/FDTD solver implementation
 
-use kwavers_domain::field::wave::WaveFields;
+use kwavers_field::wave::WaveFields;
 use kwavers_grid::Grid;
 use crate::forward::fdtd::FdtdSolver;
 use crate::forward::hybrid::adaptive_selection::AdaptiveSelector;

@@ -1,6 +1,6 @@
 use super::*;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
-use kwavers_domain::field::mapping::UnifiedFieldType;
+use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_domain::medium::HomogeneousMedium;
 use kwavers_domain::source::NullSource;
 use kwavers_physics::traits::AcousticWaveModel;

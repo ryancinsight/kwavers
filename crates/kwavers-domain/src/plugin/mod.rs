@@ -14,7 +14,7 @@ pub use metadata::PluginMetadata;
 use kwavers_core::error::KwaversResult;
 use kwavers_core::time::StabilityConstraints;
 use crate::boundary::Boundary;
-use crate::field::mapping::UnifiedFieldType;
+use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;
 use crate::medium::Medium;
 use crate::source::Source;

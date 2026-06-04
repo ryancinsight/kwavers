@@ -1,7 +1,7 @@
 //! Simulation result output writers (CSV / pressure-field export / run summary).
 use kwavers_core::time::Time;
-use kwavers_domain::field::indices::LIGHT_IDX;
-use kwavers_domain::field::mapping::UnifiedFieldType;
+use kwavers_field::indices::LIGHT_IDX;
+use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_domain::sensor::recorder::Recorder;
 use log::info;
 use ndarray::{Array3, Axis};

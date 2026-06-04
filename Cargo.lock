@@ -4817,6 +4817,7 @@ dependencies = [
  "kwavers-core",
  "kwavers-diagnostics",
  "kwavers-domain",
+ "kwavers-field",
  "kwavers-gpu",
  "kwavers-grid",
  "kwavers-math",
@@ -4872,6 +4873,7 @@ dependencies = [
  "egui",
  "kwavers-core",
  "kwavers-domain",
+ "kwavers-field",
  "kwavers-grid",
  "kwavers-math",
  "kwavers-signal",
@@ -4949,6 +4951,7 @@ dependencies = [
  "burn",
  "gaia",
  "kwavers-core",
+ "kwavers-field",
  "kwavers-grid",
  "kwavers-math",
  "kwavers-signal",
@@ -4967,6 +4970,17 @@ dependencies = [
  "ritk-registration",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "kwavers-field"
+version = "3.0.0"
+dependencies = [
+ "approx",
+ "kwavers-core",
+ "kwavers-grid",
+ "ndarray 0.16.1",
+ "num-complex",
 ]
 
 [[package]]
@@ -5035,6 +5049,7 @@ dependencies = [
  "approx",
  "kwavers-core",
  "kwavers-domain",
+ "kwavers-field",
  "kwavers-grid",
  "kwavers-math",
  "log",
@@ -5104,6 +5119,7 @@ dependencies = [
  "approx",
  "kwavers-core",
  "kwavers-domain",
+ "kwavers-field",
  "kwavers-gpu",
  "kwavers-grid",
  "kwavers-math",
@@ -5132,6 +5148,7 @@ dependencies = [
  "bytemuck",
  "kwavers-core",
  "kwavers-domain",
+ "kwavers-field",
  "kwavers-grid",
  "kwavers-math",
  "kwavers-physics",

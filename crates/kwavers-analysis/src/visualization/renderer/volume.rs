@@ -2,7 +2,7 @@
 
 use crate::visualization::{ColorScheme, VisualizationConfig};
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::field::UnifiedFieldType;
+use kwavers_field::UnifiedFieldType;
 use kwavers_grid::Grid;
 use ndarray::Array3;
 

@@ -2,7 +2,7 @@ use super::MultiphysicsFieldCoupler;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE};
 use kwavers_core::constants::thermodynamic::SPECIFIC_HEAT_WATER;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_domain::field::indices::{LIGHT_IDX, PRESSURE_IDX, TEMPERATURE_IDX};
+use kwavers_field::indices::{LIGHT_IDX, PRESSURE_IDX, TEMPERATURE_IDX};
 use ndarray::Array3;
 
 impl MultiphysicsFieldCoupler {

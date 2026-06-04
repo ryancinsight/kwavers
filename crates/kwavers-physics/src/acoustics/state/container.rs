@@ -8,7 +8,7 @@ use kwavers_core::error::{KwaversResult, PhysicsError};
 use kwavers_grid::Grid;
 use ndarray::{Array3, Array4, ArrayView3, ArrayViewMut3, Axis};
 
-pub use kwavers_domain::field::indices as field_indices;
+pub use kwavers_field::indices as field_indices;
 
 /// Physics state container - Single Source of Truth for all field data
 #[derive(Debug)]

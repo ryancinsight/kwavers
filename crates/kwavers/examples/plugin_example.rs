@@ -5,7 +5,7 @@
 //! 2. Use the plugin manager for composition
 //! 3. Adapt existing components as plugins
 
-use kwavers_domain::field::mapping::UnifiedFieldType;
+use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_domain::plugin::PluginState;
 use kwavers_domain::medium::HomogeneousMedium;
 use kwavers_grid::Grid;

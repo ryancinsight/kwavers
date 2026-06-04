@@ -1,5 +1,5 @@
 use super::readonly::PluginFieldAccess;
-use kwavers_domain::field::mapping::UnifiedFieldType;
+use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;
 use crate::acoustics::state::PhysicsState;
 

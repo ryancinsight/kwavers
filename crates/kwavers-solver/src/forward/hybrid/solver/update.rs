@@ -30,7 +30,7 @@ impl HybridSolver {
             self.update_decomposition(fields, medium)?;
         }
 
-        use kwavers_domain::field::mapping::UnifiedFieldType;
+        use kwavers_field::mapping::UnifiedFieldType;
         let p_idx = UnifiedFieldType::Pressure.index();
         let vx_idx = UnifiedFieldType::VelocityX.index();
         let vy_idx = UnifiedFieldType::VelocityY.index();
@@ -169,7 +169,7 @@ impl HybridSolver {
         fields: &mut Array4<f64>,
         region: &DomainRegion,
     ) -> KwaversResult<()> {
-        use kwavers_domain::field::mapping::UnifiedFieldType;
+        use kwavers_field::mapping::UnifiedFieldType;
         let p_idx = UnifiedFieldType::Pressure.index();
         let vx_idx = UnifiedFieldType::VelocityX.index();
         let uy_idx = UnifiedFieldType::VelocityY.index();
@@ -262,7 +262,7 @@ impl HybridSolver {
     /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
     ///
     fn validate_solution(&mut self, fields: &Array4<f64>, _time: f64) -> KwaversResult<()> {
-        use kwavers_domain::field::mapping::UnifiedFieldType;
+        use kwavers_field::mapping::UnifiedFieldType;
 
         let pressure = fields.index_axis(ndarray::Axis(0), UnifiedFieldType::Pressure.index());
         let has_nan = pressure.iter().any(|&x| x.is_nan());
@@ -308,7 +308,7 @@ mod tests {
     use super::*;
     use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
     use kwavers_domain::boundary::{DomainPMLBoundary, DomainPmlConfig};
-    use kwavers_domain::field::mapping::UnifiedFieldType;
+    use kwavers_field::mapping::UnifiedFieldType;
     use kwavers_grid::Grid;
     use kwavers_domain::medium::HomogeneousMedium;
     use kwavers_signal::Signal;

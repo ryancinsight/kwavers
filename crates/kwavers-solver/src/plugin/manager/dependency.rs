@@ -2,7 +2,7 @@
 
 use super::PluginManager;
 use kwavers_core::error::{KwaversResult, ValidationError};
-use kwavers_domain::field::mapping::UnifiedFieldType;
+use kwavers_field::mapping::UnifiedFieldType;
 use std::collections::{HashMap, HashSet};
 
 impl PluginManager {

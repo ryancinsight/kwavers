@@ -232,12 +232,12 @@ impl kwavers_domain::plugin::Plugin for MixedDomainPropagationPlugin {
         self.state = state;
     }
 
-    fn required_fields(&self) -> Vec<kwavers_domain::field::mapping::UnifiedFieldType> {
-        vec![kwavers_domain::field::mapping::UnifiedFieldType::Pressure]
+    fn required_fields(&self) -> Vec<kwavers_field::mapping::UnifiedFieldType> {
+        vec![kwavers_field::mapping::UnifiedFieldType::Pressure]
     }
 
-    fn provided_fields(&self) -> Vec<kwavers_domain::field::mapping::UnifiedFieldType> {
-        vec![kwavers_domain::field::mapping::UnifiedFieldType::Pressure]
+    fn provided_fields(&self) -> Vec<kwavers_field::mapping::UnifiedFieldType> {
+        vec![kwavers_field::mapping::UnifiedFieldType::Pressure]
     }
 
     fn update(
@@ -249,7 +249,7 @@ impl kwavers_domain::plugin::Plugin for MixedDomainPropagationPlugin {
         _t: f64,
         _context: &mut kwavers_domain::plugin::PluginContext<'_>,
     ) -> KwaversResult<()> {
-        use kwavers_domain::field::mapping::UnifiedFieldType;
+        use kwavers_field::mapping::UnifiedFieldType;
 
         // Extract pressure field
         let pressure_field =

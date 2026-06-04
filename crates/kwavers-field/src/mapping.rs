@@ -4,7 +4,7 @@
 //! and their indices in the global fields array. This prevents data corruption
 //! from incorrect field indexing.
 
-pub use crate::field::UnifiedFieldType;
+pub use crate::UnifiedFieldType;
 
 /// Type-safe field accessor to prevent index confusion
 #[derive(Debug)]

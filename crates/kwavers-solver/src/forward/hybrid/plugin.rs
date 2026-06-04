@@ -1,7 +1,7 @@
 //! Physics plugin implementation for hybrid solver
 
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::field::mapping::UnifiedFieldType;
+use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;
 use kwavers_domain::medium::Medium;
 use kwavers_domain::plugin::{PluginMetadata, PluginState};

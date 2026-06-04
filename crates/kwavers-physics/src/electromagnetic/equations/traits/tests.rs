@@ -1,6 +1,6 @@
 use super::super::materials::EMMaterialDistribution;
 use super::maxwell::ElectromagneticWaveEquation;
-use kwavers_domain::field::EMFields;
+use kwavers_field::EMFields;
 use crate::electromagnetic::equations::types::EMDimension;
 
 // Mock implementation for testing traits

@@ -4,7 +4,7 @@ mod ivp_velocity;
 use super::{pstd_source_gain, pstd_source_time_shift_samples, PSTDSolver};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_domain::boundary::{CPMLBoundary, DomainPMLBoundary};
-use kwavers_domain::field::wave::WaveFields;
+use kwavers_field::wave::WaveFields;
 use kwavers_grid::Grid;
 use kwavers_domain::medium::MaterialFields;
 use kwavers_domain::medium::Medium;

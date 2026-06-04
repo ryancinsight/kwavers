@@ -269,7 +269,7 @@ impl TimeReversalReconstructor {
 
         // Extract the reconstruction field (typically maximum pressure)
         let pressure_field = solver
-            .get_field(kwavers_domain::field::mapping::UnifiedFieldType::Pressure)
+            .get_field(kwavers_field::mapping::UnifiedFieldType::Pressure)
             .ok_or_else(|| {
                 kwavers_core::error::KwaversError::Validation(
                     kwavers_core::error::ValidationError::FieldValidation {

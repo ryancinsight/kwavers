@@ -1,7 +1,7 @@
 //! ElectromagneticWaveEquation trait impl and PEC boundary conditions.
 
 use super::types::ElectromagneticFdtdSolver;
-use kwavers_domain::field::EMFields;
+use kwavers_field::EMFields;
 use kwavers_physics::electromagnetic::equations::{
     EMDimension, EMMaterialDistribution, ElectromagneticWaveEquation,
 };

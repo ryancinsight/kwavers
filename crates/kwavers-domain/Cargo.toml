@@ -11,6 +11,7 @@ repository = "https://github.com/ryancinsight/kwavers"
 kwavers-core = { path = "../kwavers-core", features = ["registration", "nifti"] }
 kwavers-math = { path = "../kwavers-math" }
 kwavers-grid = { path = "../kwavers-grid" }
+kwavers-field = { path = "../kwavers-field" }
 kwavers-signal = { path = "../kwavers-signal" }
 ndarray = { version = "0.16", features = ["rayon", "serde"] }
 nalgebra = { version = "0.32" }

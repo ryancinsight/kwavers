@@ -136,7 +136,7 @@ pub struct GenericFdtdSolver<T> {
 
     // Wave Fields (p, ux, uy, uz)
     // Instantiated as T, natively mapped by alias
-    pub fields: kwavers_domain::field::wave::GenericWaveFields<T>,
+    pub fields: kwavers_field::wave::GenericWaveFields<T>,
 
     // Material Properties (rho0, c0)
     pub materials: kwavers_domain::medium::material_fields::GenericMaterialFields<T>,

@@ -5,7 +5,7 @@ use super::types::{DetectorConfig, SonoluminescenceEvent, SonoluminescenceStatis
 use kwavers_core::constants::fundamental::{PLANCK, SPEED_OF_LIGHT, STEFAN_BOLTZMANN};
 use kwavers_core::constants::numerical::FOUR_PI;
 use kwavers_core::constants::optical::WIEN_CONSTANT;
-use crate::field::BubbleStateFields;
+use kwavers_field::BubbleStateFields;
 use ndarray::Array3;
 use std::collections::HashMap;
 

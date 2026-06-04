@@ -1,5 +1,5 @@
 use super::*;
-use kwavers_domain::field::UnifiedFieldType;
+use kwavers_field::UnifiedFieldType;
 use ndarray::Array3;
 use std::collections::HashMap;
 

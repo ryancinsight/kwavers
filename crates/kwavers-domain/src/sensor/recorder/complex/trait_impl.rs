@@ -1,7 +1,7 @@
 // recorder/complex/trait_impl.rs - RecorderTrait implementation
 
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
-use crate::field::indices::{LIGHT_IDX, PRESSURE_IDX, TEMPERATURE_IDX};
+use kwavers_field::indices::{LIGHT_IDX, PRESSURE_IDX, TEMPERATURE_IDX};
 use kwavers_grid::Grid;
 use log::info;
 use ndarray::{Array4, Axis};
