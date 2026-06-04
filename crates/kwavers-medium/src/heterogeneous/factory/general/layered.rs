@@ -1,10 +1,10 @@
 //! Layered heterogeneous medium factory method.
 
 use super::HeterogeneousFactory;
+use crate::heterogeneous::core::HeterogeneousMedium;
 use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use kwavers_core::constants::thermodynamic::ROOM_TEMPERATURE_K;
 use kwavers_grid::Grid;
-use crate::heterogeneous::core::HeterogeneousMedium;
 use ndarray::Array3;
 
 impl HeterogeneousFactory {

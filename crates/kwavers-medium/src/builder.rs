@@ -3,11 +3,11 @@
 //! Follows Builder pattern for complex medium instantiation
 
 use super::{DomainMediumParameters, InterfaceTypeParameters, LayerParameters, MediumType};
+use crate::heterogeneous::HeterogeneousFactory;
+use crate::{homogeneous::HomogeneousMedium, Medium};
 use kwavers_core::constants::{REFERENCE_FREQUENCY_HZ, SOUND_SPEED_WATER_SIM};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
-use crate::heterogeneous::HeterogeneousFactory;
-use crate::{homogeneous::HomogeneousMedium, Medium};
 
 /// Specialized medium builder following Builder pattern from GRASP
 #[derive(Debug)]
@@ -290,9 +290,7 @@ impl MediumBuilder {
 mod tests {
     use super::*;
     use kwavers_core::constants::fundamental::{
-        DENSITY_TISSUE,
-        DENSITY_WATER_NOMINAL,
-        SOUND_SPEED_TISSUE,
+        DENSITY_TISSUE, DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE,
     };
     use kwavers_core::constants::tissue_acoustics::{B_OVER_A_SOFT_TISSUE, DENSITY_BRAIN};
     use std::collections::HashMap;

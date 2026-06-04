@@ -4,7 +4,7 @@ use crate::{
     phase::{ConstantPhase, Phase},
     Signal,
 };
-use kwavers_core::constants::numerical::{TWO_PI};
+use kwavers_core::constants::numerical::TWO_PI;
 
 #[derive(Debug, Clone)]
 pub struct SquareWave {

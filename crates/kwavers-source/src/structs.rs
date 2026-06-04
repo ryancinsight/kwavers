@@ -1,6 +1,6 @@
+use crate::types::Source;
 use kwavers_grid::Grid;
 use kwavers_signal::{NullSignal, Signal, TimeVaryingSignal};
-use crate::types::Source;
 use ndarray::Array3;
 use std::fmt::Debug;
 

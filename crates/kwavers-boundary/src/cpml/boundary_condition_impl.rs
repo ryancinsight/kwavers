@@ -1,8 +1,8 @@
 //! `BoundaryCondition` and `AbsorbingBoundary` trait impls for `CPMLBoundary`
 
 use super::CPMLBoundary;
-use kwavers_core::error::KwaversResult;
 use crate::traits::{AbsorbingBoundary, BoundaryCondition, BoundaryDirections};
+use kwavers_core::error::KwaversResult;
 use kwavers_grid::GridTopology;
 use ndarray::{Array3, ArrayViewMut3, Zip};
 

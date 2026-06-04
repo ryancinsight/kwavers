@@ -1,6 +1,6 @@
 use super::UnifiedMedicalImageLoader;
-use kwavers_core::error::{KwaversError, KwaversResult};
 use crate::medical::MedicalImageMetadata;
+use kwavers_core::error::{KwaversError, KwaversResult};
 use ndarray::Array3;
 use std::path::Path;
 

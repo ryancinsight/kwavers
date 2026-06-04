@@ -1,8 +1,8 @@
 //! Frequency Modulation (FM)
 
 use super::{Modulation, ModulationParams};
+use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
-use kwavers_core::constants::numerical::{TWO_PI};
 
 /// Frequency modulation implementation
 #[derive(Debug, Clone)]

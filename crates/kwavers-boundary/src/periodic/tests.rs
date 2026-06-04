@@ -1,14 +1,14 @@
 use approx::assert_abs_diff_eq;
 use ndarray::Array3;
 
-use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
-use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use crate::traits::BoundaryFieldType;
 use crate::BoundaryCondition;
+use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_grid::topology::{GridTopology, TopologyDimension};
 
 use super::{PeriodicBoundaryCondition, PeriodicConfig};
-use kwavers_core::constants::numerical::{TWO_PI};
+use kwavers_core::constants::numerical::TWO_PI;
 
 struct MockGrid;
 impl GridTopology for MockGrid {
@@ -167,9 +167,7 @@ fn test_energy_conservation() {
                 let x = (i as f64) / 16.0;
                 let y = (j as f64) / 16.0;
                 let z = (k as f64) / 16.0;
-                field[[i, j, k]] = (TWO_PI * x).sin()
-                    * (TWO_PI * y).sin()
-                    * (TWO_PI * z).sin();
+                field[[i, j, k]] = (TWO_PI * x).sin() * (TWO_PI * y).sin() * (TWO_PI * z).sin();
             }
         }
     }

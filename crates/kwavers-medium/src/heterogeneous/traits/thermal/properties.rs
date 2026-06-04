@@ -3,12 +3,12 @@
 //! **Domain Focus**: Pure thermal behavior following Domain-Driven Design
 //! Evidence-based thermal modeling per Hamilton & Blackstock Ch.8
 
-use kwavers_core::constants::tissue_thermal::THERMAL_EXPANSION_SOFT_TISSUE;
-use kwavers_grid::Grid;
 use crate::{
     heterogeneous::{core::HeterogeneousMedium, interpolation::HetTrilinearInterpolator},
     thermal::{ThermalField, ThermalProperties},
 };
+use kwavers_core::constants::tissue_thermal::THERMAL_EXPANSION_SOFT_TISSUE;
+use kwavers_grid::Grid;
 use ndarray::Array3;
 
 impl ThermalProperties for HeterogeneousMedium {

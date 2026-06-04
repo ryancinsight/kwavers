@@ -3,8 +3,6 @@
 //! Following GRASP principle: Separated core data structure from trait implementations
 //! to achieve optimal cohesion per senior engineering standards.
 
-use kwavers_core::constants::REFERENCE_FREQUENCY_HZ;
-use kwavers_grid::Grid;
 use crate::homogeneous::HomogeneousMedium;
 use crate::{
     acoustic::AcousticProperties,
@@ -15,6 +13,8 @@ use crate::{
     thermal::{ThermalField, ThermalProperties},
     viscous::ViscousProperties,
 };
+use kwavers_core::constants::REFERENCE_FREQUENCY_HZ;
+use kwavers_grid::Grid;
 use ndarray::Array3;
 
 /// Medium with spatially varying properties

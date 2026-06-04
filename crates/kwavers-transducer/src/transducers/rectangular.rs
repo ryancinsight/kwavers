@@ -3,7 +3,7 @@
 //! This module defines the physical properties of a rectangular transducer array,
 //! decoupled from any specific solver implementation.
 
-use kwavers_core::constants::numerical::{TWO_PI};
+use kwavers_core::constants::numerical::TWO_PI;
 
 /// Rectangular transducer description
 #[derive(Debug, Clone)]

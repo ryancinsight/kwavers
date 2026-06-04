@@ -2,9 +2,9 @@
 
 use super::constants::MAX_ELEMENT_DENSITY;
 use super::element::ElementConfiguration;
-use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
 use crate::transducers::focused::{SphericalCapConfig, SphericalCapLayout};
-use kwavers_core::constants::numerical::{FOUR_PI};
+use kwavers_core::constants::numerical::FOUR_PI;
+use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
 
 /// Hemisphere geometry definition
 #[derive(Debug, Clone)]

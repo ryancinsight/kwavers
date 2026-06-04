@@ -3,9 +3,9 @@
 //! This module provides interfaces for creating custom source implementations
 //! that can be defined by users for specialized applications.
 
+use crate::{Source, SourceField};
 use kwavers_grid::Grid;
 use kwavers_signal::Signal;
-use crate::{Source, SourceField};
 use ndarray::Array3;
 use std::fmt::Debug;
 use std::sync::Arc;

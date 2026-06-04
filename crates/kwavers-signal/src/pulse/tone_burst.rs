@@ -1,11 +1,11 @@
 //! Tone burst signal implementation
 
-use kwavers_core::error::{KwaversError, KwaversResult};
 use crate::window::{window_value, SignalWindowType};
 use crate::Signal;
+use kwavers_core::error::{KwaversError, KwaversResult};
 
 use super::MAX_TONE_BURST_CYCLES;
-use kwavers_core::constants::numerical::{TWO_PI};
+use kwavers_core::constants::numerical::TWO_PI;
 
 /// Tone burst signal - windowed sinusoid with specific number of cycles
 ///

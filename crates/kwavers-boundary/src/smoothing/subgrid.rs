@@ -135,8 +135,8 @@ impl SubgridAveraging {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
     use approx::assert_relative_eq;
+    use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
     use ndarray::{s, Array3};
 
     #[test]

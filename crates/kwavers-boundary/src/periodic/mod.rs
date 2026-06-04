@@ -33,8 +33,8 @@
 //! 2. Brillouin, L. (1953). *Wave Propagation in Periodic Structures*.
 //! 3. Treeby & Cox (2010). "k-Wave: MATLAB toolbox".
 
-use kwavers_core::error::{KwaversError, KwaversResult};
 use crate::traits::BoundaryDirections;
+use kwavers_core::error::{KwaversError, KwaversResult};
 
 /// Periodic boundary condition configuration
 #[derive(Debug, Clone)]

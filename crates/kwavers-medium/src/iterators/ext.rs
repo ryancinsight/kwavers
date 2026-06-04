@@ -1,7 +1,7 @@
 //! Extension trait that adds iterator methods to `dyn Medium`.
 
-use kwavers_grid::Grid;
 use crate::Medium;
+use kwavers_grid::Grid;
 
 use super::interface::InterfaceIterator;
 use super::parallel::ParallelMediumIterator;

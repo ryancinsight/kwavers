@@ -1,6 +1,6 @@
 //! Array geometry definitions for PAM
 
-use kwavers_core::constants::numerical::{TWO_PI};
+use kwavers_core::constants::numerical::TWO_PI;
 /// Array geometry types for different sensor configurations
 #[derive(Debug, Clone)]
 pub enum PamArrayGeometry {

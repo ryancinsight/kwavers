@@ -1,8 +1,8 @@
 use ndarray::{ArrayView3, ArrayViewMut3};
 
+use crate::core::{ArrayAccess, CoreMedium};
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
-use crate::core::{ArrayAccess, CoreMedium};
 
 use super::HomogeneousMedium;
 

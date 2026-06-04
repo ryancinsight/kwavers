@@ -16,10 +16,10 @@
 
 use super::mesh::TetrahedralMesh;
 use super::types::MeshBoundaryType;
-use kwavers_core::error::{KwaversError, KwaversResult};
 use gaia::domain::core::index::{FaceId, VertexId};
 use gaia::domain::topology::{Cell, ElementType};
 use gaia::IndexedMesh;
+use kwavers_core::error::{KwaversError, KwaversResult};
 use std::collections::BTreeSet;
 
 impl TetrahedralMesh {

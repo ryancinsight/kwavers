@@ -1,7 +1,7 @@
 //! Interface detector iterator.
 
-use kwavers_grid::Grid;
 use crate::Medium;
+use kwavers_grid::Grid;
 
 /// Iterator that finds interfaces in the medium
 #[derive(Debug)]
@@ -47,8 +47,7 @@ impl<'a> InterfaceIterator<'a> {
 
         neighbors.iter().any(|&(ni, nj, nk)| {
             let (nx, ny, nz) = self.grid.indices_to_coordinates(ni, nj, nk);
-            let neighbor_density =
-                crate::density_at(self.medium, nx, ny, nz, self.grid);
+            let neighbor_density = crate::density_at(self.medium, nx, ny, nz, self.grid);
             ((neighbor_density - center_density).abs() / center_density) > self.threshold
         })
     }
@@ -71,8 +70,7 @@ impl<'a> InterfaceIterator<'a> {
 
                     if ni < self.grid.nx && nj < self.grid.ny && nk < self.grid.nz {
                         let (nx, ny, nz) = self.grid.indices_to_coordinates(ni, nj, nk);
-                        let neighbor =
-                            crate::density_at(self.medium, nx, ny, nz, self.grid);
+                        let neighbor = crate::density_at(self.medium, nx, ny, nz, self.grid);
                         max_jump = f64::max(max_jump, (neighbor - center).abs());
                     }
                 }

@@ -1,8 +1,8 @@
 //! Phase Modulation (PM)
 
 use super::{Modulation, ModulationParams};
+use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_core::constants::numerical::{TWO_PI};
 
 /// Phase modulation implementation
 #[derive(Debug, Clone)]

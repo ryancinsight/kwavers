@@ -26,7 +26,7 @@
 
 use super::math::{DISC_SAMPLE_UPSAMPLING_RATE, GOLDEN_ANGLE};
 use super::KWaveArray;
-use kwavers_core::constants::numerical::{TWO_PI};
+use kwavers_core::constants::numerical::TWO_PI;
 
 impl KWaveArray {
     // ─── Arc ───────────────────────────────────────────────────────────────

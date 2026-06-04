@@ -22,11 +22,11 @@ impl Default for CEUSImagingParameters {
         use kwavers_core::constants::numerical::MHZ_TO_HZ;
         Self {
             frequency: 3.0 * MHZ_TO_HZ, // 3 MHz
-            mechanical_index: 0.1, // Low MI for CEUS
-            frame_rate: 10.0,      // 10 fps
-            dynamic_range: 60.0,   // 60 dB
-            fov: (80.0, 60.0),     // 80x60 mm
-            depth: 150.0,          // 150 mm
+            mechanical_index: 0.1,      // Low MI for CEUS
+            frame_rate: 10.0,           // 10 fps
+            dynamic_range: 60.0,        // 60 dB
+            fov: (80.0, 60.0),          // 80x60 mm
+            depth: 150.0,               // 150 mm
         }
     }
 }

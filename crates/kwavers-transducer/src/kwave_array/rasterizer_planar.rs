@@ -22,7 +22,7 @@
 
 use super::math::{apply_matrix, euler_xyz_rotation_matrix, DISC_SAMPLE_UPSAMPLING_RATE};
 use super::{ElementShape, KWaveArray};
-use kwavers_core::constants::numerical::{TWO_PI};
+use kwavers_core::constants::numerical::TWO_PI;
 
 impl KWaveArray {
     // ─── Rect ──────────────────────────────────────────────────────────────

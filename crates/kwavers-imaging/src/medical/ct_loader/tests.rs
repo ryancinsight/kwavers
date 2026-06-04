@@ -1,6 +1,6 @@
 use super::loader::CTImageLoader;
-use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use crate::medical::MedicalImageLoader;
+use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 
 #[test]
 fn test_ct_loader_creation() {

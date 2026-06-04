@@ -31,8 +31,8 @@
 //! `record_step` call, and `u(s, n)` is the staggered velocity component.
 
 use super::super::SensorRecorder;
-use kwavers_core::error::KwaversResult;
 use crate::recorder::fields::SensorRecordField;
+use kwavers_core::error::KwaversResult;
 use ndarray::{Array1, Array2, Array3};
 
 impl SensorRecorder {

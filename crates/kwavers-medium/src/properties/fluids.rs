@@ -15,57 +15,37 @@
 //! Pressure: 1 atm unless otherwise noted
 
 use super::material::AcousticMaterialProperties;
-use kwavers_core::constants::acoustic_parameters::{BLOOD_PLASMA_VISCOSITY_37C, BLOOD_VISCOSITY_37C};
+use kwavers_core::constants::acoustic_parameters::{
+    BLOOD_PLASMA_VISCOSITY_37C, BLOOD_VISCOSITY_37C,
+};
 use kwavers_core::constants::cavitation::VISCOSITY_WATER;
+use kwavers_core::constants::fundamental::{
+    ATMOSPHERIC_PRESSURE, DENSITY_TISSUE, DENSITY_WATER_37C, SOUND_SPEED_WATER,
+    SOUND_SPEED_WATER_37C,
+};
+use kwavers_core::constants::medical::BLOOD_SPECIFIC_HEAT;
 use kwavers_core::constants::optical::{
     REFRACTIVE_INDEX_BIOLOGICAL_FLUID, REFRACTIVE_INDEX_CSF, REFRACTIVE_INDEX_WATER,
 };
-use kwavers_core::constants::fundamental::{
-    ATMOSPHERIC_PRESSURE,
-    DENSITY_TISSUE,
-    DENSITY_WATER_37C,
-    SOUND_SPEED_WATER,
-    SOUND_SPEED_WATER_37C,
+use kwavers_core::constants::thermodynamic::{
+    BODY_TEMPERATURE_C, ROOM_TEMPERATURE_C, SPECIFIC_HEAT_WATER_37C, THERMAL_CONDUCTIVITY_WATER_37C,
 };
 use kwavers_core::constants::tissue_acoustics::{
-    ACOUSTIC_ABSORPTION_BLOOD_PLASMA,
-    ACOUSTIC_ABSORPTION_CSF,
-    ACOUSTIC_ABSORPTION_URINE,
-    ACOUSTIC_ABSORPTION_WHOLE_BLOOD,
-    B_OVER_A_BLOOD,
-    B_OVER_A_CSF,
-    B_OVER_A_MINERAL_OIL,
-    B_OVER_A_NANOPARTICLE_SUSPENSION,
-    B_OVER_A_URINE,
-    B_OVER_A_WATER,
-    B_OVER_A_WATER_37C,
-    DENSITY_BLOOD,
-    DENSITY_CSF,
-    DENSITY_MICROBUBBLE_SUSPENSION,
-    DENSITY_MINERAL_OIL,
-    DENSITY_ULTRASOUND_GEL,
-    DENSITY_URINE,
-    SOUND_SPEED_BLOOD,
-    SOUND_SPEED_CSF,
-    SOUND_SPEED_MINERAL_OIL,
-    SOUND_SPEED_NANOPARTICLE_SUSPENSION,
-    SOUND_SPEED_ULTRASOUND_GEL,
-    SOUND_SPEED_URINE,
-    WATER_ABSORPTION_ALPHA_0_DB_CM_MHZ2,
-};
-use kwavers_core::constants::medical::BLOOD_SPECIFIC_HEAT;
-use kwavers_core::constants::thermodynamic::{
-    BODY_TEMPERATURE_C, ROOM_TEMPERATURE_C, SPECIFIC_HEAT_WATER_37C,
-    THERMAL_CONDUCTIVITY_WATER_37C,
+    ACOUSTIC_ABSORPTION_BLOOD_PLASMA, ACOUSTIC_ABSORPTION_CSF, ACOUSTIC_ABSORPTION_URINE,
+    ACOUSTIC_ABSORPTION_WHOLE_BLOOD, B_OVER_A_BLOOD, B_OVER_A_CSF, B_OVER_A_MINERAL_OIL,
+    B_OVER_A_NANOPARTICLE_SUSPENSION, B_OVER_A_URINE, B_OVER_A_WATER, B_OVER_A_WATER_37C,
+    DENSITY_BLOOD, DENSITY_CSF, DENSITY_MICROBUBBLE_SUSPENSION, DENSITY_MINERAL_OIL,
+    DENSITY_ULTRASOUND_GEL, DENSITY_URINE, SOUND_SPEED_BLOOD, SOUND_SPEED_CSF,
+    SOUND_SPEED_MINERAL_OIL, SOUND_SPEED_NANOPARTICLE_SUSPENSION, SOUND_SPEED_ULTRASOUND_GEL,
+    SOUND_SPEED_URINE, WATER_ABSORPTION_ALPHA_0_DB_CM_MHZ2,
 };
 use kwavers_core::constants::tissue_thermal::{
     SPECIFIC_HEAT_BLOOD_PLASMA, SPECIFIC_HEAT_CSF, SPECIFIC_HEAT_MICROBUBBLE_SUSPENSION,
-    SPECIFIC_HEAT_MINERAL_OIL, SPECIFIC_HEAT_NANOPARTICLE_SUSPENSION,
-    SPECIFIC_HEAT_ULTRASOUND_GEL, SPECIFIC_HEAT_URINE, THERMAL_CONDUCTIVITY_BLOOD,
-    THERMAL_CONDUCTIVITY_BLOOD_PLASMA, THERMAL_CONDUCTIVITY_CSF,
-    THERMAL_CONDUCTIVITY_MICROBUBBLE_SUSPENSION, THERMAL_CONDUCTIVITY_MINERAL_OIL,
-    THERMAL_CONDUCTIVITY_NANOPARTICLE_SUSPENSION, THERMAL_CONDUCTIVITY_ULTRASOUND_GEL,
-    THERMAL_CONDUCTIVITY_URINE, THERMAL_DIFFUSIVITY_BLOOD,
+    SPECIFIC_HEAT_MINERAL_OIL, SPECIFIC_HEAT_NANOPARTICLE_SUSPENSION, SPECIFIC_HEAT_ULTRASOUND_GEL,
+    SPECIFIC_HEAT_URINE, THERMAL_CONDUCTIVITY_BLOOD, THERMAL_CONDUCTIVITY_BLOOD_PLASMA,
+    THERMAL_CONDUCTIVITY_CSF, THERMAL_CONDUCTIVITY_MICROBUBBLE_SUSPENSION,
+    THERMAL_CONDUCTIVITY_MINERAL_OIL, THERMAL_CONDUCTIVITY_NANOPARTICLE_SUSPENSION,
+    THERMAL_CONDUCTIVITY_ULTRASOUND_GEL, THERMAL_CONDUCTIVITY_URINE, THERMAL_DIFFUSIVITY_BLOOD,
 };
 
 /// Fluid material properties type alias
@@ -130,8 +110,8 @@ pub const WHOLE_BLOOD: FluidProperties = FluidProperties {
 /// Source: Duck (1990)
 /// Similar to plasma but with slightly different composition
 pub const CSF: FluidProperties = FluidProperties {
-    sound_speed: SOUND_SPEED_CSF,           // 1515.0 m/s — Duck (1990) Table 4.6 at 37°C
-    density: DENSITY_CSF,                   // 1007.0 kg/m³ — Duck (1990) Table 4.1
+    sound_speed: SOUND_SPEED_CSF, // 1515.0 m/s — Duck (1990) Table 4.6 at 37°C
+    density: DENSITY_CSF,         // 1007.0 kg/m³ — Duck (1990) Table 4.1
     // Z = ρ·c = DENSITY_CSF × SOUND_SPEED_CSF = 1007.0 × 1515.0 = 1 525 605 Pa·s/m
     impedance: 1_525_605.0,
     absorption_coefficient: ACOUSTIC_ABSORPTION_CSF, // 0.008 dB/(cm·MHz) — Duck (1990)
@@ -156,8 +136,8 @@ pub const CSF: FluidProperties = FluidProperties {
 /// Urine at 37°C
 /// Source: Duck (1990)
 pub const URINE: FluidProperties = FluidProperties {
-    sound_speed: SOUND_SPEED_URINE,         // 1541.0 m/s — Duck (1990) Table 4.6
-    density: DENSITY_URINE,                 // 1005.0 kg/m³ — Duck (1990)
+    sound_speed: SOUND_SPEED_URINE, // 1541.0 m/s — Duck (1990) Table 4.6
+    density: DENSITY_URINE,         // 1005.0 kg/m³ — Duck (1990)
     // Z = ρ·c = DENSITY_URINE × SOUND_SPEED_URINE = 1005.0 × 1541.0 = 1 548 705 Pa·s/m
     impedance: 1_548_705.0,
     absorption_coefficient: ACOUSTIC_ABSORPTION_URINE, // 0.012 dB/(cm·MHz) — Duck (1990)
@@ -187,14 +167,14 @@ pub const URINE: FluidProperties = FluidProperties {
 /// Source: Perry & Green (2007)
 /// Typical commercial formulation based on mineral oil and thickening agents
 pub const ULTRASOUND_GEL: FluidProperties = FluidProperties {
-    sound_speed: SOUND_SPEED_ULTRASOUND_GEL,   // 1550.0 m/s — Perry & Green (2007)
-    density: DENSITY_ULTRASOUND_GEL,           // 1020.0 kg/m³ — Perry & Green (2007)
+    sound_speed: SOUND_SPEED_ULTRASOUND_GEL, // 1550.0 m/s — Perry & Green (2007)
+    density: DENSITY_ULTRASOUND_GEL,         // 1020.0 kg/m³ — Perry & Green (2007)
     // Z = ρ·c = DENSITY_ULTRASOUND_GEL × SOUND_SPEED_ULTRASOUND_GEL = 1020 × 1550 = 1 581 000
     impedance: 1581000.0,
     absorption_coefficient: 0.008,
     absorption_exponent: 1.1,
     nonlinearity_parameter: B_OVER_A_WATER_37C, // 5.0 at 37°C (water-based gel)
-    shear_viscosity: 5.0, // Highly viscous for contact
+    shear_viscosity: 5.0,                       // Highly viscous for contact
     bulk_viscosity: 0.0,
     specific_heat: SPECIFIC_HEAT_ULTRASOUND_GEL,
     thermal_conductivity: THERMAL_CONDUCTIVITY_ULTRASOUND_GEL,
@@ -214,14 +194,14 @@ pub const ULTRASOUND_GEL: FluidProperties = FluidProperties {
 /// Source: Perry & Green (2007)
 /// Pure liquid medium without polymer additives
 pub const MINERAL_OIL: FluidProperties = FluidProperties {
-    sound_speed: SOUND_SPEED_MINERAL_OIL,   // 1450.0 m/s — Perry & Green (2007)
-    density: DENSITY_MINERAL_OIL,           // 870.0 kg/m³ — Perry & Green (2007)
+    sound_speed: SOUND_SPEED_MINERAL_OIL, // 1450.0 m/s — Perry & Green (2007)
+    density: DENSITY_MINERAL_OIL,         // 870.0 kg/m³ — Perry & Green (2007)
     // Z = ρ·c = DENSITY_MINERAL_OIL × SOUND_SPEED_MINERAL_OIL = 870 × 1450 = 1 261 500
     impedance: 1261500.0,
     absorption_coefficient: 0.005,
     absorption_exponent: 1.0,
     nonlinearity_parameter: B_OVER_A_MINERAL_OIL, // 4.5 (Perry & Green 2007)
-    shear_viscosity: 80.0e-3, // Low viscosity
+    shear_viscosity: 80.0e-3,                     // Low viscosity
     bulk_viscosity: 0.0,
     specific_heat: SPECIFIC_HEAT_MINERAL_OIL,
     thermal_conductivity: THERMAL_CONDUCTIVITY_MINERAL_OIL,
@@ -283,7 +263,7 @@ pub const WATER_37C: FluidProperties = FluidProperties {
 /// Effective properties depend on bubble concentration
 pub const MICROBUBBLE_SUSPENSION: FluidProperties = FluidProperties {
     sound_speed: SOUND_SPEED_WATER,
-    density: DENSITY_MICROBUBBLE_SUSPENSION,    // 1010.0 kg/m³ — Stride & Saffari (2003)
+    density: DENSITY_MICROBUBBLE_SUSPENSION, // 1010.0 kg/m³ — Stride & Saffari (2003)
     // Z = ρ·c = DENSITY_MICROBUBBLE_SUSPENSION × SOUND_SPEED_WATER = 1010.0 × 1482.0 = 1 496 820
     impedance: 1_496_820.0,
     absorption_coefficient: 0.05, // Higher absorption due to bubble resonance
@@ -316,7 +296,7 @@ pub const NANOPARTICLE_SUSPENSION: FluidProperties = FluidProperties {
     absorption_coefficient: 0.03,
     absorption_exponent: 1.2,
     nonlinearity_parameter: B_OVER_A_NANOPARTICLE_SUSPENSION, // 5.3 (Stride & Saffari 2003)
-    shear_viscosity: VISCOSITY_WATER, // water-based carrier
+    shear_viscosity: VISCOSITY_WATER,                         // water-based carrier
     bulk_viscosity: 0.0,
     specific_heat: SPECIFIC_HEAT_NANOPARTICLE_SUSPENSION, // 4150.0 J/(kg·K)
     thermal_conductivity: THERMAL_CONDUCTIVITY_NANOPARTICLE_SUSPENSION, // 0.59 W/(m·K)
@@ -401,7 +381,12 @@ mod tests {
     #[test]
     fn test_attenuation_frequency_scaling() {
         // Test frequency-dependent attenuation for all fluids
-        let freqs = [MHZ_TO_HZ, 2.0 * MHZ_TO_HZ, 5.0 * MHZ_TO_HZ, 10.0 * MHZ_TO_HZ]; // 1, 2, 5, 10 MHz
+        let freqs = [
+            MHZ_TO_HZ,
+            2.0 * MHZ_TO_HZ,
+            5.0 * MHZ_TO_HZ,
+            10.0 * MHZ_TO_HZ,
+        ]; // 1, 2, 5, 10 MHz
 
         for fluid in &[WHOLE_BLOOD, CSF, ULTRASOUND_GEL] {
             let mut prev_att = 0.0;

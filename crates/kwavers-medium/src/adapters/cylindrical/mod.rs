@@ -61,8 +61,8 @@ mod tests;
 use ndarray::Array2;
 use std::fmt;
 
-use kwavers_grid::{CylindricalTopology, Grid};
 use crate::Medium;
+use kwavers_grid::{CylindricalTopology, Grid};
 
 /// Cylindrical projection of a 3D medium for axisymmetric solvers
 ///

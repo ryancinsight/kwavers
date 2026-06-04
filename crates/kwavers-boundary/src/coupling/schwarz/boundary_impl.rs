@@ -8,9 +8,9 @@
 use ndarray::{Array3, ArrayViewMut3};
 
 use super::SchwarzBoundary;
-use kwavers_core::error::KwaversResult;
 use crate::coupling::types::BoundaryDirections;
 use crate::traits::BoundaryCondition;
+use kwavers_core::error::KwaversResult;
 use kwavers_grid::GridTopology;
 
 impl BoundaryCondition for SchwarzBoundary {

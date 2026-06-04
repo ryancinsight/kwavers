@@ -1,13 +1,13 @@
 //! Homogeneous medium implementation with uniform properties
 
-use kwavers_core::constants::tissue_acoustics::B_OVER_A_WATER;
-use kwavers_core::constants::thermodynamic::THERMAL_EXPANSION_WATER_20C;
-use kwavers_core::constants::{
-    AIR_POLYTROPIC_INDEX, ATMOSPHERIC_PRESSURE, MHZ_TO_HZ, REFERENCE_FREQUENCY_HZ,
-    VISCOSITY_WATER, WATER_ABSORPTION_ALPHA_0, WATER_ABSORPTION_POWER, WATER_VAPOR_PRESSURE_20C,
-};
 use kwavers_core::constants::cavitation::SURFACE_TENSION_WATER;
+use kwavers_core::constants::thermodynamic::THERMAL_EXPANSION_WATER_20C;
 use kwavers_core::constants::thermodynamic::{SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER};
+use kwavers_core::constants::tissue_acoustics::B_OVER_A_WATER;
+use kwavers_core::constants::{
+    AIR_POLYTROPIC_INDEX, ATMOSPHERIC_PRESSURE, MHZ_TO_HZ, REFERENCE_FREQUENCY_HZ, VISCOSITY_WATER,
+    WATER_ABSORPTION_ALPHA_0, WATER_ABSORPTION_POWER, WATER_VAPOR_PRESSURE_20C,
+};
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
 use ndarray::Array3;

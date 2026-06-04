@@ -1,7 +1,7 @@
 use std::f64::consts::PI;
 
-use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_core::constants::numerical::{FOUR_PI, TWO_PI};
+use kwavers_core::error::{KwaversError, KwaversResult};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum SignalWindowType {

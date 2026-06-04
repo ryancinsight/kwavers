@@ -1,9 +1,7 @@
 //! Pressure data extraction and accessor methods for SensorRecorder.
 
+use crate::recorder::pressure_statistics::{PressureFieldStatistics, SampledStatistics};
 use kwavers_core::error::{KwaversError, KwaversResult};
-use crate::recorder::pressure_statistics::{
-    PressureFieldStatistics, SampledStatistics,
-};
 use ndarray::{Array1, Array2, ArrayView2};
 
 use super::SensorRecorder;

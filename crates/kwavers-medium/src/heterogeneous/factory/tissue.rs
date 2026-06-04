@@ -3,6 +3,7 @@
 //! **Factory Pattern**: Encapsulated creation logic per Gang of Four
 //! **Evidence-Based**: Tissue parameters from Hamilton & Blackstock (1998)
 
+use crate::heterogeneous::core::HeterogeneousMedium;
 use kwavers_core::constants::acoustic_parameters::{
     REFERENCE_FREQUENCY_TISSUE_HZ, TISSUE_NONLINEARITY_B_A, VISCOSITY_SOFT_TISSUE,
 };
@@ -23,7 +24,6 @@ use kwavers_core::constants::tissue_thermal::{
 };
 use kwavers_core::constants::MHZ_TO_HZ;
 use kwavers_grid::Grid;
-use crate::heterogeneous::core::HeterogeneousMedium;
 use log::debug;
 use ndarray::Array3;
 
@@ -70,11 +70,14 @@ impl TissueFactory {
 
         // Optical properties [m⁻¹] — broadband NIR soft tissue initialization
         let mu_a = Array3::from_elem((grid.nx, grid.ny, grid.nz), OPTICAL_ABSORPTION_TISSUE_NIR_M);
-        let mu_s_prime =
-            Array3::from_elem((grid.nx, grid.ny, grid.nz), OPTICAL_SCATTERING_REDUCED_TISSUE_NIR_M);
+        let mu_s_prime = Array3::from_elem(
+            (grid.nx, grid.ny, grid.nz),
+            OPTICAL_SCATTERING_REDUCED_TISSUE_NIR_M,
+        );
 
         // Bubble state
-        let bubble_radius = Array3::from_elem((grid.nx, grid.ny, grid.nz), TISSUE_NUCLEATION_RADIUS);
+        let bubble_radius =
+            Array3::from_elem((grid.nx, grid.ny, grid.nz), TISSUE_NUCLEATION_RADIUS);
         let bubble_velocity = Array3::zeros((grid.nx, grid.ny, grid.nz));
 
         // Acoustic parameters

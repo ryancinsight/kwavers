@@ -3,11 +3,9 @@
 //! **Separation of Concerns**: Pure elastic behavior per Clean Architecture
 //! Following TSE 2025 "Domain-Specific Module Organization"
 
-use kwavers_grid::Grid;
 use crate::elastic::{ElasticArrayAccess, ElasticProperties};
-use crate::heterogeneous::{
-    core::HeterogeneousMedium, interpolation::HetTrilinearInterpolator,
-};
+use crate::heterogeneous::{core::HeterogeneousMedium, interpolation::HetTrilinearInterpolator};
+use kwavers_grid::Grid;
 use ndarray::Array3;
 
 impl ElasticProperties for HeterogeneousMedium {

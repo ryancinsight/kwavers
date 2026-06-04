@@ -1,10 +1,10 @@
 //! Value-semantic regression tests for cylindrical projection.
 
 use super::CylindricalMediumProjection;
-use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
-use kwavers_grid::{CylindricalTopology, Grid};
 use crate::heterogeneous::HeterogeneousMedium;
 use crate::{CoreMedium, HomogeneousMedium};
+use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
+use kwavers_grid::{CylindricalTopology, Grid};
 
 #[test]
 fn test_homogeneous_projection() {

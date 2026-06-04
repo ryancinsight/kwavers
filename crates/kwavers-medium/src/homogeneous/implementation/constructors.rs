@@ -7,21 +7,14 @@ use kwavers_core::constants::cavitation::{
 };
 use kwavers_core::constants::fundamental::ACOUSTIC_ABSORPTION_TISSUE;
 use kwavers_core::constants::fundamental::{
-    ATMOSPHERIC_PRESSURE,
-    DENSITY_TISSUE,
-    DENSITY_WATER,
-    SOUND_SPEED_AIR,
-    SOUND_SPEED_TISSUE,
+    ATMOSPHERIC_PRESSURE, DENSITY_TISSUE, DENSITY_WATER, SOUND_SPEED_AIR, SOUND_SPEED_TISSUE,
     SOUND_SPEED_WATER,
-};
-use kwavers_core::constants::tissue_acoustics::{
-    B_OVER_A_AIR,
-    DENSITY_AIR,
-    DENSITY_BLOOD,
-    SOUND_SPEED_BLOOD,
 };
 use kwavers_core::constants::thermodynamic::{
     BODY_TEMPERATURE_K, ROOM_TEMPERATURE_K, THERMAL_CONDUCTIVITY_AIR, THERMAL_EXPANSION_AIR_20C,
+};
+use kwavers_core::constants::tissue_acoustics::{
+    B_OVER_A_AIR, DENSITY_AIR, DENSITY_BLOOD, SOUND_SPEED_BLOOD,
 };
 use kwavers_core::constants::BLOOD_VISCOSITY_37C;
 use kwavers_core::constants::MHZ_TO_HZ;

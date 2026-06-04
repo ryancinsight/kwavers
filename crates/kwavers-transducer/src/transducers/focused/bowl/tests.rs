@@ -215,8 +215,7 @@ fn axis_reference_preset_preserves_focus_axis_and_explicit_radius() {
 
     let bowl = BowlTransducer::with_polar_bounds(config, theta_min, theta_max, 96).unwrap();
     let summed_area: f64 = bowl.element_areas().iter().sum();
-    let expected_area =
-        TWO_PI * radius.powi(2) * (theta_min.cos() - theta_max.cos());
+    let expected_area = TWO_PI * radius.powi(2) * (theta_min.cos() - theta_max.cos());
 
     assert!((summed_area - expected_area).abs() < 1.0e-14);
     for position in bowl.element_positions() {
@@ -252,8 +251,7 @@ fn focus_axis_preset_preserves_axis_radius_and_explicit_aperture() {
     assert!((config.diameter - aperture_diameter).abs() < 1.0e-14);
 
     let bowl = BowlTransducer::with_polar_bounds(config, theta_min, theta_max, 128).unwrap();
-    let expected_area =
-        TWO_PI * radius.powi(2) * (theta_min.cos() - theta_max.cos());
+    let expected_area = TWO_PI * radius.powi(2) * (theta_min.cos() - theta_max.cos());
     let summed_area: f64 = bowl.element_areas().iter().sum();
 
     assert_eq!(bowl.element_count(), 128);
@@ -357,8 +355,7 @@ fn bowl_polar_bounds_support_annular_cutout_area() {
 
     let bowl = BowlTransducer::with_polar_bounds(config, theta_min, theta_max, 96).unwrap();
     let summed_area: f64 = bowl.element_areas().iter().sum();
-    let expected_area =
-        TWO_PI * 0.10_f64.powi(2) * (theta_min.cos() - theta_max.cos());
+    let expected_area = TWO_PI * 0.10_f64.powi(2) * (theta_min.cos() - theta_max.cos());
     let max_z = bowl
         .element_positions()
         .iter()

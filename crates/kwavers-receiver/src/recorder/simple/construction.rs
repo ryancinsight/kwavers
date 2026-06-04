@@ -3,11 +3,11 @@
 //! All constructors share the invariant that `sensor_indices` is ordered
 //! x-fastest (Fortran order) matching k-Wave's `sensor.mask` convention.
 
-use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use crate::recorder::config::RecordingMode;
 use crate::recorder::fields::{SensorRecordField, SensorRecordSpec};
 use crate::recorder::pressure_statistics::PressureFieldStatistics;
 use crate::recorder::velocity_statistics::VelocityComponentStats;
+use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use ndarray::{Array1, Array2, Array3};
 
 use super::SensorRecorder;

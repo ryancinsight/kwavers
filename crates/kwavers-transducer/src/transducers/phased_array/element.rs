@@ -1,7 +1,7 @@
 //! Individual transducer element modeling
 
+use kwavers_core::constants::numerical::TWO_PI;
 use std::f64::consts::PI;
-use kwavers_core::constants::numerical::{TWO_PI};
 
 /// Individual transducer element with physics-based modeling
 #[derive(Debug, Clone)]

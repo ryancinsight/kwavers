@@ -1,9 +1,9 @@
 //! `ElasticProperties` and `ElasticArrayAccess` impls for `HeterogeneousTissueMedium`
 
 use super::HeterogeneousTissueMedium;
-use kwavers_grid::Grid;
 use crate::absorption::TISSUE_PROPERTIES;
 use crate::elastic::{ElasticArrayAccess, ElasticProperties};
+use kwavers_grid::Grid;
 use ndarray::Array3;
 
 impl ElasticProperties for HeterogeneousTissueMedium {

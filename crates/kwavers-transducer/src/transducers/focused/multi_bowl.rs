@@ -4,10 +4,10 @@
 
 use super::bowl::{BowlConfig, BowlTransducer};
 use super::validation::{field_validation_error, validate_finite_field};
+use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use ndarray::{Array3, Zip};
-use kwavers_core::constants::numerical::{TWO_PI};
 
 /// Multi-element bowl array (makeMultiBowl equivalent)
 #[derive(Debug)]

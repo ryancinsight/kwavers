@@ -3,9 +3,9 @@
 //! References:
 //! - Blemker et al. (2005). "A 3D model of muscle reveals the causes of nonuniform strains"
 
+use kwavers_core::constants::numerical::TWO_PI;
 use ndarray::Array3;
 use std::f64::consts::PI;
-use kwavers_core::constants::numerical::{TWO_PI};
 
 /// Fiber orientation in 3D space
 #[derive(Debug, Clone, Default)]

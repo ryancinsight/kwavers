@@ -32,8 +32,8 @@
 //! - `conductivity ≥ 0.0`
 
 use kwavers_core::constants::fundamental::{SPEED_OF_LIGHT, VACUUM_IMPEDANCE, VACUUM_PERMEABILITY};
+use kwavers_core::constants::numerical::TWO_PI;
 use std::fmt;
-use kwavers_core::constants::numerical::{TWO_PI};
 
 /// Canonical electromagnetic material properties
 #[derive(Debug, Clone, Copy, PartialEq)]

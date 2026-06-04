@@ -1,8 +1,8 @@
 //! `MediumOpticalProperties` impl for `HeterogeneousTissueMedium`
 
 use super::HeterogeneousTissueMedium;
-use kwavers_grid::Grid;
 use crate::optical::MediumOpticalProperties;
+use kwavers_grid::Grid;
 
 impl MediumOpticalProperties for HeterogeneousTissueMedium {
     fn optical_absorption_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {

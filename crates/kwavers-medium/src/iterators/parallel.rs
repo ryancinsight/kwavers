@@ -2,8 +2,8 @@
 
 use rayon::prelude::*;
 
-use kwavers_grid::Grid;
 use crate::{AcousticProperties, CoreMedium, Medium};
+use kwavers_grid::Grid;
 
 use super::property::MediumProperties;
 
@@ -36,13 +36,7 @@ impl<'a> ParallelMediumIterator<'a> {
 
                 let properties = MediumProperties {
                     density: crate::density_at(self.medium, x, y, z, self.grid),
-                    sound_speed: crate::sound_speed_at(
-                        self.medium,
-                        x,
-                        y,
-                        z,
-                        self.grid,
-                    ),
+                    sound_speed: crate::sound_speed_at(self.medium, x, y, z, self.grid),
                     absorption: AcousticProperties::absorption_coefficient(
                         self.medium,
                         x,
@@ -83,13 +77,7 @@ impl<'a> ParallelMediumIterator<'a> {
 
                 let properties = MediumProperties {
                     density: crate::density_at(self.medium, x, y, z, self.grid),
-                    sound_speed: crate::sound_speed_at(
-                        self.medium,
-                        x,
-                        y,
-                        z,
-                        self.grid,
-                    ),
+                    sound_speed: crate::sound_speed_at(self.medium, x, y, z, self.grid),
                     absorption: AcousticProperties::absorption_coefficient(
                         self.medium,
                         x,

@@ -1,5 +1,5 @@
 use super::super::{KWaveArray, KwaveApodizationWindow};
-use kwavers_core::constants::numerical::{TWO_PI};
+use kwavers_core::constants::numerical::TWO_PI;
 
 impl KWaveArray {
     /// Calculate focus delays `(s)` for each element to a target point
@@ -81,9 +81,7 @@ impl KWaveArray {
                     return vec![1.0];
                 }
                 (0..n)
-                    .map(|i| {
-                        0.5 * (1.0 - (TWO_PI * i as f64 / (n - 1) as f64).cos())
-                    })
+                    .map(|i| 0.5 * (1.0 - (TWO_PI * i as f64 / (n - 1) as f64).cos()))
                     .collect()
             }
             KwaveApodizationWindow::Hamming => {
@@ -91,12 +89,7 @@ impl KWaveArray {
                     return vec![1.0];
                 }
                 (0..n)
-                    .map(|i| {
-                        0.46f64.mul_add(
-                            -(TWO_PI * i as f64 / (n - 1) as f64).cos(),
-                            0.54,
-                        )
-                    })
+                    .map(|i| 0.46f64.mul_add(-(TWO_PI * i as f64 / (n - 1) as f64).cos(), 0.54))
                     .collect()
             }
         }

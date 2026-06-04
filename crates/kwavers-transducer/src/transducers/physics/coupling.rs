@@ -3,8 +3,8 @@
 //! Models acoustic and electrical coupling between array elements.
 
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
+use kwavers_core::constants::numerical::TWO_PI;
 use ndarray::{Array1, Array2};
-use kwavers_core::constants::numerical::{TWO_PI};
 
 /// Element coupling characteristics
 ///

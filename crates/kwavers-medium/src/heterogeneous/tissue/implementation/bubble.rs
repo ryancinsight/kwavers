@@ -1,11 +1,11 @@
 //! `BubbleProperties` and `BubbleState` impls for `HeterogeneousTissueMedium`
 
 use super::HeterogeneousTissueMedium;
+use crate::bubble::{BubbleProperties, BubbleState};
 use kwavers_core::constants::acoustic_parameters::AIR_POLYTROPIC_INDEX;
 use kwavers_core::constants::cavitation::VAPOR_PRESSURE_WATER;
 use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use kwavers_grid::Grid;
-use crate::bubble::{BubbleProperties, BubbleState};
 use ndarray::Array3;
 
 impl BubbleProperties for HeterogeneousTissueMedium {

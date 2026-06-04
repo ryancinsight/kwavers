@@ -14,9 +14,9 @@
 //! - Marple (1999): "Computing the discrete-time analytic signal via FFT", *IEEE Transactions
 //!   on Signal Processing*
 
+use kwavers_core::constants::numerical::TWO_PI;
 use ndarray::{Array1, Array2};
 use num_complex::Complex64;
-use kwavers_core::constants::numerical::{TWO_PI};
 
 /// Compute the Hilbert transform of a real signal using FFT
 ///

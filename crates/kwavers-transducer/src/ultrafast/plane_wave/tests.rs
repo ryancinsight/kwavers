@@ -2,8 +2,8 @@
 
 use super::config::UltrafastPlaneWaveConfig;
 use super::processor::UltrafastPlaneWave;
-use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use approx::assert_relative_eq;
+use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use ndarray::Array1;
 use std::f64::consts::PI;
 

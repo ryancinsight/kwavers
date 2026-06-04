@@ -2,8 +2,8 @@
 //!
 //! This module handles numerical stability calculations for time-stepping.
 
-use kwavers_core::constants::numerical::CFL_SAFETY_FACTOR;
 use crate::structure::Grid;
+use kwavers_core::constants::numerical::CFL_SAFETY_FACTOR;
 
 /// Stability calculator for numerical schemes
 #[derive(Debug)]

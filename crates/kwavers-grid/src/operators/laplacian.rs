@@ -3,8 +3,8 @@
 //! Unified Laplacian operator implementation for discretized grids.
 
 use super::coefficients::{FDCoefficients, FdAccuracyOrder};
-use kwavers_core::error::KwaversResult;
 use crate::Grid;
+use kwavers_core::error::KwaversResult;
 use ndarray::{s, Array3, ArrayView3, ArrayViewMut3, Zip};
 
 /// Configuration for Laplacian computation

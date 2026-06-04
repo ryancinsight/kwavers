@@ -12,7 +12,7 @@ use super::validation::{
     field_validation_error, validate_finite_field, validate_finite_vector,
     validate_positive_finite_field,
 };
-use kwavers_core::constants::numerical::{TWO_PI};
+use kwavers_core::constants::numerical::TWO_PI;
 
 /// Configuration for an arc source (2D focused transducer)
 #[derive(Debug, Clone)]

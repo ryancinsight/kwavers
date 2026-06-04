@@ -2,7 +2,7 @@
 
 use super::filter::FrequencyFilter;
 use crate::Filter;
-use kwavers_core::constants::numerical::{TWO_PI};
+use kwavers_core::constants::numerical::TWO_PI;
 
 fn sine_wave(freq: f64, sample_rate: f64, n_samples: usize) -> Vec<f64> {
     let dt = 1.0 / sample_rate;

@@ -1,8 +1,8 @@
 //! `ViscousProperties` impl for `HeterogeneousTissueMedium`
 
 use super::HeterogeneousTissueMedium;
-use kwavers_grid::Grid;
 use crate::viscous::ViscousProperties;
+use kwavers_grid::Grid;
 
 impl ViscousProperties for HeterogeneousTissueMedium {
     fn viscosity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {

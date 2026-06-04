@@ -9,11 +9,11 @@ mod signal;
 #[cfg(test)]
 mod tests;
 
+use crate::basic::{LinearArray, MatrixArray, PistonApodization, PistonConfig, PistonSource};
+use crate::transducers::focused::FocusedSource;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::error::{ConfigError, KwaversResult};
 use kwavers_grid::Grid;
-use crate::basic::{LinearArray, MatrixArray, PistonApodization, PistonConfig, PistonSource};
-use crate::transducers::focused::FocusedSource;
 use kwavers_source::{
     apodization::RectangularApodization,
     wavefront::{

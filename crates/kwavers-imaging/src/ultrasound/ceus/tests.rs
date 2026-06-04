@@ -2,8 +2,8 @@
 
 use super::microbubble::Microbubble;
 use kwavers_core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL};
+use kwavers_core::constants::numerical::FOUR_PI;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
-use kwavers_core::constants::numerical::{FOUR_PI};
 
 /// Cross-section must be strictly positive for any physical frequency.
 /// # Panics

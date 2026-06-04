@@ -1,13 +1,13 @@
 //! Beam steering and focusing control
 
 use super::element::ElementConfiguration;
+use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::constants::SOUND_SPEED_WATER_SIM;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_signal::Signal;
 use ndarray::Array3;
 use std::sync::Arc;
-use kwavers_core::constants::numerical::{TWO_PI};
 
 /// Focal point specification
 #[derive(Debug, Clone, Copy)]

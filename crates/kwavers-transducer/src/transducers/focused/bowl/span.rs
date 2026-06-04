@@ -9,8 +9,8 @@ use std::f64::consts::PI;
 
 use super::super::validation::{field_validation_error, validate_element_count};
 use super::{add3, normalize3, scale3, sub3, BowlConfig, BowlTransducer};
-use kwavers_core::error::KwaversResult;
 use crate::transducers::focused::{SphericalCapConfig, SphericalCapLayout};
+use kwavers_core::error::KwaversResult;
 
 /// Validated polar-angle coverage for a focused bowl aperture.
 ///

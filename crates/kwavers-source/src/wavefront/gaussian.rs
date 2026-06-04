@@ -3,14 +3,14 @@
 //! This source generates focused Gaussian beams commonly used in
 //! medical imaging and optical applications.
 
+use crate::{Source, SourceField};
+use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_grid::Grid;
 use kwavers_signal::Signal;
-use crate::{Source, SourceField};
 use ndarray::Array3;
 use std::f64::consts::PI;
 use std::fmt::Debug;
 use std::sync::Arc;
-use kwavers_core::constants::numerical::{TWO_PI};
 
 /// Gaussian beam configuration
 #[derive(Debug, Clone)]

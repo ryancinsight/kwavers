@@ -4,7 +4,7 @@ use crate::Signal;
 use std::f64::consts::PI;
 
 use super::{DEFAULT_RISE_TIME_FRACTION, MIN_PULSE_WIDTH};
-use kwavers_core::constants::numerical::{TWO_PI};
+use kwavers_core::constants::numerical::TWO_PI;
 
 /// Rectangular pulse with configurable rise/fall times
 ///

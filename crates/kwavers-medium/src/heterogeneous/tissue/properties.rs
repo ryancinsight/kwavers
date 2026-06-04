@@ -1,7 +1,7 @@
 //! Tissue property caching utilities
 
-use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use crate::absorption::{AbsorptionTissueType, TISSUE_PROPERTIES};
+use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use ndarray::Array3;
 use std::collections::HashMap;
 

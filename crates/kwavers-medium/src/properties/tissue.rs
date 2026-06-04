@@ -10,55 +10,27 @@
 
 use super::material::AcousticMaterialProperties;
 use kwavers_core::constants::acoustic_parameters::{DENSITY_SKULL, VISCOSITY_PARENCHYMAL_TISSUE};
+use kwavers_core::constants::cavitation::VISCOSITY_WATER;
+use kwavers_core::constants::fundamental::{
+    ACOUSTIC_ABSORPTION_TISSUE, ATMOSPHERIC_PRESSURE, DENSITY_TISSUE, DENSITY_WATER,
+    SOUND_SPEED_WATER,
+};
 use kwavers_core::constants::optical::{
     REFRACTIVE_INDEX_BIOLOGICAL_FLUID, REFRACTIVE_INDEX_BRAIN_TISSUE,
     REFRACTIVE_INDEX_SOFT_TISSUE_NIR, REFRACTIVE_INDEX_WATER,
 };
-use kwavers_core::constants::cavitation::VISCOSITY_WATER;
-use kwavers_core::constants::fundamental::{
-    ACOUSTIC_ABSORPTION_TISSUE,
-    ATMOSPHERIC_PRESSURE,
-    DENSITY_TISSUE,
-    DENSITY_WATER,
-    SOUND_SPEED_WATER,
-};
-use kwavers_core::constants::tissue_acoustics::{
-    ACOUSTIC_ABSORPTION_BLOOD,
-    ACOUSTIC_ABSORPTION_BRAIN_GRAY,
-    ACOUSTIC_ABSORPTION_BRAIN_WHITE,
-    ACOUSTIC_ABSORPTION_FAT,
-    ACOUSTIC_ABSORPTION_LIVER,
-    ACOUSTIC_ABSORPTION_MUSCLE,
-    ACOUSTIC_ABSORPTION_SKULL_BULK,
-    B_OVER_A_BLOOD,
-    B_OVER_A_BONE,
-    B_OVER_A_BRAIN,
-    B_OVER_A_CSF,
-    B_OVER_A_FAT,
-    B_OVER_A_KIDNEY,
-    B_OVER_A_LIVER,
-    B_OVER_A_MUSCLE,
-    B_OVER_A_WATER,
-    DENSITY_BLOOD,
-    DENSITY_BRAIN,
-    DENSITY_CSF,
-    DENSITY_FAT,
-    DENSITY_KIDNEY_MEDULLA,
-    DENSITY_LIVER,
-    DENSITY_MUSCLE,
-    SOUND_SPEED_BLOOD,
-    SOUND_SPEED_BRAIN,
-    SOUND_SPEED_BRAIN_GRAY_MATTER,
-    SOUND_SPEED_CSF,
-    SOUND_SPEED_FAT,
-    SOUND_SPEED_KIDNEY,
-    SOUND_SPEED_KIDNEY_MEDULLA,
-    SOUND_SPEED_LIVER,
-    SOUND_SPEED_MUSCLE,
-    WATER_ABSORPTION_ALPHA_0_DB_CM_MHZ2,
-};
 use kwavers_core::constants::thermodynamic::{
     BODY_TEMPERATURE_C, ROOM_TEMPERATURE_C, SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER,
+};
+use kwavers_core::constants::tissue_acoustics::{
+    ACOUSTIC_ABSORPTION_BLOOD, ACOUSTIC_ABSORPTION_BRAIN_GRAY, ACOUSTIC_ABSORPTION_BRAIN_WHITE,
+    ACOUSTIC_ABSORPTION_FAT, ACOUSTIC_ABSORPTION_LIVER, ACOUSTIC_ABSORPTION_MUSCLE,
+    ACOUSTIC_ABSORPTION_SKULL_BULK, B_OVER_A_BLOOD, B_OVER_A_BONE, B_OVER_A_BRAIN, B_OVER_A_CSF,
+    B_OVER_A_FAT, B_OVER_A_KIDNEY, B_OVER_A_LIVER, B_OVER_A_MUSCLE, B_OVER_A_WATER, DENSITY_BLOOD,
+    DENSITY_BRAIN, DENSITY_CSF, DENSITY_FAT, DENSITY_KIDNEY_MEDULLA, DENSITY_LIVER, DENSITY_MUSCLE,
+    SOUND_SPEED_BLOOD, SOUND_SPEED_BRAIN, SOUND_SPEED_BRAIN_GRAY_MATTER, SOUND_SPEED_CSF,
+    SOUND_SPEED_FAT, SOUND_SPEED_KIDNEY, SOUND_SPEED_KIDNEY_MEDULLA, SOUND_SPEED_LIVER,
+    SOUND_SPEED_MUSCLE, WATER_ABSORPTION_ALPHA_0_DB_CM_MHZ2,
 };
 use kwavers_core::constants::tissue_thermal::{
     SPECIFIC_HEAT_BLOOD, SPECIFIC_HEAT_BONE, SPECIFIC_HEAT_BRAIN_GRAY, SPECIFIC_HEAT_BRAIN_WHITE,
@@ -135,7 +107,7 @@ pub const BRAIN_WHITE_MATTER: TissueProperties = TissueProperties {
 /// Brain gray matter (37°C)
 /// Source: Duck (1990), Table 3.3
 pub const BRAIN_GRAY_MATTER: TissueProperties = TissueProperties {
-    sound_speed: SOUND_SPEED_BRAIN_GRAY_MATTER,  // 1545.0 m/s — Duck (1990) Table 4.6
+    sound_speed: SOUND_SPEED_BRAIN_GRAY_MATTER, // 1545.0 m/s — Duck (1990) Table 4.6
     density: DENSITY_TISSUE,
     // Z = ρ·c = DENSITY_TISSUE × SOUND_SPEED_BRAIN_GRAY_MATTER = 1050 × 1545 = 1 622 250
     impedance: 1622250.0,
@@ -245,8 +217,8 @@ pub const KIDNEY_CORTEX: TissueProperties = TissueProperties {
 
 /// Kidney medulla (37°C)
 pub const KIDNEY_MEDULLA: TissueProperties = TissueProperties {
-    sound_speed: SOUND_SPEED_KIDNEY_MEDULLA,    // 1565.0 m/s — Duck (1990) Table 4.6
-    density: DENSITY_KIDNEY_MEDULLA,            // 1055.0 kg/m³ — Duck (1990) Table 4.1
+    sound_speed: SOUND_SPEED_KIDNEY_MEDULLA, // 1565.0 m/s — Duck (1990) Table 4.6
+    density: DENSITY_KIDNEY_MEDULLA,         // 1055.0 kg/m³ — Duck (1990) Table 4.1
     // Z = ρ·c = DENSITY_KIDNEY_MEDULLA × SOUND_SPEED_KIDNEY_MEDULLA = 1055 × 1565 = 1 651 075
     impedance: 1_651_075.0,
     absorption_coefficient: ACOUSTIC_ABSORPTION_TISSUE, // 0.5 dB/(cm·MHz) — Duck (1990)
@@ -351,8 +323,8 @@ pub const FAT: TissueProperties = TissueProperties {
 
 /// Cerebrospinal fluid (CSF) (37°C)
 pub const CSF: TissueProperties = TissueProperties {
-    sound_speed: SOUND_SPEED_CSF,   // 1515.0 m/s — Duck (1990) Table 4.6 at 37°C
-    density: DENSITY_CSF,           // 1007.0 kg/m³ — Duck (1990) Table 4.1
+    sound_speed: SOUND_SPEED_CSF, // 1515.0 m/s — Duck (1990) Table 4.6 at 37°C
+    density: DENSITY_CSF,         // 1007.0 kg/m³ — Duck (1990) Table 4.1
     // Z = ρ·c = DENSITY_CSF × SOUND_SPEED_CSF = 1007.0 × 1515.0 = 1 525 605 Pa·s/m
     impedance: 1_525_605.0,
     absorption_coefficient: 0.0,

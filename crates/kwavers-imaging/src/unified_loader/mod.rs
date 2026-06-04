@@ -25,10 +25,10 @@ mod tests;
 
 pub use batch::MedicalImageBatchLoader;
 
-use kwavers_core::error::{KwaversError, KwaversResult};
 use crate::medical::{
     create_loader, CTImageLoader, DicomImageLoader, MedicalImageLoader, MedicalImageMetadata,
 };
+use kwavers_core::error::{KwaversError, KwaversResult};
 use ndarray::Array3;
 use std::path::Path;
 

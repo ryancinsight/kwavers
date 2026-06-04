@@ -1,8 +1,8 @@
 //! Quadrature Amplitude Modulation (QAM)
 
 use super::{Modulation, ModulationParams};
+use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
-use kwavers_core::constants::numerical::{TWO_PI};
 
 /// QAM implementation
 #[derive(Debug, Clone)]

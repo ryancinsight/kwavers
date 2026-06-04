@@ -3,8 +3,8 @@
 use super::super::coefficients::FdAccuracyOrder;
 use super::cache::GradientCache;
 use super::functions::{gradient_optimized, gradient_with_strategy};
-use kwavers_core::error::KwaversResult;
 use crate::Grid;
+use kwavers_core::error::KwaversResult;
 use ndarray::{Array3, ArrayView3};
 use num_traits::Float;
 

@@ -2,8 +2,8 @@
 
 use super::microbubble::{CeusSizeDistribution, Microbubble};
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
-use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_core::constants::numerical::{FOUR_PI, TWO_PI};
+use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 
 /// Population of microbubbles with size distribution
 #[derive(Debug, Clone)]

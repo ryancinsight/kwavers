@@ -4,6 +4,7 @@ use super::beamforming::{BeamformingCalculator, BeamformingMode};
 use super::config::PhasedArrayConfig;
 use super::crosstalk::CrosstalkModel;
 use super::element::TransducerElement;
+use kwavers_core::constants::numerical::FOUR_PI;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
@@ -11,7 +12,6 @@ use kwavers_signal::Signal;
 use kwavers_source::Source;
 use ndarray::{Array1, Array3, Zip};
 use std::sync::Arc;
-use kwavers_core::constants::numerical::{FOUR_PI};
 
 /// Phased array transducer with electronic beam control
 #[derive(Debug)]
@@ -275,8 +275,7 @@ impl Source for PhasedArrayTransducer {
                         element.directivity(theta, self.config.frequency, self.sound_speed);
 
                     // Add with spherical spreading
-                    total_pressure +=
-                        modulated * directivity / (FOUR_PI * distance);
+                    total_pressure += modulated * directivity / (FOUR_PI * distance);
                 }
             }
         }

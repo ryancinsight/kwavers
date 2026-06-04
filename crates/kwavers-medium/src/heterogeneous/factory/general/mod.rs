@@ -8,10 +8,10 @@ mod layered;
 #[cfg(test)]
 mod tests;
 
+use crate::heterogeneous::core::HeterogeneousMedium;
 use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use kwavers_core::constants::thermodynamic::ROOM_TEMPERATURE_K;
 use kwavers_grid::Grid;
-use crate::heterogeneous::core::HeterogeneousMedium;
 use ndarray::Array3;
 
 /// Factory for creating heterogeneous media from arrays or functions

@@ -3,8 +3,8 @@
 use ndarray::ArrayView2;
 
 use super::CylindricalMediumProjection;
-use kwavers_grid::{CylindricalTopology, Grid};
 use crate::Medium;
+use kwavers_grid::{CylindricalTopology, Grid};
 
 impl<'a, M: Medium> CylindricalMediumProjection<'a, M> {
     /// Get the projected sound speed field (nz × nr)

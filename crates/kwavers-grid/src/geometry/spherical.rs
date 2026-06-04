@@ -2,7 +2,7 @@ use ndarray::{Array1, Array2};
 use std::f64::consts::PI;
 
 use super::{GeometricDomain, GeometryDimension, PointLocation};
-use kwavers_core::constants::numerical::{TWO_PI};
+use kwavers_core::constants::numerical::TWO_PI;
 
 /// Circular/spherical domain
 ///

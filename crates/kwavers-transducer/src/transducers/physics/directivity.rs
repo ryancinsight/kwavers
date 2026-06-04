@@ -3,9 +3,9 @@
 //! Models the spatial radiation pattern of transducer elements.
 
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
+use kwavers_core::constants::numerical::{FOUR_PI, TWO_PI};
 use ndarray::Array1;
 use std::f64::consts::PI;
-use kwavers_core::constants::numerical::{FOUR_PI, TWO_PI};
 
 /// Directivity pattern of a transducer element
 ///

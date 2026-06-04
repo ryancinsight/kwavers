@@ -4,7 +4,7 @@ use crate::Signal;
 use std::f64::consts::PI;
 
 use super::DEFAULT_DUTY_CYCLE;
-use kwavers_core::constants::numerical::{TWO_PI};
+use kwavers_core::constants::numerical::TWO_PI;
 
 /// Pulse train - periodic sequence of pulses
 #[derive(Debug, Clone)]

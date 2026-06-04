@@ -1,10 +1,10 @@
 //! `AcousticProperties` impl for `HeterogeneousTissueMedium`
 
 use super::HeterogeneousTissueMedium;
-use kwavers_core::constants::{DB_TO_NP, MHZ_TO_HZ};
-use kwavers_grid::Grid;
 use crate::absorption::AbsorptionTissueType;
 use crate::acoustic::AcousticProperties;
+use kwavers_core::constants::{DB_TO_NP, MHZ_TO_HZ};
+use kwavers_grid::Grid;
 
 impl AcousticProperties for HeterogeneousTissueMedium {
     fn absorption_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid, frequency: f64) -> f64 {

@@ -5,10 +5,10 @@
 //! with exact f64 arithmetic — no tolerances tighter than `f64::EPSILON` are
 //! used, and no tolerances are artificially widened.
 
-use kwavers_core::constants::numerical::MHZ_TO_HZ;
-use kwavers_grid::Grid;
 use crate::acoustic::AcousticProperties;
 use crate::heterogeneous::core::HeterogeneousMedium;
+use kwavers_core::constants::numerical::MHZ_TO_HZ;
+use kwavers_grid::Grid;
 use ndarray::Array3;
 
 /// Construct a minimal 4×4×4 grid for point-query tests.

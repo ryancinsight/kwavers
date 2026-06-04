@@ -5,8 +5,8 @@
 //! and the affine-from-IPP/IOP helper remain here for callers that work with
 //! raw DICOM-derived spatial metadata directly.
 
-use kwavers_core::error::{KwaversError, KwaversResult};
 use crate::medical::{MedicalImageLoader, MedicalImageMetadata};
+use kwavers_core::error::{KwaversError, KwaversResult};
 use ndarray::Array3;
 use std::path::Path;
 
@@ -75,8 +75,7 @@ impl DicomImageLoader {
         dir_path: &str,
         series_uid: &str,
     ) -> KwaversResult<Array3<f64>> {
-        let volume =
-            super::dicom_ritk::load_series_with_uid(Path::new(dir_path), series_uid)?;
+        let volume = super::dicom_ritk::load_series_with_uid(Path::new(dir_path), series_uid)?;
         Ok(self.apply_volume(volume))
     }
 

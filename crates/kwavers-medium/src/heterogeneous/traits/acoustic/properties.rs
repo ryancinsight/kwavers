@@ -3,15 +3,13 @@
 //! **Single Responsibility**: Pure acoustic property access per SOLID principles
 //! **Evidence-Based**: Following Hamilton & Blackstock (1998) acoustic theory
 
-use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
-use kwavers_grid::Grid;
-use crate::heterogeneous::{
-    core::HeterogeneousMedium, interpolation::HetTrilinearInterpolator,
-};
+use crate::heterogeneous::{core::HeterogeneousMedium, interpolation::HetTrilinearInterpolator};
 use crate::{
     acoustic::AcousticProperties,
     core::{ArrayAccess, CoreMedium, MIN_PHYSICAL_DENSITY, MIN_PHYSICAL_SOUND_SPEED},
 };
+use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
+use kwavers_grid::Grid;
 
 impl CoreMedium for HeterogeneousMedium {
     /// Get sound speed at grid point with physical limits

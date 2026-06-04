@@ -1,9 +1,7 @@
 use ndarray::{s, Array3, ArrayViewMut3};
 
+use crate::traits::{BoundaryCondition, BoundaryDirections, BoundaryFieldType, PeriodicBoundary};
 use kwavers_core::error::KwaversResult;
-use crate::traits::{
-    BoundaryCondition, BoundaryDirections, BoundaryFieldType, PeriodicBoundary,
-};
 use kwavers_grid::topology::GridTopology;
 
 use super::{PeriodicBoundaryCondition, PeriodicConfig};

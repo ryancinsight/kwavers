@@ -4,9 +4,9 @@
 //! - Auld, B. A. (1973). "Acoustic Fields and Waves in Solids"
 
 use super::stiffness::AnisotropicStiffnessTensor;
+use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
 use ndarray::{Array1, Array2};
-use kwavers_core::constants::numerical::{TWO_PI};
 
 /// Christoffel equation solver for anisotropic wave propagation
 #[derive(Debug)]

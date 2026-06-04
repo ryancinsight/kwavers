@@ -1,8 +1,8 @@
 use super::{GridTopology, TopologyDimension};
+use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
 use ndarray::{Array1, Array2, Array3};
 use std::f64::consts::PI;
-use kwavers_core::constants::numerical::{TWO_PI};
 
 /// Cylindrical grid topology for axisymmetric simulations
 ///

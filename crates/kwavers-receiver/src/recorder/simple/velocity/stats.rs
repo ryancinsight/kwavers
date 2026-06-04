@@ -5,10 +5,8 @@
 //! record fields.
 
 use super::super::SensorRecorder;
+use crate::recorder::velocity_statistics::{SampledVelocityStats, VelocityComponentStats};
 use kwavers_core::error::{KwaversError, KwaversResult};
-use crate::recorder::velocity_statistics::{
-    SampledVelocityStats, VelocityComponentStats,
-};
 use ndarray::Array1;
 
 impl SensorRecorder {

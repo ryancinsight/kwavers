@@ -4,13 +4,13 @@
 //! their shape over long distances, useful for applications requiring
 //! extended depth of field.
 
+use crate::{Source, SourceField};
+use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_grid::Grid;
 use kwavers_signal::Signal;
-use crate::{Source, SourceField};
 use ndarray::Array3;
 use std::fmt::Debug;
 use std::sync::Arc;
-use kwavers_core::constants::numerical::{TWO_PI};
 
 /// Bessel beam configuration
 #[derive(Debug, Clone)]

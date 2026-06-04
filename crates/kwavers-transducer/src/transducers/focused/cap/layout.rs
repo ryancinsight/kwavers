@@ -9,9 +9,9 @@
 //! `theta in [theta_min, theta_max]` is obtained by sampling `cos(theta)`
 //! uniformly because the cap area element is `R^2 sin(theta) dtheta dphi`.
 
+use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use std::f64::consts::{FRAC_PI_2, PI};
-use kwavers_core::constants::numerical::{TWO_PI};
 
 /// Configuration for equal-area focused spherical-cap element placement.
 #[derive(Clone, Copy, Debug, PartialEq)]

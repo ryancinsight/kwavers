@@ -1,8 +1,8 @@
 //! Amplitude Modulation (AM)
 
 use super::{Modulation, ModulationParams};
+use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_core::constants::numerical::{TWO_PI};
 
 /// Amplitude modulation implementation
 #[derive(Debug, Clone)]

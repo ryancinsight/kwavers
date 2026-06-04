@@ -2,10 +2,10 @@
 
 use super::super::types::{BoundaryCouplingPhysicsDomain, BoundaryCouplingType};
 use super::interface::BoundaryMultiPhysicsInterface;
-use kwavers_core::constants::tissue_acoustics::DENSITY_BLOOD;
 use kwavers_core::constants::medical::BLOOD_SPECIFIC_HEAT;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::thermodynamic::GRUNEISEN_WATER_20C;
+use kwavers_core::constants::tissue_acoustics::DENSITY_BLOOD;
 
 const Z_WATER: f64 = 1_479_036.0;
 const Z_SOFT_TISSUE: f64 = 1_632_400.0;

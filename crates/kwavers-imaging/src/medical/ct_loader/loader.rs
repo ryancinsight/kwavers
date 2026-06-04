@@ -1,9 +1,9 @@
 //! CT image loader implementation.
 
 use super::types::CTMetadata;
+use crate::medical::{MedicalImageLoader, MedicalImageMetadata};
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
-use crate::medical::{MedicalImageLoader, MedicalImageMetadata};
 use log::warn;
 use ndarray::Array3;
 

@@ -1,7 +1,7 @@
 // signal/amplitude/mod.rs
 
+use kwavers_core::constants::numerical::TWO_PI;
 use std::fmt::Debug;
-use kwavers_core::constants::numerical::{TWO_PI};
 
 pub trait Amplitude: Debug + Send + Sync {
     fn amplitude(&self, t: f64) -> f64;
@@ -70,10 +70,9 @@ impl PowerModulation {
 impl Amplitude for PowerModulation {
     fn amplitude(&self, t: f64) -> f64 {
         self.base_amplitude
-            * self.modulation_depth.mul_add(
-                (TWO_PI * self.modulation_freq * t).sin(),
-                1.0,
-            )
+            * self
+                .modulation_depth
+                .mul_add((TWO_PI * self.modulation_freq * t).sin(), 1.0)
     }
     fn clone_box(&self) -> Box<dyn Amplitude> {
         Box::new(self.clone())

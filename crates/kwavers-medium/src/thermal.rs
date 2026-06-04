@@ -3,9 +3,9 @@
 //! This module defines traits for thermal properties including heat capacity,
 //! thermal conductivity, and temperature-dependent effects.
 
+use crate::core::CoreMedium;
 use kwavers_core::constants::thermodynamic::SPECIFIC_HEAT_WATER_37C;
 use kwavers_grid::Grid;
-use crate::core::CoreMedium;
 use ndarray::Array3;
 
 /// Trait for thermal medium properties

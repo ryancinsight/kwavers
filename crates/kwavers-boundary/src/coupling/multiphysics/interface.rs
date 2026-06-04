@@ -1,7 +1,7 @@
 //! `BoundaryMultiPhysicsInterface` — multi-physics interface boundary condition.
 
-use kwavers_core::error::KwaversResult;
 use crate::traits::BoundaryCondition;
+use kwavers_core::error::KwaversResult;
 use kwavers_grid::GridTopology;
 use ndarray::ArrayViewMut3;
 

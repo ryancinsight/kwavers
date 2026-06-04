@@ -22,8 +22,8 @@ mod tests;
 
 pub use gradient::GradientFieldUpdater;
 
-use kwavers_core::error::KwaversResult;
 use crate::traits::{BoundaryCondition, BoundaryFieldType};
+use kwavers_core::error::KwaversResult;
 use kwavers_grid::GridTopology;
 use ndarray::Array3;
 

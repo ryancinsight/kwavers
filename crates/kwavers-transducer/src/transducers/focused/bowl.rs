@@ -3,10 +3,10 @@
 //! Provides focused bowl transducer geometry and source generation.
 
 use kwavers_core::{
-        constants::numerical::{MHZ_TO_HZ, MPA_TO_PA},
-        constants::SOUND_SPEED_WATER,
-        error::{KwaversError, KwaversResult, ValidationError},
-    };
+    constants::numerical::{MHZ_TO_HZ, MPA_TO_PA},
+    constants::SOUND_SPEED_WATER,
+    error::{KwaversError, KwaversResult, ValidationError},
+};
 use kwavers_grid::Grid;
 use ndarray::{Array3, Zip};
 

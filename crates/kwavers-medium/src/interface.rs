@@ -3,8 +3,8 @@
 //! This module provides utilities for detecting interfaces and boundaries
 //! between different media based on property discontinuities.
 
-use kwavers_grid::Grid;
 use crate::core::{ArrayAccess, CoreMedium};
+use kwavers_grid::Grid;
 use ndarray::ArrayView3;
 
 /// Interface point information
@@ -53,8 +53,7 @@ pub fn find_interfaces_pointwise<M: CoreMedium + ?Sized>(
 
                 // Check one neighbor for efficiency
                 let (nx, ny, nz) = grid.indices_to_coordinates(i + 1, j, k);
-                let neighbor_density =
-                    crate::density_at_core(medium, nx, ny, nz, grid);
+                let neighbor_density = crate::density_at_core(medium, nx, ny, nz, grid);
 
                 if ((neighbor_density - center_density).abs() / center_density) > threshold {
                     // Calculate proper interface normal via central differences

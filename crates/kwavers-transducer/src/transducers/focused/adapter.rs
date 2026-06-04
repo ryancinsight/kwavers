@@ -1,6 +1,6 @@
+use crate::transducers::focused::bowl::{BowlConfig, BowlTransducer};
 use kwavers_grid::Grid;
 use kwavers_signal::Signal;
-use crate::transducers::focused::bowl::{BowlConfig, BowlTransducer};
 use kwavers_source::Source;
 use ndarray::Array3;
 use std::collections::HashMap;

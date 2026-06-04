@@ -1,10 +1,8 @@
 //! Optical properties implementation for heterogeneous media
 
-use kwavers_grid::Grid;
-use crate::heterogeneous::{
-    core::HeterogeneousMedium, interpolation::HetTrilinearInterpolator,
-};
+use crate::heterogeneous::{core::HeterogeneousMedium, interpolation::HetTrilinearInterpolator};
 use crate::optical::MediumOpticalProperties;
+use kwavers_grid::Grid;
 
 impl MediumOpticalProperties for HeterogeneousMedium {
     /// Optical absorption coefficient μ_a at continuous coordinates (1/m)

@@ -4,9 +4,9 @@
 use ndarray::Array2;
 
 use super::CylindricalMediumProjection;
+use crate::Medium;
 use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
 use kwavers_grid::{CylindricalTopology, Grid};
-use crate::Medium;
 
 impl<'a, M: Medium> CylindricalMediumProjection<'a, M> {
     /// Create a new cylindrical projection of the 3D medium

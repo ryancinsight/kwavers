@@ -1,7 +1,7 @@
-use kwavers_core::error::KwaversError;
 use crate::recorder::fields::{SensorRecordField, SensorRecordSpec};
 use crate::recorder::simple::SensorRecorder;
 use crate::recorder::velocity_statistics::SampledVelocityStats;
+use kwavers_core::error::KwaversError;
 use ndarray::{Array1, Array3};
 
 #[test]

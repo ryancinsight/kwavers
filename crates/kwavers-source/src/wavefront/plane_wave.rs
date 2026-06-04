@@ -3,13 +3,13 @@
 //! This source generates a plane wave propagating in a specified direction.
 //! Commonly used for testing and validation against analytical solutions.
 
+use crate::{Source, SourceField};
+use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_grid::Grid;
 use kwavers_signal::Signal;
-use crate::{Source, SourceField};
 use ndarray::Array3;
 use std::fmt::Debug;
 use std::sync::Arc;
-use kwavers_core::constants::numerical::{TWO_PI};
 
 /// Injection mode for plane wave sources
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]

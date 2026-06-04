@@ -3,8 +3,8 @@
 //! This module defines traits for bubble-related properties including surface tension,
 //! vapor pressure, and bubble state management.
 
-use kwavers_grid::Grid;
 use crate::core::CoreMedium;
+use kwavers_grid::Grid;
 use ndarray::Array3;
 
 /// Trait for bubble dynamics properties

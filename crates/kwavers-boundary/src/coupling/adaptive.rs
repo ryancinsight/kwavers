@@ -3,8 +3,8 @@
 //! Dynamically adjusts absorption strength based on field energy levels.
 //! Useful for preventing reflections while maintaining computational efficiency.
 
-use kwavers_core::error::KwaversResult;
 use crate::traits::BoundaryCondition;
+use kwavers_core::error::KwaversResult;
 use kwavers_grid::GridTopology;
 use ndarray::ArrayViewMut3;
 

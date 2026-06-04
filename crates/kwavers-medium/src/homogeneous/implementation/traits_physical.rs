@@ -1,6 +1,5 @@
 use ndarray::Array3;
 
-use kwavers_grid::Grid;
 use crate::{
     acoustic::AcousticProperties,
     bubble::{BubbleProperties, BubbleState},
@@ -9,6 +8,7 @@ use crate::{
     thermal::{ThermalField, ThermalProperties},
     viscous::ViscousProperties,
 };
+use kwavers_grid::Grid;
 
 use super::HomogeneousMedium;
 

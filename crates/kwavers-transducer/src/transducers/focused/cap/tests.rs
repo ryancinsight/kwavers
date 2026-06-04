@@ -1,6 +1,6 @@
 use super::{SphericalCapConfig, SphericalCapLayout};
+use kwavers_core::constants::numerical::TWO_PI;
 use std::f64::consts::{FRAC_PI_2, PI};
-use kwavers_core::constants::numerical::{TWO_PI};
 
 #[test]
 fn hemisphere_layout_places_elements_on_focused_sphere() {

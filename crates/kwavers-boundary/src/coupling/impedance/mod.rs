@@ -3,9 +3,9 @@
 //! Frequency-dependent absorption based on acoustic impedance matching.
 //! Particularly useful for ultrasound transducers and tissue interfaces.
 
+use crate::traits::BoundaryCondition;
 use kwavers_core::constants::fundamental::ACOUSTIC_IMPEDANCE_WATER_NOMINAL;
 use kwavers_core::error::KwaversResult;
-use crate::traits::BoundaryCondition;
 use kwavers_grid::GridTopology;
 use ndarray::ArrayViewMut3;
 
@@ -217,10 +217,8 @@ impl BoundaryCondition for ImpedanceBoundary {
         // For Flat frequency profile the coefficient is exact and frequency-
         // independent. For Gaussian/Custom profiles the coefficient is
         // evaluated at `representative_frequency_hz` (the spectral peak).
-        let r = self.reflection_coefficient(
-            self.representative_frequency_hz,
-            self.medium_impedance,
-        );
+        let r =
+            self.reflection_coefficient(self.representative_frequency_hz, self.medium_impedance);
         let dims = grid.dimensions();
         let (nx, ny, nz) = (dims[0], dims[1], dims[2]);
         if nx < 2 || ny < 2 || nz < 2 {
@@ -287,10 +285,8 @@ impl BoundaryCondition for ImpedanceBoundary {
         // frequency. Frequency-bin-dependent profiles require k → ω mapping
         // (k = ω/c) which depends on the medium's sound speed and is therefore
         // applied at the model level where c is known, not here.
-        let r = self.reflection_coefficient(
-            self.representative_frequency_hz,
-            self.medium_impedance,
-        );
+        let r =
+            self.reflection_coefficient(self.representative_frequency_hz, self.medium_impedance);
         let r_complex = num_complex::Complex::new(r, 0.0);
         let dims = grid.dimensions();
         let (nx, ny, nz) = (dims[0], dims[1], dims[2]);
@@ -345,4 +341,3 @@ impl BoundaryCondition for ImpedanceBoundary {
 
     fn reset(&mut self) {}
 }
-

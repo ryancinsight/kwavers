@@ -1,8 +1,8 @@
 //! Beamforming processor
 
 // Import config from domain layer (single source of truth for configuration)
-use kwavers_core::error::KwaversResult;
 use crate::beamforming::BeamformingConfig;
+use kwavers_core::error::KwaversResult;
 use kwavers_math::linear_algebra::{EigenDecomposition, LinearAlgebra};
 use ndarray::{Array1, Array2, Array3};
 

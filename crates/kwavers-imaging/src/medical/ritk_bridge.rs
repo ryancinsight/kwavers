@@ -61,11 +61,11 @@ pub(crate) fn image_to_volume(image: &Image<AdapterBackend, 3>) -> KwaversResult
     }
 
     let tensor_data: TensorData = image.data().clone().into_data();
-    let values = tensor_data
-        .as_slice::<f32>()
-        .map_err(|err| {
-            KwaversError::InternalError(format!("ritk-io tensor data is not contiguous f32: {err:?}"))
-        })?;
+    let values = tensor_data.as_slice::<f32>().map_err(|err| {
+        KwaversError::InternalError(format!(
+            "ritk-io tensor data is not contiguous f32: {err:?}"
+        ))
+    })?;
     let expected_len = depth * rows * cols;
     if values.len() != expected_len {
         return Err(KwaversError::InternalError(format!(

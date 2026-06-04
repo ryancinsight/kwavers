@@ -1,8 +1,8 @@
 //! Post-construction physical-bound invariant check.
 
 use super::CylindricalMediumProjection;
-use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
 use crate::Medium;
+use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
 
 impl<'a, M: Medium> CylindricalMediumProjection<'a, M> {
     /// Validate that projection preserves physical bounds.

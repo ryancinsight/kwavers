@@ -4,8 +4,8 @@
 //! arbitrary waveform generation and experimental signal patterns.
 
 use crate::Signal;
+use kwavers_core::constants::numerical::TWO_PI;
 use std::fmt::Debug;
-use kwavers_core::constants::numerical::{TWO_PI};
 
 /// Time-varying signal with pre-computed values
 #[derive(Debug, Clone)]

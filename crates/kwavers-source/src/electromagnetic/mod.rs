@@ -5,8 +5,8 @@
 
 use super::types::{SourceEMWaveType, SourcePolarization};
 use kwavers_core::constants::fundamental::SPEED_OF_LIGHT;
+use kwavers_core::constants::numerical::TWO_PI;
 use num_complex::Complex;
-use kwavers_core::constants::numerical::{TWO_PI};
 
 /// Basic electromagnetic source trait
 ///
@@ -94,11 +94,11 @@ impl DomainEMSource for PointEMSource {
 
         // Simplified spherical wave: E ∝ (1/r) sin(kr - ωt + φ)
         let k = TWO_PI * self.frequency / SPEED_OF_LIGHT; // Wave number
-                                                                              //
-                                                                              // Not yet implemented: full radiation pattern modeling. Absent: Hertzian dipole
-                                                                              // near-field corrections; phased antenna array beamforming; dielectric material
-                                                                              // dispersion effects; surface plasmon polariton coupling at metal-dielectric
-                                                                              // interfaces; and quantum optical effects for high-intensity sources.
+                                                          //
+                                                          // Not yet implemented: full radiation pattern modeling. Absent: Hertzian dipole
+                                                          // near-field corrections; phased antenna array beamforming; dielectric material
+                                                          // dispersion effects; surface plasmon polariton coupling at metal-dielectric
+                                                          // interfaces; and quantum optical effects for high-intensity sources.
         let omega = TWO_PI * self.frequency;
         let phase = k * distance - omega * time + self.phase;
 

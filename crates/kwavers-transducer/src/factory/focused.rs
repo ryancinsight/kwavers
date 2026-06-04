@@ -1,7 +1,7 @@
 //! Focused bowl transducer construction for SourceFactory.
 
-use kwavers_core::error::{ConfigError, KwaversResult};
 use crate::transducers::focused::{BowlAngularBounds, BowlConfig, BowlTransducer};
+use kwavers_core::error::{ConfigError, KwaversResult};
 use kwavers_source::config::DEFAULT_FOCUSED_BOWL_FOCUS_OFFSET_M;
 use kwavers_source::{DomainSourceParameters, FocusedBowlAperture};
 

@@ -2,12 +2,12 @@
 
 use super::traits::Signal;
 use super::window::{get_win, SignalWindowType};
+use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use ndarray::Array2;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 use rand_distr::{Distribution, Normal};
-use kwavers_core::constants::numerical::{TWO_PI};
 
 /// Sample a signal at evenly spaced time points starting at `t0`.
 /// # Errors

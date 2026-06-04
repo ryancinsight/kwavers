@@ -29,7 +29,7 @@
 //! ```
 
 use super::KWaveArray;
-use kwavers_core::constants::numerical::{TWO_PI};
+use kwavers_core::constants::numerical::TWO_PI;
 
 impl KWaveArray {
     /// Arc length subtended by `[start_angle, end_angle]` (degrees) at radius `radius`.

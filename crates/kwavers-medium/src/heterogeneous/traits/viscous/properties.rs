@@ -1,11 +1,9 @@
 //! Viscous properties implementation for heterogeneous media
 
-use kwavers_grid::Grid;
 use crate::core::MIN_PHYSICAL_DENSITY;
-use crate::heterogeneous::{
-    core::HeterogeneousMedium, interpolation::HetTrilinearInterpolator,
-};
+use crate::heterogeneous::{core::HeterogeneousMedium, interpolation::HetTrilinearInterpolator};
 use crate::viscous::ViscousProperties;
+use kwavers_grid::Grid;
 
 impl ViscousProperties for HeterogeneousMedium {
     /// Dynamic viscosity at continuous coordinates (Pa·s)

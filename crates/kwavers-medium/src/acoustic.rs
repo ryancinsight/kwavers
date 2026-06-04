@@ -3,10 +3,12 @@
 //! This module defines traits for acoustic-specific properties including
 //! absorption, attenuation, and nonlinear effects.
 
-use kwavers_core::constants::acoustic_parameters::{WATER_ABSORPTION_ALPHA_0, WATER_NONLINEARITY_B_A};
-use kwavers_grid::Grid;
 use crate::absorption::AbsorptionTissueType;
 use crate::core::CoreMedium;
+use kwavers_core::constants::acoustic_parameters::{
+    WATER_ABSORPTION_ALPHA_0, WATER_NONLINEARITY_B_A,
+};
+use kwavers_grid::Grid;
 
 /// Trait for acoustic wave propagation properties
 pub trait AcousticProperties: CoreMedium {

@@ -1,14 +1,14 @@
 //! `HeterogeneousTissueMedium` implementation
 
 use super::{DomainTissueRegion, TissueMap};
-use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_K;
-use kwavers_core::error::{KwaversResult, ValidationError};
-use kwavers_grid::Grid;
 use crate::absorption::AbsorptionTissueType;
 use crate::{
     absorption::{tissue::AbsorptionTissueProperties, TISSUE_PROPERTIES},
     core::{ArrayAccess, CoreMedium, MIN_PHYSICAL_DENSITY, MIN_PHYSICAL_SOUND_SPEED},
 };
+use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_K;
+use kwavers_core::error::{KwaversResult, ValidationError};
+use kwavers_grid::Grid;
 use ndarray::{Array3, ArrayView3, ArrayViewMut3};
 
 mod acoustic;

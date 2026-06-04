@@ -3,8 +3,8 @@ use super::functions::{
 };
 use super::window::SignalWindowType;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
+use kwavers_core::constants::numerical::TWO_PI;
 use proptest::prelude::*;
-use kwavers_core::constants::numerical::{TWO_PI};
 
 #[test]
 fn tone_burst_series_respects_offset_and_length() {

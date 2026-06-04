@@ -1,7 +1,7 @@
 //! Beamforming configuration (core, unified)
 
-use kwavers_core::constants::{SAMPLING_FREQUENCY_DEFAULT, SOUND_SPEED_TISSUE};
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
+use kwavers_core::constants::{SAMPLING_FREQUENCY_DEFAULT, SOUND_SPEED_TISSUE};
 
 /// Core configuration for beamforming operations across array-processing consumers.
 ///

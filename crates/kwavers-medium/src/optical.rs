@@ -3,8 +3,8 @@
 //! This module defines traits for optical properties including absorption,
 //! scattering, and refractive index.
 
-use kwavers_grid::Grid;
 use crate::core::CoreMedium;
+use kwavers_grid::Grid;
 
 /// Trait for optical medium properties
 pub trait MediumOpticalProperties: CoreMedium {

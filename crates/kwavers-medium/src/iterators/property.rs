@@ -1,7 +1,7 @@
 //! Sequential medium property iterator.
 
-use kwavers_grid::Grid;
 use crate::{AcousticProperties, CoreMedium, Medium};
+use kwavers_grid::Grid;
 
 /// Iterator over medium properties at each grid point
 #[derive(Debug)]

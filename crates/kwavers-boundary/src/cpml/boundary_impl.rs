@@ -1,8 +1,8 @@
 //! `Boundary` trait impl for `CPMLBoundary`
 
 use super::CPMLBoundary;
-use kwavers_core::error::KwaversResult;
 use crate::{Boundary, PmlExpFactors};
+use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use ndarray::{Array3, ArrayViewMut3, Zip};
 
