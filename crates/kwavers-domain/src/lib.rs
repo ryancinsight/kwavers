@@ -97,5 +97,7 @@
 //! - **Integration tests**: Domain object interactions
 //! - **Property-based tests**: Mathematical correctness (Proptest)
 //! - **Validation functions**: Runtime invariant checking
-
-pub mod therapy;
+//!
+//! NOTE: This crate has been fully decomposed into domain-specific crates
+//! (kwavers-grid, -field, -medium, -source, -receiver, -transducer, -boundary,
+//! -mesh, -phantom, -optics, -imaging) and is scheduled for removal.

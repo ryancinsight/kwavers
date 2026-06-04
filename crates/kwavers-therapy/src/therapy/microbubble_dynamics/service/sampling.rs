@@ -1,7 +1,7 @@
 use ndarray::Array3;
 
 use kwavers_core::error::{KwaversError, KwaversResult, PhysicsError};
-use kwavers_domain::therapy::microbubble::Position3D;
+use kwavers_physics::therapy::microbubble::Position3D;
 
 /// Sample acoustic field at bubble position
 ///

@@ -1,8 +1,9 @@
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use ndarray::Array3;
 
-use kwavers_domain::therapy::microbubble::{
-    DrugLoadingMode, DrugPayload, MarmottantShellProperties, MicrobubbleState, Position3D,
+use crate::therapy::microbubble_dynamics::{DrugLoadingMode, DrugPayload};
+use kwavers_physics::therapy::microbubble::{
+    MarmottantShellProperties, MicrobubbleState, Position3D,
 };
 
 use super::*;

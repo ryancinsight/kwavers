@@ -1,6 +1,6 @@
 use super::loading_mode::DrugLoadingMode;
 use super::payload::DrugPayload;
-use crate::therapy::microbubble::shell::ShellState;
+use kwavers_physics::therapy::microbubble::shell::ShellState;
 
 #[test]
 fn test_create_drug_payload() {

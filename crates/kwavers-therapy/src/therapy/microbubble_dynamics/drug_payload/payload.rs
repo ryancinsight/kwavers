@@ -17,7 +17,7 @@
 
 use super::loading_mode::DrugLoadingMode;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
-use crate::therapy::microbubble::shell::ShellState;
+use kwavers_physics::therapy::microbubble::shell::ShellState;
 use std::fmt;
 
 /// Drug payload properties and release state

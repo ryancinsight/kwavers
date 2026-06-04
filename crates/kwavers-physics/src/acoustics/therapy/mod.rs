@@ -27,4 +27,4 @@ pub use cavitation::{CavitationDetectionMethod, TherapyCavitationDetector};
 // pub use parameters::TherapyParameters; // Moved to domain
 
 // Note: TherapyCalculator has moved to crate::simulation::therapy::calculator
-// Domain types are in kwavers_domain::therapy
+// Domain types are in kwavers_physics::therapy

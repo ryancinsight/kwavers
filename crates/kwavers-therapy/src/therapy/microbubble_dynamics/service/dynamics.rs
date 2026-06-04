@@ -1,6 +1,7 @@
 use kwavers_core::error::{KwaversError, KwaversResult, PhysicsError};
-use kwavers_domain::therapy::microbubble::{
-    calculate_primary_bjerknes_force, DrugPayload, MarmottantShellProperties, MicrobubbleState,
+use crate::therapy::microbubble_dynamics::DrugPayload;
+use kwavers_physics::therapy::microbubble::{
+    calculate_primary_bjerknes_force, MarmottantShellProperties, MicrobubbleState,
 };
 use kwavers_physics::acoustics::bubble_dynamics::adaptive_integration::integrate_bubble_dynamics_adaptive;
 

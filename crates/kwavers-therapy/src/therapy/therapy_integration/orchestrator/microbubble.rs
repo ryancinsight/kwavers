@@ -59,8 +59,9 @@ use crate::therapy::microbubble_dynamics::{
 };
 use kwavers_core::error::KwaversResult;
 
-use kwavers_domain::therapy::microbubble::{
-    DrugLoadingMode, DrugPayload, MarmottantShellProperties, MicrobubbleState, Position3D,
+use crate::therapy::microbubble_dynamics::{DrugLoadingMode, DrugPayload};
+use kwavers_physics::therapy::microbubble::{
+    MarmottantShellProperties, MicrobubbleState, Position3D,
 };
 use kwavers_simulation::imaging::ceus::ContrastEnhancedUltrasound;
 use ndarray::Array3;

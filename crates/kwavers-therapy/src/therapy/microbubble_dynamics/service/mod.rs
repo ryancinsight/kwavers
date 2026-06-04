@@ -12,7 +12,7 @@
 //! - Keller JB, Miksis M (1980). *J Acoust Soc Am* 68(2):628–633.
 
 use kwavers_core::error::KwaversResult;
-use kwavers_domain::therapy::microbubble::MicrobubbleState;
+use kwavers_physics::therapy::microbubble::MicrobubbleState;
 use kwavers_physics::acoustics::bubble_dynamics::bubble_state::BubbleParameters;
 use kwavers_physics::acoustics::bubble_dynamics::keller_miksis::KellerMiksisModel;
 

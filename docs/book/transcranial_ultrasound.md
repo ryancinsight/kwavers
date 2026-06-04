@@ -694,9 +694,14 @@ $\dot{C}_m = \omega \Delta C_m \cos(\omega t)$, giving equation (10.23). $\squar
 
 This current enters the Hodgkin–Huxley equations as an additional drive term, and
 for sufficient $\Delta C_m$ (achieved at MI $\gtrsim 0.3$) can trigger action
-potentials. The NICE model is implemented as a surrogate coupling between the
-acoustic simulation (providing $P_{\text{ac}}(t)$ at target) and a compartmental
-neuron model in `kwavers::physics::acoustics::transcranial::NICEModel`.
+potentials. The NICE / intramembrane-cavitation mechanism described here is a
+*theoretical* candidate and is **not** currently a kwavers module. The
+neuromodulation pathway kwavers does implement is the complementary
+mechanosensitive-channel (membrane-tension-gated) model —
+`kwavers_physics::acoustics::therapy::sonogenetics` (`channels`, `membrane`,
+`neuron`, `arf_field`) — developed in full in the dedicated **Neuromodulation**
+chapter (Ch26), which is the canonical home for the FUS-neuromodulation mechanism
+and its clinical parameter space.
 
 ![NICE model: intramembrane sonophore radius $R(t)$ (top), capacitance modulation $C_m(t)$ (middle), and resulting transmembrane voltage $V_m(t)$ showing AP generation (bottom) for LIPUS at $f = 500$ kHz, $P_A = 0.5$ MPa.](figures/ch_tc/fig07_nice_model_neurostimulation.png)
 
@@ -722,6 +727,14 @@ endothelial cells and tight junctions. The sequence is:
    occludin, widening paracellular gaps.
 4. **BBB closure**: restores within 4–24 h for sub-threshold exposures; no
    permanent damage if MI is controlled.
+
+kwavers implements the BBB-opening exposure, permeability, and safety models in
+`kwavers_physics::acoustics::transcranial::bbb_opening` (`models`, `safety`,
+`simulator`). This section covers the transcranial-context physics; the full
+closed-loop treatment-planning workflow — Keller–Miksis microbubble dynamics,
+multi-spot targeting, sparse (aperiodic) arrays, and passive-cavitation
+harmonic-dose monitoring — is in the dedicated **LIFU-Mediated Blood–Brain Barrier
+Opening** chapter (Ch24), the canonical home.
 
 ### 10.10.2 Acoustic Radiation Force on Endothelial Cells
 

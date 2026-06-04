@@ -34,6 +34,7 @@ pub mod field_surrogate; // Cached focal-pressure kernels for fast planner queri
 pub mod foundations; // Physics specifications and wave equation traits
 pub mod optics; // Optical physics (elevated from electromagnetic)
 pub mod photoacoustics; // Photoacoustic physics (thermoelastic coupling)
+pub mod therapy; // Therapeutic-ultrasound domain models (microbubble dynamics, modality types)
 pub mod thermal;
 
 // ============================================================================

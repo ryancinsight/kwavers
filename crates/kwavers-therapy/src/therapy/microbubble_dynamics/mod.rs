@@ -85,7 +85,7 @@
 //!
 //! ```rust,no_run
 //! use kwavers_therapy::therapy::microbubble_dynamics::MicrobubbleDynamicsService;
-//! use kwavers_domain::therapy::microbubble::{
+//! use kwavers_physics::therapy::microbubble::{
 //!     MicrobubbleState, MarmottantShellProperties, DrugPayload,
 //!     DrugLoadingMode, Position3D,
 //! };
@@ -139,11 +139,15 @@
 //! - Domain-Driven Design (Eric Evans, 2003)
 //! - Patterns of Enterprise Application Architecture (Martin Fowler, 2002)
 
+pub mod drug_payload;
 pub mod service;
 
 // Tests are inline in service.rs for now
 // #[cfg(test)]
 // pub mod tests;
 
+// Drug-payload value objects (therapy-delivery concern; moved here from the
+// former kwavers-domain therapy module).
+pub use drug_payload::{DrugLoadingMode, DrugPayload};
 // Re-export main service for convenience
 pub use service::{sample_acoustic_field_at_position, MicrobubbleDynamicsService};

@@ -3,7 +3,7 @@
 //! The application-level acoustic exposure parameters used by the therapy
 //! planning and safety workflows. The canonical domain value types
 //! (`DomainTreatmentMetrics`, `DomainTherapyMechanism`, `DomainTherapyModality`)
-//! live in `kwavers_domain::therapy::types` (SSOT) — workflows import those
+//! live in `kwavers_physics::therapy::types` (SSOT) — workflows import those
 //! directly. This module holds only `ClinicalTherapyParameters`, which extends
 //! the domain parameter set with planning-convenience fields and constructors.
 

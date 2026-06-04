@@ -9,7 +9,7 @@ use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::properties::ThermalPropertyData;
 use kwavers_medium::Medium;
-use kwavers_domain::therapy::types::{
+use kwavers_physics::therapy::types::{
     DomainTherapyModality, DomainTherapyParameters, DomainTreatmentMetrics,
 };
 use kwavers_solver::forward::thermal::PennesSolver;

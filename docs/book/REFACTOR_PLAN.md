@@ -154,8 +154,19 @@ in Rust where a real computation applies, embedded with a descriptive caption.
      sensor::recorder`, `kwavers_solver::inverse::reconstruction` (back-projection/TR).
      NOTE: ch14 regen currently blocked by the in-flight pykwavers refactor; used the
      existing root figures.
-   - ⬜ Ch5/6 (sources/beamforming residual paths), … + the deferred transcranial
-     §10.9/§10.10 ↔ neuro/BBB de-dup.
+   - ✅ **transcranial §10.9/§10.10 ↔ neuromodulation (Ch26)/BBB (Ch24)**: the
+     implementation check showed these are **complementary, not duplicates** — so
+     cross-referenced rather than stripped. **Caught a fictional impl claim:** §10.9.2
+     said the NICE model is "implemented in `…transcranial::NICEModel`" — *no such struct
+     exists anywhere*. Corrected to state NICE is a theoretical mechanism and pointed to
+     the actually-implemented neuromodulation path (`…therapy::sonogenetics`: channels/
+     membrane/neuron/arf_field) + Ch26. Added a verified BBB cross-ref/impl pointer
+     (`…transcranial::bbb_opening`: models/safety/simulator) + Ch24.
+   - ⬜ Ch5/6 (sources/beamforming residual paths). Remaining application chapters.
+   - ⚠️ **transcranial figures all broken**: 9 embeds point to empty `figures/ch_tc/`;
+     the `ch16` script makes 5 *different* figures (skull insertion loss, phase aberration,
+     CT conversion, Strehl, skull temp) and has no NICE/BBB figure. Full re-wire deferred to
+     Ch15's audit (needs pykwavers, currently down mid-refactor).
    - ⚠️ NOTE: a code refactor is in flight (CPML moved to a new `kwavers_boundary` crate,
      seen in `dispatch/fdtd.rs`). The final path-verification pass (item 7) must re-check
      all `kwavers_*::` module paths against the then-current crate layout.
