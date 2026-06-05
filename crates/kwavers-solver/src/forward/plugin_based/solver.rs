@@ -26,6 +26,10 @@ pub struct PluginBasedSolver {
     grid: Grid,
     /// Time configuration
     time: Time,
+    // dyn: sanctioned dynamic-dispatch boundaries (ADR 012). `Medium` is dependency
+    // inversion (properties pre-sampled at setup, not dispatched per cell);
+    // `Boundary` is a per-step strategy; `Source` is an open, cross-crate set in a
+    // heterogeneous collection. None are per-cell hot paths.
     /// Medium properties
     medium: Arc<dyn Medium>,
     /// Boundary conditions

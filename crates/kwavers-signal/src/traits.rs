@@ -4,7 +4,14 @@
 
 use std::fmt::Debug;
 
-/// Core Signal trait representing time-varying amplitude
+/// Core Signal trait representing time-varying amplitude.
+///
+// dyn: used as `dyn Signal`/`Arc<dyn Signal>` (open, cross-crate-extensible
+// implementor set — 22 impls across 6 crates: kwavers-signal, -source,
+// -transducer, -solver, -python, facade). Per ADR 012 this is a sanctioned
+// dynamic-dispatch boundary; a closed `SignalKind` enum is infeasible without
+// circular crate dependencies. Dispatch is O(num_sources)/step (sampled once per
+// source per step), never per-cell, so it is not throughput-critical.
 pub trait Signal: Debug + Send + Sync {
     /// Get the signal amplitude at time t
     fn amplitude(&self, t: f64) -> f64;

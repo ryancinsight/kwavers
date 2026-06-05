@@ -62,6 +62,8 @@ pub struct PSTDSolver {
     /// Construction-time diagnostic pressure-source gain.
     pub(crate) source_gain: f64,
     pub(crate) k_max: f64,
+    // dyn: boundary-strategy abstraction (ADR 012) — PML/CPML/none chosen at
+    // construction; applied once per step, not per cell. Sanctioned boundary.
     pub(crate) boundary: Option<Box<dyn Boundary>>,
     /// Precomputed split-field PML factors for fused velocity and density updates.
     ///

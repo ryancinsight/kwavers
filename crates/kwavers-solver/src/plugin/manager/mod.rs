@@ -50,6 +50,9 @@ impl PluginExecutionMetrics {
 
 /// Plugin manager: coordinates plugin lifecycle, dependency ordering, and execution.
 pub struct PluginManager {
+    // dyn: plugin/extension boundary (ADR 012) — a heterogeneous, runtime-assembled
+    // set of physics plugins; the explicit plugin-system exception to the zero-cost
+    // dispatch policy. `Plugin::update` runs once per plugin per step, not per cell.
     pub(self) plugins: Vec<Box<dyn Plugin>>,
     pub(self) execution_order: Vec<usize>,
     pub(self) execution_strategy: Box<dyn ExecutionStrategy>,

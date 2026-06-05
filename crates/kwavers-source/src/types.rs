@@ -83,7 +83,14 @@ pub struct SourceFocalProperties {
     pub focal_gain: Option<f64>,
 }
 
-/// Efficient source trait using mask-based approach
+/// Efficient source trait using mask-based approach.
+///
+// dyn: used as `dyn Source` (open, cross-crate-extensible implementor set —
+// 6 impls in kwavers-source, 8+ in kwavers-transducer — and stored in
+// heterogeneous `Vec<Box<dyn Source>>` collections). Per the zero-cost policy
+// (ADR 012) this is a sanctioned dynamic-dispatch boundary: the concrete type is
+// genuinely unknown at the storage site and dispatch is O(num_sources)/step
+// (the scalar `amplitude(t)`), never per-cell. Trait methods stay object-safe.
 pub trait Source: Debug + Sync + Send {
     /// Create a source mask on the grid (1.0 at source locations, 0.0 elsewhere)
     /// This is called once during initialization for optimal performance
