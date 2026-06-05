@@ -52,10 +52,10 @@ import scipy.signal
 # ---------------------------------------------------------------------------
 # Path setup: expose k-wave-python and pykwavers
 # ---------------------------------------------------------------------------
-_ROOT = Path(__file__).parents[2]
+_ROOT = Path(__file__).parents[3]
 _SCRIPT_DIR = Path(__file__).resolve().parent
 _KWAVE_PY = _ROOT / "external" / "k-wave-python"
-_PYKWAVERS = _ROOT / "pykwavers"
+_PYKWAVERS = _ROOT / "crates" / "kwavers-python" / "python"
 
 for p in [str(_SCRIPT_DIR), str(_KWAVE_PY), str(_PYKWAVERS / "python")]:
     if p not in sys.path:
@@ -299,8 +299,8 @@ def _pool_initializer(rayon_threads):
     """Pool initializer: cap Rayon threads before pykwavers is imported."""
     os.environ["RAYON_NUM_THREADS"] = str(rayon_threads)
     # Re-bootstrap sys.path in spawned process (Windows spawn loses parent path)
-    _ROOT = Path(__file__).parents[2]
-    for p in [str(_ROOT / "external" / "k-wave-python"), str(_ROOT / "pykwavers" / "python")]:
+    _ROOT = Path(__file__).parents[3]
+    for p in [str(_ROOT / "external" / "k-wave-python"), str(_ROOT / "crates" / "kwavers-python" / "python")]:
         if p not in sys.path:
             sys.path.insert(0, p)
 

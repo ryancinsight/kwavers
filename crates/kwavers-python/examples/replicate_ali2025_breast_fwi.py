@@ -38,8 +38,8 @@ from ali2025_breast_fwi.operator_equivalence import (
 from ali2025_breast_fwi.visualization import write_orthographic_plot
 
 
-ROOT = Path(__file__).resolve().parents[2]
-PYKWAVERS_PACKAGE_ROOT = ROOT / "pykwavers" / "python"
+ROOT = Path(__file__).resolve().parents[3]
+PYKWAVERS_PACKAGE_ROOT = ROOT / "crates" / "kwavers-python" / "python"
 PHANTOM_URL = (
     "https://github.com/rehmanali1994/3D-FWI-MultiRowRingArrayUST/"
     "releases/download/v1.0.0/BreastPhantomFromMRI.mat"

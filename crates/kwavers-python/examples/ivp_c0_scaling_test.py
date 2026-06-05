@@ -12,8 +12,8 @@ if hasattr(sys.stdout, "reconfigure"):
 import numpy as np
 from pathlib import Path
 
-_root = Path(__file__).resolve().parents[2]
-_pyp  = _root / "pykwavers" / "python"
+_root = Path(__file__).resolve().parents[3]
+_pyp  = _root / "crates" / "kwavers-python" / "python"
 if str(_pyp) not in sys.path:
     sys.path.insert(0, str(_pyp))
 

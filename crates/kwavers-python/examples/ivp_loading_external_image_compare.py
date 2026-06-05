@@ -114,7 +114,7 @@ P0_MAGNITUDE = 3.0  # Pa — peak initial pressure after image scaling
 
 # Source image: shipped with the k-Wave MATLAB toolbox.
 SOURCE_IMAGE_PATH = (
-    Path(__file__).parents[2]
+    Path(__file__).parents[3]
     / "external"
     / "k-wave"
     / "k-Wave"

@@ -75,7 +75,7 @@ from example_parity_utils import (
 bootstrap_example_paths()
 import pykwavers as pkw
 
-REPO_ROOT = HERE.parents[1]
+REPO_ROOT = HERE.parents[2]
 JULIA_PROJECT = REPO_ROOT / "external" / "k-wave-julia" / "KWave.jl"
 JULIA_DRIVER = HERE / "run_kwave_julia_diff_homogeneous_medium_source_2d.jl"
 

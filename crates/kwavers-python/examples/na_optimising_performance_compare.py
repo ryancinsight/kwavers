@@ -80,7 +80,7 @@ PML_SIZE = 20   # k-wave-python default for 256×256 grids
 
 # Image source (shipped with k-wave-python tests)
 SOURCE_IMAGE_PATH = (
-    Path(__file__).parents[2]
+    Path(__file__).parents[3]
     / "external"
     / "k-wave-python"
     / "tests"
@@ -279,7 +279,7 @@ def run_pykwavers(inputs: dict, *, no_cache: bool = False) -> dict:
     p0_smooth = inputs["p0_smooth"]
 
     grid   = pkw.Grid(NX, NY, 1, DX, DY, DX)
-    medium = pkw.Medium(sound_speed=C0, density=RHO)
+    medium = pkw.Medium.homogeneous(sound_speed=C0, density=RHO)
 
     # Use the pre-smoothed p0 (same one k-wave sees after smooth_p0=True)
     p0_3d  = p0_smooth[:, :, None]

@@ -56,7 +56,7 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 # ── k-wave-python import ──────────────────────────────────────────────────────
-kwave_root = Path(__file__).parents[2] / "external" / "k-wave-python"
+kwave_root = Path(__file__).parents[3] / "external" / "k-wave-python"
 if str(kwave_root) not in sys.path:
     sys.path.insert(0, str(kwave_root))
 
@@ -70,7 +70,7 @@ from kwave.utils.filters import smooth as kwave_smooth
 from kwave.utils.mapgen import make_disc
 
 # ── pykwavers import ──────────────────────────────────────────────────────────
-pykwavers_root = Path(__file__).parents[1]
+pykwavers_root = Path(__file__).parents[1] / "python"
 if str(pykwavers_root) not in sys.path:
     sys.path.insert(0, str(pykwavers_root))
 

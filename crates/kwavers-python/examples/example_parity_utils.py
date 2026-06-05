@@ -12,9 +12,11 @@ from typing import Iterable, Literal, Sequence
 import numpy as np
 
 
-ROOT = Path(__file__).parents[2]
+# examples live at <repo>/crates/kwavers-python/examples/, so the repository
+# root is three parents up (examples -> kwavers-python -> crates -> repo root).
+ROOT = Path(__file__).parents[3]
 KWAVE_PYTHON_ROOT = ROOT / "external" / "k-wave-python"
-PYKWAVERS_PYTHON_ROOT = ROOT / "pykwavers" / "python"
+PYKWAVERS_PYTHON_ROOT = ROOT / "crates" / "kwavers-python" / "python"
 DEFAULT_OUTPUT_DIR = Path(__file__).parent / "output"
 
 

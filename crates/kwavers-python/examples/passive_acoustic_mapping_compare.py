@@ -166,7 +166,7 @@ def run_pykwavers(case: dict[str, np.ndarray | float], window_size: int) -> tupl
 def run_julia_reference(case: dict[str, np.ndarray | float], root: Path) -> dict[str, float] | None:
     if shutil.which("julia") is None:
         return None
-    output_dir = root / "pykwavers" / "examples" / "output" / "pam"
+    output_dir = root / "crates" / "kwavers-python" / "examples" / "output" / "pam"
     output_dir.mkdir(parents=True, exist_ok=True)
     script = output_dir / "_pam_julia_compare_tmp.jl"
     beamform_path = (root / "external" / "k-wave-julia" / "KWave.jl" / "src" / "reconstruction" / "beamform.jl").as_posix()
@@ -236,7 +236,7 @@ def maybe_plot(case: dict[str, np.ndarray | float], rust_map: np.ndarray, ref_ma
         ax.set_xlabel("z [mm]")
         ax.set_ylabel("x [mm]")
         fig.colorbar(im, ax=ax)
-    output_dir = root / "pykwavers" / "examples" / "output"
+    output_dir = root / "crates" / "kwavers-python" / "examples" / "output"
     output_dir.mkdir(parents=True, exist_ok=True)
     output = output_dir / "passive_acoustic_mapping_compare.png"
     fig.savefig(output, dpi=160)
@@ -311,7 +311,7 @@ def plot_volume_detection(
                 axes[row, col].scatter([peak_xy[0]], [peak_xy[1]], marker="o", facecolors="none", edgecolors="cyan", s=80)
             fig.colorbar(im, ax=axes[row, col], fraction=0.046, pad=0.02)
 
-    output_dir = root / "pykwavers" / "examples" / "output"
+    output_dir = root / "crates" / "kwavers-python" / "examples" / "output"
     output_dir.mkdir(parents=True, exist_ok=True)
     output = output_dir / "passive_acoustic_mapping_volume_compare.png"
     fig.savefig(output, dpi=160)
@@ -323,7 +323,7 @@ def main() -> int:
     parser.add_argument("--plot", action="store_true")
     args = parser.parse_args()
 
-    root = Path(__file__).resolve().parents[2]
+    root = Path(__file__).resolve().parents[3]
     sys.path.insert(0, str(root / "external" / "k-wave-python"))
     case = synthetic_case()
     rust_map, rust_seconds = run_pykwavers(case, window_size=1)

@@ -17,22 +17,21 @@ from pathlib import Path
 
 EXAMPLES = Path(__file__).resolve().parent
 
-# (script, failure-tolerance arg)
+# (script, extra CLI args). The elastic script is driven through its canonical
+# pseudospectral path (``--pstd`` → SolverType.ElasticPSTD), which reaches
+# peak_ratio ≈ 1.0 vs KWave.jl; its default SolverType.Elastic baseline remains
+# the tracked [arch] ElasticPSTD gap and is intentionally not exercised here.
 SCRIPTS = [
-    ("diff_bioheat_1d_jl_compare.py",      "--allow-failure"),
-    ("ewp_elastic_2d_jl_compare.py",       None),         # never strict by
-                                                           # default — see
-                                                           # script docstring
-    ("pr_time_reversal_2d_jl_compare.py",  "--allow-failure"),
-    ("us_phased_array_3d_jl_compare.py",   "--allow-failure"),
-    ("us_beamforming_2d_jl_compare.py",    "--allow-failure"),
+    ("diff_bioheat_1d_jl_compare.py",      ["--allow-failure"]),
+    ("ewp_elastic_2d_jl_compare.py",       ["--pstd", "--allow-failure"]),
+    ("pr_time_reversal_2d_jl_compare.py",  ["--allow-failure"]),
+    ("us_phased_array_3d_jl_compare.py",   ["--allow-failure"]),
+    ("us_beamforming_2d_jl_compare.py",    ["--allow-failure"]),
 ]
 
 
-def run_one(script: str, fail_arg: str | None) -> dict:
-    cmd = [sys.executable, str(EXAMPLES / script)]
-    if fail_arg is not None:
-        cmd.append(fail_arg)
+def run_one(script: str, extra_args: list[str]) -> dict:
+    cmd = [sys.executable, str(EXAMPLES / script), *extra_args]
     t0 = time.perf_counter()
     proc = subprocess.run(cmd, capture_output=True, text=True, timeout=3600)
     elapsed = time.perf_counter() - t0
@@ -56,9 +55,9 @@ def main() -> int:
     print(f"{'script':<45} {'result':<8} {'pearson':<10} {'time':<8}")
     print("-" * 75)
     all_ok = True
-    for script, fail_arg in SCRIPTS:
-        r = run_one(script, fail_arg)
-        if not r["result"].startswith("PASS") and script != "ewp_elastic_2d_jl_compare.py":
+    for script, extra_args in SCRIPTS:
+        r = run_one(script, extra_args)
+        if not r["result"].startswith("PASS"):
             all_ok = False
         print(f"{r['script']:<45} {r['result']:<8} {r['pearson']:<10} {r['elapsed_s']:<8} s")
     return 0 if all_ok else 1
