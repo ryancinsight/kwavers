@@ -23,7 +23,9 @@ EXAMPLES = Path(__file__).resolve().parent
 # the tracked [arch] ElasticPSTD gap and is intentionally not exercised here.
 SCRIPTS = [
     ("diff_bioheat_1d_jl_compare.py",      ["--allow-failure"]),
-    ("ewp_elastic_2d_jl_compare.py",       ["--pstd", "--allow-failure"]),
+    # elastic jl script is non-strict by default and accepts --pstd/--strict
+    # only (no --allow-failure flag).
+    ("ewp_elastic_2d_jl_compare.py",       ["--pstd"]),
     ("pr_time_reversal_2d_jl_compare.py",  ["--allow-failure"]),
     ("us_phased_array_3d_jl_compare.py",   ["--allow-failure"]),
     ("us_beamforming_2d_jl_compare.py",    ["--allow-failure"]),
