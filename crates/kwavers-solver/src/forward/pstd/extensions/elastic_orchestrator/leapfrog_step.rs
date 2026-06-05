@@ -51,44 +51,16 @@ pub(super) fn propagate_leapfrog_step(
     scratch_r: &mut Array3<f64>,
     dt: f64,
 ) {
-    let op_x_neg = ops.dkx_neg.as_slice().expect("dkx_neg contiguous");
-    let op_y_neg = ops.dky_neg.as_slice().expect("dky_neg contiguous");
-    let op_z_neg = ops.dkz_neg.as_slice().expect("dkz_neg contiguous");
     let op_x_pos = ops.dkx_pos.as_slice().expect("dkx_pos contiguous");
     let op_y_pos = ops.dky_pos.as_slice().expect("dky_pos contiguous");
     let op_z_pos = ops.dkz_pos.as_slice().expect("dkz_pos contiguous");
     let kappa = ops.kappa;
-    let buf = &mut spec_scratch.txx;
 
     // ── PHASE 1 — stress update (real-space λ, μ) ───────────────────────────
     fft_3d_array_into(&velocity.vx, &mut spec_vel.vx);
     fft_3d_array_into(&velocity.vy, &mut spec_vel.vy);
     fft_3d_array_into(&velocity.vz, &mut spec_vel.vz);
-
-    // ∂_x v_x → (λ+2μ) on txx, λ on tyy/tzz.
-    spectral_mul_x(&spec_vel.vx, op_x_neg, kappa, buf);
-    ifft_3d_array_into(buf, scratch_r);
-    accumulate_normal(stress, scratch_r, medium, dt, NormalAxis::X);
-
-    // ∂_y v_y → (λ+2μ) on tyy, λ on txx/tzz.
-    spectral_mul_y(&spec_vel.vy, op_y_neg, kappa, buf);
-    ifft_3d_array_into(buf, scratch_r);
-    accumulate_normal(stress, scratch_r, medium, dt, NormalAxis::Y);
-
-    // ∂_z v_z → (λ+2μ) on tzz, λ on txx/tyy.
-    spectral_mul_z(&spec_vel.vz, op_z_neg, kappa, buf);
-    ifft_3d_array_into(buf, scratch_r);
-    accumulate_normal(stress, scratch_r, medium, dt, NormalAxis::Z);
-
-    // Shear: τ_xy += dt·μ·(∂_y v_x + ∂_x v_y).
-    shear(spectral_mul_y, &spec_vel.vx, op_y_neg, kappa, buf, scratch_r, dt, medium, &mut stress.txy);
-    shear(spectral_mul_x, &spec_vel.vy, op_x_neg, kappa, buf, scratch_r, dt, medium, &mut stress.txy);
-    // τ_xz += dt·μ·(∂_z v_x + ∂_x v_z).
-    shear(spectral_mul_z, &spec_vel.vx, op_z_neg, kappa, buf, scratch_r, dt, medium, &mut stress.txz);
-    shear(spectral_mul_x, &spec_vel.vz, op_x_neg, kappa, buf, scratch_r, dt, medium, &mut stress.txz);
-    // τ_yz += dt·μ·(∂_z v_y + ∂_y v_z).
-    shear(spectral_mul_z, &spec_vel.vy, op_z_neg, kappa, buf, scratch_r, dt, medium, &mut stress.tyz);
-    shear(spectral_mul_y, &spec_vel.vz, op_y_neg, kappa, buf, scratch_r, dt, medium, &mut stress.tyz);
+    accumulate_stress(spec_vel, stress, medium, ops, &mut spec_scratch.txx, scratch_r, dt);
 
     // ── PHASE 2 — velocity update (real-space 1/ρ) ──────────────────────────
     fft_3d_array_into(&stress.txx, &mut spec_stress.txx);
@@ -111,6 +83,69 @@ pub(super) fn propagate_leapfrog_step(
     vel(spectral_mul_x, &spec_stress.txz, op_x_pos, kappa, buf, scratch_r, dt, medium, &mut velocity.vz);
     vel(spectral_mul_y, &spec_stress.tyz, op_y_pos, kappa, buf, scratch_r, dt, medium, &mut velocity.vz);
     vel(spectral_mul_z, &spec_stress.tzz, op_z_pos, kappa, buf, scratch_r, dt, medium, &mut velocity.vz);
+}
+
+/// Accumulate `σ += dt · C : ε(v)` from a spectral velocity field, applying
+/// `λ, μ` in real space. Shared by the leapfrog step and the IVP seed.
+fn accumulate_stress(
+    spec_vel: &SpectralVelocityFields,
+    stress: &mut StressFields,
+    medium: &ElasticPstdMedium,
+    ops: &SpectralOperators<'_>,
+    buf: &mut Array3<Complex<f64>>,
+    scratch_r: &mut Array3<f64>,
+    dt: f64,
+) {
+    let op_x_neg = ops.dkx_neg.as_slice().expect("dkx_neg contiguous");
+    let op_y_neg = ops.dky_neg.as_slice().expect("dky_neg contiguous");
+    let op_z_neg = ops.dkz_neg.as_slice().expect("dkz_neg contiguous");
+    let kappa = ops.kappa;
+
+    spectral_mul_x(&spec_vel.vx, op_x_neg, kappa, buf);
+    ifft_3d_array_into(buf, scratch_r);
+    accumulate_normal(stress, scratch_r, medium, dt, NormalAxis::X);
+    spectral_mul_y(&spec_vel.vy, op_y_neg, kappa, buf);
+    ifft_3d_array_into(buf, scratch_r);
+    accumulate_normal(stress, scratch_r, medium, dt, NormalAxis::Y);
+    spectral_mul_z(&spec_vel.vz, op_z_neg, kappa, buf);
+    ifft_3d_array_into(buf, scratch_r);
+    accumulate_normal(stress, scratch_r, medium, dt, NormalAxis::Z);
+
+    shear(spectral_mul_y, &spec_vel.vx, op_y_neg, kappa, buf, scratch_r, dt, medium, &mut stress.txy);
+    shear(spectral_mul_x, &spec_vel.vy, op_x_neg, kappa, buf, scratch_r, dt, medium, &mut stress.txy);
+    shear(spectral_mul_z, &spec_vel.vx, op_z_neg, kappa, buf, scratch_r, dt, medium, &mut stress.txz);
+    shear(spectral_mul_x, &spec_vel.vz, op_x_neg, kappa, buf, scratch_r, dt, medium, &mut stress.txz);
+    shear(spectral_mul_z, &spec_vel.vy, op_z_neg, kappa, buf, scratch_r, dt, medium, &mut stress.tyz);
+    shear(spectral_mul_y, &spec_vel.vz, op_y_neg, kappa, buf, scratch_r, dt, medium, &mut stress.tyz);
+}
+
+/// Seed the initial stress for an initial-value problem with displacement `u0`
+/// along `axis` (0=x, 1=y, 2=z), other components and initial velocity zero.
+/// The initial stress `σ = λ(∇·u)I + μ(∇u + ∇uᵀ)` is the `dt = 1` stress
+/// increment driven by `u0` in place of velocity, so it reuses
+/// [`accumulate_stress`] for an exactly grid-consistent discretisation.
+#[allow(clippy::too_many_arguments)]
+pub(super) fn seed_stress_from_displacement(
+    stress: &mut StressFields,
+    u0: &Array3<f64>,
+    axis: usize,
+    medium: &ElasticPstdMedium,
+    ops: &SpectralOperators<'_>,
+    spec_vel: &mut SpectralVelocityFields,
+    buf: &mut Array3<Complex<f64>>,
+    scratch_r: &mut Array3<f64>,
+) {
+    stress.reset();
+    spec_vel.vx.fill(Complex::new(0.0, 0.0));
+    spec_vel.vy.fill(Complex::new(0.0, 0.0));
+    spec_vel.vz.fill(Complex::new(0.0, 0.0));
+    let slot = match axis {
+        0 => &mut spec_vel.vx,
+        1 => &mut spec_vel.vy,
+        _ => &mut spec_vel.vz,
+    };
+    fft_3d_array_into(u0, slot);
+    accumulate_stress(spec_vel, stress, medium, ops, buf, scratch_r, 1.0);
 }
 
 enum NormalAxis {

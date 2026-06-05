@@ -102,4 +102,8 @@ pub struct SimulationRunRequest<'a> {
     pub transducers_for_rs: &'a [kwavers_transducer::array_2d::TransducerArray2D],
     /// ElasticPSTD velocity source (mask + per-axis signals + injection mode).
     pub elastic_velocity_source: Option<ElasticPstdVelocitySource>,
+    /// ElasticPSTD initial-displacement IVP axis (0=x, 1=y, 2=z). When set, the
+    /// `grid_source.p0` field is interpreted as the initial displacement along
+    /// this axis and seeds the initial stress (σ = λ(∇·u)I + μ(∇u + ∇uᵀ)).
+    pub elastic_ivp_axis: Option<usize>,
 }

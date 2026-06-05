@@ -129,6 +129,7 @@ mod tests {
             record_start_index: 0,
             transducers_for_rs: &[],
             elastic_velocity_source: None,
+            elastic_ivp_axis: None,
         }
     }
 

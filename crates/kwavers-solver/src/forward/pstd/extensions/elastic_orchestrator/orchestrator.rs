@@ -17,7 +17,7 @@
 //!    points into the recorder matrices.
 
 use super::kspace::{build_kappa, grid_spacing_from_wavenumber, max_p_wave_speed, wavenumber_axis};
-use super::leapfrog_step::propagate_leapfrog_step;
+use super::leapfrog_step::{propagate_leapfrog_step, seed_stress_from_displacement};
 use super::pml::{ElasticPml, ElasticPmlSpec};
 use super::source_sensor::{
     inject_velocity_source, inject_velocity_source_subfields, record_sensors, validate_source,
@@ -276,6 +276,35 @@ impl ElasticPstdOrchestrator {
             vy: sensor_vy,
             vz: sensor_vz,
         })
+    }
+
+    /// Seed the initial stress from an initial-value-problem displacement.
+    ///
+    /// `u0` is the displacement field along `axis` (0=x, 1=y, 2=z); the other
+    /// components and the initial velocity are zero. Sets the initial stress
+    /// `σ = λ(∇·u)I + μ(∇u + ∇uᵀ)` so a standing-start displacement IC (e.g.
+    /// an SH plane-wave packet) propagates correctly. Call once after
+    /// construction, before `propagate`.
+    pub fn seed_initial_displacement(&mut self, u0: &Array3<f64>, axis: usize) {
+        let ops = SpectralOperators {
+            dkx_neg: &self.derivative_ops.dkx_neg,
+            dky_neg: &self.derivative_ops.dky_neg,
+            dkz_neg: &self.derivative_ops.dkz_neg,
+            dkx_pos: &self.derivative_ops.dkx_pos,
+            dky_pos: &self.derivative_ops.dky_pos,
+            dkz_pos: &self.derivative_ops.dkz_pos,
+            kappa: &self.kappa,
+        };
+        seed_stress_from_displacement(
+            &mut self.stress,
+            u0,
+            axis,
+            &self.medium,
+            &ops,
+            &mut self.spectral_velocity_in,
+            &mut self.spectral_stress_next.txx,
+            &mut self.scratch_r,
+        );
     }
 
     /// Attach a real-space exponential PML to the orchestrator.

@@ -758,6 +758,11 @@ impl Simulation {
             record_start_index,
             transducers_for_rs: &kwavers_transducers,
             elastic_velocity_source: kwavers_elastic_vsrc,
+            elastic_ivp_axis: elastic_ivp_axis.as_deref().map(|s| match s {
+                "x" => 0usize,
+                "y" => 1usize,
+                _ => 2usize,
+            }),
         };
 
         // ── Run ─────────────────────────────────────────────────────────────

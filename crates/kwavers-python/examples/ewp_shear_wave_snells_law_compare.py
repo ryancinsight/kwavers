@@ -108,10 +108,15 @@ J0      = 30              # source centre y-cell (grid mid-plane)
 SIGMA_CELLS = 3.5         # Gaussian half-width [cells]
 AMP     = 1.0             # initial displacement amplitude [m]
 
-# Sensor row in layer 2
-SENSOR_IX = 44                    # x = 44 mm, well inside layer 2
-SENSOR_J  = [34, 38, 42, 46, 50]  # y-cells in ascending order
-TOL_DEG   = 1.5                   # acceptance threshold [degrees]
+# Sensor row in layer 2. Placed ~10 cells past the interface (x=30): far
+# enough to clear the interface near-field, close enough that pseudospectral
+# propagation dispersion has not yet biased the apparent angle. A dense row of
+# sensors, all strictly inside the non-PML interior (valid j ∈ [PML, NY-PML)),
+# gives a robust slope fit; the previous sparse row included j=50 which sits in
+# the PML and corrupted the timing.
+SENSOR_IX = 40                          # x = 40 mm, ~10 cells into layer 2
+SENSOR_J  = list(range(22, 45))         # dense in-domain row (j = 22 … 44)
+TOL_DEG   = 1.5                         # acceptance threshold [degrees]
 
 FIGURE_PATH  = DEFAULT_OUTPUT_DIR / "ewp_shear_wave_snells_law_compare.png"
 METRICS_PATH = DEFAULT_OUTPUT_DIR / "ewp_shear_wave_snells_law_metrics.txt"
@@ -153,7 +158,7 @@ def run_sim() -> np.ndarray:
     sensor = pkw.Sensor.from_mask(sens_mask)
 
     sim = pkw.Simulation(grid, medium, source, sensor,
-                         solver=pkw.SolverType.Elastic)
+                         solver=pkw.SolverType.ElasticPSTD)
     sim.set_pml_size(PML)
     sim.set_pml_inside(True)
 
@@ -166,17 +171,26 @@ def run_sim() -> np.ndarray:
     return data
 
 
-def extract_peak_time(trace: np.ndarray) -> float:
-    """Peak of |trace| index (parabolic sub-sample refinement)."""
-    idx = int(np.argmax(np.abs(trace)))
-    if 1 <= idx < len(trace) - 1:
-        a = np.abs(trace[idx - 1])
-        b = np.abs(trace[idx])
-        c = np.abs(trace[idx + 1])
-        denom = 2 * b - a - c
-        sub = 0.0 if denom == 0 else (a - c) / (2 * denom)
-        return (idx + sub) * DT
-    return idx * DT
+def first_break_time(trace: np.ndarray, frac: float = 0.2) -> float:
+    """First-break (onset) time: the sub-sample instant when ``|trace|`` first
+    crosses ``frac`` of its maximum.
+
+    This is the standard refraction-arrival pick. The global peak is unreliable
+    here because the displacement-IVP launches a counter-propagating wave whose
+    reflected/coda energy can exceed the transmitted wavefront peak at a sensor;
+    the onset of the *first* arrival isolates the transmitted wavefront.
+    """
+    a = np.abs(trace)
+    amax = a.max()
+    if amax <= 0.0:
+        return 0.0
+    thr = frac * amax
+    idx = int(np.argmax(a > thr))
+    if idx <= 0:
+        return idx * DT
+    y0, y1 = a[idx - 1], a[idx]
+    sub = 0.0 if y1 == y0 else (thr - y0) / (y1 - y0)
+    return (idx - 1 + sub) * DT
 
 
 def main() -> int:
@@ -207,31 +221,20 @@ def main() -> int:
         if not args.allow_failure:
             return 1
 
-    # Peak arrival times
-    t_peak = np.array([extract_peak_time(data[s, :]) for s in range(n_sensors)])
-    print(f"\n  Sensor peak arrival times (µs):")
-    for s, j in enumerate(sensor_j_sorted):
-        print(f"    j={j}: t={t_peak[s]*1e6:.3f} µs")
-
-    # Estimate sin(θ_t) from inter-sensor timing
-    # Δt[s] = (y[s+1] - y[s]) × sin(θ_t) / c_s2
-    sin_theta_t_vals = []
-    for s in range(n_sensors - 1):
-        delta_j = sensor_j_sorted[s + 1] - sensor_j_sorted[s]
-        delta_y = delta_j * DX
-        delta_t = t_peak[s + 1] - t_peak[s]
-        if abs(delta_t) < 1e-12:
-            continue
-        sin_t = CS2 * abs(delta_t) / delta_y
-        if sin_t <= 1.0:
-            sin_theta_t_vals.append(sin_t)
-
-    if not sin_theta_t_vals:
-        print("ERROR: no valid Δt measurements (insufficient wave amplitude?)")
+    # First-break (onset) arrival times of the transmitted wavefront.
+    t_peak = np.array([first_break_time(data[s, :]) for s in range(n_sensors)])
+    if not np.any(np.abs(data) > 0.0):
+        print("ERROR: no wave energy at sensors (insufficient amplitude?)")
         if not args.allow_failure:
             return 1
 
-    sin_theta_t_meas = float(np.median(sin_theta_t_vals))
+    # sin(θ_t) from the slope of a robust linear fit of arrival-time vs y:
+    #   t(y) = y · sin(θ_t) / c_s2 + const  ⇒  sin(θ_t) = c_s2 · (dt/dy)
+    # The least-squares slope over the dense sensor row averages out per-trace
+    # onset-pick jitter (far more robust than per-pair finite differences).
+    j_arr_fit = np.array(sensor_j_sorted, dtype=float)
+    slope_s_per_cell = float(np.polyfit(j_arr_fit, t_peak, 1)[0])
+    sin_theta_t_meas = float(np.clip(CS2 * slope_s_per_cell / DX, 0.0, 1.0))
     theta_t_meas_deg = float(np.rad2deg(np.arcsin(np.clip(sin_theta_t_meas, 0, 1))))
     theta_err_deg    = abs(theta_t_meas_deg - THETA_T_DEG_ANAL)
 
