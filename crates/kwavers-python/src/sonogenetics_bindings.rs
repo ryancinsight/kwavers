@@ -8,11 +8,11 @@
 //!
 //! | Python name | Rust kernel | Reference |
 //! |---|---|---|
-//! | `compute_acoustic_membrane_tension_py` | `compute_membrane_tension` | Timoshenko 1959; Sarvazyan 2010 |
-//! | `boltzmann_open_probability_py` | `boltzmann_p_open` | Sukharev 1997; Cox 2016 |
-//! | `coupled_channel_drive_py` | `boltzmann_p_open` (multi-channel) | Hille 2001 |
-//! | `gaussian_beam_pressure_field_py` | Analytical Gaussian envelope | Goodman 2005 §3.3 |
-//! | `simulate_lif_neuron_py` | `LifNeuron::step` | Koch 1999 |
+//! | `compute_acoustic_membrane_tension_py` | `pressure_to_membrane_tension_mn_m` | Timoshenko 1959; Sarvazyan 2010 |
+//! | `boltzmann_open_probability_py` | `boltzmann_open_probability_from_tension_mn_m` | Sukharev 1997; Cox 2016 |
+//! | `coupled_channel_drive_py` | `coupled_channel_drive` | Hille 2001 |
+//! | `gaussian_beam_pressure_field_py` | `gaussian_beam_pressure_field` | Goodman 2005 §3.3 |
+//! | `simulate_lif_neuron_py` | `simulate_lif_trace` | Koch 1999 |
 //!
 //! # Physics contract
 //!
@@ -30,15 +30,18 @@
 //! - Goodman, J.W. (2005). *Introduction to Fourier Optics*, 3rd ed. §3.3.
 //! - Koch, C. (1999). *Biophysics of Computation*. Oxford University Press.
 
-use kwavers_core::constants::fundamental::BOLTZMANN as K_B;
 use kwavers_physics::acoustics::therapy::sonogenetics::{
-    boltzmann_p_open, compute_membrane_tension, BoltzmannGatingParams, CellMembraneParams,
-    LifNeuron, LifParams,
+    boltzmann_open_probability_from_tension_mn_m, coupled_channel_drive,
+    gaussian_beam_pressure_field, pressure_to_membrane_tension_mn_m, simulate_lif_trace, LifParams,
 };
-use ndarray::{Array1, Array3};
+use ndarray::Array1;
 use numpy::{IntoPyArray, PyReadonlyArray1};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
+
+fn kwavers_to_py(err: kwavers_core::error::KwaversError) -> PyErr {
+    pyo3::exceptions::PyValueError::new_err(err.to_string())
+}
 
 // ── Membrane tension ──────────────────────────────────────────────────────────
 
@@ -79,30 +82,18 @@ pub fn compute_acoustic_membrane_tension_py<'py>(
     sound_speed_m_s: f64,
     cell_radius_m: f64,
 ) -> PyResult<Bound<'py, numpy::PyArray1<f64>>> {
-    let p = pressure_pa.as_array().to_owned();
-    let n = p.len();
-    let tension_mn_m = py.detach(|| {
-        // Intensity: I = p² / (2·ρ·c)
-        let intensity_1d: Array1<f64> =
-            p.mapv(|pi| pi * pi / (2.0 * density_kg_m3 * sound_speed_m_s));
-        // Reshape to (N, 1, 1) for Rust kernel
-        let intensity_3d = intensity_1d
-            .into_shape_with_order((n, 1, 1))
-            .expect("1-D-to-(N,1,1) reshape is infallible");
-        let c_3d = Array3::from_elem((n, 1, 1), sound_speed_m_s);
-        let params = CellMembraneParams {
-            radius_m: cell_radius_m,
-            // Canonical lipid bilayer thickness h = 5 nm (Engelman 2005).
-            thickness_m: 5.0e-9,
-        };
-        // ΔT in N/m → scale to mN/m
-        let tension_3d = compute_membrane_tension(&intensity_3d, &c_3d, &params);
-        tension_3d
-            .into_shape_with_order(n)
-            .expect("(N,1,1)-to-1-D reshape is infallible")
-            .mapv(|t| t * 1.0e3)
-    });
-    Ok(tension_mn_m.into_pyarray(py))
+    let pressure = pressure_pa.as_slice()?;
+    let tension_mn_m = py
+        .detach(|| {
+            pressure_to_membrane_tension_mn_m(
+                pressure,
+                density_kg_m3,
+                sound_speed_m_s,
+                cell_radius_m,
+            )
+        })
+        .map_err(kwavers_to_py)?;
+    Ok(Array1::from_vec(tension_mn_m).into_pyarray(py))
 }
 
 // ── Channel open probability ──────────────────────────────────────────────────
@@ -138,40 +129,18 @@ pub fn boltzmann_open_probability_py<'py>(
     slope_mn_m: f64,
     temperature_k: f64,
 ) -> PyResult<Bound<'py, numpy::PyArray1<f64>>> {
-    if temperature_k <= 0.0 {
-        return Err(pyo3::exceptions::PyValueError::new_err(
-            "temperature_k must be strictly positive",
-        ));
-    }
-    if slope_mn_m <= 0.0 {
-        return Err(pyo3::exceptions::PyValueError::new_err(
-            "slope_mn_m must be strictly positive",
-        ));
-    }
-    let t = tension_mn_m.as_array().to_owned();
-    let n = t.len();
-    // Derive gating area from slope parameterisation: A = k_B·θ / slope [m²]
-    let gating_area_m2 = K_B * temperature_k / (slope_mn_m * 1.0e-3);
-    let params = BoltzmannGatingParams {
-        gating_area_m2,
-        half_tension_n_per_m: half_tension_mn_m * 1.0e-3,
-        // single_channel_conductance_s and reversal_potential_v are unused by
-        // boltzmann_p_open; set to zero to satisfy struct completeness.
-        single_channel_conductance_s: 0.0,
-        reversal_potential_v: 0.0,
-    };
-    let p_open = py.detach(|| {
-        // Convert mN/m → N/m for Rust kernel
-        let t_si: Array1<f64> = t.mapv(|v| v * 1.0e-3);
-        let t_3d = t_si
-            .into_shape_with_order((n, 1, 1))
-            .expect("1-D-to-(N,1,1) reshape is infallible");
-        let out = boltzmann_p_open(&t_3d, &params, temperature_k)
-            .expect("temperature_k > 0 is guaranteed by pre-call validation");
-        out.into_shape_with_order(n)
-            .expect("(N,1,1)-to-1-D reshape is infallible")
-    });
-    Ok(p_open.into_pyarray(py))
+    let tension = tension_mn_m.as_slice()?;
+    let p_open = py
+        .detach(|| {
+            boltzmann_open_probability_from_tension_mn_m(
+                tension,
+                half_tension_mn_m,
+                slope_mn_m,
+                temperature_k,
+            )
+        })
+        .map_err(kwavers_to_py)?;
+    Ok(Array1::from_vec(p_open).into_pyarray(py))
 }
 
 // ── Coupled channel drive ─────────────────────────────────────────────────────
@@ -221,65 +190,22 @@ pub fn coupled_channel_drive_py<'py>(
     cell_radius_m: f64,
     temperature_k: f64,
 ) -> PyResult<Bound<'py, numpy::PyArray1<f64>>> {
-    let n_ch = half_tensions_mn_m.len();
-    if slopes_mn_m.len() != n_ch || conductance_weights.len() != n_ch {
-        return Err(pyo3::exceptions::PyValueError::new_err(
-            "half_tensions_mn_m, slopes_mn_m, and conductance_weights must have equal length",
-        ));
-    }
-    if temperature_k <= 0.0 {
-        return Err(pyo3::exceptions::PyValueError::new_err(
-            "temperature_k must be strictly positive",
-        ));
-    }
-    for (k, &slope) in slopes_mn_m.iter().enumerate() {
-        if slope <= 0.0 {
-            return Err(pyo3::exceptions::PyValueError::new_err(format!(
-                "slopes_mn_m[{k}] = {slope} must be strictly positive"
-            )));
-        }
-    }
-    let p = pressure_pa.as_array().to_owned();
-    let n = p.len();
-    let drive = py.detach(|| {
-        // Step 1: intensity
-        let intensity_1d: Array1<f64> =
-            p.mapv(|pi| pi * pi / (2.0 * density_kg_m3 * sound_speed_m_s));
-        let intensity_3d = intensity_1d
-            .into_shape_with_order((n, 1, 1))
-            .expect("1-D-to-(N,1,1) reshape is infallible");
-        let c_3d = Array3::from_elem((n, 1, 1), sound_speed_m_s);
-        let membrane_params = CellMembraneParams {
-            radius_m: cell_radius_m,
-            thickness_m: 5.0e-9,
-        };
-        // Step 2: membrane tension (N/m)
-        let tension_3d = compute_membrane_tension(&intensity_3d, &c_3d, &membrane_params);
-        // Step 3 + 4: accumulate weighted P_open over all channels
-        let norm: f64 = conductance_weights.iter().map(|w| w.abs()).sum();
-        let mut drive = Array1::<f64>::zeros(n);
-        for k in 0..n_ch {
-            let gating_area_m2 = K_B * temperature_k / (slopes_mn_m[k] * 1.0e-3);
-            let gating_params = BoltzmannGatingParams {
-                gating_area_m2,
-                half_tension_n_per_m: half_tensions_mn_m[k] * 1.0e-3,
-                single_channel_conductance_s: 0.0,
-                reversal_potential_v: 0.0,
-            };
-            let p_open_3d = boltzmann_p_open(&tension_3d, &gating_params, temperature_k)
-                .expect("temperature_k > 0 guaranteed by pre-call validation");
-            let p_open_1d = p_open_3d
-                .into_shape_with_order(n)
-                .expect("(N,1,1)-to-1-D reshape is infallible");
-            let w = conductance_weights[k];
-            drive.zip_mut_with(&p_open_1d, |d, &p| *d += w * p);
-        }
-        if norm > 0.0 {
-            drive.mapv_inplace(|d| (d / norm).clamp(-1.0, 1.0));
-        }
-        drive
-    });
-    Ok(drive.into_pyarray(py))
+    let pressure = pressure_pa.as_slice()?;
+    let drive = py
+        .detach(|| {
+            coupled_channel_drive(
+                pressure,
+                &half_tensions_mn_m,
+                &slopes_mn_m,
+                &conductance_weights,
+                density_kg_m3,
+                sound_speed_m_s,
+                cell_radius_m,
+                temperature_k,
+            )
+        })
+        .map_err(kwavers_to_py)?;
+    Ok(Array1::from_vec(drive).into_pyarray(py))
 }
 
 // ── Gaussian beam ─────────────────────────────────────────────────────────────
@@ -322,49 +248,26 @@ pub fn gaussian_beam_pressure_field_py<'py>(
     lateral_fwhm_m: f64,
     axial_fwhm_m: f64,
 ) -> PyResult<Bound<'py, PyDict>> {
-    if lateral_fwhm_m <= 0.0 || axial_fwhm_m <= 0.0 {
-        return Err(pyo3::exceptions::PyValueError::new_err(
-            "lateral_fwhm_m and axial_fwhm_m must be strictly positive",
-        ));
-    }
-    // σ = FWHM / (2·√(2·ln2));  pre-compute reciprocals.
-    let fwhm_to_sigma = (2.0 * (2.0_f64 * std::f64::consts::LN_2).sqrt()).recip();
-    let sigma_lat = lateral_fwhm_m * fwhm_to_sigma;
-    let sigma_ax = axial_fwhm_m * fwhm_to_sigma;
-    let inv2sl2 = 0.5 / (sigma_lat * sigma_lat);
-    let inv2sa2 = 0.5 / (sigma_ax * sigma_ax);
-    let cx = (nx as f64 - 1.0) / 2.0;
-    let cy = (ny as f64 - 1.0) / 2.0;
-    let cz = (nz as f64 - 1.0) / 2.0;
-
-    let (x_arr, y_arr, z_arr, pressure) = py.detach(|| {
-        let mut x_arr = Array3::<f64>::zeros((nx, ny, nz));
-        let mut y_arr = Array3::<f64>::zeros((nx, ny, nz));
-        let mut z_arr = Array3::<f64>::zeros((nx, ny, nz));
-        let mut pressure = Array3::<f64>::zeros((nx, ny, nz));
-        for i in 0..nx {
-            let xi = (i as f64 - cx) * dx_m;
-            for j in 0..ny {
-                let yj = (j as f64 - cy) * dy_m;
-                let r2 = xi * xi + yj * yj;
-                let lat_term = r2 * inv2sl2;
-                for k in 0..nz {
-                    let zk = (k as f64 - cz) * dz_m;
-                    x_arr[[i, j, k]] = xi;
-                    y_arr[[i, j, k]] = yj;
-                    z_arr[[i, j, k]] = zk;
-                    pressure[[i, j, k]] =
-                        peak_pressure_pa * (-(lat_term + zk * zk * inv2sa2)).exp();
-                }
-            }
-        }
-        (x_arr, y_arr, z_arr, pressure)
-    });
+    let field = py
+        .detach(|| {
+            gaussian_beam_pressure_field(
+                nx,
+                ny,
+                nz,
+                dx_m,
+                dy_m,
+                dz_m,
+                peak_pressure_pa,
+                lateral_fwhm_m,
+                axial_fwhm_m,
+            )
+        })
+        .map_err(kwavers_to_py)?;
     let dict = PyDict::new(py);
-    dict.set_item("x", x_arr.into_pyarray(py))?;
-    dict.set_item("y", y_arr.into_pyarray(py))?;
-    dict.set_item("z", z_arr.into_pyarray(py))?;
-    dict.set_item("pressure", pressure.into_pyarray(py))?;
+    dict.set_item("x", field.x_m.into_pyarray(py))?;
+    dict.set_item("y", field.y_m.into_pyarray(py))?;
+    dict.set_item("z", field.z_m.into_pyarray(py))?;
+    dict.set_item("pressure", field.pressure_pa.into_pyarray(py))?;
     Ok(dict)
 }
 
@@ -424,42 +327,29 @@ pub fn simulate_lif_neuron_py<'py>(
     reset_v: f64,
     refractory_s: f64,
 ) -> PyResult<Bound<'py, PyDict>> {
-    if dt_s <= 0.0 {
-        return Err(pyo3::exceptions::PyValueError::new_err(
-            "dt_s must be strictly positive",
-        ));
-    }
-    let current = i_ion_a.as_array().to_owned();
-    let n = current.len();
-    let (voltage, spike_times) = py.detach(|| {
-        let params = LifParams {
-            capacitance_f,
-            leak_conductance_s,
-            leak_reversal_v,
-            threshold_v,
-            reset_v,
-            refractory_s,
-        };
-        let mut neuron = LifNeuron::new(params);
-        let mut voltage = Vec::with_capacity(n);
-        for (idx, &i) in current.iter().enumerate() {
-            let t_now = idx as f64 * dt_s;
-            // step() only errors for dt ≤ 0; guaranteed safe by pre-call validation.
-            let _ = neuron.step(i, dt_s, t_now);
-            voltage.push(neuron.membrane_voltage());
-        }
-        let spike_times: Vec<f64> = neuron.spike_times().to_vec();
-        (voltage, spike_times)
-    });
-    let spike_count = spike_times.len();
+    let current = i_ion_a.as_slice()?;
+    let trace = py
+        .detach(|| {
+            let params = LifParams {
+                capacitance_f,
+                leak_conductance_s,
+                leak_reversal_v,
+                threshold_v,
+                reset_v,
+                refractory_s,
+            };
+            simulate_lif_trace(current, dt_s, params)
+        })
+        .map_err(kwavers_to_py)?;
+    let spike_count = trace.spike_times_s.len();
     let dict = PyDict::new(py);
     dict.set_item(
         "voltage_v",
-        Array1::from_vec(voltage).into_pyarray(py),
+        Array1::from_vec(trace.voltage_v).into_pyarray(py),
     )?;
     dict.set_item(
         "spike_times_s",
-        Array1::from_vec(spike_times).into_pyarray(py),
+        Array1::from_vec(trace.spike_times_s).into_pyarray(py),
     )?;
     dict.set_item("spike_count", spike_count)?;
     Ok(dict)

@@ -7,9 +7,9 @@ mod model;
 #[cfg(test)]
 mod tests;
 
-use kwavers_core::error::KwaversResult;
 #[cfg(feature = "pinn")]
 use burn::tensor::backend::Backend;
+use kwavers_core::error::KwaversResult;
 use model::EnsembleModel;
 #[cfg(not(feature = "pinn"))]
 use ndarray::Array2;

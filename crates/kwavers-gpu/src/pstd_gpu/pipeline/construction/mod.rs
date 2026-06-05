@@ -5,5 +5,3 @@
 
 mod kspace;
 mod solver;
-
-pub(super) use kspace::precompute_kspace_shifts;

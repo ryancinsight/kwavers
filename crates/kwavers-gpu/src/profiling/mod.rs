@@ -21,8 +21,8 @@
 
 pub mod gpu_allocator;
 
-pub use kwavers_core::error::gpu::GpuError;
 pub use gpu_allocator::{GpuAllocationConfig, GpuAllocationStats, GpuAllocationTracker};
+pub use kwavers_core::error::gpu::GpuError;
 
 /// Version constant for this module
 pub const PROFILING_VERSION: &str = "4.0.0-sprint220";

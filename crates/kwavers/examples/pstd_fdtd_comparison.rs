@@ -29,14 +29,14 @@
 //! - Treeby & Cox (2010). J. Biomed. Opt. 15(2), 021314.
 //! - Liu (1998). Geophysics 63(6), 2082-2089.
 
+use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
-use kwavers_source::{GridSource, SourceMode};
 use kwavers_solver::forward::fdtd::{FdtdConfig, FdtdSolver, KSpaceCorrectionMode};
 use kwavers_solver::forward::pstd::config::{BoundaryConfig, KSpaceMethod};
 use kwavers_solver::forward::pstd::{PSTDConfig, PSTDSolver};
 use kwavers_solver::interface::solver::Solver;
-use kwavers_core::error::KwaversResult;
+use kwavers_source::{GridSource, SourceMode};
 use ndarray::{Array3, ArrayView3};
 use std::time::{Duration, Instant};
 

@@ -41,11 +41,11 @@ use ndarray::{Array3, Zip};
 use super::super::super::core::DGSolver;
 use super::boundary::add_axis_surface_flux;
 use super::{velocity_var, AcousticDgTensorWorkspace, ACOUSTIC_PRESSURE_VAR};
-use kwavers_core::error::{KwaversError, KwaversResult};
 use crate::forward::pstd::dg::cpml::{
     memory::{pressure_memory_index, velocity_memory_index, DG_CPML_MEMORY_VARS},
     DgCpmlMemoryWorkspace, DgCpmlProfiles,
 };
+use kwavers_core::error::{KwaversError, KwaversResult};
 
 impl DGSolver {
     /// Compute the CPML-aware tensor acoustic RHS for both field and memory state.

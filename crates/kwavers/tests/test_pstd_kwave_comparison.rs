@@ -41,11 +41,11 @@ use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_signal::SineWave;
+use kwavers_solver::forward::pstd::config::{KSpaceMethod, PSTDConfig};
+use kwavers_solver::forward::pstd::implementation::core::orchestrator::PSTDSolver;
 use kwavers_source::{
     GridSource, InjectionMode, PlaneWaveSource, PlaneWaveSourceConfig, SourceField,
 };
-use kwavers_solver::forward::pstd::config::{KSpaceMethod, PSTDConfig};
-use kwavers_solver::forward::pstd::implementation::core::orchestrator::PSTDSolver;
 use ndarray::Array3;
 use plotters::prelude::*;
 use std::sync::Arc;

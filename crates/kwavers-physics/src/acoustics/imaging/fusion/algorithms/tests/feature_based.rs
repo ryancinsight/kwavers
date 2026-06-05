@@ -27,13 +27,11 @@ fn test_fuse_feature_based_tissue_classification_invariants() {
     fusion.register_ultrasound(&us_data).unwrap();
     fusion.register_photoacoustic(&pa_data).unwrap();
     fusion
-        .register_elastography(
-            &kwavers_imaging::ultrasound::elastography::ElasticityMap {
-                youngs_modulus: Array3::zeros(shape),
-                shear_modulus: elasto_data,
-                shear_wave_speed: Array3::zeros(shape),
-            },
-        )
+        .register_elastography(&kwavers_imaging::ultrasound::elastography::ElasticityMap {
+            youngs_modulus: Array3::zeros(shape),
+            shear_modulus: elasto_data,
+            shear_wave_speed: Array3::zeros(shape),
+        })
         .unwrap();
 
     let result = fusion.fuse().unwrap();

@@ -1,6 +1,6 @@
 use super::*;
-use kwavers_grid::Grid;
 use crate::forward::pstd::dg::{DGConfig, DgBoundaryCondition};
+use kwavers_grid::Grid;
 use std::sync::Arc;
 
 fn make_solver(nx: usize, ny: usize, nz: usize) -> DGSolver {

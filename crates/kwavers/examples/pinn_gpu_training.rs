@@ -11,9 +11,9 @@
 //! - Multi-region domains with interface conditions
 
 #[cfg(feature = "pinn")]
-use kwavers_solver::inverse::pinn::ml::Geometry2D;
-#[cfg(feature = "pinn")]
 use kwavers_core::error::KwaversResult;
+#[cfg(feature = "pinn")]
+use kwavers_solver::inverse::pinn::ml::Geometry2D;
 
 #[cfg(feature = "pinn")]
 fn main() -> KwaversResult<()> {

@@ -1,8 +1,8 @@
 use super::super::{FwiGeometry, FwiProcessor, RHO_SEISMIC_REF};
+use crate::inverse::seismic::parameters::FwiParameters;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_grid::Grid;
 use kwavers_source::{GridSource, SourceMode};
-use crate::inverse::seismic::parameters::FwiParameters;
 use ndarray::{Array2, Array3};
 
 /// Verify the post-correlation velocity-gradient scaling applies the

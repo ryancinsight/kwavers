@@ -1,9 +1,9 @@
 //! Value-semantic regression tests for the diffusion solver.
 
 use super::{analytical, DiffusionSolver, DiffusionSolverConfig};
+use anyhow::Result;
 use kwavers_grid::Grid;
 use kwavers_medium::properties::OpticalPropertyData;
-use anyhow::Result;
 use ndarray::Array3;
 
 #[test]

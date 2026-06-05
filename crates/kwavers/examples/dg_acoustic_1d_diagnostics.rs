@@ -13,8 +13,8 @@ use dg_acoustic_common::{
     run_native_acoustic_diagnostic, DENSITY, DT, ELEMENTS, EMBEDDED_NY, EMBEDDED_NZ,
     POLYNOMIAL_ORDER, STEPS,
 };
-use kwavers_solver::forward::pstd::dg::quadrature::gauss_lobatto_quadrature;
 use kwavers_core::error::KwaversResult;
+use kwavers_solver::forward::pstd::dg::quadrature::gauss_lobatto_quadrature;
 use std::f64::consts::PI;
 
 fn main() -> KwaversResult<()> {

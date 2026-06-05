@@ -2,11 +2,11 @@
 
 use std::collections::HashMap;
 
-use kwavers_physics::optics::sonoluminescence::SonoluminescenceEmission;
 use crate::inverse::pinn::ml::physics::{
     BoundaryPosition, PinnCouplingInterface, PinnPhysicsCouplingType,
 };
 use burn::tensor::backend::AutodiffBackend;
+use kwavers_physics::optics::sonoluminescence::SonoluminescenceEmission;
 
 use super::super::config::{SonoluminescenceCouplingConfig, SonoluminescenceCouplingType};
 use super::SonoluminescenceCoupledDomain;
@@ -55,8 +55,12 @@ impl<B: AutodiffBackend> SonoluminescenceCoupledDomain<B> {
                 "sonoluminescence".to_string(),
             ],
             coupling_type: match coupling_type {
-                SonoluminescenceCouplingType::StaticEmission => PinnPhysicsCouplingType::SolutionContinuity,
-                SonoluminescenceCouplingType::DynamicEmission => PinnPhysicsCouplingType::FluxContinuity,
+                SonoluminescenceCouplingType::StaticEmission => {
+                    PinnPhysicsCouplingType::SolutionContinuity
+                }
+                SonoluminescenceCouplingType::DynamicEmission => {
+                    PinnPhysicsCouplingType::FluxContinuity
+                }
                 SonoluminescenceCouplingType::SpectralCoupling => {
                     PinnPhysicsCouplingType::Custom("spectral".to_string())
                 }

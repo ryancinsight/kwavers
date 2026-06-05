@@ -1,6 +1,7 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 use kwavers_solver::inverse::reconstruction::photoacoustic::{
-    IterativeAlgorithm, PhotoacousticAlgorithm, ReconstructionPhotoacousticConfig, PhotoacousticReconstructor,
+    IterativeAlgorithm, PhotoacousticAlgorithm, PhotoacousticReconstructor,
+    ReconstructionPhotoacousticConfig,
 };
 use ndarray::Array2;
 

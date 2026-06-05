@@ -2,12 +2,12 @@
 //!
 //! Routes `SolverType::Nonlinear` to the Westervelt FDTD solver.
 
-use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_grid::Grid;
-use kwavers_source::Source;
 use crate::dispatch::shared::trim_initial_recorder_sample;
 use crate::types::{SimulationRunRequest, SimulationRunResult};
+use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_grid::Grid;
 use kwavers_solver::forward::nonlinear::westervelt::{WesterveltFdtd, WesterveltFdtdConfig};
+use kwavers_source::Source;
 
 /// Run a Westervelt nonlinear FDTD simulation.
 ///
@@ -75,9 +75,15 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
     Ok(SimulationRunResult {
         sensor_data,
         stats: None,
-        ux_data: None, uy_data: None, uz_data: None,
-        ix_data: None, iy_data: None, iz_data: None,
-        i_avg_x: None, i_avg_y: None, i_avg_z: None,
+        ux_data: None,
+        uy_data: None,
+        uz_data: None,
+        ix_data: None,
+        iy_data: None,
+        iz_data: None,
+        i_avg_x: None,
+        i_avg_y: None,
+        i_avg_z: None,
         velocity_stats: None,
         full_grid_stats: None,
         thermal_temperature: None,
@@ -105,10 +111,7 @@ fn build_sources(gs: &kwavers_source::GridSource, grid: &Grid) -> Vec<Box<dyn So
     for ((i, j, k), &val) in p0.indexed_iter() {
         if val.abs() > 1e-15 {
             let (x, y, z) = grid.indices_to_coordinates(i, j, k);
-            sources.push(Box::new(PointSource::new(
-                (x, y, z),
-                Arc::clone(&signal),
-            )));
+            sources.push(Box::new(PointSource::new((x, y, z), Arc::clone(&signal))));
         }
     }
     sources

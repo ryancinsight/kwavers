@@ -1,9 +1,9 @@
 use super::processor::DelayAndSumPAM;
 use super::types::{ApodizationType, DelayAndSumConfig, PamImagingMode};
+use approx::assert_relative_eq;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::numerical::TWO_PI;
-use approx::assert_relative_eq;
 use ndarray::{Array1, Array2};
 
 #[test]
@@ -191,8 +191,14 @@ fn dmas_sharpens_localization_relative_to_das() {
         .unwrap();
 
     // Source-pixel value is positive for both imaging conditions.
-    assert!(das[source_pixel] > 0.0, "DAS source intensity must be positive");
-    assert!(dmas[source_pixel] > 0.0, "DMAS source intensity must be positive");
+    assert!(
+        das[source_pixel] > 0.0,
+        "DAS source intensity must be positive"
+    );
+    assert!(
+        dmas[source_pixel] > 0.0,
+        "DMAS source intensity must be positive"
+    );
 
     // Source-to-max-sidelobe contrast (sidelobes = pixels >2 bins from source).
     let max_sidelobe = |map: &Array1<f64>| -> f64 {
@@ -235,7 +241,9 @@ fn beamform_with_delays_aligns_on_supplied_delays() {
 
     let delays = Array2::from_shape_vec(
         (2, 3),
-        vec![10.0, 12.0, 14.0, /* aligned */ 0.0, 0.0, 0.0 /* mis-aligned */],
+        vec![
+            10.0, 12.0, 14.0, /* aligned */ 0.0, 0.0, 0.0, /* mis-aligned */
+        ],
     )
     .unwrap();
     let signals = pam

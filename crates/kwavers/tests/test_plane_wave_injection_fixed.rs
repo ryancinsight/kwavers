@@ -10,13 +10,13 @@ use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_signal::SineWave;
-use kwavers_source::{
-    InjectionMode, PlaneWaveSource, PlaneWaveSourceConfig, PointSource, SourceField,
-};
 use kwavers_solver::forward::fdtd::{FdtdConfig, FdtdSolver};
 use kwavers_solver::forward::pstd::config::KSpaceMethod;
 use kwavers_solver::forward::pstd::{PSTDConfig, PSTDSolver};
 use kwavers_solver::interface::Solver;
+use kwavers_source::{
+    InjectionMode, PlaneWaveSource, PlaneWaveSourceConfig, PointSource, SourceField,
+};
 use std::sync::Arc;
 
 /// Test helper to analyze arrival time and amplitude

@@ -3,13 +3,13 @@
 
 use super::config::{CavitationCouplingConfig, CavitationCouplingType};
 use super::domain::CavitationCoupledDomain;
-use kwavers_core::constants::cavitation::SURFACE_TENSION_WATER;
-use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
-use kwavers_physics::bubble_dynamics::{BubbleState, KellerMiksisModel};
 use crate::inverse::pinn::ml::physics::{
     BoundaryPosition, PinnCouplingInterface, PinnPhysicsCouplingType,
 };
 use burn::tensor::{backend::AutodiffBackend, Tensor};
+use kwavers_core::constants::cavitation::SURFACE_TENSION_WATER;
+use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
+use kwavers_physics::bubble_dynamics::{BubbleState, KellerMiksisModel};
 use std::collections::HashMap;
 
 impl<B: AutodiffBackend> CavitationCoupledDomain<B> {
@@ -152,7 +152,9 @@ impl<B: AutodiffBackend> CavitationCoupledDomain<B> {
         let acoustic_coupling_type = match coupling_type {
             CavitationCouplingType::Weak => PinnPhysicsCouplingType::FluxContinuity,
             CavitationCouplingType::Strong => PinnPhysicsCouplingType::Conjugate,
-            CavitationCouplingType::MultiBubble => PinnPhysicsCouplingType::Custom("multi_bubble".to_string()),
+            CavitationCouplingType::MultiBubble => {
+                PinnPhysicsCouplingType::Custom("multi_bubble".to_string())
+            }
         };
 
         let mut acoustic_params = HashMap::new();

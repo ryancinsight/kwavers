@@ -124,5 +124,5 @@ impl Default for AntiAliasingConfig {
     }
 }
 
-use kwavers_physics::acoustics::mechanics::absorption::AbsorptionMode;
 use crate::geometry::SolverGeometry;
+use kwavers_physics::acoustics::mechanics::absorption::AbsorptionMode;

@@ -3,8 +3,8 @@
 
 use kwavers_solver::inverse::fwi::frequency_domain::{
     AbsorbingBoundary, Config, DenseConvergentBornOperator, FrequencyObservation,
-    HelmholtzForwardOperator, PstdFiniteWindowBornOperator, PstdFiniteWindowBornSecondOrderOperator,
-    PstdSpectralConvergentBornOperator,
+    HelmholtzForwardOperator, PstdFiniteWindowBornOperator,
+    PstdFiniteWindowBornSecondOrderOperator, PstdSpectralConvergentBornOperator,
     PstdTemporalTransferConfig, SingleScatterBornOperator, SpectralConvergentBornOperator,
 };
 use kwavers_transducer::transducers::ElementPosition;
@@ -65,12 +65,14 @@ pub(super) fn parse_forward_operator(
             cycles_per_frequency: pstd_cycles_per_frequency,
             frequency_bin_cycles: pstd_frequency_bin_cycles,
         })),
-        "pstd_finite_window_born_second_order" => Ok(Arc::new(PstdFiniteWindowBornSecondOrderOperator {
-            time_step_s: pstd_time_step_s,
-            source_amplitude_pa: pstd_source_amplitude_pa,
-            cycles_per_frequency: pstd_cycles_per_frequency,
-            frequency_bin_cycles: pstd_frequency_bin_cycles,
-        })),
+        "pstd_finite_window_born_second_order" => {
+            Ok(Arc::new(PstdFiniteWindowBornSecondOrderOperator {
+                time_step_s: pstd_time_step_s,
+                source_amplitude_pa: pstd_source_amplitude_pa,
+                cycles_per_frequency: pstd_cycles_per_frequency,
+                frequency_bin_cycles: pstd_frequency_bin_cycles,
+            }))
+        }
         other => Err(PyValueError::new_err(format!(
             "unknown breast FWI propagation_model '{other}'"
         ))),

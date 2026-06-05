@@ -4,9 +4,9 @@
 //! driven mode growth, and capillary boundedness at rest of the symplectic
 //! shape-mode integrator.
 
-use kwavers_core::constants::numerical::TWO_PI;
 use crate::acoustics::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};
 use crate::acoustics::bubble_dynamics::keller_miksis::KellerMiksisModel;
+use kwavers_core::constants::numerical::TWO_PI;
 
 /// A freshly constructed model must have shape modes seeded and the bubble
 /// must not be immediately flagged as unstable at equilibrium radius.

@@ -1,8 +1,8 @@
 use super::MicrobubbleState;
 use kwavers_core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL};
+use kwavers_core::constants::numerical::{FOUR_PI, TWO_PI};
 use kwavers_core::constants::thermodynamic::HEAT_CAPACITY_RATIO_DIATOMIC;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
-use kwavers_core::constants::numerical::{FOUR_PI, TWO_PI};
 
 impl MicrobubbleState {
     #[must_use]
@@ -39,8 +39,7 @@ impl MicrobubbleState {
     /// Kinetic energy of oscillating bubble wall (J).
     #[must_use]
     pub fn kinetic_energy(&self) -> f64 {
-        let mass_effective =
-            FOUR_PI * DENSITY_WATER_NOMINAL * self.radius.powi(3);
+        let mass_effective = FOUR_PI * DENSITY_WATER_NOMINAL * self.radius.powi(3);
         0.5 * mass_effective * self.wall_velocity.powi(2)
     }
 

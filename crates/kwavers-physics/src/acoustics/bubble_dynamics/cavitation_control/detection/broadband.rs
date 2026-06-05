@@ -97,9 +97,9 @@ impl BroadbandDetector {
 #[cfg(test)]
 mod tests {
     use super::BroadbandDetector;
-    use kwavers_core::constants::numerical::MHZ_TO_HZ;
     use crate::acoustics::bubble_dynamics::cavitation_control::detection::traits::CavitationDetector;
     use crate::acoustics::bubble_dynamics::cavitation_control::detection::types::CavitationDetectionState;
+    use kwavers_core::constants::numerical::MHZ_TO_HZ;
     use ndarray::arr1;
 
     #[test]

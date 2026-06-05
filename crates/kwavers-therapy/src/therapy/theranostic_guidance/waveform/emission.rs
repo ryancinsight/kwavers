@@ -54,7 +54,9 @@ use super::eikonal::eikonal_travel_time;
 use super::forward::propagate;
 use super::grid::{passive_emission_grid, point_to_padded_cell_2d};
 use super::types::PaddedSimulation;
-use kwavers_analysis::signal_processing::pam::{ApodizationType, DelayAndSumConfig, DelayAndSumPAM};
+use kwavers_analysis::signal_processing::pam::{
+    ApodizationType, DelayAndSumConfig, DelayAndSumPAM,
+};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::apply_spectral_response_1d;
 
@@ -555,17 +557,32 @@ mod tests {
         config.frequencies_hz = vec![500_000.0];
 
         // Three distinct receivers plus a deliberate duplicate of the first.
-        let r0 = Point2 { x_m: 0.018, y_m: 0.0 };
-        let r1 = Point2 { x_m: 0.0, y_m: 0.018 };
-        let r2 = Point2 { x_m: -0.018, y_m: 0.0 };
+        let r0 = Point2 {
+            x_m: 0.018,
+            y_m: 0.0,
+        };
+        let r1 = Point2 {
+            x_m: 0.0,
+            y_m: 0.018,
+        };
+        let r2 = Point2 {
+            x_m: -0.018,
+            y_m: 0.0,
+        };
         let layout = DeviceLayout {
             therapy_elements: Vec::new(),
             imaging_receivers: vec![r0, r1, r2, r0],
             focus_m: Point2 { x_m: 0.0, y_m: 0.0 },
-            skin_contact_m: Point2 { x_m: -0.018, y_m: 0.0 },
+            skin_contact_m: Point2 {
+                x_m: -0.018,
+                y_m: 0.0,
+            },
             model_name: "dedup_test".to_owned(),
         };
-        let source = Point2 { x_m: 2.0 * spacing, y_m: 0.0 };
+        let source = Point2 {
+            x_m: 2.0 * spacing,
+            y_m: 0.0,
+        };
         let grid_points: Vec<Point2> = (-8i32..=8)
             .flat_map(|ix| {
                 (-8i32..=8).map(move |iy| Point2 {
@@ -586,7 +603,8 @@ mod tests {
         // cell, so their delay columns are bit-identical.
         for g in 0..grid_cells.len() {
             assert_eq!(
-                delays[[g, 0]], delays[[g, 3]],
+                delays[[g, 0]],
+                delays[[g, 3]],
                 "coincident receivers must share an identical delay column"
             );
         }

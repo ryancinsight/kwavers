@@ -9,11 +9,15 @@ mod pressure;
 mod source;
 mod velocity;
 
-use super::super::{GpuPstdSolver, PstdParams};
+use super::super::PstdParams;
 
 /// Scalar constants and workgroup sizes extracted from `GpuPstdSolver` once per
 /// batch and threaded to all per-step encoders.
-pub(super) struct StepCtx {
+///
+/// Visibility matches the `encode_*` methods that take it
+/// (`pub(in crate::pstd_gpu)`) so the public interface does not expose a
+/// more-private type (`private_interfaces` lint).
+pub(in crate::pstd_gpu) struct StepCtx {
     pub nx: u32,
     pub ny: u32,
     pub nz: u32,

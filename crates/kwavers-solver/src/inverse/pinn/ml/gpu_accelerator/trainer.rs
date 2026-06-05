@@ -2,9 +2,9 @@
 
 use super::kernel::CudaKernelManager;
 use super::memory::{CudaBuffer, GpuMemoryManager, PinnGpuMemoryPoolType, PinnGpuMemoryStats};
-use kwavers_core::error::KwaversResult;
 use burn::prelude::ToElement;
 use burn::tensor::{backend::AutodiffBackend, Tensor};
+use kwavers_core::error::KwaversResult;
 
 /// Training statistics
 #[derive(Debug, Clone)]

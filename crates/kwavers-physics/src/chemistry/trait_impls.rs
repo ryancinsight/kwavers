@@ -3,8 +3,8 @@
 use super::model::ChemicalModel;
 use super::parameters::ChemicalUpdateParams;
 use super::reactions::ReactionType;
-use kwavers_grid::Grid;
 use crate::traits::ChemicalModelTrait;
+use kwavers_grid::Grid;
 use ndarray::Array3;
 
 impl ChemicalModelTrait for ChemicalModel {

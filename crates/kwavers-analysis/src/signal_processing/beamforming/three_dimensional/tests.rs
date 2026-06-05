@@ -142,12 +142,9 @@ async fn das_gpu_matches_cpu_reference() {
         }
     }
 
-    let cpu = super::cpu::delay_and_sum_cpu(
-        &rf,
-        &config,
-        &Beamforming3dApodizationWindow::Rectangular,
-    )
-    .expect("CPU DAS reference");
+    let cpu =
+        super::cpu::delay_and_sum_cpu(&rf, &config, &Beamforming3dApodizationWindow::Rectangular)
+            .expect("CPU DAS reference");
 
     let mut processor = match BeamformingProcessor3D::new(config.clone()).await {
         Ok(p) => p,

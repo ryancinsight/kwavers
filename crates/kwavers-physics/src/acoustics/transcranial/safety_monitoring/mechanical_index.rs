@@ -1,8 +1,8 @@
 //! Mechanical index calculation per AIUM/NEMA UD 3-2004
 
 use super::monitor::TranscranialSafetyMonitor;
-use kwavers_core::constants::numerical::MPA_TO_PA;
 use crate::acoustics::analysis::calculate_mechanical_index;
+use kwavers_core::constants::numerical::MPA_TO_PA;
 
 impl TranscranialSafetyMonitor {
     /// Update mechanical index

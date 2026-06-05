@@ -3,9 +3,9 @@
 use std::f64::consts::PI;
 
 use kwavers_core::{
-        constants::ct_acoustics::{HU_BONE_THRESHOLD, HU_BRAIN_BODY_THRESHOLD},
-        error::{KwaversError, KwaversResult},
-    };
+    constants::ct_acoustics::{HU_BONE_THRESHOLD, HU_BRAIN_BODY_THRESHOLD},
+    error::{KwaversError, KwaversResult},
+};
 use kwavers_transducer::transducers::focused::BowlAngularBounds;
 use ndarray::{s, Array2, Array3};
 

@@ -1,13 +1,11 @@
 use super::MetaLearner;
-use kwavers_core::error::KwaversResult;
 use crate::inverse::pinn::ml::burn_wave_equation_2d::SimpleOptimizer2D;
-use crate::inverse::pinn::ml::meta_learning::gradient::{
-    GradientApplicator, GradientExtractor,
-};
+use crate::inverse::pinn::ml::meta_learning::gradient::{GradientApplicator, GradientExtractor};
 use crate::inverse::pinn::ml::meta_learning::metrics::MetaLoss;
 use crate::inverse::pinn::ml::meta_learning::types::PhysicsTask;
 use burn::module::Module;
 use burn::tensor::{backend::AutodiffBackend, Tensor};
+use kwavers_core::error::KwaversResult;
 
 impl<B: AutodiffBackend> MetaLearner<B> {
     /// Perform one meta-training step

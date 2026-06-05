@@ -14,13 +14,11 @@
 
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
-use kwavers_signal::SineWave;
-use kwavers_source::{
-    InjectionMode, PlaneWaveSource, PlaneWaveSourceConfig, Source, SourceField,
-};
 use kwavers_physics::acoustics::mechanics::acoustic_wave::AcousticSpatialOrder;
+use kwavers_signal::SineWave;
 use kwavers_simulation::backends::acoustic::backend::AcousticSolverBackend;
 use kwavers_simulation::backends::acoustic::fdtd::FdtdBackend;
+use kwavers_source::{InjectionMode, PlaneWaveSource, PlaneWaveSourceConfig, Source, SourceField};
 use std::sync::Arc;
 
 #[test]

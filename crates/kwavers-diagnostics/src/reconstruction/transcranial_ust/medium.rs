@@ -55,7 +55,10 @@ pub fn select_head_slice(volume_hu: &Array3<f64>) -> KwaversResult<usize> {
     let mut best = None;
     for z in 0..nz {
         let slice = volume_hu.slice(s![.., .., z]);
-        let head_voxels = slice.iter().filter(|v| **v > HU_BRAIN_BODY_THRESHOLD).count();
+        let head_voxels = slice
+            .iter()
+            .filter(|v| **v > HU_BRAIN_BODY_THRESHOLD)
+            .count();
         let skull_voxels = slice.iter().filter(|v| **v > HU_BONE_THRESHOLD).count();
         let score = head_voxels + 4 * skull_voxels;
         if best.is_none_or(|(_, best_score)| score > best_score) {

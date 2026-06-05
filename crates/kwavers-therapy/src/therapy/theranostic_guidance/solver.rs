@@ -288,8 +288,12 @@ pub fn run_theranostic_inverse(
                 );
 
                 let ultraharmonic_vec = vector_from_image(&ultraharmonic_target, &active);
-                let ultra_result =
-                    solve_tikhonov_h1(&ultraharmonic, &ultraharmonic_vec, &active, inverse_settings);
+                let ultra_result = solve_tikhonov_h1(
+                    &ultraharmonic,
+                    &ultraharmonic_vec,
+                    &active,
+                    inverse_settings,
+                );
                 history.extend(ultra_result.objective_history);
                 let ultraharmonic = normalize_positive(
                     &image_from_vector(&ultra_result.model, &active, active_mask.dim()),
@@ -505,7 +509,10 @@ fn passive_pam_channels(
     )?;
     let to_image = |intensity: &[f64]| -> Array2<f64> {
         let model: Vec<f32> = intensity.iter().map(|&v| v as f32).collect();
-        normalize_positive(&image_from_vector(&model, active, active_mask.dim()), active_mask)
+        normalize_positive(
+            &image_from_vector(&model, active, active_mask.dim()),
+            active_mask,
+        )
     };
     Ok((to_image(&maps[0]), to_image(&maps[1])))
 }
@@ -583,4 +590,3 @@ fn inverse_settings(config: &TheranosticInverseConfig) -> PcgSettings {
         noise_fraction: config.noise_fraction,
     }
 }
-

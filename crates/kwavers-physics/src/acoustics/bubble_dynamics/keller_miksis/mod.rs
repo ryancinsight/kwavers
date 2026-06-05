@@ -137,11 +137,11 @@ pub mod thermodynamics;
 #[cfg(test)]
 pub mod validation;
 
-use kwavers_core::error::KwaversResult;
 use crate::acoustics::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};
 use crate::acoustics::bubble_dynamics::thermodynamics::{
     ThermodynamicsCalculator, VaporPressureModel,
 };
+use kwavers_core::error::KwaversResult;
 use shape_instability::{advance_shape_modes, ShapeModeState};
 
 /// Keller-Miksis equation solver (compressible)

@@ -290,12 +290,12 @@ impl KzkNonlinearOperator {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::forward::nonlinear::kzk::KZKConfig;
     use kwavers_core::constants::fundamental::{
         DENSITY_TISSUE, DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM,
     };
     use kwavers_core::constants::numerical::MHZ_TO_HZ;
     use kwavers_core::constants::tissue_acoustics::B_OVER_A_WATER;
-    use crate::forward::nonlinear::kzk::KZKConfig;
 
     /// Helper: minimal `KZKConfig` for unit tests of `KzkNonlinearOperator`.
     /// Grid dimensions are kept small (1×1×1, nt=4) because `KzkNonlinearOperator::new`

@@ -1,9 +1,9 @@
+use crate::forward::fdtd::config::FdtdConfig;
+use crate::forward::fdtd::solver::FdtdSolver;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_source::GridSource;
-use crate::forward::fdtd::config::FdtdConfig;
-use crate::forward::fdtd::solver::FdtdSolver;
 use ndarray::{Array3, Zip};
 
 /// Westervelt correction must produce non-zero perturbation after two history steps.

@@ -11,8 +11,8 @@ mod tests {
     use kwavers_core::constants::{DENSITY_WATER, SOUND_SPEED_WATER};
     use kwavers_grid::Grid;
     use kwavers_medium::HomogeneousMedium;
-    use kwavers_source::PointSource;
     use kwavers_physics::traits::AcousticWaveModel;
+    use kwavers_source::PointSource;
     use ndarray::Array4;
 
     /// Test linear wave propagation (nonlinearity = 0, diffusivity = 0)

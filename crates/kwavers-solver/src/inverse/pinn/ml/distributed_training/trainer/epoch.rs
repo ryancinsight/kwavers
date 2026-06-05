@@ -1,8 +1,8 @@
 use super::super::{DistributedPinnTrainer, TrainingState};
-use kwavers_core::error::KwaversResult;
 use crate::inverse::pinn::ml::{BurnTrainingMetrics2D, BurnTrainingMetrics2D as Metrics};
 use burn::tensor::backend::AutodiffBackend;
 use burn::tensor::Tensor;
+use kwavers_core::error::KwaversResult;
 
 impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
     /// Single-epoch training step across all model replicas.

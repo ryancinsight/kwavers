@@ -1,7 +1,7 @@
 use super::solver::Multilateration;
 use super::types::MultilaterationConfig;
-use kwavers_core::constants::fundamental::{SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM};
 use approx::assert_relative_eq;
+use kwavers_core::constants::fundamental::{SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM};
 
 #[test]
 fn test_multilateration_creation() {

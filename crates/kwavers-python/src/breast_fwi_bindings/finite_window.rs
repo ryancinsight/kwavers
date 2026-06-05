@@ -1,7 +1,7 @@
 //! PyO3 conversion surface for finite-window PSTD Born prediction.
 
-use super::PyMultiRowRingArray;
 use super::helpers::kwavers_to_py;
+use super::PyMultiRowRingArray;
 use kwavers_solver::inverse::fwi::frequency_domain::{
     simulate_pstd_finite_window_born_observation,
     simulate_pstd_finite_window_born_second_order_observation, PstdFiniteWindowBornConfig,

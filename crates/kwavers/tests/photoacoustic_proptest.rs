@@ -5,7 +5,9 @@
 
 use kwavers_grid::Grid;
 use kwavers_medium::homogeneous::HomogeneousMedium;
-use kwavers_simulation::modalities::photoacoustic::{PhotoacousticParameters, PhotoacousticSimulator};
+use kwavers_simulation::modalities::photoacoustic::{
+    PhotoacousticParameters, PhotoacousticSimulator,
+};
 use proptest::prelude::*;
 
 fn make_grid(nx: usize, ny: usize, nz: usize, dx: f64, dy: f64, dz: f64) -> Grid {

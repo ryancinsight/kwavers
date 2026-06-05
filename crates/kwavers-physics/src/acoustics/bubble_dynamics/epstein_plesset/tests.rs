@@ -1,11 +1,11 @@
 use super::solver::EpsteinPlessetStabilitySolver;
 use super::types::{AmplitudeEvolution, OscillationType};
+use crate::acoustics::bubble_dynamics::bubble_state::BubbleParameters;
+use approx::assert_relative_eq;
 use kwavers_core::constants::cavitation::{SURFACE_TENSION_WATER, VISCOSITY_WATER};
 use kwavers_core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL};
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::constants::thermodynamic::HEAT_CAPACITY_RATIO_DIATOMIC;
-use crate::acoustics::bubble_dynamics::bubble_state::BubbleParameters;
-use approx::assert_relative_eq;
 
 #[test]
 fn test_epstein_plesset_stability_analysis() {
@@ -133,20 +133,19 @@ fn test_minnaert_constant_matches_literature_value() {
     let gamma = HEAT_CAPACITY_RATIO_DIATOMIC;
 
     // f₀·R₀ = (1/2π)·√(3γp₀/ρ) — independent of R₀; the Minnaert constant.
-    let f0_times_r0 =
-        |r0: f64| -> f64 {
-            let params = BubbleParameters {
-                r0,
-                p0,
-                rho_liquid: rho,
-                gamma,
-                ..Default::default()
-            };
-            EpsteinPlessetStabilitySolver::new(params)
-                .analyze_stability()
-                .resonance_frequency
-                * r0
+    let f0_times_r0 = |r0: f64| -> f64 {
+        let params = BubbleParameters {
+            r0,
+            p0,
+            rho_liquid: rho,
+            gamma,
+            ..Default::default()
         };
+        EpsteinPlessetStabilitySolver::new(params)
+            .analyze_stability()
+            .resonance_frequency
+            * r0
+    };
 
     // Published value ≈ 3.26 m·Hz. Allow 2% (γ/p₀/ρ rounding across sources).
     let literature_constant = 3.26;

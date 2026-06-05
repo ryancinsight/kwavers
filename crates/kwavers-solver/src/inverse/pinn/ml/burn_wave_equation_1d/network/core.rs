@@ -20,12 +20,12 @@
 //!   Neural Networks, 2(5):359-366. DOI: 10.1016/0893-6080(89)90020-8
 
 use super::super::config::BurnPINNConfig;
-use kwavers_core::error::{KwaversError, KwaversResult};
 use burn::{
     module::Module,
     nn::{Linear, LinearConfig},
     tensor::{backend::Backend, Tensor},
 };
+use kwavers_core::error::{KwaversError, KwaversResult};
 use ndarray::{Array1, Array2};
 
 /// Burn-based Physics-Informed Neural Network for 1D Wave Equation.

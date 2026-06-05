@@ -4,13 +4,13 @@ use super::MonteCarloSolver;
 use rand::Rng;
 use std::sync::atomic::AtomicU64;
 
-use kwavers_core::constants::optical::REFRACTIVE_INDEX_SOFT_TISSUE;
 use crate::optics::monte_carlo::config::SimulationConfig;
 use crate::optics::monte_carlo::interfaces::{apply_fresnel, fresnel_reflectance};
 use crate::optics::monte_carlo::photon::Photon;
 use crate::optics::monte_carlo::utils::{
     atomic_add, normalize, photon_step_to_boundary, scatter_photon,
 };
+use kwavers_core::constants::optical::REFRACTIVE_INDEX_SOFT_TISSUE;
 
 impl MonteCarloSolver {
     /// Trace one photon through the medium using the MCML algorithm.

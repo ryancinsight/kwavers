@@ -20,11 +20,7 @@ use rayon::prelude::*;
 use super::SoundSpeedShiftOperator;
 
 impl SoundSpeedShiftOperator {
-    pub(in crate::reconstruction::sound_speed_shift) fn matvec(
-        &self,
-        x: &[f64],
-        out: &mut [f64],
-    ) {
+    pub(in crate::reconstruction::sound_speed_shift) fn matvec(&self, x: &[f64], out: &mut [f64]) {
         debug_assert_eq!(x.len(), self.cols());
         debug_assert_eq!(out.len(), self.rows());
         // Each row is independent: y[row] = Σ_{col} A[row,col]·x[col]
@@ -71,10 +67,7 @@ impl SoundSpeedShiftOperator {
         out.copy_from_slice(&result);
     }
 
-    pub(in crate::reconstruction::sound_speed_shift) fn normal_diag_into(
-        &self,
-        out: &mut [f64],
-    ) {
+    pub(in crate::reconstruction::sound_speed_shift) fn normal_diag_into(&self, out: &mut [f64]) {
         debug_assert_eq!(out.len(), self.cols());
         let ncols = self.cols();
         let nrows = self.rows();

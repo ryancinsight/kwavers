@@ -2,8 +2,8 @@ use super::{
     BurnLossWeights, BurnPINN1DWave, BurnPINNConfig, BurnPINNTrainer, BurnTrainingMetrics,
     SimpleOptimizer,
 };
-use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use burn::backend::{Autodiff, NdArray};
+use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use ndarray::{Array1, Array2};
 
 type TestBackend = Autodiff<NdArray<f32>>;

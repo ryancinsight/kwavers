@@ -236,7 +236,9 @@ fn test_module_imports() {
 #[test]
 fn test_grid_validation_suite() {
     if !should_run_python_validation() {
-        println!("Skipping grid validation suite (set KWAVERS_RUN_PYTHON=1 with a built pykwavers)");
+        println!(
+            "Skipping grid validation suite (set KWAVERS_RUN_PYTHON=1 with a built pykwavers)"
+        );
         return;
     }
     let results = generate_grid_validation_report();
@@ -273,7 +275,9 @@ fn test_grid_validation_suite() {
 #[test]
 fn test_signal_validation_suite() {
     if !should_run_python_validation() {
-        println!("Skipping signal validation suite (set KWAVERS_RUN_PYTHON=1 with a built pykwavers)");
+        println!(
+            "Skipping signal validation suite (set KWAVERS_RUN_PYTHON=1 with a built pykwavers)"
+        );
         return;
     }
     let results = generate_signal_validation_report();
@@ -303,7 +307,9 @@ fn test_signal_validation_suite() {
 #[test]
 fn test_source_validation_suite() {
     if !should_run_python_validation() {
-        println!("Skipping source validation suite (set KWAVERS_RUN_PYTHON=1 with a built pykwavers)");
+        println!(
+            "Skipping source validation suite (set KWAVERS_RUN_PYTHON=1 with a built pykwavers)"
+        );
         return;
     }
     let results = generate_source_validation_report();
@@ -333,7 +339,9 @@ fn test_source_validation_suite() {
 #[test]
 fn test_sensor_validation_suite() {
     if !should_run_python_validation() {
-        println!("Skipping sensor validation suite (set KWAVERS_RUN_PYTHON=1 with a built pykwavers)");
+        println!(
+            "Skipping sensor validation suite (set KWAVERS_RUN_PYTHON=1 with a built pykwavers)"
+        );
         return;
     }
     let results = generate_sensor_validation_report();
@@ -360,7 +368,9 @@ fn test_sensor_validation_suite() {
 #[test]
 fn test_solver_validation_suite() {
     if !should_run_python_validation() {
-        println!("Skipping solver validation suite (set KWAVERS_RUN_PYTHON=1 with a built pykwavers)");
+        println!(
+            "Skipping solver validation suite (set KWAVERS_RUN_PYTHON=1 with a built pykwavers)"
+        );
         return;
     }
     let results = generate_solver_validation_report();
@@ -391,7 +401,9 @@ fn test_solver_validation_suite() {
 #[test]
 fn test_full_validation_suite() {
     if !should_run_python_validation() {
-        println!("Skipping full validation suite (set KWAVERS_RUN_PYTHON=1 with a built pykwavers)");
+        println!(
+            "Skipping full validation suite (set KWAVERS_RUN_PYTHON=1 with a built pykwavers)"
+        );
         return;
     }
     println!("\\n========================================");

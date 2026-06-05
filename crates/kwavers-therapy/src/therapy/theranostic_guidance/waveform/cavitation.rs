@@ -79,7 +79,10 @@ pub(super) fn cavitation_emission_waveform(
     let lines = [
         (f_sub, CAV_WEIGHT_SUBHARMONIC),
         (fundamental_hz, CAV_WEIGHT_FUNDAMENTAL),
-        (CAV_MAX_LINE_MULTIPLE * fundamental_hz, CAV_WEIGHT_ULTRAHARMONIC),
+        (
+            CAV_MAX_LINE_MULTIPLE * fundamental_hz,
+            CAV_WEIGHT_ULTRAHARMONIC,
+        ),
     ];
     let sigma = cavitation_envelope_sigma_s(fundamental_hz);
     let t_center = 3.0 * sigma;

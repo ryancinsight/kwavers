@@ -1,9 +1,9 @@
 //! Training metrics and prediction shape consistency tests.
 
 use super::super::*;
+use burn::backend::{Autodiff, NdArray};
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::error::KwaversResult;
-use burn::backend::{Autodiff, NdArray};
 
 type TestBackend = Autodiff<NdArray>;
 

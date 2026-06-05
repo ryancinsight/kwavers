@@ -1,7 +1,7 @@
 use super::chemistry::PlasmaChemistry;
 use super::reaction::{zeldovich_no_rate, PlasmaReaction};
-use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use approx::assert_relative_eq;
+use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 
 #[test]
 fn test_plasma_reaction_rate() {

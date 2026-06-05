@@ -311,7 +311,10 @@ mod tests {
             therapy_elements: elements,
             imaging_receivers: Vec::new(),
             focus_m: Point2 { x_m: 0.0, y_m: 0.0 },
-            skin_contact_m: Point2 { x_m: -bowl_radius_m, y_m: 0.0 },
+            skin_contact_m: Point2 {
+                x_m: -bowl_radius_m,
+                y_m: 0.0,
+            },
             model_name: "homogeneous_bowl_test".to_owned(),
         };
 
@@ -454,7 +457,10 @@ mod tests {
         config.source_pressure_pa = 28.0e6;
 
         // Focus 30 mm off-centre (matches the liver tumour offset scale).
-        let focus = Point2 { x_m: -0.030, y_m: -0.020 };
+        let focus = Point2 {
+            x_m: -0.030,
+            y_m: -0.020,
+        };
         // Skin contact: nearest body skin point along the line from focus
         // to the body centre and outward — for a body disk centred at the
         // origin and focus at (−30, −20) mm, the line from focus through
@@ -471,8 +477,10 @@ mod tests {
         let half_aperture_rad = 54.0_f64.to_radians();
         // Elements: hemisphere arc about the (focus → skin_contact) axis,
         // anchored at radius `bowl_radius_m` from focus.
-        let axis_x = (skin_contact.x_m - focus.x_m) / (skin_contact.x_m - focus.x_m).hypot(skin_contact.y_m - focus.y_m);
-        let axis_y = (skin_contact.y_m - focus.y_m) / (skin_contact.x_m - focus.x_m).hypot(skin_contact.y_m - focus.y_m);
+        let axis_x = (skin_contact.x_m - focus.x_m)
+            / (skin_contact.x_m - focus.x_m).hypot(skin_contact.y_m - focus.y_m);
+        let axis_y = (skin_contact.y_m - focus.y_m)
+            / (skin_contact.x_m - focus.x_m).hypot(skin_contact.y_m - focus.y_m);
         let perp_x = -axis_y;
         let perp_y = axis_x;
         let elements: Vec<Point2> = (0..256)
@@ -517,7 +525,9 @@ mod tests {
              {peak_y_m:.4}) m, focus at ({:.4}, {:.4}) m, offset {offset_m:.4} m \
              exceeds 6 wavelengths ({:.4} m).  peak = {peak_value:.3e} Pa, \
              peak/mean = {peak_over_mean:.2}.",
-            focus.x_m, focus.y_m, 6.0 * wavelength_m
+            focus.x_m,
+            focus.y_m,
+            6.0 * wavelength_m
         );
     }
 

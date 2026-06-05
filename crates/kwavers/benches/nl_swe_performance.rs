@@ -28,9 +28,7 @@
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use kwavers_grid::Grid;
-use kwavers_imaging::ultrasound::elastography::{
-    InversionMethod, NonlinearInversionMethod,
-};
+use kwavers_imaging::ultrasound::elastography::{InversionMethod, NonlinearInversionMethod};
 use kwavers_medium::HomogeneousMedium;
 use kwavers_physics::acoustics::imaging::modalities::elastography::{
     HarmonicDetectionConfig, HarmonicDetector, HarmonicDisplacementField,

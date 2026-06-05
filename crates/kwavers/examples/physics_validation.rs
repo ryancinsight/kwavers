@@ -3,9 +3,9 @@
 //! This example demonstrates validation of numerical methods against
 //! known analytical solutions in physics.
 
+use kwavers_grid::Grid;
 use kwavers_medium::AcousticProperties;
 use kwavers_medium::HomogeneousMedium;
-use kwavers_grid::Grid;
 use ndarray::Array3;
 use std::f64::consts::PI;
 

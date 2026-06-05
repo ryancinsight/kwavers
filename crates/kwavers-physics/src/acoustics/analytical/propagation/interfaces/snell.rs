@@ -132,11 +132,9 @@ impl<'a> SnellLawCalculator<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::acoustics::analytical::propagation::{AnalyticalMediumProperties, InterfaceType};
     use kwavers_core::constants::fundamental::SPEED_OF_LIGHT;
     use kwavers_core::constants::optical::{REFRACTIVE_INDEX_GLASS, REFRACTIVE_INDEX_WATER_VIS};
-    use crate::acoustics::analytical::propagation::{
-        AnalyticalMediumProperties, InterfaceType,
-    };
 
     #[test]
     fn test_snells_law_water_to_glass() {

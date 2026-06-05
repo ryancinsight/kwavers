@@ -1,6 +1,10 @@
 //! Light diffusion solver implementation
 
 use super::properties::DiffusionOpticalProperties;
+use crate::acoustics::traits::LightDiffusionModelTrait;
+use crate::optics::polarization::LinearPolarization;
+use crate::optics::PolarizationModel as PolarizationModelTrait;
+use crate::wave_propagation::scattering::ScatteringCalculator;
 use kwavers_core::constants::fundamental::SPEED_OF_LIGHT;
 use kwavers_core::constants::optical::{
     DEFAULT_POLARIZATION_FACTOR, LAPLACIAN_CENTER_COEFF, VISIBLE_LIGHT_FREQUENCY_HZ,
@@ -8,10 +12,6 @@ use kwavers_core::constants::optical::{
 use kwavers_field::indices::LIGHT_IDX;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use crate::acoustics::traits::LightDiffusionModelTrait;
-use crate::optics::polarization::LinearPolarization;
-use crate::optics::PolarizationModel as PolarizationModelTrait;
-use crate::wave_propagation::scattering::ScatteringCalculator;
 use log::debug;
 use ndarray::{Array3, Array4, Axis};
 use std::time::Instant;

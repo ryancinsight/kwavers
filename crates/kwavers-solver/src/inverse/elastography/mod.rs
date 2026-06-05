@@ -221,9 +221,7 @@ mod tests {
     use super::*;
     use kwavers_core::constants::fundamental::DENSITY_TISSUE;
     use kwavers_grid::Grid;
-    use kwavers_imaging::ultrasound::elastography::{
-        InversionMethod, NonlinearInversionMethod,
-    };
+    use kwavers_imaging::ultrasound::elastography::{InversionMethod, NonlinearInversionMethod};
     use kwavers_physics::acoustics::imaging::modalities::elastography::displacement::DisplacementField;
     use kwavers_physics::acoustics::imaging::modalities::elastography::HarmonicDisplacementField;
 

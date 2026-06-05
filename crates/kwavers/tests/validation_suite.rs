@@ -4,11 +4,11 @@
 //! solutions and published benchmarks from acoustic literature.
 
 use approx::assert_relative_eq;
-use kwavers_physics::acoustics::bubble_dynamics::epstein_plesset::OscillationType;
 use kwavers_grid::Grid;
+use kwavers_physics::acoustics::bubble_dynamics::epstein_plesset::OscillationType;
 use kwavers_physics::acoustics::bubble_dynamics::{
-        BubbleParameters, EpsteinPlessetStabilitySolver, KellerMiksisModel,
-    };
+    BubbleParameters, EpsteinPlessetStabilitySolver, KellerMiksisModel,
+};
 use ndarray::{Array1, Array3};
 use std::f64::consts::PI;
 

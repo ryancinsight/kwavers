@@ -2,9 +2,9 @@ use super::quantization::BurnWave2dQuantizer;
 #[cfg(feature = "gpu")]
 use super::types::BurnNeuralNetwork;
 use super::types::{ActivationType, BurnWave2dInferenceMemoryPool, QuantizedNetwork};
-use kwavers_core::error::{KwaversError, KwaversResult};
 use crate::inverse::pinn::ml::burn_wave_equation_2d::model::BurnPINN2DWave;
 use burn::tensor::backend::Backend;
+use kwavers_core::error::{KwaversError, KwaversResult};
 
 #[cfg(feature = "simd")]
 use super::backend::simd::SimdExecutor;

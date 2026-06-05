@@ -1,7 +1,7 @@
 //! Aberration-correction model construction.
 
-use kwavers_grid::Grid;
 use crate::acoustics::skull::HeterogeneousSkull;
+use kwavers_grid::Grid;
 
 use super::constants::C_WATER_DEFAULT;
 

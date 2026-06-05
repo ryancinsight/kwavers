@@ -63,13 +63,14 @@ pub mod physics_kernels;
 pub mod pipeline;
 pub mod realtime_loop;
 
-use kwavers_solver::backend::traits::{BackendCapabilities, BackendType, ComputeBackend, ComputeDevice};
-use kwavers_core::error::{KwaversError, KwaversResult};
 use buffers::GpuBackendBufferManager;
 use init::WGPUContext;
+use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_solver::backend::traits::{
+    BackendCapabilities, BackendType, ComputeBackend, ComputeDevice,
+};
 use ndarray::Array3;
-use performance_monitor::GpuPerformanceMonitor;
-use physics_kernels::{GpuKernelPhysicsDomain, PhysicsKernelRegistry};
+use physics_kernels::PhysicsKernelRegistry;
 use pipeline::PipelineManager;
 use realtime_loop::{RealtimeConfig, RealtimeSimulationOrchestrator};
 use std::collections::HashMap;
@@ -177,9 +178,11 @@ impl ComputeBackend for GPUBackend {
     }
 
     fn synchronize(&self) -> KwaversResult<()> {
-        // Wait for all GPU operations to complete
+        // Wait for all GPU operations to complete. `PollType::Wait` blocks until
+        // the queue is drained; the returned maintain status is informational so
+        // it is intentionally discarded (matches the pstd_gpu poll idiom).
         self.context.queue().submit(std::iter::empty());
-        self.context.device().poll(wgpu::PollType::Wait);
+        let _ = self.context.device().poll(wgpu::PollType::Wait);
         Ok(())
     }
 

@@ -127,7 +127,7 @@ impl AcousticFieldKernel {
     pub fn compute_propagation(
         &self,
         pressure: &Array3<f64>,
-        grid: &grid::Grid,
+        grid: &kwavers_grid::Grid,
         dt: f64,
         sound_speed: f64,
     ) -> KwaversResult<Array3<f64>> {

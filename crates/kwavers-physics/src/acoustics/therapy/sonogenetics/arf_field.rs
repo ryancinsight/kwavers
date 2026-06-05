@@ -195,8 +195,8 @@ impl VolumetricArfField {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
     use approx::assert_relative_eq;
+    use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
     use ndarray::Array3;
 
     /// Uniform pressure field: I = p² / (ρ·c); F = 2·α·I / c.

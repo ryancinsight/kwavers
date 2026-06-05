@@ -11,14 +11,14 @@
 //! The restored state is bit-exact (proven in `test_checkpoint_bit_exact_continuation`),
 //! so the velocity trajectory is identical and the recorded buffers match.
 
+use crate::forward::pstd::config::{CompatibilityMode, PSTDConfig};
+use crate::forward::pstd::PSTDSolver;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_receiver::recorder::fields::{SensorRecordField, SensorRecordSpec};
 use kwavers_receiver::recorder::simple::SensorRecorder;
 use kwavers_source::GridSource;
-use crate::forward::pstd::config::{CompatibilityMode, PSTDConfig};
-use crate::forward::pstd::PSTDSolver;
 use ndarray::Array3;
 
 fn build_with_velocity(nx: usize, ny: usize, nz: usize, nt: usize, dt: f64) -> PSTDSolver {

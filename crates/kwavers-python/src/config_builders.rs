@@ -10,10 +10,8 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
 use kwavers_simulation::{
-    HelmholtzConfig as KwaversHelmholtzConfig,
-    NonlinearConfig as KwaversNonlinearConfig,
-    PmlConfig as KwaversPmlConfig,
-    PoroelasticConfig as KwaversPoroelasticConfig,
+    HelmholtzConfig as KwaversHelmholtzConfig, NonlinearConfig as KwaversNonlinearConfig,
+    PmlConfig as KwaversPmlConfig, PoroelasticConfig as KwaversPoroelasticConfig,
     ThermalConfig as KwaversThermalConfig,
 };
 
@@ -42,7 +40,9 @@ impl PmlConfig {
     /// Create a new PmlConfig with default settings.
     #[new]
     fn new() -> Self {
-        Self { inner: KwaversPmlConfig::default() }
+        Self {
+            inner: KwaversPmlConfig::default(),
+        }
     }
 
     /// Set uniform PML thickness (grid cells on each face).
@@ -62,7 +62,12 @@ impl PmlConfig {
     }
 
     /// Set per-axis PML thickness ``(x, y, z)`` for k-Wave parity.
-    fn with_size_xyz(mut slf: PyRefMut<'_, Self>, x: usize, y: usize, z: usize) -> PyRefMut<'_, Self> {
+    fn with_size_xyz(
+        mut slf: PyRefMut<'_, Self>,
+        x: usize,
+        y: usize,
+        z: usize,
+    ) -> PyRefMut<'_, Self> {
         slf.inner.size = Some(x.max(y).max(z));
         slf.inner.size_xyz = Some((x, y, z));
         slf
@@ -91,7 +96,9 @@ impl PmlConfig {
     /// Set per-axis PML absorption factors.
     fn with_alpha_xyz(
         mut slf: PyRefMut<'_, Self>,
-        ax: f64, ay: f64, az: f64,
+        ax: f64,
+        ay: f64,
+        az: f64,
     ) -> PyRefMut<'_, Self> {
         slf.inner.alpha_xyz = Some((ax, ay, az));
         slf
@@ -127,7 +134,9 @@ pub struct HelmholtzConfig {
 impl HelmholtzConfig {
     #[new]
     fn new() -> Self {
-        Self { inner: KwaversHelmholtzConfig::default() }
+        Self {
+            inner: KwaversHelmholtzConfig::default(),
+        }
     }
 
     /// Set the source frequency for wavenumber derivation.
@@ -138,7 +147,9 @@ impl HelmholtzConfig {
     ///     Source frequency in Hz (e.g., ``1e6`` for 1 MHz).
     fn with_frequency(mut slf: PyRefMut<'_, Self>, frequency: f64) -> PyResult<PyRefMut<'_, Self>> {
         if frequency <= 0.0 {
-            return Err(PyValueError::new_err("Helmholtz frequency must be positive (Hz)"));
+            return Err(PyValueError::new_err(
+                "Helmholtz frequency must be positive (Hz)",
+            ));
         }
         slf.inner.frequency = Some(frequency);
         Ok(slf)
@@ -172,7 +183,9 @@ pub struct NonlinearConfig {
 impl NonlinearConfig {
     #[new]
     fn new() -> Self {
-        Self { inner: KwaversNonlinearConfig::default() }
+        Self {
+            inner: KwaversNonlinearConfig::default(),
+        }
     }
 
     /// Enable the Westervelt nonlinear source term.
@@ -239,7 +252,9 @@ impl PoroelasticConfig {
     /// Create a new PoroelasticConfig with soft-tissue defaults.
     #[new]
     fn new() -> Self {
-        Self { inner: KwaversPoroelasticConfig::default() }
+        Self {
+            inner: KwaversPoroelasticConfig::default(),
+        }
     }
 
     /// Set porosity (0 < φ < 1).
@@ -272,7 +287,9 @@ impl PoroelasticConfig {
     /// Set fluid properties in one call.
     fn with_fluid(
         mut slf: PyRefMut<'_, Self>,
-        density: f64, bulk_modulus: f64, viscosity: f64,
+        density: f64,
+        bulk_modulus: f64,
+        viscosity: f64,
     ) -> PyResult<PyRefMut<'_, Self>> {
         if density <= 0.0 || bulk_modulus <= 0.0 || viscosity <= 0.0 {
             return Err(PyValueError::new_err(
@@ -288,9 +305,7 @@ impl PoroelasticConfig {
     fn __repr__(&self) -> String {
         format!(
             "PoroelasticConfig(porosity={}, perm={:.1e}, tort={:?})",
-            self.inner.porosity,
-            self.inner.permeability,
-            self.inner.tortuosity,
+            self.inner.porosity, self.inner.permeability, self.inner.tortuosity,
         )
     }
 }
@@ -420,10 +435,7 @@ impl ThermalConfig {
     }
 
     /// Set thermal material properties.
-    fn with_material(
-        mut slf: PyRefMut<'_, Self>,
-        k: f64, rho: f64, cp: f64,
-    ) -> PyRefMut<'_, Self> {
+    fn with_material(mut slf: PyRefMut<'_, Self>, k: f64, rho: f64, cp: f64) -> PyRefMut<'_, Self> {
         slf.inner.thermal_conductivity = k;
         slf.inner.density = rho;
         slf.inner.specific_heat = cp;
@@ -431,10 +443,7 @@ impl ThermalConfig {
     }
 
     /// Set acoustic/thermal step ratio.
-    fn with_steps_per_thermal(
-        mut slf: PyRefMut<'_, Self>,
-        n: usize,
-    ) -> PyRefMut<'_, Self> {
+    fn with_steps_per_thermal(mut slf: PyRefMut<'_, Self>, n: usize) -> PyRefMut<'_, Self> {
         slf.inner.n_acoustic_per_thermal = n;
         slf
     }

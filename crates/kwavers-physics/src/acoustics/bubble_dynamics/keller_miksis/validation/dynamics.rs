@@ -1,9 +1,9 @@
 //! Keller-Miksis wall-motion ODE regression tests.
 
-use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
-use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use crate::acoustics::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};
 use crate::acoustics::bubble_dynamics::keller_miksis::KellerMiksisModel;
+use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
+use kwavers_core::constants::numerical::MHZ_TO_HZ;
 
 #[test]
 fn test_keller_miksis_creation() {

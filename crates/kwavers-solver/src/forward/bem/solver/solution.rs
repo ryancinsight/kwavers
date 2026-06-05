@@ -1,13 +1,13 @@
 use super::BemSolver;
-use kwavers_core::error::KwaversResult;
-use kwavers_boundary::BemBoundaryManager;
-use kwavers_math::linear_algebra::sparse::{
-    solver::SparsePreconditioner, CompressedSparseRowMatrix,
-};
 use crate::forward::bem::{
     field::BemSolution,
     geometry::{point_to_triangle_distance, triangle_characteristic_length},
     integrals::{compute_nearfield_integrals, compute_nonsingular_integrals},
+};
+use kwavers_boundary::BemBoundaryManager;
+use kwavers_core::error::KwaversResult;
+use kwavers_math::linear_algebra::sparse::{
+    solver::SparsePreconditioner, CompressedSparseRowMatrix,
 };
 use ndarray::Array1;
 use num_complex::Complex64;

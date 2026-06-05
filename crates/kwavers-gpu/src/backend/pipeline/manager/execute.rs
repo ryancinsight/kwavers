@@ -27,7 +27,11 @@ impl super::PipelineManager {
             .pipelines
             .get(&PipelineType::ElementWiseMultiply)
             .ok_or_else(|| {
-                KwaversError::GpuError(format!("{}: {}", "ElementWiseMultiply pipeline".to_string(), "Pipeline not compiled".to_string()))
+                KwaversError::GpuError(format!(
+                    "{}: {}",
+                    "ElementWiseMultiply pipeline".to_string(),
+                    "Pipeline not compiled".to_string()
+                ))
             })?;
 
         let shape = a.shape();
@@ -133,7 +137,11 @@ impl super::PipelineManager {
             .pipelines
             .get(&PipelineType::SpatialDerivative)
             .ok_or_else(|| {
-                KwaversError::GpuError(format!("{}: {}", "SpatialDerivative pipeline".to_string(), "Pipeline not compiled".to_string()))
+                KwaversError::GpuError(format!(
+                    "{}: {}",
+                    "SpatialDerivative pipeline".to_string(),
+                    "Pipeline not compiled".to_string()
+                ))
             })?;
 
         let (nx, ny, nz) = field.dim();

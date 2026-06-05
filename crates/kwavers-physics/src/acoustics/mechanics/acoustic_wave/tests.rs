@@ -147,9 +147,8 @@ fn compute_nonlinearity_coefficient_matches_ba_formula() {
     let beta = compute_nonlinearity_coefficient(&medium, 0.0, 0.0, 0.0, &grid);
 
     // nonlinearity_parameter returns B/A directly; β = 1 + B/(2A)
-    let b_over_a = kwavers_medium::AcousticProperties::nonlinearity_parameter(
-        &medium, 0.0, 0.0, 0.0, &grid,
-    );
+    let b_over_a =
+        kwavers_medium::AcousticProperties::nonlinearity_parameter(&medium, 0.0, 0.0, 0.0, &grid);
     let expected = 1.0 + b_over_a / 2.0;
     assert!(
         (beta - expected).abs() < 1e-15,

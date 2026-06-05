@@ -24,9 +24,9 @@
 //! while keeping all weights derived from input data and quality metadata.
 
 use super::MultiModalFusion;
-use kwavers_core::error::{KwaversError, KwaversResult};
 use crate::acoustics::imaging::fusion::registration::generate_coordinate_arrays;
 use crate::acoustics::imaging::fusion::types::{FusedImageResult, RegisteredModality};
+use kwavers_core::error::{KwaversError, KwaversResult};
 use ndarray::Array3;
 use std::collections::HashMap;
 

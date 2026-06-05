@@ -1,8 +1,8 @@
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use kwavers_medium::Medium;
 use kwavers_math::fft::Complex64 as Complex;
 use kwavers_math::fft::{fft_3d_array, ifft_3d_array};
+use kwavers_medium::Medium;
 use ndarray::{Array3, Zip};
 
 use super::super::wave_model::NonlinearWave;
@@ -94,10 +94,9 @@ impl NonlinearWave {
                     let z = k as f64 * grid.dz;
 
                     let density = kwavers_medium::density_at(medium, x, y, z, grid);
-                    let b_over_a =
-                        kwavers_medium::AcousticProperties::nonlinearity_parameter(
-                            medium, x, y, z, grid,
-                        );
+                    let b_over_a = kwavers_medium::AcousticProperties::nonlinearity_parameter(
+                        medium, x, y, z, grid,
+                    );
 
                     // β = 1 + B/(2A); prefactor 2β·dt²/ρ₀ from Westervelt Ch. 3.
                     let beta = 1.0 + b_over_a / 2.0;

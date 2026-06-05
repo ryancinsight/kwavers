@@ -10,8 +10,10 @@
 //! **Design Principle**: Single Source of Truth (SSOT) for all inverse problem utilities.
 //! All higher-level inverse solvers (SIRT, FWI, etc.) use these foundational components.
 
+pub mod constrained;
 pub mod regularization;
 
+pub use constrained::{projected_gradient_descent, BoxConstraints};
 pub use regularization::{
     ModelRegularizer1D, ModelRegularizer2D, ModelRegularizer3D, RegularizationConfig,
 };

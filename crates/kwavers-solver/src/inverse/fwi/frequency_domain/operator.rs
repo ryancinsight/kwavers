@@ -583,12 +583,14 @@ impl HelmholtzForwardOperator for PstdFiniteWindowBornSecondOrderOperator {
         }
         if self.cycles_per_frequency == 0 {
             return Err(KwaversError::InvalidInput(
-                "PstdFiniteWindowBornSecondOrderOperator cycles_per_frequency must be nonzero".to_owned(),
+                "PstdFiniteWindowBornSecondOrderOperator cycles_per_frequency must be nonzero"
+                    .to_owned(),
             ));
         }
         if self.frequency_bin_cycles == 0 {
             return Err(KwaversError::InvalidInput(
-                "PstdFiniteWindowBornSecondOrderOperator frequency_bin_cycles must be nonzero".to_owned(),
+                "PstdFiniteWindowBornSecondOrderOperator frequency_bin_cycles must be nonzero"
+                    .to_owned(),
             ));
         }
         Ok(())

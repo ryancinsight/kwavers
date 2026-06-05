@@ -76,6 +76,10 @@ fn test_latent_heat_temperature_dependence() {
 
 #[test]
 fn test_bubble_collapse_temperature_reduced_by_latent_heat() {
+    use crate::acoustics::bubble_dynamics::bubble_state::{
+        BubbleParameters, BubbleState, GasSpecies, GasType,
+    };
+    use crate::acoustics::bubble_dynamics::keller_miksis::KellerMiksisModel;
     use kwavers_core::constants::cavitation::{
         SURFACE_TENSION_WATER, VAPOR_PRESSURE_WATER, VISCOSITY_WATER,
     };
@@ -83,10 +87,6 @@ fn test_bubble_collapse_temperature_reduced_by_latent_heat() {
     use kwavers_core::constants::thermodynamic::{
         ROOM_TEMPERATURE_K, SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER,
     };
-    use crate::acoustics::bubble_dynamics::bubble_state::{
-        BubbleParameters, BubbleState, GasSpecies, GasType,
-    };
-    use crate::acoustics::bubble_dynamics::keller_miksis::KellerMiksisModel;
 
     let params = BubbleParameters {
         r0: 10e-6,

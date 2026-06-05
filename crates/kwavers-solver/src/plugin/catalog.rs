@@ -38,21 +38,21 @@
 //! [`HybridSpectralDGSolver`]: crate::pstd::dg::HybridSpectralDGSolver
 //! [`BubbleDynamicsPlugin`]: crate::forward::bubble_dynamics::plugin::BubbleDynamicsPlugin
 
-use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
-use kwavers_grid::Grid;
-use kwavers_medium::Medium;
-use crate::plugin::Plugin;
-use kwavers_physics::factory::config::PhysicsConfig;
-use kwavers_physics::factory::models::{AcousticSolver, NonlinearEquation, PhysicsModelType};
-use kwavers_physics::thermal::diffusion::ThermalDiffusionConfig;
 use crate::fdtd::FdtdConfig;
 use crate::forward::bubble_dynamics::plugin::{BubbleDynamicsConfig, BubbleDynamicsPlugin};
 use crate::forward::fdtd::plugin::FdtdPlugin;
 use crate::forward::nonlinear::kzk_solver_plugin::KzkSolverPlugin;
 use crate::forward::pstd::plugin::PSTDPlugin;
 use crate::forward::thermal_diffusion::plugin::ThermalDiffusionPlugin;
+use crate::plugin::Plugin;
 use crate::plugin::PluginManager;
 use crate::pstd::PSTDConfig;
+use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
+use kwavers_grid::Grid;
+use kwavers_medium::Medium;
+use kwavers_physics::factory::config::PhysicsConfig;
+use kwavers_physics::factory::models::{AcousticSolver, NonlinearEquation, PhysicsModelType};
+use kwavers_physics::thermal::diffusion::ThermalDiffusionConfig;
 
 /// Capability-driven plugin catalog.
 ///

@@ -1,4 +1,6 @@
 use super::{test_k_mag, zeros_k_mag};
+use crate::forward::pstd::config::PSTDConfig;
+use crate::forward::pstd::physics::absorption::init::initialize_absorption_operators;
 use kwavers_core::constants::cavitation::VISCOSITY_WATER;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
@@ -6,8 +8,6 @@ use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_physics::acoustics::mechanics::absorption::AbsorptionMode;
-use crate::forward::pstd::config::PSTDConfig;
-use crate::forward::pstd::physics::absorption::init::initialize_absorption_operators;
 
 #[test]
 fn test_power_law_initialization() {

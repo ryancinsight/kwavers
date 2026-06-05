@@ -27,6 +27,7 @@
 //! - Caputo (1967). Geophys. J. Int. 13(5), 529–539. (fractional calculus)
 
 use super::kernel::AbsorptionKernel;
+use crate::forward::pstd::config::PSTDConfig;
 use kwavers_core::constants::ABSORPTION_SINGULARITY_THRESHOLD;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
@@ -34,7 +35,6 @@ use kwavers_medium::Medium;
 use kwavers_physics::acoustics::mechanics::absorption::{
     power_law_db_cm_to_np_omega_m, AbsorptionMode,
 };
-use crate::forward::pstd::config::PSTDConfig;
 use ndarray::Array3;
 
 /// Initialize absorption operators τ, η, spatially-varying exponent y, and the

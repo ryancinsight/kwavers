@@ -1,4 +1,4 @@
-﻿//! GPU Buffer Management
+//! GPU Buffer Management
 //!
 //! Handles allocation, transfer, and lifecycle of GPU buffers.
 
@@ -108,11 +108,9 @@ impl GpuBackendBufferManager {
             usage | wgpu::BufferUsages::COPY_DST,
         );
 
-        // Write data to buffer
-        device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("buffer-write"),
-        });
-
+        // The buffer is written by the caller via `queue.write_buffer` / a copy
+        // pass; no command encoder is created here (the previous encoder was
+        // allocated and immediately dropped without recording or submission).
         Ok(buffer)
     }
 
@@ -165,8 +163,10 @@ impl GpuBackendBufferManager {
 
         encoder.copy_buffer_to_buffer(buffer, 0, &staging_buffer, 0, size);
 
-        // Submit and wait
-        let submission_index = queue.submit(std::iter::once(encoder.finish()));
+        // Submit and wait. The submission index is not needed (we block on the
+        // explicit `device.poll(Wait)` below), but `submit` is `#[must_use]` so
+        // it is bound rather than dropped.
+        let _submission_index = queue.submit(std::iter::once(encoder.finish()));
         queue.on_submitted_work_done(move || {
             // Work done
         });
@@ -178,14 +178,22 @@ impl GpuBackendBufferManager {
             tx.send(result).unwrap();
         });
 
-        device.poll(wgpu::PollType::Wait);
+        let _ = device.poll(wgpu::PollType::Wait);
 
         rx.recv()
             .map_err(|e| {
-                KwaversError::GpuError(format!("{}: {}", "buffer_map".to_string(), format!("Failed to map buffer: {}", e)))
+                KwaversError::GpuError(format!(
+                    "{}: {}",
+                    "buffer_map".to_string(),
+                    format!("Failed to map buffer: {}", e)
+                ))
             })?
             .map_err(|e| {
-                KwaversError::GpuError(format!("{}: {}", "buffer_map".to_string(), format!("Buffer mapping error: {:?}", e)))
+                KwaversError::GpuError(format!(
+                    "{}: {}",
+                    "buffer_map".to_string(),
+                    format!("Buffer mapping error: {:?}", e)
+                ))
             })?;
 
         // Read data
@@ -197,7 +205,11 @@ impl GpuBackendBufferManager {
 
         // Reshape to Array3
         let array = Array3::from_shape_vec(shape, data_f64).map_err(|e| {
-            KwaversError::GpuError(format!("{}: {}", "shape".to_string(), format!("Failed to reshape array: {}", e)))
+            KwaversError::GpuError(format!(
+                "{}: {}",
+                "shape".to_string(),
+                format!("Failed to reshape array: {}", e)
+            ))
         })?;
 
         // Unmap buffer
@@ -262,28 +274,30 @@ mod tests {
     fn test_buffer_manager_creation() {
         // Need actual device for full test
         // This is a minimal smoke test
-        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
             backends: wgpu::Backends::all(),
             ..Default::default()
         });
 
-        // Try to get adapter
-        if let Some(adapter) =
+        // Try to get adapter (wgpu ≥ 25: request_adapter returns Result).
+        if let Ok(adapter) =
             pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
                 power_preference: wgpu::PowerPreference::default(),
                 compatible_surface: None,
                 force_fallback_adapter: false,
             }))
         {
-            if let Ok((device, _queue)) = pollster::block_on(adapter.request_device(
-                &wgpu::DeviceDescriptor {
+            // wgpu ≥ 26: single-arg request_device; the former trace arg is now a
+            // `trace` field on DeviceDescriptor.
+            if let Ok((device, _queue)) =
+                pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
                     label: Some("test-device"),
                     required_features: wgpu::Features::empty(),
                     required_limits: wgpu::Limits::default(),
                     memory_hints: Default::default(),
-                },
-                None,
-            )) {
+                    trace: wgpu::Trace::Off,
+                }))
+            {
                 let manager = GpuBackendBufferManager::new(&device);
                 assert_eq!(manager.total_allocated(), 0);
             }

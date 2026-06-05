@@ -1,7 +1,7 @@
 //! Erosion pattern analysis and cavitation intensity
 
-use kwavers_core::constants::cavitation::IMPACT_ENERGY_COEFFICIENT;
 use crate::bubble_dynamics::bubble_field::BubbleStateFields;
+use kwavers_core::constants::cavitation::IMPACT_ENERGY_COEFFICIENT;
 use ndarray::{Array3, Zip};
 
 /// Empirical flow-velocity enhancement coefficient for erosion potential.

@@ -88,10 +88,10 @@ fn run_simulation_gpu(
 ) -> Result<Array3<f64>, KwaversError> {
     #[cfg(feature = "gpu")]
     {
-        use kwavers_signal::ToneBurst;
-        use kwavers_source::grid_source::GridSource;
         use crate::backend::GPUBackend;
+        use kwavers_signal::ToneBurst;
         use kwavers_solver::backend::traits::ComputeBackend;
+        use kwavers_source::grid_source::GridSource;
 
         if let Ok(backend) = GPUBackend::new() {
             let nx = grid.nx;

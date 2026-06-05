@@ -1,9 +1,9 @@
 //! Tests for optical polarization physics
 
 use super::*;
+use approx::assert_relative_eq;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_grid::Grid;
-use approx::assert_relative_eq;
 use num_complex::Complex64;
 
 #[test]
@@ -102,13 +102,8 @@ fn test_jones_polarization_model() {
 
     let grid = Grid::new(2, 2, 2, 1.0, 1.0, 1.0).unwrap();
 
-    let medium = kwavers_medium::HomogeneousMedium::new(
-        1000.0,
-        SOUND_SPEED_WATER_SIM,
-        0.5,
-        1.0,
-        &grid,
-    );
+    let medium =
+        kwavers_medium::HomogeneousMedium::new(1000.0, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
     model.apply_polarization(&mut fluence, &mut polarization_state, &grid, &medium);
 
     for i in 0..2 {

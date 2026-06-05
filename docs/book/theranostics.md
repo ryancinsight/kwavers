@@ -1,4 +1,4 @@
-# Chapter 7: Theranostics — Combined Imaging and Therapy
+# Chapter 13: Theranostics — Combined Imaging and Therapy
 
 **Scope.** This chapter covers the physics and engineering of closed-loop ultrasound
 theranostics: systems where diagnostic imaging estimates biological state and acoustic
@@ -11,18 +11,18 @@ cavitation modules.
 
 ---
 
-## 7.1 Bubble Dynamics (recap)
+## 13.1 Bubble Dynamics (recap)
 
 Theranostic cavitation control rests on the single-bubble physics derived in full in the
 **Cavitation and Bubble Dynamics** chapter; the results reused in this chapter are:
 
 - **Rayleigh–Plesset** wall dynamics
   `ρ_l(R R̈ + 3/2 Ṙ²) = p_g(R) − p_∞(t) − p_0 − 4μ_l Ṙ/R − 2σ/R`
-  with polytropic gas law `p_g = (p_0 + 2σ/R_0)(R_0/R)^{3κ}` — *Cavitation §7.2*, and the
-  Keller–Miksis compressible extension for high-amplitude drive — *Cavitation §7.3*.
+  with polytropic gas law `p_g = (p_0 + 2σ/R_0)(R_0/R)^{3κ}` — *Cavitation §5.2*, and the
+  Keller–Miksis compressible extension for high-amplitude drive — *Cavitation §5.3*.
 - **Minnaert resonance** `f_M = (1/2πR_0)√(3κp_0/ρ_l)` (1 μm → 3.3 MHz, 5 μm → 0.65 MHz)
-  — *Cavitation §7.5*.
-- **Blake threshold** for the onset of inertial collapse — *Cavitation §7.4*.
+  — *Cavitation §5.5*.
+- **Blake threshold** for the onset of inertial collapse — *Cavitation §5.4*.
 
 These ODEs are integrated in kwavers by
 `kwavers_physics::acoustics::bubble_dynamics::rayleigh_plesset` (`RayleighPlesset`), with
@@ -30,12 +30,12 @@ adaptive time-stepping and the Keller–Miksis model in the same `bubble_dynamic
 
 ---
 
-## 7.2 Passive Cavitation Detection (PCD)
+## 13.2 Passive Cavitation Detection (PCD)
 
-### 7.2.1 Cavitation signatures (recap)
+### 13.2.1 Cavitation signatures (recap)
 
 The acoustic-emission discriminants used by the controller below are derived in
-*Cavitation §7.6 (Acoustic Emission and Passive Cavitation Detection)*:
+*Cavitation §5.6 (Acoustic Emission and Passive Cavitation Detection)*:
 
 - **Stable cavitation (SC):** sub-harmonic (½f₀) and ultra-harmonic (3/2 f₀) spectral
   peaks with low broadband noise (period-2 bubble oscillation; the Floquet multiplier of
@@ -48,20 +48,20 @@ The acoustic-emission discriminants used by the controller below are derived in
 kwavers computes both discriminants from the received spectrum in
 `kwavers_physics::acoustics::bubble_dynamics::cavitation_control::detection`
 (`broadband`, `spectral`, `subharmonic` sub-modules), which drive the closed-loop
-controller of §7.2.2.
+controller of §13.2.2.
 
-### 7.2.2 Cavitation Control for BBB Opening
+### 13.2.2 Cavitation Control for BBB Opening
 
 A PCD-based controller adjusts the therapeutic ultrasound pulse amplitude to maintain
 stable cavitation while avoiding inertial cavitation:
 
 ```
-Algorithm 7.1 (PCD Feedback Control):
+Algorithm 13.1 (PCD Feedback Control):
 Input:  S(f): PCD spectrum; P_n: current pressure amplitude; thresholds SC_min, IC_min
 Output: P_{n+1}
 
 1. Compute SC_n = peak power at ½f₀ (sub-harmonic)
-2. Compute IC_n = broadband ICD (§7.2.1)
+2. Compute IC_n = broadband ICD (§13.2.1)
 3. If IC_n > IC_thresh: reduce P_{n+1} = γ_down × P_n   (γ_down < 1)
 4. Elif SC_n < SC_target: increase P_{n+1} = γ_up × P_n  (γ_up > 1)
 5. Else: maintain P_{n+1} = P_n
@@ -70,15 +70,15 @@ Output: P_{n+1}
 
 ---
 
-## 7.3 MR Thermometry and Closed-Loop HIFU
+## 13.3 MR Thermometry and Closed-Loop HIFU
 
-### 7.3.1 Proton Resonance Frequency Shift
+### 13.3.1 Proton Resonance Frequency Shift
 
-**Theorem 7.5 (MR Thermometry — PRFS Method).** The proton resonance frequency
+**Theorem 13.5 (MR Thermometry — PRFS Method).** The proton resonance frequency
 (PRF) in water-containing tissues shifts linearly with temperature:
 
 ```
-f_MR(T) = f_0(1 − α_PRFS T)    α_PRFS ≈ −0.0102 ppm/°C                 (7.7)
+f_MR(T) = f_0(1 − α_PRFS T)    α_PRFS ≈ −0.0102 ppm/°C                 (13.7)
 ```
 
 *Proof.* Hydrogen bonding in liquid water modulates the electron shielding constant σ_c.
@@ -88,15 +88,15 @@ for aqueous tissue (De Poorter 1995). The frequency shift Δf = f_0 α_PRFS ΔT.
 Phase difference between reference and post-heating MR images gives ΔT:
 
 ```
-ΔT(r) = Δφ(r) / (2π f_0 α_PRFS TE)                                      (7.8)
+ΔT(r) = Δφ(r) / (2π f_0 α_PRFS TE)                                      (13.8)
 ```
 
 where TE is echo time [s] and Δφ is the voxel phase change [rad].
 MR thermometry precision: ~1–2 °C at 3 T with TE = 15 ms.
 
-### 7.3.2 Closed-Loop HIFU Controller
+### 13.3.2 Closed-Loop HIFU Controller
 
-**Theorem 7.6 (Closed-Loop Thermal Dose Monotonicity).** Let D_k be the cumulative
+**Theorem 13.6 (Closed-Loop Thermal Dose Monotonicity).** Let D_k be the cumulative
 CEM43 dose at step k and u_k ≥ 0 the acoustic power.  Define the CEM43 dose rate:
 
 ```
@@ -106,7 +106,7 @@ CEM43 dose at step k and u_k ≥ 0 the acoustic power.  Define the CEM43 dose ra
 The dose update
 
 ```
-D_{k+1} = D_k + φ(T_k) Δt                                                (7.9)
+D_{k+1} = D_k + φ(T_k) Δt                                                (13.9)
 ```
 
 is monotone non-decreasing: D_{k+1} ≥ D_k for all k.
@@ -116,21 +116,21 @@ is strictly positive.  Therefore `φ(T) = R^(T−43) > 0` for all finite `T`.  W
 `Δt > 0`, `D_{k+1} − D_k = φ(T_k) Δt > 0`.  By induction the sequence {D_k} is
 strictly increasing. □
 
-**Corollary 7.1 (Irreversibility and Safety Constraint).** Because φ > 0, dose is
+**Corollary 13.1 (Irreversibility and Safety Constraint).** Because φ > 0, dose is
 strictly monotone — it cannot be reduced by decreasing power. Consequently a bounded
 safety constraint `D_k ≤ D_max` cannot be enforced by reducing `u_k` once the bound is
 approached, since `D_k` is non-decreasing in `k` regardless of `u_k`. Safety must
-therefore be guaranteed by pre-treatment planning (Chapter 6), which predicts the dose
+therefore be guaranteed by pre-treatment planning (Chapter 12), which predicts the dose
 evolution `{D_k}` and selects an exposure schedule that keeps the trajectory below
 `D_max` for the entire treatment.
 
 ---
 
-## 7.4 Theranostic Feedback Architecture
+## 13.4 Theranostic Feedback Architecture
 
-### 7.4.1 State-Estimator Loop
+### 13.4.1 State-Estimator Loop
 
-**Algorithm 7.2 (Image-Guided Therapy Loop).**
+**Algorithm 13.2 (Image-Guided Therapy Loop).**
 
 ```
 Initialize: acoustic field model; tissue state estimate x̂_0; dose D_0 = 0
@@ -150,21 +150,21 @@ Loop (k = 0, 1, 2, ...):
   8. Terminate when D_{k+1} ≥ D_target or safety limit reached.
 ```
 
-### 7.4.2 State Uncertainty
+### 13.4.2 State Uncertainty
 
 State-estimator uncertainty must be propagated explicitly:
 
 ```
-σ_D² = σ_x² (∂φ/∂x)² Δt²    (linearized uncertainty propagation)          (7.10)
+σ_D² = σ_x² (∂φ/∂x)² Δt²    (linearized uncertainty propagation)          (13.10)
 ```
 
 Acceptance criterion: D_target − 2σ_D ≥ 0 (dose coverage at 95% confidence).
 
 ---
 
-## 7.5 Microbubble-Mediated Drug Delivery
+## 13.5 Microbubble-Mediated Drug Delivery
 
-### 7.5.1 Physical Mechanism
+### 13.5.1 Physical Mechanism
 
 Oscillating microbubbles increase local permeability via:
 
@@ -174,11 +174,11 @@ Oscillating microbubbles increase local permeability via:
 3. **Tight junction disruption.** BBB-specific: ZO-1, occludin proteins are displaced
    from tight junctions under stable cavitation stress.
 
-**Theorem 7.7 (Drug Uptake Enhancement).** For stable cavitation at MI ≈ 0.3, the
+**Theorem 13.7 (Drug Uptake Enhancement).** For stable cavitation at MI ≈ 0.3, the
 fractional drug uptake enhancement ε relative to passive diffusion scales as
 
 ```
-ε ∝ R₀² f₀ p_A / (μ_l c₀)                                               (7.11)
+ε ∝ R₀² f₀ p_A / (μ_l c₀)                                               (13.11)
 ```
 
 where p_A is the driving pressure amplitude and f₀ the frequency.
@@ -189,16 +189,16 @@ velocity near a single oscillating bubble in unbounded fluid scales as
 the oscillation velocity `Ṙ_max ≈ p_A/(ρ_l c₀)` and to the bubble size `R₀`).
 Membrane shear stress `τ ∝ μ_l u_s / δ` (Stokes boundary layer, `δ = pore size`).
 Drug uptake per-bubble ∝ permeability ∝ τ ∝ `R₀ f₀ p_A / (ρ_l c₀ δ)`. The ratio
-to passive diffusion (τ = 0, i.e. p_A → 0) gives (7.11).
+to passive diffusion (τ = 0, i.e. p_A → 0) gives (13.11).
 
-**Scope limitation.** The scaling (7.11) holds for a single isolated bubble in the
+**Scope limitation.** The scaling (13.11) holds for a single isolated bubble in the
 dilute limit (bubble volume fraction < 1%).  For clinical BBB opening
 (bubble concentration ≈ 10⁴–10⁷ mm⁻³), bubble–bubble hydrodynamic coupling,
 secondary Bjerknes forces, and collective microstreaming modify the effective shear
-field.  Eq. (7.11) is a single-bubble lower bound; collective enhancement depends on
+field.  Eq. (13.11) is a single-bubble lower bound; collective enhancement depends on
 concentration and spacing (Garbin et al. 2009). □
 
-### 7.5.2 Dose–Response Relationship
+### 13.5.2 Dose–Response Relationship
 
 Clinical BBB opening protocol (Hynynen et al.):
 
@@ -216,19 +216,19 @@ within 4–6 hours.
 
 ---
 
-## 7.6 Histotripsy (cross-reference)
+## 13.6 Histotripsy (cross-reference)
 
 In the theranostic loop, histotripsy is the high-amplitude mechanical-ablation mode
 (P_neg > 15–30 MPa, MI > 5–10): dense bubble clouds liquefy tissue without coagulative
 necrosis, initiated above the intrinsic cavitation threshold
 `P_neg,intrinsic = √(16πσ³/(3 k_B T)) ≈ 26–30 MPa` (water, 37 °C, classical nucleation
 theory). The full mechanism, derivation, and the classical-vs-millisecond-pulse regimes
-are in the **Histotripsy** chapter and *Cavitation §7.9*. kwavers models the bubble-cloud
+are in the **Histotripsy** chapter and *Cavitation §5.9*. kwavers models the bubble-cloud
 dynamics in `kwavers_therapy::therapy::lithotripsy::cavitation_cloud` (`CavitationCloud`).
 
 ---
 
-## 7.7 Code Mapping
+## 13.7 Code Mapping
 
 | Concept | kwavers module | Key struct |
 |---------|---------------|------------|
@@ -244,7 +244,7 @@ dynamics in `kwavers_therapy::therapy::lithotripsy::cavitation_cloud` (`Cavitati
 
 ---
 
-## 7.8 Worked Example: PCD-Controlled BBB Opening
+## 13.8 Worked Example: PCD-Controlled BBB Opening
 
 **Setup.** 0.5 MHz transducer, 64-element array, focus at 60 mm depth (brain), SonoVue
 microbubbles at 0.1 mL/kg IV. Target: stable cavitation at f₀/2 = 250 kHz, IC avoided.

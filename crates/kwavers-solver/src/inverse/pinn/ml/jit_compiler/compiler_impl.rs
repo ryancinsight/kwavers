@@ -1,6 +1,6 @@
+use crate::inverse::pinn::ml::BurnWave2dGeometry;
 use kwavers_core::constants::fundamental::SOUND_SPEED_AIR;
 use kwavers_core::error::KwaversResult;
-use crate::inverse::pinn::ml::BurnWave2dGeometry;
 use std::sync::Arc;
 
 use super::{

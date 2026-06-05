@@ -1,7 +1,7 @@
+use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_diagnostics::reconstruction::breast_ust_fwi::{
     generate_breast_ust_pstd_frequency_dataset, BreastUstPstdDatasetConfig,
 };
-use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;
 use kwavers_solver::inverse::fwi::frequency_domain::{
     simulate_pstd_finite_window_born_observation,
@@ -85,12 +85,14 @@ fn second_order_correction_is_quadratic_in_contrast() {
             .expect("first-order double");
 
     // Second-order predictions at each contrast.
-    let second_small =
-        simulate_pstd_finite_window_born_second_order_observation(&small, &array, 200_000.0, config, 4)
-            .expect("second-order small");
-    let second_double =
-        simulate_pstd_finite_window_born_second_order_observation(&double, &array, 200_000.0, config, 4)
-            .expect("second-order double");
+    let second_small = simulate_pstd_finite_window_born_second_order_observation(
+        &small, &array, 200_000.0, config, 4,
+    )
+    .expect("second-order small");
+    let second_double = simulate_pstd_finite_window_born_second_order_observation(
+        &double, &array, 200_000.0, config, 4,
+    )
+    .expect("second-order double");
 
     // Isolate the second-order-only contribution: ps2 = second_order − first_order
     // For chi → 2·chi, ps2 should quadruple: ps2(2χ) ≈ 4·ps2(χ)
@@ -135,15 +137,25 @@ fn second_order_differs_from_first_order_on_heterogeneous() {
     let first_homog =
         simulate_pstd_finite_window_born_observation(&homogeneous, &array, 200_000.0, config, 4)
             .expect("first order homogeneous");
-    let second_homog =
-        simulate_pstd_finite_window_born_second_order_observation(&homogeneous, &array, 200_000.0, config, 4)
-            .expect("second order homogeneous");
+    let second_homog = simulate_pstd_finite_window_born_second_order_observation(
+        &homogeneous,
+        &array,
+        200_000.0,
+        config,
+        4,
+    )
+    .expect("second order homogeneous");
     let first_hetero =
         simulate_pstd_finite_window_born_observation(&heterogeneous, &array, 200_000.0, config, 4)
             .expect("first order heterogeneous");
-    let second_hetero =
-        simulate_pstd_finite_window_born_second_order_observation(&heterogeneous, &array, 200_000.0, config, 4)
-            .expect("second order heterogeneous");
+    let second_hetero = simulate_pstd_finite_window_born_second_order_observation(
+        &heterogeneous,
+        &array,
+        200_000.0,
+        config,
+        4,
+    )
+    .expect("second order heterogeneous");
 
     // Homogeneous: first and second order must agree (ps2 = 0 when chi = 0).
     let mut homog_diff_norm = 0.0_f64;
@@ -197,21 +209,39 @@ fn second_order_does_not_worsen_pstd_match() {
         frequency_bin_cycles: acquisition.frequency_bin_cycles,
     };
 
-    let pstd_data =
-        generate_breast_ust_pstd_frequency_dataset(&heterogeneous, &array, &[frequency_hz], acquisition)
-            .expect("PSTD data");
-    let first_order =
-        simulate_pstd_finite_window_born_observation(&heterogeneous, &array, frequency_hz, born_config, 4)
-            .expect("first order");
-    let second_order =
-        simulate_pstd_finite_window_born_second_order_observation(&heterogeneous, &array, frequency_hz, born_config, 4)
-            .expect("second order");
+    let pstd_data = generate_breast_ust_pstd_frequency_dataset(
+        &heterogeneous,
+        &array,
+        &[frequency_hz],
+        acquisition,
+    )
+    .expect("PSTD data");
+    let first_order = simulate_pstd_finite_window_born_observation(
+        &heterogeneous,
+        &array,
+        frequency_hz,
+        born_config,
+        4,
+    )
+    .expect("first order");
+    let second_order = simulate_pstd_finite_window_born_second_order_observation(
+        &heterogeneous,
+        &array,
+        frequency_hz,
+        born_config,
+        4,
+    )
+    .expect("second order");
 
     let mut pstd_norm_sq = 0.0_f64;
     let mut first_residual_sq = 0.0_f64;
     let mut second_residual_sq = 0.0_f64;
     let pstd_row = pstd_data.observed_pressure.index_axis(ndarray::Axis(0), 0);
-    for ((&pstd, &first), &second) in pstd_row.iter().zip(first_order.iter()).zip(second_order.iter()) {
+    for ((&pstd, &first), &second) in pstd_row
+        .iter()
+        .zip(first_order.iter())
+        .zip(second_order.iter())
+    {
         pstd_norm_sq += pstd.norm_sqr();
         first_residual_sq += (first - pstd).norm_sqr();
         second_residual_sq += (second - pstd).norm_sqr();

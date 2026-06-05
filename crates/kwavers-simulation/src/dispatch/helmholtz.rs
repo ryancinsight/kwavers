@@ -4,11 +4,13 @@ use ndarray::Array3;
 use num_complex::Complex64;
 use std::f64::consts::TAU;
 
-use kwavers_core::error::KwaversResult;
-use kwavers_receiver::recorder::pressure_statistics::SampledStatistics;
 use crate::dispatch::shared::trim_initial_recorder_sample;
 use crate::types::{SimulationRunRequest, SimulationRunResult};
-use kwavers_solver::forward::helmholtz::fem::{FemHelmholtzConfig, FemHelmholtzSolver, FemPreconditionerType};
+use kwavers_core::error::KwaversResult;
+use kwavers_receiver::recorder::pressure_statistics::SampledStatistics;
+use kwavers_solver::forward::helmholtz::fem::{
+    FemHelmholtzConfig, FemHelmholtzSolver, FemPreconditionerType,
+};
 
 /// Run a frequency-domain Helmholtz FEM simulation for the given request.
 pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult> {
@@ -44,9 +46,10 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
 
     solver.solve_system()?;
 
-    let sensor_mask = req.sensor_mask.clone().unwrap_or_else(|| {
-        Array3::from_elem((req.grid.nx, req.grid.ny, req.grid.nz), false)
-    });
+    let sensor_mask = req
+        .sensor_mask
+        .clone()
+        .unwrap_or_else(|| Array3::from_elem((req.grid.nx, req.grid.ny, req.grid.nz), false));
     let sensor_indices: Vec<(usize, usize, usize)> = sensor_mask
         .indexed_iter()
         .filter(|(_, &active)| active)
@@ -63,10 +66,18 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
     let sensor_data = trim_initial_recorder_sample(sensor_data, 1, req.record_start_index);
     let stats = if !sensor_indices.is_empty() {
         Some(SampledStatistics {
-            p_max: ndarray::Array1::from_vec(sensor_data.rows().into_iter().map(|row| row[0]).collect()),
-            p_min: ndarray::Array1::from_vec(sensor_data.rows().into_iter().map(|row| row[0]).collect()),
-            p_rms: ndarray::Array1::from_vec(sensor_data.rows().into_iter().map(|row| row[0]).collect()),
-            p_final: ndarray::Array1::from_vec(sensor_data.rows().into_iter().map(|row| row[0]).collect()),
+            p_max: ndarray::Array1::from_vec(
+                sensor_data.rows().into_iter().map(|row| row[0]).collect(),
+            ),
+            p_min: ndarray::Array1::from_vec(
+                sensor_data.rows().into_iter().map(|row| row[0]).collect(),
+            ),
+            p_rms: ndarray::Array1::from_vec(
+                sensor_data.rows().into_iter().map(|row| row[0]).collect(),
+            ),
+            p_final: ndarray::Array1::from_vec(
+                sensor_data.rows().into_iter().map(|row| row[0]).collect(),
+            ),
         })
     } else {
         None
@@ -75,10 +86,18 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
     Ok(SimulationRunResult {
         sensor_data,
         stats,
-        ux_data: None, uy_data: None, uz_data: None,
-        ix_data: None, iy_data: None, iz_data: None,
-        i_avg_x: None, i_avg_y: None, i_avg_z: None,
-        velocity_stats: None, full_grid_stats: None,
-        thermal_temperature: None, thermal_dose: None,
+        ux_data: None,
+        uy_data: None,
+        uz_data: None,
+        ix_data: None,
+        iy_data: None,
+        iz_data: None,
+        i_avg_x: None,
+        i_avg_y: None,
+        i_avg_z: None,
+        velocity_stats: None,
+        full_grid_stats: None,
+        thermal_temperature: None,
+        thermal_dose: None,
     })
 }

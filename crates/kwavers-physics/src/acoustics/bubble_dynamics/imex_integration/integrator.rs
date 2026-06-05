@@ -42,8 +42,8 @@
 //!   (Keller-Miksis equation and thermodynamic coupling)
 
 use super::config::BubbleIMEXConfig;
-use kwavers_core::error::{KwaversResult, PhysicsError};
 use crate::acoustics::bubble_dynamics::{BubbleState, KellerMiksisModel};
+use kwavers_core::error::{KwaversResult, PhysicsError};
 use ndarray::Array1;
 use std::sync::Arc;
 

@@ -123,8 +123,13 @@ impl FwiProcessor {
             regularized_gradient
         };
 
-        let step_size =
-            self.line_search(current_model, &normalized_gradient, observed_data, geometry, grid)?;
+        let step_size = self.line_search(
+            current_model,
+            &normalized_gradient,
+            observed_data,
+            geometry,
+            grid,
+        )?;
 
         if step_size == 0.0 {
             return Ok((objective, current_model.clone(), 0.0));

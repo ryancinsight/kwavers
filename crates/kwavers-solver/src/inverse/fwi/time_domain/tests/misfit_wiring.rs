@@ -105,7 +105,9 @@ fn with_misfit_routes_objective_and_adjoint_through_dispatcher() {
         let objective = processor
             .compute_misfit_objective(&observed, &synthetic)
             .expect("objective");
-        let expected_objective = reference.compute(&observed, &synthetic).expect("ref objective");
+        let expected_objective = reference
+            .compute(&observed, &synthetic)
+            .expect("ref objective");
         assert_eq!(
             objective, expected_objective,
             "objective must match dispatcher for {misfit:?}"

@@ -1,4 +1,4 @@
-# Same-Device Therapeutic Ultrasound, Finite-Frequency Inverse, and RTM Monitoring
+# Chapter 28 — Same-Device Therapeutic Ultrasound, Finite-Frequency Inverse, and RTM Monitoring
 
 This chapter studies the tomotherapy-like ultrasound contract: the treatment
 array is also the transmit/receive aperture for image formation and treatment

@@ -15,11 +15,11 @@ use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
 use kwavers_field::wave::WaveFields;
 use kwavers_grid::Grid;
+use kwavers_math::numerics::operators::StaggeredGridOperator;
 use kwavers_medium::{MaterialFields, Medium};
+use kwavers_physics::acoustics::mechanics::acoustic_wave::AcousticSpatialOrder;
 use kwavers_receiver::recorder::simple::SensorRecorder;
 use kwavers_source::grid_source::GridSource;
-use kwavers_math::numerics::operators::StaggeredGridOperator;
-use kwavers_physics::acoustics::mechanics::acoustic_wave::AcousticSpatialOrder;
 
 use super::super::config::{FdtdConfig, KSpaceCorrectionMode};
 use super::super::kspace_correction::KSpaceFdtdOperators;
@@ -63,10 +63,8 @@ impl GenericFdtdSolver<Array3<f64>> {
             for j in 0..grid.ny {
                 for i in 0..grid.nx {
                     let (x, y, z) = grid.indices_to_coordinates(i, j, k);
-                    materials.rho0[[i, j, k]] =
-                        kwavers_medium::density_at(medium, x, y, z, grid);
-                    materials.c0[[i, j, k]] =
-                        kwavers_medium::sound_speed_at(medium, x, y, z, grid);
+                    materials.rho0[[i, j, k]] = kwavers_medium::density_at(medium, x, y, z, grid);
+                    materials.c0[[i, j, k]] = kwavers_medium::sound_speed_at(medium, x, y, z, grid);
                 }
             }
         }

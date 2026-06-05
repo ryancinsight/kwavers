@@ -46,10 +46,10 @@
 //! - Liu (1998). Geophysics 63(6), 2082–2089. (k-space PSTD method)
 //! - Berenger (1994). J. Comput. Phys. 114(2), 185–200. (split-field PML)
 
-use kwavers_math::fft::Fft3dInOutExt;
-use kwavers_core::error::{KwaversError, KwaversResult};
 use crate::forward::pstd::implementation::core::orchestrator::PSTDSolver;
 use crate::geometry::SolverGeometry;
+use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_math::fft::Fft3dInOutExt;
 use ndarray::{s, Zip};
 
 impl PSTDSolver {
@@ -128,7 +128,9 @@ impl PSTDSolver {
             // Fused: u = pml * (pml * u - (dt/rho) * dp)
             // pml_vel_x[i] = exp(-sigma_x_sgx[i] * dt/2)
             let pml_exp = self.pml_exp.as_ref().ok_or_else(|| {
-                KwaversError::InternalError("pml_exp unexpectedly None in fused velocity path".into())
+                KwaversError::InternalError(
+                    "pml_exp unexpectedly None in fused velocity path".into(),
+                )
             })?;
             let pml_vx = pml_exp.vel_x.as_slice().ok_or_else(|| {
                 KwaversError::InternalError("pml_vel_x must be contiguous".into())
@@ -308,14 +310,18 @@ impl PSTDSolver {
             // Fused: ux = pml_x[i] · (pml_x[i] · ux − (dt/ρ₀) · ∂p/∂x)
             // In the 2-D slice (nx, nr), indexed returns (i, k).
             let pml_exp = self.pml_exp.as_ref().ok_or_else(|| {
-                KwaversError::InternalError("pml_exp unexpectedly None in fused AS velocity path".into())
+                KwaversError::InternalError(
+                    "pml_exp unexpectedly None in fused AS velocity path".into(),
+                )
             })?;
-            let pml_vx = pml_exp.vel_x.as_slice().ok_or_else(|| {
-                KwaversError::InternalError("pml_vel_x contiguous".into())
-            })?;
-            let pml_vz = pml_exp.vel_z.as_slice().ok_or_else(|| {
-                KwaversError::InternalError("pml_vel_z contiguous".into())
-            })?;
+            let pml_vx = pml_exp
+                .vel_x
+                .as_slice()
+                .ok_or_else(|| KwaversError::InternalError("pml_vel_x contiguous".into()))?;
+            let pml_vz = pml_exp
+                .vel_z
+                .as_slice()
+                .ok_or_else(|| KwaversError::InternalError("pml_vel_z contiguous".into()))?;
 
             Zip::indexed(self.fields.ux.slice_mut(s![.., 0, ..]))
                 .and(self.materials.rho0.slice(s![.., 0, ..]))

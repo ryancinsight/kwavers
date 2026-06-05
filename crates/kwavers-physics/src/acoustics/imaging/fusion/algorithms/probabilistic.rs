@@ -1,8 +1,8 @@
 use super::MultiModalFusion;
-use kwavers_core::error::{KwaversError, KwaversResult};
 use crate::acoustics::imaging::fusion::quality;
 use crate::acoustics::imaging::fusion::registration;
 use crate::acoustics::imaging::fusion::types::{AffineTransform, FusedImageResult};
+use kwavers_core::error::{KwaversError, KwaversResult};
 use ndarray::{Array3, CowArray};
 use ritk_registration::ImageRegistration;
 use std::collections::HashMap;

@@ -1,7 +1,7 @@
 //! Elastic PSTD solver dispatch.
 
-use kwavers_core::error::KwaversResult;
 use crate::types::{SimulationRunRequest, SimulationRunResult};
+use kwavers_core::error::KwaversResult;
 use kwavers_solver::forward::pstd::extensions::{ElasticPstdMedium, ElasticPstdOrchestrator};
 
 /// Run an elastic pseudo-spectral time-domain simulation.
@@ -15,7 +15,13 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
         .iter()
         .zip(lame_mu.iter())
         .zip(density.iter())
-        .map(|((&l, &m), &r)| if r > 0.0 { ((l + 2.0 * m) / r).sqrt() } else { 0.0 })
+        .map(|((&l, &m), &r)| {
+            if r > 0.0 {
+                ((l + 2.0 * m) / r).sqrt()
+            } else {
+                0.0
+            }
+        })
         .fold(0.0_f64, f64::max);
 
     let pstd_medium = ElasticPstdMedium {

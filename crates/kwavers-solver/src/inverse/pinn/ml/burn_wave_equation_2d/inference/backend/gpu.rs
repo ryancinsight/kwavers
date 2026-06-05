@@ -3,11 +3,11 @@ use super::super::types::BurnNeuralNetwork;
 #[cfg(feature = "gpu")]
 use super::super::types::QuantizedNetwork;
 #[cfg(feature = "gpu")]
-use kwavers_core::error::{KwaversError, KwaversResult};
-#[cfg(feature = "gpu")]
 use burn::tensor::activation::{relu, sigmoid, tanh};
 #[cfg(feature = "gpu")]
 use burn::tensor::{backend::Backend, Tensor, TensorData};
+#[cfg(feature = "gpu")]
+use kwavers_core::error::{KwaversError, KwaversResult};
 
 #[cfg(feature = "gpu")]
 impl<B: Backend> BurnNeuralNetwork<B> {

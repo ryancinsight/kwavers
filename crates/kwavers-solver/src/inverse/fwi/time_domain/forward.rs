@@ -16,13 +16,13 @@
 //!   separate `enable_cpml` call is needed.
 
 use super::{geometry::FwiGeometry, FwiProcessor};
-use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
+use crate::config::SolverType;
+use crate::interface::Solver;
 use kwavers_boundary::cpml::{CPMLConfig, PerDimensionPML};
+use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
 use kwavers_medium::heterogeneous::HeterogeneousFactory;
 use kwavers_source::GridSource;
-use crate::config::SolverType;
-use crate::interface::Solver;
 use ndarray::{s, Array2, Array3, Array4};
 
 impl FwiProcessor {
@@ -176,9 +176,9 @@ impl FwiProcessor {
         dt: f64,
         source: GridSource,
     ) -> KwaversResult<Box<dyn Solver>> {
-        use kwavers_physics::acoustics::mechanics::absorption::AbsorptionMode;
         use crate::forward::pstd::config::{BoundaryConfig, PSTDConfig};
         use crate::forward::pstd::implementation::core::orchestrator::PSTDSolver;
+        use kwavers_physics::acoustics::mechanics::absorption::AbsorptionMode;
 
         let (_, ny, _) = grid.dimensions();
         let num_steps = self.parameters.nt;

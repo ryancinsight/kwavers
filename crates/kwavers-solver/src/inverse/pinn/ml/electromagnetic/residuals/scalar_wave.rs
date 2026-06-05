@@ -153,7 +153,8 @@ mod tests {
         let t0 = 1e-10_f32; // arbitrary time sample
                             // free space ε₀μ₀ — sourced from SSOT to avoid drift in dimensional checks.
         let eps_mu = (kwavers_core::constants::fundamental::VACUUM_PERMITTIVITY
-            * kwavers_core::constants::fundamental::VACUUM_PERMEABILITY) as f32;
+            * kwavers_core::constants::fundamental::VACUUM_PERMEABILITY)
+            as f32;
         let mu_sigma = 0.0_f32; // lossless
 
         // FD approximation of ∂²cos/∂t² at t0

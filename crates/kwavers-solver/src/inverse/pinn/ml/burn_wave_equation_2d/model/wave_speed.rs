@@ -1,9 +1,9 @@
 //! `WaveSpeedFn` — spatially varying wave speed wrapper implementing the Burn `Module` trait.
 
-use kwavers_core::error::{KwaversError, KwaversResult};
 use burn::module::{Module, ModuleMapper, ModuleVisitor};
 use burn::tensor::backend::{AutodiffBackend, Backend};
 use burn::tensor::Tensor;
+use kwavers_core::error::{KwaversError, KwaversResult};
 use std::sync::Arc;
 
 /// Wrapper for wave speed function to implement Debug and Module traits.

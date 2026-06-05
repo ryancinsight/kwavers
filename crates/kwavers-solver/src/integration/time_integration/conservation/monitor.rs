@@ -202,8 +202,7 @@ impl ConservationMonitor {
                         let y = j as f64 * self.grid.dy;
                         let z = k as f64 * self.grid.dz;
 
-                        let density =
-                            kwavers_medium::density_at(medium, x, y, z, &self.grid);
+                        let density = kwavers_medium::density_at(medium, x, y, z, &self.grid);
                         let sound_speed =
                             kwavers_medium::sound_speed_at(medium, x, y, z, &self.grid);
 
@@ -227,8 +226,7 @@ impl ConservationMonitor {
                 let z = k as f64 * self.grid.dz;
 
                 let density = kwavers_medium::density_at(medium, x, y, z, &self.grid);
-                let sound_speed =
-                    kwavers_medium::sound_speed_at(medium, x, y, z, &self.grid);
+                let sound_speed = kwavers_medium::sound_speed_at(medium, x, y, z, &self.grid);
 
                 // Acoustic potential energy density: E = p²/(2ρc²)
                 let energy_density = p * p / (2.0 * density * sound_speed * sound_speed);

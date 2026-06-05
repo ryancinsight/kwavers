@@ -1,8 +1,10 @@
 //! Elastic wave solver dispatch.
 
-use kwavers_core::error::{KwaversError, KwaversResult};
 use crate::types::{SimulationRunRequest, SimulationRunResult};
-use kwavers_solver::forward::elastic::swe::{ElasticWaveConfig, ElasticWaveField, ElasticWaveSolver};
+use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_solver::forward::elastic::swe::{
+    ElasticWaveConfig, ElasticWaveField, ElasticWaveSolver,
+};
 
 /// Run an elastic-wave simulation.
 pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult> {
@@ -10,7 +12,9 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
     let u0_opt = match &req.grid_source.p0 {
         Some(u0) => {
             if u0.dim() != (nx, ny, nz) {
-                return Err(KwaversError::InvalidInput("Elastic initial displacement shape mismatch".into()));
+                return Err(KwaversError::InvalidInput(
+                    "Elastic initial displacement shape mismatch".into(),
+                ));
             }
             Some(u0.clone())
         }
@@ -42,11 +46,20 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
     let (ux_data, uy_data, uz_data) = solver.extract_recorded_velocity_components();
 
     Ok(SimulationRunResult {
-        sensor_data, stats: None,
-        ux_data, uy_data, uz_data,
-        ix_data: None, iy_data: None, iz_data: None,
-        i_avg_x: None, i_avg_y: None, i_avg_z: None,
-        velocity_stats: None, full_grid_stats: None,
-        thermal_temperature: None, thermal_dose: None,
+        sensor_data,
+        stats: None,
+        ux_data,
+        uy_data,
+        uz_data,
+        ix_data: None,
+        iy_data: None,
+        iz_data: None,
+        i_avg_x: None,
+        i_avg_y: None,
+        i_avg_z: None,
+        velocity_stats: None,
+        full_grid_stats: None,
+        thermal_temperature: None,
+        thermal_dose: None,
     })
 }

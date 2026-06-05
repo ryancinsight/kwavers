@@ -2,6 +2,10 @@ use super::types::PipelineType;
 
 #[test]
 fn test_pipeline_type_enum() {
-    assert_ne!(PipelineType::FFT3D, PipelineType::IFFT3D);
-    assert_ne!(PipelineType::FFT3D, PipelineType::ElementWiseMultiply);
+    // FFT3D/IFFT3D were removed when FFT moved to the `apollofft-wgpu` backend;
+    // the elementwise/operators pipeline now exposes these two variants.
+    assert_ne!(
+        PipelineType::ElementWiseMultiply,
+        PipelineType::SpatialDerivative
+    );
 }

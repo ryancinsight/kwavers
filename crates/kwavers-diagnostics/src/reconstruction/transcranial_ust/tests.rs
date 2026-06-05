@@ -1,8 +1,8 @@
 use ndarray::{Array2, Array3};
 
+use kwavers_solver::inverse::linear_born_inversion::LinearBornInversionConfig;
 use kwavers_transducer::transducers::focused::BowlAngularBounds;
 use kwavers_transducer::transducers::TransducerGeometry;
-use kwavers_solver::inverse::linear_born_inversion::LinearBornInversionConfig;
 
 use super::{
     reconstruct_brain_slice, reconstruct_brain_volume, transducer::TranscranialBowlGeometry,

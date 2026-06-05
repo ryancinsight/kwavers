@@ -1,9 +1,9 @@
 //! `KzkSolverPlugin`: core KZK solver logic and operator methods.
 
+use crate::plugin::{PluginMetadata, PluginState};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use crate::plugin::{PluginMetadata, PluginState};
 use ndarray::Array3;
 
 use super::frequency_operator::FrequencyOperator;

@@ -38,10 +38,10 @@ use super::absorption::KzkAbsorptionOperator;
 use super::complex_parabolic_diffraction::ParabolicDiffractionOperator;
 use super::nonlinearity::KzkNonlinearOperator;
 use super::KZKConfig;
-use kwavers_math::fft::Complex64;
 use crate::forward::nonlinear::conservation::{
     ConservationDiagnostics, ConservationTolerances, ConservationTracker,
 };
+use kwavers_math::fft::Complex64;
 
 /// KZK equation solver.
 ///

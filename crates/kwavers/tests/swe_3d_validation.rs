@@ -37,9 +37,6 @@
 //! - Palmeri, M. L., et al. (2011). "Quantifying hepatic shear modulus in vivo using
 //!   acoustic radiation force." *Ultrasound in Medicine & Biology*, 37(4), 546-558.
 
-use kwavers_therapy::therapy::swe_3d_workflows::{
-    ElasticityMap3D, Swe3dClinicalDecisionSupport, VolumetricROI,
-};
 use kwavers_grid::Grid;
 use kwavers_medium::heterogeneous::HeterogeneousMedium;
 use kwavers_medium::HomogeneousMedium;
@@ -54,6 +51,9 @@ use kwavers_solver::forward::elastic::swe::GPUElasticWaveSolver3D;
 use kwavers_solver::forward::elastic::{
     ArrivalDetection, ElasticBodyForceConfig, ElasticWaveSolver, VolumetricWaveConfig,
     WaveFrontTracker,
+};
+use kwavers_therapy::therapy::swe_3d_workflows::{
+    ElasticityMap3D, Swe3dClinicalDecisionSupport, VolumetricROI,
 };
 use ndarray::Array3;
 use std::default::Default;

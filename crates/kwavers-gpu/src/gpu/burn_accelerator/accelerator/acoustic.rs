@@ -1,9 +1,9 @@
 //! Acoustic wave propagation on GPU via Burn.
 
 use super::BurnGpuAccelerator;
-use kwavers_core::error::KwaversResult;
 use burn::tensor::backend::Backend;
 use burn::tensor::Tensor;
+use kwavers_core::error::KwaversResult;
 use ndarray::Array3;
 
 impl<B: Backend> BurnGpuAccelerator<B> {

@@ -1,13 +1,13 @@
 use super::config::AdaptiveBubbleConfig;
 use super::statistics::IntegrationStatistics;
+use crate::acoustics::bubble_dynamics::keller_miksis::KellerMiksisModel;
+use crate::acoustics::bubble_dynamics::BubbleState;
 use kwavers_core::constants::cavitation::{MAX_RADIUS, MIN_RADIUS};
 use kwavers_core::constants::numerical::{
     ERROR_CONTROL_EXPONENT, HALF_STEP_FACTOR, INITIAL_TIME_STEP_FRACTION, MAX_RADIUS_SAFETY_FACTOR,
     MAX_TEMPERATURE, MAX_VELOCITY_FRACTION, MIN_RADIUS_SAFETY_FACTOR, MIN_TEMPERATURE,
 };
 use kwavers_core::error::{KwaversResult, PhysicsError};
-use crate::acoustics::bubble_dynamics::keller_miksis::KellerMiksisModel;
-use crate::acoustics::bubble_dynamics::BubbleState;
 
 /// Adaptive integrator for bubble dynamics with sub-cycling
 #[derive(Debug)]
@@ -258,15 +258,10 @@ impl<'a> AdaptiveBubbleIntegrator<'a> {
             .calculate_acceleration(state, p_acoustic, dp_dt, t + dt)?;
         let k4_v = state.wall_velocity;
 
-        // Combine
-        state.radius = (dt / 6.0).mul_add(
-            2.0f64.mul_add(k3_v, 2.0f64.mul_add(k2_v, k1_v)) + k4_v,
-            state0.radius,
-        );
-        state.wall_velocity = (dt / 6.0).mul_add(
-            2.0f64.mul_add(k3_a, 2.0f64.mul_add(k2_a, k1_a)) + k4_a,
-            state0.wall_velocity,
-        );
+        // Combine via the shared RK4 Butcher-weight SSOT.
+        use crate::acoustics::bubble_dynamics::integration::rk4_weighted_sum;
+        state.radius = rk4_weighted_sum(state0.radius, k1_v, k2_v, k3_v, k4_v, dt);
+        state.wall_velocity = rk4_weighted_sum(state0.wall_velocity, k1_a, k2_a, k3_a, k4_a, dt);
 
         // Update derived quantities
         state.update_compression(r0);

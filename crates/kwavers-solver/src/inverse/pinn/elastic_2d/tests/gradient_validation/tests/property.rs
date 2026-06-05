@@ -1,9 +1,9 @@
 use super::helpers::{autodiff_gradient_x, autodiff_gradient_y};
 use super::TestAutodiffBackend;
-use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use crate::inverse::elastic_2d::Config;
 use crate::inverse::pinn::elastic_2d::model::ElasticPINN2D;
 use burn::tensor::Tensor;
+use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
 
 #[test]
 fn test_gradient_linearity() {

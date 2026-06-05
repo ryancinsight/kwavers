@@ -47,8 +47,8 @@ pub mod solver;
 
 pub use conservation::MultiPhysicsConservationEnforcer;
 pub use coupler::MultiPhysicsFieldCoupler;
-pub use residual_gas::ResidualGasField;
 pub use interface::SimulationMultiPhysicsInterface;
+pub use residual_gas::ResidualGasField;
 pub use schwarz::SchwarzCoupling;
 pub use solver::SimulationMultiPhysicsSolver;
 

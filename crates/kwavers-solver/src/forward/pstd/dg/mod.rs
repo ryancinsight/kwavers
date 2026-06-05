@@ -28,11 +28,9 @@ pub use discontinuity_detector::DiscontinuityDetector;
 pub use flux::{FluxType, LimiterType};
 pub use traits::{DGOperations, DiscontinuityDetection, NumericalSolver, SolutionCoupling};
 
+use crate::constants::{CONSERVATION_TOLERANCE, DEFAULT_POLYNOMIAL_ORDER, DISCONTINUITY_THRESHOLD};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
-use crate::constants::{
-    CONSERVATION_TOLERANCE, DEFAULT_POLYNOMIAL_ORDER, DISCONTINUITY_THRESHOLD,
-};
 
 use ndarray::Array3;
 use spectral_solver::RegionPSTDSolver;

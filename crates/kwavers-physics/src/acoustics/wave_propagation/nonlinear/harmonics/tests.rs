@@ -1,8 +1,8 @@
 use super::*;
-use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use crate::acoustics::wave_propagation::nonlinear::{
     NonlinearParameters, TissueHarmonicProperties,
 };
+use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 
 fn water() -> NonlinearParameters {
     NonlinearParameters::water()

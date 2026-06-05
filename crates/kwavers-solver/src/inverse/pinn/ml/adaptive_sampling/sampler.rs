@@ -1,6 +1,6 @@
 use super::{AdaptiveCollocationSampler, AdaptiveRefinementConfig, SamplingStats};
-use kwavers_core::error::KwaversResult;
 use burn::tensor::{backend::AutodiffBackend, Tensor};
+use kwavers_core::error::KwaversResult;
 
 impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
     /// Create a new adaptive sampler

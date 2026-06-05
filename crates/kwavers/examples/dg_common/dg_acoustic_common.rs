@@ -1,8 +1,8 @@
 //! Shared 1-D acoustic DG/FDTD/PSTD comparison fixture for examples.
 #![allow(dead_code)] // Shared example fixture: each example target uses a subset.
+use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
-use kwavers_source::{GridSource, SourceMode};
 use kwavers_solver::forward::fdtd::{FdtdConfig, FdtdSolver, KSpaceCorrectionMode};
 use kwavers_solver::forward::pstd::config::{BoundaryConfig, KSpaceMethod};
 use kwavers_solver::forward::pstd::dg::dg_solver::acoustic::AcousticDg1DWorkspace;
@@ -10,7 +10,7 @@ use kwavers_solver::forward::pstd::dg::quadrature::gauss_lobatto_quadrature;
 use kwavers_solver::forward::pstd::dg::{DGConfig, DGSolver};
 use kwavers_solver::forward::pstd::{PSTDConfig, PSTDSolver};
 use kwavers_solver::interface::solver::Solver;
-use kwavers_core::error::KwaversResult;
+use kwavers_source::{GridSource, SourceMode};
 use ndarray::{Array1, Array3};
 use std::f64::consts::PI;
 use std::sync::Arc;

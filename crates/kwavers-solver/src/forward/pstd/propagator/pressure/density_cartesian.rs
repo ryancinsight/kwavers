@@ -1,6 +1,6 @@
-use kwavers_math::fft::Fft3dInOutExt;
-use kwavers_core::error::{KwaversError, KwaversResult};
 use crate::forward::pstd::implementation::core::orchestrator::PSTDSolver;
+use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_math::fft::Fft3dInOutExt;
 use ndarray::Zip;
 
 // Implementation note on divergence caching:

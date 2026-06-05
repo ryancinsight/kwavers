@@ -1,5 +1,5 @@
-use kwavers_core::constants::MIN_RADIUS;
 use crate::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};
+use kwavers_core::constants::MIN_RADIUS;
 
 /// Update thermodynamic state using adiabatic compression
 ///

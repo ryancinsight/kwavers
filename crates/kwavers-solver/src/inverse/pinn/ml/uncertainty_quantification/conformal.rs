@@ -1,7 +1,7 @@
 //! Conformal prediction for PINN uncertainty quantification.
 
-use kwavers_core::error::{KwaversError, KwaversResult};
 use burn::tensor::backend::Backend;
+use kwavers_core::error::{KwaversError, KwaversResult};
 use ndarray::Array1;
 
 /// Conformal prediction for uncertainty quantification.

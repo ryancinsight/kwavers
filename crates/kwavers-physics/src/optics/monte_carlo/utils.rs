@@ -1,5 +1,5 @@
-use kwavers_core::constants::numerical::TWO_PI;
 use crate::optics::monte_carlo::photon::Photon;
+use kwavers_core::constants::numerical::TWO_PI;
 use rand::Rng;
 use std::sync::atomic::{AtomicU64, Ordering};
 

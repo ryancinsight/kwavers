@@ -1,9 +1,9 @@
 use kwavers_core::constants::numerical;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use kwavers_medium::Medium;
 use kwavers_math::fft::Complex64 as Complex;
 use kwavers_math::fft::{fft_3d_array, ifft_3d_array};
+use kwavers_medium::Medium;
 use ndarray::{Array3, Zip};
 
 use super::super::wave_model::NonlinearWave;

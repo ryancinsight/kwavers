@@ -3,12 +3,12 @@
 //! This module defines the fundamental solver trait that all
 //! solver implementations must implement.
 
+use crate::feature::SolverFeature;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_receiver::GridSensorSet;
 use kwavers_source::Source;
-use crate::feature::SolverFeature;
 use std::fmt::Debug;
 
 /// Fundamental solver trait

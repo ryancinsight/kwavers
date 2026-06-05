@@ -1,13 +1,13 @@
-# Chapter 23 — Passive Acoustic Mapping
+# Chapter 22 — Passive Acoustic Mapping
 
-> **Prerequisite:** Chapter 9 (Cavitation and Bubble Dynamics), Chapter 16
-> (Transcranial Ultrasound), Chapter 22 (Simulation Orchestration).
+> **Prerequisite:** Chapter 5 (Cavitation and Bubble Dynamics), Chapter 16
+> (Transcranial Ultrasound), Chapter 21 (Simulation Orchestration).
 > Familiarity with array signal processing and the van Cittert–Zernike theorem
 > is assumed.
 
 ---
 
-## 23.1 Scope
+## 22.1 Scope
 
 Passive Acoustic Mapping (PAM) reconstructs the spatial distribution of
 acoustic emissions from cavitation inside tissue using a passive multi-element
@@ -21,11 +21,11 @@ This chapter formalises the signal model, derives the van Cittert–Zernike
 coherence limit on spatial resolution, describes the two main beamformers
 (delay-and-sum and eigenspace), and analyses the transcranial SNR budget.  A
 simulation workflow using the kwavers `PhysicsCatalog` is provided as the
-worked example (§23.6).
+worked example (§22.6).
 
 ---
 
-## 23.2 Cavitation emission model
+## 22.2 Cavitation emission model
 
 A cavitation cloud at position **r**₀ emits pressure waves that travel to a
 receive aperture of $N$ elements at positions **r**_i.  The received
@@ -39,7 +39,7 @@ $$
 where $G$ is the propagation Green's function (includes skull attenuation),
 $s(f)$ is the source spectrum, and $n_i$ is additive noise.
 
-> **Definition 23.1 (Cavitation emission spectrum).**
+> **Definition 22.1 (Cavitation emission spectrum).**
 > *Stable cavitation (SC) emits at harmonics of the driving frequency $f_0$
 > and its sub-harmonic $f_0/2$.  Inertial cavitation (IC) adds a broadband
 > floor elevated by 15–25 dB above the SC inter-harmonic noise level.*
@@ -50,7 +50,7 @@ wideband emission energy — the *cavitation dose* metric of Gyöngy & Coussios
 
 ---
 
-## 23.3 Delay-and-sum passive beamformer
+## 22.3 Delay-and-sum passive beamformer
 
 The passive DAS output at candidate focus position **r**_f is:
 
@@ -61,7 +61,7 @@ $$
 where $\tau_i = |\mathbf{r}_f - \mathbf{r}_i| / c$ is the focusing delay and
 $w_i$ is an apodisation weight.
 
-> **Theorem 23.1 (DAS resolution).**
+> **Theorem 22.1 (DAS resolution).**
 > *For an incoherent source at position **r**₀, the DAS mainlobe half-width
 > (−6 dB) in the lateral dimension is approximately*
 > $$\delta_\perp \approx \lambda \, z / D$$
@@ -109,7 +109,7 @@ pykwavers, the independent delay-law reference, and their absolute difference.
 
 ---
 
-## 23.4 Eigenspace beamformer
+## 22.4 Eigenspace beamformer
 
 Let $\mathbf{R} \in \mathbb{C}^{N\times N}$ be the cross-spectral density
 matrix estimated from $M$ receive snapshots.  The eigenvalue decomposition:
@@ -122,7 +122,7 @@ $$
 partitions the signal subspace $\mathbf{U}_S$ (rank $K$ = number of sources)
 from the noise subspace $\mathbf{U}_N$.
 
-> **Theorem 23.2 (Eigenspace PAM noise rejection).**
+> **Theorem 22.2 (Eigenspace PAM noise rejection).**
 > *For $K$ incoherent point sources with signal power $\sigma_s^2$ and
 > spatially-white noise power $\sigma_n^2$, the $K$ largest singular values
 > of $\mathbf{R}$ satisfy $\sigma_k = \sigma_s^2 + \sigma_n^2$ (signal + noise),
@@ -146,7 +146,7 @@ the steering vector to the candidate focus.
 
 ---
 
-## 23.5 Transcranial SNR budget
+## 22.5 Transcranial SNR budget
 
 Two loss mechanisms reduce transcranial PAM SNR:
 
@@ -169,7 +169,7 @@ where $\sigma_\phi$ is the RMS wavefront phase error across the aperture due
 to skull heterogeneity.  For typical adult skulls $\sigma_\phi \sim 1\;\text{rad}$
 at 1 MHz, giving $\text{CF}_\phi \approx -4.3\;\text{dB}$.
 
-> **Corollary 23.1 (Optimal PAM frequency).**
+> **Corollary 22.1 (Optimal PAM frequency).**
 > *The PAM SNR is maximised at the frequency where the total loss
 > $2\,\text{IL}(f) + |\text{CF}_\phi(f)|$ is minimised relative to the
 > cavitation emission energy spectrum $S_{cav}(f)$.
@@ -177,7 +177,7 @@ at 1 MHz, giving $\text{CF}_\phi \approx -4.3\;\text{dB}$.
 
 ---
 
-## 23.6 Simulation workflow — cerebral cavitation PAM
+## 22.6 Simulation workflow — cerebral cavitation PAM
 
 The forward simulation propagates broadband cavitation emissions through a
 skull-heterogeneous medium and captures them at a hemispherical receive array.
@@ -213,7 +213,7 @@ receive aperture — see `analysis::beamforming::passive_acoustic_mapping`.
 
 ---
 
-## 23.7 Figure sources
+## 22.7 Figure sources
 
 Run the companion script to generate all figures:
 
@@ -234,7 +234,7 @@ Outputs are written to `docs/book/figures/ch23/` (PDF and PNG).
 
 ---
 
-## 23.8 References
+## 22.8 References
 
 - Coviello C., Kozick R., Choi J., Gyöngy M., Jensen C., Smith P.P.,
   Coussios C.C. *Passive Acoustic Mapping utilizing optimal beamforming

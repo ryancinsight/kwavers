@@ -4,8 +4,8 @@ use super::types::{
     GpuAffinity, GpuCommunicationChannel, GpuTransferStatus, MultiGpuPerformanceSummary,
     PendingTransfer,
 };
-use kwavers_core::error::{KwaversError, KwaversResult};
 use crate::gpu::{CoreGpuCapabilities, CoreGpuContext};
+use kwavers_core::error::{KwaversError, KwaversResult};
 use std::collections::HashMap;
 
 /// Multi-GPU context for distributed computing.

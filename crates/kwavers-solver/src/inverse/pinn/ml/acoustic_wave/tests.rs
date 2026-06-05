@@ -1,8 +1,8 @@
 use super::domain::AcousticWaveDomain;
 use super::types::{AcousticBoundarySpec, AcousticProblemType, PinnAcousticBoundaryType};
-use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use crate::inverse::pinn::ml::physics::{BoundaryPosition, SimulationPhysicsDomain};
 use burn::backend::NdArray;
+use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use std::collections::HashMap;
 
 type B = burn::backend::Autodiff<NdArray<f32>>;

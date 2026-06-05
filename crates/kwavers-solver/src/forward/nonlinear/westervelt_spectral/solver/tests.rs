@@ -2,8 +2,8 @@ use super::*;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_medium::HomogeneousMedium;
-use kwavers_source::NullSource;
 use kwavers_physics::traits::AcousticWaveModel;
+use kwavers_source::NullSource;
 use ndarray::Array4;
 
 #[test]

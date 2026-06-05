@@ -27,9 +27,9 @@
 //! - Runtime performance comparison
 
 use anyhow::Result;
-use kwavers_phantom::PhantomBuilder;
 use kwavers_grid::{Grid3D, GridDimensions};
 use kwavers_medium::properties::OpticalPropertyData;
+use kwavers_phantom::PhantomBuilder;
 use kwavers_physics::optics::map_builder::OpticalPropertyMap;
 use kwavers_physics::optics::monte_carlo::{MonteCarloSolver, PhotonSource, SimulationConfig};
 use kwavers_solver::forward::optical::diffusion::{DiffusionSolver, DiffusionSolverConfig};

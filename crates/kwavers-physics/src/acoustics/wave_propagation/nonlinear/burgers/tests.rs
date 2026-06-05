@@ -1,6 +1,6 @@
 use super::*;
-use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA, TWO_PI};
 use crate::acoustics::wave_propagation::NonlinearParameters;
+use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA, TWO_PI};
 
 #[test]
 fn bessel_j0_at_zero() {

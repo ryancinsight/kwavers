@@ -6,20 +6,20 @@
 
 use kwavers_boundary::{DomainPMLBoundary, DomainPmlConfig};
 use kwavers_core::error::KwaversResult;
-use kwavers_source::NullSource;
+use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_physics::acoustics::mechanics::absorption::AbsorptionMode;
-use kwavers_solver::forward::nonlinear::westervelt_spectral::WesterveltWave;
-use kwavers_solver::pstd::numerics::spectral_correction::SpectralCorrectionMethod;
 use kwavers_physics::traits::AcousticWaveModel;
 use kwavers_solver::fdtd::FdtdConfig;
 use kwavers_solver::fdtd::FdtdPlugin;
-use kwavers_grid::Grid;
 use kwavers_solver::forward::nonlinear::kuznetsov::KuznetsovConfig;
 use kwavers_solver::forward::nonlinear::kuznetsov::KuznetsovWave;
+use kwavers_solver::forward::nonlinear::westervelt_spectral::WesterveltWave;
+use kwavers_solver::plugin::PluginManager;
+use kwavers_solver::pstd::numerics::spectral_correction::SpectralCorrectionMethod;
 use kwavers_solver::pstd::PSTDConfig;
 use kwavers_solver::pstd::PSTDPlugin;
-use kwavers_solver::plugin::PluginManager;
+use kwavers_source::NullSource;
 use ndarray::{Array3, Array4};
 use plotters::prelude::*;
 use std::fs;

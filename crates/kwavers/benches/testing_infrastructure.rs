@@ -5,12 +5,12 @@
 //! **Methodology**: Criterion-based statistical benchmarking
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use kwavers_core::constants::{DENSITY_WATER, SOUND_SPEED_WATER};
 use kwavers_analysis::testing::acoustic_properties::*;
 use kwavers_analysis::testing::grid_properties::*;
 use kwavers_analysis::testing::medium_properties::*;
-use kwavers_medium::HomogeneousMedium;
+use kwavers_core::constants::{DENSITY_WATER, SOUND_SPEED_WATER};
 use kwavers_grid::Grid;
+use kwavers_medium::HomogeneousMedium;
 
 /// Benchmark grid creation for various sizes
 fn bench_grid_creation(c: &mut Criterion) {

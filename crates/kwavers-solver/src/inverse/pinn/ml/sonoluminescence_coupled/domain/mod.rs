@@ -9,9 +9,9 @@ mod construction;
 mod physics_domain_impl;
 mod residuals;
 
-use kwavers_physics::optics::sonoluminescence::SonoluminescenceEmission;
 use crate::inverse::pinn::ml::physics::PinnCouplingInterface;
 use burn::tensor::backend::AutodiffBackend;
+use kwavers_physics::optics::sonoluminescence::SonoluminescenceEmission;
 use ndarray::Array3;
 
 use super::config::{SonoluminescenceCouplingConfig, SonoluminescenceCouplingType};

@@ -10,12 +10,12 @@
 //!
 //! Showcases the proper use of kwavers factory patterns with advanced transducer modeling.
 
+use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::homogeneous::HomogeneousMedium;
-use kwavers_transducer::{BeamformingMode, PhasedArrayConfig, PhasedArrayTransducer};
-use kwavers_source::Source;
-use kwavers_core::error::KwaversResult;
 use kwavers_signal::SineWave;
+use kwavers_source::Source;
+use kwavers_transducer::{BeamformingMode, PhasedArrayConfig, PhasedArrayTransducer};
 use std::sync::Arc;
 
 fn main() -> KwaversResult<()> {

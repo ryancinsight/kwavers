@@ -232,9 +232,9 @@ impl<T: ElectromagneticWaveEquation> PhotoacousticCoupling for PhotoacousticSolv
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::forward::fdtd::ElectromagneticFdtdSolver;
     use kwavers_grid::Grid;
     use kwavers_physics::electromagnetic::equations::EMMaterialDistribution;
-    use crate::forward::fdtd::ElectromagneticFdtdSolver;
 
     #[test]
     fn test_photoacoustic_solver() {

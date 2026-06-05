@@ -26,10 +26,8 @@ use numpy::{IntoPyArray, PyArray1, PyArray2, PyArray3, PyReadonlyArray3};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
-use kwavers_core::constants::medical::{
-    THERMAL_DOSE_REFERENCE_TEMP_C,
-};
 use kwavers_core::constants::fundamental::{DENSITY_TISSUE, SOUND_SPEED_TISSUE};
+use kwavers_core::constants::medical::THERMAL_DOSE_REFERENCE_TEMP_C;
 use kwavers_core::constants::thermodynamic::{BODY_TEMPERATURE_C, KELVIN_OFFSET_C};
 use kwavers_grid::Grid as KwaversGrid;
 use kwavers_medium::HomogeneousMedium;

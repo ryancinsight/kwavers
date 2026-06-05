@@ -88,7 +88,6 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
-use kwavers_source::{GridSource, SourceMode};
 use kwavers_solver::inverse::fwi::time_domain::{FwiGeometry, FwiProcessor};
 use kwavers_solver::inverse::seismic::{
     parameters::{
@@ -97,6 +96,7 @@ use kwavers_solver::inverse::seismic::{
     },
     rtm::RtmProcessor,
 };
+use kwavers_source::{GridSource, SourceMode};
 use ndarray::{Array2, Array3, Zip};
 use std::f64::consts::PI;
 use std::fs::File;

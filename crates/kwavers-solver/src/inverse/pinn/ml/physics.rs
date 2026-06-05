@@ -4,8 +4,8 @@
 //! within the PINN ecosystem, enabling rapid extension to new physics while maintaining
 //! a unified training and inference interface.
 
-use kwavers_core::error::{KwaversError, KwaversResult};
 use burn::tensor::{backend::AutodiffBackend, Tensor};
+use kwavers_core::error::{KwaversError, KwaversResult};
 use std::collections::HashMap;
 
 /// PDE Characteristics for adaptive sampling

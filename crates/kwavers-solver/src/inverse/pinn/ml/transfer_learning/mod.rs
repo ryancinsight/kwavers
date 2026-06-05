@@ -3,8 +3,8 @@
 //! This module implements transfer learning techniques to adapt Physics-Informed Neural Networks
 //! trained on simple geometries to more complex geometries, enabling efficient generalization.
 
-use kwavers_core::error::KwaversResult;
 use burn::tensor::{backend::AutodiffBackend, Tensor};
+use kwavers_core::error::KwaversResult;
 
 mod evaluation;
 mod learner;

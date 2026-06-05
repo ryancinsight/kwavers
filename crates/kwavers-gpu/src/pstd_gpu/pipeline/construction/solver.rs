@@ -170,9 +170,7 @@ impl GpuPstdSolver {
         // ── Shader ────────────────────────────────────────────────────────────
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("pstd_shader"),
-            source: wgpu::ShaderSource::Wgsl(
-                include_str!("../../shaders/pstd.wgsl").into(),
-            ),
+            source: wgpu::ShaderSource::Wgsl(include_str!("../../shaders/pstd.wgsl").into()),
         });
 
         // ── Bind group layouts ────────────────────────────────────────────────

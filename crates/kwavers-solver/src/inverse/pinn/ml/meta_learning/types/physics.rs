@@ -1,11 +1,11 @@
 //! Physics parameters for meta-learning task governing equations.
 
 use kwavers_core::constants::acoustic_parameters::WATER_ABSORPTION_ALPHA_0;
+use kwavers_core::constants::fundamental::ACOUSTIC_ABSORPTION_TISSUE;
 use kwavers_core::constants::fundamental::{
     DENSITY_TISSUE, DENSITY_WATER_NOMINAL, SOUND_SPEED_AIR, SOUND_SPEED_TISSUE,
     SOUND_SPEED_WATER_SIM,
 };
-use kwavers_core::constants::fundamental::ACOUSTIC_ABSORPTION_TISSUE;
 use kwavers_core::constants::tissue_acoustics::{
     B_OVER_A_SOFT_TISSUE, B_OVER_A_WATER, DENSITY_AIR,
 };

@@ -4,9 +4,9 @@ use super::config::ConformalConfig;
 use super::types::{
     CalibrationSummary, ConformalResult, ConformalValidationMetrics, ScoreDistribution,
 };
-use kwavers_core::error::KwaversResult;
 #[cfg(feature = "pinn")]
 use burn::tensor::backend::Backend;
+use kwavers_core::error::KwaversResult;
 use log::info;
 use ndarray::{Array1, Array2};
 use std::collections::HashMap;
@@ -112,14 +112,12 @@ impl MlConformalPredictor {
         let coverage_probability = self.estimate_coverage_probability();
         let reliability_score = coverage_probability.min(1.0);
 
-        Ok(
-            crate::ml::uncertainty::MlPredictionWithUncertainty {
-                mean_prediction: prediction,
-                uncertainty,
-                confidence_intervals,
-                reliability_score,
-            },
-        )
+        Ok(crate::ml::uncertainty::MlPredictionWithUncertainty {
+            mean_prediction: prediction,
+            uncertainty,
+            confidence_intervals,
+            reliability_score,
+        })
     }
 
     /// Generate prediction intervals for new data

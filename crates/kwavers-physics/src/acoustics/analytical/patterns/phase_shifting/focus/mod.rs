@@ -8,11 +8,11 @@
 use kwavers_core::error::KwaversResult;
 use ndarray::{Array1, Array2};
 
-use kwavers_core::constants::numerical::TWO_PI;
-use kwavers_core::constants::SOUND_SPEED_WATER;
 use crate::phase_modulation::phase_shifting::core::{
     calculate_wavelength, wrap_phase, MAX_FOCAL_POINTS, MIN_FOCAL_DISTANCE,
 };
+use kwavers_core::constants::numerical::TWO_PI;
+use kwavers_core::constants::SOUND_SPEED_WATER;
 
 /// Dynamic focusing controller
 #[derive(Debug)]
@@ -187,8 +187,8 @@ impl DynamicFocusing {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kwavers_core::constants::numerical::MHZ_TO_HZ;
     use approx::assert_relative_eq;
+    use kwavers_core::constants::numerical::MHZ_TO_HZ;
     use ndarray::arr2;
 
     fn linear_array() -> Array2<f64> {

@@ -1,6 +1,6 @@
 //! `encode_nonlinear_snapshot` and `encode_density_update`: density phase dispatches.
 
-use super::super::super::{GpuPstdSolver, PstdParams};
+use super::super::super::GpuPstdSolver;
 use super::StepCtx;
 
 impl GpuPstdSolver {

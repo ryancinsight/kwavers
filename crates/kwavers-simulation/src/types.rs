@@ -4,16 +4,18 @@
 
 use ndarray::Array3;
 
+use crate::configs::{
+    HelmholtzConfig, NonlinearConfig, PmlConfig, PoroelasticConfig, ThermalConfig,
+};
 use kwavers_grid::Grid;
 use kwavers_medium::traits::Medium as MediumTrait;
 use kwavers_receiver::recorder::pressure_statistics::SampledStatistics;
 use kwavers_receiver::recorder::simple::SensorRecorder;
-use kwavers_source::GridSource;
-use crate::configs::{HelmholtzConfig, NonlinearConfig, PmlConfig, PoroelasticConfig, ThermalConfig};
 use kwavers_solver::config::SolverType;
 use kwavers_solver::forward::fdtd::config::KSpaceCorrectionMode;
 use kwavers_solver::forward::pstd::config::CompatibilityMode;
 use kwavers_solver::forward::pstd::extensions::ElasticPstdVelocitySource;
+use kwavers_source::GridSource;
 
 // ============================================================================
 // Full-grid statistics
@@ -63,7 +65,8 @@ pub struct SimulationRunResult {
     /// Time-averaged z-intensity at sensor positions.
     pub i_avg_z: Option<ndarray::Array1<f64>>,
     /// Per-component velocity statistics sampled at sensor positions.
-    pub velocity_stats: Option<kwavers_receiver::recorder::velocity_statistics::SampledVelocityStats>,
+    pub velocity_stats:
+        Option<kwavers_receiver::recorder::velocity_statistics::SampledVelocityStats>,
     /// Full-grid pressure-statistics field.
     pub full_grid_stats: FullGridStats,
     /// Final temperature field (nx, ny, nz) [K]. `None` for acoustic-only runs.

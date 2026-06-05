@@ -4,12 +4,12 @@ use ndarray::{Array1, Array3};
 use num_complex::Complex64;
 use std::f64::consts::TAU;
 
+use crate::dispatch::shared::trim_initial_recorder_sample;
+use crate::types::{SimulationRunRequest, SimulationRunResult};
 use kwavers_core::error::KwaversResult;
 use kwavers_mesh::tetrahedral::TetrahedralMesh;
 use kwavers_receiver::recorder::pressure_statistics::SampledStatistics;
-use crate::dispatch::shared::trim_initial_recorder_sample;
-use crate::types::{SimulationRunRequest, SimulationRunResult};
-use kwavers_solver::forward::bem::{BemConfig, BemSolver, BemSolution};
+use kwavers_solver::forward::bem::{BemConfig, BemSolution, BemSolver};
 
 /// Run a boundary-element method simulation for the given request.
 pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult> {
@@ -45,9 +45,9 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
                         let val = p0[[i, j, k]];
                         if val.abs() > 0.0 && !dirichlet_nodes.contains(&local_idx) {
                             dirichlet_nodes.push(local_idx);
-                            solver.boundary_manager().add_dirichlet(vec![(
-                                local_idx, Complex64::new(val, 0.0),
-                            )]);
+                            solver
+                                .boundary_manager()
+                                .add_dirichlet(vec![(local_idx, Complex64::new(val, 0.0))]);
                         }
                     }
                 }
@@ -59,9 +59,9 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
                         let val = p0[[i, j, k]];
                         if val.abs() > 0.0 && !dirichlet_nodes.contains(&local_idx) {
                             dirichlet_nodes.push(local_idx);
-                            solver.boundary_manager().add_dirichlet(vec![(
-                                local_idx, Complex64::new(val, 0.0),
-                            )]);
+                            solver
+                                .boundary_manager()
+                                .add_dirichlet(vec![(local_idx, Complex64::new(val, 0.0))]);
                         }
                     }
                 }
@@ -75,9 +75,9 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
                         let val = p0[[i, j, k]];
                         if val.abs() > 0.0 && !dirichlet_nodes.contains(&local_idx) {
                             dirichlet_nodes.push(local_idx);
-                            solver.boundary_manager().add_dirichlet(vec![(
-                                local_idx, Complex64::new(val, 0.0),
-                            )]);
+                            solver
+                                .boundary_manager()
+                                .add_dirichlet(vec![(local_idx, Complex64::new(val, 0.0))]);
                         }
                     }
                 }
@@ -96,9 +96,10 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
 
     let bemsol: BemSolution = solver.solve(wavenumber, None)?;
 
-    let sensor_mask = req.sensor_mask.clone().unwrap_or_else(|| {
-        Array3::from_elem((nx, ny, nz), false)
-    });
+    let sensor_mask = req
+        .sensor_mask
+        .clone()
+        .unwrap_or_else(|| Array3::from_elem((nx, ny, nz), false));
     let sensor_indices: Vec<(usize, usize, usize)> = sensor_mask
         .indexed_iter()
         .filter(|(_, &active)| active)
@@ -135,14 +136,25 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
             p_rms: Array1::from_vec(sensor_data.rows().into_iter().map(|row| row[0]).collect()),
             p_final: Array1::from_vec(sensor_data.rows().into_iter().map(|row| row[0]).collect()),
         })
-    } else { None };
+    } else {
+        None
+    };
 
     Ok(SimulationRunResult {
-        sensor_data, stats,
-        ux_data: None, uy_data: None, uz_data: None,
-        ix_data: None, iy_data: None, iz_data: None,
-        i_avg_x: None, i_avg_y: None, i_avg_z: None,
-        velocity_stats: None, full_grid_stats: None,
-        thermal_temperature: None, thermal_dose: None,
+        sensor_data,
+        stats,
+        ux_data: None,
+        uy_data: None,
+        uz_data: None,
+        ix_data: None,
+        iy_data: None,
+        iz_data: None,
+        i_avg_x: None,
+        i_avg_y: None,
+        i_avg_z: None,
+        velocity_stats: None,
+        full_grid_stats: None,
+        thermal_temperature: None,
+        thermal_dose: None,
     })
 }

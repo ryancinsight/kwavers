@@ -220,15 +220,14 @@ mod tests {
 
         let grid = Grid::new(10, 10, 10, 0.001, 0.001, 0.001).unwrap();
 
-        let acoustic_params =
-            crate::therapy::therapy_integration::config::AcousticTherapyParams {
-                frequency: MHZ_TO_HZ,
-                pnp: MPA_TO_PA,
-                prf: 100.0,
-                duty_cycle: 0.1,
-                focal_depth: 0.005, // 5mm
-                treatment_volume: 1.0,
-            };
+        let acoustic_params = crate::therapy::therapy_integration::config::AcousticTherapyParams {
+            frequency: MHZ_TO_HZ,
+            pnp: MPA_TO_PA,
+            prf: 100.0,
+            duty_cycle: 0.1,
+            focal_depth: 0.005, // 5mm
+            treatment_volume: 1.0,
+        };
 
         let temperature =
             calculate_temperature_field(&acoustic_field, &grid, &acoustic_params, 0.01);
@@ -253,15 +252,14 @@ mod tests {
 
         let grid = Grid::new(20, 20, 20, 0.001, 0.001, 0.001).unwrap();
 
-        let acoustic_params =
-            crate::therapy::therapy_integration::config::AcousticTherapyParams {
-                frequency: MHZ_TO_HZ,
-                pnp: 2.0 * MPA_TO_PA,
-                prf: 100.0,
-                duty_cycle: 0.1,
-                focal_depth: 0.01, // 10mm (center of grid)
-                treatment_volume: 1.0,
-            };
+        let acoustic_params = crate::therapy::therapy_integration::config::AcousticTherapyParams {
+            frequency: MHZ_TO_HZ,
+            pnp: 2.0 * MPA_TO_PA,
+            prf: 100.0,
+            duty_cycle: 0.1,
+            focal_depth: 0.01, // 10mm (center of grid)
+            treatment_volume: 1.0,
+        };
 
         let temperature =
             calculate_temperature_field(&acoustic_field, &grid, &acoustic_params, 0.1);

@@ -1,8 +1,8 @@
 use super::super::config::NewtonKrylovConfig;
 use super::super::coupler::MonolithicCoupler;
 use super::super::residual_metric::norm;
-use kwavers_field::UnifiedFieldType;
 use crate::integration::nonlinear::GMRESConfig;
+use kwavers_field::UnifiedFieldType;
 use ndarray::Array3;
 
 #[test]

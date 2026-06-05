@@ -24,8 +24,8 @@
 //! `crate::gpu::buffer`. Changes to dispatch-pool reuse semantics belong in
 //! `solver::backend::gpu::buffers`.
 
-use kwavers_core::error::{KwaversError, KwaversResult};
 use crate::gpu::buffer::GpuBufferData;
+use kwavers_core::error::{KwaversError, KwaversResult};
 use std::collections::HashMap;
 
 /// Named GPU buffer pool with aggregate memory tracking.

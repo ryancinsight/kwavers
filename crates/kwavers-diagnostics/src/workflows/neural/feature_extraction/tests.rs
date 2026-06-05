@@ -1,6 +1,6 @@
 use super::extractor::FeatureExtractor;
-use kwavers_analysis::signal_processing::beamforming::neural::config::FeatureConfig;
 use approx::assert_relative_eq;
+use kwavers_analysis::signal_processing::beamforming::neural::config::FeatureConfig;
 use ndarray::Array3;
 
 #[test]

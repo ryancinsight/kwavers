@@ -1,7 +1,7 @@
 use super::core::BurnPINN3DWave;
-use kwavers_core::error::KwaversResult;
 use crate::inverse::pinn::ml::burn_wave_equation_3d::config::BurnLossWeights3D;
 use burn::tensor::{backend::Backend, Tensor, TensorData};
+use kwavers_core::error::KwaversResult;
 
 /// Adaptive loss scaling for normalization
 ///

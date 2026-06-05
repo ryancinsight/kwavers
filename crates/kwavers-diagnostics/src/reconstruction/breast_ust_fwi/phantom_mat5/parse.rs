@@ -1,7 +1,7 @@
 //! Minimal MATLAB Level-5 numeric-volume parser.
 
-use kwavers_core::error::{KwaversError, KwaversResult};
 use flate2::read::ZlibDecoder;
+use kwavers_core::error::{KwaversError, KwaversResult};
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;

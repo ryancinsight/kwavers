@@ -3,13 +3,13 @@
 //! This module provides the primary wave propagation calculator that coordinates
 //! calculations across different wave modes and interface types.
 
-use kwavers_core::constants::numerical::TWO_PI;
-use kwavers_core::error::{KwaversError, KwaversResult, PhysicsError};
 use crate::acoustics::analytical::propagation::{
     coefficients::PropagationCoefficients, interfaces::fresnel::FresnelCalculator,
     interfaces::interface::Interface, interfaces::snell::SnellLawCalculator,
     AnalyticalPolarization, AnalyticalWaveMode,
 };
+use kwavers_core::constants::numerical::TWO_PI;
+use kwavers_core::error::{KwaversError, KwaversResult, PhysicsError};
 use std::f64::consts::PI;
 
 /// Main wave propagation calculator

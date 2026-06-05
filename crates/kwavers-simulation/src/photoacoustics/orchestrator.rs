@@ -1,8 +1,8 @@
+use super::vertical::PhotoacousticPipeline;
 use kwavers_core::error::KwaversResult;
 use kwavers_imaging::photoacoustic::{
     PhotoacousticScenario, PhotoacousticSimulation, PhotoacousticValidationReport,
 };
-use super::vertical::PhotoacousticPipeline;
 
 /// Thin orchestration layer that owns the canonical photoacoustic pipeline.
 #[derive(Debug, Default)]

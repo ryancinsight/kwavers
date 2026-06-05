@@ -67,14 +67,14 @@ pub fn capon_spatial_spectrum_point_complex_baseband(
         .snapshot_selection
         .clone()
         .unwrap_or(SnapshotSelection::Auto(
-        crate::signal_processing::beamforming::narrowband::snapshots::SnapshotScenario {
-            frequency_hz: cfg.frequency_hz,
-            sampling_frequency_hz,
-            fractional_bandwidth: Some(0.05),
-            prefer_robustness: true,
-            prefer_time_resolution: false,
-        },
-    ));
+            crate::signal_processing::beamforming::narrowband::snapshots::SnapshotScenario {
+                frequency_hz: cfg.frequency_hz,
+                sampling_frequency_hz,
+                fractional_bandwidth: Some(0.05),
+                prefer_robustness: true,
+                prefer_time_resolution: false,
+            },
+        ));
 
     let x = match extract_narrowband_snapshots(sensor_data, &selection) {
         Ok(x) => x,

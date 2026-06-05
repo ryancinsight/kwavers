@@ -5,10 +5,10 @@
 
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
-use kwavers_source::GridSource;
 use kwavers_solver::forward::fdtd::{FdtdConfig, FdtdSolver};
 use kwavers_solver::forward::pstd::{PSTDConfig, PSTDSolver};
 use kwavers_solver::interface::solver::Solver;
+use kwavers_source::GridSource;
 
 /// Quick comparison test - runs in under 10 seconds
 #[test]

@@ -119,8 +119,6 @@ pub fn register_book(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(cavitation::minnaert_resonance_hz, m)?)?;
     m.add_function(wrap_pyfunction!(cavitation::blake_threshold_pa, m)?)?;
     m.add_function(wrap_pyfunction!(cavitation::rayleigh_collapse_time_s, m)?)?;
-    m.add_function(wrap_pyfunction!(cavitation::rayleigh_plesset_rk4, m)?)?;
-    m.add_function(wrap_pyfunction!(cavitation::keller_miksis_rk4, m)?)?;
     m.add_function(wrap_pyfunction!(cavitation::bubble_power_spectrum, m)?)?;
     m.add_function(wrap_pyfunction!(
         cavitation::bubble_acoustic_emission_pressure,

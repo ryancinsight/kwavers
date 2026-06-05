@@ -24,7 +24,10 @@ pub fn compute_spatial_gradient_2d<B, F>(
     forward_fn: F,
     input: &Tensor<B, 2>,
     output_component: usize,
-) -> Result<(Tensor<B::InnerBackend, 2>, Tensor<B::InnerBackend, 2>), kwavers_core::error::KwaversError>
+) -> Result<
+    (Tensor<B::InnerBackend, 2>, Tensor<B::InnerBackend, 2>),
+    kwavers_core::error::KwaversError,
+>
 where
     B: AutodiffBackend,
     F: Fn(Tensor<B, 2>) -> Tensor<B, 2>,
@@ -37,7 +40,9 @@ where
     let grads = component.sum().backward();
 
     let grad_tensor = input_grad.grad(&grads).ok_or_else(|| {
-        kwavers_core::error::KwaversError::InternalError("Failed to compute spatial gradient".into())
+        kwavers_core::error::KwaversError::InternalError(
+            "Failed to compute spatial gradient".into(),
+        )
     })?;
 
     let dx_grad = grad_tensor.clone().slice([0..input.dims()[0], 1..2]);
@@ -80,7 +85,9 @@ where
     let du_x_dx = input_grad
         .grad(&grads_x)
         .ok_or_else(|| {
-            kwavers_core::error::KwaversError::InternalError("Failed to compute ∂u_x/∂x gradient".into())
+            kwavers_core::error::KwaversError::InternalError(
+                "Failed to compute ∂u_x/∂x gradient".into(),
+            )
         })?
         .slice([0..input.dims()[0], 1..2]);
 
@@ -92,7 +99,9 @@ where
     let du_y_dy = input_grad
         .grad(&grads_y)
         .ok_or_else(|| {
-            kwavers_core::error::KwaversError::InternalError("Failed to compute ∂u_y/∂y gradient".into())
+            kwavers_core::error::KwaversError::InternalError(
+                "Failed to compute ∂u_y/∂y gradient".into(),
+            )
         })?
         .slice([0..input.dims()[0], 2..3]);
 

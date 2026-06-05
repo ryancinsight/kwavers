@@ -180,12 +180,12 @@ impl ParabolicDiffractionOperator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use crate::forward::nonlinear::kzk::constants::{
         DEFAULT_BEAM_WAIST, DEFAULT_FREQUENCY, DEFAULT_GRID_SIZE, DEFAULT_WAVELENGTH,
     };
     use crate::validation::measure_beam_radius;
     use approx::assert_relative_eq;
+    use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use std::f64::consts::PI;
 
     #[test]

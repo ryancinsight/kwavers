@@ -2,11 +2,11 @@
 //!
 //! This module contains implementations of various traits for the `NonlinearWave` struct.
 
+use crate::traits::AcousticWaveModel;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_source::Source;
-use crate::traits::AcousticWaveModel;
 use log::info;
 use ndarray::{Array3, Array4, Axis};
 
@@ -163,11 +163,11 @@ impl NonlinearWave {
 #[cfg(test)]
 mod tests {
     use super::super::wave_model::NonlinearWave;
+    use crate::traits::AcousticWaveModel;
     use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use kwavers_core::constants::numerical::MHZ_TO_HZ;
     use kwavers_grid::Grid;
     use kwavers_medium::HomogeneousMedium;
-    use crate::traits::AcousticWaveModel;
 
     /// `set_nonlinearity_scaling` stores the supplied value verbatim.
     #[test]

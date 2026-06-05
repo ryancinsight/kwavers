@@ -23,9 +23,9 @@
 //! Multimodal Medical Image Fusion Techniques`, Biomed Res Int. 2020.
 
 use super::MultiModalFusion;
-use kwavers_core::error::{KwaversError, KwaversResult};
 use crate::acoustics::imaging::fusion::registration::generate_coordinate_arrays;
 use crate::acoustics::imaging::fusion::types::{FusedImageResult, RegisteredModality};
+use kwavers_core::error::{KwaversError, KwaversResult};
 use ndarray::Array3;
 use std::collections::HashMap;
 

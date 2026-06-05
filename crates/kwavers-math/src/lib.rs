@@ -29,6 +29,7 @@ pub mod geometry;
 pub mod inverse_problems;
 pub mod linear_algebra;
 pub mod numerics;
+pub mod optimization;
 pub mod signal;
 pub mod simd;
 pub mod simd_safe;
@@ -67,4 +68,6 @@ pub use simd::{
 pub use simd_safe::SimdOps;
 
 /// Unified CPU/GPU tensor abstraction (ndarray-backed; Burn-ready)
-pub use tensor::{convert, DType, NdArrayTensor, Shape as TensorShape, TensorBackend, TensorMut, TensorView};
+pub use tensor::{
+    convert, DType, NdArrayTensor, Shape as TensorShape, TensorBackend, TensorMut, TensorView,
+};

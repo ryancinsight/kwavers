@@ -94,8 +94,7 @@ pub(super) fn result_to_dict<'py>(
     let placement_context_surface_points = placement_context.body_surface_points_m.len();
     let placement_therapy_points = points3_to_array(&placement_context.therapy_points_m);
     let placement_imaging_points = points3_to_array(&placement_context.imaging_points_m);
-    let placement_body_surface_points =
-        points3_to_array(&placement_context.body_surface_points_m);
+    let placement_body_surface_points = points3_to_array(&placement_context.body_surface_points_m);
     out.set_item("anatomy", prepared.anatomy.label())?;
     out.set_item("device_model", layout.model_name.clone())?;
     out.set_item("ct_hu", prepared.ct_hu.into_pyarray(py))?;

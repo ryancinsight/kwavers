@@ -1,5 +1,5 @@
-use kwavers_core::error::{KwaversError, KwaversResult};
 use crate::inverse::pinn::ml::BurnWave2dGeometry;
+use kwavers_core::error::{KwaversError, KwaversResult};
 
 use super::{
     InferenceStats, JitCompiler, JitMemoryPool, KernelData, OptimizedRuntime, RuntimeConfig,

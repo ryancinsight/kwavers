@@ -2,19 +2,8 @@ use kwavers_core::constants::numerical::TWO_PI;
 mod ivp_velocity;
 
 use super::{pstd_source_gain, pstd_source_time_shift_samples, PSTDSolver};
-use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_boundary::{CPMLBoundary, DomainPMLBoundary};
-use kwavers_field::wave::WaveFields;
-use kwavers_grid::Grid;
-use kwavers_medium::MaterialFields;
-use kwavers_medium::Medium;
-use kwavers_receiver::recorder::simple::SensorRecorder;
-use kwavers_source::GridSource;
-use kwavers_math::fft::shift_operators::generate_shift_1d;
 use crate::fdtd::SourceHandler;
-use crate::forward::pstd::config::{
-    BoundaryConfig, CompatibilityMode, KSpaceMethod, PSTDConfig,
-};
+use crate::forward::pstd::config::{BoundaryConfig, CompatibilityMode, KSpaceMethod, PSTDConfig};
 use crate::forward::pstd::implementation::k_space::{PSTDKSGrid, PSTDKSOperators};
 use crate::forward::pstd::numerics::operators::initialize_spectral_operators;
 use crate::forward::pstd::numerics::spectral_correction::SpectralCorrectionMethod;
@@ -22,6 +11,15 @@ use crate::forward::pstd::physics::absorption::initialize_absorption_operators;
 use crate::forward::pstd::propagator::axisymmetric::AsContext;
 use crate::forward::pstd::utils::compute_k_magnitude;
 use crate::geometry::SolverGeometry;
+use kwavers_boundary::{CPMLBoundary, DomainPMLBoundary};
+use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_field::wave::WaveFields;
+use kwavers_grid::Grid;
+use kwavers_math::fft::shift_operators::generate_shift_1d;
+use kwavers_medium::MaterialFields;
+use kwavers_medium::Medium;
+use kwavers_receiver::recorder::simple::SensorRecorder;
+use kwavers_source::GridSource;
 use ndarray::{s, Array3, Zip};
 use std::sync::Arc;
 
@@ -95,8 +93,7 @@ impl PSTDSolver {
         if let Some(ref mut f) = k_ops.filter {
             *f = f.slice(s![.., .., ..nz_c]).to_owned();
         }
-        let field_arrays =
-            crate::forward::pstd::data::initialize_field_arrays(&grid, medium)?;
+        let field_arrays = crate::forward::pstd::data::initialize_field_arrays(&grid, medium)?;
 
         let dk_x = TWO_PI / (grid.nx as f64 * grid.dx);
         let dk_y = TWO_PI / (grid.ny as f64 * grid.dy);
@@ -132,11 +129,9 @@ impl PSTDSolver {
                     for i in 0..grid.nx {
                         let (x, y, z) = grid.indices_to_coordinates(i, j, k);
                         rho0[[i, j, k]] = kwavers_medium::density_at(medium, x, y, z, &grid);
-                        c0[[i, j, k]] =
-                            kwavers_medium::sound_speed_at(medium, x, y, z, &grid);
+                        c0[[i, j, k]] = kwavers_medium::sound_speed_at(medium, x, y, z, &grid);
                         if let Some(ref mut b) = bon {
-                            b[[i, j, k]] =
-                                kwavers_medium::nonlinearity_at(medium, x, y, z, &grid);
+                            b[[i, j, k]] = kwavers_medium::nonlinearity_at(medium, x, y, z, &grid);
                         }
                     }
                 }

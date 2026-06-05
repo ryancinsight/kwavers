@@ -31,18 +31,17 @@ fn tone_burst(
             )))
         }
     };
-    let signal =
-        kwavers_signal::tone_burst_series(&kwavers_signal::ToneBurstSpec {
-            sample_rate_hz,
-            signal_freq_hz,
-            num_cycles,
-            signal_offset,
-            signal_length,
-            window: window_type,
-            amplitude,
-            phase,
-        })
-        .map_err(|e| PyRuntimeError::new_err(format!("{:?}", e)))?;
+    let signal = kwavers_signal::tone_burst_series(&kwavers_signal::ToneBurstSpec {
+        sample_rate_hz,
+        signal_freq_hz,
+        num_cycles,
+        signal_offset,
+        signal_length,
+        window: window_type,
+        amplitude,
+        phase,
+    })
+    .map_err(|e| PyRuntimeError::new_err(format!("{:?}", e)))?;
     Ok(PyArray1::from_vec(py, signal).into())
 }
 
@@ -63,9 +62,8 @@ fn create_cw_signals(
     let phase_slice = phases
         .as_slice()
         .map_err(|_| PyValueError::new_err("Failed to read phases"))?;
-    let signals =
-        kwavers_signal::create_cw_signals(t_slice, frequency_hz, amp_slice, phase_slice)
-            .map_err(|e| PyRuntimeError::new_err(format!("{:?}", e)))?;
+    let signals = kwavers_signal::create_cw_signals(t_slice, frequency_hz, amp_slice, phase_slice)
+        .map_err(|e| PyRuntimeError::new_err(format!("{:?}", e)))?;
     Ok(PyArray2::from_owned_array(py, signals).into())
 }
 
@@ -105,27 +103,8 @@ fn add_noise(
     let data = signal
         .as_slice()
         .map_err(|_| PyValueError::new_err("Failed to read signal array"))?;
-    let sig_power: f64 = data.iter().map(|&x| x * x).sum::<f64>() / data.len() as f64;
-    if sig_power <= 0.0 {
-        return Err(PyValueError::new_err("Signal power is zero"));
-    }
-    let noise_power = sig_power / 10.0f64.powf(snr_db / 10.0);
-    let noise_std = noise_power.sqrt();
-    let mut state = seed.unwrap_or(42);
-    let mut result = Vec::with_capacity(data.len());
-    for &s in data.iter() {
-        state ^= state << 13;
-        state ^= state >> 7;
-        state ^= state << 17;
-        let u1 = (state as f64) / (u64::MAX as f64);
-        state ^= state << 13;
-        state ^= state >> 7;
-        state ^= state << 17;
-        let u2 = (state as f64) / (u64::MAX as f64);
-        let u1_clamped = u1.max(1e-300);
-        let z = (-2.0 * u1_clamped.ln()).sqrt() * (2.0 * std::f64::consts::PI * u2).cos();
-        result.push(s + noise_std * z);
-    }
+    let result = kwavers_signal::add_noise(data, snr_db, seed)
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
     Ok(PyArray1::from_vec(py, result).into())
 }
 

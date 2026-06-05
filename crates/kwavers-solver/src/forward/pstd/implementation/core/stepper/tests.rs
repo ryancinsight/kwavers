@@ -1,9 +1,9 @@
 use super::super::orchestrator::PSTDSolver;
+use crate::forward::pstd::config::{AntiAliasingConfig, BoundaryConfig, PSTDConfig};
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_source::{GridSource, SourceMode};
-use crate::forward::pstd::config::{AntiAliasingConfig, BoundaryConfig, PSTDConfig};
 
 const CPML_REFERENCE_STEP2: f64 = 5.344_360e-1;
 const CPML_REFERENCE_STEP3: f64 = 1.127_856e-1;

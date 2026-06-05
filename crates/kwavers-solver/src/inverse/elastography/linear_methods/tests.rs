@@ -2,16 +2,17 @@
 
 use super::direct::direct_inversion;
 use super::directional::directional_phase_gradient_inversion;
+use super::lfe::local_frequency_estimation_inversion;
 use super::phase_gradient::{compute_phase_gradient_speed, phase_gradient_inversion};
 use super::time_of_flight::time_of_flight_inversion;
 use super::volumetric::volumetric_time_of_flight_inversion;
 use super::ShearWaveInversion;
+use crate::inverse::elastography::config::ShearWaveInversionConfig;
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_grid::Grid;
 use kwavers_imaging::ultrasound::elastography::InversionMethod;
 use kwavers_physics::acoustics::imaging::modalities::elastography::displacement::DisplacementField;
-use crate::inverse::elastography::config::ShearWaveInversionConfig;
 
 #[test]
 fn test_time_of_flight_inversion() {
@@ -79,6 +80,50 @@ fn test_direct_inversion_synthetic() {
 }
 
 #[test]
+fn test_local_frequency_estimation_recovers_known_speed() {
+    // Plane shear wave along X with a known speed cs = 1.0 m/s at 100 Hz.
+    // λ = cs/f = 10 mm = 10 cells (dx = 1 mm) → several wavelengths across the
+    // domain so the LFE averaging window resolves ⟨|∇u|²⟩/⟨u²⟩ → |k|².
+    let dx = 0.001;
+    let (nx, ny, nz) = (64, 8, 8);
+    let grid = Grid::new(nx, ny, nz, dx, dx, dx).unwrap();
+
+    let frequency = 100.0;
+    let cs_true = 1.0;
+    let k_wave = TWO_PI * frequency / cs_true;
+
+    let mut displacement = DisplacementField::zeros(nx, ny, nz);
+    for i in 0..nx {
+        let val = (k_wave * (i as f64 * dx)).cos();
+        for j in 0..ny {
+            for k in 0..nz {
+                displacement.uz[[i, j, k]] = val;
+            }
+        }
+    }
+
+    let map =
+        local_frequency_estimation_inversion(&displacement, &grid, 1000.0, frequency).unwrap();
+    assert_eq!(map.shear_wave_speed.dim(), (nx, ny, nz));
+
+    let center = map.shear_wave_speed[[nx / 2, ny / 2, nz / 2]];
+    // Value-semantic: recovered speed tracks the true 1.0 m/s (not the default
+    // fill nor the clamp rails at 0.5 / 20.0 m/s).
+    assert!(
+        (center - cs_true).abs() < 0.4,
+        "LFE center speed = {center} should recover cs_true = {cs_true} (±0.4)"
+    );
+
+    // Shear modulus μ = ρ cs² must be consistent with the recovered speed.
+    let mu = map.shear_modulus[[nx / 2, ny / 2, nz / 2]];
+    let mu_expected = 1000.0 * center * center;
+    assert!(
+        (mu - mu_expected).abs() / mu_expected < 1e-6,
+        "shear modulus {mu} must equal ρ·cs² = {mu_expected}"
+    );
+}
+
+#[test]
 fn test_all_inversion_methods() {
     let grid = Grid::new(20, 20, 20, 0.001, 0.001, 0.001).unwrap();
     let displacement = DisplacementField::zeros(20, 20, 20);
@@ -89,6 +134,7 @@ fn test_all_inversion_methods() {
         InversionMethod::DirectInversion,
         InversionMethod::VolumetricTimeOfFlight,
         InversionMethod::DirectionalPhaseGradient,
+        InversionMethod::LocalFrequencyEstimation,
     ] {
         let config = ShearWaveInversionConfig::new(method);
         let inversion = ShearWaveInversion::new(config);

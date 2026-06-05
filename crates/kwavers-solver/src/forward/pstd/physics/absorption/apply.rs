@@ -39,10 +39,10 @@
 //! - k-wave-python: `kspace_solver.py:613` — the canonical reference run by
 //!   the parity scripts.
 
-use kwavers_math::fft::Fft3dInOutExt;
-use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
-use kwavers_physics::acoustics::mechanics::absorption::AbsorptionMode;
 use crate::pstd::PSTDSolver;
+use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
+use kwavers_math::fft::Fft3dInOutExt;
+use kwavers_physics::acoustics::mechanics::absorption::AbsorptionMode;
 use ndarray::{s, Zip};
 
 impl PSTDSolver {

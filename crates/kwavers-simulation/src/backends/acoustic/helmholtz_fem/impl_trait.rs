@@ -1,9 +1,9 @@
 //! `FrequencyDomainAcousticBackend` implementation for FEM Helmholtz.
 
 use super::backend::FemHelmholtzBackend;
+use crate::backends::acoustic::backend::FrequencyDomainAcousticBackend;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_mesh::MeshBoundaryType;
-use crate::backends::acoustic::backend::FrequencyDomainAcousticBackend;
 use ndarray::{Array1, ArrayView2};
 use num_complex::Complex64;
 

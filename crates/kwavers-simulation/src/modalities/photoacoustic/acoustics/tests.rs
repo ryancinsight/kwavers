@@ -2,13 +2,13 @@
 
 use super::pressure::{compute_initial_pressure, compute_multi_wavelength_pressure};
 use super::propagation::propagate_acoustic_wave;
+use approx::assert_relative_eq;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_core::constants::numerical::MPA_TO_PA;
 use kwavers_core::constants::thermodynamic::GRUNEISEN_WATER_20C;
 use kwavers_grid::Grid;
 use kwavers_imaging::photoacoustic::InitialPressure;
 use kwavers_medium::homogeneous::HomogeneousMedium;
-use approx::assert_relative_eq;
 use ndarray::Array3;
 
 #[test]
@@ -23,10 +23,8 @@ fn test_initial_pressure_computation() {
     );
 
     let optical_properties =
-        crate::modalities::photoacoustic::optics::initialize_optical_properties(
-            &grid, &medium,
-        )
-        .unwrap();
+        crate::modalities::photoacoustic::optics::initialize_optical_properties(&grid, &medium)
+            .unwrap();
 
     let fluence = Array3::from_elem((16, 16, 8), 1e6);
 
@@ -60,10 +58,8 @@ fn test_wavelength_dependent_gruneisen() {
     );
 
     let optical_properties =
-        crate::modalities::photoacoustic::optics::initialize_optical_properties(
-            &grid, &medium,
-        )
-        .unwrap();
+        crate::modalities::photoacoustic::optics::initialize_optical_properties(&grid, &medium)
+            .unwrap();
 
     let fluence = Array3::from_elem((8, 8, 4), 1e6);
 
@@ -103,10 +99,8 @@ fn test_multi_wavelength_pressure() {
     );
 
     let optical_properties =
-        crate::modalities::photoacoustic::optics::initialize_optical_properties(
-            &grid, &medium,
-        )
-        .unwrap();
+        crate::modalities::photoacoustic::optics::initialize_optical_properties(&grid, &medium)
+            .unwrap();
 
     let fluence_fields = vec![
         Array3::from_elem((8, 8, 4), 1e6),

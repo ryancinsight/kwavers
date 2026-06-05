@@ -7,22 +7,16 @@ use ndarray::Array3;
 
 use kwavers_core::constants::fundamental::{BOLTZMANN, ELEMENTARY_CHARGE};
 
-use crate::optics::sonoluminescence::blackbody::{
-    calculate_blackbody_emission, BlackbodyModel,
-};
+use crate::optics::sonoluminescence::blackbody::{calculate_blackbody_emission, BlackbodyModel};
 use crate::optics::sonoluminescence::bremsstrahlung::{
     calculate_bremsstrahlung_emission, BremsstrahlungModel,
 };
-use crate::optics::sonoluminescence::cherenkov::{
-    calculate_cherenkov_emission, CherenkovModel,
-};
+use crate::optics::sonoluminescence::cherenkov::{calculate_cherenkov_emission, CherenkovModel};
 use crate::optics::sonoluminescence::spectral::{
     EmissionSpectrum, SpectralAnalyzer, SpectralRange,
 };
 
-use crate::optics::sonoluminescence::emission::spectrum::{
-    EmissionParameters, SpectralField,
-};
+use crate::optics::sonoluminescence::emission::spectrum::{EmissionParameters, SpectralField};
 
 /// Main sonoluminescence emission calculator
 #[derive(Debug)]

@@ -18,10 +18,10 @@
 
 use super::config::CloudBubble;
 use super::simulator::CloudDynamics;
+use crate::acoustics::imaging::modalities::ceus::microbubble::BubbleResponse;
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use kwavers_core::constants::numerical::{FOUR_PI, TWO_PI};
 use kwavers_core::error::KwaversResult;
-use crate::acoustics::imaging::modalities::ceus::microbubble::BubbleResponse;
 
 impl CloudDynamics {
     /// Handle bubble-bubble interactions (coalescence check)

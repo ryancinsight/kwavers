@@ -1,9 +1,7 @@
 use crate::therapy::therapy_integration::acoustic::AcousticWaveSolver;
 use crate::therapy::therapy_integration::config::TherapyIntegrationModality;
 use crate::therapy::therapy_integration::intensity_tracker::IntensityTracker;
-use crate::therapy::therapy_integration::safety_controller::{
-    SafetyController, TherapyAction,
-};
+use crate::therapy::therapy_integration::safety_controller::{SafetyController, TherapyAction};
 use crate::therapy::therapy_integration::state::{
     SafetyMetrics, TherapyIntegrationSafetyStatus, TherapySessionState,
 };

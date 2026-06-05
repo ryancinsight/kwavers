@@ -42,19 +42,19 @@ mod medium;
 
 use medium::GpuMediumSnapshot;
 
-use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_boundary::cpml::{CPMLConfig, CPMLProfiles};
-use kwavers_grid::Grid;
-use kwavers_medium::Medium;
-use kwavers_receiver::GridSensorSet;
-use kwavers_source::{GridSource, Source};
-use kwavers_physics::acoustics::mechanics::absorption::power_law_db_cm_to_np_omega_m;
-use kwavers_solver::config::SolverConfiguration;
-use kwavers_solver::feature::SolverFeature;
+use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_gpu::pstd_gpu::{
     AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays, SolverParams,
 };
+use kwavers_grid::Grid;
+use kwavers_medium::Medium;
+use kwavers_physics::acoustics::mechanics::absorption::power_law_db_cm_to_np_omega_m;
+use kwavers_receiver::GridSensorSet;
+use kwavers_solver::config::SolverConfiguration;
+use kwavers_solver::feature::SolverFeature;
 use kwavers_solver::interface::{Solver, SolverStatistics};
+use kwavers_source::{GridSource, Source};
 use ndarray::{Array2, Array3};
 use std::f64::consts::PI;
 use std::time::{Duration, Instant};

@@ -2,11 +2,11 @@
 
 use super::super::config::{BurnLossWeights2D, BurnPINN2DConfig};
 use super::wave_speed::WaveSpeedFn;
-use kwavers_core::error::{KwaversError, KwaversResult};
 use burn::module::{Ignored, Module};
 use burn::nn::{Linear, LinearConfig};
 use burn::tensor::backend::{AutodiffBackend, Backend};
 use burn::tensor::Tensor;
+use kwavers_core::error::{KwaversError, KwaversResult};
 use ndarray::{Array1, Array2};
 use std::sync::Arc;
 

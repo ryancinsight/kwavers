@@ -17,10 +17,10 @@ mod tests;
 
 pub use metrics::{compute_correlation, compute_mean_relative_error, compute_validation_metrics};
 
-use kwavers_core::error::{KwaversError, KwaversResult};
 use crate::inverse::pinn::ml::burn_wave_equation_1d::BurnPINN1DWave;
 use crate::inverse::pinn::ml::fdtd_reference::{FDTD1DWaveSolver, FDTDConfig};
 use burn::tensor::backend::AutodiffBackend;
+use kwavers_core::error::{KwaversError, KwaversResult};
 use ndarray::Array1;
 
 /// Standard validation metrics.

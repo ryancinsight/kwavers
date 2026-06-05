@@ -1,11 +1,11 @@
 //! Physics plugin implementation for hybrid solver
 
+use crate::hybrid::{HybridConfig, HybridSolver};
+use crate::plugin::{PluginMetadata, PluginState};
 use kwavers_core::error::KwaversResult;
 use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use crate::plugin::{PluginMetadata, PluginState};
-use crate::hybrid::{HybridConfig, HybridSolver};
 use ndarray::Array4;
 
 /// Hybrid solver plugin for integration with physics pipeline

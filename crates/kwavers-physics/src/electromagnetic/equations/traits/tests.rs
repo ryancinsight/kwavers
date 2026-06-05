@@ -1,7 +1,7 @@
 use super::super::materials::EMMaterialDistribution;
 use super::maxwell::ElectromagneticWaveEquation;
-use kwavers_field::EMFields;
 use crate::electromagnetic::equations::types::EMDimension;
+use kwavers_field::EMFields;
 
 // Mock implementation for testing traits
 struct MockEMSolver {

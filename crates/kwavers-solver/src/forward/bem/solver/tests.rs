@@ -1,6 +1,6 @@
 use super::*;
-use kwavers_mesh::tetrahedral::{MeshBoundaryType, TetrahedralMesh};
 use crate::forward::bem::field::BemSolution;
+use kwavers_mesh::tetrahedral::{MeshBoundaryType, TetrahedralMesh};
 use ndarray::Array1;
 use num_complex::Complex64;
 

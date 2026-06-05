@@ -28,13 +28,14 @@ pub use array_config::PyMultiRowRingArray;
 pub use dataset::{generate_breast_fwi_pstd_dataset, PyBreastFwiPstdDatasetConfig};
 pub use fwi_config::PyFrequencyDomainFwiConfig;
 pub use inversion::{
-    ali_2025_breast_fwi_frequency_sweep_hz, invert_breast_fwi, PyFrequencyObservation,
+    ali_2025_breast_fwi_frequency_sweep_hz, invert_breast_fwi,
     simulate_breast_fwi_frequency_observation, snap_breast_fwi_array_to_grid,
+    PyFrequencyObservation,
 };
 pub use phantom::load_ali_2025_breast_fwi_phantom;
 
-use pyo3::types::PyModule;
 use pyo3::prelude::*;
+use pyo3::types::PyModule;
 
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyMultiRowRingArray>()?;

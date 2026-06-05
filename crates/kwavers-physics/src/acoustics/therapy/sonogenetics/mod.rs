@@ -81,6 +81,7 @@ pub mod arf_field;
 pub mod channels;
 pub mod membrane;
 pub mod neuron;
+pub mod pipeline;
 
 pub use arf_field::VolumetricArfField;
 pub use channels::{
@@ -88,4 +89,9 @@ pub use channels::{
     BoltzmannGatingParams, GatingModel, MechanoChannel, PressureThresholdParams,
 };
 pub use membrane::{compute_membrane_tension, compute_radiation_pressure, CellMembraneParams};
-pub use neuron::{LifNeuron, LifParams};
+pub use neuron::{yoo_thermal_neural_response, LifNeuron, LifParams, ThermalNeuralParams};
+pub use pipeline::{
+    boltzmann_open_probability_from_tension_mn_m, coupled_channel_drive,
+    gaussian_beam_pressure_field, pressure_to_membrane_tension_mn_m, simulate_lif_trace,
+    GaussianBeamPressureField, LifTrace,
+};

@@ -361,8 +361,6 @@ from ._pykwavers import (
     minnaert_resonance_hz,
     blake_threshold_pa,
     rayleigh_collapse_time_s,
-    rayleigh_plesset_rk4,
-    keller_miksis_rk4,
     bubble_power_spectrum,
     bubble_acoustic_emission_pressure,
     hann_windowed_power_spectrum,
@@ -435,9 +433,12 @@ from ._pykwavers import (
     voigt_complex_modulus,
     springpot_complex_modulus,
     # ── Bubble dynamics (Keller–Miksis / CEM43) ──────────────────────────────
+    solve_rayleigh_plesset,
     solve_keller_miksis,
     compute_cem43,
     cem43_at_temperatures,
+    compute_arrhenius_damage,
+    solve_hodgkin_huxley_like,
     # ── Thermal: Beer-Lambert depth profiles + 3-D heat-source density ──────────
     adiabatic_temperature_rise_kelvin,
     gaussian_power_deposition_2d,
@@ -665,8 +666,6 @@ __all__ = [
     "minnaert_resonance_hz",
     "blake_threshold_pa",
     "rayleigh_collapse_time_s",
-    "rayleigh_plesset_rk4",
-    "keller_miksis_rk4",
     "bubble_power_spectrum",
     "bubble_acoustic_emission_pressure",
     "hann_windowed_power_spectrum",
@@ -739,9 +738,12 @@ __all__ = [
     "voigt_complex_modulus",
     "springpot_complex_modulus",
     # ── Bubble dynamics (Keller–Miksis / CEM43) ──────────────────────────────
+    "solve_rayleigh_plesset",
     "solve_keller_miksis",
     "compute_cem43",
     "cem43_at_temperatures",
+    "compute_arrhenius_damage",
+    "solve_hodgkin_huxley_like",
     # ── Thermal: Beer-Lambert depth profiles + 3-D heat-source density ──────────
     "adiabatic_temperature_rise_kelvin",
     "gaussian_power_deposition_2d",

@@ -9,9 +9,9 @@
 //! voxel value is always one of the registered input measurements.
 
 use super::MultiModalFusion;
-use kwavers_core::error::KwaversResult;
 use crate::acoustics::imaging::fusion::registration::generate_coordinate_arrays;
 use crate::acoustics::imaging::fusion::types::FusedImageResult;
+use kwavers_core::error::KwaversResult;
 use ndarray::Array3;
 use std::collections::HashMap;
 

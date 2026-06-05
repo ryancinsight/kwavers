@@ -1,7 +1,7 @@
 //! Staggered-grid velocity divergence computation.
 
-use kwavers_core::error::KwaversResult;
 use crate::geometry::SolverGeometry;
+use kwavers_core::error::KwaversResult;
 use ndarray::{s, Zip};
 
 use super::super::solver::FdtdSolver;

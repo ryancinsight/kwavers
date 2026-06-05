@@ -4,9 +4,9 @@
 //! heap allocations in the main simulation loop.
 
 use super::spectral::KuznetsovSpectralOperator;
+use crate::workspace::ScratchArena;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use crate::workspace::ScratchArena;
 use ndarray::Array3;
 
 /// Comprehensive workspace for Kuznetsov equation solver
@@ -155,8 +155,8 @@ impl KuznetsovWorkspace {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kwavers_grid::Grid;
     use crate::workspace::ScratchArena;
+    use kwavers_grid::Grid;
 
     /// Workspace must allocate exactly 18 Array3<f64> buffers.
     ///

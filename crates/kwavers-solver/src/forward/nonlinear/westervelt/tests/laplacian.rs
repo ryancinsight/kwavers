@@ -1,10 +1,10 @@
 //! Laplacian stencil accuracy and spatial-order validation tests.
 
+use crate::forward::nonlinear::westervelt::{WesterveltFdtd, WesterveltFdtdConfig};
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
+use kwavers_core::error::KwaversError;
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
-use crate::forward::nonlinear::westervelt::{WesterveltFdtd, WesterveltFdtdConfig};
-use kwavers_core::error::KwaversError;
 
 fn assert_quadratic_laplacian_exact(spatial_order: usize, radius: usize) {
     let grid = Grid::new(12, 12, 12, 0.2, 0.3, 0.4).unwrap();

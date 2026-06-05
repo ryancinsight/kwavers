@@ -1,12 +1,12 @@
 //! Mixed-Domain Propagation Plugin
 //! Based on Pinton et al. (2009): "A heterogeneous nonlinear attenuating full-wave model"
 
+use crate::plugin::{PluginMetadata, PluginState};
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use kwavers_medium::Medium;
-use crate::plugin::{PluginMetadata, PluginState};
 use kwavers_math::fft::{Fft3dInOutExt, Shape3D, FFT_CACHE_3D};
+use kwavers_medium::Medium;
 use ndarray::{Array3, Zip};
 use num_complex::Complex64;
 
@@ -168,8 +168,7 @@ impl MixedDomainPropagationPlugin {
     ) -> KwaversResult<Array3<Complex64>> {
         // Apply spectral propagator exp(ikz * dz) in frequency domain
         let mut result = field.clone();
-        let k = TWO_PI
-            / (kwavers_medium::sound_speed_at(medium, 0.0, 0.0, 0.0, grid) * time_step);
+        let k = TWO_PI / (kwavers_medium::sound_speed_at(medium, 0.0, 0.0, 0.0, grid) * time_step);
 
         Zip::from(&mut result).and(field).par_for_each(|r, &f| {
             *r = f * Complex64::from_polar(1.0, k * grid.dx);

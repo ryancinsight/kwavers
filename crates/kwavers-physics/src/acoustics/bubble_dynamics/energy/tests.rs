@@ -1,9 +1,9 @@
 //! Tests for energy balance calculator
 
 use super::*;
-use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use crate::acoustics::bubble_dynamics::bubble_state::BubbleState;
 use crate::acoustics::bubble_dynamics::BubbleParameters;
+use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use uom::si::f64::{Power, Pressure};
 use uom::si::power::watt;
 use uom::si::pressure::pascal;

@@ -21,8 +21,8 @@ mod tests {
     type TestBackend = burn::backend::Autodiff<burn::backend::NdArray<f32>>;
 
     // We need to bring variants into scope or use full path
-    use kwavers_core::constants::fundamental::{VACUUM_PERMEABILITY, VACUUM_PERMITTIVITY};
     use crate::inverse::pinn::ml::physics::BoundaryPosition;
+    use kwavers_core::constants::fundamental::{VACUUM_PERMEABILITY, VACUUM_PERMITTIVITY};
 
     #[test]
     fn test_electromagnetic_domain_creation() {

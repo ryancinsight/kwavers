@@ -48,6 +48,22 @@ use super::keller_miksis::KellerMiksisModel;
 use super::symplectic_integration::{BubbleSymplecticIntegrator, SymplecticConfig};
 use kwavers_core::error::{KwaversError, KwaversResult, PhysicsError};
 
+/// Classical RK4 weighted combine `y₀ + (dt/6)·(k₁ + 2k₂ + 2k₃ + k₄)`.
+///
+/// Single source of truth for the fourth-order Butcher weights used by every
+/// explicit RK4 bubble integrator (`Gilmore::step_rk4`, the adaptive
+/// Keller–Miksis stepper, and the per-voxel sonoluminescence integrator). Those
+/// integrators legitimately differ in their per-stage hooks (pure vs
+/// state-mutating acceleration, per-stage `dp_dt`, inter-stage thermodynamic
+/// updates, radius clamping), so only this final combine — identical and
+/// `fma`-fused in all three — is shared, guaranteeing the tableau coefficients
+/// cannot silently diverge between models.
+#[inline]
+#[must_use]
+pub(crate) fn rk4_weighted_sum(y0: f64, k1: f64, k2: f64, k3: f64, k4: f64, dt: f64) -> f64 {
+    (dt / 6.0).mul_add(2.0f64.mul_add(k3, 2.0f64.mul_add(k2, k1)) + k4, y0)
+}
+
 /// Integrate bubble dynamics using the Störmer-Verlet symplectic integrator.
 ///
 /// ## Algorithm

@@ -1,12 +1,12 @@
 //! `AcousticWaveModel` trait implementation and conservation law checking.
 
 use super::wave::KuznetsovWave;
+use crate::forward::nonlinear::conservation::{ConservationDiagnostics, ViolationSeverity};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use kwavers_source::Source;
 use kwavers_physics::traits::AcousticWaveModel;
-use crate::forward::nonlinear::conservation::{ConservationDiagnostics, ViolationSeverity};
+use kwavers_source::Source;
 use ndarray::{Array3, Array4, Zip};
 use tracing::{error, info, warn};
 

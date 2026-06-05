@@ -14,8 +14,8 @@ mod tests;
 mod therapy_delivery;
 
 pub use dynamics::{
-    blake_threshold_pa, keller_miksis_rk4, minnaert_resonance_hz, rayleigh_collapse_time_s,
-    rayleigh_plesset_rk4,
+    blake_threshold_pa, keller_miksis_rk4, keller_miksis_shelled_rk4, minnaert_resonance_hz,
+    rayleigh_collapse_time_s, rayleigh_plesset_rk4,
 };
 pub use histotripsy::{
     cumulative_cavitation_probability, frequency_dependent_intrinsic_threshold_pa,

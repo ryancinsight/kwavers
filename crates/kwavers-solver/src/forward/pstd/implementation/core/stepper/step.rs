@@ -1,10 +1,10 @@
 //! PSTD time-stepping kernel: `step_forward` and k-space variant.
 
 use super::super::orchestrator::PSTDSolver;
-use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_source::{SourceField, SourceInjectionMode};
 use crate::forward::pstd::config::KSpaceMethod;
 use crate::forward::pstd::implementation::k_space::PSTDKSOperators;
+use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_source::{SourceField, SourceInjectionMode};
 use ndarray::{Array3, Zip};
 use tracing::{enabled, trace, warn, Level};
 

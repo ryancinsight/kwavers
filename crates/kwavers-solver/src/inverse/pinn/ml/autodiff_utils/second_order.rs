@@ -141,7 +141,10 @@ where
 pub fn compute_gradient_of_divergence_2d<B, F>(
     forward_fn: F,
     input: &Tensor<B, 2>,
-) -> Result<(Tensor<B::InnerBackend, 2>, Tensor<B::InnerBackend, 2>), kwavers_core::error::KwaversError>
+) -> Result<
+    (Tensor<B::InnerBackend, 2>, Tensor<B::InnerBackend, 2>),
+    kwavers_core::error::KwaversError,
+>
 where
     B: AutodiffBackend,
     F: Fn(Tensor<B, 2>) -> Tensor<B, 2> + Clone,

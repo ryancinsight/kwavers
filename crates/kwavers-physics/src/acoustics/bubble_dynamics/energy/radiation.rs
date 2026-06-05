@@ -4,10 +4,10 @@ use uom::si::f64::Power;
 use uom::si::power::watt;
 use uom::si::thermodynamic_temperature::kelvin;
 
-use kwavers_core::constants::fundamental::STEFAN_BOLTZMANN;
-use kwavers_core::constants::numerical::FOUR_PI;
 use crate::acoustics::bubble_dynamics::bubble_state::BubbleState;
 use crate::acoustics::bubble_dynamics::energy::EnergyBalanceCalculator;
+use kwavers_core::constants::fundamental::STEFAN_BOLTZMANN;
+use kwavers_core::constants::numerical::FOUR_PI;
 
 impl EnergyBalanceCalculator {
     /// Calculate Stefan-Boltzmann radiation losses

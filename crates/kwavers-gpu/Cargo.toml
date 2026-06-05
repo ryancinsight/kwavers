@@ -61,3 +61,5 @@ pinn = ["gpu", "dep:burn"]
 
 [dev-dependencies]
 kwavers-solver = { path = "../kwavers-solver", features = ["test-util"] }
+approx = "0.5"
+tokio = { version = "1.42", features = ["rt-multi-thread", "macros"] }

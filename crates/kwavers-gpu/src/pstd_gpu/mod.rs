@@ -98,6 +98,12 @@ pub(super) struct PstdParams {
 ///
 /// Keeps all field data on the GPU throughout the time loop; sensor readings
 /// are downloaded in a single transfer after all time steps complete.
+// Several `buf_*` fields are owned `wgpu::Buffer` resources bound into the
+// pipeline bind groups at construction and driven entirely by GPU dispatch;
+// they are never re-read through `self.<field>` on the Rust side, so the
+// `dead_code` lint flags them even though they are load-bearing (the struct
+// must own them for the bind groups to stay valid for the solver's lifetime).
+#[allow(dead_code)]
 pub struct GpuPstdSolver {
     // Note: Manual Debug impl because wgpu types don't implement Debug.
     pub(super) device: Arc<wgpu::Device>,

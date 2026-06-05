@@ -1,11 +1,9 @@
 //! `RealtimeSimulationOrchestrator`: realtime-budgeted GPU multiphysics loop.
 
+use crate::backend::performance_monitor::{BudgetAnalysis, GpuPerformanceMonitor, GpuStepMetrics};
+use crate::backend::physics_kernels::PhysicsKernelRegistry;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
-use crate::backend::performance_monitor::{
-    BudgetAnalysis, GpuPerformanceMonitor, GpuStepMetrics,
-};
-use crate::backend::physics_kernels::PhysicsKernelRegistry;
 use log::debug;
 use ndarray::Array3;
 use std::collections::HashMap;
@@ -108,6 +106,12 @@ impl RealtimeSimulationOrchestrator {
         })
     }
 
+    /// Number of time steps advanced so far.
+    #[must_use]
+    pub fn step_count(&self) -> u64 {
+        self.step_count
+    }
+
     /// Run full simulation loop.
     ///
     /// # Errors
@@ -173,7 +177,7 @@ impl RealtimeSimulationOrchestrator {
     }
 
     /// Adjust timestep for CFL stability and end-time constraint.
-    fn adjust_timestep(&self, current_dt: f64, _t: f64, t_end: f64) -> f64 {
+    pub(crate) fn adjust_timestep(&self, current_dt: f64, _t: f64, t_end: f64) -> f64 {
         let max_dt = (t_end - _t).max(current_dt);
         let safe_dt = current_dt * self.config.cfl_safety_factor;
         safe_dt.min(max_dt)

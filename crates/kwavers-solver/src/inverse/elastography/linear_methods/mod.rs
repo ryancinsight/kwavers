@@ -50,6 +50,7 @@
 
 mod direct;
 mod directional;
+mod lfe;
 mod phase_gradient;
 mod time_of_flight;
 mod volumetric;
@@ -59,6 +60,7 @@ mod tests;
 
 use direct::direct_inversion;
 use directional::directional_phase_gradient_inversion;
+use lfe::local_frequency_estimation_inversion;
 use phase_gradient::phase_gradient_inversion;
 use time_of_flight::time_of_flight_inversion;
 use volumetric::volumetric_time_of_flight_inversion;
@@ -139,6 +141,12 @@ impl ShearWaveInversion {
                 self.config.frequency,
             ),
             InversionMethod::DirectionalPhaseGradient => directional_phase_gradient_inversion(
+                displacement,
+                grid,
+                self.config.density,
+                self.config.frequency,
+            ),
+            InversionMethod::LocalFrequencyEstimation => local_frequency_estimation_inversion(
                 displacement,
                 grid,
                 self.config.density,

@@ -3,13 +3,13 @@
 //! Replaces legacy factory system. Orchestrates the creation of simulation components
 //! from configuration (SSOT).
 
+use crate::configuration::Configuration;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::{Medium, MediumBuilder};
 use kwavers_receiver::GridSensorSet;
 use kwavers_source::Source;
 use kwavers_transducer::SourceFactory;
-use crate::configuration::Configuration;
 use std::sync::Arc;
 
 /// Container for simulation components

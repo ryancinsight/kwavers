@@ -7,7 +7,6 @@ mod data_gen;
 mod tensors;
 mod training;
 
-use kwavers_core::error::KwaversResult;
 use crate::inverse::pinn::ml::burn_wave_equation_2d::{BurnPINN2DConfig, BurnPINN2DWave};
 use crate::inverse::pinn::ml::meta_learning::config::MetaLearningConfig;
 use crate::inverse::pinn::ml::meta_learning::metrics::MetaLearningStats;
@@ -16,6 +15,7 @@ use crate::inverse::pinn::ml::meta_learning::sampling::{
     MetaLearningSamplingStrategy, TaskSampler,
 };
 use burn::tensor::backend::AutodiffBackend;
+use kwavers_core::error::KwaversResult;
 
 #[derive(Debug)]
 pub struct MetaLearner<B: AutodiffBackend> {

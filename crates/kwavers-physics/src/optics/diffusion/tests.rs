@@ -64,9 +64,9 @@ fn uniform_fluence_decays_at_rate_c_mu_a() {
     // The factor of c (≈ 2.14×10⁸ m/s in tissue) is required for
     // dimensional consistency: without it the predicted decay would be
     // ~9 orders of magnitude too slow.
+    use crate::acoustics::traits::LightDiffusionModelTrait;
     use kwavers_core::constants::fundamental::SPEED_OF_LIGHT;
     use kwavers_field::indices::LIGHT_IDX;
-    use crate::acoustics::traits::LightDiffusionModelTrait;
     use ndarray::Array4;
 
     let grid = kwavers_grid::Grid::new(8, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();

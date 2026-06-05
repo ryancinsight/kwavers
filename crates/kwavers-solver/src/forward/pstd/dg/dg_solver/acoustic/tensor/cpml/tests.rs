@@ -1,13 +1,13 @@
 //! Value-semantic regression tests for the DG-CPML tensor acoustic stepper.
 
 use super::super::{AcousticDgTensorWorkspace, ACOUSTIC_PRESSURE_VAR, ACOUSTIC_VELOCITY_X_VAR};
-use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
-use kwavers_grid::Grid;
 use crate::forward::pstd::dg::cpml::{
     DgCpmlAxis, DgCpmlConfig, DgCpmlMemoryWorkspace, DgCpmlProfiles,
 };
 use crate::forward::pstd::dg::dg_solver::core::DGSolver;
 use crate::forward::pstd::dg::DGConfig;
+use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
+use kwavers_grid::Grid;
 use ndarray::Array3;
 use std::sync::Arc;
 

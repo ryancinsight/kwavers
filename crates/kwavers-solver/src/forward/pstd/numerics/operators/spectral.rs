@@ -9,8 +9,8 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use kwavers_medium::Medium;
 use kwavers_math::fft::KSpaceCalculator;
+use kwavers_medium::Medium;
 use ndarray::Array3;
 
 use crate::forward::pstd::config::PSTDConfig;

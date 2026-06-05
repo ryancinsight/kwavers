@@ -63,8 +63,8 @@ pub fn spectral_velocity_scale_from_source_kappa(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
     use approx::assert_abs_diff_eq;
+    use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
     use ndarray::Array3;
     use std::f64::consts::FRAC_PI_4;
 

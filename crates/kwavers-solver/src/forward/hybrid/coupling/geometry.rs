@@ -1,8 +1,8 @@
 //! Interface geometry for domain coupling
 
+use crate::forward::hybrid::domain_decomposition::DomainRegion;
 use kwavers_core::error::{KwaversResult, ValidationError};
 use kwavers_grid::Grid;
-use crate::forward::hybrid::domain_decomposition::DomainRegion;
 use serde::{Deserialize, Serialize};
 
 /// Interface geometry description

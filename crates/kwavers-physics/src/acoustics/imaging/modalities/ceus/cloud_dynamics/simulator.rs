@@ -4,12 +4,10 @@
 
 use super::config::{CloudBubble, CloudConfig};
 use super::incident_field::{CloudResponse, CloudState, IncidentField};
+use crate::acoustics::imaging::modalities::ceus::microbubble::{BubbleDynamics, Microbubble};
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use crate::acoustics::imaging::modalities::ceus::microbubble::{
-    BubbleDynamics, Microbubble,
-};
 use log::{debug, info};
 
 /// Microbubble cloud dynamics simulator

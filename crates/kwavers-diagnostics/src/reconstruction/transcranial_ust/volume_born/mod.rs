@@ -6,10 +6,10 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_math::statistics::{normalized_rmse, pearson, percentile_range};
-use kwavers_transducer::transducers::TransducerGeometry;
 use kwavers_solver::inverse::linear_born_inversion::{
     high_pass_enhance_volume, pcg_invert, VolumeOperator, VolumeVoxel,
 };
+use kwavers_transducer::transducers::TransducerGeometry;
 use ndarray::Array3;
 
 use super::{

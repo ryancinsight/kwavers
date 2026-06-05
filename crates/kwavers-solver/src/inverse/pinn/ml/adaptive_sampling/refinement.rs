@@ -1,6 +1,6 @@
 use super::{AdaptiveCollocationSampler, HighResidualRegion};
-use kwavers_core::error::KwaversResult;
 use burn::tensor::{backend::AutodiffBackend, Tensor};
+use kwavers_core::error::KwaversResult;
 use rand::Rng;
 
 impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {

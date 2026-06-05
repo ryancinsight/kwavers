@@ -535,9 +535,7 @@ fn validate_sonoluminescence_spectral_analysis() {
     // Test complete sonoluminescence spectral analysis
     // Theorem: Broadband emission from multiple mechanisms
 
-    use kwavers_physics::optics::sonoluminescence::{
-        EmissionParameters, SonoluminescenceEmission,
-    };
+    use kwavers_physics::optics::sonoluminescence::{EmissionParameters, SonoluminescenceEmission};
     use ndarray::Array3;
 
     // Create test fields
@@ -599,9 +597,7 @@ fn validate_acoustic_to_optic_energy_conversion() {
     // Theorem: Ultrasound energy → bubble oscillation → plasma formation → light emission
 
     use kwavers_physics::bubble_dynamics::BubbleParameters;
-    use kwavers_physics::optics::sonoluminescence::{
-        EmissionParameters, SonoluminescenceEmission,
-    };
+    use kwavers_physics::optics::sonoluminescence::{EmissionParameters, SonoluminescenceEmission};
     use ndarray::Array3;
 
     // Step 1: Ultrasound excitation (acoustic energy input)
@@ -674,9 +670,7 @@ fn validate_interdisciplinary_coupling_efficiency() {
     // Theorem: Energy conversion efficiency η = E_light/E_acoustic
 
     use kwavers_physics::bubble_dynamics::BubbleParameters;
-    use kwavers_physics::optics::sonoluminescence::{
-        EmissionParameters, SonoluminescenceEmission,
-    };
+    use kwavers_physics::optics::sonoluminescence::{EmissionParameters, SonoluminescenceEmission};
     use ndarray::Array3;
 
     // Acoustic input energy (simplified)
@@ -802,9 +796,7 @@ fn validate_multi_modal_fusion_ultrasound_optical() {
     use kwavers_physics::acoustics::imaging::fusion::{
         FusionConfig, ImagingFusionMethod, MultiModalFusion, RegistrationMethod,
     };
-    use kwavers_physics::optics::sonoluminescence::{
-        EmissionParameters, SonoluminescenceEmission,
-    };
+    use kwavers_physics::optics::sonoluminescence::{EmissionParameters, SonoluminescenceEmission};
     use ndarray::Array3;
     use std::collections::HashMap;
 

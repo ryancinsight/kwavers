@@ -115,18 +115,12 @@ impl PmlConfig {
 ///
 /// Controls the wavenumber derivation for Helmholtz/BEM solvers, decoupling
 /// the frequency-domain solve from the time step `dt`.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct HelmholtzConfig {
     /// Source frequency [Hz] for wavenumber derivation.
     /// `k = 2π · frequency / cₘₐₓ`.
     /// When `None`, falls back to `k = 2π / (cₘₐₓ · dt)`.
     pub frequency: Option<f64>,
-}
-
-impl Default for HelmholtzConfig {
-    fn default() -> Self {
-        Self { frequency: None }
-    }
 }
 
 impl HelmholtzConfig {

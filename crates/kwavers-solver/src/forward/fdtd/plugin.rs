@@ -4,11 +4,11 @@ use ndarray::Array4;
 use std::fmt::Debug;
 
 use super::{FdtdConfig, FdtdSolver};
+use crate::plugin::{PluginContext, PluginMetadata, PluginState};
 use kwavers_core::error::{KwaversError, KwaversResult, PhysicsError};
 use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use crate::plugin::{PluginContext, PluginMetadata, PluginState};
 use kwavers_source::GridSource;
 
 /// FDTD solver plugin

@@ -3,8 +3,8 @@
 #[cfg(test)]
 mod tests {
     use super::super::super::*;
-    use kwavers_core::constants::numerical::MHZ_TO_HZ;
     use crate::forward::nonlinear::kzk::constants::*;
+    use kwavers_core::constants::numerical::MHZ_TO_HZ;
     use ndarray::Array2;
     use std::f64::consts::PI;
 

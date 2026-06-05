@@ -8,8 +8,8 @@
 
 #![cfg(feature = "gpu")]
 
-use kwavers_grid::Grid;
 use kwavers_gpu::gpu::compute_kernels::{AcousticFieldKernel, WaveEquationGpu};
+use kwavers_grid::Grid;
 use ndarray::Array3;
 
 /// Create a test grid for acoustic simulations

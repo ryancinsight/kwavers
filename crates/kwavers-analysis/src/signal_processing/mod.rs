@@ -162,12 +162,16 @@
 
 pub mod beamforming;
 pub mod doppler;
-pub mod ulm;
-pub mod vasculature;
-pub mod spectroscopy;
 pub mod filtering;
 pub mod localization;
 pub mod pam;
+pub mod spectroscopy;
+pub mod ulm;
+pub mod vasculature;
+
+// Cramér–Rao lower bounds for displacement / strain / shear-speed estimators
+// Based on: Walker & Trahey (1995), Céspedes et al. (1995)
+pub mod estimation_bounds;
 
 // Clutter filtering for Doppler and functional ultrasound
 // Based on: Demené et al. (2015), Nouhoum et al. (2021)

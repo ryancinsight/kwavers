@@ -1,7 +1,7 @@
 use super::readonly::PluginFieldAccess;
+use crate::acoustics::state::PhysicsState;
 use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;
-use crate::acoustics::state::PhysicsState;
 
 #[test]
 fn test_plugin_field_access() {

@@ -157,8 +157,8 @@ mod tests {
     use super::*;
     use burn::backend::{Autodiff, NdArray};
 
-    use kwavers_core::error::{KwaversError, KwaversResult, SystemError, ValidationError};
     use crate::inverse::pinn::ml::burn_wave_equation_3d::config::BurnPINN3DConfig;
+    use kwavers_core::error::{KwaversError, KwaversResult, SystemError, ValidationError};
 
     type TestBackend = Autodiff<NdArray>;
 

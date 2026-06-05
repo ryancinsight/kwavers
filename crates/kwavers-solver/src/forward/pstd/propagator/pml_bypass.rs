@@ -1,7 +1,7 @@
 //! Reusable x-plane preservation for Dirichlet-PML bypass rows.
 
-use kwavers_core::error::{KwaversError, KwaversResult};
 use crate::forward::pstd::implementation::core::orchestrator::PSTDSolver;
+use kwavers_core::error::{KwaversError, KwaversResult};
 use ndarray::{s, Array3, ArrayViewMut3};
 
 impl PSTDSolver {

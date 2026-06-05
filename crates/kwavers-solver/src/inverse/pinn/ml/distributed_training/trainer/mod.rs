@@ -6,11 +6,11 @@ use super::{
     CheckpointManager, DistributedPinnTrainer, DistributedTrainingConfig, PerformanceStats,
     TrainingCheckpoint, TrainingCoordinator, TrainingState,
 };
-use kwavers_core::error::KwaversResult;
 use crate::inverse::pinn::ml::{
     BurnPINN2DConfig, BurnPINN2DWave, BurnTrainingMetrics2D, BurnWave2dGeometry,
 };
 use burn::tensor::backend::AutodiffBackend;
+use kwavers_core::error::KwaversResult;
 use log::info;
 
 impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
@@ -23,11 +23,10 @@ impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
         base_config: BurnPINN2DConfig,
         _geometry: BurnWave2dGeometry,
     ) -> KwaversResult<Self> {
-        let decomposition =
-            crate::inverse::pinn::ml::MultiGpuDecompositionStrategy::Spatial {
-                dimensions: 2,
-                overlap: 0.05,
-            };
+        let decomposition = crate::inverse::pinn::ml::MultiGpuDecompositionStrategy::Spatial {
+            dimensions: 2,
+            overlap: 0.05,
+        };
         let load_balancer = crate::inverse::pinn::ml::LoadBalancingAlgorithm::Dynamic {
             imbalance_threshold: 0.1,
             migration_interval: 30.0,
@@ -35,11 +34,8 @@ impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
 
         let multi_gpu_manager = if config.num_gpus > 1 {
             Some(
-                crate::inverse::pinn::ml::MultiGpuManager::new(
-                    decomposition,
-                    load_balancer,
-                )
-                .await?,
+                crate::inverse::pinn::ml::MultiGpuManager::new(decomposition, load_balancer)
+                    .await?,
             )
         } else {
             None

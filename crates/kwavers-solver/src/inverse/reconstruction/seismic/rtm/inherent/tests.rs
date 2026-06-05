@@ -7,12 +7,12 @@
 mod tests {
     use ndarray::{s, Array2, Array3, Array4};
 
-    use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
-    use kwavers_grid::Grid;
     use crate::inverse::reconstruction::seismic::config::{
         RtmImagingCondition, SeismicImagingConfig,
     };
     use crate::inverse::reconstruction::seismic::rtm::ReverseTimeMigration;
+    use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use kwavers_grid::Grid;
 
     fn rtm_with_condition(condition: RtmImagingCondition) -> ReverseTimeMigration {
         let mut config = SeismicImagingConfig::default();

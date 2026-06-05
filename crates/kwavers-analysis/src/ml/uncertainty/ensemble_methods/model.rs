@@ -1,6 +1,6 @@
-use kwavers_core::error::KwaversResult;
 #[cfg(feature = "pinn")]
 use burn::tensor::backend::Backend;
+use kwavers_core::error::KwaversResult;
 #[cfg(not(feature = "pinn"))]
 use ndarray::Array2;
 #[cfg(feature = "pinn")]

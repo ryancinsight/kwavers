@@ -3,11 +3,11 @@
 //! This module implements reconstruction algorithms for planar sensor arrays,
 //! commonly used in photoacoustic and ultrasound imaging.
 
-use kwavers_core::error::KwaversResult;
-use kwavers_grid::Grid;
 use crate::reconstruction::{
     ReconstructionConfig, Reconstructor, UniversalBackProjection, WeightFunction,
 };
+use kwavers_core::error::KwaversResult;
+use kwavers_grid::Grid;
 use ndarray::{Array2, Array3};
 
 /// Planar array reconstruction

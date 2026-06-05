@@ -1,12 +1,10 @@
 //! Energy conservation, absorption decay, and diagnostics check-interval tests.
 
+use crate::forward::nonlinear::conservation::{ConservationDiagnostics, ConservationTolerances};
+use crate::forward::nonlinear::westervelt::{WesterveltFdtd, WesterveltFdtdConfig};
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
-use crate::forward::nonlinear::conservation::{
-    ConservationDiagnostics, ConservationTolerances,
-};
-use crate::forward::nonlinear::westervelt::{WesterveltFdtd, WesterveltFdtdConfig};
 
 #[test]
 fn test_energy_calculation_accuracy() {

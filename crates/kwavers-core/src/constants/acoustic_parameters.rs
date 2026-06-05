@@ -89,10 +89,14 @@ pub const MIN_ACOUSTIC_TIME_STEP: f64 = 1e-10;
 
 // MAX_TIME_STEP moved to numerical.rs to avoid duplication
 
-/// Rayleigh collapse time coefficient
-/// Value: 0.915
-/// Reference: Rayleigh (1917). "On the pressure developed in a liquid"
-pub const RAYLEIGH_COLLAPSE_COEFFICIENT: f64 = 0.915;
+/// Rayleigh collapse time coefficient.
+///
+/// Value: 0.9147 — the exact prefactor `√(3π/2)·Γ(7/6)/Γ(5/3) ≈ 0.914681` of the
+/// Rayleigh collapse time `t_c = 0.9147·R_max·√(ρ/Δp)` (Rayleigh 1917). This is the
+/// single source of truth used by `analytical::cavitation::rayleigh_collapse_time_s`.
+/// Reference: Rayleigh (1917). "On the pressure developed in a liquid during the
+/// collapse of a spherical cavity", Phil. Mag. 34:94.
+pub const RAYLEIGH_COLLAPSE_COEFFICIENT: f64 = 0.9147;
 
 /// Air specific heat at constant pressure (J/(kg·K))
 /// Value: 1005
@@ -116,8 +120,7 @@ pub const AIR_THERMAL_CONDUCTIVITY: f64 = 0.0257;
 ///
 /// γ = Cp/Cv = 7/5 = 1.4 for diatomic ideal gases (Air, N₂, O₂) at ambient conditions.
 /// SSOT: delegates to `HEAT_CAPACITY_RATIO_DIATOMIC` in `thermodynamic` constants.
-pub const AIR_POLYTROPIC_INDEX: f64 =
-    crate::constants::thermodynamic::HEAT_CAPACITY_RATIO_DIATOMIC;
+pub const AIR_POLYTROPIC_INDEX: f64 = crate::constants::thermodynamic::HEAT_CAPACITY_RATIO_DIATOMIC;
 
 /// Classical acoustic absorption coefficient for air (m·s²).
 ///

@@ -2,10 +2,10 @@
 
 use super::super::core::PhotoacousticSimulator;
 use super::super::reconstruction;
+use approx::assert_relative_eq;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_grid::Grid;
 use kwavers_medium::homogeneous::HomogeneousMedium;
-use approx::assert_relative_eq;
 use ndarray::Array3;
 
 #[test]

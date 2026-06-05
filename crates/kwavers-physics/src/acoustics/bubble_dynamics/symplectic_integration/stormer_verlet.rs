@@ -1,8 +1,8 @@
 //! Single Störmer-Verlet step (2nd-order symplectic) for bubble wall mechanics.
 
-use kwavers_core::error::{KwaversError, KwaversResult, PhysicsError};
 use crate::acoustics::bubble_dynamics::bubble_state::BubbleState;
 use crate::acoustics::bubble_dynamics::keller_miksis::KellerMiksisModel;
+use kwavers_core::error::{KwaversError, KwaversResult, PhysicsError};
 
 /// Single Störmer-Verlet step for bubble wall mechanics.
 ///

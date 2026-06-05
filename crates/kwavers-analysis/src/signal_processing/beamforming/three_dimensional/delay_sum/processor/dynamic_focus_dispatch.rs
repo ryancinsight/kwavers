@@ -43,7 +43,8 @@ const DEFAULT_NUM_FOCUS_ZONES: u32 = 32;
 /// `BeamformingProcessor3D` owns for the dynamic-focus path.
 #[cfg(feature = "gpu")]
 pub struct DynamicFocusGPU<'a> {
-    pub(crate) config: &'a crate::signal_processing::beamforming::three_dimensional::config::BeamformingConfig3D,
+    pub(crate) config:
+        &'a crate::signal_processing::beamforming::three_dimensional::config::BeamformingConfig3D,
     pub(crate) device: &'a wgpu::Device,
     pub(crate) queue: &'a wgpu::Queue,
     pub(crate) pipeline: &'a wgpu::ComputePipeline,

@@ -1,12 +1,10 @@
 //! Pressure-buffer identity, wave propagation, and conservation-diagnostic integration tests.
 
+use crate::forward::nonlinear::conservation::{ConservationDiagnostics, ConservationTolerances};
+use crate::forward::nonlinear::westervelt::{WesterveltFdtd, WesterveltFdtdConfig};
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
-use crate::forward::nonlinear::conservation::{
-    ConservationDiagnostics, ConservationTolerances,
-};
-use crate::forward::nonlinear::westervelt::{WesterveltFdtd, WesterveltFdtdConfig};
 
 #[test]
 fn westervelt_update_reuses_pressure_and_nonlinear_workspaces() {

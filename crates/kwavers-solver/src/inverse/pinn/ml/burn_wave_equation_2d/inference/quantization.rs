@@ -1,8 +1,8 @@
 use super::types::{ActivationType, QuantizedNetwork};
-use kwavers_core::error::KwaversResult;
 use crate::inverse::pinn::ml::burn_wave_equation_2d::model::BurnPINN2DWave;
 use burn::tensor::backend::Backend;
 use burn::tensor::Tensor;
+use kwavers_core::error::KwaversResult;
 
 #[derive(Debug)]
 pub struct BurnWave2dQuantizer;

@@ -1,8 +1,8 @@
 use super::core::ShiftingStrategy;
 use super::shifter::PhaseShifter;
+use approx::assert_relative_eq;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::numerical::TWO_PI;
-use approx::assert_relative_eq;
 use ndarray::{arr2, Array2};
 use std::f64::consts::PI;
 

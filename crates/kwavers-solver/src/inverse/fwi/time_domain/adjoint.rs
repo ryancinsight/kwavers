@@ -1,13 +1,13 @@
 //! Adjoint simulation run, adjoint-source construction, L2 residual and objective.
 
 use super::{geometry::FwiGeometry, FwiProcessor};
-use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
-use kwavers_grid::Grid;
-use kwavers_source::{GridSource, SourceMode};
 use crate::inverse::fwi::time_domain::{
     accumulate_signed_correlation, l2_objective, l2_residual, reverse_time_axis,
 };
 use crate::inverse::reconstruction::seismic::{MisfitFunction, MisfitType};
+use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
+use kwavers_grid::Grid;
+use kwavers_source::{GridSource, SourceMode};
 use ndarray::{Array2, Array3, Array4, ArrayView3, ArrayViewMut3, Axis, Zip};
 
 /// Apply the Plessix (2006) eq. (12) per-voxel scaling
@@ -329,29 +329,28 @@ impl FwiProcessor {
         // the discrete time-reversal symmetry (time-reversal theorem).
         // No sensor mask on the adjoint solver — receiver data is injected through
         // the adjoint_source pressure signal, not recorded.
-        let mut solver: Box<dyn crate::interface::Solver> =
-            match self.parameters.solver_type {
-                SolverType::FDTD => self.build_fdtd_boxed(
-                    model,
-                    None, // no sensor recording on adjoint pass
-                    grid,
-                    dt,
-                    adjoint_source.clone(),
-                )?,
-                SolverType::PSTD => self.build_pstd_boxed(
-                    model,
-                    None, // no sensor recording on adjoint pass
-                    grid,
-                    dt,
-                    adjoint_source.clone(),
-                )?,
-                other => {
-                    return Err(KwaversError::InvalidInput(format!(
-                        "FWI adjoint builder: SolverType::{other:?} is not yet supported; \
+        let mut solver: Box<dyn crate::interface::Solver> = match self.parameters.solver_type {
+            SolverType::FDTD => self.build_fdtd_boxed(
+                model,
+                None, // no sensor recording on adjoint pass
+                grid,
+                dt,
+                adjoint_source.clone(),
+            )?,
+            SolverType::PSTD => self.build_pstd_boxed(
+                model,
+                None, // no sensor recording on adjoint pass
+                grid,
+                dt,
+                adjoint_source.clone(),
+            )?,
+            other => {
+                return Err(KwaversError::InvalidInput(format!(
+                    "FWI adjoint builder: SolverType::{other:?} is not yet supported; \
                          use FDTD or PSTD"
-                    )))
-                }
-            };
+                )))
+            }
+        };
 
         let mut gradient_m = Array3::zeros((nx, ny, nz));
         let mut p_tt = Array3::zeros((nx, ny, nz));

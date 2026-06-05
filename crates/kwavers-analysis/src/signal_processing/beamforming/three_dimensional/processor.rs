@@ -14,9 +14,9 @@
 //! - Synnevåg et al. (2005) - Adaptive beamforming applied to medical ultrasound imaging
 
 use super::config::{BeamformingConfig3D, BeamformingMetrics};
-use kwavers_core::error::{KwaversError, KwaversResult};
 #[cfg(feature = "gpu")]
 use super::shaders;
+use kwavers_core::error::{KwaversError, KwaversResult};
 
 #[cfg(feature = "gpu")]
 use wgpu;

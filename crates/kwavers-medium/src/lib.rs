@@ -22,6 +22,7 @@ pub mod optical_map;
 pub mod properties;
 pub mod thermal;
 pub mod traits;
+pub mod viscoelastic;
 pub mod viscous;
 pub mod wrapper;
 

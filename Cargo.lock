@@ -4965,7 +4965,6 @@ dependencies = [
  "num-complex",
  "rand 0.8.5",
  "rayon",
- "ritk-core",
  "ritk-registration",
  "serde",
  "tempfile",
@@ -4988,6 +4987,7 @@ name = "kwavers-gpu"
 version = "3.0.0"
 dependencies = [
  "apollo-fft-wgpu",
+ "approx",
  "burn",
  "bytemuck",
  "flume",
@@ -5006,6 +5006,7 @@ dependencies = [
  "pollster",
  "rand 0.8.5",
  "rayon",
+ "tokio",
  "tracing",
  "wgpu",
 ]
@@ -5098,13 +5099,11 @@ dependencies = [
 name = "kwavers-phantom"
 version = "3.0.0"
 dependencies = [
- "anyhow",
  "approx",
  "kwavers-core",
  "kwavers-grid",
  "kwavers-medium",
  "kwavers-optics",
- "ndarray 0.16.1",
 ]
 
 [[package]]
@@ -5180,7 +5179,6 @@ dependencies = [
  "kwavers-signal",
  "log",
  "ndarray 0.16.1",
- "num-complex",
  "rayon",
  "serde",
  "serde_json",
@@ -5285,11 +5283,8 @@ dependencies = [
  "kwavers-math",
  "kwavers-medium",
  "kwavers-signal",
- "log",
- "nalgebra 0.32.6",
  "ndarray 0.16.1",
  "num-complex",
- "rayon",
  "serde",
 ]
 
@@ -5311,7 +5306,6 @@ dependencies = [
  "kwavers-transducer",
  "log",
  "ndarray 0.16.1",
- "num-complex",
  "rayon",
  "serde",
 ]
@@ -5335,7 +5329,6 @@ dependencies = [
  "num-complex",
  "rayon",
  "serde",
- "serde_json",
 ]
 
 [[package]]

@@ -1,7 +1,7 @@
 use super::MultiModalFusion;
+use crate::acoustics::imaging::fusion::types::RegisteredModality;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_imaging::fusion::AffineTransform;
-use crate::acoustics::imaging::fusion::types::RegisteredModality;
 use ndarray::ArrayView3;
 use std::collections::HashMap;
 /// Sorted modalities.

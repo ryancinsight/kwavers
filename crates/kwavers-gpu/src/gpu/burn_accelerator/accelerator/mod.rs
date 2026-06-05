@@ -5,10 +5,10 @@ mod electromagnetic;
 mod pde_residuals;
 
 use super::super::types::{GpuConfig, GpuPhysicsParameters};
-use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_solver::forward::fdtd::FdtdGpuAccelerator;
 use burn::prelude::*;
 use burn::tensor::backend::Backend;
+use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_solver::forward::fdtd::FdtdGpuAccelerator;
 use ndarray::Array3;
 use std::marker::PhantomData;
 

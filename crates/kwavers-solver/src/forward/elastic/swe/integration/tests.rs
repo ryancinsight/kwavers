@@ -1,11 +1,11 @@
 //! Tests for velocity-Verlet time integration.
 
 use super::integrator::TimeIntegrator;
-use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
-use kwavers_grid::Grid;
 use crate::forward::elastic::swe::boundary::{ElasticSwePMLBoundary, SwePmlConfig};
 use crate::forward::elastic::swe::scratch::ElasticStepScratch;
 use crate::forward::elastic::swe::types::ElasticWaveField;
+use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
+use kwavers_grid::Grid;
 use ndarray::Array3;
 
 fn make_integrator(

@@ -4,25 +4,28 @@
 
 use ndarray::Array3;
 
-use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
-use kwavers_boundary::cpml::CPMLConfig;
-use kwavers_grid::Grid;
-use kwavers_receiver::recorder::simple::SensorRecorder;
-use kwavers_source::{GridSource, Source as KwaversSource};
-use kwavers_physics::acoustics::mechanics::absorption::AbsorptionMode;
 use crate::configs::ThermalConfig;
 use crate::dispatch::shared::{record_modes_to_spec, trim_initial_recorder_view};
 use crate::types::extract_full_grid_stats;
 use crate::types::{SimulationRunRequest, SimulationRunResult};
+use kwavers_boundary::cpml::CPMLConfig;
+use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
+use kwavers_grid::Grid;
+use kwavers_physics::acoustics::mechanics::absorption::AbsorptionMode;
+use kwavers_receiver::recorder::simple::SensorRecorder;
 use kwavers_solver::forward::pstd::config::{BoundaryConfig, PSTDConfig};
 use kwavers_solver::forward::pstd::implementation::core::orchestrator::PSTDSolver;
 use kwavers_solver::geometry::SolverGeometry;
 use kwavers_solver::interface::solver::Solver as SolverTrait;
+use kwavers_source::{GridSource, Source as KwaversSource};
 
 // ── PSTD (acoustic-only) ──────────────────────────────────────────────────────
 
 /// Run a PSTD (acoustic-only) simulation.
-pub fn run(req: &SimulationRunRequest<'_>, sources: Vec<Box<dyn KwaversSource>>) -> KwaversResult<SimulationRunResult> {
+pub fn run(
+    req: &SimulationRunRequest<'_>,
+    sources: Vec<Box<dyn KwaversSource>>,
+) -> KwaversResult<SimulationRunResult> {
     let (mut solver, _sim_grid) = prepare_solver(req, sources)?;
     solver.run_orchestrated(req.time_steps)?;
     extract_result(&solver, req.time_steps, req.record_start_index)
@@ -45,7 +48,8 @@ pub fn run_with_thermal(
 
     let (mut solver, sim_grid) = prepare_solver(req, sources)?;
 
-    let mut medium = HomogeneousMedium::new(thermal_cfg.density, SOUND_SPEED_TISSUE, 0.0, 0.0, &sim_grid);
+    let mut medium =
+        HomogeneousMedium::new(thermal_cfg.density, SOUND_SPEED_TISSUE, 0.0, 0.0, &sim_grid);
     medium
         .set_thermal_properties(thermal_cfg.thermal_conductivity, thermal_cfg.specific_heat)
         .map_err(|e| KwaversError::InternalError(e.to_string()))?;
@@ -68,7 +72,9 @@ pub fn run_with_thermal(
 
     let mut thermal_solver = ThermalDiffusionSolver::new(config, &sim_grid);
     thermal_solver.set_temperature(Array3::from_elem(
-        (sim_grid.nx, sim_grid.ny, sim_grid.nz), initial_temp_k));
+        (sim_grid.nx, sim_grid.ny, sim_grid.nz),
+        initial_temp_k,
+    ));
 
     let omega_c = std::f64::consts::TAU * thermal_cfg.center_frequency_hz;
     let dt_thermal = thermal_cfg
@@ -115,12 +121,14 @@ pub(crate) fn prepare_solver(
     req: &SimulationRunRequest<'_>,
     sources: Vec<Box<dyn KwaversSource>>,
 ) -> KwaversResult<(PSTDSolver, Grid)> {
-    let sensor_mask = req.sensor_mask.clone().unwrap_or_else(|| {
-        Array3::from_elem((req.grid.nx, req.grid.ny, req.grid.nz), false)
-    });
+    let sensor_mask = req
+        .sensor_mask
+        .clone()
+        .unwrap_or_else(|| Array3::from_elem((req.grid.nx, req.grid.ny, req.grid.nz), false));
 
     let pml = req.pml.cloned().unwrap_or_default();
-    let (default_thickness, max_allowed) = pml.effective_thickness(req.grid.nx, req.grid.ny, req.grid.nz);
+    let (default_thickness, max_allowed) =
+        pml.effective_thickness(req.grid.nx, req.grid.ny, req.grid.nz);
     let thickness = pml.size.unwrap_or(default_thickness).min(max_allowed);
 
     let (sim_grid, grid_source, sensor_mask, effective_pml_inside) =
@@ -141,9 +149,13 @@ pub(crate) fn prepare_solver(
 
             let pnx = if pad_x { nx + 2 * p } else { nx };
             let pny = if pad_y { ny + 2 * p } else { ny };
-            let pnz = if pad_z_two_sided { nz + 2 * p }
-                else if pad_z_one_sided { nz + p }
-                else { nz };
+            let pnz = if pad_z_two_sided {
+                nz + 2 * p
+            } else if pad_z_one_sided {
+                nz + p
+            } else {
+                nz
+            };
             let padded_grid = Grid::new(pnx, pny, pnz, req.grid.dx, req.grid.dy, req.grid.dz)?;
 
             let px_embed = if pad_x { p } else { 0 };
@@ -163,19 +175,24 @@ pub(crate) fn prepare_solver(
                 .slice_mut(ndarray::s![p..nx + p, py..ny + py, pz_embed..nz + pz_embed])
                 .assign(&sensor_mask);
 
-            let padded_source = GridSource {
-                p0: req.grid_source.p0.as_ref().map(|a| a.mapv(|v| v))
-                    .map(|a| embed(a)),
-                u0: req.grid_source.u0.as_ref().map(|(ux, uy, uz)| {
-                    (embed(ux.clone()), embed(uy.clone()), embed(uz.clone()))
-                }),
-                p_mask: req.grid_source.p_mask.as_ref().map(|a| embed(a.clone())),
-                p_signal: req.grid_source.p_signal.clone(),
-                p_mode: req.grid_source.p_mode.clone(),
-                u_mask: req.grid_source.u_mask.as_ref().map(|a| embed(a.clone())),
-                u_signal: req.grid_source.u_signal.clone(),
-                u_mode: req.grid_source.u_mode.clone(),
-            };
+            let padded_source =
+                GridSource {
+                    p0: req
+                        .grid_source
+                        .p0
+                        .as_ref()
+                        .map(|a| a.mapv(|v| v))
+                        .map(&embed),
+                    u0: req.grid_source.u0.as_ref().map(|(ux, uy, uz)| {
+                        (embed(ux.clone()), embed(uy.clone()), embed(uz.clone()))
+                    }),
+                    p_mask: req.grid_source.p_mask.as_ref().map(|a| embed(a.clone())),
+                    p_signal: req.grid_source.p_signal.clone(),
+                    p_mode: req.grid_source.p_mode,
+                    u_mask: req.grid_source.u_mask.as_ref().map(|a| embed(a.clone())),
+                    u_signal: req.grid_source.u_signal.clone(),
+                    u_mode: req.grid_source.u_mode,
+                };
 
             (padded_grid, padded_source, padded_mask, true)
         } else {
@@ -278,17 +295,29 @@ pub(crate) fn extract_result(
         .ok_or_else(|| KwaversError::Io(std::io::Error::other("No sensor data recorded")))?;
     let sensor_data = trim_initial_recorder_view(full_data, time_steps, record_start_index);
 
-    let ux_data = solver.sensor_recorder.recorded_ux_view()
+    let ux_data = solver
+        .sensor_recorder
+        .recorded_ux_view()
         .map(|d| trim_initial_recorder_view(d, time_steps, record_start_index));
-    let uy_data = solver.sensor_recorder.recorded_uy_view()
+    let uy_data = solver
+        .sensor_recorder
+        .recorded_uy_view()
         .map(|d| trim_initial_recorder_view(d, time_steps, record_start_index));
-    let uz_data = solver.sensor_recorder.recorded_uz_view()
+    let uz_data = solver
+        .sensor_recorder
+        .recorded_uz_view()
         .map(|d| trim_initial_recorder_view(d, time_steps, record_start_index));
-    let ix_data = solver.sensor_recorder.recorded_ix_view()
+    let ix_data = solver
+        .sensor_recorder
+        .recorded_ix_view()
         .map(|d| trim_initial_recorder_view(d, time_steps, record_start_index));
-    let iy_data = solver.sensor_recorder.recorded_iy_view()
+    let iy_data = solver
+        .sensor_recorder
+        .recorded_iy_view()
         .map(|d| trim_initial_recorder_view(d, time_steps, record_start_index));
-    let iz_data = solver.sensor_recorder.recorded_iz_view()
+    let iz_data = solver
+        .sensor_recorder
+        .recorded_iz_view()
         .map(|d| trim_initial_recorder_view(d, time_steps, record_start_index));
     let i_avg_x = solver.sensor_recorder.extract_i_avg_x();
     let i_avg_y = solver.sensor_recorder.extract_i_avg_y();
@@ -297,11 +326,19 @@ pub(crate) fn extract_result(
     let full_grid_stats = extract_full_grid_stats(&solver.sensor_recorder);
 
     Ok(SimulationRunResult {
-        sensor_data, stats,
-        ux_data, uy_data, uz_data,
-        ix_data, iy_data, iz_data,
-        i_avg_x, i_avg_y, i_avg_z,
-        velocity_stats, full_grid_stats,
+        sensor_data,
+        stats,
+        ux_data,
+        uy_data,
+        uz_data,
+        ix_data,
+        iy_data,
+        iz_data,
+        i_avg_x,
+        i_avg_y,
+        i_avg_z,
+        velocity_stats,
+        full_grid_stats,
         thermal_temperature: None,
         thermal_dose: None,
     })

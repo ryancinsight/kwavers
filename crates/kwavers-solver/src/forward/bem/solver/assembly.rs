@@ -1,11 +1,9 @@
 use super::BemSolver;
+use crate::forward::bem::integrals::{compute_nonsingular_integrals, compute_singular_integrals};
 use kwavers_core::error::KwaversResult;
 use kwavers_math::linear_algebra::sparse::{
     solver::{IterativeSolver, SolverConfig, SparsePreconditioner},
     CompressedSparseRowMatrix,
-};
-use crate::forward::bem::integrals::{
-    compute_nonsingular_integrals, compute_singular_integrals,
 };
 use ndarray::Array1;
 use num_complex::Complex64;

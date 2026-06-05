@@ -1,8 +1,8 @@
 //! Configuration for enhanced BEM-FEM coupling with Burton-Miller support.
 
 use super::super::BemFemCouplingConfig;
-use kwavers_core::constants::fundamental::SOUND_SPEED_AIR;
 use crate::forward::bem::burton_miller::BurtonMillerConfig;
+use kwavers_core::constants::fundamental::SOUND_SPEED_AIR;
 
 /// Enhanced BEM-FEM coupling configuration with Burton-Miller support.
 #[derive(Debug, Clone)]

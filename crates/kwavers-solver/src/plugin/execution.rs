@@ -2,10 +2,10 @@
 //!
 //! This module provides different execution strategies for running plugins.
 
+use crate::plugin::{Plugin, PluginContext};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use crate::plugin::{Plugin, PluginContext};
 use ndarray::Array4;
 
 /// Strategy for executing plugins

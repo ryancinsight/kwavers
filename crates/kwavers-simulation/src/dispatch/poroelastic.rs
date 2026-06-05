@@ -6,11 +6,11 @@
 //! `Medium` trait (frame moduli, density) and SSOT constants (fluid bulk
 //! modulus, viscosity, water density).
 
-use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
+use crate::types::{SimulationRunRequest, SimulationRunResult};
 use kwavers_core::constants::cavitation::VISCOSITY_WATER;
+use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use kwavers_core::error::KwaversResult;
 use kwavers_physics::acoustics::mechanics::poroelastic::material::PoroelasticMaterial;
-use crate::types::{SimulationRunRequest, SimulationRunResult};
 use kwavers_solver::forward::poroelastic::PoroelasticSolver;
 
 /// Fluid bulk modulus at 20 °C [Pa] — SSOT reference value.
@@ -52,11 +52,11 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
             let porosity: f64 = 0.15;
             (
                 porosity,
-                1e-11,                              // m²
-                1.0 / porosity.sqrt(),              // tortuosity
-                DENSITY_WATER_NOMINAL,              // SSOT
-                FLUID_BULK_MODULUS_WATER,           // 2.25 GPa
-                VISCOSITY_WATER,                    // SSOT: 0.001 Pa·s
+                1e-11,                    // m²
+                1.0 / porosity.sqrt(),    // tortuosity
+                DENSITY_WATER_NOMINAL,    // SSOT
+                FLUID_BULK_MODULUS_WATER, // 2.25 GPa
+                VISCOSITY_WATER,          // SSOT: 0.001 Pa·s
             )
         };
 
@@ -81,9 +81,15 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
     Ok(SimulationRunResult {
         sensor_data,
         stats: None,
-        ux_data: None, uy_data: None, uz_data: None,
-        ix_data: None, iy_data: None, iz_data: None,
-        i_avg_x: None, i_avg_y: None, i_avg_z: None,
+        ux_data: None,
+        uy_data: None,
+        uz_data: None,
+        ix_data: None,
+        iy_data: None,
+        iz_data: None,
+        i_avg_x: None,
+        i_avg_y: None,
+        i_avg_z: None,
         velocity_stats: None,
         full_grid_stats: None,
         thermal_temperature: None,
@@ -94,13 +100,13 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::configs::PoroelasticConfig;
     use kwavers_grid::Grid;
     use kwavers_medium::homogeneous::HomogeneousMedium;
-    use kwavers_source::grid_source::GridSource;
-    use crate::configs::PoroelasticConfig;
     use kwavers_solver::config::SolverType;
     use kwavers_solver::forward::fdtd::config::KSpaceCorrectionMode;
     use kwavers_solver::forward::pstd::config::CompatibilityMode;
+    use kwavers_source::grid_source::GridSource;
 
     /// Build a minimal `SimulationRunRequest` for poroelastic dispatch testing.
     fn make_request<'a>(
@@ -210,7 +216,10 @@ mod tests {
 
         let result = run(&req).expect("derived tortuosity dispatch should succeed");
         let dt = result.sensor_data[[0, 0]];
-        assert!(dt > 0.0, "stable dt with derived tortuosity must be positive");
+        assert!(
+            dt > 0.0,
+            "stable dt with derived tortuosity must be positive"
+        );
         assert!(dt.is_finite());
     }
 }

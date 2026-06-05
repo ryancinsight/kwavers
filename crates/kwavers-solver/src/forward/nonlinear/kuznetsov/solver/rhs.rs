@@ -19,12 +19,12 @@
 //! RHS while keeping trait dispatch in a single serial sweep.
 
 use super::wave::KuznetsovWave;
-use kwavers_core::constants::numerical::{B_OVER_A_DIVISOR, NONLINEARITY_COEFFICIENT_OFFSET};
-use kwavers_medium::Medium;
-use kwavers_source::Source;
 use crate::forward::nonlinear::kuznetsov::config::AcousticEquationMode;
 use crate::forward::nonlinear::kuznetsov::diffusion::compute_diffusive_term_workspace;
 use crate::forward::nonlinear::kuznetsov::nonlinear::compute_nonlinear_term_workspace;
+use kwavers_core::constants::numerical::{B_OVER_A_DIVISOR, NONLINEARITY_COEFFICIENT_OFFSET};
+use kwavers_medium::Medium;
+use kwavers_source::Source;
 use ndarray::Zip;
 
 impl KuznetsovWave {
@@ -49,9 +49,7 @@ impl KuznetsovWave {
                 let center_y = self.grid.dy * (self.grid.ny as f64) / 2.0;
                 let center_z = self.grid.dz * (self.grid.nz as f64) / 2.0;
                 (
-                    kwavers_medium::density_at(
-                        medium, center_x, center_y, center_z, &self.grid,
-                    ),
+                    kwavers_medium::density_at(medium, center_x, center_y, center_z, &self.grid),
                     kwavers_medium::sound_speed_at(
                         medium, center_x, center_y, center_z, &self.grid,
                     ),

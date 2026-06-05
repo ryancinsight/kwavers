@@ -1,8 +1,8 @@
 #![cfg(feature = "gpu")]
 
-use kwavers_grid::Grid;
 use kwavers_gpu::gpu::FdtdGpu;
 use kwavers_gpu::profiling::{GpuAllocationConfig, GpuAllocationTracker};
+use kwavers_grid::Grid;
 use ndarray::Array3;
 
 async fn create_test_device() -> Result<(wgpu::Device, wgpu::Queue), String> {

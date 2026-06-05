@@ -28,15 +28,14 @@ use kwavers_analysis::ml::uncertainty::{
 use kwavers_analysis::validation::clinical::{
     ClinicalValidator, ImageQualityMetrics, MeasurementAccuracy, SafetyIndices,
 };
-use kwavers_grid::Grid;
-use kwavers_imaging::ultrasound::elastography::InversionMethod;
-use kwavers_imaging::ultrasound::elastography::{
-    NonlinearInversionMethod, NonlinearParameterMap,
-};
-use kwavers_medium::Medium;
-use kwavers_medium::{heterogeneous::HeterogeneousMedium, homogeneous::HomogeneousMedium};
+use kwavers_core::error::KwaversResult;
 #[cfg(feature = "gpu")]
 use kwavers_gpu::gpu::memory::UnifiedMemoryManager;
+use kwavers_grid::Grid;
+use kwavers_imaging::ultrasound::elastography::InversionMethod;
+use kwavers_imaging::ultrasound::elastography::{NonlinearInversionMethod, NonlinearParameterMap};
+use kwavers_medium::Medium;
+use kwavers_medium::{heterogeneous::HeterogeneousMedium, homogeneous::HomogeneousMedium};
 use kwavers_physics::acoustics::imaging::modalities::ceus::CeusPerfusionModel;
 use kwavers_physics::acoustics::imaging::modalities::elastography::radiation_force::PushPulseParameters;
 use kwavers_physics::acoustics::imaging::modalities::elastography::{
@@ -48,7 +47,6 @@ use kwavers_solver::forward::elastic::{ElasticWaveConfig, ElasticWaveField, Elas
 use kwavers_solver::inverse::elastography::{
     NonlinearInversion, NonlinearInversionConfig, ShearWaveInversion, ShearWaveInversionConfig,
 };
-use kwavers_core::error::KwaversResult;
 use ndarray::{s, Array3, Array4};
 use std::time::Instant;
 

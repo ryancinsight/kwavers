@@ -7,8 +7,8 @@
 use kwavers_analysis::testing::property_based::acoustic::acoustic_properties::*;
 use kwavers_analysis::testing::property_based::acoustic::grid_properties::*;
 use kwavers_analysis::testing::property_based::acoustic::medium_properties::*;
-use kwavers_medium::{CoreMedium, HomogeneousMedium};
 use kwavers_grid::Grid;
+use kwavers_medium::{CoreMedium, HomogeneousMedium};
 use proptest::prelude::*;
 
 // Property test: Density must always be physically valid (positive, finite)

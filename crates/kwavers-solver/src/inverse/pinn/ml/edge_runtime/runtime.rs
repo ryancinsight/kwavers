@@ -2,8 +2,8 @@ use super::{
     DataType, EdgeRuntime, EdgeRuntimePerformanceMonitor, ExecutionKernel, IOSpecification,
     MemoryAllocator,
 };
-use kwavers_core::error::{KwaversError, KwaversResult};
 use crate::inverse::pinn::ml::QuantizedModel;
+use kwavers_core::error::{KwaversError, KwaversResult};
 use std::collections::HashMap;
 
 impl EdgeRuntime {
@@ -114,8 +114,7 @@ impl EdgeRuntime {
 
         let required_simd = match &model.quantization_params.scheme {
             crate::inverse::pinn::ml::QuantizationScheme::MixedPrecision {
-                weight_bits,
-                ..
+                weight_bits, ..
             } => {
                 if *weight_bits <= 8 {
                     8

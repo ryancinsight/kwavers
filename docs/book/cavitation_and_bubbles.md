@@ -1,16 +1,16 @@
-# Chapter 7: Cavitation and Bubble Dynamics
+# Chapter 5: Cavitation and Bubble Dynamics
 
 > **Module ownership.** All physics described in this chapter is implemented in
-> `kwavers::physics::acoustics::bubble_dynamics` (Rayleigh–Plesset, Keller–Miksis,
+> `kwavers_physics::acoustics::bubble_dynamics` (Rayleigh–Plesset, Keller–Miksis,
 > encapsulated shell models, Bjerknes forces, adaptive integration, Epstein–Plesset
-> dissolution), `kwavers::physics::acoustics::therapy::cavitation` (detection,
-> thresholds, metrics), `kwavers::domain::therapy::microbubble` (contrast-agent shell
+> dissolution), `kwavers_physics::acoustics::therapy::cavitation` (detection,
+> thresholds, metrics), `kwavers_domain::therapy::microbubble` (contrast-agent shell
 > state, drug payload, radiation force), and
-> `kwavers::solver::forward::ode::bubble_symplectic` (symplectic time integration).
+> `kwavers_solver::forward::ode::bubble_symplectic` (symplectic time integration).
 
 ---
 
-## 7.1 Physical Overview
+## 5.1 Physical Overview
 
 Cavitation is the nucleation, growth, oscillation, and collapse of gas- or
 vapor-filled voids driven by time-varying pressure fields.  In ultrasound
@@ -30,9 +30,9 @@ tissue or fluid.
 
 ---
 
-## 7.2 Rayleigh–Plesset Equation
+## 5.2 Rayleigh–Plesset Equation
 
-### 7.2.1 Governing Assumptions
+### 5.2.1 Governing Assumptions
 
 The classical derivation assumes:
 
@@ -47,7 +47,7 @@ The classical derivation assumes:
 Let $R(t)$ denote the instantaneous bubble radius, $\dot{R} = dR/dt$ the wall
 velocity, and $\ddot{R} = d^2 R/dt^2$ the wall acceleration.
 
-### 7.2.2 Potential-Flow Field
+### 5.2.2 Potential-Flow Field
 
 Under spherical symmetry the liquid velocity field is irrotational and the
 velocity potential satisfies Laplace's equation in spherical coordinates with
@@ -78,7 +78,7 @@ $$
 is $4\pi r^2 u_r = 4\pi R^2 \dot{R}$, which equals $d(4\pi R^3/3)/dt$; mass is
 conserved identically.
 
-### 7.2.3 Momentum Integration
+### 5.2.3 Momentum Integration
 
 The unsteady Bernoulli equation for an irrotational, incompressible liquid is
 
@@ -117,7 +117,7 @@ $$
 R\ddot{R} + \tfrac{3}{2}\dot{R}^2 = \frac{p_L(R,t) - p_\infty(t)}{\rho_L}.
 $$
 
-### 7.2.4 Interfacial Boundary Condition
+### 5.2.4 Interfacial Boundary Condition
 
 The normal stress balance at $r = R$ (surface tension $\sigma$, viscous normal
 stress in the liquid $-4\mu\dot{R}/R$) gives
@@ -128,7 +128,7 @@ $$
 
 where $p_g(t)$ is the gas pressure inside the bubble.
 
-### 7.2.5 Gas Pressure—Polytropic Law
+### 5.2.5 Gas Pressure—Polytropic Law
 
 $$
 p_g = p_{g0}\!\left(\frac{R_0}{R}\right)^{3\gamma},
@@ -139,7 +139,7 @@ Here $p_0$ is the ambient pressure at equilibrium, $R_0$ the equilibrium radius,
 and $\gamma$ the polytropic exponent ($\gamma = 1$ isothermal,
 $\gamma = C_p/C_v$ adiabatic).
 
-### 7.2.6 Rayleigh–Plesset Equation (Complete Form)
+### 5.2.6 Rayleigh–Plesset Equation (Complete Form)
 
 Substituting the interfacial condition into the momentum integral:
 
@@ -154,34 +154,34 @@ p_{g0}\!\left(\frac{R_0}{R}\right)^{3\gamma}
 \tag{7.1}
 $$
 
-**Theorem 7.1 (Rayleigh–Plesset).** *Under assumptions 1–6 of Section 7.2.1,
-the bubble radius $R(t)$ satisfies equation (7.1).  Every term is
+**Theorem 5.1 (Rayleigh–Plesset).** *Under assumptions 1–6 of Section 5.2.1,
+the bubble radius $R(t)$ satisfies equation (5.1).  Every term is
 analytically exact; no approximation has been made beyond the stated
 assumptions.*
 
-*Proof.* Steps 7.2.2–7.2.5 constitute the complete derivation.  The potential
+*Proof.* Steps 7.2.2–5.2.5 constitute the complete derivation.  The potential
 ansatz $\varphi = A(t)/r$ is the unique decaying solution of Laplace's equation
 in $r > R$; $A(t) = R^2\dot{R}$ follows from the kinematic condition.
-Bernoulli's equation evaluated at $r = R$ yields (7.1) after substituting the
+Bernoulli's equation evaluated at $r = R$ yields (5.1) after substituting the
 interfacial stress balance and the polytropic gas law. $\blacksquare$
 
-![Rayleigh–Plesset bubble radius vs time for $R_0 = 1\,\mu\text{m}$, $f = 1\,\text{MHz}$, $p_a = 300\,\text{kPa}$.](figures/ch_cav/fig01_rayleigh_plesset.png)
+![Rayleigh–Plesset bubble radius vs time for $R_0 = 1\,\mu\text{m}$, $f = 1\,\text{MHz}$, $p_a = 300\,\text{kPa}$.](figures/ch09/fig01_rp_dynamics.png)
 
-*Figure 7.1: Computed from `kwavers::physics::acoustics::bubble_dynamics::rayleigh_plesset`.*
+*Figure 5.1: Computed from `kwavers_physics::acoustics::bubble_dynamics::rayleigh_plesset`.*
 
 ---
 
-## 7.3 Keller–Miksis Equation
+## 5.3 Keller–Miksis Equation
 
-### 7.3.1 Motivation
+### 5.3.1 Motivation
 
-Equation (7.1) uses an incompressible liquid.  When $\dot{R} \sim c_L$ (sound
+Equation (5.1) uses an incompressible liquid.  When $\dot{R} \sim c_L$ (sound
 speed in liquid), acoustic radiation losses and finite-propagation-time effects
 alter the dynamics significantly.  Keller and Miksis (1980) derived a
 first-order compressibility correction by matching a retarded potential to the
 far-field radiation.
 
-### 7.3.2 Derivation
+### 5.3.2 Derivation
 
 Define the total bubble-boundary pressure
 
@@ -211,28 +211,28 @@ derivation proceeds by:
 3. Evaluating the unsteady Bernoulli equation at $r = R$ with the retarded
    potential.
 
-**Theorem 7.2 (Incompressible limit).** *Equation (7.2) reduces to the
-Rayleigh–Plesset equation (7.1) in the limit $c_L \to \infty$.*
+**Theorem 5.2 (Incompressible limit).** *Equation (5.2) reduces to the
+Rayleigh–Plesset equation (5.1) in the limit $c_L \to \infty$.*
 
 *Proof.* Set $c_L \to \infty$; all $\dot{R}/c_L$ terms vanish, the
 $R/({\rho_L c_L})\,dp_b/dt$ term vanishes, and the right-hand side becomes
 $(p_b - p_\infty)/\rho_L$.  Recognizing $p_b - p_\infty = p_g - 2\sigma/R -
-4\mu\dot{R}/R - p_\infty$ recovers (7.1). $\blacksquare$
+4\mu\dot{R}/R - p_\infty$ recovers (5.1). $\blacksquare$
 
-**Implementation.** `kwavers::physics::acoustics::bubble_dynamics::keller_miksis::equation`
-implements (7.2) as a first-order system
+**Implementation.** `kwavers_physics::acoustics::bubble_dynamics::keller_miksis::equation`
+implements (5.2) as a first-order system
 $\mathbf{y} = (R, \dot{R})^\top$,
 $\dot{\mathbf{y}} = \mathbf{F}(\mathbf{y}, t)$,
 suitable for adaptive RK45 or implicit–explicit integration.
 
 ---
 
-## 7.4 Blake Threshold
+## 5.4 Blake Threshold
 
-### 7.4.1 Static Equilibrium Curve
+### 5.4.1 Static Equilibrium Curve
 
 In a static field ($p_\infty = \text{const}$, $\dot{R} = \ddot{R} = 0$) equation
-(7.1) reduces to mechanical equilibrium:
+(5.1) reduces to mechanical equilibrium:
 
 $$
 p_\infty = p_g - \frac{2\sigma}{R}
@@ -244,9 +244,9 @@ For $\gamma = 1$ and small surface tension relative to ambient pressure,
 $p_\infty(R)$ has a maximum at a critical radius $R^*$, beyond which no
 equilibrium exists—the bubble becomes unstable and grows without bound.
 
-### 7.4.2 Blake Threshold Derivation
+### 5.4.2 Blake Threshold Derivation
 
-**Theorem 7.3 (Blake threshold).** *For isothermal gas ($\gamma = 1$), the
+**Theorem 5.3 (Blake threshold).** *For isothermal gas ($\gamma = 1$), the
 minimum external pressure required to prevent unbounded bubble growth (the Blake
 threshold) is*
 
@@ -266,7 +266,7 @@ R^* = \sqrt{\frac{3 p_{g0} R_0^3}{2\sigma/R_0 + p_0}}\cdot
 $$
 
 *Proof.* At the turning point of $p_\infty(R)$, both
-$dp_\infty/dR = 0$ and $p_\infty$ is at its minimum.  From (7.3) with $\gamma=1$:
+$dp_\infty/dR = 0$ and $p_\infty$ is at its minimum.  From (5.3) with $\gamma=1$:
 
 $$
 \frac{dp_\infty}{dR}
@@ -274,7 +274,7 @@ $$
 \implies R^{*2} = \frac{3 p_{g0} R_0^3}{2\sigma}.
 $$
 
-Substituting $R^*$ into (7.3):
+Substituting $R^*$ into (5.3):
 
 $$
 P_B = p_{g0}\left(\frac{R_0}{R^*}\right)^3 - \frac{2\sigma}{R^*}.
@@ -290,20 +290,20 @@ P_B = \frac{4\sigma}{3R^*} - p_0,
 \quad R^* = \left(\frac{3p_{g0}R_0^3}{2\sigma}\right)^{1/2},
 $$
 
-which yields (7.4) after substituting and simplifying.  Negative $P_B$ means
+which yields (5.4) after substituting and simplifying.  Negative $P_B$ means
 a tensile pressure $|P_B|$ must be applied to trigger unbounded growth. $\blacksquare$
 
-![Static equilibrium curve $p_\infty(R)$ for an air bubble in water at 1 atm.  The Blake threshold $P_B$ marks the turning point; no static equilibrium exists below this pressure.](figures/ch_cav/fig02_blake_threshold.png)
+![Static equilibrium curve $p_\infty(R)$ for an air bubble in water at 1 atm.  The Blake threshold $P_B$ marks the turning point; no static equilibrium exists below this pressure.](figures/ch09/fig03_blake_threshold.png)
 
-*Figure 7.2: Computed from `kwavers::physics::acoustics::therapy::cavitation::constants`.*
+*Figure 5.2: Computed from `kwavers_physics::acoustics::therapy::cavitation::constants`.*
 
 ---
 
-## 7.5 Minnaert Resonance Frequency
+## 5.5 Minnaert Resonance Frequency
 
-### 7.5.1 Linearization of the Rayleigh–Plesset Equation
+### 5.5.1 Linearization of the Rayleigh–Plesset Equation
 
-**Theorem 7.4 (Minnaert frequency).** *A free spherical gas bubble of
+**Theorem 5.4 (Minnaert frequency).** *A free spherical gas bubble of
 equilibrium radius $R_0$ in an incompressible liquid of density $\rho_L$,
 ambient pressure $p_0$, and surface tension $\sigma$, undergoing small-amplitude
 radial oscillations, has natural angular frequency*
@@ -314,7 +314,7 @@ $$
 \tag{7.6}
 $$
 
-*Proof.* Let $R(t) = R_0 + x(t)$ with $|x| \ll R_0$.  Expand (7.1) to first
+*Proof.* Let $R(t) = R_0 + x(t)$ with $|x| \ll R_0$.  Expand (5.1) to first
 order in $x$ and $\dot{x}$:
 
 $$
@@ -330,7 +330,7 @@ $$
 \frac{4\mu\dot{R}}{R} \approx \frac{4\mu\dot{x}}{R_0}.
 $$
 
-The left-hand side of (7.1):
+The left-hand side of (5.1):
 
 $$
 R\ddot{R} + \tfrac{3}{2}\dot{R}^2
@@ -356,10 +356,10 @@ $$
 $$
 
 Identifying the coefficient of $x$ with $\omega_0^2$ and using
-$p_{g0} = p_0 + 2\sigma/R_0$ yields (7.6).  The damping coefficient is
+$p_{g0} = p_0 + 2\sigma/R_0$ yields (5.6).  The damping coefficient is
 $\beta = 2\mu/(\rho_L R_0^2)$. $\blacksquare$
 
-### 7.5.2 Limit: Large Bubbles
+### 5.5.2 Limit: Large Bubbles
 
 For $R_0 \gg 2\sigma/p_0$ (surface tension negligible):
 
@@ -372,7 +372,7 @@ $$
 
 This is the **Minnaert formula** (1933).
 
-### 7.5.3 Numerical Example
+### 5.5.3 Numerical Example
 
 Air bubble in water at $p_0 = 101\,325\,\text{Pa}$, $\rho_L = 998\,\text{kg/m}^3$,
 $\gamma = 1.4$, $R_0 = 1\,\mu\text{m}$, $\sigma = 0.0725\,\text{N/m}$:
@@ -413,15 +413,15 @@ The $\sim 45\%$ discrepancy at $R_0 = 1\,\mu\text{m}$ confirms that surface
 tension is non-negligible for micron-scale bubbles.  At $R_0 = 10\,\mu\text{m}$
 the Minnaert approximation gives $f_0 \approx 326\,\text{kHz}$ with $<5\%$ error.
 
-![Minnaert frequency vs bubble radius for air in water at 1 atm.  Solid: full expression (7.6); dashed: Minnaert approximation (7.7).](figures/ch_cav/fig03_minnaert_frequency.png)
+![Minnaert frequency vs bubble radius for air in water at 1 atm.  Solid: full expression (5.6); dashed: Minnaert approximation (5.7).](figures/ch09/fig02_minnaert_resonance.png)
 
-*Figure 7.3: Computed from `kwavers::physics::acoustics::bubble_dynamics::bubble_state::gas_dynamics`.*
+*Figure 5.3: Computed from `kwavers_physics::acoustics::bubble_dynamics::bubble_state::gas_dynamics`.*
 
 ---
 
-## 7.6 Acoustic Emission and Passive Cavitation Detection
+## 5.6 Acoustic Emission and Passive Cavitation Detection
 
-### 7.6.1 Spectral Taxonomy of Bubble Emission
+### 5.6.1 Spectral Taxonomy of Bubble Emission
 
 A radially oscillating bubble is an acoustic monopole with source strength
 $Q(t) = 4\pi R^2 \dot{R}$.  The radiated pressure at distance $r$ is
@@ -444,7 +444,7 @@ oscillation regime.
 
 *$f_d$: driving frequency.*
 
-### 7.6.2 Subharmonic Generation
+### 5.6.2 Subharmonic Generation
 
 When the driving pressure amplitude exceeds the subharmonic threshold (typically
 $p_a \sim 0.1$–$0.5\,\text{MPa}$ depending on $f_d$ and $R_0$), the bubble
@@ -453,21 +453,21 @@ $2T_d$ rather than $T_d$, producing a spectral peak at $f_d/2$.  Floquet
 analysis of the linearized RP equation shows the onset of this bifurcation
 when the discriminant of the monodromy matrix crosses unity.
 
-### 7.6.3 Broadband Emission from Inertial Collapse
+### 5.6.3 Broadband Emission from Inertial Collapse
 
-During inertial collapse the wall velocity $\dot{R}$ diverges (see Section 7.7),
+During inertial collapse the wall velocity $\dot{R}$ diverges (see Section 5.7),
 generating a broadband pressure transient.  The emitted pressure pulse has a
 rise time comparable to $R_{\min}/c_L$ and a broad Fourier spectrum extending
 to $f \sim c_L / R_{\min} \gtrsim 100\,\text{MHz}$ for $R_{\min} \sim 10\,\text{nm}$.
 This broadband signature is the primary marker used in passive cavitation
 detection (PCD).
 
-**Implementation.** `kwavers::physics::acoustics::bubble_dynamics::cavitation_control::detection`
+**Implementation.** `kwavers_physics::acoustics::bubble_dynamics::cavitation_control::detection`
 provides `BroadbandDetector`, `SubharmonicDetector`, and `SpectralDetector`
 types.  Each implements the `CavitationDetector` trait:
 
 ```rust
-// kwavers::physics::acoustics::bubble_dynamics::cavitation_control::detection::traits
+// kwavers_physics::acoustics::bubble_dynamics::cavitation_control::detection::traits
 pub trait CavitationDetector {
     type Config;
     type Evidence;
@@ -477,11 +477,11 @@ pub trait CavitationDetector {
 
 ---
 
-## 7.7 Inertial Collapse Dynamics
+## 5.7 Inertial Collapse Dynamics
 
-### 7.7.1 Collapse Without Gas Pressure
+### 5.7.1 Collapse Without Gas Pressure
 
-**Theorem 7.5 (Rayleigh collapse velocity).** *In the absence of gas pressure,
+**Theorem 5.5 (Rayleigh collapse velocity).** *In the absence of gas pressure,
 surface tension, and viscosity, the collapse velocity diverges as $R \to 0$:*
 
 $$
@@ -490,7 +490,7 @@ $$
 \tag{7.9}
 $$
 
-*Proof.* Set $p_g = \sigma = \mu = 0$ in (7.1):
+*Proof.* Set $p_g = \sigma = \mu = 0$ in (5.1):
 
 $$
 R\ddot{R} + \tfrac{3}{2}\dot{R}^2 = -\frac{p_\infty}{\rho_L}.
@@ -519,15 +519,15 @@ $$
 \dot{R}^2 = \frac{2p_\infty}{3\rho_L}\left[\left(\frac{R_0}{R}\right)^3 - 1\right].
 $$
 
-Taking the negative square root (collapse): (7.9). $\blacksquare$
+Taking the negative square root (collapse): (5.9). $\blacksquare$
 
 As $R \to 0$ the velocity diverges as $\dot{R} \sim -R^{-3/2}$; kinetic energy
 is transferred from the liquid to an ever-shrinking volume, producing extreme
 local pressures and temperatures.
 
-### 7.7.2 Rayleigh Collapse Time
+### 5.7.2 Rayleigh Collapse Time
 
-**Theorem 7.6 (Rayleigh collapse time).** *The time for a bubble to collapse from
+**Theorem 5.6 (Rayleigh collapse time).** *The time for a bubble to collapse from
 $R_0$ to $R = 0$ under constant far-field pressure $p_\infty$ (no gas, no
 surface tension, no viscosity) is*
 
@@ -604,15 +604,15 @@ t_c = 0.9147 \times 10^{-4} \times \sqrt{\frac{998}{101\,325}}
 \approx 9.08\,\mu\text{s}.
 $$
 
-![Bubble radius vs normalized time during inertial collapse for Rayleigh model (no gas) and adiabatic gas rebound.](figures/ch_cav/fig04_inertial_collapse.png)
+![Bubble radius vs normalized time during inertial collapse for Rayleigh model (no gas) and adiabatic gas rebound.](figures/ch09/fig04_collapse_time.png)
 
-*Figure 7.4: Computed from `kwavers::physics::acoustics::bubble_dynamics::thermodynamics::collapse`.*
+*Figure 5.4: Computed from `kwavers_physics::acoustics::bubble_dynamics::thermodynamics::collapse`.*
 
 ---
 
-## 7.8 Bjerknes Forces
+## 5.8 Bjerknes Forces
 
-### 7.8.1 Primary Bjerknes Force
+### 5.8.1 Primary Bjerknes Force
 
 A bubble in an acoustic field experiences a time-averaged radiation force due
 to the pressure gradient across its volume.  The instantaneous force is
@@ -626,7 +626,7 @@ where $V(t) = \tfrac{4}{3}\pi R^3(t)$ is the instantaneous volume and
 $\nabla p$ is the local pressure gradient evaluated at the bubble center
 $\mathbf{x}_b$.
 
-**Theorem 7.7 (Primary Bjerknes force direction).** *For a standing acoustic
+**Theorem 5.7 (Primary Bjerknes force direction).** *For a standing acoustic
 field $p = P_0 \cos(kx)\cos(\omega t)$, the time-averaged primary Bjerknes
 force is*
 
@@ -650,7 +650,7 @@ Below resonance, the bubble response is in phase with the driving pressure
 toward antinodes (maximum pressure amplitude).  Above resonance the response is
 $\pi$-phase shifted, reversing the sign of the force. $\blacksquare$
 
-### 7.8.2 Secondary Bjerknes Force
+### 5.8.2 Secondary Bjerknes Force
 
 Two bubbles 1 and 2 separated by distance $d$ exert mutual acoustic forces via
 the radiated pressure field.  Bubble 1 radiates:
@@ -676,7 +676,7 @@ $$
 \tag{7.14}
 $$
 
-**Theorem 7.8 (Secondary Bjerknes attraction/repulsion).** *Two identically
+**Theorem 5.8 (Secondary Bjerknes attraction/repulsion).** *Two identically
 driven bubbles oscillating in phase ($\langle \ddot{V}_1 V_2\rangle > 0$)
 attract; bubbles oscillating out of phase repel.*
 
@@ -686,19 +686,17 @@ $\langle \ddot{V}_1 V_2\rangle = \langle -A\omega^2\cos^2(\omega t)\rangle = -A\
 making $\langle F_{12}\rangle = \rho_L A^2\omega^2/(8\pi d^2) > 0$ (attractive,
 along $-\hat{d}$). $\blacksquare$
 
-**Implementation.** `kwavers::physics::acoustics::bubble_dynamics::bjerknes_forces`
+**Implementation.** `kwavers_physics::acoustics::bubble_dynamics::bjerknes_forces`
 provides `PrimaryBjerknesCalculator` and `SecondaryBjerknesCalculator` operating
 on `BubbleField` collections.
 
-![Primary Bjerknes force on an air bubble in water as a function of $R_0$ at $f = 1\,\text{MHz}$, $p_a = 100\,\text{kPa}$; sign reversal at resonance radius.](figures/ch_cav/fig05_bjerknes_primary.png)
-
-*Figure 7.5: Computed from `kwavers::physics::acoustics::bubble_dynamics::bjerknes_forces::primary`.*
+*Figure 5.5: Computed from `kwavers_physics::acoustics::bubble_dynamics::bjerknes_forces::primary`.*
 
 ---
 
-## 7.9 Histotripsy
+## 5.9 Histotripsy
 
-### 7.9.1 Physical Mechanism
+### 5.9.1 Physical Mechanism
 
 Histotripsy uses microsecond-duration focused ultrasound pulses to nucleate and
 drive a dense cloud of microbubbles that mechanically fractionate soft tissue
@@ -728,7 +726,7 @@ $$
 where $p_v$ is the vapor pressure.  Significant nucleation rates require
 $|p_\infty| \gtrsim 25\,\text{MPa}$ in pure water.
 
-### 7.9.2 Bubble Cloud Dynamics
+### 5.9.2 Bubble Cloud Dynamics
 
 Once nucleated, the bubble cloud shields the tissue behind it from the incident
 wave (acoustic shielding) and the bubbles interact via secondary Bjerknes
@@ -747,14 +745,14 @@ $$
 is used clinically to characterize cavitation risk.  Histotripsy operates at
 $MI \gg 1.9$ (the FDA diagnostic limit) under controlled conditions.
 
-**Implementation.** `kwavers::physics::acoustics::therapy::cavitation::metrics`
+**Implementation.** `kwavers_physics::acoustics::therapy::cavitation::metrics`
 computes $MI$, cavitation index, and cloud density.
-`kwavers::physics::acoustics::bubble_dynamics::bubble_field::cloud` tracks
+`kwavers_physics::acoustics::bubble_dynamics::bubble_field::cloud` tracks
 multi-bubble cloud dynamics via coupled Keller–Miksis equations.
 
-### 7.9.3 Algorithm: Histotripsy Treatment Planning
+### 5.9.3 Algorithm: Histotripsy Treatment Planning
 
-**Algorithm 7.1: Bubble Cloud Nucleation and Collapse Simulation**
+**Algorithm 5.1: Bubble Cloud Nucleation and Collapse Simulation**
 
 ```
 Input:  Focus pressure waveform p(x,t), tissue acoustic properties
@@ -765,13 +763,13 @@ Output: Mechanical dose map D(x), bubble event locations E
    linear pressure field via kSPACE/PSTD propagation.
 2. Apply the nucleation criterion: mark voxels where
    $p^-_{\max} > P_{\text{thresh}}(\mathbf{x})$ (tissue-dependent, from
-   `kwavers::physics::acoustics::bubble_dynamics::heterogeneous_nucleation`).
+   `kwavers_physics::acoustics::bubble_dynamics::heterogeneous_nucleation`).
 3. For each nucleation voxel, initialize a bubble state with
-   $R_0 = r^*$ from (7.16) and $\dot{R}_0 = 0$.
-4. Integrate the Keller–Miksis system (7.2) for all bubbles simultaneously,
-   including secondary Bjerknes coupling via (7.13).
+   $R_0 = r^*$ from (5.16) and $\dot{R}_0 = 0$.
+4. Integrate the Keller–Miksis system (5.2) for all bubbles simultaneously,
+   including secondary Bjerknes coupling via (5.13).
 5. Detect bubble collapse events: trigger when $R < R_{\min} = 10\,\text{nm}$
-   using adaptive step-size reduction and event detection (see Algorithm 7.3).
+   using adaptive step-size reduction and event detection (see Algorithm 5.3).
 6. At each collapse event, compute the emitted pressure pulse amplitude and
    deposit mechanical dose $D(\mathbf{x}) \mathrel{+}=
    \rho_L c_L p_{\text{peak}}^2 / (2 Z_{\text{tissue}})$.
@@ -781,9 +779,9 @@ Output: Mechanical dose map D(x), bubble event locations E
 
 ---
 
-## 7.10 Microbubble Contrast Agents
+## 5.10 Microbubble Contrast Agents
 
-### 7.10.1 Physical Structure
+### 5.10.1 Physical Structure
 
 Ultrasound contrast agents (UCAs) consist of a high-molecular-weight gas core
 (perfluorocarbon: $C_3F_8$, $C_4F_{10}$; or sulfur hexafluoride $SF_6$)
@@ -796,7 +794,7 @@ agents:
 | Definity (Luminity) | DPPC/DPPA/DPPE-PEG5000 | $C_3F_8$ | 1.1–2.0 | 2.1–3.9 |
 | Optison | Albumin | $C_3F_8$ | 2.0–4.5 | 1.0–2.3 |
 
-### 7.10.2 Marmottant Shell Model
+### 5.10.2 Marmottant Shell Model
 
 The Marmottant model (2005) extends the Rayleigh–Plesset equation with
 state-dependent shell elasticity:
@@ -826,7 +824,7 @@ Here $\chi$ is the shell elastic modulus (N/m), $R_{\text{buck}}$ is the
 buckling radius (below which the shell wrinkles and $\sigma_{\text{eff}} \to 0$),
 and $R_{\text{rupt}}$ is the rupture radius.
 
-### 7.10.3 Church Model for Albumin Shells
+### 5.10.3 Church Model for Albumin Shells
 
 The Church (1995) model treats the shell as an elastic layer of inner radius
 $R_1 = R$ and outer radius $R_2 = R + h$ (shell thickness $h$):
@@ -844,13 +842,13 @@ where the shell stress tensor contributes terms proportional to the shell shear
 modulus $G_S$ and shell viscosity $\mu_S$.
 
 **Implementation.** Both models are in
-`kwavers::physics::acoustics::bubble_dynamics::encapsulated::model`:
+`kwavers_physics::acoustics::bubble_dynamics::encapsulated::model`:
 `MarmottantModel` (struct with fields `chi`, `r_buck`, `r_rupt`, `kappa_s`) and
 `ChurchModel` (struct with fields `g_s`, `mu_s`, `shell_thickness`).
-`kwavers::domain::therapy::microbubble::shell` stores the run-time shell state
+`kwavers_domain::therapy::microbubble::shell` stores the run-time shell state
 and transitions.
 
-### 7.10.4 Modified Resonance Frequency
+### 5.10.4 Modified Resonance Frequency
 
 For the Marmottant model in the intact (elastic) regime, the resonance frequency
 is shifted relative to the free bubble:
@@ -865,17 +863,15 @@ $$
 where $\sigma_0 = \sigma_{\text{eff}}(R_0)$.  The shell elasticity $\chi$
 increases the effective stiffness and raises $f_0$.
 
-![Radius-time curve for SonoVue at 1.7 MHz, $p_a = 50\,\text{kPa}$: free bubble (RP) vs Marmottant model.  The shell suppresses large excursions below $R_{\text{buck}}$.](figures/ch_cav/fig06_marmottant.png)
-
-*Figure 7.6: Computed from `kwavers::physics::acoustics::bubble_dynamics::encapsulated::model::marmottant`.*
+*Figure 5.6: Computed from `kwavers_physics::acoustics::bubble_dynamics::encapsulated::model::marmottant`.*
 
 ---
 
-## 7.11 Numerical Implementation
+## 5.11 Numerical Implementation
 
-### 7.11.1 ODE System Formulation
+### 5.11.1 ODE System Formulation
 
-Both (7.1) and (7.2) are second-order ODEs.  Write the first-order system
+Both (5.1) and (5.2) are second-order ODEs.  Write the first-order system
 $\mathbf{y} = (y_1, y_2)^\top = (R, \dot{R})^\top$:
 
 $$
@@ -900,7 +896,7 @@ $$
 + \frac{y_1}{\rho_L c_L}\frac{dp_b}{dt}.
 $$
 
-### 7.11.2 Stiffness Analysis
+### 5.11.2 Stiffness Analysis
 
 The RP/KM system is stiff during bubble collapse: the wall velocity $|\dot{R}|$
 grows as $R^{-3/2}$ while the natural timescale $\sim R/|\dot{R}| \sim R^{5/2}$
@@ -910,12 +906,12 @@ exceed $10^6$ near minimum radius.
 Adaptive explicit methods (RK45, Dormand–Prince) handle the pre-collapse
 phase.  Near collapse, implicit or implicit–explicit (IMEX) methods maintain
 stability without requiring sub-femtosecond steps.
-`kwavers::physics::acoustics::bubble_dynamics::imex_integration` implements the
+`kwavers_physics::acoustics::bubble_dynamics::imex_integration` implements the
 IMEX-SSP3(4,3,3) scheme with automatic stiffness detection.
 
-### 7.11.3 Algorithm: Adaptive RK45 with Collapse Detection
+### 5.11.3 Algorithm: Adaptive RK45 with Collapse Detection
 
-**Algorithm 7.2: Bubble ODE Integration (Adaptive RK45)**
+**Algorithm 5.2: Bubble ODE Integration (Adaptive RK45)**
 
 ```
 Input:  Initial state (R0, dR0), time span [t0, tf], tolerances rtol, atol
@@ -934,13 +930,13 @@ Output: Trajectory {(t_i, R_i, dR_i)}, collapse events
 6. New step size: $h_{\text{new}} = h \cdot 0.9\, e^{-1/5}$,
    clipped to $[h_{\min}, h_{\max}]$.
 7. **Collapse detection:** if $y_1 < R_{\min}$ or $y_2 <
-   -\dot{R}_{\text{thresh}}$, invoke event bisection (Algorithm 7.3).
+   -\dot{R}_{\text{thresh}}$, invoke event bisection (Algorithm 5.3).
 8. **Stiffness detection:** if rejected-step ratio exceeds 0.2, switch
    to IMEX integrator
-   (`kwavers::physics::acoustics::bubble_dynamics::imex_integration`).
+   (`kwavers_physics::acoustics::bubble_dynamics::imex_integration`).
 9. Repeat until $t \geq t_f$.
 
-**Algorithm 7.3: Collapse Event Detection by Bisection**
+**Algorithm 5.3: Collapse Event Detection by Bisection**
 
 ```
 Input:  Bracketing interval [t_a, t_b] where R(t_a) > R_min > R(t_b)
@@ -954,25 +950,25 @@ Output: Collapse time t_c, state y(t_c)
    - If $R(t_m) > R_{\min}$: $t_a = t_m$; else $t_b = t_m$.
 3. Record $t_c = t_b$, emit collapse event with peak $\dot{R}_{\max}$ and
    associated temperature estimate from
-   `kwavers::physics::acoustics::bubble_dynamics::thermodynamics`.
+   `kwavers_physics::acoustics::bubble_dynamics::thermodynamics`.
 
-### 7.11.4 Symplectic Integration for Long-Time Stability
+### 5.11.4 Symplectic Integration for Long-Time Stability
 
 For stable cavitation over many acoustic cycles, symplectic (energy-preserving)
 integration is preferred.  The Störmer–Verlet and Yoshida 4th-order
 compositions implemented in
-`kwavers::solver::forward::ode::bubble_symplectic` conserve a modified
+`kwavers_solver::forward::ode::bubble_symplectic` conserve a modified
 Hamiltonian to order $O(h^p)$, preventing secular energy drift that would
 falsely indicate inertial collapse.
 
 The RP equation can be written in near-Hamiltonian form with generalized
 coordinate $q = R^{3/2}$ and conjugate momentum
 $\pi = (\tfrac{2}{3})\rho_L q\dot{q}$ (see
-`kwavers::solver::forward::ode::bubble_symplectic::stormer_verlet`).
+`kwavers_solver::forward::ode::bubble_symplectic::stormer_verlet`).
 
-### 7.11.5 Algorithm: Yoshida 4th-Order Symplectic Integrator
+### 5.11.5 Algorithm: Yoshida 4th-Order Symplectic Integrator
 
-**Algorithm 7.4: Yoshida Integration for Long-Time Bubble Dynamics**
+**Algorithm 5.4: Yoshida Integration for Long-Time Bubble Dynamics**
 
 ```
 Input:  State (q, π), Hamiltonian H(q,π), step h, N steps
@@ -991,11 +987,11 @@ Output: Phase-space trajectory {(q_n, π_n)}
 
 The Yoshida method has global order 4; the modified Hamiltonian
 $\tilde{H} = H + O(h^4)$ is preserved to machine precision over the full
-integration. Implemented in `kwavers::solver::forward::ode::bubble_symplectic::yoshida`.
+integration. Implemented in `kwavers_solver::forward::ode::bubble_symplectic::yoshida`.
 
 ---
 
-## 7.12 Epstein–Plesset Dissolution
+## 5.12 Epstein–Plesset Dissolution
 
 For bubbles not driven to collapse, gas exchange across the interface causes
 dissolution or growth.  The Epstein–Plesset (1950) model gives the rate of
@@ -1013,13 +1009,13 @@ concentration, $c_\infty$ the bulk dissolved-gas concentration, $M$ the
 molecular mass, $T$ the temperature, and $\ell_D = \sqrt{\pi D t / 4}$ the
 diffusion length.
 
-**Implementation.** `kwavers::physics::acoustics::bubble_dynamics::epstein_plesset`
-implements (7.24) with a validated solver; tests enforce agreement with
+**Implementation.** `kwavers_physics::acoustics::bubble_dynamics::epstein_plesset`
+implements (5.24) with a validated solver; tests enforce agreement with
 analytical dissolution time for air in water within $0.1\%$.
 
 ---
 
-## 7.13 Sonoluminescence
+## 5.13 Sonoluminescence
 
 Single-bubble sonoluminescence (SBSL) occurs when a stably levitated bubble
 undergoes spherical collapse emitting a broadband optical flash of duration
@@ -1048,7 +1044,7 @@ local temperature.
 
 ---
 
-## 7.14 Coupled Acoustic-Bubble Field Equations
+## 5.14 Coupled Acoustic-Bubble Field Equations
 
 In a bubble-laden medium the effective wave equation is modified by the
 volumetric bubble response.  The linearized coupled system is:
@@ -1072,14 +1068,14 @@ and $\beta$ the damping coefficient.  Below $\omega_0$ the medium becomes
 hypercompressible ($c_{\text{eff}} \ll c_L$); above $\omega_0$ the medium
 becomes evanescent.
 
-**Implementation.** `kwavers::physics::acoustics::bubble_dynamics::bubble_field::core`
+**Implementation.** `kwavers_physics::acoustics::bubble_dynamics::bubble_field::core`
 tracks the bubble density field and computes $c_{\text{eff}}(\omega)$ for each
-voxel.  The PSTD solver in `kwavers::solver::forward::pstd` accepts an
+voxel.  The PSTD solver in `kwavers_solver::forward::pstd` accepts an
 inhomogeneous sound speed field that can incorporate bubble-cloud effects.
 
 ---
 
-## 7.15 Summary Table
+## 5.15 Summary Table
 
 | Quantity | Expression | Module |
 |---|---|---|
@@ -1095,20 +1091,20 @@ inhomogeneous sound speed field that can incorporate bubble-cloud effects.
 
 ---
 
-## 7.16 Verification and Validation
+## 5.16 Verification and Validation
 
 All bubble dynamics models are verified against analytical solutions and
 published experimental data:
 
-1. **Minnaert frequency:** `kwavers::analysis::validation::theorem_validation`
-   checks that computed $f_0$ matches the large-bubble approximation (7.7)
+1. **Minnaert frequency:** `kwavers_analysis::validation::theorem_validation`
+   checks that computed $f_0$ matches the large-bubble approximation (5.7)
    within $0.01\%$ across $R_0 \in [1, 100]\,\mu\text{m}$.
-   The full surface-tension correction (7.6) is not implemented;
-   for $R_0 \lesssim 1\,\mu\text{m}$ the discrepancy between (7.6) and (7.7)
-   exceeds $10\%$ and (7.6) must be used.
+   The full surface-tension correction (5.6) is not implemented;
+   for $R_0 \lesssim 1\,\mu\text{m}$ the discrepancy between (5.6) and (5.7)
+   exceeds $10\%$ and (5.6) must be used.
 
-2. **Rayleigh collapse time:** Integration of (7.1) with zero gas pressure
-   is compared to the analytical result (7.10); agreement within $0.1\%$ is
+2. **Rayleigh collapse time:** Integration of (5.1) with zero gas pressure
+   is compared to the analytical result (5.10); agreement within $0.1\%$ is
    enforced.
 
 3. **Keller–Miksis incompressible limit:** At $c_L = 10^6\,\text{m/s}$ the

@@ -1,10 +1,10 @@
 //! Buffer allocation invariants, nonlinear steepening, and CFL stability tests.
 
+use crate::forward::nonlinear::westervelt::{WesterveltFdtd, WesterveltFdtdConfig};
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_core::constants::tissue_acoustics::B_OVER_A_WATER;
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
-use crate::forward::nonlinear::westervelt::{WesterveltFdtd, WesterveltFdtdConfig};
 
 /// **Invariant (pressure_prev2 allocation schedule):**
 /// `pressure_prev2` is allocated lazily on the first `update()` call so that

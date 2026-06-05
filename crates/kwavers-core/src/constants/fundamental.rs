@@ -102,8 +102,9 @@ pub const ACOUSTIC_ABSORPTION_TISSUE: f64 = 0.5; // dB/(cm·MHz)
 /// Standard atmospheric pressure (Pa).
 pub const ATMOSPHERIC_PRESSURE: f64 = 101325.0;
 
-/// Vapor pressure of water at 20°C (Pa).
-pub const VAPOR_PRESSURE_WATER_20C: f64 = 2339.0;
+// Water vapor pressure lives in `constants::cavitation::VAPOR_PRESSURE_WATER`
+// (single source of truth); the former `VAPOR_PRESSURE_WATER_20C` duplicate here
+// was unused and has been removed.
 
 /// Gravitational acceleration (m/s²).
 pub const GRAVITY: f64 = 9.80665;

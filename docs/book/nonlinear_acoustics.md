@@ -660,7 +660,7 @@ received signal at 2f₀ has lower clutter (reverberations at 2f₀ are weak) an
 spatial resolution (effective aperture doubling). The second-harmonic amplitude scales
 as P₀² (Eq. 3.27), so THI requires sufficient transmitted pressure (typically 0.5–2 MPa).
 
-**HIFU.** High-intensity focused ultrasound (Chapter 6) operates at P₀ ~ 1–10 MPa, placing
+**HIFU.** High-intensity focused ultrasound (Chapter 12) operates at P₀ ~ 1–10 MPa, placing
 σ well above 1 at the focal point. The sawtooth waveform generated post-shock deposits
 energy at all harmonics, increasing the effective absorption cross-section significantly
 above the fundamental-only value. This enhances the thermal dose rate (Eq. 6.3, CEM43).
@@ -671,7 +671,7 @@ impulsively, generating tensile stress that fractures calculi.
 
 **Diagnostic MI limit.** The Mechanical Index (MI) = P_neg / √f₀ ≤ 1.9 (FDA 2019)
 caps P_neg in kPa/MHz^0.5. Below MI ~ 0.7 nonlinear effects are perturbative.
-Above MI ~ 1.9 inertial cavitation (Chapter 7) becomes likely.
+Above MI ~ 1.9 inertial cavitation (Chapter 5) becomes likely.
 
 ---
 

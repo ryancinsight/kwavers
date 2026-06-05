@@ -1,14 +1,14 @@
 //! `KuznetsovWave` struct definition and primary impl methods.
 
-use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
-use kwavers_core::error::KwaversResult;
-use kwavers_grid::Grid;
-use kwavers_medium::Medium;
 use crate::forward::nonlinear::conservation::{
     ConservationDiagnostics, ConservationTolerances, ConservationTracker,
 };
 use crate::forward::nonlinear::kuznetsov::config::KuznetsovConfig;
 use crate::forward::nonlinear::kuznetsov::workspace::KuznetsovWorkspace;
+use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
+use kwavers_core::error::KwaversResult;
+use kwavers_grid::Grid;
+use kwavers_medium::Medium;
 use ndarray::Array3;
 
 /// Cached medium properties for conservation calculations

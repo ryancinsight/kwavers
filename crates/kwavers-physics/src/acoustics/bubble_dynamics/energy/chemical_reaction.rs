@@ -3,12 +3,12 @@
 use uom::si::f64::Power;
 use uom::si::power::watt;
 
+use crate::acoustics::bubble_dynamics::bubble_state::BubbleState;
+use crate::acoustics::bubble_dynamics::energy::EnergyBalanceCalculator;
 use kwavers_core::constants::chemistry::{
     EA_WATER_DECOMPOSITION_J_MOL, H_WATER_DISSOCIATION_J_MOL, K_WATER_DECOMPOSITION_PRE_EXP,
 };
 use kwavers_core::constants::fundamental::GAS_CONSTANT as R_GAS;
-use crate::acoustics::bubble_dynamics::bubble_state::BubbleState;
-use crate::acoustics::bubble_dynamics::energy::EnergyBalanceCalculator;
 
 impl EnergyBalanceCalculator {
     /// Calculate thermal dissociation energy rate for water vapor.

@@ -201,8 +201,8 @@ pub(super) fn step_wavefield_cpml(
                     - current[linear(ix, iy + 2, ny)])
                     * inv12dx2;
                 let cpml_correction = psi_x[idx] + psi_y[idx];
-                row[iy] = 2.0 * current[idx] - previous[idx]
-                    + c2dt2[idx] * (lx + ly + cpml_correction);
+                row[iy] =
+                    2.0 * current[idx] - previous[idx] + c2dt2[idx] * (lx + ly + cpml_correction);
             }
         });
 }

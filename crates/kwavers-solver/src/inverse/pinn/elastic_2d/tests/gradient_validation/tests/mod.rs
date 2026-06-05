@@ -1,8 +1,8 @@
-use kwavers_core::error::KwaversResult;
 use crate::inverse::elastic_2d::Config;
 use crate::inverse::pinn::elastic_2d::model::ElasticPINN2D;
 use burn::backend::{Autodiff, NdArray};
 use burn::tensor::Tensor;
+use kwavers_core::error::KwaversResult;
 
 mod analytic;
 mod first_deriv;

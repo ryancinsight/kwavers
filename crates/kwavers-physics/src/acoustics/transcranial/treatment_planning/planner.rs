@@ -27,7 +27,10 @@ impl TreatmentPlanner {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     pub fn new(brain_grid: &Grid, skull_ct_data: &Array3<f64>) -> KwaversResult<Self> {
-        let aberration_corrector = crate::transcranial::aberration_correction::TranscranialAberrationCorrection::new(brain_grid)?;
+        let aberration_corrector =
+            crate::transcranial::aberration_correction::TranscranialAberrationCorrection::new(
+                brain_grid,
+            )?;
 
         Ok(Self {
             brain_grid: brain_grid.clone(),

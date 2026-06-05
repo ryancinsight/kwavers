@@ -70,10 +70,10 @@ pub use geometry::FwiGeometry;
 #[cfg(test)]
 mod tests;
 
-use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
-use kwavers_grid::Grid;
 use crate::inverse::reconstruction::seismic::MisfitType;
 use crate::inverse::seismic::parameters::FwiParameters;
+use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
+use kwavers_grid::Grid;
 use ndarray::Array3;
 
 /// Reference density for seismic-tradition acoustic FWI [kg/m³].

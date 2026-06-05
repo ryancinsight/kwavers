@@ -2,9 +2,9 @@
 //! for the breast UST PSTD acquisition pipeline.
 
 use super::BreastUstPstdDatasetConfig;
+use kwavers_boundary::CPMLConfig;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_boundary::CPMLConfig;
 use kwavers_solver::forward::pstd::config::BoundaryConfig;
 use kwavers_transducer::transducers::ElementPosition;
 use ndarray::{s, Array2, ArrayView1};

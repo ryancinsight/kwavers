@@ -253,11 +253,11 @@ impl FwiProcessor {
             let (geometry, encoded_data) = encode_shots(shots, codes)?;
             let (objective, updated, step_size) =
                 self.descent_update(&model, &encoded_data, &geometry, grid)?;
-            log::info!(
-                "FWI encoded iter {iteration}: J={objective:.6e} step={step_size:.6e}"
-            );
+            log::info!("FWI encoded iter {iteration}: J={objective:.6e} step={step_size:.6e}");
             if step_size == 0.0 {
-                log::info!("FWI encoded iter {iteration}: no descent for this code; retaining model");
+                log::info!(
+                    "FWI encoded iter {iteration}: no descent for this code; retaining model"
+                );
                 continue;
             }
             model = updated;
@@ -270,9 +270,9 @@ impl FwiProcessor {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::inverse::seismic::parameters::FwiParameters;
     use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use kwavers_source::SourceMode;
-    use crate::inverse::seismic::parameters::FwiParameters;
     use ndarray::Array2;
 
     #[test]
@@ -287,7 +287,10 @@ mod tests {
                 for j in 0..n {
                     let dot: f64 = (0..n).map(|k| codes[k][i] * codes[k][j]).sum();
                     let expected = if i == j { n as f64 } else { 0.0 };
-                    assert!((dot - expected).abs() < 1e-12, "n={n} i={i} j={j} dot={dot}");
+                    assert!(
+                        (dot - expected).abs() < 1e-12,
+                        "n={n} i={i} j={j} dot={dot}"
+                    );
                 }
             }
         }
@@ -379,10 +382,7 @@ mod tests {
         };
         let processor = FwiProcessor::new(parameters);
 
-        let shots = vec![
-            shot(1.0, 0.0, 0.3),
-            shot(1.3, 0.9, -0.15),
-        ];
+        let shots = vec![shot(1.0, 0.0, 0.3), shot(1.3, 0.9, -0.15)];
 
         // Reference: Σ_i g_i (raw physics gradient per shot).
         let mut reference = Array3::<f64>::zeros(dims);

@@ -7,9 +7,7 @@
 //! 3. Focal pressure history must have `n_opt_iter + 1` entries.
 //! 4. Snapshot fields must have shape `(n_snapshots, nx, ny)` with non-zero energy.
 
-use crate::therapy::theranostic_guidance::{
-    run_standing_wave_suppression, StandingWaveOptConfig,
-};
+use crate::therapy::theranostic_guidance::{run_standing_wave_suppression, StandingWaveOptConfig};
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE};
 
 /// Minimal fast configuration for testing: small grid, few elements, few iterations.

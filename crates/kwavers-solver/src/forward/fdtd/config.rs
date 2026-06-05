@@ -1,8 +1,8 @@
 //! FDTD solver configuration
 
+use crate::geometry::SolverGeometry;
 use kwavers_core::constants::numerical::CFL_SAFETY_FACTOR;
 use kwavers_core::error::{KwaversResult, MultiError, ValidationError};
-use crate::geometry::SolverGeometry;
 use ndarray::Array3;
 use serde::{Deserialize, Serialize};
 

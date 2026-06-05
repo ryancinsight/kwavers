@@ -4,23 +4,27 @@ use std::sync::Arc;
 
 use ndarray::Array3;
 
-use kwavers_core::error::KwaversResult;
-use kwavers_receiver::recorder::pressure_statistics::SampledStatistics;
 use crate::dispatch::shared::trim_initial_recorder_sample;
 use crate::types::{SimulationRunRequest, SimulationRunResult};
+use kwavers_core::error::KwaversResult;
+use kwavers_receiver::recorder::pressure_statistics::SampledStatistics;
 use kwavers_solver::forward::pstd::dg::{HybridSpectralDGConfig, HybridSpectralDGSolver};
 
 /// Run a discontinuous Galerkin (hybrid spectral) simulation.
 pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult> {
-    let sensor_mask = req.sensor_mask.clone().unwrap_or_else(|| {
-        Array3::from_elem((req.grid.nx, req.grid.ny, req.grid.nz), false)
-    });
+    let sensor_mask = req
+        .sensor_mask
+        .clone()
+        .unwrap_or_else(|| Array3::from_elem((req.grid.nx, req.grid.ny, req.grid.nz), false));
     let c = req.medium.max_sound_speed();
     let config = HybridSpectralDGConfig::default();
     let grid_arc = Arc::new(req.grid.clone());
     let mut solver = HybridSpectralDGSolver::new(config, grid_arc);
 
-    let mut field = req.grid_source.p0.clone()
+    let mut field = req
+        .grid_source
+        .p0
+        .clone()
         .unwrap_or_else(|| Array3::zeros((req.grid.nx, req.grid.ny, req.grid.nz)));
     let mut output = Array3::<f64>::zeros((req.grid.nx, req.grid.ny, req.grid.nz));
 
@@ -44,26 +48,53 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
         std::mem::swap(&mut field, &mut output);
     }
 
-    let sensor_data = trim_initial_recorder_sample(sensor_data, req.time_steps, req.record_start_index);
+    let sensor_data =
+        trim_initial_recorder_sample(sensor_data, req.time_steps, req.record_start_index);
     let stats = if !sensor_indices.is_empty() {
         let n_cols = sensor_data.ncols();
         Some(SampledStatistics {
-            p_max: ndarray::Array1::from_iter(sensor_data.rows().into_iter().map(|row| row.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b)))),
-            p_min: ndarray::Array1::from_iter(sensor_data.rows().into_iter().map(|row| row.iter().fold(f64::INFINITY, |a, &b| a.min(b)))),
+            p_max: ndarray::Array1::from_iter(
+                sensor_data
+                    .rows()
+                    .into_iter()
+                    .map(|row| row.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b))),
+            ),
+            p_min: ndarray::Array1::from_iter(
+                sensor_data
+                    .rows()
+                    .into_iter()
+                    .map(|row| row.iter().fold(f64::INFINITY, |a, &b| a.min(b))),
+            ),
             p_rms: ndarray::Array1::from_iter(sensor_data.rows().into_iter().map(|row| {
                 let sq: f64 = row.iter().map(|v| v * v).sum();
                 (sq / n_cols as f64).sqrt()
             })),
-            p_final: ndarray::Array1::from_iter(sensor_data.rows().into_iter().map(|row| row[n_cols.saturating_sub(1)])),
+            p_final: ndarray::Array1::from_iter(
+                sensor_data
+                    .rows()
+                    .into_iter()
+                    .map(|row| row[n_cols.saturating_sub(1)]),
+            ),
         })
-    } else { None };
+    } else {
+        None
+    };
 
     Ok(SimulationRunResult {
-        sensor_data, stats,
-        ux_data: None, uy_data: None, uz_data: None,
-        ix_data: None, iy_data: None, iz_data: None,
-        i_avg_x: None, i_avg_y: None, i_avg_z: None,
-        velocity_stats: None, full_grid_stats: None,
-        thermal_temperature: None, thermal_dose: None,
+        sensor_data,
+        stats,
+        ux_data: None,
+        uy_data: None,
+        uz_data: None,
+        ix_data: None,
+        iy_data: None,
+        iz_data: None,
+        i_avg_x: None,
+        i_avg_y: None,
+        i_avg_z: None,
+        velocity_stats: None,
+        full_grid_stats: None,
+        thermal_temperature: None,
+        thermal_dose: None,
     })
 }

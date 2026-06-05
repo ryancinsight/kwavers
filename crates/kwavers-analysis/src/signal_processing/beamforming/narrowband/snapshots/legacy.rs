@@ -183,8 +183,8 @@ mod tests {
     use super::{
         analytic_signal_hilbert, downconvert_to_baseband, extract_complex_baseband_snapshots,
     };
-    use kwavers_math::fft::Complex64;
     use approx::assert_abs_diff_eq;
+    use kwavers_math::fft::Complex64;
     use ndarray::Array3;
 
     #[test]

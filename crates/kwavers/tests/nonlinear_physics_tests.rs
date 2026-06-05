@@ -29,15 +29,15 @@
 //! - Westervelt (1963). J. Acoust. Soc. Am. 35(4), 535–537.
 //! - Hamilton & Blackstock (1998). Nonlinear Acoustics. Academic Press.
 
+use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
-use kwavers_signal::SineWave;
-use kwavers_source::{PointSource, Source};
 use kwavers_physics::acoustics::bubble_dynamics::{
     BubbleParameters, BubbleState, KellerMiksisModel,
 };
+use kwavers_signal::SineWave;
 use kwavers_solver::forward::nonlinear::westervelt::{WesterveltFdtd, WesterveltFdtdConfig};
-use kwavers_core::error::KwaversResult;
+use kwavers_source::{PointSource, Source};
 use std::sync::Arc;
 
 /// Theorem (Westervelt solver stability):

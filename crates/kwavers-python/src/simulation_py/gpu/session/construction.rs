@@ -1,5 +1,7 @@
 use numpy::PyReadonlyArray3;
-use pyo3::exceptions::{PyRuntimeError, PyValueError};
+use pyo3::exceptions::PyRuntimeError;
+#[cfg(feature = "gpu")]
+use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
 use super::GpuPstdSession;
@@ -50,10 +52,10 @@ impl GpuPstdSession {
         #[cfg(feature = "gpu")]
         {
             use kwavers_boundary::cpml::{CPMLConfig, CPMLProfiles};
-            use kwavers_physics::acoustics::mechanics::absorption::power_law_db_cm_to_np_omega_m;
             use kwavers_gpu::pstd_gpu::{
                 AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays, SolverParams,
             };
+            use kwavers_physics::acoustics::mechanics::absorption::power_law_db_cm_to_np_omega_m;
 
             let kgrid = &grid.inner;
             let nx = kgrid.nx;

@@ -75,9 +75,7 @@ impl ReverseTimeMigration {
                 }
             });
 
-        if self.config.base_config.filter
-            != crate::reconstruction::ReconstructionFilterType::None
-        {
+        if self.config.base_config.filter != crate::reconstruction::ReconstructionFilterType::None {
             let filtered = self.apply_laplacian_filter_inplace(&self.image.clone())?;
             self.image.assign(&filtered);
         }

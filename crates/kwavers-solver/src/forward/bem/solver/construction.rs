@@ -1,6 +1,6 @@
 use super::{BemConfig, BemSolver};
-use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_boundary::BemBoundaryManager;
+use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_mesh::tetrahedral::TetrahedralMesh;
 use std::collections::HashMap;
 

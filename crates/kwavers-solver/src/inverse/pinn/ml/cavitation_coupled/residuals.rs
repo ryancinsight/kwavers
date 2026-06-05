@@ -2,12 +2,12 @@
 
 use super::domain::CavitationCoupledDomain;
 use super::mie_scattering::mie_backscatter_form_function;
-use kwavers_core::constants::acoustic_parameters::AIR_POLYTROPIC_INDEX;
-use kwavers_core::constants::cavitation::{SURFACE_TENSION_WATER, VAPOR_PRESSURE_WATER};
-use kwavers_core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL};
 use crate::inverse::pinn::ml::physics::PinnDomainPhysicsParameters;
 use burn::prelude::ElementConversion;
 use burn::tensor::{backend::AutodiffBackend, Tensor};
+use kwavers_core::constants::acoustic_parameters::AIR_POLYTROPIC_INDEX;
+use kwavers_core::constants::cavitation::{SURFACE_TENSION_WATER, VAPOR_PRESSURE_WATER};
+use kwavers_core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL};
 
 impl<B: AutodiffBackend> CavitationCoupledDomain<B> {
     /// Compute the Keller–Miksis cavitation residual.

@@ -1,6 +1,6 @@
 use super::{TestPoint, TransferLearner};
-use kwavers_core::error::KwaversResult;
 use burn::tensor::backend::AutodiffBackend;
+use kwavers_core::error::KwaversResult;
 
 impl<B: AutodiffBackend> TransferLearner<B> {
     /// Evaluate model accuracy on geometry

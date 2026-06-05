@@ -3,8 +3,8 @@
 use super::types::{
     PinnPredictionWithUncertainty, PinnUncertaintyConfig, PinnUncertaintyMethod, UncertaintyStats,
 };
-use kwavers_core::error::{KwaversError, KwaversResult};
 use burn::tensor::backend::AutodiffBackend;
+use kwavers_core::error::{KwaversError, KwaversResult};
 use ndarray::Array1;
 
 use super::conformal::PinnConformalPredictor;

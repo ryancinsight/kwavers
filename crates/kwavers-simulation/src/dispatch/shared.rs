@@ -78,7 +78,9 @@ pub(crate) fn trim_initial_recorder_sample(
     let start = record_start_index.max(1).min(time_steps);
     let skip = start.saturating_sub(1);
     if recorded_data.ncols() > time_steps {
-        recorded_data.slice(ndarray::s![.., skip..time_steps]).to_owned()
+        recorded_data
+            .slice(ndarray::s![.., skip..time_steps])
+            .to_owned()
     } else {
         recorded_data.slice(ndarray::s![.., skip..]).to_owned()
     }
@@ -93,7 +95,9 @@ pub(crate) fn trim_initial_recorder_view(
     let start = record_start_index.max(1).min(time_steps);
     let skip = start.saturating_sub(1);
     if recorded_data.ncols() > time_steps {
-        recorded_data.slice(ndarray::s![.., skip..time_steps]).to_owned()
+        recorded_data
+            .slice(ndarray::s![.., skip..time_steps])
+            .to_owned()
     } else {
         recorded_data.slice(ndarray::s![.., skip..]).to_owned()
     }

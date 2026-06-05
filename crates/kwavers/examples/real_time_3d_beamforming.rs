@@ -16,11 +16,11 @@
 //! - Speedup: 10-100× vs CPU implementation
 //! - Memory efficiency: Streaming processing
 
+use kwavers_core::error::KwaversResult;
 #[cfg(feature = "gpu")]
 use kwavers_transducer::beamforming::{
-        ApodizationWindow, BeamformingAlgorithm3D, BeamformingConfig3D, BeamformingProcessor3D,
-    };
-use kwavers_core::error::KwaversResult;
+    ApodizationWindow, BeamformingAlgorithm3D, BeamformingConfig3D, BeamformingProcessor3D,
+};
 use ndarray::{Array3, Array4};
 #[cfg(feature = "gpu")]
 use std::time::Instant;

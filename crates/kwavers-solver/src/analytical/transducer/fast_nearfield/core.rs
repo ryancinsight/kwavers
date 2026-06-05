@@ -1,8 +1,8 @@
 //! FastNearfieldSolver implementation.
 
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
-use kwavers_transducer::transducers::rectangular::RectangularTransducer;
 use kwavers_math::fft::{fft_2d_complex, ifft_2d_complex, Complex64};
+use kwavers_transducer::transducers::rectangular::RectangularTransducer;
 use ndarray::{s, Array2, Array3, Axis};
 use std::collections::HashMap;
 

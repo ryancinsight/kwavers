@@ -16,6 +16,7 @@
 pub mod analysis;
 pub mod blood_oxygenation;
 pub mod config;
+pub mod fk_migration;
 pub mod neural;
 pub mod orchestrator;
 pub mod plane_wave_compounding;

@@ -15,6 +15,8 @@ pub enum InversionMethod {
     VolumetricTimeOfFlight,
     /// 3D phase gradient with directional analysis
     DirectionalPhaseGradient,
+    /// Local frequency estimation (windowed energy-ratio wavenumber estimate)
+    LocalFrequencyEstimation,
 }
 
 /// Nonlinear inversion method for advanced parameter estimation

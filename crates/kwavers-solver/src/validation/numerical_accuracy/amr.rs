@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
-    use kwavers_grid::Grid;
     use crate::amr::AMRSolver;
+    use kwavers_grid::Grid;
     use ndarray::Array3;
     use std::f64::consts::PI;
 

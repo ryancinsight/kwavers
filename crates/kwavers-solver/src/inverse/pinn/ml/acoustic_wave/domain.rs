@@ -3,9 +3,9 @@
 use super::types::{AcousticBoundarySpec, AcousticProblemType, PinnAcousticBoundaryType};
 use crate::inverse::pinn::ml::adapters::source::PinnAcousticSource;
 use crate::inverse::pinn::ml::physics::{
-    BoundaryPosition, PinnPhysicsCouplingType, InitialConditionSpec, PhysicsLossWeights,
-    PhysicsValidationMetric, PinnBoundaryComponent, PinnBoundaryConditionSpec,
-    PinnCouplingInterface, PinnDomainPhysicsParameters, SimulationPhysicsDomain,
+    BoundaryPosition, InitialConditionSpec, PhysicsLossWeights, PhysicsValidationMetric,
+    PinnBoundaryComponent, PinnBoundaryConditionSpec, PinnCouplingInterface,
+    PinnDomainPhysicsParameters, PinnPhysicsCouplingType, SimulationPhysicsDomain,
 };
 use burn::tensor::{backend::AutodiffBackend, Tensor};
 use std::collections::HashMap;

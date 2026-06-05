@@ -1,9 +1,9 @@
 use super::types::{EMProblemType, ElectromagneticBoundarySpec};
-use kwavers_core::constants::fundamental::{VACUUM_PERMEABILITY, VACUUM_PERMITTIVITY};
-use kwavers_core::error::{KwaversError, KwaversResult};
 use crate::inverse::pinn::ml::adapters::electromagnetic::PinnEMSource;
 use crate::inverse::pinn::ml::physics::BoundaryPosition;
 use burn::tensor::backend::AutodiffBackend;
+use kwavers_core::constants::fundamental::{VACUUM_PERMEABILITY, VACUUM_PERMITTIVITY};
+use kwavers_core::error::{KwaversError, KwaversResult};
 
 /// GPU acceleration flag for electromagnetic simulations
 #[cfg(feature = "gpu")]

@@ -2,9 +2,9 @@ use super::{
     DomainAdapter, SourceFeatures, TrainingData, TransferLearner, TransferLearningStats,
     TransferMetrics,
 };
-use kwavers_core::error::{KwaversError, KwaversResult};
 use burn::prelude::ToElement;
 use burn::tensor::{backend::AutodiffBackend, Tensor};
+use kwavers_core::error::{KwaversError, KwaversResult};
 
 impl<B: AutodiffBackend> TransferLearner<B> {
     /// Create a new transfer learner
@@ -28,10 +28,7 @@ impl<B: AutodiffBackend> TransferLearner<B> {
         &mut self,
         target_geometry: &crate::inverse::pinn::ml::BurnWave2dGeometry,
         target_conditions: &[crate::inverse::pinn::ml::BoundaryCondition2D],
-    ) -> KwaversResult<(
-        crate::inverse::pinn::ml::BurnPINN2DWave<B>,
-        TransferMetrics,
-    )> {
+    ) -> KwaversResult<(crate::inverse::pinn::ml::BurnPINN2DWave<B>, TransferMetrics)> {
         let start_time = std::time::Instant::now();
 
         let source_features = self.extract_source_features()?;
@@ -257,9 +254,7 @@ impl<B: AutodiffBackend> TransferLearner<B> {
         let grads = total_loss.backward();
 
         let optimizer =
-            crate::inverse::pinn::ml::burn_wave_equation_2d::SimpleOptimizer2D::new(
-                1e-4_f32,
-            );
+            crate::inverse::pinn::ml::burn_wave_equation_2d::SimpleOptimizer2D::new(1e-4_f32);
         *model = optimizer.step(model.clone(), &grads);
 
         let loss_value = total_loss.into_scalar().to_f32();

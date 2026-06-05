@@ -39,12 +39,12 @@
 //! - Westervelt, P.J. (1963). Parametric acoustic array. J. Acoust. Soc. Am. 35(4), 535–537.
 //! - Hamilton, M.F. & Blackstock, D.T. (1998). Nonlinear Acoustics. Academic Press, Ch. 3.
 
-use kwavers_grid::Grid;
-use kwavers_medium::Medium;
-use kwavers_math::fft::Complex64;
 use crate::forward::nonlinear::conservation::{
     ConservationDiagnostics, ConservationTolerances, ConservationTracker, ViolationSeverity,
 };
+use kwavers_grid::Grid;
+use kwavers_math::fft::Complex64;
+use kwavers_medium::Medium;
 use log::warn;
 use ndarray::{Array3, ArrayView3};
 use std::sync::{Arc, Mutex};
@@ -130,10 +130,8 @@ impl WesterveltWave {
             let center_x = grid.dx * (grid.nx as f64) / 2.0;
             let center_y = grid.dy * (grid.ny as f64) / 2.0;
             let center_z = grid.dz * (grid.nz as f64) / 2.0;
-            let rho0 =
-                kwavers_medium::density_at(medium, center_x, center_y, center_z, grid);
-            let c0 =
-                kwavers_medium::sound_speed_at(medium, center_x, center_y, center_z, grid);
+            let rho0 = kwavers_medium::density_at(medium, center_x, center_y, center_z, grid);
+            let c0 = kwavers_medium::sound_speed_at(medium, center_x, center_y, center_z, grid);
             self.medium_properties = Some(MediumProperties { rho0, c0 });
         }
 

@@ -20,8 +20,8 @@ use kwavers_analysis::signal_processing::localization::beamforming_search::{
     localize_beamforming, BeamformingLocalizationInput, LocalizationBeamformSearchConfig,
     LocalizationBeamformingMethod, SearchGrid,
 };
-use kwavers_transducer::beamforming::BeamformingCoreConfig;
 use kwavers_receiver::{Position, Sensor, SensorArray, SensorArrayGeometry};
+use kwavers_transducer::beamforming::BeamformingCoreConfig;
 
 use ndarray::Array3;
 

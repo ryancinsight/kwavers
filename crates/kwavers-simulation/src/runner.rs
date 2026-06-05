@@ -4,10 +4,10 @@
 //! [`dispatch`](super::dispatch).  All shared types live in
 //! [`types`](super::types).
 
-use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_source::Source as KwaversSource;
 use crate::dispatch;
+use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_solver::config::SolverType;
+use kwavers_source::Source as KwaversSource;
 
 use crate::types::{SimulationRunRequest, SimulationRunResult};
 

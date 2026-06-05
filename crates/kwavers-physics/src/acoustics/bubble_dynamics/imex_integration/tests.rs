@@ -1,9 +1,7 @@
 //! Tests for IMEX bubble integration
 
 use super::*;
-use crate::acoustics::bubble_dynamics::{
-    BubbleParameters, BubbleState, KellerMiksisModel,
-};
+use crate::acoustics::bubble_dynamics::{BubbleParameters, BubbleState, KellerMiksisModel};
 use std::sync::Arc;
 
 #[test]

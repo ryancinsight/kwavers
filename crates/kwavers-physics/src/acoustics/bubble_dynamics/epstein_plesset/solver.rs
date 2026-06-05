@@ -17,8 +17,8 @@
 //! - Prosperetti, A. (1984). Appl. Sci. Res., 38(3), 145-164.
 
 use super::types::{OscillationType, StabilityAnalysis};
-use kwavers_core::constants::numerical::TWO_PI;
 use crate::acoustics::bubble_dynamics::bubble_state::BubbleParameters;
+use kwavers_core::constants::numerical::TWO_PI;
 
 /// Epstein-Plesset stability solver
 #[derive(Debug)]

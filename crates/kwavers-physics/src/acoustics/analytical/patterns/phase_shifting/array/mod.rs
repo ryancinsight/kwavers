@@ -6,11 +6,11 @@
 use kwavers_core::error::KwaversResult;
 use ndarray::{Array1, Array2};
 
-use kwavers_core::constants::numerical::TWO_PI;
-use kwavers_core::constants::SOUND_SPEED_WATER;
 use crate::phase_modulation::phase_shifting::beam::BeamSteering;
 use crate::phase_modulation::phase_shifting::core::{calculate_wavelength, wrap_phase};
 use crate::phase_modulation::phase_shifting::focus::DynamicFocusing;
+use kwavers_core::constants::numerical::TWO_PI;
+use kwavers_core::constants::SOUND_SPEED_WATER;
 
 /// Phased array system
 #[derive(Debug)]

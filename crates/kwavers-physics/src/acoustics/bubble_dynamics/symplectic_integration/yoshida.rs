@@ -1,9 +1,9 @@
 //! Yoshida 4th-order symplectic composition step.
 
 use super::{stormer_verlet_step, YOSHIDA_W1, YOSHIDA_W2};
-use kwavers_core::error::KwaversResult;
 use crate::acoustics::bubble_dynamics::bubble_state::BubbleState;
 use crate::acoustics::bubble_dynamics::keller_miksis::KellerMiksisModel;
+use kwavers_core::error::KwaversResult;
 
 /// Yoshida 4th-order symplectic step: three Störmer-Verlet sub-steps.
 ///

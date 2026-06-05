@@ -1,7 +1,7 @@
 use super::{TestAutodiffBackend, TestBackend};
-use kwavers_core::error::KwaversResult;
 use crate::inverse::pinn::elastic_2d::model::ElasticPINN2D;
 use burn::tensor::Tensor;
+use kwavers_core::error::KwaversResult;
 
 /// Compute central finite difference approximation of ∂f/∂x
 ///

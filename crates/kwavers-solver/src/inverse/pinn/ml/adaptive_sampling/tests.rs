@@ -27,9 +27,7 @@ impl<B: AutodiffBackend> crate::inverse::pinn::ml::physics::SimulationPhysicsDom
     ) -> Vec<crate::inverse::pinn::ml::physics::PinnBoundaryConditionSpec> {
         vec![]
     }
-    fn initial_conditions(
-        &self,
-    ) -> Vec<crate::inverse::pinn::ml::physics::InitialConditionSpec> {
+    fn initial_conditions(&self) -> Vec<crate::inverse::pinn::ml::physics::InitialConditionSpec> {
         vec![]
     }
     fn loss_weights(&self) -> crate::inverse::pinn::ml::physics::PhysicsLossWeights {
@@ -46,9 +44,8 @@ impl<B: AutodiffBackend> crate::inverse::pinn::ml::physics::SimulationPhysicsDom
 fn test_adaptive_sampler_creation() {
     type TestBackend = Autodiff<NdArray<f32>>;
 
-    let domain: Box<
-        dyn crate::inverse::pinn::ml::physics::SimulationPhysicsDomain<TestBackend>,
-    > = Box::new(MockPhysicsDomain);
+    let domain: Box<dyn crate::inverse::pinn::ml::physics::SimulationPhysicsDomain<TestBackend>> =
+        Box::new(MockPhysicsDomain);
     let strategy = AdaptiveRefinementConfig::default();
 
     let sampler = AdaptiveCollocationSampler::<TestBackend>::new(100, domain, strategy);

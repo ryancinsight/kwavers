@@ -1,11 +1,9 @@
 //! Conservation diagnostics tests for the KZK solver.
 
+use crate::forward::nonlinear::conservation::{ConservationDiagnostics, ConservationTolerances};
+use crate::forward::nonlinear::kzk::{KZKConfig, KZKSolver};
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_math::fft::Complex64;
-use crate::forward::nonlinear::conservation::{
-    ConservationDiagnostics, ConservationTolerances,
-};
-use crate::forward::nonlinear::kzk::{KZKConfig, KZKSolver};
 use ndarray::Array2;
 
 #[test]

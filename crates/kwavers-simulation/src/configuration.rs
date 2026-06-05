@@ -12,12 +12,10 @@ use kwavers_grid::config::DomainGridParameters;
 use kwavers_medium::config::DomainMediumParameters;
 
 // Import relocated parameters
-use kwavers_source::DomainSourceParameters;
-use crate::parameters::{
-    OutputParameters, PerformanceParameters, SimulationParameters,
-};
+use crate::parameters::{OutputParameters, PerformanceParameters, SimulationParameters};
 use kwavers_solver::config::SolverConfiguration;
 use kwavers_solver::validation::ValidationParameters;
+use kwavers_source::DomainSourceParameters;
 
 /// Master configuration structure - Single Source of Truth
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -205,13 +203,13 @@ impl Configuration {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use crate::parameters::SimulationParameters;
     use kwavers_boundary::config::BoundaryParameters;
+    use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use kwavers_grid::config::DomainGridParameters;
     use kwavers_medium::config::DomainMediumParameters;
-    use kwavers_source::config::DomainSourceParameters;
-    use crate::parameters::SimulationParameters;
     use kwavers_solver::config::SolverConfiguration;
+    use kwavers_source::config::DomainSourceParameters;
 
     #[test]
     fn test_default_configuration() {

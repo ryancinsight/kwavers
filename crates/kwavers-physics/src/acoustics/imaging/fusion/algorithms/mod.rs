@@ -41,8 +41,8 @@ pub(crate) mod weighted_average;
 use super::config::{FusionConfig, ImagingFusionMethod};
 use super::quality;
 use super::types::{FusedImageResult, RegisteredModality};
-use kwavers_core::error::{KwaversError, KwaversResult};
 use intensity_projection::ProjectionKind;
+use kwavers_core::error::{KwaversError, KwaversResult};
 use ndarray::Array3;
 use std::collections::HashMap;
 

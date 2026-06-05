@@ -8,12 +8,10 @@ use super::types::{
     GeometricFeature, PhysicsSolution, UniversalSolverConvergenceInfo, UniversalSolverDomainInfo,
     UniversalSolverGeometry2D, UniversalSolverStats, UniversalTrainingConfig,
 };
-use kwavers_core::error::{KwaversError, KwaversResult};
-use crate::inverse::pinn::ml::physics::{
-    PinnDomainPhysicsParameters, SimulationPhysicsDomain,
-};
+use crate::inverse::pinn::ml::physics::{PinnDomainPhysicsParameters, SimulationPhysicsDomain};
 use burn::prelude::ToElement;
 use burn::tensor::{backend::AutodiffBackend, Tensor};
+use kwavers_core::error::{KwaversError, KwaversResult};
 use log::info;
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
@@ -235,10 +233,9 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
             Tensor::<B, 1>::from_floats(t_coords.as_slice(), &device).reshape([n_points, 1]);
 
         let mut loss_history = Vec::new();
-        let optimizer =
-            crate::inverse::pinn::ml::burn_wave_equation_2d::SimpleOptimizer2D::new(
-                config.learning_rate as f32,
-            );
+        let optimizer = crate::inverse::pinn::ml::burn_wave_equation_2d::SimpleOptimizer2D::new(
+            config.learning_rate as f32,
+        );
 
         for epoch in 0..config.epochs {
             let residual =

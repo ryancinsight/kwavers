@@ -13,11 +13,11 @@ use uom::si::thermal_conductivity::watt_per_meter_kelvin;
 use uom::si::thermodynamic_temperature::kelvin;
 use uom::si::time::second;
 
-use kwavers_core::constants::thermodynamic::H_VAP_WATER_100C;
-use kwavers_core::constants::GAS_CONSTANT as R_GAS;
 use crate::acoustics::bubble_dynamics::bubble_state::BubbleState;
 use crate::acoustics::bubble_dynamics::energy::EnergyBalanceCalculator;
 use crate::acoustics::bubble_dynamics::BubbleParameters;
+use kwavers_core::constants::thermodynamic::H_VAP_WATER_100C;
+use kwavers_core::constants::GAS_CONSTANT as R_GAS;
 
 impl EnergyBalanceCalculator {
     /// Calculate the rate of change of internal energy (dU/dt)

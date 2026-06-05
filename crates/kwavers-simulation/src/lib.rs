@@ -4,8 +4,8 @@
 
 pub mod backends;
 pub mod builder;
-pub mod configuration;
 pub mod configs;
+pub mod configuration;
 pub mod core;
 pub mod dispatch;
 pub mod factory;
@@ -24,13 +24,11 @@ pub mod therapy;
 pub mod types;
 
 // Re-exports
-pub use kwavers_receiver::recorder;
 pub use builder::ConfigurationBuilder;
 pub use configs::{HelmholtzConfig, NonlinearConfig, PmlConfig, PoroelasticConfig, ThermalConfig};
 pub use configuration::Configuration;
 pub use core::{CoreSimulation, CoreSimulationStatistics, SimulationBuilder, SimulationResult};
-pub use runner::{SimulationRunner};
-pub use types::{extract_full_grid_stats, FullGridStats, SimulationRunRequest, SimulationRunResult};
+pub use kwavers_receiver::recorder;
 pub use manager::PhysicsManager;
 pub use modalities::{PhotoacousticParameters, PhotoacousticResult, PhotoacousticSimulator};
 pub use multi_physics::{
@@ -41,4 +39,8 @@ pub use parameters::{
     OutputFieldType, OutputFormat, OutputParameters, PerformanceParameters, SimulationParameters,
 };
 pub use photoacoustics::PhotoacousticRunner;
+pub use runner::SimulationRunner;
 pub use setup::{SimulationComponents, SimulationSetup};
+pub use types::{
+    extract_full_grid_stats, FullGridStats, SimulationRunRequest, SimulationRunResult,
+};

@@ -1,4 +1,4 @@
-# Pancreatic Cancer Histotripsy: PDAC Treatment Planning
+# Chapter 32 — Pancreatic Cancer Histotripsy: PDAC Treatment Planning
 
 Chapter 21f implements treatment-planning simulations for histotripsy of
 pancreatic ductal adenocarcinoma (PDAC). It loads an abdominal CT with

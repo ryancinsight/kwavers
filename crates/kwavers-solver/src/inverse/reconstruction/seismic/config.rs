@@ -92,8 +92,7 @@ impl Default for SeismicImagingConfig {
             base_config: ReconstructionConfig {
                 sound_speed: 3000.0,                         // Typical crustal velocity
                 sampling_frequency: 1.0 / DEFAULT_TIME_STEP, // 2000 Hz
-                algorithm:
-                    crate::reconstruction::ReconstructionAlgorithm::FullWaveformInversion,
+                algorithm: crate::reconstruction::ReconstructionAlgorithm::FullWaveformInversion,
                 filter: ReconstructionFilterType::None,
                 interpolation: ReconstructionInterpolationMethod::Linear,
             },

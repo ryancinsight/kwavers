@@ -3,8 +3,8 @@
 //! WGSL compute shaders for real-time PINN inference on GPU.
 //! Provides matrix multiplication and activation function kernels.
 
-use kwavers_core::error::KwaversResult;
 use crate::gpu::device::GpuDevice;
+use kwavers_core::error::KwaversResult;
 mod activate;
 mod matmul;
 #[cfg(all(test, feature = "gpu"))]

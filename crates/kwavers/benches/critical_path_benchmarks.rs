@@ -10,11 +10,11 @@
 //! - GoT: Connect performance metrics across modules for holistic optimization
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use kwavers_math::numerics::operators::{
-        CentralDifference2, CentralDifference4, CentralDifference6, DifferentialOperator,
-    };
-use kwavers_medium::{CoreMedium, HomogeneousMedium};
 use kwavers_grid::Grid;
+use kwavers_math::numerics::operators::{
+    CentralDifference2, CentralDifference4, CentralDifference6, DifferentialOperator,
+};
+use kwavers_medium::{CoreMedium, HomogeneousMedium};
 use ndarray::Array3;
 
 /// Benchmark FDTD finite difference operations (critical inner loop)

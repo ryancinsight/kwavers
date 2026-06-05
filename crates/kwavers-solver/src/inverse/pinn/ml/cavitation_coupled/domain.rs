@@ -1,7 +1,7 @@
 use super::config::{CavitationCouplingConfig, CavitationCouplingType};
-use kwavers_physics::bubble_dynamics::{BubbleState, KellerMiksisModel};
 use crate::inverse::pinn::ml::physics::PinnCouplingInterface;
 use burn::tensor::backend::AutodiffBackend;
+use kwavers_physics::bubble_dynamics::{BubbleState, KellerMiksisModel};
 
 /// Cavitation coupled physics domain.
 #[derive(Debug)]

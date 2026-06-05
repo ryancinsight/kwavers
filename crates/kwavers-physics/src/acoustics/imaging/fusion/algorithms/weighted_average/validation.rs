@@ -1,5 +1,5 @@
-use kwavers_core::error::{KwaversError, KwaversResult};
 use crate::acoustics::imaging::fusion::algorithms::MultiModalFusion;
+use kwavers_core::error::{KwaversError, KwaversResult};
 
 /// Validation descriptor for weighted-average fusion.
 #[derive(Debug, Clone)]

@@ -83,11 +83,9 @@ impl DelayAndSumPAM {
                     &delays_samples,
                     &apodization_weights,
                 )?,
-                PamImagingMode::DelayMultiplyAndSum => self.dmas_at_point_view(
-                    passive_data,
-                    &delays_samples,
-                    &apodization_weights,
-                ),
+                PamImagingMode::DelayMultiplyAndSum => {
+                    self.dmas_at_point_view(passive_data, &delays_samples, &apodization_weights)
+                }
             };
         }
 

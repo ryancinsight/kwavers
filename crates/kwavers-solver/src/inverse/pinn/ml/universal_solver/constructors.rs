@@ -3,14 +3,14 @@
 //! SRP: changes when domain registration logic or device setup changes.
 
 use super::solver::UniversalPINNSolver;
+use crate::inverse::pinn::ml::physics::PhysicsDomainRegistry;
+use burn::tensor::backend::AutodiffBackend;
 use kwavers_core::constants::fundamental::{
     SOUND_SPEED_AIR, VACUUM_PERMEABILITY, VACUUM_PERMITTIVITY,
 };
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::tissue_acoustics::DENSITY_AIR;
 use kwavers_core::error::KwaversResult;
-use crate::inverse::pinn::ml::physics::PhysicsDomainRegistry;
-use burn::tensor::backend::AutodiffBackend;
 use std::collections::HashMap;
 
 impl<B: AutodiffBackend> UniversalPINNSolver<B> {

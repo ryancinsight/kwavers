@@ -4,9 +4,9 @@
 //! temperature evolution, Van der Waals bubble pressure, and physical-
 //! bound rejection on extreme states.
 
-use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use crate::acoustics::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};
 use crate::acoustics::bubble_dynamics::keller_miksis::KellerMiksisModel;
+use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 
 #[test]
 fn test_heat_capacity_calculation() {

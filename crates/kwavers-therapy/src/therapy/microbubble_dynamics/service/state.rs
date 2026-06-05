@@ -11,10 +11,10 @@ use kwavers_core::constants::thermodynamic::{
     BODY_TEMPERATURE_K, SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER,
 };
 use kwavers_core::error::KwaversResult;
-use kwavers_physics::therapy::microbubble::{MarmottantShellProperties, MicrobubbleState};
 use kwavers_physics::acoustics::bubble_dynamics::bubble_state::{
     BubbleParameters, BubbleState, GasSpecies,
 };
+use kwavers_physics::therapy::microbubble::{MarmottantShellProperties, MicrobubbleState};
 
 use super::MicrobubbleDynamicsService;
 

@@ -12,6 +12,7 @@
 //! Sherwood correlation for mass transfer coefficient
 
 use super::integrator::BubbleIMEXIntegrator;
+use crate::acoustics::bubble_dynamics::BubbleState;
 use kwavers_core::constants::fundamental::GAS_CONSTANT as R_GAS;
 use kwavers_core::constants::numerical::MMHG_TO_PA;
 use kwavers_core::constants::thermodynamic::{
@@ -19,7 +20,6 @@ use kwavers_core::constants::thermodynamic::{
     VAPOR_DIFFUSION_COEFFICIENT, WATER_ANTOINE_A, WATER_ANTOINE_B, WATER_ANTOINE_C,
 };
 use kwavers_core::error::KwaversResult;
-use crate::acoustics::bubble_dynamics::BubbleState;
 
 impl BubbleIMEXIntegrator {
     /// Calculate thermal and mass transfer rates without modifying state

@@ -1,80 +1,29 @@
-//! Keller-Miksis ODE integration (compressible bubble dynamics).
+//! PyO3 wrapper for the Keller–Miksis integrator (compressible-liquid bubble
+//! dynamics).
 //!
-//! # Theorem
+//! This module is a thin binding only: the Keller–Miksis ODE physics lives in
+//! `kwavers_physics::analytical::cavitation::keller_miksis_shelled_rk4` (the single
+//! source of truth). Here we only marshal the Python call: build the uniform time
+//! grid, delegate, and return numpy arrays.
 //!
-//! The Keller-Miksis equation (Keller & Miksis 1980) extends Rayleigh-Plesset
-//! with first-order liquid compressibility corrections:
-//!
-//! ```text
-//! (1 − Ṙ/c) R R̈ + (3/2)(1 − Ṙ/(3c)) Ṙ² =
-//!     (1 + Ṙ/c)/ρ · [p_L − p_∞ − p_ac·sin(ωt)]
-//!     + R/(ρ·c) · ṗ_L
-//! ```
-//!
-//! where:
-//!
-//! ```text
-//! p_L(R) = (p_∞ + 2σ/R₀)(R₀/R)^{3κ} − 2σ/R − 4μṘ/R − 4ξṘ/R²
-//! ṗ_L ≈ −3κ p_gas Ṙ/R   (dominant gas compression term)
-//! ```
-//!
-//! The shell viscosity term `4ξṘ/R²` models encapsulated microbubble shells;
-//! set `xi_s = 0` for a bare gas bubble.
-//!
-//! The Mach number `Ṙ/c` is clamped to `[−0.99, 0.99]` to prevent
-//! division by zero near catastrophic collapse (|Ṙ| → c).
+//! The shell viscosity `xi_s` [Pa·s·m] selects the encapsulated-microbubble shell
+//! damping (de Jong 1994 lumped linear model): `xi_s = 0` is the bare gas bubble,
+//! `xi_s > 0` adds the `−4 ξ_s Ṙ / R²` shell-damping wall pressure. Both cases are
+//! the same canonical physics function (the bare case is `xi_s = 0`), so no model
+//! branching or approximation happens in the binding.
 //!
 //! # References
-//!
-//! - Keller & Miksis (1980) J. Acoust. Soc. Am. 68(2):628
+//! - Keller & Miksis (1980) J. Acoust. Soc. Am. 68(2):628.
+//! - de Jong et al. (1994) Ultrasonics 32:447 (linear shell viscosity).
 
 use ndarray::Array1;
 use numpy::{IntoPyArray, PyArray1};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
-#[inline]
-#[allow(clippy::too_many_arguments)]
-pub(super) fn km_rhs(
-    t: f64,
-    r: f64,
-    rdot: f64,
-    r0: f64,
-    p_inf: f64,
-    p_ac: f64,
-    omega: f64,
-    rho: f64,
-    sigma: f64,
-    kappa: f64,
-    mu: f64,
-    xi_s: f64,
-    c_l: f64,
-) -> (f64, f64) {
-    let r_safe = r.max(1.0e-12);
-    let p_gas = (p_inf + 2.0 * sigma / r0) * (r0 / r_safe).powf(3.0 * kappa);
-    let p_l = p_gas
-        - 2.0 * sigma / r_safe
-        - 4.0 * mu * rdot / r_safe
-        - 4.0 * xi_s * rdot / (r_safe * r_safe);
-    let dp_l_dt = -3.0 * kappa * p_gas * rdot / r_safe;
-    let p_drive = p_inf + p_ac * (omega * t).sin();
-
-    let mach = (rdot / c_l).clamp(-0.99, 0.99);
-    let lhs_r_coeff = (1.0 - mach) * r_safe;
-    if lhs_r_coeff.abs() < 1.0e-20 {
-        return (rdot, 0.0);
-    }
-
-    let rhs = (1.0 + mach) * (p_l - p_drive) / rho + r_safe * dp_l_dt / (rho * c_l)
-        - 1.5 * (1.0 - mach / 3.0) * rdot * rdot;
-
-    let rddot = rhs / lhs_r_coeff;
-    (rdot, rddot)
-}
-
-/// Integrate the Keller-Miksis equation using fixed-step RK4.
-///
-/// Extends Rayleigh-Plesset with liquid compressibility (Mach-number) correction.
+/// Integrate the Keller-Miksis equation using fixed-step RK4 (delegates to
+/// `kwavers_physics`). Extends Rayleigh-Plesset with the liquid-compressibility
+/// (Mach-number) correction.
 ///
 /// Parameters
 /// ----------
@@ -89,9 +38,10 @@ pub(super) fn km_rhs(
 /// sigma : surface tension [N/m]
 /// gamma : polytropic index (dimensionless)
 /// mu : liquid dynamic viscosity [Pa·s]
-/// pv_pa : vapour pressure [Pa] (accepted for API symmetry; unused in K-M)
+/// pv_pa : vapour pressure [Pa]
 /// c_l : liquid sound speed [m/s]
-/// xi_s : shell viscosity parameter [Pa·s·m] (0 for bare bubble)
+/// xi_s : encapsulating-shell viscosity [Pa·s·m] (de Jong 1994 lumped linear shell).
+///        0 = bare gas bubble; > 0 = coated/encapsulated microbubble.
 ///
 /// Returns
 /// -------
@@ -103,8 +53,8 @@ pub(super) fn km_rhs(
     xi_s = 0.0,
 ))]
 #[allow(clippy::too_many_arguments)]
-pub fn solve_keller_miksis<'py>(
-    py: Python<'py>,
+pub fn solve_keller_miksis(
+    py: Python<'_>,
     r0_m: f64,
     rdot0_m_s: f64,
     p_inf_pa: f64,
@@ -120,7 +70,6 @@ pub fn solve_keller_miksis<'py>(
     c_l: f64,
     xi_s: f64,
 ) -> PyResult<(Py<PyArray1<f64>>, Py<PyArray1<f64>>, Py<PyArray1<f64>>)> {
-    let _ = pv_pa;
     if r0_m <= 0.0 {
         return Err(PyValueError::new_err("r0_m must be > 0"));
     }
@@ -133,86 +82,33 @@ pub fn solve_keller_miksis<'py>(
     if rho <= 0.0 || c_l <= 0.0 {
         return Err(PyValueError::new_err("rho and c_l must be > 0"));
     }
-
-    let n_out = n_steps + 1;
-    let mut time = Array1::<f64>::zeros(n_out);
-    let mut radius = Array1::<f64>::zeros(n_out);
-    let mut rdot_out = Array1::<f64>::zeros(n_out);
-
-    let dt = t_end_s / n_steps as f64;
-    let omega = 2.0 * std::f64::consts::PI * frequency_hz;
-
-    time[0] = 0.0;
-    radius[0] = r0_m;
-    rdot_out[0] = rdot0_m_s;
-
-    let mut r_cur = r0_m;
-    let mut v_cur = rdot0_m_s;
-
-    for i in 1..n_out {
-        let t_cur = (i - 1) as f64 * dt;
-
-        let (dr1, dv1) = km_rhs(
-            t_cur, r_cur, v_cur, r0_m, p_inf_pa, p_ac_pa, omega, rho, sigma, gamma, mu, xi_s, c_l,
-        );
-        let (dr2, dv2) = km_rhs(
-            t_cur + 0.5 * dt,
-            r_cur + 0.5 * dt * dr1,
-            v_cur + 0.5 * dt * dv1,
-            r0_m,
-            p_inf_pa,
-            p_ac_pa,
-            omega,
-            rho,
-            sigma,
-            gamma,
-            mu,
-            xi_s,
-            c_l,
-        );
-        let (dr3, dv3) = km_rhs(
-            t_cur + 0.5 * dt,
-            r_cur + 0.5 * dt * dr2,
-            v_cur + 0.5 * dt * dv2,
-            r0_m,
-            p_inf_pa,
-            p_ac_pa,
-            omega,
-            rho,
-            sigma,
-            gamma,
-            mu,
-            xi_s,
-            c_l,
-        );
-        let (dr4, dv4) = km_rhs(
-            t_cur + dt,
-            r_cur + dt * dr3,
-            v_cur + dt * dv3,
-            r0_m,
-            p_inf_pa,
-            p_ac_pa,
-            omega,
-            rho,
-            sigma,
-            gamma,
-            mu,
-            xi_s,
-            c_l,
-        );
-
-        r_cur += dt / 6.0 * (dr1 + 2.0 * dr2 + 2.0 * dr3 + dr4);
-        v_cur += dt / 6.0 * (dv1 + 2.0 * dv2 + 2.0 * dv3 + dv4);
-        r_cur = r_cur.max(1.0e-12);
-
-        time[i] = t_cur + dt;
-        radius[i] = r_cur;
-        rdot_out[i] = v_cur;
+    if xi_s < 0.0 {
+        return Err(PyValueError::new_err("xi_s must be >= 0"));
     }
 
+    let dt = t_end_s / n_steps as f64;
+    let time: Vec<f64> = (0..=n_steps).map(|i| i as f64 * dt).collect();
+    // Single source of truth: the bare bubble (xi_s = 0) and the coated
+    // microbubble (xi_s > 0) are the SAME canonical Keller–Miksis integrator;
+    // the shell term −4 ξ_s Ṙ / R² vanishes identically at xi_s = 0.
+    let (radius, rdot) = kwavers_physics::analytical::cavitation::keller_miksis_shelled_rk4(
+        r0_m,
+        rdot0_m_s,
+        p_ac_pa,
+        frequency_hz,
+        &time,
+        p_inf_pa,
+        rho,
+        sigma,
+        mu,
+        gamma,
+        pv_pa,
+        xi_s,
+        c_l,
+    );
     Ok((
-        time.into_pyarray(py).into(),
-        radius.into_pyarray(py).into(),
-        rdot_out.into_pyarray(py).into(),
+        Array1::from(time).into_pyarray(py).into(),
+        Array1::from(radius).into_pyarray(py).into(),
+        Array1::from(rdot).into_pyarray(py).into(),
     ))
 }

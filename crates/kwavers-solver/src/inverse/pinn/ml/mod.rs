@@ -113,7 +113,6 @@ pub use burn_wave_equation_1d::{
     SimpleOptimizer,
 };
 
-
 #[cfg(feature = "pinn")]
 pub use burn_wave_equation_2d::{
     BoundaryCondition2D, BurnLossWeights2D, BurnPINN2DConfig, BurnPINN2DWave,
@@ -136,7 +135,6 @@ pub mod multi_gpu_manager;
 
 #[cfg(feature = "pinn")]
 pub mod distributed_training;
-
 
 // Sprint 153: Real-Time Inference & Optimization
 #[cfg(feature = "pinn")]
@@ -197,7 +195,6 @@ pub use distributed_training::{
     CheckpointManager, DistributedPinnTrainer, GradientAggregation, TrainingCoordinator,
 };
 
-
 // Sprint 153: Real-Time Inference & Optimization
 #[cfg(feature = "pinn")]
 pub use jit_compiler::{
@@ -212,8 +209,8 @@ pub use quantization::{
 
 #[cfg(feature = "pinn")]
 pub use edge_runtime::{
-    Architecture, DataType, EdgeRuntime, ExecutionKernel, HardwareCapabilities, IOSpecification,
-    MemoryAllocator, EdgeRuntimePerformanceMonitor as EdgePerformanceMonitor,
+    Architecture, DataType, EdgeRuntime, EdgeRuntimePerformanceMonitor as EdgePerformanceMonitor,
+    ExecutionKernel, HardwareCapabilities, IOSpecification, MemoryAllocator,
 };
 
 // Sprint 154: Meta-Learning & Transfer Learning

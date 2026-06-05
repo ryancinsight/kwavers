@@ -2,11 +2,11 @@
 
 use kwavers_boundary::DomainPMLBoundary;
 use kwavers_core::constants::{DENSITY_WATER, SOUND_SPEED_WATER};
+use kwavers_core::time::Time;
 use kwavers_grid::Grid;
 use kwavers_medium::{CoreMedium, HomogeneousMedium};
 use kwavers_solver::plugin_based::PluginBasedSolver;
 use kwavers_source::PointSource;
-use kwavers_core::time::Time;
 use std::sync::Arc;
 
 #[test]

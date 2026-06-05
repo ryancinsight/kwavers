@@ -194,7 +194,7 @@ pub fn focused_bowl_element_positions_3d(
 /// element phases at `focus_xyz`.
 #[must_use]
 pub fn delay_law_focus_3d(elem_pos: &[f64], focus_xyz: [f64; 3], c: f64) -> Vec<f64> {
-    if elem_pos.len() % 3 != 0 || c <= 0.0 {
+    if !elem_pos.len().is_multiple_of(3) || c <= 0.0 {
         return Vec::new();
     }
     let n = elem_pos.len() / 3;
@@ -231,8 +231,8 @@ pub fn steered_aperture_pressure_3d(
     alpha_np_m: f64,
     focus_pressure_pa: f64,
 ) -> Vec<f64> {
-    if points_xyz.len() % 3 != 0
-        || elem_pos.len() % 3 != 0
+    if !points_xyz.len().is_multiple_of(3)
+        || !elem_pos.len().is_multiple_of(3)
         || freq_hz <= 0.0
         || c <= 0.0
         || focus_pressure_pa < 0.0

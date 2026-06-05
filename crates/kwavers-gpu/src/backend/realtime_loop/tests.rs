@@ -4,11 +4,11 @@ use std::collections::HashMap;
 
 use ndarray::Array3;
 
-use kwavers_core::error::KwaversResult;
-use kwavers_grid::Grid;
 use crate::backend::physics_kernels::{
     GpuKernelPhysicsDomain, PhysicsKernel, PhysicsKernelRegistry, WorkgroupConfig,
 };
+use kwavers_core::error::KwaversResult;
+use kwavers_grid::Grid;
 
 use super::orchestrator::RealtimeSimulationOrchestrator;
 use super::types::{RealtimeConfig, StepResult};
@@ -27,7 +27,7 @@ fn test_orchestrator_creation() -> KwaversResult<()> {
     let registry = PhysicsKernelRegistry::new();
     let orchestrator = RealtimeSimulationOrchestrator::new(config, registry)?;
 
-    assert_eq!(orchestrator.step_count, 0);
+    assert_eq!(orchestrator.step_count(), 0);
     Ok(())
 }
 
@@ -61,7 +61,7 @@ fn test_budget_enforcement() -> KwaversResult<()> {
 
     assert_eq!(result.kernels_executed, 0);
     assert!(result.time == 0.0);
-    assert_eq!(orchestrator.step_count, 1);
+    assert_eq!(orchestrator.step_count(), 1);
 
     Ok(())
 }
@@ -104,7 +104,7 @@ fn test_registered_kernel_step_records_execution_metadata() -> KwaversResult<()>
     assert_eq!(result.dt, 1e-6);
     assert_eq!(result.time, 1e-5);
     assert!(metrics.avg_step_time_ms >= 0.0);
-    assert_eq!(orchestrator.step_count, 1);
+    assert_eq!(orchestrator.step_count(), 1);
     Ok(())
 }
 

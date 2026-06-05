@@ -1,8 +1,8 @@
 use super::thermodynamics::update_thermodynamics;
-use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
-use kwavers_core::constants::thermodynamic::HEAT_CAPACITY_RATIO_DIATOMIC;
 use crate::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};
 use approx::assert_relative_eq;
+use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
+use kwavers_core::constants::thermodynamic::HEAT_CAPACITY_RATIO_DIATOMIC;
 
 #[test]
 fn test_update_thermodynamics() {

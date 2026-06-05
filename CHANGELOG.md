@@ -2,6 +2,35 @@
 
 ## Unreleased
 
+### Fixed (2026-06-05) - Comparison-example parity restored + elastic-PSTD solver fixes
+
+- [patch] Repaired every kwavers↔k-wave-python / KWave.jl comparison script
+  after the crate split relocated `pykwavers/examples/` →
+  `crates/kwavers-python/examples/` (one directory deeper): all `parents[N]`
+  path computations for `external/k-wave-python`, `external/k-wave-julia`, the
+  pykwavers package, and figure/cache output dirs. Likewise repaired the book
+  figure-output paths (chapter scripts + sub-packages) that were writing to
+  `crates/docs/` instead of `docs/`.
+- [minor] **ElasticPSTD heterogeneous k-space fix**: the leapfrog kernel
+  multiplied spatially-varying Lamé/density coefficients against spectral-domain
+  fields (valid only for homogeneous media; in heterogeneous media a wave at the
+  reference speed was dragged toward the spatial average — a layer at
+  c_p=3000 m/s propagated at ~2434 m/s). Coefficients are now applied in real
+  space after each `IFFT(i·k·κ·FFT)`, matching the acoustic propagator and the
+  elastic split-field path. Homogeneous results are unchanged (FFT round-trip of
+  a constant-coefficient linear operator is the identity).
+- [minor] **ElasticPSTD IVP support + PML wiring**: added initial-displacement
+  seeding (`seed_initial_displacement`, σ = λ(∇·u)I + μ(∇u+∇uᵀ)) threaded
+  through the run request → dispatch → binding, and the elastic dispatch now
+  honors the requested PML so transient/IVP runs absorb outgoing waves instead
+  of wrapping around the periodic FFT grid.
+- [patch] Example/measurement fixes: `ewp_3D` sensor C-order mapping; `pr_3D_FFT`
+  photoacoustic non-negativity prior (full-volume Pearson 0.62→0.79); `ewp_shear`
+  first-break Snell-angle measurement on a dense interior sensor row (θ_t error
+  0.67°); `na_optimising_performance` canonical `Medium.homogeneous` constructor.
+- Result: k-wave-python parity 66/66, KWave.jl parity 5/5; full workspace
+  `cargo test` green (4328 passed, 0 failed).
+
 ### Architecture (2026-06-04) - Decompose kwavers-domain into domain-specific crates
 
 - [arch] Replaced the monolithic ~63K-line `kwavers-domain` mega-crate (15

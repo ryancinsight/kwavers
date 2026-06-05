@@ -86,9 +86,9 @@ pub use gpu_accelerator::FdtdGpuAccelerator;
 
 use kwavers_boundary::cpml::CPMLBoundary;
 use kwavers_grid::Grid;
-use kwavers_source::{Source, SourceInjectionMode};
 use kwavers_math::numerics::operators::StaggeredGridOperator;
 use kwavers_physics::acoustics::mechanics::acoustic_wave::AcousticSpatialOrder;
+use kwavers_source::{Source, SourceInjectionMode};
 use ndarray::Array3;
 use std::sync::Arc;
 

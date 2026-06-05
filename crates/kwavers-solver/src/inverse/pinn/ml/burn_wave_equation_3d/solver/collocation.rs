@@ -1,7 +1,7 @@
 use super::core::BurnPINN3DWave;
-use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::inverse::pinn::ml::burn_wave_equation_3d::config::BurnPINN3DConfig;
 use burn::tensor::{backend::Backend, Tensor, TensorData};
+use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
 impl<B: Backend> BurnPINN3DWave<B> {
     /// Generate collocation points for PDE residual computation
@@ -81,9 +81,9 @@ impl<B: Backend> BurnPINN3DWave<B> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kwavers_core::error::{KwaversError, KwaversResult, SystemError};
     use crate::inverse::pinn::ml::burn_wave_equation_3d::geometry::Geometry3D;
     use burn::backend::{Autodiff, NdArray};
+    use kwavers_core::error::{KwaversError, KwaversResult, SystemError};
     type TestBackend = Autodiff<NdArray>;
 
     #[test]

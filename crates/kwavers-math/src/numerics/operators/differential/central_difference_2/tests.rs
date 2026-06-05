@@ -1,6 +1,6 @@
 use super::*;
-use kwavers_core::error::{KwaversError, NumericalError};
 use approx::assert_abs_diff_eq;
+use kwavers_core::error::{KwaversError, NumericalError};
 
 fn assert_invalid_grid_spacing(
     result: KwaversResult<CentralDifference2>,

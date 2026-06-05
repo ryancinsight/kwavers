@@ -3,12 +3,12 @@
 use uom::si::f64::Power;
 use uom::si::power::watt;
 
+use crate::acoustics::bubble_dynamics::bubble_state::{BubbleState, GasSpecies};
+use crate::acoustics::bubble_dynamics::energy::EnergyBalanceCalculator;
 use kwavers_core::constants::fundamental::{
     AVOGADRO, BOLTZMANN, ELECTRON_MASS, ELEMENTARY_CHARGE, PLANCK,
 };
 use kwavers_core::constants::numerical::TWO_PI;
-use crate::acoustics::bubble_dynamics::bubble_state::{BubbleState, GasSpecies};
-use crate::acoustics::bubble_dynamics::energy::EnergyBalanceCalculator;
 
 impl EnergyBalanceCalculator {
     /// Calculate plasma ionization energy rate using the full Saha equation.
@@ -109,15 +109,15 @@ impl EnergyBalanceCalculator {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::acoustics::bubble_dynamics::bubble_state::{
+        BubbleParameters, BubbleState, GasSpecies, GasType,
+    };
     use kwavers_core::constants::cavitation::{
         SURFACE_TENSION_WATER, VAPOR_PRESSURE_WATER, VISCOSITY_WATER,
     };
     use kwavers_core::constants::fundamental::{ATMOSPHERIC_PRESSURE, C_WATER, DENSITY_WATER};
     use kwavers_core::constants::thermodynamic::{
         HEAT_CAPACITY_RATIO_MONATOMIC, SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER,
-    };
-    use crate::acoustics::bubble_dynamics::bubble_state::{
-        BubbleParameters, BubbleState, GasSpecies, GasType,
     };
 
     fn make_params() -> BubbleParameters {

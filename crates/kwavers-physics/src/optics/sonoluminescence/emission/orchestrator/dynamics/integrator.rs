@@ -1,16 +1,17 @@
+use crate::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};
+use crate::bubble_dynamics::integration::rk4_weighted_sum;
+use crate::bubble_dynamics::keller_miksis::KellerMiksisModel;
 use kwavers_core::constants::fundamental::{
     ATMOSPHERIC_PRESSURE, BOLTZMANN, ELECTRON_MASS, ELEMENTARY_CHARGE,
 };
 use kwavers_core::constants::thermodynamic::BUBBLE_REFERENCE_TEMPERATURE_K;
 use kwavers_core::error::KwaversResult;
-use crate::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};
-use crate::bubble_dynamics::keller_miksis::KellerMiksisModel;
 use ndarray::Array3;
 
 use super::super::emission_calculator::SonoluminescenceEmission;
 use super::thermodynamics::update_thermodynamics;
-use kwavers_core::constants::numerical::TWO_PI;
 use crate::optics::sonoluminescence::emission::spectrum::EmissionParameters;
+use kwavers_core::constants::numerical::TWO_PI;
 
 /// Integrated bubble dynamics and sonoluminescence emission
 ///
@@ -170,15 +171,10 @@ impl IntegratedSonoluminescence {
                     )?;
                     let k4_r = state_k4.wall_velocity;
 
-                    // Final RK4 update
-                    let new_radius = (dt / 6.0).mul_add(
-                        2.0f64.mul_add(k3_r, 2.0f64.mul_add(k2_r, k1_r)) + k4_r,
-                        state.radius,
-                    );
-                    let new_velocity = (dt / 6.0).mul_add(
-                        2.0f64.mul_add(k3_v, 2.0f64.mul_add(k2_v, k1_v)) + k4_v,
-                        state.wall_velocity,
-                    );
+                    // Final RK4 update (shared Butcher-weight SSOT).
+                    let new_radius = rk4_weighted_sum(state.radius, k1_r, k2_r, k3_r, k4_r, dt);
+                    let new_velocity =
+                        rk4_weighted_sum(state.wall_velocity, k1_v, k2_v, k3_v, k4_v, dt);
 
                     state.radius = new_radius;
                     state.wall_velocity = new_velocity;

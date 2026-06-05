@@ -1,7 +1,7 @@
-use kwavers_core::error::KwaversResult;
 use crate::linear_algebra::{
     ComplexLinearAlgebra, EigenDecomposition, LinearAlgebra, VectorOperations,
 };
+use kwavers_core::error::KwaversResult;
 use ndarray::{Array1, Array2};
 use num_complex::Complex;
 

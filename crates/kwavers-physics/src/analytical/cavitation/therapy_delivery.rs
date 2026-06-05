@@ -328,7 +328,7 @@ pub fn receiver_channel_psd_from_source(
     receiver_xyz: &[f64],
     alpha_np_m: f64,
 ) -> Vec<f64> {
-    if receiver_xyz.len() % 3 != 0 {
+    if !receiver_xyz.len().is_multiple_of(3) {
         return Vec::new();
     }
     let n_recv = receiver_xyz.len() / 3;

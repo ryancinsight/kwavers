@@ -9,10 +9,10 @@ mod coupled;
 mod interface;
 mod solvers;
 
-use kwavers_core::error::KwaversResult;
-use kwavers_mesh::tetrahedral::TetrahedralMesh;
-use kwavers_math::numerics::operators::NumericsTrilinearInterpolator;
 use crate::forward::bem::solver::{BemConfig, BemSolver};
+use kwavers_core::error::KwaversResult;
+use kwavers_math::numerics::operators::NumericsTrilinearInterpolator;
+use kwavers_mesh::tetrahedral::TetrahedralMesh;
 
 use super::super::{BemFemCouplingConfig, BemFemInterface};
 

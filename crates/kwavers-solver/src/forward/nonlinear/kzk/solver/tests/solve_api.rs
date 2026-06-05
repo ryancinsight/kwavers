@@ -1,7 +1,7 @@
 //! `KZKSolver::solve(n)` API invariant tests.
 
-use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use crate::forward::nonlinear::kzk::{KZKConfig, KZKSolver};
+use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use ndarray::Array2;
 
 /// `solve(0)` succeeds and does not change the field.

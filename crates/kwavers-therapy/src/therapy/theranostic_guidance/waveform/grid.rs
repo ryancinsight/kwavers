@@ -158,11 +158,12 @@ pub(super) fn acoustic_grid(
     // implicit in the Godunov upwind update.  We do NOT clamp bone here:
     // Eikonal handles refraction correctly.
     let focus_cell = focus_padded_cell(focus, nx, ny, dx);
-    let travel_time_field = crate::therapy::theranostic_guidance::waveform::eikonal::eikonal_travel_time(
-        &speed_baseline,
-        dx,
-        focus_cell,
-    );
+    let travel_time_field =
+        crate::therapy::theranostic_guidance::waveform::eikonal::eikonal_travel_time(
+            &speed_baseline,
+            dx,
+            focus_cell,
+        );
     let travel_times_s: Vec<f64> = layout
         .therapy_elements
         .iter()
@@ -175,7 +176,13 @@ pub(super) fn acoustic_grid(
         .fold(0.0_f64, f64::max);
     let source_delays_s: Vec<f64> = travel_times_s
         .iter()
-        .map(|t| if t.is_finite() { max_travel_time_s - t } else { 0.0 })
+        .map(|t| {
+            if t.is_finite() {
+                max_travel_time_s - t
+            } else {
+                0.0
+            }
+        })
         .collect();
 
     // Deduplicate the (rare) collisions that survive after embedding in the
@@ -328,7 +335,11 @@ pub(super) fn passive_emission_grid(
     let source_delays_s = vec![0.0_f64; source_cells.len()];
     let source_scale = config.source_pressure_pa as f32 / (source_cells.len().max(1) as f32).sqrt();
     // Broadband bubble-cloud emission: subharmonic, fundamental, ultraharmonic.
-    let source_waveform = Some(cavitation_emission_waveform(time_steps, dt_s, fundamental_hz));
+    let source_waveform = Some(cavitation_emission_waveform(
+        time_steps,
+        dt_s,
+        fundamental_hz,
+    ));
 
     let receiver_cells = layout
         .imaging_receivers
@@ -422,8 +433,7 @@ fn build_padded_alpha_field_refined(
             if ix >= ox && iy >= oy && ix < ox + nx_b && iy < oy + ny_b {
                 let bx = (ix - ox) / refinement;
                 let by = (iy - oy) / refinement;
-                let alpha_np_per_m =
-                    prepared.attenuation_np_per_m_mhz[[bx, by]] * f0_mhz;
+                let alpha_np_per_m = prepared.attenuation_np_per_m_mhz[[bx, by]] * f0_mhz;
                 out[linear(ix, iy, ny)] = (alpha_np_per_m * dx) as f32;
             }
         }

@@ -31,8 +31,8 @@ pub use filters::Filters;
 pub use iterative::IterativeAlgorithm;
 pub use line_reconstruction::{kspace_line_recon, LineReconDataOrder, LineReconInterpolation};
 
-use kwavers_core::error::KwaversResult;
 use crate::reconstruction::Reconstructor;
+use kwavers_core::error::KwaversResult;
 use ndarray::{Array2, Array3};
 
 impl Reconstructor for PhotoacousticReconstructor {

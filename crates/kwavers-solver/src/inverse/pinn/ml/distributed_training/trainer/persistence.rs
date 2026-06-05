@@ -1,6 +1,6 @@
 use super::super::{DistributedPinnTrainer, TrainingCheckpoint};
-use kwavers_core::error::{KwaversError, KwaversResult};
 use burn::tensor::backend::AutodiffBackend;
+use kwavers_core::error::{KwaversError, KwaversResult};
 use log::info;
 
 impl<B: AutodiffBackend> DistributedPinnTrainer<B> {

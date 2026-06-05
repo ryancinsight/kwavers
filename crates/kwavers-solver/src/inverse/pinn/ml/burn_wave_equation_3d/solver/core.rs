@@ -260,8 +260,8 @@ impl<B: Backend> BurnPINN3DWave<B> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use burn::backend::{Autodiff, NdArray};
+    use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     type TestBackend = Autodiff<NdArray>;
 
     #[test]

@@ -2,10 +2,10 @@
 
 #[cfg(test)]
 mod tests {
-    use kwavers_core::constants::SOUND_SPEED_WATER;
     use crate::forward::nonlinear::kzk::{
         constants::*, parabolic_diffraction::KzkParabolicDiffractionOperator, KZKConfig,
     };
+    use kwavers_core::constants::SOUND_SPEED_WATER;
     use ndarray::Array2;
 
     #[test]

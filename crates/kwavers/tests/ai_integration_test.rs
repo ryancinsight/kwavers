@@ -107,18 +107,17 @@ mod pinn_tests {
         let algorithm = DiagnosisAlgorithm::new();
 
         // Create dummy clinical analysis
-        let clinical_analysis =
-            kwavers_transducer::beamforming::ai_integration::ClinicalAnalysis {
-                lesions: vec![],
-                tissue_classification:
-                    kwavers_transducer::beamforming::ai_integration::TissueClassification {
-                        probabilities: HashMap::new(),
-                        dominant_tissue: Array3::from_elem((32, 32, 16), "Muscle".to_string()),
-                        boundary_confidence: Array3::from_elem((32, 32, 16), 0.8),
-                    },
-                recommendations: vec!["Test recommendation".to_string()],
-                diagnostic_confidence: 0.85,
-            };
+        let clinical_analysis = kwavers_transducer::beamforming::ai_integration::ClinicalAnalysis {
+            lesions: vec![],
+            tissue_classification:
+                kwavers_transducer::beamforming::ai_integration::TissueClassification {
+                    probabilities: HashMap::new(),
+                    dominant_tissue: Array3::from_elem((32, 32, 16), "Muscle".to_string()),
+                    boundary_confidence: Array3::from_elem((32, 32, 16), 0.8),
+                },
+            recommendations: vec!["Test recommendation".to_string()],
+            diagnostic_confidence: 0.85,
+        };
 
         let features = kwavers_transducer::beamforming::ai_integration::FeatureMap {
             morphological: HashMap::new(),

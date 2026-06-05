@@ -1,10 +1,10 @@
 //! Vapor mass-transfer update for Keller-Miksis thermodynamics.
 
 use super::super::KellerMiksisModel;
+use crate::acoustics::bubble_dynamics::bubble_state::BubbleState;
 use kwavers_core::constants::numerical::{FOUR_PI, TWO_PI};
 use kwavers_core::constants::{AVOGADRO, GAS_CONSTANT as R_GAS, M_WATER};
 use kwavers_core::error::{KwaversResult, PhysicsError};
-use crate::acoustics::bubble_dynamics::bubble_state::BubbleState;
 
 /// Update vapor content through evaporation or condensation.
 /// # Errors

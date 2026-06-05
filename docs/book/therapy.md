@@ -1,67 +1,78 @@
-# Chapter 6: Therapeutic Ultrasound
+# Chapter 12: Therapeutic Ultrasound
 
 **Scope.** This chapter derives the physical mechanisms of ultrasound therapy: HIFU-induced
 heating, the Pennes bioheat equation, thermal dose (CEM43), acoustic radiation force,
 sonoporation, lithotripsy, and neuromodulation. Histotripsy (microsecond intrinsic-threshold
 and millisecond regimes) and the optimal pulse patterns for each — dual-PRF burst-and-pause,
 dithered-PRF, and hybrid microsecond/boiling — are treated separately in
-[Chapter 21 (Histotripsy)](histotripsy.md), with code in
-`kwavers::clinical::therapy::clinical_scenarios`. Every mechanism is derived from
-first principles with formal theorems. Code references map to `kwavers::clinical::therapy`
+[Chapter 14 (Histotripsy)](histotripsy.md), with code in
+`kwavers_therapy::therapy::clinical_scenarios`. Every mechanism is derived from
+first principles with formal theorems. Code references map to `kwavers_therapy::therapy`
 and the acoustic propagation solvers (Chapters 2–3).
 
 ---
 
-## 6.1 Acoustic Intensity and Energy Deposition
+## 12.1 Acoustic Intensity and Energy Deposition
 
-### 6.1.1 Time-Averaged Intensity
+### 12.1.1 Time-Averaged Intensity
 
-**Theorem 6.1 (Acoustic Power Deposition).** For a plane wave with pressure amplitude P
+**Theorem 12.1 (Acoustic Power Deposition).** For a plane wave with pressure amplitude P
 propagating in a medium with absorption coefficient α [Np m⁻¹], the volumetric acoustic
 power deposition (heat source density) is
 
 ```
-Q_ac(r) = 2α I(r) = α P²(r) / (ρ₀ c₀)    [W m⁻³]                       (6.1)
+Q_ac(r) = 2α I(r) = α P²(r) / (ρ₀ c₀)    [W m⁻³]                       (12.1)
 ```
 
 where I = P²/(2ρ₀c₀) is the time-averaged acoustic intensity.
 
 *Proof.* The intensity of a plane wave decays as I(z) = I₀ exp(−2αz). Conservation of
 acoustic energy (Theorem 1.5) relates the divergence of the Poynting vector to
-dissipation: Q_ac = −∇·(pu) = 2αI. Substituting I = P²/(2ρ₀c₀) gives (6.1). □
+dissipation: Q_ac = −∇·(pu) = 2αI. Substituting I = P²/(2ρ₀c₀) gives (12.1). □
 
-**Remark 6.1.** For non-planar fields (focused beams), Eq. (6.1) holds locally when α
+**Remark 12.1.** For non-planar fields (focused beams), Eq. (12.1) holds locally when α
 is small (αλ ≪ 1) and the beam is quasi-planar within a resolution cell. For strongly
 focused beams the full vector form Q = −∇·⟨p u⟩ must be used.
 
-### 6.1.2 Focal Intensity for a Focused Bowl
+![Acoustic power deposition depth profile](figures/ch06/fig04_power_deposition_profile.png)
+
+*Figure 12.1. Acoustic power deposition Q_ac = 2αI vs depth (§12.1; `kw.absorption_power_law_db_cm`); the heat-source profile that drives the bioheat equation.*
+
+
+### 12.1.2 Focal Intensity for a Focused Bowl
 
 For a HIFU focused bowl of aperture 2a, focal length R_f, face pressure P₀, surface
 intensity I_face = P₀²/(2ρ₀c₀):
 
 ```
-I_focal = G² I_face    G = k a²/(2R_f)    (Theorem 4.9)                   (6.2)
+I_focal = G² I_face    G = k a²/(2R_f)    (Ch. 6 §4, Focusing Gain)                   (12.2)
 ```
 
 For a = 30 mm, f = 1 MHz, R_f = 60 mm: G ≈ 31, I_focal/I_face ≈ 961.
 
 ---
 
-## 6.2 Pennes Bioheat Equation
+![HIFU focal intensity gain vs f-number](figures/ch06/fig03_hifu_focal_gain.png)
 
-### 6.2.1 Derivation
+*Figure 12.2. HIFU focal intensity gain G² vs f-number (`kw.hifu_focal_pressure_gain`, §12.1.2); tighter focusing (smaller f-number) raises focal intensity quadratically.*
 
-**Theorem 6.2 (Pennes Bioheat Equation).** The temperature T(r, t) in perfused tissue
+---
+
+## 12.2 Pennes Bioheat Equation
+
+### 12.2.1 Derivation
+
+**Theorem 12.2 (Pennes Bioheat Equation).** The temperature T(r, t) in perfused tissue
 satisfies
 
 ```
-ρ_t c_p ∂T/∂t = ∇·(κ ∇T) + Q_ac − ω_b ρ_b c_b (T − T_b) + Q_met         (6.3)
+ρ_t c_p ∂T/∂t = ∇·(κ ∇T) + Q_ac − ω_b ρ_b c_b (T − T_b) + Q_met         (12.3)
 ```
 
 where:
 - ρ_t, c_p: tissue density [kg m⁻³] and specific heat capacity [J kg⁻¹ K⁻¹]
 - κ: thermal conductivity [W m⁻¹ K⁻¹]
-- Q_ac = 2αI: acoustic heat source [W m⁻³] (Eq. 6.1)
+- Q_ac = 2αI: acoustic heat source [W m⁻³] (Eq. 12.1)
 - ω_b: blood perfusion rate [kg m⁻³ s⁻¹]
 - ρ_b, c_b: blood density and specific heat
 - T_b: blood temperature (37 °C)
@@ -73,7 +84,7 @@ cooling by convective heat exchange with blood flowing at ω_b kg m⁻³ s⁻¹.
 Pennes (1948) derived the blood term by modeling perfusion as a spatially distributed
 heat exchanger at temperature T_b. □
 
-### 6.2.2 Tissue Thermal Properties
+### 12.2.2 Tissue Thermal Properties
 
 | Tissue | ρ (kg/m³) | c_p (J/kg·K) | κ (W/m·K) | ω_b (kg/m³/s) |
 |--------|-----------|--------------|-----------|---------------|
@@ -83,12 +94,12 @@ heat exchanger at temperature T_b. □
 | Fat | 940 | 2350 | 0.21 | 0.5 × 10⁻³ |
 | Bone (cortical) | 1850 | 1300 | 0.38 | 0 |
 
-### 6.2.3 Simplified Homogeneous Solution
+### 12.2.3 Simplified Homogeneous Solution
 
-Neglecting perfusion and conduction (short exposures, τ < 1 s), Eq. (6.3) reduces to:
+Neglecting perfusion and conduction (short exposures, τ < 1 s), Eq. (12.3) reduces to:
 
 ```
-∂T/∂t ≈ Q_ac / (ρ_t c_p)  →  ΔT = 2αI τ / (ρ_t c_p)                    (6.4)
+∂T/∂t ≈ Q_ac / (ρ_t c_p)  →  ΔT = 2αI τ / (ρ_t c_p)                    (12.4)
 ```
 
 At HIFU focal intensities (I = 5000 W/cm² = 5×10⁷ W/m², α = 5 Np/m, τ = 1 s):
@@ -103,28 +114,34 @@ numerator; the result has units of °C, not °C/s).  Tissue reaches 60 °C
 
 ---
 
-## 6.3 Thermal Dose: CEM43
+![Pennes bioheat temperature rise](figures/ch06/fig01_temperature_rise.png)
 
-### 6.3.1 Definition
+*Figure 12.3. Temperature rise vs depth from the real `ThermalDiffusionSolver` (Pennes bioheat, §12.2); perfusion and conduction limit the focal ΔT below the adiabatic estimate.*
 
-**Definition 6.1 (Cumulative Equivalent Minutes at 43 °C, CEM43).** The thermal dose
+---
+
+## 12.3 Thermal Dose: CEM43
+
+### 12.3.1 Definition
+
+**Definition 12.1 (Cumulative Equivalent Minutes at 43 °C, CEM43).** The thermal dose
 accumulated over a treatment at spatially varying temperature T(t) is
 
 ```
-CEM43 = ∫₀^{t_total} R^{43−T(t)} dt                                       (6.5)
+CEM43 = ∫₀^{t_total} R^{43−T(t)} dt                                       (12.5)
 ```
 
 where R = 0.5 for T ≥ 43 °C and R = 0.25 for T < 43 °C (Sapareto & Dewey 1984).
 
-**Theorem 6.3 (CEM43 Ablation Threshold).** Irreversible tissue damage (coagulative
+**Theorem 12.3 (CEM43 Ablation Threshold).** Irreversible tissue damage (coagulative
 necrosis) occurs when
 
 ```
-CEM43 ≥ 240 min    (muscle, liver, most soft tissue)                       (6.6)
+CEM43 ≥ 240 min    (muscle, liver, most soft tissue)                       (12.6)
 ```
 
 *Derivation.* The Arrhenius cell survival model S = exp(−Ω), with damage integral
-Ω = A ∫ exp(−E_a/(RT)) dt, is empirically equivalent to (6.6) at 240 min CEM43
+Ω = A ∫ exp(−E_a/(RT)) dt, is empirically equivalent to (12.6) at 240 min CEM43
 for tissues with activation energy E_a ≈ 680 kJ/mol (Dewey 2009). □
 
 | Tissue | CEM43 threshold | Notes |
@@ -135,28 +152,35 @@ for tissues with activation energy E_a ≈ 680 kJ/mol (Dewey 2009). □
 | Nerve | 5 min | Sensitive |
 | Brain (gray matter) | 17 min | — |
 
-### 6.3.2 Discrete CEM43 Accumulation
+### 12.3.2 Discrete CEM43 Accumulation
 
 For a numerical simulation with time step Δt and temperature T^n at step n:
 
 ```
-CEM43^{N} = Σ_{n=0}^{N-1} R^{43−T^n} · Δt                               (6.7)
+CEM43^{N} = Σ_{n=0}^{N-1} R^{43−T^n} · Δt                               (12.7)
 ```
 
-Implemented in `kwavers::clinical::therapy::metrics` with the discrete summation (6.7)
-applied element-wise over the 3-D temperature field.
+Implemented by the `ThermalDoseCalculator` / `ThermalCEM43Grid` types in
+`kwavers_physics::thermal` (discrete summation (12.7) applied element-wise over the 3-D
+temperature field).
 
 ---
 
-## 6.4 Acoustic Radiation Force
+![CEM43 thermal dose accumulation](figures/ch06/fig02_cem43_accumulation.png)
 
-### 6.4.1 Definition and Theorem
+*Figure 12.4. CEM43 accumulation vs temperature and duration (`kw.cem43_at_temperatures`, §12.3); the 240-min ablation threshold is crossed in under a second at HIFU focal temperatures.*
 
-**Theorem 6.4 (Acoustic Radiation Force).** The time-averaged body force per unit volume
+---
+
+## 12.4 Acoustic Radiation Force
+
+### 12.4.1 Definition and Theorem
+
+**Theorem 12.4 (Acoustic Radiation Force).** The time-averaged body force per unit volume
 exerted by an acoustic field on an absorbing medium is
 
 ```
-F_rad = 2α I / c₀    [N m⁻³]                                              (6.8)
+F_rad = 2α I / c₀    [N m⁻³]                                              (12.8)
 ```
 
 in the direction of wave propagation.
@@ -165,45 +189,45 @@ in the direction of wave propagation.
 deposited per unit volume due to absorption is dg/dt = 2α I/c₀ (momentum transfer
 proportional to energy deposition × 1/c₀). □
 
-### 6.4.2 ARFI and Shear-Wave Generation
+### 12.4.2 ARFI and Shear-Wave Generation
 
 For a push pulse of duration τ_push [s] at focal intensity I_focus [W m⁻²]:
 
 ```
-F_push = 2α I_focus / c₀ × τ_push    [N m⁻³ · s = Pa]                   (6.9)
+F_push = 2α I_focus / c₀ × τ_push    [N m⁻³ · s = Pa]                   (12.9)
 ```
 
 This creates a tissue displacement u_peak ≈ F_push τ_push / (ρ c_s) and launches shear
-waves at c_s (see Chapter 5, Eq. 5.21). The kwavers therapy module tracks radiation force
-in `kwavers::clinical::therapy::therapy_integration::acoustic`.
+waves at c_s (see Chapter 9, Eq. 9.21). The kwavers therapy module tracks radiation force
+in `kwavers_therapy::therapy::therapy_integration::acoustic`.
 
 ---
 
-## 6.5 Sonoporation and Drug Delivery
+## 12.5 Sonoporation and Drug Delivery
 
-### 6.5.1 Bubble Oscillation and Membrane Permeabilization
+### 12.5.1 Bubble Oscillation and Membrane Permeabilization
 
-**Definition 6.2 (Sonoporation).** Sonoporation is the transient increase in cell membrane
+**Definition 12.2 (Sonoporation).** Sonoporation is the transient increase in cell membrane
 permeability caused by oscillating microbubbles in an acoustic field, enabling intracellular
 delivery of otherwise membrane-impermeant molecules.
 
-**Theorem 6.5 (Permeabilization Threshold).** Inertial cavitation (IC) onset requires
+**Theorem 12.5 (Permeabilization Threshold).** Inertial cavitation (IC) onset requires
 
 ```
-MI ≡ P_neg / √f₀ ≥ MI_IC ≈ 1.0    [kPa / √MHz = MPa^0.5]               (6.10)
+MI ≡ P_neg / √f₀ ≥ MI_IC ≈ 1.0    [kPa / √MHz = MPa^0.5]               (12.10)
 ```
 
 Stable cavitation (SC, non-inertial), sufficient for gentle sonoporation, occurs at
 
 ```
-MI_SC ≈ 0.1 – 0.5    (bubble-type and size dependent)                     (6.11)
+MI_SC ≈ 0.1 – 0.5    (bubble-type and size dependent)                     (12.11)
 ```
 
 *Derivation.* The inertial cavitation threshold is set by the condition that bubble
 collapse time τ_collapse ≈ 0.915 R₀ √(ρ/p_∞) is shorter than the acoustic period 1/f₀.
 Solving gives P_neg,IC ∝ √f₀, hence MI = P_neg/√f₀ = const at threshold. □
 
-### 6.5.2 Blood-Brain Barrier Opening
+### 12.5.2 Blood-Brain Barrier Opening
 
 Focused ultrasound combined with intravenous microbubbles opens the blood-brain barrier
 (BBB) transiently at MI 0.2–0.6 (SC regime). The mechanism involves endothelial tight
@@ -219,9 +243,9 @@ junction disruption by oscillating bubble microstreaming. Key parameters:
 
 ---
 
-## 6.6 Lithotripsy
+## 12.6 Lithotripsy
 
-### 6.6.1 Shock Wave Lithotripsy (SWL)
+### 12.6.1 Shock Wave Lithotripsy (SWL)
 
 In extracorporeal shock wave lithotripsy (ESWL), a focused shock wave with P_peak ~
 50–100 MPa (positive) and P_neg ~ −5 to −15 MPa fractures kidney stones. The physical
@@ -233,12 +257,12 @@ mechanisms are:
    produces microjet velocities ~100 m/s directed at the stone surface.
 3. **Fatigue.** Repeated cycles (~ 2000 shocks) accumulate fatigue damage.
 
-**Theorem 6.6 (Stone Tensile Stress from Reflected Shock).** A compressive shock of
+**Theorem 12.6 (Stone Tensile Stress from Reflected Shock).** A compressive shock of
 peak pressure P_s transmitted into a stone of impedance Z_s ≫ Z_fluid generates a
 reflected tensile wave at the distal stone–fluid interface of amplitude
 
 ```
-p_tensile = −(Z_s − Z_f)/(Z_s + Z_f) × P_s × T_12                       (6.12)
+p_tensile = −(Z_s − Z_f)/(Z_s + Z_f) × P_s × T_12                       (12.12)
 ```
 
 where T_12 = 2Z_s/(Z_s+Z_f) is the transmission coefficient at incidence, and the
@@ -250,11 +274,11 @@ The minus sign on the reflected wave at the stone–fluid interface (Z_f < Z_s) 
 a tensile phase. □
 
 The stone fracture model in kwavers is in
-`kwavers::clinical::therapy::lithotripsy::stone_fracture`.
+`kwavers_therapy::therapy::lithotripsy` (`StoneFractureModel`).
 
 ---
 
-## 6.7 Transcranial Focused Ultrasound Neuromodulation
+## 12.7 Transcranial Focused Ultrasound Neuromodulation
 
 Low-intensity transcranial focused ultrasound (tFUS) modulates neural activity
 non-thermally. Two physics constraints dominate, both with canonical homes elsewhere:
@@ -263,10 +287,10 @@ non-thermally. Two physics constraints dominate, both with canonical homes elsew
   normal-incidence pressure transmission through a layer of impedance `Z_s = ρ_s c_s`
   gives `|T|² ≈ 20–40 %` (intensity) for human temporal bone at 0.5 MHz (transfer-matrix
   method). The full skull-acoustics, aberration, and phase-correction treatment is in the
-  **Transcranial Ultrasound** chapter (§10.2–10.5).
+  **Transcranial Ultrasound** chapter (§15.2–15.5).
 - **Safety envelope.** tFUS operates at MI ≈ 0.5–1.0 and TI < 2 (0.25–1 MHz, pulsed,
   30–120 s). The Mechanical Index, Thermal Index, and FDA limits are derived in the
-  **Safety and Dosimetry** chapter (§9.3–9.7).
+  **Safety and Dosimetry** chapter (§16.3–16.7).
 
 The neuromodulation *mechanism* (intramembrane cavitation / NICE sonophore model,
 dose–response, and protocols) is the subject of the dedicated **Neuromodulation** chapter;
@@ -275,9 +299,9 @@ models in `kwavers_physics::acoustics::therapy::sonogenetics`).
 
 ---
 
-## 6.8 Therapy Validation Protocol
+## 12.8 Therapy Validation Protocol
 
-**Algorithm 6.1 (Therapy Validation Loop).**
+**Algorithm 12.1 (Therapy Validation Loop).**
 
 ```
 Input:  transducer geometry, medium properties, exposure parameters
@@ -285,37 +309,45 @@ Output: thermal dose map CEM43(r), peak pressure field, MI/TI
 
 1. ACOUSTIC FIELD: run FDTD or PSTD solver with heterogeneous c₀, ρ₀, α.
 2. INTENSITY: I(r) = ⟨p(r,t) u_n(r,t)⟩ or I = P_rms²/(2ρ₀c₀) (plane-wave approx.)
-3. HEAT SOURCE: Q = 2α I (Theorem 6.1)
-4. BIOHEAT: integrate Eq. (6.3) over exposure duration with Crank-Nicolson scheme.
-5. THERMAL DOSE: accumulate CEM43 via Eq. (6.7).
+3. HEAT SOURCE: Q = 2α I (Theorem 12.1)
+4. BIOHEAT: integrate Eq. (12.3) over exposure duration with Crank-Nicolson scheme.
+5. THERMAL DOSE: accumulate CEM43 via Eq. (12.7).
 6. SAFETY: compute MI = P_neg/√f₀; TI = W/W_deg; compare to FDA limits.
 7. VALIDATE:
-   a. Homogeneous medium: ΔT against Eq. (6.4) within 5%.
-   b. Focal pressure gain against Theorem 4.9 within 10%.
+   a. Homogeneous medium: ΔT against Eq. (12.4) within 5%.
+   b. Focal pressure gain against the Ch. 6 §4 focusing-gain result within 10%.
    c. CEM43 ablation zone volume against k-Wave reference within 15%.
 ```
 
 ---
 
-## 6.9 Code Mapping
+![2-D thermal ablation zone](figures/ch06/fig05_ablation_zone_2d.png)
 
-| Concept | kwavers module | Key struct/fn |
-|---------|---------------|---------------|
-| HIFU planning | `clinical::therapy::hifu_planning` | `HifuPlanner` |
-| Bioheat solver | `clinical::therapy::therapy_integration::tissue` | `BioheatSolver` |
-| Thermal dose | `clinical::therapy::metrics` | `CEM43Accumulator` |
-| Intensity tracking | `therapy_integration::intensity_tracker` | `IntensityTracker` |
-| Lithotripsy | `clinical::therapy::lithotripsy` | `ShockWaveGenerator` |
-| Histotripsy scenarios | `clinical::therapy::clinical_scenarios` | `HistotripsyScenario`, `PulsePattern` |
-| Stone fracture | `lithotripsy::stone_fracture` | `StoneFractureModel` |
-| Cavitation cloud | `lithotripsy::cavitation_cloud` | `CavitationCloud` |
-| Microbubble dynamics | `clinical::therapy::microbubble_dynamics` | `MicrobubbleService` |
-| Safety controller | `therapy_integration::safety_controller` | `SafetyController` |
-| Therapy orchestrator | `therapy_integration::orchestrator` | `TherapyOrchestrator` |
+*Figure 12.5. Thermal ablation zone from a 2-D `ThermalDiffusionSolver` with Pennes bioheat (§12.8); the CEM43 ≥ 240 min contour delimits coagulative necrosis.*
 
 ---
 
-## 6.10 Worked Example: HIFU Ablation Dose
+## 12.9 Code Mapping
+
+| Concept | kwavers path | Key struct/fn |
+|---------|---------------|---------------|
+| HIFU planning | `kwavers_therapy::therapy::hifu_planning` | `HIFUPlanner` |
+| Bioheat (Pennes) physics | `kwavers_physics::thermal::diffusion` | `PennesBioheat` |
+| Thermal solver (integrates bioheat + dose) | `kwavers_solver::forward::thermal_diffusion` | `ThermalDiffusionSolver` |
+| Thermal dose CEM43 | `kwavers_physics::thermal` | `ThermalDoseCalculator`, `ThermalCEM43Grid` |
+| Intensity tracking | `kwavers_therapy::therapy::therapy_integration::intensity_tracker` | `IntensityTracker` |
+| Lithotripsy | `kwavers_therapy::therapy::lithotripsy` | `ShockWaveGenerator` |
+| Histotripsy scenarios | `kwavers_therapy::therapy` | `HistotripsyScenario`, `PulsePattern` |
+| Stone fracture | `kwavers_therapy::therapy::lithotripsy` | `StoneFractureModel` |
+| Cavitation cloud | `kwavers_therapy::therapy::lithotripsy` | `CavitationCloudDynamics` |
+| Microbubble dynamics | `kwavers_therapy::therapy::microbubble_dynamics` | `MicrobubbleDynamicsService` |
+| Safety controller | `kwavers_therapy::therapy::therapy_integration::safety_controller` | `SafetyController` |
+| Therapy orchestrator | `kwavers_therapy::therapy::therapy_integration` | `TherapyIntegrationOrchestrator` |
+| Neuromodulation / sonophore | `kwavers_physics::acoustics::therapy::sonogenetics` | `VolumetricArfField`, `MechanoChannel`, `LifNeuron` |
+
+---
+
+## 12.10 Worked Example: HIFU Ablation Dose
 
 **Setup.** Liver tumor, 1 MHz HIFU, a = 35 mm, R_f = 80 mm, face pressure P₀ = 300 kPa.
 - Surface intensity: I_face = P₀²/(2ρ₀c₀) = (3×10⁵)²/(2×1060×1540) ≈ 27.5 W/cm²
@@ -325,7 +357,7 @@ Output: thermal dose map CEM43(r), peak pressure field, MI/TI
 - Heat source at focus: Q = 2α I = 2 × 7 × 2.61×10⁸ ≈ 3.66 × 10⁹ W/m³
 - Adiabatic temperature rise (τ = 0.5 s, no conduction/perfusion):
   ΔT_adiabatic = Q τ/(ρ c_p) = 3.66×10⁹×0.5/(1060×3600) ≈ 479 °C.
-  The adiabatic estimate neglects thermal conduction (κ∇²T term in Eq. 6.3)
+  The adiabatic estimate neglects thermal conduction (κ∇²T term in Eq. 12.3)
   and blood perfusion (W_b term).  Including both at clinical sonication pulse
   lengths (τ ≪ thermal diffusion time L²/κ) reduces peak focal ΔT to
   ≈ 60–80 °C in practice.

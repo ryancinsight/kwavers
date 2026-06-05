@@ -52,8 +52,8 @@ impl RadicalInitiation {
                 };
 
                 // Basic light-induced radical formation (pre-photochemistry)
-                let light_rate =
-                    kwavers_core::constants::chemistry::BASE_PHOTOCHEMICAL_RATE * light_val.max(0.0);
+                let light_rate = kwavers_core::constants::chemistry::BASE_PHOTOCHEMICAL_RATE
+                    * light_val.max(0.0);
 
                 let total_rate = (cav_rate + light_rate) * dt;
                 if rand::random::<f64>() < total_rate {

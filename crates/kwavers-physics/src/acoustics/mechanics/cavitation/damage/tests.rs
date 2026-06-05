@@ -1,7 +1,7 @@
 use super::material::{CavitationDamageMaterialProperties, DamageParameters};
 use super::model::CavitationDamage;
-use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use crate::bubble_dynamics::bubble_field::BubbleStateFields;
+use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 
 #[test]
 fn test_damage_calculation() {

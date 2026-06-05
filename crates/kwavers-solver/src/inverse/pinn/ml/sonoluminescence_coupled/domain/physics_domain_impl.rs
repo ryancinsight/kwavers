@@ -5,8 +5,8 @@ use std::collections::HashMap;
 use burn::tensor::{backend::AutodiffBackend, Tensor};
 
 use crate::inverse::pinn::ml::physics::{
-    BoundaryPosition, PinnCouplingInterface, InitialConditionSpec, PhysicsLossWeights,
-    PhysicsValidationMetric, PinnBoundaryComponent, PinnBoundaryConditionSpec,
+    BoundaryPosition, InitialConditionSpec, PhysicsLossWeights, PhysicsValidationMetric,
+    PinnBoundaryComponent, PinnBoundaryConditionSpec, PinnCouplingInterface,
     PinnDomainPhysicsParameters, SimulationPhysicsDomain,
 };
 

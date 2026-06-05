@@ -496,8 +496,7 @@ fn adjoint_backward_pass(
             let phase = angular_step * step as f64;
             let demod = Complex64::new(phase.cos(), phase.sin());
             for (recv_idx, &(ix, iy, iz)) in receiver_indices.iter().enumerate() {
-                pa_source_spatial[[ix, iy, iz]] +=
-                    adj_scale * receiver_residual[recv_idx] * demod;
+                pa_source_spatial[[ix, iy, iz]] += adj_scale * receiver_residual[recv_idx] * demod;
             }
         }
         fft_3d_complex_into(&pa_source_spatial, &mut pa_source_hat);
@@ -705,9 +704,8 @@ fn simulate_transmit_second_order(
             let phase = -angular_step * step as f64;
             let demodulation = Complex64::new(phase.cos(), phase.sin());
             for (dst, &(ix, iy, iz)) in receivers.iter_mut().zip(receiver_indices.iter()) {
-                let total = direct_next[[ix, iy, iz]]
-                    + scat1_next[[ix, iy, iz]]
-                    + scat2_next[[ix, iy, iz]];
+                let total =
+                    direct_next[[ix, iy, iz]] + scat1_next[[ix, iy, iz]] + scat2_next[[ix, iy, iz]];
                 *dst += total * demodulation;
             }
         }

@@ -44,9 +44,7 @@ pub(in crate::therapy::theranostic_guidance::nonlinear3d) enum AcceptedBlock {
 }
 
 impl AcceptedBlock {
-    pub(in crate::therapy::theranostic_guidance::nonlinear3d) fn label(
-        self,
-    ) -> &'static str {
+    pub(in crate::therapy::theranostic_guidance::nonlinear3d) fn label(self) -> &'static str {
         match self {
             Self::Coupled => "coupled",
             Self::SpeedOnly => "speed_only",
@@ -57,8 +55,7 @@ impl AcceptedBlock {
 
 #[derive(Clone, Copy, Debug)]
 pub(in crate::therapy::theranostic_guidance::nonlinear3d) struct LineSearchOutcome {
-    pub(in crate::therapy::theranostic_guidance::nonlinear3d) accepted_block:
-        AcceptedBlock,
+    pub(in crate::therapy::theranostic_guidance::nonlinear3d) accepted_block: AcceptedBlock,
     pub(in crate::therapy::theranostic_guidance::nonlinear3d) scale: f64,
     pub(in crate::therapy::theranostic_guidance::nonlinear3d) objective: f64,
 }
@@ -71,9 +68,7 @@ pub(super) struct CandidateAcceptance {
 
 impl LineSearchWorkspace {
     #[must_use]
-    pub(in crate::therapy::theranostic_guidance::nonlinear3d) fn new(
-        cells: usize,
-    ) -> Self {
+    pub(in crate::therapy::theranostic_guidance::nonlinear3d) fn new(cells: usize) -> Self {
         Self {
             candidate_speed: vec![0.0; cells],
             candidate_beta: vec![0.0; cells],

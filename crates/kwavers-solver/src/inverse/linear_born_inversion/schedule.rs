@@ -7,10 +7,7 @@
 use super::LinearBornInversionConfig;
 
 /// Build low-to-high frequency row schedules.
-pub fn continuation_rows(
-    config: &LinearBornInversionConfig,
-    nrows: usize,
-) -> Vec<Vec<usize>> {
+pub fn continuation_rows(config: &LinearBornInversionConfig, nrows: usize) -> Vec<Vec<usize>> {
     let nf = config.frequencies_hz.len();
     let harmonic_count = config.harmonic_count();
     let stage_count = if config.frequency_continuation { nf } else { 1 };

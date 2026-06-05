@@ -5,8 +5,8 @@ use kwavers_grid::Grid;
 use kwavers_imaging::photoacoustic::PhotoacousticParameters;
 use kwavers_medium::properties::OpticalPropertyData;
 use kwavers_medium::Medium;
-use kwavers_source::GridSource;
 use kwavers_solver::forward::fdtd::{FdtdConfig, FdtdSolver, KSpaceCorrectionMode};
+use kwavers_source::GridSource;
 use ndarray::Array3;
 
 use super::super::optics;

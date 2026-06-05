@@ -2,8 +2,8 @@
 
 use super::super::{BubbleSymplecticIntegrator, SymplecticConfig};
 use super::helpers::{make_model, make_params};
-use kwavers_core::constants::numerical::TWO_PI;
 use crate::acoustics::bubble_dynamics::bubble_state::BubbleState;
+use kwavers_core::constants::numerical::TWO_PI;
 use std::sync::Arc;
 
 /// **Test A — Minnaert period accuracy (Störmer-Verlet, O(h²) error).**

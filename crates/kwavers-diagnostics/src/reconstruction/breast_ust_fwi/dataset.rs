@@ -8,11 +8,11 @@ use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
 use kwavers_medium::heterogeneous::HeterogeneousFactory;
-use kwavers_receiver::recorder::simple::SensorRecorder;
-use kwavers_source::{GridSource, SourceMode};
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;
+use kwavers_receiver::recorder::simple::SensorRecorder;
 use kwavers_solver::forward::pstd::{PSTDConfig, PSTDSolver};
 use kwavers_solver::inverse::fwi::frequency_domain::FrequencyObservation;
+use kwavers_source::{GridSource, SourceMode};
 use ndarray::{s, Array2, Array3};
 use num_complex::Complex64;
 

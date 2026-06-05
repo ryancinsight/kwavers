@@ -1,12 +1,12 @@
 use kwavers_boundary::DomainPmlConfig;
 use kwavers_grid::Grid;
 use kwavers_medium::homogeneous::HomogeneousMedium;
-use kwavers_solver::plugin::{Plugin, PluginContext, PluginFields};
 use kwavers_signal::SineWave;
-use kwavers_source::{GaussianBuilder, Source};
 use kwavers_solver::forward::hybrid::domain_decomposition::{DomainRegion, DomainType};
 use kwavers_solver::forward::hybrid::{HybridConfig, HybridDecompositionStrategy, HybridPlugin};
 use kwavers_solver::forward::pstd::config::{BoundaryConfig as PSTDBoundaryConfig, PSTDConfig};
+use kwavers_solver::plugin::{Plugin, PluginContext, PluginFields};
+use kwavers_source::{GaussianBuilder, Source};
 use ndarray::{Array3, Array4};
 use std::sync::Arc;
 

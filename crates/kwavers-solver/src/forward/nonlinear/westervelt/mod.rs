@@ -215,12 +215,12 @@ mod tests;
 
 use ndarray::Array3;
 
-use kwavers_core::error::KwaversResult;
-use kwavers_grid::Grid;
-use kwavers_medium::Medium;
 use crate::forward::nonlinear::conservation::{
     ConservationDiagnostics, ConservationTolerances, ConservationTracker,
 };
+use kwavers_core::error::KwaversResult;
+use kwavers_grid::Grid;
+use kwavers_medium::Medium;
 
 /// Configuration for Westervelt FDTD solver
 #[derive(Debug, Clone)]

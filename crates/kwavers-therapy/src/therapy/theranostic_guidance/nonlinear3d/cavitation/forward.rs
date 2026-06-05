@@ -176,7 +176,7 @@ fn rk4_step(
     let k3 = derivative(solver, &s3, pressure_pa, t + 0.5 * dt);
     let s4 = shifted_state(state, k3, dt, r0);
     let k4 = derivative(solver, &s4, pressure_pa, t + dt);
-    let mut out = state.clone();
+    let mut out = *state;
     out.radius = (state.radius + dt * (k1.0 + 2.0 * k2.0 + 2.0 * k3.0 + k4.0) / 6.0).max(0.05 * r0);
     out.wall_velocity = state.wall_velocity + dt * (k1.1 + 2.0 * k2.1 + 2.0 * k3.1 + k4.1) / 6.0;
     out.wall_acceleration = solver.calculate_acceleration(&out, pressure_pa, t + dt);
@@ -196,7 +196,7 @@ fn derivative(
 }
 
 fn shifted_state(state: &BubbleState, derivative: (f64, f64), dt: f64, r0: f64) -> BubbleState {
-    let mut shifted = state.clone();
+    let mut shifted = *state;
     shifted.radius = (state.radius + dt * derivative.0).max(0.05 * r0);
     shifted.wall_velocity = state.wall_velocity + dt * derivative.1;
     shifted

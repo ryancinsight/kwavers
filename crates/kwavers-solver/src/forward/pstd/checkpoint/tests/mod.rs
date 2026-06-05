@@ -6,14 +6,14 @@
 mod velocity_recording;
 
 use super::data::PSTDCheckpoint;
+use crate::forward::pstd::config::{CompatibilityMode, PSTDConfig};
+use crate::forward::pstd::PSTDSolver;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_core::error::KwaversError;
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_receiver::recorder::simple::SensorRecorder;
 use kwavers_source::GridSource;
-use crate::forward::pstd::config::{CompatibilityMode, PSTDConfig};
-use crate::forward::pstd::PSTDSolver;
 use ndarray::Array3;
 
 pub(super) fn build_solver_with_sensor(

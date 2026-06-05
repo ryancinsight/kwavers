@@ -1,8 +1,8 @@
 use super::MetaLearner;
-use kwavers_core::constants::numerical::TWO_PI;
-use kwavers_core::error::KwaversResult;
 use crate::inverse::pinn::ml::meta_learning::types::{PhysicsTask, TaskData};
 use burn::tensor::backend::AutodiffBackend;
+use kwavers_core::constants::numerical::TWO_PI;
+use kwavers_core::error::KwaversResult;
 
 impl<B: AutodiffBackend> MetaLearner<B> {
     /// Generate task data.
@@ -189,14 +189,11 @@ impl<B: AutodiffBackend> MetaLearner<B> {
                 }
             }
             crate::inverse::pinn::ml::BurnWave2dGeometry::AdaptiveMesh {
-                base_geometry,
-                ..
+                base_geometry, ..
             } => {
                 data.extend(self.generate_boundary_data(base_geometry.as_ref(), conditions));
             }
-            crate::inverse::pinn::ml::BurnWave2dGeometry::MultiRegion {
-                regions, ..
-            } => {
+            crate::inverse::pinn::ml::BurnWave2dGeometry::MultiRegion { regions, .. } => {
                 for (region, _) in regions {
                     data.extend(self.generate_boundary_data(region, conditions));
                 }

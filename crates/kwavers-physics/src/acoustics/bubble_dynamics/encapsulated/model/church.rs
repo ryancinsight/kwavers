@@ -1,7 +1,7 @@
 use super::super::shell::ShellProperties;
+use crate::acoustics::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
-use crate::acoustics::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};
 
 /// Church model for encapsulated bubbles with elastic shell
 ///

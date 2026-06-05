@@ -33,9 +33,6 @@
 //!   for contrast enhanced ultrasound (CEUS) in the liver." *Ultrasound in Medicine & Biology*
 //! - Barr, R. G., et al. (2019). "Elastography assessment of liver fibrosis." *Abdominal Radiology*
 
-use kwavers_therapy::therapy::swe_3d_workflows::{
-    ElasticityMap3D, MultiPlanarReconstruction, Swe3dClinicalDecisionSupport, VolumetricROI,
-};
 use kwavers_grid::Grid;
 use kwavers_medium::heterogeneous::HeterogeneousMedium;
 use kwavers_physics::acoustics::imaging::modalities::elastography::{
@@ -44,6 +41,9 @@ use kwavers_physics::acoustics::imaging::modalities::elastography::{
 use kwavers_solver::forward::elastic::{
     ArrivalDetection, ElasticBodyForceConfig, ElasticWaveSolver, VolumetricSource,
     VolumetricWaveConfig, WaveFrontTracker,
+};
+use kwavers_therapy::therapy::swe_3d_workflows::{
+    ElasticityMap3D, MultiPlanarReconstruction, Swe3dClinicalDecisionSupport, VolumetricROI,
 };
 use ndarray::Array3;
 

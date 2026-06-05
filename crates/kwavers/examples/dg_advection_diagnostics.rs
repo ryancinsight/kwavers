@@ -25,10 +25,10 @@
 //! - Shu & Osher (1988). *J. Comput. Phys.* 77(2):439-471.
 //! - Pierce (1989). *Acoustics: An Introduction to Its Physical Principles*.
 
+use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_solver::forward::pstd::dg::quadrature::gauss_lobatto_quadrature;
 use kwavers_solver::forward::pstd::dg::{DGConfig, DGSolver};
-use kwavers_core::error::KwaversResult;
 use ndarray::{Array1, Array3};
 use std::f64::consts::PI;
 use std::sync::Arc;

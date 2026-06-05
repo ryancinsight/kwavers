@@ -1,6 +1,6 @@
 use super::super::{FwiGeometry, FwiProcessor};
-use kwavers_source::{GridSource, SourceMode};
 use crate::inverse::seismic::parameters::FwiParameters;
+use kwavers_source::{GridSource, SourceMode};
 use ndarray::{Array2, Array3, Array4};
 
 #[test]

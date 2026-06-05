@@ -50,18 +50,18 @@ pub use adaptive_integration::{
     IntegrationStatistics,
 };
 pub use bjerknes_forces::{BjerknesCalculator, BjerknesConfig, BjerknesInteractionType}; // NEW: Bubble-bubble interaction forces
+pub use bubble_field::{BubbleCloud, BubbleField, BubbleStateFields};
+pub use bubble_state::{BubbleParameters, BubbleState, GasSpecies};
 pub use bubbly_medium::{
     commander_prosperetti_attenuation, commander_prosperetti_phase_velocity,
     commander_prosperetti_wavenumber, mixture_density, wood_sound_speed,
 };
+pub use cavitation_control::{
+    CavitationMetrics, ControlOutput, ControlStrategy, FeedbackConfig, FeedbackController,
+};
 pub use dissolution::{
     dissolution_time_numeric, integrate_dissolution, DissolutionModel, DissolutionTrajectory,
     EpsteinPlessetDissolution, GasDiffusionParams, ShellPermeationDissolution,
-};
-pub use bubble_field::{BubbleCloud, BubbleField, BubbleStateFields};
-pub use bubble_state::{BubbleParameters, BubbleState, GasSpecies};
-pub use cavitation_control::{
-    CavitationMetrics, ControlOutput, ControlStrategy, FeedbackConfig, FeedbackController,
 };
 pub use encapsulated::{ChurchModel, MarmottantModel, ShellProperties}; // NEW: Encapsulated bubble models
 pub use epstein_plesset::EpsteinPlessetStabilitySolver; // NEW: Epstein-Plesset stability analysis
@@ -72,10 +72,10 @@ pub use imex_integration::{
     integrate_bubble_dynamics_imex, BubbleIMEXConfig, BubbleIMEXIntegrator,
 };
 pub use integration::integrate_bubble_dynamics_stable; // NEW: Extracted integration utilities
+pub use interactions::{BjerknesForceComputer, BubbleInteractions, CollectiveEffects};
+pub use keller_miksis::KellerMiksisModel; // NEW: Modular Keller-Miksis solver
+pub use rayleigh_plesset::RayleighPlessetSolver;
 pub use symplectic_integration::{
     integrate_bubble_dynamics_symplectic, stormer_verlet_step, yoshida4_step,
     BubbleSymplecticIntegrator, SymplecticConfig,
 };
-pub use interactions::{BjerknesForceComputer, BubbleInteractions, CollectiveEffects};
-pub use keller_miksis::KellerMiksisModel; // NEW: Modular Keller-Miksis solver
-pub use rayleigh_plesset::RayleighPlessetSolver;

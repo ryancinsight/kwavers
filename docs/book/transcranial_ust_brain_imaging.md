@@ -1,12 +1,12 @@
-# Chapter 27 - Transcranial UST Brain Imaging
+# Chapter 26 - Transcranial UST Brain Imaging
 
-> **Prerequisite:** Chapter 16 (Transcranial Ultrasound), Chapter 17
-> (Inverse Problems and PINNs), Chapter 25 (Transcranial HIFU and BBB
-> Treatment Planning), and Chapter 26 (Neuromodulation).
+> **Prerequisite:** Chapter 15 (Transcranial Ultrasound), Chapter 17
+> (Inverse Problems and PINNs), Chapter 24 (Transcranial HIFU and BBB
+> Treatment Planning), and Chapter 25 (Neuromodulation).
 
 ---
 
-## 27.1 Scope
+## 26.1 Scope
 
 This chapter adds a reproducible, CT-derived seismic-imaging workflow for
 transcranial brain sound-speed reconstruction.  It follows the published
@@ -62,7 +62,7 @@ No SciPy, nibabel, or pydicom dependency is required for this chapter path.
 
 ---
 
-## 27.2 Formal contract
+## 26.2 Formal contract
 
 Inputs:
 
@@ -89,7 +89,7 @@ Outputs:
   deep midline inspection from pons-level through thalamus-level slices.
 - Objective history and visibility metrics.
 
-**Theorem 27.1 (Born Linearity).** Let the true sound-speed field be
+**Theorem 26.1 (Born Linearity).** Let the true sound-speed field be
 `c(x) = c₀ + δc(x)` with relative contrast `m(x) = δc(x)/c₀`.  Under the
 single-scattering (first Born) approximation `|m(x)| ≪ 1`, every multiply
 scattered wave is O(m²) and is dropped.  The scattered pressure at receiver `r`
@@ -158,7 +158,7 @@ or when the reconstruction fails the objective and contrast criteria.
 
 ---
 
-## 27.3 Acquisition model
+## 26.3 Acquisition model
 
 The chapter now solves one coupled 3-D inverse problem and slices the returned
 volume for display.  The acquisition geometry is not a ring.  The 1024 elements
@@ -224,7 +224,7 @@ defined by encoded channel geometry rather than by arbitrary source amplitude.
 
 ---
 
-## 27.4 CT-to-acoustic model
+## 26.4 CT-to-acoustic model
 
 The RITK-loaded CT tensor is transposed from `[z,y,x]` to `[x,y,z]` before
 resampling.  The non-air head support is cropped and resampled onto an isotropic
@@ -246,7 +246,7 @@ in the CT-derived central brain mask are updated.
 
 ---
 
-## 27.5 Optimization
+## 26.5 Optimization
 
 The first reconstruction is a migration image:
 
@@ -301,7 +301,7 @@ to the physical FWI reconstruction.
 
 ---
 
-## 27.6 Nonlinear and therapy-monitoring variants
+## 26.6 Nonlinear and therapy-monitoring variants
 
 | Variant | Data stream | Inverted quantity | Histotripsy role | Implemented here |
 | --- | --- | --- | --- | --- |
@@ -321,14 +321,14 @@ FWI. The histotripsy simulator now adds deterministic receiver noise,
 gain/phase jitter, low-to-high frequency continuation, Huber IRLS weighting,
 multiparameter speed/attenuation inversion, and a weak nonlinear harmonic
 `beta` branch. Bubble-state FWI should be added as a separate
-therapy-monitoring orchestrator over existing Chapter 21, 23, 25, and 27
+therapy-monitoring orchestrator over existing Chapter 14, 22, 24, and 26
 components.
 
 The custom executable monitoring simulation is:
 
 `pykwavers/examples/book/ch27_histotripsy_fwi_rtm.py`
 
-It uses the RITK-backed Chapter 27 CT baseline, all 1024 receiver elements,
+It uses the RITK-backed Chapter 26 CT baseline, all 1024 receiver elements,
 active continuation stages (`110 kHz`, `160 kHz`, `220 kHz`) ending at the
 `220 kHz` therapy-monitoring carrier, passive cavitation diagnostics
 (`110 kHz`, `220 kHz`, `440 kHz`), and three synthetic lesion states: compact
@@ -340,7 +340,7 @@ image as cavitation support rather than as a boundary-resolution measurement.
 
 ---
 
-## 27.7 Minimal usage example
+## 26.7 Minimal usage example
 
 The PyO3 binding exposes the full pipeline via a single call.  No NumPy,
 SciPy, nibabel, or pydicom dependency is required on the Python side.
@@ -398,7 +398,7 @@ PCG iteration.  The 1024-element hemispherical focused-bowl geometry satisfies
 the same-device aperture contract (§29.2): every element index used as a
 transmitter also appears as a receiver.
 
-## 27.8 Reproducible figures
+## 26.8 Reproducible figures
 
 Run:
 
@@ -472,7 +472,7 @@ each reconstruction family. The latest generated fusion metrics are:
 
 ---
 
-## 27.9 Boundary of replication
+## 26.9 Boundary of replication
 
 The published npj Digital Medicine study is a full 3-D time-domain FWI pipeline.
 This chapter is a bounded in-repository reproduction of the acquisition and

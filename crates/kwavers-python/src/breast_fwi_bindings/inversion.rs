@@ -30,10 +30,7 @@ impl PyFrequencyObservation {
     #[new]
     pub fn new(frequency_hz: f64, observed_pressure: PyReadonlyArray2<Complex64>) -> Self {
         Self {
-            inner: FrequencyObservation::new(
-                frequency_hz,
-                observed_pressure.as_array().to_owned(),
-            ),
+            inner: FrequencyObservation::new(frequency_hz, observed_pressure.as_array().to_owned()),
         }
     }
 

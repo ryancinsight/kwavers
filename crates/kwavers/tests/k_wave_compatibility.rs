@@ -1,8 +1,8 @@
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
-use kwavers_source::GridSource;
 use kwavers_solver::forward::pstd::config::{CompatibilityMode, PSTDConfig};
 use kwavers_solver::forward::pstd::PSTDSolver;
+use kwavers_source::GridSource;
 
 #[test]
 fn test_kwave_compatibility_mode() {

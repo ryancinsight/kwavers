@@ -1,6 +1,6 @@
 use super::HybridSolver;
-use kwavers_core::error::KwaversResult;
 use crate::forward::hybrid::domain_decomposition::{DomainRegion, DomainType};
+use kwavers_core::error::KwaversResult;
 use ndarray::s;
 
 impl HybridSolver {

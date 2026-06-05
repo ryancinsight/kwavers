@@ -1,4 +1,4 @@
-# Performance and Memory
+# Chapter 19: Performance and Memory
 
 *High-Performance Computing for Ultrasound Simulation*
 

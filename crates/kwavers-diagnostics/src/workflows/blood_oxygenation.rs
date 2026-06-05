@@ -1,6 +1,6 @@
-use kwavers_optics::chromophores::HemoglobinDatabase;
-use kwavers_analysis::signal_processing::spectroscopy::{SpectralUnmixer, SpectralUnmixingConfig};
 use anyhow::{Context, Result};
+use kwavers_analysis::signal_processing::spectroscopy::{SpectralUnmixer, SpectralUnmixingConfig};
+use kwavers_optics::chromophores::HemoglobinDatabase;
 use ndarray::{Array2, Array3};
 
 /// Blood oxygenation map result

@@ -1,6 +1,6 @@
 //! `encode_velocity_update`: shared FFT(p) cache + per-axis gradient/velocity dispatches.
 
-use super::super::super::{GpuPstdSolver, PstdParams};
+use super::super::super::GpuPstdSolver;
 use super::StepCtx;
 
 impl GpuPstdSolver {

@@ -4,9 +4,9 @@ use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_receiver::GridSensorSet;
-use kwavers_source::Source;
 use kwavers_solver::config::{SolverConfiguration, SolverType};
 use kwavers_solver::feature::SolverFeature;
+use kwavers_source::Source;
 use std::sync::Arc;
 
 use super::controller::CoreSimulation;

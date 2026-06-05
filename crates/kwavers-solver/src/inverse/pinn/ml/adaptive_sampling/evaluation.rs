@@ -1,6 +1,6 @@
 use super::AdaptiveCollocationSampler;
-use kwavers_core::error::KwaversResult;
 use burn::tensor::{backend::AutodiffBackend, ElementConversion, Tensor};
+use kwavers_core::error::KwaversResult;
 use std::collections::HashMap;
 
 impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
@@ -12,13 +12,12 @@ impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
         &self,
         model: &crate::inverse::pinn::ml::BurnPINN2DWave<B>,
     ) -> KwaversResult<Tensor<B, 1>> {
-        let physics_params =
-            crate::inverse::pinn::ml::physics::PinnDomainPhysicsParameters {
-                material_properties: HashMap::new(),
-                boundary_values: HashMap::new(),
-                initial_values: HashMap::new(),
-                domain_params: HashMap::new(),
-            };
+        let physics_params = crate::inverse::pinn::ml::physics::PinnDomainPhysicsParameters {
+            material_properties: HashMap::new(),
+            boundary_values: HashMap::new(),
+            initial_values: HashMap::new(),
+            domain_params: HashMap::new(),
+        };
 
         let x: Tensor<B, 1> = self
             .active_points

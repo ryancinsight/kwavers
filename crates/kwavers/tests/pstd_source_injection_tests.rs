@@ -24,17 +24,17 @@
 //! - Treeby & Cox (2010), J. Biomed. Opt. 15(2), Eq. (16–18).
 //! - Treeby, Jaros, Rendell & Cox (2012), J. Acoust. Soc. Am. 131(6).
 
-use kwavers_core::error::KwaversResult;
 use kwavers_boundary::CPMLConfig;
+use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_signal::SineWave;
-use kwavers_source::{
-    GridSource, InjectionMode, PlaneWaveSource, PlaneWaveSourceConfig, SourceField,
-};
 use kwavers_solver::forward::pstd::config::{BoundaryConfig, KSpaceMethod, PSTDConfig};
 use kwavers_solver::forward::pstd::implementation::core::orchestrator::PSTDSolver;
 use kwavers_solver::interface::Solver;
+use kwavers_source::{
+    GridSource, InjectionMode, PlaneWaveSource, PlaneWaveSourceConfig, SourceField,
+};
 use ndarray::Array3;
 use std::sync::Arc;
 

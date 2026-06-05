@@ -84,8 +84,7 @@ mod utils_bindings;
 /// PSTD path uses the shared kwavers spectral conversion helper.
 #[allow(dead_code)]
 fn alpha_db_cm_to_np_m(alpha_db_cm: f64, frequency_mhz: f64, alpha_power: f64) -> f64 {
-    let db_to_np = 20.0 / std::f64::consts::LN_10;
-    alpha_db_cm * frequency_mhz.powf(alpha_power) * 100.0 / db_to_np
+    kwavers_core::units::alpha_db_per_mhz_cm_to_np_per_m(alpha_db_cm, frequency_mhz, alpha_power)
 }
 
 #[cfg(test)]

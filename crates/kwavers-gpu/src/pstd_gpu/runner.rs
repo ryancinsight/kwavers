@@ -16,17 +16,15 @@
 //! Returns `Array2<f64>` of shape `(num_sensors, time_steps)` with the
 //! pressure recorded at each sensor index per step.
 
+use crate::pstd_gpu::{AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays, SolverParams};
+use kwavers_boundary::cpml::{CPMLConfig, CPMLProfiles};
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_boundary::cpml::{CPMLConfig, CPMLProfiles};
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use kwavers_source::GridSource;
 use kwavers_physics::acoustics::mechanics::absorption::power_law_db_cm_to_np_omega_m;
-use crate::pstd_gpu::{
-    AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays, SolverParams,
-};
+use kwavers_source::GridSource;
 use ndarray::{Array2, Array3};
 use std::f64::consts::PI;
 

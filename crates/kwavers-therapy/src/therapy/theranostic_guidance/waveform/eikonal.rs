@@ -119,16 +119,32 @@ pub(super) fn eikonal_travel_time(
 /// Smaller of the two axis-x neighbours; `+∞` at the grid boundary.
 #[inline]
 fn neighbour_min_x(t: &Array2<f64>, ix: usize, iy: usize, nx: usize) -> f64 {
-    let left = if ix > 0 { t[[ix - 1, iy]] } else { f64::INFINITY };
-    let right = if ix + 1 < nx { t[[ix + 1, iy]] } else { f64::INFINITY };
+    let left = if ix > 0 {
+        t[[ix - 1, iy]]
+    } else {
+        f64::INFINITY
+    };
+    let right = if ix + 1 < nx {
+        t[[ix + 1, iy]]
+    } else {
+        f64::INFINITY
+    };
     left.min(right)
 }
 
 /// Smaller of the two axis-y neighbours; `+∞` at the grid boundary.
 #[inline]
 fn neighbour_min_y(t: &Array2<f64>, ix: usize, iy: usize, ny: usize) -> f64 {
-    let down = if iy > 0 { t[[ix, iy - 1]] } else { f64::INFINITY };
-    let up = if iy + 1 < ny { t[[ix, iy + 1]] } else { f64::INFINITY };
+    let down = if iy > 0 {
+        t[[ix, iy - 1]]
+    } else {
+        f64::INFINITY
+    };
+    let up = if iy + 1 < ny {
+        t[[ix, iy + 1]]
+    } else {
+        f64::INFINITY
+    };
     down.min(up)
 }
 

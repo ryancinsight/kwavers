@@ -9,15 +9,14 @@ impl NumericalValidator {
     pub(super) fn validate_dispersion(
         &self,
     ) -> Result<DispersionResults, Box<dyn std::error::Error>> {
-        use kwavers_source::GridSource;
         use crate::fdtd::{FdtdConfig, FdtdSolver};
         use crate::forward::nonlinear::kuznetsov::{KuznetsovConfig, KuznetsovWave};
         use crate::pstd::{PSTDConfig, PSTDSolver};
+        use kwavers_source::GridSource;
 
         let wavelength = 10.0 * self.grid.dx;
         let k = TWO_PI / wavelength;
-        let omega =
-            k * kwavers_medium::sound_speed_at(&self.medium, 0.0, 0.0, 0.0, &self.grid);
+        let omega = k * kwavers_medium::sound_speed_at(&self.medium, 0.0, 0.0, 0.0, &self.grid);
         let dt = 0.5 * self.grid.dx
             / kwavers_medium::sound_speed_at(&self.medium, 0.0, 0.0, 0.0, &self.grid);
 

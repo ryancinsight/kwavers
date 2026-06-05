@@ -1,8 +1,8 @@
+use crate::plugin::{PluginContext, PluginMetadata, PluginState};
 use kwavers_core::error::KwaversResult;
 use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use crate::plugin::{PluginContext, PluginMetadata, PluginState};
 use kwavers_physics::thermal::diffusion::ThermalDiffusionConfig;
 use ndarray::Array4;
 

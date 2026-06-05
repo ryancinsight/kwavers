@@ -66,7 +66,11 @@ impl PyResidualGasField {
 
     /// Current void-fraction field `β(x)` as an (nx, ny, nz) array.
     fn void_fraction(&self, py: Python<'_>) -> Py<PyArray3<f64>> {
-        self.inner.void_fraction().to_owned().into_pyarray(py).into()
+        self.inner
+            .void_fraction()
+            .to_owned()
+            .into_pyarray(py)
+            .into()
     }
 
     /// Wood (1930) effective sound-speed field [m/s] for the gas-laden medium.

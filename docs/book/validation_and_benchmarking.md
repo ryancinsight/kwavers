@@ -1,4 +1,4 @@
-# Validation and Benchmarking
+# Chapter 20: Validation and Benchmarking
 
 *Systematic Validation of kwavers Against Analytical Solutions, Reference Simulators, and Experimental Data*
 

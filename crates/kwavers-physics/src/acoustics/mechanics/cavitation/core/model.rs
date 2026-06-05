@@ -13,9 +13,9 @@
 
 use super::state::{CavitationDose, CavitationMechanicsState};
 use super::thresholds::{blake_threshold, flynn_threshold, neppiras_threshold, ThresholdModel};
-use kwavers_core::error::KwaversResult;
 use crate::acoustics::analysis::calculate_mechanical_index;
 use crate::acoustics::bubble_dynamics::bubble_state::BubbleParameters;
+use kwavers_core::error::KwaversResult;
 use ndarray::{Array3, Zip};
 
 /// Mechanical Index (MI) threshold for the onset of inertial cavitation in water

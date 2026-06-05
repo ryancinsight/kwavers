@@ -4,10 +4,10 @@ mod dependency;
 mod execution_impl;
 
 use super::execution::{ExecutionStrategy, SequentialStrategy};
+use crate::plugin::{Plugin, PluginFields};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use crate::plugin::{Plugin, PluginFields};
 use ndarray::Array3;
 use std::collections::HashMap;
 

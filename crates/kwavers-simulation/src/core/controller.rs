@@ -1,14 +1,14 @@
 //! `CoreSimulation` controller — orchestrates solver, sources, sensors, and medium.
 
+use crate::solver_factory::SimulationSolverFactory;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_receiver::GridSensorSet;
-use kwavers_source::Source;
-use crate::solver_factory::SimulationSolverFactory;
 use kwavers_solver::config::SolverConfiguration;
 use kwavers_solver::feature::{FeatureManager, SolverFeature};
 use kwavers_solver::interface::{FieldsSummary, ProgressReporter, ProgressUpdate, Solver};
+use kwavers_source::Source;
 use std::sync::Arc;
 
 use super::types::{CoreSimulationStatistics, SimulationResult};

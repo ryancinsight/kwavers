@@ -1,8 +1,8 @@
 //! Convergence order and linear accuracy tests.
 
 use super::super::*;
-use kwavers_core::constants::numerical::TWO_PI;
 use approx::assert_abs_diff_eq;
+use kwavers_core::constants::numerical::TWO_PI;
 use ndarray::Array3;
 
 #[test]

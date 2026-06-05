@@ -16,7 +16,8 @@
 /// Laplacian on an isotropic grid (dx = dy = dz).
 ///
 /// Interior cells only (`1 ≤ i,j,k ≤ N−2`); boundary cells are set to zero
-/// (Dirichlet condition), matching `kspace_shift.wgsl`.
+/// (Dirichlet condition), matching the `kspace_shift_apply` entry point in
+/// `pstd_gpu/shaders/pstd.wgsl`.
 ///
 /// # CPU vs GPU Parity
 ///

@@ -47,7 +47,8 @@ impl Default for QualityThresholds {
         Self {
             max_interpolation_error:
                 kwavers_core::constants::numerical::INTERPOLATION_ERROR_THRESHOLD,
-            max_conservation_error: kwavers_core::constants::numerical::CONSERVATION_ERROR_THRESHOLD,
+            max_conservation_error:
+                kwavers_core::constants::numerical::CONSERVATION_ERROR_THRESHOLD,
             max_reflection: 0.01,   // 1% reflection
             min_transmission: 0.99, // 99% transmission
         }

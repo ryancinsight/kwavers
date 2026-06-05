@@ -15,12 +15,12 @@
 //! Burn PINN Implementations (Solver Layer 2)
 //! ```
 
-use kwavers_core::error::{KwaversError, KwaversResult, SystemError};
 use crate::interface::pinn_beamforming::{
-    ModelInfo, InterfacePinnBeamformingResult, PinnBeamformingConfig, PinnBeamformingProvider,
-    PinnBeamformingUncertaintyConfig, BeamformingTrainingMetrics,
+    BeamformingTrainingMetrics, InterfacePinnBeamformingResult, ModelInfo, PinnBeamformingConfig,
+    PinnBeamformingProvider, PinnBeamformingUncertaintyConfig,
 };
 use burn::tensor::backend::AutodiffBackend;
+use kwavers_core::error::{KwaversError, KwaversResult, SystemError};
 use ndarray::{Array1, Array2, Array3};
 use std::sync::{Arc, Mutex};
 

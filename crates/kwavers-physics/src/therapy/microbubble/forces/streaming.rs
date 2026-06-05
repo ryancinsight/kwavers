@@ -5,8 +5,8 @@
 //! - Elder (1959): "Steady flow produced by vibrating cylinders"
 //! - Marmottant & Hilgenfeldt (2003): "Controlled vesicle deformation"
 
+use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
-use kwavers_core::constants::numerical::{TWO_PI};
 
 /// Steady acoustic streaming velocity induced by viscous dissipation [m/s].
 #[derive(Debug, Clone, Copy, PartialEq)]

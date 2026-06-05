@@ -2,12 +2,12 @@
 //!
 //! Core time-reversal reconstruction implementation.
 
+use crate::plugin_based::PluginBasedSolver;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_receiver::recorder::Recorder;
 use kwavers_source::{Source, TimeVaryingSource};
-use crate::plugin_based::PluginBasedSolver;
 use log::{debug, info};
 use ndarray::{Array2, Array3};
 use std::collections::HashMap;

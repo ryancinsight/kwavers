@@ -1,10 +1,10 @@
 //! Velocity-Verlet integration for CEUS microbubble oscillation.
 
 use super::BubbleDynamics;
+use crate::acoustics::imaging::modalities::ceus::microbubble::response::BubbleResponse;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
 use kwavers_imaging::ultrasound::ceus::Microbubble;
-use crate::acoustics::imaging::modalities::ceus::microbubble::response::BubbleResponse;
 
 impl BubbleDynamics {
     /// Simulate radial oscillation response to acoustic pressure.

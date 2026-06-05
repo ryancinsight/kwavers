@@ -1,8 +1,8 @@
 use super::projection::axis_map_for_index;
 use super::{validate_tensor_state, AcousticDgTensorSourceWeight, AcousticDgTensorWorkspace};
-use kwavers_core::error::KwaversResult;
 use crate::forward::pstd::dg::dg_solver::core::DGSolver;
 use crate::forward::pstd::dg::dg_solver::topology::DgTopology;
+use kwavers_core::error::KwaversResult;
 use ndarray::{Array3, Zip};
 
 impl DGSolver {

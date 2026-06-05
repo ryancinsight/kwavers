@@ -14,9 +14,9 @@
 
 use super::trait_def::SpectralOperatorTrait;
 use super::{SpectralFilter, SpectralFilterType};
+use crate::fft::{Complex64, Fft1d, Shape1D, FFT_CACHE_1D};
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
-use crate::fft::{Complex64, Fft1d, Shape1D, FFT_CACHE_1D};
 use ndarray::{Array1, Array3, ArrayView3};
 use std::f64::consts::PI;
 

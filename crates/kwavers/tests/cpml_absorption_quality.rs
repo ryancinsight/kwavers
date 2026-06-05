@@ -17,11 +17,11 @@
 //! - Treeby & Cox (2010). J. Biomed. Opt. 15(2), 021314.
 
 use kwavers_boundary::cpml::{CPMLConfig, CPMLProfiles};
+use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
-use kwavers_source::GridSource;
 use kwavers_solver::fdtd::{FdtdConfig, FdtdSolver};
-use kwavers_core::error::KwaversResult;
+use kwavers_source::GridSource;
 
 /// Theorem (CPML a-coefficient correctness, Roden & Gedney 2000):
 /// In PML cells (where σ > 0), a_coeff = b_coeff − 1 < 0.

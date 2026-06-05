@@ -1,7 +1,7 @@
 use super::super::DifferentialOperator;
 use super::core::CentralDifference6;
-use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
 use approx::assert_abs_diff_eq;
+use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
 use ndarray::Array3;
 
 fn assert_invalid_grid_spacing(

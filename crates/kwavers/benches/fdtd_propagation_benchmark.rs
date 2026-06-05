@@ -40,8 +40,8 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion, Throughput};
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
-use kwavers_source::GridSource;
 use kwavers_solver::forward::fdtd::{FdtdConfig, FdtdSolver};
+use kwavers_source::GridSource;
 use ndarray::{Array2, Array3};
 use std::time::Duration;
 

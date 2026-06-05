@@ -48,7 +48,7 @@ impl WaveEquationGpu {
         velocity: &Array3<f64>,
         density: &Array3<f64>,
         sound_speed: &Array3<f64>,
-        grid: &grid::Grid,
+        grid: &kwavers_grid::Grid,
         dt: f64,
     ) -> KwaversResult<(Array3<f64>, Array3<f64>)> {
         let (nx, ny, nz) = pressure.dim();

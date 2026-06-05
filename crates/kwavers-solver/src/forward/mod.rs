@@ -182,23 +182,23 @@ mod path_equivalence_tests {
     fn pennes_solver_path_equivalence() {
         let _: fn(
             crate::forward::thermal::PennesSolver,
-        ) -> crate::forward::thermal_solvers::thermal::PennesSolver =
-            std::convert::identity;
+        ) -> crate::forward::thermal_solvers::thermal::PennesSolver = std::convert::identity;
     }
 
     #[test]
     fn plugin_based_solver_path_equivalence() {
         let _: fn(
             crate::forward::plugin_based::PluginBasedSolver,
-        ) -> crate::forward::plugin::plugin_based::PluginBasedSolver =
-            std::convert::identity;
+        ) -> crate::forward::plugin::plugin_based::PluginBasedSolver = std::convert::identity;
     }
 
     #[test]
     fn elastic_solvers_module_resolves() {
         // Confirms `elastic_solvers::elastic` and the flat path resolve to the
         // same module by exercising a struct re-exported from each.
-        let _: fn(crate::forward::elastic::nonlinear::HyperelasticModel)
+        let _: fn(
+            crate::forward::elastic::nonlinear::HyperelasticModel,
+        )
             -> crate::forward::elastic_solvers::elastic::nonlinear::HyperelasticModel =
             std::convert::identity;
     }
@@ -207,8 +207,7 @@ mod path_equivalence_tests {
     fn optical_solvers_module_resolves() {
         let _: fn(
             crate::forward::optical::DiffusionSolver,
-        ) -> crate::forward::optical_solvers::optical::DiffusionSolver =
-            std::convert::identity;
+        ) -> crate::forward::optical_solvers::optical::DiffusionSolver = std::convert::identity;
     }
 
     #[test]

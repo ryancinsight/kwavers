@@ -1,6 +1,6 @@
 use kwavers_grid::Grid;
-use kwavers_transducer::beamforming::SensorBeamformer;
 use kwavers_receiver::{Position, Sensor, SensorArray, SensorArrayGeometry};
+use kwavers_transducer::beamforming::SensorBeamformer;
 
 #[test]
 fn test_geometric_delay_calculation() {

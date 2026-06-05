@@ -9,15 +9,15 @@
 //!
 //! Expected: sensor amplitude >> 3.7e-10 Pa (the ~0 failure value seen in Python)
 
-use kwavers_core::error::KwaversResult;
 use kwavers_boundary::cpml::CPMLConfig;
+use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::heterogeneous::HeterogeneousMedium;
 use kwavers_medium::HomogeneousMedium;
-use kwavers_source::grid_source::SourceMode;
-use kwavers_source::GridSource;
 use kwavers_solver::forward::pstd::config::{BoundaryConfig, KSpaceMethod, PSTDConfig};
 use kwavers_solver::forward::pstd::implementation::core::orchestrator::PSTDSolver;
+use kwavers_source::grid_source::SourceMode;
+use kwavers_source::GridSource;
 use ndarray::{Array2, Array3};
 
 fn build_tone_burst(nt: usize, dt: f64, f0: f64, n_cycles: usize) -> Array2<f64> {

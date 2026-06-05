@@ -1,6 +1,6 @@
+use crate::acoustics::skull::AcousticSkullProperties;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use crate::acoustics::skull::AcousticSkullProperties;
 use ndarray::{Array3, Zip};
 
 use super::constants::ALPHA_WATER;

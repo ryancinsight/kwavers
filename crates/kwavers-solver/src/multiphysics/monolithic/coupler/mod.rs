@@ -13,8 +13,8 @@
 //! All child modules add inherent methods to [`MonolithicCoupler`].  No wrapper
 //! type, compatibility alias, or dynamic dispatch layer is introduced.
 
-use crate::plugin::Plugin;
 use crate::integration::nonlinear::{GMRESConfig, GMRESSolver};
+use crate::plugin::Plugin;
 use ndarray::Array3;
 use std::collections::HashMap;
 

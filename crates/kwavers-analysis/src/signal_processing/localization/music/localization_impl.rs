@@ -1,6 +1,4 @@
-use crate::signal_processing::localization::tdoa::{
-    TDOAConfig, TDOAProcessor, TimeDelayMethod,
-};
+use crate::signal_processing::localization::tdoa::{TDOAConfig, TDOAProcessor, TimeDelayMethod};
 use crate::signal_processing::localization::{LocalizationProcessor, SourceLocation};
 use kwavers_core::error::{KwaversError, KwaversResult};
 

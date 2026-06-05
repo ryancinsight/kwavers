@@ -1,10 +1,10 @@
 //! Pressure and velocity source injection for `PSTDSolver`.
 
-use kwavers_math::fft::Fft3dInOutExt;
 use super::super::orchestrator::PSTDSolver;
-use kwavers_core::error::KwaversResult;
-use kwavers_source::{SourceField, SourceInjectionMode};
 use crate::geometry::SolverGeometry;
+use kwavers_core::error::KwaversResult;
+use kwavers_math::fft::Fft3dInOutExt;
+use kwavers_source::{SourceField, SourceInjectionMode};
 use ndarray::Zip;
 
 impl PSTDSolver {

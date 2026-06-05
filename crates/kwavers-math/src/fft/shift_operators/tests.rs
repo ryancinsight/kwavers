@@ -1,7 +1,7 @@
 use super::functions::{generate_kappa, generate_shift_1d, generate_source_kappa};
+use crate::fft::Complex64;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::constants::numerical::TWO_PI;
-use crate::fft::Complex64;
 
 /// Shift operators at k=0 (DC bin) must be exactly zero.
 ///

@@ -25,9 +25,9 @@ use std::path::{Path, PathBuf};
 use anyhow::{bail, Context, Result};
 use burn::backend::NdArray;
 use kwavers_grid::Grid;
-use kwavers_transducer::transducers::focused::{BowlConfig, BowlTransducer};
 use kwavers_physics::acoustics::skull::{AberrationCorrection, HeterogeneousSkull};
 use kwavers_physics::skull::heterogeneous::SkullLayer;
+use kwavers_transducer::transducers::focused::{BowlConfig, BowlTransducer};
 use ndarray::{Array1, Array2, Array3};
 use ritk_io::{load_dicom_series, scan_dicom_directory};
 

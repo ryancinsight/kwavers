@@ -1,8 +1,8 @@
 //! IVP staggered leapfrog velocity initialisation for `PSTDSolver`.
 
-use kwavers_math::fft::Fft3dInOutExt;
 use super::PSTDSolver;
 use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_math::fft::Fft3dInOutExt;
 use ndarray::Zip;
 
 impl PSTDSolver {

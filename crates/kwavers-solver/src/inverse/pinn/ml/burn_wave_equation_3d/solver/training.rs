@@ -1,9 +1,9 @@
 use super::core::BurnPINN3DWave;
 use super::losses::LossScales;
-use kwavers_core::error::{KwaversError, KwaversResult};
 use crate::inverse::pinn::ml::burn_wave_equation_3d::config::BurnTrainingMetrics3D;
 use crate::inverse::pinn::ml::burn_wave_equation_3d::optimizer::SimpleOptimizer3D;
 use burn::tensor::{backend::AutodiffBackend, Tensor, TensorData};
+use kwavers_core::error::{KwaversError, KwaversResult};
 use std::time::Instant;
 
 impl<B: AutodiffBackend> BurnPINN3DWave<B> {

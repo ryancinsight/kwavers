@@ -1,7 +1,7 @@
 use super::*;
-use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use flate2::write::ZlibEncoder;
 use flate2::Compression;
+use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use std::io::Write;
 
 #[test]

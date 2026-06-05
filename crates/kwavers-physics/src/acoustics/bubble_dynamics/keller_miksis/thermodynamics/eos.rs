@@ -1,5 +1,6 @@
 //! Gas equation-of-state closures for Keller-Miksis thermodynamics.
 
+use crate::acoustics::bubble_dynamics::bubble_state::{BubbleState, GasSpecies};
 use kwavers_core::constants::cavitation::{BAR_L2_TO_PA_M6, L_TO_M3};
 use kwavers_core::constants::thermodynamic::{
     VAN_DER_WAALS_AIR, VAN_DER_WAALS_ARGON, VAN_DER_WAALS_NITROGEN, VAN_DER_WAALS_OXYGEN,
@@ -7,7 +8,6 @@ use kwavers_core::constants::thermodynamic::{
 };
 use kwavers_core::constants::{AVOGADRO, GAS_CONSTANT as R_GAS};
 use kwavers_core::error::{KwaversResult, PhysicsError};
-use crate::acoustics::bubble_dynamics::bubble_state::{BubbleState, GasSpecies};
 
 /// Calculate Van der Waals pressure for thermal effects.
 /// # Errors

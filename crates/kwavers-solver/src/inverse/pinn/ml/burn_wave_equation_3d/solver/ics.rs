@@ -1,6 +1,6 @@
 use super::core::BurnPINN3DWave;
-use kwavers_core::error::{KwaversError, KwaversResult};
 use burn::tensor::{backend::Backend, Tensor, TensorData};
+use kwavers_core::error::{KwaversError, KwaversResult};
 
 impl<B: Backend> BurnPINN3DWave<B> {
     /// Compute temporal derivative ∂u/∂t at t=0 via forward finite difference

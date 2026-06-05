@@ -1,10 +1,10 @@
 //! Shared private helpers for theranostic_bindings sub-modules.
 
+use kwavers_core::error::KwaversError;
 use kwavers_therapy::therapy::theranostic_guidance::{
     DevicePlacementMetrics, PlacementContext, Point3, ReconstructionMetrics,
     VolumeReconstructionMetrics,
 };
-use kwavers_core::error::KwaversError;
 use ndarray::{Array1, Array2};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;

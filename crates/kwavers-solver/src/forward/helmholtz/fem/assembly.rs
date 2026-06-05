@@ -4,8 +4,8 @@
 //! Provides efficient sparse matrix construction and boundary condition application.
 
 use kwavers_core::error::KwaversResult;
-use kwavers_mesh::Tetrahedron;
 use kwavers_math::linear_algebra::sparse::CompressedSparseRowMatrix;
+use kwavers_mesh::Tetrahedron;
 use ndarray::Array1;
 use num_complex::Complex64;
 

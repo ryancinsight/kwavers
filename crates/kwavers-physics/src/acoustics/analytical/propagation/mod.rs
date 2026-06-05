@@ -8,11 +8,11 @@ pub mod interfaces;
 
 pub mod scattering;
 
-pub use kwavers_medium::AnalyticalMediumProperties;
 pub use attenuation::AttenuationCalculator;
 pub use calculator::WavePropagationCalculator;
 pub use coefficients::PropagationCoefficients;
 pub use interfaces::{FresnelCalculator, Interface, InterfaceType, SnellLawCalculator};
+pub use kwavers_medium::AnalyticalMediumProperties;
 
 /// Wave mode enumeration for different types of wave propagation
 #[derive(Debug, Clone, Copy, PartialEq)]

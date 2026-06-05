@@ -2,13 +2,13 @@
 
 use super::super::KellerMiksisModel;
 use super::phase::{latent_heat_water_j_per_kg, p_sat_water_pa};
+use crate::acoustics::bubble_dynamics::bubble_state::BubbleState;
 use kwavers_core::constants::fundamental::{GAS_CONSTANT as R_GAS, STEFAN_BOLTZMANN};
 use kwavers_core::constants::numerical::{FOUR_PI, TWO_PI};
 use kwavers_core::constants::thermodynamic::{
     EMISSIVITY_VAPOR, KELVIN_OFFSET_C, M_WATER, ROOM_TEMPERATURE_K, THERMAL_CONDUCTIVITY_AIR,
 };
 use kwavers_core::error::{KwaversResult, PhysicsError};
-use crate::acoustics::bubble_dynamics::bubble_state::BubbleState;
 
 /// Update bubble temperature through adiabatic, conductive, latent, and radiative terms.
 /// # Errors

@@ -1,13 +1,13 @@
 //! CouplingInterface implementation
 
-use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
-use kwavers_field::mapping::UnifiedFieldType;
-use kwavers_grid::Grid;
 use crate::forward::hybrid::coupling::{
     HybridCouplingConservationEnforcer, HybridInterpolationScheme, InterfaceGeometry,
     InterfaceQualityMetrics, InterpolationManager, QualityMonitor, TransferOperators,
 };
 use crate::forward::hybrid::domain_decomposition::DomainRegion;
+use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
+use kwavers_field::mapping::UnifiedFieldType;
+use kwavers_grid::Grid;
 use ndarray::{s, Array3, Array4};
 
 /// Main coupling interface between PSTD and FDTD domains
@@ -327,8 +327,8 @@ impl CouplingInterface {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_C;
     use crate::forward::hybrid::domain_decomposition::DomainType;
+    use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_C;
     use ndarray::Array4;
 
     fn test_interface() -> CouplingInterface {

@@ -1,7 +1,7 @@
 //! Gaussian beam propagation tests (Tier 1 fast + Tier 3 comprehensive).
 
-use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use crate::forward::nonlinear::kzk::{KZKConfig, KZKSolver};
+use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use ndarray::Array2;
 
 /// Tier 3 — comprehensive validation (>30 s).

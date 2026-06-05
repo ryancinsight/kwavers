@@ -1,10 +1,10 @@
 //! `Plugin` trait implementation for `KzkSolverPlugin`.
 
+use crate::plugin::{PluginMetadata, PluginState};
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use crate::plugin::{PluginMetadata, PluginState};
 
 use super::solver::KzkSolverPlugin;
 

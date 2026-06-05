@@ -1,6 +1,6 @@
+use crate::acoustics::state::{FieldView, PhysicsState};
 use kwavers_core::error::{KwaversResult, PhysicsError};
 use kwavers_field::mapping::UnifiedFieldType;
-use crate::acoustics::state::{FieldView, PhysicsState};
 use ndarray::ArrayView3;
 use std::collections::HashSet;
 

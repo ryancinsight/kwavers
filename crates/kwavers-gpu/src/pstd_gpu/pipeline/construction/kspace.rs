@@ -5,7 +5,9 @@
 //! direct upload to GPU buffers.
 
 use kwavers_core::constants::numerical::TWO_PI;
-use kwavers_math::fft::shift_operators::{generate_kappa, generate_shift_1d, generate_source_kappa};
+use kwavers_math::fft::shift_operators::{
+    generate_kappa, generate_shift_1d, generate_source_kappa,
+};
 
 /// Precompute kappa, source_kappa, and packed 1-D shift arrays for k-space.
 ///

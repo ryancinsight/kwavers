@@ -1,7 +1,7 @@
+use kwavers::init_logging;
+use kwavers_grid::Grid;
 use kwavers_medium::heterogeneous::tissue::HeterogeneousTissueMedium;
 use kwavers_medium::AbsorptionTissueType;
-use kwavers_grid::Grid;
-use kwavers::init_logging;
 use log::info;
 use ndarray::Array3;
 use std::io::Write;

@@ -1,4 +1,4 @@
-# Chapter 6: Sensors and Measurements
+# Chapter 8: Sensors and Measurements
 
 ## 1. Introduction
 
@@ -53,7 +53,7 @@ angle-dependent pressure sensitivity (directivity function) of
 H(θ) = 2 J_1(ka sinθ) / (ka sinθ)
 ```
 
-identical in form to the piston transmit directivity derived in Chapter 5. By the reciprocity
+identical in form to the piston transmit directivity derived in Chapter 6. By the reciprocity
 principle, the receive directivity of a passive element equals its transmit directivity.
 
 For a square element of half-width `b`, the directivity is separable:
@@ -81,7 +81,7 @@ integrated output is
 S(θ) = ∫∫_aperture p_0 e^{ikx sinθ} dA.
 ```
 For a circular aperture the integral evaluates identically to the Huygens-Fresnel piston
-calculation of Chapter 5, yielding `H(θ) = 2J_1(ka sinθ)/(ka sinθ)`.       □
+calculation of Chapter 6, yielding `H(θ) = 2J_1(ka sinθ)/(ka sinθ)`.       □
 
 ### Calibration via Reciprocity
 

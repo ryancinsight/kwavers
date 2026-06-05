@@ -1,10 +1,10 @@
-use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_imaging::fusion::RegistrationMethod;
 use crate::acoustics::imaging::fusion::algorithms::MultiModalFusion;
 use crate::acoustics::imaging::fusion::registration::{
     generate_coordinate_arrays, FusionBenchmarkCase, FusionValidationCase, RitkRegistrationEngine,
 };
 use crate::acoustics::imaging::fusion::types::FusedImageResult;
+use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_imaging::fusion::RegistrationMethod;
 use ndarray::{Array3, CowArray};
 use std::collections::HashMap;
 

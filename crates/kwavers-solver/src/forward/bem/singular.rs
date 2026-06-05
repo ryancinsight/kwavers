@@ -297,8 +297,7 @@ mod tests {
         let naive_sum: f64 = qpoints
             .iter()
             .map(|qp| {
-                let r =
-                    crate::forward::bem::quadrature::map_to_triangle(qp.bary, p0, p1, p2);
+                let r = crate::forward::bem::quadrature::map_to_triangle(qp.bary, p0, p1, p2);
                 let dx = r[0];
                 let dy = r[1];
                 let dist = (dx * dx + dy * dy).sqrt();

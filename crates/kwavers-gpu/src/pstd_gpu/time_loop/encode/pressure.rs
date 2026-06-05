@@ -1,6 +1,6 @@
 //! `encode_pressure_record`: pressure-from-density, absorption correction, sensor recording.
 
-use super::super::super::{GpuPstdSolver, PstdParams};
+use super::super::super::GpuPstdSolver;
 use super::StepCtx;
 
 impl GpuPstdSolver {

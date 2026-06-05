@@ -1,5 +1,5 @@
-use kwavers_core::error::{KwaversError, KwaversResult};
 use crate::forward::pstd::implementation::core::orchestrator::PSTDSolver;
+use kwavers_core::error::{KwaversError, KwaversResult};
 use ndarray::{s, Zip};
 
 impl PSTDSolver {
@@ -73,7 +73,9 @@ impl PSTDSolver {
             //        rhoz = pml_z[k]·(pml_z[k]·rhoz − dt·coef·duzdr)
             // In the 2-D slice (nx, nr), Zip::indexed returns (i, k).
             let pml_exp = self.pml_exp.as_ref().ok_or_else(|| {
-                KwaversError::InternalError("pml_exp unexpectedly None in fused AS density path".into())
+                KwaversError::InternalError(
+                    "pml_exp unexpectedly None in fused AS density path".into(),
+                )
             })?;
             let pml_dx = pml_exp.den_x.as_slice().ok_or_else(|| {
                 KwaversError::InternalError("pml_den_x must be contiguous".into())

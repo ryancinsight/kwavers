@@ -1,13 +1,13 @@
-# Chapter 26 — Low-Intensity Ultrasound Neuromodulation
+# Chapter 25 — Low-Intensity Ultrasound Neuromodulation
 
-> **Prerequisite:** Chapter 15 (Safety and Dosimetry), Chapter 16
-> (Transcranial Ultrasound), Chapter 18 (Sonogenetics), Chapter 24
-> (BBB Opening), and Chapter 25 (Transcranial HIFU and BBB Treatment
+> **Prerequisite:** Chapter 16 (Safety and Dosimetry), Chapter 16
+> (Transcranial Ultrasound), Chapter 17 (Sonogenetics), Chapter 23
+> (BBB Opening), and Chapter 24 (Transcranial HIFU and BBB Treatment
 > Planning).
 
 ---
 
-## 26.1 Scope
+## 25.1 Scope
 
 Low-intensity transcranial ultrasound stimulation (TUS/tFUS/LIFUS) uses
 sub-ablative acoustic pulses to reversibly alter neural excitability.  This
@@ -32,7 +32,7 @@ clinical treatment protocol.
 
 ---
 
-## 26.2 Formal contract
+## 25.2 Formal contract
 
 Inputs:
 
@@ -74,7 +74,7 @@ when a claimed clinical endpoint is inferred from a mechanism-only simulation.
 
 ---
 
-## 26.3 Acoustic exposure model
+## 25.3 Acoustic exposure model
 
 For the simulation chapter, the in-situ focus is represented as an ellipsoidal
 Gaussian pressure envelope:
@@ -99,7 +99,7 @@ benchmarks, but transcranial adult-skull heating requires additional modeling.
 
 ---
 
-## 26.4 Mechanochemical coupling
+## 25.4 Mechanochemical coupling
 
 The acoustic energy density is:
 
@@ -147,7 +147,7 @@ constraints have already been satisfied.
 
 ---
 
-## 26.5 Chemical and neural response model
+## 25.5 Chemical and neural response model
 
 The chemical state is a calcium proxy:
 
@@ -180,7 +180,7 @@ The model encodes four mechanism constraints:
 
 ---
 
-## 26.6 Safety model
+## 25.6 Safety model
 
 Thermal dose uses the Pennes equation:
 
@@ -208,7 +208,7 @@ neuromodulation should not depend on cavitation or BBB-opening mechanisms.
 
 ---
 
-## 26.7 Clinical evidence guidance
+## 25.7 Clinical evidence guidance
 
 Clinical evidence remains heterogeneous.  As of 2026-05-12, low-intensity
 transcranial ultrasound neuromodulation should be treated as investigational in
@@ -230,7 +230,7 @@ and imaging/neurocognitive follow-up when the protocol enters human research.
 
 ---
 
-## 26.8 Simulation workflow
+## 25.8 Simulation workflow
 
 ```bash
 python pykwavers/examples/book/ch26_neuromodulation.py
@@ -253,7 +253,7 @@ the guidance grid.
 
 ---
 
-## 26.9 References
+## 25.9 References
 
 - Legon W. et al. *Transcranial focused ultrasound modulates the activity of
   primary somatosensory cortex in humans.* Nature Neuroscience **17**,

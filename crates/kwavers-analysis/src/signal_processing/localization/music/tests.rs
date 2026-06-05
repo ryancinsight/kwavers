@@ -1,7 +1,5 @@
 use crate::signal_processing::localization::model_order::ModelOrderCriterion;
-use crate::signal_processing::localization::{
-    AcousticLocalizationConfig, LocalizationProcessor,
-};
+use crate::signal_processing::localization::{AcousticLocalizationConfig, LocalizationProcessor};
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use ndarray::Array2;
 use num_complex::Complex;

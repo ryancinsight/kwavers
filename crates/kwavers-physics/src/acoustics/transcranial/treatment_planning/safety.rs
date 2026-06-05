@@ -2,9 +2,9 @@
 
 use super::planner::TreatmentPlanner;
 use super::types::TranscranialSafetyConstraints;
+use crate::acoustics::analysis::calculate_mechanical_index;
 use kwavers_core::constants::tissue_acoustics::{DENSITY_BRAIN, SOUND_SPEED_BRAIN};
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
-use crate::acoustics::analysis::calculate_mechanical_index;
 use ndarray::Array3;
 
 impl TreatmentPlanner {

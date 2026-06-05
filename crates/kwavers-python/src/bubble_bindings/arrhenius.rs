@@ -14,7 +14,7 @@
 //! - `R_gas = 8.314 J/(mol·K)` is the universal gas constant
 //! - `T(t)` [K] is the instantaneous temperature
 //!
-//! Integration is by the trapezoidal rule. Cell death probability follows
+//! Integration is by the rectangle rule (kwavers_physics). Cell death probability follows
 //! `P_death = 1 − exp(−Ω)`. Typical human tissue values:
 //! `Ea ≈ 2.77 × 10⁵ J/mol`, `A ≈ 3.1 × 10⁴³ s⁻¹` (Henriques 1947).
 //!
@@ -27,18 +27,18 @@ use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
-const R_GAS: f64 = 8.314; // J/(mol·K)
+const KELVIN_OFFSET_C: f64 = 273.15; // K↔°C boundary conversion
 
 /// Compute the cumulative Arrhenius thermal damage integral Ω(t).
 ///
-/// `dΩ/dt = A · exp(−Ea / (R_gas · T(t)))`
-///
-/// Integration uses the trapezoidal rule over the provided time series.
+/// Thin wrapper: the Arrhenius damage physics lives in
+/// `kwavers_physics::analytical::safety::arrhenius_cumulative` (single source of
+/// truth). Here we only convert K→°C and derive the time step before delegating.
 ///
 /// Parameters
 /// ----------
 /// temperatures_k : temperature array [K] at each time point.
-/// times_s : time array [s], same length as temperatures_k. Must be monotone.
+/// times_s : uniformly-spaced time array [s], same length as temperatures_k.
 /// ea_j_per_mol : activation energy Ea [J/mol].
 /// a_hz : frequency factor A [s⁻¹].
 ///
@@ -46,8 +46,8 @@ const R_GAS: f64 = 8.314; // J/(mol·K)
 /// -------
 /// 1-D array of cumulative Ω at each time point.
 #[pyfunction]
-pub fn compute_arrhenius_damage<'py>(
-    py: Python<'py>,
+pub fn compute_arrhenius_damage(
+    py: Python<'_>,
     temperatures_k: PyReadonlyArray1<f64>,
     times_s: PyReadonlyArray1<f64>,
     ea_j_per_mol: f64,
@@ -67,18 +67,16 @@ pub fn compute_arrhenius_damage<'py>(
         return Err(PyValueError::new_err("a_hz must be >= 0"));
     }
     let n = temps.len();
-    let mut omega = Array1::<f64>::zeros(n);
-    let rate = |t_k: f64| -> f64 {
-        if t_k <= 0.0 {
-            0.0
-        } else {
-            a_hz * (-ea_j_per_mol / (R_GAS * t_k)).exp()
-        }
-    };
-    for i in 1..n {
-        let dt = times[i] - times[i - 1];
-        let increment = 0.5 * (rate(temps[i - 1]) + rate(temps[i])) * dt;
-        omega[i] = omega[i - 1] + increment.max(0.0);
+    if n < 2 {
+        return Ok(Array1::<f64>::zeros(n).into_pyarray(py).into());
     }
-    Ok(omega.into_pyarray(py).into())
+    let dt_s = (times[n - 1] - times[0]) / (n - 1) as f64; // uniform step
+    let celsius: Vec<f64> = temps.iter().map(|&t_k| t_k - KELVIN_OFFSET_C).collect();
+    let omega = kwavers_physics::analytical::safety::arrhenius_cumulative(
+        &celsius,
+        dt_s,
+        a_hz,
+        ea_j_per_mol,
+    );
+    Ok(Array1::from(omega).into_pyarray(py).into())
 }

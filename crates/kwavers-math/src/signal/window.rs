@@ -28,7 +28,10 @@ pub fn hamming(x: f64) -> f64 {
 #[inline]
 #[must_use]
 pub fn blackman(x: f64) -> f64 {
-    0.08f64.mul_add((FOUR_PI * x).cos(), 0.5f64.mul_add(-(TWO_PI * x).cos(), 0.42))
+    0.08f64.mul_add(
+        (FOUR_PI * x).cos(),
+        0.5f64.mul_add(-(TWO_PI * x).cos(), 0.42),
+    )
 }
 
 #[cfg(test)]

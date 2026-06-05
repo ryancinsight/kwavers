@@ -38,11 +38,11 @@
 //! ```
 
 use super::PSTDSolver;
+use crate::forward::thermal_diffusion::ThermalDiffusionSolver;
 use kwavers_core::error::KwaversResult;
 use kwavers_medium::Medium;
 use kwavers_physics::acoustics::conservation::acoustic_heat_source;
 use kwavers_physics::acoustics::mechanics::absorption::AbsorptionMode;
-use crate::forward::thermal_diffusion::ThermalDiffusionSolver;
 use ndarray::{Array2, Array3, Zip};
 use std::{fmt, sync::Arc};
 

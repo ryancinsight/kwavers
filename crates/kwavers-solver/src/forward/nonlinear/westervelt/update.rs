@@ -39,11 +39,11 @@ use ndarray::Zip;
 use tracing::warn;
 
 use super::WesterveltFdtd;
+use crate::forward::nonlinear::conservation::{ConservationDiagnostics, ViolationSeverity};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_source::Source;
-use crate::forward::nonlinear::conservation::{ConservationDiagnostics, ViolationSeverity};
 
 impl WesterveltFdtd {
     /// Advance the pressure field by one time step.

@@ -2,8 +2,8 @@
 //!
 //! Reference: Johnson et al. (1987) "Theory of dynamic permeability"
 
-use kwavers_core::constants::numerical::TWO_PI;
 use crate::acoustics::mechanics::poroelastic::PoroelasticMaterial;
+use kwavers_core::constants::numerical::TWO_PI;
 
 /// Property calculator for poroelastic materials
 #[derive(Debug)]
@@ -51,8 +51,8 @@ impl PoroelasticProperties {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kwavers_core::constants::numerical::MHZ_TO_HZ;
     use crate::acoustics::mechanics::poroelastic::PoroelasticMaterial;
+    use kwavers_core::constants::numerical::MHZ_TO_HZ;
 
     /// `dynamic_permeability` at zero frequency equals the static permeability κ₀.
     ///

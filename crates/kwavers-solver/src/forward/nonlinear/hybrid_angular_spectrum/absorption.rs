@@ -133,8 +133,8 @@ impl HasAbsorptionOperator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kwavers_core::constants::numerical::MHZ_TO_HZ;
     use approx::assert_abs_diff_eq;
+    use kwavers_core::constants::numerical::MHZ_TO_HZ;
     use ndarray::Array2;
 
     fn default_config() -> HASConfig {

@@ -2,6 +2,9 @@
 use rand::Rng;
 use std::fmt::Debug;
 
+pub mod unwrap;
+pub use unwrap::{unwrap_1d, unwrap_2d};
+
 pub trait Phase: Debug + Send + Sync {
     fn phase(&self, t: f64) -> f64;
     fn clone_box(&self) -> Box<dyn Phase>;

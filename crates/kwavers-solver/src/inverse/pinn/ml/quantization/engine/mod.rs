@@ -4,8 +4,8 @@ use std::collections::HashMap;
 
 use burn::tensor::backend::Backend;
 
-use kwavers_core::error::{KwaversError, KwaversResult};
 use crate::inverse::pinn::ml::BurnPINN2DWave;
+use kwavers_core::error::{KwaversError, KwaversResult};
 
 use crate::inverse::pinn::ml::quantization::{
     LayerInfo, MlQuantizer, QuantizationParams, QuantizationScheme, QuantizedModel, QuantizedTensor,

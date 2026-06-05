@@ -32,7 +32,7 @@ impl Default for EmissionParameters {
             use_cherenkov: false,       // Experimental feature
             use_molecular_lines: false, // Not implemented yet
             ionization_energy: kwavers_core::constants::chemistry::ARGON_IONIZATION_ENERGY, // eV for argon
-            min_temperature: 2000.0,                                                       // K
+            min_temperature: 2000.0,                                                        // K
             opacity_factor: 1.0, // Optically thin
             cherenkov_refractive_index: REFRACTIVE_INDEX_SOFT_TISSUE,
             cherenkov_coherence_factor: 100.0,

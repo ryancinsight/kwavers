@@ -2,11 +2,11 @@ use std::collections::HashMap;
 
 use ndarray::{Array3, Array4, Axis};
 
+use crate::plugin::{Plugin, PluginContext, PluginMetadata, PluginState};
 use kwavers_core::error::KwaversResult;
 use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use crate::plugin::{Plugin, PluginContext, PluginMetadata, PluginState};
 use kwavers_physics::acoustics::bubble_dynamics::{
     bubble_field::BubbleField, bubble_state::BubbleState, gilmore::GilmoreSolver,
 };

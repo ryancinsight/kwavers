@@ -7,11 +7,9 @@ use super::types::{
     MultiDomainTrainingResult, UniversalSolverGeometry2D, UniversalSolverStats,
     UniversalTrainingConfig,
 };
-use kwavers_core::error::{KwaversError, KwaversResult};
-use crate::inverse::pinn::ml::physics::{
-    PinnDomainPhysicsParameters, SimulationPhysicsDomain,
-};
+use crate::inverse::pinn::ml::physics::{PinnDomainPhysicsParameters, SimulationPhysicsDomain};
 use burn::tensor::backend::AutodiffBackend;
+use kwavers_core::error::{KwaversError, KwaversResult};
 use std::collections::HashMap;
 use std::time::Instant;
 

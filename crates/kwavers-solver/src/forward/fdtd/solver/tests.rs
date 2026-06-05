@@ -47,13 +47,13 @@
 //! - Gustafsson B et al. (1995). Time Compact Difference Schemes. §4.
 //! - Taflove A, Hagness SC (2005). Computational Electrodynamics, 3rd ed. §3.4.
 
+use crate::forward::fdtd::config::FdtdConfig;
+use crate::forward::fdtd::solver::FdtdSolver;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
-use kwavers_source::GridSource;
 use kwavers_physics::acoustics::mechanics::acoustic_wave::AcousticSpatialOrder;
-use crate::forward::fdtd::config::FdtdConfig;
-use crate::forward::fdtd::solver::FdtdSolver;
+use kwavers_source::GridSource;
 
 /// Helper: create a minimal FdtdSolver for unit tests.
 fn make_solver(

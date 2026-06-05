@@ -202,7 +202,10 @@ pub(crate) fn build_simulation_result(
         let row = result.sensor_data.row(0).to_owned();
         (Some(PyArray1::from_owned_array(py, row).unbind()), None)
     } else {
-        (None, Some(PyArray2::from_owned_array(py, result.sensor_data.clone()).unbind()))
+        (
+            None,
+            Some(PyArray2::from_owned_array(py, result.sensor_data.clone()).unbind()),
+        )
     };
 
     // Sampled statistics
@@ -231,15 +234,42 @@ pub(crate) fn build_simulation_result(
         };
 
     // Velocity time series
-    let ux = result.ux_data.as_ref().map(|d| PyArray2::from_owned_array(py, d.clone()).unbind());
-    let uy = result.uy_data.as_ref().map(|d| PyArray2::from_owned_array(py, d.clone()).unbind());
-    let uz = result.uz_data.as_ref().map(|d| PyArray2::from_owned_array(py, d.clone()).unbind());
-    let ix = result.ix_data.as_ref().map(|d| PyArray2::from_owned_array(py, d.clone()).unbind());
-    let iy = result.iy_data.as_ref().map(|d| PyArray2::from_owned_array(py, d.clone()).unbind());
-    let iz = result.iz_data.as_ref().map(|d| PyArray2::from_owned_array(py, d.clone()).unbind());
-    let i_avg_x = result.i_avg_x.as_ref().map(|d| PyArray1::from_owned_array(py, d.clone()).unbind());
-    let i_avg_y = result.i_avg_y.as_ref().map(|d| PyArray1::from_owned_array(py, d.clone()).unbind());
-    let i_avg_z = result.i_avg_z.as_ref().map(|d| PyArray1::from_owned_array(py, d.clone()).unbind());
+    let ux = result
+        .ux_data
+        .as_ref()
+        .map(|d| PyArray2::from_owned_array(py, d.clone()).unbind());
+    let uy = result
+        .uy_data
+        .as_ref()
+        .map(|d| PyArray2::from_owned_array(py, d.clone()).unbind());
+    let uz = result
+        .uz_data
+        .as_ref()
+        .map(|d| PyArray2::from_owned_array(py, d.clone()).unbind());
+    let ix = result
+        .ix_data
+        .as_ref()
+        .map(|d| PyArray2::from_owned_array(py, d.clone()).unbind());
+    let iy = result
+        .iy_data
+        .as_ref()
+        .map(|d| PyArray2::from_owned_array(py, d.clone()).unbind());
+    let iz = result
+        .iz_data
+        .as_ref()
+        .map(|d| PyArray2::from_owned_array(py, d.clone()).unbind());
+    let i_avg_x = result
+        .i_avg_x
+        .as_ref()
+        .map(|d| PyArray1::from_owned_array(py, d.clone()).unbind());
+    let i_avg_y = result
+        .i_avg_y
+        .as_ref()
+        .map(|d| PyArray1::from_owned_array(py, d.clone()).unbind());
+    let i_avg_z = result
+        .i_avg_z
+        .as_ref()
+        .map(|d| PyArray1::from_owned_array(py, d.clone()).unbind());
 
     // Velocity statistics
     let (ux_max, ux_min, ux_rms, uy_max, uy_min, uy_rms, uz_max, uz_min, uz_rms) =

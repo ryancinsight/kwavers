@@ -1,8 +1,8 @@
 //! Cavitation damage model with Miner's rule fatigue and erosion
 
 use super::material::{CavitationDamageMaterialProperties, DamageParameters};
-use kwavers_core::constants::cavitation::{IMPACT_ENERGY_COEFFICIENT, MATERIAL_REMOVAL_EFFICIENCY};
 use crate::bubble_dynamics::bubble_field::BubbleStateFields;
+use kwavers_core::constants::cavitation::{IMPACT_ENERGY_COEFFICIENT, MATERIAL_REMOVAL_EFFICIENCY};
 use ndarray::{Array3, Zip};
 use std::f64::consts::PI;
 

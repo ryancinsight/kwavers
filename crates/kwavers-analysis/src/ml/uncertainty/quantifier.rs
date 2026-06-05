@@ -10,9 +10,9 @@ use super::types::{
     BeamformingUncertainty, MlUncertaintyConfig, MlUncertaintyMethod, ReliabilityMetrics,
     UncertaintyReport, UncertaintyResult, UncertaintySummary,
 };
-use kwavers_core::error::{KwaversError, KwaversResult};
 #[cfg(feature = "pinn")]
 use burn::tensor::backend::Backend;
+use kwavers_core::error::{KwaversError, KwaversResult};
 #[cfg(feature = "pinn")]
 use ndarray::{Array1, Array2, Array3};
 #[cfg(not(feature = "pinn"))]

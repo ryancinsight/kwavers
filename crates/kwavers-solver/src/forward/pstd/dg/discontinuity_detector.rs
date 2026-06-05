@@ -108,8 +108,8 @@ fn axis_gradient(
 #[cfg(test)]
 mod tests {
     use super::DiscontinuityDetector;
-    use kwavers_grid::Grid;
     use crate::forward::pstd::dg::traits::DiscontinuityDetection;
+    use kwavers_grid::Grid;
     use ndarray::Array3;
 
     #[test]

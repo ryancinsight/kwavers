@@ -1,10 +1,10 @@
 use super::config::FdtdFemCouplingConfig;
 use super::interface::FdtdFemInterface;
+use crate::forward::helmholtz::fem::solver::{FemHelmholtzConfig, FemHelmholtzSolver};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_mesh::tetrahedral::TetrahedralMesh;
-use crate::forward::helmholtz::fem::solver::{FemHelmholtzConfig, FemHelmholtzSolver};
 use ndarray::Array3;
 use num_complex::Complex64;
 

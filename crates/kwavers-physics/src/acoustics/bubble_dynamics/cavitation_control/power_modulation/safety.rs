@@ -1,8 +1,8 @@
 //! Safety limiting for power modulation
 
 use super::constants::{MAX_AMPLITUDE_RATE, MECHANICAL_INDEX_LIMIT};
-use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use crate::acoustics::analysis::calculate_mechanical_index;
+use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 
 /// Safety limiter for preventing excessive power output
 #[derive(Debug, Clone)]

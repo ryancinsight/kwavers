@@ -27,6 +27,8 @@
 //! - Tissue: Viscoelastic model (E = 2-12 kPa, η = 1-5 Pa·s)
 //! - Reconstruction: Time-of-flight method with phase gradient refinement
 
+use kwavers_core::error::KwaversError;
+use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_imaging::ultrasound::elastography::{ElasticityMap, InversionMethod};
 use kwavers_medium::homogeneous::HomogeneousMedium;
@@ -35,8 +37,6 @@ use kwavers_physics::acoustics::imaging::modalities::elastography::radiation_for
 use kwavers_physics::acoustics::imaging::modalities::elastography::AcousticRadiationForce;
 use kwavers_solver::forward::elastic::swe::{ElasticWaveConfig, ElasticWaveSolver};
 use kwavers_solver::inverse::elastography::{ShearWaveInversion, ShearWaveInversionConfig};
-use kwavers_core::error::KwaversError;
-use kwavers_core::error::KwaversResult;
 use ndarray::Array3;
 use std::time::Instant;
 

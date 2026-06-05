@@ -9,12 +9,12 @@ use ndarray::Array3;
 use std::sync::Arc;
 
 use super::GenericFdtdSolver;
+use crate::interface::{Solver, SolverFeature, SolverStatistics};
 use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_receiver::GridSensorSet;
 use kwavers_source::Source;
-use crate::interface::{Solver, SolverFeature, SolverStatistics};
 
 impl Solver for GenericFdtdSolver<Array3<f64>> {
     fn name(&self) -> &str {

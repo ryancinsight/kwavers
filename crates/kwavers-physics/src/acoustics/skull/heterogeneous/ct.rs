@@ -1,5 +1,5 @@
-use kwavers_core::error::KwaversResult;
 use crate::acoustics::skull::AcousticSkullProperties;
+use kwavers_core::error::KwaversResult;
 use ndarray::Array3;
 
 use super::constants::ALPHA_WATER;

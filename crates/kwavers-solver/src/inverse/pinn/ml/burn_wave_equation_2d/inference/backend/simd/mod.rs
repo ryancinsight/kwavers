@@ -1,9 +1,9 @@
 #[cfg(all(feature = "simd", feature = "nightly"))]
-use kwavers_core::error::KwaversResult;
-#[cfg(all(feature = "simd", feature = "nightly"))]
 use crate::inverse::pinn::ml::burn_wave_equation_2d::inference::types::{
     ActivationType, BurnWave2dInferenceMemoryPool, QuantizedNetwork,
 };
+#[cfg(all(feature = "simd", feature = "nightly"))]
+use kwavers_core::error::KwaversResult;
 
 #[cfg(all(test, feature = "simd", feature = "nightly"))]
 mod tests;

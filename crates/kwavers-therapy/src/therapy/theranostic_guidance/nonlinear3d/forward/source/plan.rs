@@ -15,12 +15,10 @@ pub(in crate::therapy::theranostic_guidance::nonlinear3d::forward) struct Source
     pub(super) encoding_weights: Vec<f64>,
 }
 
-pub(in crate::therapy::theranostic_guidance::nonlinear3d::forward) struct DriveContext<'a>
-{
+pub(in crate::therapy::theranostic_guidance::nonlinear3d::forward) struct DriveContext<'a> {
     pub(in crate::therapy::theranostic_guidance::nonlinear3d::forward) config:
         &'a Nonlinear3dConfig,
-    pub(in crate::therapy::theranostic_guidance::nonlinear3d::forward) schedule:
-        TimeSchedule,
+    pub(in crate::therapy::theranostic_guidance::nonlinear3d::forward) schedule: TimeSchedule,
     pub(in crate::therapy::theranostic_guidance::nonlinear3d::forward) source_scale: f64,
 }
 

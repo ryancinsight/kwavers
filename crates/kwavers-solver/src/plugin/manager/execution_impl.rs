@@ -1,11 +1,11 @@
 //! Plugin execution: `execute`, `execute_with_metrics`, and `add_plugin`.
 
 use super::PluginManager;
-use kwavers_core::error::{KwaversError, KwaversResult, PhysicsError, ValidationError};
+use crate::plugin::{Plugin, PluginContext};
 use kwavers_boundary::Boundary;
+use kwavers_core::error::{KwaversError, KwaversResult, PhysicsError, ValidationError};
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use crate::plugin::{Plugin, PluginContext};
 use kwavers_source::Source;
 use ndarray::Array4;
 use std::time::Instant;

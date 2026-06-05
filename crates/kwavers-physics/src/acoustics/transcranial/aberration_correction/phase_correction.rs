@@ -200,8 +200,7 @@ impl TranscranialAberrationCorrection {
                 let iz = ((point[2] / self.grid.dz) as usize).min(self.grid.nz - 1);
 
                 let hu = skull_ct_data[[ix, iy, iz]];
-                let local_speed =
-                    kwavers_imaging::medical::CTImageLoader::hu_to_sound_speed(hu);
+                let local_speed = kwavers_imaging::medical::CTImageLoader::hu_to_sound_speed(hu);
 
                 let k_local = TWO_PI * self.frequency / local_speed;
                 total_aberration += (k_local - k_water) * ds;

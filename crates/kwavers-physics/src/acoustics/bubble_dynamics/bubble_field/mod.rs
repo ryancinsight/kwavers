@@ -6,10 +6,10 @@ pub mod cloud;
 pub mod core;
 pub mod distributions;
 
-pub use kwavers_field::BubbleStateFields;
 pub use cloud::BubbleCloud;
 pub use core::{BubbleField, BubbleFieldStats};
 pub use distributions::{BubbleFieldSizeDistribution, SpatialDistribution};
+pub use kwavers_field::BubbleStateFields;
 
 #[cfg(test)]
 mod tests;

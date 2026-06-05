@@ -1,10 +1,10 @@
 use super::super::shell::ShellProperties;
-use kwavers_core::constants::cavitation::SURFACE_TENSION_WATER;
-use kwavers_core::constants::numerical::TWO_PI;
-use kwavers_core::error::KwaversResult;
 use crate::acoustics::bubble_dynamics::bubble_state::{
     young_laplace_pressure, BubbleParameters, BubbleState,
 };
+use kwavers_core::constants::cavitation::SURFACE_TENSION_WATER;
+use kwavers_core::constants::numerical::TWO_PI;
+use kwavers_core::error::KwaversResult;
 
 /// Marmottant model for encapsulated bubbles with buckling/rupture
 ///

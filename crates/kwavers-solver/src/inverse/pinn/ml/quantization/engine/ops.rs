@@ -2,8 +2,8 @@
 
 use burn::tensor::{backend::Backend, Tensor};
 
-use kwavers_core::error::{KwaversError, KwaversResult};
 use crate::inverse::pinn::ml::BurnPINN2DWave;
+use kwavers_core::error::{KwaversError, KwaversResult};
 
 use crate::inverse::pinn::ml::quantization::{
     LayerInfo, MlQuantizer, QuantizationScheme, QuantizedData, QuantizedTensor,

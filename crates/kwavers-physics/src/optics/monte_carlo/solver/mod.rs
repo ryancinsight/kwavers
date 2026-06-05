@@ -4,8 +4,8 @@ mod geometry;
 mod simulation;
 mod trace;
 
-use kwavers_grid::Grid3D;
 use crate::optics::map_builder::OpticalPropertyMap;
+use kwavers_grid::Grid3D;
 
 /// Monte Carlo photon transport solver.
 #[derive(Debug)]

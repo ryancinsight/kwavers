@@ -319,18 +319,12 @@ impl GilmoreSolver {
             .calculate_acceleration(&s4, p_acoustic, t + dt)
             .unwrap_or(0.0);
 
-        // ── Combine via standard Butcher weights ────────────────────────────
+        // ── Combine via standard Butcher weights (shared RK4 SSOT) ──────────
+        use crate::acoustics::bubble_dynamics::integration::rk4_weighted_sum;
         let mut out = *state;
-        out.radius = (dt / 6.0)
-            .mul_add(
-                2.0f64.mul_add(k3_r, 2.0f64.mul_add(k2_r, k1_r)) + k4_r,
-                state.radius,
-            )
-            .max(f64::MIN_POSITIVE);
-        out.wall_velocity = (dt / 6.0).mul_add(
-            2.0f64.mul_add(k3_v, 2.0f64.mul_add(k2_v, k1_v)) + k4_v,
-            state.wall_velocity,
-        );
+        out.radius =
+            rk4_weighted_sum(state.radius, k1_r, k2_r, k3_r, k4_r, dt).max(f64::MIN_POSITIVE);
+        out.wall_velocity = rk4_weighted_sum(state.wall_velocity, k1_v, k2_v, k3_v, k4_v, dt);
         // Store the k₄ acceleration as the best available approximation of the
         // acceleration at the end of the step (used by downstream diagnostics).
         out.wall_acceleration = k4_v;

@@ -1,10 +1,10 @@
 //! Tests for the FEM Helmholtz frequency-domain backend.
 
 use super::backend::FemHelmholtzBackend;
+use crate::backends::acoustic::FrequencyDomainAcousticBackend;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
-use crate::backends::acoustic::FrequencyDomainAcousticBackend;
 use kwavers_solver::forward::helmholtz::fem::{FemHelmholtzConfig, FemPreconditionerType};
 use ndarray::arr2;
 use num_complex::Complex64;

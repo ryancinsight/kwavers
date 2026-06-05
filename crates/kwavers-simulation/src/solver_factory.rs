@@ -4,22 +4,22 @@
 //! owns concrete assembly because it is the orchestration boundary that binds
 //! domain objects to numerical implementations.
 
+use crate::solver_adapters::DgSimulationSolver;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
 use kwavers_medium::{density_at, sound_speed_at, AcousticProperties, CoreMedium, Medium};
-use kwavers_source::GridSource;
-use crate::solver_adapters::DgSimulationSolver;
 use kwavers_solver::config::{SolverConfiguration, SolverType};
 use kwavers_solver::factory::SolverFactoryRegistry;
 use kwavers_solver::forward::fdtd::FdtdConfig;
 use kwavers_solver::forward::hybrid::config::HybridConfig;
 use kwavers_solver::forward::pstd::config::KSpaceMethod;
 use kwavers_solver::forward::pstd::{PSTDConfig, PSTDSolver};
-use kwavers_solver::{FdtdSolver, HybridSolver};
 use kwavers_solver::interface::factory::{
     FactoryConfiguration, FactoryGridParameters, FactoryMediumParameters,
 };
 use kwavers_solver::interface::Solver;
+use kwavers_solver::{FdtdSolver, HybridSolver};
+use kwavers_source::GridSource;
 
 /// Concrete assembly boundary for simulation-driven solver creation.
 #[derive(Debug, Default)]

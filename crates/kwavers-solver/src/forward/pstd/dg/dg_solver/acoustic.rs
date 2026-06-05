@@ -314,8 +314,8 @@ fn lax_friedrichs_acoustic_flux(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kwavers_grid::Grid;
     use crate::forward::pstd::dg::DGConfig;
+    use kwavers_grid::Grid;
     use std::sync::Arc;
 
     fn make_solver() -> DGSolver {

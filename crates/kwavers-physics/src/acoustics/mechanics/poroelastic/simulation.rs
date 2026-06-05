@@ -68,9 +68,9 @@ impl PoroelasticSimulation {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::acoustics::mechanics::poroelastic::PoroelasticMaterial;
     use kwavers_core::constants::numerical::MHZ_TO_HZ;
     use kwavers_grid::Grid;
-    use crate::acoustics::mechanics::poroelastic::PoroelasticMaterial;
 
     fn make_sim() -> PoroelasticSimulation {
         let grid = Grid::new(4, 4, 4, 0.001, 0.001, 0.001).unwrap();

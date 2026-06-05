@@ -2,9 +2,9 @@ use super::extraction::{extract_stft_bin_snapshots, extract_windowed_snapshots};
 use super::types::{
     SnapshotMethod, SnapshotScenario, SnapshotSelection, StftBinConfig, WindowFunction,
 };
+use approx::assert_relative_eq;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::constants::numerical::TWO_PI;
-use approx::assert_relative_eq;
 use ndarray::Array3;
 
 fn sensor_positions_m() -> Vec<[f64; 3]> {

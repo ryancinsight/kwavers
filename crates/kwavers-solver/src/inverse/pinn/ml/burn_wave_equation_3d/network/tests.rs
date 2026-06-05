@@ -1,9 +1,9 @@
 use super::super::config::BurnPINN3DConfig;
 use super::core::PINN3DNetwork;
-use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
-use kwavers_core::error::{KwaversError, KwaversResult, SystemError};
 use burn::backend::NdArray;
 use burn::tensor::{Tensor, TensorData};
+use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use kwavers_core::error::{KwaversError, KwaversResult, SystemError};
 
 type TestBackend = NdArray<f32>;
 

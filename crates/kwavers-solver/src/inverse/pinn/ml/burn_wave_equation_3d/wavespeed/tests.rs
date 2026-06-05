@@ -1,7 +1,7 @@
 use super::*;
-use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use burn::backend::NdArray;
 use burn::module::Module;
+use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
 type TestBackend = NdArray<f32>;
 

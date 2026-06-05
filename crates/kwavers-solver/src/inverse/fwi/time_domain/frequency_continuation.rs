@@ -225,18 +225,21 @@ mod tests {
         }
         let filtered = lowpass_band_limit(&bump, DT, 0.05);
         // Peak stays at the centre sample.
-        let (peak_idx, _) = filtered
-            .row(0)
-            .iter()
-            .enumerate()
-            .fold((0usize, f64::NEG_INFINITY), |(bi, bv), (i, &v)| {
+        let (peak_idx, _) = filtered.row(0).iter().enumerate().fold(
+            (0usize, f64::NEG_INFINITY),
+            |(bi, bv), (i, &v)| {
                 if v > bv {
                     (i, v)
                 } else {
                     (bi, bv)
                 }
-            });
-        assert_eq!(peak_idx, N / 2, "zero-phase filter must preserve peak position");
+            },
+        );
+        assert_eq!(
+            peak_idx,
+            N / 2,
+            "zero-phase filter must preserve peak position"
+        );
         // Symmetry: f[center-k] ≈ f[center+k].
         for k in 1..40 {
             let left = filtered[[0, N / 2 - k]];

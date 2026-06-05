@@ -64,7 +64,8 @@ fn test_primary_bjerknes_3d_gradient() {
 #[test]
 fn test_streaming_velocity_zero_at_surface() {
     let r0 = 1.0e-6;
-    let v = calculate_acoustic_streaming_velocity(r0, 10.0, MHZ_TO_HZ, r0, (1.0, 0.0, 0.0)).unwrap();
+    let v =
+        calculate_acoustic_streaming_velocity(r0, 10.0, MHZ_TO_HZ, r0, (1.0, 0.0, 0.0)).unwrap();
     assert_eq!(v.vx, 0.0);
     assert_eq!(v.vy, 0.0);
     assert_eq!(v.vz, 0.0);
@@ -73,14 +74,15 @@ fn test_streaming_velocity_zero_at_surface() {
 #[test]
 fn test_streaming_velocity_far_field() {
     let r0 = 1.0e-6;
-    let v =
-        calculate_acoustic_streaming_velocity(r0, 10.0, MHZ_TO_HZ, 10.0 * r0, (1.0, 0.0, 0.0)).unwrap();
+    let v = calculate_acoustic_streaming_velocity(r0, 10.0, MHZ_TO_HZ, 10.0 * r0, (1.0, 0.0, 0.0))
+        .unwrap();
     assert!(v.vx > 0.0);
     assert_eq!(v.vy, 0.0);
     assert_eq!(v.vz, 0.0);
 
     let v_far =
-        calculate_acoustic_streaming_velocity(r0, 10.0, MHZ_TO_HZ, 20.0 * r0, (1.0, 0.0, 0.0)).unwrap();
+        calculate_acoustic_streaming_velocity(r0, 10.0, MHZ_TO_HZ, 20.0 * r0, (1.0, 0.0, 0.0))
+            .unwrap();
     assert!(v_far.vx < v.vx);
 }
 

@@ -1,11 +1,11 @@
 use super::HybridSolver;
-use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_boundary::Boundary;
-use kwavers_medium::Medium;
-use kwavers_source::{Source, SourceField};
 use crate::forward::hybrid::config::HybridDecompositionStrategy;
 use crate::forward::hybrid::domain_decomposition::{DomainRegion, DomainType};
 use crate::forward::hybrid::metrics::{HybridMetrics, HybridValidationResults};
+use kwavers_boundary::Boundary;
+use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_medium::Medium;
+use kwavers_source::{Source, SourceField};
 use log::debug;
 use ndarray::{s, Array4, Zip};
 use std::time::Instant;
@@ -306,14 +306,14 @@ impl HybridSolver {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
+    use crate::forward::hybrid::config::{HybridConfig, HybridDecompositionStrategy};
     use kwavers_boundary::{DomainPMLBoundary, DomainPmlConfig};
+    use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
     use kwavers_field::mapping::UnifiedFieldType;
     use kwavers_grid::Grid;
     use kwavers_medium::HomogeneousMedium;
     use kwavers_signal::Signal;
     use kwavers_source::PointSource;
-    use crate::forward::hybrid::config::{HybridConfig, HybridDecompositionStrategy};
     use ndarray::Array4;
     use std::sync::Arc;
 

@@ -9,10 +9,10 @@
 
 use super::types::MisfitFunction;
 use kwavers_core::error::KwaversResult;
+use kwavers_math::fft::{fft_1d_array, ifft_1d_complex, Complex64};
 use kwavers_signal::analytic::{
     hilbert_transform, instantaneous_envelope_2d, instantaneous_phase_2d,
 };
-use kwavers_math::fft::{fft_1d_array, ifft_1d_complex, Complex64};
 use ndarray::Array2;
 
 impl MisfitFunction {

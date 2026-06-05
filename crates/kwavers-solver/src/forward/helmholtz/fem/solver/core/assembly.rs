@@ -1,9 +1,9 @@
 use super::FemHelmholtzSolver;
+use crate::forward::helmholtz::fem::assembly::FemAssembly;
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
+use kwavers_math::linear_algebra::sparse::csr::CompressedSparseRowMatrix;
 use kwavers_medium::Medium;
 use kwavers_mesh::MeshBoundaryType;
-use kwavers_math::linear_algebra::sparse::csr::CompressedSparseRowMatrix;
-use crate::forward::helmholtz::fem::assembly::FemAssembly;
 use ndarray::Array1;
 use num_complex::Complex64;
 

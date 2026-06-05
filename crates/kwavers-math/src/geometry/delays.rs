@@ -264,9 +264,9 @@ pub fn calculate_focal_zone(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use approx::assert_relative_eq;
     use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
     use kwavers_core::constants::numerical::MHZ_TO_HZ;
-    use approx::assert_relative_eq;
 
     #[test]
     fn focus_phase_delays_are_non_negative_and_symmetric() {

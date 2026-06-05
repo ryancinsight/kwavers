@@ -1,11 +1,11 @@
 use super::*;
+use crate::optics::monte_carlo::config::SimulationConfig;
+use crate::optics::monte_carlo::photon::Photon;
+use crate::optics::monte_carlo::utils::*;
 use kwavers_core::constants::optical::REFRACTIVE_INDEX_SOFT_TISSUE;
 use kwavers_grid::{Grid3D, GridDimensions};
 use kwavers_medium::optical_map::OpticalPropertyMap;
 use kwavers_medium::properties::OpticalPropertyData;
-use crate::optics::monte_carlo::config::SimulationConfig;
-use crate::optics::monte_carlo::photon::Photon;
-use crate::optics::monte_carlo::utils::*;
 use rand::Rng;
 use rand::SeedableRng;
 

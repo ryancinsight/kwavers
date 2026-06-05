@@ -1,9 +1,9 @@
 #[cfg(feature = "pinn")]
 use super::super::loss::CollocationData;
 #[cfg(feature = "pinn")]
-use kwavers_core::error::{KwaversError, KwaversResult};
-#[cfg(feature = "pinn")]
 use burn::tensor::Tensor;
+#[cfg(feature = "pinn")]
+use kwavers_core::error::{KwaversError, KwaversResult};
 
 /// Iterator over mini-batches of collocation point indices.
 #[cfg(feature = "pinn")]

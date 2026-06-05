@@ -1,7 +1,7 @@
 use super::*;
-use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::inverse::pinn::ml::burn_wave_equation_1d::config::BurnPINNConfig;
 use burn::backend::{Autodiff, NdArray};
+use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
 type TestBackend = Autodiff<NdArray<f32>>;
 

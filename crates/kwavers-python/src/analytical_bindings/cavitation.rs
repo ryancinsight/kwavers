@@ -181,93 +181,13 @@ pub fn rayleigh_collapse_time_s(rmax_m: f64, p_inf_pa: f64, rho: f64) -> PyResul
     Ok(cavitation::rayleigh_collapse_time_s(rmax_m, p_inf_pa, rho))
 }
 
-/// Integrate the Rayleigh–Plesset equation with RK4.
-///
-/// Args:
-///     r0_m: Initial radius [m].
-///     rdot0: Initial wall velocity [m/s].
-///     p_ac_pa: Acoustic pressure amplitude [Pa].
-///     freq_hz: Driving frequency [Hz].
-///     t_arr: Time array [s].
-///     p0_pa: Ambient pressure [Pa].
-///     rho: Liquid density [kg/m³].
-///     sigma: Surface tension [N/m].
-///     mu: Dynamic viscosity [Pa·s].
-///     kappa: Polytropic index.
-///     p_v_pa: Vapour pressure [Pa].
-///
-/// Returns:
-///     (r, rdot) — tuple of radius [m] and wall-velocity [m/s] arrays.
-#[pyfunction]
-#[pyo3(signature = (r0_m, rdot0, p_ac_pa, freq_hz, t_arr, p0_pa, rho, sigma, mu, kappa, p_v_pa))]
-pub fn rayleigh_plesset_rk4(
-    py: Python<'_>,
-    r0_m: f64,
-    rdot0: f64,
-    p_ac_pa: f64,
-    freq_hz: f64,
-    t_arr: PyReadonlyArray1<f64>,
-    p0_pa: f64,
-    rho: f64,
-    sigma: f64,
-    mu: f64,
-    kappa: f64,
-    p_v_pa: f64,
-) -> PyResult<(Py<PyArray1<f64>>, Py<PyArray1<f64>>)> {
-    let t_s = t_arr
-        .as_slice()
-        .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-    let (r, rdot) = cavitation::rayleigh_plesset_rk4(
-        r0_m, rdot0, p_ac_pa, freq_hz, t_s, p0_pa, rho, sigma, mu, kappa, p_v_pa,
-    );
-    Ok((r.into_pyarray(py).unbind(), rdot.into_pyarray(py).unbind()))
-}
-
-/// Integrate the Keller–Miksis equation with RK4.
-///
-/// Extends Rayleigh–Plesset to include liquid compressibility via *c_liquid*.
-///
-/// Args:
-///     r0_m: Initial radius [m].
-///     rdot0: Initial wall velocity [m/s].
-///     p_ac_pa: Acoustic driving amplitude [Pa].
-///     freq_hz: Frequency [Hz].
-///     t_arr: Time array [s].
-///     p0_pa: Ambient pressure [Pa].
-///     rho: Density [kg/m³].
-///     sigma: Surface tension [N/m].
-///     mu: Viscosity [Pa·s].
-///     kappa: Polytropic index.
-///     p_v_pa: Vapour pressure [Pa].
-///     c_liquid: Sound speed in the liquid [m/s].
-///
-/// Returns:
-///     (r, rdot) tuple.
-#[pyfunction]
-#[pyo3(signature = (r0_m, rdot0, p_ac_pa, freq_hz, t_arr, p0_pa, rho, sigma, mu, kappa, p_v_pa, c_liquid))]
-pub fn keller_miksis_rk4(
-    py: Python<'_>,
-    r0_m: f64,
-    rdot0: f64,
-    p_ac_pa: f64,
-    freq_hz: f64,
-    t_arr: PyReadonlyArray1<f64>,
-    p0_pa: f64,
-    rho: f64,
-    sigma: f64,
-    mu: f64,
-    kappa: f64,
-    p_v_pa: f64,
-    c_liquid: f64,
-) -> PyResult<(Py<PyArray1<f64>>, Py<PyArray1<f64>>)> {
-    let t_s = t_arr
-        .as_slice()
-        .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-    let (r, rdot) = cavitation::keller_miksis_rk4(
-        r0_m, rdot0, p_ac_pa, freq_hz, t_s, p0_pa, rho, sigma, mu, kappa, p_v_pa, c_liquid,
-    );
-    Ok((r.into_pyarray(py).unbind(), rdot.into_pyarray(py).unbind()))
-}
+// The Rayleigh–Plesset and Keller–Miksis RK4 integrators are exposed through a
+// single canonical binding pair — `solve_rayleigh_plesset` and
+// `solve_keller_miksis` (see `crate::bubble_bindings`) — which build the uniform
+// time grid from `(t_end_s, n_steps)`, return `(time, radius, rdot)`, and (for
+// Keller–Miksis) carry the shell-viscosity `xi_s` parameter. Both delegate to
+// the same `kwavers_physics::analytical::cavitation` functions, so no separate
+// raw-`t_arr` binding is kept here.
 
 /// Compute the power spectrum of a bubble radius time series.
 ///
@@ -1208,8 +1128,8 @@ pub fn hann_windowed_power_spectrum(
 /// p_sc(r_obs, t) = (rho * R / r_obs) * (2*Rdot^2 + R*Rddot)
 ///
 /// This is the signal a passive cavitation detector records, computed from the
-/// radius/wall-velocity history returned by `keller_miksis_rk4` /
-/// `rayleigh_plesset_rk4`. Rddot is obtained by central differences of Rdot.
+/// radius/wall-velocity history returned by `solve_keller_miksis` /
+/// `solve_rayleigh_plesset`. Rddot is obtained by central differences of Rdot.
 ///
 /// Args:
 ///     r_arr: Bubble radius series R(t) [m].

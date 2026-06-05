@@ -1,13 +1,13 @@
-# Chapter 24 — LIFU-Mediated Blood–Brain Barrier Opening
+# Chapter 23 — LIFU-Mediated Blood–Brain Barrier Opening
 
-> **Prerequisite:** Chapter 9 (Cavitation and Bubble Dynamics), Chapter 15
-> (Safety and Dosimetry), Chapter 23 (Passive Acoustic Mapping).
+> **Prerequisite:** Chapter 5 (Cavitation and Bubble Dynamics), Chapter 15
+> (Safety and Dosimetry), Chapter 22 (Passive Acoustic Mapping).
 > Familiarity with Pennes bioheat transfer and Keller–Miksis bubble dynamics
 > is assumed.
 
 ---
 
-## 24.1 Scope
+## 23.1 Scope
 
 Low-Intensity Focused Ultrasound (LIFU) combined with systemically injected
 microbubbles (MBs) transiently opens the Blood–Brain Barrier (BBB) via
@@ -20,11 +20,11 @@ This chapter covers: the Keller–Miksis microbubble dynamics under LIFU
 driving, the MI parameter space separating stable from inertial cavitation,
 the Hill-function permeability enhancement model, thermal safety analysis via
 Pennes bioheat + CEM43, CEUS contrast enhancement, and the BBB closure
-kinetics.  A kwavers `PhysicsCatalog` simulation workflow is given in §24.9.
+kinetics.  A kwavers `PhysicsCatalog` simulation workflow is given in §23.9.
 
 ---
 
-## 24.2 Microbubble dynamics — Keller–Miksis equation
+## 23.2 Microbubble dynamics — Keller–Miksis equation
 
 A coated MB of equilibrium radius $R_0$ in blood driven by acoustic pressure
 $p_a \sin(\omega t)$ obeys the Keller–Miksis equation (Keller & Miksis 1980;
@@ -47,7 +47,7 @@ $$
 The shell viscosity term $4\xi\dot R/R^2$ (Doinikov–Dayton neo-Hookean model)
 is critical for SonoVue-type phospholipid shells where $\xi \approx 1.5\;\text{nm·Pa·s}$.
 
-> **Theorem 24.1 (Linear resonance frequency).**
+> **Theorem 23.1 (Linear resonance frequency).**
 > *For small oscillations $R = R_0 + x$, $|x| \ll R_0$, the linearised
 > Keller–Miksis equation reduces to a damped harmonic oscillator with natural
 > frequency (Minnaert 1933; Prosperetti 1977):*
@@ -63,7 +63,7 @@ supporting the clinical choice of 0.5–1.5 MHz for sub-resonance driving.
 
 ---
 
-## 24.3 LIFU safety parameter space
+## 23.3 LIFU safety parameter space
 
 The Mechanical Index (MI) is the internationally standardised LIFU safety
 parameter (IEC 62359):
@@ -82,7 +82,7 @@ Three critical boundaries in the $(f, \text{MI})$ plane:
 | BBB opening window | $0.20 \lesssim \text{MI} \lesssim 0.55$ | Microstreaming + shear |
 | IC onset with MBs | $\text{MI} \approx 0.45/\sqrt{f[\text{MHz}]}$ | Blake threshold × sensitisation |
 
-> **Theorem 24.2 (Blake threshold with MBs).**
+> **Theorem 23.2 (Blake threshold with MBs).**
 > *The acoustic pressure threshold for inertial cavitation of a free bubble is:*
 > $$p_{Blake} = P_0\sqrt{1 + \frac{4}{27}\left(\frac{2\sigma/R_0}{P_0}\right)^3}$$
 > *Coated MBs lower this threshold by a factor of 2–4 due to shell pre-stress
@@ -96,9 +96,9 @@ $\square$
 
 ---
 
-## 24.4 Permeability enhancement model
+## 23.4 Permeability enhancement model
 
-> **Definition 24.1 (BBB acoustic dose).**
+> **Definition 23.1 (BBB acoustic dose).**
 > *$D = \text{MI}^2 \cdot t_{on} \cdot \text{PRF}\;[\text{MI}^2\text{·s}]$
 > is the cumulative acoustic dose, proportional to the time-averaged acoustic
 > energy deposited at the focus per unit area of the skull window.*
@@ -112,7 +112,7 @@ $$
 with $D_{50} \approx 1.2\;\text{MI}^2\text{·s}$ and $n \approx 2.5$ for stable
 cavitation (fit to Evans-blue extravasation data, McDannold 2008).
 
-> **Theorem 24.3 (Damage-free operating window).**
+> **Theorem 23.3 (Damage-free operating window).**
 > *There exists a dose interval $[D_{min}, D_{max}]$ such that:*
 > *(a) $P(D_{min}) > P_{baseline}$ (effective opening),*
 > *(b) the tissue damage probability $P_{dam}(D_{max}) < \epsilon_{tol}$,*
@@ -127,7 +127,7 @@ construction.  $\square$
 
 ---
 
-## 24.5 Thermal safety
+## 23.5 Thermal safety
 
 Pennes bioheat equation (linearised for small $\Delta T$):
 
@@ -146,7 +146,7 @@ $$
 \qquad R = \begin{cases} 0.5 & T > 43°C \\ 0.25 & T \leq 43°C \end{cases}
 $$
 
-> **Corollary 24.1 (LIFU thermal safety margin).**
+> **Corollary 23.1 (LIFU thermal safety margin).**
 > *For LIFU with $I_{SATA} \leq 10\;\text{W/cm}^2$, $DC \leq 5\%$, and
 > blood perfusion $W_b = 0.01\;\text{s}^{-1}$ (brain), the steady-state
 > focal temperature rise is $\Delta T_{ss} \approx 0.3°C$ and CEM43 < 0.01 min
@@ -155,7 +155,7 @@ $$
 
 ---
 
-## 24.6 BBB closure kinetics
+## 23.6 BBB closure kinetics
 
 Post-sonication, BBB permeability recovers as a bi-exponential (Deffieux &
 Konofagou 2010):
@@ -173,7 +173,7 @@ for the stable-cavitation dose range.
 
 ---
 
-## 24.7 Multi-spot targeting
+## 23.7 Multi-spot targeting
 
 A clinically useful BBB-opening volume is larger than a single diffraction-
 limited focus, so the array addresses several focal **sub-spots** — either by
@@ -215,9 +215,9 @@ kwavers Rust core (`linear_array_positions`, `multi_focus_delay_laws_2d`,
 
 ---
 
-## 24.8 Sparse (aperiodic) arrays and the treatment envelope
+## 23.8 Sparse (aperiodic) arrays and the treatment envelope
 
-Electronic steering of the foci in §24.7 is not free: as the commanded focus
+Electronic steering of the foci in §23.7 is not free: as the commanded focus
 moves away from broadside, a periodic aperture can radiate a second, coherent
 **grating lobe** — an unintended focus that deposits energy off-target. The
 practical **treatment envelope** is the range of steering angles the array can
@@ -293,7 +293,7 @@ marked.
 
 ---
 
-## 24.9 Passive-cavitation harmonic-dose monitoring
+## 23.9 Passive-cavitation harmonic-dose monitoring
 
 Clinical BBB-opening systems do not dose by mechanical index alone — they
 listen. The receive elements over the focal sonication volume $V_s$ record the
@@ -309,7 +309,7 @@ diagnostic signatures:
 - **broadband** inharmonic floor — the fingerprint of *inertial* cavitation and
   its associated tissue-damage risk.
 
-> **Definition 24.2 (stable / inertial cavitation dose).**
+> **Definition 23.2 (stable / inertial cavitation dose).**
 > For an emission power spectrum $S(f)$ over the sonication, with line windows
 > of half-width $\delta = \texttt{rel\_halfwidth}\cdot f_0$ around each
 > half-harmonic $k f_0/2$ and a baseline noise floor $S_0$,
@@ -353,7 +353,7 @@ mechanical repositioning.
 
 ---
 
-## 24.10 Simulation workflow
+## 23.10 Simulation workflow
 
 ```rust
 use kwavers::plugin::*;
@@ -389,11 +389,11 @@ let manager = PhysicsCatalog::build(&config, &grid, &brain_medium, dt)?;
 The BubbleDynamics capability (Keller–Miksis plugin) is a near-term roadmap
 item in `PhysicsCatalog::build_plugin`; the current implementation returns a
 structured `ConfigError::InvalidValue` identifying the gap explicitly (see
-Chapter 22 §4, Theorem 22.1).
+Chapter 21 §4, Theorem 21.1).
 
 ---
 
-## 24.11 Figure sources
+## 23.11 Figure sources
 
 ```bash
 python pykwavers/examples/book/ch24_bbb_lifu_opening.py
@@ -416,7 +416,7 @@ Outputs to `docs/book/figures/ch24/` (PDF and PNG).
 
 ---
 
-## 24.11 References
+## 23.11 References
 
 - Hynynen K., McDannold N., Vykhodtseva N., Jolesz F.A. *Noninvasive MR
   imaging-guided focal opening of the blood-brain barrier in rabbits.*

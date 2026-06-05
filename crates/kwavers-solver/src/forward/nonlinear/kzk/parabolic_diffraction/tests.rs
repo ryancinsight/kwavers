@@ -1,15 +1,15 @@
 use super::KzkParabolicDiffractionOperator;
-use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
-use kwavers_core::constants::numerical::MHZ_TO_HZ;
-use kwavers_core::constants::numerical::TWO_PI;
-use kwavers_core::constants::SOUND_SPEED_WATER;
-use kwavers_math::fft::Complex64;
 use crate::forward::nonlinear::kzk::constants::{
     DEFAULT_BEAM_WAIST, DEFAULT_FREQUENCY, DEFAULT_GRID_SIZE, DEFAULT_WAVELENGTH,
 };
 use crate::forward::nonlinear::kzk::KZKConfig;
 use crate::validation::measure_beam_radius;
 use approx::assert_relative_eq;
+use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use kwavers_core::constants::numerical::MHZ_TO_HZ;
+use kwavers_core::constants::numerical::TWO_PI;
+use kwavers_core::constants::SOUND_SPEED_WATER;
+use kwavers_math::fft::Complex64;
 use ndarray::Array2;
 use std::f64::consts::PI;
 

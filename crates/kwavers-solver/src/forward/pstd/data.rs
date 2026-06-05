@@ -5,8 +5,8 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use kwavers_medium::Medium;
 use kwavers_math::fft::Complex64;
+use kwavers_medium::Medium;
 use ndarray::Array3;
 
 /// Helper struct for field array initialization

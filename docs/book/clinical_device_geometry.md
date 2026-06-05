@@ -1,4 +1,4 @@
-# Clinical Theranostic Device Geometries: 3-D Transducer–Patient Integration
+# Chapter 30 — Clinical Theranostic Device Geometries: 3-D Transducer–Patient Integration
 
 This chapter develops the formal geometry model for placing focused ultrasound
 therapy arrays on CT-derived patient anatomy in 3-D.  Two focused-bowl
@@ -22,7 +22,7 @@ finite-frequency Born inverse.
 
 The chapter does not model proprietary device geometry.  The bowl
 parameters match published research system specifications.  See Chapter 29 for
-the mathematical contract of the inversion and Chapter 21 for transcranial skull
+the mathematical contract of the inversion and Chapter 14 for transcranial skull
 aberration correction.
 
 ## Mathematical Foundation
@@ -345,7 +345,7 @@ the bowl on the posterior/lateral flank for retroperitoneal kidneys.
 ![Brain focused-bowl 3-D calvarium](figures/ch31/fig03_brain_focused_bowl_3d_calvarium.png)
 
 1024-element focused-bowl cap around the calvarium using the same CT-aligned
-`CANONICAL_BRAIN_SCENE` target and 0.150 m bowl radius used by Chapter 25 and
+`CANONICAL_BRAIN_SCENE` target and 0.150 m bowl radius used by Chapter 24 and
 Chapter 29 brain outputs. Elevated oblique view (left) shows elements wrap over
 the top of the skull, not the neck. Top-down view (right) confirms circular
 aperture centred on the vertex. Yellow points are CT-derived skull entry

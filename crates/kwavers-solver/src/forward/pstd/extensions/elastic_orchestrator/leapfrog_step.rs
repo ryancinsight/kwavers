@@ -36,7 +36,8 @@ use ndarray::{Array3, Zip};
 use num_complex::Complex;
 
 /// Axis-specific `out ← op·κ·field_k` spectral derivative multiplier.
-type SpectralMul = fn(&Array3<Complex<f64>>, &[Complex<f64>], &Array3<f64>, &mut Array3<Complex<f64>>);
+type SpectralMul =
+    fn(&Array3<Complex<f64>>, &[Complex<f64>], &Array3<f64>, &mut Array3<Complex<f64>>);
 
 /// Advance `(stress, velocity)` one leapfrog step with real-space coefficients.
 #[allow(clippy::too_many_arguments)]
@@ -60,7 +61,15 @@ pub(super) fn propagate_leapfrog_step(
     fft_3d_array_into(&velocity.vx, &mut spec_vel.vx);
     fft_3d_array_into(&velocity.vy, &mut spec_vel.vy);
     fft_3d_array_into(&velocity.vz, &mut spec_vel.vz);
-    accumulate_stress(spec_vel, stress, medium, ops, &mut spec_scratch.txx, scratch_r, dt);
+    accumulate_stress(
+        spec_vel,
+        stress,
+        medium,
+        ops,
+        &mut spec_scratch.txx,
+        scratch_r,
+        dt,
+    );
 
     // ── PHASE 2 — velocity update (real-space 1/ρ) ──────────────────────────
     fft_3d_array_into(&stress.txx, &mut spec_stress.txx);
@@ -72,17 +81,107 @@ pub(super) fn propagate_leapfrog_step(
     let buf = &mut spec_scratch.txx;
 
     // v_x += (dt/ρ)·(∂_x τ_xx + ∂_y τ_xy + ∂_z τ_xz).
-    vel(spectral_mul_x, &spec_stress.txx, op_x_pos, kappa, buf, scratch_r, dt, medium, &mut velocity.vx);
-    vel(spectral_mul_y, &spec_stress.txy, op_y_pos, kappa, buf, scratch_r, dt, medium, &mut velocity.vx);
-    vel(spectral_mul_z, &spec_stress.txz, op_z_pos, kappa, buf, scratch_r, dt, medium, &mut velocity.vx);
+    vel(
+        spectral_mul_x,
+        &spec_stress.txx,
+        op_x_pos,
+        kappa,
+        buf,
+        scratch_r,
+        dt,
+        medium,
+        &mut velocity.vx,
+    );
+    vel(
+        spectral_mul_y,
+        &spec_stress.txy,
+        op_y_pos,
+        kappa,
+        buf,
+        scratch_r,
+        dt,
+        medium,
+        &mut velocity.vx,
+    );
+    vel(
+        spectral_mul_z,
+        &spec_stress.txz,
+        op_z_pos,
+        kappa,
+        buf,
+        scratch_r,
+        dt,
+        medium,
+        &mut velocity.vx,
+    );
     // v_y += (dt/ρ)·(∂_x τ_xy + ∂_y τ_yy + ∂_z τ_yz).
-    vel(spectral_mul_x, &spec_stress.txy, op_x_pos, kappa, buf, scratch_r, dt, medium, &mut velocity.vy);
-    vel(spectral_mul_y, &spec_stress.tyy, op_y_pos, kappa, buf, scratch_r, dt, medium, &mut velocity.vy);
-    vel(spectral_mul_z, &spec_stress.tyz, op_z_pos, kappa, buf, scratch_r, dt, medium, &mut velocity.vy);
+    vel(
+        spectral_mul_x,
+        &spec_stress.txy,
+        op_x_pos,
+        kappa,
+        buf,
+        scratch_r,
+        dt,
+        medium,
+        &mut velocity.vy,
+    );
+    vel(
+        spectral_mul_y,
+        &spec_stress.tyy,
+        op_y_pos,
+        kappa,
+        buf,
+        scratch_r,
+        dt,
+        medium,
+        &mut velocity.vy,
+    );
+    vel(
+        spectral_mul_z,
+        &spec_stress.tyz,
+        op_z_pos,
+        kappa,
+        buf,
+        scratch_r,
+        dt,
+        medium,
+        &mut velocity.vy,
+    );
     // v_z += (dt/ρ)·(∂_x τ_xz + ∂_y τ_yz + ∂_z τ_zz).
-    vel(spectral_mul_x, &spec_stress.txz, op_x_pos, kappa, buf, scratch_r, dt, medium, &mut velocity.vz);
-    vel(spectral_mul_y, &spec_stress.tyz, op_y_pos, kappa, buf, scratch_r, dt, medium, &mut velocity.vz);
-    vel(spectral_mul_z, &spec_stress.tzz, op_z_pos, kappa, buf, scratch_r, dt, medium, &mut velocity.vz);
+    vel(
+        spectral_mul_x,
+        &spec_stress.txz,
+        op_x_pos,
+        kappa,
+        buf,
+        scratch_r,
+        dt,
+        medium,
+        &mut velocity.vz,
+    );
+    vel(
+        spectral_mul_y,
+        &spec_stress.tyz,
+        op_y_pos,
+        kappa,
+        buf,
+        scratch_r,
+        dt,
+        medium,
+        &mut velocity.vz,
+    );
+    vel(
+        spectral_mul_z,
+        &spec_stress.tzz,
+        op_z_pos,
+        kappa,
+        buf,
+        scratch_r,
+        dt,
+        medium,
+        &mut velocity.vz,
+    );
 }
 
 /// Accumulate `σ += dt · C : ε(v)` from a spectral velocity field, applying
@@ -111,12 +210,72 @@ fn accumulate_stress(
     ifft_3d_array_into(buf, scratch_r);
     accumulate_normal(stress, scratch_r, medium, dt, NormalAxis::Z);
 
-    shear(spectral_mul_y, &spec_vel.vx, op_y_neg, kappa, buf, scratch_r, dt, medium, &mut stress.txy);
-    shear(spectral_mul_x, &spec_vel.vy, op_x_neg, kappa, buf, scratch_r, dt, medium, &mut stress.txy);
-    shear(spectral_mul_z, &spec_vel.vx, op_z_neg, kappa, buf, scratch_r, dt, medium, &mut stress.txz);
-    shear(spectral_mul_x, &spec_vel.vz, op_x_neg, kappa, buf, scratch_r, dt, medium, &mut stress.txz);
-    shear(spectral_mul_z, &spec_vel.vy, op_z_neg, kappa, buf, scratch_r, dt, medium, &mut stress.tyz);
-    shear(spectral_mul_y, &spec_vel.vz, op_y_neg, kappa, buf, scratch_r, dt, medium, &mut stress.tyz);
+    shear(
+        spectral_mul_y,
+        &spec_vel.vx,
+        op_y_neg,
+        kappa,
+        buf,
+        scratch_r,
+        dt,
+        medium,
+        &mut stress.txy,
+    );
+    shear(
+        spectral_mul_x,
+        &spec_vel.vy,
+        op_x_neg,
+        kappa,
+        buf,
+        scratch_r,
+        dt,
+        medium,
+        &mut stress.txy,
+    );
+    shear(
+        spectral_mul_z,
+        &spec_vel.vx,
+        op_z_neg,
+        kappa,
+        buf,
+        scratch_r,
+        dt,
+        medium,
+        &mut stress.txz,
+    );
+    shear(
+        spectral_mul_x,
+        &spec_vel.vz,
+        op_x_neg,
+        kappa,
+        buf,
+        scratch_r,
+        dt,
+        medium,
+        &mut stress.txz,
+    );
+    shear(
+        spectral_mul_z,
+        &spec_vel.vy,
+        op_z_neg,
+        kappa,
+        buf,
+        scratch_r,
+        dt,
+        medium,
+        &mut stress.tyz,
+    );
+    shear(
+        spectral_mul_y,
+        &spec_vel.vz,
+        op_y_neg,
+        kappa,
+        buf,
+        scratch_r,
+        dt,
+        medium,
+        &mut stress.tyz,
+    );
 }
 
 /// Seed the initial stress for an initial-value problem with displacement `u0`

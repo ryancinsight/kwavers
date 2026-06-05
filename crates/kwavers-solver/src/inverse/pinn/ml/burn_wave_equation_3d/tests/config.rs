@@ -1,9 +1,9 @@
 //! Config defaults and collocation point generation tests.
 
 use super::super::*;
+use burn::backend::{Autodiff, NdArray};
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::error::{KwaversError, KwaversResult, SystemError};
-use burn::backend::{Autodiff, NdArray};
 
 type TestBackend = Autodiff<NdArray>;
 

@@ -24,11 +24,11 @@ mod interpolation;
 mod solve;
 
 use super::config::FemHelmholtzConfig;
-use kwavers_core::error::KwaversResult;
 use kwavers_boundary::FemBoundaryManager;
+use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use kwavers_mesh::TetrahedralMesh;
 use kwavers_math::linear_algebra::sparse::csr::CompressedSparseRowMatrix;
+use kwavers_mesh::TetrahedralMesh;
 use ndarray::Array1;
 use num_complex::Complex64;
 

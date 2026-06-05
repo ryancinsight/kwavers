@@ -131,9 +131,7 @@ impl InteractiveControls {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub fn create(
-        _config: &crate::visualization::VisualizationConfig,
-    ) -> KwaversResult<Self> {
+    pub fn create(_config: &crate::visualization::VisualizationConfig) -> KwaversResult<Self> {
         Ok(Self::new())
     }
 

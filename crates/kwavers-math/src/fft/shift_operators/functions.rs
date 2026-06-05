@@ -42,8 +42,8 @@
 //!   two cells per wavelength. Microwave Opt. Technol. Lett. 15(3), 158–165.
 //!   (staggered-shift derivation)
 
-use kwavers_core::constants::numerical::TWO_PI;
 use crate::fft::Complex64;
+use kwavers_core::constants::numerical::TWO_PI;
 use ndarray::{Array1, Array3};
 
 /// Generate the 1-D staggered-shift operator for one axis.

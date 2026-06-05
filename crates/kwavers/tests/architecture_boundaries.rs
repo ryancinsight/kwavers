@@ -80,7 +80,10 @@ fn domain_tier_crates_have_no_upward_imports() {
             let source = fs::read_to_string(&file).unwrap();
             for forbidden in FORBIDDEN_UPWARD {
                 if source.contains(forbidden) {
-                    violations.push(format!("{crate_name}: {} contains {forbidden}", file.display()));
+                    violations.push(format!(
+                        "{crate_name}: {} contains {forbidden}",
+                        file.display()
+                    ));
                 }
             }
         }

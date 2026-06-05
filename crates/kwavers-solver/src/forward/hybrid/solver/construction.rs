@@ -1,9 +1,4 @@
 use super::HybridSolver;
-use kwavers_core::error::KwaversResult;
-use kwavers_field::wave::WaveFields;
-use kwavers_grid::Grid;
-use kwavers_medium::Medium;
-use kwavers_source::GridSource;
 use crate::forward::fdtd::FdtdSolver;
 use crate::forward::hybrid::adaptive_selection::AdaptiveSelector;
 use crate::forward::hybrid::config::HybridConfig;
@@ -11,6 +6,11 @@ use crate::forward::hybrid::coupling::CouplingInterface;
 use crate::forward::hybrid::domain_decomposition::DomainDecomposer;
 use crate::forward::hybrid::metrics::{HybridMetrics, HybridValidationResults};
 use crate::forward::pstd::PSTDSolver;
+use kwavers_core::error::KwaversResult;
+use kwavers_field::wave::WaveFields;
+use kwavers_grid::Grid;
+use kwavers_medium::Medium;
+use kwavers_source::GridSource;
 use log::info;
 
 impl HybridSolver {

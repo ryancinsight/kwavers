@@ -64,9 +64,9 @@
 //! - Gassmann F. (1951). "Elasticity of porous media." Vierteljahrschrift
 //!   der Naturforschenden Gesellschaft in Zürich 96, 1–23.
 
+use crate::acoustics::mechanics::poroelastic::{PoroelasticMaterial, WaveSpeeds};
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
-use crate::acoustics::mechanics::poroelastic::{PoroelasticMaterial, WaveSpeeds};
 
 /// Biot theory for poroelastic wave propagation
 #[derive(Debug)]
@@ -210,8 +210,8 @@ impl BiotTheory {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kwavers_core::constants::numerical::MHZ_TO_HZ;
     use crate::acoustics::mechanics::poroelastic::PoroelasticMaterial;
+    use kwavers_core::constants::numerical::MHZ_TO_HZ;
 
     fn bone() -> PoroelasticMaterial {
         PoroelasticMaterial::default() // trabecular bone

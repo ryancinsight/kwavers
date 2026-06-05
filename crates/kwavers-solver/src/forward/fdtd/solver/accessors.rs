@@ -6,9 +6,9 @@ use ndarray::{Array3, ArrayView2};
 use std::sync::Arc;
 
 use super::{FdtdGpuAccelerator, FdtdMetrics, GenericFdtdSolver};
-use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_boundary::cpml::{CPMLBoundary, CPMLConfig};
 use crate::forward::fdtd::config::KSpaceCorrectionMode;
+use kwavers_boundary::cpml::{CPMLBoundary, CPMLConfig};
+use kwavers_core::error::{KwaversError, KwaversResult};
 
 impl GenericFdtdSolver<Array3<f64>> {
     pub fn set_gpu_accelerator(&mut self, accelerator: Arc<dyn FdtdGpuAccelerator>) {
@@ -130,14 +130,14 @@ impl GenericFdtdSolver<Array3<f64>> {
 
 #[cfg(test)]
 mod tests {
+    use crate::forward::fdtd::config::{FdtdConfig, KSpaceCorrectionMode};
+    use crate::forward::fdtd::FdtdSolver;
+    use kwavers_boundary::cpml::CPMLConfig;
     use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
     use kwavers_core::error::KwaversError;
-    use kwavers_boundary::cpml::CPMLConfig;
     use kwavers_grid::Grid;
     use kwavers_medium::HomogeneousMedium;
     use kwavers_source::GridSource;
-    use crate::forward::fdtd::config::{FdtdConfig, KSpaceCorrectionMode};
-    use crate::forward::fdtd::FdtdSolver;
 
     /// Construct a minimal FdtdSolver for accessor tests.
     ///

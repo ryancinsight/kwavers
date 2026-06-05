@@ -28,14 +28,14 @@
 
 #![cfg(feature = "gpu")]
 
+use kwavers_gpu::pstd_gpu::GpuPstdSolver;
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_signal::SineWave;
-use kwavers_source::{InjectionMode, PlaneWaveSource, PlaneWaveSourceConfig, SourceField};
 use kwavers_solver::forward::pstd::config::{BoundaryConfig, KSpaceMethod, PSTDConfig};
-use kwavers_gpu::pstd_gpu::GpuPstdSolver;
 use kwavers_solver::forward::pstd::implementation::core::orchestrator::PSTDSolver;
 use kwavers_solver::interface::Solver;
+use kwavers_source::{InjectionMode, PlaneWaveSource, PlaneWaveSourceConfig, SourceField};
 use std::sync::Arc;
 
 // ── GPU initialisation ────────────────────────────────────────────────────────

@@ -1,9 +1,9 @@
 //! Time-span integration wrapper using Störmer-Verlet steps.
 
 use super::{stormer_verlet_step, SymplecticConfig};
-use kwavers_core::error::{KwaversError, KwaversResult, PhysicsError};
 use crate::acoustics::bubble_dynamics::bubble_state::BubbleState;
 use crate::acoustics::bubble_dynamics::keller_miksis::KellerMiksisModel;
+use kwavers_core::error::{KwaversError, KwaversResult, PhysicsError};
 
 /// Integrate bubble dynamics over a time span using Störmer-Verlet.
 ///

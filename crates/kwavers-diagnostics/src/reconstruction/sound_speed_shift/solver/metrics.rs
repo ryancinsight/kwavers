@@ -6,11 +6,9 @@ use super::normal::estimate_lipschitz;
 
 /// Metrics that depend on the operator and regularization, not frame data.
 #[derive(Clone, Debug)]
-pub(in crate::reconstruction::sound_speed_shift) struct SoundSpeedShiftSolverMetrics
-{
+pub(in crate::reconstruction::sound_speed_shift) struct SoundSpeedShiftSolverMetrics {
     pub(in crate::reconstruction::sound_speed_shift) normal_diagonal: Vec<f64>,
-    pub(in crate::reconstruction::sound_speed_shift) sparse_lipschitz:
-        Option<f64>,
+    pub(in crate::reconstruction::sound_speed_shift) sparse_lipschitz: Option<f64>,
 }
 
 pub(in crate::reconstruction::sound_speed_shift) fn compute_solver_metrics(

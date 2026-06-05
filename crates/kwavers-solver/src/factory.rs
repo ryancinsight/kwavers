@@ -70,8 +70,8 @@ impl SolverFactoryRegistry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
     use crate::interface::factory::{FactoryGridParameters, FactoryMediumParameters};
+    use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 
     struct TestGrid {
         nx: usize,

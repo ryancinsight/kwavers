@@ -4,26 +4,19 @@ use pyo3::prelude::*;
 #[pyfunction]
 #[pyo3(signature = (db, y=1.0))]
 fn db2neper(db: f64, y: f64) -> f64 {
-    let neper_per_db = 10.0f64.ln() / 20.0;
-    db * (100.0 * neper_per_db) / (2.0 * std::f64::consts::PI * 1e6).powf(y)
+    kwavers_core::units::db_per_mhz_cm_to_neper_per_rad_s_m(db, y)
 }
 
 #[pyfunction]
 #[pyo3(signature = (neper, y=1.0))]
 fn neper2db(neper: f64, y: f64) -> f64 {
-    let db_per_neper = 20.0 / 10.0f64.ln();
-    neper * (db_per_neper / 100.0) * (2.0 * std::f64::consts::PI * 1e6).powf(y)
+    kwavers_core::units::neper_per_rad_s_m_to_db_per_mhz_cm(neper, y)
 }
 
 #[pyfunction]
 fn freq2wavenumber(frequency: f64, sound_speed: f64) -> PyResult<f64> {
-    if sound_speed <= 0.0 {
-        return Err(PyValueError::new_err("Sound speed must be positive"));
-    }
-    if frequency < 0.0 {
-        return Err(PyValueError::new_err("Frequency must be non-negative"));
-    }
-    Ok(2.0 * std::f64::consts::PI * frequency / sound_speed)
+    kwavers_core::units::frequency_to_wavenumber(frequency, sound_speed)
+        .map_err(|err| PyValueError::new_err(err.to_string()))
 }
 
 #[pyfunction]

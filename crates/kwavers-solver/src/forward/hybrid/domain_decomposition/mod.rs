@@ -35,10 +35,10 @@ pub use metrics::DomainDecompQualityMetrics;
 pub use partitioner::DomainPartitioner;
 pub use region::{DomainRegion, DomainType};
 
+use crate::hybrid::config::HybridDecompositionStrategy;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use crate::hybrid::config::HybridDecompositionStrategy;
 
 /// Main domain decomposer that coordinates analysis and partitioning
 #[derive(Debug)]

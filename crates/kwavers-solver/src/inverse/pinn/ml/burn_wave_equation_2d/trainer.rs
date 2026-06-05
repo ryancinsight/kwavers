@@ -2,9 +2,9 @@ use super::config::{BurnPINN2DConfig, BurnTrainingMetrics2D};
 use super::geometry::BurnWave2dGeometry;
 use super::model::BurnPINN2DWave;
 use super::optimizer::SimpleOptimizer2D;
-use kwavers_core::error::{KwaversError, KwaversResult};
 use burn::tensor::backend::AutodiffBackend;
 use burn::tensor::Tensor;
+use kwavers_core::error::{KwaversError, KwaversResult};
 use ndarray::{Array1, Array2};
 use std::f64::consts::PI;
 

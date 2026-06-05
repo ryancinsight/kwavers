@@ -1,11 +1,11 @@
-# Sonogenetics: Acoustic Control of Genetically Encoded Mechanosensitive Systems
+# Chapter 17: Sonogenetics: Acoustic Control of Genetically Encoded Mechanosensitive Systems
 
 > **Module ownership**: `kwavers::physics::acoustics::therapy::sonogenetics`,
 > `kwavers::clinical::therapy`, `kwavers::domain::therapy::microbubble`
 
 ---
 
-## 11.1 Introduction
+## 17.1 Introduction
 
 Sonogenetics is the use of focused ultrasound to selectively activate or silence cells that
 express ultrasound-sensitive proteins — mechanosensitive ion channels, genetically encoded
@@ -14,7 +14,7 @@ The technique extends optogenetics from the optical window (penetration depth ~1
 tissue) to the acoustic window (penetration depth ~10 cm), enabling non-invasive, millimetre-
 precise neuromodulation, gene expression control, and cell sorting in deep tissue.
 
-### 11.1.1 Conceptual Architecture
+### 17.1.1 Conceptual Architecture
 
 The sonogenetic pipeline couples three physical layers:
 
@@ -36,7 +36,7 @@ The unique feature relative to pure transcranial focused ultrasound neuromodulat
 MscL-G22S, Piezo1, TRPC6, or hsTRPA1 respond selectively to acoustic stimulation, while
 unmodified cells in the same region remain quiescent.
 
-### 11.1.2 Historical Context
+### 17.1.2 Historical Context
 
 Ibsen et al. (2015, *Nature Nanotechnology*) established the proof of concept in
 *Caenorhabditis elegans* by expressing the halorhodopsin-related bacterial channel hsTRPA1,
@@ -58,13 +58,13 @@ requiring genetic delivery of exogenous bacterial channels.
 
 ---
 
-## 11.2 Theorem: Mechanosensitive Channel Gating — Boltzmann Two-State Model
+## 17.2 Theorem: Mechanosensitive Channel Gating — Boltzmann Two-State Model
 
 **Statement.** For a mechanosensitive ion channel with two accessible states (closed C, open O)
 in thermodynamic equilibrium at temperature T, the open probability is
 
 ```text
-P_open = 1 / [1 + exp(−A_gate · (ΔT − T_half) / (k_B · T))]       (11.1)
+P_open = 1 / [1 + exp(−A_gate · (ΔT − T_half) / (k_B · T))]       (17.1)
 ```
 
 where A_gate [m²] is the gating area (the in-plane protein area change between closed and open
@@ -122,27 +122,27 @@ Values from: Xian 2023; Li 2026; Cox 2016; Shimojo 2024; Hamill & Martinac 2001.
 
 ---
 
-## 11.3 Theorem: Acoustic Radiation Force on a Cell — Yosioka–Kawasima Formula
+## 17.3 Theorem: Acoustic Radiation Force on a Cell — Yosioka–Kawasima Formula
 
 **Statement.** A spherical cell of radius r embedded in a plane-wave field of angular
 frequency ω, density contrast ρ̃ = ρ_cell/ρ_medium, and compressibility contrast
 κ̃ = κ_cell/κ_medium experiences an acoustic radiation force (time-averaged):
 
 ```text
-F_rad = (2π r³ / 3c) · [f_1 · κ̃ · d(P²)/dx − (3/2) f_2 · ρ̃ · d(v²)/dx]   (11.2)
+F_rad = (2π r³ / 3c) · [f_1 · κ̃ · d(P²)/dx − (3/2) f_2 · ρ̃ · d(v²)/dx]   (17.2)
 ```
 
 where c is the medium sound speed, P is the acoustic pressure amplitude, v is the particle
 velocity amplitude, and the Gorkov coefficients are
 
 ```text
-f_1 = 1 − κ̃,   f_2 = 2(ρ̃ − 1) / (2ρ̃ + 1).   (11.3)
+f_1 = 1 − κ̃,   f_2 = 2(ρ̃ − 1) / (2ρ̃ + 1).   (17.3)
 ```
 
 For a progressive plane wave the acoustic radiation pressure simplifies to (Sarvazyan 2010):
 
 ```text
-P_rad = I / c   [Pa],   where I = ⟨p²⟩ / (ρ·c)   [W/m²].   (11.4)
+P_rad = I / c   [Pa],   where I = ⟨p²⟩ / (ρ·c)   [W/m²].   (17.4)
 ```
 
 **Proof via momentum flux (Gorkov 1962).** Consider the force on a compressible sphere of
@@ -162,7 +162,7 @@ is
 U = (2π r³ / 3) · [f_1 ⟨p²⟩/ρc² − (3/2) f_2 ρ⟨v²⟩]
 ```
 
-and the force is F = −∇U, yielding equation (11.2) for a one-dimensional pressure gradient
+and the force is F = −∇U, yielding equation (17.2) for a one-dimensional pressure gradient
 ∂⟨p²⟩/∂x in a progressive wave where ⟨v²⟩ = ⟨p²⟩/(ρc)². Substituting ⟨p²⟩ = ρc · I and
 simplifying for a progressive wave where d(P²)/dx = d(v²)/dx · (ρc)²:
 
@@ -175,7 +175,7 @@ coefficient α and sphere volume V = (4/3)πr³ (Nightingale 2002). In the limit
 homogeneous medium the volumetric ARF body force density is:
 
 ```text
-F_vol(x) = 2·α(x)·I(x) / c(x)   [N/m³].   □   (11.5)
+F_vol(x) = 2·α(x)·I(x) / c(x)   [N/m³].   □   (17.5)
 ```
 
 **Numerical example (mammalian neuron soma).** For r = 10 μm, I = 10⁵ W/m²,
@@ -191,20 +191,20 @@ motor protein — and is sufficient to gate mechanosensitive channels with picon
 gating thresholds.
 
 **kwavers implementation.** `VolumetricArfField` in
-`kwavers::physics::acoustics::therapy::sonogenetics::arf_field` implements equation (11.5)
+`kwavers::physics::acoustics::therapy::sonogenetics::arf_field` implements equation (17.5)
 by accumulating ⟨p²⟩ over complete acoustic cycles and computing F = 2·α·I/c at each voxel.
 The `finalize` method requires at least one accumulated pressure snapshot.
 
 ---
 
-## 11.4 Theorem: Membrane Tension Under Acoustic Radiation Pressure — Laplace Law
+## 17.4 Theorem: Membrane Tension Under Acoustic Radiation Pressure — Laplace Law
 
 **Statement.** For a thin spherical cell membrane (radius R, thickness h, h ≪ R) under
 isotropic internal excess pressure ΔP = P_rad = I/c, the circumferential (hoop) membrane
 tension increment is
 
 ```text
-ΔT_membrane = P_rad · R / 2 = I · R / (2c)   [N/m].   (11.6)
+ΔT_membrane = P_rad · R / 2 = I · R / (2c)   [N/m].   (17.6)
 ```
 
 **Proof (Laplace law for thin spherical shell).** Consider a spherical membrane shell of
@@ -218,7 +218,7 @@ the restraining force is F_tension = T · 2πR. Equilibrium requires:
 T · 2πR = ΔP · πR²   →   T = ΔP · R / 2.
 ```
 
-Setting ΔP = P_rad = I/c yields equation (11.6). □
+Setting ΔP = P_rad = I/c yields equation (17.6). □
 
 **Validity condition.** The thin-shell approximation requires h/R ≪ 1. For a lipid bilayer
 h = 5 nm and neuronal soma R = 10 μm: h/R = 5 × 10⁻⁴ ≪ 1. The assumption of quasi-static
@@ -227,7 +227,7 @@ loading is valid when the acoustic period T_ac = 1/f ≫ τ_membrane (membrane r
 quasi-static approximation holds for f < 1 MHz in this context.
 
 **kwavers implementation.** `compute_membrane_tension` in
-`kwavers::physics::acoustics::therapy::sonogenetics::membrane` evaluates equation (11.6)
+`kwavers::physics::acoustics::therapy::sonogenetics::membrane` evaluates equation (17.6)
 element-wise:
 
 ```rust
@@ -239,21 +239,21 @@ canonical mammalian neuron soma parameters: R = 10 μm, h = 5 nm.
 
 ---
 
-## 11.5 Theorem: Acoustic Streaming-Enhanced Membrane Permeability
+## 17.5 Theorem: Acoustic Streaming-Enhanced Membrane Permeability
 
 **Statement.** A progressive wave of intensity I in a medium of density ρ, sound speed c,
 and absorption coefficient α generates an acoustic streaming velocity field. In the far
 field from any boundary, the streaming velocity magnitude is
 
 ```text
-v_s ≈ (2 α · I) / (ρ · c · ω_visc)   [m/s]   (11.7)
+v_s ≈ (2 α · I) / (ρ · c · ω_visc)   [m/s]   (17.7)
 ```
 
 where ω_visc is the effective viscous damping coefficient (Nyborg 1965). For a viscous
 streaming flow past a cell membrane of area A_m, the wall shear stress is
 
 ```text
-τ_s = μ · (∂v_s/∂r)|_{r=R} ≈ μ · v_s / δ   [Pa]   (11.8)
+τ_s = μ · (∂v_s/∂r)|_{r=R} ≈ μ · v_s / δ   [Pa]   (17.8)
 ```
 
 where μ is the fluid viscosity and δ is the streaming boundary layer thickness
@@ -275,13 +275,13 @@ f_stream = 2α · I / c   [N/m³]   (same as the ARF density, eq. 11.5)
 ```
 
 In the far field, balancing this body force against the viscous resistance ρ·ω_visc·v_s
-gives v_s = f_stream / (ρ·ω_visc) = 2α·I/(ρ·c·ω_visc), confirming (11.7). □
+gives v_s = f_stream / (ρ·ω_visc) = 2α·I/(ρ·c·ω_visc), confirming (17.7). □
 
 **Membrane permeability enhancement.** The enhanced permeability P_mem under shear stress
 follows a sigmoidal model (Karshafian et al. 2010):
 
 ```text
-P_mem(τ_s) = P_baseline · [1 + ΔP_max / (1 + exp(−k_τ · (τ_s − τ_half)))]   (11.9)
+P_mem(τ_s) = P_baseline · [1 + ΔP_max / (1 + exp(−k_τ · (τ_s − τ_half)))]   (17.9)
 ```
 
 This enhanced permeability supports macromolecule uptake (sonoporation) and is exploited
@@ -290,25 +290,25 @@ plasmid DNA injection.
 
 ---
 
-## 11.6 Theorem: Pressure-Threshold Channel Gating — hsTRPA1 Model
+## 17.6 Theorem: Pressure-Threshold Channel Gating — hsTRPA1 Model
 
 **Statement.** The archaeal channel hsTRPA1 (from *Halobacterium salinarum*) is gated by
 acoustic radiation pressure rather than membrane tension. Its open probability follows the
 sigmoidal model (Ibsen 2015):
 
 ```text
-P_open = 1 / [1 + exp(−(P_rad − P_half) / s)]   (11.10)
+P_open = 1 / [1 + exp(−(P_rad − P_half) / s)]   (17.10)
 ```
 
 where P_rad = I/c is the acoustic radiation pressure in Pa, P_half [Pa] is the half-
 activation radiation pressure, and s [Pa] is the sigmoid steepness.
 
-**Proof.** Equation (11.10) is the logistic activation function derived from a two-state
-channel model (identical to Section 11.2) but with the gating coordinate replaced by
+**Proof.** Equation (17.10) is the logistic activation function derived from a two-state
+channel model (identical to Section 17.2) but with the gating coordinate replaced by
 acoustic radiation pressure P_rad rather than membrane tension ΔT. The free energy
 difference is ΔG = ΔG_0 − A_eff · P_rad where A_eff is an effective area coupling the
 channel to the acoustic radiation stress. Defining P_half = ΔG_0/A_eff and
-s = k_B T / A_eff yields equation (11.10) by the same derivation as Section 11.2. □
+s = k_B T / A_eff yields equation (17.10) by the same derivation as Section 17.2. □
 
 **Parameter range.** For hsTRPA1 (Ibsen 2015 calibrated): P_half ≈ 35 Pa (derived from
 MI ≈ 0.4 at 1 MHz in water: P_peak = 0.4 × √(1.0) = 0.4 MPa, P_rad = P_peak²/(2ρc²) ≈ 35 Pa),
@@ -319,14 +319,14 @@ cycle 1–5%).
 
 ---
 
-## 11.7 Theorem: Ion Current and Channel Density
+## 17.7 Theorem: Ion Current and Channel Density
 
 **Statement.** For N_chan channels per unit membrane area expressed in a cell of membrane
 area A_mem, with open probability P_open, unitary conductance g_single, and driving force
 (E_rev − V_m), the total ion current entering the cell is
 
 ```text
-I_ion = g_single · N_chan · A_mem · P_open · (E_rev − V_m)   [A].   (11.11)
+I_ion = g_single · N_chan · A_mem · P_open · (E_rev − V_m)   [A].   (17.11)
 ```
 
 **Proof.** By the independence principle (Hille 2001 §1.3), for N = N_chan · A_mem
@@ -339,31 +339,31 @@ P_open, the expected current is:
 
 **kwavers implementation.** `ion_current` in
 `kwavers::physics::acoustics::therapy::sonogenetics::channels::current` evaluates
-equation (11.11) element-wise for a given channel identity and open probability field.
+equation (17.11) element-wise for a given channel identity and open probability field.
 
 ---
 
-## 11.8 Theorem: Thermal Safety Budget for Sonogenetics — CEM43 < 0.1
+## 17.8 Theorem: Thermal Safety Budget for Sonogenetics — CEM43 < 0.1
 
 **Statement.** For a pulsed sonogenetics protocol with peak intensity I_SPPA [W/m²], duty
 cycle DC (fraction), and duration T_son [s], the temperature rise at the target in brain
 tissue (absorption coefficient α_brain ≈ 0.6 dB/cm/MHz ≈ 6.9 Np/m at 250 kHz) is
 
 ```text
-ΔT = 2 · α_brain · I_SPPA · DC / (ρ_brain · c_p,brain · ω_perf_factor)   (11.12)
+ΔT = 2 · α_brain · I_SPPA · DC / (ρ_brain · c_p,brain · ω_perf_factor)   (17.12)
 ```
 
 where ρ_brain = 1040 kg/m³, c_p,brain = 3600 J/(kg·K), and ω_perf_factor ≈ 1.2 accounts for
 perfusion heat removal (bilinear Pennes model). The cumulative equivalent minutes at 43°C is
 
 ```text
-CEM43 = DC · T_son · R^(43 − T_peak)                                (11.13)
+CEM43 = DC · T_son · R^(43 − T_peak)                                (17.13)
 ```
 
 with R = 0.5 for T_peak > 43°C and R = 0.25 for T_peak ≤ 43°C. The safety requirement for
 sonogenetics neuromodulation is CEM43 < 0.1 min (< 6 s equivalent at 43°C).
 
-**Proof.** In the absence of thermal conduction (upper bound estimate), equation (11.12)
+**Proof.** In the absence of thermal conduction (upper bound estimate), equation (17.12)
 follows from the bioheat equation:
 
 ```text
@@ -378,7 +378,7 @@ At steady state (∂T/∂t = 0):
 ΔT = Q · ω_perf_factor / (ρ · c_p) = 2α·I·DC·ω_perf_factor / (ρ·c_p).
 ```
 
-Equation (11.13) follows from the Sapareto-Dewey (1984) isoeffect model with the
+Equation (17.13) follows from the Sapareto-Dewey (1984) isoeffect model with the
 conventional R values. □
 
 **Numerical example.** At f = 250 kHz, I_SPPA = 500 W/m², DC = 1%, T_son = 120 s,
@@ -393,7 +393,7 @@ Well below the 0.1 min safety limit; the safety margin exceeds 300×.
 
 ---
 
-## 11.9 Algorithm: Sonogenetic Stimulation Protocol
+## 17.9 Algorithm: Sonogenetic Stimulation Protocol
 
 ```
 Algorithm SGS (Sonogenetic Stimulation Protocol)
@@ -441,7 +441,7 @@ Phase 5 — Safety Report
 16. Output: P_open map, spike probability, CEM43 map, MI, ΔT_brain, ΔT_skull.
 ```
 
-### 11.9.1 Pulse Parameter Selection
+### 17.9.1 Pulse Parameter Selection
 
 The acoustic burst is parameterised by:
 
@@ -461,13 +461,13 @@ In the absence of a skull (in vitro, or with a pre-existing craniotomy), frequen
 
 ---
 
-## 11.10 Algorithm: Optogenetic–Sonogenetic Equivalence Mapping
+## 17.10 Algorithm: Optogenetic–Sonogenetic Equivalence Mapping
 
 Optogenetics activates channelrhodopsin-2 (ChR2) with 473-nm light at irradiance E_opt
 [W/m²] at the cell surface. The ChR2 photocurrent per cell is:
 
 ```text
-I_ChR2 = ε_ChR2 · E_opt · A_cell · g_ChR2 · (E_ChR2_rev − V_m)   (11.14)
+I_ChR2 = ε_ChR2 · E_opt · A_cell · g_ChR2 · (E_ChR2_rev − V_m)   (17.14)
 ```
 
 where ε_ChR2 ≈ 0.5 mA/W is the quantum efficiency × conductance coupling, A_cell is
@@ -529,9 +529,9 @@ Output: required acoustic parameters {f, p_neg, DC} achieving I_ion = I_thresh
 
 ---
 
-## 11.11 kwavers Implementation
+## 17.11 kwavers Implementation
 
-### 11.11.1 Module Map
+### 17.11.1 Module Map
 
 | Module path | Functionality |
 |---|---|
@@ -544,7 +544,7 @@ Output: required acoustic parameters {f, p_neg, DC} achieving I_ion = I_thresh
 | `kwavers::physics::acoustics::therapy::sonogenetics::channels::constants` | k_B, T_body_K |
 | `kwavers::physics::acoustics::therapy::sonogenetics::neuron` | LifNeuron, LifParams |
 
-### 11.11.2 End-to-End Simulation Example
+### 17.11.2 End-to-End Simulation Example
 
 ```rust
 use kwavers::physics::acoustics::therapy::sonogenetics::{
@@ -603,7 +603,7 @@ for step in 0..n_steps_lif {
 println!("Firing rate: {:.1} Hz", neuron.mean_firing_rate(t_son));
 ```
 
-### 11.11.3 Parameter Validation
+### 17.11.3 Parameter Validation
 
 `MechanoChannel` in `kwavers::physics::acoustics::therapy::sonogenetics::channels::identity`
 holds the canonical parameter set for each channel variant. Before any simulation, parameters
@@ -617,7 +617,7 @@ are validated:
 Negative steepness_pa for pressure-threshold channels is rejected by `pressure_threshold_p_open`
 with a `KwaversError::Validation` error.
 
-### 11.11.4 Safety Checks in the Clinical Integration Layer
+### 17.11.4 Safety Checks in the Clinical Integration Layer
 
 `kwavers::clinical::therapy` orchestrates sonogenetics protocols and enforces:
 
@@ -632,9 +632,9 @@ returns a `ClinicalSafetyError`.
 
 ---
 
-## 11.12 Current Research State
+## 17.12 Current Research State
 
-### 11.12.1 Invertebrate Validation
+### 17.12.1 Invertebrate Validation
 
 Ibsen et al. (2015) injected hsTRPA1 mRNA into *C. elegans* and exposed animals to 70 kHz
 focused ultrasound at MI ≈ 0.4. Only injected animals showed backward locomotion, confirming
@@ -646,7 +646,7 @@ in specific flight control neurons and showed acoustic activation at 40 kHz alte
 trajectory. The experiment established that native invertebrate channels could serve as
 sonogenetic actuators without requiring cross-species protein expression.
 
-### 11.12.2 Mammalian Deep Brain Activation
+### 17.12.2 Mammalian Deep Brain Activation
 
 Xian et al. (2023) delivered MscL-G22S (a gain-of-function mutant with reduced T_half)
 via AAV to mouse motor cortex and thalamic nuclei. Focused 0.5-MHz ultrasound at 0.2–0.5 MPa
@@ -660,7 +660,7 @@ reduced T_half, while MscS required the highest. The differential profile allows
 selection based on the desired activation threshold, informing the parameter lookup table
 in `MechanoChannel`.
 
-### 11.12.3 Native Mammalian Channels: TRPC6
+### 17.12.3 Native Mammalian Channels: TRPC6
 
 Shimojo et al. (2024) demonstrated that TRPC6, a native mammalian mechanosensitive channel,
 is activated by focused ultrasound in mouse brain neurons at 0.5 MHz and 0.3 MPa. Unlike
@@ -673,18 +673,18 @@ Matsushita et al. (2024) confirmed TRPC6-mediated selective sonogenetic activati
 showed that cell-type specificity could be achieved by targeting brain regions with distinct
 TRPC6 expression levels, extending the applicability without requiring genetic modification.
 
-### 11.12.4 hsTRPA1 in Mammals
+### 17.12.4 hsTRPA1 in Mammals
 
 Duque et al. (2023, *Science*) expressed hsTRPA1 in mouse neurons via AAV and demonstrated
 acoustic activation at 500 kHz and 0.5 MPa, achieving action potential generation in vivo.
-The pressure-threshold model (Section 11.6) was validated against their dose-response data
+The pressure-threshold model (Section 17.6) was validated against their dose-response data
 with P_half ≈ 35 Pa and s ≈ 5 Pa.
 
 ---
 
-## 11.13 Therapeutic Opportunities
+## 17.13 Therapeutic Opportunities
 
-### 11.13.1 Targeted Neuronal Activation
+### 17.13.1 Targeted Neuronal Activation
 
 The primary near-term clinical application is non-invasive brain stimulation with cell-type
 specificity exceeding that of transcranial magnetic stimulation (TMS) or transcranial direct
@@ -697,7 +697,7 @@ current stimulation (tDCS). Potential targets:
 - **Psychiatric disorders**: activation of prefrontal cortical circuits for depression or
   OCD, with millimetre-scale spatial precision.
 
-### 11.13.2 Acoustic Gene Therapy
+### 17.13.2 Acoustic Gene Therapy
 
 Combining focused ultrasound with acoustically responsive gene expression systems
 (mechanoresponsive promoters or viral capsids functionalized with acoustic contrast
@@ -705,14 +705,14 @@ agents) enables spatially controlled gene delivery and expression. The sonogenet
 pipeline in kwavers models the acoustic field component; the gene expression kinetics
 require coupling to a pharmacokinetic model (not implemented in the current version).
 
-### 11.13.3 Cell Sorting and Immune Cell Activation
+### 17.13.3 Cell Sorting and Immune Cell Activation
 
-Acoustic radiation force separates cells by size and compressibility (Section 11.3). In
+Acoustic radiation force separates cells by size and compressibility (Section 17.3). In
 microfluidic devices, this enables label-free cell sorting. For immunotherapy, focused
 ultrasound can activate adoptively transferred CAR-T cells expressing mechanosensitive
 channels at tumour sites, combining spatial targeting with immune activation.
 
-### 11.13.4 Comparison with Optogenetics
+### 17.13.4 Comparison with Optogenetics
 
 | Dimension | Optogenetics | Sonogenetics |
 |---|---|---|
@@ -726,24 +726,24 @@ channels at tumour sites, combining spatial targeting with immune activation.
 
 ---
 
-## 11.14 Figure References
+## 17.14 Figure References
 
-- **Figure 11.1**: Sonogenetics pipeline schematic: acoustic field → ARF → membrane tension →
+- **Figure 17.1**: Sonogenetics pipeline schematic: acoustic field → ARF → membrane tension →
   P_open → ion current → LIF spike. Located at `docs/book/figures/sonogenetics_pipeline.svg`.
-- **Figure 11.2**: Boltzmann P_open vs membrane tension for MscL-G22S, MscL-G22N, MscS,
+- **Figure 17.2**: Boltzmann P_open vs membrane tension for MscL-G22S, MscL-G22N, MscS,
   Piezo1, TRPC6 at T = 310 K.
-- **Figure 11.3**: Acoustic radiation force body force density F(x) [N/m³] from a 500-kHz
+- **Figure 17.3**: Acoustic radiation force body force density F(x) [N/m³] from a 500-kHz
   focused transducer; 3D cross-section through focus.
-- **Figure 11.4**: LIF neuron response to sonogenetic drive: I_ion(t) (top), V_m(t) (middle),
+- **Figure 17.4**: LIF neuron response to sonogenetic drive: I_ion(t) (top), V_m(t) (middle),
   raster plot of spikes vs pulse duty cycle (bottom).
-- **Figure 11.5**: Thermal safety budget: CEM43 vs duty cycle for three frequencies
+- **Figure 17.5**: Thermal safety budget: CEM43 vs duty cycle for three frequencies
   (250 kHz, 500 kHz, 1 MHz) at I_SPPA = 500 W/m²; safety threshold CEM43 = 0.1 min overlaid.
-- **Figure 11.6**: Channel activation comparison: P_open vs I_SPPA for MscL-G22S, TRPC6,
+- **Figure 17.6**: Channel activation comparison: P_open vs I_SPPA for MscL-G22S, TRPC6,
   and hsTRPA1 at R = 10 μm, c = 1500 m/s, T = 310 K.
 
 ---
 
-## 11.15 References
+## 17.15 References
 
 1. Ibsen, S., Tong, A., Schutt, C., Esener, S., & Chalasani, S. H. (2015). Sonogenetics is a
    non-invasive approach to activating neurons in *Caenorhabditis elegans*. *Nature

@@ -3,16 +3,16 @@
 //! Orchestrates physics simulations using a plugin architecture.
 //! Follows SOLID principles with clear separation of concerns.
 
+use crate::plugin::Plugin;
+use crate::plugin::PluginManager;
+use kwavers_boundary::Boundary;
 use kwavers_core::error::KwaversResult;
 use kwavers_core::time::Time;
-use kwavers_boundary::Boundary;
 use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use crate::plugin::Plugin;
 use kwavers_receiver::recorder::traits::RecorderTrait;
 use kwavers_source::{Source, SourceField};
-use crate::plugin::PluginManager;
 use log::{debug, info};
 use ndarray::Array3;
 use std::sync::Arc;
@@ -332,9 +332,9 @@ impl PluginBasedSolver {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use kwavers_boundary::DomainPMLBoundary;
     use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use kwavers_core::constants::numerical::MHZ_TO_HZ;
-    use kwavers_boundary::DomainPMLBoundary;
     use kwavers_medium::homogeneous::HomogeneousMedium;
     use kwavers_signal::SineWave;
     use kwavers_source::PointSource;

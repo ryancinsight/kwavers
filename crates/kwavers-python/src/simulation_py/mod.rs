@@ -29,17 +29,15 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyAny;
 
-
-use kwavers_source::GridSource;
 use kwavers_simulation::{
     HelmholtzConfig as KwaversHelmholtzConfig, NonlinearConfig as KwaversNonlinearConfig,
     PmlConfig as KwaversPmlConfig, PoroelasticConfig as KwaversPoroelasticConfig,
-    ThermalConfig as KwaversThermalConfig,
-    SimulationRunRequest, SimulationRunner,
+    SimulationRunRequest, SimulationRunner, ThermalConfig as KwaversThermalConfig,
 };
 use kwavers_solver::forward::fdtd::config::KSpaceCorrectionMode;
 use kwavers_solver::forward::pstd::config::CompatibilityMode;
 use kwavers_solver::forward::pstd::extensions::{ElasticPstdSourceMode, ElasticPstdVelocitySource};
+use kwavers_source::GridSource;
 
 use crate::config_builders::{
     HelmholtzConfig as PyHelmholtzConfig, NonlinearConfig as PyNonlinearConfig,
@@ -645,9 +643,7 @@ impl Simulation {
 
         // ── Guard: time_steps must be at least 1 ──────────────────────────
         if time_steps == 0 {
-            return Err(PyValueError::new_err(
-                "time_steps must be at least 1"
-            ));
+            return Err(PyValueError::new_err("time_steps must be at least 1"));
         }
 
         // ── Fall back to sensor record modes when not explicitly passed ────
@@ -676,12 +672,15 @@ impl Simulation {
             SolverType::Helmholtz => kwavers_solver::config::SolverType::Helmholtz,
             SolverType::BEM => kwavers_solver::config::SolverType::BEM,
             SolverType::DG => kwavers_solver::config::SolverType::DG,
-            SolverType::RayleighSommerfeld => kwavers_solver::config::SolverType::RayleighSommerfeld,
+            SolverType::RayleighSommerfeld => {
+                kwavers_solver::config::SolverType::RayleighSommerfeld
+            }
             SolverType::Poroelastic => kwavers_solver::config::SolverType::Poroelastic,
             SolverType::PstdGpu => kwavers_solver::config::SolverType::PstdGpu,
             other => {
                 return Err(PyValueError::new_err(format!(
-                    "Unsupported solver type: {:?}", other
+                    "Unsupported solver type: {:?}",
+                    other
                 )))
             }
         };
@@ -715,10 +714,10 @@ impl Simulation {
             self.transducer_sensor.as_ref(),
         );
 
-        let transducer_ordered_indices =
-            self.transducer_sensor.as_ref().map(|ts| {
-                Simulation::create_transducer_ordered_indices(&self.grid.inner, &ts.inner)
-            });
+        let transducer_ordered_indices = self
+            .transducer_sensor
+            .as_ref()
+            .map(|ts| Simulation::create_transducer_ordered_indices(&self.grid.inner, &ts.inner));
 
         // ── Config references (moved from config builders, no clone) ────────
         // ── Extract transducer refs for RS solver ───────────────────────────
@@ -726,15 +725,19 @@ impl Simulation {
             self.transducers.iter().map(|t| t.inner.clone()).collect();
 
         // ── Convert elastic velocity source ─────────────────────────────────
-        let kwavers_elastic_vsrc = elastic_velocity_source.map(
-            |(mask, ux, uy, uz, mode_str)| {
-                let mode = match mode_str.as_str() {
-                    "dirichlet" => ElasticPstdSourceMode::Dirichlet,
-                    _ => ElasticPstdSourceMode::Additive,
-                };
-                ElasticPstdVelocitySource { mask, ux, uy, uz, mode }
-            },
-        );
+        let kwavers_elastic_vsrc = elastic_velocity_source.map(|(mask, ux, uy, uz, mode_str)| {
+            let mode = match mode_str.as_str() {
+                "dirichlet" => ElasticPstdSourceMode::Dirichlet,
+                _ => ElasticPstdSourceMode::Additive,
+            };
+            ElasticPstdVelocitySource {
+                mask,
+                ux,
+                uy,
+                uz,
+                mode,
+            }
+        });
 
         // ── Build request ───────────────────────────────────────────────────
         let req = SimulationRunRequest {
@@ -744,8 +747,14 @@ impl Simulation {
             dt,
             solver_type,
             pml: self.pml_config.as_ref(),
-            helmholtz: self.helmholtz_config.as_ref().filter(|cfg| cfg.frequency.is_some()),
-            nonlinear: self.nonlinear_config.as_ref().filter(|cfg| cfg.enabled || cfg.alpha_coeff > 0.0),
+            helmholtz: self
+                .helmholtz_config
+                .as_ref()
+                .filter(|cfg| cfg.frequency.is_some()),
+            nonlinear: self
+                .nonlinear_config
+                .as_ref()
+                .filter(|cfg| cfg.enabled || cfg.alpha_coeff > 0.0),
             thermal: self.thermal.as_ref(),
             poroelastic: self.poroelastic.as_ref(),
             compatibility_mode: self.compatibility_mode,
@@ -766,12 +775,9 @@ impl Simulation {
         };
 
         // ── Run ─────────────────────────────────────────────────────────────
-        let result = SimulationRunner::run(&req, dynamic_sources)
-            .map_err(|e| kwavers_error_to_py(e))?;
+        let result = SimulationRunner::run(&req, dynamic_sources).map_err(kwavers_error_to_py)?;
 
         // ── Build Python result ─────────────────────────────────────────────
-        Python::attach(|py| {
-            build_simulation_result(py, &result, &self.grid.inner, time_steps, dt)
-        })
+        Python::attach(|py| build_simulation_result(py, &result, &self.grid.inner, time_steps, dt))
     }
 }

@@ -21,8 +21,8 @@
 //! removes rejected modes without changing their phase. Constant fields are
 //! invariant because `H(0,0,0)=1`.
 
-use kwavers_core::error::{KwaversError, KwaversResult};
 use crate::fft::{fft_3d_array_into, ifft_3d_array_into, Complex64};
+use kwavers_core::error::{KwaversError, KwaversResult};
 use ndarray::{Array3, ArrayView3};
 use std::f64::consts::PI;
 

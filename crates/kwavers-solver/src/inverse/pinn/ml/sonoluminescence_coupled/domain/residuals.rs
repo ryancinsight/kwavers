@@ -8,8 +8,8 @@
 use burn::tensor::{backend::AutodiffBackend, Tensor};
 
 use super::SonoluminescenceCoupledDomain;
-use kwavers_core::constants::fundamental::{VACUUM_PERMEABILITY, VACUUM_PERMITTIVITY};
 use crate::inverse::pinn::ml::physics::PinnDomainPhysicsParameters;
+use kwavers_core::constants::fundamental::{VACUUM_PERMEABILITY, VACUUM_PERMITTIVITY};
 
 impl<B: AutodiffBackend> SonoluminescenceCoupledDomain<B> {
     /// Interpolate the sonoluminescence emission field at query coordinates
