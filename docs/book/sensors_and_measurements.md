@@ -1,4 +1,4 @@
-# Chapter 6: Sensors and Measurements
+# Chapter 8: Sensors and Measurements
 
 ## 1. Introduction
 
@@ -53,7 +53,7 @@ angle-dependent pressure sensitivity (directivity function) of
 H(θ) = 2 J_1(ka sinθ) / (ka sinθ)
 ```
 
-identical in form to the piston transmit directivity derived in Chapter 5. By the reciprocity
+identical in form to the piston transmit directivity derived in Chapter 6. By the reciprocity
 principle, the receive directivity of a passive element equals its transmit directivity.
 
 For a square element of half-width `b`, the directivity is separable:
@@ -81,7 +81,7 @@ integrated output is
 S(θ) = ∫∫_aperture p_0 e^{ikx sinθ} dA.
 ```
 For a circular aperture the integral evaluates identically to the Huygens-Fresnel piston
-calculation of Chapter 5, yielding `H(θ) = 2J_1(ka sinθ)/(ka sinθ)`.       □
+calculation of Chapter 6, yielding `H(θ) = 2J_1(ka sinθ)/(ka sinθ)`.       □
 
 ### Calibration via Reciprocity
 
@@ -113,6 +113,12 @@ frequencies or larger elements:
 ```
 H(-3 dB angle) ≈ arcsin(1.6 / (ka))   (angular half-power width)
 ```
+
+![Hydrophone directivity H(theta) for ka=0.5,1,2](figures/ch14/fig01_hydrophone_directivity.png)
+
+**Figure 6.1.** Circular-hydrophone receive directivity H(θ) = 2J₁(ka sinθ)/(ka sinθ) for
+ka = 0.5, 1, 2. Smaller elements (ka ≤ 1) stay near-omnidirectional; larger elements
+narrow and develop sidelobes — the receive analog of the piston pattern (Sources §3).
 
 ---
 
@@ -182,6 +188,11 @@ element count), grating lobe suppression requires:
 
 kwavers supports non-uniform sensor masks natively; the sensor mask is an arbitrary binary
 array with no geometric constraint enforced at construction time.
+
+![Grating lobes: d=lambda/2 vs d=lambda](figures/ch14/fig02_grating_lobes.png)
+
+**Figure 6.2.** Array beam pattern at d = λ/2 (no grating lobes) versus d = λ, where a
+broadside signal aliases to end-fire — the spatial-Nyquist limit of §3.
 
 ---
 
@@ -258,7 +269,7 @@ which is a second-order accurate centered-difference approximation to `ρ ∂u_x
 For simulation steps where velocity sensors are active, kwavers records the three staggered
 velocity components at the nearest grid node to each sensor position. The staggered-to-collocated
 interpolation (averaging two adjacent nodes) is performed post-hoc in
-`kwavers::domain::sensor::recorder::velocity_statistics::interpolate_staggered_to_collocated`
+`kwavers_domain::sensor::recorder::velocity_statistics::interpolate_staggered_to_collocated`
 to produce a co-located velocity estimate for output:
 ```rust
 pub fn interpolate_staggered_to_collocated(
@@ -267,6 +278,11 @@ pub fn interpolate_staggered_to_collocated(
     uz_staggered: &Array3<f64>,
 ) -> (Array3<f64>, Array3<f64>, Array3<f64>)
 ```
+
+![Pressure and particle-velocity waveforms](figures/ch14/fig03_pressure_velocity.png)
+
+**Figure 6.3.** Pressure and particle-velocity waveforms for a progressive plane wave:
+u = p/(ρc) (in phase), with the ratio fixed by the specific acoustic impedance Z = ρc.
 
 ---
 
@@ -359,6 +375,12 @@ identical to the forward beamformed resolution. In a heterogeneous random medium
 scattering provides virtual aperture extension beyond `D`, potentially exceeding the
 diffraction limit (super-resolution time reversal, Derode et al., 2003).
 
+![Time-reversal focal spot vs DAS](figures/ch14/fig04_time_reversal.png)
+
+**Figure 6.4.** Time-reversal focusing in a homogeneous medium: re-emitting the
+phase-conjugated recordings reconstructs a diffraction-limited focus at the original
+source location, matching delay-and-sum beamforming (§5).
+
 ---
 
 ## 6. Algorithm: Sensor Recording Contract
@@ -430,7 +452,7 @@ active_fortran = np.argwhere(mask.T).T  # transpose mask before argwhere → x v
 flat_indices = np.flatnonzero(mask.ravel(order='F'))  # Fortran-order flat indices
 ```
 
-In the kwavers Rust implementation (`kwavers::domain::sensor::recorder`), the active cell
+In the kwavers Rust implementation (`kwavers_domain::sensor::recorder`), the active cell
 enumeration iterates with x as the outer loop and z as the inner loop by convention,
 producing the Fortran-order sequence without explicit transposition.
 
@@ -461,6 +483,11 @@ harmonic content.
 Checkpoint files (`.kwcp` format) serialize the current recorder state using `rkyv`, enabling
 exact restoration of accumulated sensor data across interrupted simulation runs. The ordering
 invariant is preserved across checkpoint boundaries.
+
+![Recorded vs reference sensor signal](figures/ch14/fig05_signal_comparison.png)
+
+**Figure 6.5.** Recorded sensor time series versus the analytic/k-Wave reference,
+validating the recording contract and Fortran-order convention of §6.
 
 ---
 
@@ -575,7 +602,7 @@ p_DAS(r) = Σ_{n=1}^{M} s_n(τ_n(r)) · w_n(r)
 ```
 where `τ_n(r) = |r - r_n| / c` is the travel time from pixel to sensor `n`, and `w_n(r)`
 is an apodization weight. This is equivalent to the backprojection algorithm and is
-implemented in `kwavers::analysis::signal_processing::beamforming`.
+implemented in `kwavers_analysis::signal_processing::beamforming`.
 
 ### Coherence-Based Weighting
 
@@ -594,7 +621,7 @@ signal-to-noise-ratio dependent and rejects uncorrelated noise naturally.
 ### Module Structure
 
 ```
-kwavers::domain::sensor
+kwavers_domain::sensor
 ├── mod.rs                          Sensor trait, SensorType, SensorField
 ├── array.rs                        SensorArray: multi-element sensor collections
 ├── grid_sampling.rs                Sensor mask sampling, interpolation weights
@@ -757,21 +784,13 @@ contributions to signal contamination are:
 
 ---
 
-## 11. Figure References
+## 11. Figure Generation
 
-The following figures should be generated from the corresponding Python validation scripts
-in `pykwavers/examples/` and stored in `docs/book/figures/`:
-
-| Figure | Script | Description |
-|--------|--------|-------------|
-| Fig 6.1 | `hydrophone_directivity.py` | H(θ) for ka = 0.5, 1, 2 (circular element) |
-| Fig 6.2 | `spatial_aliasing.py` | Beam pattern with d = λ/2 vs d = λ (grating lobes) |
-| Fig 6.3 | `pressure_velocity.py` | Pressure and velocity waveforms: plane wave, Z = ρc |
-| Fig 6.4 | `time_reversal_focus.py` | TR focal spot in homogeneous medium vs DAS |
-| Fig 6.5 | `sensor_ordering.py` | Sensor mask active-cell ordering: Fortran vs C |
-| Fig 6.6 | `photoacoustic_forward.py` | Photoacoustic wavefield and sensor recording |
-| Fig 6.7 | `tr_reconstruction.py` | Iterative TR reconstruction of point absorber |
-| Fig 6.8 | `calibration_error.py` | Calibration error budget waterfall chart |
+Figures 6.1–6.5 are generated by
+`crates/kwavers-python/examples/book/ch14_sensors_and_measurements.py` and written to
+`docs/book/figures/ch14/`. Each derives from the analytic expressions in this chapter
+(directivity, array factor, impedance, time-reversal focus) with the field samples
+produced by the kwavers solver where a simulation is required.
 
 ---
 

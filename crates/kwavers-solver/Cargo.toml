@@ -1,0 +1,70 @@
+[package]
+name = "kwavers-solver"
+version = "3.0.0"
+edition = "2021"
+authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
+description = "Forward and inverse solvers for kwavers: FDTD/PSTD/k-space/Helmholtz, BEM, FWI/RTM/CBS, PINN"
+license = "MIT"
+repository = "https://github.com/ryancinsight/kwavers"
+
+[dependencies]
+kwavers-core = { path = "../kwavers-core" }
+kwavers-math = { path = "../kwavers-math" }
+kwavers-grid = { path = "../kwavers-grid" }
+kwavers-imaging = { path = "../kwavers-imaging" }
+kwavers-transducer = { path = "../kwavers-transducer" }
+kwavers-receiver = { path = "../kwavers-receiver" }
+kwavers-source = { path = "../kwavers-source" }
+kwavers-boundary = { path = "../kwavers-boundary" }
+kwavers-mesh = { path = "../kwavers-mesh" }
+kwavers-medium = { path = "../kwavers-medium" }
+kwavers-field = { path = "../kwavers-field" }
+kwavers-signal = { path = "../kwavers-signal" }
+kwavers-physics = { path = "../kwavers-physics" }
+ndarray = { version = "0.16", features = ["rayon", "serde"] }
+ndarray-npy = { version = "0.9", default-features = false, features = ["compressed_npz"] }
+nalgebra = { version = "0.32" }
+num-complex = "0.4"
+num-traits = "0.2"
+serde = { version = "1.0", features = ["derive"] }
+log = "0.4"
+rayon = "1.10"
+rand = "0.8"
+rand_chacha = "0.3"
+anyhow = "1.0"
+bitflags = "2.4"
+parking_lot = "0.12"
+tracing = { version = "0.1", features = ["attributes"] }
+apollo = { workspace = true }
+burn = { version = "0.19", features = ["ndarray", "autodiff", "wgpu"] }
+
+# Optional GPU stack (the `backend::gpu` subtree + gpu_pstd are feature-gated).
+wgpu = { version = "26.0", features = ["wgsl"], optional = true }
+bytemuck = { version = "1.19", features = ["derive"], optional = true }
+pollster = { version = "0.4", optional = true }
+apollofft-wgpu = { workspace = true, optional = true }
+# Optional async runtime (PINN distributed training / persistence).
+tokio = { version = "1.42", features = ["rt-multi-thread", "macros", "sync", "time", "fs", "io-util"], optional = true }
+# Typed errors for the PINN training/distributed subsystem.
+thiserror = { workspace = true, optional = true }
+
+[features]
+# Exposes `plugin::test_support` (NullBoundary + context helpers) for downstream
+# crates' tests.
+test-util = []
+gpu = ["dep:wgpu", "dep:bytemuck", "dep:pollster", "dep:apollofft-wgpu", "kwavers-core/gpu", "kwavers-math/gpu"]
+pinn = ["dep:tokio", "dep:thiserror"]
+pinn-gpu = ["pinn", "gpu"]
+burn-wgpu = ["pinn"]
+async-runtime = ["dep:tokio"]
+# Nightly-only code paths (portable `std::simd`); WIP, off by default.
+nightly = []
+# SIMD-accelerated PINN inference (WIP, nightly-only — implies `nightly` so the
+# engine and `SimdExecutor` cfg-gates activate together).
+simd = ["nightly"]
+
+[dev-dependencies]
+approx = "0.5"
+
+[lints]
+workspace = true

@@ -1,0 +1,25 @@
+[package]
+name = "kwavers-imaging"
+version = "3.0.0"
+edition = "2021"
+authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
+description = "Medical-imaging domain workflows for kwavers: DICOM/CT/NIfTI loaders, ultrasound/photoacoustic modalities, CEUS orchestration, multimodality fusion"
+license = "MIT"
+repository = "https://github.com/ryancinsight/kwavers"
+
+[dependencies]
+kwavers-core = { path = "../kwavers-core", features = ["registration", "nifti"] }
+kwavers-grid = { path = "../kwavers-grid" }
+kwavers-medium = { path = "../kwavers-medium" }
+ndarray = { version = "0.16", features = ["rayon", "serde"] }
+log = "0.4"
+burn = { version = "0.19", features = ["ndarray"] }
+ritk-core = { workspace = true }
+ritk-io = { workspace = true }
+ritk-registration = { workspace = true }
+
+[dev-dependencies]
+approx = "0.5"
+
+[lints]
+workspace = true

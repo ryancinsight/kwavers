@@ -1,0 +1,145 @@
+//! Source Localization Analysis Module
+//!
+//! Implements advanced source localization algorithms for passive acoustic mapping and
+//! source detection from transducer array signals.
+//!
+//! ## Algorithms
+//!
+//! ### 1. MUSIC (Multiple Signal Classification)
+//! - Super-resolution direction-of-arrival (DoA) estimation
+//! - Subspace-based method
+//! - Effective for multiple sources
+//! - References: Schmidt (1986), Stoica & Nehorai (1989)
+//!
+//! ### 2. TDOA (Time-Difference-of-Arrival) Triangulation
+//! - Localization from time delays between sensors
+//! - Iterative Newton-Raphson refinement
+//! - 2D and 3D support
+//! - References: Knapp & Carter (1976)
+//!
+//! ### 3. Bayesian Filtering
+//! - Extended Kalman Filter (EKF) for nonlinear state estimation
+//! - Unscented Kalman Filter (UKF) for improved accuracy
+//! - Particle filters for multi-modal distributions
+//! - References: Kalman (1960), Julier & Uhlmann (1997)
+//!
+//! ### 4. Wavefront Analysis
+//! - Spherical vs. plane wave detection
+//! - Source distance estimation from wavefront curvature
+//! - Plane wave detection for far-field sources
+//!
+//! ## Integration with Domain Layer
+//!
+//! All implementations satisfy the `LocalizationProcessor` trait from domain layer,
+//! ensuring clean architecture and easy swapping of algorithms.
+
+pub mod bayesian;
+pub mod beamforming_search;
+pub mod config;
+pub mod model_order;
+pub mod multilateration;
+pub mod music;
+pub mod tdoa;
+pub mod trilateration;
+pub mod wavefront;
+
+// Re-export core types
+pub use bayesian::{BayesianFilter, KalmanFilterConfig};
+pub use beamforming_search::{
+    BeamformSearch, BeamformingLocalizationInput, LocalizationBeamformSearchConfig,
+    LocalizationBeamformingMethod, MvdrCovarianceDomain, SearchGrid,
+};
+pub use config::AcousticLocalizationConfig;
+pub use model_order::{
+    ModelOrderConfig, ModelOrderCriterion, ModelOrderEstimator, ModelOrderResult,
+};
+pub use multilateration::{Multilateration, MultilaterationConfig};
+pub use music::{MUSICConfig, MUSICProcessor};
+pub use tdoa::{TDOAConfig, TDOAProcessor};
+pub use trilateration::{LocalizationResult, Trilateration};
+pub use wavefront::WavefrontAnalyzer;
+
+use kwavers_core::error::KwaversResult;
+
+/// Source location result
+#[derive(Debug, Clone)]
+pub struct SourceLocation {
+    /// Position [x, y, z] in meters
+    pub position: [f64; 3],
+
+    /// Confidence (0.0-1.0)
+    pub confidence: f64,
+
+    /// Uncertainty radius (m)
+    pub uncertainty: f64,
+}
+
+/// Localization algorithm trait
+pub trait LocalizationProcessor: Send + Sync {
+    /// Localize source from time-delay measurements
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    fn localize(
+        &self,
+        time_delays: &[f64],
+        sensor_positions: &[[f64; 3]],
+    ) -> KwaversResult<SourceLocation>;
+
+    /// Get processor name
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    fn name(&self) -> &str;
+}
+
+/// Create a MUSIC-based localization processor
+/// # Errors
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
+pub fn create_music_processor(
+    config: &MUSICConfig,
+) -> KwaversResult<Box<dyn LocalizationProcessor>> {
+    Ok(Box::new(MUSICProcessor::new(config)?))
+}
+
+/// Create a TDOA-based localization processor
+/// # Errors
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
+pub fn create_tdoa_processor(config: &TDOAConfig) -> KwaversResult<Box<dyn LocalizationProcessor>> {
+    Ok(Box::new(TDOAProcessor::new(config)?))
+}
+
+/// Create a Bayesian filtering localization processor
+/// # Errors
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
+pub fn create_bayesian_processor(
+    config: &KalmanFilterConfig,
+) -> KwaversResult<Box<dyn LocalizationProcessor>> {
+    Ok(Box::new(BayesianFilter::new(config)?))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_music_processor_creation() {
+        let config = MUSICConfig::default();
+        let _processor = create_music_processor(&config).unwrap();
+    }
+
+    #[test]
+    fn test_tdoa_processor_creation() {
+        let config = TDOAConfig::default();
+        let _processor = create_tdoa_processor(&config).unwrap();
+    }
+
+    #[test]
+    fn test_bayesian_processor_creation() {
+        let config = KalmanFilterConfig::default();
+        let _processor = create_bayesian_processor(&config).unwrap();
+    }
+}

@@ -1,0 +1,432 @@
+//! Fluid property catalogs
+//!
+//! Provides standardized fluid property definitions for:
+//! - Biological fluids (blood, cerebrospinal fluid)
+//! - Coupling fluids for ultrasound transducers
+//! - Contrast agents and suspensions
+//!
+//! Sources:
+//! - Duck (1990) - Physical Properties of Tissues
+//! - Perry & Green (2007) - Chemical Engineering Handbook
+//! - IEC 61161:2013 - Ultrasound equipment safety standard
+//! - Gordon et al. (2009) - Acoustic and thermal properties of blood at body temperature
+//!
+//! Temperature: 37°C (body temperature) unless otherwise noted
+//! Pressure: 1 atm unless otherwise noted
+
+use super::material::AcousticMaterialProperties;
+use kwavers_core::constants::acoustic_parameters::{
+    BLOOD_PLASMA_VISCOSITY_37C, BLOOD_VISCOSITY_37C,
+};
+use kwavers_core::constants::cavitation::VISCOSITY_WATER;
+use kwavers_core::constants::fundamental::{
+    ATMOSPHERIC_PRESSURE, DENSITY_TISSUE, DENSITY_WATER_37C, SOUND_SPEED_WATER,
+    SOUND_SPEED_WATER_37C,
+};
+use kwavers_core::constants::medical::BLOOD_SPECIFIC_HEAT;
+use kwavers_core::constants::optical::{
+    REFRACTIVE_INDEX_BIOLOGICAL_FLUID, REFRACTIVE_INDEX_CSF, REFRACTIVE_INDEX_WATER,
+};
+use kwavers_core::constants::thermodynamic::{
+    BODY_TEMPERATURE_C, ROOM_TEMPERATURE_C, SPECIFIC_HEAT_WATER_37C, THERMAL_CONDUCTIVITY_WATER_37C,
+};
+use kwavers_core::constants::tissue_acoustics::{
+    ACOUSTIC_ABSORPTION_BLOOD_PLASMA, ACOUSTIC_ABSORPTION_CSF, ACOUSTIC_ABSORPTION_URINE,
+    ACOUSTIC_ABSORPTION_WHOLE_BLOOD, B_OVER_A_BLOOD, B_OVER_A_CSF, B_OVER_A_MINERAL_OIL,
+    B_OVER_A_NANOPARTICLE_SUSPENSION, B_OVER_A_URINE, B_OVER_A_WATER, B_OVER_A_WATER_37C,
+    DENSITY_BLOOD, DENSITY_CSF, DENSITY_MICROBUBBLE_SUSPENSION, DENSITY_MINERAL_OIL,
+    DENSITY_ULTRASOUND_GEL, DENSITY_URINE, SOUND_SPEED_BLOOD, SOUND_SPEED_CSF,
+    SOUND_SPEED_MINERAL_OIL, SOUND_SPEED_NANOPARTICLE_SUSPENSION, SOUND_SPEED_ULTRASOUND_GEL,
+    SOUND_SPEED_URINE, WATER_ABSORPTION_ALPHA_0_DB_CM_MHZ2,
+};
+use kwavers_core::constants::tissue_thermal::{
+    SPECIFIC_HEAT_BLOOD_PLASMA, SPECIFIC_HEAT_CSF, SPECIFIC_HEAT_MICROBUBBLE_SUSPENSION,
+    SPECIFIC_HEAT_MINERAL_OIL, SPECIFIC_HEAT_NANOPARTICLE_SUSPENSION, SPECIFIC_HEAT_ULTRASOUND_GEL,
+    SPECIFIC_HEAT_URINE, THERMAL_CONDUCTIVITY_BLOOD, THERMAL_CONDUCTIVITY_BLOOD_PLASMA,
+    THERMAL_CONDUCTIVITY_CSF, THERMAL_CONDUCTIVITY_MICROBUBBLE_SUSPENSION,
+    THERMAL_CONDUCTIVITY_MINERAL_OIL, THERMAL_CONDUCTIVITY_NANOPARTICLE_SUSPENSION,
+    THERMAL_CONDUCTIVITY_ULTRASOUND_GEL, THERMAL_CONDUCTIVITY_URINE, THERMAL_DIFFUSIVITY_BLOOD,
+};
+
+/// Fluid material properties type alias
+pub type FluidProperties = AcousticMaterialProperties;
+
+// ============================================================================
+// Biological Fluids
+// ============================================================================
+
+/// Blood plasma at 37°C
+/// Source: Duck (1990), Gordon et al. (2009)
+/// Acoustic properties similar to water with slight frequency dependence
+pub const BLOOD_PLASMA: FluidProperties = FluidProperties {
+    sound_speed: SOUND_SPEED_BLOOD,
+    density: 1026.0,
+    impedance: 1624784.0,
+    absorption_coefficient: ACOUSTIC_ABSORPTION_BLOOD_PLASMA, // 0.015 dB/(cm·MHz^y) — Duck (1990)
+    absorption_exponent: 1.2,
+    nonlinearity_parameter: B_OVER_A_WATER, // 5.2 (Duck 1990 Table 4.16)
+    shear_viscosity: BLOOD_PLASMA_VISCOSITY_37C,
+    bulk_viscosity: 0.0,
+    specific_heat: SPECIFIC_HEAT_BLOOD_PLASMA,
+    thermal_conductivity: THERMAL_CONDUCTIVITY_BLOOD_PLASMA, // 0.55 W/(m·K)
+    // α = k/(ρ·cp) = 0.55 / (1026 × 3840) = 1.396e-7 m²/s
+    thermal_diffusivity: 1.396e-7,
+    perfusion_rate: 100.0, // Blood circulation rate
+    arterial_temperature: BODY_TEMPERATURE_C,
+    metabolic_heat: 0.0, // Carries heat via circulation
+    optical_absorption: 0.1,
+    optical_scattering: 10.0,
+    refractive_index: REFRACTIVE_INDEX_BIOLOGICAL_FLUID,
+    reference_temperature: BODY_TEMPERATURE_C,
+    reference_pressure: ATMOSPHERIC_PRESSURE,
+};
+
+/// Whole blood at 37°C (hematocrit 45%)
+/// Source: Duck (1990), Gordon et al. (2009)
+/// Contains red blood cells affecting acoustic properties
+pub const WHOLE_BLOOD: FluidProperties = FluidProperties {
+    sound_speed: SOUND_SPEED_BLOOD,
+    density: DENSITY_BLOOD,
+    impedance: 1_679_040.0, // DENSITY_BLOOD * SOUND_SPEED_BLOOD = 1060.0 × 1584.0
+    absorption_coefficient: ACOUSTIC_ABSORPTION_WHOLE_BLOOD, // 0.025 dB/(cm·MHz^y) — Duck (1990)
+    absorption_exponent: 1.3,
+    nonlinearity_parameter: B_OVER_A_BLOOD, // 6.1 (Duck 1990 Table 4.16)
+    shear_viscosity: BLOOD_VISCOSITY_37C,   // Non-Newtonian: shear-thinning
+    bulk_viscosity: 0.0,
+    specific_heat: BLOOD_SPECIFIC_HEAT,
+    thermal_conductivity: THERMAL_CONDUCTIVITY_BLOOD,
+    thermal_diffusivity: THERMAL_DIFFUSIVITY_BLOOD,
+    perfusion_rate: 100.0,
+    arterial_temperature: BODY_TEMPERATURE_C,
+    metabolic_heat: 0.0,
+    optical_absorption: 0.5, // Red blood cells scatter and absorb
+    optical_scattering: 50.0,
+    refractive_index: REFRACTIVE_INDEX_BIOLOGICAL_FLUID,
+    reference_temperature: BODY_TEMPERATURE_C,
+    reference_pressure: ATMOSPHERIC_PRESSURE,
+};
+
+/// Cerebrospinal fluid (CSF) at 37°C
+/// Source: Duck (1990)
+/// Similar to plasma but with slightly different composition
+pub const CSF: FluidProperties = FluidProperties {
+    sound_speed: SOUND_SPEED_CSF, // 1515.0 m/s — Duck (1990) Table 4.6 at 37°C
+    density: DENSITY_CSF,         // 1007.0 kg/m³ — Duck (1990) Table 4.1
+    // Z = ρ·c = DENSITY_CSF × SOUND_SPEED_CSF = 1007.0 × 1515.0 = 1 525 605 Pa·s/m
+    impedance: 1_525_605.0,
+    absorption_coefficient: ACOUSTIC_ABSORPTION_CSF, // 0.008 dB/(cm·MHz) — Duck (1990)
+    absorption_exponent: 1.1,
+    nonlinearity_parameter: B_OVER_A_CSF,
+    shear_viscosity: 0.7e-3, // Lower viscosity than blood
+    bulk_viscosity: 0.0,
+    specific_heat: SPECIFIC_HEAT_CSF,
+    thermal_conductivity: THERMAL_CONDUCTIVITY_CSF,
+    // α = k/(ρ·cp) = 0.60 / (1007 × 3900) = 1.528e-7 m²/s
+    thermal_diffusivity: 1.528e-7,
+    perfusion_rate: 0.0,
+    arterial_temperature: BODY_TEMPERATURE_C,
+    metabolic_heat: 0.0,
+    optical_absorption: 0.05,
+    optical_scattering: 5.0,
+    refractive_index: REFRACTIVE_INDEX_CSF,
+    reference_temperature: BODY_TEMPERATURE_C,
+    reference_pressure: ATMOSPHERIC_PRESSURE,
+};
+
+/// Urine at 37°C
+/// Source: Duck (1990)
+pub const URINE: FluidProperties = FluidProperties {
+    sound_speed: SOUND_SPEED_URINE, // 1541.0 m/s — Duck (1990) Table 4.6
+    density: DENSITY_URINE,         // 1005.0 kg/m³ — Duck (1990)
+    // Z = ρ·c = DENSITY_URINE × SOUND_SPEED_URINE = 1005.0 × 1541.0 = 1 548 705 Pa·s/m
+    impedance: 1_548_705.0,
+    absorption_coefficient: ACOUSTIC_ABSORPTION_URINE, // 0.012 dB/(cm·MHz) — Duck (1990)
+    absorption_exponent: 1.15,
+    nonlinearity_parameter: B_OVER_A_URINE, // 5.1 (Duck 1990)
+    shear_viscosity: 0.95e-3,
+    bulk_viscosity: 0.0,
+    specific_heat: SPECIFIC_HEAT_URINE,
+    thermal_conductivity: THERMAL_CONDUCTIVITY_URINE,
+    // α = k/(ρ·cp) = 0.61 / (1005 × 3680) = 1.649e-7 m²/s
+    thermal_diffusivity: 1.649e-7,
+    perfusion_rate: 0.0,
+    arterial_temperature: BODY_TEMPERATURE_C,
+    metabolic_heat: 0.0,
+    optical_absorption: 0.2,
+    optical_scattering: 15.0,
+    refractive_index: REFRACTIVE_INDEX_BIOLOGICAL_FLUID,
+    reference_temperature: BODY_TEMPERATURE_C,
+    reference_pressure: ATMOSPHERIC_PRESSURE,
+};
+
+// ============================================================================
+// Coupling and Contact Fluids
+// ============================================================================
+
+/// Ultrasound gel (acoustic coupling medium)
+/// Source: Perry & Green (2007)
+/// Typical commercial formulation based on mineral oil and thickening agents
+pub const ULTRASOUND_GEL: FluidProperties = FluidProperties {
+    sound_speed: SOUND_SPEED_ULTRASOUND_GEL, // 1550.0 m/s — Perry & Green (2007)
+    density: DENSITY_ULTRASOUND_GEL,         // 1020.0 kg/m³ — Perry & Green (2007)
+    // Z = ρ·c = DENSITY_ULTRASOUND_GEL × SOUND_SPEED_ULTRASOUND_GEL = 1020 × 1550 = 1 581 000
+    impedance: 1581000.0,
+    absorption_coefficient: 0.008,
+    absorption_exponent: 1.1,
+    nonlinearity_parameter: B_OVER_A_WATER_37C, // 5.0 at 37°C (water-based gel)
+    shear_viscosity: 5.0,                       // Highly viscous for contact
+    bulk_viscosity: 0.0,
+    specific_heat: SPECIFIC_HEAT_ULTRASOUND_GEL,
+    thermal_conductivity: THERMAL_CONDUCTIVITY_ULTRASOUND_GEL,
+    // α = k/(ρ·cp) = 0.15 / (1020 × 3300) = 4.456e-8 m²/s
+    thermal_diffusivity: 4.456e-8,
+    perfusion_rate: 0.0,
+    arterial_temperature: ROOM_TEMPERATURE_C,
+    metabolic_heat: 0.0,
+    optical_absorption: 0.1,
+    optical_scattering: 20.0,
+    refractive_index: 1.45,
+    reference_temperature: ROOM_TEMPERATURE_C,
+    reference_pressure: ATMOSPHERIC_PRESSURE,
+};
+
+/// Mineral oil (acoustic coupling medium)
+/// Source: Perry & Green (2007)
+/// Pure liquid medium without polymer additives
+pub const MINERAL_OIL: FluidProperties = FluidProperties {
+    sound_speed: SOUND_SPEED_MINERAL_OIL, // 1450.0 m/s — Perry & Green (2007)
+    density: DENSITY_MINERAL_OIL,         // 870.0 kg/m³ — Perry & Green (2007)
+    // Z = ρ·c = DENSITY_MINERAL_OIL × SOUND_SPEED_MINERAL_OIL = 870 × 1450 = 1 261 500
+    impedance: 1261500.0,
+    absorption_coefficient: 0.005,
+    absorption_exponent: 1.0,
+    nonlinearity_parameter: B_OVER_A_MINERAL_OIL, // 4.5 (Perry & Green 2007)
+    shear_viscosity: 80.0e-3,                     // Low viscosity
+    bulk_viscosity: 0.0,
+    specific_heat: SPECIFIC_HEAT_MINERAL_OIL,
+    thermal_conductivity: THERMAL_CONDUCTIVITY_MINERAL_OIL,
+    thermal_diffusivity: 7.62e-8,
+    perfusion_rate: 0.0,
+    arterial_temperature: ROOM_TEMPERATURE_C,
+    metabolic_heat: 0.0,
+    optical_absorption: 0.01,
+    optical_scattering: 5.0,
+    refractive_index: 1.47,
+    reference_temperature: ROOM_TEMPERATURE_C,
+    reference_pressure: ATMOSPHERIC_PRESSURE,
+};
+
+/// Distilled water at 37°C
+///
+/// Sources:
+/// - Del Grosso VA, Mader CW (1972). "Speed of sound in pure water."
+///   *J. Acoust. Soc. Am.* **52**(5):1442–1446.  c(37 °C) = 1524.0 m/s.
+/// - Duck FA (1990). *Physical Properties of Tissue*. Academic Press, Table 2.1.
+/// - IEC 61161:2013 (reference conditions for acoustic power measurements).
+///
+/// Note: 1497 m/s is the value at ~25 °C, not 37 °C.  Water sound speed
+/// increases monotonically with temperature up to ≈74 °C; the physiological
+/// value is 1524 m/s.
+///
+/// Impedance Z = ρ·c = 993.3 × 1524 = 1 513 789 Pa·s/m.
+pub const WATER_37C: FluidProperties = FluidProperties {
+    sound_speed: SOUND_SPEED_WATER_37C,
+    density: DENSITY_WATER_37C,
+    // Z = ρ·c = DENSITY_WATER_37C × SOUND_SPEED_WATER_37C = 993.3 × 1524 = 1 513 789 Pa·s/m
+    impedance: 1_513_789.0,
+    absorption_coefficient: WATER_ABSORPTION_ALPHA_0_DB_CM_MHZ2, // 0.002 dB/(cm·MHz²) — Duck (1990)
+    absorption_exponent: 2.0,
+    nonlinearity_parameter: B_OVER_A_WATER_37C, // 5.0 at 37°C (Duck 1990 Table 4.16)
+    shear_viscosity: 0.7e-3,
+    bulk_viscosity: 0.0,
+    specific_heat: SPECIFIC_HEAT_WATER_37C,
+    thermal_conductivity: THERMAL_CONDUCTIVITY_WATER_37C,
+    // α = k/(ρ·cp) = 0.623 / (993.3 × 4180) = 1.499e-7 m²/s
+    thermal_diffusivity: 1.499e-7,
+    perfusion_rate: 0.0,
+    arterial_temperature: BODY_TEMPERATURE_C,
+    metabolic_heat: 0.0,
+    optical_absorption: 0.0,
+    optical_scattering: 0.0,
+    refractive_index: REFRACTIVE_INDEX_WATER,
+    reference_temperature: BODY_TEMPERATURE_C,
+    reference_pressure: ATMOSPHERIC_PRESSURE,
+};
+
+// ============================================================================
+// Contrast Agents and Suspensions
+// ============================================================================
+
+/// Microbubble contrast agent (typical formulation)
+/// Source: Stride & Saffari (2003) - Microbubble suspensions for contrast imaging
+/// Mostly water with suspended gas bubbles (~3-10 μm diameter)
+/// Effective properties depend on bubble concentration
+pub const MICROBUBBLE_SUSPENSION: FluidProperties = FluidProperties {
+    sound_speed: SOUND_SPEED_WATER,
+    density: DENSITY_MICROBUBBLE_SUSPENSION, // 1010.0 kg/m³ — Stride & Saffari (2003)
+    // Z = ρ·c = DENSITY_MICROBUBBLE_SUSPENSION × SOUND_SPEED_WATER = 1010.0 × 1482.0 = 1 496 820
+    impedance: 1_496_820.0,
+    absorption_coefficient: 0.05, // Higher absorption due to bubble resonance
+    absorption_exponent: 1.5,
+    nonlinearity_parameter: B_OVER_A_WATER, // 5.2 (Duck 1990 Table 4.16)
+    shear_viscosity: 0.8e-3,
+    bulk_viscosity: 0.0,
+    specific_heat: SPECIFIC_HEAT_MICROBUBBLE_SUSPENSION, // 4170.0 J/(kg·K)
+    thermal_conductivity: THERMAL_CONDUCTIVITY_MICROBUBBLE_SUSPENSION, // 0.60 W/(m·K)
+    // α = k/(ρ·cp) = 0.60 / (1010 × 4170) = 1.425e-7 m²/s
+    thermal_diffusivity: 1.425e-7,
+    perfusion_rate: 0.0,
+    arterial_temperature: BODY_TEMPERATURE_C,
+    metabolic_heat: 0.0,
+    optical_absorption: 0.2,
+    optical_scattering: 30.0,
+    refractive_index: REFRACTIVE_INDEX_WATER,
+    reference_temperature: BODY_TEMPERATURE_C,
+    reference_pressure: ATMOSPHERIC_PRESSURE,
+};
+
+/// Nanoparticle suspension (iron oxide or gold nanoparticles)
+/// Source: Stride & Saffari (2003)
+/// Water-based carrier with suspended nanoparticles for theranostics
+pub const NANOPARTICLE_SUSPENSION: FluidProperties = FluidProperties {
+    sound_speed: SOUND_SPEED_NANOPARTICLE_SUSPENSION, // 1490.0 m/s — Stride & Saffari (2003)
+    density: DENSITY_TISSUE,
+    // Z = ρ·c = DENSITY_TISSUE × SOUND_SPEED_NANOPARTICLE_SUSPENSION = 1050 × 1490 = 1 564 500
+    impedance: 1_564_500.0,
+    absorption_coefficient: 0.03,
+    absorption_exponent: 1.2,
+    nonlinearity_parameter: B_OVER_A_NANOPARTICLE_SUSPENSION, // 5.3 (Stride & Saffari 2003)
+    shear_viscosity: VISCOSITY_WATER,                         // water-based carrier
+    bulk_viscosity: 0.0,
+    specific_heat: SPECIFIC_HEAT_NANOPARTICLE_SUSPENSION, // 4150.0 J/(kg·K)
+    thermal_conductivity: THERMAL_CONDUCTIVITY_NANOPARTICLE_SUSPENSION, // 0.59 W/(m·K)
+    thermal_diffusivity: 1.36e-7,
+    perfusion_rate: 0.0,
+    arterial_temperature: BODY_TEMPERATURE_C,
+    metabolic_heat: 0.0,
+    optical_absorption: 1.0, // Significant optical absorption
+    optical_scattering: 100.0,
+    refractive_index: 1.34,
+    reference_temperature: BODY_TEMPERATURE_C,
+    reference_pressure: ATMOSPHERIC_PRESSURE,
+};
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use kwavers_core::constants::numerical::MHZ_TO_HZ;
+
+    #[test]
+    fn test_blood_properties() {
+        assert!(WHOLE_BLOOD.sound_speed > SOUND_SPEED_WATER_SIM);
+        assert!(WHOLE_BLOOD.sound_speed < 1600.0);
+        WHOLE_BLOOD.validate().unwrap();
+    }
+
+    #[test]
+    fn test_fluid_impedance_matching() {
+        // Blood and tissue should have similar impedance for coupling
+        let tissue_impedance = 1_620_000.0; // Brain tissue typical
+        let blood_impedance = WHOLE_BLOOD.impedance;
+        let mismatch = (blood_impedance - tissue_impedance).abs() / tissue_impedance;
+        assert!(mismatch < 0.1); // Less than 10% mismatch
+    }
+
+    #[test]
+    fn test_coupling_fluid_acoustic_properties() {
+        ULTRASOUND_GEL.validate().unwrap();
+        MINERAL_OIL.validate().unwrap();
+
+        // Gel and oil should have similar sound speeds for coupling
+        let speed_diff = (ULTRASOUND_GEL.sound_speed - MINERAL_OIL.sound_speed).abs();
+        assert!(speed_diff < 150.0); // Within 150 m/s
+    }
+
+    #[test]
+    fn test_water_temperature_dependence() {
+        // Water sound speed increases monotonically with temperature up to ~74 °C.
+        // At 20 °C: ~1483 m/s; at 37 °C: ~1524 m/s (Del Grosso & Mader 1972).
+        assert!(WATER_37C.sound_speed > 1515.0);
+        assert!(WATER_37C.sound_speed < 1535.0);
+    }
+
+    #[test]
+    fn test_contrast_agent_acoustic_differences() {
+        // Microbubbles should have higher absorption
+        assert!(MICROBUBBLE_SUSPENSION.absorption_coefficient > WATER_37C.absorption_coefficient);
+
+        // Nanoparticles should have high optical absorption
+        assert!(NANOPARTICLE_SUSPENSION.optical_absorption > WATER_37C.optical_absorption);
+    }
+
+    #[test]
+    fn test_csf_similarity_to_plasma() {
+        // CSF is mostly water, so properties should be close to plasma
+        let speed_diff = (CSF.sound_speed - BLOOD_PLASMA.sound_speed).abs();
+        let impedance_diff =
+            (CSF.impedance - BLOOD_PLASMA.impedance).abs() / BLOOD_PLASMA.impedance;
+
+        assert!(speed_diff < 100.0);
+        assert!(impedance_diff < 0.10);
+    }
+
+    #[test]
+    fn test_reflection_coefficient_blood_tissue() {
+        // Reflection between blood and tissue should be minimal
+        let r = WHOLE_BLOOD.reflection_coefficient(&super::super::tissue::BRAIN_GRAY_MATTER);
+        assert!(r < 0.05); // Less than 5% reflection
+    }
+
+    #[test]
+    fn test_attenuation_frequency_scaling() {
+        // Test frequency-dependent attenuation for all fluids
+        let freqs = [
+            MHZ_TO_HZ,
+            2.0 * MHZ_TO_HZ,
+            5.0 * MHZ_TO_HZ,
+            10.0 * MHZ_TO_HZ,
+        ]; // 1, 2, 5, 10 MHz
+
+        for fluid in &[WHOLE_BLOOD, CSF, ULTRASOUND_GEL] {
+            let mut prev_att = 0.0;
+            for &f in &freqs {
+                let att = fluid.absorption_at_frequency(f);
+                assert!(att >= prev_att); // Monotonically increasing
+                prev_att = att;
+            }
+        }
+    }
+
+    #[test]
+    fn test_thermal_properties_consistency() {
+        // Thermal diffusivity = k / (ρ * c)
+        let expected =
+            WHOLE_BLOOD.thermal_conductivity / (WHOLE_BLOOD.density * WHOLE_BLOOD.specific_heat);
+
+        // Allow 1% tolerance
+        let tolerance = expected * 0.01;
+        assert!((WHOLE_BLOOD.thermal_diffusivity - expected).abs() < tolerance);
+    }
+
+    #[test]
+    fn test_all_fluids_valid() {
+        let fluids = vec![
+            BLOOD_PLASMA,
+            WHOLE_BLOOD,
+            CSF,
+            URINE,
+            ULTRASOUND_GEL,
+            MINERAL_OIL,
+            WATER_37C,
+            MICROBUBBLE_SUSPENSION,
+            NANOPARTICLE_SUSPENSION,
+        ];
+
+        for fluid in fluids {
+            fluid
+                .validate()
+                .unwrap_or_else(|e| panic!("Fluid validation failed: {e:?}"));
+        }
+    }
+}

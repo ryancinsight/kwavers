@@ -1,0 +1,30 @@
+[package]
+name = "kwavers-transducer"
+version = "3.0.0"
+edition = "2021"
+authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
+description = "High-level transducer devices for kwavers: focused bowls, phased/linear/matrix/2-D/hemispherical arrays, k-Wave arrays, calibration, factories, beamforming, PAM, ultrafast"
+license = "MIT"
+repository = "https://github.com/ryancinsight/kwavers"
+
+[dependencies]
+kwavers-core = { path = "../kwavers-core" }
+kwavers-math = { path = "../kwavers-math" }
+kwavers-grid = { path = "../kwavers-grid" }
+kwavers-signal = { path = "../kwavers-signal" }
+kwavers-field = { path = "../kwavers-field" }
+kwavers-medium = { path = "../kwavers-medium" }
+kwavers-source = { path = "../kwavers-source" }
+kwavers-receiver = { path = "../kwavers-receiver" }
+ndarray = { version = "0.16", features = ["rayon", "serde"] }
+nalgebra = { version = "0.32" }
+num-complex = "0.4"
+serde = { version = "1.0", features = ["derive"] }
+log = "0.4"
+rayon = "1.10"
+
+[dev-dependencies]
+approx = "0.5"
+
+[lints]
+workspace = true

@@ -1,0 +1,258 @@
+"""
+Chapter 11 figure generation — Sources and Transducers
+=======================================================
+
+Produces publication-quality figures for docs/book/sources_and_transducers.md.
+All expressions from classical transducer theory (piston source, focused bowl,
+phased array) are closed-form analytical solutions.
+
+Output directory: docs/book/figures/ch11/
+
+Figures produced
+----------------
+fig01  Piston source directivity H(θ) = 2J₁(ka sinθ)/(ka sinθ) vs angle
+fig02  On-axis pressure of a focused bowl transducer vs depth
+fig03  Linear phased array beam pattern: steering at 0°, 15°, 30°
+fig04  Delay law for a linear array: element delays vs steering angle
+fig05  BLI rasterization accuracy vs grid points per wavelength
+
+References
+----------
+O'Neil (1949) J. Acoust. Soc. Am. 21:516
+Thomenius (1996) Proc. IEEE Ultrasonics Symposium
+Selfridge et al. (1980) IEEE Trans. SU-27:19
+"""
+
+from __future__ import annotations
+
+import os
+import numpy as np
+import matplotlib
+
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+
+try:
+    import pykwavers as kw
+    _HAS_PYKWAVERS = True
+except ImportError:
+    kw = None
+    _HAS_PYKWAVERS = False
+
+REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
+OUT_DIR = os.path.join(REPO_ROOT, "docs", "book", "figures", "ch11")
+os.makedirs(OUT_DIR, exist_ok=True)
+
+
+def savefig(name: str) -> None:
+    for ext in ("pdf", "png"):
+        plt.savefig(os.path.join(OUT_DIR, f"{name}.{ext}"), dpi=150, bbox_inches="tight")
+    print(f"  saved: docs/book/figures/ch11/{name}.{{pdf,png}}")
+
+
+plt.rcParams.update({
+    "font.family": "serif", "font.size": 11,
+    "axes.titlesize": 12, "axes.labelsize": 11,
+    "legend.fontsize": 9, "lines.linewidth": 1.6,
+})
+
+C0 = 1500.0   # m/s
+
+
+# ── Figure 01: Piston directivity ─────────────────────────────────────────────
+def fig01_piston_directivity() -> None:
+    """
+    H(θ) = 2 J₁(ka sinθ) / (ka sinθ)  — O'Neil (1949).
+    Computed via kw.circular_piston_directivity (Rust kernel, normalised to unity on-axis).
+    Sinc-like pattern; first null at ka sinθ = 1.22π.
+    """
+    if not _HAS_PYKWAVERS:
+        raise ImportError("pykwavers is required for fig01 (piston directivity)")
+    theta = np.linspace(-np.pi / 2 + 1e-6, np.pi / 2 - 1e-6, 3600)
+
+    fig, axes = plt.subplots(1, 2, figsize=(11, 4.5))
+    ka_values = [(2.0, "#1f77b4"), (5.0, "#ff7f0e"), (10.0, "#2ca02c"), (20.0, "#d62728")]
+
+    for ka, col in ka_values:
+        H = np.asarray(kw.circular_piston_directivity(theta, ka))
+        H_dB = 20 * np.log10(np.abs(H) + 1e-12)
+        axes[0].plot(np.degrees(theta), H**2, color=col, label=f"$ka = {ka:.0f}$")
+        axes[1].plot(np.degrees(theta), np.clip(H_dB, -60, 0), color=col, label=f"$ka = {ka:.0f}$")
+
+    for ax in axes:
+        ax.set_xlabel(r"Angle $\theta$ (°)")
+        ax.legend(fontsize=8)
+        ax.axvline(0, color="k", linewidth=0.5)
+
+    axes[0].set_ylabel(r"Intensity pattern $|H(\theta)|^2$")
+    axes[0].set_title("Piston directivity (linear scale)")
+    axes[1].set_ylabel(r"$|H(\theta)|$ (dB)")
+    axes[1].set_title("Piston directivity (dB scale)")
+    axes[1].set_ylim(-60, 5)
+
+    fig.suptitle(r"Piston directivity: $H(\theta) = 2J_1(ka\sin\theta)/(ka\sin\theta)$", y=1.01)
+    fig.tight_layout()
+    savefig("fig01_piston_directivity")
+    plt.close(fig)
+
+
+# ── Figure 02: Focused bowl on-axis pressure ──────────────────────────────────
+def fig02_focused_bowl_onaxis() -> None:
+    """
+    On-axis pressure of a focused spherical bowl transducer (O'Neil 1949).
+    Computed via kw.focused_bowl_onaxis (Rust kernel, exact Rayleigh integral on axis).
+    Args: bowl_radius_m = aperture radius a, focal_length_m = F.
+    """
+    if not _HAS_PYKWAVERS:
+        raise ImportError("pykwavers is required for fig02 (focused bowl on-axis pressure)")
+    F = 0.06    # 60 mm focal length
+    a = 0.015   # 15 mm aperture radius
+    f = 1.0e6   # 1 MHz
+
+    z = np.linspace(0.001, 0.12, 3000)  # 1 mm to 120 mm
+    # On-axis pressure [Pa] with unit source amplitude (p0_pa=1.0)
+    p_pa = np.asarray(kw.focused_bowl_onaxis(z, a, F, f, 1.0, C0))
+    # Normalise by pressure at the geometric focus
+    p_focus_val = float(np.asarray(kw.focused_bowl_onaxis(np.array([F]), a, F, f, 1.0, C0))[0])
+    p_norm = p_pa / (p_focus_val if p_focus_val > 0.0 else 1.0)
+
+    fig, ax = plt.subplots(figsize=(8, 4.5))
+    ax.plot(z * 1e3, p_norm, color="#1f77b4")
+    ax.axvline(F * 1e3, color="k", linestyle="--", linewidth=1, label=f"Focus z=F={F*1000:.0f} mm")
+    ax.set_xlabel("Axial depth $z$ (mm)")
+    ax.set_ylabel("Normalised pressure $|p|/|p_F|$")
+    ax.set_title(f"Focused bowl on-axis pressure\n"
+                 f"$F={F*1e3:.0f}$ mm, $a={a*1e3:.0f}$ mm, $f={f*1e-6:.0f}$ MHz, $c={C0:.0f}$ m/s")
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+    fig.tight_layout()
+    savefig("fig02_focused_bowl_onaxis")
+    plt.close(fig)
+
+
+# ── Figure 03: Linear phased array beam pattern ───────────────────────────────
+def fig03_array_beam_pattern() -> None:
+    """
+    Far-field array factor: AF(θ) = Σ_{n=0}^{N-1} exp(i·n·kd·(sinθ - sinθ_s)).
+    Computed via kw.linear_array_factor (Rust kernel, rectangular apodization).
+    """
+    if not _HAS_PYKWAVERS:
+        raise ImportError("pykwavers is required for fig03 (array beam pattern)")
+    N = 64          # elements
+    d = 0.3e-3      # 0.3 mm pitch (half-wavelength at 2.5 MHz)
+    f = 2.5e6
+    k = 2 * np.pi * f / C0
+
+    theta = np.linspace(-np.pi / 2 + 1e-4, np.pi / 2 - 1e-4, 3600)
+    steer_angles_deg = [0.0, 15.0, 30.0]
+    colors = ["#1f77b4", "#ff7f0e", "#2ca02c"]
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+    for ang_deg, col in zip(steer_angles_deg, colors):
+        theta_s = np.radians(ang_deg)
+        AF = np.asarray(kw.linear_array_factor(theta, k, d, N, theta_s))
+        AF_dB = 20 * np.log10(AF + 1e-12)
+        ax.plot(np.degrees(theta), np.clip(AF_dB, -60, 0),
+                color=col, label=rf"$\theta_s = {ang_deg:.0f}°$")
+
+    ax.set_xlabel(r"Angle $\theta$ (°)")
+    ax.set_ylabel("Normalised array factor (dB)")
+    ax.set_title(f"Linear phased array beam pattern\n$N={N}$, $d={d*1e3:.1f}$ mm, $f={f*1e-6:.1f}$ MHz")
+    ax.set_ylim(-60, 5)
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+    fig.tight_layout()
+    savefig("fig03_array_beam_pattern")
+    plt.close(fig)
+
+
+# ── Figure 04: Delay law ──────────────────────────────────────────────────────
+def fig04_delay_law() -> None:
+    """
+    tau_i = (|r_i - r_f| - min_j |r_j - r_f|) / c.
+    Computed via kw.delay_law_focus_2d (Rust kernel).
+    Steering: focus placed at (z_far · sin θ_s, z_far) with z_far = 1e3 m (far-field limit).
+    Focusing: near-field focus at (x_f, z_f) in the (x, z) plane.
+    """
+    if not _HAS_PYKWAVERS:
+        raise ImportError("pykwavers is required for fig04 (delay law)")
+    N = 64
+    d = 0.3e-3
+    elem_x = (np.arange(N) - (N - 1) / 2) * d
+    elem_z_zeros = np.zeros(N)
+
+    fig, axes = plt.subplots(1, 2, figsize=(11, 4.5))
+
+    # Steering (far-field): focus at 1 km in direction θ_s
+    Z_FAR = 1.0e3
+    for ang_deg, col, ls in [(0.0, "#1f77b4", "solid"), (15.0, "#ff7f0e", "dashed"), (30.0, "#2ca02c", "dotted")]:
+        theta_s = np.radians(ang_deg)
+        x_far = Z_FAR * np.sin(theta_s)
+        tau = np.asarray(kw.delay_law_focus_2d(elem_x, elem_z_zeros, x_far, Z_FAR, C0))
+        axes[0].plot(np.arange(N), tau * 1e6, color=col, linestyle=ls, label=rf"$\theta_s={ang_deg:.0f}°$")
+
+    axes[0].set_xlabel("Element index")
+    axes[0].set_ylabel(r"Delay $\tau_i$ (µs)")
+    axes[0].set_title("Steering delay law (far-field focus)")
+    axes[0].legend()
+
+    # Focused (near-field)
+    F = 0.05  # 50 mm focus depth
+    for x_f, col, lbl in [(0.0, "#1f77b4", "F=(0, 50mm)"),
+                           (0.01, "#ff7f0e", "F=(10, 50mm)"),
+                           (0.02, "#2ca02c", "F=(20, 50mm)")]:
+        tau = np.asarray(kw.delay_law_focus_2d(elem_x, elem_z_zeros, x_f, F, C0))
+        axes[1].plot(np.arange(N), tau * 1e6, label=lbl)
+
+    axes[1].set_xlabel("Element index")
+    axes[1].set_ylabel(r"Delay $\tau_i$ (µs)")
+    axes[1].set_title("Focusing delay law (near-field)")
+    axes[1].legend()
+
+    fig.suptitle(r"Delay law: $\tau_i = (|\mathbf{r}_i - \mathbf{r}_f| - \min_j|\mathbf{r}_j - \mathbf{r}_f|)/c$", y=1.01)
+    fig.tight_layout()
+    savefig("fig04_delay_law")
+    plt.close(fig)
+
+
+# ── Figure 05: BLI rasterization accuracy ─────────────────────────────────────
+def fig05_bli_accuracy() -> None:
+    """
+    Rasterization error vs points per wavelength (PPW).
+    For a sinusoidal source mask, BLI preserves the exact continuous
+    Fourier content up to the Nyquist limit. Error decays as 1/PPW.
+    Analytical: aliasing error ~ sinc²(π/PPW) for spectral content at Nyquist.
+    """
+    ppw = np.linspace(2.1, 20.0, 200)  # points per wavelength
+
+    # Spectral leakage from sampling (normalised Fourier amplitude at Nyquist)
+    # For a rect window of N points: worst-case aliasing ~ 1/N
+    aliasing_error_dB = 20 * np.log10(1.0 / ppw)  # linear decay in amplitude
+
+    # More accurate BLI bound: residual after Whittaker-Shannon interpolation
+    # E(ppw) = max_x |f(x) - f_BLI(x)| ~ π²/(6 ppw²) for band-limited signals
+    bli_error_dB = 20 * np.log10(np.pi**2 / (6 * ppw**2))
+
+    fig, ax = plt.subplots(figsize=(7, 4.5))
+    ax.plot(ppw, aliasing_error_dB, label="Nearest-neighbour rasterization error")
+    ax.plot(ppw, bli_error_dB, "--", label="BLI rasterization error (Whittaker-Shannon)")
+    ax.axvline(4, color="gray", linestyle=":", linewidth=1, label="PPW = 4 (typical k-Wave default)")
+    ax.set_xlabel("Points per wavelength (PPW)")
+    ax.set_ylabel("Amplitude error (dB)")
+    ax.set_title("Rasterization accuracy vs grid resolution")
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+    ax.set_ylim(-80, 5)
+    fig.tight_layout()
+    savefig("fig05_bli_accuracy")
+    plt.close(fig)
+
+
+if __name__ == "__main__":
+    print("Generating Chapter 11 figures (Sources and Transducers)...")
+    fig01_piston_directivity()
+    fig02_focused_bowl_onaxis()
+    fig03_array_beam_pattern()
+    fig04_delay_law()
+    fig05_bli_accuracy()
+    print("Done. Output: docs/book/figures/ch11/")

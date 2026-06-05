@@ -1,4 +1,4 @@
-# Segmented Tissue Transducer Planning
+# Chapter 31 — Segmented Tissue Transducer Planning
 
 This chapter example converts normal-tissue, tumor, air, bone, fat, and
 protected-structure segmentations into a therapy-head placement problem.  It

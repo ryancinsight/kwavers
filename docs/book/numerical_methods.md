@@ -117,7 +117,7 @@ where the coefficients are given by the standard formula (Fornberg 1998):
 | 6 | $\frac{75}{64}$ | $-\frac{25}{384}$ | $\frac{3}{640}$ |
 
 kwavers supports 2nd, 4th, and 6th order, selectable via `FdtdConfig::spatial_order`
-(see `kwavers::solver::forward::fdtd::config`).
+(see `kwavers_solver::forward::fdtd::config`).
 
 ---
 
@@ -142,20 +142,31 @@ and the stability bound tightens by a factor $\sum_m |a_m|$.*
 **Proof (von Neumann analysis, 1D).** Substitute the Fourier mode ansatz
 $p^n_j = P(\xi) e^{i j \xi}$, $u^{n+1/2}_{j+1/2} = U(\xi) e^{i(j+1/2)\xi}$
 into (2.1)–(2.2), where $\xi = k\Delta x$ is the normalised wavenumber.
-The update is a $2\times 2$ linear system in $(U, P)$.  Stability requires all
-eigenvalues $|\lambda| \leq 1$.  The characteristic equation gives
-$|\lambda|^2 = 1 - 4r^2 \sin^2(\xi/2)$ where $r = c_0\Delta t/\Delta x$.
-Stability requires $4r^2 \sin^2(\xi/2) \leq 4$ for all $\xi$, i.e.\ $r \leq 1$
-in 1D.  In 3D the constraint is $r\sqrt{3} \leq 1$.  $\square$
+The update is a $2\times 2$ linear system in $(U, P)$ whose amplification factor
+$\lambda$ satisfies $\lambda^2 - 2\beta\lambda + 1 = 0$ with
+$\beta = 1 - 2r^2\sin^2(\xi/2)$ and $r = c_0\Delta t/\Delta x$.  Because the
+product of roots is $1$, the scheme is non-dissipative ($|\lambda| = 1$) exactly
+when the roots are complex conjugates, i.e.\ when $|\beta| \leq 1$; a real root
+pair ($|\beta| > 1$) always contains one $|\lambda| > 1$ (unstable growth).
+Thus stability requires $r^2\sin^2(\xi/2) \leq 1$ for all $\xi$, giving
+$r \leq 1$ in 1D.  In 3D the gradient contributions add and the constraint
+becomes $r\sqrt{3} \leq 1$.  $\square$
 
 **kwavers implementation.**  The CFL constant is set to $1/\sqrt{3}$ and a
 safety factor of 0.95 is applied:
 
 ```rust
-// kwavers::solver::forward::fdtd::config
+// kwavers_solver::forward::fdtd::config
 pub const CFL_3D: f64 = 0.577_350_269_189_625_8;  // 1/√3, 16 significant figures
 pub const CFL_SAFETY: f64 = 0.95;
 ```
+
+![FDTD CFL stability region in 2D and 3D](figures/ch02/fig01_fdtd_cfl_region.png)
+
+**Figure 2.1.** Von Neumann stability region of the leapfrog FDTD scheme: the
+Courant number $r = c_0\Delta t/\Delta x$ must lie below $1/\sqrt{D}$, shrinking
+from $1$ (1D) to $1/\sqrt{2}$ (2D) to $1/\sqrt{3}\approx 0.577$ (3D).
+
 
 ---
 
@@ -183,25 +194,40 @@ $$
 \tag{2.6}
 $$
 
-*At the Nyquist wavenumber $k_\mathrm{N} = \pi/\Delta x$ the dispersion error
-is*
+*For well-resolved waves ($k\Delta x \ll 1$) the leading-order fractional
+phase-velocity error is*
 
 $$
-\frac{\tilde{c}(k_\mathrm{N}) - c_0}{c_0}
-\approx -\frac{(k\Delta x)^2}{6} \bigl(1 - r^2/3\bigr).
+\frac{\tilde{c}(k) - c_0}{c_0}
+\approx -\frac{(k\Delta x)^2}{24} \bigl(1 - r^2\bigr).
 \tag{2.7}
 $$
+
+*The error vanishes at $r = 1$ (the 1D "magic time step", where FDTD is
+dispersion-free) and grows as $r \to 0$.  Near the Nyquist wavenumber
+$k_\mathrm{N} = \pi/\Delta x$ this small-argument expansion no longer applies and
+the error becomes $\mathcal{O}(1)$.*
 
 **Proof.**  Substitute the mode $p^n_j = P e^{i(jk\Delta x - \omega n\Delta t)}$,
 $u^{n+1/2}_{j+1/2} = U e^{i((j+1/2)k\Delta x - \omega(n+1/2)\Delta t)}$
 into (2.1)–(2.2).  The characteristic condition reduces to
-$\sin^2(\omega\Delta t/2) = r^2 \sin^2(k\Delta x/2)$, yielding (2.5).
-Taylor expansion of the arcsin and sin about $k\Delta x \to 0$ gives (2.7).
-$\square$
+$\sin^2(\omega\Delta t/2) = r^2 \sin^2(k\Delta x/2)$, yielding (2.5).  Writing
+$\theta = k\Delta x/2$, the phase velocity is
+$\tilde{c}/c_0 = \arcsin(r\sin\theta)/(r\theta)
+= 1 - \tfrac{1}{6}\theta^2(1 - r^2) + \mathcal{O}(\theta^4)$;
+substituting $\theta = k\Delta x/2$ gives (2.7).  $\square$
 
 **Practical rule of thumb.** To keep dispersion below 1% at the highest
 resolved frequency, use $\Delta x \leq \lambda_\mathrm{min}/10$ (10 points per
 shortest wavelength).  kwavers validates this via `Grid::validate_ppw(min_ppw=10)`.
+
+![Finite-difference modified-wavenumber dispersion](figures/ch02/fig02_modified_wavenumber_error.png)
+
+**Figure 2.2.** Modified-wavenumber symbol $\tilde{k}/k$ for 2nd-, 4th-, and
+6th-order centred stencils.  Every finite-difference symbol bends below unity and
+vanishes at the Nyquist limit $k\Delta x = \pi$; higher order delays the onset of
+dispersion.  The spectral PSTD operator is the flat line $\tilde{k}/k \equiv 1$.
+
 
 ---
 
@@ -236,7 +262,14 @@ gradient.  In 3D at each time step:
 7. Update pressure: $p^{n+1} = c_0^2 \rho^{n+1}$.
 
 **Implementation reference.**  This sequence is executed in
-`kwavers::solver::forward::pstd::implementation::core::stepper::step::step_forward`.
+`kwavers_solver::forward::pstd::implementation::core::stepper::step::step_forward`.
+![Spectral vs finite-difference derivative symbols](figures/ch02/fig04_derivative_symbols.png)
+
+**Figure 2.3.** Derivative symbols: the exact spectral symbol $ik$ (straight
+line) versus the finite-difference symbols, which underestimate the wavenumber
+increasingly toward Nyquist.  This is the spatial-derivative root cause of the
+dispersion in Figure 2.2.
+
 
 ### 2.5.2 Spectral convergence
 
@@ -271,20 +304,31 @@ $5^3 = 125\times$ fewer grid points.
 method with leapfrog time stepping is stable if*
 
 $$
-\Delta t \leq \frac{2}{\pi c_0 k_\mathrm{max}} = \frac{2\Delta x}{\pi c_0},
+\Delta t \leq \frac{2}{c_0\, |\mathbf{k}|_\mathrm{max}}
+= \frac{2\Delta x}{\pi c_0 \sqrt{D}},
 \tag{2.10}
 $$
 
-*i.e.\ the CFL number can approach $2/\pi \approx 0.637$ instead of $1/\sqrt{3}$
-for 2nd-order FDTD in 3D.*
+*where $|\mathbf{k}|_\mathrm{max} = \pi\sqrt{D}/\Delta x$ is the largest wavenumber
+magnitude on a $D$-dimensional grid (the Brillouin-zone corner).  The Courant
+number is bounded by $r = c_0\Delta t/\Delta x \leq 2/(\pi\sqrt{D})$: $0.637$ in
+1D, $0.450$ in 2D, $0.367$ in 3D.*
 
-**Proof.**  The highest wavenumber on the PSTD grid is
-$k_\mathrm{max} = \pi/\Delta x$.  The spectral gradient factor is $ik$, whose
-maximum magnitude is $k_\mathrm{max}$.  Von Neumann analysis of the PSTD
-leapfrog gives the stability condition
-$c_0 \Delta t k_\mathrm{max} \leq 2/\pi$ (the factor $2/\pi$ instead of 1 arises
-because all wave energy resides at $|k| \leq k_\mathrm{max}$, unlike in FDTD
-where the effective speed grows with $k$).  Tabei et al. (2002), §III.  $\square$
+**Proof.**  The spectral gradient reproduces $i\mathbf{k}$ exactly, so the
+leapfrog pressure update has amplification governed by
+$\sin(\omega\Delta t/2) = c_0\Delta t\,|\mathbf{k}|/2$.  A real $\omega$ (neutral
+stability) requires $c_0\Delta t\,|\mathbf{k}| \leq 2$ for every resolved mode; the
+worst case is the corner mode $|\mathbf{k}|_\mathrm{max} = \pi\sqrt{D}/\Delta x$,
+giving (2.10).  Tabei et al. (2002), §III.  $\square$
+
+> **Bare PSTD is *not* cheaper than FDTD per step.**  In 3D the bare-leapfrog
+> PSTD bound $0.367$ is *tighter* than the 2nd-order FDTD bound
+> $1/\sqrt{3} \approx 0.577$: the spectral operator represents the full wavenumber
+> magnitude up to the corner, whereas the FDTD stencil *underestimates* it (its
+> modified wavenumber bends below $k$ — Figure 2.2).  PSTD's efficiency comes from
+> needing far fewer points per wavelength (§2.5.2) and from the k-space temporal
+> correction (§2.7) — which removes the time-step restriction entirely — not from a
+> larger CFL.
 
 ---
 
@@ -314,9 +358,16 @@ exact solution is the harmonic oscillator (2.11).  $\square$
 
 **kwavers implementation.**  The k-space propagator is available as an optional
 mode (`PSTDConfig::kspace_correction = KspaceMode::FullSpectral`) in
-`kwavers::solver::forward::pstd::implementation::core::stepper::step_forward_kspace`.
+`kwavers_solver::forward::pstd::implementation::core::stepper::step_forward_kspace`.
 It completely eliminates temporal dispersion at the cost of storing
 $\hat{\dot{p}}_\mathbf{k}$.
+
+![k-space temporal correction factor](figures/ch02/fig03_kspace_temporal_correction.png)
+
+**Figure 2.4.** The k-space temporal correction $\mathrm{sinc}(c_0|\mathbf{k}|\Delta t/2)$
+that converts the leapfrog update into the exact harmonic propagator (2.11),
+removing the $\mathcal{O}(\Delta t^2)$ temporal dispersion for every mode at once.
+
 
 ---
 
@@ -408,7 +459,7 @@ conductivity ramp.  The CPML formulation (Roden & Gedney 2000) improves on the
 split-field PML by using memory variables, reducing reflection to
 $\sim 10^{-6}$ for a 20-cell layer.
 
-**kwavers implementation:** `kwavers::domain::boundary::cpml::CPMLBoundary`,
+**kwavers implementation:** `kwavers_domain::boundary::cpml::CPMLBoundary`,
 used by both FDTD and PSTD solvers.
 
 ---
@@ -420,7 +471,7 @@ used by both FDTD and PSTD solvers.
 | Spatial accuracy | $\mathcal{O}(\Delta x^2)$ | $\mathcal{O}(\Delta x^6)$ | Spectral (exp.) |
 | Min PPW for 1% error | ~10 | ~4 | 2–3 |
 | Temporal accuracy | $\mathcal{O}(\Delta t^2)$ | $\mathcal{O}(\Delta t^2)$ | $\mathcal{O}(\Delta t^2)$ or exact |
-| CFL limit (3D) | $1/\sqrt{3} \approx 0.577$ | $\approx 0.45$ | $2/\pi \approx 0.637$ |
+| CFL limit (3D) | $1/\sqrt{3} \approx 0.577$ | $\approx 0.45$ | $2/(\pi\sqrt{3}) \approx 0.367$ bare; unrestricted with k-space corr. |
 | Memory per grid pt | $\sim 2$ fields | $\sim 2$ fields | $\sim 4$ fields (complex) |
 | FFT cost | None | None | $\mathcal{O}(N\log N)$/step |
 | Heterogeneous media | Easy | Easy | Requires filtering |
@@ -445,7 +496,7 @@ used by both FDTD and PSTD solvers.
 kwavers stores the FDTD state in `GenericWaveFields<Array3<f64>>`:
 
 ```rust
-// kwavers::solver::forward::fdtd
+// kwavers_solver::forward::fdtd
 pub struct GenericFdtdSolver<T> {
     pub config: FdtdConfig,
     pub fields: GenericWaveFields<T>,       // p, ux, uy, uz + optional stress
@@ -473,7 +524,7 @@ PSTD stores both real and complex fields, roughly doubling the memory footprint
 of FDTD:
 
 ```rust
-// kwavers::solver::forward::pstd::implementation::core::orchestrator
+// kwavers_solver::forward::pstd::implementation::core::orchestrator
 pub struct PSTDSolver {
     pub p:    Array3<f64>,    // pressure (real, physical space)
     pub ux:   Array3<f64>,    // velocity x (real)
@@ -501,6 +552,13 @@ the 2/3-rule dealiasing mask).
 - **Total:** $\approx 1.5\,\text{GB}$
 
 For comparison, FDTD on the same grid requires $\approx 544\,\text{MB}$.
+
+![Sparse sensor recorder memory scaling](figures/ch02/fig05_recorder_memory_scaling.png)
+
+**Figure 2.5.** Sparse sensor-recorder memory scaling: borrowing a view of the
+recorded field avoids the owned-copy allocation that grows with the number of
+recorded time steps.
+
 
 ---
 
@@ -551,13 +609,57 @@ Pearson correlation $\geq 0.999$ is additionally required for spatial field
 comparisons.
 
 Relevant tests:
-- `pykwavers/tests/test_pstd_kwave_comparison.py`
-- `kwavers/tests/fdtd_pstd_comparison.rs` (Chapter 1 standing-wave and dispersion tests)
-- `kwavers/tests/test_pstd_kwave_comparison.rs`
+- `crates/kwavers-python/tests/test_pstd_hybrid_solvers.py`
+- `crates/kwavers/tests/fdtd_pstd_comparison.rs` (Chapter 1 standing-wave and dispersion tests)
+- `crates/kwavers/tests/test_pstd_kwave_comparison.rs`
 
 ---
 
-## 2.14 Further reading
+## 2.14 Worked example — sizing a 3D HIFU focal simulation
+
+This example applies the PSTD resolution rule (§2.5.2) and the CFL bound (§2.6) to
+size a realistic focused-bowl simulation and reports the kwavers–vs–k-Wave parity.
+
+**Transducer and medium.** A spherically focused bowl of radius $a = 25$ mm and
+focal length $F = 100$ mm radiates at $f = 1$ MHz into water
+($c_0 = 1482\,\text{m/s}$, $\rho_0 = 998\,\text{kg/m}^3$):
+
+$$
+\lambda = c_0/f = 1.482\,\text{mm}, \qquad
+\text{F-number} = \frac{F}{2a} = 2, \qquad
+G \approx \frac{\pi a^2}{\lambda F} \approx 13,
+$$
+
+where $G$ is the small-signal (linear) on-axis focusing gain.
+
+**Grid (PSTD at 2 PPW).** Because PSTD needs only $\sim 2$ points per wavelength
+(§2.5.2):
+
+$$
+\Delta x = \lambda/2 = 0.741\,\text{mm}, \qquad
+N = \lceil 200\,\text{mm}/\Delta x \rceil = 270 \text{ per axis}
+\;\Rightarrow\; 270^3 \approx 2\times 10^7 \text{ cells}.
+$$
+
+A 2nd-order FDTD run at 10 PPW would need $5\times$ finer spacing — $125\times$ more
+cells — which is the memory argument for PSTD (§2.10).
+
+**Time step (3D PSTD CFL, §2.6).** kwavers uses $C = 0.3$, inside the bound
+$2/(\pi\sqrt{3}) \approx 0.367$:
+
+$$
+\Delta t = \frac{C\,\Delta x}{c_0}
+= \frac{0.3 \times 7.41\times10^{-4}}{1482} \approx 150\,\text{ns}.
+$$
+
+**Parity.** The kwavers run
+(`crates/kwavers-python/examples/at_focused_bowl_3D_compare.py`) reproduces the
+k-Wave reference focal field to Pearson $r = 0.9999$ and PSNR $= 45.8$ dB
+(project memory `project_at_focused_bowl_3D_parity.md`).
+
+---
+
+## 2.15 Further reading
 
 1. **Yee, K.** (1966). Numerical solution of initial boundary value problems
    involving Maxwell's equations in isotropic media. *IEEE Trans. Antennas

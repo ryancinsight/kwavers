@@ -1,0 +1,42 @@
+use kwavers_core::error::KwaversResult;
+use kwavers_imaging::photoacoustic::{PhotoacousticScenario, PhotoacousticSignalSet};
+use kwavers_solver::inverse::reconstruction::photoacoustic::{
+    PhotoacousticAlgorithm, PhotoacousticReconstructor, ReconstructionPhotoacousticConfig,
+};
+use kwavers_solver::reconstruction::{ReconstructionConfig, Reconstructor};
+use ndarray::Array3;
+
+/// FFT-style reconstruction specialized for planar sensor geometries.
+#[derive(Debug, Default)]
+pub struct PlanarSensorFftReconstruction;
+
+impl PlanarSensorFftReconstruction {
+    /// Reconstruct.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    pub fn reconstruct(
+        &self,
+        scenario: &PhotoacousticScenario,
+        signals: &PhotoacousticSignalSet,
+    ) -> KwaversResult<Array3<f64>> {
+        let config = ReconstructionPhotoacousticConfig {
+            algorithm: PhotoacousticAlgorithm::FourierDomain,
+            sensor_positions: signals.sensor_positions.clone(),
+            grid_size: [scenario.grid.nx, scenario.grid.ny, scenario.grid.nz],
+            grid_spacing: [scenario.grid.dx, scenario.grid.dy, scenario.grid.dz],
+            sound_speed: scenario.config.acoustic.speed_of_sound_m_s,
+            sampling_frequency: signals.sampling_frequency_hz.max(f64::MIN_POSITIVE),
+            envelope_detection: false,
+            bandpass_filter: None,
+            regularization_parameter: 0.0,
+        };
+        let reconstructor = PhotoacousticReconstructor::new(config);
+        reconstructor.reconstruct(
+            &signals.sensor_data,
+            &signals.sensor_positions,
+            &scenario.grid,
+            &ReconstructionConfig::default(),
+        )
+    }
+}

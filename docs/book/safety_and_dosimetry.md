@@ -1,12 +1,12 @@
-# Chapter 9 — Ultrasound Safety and Dosimetry
+# Chapter 16 — Ultrasound Safety and Dosimetry
 
 > **Textbook:** *Computational Ultrasound Physics with kwavers*
-> **Module references:** `kwavers::clinical::safety`, `kwavers::physics::thermal`,
-> `kwavers::physics::acoustics::therapy`
+> **Module references:** `kwavers_therapy::safety`, `kwavers_physics::thermal`,
+> `kwavers_physics::acoustics::therapy`
 
 ---
 
-## 9.1 Introduction and Scope
+## 16.1 Introduction and Scope
 
 Diagnostic and therapeutic ultrasound occupy opposite ends of the acoustic output
 spectrum yet share a unified safety framework. Diagnostic systems must guarantee
@@ -25,16 +25,16 @@ three Thermal Index variants (TIS, TIB, TIC) — together with thermal dosimetry
 Each metric is derived from first principles, with full proofs, then mapped to
 the corresponding kwavers implementation.
 
-![Regulatory metrics on a modern diagnostic scanner display](figures/ch_safe/fig01_mi_ti_chart.png)
+![Regulatory metrics on a modern diagnostic scanner display](figures/ch15/fig01_mechanical_index.png)
 
-*Figure 9.1. Mechanical Index (MI) and Thermal Index (TI) displayed in real time
+*Figure 16.1. Mechanical Index (MI) and Thermal Index (TI) displayed in real time
 on a modern diagnostic system. FDA limits are indicated by dashed red lines.*
 
 ---
 
-## 9.2 Acoustic Output Metrics
+## 16.2 Acoustic Output Metrics
 
-### 9.2.1 Spatial-Peak Temporal-Average Intensity (I_SPTA)
+### 16.2.1 Spatial-Peak Temporal-Average Intensity (I_SPTA)
 
 **Definition.** Let $p(\mathbf{r},t)$ be the acoustic pressure field and
 $\rho_0(\mathbf{r})$, $c(\mathbf{r})$ be the ambient density and speed of sound.
@@ -64,7 +64,7 @@ $$I_{\mathrm{SPTA}} = \eta\, I_{\mathrm{SPPA}},$$
 
 where $I_{\mathrm{SPPA}}$ is the spatial-peak pulse-average intensity (§ 9.2.2).
 
-### 9.2.2 Spatial-Peak Pulse-Average Intensity (I_SPPA)
+### 16.2.2 Spatial-Peak Pulse-Average Intensity (I_SPPA)
 
 **Definition.** The pulse-average intensity is the integral of instantaneous
 intensity over the pulse duration $\tau$, divided by $\tau$:
@@ -79,7 +79,7 @@ $$I_{\mathrm{SPPA}} = \frac{P_0^2}{2\rho_0 c}.$$
 The factor $\tfrac{1}{2}$ arises because the time-average of $\sin^2(\omega t)$
 over a complete cycle is $\tfrac{1}{2}$.
 
-### 9.2.3 FDA Derating: I_SPTA.3 and I_SPPA.3
+### 16.2.3 FDA Derating: I_SPTA.3 and I_SPPA.3
 
 **Physical basis.** Soft tissue attenuates acoustic energy. The in-situ intensity
 is lower than the free-water measurement. The FDA 510(k) guidance adopts a uniform
@@ -89,7 +89,7 @@ lower bound on human tissue (true soft tissue ranges 0.5–1.0 dB/cm/MHz, so
 0.3 dB/cm/MHz under-derates, yielding a displayed value that is a conservative
 upper bound on the actual in-situ intensity).
 
-**Theorem 9.1 (Derating formula).**
+**Theorem 16.1 (Derating formula).**
 
 $$I_{\mathrm{SPTA.3}}(z) = I_{\mathrm{SPTA}} \cdot 10^{-\alpha_0 f z / 10},$$
 
@@ -131,17 +131,15 @@ is non-arbitrary: the FDA derating formula is designed so that typical clinical
 imaging settings produce values near but below the limit, providing approximately
 8 dB headroom at any single depth.
 
-![Derating curves at three frequencies](figures/ch_safe/fig02_derating_curves.png)
-
-*Figure 9.2. Derated intensity $I_{\mathrm{SPTA.3}}(z)$ versus depth for
+*Figure 16.2. Derated intensity $I_{\mathrm{SPTA.3}}(z)$ versus depth for
 $f = \{3.5, 5, 7.5\}\;\text{MHz}$ with $I_{\mathrm{SPTA}} = 1000\;\text{mW/cm}^2$.
 Shaded region is above the 720 mW/cm² FDA limit.*
 
 ---
 
-## 9.3 Mechanical Index
+## 16.3 Mechanical Index
 
-### 9.3.1 Definition
+### 16.3.1 Definition
 
 The Mechanical Index (MI) is defined by
 
@@ -152,9 +150,9 @@ and $f_c$ is the centre frequency in megahertz (MHz). The units of the
 denominator $\sqrt{f_c}$ are $\text{MHz}^{1/2}$, so MI is dimensionless when
 expressed as MPa / MHz^{1/2}.
 
-### 9.3.2 Physical Motivation: Cavitation Threshold Scales as √f
+### 16.3.2 Physical Motivation: Cavitation Threshold Scales as √f
 
-**Theorem 9.2 (Blake threshold scaling).**
+**Theorem 16.2 (Blake threshold scaling).**
 
 For a spherical bubble nucleus of equilibrium radius $R_0$ in a liquid of
 surface tension $\sigma$, the Blake pressure threshold for rectified diffusion
@@ -207,7 +205,7 @@ equal safety margins above the cavitation threshold for the same bubble
 population. This is the physical justification for using MI as a
 frequency-independent safety metric.
 
-### 9.3.3 FDA Limit and Tissue-Specific Thresholds
+### 16.3.3 FDA Limit and Tissue-Specific Thresholds
 
 | Tissue | MI Limit | Authority |
 |---|---|---|
@@ -223,9 +221,9 @@ Apfel–Holland threshold of $0.5 + 0.5\sqrt{3.5} \approx 1.44\;\text{MPa}$.  Th
 FDA limit therefore carries an intentional margin of approximately 2.5 dB above
 the worst-case threshold, assuming no stable nuclei pre-exist at the focus.
 
-### 9.3.4 kwavers Implementation
+### 16.3.4 kwavers Implementation
 
-`kwavers::clinical::safety::mechanical_index::MechanicalIndexCalculator` applies
+`kwavers_therapy::safety::mechanical_index::MechanicalIndexCalculator` applies
 the derating formula and computes MI:
 
 ```rust
@@ -248,9 +246,9 @@ class; `SafetyStatus` transitions from `Safe` → `CavitationRisk` → `Caution`
 
 ---
 
-## 9.4 Thermal Index
+## 16.4 Thermal Index
 
-### 9.4.1 Fundamental Definition
+### 16.4.1 Fundamental Definition
 
 The Thermal Index (TI) is defined as the ratio of the applied acoustic power to
 the acoustic power that would raise the temperature of the insonated tissue by
@@ -263,7 +261,7 @@ $W_{\mathrm{deg}}$ is the model-specific reference power (W). A TI of 1
 predicts a worst-case $1\;\text{°C}$ temperature rise; TI of 2 predicts
 $2\;\text{°C}$, and so forth.
 
-**Theorem 9.3 (TI linearity).**
+**Theorem 16.3 (TI linearity).**
 
 Under the assumptions of (i) linear acoustic propagation, (ii) uniform tissue
 with constant attenuation, thermal conductivity $k_t$, and absorption
@@ -294,7 +292,7 @@ where $\ell$ is a geometric length scale.  $\Delta T \propto W$ with all
 other parameters fixed.  Therefore TI $= W/W_{\mathrm{deg}} \propto \Delta T$.
 $\square$
 
-### 9.4.2 Soft-Tissue Thermal Index (TIS)
+### 16.4.2 Soft-Tissue Thermal Index (TIS)
 
 TIS applies when the ultrasound beam propagates through soft tissue with no bone
 in the beam path.  The reference power for a $1\;\text{°C}$ rise is (IEC 62359):
@@ -317,7 +315,7 @@ let derated_power = acoustic_power_w
 let ti = derated_power / reference_power_w;
 ```
 
-### 9.4.3 Bone Thermal Index (TIB)
+### 16.4.3 Bone Thermal Index (TIB)
 
 TIB applies when the ultrasound beam passes through soft tissue and is partially
 absorbed at bone at or near the focus.  Bone has a much higher absorption
@@ -331,7 +329,7 @@ $$\mathrm{TIB} = \frac{W_{\mathrm{TA}} \cdot f}{(2.5\;\text{W/MHz})},$$
 where $W_{\mathrm{TA}}$ is the total time-averaged acoustic power.  This
 formulation is more conservative than TIS for scenarios with bone near the focus.
 
-### 9.4.4 Cranial Bone Thermal Index (TIC)
+### 16.4.4 Cranial Bone Thermal Index (TIC)
 
 TIC applies to transcranial applications where the beam traverses the adult
 skull.  The skull is located between the transducer and the brain, so the
@@ -343,7 +341,7 @@ $$\mathrm{TIC} = \frac{W_{\mathrm{0}} \cdot f}{(40\;\text{W/MHz})},$$
 where $W_0$ is the total acoustic power at the transducer face.  TIC is typically
 the dominant thermal constraint for transcranial ultrasound and HIFU.
 
-### 9.4.5 FDA and AIUM Limits
+### 16.4.5 FDA and AIUM Limits
 
 | Index | Limit | Exposure duration | Authority |
 |---|---|---|---|
@@ -364,13 +362,13 @@ raise the effective threshold further.  Therefore TI $= 6$ provides at minimum
 $45 - 41.8 = 3.2\;\text{°C}$ margin before onset of thermal damage, corresponding
 to a safety factor of approximately 1.7 on temperature rise. $\square$
 
-### 9.4.6 kwavers ThermalIndexCalculator
+### 16.4.6 kwavers ThermalIndexCalculator
 
-`kwavers::clinical::safety::thermal_index::ThermalIndexCalculator` provides a
+`kwavers_therapy::safety::thermal_index::ThermalIndexCalculator` provides a
 unified implementation for TIS, TIB, and TIC via `ThermalIndexModel`:
 
 ```rust
-use kwavers::clinical::safety::thermal_index::{
+use kwavers_therapy::safety::thermal_index::{
     ThermalIndexCalculator, ThermalIndexModel,
 };
 
@@ -391,17 +389,17 @@ attenuation model is undefined), non-positive reference power (TI would be
 negative or infinite), and negative depth (unphysical). `ThermalIndexStatus`
 transitions from `Safe` → `Caution` (≥ 80% of limit) → `Unsafe`.
 
-![TI versus depth for TIS, TIB, TIC at 5 MHz, 50 mW output](figures/ch_safe/fig03_ti_vs_depth.png)
+![TI versus depth for TIS, TIB, TIC at 5 MHz, 50 mW output](figures/ch15/fig02_thermal_index.png)
 
-*Figure 9.3. Thermal Index depth profiles for soft tissue (TIS), bone-at-focus
+*Figure 16.3. Thermal Index depth profiles for soft tissue (TIS), bone-at-focus
 (TIB), and cranial bone (TIC) at $f = 5\;\text{MHz}$, $W_0 = 50\;\text{mW}$.
 Dashed line: FDA limit TI = 6.*
 
 ---
 
-## 9.5 Thermal Dose: CEM43
+## 16.5 Thermal Dose: CEM43
 
-### 9.5.1 Definition
+### 16.5.1 Definition
 
 The cumulative equivalent minutes at 43 °C (CEM43) is defined by the
 Sapareto–Dewey (1984) integral:
@@ -416,9 +414,9 @@ CEM43 accumulates dose only above baseline body temperature; the standard
 convention in kwavers (following the BHTE literature) begins accumulation
 above $37\;\text{°C}$.
 
-### 9.5.2 Time–Temperature Equivalence
+### 16.5.2 Time–Temperature Equivalence
 
-**Theorem 9.4 (Time–temperature equivalence).**
+**Theorem 16.4 (Time–temperature equivalence).**
 
 Heating to $56\;\text{°C}$ for $1\;\text{s}$ is thermally equivalent to
 $\mathrm{CEM43} = 8192\;\text{min}$.
@@ -442,7 +440,7 @@ $$\mathrm{CEM43} = 1 \cdot (0.5)^{43 - 56} = 2^{13} = 8192\;\text{min.} \qquad \
 This equivalence is used to define the lethal dose for HIFU: a brief high-temperature
 exposure accumulates the same CEM43 as a prolonged moderate-temperature exposure.
 
-### 9.5.3 Damage Thresholds
+### 16.5.3 Damage Thresholds
 
 | Tissue | CEM43 threshold | Effect |
 |---|---|---|
@@ -454,7 +452,7 @@ exposure accumulates the same CEM43 as a prolonged moderate-temperature exposure
 
 These thresholds are empirically established (Dewey 1994, Dewhirst 2003) and
 implemented as compile-time constants in
-`kwavers::physics::thermal::diffusion::dose::thresholds`:
+`kwavers_physics::thermal::diffusion::dose::thresholds`:
 
 ```rust
 pub const NECROSIS_THRESHOLD_CEM43: f64 = 240.0;  // muscle
@@ -463,10 +461,10 @@ pub const PROTEIN_DENATURATION:     f64 =   1.0;  // albumin onset
 pub const DIAGNOSTIC_SAFETY:        f64 =   0.1;  // diagnostic safe level
 ```
 
-### 9.5.4 kwavers CEM43 Accumulator
+### 16.5.4 kwavers CEM43 Accumulator
 
-`kwavers::physics::thermal::thermal_dose::ThermalDose` and
-`kwavers::physics::thermal::diffusion::dose::ThermalDoseCalculator` both
+`kwavers_physics::thermal::thermal_dose::ThermalCEM43Grid` and
+`kwavers_physics::thermal::diffusion::dose::ThermalDoseCalculator` both
 implement the CEM43 integral over 3-D temperature fields:
 
 ```rust
@@ -482,17 +480,17 @@ accumulate more than one minute of CEM43 per actual minute, which is the
 hallmark of super-threshold thermal dose. Conversely, $T < 43\;\text{°C}$
 with $R = 0.25$ accumulates far less.
 
-![CEM43 accumulation during HIFU sonication](figures/ch_safe/fig04_cem43_hifu.png)
+![CEM43 accumulation during HIFU sonication](figures/ch15/fig03_cem43.png)
 
-*Figure 9.4. Spatial map of CEM43 after a 10 s HIFU sonication at 1.1 MHz,
+*Figure 16.4. Spatial map of CEM43 after a 10 s HIFU sonication at 1.1 MHz,
 100 W acoustic power. Contour at 240 min (muscle necrosis threshold) is shown
 in red.*
 
 ---
 
-## 9.6 Arrhenius Thermal Damage Integral
+## 16.6 Arrhenius Thermal Damage Integral
 
-### 9.6.1 Definition
+### 16.6.1 Definition
 
 The Arrhenius thermal damage integral $\Omega(t)$ quantifies the fraction of
 damaged cells through a first-order reaction model:
@@ -506,9 +504,9 @@ where:
 - $R_{\mathrm{gas}} = 8.314\;\text{J mol}^{-1}\text{K}^{-1}$ is the universal gas constant,
 - $T(t')$ is absolute temperature in kelvin.
 
-### 9.6.2 Proof: Ω = 1 Corresponds to 63% Cell Death
+### 16.6.2 Proof: Ω = 1 Corresponds to 63% Cell Death
 
-**Theorem 9.5.**
+**Theorem 16.5.**
 
 In the first-order Arrhenius model, $\Omega = 1$ corresponds to $1 - e^{-1}
 \approx 63.2\%$ cell death probability.
@@ -534,9 +532,9 @@ At $\Omega = 1$: killed fraction $= 1 - e^{-1} \approx 0.632 = 63.2\%$. $\square
 boundary of the intended lesion. Regions outside this contour have $\Omega < 1$
 (sub-lethal damage); regions inside have $\Omega > 1$ (supralethal exposure).
 
-### 9.6.3 Equivalence of Ω and CEM43 at Constant Temperature
+### 16.6.3 Equivalence of Ω and CEM43 at Constant Temperature
 
-**Theorem 9.6 (Arrhenius–CEM43 equivalence at constant temperature).**
+**Theorem 16.6 (Arrhenius–CEM43 equivalence at constant temperature).**
 
 At constant temperature $T$, the Arrhenius integral $\Omega$ and CEM43 are
 related by a monotone increasing bijection; specifically, there exists a
@@ -579,11 +577,17 @@ $(0.5)^{43-56}/60 = 2^{13}/60 \approx 136.5\;\text{min}$, well above the
 
 The parameters $A$ and $E_a$ are tissue-specific; the values above apply to
 muscle tissue (Bhowmick & Bhowmick 2000). Implementation resides in
-`kwavers::physics::thermal::ablation::kinetics`.
+`kwavers_physics::thermal::ablation::kinetics`.
+
+![Arrhenius thermal-damage integral](figures/ch15/fig04_arrhenius_damage.png)
+
+**Figure 16.6.** Arrhenius thermal-damage integral Ω(t) and the corresponding necrosis
+fraction versus temperature–time history (§16.6); Ω = 1 marks the boundary of irreversible
+coagulative damage.
 
 ---
 
-## 9.7 FDA Diagnostic Imaging Limits
+## 16.7 FDA Diagnostic Imaging Limits
 
 The FDA 510(k) guidance "Marketing Clearance of Diagnostic Ultrasound Systems
 and Transducers" (2019) defines the following application-class output limits:
@@ -623,11 +627,16 @@ In the 40+ years of diagnostic ultrasound use since the first commercial systems
 below the FDA limits in vivo. The WFUMB safety symposia (2012, 2015) reviewed
 all epidemiological and experimental evidence and reached the same conclusion.
 
+![FDA diagnostic output parameter space](figures/ch15/fig05_fda_parameter_space.png)
+
+**Figure 16.7.** FDA Track-3 diagnostic output limits (§16.7) — the admissible region in
+(MI, I_SPTA.3) below MI ≤ 1.9 and I_SPTA.3 ≤ 720 mW cm⁻².
+
 ---
 
-## 9.8 Fetal Safety and the ALARA Principle
+## 16.8 Fetal Safety and the ALARA Principle
 
-### 9.8.1 Special Concern for Fetal Exposures
+### 16.8.1 Special Concern for Fetal Exposures
 
 The developing embryo and fetus present heightened safety concerns for three
 reasons:
@@ -650,7 +659,7 @@ sufficient image quality. It is not an absolute limit but an operational
 obligation. ALARA is formalized in the AIUM Statement on the Safe Use of
 Diagnostic Ultrasound (2020).
 
-### 9.8.2 Extra Factor of 2 Caution
+### 16.8.2 Extra Factor of 2 Caution
 
 Several national guidelines recommend applying an extra factor of 2 on all
 output limits for first-trimester fetal scanning, reducing the effective TI limit
@@ -672,9 +681,9 @@ below the conservative fetal limit.
 
 ---
 
-## 9.9 Non-Thermal Bioeffects
+## 16.9 Non-Thermal Bioeffects
 
-### 9.9.1 Cavitation Threshold
+### 16.9.1 Cavitation Threshold
 
 Beyond the MI framework, the Apfel–Holland (1991) empirical formula gives the
 pressure threshold for inertial cavitation in a liquid with a natural nucleus
@@ -698,7 +707,7 @@ $$P_{\mathrm{th}} \approx \frac{P_0}{\sqrt{2}} + C\sqrt{f\rho\sigma},$$
 where $C$ is a numeric constant.  Substituting SI values for water and fitting
 to measured data at 0.5–5 MHz gives the Apfel–Holland coefficients.
 
-### 9.9.2 Acoustic Streaming
+### 16.9.2 Acoustic Streaming
 
 A traveling acoustic wave in a viscous medium exerts a body force on the fluid
 due to the attenuation of momentum flux:
@@ -724,7 +733,7 @@ Streaming velocities of $\sim$1–10 cm/s are observed in cyst fluids in vivo.
 Streaming is non-destructive at diagnostic levels but is relevant for
 microbubble manipulation in contrast-enhanced imaging and drug delivery.
 
-### 9.9.3 Radiation Force on a Target
+### 16.9.3 Radiation Force on a Target
 
 The time-averaged radiation force on a perfectly reflecting target (e.g., a
 kidney stone or calibration target) is
@@ -740,9 +749,9 @@ elastography and is exploited therapeutically in kidney stone repositioning
 
 ---
 
-## 9.10 HIFU Safety Monitoring
+## 16.10 HIFU Safety Monitoring
 
-### 9.10.1 Real-Time Thermometry
+### 16.10.1 Real-Time Thermometry
 
 Safe delivery of HIFU requires real-time knowledge of the temperature field to
 prevent unintended collateral heating.  Two thermometry modalities are in clinical
@@ -790,7 +799,7 @@ For a $1\;\text{°C}$ rise, the phase shift is $\Delta\phi \approx 0.08\;\text{r
 well within the detection limit of phase-sensitive MRI sequences.  Practical MR
 thermometry accuracy is $\pm 0.5$–$1.0\;\text{°C}$ at 1.5 T.
 
-### 9.10.2 Ultrasound Backscatter Thermometry
+### 16.10.2 Ultrasound Backscatter Thermometry
 
 The backscattered echo coefficient of biological tissue changes with temperature
 due to thermoelastic properties of lipid-based structures.  In the range
@@ -803,25 +812,23 @@ of lipids ($\approx 40$–$42\;\text{°C}$), the coefficient change increases to
 $\sim$2–5%/°C, enabling temperature discrimination of $\pm 1$–2°C.
 
 Ultrasound thermometry is implemented via motion-compensated speckle tracking
-and is available in `kwavers::physics::acoustics::transcranial::safety_monitoring`.
+and is available in `kwavers_physics::acoustics::transcranial::safety_monitoring`.
 Its accuracy is lower than MR thermometry ($\pm 2$–$3\;\text{°C}$) but it
 provides temporal resolution of $\sim$10 ms (vs. seconds for MR) and can be
 implemented on the same transducer used for therapy.
 
-![MR-HIFU temperature map during hepatic ablation](figures/ch_safe/fig05_mr_hifu_thermometry.png)
-
-*Figure 9.5. PRF thermometry temperature map during MR-HIFU hepatic ablation.
+*Figure 16.5. PRF thermometry temperature map during MR-HIFU hepatic ablation.
 Left: anatomical reference. Right: $\Delta T$ map with CEM43 = 240 min contour
 overlaid in red.*
 
 ---
 
-## 9.11 kwavers Safety Module Architecture
+## 16.11 kwavers Safety Module Architecture
 
-### 9.11.1 Module Structure
+### 16.11.1 Module Structure
 
 ```
-kwavers::clinical::safety
+kwavers_therapy::safety
 ├── mechanical_index
 │   ├── MechanicalIndexCalculator  (MI computation with derating)
 │   ├── MechanicalIndexResult      (MI value, safety status, margin)
@@ -832,8 +839,8 @@ kwavers::clinical::safety
 │   ├── ThermalIndexResult         (TI, derated power, status)
 │   └── ThermalIndexStatus         (Safe / Caution / Unsafe)
 ├── monitor
-│   ├── SafetyMonitor              (real-time parameter monitoring)
-│   ├── SafetyLimits               (configurable regulatory limits)
+│   ├── ClinicalSafetyMonitor      (real-time parameter monitoring)
+│   ├── ClinicalSafetyLimits       (configurable regulatory limits)
 │   └── SafetyViolation            (violation record with computed values)
 ├── interlocks
 │   └── InterlockSystem            (hardware/software interlock logic)
@@ -845,21 +852,21 @@ kwavers::clinical::safety
     └── SafetyAuditLogger          (structured safety event log)
 ```
 
-### 9.11.2 Integration with Physics Layer
+### 16.11.2 Integration with Physics Layer
 
 The thermal dose computation is split across two layers:
 
-- **`kwavers::physics::thermal::thermal_dose::ThermalDose`** — 3-D CEM43
+- **`kwavers_physics::thermal::thermal_dose::ThermalCEM43Grid`** — 3-D CEM43
   accumulation over the full simulation grid, used during HIFU forward
   simulations.
-- **`kwavers::physics::thermal::diffusion::dose::ThermalDoseCalculator`** —
+- **`kwavers_physics::thermal::diffusion::dose::ThermalDoseCalculator`** —
   higher-level interface with Kelvin-input temperature fields, necrosis fraction
   computation, and damage mapping.
 
 Both share the same CEM43 formula and threshold constants, enforcing the SSOT
 (single source of truth) principle.
 
-### 9.11.3 Compliance and Audit
+### 16.11.3 Compliance and Audit
 
 `EnhancedComplianceValidator` checks every output parameter against the full
 FDA regulatory matrix before and during a session. `SafetyAuditLogger` records
@@ -868,17 +875,17 @@ as a structured `AuditEntry` with timestamp, parameter values, and regulatory
 reference. This provides a traceable record for 510(k) submissions and IEC
 60601-2-37 risk management documentation.
 
-### 9.11.4 Test Coverage
+### 16.11.4 Test Coverage
 
-Tests are organised under `kwavers::clinical::safety::thermal_index::tests`,
-`kwavers::clinical::safety::mechanical_index::tests`, and
-`kwavers::clinical::safety::tests`.  Key invariants verified:
+Tests are organised under `kwavers_therapy::safety::thermal_index::tests`,
+`kwavers_therapy::safety::mechanical_index::tests`, and
+`kwavers_therapy::safety::tests`.  Key invariants verified:
 
 | Test | Invariant | Mathematical justification |
 |---|---|---|
-| MI derating correctness | $P_{r.3} = P_r \cdot 10^{-\alpha_0 f z / 20}$ | Theorem 9.1 |
+| MI derating correctness | $P_{r.3} = P_r \cdot 10^{-\alpha_0 f z / 20}$ | Theorem 16.1 |
 | MI denominator validation | Reject $f \leq 0$ | $\sqrt{f}$ undefined |
-| TI linearity | $\mathrm{TI} \propto W$ at fixed depth | Theorem 9.3 |
+| TI linearity | $\mathrm{TI} \propto W$ at fixed depth | Theorem 16.3 |
 | TI domain validation | Reject negative power / depth | Physical constraint |
 | CEM43 accumulation | $(0.5)^{43-45} \cdot 1\;\text{min} = 4\;\text{min}$ | Sapareto–Dewey |
 | Necrosis threshold | `fraction_above_threshold(240)` on known field | Dewey 1994 |
@@ -890,9 +897,9 @@ with analytically derived expected values; no assertion checks `is_ok()` alone.
 
 ---
 
-## 9.12 Safety in Therapeutic Contexts
+## 16.12 Safety in Therapeutic Contexts
 
-### 9.12.1 HIFU Lesion Sizing
+### 16.12.1 HIFU Lesion Sizing
 
 The target HIFU lesion is defined by the $\Omega = 1$ isocontour.  Planning
 requires:
@@ -906,17 +913,17 @@ requires:
 5. Verify that the $\Omega = 1$ boundary is within the target and that the
    thermal margin at sensitive structures (nerves, vessels) is CEM43 $< 1\;\text{min}$.
 
-This pipeline is implemented in `kwavers::clinical::therapy::hifu_planning` with
-the thermal coupling solver in `kwavers::physics::thermal::coupling`.
+This pipeline is implemented in `kwavers_clinical::therapy::hifu_planning` with
+the thermal coupling solver in `kwavers_physics::thermal::coupling`.
 
-### 9.12.2 Tissue Selectivity
+### 16.12.2 Tissue Selectivity
 
 Bone absorbs ultrasound at $\sim$10–20× the soft-tissue rate.  For transcranial
 HIFU, skull heating is the primary safety constraint.  TIC provides the
 regulatory metric; real-time skull thermometry via PRF-MR is mandatory for
 exposures exceeding TIC $> 2$.
 
-### 9.12.3 Cavitation in Therapy
+### 16.12.3 Cavitation in Therapy
 
 At therapeutic pressures (MI $> 4$–6), inertial cavitation is intentional
 (histotripsy, lithotripsy).  The safety concern shifts from preventing cavitation
@@ -926,7 +933,7 @@ kwavers therapeutic sessions where MI $> 1.9$.
 
 ---
 
-## 9.13 Summary and Key Equations
+## 16.13 Summary and Key Equations
 
 | Quantity | Formula | Unit | FDA limit |
 |---|---|---|---|
@@ -942,7 +949,7 @@ kwavers therapeutic sessions where MI $> 1.9$.
 
 ---
 
-## 9.14 References
+## 16.14 References
 
 1. **FDA (2019).** *Marketing Clearance of Diagnostic Ultrasound Systems and
    Transducers: Guidance for Industry and Food and Drug Administration Staff.*

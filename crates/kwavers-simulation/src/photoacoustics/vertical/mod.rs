@@ -1,0 +1,23 @@
+//! Canonical photoacoustic solver vertical.
+//!
+//! The retained public surface is organized by physical stage:
+//! optical transport, thermoelastic source generation, acoustic propagation,
+//! and reconstruction. Each stage owns its own workspace and validation types
+//! so allocation policy and scientific evidence stay local to the algorithm
+//! that consumes them.
+
+pub mod acoustic;
+pub mod optical;
+mod pipeline;
+pub mod reconstruction;
+pub mod source;
+pub mod validation;
+
+pub use acoustic::AcousticForwardModel;
+pub use optical::{
+    DiffusionOpticalSolver, MonteCarloOpticalSolver, OpticalForwardModel, OpticalSolveResult,
+};
+pub use pipeline::PhotoacousticPipeline;
+pub use reconstruction::PhotoacousticReconstructionModel;
+pub use source::PhotoacousticSourceModel;
+pub use validation::validate_photoacoustic_simulation;

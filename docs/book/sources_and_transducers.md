@@ -1,14 +1,24 @@
-# Chapter 5: Sources and Transducers
+# Chapter 6: Sources and Transducers
 
 ## 1. Introduction
 
 This chapter develops the mathematical foundation for ultrasound source modeling and
-transducer physics as implemented in kwavers. The scope covers piezoelectric constitutive
-relations, far-field directivity of planar piston sources, focused spherical bowl transducers,
-phased-array delay laws, annular arrays, band-limited interpolation (BLI) rasterization of
-arbitrary aperture geometries, capacitive micromachined ultrasound transducers (CMUT), and
-the source contract that governs how all geometric descriptions are converted to
-grid-compatible excitation fields inside kwavers.
+transducer physics in kwavers. The scope covers far-field directivity of planar piston
+sources, focused spherical bowl transducers, phased-array delay laws, annular arrays,
+band-limited interpolation (BLI) rasterization of arbitrary aperture geometries, and the
+source contract that governs how all geometric descriptions are converted to grid-compatible
+excitation fields inside kwavers. Piezoelectric constitutive relations (§2) and CMUT response
+are included as foundational transducer theory; they are **not** modelled in kwavers, which
+treats the transducer surface as a prescribed geometric/kinematic source rather than solving
+the electromechanical problem.
+
+**Scope boundary.** This chapter is the canonical home for **single-source and
+single-transducer** physics and for putting a source onto the computational grid. The
+*multi-element beam pattern* — array factor, grating lobes, transmit/receive steering and
+focusing delays, apodization, and delay-and-sum image formation — is derived in the
+companion **Beamforming and Image Formation** chapter; the phased-array delay law (§5) and
+grating-lobe condition (§9) below are stated for completeness and cross-reference that
+chapter for the full beam-pattern analysis.
 
 ### Notation
 
@@ -115,7 +125,16 @@ the resonance condition derived above.
 kwavers does not model the full electromechanical coupling; instead, a velocity or pressure
 boundary condition is imposed on the grid at the source mask. The resonance frequency
 determines the usable bandwidth and influences the temporal signal shape (`PulseParameters`
-in `kwavers::domain::source::config`).
+in `kwavers_source::config`).
+
+---
+
+> **Implementation status.** The piezoelectric constitutive relations and the Mason
+> equivalent circuit above are foundational theory for *how* a transducer converts drive
+> voltage to surface motion. kwavers does **not** implement a piezoelectric or CMUT
+> material model; it injects a prescribed surface velocity/pressure (§7 source contract)
+> and the resonance/bandwidth of a real element is supplied as an input pulse spectrum
+> (`PulseParameters`), not derived from `d_33`/Mason parameters.
 
 ---
 
@@ -170,6 +189,16 @@ Normalizing:
 H(θ) = 2 J_1(ka sinθ) / (ka sinθ).       □
 ```
 
+### On-Axis Near-Field Pressure
+
+Along the axis the exact (all-distance) on-axis pressure of a baffled circular
+piston driven at face velocity `U_0` is (O'Neil 1949)
+```
+p(z) = 2 ρ c U_0 · sin[(k/2)(√(z² + a²) − z)],
+```
+which oscillates between `0` and `2 ρ c U_0` in the near field and rolls off as
+`a²/(2z)` beyond the last axial maximum at `z = N = a²/λ`.
+
 ### First Null and Half-Pressure Angle
 
 | Quantity | Expression | Physical meaning |
@@ -190,6 +219,12 @@ where `sinc(x) = sin(πx)/(πx)`. CMUT elements may also exhibit strong electros
 non-linearity near the collapse voltage `V_c`; at operating bias `V_DC < V_c`, the effective
 stiffness is reduced and the center frequency shifts downward by the factor
 `sqrt(1 - (V_DC/V_c)²)` (Ladabaum et al., 1998).
+
+---
+
+![Piston source directivity](figures/ch11/fig01_piston_directivity.png)
+
+*Figure 1. Circular-piston directivity H(θ)=2J₁(ka sinθ)/(ka sinθ) for ka = 2, 5, 10 (`kw.circular_piston_directivity`, §3). Larger ka narrows the main lobe and adds sidelobes.*
 
 ---
 
@@ -256,6 +291,12 @@ These are standard approximations from Zemanek (1971), valid for `f_# ≥ 1`.
 
 ---
 
+![Focused-bowl on-axis pressure](figures/ch11/fig02_focused_bowl_onaxis.png)
+
+*Figure 2. On-axis pressure of a focused bowl vs depth (`kw.focused_bowl_onaxis`, §4); the peak near the geometric focus shows the focusing gain G = πa²/(λF).*
+
+---
+
 ## 5. Theorem: Delay Law for a Phased Array
 
 ### Statement
@@ -318,6 +359,12 @@ reduces sidelobes at the cost of increased main lobe width.
 
 ---
 
+![Phased-array delay law](figures/ch11/fig04_delay_law.png)
+
+*Figure 3. Linear-array element delays vs steering angle (§5); the far-field ramp is linear in element index with slope ∝ sin θ_s.*
+
+---
+
 ## 6. Theorem: BLI Rasterization Accuracy
 
 ### Statement
@@ -374,6 +421,12 @@ strongly recommend `ppw ≥ 10` for aperture-shaped sources.
 
 ---
 
+![BLI rasterization accuracy](figures/ch11/fig05_bli_accuracy.png)
+
+*Figure 4. BLI rasterization accuracy vs grid points per wavelength (§6); spectral convergence of the sinc-stencil source representation (Wise 2019).*
+
+---
+
 ## 7. Algorithm: Source Contract
 
 The source contract defines the invariants that every source implementation in kwavers must
@@ -424,7 +477,7 @@ Algorithm:
 
 k-Wave MATLAB stores sensor/source data in Fortran (column-major) order: the active cells
 are enumerated with the x-index varying fastest. kwavers replicates this ordering in the
-sensor recorder (see Chapter 6) and in the source mask active-cell enumeration to ensure
+sensor recorder (see Chapter 8) and in the source mask active-cell enumeration to ensure
 that any comparison with k-Wave reference data using the same mask does not require
 additional permutation.
 
@@ -537,8 +590,14 @@ At transmit depth `z_f`, the delay for ring `n` is:
 τ_n = (sqrt(ρ_n² + z_f²) - z_f) / c
 ```
 (spherical wave approximation, valid when `ρ_n² ≪ z_f²` or exactly for spherical geometry).
-kwavers implements annular arrays via `kwavers::domain::source::basic::piston::PistonSource`
-with multi-ring geometry constructed through `KWaveArray::add_annular_array`.
+kwavers constructs annular arrays through `KWaveArray::add_annular_element`
+(`kwavers_transducer::kwave_array`), placing concentric ring elements with per-ring focal delays.
+
+---
+
+![Linear phased-array beam pattern](figures/ch11/fig03_array_beam_pattern.png)
+
+*Figure 5. Linear phased-array beam pattern steered to 0°, 15°, 30° (`kw.linear_array_factor`, §9); the main lobe tracks the steering angle.*
 
 ---
 
@@ -547,14 +606,16 @@ with multi-ring geometry constructed through `KWaveArray::add_annular_array`.
 ### Module Structure
 
 ```
-kwavers::domain::source
-├── mod.rs                          Source trait, SourceType, SourceField
+kwavers_source                       Source trait + grid injection (solver-facing)
+├── types.rs                        Source trait, SourceType (= SourceField)
 ├── config.rs                       PulseParameters, PulseType, EnvelopeType, SourceModel
-├── factory.rs                      SourceFactory: construct sources by type
-├── types.rs                        Source, EMWaveType, Polarization
 ├── structs.rs                      PointSource, CompositeSource, NullSource
-├── grid_source.rs                  GridSource, SourceMode (additive vs. dirichlet)
-├── injection.rs                    SourceInjectionMode (hard vs. soft sources)
+├── grid_source.rs                  GridSource, SourceMode (Additive | AdditiveNoCorrection | Dirichlet)
+├── injection.rs                    SourceInjectionMode (Boundary [Dirichlet] | Additive { scale } [soft])
+└── wavefront/                      PlaneWaveSource, BesselSource, GaussianSource, SphericalSource
+
+kwavers_transducer                   Transducer geometry → grid rasterization
+├── factory/                        SourceFactory: construct sources by type
 ├── basic/
 │   ├── piston.rs                   PistonSource, PistonConfig, PistonApodization
 │   ├── linear_array.rs             LinearArray
@@ -562,17 +623,15 @@ kwavers::domain::source
 ├── kwave_array/
 │   ├── mod.rs                      KWaveArray struct, public API
 │   ├── bli_kernel.rs               BLI stencil, sinc kernel, on-grid detection
-│   ├── geometry.rs                 Disc, bowl, planar element geometry
+│   ├── construction.rs             add_rect_element, add_disc_element, add_bowl_element, add_annular_element
 │   ├── rasterizer_planar.rs        Planar element rasterization
 │   ├── rasterizer_curved.rs        Curved (bowl) element rasterization
-│   ├── construction.rs             add_rect_element, add_disc_element, add_bowl
-│   ├── math.rs                     BLI constants, DISC_BLI_TOLERANCE = 0.05
-│   ├── transform.rs                Euler rotation for element orientation
-│   └── accessors/                  get_element_*, get_grid_weights
+│   ├── geometry.rs                 Disc / bowl / planar element geometry
+│   ├── math.rs                     BLI constants + euler_xyz_rotation_matrix
+│   └── accessors/                  get_array_binary_mask, get_element_positions, get_element_*
 ├── flexible/                       FlexibleTransducerArray (in-vivo calibration)
-├── hemispherical/                  HemisphericalArray, ElementState
-├── array_2d/                       TransducerArray2D, 2-D matrix arrays
-└── wavefront/                      WavefrontSource (plane wave, steered CW)
+├── hemispherical/                  HemisphericalArray, ElementState (Active | Disabled | Failed | Sparse)
+└── array_2d/                       TransducerArray2D (2-D matrix arrays)
 ```
 
 ### Key Types
@@ -581,53 +640,51 @@ kwavers::domain::source
 produce k-Wave-compatible source masks and signal matrices. The public API exposes:
 
 ```rust
-// Add a rectangular element (typical for linear arrays)
+// Add a rectangular element (typical for linear arrays); builder-style, returns &mut Self
 pub fn add_rect_element(
     &mut self,
     position: (f64, f64, f64),
     u_size: f64,            // element width
     v_size: f64,            // element height
-    euler_angles: (f64, f64, f64),  // rotation (phi, theta, psi) in radians
-) -> Result<(), KWaveArrayError>
+    euler_angles: (f64, f64, f64),  // XYZ rotation (alpha, beta, gamma) in radians
+) -> &mut Self
 
-// Add a focused disc element (piston with focus)
+// Add a focused disc element (piston with optional focus)
 pub fn add_disc_element(
     &mut self,
     position: (f64, f64, f64),
     radius: f64,
     focus_position: Option<(f64, f64, f64)>,
-) -> Result<(), KWaveArrayError>
+) -> &mut Self
 
-// Compute grid weights for a given grid (performs BLI rasterization)
-pub fn get_array_grid_weights(
-    &self,
-    grid: &Grid,
-) -> Result<ArrayGridWeights, KWaveArrayError>
+// BLI rasterization -> binary source mask for a given grid
+pub fn get_array_binary_mask(&self, grid: &Grid) -> Array3<bool>
+// (element positions / per-element weights via the `accessors` module)
 ```
 
 **`SourceInjectionMode`** selects between:
-- `Hard`: pressure or velocity at source cells is forced to the signal value (Dirichlet BC).
-- `Soft`: source signal is added to the propagating field (additive injection).
+- `Boundary`: pressure or velocity at source cells is forced to the signal value (Dirichlet/hard BC).
+- `Additive { scale }`: source signal is added to the propagating field (soft injection).
 
-For parity with k-Wave MATLAB, soft injection is the default for pressure sources.
+For parity with k-Wave MATLAB, additive (soft) injection is the default for pressure sources.
 
 ### BLI Constants (from `kwave_array/math.rs`)
 
 ```rust
 pub const DISC_BLI_TOLERANCE: f64 = 0.05;     // 5% weight threshold → N_sub = 7
-pub const DISC_AXIS_EPSILON: f64 = 1.0e-10;   // collinearity guard for Gram-Schmidt
-pub const DISC_PACKING_NUMBER: f64 = 6.28;    // ≈ 2π, azimuthal ring packing factor
+pub const DISC_AXIS_EPSILON: f64 = 1.0e-12;   // collinearity guard for Gram-Schmidt
+pub const DISC_PACKING_NUMBER: f64 = 7.0;     // azimuthal ring packing factor
 ```
 
 ### Element Rotation (Euler Angles)
 
-kwavers uses ZYZ Euler angles `(φ, θ, ψ)` to orient element normal vectors, matching the
-k-Wave MATLAB convention. The rotation matrix is:
+kwavers uses intrinsic XYZ Euler angles `(α, β, γ)` to orient element normal vectors,
+matching the k-Wave MATLAB `kWaveArray` convention. The rotation matrix is:
 ```
-R = R_z(φ) · R_y(θ) · R_z(ψ)
+R = R_z(γ) · R_y(β) · R_x(α)
 ```
-This is implemented in `kwave_array/transform.rs` and applied before disc-basis computation
-to orient the element tangent plane correctly in 3-D space.
+This is implemented as `euler_xyz_rotation_matrix` in `kwave_array/math.rs` and applied
+before disc-basis computation to orient the element tangent plane correctly in 3-D space.
 
 ---
 
@@ -667,19 +724,15 @@ MATLAB for equivalent grid sizes (see project_gpu_pstd_perf_regression.md).
 
 ## 12. Figure References
 
-The following figures should be generated from the corresponding Python validation scripts
-in `pykwavers/examples/` and stored in `docs/book/figures/`:
+Figures 1–5 (embedded in §3–§9) are generated by
+`pykwavers/examples/book/ch11_sources_and_transducers.py`, which computes every quantity
+through the kwavers Rust core (`kw.circular_piston_directivity`, `kw.focused_bowl_onaxis`,
+`kw.linear_array_factor` → `kwavers_physics::analytical::transducer`) and performs only
+rendering. The k-Wave parity results quoted in §11 are produced by the `at_focused_bowl_3D`,
+`at_focused_annular_array_3D`, and `sd_focussed_detector_3D` comparison scripts.
 
-| Figure | Script | Description |
-|--------|--------|-------------|
-| Fig 5.1 | `piston_directivity.py` | H(θ) for ka = 2, 5, 10 |
-| Fig 5.2 | `bowl_onaxis.py` | On-axis pressure vs axial distance for F/a = 2 |
-| Fig 5.3 | `phased_array_beam.py` | Beam pattern for 64-element linear array, 0° and 30° steer |
-| Fig 5.4 | `annular_array_depths.py` | On-axis focal depth vs ring delay for 5-ring annular array |
-| Fig 5.5 | `bli_error.py` | BLI weight error vs N_sub for off-grid source point |
-| Fig 5.6 | `kwave_parity_bowl.py` | kwavers vs k-Wave on-axis pressure overlay |
-| Fig 5.7 | `cmut_directivity.py` | Square element directivity H(θ_x, θ_y) surface plot |
-| Fig 5.8 | `piezo_resonance.py` | Mason circuit impedance magnitude vs frequency |
+CMUT and Mason-circuit (piezoelectric resonance) figures are intentionally absent: those
+models are documented as theory (§2) and are not implemented in kwavers.
 
 ---
 

@@ -1,4 +1,4 @@
-# Chapter: Photoacoustic Imaging
+# Chapter 10: Photoacoustic Imaging
 
 ## Overview
 
@@ -6,9 +6,9 @@ Photoacoustic (PA) imaging combines pulsed optical excitation with ultrasonic de
 
 This chapter derives every governing equation from first principles, proves each reconstruction theorem completely, and maps each result to the corresponding module in the `kwavers` library.
 
-![PA signal generation schematic](figures/ch_pa/fig01_pa_signal_generation.png)
+![Photoacoustic signal from a spherical absorber](figures/ch13/fig03_pa_sphere_signal.png)
 
-*Figure 1. Photoacoustic signal generation. A nanosecond laser pulse is absorbed by a chromophore (red), generating a bipolar pressure transient that propagates to an array detector.*
+*Figure 1. Photoacoustic pressure transient from a uniformly absorbing sphere (N-wave, Xu & Wang 2006), computed by `kw.pa_sphere_pressure_signal`. The bipolar shape is the time-domain signature of the spherical-shell Green's function (§3.2).*
 
 ---
 
@@ -129,11 +129,11 @@ in the limit $\tau_L \to 0$ (stress confinement becomes exact). This delta-funct
 **Theorem 2.1 (Grüneisen Parameter).** *The Grüneisen parameter satisfies*
 
 $$
-\Gamma = \frac{\beta c_s^2}{C_p} = \frac{\alpha \beta c_s^2}{\kappa_T C_p},
+\Gamma = \frac{\beta c_s^2}{C_p} = \frac{\beta}{\rho\, \kappa_T\, C_p},
 \tag{2.1}
 $$
 
-*where $\beta$ is the isobaric volumetric thermal expansion coefficient, $c_s$ is the adiabatic speed of sound, $C_p$ is the specific heat at constant pressure, $\alpha$ is the isothermal compressibility, and $\kappa_T$ is the isothermal compressibility coefficient.*
+*where $\beta$ is the isobaric volumetric thermal expansion coefficient, $c_s$ is the adiabatic speed of sound, $\rho$ is the mass density, $C_p$ is the specific heat at constant pressure, and $\kappa_T = 1/K_T$ is the isothermal compressibility. The second equality holds in the weak-thermoelastic limit $\kappa_S \approx \kappa_T$ (justified below).*
 
 **Proof.** From the definition $\Gamma = \beta c_s^2 / C_p$ (established in Theorem 1.1), write the adiabatic compressibility as $\kappa_S = 1/(\rho c_s^2)$. The standard thermodynamic identity relating adiabatic and isothermal compressibilities is
 
@@ -149,10 +149,10 @@ $$
 \tag{2.3}
 $$
 
-Identifying $\alpha = \rho \kappa_T$ as the coefficient relating the two compressibilities (or equivalently writing $1/\kappa_T = K_T$):
+Equation (2.3) is the second form of (2.1). Re-expressing it through $c_s^2 \approx 1/(\rho\kappa_T)$ recovers the adiabatic-speed form, so the two are identical in the weak-thermoelastic limit:
 
 $$
-\Gamma = \frac{\beta c_s^2}{C_p} = \frac{\alpha \beta c_s^2}{\kappa_T C_p},
+\Gamma = \frac{\beta c_s^2}{C_p} = \frac{\beta}{\rho\, \kappa_T\, C_p},
 \tag{2.4}
 $$
 
@@ -176,7 +176,12 @@ $$
 \tag{2.6}
 $$
 
-where $T_0 = 293\,\text{K}$, $\beta_0 = 2.1 \times 10^{-4}\,\text{K}^{-1}$, $a_1 = 1.6 \times 10^{-5}\,\text{K}^{-2}$. This makes PA signal amplitude a thermometer: $\partial p_0 / \partial T = (\partial \Gamma / \partial T) H$. The kwavers module `kwavers::physics::photoacoustics::thermoelasticity::GrueneisenModel` implements this temperature-dependent model.
+where $T_0 = 293\,\text{K}$, $\beta_0 = 2.1 \times 10^{-4}\,\text{K}^{-1}$, $a_1 = 1.6 \times 10^{-5}\,\text{K}^{-2}$. This makes PA signal amplitude a thermometer: $\partial p_0 / \partial T = (\partial \Gamma / \partial T) H$. The kwavers module `kwavers_physics::photoacoustics::thermoelasticity::GrueneisenModel` implements this temperature-dependent model.
+
+![Grüneisen parameter of water vs temperature](figures/ch13/fig02_gruneisen_temperature.png)
+
+*Figure 2. Grüneisen parameter Γ(T) of water from 0–100 °C (`kw.gruneisen_parameter_water`, Sigrist & Kneubühl 1978). The rise of Γ with T makes PA amplitude a tissue thermometer (Eq. 2.6), the basis of `GrueneisenModel`.*
+
 
 ### 2.3 Tissue Grüneisen Values
 
@@ -285,9 +290,6 @@ which is equation (3.6). The time derivative acts on the retarded-time argument 
 
 Equation (3.6) has a clear geometric interpretation: $p(\mathbf{r},t)$ at time $t$ receives contributions from all source voxels $\mathbf{r}'$ at distance $c_s t$ from $\mathbf{r}$, i.e., from a spherical shell of radius $c_s t$ centered at $\mathbf{r}$. This spherical Radon transform structure underlies all back-projection reconstruction algorithms.
 
-![PA Green's function geometry](figures/ch_pa/fig02_greens_function_geometry.png)
-
-*Figure 2. Retarded Green's function geometry. Each detected time sample $p(\mathbf{r}_s, t)$ receives contributions from a spherical shell of radius $c_s t$ centered at sensor position $\mathbf{r}_s$. Intersections of shells from multiple sensors localize the source.*
 
 ---
 
@@ -336,7 +338,7 @@ D = \frac{1}{3(\mu_a + \mu_s')}.
 \tag{4.5}
 $$
 
-This is the governing equation solved by `kwavers::solver::photoacoustics::optical::DiffusionOpticalSolver`.
+This is the governing equation solved by `kwavers_simulation::photoacoustics::vertical::optical::DiffusionOpticalSolver`.
 
 ### 4.3 Effective Attenuation Coefficient
 
@@ -379,11 +381,11 @@ The "biological optical window" at 700–1000 nm arises from the combined spectr
 - **Water**: absorbs strongly below 300 nm and above 1300 nm.
 - **Lipids**: prominent absorption at 1210 nm and 1720 nm.
 
-In the window 700–900 nm, tissue $\mu_a \approx 0.1\text{–}1\,\text{cm}^{-1}$ and $\mu_s' \approx 5\text{–}15\,\text{cm}^{-1}$, giving $\mu_{\text{eff}} \approx 0.5\text{–}3\,\text{cm}^{-1}$ and penetration depths of 3–20 mm for diffuse imaging. The hemoglobin database is implemented in `kwavers::clinical::imaging::chromophores::hemoglobin::HemoglobinDatabase`.
+In the window 700–900 nm, tissue $\mu_a \approx 0.1\text{–}1\,\text{cm}^{-1}$ and $\mu_s' \approx 5\text{–}15\,\text{cm}^{-1}$, giving $\mu_{\text{eff}} \approx 0.5\text{–}3\,\text{cm}^{-1}$ and penetration depths of 3–20 mm for diffuse imaging. The hemoglobin database is implemented in `kwavers_optics::chromophores::HemoglobinDatabase`.
 
-![Hemoglobin absorption spectra](figures/ch_pa/fig03_hemoglobin_spectra.png)
+![Near-IR optical absorption spectra of HbO2 and Hb](figures/ch13/fig01_absorption_spectra.png)
 
-*Figure 3. Molar extinction coefficients of HbO$_2$ (solid) and Hb (dashed) from 450 to 1000 nm. The isosbestic point at 797 nm is marked. Values from Prahl (1999) tabulated in the kwavers `HemoglobinDatabase`.*
+*Figure 3. Molar absorption spectra of HbO₂ (solid) and Hb (dashed), 450–1000 nm, from `kw.hbo2_molar_absorption` / `kw.hb_molar_absorption` (Prahl 1999 fits). The isosbestic point near 797 nm and the 760/850 nm working pair (§5.3) are visible.*
 
 ---
 
@@ -468,7 +470,12 @@ $$
 
 The determinant of the normalized matrix is $r_1 - r_2$. When $r_1 \approx r_2$, the matrix is nearly singular and $\kappa \to \infty$. The condition number is minimized by maximizing $|r_1 - r_2|$, which is achieved by choosing wavelengths on opposite sides of the isosbestic point (e.g., 760 nm and 850 nm), where HbO$_2$ and Hb absorption exchange dominance. $\blacksquare$
 
-The spectral unmixing is implemented in `kwavers::clinical::imaging::spectroscopy::SpectralUnmixer`.
+![Two-chromophore spectroscopic unmixing](figures/ch13/fig05_spectroscopic_unmixing.png)
+
+*Figure 4. Least-squares HbO₂/Hb unmixing at 760/850 nm (`kw.spectroscopic_unmixing_lstsq`), recovering sO₂ from the 2×2 system (5.5)–(5.6). Wavelengths straddle the isosbestic point to minimize κ(E) (§5.3).*
+
+
+The spectral unmixing is implemented in `kwavers_analysis::signal_processing::spectroscopy::SpectralUnmixer`.
 
 ---
 
@@ -553,7 +560,7 @@ yields, upon angular integration $\oint d\Omega$, the sum $\Omega_0 p_0(\mathbf{
 
 ### 6.3 Planar and Linear Sensor Geometries
 
-For a planar detector array spanning the $z=0$ plane, $\Omega_0 = 2\pi$ and the back-projection simplifies to a 2D integration. The Fourier-domain equivalent (k-Wave planar reconstruction) is equivalent to a matched filter applied in the $(\mathbf{k}_\perp, \omega)$ domain. This is implemented in `kwavers::solver::photoacoustics::reconstruction::PlanarSensorFftReconstruction`.
+For a planar detector array spanning the $z=0$ plane, $\Omega_0 = 2\pi$ and the back-projection simplifies to a 2D integration. The Fourier-domain equivalent (k-Wave planar reconstruction) is equivalent to a matched filter applied in the $(\mathbf{k}_\perp, \omega)$ domain. This is implemented in `kwavers_simulation::photoacoustics::vertical::reconstruction::PlanarSensorFftReconstruction`.
 
 For a linear array, the 2D cross-sectional image is reconstructed by delay-and-sum (DAS) back-projection:
 
@@ -564,9 +571,6 @@ $$
 
 where $w_s$ are apodization weights. DAS is the discrete approximation of (6.4) applied to a finite aperture; it degrades for sparse or incomplete apertures.
 
-![Back-projection reconstruction](figures/ch_pa/fig04_back_projection.png)
-
-*Figure 4. Universal back-projection geometry. Each detector $\mathbf{r}_s$ contributes a spherical shell to the reconstruction. Coherent superposition localizes the source.*
 
 ---
 
@@ -625,7 +629,7 @@ For a discrete set of $N_s$ detectors uniformly sampling $S_0$, the quadrature e
 
 ### 7.3 Heterogeneous Media
 
-In a heterogeneous medium with known sound speed $c_s(\mathbf{r})$, time reversal is performed with the same spatially varying $c_s(\mathbf{r})$, and exact reconstruction is achieved when $c_s(\mathbf{r})$ is known precisely. This requires replacing the free-space Green's function in step 4 with the full heterogeneous Green's function, solved numerically by the PSTD or FDTD solver in `kwavers::solver::forward::pstd`. The time-reversal reconstruction path in kwavers is `kwavers::solver::photoacoustics::reconstruction::TimeReversalReconstruction`.
+In a heterogeneous medium with known sound speed $c_s(\mathbf{r})$, time reversal is performed with the same spatially varying $c_s(\mathbf{r})$, and exact reconstruction is achieved when $c_s(\mathbf{r})$ is known precisely. This requires replacing the free-space Green's function in step 4 with the full heterogeneous Green's function, solved numerically by the PSTD or FDTD solver in `kwavers_solver::forward::pstd`. The time-reversal reconstruction path in kwavers is `kwavers_simulation::photoacoustics::vertical::reconstruction::TimeReversalReconstruction`.
 
 ### 7.4 Aperture Completeness
 
@@ -676,6 +680,11 @@ B = \frac{1500}{150 \times 10^{-6}} = 10\,\text{MHz}.
 $$
 
 This is the operating bandwidth for OR-PAM and high-frequency PA imaging systems. Blood vessels and red blood cells are the primary resolution-limiting structures at this scale.
+
+![PA axial resolution vs transducer bandwidth](figures/ch13/fig04_bandwidth_vs_radius.png)
+
+*Figure 5. PA axial resolution δz = c/(2·BW) vs absorber radius / signal bandwidth (Xu & Wang 2006), illustrating B ≈ c_s/d (Theorem 8.1): smaller absorbers radiate broader-band signals and are resolved more finely.*
+
 
 ### 8.2 Signal-to-Noise Ratio
 
@@ -769,9 +778,6 @@ which is (9.2). This differs from the Rayleigh criterion by the factor $0.71/0.6
 
 OR-PAM achieves single-capillary resolution but is limited to superficial tissue (within one optical transport mean free path $\ell^* = 1/\mu_s' \approx 1\,\text{mm}$). AR-PAM sacrifices lateral resolution for penetration depth. Photoacoustic computed tomography (PACT) uses tomographic arrays for centimeter-scale deep imaging.
 
-![PAM resolution diagram](figures/ch_pa/fig05_pam_modes.png)
-
-*Figure 5. Comparison of OR-PAM (tight optical focus, 2.5 μm resolution, 1 mm depth) and AR-PAM (wide illumination, 50 μm resolution, 5 mm depth). The acoustic focal zone of the AR-PAM transducer is shown in gray.*
 
 ---
 
@@ -808,7 +814,7 @@ If the observer attributes the full signal to $\mu_a$ (assuming $F = F_0$), the 
 
 ### 10.2 Fluence Estimation via Diffusion Equation
 
-Quantitative PA (qPA) imaging requires estimating $F(\mathbf{r})$ independently and dividing out the fluence artifact. The optical fluence satisfies the diffusion equation (4.4). Given an estimate of the optical properties $(\mu_a, \mu_s')$, the fluence can be computed numerically; this is a forward solve in `kwavers::solver::photoacoustics::optical::DiffusionOpticalSolver`.
+Quantitative PA (qPA) imaging requires estimating $F(\mathbf{r})$ independently and dividing out the fluence artifact. The optical fluence satisfies the diffusion equation (4.4). Given an estimate of the optical properties $(\mu_a, \mu_s')$, the fluence can be computed numerically; this is a forward solve in `kwavers_simulation::photoacoustics::vertical::optical::DiffusionOpticalSolver`.
 
 In practice, $\mu_a(\mathbf{r})$ is the unknown being sought (chicken-and-egg problem). The iterative approach solves alternately:
 
@@ -847,31 +853,31 @@ where $\mathcal{R}$ is a regularization functional (total variation, Tikhonov, o
 The photoacoustics pipeline in kwavers is organized as follows:
 
 ```
-kwavers::solver::photoacoustics
+kwavers_simulation::photoacoustics::vertical
 ├── source
-│   └── thermoelastic   # p₀ = Γ μₐ F  (Theorem 1.1)
+│   └── thermoelastic   # PhotoacousticSourceModel: p₀ = Γ μₐ F  (Theorem 1.1)
 ├── optical
-│   ├── diffusion       # Diffusion equation solver (Eq. 4.4)
-│   └── monte_carlo     # MC for high-μₐ regions
-├── acoustic            # PSTD/FDTD wave propagation
-│   ├── cpu
-│   └── gpu
-├── reconstruction
-│   ├── planar_sensor_fft   # k-space planar algorithm
-│   ├── line_sensor_fft     # linear array FFT reconstruction
-│   └── time_reversal       # Theorem 7.1 implementation
-└── pipeline            # End-to-end PA simulation
+│   ├── DiffusionOpticalSolver   # diffusion eq. (Eq. 4.4); re-exports kwavers_solver::forward::optical::diffusion
+│   └── MonteCarloOpticalSolver  # RTE/Henyey-Greenstein; physics in kwavers_physics::optics::monte_carlo
+└── reconstruction
+    ├── PlanarSensorFftReconstruction   # k-space planar algorithm
+    ├── LineSensorFftReconstruction     # linear array FFT reconstruction
+    ├── TimeReversalReconstruction      # Theorem 7.1 (drives kwavers_solver::forward::pstd)
+    └── PhotoacousticReconstructionModel::reconstruct  # geometry-aware dispatch
 
-kwavers::clinical::imaging
-├── chromophores
-│   └── hemoglobin      # HbO₂/Hb extinction database (§4.4)
-├── spectroscopy        # SpectralUnmixer (§5)
-└── photoacoustic       # PA scenario and workflow types
+kwavers_physics::photoacoustics
+└── thermoelasticity::GrueneisenModel   # Γ(T), soft_tissue() (§2.2)
+
+kwavers_optics::chromophores
+└── HemoglobinDatabase                  # HbO₂/Hb molar extinction (§4.4)
+
+kwavers_analysis::signal_processing
+└── spectroscopy::SpectralUnmixer       # Tikhonov-regularized unmixing (§5)
 ```
 
 ### 11.2 Source Term Computation
 
-The thermoelastic source model in `kwavers::solver::photoacoustics::source::thermoelastic` evaluates
+The thermoelastic source model in `kwavers_simulation::photoacoustics::vertical::source::thermoelastic` evaluates
 
 $$
 p_0[i,j,k] = \Gamma(\text{tissue})\, \mu_a[i,j,k]\, F[i,j,k]
@@ -892,11 +898,11 @@ Detection is by trilinear interpolation of the pressure field at detector positi
 
 ### 11.4 Spectral Unmixing Pipeline
 
-The `SpectralUnmixer` in `kwavers::clinical::imaging::spectroscopy` solves the linear system (5.3) using QR decomposition (for $M \geq N$) or the Moore-Penrose pseudoinverse $\mathbf{E}^+ = (\mathbf{E}^T\mathbf{E})^{-1}\mathbf{E}^T$ (least-squares, $M > N$). The condition number $\kappa(\mathbf{E})$ is computed and flagged if $\kappa > 100$ (indicating poor wavelength selection).
+The `SpectralUnmixer` in `kwavers_analysis::signal_processing::spectroscopy` solves the linear system (5.3) using QR decomposition (for $M \geq N$) or the Moore-Penrose pseudoinverse $\mathbf{E}^+ = (\mathbf{E}^T\mathbf{E})^{-1}\mathbf{E}^T$ (least-squares, $M > N$). The condition number $\kappa(\mathbf{E})$ is computed and flagged if $\kappa > 100$ (indicating poor wavelength selection).
 
 ### 11.5 Signal Analysis
 
-The `kwavers::analysis::signal_processing` module provides:
+The `kwavers_signal` crate (signal primitives, re-surfaced through `kwavers_analysis::signal_processing`) provides:
 
 - Bandpass filtering for noise reduction before reconstruction
 - Hilbert transform for envelope detection (converting bipolar PA signals to positive envelopes for display)

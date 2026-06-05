@@ -22,22 +22,30 @@ In clinical ultrasound the quantities of primary interest are
 | Density perturbation | $\rho'(\mathbf{x},t)$ | kg m⁻³ |
 | Acoustic intensity | $I(\mathbf{x},t)$ | W m⁻² |
 
-The *small-signal* or *linear* regime is defined by the conditions
+The *small-signal* or *linear* regime is governed by two dimensionless small
+parameters — the **condensation** $s$ and the **acoustic Mach number** $M$:
 
 $$
-\frac{|p|}{p_0} \ll 1, \qquad
-\frac{|\rho'|}{\rho_0} \ll 1, \qquad
-|\mathbf{u}| \ll c_0,
+s \equiv \frac{|\rho'|}{\rho_0} \approx \frac{|p|}{\rho_0 c_0^2} \ll 1,
+\qquad
+M \equiv \frac{|\mathbf{u}|}{c_0} \ll 1,
 $$
 
-where $p_0 \approx 10^5\,\text{Pa}$ is the ambient (atmospheric) pressure,
-$\rho_0$ the equilibrium density, and $c_0$ the small-signal speed of sound.
-Diagnostic ultrasound typically satisfies these conditions (peak pressures of
-$0.1$–$1\,\text{MPa} \ll p_0$ is the caveat: diagnostics are in the nonlinear
-regime because $p \gg p_0$, but the *relative* nonlinear distortion per
-wavelength is small enough to treat propagation as approximately linear).
-High-intensity therapy (HIFU, lithotripsy) explicitly violates the linear
-assumption; those cases are treated in Chapters 3 and 6.
+where $\rho_0$ is the equilibrium density, $c_0$ the small-signal speed of sound,
+and $K = \rho_0 c_0^2$ the adiabatic **bulk modulus**.  The relevant pressure
+scale is $K$, *not* the ambient pressure $p_0$: only for an ideal gas, where
+$K = \gamma p_0$, does the condition reduce to the familiar $|p|/p_0 \ll 1$.
+For water and soft tissue $K = \rho_0 c_0^2 \approx 2.2\,\text{GPa}$, four orders
+of magnitude above $p_0 \approx 10^5\,\text{Pa}$.
+
+This is why diagnostic ultrasound is treated as quasi-linear even at megapascal
+pressures: peak pressures of $0.1$–$1\,\text{MPa}$ give
+$s \approx |p|/K \sim 10^{-4}$–$10^{-3} \ll 1$, so the *local* constitutive
+relation is linear to high accuracy.  The residual per-wavelength nonlinearity is
+tiny but **cumulative** over the propagation path — it is what tissue-harmonic
+imaging exploits (§1.10, Chapter 3).  High-intensity therapy (HIFU, lithotripsy)
+drives $|p|$ to an appreciable fraction of $K$ and violates $s \ll 1$ outright;
+those cases are treated in Chapters 3 and 6.
 
 This chapter derives the linear acoustic wave equation from first principles,
 establishes its solutions, and characterises the physical parameters needed to
@@ -143,7 +151,7 @@ $$
 
 Equations (1.5)–(1.7) are the **first-order linear acoustic equations**.  They
 are the exact governing equations implemented in kwavers' PSTD solver
-(`kwavers::solver::forward::pstd`).
+(`kwavers_solver::forward::pstd`).
 
 ---
 
@@ -208,7 +216,7 @@ $$
 $$
 
 This form is used in the kwavers FDTD solver for heterogeneous media (see
-`kwavers::solver::forward::fdtd`).
+`kwavers_solver::forward::fdtd`).
 
 ---
 
@@ -389,6 +397,14 @@ $\mathcal{R} = (6.7 - 1.63)/(6.7 + 1.63) = 0.608$, so $R_I = 37\,\%$ of the
 incident intensity is reflected.  This strong reflection is the basis of
 bone-interface echo signatures in B-mode imaging.
 
+![Figure 1.2 — intensity reflection at soft-tissue interfaces](figures/ch01/fig02_impedance_mismatch.png)
+
+**Figure 1.2.** Normal-incidence intensity reflection $R_I$ and transmission
+$T_I$ at the interface between soft tissue ($Z_1 = \rho_0 c_0$) and a range of
+media, computed from (1.17).  Note the near-total reflection at the
+tissue–air ($R_I \approx 99.9\,\%$) and strong reflection at the tissue–bone
+interface, motivating coupling gel and the difficulty of transcranial imaging.
+
 ---
 
 ## 1.8 Acoustic energy and intensity
@@ -461,9 +477,13 @@ harmonic.  Thus $\langle I \rangle = p_\mathrm{rms}^2 / Z_0$.
 Real biological tissue absorbs acoustic energy through at least three mechanisms:
 
 1. **Viscous dissipation.**  Velocity gradients drive irreversible momentum
-   transfer.  The equation of motion gains a term
-   $(\eta + \eta_B/3)\nabla(\nabla\cdot\mathbf{u}) - \eta\nabla\times\nabla\times\mathbf{u}$,
-   where $\eta$ is shear viscosity and $\eta_B$ bulk viscosity.
+   transfer.  The Navier–Stokes momentum equation gains the viscous force
+   $\eta\nabla^2\mathbf{u} + (\eta_B + \tfrac{1}{3}\eta)\nabla(\nabla\cdot\mathbf{u})$,
+   which for the longitudinal (compressional) acoustic mode reduces to
+   $(\eta_B + \tfrac{4}{3}\eta)\nabla(\nabla\cdot\mathbf{u}) - \eta\nabla\times(\nabla\times\mathbf{u})$,
+   where $\eta$ is the shear viscosity and $\eta_B$ the bulk viscosity.  The
+   combination $\eta_B + \tfrac{4}{3}\eta$ is the **longitudinal viscosity** that
+   sets the classical (Stokes) $\alpha \propto \omega^2$ absorption.
 
 2. **Thermal conduction.**  The process is not perfectly isentropic;
    temperature gradients near compressions drive heat conduction, dissipating
@@ -503,54 +523,89 @@ where $f$ is frequency in MHz, $\alpha_0$ is the absorption coefficient at
 Unit conversion: $1\,\text{dB cm}^{-1} = 0.1151\,\text{Np cm}^{-1}
 = 11.51\,\text{Np m}^{-1}$.
 
+![Figure 1.3 — power-law attenuation vs frequency](figures/ch01/fig03_power_law_attenuation.png)
+
+**Figure 1.3.** Power-law attenuation $\alpha(f) = \alpha_0 f^y$ for
+representative tissues over the diagnostic band.  Water follows the viscothermal
+$y = 2$ law (steeply rising), whereas most soft tissues are near-linear
+($y \approx 1$).  Computed by `kwavers_physics::analytical::wave::absorption_power_law_db_cm`.
+
 ### 1.9.3 Fractional Laplacian formulation
 
 Treeby and Cox (2010) showed that the power-law model (1.22) can be incorporated
-*exactly* into the time-domain acoustic equations by augmenting the density
-update with a fractional-Laplacian operator.
+*exactly* into the time-domain acoustic equations by augmenting the equation of
+state with two fractional-Laplacian operators — one carrying the absorption, the
+other the Kramers–Kronig-consistent dispersion.
 
-**Theorem 1.7 (Treeby–Cox fractional absorption operators).**  *Define the
-causal power-law absorption operators*
+**Theorem 1.7 (Treeby–Cox fractional power-law absorption).**  *For the
+attenuation law $\alpha(\omega) = \alpha_0 |\omega|^y$ — with $\alpha_0$ in SI
+units $\text{Np}\,(\text{rad s}^{-1})^{-y}\,\text{m}^{-1}$ — define the
+absorption and dispersion coefficients and the two fractional-Laplacian
+operators*
 
 $$
-\mathcal{L}_1 = -2\alpha_0 \omega_0^{-y} (-\nabla^2)^{(y+1)/2},
+\tau = -2\alpha_0 c_0^{\,y-1},
+\quad
+\eta = 2\alpha_0 c_0^{\,y}\,\tan\!\left(\tfrac{\pi y}{2}\right);
 \qquad
-\mathcal{L}_2 = 2\alpha_0 \omega_0^{-y} c_0 (-\nabla^2)^{y/2},
+\mathcal{L}_1 = (-\nabla^2)^{\frac{y-2}{2}},
+\quad
+\mathcal{L}_2 = (-\nabla^2)^{\frac{y-1}{2}},
 \tag{1.23}
 $$
 
-*where $\omega_0 = 2\pi \times 1\,\text{MHz}$ is the reference frequency.
-Then the first-order system*
+*each fractional power evaluated spectrally,
+$(-\nabla^2)^s = \mathrm{IFFT}\bigl[\,|\mathbf{k}|^{2s}\,\mathrm{FFT}[\cdot]\,\bigr]$.
+Augmenting the lossless equation of state $p = c_0^2\rho$ to*
 
 $$
-\frac{\partial \mathbf{u}}{\partial t}
-= -\frac{1}{\rho_0} \nabla p,
-\qquad
-\frac{\partial \rho}{\partial t}
-= -\rho_0 \nabla \cdot \mathbf{u}
-  + \mathcal{L}_1 p + \mathcal{L}_2 \rho,
+p = c_0^2\rho
+  \;+\; c_0^2\Bigl(
+        \tau\,\mathcal{L}_1\!\left[\rho_0\,\nabla\!\cdot\!\mathbf{u}\right]
+        \;-\; \eta\,\mathcal{L}_2[\rho]
+      \Bigr),
 \tag{1.24}
 $$
 
-*produces attenuation $\alpha \propto \omega^y$ and phase velocity
-$c_\mathrm{ph}(\omega) = c_0 \left[1 + \alpha_0 \omega_0^{-y} c_0 \omega^{y-1}
-\cot(y\pi/2)\right]^{-1}$ consistent with the Kramers–Kronig relations.*
+*while retaining the first-order continuity (1.5) and momentum (1.6) equations,
+reproduces $\alpha(\omega) = \alpha_0 |\omega|^y$ together with the
+Kramers–Kronig-consistent phase velocity*
 
-**Proof sketch.**  Fourier-transform the system (1.24) in space.  The
-fractional Laplacian $(-\nabla^2)^s$ becomes multiplication by $|\mathbf{k}|^{2s}$
-in Fourier space.  Substituting the plane-wave ansatz
-$p, \rho \sim e^{i(\mathbf{k}\cdot\mathbf{x} - \omega t)}$ and eliminating
-density yields a complex dispersion relation.  The imaginary part of the complex
-wavenumber gives $\alpha(\omega)$, which matches (1.22).  The real part gives
-the phase velocity, which is shown to satisfy the Kramers–Kronig relations by
-the causal construction of $\mathcal{L}_1$.
+$$
+\frac{1}{c_\mathrm{ph}(\omega)}
+= \frac{1}{c_0}
+  - \alpha_0\,\tan\!\left(\tfrac{\pi y}{2}\right)
+    \bigl(|\omega|^{y-1} - \omega_0^{y-1}\bigr).
+$$
+
+**Remarks.**  *(i)* The dispersion coefficient $\eta \propto \tan(\pi y/2)$
+*vanishes at $y = 2$*: viscothermal absorption ($\alpha \propto \omega^2$, e.g.
+water) is exactly non-dispersive, $c_\mathrm{ph} = c_0$.  *(ii)* $y = 1$ is the
+removable singularity of $\tan(\pi y/2)$ and is handled by the logarithmic
+dispersion limit (Treeby & Cox 2010, §III).  *(iii)* The correction in (1.24) is
+*algebraic* — added once per step to the EOS with **no** $\Delta t$ factor —
+because the fractional-Laplacian terms belong to the constitutive relation, not
+to a time integral.
+
+**Proof sketch.**  Fourier-transform the augmented system in space, so each
+$(-\nabla^2)^s \mapsto |\mathbf{k}|^{2s}$.  Substituting the plane-wave ansatz
+$p, \rho \sim e^{i(\mathbf{k}\cdot\mathbf{x} - \omega t)}$ and eliminating the
+velocity and density yields a complex wavenumber $k(\omega)$.  Its imaginary part
+is $\alpha(\omega) = \alpha_0|\omega|^y$ (from the $\tau\mathcal{L}_1$ term); its
+real part gives $c_\mathrm{ph}(\omega)$ above (from the $\eta\mathcal{L}_2$ term),
+the two being a Hilbert-transform pair and hence Kramers–Kronig-consistent.
 Full proof: Treeby & Cox, *J. Acoust. Soc. Am.* 127(5), 2010, §III.  $\square$
 
-**Implementation reference.**  This is exactly what kwavers implements for the
-CPU PSTD solver (see
-`kwavers::solver::forward::pstd::physics::absorption`).  The fractional
-Laplacian $(-\nabla^2)^s$ is computed as $\mathrm{IFFT}[|\mathbf{k}|^{2s}
-\cdot \mathrm{FFT}[\cdot]]$, using Apollo's 3D FFT plan.
+**Implementation reference.**  kwavers implements (1.23)–(1.24) verbatim on the
+*pressure side* of the equation of state in
+`kwavers_solver::forward::pstd::physics::absorption`
+(`apply.rs::apply_absorption_to_pressure`): after the lossless EOS sets
+$p = c_0^2\rho$, the correction
+$p \mathrel{+}= c_0^2\bigl(\tau\,\mathcal{L}_1[\rho_0\nabla\!\cdot\!\mathbf{u}]
+- \eta\,\mathcal{L}_2[\rho]\bigr)$ is added, with $\tau$, $\eta$,
+$|\mathbf{k}|^{y-2}$ and $|\mathbf{k}|^{y-1}$ precomputed in `kernel.rs`.  The
+same formulation drives the GPU WGSL shader and matches k-Wave (MATLAB and
+k-wave-python) to several significant figures across $y \in [1, 2]$.
 
 ---
 
@@ -598,25 +653,45 @@ shocks form at shorter propagation distances.
 **Theorem 1.8 (Harmonic generation from quadratic nonlinearity).**  *A
 monochromatic plane wave $p(x,0) = p_0 \cos(kx)$ propagating in a lossless
 nonlinear medium generates harmonics at integer multiples of the fundamental
-frequency.  To leading order, the second-harmonic amplitude grows as*
+frequency.  To leading order (quasi-linear approximation, $\sigma \ll 1$), the
+second-harmonic amplitude grows as*
 
 $$
-p_2(x) \approx \frac{\beta k p_0^2}{4 \rho_0 c_0^3} \, x.
+p_2(x) \approx \frac{\beta \omega p_0^2}{2 \rho_0 c_0^3} \, x
+        = \frac{\beta k p_0^2}{2 \rho_0 c_0^2} \, x
+        = \tfrac{1}{2}\, p_0\, \sigma(x),
 \tag{1.27}
 $$
 
+*where $\sigma(x) = x / x_\text{sh}$ is the dimensionless Gol'dberg distance and
+$x_\text{sh} = \rho_0 c_0^3/(\beta p_0 \omega)$ is the shock-formation distance.*
+
 **Proof sketch.**  Substitute $p = p_0\cos(kx - \omega t) + p_2$ into the
 Westervelt equation (see Chapter 3, eq. 3.1) and collect terms at frequency
-$2\omega$.  The driving term on the right-hand side is
-$(\beta/\rho_0 c_0^4) \partial^2(p_0^2 \cos^2)/\partial t^2
-= (\beta p_0^2 \omega^2 / \rho_0 c_0^4) \cos(2\omega t - 2kx)$,
-which resonantly drives $p_2$ linearly in $x$.  Integrating gives (1.27).
+$2\omega$.  With $\cos^2\theta = \tfrac{1}{2}(1+\cos 2\theta)$ the driving term
+on the right-hand side is
+$(\beta/\rho_0 c_0^4) \partial_{tt}(p_0^2 \cos^2(kx-\omega t))
+= -(2\beta p_0^2 \omega^2 / \rho_0 c_0^4)\cos(2\omega t - 2kx)$,
+which resonantly drives $p_2$ linearly in $x$, giving (1.27).  Equation (1.27)
+is exactly the small-$\sigma$ limit of the Fubini solution
+$p_2 = p_0 B_2(\sigma)$ with $B_2(\sigma)=2J_2(2\sigma)/(2\sigma)\to\sigma/2$
+(see §1.10 figure and `kwavers_physics::analytical::wave::fubini_harmonic_amplitude`).
 Full derivation: Hamilton & Blackstock (1998), §1.4.  $\square$
 
 **Clinical implication.**  Second-harmonic imaging (tissue harmonic imaging)
 exploits the $p_0^2$ dependence in (1.27): grating-lobe artefacts and
 reverberation clutter, which scale linearly with $p_0$, are suppressed relative
 to the tissue harmonic signal.
+
+![Figure 1.4 — exact Fubini harmonic generation](figures/ch01/fig04_harmonic_generation.png)
+
+**Figure 1.4.** Exact Fubini harmonic amplitudes $B_n(\sigma) = 2J_n(n\sigma)/(n\sigma)$
+for a lossless plane wave ($\sigma = z/z_\text{sh}$).  The fundamental ($n=1$)
+depletes as energy cascades into the harmonics.  The dashed line is the
+quasi-linear tangent $p_2/p_0 \approx \sigma/2$ of Theorem 1.8 / Eq. (1.27): it
+matches the exact second-harmonic slope near the source and diverges as the
+exact series saturates approaching the shock distance $\sigma = 1$.  Computed by
+`kwavers_physics::analytical::wave::fubini_harmonic_spectrum`.
 
 ---
 
@@ -643,51 +718,80 @@ c_\text{water}(T)
 \tag{1.29}
 $$
 
+This Del Grosso–Mader fit reproduces the Marczak (1997) reference to within
+$1.1\,\text{m s}^{-1}$ across $0$–$100\,°\text{C}$ and is the SSOT implementation
+in `kwavers_physics::analytical::wave::water_sound_speed_temperature`.
+
+![Figure 1.5 — sound speed in water vs temperature](figures/ch01/fig05_sound_speed_temperature.png)
+
+**Figure 1.5.** Sound speed in water as a function of temperature from (1.29),
+with the $20\,°\text{C}$ and $37\,°\text{C}$ (body-temperature) reference points
+marked.  The non-monotonic-looking rise peaks near $74\,°\text{C}$.
+
 **Implementation reference.**  kwavers stores $c_0$ as a 3D scalar field in
-`kwavers::domain::medium::material_fields::GenericMaterialFields`.  The
+`kwavers_domain::medium::material_fields::GenericMaterialFields`.  The
 temperature-dependent correction (1.28) can be applied by updating the field
-after each thermal step in a coupled simulation (see Chapter 6).
+after each thermal step in a coupled simulation (see Chapter 12).
 
 ---
 
 ## 1.12 Summary of governing constants in kwavers
 
 The physical constants relevant to this chapter are defined as single-source-of-truth
-constants in `kwavers::core::constants`:
+constants in `kwavers_core::constants` (verbatim names and values from the
+crate):
 
 ```rust
-// From kwavers::core::constants::fundamental
-pub const SOUND_SPEED_WATER_20C: f64 = 1_481.0;   // m/s
-pub const DENSITY_WATER_20C: f64    = 998.0;       // kg/m³
-pub const WATER_IMPEDANCE: f64      = 1_477.938;   // kg/(m²·s) = Pa·s/m
+// From kwavers_core::constants::fundamental
+pub const SOUND_SPEED_WATER: f64       = 1482.0;   // m/s, 20 °C (physical)
+pub const SOUND_SPEED_WATER_SIM: f64   = 1500.0;   // m/s, round-number sim default
+pub const SOUND_SPEED_WATER_37C: f64   = 1524.0;   // m/s, body temperature
+pub const DENSITY_WATER: f64           = 998.2;    // kg/m³, 20 °C
+pub const DENSITY_WATER_37C: f64       = 993.3;    // kg/m³
+pub const SOUND_SPEED_TISSUE: f64      = 1540.0;   // m/s
+pub const DENSITY_TISSUE: f64          = 1050.0;   // kg/m³
+pub const SOUND_SPEED_AIR: f64         = 343.0;    // m/s
+// Impedance is derived, not stored: Z = ρ·c.
+pub const ACOUSTIC_IMPEDANCE_WATER_NOMINAL: f64  =
+    DENSITY_WATER_NOMINAL * SOUND_SPEED_WATER_SIM; // 1.50e6 Pa·s/m
+pub const ACOUSTIC_IMPEDANCE_TISSUE_NOMINAL: f64 =
+    DENSITY_TISSUE * SOUND_SPEED_TISSUE;           // 1.617e6 Pa·s/m
 
-// From kwavers::core::constants::acoustic_parameters
-pub const WATER_NONLINEARITY_B_A: f64       = 5.0;
-pub const WATER_ABSORPTION_ALPHA_0: f64     = 0.002; // Np/(m·MHz^y)
-pub const WATER_ABSORPTION_POWER: f64       = 2.0;   // y (viscothermal)
+// From kwavers_core::constants::acoustic_parameters
+pub const WATER_NONLINEARITY_B_A: f64   = 5.0;
+pub const TISSUE_NONLINEARITY_B_A: f64  = 7.0;
+pub const WATER_ABSORPTION_ALPHA_0: f64 = 0.0022; // dB/(cm·MHz^y)
+pub const WATER_ABSORPTION_POWER: f64   = 2.0;    // y (viscothermal, α ∝ f²)
+pub const ACOUSTIC_ABSORPTION_TISSUE: f64 = 0.5;  // dB/(cm·MHz)
 
-// Tissue defaults (Duck 1990)
-pub const SOFT_TISSUE_SOUND_SPEED: f64      = 1_540.0;    // m/s
-pub const SOFT_TISSUE_DENSITY: f64          = 1_060.0;    // kg/m³
-pub const SOFT_TISSUE_ABSORPTION_ALPHA: f64 = 0.52;       // dB/(cm·MHz^y)
-pub const SOFT_TISSUE_ABSORPTION_POWER: f64 = 1.0;        // y
-pub const SOFT_TISSUE_NONLINEARITY_B_A: f64 = 7.4;
+// From kwavers_core::constants::tissue_acoustics
+pub const SOFT_TISSUE_ABSORPTION_POWER_Y: f64 = 1.1; // y
 ```
+
+> **Note.** The physical water impedance $\rho_0 c_0 = 998.2 \times 1482
+> \approx 1.479\times10^{6}\,\text{Pa·s m}^{-1}$ (1.479 MRayl, §1.7 table); the
+> stored `ACOUSTIC_IMPEDANCE_WATER_NOMINAL` uses the round-number simulation
+> defaults ($1000 \times 1500 = 1.5$ MRayl) and is therefore $\approx 1.4\%$
+> higher. Use the `_SIM` constants for numerical reproducibility against
+> k-Wave reference cases and the physical constants for quantitative tissue
+> modelling.
 
 ---
 
 ## 1.13 Worked example — standing-wave field in a 1D water column
 
 **Setup.** A 50 mm water column ($c_0 = 1\,481\,\text{m s}^{-1}$,
-$\rho_0 = 998\,\text{kg m}^{-3}$) with rigid boundaries at $x = 0$ and
-$x = L$ is excited by an initial pressure distribution
-$p(x, 0) = p_0 \sin(kx)$ with $k = \pi/L$ (fundamental mode) and
-$p_0 = 10^5\,\text{Pa}$.
+$\rho_0 = 998\,\text{kg m}^{-3}$) with **pressure-release** boundaries at
+$x = 0$ and $x = L$ (free surfaces, e.g. water open to air) is excited by an
+initial pressure distribution $p(x, 0) = p_0 \sin(kx)$ with $k = \pi/L$
+(fundamental mode) and $p_0 = 10^5\,\text{Pa}$.
 
-**Analytical solution.** The boundary conditions require $\partial p/\partial x = 0$
-at both walls, consistent with $\sin(kx)$ with $k = n\pi/L$ for integer $n$.
-By d'Alembert's solution (Theorem 1.2) the wave decomposes into left- and
-right-travelling pulses, producing a perfect standing wave:
+**Analytical solution.** A pressure-release wall enforces $p = 0$ (a pressure
+node), so the admissible modes are $\sin(kx)$ with $k = n\pi/L$ for integer $n$,
+each of which vanishes at both walls.  (A *rigid* wall would instead enforce
+$\partial p/\partial x = 0$ — a pressure antinode — selecting the $\cos(kx)$
+mode family.)  By d'Alembert's solution (Theorem 1.2) the wave decomposes into
+left- and right-travelling pulses, producing a perfect standing wave:
 
 $$
 p(x, t) = p_0 \sin(kx)\cos(\omega t),
@@ -695,16 +799,36 @@ p(x, t) = p_0 \sin(kx)\cos(\omega t),
 \tag{1.30}
 $$
 
-This is the reference solution used in the `test_standing_wave_analytical` test in
-`kwavers/tests/fdtd_pstd_comparison.rs`, which validates that the PSTD, FDTD,
-Kuznetsov (linear limit), and Westervelt (linear limit) solvers all reproduce
-(1.30) to machine precision at $t = 0$ and within numerical truncation error
-for $t > 0$.
+This is the reference solution exercised by the `test_standing_wave_analytical`
+test in `crates/kwavers/tests/fdtd_pstd_comparison.rs`.  Figure 1.1 validates the
+forward solvers directly against it.
 
-**Figure 1.1.** Standing-wave field at four instants $\omega t \in \{0, \pi/4, \pi/2, 3\pi/4\}$
-for the analytical solution (1.30).
+> **Boundary note.** A standing wave is a superposition of two counter-propagating
+> travelling waves, so it can only be *sustained* by reflecting or transparent
+> (non-absorbing) boundaries.  An absorbing PML — the default — instead absorbs
+> the constituents as they cross the domain, so the standing mode decays over one
+> period (correct physics, not solver loss).  Panel (a) therefore uses a
+> transparent boundary (`set_pml_alpha(0)`); the spectral PSTD operator is
+> intrinsically periodic, making the column a lossless resonator that reproduces
+> (1.30) to machine precision (max error $< 0.01\%$).  The solver itself is
+> lossless: a travelling pulse retains its amplitude to within FDTD dispersion
+> error (panel b).
 
-> *Generated by `pykwavers/examples/book/ch01_standing_wave.py`.*
+![Figure 1.1 — solver validation: PSTD standing wave and FDTD travelling pulse](figures/ch01/fig01_standing_wave.png)
+
+**Figure 1.1.** Wave-equation solver validation.  **(a)** The PSTD initial-value
+solution (markers) for $p(x,0)=p_0\sin(kx)$, $\mathbf{u}(x,0)=0$ overlaid on the
+analytic standing wave (1.30) at $\omega t \in \{0,\pi/4,\pi/2,3\pi/4\}$;
+agreement is exact.  **(b)** The FDTD solution of the travelling-pulse IVP
+$p(x,0)=g(x)$ compared with the d'Alembert decomposition
+$\tfrac{1}{2}[g(x-c_0 t)+g(x+c_0 t)]$ (Theorem 1.2): the pulse splits into two
+half-amplitude copies travelling at $c_0$ (measured speed within $0.4\%$ of
+$c_0$).  The few-percent shape residual is FDTD *numerical dispersion* — the
+finite-difference stencil propagates different spatial frequencies at slightly
+different speeds.  The spectral PSTD operator (panel a) is dispersion-free by
+construction; this contrast motivates the pseudospectral method.
+
+> *Generated by `crates/kwavers-python/examples/book/ch01_wave_physics_fundamentals.py`.*
 
 ---
 

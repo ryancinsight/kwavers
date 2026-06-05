@@ -1,12 +1,12 @@
-# Chapter 22 — Simulation Orchestration: The Capability Catalog
+# Chapter 21 — Simulation Orchestration: The Capability Catalog
 
-> **Prerequisite:** Chapter 2 (FDTD/PSTD time loop), Chapter 14 (sensor recording),
-> Chapter 9 (cavitation/bubble dynamics). Familiarity with directed acyclic graphs
+> **Prerequisite:** Chapter 2 (FDTD/PSTD time loop), Chapter 8 (sensor recording),
+> Chapter 5 (cavitation/bubble dynamics). Familiarity with directed acyclic graphs
 > and topological sort is assumed.
 
 ---
 
-## 22.1 Scope
+## 21.1 Scope
 
 A multi-physics simulation is a *graph computation*. Each enabled physics
 domain (acoustic propagation, thermal diffusion, elastic stress, cavitation
@@ -27,7 +27,7 @@ cavitation detection as the worked example.
 
 ---
 
-## 22.2 The plugin contract
+## 21.2 The plugin contract
 
 A *plugin* is the minimal abstraction over one physics domain's per-step
 update. The contract lives in `kwavers::plugin::Plugin` (formally defined in
@@ -52,7 +52,7 @@ on the field-vertex set $V_F = \{ \text{Pressure}, \text{Density},
 \text{Temperature}, \dots \}$ (the full enumeration is in
 `UnifiedFieldType`).
 
-> **Definition 22.1 (Plugin field signature).**
+> **Definition 21.1 (Plugin field signature).**
 > *For a plugin $P$, define $\text{Req}(P) \subseteq V_F$ and
 > $\text{Prov}(P) \subseteq V_F$ as the sets returned by `required_fields`
 > and `provided_fields`. The signature $(\text{Req}(P), \text{Prov}(P))$
@@ -60,7 +60,7 @@ on the field-vertex set $V_F = \{ \text{Pressure}, \text{Density},
 
 ---
 
-## 22.3 The capability lattice
+## 21.3 The capability lattice
 
 A *capability* is a strongly-typed enum variant naming one physics
 behaviour. The capability set is `PhysicsModelType`:
@@ -86,7 +86,7 @@ a string-keyed parameter bag for global state. Two key properties:
 
 ---
 
-## 22.4 The catalog dispatch theorem
+## 21.4 The catalog dispatch theorem
 
 The catalog is one function:
 
@@ -98,7 +98,7 @@ It walks `config.models`, skips disabled entries, and dispatches each
 enabled `PhysicsModelType` variant to its concrete plugin constructor.
 Source: [`physics::factory::catalog`](../../kwavers/src/physics/factory/catalog.rs).
 
-> **Theorem 22.1 (Catalog determinism and exhaustiveness).**
+> **Theorem 21.1 (Catalog determinism and exhaustiveness).**
 > *For every variant $v$ of `PhysicsModelType`, `PhysicsCatalog::build_plugin(v, …)`
 > returns either (i) a `Box<dyn Plugin>` whose construction has fully
 > succeeded, or (ii) a structured `ConfigError::InvalidValue` naming both
@@ -125,7 +125,7 @@ arm; failing to add the second is a compile error, not a runtime mystery.
 
 ---
 
-## 22.5 The scheduling theorem
+## 21.5 The scheduling theorem
 
 `PluginManager::add_plugin` calls `resolve_dependencies` after every
 insertion. That routine builds the field-dependency graph and topologically
@@ -137,7 +137,7 @@ Build the directed graph $G = (V_P, E_P)$ over the registered plugins:
 - $(P_i, P_j) \in E_P$ iff $\text{Prov}(P_i) \cap \text{Req}(P_j) \ne
   \emptyset$ (some field $P_j$ reads is written by $P_i$).
 
-> **Theorem 22.2 (Sound scheduling).**
+> **Theorem 21.2 (Sound scheduling).**
 > *(a) If no field is provided by two distinct plugins
 > ($\forall i \ne j,\ \text{Prov}(P_i) \cap \text{Prov}(P_j) = \emptyset$)
 > and (b) $G$ is acyclic, then `resolve_dependencies` returns an execution
@@ -163,7 +163,7 @@ field signatures.
 
 ---
 
-## 22.6 Worked example — PAM for cerebral cavitation detection
+## 21.6 Worked example — PAM for cerebral cavitation detection
 
 Passive Acoustic Mapping (PAM, Coviello et al. 2015; Salgaonkar et al. 2009;
 O'Reilly & Hynynen 2013) reconstructs the spatial distribution of acoustic
@@ -205,9 +205,9 @@ spectrum on which PAM depends.
 The post-processing path — synthesising the receive aperture on a
 hemispherical sensor array, time-reversing or back-projecting to the
 target plane — lives in `analysis::beamforming::passive_acoustic_mapping`
-and is the subject of Chapter 7 (*Theranostics*, §7.4).
+and is the subject of Chapter 13 (*Theranostics*, §13.4).
 
-### 22.6.1 Why the catalog matters here
+### 21.6.1 Why the catalog matters here
 
 A direct `PluginManager::add_plugin` workflow would have required the
 researcher to (a) construct `PSTDPlugin` with the right `PSTDConfig`,
@@ -225,7 +225,7 @@ correctness guarantee is unchanged.
 
 ---
 
-## 22.7 Visualisation: the dependency DAG of an enabled config
+## 21.7 Visualisation: the dependency DAG of an enabled config
 
 The companion script `pykwavers/examples/book/ch22_simulation_orchestration.py`
 renders the capability fan-out and the field-dependency DAG for a
@@ -250,9 +250,9 @@ state).
 
 ---
 
-## 22.7 The BubbleDynamics sub-graph: three ODEs, one plugin
+## 21.7 The BubbleDynamics sub-graph: three ODEs, one plugin
 
-### 22.7.1 Model selection and the SRP boundary
+### 21.7.1 Model selection and the SRP boundary
 
 The `BubbleDynamicsPlugin` exposes a single `Plugin` interface over three
 distinct ODE systems:
@@ -270,7 +270,7 @@ not responsible for integration strategy.  This means swapping from classical
 RK4 to an adaptive Dormand-Prince integrator requires editing only
 `gilmore.rs`, not the plugin.
 
-### 22.7.2 The dp/dt coupling in the KM path
+### 21.7.2 The dp/dt coupling in the KM path
 
 The Keller-Miksis radiation-damping term requires `dp/dt`:
 
@@ -292,7 +292,7 @@ The Gilmore path requires no dp/dt because the Tait enthalpy difference
 already encodes the compressible liquid response exactly to second order in
 the wall Mach number.
 
-### 22.7.3 Visualization: bubble radius dynamics under three models
+### 21.7.3 Visualization: bubble radius dynamics under three models
 
 Run the following script to generate figure 22-B (radius–time curves for
 KM, RP, and Gilmore under a 1-MHz 200 kPa driving pressure):
@@ -450,9 +450,9 @@ approaching unity.  At 200 kPa the models bracket a spread of ≈8% in minimum
 radius — the selection rule `GilmoreSolver::should_use_gilmore` triggers at
 wall Mach > 0.1, which occurs during the collapse phase at this amplitude.
 
-### 22.7.4 Theorem 22.3 — Gilmore RK4 contraction invariant
+### 21.7.4 Theorem 21.3 — Gilmore RK4 contraction invariant
 
-**Theorem 22.3** (Underpressured bubble contraction): Let `BubbleState::new`
+**Theorem 21.3** (Underpressured bubble contraction): Let `BubbleState::new`
 initialise R = R₀ and Ṙ = 0 with `p_gas = p₀`.  Under zero external acoustic
 forcing, the classical RK4 step with `GilmoreSolver` satisfies:
 
@@ -474,7 +474,7 @@ in `gilmore.rs`.
 
 ---
 
-## 22.8 References
+## 21.8 References
 
 - Coviello C., Kozick R., Choi J., Gyöngy M., Jensen C., Smith P.P.,
   Coussios C.C. *Passive Acoustic Mapping utilizing optimal beamforming
@@ -487,8 +487,8 @@ in `gilmore.rs`.
   brain vascular mapping.* Med. Phys. 40(11), 110701, 2013.
   doi:10.1118/1.4823762
 - Cormen T.H., Leiserson C.E., Rivest R.L., Stein C. *Introduction to
-  Algorithms*, 3rd ed., MIT Press, 2009. Section 22.4 (Topological sort,
-  Theorem 22.7).
+  Algorithms*, 3rd ed., MIT Press, 2009. Section 21.4 (Topological sort,
+  Theorem 21.7).
 - Treeby B.E., Cox B.T. *k-Wave: MATLAB toolbox for the simulation and
   reconstruction of photoacoustic wave fields.* J. Biomed. Opt. 15(2),
   021314, 2010. doi:10.1117/1.3360308 (background on plugin-style

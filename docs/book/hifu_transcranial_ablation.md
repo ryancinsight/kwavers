@@ -1,8 +1,8 @@
-# Chapter 25 — Transcranial HIFU and BBB Treatment Planning
+# Chapter 24 — Transcranial HIFU and BBB Treatment Planning
 
-## 25.1 Scope
+## 24.1 Scope
 
-This chapter extends the histotripsy treatment-planning pattern from Chapter 21
+This chapter extends the histotripsy treatment-planning pattern from Chapter 14
 to transcranial focused-ultrasound therapy.  The executable chapter script is
 `pykwavers/examples/book/ch25_transcranial_brain_fus_planning.py`.
 
@@ -44,7 +44,7 @@ skull-adaptive transcranial benchmark resolve their target index from this
 scene definition instead of carrying separate centroid or element-count
 defaults.
 
-## 25.2 Registration contract
+## 24.2 Registration contract
 
 Let `C(x)` be the CT volume, `M(x)` the subject MRI, and `A(x)` the atlas T1.
 The registration adapter returns transformed moving images `M'(x)` and `A'(x)`
@@ -133,7 +133,7 @@ medical image translation reference for candidate MR-to-CT or missing-MRI
 generation.  SLaM-DiMM
 (`https://huggingface.co/papers/2509.16019`) is recorded for missing T1w,
 T1ce, T2w, or FLAIR MRI synthesis from available brain MRI modalities.  A
-generated modality can enter the Chapter 25 pipeline only after it exists as a
+generated modality can enter the Chapter 24 pipeline only after it exists as a
 real NIfTI volume, is registered to the planning lattice, and has QC metrics
 and visual overlays recorded.  Synthetic CT may support research simulation
 only after those checks; it is not same-patient measured CT.  Synthetic MRI can
@@ -144,7 +144,7 @@ The deterministic handoff directory is `bridge/` beside the discovered
 segmentation.  The accepted external CT artifact names are
 `synthetic_ct_cwdm.nii.gz` or `synthetic_ct.nii.gz`; missing MRI artifacts use
 `synthetic_<modality>_slam_dimm.nii.gz`.  These files are inputs to the
-existing NIfTI registration/QC path, not generated outputs from the Chapter 25
+existing NIfTI registration/QC path, not generated outputs from the Chapter 24
 script.
 
 NV-Segment-CTMR (`https://huggingface.co/nvidia/NV-Segment-CTMR`) is recorded
@@ -152,7 +152,7 @@ as a research segmentation reference for CT/MR masks.  It is not treated as an
 expert GBM segmentation substitute unless target-label validation and local
 review are added.
 
-## 25.3 Skull phase correction
+## 24.3 Skull phase correction
 
 For array element `i`, the corrected delay is:
 
@@ -188,7 +188,7 @@ attenuation coefficient.  The field synthesis weights each element by `A_i`,
 so skull reflection/transmission and absorption affect the Rayleigh sum rather
 than being reported as metadata only.
 
-## 25.4 Essential-tremor ablation
+## 24.4 Essential-tremor ablation
 
 The chapter targets the VIM-like atlas coordinate `(14, -18, 2)` mm after that
 coordinate has been mapped once into the CT brain-support fraction recorded in
@@ -211,7 +211,7 @@ Generated figures:
 - `fig02_transcranial_bowl_phase_correction`
 - `fig03_essential_tremor_ablation`
 
-## 25.5 GBM BBB-opening subspots
+## 24.5 GBM BBB-opening subspots
 
 When a GBM case is present, the chapter computes a subspot lattice inside the
 segmented tumor and evaluates the BBB acoustic dose.  The default executable
@@ -230,7 +230,7 @@ D(x) = \sum_j \mathrm{MI}^2 t_\mathrm{on}
 \exp\left(-\frac{\|x-x_j\|^2}{2\sigma_f^2}\right).
 $$
 
-Permeability follows the Chapter 24 Hill model:
+Permeability follows the Chapter 23 Hill model:
 
 $$
 P(D) = \frac{D^n}{D_{50}^n + D^n}.
@@ -249,9 +249,9 @@ Generated optional figures:
 - `modality_bridge_manifest.json` for the CT/MRI/segmentation readiness and
   synthesis-boundary contract
 
-## 25.6 Skull-adaptive transcranial benchmark
+## 24.6 Skull-adaptive transcranial benchmark
 
-The skull-adaptive benchmark is the Chapter 25 execution path that maps the
+The skull-adaptive benchmark is the Chapter 24 execution path that maps the
 TFUScapes/DeepTFUS paper structure into the existing kwavers brain pipeline
 without creating a parallel demonstration.  The reference paper is
 `https://huggingface.co/papers/2505.12998`, with manuscript text at
@@ -274,7 +274,7 @@ Python package.  The pipeline:
 
 1. Loads the measured CT into the existing planning lattice.
 2. Builds the CT skull and brain masks with the same HU and intracranial
-   conventions used by Chapter 25.
+   conventions used by Chapter 24.
 3. Computes per-element skull rays, phase correction, amplitude transmission,
    and skull path length.
 4. Selects the active skull-aware aperture from the existing hemispherical
@@ -311,11 +311,11 @@ Structural comparison to the paper:
 
 | Paper structure | kwavers benchmark structure | Current boundary |
 | --- | --- | --- |
-| TFUScapes stores pseudo-CT volumes, transducer coordinates, and k-Wave pressure maps. | The benchmark stores measured CT HU, active bowl-aperture coordinates, skull-aware Rayleigh pressure, and uncorrected baseline pressure. | The pressure backend is the existing deterministic Chapter 25 Rayleigh path, not the paper's full k-Wave simulation backend. |
+| TFUScapes stores pseudo-CT volumes, transducer coordinates, and k-Wave pressure maps. | The benchmark stores measured CT HU, active bowl-aperture coordinates, skull-aware Rayleigh pressure, and uncorrected baseline pressure. | The pressure backend is the existing deterministic Chapter 24 Rayleigh path, not the paper's full k-Wave simulation backend. |
 | Transducer placement adapts to subject skull geometry. | Aperture placement is CT-conditioned by skull-ray transmission, skull path length, and the existing focused-bowl geometry. | The aperture is selected deterministically from the bowl-transducer source rather than through a learned pose model. |
 | DeepTFUS is trained and evaluated with relative L2, focal-position error, and max-pressure error. | The benchmark reports the same metric families for corrected reference versus uncorrected baseline. | Neural surrogate training, TFUScapes-scale dataset generation, and DeepTFUS inference are not implemented in this path. |
 
-## 25.7 Verification
+## 24.7 Verification
 
 The focused tests are:
 

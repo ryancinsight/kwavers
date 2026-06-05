@@ -1,4 +1,4 @@
-# Chapter: Inverse Problems and Physics-Informed Neural Networks
+# Chapter 18: Inverse Problems and Physics-Informed Neural Networks
 
 ## 1. Inverse Problem Formulation
 
@@ -47,6 +47,12 @@ has a unique minimizer $m_\lambda^* = (F^*F + \lambda I)^{-1}F^*d$.
 hence invertible by the Lax–Milgram theorem. The gradient $\nabla_m J_\lambda = 2A_\lambda m - 2F^*d$
 vanishes at $m_\lambda^* = A_\lambda^{-1}F^*d$, which is the unique global minimum since $J_\lambda$ is
 strictly convex. $\square$
+
+---
+
+![Singular-value spectrum of the forward map](figures/ch17/fig01_svd_spectrum.png)
+
+*Figure 1. Singular-value spectrum of the 2-D Helmholtz forward map (§1.1): the rapid decay is the ill-conditioning that makes the inverse problem ill-posed and motivates regularization.*
 
 ---
 
@@ -195,6 +201,12 @@ stencil approximation is used; the PDE residual is exact given the network appro
 
 ---
 
+![PINN composite loss landscape](figures/ch17/fig03_pinn_loss.png)
+
+*Figure 2. PINN composite loss: the physics (PDE) residual and the data-misfit terms, and their weighting (§4.2). Balancing the two controls constraint stiffness during training.*
+
+---
+
 ## 5. PINN for the Wave Equation
 
 For the 3D linear acoustic wave equation $\partial_{tt}p = c^2\nabla^2 p$, the PINN enforces:
@@ -227,6 +239,12 @@ $$\mathcal{L}(\theta, \phi) = \mathcal{L}_{\text{PDE}}(\theta, \phi) + \lambda_{
 
 The data term anchors the pressure field to measurements while the PDE term enforces physical consistency.
 Gradient descent alternates between $\theta$ and $\phi$ updates or performs simultaneous optimization.
+
+> **Implementation note.** The scalar-wave PINN above is the pedagogical template. The PINN
+> actually shipped in kwavers is a **2-D elastic** PINN (`ElasticPINN2D<B: Backend>`,
+> §8.5) that learns the displacement field $(u_x, u_y)$ with trainable Lamé parameters
+> $(\lambda, \mu, \rho)$; it is Burn-backed (autodiff) and trained with Adam/AdamW. A
+> general scalar-wave / 3-D PINN is not yet implemented.
 
 ---
 
@@ -270,6 +288,13 @@ where $w$ is the imaging kernel combining the transmitted and received beam patt
 Delay-and-sum (DAS) beamforming is the adjoint of this forward operator, providing a computationally
 efficient backprojection reconstruction at the cost of sidelobe artifacts.
 
+> **Implementation status.** Acoustic CT as presented here — the Radon/filtered-backprojection
+> travel-time inversion and reflection-CT reflectivity reconstruction — is documented as theory
+> and is **not** implemented in kwavers. The implemented quantitative sound-speed paths are
+> frequency-domain FWI / convergent-Born-series and linear Born inversion (§8), and the
+> straight-/curved-ray speed-of-sound *shift* tomography in the Diagnostic Imaging chapter.
+> There is no `RadonTransform` / FBP type.
+
 ---
 
 ## 7. Regularization Strategies and Parameter Selection
@@ -304,6 +329,12 @@ the bound $\|m_{\lambda^*} - m_{\text{true}}\| \leq C\delta^{1/2}$ (or faster fo
 
 ---
 
+![Tikhonov L-curve](figures/ch17/fig02_lcurve.png)
+
+*Figure 3. Tikhonov L-curve for a 1-D deconvolution (§7): the corner trades residual norm against solution norm and selects the regularization weight λ.*
+
+---
+
 ## 8. kwavers Inverse Solver Modules
 
 ### 8.1 Module Architecture
@@ -311,74 +342,82 @@ the bound $\|m_{\lambda^*} - m_{\text{true}}\| \leq C\delta^{1/2}$ (or faster fo
 The inverse solver hierarchy in kwavers follows a strict dependency inversion architecture:
 
 ```
-kwavers::solver::inverse
-├── fwi/                      # Full-waveform inversion
-│   ├── adjoint_state.rs      # AdjointState: backward wave solve + gradient accumulation
-│   ├── gradient_computer.rs  # GradientComputer<M>: Fréchet derivative w.r.t. model M
-│   ├── line_search.rs        # Wolfe-condition line search for step size
-│   └── lbfgs.rs              # L-BFGS preconditioned gradient descent
-├── pinn/                     # Physics-informed neural networks
-│   ├── network.rs            # WaveNet: MLP with tanh activation, weight initialization
-│   ├── collocation.rs        # CollocationSampler: Sobol quasi-random point generation
-│   ├── loss.rs               # PINNLoss: PDE + BC + IC + data components
-│   └── optimizer.rs          # AdamLBFGS: two-phase optimizer
-├── reconstruction/           # Linear and Born-approximation inversion
-│   ├── born.rs               # BornInversion<G>: linearized scattering operator
-│   ├── radon.rs              # RadonTransform: filtered backprojection for CT
-│   └── tikhonov.rs           # TikhonovSolver: (F*F + λI)^{-1}F*d via conjugate gradient
-└── elastography/             # Shear wave inversion for tissue stiffness
-    ├── wave_speed.rs         # LocalFrequencyEstimation for shear wave speed maps
-    └── constrained.rs        # ConstrainedInversion: positivity and smoothness constraints
+kwavers_solver::inverse
+├── fwi/
+│   ├── time_domain/
+│   │   ├── FwiProcessor             # forward+adjoint orchestration, gradient, regularization, line search
+│   │   ├── adjoint_state            # l2_residual, reverse_time_axis, accumulate_signed_correlation
+│   │   ├── frequency_continuation   # multiscale Butterworth band-limiting (Bunks 1995)
+│   │   ├── encoded_source           # Hadamard-coded simultaneous sources
+│   │   └── search                   # Armijo line search (line_search / line_search_multi, step-halving)
+│   └── frequency_domain/            # CBS (convergent Born series) FWI  [PyO3: invert_breast_fwi]
+├── reconstruction/seismic/misfit
+│   └── MisfitType                   # L2 | L1 | Envelope | Phase | Correlation | Wasserstein (optimal transport)
+├── linear_born_inversion/           # LinearBornInversionConfig, VolumeOperator, pcg_invert
+├── pinn/                            # Burn-backed PINN (feature = "pinn")
+│   ├── elastic_2d::model::ElasticPINN2D<B>      # MLP, tanh, trainable (λ, μ, ρ)
+│   ├── elastic_2d::loss::LossComputer           # PDE + BC + IC + data residuals (Burn autodiff)
+│   ├── elastic_2d::training::PINNOptimizer<B>   # SGD | SGDMomentum | Adam | AdamW
+│   └── geometry::CollocationSampler             # Uniform | LatinHypercube | Sobol | AdaptiveRefinement
+└── elastography/                    # ShearWaveInversion (TOF / phase-gradient / direct / volumetric / directional)
+                                     #   + nonlinear_methods (harmonic_ratio, least_squares, bayesian)
+
+kwavers_math::inverse_problems::regularization
+└── ModelRegularizer3D              # apply_tikhonov | apply_total_variation (Huber) | apply_smoothness | apply_l1
 ```
 
-### 8.2 AdjointState Type
+### 8.2 Adjoint Gradient (`FwiProcessor`)
 
-The `AdjointState` type orchestrates the two-pass computation (forward then backward) required for the
-adjoint gradient. It holds a reference to the forward solver and accumulates the gradient correlation
-integral over time steps:
+The time-domain adjoint gradient is orchestrated by `FwiProcessor` (not a generic
+`AdjointState<S>` wrapper). It runs a forward solve, then an adjoint solve driven by the
+time-reversed data residual, and accumulates the correlation integral via free functions in
+`adjoint_state`:
 
-```rust
-pub struct AdjointState<S: ForwardSolver> {
-    solver: Arc<S>,
-    gradient_accumulator: Array3<f64>,  // δJ/δc accumulated over time
-    checkpoint_interval: usize,         // Checkpoint-and-replay for memory efficiency
-}
-```
+- `l2_residual()` / `l2_objective()` — data residual $d_{\text{syn}} - d_{\text{obs}}$ and $J$;
+- `reverse_time_axis()` — time-reverses the residual into the adjoint source;
+- `accumulate_signed_correlation()` — the $\int_0^T u^{\dagger}\,\partial_{tt}u\,dt$ gradient kernel.
 
-For $N_t$ time steps and $N^3$ spatial points, the full adjoint pass requires storing the forward
-wavefield at each time step. With checkpointing at interval $q$, memory reduces from $O(N_t N^3)$
-to $O(q N^3 + N_t/q)$ at the cost of $\sqrt{N_t}$ additional forward solves (optimal $q = \sqrt{N_t}$,
-Griewank's revolve algorithm).
+For $N_t$ time steps and $N^3$ spatial points the full adjoint pass conceptually needs the forward
+wavefield at every step; the Griewank *revolve* checkpointing that reduces memory from $O(N_t N^3)$
+to $O(qN^3 + N_t/q)$ at the cost of $\sqrt{N_t}$ extra forward solves is the standard remedy
+(documented here as the design target; the shipped processor stores/streams the forward field
+rather than using a generic revolve scheduler).
 
-### 8.3 GradientComputer
+### 8.3 Gradient Assembly and Regularization
 
-```rust
-pub trait GradientComputer<M> {
-    type Gradient;
-    fn compute(&self, model: &M, data_residual: &Array2<f64>) -> Self::Gradient;
-}
-```
+Gradient assembly is performed by `FwiProcessor` methods rather than a generic
+`GradientComputer<M>` trait: `calculate_interaction()` forms the forward × adjoint product,
+`smooth_gradient()` applies box/stencil smoothing (3×3 in 2-D, 6-point in 3-D), and
+`apply_regularization()` adds the Tikhonov, total-variation (Huber-smoothed,
+`compute_total_variation_gradient`), and Laplacian-smoothness (`compute_smoothness_gradient`)
+terms — the same functionals exposed standalone by
+`kwavers_math::inverse_problems::regularization::ModelRegularizer3D`. The sound-speed gradient is
+the primary target; multi-parameter (density/absorption) gradients are not separate
+`GradientComputer` impls.
 
-Concrete implementations are provided for `SoundSpeedMap`, `DensityMap`, and `AbsorptionMap` model types.
-The gradient with respect to multiple model parameters is computed in a single backward pass via the
-linearity of the adjoint equation.
+### 8.4 Box-Constrained Inversion
 
-### 8.4 ConstrainedInversion
-
-The `ConstrainedInversion` type wraps a gradient-based optimizer with box constraints
-$m_{\min} \leq m(\mathbf{r}) \leq m_{\max}$ enforced by projected gradient descent:
-
-$$m^{(k+1)} = \Pi_{[m_{\min}, m_{\max}]}\left(m^{(k)} - \alpha_k \frac{\delta J}{\delta m}\right)$$
-
-where $\Pi$ is the pointwise projection (clipping) operator. Physiological bounds for tissue
-($c \in [1400, 1650]$ m/s, $\rho \in [900, 1100]$ kg/m³) are enforced automatically.
+Projected-gradient box constraints $m^{(k+1)} = \Pi_{[m_{\min}, m_{\max}]}(m^{(k)} -
+\alpha_k\,\delta J/\delta m)$ — with physiological tissue bounds ($c \in [1400, 1650]$ m/s,
+$\rho \in [900, 1100]$ kg/m³) — are implemented in
+`kwavers_math::inverse_problems::constrained`: `BoxConstraints` (with `sound_speed_tissue()`
+and `density_tissue()` presets and the pointwise `project` / `Π` operator) and
+`projected_gradient_descent`, which drives any gradient closure (FWI data misfit, regularised
+elastography) with the constraint re-imposed after each step. For a separable convex objective
+this converges to the projection of the unconstrained minimiser onto the box. The FWI loop
+additionally uses Armijo step-halving line search; nonlinear elastography inversion offers
+Bayesian posterior sampling (`nonlinear_methods::bayesian`) as an alternative to hard box
+constraints.
 
 ### 8.5 PINN Integration with Burn
 
-The kwavers PINN module uses the Burn deep learning framework for automatic differentiation and GPU-
-accelerated training. The `PINNLoss` type implements `burn::module::Module` and the training loop
-uses Burn's `Learner` with the Adam optimizer, enabling seamless CPU/GPU backend switching via the
-`burn::backend::Backend` trait, consistent with kwavers' `ComputeBackend` abstraction policy.
+The kwavers PINN module (`pinn`, gated behind the `pinn` Cargo feature) uses the **Burn 0.19**
+deep-learning framework (features `ndarray`, `autodiff`, `wgpu`) for automatic differentiation and
+GPU-accelerated training. The network `ElasticPINN2D<B: Backend>` derives `burn::module::Module`;
+`LossComputer` evaluates the PDE/BC/IC/data residuals over `Tensor<B: AutodiffBackend>` (it computes
+the loss functionally rather than deriving `Module`); and `PINNOptimizer<B>` provides SGD,
+SGD-momentum, Adam, and AdamW (no L-BFGS phase). Backend switching (CPU `ndarray` ↔ `wgpu`) is via
+the `burn::backend::Backend` trait, consistent with kwavers' `ComputeBackend` abstraction policy.
 
 ---
 
@@ -388,8 +427,14 @@ uses Burn's `Learner` with the Adam optimizer, enabling seamless CPU/GPU backend
 
 A 2D Marmousi-style phantom (sound speed range 1480–3500 m/s) is reconstructed from 32 sources and
 128 receivers at 250 kHz. Convergence criterion: $\|m^{(k+1)} - m^{(k)}\|/\|m^{(k)}\| < 10^{-4}$.
-L-BFGS with $q=10$ history pairs achieves convergence in $\leq 50$ iterations. Gradient accuracy is
-verified by the finite-difference check: $\|g - g_{\text{FD}}\|/\|g\| < 10^{-5}$.
+Armijo-backtracking gradient descent (the shipped `FwiProcessor` line search) with multiscale
+frequency continuation reaches the convergence criterion; gradient accuracy is verified by a
+finite-difference check $\|g - g_{\text{FD}}\|/\|g\| < 10^{-5}$ A general quasi-Newton L-BFGS optimiser (Nocedal two-loop recursion) is implemented in `kwavers_math::optimization` (`minimize` / `LbfgsConfig`); wiring it into `FwiProcessor` as the refinement phase is the remaining integration step.
+
+![CBS vs Born FWI convergence](figures/ch17/fig04_convergence_comparison.png)
+
+*Figure 4. FWI objective history: kwavers linear Born vs convergent-Born-series (CBS) frequency-domain FWI on a 2-D phantom (`kw.invert_breast_fwi`, §9.1).*
+
 
 ### 9.2 Born Approximation Error Budget
 
@@ -398,13 +443,22 @@ For a spherical inclusion of radius $a=3$ mm with $\delta c/c_0 = 0.05$ at $f = 
 - Scattered field relative error vs full nonlinear simulation: $< 2\%$.
 - At $\delta c/c_0 = 0.20$: Born error $\approx 15\%$; iterative Born reduces to $< 3\%$.
 
+![Sound-speed reconstruction](figures/ch17/fig05_sound_speed_reconstruction.png)
+
+*Figure 5. Reconstructed sound-speed map: kwavers Born vs CBS FWI on a 2-D breast phantom (§9.1).*
+
+
 ### 9.3 PINN Training Metrics
 
-For the 1D wave equation on $[0,1] \times [0,1]$ with $c=1$, exact solution $u = \sin(\pi x)\cos(\pi t)$:
-- $N_c = 10^4$ collocation points, $N_i = N_b = 200$ boundary/initial points.
-- 10,000 Adam steps ($\alpha=10^{-3}$) + 5,000 L-BFGS steps.
-- Final $L^\infty$ error: $< 2 \times 10^{-4}$.
-- Scales to 3D: $N_c = 10^6$, training on GPU achieves $< 10^{-3}$ relative error.
+The shipped `ElasticPINN2D` is validated on a 2-D elastic forward/inverse problem with a manufactured
+displacement field:
+- Sobol collocation sampling (`CollocationSampler`) over the interior + boundary/initial sets;
+- Adam / AdamW training (`PINNOptimizer`) on a Burn autodiff backend (CPU `ndarray` or `wgpu` GPU);
+- PDE + BC + IC + data losses balanced by `LossWeights`, with the trainable Lamé parameters
+  $(\lambda, \mu, \rho)$ recovered in the inverse configuration.
+
+The scalar-wave error bounds of §5.1 (Mishra & Molinaro) are the analytical target for a general
+PINN; the 1-D/3-D scalar-wave training figures are illustrative — that PINN is not yet shipped.
 
 ---
 

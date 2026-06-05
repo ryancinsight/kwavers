@@ -1,8 +1,8 @@
-# Abdominal Histotripsy FWI Targeting and Lesion Monitoring
+# Chapter 27 — Abdominal Histotripsy FWI Targeting and Lesion Monitoring
 
 Chapter 28 implements a CT-derived abdominal full-waveform inversion analysis
 for the existing kidney and liver histotripsy examples. The workflow loads the
-KiTS19 kidney CT and LiTS liver CT through the Chapter 21 loaders, extracts the
+KiTS19 kidney CT and LiTS liver CT through the Chapter 14 loaders, extracts the
 tumor-centered slice, maps labels plus HU texture to acoustic sound speed, and
 reconstructs local anatomical sound-speed contrast from synthetic
 finite-frequency pitch-catch data. The same chapter reconstructs

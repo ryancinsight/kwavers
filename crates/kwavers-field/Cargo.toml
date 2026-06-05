@@ -1,0 +1,20 @@
+[package]
+name = "kwavers-field"
+version = "3.0.0"
+edition = "2021"
+authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
+description = "Numerical field definitions for kwavers: component indices (SSOT), field-type mapping, operations/statistics, and bubble/electromagnetic field states"
+license = "MIT"
+repository = "https://github.com/ryancinsight/kwavers"
+
+[dependencies]
+kwavers-core = { path = "../kwavers-core" }
+kwavers-grid = { path = "../kwavers-grid" }
+ndarray = { version = "0.16", features = ["rayon", "serde"] }
+num-complex = "0.4"
+
+[dev-dependencies]
+approx = "0.5"
+
+[lints]
+workspace = true

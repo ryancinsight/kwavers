@@ -1,0 +1,26 @@
+[package]
+name = "kwavers-medium"
+version = "3.0.0"
+edition = "2021"
+authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
+description = "Material and tissue models for kwavers: homogeneous/heterogeneous media, acoustic/elastic/optical/thermal/viscous properties, absorption models, anisotropy"
+license = "MIT"
+repository = "https://github.com/ryancinsight/kwavers"
+
+[dependencies]
+kwavers-core = { path = "../kwavers-core" }
+kwavers-math = { path = "../kwavers-math" }
+kwavers-grid = { path = "../kwavers-grid" }
+ndarray = { version = "0.16", features = ["rayon", "serde"] }
+nalgebra = { version = "0.32" }
+num-complex = "0.4"
+serde = { version = "1.0", features = ["derive"] }
+log = "0.4"
+rayon = "1.10"
+
+[dev-dependencies]
+approx = "0.5"
+proptest = "1.2"
+
+[lints]
+workspace = true

@@ -1,0 +1,24 @@
+[package]
+name = "kwavers-source"
+version = "3.0.0"
+edition = "2021"
+authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
+description = "Low-level acoustic/optical/EM excitation primitives for kwavers: source trait, grid/mask sources, wavefronts, custom signals, apodization windows"
+license = "MIT"
+repository = "https://github.com/ryancinsight/kwavers"
+
+[dependencies]
+kwavers-core = { path = "../kwavers-core" }
+kwavers-math = { path = "../kwavers-math" }
+kwavers-grid = { path = "../kwavers-grid" }
+kwavers-signal = { path = "../kwavers-signal" }
+kwavers-medium = { path = "../kwavers-medium" }
+ndarray = { version = "0.16", features = ["rayon", "serde"] }
+num-complex = "0.4"
+serde = { version = "1.0", features = ["derive"] }
+
+[dev-dependencies]
+approx = "0.5"
+
+[lints]
+workspace = true

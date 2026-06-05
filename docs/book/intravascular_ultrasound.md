@@ -1,4 +1,4 @@
-# Intravascular Ultrasound Imaging and Therapy
+# Chapter 29 — Intravascular Ultrasound Imaging and Therapy
 
 This chapter implements a deterministic intravascular ultrasound (IVUS) slice
 for coronary wall imaging and localized vessel-wall therapy. The executable

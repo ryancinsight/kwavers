@@ -1,0 +1,76 @@
+[package]
+name = "kwavers-python"
+version = "0.1.0"
+edition = "2021"
+authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
+description = "Python bindings for kwavers ultrasound simulation library"
+license = "MIT"
+repository = "https://github.com/ryancinsight/kwavers"
+keywords = ["ultrasound", "simulation", "python", "pyo3", "k-wave"]
+categories = ["science", "simulation", "medical"]
+
+[lib]
+name = "pykwavers"
+crate-type = ["cdylib"]  # Dynamic library for Python import
+
+[dependencies]
+# Layered kwavers crates — depended on directly (no facade; ADR 011 amendment).
+# kwavers-core keeps `channels`+`registration` (flume/ritk-registration were
+# always-on in the former facade).
+kwavers-core = { path = "../kwavers-core", features = ["channels", "registration"] }
+kwavers-math = { path = "../kwavers-math" }
+kwavers-grid = { path = "../kwavers-grid" }
+kwavers-transducer = { path = "../kwavers-transducer" }
+kwavers-receiver = { path = "../kwavers-receiver" }
+kwavers-source = { path = "../kwavers-source" }
+kwavers-boundary = { path = "../kwavers-boundary" }
+kwavers-medium = { path = "../kwavers-medium" }
+kwavers-signal = { path = "../kwavers-signal" }
+kwavers-physics = { path = "../kwavers-physics" }
+kwavers-solver = { path = "../kwavers-solver" }
+kwavers-analysis = { path = "../kwavers-analysis" }
+kwavers-simulation = { path = "../kwavers-simulation" }
+kwavers-diagnostics = { path = "../kwavers-diagnostics" }
+kwavers-therapy = { path = "../kwavers-therapy" }
+kwavers-gpu = { path = "../kwavers-gpu" }
+burn = { version = "0.19", features = ["ndarray"] }
+ritk-io = { workspace = true }
+
+# PyO3 for Python bindings
+pyo3 = { version = "0.27", features = ["extension-module", "abi3-py38", "multiple-pymethods"] }
+numpy = "0.27"  # ndarray ↔ numpy conversions
+
+# Essential numerical computing (re-export from kwavers)
+# Note: Must match burn's ndarray requirement (0.16.1) and numpy 0.27 supports this
+ndarray = { version = "=0.16.1", features = ["rayon", "serde"] }
+num-complex = "0.4"
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Serialization for caching comparison results
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[dev-dependencies]
+# Python testing via pytest-benchmark will be used externally
+# No Rust dev dependencies needed for bindings
+
+[features]
+default = ["minimal"]
+minimal = []
+gpu = [
+    "kwavers-gpu/gpu",
+    "kwavers-core/gpu",
+    "kwavers-math/gpu",
+    "kwavers-solver/gpu",
+    "kwavers-analysis/gpu",
+    "kwavers-simulation/gpu",
+    "kwavers-diagnostics/gpu",
+]
+plotting = ["kwavers-analysis/plotting"]
+pinn = ["kwavers-solver/pinn", "kwavers-analysis/pinn", "kwavers-diagnostics/pinn"]
+full = ["gpu", "plotting", "pinn"]
+
+# Profiles are defined at workspace root (Cargo.toml)

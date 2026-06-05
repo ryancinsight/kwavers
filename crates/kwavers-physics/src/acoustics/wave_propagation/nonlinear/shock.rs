@@ -1,0 +1,99 @@
+//! Shock Wave Formation and Physics
+//!
+//! Models the nonlinear steepening of acoustic waves into shocks.
+
+use super::NonlinearParameters;
+use kwavers_core::constants::numerical::TWO_PI;
+
+/// Calculates the spatial location where a shock wave forms
+///
+/// Due to nonlinear steepening, the positive phase of an acoustic wave travels
+/// slightly faster than the local sound speed (c = c₀ + βu), and the negative phase
+/// travels slightly slower. This causes the wave to steepen until a shock forms.
+///
+/// Returns distance (m)
+#[must_use]
+pub fn shock_formation_distance(
+    initial_pressure: f64,
+    frequency: f64,
+    params: &NonlinearParameters,
+) -> f64 {
+    let omega = TWO_PI * frequency;
+    let beta = params.beta;
+    let rho_0 = params.density;
+    let c_0 = params.sound_speed;
+
+    // Shock formation distance (Hamilton & Blackstock 1998, §4.4, lossless plane wave):
+    //   l_s = ρ₀ c₀³ / (β ω P₀)
+    // Returns +∞ for P₀ = 0 (correct limit: no shock at zero amplitude).
+    // For absorbing media, use the Goldberg-number-corrected form; this lossless
+    // formula overestimates l_s when Γ = β ω P₀ / (ρ₀ c₀² α l_s) ≲ 1.
+    if initial_pressure == 0.0 {
+        return f64::INFINITY;
+    }
+    (rho_0 * c_0.powi(3)) / (beta * omega * initial_pressure)
+}
+
+/// Calculate the shock front thickness
+///
+/// Thermoviscous dissipation counteracts nonlinear steepening, resulting in a
+/// finite shock thickness. From weak-shock theory (Hamilton & Blackstock 1998,
+/// §4.3):
+///
+/// ```text
+/// l_s = ρ₀ c₀ δ / (β P_shock)
+/// ```
+///
+/// where the diffusivity of sound `δ` (m²/s) relates to the thermoviscous
+/// attenuation coefficient `α(ω)` (Np/m) at angular frequency `ω = 2πf` via
+///
+/// ```text
+/// δ = 2 α(ω) c₀³ / ω²
+/// ```
+///
+/// Combining: `l_s = 2 ρ₀ α(ω) c₀⁴ / (β ω² P_shock)`
+///
+/// # Arguments
+/// * `shock_pressure` - Shock pressure amplitude (Pa)
+/// * `frequency` - Driving frequency (Hz)
+/// * `params` - Nonlinear propagation parameters
+///
+/// Returns thickness (m)
+#[must_use]
+pub fn shock_thickness(shock_pressure: f64, frequency: f64, params: &NonlinearParameters) -> f64 {
+    let omega = TWO_PI * frequency;
+    // Thermoviscous attenuation at the driving frequency [Np/m]
+    let alpha = params.attenuation_at_frequency(frequency);
+    // Diffusivity of sound: δ = 2α c₀³ / ω²
+    let delta = 2.0 * alpha * params.sound_speed.powi(3) / (omega * omega);
+    // Shock thickness: l_s = ρ₀ c₀ δ / (β P_shock)
+    let thickness = params.density * params.sound_speed * delta / (params.beta * shock_pressure);
+
+    // Bounded below by mean free path for liquids (~1e-10 m)
+    thickness.max(1e-10)
+}
+
+/// Estimates peak pressure considering shock dissipation
+#[must_use]
+pub fn shock_wave_amplitude(
+    initial_pressure: f64,
+    frequency: f64,
+    distance: f64,
+    params: &NonlinearParameters,
+) -> f64 {
+    let shock_dist = shock_formation_distance(initial_pressure, frequency, params);
+
+    // Acoustic saturation limit
+    let p_sat = super::saturation::acoustic_saturation_pressure(frequency, distance, params);
+
+    if distance < shock_dist {
+        // Pre-shock regime: nonlinear growth but dominated by fundamental
+        // P(z) ~ P_0 (ignoring linear attenuation for this estimate)
+        initial_pressure.min(p_sat)
+    } else {
+        // Post-shock regime: rapid dissipation, amplitude limits to saturation
+        // Classic sawtooth wave dissipation: P(z) = P_0 / (1 + z/l_s)
+        let sawtooth_amp = initial_pressure / (1.0 + distance / shock_dist);
+        sawtooth_amp.min(p_sat)
+    }
+}

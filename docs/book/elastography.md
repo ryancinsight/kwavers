@@ -1,9 +1,9 @@
-# Chapter — Elastography: Imaging Tissue Mechanical Properties
+# Chapter 11 — Elastography: Imaging Tissue Mechanical Properties
 
-> **Prerequisites:** linear acoustics (Chapter 1), wave propagation in heterogeneous media
-> (Chapter 2), inverse problems (Chapter 9), signal processing fundamentals
-> (Chapter 4). Readers should be comfortable with index notation for tensors,
-> the Fourier transform, and cross-correlation as an estimator.
+> **Prerequisites:** linear acoustics and wave physics (Chapter 1), heterogeneous
+> media and tissue models (Chapter 4), sensors and signal measurement (Chapter 8),
+> and inverse problems (Chapter 18). Readers should be comfortable with index
+> notation for tensors, the Fourier transform, and cross-correlation as an estimator.
 
 ---
 
@@ -27,22 +27,28 @@ Three broad families of elastography exist and are treated in this chapter:
 
 The `kwavers` implementation distributes responsibility across:
 
-- **`kwavers::solver::inverse::elastography`** — inversion kernels (Helmholtz,
-  time-of-flight, phase gradient, local frequency estimation).
-- **`kwavers::analysis::signal_processing`** — RF cross-correlation, phase
-  unwrapping, displacement tracking, spectral methods.
-- **`kwavers::domain::medium`** — tissue mechanical parameter storage,
-  Voigt/Zener model kernels.
-- **`kwavers::solver::forward::elastic::swe`** — forward elastic wave
-  propagation used in synthetic validation.
-
-![Overview of elastography modalities](figures/ch_elasto/fig00_modality_overview.png)
+- **`kwavers_solver::inverse::elastography::linear_methods::ShearWaveInversion`**
+  — shear-speed inversion kernels: time-of-flight, phase-gradient, `direct`
+  (Gauss-Seidel algebraic local-Helmholtz), volumetric, and directional
+  phase-gradient.
+- **`kwavers_physics::acoustics::imaging::modalities::elastography`** — RF
+  cross-correlation displacement tracking (`DisplacementEstimator`), harmonic
+  detection (`HarmonicDetector`), and ARFI radiation force
+  (`AcousticRadiationForce`, `MultiDirectionalPush`).
+- **`kwavers_medium::{elastic,viscous}`** — tissue mechanical parameter storage
+  (`ElasticProperties`; generic Stokes `ViscousProperties`).
+- **`kwavers_solver::forward::elastic::{swe,nonlinear}`** — forward elastic wave
+  propagation (`ElasticWaveSolver`; hyperelastic `NonlinearElasticWaveSolver`)
+  for synthetic validation.
+- **`kwavers_physics::analytical::elastography`** — closed-form models exposed to
+  Python (`shear_wave_speed`, `voigt_complex_modulus`, `voigt_shear_wave_dispersion`)
+  that generate this chapter's figures.
 
 ---
 
-## 10.1 Linear Elasticity Fundamentals
+## 11.1 Linear Elasticity Fundamentals
 
-### 10.1.1 Kinematics: Strain Tensor
+### 11.1.1 Kinematics: Strain Tensor
 
 Let $\mathbf{u}(\mathbf{x}, t)$ denote the displacement vector field of a
 continuous solid. For small deformations the linearised strain tensor is
@@ -64,7 +70,7 @@ $$
 = \nabla \cdot \mathbf{u}.
 $$
 
-### 10.1.2 Dynamics: Stress Tensor and Newton's Second Law
+### 11.1.2 Dynamics: Stress Tensor and Newton's Second Law
 
 The Cauchy stress tensor $\sigma_{ij}$ represents the traction (force per unit
 area) exerted across an internal surface with outward normal $\hat{n}_j$ on the
@@ -80,7 +86,7 @@ $$
 where $\ddot{u}_i \equiv \partial^2 u_i / \partial t^2$ and $f_i$ is the body
 force density (N m$^{-3}$).
 
-### 10.1.3 Constitutive Law for a Linear Isotropic Elastic Solid
+### 11.1.3 Constitutive Law for a Linear Isotropic Elastic Solid
 
 For a homogeneous, isotropic, linearly elastic material characterised by the
 Lamé parameters $\lambda$ and $\mu$, the constitutive law (generalised Hooke's
@@ -127,11 +133,10 @@ Using the vector identity $\nabla^2 \mathbf{u} = \nabla(\nabla \cdot
 \mathbf{u}) - \nabla \times (\nabla \times \mathbf{u})$ gives the Navier
 equation above. $\square$
 
-![Stress tensor components on a unit cube](figures/ch_elasto/fig01_stress_tensor.png)
 
 ---
 
-## 10.2 Theorem: P-Wave and S-Wave Separation via Helmholtz Decomposition
+## 11.2 Theorem: P-Wave and S-Wave Separation via Helmholtz Decomposition
 
 ### Statement
 
@@ -238,11 +243,10 @@ the Christoffel equation yields two eigenvalues: $\omega^2/k^2 = (\lambda
 transverse polarisation. This recovers $c_P$ and $c_S$ from the algebraic
 eigenvalue problem, confirming the partial-differential-equation result.
 
-![Particle motion in P- and S-waves](figures/ch_elasto/fig02_pwave_swave_motion.png)
 
 ---
 
-## 10.3 Theorem: Shear Modulus from Shear-Wave Speed
+## 11.3 Theorem: Shear Modulus from Shear-Wave Speed
 
 ### Statement
 
@@ -256,7 +260,7 @@ $$
 
 ### Proof
 
-From the S-wave equation derived in §10.2, a monochromatic plane shear wave
+From the S-wave equation derived in §11.2, a monochromatic plane shear wave
 $\boldsymbol{\psi}(\mathbf{x},t) = \boldsymbol{\Psi}\,e^{i(\mathbf{k}\cdot
 \mathbf{x}-\omega t)}$ satisfies
 
@@ -281,7 +285,12 @@ estimated. In practice $\rho$ varies by only $\pm 5\,\%$ across soft tissues
 (Table 10.1), so the dominant source of contrast in shear modulus maps is $c_S$,
 not $\rho$.
 
-### 10.3.1 Tissue Reference Values
+![Shear-wave speed vs shear modulus](figures/ch10/fig01_shear_wave_speed.png)
+
+*Figure 11.1. Shear-wave speed c_S=√(μ/ρ) vs shear modulus for normal and pathological tissue (`kw.shear_wave_speed`, §11.3). The √μ scaling is why SWE reports speed but clinicians read stiffness μ=ρc_S².*
+
+
+### 11.3.1 Tissue Reference Values
 
 **Table 10.1 — Shear-wave speed and shear modulus in representative soft tissues**
 
@@ -304,15 +313,15 @@ not $\rho$.
 The values assume $\rho \approx 1000\,\text{kg m}^{-3}$ for the conversion
 $\mu = \rho c_S^2$.
 
-Implementation reference: `kwavers::domain::medium::TissueMechanics` stores
-these parameters and is consumed by
-`kwavers::solver::inverse::elastography::ShearModulusMap`.
+Implementation reference: `kwavers_medium::elastic::ElasticProperties` stores
+$\lambda, \mu, c_P, c_S$ and is consumed by the shear-modulus map produced by
+`kwavers_solver::inverse::elastography::linear_methods::ShearWaveInversion`.
 
 ---
 
-## 10.4 Quasi-Incompressibility of Soft Tissue
+## 11.4 Quasi-Incompressibility of Soft Tissue
 
-### 10.4.1 Poisson Ratio and Lamé Parameter Relationship
+### 11.4.1 Poisson Ratio and Lamé Parameter Relationship
 
 The Poisson ratio $\nu$ relates the lateral contraction to the axial extension:
 
@@ -326,7 +335,7 @@ $$
 \lambda = \frac{2\mu\nu}{1 - 2\nu}.
 $$
 
-### 10.4.2 Theorem: Separation of Scales in Soft Tissue
+### 11.4.2 Theorem: Separation of Scales in Soft Tissue
 
 **Statement.** Soft biological tissue satisfies $\lambda \gg \mu$, yielding
 $\nu \to 0.5^-$, $c_P \approx 1540\,\text{m s}^{-1}$, and $c_S \in
@@ -369,22 +378,24 @@ echoes at MHz frequencies; shear wave propagation occurs at sub-kHz frequencies
 with sub-millimetre displacements. The two measurement channels do not
 interfere, enabling a clean inversion pipeline.
 
-**Implementation consequence.** `kwavers::solver::forward::elastic::swe` uses
+**Implementation consequence.** `kwavers_solver::forward::elastic::swe::ElasticWaveSolver` uses
 the quasi-incompressible approximation: $\lambda$ is set from the measured
 $c_P$ of water (fixed), and only $\mu(\mathbf{x})$ is the unknown field.
 This eliminates one degree of freedom from the forward model.
 
-![Speed ratio c_P/c_S vs shear modulus](figures/ch_elasto/fig03_speed_ratio.png)
+![P-/S-wave velocity ratio vs Poisson ratio](figures/ch10/fig02_wave_velocity_ratio.png)
+
+*Figure 11.2. Ratio c_P/c_S vs Poisson's ratio (`kw.shear_wave_speed`). As ν→0.5 (quasi-incompressible tissue, §11.4) the ratio diverges, so the shear channel carries the stiffness contrast while the bulk channel is nearly fixed.*
 
 ---
 
-## 10.5 Strain Elastography
+## 11.5 Strain Elastography
 
 Strain elastography (Ophir et al., 1991) estimates the relative stiffness of
 tissue by measuring how much it deforms under a known external compression.
 Stiffer tissue deforms less; softer tissue deforms more.
 
-### 10.5.1 Displacement Estimation by RF Cross-Correlation
+### 11.5.1 Displacement Estimation by RF Cross-Correlation
 
 Let $r_{\text{pre}}(z, t)$ and $r_{\text{post}}(z, t)$ denote the
 radio-frequency (RF) echo signals acquired before and after applying an axial
@@ -411,12 +422,12 @@ $$
 \hat{\delta}(z) = \frac{c_P}{2}\hat{\tau}(z).
 $$
 
-**Implementation.** `kwavers::analysis::signal_processing::crosscorr::rf_displacement`
+**Implementation.** `kwavers_physics::acoustics::imaging::modalities::elastography::displacement::DisplacementEstimator`
 implements windowed cross-correlation with parabolic interpolation for
 sub-sample time-delay estimation and returns the displacement field
 $\hat{\delta}(z_k)$ on the imaging grid.
 
-### 10.5.2 Theorem: Axial Strain from Displacement Gradient
+### 11.5.2 Theorem: Axial Strain from Displacement Gradient
 
 **Statement.** The axial strain $\varepsilon_{zz}(z)$ equals the spatial
 derivative of the displacement field:
@@ -442,7 +453,7 @@ $$
 {\sum_j (z_j - \bar{z})^2}, \qquad j \in [k-m, k+m].
 $$
 
-### 10.5.3 Young's Modulus and the Incompressible Approximation
+### 11.5.3 Young's Modulus and the Incompressible Approximation
 
 For a linearly elastic, isotropic material the Young's modulus $E$ relates
 axial stress to axial strain: $\sigma_{zz} = E \varepsilon_{zz}$. The
@@ -467,10 +478,10 @@ incompressible limit holds. Failing to apply the factor-of-3 correction
 produces stiffness estimates that are systematically low by 3-fold when
 comparing SWE-derived $E$ to literature values.
 
-### 10.5.4 Algorithm 10.1 — Strain Elastography Pipeline
+### 11.5.4 Algorithm 11.1 — Strain Elastography Pipeline
 
 ```
-Algorithm 10.1  Strain Elastography
+Algorithm 11.1  Strain Elastography
 
 INPUT:  RF frames r_pre[z,t], r_post[z,t]; sound speed c_P; window L; gradient neighbourhood l
 OUTPUT: axial strain map ε_zz[z], relative stiffness image S[z]
@@ -488,21 +499,22 @@ OUTPUT: axial strain map ε_zz[z], relative stiffness image S[z]
 6.  Display S as elastogram with colourbar in units of relative stiffness.
 ```
 
-Implementation entry point:
-`kwavers::solver::inverse::elastography::StrainElastographer::run`.
+Implementation entry point: the displacement field is produced by
+`kwavers_physics::acoustics::imaging::modalities::elastography::displacement::DisplacementEstimator`;
+the axial strain is its spatial gradient (Theorem §11.5.2). There is no separate
+`StrainElastographer` type — strain is a derived quantity of the displacement estimate.
 
-![Strain elastography pipeline: RF frames to elastogram](figures/ch_elasto/fig04_strain_pipeline.png)
 
 ---
 
-## 10.6 Shear-Wave Elastography
+## 11.6 Shear-Wave Elastography
 
 Shear-wave elastography (SWE) generates propagating shear waves in tissue
 using an acoustic radiation force impulse (ARFI) push pulse, then tracks the
 travelling shear wavefront by ultrafast plane-wave compounding imaging to
 extract an absolute, quantitative $\mu(\mathbf{x})$ map.
 
-### 10.6.1 ARFI Push Pulse Physics
+### 11.6.1 ARFI Push Pulse Physics
 
 A focused ultrasound pulse of intensity $I$ propagating through an absorbing
 medium deposits a body force density
@@ -517,7 +529,7 @@ displacement of order $10$–$100\,\mu\text{m}$ on a microsecond timescale.
 The impulsive force launches a cylindrical shear wave that propagates radially
 outward from the focus.
 
-### 10.6.2 Time-of-Flight Estimation
+### 11.6.2 Time-of-Flight Estimation
 
 For a laterally homogeneous medium, the shear-wave wavefront arrives at
 lateral position $x$ with a time delay relative to position $x_0$:
@@ -543,7 +555,7 @@ $$
 A linear regression of $t_{\text{arr}}$ vs $x$ gives $\hat{c}_S$ with
 uncertainty proportional to the tracking SNR.
 
-### 10.6.3 Phase-Gradient Method
+### 11.6.3 Phase-Gradient Method
 
 For a narrowband shear wave at temporal frequency $\omega$ the spatial phase
 of the complex analytic signal $\tilde{v}(x)$ advances linearly with distance:
@@ -561,7 +573,7 @@ $$
 This method generalises to 2-D and 3-D by replacing the scalar gradient with
 the vector phase gradient magnitude $|\nabla\phi|$.
 
-### 10.6.4 Theorem: Equivalence of Time-of-Flight and Phase-Gradient Estimators for Plane Shear Waves
+### 11.6.4 Theorem: Equivalence of Time-of-Flight and Phase-Gradient Estimators for Plane Shear Waves
 
 **Statement.** For a monochromatic plane shear wave with phase speed $c_S$,
 the time-of-flight estimator $\hat{c}_S = \Delta x / \Delta t$ and the
@@ -583,15 +595,15 @@ x + \phi_0$ and $|\nabla\phi| = k_S$. Therefore $\omega / |\nabla\phi| =
 
 Both methods return $c_S$ exactly. $\square$
 
-**Remark.** For viscoelastic media $c_S$ is frequency-dependent (see §10.8),
+**Remark.** For viscoelastic media $c_S$ is frequency-dependent (see §11.8),
 and only the phase-gradient method applied at a specific $\omega$ yields the
 correct frequency-resolved speed. The time-of-flight method averages over the
 frequency content of the push pulse.
 
-### 10.6.5 Algorithm 10.2 — Shear-Wave Speed Mapping
+### 11.6.5 Algorithm 11.2 — Shear-Wave Speed Mapping
 
 ```
-Algorithm 10.2  Shear-Wave Elastography (SWE) Inversion
+Algorithm 11.2  Shear-Wave Elastography (SWE) Inversion
 
 INPUT:  Tissue velocity volume v_z[x, y, z, t] from ultrafast tracking;
         push frequency f_push; density ρ
@@ -611,15 +623,14 @@ OUTPUT: Shear modulus map μ[x, y, z]
 10. Apply confidence mask: exclude pixels where tracking SNR < threshold.
 ```
 
-Implementation: `kwavers::solver::inverse::elastography::SweInverter::invert`.
+Implementation: `kwavers_solver::inverse::elastography::linear_methods::ShearWaveInversion` (time-of-flight and phase-gradient methods).
 
-![Shear-wave propagation from ARFI push: kymograph and speed map](figures/ch_elasto/fig05_shear_wave_propagation.png)
 
 ---
 
-## 10.7 MR Elastography and the Helmholtz Inversion
+## 11.7 MR Elastography and the Helmholtz Inversion
 
-### 10.7.1 Measurement Principle
+### 11.7.1 Measurement Principle
 
 Magnetic resonance elastography (MRE; Muthupillai et al., 1995) encodes
 mechanical displacement into the MR phase signal using motion-sensitising
@@ -628,7 +639,7 @@ The measured quantity is the complex displacement field $\mathbf{u}(\mathbf{x})$
 at the drive frequency. Unlike ultrasound SWE, MRE measures all three
 displacement components with isotropic spatial resolution.
 
-### 10.7.2 Theorem: Local Helmholtz Inversion for Shear Modulus
+### 11.7.2 Theorem: Local Helmholtz Inversion for Shear Modulus
 
 **Statement.** In a locally homogeneous viscoelastic medium oscillating
 harmonically at frequency $\omega$, where the shear modulus $\mu(\mathbf{x})$
@@ -640,7 +651,7 @@ $$
 
 for any displacement component $u_i$ satisfying the shear-wave equation.
 
-**Proof.** The time-harmonic form of the S-wave equation (from §10.2) for a
+**Proof.** The time-harmonic form of the S-wave equation (from §11.2) for a
 displacement component $u_i$ satisfying $\mathbf{u} = \nabla\times\boldsymbol{\psi}$
 (solenoidal part) with temporal factor $e^{-i\omega t}$ is
 
@@ -667,14 +678,14 @@ At tissue boundaries the error is large; regularised global inversions are
 preferred there.
 
 **Remark — complex modulus.** For viscoelastic tissue $\mu$ is complex-valued
-(§10.8), and the same formula applies with $\mu^* = \mu' + i\mu''$, yielding
+(§11.8), and the same formula applies with $\mu^* = \mu' + i\mu''$, yielding
 both the storage modulus $\mu'$ (stiffness) and the loss modulus $\mu''$
 (viscosity).
 
-### 10.7.3 Algorithm 10.3 — Helmholtz Inversion (MRE)
+### 11.7.3 Algorithm 11.3 — Helmholtz Inversion (MRE)
 
 ```
-Algorithm 10.3  Local Helmholtz Inversion for MRE
+Algorithm 11.3  Local Helmholtz Inversion for MRE
 
 INPUT:  Complex displacement field U[x,y,z,c] (3 components c∈{x,y,z});
         drive frequency ω; density ρ
@@ -696,15 +707,17 @@ OUTPUT: Complex shear modulus map μ*[x,y,z]
 5.  Compute loss tangent: tan δ = μ''/μ'.
 ```
 
-Implementation: `kwavers::solver::inverse::elastography::HelmholtzInverter`.
+Implementation: the algebraic local inversion $\mu = -\rho\omega^2 u_i/\nabla^2 u_i$ is the `direct` (Gauss-Seidel) method of `kwavers_solver::inverse::elastography::linear_methods::ShearWaveInversion`. A regularised global Helmholtz / LFE inversion is not yet implemented.
 
-![MRE displacement field and recovered μ map](figures/ch_elasto/fig06_mre_helmholtz.png)
+![MRE harmonic displacement field](figures/ch10/fig05_mre_displacement.png)
+
+*Figure 11.3. Analytical MRE harmonic displacement field for a stiff cylindrical inclusion (k=ω/c_S via `kw.shear_wave_speed`); the local-Helmholtz inversion μ=−ρω²u/∇²u (§11.7.2) recovers the inclusion modulus.*
 
 ---
 
-## 10.8 Viscoelastic Tissue: The Voigt Model
+## 11.8 Viscoelastic Tissue: The Voigt Model
 
-### 10.8.1 Constitutive Law
+### 11.8.1 Constitutive Law
 
 Real soft tissue is neither purely elastic nor purely viscous. The Voigt model
 (Kelvin–Voigt model) represents tissue as a spring and dashpot in parallel:
@@ -717,7 +730,7 @@ where $E$ (Pa) is the elastic modulus and $\eta$ (Pa·s) is the dynamic
 viscosity. In the shear channel this becomes $\tau = \mu\gamma + \eta_s \dot\gamma$
 where $\tau$ is shear stress and $\gamma$ the shear strain.
 
-### 10.8.2 Complex Modulus
+### 11.8.2 Complex Modulus
 
 For a harmonic excitation $\varepsilon(t) = \varepsilon_0 e^{-i\omega t}$ the
 constitutive law gives
@@ -734,7 +747,11 @@ $$
 
 with storage modulus $E' = E$ and loss modulus $E'' = \omega\eta$.
 
-### 10.8.3 Theorem: Dispersive Phase Velocity in the Voigt Model
+![Voigt storage and loss moduli vs frequency](figures/ch10/fig03_voigt_viscoelastic.png)
+
+*Figure 11.4. Voigt complex modulus G'(ω) (storage) and G''(ω)=ωη (loss) from `kw.voigt_complex_modulus` (§11.8.2). The loss modulus rises linearly with frequency, the signature of the parallel dashpot.*
+
+### 11.8.3 Theorem: Dispersive Phase Velocity in the Voigt Model
 
 **Statement.** A viscoelastic Voigt solid supports shear waves with a complex
 wavenumber $k^*(\omega)$ and a frequency-dependent phase velocity
@@ -802,7 +819,12 @@ relative to $E$, reducing the effective real stiffness and hence $k'$ grows
 slower than $\omega$. The complete monotonicity proof is by direct computation
 of $d(k'/\omega)/d\omega < 0$ using the above closed form. $\square$
 
-### 10.8.4 Tissue Viscosity Reference Values
+![Shear-wave phase vs group velocity dispersion](figures/ch10/fig04_shear_dispersion.png)
+
+*Figure 11.5. Shear-wave phase and group velocity vs frequency in the Voigt model (`kw.voigt_shear_wave_dispersion`, §11.8.3). Velocity rises with frequency — viscous dispersion — so a single-frequency μ estimate is frequency-dependent.*
+
+
+### 11.8.4 Tissue Viscosity Reference Values
 
 **Table 10.2 — Voigt model parameters for soft tissue at 100 Hz shear excitation**
 
@@ -820,16 +842,19 @@ tangent $\tan\delta = \eta\omega/\mu$ ranges from $0.1$ to $2.0$,
 confirming that viscosity is not negligible and $c_S$ is frequency-dependent
 at the level of $20$–$50\,\%$ across the SWE band.
 
-Implementation: `kwavers::domain::medium::VoigtKernel` and
-`kwavers::solver::inverse::elastography::DispersionFitter`.
-
-![Voigt model dispersion: phase speed vs frequency for liver](figures/ch_elasto/fig07_voigt_dispersion.png)
+Implementation: the Voigt complex modulus and shear-wave dispersion are the analytical
+functions `voigt_complex_modulus` / `voigt_shear_wave_dispersion` in
+`kwavers_physics::analytical::elastography`; the medium layer stores only generic Stokes
+viscosity (`kwavers_medium::viscous::ViscousProperties`); the frequency-domain Kelvin–Voigt
+constitutive model (complex modulus, dispersion, attenuation, Q) is
+`kwavers_medium::viscoelastic::KelvinVoigtModel`. A dispersion-fitting inversion
+kernel is not yet implemented.
 
 ---
 
-## 10.9 Nonlinear Elastography and Acousto-Elasticity
+## 11.9 Nonlinear Elastography and Acousto-Elasticity
 
-### 10.9.1 Third-Order Elasticity: Murnaghan Constants
+### 11.9.1 Third-Order Elasticity: Murnaghan Constants
 
 Linear elasticity characterises a material by two Lamé constants $\lambda, \mu$.
 For large pre-deformations or high-amplitude waves, third-order (nonlinear)
@@ -846,7 +871,7 @@ For soft tissue the reported values are $l \approx -10^4$ to $-10^3$ Pa,
 $m \approx -10^4$ to $-10^3$ Pa, $n \approx -10^3$ Pa, all much larger in
 magnitude than $\mu$.
 
-### 10.9.2 Acousto-Elasticity: Stress-Dependent Wave Speed
+### 11.9.2 Acousto-Elasticity: Stress-Dependent Wave Speed
 
 When a medium is subjected to a static pre-stress $\boldsymbol{\sigma}_0$, the
 effective wave speeds change. For a uniaxial pre-stress $\sigma_0$ applied
@@ -869,10 +894,10 @@ direct measure of the nonlinear elastic constants and the in-situ wall stress.
 In musculo-skeletal elastography, muscle contraction creates a pre-stress that
 stiffens tissue by a factor of $2$–$5$.
 
-### 10.9.3 Algorithm 10.4 — Acousto-Elastic Pre-Stress Estimation
+### 11.9.3 Algorithm 11.4 — Acousto-Elastic Pre-Stress Estimation
 
 ```
-Algorithm 10.4  Pre-Stress Estimation from Shear-Wave Speed Variation
+Algorithm 11.4  Pre-Stress Estimation from Shear-Wave Speed Variation
 
 INPUT:  Shear-wave speed sequences c_S[x, y, z, t_cardiac] over a cardiac cycle;
         linear Lamé parameters λ, μ (from diastolic reference frame)
@@ -888,11 +913,18 @@ OUTPUT: Pre-stress field σ_0[x, y, z, t_cardiac]
 4.  Validate against independent intravascular pressure measurement where available.
 ```
 
+**Implementation status.** The Murnaghan third-order constants and the
+acousto-elastic pre-stress inversion (Algorithm 11.4) are presented here as theory;
+they are not yet implemented in `kwavers`. The available nonlinear path,
+`kwavers_solver::forward::elastic::nonlinear::NonlinearElasticWaveSolver`, uses
+hyperelastic constitutive models (Neo-Hookean, Mooney-Rivlin, Ogden) — a distinct
+formulation from Murnaghan acousto-elasticity.
+
 ---
 
-## 10.10 Spatial Resolution in Shear-Wave Elastography
+## 11.10 Spatial Resolution in Shear-Wave Elastography
 
-### 10.10.1 Shear Wavelength Limit
+### 11.10.1 Shear Wavelength Limit
 
 The spatial resolution of a shear modulus map is limited by the shear
 wavelength $\lambda_S$. Features smaller than $\lambda_S$ cannot be resolved.
@@ -926,7 +958,7 @@ the wavelength is longer. Higher push frequencies improve resolution but
 attenuate more rapidly (shear-wave attenuation scales as $\alpha_S \propto
 f^2$ in the Voigt model).
 
-### 10.10.2 Depth of Field of the ARFI Push Pulse
+### 11.10.2 Depth of Field of the ARFI Push Pulse
 
 The ARFI push pulse is a focused compressional beam with depth of field
 
@@ -944,7 +976,7 @@ The push focus depth determines the depth at which the maximum shear-wave
 amplitude is generated. Clinical systems steer the push focus over a range of
 depths to build a full 2-D stiffness map.
 
-### 10.10.3 Resolution–Depth Trade-off
+### 11.10.3 Resolution–Depth Trade-off
 
 **Table 10.3 — Shear wavelength vs push frequency for two tissue stiffness values**
 
@@ -959,15 +991,14 @@ At depth $> 5\,\text{cm}$ shear-wave SNR limits the usable frequency to below
 $300\,\text{Hz}$ in most clinical systems, giving resolution worse than $3\,\text{mm}$
 for normal liver and worse than $15\,\text{mm}$ for fibrotic liver.
 
-Implementation: `kwavers::analysis::signal_processing::resolution::ShearWavelengthEstimator`.
+Implementation: the shear wavelength $\lambda_S = c_S/f$ follows directly from `kwavers_physics::analytical::elastography::shear_wave_speed`; no dedicated wavelength estimator is implemented.
 
-![Resolution limit and SNR vs depth for SWE](figures/ch_elasto/fig08_resolution_depth.png)
 
 ---
 
-## 10.11 Clinical Tissue Classification
+## 11.11 Clinical Tissue Classification
 
-### 10.11.1 Liver Fibrosis (METAVIR Staging)
+### 11.11.1 Liver Fibrosis (METAVIR Staging)
 
 Liver fibrosis is the leading clinical application of shear-wave elastography.
 The METAVIR scoring system classifies fibrosis in five stages $F0$–$F4$:
@@ -986,7 +1017,7 @@ Thresholds above are approximate; individual manufacturer calibration and clinic
 protocol (fasting state, respiration hold) affect the cut-off values
 systematically by up to $\pm 15\,\%$.
 
-### 10.11.2 Prostate
+### 11.11.2 Prostate
 
 **Table 10.5 — Prostate SWE (peripheral zone)**
 
@@ -1000,7 +1031,7 @@ systematically by up to $\pm 15\,\%$.
 Prostate SWE is confounded by zonal anatomy (transition zone is inherently
 stiffer than peripheral zone), capsule artefacts, and BPH.
 
-### 10.11.3 Thyroid
+### 11.11.3 Thyroid
 
 **Table 10.6 — Thyroid SWE**
 
@@ -1011,7 +1042,7 @@ stiffer than peripheral zone), capsule artefacts, and BPH.
 | Papillary carcinoma | 40 – 200 | High |
 | Anaplastic carcinoma | > 200 | Very high |
 
-### 10.11.4 Breast (ACR BI-RADS SWE Supplement)
+### 11.11.4 Breast (ACR BI-RADS SWE Supplement)
 
 **Table 10.7 — Breast SWE (BI-RADS complementary data)**
 
@@ -1026,10 +1057,10 @@ stiffer than peripheral zone), capsule artefacts, and BPH.
 Mucinous and medullary carcinomas are exceptions: they present as soft on SWE
 and must not be down-classified based on stiffness alone.
 
-### 10.11.5 Algorithm 10.5 — Automated Tissue Classification
+### 11.11.5 Algorithm 11.5 — Automated Tissue Classification
 
 ```
-Algorithm 10.5  SWE-Based Tissue Classification
+Algorithm 11.5  SWE-Based Tissue Classification
 
 INPUT:  Shear modulus map μ[x,y,z]; organ label (liver | prostate | thyroid | breast);
         reference lookup table T for that organ
@@ -1045,13 +1076,13 @@ OUTPUT: Per-ROI classification with confidence
 7.  Flag if ROI depth > 7 cm (SNR degradation risk) or ROI size < 2·λ_S (resolution limit).
 ```
 
-Implementation: `kwavers::solver::inverse::elastography::TissueClassifier`.
+Implementation: the organ-specific staging cut-offs in §11.11 are reference tables; no dedicated elastography tissue classifier is implemented (the unrelated `kwavers_analysis::ml::models` classifier is a generic ML utility).
 
 ---
 
-## 10.12 Uncertainty Quantification in Elastography
+## 11.12 Uncertainty Quantification in Elastography
 
-### 10.12.1 Cramér–Rao Lower Bound for Time-Delay Estimation
+### 11.12.1 Cramér–Rao Lower Bound for Time-Delay Estimation
 
 The variance of any unbiased time-delay estimator from cross-correlation of
 bandlimited signals satisfies the Cramér–Rao lower bound (Walker and Trahey, 1995):
@@ -1071,7 +1102,7 @@ $$
 This sets a fundamental limit on strain sensitivity for a given transducer
 centre frequency, window length, and SNR.
 
-### 10.12.2 Shear-Wave Speed Uncertainty
+### 11.12.2 Shear-Wave Speed Uncertainty
 
 For the phase-gradient estimator with phase estimated from the analytic signal,
 the standard deviation of $\hat{c}_S$ scales as
@@ -1084,7 +1115,7 @@ where $L_x$ is the lateral aperture over which the phase gradient is computed
 and $N_t$ is the number of temporal samples used in the time-frequency analysis.
 Larger push apertures and higher tracking SNR reduce speed uncertainty linearly.
 
-### 10.12.3 Bias from Boundary Reflections
+### 11.12.3 Bias from Boundary Reflections
 
 Near an inclusion boundary, reflected shear waves interfere with the incident
 wave, creating standing-wave components that bias the phase-gradient speed
@@ -1099,37 +1130,57 @@ phase difference between incident and reflected waves at the measurement point.
 Directional filtering (f-k filtering to retain only waves propagating away
 from the push source) reduces this bias at the cost of SNR.
 
-Implementation: `kwavers::solver::inverse::elastography::DirectionalFilter`
-and `kwavers::solver::inverse::elastography::UncertaintyEstimator`.
+Directional (f-k-style) filtering is provided by the
+`directional_phase_gradient_inversion()` method of `ShearWaveInversion`. The
+The Cramér–Rao expressions in §11.12.1–§11.12.2 are implemented in
+`kwavers_analysis::signal_processing::estimation_bounds` (`time_delay_crlb_variance`,
+`strain_crlb_std`, `shear_wave_speed_crlb_std`); bootstrap confidence intervals are not yet
+implemented.
 
 ---
 
-## 10.13 Implementation Architecture in kwavers
+## 11.13 Implementation Architecture in kwavers
 
-### 10.13.1 Module Topology
+### 11.13.1 Module Topology
 
 ```
-kwavers::solver::inverse::elastography
-├── StrainElastographer          — RF cross-correlation, displacement, strain
-├── SweInverter                  — ARFI, phase-gradient, time-of-flight inversion
-│   ├── DirectionalFilter        — f-k filtering of shear-wave field
-│   └── UncertaintyEstimator     — CRLB and bootstrap confidence intervals
-├── HelmholtzInverter            — Local Helmholtz inversion (MRE)
-├── DispersionFitter             — Voigt/power-law dispersion fitting
-├── TissueClassifier             — Organ-specific staging lookup
-└── AcoustoElasticInverter       — Pre-stress estimation from c_S variation
+kwavers_solver::inverse::elastography::linear_methods
+└── ShearWaveInversion          — shear-speed inversion; methods:
+    ├── time_of_flight_inversion()            (§11.6.2; Bercoff 2004)
+    ├── phase_gradient_inversion()            (§11.6.3; McLaughlin & Renzi 2006)
+    ├── direct (Gauss-Seidel)                 — algebraic local-Helmholtz μ=-ρω²u/∇²u (§11.7.2)
+    ├── volumetric_time_of_flight_inversion() — 3-D multi-source median TOF
+    ├── directional_phase_gradient_inversion()— 3-D directional / f-k filtering (§11.12.3)
+    └── LocalFrequencyEstimation               — windowed energy-ratio |k|²=⟨|∇u|²⟩/⟨u²⟩ (§11.7.2)
 
-kwavers::analysis::signal_processing
-├── crosscorr::rf_displacement   — Windowed RF cross-correlation
-├── phase_unwrap::unwrap_2d      — 2-D phase unwrapping (Goldstein)
-├── resolution::ShearWavelengthEstimator
-└── spectral::LocalFrequencyEstimator  — LFE for direct |k_S| mapping
+kwavers_physics::acoustics::imaging::modalities::elastography
+├── displacement::DisplacementEstimator       — windowed RF cross-correlation (§11.5.1)
+├── harmonic_detection::HarmonicDetector       — multi-frequency displacement spectra
+└── radiation_force::{AcousticRadiationForce, PushPulseParameters,
+                      MultiDirectionalPush, DirectionalWaveTracker}  — ARFI (§11.6.1)
 
-kwavers::solver::forward::elastic::swe
-└── ElasticPropagator            — Velocity-stress elastic FDTD for validation
+kwavers_solver::forward::elastic
+├── swe::ElasticWaveSolver        — velocity-stress 4th-order FDTD + PML (validation, §11.13.3)
+└── nonlinear::NonlinearElasticWaveSolver — Neo-Hookean / Mooney-Rivlin / Ogden hyperelasticity
+
+kwavers_medium
+├── elastic::ElasticProperties    — λ, μ, c_P, c_S storage
+└── viscous::ViscousProperties    — generic Stokes viscosity
+
+kwavers_physics::analytical::elastography   (PyO3-exposed; generates the chapter figures)
+└── shear_wave_speed · voigt_complex_modulus · voigt_shear_wave_dispersion
+
+Theory only — covered in this chapter but NOT yet implemented as kwavers kernels:
+  • residue-aware (Goldstein branch-cut) phase unwrapping — the separable 2-D Itoh
+    unwrapper exists at `kwavers_signal::phase::unwrap_2d`, but the residue-handling variant does not;
+  • Zener (standard-linear-solid) constitutive kernel — the **Kelvin–Voigt** model is now
+    implemented at the medium layer (`kwavers_medium::viscoelastic::KelvinVoigtModel`: complex
+    modulus G*(ω)=μ+iωη, dispersive phase velocity, attenuation, Q); the Zener variant is not;
+  • Murnaghan third-order / acousto-elastic pre-stress inversion (§11.9);
+  • bootstrap confidence intervals (§11.12) and an organ-staging classifier (§11.11).
 ```
 
-### 10.13.2 Data Flow
+### 11.13.2 Data Flow
 
 ```
 ARFI/external vibrator excitation
@@ -1137,33 +1188,33 @@ ARFI/external vibrator excitation
          ▼
 Ultrafast compounding imaging  ──►  RF frames r[x,z,t]
          │
-         ▼  kwavers::analysis::signal_processing
+         ▼  kwavers_physics::acoustics::imaging::modalities::elastography::displacement
 Displacement tracking  ──►  u[x,z,t]  (tissue velocity via Doppler or cross-corr)
          │
-         ▼  kwavers::solver::inverse::elastography::SweInverter
+         ▼  kwavers_solver::inverse::elastography::linear_methods::ShearWaveInversion
 Phase-gradient / ToF inversion  ──►  c_S[x,z]
          │
          ▼  μ = ρ c_S²
 Shear modulus map  ──►  μ[x,z]  [kPa]
          │
-         ▼  kwavers::solver::inverse::elastography::TissueClassifier
+         ▼  reference staging tables (§11.11)
 Tissue classification  ──►  stage, confidence, uncertainty map
 ```
 
-### 10.13.3 Validation Protocol
+### 11.13.3 Validation Protocol
 
-**Algorithm 10.6 — Elastography Validation Against Analytical Phantoms**
+**Algorithm 11.6 — Elastography Validation Against Analytical Phantoms**
 
 ```
-Algorithm 10.6  Elastography Validation
+Algorithm 11.6  Elastography Validation
 
 INPUT:  Phantom geometry; known μ_true[x,z]; noise level σ_noise
 OUTPUT: Bias, RMSE, spatial resolution confirmed against analytical expectation
 
-1.  Generate synthetic RF data via kwavers::solver::forward::elastic::swe
+1.  Generate synthetic RF data via kwavers_solver::forward::elastic::swe::ElasticWaveSolver
     with μ = μ_true and c_P = 1540 m/s.
 2.  Add Gaussian noise at specified SNR.
-3.  Run StrainElastographer or SweInverter on synthetic data.
+3.  Run DisplacementEstimator or ShearWaveInversion on synthetic data.
 4.  Compute:
     a.  Bias = mean(μ_estimated - μ_true) inside homogeneous region.
     b.  RMSE = sqrt(mean((μ_estimated - μ_true)²)).
@@ -1177,21 +1228,21 @@ OUTPUT: Bias, RMSE, spatial resolution confirmed against analytical expectation
 
 ---
 
-## 10.14 Summary and Key Equations
+## 11.14 Summary and Key Equations
 
 | Quantity | Formula | Reference |
 |----------|---------|-----------|
-| Strain tensor | $\varepsilon_{ij} = \tfrac{1}{2}(\partial_j u_i + \partial_i u_j)$ | §10.1.1 |
-| Constitutive law | $\sigma_{ij} = \lambda\Delta\delta_{ij} + 2\mu\varepsilon_{ij}$ | §10.1.3 |
-| Navier equation | $\rho\ddot{\mathbf{u}} = (\lambda+2\mu)\nabla(\nabla\cdot\mathbf{u}) - \mu\nabla\times(\nabla\times\mathbf{u}) + \mathbf{f}$ | §10.1.3 |
-| P-wave speed | $c_P = \sqrt{(\lambda+2\mu)/\rho}$ | §10.2 |
-| S-wave speed | $c_S = \sqrt{\mu/\rho}$ | §10.2 |
-| Shear modulus | $\mu = \rho c_S^2$ | §10.3 |
-| Incompressible Young's | $E \approx 3\mu$ | §10.5.3 |
-| Helmholtz inversion | $\mu(\mathbf{x}) = -\rho\omega^2 u_i / \nabla^2 u_i$ | §10.7.2 |
-| Voigt complex modulus | $E^*(\omega) = E + i\omega\eta$ | §10.8.2 |
-| Shear wavelength | $\lambda_S = c_S / f_S$ | §10.10.1 |
-| ARFI body force | $\mathbf{f}_{\text{ARF}} = 2\alpha I \hat{z}/c_P$ | §10.6.1 |
+| Strain tensor | $\varepsilon_{ij} = \tfrac{1}{2}(\partial_j u_i + \partial_i u_j)$ | §11.1.1 |
+| Constitutive law | $\sigma_{ij} = \lambda\Delta\delta_{ij} + 2\mu\varepsilon_{ij}$ | §11.1.3 |
+| Navier equation | $\rho\ddot{\mathbf{u}} = (\lambda+2\mu)\nabla(\nabla\cdot\mathbf{u}) - \mu\nabla\times(\nabla\times\mathbf{u}) + \mathbf{f}$ | §11.1.3 |
+| P-wave speed | $c_P = \sqrt{(\lambda+2\mu)/\rho}$ | §11.2 |
+| S-wave speed | $c_S = \sqrt{\mu/\rho}$ | §11.2 |
+| Shear modulus | $\mu = \rho c_S^2$ | §11.3 |
+| Incompressible Young's | $E \approx 3\mu$ | §11.5.3 |
+| Helmholtz inversion | $\mu(\mathbf{x}) = -\rho\omega^2 u_i / \nabla^2 u_i$ | §11.7.2 |
+| Voigt complex modulus | $E^*(\omega) = E + i\omega\eta$ | §11.8.2 |
+| Shear wavelength | $\lambda_S = c_S / f_S$ | §11.10.1 |
+| ARFI body force | $\mathbf{f}_{\text{ARF}} = 2\alpha I \hat{z}/c_P$ | §11.6.1 |
 
 ---
 

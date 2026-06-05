@@ -1,11 +1,11 @@
-# Transcranial Ultrasound: Physics, Aberration Correction, and Therapeutic Applications
+# Chapter 15: Transcranial Ultrasound: Physics, Aberration Correction, and Therapeutic Applications
 
 > **Module ownership**: `kwavers::physics::acoustics::transcranial`,
 > `kwavers::solver::forward`, `kwavers::domain::medium`
 
 ---
 
-## 10.1 Introduction
+## 15.1 Introduction
 
 Transcranial ultrasound delivers acoustic energy through the human skull to image or
 treat intracranial targets. The skull is acoustically hostile: its impedance mismatch
@@ -24,9 +24,9 @@ and maps each result onto the simulation abstractions provided by
 
 ---
 
-## 10.2 Skull Acoustic Properties
+## 15.2 Skull Acoustic Properties
 
-### 10.2.1 Measured Material Constants
+### 15.2.1 Measured Material Constants
 
 The human calvaria is a three-layer composite:
 
@@ -41,7 +41,7 @@ The diploe heterogeneity spans a factor of $\approx 1.4$ in speed and $\approx 2
 impedance, making the skull the dominant source of both amplitude loss and phase
 aberration in any transcranial path.
 
-### 10.2.2 Characteristic Impedance and Transmission Coefficient
+### 15.2.2 Characteristic Impedance and Transmission Coefficient
 
 **Definition.** The specific acoustic impedance of a planar medium is
 
@@ -58,7 +58,7 @@ Z_1 = \rho_{\text{skull}} \, c_{\text{skull}} \approx 1900 \times 2800 = 5.32 \t
 Z_2 = \rho_{\text{tissue}} \, c_{\text{tissue}} \approx 1040 \times 1540 = 1.60 \times 10^6 \; \text{Rayl}.
 $$
 
-**Theorem 10.1 (Normal-Incidence Transmission Coefficient).**
+**Theorem 15.1 (Normal-Incidence Transmission Coefficient).**
 At a planar interface between two lossless half-spaces under normal incidence, the
 pressure transmission coefficient is
 
@@ -133,11 +133,11 @@ consistent with published clinical measurements (Aubry & Tanter 2010).
 
 ---
 
-## 10.3 Skull Aberration Model
+## 15.3 Skull Aberration Model
 
-### 10.3.1 Phase Accumulation Through a Heterogeneous Layer
+### 15.3.1 Phase Accumulation Through a Heterogeneous Layer
 
-**Theorem 10.2 (Scalar Phase Integral).** For a narrow-band wave at frequency $f$
+**Theorem 15.2 (Scalar Phase Integral).** For a narrow-band wave at frequency $f$
 propagating along a path parameterised by arc length $s$ through a medium with
 spatially varying sound speed $c(s)$, the total accumulated phase is
 
@@ -153,7 +153,7 @@ Phase is the line integral of the wavenumber along the propagation path:
 $\phi = \int_0^L k(s)\, ds = \int_0^L \omega / c(s)\, ds = 2\pi f \int_0^L ds / c(s)$.
 $\square$
 
-### 10.3.2 Aberration as a Differential Phase Screen
+### 15.3.2 Aberration as a Differential Phase Screen
 
 For a transducer element located at transverse position $\mathbf{x}_\perp$ on the skull
 outer surface, the phase accumulated through the skull at that position is
@@ -175,7 +175,7 @@ $$
 where $c_{\text{skull}}(\mathbf{x}_\perp)$ is the effective (thickness-averaged) skull
 speed at position $\mathbf{x}_\perp$.
 
-### 10.3.3 Strehl Ratio and Focus Degradation
+### 15.3.3 Strehl Ratio and Focus Degradation
 
 **Definition.** The Strehl ratio $S$ is the ratio of the peak focal intensity with
 aberration to the diffraction-limited peak intensity without aberration:
@@ -185,7 +185,7 @@ S = \frac{I_{\text{focus,aberrated}}}{I_{\text{focus,ideal}}}.
 \tag{10.5}
 $$
 
-**Theorem 10.3 (Maréchal Approximation).** For small-aberration phase screens
+**Theorem 15.3 (Maréchal Approximation).** For small-aberration phase screens
 with zero-mean phase error $\Delta\phi$ and variance $\sigma_\phi^2$,
 
 $$
@@ -248,18 +248,18 @@ $$
   \times 2.1 \times 10^{-3} \times 2.5 \times 10^{-4} \approx 3.3 \;\text{rad}.
 $$
 
-With $\sigma_\phi = 3.3$ rad, $S = e^{-10.9} \approx 1.8 \times 10^{-5}$: the focus is
+With $\sigma_\phi = 3.3$ rad, $S = e^{-15.9} \approx 1.8 \times 10^{-5}$: the focus is
 completely destroyed without correction. Phase correction is non-optional.
 
 ![Spatial maps of local skull thickness $d(\mathbf{x}_\perp)$, phase aberration $\Delta\phi(\mathbf{x}_\perp)$, and Strehl ratio predicted from Maréchal for a representative cranial window.](figures/ch_tc/fig02_phase_screen_and_strehl.png)
 
 ---
 
-## 10.4 Transcranial Phase Correction by Time-Reversal
+## 15.4 Transcranial Phase Correction by Time-Reversal
 
-### 10.4.1 Time-Reversal Focusing
+### 15.4.1 Time-Reversal Focusing
 
-**Theorem 10.4 (Time-Reversal Phase Conjugation).** Let $p(\mathbf{r}_i, t)$ be the
+**Theorem 15.4 (Time-Reversal Phase Conjugation).** Let $p(\mathbf{r}_i, t)$ be the
 pressure recorded at transducer element $i$ when a point source fires at target
 $\mathbf{r}_0$ at $t = 0$ in a reciprocal, time-invariant medium. Define the
 time-reversed signal
@@ -315,9 +315,9 @@ Both approaches are implemented in `kwavers::physics::acoustics::transcranial::T
 
 ---
 
-## 10.5 CT-Based Aberration Correction
+## 15.5 CT-Based Aberration Correction
 
-### 10.5.1 Hounsfield Unit to Acoustic Velocity Mapping
+### 15.5.1 Hounsfield Unit to Acoustic Velocity Mapping
 
 CT scanners report attenuation in Hounsfield units:
 
@@ -353,11 +353,11 @@ The resulting heterogeneous medium is ingested by
 `kwavers::domain::medium::HeterogeneousMedium`, which holds spatially varying
 $c_0(\mathbf{x})$, $\rho_0(\mathbf{x})$, and $\alpha_0(\mathbf{x})$ arrays.
 
-### 10.5.2 Full-Wave Simulation for Phase Correction
+### 15.5.2 Full-Wave Simulation for Phase Correction
 
-**Theorem 10.5 (FDTD/PSTD Aberration Map Validity).**  
+**Theorem 15.5 (FDTD/PSTD Aberration Map Validity).**  
 Given the patient-specific heterogeneous medium $\{c_0(\mathbf{x}), \rho_0(\mathbf{x})\}$
-derived from equation (10.9)–(10.10), a forward PSTD simulation of a point source at
+derived from equation (15.9)–(15.10), a forward PSTD simulation of a point source at
 the target produces pressure signals $\hat{p}(\mathbf{r}_i, \omega)$ at each array
 element. The phase of each signal is
 
@@ -392,7 +392,7 @@ PSTD numerically integrates the heterogeneous wave equation
 (see `kwavers::solver::forward::pstd`), producing $\hat{p}(\mathbf{r}_i, \omega_0)$
 that encodes this phase without further approximation. $\square$
 
-### 10.5.3 Ray-Tracing Approximation for Thin Skulls
+### 15.5.3 Ray-Tracing Approximation for Thin Skulls
 
 When the skull is acoustically thin ($d \ll \lambda_{\text{tissue}}$), the full-wave
 simulation simplifies to a ray integral. For element $i$ and a ray from target
@@ -423,9 +423,9 @@ provides both paths and selects automatically based on configured Fresnel number
 
 ---
 
-## 10.6 Thermal Hazard at the Skull
+## 15.6 Thermal Hazard at the Skull
 
-### 10.6.1 Power Deposition in Bone
+### 15.6.1 Power Deposition in Bone
 
 The time-averaged acoustic intensity attenuation power density in a lossy medium is
 
@@ -443,9 +443,9 @@ $$
 \alpha_{\text{skull}} \approx 115 \text{–} 230 \;\text{Np m}^{-1}.
 $$
 
-### 10.6.2 Temperature Rise
+### 15.6.2 Temperature Rise
 
-**Theorem 10.6 (Skull Temperature Rise Under Continuous Insonation).**
+**Theorem 15.6 (Skull Temperature Rise Under Continuous Insonation).**
 For a spatially uniform insonation of intensity $I$ absorbed in a skull layer of
 thickness $d$ with density $\rho$, specific heat $c_p$, and no thermal diffusion
 during interval $[0, t_{\text{on}}]$:
@@ -484,16 +484,16 @@ between sonications.
 
 **Implication for `kwavers`.** The
 `kwavers::physics::acoustics::transcranial::SkullThermalMonitor` integrates
-equation (10.15) with spatially resolved power density from the forward solver and
+equation (15.15) with spatially resolved power density from the forward solver and
 enforces a configurable skull temperature ceiling before each sonication.
 
 ![Simulated skull and focal temperature time courses during a 20-s FUS exposure at ISPTA = 500 W cm$^{-2}$.](figures/ch_tc/fig05_skull_thermal_rise.png)
 
 ---
 
-## 10.7 Standing Waves in the Skull Cavity
+## 15.7 Standing Waves in the Skull Cavity
 
-### 10.7.1 Resonance Frequencies of the Cranial Cavity
+### 15.7.1 Resonance Frequencies of the Cranial Cavity
 
 The intracranial space approximates a closed cavity. The simplest resonance model
 treats the skull as two parallel reflecting walls separated by distance $L$ (lateral
@@ -512,9 +512,9 @@ $$
 
 The spacing between adjacent modes is constant at $\Delta f = c / (2L) \approx 4.3$ kHz.
 
-### 10.7.2 Proof That Clinical-Frequency Resonance Is Negligible
+### 15.7.2 Proof That Clinical-Frequency Resonance Is Negligible
 
-**Theorem 10.7 (High-Mode Density at Clinical Frequencies).**
+**Theorem 15.7 (High-Mode Density at Clinical Frequencies).**
 At clinical transcranial frequencies $f_{\text{clinical}} \in [0.5, 2]$ MHz, the number
 of resonant modes below $f_{\text{clinical}}$ in the cranial cavity is of order
 $10^3$, the inter-modal spacing is $\Delta f \approx 4.3$ kHz, and the effective
@@ -562,9 +562,9 @@ and coherence lengths are long.
 
 ---
 
-## 10.8 Cavitation Threshold Modification Under Skull Passage
+## 15.8 Cavitation Threshold Modification Under Skull Passage
 
-### 10.8.1 Effective Mechanical Index at the Focus
+### 15.8.1 Effective Mechanical Index at the Focus
 
 The mechanical index quantifies cavitation risk:
 
@@ -590,8 +590,8 @@ $$
 \tag{10.19}
 $$
 
-**Theorem 10.8 (Cavitation Threshold Elevation by Skull Loss).**
-For a homogeneous skull slab with parameters as in Section 10.2, $R_{\text{path}} < 1$,
+**Theorem 15.8 (Cavitation Threshold Elevation by Skull Loss).**
+For a homogeneous skull slab with parameters as in Section 15.2, $R_{\text{path}} < 1$,
 so $\text{MI}_{\text{eff}} < \text{MI}_{\text{incident}}$. The cavitation threshold
 $\text{MI}_{\text{cav}}$ at the focus requires
 
@@ -603,9 +603,9 @@ $$
 which is elevated relative to the free-field requirement.
 
 *Proof.* The threshold condition for inertial cavitation is $\text{MI}_{\text{eff}} \ge
-\text{MI}_{\text{cav}}$. Substituting equation (10.19):
+\text{MI}_{\text{cav}}$. Substituting equation (15.19):
 $\text{MI}_{\text{incident}} \times R_{\text{path}} \ge \text{MI}_{\text{cav}}$,
-rearranging gives equation (10.20). Since $R_{\text{path}} < 1$ (attenuation and
+rearranging gives equation (15.20). Since $R_{\text{path}} < 1$ (attenuation and
 reflection both reduce amplitude), the required incident MI exceeds $\text{MI}_{\text{cav}}$.
 $\square$
 
@@ -621,9 +621,9 @@ spatially resolved MI map needed to identify such hot spots.
 
 ---
 
-## 10.9 Focused Ultrasound Neuromodulation (Non-Thermal LIPUS)
+## 15.9 Focused Ultrasound Neuromodulation (Non-Thermal LIPUS)
 
-### 10.9.1 Low-Intensity Pulsed Ultrasound (LIPUS) Parameters
+### 15.9.1 Low-Intensity Pulsed Ultrasound (LIPUS) Parameters
 
 FUS neuromodulation operates in a regime distinct from thermal ablation:
 
@@ -642,7 +642,7 @@ detectable tissue heating remains debated. Three candidate mechanisms are:
 2. **Intramembrane cavitation** (the Bilayer Sonophore / NICE model, Lemaire et al.).
 3. **Indirect thermal effects** below calorimetric detection limits.
 
-### 10.9.2 The NICE Model (Neuronal Intramembrane Cavitation Excitation)
+### 15.9.2 The NICE Model (Neuronal Intramembrane Cavitation Excitation)
 
 **Physical setup.** The NICE model (Krasovitski et al. 2011; Lemaire et al. 2019)
 proposes that acoustic pressure deforms the plasma membrane, creating oscillating
@@ -673,7 +673,7 @@ sonophore expands ($R > R_0$), membrane thinning increases $C_m$; as it contract
 $C_m$ decreases. This modulates the charge stored on the membrane and effectively
 drives an oscillating transmembrane current analogous to an external stimulus.
 
-**Theorem 10.9 (Capacitance Current from Sonophore Oscillation).**
+**Theorem 15.9 (Capacitance Current from Sonophore Oscillation).**
 For a neuron with transmembrane voltage $V_m$ and membrane capacitance $C_m(t)$
 varying sinusoidally at frequency $\omega$, the membrane current due to capacitance
 modulation is
@@ -690,26 +690,31 @@ amplitude of capacitance oscillation $\Delta C_m$.
 $I = dq/dt = \dot{C}_m V_m + C_m \dot{V}_m$. At the onset of sonication, when the
 neuron has not yet responded, $\dot{V}_m \approx 0$ and $I_{C_m} = V_m \dot{C}_m$.
 For $C_m(t) = C_{m,0} + \Delta C_m \sin(\omega t)$:
-$\dot{C}_m = \omega \Delta C_m \cos(\omega t)$, giving equation (10.23). $\square$
+$\dot{C}_m = \omega \Delta C_m \cos(\omega t)$, giving equation (15.23). $\square$
 
 This current enters the Hodgkin–Huxley equations as an additional drive term, and
 for sufficient $\Delta C_m$ (achieved at MI $\gtrsim 0.3$) can trigger action
-potentials. The NICE model is implemented as a surrogate coupling between the
-acoustic simulation (providing $P_{\text{ac}}(t)$ at target) and a compartmental
-neuron model in `kwavers::physics::acoustics::transcranial::NICEModel`.
+potentials. The NICE / intramembrane-cavitation mechanism described here is a
+*theoretical* candidate and is **not** currently a kwavers module. The
+neuromodulation pathway kwavers does implement is the complementary
+mechanosensitive-channel (membrane-tension-gated) model —
+`kwavers_physics::acoustics::therapy::sonogenetics` (`channels`, `membrane`,
+`neuron`, `arf_field`) — developed in full in the dedicated **Neuromodulation**
+chapter (Ch26), which is the canonical home for the FUS-neuromodulation mechanism
+and its clinical parameter space.
 
 ![NICE model: intramembrane sonophore radius $R(t)$ (top), capacitance modulation $C_m(t)$ (middle), and resulting transmembrane voltage $V_m(t)$ showing AP generation (bottom) for LIPUS at $f = 500$ kHz, $P_A = 0.5$ MPa.](figures/ch_tc/fig07_nice_model_neurostimulation.png)
 
-### 10.9.3 Reference
+### 15.9.3 Reference
 
 Tyler W.J. (2011). "Noninvasive neuromodulation with ultrasound? A continuum
 mechanics hypothesis." *Neuron* **72**(1): 9–18.
 
 ---
 
-## 10.10 Focused Ultrasound Blood–Brain Barrier Opening
+## 15.10 Focused Ultrasound Blood–Brain Barrier Opening
 
-### 10.10.1 Mechanism and Safety Window
+### 15.10.1 Mechanism and Safety Window
 
 MRgFUS + systemically injected microbubbles (SonoVue, Definity) can transiently
 open the BBB via mechanical interaction of oscillating microbubbles with cerebrovascular
@@ -723,9 +728,17 @@ endothelial cells and tight junctions. The sequence is:
 4. **BBB closure**: restores within 4–24 h for sub-threshold exposures; no
    permanent damage if MI is controlled.
 
-### 10.10.2 Acoustic Radiation Force on Endothelial Cells
+kwavers implements the BBB-opening exposure, permeability, and safety models in
+`kwavers_physics::acoustics::transcranial::bbb_opening` (`models`, `safety`,
+`simulator`). This section covers the transcranial-context physics; the full
+closed-loop treatment-planning workflow — Keller–Miksis microbubble dynamics,
+multi-spot targeting, sparse (aperiodic) arrays, and passive-cavitation
+harmonic-dose monitoring — is in the dedicated **LIFU-Mediated Blood–Brain Barrier
+Opening** chapter (Ch24), the canonical home.
 
-**Theorem 10.10 (Acoustic Radiation Force on a Sphere Near a Boundary).**
+### 15.10.2 Acoustic Radiation Force on Endothelial Cells
+
+**Theorem 15.10 (Acoustic Radiation Force on a Sphere Near a Boundary).**
 A microbubble of equilibrium radius $R_0$ oscillating in a standing-wave field near an
 endothelial cell wall experiences a primary Bjerknes force:
 
@@ -754,7 +767,7 @@ the contact stress. Controlled via MI to remain in the stable cavitation regime
 (MI 0.3–0.6 per Deffieux & Konofagou 2010), the mechanical stress is sufficient to
 open tight junctions without endothelial lysis.
 
-### 10.10.3 Safe Exposure Window
+### 15.10.3 Safe Exposure Window
 
 Published preclinical and Phase I clinical data define the safe BBB-opening window:
 
@@ -768,7 +781,7 @@ Published preclinical and Phase I clinical data define the safe BBB-opening wind
 The combination of passive cavitation detection (PCD) and real-time MR thermometry
 enables closed-loop control within this window (Lipsman et al. 2013).
 
-**Theorem 10.11 (Endothelial Volume Change Under Radiation Force).**
+**Theorem 15.11 (Endothelial Volume Change Under Radiation Force).**
 An endothelial cell modelled as a spherical elastic body of bulk modulus $K$ and
 volume $V_0$ subjected to acoustic radiation pressure $P_{\text{rad}}$ undergoes
 fractional volume change
@@ -791,9 +804,9 @@ $\Delta V = -V_0 \Delta P / K = -V_0 P_{\text{rad}} / K$. $\square$
 
 ---
 
-## 10.11 kwavers Transcranial Simulation Workflow
+## 15.11 kwavers Transcranial Simulation Workflow
 
-### 10.11.1 CT Segmentation and Medium Construction
+### 15.11.1 CT Segmentation and Medium Construction
 
 ```
 CT DICOM stack
@@ -802,7 +815,7 @@ CT DICOM stack
 kwavers::domain::medium::CT::load_dicom()     // DICOM ingestion, HU calibration
      │
      ▼
-kwavers::domain::medium::CT::to_acoustic()    // Eqs. (10.9)–(10.10): HU → c₀, ρ₀, α₀
+kwavers::domain::medium::CT::to_acoustic()    // Eqs. (15.9)–(15.10): HU → c₀, ρ₀, α₀
      │
      ▼
 kwavers::domain::medium::HeterogeneousMedium  // Spatially-varying acoustic parameters
@@ -819,7 +832,7 @@ kwavers::analysis::signal_processing::         // Focus quality metrics: Strehl,
     beamforming::FocusAnalyzer
 ```
 
-### 10.11.2 Simulation Configuration
+### 15.11.2 Simulation Configuration
 
 The PSTD solver requires spatial sampling satisfying the Nyquist criterion for the
 fastest wave speed in the domain:
@@ -837,7 +850,7 @@ $$
 \tag{10.27}
 $$
 
-### 10.11.3 Phase Correction Map Computation
+### 15.11.3 Phase Correction Map Computation
 
 After the forward simulation, `TranscranialAberrationCorrector` extracts element
 signals from `kwavers::domain::sensor::SensorRecorder`, applies Fourier analysis at
@@ -846,7 +859,7 @@ and stores the correction delays $\{\Delta\tau_i\}$. These delays are applied to
 transducer firing times in the subsequent therapeutic simulation via
 `kwavers::physics::acoustics::transcranial::ElementDelayTable`.
 
-### 10.11.4 Skull Thermal Safety Integration
+### 15.11.4 Skull Thermal Safety Integration
 
 For each therapeutic sonication the thermal monitor integrates:
 
@@ -862,7 +875,7 @@ skull mask. The simulation is halted if $T_{\text{skull,max}} > T_{\text{ceiling
 (default 43°C). This implements the safety interlocks described for MRgFUS clinical
 systems (Lipsman et al. 2013).
 
-### 10.11.5 Full Workflow Example
+### 15.11.5 Full Workflow Example
 
 ```rust
 use kwavers::domain::medium::{HeterogeneousMedium, CT};
@@ -897,25 +910,25 @@ therapy_solver.run_to_end()?;
 
 ---
 
-## 10.12 Summary of Key Theorems
+## 15.12 Summary of Key Theorems
 
 | Theorem | Statement | Equation |
 |---|---|---|
-| 10.1 | Normal-incidence pressure transmission $T_p = 2Z_2/(Z_1+Z_2)$ | (10.1) |
-| 10.2 | Phase accumulation through heterogeneous path | (10.3) |
-| 10.3 | Maréchal approximation: $S = e^{-\sigma_\phi^2}$ | (10.6) |
-| 10.4 | Time-reversal achieves phase conjugation at target | (10.7) |
-| 10.5 | PSTD simulation provides exact aberration phase map | (10.11) |
-| 10.6 | Skull temperature rise under CW insonation | (10.15) |
+| 10.1 | Normal-incidence pressure transmission $T_p = 2Z_2/(Z_1+Z_2)$ | (15.1) |
+| 10.2 | Phase accumulation through heterogeneous path | (15.3) |
+| 10.3 | Maréchal approximation: $S = e^{-\sigma_\phi^2}$ | (15.6) |
+| 10.4 | Time-reversal achieves phase conjugation at target | (15.7) |
+| 10.5 | PSTD simulation provides exact aberration phase map | (15.11) |
+| 10.6 | Skull temperature rise under CW insonation | (15.15) |
 | 10.7 | Clinical-frequency resonances unresolvable ($>10^3$ modes in BW) | — |
-| 10.8 | Skull loss elevates cavitation threshold at focus | (10.20) |
-| 10.9 | Sonophore capacitance modulation drives membrane current | (10.23) |
-| 10.10 | Bjerknes radiation force on bubble near wall | (10.24) |
-| 10.11 | Endothelial volume change under radiation pressure | (10.25) |
+| 10.8 | Skull loss elevates cavitation threshold at focus | (15.20) |
+| 10.9 | Sonophore capacitance modulation drives membrane current | (15.23) |
+| 10.10 | Bjerknes radiation force on bubble near wall | (15.24) |
+| 10.11 | Endothelial volume change under radiation pressure | (15.25) |
 
 ---
 
-## 10.13 References
+## 15.13 References
 
 1. Aubry J.-F. & Tanter M. (2010). "MR-guided transcranial focused ultrasound."
    *IEEE Transactions on Biomedical Engineering* **57**(6): 1296–1310.

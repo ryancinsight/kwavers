@@ -1,0 +1,37 @@
+//! Imaging Domain Module
+//!
+//! This module contains imaging-related domain types.
+//!
+//! ## Architecture
+//!
+//! Provides three layers:
+//! 1. **Domain Models** (ultrasound/, photoacoustic/) - Data structures for imaging concepts
+//! 2. **Orchestration Interfaces** (ceus_orchestrator.rs) - Traits for orchestration logic
+//! 3. **Implementations** - Physics and simulation layers implement these traits
+//!
+//! This ensures clinical layer depends only on domain abstractions, not on implementation details.
+//!
+//! ## See Also
+//!
+//! - `kwavers_physics::foundations` - Physics specifications for wave equations
+//! - `kwavers_receiver` - Sensor primitives for signal detection
+//! - `kwavers_source` - Source primitives for wave generation
+
+pub mod ceus_orchestrator;
+pub mod fusion;
+pub mod medical;
+pub mod multimodality_fusion;
+pub mod photoacoustic;
+pub mod ultrasound;
+pub mod unified_loader;
+
+pub use ceus_orchestrator::{CEUSOrchestrator, CEUSOrchestrators};
+pub use fusion::{AffineTransform, FusedImageResult, FusionConfig, ImagingFusionMethod};
+pub use medical::{
+    create_loader, CTImageLoader, DicomImageLoader, MedicalImageLoader, MedicalImageMetadata,
+};
+pub use multimodality_fusion::{
+    FusionEngine, FusionParameters, ImageData, ImageModality, MultimodalityFusionManager,
+    MultimodalityFusionMethod, RegistrationTransform, TransformationType,
+};
+pub use unified_loader::{MedicalImageBatchLoader, UnifiedMedicalImageLoader};

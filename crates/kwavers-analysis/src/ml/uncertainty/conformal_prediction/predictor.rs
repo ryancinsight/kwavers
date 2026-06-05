@@ -1,0 +1,426 @@
+//! MlConformalPredictor — calibration and interval generation
+
+use super::config::ConformalConfig;
+use super::types::{
+    CalibrationSummary, ConformalResult, ConformalValidationMetrics, ScoreDistribution,
+};
+#[cfg(feature = "pinn")]
+use burn::tensor::backend::Backend;
+use kwavers_core::error::KwaversResult;
+use log::info;
+use ndarray::{Array1, Array2};
+use std::collections::HashMap;
+
+/// Conformal predictor for uncertainty quantification
+#[derive(Debug)]
+pub struct MlConformalPredictor {
+    pub(super) config: ConformalConfig,
+    calibration_scores: Vec<f64>,
+    is_calibrated: bool,
+}
+
+impl MlConformalPredictor {
+    /// Create new conformal predictor
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    pub fn new(config: ConformalConfig) -> KwaversResult<Self> {
+        if config.confidence_level <= 0.0 || config.confidence_level >= 1.0 {
+            return Err(kwavers_core::error::KwaversError::InvalidInput(
+                "Confidence level must be between 0 and 1".to_owned(),
+            ));
+        }
+
+        Ok(Self {
+            config,
+            calibration_scores: Vec::new(),
+            is_calibrated: false,
+        })
+    }
+
+    /// Calibrate the conformal predictor using a calibration dataset
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
+    pub fn calibrate(
+        &mut self,
+        predictions: &[Array2<f32>],
+        targets: &[Array2<f32>],
+    ) -> KwaversResult<()> {
+        if predictions.len() != targets.len() {
+            return Err(kwavers_core::error::KwaversError::InvalidInput(
+                "Predictions and targets must have same length".to_owned(),
+            ));
+        }
+
+        self.calibration_scores.clear();
+
+        for (pred, target) in predictions.iter().zip(targets.iter()) {
+            let score = self.compute_conformity_score(pred, target);
+            self.calibration_scores.push(score);
+        }
+
+        self.calibration_scores.sort_by(|a, b| a.total_cmp(b));
+
+        self.is_calibrated = true;
+        info!(
+            "Conformal predictor calibrated with {} samples",
+            self.calibration_scores.len()
+        );
+
+        Ok(())
+    }
+
+    /// Quantify uncertainty using conformal prediction
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
+    #[cfg(feature = "pinn")]
+    pub fn quantify_uncertainty<B: Backend>(
+        &self,
+        pinn: &kwavers_solver::inverse::pinn::ml::BurnPINN1DWave<B>,
+        inputs: &Array2<f32>,
+        _ground_truth: Option<&Array2<f32>>,
+    ) -> KwaversResult<crate::ml::uncertainty::MlPredictionWithUncertainty> {
+        if !self.is_calibrated {
+            return Err(kwavers_core::error::KwaversError::InvalidInput(
+                "Conformal predictor must be calibrated before use".to_string(),
+            ));
+        }
+
+        let x: Array1<f64> = inputs.column(0).mapv(|v| v as f64).to_owned();
+        let t: Array1<f64> = inputs.column(1).mapv(|v| v as f64).to_owned();
+        let device = pinn.device();
+
+        let prediction_f64 = pinn.predict(&x, &t, &device)?;
+        let prediction = prediction_f64.mapv(|v| v as f32);
+
+        let quantile = self.compute_quantile(self.config.confidence_level);
+
+        let uncertainty = Array2::from_elem(prediction.dim(), quantile as f32);
+
+        let lower_bound = &prediction - &uncertainty;
+        let upper_bound = &prediction + &uncertainty;
+
+        let mut confidence_intervals = HashMap::new();
+        let conf_level_str = format!("{:.0}%", self.config.confidence_level * 100.0);
+        confidence_intervals.insert(conf_level_str, (lower_bound, upper_bound));
+
+        let coverage_probability = self.estimate_coverage_probability();
+        let reliability_score = coverage_probability.min(1.0);
+
+        Ok(crate::ml::uncertainty::MlPredictionWithUncertainty {
+            mean_prediction: prediction,
+            uncertainty,
+            confidence_intervals,
+            reliability_score,
+        })
+    }
+
+    /// Generate prediction intervals for new data
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    pub fn predict_intervals(&self, predictions: &[Array2<f32>]) -> KwaversResult<ConformalResult> {
+        if !self.is_calibrated {
+            return Err(kwavers_core::error::KwaversError::InvalidInput(
+                "Predictor must be calibrated".to_owned(),
+            ));
+        }
+
+        let mut prediction_intervals = HashMap::new();
+
+        let confidence_levels = vec![0.8, 0.9, 0.95];
+
+        for &level in &confidence_levels {
+            let quantile = self.compute_quantile(level);
+            let mut lower_bounds = Vec::new();
+            let mut upper_bounds = Vec::new();
+
+            for prediction in predictions {
+                let lower = prediction - quantile as f32;
+                let upper = prediction + quantile as f32;
+                lower_bounds.push(lower);
+                upper_bounds.push(upper);
+            }
+
+            if !lower_bounds.is_empty() {
+                prediction_intervals.insert(
+                    format!("{:.0}%", level * 100.0),
+                    (lower_bounds[0].clone(), upper_bounds[0].clone()),
+                );
+            }
+        }
+
+        Ok(ConformalResult {
+            prediction_intervals,
+            coverage_probability: self.estimate_coverage_probability(),
+            conformity_scores: Array1::from_vec(self.calibration_scores.clone()),
+        })
+    }
+
+    /// Validate conformal prediction performance
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    pub fn validate_performance(
+        &self,
+        test_predictions: &[Array2<f32>],
+        test_targets: &[Array2<f32>],
+    ) -> KwaversResult<ConformalValidationMetrics> {
+        if test_predictions.len() != test_targets.len() {
+            return Err(kwavers_core::error::KwaversError::InvalidInput(
+                "Test predictions and targets must have same length".to_owned(),
+            ));
+        }
+
+        let mut coverage_count = 0;
+        let mut interval_widths = Vec::new();
+
+        for (pred, target) in test_predictions.iter().zip(test_targets.iter()) {
+            let quantile = self.compute_quantile(self.config.confidence_level);
+            let lower_bound = pred - quantile as f32;
+            let upper_bound = pred + quantile as f32;
+
+            let target_within_interval = lower_bound
+                .iter()
+                .zip(upper_bound.iter())
+                .zip(target.iter())
+                .all(|((low, high), t)| t >= low && t <= high);
+
+            if target_within_interval {
+                coverage_count += 1;
+            }
+
+            let width = (&upper_bound - &lower_bound).mapv(|x| x.abs());
+            interval_widths.push(width.iter().sum::<f32>() / width.len() as f32);
+        }
+
+        let empirical_coverage = coverage_count as f64 / test_predictions.len() as f64;
+        let mean_interval_width =
+            interval_widths.iter().sum::<f32>() / interval_widths.len() as f32;
+
+        Ok(ConformalValidationMetrics {
+            empirical_coverage,
+            target_coverage: self.config.confidence_level,
+            mean_interval_width,
+            coverage_efficiency: empirical_coverage / mean_interval_width as f64,
+        })
+    }
+
+    /// Check if predictor is calibrated
+    #[must_use]
+    pub fn is_calibrated(&self) -> bool {
+        self.is_calibrated
+    }
+
+    /// Get calibration summary
+    #[must_use]
+    pub fn calibration_summary(&self) -> CalibrationSummary {
+        if !self.is_calibrated {
+            return CalibrationSummary {
+                is_calibrated: false,
+                num_calibration_samples: 0,
+                score_distribution: ScoreDistribution {
+                    min_score: 0.0,
+                    max_score: 0.0,
+                    mean_score: 0.0,
+                    median_score: 0.0,
+                },
+            };
+        }
+
+        let min_score = self
+            .calibration_scores
+            .iter()
+            .fold(f64::INFINITY, |a, &b| a.min(b));
+        let max_score = self
+            .calibration_scores
+            .iter()
+            .fold(0.0_f64, |a, &b| a.max(b));
+        if self.calibration_scores.is_empty() {
+            return CalibrationSummary {
+                is_calibrated: false,
+                num_calibration_samples: 0,
+                score_distribution: ScoreDistribution {
+                    min_score: 0.0,
+                    max_score: 0.0,
+                    mean_score: 0.0,
+                    median_score: 0.0,
+                },
+            };
+        }
+        let mean_score =
+            self.calibration_scores.iter().sum::<f64>() / self.calibration_scores.len() as f64;
+
+        let median_score = if self.calibration_scores.len().is_multiple_of(2) {
+            let mid = self.calibration_scores.len() / 2;
+            (self.calibration_scores[mid - 1] + self.calibration_scores[mid]) / 2.0
+        } else {
+            self.calibration_scores[self.calibration_scores.len() / 2]
+        };
+
+        CalibrationSummary {
+            is_calibrated: true,
+            num_calibration_samples: self.calibration_scores.len(),
+            score_distribution: ScoreDistribution {
+                min_score,
+                max_score,
+                mean_score,
+                median_score,
+            },
+        }
+    }
+
+    fn compute_conformity_score(&self, prediction: &Array2<f32>, target: &Array2<f32>) -> f64 {
+        let error = prediction - target;
+        let abs_error = error.mapv(|x| x.abs());
+
+        let mut errors: Vec<f64> = abs_error.iter().map(|&x| x as f64).collect();
+        errors.sort_by(|a, b| a.total_cmp(b));
+
+        let mid = errors.len() / 2;
+        if errors.len().is_multiple_of(2) {
+            (errors[mid - 1] + errors[mid]) / 2.0
+        } else {
+            errors[mid]
+        }
+    }
+
+    fn compute_quantile(&self, confidence_level: f64) -> f64 {
+        if self.calibration_scores.is_empty() {
+            return 1.0;
+        }
+
+        let alpha = 1.0 - confidence_level;
+        let index = ((self.calibration_scores.len() as f64 * alpha).ceil() as usize)
+            .max(1)
+            .min(self.calibration_scores.len())
+            - 1;
+
+        self.calibration_scores[index]
+    }
+
+    fn estimate_coverage_probability(&self) -> f64 {
+        self.config.confidence_level
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ml::uncertainty::conformal_prediction::config::ConformalConfig;
+    use ndarray::Array2;
+
+    #[test]
+    fn test_conformal_predictor_creation() {
+        let config = ConformalConfig {
+            confidence_level: 0.9,
+            calibration_size: 100,
+        };
+        let predictor = MlConformalPredictor::new(config).unwrap();
+        assert!(
+            !predictor.is_calibrated(),
+            "fresh predictor must not be calibrated"
+        );
+        assert!(
+            predictor.calibration_scores.is_empty(),
+            "calibration_scores must be empty before calibrate()"
+        );
+    }
+
+    #[test]
+    fn test_conformal_predictor_rejects_invalid_confidence() {
+        let err = MlConformalPredictor::new(ConformalConfig {
+            confidence_level: 0.0,
+            calibration_size: 100,
+        })
+        .unwrap_err();
+        let msg = format!("{err:?}");
+        assert!(
+            msg.contains("Confidence level"),
+            "zero confidence_level error must mention 'Confidence level'; got: {msg}"
+        );
+
+        let err2 = MlConformalPredictor::new(ConformalConfig {
+            confidence_level: 1.0,
+            calibration_size: 100,
+        })
+        .unwrap_err();
+        let msg2 = format!("{err2:?}");
+        assert!(
+            msg2.contains("Confidence level"),
+            "unit confidence_level error must mention 'Confidence level'; got: {msg2}"
+        );
+    }
+
+    #[test]
+    fn test_conformal_calibration() {
+        let mut predictor = MlConformalPredictor::new(ConformalConfig {
+            confidence_level: 0.9,
+            calibration_size: 10,
+        })
+        .unwrap();
+
+        let predictions = vec![
+            Array2::from_elem((5, 5), 1.0_f32),
+            Array2::from_elem((5, 5), 2.0_f32),
+        ];
+        let targets = vec![
+            Array2::from_elem((5, 5), 1.1_f32),
+            Array2::from_elem((5, 5), 1.9_f32),
+        ];
+
+        predictor.calibrate(&predictions, &targets).unwrap();
+        assert!(
+            predictor.is_calibrated(),
+            "predictor must be calibrated after calibrate()"
+        );
+        assert_eq!(
+            predictor.calibration_scores.len(),
+            2,
+            "must store one score per calibration pair"
+        );
+        for (i, &score) in predictor.calibration_scores.iter().enumerate() {
+            let err = (score - 0.1).abs();
+            assert!(
+                err < 1e-5,
+                "calibration_scores[{i}] = {score} (expected 0.1)"
+            );
+        }
+    }
+
+    #[test]
+    fn test_conformity_score_computation() {
+        let predictor = MlConformalPredictor::new(ConformalConfig::default()).unwrap();
+        let prediction = Array2::from_elem((3, 3), 1.0_f32);
+        let target = Array2::from_elem((3, 3), 1.2_f32);
+
+        let score = predictor.compute_conformity_score(&prediction, &target);
+        let err = (score - 0.2).abs();
+        assert!(
+            err < 1e-5,
+            "conformity score = {score} (expected 0.2 for uniform offset 0.2)"
+        );
+        assert!(
+            score > 0.0,
+            "conformity score must be positive for non-matching prediction"
+        );
+    }
+
+    #[test]
+    fn test_quantile_computation() {
+        let mut predictor = MlConformalPredictor::new(ConformalConfig::default()).unwrap();
+        predictor.calibration_scores = vec![0.1, 0.2, 0.3, 0.4, 0.5];
+        predictor.is_calibrated = true;
+
+        let quantile = predictor.compute_quantile(0.9);
+        assert_eq!(
+            quantile, 0.1,
+            "quantile(0.9) on [0.1..0.5] must select lowest decile = 0.1"
+        );
+    }
+}

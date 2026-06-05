@@ -1,0 +1,25 @@
+[package]
+name = "kwavers-grid"
+version = "3.0.0"
+edition = "2021"
+authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
+description = "Spatial discretization for kwavers: Cartesian/cylindrical grids, coordinates, topology, operators, k-space FFT utilities, and geometric domains"
+license = "MIT"
+repository = "https://github.com/ryancinsight/kwavers"
+
+[dependencies]
+kwavers-core = { path = "../kwavers-core" }
+kwavers-math = { path = "../kwavers-math" }
+ndarray = { version = "0.16", features = ["rayon", "serde"] }
+num-traits = "0.2"
+serde = { version = "1.0", features = ["derive"] }
+log = "0.4"
+rand = "0.8"
+rand_chacha = "0.3"
+
+[dev-dependencies]
+approx = "0.5"
+proptest = "1.2"
+
+[lints]
+workspace = true
