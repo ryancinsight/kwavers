@@ -13,10 +13,9 @@
 //!
 //! ## See Also
 //!
-//! - `clinical::imaging` - Application-level imaging workflows and types
-//! - `physics::foundations` - Physics specifications for wave equations
-//! - `domain::sensor` - Sensor primitives for signal detection
-//! - `domain::source` - Source primitives for wave generation
+//! - `kwavers_physics::foundations` - Physics specifications for wave equations
+//! - `kwavers_receiver` - Sensor primitives for signal detection
+//! - `kwavers_source` - Source primitives for wave generation
 
 pub mod ceus_orchestrator;
 pub mod fusion;

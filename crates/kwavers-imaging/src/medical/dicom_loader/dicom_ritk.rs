@@ -2,7 +2,7 @@
 //!
 //! This module is the canonical seam between the ritk-io DICOM reader (which
 //! returns a Burn `Image<B, 3>`) and the kwavers `Array3<f64>` consumer.
-//! Both `domain::imaging::medical::dicom_loader::DicomImageLoader` and the
+//! Both `kwavers_imaging::medical::dicom_loader::DicomImageLoader` and the
 //! therapy orchestrator's CT-loading branch route through these helpers.
 //!
 //! # Why this exists
