@@ -8,18 +8,23 @@ pub trait Apodization: Debug + Sync + Send {
     fn weight(&self, position_idx: usize, total_elements: usize) -> f64;
 }
 
+/// Shared symmetric-window weight: maps `position_idx ∈ [0, total_elements)` to the
+/// normalized window position and evaluates the canonical `kwavers_signal` window.
+/// Single arrays of one element get unit weight. Factored out so the per-window
+/// apodization structs carry no duplicated boilerplate.
+fn windowed_weight(kind: SignalWindowType, position_idx: usize, total_elements: usize) -> f64 {
+    if total_elements <= 1 {
+        return 1.0;
+    }
+    window_value(kind, position_idx as f64 / (total_elements - 1) as f64)
+}
+
 #[derive(Debug, Clone)]
 pub struct HanningApodization;
 
 impl Apodization for HanningApodization {
     fn weight(&self, position_idx: usize, total_elements: usize) -> f64 {
-        if total_elements <= 1 {
-            return 1.0;
-        }
-        window_value(
-            SignalWindowType::Hann,
-            position_idx as f64 / (total_elements - 1) as f64,
-        )
+        windowed_weight(SignalWindowType::Hann, position_idx, total_elements)
     }
 }
 
@@ -28,13 +33,7 @@ pub struct HammingApodization;
 
 impl Apodization for HammingApodization {
     fn weight(&self, position_idx: usize, total_elements: usize) -> f64 {
-        if total_elements <= 1 {
-            return 1.0;
-        }
-        window_value(
-            SignalWindowType::Hamming,
-            position_idx as f64 / (total_elements - 1) as f64,
-        )
+        windowed_weight(SignalWindowType::Hamming, position_idx, total_elements)
     }
 }
 
@@ -43,13 +42,7 @@ pub struct BlackmanApodization;
 
 impl Apodization for BlackmanApodization {
     fn weight(&self, position_idx: usize, total_elements: usize) -> f64 {
-        if total_elements <= 1 {
-            return 1.0;
-        }
-        window_value(
-            SignalWindowType::Blackman,
-            position_idx as f64 / (total_elements - 1) as f64,
-        )
+        windowed_weight(SignalWindowType::Blackman, position_idx, total_elements)
     }
 }
 

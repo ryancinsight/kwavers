@@ -37,7 +37,6 @@ consus-core = { workspace = true }
 consus-io = { workspace = true }
 flate2 = { workspace = true }
 ritk-registration = { workspace = true }
-ritk-core = { workspace = true }
 
 [features]
 gpu = ["dep:kwavers-gpu", "kwavers-gpu/gpu", "kwavers-core/gpu", "kwavers-math/gpu", "kwavers-solver/gpu", "kwavers-analysis/gpu"]
