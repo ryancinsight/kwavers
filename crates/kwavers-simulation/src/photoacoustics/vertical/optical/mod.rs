@@ -11,7 +11,7 @@ mod workspace;
 pub use benchmarks::OpticalBenchmarkCase;
 pub use diffusion::DiffusionOpticalSolver;
 pub use monte_carlo::MonteCarloOpticalSolver;
-pub use validation::{validate_diffusion_regime, OpticalValidationCase};
+pub use validation::validate_diffusion_regime;
 pub use workspace::OpticalWorkspace;
 
 /// Output of a canonical optical forward solve.

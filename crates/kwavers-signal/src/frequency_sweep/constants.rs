@@ -24,5 +24,9 @@ pub const DEFAULT_FREQUENCY_STEPS: usize = 10;
 /// Minimum sweep duration \[seconds\]
 pub const MIN_SWEEP_DURATION: f64 = 1e-9;
 
-/// Two pi constant for phase calculations
-pub const TWO_PI: f64 = 2.0 * std::f64::consts::PI;
+/// Two pi constant for phase calculations.
+///
+/// Re-exported from the workspace SSOT (`kwavers_core::constants::numerical`)
+/// rather than re-derived locally — the rest of `kwavers-signal` already imports
+/// it from there.
+pub use kwavers_core::constants::numerical::TWO_PI;

@@ -13,14 +13,11 @@ pub mod reconstruction;
 pub mod source;
 pub mod validation;
 
-pub use acoustic::{gpu_acoustic_available, AcousticForwardModel, AcousticGpuWorkspace};
+pub use acoustic::AcousticForwardModel;
 pub use optical::{
     DiffusionOpticalSolver, MonteCarloOpticalSolver, OpticalForwardModel, OpticalSolveResult,
 };
-pub use pipeline::{
-    PhotoacousticBenchmarkCase, PhotoacousticPipeline, PhotoacousticValidationCase,
-    PhotoacousticWorkspace,
-};
+pub use pipeline::PhotoacousticPipeline;
 pub use reconstruction::PhotoacousticReconstructionModel;
 pub use source::PhotoacousticSourceModel;
 pub use validation::validate_photoacoustic_simulation;

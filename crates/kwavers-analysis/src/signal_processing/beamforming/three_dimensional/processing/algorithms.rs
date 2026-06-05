@@ -1,6 +1,6 @@
 use super::super::config::Beamforming3dApodizationWindow;
 use super::super::processor::BeamformingProcessor3D;
-use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_core::error::KwaversResult;
 use ndarray::{Array3, Array4};
 
 impl BeamformingProcessor3D {
