@@ -10,7 +10,7 @@ from scipy.ndimage import binary_closing, binary_fill_holes, zoom
 from .scene import CANONICAL_BRAIN_SCENE, BrainSceneDefinition
 
 
-REPO_ROOT = Path(__file__).resolve().parents[4]
+REPO_ROOT = Path(__file__).resolve().parents[5]
 FIG_DIR = REPO_ROOT / "docs" / "book" / "figures" / "ch25"
 
 LOCAL_CT = REPO_ROOT / "data" / "niivue" / "CT_Philips.nii.gz"

@@ -61,7 +61,7 @@ from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
 
 import pykwavers  # All physics: Rust FWI/RTM/FDTD via PyO3
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+REPO_ROOT = Path(__file__).resolve().parents[4]
 OUT_DIR = REPO_ROOT / "docs" / "book" / "figures" / "ch27"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 

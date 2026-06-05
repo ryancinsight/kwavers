@@ -43,7 +43,7 @@ from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 — required for projectio
 
 import pykwavers as kw
 
-REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
 OUT_DIR = os.path.join(REPO_ROOT, "docs", "book", "figures", "ch21d")
 os.makedirs(OUT_DIR, exist_ok=True)
 

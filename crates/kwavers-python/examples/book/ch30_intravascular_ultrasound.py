@@ -28,7 +28,7 @@ except ImportError:
 
 
 BOOK_DIR = Path(__file__).resolve().parent
-REPO_ROOT = BOOK_DIR.parents[2]
+REPO_ROOT = BOOK_DIR.parents[3]
 OUT_DIR = REPO_ROOT / "docs" / "book" / "figures" / "ch30"
 
 RHO_TISSUE_KG_M3 = 1060.0

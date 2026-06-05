@@ -55,7 +55,7 @@ from mpl_toolkits.mplot3d import Axes3D  # noqa: F401  — registers 3D projecti
 
 import pykwavers  # All physics: Rust FDTD/PSTD/FWI via PyO3
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+REPO_ROOT = Path(__file__).resolve().parents[4]
 OUT_DIR = REPO_ROOT / "docs" / "book" / "figures" / "ch28"
 
 plt.rcParams.update({

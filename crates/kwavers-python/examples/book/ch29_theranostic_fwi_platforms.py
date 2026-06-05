@@ -35,7 +35,7 @@ from ch29_pressure_diagnostics import pressure_diagnostics
 
 
 BOOK_DIR = Path(__file__).resolve().parent
-REPO_ROOT = BOOK_DIR.parents[2]
+REPO_ROOT = BOOK_DIR.parents[3]
 OUT_DIR = Path(os.environ.get("KWAVERS_CH29_OUT_DIR", REPO_ROOT / "docs" / "book" / "figures" / "ch29"))
 PY_PACKAGE = REPO_ROOT / "pykwavers" / "python"
 DLL_DIRECTORY_HANDLES = []

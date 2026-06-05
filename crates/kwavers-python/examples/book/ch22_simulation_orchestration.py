@@ -29,7 +29,7 @@ from typing import Iterable
 import matplotlib.pyplot as plt
 import networkx as nx
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
+REPO_ROOT = Path(__file__).resolve().parents[4]
 FIG_DIR = REPO_ROOT / "docs" / "book" / "figures" / "ch22"
 
 

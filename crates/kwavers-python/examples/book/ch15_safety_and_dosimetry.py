@@ -35,7 +35,7 @@ import matplotlib.patches as mpatches
 
 import pykwavers as kw
 
-REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
 OUT_DIR = os.path.join(REPO_ROOT, "docs", "book", "figures", "ch15")
 os.makedirs(OUT_DIR, exist_ok=True)
 

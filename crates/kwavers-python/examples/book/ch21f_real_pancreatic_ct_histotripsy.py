@@ -84,7 +84,7 @@ from scipy.ndimage import (binary_dilation, binary_erosion, binary_closing,
 # Paths
 # ───────────────────────────────────────────────────────────────────────
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
+REPO_ROOT = Path(__file__).resolve().parents[4]
 MSD_DIR   = REPO_ROOT / "data" / "msd_pancreas_sample"
 CT_PATH   = MSD_DIR / "ct_ts.nii.gz"
 OUT_DIR   = REPO_ROOT / "docs" / "book" / "figures" / "ch21f"

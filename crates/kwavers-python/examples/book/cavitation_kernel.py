@@ -51,7 +51,7 @@ import numpy as np
 
 import pykwavers as kw
 
-REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
 KERNEL_DIR = os.path.join(REPO_ROOT, "data", "kernels")
 os.makedirs(KERNEL_DIR, exist_ok=True)
 

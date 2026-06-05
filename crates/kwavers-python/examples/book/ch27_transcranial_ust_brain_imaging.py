@@ -20,7 +20,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
+REPO_ROOT = Path(__file__).resolve().parents[4]
 for candidate in (
     REPO_ROOT / "target" / "release" / "pykwavers.dll",
     REPO_ROOT / "target" / "maturin" / "pykwavers.dll",

@@ -27,7 +27,7 @@ import matplotlib.pyplot as plt
 
 import pykwavers as kw
 
-REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
 OUT_DIR = os.path.join(REPO_ROOT, "docs", "book", "figures", "ch09")
 os.makedirs(OUT_DIR, exist_ok=True)
 
@@ -36,6 +36,7 @@ SIGMA = 0.0728
 P0_ATM = 101_325.0
 PV = 2_338.0
 GAMMA = 1.4
+MU = 1.0e-3  # water dynamic viscosity [Pa·s]
 
 
 def savefig(name: str) -> None:
@@ -63,7 +64,9 @@ def fig01_rp_dynamics() -> None:
         (0.3e6, r"$P_{ac}=0.3\,\mathrm{MPa}$ (stable)", "solid"),
         (1.5e6, r"$P_{ac}=1.5\,\mathrm{MPa}$ (inertial)", "dashed"),
     ]:
-        t, R = kw.rayleigh_plesset_rk4(R0, P_ac, f_us, t_end, n_steps)
+        t, R, _ = kw.solve_rayleigh_plesset(
+            R0, 0.0, P0_ATM, P_ac, f_us, t_end, n_steps, RHO, SIGMA, GAMMA, MU, PV
+        )
         axes[0].plot(t * 1e6, R / R0, linestyle=ls, label=lbl)
 
     axes[0].set_xlabel(r"Time $t$ (us)")
@@ -72,7 +75,9 @@ def fig01_rp_dynamics() -> None:
     axes[0].legend()
     axes[0].axhline(1.0, color="k", linewidth=0.5, linestyle=":")
 
-    t2, R2 = kw.rayleigh_plesset_rk4(R0, 1.5e6, f_us, 1.5e-6, 3000)
+    t2, R2, _ = kw.solve_rayleigh_plesset(
+        R0, 0.0, P0_ATM, 1.5e6, f_us, 1.5e-6, 3000, RHO, SIGMA, GAMMA, MU, PV
+    )
     axes[1].plot(t2 * 1e6, R2 / R0, color="#d62728")
     axes[1].set_xlabel(r"Time $t$ (us)")
     axes[1].set_ylabel(r"$R(t) / R_0$")
@@ -86,7 +91,7 @@ def fig01_rp_dynamics() -> None:
 
 def fig02_minnaert_resonance() -> None:
     R0_arr = np.logspace(-7, -3, 400)
-    f_M = kw.minnaert_resonance_hz(R0_arr, P0_ATM, SIGMA, RHO, GAMMA, PV)
+    f_M = np.vectorize(lambda r: kw.minnaert_resonance_hz(r, GAMMA, P0_ATM, RHO))(R0_arr)
 
     fig, ax = plt.subplots(figsize=(7, 4.5))
     ax.loglog(R0_arr * 1e6, f_M * 1e-6, color="#1f77b4")
@@ -107,7 +112,7 @@ def fig02_minnaert_resonance() -> None:
 
 def fig03_blake_threshold() -> None:
     R0_arr = np.logspace(np.log10(0.1e-6), np.log10(100e-6), 500)
-    P_B = kw.blake_threshold_pa(R0_arr, P0_ATM, SIGMA, PV)
+    P_B = np.vectorize(lambda r: kw.blake_threshold_pa(r, P0_ATM, SIGMA))(R0_arr)
 
     fig, ax = plt.subplots(figsize=(7, 4.5))
     ax.loglog(R0_arr * 1e6, P_B * 1e-6, color="#d62728")
@@ -132,7 +137,7 @@ def fig04_collapse_time() -> None:
         (5e5, r"$\Delta P = 0.5\,\mathrm{MPa}$", "#ff7f0e"),
         (2e6, r"$\Delta P = 2\,\mathrm{MPa}$", "#2ca02c"),
     ]:
-        t_c = kw.rayleigh_collapse_time_s(R_max, delta_P, RHO)
+        t_c = np.vectorize(lambda rm: kw.rayleigh_collapse_time_s(rm, delta_P, RHO))(R_max)
         ax.loglog(R_max * 1e6, t_c * 1e9, label=lbl, color=col)
 
     ax.set_xlabel(r"Maximum radius $R_\mathrm{max}$ (um)")

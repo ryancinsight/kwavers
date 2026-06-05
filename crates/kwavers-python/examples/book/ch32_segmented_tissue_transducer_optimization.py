@@ -24,7 +24,7 @@ from pathlib import Path
 import pykwavers
 
 BOOK_DIR = Path(__file__).resolve().parent
-REPO_ROOT = BOOK_DIR.parents[2]
+REPO_ROOT = BOOK_DIR.parents[3]
 OUT_DIR = REPO_ROOT / "docs" / "book" / "figures" / "ch32"
 LIVER_CT = str(REPO_ROOT / "data" / "lits17_sample" / "volume-0.nii")
 LIVER_SEG = str(REPO_ROOT / "data" / "lits17_sample" / "segmentation-0.nii")

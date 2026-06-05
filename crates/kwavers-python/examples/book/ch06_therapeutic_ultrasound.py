@@ -29,7 +29,7 @@ from matplotlib.colors import LinearSegmentedColormap
 import pykwavers as kw
 
 REPO_ROOT = os.path.normpath(
-    os.path.join(os.path.dirname(__file__), "..", "..", "..")
+    os.path.join(os.path.dirname(__file__), "..", "..", "..", "..")
 )
 OUT_DIR = os.path.join(REPO_ROOT, "docs", "book", "figures", "ch06")
 os.makedirs(OUT_DIR, exist_ok=True)

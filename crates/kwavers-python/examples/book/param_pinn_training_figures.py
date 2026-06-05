@@ -27,7 +27,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
 DEMO_DIR = os.path.join(REPO_ROOT, "target", "field_surrogate_demo")
 OUT_DIR = os.path.join(REPO_ROOT, "docs", "book", "figures", "ch21e")
 os.makedirs(OUT_DIR, exist_ok=True)

@@ -71,7 +71,7 @@ from matplotlib.cm import ScalarMappable
 
 import pykwavers  # Rust FDTD via PyO3 — all wave physics executes in Rust
 
-REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
 OUT_DIR = os.path.join(REPO_ROOT, "docs", "book", "figures", "ch25")
 os.makedirs(OUT_DIR, exist_ok=True)
 

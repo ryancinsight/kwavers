@@ -8,7 +8,7 @@ from pathlib import Path
 import numpy as np
 from transcranial_ust.histotripsy_plots import ReportConfig, plot_metrics, plot_passive_bands, plot_scenarios, write_metrics
 
-REPO_ROOT = Path(__file__).resolve().parents[4]
+REPO_ROOT = Path(__file__).resolve().parents[5]
 for candidate in (
     REPO_ROOT / "target" / "release" / "pykwavers.dll",
     REPO_ROOT / "target" / "maturin" / "pykwavers.dll",

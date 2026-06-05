@@ -46,7 +46,7 @@ if hasattr(sys.stdout, "reconfigure"):
 if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
-REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
 BOOK_SCRIPTS_DIR = os.path.dirname(__file__)
 CHAPTERS_TOML = os.path.join(BOOK_SCRIPTS_DIR, "chapters.toml")
 
