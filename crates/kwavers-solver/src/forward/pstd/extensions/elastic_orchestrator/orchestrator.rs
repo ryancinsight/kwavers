@@ -16,8 +16,8 @@
 //! 6. **Sensor recording** — copy the per-component values at masked grid
 //!    points into the recorder matrices.
 
-use super::super::PstdElasticPlugin;
 use super::kspace::{build_kappa, grid_spacing_from_wavenumber, max_p_wave_speed, wavenumber_axis};
+use super::leapfrog_step::propagate_leapfrog_step;
 use super::pml::{ElasticPml, ElasticPmlSpec};
 use super::source_sensor::{
     inject_velocity_source, inject_velocity_source_subfields, record_sensors, validate_source,
@@ -28,10 +28,8 @@ use super::staggered_ops::StaggeredDerivativeOps;
 use super::types::{ElasticPstdMedium, ElasticPstdSensorData, ElasticPstdVelocitySource};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use kwavers_math::fft::{fft_3d_array_into, ifft_3d_array_into};
 use kwavers_physics::acoustics::mechanics::elastic_wave::{
-    fields::VelocityFields,
-    parameters::{StressUpdateParams, VelocityUpdateParams},
+    fields::{StressFields, VelocityFields},
     spectral_fields::{SpectralStressFields, SpectralVelocityFields},
 };
 use ndarray::{Array2, Array3};
@@ -43,7 +41,6 @@ use ndarray::{Array2, Array3};
 /// consecutive leapfrog steps while recording sensors.
 #[derive(Debug)]
 pub struct ElasticPstdOrchestrator {
-    pub(super) plugin: PstdElasticPlugin,
     pub(super) medium: ElasticPstdMedium,
     /// Pre-built complex derivative operators with the half-cell k-shift
     /// baked in (matches KWave.jl `pstd_elastic_2d`'s `ddx_k_shift_pos/neg`).
@@ -72,6 +69,10 @@ pub struct ElasticPstdOrchestrator {
     /// IFFTs. One allocation at construction; zero allocations per step.
     scratch_r: ndarray::Array3<f64>,
     pub(super) velocity: VelocityFields,
+    /// Real-space stress state for the standard (non-split-field) leapfrog
+    /// path. Persisted between steps; updated with real-space Lamé coefficients
+    /// (see [`super::leapfrog_step`]) so heterogeneous media are correct.
+    stress: StressFields,
     pub(super) spectral_stress: SpectralStressFields,
     spectral_stress_next: SpectralStressFields,
     /// Persistent scratch for `fft(velocity)` — reused every step via
@@ -131,7 +132,6 @@ impl ElasticPstdOrchestrator {
         );
 
         Ok(Self {
-            plugin: PstdElasticPlugin::default(),
             medium,
             derivative_ops,
             kappa,
@@ -140,6 +140,7 @@ impl ElasticPstdOrchestrator {
             split_pml_state: None,
             scratch_r: ndarray::Array3::<f64>::zeros(shape),
             velocity: VelocityFields::new(nx, ny, nz),
+            stress: StressFields::new(nx, ny, nz),
             spectral_stress: SpectralStressFields::new(nx, ny, nz),
             spectral_stress_next: SpectralStressFields::new(nx, ny, nz),
             spectral_velocity_in: SpectralVelocityFields::new(nx, ny, nz),
@@ -225,58 +226,29 @@ impl ElasticPstdOrchestrator {
                 ));
             } else {
                 // ── Standard leapfrog path (no split-field PML) ───────────
-                fft_3d_array_into(&self.velocity.vx, &mut self.spectral_velocity_in.vx);
-                fft_3d_array_into(&self.velocity.vy, &mut self.spectral_velocity_in.vy);
-                fft_3d_array_into(&self.velocity.vz, &mut self.spectral_velocity_in.vz);
-
-                let stress_params = StressUpdateParams {
-                    vx_fft: &self.spectral_velocity_in.vx,
-                    vy_fft: &self.spectral_velocity_in.vy,
-                    vz_fft: &self.spectral_velocity_in.vz,
-                    txx_fft: &self.spectral_stress.txx,
-                    tyy_fft: &self.spectral_stress.tyy,
-                    tzz_fft: &self.spectral_stress.tzz,
-                    txy_fft: &self.spectral_stress.txy,
-                    txz_fft: &self.spectral_stress.txz,
-                    tyz_fft: &self.spectral_stress.tyz,
-                    dkx_op: &self.derivative_ops.dkx_neg,
-                    dky_op: &self.derivative_ops.dky_neg,
-                    dkz_op: &self.derivative_ops.dkz_neg,
-                    lame_lambda: &self.medium.lame_lambda,
-                    lame_mu: &self.medium.lame_mu,
-                    density: self.medium.density.view(),
-                    dt: self.dt,
+                // Coefficients (λ, μ, 1/ρ) are applied in REAL space after each
+                // k-space derivative IFFT, so heterogeneous media propagate at
+                // the correct local speed (see `super::leapfrog_step`).
+                let ops = SpectralOperators {
+                    dkx_neg: &self.derivative_ops.dkx_neg,
+                    dky_neg: &self.derivative_ops.dky_neg,
+                    dkz_neg: &self.derivative_ops.dkz_neg,
+                    dkx_pos: &self.derivative_ops.dkx_pos,
+                    dky_pos: &self.derivative_ops.dky_pos,
+                    dkz_pos: &self.derivative_ops.dkz_pos,
                     kappa: &self.kappa,
                 };
-                self.plugin
-                    .apply_stress_update_in_place(&stress_params, &mut self.spectral_stress_next);
-
-                let velocity_params = VelocityUpdateParams {
-                    vx_fft: &self.spectral_velocity_in.vx,
-                    vy_fft: &self.spectral_velocity_in.vy,
-                    vz_fft: &self.spectral_velocity_in.vz,
-                    txx_fft: &self.spectral_stress_next.txx,
-                    tyy_fft: &self.spectral_stress_next.tyy,
-                    tzz_fft: &self.spectral_stress_next.tzz,
-                    txy_fft: &self.spectral_stress_next.txy,
-                    txz_fft: &self.spectral_stress_next.txz,
-                    tyz_fft: &self.spectral_stress_next.tyz,
-                    dkx_op: &self.derivative_ops.dkx_pos,
-                    dky_op: &self.derivative_ops.dky_pos,
-                    dkz_op: &self.derivative_ops.dkz_pos,
-                    density: self.medium.density.view(),
-                    dt: self.dt,
-                    kappa: &self.kappa,
-                };
-                self.plugin.apply_velocity_update_in_place(
-                    &velocity_params,
-                    &mut self.spectral_velocity_next,
+                propagate_leapfrog_step(
+                    &mut self.velocity,
+                    &mut self.stress,
+                    &self.medium,
+                    &ops,
+                    &mut self.spectral_velocity_in,
+                    &mut self.spectral_stress,
+                    &mut self.spectral_stress_next,
+                    &mut self.scratch_r,
+                    self.dt,
                 );
-
-                std::mem::swap(&mut self.spectral_stress, &mut self.spectral_stress_next);
-                ifft_3d_array_into(&mut self.spectral_velocity_next.vx, &mut self.velocity.vx);
-                ifft_3d_array_into(&mut self.spectral_velocity_next.vy, &mut self.velocity.vy);
-                ifft_3d_array_into(&mut self.spectral_velocity_next.vz, &mut self.velocity.vz);
 
                 if let Some(pml) = self.pml.as_ref() {
                     pml.apply_to_field(&mut self.velocity.vx);
