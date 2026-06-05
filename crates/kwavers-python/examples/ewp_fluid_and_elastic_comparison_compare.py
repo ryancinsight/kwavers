@@ -325,6 +325,8 @@ def main() -> int:
         f"Elastic p_max(focus) = {p_at_focus_elast:.4e} Pa  "
         f"(expected ratio T≈{T:.2f})"
     )
+    # Standard status line so the parity sweep aggregator parses the outcome.
+    print(f"parity_status: {status}")
 
     save_text_report(
         out_dir / "ewp_fluid_elastic_compare.txt",
