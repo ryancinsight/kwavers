@@ -150,7 +150,7 @@ def run_elastic() -> tuple[np.ndarray, list[str]]:
     sim = pkw.Simulation(
         pkw.Grid(N, N, N, DX, DX, DX),
         medium, source, sensor,
-        solver=pkw.SolverType.Elastic,
+        solver=pkw.SolverType.ElasticPSTD,
     )
     sim.set_pml_size(PML)
     sim.set_pml_inside(True)
@@ -162,12 +162,12 @@ def run_elastic() -> tuple[np.ndarray, list[str]]:
     else:
         data = np.asarray(result.sensor_data, dtype=np.float64)
 
-    # Determine the Fortran-order iteration sequence of the sensor positions so
-    # data row indices align with labels.  SensorRecorder iterates x-fastest
-    # (inner loop i=0..nx, then j, then k outermost), so sort by (z, y, x).
+    # Sensor.from_mask returns rows in the C-order (row-major) sequence of the
+    # masked cells — i.e. np.argwhere(mask) order, which sorts by (x, y, z) with
+    # x slowest and z fastest. Map labels in that same order so row indices align.
     sorted_names = sorted(
         named_positions.keys(),
-        key=lambda n: (named_positions[n][2], named_positions[n][1], named_positions[n][0]),
+        key=lambda n: named_positions[n],
     )
     return data, sorted_names
 

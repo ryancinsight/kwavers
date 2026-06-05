@@ -164,7 +164,7 @@ def run_elastic() -> np.ndarray:
     sim = pkw.Simulation(
         pkw.Grid(NX, NY, NZ, DX, DX, DX),
         medium, source, sensor,
-        solver=pkw.SolverType.Elastic,
+        solver=pkw.SolverType.ElasticPSTD,
     )
     sim.set_pml_size(PML)
     sim.set_pml_inside(True)
