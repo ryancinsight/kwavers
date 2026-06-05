@@ -131,7 +131,7 @@ impl GridTopology for CartesianTopology {
     }
 
     fn is_uniform(&self) -> bool {
-        const EPSILON: f64 = 1e-10;
+        use crate::structure::GRID_SPACING_EQUALITY_EPSILON as EPSILON;
         (self.spacing[0] - self.spacing[1]).abs() < EPSILON
             && (self.spacing[1] - self.spacing[2]).abs() < EPSILON
     }

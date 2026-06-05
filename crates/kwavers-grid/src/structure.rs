@@ -5,8 +5,8 @@
 use super::error::GridError;
 use log::debug;
 
-/// Epsilon for floating point comparisons of grid spacing
-const GRID_SPACING_EQUALITY_EPSILON: f64 = 1e-10;
+/// Epsilon for floating point comparisons of grid spacing (crate SSOT).
+pub(crate) const GRID_SPACING_EQUALITY_EPSILON: f64 = 1e-10;
 
 /// Spatial bounds for a region
 #[derive(Debug, Clone, Copy)]

@@ -20,6 +20,10 @@ mod validation;
 
 pub(crate) use centroid::{centroid_float, centroid_index};
 
+/// HU threshold below which a voxel is treated as internal gas (lung/bowel/sinus).
+/// Shared SSOT for the `mask` and `material` submodules.
+const INTERNAL_GAS_HU_THRESHOLD: f64 = -700.0;
+
 pub(crate) fn prepare_volume(
     anatomy: AnatomyKind,
     ct_hu: &Array3<f64>,

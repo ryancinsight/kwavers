@@ -27,7 +27,7 @@ const COUPLING_BETA: f64 = 1.0 + B_OVER_A_WATER_37C / 2.0;
 const AIR_DENSITY_KG_M3: f64 = DENSITY_AIR;
 /// β = 1 + B/(2A) for air. B_OVER_A_AIR = 0.4 → β = 1.2 (classical diatomic gas).
 const AIR_BETA: f64 = 1.0 + B_OVER_A_AIR / 2.0;
-const INTERNAL_GAS_HU_THRESHOLD: f64 = -700.0;
+use super::INTERNAL_GAS_HU_THRESHOLD;
 
 /// CT-to-density linear slope [kg/m³ per HU].
 ///

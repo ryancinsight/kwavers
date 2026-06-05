@@ -14,8 +14,7 @@ use super::super::super::medium::{largest_connected_target_component, largest_ta
 use super::super::super::scene::target_index_from_mask_fraction_3d;
 use super::super::super::AnatomyKind;
 use super::centroid::centroid_float;
-
-const INTERNAL_GAS_HU_THRESHOLD: f64 = -700.0;
+use super::INTERNAL_GAS_HU_THRESHOLD;
 
 pub(super) fn body_mask_full(
     anatomy: AnatomyKind,

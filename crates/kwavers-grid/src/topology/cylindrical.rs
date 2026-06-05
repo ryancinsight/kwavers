@@ -301,7 +301,7 @@ impl GridTopology for CylindricalTopology {
     }
 
     fn is_uniform(&self) -> bool {
-        const EPSILON: f64 = 1e-10;
+        use crate::structure::GRID_SPACING_EQUALITY_EPSILON as EPSILON;
         (self.dz - self.dr).abs() < EPSILON
     }
 
