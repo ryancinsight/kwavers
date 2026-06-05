@@ -4,9 +4,9 @@
 //! with no dependencies on domain-specific modules.
 
 pub mod phase;
+pub mod window;
 pub use phase::wrap_to_pi;
 
-use kwavers_core::constants::numerical::TWO_PI;
 use serde::{Deserialize, Serialize};
 
 /// Apodization window type for transducer arrays and beamforming.
@@ -66,18 +66,11 @@ impl ApodizationType {
         let denom = (n - 1) as f64;
         match *self {
             Self::Uniform => vec![1.0; n],
-            Self::Hamming => (0..n)
-                .map(|i| 0.46f64.mul_add(-(TWO_PI * i as f64 / denom).cos(), 0.54))
-                .collect(),
-            Self::Hanning => (0..n)
-                .map(|i| 0.5 * (1.0 - (TWO_PI * i as f64 / denom).cos()))
-                .collect(),
-            Self::Blackman => (0..n)
-                .map(|i| {
-                    let t = TWO_PI * i as f64 / denom;
-                    0.08f64.mul_add((2.0 * t).cos(), 0.5f64.mul_add(-t.cos(), 0.42))
-                })
-                .collect(),
+            // Hann/Hamming/Blackman delegate to the canonical window-coefficient
+            // SSOT (`super::window`) so the formulas live in exactly one place.
+            Self::Hamming => (0..n).map(|i| window::hamming(i as f64 / denom)).collect(),
+            Self::Hanning => (0..n).map(|i| window::hann(i as f64 / denom)).collect(),
+            Self::Blackman => (0..n).map(|i| window::blackman(i as f64 / denom)).collect(),
             Self::Kaiser { beta } => {
                 let i0_beta = i0(beta);
                 (0..n)

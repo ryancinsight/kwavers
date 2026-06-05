@@ -1,7 +1,8 @@
 use std::f64::consts::PI;
 
-use kwavers_core::constants::numerical::{FOUR_PI, TWO_PI};
+use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_math::signal::window as window_coeff;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum SignalWindowType {
@@ -21,12 +22,10 @@ pub fn window_value(window: SignalWindowType, normalized_time: f64) -> f64 {
 
     match window {
         SignalWindowType::Rectangular => 1.0,
-        SignalWindowType::Hann => 0.5 * (1.0 - (TWO_PI * normalized_time).cos()),
-        SignalWindowType::Hamming => 0.46f64.mul_add(-(TWO_PI * normalized_time).cos(), 0.54),
-        SignalWindowType::Blackman => 0.08f64.mul_add(
-            (FOUR_PI * normalized_time).cos(),
-            0.5f64.mul_add(-(TWO_PI * normalized_time).cos(), 0.42),
-        ),
+        // Hann/Hamming/Blackman delegate to the kwavers-math window-coefficient SSOT.
+        SignalWindowType::Hann => window_coeff::hann(normalized_time),
+        SignalWindowType::Hamming => window_coeff::hamming(normalized_time),
+        SignalWindowType::Blackman => window_coeff::blackman(normalized_time),
         SignalWindowType::Gaussian => {
             let sigma = 0.4;
             let arg = (normalized_time - 0.5) / sigma;
