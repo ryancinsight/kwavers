@@ -7,6 +7,7 @@
 use crate::{Source, SourceField};
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_grid::Grid;
+use kwavers_math::special::bessel::jn;
 use kwavers_signal::Signal;
 use ndarray::Array3;
 use std::fmt::Debug;
@@ -90,35 +91,6 @@ impl BesselSource {
         self.config.order
     }
 
-    /// Calculate Bessel function of order n at position r
-    fn bessel_j(&self, n: usize, r: f64) -> f64 {
-        // Implement Bessel function using series expansion
-        // This is a simplified implementation - for production use, consider using
-        // a more accurate numerical library
-
-        if r == 0.0 {
-            if n == 0 {
-                return 1.0; // J0(0) = 1
-            }
-            return 0.0; // Jn(0) = 0 for n > 0
-        }
-
-        let x = self.config.radial_wavenumber * r;
-        let mut result = 0.0;
-
-        // Series expansion for Bessel function
-        // Jn(x) = sum_{k=0}^∞ (-1)^k / (k! (n+k)!) * (x/2)^(2k+n)
-
-        for k in 0..20 {
-            // Limit to 20 terms for performance
-            let term1 = (-1.0_f64).powi(k as i32);
-            let term2 = 1.0 / (Self::factorial(k) * Self::factorial(n + k));
-            let term3 = (x / 2.0).powi((2 * k + n) as i32);
-            result += term1 * term2 * term3;
-        }
-
-        result
-    }
 
     /// Calculate Bessel beam amplitude at position (x, y, z)
     fn bessel_amplitude(&self, x: f64, y: f64, z: f64) -> f64 {
@@ -150,8 +122,11 @@ impl BesselSource {
             _ => dx,
         };
 
-        // Bessel function value
-        let bessel_value = self.bessel_j(self.config.order, radial_distance);
+        // Bessel function value (argument k_r·r), via the kwavers-math SSOT.
+        let bessel_value = jn(
+            self.config.order as u32,
+            self.config.radial_wavenumber * radial_distance,
+        );
 
         // Phase term
         let phase_term = self
@@ -163,14 +138,6 @@ impl BesselSource {
         bessel_value * phase_term.cos()
     }
 
-    /// Helper function to calculate factorial
-    fn factorial(n: usize) -> f64 {
-        if n == 0 {
-            1.0
-        } else {
-            (1..=n).product::<usize>() as f64
-        }
-    }
 }
 
 impl Source for BesselSource {
