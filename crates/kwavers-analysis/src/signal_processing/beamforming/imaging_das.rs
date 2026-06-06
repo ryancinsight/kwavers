@@ -25,7 +25,6 @@
 
 use ndarray::{Array1, ArrayView2};
 
-use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
 
 /// Apodization windows supported by the imaging-DAS primitive.
@@ -178,31 +177,22 @@ pub fn beamform_image_das(
 }
 
 fn apodization_weights(n: usize, kind: ImagingDasApodization) -> Vec<f64> {
+    use kwavers_math::signal::window::{blackman, hamming, hann};
     if n == 0 {
         return Vec::new();
     }
-    match kind {
-        ImagingDasApodization::Rectangular => vec![1.0; n],
-        ImagingDasApodization::Hamming => cosine_window(n, 0.54, 0.46),
-        ImagingDasApodization::Hanning => cosine_window(n, 0.5, 0.5),
-        ImagingDasApodization::Blackman => (0..n)
-            .map(|i| {
-                let phi = TWO_PI * i as f64 / (n.saturating_sub(1).max(1)) as f64;
-                0.42 - 0.5 * phi.cos() + 0.08 * (2.0 * phi).cos()
-            })
-            .collect(),
-    }
-}
-
-fn cosine_window(n: usize, a0: f64, a1: f64) -> Vec<f64> {
-    if n == 1 {
-        return vec![a0 - a1];
-    }
-    let denom = (n - 1) as f64;
+    // Normalized symmetric position x = i/(n-1) ∈ [0, 1]; n=1 → x=0 (single element).
+    // Window coefficients delegate to the kwavers-math SSOT.
+    let denom = n.saturating_sub(1).max(1) as f64;
     (0..n)
         .map(|i| {
-            let phi = TWO_PI * i as f64 / denom;
-            a0 - a1 * phi.cos()
+            let x = i as f64 / denom;
+            match kind {
+                ImagingDasApodization::Rectangular => 1.0,
+                ImagingDasApodization::Hamming => hamming(x),
+                ImagingDasApodization::Hanning => hann(x),
+                ImagingDasApodization::Blackman => blackman(x),
+            }
         })
         .collect()
 }

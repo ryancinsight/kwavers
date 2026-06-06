@@ -43,7 +43,6 @@ kwavers-gpu = { path = "../kwavers-gpu" }
 
 # Essential numerical computing
 ndarray = { version = "0.16", features = ["rayon", "serde"] }
-ndarray-npy = { version = "0.9", default-features = false, features = ["compressed_npz"] }
 rayon = "1.10"
 num-complex = "0.4"
 num-traits = "0.2"
@@ -59,11 +58,9 @@ serde_json = "1.0"
 toml = "0.8"
 
 # Unit safety
-uom = { version = "0.36", default-features = false, features = ["f64", "si", "std"] }
 
 # Linear algebra
 nalgebra = { version = "0.32" }
-gaia = { workspace = true }
 
 # Essential utilities
 log = "0.4"
@@ -73,11 +70,9 @@ bitflags = "2.4"
 rand = "0.8"
 rand_distr = "0.4"
 rand_chacha = "0.3"
-regex = "1.8"
 # NOTE: medical-image I/O (DICOM, NIfTI, …) is owned by ritk-io and bridged in
 # `domain::imaging::medical::ritk_bridge`; kwavers has no direct format-crate deps.
 chrono = { version = "0.4", features = ["serde"] }
-base64 = "0.22"
 
 # Async runtime (Sprint 138 - Persona Requirements)
 tokio = { version = "1.42", features = ["rt-multi-thread", "macros", "sync", "time", "fs", "io-util"], optional = true }
