@@ -91,4 +91,44 @@ impl CPMLMemory {
         self.psi_v_y.fill(0.0);
         self.psi_v_z.fill(0.0);
     }
+
+    /// Pressure-gradient memory array for `axis` (0=x, 1=y, 2=z).
+    #[inline]
+    pub(crate) fn psi_p(&self, axis: usize) -> &Array3<f64> {
+        match axis {
+            0 => &self.psi_p_x,
+            1 => &self.psi_p_y,
+            _ => &self.psi_p_z,
+        }
+    }
+
+    /// Mutable pressure-gradient memory array for `axis` (0=x, 1=y, 2=z).
+    #[inline]
+    pub(crate) fn psi_p_mut(&mut self, axis: usize) -> &mut Array3<f64> {
+        match axis {
+            0 => &mut self.psi_p_x,
+            1 => &mut self.psi_p_y,
+            _ => &mut self.psi_p_z,
+        }
+    }
+
+    /// Velocity-gradient memory array for `axis` (0=x, 1=y, 2=z).
+    #[inline]
+    pub(crate) fn psi_v(&self, axis: usize) -> &Array3<f64> {
+        match axis {
+            0 => &self.psi_v_x,
+            1 => &self.psi_v_y,
+            _ => &self.psi_v_z,
+        }
+    }
+
+    /// Mutable velocity-gradient memory array for `axis` (0=x, 1=y, 2=z).
+    #[inline]
+    pub(crate) fn psi_v_mut(&mut self, axis: usize) -> &mut Array3<f64> {
+        match axis {
+            0 => &mut self.psi_v_x,
+            1 => &mut self.psi_v_y,
+            _ => &mut self.psi_v_z,
+        }
+    }
 }

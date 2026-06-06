@@ -106,6 +106,36 @@ pub struct CPMLProfiles {
 }
 
 impl CPMLProfiles {
+    /// CPML decay coefficient `b` for `axis` (0=x, 1=y, 2=z).
+    #[inline]
+    pub(crate) fn b(&self, axis: usize) -> &Array1<f64> {
+        match axis {
+            0 => &self.b_x,
+            1 => &self.b_y,
+            _ => &self.b_z,
+        }
+    }
+
+    /// CPML amplitude coefficient `a` for `axis` (0=x, 1=y, 2=z).
+    #[inline]
+    pub(crate) fn a(&self, axis: usize) -> &Array1<f64> {
+        match axis {
+            0 => &self.a_x,
+            1 => &self.a_y,
+            _ => &self.a_z,
+        }
+    }
+
+    /// CPML stretch factor `kappa` for `axis` (0=x, 1=y, 2=z).
+    #[inline]
+    pub(crate) fn kappa(&self, axis: usize) -> &Array1<f64> {
+        match axis {
+            0 => &self.kappa_x,
+            1 => &self.kappa_y,
+            _ => &self.kappa_z,
+        }
+    }
+
     /// Create CPML profiles from grid spacing, medium reference speed, and time step.
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.

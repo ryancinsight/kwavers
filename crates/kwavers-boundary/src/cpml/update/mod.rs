@@ -28,9 +28,7 @@ use super::profiles::CPMLProfiles;
 
 use ndarray::Array3;
 
-mod x;
-mod y;
-mod z;
+mod axis;
 
 /// CPML field updater
 #[derive(Debug, Clone)]
@@ -43,7 +41,8 @@ impl CPMLUpdater {
         Self {}
     }
 
-    /// Update memory component for acoustic gradients (used in velocity update)
+    /// Update memory component for acoustic gradients (used in velocity update).
+    /// `component`: 0=x, 1=y, 2=z (out-of-range is a no-op).
     pub fn update_p_memory(
         &self,
         memory: &mut CPMLMemory,
@@ -51,15 +50,11 @@ impl CPMLUpdater {
         component: usize,
         profiles: &CPMLProfiles,
     ) {
-        match component {
-            0 => self.update_p_x_memory(memory, gradient, profiles),
-            1 => self.update_p_y_memory(memory, gradient, profiles),
-            2 => self.update_p_z_memory(memory, gradient, profiles),
-            _ => {}
-        }
+        self.update_p_memory_axis(memory, gradient, component, profiles);
     }
 
-    /// Update memory component for velocity gradients (used in pressure update)
+    /// Update memory component for velocity gradients (used in pressure update).
+    /// `component`: 0=x, 1=y, 2=z (out-of-range is a no-op).
     pub fn update_v_memory(
         &self,
         memory: &mut CPMLMemory,
@@ -67,15 +62,11 @@ impl CPMLUpdater {
         component: usize,
         profiles: &CPMLProfiles,
     ) {
-        match component {
-            0 => self.update_v_x_memory(memory, v_gradient, profiles),
-            1 => self.update_v_y_memory(memory, v_gradient, profiles),
-            2 => self.update_v_z_memory(memory, v_gradient, profiles),
-            _ => {}
-        }
+        self.update_v_memory_axis(memory, v_gradient, component, profiles);
     }
 
-    /// Apply gradient correction from CPML memory
+    /// Apply gradient correction from CPML memory.
+    /// `component`: 0=x, 1=y, 2=z (out-of-range is a no-op).
     pub fn apply_p_correction(
         &self,
         gradient: &mut Array3<f64>,
@@ -83,15 +74,11 @@ impl CPMLUpdater {
         component: usize,
         profiles: &CPMLProfiles,
     ) {
-        match component {
-            0 => self.apply_p_x_correction(gradient, memory, profiles),
-            1 => self.apply_p_y_correction(gradient, memory, profiles),
-            2 => self.apply_p_z_correction(gradient, memory, profiles),
-            _ => {}
-        }
+        self.apply_p_correction_axis(gradient, memory, component, profiles);
     }
 
-    /// Apply velocity gradient correction from CPML memory
+    /// Apply velocity gradient correction from CPML memory.
+    /// `component`: 0=x, 1=y, 2=z (out-of-range is a no-op).
     pub fn apply_v_correction(
         &self,
         v_gradient: &mut Array3<f64>,
@@ -99,12 +86,7 @@ impl CPMLUpdater {
         component: usize,
         profiles: &CPMLProfiles,
     ) {
-        match component {
-            0 => self.apply_v_x_correction(v_gradient, memory, profiles),
-            1 => self.apply_v_y_correction(v_gradient, memory, profiles),
-            2 => self.apply_v_z_correction(v_gradient, memory, profiles),
-            _ => {}
-        }
+        self.apply_v_correction_axis(v_gradient, memory, component, profiles);
     }
 }
 
