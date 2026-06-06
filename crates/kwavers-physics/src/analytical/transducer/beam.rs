@@ -7,7 +7,7 @@ use kwavers_core::constants::numerical::TWO_PI;
 use num_complex::Complex64;
 use rayon::prelude::*;
 
-use super::array_factor::bessel_j1;
+use kwavers_math::special::bessel::j1;
 
 // ─── Array geometry ────────────────────────────────────────────────────────────
 
@@ -639,7 +639,7 @@ fn piston_directivity(theta: f64, ka: f64) -> f64 {
     if arg.abs() < 1e-12 {
         1.0
     } else {
-        2.0 * bessel_j1(arg) / arg
+        2.0 * j1(arg) / arg
     }
 }
 

@@ -11,12 +11,12 @@
 //! keeps the public facade stable while separating special functions, analytical
 //! coefficients, and tests into single-responsibility child modules.
 
-mod bessel;
 mod solution;
 
 #[cfg(test)]
 mod tests;
 
-#[cfg(test)]
-pub(crate) use bessel::bessel_j;
+/// Canonical Bessel Jₙ (workspace SSOT) re-exported for the Fubini harmonic
+/// coefficients in `solution` and the harmonic-amplitude tests.
+pub(crate) use kwavers_math::special::bessel::jn as bessel_j;
 pub use solution::{burgers_equation, fubini_harmonic_amplitude};

@@ -1,9 +1,23 @@
+//! Bessel functions of the first kind, Jₙ(x) — workspace SSOT.
+//!
+//! Canonical implementation consolidating the formerly-duplicated copies in
+//! `kwavers-physics` (analytical wave, Burgers/Fubini harmonics, transducer
+//! directivity). Uses the Numerical-Recipes Horner/Chebyshev rational
+//! approximations for J₀ and J₁ (error ≲ 2e-9 for |x| ≤ 8, Hankel asymptotic
+//! expansion beyond), and Miller downward recurrence for Jₙ (n ≥ 2). The x = 0
+//! values are returned exactly (J₀(0) = 1, Jₙ₍ₙ≥₁₎(0) = 0).
+//!
+//! References: Abramowitz & Stegun (1964) §9; Press et al., *Numerical Recipes*
+//! (Bessel rational approximations); DLMF 10.
+
 use std::f64::consts::{FRAC_PI_4, PI};
 
-/// Bessel J₀(x) via Horner-evaluated Chebyshev approximation.
-///
-/// Error < 1.6e-9 for |x| ≤ 8, DLMF 10.2.2 rational approximation elsewhere.
-pub(super) fn bessel_j0(x: f64) -> f64 {
+/// Bessel J₀(x). Exact `1.0` at the origin.
+#[must_use]
+pub fn j0(x: f64) -> f64 {
+    if x == 0.0 {
+        return 1.0; // J₀(0) = 1 exactly (the rational approx returns 1 + ~3e-9).
+    }
     let ax = x.abs();
     if ax < 8.0 {
         let y = x * x;
@@ -27,12 +41,13 @@ pub(super) fn bessel_j0(x: f64) -> f64 {
     }
 }
 
-/// J₁(x) via clean power series for |x| ≤ 8, Hankel expansion otherwise.
-/// J₁ is an odd function: J₁(−x) = −J₁(x).
-fn bessel_j1_clean(x: f64) -> f64 {
+/// Bessel J₁(x) — odd function, `J₁(0) = 0` (falls out of the leading `x` factor).
+#[must_use]
+pub fn j1(x: f64) -> f64 {
     let ax = x.abs();
-    let sign = x.signum();
-    let r = if ax < 8.0 {
+    if ax < 8.0 {
+        // Small-argument rational approximation; the numerator carries the
+        // signed `x` factor, so the result already has the correct (odd) sign.
         let y = x * x;
         let num = x
             * (72362614232.0
@@ -51,18 +66,25 @@ fn bessel_j1_clean(x: f64) -> f64 {
         let q = 0.04687499995
             + y * (-0.2002690873e-3
                 + y * (8.449199096e-5 + y * (-8.8228987e-5 + y * 1.050343160e-6)));
-        (2.0 / (PI * ax)).sqrt() * (p * xx.cos() - z * q * xx.sin())
-    };
-    sign * r
+        let r = (2.0 / (PI * ax)).sqrt() * (p * xx.cos() - z * q * xx.sin());
+        if x < 0.0 {
+            -r
+        } else {
+            r
+        }
+    }
 }
 
-/// Miller downward-recurrence Jₙ(x) with two-buffer normalisation.
+/// Bessel Jₙ(x) for integer order `n ≥ 0`.
 ///
-/// Accurate to ≲10⁻⁹ for |x| ≤ 50, n ≤ 20 (ultrasound range: n ≤ 10, x < 10).
-fn bessel_jn(n: u32, x: f64) -> f64 {
+/// Delegates to [`j0`]/[`j1`] for n ∈ {0, 1}; uses Miller downward recurrence
+/// with two-buffer normalisation for n ≥ 2 (accurate to ≲1e-9 for |x| ≤ 50,
+/// n ≤ 20). Returns exact 0 for n ≥ 1 at x = 0.
+#[must_use]
+pub fn jn(n: u32, x: f64) -> f64 {
     match n {
-        0 => bessel_j0(x),
-        1 => bessel_j1_clean(x),
+        0 => j0(x),
+        1 => j1(x),
         _ => {
             if x.abs() < 1e-15 {
                 return 0.0;
@@ -96,8 +118,8 @@ fn bessel_jn(n: u32, x: f64) -> f64 {
                     bj0 = bj;
                 }
             }
-            let j0_true = bessel_j0(x);
-            let j1_true = bessel_j1_clean(x);
+            let j0_true = j0(x);
+            let j1_true = j1(x);
             let scale = if bj0.abs() >= bj1.abs() {
                 if bj0.abs() < 1e-300 {
                     return 0.0;
@@ -114,7 +136,37 @@ fn bessel_jn(n: u32, x: f64) -> f64 {
     }
 }
 
-/// Public crate-level Bessel Jₙ driver (clean two-buffer Miller recurrence).
-pub(crate) fn jn(n: u32, x: f64) -> f64 {
-    bessel_jn(n, x)
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Reference values from Abramowitz & Stegun / DLMF (10 significant figures).
+    #[test]
+    fn reference_values() {
+        assert_eq!(j0(0.0), 1.0);
+        assert_eq!(j1(0.0), 0.0);
+        assert_eq!(jn(0, 0.0), 1.0);
+        assert_eq!(jn(5, 0.0), 0.0);
+        // NR rational approximation accuracy is ≲2e-9; assert against A&S
+        // reference values within 1e-8.
+        assert!((j0(1.0) - 0.765_197_686_6).abs() < 1e-8);
+        assert!((j1(1.0) - 0.440_050_585_7).abs() < 1e-8);
+        assert!((j0(5.0) - (-0.177_596_771_3)).abs() < 1e-8);
+        assert!((j1(5.0) - (-0.327_579_137_9)).abs() < 1e-8);
+        assert!((jn(2, 1.0) - 0.114_903_484_9).abs() < 1e-8);
+        assert!((jn(3, 2.0) - 0.128_943_249_8).abs() < 1e-8);
+        // Large-argument (Hankel asymptotic branch): NR error is ≈1.4e-6 near
+        // the x=8 changeover (tightening for larger x), matching the existing
+        // physics directivity/harmonic tolerances.
+        assert!((j0(10.0) - (-0.245_935_764_5)).abs() < 1e-5);
+        assert!((j1(10.0) - 0.043_472_746_2).abs() < 1e-5);
+    }
+
+    #[test]
+    fn parity() {
+        for &x in &[0.3, 1.7, 4.2, 9.5] {
+            assert!((j0(-x) - j0(x)).abs() < 1e-14); // even
+            assert!((j1(-x) + j1(x)).abs() < 1e-14); // odd
+        }
+    }
 }

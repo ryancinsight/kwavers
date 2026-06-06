@@ -33,6 +33,7 @@ pub mod optimization;
 pub mod signal;
 pub mod simd;
 pub mod simd_safe;
+pub mod special;
 pub mod statistics;
 pub mod tensor;
 pub mod vector3;

@@ -4,7 +4,6 @@
 //! transmission, power-law attenuation, numerical dispersion, nonlinear
 //! harmonic generation (Fubini / Westervelt), and shock formation.
 
-mod bessel;
 mod dispersion;
 mod linear;
 mod nonlinear;

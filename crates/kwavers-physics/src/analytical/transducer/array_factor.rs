@@ -4,7 +4,7 @@
 //! grating-lobe prediction, and apodization windows.
 
 use kwavers_core::constants::numerical::TWO_PI;
-use std::f64::consts::PI;
+use kwavers_math::special::bessel::j1;
 
 // ─── Directivity ──────────────────────────────────────────────────────────────
 
@@ -31,7 +31,7 @@ pub fn circular_piston_directivity(theta_rad: &[f64], ka: f64) -> Vec<f64> {
             if arg.abs() < 1e-12 {
                 1.0
             } else {
-                2.0 * bessel_j1(arg) / arg
+                2.0 * j1(arg) / arg
             }
         })
         .collect()
@@ -209,40 +209,5 @@ pub fn apodization_weights(n: usize, window_type: &str) -> Vec<f64> {
     }
 }
 
-// ─── Internal helper (used by directivity) ────────────────────────────────────
-
-/// Bessel J₁(x) — Horner-evaluated Chebyshev rational approximation.
-/// Error < 2e-9 for |x| ≤ 8; Hankel expansion elsewhere.
-pub(super) fn bessel_j1(x: f64) -> f64 {
-    let ax = x.abs();
-    if ax < 8.0 {
-        // Small-argument rational approximation; the numerator carries the
-        // signed `x` factor, so the result already has the correct (odd) sign.
-        let y = x * x;
-        let num = x
-            * (72_362_614_232.0
-                + y * (-7_895_059_235.0
-                    + y * (242_396_853.1
-                        + y * (-2_972_611.439 + y * (15_704.482_60 + y * (-30.160_366_06))))));
-        let den = 144_725_228_442.0
-            + y * (2_300_535_178.0
-                + y * (18_583_304.74 + y * (99_447.433_94 + y * (376.999_139_7 + y))));
-        num / den
-    } else {
-        let z = 8.0 / ax;
-        let y = z * z;
-        let xx = ax - 2.356_194_490_2;
-        let p = 1.0
-            + y * (0.183_105e-2
-                + y * (-3.516_396_496e-5 + y * (2.457_520_174e-5 - y * 2.400_505_341e-7)));
-        let q = 0.046_874_999_95
-            + y * (-2.002_690_873e-4
-                + y * (8.449_199_096e-5 + y * (-8.822_898_7e-5 + y * 1.050_343_160e-6)));
-        let r = (2.0 / (PI * ax)).sqrt() * (p * xx.cos() - z * q * xx.sin());
-        if x < 0.0 {
-            -r
-        } else {
-            r
-        }
-    }
-}
+// J₁ for circular-piston directivity is the workspace SSOT
+// `kwavers_math::special::bessel::j1` (imported above).

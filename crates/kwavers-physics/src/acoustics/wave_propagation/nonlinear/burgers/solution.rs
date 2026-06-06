@@ -1,6 +1,6 @@
 //! Fubini-Blackstock analytical Burgers solution.
 
-use super::bessel::bessel_j;
+use super::bessel_j;
 use crate::acoustics::wave_propagation::nonlinear::NonlinearParameters;
 use kwavers_core::constants::numerical::TWO_PI;
 use std::f64::consts::PI;
