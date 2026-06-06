@@ -1,6 +1,7 @@
 //! CBS grid and bandlimited point projection.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_math::special::sinc;
 use kwavers_transducer::transducers::ElementPosition;
 use std::f64::consts::PI;
 
@@ -227,13 +228,4 @@ fn on_grid_axes(grid: GridSpec, point: ElementPosition, nearest: [usize; 3]) -> 
         (center.y_m - point.y_m).abs() < threshold,
         (center.z_m - point.z_m).abs() < threshold,
     ]
-}
-
-#[inline]
-fn sinc(x: f64) -> f64 {
-    if x.abs() <= f64::EPSILON {
-        1.0
-    } else {
-        x.sin() / x
-    }
 }

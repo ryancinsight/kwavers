@@ -24,6 +24,7 @@ use super::{
     math::{DISC_AXIS_EPSILON, DISC_BLI_TOLERANCE, DISC_PACKING_NUMBER},
     KWaveArray,
 };
+use kwavers_math::special::sinc;
 
 impl KWaveArray {
     /// Map a single surface sample point through the BLI stencil, calling
@@ -79,8 +80,8 @@ impl KWaveArray {
                     }
                     let ix = ix as usize;
                     let iy = iy as usize;
-                    let wx = Self::sinc(std::f64::consts::PI * (x_vec[ix] - point[0]) / grid.dx);
-                    let wy = Self::sinc(std::f64::consts::PI * (y_vec[iy] - point[1]) / grid.dy);
+                    let wx = sinc(std::f64::consts::PI * (x_vec[ix] - point[0]) / grid.dx);
+                    let wy = sinc(std::f64::consts::PI * (y_vec[iy] - point[1]) / grid.dy);
                     let weight = scale * wx * wy;
                     if mask_only || weight != 0.0 {
                         visit(ix, iy, iz, if mask_only { 1.0 } else { weight });
@@ -120,9 +121,9 @@ impl KWaveArray {
                     let ix = ix as usize;
                     let iy = iy as usize;
                     let iz = iz as usize;
-                    let wx = Self::sinc(std::f64::consts::PI * (x_vec[ix] - point[0]) / grid.dx);
-                    let wy = Self::sinc(std::f64::consts::PI * (y_vec[iy] - point[1]) / grid.dy);
-                    let wz = Self::sinc(std::f64::consts::PI * (z_vec[iz] - point[2]) / grid.dz);
+                    let wx = sinc(std::f64::consts::PI * (x_vec[ix] - point[0]) / grid.dx);
+                    let wy = sinc(std::f64::consts::PI * (y_vec[iy] - point[1]) / grid.dy);
+                    let wz = sinc(std::f64::consts::PI * (z_vec[iz] - point[2]) / grid.dz);
                     let weight = scale * wx * wy * wz;
                     if mask_only || weight != 0.0 {
                         visit(ix, iy, iz, if mask_only { 1.0 } else { weight });
@@ -150,16 +151,6 @@ impl KWaveArray {
             }
         }
         (best_index, best_value)
-    }
-
-    /// Unnormalized sinc: `sin(x)/x` with the `x→0` limit returning 1.
-    #[inline]
-    pub(super) fn sinc(x: f64) -> f64 {
-        if x.abs() <= f64::EPSILON {
-            1.0
-        } else {
-            x.sin() / x
-        }
     }
 
     /// Total sample count for a disc rasterized with `num_radial` rings
