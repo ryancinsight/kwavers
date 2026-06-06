@@ -61,6 +61,7 @@
 //! - Kopriva (2009). *Implementing Spectral Methods*. Springer. §4.
 
 use kwavers_core::error::KwaversResult;
+use kwavers_math::special::legendre::legendre_poly;
 use ndarray::{Array1, Array2};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -131,26 +132,6 @@ pub fn build_vandermonde(
     }
 
     Ok(v)
-}
-
-fn legendre_poly(n: usize, x: f64) -> f64 {
-    if n == 0 {
-        return 1.0;
-    }
-    if n == 1 {
-        return x;
-    }
-
-    let mut l_prev = 1.0;
-    let mut l_curr = x;
-
-    for i in 1..n {
-        let l_next =
-            ((2 * i + 1) as f64 * x).mul_add(l_curr, -(i as f64 * l_prev)) / ((i + 1) as f64);
-        l_prev = l_curr;
-        l_curr = l_next;
-    }
-    l_curr
 }
 
 pub(super) fn chebyshev_t(n: usize, x: f64) -> f64 {

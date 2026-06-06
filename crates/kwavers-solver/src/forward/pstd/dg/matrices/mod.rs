@@ -49,6 +49,7 @@
 use super::basis::{fourier_theta, validate_fourier_nodes, BasisType};
 use kwavers_core::error::KwaversResult;
 use kwavers_core::error::{KwaversError, NumericalError};
+use kwavers_math::special::legendre::legendre_poly_and_deriv;
 use ndarray::{Array1, Array2};
 
 /// Compute mass matrix using quadrature
@@ -263,47 +264,6 @@ pub fn matrix_inverse(a: &Array2<f64>) -> KwaversResult<Array2<f64>> {
     }
 
     Ok(inv)
-}
-
-fn legendre_poly_and_deriv(n: usize, x: f64) -> (f64, f64) {
-    if n == 0 {
-        return (1.0, 0.0);
-    }
-    if n == 1 {
-        return (x, 1.0);
-    }
-
-    let mut l_prev = 1.0;
-    let mut l_curr = x;
-
-    for i in 1..n {
-        let l_next =
-            ((2 * i + 1) as f64 * x).mul_add(l_curr, -(i as f64 * l_prev)) / ((i + 1) as f64);
-        l_prev = l_curr;
-        l_curr = l_next;
-    }
-
-    if x == 1.0 {
-        return (1.0, endpoint_legendre_derivative(n, 1.0));
-    }
-    if x == -1.0 {
-        return (
-            if n.is_multiple_of(2) { 1.0 } else { -1.0 },
-            endpoint_legendre_derivative(n, -1.0),
-        );
-    }
-
-    let deriv = (n as f64) * x.mul_add(-l_curr, l_prev) / x.mul_add(-x, 1.0);
-    (l_curr, deriv)
-}
-
-fn endpoint_legendre_derivative(n: usize, x: f64) -> f64 {
-    let magnitude = (n * (n + 1)) as f64 / 2.0;
-    if x == 1.0 || !n.is_multiple_of(2) {
-        magnitude
-    } else {
-        -magnitude
-    }
 }
 
 fn chebyshev_t_derivative(n: usize, x: f64) -> f64 {

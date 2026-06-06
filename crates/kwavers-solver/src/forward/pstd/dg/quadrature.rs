@@ -14,6 +14,7 @@
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
 use kwavers_core::error::{ConfigError, KwaversError};
+use kwavers_math::special::legendre::{legendre_poly, legendre_poly_and_deriv};
 use ndarray::Array1;
 
 /// Compute Gauss-Lobatto-Legendre (GLL) quadrature nodes and weights
@@ -106,30 +107,3 @@ pub fn fourier_periodic_nodes(n: usize) -> KwaversResult<(Array1<f64>, Array1<f6
     Ok((nodes, weights))
 }
 
-fn legendre_poly(n: usize, x: f64) -> f64 {
-    if n == 0 {
-        return 1.0;
-    }
-    if n == 1 {
-        return x;
-    }
-
-    let mut l_prev = 1.0;
-    let mut l_curr = x;
-
-    for i in 1..n {
-        let l_next =
-            ((2 * i + 1) as f64 * x).mul_add(l_curr, -(i as f64 * l_prev)) / ((i + 1) as f64);
-        l_prev = l_curr;
-        l_curr = l_next;
-    }
-    l_curr
-}
-
-fn legendre_poly_and_deriv(n: usize, x: f64) -> (f64, f64) {
-    let ln = legendre_poly(n, x);
-    let l_prev = legendre_poly(n - 1, x);
-
-    let dln = (n as f64) * x.mul_add(-ln, l_prev) / x.mul_add(-x, 1.0);
-    (ln, dln)
-}
