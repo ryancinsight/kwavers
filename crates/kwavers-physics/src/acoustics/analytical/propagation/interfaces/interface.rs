@@ -50,8 +50,7 @@ impl InterfaceProperties {
     pub fn normal_reflection_coefficient(interface: &Interface) -> f64 {
         let z1 = interface.medium1.impedance();
         let z2 = interface.medium2.impedance();
-        let r: f64 = (z2 - z1) / (z2 + z1);
-        r.abs()
+        kwavers_medium::properties::reflection_coefficient(z1, z2).abs()
     }
 
     /// Calculate normal transmission coefficient for an interface

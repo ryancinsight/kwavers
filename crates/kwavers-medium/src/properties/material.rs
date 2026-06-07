@@ -129,6 +129,18 @@ pub struct AcousticMaterialProperties {
     pub reference_pressure: f64,
 }
 
+/// Pressure-amplitude reflection coefficient at a normal-incidence planar
+/// interface (workspace SSOT): `R = (Z_t − Z_i) / (Z_t + Z_i)` for a wave
+/// travelling from a medium of acoustic impedance `z_incident` into one of
+/// impedance `z_transmitted` [both rayl]. Sign follows the standard convention
+/// (positive when transmitting into a higher-impedance medium); take `.abs()`
+/// for the magnitude.
+#[inline]
+#[must_use]
+pub fn reflection_coefficient(z_incident: f64, z_transmitted: f64) -> f64 {
+    (z_transmitted - z_incident) / (z_transmitted + z_incident)
+}
+
 impl AcousticMaterialProperties {
     /// Create material properties with core parameters
     #[must_use]
@@ -247,20 +259,16 @@ impl AcousticMaterialProperties {
         Ok(())
     }
 
-    /// Calculate acoustic impedance mismatch ratio
+    /// Calculate acoustic impedance mismatch ratio (|reflection coefficient|).
     #[must_use]
     pub fn impedance_ratio(&self, other: &Self) -> f64 {
-        let z1 = self.impedance;
-        let z2 = other.impedance;
-        ((z1 - z2) / (z1 + z2)).abs()
+        reflection_coefficient(self.impedance, other.impedance).abs()
     }
 
-    /// Calculate reflection coefficient at normal incidence
+    /// Calculate reflection coefficient magnitude at normal incidence.
     #[must_use]
     pub fn reflection_coefficient(&self, other: &Self) -> f64 {
-        let z1 = self.impedance;
-        let z2 = other.impedance;
-        ((z2 - z1) / (z2 + z1)).abs()
+        reflection_coefficient(self.impedance, other.impedance).abs()
     }
 
     /// Calculate transmission coefficient at normal incidence

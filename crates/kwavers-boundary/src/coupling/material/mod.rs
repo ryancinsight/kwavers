@@ -57,7 +57,7 @@ impl MaterialInterface {
     pub fn reflection_coefficient(&self) -> f64 {
         let z1 = self.material_1.impedance();
         let z2 = self.material_2.impedance();
-        (z2 - z1) / (z2 + z1)
+        kwavers_medium::properties::reflection_coefficient(z1, z2)
     }
 
     /// Compute transmission coefficient T = 2Z2/(Z1 + Z2)

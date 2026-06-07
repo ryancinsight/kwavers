@@ -183,7 +183,8 @@ impl BackingLayer {
     /// Calculate reflection coefficient at piezo-backing interface
     #[must_use]
     pub fn reflection_coefficient(&self, piezo_impedance: f64) -> f64 {
-        (self.acoustic_impedance - piezo_impedance) / (self.acoustic_impedance + piezo_impedance)
+        // From the piezo backing (incident) into the matching/acoustic layer.
+        kwavers_medium::properties::reflection_coefficient(piezo_impedance, self.acoustic_impedance)
     }
 }
 

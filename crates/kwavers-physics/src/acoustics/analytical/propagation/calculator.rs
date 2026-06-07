@@ -49,7 +49,7 @@ impl WavePropagationCalculator {
     pub fn normal_reflection_coefficient(&self) -> f64 {
         let z1 = self.interface.medium1.impedance();
         let z2 = self.interface.medium2.impedance();
-        ((z2 - z1) / (z2 + z1)).abs()
+        kwavers_medium::properties::reflection_coefficient(z1, z2).abs()
     }
 
     /// Check if frequency is appropriate for the wavelength assumption
