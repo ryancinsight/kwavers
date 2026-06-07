@@ -47,7 +47,7 @@ pub fn entropy_production_rate(
                     let vz = velocity_z[[i, j, k]];
                     let energy_density = (0.5 * rho).mul_add(
                         vz.mul_add(vz, vx.mul_add(vx, vy * vy)),
-                        p * p / (2.0 * rho * c * c),
+                        super::acoustic_potential_energy_density(p, rho, c),
                     );
                     total += 2.0 * alpha * c * energy_density * t0_inv * dv;
                 }

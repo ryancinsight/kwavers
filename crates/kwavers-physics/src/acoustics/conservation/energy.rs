@@ -28,7 +28,7 @@ pub fn validate_energy_conservation(
         .for_each(|&p, &vx, &vy, &vz, &rho, &c| {
             if rho > 0.0 && c > 0.0 {
                 let kinetic = 0.5 * rho * vz.mul_add(vz, vx.mul_add(vx, vy * vy));
-                let potential = p * p / (2.0 * rho * c * c);
+                let potential = super::acoustic_potential_energy_density(p, rho, c);
                 total_energy += (kinetic + potential) * dv;
             }
         });
@@ -92,7 +92,7 @@ mod tests {
         let rho_val = DENSITY_WATER_NOMINAL;
         let c_val = SOUND_SPEED_WATER_SIM;
         let kinetic = 0.5 * rho_val * v_val * v_val;
-        let potential = p_val * p_val / (2.0 * rho_val * c_val * c_val);
+        let potential = super::super::acoustic_potential_energy_density(p_val, rho_val, c_val);
         let cell_energy = (kinetic + potential) * dv;
         let initial_energy = cell_energy * (4.0_f64).powi(3);
 

@@ -48,6 +48,16 @@ mod validation;
 #[cfg(test)]
 mod tests;
 
+/// Linear acoustic *potential* energy density `p²/(2ρc²)` [J/m³] (the
+/// compressional/strain energy term). Single source of truth for the energy,
+/// entropy, and heat-source integrators; callers add the kinetic term
+/// `½ρ|v|²` themselves.
+#[inline]
+#[must_use]
+pub(crate) fn acoustic_potential_energy_density(pressure: f64, density: f64, sound_speed: f64) -> f64 {
+    pressure * pressure / (2.0 * density * sound_speed * sound_speed)
+}
+
 pub use energy::validate_energy_conservation;
 pub use entropy::entropy_production_rate;
 pub use heat::acoustic_heat_source;

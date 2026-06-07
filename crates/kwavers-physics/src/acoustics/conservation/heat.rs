@@ -39,7 +39,8 @@ pub fn acoustic_heat_source(
         .and(absorption)
         .par_for_each(|qv, &p, &vs, &rho, &c, &alpha| {
             if rho > 0.0 && c > 0.0 {
-                let energy_density = (0.5 * rho).mul_add(vs, p * p / (2.0 * rho * c * c));
+                let energy_density =
+                    (0.5 * rho).mul_add(vs, super::acoustic_potential_energy_density(p, rho, c));
                 *qv = 2.0 * alpha * c * energy_density;
             }
         });
