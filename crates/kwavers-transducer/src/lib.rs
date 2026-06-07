@@ -10,10 +10,12 @@
 pub mod array_2d;
 pub mod basic;
 pub mod beamforming;
+pub mod bulk_piezo;
 pub mod factory;
 pub mod flexible;
 pub mod hemispherical;
 pub mod kwave_array;
+pub mod mems;
 pub mod passive_acoustic_mapping;
 pub mod transducers;
 pub mod ultrafast;

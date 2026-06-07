@@ -153,12 +153,125 @@ pub fn mre_displacement_field(
     out
 }
 
+/// Acousto-elastic sensitivity coefficient `A = (m + n) / (2(λ + μ))` relating the
+/// shear-modulus shift to applied uniaxial pre-stress (Murnaghan constants `m, n`;
+/// Lamé `λ, μ`). Units: Pa·shift per Pa·stress (dimensionless slope of `ρc_S²` vs `σ₀`).
+///
+/// Elastography §11.9 (Hughes & Kelly 1953; Murnaghan 1951).
+#[must_use]
+pub fn acoustoelastic_sensitivity(m_const: f64, n_const: f64, lambda: f64, mu: f64) -> f64 {
+    (m_const + n_const) / (2.0 * (lambda + mu))
+}
+
+/// Stress-dependent shear-wave speed under uniaxial pre-stress `σ₀`:
+///
+/// ```text
+/// ρ c_S²(σ₀) = μ + A·σ₀,   A = (m+n)/(2(λ+μ));   c_S = √((μ + A σ₀)/ρ)
+/// ```
+///
+/// First-order acousto-elastic relation (§11.9). Returns `0.0` if the effective
+/// modulus `μ + A σ₀` is non-positive (pre-stress beyond the linear regime).
+#[must_use]
+pub fn acoustoelastic_shear_speed(
+    mu: f64,
+    lambda: f64,
+    m_const: f64,
+    n_const: f64,
+    rho: f64,
+    sigma0: f64,
+) -> f64 {
+    let a = acoustoelastic_sensitivity(m_const, n_const, lambda, mu);
+    let eff = mu + a * sigma0;
+    if eff <= 0.0 || rho <= 0.0 {
+        return 0.0;
+    }
+    (eff / rho).sqrt()
+}
+
+/// Recover the uniaxial pre-stress `σ₀` from a shear-speed measurement relative to
+/// an unstressed reference, by inverting the slope of `ρc_S²` vs `σ₀`:
+///
+/// ```text
+/// σ₀ = ρ (c_S² − c_S0²) / A
+/// ```
+///
+/// `a_sensitivity` is [`acoustoelastic_sensitivity`]. Returns `0.0` if `A` or `ρ`
+/// is zero. (Algorithm "Pre-Stress Estimation", §11.9.)
+#[must_use]
+pub fn estimate_prestress(c_s: f64, c_s0: f64, rho: f64, a_sensitivity: f64) -> f64 {
+    if a_sensitivity == 0.0 || rho == 0.0 {
+        return 0.0;
+    }
+    rho * (c_s * c_s - c_s0 * c_s0) / a_sensitivity
+}
+
+/// Pre-stress estimate over a sequence of shear-speed measurements (e.g. a cardiac
+/// cycle), against a fixed unstressed reference `c_s0`.
+#[must_use]
+pub fn estimate_prestress_sequence(
+    c_s_seq: &[f64],
+    c_s0: f64,
+    rho: f64,
+    a_sensitivity: f64,
+) -> Vec<f64> {
+    c_s_seq
+        .iter()
+        .map(|&c| estimate_prestress(c, c_s0, rho, a_sensitivity))
+        .collect()
+}
+
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use kwavers_core::constants::tissue_acoustics::DENSITY_BLOOD;
+
+    #[test]
+    fn acoustoelastic_zero_prestress_matches_elastic_speed() {
+        let (mu, lambda, m, n, rho) = (3000.0, 2.0e9, -3000.0, -2000.0, 1060.0);
+        let c0 = acoustoelastic_shear_speed(mu, lambda, m, n, rho, 0.0);
+        assert!((c0 - shear_wave_speed(mu, rho)).abs() < 1e-9);
+    }
+
+    #[test]
+    fn acoustoelastic_sensitivity_formula() {
+        let a = acoustoelastic_sensitivity(-3000.0, -2000.0, 2.0e9, 3000.0);
+        assert!((a - (-5000.0) / (2.0 * (2.0e9 + 3000.0))).abs() < 1e-18);
+    }
+
+    #[test]
+    fn prestress_round_trip() {
+        // softer skull/tissue-like Lamé to give a non-negligible sensitivity
+        let (mu, lambda, m, n, rho) = (3000.0, 5000.0, -3.0e4, -2.0e4, 1060.0);
+        let a = acoustoelastic_sensitivity(m, n, lambda, mu);
+        assert!(a.abs() > 0.0);
+        let c0 = acoustoelastic_shear_speed(mu, lambda, m, n, rho, 0.0);
+        for &sigma0 in &[-500.0, 0.0, 300.0, 800.0] {
+            let cs = acoustoelastic_shear_speed(mu, lambda, m, n, rho, sigma0);
+            let recovered = estimate_prestress(cs, c0, rho, a);
+            assert!(
+                (recovered - sigma0).abs() < 1e-6,
+                "σ₀ round-trip: in {sigma0}, out {recovered}"
+            );
+        }
+    }
+
+    #[test]
+    fn prestress_sequence_recovers_each_frame() {
+        let (mu, lambda, m, n, rho) = (3000.0, 5000.0, -3.0e4, -2.0e4, 1060.0);
+        let a = acoustoelastic_sensitivity(m, n, lambda, mu);
+        let c0 = acoustoelastic_shear_speed(mu, lambda, m, n, rho, 0.0);
+        let truth = [0.0, 200.0, 400.0, 200.0, -100.0];
+        let seq: Vec<f64> = truth
+            .iter()
+            .map(|&s| acoustoelastic_shear_speed(mu, lambda, m, n, rho, s))
+            .collect();
+        let est = estimate_prestress_sequence(&seq, c0, rho, a);
+        for (e, t) in est.iter().zip(truth) {
+            assert!((e - t).abs() < 1e-6, "frame σ₀ {e} vs {t}");
+        }
+    }
 
     #[test]
     fn shear_wave_speed_elastic() {

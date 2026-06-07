@@ -2,7 +2,7 @@
 
 This directory is the source tree for the in-repository book on ultrasound physics for simulation, diagnostics, therapy, and theranostics. Chapters are organized in pedagogical order — physics foundations first, then transduction, imaging, therapy, and clinical case studies — and reference the production modules that implement each model.
 
-> **Note.** All chapters (1–32) now carry unified, unique, contiguous numbers matching
+> **Note.** All chapters (1–33) now carry unified, unique, contiguous numbers matching
 > their file headers — the duplicate-numbering collisions (two "Chapter 4/5/6/7") and the
 > separate case-study scheme have been resolved. See
 > [REFACTOR_PLAN.md](REFACTOR_PLAN.md) for the campaign tracker.
@@ -54,6 +54,9 @@ This directory is the source tree for the in-repository book on ultrasound physi
 - **30.** [Clinical Theranostic Device Geometries](clinical_device_geometry.md)
 - **31.** [Segmented Tissue Transducer Planning](segmented_tissue_transducer_planning.md)
 - **32.** [Pancreatic Cancer Histotripsy (PDAC)](pancreatic_histotripsy.md)
+
+### Part VIII — Micromachined & Flexible Transducers
+- **33.** [CMUT vs PMUT: Micromachined and Flexible Transducers for IVUS](cmut_vs_pmut.md) — capacitive vs piezoelectric MUTs: electrical properties, microfabrication, self-heating, bandwidth, and a simulation-backed IVUS figure-of-merit verdict.
 
 ## Figure Sources
 

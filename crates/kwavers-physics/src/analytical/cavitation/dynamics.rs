@@ -183,7 +183,12 @@ pub fn rayleigh_plesset_rk4(
 /// at the last finite state if a step becomes non-finite (so a violent collapse
 /// that exceeds explicit-RK4 stability yields a bounded, plottable result rather
 /// than NaN/Inf — see `keller_miksis_shelled_rk4`).
-fn integrate_radial_rk4<F>(t_arr: &[f64], r0_m: f64, rdot0: f64, rhs: F) -> (Vec<f64>, Vec<f64>)
+pub(crate) fn integrate_radial_rk4<F>(
+    t_arr: &[f64],
+    r0_m: f64,
+    rdot0: f64,
+    rhs: F,
+) -> (Vec<f64>, Vec<f64>)
 where
     F: Fn(f64, f64, f64) -> (f64, f64),
 {
@@ -308,6 +313,89 @@ pub fn keller_miksis_shelled_rk4(
     c_liquid: f64,
 ) -> (Vec<f64>, Vec<f64>) {
     let omega = TWO_PI * freq_hz;
+    // Monochromatic drive: forcing `force(t_ret) = (p_ac, dp_ac/dt)` is a single
+    // sinusoid. The full wall-pressure balance and the RK4 loop live in the
+    // shared SSOT core [`keller_miksis_forced_rk4`]; passing this monochromatic
+    // forcing reproduces the canonical Keller–Miksis solution bit-for-bit.
+    let params = KmShellParams {
+        r0_m,
+        p0_pa,
+        rho,
+        sigma,
+        mu,
+        kappa,
+        p_v_pa,
+        xi_s,
+        c_liquid,
+    };
+    keller_miksis_forced_rk4(params, rdot0, t_arr, move |t_ret| {
+        (
+            p_ac_pa * (omega * t_ret).sin(),
+            p_ac_pa * omega * (omega * t_ret).cos(),
+        )
+    })
+}
+
+/// Bubble + liquid parameters for the shell-damped Keller–Miksis wall model.
+///
+/// Bundles the per-bubble constants shared by every Keller–Miksis drive variant
+/// so the forcing-generic core [`keller_miksis_forced_rk4`] keeps a clean
+/// signature (associated-bundle pattern, not a long parameter chain).
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct KmShellParams {
+    /// Equilibrium radius `R₀` [m].
+    pub r0_m: f64,
+    /// Ambient pressure `P₀` [Pa].
+    pub p0_pa: f64,
+    /// Liquid density `ρ` [kg/m³].
+    pub rho: f64,
+    /// Surface tension `σ` [N/m].
+    pub sigma: f64,
+    /// Liquid dynamic viscosity `μ` [Pa·s].
+    pub mu: f64,
+    /// Polytropic exponent `κ` of the non-condensable gas.
+    pub kappa: f64,
+    /// Saturated vapor pressure `P_v` [Pa].
+    pub p_v_pa: f64,
+    /// Lumped Newtonian shell viscosity `ξ_s` [Pa·s·m] (de Jong 1994); 0 = bare.
+    pub xi_s: f64,
+    /// Liquid sound speed `c` [m/s].
+    pub c_liquid: f64,
+}
+
+/// Integrate the shell-damped Keller–Miksis equation under an *arbitrary*
+/// acoustic forcing, the SSOT core for every drive waveform.
+///
+/// `force(t_ret) → (p_ac, dp_ac/dt)` returns the acoustic pressure and its bare
+/// time derivative (without the `(1 + Ṙ/c)` compressibility factor, which the
+/// radiation-damping term applies) evaluated at the retarded time `t_ret = t +
+/// R/c`. The monochromatic [`keller_miksis_shelled_rk4`] passes a single
+/// sinusoid; the swept-frequency module passes a chirp. Both therefore share one
+/// audited wall-pressure balance and one RK4 loop — no duplicated dynamics.
+///
+/// # Reference
+/// Keller & Miksis (1980), *J. Acoust. Soc. Am.* 68, 628 (canonical form,
+/// Brennen 2014 Eq 4.5); de Jong et al. (1994) for the lumped shell viscosity.
+pub(crate) fn keller_miksis_forced_rk4<Force>(
+    params: KmShellParams,
+    rdot0: f64,
+    t_arr: &[f64],
+    force: Force,
+) -> (Vec<f64>, Vec<f64>)
+where
+    Force: Fn(f64) -> (f64, f64),
+{
+    let KmShellParams {
+        r0_m,
+        p0_pa,
+        rho,
+        sigma,
+        mu,
+        kappa,
+        p_v_pa,
+        xi_s,
+        c_liquid,
+    } = params;
     // Canonical polytropic gas closure with vapor-pressure separation
     // (Brennen 1995 sec 2.4):
     //   p_gas_total(r) = p_nc(r) + p_v,
@@ -329,20 +417,13 @@ pub fn keller_miksis_shelled_rk4(
     // contributions, not just the gas-pressure / acoustic-forcing parts.
     // The d/dt term likewise differentiates the full p_L(R) - p_inf, not just
     // the gas pressure.
-    //
-    // Prior to 2026-05-21 the surface-tension and viscous terms were added
-    // outside the (1 + Rdot/c) factor and the radiation-damping derivative
-    // included only dp_gas/dt.  At low wall-Mach number Rdot/c ~ 0.01 (typical
-    // tissue-bubble drive) the error was sub-percent; near collapse where
-    // Rdot/c → 0.1+, the error grew to multiple percent and biased the
-    // radiation-damping balance.
     let rhs = |r: f64, rdot: f64, t: f64| -> (f64, f64) {
         let r_c = r.max(1e-15);
         // Non-condensable partial pressure and full internal pressure.
         let p_nc = p_eq * (r0_m / r_c).powf(3.0 * kappa);
         let p_gas = p_nc + p_v_pa;
         let t_ret = t + r_c / c_liquid;
-        let p_ac_ret = p_ac_pa * (omega * t_ret).sin();
+        let (p_ac_ret, dp_ac_dt) = force(t_ret);
 
         // Liquid-side bubble wall pressure and far-field pressure.
         // The lumped Newtonian shell-damping pressure −4 ξ_s Ṙ / R² (de Jong
@@ -362,8 +443,7 @@ pub fn keller_miksis_shelled_rk4(
         // Viscous wall stress term (first-order, neglecting R-ddot back-reaction):
         //   d(-4 mu Rdot/R)/dt ≈ 4 mu Rdot^2 / R^2
         // Retarded far-field acoustic pressure derivative:
-        //   dp_inf/dt = p_ac' (t_ret) * (1 + Rdot/c)
-        //             = p_ac * omega * cos(omega t_ret) * (1 + Rdot/c)
+        //   dp_inf/dt = p_ac'(t_ret) * (1 + Rdot/c)   [compressibility factor]
         let dp_nc_dt = -3.0 * kappa * p_nc * rdot / r_c;
         let dp_surface_dt = young_laplace_pressure(sigma, r_c) * rdot / r_c;
         let dp_viscous_dt = 4.0 * mu * rdot * rdot / (r_c * r_c);
@@ -377,7 +457,7 @@ pub fn keller_miksis_shelled_rk4(
         // a radiation-damping source. xi_s = 0 leaves dp_wall_dt unchanged, so
         // the bare Keller–Miksis solution is recovered bit-for-bit.
         let dp_wall_dt = dp_nc_dt + dp_surface_dt + dp_viscous_dt;
-        let dp_inf_dt = p_ac_pa * omega * (omega * t_ret).cos() * (1.0 + rdot / c_liquid);
+        let dp_inf_dt = dp_ac_dt * (1.0 + rdot / c_liquid);
 
         let rdot_cl = rdot / c_liquid;
         let lhs_coeff = (1.0 - rdot_cl) * r_c;
@@ -394,8 +474,6 @@ pub fn keller_miksis_shelled_rk4(
     };
 
     // Shared RK4 loop + radius floor + inertial-collapse arrest (see
-    // `integrate_radial_rk4`). The arrest is what keeps a super-threshold shelled
-    // collapse bounded; for ξ_s = 0 the bare Keller–Miksis solution stays finite
-    // via the radius floor, so it is recovered bit-for-bit.
+    // `integrate_radial_rk4`).
     integrate_radial_rk4(t_arr, r0_m, rdot0, rhs)
 }

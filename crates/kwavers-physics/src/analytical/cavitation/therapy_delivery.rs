@@ -363,6 +363,74 @@ pub fn integrate_channel_psd(channel_psd: &[f64], n_receivers: usize, n_freq: us
     out
 }
 
+/// Backscatter coefficient of partially fractionated tissue (lesion B-mode).
+///
+/// Histotripsy mechanically homogenizes tissue: the sub-resolution acoustic
+/// scatterers (cell nuclei, collagen fibres) that produce B-mode speckle are
+/// progressively destroyed as the fractionation fraction `f ∈ [0, 1]` rises, so
+/// the (incoherent) backscatter coefficient falls from the intact-tissue value
+/// `σ_intact` toward the near-anechoic liquefied-homogenate value
+/// `σ_liquefied`:
+/// ```text
+/// σ_bsc(f) = σ_liquefied + (σ_intact − σ_liquefied)·(1 − f)^γ
+/// ```
+/// The exponent `γ ≥ 1` controls how fast coherent scatterer structure is lost;
+/// `γ = 2` matches the quadratic backscatter–scatterer-density scaling for
+/// progressive homogenization. This is why a completed histotripsy lesion reads
+/// **hypoechoic** on post-treatment B-mode while the surrounding tissue keeps
+/// full speckle. `f` is clamped to [0, 1].
+///
+/// # Reference
+/// Wang et al. (2018), *Ultrasound Med. Biol.* 44, 2466 (lesion echogenicity);
+/// Insana et al. (1990), *J. Acoust. Soc. Am.* 87, 179 (backscatter ∝ scatterer
+/// number density).
+#[must_use]
+pub fn fractionation_backscatter_coefficient(
+    fractionation: &[f64],
+    sigma_intact: f64,
+    sigma_liquefied: f64,
+    gamma: f64,
+) -> Vec<f64> {
+    let g = gamma.max(1.0);
+    fractionation
+        .iter()
+        .map(|&f| {
+            let f = f.clamp(0.0, 1.0);
+            sigma_liquefied + (sigma_intact - sigma_liquefied) * (1.0 - f).powf(g)
+        })
+        .collect()
+}
+
+/// Acoustic impedance of partially fractionated tissue (lesion-rim echo).
+///
+/// As tissue liquefies its specific acoustic impedance `Z = ρc` migrates from
+/// the intact value `z_intact` toward the water-like homogenate value
+/// `z_liquefied` by linear volume mixing:
+/// ```text
+/// Z(f) = z_intact·(1 − f) + z_liquefied·f
+/// ```
+/// The spatial gradient of this map produces the **specular bright rim** seen at
+/// the boundary of a histotripsy lesion (impedance mismatch between liquefied
+/// core and intact rim). `f` is clamped to [0, 1].
+///
+/// # Reference
+/// Bamber (1986), *Physical Principles of Medical Ultrasonics* (impedance
+/// mixing); histotripsy lesion-boundary echogenicity (Wang et al. 2018).
+#[must_use]
+pub fn fractionation_acoustic_impedance(
+    fractionation: &[f64],
+    z_intact: f64,
+    z_liquefied: f64,
+) -> Vec<f64> {
+    fractionation
+        .iter()
+        .map(|&f| {
+            let f = f.clamp(0.0, 1.0);
+            z_intact.mul_add(1.0 - f, z_liquefied * f)
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -373,6 +441,39 @@ mod tests {
         assert!((r - 0.6e-3).abs() < 1e-12);
         let unconstrained = clipped_lateral_radius_for_clearance(2.0e-3, 30.0e-3, 5.0);
         assert!((unconstrained - 2.0e-3).abs() < 1e-12);
+    }
+
+    #[test]
+    fn backscatter_drops_monotonically_with_fractionation() {
+        // Intact tissue keeps full backscatter; fully fractionated → liquefied
+        // floor; the lesion is hypoechoic relative to its surround.
+        let f = [0.0, 0.25, 0.5, 0.75, 1.0];
+        let si = 1.0;
+        let sl = 0.05;
+        let s = fractionation_backscatter_coefficient(&f, si, sl, 2.0);
+        assert!((s[0] - si).abs() < 1e-12, "intact backscatter preserved");
+        assert!((s[4] - sl).abs() < 1e-12, "liquefied floor reached");
+        assert!(
+            s.windows(2).all(|w| w[1] <= w[0] + 1e-15),
+            "monotone non-increasing"
+        );
+        // γ = 2 quadratic: at f = 0.5, σ = sl + (si-sl)*0.25.
+        assert!((s[2] - (sl + (si - sl) * 0.25)).abs() < 1e-12);
+        // Hypoechoic contrast: completed lesion backscatter ≪ intact.
+        assert!(s[4] < 0.1 * s[0]);
+    }
+
+    #[test]
+    fn impedance_mixes_linearly_for_rim_echo() {
+        let f = [0.0, 0.5, 1.0];
+        let zi = 1.65e6; // intact liver ≈ 1.65 MRayl
+        let zl = 1.50e6; // liquefied homogenate ≈ water-like
+        let z = fractionation_acoustic_impedance(&f, zi, zl);
+        assert!((z[0] - zi).abs() < 1e-6);
+        assert!((z[1] - 0.5 * (zi + zl)).abs() < 1e-6);
+        assert!((z[2] - zl).abs() < 1e-6);
+        // A gradient exists across a partial→full boundary (drives the rim echo).
+        assert!((z[0] - z[2]).abs() > 1e5);
     }
 
     #[test]

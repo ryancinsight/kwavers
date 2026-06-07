@@ -34,12 +34,17 @@ import numpy as np
 import pykwavers as kw
 
 def _find_repo_root(start: str) -> str:
-    """Walk up to the directory containing ``data/kernels`` (robust to crate
-    depth; the crate move to crates/kwavers-python/ changed the relative depth)."""
+    """Walk up to the directory containing a POPULATED ``data/kernels`` (robust
+    to crate depth; the crate move to crates/kwavers-python/ changed the relative
+    depth). The populated-directory check is load-bearing: a prior wrong-path
+    write left an *empty* ``crates/data/kernels`` stray that, if matched, would
+    shadow the real repo root and make every kernel lookup fail."""
     d = os.path.abspath(start)
     while True:
-        if os.path.isdir(os.path.join(d, "data", "kernels")) or \
-                os.path.isdir(os.path.join(d, "docs", "book")):
+        kd = os.path.join(d, "data", "kernels")
+        if os.path.isdir(kd) and any(f.endswith(".npz") for f in os.listdir(kd)):
+            return d
+        if os.path.isdir(os.path.join(d, "docs", "book")):
             return d
         parent = os.path.dirname(d)
         if parent == d:

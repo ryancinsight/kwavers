@@ -188,6 +188,120 @@ pub fn arrhenius_cumulative(t_celsius: &[f64], dt_s: f64, a_per_s: f64, ea_j_mol
         .collect()
 }
 
+/// Cumulative thermal cell-death probability from the Arrhenius damage integral.
+///
+/// ```text
+/// P_death(t_k) = 1 − exp(−Ω(t_k))
+/// ```
+/// where `Ω(t_k)` is the cumulative Arrhenius damage integral (see
+/// [`arrhenius_cumulative`]). At `Ω = 1` this reproduces the Henriques (1947)
+/// 63 % kill criterion (`1 − e^{-1} ≈ 0.632`); the probability saturates toward
+/// 1 as thermal exposure accumulates. This is the canonical map from a thermal
+/// dose history to a per-voxel kill probability, suitable for combination with a
+/// mechanical (cavitation) kill probability via [`combined_kill_probability`].
+///
+/// # Arguments
+/// * `t_celsius` – temperature time series [°C]
+/// * `dt_s` – time step [s]
+/// * `a_per_s` – frequency factor A [s⁻¹]
+/// * `ea_j_mol` – activation energy Ea [J/mol]
+///
+/// Returns the cumulative kill probability at each time step, in [0, 1).
+///
+/// # Reference
+/// Henriques & Moritz (1947), *Am. J. Pathol.* 23, 531;
+/// Pearce (2013), *J. Biomech. Eng.* 135, 121002 (survival-fraction reading).
+#[must_use]
+pub fn arrhenius_kill_probability(
+    t_celsius: &[f64],
+    dt_s: f64,
+    a_per_s: f64,
+    ea_j_mol: f64,
+) -> Vec<f64> {
+    arrhenius_cumulative(t_celsius, dt_s, a_per_s, ea_j_mol)
+        .into_iter()
+        .map(|omega| 1.0 - (-omega).exp())
+        .collect()
+}
+
+/// Per-voxel thermal cell-death probability for a steady temperature held for a
+/// fixed duration.
+///
+/// Treats each element of `t_celsius` as an INDEPENDENT voxel held at a constant
+/// temperature `T` for `duration_s`, giving the Arrhenius damage
+/// `Ω = A·exp(−Ea/(R·T_K))·duration_s` and kill probability `P = 1 − exp(−Ω)`.
+/// This is the spatial-field analogue of [`arrhenius_kill_probability`] (which
+/// integrates a temperature *time series*), and mirrors the per-voxel-steady
+/// semantics used for CEM43 field dosimetry — one steady temperature per voxel,
+/// one exposure time — so a steady-state thermal map can be turned directly into
+/// a biologically-effective thermal kill field for [`combined_kill_probability`].
+///
+/// # Arguments
+/// * `t_celsius` – per-voxel steady temperature [°C]
+/// * `duration_s` – exposure duration [s]
+/// * `a_per_s` – frequency factor A [s⁻¹]
+/// * `ea_j_mol` – activation energy Ea [J/mol]
+///
+/// Returns per-voxel kill probability in [0, 1), same length as `t_celsius`.
+///
+/// # Reference
+/// Henriques & Moritz (1947), *Am. J. Pathol.* 23, 531.
+#[must_use]
+pub fn arrhenius_steady_kill_probability(
+    t_celsius: &[f64],
+    duration_s: f64,
+    a_per_s: f64,
+    ea_j_mol: f64,
+) -> Vec<f64> {
+    let r_gas = GAS_CONSTANT;
+    t_celsius
+        .iter()
+        .map(|&t| {
+            let t_k = t + KELVIN_OFFSET_C;
+            let omega = a_per_s * (-ea_j_mol / (r_gas * t_k)).exp() * duration_s;
+            1.0 - (-omega).exp()
+        })
+        .collect()
+}
+
+/// Combine independent cell-kill insults into one biologically-effective kill
+/// probability.
+///
+/// For statistically independent mechanical (cavitation/fractionation) and
+/// thermal (protein-denaturation) damage mechanisms the *survival* probabilities
+/// multiply, so the combined kill probability is
+/// ```text
+/// P_kill = 1 − (1 − P_mech)·(1 − P_thermal)
+/// ```
+/// Each input is clamped to [0, 1]; the result lies in [0, 1] and is never less
+/// than `max(P_mech, P_thermal)` (adding an insult cannot reduce kill). This is
+/// the single source of truth for fusing the mechanical and thermal dose maps of
+/// a histotripsy / boiling-histotripsy treatment into one biologically-effective
+/// dose field.
+///
+/// The two slices are combined element-wise over the shorter of the two lengths.
+///
+/// # Arguments
+/// * `p_mech` – per-voxel mechanical (cavitation) kill probability, in [0, 1]
+/// * `p_thermal` – per-voxel thermal kill probability, in [0, 1]
+///   (e.g. from [`arrhenius_kill_probability`])
+///
+/// # Reference
+/// Independent-insult survival product (Pearce 2013); multi-mechanism
+/// histotripsy damage (Vlaisavljevich et al. 2015).
+#[must_use]
+pub fn combined_kill_probability(p_mech: &[f64], p_thermal: &[f64]) -> Vec<f64> {
+    p_mech
+        .iter()
+        .zip(p_thermal.iter())
+        .map(|(&m, &t)| {
+            let m = m.clamp(0.0, 1.0);
+            let t = t.clamp(0.0, 1.0);
+            1.0 - (1.0 - m) * (1.0 - t)
+        })
+        .collect()
+}
+
 /// FDA ISPTA.3 output limit.
 ///
 /// ```text
@@ -283,6 +397,77 @@ mod tests {
         let t = vec![70.0; 100];
         let omega = arrhenius_damage_integral(&t, 0.01, 3.1e98, 6.28e5);
         assert!(omega > 0.0);
+    }
+
+    #[test]
+    fn arrhenius_kill_probability_is_one_minus_exp_neg_omega() {
+        // Contract: P_death(t_k) = 1 - exp(-Ω(t_k)) element-wise vs the
+        // cumulative Arrhenius integral; monotone non-decreasing; bounded [0, 1].
+        let a = 3.1e98;
+        let ea = 6.28e5;
+        let t = vec![70.0; 200];
+        let dt = 0.01;
+        let omega = arrhenius_cumulative(&t, dt, a, ea);
+        let p = arrhenius_kill_probability(&t, dt, a, ea);
+        for (&pk, &ok) in p.iter().zip(omega.iter()) {
+            assert!((pk - (1.0 - (-ok).exp())).abs() < 1e-12);
+        }
+        assert!(p.windows(2).all(|w| w[1] >= w[0] - 1e-15), "monotone");
+        assert!(p.iter().all(|&x| (0.0..=1.0).contains(&x)), "bounded [0,1]");
+        // The Henriques Ω = 1 point gives the 63% kill criterion (1 - e^-1).
+        assert!((1.0 - (-1.0_f64).exp() - 0.6321205588).abs() < 1e-9);
+    }
+
+    #[test]
+    fn arrhenius_kill_probability_zero_at_body_temp() {
+        // At 37 °C over a short exposure, thermal kill is negligible.
+        let p = arrhenius_kill_probability(&vec![37.0; 50], 0.01, 3.1e98, 6.28e5);
+        assert!(*p.last().unwrap() < 1e-6);
+    }
+
+    #[test]
+    fn arrhenius_steady_kill_matches_time_series_single_step() {
+        // A single-element steady field for `duration` must equal a 1-step
+        // time-series kill with dt = duration (same Ω).
+        let a = 7.39e66;
+        let ea = 4.30e5;
+        let dur = 30.0;
+        let steady = arrhenius_steady_kill_probability(&[57.0], dur, a, ea);
+        let series = arrhenius_kill_probability(&[57.0], dur, a, ea);
+        assert!((steady[0] - series[0]).abs() < 1e-12);
+        // Per-voxel independence: hotter voxel kills more.
+        let field = arrhenius_steady_kill_probability(&[45.0, 55.0, 65.0], dur, a, ea);
+        assert!(field[0] <= field[1] && field[1] <= field[2]);
+        assert!(field.iter().all(|&x| (0.0..=1.0).contains(&x)));
+    }
+
+    #[test]
+    fn combined_kill_is_independent_insult_product() {
+        // P_kill = 1 - (1-m)(1-t); verify a few exact values + the bounds.
+        let m = [0.0, 0.5, 0.9, 1.0];
+        let t = [0.0, 0.5, 0.2, 0.0];
+        let c = combined_kill_probability(&m, &t);
+        let expect: Vec<f64> = m
+            .iter()
+            .zip(t.iter())
+            .map(|(&a, &b)| 1.0 - (1.0 - a) * (1.0 - b))
+            .collect();
+        for (got, exp) in c.iter().zip(expect.iter()) {
+            assert!((got - exp).abs() < 1e-12, "got={got} exp={exp}");
+        }
+        // Adding an insult never reduces kill: combined ≥ max(m, t).
+        for ((&a, &b), &got) in m.iter().zip(t.iter()).zip(c.iter()) {
+            assert!(got >= a.max(b) - 1e-12);
+            assert!((0.0..=1.0).contains(&got));
+        }
+    }
+
+    #[test]
+    fn combined_kill_clamps_out_of_range_inputs() {
+        // Inputs outside [0,1] are clamped before combination.
+        let c = combined_kill_probability(&[1.5, -0.3], &[0.4, 2.0]);
+        assert!((c[0] - 1.0).abs() < 1e-12); // m clamps to 1 → kill 1
+        assert!((c[1] - 1.0).abs() < 1e-12); // t clamps to 1 → kill 1
     }
 
     #[test]

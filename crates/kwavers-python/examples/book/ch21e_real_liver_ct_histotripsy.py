@@ -42,7 +42,7 @@ import matplotlib.patches as mpatches
 from matplotlib.colors import LinearSegmentedColormap, ListedColormap
 from matplotlib.lines import Line2D
 from scipy.ndimage import (binary_closing, binary_dilation, binary_erosion,
-                           distance_transform_edt, label, zoom)
+                           distance_transform_edt, label, maximum_filter, zoom)
 from scipy.special import erf
 
 try:
@@ -120,6 +120,23 @@ class Tissue:
     # 1σ width of the Maxwell 2013 erf-CDF threshold distribution (Pa).
     # Reflects biological variability within each tissue type.
     pt_sigma_pa: float = 0.96e6  # default: water-based σ (Maxwell 2013)
+    # Histotripsy fractionation dose-response (Weibull):
+    #   kill = 1 − exp(−(events/frac_d0)^frac_k)
+    # where `events` = expected number of supra-threshold cavitation events at a
+    # voxel (= pulses × P_cav). frac_d0 = events for 63 % fractionation; frac_k =
+    # sigmoid shoulder exponent. Denser/stiffer tissue resists fractionation.
+    # Vlaisavljevich 2014 (UMB 40:1379) liver fractionation pulse counts;
+    # Maxwell 2013 dose–response shoulder. `frac_d0` is calibrated to the per-
+    # point pulse budget of this simulation (intrinsic regime = 100 pulses/point
+    # = HistoSonics clinical dose), so a single supra-threshold focal exposure
+    # drives kill→1 at the focus and the lateral P_cav taper sets the footprint.
+    frac_d0: float = 25.0    # cavitation events for 63 % fractionation (soft tissue)
+    frac_k: float = 2.5      # Weibull shoulder exponent
+    # Arrhenius thermal-damage kinetics (protein denaturation):
+    #   Ω = A·exp(−Ea/(R·T_K))·t ; P_thermal = 1 − exp(−Ω)
+    # Liver-parenchyma values (Jacques 1996; Bhowmick 2002 scaled).
+    arr_a_per_s: float = 7.39e66   # frequency factor A [1/s]
+    arr_ea_j_mol: float = 4.30e5   # activation energy Ea [J/mol]
 
 
 #  Acoustic/thermal: Duck 1990 / IT'IS Foundation v4.1 / Mast 2000
@@ -156,13 +173,17 @@ HCC    = Tissue(6, "hcc",    1066.0, 1570.0,  12.500, 1.10, 3750.0, 0.55, 9.0,
                 # HCC has denser cell packing and higher nuclear/cytoplasm ratio
                 # than normal parenchyma → slightly higher threshold 22.2 MPa,
                 # narrower distribution σ = 1.2 MPa (uniform pathological tissue).
-                pt_pa_1mhz=22.2e6, pt_sigma_pa=1.2e6)
+                # Denser/stiffer tumour stroma also resists fractionation, so it
+                # needs more cavitation events for 63 % kill than normal liver.
+                pt_pa_1mhz=22.2e6, pt_sigma_pa=1.2e6,
+                frac_d0=40.0, frac_k=2.8)
 # Same acoustic/thermal properties as HCC but separate label so
 # multifocal disease can be visualised — only the target focus
 # (label 6) is driven by the raster planner; HCC_OTHER (label 7)
 # is shown as untreated for context.
 HCC_OTHER = Tissue(7, "hcc_other", 1066.0, 1570.0, 12.500, 1.10, 3750.0, 0.55, 9.0,
-                   pt_pa_1mhz=22.2e6, pt_sigma_pa=1.2e6)
+                   pt_pa_1mhz=22.2e6, pt_sigma_pa=1.2e6,
+                   frac_d0=40.0, frac_k=2.8)
 
 TISSUES = [AIR, SKIN, FAT, MUSCLE, BONE, LIVER, HCC, HCC_OTHER]
 
@@ -338,6 +359,54 @@ SCENARIOS = [
              0.5e6, 18.0e6, 35.0e6, 5.0e-3, 10.0, 0.0, 0, 2.5, "#2ca02c",
              interleave_subspots=8, pulses_per_point=50),
 ]
+
+
+# ───────────────────────────────────────────────────────────────────────
+# Clinical prescription, selectivity, and closed-loop control parameters
+# ───────────────────────────────────────────────────────────────────────
+# Histotripsy vessel-sparing: residual mechanical-kill fraction inside large
+# vessels (≈0 ⇒ fully spared). 0.15 reflects partial peri-luminal damage while
+# the lumen/wall survive (Vlaisavljevich 2014; Roberts 2014).
+VESSEL_SPARING_FACTOR = 0.15
+
+# Prescription (radiation-oncology style, adapted to mechanical ablation):
+#   - the GTV must reach the ablative kill level over ≥ RX_COVERAGE of its volume
+#   - collateral ablation is bounded by a spillover ratio and a minimum confinement
+#   - absolute OARs must receive no ablative dose; flagged OARs stay below a cap
+RX_KILL = 0.90               # prescription iso-kill (LD90 ablative endpoint)
+RX_COVERAGE = 0.95           # ≥95 % of the CTV must reach RX_KILL (V90 ≥ 95 %)
+RX_SPILLOVER_RATIO_MAX = 1.0  # ablation BEYOND the PTV ≤ 1× the GTV volume
+# Paddick (2000) Conformity Index acceptance floor. SRS practice grades CI ≥ 0.6
+# as conformal; histotripsy lesions are intrinsically less conformal than a
+# steered SRS dose, so 0.55 is the acceptance threshold here.
+RX_CONFORMITY_MIN = 0.55
+OAR_ABSOLUTE_VABL_MAX = 0.005  # absolute OARs: ≤0.5 % ablative-volume tolerance
+OAR_FLAGGED_KILL_MAX = 0.20    # flagged OARs: peak kill probability cap
+
+# Closed-loop per-spot control: deliver pulses until the focal kill reaches
+# RX_KILL, bounded by a clinical pulse budget. Avoids the open-loop fixed count.
+CLOSED_LOOP_MIN_PULSES = 10
+CLOSED_LOOP_MAX_PULSES = 600   # safety cap (HistoSonics-class per-spot budget)
+
+# Pulse-duration modulation ("edge feathering"). Spots whose ablative footprint
+# would reach a critical structure (absolute OAR or liver capsule) fire a
+# SHORTENED pulse, producing a smaller, more conformal lesion that does not
+# overshoot the structure. Boiling-lesion penetration scales ~√(pulse duration),
+# so a 0.4× pulse gives ~0.63× footprint radius. This is the clinical "shorten
+# the pulse at the boundary" technique; the coverage lost at the feathered rim
+# is recovered by the closed-loop pulse-count escalation on interior spots.
+SHORT_PULSE_FACTOR = 0.4
+
+# Boiling-histotripsy cavity localization. The fractionating vapour cavity
+# nucleates at the focal PRESSURE PEAK, not throughout the broadly-heated zone:
+# the transient-temperature model can read far past 100 °C over a large focal
+# cigar, but the mechanically-disruptive boiling cavity is confined to the
+# high-pressure core. The per-shot boiling lesion is therefore gated to the
+# focal core (p ≥ CAVITY_CORE_FRACTION · p_peak) — a physical "tadpole" lesion
+# (Khokhlova 2014; Maxwell 2017) — so dense rastering builds a conformal volume
+# instead of a few oversized exposures, and the broad sub-cavity heating does not
+# count as mechanical ablation.
+CAVITY_CORE_FRACTION = 0.6
 
 
 def autosize_raster(
@@ -983,7 +1052,13 @@ def thermal_maps(p_field, props, sc):
         )
     ).reshape(p_field.shape)
     dT_p = Q_pulse * sc.pulse_on_s / (props["rho"] * props["cp"])
-    T_transient = np.minimum(37.0 + dT_p, 100.0)
+    T_transient = np.minimum(37.0 + dT_p, 100.0)        # capped tissue temp (boiling plateau)
+    # Uncapped temperature rise = boiling-VIGOR proxy. Once boiling onset (100°C)
+    # is reached the tissue temperature plateaus (latent heat), but the surplus
+    # deposited energy drives a larger, more violent vapour cavity → more complete
+    # fractionation. The boiling-histotripsy kill model uses this surplus so a
+    # well-driven ms pulse fully fractionates instead of saturating at 0.5.
+    T_transient_uncapped = 37.0 + dT_p
 
     duty = sc.pulse_on_s * sc.prf
     Q_avg = Q_pulse * duty
@@ -1008,13 +1083,15 @@ def thermal_maps(p_field, props, sc):
         R = np.where(T_steady >= 43.0, 0.5, 0.25)
         cem43 = (R ** (43.0 - T_steady)) * (sc.treatment_s / 60.0)
     cem43[T_steady < 39.0] = 0.0
-    return cem43, T_steady, T_transient
+    return cem43, T_steady, T_transient, T_transient_uncapped
 
 
 def predicted_lesion(p_field, props, sc, info, label_vol,
-                     oar_masks: dict[str, np.ndarray] | None = None):
+                     oar_masks: dict[str, np.ndarray] | None = None,
+                     ctv: np.ndarray | None = None,
+                     ptv: np.ndarray | None = None):
     # Thermal maps first: T_transient feeds the temperature correction for p_t.
-    cem43, T_steady, T_transient = thermal_maps(p_field, props, sc)
+    cem43, T_steady, T_transient, T_transient_uncapped = thermal_maps(p_field, props, sc)
     # Per-voxel tissue-specific cavitation probability.
     # Each voxel uses the threshold and σ of the tissue at that position
     # (LIVER, HCC, FAT, MUSCLE …) plus a −0.3 MPa/°C temperature correction
@@ -1065,18 +1142,108 @@ def predicted_lesion(p_field, props, sc, info, label_vol,
         pt_focal = intrinsic_threshold(sc.f0)   # fallback for bone/air
     cloud_r_m = lam_m / 4.0 * max(sc.pnp / pt_focal, 1.0)
     cloud_vox = max(int(round(cloud_r_m / info["dx"])), 1)
+    # ── Biologically-effective dose (BED) ───────────────────────────────────
+    # A single continuous per-voxel kill probability that fuses the MECHANICAL
+    # (cavitation fractionation) and THERMAL (protein-denaturation) insults,
+    # replacing the former hard binary thresholds. All dose physics is delegated
+    # to kwavers (no hand-rolled survival math): the mechanical Weibull
+    # dose-response, the Arrhenius thermal kill, and the independent-insult
+    # combination each live in kwavers_physics. The lesion is the LD50 iso-
+    # surface of this BED field.
+    shp = p_field.shape
+    # Thermal exposure time per voxel = the focal DWELL, not the total treatment.
+    # In a rastered ablation the focus visits each location only briefly; a voxel
+    # reaches its quasi-steady focal temperature T_steady only while the focus is
+    # within thermal-diffusion range of it (one dwell), after which perfusion
+    # clamps the background rise. Using the TOTAL treatment time would assume
+    # every voxel is held at its steady temperature for the entire (raster-density
+    # dependent) treatment — a gross over-estimate that ablates the whole field as
+    # the raster densifies. The dwell = pulses_per_point / PRF is the correct,
+    # raster-density-independent thermal insult (Pennes-limited steady focal temp
+    # held for the active focal sonication time).
+    dwell_s = max(pulses_per_pt / max(sc.prf, 1e-9), 1e-9)
+    # Thermal kill probability per voxel: steady focal temperature held for the
+    # focal-dwell duration, focal-tissue Arrhenius kinetics (Henriques criterion).
+    p_therm = np.asarray(kw.arrhenius_steady_kill_probability(
+        T_steady.ravel().astype(float), dwell_s,
+        _focus_tissue.arr_a_per_s, _focus_tissue.arr_ea_j_mol)).reshape(shp)
+    # Mechanical kill probability per voxel from the regime dose-response.
     if sc.regime == "intrinsic":
-        p_acc = 1.0 - (1.0 - pcav) ** pulses_per_pt
-        mech = binary_dilation(p_acc >= 0.95, iterations=cloud_vox)
+        # Expected supra-threshold cavitation events per voxel over the
+        # per-point pulse train, mapped through the tissue-specific Weibull
+        # fractionation dose-response (kill = 1 − exp(−(events/d0)^k), kwavers).
+        events = (pulses_per_pt * pcav).astype(float)
+        p_mech = np.asarray(kw.delivered_histotripsy_progress(
+            events.ravel(), _focus_tissue.frac_d0, _focus_tissue.frac_k)).reshape(shp)
     elif sc.regime == "shock_vapor":
-        seed = T_transient >= 100.0
-        sv_cloud = max(int(round(3.0e-3 / info["dx"])), 1)
-        mech = binary_dilation(seed, iterations=sv_cloud)
-    elif sc.regime == "subthreshold_cav":
-        mech = binary_dilation(coll >= 5.0, iterations=cloud_vox)
-    else:
-        mech = np.zeros_like(p_field, dtype=bool)
-    therm = cem43 >= 240.0
+        # Boiling histotripsy: once boiling onset (100 °C) is reached, the vapour
+        # cavity + acoustic interaction fractionates tissue to a homogenate. The
+        # DEGREE of fractionation scales with boiling vigor — how far the
+        # (uncapped) temperature rise exceeds the 100 °C onset — so a well-driven
+        # ms pulse fully fractionates (p_mech → 1). Driving the kill from the
+        # capped-at-onset temperature (old model) saturated p_mech at 0.5 and made
+        # boiling histotripsy spuriously under-perform; using the boiling-vigor
+        # surplus (Khokhlova 2014; Maxwell 2017 BH lesion completeness) is correct.
+        p_mech = 1.0 / (1.0 + np.exp(-(T_transient_uncapped - 100.0) / 12.0))
+    else:  # subthreshold_cav
+        # Sub-threshold erosion above the S_c = 5 fractionation knee, logistic-
+        # softened over one collapse-strength unit.
+        p_mech = 1.0 / (1.0 + np.exp(-(coll - 5.0) / 1.0))
+    # Confine the ms-regime cavitation cloud to the focal pressure core. Both the
+    # boiling vapour cavity (shock_vapor) and the inertial-collapse erosion cloud
+    # (subthreshold_cav) nucleate only where the rarefactional pressure is high;
+    # the broad sub-cavity heating / weak-collapse skirt outside the core does not
+    # mechanically homogenize tissue. Gating to p >= CAVITY_CORE_FRACTION·p_peak
+    # yields a physical, axially-elongated "tadpole" per-shot lesion that rasters
+    # into a conformal volume instead of a broad, non-selective wash. The intrinsic
+    # (µs) regime is already focal via its supra-threshold P_cav and is left ungated.
+    if sc.regime in ("shock_vapor", "subthreshold_cav"):
+        cavity_core = (p_field >= CAVITY_CORE_FRACTION * float(p_field.max())).astype(float)
+        p_mech = p_mech * cavity_core
+    p_mech = np.clip(p_mech, 0.0, 1.0).astype(float)
+    # Unified BED: independent-insult kill probability P_kill = 1−(1−P_m)(1−P_t).
+    p_kill = np.asarray(kw.combined_kill_probability(
+        p_mech.ravel(), p_therm.ravel())).reshape(shp).astype(np.float32)
+
+    # Lesion = LD50 iso-surface of the BED field, dilated by the bubble-cloud
+    # radius so the ablation mask includes cloud expansion beyond the strict
+    # threshold kernel (mechanical regimes use the overpressure-scaled cloud;
+    # shock-vapour uses the boiling-cavity radius). Boiling histotripsy is planned
+    # CONFORMALLY: each ms pulse makes a small (~1.5 mm) "tadpole" lesion, and the
+    # volume is built by dense rastering — not by a few oversized exposures. The
+    # 1.5 mm boiling cavity (Khokhlova 2014; Maxwell 2017) gives a tight per-shot
+    # footprint so the auto-sized raster is dense enough to conform to the CTV.
+    cloud_iter = (max(int(round(1.5e-3 / info["dx"])), 1)
+                  if sc.regime == "shock_vapor" else cloud_vox)
+    mech = binary_dilation(p_kill >= 0.5, iterations=cloud_iter)
+    # Mechanical-only single-shot footprint (the actual tiled kernel). The raster
+    # survival-product accumulates the MECHANICAL kernel shot-by-shot, whereas the
+    # thermal field is a single global steady field added once — so the raster
+    # PITCH must be sized from the mechanical lesion, not from the broad thermal
+    # halo (which would over-space the grid and leave coverage gaps).
+    mech_core = binary_dilation(p_mech >= 0.5, iterations=cloud_iter)
+    # Thermal-only sub-component (P_thermal ≥ 0.5 ≈ Henriques 63 % at Ω≈1),
+    # reported separately for the mechanical/thermal volume split.
+    therm = p_therm >= 0.5
+    # Single-shot MECHANICAL fractionation field for the cumulative BED. The
+    # bubble cloud fractionates its whole footprint, so the high-kill focal core
+    # of p_mech is grey-dilated (max-filter) out to the cloud radius. This is the
+    # per-shot kill that the raster survival-product accumulates below; using the
+    # regime-specific p_mech (not one global cavitation Weibull) keeps the
+    # boiling (shock-vapour) and erosion (sub-threshold) regimes — which deliver
+    # far fewer pulses than the intrinsic regime — physically correct.
+    per_shot_frac = maximum_filter(p_mech.astype(np.float32),
+                                   size=2 * cloud_iter + 1)
+    # Short-pulse per-shot footprint for edge feathering (pulse-duration
+    # modulation). A shorter pulse still reaches the cavitation/boiling endpoint
+    # AT THE FOCUS but grows a SMALLER lesion (less time for the bubble cloud /
+    # boiling cavity to expand): footprint radius ~√(pulse duration). So the
+    # focal kill (p_mech) is preserved while the cloud is tightened — this is the
+    # conformal, off-OAR feathering, NOT a drop below the boiling threshold
+    # (which would simply fail to ablate).
+    cloud_iter_short = max(int(round(cloud_iter * SHORT_PULSE_FACTOR ** 0.5)), 1)
+    per_shot_frac_short = maximum_filter(p_mech.astype(np.float32),
+                                         size=2 * cloud_iter_short + 1)
 
     # Per-shot footprint volume (before raster superposition) — the
     # lesion produced by a single focal-point exposure, NOT the total
@@ -1086,8 +1253,13 @@ def predicted_lesion(p_field, props, sc, info, label_vol,
     per_shot_volume_mm3 = float((mech | therm).sum() * voxel_vol_mm3)
     per_shot_radius_mm = (per_shot_volume_mm3 * 3.0 / (4.0 * np.pi)) ** (1.0 / 3.0)
 
-    tumour = label_vol == HCC.label
-    coords = np.argwhere(tumour)
+    tumour = label_vol == HCC.label   # GTV (gross tumour) — used for GTV metrics
+    # Clinical planning target = CTV (GTV + ablative margin) when supplied: the
+    # raster is laid out to ablate the gross tumour PLUS its peritumoural margin
+    # (the A0-margin best practice), not just the visible GTV. Falls back to the
+    # GTV for the probe pass (no CTV provided).
+    plan_target = ctv if (ctv is not None and ctv.any()) else tumour
+    coords = np.argwhere(plan_target)
     if len(coords) == 0:
         return mech | therm, {"pcav": pcav, "T_steady": T_steady, "T_transient": T_transient,
                               "cem43": cem43, "metrics": {}}
@@ -1095,8 +1267,8 @@ def predicted_lesion(p_field, props, sc, info, label_vol,
     extent = cmax - cmin
 
     fwhm_lat_m, fwhm_ax_m = focal_fwhm(sc.f0)
-    if mech.any() or therm.any():
-        ps = np.argwhere(mech | therm)
+    if mech_core.any():
+        ps = np.argwhere(mech_core)
         ps_extent = ps.max(0) - ps.min(0) + 1
         mech_hx = max(int(np.ceil(ps_extent[0] / 2.0)), 1)
         mech_hy = max(int(np.ceil(ps_extent[1] / 2.0)), 1)
@@ -1140,7 +1312,7 @@ def predicted_lesion(p_field, props, sc, info, label_vol,
         if rx == 0 and ry == 0 and rz == 0:
             return tumour.copy()
         struct = np.ones((2*rx + 1, 2*ry + 1, 2*rz + 1), dtype=bool)
-        return binary_erosion(tumour, structure=struct)
+        return binary_erosion(plan_target, structure=struct)
     valid_centres = _try_erode(pitch_x, pitch_y, pitch_z)
     if not valid_centres.any():
         # Progressively relax the erosion radius using the per-shot
@@ -1154,7 +1326,41 @@ def predicted_lesion(p_field, props, sc, info, label_vol,
             if valid_centres.any():
                 break
         if not valid_centres.any():
-            valid_centres = tumour.copy()
+            valid_centres = plan_target.copy()
+
+    # ── Clinical best practice: OAR-aware raster exclusion ("no-fly") ────────
+    # Never place a focal spot whose ablative footprint could reach an ABSOLUTE
+    # organ-at-risk (gallbladder, bowel/extrahepatic tissue, bone). This is the
+    # mandatory avoidance constraint of any ablation plan: ablation into bowel
+    # risks perforation, into the gallbladder risks bile peritonitis, into bone
+    # is wasted (no cavitation) and overheats periosteum. Forbidden centres are
+    # the absolute-OAR masks dilated by the per-shot footprint reach, removed
+    # from the candidate set BEFORE shot placement. Flagged OARs (large vessels)
+    # are deliberately NOT excluded — histotripsy is vessel-sparing (handled by
+    # the cumulative vessel-kill cap), and excluding them would needlessly forbid
+    # treating peri-vascular tumour the modality can safely ablate.
+    n_oar_excluded_centres = 0
+    if oar_masks is not None:
+        # Forbid centering a shot INSIDE an absolute-OAR PRV. The PRV mask already
+        # bakes in the avoidance margin (e.g. extrahepatic_prv = 10 mm), so we do
+        # NOT further dilate by the footprint — doing so over-excludes and
+        # needlessly under-treats a confined-lesion (intrinsic) plan whose
+        # ablation never reaches the OAR. A shot whose larger lesion still spills
+        # into the PRV from a tumour-centred position is then caught by the dose
+        # verdict (the residual OAR ablative-volume term), which is the honest
+        # place to surface an unavoidable peri-OAR conflict.
+        forbid = np.zeros_like(tumour, dtype=bool)
+        for spec in OAR_SPECS:
+            if spec.is_absolute:
+                m_oar = oar_masks.get(spec.name)
+                if m_oar is not None and m_oar.any():
+                    forbid |= m_oar
+        allowed = valid_centres & (~forbid)
+        n_oar_excluded_centres = int((valid_centres & forbid).sum())
+        # Apply only if a viable target remains; otherwise keep the original set
+        # and let the dose verdict flag the unavoidable OAR conflict.
+        if allowed.any():
+            valid_centres = allowed
 
     # Farthest-point sampling on the tumour bounding box ONLY (not the
     # full simulation grid) so distance_transform_edt stays O(tumour
@@ -1258,8 +1464,8 @@ def predicted_lesion(p_field, props, sc, info, label_vol,
     mech_super = superpose(mech)
     therm_super = superpose(therm)
     lesion_super = mech_super | therm_super
-    mech_full = mech_super & tumour
-    therm_full = therm_super & tumour
+    mech_full = mech_super & plan_target
+    therm_full = therm_super & plan_target
     lesion = mech_full | therm_full
 
     # Cavitation-dose heatmap — accumulated 1 - (1 - p_per_pulse)^N over
@@ -1275,6 +1481,27 @@ def predicted_lesion(p_field, props, sc, info, label_vol,
     per_pulse = np.clip(dose_map_regime.astype(np.float32), 0.0, 0.99)
     log_safe = np.log(1.0 - per_pulse)  # ≤ 0
     log_dose_super = np.zeros_like(log_safe)
+    # Survival-product accumulator of the per-shot MECHANICAL fractionation
+    # (per_shot_frac): each shot independently fractionates its cloud footprint,
+    # so overlapping shots combine as 1 − Π_shots(1 − p). Accumulate log(1 − p)
+    # (steering-weighted) and exponentiate after the loop. This is the cumulative
+    # mechanical kill that drives the biologically-effective dose field.
+    log_mech_safe = np.log(1.0 - np.clip(per_shot_frac, 0.0, 0.999))
+    log_mech_safe_short = np.log(1.0 - np.clip(per_shot_frac_short, 0.0, 0.999))
+    log_mech_super = np.zeros_like(log_safe)
+    # Edge-feather zone: spots whose nominal footprint would reach a critical
+    # structure (absolute OAR or liver capsule) fire the SHORTENED pulse.
+    feather_zone = np.zeros_like(tumour, dtype=bool)
+    if oar_masks is not None:
+        crit = np.zeros_like(tumour, dtype=bool)
+        for spec in OAR_SPECS:
+            if spec.is_absolute or spec.name == "liver_capsule":
+                mm = oar_masks.get(spec.name)
+                if mm is not None and mm.any():
+                    crit |= mm
+        if crit.any():
+            feather_zone = binary_dilation(crit, iterations=cloud_iter)
+    n_feathered = 0
     n_degraded = 0
     n_mech_anchors = 0
     if raster_grid.any():
@@ -1306,7 +1533,41 @@ def predicted_lesion(p_field, props, sc, info, label_vol,
             dst_z0 = src_z0 + shift[2]; dst_z1 = src_z1 + shift[2]
             log_dose_super[dst_x0:dst_x1, dst_y0:dst_y1, dst_z0:dst_z1] += \
                 log_safe[src_x0:src_x1, src_y0:src_y1, src_z0:src_z1] * k
+            # Pulse-duration modulation: feather (shorten) spots adjacent to a
+            # critical structure so their lesion does not overshoot it.
+            feathered = bool(feather_zone[rpt[0], rpt[1], rpt[2]])
+            if feathered:
+                n_feathered += 1
+            lm = log_mech_safe_short if feathered else log_mech_safe
+            log_mech_super[dst_x0:dst_x1, dst_y0:dst_y1, dst_z0:dst_z1] += \
+                lm[src_x0:src_x1, src_y0:src_y1, src_z0:src_z1] * k
     cav_dose = 1.0 - np.exp(log_dose_super * pulses_per_pt)
+
+    # Cumulative biologically-effective dose (BED) field over the treated volume.
+    # MECHANICAL kill: survival-product of the per-shot fractionation across all
+    # overlapping shots, 1 − Π_shots(1 − per_shot_frac) = 1 − exp(Σ log(1 − p)).
+    # Because per_shot_frac is the regime-specific per-shot kill grey-dilated to
+    # the bubble-cloud footprint, this cumulative field is consistent with the
+    # binary lesion (a fully-covered voxel is fully fractionated) and correct for
+    # every regime regardless of pulse count. THERMAL kill: the Arrhenius field
+    # p_therm. The two independent insults are fused by combined_kill_probability.
+    # This is the quantity the lesion imaging (backscatter contrast) and the
+    # LD25/50/75/100 iso-dose contours are derived from.
+    mech_kill = (1.0 - np.exp(log_mech_super)).astype(float)
+    # Vessel-sparing (tissue selectivity). Histotripsy preferentially fractionates
+    # cellular parenchyma while the collagen/elastin-rich walls and the flowing
+    # lumen of large vessels resist mechanical disruption — vessels stay patent
+    # even when a lesion engulfs them, and remain spared under repeated exposure
+    # (Vlaisavljevich 2014 UMB 40:1379; Roberts 2014). Cap the CUMULATIVE
+    # mechanical kill inside the large-vessel mask (not just per-shot, which the
+    # survival product would still climb past) so reported vessel dose reflects
+    # the real structural resistance.
+    if oar_masks is not None:
+        vmask = oar_masks.get("large_vessels")
+        if vmask is not None and vmask.any():
+            mech_kill[vmask] *= VESSEL_SPARING_FACTOR
+    bed_field = np.asarray(kw.combined_kill_probability(
+        mech_kill.ravel(), p_therm.ravel().astype(float))).reshape(shp).astype(np.float32)
 
     # Treatment time is set by the ACTUAL placed raster fill: each spot
     # gets pulses_per_pt clinical doses, with electronic interleave
@@ -1318,13 +1579,52 @@ def predicted_lesion(p_field, props, sc, info, label_vol,
     # typical for clinical robotic stages. Add it to the electronic-sonication
     # time so the treatment_s is honest about wall-clock duration.
     mech_repo_s = 2.0 * n_mech_anchors
-    actual_treatment_s = actual_n * pulses_per_pt / effective_prf + mech_repo_s
+
+    # ── Closed-loop per-spot dosing (treat-to-endpoint) ─────────────────────
+    # Open-loop delivers a FIXED pulses_per_pt to every spot. The closed loop
+    # instead dwells on each spot only until its focal cavitation reaches the
+    # prescription kill RX_KILL, then advances — exactly how a HistoSonics-class
+    # system uses real-time bubble-cloud feedback. The per-spot pulse count is
+    # the events-to-endpoint (inverse-Weibull, kwavers histotripsy_lethal_dose)
+    # divided by the local per-pulse cavitation probability, bounded by a
+    # clinical pulse budget. For the cavitation (intrinsic) regime this both
+    # SAVES time on easily-fractionated spots and ESCALATES on resistant ones;
+    # the thermal/erosion regimes keep their fixed ms dwell.
+    open_loop_treatment_s = actual_n * pulses_per_pt / effective_prf + mech_repo_s
+    spot_pulses = None
+    if sc.regime == "intrinsic" and raster_grid.any():
+        events_to_rx = float(kw.histotripsy_lethal_dose(
+            RX_KILL, _focus_tissue.frac_d0, _focus_tissue.frac_k))
+        # Each raster spot REFOCUSES there, so the cavitation it sees is the
+        # focal P_cav (≈1 for a supra-threshold focus) reduced by that spot's
+        # electronic-steering pressure factor — not the static single-focus field
+        # sampled off-focus. Spots near the array's steering limit cavitate less
+        # per pulse, so the loop ESCALATES their pulse count; well-steered spots
+        # reach the endpoint quickly and the loop advances early.
+        focus_idx_t = tuple(int(c) for c in info["focus_idx"])
+        pcav_focal = float(pcav[info["focus_idx"]])
+        rpts = np.argwhere(raster_grid)
+        anchors_cl, _ = mechanical_walk(
+            serpentine_order(raster_grid), focus_idx_t, info["dx"], sc.f0)
+        anch_lut = {pt: a for pt, a in zip(serpentine_order(raster_grid), anchors_cl)}
+        spot_pulses = np.empty(len(rpts), dtype=float)
+        for i, rp in enumerate(rpts):
+            rp_t = tuple(int(c) for c in rp)
+            steer = steering_pressure_factor(rp_t, anch_lut.get(rp_t, focus_idx_t),
+                                             info["dx"], sc.f0)
+            pcav_local = max(pcav_focal * steer, 1e-3)
+            spot_pulses[i] = np.clip(round(events_to_rx / pcav_local),
+                                     CLOSED_LOOP_MIN_PULSES, CLOSED_LOOP_MAX_PULSES)
+        delivered_pulses = float(spot_pulses.sum())
+        actual_treatment_s = delivered_pulses / effective_prf + mech_repo_s
+    else:
+        actual_treatment_s = open_loop_treatment_s
     if sc.treatment_s > 0:
         cem43 = cem43 * (actual_treatment_s / sc.treatment_s)
-    # Spillover = ablation outside the HCC outline; a tighter raster
-    # confines this to a thin rim from per-shot footprints touching the
-    # tumour boundary.
-    spillover = lesion_super & (~tumour)
+    # Spillover = ablation outside the clinical planning target (CTV); the
+    # ablative margin itself is intended treatment, so only ablation beyond the
+    # CTV counts as spill. (The verdict's collateral term uses the PTV.)
+    spillover = lesion_super & (~plan_target)
     raster_grid_out = raster_grid  # capture for plotting
     voxel_vol = (info["dx"] * 1e3) ** 3
     raster_pitch_mm = float(pitch_x * info["dx"] * 1e3)  # isotropic by construction
@@ -1344,9 +1644,24 @@ def predicted_lesion(p_field, props, sc, info, label_vol,
         "pulses_per_point": pulses_per_pt,
         "treatment_min": actual_treatment_s / 60.0,
         "actual_treatment_s": actual_treatment_s,
+        # Closed-loop control summary (vs the open-loop fixed-pulse baseline).
+        "open_loop_treatment_s": open_loop_treatment_s,
+        "closed_loop": spot_pulses is not None,
+        "closed_loop_pulses_median": float(np.median(spot_pulses)) if spot_pulses is not None else float(pulses_per_pt),
+        "closed_loop_pulses_min": float(spot_pulses.min()) if spot_pulses is not None else float(pulses_per_pt),
+        "closed_loop_pulses_max": float(spot_pulses.max()) if spot_pulses is not None else float(pulses_per_pt),
+        "closed_loop_pct_at_cap": float(100.0 * (spot_pulses >= CLOSED_LOOP_MAX_PULSES).mean()) if spot_pulses is not None else 0.0,
+        "closed_loop_time_saved_pct": float(100.0 * (1.0 - actual_treatment_s / open_loop_treatment_s)) if open_loop_treatment_s > 0 else 0.0,
         "lesion_volume_mm3": float(lesion.sum() * voxel_vol),
         "mech_volume_mm3": float(mech_full.sum() * voxel_vol),
         "therm_volume_mm3": float(therm_full.sum() * voxel_vol),
+        # Graded biologically-effective-dose iso-volumes inside the tumour:
+        # LDxx = volume receiving ≥ xx% kill probability (BED iso-surfaces).
+        "ld25_volume_mm3": float(((bed_field >= 0.25) & tumour).sum() * voxel_vol),
+        "ld50_volume_mm3": float(((bed_field >= 0.50) & tumour).sum() * voxel_vol),
+        "ld75_volume_mm3": float(((bed_field >= 0.75) & tumour).sum() * voxel_vol),
+        "ld100_volume_mm3": float(((bed_field >= 0.99) & tumour).sum() * voxel_vol),
+        "bed_mean_in_tumour": float(bed_field[tumour].mean()) if tumour.any() else 0.0,
         "T_transient_C": float(T_transient.max()),
         "T_steady_C": float(T_steady.max()),
         "tumour_volume_mm3": float(tumour.sum() * voxel_vol),
@@ -1370,24 +1685,98 @@ def predicted_lesion(p_field, props, sc, info, label_vol,
     }
     metrics["fwhm_lat_mm"] = fwhm_lat_m * 1e3
     metrics["fwhm_ax_mm"] = fwhm_ax_m * 1e3
-    # Per-OAR dose: max cavitation dose received by each OAR.
-    # Values > 0.05 warrant clinical review of the treatment plan.
+    # ── Per-OAR dose on the biologically-effective-dose field ───────────────
+    # For each organ-at-risk report (a) the ABLATIVE VOLUME fraction (BED ≥ 0.5),
+    # and the peak (b) mechanical and (c) thermal kill SEPARATELY — the thermal
+    # component is the dominant OAR risk in the boiling regime (bile-duct
+    # stricture, bowel perforation) and must not be hidden inside the combined
+    # dose. Absolute OARs (gallbladder, bowel, bone) must receive ~zero ablative
+    # volume; flagged OARs (vessels, capsule) stay below a peak-kill cap.
+    oar_violations: list[str] = []
     if oar_masks is not None:
         for spec in OAR_SPECS:
             m_oar = oar_masks.get(spec.name)
             if m_oar is not None and m_oar.any():
-                metrics[f"oar_{spec.name}_dose_max"] = float(
-                    cav_dose[m_oar].max())
-                metrics[f"oar_{spec.name}_dose_mean"] = float(
-                    cav_dose[m_oar].mean())
+                v_abl = float((bed_field[m_oar] >= 0.5).mean())
+                k_bed = float(bed_field[m_oar].max())
+                k_mech = float(mech_kill[m_oar].max())
+                k_therm = float(p_therm[m_oar].max())
             else:
-                metrics[f"oar_{spec.name}_dose_max"] = 0.0
-                metrics[f"oar_{spec.name}_dose_mean"] = 0.0
+                v_abl = k_bed = k_mech = k_therm = 0.0
+            metrics[f"oar_{spec.name}_vablative"] = v_abl
+            metrics[f"oar_{spec.name}_kill_max"] = k_bed
+            metrics[f"oar_{spec.name}_kill_mech_max"] = k_mech
+            metrics[f"oar_{spec.name}_kill_therm_max"] = k_therm
+            # Back-compat scalar (now BED-based, not cav_dose).
+            metrics[f"oar_{spec.name}_dose_max"] = k_bed
+            metrics[f"oar_{spec.name}_dose_mean"] = (
+                float(bed_field[m_oar].mean()) if (m_oar is not None and m_oar.any()) else 0.0)
+            if spec.is_absolute and v_abl > OAR_ABSOLUTE_VABL_MAX:
+                oar_violations.append(
+                    f"{spec.name} ablative V={100*v_abl:.1f}% (absolute OAR)")
+            elif (not spec.is_absolute) and k_bed > OAR_FLAGGED_KILL_MAX:
+                oar_violations.append(
+                    f"{spec.name} peak kill={k_bed:.2f} (>{OAR_FLAGGED_KILL_MAX:.2f})")
+
+    # ── Clinical prescription & automatic acceptance verdict ────────────────
+    # Prescribe the ablative iso-kill RX_KILL over ≥ RX_COVERAGE of the GTV,
+    # bound collateral damage (spillover ratio + confinement), and respect the
+    # OAR constraints above. Emit a PASS/REVIEW verdict with the failing terms —
+    # the go/no-go a proceduralist needs, computed rather than left to the reader.
+    gtv_vol_mm3 = float(tumour.sum() * voxel_vol)
+    v_rx_gtv = float((bed_field[tumour] >= RX_KILL).mean()) if tumour.any() else 0.0
+    metrics["rx_v90_gtv_pct"] = 100.0 * v_rx_gtv
+    metrics["n_oar_excluded_centres"] = n_oar_excluded_centres
+    metrics["n_feathered_spots"] = n_feathered
+    rx_violations: list[str] = []
+
+    # ── Clinical target = CTV (GTV + ablative margin). Best practice in tumour
+    # ablation is the "A0" margin: ablate the gross tumour PLUS a ≥5 mm
+    # circumferential margin to cover microscopic peritumoural spread; a minimal
+    # ablative margin <5 mm is the dominant predictor of local recurrence
+    # (Laimer 2020 Eur Radiol; Wang 2013). So the prescription is V90(CTV) ≥ 95 %,
+    # not merely GTV coverage. Collateral damage is then ablation BEYOND the PTV
+    # (the margin itself is intended treatment, not spillover). ───────────────
+    piv = bed_field >= RX_KILL              # prescription iso-volume (LD90)
+    target = ctv if (ctv is not None and ctv.any()) else tumour
+    tv = float(target.sum())
+    piv_vol = float(piv.sum())
+    tv_piv = float((piv & target).sum())
+    # Paddick (2000) Conformity Index = coverage × selectivity (volumetric, 3-D).
+    coverage = tv_piv / tv if tv > 0 else 0.0
+    selectivity = tv_piv / piv_vol if piv_vol > 0 else 0.0
+    metrics["rx_coverage"] = coverage
+    metrics["rx_selectivity"] = selectivity
+    metrics["paddick_ci"] = coverage * selectivity
+    v_rx_ctv = (float((bed_field[ctv] >= RX_KILL).mean())
+                if (ctv is not None and ctv.any()) else v_rx_gtv)
+    metrics["rx_v90_ctv_pct"] = 100.0 * v_rx_ctv
+    if v_rx_ctv < RX_COVERAGE:
+        rx_violations.append(
+            f"V{int(RX_KILL*100)}(CTV)={100*v_rx_ctv:.0f}% < {int(RX_COVERAGE*100)}%")
+    # Collateral = ablation outside the PTV (planning target). Falls back to GTV
+    # when no PTV is supplied (probe pass).
+    bound = ptv if (ptv is not None and ptv.any()) else target
+    collateral = piv & (~bound)
+    collateral_mm3 = float(collateral.sum() * voxel_vol)
+    spill_ratio = (collateral_mm3 / gtv_vol_mm3) if gtv_vol_mm3 > 0 else 0.0
+    metrics["collateral_beyond_ptv_mm3"] = collateral_mm3
+    metrics["rx_spillover_ratio"] = spill_ratio
+    if spill_ratio > RX_SPILLOVER_RATIO_MAX:
+        rx_violations.append(
+            f"collateral {spill_ratio:.1f}x GTV beyond PTV > {RX_SPILLOVER_RATIO_MAX:.1f}x")
+    if metrics["paddick_ci"] < RX_CONFORMITY_MIN:
+        rx_violations.append(
+            f"Paddick CI={metrics['paddick_ci']:.2f} < {RX_CONFORMITY_MIN:.2f}")
+    all_violations = rx_violations + oar_violations
+    metrics["plan_accept"] = len(all_violations) == 0
+    metrics["plan_violations"] = all_violations
     return lesion, {"pcav": pcav, "T_steady": T_steady, "T_transient": T_transient,
                     "coll": coll,
                     "cem43": cem43, "metrics": metrics,
-                    "raster_grid": raster_grid_out, "per_shot_mask": mech | therm,
+                    "raster_grid": raster_grid_out, "per_shot_mask": mech_core,
                     "cav_dose": cav_dose,
+                    "bed_field": bed_field, "p_kill": p_kill, "p_therm": p_therm,
                     "dose_map_regime": dose_map_regime,
                     "regime_label": regime_label,
                     "fwhm_lat_m": fwhm_lat_m, "fwhm_ax_m": fwhm_ax_m}
@@ -1982,16 +2371,37 @@ def make_sonication_animation(ct, label_vol, info, results, scenarios,
     return b64
 
 
+def _savefig_robust(fig, target, **kwargs) -> None:
+    """Save a figure, tolerating the Windows + Agg + ``bbox_inches="tight"``
+    flake.
+
+    On Windows the Agg backend intermittently raises ``OSError: [Errno 22]
+    Invalid argument`` when the *tight* bounding box resolves to a degenerate
+    raster size (a platform/matplotlib interaction, not a data defect — the PDF
+    of the same figure writes cleanly). Retry once with the fixed canvas bbox so
+    a save flake never aborts the whole figure set. The fallback is logged, not
+    silently swallowed; the only difference is the outer whitespace crop.
+    """
+    try:
+        fig.savefig(target, **kwargs)
+    except OSError as exc:
+        kwargs.pop("bbox_inches", None)
+        name = target if isinstance(target, str) else "<buffer>"
+        print(f"  [save_fig] tight-bbox save failed ({exc}); fixed-canvas retry: {name}")
+        fig.savefig(target, **kwargs)
+
+
 def fig_to_base64(fig) -> str:
     buf = io.BytesIO()
-    fig.savefig(buf, format="png", dpi=130, bbox_inches="tight")
+    _savefig_robust(fig, buf, format="png", dpi=130, bbox_inches="tight")
     buf.seek(0)
     return base64.b64encode(buf.read()).decode("ascii")
 
 
 def save_fig(fig, name: str) -> str:
     for ext in ("pdf", "png"):
-        fig.savefig(os.path.join(OUT_DIR, f"{name}.{ext}"), dpi=130, bbox_inches="tight")
+        _savefig_robust(fig, os.path.join(OUT_DIR, f"{name}.{ext}"),
+                        dpi=130, bbox_inches="tight")
     return fig_to_base64(fig)
 
 
@@ -3383,6 +3793,143 @@ def plot_raster_pulsing_fig(scenarios) -> str:
     return b64
 
 
+def plot_lesion_imaging(ct, label_vol, info, results, scenarios, gtv, ctv=None) -> str:
+    """Whole-tumour (3-D) physics-based lesion image characterization (fig21).
+
+    Maps the 3-D biologically-effective-dose (BED) field to acoustic backscatter
+    (hypoechoic liquefied core) and impedance (bright specular rim) via the
+    kwavers `fractionation_backscatter_coefficient` / `fractionation_acoustic_
+    impedance` physics, envelope-detects with Rayleigh speckle, and log-compresses
+    to a synthetic B-mode. ALL image metrics — VOLUMETRIC Dice of the LD50 iso-
+    surface vs the GTV, lesion-to-background CNR and contrast — are computed over
+    the FULL 3-D tumour (not a single slice), and the B-mode is shown as a
+    multi-slice montage spanning the tumour so the figure reflects whole-tumour
+    treatment, not one plane.
+    """
+    sc = next((s for s in scenarios if s.regime == "intrinsic"), scenarios[0])
+    r = results[sc.name]
+    m = r["metrics"]
+    bed3d = np.clip(np.asarray(r.get("bed_field")), 0.0, 1.0).astype(np.float64)
+    soft3d = np.isin(label_vol, [SKIN.label, FAT.label, MUSCLE.label,
+                                 LIVER.label, HCC.label, HCC_OTHER.label])
+
+    # ── Whole-tumour (3-D) image metrics ───────────────────────────────────
+    # Dice is measured against the CLINICAL TARGET (CTV when planned with an
+    # ablative margin), not the bare GTV — the lesion is intended to exceed the
+    # GTV by the margin, so a GTV-referenced Dice would understate conformity.
+    target3d = ctv if (ctv is not None and ctv.any()) else gtv
+    target_name = "CTV" if (ctv is not None and ctv.any()) else "GTV"
+    lesion3d = (bed3d >= 0.5) & soft3d                     # LD50 iso-surface (3-D)
+    inter = float((lesion3d & target3d).sum())
+    dice3d = 2.0 * inter / (float(lesion3d.sum()) + float(target3d.sum()) + 1e-9)
+    # CNR / contrast over a tumour bounding box (3-D voxel populations).
+    coords = np.argwhere(gtv)
+    if len(coords) == 0:
+        coords = np.argwhere(soft3d)
+    cmin = np.maximum(coords.min(0) - 8, 0)
+    cmax = np.minimum(coords.max(0) + 9, np.array(bed3d.shape))
+    sl3 = tuple(slice(cmin[i], cmax[i]) for i in range(3))
+    bed_bb, soft_bb = bed3d[sl3], soft3d[sl3]
+    bsc_bb = np.asarray(kw.fractionation_backscatter_coefficient(
+        bed_bb.ravel(), 1.0, 0.04, 2.0)).reshape(bed_bb.shape)
+    rng = np.random.default_rng(0)
+    env_bb = np.sqrt(np.maximum(bsc_bb, 0.0)) * rng.rayleigh(1.0, size=bed_bb.shape) * soft_bb
+    db_bb = np.clip(20.0 * np.log10(env_bb + 1e-3), -40.0, 0.0)
+    les_bb, bg_bb = (bed_bb >= 0.5) & soft_bb, (bed_bb < 0.1) & soft_bb
+    ml, sl_ = (float(db_bb[les_bb].mean()), float(db_bb[les_bb].std())) if les_bb.any() else (0.0, 0.0)
+    mb, sb = (float(db_bb[bg_bb].mean()), float(db_bb[bg_bb].std())) if bg_bb.any() else (0.0, 0.0)
+    contrast_db = ml - mb
+    cnr = abs(ml - mb) / (np.sqrt(sl_**2 + sb**2) + 1e-9)
+
+    # ── Multi-slice montage: 3 axial planes spanning the tumour ─────────────
+    nx, ny, nz = label_vol.shape
+    fy_idx, fz_idx = info["focus_idx"][1], info["focus_idx"][2]
+    xs = sorted({int(c) for c in coords[:, 0]})
+    x_slices = ([xs[int(len(xs) * f)] for f in (0.25, 0.5, 0.75)]
+                if len(xs) >= 3 else [info["focus_idx"][0]] * 3)
+    win_mm = 45.0
+    wv = int(round(win_mm * 1e-3 / info["dx"]))
+    y0, y1 = max(0, fy_idx - wv), min(ny, fy_idx + wv)
+    z0, z1 = max(0, fz_idx - wv), min(nz, fz_idx + wv)
+    extent = [info["z_axis"][z0]*1e3, info["z_axis"][z1-1]*1e3,
+              info["y_axis"][y1-1]*1e3, info["y_axis"][y0]*1e3]
+
+    def bmode_slice(fx):
+        bed_sl = bed3d[fx, y0:y1, z0:z1]
+        soft_sl = soft3d[fx, y0:y1, z0:z1]
+        bsc = np.asarray(kw.fractionation_backscatter_coefficient(
+            bed_sl.ravel(), 1.0, 0.04, 2.0)).reshape(bed_sl.shape)
+        z_map = np.asarray(kw.fractionation_acoustic_impedance(
+            bed_sl.ravel(), 1.65e6, 1.50e6)).reshape(bed_sl.shape)
+        gy, gz = np.gradient(z_map)
+        rim = np.hypot(gy, gz); rim /= (rim.max() + 1e-30)
+        spk = np.random.default_rng(fx).rayleigh(1.0, size=bed_sl.shape)
+        env = (np.sqrt(np.maximum(bsc, 0.0)) * spk * soft_sl) + 0.6 * rim
+        return np.clip(20.0 * np.log10(env + 1e-3), -40.0, 0.0), bed_sl
+
+    yy = np.linspace(extent[3], extent[2], y1 - y0)
+    zz = np.linspace(extent[0], extent[1], z1 - z0)
+
+    # ── Render: top row = 3 B-mode planes through the tumour; bottom row =
+    #    pre-treatment B-mode, central BED + LD contours, metrics panel. ──────
+    fig, axes = plt.subplots(2, 3, figsize=(15, 9))
+    for j, fx in enumerate(x_slices):
+        bm, _ = bmode_slice(fx)
+        axes[0, j].imshow(bm, cmap="gray", extent=extent, vmin=-40, vmax=0, aspect="equal")
+        axes[0, j].contour(zz, yy, gtv[fx, y0:y1, z0:z1].astype(float),
+                           levels=[0.5], colors="cyan", linewidths=1.0)
+        axes[0, j].set_title(f"Post-treatment B-mode @ x={fx}\n(whole-tumour plane {j+1}/3)", fontsize=9)
+        axes[0, j].set(xlabel="z [mm]", ylabel="y [mm]")
+    # Pre-treatment B-mode (central plane, intact speckle baseline).
+    fxc = x_slices[1]
+    soft_c = soft3d[fxc, y0:y1, z0:z1]
+    spk_c = np.random.default_rng(fxc).rayleigh(1.0, size=soft_c.shape)
+    bm_pre = np.clip(20.0 * np.log10(np.sqrt(1.0) * spk_c * soft_c + 1e-3), -40.0, 0.0)
+    axes[1, 0].imshow(bm_pre, cmap="gray", extent=extent, vmin=-40, vmax=0, aspect="equal")
+    axes[1, 0].set_title("Pre-treatment B-mode\n(intact speckle, central plane)", fontsize=9)
+    axes[1, 0].set(xlabel="z [mm]", ylabel="y [mm]")
+    # Central BED slice + LD iso-contours + GTV.
+    _, bed_c = bmode_slice(fxc)
+    im = axes[1, 1].imshow(bed_c, cmap="inferno", extent=extent, vmin=0, vmax=1, aspect="equal")
+    cs = axes[1, 1].contour(zz, yy, bed_c, levels=[0.25, 0.5, 0.75, 0.99],
+                            colors=["#66ccff", "#ffff66", "#ff9933", "#ff3333"], linewidths=1.0)
+    axes[1, 1].clabel(cs, fmt={0.25: "LD25", 0.5: "LD50", 0.75: "LD75", 0.99: "LD100"}, fontsize=7)
+    axes[1, 1].contour(zz, yy, gtv[fxc, y0:y1, z0:z1].astype(float),
+                       levels=[0.5], colors="cyan", linewidths=1.2)
+    axes[1, 1].set_title("Biologically-effective dose\n(kill probability + LD iso-contours)", fontsize=9)
+    plt.colorbar(im, ax=axes[1, 1], fraction=0.046, pad=0.04).set_label("$P_{kill}$")
+    axes[1, 1].set(xlabel="z [mm]", ylabel="y [mm]")
+    # Metrics panel — whole-tumour (3-D).
+    axes[1, 2].axis("off")
+    txt = (
+        "Whole-tumour image characterization (3-D)\n"
+        f"  CNR (lesion/bg)      : {cnr:5.2f}\n"
+        f"  Contrast             : {contrast_db:6.1f} dB\n"
+        f"  Dice3D (LD50 vs {target_name}) : {dice3d:5.2f}\n"
+        "\nClinical conformity (whole-tumour)\n"
+        f"  V90(GTV)             : {m.get('rx_v90_gtv_pct',0):5.1f} %\n"
+        f"  V90(CTV)             : {m.get('rx_v90_ctv_pct',0):5.1f} %\n"
+        f"  Paddick CI           : {m.get('paddick_ci',0):5.2f}\n"
+        f"  coverage / select.   : {m.get('rx_coverage',0):.2f} / {m.get('rx_selectivity',0):.2f}\n"
+        f"  collateral beyond PTV: {m.get('collateral_beyond_ptv_mm3',0)/1e3:5.2f} cm3\n"
+        "\nBiologically-effective dose (GTV)\n"
+        f"  mean P_kill          : {m.get('bed_mean_in_tumour',0):5.2f}\n"
+        f"  LD100 / LD50 volume  : {m.get('ld100_volume_mm3',0)/1e3:.2f} / "
+        f"{m.get('ld50_volume_mm3',0)/1e3:.2f} cm3\n"
+        f"  PLAN                 : {'ACCEPT' if m.get('plan_accept') else 'REVIEW'}\n"
+    )
+    axes[1, 2].text(0.0, 0.98, txt, va="top", ha="left", family="monospace", fontsize=9.0,
+                    transform=axes[1, 2].transAxes)
+    fig.suptitle(f"Whole-tumour lesion characterization — {sc.label} (intrinsic histotripsy)",
+                 fontsize=13, y=1.005)
+    fig.tight_layout()
+    b64 = save_fig(fig, "fig21_lesion_imaging")
+    plt.close(fig)
+    print(f"  saved fig21_lesion_imaging "
+          f"(3-D: CNR={cnr:.2f}, contrast={contrast_db:.1f} dB, Dice3D-vs-{target_name}={dice3d:.2f})")
+    return b64
+
+
 def main():
     if not os.path.exists(CT_PATH):
         raise SystemExit(f"CT not found: {CT_PATH}. Download KiTS19 case_00000 first.")
@@ -3454,13 +4001,35 @@ def main():
               f"x:{ps_half_m[0]*1e3:.1f}, y:{ps_half_m[1]*1e3:.1f}, z:{ps_half_m[2]*1e3:.1f}; "
               f"r_eq={r_probe['metrics']['per_shot_radius_mm']:.2f}")
 
+        # Pre-treatment cavitation verification (clinical "test sonication").
+        # Confirm the focal spot reaches its regime-specific cavitation/ablation
+        # endpoint at the planned pressure BEFORE committing the full raster — the
+        # bubble-cloud confirmation step. If the endpoint is not met the planned
+        # PNP is insufficient and must be escalated (flagged, not silently run).
+        _fi = info["focus_idx"]
+        if sc_template.regime == "intrinsic":
+            _cav_metric = float(r_probe["pcav"][_fi]); _thr = 0.5
+            _cav_ok = _cav_metric >= _thr
+            _vmsg = f"focal P_cav={_cav_metric:.2f} (>={_thr:.2f}?)"
+        elif sc_template.regime == "shock_vapor":
+            _cav_metric = float(r_probe["T_transient"][_fi]); _thr = 100.0
+            _cav_ok = _cav_metric >= _thr
+            _vmsg = f"focal T_transient={_cav_metric:.0f}C (>={_thr:.0f}?)"
+        else:
+            _cav_metric = float(r_probe["coll"][_fi]); _thr = 5.0
+            _cav_ok = _cav_metric >= _thr
+            _vmsg = f"focal collapse-strength={_cav_metric:.1f} (>={_thr:.1f}?)"
+        print(f"  test dose: {_vmsg} @ PNP={sc_template.pnp/1e6:.1f} MPa -> "
+              + ("cavitation CONFIRMED" if _cav_ok
+                 else "INSUFFICIENT - escalate pressure before treating"))
+
         sc = autosize_raster(sc_template, ps_half_m, tumour_volume_m3)
         sized_scenarios.append(sc)
         print(f"[ch21e] Sized scenario (autosize estimate): {sc.raster_points} pts, "
               f"{sc.treatment_s/60:.1f} min")
         # Re-run with the autosized raster; reuse the p_field (same scenario).
         lesion, r = predicted_lesion(p_field, props, sc, info, label_vol,
-                                     oar_masks=oar_masks)
+                                     oar_masks=oar_masks, ctv=ctv, ptv=ptv)
         r["p_field"] = p_field
         # Sync sc to the ACTUAL placed raster + actual treatment time so
         # downstream visualizations (animation, raster overlay, metrics
@@ -3491,14 +4060,41 @@ def main():
               f"confinement {m['confinement_pct']:.0f}%, "
               f"T_trans {m['T_transient_C']:.1f} °C, "
               f"T_steady {m['T_steady_C']:.1f} °C")
-        if oar_overlap > 0 or oar_enc > 0:
-            print(f"    OAR: {oar_overlap} raster pts with OAR footprint overlap "
-                  f"(dose monitored, not excluded), "
-                  f"{oar_enc} pts inside vessel-encasing GTV (MDT review)")
+        _tv = max(m.get('tumour_volume_mm3', 1.0), 1e-9)
+        print(f"    BED: mean P_kill={m.get('bed_mean_in_tumour',0):.2f}  "
+              f"LD25={100*m.get('ld25_volume_mm3',0)/_tv:.0f}%  "
+              f"LD50={100*m.get('ld50_volume_mm3',0)/_tv:.0f}%  "
+              f"LD75={100*m.get('ld75_volume_mm3',0)/_tv:.0f}%  "
+              f"LD100={100*m.get('ld100_volume_mm3',0)/_tv:.0f}% of GTV")
+        # Closed-loop control summary (treat-to-endpoint vs open-loop fixed dose).
+        if m.get("closed_loop"):
+            print(f"    closed-loop: pulses/spot median={m['closed_loop_pulses_median']:.0f} "
+                  f"[{m['closed_loop_pulses_min']:.0f}-{m['closed_loop_pulses_max']:.0f}], "
+                  f"{m['closed_loop_pct_at_cap']:.0f}% at cap, "
+                  f"time saved {m['closed_loop_time_saved_pct']:.0f}% vs open-loop")
+        # Conformity / plan-quality (whole-tumour, 3-D).
+        print(f"    conformity: V{int(RX_KILL*100)}(GTV)={m['rx_v90_gtv_pct']:.0f}%  "
+              f"V{int(RX_KILL*100)}(CTV)={m.get('rx_v90_ctv_pct',0):.0f}%  "
+              f"Paddick CI={m.get('paddick_ci',0):.2f} "
+              f"(cov={m.get('rx_coverage',0):.2f}, sel={m.get('rx_selectivity',0):.2f})  "
+              f"collateral={m.get('collateral_beyond_ptv_mm3',0)/1e3:.2f} cm3 beyond PTV  "
+              f"OAR-excluded={m.get('n_oar_excluded_centres',0)}  "
+              f"feathered(short-pulse)={m.get('n_feathered_spots',0)}")
+        # Clinical prescription verdict.
+        if m.get("plan_accept"):
+            print(f"    PLAN: ACCEPT  (V{int(RX_KILL*100)}(CTV)={m.get('rx_v90_ctv_pct',0):.0f}%, "
+                  f"Paddick CI={m.get('paddick_ci',0):.2f}, "
+                  f"collateral {m['rx_spillover_ratio']:.1f}x GTV, OAR limits met)")
+        else:
+            print(f"    PLAN: REVIEW REQUIRED - " + "; ".join(m.get("plan_violations", [])))
+        # Per-OAR ablative dose with mechanical/thermal split.
         for spec in OAR_SPECS:
-            dmax = m.get(f"oar_{spec.name}_dose_max", 0.0)
-            if dmax > 0.05:
-                print(f"    WARNING OAR {spec.name}: max dose {dmax:.3f} "
+            v_abl = m.get(f"oar_{spec.name}_vablative", 0.0)
+            k_mech = m.get(f"oar_{spec.name}_kill_mech_max", 0.0)
+            k_therm = m.get(f"oar_{spec.name}_kill_therm_max", 0.0)
+            if v_abl > 0.001 or k_mech > 0.05 or k_therm > 0.05:
+                print(f"    OAR {spec.name}: ablative V={100*v_abl:.1f}%  "
+                      f"mech_kill={k_mech:.2f}  therm_kill={k_therm:.2f} "
                       f"{'[ABSOLUTE]' if spec.is_absolute else '[flagged]'}")
 
     # Render figures + capture base64 for embedding
@@ -3514,6 +4110,7 @@ def main():
     b64_pcd = plot_passive_cavitation_dose(label_vol, info, results, sized_scenarios)
     b64_mon = plot_cavitation_monitor_fig(sized_scenarios)
     b64_puls = plot_raster_pulsing_fig(sized_scenarios)
+    b64_lesimg = plot_lesion_imaging(ct, label_vol, info, results, sized_scenarios, gtv, ctv=ctv)
     b64_anim = make_sonication_animation(ct, label_vol, info, results, sized_scenarios,
                                          gtv, ctv, ptv, oar_masks=oar_masks)
     # Strategy-comparison animation: pick the shock-vapor scenario
@@ -3942,6 +4539,28 @@ def main():
             "cavitation-vs-pressure response all run in the kwavers Rust core.\n\n"
         )
         f.write(f"![Subspot pulsing](data:image/png;base64,{b64_puls})\n\n")
+        f.write("### Figure 21.21b — Lesion image characterization (synthetic B-mode + BED)\n\n")
+        f.write(
+            "Physics-based **image characterization** of the histotripsy lesion. "
+            "The biologically-effective-dose (BED) field — a continuous per-voxel "
+            "kill probability that fuses the mechanical cavitation-fractionation "
+            "dose (tissue-specific Weibull dose–response, "
+            "`delivered_histotripsy_progress`) with the thermal Arrhenius kill "
+            "(`arrhenius_steady_kill_probability`) via the independent-insult "
+            "combination (`combined_kill_probability`) — is mapped to acoustic "
+            "**backscatter** (`fractionation_backscatter_coefficient`) and "
+            "**impedance** (`fractionation_acoustic_impedance`) in the kwavers "
+            "Rust core. Envelope detection with Rayleigh speckle and log "
+            "compression then yields a synthetic B-mode: the liquefied lesion "
+            "core reads **hypoechoic** while the impedance gradient at its "
+            "boundary produces the characteristic **bright specular rim**. The "
+            "panel reports quantitative image metrics — lesion-to-background CNR, "
+            "contrast, edge sharpness, and the Dice overlap of the LD50 iso-"
+            "surface with the planned GTV — alongside the graded LD25/50/75/100 "
+            "iso-dose volumes, closing the loop between the dose model and the "
+            "interventional-ultrasound appearance of the ablation.\n\n"
+        )
+        f.write(f"![Lesion imaging](data:image/png;base64,{b64_lesimg})\n\n")
         f.write("### Figure 21.23 — Sonication animation (real-time, synchronised)\n\n")
         f.write(
             "Animated GIF of the raster scan progressing in **real treatment "

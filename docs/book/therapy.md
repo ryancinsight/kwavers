@@ -137,8 +137,11 @@ where R = 0.5 for T ≥ 43 °C and R = 0.25 for T < 43 °C (Sapareto & Dewey 198
 necrosis) occurs when
 
 ```
-CEM43 ≥ 240 min    (muscle, liver, most soft tissue)                       (12.6)
+CEM43 ≥ 240 min    (muscle and most soft tissue)                           (12.6)
 ```
+
+Thermally sensitive organs have lower thresholds (see the table in §12.3.1; liver
+coagulates at ≈ 25 min CEM43).
 
 *Derivation.* The Arrhenius cell survival model S = exp(−Ω), with damage integral
 Ω = A ∫ exp(−E_a/(RT)) dt, is empirically equivalent to (12.6) at 240 min CEM43
@@ -214,8 +217,11 @@ delivery of otherwise membrane-impermeant molecules.
 **Theorem 12.5 (Permeabilization Threshold).** Inertial cavitation (IC) onset requires
 
 ```
-MI ≡ P_neg / √f₀ ≥ MI_IC ≈ 1.0    [kPa / √MHz = MPa^0.5]               (12.10)
+MI ≡ P_neg / √f₀ ≥ MI_IC ≈ 1.0    (P_neg in MPa, f₀ in MHz)            (12.10)
 ```
+
+The mechanical index is reported as a dimensionless number under the convention that
+P_neg is expressed in MPa and f₀ in MHz (so MI has nominal units MPa·MHz⁻⁰·⁵).
 
 Stable cavitation (SC, non-inertial), sufficient for gentle sonoporation, occurs at
 
@@ -350,17 +356,18 @@ Output: thermal dose map CEM43(r), peak pressure field, MI/TI
 ## 12.10 Worked Example: HIFU Ablation Dose
 
 **Setup.** Liver tumor, 1 MHz HIFU, a = 35 mm, R_f = 80 mm, face pressure P₀ = 300 kPa.
-- Surface intensity: I_face = P₀²/(2ρ₀c₀) = (3×10⁵)²/(2×1060×1540) ≈ 27.5 W/cm²
-- Focal gain: G = ka²/(2R_f) = (2π×10⁶/1540)×(0.035)²/(2×0.08) ≈ 30.8
+- Surface intensity: I_face = P₀²/(2ρ₀c₀) = (3×10⁵)²/(2×1060×1540) ≈ 2.76×10⁴ W/m² = 2.76 W/cm²
+- Focal gain: G = ka²/(2R_f) = (2π×10⁶/1540)×(0.035)²/(2×0.08) ≈ 31.2
   (kπa²/(2πR_f) = ka²/(2R_f); the π factors cancel)
-- Focal intensity: I_focal = G² × I_face ≈ 949 × 27.5 ≈ 26,100 W/cm² = 2.61 × 10⁸ W/m²
-- Heat source at focus: Q = 2α I = 2 × 7 × 2.61×10⁸ ≈ 3.66 × 10⁹ W/m³
+- Focal intensity: I_focal = G² × I_face ≈ 976 × 2.76×10⁴ ≈ 2.69 × 10⁷ W/m² = 2690 W/cm²
+- Heat source at focus: Q = 2α I = 2 × 7 × 2.69×10⁷ ≈ 3.77 × 10⁸ W/m³
 - Adiabatic temperature rise (τ = 0.5 s, no conduction/perfusion):
-  ΔT_adiabatic = Q τ/(ρ c_p) = 3.66×10⁹×0.5/(1060×3600) ≈ 479 °C.
+  ΔT_adiabatic = Q τ/(ρ c_p) = 3.77×10⁸×0.5/(1060×3600) ≈ 49 °C, i.e. a focal
+  temperature ≈ 37 + 49 = 86 °C — above the 60 °C coagulation threshold.
   The adiabatic estimate neglects thermal conduction (κ∇²T term in Eq. 12.3)
-  and blood perfusion (W_b term).  Including both at clinical sonication pulse
-  lengths (τ ≪ thermal diffusion time L²/κ) reduces peak focal ΔT to
-  ≈ 60–80 °C in practice.
+  and blood perfusion (W_b term); both lower the sustained peak, but at clinical
+  sonication pulse lengths (τ ≪ thermal diffusion time L²/κ) the focus still
+  exceeds 60 °C and ablates.
 - CEM43 from 60 °C isothermal hold of 1 s (= 1/60 min):
   CEM43 = 0.5^(43−60) × (1/60 min) = 2^17/60 ≈ 2184 min >> 240 min threshold
 

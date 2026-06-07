@@ -1,6 +1,7 @@
 //! FWI inversion drivers: single-source `invert`, multi-source variants, shot-gradient dispatch.
 
 mod multi_source;
+mod quasi_newton;
 mod shot_gradient;
 
 use super::{geometry::FwiGeometry, FwiProcessor};
@@ -97,21 +98,8 @@ impl FwiProcessor {
         geometry: &FwiGeometry,
         grid: &Grid,
     ) -> KwaversResult<(f64, Array3<f64>, f64)> {
-        let (synthetic_data, forward_history) =
-            self.forward_model(current_model, geometry, grid)?;
-        let objective = self.compute_misfit_objective(observed_data, &synthetic_data)?;
-
-        let residual = self.compute_adjoint_source(observed_data, &synthetic_data)?;
-        let adjoint_source = self.build_adjoint_source(&residual, geometry)?;
-        let gradient = self.adjoint_model(
-            &adjoint_source,
-            current_model,
-            grid,
-            &forward_history,
-            geometry.source.p_mask.as_ref(),
-        )?;
-        let smoothed_gradient = self.smooth_gradient(&gradient);
-        let regularized_gradient = self.apply_regularization(&smoothed_gradient, current_model)?;
+        let (objective, regularized_gradient) =
+            self.misfit_and_gradient(current_model, observed_data, geometry, grid)?;
 
         let grad_max = regularized_gradient
             .iter()
@@ -138,5 +126,42 @@ impl FwiProcessor {
         let mut updated_model = current_model - &(&normalized_gradient * step_size);
         self.apply_model_constraints(&mut updated_model);
         Ok((objective, updated_model, step_size))
+    }
+
+    /// Evaluate the misfit objective and the smoothed, regularized reduced
+    /// gradient `g = +∂J/∂c` at `current_model`.
+    ///
+    /// This is the single forward+adjoint+regularization pass shared by the
+    /// steepest-descent driver ([`Self::descent_update`]) and the quasi-Newton
+    /// driver ([`Self::invert_lbfgs`](super::FwiProcessor::invert_lbfgs)). Unlike
+    /// `descent_update`, the gradient is returned **un-normalized**: L-BFGS
+    /// requires the true gradient so the stored curvature pairs
+    /// `(s, y = Δg)` retain their physical scaling.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] from the forward/adjoint solve, the
+    ///   misfit evaluation, or regularization.
+    pub(in crate::inverse::fwi::time_domain) fn misfit_and_gradient(
+        &self,
+        current_model: &Array3<f64>,
+        observed_data: &ndarray::Array2<f64>,
+        geometry: &FwiGeometry,
+        grid: &Grid,
+    ) -> KwaversResult<(f64, Array3<f64>)> {
+        let (synthetic_data, forward_history) =
+            self.forward_model(current_model, geometry, grid)?;
+        let objective = self.compute_misfit_objective(observed_data, &synthetic_data)?;
+
+        let residual = self.compute_adjoint_source(observed_data, &synthetic_data)?;
+        let adjoint_source = self.build_adjoint_source(&residual, geometry)?;
+        let gradient = self.adjoint_model(
+            &adjoint_source,
+            current_model,
+            grid,
+            &forward_history,
+            geometry.source.p_mask.as_ref(),
+        )?;
+        let smoothed_gradient = self.smooth_gradient(&gradient);
+        let regularized_gradient = self.apply_regularization(&smoothed_gradient, current_model)?;
+        Ok((objective, regularized_gradient))
     }
 }

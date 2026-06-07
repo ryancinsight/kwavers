@@ -845,10 +845,11 @@ at the level of $20$–$50\,\%$ across the SWE band.
 Implementation: the Voigt complex modulus and shear-wave dispersion are the analytical
 functions `voigt_complex_modulus` / `voigt_shear_wave_dispersion` in
 `kwavers_physics::analytical::elastography`; the medium layer stores only generic Stokes
-viscosity (`kwavers_medium::viscous::ViscousProperties`); the frequency-domain Kelvin–Voigt
-constitutive model (complex modulus, dispersion, attenuation, Q) is
-`kwavers_medium::viscoelastic::KelvinVoigtModel`. A dispersion-fitting inversion
-kernel is not yet implemented.
+viscosity (`kwavers_medium::viscous::ViscousProperties`); the frequency-domain constitutive
+models are in `kwavers_medium::viscoelastic` — `KelvinVoigtModel` (complex modulus, dispersion,
+attenuation, Q) and `ZenerModel` (standard linear solid: bounded dispersion between relaxed and
+unrelaxed moduli, Debye loss peak at ωτ=1). A dispersion-fitting inversion kernel is not yet
+implemented.
 
 ---
 
@@ -913,12 +914,15 @@ OUTPUT: Pre-stress field σ_0[x, y, z, t_cardiac]
 4.  Validate against independent intravascular pressure measurement where available.
 ```
 
-**Implementation status.** The Murnaghan third-order constants and the
-acousto-elastic pre-stress inversion (Algorithm 11.4) are presented here as theory;
-they are not yet implemented in `kwavers`. The available nonlinear path,
-`kwavers_solver::forward::elastic::nonlinear::NonlinearElasticWaveSolver`, uses
-hyperelastic constitutive models (Neo-Hookean, Mooney-Rivlin, Ogden) — a distinct
-formulation from Murnaghan acousto-elasticity.
+**Implementation status.** The first-order acousto-elastic relation and the pre-stress
+inversion (Algorithm 11.4) are implemented in
+`kwavers_physics::analytical::elastography`: `acoustoelastic_sensitivity`
+(`A=(m+n)/(2(λ+μ))`), `acoustoelastic_shear_speed` (`c_S=√((μ+Aσ₀)/ρ)`), and
+`estimate_prestress` / `estimate_prestress_sequence` (`σ₀=ρ(c_S²−c_S0²)/A`) — ADR 014. The
+second-order `O(σ₀²)` terms and a full 3rd-order (Murnaghan) elastic-wave *PDE* solver remain;
+the available nonlinear forward path,
+`kwavers_solver::forward::elastic::nonlinear::NonlinearElasticWaveSolver`, uses hyperelastic
+constitutive models (Neo-Hookean, Mooney-Rivlin, Ogden) — a distinct formulation.
 
 ---
 
@@ -1171,11 +1175,6 @@ kwavers_physics::analytical::elastography   (PyO3-exposed; generates the chapter
 └── shear_wave_speed · voigt_complex_modulus · voigt_shear_wave_dispersion
 
 Theory only — covered in this chapter but NOT yet implemented as kwavers kernels:
-  • residue-aware (Goldstein branch-cut) phase unwrapping — the separable 2-D Itoh
-    unwrapper exists at `kwavers_signal::phase::unwrap_2d`, but the residue-handling variant does not;
-  • Zener (standard-linear-solid) constitutive kernel — the **Kelvin–Voigt** model is now
-    implemented at the medium layer (`kwavers_medium::viscoelastic::KelvinVoigtModel`: complex
-    modulus G*(ω)=μ+iωη, dispersive phase velocity, attenuation, Q); the Zener variant is not;
   • Murnaghan third-order / acousto-elastic pre-stress inversion (§11.9);
   • bootstrap confidence intervals (§11.12) and an organ-staging classifier (§11.11).
 ```

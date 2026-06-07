@@ -106,4 +106,3 @@ pub fn fourier_periodic_nodes(n: usize) -> KwaversResult<(Array1<f64>, Array1<f6
     let weights = Array1::from_elem(n, weight);
     Ok((nodes, weights))
 }
-

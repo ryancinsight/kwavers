@@ -266,8 +266,10 @@ model).  At mechanical index MI > 0.3, lipid and polymer shells exhibit
 strain-dependent stiffness and rupture; the linear model loses validity exactly where
 clinical contrast imaging is performed.  The kwavers implementation uses the constant-χ linearized model for resonance-frequency
 estimation; the full nonlinear Rayleigh–Plesset / Keller–Miksis bubble dynamics (Cavitation
-chapter) drive CEUS/cavitation simulation. CEUS-specific contrast pulse sequences
-(pulse-inversion, amplitude modulation) are not yet implemented.
+chapter) drive CEUS/cavitation simulation. CEUS contrast pulse sequences — pulse inversion,
+amplitude modulation, and general CPS — are implemented in
+`kwavers_physics::acoustics::imaging::modalities::ceus::pulse_sequences`
+(`pulse_inversion`, `amplitude_modulation`, `cps_combine`).
 
 ### 9.4.2 Nonlinear Bubble Scattering for Contrast Imaging
 
@@ -562,9 +564,6 @@ reparameterization by the change-of-variables theorem. □
 | Speed-of-sound shift | `kwavers_diagnostics::reconstruction::sound_speed_shift` | `reconstruct_sound_speed_shift()` |
 | OpenPros shift benchmark | `kwavers_diagnostics::reconstruction::sound_speed_shift` | `run_openpros_shift_benchmark()` |
 
-*Not yet implemented (presented as theory in this chapter):* CEUS contrast pulse
-sequences (pulse-inversion / amplitude
-modulation, §9.4.2).
 
 ---
 

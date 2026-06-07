@@ -127,6 +127,106 @@ impl KelvinVoigtModel {
     }
 }
 
+/// Standard linear solid (**Zener**) viscoelastic model — a spring in parallel
+/// with a Maxwell (spring + dashpot) arm.
+///
+/// Unlike the Kelvin–Voigt model (whose phase velocity and attenuation grow without
+/// bound with frequency), the Zener model has **bounded dispersion**: the modulus
+/// relaxes from the unrelaxed (instantaneous) value `G_u` at high frequency to the
+/// relaxed value `G_r` at low frequency, with a single relaxation time `τ`:
+///
+/// ```text
+/// G*(ω) = G_r + (G_u − G_r) · iωτ/(1 + iωτ)
+/// G'(ω) = G_r + (G_u − G_r) (ωτ)²/(1+(ωτ)²)     (storage)
+/// G''(ω) = (G_u − G_r) ωτ/(1+(ωτ)²)             (loss, peaks at ωτ = 1)
+/// ```
+///
+/// This is the standard single-relaxation tissue model (also the building block of
+/// generalized-Maxwell / fractional models).
+#[derive(Debug, Clone, Copy)]
+pub struct ZenerModel {
+    /// Relaxed (low-frequency, ω→0) shear modulus `G_r` \[Pa].
+    relaxed_modulus: f64,
+    /// Unrelaxed (high-frequency, ω→∞) shear modulus `G_u ≥ G_r` \[Pa].
+    unrelaxed_modulus: f64,
+    /// Relaxation time `τ` \[s].
+    relaxation_time: f64,
+    /// Mass density `ρ` \[kg·m⁻³].
+    density: f64,
+}
+
+impl ZenerModel {
+    /// Create a Zener model. Returns `None` unless `0 < G_r ≤ G_u`, `τ > 0`, `ρ > 0`.
+    #[must_use]
+    pub fn new(relaxed_modulus: f64, unrelaxed_modulus: f64, relaxation_time: f64, density: f64) -> Option<Self> {
+        if relaxed_modulus > 0.0
+            && unrelaxed_modulus >= relaxed_modulus
+            && relaxation_time > 0.0
+            && density > 0.0
+        {
+            Some(Self { relaxed_modulus, unrelaxed_modulus, relaxation_time, density })
+        } else {
+            None
+        }
+    }
+
+    /// Complex shear modulus `G*(ω)` \[Pa].
+    #[must_use]
+    pub fn complex_modulus(&self, omega: f64) -> Complex64 {
+        let wt = omega * self.relaxation_time;
+        let delta = self.unrelaxed_modulus - self.relaxed_modulus;
+        let maxwell = Complex64::new(0.0, wt) / Complex64::new(1.0, wt); // iωτ/(1+iωτ)
+        Complex64::new(self.relaxed_modulus, 0.0) + delta * maxwell
+    }
+
+    /// Storage modulus `G'(ω)` \[Pa] — rises monotonically from `G_r` to `G_u`.
+    #[must_use]
+    pub fn storage_modulus(&self, omega: f64) -> f64 {
+        let wt = omega * self.relaxation_time;
+        self.relaxed_modulus + (self.unrelaxed_modulus - self.relaxed_modulus) * (wt * wt) / (1.0 + wt * wt)
+    }
+
+    /// Loss modulus `G''(ω)` \[Pa] — Debye peak at `ωτ = 1`.
+    #[must_use]
+    pub fn loss_modulus(&self, omega: f64) -> f64 {
+        let wt = omega * self.relaxation_time;
+        (self.unrelaxed_modulus - self.relaxed_modulus) * wt / (1.0 + wt * wt)
+    }
+
+    /// Frequency \[Hz] of the loss (`G''`) peak, where `ωτ = 1`.
+    #[must_use]
+    pub fn loss_peak_frequency(&self) -> f64 {
+        1.0 / (core::f64::consts::TAU * self.relaxation_time)
+    }
+
+    /// Relaxed (low-frequency) shear-wave speed `√(G_r/ρ)` \[m·s⁻¹].
+    #[must_use]
+    pub fn relaxed_shear_speed(&self) -> f64 {
+        (self.relaxed_modulus / self.density).sqrt()
+    }
+
+    /// Unrelaxed (high-frequency) shear-wave speed `√(G_u/ρ)` \[m·s⁻¹].
+    #[must_use]
+    pub fn unrelaxed_shear_speed(&self) -> f64 {
+        (self.unrelaxed_modulus / self.density).sqrt()
+    }
+
+    /// Dispersive shear-wave phase velocity `c_p(ω) = ω/Re(k)`, `k = ω√(ρ/G*)`
+    /// \[m·s⁻¹] — bounded between the relaxed and unrelaxed speeds.
+    #[must_use]
+    pub fn phase_velocity(&self, omega: f64) -> f64 {
+        if omega == 0.0 {
+            return self.relaxed_shear_speed();
+        }
+        let ratio = Complex64::new(self.density, 0.0) / self.complex_modulus(omega);
+        let mut k = ratio.sqrt() * omega;
+        if k.re < 0.0 {
+            k = -k;
+        }
+        omega / k.re
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -134,6 +234,55 @@ mod tests {
     // Representative soft tissue: μ = 3 kPa, η_s = 1.5 Pa·s, ρ = 1000 kg/m³.
     fn liver() -> KelvinVoigtModel {
         KelvinVoigtModel::new(3000.0, 1.5, 1000.0).unwrap()
+    }
+
+    // Zener tissue: G_r = 2 kPa, G_u = 6 kPa, τ = 1 ms, ρ = 1000.
+    fn zener() -> ZenerModel {
+        ZenerModel::new(2000.0, 6000.0, 1.0e-3, 1000.0).unwrap()
+    }
+
+    #[test]
+    fn zener_rejects_unphysical() {
+        assert!(ZenerModel::new(6000.0, 2000.0, 1e-3, 1000.0).is_none()); // G_u < G_r
+        assert!(ZenerModel::new(2000.0, 6000.0, 0.0, 1000.0).is_none()); // τ = 0
+    }
+
+    #[test]
+    fn zener_storage_rises_from_relaxed_to_unrelaxed() {
+        let z = zener();
+        let lo = z.storage_modulus(1.0); // ωτ ≪ 1
+        let hi = z.storage_modulus(1.0e7); // ωτ ≫ 1
+        assert!((lo - 2000.0).abs() < 5.0, "low-ω storage {lo} ≈ G_r");
+        assert!((hi - 6000.0).abs() < 5.0, "high-ω storage {hi} ≈ G_u");
+        // monotone increasing
+        assert!(z.storage_modulus(2000.0) > z.storage_modulus(500.0));
+    }
+
+    #[test]
+    fn zener_loss_peaks_at_omega_tau_unity() {
+        let z = zener();
+        let f_peak = z.loss_peak_frequency();
+        let w_peak = core::f64::consts::TAU * f_peak; // ωτ = 1
+        let g_peak = z.loss_modulus(w_peak);
+        // peak value is (G_u − G_r)/2
+        assert!((g_peak - 2000.0).abs() < 1.0, "G''_peak {g_peak} ≈ (G_u−G_r)/2");
+        // it is a maximum
+        assert!(g_peak > z.loss_modulus(0.1 * w_peak));
+        assert!(g_peak > z.loss_modulus(10.0 * w_peak));
+    }
+
+    #[test]
+    fn zener_dispersion_is_bounded() {
+        let z = zener();
+        let lo = z.phase_velocity(1.0);
+        let hi = z.phase_velocity(1.0e7);
+        assert!((lo - z.relaxed_shear_speed()).abs() / lo < 1e-2, "low-ω → relaxed speed");
+        assert!((hi - z.unrelaxed_shear_speed()).abs() / hi < 1e-2, "high-ω → unrelaxed speed");
+        // every phase velocity stays within [relaxed, unrelaxed] (bounded, unlike Kelvin–Voigt)
+        for &f in &[1.0, 1e2, 1e3, 1e4, 1e5, 1e6] {
+            let c = z.phase_velocity(core::f64::consts::TAU * f);
+            assert!(c >= z.relaxed_shear_speed() - 1e-9 && c <= z.unrelaxed_shear_speed() + 1e-9, "c={c}");
+        }
     }
 
     #[test]

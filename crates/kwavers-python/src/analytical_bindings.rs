@@ -12,6 +12,7 @@ pub mod cavitation;
 pub mod elastography;
 pub mod imaging;
 pub mod inverse;
+pub mod mems;
 pub mod photoacoustics;
 pub mod rtm;
 pub mod safety;
@@ -26,6 +27,24 @@ use pyo3::prelude::*;
 
 /// Register all book-physics functions into the given Python sub-module.
 pub fn register_book(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    // mems (CMUT / PMUT / IVUS — Chapter 33)
+    m.add_function(wrap_pyfunction!(mems::mems_clamped_plate_resonance, m)?)?;
+    m.add_function(wrap_pyfunction!(mems::mems_immersion_resonance, m)?)?;
+    m.add_function(wrap_pyfunction!(mems::cmut_resonance_immersion, m)?)?;
+    m.add_function(wrap_pyfunction!(mems::cmut_collapse_voltage, m)?)?;
+    m.add_function(wrap_pyfunction!(mems::cmut_coupling_k2, m)?)?;
+    m.add_function(wrap_pyfunction!(mems::cmut_self_heating, m)?)?;
+    m.add_function(wrap_pyfunction!(mems::cmut_fractional_bandwidth, m)?)?;
+    m.add_function(wrap_pyfunction!(mems::pmut_resonance_immersion, m)?)?;
+    m.add_function(wrap_pyfunction!(mems::pmut_coupling_k2, m)?)?;
+    m.add_function(wrap_pyfunction!(mems::pmut_self_heating, m)?)?;
+    m.add_function(wrap_pyfunction!(mems::pmut_fractional_bandwidth, m)?)?;
+    m.add_function(wrap_pyfunction!(mems::cmut_max_output_pressure, m)?)?;
+    m.add_function(wrap_pyfunction!(mems::cmut_flex_gap_derating, m)?)?;
+    m.add_function(wrap_pyfunction!(mems::pmut_max_output_pressure, m)?)?;
+    m.add_function(wrap_pyfunction!(mems::ivus_figure_of_merit, m)?)?;
+    m.add_function(wrap_pyfunction!(mems::therapy_figure_of_merit, m)?)?;
+
     // wave
     m.add_function(wrap_pyfunction!(wave::tone_burst_waveform, m)?)?;
     m.add_function(wrap_pyfunction!(wave::pulse_train_waveform, m)?)?;
@@ -194,6 +213,14 @@ pub fn register_book(m: &Bound<'_, PyModule>) -> PyResult<()> {
         m
     )?)?;
     m.add_function(wrap_pyfunction!(
+        cavitation::fractionation_backscatter_coefficient,
+        m
+    )?)?;
+    m.add_function(wrap_pyfunction!(
+        cavitation::fractionation_acoustic_impedance,
+        m
+    )?)?;
+    m.add_function(wrap_pyfunction!(
         cavitation::boiling_lesion_from_pressure_profile,
         m
     )?)?;
@@ -215,6 +242,23 @@ pub fn register_book(m: &Bound<'_, PyModule>) -> PyResult<()> {
         m
     )?)?;
     m.add_function(wrap_pyfunction!(cavitation::inertial_cavitation_dose, m)?)?;
+    // swept-frequency (chirp) cavitation control
+    m.add_function(wrap_pyfunction!(
+        cavitation::swept_vs_monochromatic_engagement,
+        m
+    )?)?;
+    m.add_function(wrap_pyfunction!(
+        cavitation::chirped_peak_expansion_ratio,
+        m
+    )?)?;
+    m.add_function(wrap_pyfunction!(
+        cavitation::inter_pulse_residual_clearance,
+        m
+    )?)?;
+    m.add_function(wrap_pyfunction!(
+        cavitation::residual_dissolution_time_s,
+        m
+    )?)?;
     // tissue
     m.add_function(wrap_pyfunction!(tissue::water_sound_speed_temperature, m)?)?;
     m.add_function(wrap_pyfunction!(tissue::water_density_temperature, m)?)?;
@@ -232,6 +276,9 @@ pub fn register_book(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(safety::cem43_cumulative, m)?)?;
     m.add_function(wrap_pyfunction!(safety::arrhenius_damage_integral, m)?)?;
     m.add_function(wrap_pyfunction!(safety::arrhenius_cumulative, m)?)?;
+    m.add_function(wrap_pyfunction!(safety::arrhenius_kill_probability, m)?)?;
+    m.add_function(wrap_pyfunction!(safety::arrhenius_steady_kill_probability, m)?)?;
+    m.add_function(wrap_pyfunction!(safety::combined_kill_probability, m)?)?;
     m.add_function(wrap_pyfunction!(safety::fda_ispta_limit_mw_cm2, m)?)?;
     m.add_function(wrap_pyfunction!(safety::fda_isppa_limit_w_cm2, m)?)?;
     // skull

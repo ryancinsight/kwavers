@@ -25,8 +25,9 @@ Theranostic cavitation control rests on the single-bubble physics derived in ful
 - **Blake threshold** for the onset of inertial collapse — *Cavitation §5.4*.
 
 These ODEs are integrated in kwavers by
-`kwavers_physics::acoustics::bubble_dynamics::rayleigh_plesset` (`RayleighPlesset`), with
-adaptive time-stepping and the Keller–Miksis model in the same `bubble_dynamics` tree.
+`kwavers_physics::acoustics::bubble_dynamics::rayleigh_plesset` (`RayleighPlessetSolver`), with
+adaptive time-stepping and the Keller–Miksis model (`keller_miksis::KellerMiksisModel`) in the
+same `bubble_dynamics` tree.
 
 ---
 
@@ -74,11 +75,11 @@ Output: P_{n+1}
 
 ### 13.3.1 Proton Resonance Frequency Shift
 
-**Theorem 13.5 (MR Thermometry — PRFS Method).** The proton resonance frequency
+**Theorem 13.1 (MR Thermometry — PRFS Method).** The proton resonance frequency
 (PRF) in water-containing tissues shifts linearly with temperature:
 
 ```
-f_MR(T) = f_0(1 − α_PRFS T)    α_PRFS ≈ −0.0102 ppm/°C                 (13.7)
+f_MR(T) = f_0(1 − α_PRFS T)    α_PRFS ≈ −0.0102 ppm/°C                 (13.1)
 ```
 
 *Proof.* Hydrogen bonding in liquid water modulates the electron shielding constant σ_c.
@@ -88,7 +89,7 @@ for aqueous tissue (De Poorter 1995). The frequency shift Δf = f_0 α_PRFS ΔT.
 Phase difference between reference and post-heating MR images gives ΔT:
 
 ```
-ΔT(r) = Δφ(r) / (2π f_0 α_PRFS TE)                                      (13.8)
+ΔT(r) = Δφ(r) / (2π f_0 α_PRFS TE)                                      (13.2)
 ```
 
 where TE is echo time [s] and Δφ is the voxel phase change [rad].
@@ -96,7 +97,7 @@ MR thermometry precision: ~1–2 °C at 3 T with TE = 15 ms.
 
 ### 13.3.2 Closed-Loop HIFU Controller
 
-**Theorem 13.6 (Closed-Loop Thermal Dose Monotonicity).** Let D_k be the cumulative
+**Theorem 13.2 (Closed-Loop Thermal Dose Monotonicity).** Let D_k be the cumulative
 CEM43 dose at step k and u_k ≥ 0 the acoustic power.  Define the CEM43 dose rate:
 
 ```
@@ -106,7 +107,7 @@ CEM43 dose at step k and u_k ≥ 0 the acoustic power.  Define the CEM43 dose ra
 The dose update
 
 ```
-D_{k+1} = D_k + φ(T_k) Δt                                                (13.9)
+D_{k+1} = D_k + φ(T_k) Δt                                                (13.3)
 ```
 
 is monotone non-decreasing: D_{k+1} ≥ D_k for all k.
@@ -137,7 +138,8 @@ Initialize: acoustic field model; tissue state estimate x̂_0; dose D_0 = 0
 
 Loop (k = 0, 1, 2, ...):
   1. ACQUIRE: diagnostic image y_k (B-mode, MR thermometry, PCD spectrum)
-  2. REGISTER: align y_k to therapy frame using deformable registration (RITK)
+  2. REGISTER: align y_k to therapy frame using deformable registration
+                 (NOT in kwavers — external ITK/SimpleITK or future work; see §13.7)
   3. ESTIMATE: x̂_k = KalmanFilter(x̂_{k-1}, y_k, model)
                  State vector: x = [T (°C), D (CEM43), ρ_b (mm⁻³), c_s (m/s)]ᵀ ∈ ℝ⁴
                  Process noise Q = diag(σ²_T, σ²_D, σ²_b, σ²_c) from acoustic model uncertainty
@@ -155,7 +157,7 @@ Loop (k = 0, 1, 2, ...):
 State-estimator uncertainty must be propagated explicitly:
 
 ```
-σ_D² = σ_x² (∂φ/∂x)² Δt²    (linearized uncertainty propagation)          (13.10)
+σ_D² = σ_x² (∂φ/∂x)² Δt²    (linearized uncertainty propagation)          (13.4)
 ```
 
 Acceptance criterion: D_target − 2σ_D ≥ 0 (dose coverage at 95% confidence).
@@ -170,15 +172,15 @@ Oscillating microbubbles increase local permeability via:
 
 1. **Microstreaming.** Oscillatory bubble motion drives fluid jets that shear endothelial
    cell membranes, increasing pore size transiently.
-2. **Sonoporation.** Individual cell membrane permeabilization by bubble contact (§6.5.1).
+2. **Sonoporation.** Individual cell membrane permeabilization by bubble contact (§12.5.1).
 3. **Tight junction disruption.** BBB-specific: ZO-1, occludin proteins are displaced
    from tight junctions under stable cavitation stress.
 
-**Theorem 13.7 (Drug Uptake Enhancement).** For stable cavitation at MI ≈ 0.3, the
+**Theorem 13.3 (Drug Uptake Enhancement).** For stable cavitation at MI ≈ 0.3, the
 fractional drug uptake enhancement ε relative to passive diffusion scales as
 
 ```
-ε ∝ R₀² f₀ p_A / (μ_l c₀)                                               (13.11)
+ε ∝ R₀² f₀ p_A / (μ_l c₀)                                               (13.5)
 ```
 
 where p_A is the driving pressure amplitude and f₀ the frequency.
@@ -189,13 +191,13 @@ velocity near a single oscillating bubble in unbounded fluid scales as
 the oscillation velocity `Ṙ_max ≈ p_A/(ρ_l c₀)` and to the bubble size `R₀`).
 Membrane shear stress `τ ∝ μ_l u_s / δ` (Stokes boundary layer, `δ = pore size`).
 Drug uptake per-bubble ∝ permeability ∝ τ ∝ `R₀ f₀ p_A / (ρ_l c₀ δ)`. The ratio
-to passive diffusion (τ = 0, i.e. p_A → 0) gives (13.11).
+to passive diffusion (τ = 0, i.e. p_A → 0) gives (13.5).
 
-**Scope limitation.** The scaling (13.11) holds for a single isolated bubble in the
+**Scope limitation.** The scaling (13.5) holds for a single isolated bubble in the
 dilute limit (bubble volume fraction < 1%).  For clinical BBB opening
 (bubble concentration ≈ 10⁴–10⁷ mm⁻³), bubble–bubble hydrodynamic coupling,
 secondary Bjerknes forces, and collective microstreaming modify the effective shear
-field.  Eq. (13.11) is a single-bubble lower bound; collective enhancement depends on
+field.  Eq. (13.5) is a single-bubble lower bound; collective enhancement depends on
 concentration and spacing (Garbin et al. 2009). □
 
 ### 13.5.2 Dose–Response Relationship
@@ -224,7 +226,7 @@ necrosis, initiated above the intrinsic cavitation threshold
 `P_neg,intrinsic = √(16πσ³/(3 k_B T)) ≈ 26–30 MPa` (water, 37 °C, classical nucleation
 theory). The full mechanism, derivation, and the classical-vs-millisecond-pulse regimes
 are in the **Histotripsy** chapter and *Cavitation §5.9*. kwavers models the bubble-cloud
-dynamics in `kwavers_therapy::therapy::lithotripsy::cavitation_cloud` (`CavitationCloud`).
+dynamics in `kwavers_therapy::therapy::lithotripsy::cavitation_cloud` (`CavitationCloudDynamics`).
 
 ---
 
@@ -232,15 +234,15 @@ dynamics in `kwavers_therapy::therapy::lithotripsy::cavitation_cloud` (`Cavitati
 
 | Concept | kwavers module | Key struct |
 |---------|---------------|------------|
-| Bubble ODE (Rayleigh–Plesset, Keller–Miksis) | `kwavers_physics::acoustics::bubble_dynamics::rayleigh_plesset` | `RayleighPlesset` |
-| Passive cavitation detection (SC/IC) | `kwavers_physics::acoustics::bubble_dynamics::cavitation_control::detection` | `broadband` / `spectral` / `subharmonic` |
+| Bubble ODE (Rayleigh–Plesset, Keller–Miksis) | `kwavers_physics::acoustics::bubble_dynamics::{rayleigh_plesset, keller_miksis}` | `RayleighPlessetSolver`, `KellerMiksisModel` |
+| Passive cavitation detection (SC/IC) | `kwavers_physics::acoustics::bubble_dynamics::cavitation_control::detection` | `BroadbandDetector` / `SpectralDetector` / `SubharmonicDetector` |
 | Microbubble dynamics | `kwavers_therapy::therapy::microbubble_dynamics::service` | `MicrobubbleDynamicsService` |
-| Cavitation cloud (histotripsy) | `kwavers_therapy::therapy::lithotripsy::cavitation_cloud` | `CavitationCloud` |
+| Cavitation cloud (histotripsy) | `kwavers_therapy::therapy::lithotripsy::cavitation_cloud` | `CavitationCloudDynamics` |
 | Therapy orchestrator | `kwavers_therapy::therapy::therapy_integration::orchestrator` | `TherapyIntegrationOrchestrator` |
 | Safety controller | `kwavers_therapy::therapy::therapy_integration::safety_controller` | `SafetyController` |
 | ULM microbubble detection | `kwavers_analysis::signal_processing::ulm::microbubble_detection` | `UlmDetector` |
-| Plane-wave compounding | `kwavers_diagnostics::workflows::plane_wave_compounding` | `PlaneWaveCompounding` |
-| Registration | via RITK crate | `DeformableRegistration` |
+| Plane-wave compounding | `kwavers_diagnostics::workflows::plane_wave_compounding` | `PlaneWaveCompound` |
+| Image registration (loop step 2) | **not implemented in kwavers** | — (external ITK/SimpleITK, or future work) |
 
 ---
 
@@ -254,7 +256,8 @@ microbubbles at 0.1 mL/kg IV. Target: stable cavitation at f₀/2 = 250 kHz, IC 
 **Inertial cavitation threshold (IC):** MI ≈ 0.6 → P_neg = 0.6 × √0.5 ≈ 0.42 MPa.
 
 **Control window:** P_neg ∈ [0.14, 0.42] MPa, corresponding to focal intensities
-I ∈ [1300, 11800] W/m². PCD monitors broadband ICD and sub-harmonic power every pulse.
+I = P_neg²/(2ρ₀c₀) ∈ [6.1×10³, 5.5×10⁴] W/m² (≈ 0.6–5.5 W/cm², brain tissue
+ρ₀c₀ = 1060×1540). PCD monitors broadband ICD and sub-harmonic power every pulse.
 
 If ICD exceeds threshold (IC onset): power reduced by γ_down = 0.8.
 If sub-harmonic < target (SC not established): power increased by γ_up = 1.05.

@@ -28,8 +28,8 @@ Numbering today is broken: duplicate headers (two each of Ch4/5/6/7, two Ch10),
 | 9 | photoacoustics.md | Photoacoustic Imaging | 948 | 5 | ✅ audited (paths fixed; figs re-wired ch13; Γ eq fixed) |
 | 10 | elastography.md | Elastography | ~1230 | 5 | ✅ audited (de-fictioned impl claims; figs→ch10; design/order) |
 | 11 | cavitation_and_bubbles.md | Cavitation and Bubble Dynamics | 1172 | 4 | ✅ audited (physics sound; figs re-wired) |
-| 12 | therapy.md | Therapeutic Ultrasound | 396 | 0 | ⬜ |
-| 13 | theranostics.md | Theranostics | 357 | 0 | ✂️ strip re-derivations |
+| 12 | therapy.md | Therapeutic Ultrasound | 401 | 5 | ✅ audited (code-map 19/19 verified; figs ch06; §12.10 10× units fix) |
+| 13 | theranostics.md | Theranostics | 358 | 0 | ✅ audited (already recap-cross-ref'd; 3 struct names + theorem/eq renumber + intensity fix; registration marked not-impl) |
 | 14 | safety_and_dosimetry.md | Safety and Dosimetry | 1012 | 5 | ✅ audited (paths+structs fixed; figs re-wired ch15) |
 | 15 | transcranial_ultrasound.md | Transcranial Ultrasound | 955 | 9 | ⬜ |
 | 16 | inverse_problems_and_pinns.md | Inverse Problems & PINNs | ~470 | 5 | ✅ audited (§8/§9 de-fictioned; figs→ch17) |
@@ -414,6 +414,123 @@ in Rust where a real computation applies, embedded with a descriptive caption.
      transcranial_ust "Chapter 14,22,24,26", and the bbb "Theorem 22.1→21.1" cross-ref. README
      TOC numbered 1–32. Verified: all 32 headers unique/contiguous, residual §22–27 refs are
      legit self-refs.
+
+25. ✅ **AUDITED: Chapter 13 (Theranostics).** Chapter was already de-duplicated (recap headers
+   defer to Cavitation §5.x / Histotripsy), so the ✂️ flag was largely satisfied. Code-map §13.7
+   verified against source — found **3 wrong struct names** (name-only drift): `RayleighPlesset`→
+   `RayleighPlessetSolver`, `CavitationCloud`→`CavitationCloudDynamics`, `PlaneWaveCompounding`→
+   `PlaneWaveCompound` (also updated detection structs to `{Broadband,Spectral,Subharmonic}Detector`
+   and added `KellerMiksisModel`). **Honesty fix:** the code-map claimed image registration "via
+   RITK crate (`DeformableRegistration`)" — no such type exists in kwavers (only ITK DICOM-loader
+   mentions); marked **not implemented** in the code-map and the loop algorithm step 2, and filed a
+   backlog component. **Structural:** theorems renumbered 13.5/13.6/13.7→13.1/13.2/13.3 and
+   equations 13.7–13.11→13.1–13.5 (both started at a stale high number after recap stripping; no
+   external cross-refs). **Physics:** §13.8 control-window intensities were ~5–9× wrong
+   ([1300,11800]→[6.1×10³,5.5×10⁴] W/m², I=P_neg²/2ρc verified). Kalman state-estimator (loop step
+   3) confirmed backed by `kwavers_analysis::…::localization::bayesian::filter`.
+
+24. ✅ **AUDITED: Chapter 12 (Therapeutic Ultrasound).** Physics reviewed; code-map §12.9
+   verified 19/19 (all symbols FOUND, re-exported at the cited level despite deeper internal
+   submodules — `HIFUPlanner`, `PennesBioheat`, `ThermalDiffusionSolver`, `ThermalDoseCalculator`,
+   `ThermalCEM43Grid`, lithotripsy `{ShockWaveGenerator, StoneFractureModel, CavitationCloudDynamics}`,
+   `MicrobubbleDynamicsService`, `IntensityTracker`, `SafetyController`,
+   `TherapyIntegrationOrchestrator`, sonogenetics `{VolumetricArfField, MechanoChannel, LifNeuron}`,
+   `HistotripsyScenario`, `PulsePattern`, `clinical_scenarios`). All 5 figures (ch06 dir, kept per
+   the renumber convention) exist. **Physics fixes:** (a) §12.10 worked example had a 10× units
+   error — I_face = (3e5)²/(2·1060·1540) = 2.76 W/cm² (27,566 W/m²), mislabeled "27.5 W/cm²",
+   propagating to an implausible 479 °C; corrected to I_focal ≈ 2690 W/cm², Q ≈ 3.77e8 W/m³,
+   ΔT_adiabatic ≈ 49 °C (focal ≈ 86 °C), with G corrected 30.8→31.2; (b) Eq 12.6 liver/240-min
+   contradiction with the §12.3.1 table (liver = 25 min) resolved; (c) Eq 12.10 MI units
+   annotation (`kPa/√MHz = MPa^0.5`) corrected to the dimensionless MPa·MHz⁻⁰·⁵ convention.
+   No missing components.
+
+23. ✅ **WIRED: L-BFGS quasi-Newton FWI driver** (future-enhancement #3).
+   Factored the Nocedal two-loop recursion out of `kwavers_math::optimization::minimize` into a
+   reusable `LbfgsMemory` (SSOT: `minimize` now consumes it). Added
+   `FwiProcessor::invert_lbfgs(observed, initial, geometry, grid, memory)` and
+   `FwiProcessor::misfit_and_gradient` (the forward+adjoint+regularization pass, factored out of
+   `descent_update`). The driver uses `LbfgsMemory::direction` for `d=−H·g`, the **un-normalized**
+   gradient (so curvature pairs keep physical units), and an Armijo projected line search; the
+   first step (empty memory ⇒ steepest) is scaled by `step_size/‖g‖∞`. 2 value-semantic tests
+   (single-shot recovers a +60 m/s anomaly: misfit < ½ initial, anomaly-cell + illuminated-region
+   error fall; stationary at the zero-misfit truth). Clippy-clean. Inverse §9.1.
+   NOTE: the existing default Tikhonov weight (O(1)) swamps few-voxel physical gradients — the
+   test runs pure data-misfit; production use sets regularization to the problem scale.
+
+22. ✅ **IMPLEMENTED: CMUT squeeze-film damping** (MEMS-depth future-enhancement #6, part).
+   `CmutCell::{squeeze_film_damping (3πμa⁴/2g₀³), squeeze_number (12μωa²/p_a g₀²),
+   squeeze_film_quality_factor}` — the gap-gas damping channel for vented/non-evacuated CMUTs
+   (sealed-vacuum immersion CMUTs are radiation-damped). 1 value-semantic test (c∝a⁴/g³, Q falls
+   with viscosity, σ rises with f). Chapter 33 §33.6 + code-map updated. MEMS-depth remaining:
+   crosstalk, collapse-mode nonlinear drive, flexible MEMS beamformer.
+
+21. ✅ **COMPLETED: full Goldstein residue-aware unwrap** (future-enhancement #5b — auto
+   branch-cut placement). Added `goldstein_branch_cut_mask` (robust **ground-each-residue-to-
+   nearest-border** strategy — no valid loop encircles a residue) and `goldstein_unwrap_2d`.
+   Dipole test verifies branch-cut correctness by **continuity** (seam-free unwrap, no 2π jump
+   between adjacent valid pixels); residue-free reduces to the Itoh plane. 6 tests total green.
+   Residue-aware MRE unwrapping is now end-to-end.
+
+20. ✅ **IMPLEMENTED: Residue-aware phase unwrapping** (future-enhancement #5).
+   `kwavers_signal::phase::goldstein::{phase_residues, residue_count, is_unwrap_reliable,
+   masked_unwrap_2d}` — exact plaquette residue detection (Goldstein step 1), an Itoh-reliability
+   gate, and a masked BFS flood-fill unwrap that routes around residues. Elastography §11.13 +
+   `unwrap` module doc updated.
+
+19. ✅ **IMPLEMENTED: Bulk-piezo thickness-mode resonator (Mason/IEEE)** (future-enhancement #8).
+   `kwavers_transducer::bulk_piezo::BulkPiezoResonator` — stiffened sound speed, antiresonance
+   `f_p=c_D/2t`, clamped capacitance, series resonance via bisection of the IEEE thickness `k_t²`
+   relation, `coupling_from_frequencies`. 4 value-semantic tests green. Closes the Sources §2
+   Mason theory gap; the bulk-PZT therapy workhorse behind Chapter 33 §33.9.
+
+18. ✅ **CMUT/PMUT therapeutic-regime extension** (user follow-up: therapy needs high pressure at
+   2–5 MHz, and flexing a capacitive CMUT cuts output). Added CMUT gap-limited output ceiling +
+   `flex_gap_derating`, PMUT drive-scaled output, `plate::flexible_output_factor`, and
+   `comparison::evaluate_therapy`. 4 tests prove: CMUT output saturates (gap-limited) and *flexing
+   reduces it further, tighter gaps worst*; PMUT output ∝ drive; therapy verdict = PMUT (opposite
+   of the IVUS imaging verdict). Chapter 33 §33.9 added; scope broadened (imaging→CMUT,
+   therapy→PMUT/bulk-PZT); PyO3 bindings + ch33 fig06; kwavers-python compiles.
+
+17. ✅ **IMPLEMENTED: Zener (standard-linear-solid) viscoelastic model** (future-enhancement #2).
+   `kwavers_medium::viscoelastic::ZenerModel` — bounded-dispersion SLS companion to
+   `KelvinVoigtModel`; complex modulus, storage/loss, Debye loss peak at ωτ=1, relaxed/unrelaxed
+   speed bounds. 4 value-semantic tests green. Elastography §11.8 updated.
+
+16. ✅ **NEW CHAPTER 33 + CMUT/PMUT models** (user request; `[major]`, gated by **ADR 015**;
+   supersedes the bulk-piezo/CMUT backlog item). New `kwavers_transducer::mems` (plate / CMUT /
+   PMUT / IVUS comparison) — 13 value-semantic tests green; PyO3 `mems`/`cmut`/`pmut`/
+   `ivus_figure_of_merit` bindings (kwavers-python compiles); new Chapter 33
+   `cmut_vs_pmut.md` (electrical, manufacturing, heating, bandwidth, flexible/IVUS verdict —
+   CMUT favoured by the simulation) + `ch33_cmut_vs_pmut.py` figure script; README Part VIII
+   added (book now 1–33); Sources §2 cross-referenced. ch33 figure PNGs pending a maturin
+   rebuild. **Backlog queue now empty** — all documented-but-missing components implemented;
+   future-enhancement list recorded in backlog.md.
+
+15. ✅ **IMPLEMENTED: Acousto-elasticity (Murnaghan) — stress-dependent wave speed + pre-stress
+   inversion** (user directive; `[major]`, gated by **ADR 014**; scope = analytical
+   relation/inversion, full 3rd-order PDE deferred). `kwavers_physics::analytical::elastography::
+   {acoustoelastic_sensitivity, acoustoelastic_shear_speed, estimate_prestress,
+   estimate_prestress_sequence}` — `ρc_S²=μ+Aσ₀`, `A=(m+n)/(2(λ+μ))`, `σ₀=ρ(c_S²−c_S0²)/A`.
+   4 value-semantic tests (σ₀=0→√(μ/ρ); A formula; round-trip exact; cardiac-sequence per-frame
+   recovery). Elastography §11.9 updated. Re-verified missing first (no Murnaghan/acousto-elastic
+   anywhere; the nonlinear path is hyperelastic, a distinct formulation).
+
+14. ✅ **IMPLEMENTED: CEUS contrast pulse sequences** (user directive).
+   `kwavers_physics::acoustics::imaging::modalities::ceus::pulse_sequences::{pulse_inversion,
+   amplitude_modulation, cps_combine}` — multi-pulse linear-cancellation combiners (Simpson
+   1999 PI / Phillips 2001 CPS). 3 value-semantic tests with a quadratic scatterer (PI cancels
+   the fundamental, keeps 2f; AM cancels linear, nonlinear residual survives; CPS≡PI).
+   Diagnostics §9.4 updated — that chapter now has **no** "not yet implemented" markers.
+   Re-verified missing first (the ceus module had harmonic *filtering* + coherence weighting,
+   not the multi-pulse PI/AM combiner).
+
+13. ✅ **IMPLEMENTED: Acoustic CT — Radon + filtered backprojection** (user directive; first
+   `[major]`, gated by **ADR 013**). `kwavers_diagnostics::reconstruction::radon::
+   {radon_transform, filtered_backprojection}` — parallel-beam forward projection (bilinear ray
+   sampling) + Ram-Lak ramp-filtered backprojection. 3 value-semantic tests green (centred-disk
+   round-trip Pearson>0.8 + centroid; off-centre disk localizes within 4 px; empty→0). Inverse
+   §6 updated; bent-ray SIRT/ART + reflection-CT remain (SIRT path already exists). ADR at
+   docs/adr/013-acoustic-ct-radon-fbp.md.
 
 12. ✅ **IMPLEMENTED: f-k (Stolt) migration** (user directive).
    `kwavers_diagnostics::workflows::fk_migration::fk_stolt_migration` — exploding-reflector

@@ -1,5 +1,5 @@
-use kwavers_math::special::bessel::jn;
 use kwavers_core::constants::numerical::TWO_PI;
+use kwavers_math::special::bessel::jn;
 
 /// Evaluate the normalised amplitude of the nth harmonic at nonlinear parameter σ.
 ///

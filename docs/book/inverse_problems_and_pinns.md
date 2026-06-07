@@ -288,12 +288,14 @@ where $w$ is the imaging kernel combining the transmitted and received beam patt
 Delay-and-sum (DAS) beamforming is the adjoint of this forward operator, providing a computationally
 efficient backprojection reconstruction at the cost of sidelobe artifacts.
 
-> **Implementation status.** Acoustic CT as presented here — the Radon/filtered-backprojection
-> travel-time inversion and reflection-CT reflectivity reconstruction — is documented as theory
-> and is **not** implemented in kwavers. The implemented quantitative sound-speed paths are
-> frequency-domain FWI / convergent-Born-series and linear Born inversion (§8), and the
-> straight-/curved-ray speed-of-sound *shift* tomography in the Diagnostic Imaging chapter.
-> There is no `RadonTransform` / FBP type.
+> **Implementation status.** The straight-ray transmission-CT pair — the Radon transform of
+> the slowness field and its **filtered-backprojection (Ram-Lak)** inverse — is implemented in
+> `kwavers_diagnostics::reconstruction::radon` (`radon_transform`, `filtered_backprojection`;
+> ADR 013). Other quantitative sound-speed paths: frequency-domain FWI / convergent-Born-series
+> and linear Born inversion (§8), and the straight-/curved-ray speed-of-sound *shift* tomography
+> in the Diagnostic Imaging chapter. Reflection-CT reflectivity reconstruction and bent-ray
+> correction (iterative SIRT/ART over traced rays) remain — `reconstruction::real_time_sirt`
+> provides the iterative path.
 
 ---
 
@@ -429,7 +431,16 @@ A 2D Marmousi-style phantom (sound speed range 1480–3500 m/s) is reconstructed
 128 receivers at 250 kHz. Convergence criterion: $\|m^{(k+1)} - m^{(k)}\|/\|m^{(k)}\| < 10^{-4}$.
 Armijo-backtracking gradient descent (the shipped `FwiProcessor` line search) with multiscale
 frequency continuation reaches the convergence criterion; gradient accuracy is verified by a
-finite-difference check $\|g - g_{\text{FD}}\|/\|g\| < 10^{-5}$ A general quasi-Newton L-BFGS optimiser (Nocedal two-loop recursion) is implemented in `kwavers_math::optimization` (`minimize` / `LbfgsConfig`); wiring it into `FwiProcessor` as the refinement phase is the remaining integration step.
+finite-difference check $\|g - g_{\text{FD}}\|/\|g\| < 10^{-5}$. A quasi-Newton L-BFGS driver is
+also available: `FwiProcessor::invert_lbfgs(observed, initial, geometry, grid, memory)` replaces
+the normalized steepest-descent direction with the limited-memory BFGS direction $d=-H g$, where
+the implicit inverse Hessian $H$ comes from the Nocedal two-loop recursion over the last `memory`
+model/gradient correction pairs (`kwavers_math::optimization::LbfgsMemory`, the single
+implementation shared with the standalone `minimize`). It reuses the same forward/adjoint
+gradient, misfit, regularization, and model constraints as the steepest driver but feeds L-BFGS
+the **un-normalized** gradient so the curvature pairs $(s, y=\Delta g)$ retain physical scaling.
+Preconditioning by the (approximate) inverse Hessian conditions the gradient against the
+illumination imbalance discussed in §2, giving superlinear convergence near the minimiser.
 
 ![CBS vs Born FWI convergence](figures/ch17/fig04_convergence_comparison.png)
 

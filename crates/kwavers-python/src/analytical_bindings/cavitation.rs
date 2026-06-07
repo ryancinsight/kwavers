@@ -668,6 +668,75 @@ pub fn delivered_histotripsy_progress(
     Ok(out.into_pyarray(py).unbind())
 }
 
+/// Backscatter coefficient of partially fractionated tissue (lesion B-mode).
+///
+/// σ_bsc(f) = σ_liquefied + (σ_intact − σ_liquefied)·(1 − f)^γ. As the
+/// fractionation fraction `f` rises the lesion loses speckle scatterers and
+/// becomes hypoechoic. Thin wrapper over
+/// `kwavers_physics::analytical::cavitation::fractionation_backscatter_coefficient`.
+///
+/// Args:
+///     fractionation: per-voxel fractionation/kill fraction [0, 1].
+///     sigma_intact: intact-tissue backscatter coefficient (arb. units).
+///     sigma_liquefied: liquefied-homogenate floor backscatter coefficient.
+///     gamma: scatterer-loss exponent (≥ 1; 2 = quadratic).
+///
+/// Returns:
+///     Backscatter-coefficient array, same length as `fractionation`.
+#[pyfunction]
+#[pyo3(signature = (fractionation, sigma_intact, sigma_liquefied, gamma))]
+pub fn fractionation_backscatter_coefficient(
+    py: Python<'_>,
+    fractionation: PyReadonlyArray1<f64>,
+    sigma_intact: f64,
+    sigma_liquefied: f64,
+    gamma: f64,
+) -> PyResult<Py<PyArray1<f64>>> {
+    let f = fractionation
+        .as_slice()
+        .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+    let out = kwavers_physics::analytical::cavitation::fractionation_backscatter_coefficient(
+        f,
+        sigma_intact,
+        sigma_liquefied,
+        gamma,
+    );
+    Ok(out.into_pyarray(py).unbind())
+}
+
+/// Acoustic impedance of partially fractionated tissue (lesion-rim echo).
+///
+/// Z(f) = z_intact·(1 − f) + z_liquefied·f (linear volume mixing). The spatial
+/// gradient of this map produces the specular bright rim at the lesion boundary.
+/// Thin wrapper over
+/// `kwavers_physics::analytical::cavitation::fractionation_acoustic_impedance`.
+///
+/// Args:
+///     fractionation: per-voxel fractionation/kill fraction [0, 1].
+///     z_intact: intact-tissue acoustic impedance [Rayl].
+///     z_liquefied: liquefied-homogenate acoustic impedance [Rayl].
+///
+/// Returns:
+///     Acoustic-impedance array, same length as `fractionation`.
+#[pyfunction]
+#[pyo3(signature = (fractionation, z_intact, z_liquefied))]
+pub fn fractionation_acoustic_impedance(
+    py: Python<'_>,
+    fractionation: PyReadonlyArray1<f64>,
+    z_intact: f64,
+    z_liquefied: f64,
+) -> PyResult<Py<PyArray1<f64>>> {
+    let f = fractionation
+        .as_slice()
+        .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+    let out = kwavers_physics::analytical::cavitation::fractionation_acoustic_impedance(
+        f,
+        z_intact,
+        z_liquefied,
+    );
+    Ok(out.into_pyarray(py).unbind())
+}
+
 /// Size boiling-histotripsy lesion and pulse count from a resolved pressure
 /// profile. Returns `(pulses, lateral_radius_m, axial_radius_m, pulse_ms)`, or
 /// `None` when the focus does not boil within the pulse limit.
@@ -1380,4 +1449,218 @@ pub fn emission_energy_in_volume(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     Ok(cavitation::emission_energy_in_volume(s, m, dv_m3))
+}
+
+// ── Frequency-swept (chirp) cavitation control ───────────────────────────────
+
+/// Parse a sweep-profile string into the physics enum.
+fn parse_sweep_profile(profile: &str) -> PyResult<cavitation::SweepProfile> {
+    match profile.to_ascii_lowercase().as_str() {
+        "linear" => Ok(cavitation::SweepProfile::Linear),
+        "triangular" | "triangle" => Ok(cavitation::SweepProfile::Triangular),
+        other => Err(PyRuntimeError::new_err(format!(
+            "unknown sweep profile '{other}' (expected 'linear' or 'triangular')"
+        ))),
+    }
+}
+
+/// Build a soft-tissue cavitation medium from explicit parameters.
+#[allow(clippy::too_many_arguments)]
+fn tissue_medium(
+    p0_pa: f64,
+    rho: f64,
+    sigma: f64,
+    mu: f64,
+    kappa: f64,
+    p_v_pa: f64,
+    c_liquid: f64,
+) -> cavitation::CavitationMedium {
+    cavitation::CavitationMedium {
+        p0_pa,
+        rho,
+        sigma,
+        mu,
+        kappa,
+        p_v_pa,
+        c_liquid,
+    }
+}
+
+/// Swept-frequency versus monochromatic nuclei engagement.
+///
+/// Integrates the Keller–Miksis response over a log-normal nuclei population to
+/// compare the fraction of nuclei driven into inertial collapse (R_max/R₀ ≥
+/// `inertial_ratio`) by a frequency-swept drive versus a single tone (the sweep
+/// mean frequency), within a pulse of `pulse_duration_s`. The pulse window caps
+/// both integrations, so a microsecond pulse realizes no swept advantage while a
+/// millisecond pulse realizes the full enhancement.
+///
+/// Returns:
+///     (mono_fraction, swept_fraction, enhancement_factor, covered_lo_hz,
+///      covered_hi_hz).
+#[pyfunction]
+#[allow(clippy::too_many_arguments)]
+#[pyo3(signature = (
+    median_radius_m, geometric_std, f_start_hz, f_end_hz, sweep_period_s, profile,
+    amplitude_pa, pulse_duration_s, n_size_samples=41, inertial_ratio=2.0,
+    p0_pa=101_325.0, rho=1050.0, sigma=0.060, mu=1.5e-3, kappa=1.4,
+    p_v_pa=2339.0, c_liquid=1540.0
+))]
+pub fn swept_vs_monochromatic_engagement(
+    median_radius_m: f64,
+    geometric_std: f64,
+    f_start_hz: f64,
+    f_end_hz: f64,
+    sweep_period_s: f64,
+    profile: &str,
+    amplitude_pa: f64,
+    pulse_duration_s: f64,
+    n_size_samples: usize,
+    inertial_ratio: f64,
+    p0_pa: f64,
+    rho: f64,
+    sigma: f64,
+    mu: f64,
+    kappa: f64,
+    p_v_pa: f64,
+    c_liquid: f64,
+) -> PyResult<(f64, f64, f64, f64, f64)> {
+    let dist = cavitation::NucleiSizeDistribution::new(median_radius_m, geometric_std)
+        .ok_or_else(|| PyRuntimeError::new_err("invalid nuclei size distribution parameters"))?;
+    let sweep = cavitation::FrequencySweep::new(
+        f_start_hz,
+        f_end_hz,
+        sweep_period_s,
+        parse_sweep_profile(profile)?,
+    )
+    .ok_or_else(|| PyRuntimeError::new_err("invalid frequency-sweep parameters"))?;
+    let medium = tissue_medium(p0_pa, rho, sigma, mu, kappa, p_v_pa, c_liquid);
+    let cfg = cavitation::EngagementConfig {
+        n_size_samples,
+        inertial_ratio,
+        ..cavitation::EngagementConfig::default()
+    };
+    let r = cavitation::swept_vs_monochromatic_engagement(
+        &dist,
+        &medium,
+        &sweep,
+        amplitude_pa,
+        pulse_duration_s,
+        &cfg,
+    );
+    Ok((
+        r.mono_fraction,
+        r.swept_fraction,
+        r.enhancement_factor,
+        r.covered_band_hz.0,
+        r.covered_band_hz.1,
+    ))
+}
+
+/// Peak expansion ratio R_max/R₀ of a single nucleus under a chirped drive
+/// (inertial-collapse / fragmentation discriminant).
+///
+/// Returns:
+///     R_max/R₀ (dimensionless).
+#[pyfunction]
+#[allow(clippy::too_many_arguments)]
+#[pyo3(signature = (
+    r0_m, f_start_hz, f_end_hz, sweep_period_s, profile, amplitude_pa,
+    pulse_duration_s, steps_per_cycle=64,
+    p0_pa=101_325.0, rho=1050.0, sigma=0.060, mu=1.5e-3, kappa=1.4,
+    p_v_pa=2339.0, c_liquid=1540.0
+))]
+pub fn chirped_peak_expansion_ratio(
+    r0_m: f64,
+    f_start_hz: f64,
+    f_end_hz: f64,
+    sweep_period_s: f64,
+    profile: &str,
+    amplitude_pa: f64,
+    pulse_duration_s: f64,
+    steps_per_cycle: usize,
+    p0_pa: f64,
+    rho: f64,
+    sigma: f64,
+    mu: f64,
+    kappa: f64,
+    p_v_pa: f64,
+    c_liquid: f64,
+) -> PyResult<f64> {
+    let sweep = cavitation::FrequencySweep::new(
+        f_start_hz,
+        f_end_hz,
+        sweep_period_s,
+        parse_sweep_profile(profile)?,
+    )
+    .ok_or_else(|| PyRuntimeError::new_err("invalid frequency-sweep parameters"))?;
+    let f_res = f_start_hz.max(f_end_hz).max(1.0);
+    let n = ((pulse_duration_s * f_res).max(1.0) * steps_per_cycle as f64) as usize;
+    let n = n.clamp(steps_per_cycle, 400_000);
+    let dt = pulse_duration_s / n as f64;
+    let t_arr: Vec<f64> = (0..=n).map(|i| i as f64 * dt).collect();
+    Ok(cavitation::chirped_peak_expansion_ratio(
+        &sweep,
+        amplitude_pa,
+        r0_m,
+        &t_arr,
+        p0_pa,
+        rho,
+        sigma,
+        mu,
+        kappa,
+        p_v_pa,
+        0.0,
+        c_liquid,
+    ))
+}
+
+/// Inter-pulse residual-bubble clearance under a fragmenting clearing sweep.
+///
+/// Compares the residual void fraction left at the next pulse by passive
+/// Epstein–Plesset dissolution versus dissolution after a sweep fragments the
+/// residual bubble into `fragment_count` gas-volume-conserving daughters (which
+/// dissolve faster, τ ∝ R²).
+///
+/// Returns:
+///     (residual_radius_passive_m, residual_radius_swept_m,
+///      void_fraction_passive, void_fraction_swept, clearance_gain).
+#[pyfunction]
+#[pyo3(signature = (
+    initial_void_fraction, initial_radius_m, interval_s, fragment_count,
+    saturation_fraction=0.7
+))]
+pub fn inter_pulse_residual_clearance(
+    initial_void_fraction: f64,
+    initial_radius_m: f64,
+    interval_s: f64,
+    fragment_count: f64,
+    saturation_fraction: f64,
+) -> PyResult<(f64, f64, f64, f64, f64)> {
+    let params = cavitation::tissue_gas_diffusion(saturation_fraction);
+    let c = cavitation::inter_pulse_residual_clearance(
+        initial_void_fraction,
+        initial_radius_m,
+        interval_s,
+        fragment_count,
+        params,
+    );
+    Ok((
+        c.residual_radius_passive_m,
+        c.residual_radius_swept_m,
+        c.void_fraction_passive,
+        c.void_fraction_swept,
+        c.clearance_gain,
+    ))
+}
+
+/// Epstein–Plesset dissolution time R₀ → 0 [s] for a residual tissue bubble.
+///
+/// Returns:
+///     Dissolution time [s], or None if the bubble does not dissolve (f ≥ 1).
+#[pyfunction]
+#[pyo3(signature = (r0_m, saturation_fraction=0.7))]
+pub fn residual_dissolution_time_s(r0_m: f64, saturation_fraction: f64) -> PyResult<Option<f64>> {
+    let params = cavitation::tissue_gas_diffusion(saturation_fraction);
+    Ok(cavitation::residual_dissolution_time_s(r0_m, params))
 }

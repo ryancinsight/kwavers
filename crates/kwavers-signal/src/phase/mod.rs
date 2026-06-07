@@ -2,7 +2,12 @@
 use rand::Rng;
 use std::fmt::Debug;
 
+pub mod goldstein;
 pub mod unwrap;
+pub use goldstein::{
+    goldstein_branch_cut_mask, goldstein_unwrap_2d, is_unwrap_reliable, masked_unwrap_2d,
+    phase_residues, residue_count,
+};
 pub use unwrap::{unwrap_1d, unwrap_2d};
 
 pub trait Phase: Debug + Send + Sync {

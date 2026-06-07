@@ -12,6 +12,7 @@
 pub mod cloud_dynamics;
 pub mod microbubble;
 pub mod perfusion;
+pub mod pulse_sequences;
 pub mod reconstruction;
 pub mod scattering;
 
@@ -20,6 +21,7 @@ pub use cloud_dynamics::{
 };
 pub use microbubble::{BubbleDynamics, Microbubble, MicrobubblePopulation};
 pub use perfusion::{CeusPerfusionModel, FlowKinetics, TissueUptake};
+pub use pulse_sequences::{amplitude_modulation, cps_combine, pulse_inversion};
 pub use reconstruction::{CEUSReconstruction, ContrastImage};
 pub use scattering::{HarmonicImaging, NonlinearScattering};
 

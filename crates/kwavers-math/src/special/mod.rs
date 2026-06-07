@@ -34,4 +34,3 @@ mod tests {
         assert_eq!(sinc(-0.7), sinc(0.7));
     }
 }
-

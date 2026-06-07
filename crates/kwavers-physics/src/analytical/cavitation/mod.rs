@@ -9,6 +9,7 @@ mod histotripsy;
 mod passive_dose;
 mod power_spectrum;
 mod sonication;
+mod swept_frequency;
 #[cfg(test)]
 mod tests;
 mod therapy_delivery;
@@ -36,9 +37,16 @@ pub use sonication::{
     lacuna_cavitation_susceptibility, lacuna_void_fraction, pressure_transmission_coefficient,
     received_signal_fraction, SonicationOrder, SonicationSchedule,
 };
+pub use swept_frequency::{
+    chirped_keller_miksis_rk4, chirped_peak_expansion_ratio, inter_pulse_residual_clearance,
+    monochromatic_engaged_fraction, residual_dissolution_time_s, swept_engaged_fraction,
+    swept_vs_monochromatic_engagement, tissue_gas_diffusion, CavitationMedium, EngagementConfig,
+    EngagementResult, FrequencySweep, InterPulseClearance, NucleiSizeDistribution, SweepProfile,
+};
 pub use therapy_delivery::{
     boiling_lesion_from_pressure_profile, boiling_time_profile_from_pressure,
     clipped_lateral_radius_for_clearance, delivered_histotripsy_progress,
-    ellipsoid_respects_allowed_mask, integrate_channel_psd, receiver_channel_psd_from_source,
+    ellipsoid_respects_allowed_mask, fractionation_acoustic_impedance,
+    fractionation_backscatter_coefficient, integrate_channel_psd, receiver_channel_psd_from_source,
     scale_measured_emission_spectrum, BoilingLesionPlan,
 };

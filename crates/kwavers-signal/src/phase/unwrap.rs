@@ -8,8 +8,8 @@
 //! first column, then unwrap each row seeded from that column. It is **exact** for
 //! residue-free fields (smooth wavefields sampled below the Nyquist phase rate,
 //! i.e. adjacent-sample phase steps `< π`). For fields with residues (noise,
-//! aliasing) the result is path-dependent; a residue-aware (Goldstein branch-cut)
-//! unwrapper is the documented upgrade and is not yet implemented.
+//! aliasing) the result is path-dependent; use the residue-aware tools in
+//! [`super::goldstein`] (residue detection + masked flood-fill unwrap) for those.
 //!
 //! # References
 //! - Itoh, K. (1982). "Analysis of the phase unwrapping algorithm."

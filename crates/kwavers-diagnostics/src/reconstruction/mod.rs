@@ -7,6 +7,7 @@
 pub mod acoustic_projection;
 pub mod breast_ust_fwi;
 pub mod clinical_monitoring;
+pub mod radon;
 pub mod real_time_sirt;
 pub mod sound_speed_shift;
 pub mod transcranial_ust;

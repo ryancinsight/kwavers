@@ -129,12 +129,16 @@ in `kwavers_source::config`).
 
 ---
 
-> **Implementation status.** The piezoelectric constitutive relations and the Mason
-> equivalent circuit above are foundational theory for *how* a transducer converts drive
-> voltage to surface motion. kwavers does **not** implement a piezoelectric or CMUT
-> material model; it injects a prescribed surface velocity/pressure (§7 source contract)
-> and the resonance/bandwidth of a real element is supplied as an input pulse spectrum
-> (`PulseParameters`), not derived from `d_33`/Mason parameters.
+> **Implementation status.** For *array-field* simulation, kwavers injects a prescribed surface
+> velocity/pressure (§7 source contract) and the resonance/bandwidth of a real element is
+> supplied as an input pulse spectrum (`PulseParameters`) — not derived from the bulk-piezo
+> Mason circuit above (which remains foundational theory). **Micromachined** element
+> electromechanics *are* modelled: CMUT (capacitive) and PMUT (piezoelectric) cells —
+> capacitance, collapse voltage, coupling, self-heating, and bandwidth — live in
+> `kwavers_transducer::mems` and are compared for flexible/IVUS use in **Chapter 33 (CMUT vs
+> PMUT)**. The **bulk-piezo thickness-mode** resonator (the Mason/IEEE thickness model: stiffened
+> sound speed, antiresonance `f_p = c_D/2t`, series resonance via the `k_t²`↔`(f_s,f_p)` relation,
+> clamped capacitance) is `kwavers_transducer::bulk_piezo::BulkPiezoResonator`.
 
 ---
 
