@@ -1,7 +1,10 @@
 //! Special mathematical functions (workspace SSOT).
 
 pub mod bessel;
+mod error_function;
 pub mod legendre;
+
+pub use error_function::erf;
 
 /// Unnormalized cardinal sine `sinc(x) = sin(x)/x`, with the removable
 /// singularity defined as `sinc(0) = 1` (guarded for `|x| ≤ ε`).

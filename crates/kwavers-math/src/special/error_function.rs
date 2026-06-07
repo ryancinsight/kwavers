@@ -1,7 +1,6 @@
-//! Special functions shared across solver and clinical layers.
+//! Gaussian error function — part of the `kwavers-math::special` SSOT.
 //!
-//! Pure, domain-free numerics (see the module-level note in [`super`]): both the
-//! physics and clinical layers depend on these, neither depends on the other.
+//! Pure, domain-free numerics depended on by the physics and clinical layers.
 
 /// Gaussian error function `erf(x)` via the Abramowitz & Stegun 7.1.26 rational
 /// approximation.

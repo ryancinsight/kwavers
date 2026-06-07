@@ -22,7 +22,7 @@ mod regime;
 
 use kwavers_core::constants::fundamental::ACOUSTIC_IMPEDANCE_TISSUE_NOMINAL;
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
-use kwavers_math::statistics::erf;
+use kwavers_math::special::erf;
 
 pub use benefit::{intrinsic_threshold_pa, BenefitDetriment};
 pub use pulse::PulsePattern;

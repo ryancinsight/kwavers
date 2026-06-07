@@ -3,10 +3,6 @@
 //! Pure functions with no domain dependencies. Both solver and clinical layers
 //! import from here; neither depends on the other.
 
-mod special;
-
-pub use special::erf;
-
 /// Pearson product-moment correlation coefficient.
 ///
 /// Returns 0 when either slice has zero variance, when the slices have
