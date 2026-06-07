@@ -7,6 +7,20 @@ use crate::core::{ArrayAccess, CoreMedium};
 use kwavers_grid::Grid;
 use ndarray::Array3;
 
+/// Convert isotropic-elastic wave speeds to Lamé parameters `(λ, μ)` [Pa].
+///
+/// `μ = ρ·c_s²` (shear modulus) and `λ = ρ·(c_p² − 2c_s²)`, where `c_p`/`c_s`
+/// are the compressional/shear speeds [m/s] and `ρ` the density [kg/m³].
+/// Single source of truth for the speed→modulus conversion used by the
+/// homogeneous and heterogeneous medium constructors.
+#[inline]
+#[must_use]
+pub fn lame_from_speeds(c_compression: f64, c_shear: f64, density: f64) -> (f64, f64) {
+    let mu = density * c_shear * c_shear;
+    let lambda = density * c_compression.mul_add(c_compression, -(2.0 * c_shear * c_shear));
+    (lambda, mu)
+}
+
 /// Trait for elastic medium properties
 pub trait ElasticProperties: CoreMedium {
     /// Returns Lamé's first parameter λ (Pa)

@@ -231,8 +231,7 @@ impl HomogeneousMedium {
             return None;
         }
 
-        let mu = density * c_shear * c_shear;
-        let lambda = density * c_compression.mul_add(c_compression, -(2.0 * c_shear * c_shear));
+        let (lambda, mu) = crate::elastic::lame_from_speeds(c_compression, c_shear, density);
 
         // Build a baseline acoustic-only homogeneous medium at c_p, then
         // overwrite Lamé parameters with the elastic-derived values.

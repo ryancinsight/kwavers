@@ -91,8 +91,9 @@ impl HeterogeneousFactory {
                         ));
                     }
 
-                    lame_mu[[i, j, k]] = rho * cs * cs;
-                    lame_lambda[[i, j, k]] = rho * cp.mul_add(cp, -(2.0 * cs * cs));
+                    let (lambda_v, mu_v) = crate::elastic::lame_from_speeds(cp, cs, rho);
+                    lame_mu[[i, j, k]] = mu_v;
+                    lame_lambda[[i, j, k]] = lambda_v;
                     sound_speed[[i, j, k]] = cp;
                     shear_sound_speed[[i, j, k]] = cs;
                     density_arr[[i, j, k]] = rho;
