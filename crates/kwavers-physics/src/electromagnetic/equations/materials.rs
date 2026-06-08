@@ -53,6 +53,7 @@ pub struct EMMaterialDistribution {
 }
 
 impl EMMaterialDistribution {
+    /// Uniform vacuum distribution (ε₀, µ₀, zero conductivity) of the given shape.
     #[inline]
     #[must_use]
     pub fn vacuum(shape: &[usize]) -> Self {

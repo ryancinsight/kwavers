@@ -41,6 +41,10 @@
 //! the shared solver layer. Physics defines constitutive relations and material
 //! properties; solvers provide numerical algorithms.
 
+// Fully documented module — enforce complete public-item docs (incremental
+// crate-wide policy; see lib.rs).
+#![deny(missing_docs)]
+
 pub mod equations; // Electromagnetic wave equation specifications
                    // pub mod optics; // Moved to physics::optics
 pub mod photoacoustic;

@@ -211,11 +211,24 @@ pub struct PulsedLaser {
     pub beam_profile: BeamProfile,
 }
 
+/// Transverse optical-beam intensity profile.
 #[derive(Debug, Clone)]
 pub enum BeamProfile {
-    Gaussian { beam_radius: f64 },
-    FlatTop { beam_radius: f64 },
-    Bessel { central_lobe_radius: f64 },
+    /// Gaussian profile `exp(−r²/w²)`.
+    Gaussian {
+        /// 1/e² beam radius w [m].
+        beam_radius: f64,
+    },
+    /// Uniform flat-top (top-hat) profile.
+    FlatTop {
+        /// Radius of the illuminated disc [m].
+        beam_radius: f64,
+    },
+    /// Non-diffracting Bessel beam.
+    Bessel {
+        /// Radius of the central lobe [m].
+        central_lobe_radius: f64,
+    },
 }
 
 impl PulsedLaser {
