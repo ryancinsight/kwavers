@@ -9,6 +9,8 @@ use kwavers_core::constants::thermodynamic::KELVIN_OFFSET_C;
 use kwavers_core::error::KwaversResult;
 use ndarray::{Array3, Zip};
 
+/// CEM43 thermal-dose constants and damage thresholds (Sapareto & Dewey 1984),
+/// re-exported from the `kwavers-core` medical-constants SSOT.
 pub mod thresholds {
     use kwavers_core::constants::medical::{
         THERMAL_DOSE_DAMAGE_THRESHOLD_CEM43, THERMAL_DOSE_REFERENCE_TEMP_C,
@@ -33,6 +35,8 @@ pub mod thresholds {
     pub const DAMAGE_THRESHOLD_CEM43: f64 = THERMAL_DOSE_DAMAGE_THRESHOLD_CEM43;
 }
 
+/// Accumulates the CEM43 thermal dose (cumulative equivalent minutes at 43 °C)
+/// per voxel over a heating history, tracking the running maximum.
 #[derive(Debug)]
 pub struct ThermalDoseCalculator {
     cumulative_dose: Array3<f64>,
@@ -94,26 +98,31 @@ impl ThermalDoseCalculator {
         Ok(())
     }
 
+    /// Per-voxel accumulated CEM43 thermal dose [equivalent minutes at 43 °C].
     #[must_use]
     pub fn get_dose(&self) -> &Array3<f64> {
         &self.cumulative_dose
     }
 
+    /// Peak per-voxel CEM43 dose reached so far.
     #[must_use]
     pub fn max_dose(&self) -> f64 {
         self.max_dose
     }
 
+    /// Simulation time [s] at which the peak dose was reached.
     #[must_use]
     pub fn max_dose_time(&self) -> f64 {
         self.max_dose_time
     }
 
+    /// Boolean mask of voxels whose accumulated dose meets `threshold_cem43`.
     #[must_use]
     pub fn check_damage_threshold(&self, threshold_cem43: f64) -> Array3<bool> {
         self.cumulative_dose.mapv(|dose| dose >= threshold_cem43)
     }
 
+    /// Fraction of voxels exceeding the irreversible-necrosis CEM43 threshold.
     #[must_use]
     pub fn necrosis_fraction(&self) -> f64 {
         use thresholds::NECROSIS_THRESHOLD_CEM43;
@@ -128,6 +137,7 @@ impl ThermalDoseCalculator {
         necrosed_points / total_points
     }
 
+    /// Fraction of voxels exceeding the reversible-damage CEM43 threshold.
     #[must_use]
     pub fn damage_fraction(&self) -> f64 {
         use thresholds::DAMAGE_THRESHOLD_CEM43;
@@ -142,6 +152,8 @@ impl ThermalDoseCalculator {
         damaged_points / total_points
     }
 
+    /// Clear the accumulated dose and reset the running maximum (reuse the
+    /// calculator for a fresh heating history).
     pub fn reset(&mut self) {
         self.cumulative_dose.fill(0.0);
         self.max_dose = 0.0;

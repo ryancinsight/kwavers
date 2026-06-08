@@ -42,6 +42,9 @@
 //! 1976), so the cube linearly blends the two nearest `f0` corners
 //! and re-normalizes after the blend.
 
+// Already fully documented — enforce it (incremental crate-wide policy; see lib.rs).
+#![deny(missing_docs)]
+
 pub mod cube;
 pub mod helmholtz;
 pub mod kernel;

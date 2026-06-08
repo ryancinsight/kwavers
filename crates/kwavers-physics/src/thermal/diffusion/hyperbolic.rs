@@ -33,6 +33,9 @@ impl Default for HyperbolicParameters {
     }
 }
 
+/// Cattaneo–Vernotte hyperbolic heat-conduction solver: finite-speed (non-Fourier)
+/// thermal propagation with relaxation time τ, tracking the heat-flux vector field
+/// and its divergence.
 #[derive(Debug)]
 pub struct CattaneoVernotte {
     params: HyperbolicParameters,
@@ -43,6 +46,8 @@ pub struct CattaneoVernotte {
 }
 
 impl CattaneoVernotte {
+    /// Create a solver with the given hyperbolic parameters, zero-initialising the
+    /// heat-flux and divergence fields to the grid shape.
     pub fn new(params: HyperbolicParameters, grid: &Grid) -> Self {
         let shape = (grid.nx, grid.ny, grid.nz);
         Self {

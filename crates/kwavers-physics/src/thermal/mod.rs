@@ -8,6 +8,10 @@
 //! - Nyborg (1988) "Solutions of the bio-heat transfer equation"
 //! - ter Haar & Coussios (2007) "High intensity focused ultrasound"
 
+// Fully documented module — enforce complete public-item docs (incremental
+// crate-wide policy; see lib.rs).
+#![deny(missing_docs)]
+
 pub mod ablation;
 pub mod coupling;
 pub mod diffusion;
