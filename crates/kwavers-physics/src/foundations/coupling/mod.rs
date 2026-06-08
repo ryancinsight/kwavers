@@ -52,18 +52,31 @@ pub struct CouplingStrength {
 #[derive(Debug, Clone)]
 pub enum CouplingInterfaceCondition {
     /// Dirichlet-type: field continuity u₁ = u₂
-    Dirichlet { field_name: String },
+    Dirichlet {
+        /// Name of the field whose continuity is enforced across the interface.
+        field_name: String,
+    },
     /// Neumann-type: flux continuity ∂u₁/∂n = ∂u₂/∂n
-    Neumann { flux_name: String },
+    Neumann {
+        /// Name of the flux quantity whose continuity is enforced.
+        flux_name: String,
+    },
     /// Robin-type: weighted combination αu + β∂u/∂n = γu₂ + δ∂u₂/∂n
     Robin {
+        /// Coefficient α on the field value of side 1.
         alpha: f64,
+        /// Coefficient β on the normal derivative of side 1.
         beta: f64,
+        /// Coefficient γ on the field value of side 2.
         gamma: f64,
+        /// Coefficient δ on the normal derivative of side 2.
         delta: f64,
     },
     /// Transmission condition for wave propagation
-    Transmission { impedance_ratio: f64 },
+    Transmission {
+        /// Acoustic impedance ratio Z₂/Z₁ across the interface.
+        impedance_ratio: f64,
+    },
 }
 
 /// Multi-physics coupling trait

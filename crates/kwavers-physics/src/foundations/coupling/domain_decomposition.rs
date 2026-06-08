@@ -19,17 +19,29 @@ pub struct DomainDecomposition {
 #[derive(Debug, Clone)]
 pub enum DomainDecompTransmissionCondition {
     /// Dirichlet transmission: u = g
-    Dirichlet { boundary_value: f64 },
+    Dirichlet {
+        /// Prescribed interface field value `g`.
+        boundary_value: f64,
+    },
     /// Neumann transmission: ∂u/∂n = g
-    Neumann { boundary_flux: f64 },
+    Neumann {
+        /// Prescribed interface normal flux `g = ∂u/∂n`.
+        boundary_flux: f64,
+    },
     /// Robin transmission: αu + β∂u/∂n = g
     Robin {
+        /// Coefficient α on the field value.
         alpha: f64,
+        /// Coefficient β on the normal derivative.
         beta: f64,
+        /// Right-hand-side interface value `g`.
         boundary_value: f64,
     },
     /// Optimized Schwarz with optimized interface conditions
-    OptimizedSchwarz { optimization_parameter: f64 },
+    OptimizedSchwarz {
+        /// Optimized Schwarz interface-condition tuning parameter.
+        optimization_parameter: f64,
+    },
 }
 
 /// Schwarz iteration method for domain decomposition

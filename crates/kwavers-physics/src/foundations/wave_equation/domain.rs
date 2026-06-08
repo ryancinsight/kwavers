@@ -26,11 +26,20 @@ pub enum TimeIntegration {
 #[derive(Debug, Clone, PartialEq)]
 pub enum WaveEquationBoundary {
     /// Dirichlet: prescribed field value u = g
-    Dirichlet { value: f64 },
+    Dirichlet {
+        /// Prescribed boundary field value `g`.
+        value: f64,
+    },
     /// Neumann: prescribed normal derivative ∂u/∂n = g
-    Neumann { flux: f64 },
+    Neumann {
+        /// Prescribed outward-normal derivative `g = ∂u/∂n`.
+        flux: f64,
+    },
     /// Absorbing: perfectly matched layer or damping
-    Absorbing { damping: f64 },
+    Absorbing {
+        /// Damping coefficient for the absorbing/PML layer.
+        damping: f64,
+    },
     /// Periodic: u(x₀) = u(x₁)
     Periodic,
     /// Free surface: stress-free condition

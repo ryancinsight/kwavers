@@ -78,6 +78,11 @@
 //! - [`wave_equation`]: Core wave equation trait definitions
 //! - [`coupling`]: Multi-physics coupling interfaces and traits
 
+// The foundations layer is the documented physics-specification SSOT; enforce
+// complete public-item documentation here (incremental rollout of the crate-wide
+// docs policy — see lib.rs).
+#![deny(missing_docs)]
+
 pub mod coupling;
 pub mod wave_equation;
 
