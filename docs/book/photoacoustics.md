@@ -910,6 +910,66 @@ The `kwavers_signal` crate (signal primitives, re-surfaced through `kwavers_anal
 
 ---
 
+## 11A. Acousto-Optic Diffraction — the Complementary Effect
+
+Photoacoustics converts **light → sound** (absorbed optical energy launches a pressure wave).
+The complementary effect, **acousto-optics**, converts the influence of sound onto light: through
+the *photoelastic* effect a sound wave of strain `S` modulates the refractive index by
+`Δn = ½ n³ p_e S`, turning the sound column into a moving **phase grating** that diffracts a probe
+beam into orders `m = 0, ±1, ±2, …`. It is the basis of acousto-optic modulators (AOMs),
+frequency shifters, deflectors, and tunable filters, and of optical read-out of ultrasound fields.
+
+### 11A.1 Diffraction regimes — the Klein–Cook parameter
+
+Which diffraction model applies is set by the **Klein–Cook parameter**
+
+$$
+Q = \frac{2\pi \lambda_0 L}{n \Lambda^2},
+$$
+
+with `λ₀` the vacuum optical wavelength, `L` the interaction length, `n` the index, and `Λ` the
+acoustic wavelength:
+
+- **`Q ≪ 1` — Raman–Nath** (thin grating): many symmetric orders, intensities
+  `Iₘ = Jₘ²(ν)`, where `ν = 2π Δn L / λ₀` is the peak phase modulation (Bessel functions).
+- **`Q ≫ 1` — Bragg** (thick grating): a single first order at the Bragg angle
+  `θ_B = arcsin(λ₀/2nΛ)`, efficiency `η = sin²(ν/2)`.
+- **intermediate `Q`**: no closed form — integrate the coupled-wave equations.
+
+The `m`-th order is angularly separated by `sin θₘ = mλ₀/(nΛ)` and **frequency-shifted** by
+`Δf = m f_a` (it exchanges `m` phonons with the travelling wave) — the AOM/frequency-shifter
+principle.
+
+### 11A.2 The general Klein–Cook coupled-wave model
+
+The complete model integrates the order amplitudes `Eₗ(ξ)` across the normalised interaction
+coordinate `ξ ∈ [0,1]`:
+
+$$
+\frac{dE_l}{d\xi} = -i\frac{\nu}{2}\,(E_{l-1}+E_{l+1}) - i\frac{Q}{2}\,(l^2 + 2l\alpha)\,E_l,
+\qquad E_l(0)=\delta_{l0},
+$$
+
+where the first term is the grating coupling between adjacent orders and the second is the
+Bragg-mismatch phase that suppresses off-resonant orders as `Q` grows (`α` is the normalised
+incidence: `0` normal, `−½` exact Bragg). As `Q → 0` it reduces analytically to the Raman–Nath
+result `Jₗ²(ν)`; at large `Q` with `α = −½` it reduces to the Bragg `sin²(ν/2)`.
+
+### 11A.3 Implementation in kwavers
+
+The complete theory is in `kwavers_physics::analytical::acousto_optics`
+(PyO3-exposed): `klein_cook_parameter` + `diffraction_regime`; `raman_nath_order_intensities`
+/ `raman_nath_parameter`; `bragg_diffraction_efficiency` + `bragg_angle_rad`;
+`diffraction_angle_rad` + `diffraction_frequency_shift_hz`; and the general
+`solve_coupled_orders` (RK4). The field-level coupler
+`kwavers_solver::multiphysics::acoustic_optical::AcousticOpticalSolver` applies the photoelastic
+index modulation to an optical field and exposes `diffraction_orders(...)`, which delegates to the
+analytical model. Value-semantic tests verify the Bessel orders, energy conservation
+`Σ Jₘ²(ν)=1`, the Bragg closed form, the `θ₁ = 2θ_B` geometry, and — crucially — that the coupled
+solver reproduces **both** the Raman–Nath (`Q→0`) and Bragg (`Q≫1`) limits.
+
+---
+
 ## 12. Summary and Key Results
 
 | Topic | Key Result | Equation |

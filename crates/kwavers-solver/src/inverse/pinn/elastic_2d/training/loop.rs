@@ -205,10 +205,16 @@ pub fn train_pinn<B: AutodiffBackend>(
     Ok(metrics)
 }
 
-/// Simplified training function for basic use cases
+/// Simplified training entry point for basic use cases.
+///
+/// Constructs zero-initialised collocation/boundary/initial datasets and a
+/// constant-rate SGD optimiser, then delegates to [`train_pinn`]. Intended for
+/// smoke tests and examples; supply real [`TrainingData`] via [`train_pinn`]
+/// for production runs.
 ///
 /// # Errors
-/// Returns `KwaversError::NotImplemented` — delegates to `train_pinn`.
+/// Propagates any [`KwaversError`] returned by [`train_pinn`] (e.g. a tensor /
+/// autodiff backend failure during an epoch).
 #[cfg(feature = "pinn")]
 pub fn train_simple<B: AutodiffBackend>(
     model: &mut ElasticPINN2D<B>,
