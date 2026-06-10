@@ -81,6 +81,25 @@ pub fn diffraction_angle_rad(
     .unwrap_or(f64::NAN)
 }
 
+/// Frequency shift Δf = m·f_acoustic of the m-th diffracted order (AOM principle).
+#[pyfunction]
+#[pyo3(signature = (order, acoustic_frequency_hz))]
+pub fn diffraction_frequency_shift_hz(order: i32, acoustic_frequency_hz: f64) -> f64 {
+    acousto_optics::diffraction_frequency_shift_hz(order, acoustic_frequency_hz)
+}
+
+/// Bragg angle θ_B = arcsin(λ₀/(2nΛ)) [rad]; NaN if no Bragg solution.
+#[pyfunction]
+#[pyo3(signature = (optical_wavelength_m, refractive_index, acoustic_wavelength_m))]
+pub fn bragg_angle_rad(
+    optical_wavelength_m: f64,
+    refractive_index: f64,
+    acoustic_wavelength_m: f64,
+) -> f64 {
+    acousto_optics::bragg_angle_rad(optical_wavelength_m, refractive_index, acoustic_wavelength_m)
+        .unwrap_or(f64::NAN)
+}
+
 /// General Klein–Cook coupled-wave solver: exit order intensities |Eₗ(1)|² for
 /// l = −max_order..=max_order (index l + max_order). Reduces to Raman–Nath
 /// (Q→0) and Bragg (large Q, α=−½).

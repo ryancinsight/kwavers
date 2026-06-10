@@ -28,7 +28,10 @@ claimed struct name) before implementing. Confirmed corrections below.
   (RK4 on `dEₗ/dξ=−i(ν/2)(Eₗ₋₁+Eₗ₊₁)−i(Q/2)(l²+2lα)Eₗ`). 8 value-semantic tests: regime
   classification; Raman–Nath = exact Bessel + symmetry + `Σ Jₘ²=1` energy; Bragg closed form;
   diffraction angles; **the coupled solver reproduces Raman–Nath as Q→0** and **Bragg `sin²(ν/2)`
-  at large Q (α=−½)**; energy conserved in all regimes. Wired `AcousticOpticalSolver::diffraction_orders`
+  at large Q (α=−½)**; energy conserved in all regimes. Completed (2026-06-10) with the
+  **order frequency shift** `Δf=m·f_a` (`diffraction_frequency_shift_hz`, the AOM/frequency-shifter
+  principle) and the explicit **Bragg angle** `θ_B=arcsin(λ₀/2nΛ)` (`bragg_angle_rad`), both tested
+  (θ₁=2θ_B geometry, no-solution cut-off). Wired `AcousticOpticalSolver::diffraction_orders`
   to delegate to the model (+2 solver tests cross-checking against the closed form). Full PyO3
   bindings (6 fns) + `__init__.py` re-export; python crate compiles. Klein & Cook (1967); Korpel;
   Saleh & Teich §20.

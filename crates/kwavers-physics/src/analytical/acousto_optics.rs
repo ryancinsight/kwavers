@@ -146,6 +146,41 @@ pub fn diffraction_angle_rad(
     }
 }
 
+/// **Frequency shift** of the `order`-th diffracted beam: `Δf = m·f_acoustic`.
+///
+/// Each diffraction order `m` exchanges `m` phonons with the travelling sound
+/// wave, so its optical frequency is shifted by `m·f_a` (up for `m > 0`, down
+/// for `m < 0`). This is the operating principle of acousto-optic modulators,
+/// frequency shifters, and heterodyne/laser-Doppler systems. The undeviated
+/// order (`m = 0`) is unshifted.
+#[must_use]
+pub fn diffraction_frequency_shift_hz(order: i32, acoustic_frequency_hz: f64) -> f64 {
+    order as f64 * acoustic_frequency_hz
+}
+
+/// **Bragg angle** `θ_B = arcsin(λ₀ / (2 n Λ))` \[rad] — the incidence (and
+/// diffraction) angle that maximises first-order Bragg efficiency, where the
+/// grating equation and energy/momentum conservation are simultaneously
+/// satisfied. Returns `None` if `λ₀/(2nΛ) > 1` (no Bragg solution) or the
+/// geometry is degenerate.
+#[must_use]
+pub fn bragg_angle_rad(
+    optical_wavelength_m: f64,
+    refractive_index: f64,
+    acoustic_wavelength_m: f64,
+) -> Option<f64> {
+    let denom = 2.0 * refractive_index * acoustic_wavelength_m;
+    if denom <= 0.0 {
+        return None;
+    }
+    let s = optical_wavelength_m / denom;
+    if s.abs() > 1.0 {
+        None
+    } else {
+        Some(s.asin())
+    }
+}
+
 /// General **Klein–Cook coupled-wave** solver for acousto-optic diffraction.
 ///
 /// Integrates the coupled-amplitude equations for the complex order amplitudes
@@ -352,5 +387,30 @@ mod tests {
         let nu = raman_nath_parameter(1e-4, 1e-3, 633e-9);
         assert!((nu - TAU * 1e-4 * 1e-3 / 633e-9).abs() < 1e-9);
         assert_eq!(raman_nath_parameter(1e-4, 1e-3, 0.0), 0.0);
+    }
+
+    /// Diffraction-order frequency shift Δf = m·f_a (the AOM principle).
+    #[test]
+    fn diffraction_frequency_shift_is_order_times_acoustic() {
+        let fa = 80e6; // 80 MHz AOM
+        assert_eq!(diffraction_frequency_shift_hz(0, fa), 0.0);
+        assert_eq!(diffraction_frequency_shift_hz(1, fa), fa);
+        assert_eq!(diffraction_frequency_shift_hz(-1, fa), -fa);
+        assert_eq!(diffraction_frequency_shift_hz(2, fa), 2.0 * fa);
+    }
+
+    /// Bragg angle θ_B = arcsin(λ₀/2nΛ); it is half the angle between the
+    /// undiffracted and first-order beams, and has no solution when λ₀ > 2nΛ.
+    #[test]
+    fn bragg_angle_closed_form_and_geometry() {
+        let (lam0, n, lambda) = (633e-9, 1.33, 50e-6);
+        let tb = bragg_angle_rad(lam0, n, lambda).unwrap();
+        assert!((tb.sin() - lam0 / (2.0 * n * lambda)).abs() < 1e-15);
+        // The first-order diffraction angle is 2·θ_B in the small-angle limit:
+        // sin θ₁ = λ₀/(nΛ) = 2·sin θ_B.
+        let theta1 = diffraction_angle_rad(1, lam0, n, lambda).unwrap();
+        assert!((theta1.sin() - 2.0 * tb.sin()).abs() < 1e-15);
+        // No Bragg solution when the optical wavelength exceeds 2nΛ.
+        assert!(bragg_angle_rad(633e-9, 1.0, 100e-9).is_none());
     }
 }

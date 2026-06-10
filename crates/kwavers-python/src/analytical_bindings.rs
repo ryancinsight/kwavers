@@ -44,6 +44,11 @@ pub fn register_book(m: &Bound<'_, PyModule>) -> PyResult<()> {
         m
     )?)?;
     m.add_function(wrap_pyfunction!(acousto_optics::diffraction_angle_rad, m)?)?;
+    m.add_function(wrap_pyfunction!(
+        acousto_optics::diffraction_frequency_shift_hz,
+        m
+    )?)?;
+    m.add_function(wrap_pyfunction!(acousto_optics::bragg_angle_rad, m)?)?;
     m.add_function(wrap_pyfunction!(acousto_optics::solve_coupled_orders, m)?)?;
 
     // mems (CMUT / PMUT / IVUS — Chapter 33)
