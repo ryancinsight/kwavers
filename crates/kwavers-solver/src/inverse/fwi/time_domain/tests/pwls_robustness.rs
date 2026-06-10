@@ -74,6 +74,7 @@ fn build_problem() -> (Grid, FwiGeometry, FwiParameters, Array3<f64>, Array3<f64
         regularization: RegularizationParameters {
             tikhonov_weight: 0.0,
             tv_weight: 0.0,
+            directional_tv_weight: 0.0,
             smoothness_weight: 0.0,
         },
         ..FwiParameters::default()

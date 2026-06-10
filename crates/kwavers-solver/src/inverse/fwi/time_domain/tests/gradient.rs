@@ -507,3 +507,113 @@ fn test_fwi_heterogeneous_density_gradient_differs_from_baseline() {
         "heterogeneous-ρ gradient must differ from baseline somewhere; max rel diff = {max_rel_diff:e}"
     );
 }
+
+/// Deterministic non-trivial test model with directional structure along every
+/// axis and diagonal (so all TV difference directions are exercised).
+fn directional_tv_test_model(dims: (usize, usize, usize)) -> Array3<f64> {
+    let mut m = Array3::<f64>::zeros(dims);
+    for ((i, j, k), v) in m.indexed_iter_mut() {
+        let (a, b, c) = (i as f64 * 0.3, j as f64 * 0.4, k as f64 * 0.25);
+        // Smooth, non-separable pattern: gradients are O(0.1) everywhere, keeping
+        // the Huber weight W well above the ε² floor so the functional is smooth.
+        *v = a.sin() + (b + 0.2 * a).cos() + 0.5 * (c - 0.1 * b).sin();
+    }
+    m
+}
+
+/// A constant field has zero total-variation gradient for both the axis-only
+/// and the four-direction (FDTV) stencils.
+/// # Panics
+/// - Panics on any assertion failure.
+#[test]
+fn test_directional_tv_gradient_is_zero_for_constant_field() {
+    use super::super::gradient::{
+        directional_tv_gradient, AXIS_TV_DIRECTIONS, FDTV_DIRECTIONS,
+    };
+
+    let model = Array3::from_elem((6, 5, 4), 1537.0_f64);
+    for dirs in [&AXIS_TV_DIRECTIONS[..], &FDTV_DIRECTIONS[..]] {
+        let g = directional_tv_gradient(&model, dirs);
+        let max_abs = g.iter().fold(0.0_f64, |a, &x| a.max(x.abs()));
+        // W = ε so every difference is exactly 0/ε = 0.
+        assert!(
+            max_abs < 1e-12,
+            "constant field must give a zero TV gradient; max |g| = {max_abs:e}"
+        );
+    }
+}
+
+/// The analytically derived FDTV gradient is the exact functional derivative of
+/// the discrete FDTV functional — verified by a central finite-difference check
+/// at every voxel (the gradient test, strongest correctness tier).
+///
+/// `∂J/∂m[q] ≈ (J(m + h e_q) − J(m − h e_q)) / 2h` to O(h²); with h = 1e-6 and
+/// O(1) curvature the central difference matches the analytic gradient to ~1e-8.
+/// # Panics
+/// - Panics on any assertion failure.
+#[test]
+fn test_directional_tv_gradient_matches_finite_difference_of_functional() {
+    use super::super::gradient::{
+        directional_tv_functional, directional_tv_gradient, FDTV_DIRECTIONS,
+    };
+
+    let dims = (5, 5, 5);
+    let model = directional_tv_test_model(dims);
+    let analytic = directional_tv_gradient(&model, &FDTV_DIRECTIONS);
+
+    let h = 1e-6_f64;
+    let mut max_err = 0.0_f64;
+    for (idx, &g) in analytic.indexed_iter() {
+        let mut plus = model.clone();
+        let mut minus = model.clone();
+        plus[idx] += h;
+        minus[idx] -= h;
+        let fd = (directional_tv_functional(&plus, &FDTV_DIRECTIONS)
+            - directional_tv_functional(&minus, &FDTV_DIRECTIONS))
+            / (2.0 * h);
+        let err = (g - fd).abs();
+        max_err = max_err.max(err);
+        assert!(
+            err <= 1e-6 + 1e-5 * g.abs(),
+            "FDTV analytic gradient must equal the finite difference at {idx:?}: \
+             analytic = {g:e}, FD = {fd:e}, err = {err:e}"
+        );
+    }
+    // Gradient must be genuinely non-trivial (guards against a zero-returning mock).
+    let max_g = analytic.iter().fold(0.0_f64, |a, &x| a.max(x.abs()));
+    assert!(
+        max_g > 1e-2,
+        "FDTV gradient must be non-trivial on a structured model; max |g| = {max_g:e}"
+    );
+    assert!(max_err < 1e-5, "worst-case FD error too large: {max_err:e}");
+}
+
+/// The FDTV operator genuinely incorporates the diagonal difference directions:
+/// for a field with diagonal structure its per-voxel Huber weight — and hence
+/// the functional — strictly exceeds the axis-only stencil's, because the
+/// non-negative diagonal terms are added inside the same square root.
+/// # Panics
+/// - Panics on any assertion failure.
+#[test]
+fn test_fdtv_functional_exceeds_axis_only_for_diagonal_structure() {
+    use super::super::gradient::{
+        directional_tv_functional, AXIS_TV_DIRECTIONS, FDTV_DIRECTIONS,
+    };
+
+    // A ramp along the (1,1,0) face diagonal: m = i + j. The (1,1,0) difference
+    // is 2 per step while (1,−1,0) is 0, so the diagonal directions carry real
+    // signal that the axis-only stencil ignores.
+    let dims = (6, 6, 3);
+    let mut model = Array3::<f64>::zeros(dims);
+    for ((i, j, _), v) in model.indexed_iter_mut() {
+        *v = i as f64 + j as f64;
+    }
+
+    let axis = directional_tv_functional(&model, &AXIS_TV_DIRECTIONS);
+    let fdtv = directional_tv_functional(&model, &FDTV_DIRECTIONS);
+    assert!(
+        fdtv > axis * (1.0 + 1e-6),
+        "FDTV must penalize diagonal structure more than the axis-only TV; \
+         axis = {axis:e}, fdtv = {fdtv:e}"
+    );
+}

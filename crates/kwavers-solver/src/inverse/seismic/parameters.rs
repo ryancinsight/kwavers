@@ -73,8 +73,20 @@ pub struct FwiParameters {
 pub struct RegularizationParameters {
     /// Tikhonov regularization weight
     pub tikhonov_weight: f64,
-    /// Total variation weight
+    /// Axis-aligned (isotropic ROF) total variation weight.
     pub tv_weight: f64,
+    /// Four-direction total variation (FDTV) weight.
+    ///
+    /// Adds the in-plane face-diagonal difference directions to the TV operator,
+    /// producing a more rotation-invariant discretization that suppresses the
+    /// directional streak/staircase artefacts characteristic of sparse-aperture
+    /// (few-source / few-receiver) acquisition — the acoustic analog of
+    /// sparse-view CT. In any coordinate plane the operator reduces to the
+    /// horizontal, vertical, and two diagonal differences of the FDTV model.
+    ///
+    /// Reference: Zhang et al. (2023), *adaptive four-direction TV for
+    /// sparse-view CT*, PMC10745410. Default `0.0` (disabled, backward-compatible).
+    pub directional_tv_weight: f64,
     /// Smoothness constraint weight
     pub smoothness_weight: f64,
 }
@@ -177,6 +189,7 @@ impl Default for RegularizationParameters {
         Self {
             tikhonov_weight: 1e-3,
             tv_weight: 1e-4,
+            directional_tv_weight: 0.0,
             smoothness_weight: 1e-2,
         }
     }

@@ -1451,7 +1451,8 @@ fn main() -> KwaversResult<()> {
             regularization: RegularizationParameters {
                 tikhonov_weight: 0.0,
                 tv_weight: 0.0,
-                smoothness_weight: 0.0,
+
+                directional_tv_weight: 0.0,                smoothness_weight: 0.0,
             },
             source_mute_radius: 4,
             ..FwiParameters::default()
@@ -1490,7 +1491,8 @@ fn main() -> KwaversResult<()> {
             regularization: RegularizationParameters {
                 tikhonov_weight: 0.0,
                 tv_weight: 0.0,
-                smoothness_weight: 0.0,
+
+                directional_tv_weight: 0.0,                smoothness_weight: 0.0,
             },
             source_mute_radius: 4,
             ..FwiParameters::default()
@@ -1534,7 +1536,8 @@ fn main() -> KwaversResult<()> {
             regularization: RegularizationParameters {
                 tikhonov_weight: 0.0,
                 tv_weight: 0.0,
-                smoothness_weight: 0.0,
+
+                directional_tv_weight: 0.0,                smoothness_weight: 0.0,
             },
             source_mute_radius: mute_r,
             ..FwiParameters::default()
@@ -1601,7 +1604,8 @@ fn main() -> KwaversResult<()> {
             regularization: RegularizationParameters {
                 tikhonov_weight: 0.0,
                 tv_weight: 0.0,
-                smoothness_weight: 0.0,
+
+                directional_tv_weight: 0.0,                smoothness_weight: 0.0,
             },
             source_mute_radius: 4,
             ..FwiParameters::default()
@@ -1707,7 +1711,8 @@ fn main() -> KwaversResult<()> {
                     regularization: RegularizationParameters {
                         tikhonov_weight: 0.0,
                         tv_weight: 0.0,
-                        smoothness_weight: 0.0,
+
+                        directional_tv_weight: 0.0,                        smoothness_weight: 0.0,
                     },
                     source_mute_radius: 2,
                     ..FwiParameters::default()

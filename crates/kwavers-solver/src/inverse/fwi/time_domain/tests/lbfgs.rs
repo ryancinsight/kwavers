@@ -66,6 +66,7 @@ fn build_problem(anomaly: f64) -> (Grid, FwiGeometry, FwiParameters, Array3<f64>
     let regularization = crate::inverse::seismic::parameters::RegularizationParameters {
         tikhonov_weight: 0.0,
         tv_weight: 0.0,
+        directional_tv_weight: 0.0,
         smoothness_weight: 0.0,
     };
     let parameters = FwiParameters {

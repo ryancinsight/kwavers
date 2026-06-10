@@ -170,8 +170,16 @@ impl FwiProcessor {
                 .par_for_each(|r, &t| *r += t * w);
         }
 
+        if reg_params.directional_tv_weight > 0.0 {
+            let fdtv_term = directional_tv_gradient(model, &FDTV_DIRECTIONS);
+            let w = reg_params.directional_tv_weight;
+            Zip::from(&mut regularized)
+                .and(&fdtv_term)
+                .par_for_each(|r, &t| *r += t * w);
+        }
+
         if reg_params.smoothness_weight > 0.0 {
-            let smoothness_term = self.compute_smoothness_gradient(model);
+            let smoothness_term = compute_smoothness_gradient(model);
             let w = reg_params.smoothness_weight;
             Zip::from(&mut regularized)
                 .and(&smoothness_term)
@@ -181,116 +189,177 @@ impl FwiProcessor {
         Ok(regularized)
     }
 
-    /// Compute total variation gradient for regularization.
+    /// Compute the axis-aligned (isotropic ROF) total-variation gradient.
     ///
-    /// Returns `∂TV/∂m` using the Huber-smoothed isotropic TV functional:
-    ///   TV(m) = Σ_ijk √(fx² + fy² + fz² + ε²)
-    /// where fx[i,j,k] = m[i+1,j,k]−m[i,j,k] are forward differences.
-    ///
-    /// The functional derivative at (i,j,k) is (via discrete chain rule):
-    ///   ∂TV/∂m[i,j,k] = −(fx + fy + fz)/W[i,j,k]
-    ///                   + fx[i−1,j,k]/W[i−1,j,k]  (if i > 0)
-    ///                   + fy[i,j−1,k]/W[i,j−1,k]  (if j > 0)
-    ///                   + fz[i,j,k−1]/W[i,j,k−1]  (if k > 0)
-    /// where W[i,j,k] = √(fx² + fy² + fz² + ε²) is the Huber weight.
+    /// Thin wrapper over the generic [`directional_tv_gradient`] operator with
+    /// the three Cartesian-axis difference directions. See that function for the
+    /// functional and its analytically derived gradient.
     ///
     /// ## Reference
     ///
     /// Rudin, Osher & Fatemi (1992). Physica D 60, 259–268, Eq. (11).
     #[must_use]
     pub(super) fn compute_total_variation_gradient(&self, model: &Array3<f64>) -> Array3<f64> {
-        let (nx, ny, nz) = model.dim();
-        let eps2 = 1e-16_f64; // Huber ε² prevents division by zero
+        directional_tv_gradient(model, &AXIS_TV_DIRECTIONS)
+    }
+}
 
-        // Pre-compute forward differences.
-        let mut fx = Array3::<f64>::zeros((nx, ny, nz)); // fx[i] = m[i+1] − m[i]
-        let mut fy = Array3::<f64>::zeros((nx, ny, nz));
-        let mut fz = Array3::<f64>::zeros((nx, ny, nz));
+/// Huber smoothing constant ε² shared by the TV functional and its gradient.
+///
+/// Identical value in both so the analytic gradient is the exact derivative of
+/// the discrete functional (verified by the finite-difference differential test).
+const TV_EPSILON_SQUARED: f64 = 1e-16;
 
-        for i in 0..nx - 1 {
-            for j in 0..ny {
-                for k in 0..nz {
-                    fx[[i, j, k]] = model[[i + 1, j, k]] - model[[i, j, k]];
-                }
+/// Axis-aligned difference directions (classic isotropic ROF TV).
+///
+/// Each entry is `(offset, a_d)` where `a_d = 1/|offset|²` distance-normalizes
+/// the squared difference so every direction contributes a per-unit-length
+/// directional derivative.
+pub(in crate::inverse::fwi::time_domain) const AXIS_TV_DIRECTIONS: [([isize; 3], f64); 3] = [
+    ([1, 0, 0], 1.0),
+    ([0, 1, 0], 1.0),
+    ([0, 0, 1], 1.0),
+];
+
+/// Four-direction TV (FDTV) stencil generalized to 3-D: the three Cartesian
+/// axes plus the six in-plane face diagonals (step length √2, `a_d = 1/2`).
+///
+/// In any coordinate plane this reduces to the horizontal, vertical, and two
+/// diagonal differences of the FDTV operator (PMC10745410), giving a more
+/// rotation-invariant discretization than the axis-only stencil.
+pub(in crate::inverse::fwi::time_domain) const FDTV_DIRECTIONS: [([isize; 3], f64); 9] = [
+    ([1, 0, 0], 1.0),
+    ([0, 1, 0], 1.0),
+    ([0, 0, 1], 1.0),
+    ([1, 1, 0], 0.5),
+    ([1, -1, 0], 0.5),
+    ([1, 0, 1], 0.5),
+    ([1, 0, -1], 0.5),
+    ([0, 1, 1], 0.5),
+    ([0, 1, -1], 0.5),
+];
+
+/// In-bounds neighbor index `p + offset`, or `None` if outside the grid.
+#[inline]
+fn offset_index(p: [usize; 3], offset: [isize; 3], dims: [usize; 3]) -> Option<[usize; 3]> {
+    let mut out = [0usize; 3];
+    for ax in 0..3 {
+        let v = p[ax] as isize + offset[ax];
+        if v < 0 || v >= dims[ax] as isize {
+            return None;
+        }
+        out[ax] = v as usize;
+    }
+    Some(out)
+}
+
+/// Per-voxel Huber-smoothed directional-TV weight
+/// `W[p] = √(ε² + Σ_d a_d (m[p+d] − m[p])²)` over in-bounds forward neighbors.
+fn directional_tv_weights(
+    model: &Array3<f64>,
+    directions: &[([isize; 3], f64)],
+) -> Array3<f64> {
+    let (nx, ny, nz) = model.dim();
+    let dims = [nx, ny, nz];
+    let mut w = Array3::<f64>::zeros((nx, ny, nz));
+    for ((i, j, k), w_val) in w.indexed_iter_mut() {
+        let p = [i, j, k];
+        let center = model[[i, j, k]];
+        let mut acc = TV_EPSILON_SQUARED;
+        for &(offset, a) in directions {
+            if let Some(q) = offset_index(p, offset, dims) {
+                let d = model[q] - center;
+                acc += a * d * d;
             }
         }
-        for i in 0..nx {
-            for j in 0..ny - 1 {
-                for k in 0..nz {
-                    fy[[i, j, k]] = model[[i, j + 1, k]] - model[[i, j, k]];
-                }
+        *w_val = acc.sqrt();
+    }
+    w
+}
+
+/// Discrete Huber-smoothed directional-TV functional value
+/// `J(m) = Σ_p √(ε² + Σ_d a_d (m[p+d] − m[p])²)`.
+///
+/// Exposed for the finite-difference differential test that proves
+/// [`directional_tv_gradient`] is the exact functional derivative.
+#[cfg(test)]
+#[must_use]
+pub(in crate::inverse::fwi::time_domain) fn directional_tv_functional(
+    model: &Array3<f64>,
+    directions: &[([isize; 3], f64)],
+) -> f64 {
+    directional_tv_weights(model, directions).sum()
+}
+
+/// Analytically derived gradient `∂J/∂m` of the directional-TV functional
+/// [`directional_tv_functional`].
+///
+/// ## Derivation
+///
+/// With `W[p] = √(ε² + Σ_d a_d (m[p+d]−m[p])²)`, the chain rule gives
+/// `∂J/∂m[q] = −(1/W[q]) Σ_{d: q+d∈Ω} a_d (m[q+d]−m[q])`
+/// `           + Σ_{d: q−d∈Ω} a_d (m[q]−m[q−d]) / W[q−d]`,
+/// i.e. the divergence of the W-normalized directional-difference field. The
+/// axis-only special case ([`AXIS_TV_DIRECTIONS`]) is the standard ROF gradient;
+/// the FDTV stencil ([`FDTV_DIRECTIONS`]) adds the diagonal directions.
+#[must_use]
+pub(in crate::inverse::fwi::time_domain) fn directional_tv_gradient(
+    model: &Array3<f64>,
+    directions: &[([isize; 3], f64)],
+) -> Array3<f64> {
+    let (nx, ny, nz) = model.dim();
+    let dims = [nx, ny, nz];
+    let w = directional_tv_weights(model, directions);
+
+    let mut grad = Array3::<f64>::zeros((nx, ny, nz));
+    for ((i, j, k), g_val) in grad.indexed_iter_mut() {
+        let p = [i, j, k];
+        let center = model[[i, j, k]];
+        let w_c = w[[i, j, k]];
+        let mut g = 0.0;
+        for &(offset, a) in directions {
+            // Self-contribution: forward difference leaving p.
+            if let Some(q) = offset_index(p, offset, dims) {
+                g -= a * (model[q] - center) / w_c;
+            }
+            // Back-contribution: forward difference ending at p (from p−d).
+            let neg = [-offset[0], -offset[1], -offset[2]];
+            if let Some(r) = offset_index(p, neg, dims) {
+                g += a * (center - model[r]) / w[r];
             }
         }
-        for i in 0..nx {
-            for j in 0..ny {
-                for k in 0..nz - 1 {
-                    fz[[i, j, k]] = model[[i, j, k + 1]] - model[[i, j, k]];
-                }
+        *g_val = g;
+    }
+    grad
+}
+
+/// Compute smoothness gradient (Laplacian) for regularization.
+///
+/// # Loop ordering
+///
+/// `i`-outer, `k`-inner: inner-loop accesses `model[[i,j,k±1]]` at stride 1.
+#[must_use]
+pub(in crate::inverse::fwi::time_domain) fn compute_smoothness_gradient(
+    model: &Array3<f64>,
+) -> Array3<f64> {
+    let (nx, ny, nz) = model.dim();
+    let mut laplacian = Array3::zeros((nx, ny, nz));
+
+    for i in 1..nx - 1 {
+        for j in 1..ny - 1 {
+            for k in 1..nz - 1 {
+                laplacian[[i, j, k]] = 6.0f64.mul_add(
+                    -model[[i, j, k]],
+                    model[[i + 1, j, k]]
+                        + model[[i - 1, j, k]]
+                        + model[[i, j + 1, k]]
+                        + model[[i, j - 1, k]]
+                        + model[[i, j, k + 1]]
+                        + model[[i, j, k - 1]],
+                );
             }
         }
-
-        // Huber weights W[i,j,k] = √(fx² + fy² + fz² + ε²).
-        let mut w = Array3::<f64>::zeros((nx, ny, nz));
-        Zip::from(&mut w)
-            .and(&fx)
-            .and(&fy)
-            .and(&fz)
-            .par_for_each(|w_val, &dx, &dy, &dz| {
-                *w_val = dz.mul_add(dz, dx.mul_add(dx, dy * dy) + eps2).sqrt();
-            });
-
-        // Functional derivative: divergence of the normalised gradient field.
-        let mut tv_gradient = Array3::<f64>::zeros((nx, ny, nz));
-        for i in 0..nx {
-            for j in 0..ny {
-                for k in 0..nz {
-                    let w_c = w[[i, j, k]];
-                    // Negative self-contribution from the forward differences leaving (i,j,k).
-                    let mut g = -(fx[[i, j, k]] + fy[[i, j, k]] + fz[[i, j, k]]) / w_c;
-                    // Positive back-contributions from forward differences ending at (i,j,k).
-                    if i > 0 {
-                        g += fx[[i - 1, j, k]] / w[[i - 1, j, k]];
-                    }
-                    if j > 0 {
-                        g += fy[[i, j - 1, k]] / w[[i, j - 1, k]];
-                    }
-                    if k > 0 {
-                        g += fz[[i, j, k - 1]] / w[[i, j, k - 1]];
-                    }
-                    tv_gradient[[i, j, k]] = g;
-                }
-            }
-        }
-
-        tv_gradient
     }
 
-    /// Compute smoothness gradient (Laplacian) for regularization.
-    ///
-    /// # Loop ordering
-    ///
-    /// `i`-outer, `k`-inner: inner-loop accesses `model[[i,j,k±1]]` at stride 1.
-    #[must_use]
-    pub(super) fn compute_smoothness_gradient(&self, model: &Array3<f64>) -> Array3<f64> {
-        let (nx, ny, nz) = model.dim();
-        let mut laplacian = Array3::zeros((nx, ny, nz));
-
-        for i in 1..nx - 1 {
-            for j in 1..ny - 1 {
-                for k in 1..nz - 1 {
-                    laplacian[[i, j, k]] = 6.0f64.mul_add(
-                        -model[[i, j, k]],
-                        model[[i + 1, j, k]]
-                            + model[[i - 1, j, k]]
-                            + model[[i, j + 1, k]]
-                            + model[[i, j - 1, k]]
-                            + model[[i, j, k + 1]]
-                            + model[[i, j, k - 1]],
-                    );
-                }
-            }
-        }
-
-        laplacian
-    }
+    laplacian
 }
