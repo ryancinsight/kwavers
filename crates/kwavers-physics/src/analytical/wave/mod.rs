@@ -20,7 +20,7 @@ pub use linear::{
 };
 pub use nonlinear::{
     fubini_harmonic_amplitude, fubini_harmonic_spectrum, fubini_waveform,
-    goldberg_shock_parameter_sweep, shock_enhanced_absorption_gain, shock_formation_distance,
-    shock_heat_source_density, shock_vapor_pulse_waveform, shock_waveform_pressure,
-    westervelt_harmonic_evolution,
+    goldberg_shock_parameter_sweep, sawtooth_harmonic_amplitude, sawtooth_harmonic_spectrum,
+    shock_enhanced_absorption_gain, shock_formation_distance, shock_heat_source_density,
+    shock_vapor_pulse_waveform, shock_waveform_pressure, westervelt_harmonic_evolution,
 };

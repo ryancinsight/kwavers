@@ -404,6 +404,25 @@ P₂(z) = P₀ J_2(2σ)/σ ≈ P₀σ/2 = βP₀² ω₀ z/(2ρ₀c₀³)    for
 The second harmonic grows linearly in z for small σ, confirming the quadratic
 nonlinearity argument: p² generates a component at 2ω₀ via cos²(ω₀τ) = (1 + cos 2ω₀τ)/2.
 
+**Corollary 3.5 (Post-shock sawtooth — Fay solution).** Past the shock (σ ≥ 1) the wave
+becomes a sawtooth whose harmonics decay as
+
+```
+Bₙ(σ) = 2 / (n·(1+σ))                                                   (3.25b)
+```
+
+— every harmonic falls as 1/n (the sawtooth signature) and the whole spectrum decays as
+1/(1+σ). This is the Fay solution; Blackstock (1966) connects it to the pre-shock Fubini
+solution (3.21) through the transition region 1 ≲ σ ≲ 3, where neither is exact (at σ=1 the
+Fubini fundamental is depleted to ≈0.88 P₀ while the sawtooth form starts at P₀).
+
+*Implementation.* The Fubini pre-shock amplitudes (3.21) are
+`kwavers_physics::analytical::wave::fubini_harmonic_amplitude` / `fubini_harmonic_spectrum`
+/ `fubini_waveform`; the complementary Fay post-shock sawtooth (3.25b) is
+`sawtooth_harmonic_amplitude` / `sawtooth_harmonic_spectrum`. Value-semantic tests verify
+the 1/n harmonic decay, the 1/(1+σ) distance decay, the closed form, and the Fay–Fubini
+discontinuity at σ=1.
+
 **Theorem 3.8 (Quadratic Nonlinearity Generates Harmonics — Proof from First Principles).**
 Let p = P₀ cos(ω₀t) be the incident pressure. The nonlinear term (β/ρ₀c₀⁴)∂²p²/∂t² in
 the Westervelt equation generates the source

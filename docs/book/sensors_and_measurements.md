@@ -546,9 +546,14 @@ piezoelectric elements.
 ### Grüneisen Parameter and Temperature Dependence
 
 The Grüneisen parameter `Γ = c_p β c² / C_v` depends on temperature via the thermal
-expansion coefficient `β`. For water at 37°C, `Γ ≈ 0.21`; for soft tissue at 37°C,
-`Γ ≈ 0.18–0.22`. kwavers uses the constant value specified in the medium model; temperature
-coupling is not currently implemented for photoacoustic simulations.
+expansion coefficient `β`. For water at 37°C, `Γ ≈ 0.20`; for soft tissue at 37°C,
+`Γ ≈ 0.15` (Xu & Wang 2006). The **temperature-dependent** Grüneisen is available analytically:
+`kwavers_physics::analytical::photoacoustics::gruneisen_parameter_water` (Sigrist & Kneubühl,
+`Γ = 0.0043 + 0.0053·T`) and `gruneisen_parameter_soft_tissue`
+(`Γ(T) = Γ_body + (dΓ/dT)(T − T_body)`, the basis of **PA thermometry** since `p₀ = Γ·μ_a·F`
+tracks temperature), both PyO3-exposed. The full-wave PA *simulation* source still reads the
+constant `Γ` from the medium model; wiring the `Γ(T)` law into the medium during a coupled
+thermal–acoustic run is the remaining step.
 
 ---
 

@@ -65,6 +65,27 @@ pub fn gruneisen_parameter_water(
     Ok(result.into_pyarray(py).unbind())
 }
 
+/// Compute the Grüneisen parameter of generic soft tissue vs temperature
+/// (linear PA-thermometry model, Xu & Wang 2006).
+///
+/// Args:
+///     t_celsius: Temperature array [°C].
+///
+/// Returns:
+///     Grüneisen parameter array (dimensionless).
+#[pyfunction]
+#[pyo3(signature = (t_celsius,))]
+pub fn gruneisen_parameter_soft_tissue(
+    py: Python<'_>,
+    t_celsius: PyReadonlyArray1<f64>,
+) -> PyResult<Py<PyArray1<f64>>> {
+    let t_s = t_celsius
+        .as_slice()
+        .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+    let result = photoacoustics::gruneisen_parameter_soft_tissue(t_s);
+    Ok(result.into_pyarray(py).unbind())
+}
+
 /// Compute the photoacoustic pressure signal from an absorbing sphere.
 ///
 /// Args:

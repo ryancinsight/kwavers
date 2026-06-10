@@ -25,6 +25,7 @@
 //! | [`rtm`] | Reverse-time migration | ch25 |
 //! | [`bbb`] | BBB permeability, CEUS, closure kinetics | ch24 |
 
+pub mod acousto_optics;
 pub mod bbb;
 pub mod cavitation;
 pub mod elastography;

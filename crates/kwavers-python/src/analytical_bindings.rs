@@ -10,6 +10,7 @@
 //! FFI-boundary lint allowances (`type_complexity`, `too_many_arguments`) are set
 //! crate-wide in `lib.rs`; see the justification there.
 
+pub mod acousto_optics;
 pub mod bbb;
 pub mod cavitation;
 pub mod elastography;
@@ -31,6 +32,20 @@ use pyo3::prelude::*;
 
 /// Register all book-physics functions into the given Python sub-module.
 pub fn register_book(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    // acousto-optic diffraction (Raman–Nath / Bragg / Klein–Cook)
+    m.add_function(wrap_pyfunction!(acousto_optics::klein_cook_parameter, m)?)?;
+    m.add_function(wrap_pyfunction!(acousto_optics::raman_nath_parameter, m)?)?;
+    m.add_function(wrap_pyfunction!(
+        acousto_optics::raman_nath_order_intensities,
+        m
+    )?)?;
+    m.add_function(wrap_pyfunction!(
+        acousto_optics::bragg_diffraction_efficiency,
+        m
+    )?)?;
+    m.add_function(wrap_pyfunction!(acousto_optics::diffraction_angle_rad, m)?)?;
+    m.add_function(wrap_pyfunction!(acousto_optics::solve_coupled_orders, m)?)?;
+
     // mems (CMUT / PMUT / IVUS — Chapter 33)
     m.add_function(wrap_pyfunction!(mems::mems_clamped_plate_resonance, m)?)?;
     m.add_function(wrap_pyfunction!(mems::mems_immersion_resonance, m)?)?;
@@ -314,6 +329,10 @@ pub fn register_book(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(photoacoustics::hb_molar_absorption, m)?)?;
     m.add_function(wrap_pyfunction!(
         photoacoustics::gruneisen_parameter_water,
+        m
+    )?)?;
+    m.add_function(wrap_pyfunction!(
+        photoacoustics::gruneisen_parameter_soft_tissue,
         m
     )?)?;
     m.add_function(wrap_pyfunction!(

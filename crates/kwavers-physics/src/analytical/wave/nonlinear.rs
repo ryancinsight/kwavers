@@ -36,6 +36,45 @@ pub fn fubini_harmonic_spectrum(n_max: u32, sigma: f64) -> Vec<f64> {
         .collect()
 }
 
+/// Normalised amplitude of the nth harmonic in the **post-shock sawtooth (Fay)
+/// region**, the complement of the pre-shock [`fubini_harmonic_amplitude`].
+///
+/// Past shock formation (σ ≥ 1) the lossless plane wave becomes a sawtooth whose
+/// slope — and hence amplitude — decays as `1/(1+σ)` (energy lost at the shock).
+/// The Fourier series of that sawtooth gives
+/// ```text
+/// Bₙ(σ) = 2 / (n·(1+σ))     (σ ≥ 1)
+/// ```
+/// so every harmonic decays as `1/n` (the sawtooth signature) and the whole
+/// spectrum decays as `1/(1+σ)` with distance. Together with the Fubini solution
+/// this is the Fay–Fubini pair connected by Blackstock (1966).
+///
+/// # Arguments
+/// * `n` – harmonic number (n ≥ 1; `n = 0` returns 0)
+/// * `sigma` – normalised distance σ = z/z_s (sawtooth region σ ≥ 1)
+///
+/// # Reference
+/// Blackstock (1966), *J. Acoust. Soc. Am.* 39, 1019 (Fay–Fubini connection);
+/// Hamilton & Blackstock (1998) *Nonlinear Acoustics*, §4.4 (sawtooth region).
+#[must_use]
+pub fn sawtooth_harmonic_amplitude(n: u32, sigma: f64) -> f64 {
+    let denom = (1.0 + sigma) * n as f64;
+    let valid = denom.is_finite() && denom > 0.0;
+    if n == 0 || !valid {
+        return 0.0;
+    }
+    2.0 / denom
+}
+
+/// Compute the post-shock **sawtooth (Fay)** harmonic spectrum for harmonics
+/// n = 1..=n_max at parameter σ (index 0 ↔ n = 1).
+#[must_use]
+pub fn sawtooth_harmonic_spectrum(n_max: u32, sigma: f64) -> Vec<f64> {
+    (1..=n_max)
+        .map(|n| sawtooth_harmonic_amplitude(n, sigma))
+        .collect()
+}
+
 /// Shock-formation distance for a sinusoidal plane wave (Fubini–Euler criterion).
 ///
 /// ```text
@@ -373,4 +412,68 @@ pub fn westervelt_harmonic_evolution(
                 .collect()
         })
         .collect()
+}
+
+#[cfg(test)]
+mod sawtooth_tests {
+    use super::{
+        fubini_harmonic_amplitude, sawtooth_harmonic_amplitude, sawtooth_harmonic_spectrum,
+    };
+
+    /// The sawtooth harmonics decay as 1/n (the defining sawtooth signature):
+    /// Bₙ/B₁ = 1/n exactly, at any σ.
+    #[test]
+    fn sawtooth_harmonics_decay_as_inverse_n() {
+        for &sigma in &[1.0, 3.0, 9.0] {
+            let b1 = sawtooth_harmonic_amplitude(1, sigma);
+            for n in 1..=8 {
+                let bn = sawtooth_harmonic_amplitude(n, sigma);
+                assert!(
+                    (bn / b1 - 1.0 / n as f64).abs() < 1e-12,
+                    "B{n}/B1 must be 1/{n} at σ={sigma}"
+                );
+            }
+        }
+    }
+
+    /// The whole spectrum decays as 1/(1+σ) with distance, and matches the
+    /// closed form Bₙ = 2/(n(1+σ)).
+    #[test]
+    fn sawtooth_amplitude_decays_with_distance() {
+        // B₁(σ) = 2/(1+σ): 1.0 at σ=1, 0.5 at σ=3, 0.2 at σ=9.
+        assert!((sawtooth_harmonic_amplitude(1, 1.0) - 1.0).abs() < 1e-12);
+        assert!((sawtooth_harmonic_amplitude(1, 3.0) - 0.5).abs() < 1e-12);
+        assert!((sawtooth_harmonic_amplitude(1, 9.0) - 0.2).abs() < 1e-12);
+
+        // Closed-form check over a few (n, σ).
+        for (n, sigma) in [(2u32, 1.0), (3, 4.0), (5, 2.5)] {
+            let expected = 2.0 / (n as f64 * (1.0 + sigma));
+            assert!((sawtooth_harmonic_amplitude(n, sigma) - expected).abs() < 1e-12);
+        }
+    }
+
+    /// Spectrum helper matches the per-harmonic function; degenerate inputs give 0.
+    #[test]
+    fn sawtooth_spectrum_and_degenerate() {
+        let spec = sawtooth_harmonic_spectrum(4, 2.0);
+        assert_eq!(spec.len(), 4);
+        for (i, &v) in spec.iter().enumerate() {
+            assert!((v - sawtooth_harmonic_amplitude(i as u32 + 1, 2.0)).abs() < 1e-15);
+        }
+        assert_eq!(sawtooth_harmonic_amplitude(0, 2.0), 0.0);
+        assert_eq!(sawtooth_harmonic_amplitude(1, -2.0), 0.0); // 1+σ ≤ 0
+        assert_eq!(sawtooth_harmonic_amplitude(1, f64::NAN), 0.0);
+    }
+
+    /// At the shock point σ=1 the Fubini (pre-shock) fundamental is depleted
+    /// (≈0.88) while the sawtooth (post-shock) form starts at 1.0 — the known
+    /// Fay–Fubini discontinuity in the connection region (Blackstock 1966).
+    #[test]
+    fn fay_fubini_connection_at_shock() {
+        let fubini_b1 = fubini_harmonic_amplitude(1, 1.0); // 2·J1(1) ≈ 0.880
+        let sawtooth_b1 = sawtooth_harmonic_amplitude(1, 1.0); // 1.0
+        assert!((fubini_b1 - 0.8801).abs() < 1e-3, "fubini B1={fubini_b1}");
+        assert!((sawtooth_b1 - 1.0).abs() < 1e-12);
+        assert!(sawtooth_b1 > fubini_b1, "sawtooth over-predicts near σ=1");
+    }
 }

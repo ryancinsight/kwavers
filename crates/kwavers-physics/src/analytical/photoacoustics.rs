@@ -50,6 +50,32 @@ pub fn gruneisen_parameter_water(t_celsius: &[f64]) -> Vec<f64> {
     t_celsius.iter().map(|&t| 0.0043 + 0.0053 * t).collect()
 }
 
+/// Grüneisen parameter of generic **soft tissue** vs temperature (linear model).
+///
+/// ```text
+/// Γ(T) = Γ_body + (dΓ/dT)·(T − T_body)
+/// ```
+/// with `Γ_body = GRUNEISEN_SOFT_TISSUE` at body temperature `T_body` and slope
+/// `GRUNEISEN_SOFT_TISSUE_TEMP_COEFF` (SSOT constants). This is the basis of
+/// **photoacoustic thermometry**: the PA initial pressure `p₀ = Γ·μ_a·F`
+/// tracks `Γ(T)` and hence temperature, so a measured `Δp₀/p₀` maps to `ΔT`.
+///
+/// # Reference
+/// Xu M & Wang LV (2006), *Rev. Sci. Instrum.* 77, 041101.
+#[must_use]
+pub fn gruneisen_parameter_soft_tissue(t_celsius: &[f64]) -> Vec<f64> {
+    use kwavers_core::constants::thermodynamic::{
+        GRUNEISEN_SOFT_TISSUE, GRUNEISEN_SOFT_TISSUE_TEMP_COEFF,
+    };
+    use kwavers_core::constants::BODY_TEMPERATURE_C;
+    t_celsius
+        .iter()
+        .map(|&t| {
+            GRUNEISEN_SOFT_TISSUE_TEMP_COEFF.mul_add(t - BODY_TEMPERATURE_C, GRUNEISEN_SOFT_TISSUE)
+        })
+        .collect()
+}
+
 // ─── PA sphere signal ─────────────────────────────────────────────────────────
 
 /// Far-field photoacoustic pressure from an absorbing sphere.
@@ -275,6 +301,31 @@ mod tests {
         let g = gruneisen_parameter_water(&[BODY_TEMPERATURE_C]);
         // Expected ≈ 0.0043 + 0.0053*37 = 0.2004
         assert!((g[0] - 0.2004).abs() < 1e-8);
+    }
+
+    #[test]
+    fn gruneisen_soft_tissue_temperature_dependence() {
+        use kwavers_core::constants::thermodynamic::{
+            GRUNEISEN_SOFT_TISSUE, GRUNEISEN_SOFT_TISSUE_TEMP_COEFF,
+        };
+        // At body temperature the model returns the reference value exactly.
+        let g37 = gruneisen_parameter_soft_tissue(&[BODY_TEMPERATURE_C]);
+        assert!((g37[0] - GRUNEISEN_SOFT_TISSUE).abs() < 1e-12);
+
+        // Closed form Γ(T) = Γ_body + slope·(T − T_body): +10 °C above body temp.
+        let t = BODY_TEMPERATURE_C + 10.0;
+        let g = gruneisen_parameter_soft_tissue(&[t]);
+        let expected = GRUNEISEN_SOFT_TISSUE + GRUNEISEN_SOFT_TISSUE_TEMP_COEFF * 10.0;
+        assert!((g[0] - expected).abs() < 1e-12);
+
+        // Monotone increase with temperature (PA-thermometry sensitivity > 0).
+        let sweep = gruneisen_parameter_soft_tissue(&[20.0, 37.0, 45.0, 60.0]);
+        for w in sweep.windows(2) {
+            assert!(w[1] > w[0], "Γ must increase with T");
+        }
+        // PA-thermometry: the fractional change per °C equals slope/Γ_body.
+        let dgamma = gruneisen_parameter_soft_tissue(&[BODY_TEMPERATURE_C + 1.0])[0] - g37[0];
+        assert!((dgamma - GRUNEISEN_SOFT_TISSUE_TEMP_COEFF).abs() < 1e-12);
     }
 
     #[test]

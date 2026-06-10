@@ -17,6 +17,41 @@ claimed struct name) before implementing. Confirmed corrections below.
 
 ## Done
 
+- ✅ **Acousto-optic diffraction — complete theory (Raman–Nath / Bragg / Klein–Cook)** — `[minor]`
+  (2026-06-09, user request). kwavers previously had only the photoelastic Δn=p_e·p field coupler
+  (`AcousticOpticalSolver`), no diffraction model. Added the complete theory in new
+  `kwavers_physics::analytical::acousto_optics`: `klein_cook_parameter` Q=2πλ₀L/(nΛ²) +
+  `diffraction_regime` classifier; **Raman–Nath** thin-grating orders `Iₘ=Jₘ²(ν)`
+  (`raman_nath_order_intensities`, `raman_nath_parameter`); **Bragg** thick-grating efficiency
+  `η=sin²(ν/2)` (`bragg_diffraction_efficiency`); `diffraction_angle_rad` (grating equation,
+  evanescent cut-off); and the general **Klein–Cook coupled-wave solver** `solve_coupled_orders`
+  (RK4 on `dEₗ/dξ=−i(ν/2)(Eₗ₋₁+Eₗ₊₁)−i(Q/2)(l²+2lα)Eₗ`). 8 value-semantic tests: regime
+  classification; Raman–Nath = exact Bessel + symmetry + `Σ Jₘ²=1` energy; Bragg closed form;
+  diffraction angles; **the coupled solver reproduces Raman–Nath as Q→0** and **Bragg `sin²(ν/2)`
+  at large Q (α=−½)**; energy conserved in all regimes. Wired `AcousticOpticalSolver::diffraction_orders`
+  to delegate to the model (+2 solver tests cross-checking against the closed form). Full PyO3
+  bindings (6 fns) + `__init__.py` re-export; python crate compiles. Klein & Cook (1967); Korpel;
+  Saleh & Teich §20.
+- ✅ **Soft-tissue temperature-dependent Grüneisen (PA thermometry)** — `[minor]` (2026-06-09,
+  sensors-chapter audit). The chapter said "temperature coupling is not currently implemented" —
+  **partly stale**: `gruneisen_parameter_water(T)` (Sigrist & Kneubühl `Γ=0.0043+0.0053T`) already
+  existed; the soft-tissue function did not, despite the SSOT constants
+  `GRUNEISEN_SOFT_TISSUE`/`GRUNEISEN_SOFT_TISSUE_TEMP_COEFF` + documented formula. Added
+  `kwavers_physics::analytical::photoacoustics::gruneisen_parameter_soft_tissue(T)` =
+  `Γ_body + (dΓ/dT)(T−T_body)` (Xu & Wang 2006), using the SSOT constants; PyO3 binding +
+  `__init__.py` re-export (python crate compiles). 1 value-semantic test: exact reference value at
+  body temp, closed form at +10 °C, monotone increase, and the PA-thermometry sensitivity `dΓ/°C`.
+  Chapter corrected (Γ(T) is available analytically for water+tissue; remaining gap is wiring it into
+  the full-wave PA simulation medium during a coupled thermal–acoustic run).
+- ✅ **Fay (post-shock sawtooth) harmonic solution (Ch3 §3.6)** — `[minor]` (2026-06-09, Ch3 audit).
+  The Fubini pre-shock harmonic solution existed (`fubini_harmonic_amplitude/spectrum/waveform`) but
+  the complementary **Fay/sawtooth** post-shock solution — half of the Blackstock (1966) Fay–Fubini
+  pair the chapter cites — was absent. Added `kwavers_physics::analytical::wave::{sawtooth_harmonic_amplitude,
+  sawtooth_harmonic_spectrum}` — `Bₙ(σ)=2/(n(1+σ))` (lossless sawtooth, Hamilton & Blackstock 1998
+  §4.4). 4 value-semantic tests: 1/n harmonic decay (sawtooth signature, exact at multiple σ);
+  1/(1+σ) distance decay + closed form; spectrum/degenerate; the **Fay–Fubini discontinuity at σ=1**
+  (Fubini fundamental ≈0.88 vs sawtooth 1.0). Re-exported via `analytical::wave`. Chapter §3.6
+  (Corollary 3.5) added.
 - ✅ **Direct shear-wavelength estimator (§11.10.3)** — `[minor]` (2026-06-09, Ch11 audit). §11.10.3
   flagged "no dedicated wavelength estimator is implemented." Added
   `kwavers_analysis::signal_processing::wavelength_estimation::estimate_shear_wavelength(u, dx)` —
