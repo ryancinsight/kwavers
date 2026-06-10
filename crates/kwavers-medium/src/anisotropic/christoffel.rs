@@ -4,7 +4,6 @@
 //! - Auld, B. A. (1973). "Acoustic Fields and Waves in Solids"
 
 use super::stiffness::AnisotropicStiffnessTensor;
-use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
 use ndarray::{Array1, Array2};
 
@@ -114,121 +113,160 @@ impl ChristoffelEquation {
         gamma
     }
 
-    /// Solve for phase velocities in given direction
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
+    /// Sorted eigendecomposition of the Christoffel matrix along `direction`.
     ///
+    /// The Christoffel matrix `Γᵢₖ = Cᵢⱼₖₗ nⱼ nₗ` is real and symmetric, so a
+    /// symmetric eigensolver yields exact real eigenvalues `ρv²` **including
+    /// degenerate (repeated) roots** — e.g. the two equal quasi-shear modes of
+    /// an isotropic or on-axis transversely-isotropic medium. Returns the
+    /// `(eigenvalue, eigenvector)` pairs sorted by **descending** eigenvalue, so
+    /// index 0 is the quasi-longitudinal mode and 1, 2 the quasi-shear modes —
+    /// the same ordering for both [`phase_velocities`] and
+    /// [`polarization_vectors`].
+    ///
+    /// [`phase_velocities`]: Self::phase_velocities
+    /// [`polarization_vectors`]: Self::polarization_vectors
+    fn sorted_eigen(&self, direction: &[f64; 3]) -> ([f64; 3], [[f64; 3]; 3]) {
+        use nalgebra::{Matrix3, SymmetricEigen};
+        let g = self.christoffel_matrix(direction);
+        let m = Matrix3::new(
+            g[[0, 0]], g[[0, 1]], g[[0, 2]], g[[1, 0]], g[[1, 1]], g[[1, 2]], g[[2, 0]], g[[2, 1]],
+            g[[2, 2]],
+        );
+        let eig = SymmetricEigen::new(m);
+        let mut order = [0usize, 1, 2];
+        order.sort_by(|&a, &b| {
+            eig.eigenvalues[b]
+                .partial_cmp(&eig.eigenvalues[a])
+                .unwrap_or(core::cmp::Ordering::Equal)
+        });
+        let mut vals = [0.0; 3];
+        let mut vecs = [[0.0; 3]; 3];
+        for (k, &o) in order.iter().enumerate() {
+            vals[k] = eig.eigenvalues[o];
+            vecs[k] = [
+                eig.eigenvectors[(0, o)],
+                eig.eigenvectors[(1, o)],
+                eig.eigenvectors[(2, o)],
+            ];
+        }
+        (vals, vecs)
+    }
+
+    /// Solve for the three phase velocities along `direction`, sorted descending
+    /// (quasi-longitudinal first, then the two quasi-shear modes).
+    ///
+    /// `vₖ = √(ρv²ₖ / ρ)` from the Christoffel eigenvalues. A real symmetric
+    /// eigensolver is used, so **degenerate cases (isotropic / on-axis) are
+    /// handled exactly** rather than collapsing to a fallback.
+    /// # Errors
+    /// - Returns [`Err`] if the medium density is non-positive.
     pub fn phase_velocities(&self, direction: &[f64; 3]) -> KwaversResult<[f64; 3]> {
-        let gamma = self.christoffel_matrix(direction);
-
-        // Eigenvalue problem: (Γ - ρv²I)u = 0
-        // Solve for v² (phase velocity squared)
-        let eigenvalues = self.eigenvalues_3x3(&gamma);
-
+        if self.density <= 0.0 {
+            return Err(kwavers_core::error::KwaversError::InvalidInput(
+                "ChristoffelEquation density must be positive".to_owned(),
+            ));
+        }
+        let (vals, _) = self.sorted_eigen(direction);
         Ok([
-            (eigenvalues[0] / self.density).sqrt(),
-            (eigenvalues[1] / self.density).sqrt(),
-            (eigenvalues[2] / self.density).sqrt(),
+            (vals[0].max(0.0) / self.density).sqrt(),
+            (vals[1].max(0.0) / self.density).sqrt(),
+            (vals[2].max(0.0) / self.density).sqrt(),
         ])
     }
 
-    /// Compute eigenvalues of 3x3 matrix (analytical solution)
-    fn eigenvalues_3x3(&self, matrix: &Array2<f64>) -> [f64; 3] {
-        // Characteristic polynomial: det(A - λI) = 0
-        // λ³ - tr(A)λ² + (sum of principal minors)λ - det(A) = 0
+    /// Get polarization (particle-motion) unit vectors for each wave mode, in
+    /// the same descending-eigenvalue order as [`phase_velocities`]
+    /// (quasi-longitudinal, quasi-shear, quasi-shear).
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    /// [`phase_velocities`]: Self::phase_velocities
+    pub fn polarization_vectors(&self, direction: &[f64; 3]) -> KwaversResult<[Array1<f64>; 3]> {
+        let (_, vecs) = self.sorted_eigen(direction);
+        Ok([
+            Array1::from(vecs[0].to_vec()),
+            Array1::from(vecs[1].to_vec()),
+            Array1::from(vecs[2].to_vec()),
+        ])
+    }
+}
 
-        let trace = matrix[[0, 0]] + matrix[[1, 1]] + matrix[[2, 2]];
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::anisotropic::stiffness::AnisotropicStiffnessTensor;
 
-        let minor_sum = matrix[[1, 2]].mul_add(
-            -matrix[[2, 1]],
-            matrix[[1, 1]].mul_add(
-                matrix[[2, 2]],
-                matrix[[0, 2]].mul_add(
-                    -matrix[[2, 0]],
-                    matrix[[0, 0]].mul_add(
-                        matrix[[2, 2]],
-                        matrix[[0, 0]].mul_add(matrix[[1, 1]], -(matrix[[0, 1]] * matrix[[1, 0]])),
-                    ),
-                ),
-            ),
-        );
+    /// The previously-broken degenerate case: an **isotropic** medium has two
+    /// equal quasi-shear speeds, so the characteristic cubic has a repeated root
+    /// (discriminant = 0). The symmetric eigensolver recovers the exact Lamé
+    /// speeds `c_P=√((λ+2μ)/ρ)`, `c_S=√(μ/ρ)` (twice) along any direction —
+    /// where the old Cardano fallback returned a bogus [1,1,1].
+    #[test]
+    fn isotropic_phase_velocities_recover_lame_speeds() {
+        let (lambda, mu, rho) = (5.0e9, 2.0e9, 2000.0);
+        let c = AnisotropicStiffnessTensor::isotropic(lambda, mu);
+        let solver = ChristoffelEquation::create(c, rho);
 
-        let det = matrix[[0, 2]].mul_add(
-            matrix[[1, 0]].mul_add(matrix[[2, 1]], -(matrix[[1, 1]] * matrix[[2, 0]])),
-            matrix[[0, 0]].mul_add(
-                matrix[[1, 1]].mul_add(matrix[[2, 2]], -(matrix[[1, 2]] * matrix[[2, 1]])),
-                -(matrix[[0, 1]]
-                    * matrix[[1, 0]].mul_add(matrix[[2, 2]], -(matrix[[1, 2]] * matrix[[2, 0]]))),
-            ),
-        );
-
-        // Use Cardano's formula for cubic equation
-        let p = minor_sum - trace * trace / 3.0;
-        let q = trace.mul_add(2.0 * trace * trace / 27.0 - minor_sum / 3.0, det);
-
-        let discriminant = -(4.0 * p * p).mul_add(p, 27.0 * q * q) / 108.0;
-
-        if discriminant > 0.0 {
-            // Three real roots
-            let m = 2.0 * (-p / 3.0).sqrt();
-            let theta = (3.0 * q / (p * m)).acos() / 3.0;
-            let offset = trace / 3.0;
-
-            [
-                m * (theta).cos() + offset,
-                m * (theta - TWO_PI / 3.0).cos() + offset,
-                m * (theta + TWO_PI / 3.0).cos() + offset,
-            ]
-        } else {
-            // Fallback for edge cases
-            [1.0, 1.0, 1.0]
+        let c_p = ((lambda + 2.0 * mu) / rho).sqrt();
+        let c_s = (mu / rho).sqrt();
+        // Try several propagation directions, including off-axis.
+        let dirs = [
+            [1.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0],
+            {
+                let s = 1.0 / 3.0_f64.sqrt();
+                [s, s, s]
+            },
+        ];
+        for d in &dirs {
+            let v = solver.phase_velocities(d).unwrap();
+            assert!((v[0] - c_p).abs() < 1e-3 * c_p, "qP {} vs {c_p}", v[0]);
+            assert!((v[1] - c_s).abs() < 1e-3 * c_s, "qS1 {} vs {c_s}", v[1]);
+            assert!((v[2] - c_s).abs() < 1e-3 * c_s, "qS2 {} vs {c_s}", v[2]);
+            assert!(v[0] > v[1], "longitudinal must be fastest");
         }
     }
 
-    /// Get polarization vectors for each wave mode
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
-    pub fn polarization_vectors(&self, direction: &[f64; 3]) -> KwaversResult<[Array1<f64>; 3]> {
-        use nalgebra::{Matrix3, SymmetricEigen};
-
-        // Compute Christoffel matrix
-        let christoffel = self.christoffel_matrix(direction);
-
-        // Convert to nalgebra matrix for eigendecomposition
-        let matrix = Matrix3::new(
-            christoffel[[0, 0]],
-            christoffel[[0, 1]],
-            christoffel[[0, 2]],
-            christoffel[[1, 0]],
-            christoffel[[1, 1]],
-            christoffel[[1, 2]],
-            christoffel[[2, 0]],
-            christoffel[[2, 1]],
-            christoffel[[2, 2]],
+    /// Eigenvalue invariant: `Σ ρv²ₖ = tr(Γ)` along any direction (the trace of
+    /// the Christoffel matrix), for a genuinely anisotropic (transversely
+    /// isotropic) tensor.
+    #[test]
+    fn phase_velocity_eigenvalues_match_christoffel_trace() {
+        let c = AnisotropicStiffnessTensor::transversely_isotropic(10.0e9, 8.0e9, 4.0e9, 12.0e9, 3.0e9)
+            .expect("valid TI tensor");
+        let rho = 1500.0;
+        let solver = ChristoffelEquation::create(c, rho);
+        let dir = {
+            let s = 1.0 / 2.0_f64.sqrt();
+            [s, 0.0, s]
+        };
+        let gamma = solver.christoffel_matrix(&dir);
+        let trace = gamma[[0, 0]] + gamma[[1, 1]] + gamma[[2, 2]];
+        let v = solver.phase_velocities(&dir).unwrap();
+        let sum_rho_v2: f64 = v.iter().map(|&vi| rho * vi * vi).sum();
+        assert!(
+            (sum_rho_v2 - trace).abs() < 1e-3 * trace.abs(),
+            "Σρv² {sum_rho_v2} must equal tr(Γ) {trace}"
         );
+    }
 
-        // Compute eigendecomposition
-        let eigen = SymmetricEigen::new(matrix);
-        let eigenvectors = eigen.eigenvectors;
-
-        // Extract polarization vectors (eigenvectors)
-        Ok([
-            Array1::from(vec![
-                eigenvectors[(0, 0)],
-                eigenvectors[(1, 0)],
-                eigenvectors[(2, 0)],
-            ]),
-            Array1::from(vec![
-                eigenvectors[(0, 1)],
-                eigenvectors[(1, 1)],
-                eigenvectors[(2, 1)],
-            ]),
-            Array1::from(vec![
-                eigenvectors[(0, 2)],
-                eigenvectors[(1, 2)],
-                eigenvectors[(2, 2)],
-            ]),
-        ])
+    /// In an isotropic medium the quasi-longitudinal polarization is parallel to
+    /// the propagation direction and the shear polarizations are orthogonal to
+    /// it (and the velocity/polarization orderings agree).
+    #[test]
+    fn isotropic_polarizations_are_longitudinal_and_transverse() {
+        let c = AnisotropicStiffnessTensor::isotropic(5.0e9, 2.0e9);
+        let solver = ChristoffelEquation::create(c, 2000.0);
+        let dir = [1.0, 0.0, 0.0];
+        let pol = solver.polarization_vectors(&dir).unwrap();
+        // qP ∥ dir ⇒ |pol₀ · dir| ≈ 1.
+        let dot0 = pol[0][0] * dir[0] + pol[0][1] * dir[1] + pol[0][2] * dir[2];
+        assert!(dot0.abs() > 0.999, "qP polarization must be longitudinal");
+        // Shear modes ⊥ dir ⇒ |pol · dir| ≈ 0.
+        for s in 1..=2 {
+            let dot = pol[s][0] * dir[0] + pol[s][1] * dir[1] + pol[s][2] * dir[2];
+            assert!(dot.abs() < 1e-6, "qS{s} polarization must be transverse");
+        }
     }
 }

@@ -17,6 +17,18 @@ claimed struct name) before implementing. Confirmed corrections below.
 
 ## Done
 
+- ✅ **Christoffel anisotropic wave-speed solver — HARD-violation + degenerate-case fix** — `[patch]`
+  (2026-06-10, codebase audit). `ChristoffelEquation::phase_velocities` used a hand-rolled Cardano
+  cubic solver with a hardcoded `[1.0, 1.0, 1.0]` **fallback** when the discriminant ≤ 0 — a
+  HARD-prohibited mock. But the Christoffel matrix is real-symmetric, so its characteristic cubic has
+  a **repeated root (discriminant = 0) for every isotropic / on-axis medium** (two equal quasi-shear
+  speeds), meaning `phase_velocities` returned bogus `[1,1,1]` for the most common case. Replaced the
+  Cardano+fallback with `nalgebra::SymmetricEigen` (already used by `polarization_vectors`),
+  unified both methods through one `sorted_eigen` (descending eigenvalue → qP, qS1, qS2; DRY;
+  velocity↔polarization order now aligned), and added a positive-density guard (`Err`, not NaN). 3
+  value-semantic tests: isotropic recovers exact Lamé `c_P=√((λ+2μ)/ρ)`, `c_S=√(μ/ρ)`×2 along
+  multiple directions (the formerly-broken case); `Σρv²=tr(Γ)` invariant on a transversely-isotropic
+  tensor; isotropic qP-longitudinal / qS-transverse polarizations.
 - ✅ **Acousto-optic diffraction — complete theory (Raman–Nath / Bragg / Klein–Cook)** — `[minor]`
   (2026-06-09, user request). kwavers previously had only the photoelastic Δn=p_e·p field coupler
   (`AcousticOpticalSolver`), no diffraction model. Added the complete theory in new
