@@ -252,7 +252,7 @@ impl FwiProcessor {
         for (iteration, codes) in code_schedule.iter().enumerate() {
             let (geometry, encoded_data) = encode_shots(shots, codes)?;
             let (objective, updated, step_size) =
-                self.descent_update(&model, &encoded_data, &geometry, grid)?;
+                self.descent_update(&model, &encoded_data, &geometry, grid, 1.0)?;
             log::info!("FWI encoded iter {iteration}: J={objective:.6e} step={step_size:.6e}");
             if step_size == 0.0 {
                 log::info!(

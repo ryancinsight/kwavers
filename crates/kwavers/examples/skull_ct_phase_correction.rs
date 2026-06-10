@@ -207,7 +207,7 @@ fn load_ct_with_ritk(path: &Path, selected_uid: Option<&str>) -> Result<CtVolume
     let selected = match selected_uid {
         Some(uid) => series
             .iter()
-            .find(|candidate| candidate.series_instance_uid == uid)
+            .find(|candidate| candidate.series_instance_uid.as_str() == uid)
             .with_context(|| format!("series UID '{uid}' was not found"))?,
         None if series.len() == 1 => &series[0],
         None => {

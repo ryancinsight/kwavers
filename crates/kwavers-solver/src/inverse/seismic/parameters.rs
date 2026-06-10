@@ -87,6 +87,19 @@ pub struct RegularizationParameters {
     /// Reference: Zhang et al. (2023), *adaptive four-direction TV for
     /// sparse-view CT*, PMC10745410. Default `0.0` (disabled, backward-compatible).
     pub directional_tv_weight: f64,
+    /// Enable the adaptive directional-TV (FDTV) weight schedule in the
+    /// steepest-descent driver ([`FwiProcessor::invert`]).
+    ///
+    /// When set, the effective FDTV weight tracks the relative inter-iteration
+    /// model change (normalized by the largest change seen, floored at a small
+    /// constant): the prior acts strongly while the model is still moving and
+    /// relaxes as the inversion converges, preserving recovered detail near the
+    /// solution. This is the FWI analog of the adaptive parameter control of the
+    /// FDTV+POCS scheme (PMC10745410). Has no effect when
+    /// `directional_tv_weight == 0.0`, in the L-BFGS / multi-source / encoded
+    /// drivers (which require a constant prior), or before the first step.
+    /// Default `false` (constant weight, backward-compatible).
+    pub directional_tv_adaptive: bool,
     /// Smoothness constraint weight
     pub smoothness_weight: f64,
 }
@@ -190,6 +203,7 @@ impl Default for RegularizationParameters {
             tikhonov_weight: 1e-3,
             tv_weight: 1e-4,
             directional_tv_weight: 0.0,
+            directional_tv_adaptive: false,
             smoothness_weight: 1e-2,
         }
     }

@@ -144,6 +144,11 @@ impl FwiProcessor {
     }
 
     /// Apply regularization to gradient.
+    ///
+    /// `dtv_scale` multiplies the four-direction-TV (FDTV) weight only; it is the
+    /// adaptive schedule factor (see [`adaptive_dtv_scale`]). Pass `1.0` for the
+    /// constant-weight (non-adaptive) behavior used by every driver except the
+    /// steepest-descent [`FwiProcessor::invert`] loop.
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
@@ -151,6 +156,7 @@ impl FwiProcessor {
         &self,
         gradient: &Array3<f64>,
         model: &Array3<f64>,
+        dtv_scale: f64,
     ) -> KwaversResult<Array3<f64>> {
         let mut regularized = gradient.clone();
         let reg_params = &self.parameters.regularization;
@@ -172,7 +178,7 @@ impl FwiProcessor {
 
         if reg_params.directional_tv_weight > 0.0 {
             let fdtv_term = directional_tv_gradient(model, &FDTV_DIRECTIONS);
-            let w = reg_params.directional_tv_weight;
+            let w = reg_params.directional_tv_weight * dtv_scale;
             Zip::from(&mut regularized)
                 .and(&fdtv_term)
                 .par_for_each(|r, &t| *r += t * w);
@@ -202,6 +208,36 @@ impl FwiProcessor {
     pub(super) fn compute_total_variation_gradient(&self, model: &Array3<f64>) -> Array3<f64> {
         directional_tv_gradient(model, &AXIS_TV_DIRECTIONS)
     }
+}
+
+/// Floor for the adaptive directional-TV scale.
+///
+/// The FDTV prior is never fully switched off (retains 10 % of its weight at
+/// convergence): a residual edge-preserving regularization keeps the
+/// ill-conditioned null-space components of the sparse-aperture problem damped
+/// even after the data-fit has stabilized.
+pub(in crate::inverse::fwi::time_domain) const DIRECTIONAL_TV_MIN_SCALE: f64 = 0.1;
+
+/// Adaptive directional-TV (FDTV) weight scale for the current iteration.
+///
+/// Returns `clamp(rel_change / max_change, min_scale, 1.0)`, the FWI analog of
+/// the adaptive parameter control of the FDTV+POCS scheme (PMC10745410):
+/// `rel_change` is the relative model change observed on the previous step and
+/// `max_change` the largest such change seen so far, so the factor is `1.0`
+/// while the model is moving fastest (early iterations) and decays toward
+/// `min_scale` as the inversion converges — preserving recovered detail near
+/// the solution. Returns `1.0` when no change has yet been recorded
+/// (`max_change <= 0`), i.e. on the first iteration.
+#[must_use]
+pub(in crate::inverse::fwi::time_domain) fn adaptive_dtv_scale(
+    rel_change: f64,
+    max_change: f64,
+    min_scale: f64,
+) -> f64 {
+    if max_change <= 0.0 || !rel_change.is_finite() {
+        return 1.0;
+    }
+    (rel_change / max_change).clamp(min_scale, 1.0)
 }
 
 /// Huber smoothing constant ε² shared by the TV functional and its gradient.

@@ -932,7 +932,7 @@ fn build_dicom_series(mut series: Vec<DicomSeriesInfo>) -> DicomSeriesInfo {
 
     if let Some(best) = series
         .iter()
-        .position(|s| s.series_instance_uid == DEFAULT_MEDIMODEL_SERIES_UID)
+        .position(|s| s.series_instance_uid.as_str() == DEFAULT_MEDIMODEL_SERIES_UID)
     {
         return series.swap_remove(best);
     }
@@ -949,9 +949,9 @@ fn build_dicom_series(mut series: Vec<DicomSeriesInfo>) -> DicomSeriesInfo {
                   merging {n} files into one logical series for spatial sort."
         );
         DicomSeriesInfo {
-            series_instance_uid: "merged".to_string(),
+            series_instance_uid: "merged".parse().expect("UID fits in 64 chars"),
             series_description: format!("merged-{n}-slices"),
-            modality: "CT".to_string(),
+            modality: "CT".parse().expect("modality fits in 16 chars"),
             patient_id: String::new(),
             file_paths: all_paths,
         }
@@ -960,7 +960,7 @@ fn build_dicom_series(mut series: Vec<DicomSeriesInfo>) -> DicomSeriesInfo {
         let ct: Vec<usize> = series
             .iter()
             .enumerate()
-            .filter(|(_, s)| s.modality == "CT")
+            .filter(|(_, s)| s.modality.as_str() == "CT")
             .map(|(i, _)| i)
             .collect();
         let pool: Vec<usize> = if ct.is_empty() {
@@ -2265,8 +2265,9 @@ fn main() -> KwaversResult<()> {
             regularization: RegularizationParameters {
                 tikhonov_weight: 0.0,
                 tv_weight: 0.0,
-
-                directional_tv_weight: 0.0,                smoothness_weight: 0.0,
+                directional_tv_weight: 0.0,
+                directional_tv_adaptive: false,
+                smoothness_weight: 0.0,
             },
             source_mute_radius: 4,
             ..FwiParameters::default()
@@ -2298,8 +2299,9 @@ fn main() -> KwaversResult<()> {
             regularization: RegularizationParameters {
                 tikhonov_weight: 0.0,
                 tv_weight: 0.0,
-
-                directional_tv_weight: 0.0,                smoothness_weight: 0.0,
+                directional_tv_weight: 0.0,
+                directional_tv_adaptive: false,
+                smoothness_weight: 0.0,
             },
             source_mute_radius: 4,
             ..FwiParameters::default()
@@ -2348,8 +2350,9 @@ fn main() -> KwaversResult<()> {
             regularization: RegularizationParameters {
                 tikhonov_weight: 0.0,
                 tv_weight: 0.0,
-
-                directional_tv_weight: 0.0,                smoothness_weight: 0.0,
+                directional_tv_weight: 0.0,
+                directional_tv_adaptive: false,
+                smoothness_weight: 0.0,
             },
             source_mute_radius: mute_r,
             ..FwiParameters::default()
@@ -2411,8 +2414,9 @@ fn main() -> KwaversResult<()> {
             regularization: RegularizationParameters {
                 tikhonov_weight: 0.0,
                 tv_weight: 0.0,
-
-                directional_tv_weight: 0.0,                smoothness_weight: 0.0,
+                directional_tv_weight: 0.0,
+                directional_tv_adaptive: false,
+                smoothness_weight: 0.0,
             },
             source_mute_radius: 4,
             ..FwiParameters::default()
@@ -2484,8 +2488,9 @@ fn main() -> KwaversResult<()> {
                     regularization: RegularizationParameters {
                         tikhonov_weight: 0.0,
                         tv_weight: 0.0,
-
-                        directional_tv_weight: 0.0,                        smoothness_weight: 0.0,
+                        directional_tv_weight: 0.0,
+                        directional_tv_adaptive: false,
+                        smoothness_weight: 0.0,
                     },
                     source_mute_radius: 2,
                     ..FwiParameters::default()

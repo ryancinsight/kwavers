@@ -53,7 +53,7 @@ impl FwiProcessor {
             }
 
             let smoothed = self.smooth_gradient(&total_gradient);
-            let regularized = self.apply_regularization(&smoothed, &current_model)?;
+            let regularized = self.apply_regularization(&smoothed, &current_model, 1.0)?;
 
             let grad_max = regularized
                 .iter()
@@ -176,7 +176,7 @@ impl FwiProcessor {
                 });
 
             let smoothed = self.smooth_gradient(&total_gradient);
-            let mut regularized = self.apply_regularization(&smoothed, &current_model)?;
+            let mut regularized = self.apply_regularization(&smoothed, &current_model, 1.0)?;
 
             // Re-zero skull voxels after smoothing to prevent smooth-gradient leakage
             // from triggering spurious CFL violations in the line search.

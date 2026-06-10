@@ -617,3 +617,41 @@ fn test_fdtv_functional_exceeds_axis_only_for_diagonal_structure() {
          axis = {axis:e}, fdtv = {fdtv:e}"
     );
 }
+
+/// Value-semantic verification of the adaptive FDTV weight schedule:
+/// the scale equals `rel_change / max_change`, clamped to `[min_scale, 1]`,
+/// with `1.0` as the no-history fallback.
+/// # Panics
+/// - Panics on any assertion failure.
+#[test]
+fn test_adaptive_dtv_scale_tracks_relative_change() {
+    use super::super::gradient::adaptive_dtv_scale;
+
+    let min = 0.1;
+
+    // No history (or non-positive max) ⇒ full weight.
+    assert_eq!(adaptive_dtv_scale(0.05, 0.0, min), 1.0);
+    assert_eq!(adaptive_dtv_scale(f64::NAN, 0.2, min), 1.0);
+
+    // Fastest-moving iteration (rel == max) ⇒ full weight.
+    assert!((adaptive_dtv_scale(0.2, 0.2, min) - 1.0).abs() < 1e-15);
+
+    // Mid-convergence: exact ratio while above the floor.
+    let s = adaptive_dtv_scale(0.1, 0.4, min); // 0.25
+    assert!((s - 0.25).abs() < 1e-15, "expected 0.25, got {s}");
+
+    // Near convergence: ratio below the floor ⇒ clamped to min_scale (prior
+    // never fully disabled).
+    assert!((adaptive_dtv_scale(0.001, 1.0, min) - min).abs() < 1e-15);
+
+    // Monotone: a larger relative change yields a larger (or equal) scale.
+    let lo = adaptive_dtv_scale(0.05, 1.0, min);
+    let hi = adaptive_dtv_scale(0.5, 1.0, min);
+    assert!(hi > lo, "scale must increase with relative change: {lo} !< {hi}");
+
+    // Result is always within the documented bounds.
+    for &(rel, max) in &[(0.0, 1.0), (3.0, 1.0), (0.7, 0.9), (1e-9, 2.0)] {
+        let v = adaptive_dtv_scale(rel, max, min);
+        assert!((min..=1.0).contains(&v), "scale {v} out of [{min}, 1] for rel={rel}, max={max}");
+    }
+}

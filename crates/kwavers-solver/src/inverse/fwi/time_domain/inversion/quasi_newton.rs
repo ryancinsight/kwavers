@@ -77,8 +77,10 @@ impl FwiProcessor {
         let mut mem = LbfgsMemory::new(memory);
 
         // Initial objective and gradient at the (constrained) starting model.
+        // L-BFGS uses a constant prior weight (dtv_scale = 1.0): an iteration-
+        // varying regularizer would corrupt the secant curvature pairs (s, y=Δg).
         let (mut objective, grad_arr) =
-            self.misfit_and_gradient(&model, observed_data, geometry, grid)?;
+            self.misfit_and_gradient(&model, observed_data, geometry, grid, 1.0)?;
         let mut x: Vec<f64> = model.iter().copied().collect();
         let mut g: Vec<f64> = grad_arr.iter().copied().collect();
 
@@ -158,7 +160,7 @@ impl FwiProcessor {
             let model_new = Array3::from_shape_vec(dim, x_new.clone())
                 .expect("accepted model shares the model shape");
             let (obj_grad, grad_new_arr) =
-                self.misfit_and_gradient(&model_new, observed_data, geometry, grid)?;
+                self.misfit_and_gradient(&model_new, observed_data, geometry, grid, 1.0)?;
             let g_new: Vec<f64> = grad_new_arr.iter().copied().collect();
 
             // s = xₖ₊₁ − xₖ,  y = ∇Jₖ₊₁ − ∇Jₖ.

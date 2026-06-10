@@ -1022,8 +1022,9 @@ fn main() -> KwaversResult<()> {
         regularization: RegularizationParameters {
             tikhonov_weight: 0.0,
             tv_weight: 0.0,
-
-            directional_tv_weight: 0.0,            smoothness_weight: 0.0,
+            directional_tv_weight: 0.0,
+            directional_tv_adaptive: false,
+            smoothness_weight: 0.0,
         },
         source_mute_radius: 0,
     };

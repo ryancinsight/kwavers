@@ -67,6 +67,7 @@ fn build_problem(anomaly: f64) -> (Grid, FwiGeometry, FwiParameters, Array3<f64>
         tikhonov_weight: 0.0,
         tv_weight: 0.0,
         directional_tv_weight: 0.0,
+        directional_tv_adaptive: false,
         smoothness_weight: 0.0,
     };
     let parameters = FwiParameters {

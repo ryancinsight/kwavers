@@ -7,7 +7,7 @@ mod shot_gradient;
 use super::{geometry::FwiGeometry, FwiEngine, FwiProcessor};
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use ndarray::{Array3, Zip};
 
 impl FwiProcessor {
     /// Perform Full Waveform Inversion (single-source).
@@ -45,9 +45,17 @@ impl FwiProcessor {
         let mut prev_objective: Option<f64> = None;
         let max_iterations = self.parameters.max_iterations;
 
+        // Adaptive FDTV schedule state: the scale used for the *current*
+        // iteration is derived from the relative model change observed on the
+        // *previous* step (causal), normalized by the largest change seen.
+        let adaptive = self.parameters.regularization.directional_tv_adaptive
+            && self.parameters.regularization.directional_tv_weight > 0.0;
+        let mut dtv_scale = 1.0_f64;
+        let mut max_rel_change = 0.0_f64;
+
         for iteration in 0..max_iterations {
             let (objective, updated_model, step_size) =
-                self.descent_update(&current_model, observed_data, geometry, grid)?;
+                self.descent_update(&current_model, observed_data, geometry, grid, dtv_scale)?;
 
             if let Some(previous) = prev_objective {
                 let relative_change = (previous - objective).abs() / previous.max(f64::EPSILON);
@@ -67,7 +75,21 @@ impl FwiProcessor {
                 break;
             }
 
-            log::info!("FWI iter {iteration}: J={objective:.6e} step={step_size:.6e}");
+            if adaptive {
+                let rel_change = relative_model_change(&current_model, &updated_model);
+                max_rel_change = max_rel_change.max(rel_change);
+                dtv_scale = super::gradient::adaptive_dtv_scale(
+                    rel_change,
+                    max_rel_change,
+                    super::gradient::DIRECTIONAL_TV_MIN_SCALE,
+                );
+                log::info!(
+                    "FWI iter {iteration}: J={objective:.6e} step={step_size:.6e} \
+                     fdtv_scale={dtv_scale:.4}"
+                );
+            } else {
+                log::info!("FWI iter {iteration}: J={objective:.6e} step={step_size:.6e}");
+            }
             current_model = updated_model;
             prev_objective = Some(objective);
         }
@@ -97,9 +119,10 @@ impl FwiProcessor {
         observed_data: &ndarray::Array2<f64>,
         geometry: &FwiGeometry,
         grid: &Grid,
+        dtv_scale: f64,
     ) -> KwaversResult<(f64, Array3<f64>, f64)> {
         let (objective, regularized_gradient) =
-            self.misfit_and_gradient(current_model, observed_data, geometry, grid)?;
+            self.misfit_and_gradient(current_model, observed_data, geometry, grid, dtv_scale)?;
 
         let grad_max = regularized_gradient
             .iter()
@@ -146,11 +169,13 @@ impl FwiProcessor {
         observed_data: &ndarray::Array2<f64>,
         geometry: &FwiGeometry,
         grid: &Grid,
+        dtv_scale: f64,
     ) -> KwaversResult<(f64, Array3<f64>)> {
         let (objective, gradient) =
             self.forward_misfit_raw_gradient(current_model, observed_data, geometry, grid)?;
         let smoothed_gradient = self.smooth_gradient(&gradient);
-        let regularized_gradient = self.apply_regularization(&smoothed_gradient, current_model)?;
+        let regularized_gradient =
+            self.apply_regularization(&smoothed_gradient, current_model, dtv_scale)?;
         Ok((objective, regularized_gradient))
     }
 
@@ -220,4 +245,22 @@ impl FwiProcessor {
         };
         Ok((objective, gradient))
     }
+}
+
+/// Relative L2 model change `‖m_new − m_old‖₂ / ‖m_old‖₂` between two iterates.
+///
+/// Drives the adaptive FDTV schedule ([`super::gradient::adaptive_dtv_scale`]).
+/// Returns `0.0` when `m_old` has zero norm (degenerate; treated as no change).
+fn relative_model_change(old: &Array3<f64>, new: &Array3<f64>) -> f64 {
+    let mut diff_sq = 0.0_f64;
+    let mut old_sq = 0.0_f64;
+    Zip::from(old).and(new).for_each(|&o, &n| {
+        let d = n - o;
+        diff_sq += d * d;
+        old_sq += o * o;
+    });
+    if old_sq <= 0.0 {
+        return 0.0;
+    }
+    (diff_sq / old_sq).sqrt()
 }
