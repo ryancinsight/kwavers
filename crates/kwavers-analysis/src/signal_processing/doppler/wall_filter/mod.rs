@@ -188,19 +188,23 @@ fn polynomial_projector(basis: &[Vec<f64>]) -> Vec<Vec<f64>> {
         if diag.abs() < 1e-300 {
             // Singular — return identity sentinel (filter degenerates to identity)
             let mut id = vec![vec![0.0_f64; k]; k];
-            for i in 0..k {
-                id[i][i] = 1.0;
+            for (i, row) in id.iter_mut().enumerate() {
+                row[i] = 1.0;
             }
             return id;
         }
-        for j in 0..2 * k {
-            aug[col][j] /= diag;
+        for v in aug[col].iter_mut() {
+            *v /= diag;
         }
-        for row in 0..k {
+        // The pivot row is finalized above and unchanged during elimination
+        // (every modified row has `row != col`), so clone it once to satisfy the
+        // borrow checker while zipping.
+        let pivot_row = aug[col].clone();
+        for (row, aug_row) in aug.iter_mut().enumerate() {
             if row != col {
-                let factor = aug[row][col];
-                for j in 0..2 * k {
-                    aug[row][j] -= factor * aug[col][j];
+                let factor = aug_row[col];
+                for (a, &p) in aug_row.iter_mut().zip(pivot_row.iter()) {
+                    *a -= factor * p;
                 }
             }
         }

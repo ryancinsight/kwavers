@@ -38,7 +38,12 @@ pub struct IvusWeights {
 
 impl Default for IvusWeights {
     fn default() -> Self {
-        Self { bandwidth: 0.40, thermal: 0.30, drive: 0.15, integration: 0.15 }
+        Self {
+            bandwidth: 0.40,
+            thermal: 0.30,
+            drive: 0.15,
+            integration: 0.15,
+        }
     }
 }
 
@@ -82,15 +87,21 @@ pub fn evaluate_ivus(
     let pmut_fbw = pmut.fractional_bandwidth(fluid_density);
 
     let cmut_drive = 0.8 * cmut.collapse_voltage();
-    let cmut_heating = cmut.self_heating_power(0.1 * cmut_drive, cmut.immersion_resonance(fluid_density));
-    let pmut_heating = pmut.self_heating_power(pmut_drive_voltage, pmut.immersion_resonance(fluid_density));
+    let cmut_heating =
+        cmut.self_heating_power(0.1 * cmut_drive, cmut.immersion_resonance(fluid_density));
+    let pmut_heating =
+        pmut.self_heating_power(pmut_drive_voltage, pmut.immersion_resonance(fluid_density));
 
     // higher-is-better normalisation against the pair maximum
     let nb = |x: f64, y: f64| if x.max(y) > 0.0 { x / x.max(y) } else { 0.0 };
     // lower-is-better → invert (best gets 1.0)
     let nl = |x: f64, y: f64| {
         let m = x.min(y);
-        if x > 0.0 { m / x } else { 1.0 }
+        if x > 0.0 {
+            m / x
+        } else {
+            1.0
+        }
     };
 
     let cmut_integration = 1.0; // monolithic CMUT-on-CMOS
@@ -114,7 +125,11 @@ pub fn evaluate_ivus(
         pmut_drive_voltage,
         cmut_fom,
         pmut_fom,
-        recommended: if cmut_fom >= pmut_fom { MutKind::Cmut } else { MutKind::Pmut },
+        recommended: if cmut_fom >= pmut_fom {
+            MutKind::Cmut
+        } else {
+            MutKind::Pmut
+        },
     }
 }
 
@@ -154,11 +169,13 @@ pub fn evaluate_therapy(
     substrate_output_factor: f64,
 ) -> TherapyVerdict {
     let cmut_flex = cmut.flex_gap_derating(curvature);
-    let cmut_output = cmut.max_output_pressure(fluid_density, fluid_sound_speed, cmut_swing_fraction)
-        * cmut_flex
-        * substrate_output_factor;
+    let cmut_output =
+        cmut.max_output_pressure(fluid_density, fluid_sound_speed, cmut_swing_fraction)
+            * cmut_flex
+            * substrate_output_factor;
     let pmut_output =
-        pmut.max_output_pressure(pmut_drive_voltage, fluid_density, fluid_sound_speed) * substrate_output_factor;
+        pmut.max_output_pressure(pmut_drive_voltage, fluid_density, fluid_sound_speed)
+            * substrate_output_factor;
 
     let cmut_f = cmut.immersion_resonance(fluid_density);
     let pmut_f = pmut.immersion_resonance(fluid_density);
@@ -171,7 +188,11 @@ pub fn evaluate_therapy(
         cmut_flex_derating: cmut_flex,
         cmut_heating,
         pmut_heating,
-        recommended: if pmut_output >= cmut_output { MutKind::Pmut } else { MutKind::Cmut },
+        recommended: if pmut_output >= cmut_output {
+            MutKind::Pmut
+        } else {
+            MutKind::Cmut
+        },
     }
 }
 
@@ -195,9 +216,19 @@ mod tests {
         let v = evaluate_ivus(&cmut, &pmut, rho, 5.0, IvusWeights::default());
 
         // CMUT's light membrane → wider fractional bandwidth (better axial resolution)
-        assert!(v.cmut_fbw > v.pmut_fbw, "CMUT FBW {} vs PMUT {}", v.cmut_fbw, v.pmut_fbw);
+        assert!(
+            v.cmut_fbw > v.pmut_fbw,
+            "CMUT FBW {} vs PMUT {}",
+            v.cmut_fbw,
+            v.pmut_fbw
+        );
         // CMUT (tanδ≈1e-3) self-heats less than PZT PMUT (tanδ≈0.02)
-        assert!(v.cmut_heating < v.pmut_heating, "heating {} vs {}", v.cmut_heating, v.pmut_heating);
+        assert!(
+            v.cmut_heating < v.pmut_heating,
+            "heating {} vs {}",
+            v.cmut_heating,
+            v.pmut_heating
+        );
         // for the IVUS weighting, CMUT is recommended
         assert_eq!(v.recommended, MutKind::Cmut);
         assert!(v.cmut_fom > v.pmut_fom);
@@ -209,8 +240,12 @@ mod tests {
         let pmut = PmutCell::new(20e-6, 1e-6, 2e-6, PiezoFilm::Aln).unwrap();
         let v = evaluate_ivus(&cmut, &pmut, BLOOD_RHO, 5.0, IvusWeights::default());
         // PMUT operates well below the CMUT collapse bias — the documented trade-off
-        assert!(v.pmut_drive_voltage < v.cmut_drive_voltage,
-            "PMUT {} should drive below CMUT bias {}", v.pmut_drive_voltage, v.cmut_drive_voltage);
+        assert!(
+            v.pmut_drive_voltage < v.cmut_drive_voltage,
+            "PMUT {} should drive below CMUT bias {}",
+            v.pmut_drive_voltage,
+            v.cmut_drive_voltage
+        );
     }
 
     #[test]
@@ -223,13 +258,26 @@ mod tests {
         // flat, rigid backing
         let flat = evaluate_therapy(&cmut, &pmut, rho, c, 1.0 / 3.0, 40.0, 0.0, 1.0);
         // PMUT delivers more pressure for therapy (CMUT is gap-limited)
-        assert!(flat.pmut_output_pa > flat.cmut_output_pa, "PMUT {} > CMUT {}", flat.pmut_output_pa, flat.cmut_output_pa);
+        assert!(
+            flat.pmut_output_pa > flat.cmut_output_pa,
+            "PMUT {} > CMUT {}",
+            flat.pmut_output_pa,
+            flat.cmut_output_pa
+        );
         assert_eq!(flat.recommended, MutKind::Pmut);
 
         // wrap onto a flexible catheter (κ = 1/2 mm) → CMUT output falls further
         let wrapped = evaluate_therapy(&cmut, &pmut, rho, c, 1.0 / 3.0, 40.0, 1.0 / 2.0e-3, 1.0);
-        assert!(wrapped.cmut_flex_derating < 1.0, "flexing must derate the CMUT");
-        assert!(wrapped.cmut_output_pa < flat.cmut_output_pa, "flexed CMUT output {} < flat {}", wrapped.cmut_output_pa, flat.cmut_output_pa);
+        assert!(
+            wrapped.cmut_flex_derating < 1.0,
+            "flexing must derate the CMUT"
+        );
+        assert!(
+            wrapped.cmut_output_pa < flat.cmut_output_pa,
+            "flexed CMUT output {} < flat {}",
+            wrapped.cmut_output_pa,
+            flat.cmut_output_pa
+        );
         assert_eq!(wrapped.recommended, MutKind::Pmut);
     }
 
@@ -238,7 +286,12 @@ mod tests {
         // a drive-voltage-dominated weighting flips the verdict toward PMUT
         let cmut = ivus_cmut();
         let pmut = PmutCell::new(20e-6, 1e-6, 2e-6, PiezoFilm::Aln).unwrap();
-        let w = IvusWeights { bandwidth: 0.1, thermal: 0.1, drive: 0.7, integration: 0.1 };
+        let w = IvusWeights {
+            bandwidth: 0.1,
+            thermal: 0.1,
+            drive: 0.7,
+            integration: 0.1,
+        };
         let v = evaluate_ivus(&cmut, &pmut, BLOOD_RHO, 3.0, w);
         assert_eq!(v.recommended, MutKind::Pmut);
     }

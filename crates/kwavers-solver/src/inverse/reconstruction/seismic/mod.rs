@@ -37,6 +37,9 @@ pub mod wavelet;
 // the parallel reconstruction/seismic/fwi stack (custom inline FDTD stencil
 // with zero external consumers) was removed 2026-05-20 — see backlog T16.
 pub use config::{AnisotropyParameters, RtmImagingCondition, SeismicImagingConfig};
-pub use misfit::{MisfitFunction, MisfitType};
+pub use misfit::{
+    trace_weights, weighted_l2_objective, weighted_l2_residual, DataWeighting, MisfitFunction,
+    MisfitType,
+};
 pub use rtm::ReverseTimeMigration;
 pub use wavelet::SeismicRickerWavelet;

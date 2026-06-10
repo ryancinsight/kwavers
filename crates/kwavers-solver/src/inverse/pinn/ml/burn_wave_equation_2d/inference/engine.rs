@@ -1,7 +1,12 @@
 use super::quantization::BurnWave2dQuantizer;
 #[cfg(feature = "gpu")]
 use super::types::BurnNeuralNetwork;
-use super::types::{ActivationType, BurnWave2dInferenceMemoryPool, QuantizedNetwork};
+use super::types::{BurnWave2dInferenceMemoryPool, QuantizedNetwork};
+// `ActivationType` is only referenced by the scalar CPU fallback
+// (`forward_quantized_single`), which is compiled out when the `simd` feature
+// provides the vectorised path.
+#[cfg(not(feature = "simd"))]
+use super::types::ActivationType;
 use crate::inverse::pinn::ml::burn_wave_equation_2d::model::BurnPINN2DWave;
 use burn::tensor::backend::Backend;
 use kwavers_core::error::{KwaversError, KwaversResult};

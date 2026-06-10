@@ -1,0 +1,20 @@
+# mdBook configuration for the kwavers computational-ultrasound book.
+# Build:  mdbook build docs/book      Serve:  mdbook serve docs/book
+# The chapter Markdown lives alongside this file (src = "."); the table of
+# contents and part structure are defined in SUMMARY.md.
+[book]
+title = "kwavers: Computational Ultrasound Physics, Imaging, and Therapy"
+authors = ["Ryan Clanton"]
+description = "Mathematically-verified ultrasound simulation, full-waveform inversion, and theranostics — the book that documents the kwavers Rust workspace."
+src = "."
+language = "en"
+
+[build]
+build-dir = "../../target/book"
+create-missing = false
+
+[output.html]
+no-section-label = false
+mathjax-support = true
+git-repository-url = "https://github.com/ryancinsight/kwavers"
+default-theme = "rust"

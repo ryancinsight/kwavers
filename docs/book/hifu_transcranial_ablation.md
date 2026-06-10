@@ -38,8 +38,7 @@ The workflow covers:
 
 The CT-aligned brain target and transducer pose are stored once in
 `pykwavers/examples/book/transcranial_planning/scene.py` as
-`CANONICAL_BRAIN_SCENE`. Figure 2 phase-correction output, the Chapter 29
-brain Figure 5 nonlinear branch, the 3-D bowl-aperture placement view, and the
+`CANONICAL_BRAIN_SCENE`. Figure 2 phase-correction output, the transcranial brain-imaging nonlinear-reconstruction figure, the 3-D bowl-aperture placement view, and the
 skull-adaptive transcranial benchmark resolve their target index from this
 scene definition instead of carrying separate centroid or element-count
 defaults.
@@ -202,14 +201,22 @@ $$
 = k\nabla^2T - w\rho C_p(T-T_0) + 2\alpha I.
 $$
 
-CEM43 dose uses the Chapter 15 convention and the lesion mask is the brain-only
+CEM43 dose uses the Chapter 16 (Safety and Dosimetry §16.5) convention and the lesion mask is the brain-only
 region satisfying `CEM43 >= 240 min`.
 
-Generated figures:
+Generated figures (`docs/book/figures/ch25/`):
 
-- `fig01_registered_ct_mri_mni`
-- `fig02_transcranial_bowl_phase_correction`
-- `fig03_essential_tremor_ablation`
+![Registered CT / subject-MRI / MNI-atlas planes through the CT-space target.](figures/ch25/fig01_registered_ct_mri_mni.png)
+
+*Figure 24.1. CT / T1-MRI / MNI152 registration (§24.2): axial, coronal, and sagittal planes through the same CT-space target index after the metric-guarded RITK alignment.*
+
+![1024-element hemispherical bowl with per-element skull-path phase correction.](figures/ch25/fig02_transcranial_bowl_phase_correction.png)
+
+*Figure 24.2. Transcranial bowl phase correction (§24.3): per-element skull-ray delays $\tau_i$ and CT-derived amplitude transmission $A_i$ on the 1024-element hemispherical array.*
+
+![Essential-tremor VIM ablation: pressure, MI, Pennes temperature, CEM43, and lesion mask.](figures/ch25/fig03_essential_tremor_ablation.png)
+
+*Figure 24.3. VIM thermal ablation (§24.4): the skull-corrected Rayleigh field, Pennes temperature rise, and the CEM43 ≥ 240 min lesion mask at the atlas VIM coordinate.*
 
 ## 24.5 GBM BBB-opening subspots
 
@@ -240,14 +247,20 @@ The planned BBB opening mask is `P(D) >= 0.5` inside the tumor segmentation.
 The chapter also reports inertial-cavitation risk from the BBB safety window
 boundary at `MI = 0.55`.
 
-Generated optional figures:
+Generated optional figures (`docs/book/figures/ch25/`, when a GBM case is present):
 
-- `fig04_gbm_subspot_plan`
-- `fig05_gbm_bbb_opening`
-- `fig06_affine_ct_to_mri_qc` when sample CT is affine-resampled to an
-  MRI-space GBM case
-- `modality_bridge_manifest.json` for the CT/MRI/segmentation readiness and
-  synthesis-boundary contract
+![GBM subspot lattice inside the segmented tumor volume.](figures/ch25/fig04_gbm_subspot_plan.png)
+
+*Figure 24.4. GBM subspot plan (§24.5): the focal subspot lattice tiled inside the expert tumor segmentation, sized to the diffraction-limited focus.*
+
+![Planned BBB-opening mask P(D) ≥ 0.5 inside the GBM segmentation.](figures/ch25/fig05_gbm_bbb_opening.png)
+
+*Figure 24.5. GBM BBB opening (§24.5): the acoustic-dose field $D(x)$ and the Hill-model permeability mask $P(D)\ge 0.5$ inside the tumor, with the MI = 0.55 inertial-cavitation boundary.*
+
+The following are emitted only under specific fallbacks and are not produced by a
+default run: `fig06_affine_ct_to_mri_qc` (when a sample CT is affine-resampled to an
+MRI-space GBM case) and `modality_bridge_manifest.json` (the CT/MRI/segmentation
+readiness and synthesis-boundary contract).
 
 ## 24.6 Skull-adaptive transcranial benchmark
 

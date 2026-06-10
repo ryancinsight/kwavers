@@ -9,6 +9,11 @@ use crate::recorder::velocity_statistics::{SampledVelocityStats, VelocityCompone
 use kwavers_core::error::{KwaversError, KwaversResult};
 use ndarray::Array1;
 
+/// Per-statistic fill function: writes one velocity-component statistic at the
+/// sampled sensor positions into the output vector.
+type VelocityStatFill =
+    fn(&VelocityComponentStats, &[(usize, usize, usize)], &mut Array1<f64>) -> KwaversResult<()>;
+
 impl SensorRecorder {
     // ── ux statistics ─────────────────────────────────────────────────────────
 
@@ -246,11 +251,7 @@ impl SensorRecorder {
         out: &mut Array1<f64>,
         field: &str,
         stats: Option<&VelocityComponentStats>,
-        fill: fn(
-            &VelocityComponentStats,
-            &[(usize, usize, usize)],
-            &mut Array1<f64>,
-        ) -> KwaversResult<()>,
+        fill: VelocityStatFill,
     ) -> KwaversResult<()> {
         let Some(stats) = stats else {
             return Err(KwaversError::InvalidInput(format!(

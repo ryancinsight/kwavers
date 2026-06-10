@@ -110,7 +110,7 @@ impl DicomImageLoader {
             study_time: String::new(),
             study_description: volume.series_info.series_description.clone(),
             series_description: volume.series_info.series_description.clone(),
-            series_instance_uid: volume.series_info.series_instance_uid.clone(),
+            series_instance_uid: volume.series_info.series_instance_uid.to_string(),
             study_instance_uid: String::new(),
             num_slices: dims.2,
             slice_thickness_mm: spacing_mm.2,

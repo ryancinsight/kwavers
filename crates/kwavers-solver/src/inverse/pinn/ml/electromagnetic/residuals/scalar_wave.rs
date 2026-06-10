@@ -4,6 +4,9 @@ use crate::inverse::pinn::ml::BurnPINN2DWave;
 use burn::tensor::backend::AutodiffBackend;
 use burn::tensor::Tensor;
 
+// Independent field tensors and physical parameters with no cohesive
+// sub-grouping; bundling would not clarify the call site.
+#[allow(clippy::too_many_arguments)]
 pub fn wave_propagation_residual<B: AutodiffBackend>(
     model: &BurnPINN2DWave<B>, // Changed from outputs to model
     x: &Tensor<B, 2>,

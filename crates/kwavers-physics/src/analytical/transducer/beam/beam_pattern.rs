@@ -201,4 +201,3 @@ pub fn multi_focus_field_magnitude_2d(
     }
     mag
 }
-

@@ -5,7 +5,6 @@
 
 pub mod mappers;
 pub mod pinn_optimizer;
-pub mod state;
 pub mod types;
 
 #[cfg(test)]
@@ -15,5 +14,3 @@ pub use types::OptimizerAlgorithm;
 
 #[cfg(feature = "pinn")]
 pub use pinn_optimizer::PINNOptimizer;
-#[cfg(feature = "pinn")]
-pub use state::{MomentumState, PersistentAdamState};

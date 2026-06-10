@@ -94,22 +94,29 @@ impl StreamingBuffer {
         &self.rf_buffer
     }
 
+    // Coherent ring-buffer inspection API, exercised by the gpu test module but
+    // not yet consumed by non-test production code; kept as the buffer's state
+    // accessors rather than deleted piecemeal.
+    #[allow(dead_code)]
     /// Get buffer capacity (number of frames).
     pub fn capacity(&self) -> usize {
         self.capacity
     }
 
     /// Get current write position.
+    #[allow(dead_code)] // ring-buffer accessor; test-only consumer (see capacity)
     pub fn write_position(&self) -> usize {
         self.write_pos
     }
 
     /// Get current read position.
+    #[allow(dead_code)] // ring-buffer accessor; test-only consumer (see capacity)
     pub fn read_position(&self) -> usize {
         self.read_pos
     }
 
     /// Reset buffer to initial state.
+    #[allow(dead_code)] // ring-buffer accessor; test-only consumer (see capacity)
     pub fn reset(&mut self) {
         self.write_pos = 0;
         self.read_pos = 0;

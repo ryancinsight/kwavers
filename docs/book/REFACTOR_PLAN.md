@@ -31,16 +31,22 @@ Numbering today is broken: duplicate headers (two each of Ch4/5/6/7, two Ch10),
 | 12 | therapy.md | Therapeutic Ultrasound | 401 | 5 | ✅ audited (code-map 19/19 verified; figs ch06; §12.10 10× units fix) |
 | 13 | theranostics.md | Theranostics | 358 | 0 | ✅ audited (already recap-cross-ref'd; 3 struct names + theorem/eq renumber + intensity fix; registration marked not-impl) |
 | 14 | safety_and_dosimetry.md | Safety and Dosimetry | 1012 | 5 | ✅ audited (paths+structs fixed; figs re-wired ch15) |
-| 15 | transcranial_ultrasound.md | Transcranial Ultrasound | 955 | 9 | ⬜ |
+| 15 | transcranial_ultrasound.md | Transcranial Ultrasound | ~930 | 5 | ✅ audited (flat paths→split; 28 eq tags + table 10.x→15.x; 5 fictional APIs→real; 9 broken ch_tc figs→5 real ch16; HU-map note) |
 | 16 | inverse_problems_and_pinns.md | Inverse Problems & PINNs | ~470 | 5 | ✅ audited (§8/§9 de-fictioned; figs→ch17) |
-| 17 | sonogenetics.md | Sonogenetics | 828 | 0 | ⬜ |
-| 18 | performance_and_memory.md | Performance and Memory | 540 | 0 | ⬜ |
-| 19 | validation_and_benchmarking.md | Validation and Benchmarking | 559 | 0 | ⬜ |
+| 17 | sonogenetics.md | Sonogenetics | ~860 | 5 | ✅ audited (flat paths→split; eq refs 11.x→17.x, 10.15→15.15, Ch10→15; PSTDSolver API + consts fixed; 5 ch18 figs embedded) |
+| 18 | performance_and_memory.md | Performance and Memory | ~560 | 5 | ✅ audited (title 19→18; §N→18.N renumber; flat→split paths; Scalar/AbsorptionKernel/CpmlUpdater/BATCH_SIZE fictions corrected; 5 ch19 figs embedded) |
+| 19 | validation_and_benchmarking.md | Validation and Benchmarking | ~580 | 5 | ✅ audited (title 20→19; §N→19.N; flat→split paths; RITK registration verified REAL; 5 ch20 figs embedded) |
 | — | ~~acoustic_propagation.md~~ | Acoustic Propagation | — | — | ✅ DELETED 2026-06-04 (HIFU example → Ch2 §2.14) |
 
-**Application chapters** (largely distinct; clinical case studies) — keep, audit later,
-renumber after the core is settled: histotripsy, simulation_orchestration,
-passive_acoustic_mapping, bbb_lifu_opening, hifu_transcranial_ablation,
+**Application chapters** (clinical case studies) — auditing in turn:
+✅ **21 simulation_orchestration** (#30), ✅ **22 passive_acoustic_mapping** (#31),
+✅ **14 histotripsy** (#34), ✅ **23 bbb_lifu_opening** (#32),
+✅ **24 hifu_transcranial_ablation** (#33), ✅ **25 neuromodulation** (#35),
+✅ **26 transcranial_ust_brain_imaging** (#36), ✅ **27 abdominal_histotripsy_fwi** (#37),
+✅ **28 theranostic_fwi_platforms** (#38), ✅ **29 intravascular_ultrasound** (#39),
+✅ **30 clinical_device_geometry** (#40), ✅ **31 segmented_tissue_transducer_planning** (#41),
+✅ **32 pancreatic_histotripsy** (#42), ✅ **33 cmut_vs_pmut** (#43).
+**🎉 Full Ch1–33 book sweep complete — every chapter audited.**
 neuromodulation, transcranial_ust_brain_imaging, abdominal_histotripsy_fwi,
 theranostic_fwi_platforms, intravascular_ultrasound, clinical_device_geometry,
 segmented_tissue_transducer_planning, pancreatic_histotripsy.
@@ -414,6 +420,307 @@ in Rust where a real computation applies, embedded with a descriptive caption.
      transcranial_ust "Chapter 14,22,24,26", and the bbb "Theorem 22.1→21.1" cross-ref. README
      TOC numbered 1–32. Verified: all 32 headers unique/contiguous, residual §22–27 refs are
      legit self-refs.
+
+43. ✅ **AUDITED + FIXED: Chapter 33 (CMUT vs PMUT).** The chapter I authored this campaign;
+   content verified accurate — §33.10 code-map matches `kwavers_transducer::mems::{plate, cmut,
+   pmut, comparison}` + `flexible::FlexibleTransducerArray`, cross-refs (Ch6/16/29) correct,
+   verdict physics (gap-limited CMUT ceiling, drive-scaling PMUT, flex penalty) matches the
+   implemented `evaluate_ivus`/`evaluate_therapy`. Fixed a stale §33.8 critique ("squeeze-film
+   out of scope" — it's since implemented). **The 6 figures were broken links** (never generated;
+   the Done entry had flagged a needed rebuild). Generating them surfaced **two real bugs:** (1)
+   pykwavers was failing to import entirely — a stale-DLL mismatch (`hodgkin_huxley_response` added
+   by the other sessions' neuromodulation work post-dated my Ch29 build); rebuilt to fix it,
+   unblocking all book scripts. (2) the 15 mems `#[pyfunction]`s were registered in `register_book`
+   but **omitted from the hand-maintained `__init__.py` re-export list**, so the public `kw.cmut_*`/
+   `kw.ivus_figure_of_merit` API raised AttributeError — added all 15 to the import block + `__all__`.
+   Then ran `ch33_cmut_vs_pmut.py` → all **6 `figures/ch33/*`** generated and resolve.
+
+42. ✅ **AUDITED + RECONCILED: Chapter 32 (Pancreatic Cancer Histotripsy).** Two findings. **(1)
+   54 MB base64 cleanup:** the chapter referenced `embedded_figures.md` (a base64-inlined PNG
+   bundle); these existed for ch21d (6 MB), ch21e (**46 MB**), ch21f (2 MB), all git-tracked, only
+   ch21f referenced by any chapter, and all duplicating the committed PNGs — deleted all three (~54
+   MB freed) and removed the chapter reference. **(2) Chapter↔script drift** (same shape as Ch31):
+   the chapter describes the analytic histotripsy planner (Rayleigh–Sommerfeld forward + intrinsic-
+   threshold cavitation + Pennes + raster, 3 regimes) and its figures `fig01_pdac_histotripsy_overview`/
+   `fig02_pdac_thermal`, but the current `ch21f` script was migrated to `run_theranostic_inverse_from_ritk`
+   (FWI, writing `fig00`–`fig03`). **Key difference from Ch31:** the analytic model **still exists in
+   Rust** (`kwavers_physics::analytical::cavitation::sonication`: `build_sonication_schedule`,
+   `histotripsy_pulses_for_lesion_radius`, `histotripsy_kill_fraction`, …), so I kept the valid
+   Mathematical Contract, embedded the 2 existing analytic figures (which depict it), and added an
+   honest **Executable note** that the script now demonstrates the same-aperture FWI instead. No
+   re-run needed. **Env note:** pykwavers currently fails to import (`hodgkin_huxley_response`
+   missing) — a stale-DLL mismatch: other sessions added the neuromodulation HH binding + updated
+   `__init__.py` after my Ch29-era `maturin develop`; a rebuild fixes it (the binding is real in
+   `analytical_bindings::neuromodulation`). Book scripts can't run until pykwavers is rebuilt.
+
+41. ✅ **AUDITED + RECONCILED: Chapter 31 (Segmented Tissue Transducer Planning).** **Significant
+   drift found and fixed.** The chapter described a Python-side ray-trace optimiser (per-aperture
+   hazard-path scoring, an angular crossfire plan at −90/−170/−10°, complex ridge least-squares,
+   dense-field hotspot refinement, coverage 0.7838 metrics) with figures `segmentation_candidate_scores`/
+   `optimized_spot_and_avoidance`/`hybrid_solver_tradeoffs`. Git showed that optimiser was
+   **deliberately removed** (commit *"ch32: replace Python ray-trace physics with pykwavers FWI
+   bindings"*) for PyO3-only compliance and replaced by `plan_abdominal_array_placement_from_ritk_ct`
+   + `run_theranostic_inverse_from_ritk` — but the chapter and its (orphaned) figures were never
+   updated, so it documented non-existent functionality. **Reconciled to the current
+   implementation:** rebuilt pykwavers (from the Ch29 build) and ran the current script (exit 0,
+   65-iter FWI, objective 0.95→0.14) to generate the **4 real figures** (`fig01_bowl_placement_3d`,
+   `fig02_exposure_and_segmentation`, `fig03_multimodal_reconstruction`, `fig04_fwi_convergence`);
+   rewrote §Planning Contract as the real two-phase Rust pipeline (256-element bowl placement +
+   same-aperture finite-frequency inverse / RTM / elastic-shear FWI / cavitation channels / fusion)
+   with the **real metrics from `metrics.json`** (fusion pearson 0.978 / dice 1.0 / NRMSE 0.015) and
+   the honest model flags (`is_full_wave_inversion=false`, `iterative_elastic_fwi=true`); added a
+   transparent History note; removed the 3 orphaned figures (PNG+PDF); reframed the label-semantics
+   away from the removed optimiser's penalty/null language. Filed backlog #15 for an optional
+   Rust-native re-implementation of the segmentation-driven crossfire/hazard-path optimiser.
+
+40. ✅ **AUDITED: Chapter 30 (Clinical Theranostic Device Geometries).** Well-grounded — already
+   embeds its 5 figures (`figures/ch31/*`), and the §282 Rust-core code-map is **fully accurate**:
+   verified `plan_abdominal_array_placement` (`…::abdominal3d::placement`),
+   `plan_transcranial_focused_bowl_placement` (`…::transcranial_focused_bowl3d`), both PyO3
+   `…_from_ritk_ct` bindings, and all **3 property tests**
+   (`placement_returns_skin_point_outside_body`, `bowl_vertex_matches_skin_contact`,
+   `all_elements_on_sphere_of_correct_radius` in `abdominal3d/tests.rs`). Fixes: (1) flat code-map
+   paths `kwavers::clinical::therapy::theranostic_guidance::{abdominal3d, transcranial_focused_bowl3d}`
+   → split crate `kwavers_therapy::…`; §Validation `kwavers/src/…/abdominal3d.rs` →
+   `crates/kwavers-therapy/…/abdominal3d/tests.rs`. (2) cross-refs: **4× "Chapter 29"** (the
+   `run_theranostic_inverse_from_ritk` / same-aperture inversion + brain focused-bowl) → **Chapter
+   28** (Ch29 is IVUS, not the same-device chapter); "Chapter 14 for transcranial skull aberration"
+   → **Chapter 15** (Ch14 is Histotripsy; skull aberration is the Transcranial chapter). No missing
+   capability.
+
+39. ✅ **AUDITED: Chapter 29 (Intravascular Ultrasound Imaging and Therapy).** Concise, honest
+   chapter (analytic vessel phantom, "not redistributed patient IVUS", "next increment is a real
+   external-dataset loader"). No flat paths. Fixes: (1) §Figures listed 5 figure names without
+   embedding — embedded the **5 real `figures/ch30/*`** (dataset_and_anatomy, transducer_design,
+   ivus_bmode_simulation, microbubble_therapy_map, usage_sequence) as Figs 29.1–29.5; (2) added a
+   cross-ref to **Chapter 33 §33.8/§33.9** (the kwavers CMUT/PMUT IVUS verdict — CMUT wins imaging,
+   bulk-piezo/PMUT wins therapy), connecting the IVUS chapter to its transducer-physics home.
+   **Delegation gap — RESOLVED.** The example script `ch30_intravascular_ultrasound.py` computed
+   B-mode log-compression + therapy intensity/ΔT in pure Python (only MI used a Rust kernel).
+   Refactored it to delegate to existing Rust PyO3 kernels: intensity →
+   `kw.acoustic_intensity_from_amplitude`, ΔT → `kw.adiabatic_temperature_rise_kelvin`, B-mode
+   log-compression → `kw.bmode_db_fixed_reference` (each with a bit-identical Python fallback for
+   when the extension is absent). The spatially-varying-α heat source `Q = 2α(x)·I` is applied over
+   the Rust intensity (the scalar-α `acoustic_heat_source_density` kernel can't take a field).
+   **Verified end-to-end**: rebuilt pykwavers (`maturin develop --release`, exit 0), re-ran the
+   script (5 figures regenerated), and confirmed **all 24 metrics bit-identical** (max rel diff
+   0.0e0) between the pre-refactor Python run and the post-refactor Rust-kernel run. The B-mode
+   *reflectivity* phantom forward model has no single Rust kernel and stays in the script as the
+   visualization layer.
+
+38. ✅ **AUDITED: Chapter 28 (Same-Device Therapeutic Ultrasound / Finite-Frequency Inverse / RTM).**
+   Large theorem-heavy chapter; **exemplary honesty** — explicit model-fidelity flags
+   (`is_full_wave_inversion=false` for the reduced-Born/Tikhonov channels, `iterative_elastic_fwi=true`
+   for the elastic-shear channel, "not yet a joint c/α/ρ/β/bubble-density coupled KKT/Gauss-Newton
+   solve"). Code verified: bindings `run_theranostic_inverse_from_ritk` /
+   `run_theranostic_nonlinear_3d_from_ritk` exist; the cited modules
+   `kwavers_therapy::therapy::theranostic_guidance`, `kwavers_solver::inverse::{same_aperture,
+   seismic}`, and `TheranosticInverseConfig::passive_reconstruction` all exist. Fixes: (1) 3 flat
+   `kwavers::clinical/solver::…` code-map paths → split crates; (2) **8 stale prose "Chapter 29"
+   self-references** → Chapter 28 (was Ch29 under old numbering; the `KWAVERS_CH29_*` env-var
+   constants left intact); (3) Figures: §Figures listed 6 outputs without embedding — embedded the
+   **6 real `figures/ch29/*`** (device_placement, exposure_and_reconstruction, focused_bowl_3d,
+   dynamic_range_diagnostics, nonlinear_3d_westervelt_rp, controlled_comparison) as Figs 28.1–28.6.
+   No missing capability.
+
+37. ✅ **AUDITED: Chapter 27 (Abdominal Histotripsy FWI).** Concise, **already honest** (explicit
+   Scope Limits: 2-D, straight-ray Born, "not a full 3-D adjoint Westervelt/RP FWI"). Code verified:
+   the script `ch28_abdominal_histotripsy_fwi.py` calls `pykwavers.run_theranostic_inverse_from_ritk`
+   (binding exists in `theranostic_bindings::inverse::run`; abdominal modules in
+   `kwavers_therapy::…::abdominal3d`) — all physics Rust-side. Fixes: (1) stale self-reference
+   "**Chapter 28** implements…" → "This chapter…" (was Ch28 under old numbering; clarified the
+   "Chapter 14 (Histotripsy)" CT-loader ref); (2) §Figures listed 4 figure names without embedding —
+   embedded the **4 real `figures/ch28/*`** (kidney/liver abdominal FWI + kidney/liver
+   subharmonic-nonlinear) as Figs 27.1–27.4. No flat paths, no missing capability.
+
+36. ✅ **AUDITED: Chapter 26 (Transcranial UST Brain Imaging).** Well-grounded Born-FWI / RTM
+   chapter; already **honest** about gaps (§26.6 table marks "Elastic/shear FWI: Not implemented;
+   deferred" and "bubble-state FWI pending"). Code verified: `kwavers_diagnostics::reconstruction::
+   transcranial_ust` (+`volume_born`) exists, and both PyO3 bindings
+   (`run_transcranial_ust_volume_inversion_from_ritk_ct`, `run_theranostic_nonlinear_3d_from_ritk`)
+   are real. Fixes: (1) prereq "Chapter 17 (Inverse Problems and PINNs)" → **Chapter 18** (Ch17 is
+   Sonogenetics); (2) flat path `kwavers::clinical::imaging::reconstruction::transcranial_ust` →
+   `kwavers_diagnostics::reconstruction::transcranial_ust`; (3) `pykwavers::`→`pykwavers.` call form;
+   (4) "same-device aperture contract (**§29.2**)" → **§28.2** (Ch28 is the same-device theranostic
+   chapter; Ch29 is IVUS); (5) Figures: §26.8 listed 10 figures as path lines but embedded none —
+   embedded all **10 real `figures/ch27/*`** (ct_geometry, acoustic_model, brain_reconstruction,
+   optimization_and_data, simulated_ultrasound, multislice_stack, centroid_roi, + histotripsy
+   scenarios/metrics/passive-RTM) as Figs 26.1–26.10 at their sections. No missing capability.
+
+35. ✅ **AUDITED: Chapter 25 (Low-Intensity Ultrasound Neuromodulation).** **Exemplary chapter** —
+   the companion `ch26_neuromodulation.py` delegates *all* physics to the kwavers Rust core via
+   PyO3 (verified all 9 bindings exist: `kw.{mechanical_index_field, acoustic_intensity_from_amplitude,
+   compute_acoustic_membrane_tension_py, boltzmann_open_probability_py, coupled_channel_drive_py,
+   gaussian_beam_pressure_field_py, compute_cem43, simulate_lif_neuron_py, acoustic_heat_source_density}`),
+   honoring the pykwavers-is-PyO3-only principle (Python only orchestrates/plots). No missing
+   capability. Fixes: (1) prereq had a **duplicate "Chapter 16"** — the second ("Transcranial
+   Ultrasound") corrected to **Chapter 15**; (2) "CEM43 follows the **Chapter 15** convention" →
+   **Chapter 16** (Safety §16.5); (3) §25.8 listed fig01–06 without embedding — embedded the **6 real
+   `figures/ch26/*`** (acoustic_focus, mechanochemical_response, channel_activation, thermal_safety,
+   clinical_guidance_space, guidance_map) as Figs 25.1–25.6 at their sections and rewrote §25.8 as
+   an index that also documents the Rust-kernel delegation. 0 flat paths.
+
+34. ✅ **AUDITED: Chapter 14 (Histotripsy — Classical vs Millisecond).** **Major cleanup win:** the
+   file was **960 KB** because §14.11 embedded 4 figures as inline **base64 data-URIs** (Figs
+   14.18–14.21, KiTS19 real-CT run). The PNGs already exist on disk in `figures/ch21d/`, so the
+   inline copies were pure redundant bloat — replaced all 4 with file references → **39 KB (96 %
+   smaller)** and fixed the "embedded directly as base64 … no external links" intro. Also embedded
+   the **17 other figures** (14.1–14.17), which were standalone `` `figures/chXX/…{png,pdf}` ``
+   path-spans with no rendered image → proper `![]()` embeds (ch21=comparison, ch21b=HCC,
+   ch21c=diagnostics). **All 21 figures verified to resolve on disk.** Fixes: (1) module-ownership
+   header + 2 source links used flat `kwavers::clinical/physics::…` paths → split crates
+   (`kwavers_therapy::therapy::{clinical_scenarios, lithotripsy, domain_types}`,
+   `kwavers_physics::{acoustics::bubble_dynamics, analytical::cavitation::histotripsy,
+   thermal::diffusion}` — all verified present). (2) cross-ref error "**Chapter 12** (Media and
+   Tissue Models)" → **Chapter 4** (Media is Ch4; Ch12 is Therapeutic Ultrasound, separately and
+   correctly cited). 0 flat paths, 0 base64 remain. (Note: the PROPOSED chapter table row 14 is
+   stale vs the final README numbering — table predates the last renumber.)
+
+33. ✅ **AUDITED: Chapter 24 (Transcranial HIFU and BBB Treatment Planning).** A Python-pipeline
+   planning chapter (no flat `kwavers::` Rust paths). Notably **well-grounded** — a search agent
+   confirmed every cited capability exists: the Rust benchmark
+   `kwavers_therapy::…::transcranial_fus::benchmark::run_skull_adaptive_transcranial_benchmark`, the
+   PyO3 binding `run_transcranial_skull_adaptive_benchmark_from_ritk_ct`, the `ritk` image/registration
+   bindings, `transcranial_planning/scene.py::CANONICAL_BRAIN_SCENE`, and both
+   `test_transcranial_planning.py` / `test_book_therapy_chapters.py`. Fixes: (1) stale cross-ref
+   "CEM43 dose uses the **Chapter 15** convention" → **Chapter 16** (Safety §16.5; Ch15 is
+   Transcranial, which does not define CEM43); (2) "the **Chapter 29** brain Figure 5 nonlinear
+   branch" (Ch29 is Intravascular Ultrasound — wrong) → generalized to "the transcranial
+   brain-imaging nonlinear-reconstruction figure"; (3) Figures: the §24.4/§24.5 plain figure-name
+   lists were not embedded — embedded the **5 real `figures/ch25/*`** (registered_ct_mri_mni,
+   bowl_phase_correction, essential_tremor_ablation, gbm_subspot_plan, gbm_bbb_opening) as
+   Figs 24.1–24.5 with captions, and kept the two conditional outputs (fig06 / manifest) as a note.
+   Verified `Chapter 14` (histotripsy) prereq is correct. No missing capability.
+
+32. ✅ **AUDITED: Chapter 23 (LIFU-Mediated BBB Opening).** Physics (Keller–Miksis, Blake
+   threshold, Hill dose–response, Pennes/CEM43, closure kinetics, multi-spot delay laws, sparse-array
+   grating-lobe envelope, passive-cavitation dose) sound. Code verified: a search agent confirmed
+   **15/15** cited Rust-core functions exist in `kwavers_physics::analytical::{transducer::beam,
+   cavitation::passive_dose}` (one rename: `cavitation_emission_bands`→`decompose_emission_spectrum`).
+   **Reversed a stale "not-implemented" claim**: §23.10 said `BubbleDynamics` is "a near-term roadmap
+   item" whose `build_plugin` arm "returns a structured `ConfigError::InvalidValue`" — but the catalog
+   arm **actually constructs a real `BubbleDynamicsPlugin`**. Corrected the prose and added the
+   `BubbleDynamics{KellerMiksis}` capability to the worked-example config. Other fixes: (1) prereq
+   cross-ref "Chapter 15 (Safety and Dosimetry)" → **16** (Ch15 is Transcranial); (2) worked-example
+   flat paths + `BoundaryType::Absorbing`→`PhysicsBoundaryCondition::Absorbing` + real crate imports;
+   (3) **duplicate `## 23.11`** (Figure sources + References) → References = 23.12; (4) stale
+   "Figure 4.16" → "Figure 23.7"; "Chapter 21 §4" → "§21.4". (5) Figures: only fig07–10 were
+   embedded; embedded the remaining **fig01–06** (`figures/ch24/*`) as Figs 23.1–23.6 and rewrote
+   §23.11 as a 10-figure index. No missing capability.
+
+31. ✅ **AUDITED: Chapter 22 (Passive Acoustic Mapping).** Physics (cavitation emission model,
+   DAS resolution, eigenspace noise rejection, transcranial SNR budget) sound. Code verified: PAM
+   is **real and well-implemented** — `kwavers_analysis::signal_processing::pam::{DelayAndSumPAM,
+   PamBeamformingMethod::EigenspaceMinVariance, …}`, and the PyO3 `passive_acoustic_map_das` binding
+   + `passive_acoustic_mapping_compare.py` harness both exist as the chapter claims. Fixes: (1)
+   prereq cross-ref "Chapter 16" (transcranial) → 15. (2) flat paths → split crates (DAS path,
+   post-processing path). (3) §22.6 worked example: `BoundaryType::Absorbing`→
+   `PhysicsBoundaryCondition::Absorbing`, import block to the real crate split, and **removed the
+   fictional `HeterogeneousMedium::from_ct_scan`** (no such constructor — replaced with a note
+   pointing at the real `CTImageLoader::load` + `hu_to_*` path from Ch15 §15.5). (4) Figures: the §22.7
+   list of 6 described figures pointed at no embedded images; embedded the **6 real `figures/ch23/*`**
+   (cavitation_spectra, dose_accumulation, das_sensitivity, vcz_coherence, eigenspace_svd,
+   snr_budget) inline as Figs 22.1–22.6 and rewrote §22.7 as an index. No missing capability.
+
+30. ✅ **AUDITED: Chapter 21 (Simulation Orchestration).** First application chapter. Verified the
+   plugin/catalog/scheduling architecture is **real and well-implemented** (a search agent confirmed
+   `Plugin`, `PluginManager` + DFS topo-sort/cycle-detection, `PhysicsCatalog::build`,
+   `PhysicsConfig`/`PhysicsModelConfig`, `BubbleDynamicsPlugin`, `BubbleModel{RP,KM,Gilmore}`,
+   `GilmoreSolver::{step_rk4, should_use_gilmore}`, PAM). Fixes: (1) flat paths → split crates
+   (`kwavers_solver::plugin::{Plugin,PluginManager,PhysicsCatalog,catalog}`,
+   `kwavers_physics::factory::{config,models}`, PAM → `kwavers_analysis::signal_processing::pam`);
+   stale manager line-number citation generalized. (2) **`MechanicalStress` capability does not
+   exist** — `PhysicsModelType` has 5 variants, not 6; removed the row and documented the gap
+   (elastic-wave solver exists but isn't a catalog variant — backlog). (3) worked example used
+   `BoundaryType::Absorbing` → real `PhysicsBoundaryCondition::Absorbing`, and fixed the import
+   block to the real crate split. (4) **duplicate `## 21.7`** (Visualisation + BubbleDynamics) →
+   renumbered the second cluster to 21.8.x and References to 21.9; figure labels 22-B→21-B. (5)
+   stale cross-ref "Chapter 16" (transcranial) → 15. (6) **Theorem 21.3 was physically wrong**: it
+   claimed `BubbleState::new` sets `p_gas = p₀` (underpressured → contracts under zero forcing), but
+   the constructor sets `p_gas = p₀ + 2σ/R₀` (mechanical equilibrium), and the cited test
+   `step_rk4_surface_tension_drives_contraction_from_underpressured_state` **does not exist**.
+   Rewrote it to the real, already-tested invariants (positivity, equilibrium stability,
+   forced contraction) citing the two genuine tests `step_rk4_bubble_stable_at_equilibrium` and
+   `step_rk4_compressive_forcing_contracts_bubble`. (7) embedded the 2 real `figures/ch22/*` SVGs
+   (capability_fanout, field_dependency_dag) as Figs 21.1–21.2.
+
+29. ✅ **AUDITED: Chapter 19 (Validation and Benchmarking).** Methodology/results chapter; physics
+   (Pearson/PSNR/convergence/dispersion theorems) sound and the §19.9 parity numbers match the
+   project memory records. Fixes: (1) title "Chapter 20"→19; (2) bare `## 1.`–`## 13.` → `## 19.N`
+   + subsections + cross-refs (caught and fixed a double-prefix `§19.19.x` regex artefact); (3)
+   flat paths → split crates: footer `kwavers_solver::validation` (exists), §19.7.1 test-location
+   table remapped to the real `crates/kwavers-*` paths, arch test at `crates/kwavers/tests/`. (4)
+   **Reversed a Ch13 false negative**: §19.10.2 "RITK registration" is **actually implemented** —
+   `RitkRegistrationEngine` (`kwavers_physics::…::fusion::registration`, `ritk-registration` crate)
+   does rigid/affine mutual-info + Demons non-rigid registration. Corrected §19.10.2, **and went
+   back to fix Chapter 13** (§13.4.1 loop note + §13.7 code-map) and backlog #9 (⬜→✅). (5) Figures:
+   embedded the 5 real `figures/ch20/*` (pearson_phase, psnr_amplitude, pstd_convergence,
+   side_by_side_parity, validation_scatter) as Figs 19.1–19.5; rewrote §19.12 as an index. No
+   missing capability. (Also spotted a stale `kwavers-math/.../staggered_grid_draft_<timestamp>`
+   dir — flagged for cleanup.)
+
+28. ✅ **AUDITED: Chapter 18 (Performance and Memory).** Heaviest doc-vs-code drift after Ch15.
+   Fixes: (1) **title said "Chapter 19"** → 18. (2) bare section numbering `## 1.`–`## 14.` →
+   `## 18.N` + subsections + cross-refs (`Section N`→`Section 18.N`, `§11.x`→`§18.11.x`), matching
+   the book convention. (3) flat `kwavers::` paths → split crates; **GPU PSTD is a separate
+   `kwavers_gpu` crate** (not `solver::…::gpu_pstd`), CPML→`kwavers_boundary`,
+   sensor→`kwavers_receiver`, progress→`kwavers_solver::interface::ProgressReporter`. (4)
+   **Fundamental falsehood corrected**: chapter claimed fields are `Vec<S> where S: Scalar` with
+   "const generics for compile-time precision" — **no `Scalar` trait exists**; the CPU solver is
+   monomorphic `f64`, GPU is `f32`. Rewrote §18.10.3, the §18.5 kernel, and §18.7.4 to the real
+   types. (5) `AbsorptionKernel<S>`/`AbsorptionKernelInner` with `absorb_*` fields → real
+   non-generic `AbsorptionKernel { tau, eta, nabla1, nabla2, alpha_si: Array3<f64> }`, held as
+   `Option` at the orchestrator (lossless elides all 5 → ~670 MB, was mis-stated 536+134). (6)
+   `CpmlUpdater` `TILE_SIZE` const-generic tiling → marked **not shipped** (real `CPMLUpdater` is a
+   stateless axis-wise updater). (7) GPU TDR loop: `BATCH_SIZE=64`/`Maintain::Poll`/wrong file →
+   real `STEP_BATCH=32`/`PollType::Wait` in `kwavers_gpu::pstd_gpu::time_loop::run`. (8) Figures:
+   embedded the **5 real `figures/ch19/*`** (roofline, fft_scaling, memory_budget,
+   gpu_cpu_throughput, checkpoint_overhead) as Figs 18.1–18.5; rewrote §18.13 as an index. Verified
+   present: PSTD stepper, checkpoint (KWCP magic, run_to/from_checkpoint), 3-D beamforming. Filed a
+   `[arch]` backlog item for genuine `Scalar`-trait genericization (aligns with project standards).
+
+27. ✅ **AUDITED: Chapter 17 (Sonogenetics).** Core physics module is **fully and correctly
+   implemented** — a search agent confirmed all 14 capabilities with exact field/fn names
+   (`VolumetricArfField`{new,accumulate,finalize,intensity}, `compute_membrane_tension`,
+   `compute_radiation_pressure`, `CellMembraneParams`, `boltzmann_p_open`,
+   `pressure_threshold_p_open`, `ion_current`, `MechanoChannel`{MscLG22S…HsTrpa1},
+   `BoltzmannGatingParams` (4 fields exact), `PressureThresholdParams`, `LifNeuron`{new,step,
+   mean_firing_rate}, `LifParams`). Doc fixes: (1) flat `kwavers::` paths (all) → split crates,
+   incl. `clinical::therapy`→`kwavers_therapy::therapy::therapy_integration`,
+   `domain::therapy::microbubble`→`…::microbubble_dynamics`. (2) stale cross-refs: equations
+   `11.x`→`17.x` (chapter was Ch11), `10.15`→`15.15` (transcranial), `Chapter 10`→`Chapter 15`.
+   (3) §17.11.2 example used non-existent PSTDSolver methods — `add_focused_transducer`→
+   `add_source_arc`, `run_steps`→`step_forward` loop, `pressure()`→`pressure_field()`; `BODY_TEMP_K`
+   import→`kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_K`. (4) §17.11.4
+   `ClinicalSafetyError` (no such type)→`KwaversError::Validation`. (5) Figures: chapter had a
+   descriptive §17.14 list with a nonexistent `.svg`; embedded the **5 real `figures/ch18/*`**
+   (channel_gating, radiation_force, streaming_shear, safety_budget, activation_comparison) inline
+   as Figs 17.1–17.5 and rewrote §17.14 as an index, honestly flagging the 2 ungenerated figures.
+   No missing core capability.
+
+26. ✅ **AUDITED: Chapter 15 (Transcranial Ultrasound).** Large canonical chapter; the heaviest
+   drift found so far. Fixes: (1) **flat `kwavers::` paths** (all 23 occurrences) → split crates
+   (`kwavers_physics`/`kwavers_solver`/`kwavers_medium`/`kwavers_imaging`/`kwavers_receiver`).
+   (2) **Equation numbering** — all 28 equation tags were `(10.x)` (legacy Ch10) while prose
+   referenced `(15.x)`; renumbered tags + §15.12 theorem-table to 15.x. (3) **5 fictional API
+   names** in the code-map / §15.11.5 example that don't compile — verified real names:
+   `TimeReversalFocus`→`TranscranialAberrationCorrection::apply_time_reversal_correction`,
+   `TranscranialAberrationCorrector`→`TranscranialAberrationCorrection` (`compute_delays`→
+   `calculate_correction`), `SkullThermalMonitor`→`TranscranialSafetyMonitor`, `ElementDelayTable`
+   (no such type — delays are the `PhaseCorrection` output), `FocusAnalyzer`→
+   `analytical::skull::strehl_ratio`; CT API `CT::load_dicom/to_acoustic`→`CTImageLoader::load` +
+   `hu_to_sound_speed/hu_to_density`; PSTDSolver `add_point_source/run_to_end`→orchestrator API.
+   The §15.11.5 "Full Workflow Example" (non-compiling Rust) was rewritten as a clearly-labeled
+   conceptual outline over the real building blocks. (4) **Figures**: all 9 referenced
+   `figures/ch_tc/*` — a directory that does not exist (every image broken). Remapped to the 5 real
+   `figures/ch16/*` generated by `ch16_transcranial_ultrasound.py` (insertion_loss, phase_aberration,
+   strehl_ratio, ct_conversion, skull_temperature) with corrected captions; removed the 4 with no
+   generated image (intro schematic, TR-workflow diagram, hot-spot map, NICE plot — I do not
+   fabricate figures). (5) **Physics note**: documented that the shipped HU→acoustic map is the
+   Aubry 2003 bilinear form, not the chapter's piecewise-linear Eqs. (15.9)–(15.10). No missing
+   *core* capability — all transcranial physics exists (`analytical::skull::{strehl_ratio,
+   skull_transfer_matrix_transmission, skull_phase_screen}`, `acoustics::transcranial::*`);
+   filed a `[minor]` ergonomics item for a turnkey transcranial pipeline + the 4 ungenerated figures.
 
 25. ✅ **AUDITED: Chapter 13 (Theranostics).** Chapter was already de-duplicated (recap headers
    defer to Cavitation §5.x / Histotripsy), so the ✂️ flag was largely satisfied. Code-map §13.7

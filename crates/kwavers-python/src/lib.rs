@@ -51,6 +51,20 @@
 //! Date: 2026-02-04
 //! Sprint: 217 Session 9 - Python Integration via PyO3
 
+// Crate-wide PyO3 FFI-boundary lint allowances. This crate is exclusively the
+// thin Python binding layer (no domain logic, per the architecture rule), so two
+// clippy lints fire pervasively as artifacts of the cross-language boundary
+// rather than as design smells:
+//  - `type_complexity`: a binding returning several NumPy arrays maps to a
+//    `PyResult<(Py<PyArray..>, ..)>` tuple that mirrors the Python multi-value
+//    return; that tuple *is* the API contract. Aliasing each one-off FFI tuple
+//    obscures the signature without adding domain meaning.
+//  - `too_many_arguments`: binding signatures mirror their Python keyword
+//    arguments one-to-one; bundling them into a Rust struct would break the
+//    Python call surface.
+// Domain crates do not carry these allowances; they remain `-D warnings` clean.
+#![allow(clippy::type_complexity, clippy::too_many_arguments)]
+
 use pyo3::prelude::*;
 
 mod analytical_bindings;

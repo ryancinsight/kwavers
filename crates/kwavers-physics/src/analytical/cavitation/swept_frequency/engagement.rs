@@ -231,6 +231,47 @@ pub fn swept_engaged_fraction(
     }
 }
 
+/// Cavitation-optimal drive frequency: the frequency in `[f_lo_hz, f_hi_hz]`
+/// that maximizes the engaged nuclei fraction at the given amplitude and pulse
+/// duration.
+///
+/// At histotripsy sub-saturation amplitudes the engaged fraction is governed by
+/// the inertial *threshold* (a lower frequency resonates larger nuclei, which
+/// have a lower collapse threshold) as much as by resonance-matching to the
+/// population median, so the optimum is found by a direct scan rather than
+/// assumed to be the median Minnaert resonance. Returns `(f_opt_hz, fraction)`.
+#[must_use]
+// Physical drive parameters (medium, frequency bounds, amplitude, pulse duration,
+// scan resolution, engagement config) are independent scalars with no cohesive
+// sub-grouping; bundling them would obscure the call site without adding meaning.
+// Matches the sibling sweep functions in this module.
+#[allow(clippy::too_many_arguments)]
+pub fn cavitation_optimal_frequency(
+    dist: &NucleiSizeDistribution,
+    medium: &CavitationMedium,
+    f_lo_hz: f64,
+    f_hi_hz: f64,
+    amplitude_pa: f64,
+    pulse_duration_s: f64,
+    n_scan: usize,
+    cfg: &EngagementConfig,
+) -> (f64, f64) {
+    let n = n_scan.max(2);
+    let (lo, hi) = (f_lo_hz.min(f_hi_hz), f_lo_hz.max(f_hi_hz));
+    let mut best_f = lo;
+    let mut best = -1.0_f64;
+    for i in 0..n {
+        let f = lo + (hi - lo) * (i as f64 / (n - 1) as f64);
+        let frac =
+            monochromatic_engaged_fraction(dist, medium, f, amplitude_pa, pulse_duration_s, cfg);
+        if frac > best {
+            best = frac;
+            best_f = f;
+        }
+    }
+    (best_f, best.max(0.0))
+}
+
 /// Compare swept vs monochromatic engagement at matched amplitude and pulse
 /// duration. The monochromatic reference tone is the sweep mean frequency.
 #[must_use]

@@ -5,6 +5,9 @@ use kwavers_core::error::{KwaversResult, ValidationError};
 use ndarray::Array3;
 use std::collections::HashMap;
 
+/// Paired `(source, target)` grid-index lists for an interface transfer.
+type IndexPair = (Vec<(usize, usize, usize)>, Vec<(usize, usize, usize)>);
+
 /// Transfer operators for field coupling
 #[derive(Debug, Clone)]
 pub struct TransferOperators {
@@ -81,7 +84,7 @@ impl TransferOperators {
     fn generate_indices(
         geometry: &InterfaceGeometry,
         _field_type: &str,
-    ) -> KwaversResult<(Vec<(usize, usize, usize)>, Vec<(usize, usize, usize)>)> {
+    ) -> KwaversResult<IndexPair> {
         let mut source_indices = Vec::new();
         let mut target_indices = Vec::new();
 

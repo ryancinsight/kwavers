@@ -21,11 +21,6 @@ pub struct GpuPstdSession {
     pub(crate) ny: usize,
     pub(crate) nz: usize,
 
-    pub(crate) bon_a_flat: Vec<f32>,
-    pub(crate) absorb_tau_flat: Vec<f32>,
-    pub(crate) absorb_eta_flat: Vec<f32>,
-    pub(crate) has_absorption: bool,
-
     pub(crate) time_steps: usize,
 
     pub(crate) sensor_indices: Vec<u32>,

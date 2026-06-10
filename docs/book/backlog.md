@@ -17,6 +17,137 @@ claimed struct name) before implementing. Confirmed corrections below.
 
 ## Done
 
+- ✅ **Direct shear-wavelength estimator (§11.10.3)** — `[minor]` (2026-06-09, Ch11 audit). §11.10.3
+  flagged "no dedicated wavelength estimator is implemented." Added
+  `kwavers_analysis::signal_processing::wavelength_estimation::estimate_shear_wavelength(u, dx)` —
+  estimates `λ_S` directly from a displacement profile (no known `c_S`) via the biased spatial
+  autocorrelation `R(m)∝cos(2π m·dx/λ)`, whose first post-zero-crossing peak sits at lag `λ`,
+  parabolically interpolated (FFT-free, zero-dep). 4 value-semantic tests: recovers a known
+  wavelength to <2% (sub-sample) across 3 wavelengths; DC-offset-invariant; scales linearly with
+  `λ`; rejects constant/monotone/too-short/`dx≤0`. Chapter §11.10.3 updated.
+- ✅ **Acoustic gene-expression kinetics (sonogenetics §17.13.2)** — `[minor]` (2026-06-09, Ch17
+  audit). §17.13.2 flagged "gene expression kinetics require coupling to a pharmacokinetic model
+  (not implemented)." Added `kwavers_physics::analytical::sonogenetics::GeneExpressionKinetics` — the
+  standard linear two-stage central-dogma / PK–PD cascade `dm/dt=β·a−δ_m m`, `dp/dt=κ·m−δ_p p`
+  driven by the acoustic channel-activation level `a(t)` (couples to `hill_activation_probability`),
+  with RK4 `step_rk4`/`integrate` and closed-form `steady_state`. 4 value-semantic tests: rate
+  validation; **integrated trajectory reaches the closed-form steady state** `m_ss=βa/δ_m`,
+  `p_ss=κβa/(δ_m δ_p)`; **transcript transient matches the analytic `m_ss(1−e^{−δ_m t})`**; linearity
+  in activation + wash-out to ~0 after a pulse. Honestly scoped as the lumped linear model (full
+  promoter/capsid molecular kinetics deferred). Chapter §17.13.2 updated.
+- ✅ **METAVIR liver-fibrosis staging classifier (Algorithm 11.5)** — `[minor]` (2026-06-09, Ch11
+  audit). §11.11.5 flagged "no dedicated elastography tissue classifier is implemented." Added
+  `kwavers_analysis::signal_processing::tissue_staging`: `FibrosisStage{F0..F4}` (ordered),
+  `classify_liver_fibrosis(μ_kPa)` + `classify_liver_fibrosis_from_speed(c_S, ρ)` (μ=ρc_S²) using the
+  validated METAVIR cut-offs `[1.7,2.9,4.8,9.0]` kPa (half-open intervals), and `classify_liver_roi`
+  implementing Algorithm 11.5's ROI logic (median stage + heterogeneity flag `IQR>0.3·median`). 4
+  value-semantic tests: every stage, boundary convention (on-cutoff→higher stage), speed→μ path,
+  ROI median+heterogeneity+invalid-sample filtering. Chapter §11.11.5/§11.13 updated. (Prostate/
+  thyroid/breast staging tables remain reference data — a clean extension.)
+- ✅ **Bootstrap confidence intervals (elastography CRLB module)** — `[minor]` (2026-06-09, Ch11
+  audit). §11.12 flagged "bootstrap confidence intervals are not yet implemented" (the CRLB bounds
+  existed). Added `kwavers_analysis::signal_processing::estimation_bounds::bootstrap_ci_mean` —
+  percentile bootstrap (Efron 1979) of the sample mean with a self-contained **deterministic seeded
+  PRNG** (splitmix64; reproducible, no `rand` dep) + `BootstrapCi{point,lower,upper}`. 4
+  value-semantic tests: CI brackets the point + bit-identical from a fixed seed; **half-width tracks
+  the analytical `1.96·σ/√N` standard error** (within 35%); widens with spread + confidence level;
+  degenerate (empty/single/invalid-level) cases. Chapter §11.12/§11.13 updated (also cleared the
+  stale "theory only" list — Murnaghan §11.9 + acousto-elastic pre-stress inversion are implemented).
+- ✅ **Viscoelastic dispersion-fitting inversion (shear-wave spectroscopy)** — `[minor]`
+  (2026-06-09, Ch11 audit). §11.8 flagged "A dispersion-fitting inversion kernel is not yet
+  implemented" (the KV/Zener *forward* models existed). Added to `kwavers_medium::viscoelastic`:
+  `recover_complex_modulus(ω,c_p,α,ρ)` — model-agnostic `G*=ρ(ω/k)²`, `k=ω/c_p−iα` (the physical
+  branch where `Im k<0` for `G*=μ+iωη`) — and `KelvinVoigtModel::fit_dispersion(samples, ρ)`
+  recovering `μ=⟨Re G*⟩`, `η_s=⟨Im G*/ω⟩` (Catheline 2004 / Deffieux 2009, the refs the chapter
+  already cites) + a `shear_viscosity()` accessor and `DispersionSample`. 2 value-semantic tests:
+  `recover_complex_modulus` exactly inverts the forward dispersion (caught + fixed a wavenumber sign
+  error), and a forward→inverse round-trip recovers known `(μ,η_s)` to <0.1%. Chapter §11.8 updated.
+  **Zener 3-param fit DONE (2026-06-09):** `ZenerModel::fit_dispersion` by **separable least
+  squares** — for fixed `τ` the storage/loss are linear in `(G_r, Δ)` (closed-form 2×2 solve), the
+  nonlinear `τ` found by log-scan + golden-section refinement of the stacked `G'/G''` residual; added
+  `ZenerModel::{attenuation, relaxed_modulus, unrelaxed_modulus, relaxation_time}` accessors. Round-trip
+  test recovers `(G_r,G_u,τ)` across the `ωτ=1` Debye peak to ≤2%. 12 viscoelastic tests pass.
+- ✅ **Doc drift — Ch11 transducer model availability** — `[patch]` (2026-06-09). §11.12 claimed
+  "CMUT and Mason-circuit models … are documented as theory (§2) and are not implemented" —
+  **stale**: `BulkPiezoResonator` (Mason/IEEE) and `mems::{CmutCell, PmutCell}` (with collapse-mode,
+  crosstalk, flexible-array beamformer) are all implemented. Chapter corrected to cite them.
+- ✅ **Minnaert surface-tension correction (Eq 5.6)** — `[minor]` (2026-06-09, Ch5 audit). The
+  chapter flagged "(5.6) not implemented"; only the large-bubble form (5.7) existed
+  (`minnaert_resonance_hz`). Added `kwavers_physics::analytical::cavitation::minnaert_resonance_corrected_hz`
+  — `f₀ = (1/2πR₀)√([3γP₀ + (3γ−1)·2σ/R₀]/ρ)` (Young–Laplace stiffness; Leighton 1994 §3.2),
+  reducing to (5.7) as σ→0; returns 0 if surface tension destabilises the bubble. 3 value-semantic
+  tests: σ→0 reduction (exact), closed-form match, negligible large-bubble limit (<0.1% at 1 mm),
+  and >10% sub-micron correction (R₀=1 µm). PyO3 binding `minnaert_resonance_corrected_hz` added
+  (registered + `__init__.py` re-export; python crate compiles). Chapter §5 updated.
+- ✅ **Doc drift — elastography inversion methods** — `[patch]` (2026-06-09, Ch11 audit). §11.7.2
+  claimed "regularised global Helmholtz / LFE inversion is not yet implemented" — **stale**: the
+  `direct` method *is* a regularised global Helmholtz inversion (`J=‖∇²u+k²u‖²+λ‖∇k²‖²`,
+  Gauss–Seidel), and LFE (`InversionMethod::LocalFrequencyEstimation`), directional phase-gradient
+  (Wang 2014), and 3-D ToF are all implemented. Chapter corrected to cite them.
+- ✅ **Ultrasonic neuromodulation — electrical (capacitive) pathway** — `[minor]`.
+  New `kwavers_physics::acoustics::therapy::neuromodulation` module, closing the
+  Blackmore et al. (2019) mechanism-(i) gap (membrane capacitance / intramembrane
+  cavitation) that complements the existing mechanosensitive-channel sonogenetics
+  (mechanism (ii)) and thermal (Yoo) pathways. Contents: (a) genuine Hodgkin–Huxley
+  conductance neuron (`HhParams`/`HhState`/`simulate_hh`) validated against the 1952
+  squid-axon reference — resting m∞/h∞/n∞, near-zero resting net current, sub-/supra-
+  threshold response, ≈+40 mV AP overshoot, monotone f–I; (b) intramembrane-cavitation
+  capacitance modulation `C_m(t)=C_m0(1+ε·sinωt)` with exact analytic `dC_m/dt` and a
+  documented small-strain pressure→ε bridge `ε=p·R/(2K_A)`; (c) NICE coupling
+  (`simulate_nice`) injecting the displacement current `−V·dC_m/dt` into HH. 14
+  value-semantic tests. **Honest scope:** the symmetric-sinusoid capacitance gives a
+  net depth-dependent *hyperpolarising* excitability shift (geometric `1/√(1−ε²)` term
+  dominates the depolarising gating rectification); the asymmetric bilayer-sonophore
+  waveform (below) is the one that reproduces net *excitation*.
+  Follow-ups — **all now done** (2026-06-08):
+  - ✅ `[minor]` **Asymmetric bilayer sonophore + NICE excitation** (`bls.rs`): exact
+    curved-dome capacitance `C_m(Z)` (Plaksin 2014 Eq. 8) + kinematic leaflet deflection
+    driving the displacement-current HH coupling. Reproduces the real NICE mechanism —
+    membrane *hyperpolarisation during* US, net *charge accumulation*, and a
+    *post-stimulus AP* with pulse-duration dependence. `CapacitanceSource` trait makes
+    `simulate_nice` generic over the sinusoidal and BLS sources. Evidence: deflection
+    `Z(t)` is a documented kinematic surrogate for the full BLS mechanical ODE (Eq. 2,
+    molecular-force params not in the open preprint); Eqs. 1 & 8 reproduced exactly.
+  - ✅ `[minor]` **SONIC cycle-averaged reduction** (`sonic.rs`, Lemaire 2019):
+    charge-density slow integration with cycle-averaged HH gating; enables whole-protocol
+    (second-scale) simulation. Differential-tested against carrier-resolved `simulate_nice`
+    (matching spike count + AP timing within 1 ms).
+  - ✅ `[minor]` **Pulse-train protocol + dosimetry** (`protocol.rs`): Blackmore Table 1
+    parameter hierarchy (PL/PRF/BD/BI/N → BDC/TDC/BRF/TT), spatial-peak intensities
+    (ISPPA/ISPBA/ISPTA), MI, FDA-limit screening, pulse envelope, and the
+    Atkinson-Clement 2025 theta-burst preset (validated: DC=10%, ISPTA/ISPPA ratio).
+  - ✅ `[minor]` **PyO3 bindings + book chapter**: `hodgkin_huxley_response`,
+    `nice_bilayer_sonophore_response`, `nice_sonic_response`, `bilayer_capacitance_curve`,
+    `pulse_train_dosimetry` (9 pytest cases); book §25.5.1 documents the electrical pathway.
+  Honest-scope enhancements — **done** (2026-06-08, literature-grounded):
+  - ✅ `[minor]` **Pospischil RS/FS cortical neuron** (`cortical.rs`, Pospischil 2008
+    params confirmed vs PySONIC): Na/Kd/M-current/leak — the membrane Plaksin's NICE
+    model actually uses. Introduced a `Membrane` trait (4-gate `[m,h,n,p]`); `simulate_nice`
+    and `simulate_sonic` are now generic over it (squid HH stays validated). Cell-type
+    selectivity tested (RS vs FS differ under identical drive). PyO3 `cortical_sonic_response`.
+  - ✅ `[minor]` **ITRUSST safety** (`protocol.rs` `itrusst_assess`, Aubry 2024 consensus):
+    MI ≤ 1.9 AND (ΔT ≤ 2 °C or brain CEM43 ≤ 2). PyO3 `itrusst_safety`.
+  - ✅ `[minor]` **Pressure-driven (quasi-static) bilayer sonophore** (`bls_pressures.rs`):
+    the full BLS force balance — intermolecular Eq. 4–5 (p_Δ=1e5, exponents 5/3.3, via
+    quadrature), elastic tension k_A(Z/a)², electrical Maxwell stress Eq. 3, gas Eq. 6–7
+    — with a rest-gap solver that **reproduces Plaksin's Δ≈1.26 nm from the resting-charge
+    balance** (P_tot(0)=0). `quasistatic_deflection` solves Z from acoustic pressure
+    (rectified: expands in rarefaction, flat in compression); validated vs Plaksin Fig. 1
+    (≈10 nm, ≈20 mN/m @ 500 kPa/0.5 MHz). New `BilayerSonophoreQuasistatic` CapacitanceSource
+    (pressure is the input, not deflection) evokes the post-stimulus AP through NICE. PyO3
+    `nice_quasistatic_response`, `bls_deflection_curve`. Constants from PySONIC/Krasovitski 2011.
+  - ✅ `[minor]` **Exact transient BLS dynamics** (`bls_dynamics.rs`, Plaksin Eq. 2 / PySONIC
+    `derivatives`): full leaflet Rayleigh-Plesset ODE `[U,Z,ng]` — inertia, leaflet/fluid
+    viscosity (−12Uδ₀μ_S/R²−4Uμ_L/|R|), molecular Eq.4-5, elastic, electrical, gas-diffusion
+    flux — every constant verbatim from PySONIC. Z=0 curvature singularity (R→∞) handled
+    EXACTLY as the reference (seed Z(0)=balanced_deflection(P_ac(dt)), no ad-hoc regularisation);
+    adaptive step-doubling RK4 for the steric-wall stiffness. **Reproduces Plaksin Fig. 1:
+    peak deflection ≈10–11 nm @ 500 kPa/0.5 MHz** (published ≈12), monotone in pressure,
+    resonantly amplified above quasi-static. `BilayerSonophoreDynamic` CapacitanceSource
+    (pressure-driven) evokes the post-stimulus AP. PyO3 `nice_dynamic_response`.
+  **Caveat fully resolved**: deflection is now the exact transient solution (no quasi-static or
+  kinematic approximation); lighter sources kept for speed/analysis.
+
 - ✅ **Frangi vesselness / vasculature segmentation** — `[verify]` ALREADY IMPLEMENTED
   (false negative). `kwavers_analysis::signal_processing::vasculature` provides
   `compute_frangi_response` (multiscale Hessian-eigenvalue vesselness, Frangi 1998) and
@@ -66,8 +197,13 @@ claimed struct name) before implementing. Confirmed corrections below.
   immersion downshift, V_c∝g^1.5, coupling bounds, PZT>AlN coupling & heating, CMUT-wins-IVUS
   verdict, drive-weight flip to PMUT). PyO3 bindings added (`mems_*`, `cmut_*`, `pmut_*`,
   `ivus_figure_of_merit`); new Chapter 33 (`cmut_vs_pmut.md`) + figure script
-  `ch33_cmut_vs_pmut.py`. NOTE: ch33 figure PNGs need a `maturin develop --release` rebuild of
-  pykwavers (the script is ready; figures regenerate like every other chapter's).
+  `ch33_cmut_vs_pmut.py`. **ch33 figures DONE (2026-06-09):** rebuilt pykwavers and generated all 6
+  `figures/ch33/*` (resonance_geometry, electrical, heating, bandwidth, ivus_fom, therapy_output).
+  **Fixed an exposure-gap bug found doing so:** the 15 mems `#[pyfunction]`s were registered in
+  `register_book` (so present in `_pykwavers`) but **omitted from the hand-maintained
+  `python/pykwavers/__init__.py` re-export list** — so `kw.cmut_coupling_k2` etc. raised
+  AttributeError at the public API even though `kw._pykwavers.*` worked. Added all 15 to the
+  `from ._pykwavers import (...)` block and `__all__`; verified the figures regenerate.
 - ✅ **Acousto-elasticity — Murnaghan stress-dependent wave speed + pre-stress inversion** —
   `[major]` (ADR 014; scope = analytical relation/inversion, full 3rd-order PDE deferred).
   `kwavers_physics::analytical::elastography::{acoustoelastic_sensitivity,
@@ -135,9 +271,12 @@ claimed struct name) before implementing. Confirmed corrections below.
 These are *extensions* of shipped capabilities, not gaps in documented features. Each `[major]`
 needs an ADR first.
 
-1. ⬜ **Regenerate Chapter 33 figures** `[patch]` — `maturin develop --release` then run
-   `ch33_cmut_vs_pmut.py` (the script + PyO3 bindings are ready; figures regenerate like every
-   other chapter's).
+1. ✅ **Chapter 33 figures** `[patch]` — DONE (2026-06-09). Rebuilt pykwavers and ran
+   `ch33_cmut_vs_pmut.py` → all 6 `figures/ch33/*` (resonance_geometry, electrical, heating,
+   bandwidth, ivus_fom, therapy_output). En route, fixed a real **mems-binding exposure bug**: the
+   15 `#[pyfunction]`s were registered in `register_book` but omitted from the hand-maintained
+   `python/pykwavers/__init__.py` re-export list, so `kw.cmut_*`/`kw.ivus_figure_of_merit` raised
+   AttributeError; added all 15 to the import block + `__all__`.
 2. ✅ **Zener (standard-linear-solid) viscoelastic kernel** `[minor]` — DONE.
    `kwavers_medium::viscoelastic::ZenerModel` — complex modulus `G_r+(G_u−G_r)iωτ/(1+iωτ)`,
    storage/loss, Debye loss peak at ωτ=1, bounded dispersion between relaxed/unrelaxed speeds.
@@ -152,23 +291,267 @@ needs an ADR first.
    localized +60 m/s anomaly: misfit < ½ initial, anomaly-cell + illuminated-region error fall;
    stationary at the zero-misfit truth, max |Δc| < 1e-6). `LbfgsMemory` is the SSOT used by both
    `minimize` and the FWI driver. Inverse §9.1.
-4. ⬜ **Bent-ray SIRT/ART + reflection CT** `[major]` — upgrade the straight-ray Radon/FBP
-   (ADR 013) for heterogeneous media; `real_time_sirt` is the starting point.
+4. ✅ **Bent-ray traveltime tomography** `[major]` (ADR 020) — DONE (2026-06-09). Found SIRT/ART/OSEM
+   already implemented (`kwavers_solver::…::unified_sirt::{SirtAlgorithm, SirtReconstructor}`,
+   Kaczmarz) + the `real_time_sirt` streaming pipeline; the genuine gap was the **bent-ray forward
+   operator** (all projections were straight-line). Implemented
+   `kwavers_diagnostics::reconstruction::bent_ray::{bent_ray_path, bent_ray_traveltime, BentRay}` —
+   a Dijkstra shortest-path (Fermat) tracer over an 8-connected slowness grid with trapezoidal edge
+   cost `½(s_u+s_v)·L`; returns traveltime + voxel path + the per-voxel path-length **system-matrix
+   row** that plugs straight into the existing SIRT/ART reconstructor (`t = Σ s_v·row_v`). 6
+   value-semantic tests (homogeneous axis/diagonal exact, row reproduces traveltime exactly,
+   graph-metric bound ≥ Euclidean & ≤ 1.10×, **Fermat fast-channel lowers traveltime + the ray
+   bends into the channel**, degenerate/OOB). Clippy-clean. **End-to-end inversion DONE (2026-06-09):**
+   `reconstruction::bent_ray_tomography::{reconstruct_bent_ray_tomography, rms_misfit,
+   TraveltimeDatum, BentRayTomographyConfig}` — the nonlinear trace↔solve fixed point re-traces rays
+   through the evolving model and refines it by sparse-ART (Kaczmarz) sweeps over the path-length
+   rows (the `Array2` row-major buffer is indexed directly by the `BentRay::row` flatten `i·ny+j`; no
+   dense matrix formed). 2 value-semantic tests realizing the ADR-020 "tomographic recovery"
+   verification: a 7%-wrong uniform guess → true uniform (mean interior error ~1%, ≥85% voxels <3%,
+   misfit collapses >10×); a slow disk recovered (correlation >0.5, anomaly slower than background,
+   misfit falls across outer iterations). **Remaining:** reflection-CT geometry (distinct
+   acquisition) is a separate follow-on.
 5. ✅ **Residue-aware phase unwrapping** — DONE (detection + masked unwrap; auto branch-cut mask placement remains).
-6. ⬜ **MEMS depth (CMUT/PMUT)** `[major]` — (output pressure + flexible-output limitation +
-   **squeeze-film damping** DONE, §33.6/§33.9) remaining: inter-element crosstalk, collapse-mode
-   nonlinear drive, and a flexible-array beamformer populated by `mems` cells (Chapter 33 /
-   `flexible`); enables a full coupled-field CMUT/PMUT forward model.
-7. ⬜ **Full 3rd-order (Murnaghan) elastic-wave PDE solver** `[major]` — the time-domain
-   nonlinear forward field behind the analytical acousto-elastic relation (ADR 014).
+6. ✅ **MEMS depth (CMUT/PMUT)** `[major]` — (output pressure + flexible-output limitation +
+   **squeeze-film damping** DONE §33.6/§33.9; **inter-element acoustic crosstalk** DONE 2026-06-09).
+   `mems::crosstalk` (additive `[minor]`): baffled-monopole **mutual radiation impedance**
+   `Z_ij=jωρ A_iA_j/(2π d)·e^{-jkd}` + array `crosstalk_matrix` (reciprocal, zero-diagonal). 5
+   value-semantic tests: closed-form magnitude + retardation phase `π/2−kd`, reciprocity,
+   `∝ω`/`∝1/d`/far-field-decay scaling, matrix symmetry + nn/nnn `1/d` ratio + closed-form
+   cross-check, degenerate inputs. Honest scope: **fluid path only** (`d≫a`, `ka≲1`); substrate
+   Lamb/Stoneley path + coupled-field FEM out of scope (need a meshed model). Chapter §33.8 updated.
+   **Collapse-mode nonlinear electrostatics** DONE (2026-06-09): `CmutCell::{bias_pulldown_fraction,
+   biased_gap, biased_capacitance, bias_softened_resonance}` — the exact stable equilibrium
+   `u(1−u)²=(4/27)(V/V_c)²` of `k x = ε₀A V²/(2(g₀−x)²)`, the bias-dependent operating gap/capacitance,
+   and the **spring-softened resonance** `f(V)=f_imm√(1−2u/(1−u))` that vanishes at pull-in `V=V_c`.
+   2 value-semantic tests: force-balance differential check at 3 biases + monotone pull-down +
+   pull-in limit + collapse→None; capacitance rise + monotone resonance softening toward collapse.
+   **Conformal flexible-array beamformer (populated by mems cells)** DONE (2026-06-09):
+   `flexible::beamforming` — `focusing_delays` (conformal DAS `τ_i=(d_max−d_i)/c`, refocus after the
+   array bends), `steering_delays` (far-field plane wave), `per_element_curvature` (Menger curvature
+   from the tracked positions), and `cmut_flex_apodization` (per-element transmit weight from
+   `CmutCell::flex_gap_derating` at the local curvature — the array "populated" by the CMUT model).
+   Wired into `FlexibleTransducerArray::{focusing_delays, steering_delays, cmut_flex_apodization}`
+   over its current deformed geometry. 5 value-semantic tests: in-phase arrival at the focus on a
+   *deformed* array, flat-array symmetric peaked-centre delays, broadside/oblique steering ramp,
+   curvature = 0 (flat) / 1/R (circle), and flex apodization derating curved + tighter-gap elements.
+   All 3 MEMS-depth sub-items now done → **#6 closed**. **Remaining (separate future work):**
+   post-collapse (membrane-contact) annular CMUT operation needs an insulator/contact-gap parameter
+   the lumped model doesn't carry; substrate Lamb/Stoneley crosstalk + coupled-field FEM.
+7. 🟡 **3rd-order (Murnaghan) elastic-wave** `[major]` (ADR 022) — **constitutive core DONE
+   (2026-06-09); PDE solve staged.** Verified the gap is real, not a false-negative: the existing
+   `NonlinearElasticWaveSolver` uses *hyperelastic* (Neo-Hookean/Mooney-Rivlin) invariant
+   nonlinearity and its own header lists "Third-order elastic constants M and N" + "Acoustoelastic
+   tensor" as **not implemented**. Implemented the missing constitutive layer in
+   `kwavers_physics::analytical::murnaghan`: `MurnaghanConstants{λ,μ,l,m,n}`, `strain_energy(E)`,
+   `second_pk_stress(E)` (`S=[λtrE+l(trE)²+m trE²]I+(2μ+2m trE)E+3nE²`), `apply_reference_tangent`,
+   and the **finite-strain material tangent** `material_tangent` (`ℂ(E)=∂²W/∂E²=∂S/∂E`).
+   **Convention pinned to the codebase SSOT:** discovered the chapter §11.9.1 + existing
+   `acoustoelastic_sensitivity(m,n)` use the *power-sum* invariant form (`trE², trE³`), which gives
+   different `(l,m,n)` than the principal-invariant (Hughes-Kelly) form — implemented the power-sum
+   form so the constants are shared across the constitutive model and the AE relation. 10
+   value-semantic tests: StVK reduction, linear/Hooke limit, uniaxial closed form, **energy–stress
+   consistency `S=∂W/∂E` and tangent consistency `ℂ(E):H=∂S/∂E` by finite difference**, tangent
+   major-symmetry, symmetry, reference tangent. Clippy-clean; also
+   cleared 2 pre-existing unused-import warnings in `elastic_wave/tests.rs`. Chapter §11.9 updated.
+   **Staged follow-ons (own [major] items, ADR 022):** (a) small-on-large acousto-elastic acoustic
+   tensor `A⁰=ℂ(E₀)+initial-stress geometric terms` + Christoffel eigenproblem linking to the
+   first-order `A` + `O(σ₀²)` terms — needs the Thurston-Brugger geometric terms and the exact
+   Hughes-Kelly config to reproduce `A=(m+n)/(2(λ+μ))` (the finite tangent alone is insufficient);
+   (b) time-domain 3rd-order forward PDE consuming the Murnaghan `S`.
+15. ✅ **Exact discrete-adjoint FWI gradient** `[major]` (ADR 016) — DONE via a dedicated
+    **self-adjoint second-order acoustic engine** (`FwiEngine::SecondOrderSelfAdjoint`,
+    `inverse::fwi::time_domain::self_adjoint`). Background: the FD gradient test
+    (`tests::gradient::test_fwi_adjoint_gradient_is_valid_descent_direction`) showed the
+    FDTD/PSTD-driven path is only an **approximate** adjoint — `κ=(g·δm)/(dJ/ds) ≈ 238`/`191`
+    across directions (stable under step refinement): a ~200× scale offset (adjoint re-injects
+    through the scaled additive-source path `2·dt·c₀/(N·dx)` vs direct-pressure receiver
+    sampling — not transposes) plus ~20% shape error (PML/leapfrog non-self-adjointness).
+    Correct descent direction (Armijo absorbs it) but wrong absolute magnitude — fatal for
+    Gauss-Newton, fixed-step updates, gradient-norm stopping. Path A (literal transpose of the
+    shared CPML staggered solver) was rejected as high-risk to the parity-validated forward
+    code; Path B (textbook self-adjoint engine) was chosen. The new engine uses a symmetric
+    heterogeneous Dirichlet Laplacian + 3-point leapfrog + matched source/receiver injection;
+    its discrete adjoint is the same scheme run backward, so the exact gradient
+    `g_x=(−2/ρc³)Σ ξ^n p̈^n` gives **κ≈1 to <1e-4** for 3 independent directions
+    (`self_adjoint::tests::self_adjoint_gradient_matches_finite_difference_kappa_one`), and full
+    FWI/L-BFGS converges through it
+    (`tests::lbfgs::self_adjoint_engine_lbfgs_reduces_misfit_and_recovers_anomaly`). Default
+    `FwiEngine::Solver` (FDTD/PSTD) retained, still documented as approximate.
+    **Self-adjoint absorbing layer — DONE:** the SA engine now supports an optional symmetric
+    diagonal sponge (damped leapfrog `W p̈ + B ṗ = D p + s`, `build_edge_sponge`,
+    `FwiProcessor::with_self_adjoint_damping`); re-derived exact adjoint preserves κ≈1 to <1e-4
+    WITH the sponge (`self_adjoint_gradient_kappa_one_with_sponge`) and it absorbs >70% of
+    outgoing energy vs reflecting walls (`self_adjoint_sponge_absorbs_outgoing_waves`). Remaining
+    deferred: Path A (literal transpose of the shared CPML solver) only if FWI must invert with
+    the exact CPML operator.
+16. ✅ **MOFI — guidance-free rigid skull-template alignment** `[minor]` (ADR 017) — DONE.
+    Implements Bates et al. (2026, *Ultrasound Med. Biol.*, "Automatic Skull-Template Alignment
+    Without a Guidance Image"): align a CT-derived sound-speed template to acoustic data alone (no
+    MRI) by minimising the FWI misfit over a rigid SE(2) reparametrisation `φ={θ,δ₁,δ₂}` of the
+    template instead of the full pixel grid. `inverse::fwi::time_domain::mofi`: analytic bilinear
+    reparametrisation Jacobian `∂c_φ/∂φ` (FD-verified), chained gradient
+    `∂f/∂φ=(∂c_φ/∂φ)ᵀ ∂f/∂c` using the **exact** self-adjoint `∂f/∂c` (ADR 016), and SE(2)
+    manifold optimisation (Appendix A: SO(2) log/exp rotation update, `δ←δ+R_θΔδ`, gradient
+    normalisation + Armijo line search; θ/δ balanced in scaled space `(L·θ,δ)`). Recovers a known
+    `(θ=6°, δ=(2,−1.5)mm)` misalignment of an asymmetric 2-D phantom from ring-array data to
+    **<1° / <1 mm** with misfit collapsing >10× (`mofi::tests::mofi_recovers_known_rigid_misalignment`),
+    + Jacobian-vs-FD and stationary-at-truth tests. API `mofi_align`/`MofiConfig`/`MofiResult`/
+    `RigidTransform`. Scope: 2-D SE(2), single acquisition; 3-D SE(3) and non-rigid extensions deferred.
+17. ✅ **Multi-pathway skull-registration pipeline (beyond rigid MOFI)** `[minor]` (ADR 018) — DONE.
+    Four composable pathways + a pipeline, all on the exact self-adjoint `∂f/∂c` (ADR 016), in
+    `inverse::fwi::time_domain::mofi`: (a) **misfit homotopy** (`align_homotopy`, Wasserstein→
+    envelope→L2 warm-started) widens the capture basin — recovers 28° where plain L2 fails;
+    (b) **coarse global pose initializer** (`coarse_pose_search`, robust Wasserstein search — NOT
+    envelope, which is phase-blind/rotation-insensitive) rescues 45° misalignment; (c) **joint
+    pose + sound-speed calibration** (`align_with_calibration`, block-coordinate pose↔α,
+    `c=c_bg+α(c_tmpl−c_bg)`) recovers α=1.25 + pose; (d) **non-rigid FFD** (`align_nonrigid`,
+    `nonrigid.rs`, bilinear control lattice + bending-energy reg, chained gradient
+    `∂f/∂u_cp=−Σ g·∇c·w_cp`) recovers a smooth warp. `align_pipeline` chains coarse→rigid+cal→
+    non-rigid; compound (pose+speed+warp) test aligns the model to <40 m/s RMS in the illuminated
+    region. 8 MOFI value-semantic tests. API: `mofi_align_homotopy`/`_coarse_pose_search`/
+    `_align_with_calibration`/`_align_nonrigid`/`_align_pipeline`. Scope: 2-D, single acquisition;
+    3-D/SE(3), cubic-B-spline FFD, and TT-tomography image init deferred.
+18. ✅ **MOFI/SA robustness hardening** `[patch]`/`[minor]` — DONE. Resolved the flagged fragilities:
+    (a) `invert_lbfgs` convergence/zero-gradient guard is now **relative** to the initial gradient
+    norm (was absolute `f64::EPSILON`), so the SA engine's small-amplitude gradients (‖g‖∞~1e-18)
+    converge without rescaling; (b) FFD **smoothness weight is now relative** to J₀ (auto-scaled
+    `w·J₀/dx²`), removing the absolute-scale fragility that could freeze the optimiser; both removed
+    the `source×1e6` test workarounds. (c) `recommended_search_misfit()` + docs make the
+    phase-blind-envelope coarse-search pitfall API-visible (use Wasserstein). All MOFI/L-BFGS tests
+    pass unscaled.
+18b. ✅ **Self-adjoint FWI gradient — `O(N)` reverse-reconstruction memory path** `[minor]` — DONE.
+    The exact self-adjoint engine (ADR 016) stored the full forward wavefield history
+    `Array4(nt,nx,ny,nz)` (e.g. ~838 MB/shot at nt=400, 64³) to feed the imaging condition. The
+    lossless energy-conserving leapfrog is exactly time-reversible (`c_prev=1`), so
+    `self_adjoint::forward_tail` now keeps only the final two states `(p^{N-1},p^{N-2})` + traces and
+    `self_adjoint::gradient_reconstructed` re-derives the forward field **backward** in lockstep with
+    the adjoint sweep — peak per-shot memory drops `O(nt·N) → O(N)` (a handful of 3-D arrays) at the
+    cost of one extra Helmholtz apply per backward step (the standard FWI memory↔recompute trade).
+    Both FWI gradient drivers route through a new shared `forward_misfit_raw_gradient` helper (DRY)
+    that selects the reconstruction path for the **lossless** SA engine; the **damped** SA engine
+    (anti-amplifies under reverse stepping) and the FDTD/PSTD `Solver` engine keep the stored history.
+    Evidence: `self_adjoint::tests::reconstructed_gradient_matches_stored_history` asserts the
+    reconstructed gradient equals the stored-history gradient to <1e-9 relative (and `forward_tail`
+    seed states equal `history[N-1]/[N-2]` exactly); the κ≈1 and SA L-BFGS recovery tests now run
+    through the reconstruction path. 96 FWI tests pass. (Follow-up `[patch]`: `self_adjoint/mod.rs`
+    grew to ~760 lines — candidate SoC split into `forward`/`gradient`/`coeffs` leaf modules.)
+19. ⬜ **MOFI 3-D SE(3) alignment** `[major]` (ADR required) — generalise the 2-D SE(2)
+    reparametrisation to full 3-D rigid motion: 3-angle (or rotation-matrix) rotation + 3-D
+    translation, trilinear interpolation, and the SE(3)/SO(3) log-exp manifold update with the
+    analytic 3-D rotation Jacobian. Framework (chained gradient on the exact SA engine, homotopy,
+    calibration, pipeline) carries over unchanged; only `transform.rs` and `manifold_update` change.
+    Acceptance: recover a known 3-D pose to <1°/<1 mm on a 3-D phantom. Mechanical but sizable.
+20. ✅ **Cubic B-spline FFD basis** `[minor]` — ALREADY IMPLEMENTED (stale-open; verified 2026-06-09).
+    `kwavers_solver::…::mofi::nonrigid` has `FfdBasis::{Bilinear, CubicBSpline}` with the uniform
+    cubic B-spline `axis_weights` (4-point support, partition of unity, C²). Test
+    `nonrigid_ffd_cubic_bspline_recovers_smooth_deformation` passes (recovers a smooth warp). The
+    backlog item predated the implementation.
+21. ⬜ **Travel-time-tomography initializer for MOFI** `[major]` — stand up the existing
+    `sound_speed_shift`/`real_time_sirt` travel-time subsystem as a template-free coarse sound-speed
+    map to (a) image-to-image seed the pose and (b) calibrate template speeds. Lower marginal value:
+    `coarse_pose_search` already provides a global, cycle-skip-free pose seed; this adds a second,
+    physics-distinct initializer + speed prior. Acceptance: TT map seeds the pipeline and improves
+    convergence on a contrast where coarse-search alone struggles.
+22. ✅ **Cubic B-spline FFD basis** `[minor]` — DONE. `FfdBasis::{Bilinear, CubicBSpline}` on the
+    FFD lattice (uniform cubic B-spline, 4×4 support, C²); `nonrigid_ffd_cubic_bspline_recovers_smooth_deformation`.
+23. 🟡 **Marchenko + Wasserstein "prior-less" FWI** (ADR 019) — PARTIAL/staged.
+    `inverse::marchenko`: verified windowed conv/corr operators; experimental 1-D iterative
+    `redatum` (focusing functions + G⁻, structure per Wapenaar 2014 — **quantitative focusing
+    convention not yet reference-validated**, documented); `marchenko_wasserstein_misfit`
+    `J=W₁(G⁻_obs,G⁻_mod)` connector composing redatum with the (already-verified) Wasserstein
+    misfit, tested well-posed. Staged milestones (own [major] items): (a) reference-validate 1-D
+    `redatum` — **SA-engine oracle BUILT** (`marchenko::oracle_tests`, `#[ignore]`d acceptance
+    target); empirically `corr(Marchenko,true)≈corr(naive,true)≈0.14` (coda≈0 ⇒ no engagement);
+    root-caused blockers documented in ADR 019 (window/record geometry so internal multiples are
+    in-window & on-record; conv/corr convention; G⁻ time-referencing; T_d amplitude); acceptance
+    `corr>0.85 & >naive`; (b) multidimensional Marchenko (t-x, up/down decomposition);
+    (c) Marchenko-Wasserstein FWI model-update loop on the SA-engine gradient.
+    The Wasserstein "taming the math" half is already production-ready/verified
+    (`wasserstein_is_convex_in_shift_on_positive_distribution`).
 8. ✅ **Bulk-piezo Mason thickness-mode circuit** — DONE (see `BulkPiezoResonator`, above).
-9. ⬜ **Image registration (deformable/rigid)** `[major]` — surfaced by the Ch13 audit: the
-   theranostic loop (Algorithm 13.2 step 2) needs intra-/inter-modality registration to align
-   diagnostic frames to the therapy frame, but kwavers has **no registration implementation**
-   (only ITK DICOM loading). Chapter 13 now marks it not-implemented. A real implementation
-   (e.g. rigid + B-spline FFD with a mutual-information / SSD metric and a gradient optimiser —
-   the L-BFGS optimiser now in `kwavers_math` could drive it) would close the gap; needs an ADR
-   (new bounded context: `registration`).
+16. ⬜ **Rust-native segmentation-driven crossfire aperture optimiser** `[major]` — surfaced by the
+    Ch31 audit. An earlier Python-side ray-trace optimiser (per-aperture air/bone/fat hazard-path
+    scoring, an angular crossfire plan, complex ridge least-squares phase/amplitude weights, and
+    dense-field hotspot null-refinement) was deliberately removed for PyO3-only compliance and
+    replaced by the same-aperture theranostic inverse. A Rust-native re-implementation (in
+    `kwavers_therapy::therapy::theranostic_guidance`, exposed via PyO3) would restore the
+    segmentation-aware *placement-optimisation* capability — distinct from the current fixed-bowl
+    placement + inversion — with value-semantic tests on path penalties and crossfire entrance-dose
+    reduction. Needs an ADR (new optimisation module).
+14. ✅ **Wire elastic / `MechanicalStress` into the `PhysicsCatalog`** `[major]` (ADR 021) — DONE
+    (2026-06-09). **Stale-premise corrected:** the item was filed `[minor]` ("add a variant + one
+    match arm against an existing solver"), but the prior `MechanicalStress` variant + its
+    `ElasticWavePlugin` were *deliberately deleted* during the elastic-as-PSTD-plugin consolidation
+    (a `μ ≡ 0` acoustic duplicate; see `forward/mod.rs`). The genuine elastic stepper is
+    `ElasticPstdOrchestrator` (batch `propagate`, no `Plugin` adapter), so wiring needed a real
+    adapter, not a match arm — reclassified `[major]`, ADR 021. **Delivered:** (a) extracted a
+    public single-step SSOT primitive `ElasticPstdOrchestrator::step()` (the `propagate` loop now
+    delegates) + `pressure_field()`/`stress_mut()`/`velocity_mut()` accessors; (b) new
+    `pstd::extensions::MechanicalStressPlugin` — owns a real orchestrator, one genuine leapfrog
+    λ/μ step per `Plugin::update`, provides isotropic pressure `p = -⅓ tr(σ)` to the unified field,
+    requires nothing (self-contained elastic state); (c) additive serde-stable
+    `PhysicsModelType::MechanicalStress { wave_kind: ElasticWaveKind::Isotropic }` + a real
+    `build_plugin` arm (Theorem 21.1 exhaustiveness preserved). Value-semantic tests (9):
+    `step`-loop == `propagate` bit-for-bit; `pressure_field` == −⅓ tr(σ) exactly; shear velocity
+    gradient induces σxy (μ>0, not an acoustic alias); plugin steps + writes genuine evolving
+    pressure (== orchestrator's, changes between steps); errors-before-init; field contract;
+    catalog builds 1 plugin; composes with BubbleDynamics (2 plugins, scheduler resolves). Existing
+    μ=0 reduction theorem test (`pstd_elastic_plugin_reduces_to_acoustic_when_mu_is_zero`) still
+    green. Clippy-clean (also bundled a pre-existing FWI 8-arg lint into `ReconstructionSeed`).
+    Chapter 21 §21.3 updated (six variants, wired). **Remaining (future, own items):** anisotropic
+    / nonlinear `ElasticWaveKind` modes; routing acoustic `context.sources` into an elastic source.
+13. ⬜ **`Scalar` trait genericization of the solvers** `[arch]` — surfaced by the Ch20 audit and
+    mandated by the project architecture standards, but **not currently implemented**: the CPU PSTD
+    solver is monomorphic `f64` and the GPU path is `f32`, with no `Scalar` trait abstracting
+    precision (separate code paths, not one zero-cost generic kernel). A genuine `Scalar` trait
+    (associated `Accumulator`, native-precision arithmetic, sealed) genericizing `AbsorptionKernel`,
+    the stepper field buffers, and the CPML updater would unify the precision tiers. Needs an ADR
+    (large cross-cutting change; touches every kernel). Chapter 20 §20.10.3 now states the real
+    monomorphic status honestly.
+12. 🟡 **CPML cache tiling + 2 perf figures** `[minor]` — **tiling sub-item closed as
+    not-applicable (2026-06-09)**: the premise was wrong. The CPML memory update
+    (`cpml::update::axis`) is a **pointwise** recurrence `ψ ← b·ψ + a·∂f` (each cell reads only its
+    own previous ψ and gradient — no spatial stencil, no neighbour reuse), already `rayon`-parallel
+    over thin contiguous PML strips. Cache tiling improves only sweeps with spatial reuse; a
+    pointwise streaming map is already bandwidth-optimal, so a `TILE_SIZE` const generic would add
+    complexity for zero analytic benefit (CLAUDE.md: no unjustified optimizations). The tiling
+    principle applies to the PSTD spatial-stencil/transpose path instead — already handled by
+    `rustfft`'s adaptive planner. Chapter 20 (§ "Mitigation: tiling") corrected. **Remaining:** the
+    2 perf artifacts (PSTD flamegraph — needs Linux `perf`/DTrace, not generable on this Windows
+    host; KWCP-layout diagram — a static schematic) are doc figures, low value.
+11. ✅ **2 sonogenetics figures** `[patch]` — DONE (2026-06-09). Added `fig06_pipeline_schematic`
+    (acoustic field → ARF → tension → P_open → ion current → LIF spike) and `fig07_lif_raster_vs_duty`
+    (LIF spike-raster across duty cycles, driven by the real Rust `kw.simulate_lif_neuron_py`) to
+    `ch18_sonogenetics.py`; generated both into `figures/ch18/` and embedded them in Chapter 17 as
+    Figs 17.7–17.8 (§17.1.1 and §17.9.1); §17.14 index updated. All 7 ch18 figures now resolve.
+10. 🟡 **Transcranial pipeline ergonomics + 4 figures** `[minor]` — **turnkey + correctness gap
+    closed (2026-06-09); figures remain.** The Ch15 audit said "there is no turnkey
+    CT→medium→solve→correct→safety helper" — but `TreatmentPlanner::generate_plan` IS a turnkey
+    planner (skull analysis → element placement → phasing → intensity → thermal → safety →
+    treatment time). **It was, however, functionally broken:** (a) its CT aberration corrector was
+    stored as a dead `_aberration_corrector` field and never applied — plans corrected only for
+    geometric distance, defeating transcranial focusing's purpose; (b) `optimize_transducer_setup`
+    mixed unit frames (millimetre element positions vs metre target centre, `radius=80` used as
+    metres) so the geometric phase was dimensionally wrong. **Fixed:** reworked
+    `optimize_transducer_setup` to place a focused bowl (radius = focal_distance) in the grid frame
+    with consistent metre physics (positions stored in millimetres, the convention
+    `simulate_acoustic_field` consumes), and **wired the live CT phase-screen aberration
+    correction** so `φᵢ = φᵢ_geo + (−Δφᵢ)`; removed the dead corrector field. Value-semantic tests
+    (2): homogeneous CT leaves the equidistant bowl in phase (span < 1e-6); a cortical-bone slab
+    induces a ray-dependent phase spread (> 0.1 rad) that genuinely differs from the homogeneous
+    plan — proving the corrector is applied, not dead. 18 treatment-planning tests green;
+    clippy-clean. Chapter §15.11.5 rewritten (turnkey analytic route vs high-fidelity PSTD route).
+    **Remaining:** the 4 Ch15 figures (TR workflow, skull hot-spot map, BBB safety window,
+    propagation schematic) — doc artifacts, low value.
+9. ✅ **Image registration (deformable/rigid)** — ALREADY IMPLEMENTED (Ch13 audit recorded a
+   false negative; the Ch19 audit found the real code). `kwavers_physics::acoustics::imaging::
+   fusion::registration::RitkRegistrationEngine` (backed by the `ritk-registration` workspace crate)
+   provides `RegistrationMethod::{RigidBody, Affine, NonRigid}` — rigid/affine mutual-information
+   registration and symmetric-Demons (Vercauteren 2009) non-rigid registration; driven via
+   `register_for_method` / `rigid_registration_mutual_info`. Used by `multimodality_fusion::manager`
+   and the physics fusion algorithms. Chapters 13 §13.7 and 19 §19.10.2 corrected to cite it.
+   (Lesson: verify by algorithm, not by the guessed type name `DeformableRegistration`/`RITK`.)
 
 ## Notes
 

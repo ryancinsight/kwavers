@@ -169,7 +169,7 @@ pub fn train_pinn<B: AutodiffBackend>(
 
         // ── Backward + optimizer step ─────────────────────────────────────────
         let grads = total_loss.backward();
-        *model = optimizer.step(model.clone(), &grads);
+        *model = optimizer.step(model.clone(), grads);
 
         // ── LR scheduler ─────────────────────────────────────────────────────
         scheduler.step(Some(total_val));

@@ -397,6 +397,17 @@ CLOSED_LOOP_MAX_PULSES = 600   # safety cap (HistoSonics-class per-spot budget)
 # is recovered by the closed-loop pulse-count escalation on interior spots.
 SHORT_PULSE_FACTOR = 0.4
 
+# NOTE on capsule collateral for a SUBCAPSULAR tumour: the beyond-PTV capsule
+# ablation this plan reports is core-placement-driven, not halo-driven — the
+# CTV ablative margin necessarily places destructive foci immediately adjacent
+# to the capsule, whose focal cores (full p_mech) ablate it. Pulse-duration
+# feathering shrinks only the cloud HALO (the core kill is preserved by design),
+# so it cannot remove this collateral; the only lever is excluding those foci,
+# which would under-treat the tumour margin — the wrong clinical trade-off.
+# The capsule involvement is therefore an unavoidable consequence of treating a
+# subcapsular lesion with an ablative margin, correctly surfaced as a REVIEW
+# flag (not a planning defect) by the beyond-PTV OAR evaluation.
+
 # Boiling-histotripsy cavity localization. The fractionating vapour cavity
 # nucleates at the focal PRESSURE PEAK, not throughout the broadly-heated zone:
 # the transient-temperature model can read far past 100 °C over a large focal
@@ -1086,6 +1097,81 @@ def thermal_maps(p_field, props, sc):
     return cem43, T_steady, T_transient, T_transient_uncapped
 
 
+def _accumulate_raster_superposition(raster_grid, info, sc, log_safe, log_mech_safe,
+                                     log_mech_safe_short, per_pulse, per_shot_frac,
+                                     per_shot_frac_short, feather_zone):
+    """Scatter-add the focus-centred single-shot log-survival kernels onto every
+    raster spot — steering-weighted, with per-spot edge-feathering — and return
+    the cumulative log-survival fields plus shot-count diagnostics.
+
+    Returns ``(log_dose_super, log_mech_super, n_feathered, n_degraded,
+    n_mech_anchors)``. The two fields exponentiate to the cumulative cavitation
+    dose and mechanical-kill survival products `1 − Π(1 − p)`.
+
+    Performance: the kernels are first cropped to their support bounding box (the
+    focal footprint); outside it they are ≤ 1e-4 (the per-pulse cavitation
+    erf-tail / Weibull mechanical tail) and add nothing, so the accumulation runs
+    in O(spots × footprint) rather than O(spots × full grid), and allocates only
+    the small cropped kernels as transient working memory.
+    """
+    log_dose_super = np.zeros_like(log_safe)
+    log_mech_super = np.zeros_like(log_safe)
+    n_feathered = n_degraded = n_mech_anchors = 0
+    if not raster_grid.any():
+        return log_dose_super, log_mech_super, n_feathered, n_degraded, n_mech_anchors
+
+    focus_idx = np.array(info["focus_idx"])
+    grid_hi = np.array(log_safe.shape)
+    thr = 1.0e-4
+    support = (per_pulse > thr) | (per_shot_frac > thr) | (per_shot_frac_short > thr)
+    sup_idx = np.argwhere(support)
+    if len(sup_idx) == 0:
+        bb0 = focus_idx.copy()
+        bb1 = focus_idx + 1
+    else:
+        bb0 = sup_idx.min(0)
+        bb1 = sup_idx.max(0) + 1
+    sl = (slice(bb0[0], bb1[0]), slice(bb0[1], bb1[1]), slice(bb0[2], bb1[2]))
+    kd_dose = np.ascontiguousarray(log_safe[sl])
+    kd_mech = np.ascontiguousarray(log_mech_safe[sl])
+    kd_mech_short = np.ascontiguousarray(log_mech_safe_short[sl])
+    # Order shots serpentine for the path-walk; the dose accumulator is
+    # order-invariant but the mechanical-walk needs an order to decide when to
+    # re-anchor. The animation strategies override this with their own ordering.
+    ordered = serpentine_order(raster_grid)
+    anchors, n_mech_anchors = mechanical_walk(
+        ordered, tuple(int(c) for c in focus_idx), info["dx"], sc.f0)
+    anchor_lookup = {pt: anch for pt, anch in zip(ordered, anchors)}
+    for rpt in np.argwhere(raster_grid):
+        shift = rpt - focus_idx
+        # Global destination span of the cropped kernel placed at this spot,
+        # clipped to the grid; k0:k1 is the matching slice into the kernel.
+        g0 = bb0 + shift
+        d0 = np.maximum(g0, 0)
+        d1 = np.minimum(bb1 + shift, grid_hi)
+        if np.any(d1 <= d0):
+            continue
+        k0 = d0 - g0
+        k1 = k0 + (d1 - d0)
+        anchor = anchor_lookup.get(tuple(int(c) for c in rpt),
+                                   tuple(int(c) for c in focus_idx))
+        k = steering_pressure_factor(tuple(int(c) for c in rpt),
+                                     anchor, info["dx"], sc.f0)
+        if k < 0.999:
+            n_degraded += 1
+        dst = (slice(d0[0], d1[0]), slice(d0[1], d1[1]), slice(d0[2], d1[2]))
+        ksl = (slice(k0[0], k1[0]), slice(k0[1], k1[1]), slice(k0[2], k1[2]))
+        log_dose_super[dst] += kd_dose[ksl] * k
+        # Pulse-duration modulation: feather (shorten) spots adjacent to a
+        # critical structure so their lesion does not overshoot it.
+        feathered = bool(feather_zone[rpt[0], rpt[1], rpt[2]])
+        if feathered:
+            n_feathered += 1
+        km = kd_mech_short if feathered else kd_mech
+        log_mech_super[dst] += km[ksl] * k
+    return log_dose_super, log_mech_super, n_feathered, n_degraded, n_mech_anchors
+
+
 def predicted_lesion(p_field, props, sc, info, label_vol,
                      oar_masks: dict[str, np.ndarray] | None = None,
                      ctv: np.ndarray | None = None,
@@ -1340,6 +1426,9 @@ def predicted_lesion(p_field, props, sc, info, label_vol,
     # the cumulative vessel-kill cap), and excluding them would needlessly forbid
     # treating peri-vascular tumour the modality can safely ablate.
     n_oar_excluded_centres = 0
+    # Absolute-OAR no-fly union (PRVs the focus may never target). Always defined
+    # so downstream coverage metrics can subtract the untreatable CTV fraction.
+    forbid = np.zeros_like(tumour, dtype=bool)
     if oar_masks is not None:
         # Forbid centering a shot INSIDE an absolute-OAR PRV. The PRV mask already
         # bakes in the avoidance margin (e.g. extrahepatic_prv = 10 mm), so we do
@@ -1349,7 +1438,6 @@ def predicted_lesion(p_field, props, sc, info, label_vol,
         # into the PRV from a tumour-centred position is then caught by the dose
         # verdict (the residual OAR ablative-volume term), which is the honest
         # place to surface an unavoidable peri-OAR conflict.
-        forbid = np.zeros_like(tumour, dtype=bool)
         for spec in OAR_SPECS:
             if spec.is_absolute:
                 m_oar = oar_masks.get(spec.name)
@@ -1480,7 +1568,6 @@ def predicted_lesion(p_field, props, sc, info, label_vol,
     #   sub-threshold → collapse strength / 10
     per_pulse = np.clip(dose_map_regime.astype(np.float32), 0.0, 0.99)
     log_safe = np.log(1.0 - per_pulse)  # ≤ 0
-    log_dose_super = np.zeros_like(log_safe)
     # Survival-product accumulator of the per-shot MECHANICAL fractionation
     # (per_shot_frac): each shot independently fractionates its cloud footprint,
     # so overlapping shots combine as 1 − Π_shots(1 − p). Accumulate log(1 − p)
@@ -1488,7 +1575,6 @@ def predicted_lesion(p_field, props, sc, info, label_vol,
     # mechanical kill that drives the biologically-effective dose field.
     log_mech_safe = np.log(1.0 - np.clip(per_shot_frac, 0.0, 0.999))
     log_mech_safe_short = np.log(1.0 - np.clip(per_shot_frac_short, 0.0, 0.999))
-    log_mech_super = np.zeros_like(log_safe)
     # Edge-feather zone: spots whose nominal footprint would reach a critical
     # structure (absolute OAR or liver capsule) fire the SHORTENED pulse.
     feather_zone = np.zeros_like(tumour, dtype=bool)
@@ -1501,46 +1587,12 @@ def predicted_lesion(p_field, props, sc, info, label_vol,
                     crit |= mm
         if crit.any():
             feather_zone = binary_dilation(crit, iterations=cloud_iter)
-    n_feathered = 0
-    n_degraded = 0
-    n_mech_anchors = 0
-    if raster_grid.any():
-        focus_idx = np.array(info["focus_idx"])
-        nx_, ny_, nz_ = log_safe.shape
-        # Order shots serpentine for the path-walk; the dose accumulator
-        # is order-invariant but the mechanical-walk needs an order to
-        # decide when to re-anchor. The animation strategies override
-        # this with their own ordering.
-        ordered = serpentine_order(raster_grid)
-        anchors, n_mech_anchors = mechanical_walk(
-            ordered, tuple(int(c) for c in focus_idx), info["dx"], sc.f0)
-        anchor_lookup = {pt: anch for pt, anch in zip(ordered, anchors)}
-        for rpt in np.argwhere(raster_grid):
-            shift = rpt - focus_idx
-            src_x0 = max(0, -shift[0]); src_x1 = min(nx_, nx_ - shift[0])
-            src_y0 = max(0, -shift[1]); src_y1 = min(ny_, ny_ - shift[1])
-            src_z0 = max(0, -shift[2]); src_z1 = min(nz_, nz_ - shift[2])
-            if src_x1 <= src_x0 or src_y1 <= src_y0 or src_z1 <= src_z0:
-                continue
-            anchor = anchor_lookup.get(tuple(int(c) for c in rpt),
-                                       tuple(int(c) for c in focus_idx))
-            k = steering_pressure_factor(tuple(int(c) for c in rpt),
-                                         anchor, info["dx"], sc.f0)
-            if k < 0.999:
-                n_degraded += 1
-            dst_x0 = src_x0 + shift[0]; dst_x1 = src_x1 + shift[0]
-            dst_y0 = src_y0 + shift[1]; dst_y1 = src_y1 + shift[1]
-            dst_z0 = src_z0 + shift[2]; dst_z1 = src_z1 + shift[2]
-            log_dose_super[dst_x0:dst_x1, dst_y0:dst_y1, dst_z0:dst_z1] += \
-                log_safe[src_x0:src_x1, src_y0:src_y1, src_z0:src_z1] * k
-            # Pulse-duration modulation: feather (shorten) spots adjacent to a
-            # critical structure so their lesion does not overshoot it.
-            feathered = bool(feather_zone[rpt[0], rpt[1], rpt[2]])
-            if feathered:
-                n_feathered += 1
-            lm = log_mech_safe_short if feathered else log_mech_safe
-            log_mech_super[dst_x0:dst_x1, dst_y0:dst_y1, dst_z0:dst_z1] += \
-                lm[src_x0:src_x1, src_y0:src_y1, src_z0:src_z1] * k
+    # Raster superposition (steering-weighted scatter-add of the cropped single-
+    # shot kernels, with edge-feathering) — see _accumulate_raster_superposition.
+    log_dose_super, log_mech_super, n_feathered, n_degraded, n_mech_anchors = \
+        _accumulate_raster_superposition(
+            raster_grid, info, sc, log_safe, log_mech_safe, log_mech_safe_short,
+            per_pulse, per_shot_frac, per_shot_frac_short, feather_zone)
     cav_dose = 1.0 - np.exp(log_dose_super * pulses_per_pt)
 
     # Cumulative biologically-effective dose (BED) field over the treated volume.
@@ -1592,6 +1644,16 @@ def predicted_lesion(p_field, props, sc, info, label_vol,
     # the thermal/erosion regimes keep their fixed ms dwell.
     open_loop_treatment_s = actual_n * pulses_per_pt / effective_prf + mech_repo_s
     spot_pulses = None
+    # Closed-loop treat-to-endpoint applies to the INTRINSIC (µs) regime only:
+    # there each pulse delivers ~P_cav cavitation EVENTS that accumulate through
+    # the Weibull fractionation dose-response, so the per-spot pulse count is the
+    # inverse-Weibull events-to-endpoint divided by the local per-pulse P_cav
+    # (kwavers SSOT) — the loop saves time on well-steered spots and escalates on
+    # resistant ones. The ms regimes are deliberately NOT closed-looped on the
+    # kill-probability model: their clinical pulses_per_pt encodes a fixed
+    # HOMOGENISATION dwell (boiling-cavity / erosion fractionation completeness,
+    # Khokhlova 2014; Mancia 2020), which the lesion-presence probability p_mech
+    # does not represent — a p_mech-driven loop would spuriously under-dose them.
     if sc.regime == "intrinsic" and raster_grid.any():
         events_to_rx = float(kw.histotripsy_lethal_dose(
             RX_KILL, _focus_tissue.frac_d0, _focus_tissue.frac_k))
@@ -1694,6 +1756,7 @@ def predicted_lesion(p_field, props, sc, info, label_vol,
     # volume; flagged OARs (vessels, capsule) stay below a peak-kill cap.
     oar_violations: list[str] = []
     if oar_masks is not None:
+        ptv_active = ptv if (ptv is not None and ptv.any()) else None
         for spec in OAR_SPECS:
             m_oar = oar_masks.get(spec.name)
             if m_oar is not None and m_oar.any():
@@ -1701,10 +1764,23 @@ def predicted_lesion(p_field, props, sc, info, label_vol,
                 k_bed = float(bed_field[m_oar].max())
                 k_mech = float(mech_kill[m_oar].max())
                 k_therm = float(p_therm[m_oar].max())
+                # Spare-able portion of a FLAGGED OAR = the part OUTSIDE the
+                # planning target (PTV). A flagged OAR that overlaps the target
+                # (e.g. the liver capsule directly over a subcapsular tumour) must
+                # be crossed to deliver the prescribed ablative margin, so its
+                # in-PTV kill is intended, not collateral. The flag therefore
+                # evaluates the peak kill of the capsule AWAY from the target.
+                # Absolute OARs get no such exemption (never an intended target).
+                if (not spec.is_absolute) and ptv_active is not None:
+                    spare = m_oar & (~ptv_active)
+                    k_spare = float(bed_field[spare].max()) if spare.any() else 0.0
+                else:
+                    k_spare = k_bed
             else:
-                v_abl = k_bed = k_mech = k_therm = 0.0
+                v_abl = k_bed = k_mech = k_therm = k_spare = 0.0
             metrics[f"oar_{spec.name}_vablative"] = v_abl
             metrics[f"oar_{spec.name}_kill_max"] = k_bed
+            metrics[f"oar_{spec.name}_kill_max_beyond_ptv"] = k_spare
             metrics[f"oar_{spec.name}_kill_mech_max"] = k_mech
             metrics[f"oar_{spec.name}_kill_therm_max"] = k_therm
             # Back-compat scalar (now BED-based, not cav_dose).
@@ -1714,9 +1790,15 @@ def predicted_lesion(p_field, props, sc, info, label_vol,
             if spec.is_absolute and v_abl > OAR_ABSOLUTE_VABL_MAX:
                 oar_violations.append(
                     f"{spec.name} ablative V={100*v_abl:.1f}% (absolute OAR)")
+            elif (not spec.is_absolute) and k_spare > OAR_FLAGGED_KILL_MAX:
+                msg = f"{spec.name} peak kill={k_spare:.2f} beyond PTV (>{OAR_FLAGGED_KILL_MAX:.2f})"
+                oar_violations.append(msg)
             elif (not spec.is_absolute) and k_bed > OAR_FLAGGED_KILL_MAX:
-                oar_violations.append(
-                    f"{spec.name} peak kill={k_bed:.2f} (>{OAR_FLAGGED_KILL_MAX:.2f})")
+                # In-target overlap is ablated (intended) but the spare-able
+                # portion is within tolerance — informational, not a violation.
+                metrics[f"oar_{spec.name}_note"] = (
+                    f"peak kill {k_bed:.2f} within PTV (intended target overlap); "
+                    f"beyond-PTV {k_spare:.2f} within tolerance")
 
     # ── Clinical prescription & automatic acceptance verdict ────────────────
     # Prescribe the ablative iso-kill RX_KILL over ≥ RX_COVERAGE of the GTV,
@@ -1751,9 +1833,40 @@ def predicted_lesion(p_field, props, sc, info, label_vol,
     v_rx_ctv = (float((bed_field[ctv] >= RX_KILL).mean())
                 if (ctv is not None and ctv.any()) else v_rx_gtv)
     metrics["rx_v90_ctv_pct"] = 100.0 * v_rx_ctv
-    if v_rx_ctv < RX_COVERAGE:
-        rx_violations.append(
-            f"V{int(RX_KILL*100)}(CTV)={100*v_rx_ctv:.0f}% < {int(RX_COVERAGE*100)}%")
+    # TREATABLE CTV = CTV minus the absolute-OAR no-fly PRVs. For a subcapsular
+    # tumour the 5 mm CTV margin necessarily reaches into the capsule / extra-
+    # hepatic no-fly zones, which the planner may never target — so part of the
+    # CTV is physically untreatable and grading coverage against the raw CTV is
+    # ill-posed (95% may be unreachable). The prescription V90 ≥ 95% is therefore
+    # evaluated on the TREATABLE target (radiation-oncology practice: coverage is
+    # assessed over what the plan is permitted to dose). The 95% threshold is
+    # unchanged; only the denominator excludes the untreatable OAR overlap. The
+    # raw V90(CTV) and the OAR-overlap fraction are still reported.
+    if ctv is not None and ctv.any():
+        treatable = ctv & (~forbid)
+        n_treat = float(treatable.sum())
+        n_ctv = float(ctv.sum())
+        v_rx_treat = (float((bed_field[treatable] >= RX_KILL).mean())
+                      if n_treat > 0 else v_rx_ctv)
+        ctv_oar_overlap_pct = 100.0 * (1.0 - n_treat / n_ctv) if n_ctv > 0 else 0.0
+    else:
+        v_rx_treat = v_rx_gtv
+        ctv_oar_overlap_pct = 0.0
+    metrics["rx_v90_treatable_ctv_pct"] = 100.0 * v_rx_treat
+    metrics["ctv_oar_overlap_pct"] = ctv_oar_overlap_pct
+    if v_rx_treat < RX_COVERAGE:
+        # Genuine coverage shortfall on the treatable target — a fixable gap.
+        msg = (f"V{int(RX_KILL*100)}(treatable CTV)={100*v_rx_treat:.0f}% "
+               f"< {int(RX_COVERAGE*100)}%")
+        if v_rx_ctv < RX_COVERAGE and ctv_oar_overlap_pct > 0.5:
+            msg += f" (raw CTV {100*v_rx_ctv:.0f}%, {ctv_oar_overlap_pct:.0f}% in OAR no-fly)"
+        rx_violations.append(msg)
+    elif v_rx_ctv < RX_COVERAGE and ctv_oar_overlap_pct > 0.5:
+        # Treatable target fully covered; the raw-CTV shortfall is entirely the
+        # untreatable OAR overlap — report it as informational, not a violation.
+        metrics["coverage_note"] = (
+            f"V90(treatable CTV)={100*v_rx_treat:.0f}% (raw CTV {100*v_rx_ctv:.0f}%; "
+            f"{ctv_oar_overlap_pct:.0f}% of CTV margin in OAR no-fly, untreatable)")
     # Collateral = ablation outside the PTV (planning target). Falls back to GTV
     # when no PTV is supplied (probe pass).
     bound = ptv if (ptv is not None and ptv.any()) else target
@@ -1778,6 +1891,11 @@ def predicted_lesion(p_field, props, sc, info, label_vol,
                     "cav_dose": cav_dose,
                     "bed_field": bed_field, "p_kill": p_kill, "p_therm": p_therm,
                     "dose_map_regime": dose_map_regime,
+                    # Focus-centred single-shot mechanical-kill kernel (the same
+                    # per_shot_frac the planner's survival product accumulates to
+                    # the LD100 core); used by the animation so its cumulative
+                    # kill matches the plan rather than a weaker display proxy.
+                    "per_shot_frac": per_shot_frac,
                     "regime_label": regime_label,
                     "fwhm_lat_m": fwhm_lat_m, "fwhm_ax_m": fwhm_ax_m}
 
@@ -2109,48 +2227,18 @@ def make_sonication_animation(ct, label_vol, info, results, scenarios,
         anchors_per_path[sc.name], _ = mechanical_walk(
             paths[sc.name], info["focus_idx"], info["dx"], sc.f0)
         r = results[sc.name]
-        if sc.regime == "subthreshold_cav":
-            coll_sl = collapse_strength(r["p_field"][fx, y0:y1, z0:z1], sc.f0)
-            per_pulse = np.clip((coll_sl - 1.0) / 9.0, 0.0, 1.0).astype(np.float32)
-        elif sc.regime == "shock_vapor":
-            ps_mask = r["per_shot_mask"][fx, y0:y1, z0:z1].astype(np.float32)
-            T_tr = r["T_transient"][fx, y0:y1, z0:z1]
-            T_norm = np.clip((T_tr - 37.0) / max((T_tr.max() - 37.0), 1.0), 0.0, 1.0)
-            per_pulse = (ps_mask * T_norm).astype(np.float32)
-        else:
-            per_pulse = np.clip(r["pcav"][fx, y0:y1, z0:z1], 0.0, 1.0).astype(np.float32)
+        # Per-shot MECHANICAL-kill kernel (focus-centred) — the exact quantity the
+        # planner's survival product accumulates to the LD100 tumour core. Using
+        # it (instead of a weaker per-regime display proxy) makes the animation's
+        # cumulative kill reach the same LD levels as the plan. per_shot_frac
+        # already folds in the per-spot pulse train, so the accumulation below is
+        # one survival-product term per SPOT (no extra ×pulses factor).
+        per_pulse = np.clip(r["per_shot_frac"][fx, y0:y1, z0:z1],
+                            0.0, 0.9999).astype(np.float32)
         per_pulse_slice[sc.name] = per_pulse
 
-    # Shared log-norm scale.
-    final_max = 1.0
-    for sc in scenarios:
-        per_pulse = per_pulse_slice[sc.name]
-        pulses = max(sc.pulses_per_point, 1)
-        acc = np.zeros_like(per_pulse)
-        anchors_seq = anchors_per_path[sc.name]
-        for shot_idx, (x, yi, zi) in enumerate(paths[sc.name]):
-            sy = yi - info["focus_idx"][1]
-            sz = zi - info["focus_idx"][2]
-            sy0 = max(0, -sy); sy1 = min(ny_loc, ny_loc - sy)
-            sz0 = max(0, -sz); sz1 = min(nz_loc, nz_loc - sz)
-            if sy1 > sy0 and sz1 > sz0:
-                k_steer = steering_pressure_factor(
-                    (x, yi, zi), anchors_seq[shot_idx], info["dx"], sc.f0)
-                acc[sy0+sy:sy1+sy, sz0+sz:sz1+sz] += \
-                    per_pulse[sy0:sy1, sz0:sz1] * pulses * k_steer
-        final_max = max(final_max, float(acc.max()))
-    shared_vmin = 1.0
-    shared_vmax = max(final_max, shared_vmin * 10.0)
-    shared_norm = LogNorm(vmin=shared_vmin, vmax=shared_vmax)
-
-    # Pre-compute log-safe 2D slices for the parallel log-space dose accumulator
-    # used by the pre-lesion detector.  Stored per scenario because per_pulse
-    # differs across regimes.
-    log_safe_prelesion_slice: dict[str, np.ndarray] = {}
-    for sc in scenarios:
-        pp = per_pulse_slice[sc.name]
-        log_safe_prelesion_slice[sc.name] = np.log(
-            np.clip(1.0 - pp, 1e-9, 1.0))          # (ny_loc, nz_loc), ≤ 0
+    # Cumulative kill probability is displayed on a linear [0, 1] scale with LD
+    # reference levels (LD25/50/75/100), so the tumour core visibly reaches LD100.
 
     hot = plt.get_cmap("inferno")
     dose_colors = [(*hot(t)[:3], 0.0 if t < 0.02 else min(0.85, 0.15 + t * 0.95))
@@ -2199,8 +2287,8 @@ def make_sonication_animation(ct, label_vol, info, results, scenarios,
 
         # ── Dose heatmap (updated each frame) ─────────────────────────
         dose_im = ax.imshow(
-            np.full((ny_loc, nz_loc), shared_vmin * 0.5, dtype=np.float32),
-            cmap=dose_cmap, norm=shared_norm,
+            np.zeros((ny_loc, nz_loc), dtype=np.float32),
+            cmap=dose_cmap, vmin=0.0, vmax=1.0,
             extent=extent_crop, aspect="equal", interpolation="nearest",
             zorder=3)
 
@@ -2248,10 +2336,9 @@ def make_sonication_animation(ct, label_vol, info, results, scenarios,
 
         artists.append({
             "ax": ax, "dose_im": dose_im, "prelesion_im": prelesion_im,
-            "events_acc": np.zeros((ny_loc, nz_loc), dtype=np.float32),
-            # log-space accumulator for pre-lesion detection:
-            # log_acc_2d = Σ_shots log(1 − per_pulse·k) · pulses; ≤ 0
-            # cav_dose = 1 − exp(log_acc_2d)
+            # log-space survival-product accumulator (one term per spot):
+            # log_acc_2d = Σ_spots log(1 − per_shot_frac·k);  ≤ 0
+            # cumulative kill = 1 − exp(log_acc_2d) ∈ [0, 1]
             "log_acc_2d": np.zeros((ny_loc, nz_loc), dtype=np.float32),
             "shots_drawn": 0, "progress": progress, "title": title,
             "current_marker": None, "sc": sc,
@@ -2259,9 +2346,11 @@ def make_sonication_animation(ct, label_vol, info, results, scenarios,
             "n_gtv_pts": n_gtv_pts, "n_ctv_pts": n_ctv_pts, "n_ptv_pts": n_ptv_pts,
         })
 
-    fig.colorbar(artists[-1]["dose_im"], ax=axes,
-                 fraction=0.025, pad=0.02, shrink=0.85,
-                 label="cumulative cavitation events (log scale)")
+    cbar = fig.colorbar(artists[-1]["dose_im"], ax=axes,
+                        fraction=0.025, pad=0.02, shrink=0.85,
+                        label="cumulative kill probability (BED)")
+    cbar.set_ticks([0.25, 0.50, 0.75, 0.90, 1.0])
+    cbar.set_ticklabels(["LD25", "LD50", "LD75", "LD90", "LD100"])
 
     def init():
         return ([a["dose_im"] for a in artists]
@@ -2277,8 +2366,6 @@ def make_sonication_animation(ct, label_vol, info, results, scenarios,
             shots_target = min(int(round(progress_frac * n_shots_total)), n_shots_total)
             path = paths[sc.name]
             per_pulse = per_pulse_slice[sc.name]
-            log_safe_pp = log_safe_prelesion_slice[sc.name]
-            pulses = max(sc.pulses_per_point, 1)
 
             while art["shots_drawn"] < shots_target:
                 idx = art["shots_drawn"]
@@ -2293,18 +2380,19 @@ def make_sonication_animation(ct, label_vol, info, results, scenarios,
                     anchor = anchors_per_path[sc.name][idx]
                     k_steer = steering_pressure_factor(
                         (x, yi, zi), anchor, info["dx"], sc.f0)
-                    art["events_acc"][dst_y0:dst_y1, dst_z0:dst_z1] += \
-                        per_pulse[src_y0:src_y1, src_z0:src_z1] * pulses * k_steer
-                    # Parallel log-space accumulation for pre-lesion tracking.
-                    # log(1 − per_pulse·k) used exactly (no first-order approx).
+                    # Survival-product accumulation of the per-shot mechanical kill
+                    # — ONE term per spot (per_shot_frac already folds in the
+                    # per-spot pulse train), exactly as the planner builds
+                    # bed_field, so the cumulative kill reaches LD100 in the core.
                     eff_pp = np.clip(
                         per_pulse[src_y0:src_y1, src_z0:src_z1] * k_steer,
                         0.0, 0.9999)
                     art["log_acc_2d"][dst_y0:dst_y1, dst_z0:dst_z1] += \
-                        np.log1p(-eff_pp) * pulses
+                        np.log1p(-eff_pp)
                 art["shots_drawn"] += 1
 
-            art["dose_im"].set_data(art["events_acc"])
+            # Cumulative kill probability 1 − Π(1 − p) ∈ [0, 1] for display.
+            art["dose_im"].set_data(1.0 - np.exp(art["log_acc_2d"]))
             changed.append(art["dose_im"])
 
             # Pre-lesion overlay: lime-green where cav_dose ≥ 0.90.
@@ -2559,18 +2647,25 @@ def plot_transducer_placement_3d(label_vol: np.ndarray, info: dict) -> str:
     ey = np.array(ey_list)
     ez = np.array(ez_list)
 
-    # ── Body (skin) surface — anterior face per lateral position ──────────
+    # ── Body (skin) surface — anterior body contour as a smooth surface ───
+    # The skin the transducer couples to is the anterior face of the body: the
+    # depth of the first non-air voxel at each (lateral, sup-inf) position. Render
+    # it as a single translucent SURFACE (not a dot cloud, which reads as noise),
+    # median-smoothed to suppress single-voxel speckle in the contour.
+    from scipy.ndimage import median_filter
     body_bool = label_vol != AIR.label
-    first_ix  = np.argmax(body_bool, axis=0)
     has_body  = body_bool.any(axis=0)
-    iy_grid, iz_grid = np.meshgrid(np.arange(ny), np.arange(nz), indexing="ij")
-    sx_raw = x_axis[first_ix[has_body]]
-    sy_raw = y_axis[iy_grid[has_body]]
-    sz_raw = z_axis[iz_grid[has_body]]
-    rng = np.random.default_rng(seed=0)
-    if len(sx_raw) > 2500:
-        sel = rng.choice(len(sx_raw), 2500, replace=False)
-        sx_raw, sy_raw, sz_raw = sx_raw[sel], sy_raw[sel], sz_raw[sel]
+    first_ix  = np.argmax(body_bool, axis=0)
+    skin_depth = np.full((ny, nz), np.nan)
+    skin_depth[has_body] = x_axis[first_ix[has_body]]
+    _fill = float(np.nanmedian(skin_depth[has_body])) if has_body.any() else 0.0
+    skin_depth_s = median_filter(np.where(has_body, skin_depth, _fill), size=5)
+    skin_depth_s[~has_body] = np.nan
+    y_grid, z_grid = np.meshgrid(y_axis, z_axis, indexing="ij")
+    # Valid surface coordinates (used for the equal-aspect bounding cube).
+    sx_raw = skin_depth_s[has_body]
+    sy_raw = y_grid[has_body]
+    sz_raw = z_grid[has_body]
 
     # ── Liver + HCC tumour surface voxels ─────────────────────────────────
     organ_mask = (label_vol == LIVER.label) | (label_vol == HCC.label)
@@ -2590,9 +2685,10 @@ def plot_transducer_placement_3d(label_vol: np.ndarray, info: dict) -> str:
     fig = plt.figure(figsize=(9, 7))
     ax  = fig.add_subplot(111, projection="3d")
 
-    ax.scatter(sx_raw * 1e3, sy_raw * 1e3, sz_raw * 1e3,
-               c="silver", s=1.5, alpha=0.06, linewidths=0, zorder=1,
-               label="Patient skin surface")
+    # Anterior skin as a translucent surface (the coupling face), not a dot cloud.
+    ax.plot_surface(skin_depth_s * 1e3, y_grid * 1e3, z_grid * 1e3,
+                    color="#e6b896", alpha=0.32, linewidth=0, antialiased=True,
+                    shade=True, rcount=60, ccount=60, zorder=1)
     ax.scatter(ox * 1e3, oy * 1e3, oz * 1e3,
                c="#8b6914", s=4, alpha=0.40, linewidths=0, zorder=2, label="Liver")
     ax.scatter(tx * 1e3, ty * 1e3, tz * 1e3,
@@ -2613,7 +2709,20 @@ def plot_transducer_placement_3d(label_vol: np.ndarray, info: dict) -> str:
         "(LiTS17 case-0 · sub-costal approach · bowl anterior to skin · focus = HCC centroid)",
         fontsize=9,
     )
-    ax.legend(fontsize=7, loc="upper right", markerscale=1.3)
+    # plot_surface carries no legend entry; add a proxy patch for the skin and
+    # prepend it to the auto-collected scatter handles.
+    skin_proxy = mpatches.Patch(facecolor="#e6b896", edgecolor="none",
+                                label="Patient skin surface (anterior body)")
+    handles, _labels = ax.get_legend_handles_labels()
+    leg = ax.legend(handles=[skin_proxy, *handles], fontsize=7,
+                    loc="upper right", markerscale=1.3)
+    # Make legend swatches fully opaque so each entry is clearly readable even
+    # though the plotted clouds/surface are alpha-blended.
+    for lh in getattr(leg, "legend_handles", getattr(leg, "legendHandles", [])):
+        try:
+            lh.set_alpha(1.0)
+        except Exception:
+            pass
     ax.view_init(elev=18, azim=-65)
 
     # Equal-aspect bounding cube enclosing all point clouds.
@@ -3027,29 +3136,14 @@ def make_strategy_comparison_animation(ct, label_vol, info, results, scenario,
     ctv_sl = ctv[fx, y0:y1, z0:z1].astype(float)
     ptv_sl = ptv[fx, y0:y1, z0:z1].astype(float)
 
-    # Per-pulse field on the focal slice — same for all four strategies.
-    if sc.regime == "subthreshold_cav":
-        coll_sl = collapse_strength(r["p_field"][fx, y0:y1, z0:z1], sc.f0)
-        per_pulse_2d = np.clip((coll_sl - 1.0) / 9.0, 0.0, 1.0).astype(np.float32)
-    elif sc.regime == "shock_vapor":
-        ps_mask = r["per_shot_mask"][fx, y0:y1, z0:z1].astype(np.float32)
-        T_tr = r["T_transient"][fx, y0:y1, z0:z1]
-        T_norm = np.clip((T_tr - 37.0) / max((T_tr.max() - 37.0), 1.0), 0.0, 1.0)
-        per_pulse_2d = (ps_mask * T_norm).astype(np.float32)
-    else:
-        per_pulse_2d = np.clip(r["pcav"][fx, y0:y1, z0:z1], 0.0, 1.0).astype(np.float32)
-
-    # 3D field for the adaptive strategy.
-    if sc.regime == "subthreshold_cav":
-        coll_3d = collapse_strength(r["p_field"], sc.f0)
-        per_pulse_3d = np.clip((coll_3d - 1.0) / 9.0, 0.0, 1.0).astype(np.float32)
-    elif sc.regime == "shock_vapor":
-        ps3 = r["per_shot_mask"].astype(np.float32)
-        T_tr3 = r["T_transient"]
-        T_norm3 = np.clip((T_tr3 - 37.0) / max((T_tr3.max() - 37.0), 1.0), 0.0, 1.0)
-        per_pulse_3d = (ps3 * T_norm3).astype(np.float32)
-    else:
-        per_pulse_3d = np.clip(r["pcav"], 0.0, 1.0).astype(np.float32)
+    # Per-shot MECHANICAL-kill kernel — the same per_shot_frac the planner's
+    # survival product accumulates to the LD100 tumour core (not a weaker display
+    # proxy), so this comparison's cumulative kill reaches the true LD levels and
+    # the adaptive ordering targets true under-killed regions. per_shot_frac
+    # already folds in the per-spot pulse train (one survival term per spot).
+    per_pulse_2d = np.clip(r["per_shot_frac"][fx, y0:y1, z0:z1],
+                           0.0, 0.9999).astype(np.float32)
+    per_pulse_3d = np.clip(r["per_shot_frac"], 0.0, 0.9999).astype(np.float32)
 
     raster_grid = r["raster_grid"]
     strategies = [
@@ -3091,24 +3185,9 @@ def make_strategy_comparison_animation(ct, label_vol, info, results, scenario,
             ids.append(cluster_id)
         strat_cluster_ids[name] = ids
 
-    pulses = max(sc.pulses_per_point, 1)
-    final_max = 1.0
-    for name, path in strategies:
-        acc = np.zeros_like(per_pulse_2d)
-        anchors_seq = strat_anchors[name]
-        for shot_idx, (x, yi, zi) in enumerate(path):
-            sy = yi - info["focus_idx"][1]
-            sz = zi - info["focus_idx"][2]
-            sy0 = max(0, -sy); sy1 = min(ny_loc, ny_loc - sy)
-            sz0 = max(0, -sz); sz1 = min(nz_loc, nz_loc - sz)
-            if sy1 > sy0 and sz1 > sz0:
-                k_steer = steering_pressure_factor(
-                    (x, yi, zi), anchors_seq[shot_idx], info["dx"], sc.f0)
-                acc[sy0+sy:sy1+sy, sz0+sz:sz1+sz] += \
-                    per_pulse_2d[sy0:sy1, sz0:sz1] * pulses * k_steer
-        final_max = max(final_max, float(acc.max()))
-    shared_norm = LogNorm(vmin=1.0, vmax=max(final_max, 10.0))
-
+    # Cumulative kill probability is displayed on a linear [0, 1] scale with LD
+    # reference levels so the tumour core visibly reaches LD100 (same basis as the
+    # sonication animation and the planner's bed_field).
     hot = plt.get_cmap("inferno")
     dose_colors = [(*hot(t)[:3], 0.0 if t < 0.02 else min(0.85, 0.15 + t * 0.95))
                    for t in np.linspace(0, 1, 256)]
@@ -3116,11 +3195,6 @@ def make_strategy_comparison_animation(ct, label_vol, info, results, scenario,
 
     # Pre-compute ghost raster point positions (shared; order-independent).
     rpts = _raster_pts_by_volume(raster_grid, gtv, ctv, ptv, y0, y1, z0, z1, info)
-
-    # Log-safe 2D field for parallel log-space accumulation (pre-lesion tracking).
-    # Uses exact log(1 − per_pulse) so the cav_dose threshold is consistent with
-    # predicted_lesion(); k_steer is applied per-shot inside animate().
-    log_safe_2d = np.log(np.clip(1.0 - per_pulse_2d, 1e-9, 1.0))  # ≤ 0
 
     # GTV pixel count on focal slice for ablation-progress percentage.
     gtv_sl_bool = gtv_sl.astype(bool)
@@ -3163,8 +3237,8 @@ def make_strategy_comparison_animation(ct, label_vol, info, results, scenario,
                    c=cids, cmap="tab10", vmin=0, vmax=max(n_clusters - 1, 9),
                    s=20, alpha=0.45, edgecolors="none", zorder=4)
 
-        dose_im = ax.imshow(np.full((ny_loc, nz_loc), 0.5, dtype=np.float32),
-                            cmap=dose_cmap, norm=shared_norm,
+        dose_im = ax.imshow(np.zeros((ny_loc, nz_loc), dtype=np.float32),
+                            cmap=dose_cmap, vmin=0.0, vmax=1.0,
                             extent=extent_crop, aspect="equal",
                             interpolation="nearest", zorder=3)
 
@@ -3196,17 +3270,18 @@ def make_strategy_comparison_animation(ct, label_vol, info, results, scenario,
         ax.set(xlabel="z [mm]", ylabel="y [mm]")
         artists.append({
             "ax": ax, "dose_im": dose_im, "prelesion_im": prelesion_im,
-            "events_acc": np.zeros((ny_loc, nz_loc), dtype=np.float32),
-            # log_acc_2d = Σ_shots log(1−per_pulse·k)·pulses; ≤ 0
-            # cav_dose_2d = 1 − exp(log_acc_2d)
+            # log_acc_2d = Σ_spots log(1 − per_shot_frac·k); ≤ 0
+            # cumulative kill = 1 − exp(log_acc_2d) ∈ [0, 1]
             "log_acc_2d": np.zeros((ny_loc, nz_loc), dtype=np.float32),
             "shots_drawn": 0, "progress": progress, "title": title,
             "current_marker": None, "name": name, "path": path,
         })
 
-    fig.colorbar(artists[-1]["dose_im"], ax=axes,
-                 fraction=0.018, pad=0.02, shrink=0.85,
-                 label="cumulative cavitation events (log scale)")
+    cbar = fig.colorbar(artists[-1]["dose_im"], ax=axes,
+                        fraction=0.018, pad=0.02, shrink=0.85,
+                        label="cumulative kill probability (BED)")
+    cbar.set_ticks([0.25, 0.50, 0.75, 0.90, 1.0])
+    cbar.set_ticklabels(["LD25", "LD50", "LD75", "LD90", "LD100"])
 
     # Shared legend (first panel only to avoid repetition).
     # n_gtv: use path length of any strategy — all share the same raster grid.
@@ -3257,19 +3332,18 @@ def make_strategy_comparison_animation(ct, label_vol, info, results, scenario,
                     anchor = strat_anchors[art["name"]][idx]
                     k_steer = steering_pressure_factor(
                         art["path"][idx], anchor, info["dx"], sc.f0)
-                    art["events_acc"][dst_y0:dst_y1, dst_z0:dst_z1] += \
-                        per_pulse_2d[src_y0:src_y1, src_z0:src_z1] * pulses * k_steer
-                    # Parallel log-space accumulation: exact log(1−per_pulse·k).
-                    # Pre-lesioned voxels accumulate strongly negative log_acc,
-                    # naturally de-prioritising them in the adaptive scorer.
+                    # Survival-product accumulation of the per-shot mechanical
+                    # kill — one term per spot (per_shot_frac already folds in the
+                    # per-spot pulse train), exactly as the planner builds bed_field.
                     eff_pp = np.clip(
                         per_pulse_2d[src_y0:src_y1, src_z0:src_z1] * k_steer,
                         0.0, 0.9999)
                     art["log_acc_2d"][dst_y0:dst_y1, dst_z0:dst_z1] += \
-                        np.log1p(-eff_pp) * pulses
+                        np.log1p(-eff_pp)
                 art["shots_drawn"] += 1
 
-            art["dose_im"].set_data(art["events_acc"])
+            # Cumulative kill probability 1 − Π(1 − p) ∈ [0, 1] for display.
+            art["dose_im"].set_data(1.0 - np.exp(art["log_acc_2d"]))
             changed.append(art["dose_im"])
 
             # Pre-lesion overlay: voxels with cav_dose ≥ 0.90 are lime-green.
@@ -3909,6 +3983,8 @@ def plot_lesion_imaging(ct, label_vol, info, results, scenarios, gtv, ctv=None) 
         "\nClinical conformity (whole-tumour)\n"
         f"  V90(GTV)             : {m.get('rx_v90_gtv_pct',0):5.1f} %\n"
         f"  V90(CTV)             : {m.get('rx_v90_ctv_pct',0):5.1f} %\n"
+        f"  V90(treatable CTV)   : {m.get('rx_v90_treatable_ctv_pct',0):5.1f} %"
+        f"  ({m.get('ctv_oar_overlap_pct',0):.0f}% CTV in OAR no-fly)\n"
         f"  Paddick CI           : {m.get('paddick_ci',0):5.2f}\n"
         f"  coverage / select.   : {m.get('rx_coverage',0):.2f} / {m.get('rx_selectivity',0):.2f}\n"
         f"  collateral beyond PTV: {m.get('collateral_beyond_ptv_mm3',0)/1e3:5.2f} cm3\n"
@@ -3927,6 +4003,129 @@ def plot_lesion_imaging(ct, label_vol, info, results, scenarios, gtv, ctv=None) 
     plt.close(fig)
     print(f"  saved fig21_lesion_imaging "
           f"(3-D: CNR={cnr:.2f}, contrast={contrast_db:.1f} dB, Dice3D-vs-{target_name}={dice3d:.2f})")
+    return b64
+
+
+def plot_swept_frequency_benefit(scenarios, info) -> str:
+    """Staged-sonication frequency sweep for the ms regimes (fig22).
+
+    From the kwavers-physics Rust core (kw.staged_sonication_sweep,
+    kw.cavitation_optimal_frequency): the drive frequency makes ONE slow up-and-
+    down excursion across the whole per-spot sonication, oriented to the
+    cavitation-optimal frequency at mid-sonication.
+
+      * BUILD half (stage 0 -> 1/2): the drive moves toward the cavitation-
+        optimal frequency, so cavitation activity climbs to a PEAK at mid-
+        sonication and the residual gas cloud builds.
+      * WIND-DOWN half (1/2 -> 1): the drive returns to the quiet (high-
+        threshold) frequency, tapering new cavitation, while the falling sweep
+        fragments and clears the residual bubbles so the NEXT sonication starts
+        from a clean, unshielded field.
+
+    Left column: cavitation activity (green) and the drive-frequency program
+    (blue, right axis) vs stage. Right column: residual void fraction vs stage —
+    builds, then the wind-down clears it.
+    """
+    ms_regimes = [s for s in scenarios if s.regime in ("shock_vapor", "subthreshold_cav")]
+    if not ms_regimes:
+        return ""
+    fig, axes = plt.subplots(len(ms_regimes), 2, figsize=(12.0, 4.3 * len(ms_regimes)),
+                             squeeze=False)
+    fig.suptitle("Staged-sonication frequency sweep for ms regimes "
+                 "(cavitation up to a peak, then down — all curves from the Rust core)",
+                 fontsize=12, fontweight="bold")
+    amp = 0.15e6   # sub-saturation (cloud-periphery) amplitude where activity is selective
+    summary = []
+    for row, sc in enumerate(ms_regimes):
+        f0 = sc.f0
+        band = (0.45 * f0, 1.30 * f0)
+        # Cavitation-optimal turn frequency, and the quiet (least-cavitation) edge.
+        f_peak, _frac = kw.cavitation_optimal_frequency(
+            3.3e-6, 1.7, band[0], band[1], amp, sc.pulse_on_s, n_scan=11, n_size_samples=18)
+        lo_frac = kw.cavitation_optimal_frequency(
+            3.3e-6, 1.7, band[0], band[0] + 1.0, amp, sc.pulse_on_s, n_scan=2, n_size_samples=18)[1]
+        hi_frac = kw.cavitation_optimal_frequency(
+            3.3e-6, 1.7, band[1] - 1.0, band[1], amp, sc.pulse_on_s, n_scan=2, n_size_samples=18)[1]
+        f_quiet = band[1] if hi_frac <= lo_frac else band[0]
+
+        n_pulses = max(int(sc.pulses_per_point), 8)
+        st, fr, act, res, peak_stage, res_peak, res_end = kw.staged_sonication_sweep(
+            3.3e-6, 1.7, f_quiet, f_peak, amp, sc.pulse_on_s, n_pulses, sc.prf,
+            void_deposit_per_activity=0.02, residual_radius_m=6e-6,
+            clearing_fragment_count=8.0, saturation_fraction=0.7, n_size_samples=18)
+        st = np.asarray(st); fr = np.asarray(fr); act = np.asarray(act); res = np.asarray(res)
+        clr = res_peak / max(res_end, 1e-12)
+        clr_lbl = ">1000x (near-complete)" if clr > 1000.0 else f"{clr:.1f}x"
+
+        # ── Residual-shielding feedback into DELIVERED pressure ──────────────
+        # A residual gas void layer at the focus drops the Wood sound speed (the
+        # gas compliance term dominates the mixture even at β ~ 1e-4), lowering the
+        # acoustic impedance and hence the pressure TRANSMITTED to the focus on the
+        # next pulse — the cavitation-memory shielding. T(β) = 2·Z_wood/(Z_tissue +
+        # Z_wood) is the delivered-pressure factor; the clearing sweep removes the
+        # residual (β: peak → end), restoring delivery toward 1.0.
+        c_t, rho_t, c_g, rho_g = 1540.0, 1050.0, 343.0, 1.2
+        z_tissue = rho_t * c_t
+
+        def _delivered_pressure_factor(beta):
+            beta = float(max(beta, 0.0))
+            if beta <= 0.0:
+                return 1.0
+            c_w = kw.wood_sound_speed(beta, c_t, rho_t, c_g, rho_g)
+            z_w = ((1.0 - beta) * rho_t + beta * rho_g) * c_w
+            return float(kw.pressure_transmission_coefficient(z_tissue, z_w))
+
+        t_shielded = _delivered_pressure_factor(res_peak)   # residual NOT cleared
+        t_cleared = _delivered_pressure_factor(res_end)     # cleared by wind-down sweep
+        summary.append((sc.label, peak_stage, clr_lbl, t_shielded, t_cleared))
+
+        # Left: cavitation activity (build->peak->down) + frequency program.
+        axL = axes[row][0]
+        axL.axvspan(0, 0.5, color="#d04020", alpha=0.05)
+        axL.axvspan(0.5, 1, color="#208040", alpha=0.05)
+        axL.plot(st, act, color="#208040", lw=2.4, label="cavitation activity")
+        axL.axvline(peak_stage, color="#d04020", lw=1.0, ls="--",
+                    label=f"peak @ stage {peak_stage:.2f}")
+        axL.set_xlim(0, 1); axL.set_ylim(0, max(act.max() * 1.2, 0.05))
+        axL.set_xlabel("stage of sonication"); axL.set_ylabel("cavitation activity (engaged fraction)")
+        axL.set_title(f"{sc.label}\ncavitation: increase to peak, then decrease", fontsize=9)
+        axLf = axL.twinx()
+        axLf.plot(st, fr / 1e6, color="#3070b0", lw=1.4, ls=":")
+        axLf.set_ylabel("drive frequency  [MHz]", color="#3070b0")
+        axLf.tick_params(axis="y", labelcolor="#3070b0")
+        axL.text(0.25, axL.get_ylim()[1] * 0.06, "BUILD", ha="center", fontsize=8, color="#a03020")
+        axL.text(0.75, axL.get_ylim()[1] * 0.06, "WIND-DOWN", ha="center", fontsize=8,
+                 color="#206030")
+        axL.legend(loc="upper right", fontsize=7.5)
+
+        # Right: residual void fraction builds then is cleared by the wind-down.
+        axR = axes[row][1]
+        axR.axvspan(0, 0.5, color="#d04020", alpha=0.05)
+        axR.axvspan(0.5, 1, color="#208040", alpha=0.05)
+        axR.plot(st, res, color="#b05020", lw=2.4)
+        axR.axvline(peak_stage, color="#d04020", lw=1.0, ls="--")
+        axR.set_xlim(0, 1); axR.set_ylim(0, max(res_peak * 1.25, 1e-4))
+        axR.set_xlabel("stage of sonication"); axR.set_ylabel("residual void fraction (shielding)")
+        axR.set_title(f"residual built then cleared in wind-down: peak->end {clr_lbl}\n"
+                      f"(PRF {sc.prf:.0f} Hz, {n_pulses} pulses/spot)", fontsize=9)
+        # Delivered-pressure feedback: the residual void shields the focus (Wood
+        # impedance drop). Show how much pressure is delivered with the residual
+        # present (shielded) vs cleared by the wind-down sweep.
+        axR.text(0.04, 0.96,
+                 f"delivered pressure (Wood shielding):\n"
+                 f"  residual present: {100*t_shielded:.0f}% of incident\n"
+                 f"  cleared by sweep: {100*t_cleared:.0f}% of incident",
+                 transform=axR.transAxes, fontsize=7.5, va="top",
+                 bbox=dict(boxstyle="round", fc="#f5f5f5", ec="#999999", alpha=0.85))
+
+    fig.tight_layout(rect=[0, 0, 1, 0.95])
+    b64 = save_fig(fig, "fig22_swept_frequency_benefit")
+    plt.close(fig)
+    for lbl, peak_stage, clr_lbl, t_sh, t_cl in summary:
+        print(f"  swept-freq [{lbl}]: cavitation peak @ stage {peak_stage:.2f}, "
+              f"wind-down residual clearance {clr_lbl}; "
+              f"delivered pressure {100*t_sh:.0f}% (shielded) -> {100*t_cl:.0f}% (cleared)")
+    print("  saved fig22_swept_frequency_benefit")
     return b64
 
 
@@ -4075,11 +4274,15 @@ def main():
         # Conformity / plan-quality (whole-tumour, 3-D).
         print(f"    conformity: V{int(RX_KILL*100)}(GTV)={m['rx_v90_gtv_pct']:.0f}%  "
               f"V{int(RX_KILL*100)}(CTV)={m.get('rx_v90_ctv_pct',0):.0f}%  "
+              f"V{int(RX_KILL*100)}(treatable CTV)={m.get('rx_v90_treatable_ctv_pct',0):.0f}%"
+              f" [{m.get('ctv_oar_overlap_pct',0):.0f}% CTV in OAR no-fly]  "
               f"Paddick CI={m.get('paddick_ci',0):.2f} "
               f"(cov={m.get('rx_coverage',0):.2f}, sel={m.get('rx_selectivity',0):.2f})  "
               f"collateral={m.get('collateral_beyond_ptv_mm3',0)/1e3:.2f} cm3 beyond PTV  "
               f"OAR-excluded={m.get('n_oar_excluded_centres',0)}  "
               f"feathered(short-pulse)={m.get('n_feathered_spots',0)}")
+        if m.get("coverage_note"):
+            print(f"    coverage: {m['coverage_note']}")
         # Clinical prescription verdict.
         if m.get("plan_accept"):
             print(f"    PLAN: ACCEPT  (V{int(RX_KILL*100)}(CTV)={m.get('rx_v90_ctv_pct',0):.0f}%, "
@@ -4093,9 +4296,16 @@ def main():
             k_mech = m.get(f"oar_{spec.name}_kill_mech_max", 0.0)
             k_therm = m.get(f"oar_{spec.name}_kill_therm_max", 0.0)
             if v_abl > 0.001 or k_mech > 0.05 or k_therm > 0.05:
+                extra = ""
+                if not spec.is_absolute:
+                    extra = (f"  peak_kill={m.get(f'oar_{spec.name}_kill_max',0):.2f} "
+                             f"(beyond-PTV {m.get(f'oar_{spec.name}_kill_max_beyond_ptv',0):.2f})")
                 print(f"    OAR {spec.name}: ablative V={100*v_abl:.1f}%  "
-                      f"mech_kill={k_mech:.2f}  therm_kill={k_therm:.2f} "
+                      f"mech_kill={k_mech:.2f}  therm_kill={k_therm:.2f}{extra} "
                       f"{'[ABSOLUTE]' if spec.is_absolute else '[flagged]'}")
+                note = m.get(f"oar_{spec.name}_note")
+                if note:
+                    print(f"      -> {spec.name}: {note}")
 
     # Render figures + capture base64 for embedding
     b64_place = plot_transducer_placement_3d(label_vol, info)
@@ -4111,6 +4321,7 @@ def main():
     b64_mon = plot_cavitation_monitor_fig(sized_scenarios)
     b64_puls = plot_raster_pulsing_fig(sized_scenarios)
     b64_lesimg = plot_lesion_imaging(ct, label_vol, info, results, sized_scenarios, gtv, ctv=ctv)
+    b64_swept = plot_swept_frequency_benefit(sized_scenarios, info)
     b64_anim = make_sonication_animation(ct, label_vol, info, results, sized_scenarios,
                                          gtv, ctv, ptv, oar_masks=oar_masks)
     # Strategy-comparison animation: pick the shock-vapor scenario
@@ -4561,6 +4772,25 @@ def main():
             "interventional-ultrasound appearance of the ablation.\n\n"
         )
         f.write(f"![Lesion imaging](data:image/png;base64,{b64_lesimg})\n\n")
+        if b64_swept:
+            f.write("### Figure 21.22b — Staged-sonication frequency sweep (ms regimes)\n\n")
+            f.write(
+                "The drive frequency makes one slow up-and-down excursion across "
+                "the whole per-spot sonication, oriented to the cavitation-"
+                "optimal frequency at mid-sonication (all curves from the "
+                "kwavers-physics core). **Build half** (stage 0→½): the drive "
+                "moves toward the cavitation-optimal frequency, so cavitation "
+                "activity (left, green) climbs to a **peak** at mid-sonication "
+                "and the residual gas cloud (right) builds. **Wind-down half** "
+                "(½→1): the drive returns to the quiet, high-threshold frequency "
+                "(left, blue, right axis), tapering new cavitation while the "
+                "falling sweep fragments and clears the residual bubbles — so the "
+                "**next** sonication starts from a clean, unshielded field. This "
+                "is the 'increase cavitation to a peak, then decrease to protect "
+                "the next sonication' program, scaled to one excursion per "
+                "sonication.\n\n"
+            )
+            f.write(f"![Swept-frequency benefit](data:image/png;base64,{b64_swept})\n\n")
         f.write("### Figure 21.23 — Sonication animation (real-time, synchronised)\n\n")
         f.write(
             "Animated GIF of the raster scan progressing in **real treatment "

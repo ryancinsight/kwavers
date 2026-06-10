@@ -5,10 +5,6 @@ use burn::tensor::backend::AutodiffBackend;
 use kwavers_core::constants::fundamental::{VACUUM_PERMEABILITY, VACUUM_PERMITTIVITY};
 use kwavers_core::error::{KwaversError, KwaversResult};
 
-/// GPU acceleration flag for electromagnetic simulations
-#[cfg(feature = "gpu")]
-use crate::inverse::pinn::ml::electromagnetic_gpu::EMConfig;
-
 /// Electromagnetic physics domain implementation
 #[derive(Debug)]
 pub struct ElectromagneticDomain<B: AutodiffBackend> {
@@ -28,9 +24,6 @@ pub struct ElectromagneticDomain<B: AutodiffBackend> {
     pub boundary_specs: Vec<ElectromagneticBoundarySpec>,
     /// Domain dimensions [Lx, Ly]
     pub domain_size: Vec<f64>,
-    /// GPU acceleration configuration (optional)
-    #[cfg(feature = "gpu")]
-    pub gpu_config: Option<EMConfig>,
     /// Backend marker
     pub(crate) _backend: std::marker::PhantomData<B>,
 }
@@ -50,8 +43,6 @@ impl<B: AutodiffBackend> Default for ElectromagneticDomain<B> {
             current_sources: Vec::new(),
             boundary_specs: Vec::new(),
             domain_size: vec![1.0, 1.0],
-            #[cfg(feature = "gpu")]
-            gpu_config: None,
             _backend: std::marker::PhantomData,
         }
     }
@@ -77,8 +68,6 @@ impl<B: AutodiffBackend> ElectromagneticDomain<B> {
             current_sources: Vec::new(),
             boundary_specs: Vec::new(),
             domain_size,
-            #[cfg(feature = "gpu")]
-            gpu_config: None,
             _backend: std::marker::PhantomData,
         }
     }
@@ -109,16 +98,6 @@ impl<B: AutodiffBackend> ElectromagneticDomain<B> {
     ///
     pub fn with_problem_type(mut self, problem_type: EMProblemType) -> Self {
         self.problem_type = problem_type;
-        self
-    }
-
-    /// Enable GPU acceleration for electromagnetic simulations
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
-    #[cfg(feature = "gpu")]
-    pub fn with_gpu_acceleration(mut self, gpu_config: EMConfig) -> Self {
-        self.gpu_config = Some(gpu_config);
         self
     }
 

@@ -3,6 +3,14 @@
 use super::super::definition::ElasticWaveSolver;
 use ndarray::{Array2, ArrayView2};
 
+/// Per-component recorded sensor traces `(x, y, z)`, each `Some` when the
+/// corresponding component buffer was allocated; shape `(n_sensors, steps)`.
+type VelocityComponentTraces = (
+    Option<Array2<f64>>,
+    Option<Array2<f64>>,
+    Option<Array2<f64>>,
+);
+
 impl ElasticWaveSolver {
     pub fn extract_recorded_data(&self) -> Option<Array2<f64>> {
         self.sensor_recorder.extract_pressure_data()
@@ -49,13 +57,7 @@ impl ElasticWaveSolver {
     /// this output produces acceleration, not velocity, and inflates
     /// peak-amplitude ratios by a factor of order `1/dt` (~10⁷ at
     /// dt = 4 × 10⁻⁸ s).
-    pub fn extract_recorded_velocity_components(
-        &self,
-    ) -> (
-        Option<Array2<f64>>,
-        Option<Array2<f64>>,
-        Option<Array2<f64>>,
-    ) {
+    pub fn extract_recorded_velocity_components(&self) -> VelocityComponentTraces {
         (
             self.sensor_recorder.extract_ux_data(),
             self.sensor_recorder.extract_uy_data(),
@@ -74,13 +76,7 @@ impl ElasticWaveSolver {
         note = "Use extract_recorded_velocity_components — this method returns \
                 particle velocity (m/s), not displacement."
     )]
-    pub fn extract_recorded_displacement_components(
-        &self,
-    ) -> (
-        Option<Array2<f64>>,
-        Option<Array2<f64>>,
-        Option<Array2<f64>>,
-    ) {
+    pub fn extract_recorded_displacement_components(&self) -> VelocityComponentTraces {
         self.extract_recorded_velocity_components()
     }
 

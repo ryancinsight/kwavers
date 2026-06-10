@@ -1,6 +1,6 @@
 # Chapter 22 — Passive Acoustic Mapping
 
-> **Prerequisite:** Chapter 5 (Cavitation and Bubble Dynamics), Chapter 16
+> **Prerequisite:** Chapter 5 (Cavitation and Bubble Dynamics), Chapter 15
 > (Transcranial Ultrasound), Chapter 21 (Simulation Orchestration).
 > Familiarity with array signal processing and the van Cittert–Zernike theorem
 > is assumed.
@@ -48,6 +48,14 @@ Discrimination relies on the ratio of sub-harmonic/ultra-harmonic energy to
 wideband emission energy — the *cavitation dose* metric of Gyöngy & Coussios
 (2010).
 
+![Stable vs inertial cavitation emission spectra.](figures/ch23/fig01_cavitation_spectra.png)
+
+*Figure 22.1. Emission spectra (Definition 22.1): stable cavitation shows discrete harmonics + sub-/ultra-harmonics; inertial cavitation adds a 15–25 dB broadband floor.*
+
+![Cavitation dose accumulation: stable vs inertial.](figures/ch23/fig06_cavitation_dose_accumulation.png)
+
+*Figure 22.2. Cumulative cavitation dose (§22.2): the harmonic/broadband energy ratio separates the controlled-BBB (SC) regime from the haemorrhage-risk (IC) regime.*
+
 ---
 
 ## 22.3 Delay-and-sum passive beamformer
@@ -79,10 +87,18 @@ The DAS beamformer is signal-subspace blind: it uses no prior knowledge of the
 noise rank and suffers from grating-lobe artefacts when element spacing exceeds
 $\lambda/2$.
 
+![Passive DAS sensitivity map vs focal depth.](figures/ch23/fig02_das_sensitivity_map.png)
+
+*Figure 22.3. DAS point-spread sensitivity (Theorem 22.1): the −6 dB lateral width $\delta_\perp \approx \lambda z/D$ broadens with depth $z$.*
+
+![Van Cittert–Zernike spatial coherence across the aperture.](figures/ch23/fig03_vcz_coherence.png)
+
+*Figure 22.4. Van Cittert–Zernike coherence (§22.1): the spatial coherence of the emitted field across the receive aperture sets the achievable PAM resolution.*
+
 ### kwavers implementation boundary
 
 The authoritative production implementation is
-`kwavers::analysis::signal_processing::pam::DelayAndSumPAM`.  The PyO3 function
+`kwavers_analysis::signal_processing::pam::DelayAndSumPAM`.  The PyO3 function
 `pykwavers.passive_acoustic_map_das(passive_data, sensor_positions, grid_points,
 sound_speed, sampling_frequency, ...)` borrows NumPy arrays as read-only views
 and delegates shape, finite-value, and sensor-count validation to that Rust
@@ -144,6 +160,10 @@ $$
 where $\mathbf{a}(\mathbf{r}_f) = [e^{j\phi_1}, \ldots, e^{j\phi_N}]^T$ is
 the steering vector to the candidate focus.
 
+![Eigenspace SVD: signal vs noise singular values.](figures/ch23/fig04_eigenspace_svd.png)
+
+*Figure 22.5. Cross-spectral-matrix singular values (Theorem 22.2): the $K$ source eigenvalues ($\sigma_s^2+\sigma_n^2$) separate from the $N-K$ noise eigenvalues ($\sigma_n^2$), defining the signal-subspace projector $\mathbf{P}_S$.*
+
 ---
 
 ## 22.5 Transcranial SNR budget
@@ -169,6 +189,10 @@ where $\sigma_\phi$ is the RMS wavefront phase error across the aperture due
 to skull heterogeneity.  For typical adult skulls $\sigma_\phi \sim 1\;\text{rad}$
 at 1 MHz, giving $\text{CF}_\phi \approx -4.3\;\text{dB}$.
 
+![Transcranial PAM SNR budget: skull attenuation + phase-aberration coherence loss.](figures/ch23/fig05_transcranial_snr_budget.png)
+
+*Figure 22.6. Transcranial SNR budget (§22.5): two-way skull insertion loss $2\,\text{IL}(f)\propto f^{1.2}$ and the Maréchal coherence loss combine to an optimal PAM band of ≈0.5–1.0 MHz (Corollary 22.1).*
+
 > **Corollary 22.1 (Optimal PAM frequency).**
 > *The PAM SNR is maximised at the frequency where the total loss
 > $2\,\text{IL}(f) + |\text{CF}_\phi(f)|$ is minimised relative to the
@@ -183,9 +207,13 @@ The forward simulation propagates broadband cavitation emissions through a
 skull-heterogeneous medium and captures them at a hemispherical receive array.
 
 ```rust
-use kwavers::plugin::*;
-use kwavers::{Grid, AcousticSolver, BoundaryType, PhysicsModelType,
-              PhysicsModelConfig, PhysicsConfig, PhysicsCatalog};
+use kwavers_solver::plugin::{PhysicsCatalog, PluginManager};
+use kwavers_physics::factory::{
+    PhysicsConfig, PhysicsModelConfig,
+    models::{PhysicsModelType, AcousticSolver, PhysicsBoundaryCondition},
+};
+use kwavers_grid::Grid;
+use kwavers_medium::HeterogeneousMedium;
 
 // 1. Grid: 128 mm × 128 mm × 128 mm at 0.5 mm resolution
 let grid = Grid::new(256, 256, 256, 0.5e-3, 0.5e-3, 0.5e-3)?;
@@ -195,42 +223,42 @@ let mut config = PhysicsConfig::new();
 config.models.push(PhysicsModelConfig {
     model_type: PhysicsModelType::LinearAcoustics {
         solver_type: AcousticSolver::PSTD { spectral_accuracy: true },
-        boundary_conditions: BoundaryType::Absorbing { pml_layers: 12 },
+        boundary_conditions: PhysicsBoundaryCondition::Absorbing { pml_layers: 12 },
     },
     enabled: true,
     parameters: Default::default(),
 });
 
-// 3. Medium: CT-derived heterogeneous skull
-let skull_medium = HeterogeneousMedium::from_ct_scan(&ct_volume, &hu_to_acoustic_map)?;
+// 3. Medium: CT-derived heterogeneous skull. There is no single from_ct_scan
+//    constructor — load the HU volume and apply the per-voxel acoustic maps
+//    (Chapter 15 §15.5): kwavers_imaging::medical::ct_loader::CTImageLoader::load,
+//    then CTImageLoader::{hu_to_sound_speed, hu_to_density} → HeterogeneousMedium.
+let skull_medium: HeterogeneousMedium = build_skull_medium_from_ct(&ct_path)?;
 
 // 4. Build and run
 let manager = PhysicsCatalog::build(&config, &grid, &skull_medium, dt)?;
 ```
 
 Post-processing applies eigenspace PAM beamforming on the hemispherical
-receive aperture — see `analysis::beamforming::passive_acoustic_mapping`.
+receive aperture — `kwavers_analysis::signal_processing::pam` with
+`PamBeamformingMethod::EigenspaceMinVariance` (the DAS path is `DelayAndSumPAM`).
 
 ---
 
-## 22.7 Figure sources
+## 22.7 Figure index
 
-Run the companion script to generate all figures:
+The figures embedded inline above are generated by
+`pykwavers/examples/book/ch23_passive_acoustic_mapping.py` into
+`docs/book/figures/ch23/` (PDF + PNG):
 
-```bash
-python pykwavers/examples/book/ch23_passive_acoustic_mapping.py
-```
-
-Outputs are written to `docs/book/figures/ch23/` (PDF and PNG).
-
-| Figure | Content |
-|--------|---------|
-| fig01  | Stable vs inertial cavitation emission spectra |
-| fig02  | Passive DAS sensitivity map vs focal depth |
-| fig03  | Van Cittert–Zernike spatial coherence |
-| fig04  | Eigenspace SVD: signal vs noise singular values |
-| fig05  | Transcranial SNR budget (attenuation + phase aberration) |
-| fig06  | Cavitation dose accumulation — SC vs IC |
+| Figure | Content | Section | File |
+|--------|---------|---------|------|
+| 22.1 | Stable vs inertial cavitation emission spectra | §22.2 | `fig01_cavitation_spectra` |
+| 22.2 | Cavitation dose accumulation — SC vs IC | §22.2 | `fig06_cavitation_dose_accumulation` |
+| 22.3 | Passive DAS sensitivity map vs focal depth | §22.3 | `fig02_das_sensitivity_map` |
+| 22.4 | Van Cittert–Zernike spatial coherence | §22.3 | `fig03_vcz_coherence` |
+| 22.5 | Eigenspace SVD: signal vs noise singular values | §22.4 | `fig04_eigenspace_svd` |
+| 22.6 | Transcranial SNR budget (attenuation + phase aberration) | §22.5 | `fig05_transcranial_snr_budget` |
 
 ---
 

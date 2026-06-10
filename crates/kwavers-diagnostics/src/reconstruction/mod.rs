@@ -5,6 +5,8 @@
 //! with streaming data support and quality monitoring.
 
 pub mod acoustic_projection;
+pub mod bent_ray;
+pub mod bent_ray_tomography;
 pub mod breast_ust_fwi;
 pub mod clinical_monitoring;
 pub mod radon;
@@ -13,6 +15,11 @@ pub mod sound_speed_shift;
 pub mod transcranial_ust;
 
 pub use acoustic_projection::AcousticProjectionGeometry;
+pub use bent_ray::{bent_ray_path, bent_ray_traveltime, BentRay};
+pub use bent_ray_tomography::{
+    reconstruct_bent_ray_tomography, rms_misfit, BentRayTomographyConfig, BentRayTomographyResult,
+    TraveltimeDatum,
+};
 pub use breast_ust_fwi::{
     generate_breast_ust_pstd_frequency_dataset, load_ali_2025_breast_phantom_from_hdf5,
     load_ali_2025_breast_phantom_from_hdf5_with_config, reconstruct_breast_ust_sound_speed_volume,

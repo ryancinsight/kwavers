@@ -1,5 +1,8 @@
 //! Interface conditions between regions in multi-region PINN domains.
 
+/// User-defined interface condition: `f(x, y, (u₁, ∂u₁/∂n), (u₂, ∂u₂/∂n)) -> residual`.
+type InterfaceConditionFn = Box<dyn Fn(f64, f64, (f64, f64), (f64, f64)) -> f64 + Send + Sync>;
+
 /// Interface conditions between regions in multi-region domains.
 pub enum BurnWave2dInterfaceCondition {
     /// Continuity of solution and normal derivative (u and ∂u/∂n continuous).
@@ -16,7 +19,7 @@ pub enum BurnWave2dInterfaceCondition {
     /// Custom interface condition with user-defined function.
     Custom {
         /// Boundary condition function.
-        condition: Box<dyn Fn(f64, f64, (f64, f64), (f64, f64)) -> f64 + Send + Sync>,
+        condition: InterfaceConditionFn,
     },
 }
 

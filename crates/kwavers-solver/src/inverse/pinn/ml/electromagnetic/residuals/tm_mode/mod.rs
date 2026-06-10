@@ -105,6 +105,9 @@ pub fn tm_mode_faraday_y_residual<B: AutodiffBackend>(
 ///
 /// # References
 /// - Jackson (1999) §6.3; Taflove & Hagness (2005) §3.4; Raissi et al. (2019).
+// Independent per-component models, field tensors, and parameters with no
+// cohesive sub-grouping; bundling would not clarify the call site.
+#[allow(clippy::too_many_arguments)]
 pub fn tm_mode_ampere_z_residual<B: AutodiffBackend>(
     model_ez: &BurnPINN2DWave<B>,
     model_hx: &BurnPINN2DWave<B>,

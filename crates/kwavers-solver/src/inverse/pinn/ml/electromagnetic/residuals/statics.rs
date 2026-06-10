@@ -206,6 +206,9 @@ pub fn magnetostatic_residual<B: AutodiffBackend>(
 }
 
 /// Compute quasi-static residual
+// Independent field tensors and physical parameters with no cohesive
+// sub-grouping; bundling would not clarify the call site.
+#[allow(clippy::too_many_arguments)]
 pub fn quasi_static_residual<B: AutodiffBackend>(
     model: &BurnPINN2DWave<B>,
     x: &Tensor<B, 2>,

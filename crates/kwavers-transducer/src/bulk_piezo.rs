@@ -151,7 +151,11 @@ mod tests {
         assert!(f_s < f_p, "f_s {f_s} must be below f_p {f_p}");
         // recompute kt² from the recovered (f_s, f_p) → matches the configured value
         let kt2 = BulkPiezoResonator::coupling_from_frequencies(f_s, f_p);
-        assert!((kt2 - p.coupling_kt2).abs() < 1e-4, "round-trip kt² {kt2} vs {}", p.coupling_kt2);
+        assert!(
+            (kt2 - p.coupling_kt2).abs() < 1e-4,
+            "round-trip kt² {kt2} vs {}",
+            p.coupling_kt2
+        );
     }
 
     #[test]

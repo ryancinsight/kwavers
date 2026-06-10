@@ -17,12 +17,12 @@ All geometry is computed by `kwavers` in Rust through the PyO3 wrappers
 `plan_transcranial_focused_bowl_placement_from_ritk_ct`.  RITK owns NIfTI/DICOM ingestion.
 Python owns only figure rendering.  Simulated pressure exposures and
 reconstructions use the same `run_theranostic_inverse_from_ritk` pipeline as
-Chapter 29, with CT-derived heterogeneous media and the same-aperture
+Chapter 28, with CT-derived heterogeneous media and the same-aperture
 finite-frequency Born inverse.
 
 The chapter does not model proprietary device geometry.  The bowl
-parameters match published research system specifications.  See Chapter 29 for
-the mathematical contract of the inversion and Chapter 14 for transcranial skull
+parameters match published research system specifications.  See Chapter 28 for
+the mathematical contract of the inversion and Chapter 15 for transcranial skull
 aberration correction.
 
 ## Mathematical Foundation
@@ -284,10 +284,10 @@ summary = run_tfuscapes_skull_adaptive_benchmark(
 The Rust implementation lives in two modules:
 
 ```text
-kwavers::clinical::therapy::theranostic_guidance::abdominal3d
+kwavers_therapy::therapy::theranostic_guidance::abdominal3d
   └─ plan_abdominal_array_placement(ct_hu, label, spacing_mm, ...) → AbdominalArrayPlacement3D
 
-kwavers::clinical::therapy::theranostic_guidance::transcranial_focused_bowl3d
+kwavers_therapy::therapy::theranostic_guidance::transcranial_focused_bowl3d
   └─ plan_transcranial_focused_bowl_placement(ct_hu, spacing_mm, ...) → TranscranialFocusedBowlPlacement3D
 ```
 
@@ -346,7 +346,7 @@ the bowl on the posterior/lateral flank for retroperitoneal kidneys.
 
 1024-element focused-bowl cap around the calvarium using the same CT-aligned
 `CANONICAL_BRAIN_SCENE` target and 0.150 m bowl radius used by Chapter 24 and
-Chapter 29 brain outputs. Elevated oblique view (left) shows elements wrap over
+Chapter 28 brain outputs. Elevated oblique view (left) shows elements wrap over
 the top of the skull, not the neck. Top-down view (right) confirms circular
 aperture centred on the vertex. Yellow points are CT-derived skull entry
 locations.
@@ -370,7 +370,7 @@ and fused) across the three anatomies.
 ## Validation
 
 The geometry contract is validated by three property tests in
-`kwavers/src/clinical/therapy/theranostic_guidance/abdominal3d.rs`:
+`crates/kwavers-therapy/src/therapy/theranostic_guidance/abdominal3d/tests.rs`:
 
 1. `placement_returns_skin_point_outside_body`: skin contact radius matches the
    body sphere radius to within one voxel.
@@ -379,7 +379,7 @@ The geometry contract is validated by three property tests in
 3. `all_elements_on_sphere_of_correct_radius`: every element satisfies
    `|P − F| = R` to machine precision (< 10⁻¹⁰ m).
 
-The brain focused-bowl property tests reside in `transcranial_focused_bowl3d.rs` (Chapter 29).
+The brain focused-bowl property tests reside in `transcranial_focused_bowl3d.rs` (Chapter 28).
 
 ## References
 

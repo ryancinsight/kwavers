@@ -53,6 +53,8 @@ impl GpuPstdSolver {
     }
 
     /// Encode a 2-D workgroup dispatch (used by FFT to handle lane counts > 65535).
+    // Args are independent wgpu handles and scalar dispatch dimensions with no cohesive grouping.
+    #[allow(clippy::too_many_arguments)]
     pub(super) fn dispatch_2d(
         &self,
         cpass: &mut wgpu::ComputePass<'_>,
@@ -75,6 +77,8 @@ impl GpuPstdSolver {
     ///
     /// `n_batches` FFT lanes are dispatched across a 2-D workgroup grid to
     /// respect the hardware 65535-per-dimension limit.
+    // Args are independent wgpu handles and scalar FFT-lane parameters with no cohesive grouping.
+    #[allow(clippy::too_many_arguments)]
     #[inline]
     fn dispatch_fft_lane(
         &self,

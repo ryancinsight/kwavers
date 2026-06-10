@@ -1534,17 +1534,16 @@ checksum = "245097e9a4535ee1e3e3931fcfcd55a796a44c643e8596ff6566d68f09b87bbc"
 [[package]]
 name = "consus-compression"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/consus#a9ac02ac205a91bc2c29b364ea014303f38c7cb7"
+source = "git+https://github.com/ryancinsight/consus#8293fb48c8c5e61e3ea9144557b58db93e716b8f"
 dependencies = [
  "byteorder",
  "consus-core",
- "flate2",
 ]
 
 [[package]]
 name = "consus-core"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/consus#a9ac02ac205a91bc2c29b364ea014303f38c7cb7"
+source = "git+https://github.com/ryancinsight/consus#8293fb48c8c5e61e3ea9144557b58db93e716b8f"
 dependencies = [
  "byteorder",
  "smallvec",
@@ -1554,7 +1553,7 @@ dependencies = [
 [[package]]
 name = "consus-hdf5"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/consus#a9ac02ac205a91bc2c29b364ea014303f38c7cb7"
+source = "git+https://github.com/ryancinsight/consus#8293fb48c8c5e61e3ea9144557b58db93e716b8f"
 dependencies = [
  "byteorder",
  "consus-compression",
@@ -1565,7 +1564,7 @@ dependencies = [
 [[package]]
 name = "consus-io"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/consus#a9ac02ac205a91bc2c29b364ea014303f38c7cb7"
+source = "git+https://github.com/ryancinsight/consus#8293fb48c8c5e61e3ea9144557b58db93e716b8f"
 dependencies = [
  "consus-core",
 ]
@@ -5661,6 +5660,97 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4a0b3262dc837d2513fe2ef31ff8461352ef932dcca31ba0c0abe33547cf6b9b"
 
 [[package]]
+name = "moirai"
+version = "0.2.0"
+source = "git+https://github.com/ryancinsight/Moirai.git#0b1258bbe0fa0d189ea0bfd5528bb01a5c14bb16"
+dependencies = [
+ "moirai-core",
+ "moirai-executor",
+ "moirai-parallel",
+ "moirai-scheduler",
+ "moirai-sync",
+ "moirai-transport",
+ "moirai-utils",
+]
+
+[[package]]
+name = "moirai-core"
+version = "0.2.0"
+source = "git+https://github.com/ryancinsight/Moirai.git#0b1258bbe0fa0d189ea0bfd5528bb01a5c14bb16"
+dependencies = [
+ "libc",
+ "moirai-utils",
+]
+
+[[package]]
+name = "moirai-executor"
+version = "0.2.0"
+source = "git+https://github.com/ryancinsight/Moirai.git#0b1258bbe0fa0d189ea0bfd5528bb01a5c14bb16"
+dependencies = [
+ "moirai-core",
+ "moirai-pal",
+ "moirai-scheduler",
+ "moirai-utils",
+]
+
+[[package]]
+name = "moirai-pal"
+version = "0.2.0"
+source = "git+https://github.com/ryancinsight/Moirai.git#0b1258bbe0fa0d189ea0bfd5528bb01a5c14bb16"
+dependencies = [
+ "js-sys",
+ "libc",
+ "moirai-core",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
+ "windows 0.58.0",
+]
+
+[[package]]
+name = "moirai-parallel"
+version = "0.2.0"
+source = "git+https://github.com/ryancinsight/Moirai.git#0b1258bbe0fa0d189ea0bfd5528bb01a5c14bb16"
+dependencies = [
+ "moirai-executor",
+]
+
+[[package]]
+name = "moirai-scheduler"
+version = "0.2.0"
+source = "git+https://github.com/ryancinsight/Moirai.git#0b1258bbe0fa0d189ea0bfd5528bb01a5c14bb16"
+dependencies = [
+ "moirai-core",
+ "moirai-utils",
+ "num_cpus",
+]
+
+[[package]]
+name = "moirai-sync"
+version = "0.2.0"
+source = "git+https://github.com/ryancinsight/Moirai.git#0b1258bbe0fa0d189ea0bfd5528bb01a5c14bb16"
+dependencies = [
+ "libc",
+ "moirai-core",
+ "moirai-utils",
+]
+
+[[package]]
+name = "moirai-transport"
+version = "0.2.0"
+source = "git+https://github.com/ryancinsight/Moirai.git#0b1258bbe0fa0d189ea0bfd5528bb01a5c14bb16"
+dependencies = [
+ "moirai-core",
+ "moirai-scheduler",
+ "moirai-utils",
+]
+
+[[package]]
+name = "moirai-utils"
+version = "0.2.0"
+source = "git+https://github.com/ryancinsight/Moirai.git#0b1258bbe0fa0d189ea0bfd5528bb01a5c14bb16"
+
+[[package]]
 name = "moxcms"
 version = "0.7.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7390,7 +7480,7 @@ dependencies = [
 [[package]]
 name = "ritk-analyze"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/ritk#1489d71672e7a21467fabe8f873ecdd3e4917254"
+source = "git+https://github.com/ryancinsight/ritk#037907f02c90f0b3eb65ebb587ef574daa0656aa"
 dependencies = [
  "anyhow",
  "burn",
@@ -7401,7 +7491,7 @@ dependencies = [
 [[package]]
 name = "ritk-codecs"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/ritk#1489d71672e7a21467fabe8f873ecdd3e4917254"
+source = "git+https://github.com/ryancinsight/ritk#037907f02c90f0b3eb65ebb587ef574daa0656aa"
 dependencies = [
  "anyhow",
  "charls",
@@ -7413,29 +7503,27 @@ dependencies = [
 
 [[package]]
 name = "ritk-core"
-version = "0.1.0"
-source = "git+https://github.com/ryancinsight/ritk#1489d71672e7a21467fabe8f873ecdd3e4917254"
+version = "0.6.0"
+source = "git+https://github.com/ryancinsight/ritk#037907f02c90f0b3eb65ebb587ef574daa0656aa"
 dependencies = [
  "anyhow",
  "burn",
- "bytemuck",
  "gaia",
+ "moirai",
  "nalgebra 0.33.3",
  "rand 0.9.2",
- "rayon",
  "rustfft",
  "serde",
  "serde_json",
- "thiserror 2.0.17",
- "tracing",
 ]
 
 [[package]]
 name = "ritk-dicom"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/ritk#1489d71672e7a21467fabe8f873ecdd3e4917254"
+source = "git+https://github.com/ryancinsight/ritk#037907f02c90f0b3eb65ebb587ef574daa0656aa"
 dependencies = [
  "anyhow",
+ "arrayvec",
  "dicom",
  "dicom-pixeldata",
  "ritk-codecs",
@@ -7444,11 +7532,11 @@ dependencies = [
 [[package]]
 name = "ritk-io"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/ritk#1489d71672e7a21467fabe8f873ecdd3e4917254"
+source = "git+https://github.com/ryancinsight/ritk#037907f02c90f0b3eb65ebb587ef574daa0656aa"
 dependencies = [
  "anyhow",
+ "arrayvec",
  "burn",
- "consus-compression",
  "consus-core",
  "consus-hdf5",
  "consus-io",
@@ -7460,9 +7548,9 @@ dependencies = [
  "flate2",
  "gaia",
  "image 0.24.9",
+ "moirai",
  "nalgebra 0.33.3",
  "ndarray 0.16.1",
- "rayon",
  "reqwest 0.11.27",
  "ritk-analyze",
  "ritk-codecs",
@@ -7487,7 +7575,7 @@ dependencies = [
 [[package]]
 name = "ritk-jpeg"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/ritk#1489d71672e7a21467fabe8f873ecdd3e4917254"
+source = "git+https://github.com/ryancinsight/ritk#037907f02c90f0b3eb65ebb587ef574daa0656aa"
 dependencies = [
  "anyhow",
  "burn",
@@ -7499,7 +7587,7 @@ dependencies = [
 [[package]]
 name = "ritk-metaimage"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/ritk#1489d71672e7a21467fabe8f873ecdd3e4917254"
+source = "git+https://github.com/ryancinsight/ritk#037907f02c90f0b3eb65ebb587ef574daa0656aa"
 dependencies = [
  "anyhow",
  "burn",
@@ -7510,7 +7598,7 @@ dependencies = [
 [[package]]
 name = "ritk-mgh"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/ritk#1489d71672e7a21467fabe8f873ecdd3e4917254"
+source = "git+https://github.com/ryancinsight/ritk#037907f02c90f0b3eb65ebb587ef574daa0656aa"
 dependencies = [
  "anyhow",
  "burn",
@@ -7523,7 +7611,7 @@ dependencies = [
 [[package]]
 name = "ritk-minc"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/ritk#1489d71672e7a21467fabe8f873ecdd3e4917254"
+source = "git+https://github.com/ryancinsight/ritk#037907f02c90f0b3eb65ebb587ef574daa0656aa"
 dependencies = [
  "anyhow",
  "burn",
@@ -7537,7 +7625,7 @@ dependencies = [
 [[package]]
 name = "ritk-model"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/ritk#1489d71672e7a21467fabe8f873ecdd3e4917254"
+source = "git+https://github.com/ryancinsight/ritk#037907f02c90f0b3eb65ebb587ef574daa0656aa"
 dependencies = [
  "anyhow",
  "burn",
@@ -7547,7 +7635,6 @@ dependencies = [
  "ritk-core",
  "serde",
  "serde_json",
- "tempfile",
  "thiserror 2.0.17",
  "tracing",
 ]
@@ -7555,7 +7642,7 @@ dependencies = [
 [[package]]
 name = "ritk-nifti"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/ritk#1489d71672e7a21467fabe8f873ecdd3e4917254"
+source = "git+https://github.com/ryancinsight/ritk#037907f02c90f0b3eb65ebb587ef574daa0656aa"
 dependencies = [
  "anyhow",
  "burn",
@@ -7569,7 +7656,7 @@ dependencies = [
 [[package]]
 name = "ritk-nrrd"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/ritk#1489d71672e7a21467fabe8f873ecdd3e4917254"
+source = "git+https://github.com/ryancinsight/ritk#037907f02c90f0b3eb65ebb587ef574daa0656aa"
 dependencies = [
  "anyhow",
  "burn",
@@ -7581,7 +7668,7 @@ dependencies = [
 [[package]]
 name = "ritk-png"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/ritk#1489d71672e7a21467fabe8f873ecdd3e4917254"
+source = "git+https://github.com/ryancinsight/ritk#037907f02c90f0b3eb65ebb587ef574daa0656aa"
 dependencies = [
  "anyhow",
  "burn",
@@ -7591,14 +7678,14 @@ dependencies = [
 
 [[package]]
 name = "ritk-registration"
-version = "0.50.93"
-source = "git+https://github.com/ryancinsight/ritk#1489d71672e7a21467fabe8f873ecdd3e4917254"
+version = "0.50.94"
+source = "git+https://github.com/ryancinsight/ritk#037907f02c90f0b3eb65ebb587ef574daa0656aa"
 dependencies = [
  "anyhow",
  "burn",
+ "moirai",
  "nalgebra 0.33.3",
  "ndarray 0.16.1",
- "rayon",
  "ritk-core",
  "ritk-model",
  "thiserror 2.0.17",
@@ -7608,7 +7695,7 @@ dependencies = [
 [[package]]
 name = "ritk-tiff"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/ritk#1489d71672e7a21467fabe8f873ecdd3e4917254"
+source = "git+https://github.com/ryancinsight/ritk#037907f02c90f0b3eb65ebb587ef574daa0656aa"
 dependencies = [
  "anyhow",
  "burn",
@@ -7619,7 +7706,7 @@ dependencies = [
 [[package]]
 name = "ritk-vtk"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/ritk#1489d71672e7a21467fabe8f873ecdd3e4917254"
+source = "git+https://github.com/ryancinsight/ritk#037907f02c90f0b3eb65ebb587ef574daa0656aa"
 dependencies = [
  "anyhow",
  "burn",

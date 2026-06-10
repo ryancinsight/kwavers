@@ -30,9 +30,8 @@ cavitation detection as the worked example.
 ## 21.2 The plugin contract
 
 A *plugin* is the minimal abstraction over one physics domain's per-step
-update. The contract lives in `kwavers::plugin::Plugin` (formally defined in
-`kwavers::domain::plugin::Plugin`) and reduces to four pieces of metadata
-plus an update method:
+update. The contract lives in `kwavers_solver::plugin::Plugin` and reduces to a
+few pieces of metadata plus an update method:
 
 ```rust
 pub trait Plugin: Debug + Send + Sync {
@@ -67,12 +66,19 @@ behaviour. The capability set is `PhysicsModelType`:
 
 | Capability | Sub-mode parameters |
 |------------|---------------------|
-| `LinearAcoustics`     | `solver_type ∈ {FDTD, PSTD, DG}`, `boundary_conditions` |
-| `NonlinearAcoustics`  | `equation_type ∈ {Westervelt, Kuznetsov, KZK}`, `harmonics` |
-| `BubbleDynamics`      | `model ∈ {RayleighPlesset, KellerMiksis, Gilmore}`, `nucleation` |
+| `LinearAcoustics`     | `solver_type: AcousticSolver ∈ {FDTD{order}, PSTD{spectral_accuracy}, DG{polynomial_order}}`, `boundary_conditions: PhysicsBoundaryCondition` |
+| `NonlinearAcoustics`  | `equation_type: NonlinearEquation ∈ {Westervelt, Kuznetsov, KZK}`, `harmonics` |
+| `BubbleDynamics`      | `model: BubbleModel ∈ {RayleighPlesset, KellerMiksis, Gilmore}`, `nucleation` |
 | `ThermalDiffusion`    | `bioheat`, `perfusion` |
 | `OpticalPropagation`  | `scattering`, `anisotropy` |
-| `MechanicalStress`    | `elastic_modulus`, `poisson_ratio` |
+| `MechanicalStress`    | `wave_kind: ElasticWaveKind ∈ {Isotropic}` |
+
+(`PhysicsModelType` has these **six** variants. `MechanicalStress` (ADR 021) is wired into
+`PhysicsCatalog` as `MechanicalStressPlugin`, a `Plugin` owning a real
+`ElasticPstdOrchestrator` (leapfrog λ/μ stress–velocity PSTD); it provides isotropic pressure
+`p = -⅓ tr(σ)` to the unified field and — unlike the acoustic-fluid path — supports shear waves
+since `μ > 0`. It is *not* the previously-deleted `μ ≡ 0` `ElasticWavePlugin` duplicate. The
+`ElasticWaveKind` enum is additive-by-design, leaving room for anisotropic/nonlinear modes.)
 
 A `PhysicsConfig` is just a list of these (each tagged `enabled: bool`) plus
 a string-keyed parameter bag for global state. Two key properties:
@@ -96,7 +102,7 @@ PhysicsCatalog::build(config, grid, medium, dt) -> KwaversResult<PluginManager>
 
 It walks `config.models`, skips disabled entries, and dispatches each
 enabled `PhysicsModelType` variant to its concrete plugin constructor.
-Source: [`physics::factory::catalog`](../../kwavers/src/physics/factory/catalog.rs).
+Source: `kwavers_solver::plugin::catalog`.
 
 > **Theorem 21.1 (Catalog determinism and exhaustiveness).**
 > *For every variant $v$ of `PhysicsModelType`, `PhysicsCatalog::build_plugin(v, …)`
@@ -147,7 +153,7 @@ Build the directed graph $G = (V_P, E_P)$ over the registered plugins:
 > naming the offending plugins.*
 
 **Proof.** The implementation
-([`solver/plugin/manager.rs:275–362`](../../kwavers/src/solver/plugin/manager.rs))
+(`kwavers_solver::plugin::manager` — DFS topo-sort in the `dependency` submodule)
 is a standard DFS-based topological sort with three-state node colouring
 (unvisited, visiting, visited). Provider conflicts are detected eagerly
 when the `provides: HashMap<UnifiedFieldType, usize>` insertion finds an
@@ -178,16 +184,19 @@ must propagate broadband emissions through the skull and capture them at
 a virtual aperture. With the catalog, that simulation is one config:
 
 ```rust
-use kwavers::plugin::*;
-use kwavers::{Grid, AcousticSolver, BoundaryType, PhysicsModelType,
-              PhysicsModelConfig, PhysicsConfig, PhysicsCatalog};
+use kwavers_solver::plugin::{PhysicsCatalog, PluginManager};
+use kwavers_physics::factory::{
+    PhysicsConfig, PhysicsModelConfig,
+    models::{PhysicsModelType, AcousticSolver, PhysicsBoundaryCondition},
+};
+use kwavers_grid::Grid;
 
 let mut config = PhysicsConfig::new();
 config.models.clear();
 config.models.push(PhysicsModelConfig {
     model_type: PhysicsModelType::LinearAcoustics {
         solver_type: AcousticSolver::PSTD { spectral_accuracy: true },
-        boundary_conditions: BoundaryType::Absorbing { pml_layers: 12 },
+        boundary_conditions: PhysicsBoundaryCondition::Absorbing { pml_layers: 12 },
     },
     enabled: true,
     parameters: Default::default(),
@@ -197,14 +206,14 @@ let manager = PhysicsCatalog::build(&config, &grid, &skull_medium, dt)?;
 ```
 
 `skull_medium` is a `HeterogeneousMedium` whose density and sound-speed
-volumes are derived from a CT scan (see Chapter 16, *Transcranial
+volumes are derived from a CT scan (see Chapter 15, *Transcranial
 Ultrasound*). The PSTD solver was chosen because its zero numerical
 dispersion at any frequency below Nyquist preserves the broadband emission
 spectrum on which PAM depends.
 
 The post-processing path — synthesising the receive aperture on a
 hemispherical sensor array, time-reversing or back-projecting to the
-target plane — lives in `analysis::beamforming::passive_acoustic_mapping`
+target plane — lives in `kwavers_analysis::signal_processing::pam`
 and is the subject of Chapter 13 (*Theranostics*, §13.4).
 
 ### 21.6.1 Why the catalog matters here
@@ -238,6 +247,14 @@ elastic stress). It produces two figures committed to
 - `field_dependency_dag.svg` — the field-vertex graph $G$ with the
   topological execution order overlaid.
 
+![Capability fan-out: PhysicsConfig → PhysicsCatalog → plugins, with the structured-error fork.](figures/ch22/capability_fanout.svg)
+
+*Figure 21.1. The catalog dispatch (§21.4): each enabled `PhysicsModelType` resolves to a concrete plugin or a structured error — no silent fallback.*
+
+![Field-dependency DAG with the topological execution order overlaid.](figures/ch22/field_dependency_dag.svg)
+
+*Figure 21.2. The field-dependency graph $G$ (§21.5) for a PSTD-acoustics + thermal-diffusion config, with the topological execution order the manager derives from the plugin field signatures.*
+
 Run it with
 
 ```bash
@@ -250,9 +267,9 @@ state).
 
 ---
 
-## 21.7 The BubbleDynamics sub-graph: three ODEs, one plugin
+## 21.8 The BubbleDynamics sub-graph: three ODEs, one plugin
 
-### 21.7.1 Model selection and the SRP boundary
+### 21.8.1 Model selection and the SRP boundary
 
 The `BubbleDynamicsPlugin` exposes a single `Plugin` interface over three
 distinct ODE systems:
@@ -270,7 +287,7 @@ not responsible for integration strategy.  This means swapping from classical
 RK4 to an adaptive Dormand-Prince integrator requires editing only
 `gilmore.rs`, not the plugin.
 
-### 21.7.2 The dp/dt coupling in the KM path
+### 21.8.2 The dp/dt coupling in the KM path
 
 The Keller-Miksis radiation-damping term requires `dp/dt`:
 
@@ -292,14 +309,14 @@ The Gilmore path requires no dp/dt because the Tait enthalpy difference
 already encodes the compressible liquid response exactly to second order in
 the wall Mach number.
 
-### 21.7.3 Visualization: bubble radius dynamics under three models
+### 21.8.3 Visualization: bubble radius dynamics under three models
 
-Run the following script to generate figure 22-B (radius–time curves for
+Run the following script to generate figure 21-B (radius–time curves for
 KM, RP, and Gilmore under a 1-MHz 200 kPa driving pressure):
 
 ```python
 """
-fig_22B_bubble_ode_comparison.py
+fig_21B_bubble_ode_comparison.py
 =================================
 Plots R(t) for Keller-Miksis, Rayleigh-Plesset, and Gilmore bubble ODEs
 under a 1-MHz 200 kPa sinusoidal driving pressure.
@@ -436,12 +453,12 @@ ax2.legend(fontsize=9)
 ax2.grid(True, lw=0.4, alpha=0.5)
 
 fig.tight_layout()
-fig.savefig("fig_22B_bubble_ode_comparison.pdf", dpi=200, bbox_inches="tight")
+fig.savefig("fig_21B_bubble_ode_comparison.pdf", dpi=200, bbox_inches="tight")
 plt.show()
-print("Saved: fig_22B_bubble_ode_comparison.pdf")
+print("Saved: fig_21B_bubble_ode_comparison.pdf")
 ```
 
-**Figure 22-B interpretation:** RP and KM agree in the linear regime (first
+**Figure 21-B interpretation:** RP and KM agree in the linear regime (first
 quarter period).  During collapse, KM diverges from RP by ~5–15% in peak
 radius due to the O(Mach) compressibility correction.  Gilmore produces the
 strongest collapse (smallest minimum radius) because the Tait enthalpy
@@ -450,31 +467,39 @@ approaching unity.  At 200 kPa the models bracket a spread of ≈8% in minimum
 radius — the selection rule `GilmoreSolver::should_use_gilmore` triggers at
 wall Mach > 0.1, which occurs during the collapse phase at this amplitude.
 
-### 21.7.4 Theorem 21.3 — Gilmore RK4 contraction invariant
+### 21.8.4 Theorem 21.3 — Gilmore RK4 positivity, equilibrium, and forced-contraction invariants
 
-**Theorem 21.3** (Underpressured bubble contraction): Let `BubbleState::new`
-initialise R = R₀ and Ṙ = 0 with `p_gas = p₀`.  Under zero external acoustic
-forcing, the classical RK4 step with `GilmoreSolver` satisfies:
+**Theorem 21.3** (Gilmore RK4 well-posedness): the classical RK4 step
+`GilmoreSolver::step_rk4(state, p_acoustic, t, dt)` satisfies:
 
-1. `R_{n+1} > 0`        — radius is bounded away from zero.
-2. `Ṙ_{n+1} ≤ 0`       — wall velocity is non-positive.
-3. `R_{n+1} < R₀`       — bubble contracts.
+1. **Positivity.** `R_{n+1} > 0` for any input — the radius is bounded away from
+   zero by the per-stage floor `R_i ≥ f64::MIN_POSITIVE`.
+2. **Equilibrium stability.** Starting from the mechanical equilibrium
+   (`BubbleState::new` sets `p_gas = p₀ + 2σ/R₀`, so the wall pressure
+   `p_wall = p_gas − 2σ/R₀ = p₀` matches `p_∞ = p₀`, giving `H = 0`), under zero
+   acoustic forcing the radius stays within 0.1 % of `R₀` over one step.
+3. **Forced contraction.** Under a compressive instantaneous field
+   (`p_∞ = p₀ + p_a > p₀` at the compression phase), the wall velocity is driven
+   non-positive: `Ṙ_{n+1} ≤ 0`.
 
-**Proof sketch:** Young-Laplace requires `p_gas_eq = p₀ + 2σ/R₀` at
-equilibrium.  Since `p_gas = p₀ < p_gas_eq`, the net pressure difference
-across the bubble wall drives the liquid inward.  The Tait enthalpy
-difference H = H_wall - H_∞ < 0 (lower wall pressure than far field),
-which enters the Gilmore RHS as a negative net force.  The RK4 weight vector
-[1/6, 1/3, 1/3, 1/6] is strictly positive, so all four stages contribute the
-same sign.  Positivity of R follows from the floor `R_i ≥ f64::MIN_POSITIVE`
-at every stage.  ∎
+**Proof sketch.** (1) The RK4 weight vector `[1/6, 1/3, 1/3, 1/6]` is strictly
+positive and each stage clamps `R_i ≥ f64::MIN_POSITIVE`, so the convex update
+cannot produce a non-positive radius. (2) At `BubbleState::new` the Tait enthalpy
+difference `H = H_wall − H_∞ = 0` because `p_wall = p_∞ = p₀`, so the Gilmore RHS
+acceleration vanishes to leading order and the step is a fixed point up to
+`O(dt²)`. (3) Raising `p_∞` above `p_wall` makes `H < 0`, a net inward force, so
+the integrated `Ṙ` is non-positive. ∎
 
-The property is verified by `step_rk4_surface_tension_drives_contraction_from_underpressured_state`
-in `gilmore.rs`.
+These properties are verified by `step_rk4_bubble_stable_at_equilibrium` (2) and
+`step_rk4_compressive_forcing_contracts_bubble` (1, 3) in
+`kwavers_physics::acoustics::bubble_dynamics::gilmore` (`tests.rs`). Note: the
+default `BubbleState::new` is at mechanical equilibrium (not underpressured), so
+contraction under *zero* forcing does not occur — contraction requires either a
+compressive field or an explicitly sub-equilibrium gas pressure.
 
 ---
 
-## 21.8 References
+## 21.9 References
 
 - Coviello C., Kozick R., Choi J., Gyöngy M., Jensen C., Smith P.P.,
   Coussios C.C. *Passive Acoustic Mapping utilizing optimal beamforming

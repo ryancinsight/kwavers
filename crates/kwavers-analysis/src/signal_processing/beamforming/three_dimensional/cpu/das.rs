@@ -58,6 +58,11 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 /// # Errors
 /// Returns [`KwaversError::InvalidInput`] if the channel count does not match
 /// `config.num_elements_3d`.
+// Authoritative CPU DAS kernel: the active production path under default
+// features and the differential-test reference baseline. Under `gpu`, the only
+// non-test caller (`processing::algorithms`) is `cfg(not(gpu))`, so the lib
+// build sees no caller; tests still use it. Keep it, silence dead_code on gpu.
+#[cfg_attr(feature = "gpu", allow(dead_code))]
 pub fn delay_and_sum_cpu(
     rf_data: &Array4<f32>,
     config: &BeamformingConfig3D,

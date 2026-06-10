@@ -10,6 +10,17 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 use ndarray::{Array1, Array2};
 use std::sync::Arc;
 
+/// Decomposed physics-informed loss components returned by
+/// [`BurnPINN2DWave::compute_physics_loss`]:
+/// `(total, data, pde, boundary, initial)` scalar losses.
+type PhysicsLossComponents<B> = (
+    Tensor<B, 1>,
+    Tensor<B, 1>,
+    Tensor<B, 1>,
+    Tensor<B, 1>,
+    Tensor<B, 1>,
+);
+
 /// Physics-informed neural network for 2D wave equation.
 ///
 /// Supports spatially varying wave speeds c(x,y) for complex media.
@@ -267,6 +278,9 @@ impl<B: AutodiffBackend> BurnPINN2DWave<B> {
     }
 
     /// Compute physics-informed loss function.
+    // Independent collocation/boundary/initial tensors plus scalar weights with
+    // no cohesive sub-grouping; bundling would not clarify the call site.
+    #[allow(clippy::too_many_arguments)]
     pub fn compute_physics_loss(
         &self,
         x_data: Tensor<B, 2>,
@@ -286,13 +300,7 @@ impl<B: AutodiffBackend> BurnPINN2DWave<B> {
         u_initial: Tensor<B, 2>,
         wave_speed: f64,
         loss_weights: BurnLossWeights2D,
-    ) -> (
-        Tensor<B, 1>,
-        Tensor<B, 1>,
-        Tensor<B, 1>,
-        Tensor<B, 1>,
-        Tensor<B, 1>,
-    ) {
+    ) -> PhysicsLossComponents<B> {
         let u_pred_data = self.forward(x_data, y_data, t_data);
         let data_loss = (u_pred_data - u_data).powf_scalar(2.0).mean();
 

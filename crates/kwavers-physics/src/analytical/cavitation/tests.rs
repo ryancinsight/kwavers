@@ -11,6 +11,51 @@ fn minnaert_water_air_bubble() {
 }
 
 #[test]
+fn minnaert_surface_tension_correction_reduces_to_uncorrected_at_zero_sigma() {
+    // σ = 0 ⇒ the corrected form is exactly the large-bubble Minnaert frequency.
+    let r0 = 10e-6;
+    let uncorrected = minnaert_resonance_hz(r0, 1.4, ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL);
+    let corrected =
+        minnaert_resonance_corrected_hz(r0, 1.4, ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL, 0.0);
+    assert!((corrected - uncorrected).abs() <= 1e-9 * uncorrected);
+}
+
+#[test]
+fn minnaert_surface_tension_correction_matches_closed_form_and_scales_with_radius() {
+    const SIGMA: f64 = 0.0725; // water [N/m]
+    let (gamma, rho) = (1.4, DENSITY_WATER_NOMINAL);
+
+    // Closed-form check: f₀² = [3γP₀ + (3γ−1)·2σ/R₀] / (ρ·(2πR₀)²).
+    let r0 = 1e-6;
+    let f = minnaert_resonance_corrected_hz(r0, gamma, ATMOSPHERIC_PRESSURE, rho, SIGMA);
+    let laplace = 2.0 * SIGMA / r0;
+    let stiffness = 3.0 * gamma * ATMOSPHERIC_PRESSURE + (3.0 * gamma - 1.0) * laplace;
+    let expected = (stiffness / rho).sqrt() / (TWO_PI * r0);
+    assert!((f - expected).abs() <= 1e-9 * expected, "f={f} expected={expected}");
+
+    // Large bubble (R₀ = 1 mm): 2σ/R₀ ≪ P₀ ⇒ correction is negligible (<0.1%).
+    // (At 100 µm it is already a non-negligible ~0.5%, consistent with the 1/R₀
+    // scaling — surface tension matters increasingly as the bubble shrinks.)
+    let r_big = 1e-3;
+    let big_corr = minnaert_resonance_corrected_hz(r_big, gamma, ATMOSPHERIC_PRESSURE, rho, SIGMA);
+    let big_unc = minnaert_resonance_hz(r_big, gamma, ATMOSPHERIC_PRESSURE, rho);
+    assert!((big_corr - big_unc).abs() / big_unc < 1e-3, "large-bubble correction must be tiny");
+
+    // Small bubble (R₀ = 1 µm): surface tension raises f₀ by >10% (chapter §5).
+    let small_corr = minnaert_resonance_corrected_hz(r0, gamma, ATMOSPHERIC_PRESSURE, rho, SIGMA);
+    let small_unc = minnaert_resonance_hz(r0, gamma, ATMOSPHERIC_PRESSURE, rho);
+    assert!(
+        (small_corr - small_unc) / small_unc > 0.10,
+        "sub-micron surface-tension correction must exceed 10%: {small_corr} vs {small_unc}"
+    );
+    // Invalid σ ⇒ 0.
+    assert_eq!(
+        minnaert_resonance_corrected_hz(r0, gamma, ATMOSPHERIC_PRESSURE, rho, f64::NAN),
+        0.0
+    );
+}
+
+#[test]
 fn closed_form_cavitation_estimators_reject_invalid_domains() {
     assert_eq!(
         minnaert_resonance_hz(0.0, 1.4, ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL),

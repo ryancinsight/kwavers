@@ -139,7 +139,7 @@ Initialize: acoustic field model; tissue state estimate x̂_0; dose D_0 = 0
 Loop (k = 0, 1, 2, ...):
   1. ACQUIRE: diagnostic image y_k (B-mode, MR thermometry, PCD spectrum)
   2. REGISTER: align y_k to therapy frame using deformable registration
-                 (NOT in kwavers — external ITK/SimpleITK or future work; see §13.7)
+                 (via RitkRegistrationEngine — rigid/affine/Demons; see §13.7)
   3. ESTIMATE: x̂_k = KalmanFilter(x̂_{k-1}, y_k, model)
                  State vector: x = [T (°C), D (CEM43), ρ_b (mm⁻³), c_s (m/s)]ᵀ ∈ ℝ⁴
                  Process noise Q = diag(σ²_T, σ²_D, σ²_b, σ²_c) from acoustic model uncertainty
@@ -242,7 +242,7 @@ dynamics in `kwavers_therapy::therapy::lithotripsy::cavitation_cloud` (`Cavitati
 | Safety controller | `kwavers_therapy::therapy::therapy_integration::safety_controller` | `SafetyController` |
 | ULM microbubble detection | `kwavers_analysis::signal_processing::ulm::microbubble_detection` | `UlmDetector` |
 | Plane-wave compounding | `kwavers_diagnostics::workflows::plane_wave_compounding` | `PlaneWaveCompound` |
-| Image registration (loop step 2) | **not implemented in kwavers** | — (external ITK/SimpleITK, or future work) |
+| Image registration (loop step 2) | `kwavers_physics::acoustics::imaging::fusion::registration` | `RitkRegistrationEngine` (rigid/affine MI + Demons non-rigid; `ritk-registration` crate) |
 
 ---
 

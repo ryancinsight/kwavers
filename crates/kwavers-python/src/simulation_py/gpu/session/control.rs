@@ -1,4 +1,6 @@
 use numpy::{PyReadonlyArray2, PyReadonlyArray3};
+// Only referenced by the `#[cfg(not(feature = "gpu"))]` "feature not enabled" branches.
+#[cfg(not(feature = "gpu"))]
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyTuple};

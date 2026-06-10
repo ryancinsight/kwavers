@@ -10,6 +10,19 @@ use super::second_order::{compute_gradient_of_divergence_2d, compute_laplacian_2
 use super::spatial::compute_spatial_gradient_2d;
 use super::time::compute_second_time_derivative;
 
+/// 2D infinitesimal strain components `(ε_xx, ε_yy, ε_xy)`, each `[batch, 1]`.
+type StrainTensor2D<B> = (
+    Tensor<<B as AutodiffBackend>::InnerBackend, 2>,
+    Tensor<<B as AutodiffBackend>::InnerBackend, 2>,
+    Tensor<<B as AutodiffBackend>::InnerBackend, 2>,
+);
+
+/// 2D elastic-wave PDE residual components `(residual_x, residual_y)`, each `[batch, 1]`.
+type ElasticResidual2D<B> = (
+    Tensor<<B as AutodiffBackend>::InnerBackend, 2>,
+    Tensor<<B as AutodiffBackend>::InnerBackend, 2>,
+);
+
 /// Compute infinitesimal strain tensor ε = ½(∇u + ∇uᵀ) for a 2D displacement field.
 ///
 /// # Arguments
@@ -32,14 +45,7 @@ use super::time::compute_second_time_derivative;
 pub fn compute_strain_tensor_2d<B, F>(
     forward_fn: F,
     input: &Tensor<B, 2>,
-) -> Result<
-    (
-        Tensor<B::InnerBackend, 2>,
-        Tensor<B::InnerBackend, 2>,
-        Tensor<B::InnerBackend, 2>,
-    ),
-    kwavers_core::error::KwaversError,
->
+) -> Result<StrainTensor2D<B>, kwavers_core::error::KwaversError>
 where
     B: AutodiffBackend,
     F: Fn(Tensor<B, 2>) -> Tensor<B, 2> + Clone,
@@ -85,10 +91,7 @@ pub fn compute_elastic_wave_residual_2d<B, F>(
     rho: f64,
     lambda: f64,
     mu: f64,
-) -> Result<
-    (Tensor<B::InnerBackend, 2>, Tensor<B::InnerBackend, 2>),
-    kwavers_core::error::KwaversError,
->
+) -> Result<ElasticResidual2D<B>, kwavers_core::error::KwaversError>
 where
     B: AutodiffBackend,
     F: Fn(Tensor<B, 2>) -> Tensor<B, 2> + Clone,

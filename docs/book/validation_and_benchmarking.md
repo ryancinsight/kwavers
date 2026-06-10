@@ -1,10 +1,10 @@
-# Chapter 20: Validation and Benchmarking
+# Chapter 19: Validation and Benchmarking
 
 *Systematic Validation of kwavers Against Analytical Solutions, Reference Simulators, and Experimental Data*
 
 ---
 
-## 1. Introduction
+## 19.1 Introduction
 
 Validation is the process of determining that a simulation model represents reality within an accepted tolerance. Benchmarking is the process of quantifying that representation numerically. Both are mandatory preconditions for any clinical or research use of a simulation library.
 
@@ -29,7 +29,7 @@ kwavers follows a three-tier validation hierarchy, in ascending order of inferen
 
 ---
 
-## 2. Theorem: Pearson Correlation as Waveform Fidelity Metric
+## 19.2 Theorem: Pearson Correlation as Waveform Fidelity Metric
 
 **Statement.** The Pearson correlation coefficient between vectors *A* and *B* is:
 
@@ -62,9 +62,13 @@ Only when both r ≥ 0.99 **and** RMS ratio ∈ [0.95, 1.05] is parity declared.
 
 **Sensitivity to phase.** For a sinusoidal wave A = sin(kx) and B = sin(kx + φ), the Pearson correlation is r = cos(φ). A phase error of φ = 10° gives r = 0.985; φ = 18° gives r = 0.951. The threshold r ≥ 0.99 therefore bounds phase error to |φ| ≤ 8.1°.
 
+![Pearson r = cos(φ) vs phase error, with the r ≥ 0.99 acceptance band.](figures/ch20/fig01_pearson_phase_sensitivity.png)
+
+*Figure 19.1. Pearson correlation vs waveform phase error (§19.2): r ≥ 0.99 bounds phase error to ≤ 8.1°.*
+
 ---
 
-## 3. Theorem: PSNR Definition and Sensitivity
+## 19.3 Theorem: PSNR Definition and Sensitivity
 
 **Statement.** The Peak Signal-to-Noise Ratio between simulation output *A* and reference *B* is:
 
@@ -94,9 +98,13 @@ The first term is a property of the signal's dynamic range (crest factor); the s
 
 **Caveat: PSNR sensitivity to normalization.** If A and B are normalized differently, PSNR changes by 20 log₁₀(scale_factor). kwavers parity scripts normalize both fields by the reference's L∞ norm before computing PSNR to remove scale-factor ambiguity.
 
+![PSNR vs relative amplitude error, with 40 dB / 60 dB markers.](figures/ch20/fig02_psnr_amplitude.png)
+
+*Figure 19.2. PSNR vs RMS amplitude error (§19.3): 40 dB ≈ 1 % peak error, 60 dB ≈ 0.1 %.*
+
 ---
 
-## 4. Theorem: Convergence of PSTD for Linear Acoustics
+## 19.4 Theorem: Convergence of PSTD for Linear Acoustics
 
 **Statement.** For the linear acoustic wave equation:
 
@@ -146,9 +154,13 @@ for n in [32, 64, 128, 256] {
 }
 ```
 
+![PSTD error vs grid resolution N on log-log axes, showing the convergence rate.](figures/ch20/fig03_pstd_convergence.png)
+
+*Figure 19.3. PSTD error vs N (§19.4): spectral spatial accuracy with O(Δt²) leapfrog temporal convergence.*
+
 ---
 
-## 5. Theorem: Grid Dispersion Error and PSTD Correction
+## 19.5 Theorem: Grid Dispersion Error and PSTD Correction
 
 **Statement.** For a finite-difference scheme of order 2m applied to the spatial Laplacian, the numerical wavenumber k_num satisfies:
 
@@ -184,9 +196,9 @@ This is exact for all wavenumbers k that are represented in the DFT (|k| ≤ π/
 
 ---
 
-## 6. Algorithm: Parity Protocol
+## 19.6 Algorithm: Parity Protocol
 
-### 6.1 Structure of compare_*.py Scripts
+### 19.6.1 Structure of compare_*.py Scripts
 
 Each parity script in `pykwavers/examples/` follows a fixed structure:
 
@@ -214,7 +226,7 @@ assert 0.95 <= rms_ratio <= 1.05, f"RMS ratio = {rms_ratio:.3f}"
 save_side_by_side_parity_figure(result.p_final, ref.p_final, scenario_name)
 ```
 
-### 6.2 save_side_by_side_parity_figure
+### 19.6.2 save_side_by_side_parity_figure
 
 This function generates a three-panel PNG:
 
@@ -224,7 +236,7 @@ This function generates a three-panel PNG:
 
 Color axis: –60 dB to 0 dB for field panels; –80 dB to 0 dB for difference panel. Metrics (r, PSNR, RMS ratio) are printed as a text annotation at the top of the figure.
 
-### 6.3 Acceptance Criteria Matrix
+### 19.6.3 Acceptance Criteria Matrix
 
 | Scenario               | Pearson r | PSNR (dB) | RMS ratio | Status |
 |------------------------|-----------|-----------|-----------|--------|
@@ -235,7 +247,7 @@ Color axis: –60 dB to 0 dB for field panels; –80 dB to 0 dB for difference p
 | B-mode scan lines      | ≥ 0.970   | ≥ 35      | 0.85–1.15 | Gate   |
 | Nonlinear propagation  | ≥ 0.980   | ≥ 38      | 0.93–1.07 | Gate   |
 
-### 6.4 Coordinate Convention
+### 19.6.4 Coordinate Convention
 
 A persistent source of parity failure is the grid-origin offset between kwavers and k-Wave. k-Wave uses the convention that the grid center is at index `N/2` (integer division), not `(N-1)/2`. For N = 128, the center is at index 64 (not 63.5). All kwavers parity scripts enforce:
 
@@ -247,11 +259,15 @@ cz = nz // 2 * dz
 
 This fix (project_annular_array_coordinate_fix.md) raised Pearson correlation from 0.02 to 1.0 and PSNR from 3 dB to 119 dB for the annular array case, demonstrating that coordinate conventions dominate physics accuracy at this scale.
 
+![Three-panel side-by-side parity figure: kwavers, reference, and dB difference.](figures/ch20/fig04_side_by_side_parity.png)
+
+*Figure 19.4. The `save_side_by_side_parity_figure` output (§19.6.2): kwavers field, reference field, and the dB difference map.*
+
 ---
 
-## 7. Algorithm: Regression Test Suite
+## 19.7 Algorithm: Regression Test Suite
 
-### 7.1 Rust Unit and Integration Tests (cargo nextest)
+### 19.7.1 Rust Unit and Integration Tests (cargo nextest)
 
 The kwavers Rust test suite is executed via `cargo nextest` with a hard 60-second timeout per test:
 
@@ -265,15 +281,15 @@ fail-fast = false
 
 Test organization:
 
-| Test type              | Location                              | Count |
+| Test type              | Location (split-crate workspace)      | Count (approx.) |
 |------------------------|---------------------------------------|-------|
-| PSTD unit tests        | `kwavers/src/solver/forward/pstd/*/tests.rs` | 47 |
-| CPML config tests      | `kwavers/src/domain/boundary/cpml/config/tests.rs` | 12 |
-| Beamforming tests      | `kwavers/src/analysis/signal_processing/beamforming/*/tests.rs` | 18 |
-| Differential op tests  | `kwavers/src/math/numerics/operators/differential/*/tests.rs` | 32 |
-| Microbubble tests      | `kwavers/src/domain/therapy/microbubble/state/tests.rs` | 8 |
-| Architecture boundary  | `kwavers/tests/architecture_boundaries.rs` | 5 |
-| **Total**              |                                       | **122** |
+| PSTD unit tests        | `crates/kwavers-solver/src/forward/pstd/*/tests.rs` | 47 |
+| CPML config tests      | `crates/kwavers-boundary/src/cpml/config/tests.rs` | 12 |
+| Beamforming tests      | `crates/kwavers-analysis/src/signal_processing/beamforming/*/tests.rs` | 18 |
+| Differential op tests  | `crates/kwavers-math/src/numerics/operators/differential/*/tests.rs` | 32 |
+| Microbubble tests      | `crates/kwavers-physics/src/therapy/microbubble/state/` | 8 |
+| Architecture boundary  | `crates/kwavers/tests/architecture_boundaries.rs` | 5 |
+| **Total**              |                                       | **~122** |
 
 All assertions use value-semantic checks:
 
@@ -285,7 +301,7 @@ assert!((r - 0.9999).abs() < 1e-3, "Pearson r = {r}");
 // assert!(result.is_ok());   ← rejected by zero_tolerance policy
 ```
 
-### 7.2 Python Parity Tests (pytest)
+### 19.7.2 Python Parity Tests (pytest)
 
 ```bash
 cd pykwavers
@@ -294,7 +310,7 @@ pytest examples/ -v --timeout=300 -k "compare_"
 
 Parity tests are marked `@pytest.mark.slow` and excluded from the fast CI gate (< 5 min) but required for the full validation gate (< 30 min).
 
-### 7.3 Test Data Derivation
+### 19.7.3 Test Data Derivation
 
 Test data is derived from one of three authoritative sources:
 
@@ -306,9 +322,9 @@ Test data is derived from one of three authoritative sources:
 
 ---
 
-## 8. Algorithm: Analytical Benchmark Cases
+## 19.8 Algorithm: Analytical Benchmark Cases
 
-### 8.1 1-D Plane Wave
+### 19.8.1 1-D Plane Wave
 
 **Setup.** Medium: water (c = 1500 m/s, ρ = 1000 kg/m³, lossless). Grid: N = 512 points, Δx = 0.1 mm, Δt = CFL × Δx/c, T = 500 steps. Source: sinusoidal point source at x = 0, f = 1 MHz.
 
@@ -323,7 +339,7 @@ p(x, t) = 0                         for t ≤ x/c
 
 **Known pass condition.** This test is deterministic and has been passing in kwavers since the initial PSTD implementation. Failure indicates a regression in the pressure update kernel or source injection.
 
-### 8.2 Focused Bowl (3-D)
+### 19.8.2 Focused Bowl (3-D)
 
 **Setup.** Focused bowl transducer: radius of curvature R = 60 mm, aperture D = 50 mm, center frequency f = 1 MHz. Grid: 128³, Δx = 0.5 mm. Medium: homogeneous water.
 
@@ -339,7 +355,7 @@ evaluated numerically. The focal point at z = R has pressure gain G = π D² / (
 
 **Note.** The "25% deficit" reported in earlier records was a stale metrics file artefact. Always re-run `compare_at_focused_bowl_3D.py` from the cached `.npz` before diagnosing physics.
 
-### 8.3 Annular Array (3-D)
+### 19.8.3 Annular Array (3-D)
 
 **Setup.** 5-element annular array, element radii 0–25 mm, center frequency 1 MHz, f-number 1.5. Grid: 128³, Δx = 0.5 mm.
 
@@ -347,7 +363,7 @@ evaluated numerically. The focal point at z = R has pressure gain G = π D² / (
 
 **kwavers result (project_annular_array_coordinate_fix.md).** After fixing the grid center convention (nx//2 × dx, not (nx-1)/2 × dx): Pearson = 1.0, PSNR = 119 dB. The 17.5% amplitude deficit in earlier records was an example script bug, not a physics error.
 
-### 8.4 Phased Array (2-D)
+### 19.8.4 Phased Array (2-D)
 
 **Setup.** 64-element linear phased array, element pitch λ/2, steering angle 20°, f = 3.5 MHz. Grid: 256×256, Δx = 0.22 mm.
 
@@ -357,9 +373,9 @@ evaluated numerically. The focal point at z = R has pressure gain G = π D² / (
 
 ---
 
-## 9. kwavers Parity Results
+## 19.9 kwavers Parity Results
 
-### 9.1 Closed Validation Gaps
+### 19.9.1 Closed Validation Gaps
 
 | Scenario                         | Pearson r | PSNR (dB) | RMS ratio | Gap status    |
 |----------------------------------|-----------|-----------|-----------|---------------|
@@ -372,7 +388,11 @@ evaluated numerically. The focal point at z = R has pressure gain G = π D² / (
 | Focused detector 3-D (CPU PSTD)  | 1.0000    | 80        | 1.000     | CLOSED        |
 | PSTD absorption (power law)      | 0.9999    | 55        | 1.001     | CLOSED (< 0.11% error) |
 
-### 9.2 Active Validation Tasks
+![Scatter of Pearson r vs PSNR across all closed validation gates, with acceptance thresholds.](figures/ch20/fig05_validation_scatter.png)
+
+*Figure 19.5. Validation scatter (§19.9): every closed parity gate plotted as (r, PSNR) against the r ≥ 0.99 / PSNR ≥ 40 dB acceptance box.*
+
+### 19.9.2 Active Validation Tasks
 
 | Scenario                         | Current r | Target r | Gap description          |
 |----------------------------------|-----------|----------|--------------------------|
@@ -380,7 +400,7 @@ evaluated numerically. The focal point at z = R has pressure gain G = π D² / (
 | B-mode log-compression           | 0.593     | ≥ 0.95   | Normalize artefact in log_compression (project_us_bmode_linear_transducer_gap.md) |
 | Axisymmetric WSWA-FFT            | N/A       | ≥ 0.99   | Implementation done; validation pending (project_axisymmetric_impl.md) |
 
-### 9.3 Historical Root Causes of Validation Failures
+### 19.9.3 Historical Root Causes of Validation Failures
 
 Understanding past failure modes prevents their recurrence:
 
@@ -396,9 +416,9 @@ Understanding past failure modes prevents their recurrence:
 
 ---
 
-## 10. Experimental Validation
+## 19.10 Experimental Validation
 
-### 10.1 Hydrophone Scan Protocol
+### 19.10.1 Hydrophone Scan Protocol
 
 Experimental validation uses a calibrated needle hydrophone (Precision Acoustics HPM075, 75 µm active diameter, flat frequency response 0.1–30 MHz ± 1.5 dB) mounted on a 3-axis motorized stage (step size 0.1 mm). The scan procedure:
 
@@ -408,15 +428,19 @@ Experimental validation uses a calibrated needle hydrophone (Precision Acoustics
 4. Record waveforms at each position; extract peak pressure and fundamental/harmonic amplitudes via FFT.
 5. Export as HDF5 file with embedded metadata (transducer serial, calibration date, medium temperature).
 
-### 10.2 Simulation–Experiment Registration
+### 19.10.2 Simulation–Experiment Registration
 
 Spatial registration between simulation grid and scan grid requires:
 
 1. **Scale calibration.** The simulation Δx and the scan step Δx_scan must agree to < 1%. Verify via the measured focal spot FWHM against the analytical prediction.
 2. **Origin alignment.** The transducer face position in simulation coordinates is identified as the scan position where the waveform leading-edge arrival time matches the geometric propagation time c × z/Δz.
-3. **RITK registration.** For complex geometries (transcranial, curved arrays), the RITK (Registration Image Toolkit) image registration pipeline aligns simulation and experimental fields via 3-D rigid registration with mutual information metric.
+3. **Image registration.** For complex geometries (transcranial, curved arrays), the
+   `RitkRegistrationEngine` (`kwavers_physics::acoustics::imaging::fusion::registration`, backed by
+   the `ritk-registration` crate) aligns simulation and experimental fields. It supports
+   `RegistrationMethod::{RigidBody, Affine, NonRigid}` — 3-D rigid/affine registration with a
+   mutual-information metric and symmetric-Demons (Vercauteren 2009) non-rigid registration.
 
-### 10.3 Acceptance for Experimental Comparison
+### 19.10.3 Acceptance for Experimental Comparison
 
 Experimental data contains measurement noise, spatial sampling errors, and hydrophone directivity effects not modeled in simulation. The acceptance thresholds are therefore relaxed:
 
@@ -430,9 +454,9 @@ Experimental data contains measurement noise, spatial sampling errors, and hydro
 
 ---
 
-## 11. Continuous Integration
+## 19.11 Continuous Integration
 
-### 11.1 GitHub Actions Pipeline
+### 19.11.1 GitHub Actions Pipeline
 
 The kwavers CI pipeline runs on push to `main` and on pull requests:
 
@@ -472,7 +496,7 @@ jobs:
         run: pytest pykwavers/examples/ --timeout=300
 ```
 
-### 11.2 Timeout Policy
+### 19.11.2 Timeout Policy
 
 | Test category                    | Hard timeout | Action on timeout         |
 |----------------------------------|-------------|---------------------------|
@@ -483,7 +507,7 @@ jobs:
 
 Tests that approach the timeout threshold trigger an optimization cycle on the real implementation — reducing grid size in tests is prohibited by the zero_tolerance policy.
 
-### 11.3 Artifact Upload
+### 19.11.3 Artifact Upload
 
 Parity figures are uploaded as CI artifacts for visual inspection on each run. The figure naming convention is:
 
@@ -493,7 +517,7 @@ Parity figures are uploaded as CI artifacts for visual inspection on each run. T
 
 This embeds the metric values in the filename so that CI summary pages show pass/fail at a glance without opening the figure.
 
-### 11.4 Regression Detection
+### 19.11.4 Regression Detection
 
 A test marked as passing is registered in `parity_baseline.json` with its metric values. On each CI run, the current metrics are compared against the baseline:
 
@@ -509,24 +533,25 @@ A regression exceeding tolerance blocks the PR merge via the required status che
 
 ---
 
-## 12. Figure References
+## 19.12 Figure Index
 
-| Figure | Caption                                              | Source                     |
-|--------|------------------------------------------------------|----------------------------|
-| 12.1   | Validation hierarchy diagram (3-tier)                | §1                         |
-| 12.2   | Side-by-side: focused bowl kwavers vs k-Wave         | compare_at_focused_bowl_3D |
-| 12.3   | Side-by-side: annular array kwavers vs k-Wave        | compare_at_focused_annular |
-| 12.4   | Pearson r convergence vs grid resolution (N=32–256)  | Convergence test §4        |
-| 12.5   | Grid dispersion error: FD-2 vs FD-6 vs PSTD         | §5                         |
-| 12.6   | Hydrophone scan vs simulation: focal plane           | §10                        |
-| 12.7   | CI pipeline timing breakdown (Gantt chart)           | §11.1                      |
-| 12.8   | Parity metric history (r, PSNR vs commit index)      | Regression tracking §11.4  |
+The figures embedded inline above are generated by
+`pykwavers/examples/book/ch20_validation_and_benchmarking.py` into `docs/book/figures/ch20/`:
 
-Figures are generated by parity scripts in `pykwavers/examples/` and stored in `docs/book/figures/`.
+| Figure | Caption | Section | File |
+|--------|---------|---------|------|
+| 19.1 | Pearson r = cos(φ) vs phase error | §19.2 | `fig01_pearson_phase_sensitivity` |
+| 19.2 | PSNR vs relative amplitude error | §19.3 | `fig02_psnr_amplitude` |
+| 19.3 | PSTD error vs grid resolution | §19.4 | `fig03_pstd_convergence` |
+| 19.4 | Three-panel side-by-side parity | §19.6 | `fig04_side_by_side_parity` |
+| 19.5 | Validation scatter (r vs PSNR) | §19.9 | `fig05_validation_scatter` |
+
+The per-scenario `compare_*.py` scripts in `pykwavers/examples/` additionally emit their own
+side-by-side parity figures at run time.
 
 ---
 
-## 13. References
+## 19.13 References
 
 1. **Treeby, B. E., and Cox, B. T.** (2010). k-Wave: MATLAB Toolbox for the Simulation and Reconstruction of Photoacoustic Wave Fields. *Journal of Biomedical Optics*, 15(2), 021314. https://doi.org/10.1117/1.3360308
 
@@ -556,4 +581,4 @@ Figures are generated by parity scripts in `pykwavers/examples/` and stored in `
 
 ---
 
-*Module ownership: `kwavers::solver::validation`, `pykwavers/examples/`, `kwavers/tests/architecture_boundaries.rs`. Chapter version: 0.4.0.*
+*Module ownership: `kwavers_solver::validation`, `pykwavers/examples/`, `kwavers/tests/architecture_boundaries.rs`. Chapter version: 0.4.0.*

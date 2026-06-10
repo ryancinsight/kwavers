@@ -217,6 +217,47 @@ def gaussian_kernel(samples: int, sigma: float) -> np.ndarray:
     return kernel / float(kernel.sum())
 
 
+# --- Physics delegated to the kwavers Rust core (PyO3 kernels) -----------------
+# pykwavers is a thin PyO3 wrapper: the closed-form acoustic relations below run
+# in Rust (kwavers_python::analytical_bindings::{thermal, imaging}). The Python
+# fallbacks are bit-identical to the kernels and only run when the compiled
+# extension is unavailable so the book can still build.
+
+
+def intensity_w_m2(pressure: np.ndarray, rho: float, c: float) -> np.ndarray:
+    """Time-averaged intensity I = p²/(2ρc) [W/m²] via kw.acoustic_intensity_from_amplitude."""
+    if _HAS_PYKWAVERS:
+        flat = np.ascontiguousarray(pressure.ravel(), dtype=np.float64)
+        return np.asarray(
+            kw.acoustic_intensity_from_amplitude(flat, float(rho), float(c))
+        ).reshape(pressure.shape)
+    return pressure**2 / (2.0 * rho * c)
+
+
+def adiabatic_delta_t_kelvin(
+    heat_source: np.ndarray, tau_s: float, rho: float, specific_heat: float
+) -> np.ndarray:
+    """No-perfusion ΔT = Q·τ/(ρ·c_p) [K] via kw.adiabatic_temperature_rise_kelvin."""
+    if _HAS_PYKWAVERS:
+        q_flat = np.ascontiguousarray(heat_source.ravel(), dtype=np.float64)
+        tau = np.full(q_flat.size, float(tau_s), dtype=np.float64)
+        return np.asarray(
+            kw.adiabatic_temperature_rise_kelvin(q_flat, tau, float(rho), float(specific_heat))
+        ).reshape(heat_source.shape)
+    return heat_source * tau_s / (rho * specific_heat)
+
+
+def bmode_log_compress(envelope: np.ndarray, reference: float, floor_db: float = -60.0) -> np.ndarray:
+    """Fixed-reference log compression db = clip(20·log10(env/ref), floor, 0) via kw.bmode_db_fixed_reference."""
+    if _HAS_PYKWAVERS:
+        flat = np.ascontiguousarray(envelope.ravel(), dtype=np.float64)
+        return np.asarray(
+            kw.bmode_db_fixed_reference(flat, float(reference), float(floor_db))
+        ).reshape(envelope.shape)
+    db = 20.0 * np.log10(np.maximum(np.maximum(envelope, 0.0) / max(reference, 1.0e-300), 1.0e-12))
+    return np.clip(db, floor_db, 0.0)
+
+
 def simulate_bmode(
     phantom: VesselPhantom,
     design: TransducerDesign,
@@ -238,7 +279,9 @@ def simulate_bmode(
     for col in range(angle_samples):
         envelope[:, col] = np.convolve(rf[:, col], kernel, mode="same")
     envelope = np.maximum(envelope, 1.0e-9)
-    db = 20.0 * np.log10(envelope / float(envelope.max()))
+    # Log-compression in the Rust core (db is clamped to [-60, 0]); the final
+    # normalized image is identical to the unclamped-then-clip form.
+    db = bmode_log_compress(envelope, float(envelope.max()), -60.0)
     bmode = np.clip((db + 60.0) / 60.0, 0.0, 1.0)
     cartesian = scan_convert(bmode, r_axis, theta_axis, phantom)
     return {
@@ -276,16 +319,24 @@ def simulate_therapy(phantom: VesselPhantom, design: TransducerDesign) -> dict[s
     pressure = design.therapy_pressure_pa * angle_gain * np.exp(-range_m / 3.2e-3)
     pressure[phantom.radius_m <= design.catheter_radius_m] = 0.0
 
+    # Effective amplitude attenuation [Np/m] at the therapy frequency. It is a
+    # spatially-varying tissue field, so the scalar-α acoustic_heat_source_density
+    # kernel cannot consume it directly; instead I = p²/(2ρc) is computed by the
+    # Rust intensity kernel and the per-voxel Beer–Lambert weighting (Q = 2αI) is
+    # applied to that Rust intensity.
     alpha_np = phantom.attenuation_db_cm_mhz * DB_CM_MHZ_TO_NP_M_MHZ
     frequency_mhz = design.therapy_frequency_hz / 1.0e6
-    intensity = pressure**2 / (2.0 * RHO_TISSUE_KG_M3 * C_TISSUE_M_S)
-    absorbed_power = 2.0 * alpha_np * frequency_mhz * intensity * design.therapy_duty_cycle
-    delta_t = absorbed_power * design.therapy_sonication_s / (RHO_TISSUE_KG_M3 * CP_TISSUE_J_KG_K)
+    alpha_eff_np_m = alpha_np * frequency_mhz
+    intensity = intensity_w_m2(pressure, RHO_TISSUE_KG_M3, C_TISSUE_M_S)
+    absorbed_power = 2.0 * alpha_eff_np_m * intensity * design.therapy_duty_cycle
+    delta_t = adiabatic_delta_t_kelvin(
+        absorbed_power, design.therapy_sonication_s, RHO_TISSUE_KG_M3, CP_TISSUE_J_KG_K
+    )
 
     wall = phantom.eel_mask & ~phantom.lumen_mask
     wall_target = phantom.fibrous_cap_mask | phantom.lipid_mask
     radial_band = np.exp(-((range_m - 1.75e-3) / 1.2e-3) ** 2)
-    acoustic_radiation_force = 2.0 * alpha_np * frequency_mhz * intensity / C_TISSUE_M_S
+    acoustic_radiation_force = 2.0 * alpha_eff_np_m * intensity / C_TISSUE_M_S
     deposition = acoustic_radiation_force * radial_band * (0.20 * wall + 0.80 * wall_target)
     deposition /= max(float(deposition.max()), 1.0e-12)
     delivered_fraction = 1.0 - np.exp(-3.0 * deposition)

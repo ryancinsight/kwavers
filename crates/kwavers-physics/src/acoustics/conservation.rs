@@ -54,7 +54,11 @@ mod tests;
 /// `½ρ|v|²` themselves.
 #[inline]
 #[must_use]
-pub(crate) fn acoustic_potential_energy_density(pressure: f64, density: f64, sound_speed: f64) -> f64 {
+pub(crate) fn acoustic_potential_energy_density(
+    pressure: f64,
+    density: f64,
+    sound_speed: f64,
+) -> f64 {
     pressure * pressure / (2.0 * density * sound_speed * sound_speed)
 }
 

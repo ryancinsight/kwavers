@@ -117,6 +117,9 @@ impl SimdExecutor {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
+    // Independent buffers, scales, and dimensions for a quantized matmul with no
+    // cohesive sub-grouping; bundling would not clarify the call site.
+    #[allow(clippy::too_many_arguments)]
     pub(super) fn matmul_simd_quantized(
         &self,
         input: &[f32],

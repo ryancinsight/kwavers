@@ -51,11 +51,9 @@ impl GpuPstdSession {
 
         #[cfg(feature = "gpu")]
         {
-            use kwavers_boundary::cpml::{CPMLConfig, CPMLProfiles};
             use kwavers_gpu::pstd_gpu::{
                 AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays, SolverParams,
             };
-            use kwavers_physics::acoustics::mechanics::absorption::power_law_db_cm_to_np_omega_m;
 
             let kgrid = &grid.inner;
             let nx = kgrid.nx;
@@ -160,10 +158,6 @@ impl GpuPstdSession {
                 nx,
                 ny,
                 nz,
-                bon_a_flat,
-                absorb_tau_flat,
-                absorb_eta_flat,
-                has_absorption,
                 time_steps,
                 sensor_indices: Vec::new(),
                 vel_x_indices: Vec::new(),

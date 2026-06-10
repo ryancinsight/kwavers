@@ -223,11 +223,26 @@ drive-voltage-dominated weighting.*
 ### Critiques (honest limitations)
 
 - **CMUT:** needs a high DC bias and is sensitive to dielectric charging (drift); collapse-mode
-  operation is nonlinear; low transmit pressure per volt vs piezo.
+  operation is nonlinear (the pre-collapse nonlinear electrostatics — bias pull-down, capacitance
+  rise, and **spring-softening to pull-in** — are modelled in `CmutCell::{bias_pulldown_fraction,
+  biased_gap, biased_capacitance, bias_softened_resonance}`, the equilibrium of
+  `k x = ε₀ A V²/(2(g₀−x)²)`; the resonance vanishes at `V = V_c`); low transmit pressure per volt
+  vs piezo.
 - **PMUT:** PZT is not CMOS-compatible and runs hot; AlN is CMOS-friendly but low-coupling (low
   sensitivity); both have narrower bandwidth than CMUT.
 - **Model scope:** these are lumped clamped-plate models (ADR 015) — first-order for design
-  comparison; cross-coupling, squeeze-film damping, and full coupled-field FEM are out of scope.
+  comparison. Squeeze-film gap-gas damping is modelled (`CmutCell::squeeze_film_damping`,
+  `squeeze_number`, §33.6). **Inter-element acoustic crosstalk** (the fluid path) is modelled in
+  `mems::crosstalk`: the baffled-monopole mutual radiation impedance
+  `Z_ij = jωρ A_iA_j/(2π d)\,e^{-jkd}` between cells and the array `crosstalk_matrix` (reciprocal,
+  `1/d` decay; valid for `d≫a`, `ka≲1`). The **substrate** crosstalk path (dispersive Lamb/Stoneley
+  membrane-support waves) and full coupled-field FEM remain out of scope (require a meshed model).
+- **Conformal flexible array:** a deformable CMUT/PMUT aperture refocuses after it bends via the
+  geometry-driven beamformer in `flexible::beamforming` — `focusing_delays`
+  (`τ_i=(d_max−d_i)/c`, in-phase arrival at the focus for *any* tracked geometry), `steering_delays`,
+  `per_element_curvature` (Menger), and `cmut_flex_apodization` (per-element transmit weight from
+  `CmutCell::flex_gap_derating` at the local curvature). This is the array "populated" by the cell
+  model: output falls where the wrap is tight (sub-micron gap perturbed by the sag).
 
 ---
 

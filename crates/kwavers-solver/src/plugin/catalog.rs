@@ -34,14 +34,17 @@
 //! | `BubbleDynamics { RayleighPlesset }`   | [`BubbleDynamicsPlugin`] (KM, compressibility off) |
 //! | `BubbleDynamics { Gilmore }`           | [`BubbleDynamicsPlugin`] (Gilmore/Tait RK4) |
 //! | `OpticalPropagation`                     | not yet wired                        |
+//! | `MechanicalStress { Isotropic }`         | [`MechanicalStressPlugin`] (elastic PSTD, λ/μ) |
 //!
 //! [`HybridSpectralDGSolver`]: crate::pstd::dg::HybridSpectralDGSolver
 //! [`BubbleDynamicsPlugin`]: crate::forward::bubble_dynamics::plugin::BubbleDynamicsPlugin
+//! [`MechanicalStressPlugin`]: crate::forward::pstd::extensions::elastic_plugin::MechanicalStressPlugin
 
 use crate::fdtd::FdtdConfig;
 use crate::forward::bubble_dynamics::plugin::{BubbleDynamicsConfig, BubbleDynamicsPlugin};
 use crate::forward::fdtd::plugin::FdtdPlugin;
 use crate::forward::nonlinear::kzk_solver_plugin::KzkSolverPlugin;
+use crate::forward::pstd::extensions::MechanicalStressPlugin;
 use crate::forward::pstd::plugin::PSTDPlugin;
 use crate::forward::thermal_diffusion::plugin::ThermalDiffusionPlugin;
 use crate::plugin::Plugin;
@@ -51,7 +54,9 @@ use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_physics::factory::config::PhysicsConfig;
-use kwavers_physics::factory::models::{AcousticSolver, NonlinearEquation, PhysicsModelType};
+use kwavers_physics::factory::models::{
+    AcousticSolver, ElasticWaveKind, NonlinearEquation, PhysicsModelType,
+};
 use kwavers_physics::thermal::diffusion::ThermalDiffusionConfig;
 
 /// Capability-driven plugin catalog.
@@ -105,7 +110,7 @@ impl PhysicsCatalog {
         kind: &PhysicsModelType,
         grid: &Grid,
         _medium: &dyn Medium,
-        _dt: f64,
+        dt: f64,
     ) -> KwaversResult<Box<dyn Plugin>> {
         match kind {
             PhysicsModelType::LinearAcoustics { solver_type, .. } => match solver_type {
@@ -151,6 +156,13 @@ impl PhysicsCatalog {
                 "OpticalPropagation",
                 "no Plugin adapter yet; use physics::optics models directly.",
             )),
+            PhysicsModelType::MechanicalStress { wave_kind } => match wave_kind {
+                // Isotropic elastic stress–velocity propagation; the orchestrator
+                // reads λ/μ/ρ from the medium in `Plugin::initialize`. ADR 021.
+                ElasticWaveKind::Isotropic => {
+                    Ok(Box::new(MechanicalStressPlugin::new(dt)))
+                }
+            },
         }
     }
 }
@@ -326,6 +338,66 @@ mod tests {
             manager.plugin_count(),
             1,
             "exactly one plugin registered for BubbleDynamics{{Gilmore}}"
+        );
+    }
+
+    #[test]
+    fn mechanical_stress_capability_builds_one_plugin() {
+        use kwavers_physics::factory::models::ElasticWaveKind;
+
+        let mut config = PhysicsConfig::new();
+        config.models.clear();
+        config.models.push(PhysicsModelConfig {
+            model_type: PhysicsModelType::MechanicalStress {
+                wave_kind: ElasticWaveKind::Isotropic,
+            },
+            enabled: true,
+            parameters: std::collections::HashMap::new(),
+        });
+
+        let grid = small_grid();
+        let medium = water(&grid);
+        let manager = PhysicsCatalog::build(&config, &grid, &medium, 1e-7)
+            .expect("MechanicalStress{Isotropic} must build a plugin");
+        assert_eq!(
+            manager.plugin_count(),
+            1,
+            "exactly one plugin registered for MechanicalStress capability"
+        );
+    }
+
+    #[test]
+    fn mechanical_stress_and_bubble_compose_without_field_conflict() {
+        // MechanicalStress provides Pressure; BubbleDynamics provides bubble
+        // fields — non-overlapping, so the scheduler resolves a valid order.
+        use kwavers_physics::factory::models::{BubbleModel, ElasticWaveKind};
+
+        let mut config = PhysicsConfig::new();
+        config.models.clear();
+        config.models.push(PhysicsModelConfig {
+            model_type: PhysicsModelType::MechanicalStress {
+                wave_kind: ElasticWaveKind::Isotropic,
+            },
+            enabled: true,
+            parameters: std::collections::HashMap::new(),
+        });
+        config.models.push(PhysicsModelConfig {
+            model_type: PhysicsModelType::BubbleDynamics {
+                model: BubbleModel::KellerMiksis,
+                nucleation: false,
+            },
+            enabled: true,
+            parameters: std::collections::HashMap::new(),
+        });
+
+        let grid = small_grid();
+        let medium = water(&grid);
+        let manager = PhysicsCatalog::build(&config, &grid, &medium, 1e-7)
+            .expect("MechanicalStress + BubbleDynamics must build and resolve order");
+        assert_eq!(
+            manager.plugin_count(),
+            2,
+            "two plugins expected for MechanicalStress + BubbleDynamics config"
         );
     }
 

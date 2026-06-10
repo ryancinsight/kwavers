@@ -4,7 +4,7 @@ mod multi_source;
 mod quasi_newton;
 mod shot_gradient;
 
-use super::{geometry::FwiGeometry, FwiProcessor};
+use super::{geometry::FwiGeometry, FwiEngine, FwiProcessor};
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
 use ndarray::Array3;
@@ -147,21 +147,77 @@ impl FwiProcessor {
         geometry: &FwiGeometry,
         grid: &Grid,
     ) -> KwaversResult<(f64, Array3<f64>)> {
-        let (synthetic_data, forward_history) =
-            self.forward_model(current_model, geometry, grid)?;
-        let objective = self.compute_misfit_objective(observed_data, &synthetic_data)?;
-
-        let residual = self.compute_adjoint_source(observed_data, &synthetic_data)?;
-        let adjoint_source = self.build_adjoint_source(&residual, geometry)?;
-        let gradient = self.adjoint_model(
-            &adjoint_source,
-            current_model,
-            grid,
-            &forward_history,
-            geometry.source.p_mask.as_ref(),
-        )?;
+        let (objective, gradient) =
+            self.forward_misfit_raw_gradient(current_model, observed_data, geometry, grid)?;
         let smoothed_gradient = self.smooth_gradient(&gradient);
         let regularized_gradient = self.apply_regularization(&smoothed_gradient, current_model)?;
         Ok((objective, regularized_gradient))
+    }
+
+    /// Shared forward + misfit + raw (unsmoothed, unregularized) physics gradient
+    /// pass used by [`Self::misfit_and_gradient`] and
+    /// [`Self::compute_shot_gradient`](super::FwiProcessor::compute_shot_gradient).
+    ///
+    /// For the exact self-adjoint engine **without** a sponge it takes the
+    /// memory-efficient reverse-reconstruction path (`O(N)` peak memory: only the
+    /// final two forward states are retained, and the forward field is
+    /// reconstructed backward in lockstep with the adjoint sweep). The damped
+    /// self-adjoint engine and the FDTD/PSTD `Solver` engine both require the full
+    /// stored forward history and use it.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] from the forward/adjoint solve or misfit.
+    pub(in crate::inverse::fwi::time_domain) fn forward_misfit_raw_gradient(
+        &self,
+        current_model: &Array3<f64>,
+        observed_data: &ndarray::Array2<f64>,
+        geometry: &FwiGeometry,
+        grid: &Grid,
+    ) -> KwaversResult<(f64, Array3<f64>)> {
+        // Exact self-adjoint engine, lossless: reconstruct the forward field
+        // backward instead of storing the O(nt·N) history.
+        if matches!(self.engine, FwiEngine::SecondOrderSelfAdjoint) && self.sa_damping.is_none() {
+            let (synthetic_data, p_last, p_second_last) =
+                self.forward_model_self_adjoint_tail(current_model, geometry, grid)?;
+            let objective = self.compute_misfit_objective(observed_data, &synthetic_data)?;
+            let residual = self.compute_adjoint_source(observed_data, &synthetic_data)?;
+            let gradient = self.adjoint_gradient_self_adjoint_reconstructed(
+                &residual,
+                current_model,
+                geometry,
+                grid,
+                super::forward::ReconstructionSeed {
+                    p_last: &p_last,
+                    p_second_last: &p_second_last,
+                },
+                geometry.source.p_mask.as_ref(),
+            )?;
+            return Ok((objective, gradient));
+        }
+
+        let (synthetic_data, forward_history) =
+            self.forward_model(current_model, geometry, grid)?;
+        let objective = self.compute_misfit_objective(observed_data, &synthetic_data)?;
+        let residual = self.compute_adjoint_source(observed_data, &synthetic_data)?;
+        let gradient = match self.engine {
+            FwiEngine::Solver => {
+                let adjoint_source = self.build_adjoint_source(&residual, geometry)?;
+                self.adjoint_model(
+                    &adjoint_source,
+                    current_model,
+                    grid,
+                    &forward_history,
+                    geometry.source.p_mask.as_ref(),
+                )?
+            }
+            FwiEngine::SecondOrderSelfAdjoint => self.adjoint_gradient_self_adjoint(
+                &residual,
+                current_model,
+                geometry,
+                grid,
+                &forward_history,
+                geometry.source.p_mask.as_ref(),
+            )?,
+        };
+        Ok((objective, gradient))
     }
 }

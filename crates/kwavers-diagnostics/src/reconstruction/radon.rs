@@ -220,7 +220,10 @@ mod tests {
         assert!(r > 0.8, "FBP recon correlation {r} too low");
         // reconstructed mass centroid is at the image centre
         let (cx, cy) = positive_centroid(&recon);
-        assert!((cx - 31.5).abs() < 2.0 && (cy - 31.5).abs() < 2.0, "centroid ({cx},{cy})");
+        assert!(
+            (cx - 31.5).abs() < 2.0 && (cy - 31.5).abs() < 2.0,
+            "centroid ({cx},{cy})"
+        );
     }
 
     #[test]
@@ -233,7 +236,10 @@ mod tests {
         let (cx, cy) = positive_centroid(&recon);
         assert!(cx > 36.0, "expected centroid right of centre, got x={cx}");
         assert!(cy < 28.0, "expected centroid above centre, got y={cy}");
-        assert!((cx - 44.0).abs() < 4.0 && (cy - 20.0).abs() < 4.0, "centroid ({cx},{cy})");
+        assert!(
+            (cx - 44.0).abs() < 4.0 && (cy - 20.0).abs() < 4.0,
+            "centroid ({cx},{cy})"
+        );
     }
 
     #[test]

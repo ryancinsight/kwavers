@@ -35,10 +35,17 @@
 //! Prior to consolidation, two pseudospectral wave steppers existed in
 //! parallel: [`pstd::PSTDSolver`] (acoustic) and a duplicate
 //! `solver::forward::elastic_wave::ElasticWave::update_wave` (an
-//! `AcousticWaveModel` impl that hard-coded `μ = 0`). The duplicate plus its
-//! wrapping `ElasticWavePlugin` and the `PhysicsModelType::MechanicalStress`
-//! factory variant have been deleted; the genuinely useful spectral
+//! `AcousticWaveModel` impl that hard-coded `μ = 0`). That duplicate plus its
+//! `μ = 0` `ElasticWavePlugin` were deleted; the genuinely useful spectral
 //! primitives now live under [`pstd::extensions`].
+//!
+//! The `PhysicsModelType::MechanicalStress` capability has since been
+//! **re-introduced genuinely** (ADR 021) as
+//! [`pstd::extensions::MechanicalStressPlugin`] — a `Plugin` owning a real
+//! [`pstd::extensions::ElasticPstdOrchestrator`] (leapfrog λ/μ stress–velocity
+//! PSTD) that provides isotropic pressure `p = -⅓ tr(σ)` to the unified field.
+//! This is not the deleted `μ = 0` wrapper: the shear pass is active, so the
+//! variant supports shear waves the acoustic path cannot.
 //!
 //! ## Module organisation
 //!

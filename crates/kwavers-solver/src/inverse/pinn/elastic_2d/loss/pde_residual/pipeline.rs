@@ -56,6 +56,9 @@ pub fn displacement_to_stress_divergence<B: AutodiffBackend>(
 /// ## Returns
 ///
 /// `(residual_x, residual_y)` — PDE residuals per component \[N, 1\]
+// Arguments are independent field tensors and material constants with no
+// cohesive sub-grouping; bundling them into a struct would not clarify callers.
+#[allow(clippy::too_many_arguments)]
 #[cfg(feature = "pinn")]
 pub fn compute_elastic_wave_pde_residual<B: AutodiffBackend>(
     u: Tensor<B, 2>,

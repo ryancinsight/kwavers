@@ -76,4 +76,3 @@ pub fn steering_focus_point(focal_range_m: f64, steer_rad: f64) -> (f64, f64) {
         focal_range_m * steer_rad.cos(),
     )
 }
-

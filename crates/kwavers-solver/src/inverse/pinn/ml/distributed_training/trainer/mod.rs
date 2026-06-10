@@ -4,7 +4,7 @@ mod persistence;
 
 use super::{
     CheckpointManager, DistributedPinnTrainer, DistributedTrainingConfig, PerformanceStats,
-    TrainingCheckpoint, TrainingCoordinator, TrainingState,
+    TrainingCoordinator, TrainingState,
 };
 use crate::inverse::pinn::ml::{
     BurnPINN2DConfig, BurnPINN2DWave, BurnTrainingMetrics2D, BurnWave2dGeometry,

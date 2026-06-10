@@ -181,13 +181,13 @@ source is a Charbonnier-robust residual scaled by the configured receiver-noise
 fraction and observed-trace RMS, but it is not an
 iterative multiparameter FWI update and not nonlinear Westervelt/
 Rayleigh-Plesset propagation. The production contract is explicit:
-`kwavers::clinical::therapy::theranostic_guidance`
+`kwavers_therapy::therapy::theranostic_guidance`
 owns patient CT workflow, anatomy selection, device-placement analogs, exposure
 synthesis, and reconstruction reporting. The reduced finite-frequency
 same-aperture row operators, passive subharmonic rows, harmonic rows, and
 graph-Laplacian PCG normal-equation solver live under
-`kwavers::solver::inverse::same_aperture`. General seismic FWI and RTM kernels
-remain under `kwavers::solver::inverse::seismic`. The active same-aperture
+`kwavers_solver::inverse::same_aperture`. General seismic FWI and RTM kernels
+remain under `kwavers_solver::inverse::seismic`. The active same-aperture
 inverse in this chapter precomputes its support graph Laplacian once, and each
 CG step reuses row, normal-operator, and Laplacian workspaces instead of
 allocating a full image mask inside every iteration.
@@ -242,7 +242,7 @@ contract
 B(prepared, layout, config) -> (P_peak, E, diagnostics).
 ```
 
-The Chapter 29 exposure entry point calls the backend through a generic type
+The Chapter 28 exposure entry point calls the backend through a generic type
 parameter, not through `dyn` dispatch. Therefore the compiler monomorphizes the
 reference backend call into a direct call with no vtable lookup and no
 heap-erased solver object in the time-stepping loop. A future hybrid PSTD/FDTD
@@ -279,7 +279,7 @@ full-domain clear with a halo clear preserves the recurrence state and reduces
 per-step clearing work from `O(N)` to `O(nx + ny)`.
 
 The elastic shear channel is now an iterative nonlinear ElasticPSTD FWI
-reconstruction rather than a reduced acoustic-operator comparator. Chapter 29
+reconstruction rather than a reduced acoustic-operator comparator. Chapter 28
 builds baseline, lesion-perturbed, and current-estimate shear media on the CT
 slice, drives the commanded treatment focus inside the segmented target with an
 out-of-plane velocity tone burst, records the same therapy/imaging aperture as
@@ -304,7 +304,7 @@ channels still use the matrix-free same-aperture PCG operators.
 
 The patient-adaptive transmit experiment is inspired by van Nierop et al.
 `arXiv:2508.08782`, where sparse focused transmit selections are evaluated
-against equispaced baselines at matched transmit budgets. Chapter 29 implements
+against equispaced baselines at matched transmit budgets. Chapter 28 implements
 the minimal local control surface:
 
 ```text
@@ -349,7 +349,7 @@ B = C A.
 ```
 
 For any model `x`, `B x = C(A x)`. For any encoded residual `y`,
-`B^T y = A^T C^T y`. Therefore the Chapter 29 reduced inverse solves the exact
+`B^T y = A^T C^T y`. Therefore the Chapter 28 reduced inverse solves the exact
 encoded quadratic
 
 ```text
@@ -395,7 +395,7 @@ psi(r) = r / sqrt(1 + (r / epsilon)^2).
 
 Then `|psi(r)| <= epsilon` for every finite residual. Proof: write
 `x = |r| / epsilon`, so `|psi| = epsilon x / sqrt(1 + x^2) <= epsilon`.
-The Chapter 29 RTM channel uses this derivative for receiver injection by
+The Chapter 28 RTM channel uses this derivative for receiver injection by
 default. Setting `waveform_misfit = "l2"` recovers the unbounded least-squares
 adjoint source `psi(r) = r`.
 
@@ -428,7 +428,7 @@ discretizing by the second-order leapfrog gives the recurrence above with a
 steepening: compressions travel faster than rarefactions and peaks at fixed `x`
 arrive earlier than the linear prediction. The previous explicit `p*dtt(p)`
 feedback path produced non-physical runaway peaks at histotripsy drive; the
-finite-amplitude denominator keeps the 2026-05-17 Chapter 29 run finite while
+finite-amplitude denominator keeps the 2026-05-17 Chapter 28 run finite while
 reducing exactly to the linear update when `beta = 0`. A sign-flipped nonlinear
 term produces non-physical reverse steepening; the sign-sensitive regression
 `forward_westervelt_exhibits_physical_forward_steepening_with_corrected_sign`
@@ -557,7 +557,7 @@ tissue support. The operator
 H = A^T A + lambda I + gamma L
 ```
 
-is symmetric positive definite on the active support. Therefore the Chapter 29
+is symmetric positive definite on the active support. Therefore the Chapter 28
 PCG solve minimizes the unique quadratic objective:
 
 ```text
@@ -775,6 +775,30 @@ Outputs:
 - `docs/book/figures/ch29/controlled_comparison_metrics.json`
 - `docs/book/figures/ch29/controlled_comparison_fields.npz`
 
+![Same-device array placement on the CT-derived skin/skull boundary.](figures/ch29/fig01_device_placement_on_ct.png)
+
+*Figure 28.1. Device placement on CT: the same-aperture therapy/monitoring array positioned on the CT-derived boundary for brain, kidney, and liver cases.*
+
+![Planned exposure and same-aperture reconstruction channels.](figures/ch29/fig02_exposure_and_reconstruction.png)
+
+*Figure 28.2. Exposure + reconstruction: the planned focused exposure and the active-Born / passive-subharmonic / harmonic / RTM / fused reconstruction channels, all from the same element set $E$.*
+
+![3-D placement of the 1024-element focused bowl on the head CT.](figures/ch29/fig03_brain_focused_bowl_3d_placement.png)
+
+*Figure 28.3. Transcranial focused-bowl placement: the 1024-element hemispherical aperture around the head CT with source-to-focus beam paths.*
+
+![Reconstruction dynamic-range and sidelobe diagnostics.](figures/ch29/fig04_reconstruction_dynamic_range_diagnostics.png)
+
+*Figure 28.4. Reconstruction diagnostics: dynamic-range and outside-target sidelobe diagnostics for the same-aperture channels.*
+
+![Nonlinear 3-D Westervelt / Rayleigh–Plesset cavitation reconstruction.](figures/ch29/fig05_nonlinear_3d_westervelt_rp_cavitation.png)
+
+*Figure 28.5. Nonlinear 3-D branch: the heterogeneous-Westervelt FDTD field, discrete-adjoint $c/\beta$ FWI, and the Rayleigh–Plesset cavitation-source reconstruction from passive subharmonic data.*
+
+![Controlled linear vs nonlinear reconstruction comparison.](figures/ch29/fig06_controlled_linear_nonlinear_comparison.png)
+
+*Figure 28.6. Controlled comparison: matched-setup linear (reduced-Born) vs nonlinear (3-D Westervelt/RP) panels audited against the same experimental scene.*
+
 The metrics file records reconstruction quality, placement geometry, the
 canonical brain scene manifest,
 outside-target sidelobe diagnostics, matrix-free operator storage evidence,
@@ -802,7 +826,7 @@ For development smoke runs, `KWAVERS_CH29_OUT_DIR` redirects generated figures,
 metrics, and field archives away from the production book directory. The
 loader rejects stale `pykwavers` extensions that do not expose the current
 nonlinear argument surface, preventing old PyO3 binaries from silently running
-with mismatched Chapter 29 controls.
+with mismatched Chapter 28 controls.
 Figure 5 also reuses the Figure 2 brain
 scene target, therapy aperture, imaging receivers, and sampled source-to-focus
 beam paths in the CT column so the linear and nonlinear panels are visually

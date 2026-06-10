@@ -27,11 +27,9 @@ impl super::PipelineManager {
             .pipelines
             .get(&PipelineType::ElementWiseMultiply)
             .ok_or_else(|| {
-                KwaversError::GpuError(format!(
-                    "{}: {}",
-                    "ElementWiseMultiply pipeline".to_string(),
-                    "Pipeline not compiled".to_string()
-                ))
+                KwaversError::GpuError(
+                    "ElementWiseMultiply pipeline: Pipeline not compiled".to_string(),
+                )
             })?;
 
         let shape = a.shape();
@@ -102,7 +100,7 @@ impl super::PipelineManager {
 
             compute_pass.set_pipeline(pipeline);
             compute_pass.set_bind_group(0, &bind_group, &[]);
-            compute_pass.dispatch_workgroups((n_elements as u32 + 255) / 256, 1, 1);
+            compute_pass.dispatch_workgroups((n_elements as u32).div_ceil(256), 1, 1);
         }
 
         context.queue().submit(std::iter::once(encoder.finish()));
@@ -137,11 +135,9 @@ impl super::PipelineManager {
             .pipelines
             .get(&PipelineType::SpatialDerivative)
             .ok_or_else(|| {
-                KwaversError::GpuError(format!(
-                    "{}: {}",
-                    "SpatialDerivative pipeline".to_string(),
-                    "Pipeline not compiled".to_string()
-                ))
+                KwaversError::GpuError(
+                    "SpatialDerivative pipeline: Pipeline not compiled".to_string(),
+                )
             })?;
 
         let (nx, ny, nz) = field.dim();

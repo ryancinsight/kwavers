@@ -34,6 +34,8 @@
 //! magnitude — adequate for histotripsy fields whose useful dynamic
 //! range is ~`30 MPa → 30 Pa`.
 
+// Used only by the test module (reference pressure-scale assertions).
+#[cfg(test)]
 use kwavers_core::constants::numerical::MPA_TO_PA;
 use kwavers_core::error::{KwaversError, KwaversResult};
 
@@ -56,7 +58,9 @@ impl TargetTransform {
     /// # Errors
     /// Returns [`KwaversError::InvalidInput`] when `scale_pa <= 0`.
     pub fn linear(scale_pa: f32) -> KwaversResult<Self> {
-        if !(scale_pa > 0.0) {
+        // Reject non-positive *and* NaN inputs: `partial_cmp` returns `None`
+        // for NaN, which is correctly excluded by the `!= Some(Greater)` test.
+        if scale_pa.partial_cmp(&0.0) != Some(core::cmp::Ordering::Greater) {
             return Err(KwaversError::InvalidInput(
                 "TargetTransform::linear requires scale_pa > 0".into(),
             ));
@@ -70,7 +74,11 @@ impl TargetTransform {
     /// Returns [`KwaversError::InvalidInput`] when either input is
     /// non-positive.
     pub fn signed_log1p(p_max_pa: f32, p_eps_pa: f32) -> KwaversResult<Self> {
-        if !(p_max_pa > 0.0) || !(p_eps_pa > 0.0) {
+        // Reject non-positive *and* NaN inputs: `partial_cmp` returns `None`
+        // for NaN, which is correctly excluded by the `!= Some(Greater)` test.
+        if p_max_pa.partial_cmp(&0.0) != Some(core::cmp::Ordering::Greater)
+            || p_eps_pa.partial_cmp(&0.0) != Some(core::cmp::Ordering::Greater)
+        {
             return Err(KwaversError::InvalidInput(
                 "TargetTransform::signed_log1p requires both p_max_pa and p_eps_pa > 0".into(),
             ));

@@ -182,18 +182,10 @@ impl GpuBackendBufferManager {
 
         rx.recv()
             .map_err(|e| {
-                KwaversError::GpuError(format!(
-                    "{}: {}",
-                    "buffer_map".to_string(),
-                    format!("Failed to map buffer: {}", e)
-                ))
+                KwaversError::GpuError(format!("buffer_map: Failed to map buffer: {}", e))
             })?
             .map_err(|e| {
-                KwaversError::GpuError(format!(
-                    "{}: {}",
-                    "buffer_map".to_string(),
-                    format!("Buffer mapping error: {:?}", e)
-                ))
+                KwaversError::GpuError(format!("buffer_map: Buffer mapping error: {:?}", e))
             })?;
 
         // Read data
@@ -205,11 +197,7 @@ impl GpuBackendBufferManager {
 
         // Reshape to Array3
         let array = Array3::from_shape_vec(shape, data_f64).map_err(|e| {
-            KwaversError::GpuError(format!(
-                "{}: {}",
-                "shape".to_string(),
-                format!("Failed to reshape array: {}", e)
-            ))
+            KwaversError::GpuError(format!("shape: Failed to reshape array: {}", e))
         })?;
 
         // Unmap buffer

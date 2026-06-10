@@ -1,13 +1,20 @@
 # Chapter 31 — Segmented Tissue Transducer Planning
 
-This chapter example converts normal-tissue, tumor, air, bone, fat, and
-protected-structure segmentations into a therapy-head placement problem.  It
-uses the local LiTS17 liver CT sample by default: native liver and tumor labels
-define normal tissue and target tissue, while CT Hounsfield-unit thresholds
-derive air, fat, bone, and a contrast-enhanced vascular avoid channel.  The
-workflow is analogous to treatment-planning velocity constraints in
-tomotherapy: every candidate aperture is scored by what its acoustic paths cross
-before the solver is allowed to shape the focal field.
+This chapter converts a CT tumour/organ segmentation into a therapy-head
+placement plus a same-aperture theranostic reconstruction. It uses the local
+LiTS17 liver CT sample by default: native liver and tumour labels define the
+host tissue and the lesion target, while CT Hounsfield-unit thresholds derive
+air, fat, bone, and a contrast-enhanced vascular avoid channel that classify the
+acoustic-access context around the target. All physics runs in the kwavers Rust
+core (PyO3 bindings); the Python script renders only the matplotlib panels.
+
+> **History.** An earlier version of this chapter ran a Python-side ray-trace
+> optimiser (per-aperture path scoring, an angular crossfire plan, a complex
+> ridge least-squares solve, and dense-field hotspot refinement). That physics
+> was deliberately moved out of Python (commit *"replace Python ray-trace
+> physics with pykwavers FWI bindings"*) to honour the rule that pykwavers is a
+> thin PyO3 wrapper. The chapter now documents the Rust-backed pipeline that
+> replaced it.
 
 Run:
 
@@ -15,21 +22,21 @@ Run:
 python pykwavers/examples/book/ch32_segmented_tissue_transducer_optimization.py
 ```
 
-Set `KWAVERS_CH32_SOURCE=phantom` to run the deterministic analytic phantom
-used by the unit tests.
+Missing LiTS17 NIfTI files trigger the built-in synthetic abdominal liver
+phantom automatically.
 
 ## Planning Contract
 
-Input labels have one meaning:
+The segmentation classifies the acoustic-access context around the target; each
+label carries one physical meaning:
 
-- `air`: exterior air and internal gas pockets. Internal air on a beam path is a
-  hard acoustic-access penalty.
-- `bone`: rib or skull-like structures. Paths through bone incur attenuation and
-  phase-error penalties.
-- `fat`: allowed but penalized because it changes sound speed and attenuation.
-- `tumor`: desired lesion support.
-- `avoid`: sensitive anatomy that must receive a pressure null.
-- `normal`: admissible tissue with off-target dose penalties.
+- `air`: exterior air and internal gas pockets — a near-total acoustic-access
+  barrier on any beam path.
+- `bone`: rib or skull-like structures — high attenuation and a phase aberrator.
+- `fat`: a sound-speed / attenuation contrast relative to parenchyma.
+- `tumor`: the lesion target.
+- `avoid`: sensitive anatomy (e.g. enhancing vasculature) to be spared.
+- `normal`: admissible host tissue around the target.
 
 For the LiTS17 sample, the mapping is:
 
@@ -42,54 +49,72 @@ For the LiTS17 sample, the mapping is:
 - CT `HU >= 200` outside liver/tumor: `bone`;
 - CT `160 < HU < 400` inside liver parenchyma: vascular `avoid`.
 
-The optimizer is hybrid:
+The pipeline has two Rust-core phases:
 
-1.  A deterministic ray model evaluates each candidate transducer position
-    against the segmentation-derived air, bone, and fat path fractions.
-2.  The safest central aperture is paired with angularly separated safe
-    apertures to form a crossfire plan, reducing the pre-focal entrance dose
-    that a single 2-D aperture would otherwise concentrate.
-3.  A complex ridge least-squares solve computes per-element phase and amplitude
-    weights for the selected aperture set.
-4.  The focal objective requests an elliptical spot in the tumor and zero
-    pressure at protected and surrounding normal-tissue control points.
-5.  Candidate selection maximizes tumor coverage while penalizing protected
-    peak pressure, normal-tissue mean pressure, body sidelobes, and segmented
-    path hazards.
-6.  Dense-field hotspot refinement rejects plans whose strongest body-masked
-    off-target lobe exceeds the tumor peak and re-solves with added null
-    constraints at the measured body hotspots.
+**Phase 1 — Segmentation-driven placement.**
+`pykwavers.plan_abdominal_array_placement_from_ritk_ct(ct, seg, anatomy_label="liver",
+element_count=256, surface_stride=6)` places a HistoSonics-like 256-element focused
+bowl (spherical radius ≈ 0.142 m) on the anterior abdominal skin surface, targeting the
+liver organ centroid, with elements distributed by a Fibonacci golden-spiral. Production
+function: `kwavers_therapy::therapy::theranostic_guidance::abdominal3d::plan_abdominal_array_placement`.
 
-The default LiTS17 run selects a three-source crossfire plan at `-90`, `-170`,
-and `-10` degrees.  The regenerated Chapter 32 metrics report
-`target_dominant = true`, tumor coverage `0.7838`, body sidelobe peak ratio
-`0.7395`, body sidelobe P99 ratio `0.3297`, protected peak ratio `0.2959`,
-air path fraction `0.0035`, and bone path fraction `0.0329`.
+**Phase 2 — Same-aperture theranostic inversion.**
+`pykwavers.run_theranostic_inverse_from_ritk(...)` runs, over the *same* aperture, a
+finite-frequency same-aperture graph-Laplacian PCG inverse (650 kHz fundamental + 2nd/3rd
+harmonics, HADAMARD-coded receive, Charbonnier misfit), a source-encoded time-domain
+adjoint RTM channel, an iterative elastic-shear ElasticPSTD FWI channel, and
+harmonic / subharmonic / ultraharmonic cavitation-source reconstructions fused into one
+map. The run reports honest model-fidelity flags (consistent with Chapter 28): the acoustic
+anatomy/lesion/harmonic channels are reduced-Born/Tikhonov (one-shot, linearised) so
+`is_full_wave_inversion = false`; the elastic-shear channel performs iterative nonlinear FWI
+with line search so `iterative_elastic_fwi = true`; the linear forward solver gives
+`uses_nonlinear_wave_propagation = false`.
 
-This is a planning example, not a clinical approval model.  It establishes the
-software interface needed to route patient segmentations into transducer
-placement, segmented access scoring, and a higher-fidelity hybrid wave solver.
+The default LiTS17 run (256-element bowl, 65 inner FWI iterations, objective `0.95 → 0.14`)
+reports the following reconstruction quality (equal-area Dice, CNR, Pearson r vs the
+CT-derived target):
+
+| Channel | Pearson r | Dice | CNR |
+|---|---:|---:|---:|
+| Active lesion (Born) | 0.846 | 1.00 | 20.6 |
+| Harmonic (2f₀) | 0.914 | 1.00 | 29.8 |
+| Ultraharmonic (1.5f₀) | 0.892 | 1.00 | 26.6 |
+| Subharmonic (f₀/2) | 0.788 | 1.00 | 16.7 |
+| Elastic-shear FWI | 0.433 | 0.60 | 6.3 |
+| **Fused** | **0.978** | **1.00** | — (NRMSE 0.015) |
+
+This is a planning/reconstruction example, not a clinical approval model. It establishes the
+software interface that routes a patient segmentation into transducer placement and a
+same-aperture multi-channel theranostic reconstruction.
 
 ## Figures
 
-![Segmentation and candidate scores](figures/ch32/fig01_segmentation_candidate_scores.png)
+All figures are generated by
+`pykwavers/examples/book/ch32_segmented_tissue_transducer_optimization.py` into
+`docs/book/figures/ch32/`.
 
-![Optimized focal field](figures/ch32/fig02_optimized_spot_and_avoidance.png)
+![3-D focused-bowl placement on the CT-derived liver skin surface.](figures/ch32/fig01_bowl_placement_3d.png)
 
-![Hybrid solver tradeoffs](figures/ch32/fig03_hybrid_solver_tradeoffs.png)
+*Figure 31.1. Phase 1: the 256-element focused bowl placed on the abdominal skin surface, targeting the liver centroid, with the Fibonacci-distributed elements and beam rays.*
+
+![Source-encoded exposure over the CT slice with the liver/tumour segmentation.](figures/ch32/fig02_exposure_and_segmentation.png)
+
+*Figure 31.2. Phase 2 exposure: the source-encoded peak-pressure field over the CT slice, overlaid with the segmentation and the element/aperture positions.*
+
+![Multi-modal same-aperture reconstruction channels.](figures/ch32/fig03_multimodal_reconstruction.png)
+
+*Figure 31.3. The reconstruction channels (active-Born lesion, RTM, elastic-shear, harmonic / subharmonic / ultraharmonic cavitation) and the fused map.*
+
+![FWI objective convergence.](figures/ch32/fig04_fwi_convergence.png)
+
+*Figure 31.4. FWI convergence: the inner objective history (0.95 → 0.14 over 65 iterations) for the same-aperture inverse.*
 
 ## Verification
 
-The executable tests assert that:
-
-- the segmentation contains nonempty tumor, protected, air, bone, fat, and
-  normal-tissue compartments;
-- the LiTS17 liver dataset adapter preserves native liver/tumor labels and
-  derives nonempty CT hazard masks;
-- the optimizer evaluates multiple candidate apertures and selects the best
-  objective value;
-- the selected plan has lower protected-structure peak intensity than tumor
-  peak intensity;
-- dense rendered-field acceptance marks the target as dominant over body
-  sidelobes for the default LiTS17 figure generation;
-- the selected path penalties remain finite and are exported to `metrics.json`.
+The capability is exercised by the theranostic-guidance Rust tests
+(`kwavers_therapy::therapy::theranostic_guidance`) and the abdominal-placement property
+tests in `crates/kwavers-therapy/.../abdominal3d/tests.rs` (skin-contact-outside-body,
+bowl-vertex-matches-skin-contact, all-elements-on-sphere). The example run asserts that the
+placement returns a non-empty 256-element bowl on the skin, that the same-aperture inverse
+reduces its objective, and that the fused reconstruction is target-dominant; all metrics are
+exported to `metrics.json`.

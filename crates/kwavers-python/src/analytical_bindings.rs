@@ -6,6 +6,9 @@
 //! Organisation mirrors the Rust analytical sub-module layout:
 //!   wave, transducer, cavitation, tissue, safety, skull, photoacoustics,
 //!   elastography, imaging, thermal, bbb, inverse, sonogenetics, rtm
+//!
+//! FFI-boundary lint allowances (`type_complexity`, `too_many_arguments`) are set
+//! crate-wide in `lib.rs`; see the justification there.
 
 pub mod bbb;
 pub mod cavitation;
@@ -13,6 +16,7 @@ pub mod elastography;
 pub mod imaging;
 pub mod inverse;
 pub mod mems;
+pub mod neuromodulation;
 pub mod photoacoustics;
 pub mod rtm;
 pub mod safety;
@@ -136,6 +140,10 @@ pub fn register_book(m: &Bound<'_, PyModule>) -> PyResult<()> {
     )?)?;
     m.add_function(wrap_pyfunction!(cavitation::prf_efficacy_factor, m)?)?;
     m.add_function(wrap_pyfunction!(cavitation::minnaert_resonance_hz, m)?)?;
+    m.add_function(wrap_pyfunction!(
+        cavitation::minnaert_resonance_corrected_hz,
+        m
+    )?)?;
     m.add_function(wrap_pyfunction!(cavitation::blake_threshold_pa, m)?)?;
     m.add_function(wrap_pyfunction!(cavitation::rayleigh_collapse_time_s, m)?)?;
     m.add_function(wrap_pyfunction!(cavitation::bubble_power_spectrum, m)?)?;
@@ -259,6 +267,11 @@ pub fn register_book(m: &Bound<'_, PyModule>) -> PyResult<()> {
         cavitation::residual_dissolution_time_s,
         m
     )?)?;
+    m.add_function(wrap_pyfunction!(
+        cavitation::cavitation_optimal_frequency,
+        m
+    )?)?;
+    m.add_function(wrap_pyfunction!(cavitation::staged_sonication_sweep, m)?)?;
     // tissue
     m.add_function(wrap_pyfunction!(tissue::water_sound_speed_temperature, m)?)?;
     m.add_function(wrap_pyfunction!(tissue::water_density_temperature, m)?)?;
@@ -277,7 +290,10 @@ pub fn register_book(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(safety::arrhenius_damage_integral, m)?)?;
     m.add_function(wrap_pyfunction!(safety::arrhenius_cumulative, m)?)?;
     m.add_function(wrap_pyfunction!(safety::arrhenius_kill_probability, m)?)?;
-    m.add_function(wrap_pyfunction!(safety::arrhenius_steady_kill_probability, m)?)?;
+    m.add_function(wrap_pyfunction!(
+        safety::arrhenius_steady_kill_probability,
+        m
+    )?)?;
     m.add_function(wrap_pyfunction!(safety::combined_kill_probability, m)?)?;
     m.add_function(wrap_pyfunction!(safety::fda_ispta_limit_mw_cm2, m)?)?;
     m.add_function(wrap_pyfunction!(safety::fda_isppa_limit_w_cm2, m)?)?;
@@ -375,6 +391,36 @@ pub fn register_book(m: &Bound<'_, PyModule>) -> PyResult<()> {
         m
     )?)?;
     m.add_function(wrap_pyfunction!(sonogenetics::ispta_w_cm2, m)?)?;
+    // neuromodulation (Hodgkin–Huxley + NICE intramembrane cavitation)
+    m.add_function(wrap_pyfunction!(
+        neuromodulation::hodgkin_huxley_response,
+        m
+    )?)?;
+    m.add_function(wrap_pyfunction!(
+        neuromodulation::nice_bilayer_sonophore_response,
+        m
+    )?)?;
+    m.add_function(wrap_pyfunction!(neuromodulation::nice_sonic_response, m)?)?;
+    m.add_function(wrap_pyfunction!(
+        neuromodulation::nice_quasistatic_response,
+        m
+    )?)?;
+    m.add_function(wrap_pyfunction!(neuromodulation::nice_dynamic_response, m)?)?;
+    m.add_function(wrap_pyfunction!(neuromodulation::bls_deflection_curve, m)?)?;
+    m.add_function(wrap_pyfunction!(
+        neuromodulation::cortical_sonic_response,
+        m
+    )?)?;
+    m.add_function(wrap_pyfunction!(
+        neuromodulation::bilayer_capacitance_curve,
+        m
+    )?)?;
+    m.add_function(wrap_pyfunction!(neuromodulation::pulse_train_dosimetry, m)?)?;
+    m.add_function(wrap_pyfunction!(neuromodulation::itrusst_safety, m)?)?;
+    m.add_function(wrap_pyfunction!(
+        neuromodulation::neuromod_threshold_pressure_pa,
+        m
+    )?)?;
     // rtm
     m.add_function(wrap_pyfunction!(rtm::focused_gaussian_beam_2d, m)?)?;
     m.add_function(wrap_pyfunction!(rtm::backprop_green_function_2d, m)?)?;

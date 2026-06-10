@@ -23,6 +23,16 @@ use kwavers_core::constants::tissue_acoustics::{SOUND_SPEED_KIDNEY, SOUND_SPEED_
 use kwavers_core::error::{KwaversError, KwaversResult};
 use ndarray::{s, Array2, Array3, Axis, Zip};
 
+/// Abdominal acoustic-property maps: `(sound speed, attenuation, body mask,
+/// organ mask, target mask)`, all sharing the input CT shape.
+type AbdominalMaps = (
+    Array2<f64>,
+    Array2<f64>,
+    Array2<bool>,
+    Array2<bool>,
+    Array2<bool>,
+);
+
 // ── Abdominal CT acoustic property model calibration constants ────────────────
 //
 // Calibrated against Duck (1990) Table 4.6 (organ sound speeds) and
@@ -241,13 +251,7 @@ fn abdominal_properties(
     ct: &Array2<f64>,
     label: &Array2<i16>,
     body_support: &Array2<bool>,
-) -> (
-    Array2<f64>,
-    Array2<f64>,
-    Array2<bool>,
-    Array2<bool>,
-    Array2<bool>,
-) {
+) -> AbdominalMaps {
     let (nx, ny) = ct.dim();
     let c_organ = organ_reference_speed(anatomy);
     let mut speed = Array2::<f64>::from_elem((nx, ny), SOUND_SPEED_AIR);

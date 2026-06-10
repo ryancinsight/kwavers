@@ -33,6 +33,7 @@ mod chirped_dynamics;
 mod clearance;
 mod engagement;
 mod nuclei;
+mod staged;
 
 #[cfg(test)]
 mod tests;
@@ -44,7 +45,8 @@ pub use clearance::{
     InterPulseClearance,
 };
 pub use engagement::{
-    monochromatic_engaged_fraction, swept_engaged_fraction, swept_vs_monochromatic_engagement,
-    CavitationMedium, EngagementConfig, EngagementResult,
+    cavitation_optimal_frequency, monochromatic_engaged_fraction, swept_engaged_fraction,
+    swept_vs_monochromatic_engagement, CavitationMedium, EngagementConfig, EngagementResult,
 };
 pub use nuclei::NucleiSizeDistribution;
+pub use staged::{staged_sonication_sweep, StagedSonication};

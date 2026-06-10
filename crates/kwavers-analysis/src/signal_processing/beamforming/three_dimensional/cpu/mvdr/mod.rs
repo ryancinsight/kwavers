@@ -90,6 +90,10 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 /// # Errors
 /// - [`KwaversError::InvalidInput`] if the channel count mismatches the array config.
 /// - [`KwaversError::InvalidInput`] if any subarray dimension exceeds the array size.
+// Authoritative CPU MVDR kernel: active production path under default features
+// and the test reference. Under `gpu`, its only non-test caller
+// (`processing::algorithms`) is `cfg(not(gpu))`; keep it, silence dead_code on gpu.
+#[cfg_attr(feature = "gpu", allow(dead_code))]
 pub fn mvdr_cpu(
     rf_data: &Array4<f32>,
     config: &BeamformingConfig3D,

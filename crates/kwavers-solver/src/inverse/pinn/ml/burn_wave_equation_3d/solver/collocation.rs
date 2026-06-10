@@ -1,6 +1,8 @@
 use super::core::BurnPINN3DWave;
 use crate::inverse::pinn::ml::burn_wave_equation_3d::config::BurnPINN3DConfig;
 use burn::tensor::{backend::Backend, Tensor, TensorData};
+// Used only by the test module's reference wave-speed closure.
+#[cfg(test)]
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
 impl<B: Backend> BurnPINN3DWave<B> {

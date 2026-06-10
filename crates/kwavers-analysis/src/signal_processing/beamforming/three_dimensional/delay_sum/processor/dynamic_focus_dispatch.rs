@@ -24,7 +24,7 @@ use super::super::params::DynamicFocusParams;
 #[cfg(feature = "gpu")]
 use crate::signal_processing::beamforming::three_dimensional::config::Beamforming3dApodizationWindow;
 #[cfg(feature = "gpu")]
-use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_core::error::KwaversResult;
 #[cfg(feature = "gpu")]
 use ndarray::{Array3, Array4};
 #[cfg(feature = "gpu")]

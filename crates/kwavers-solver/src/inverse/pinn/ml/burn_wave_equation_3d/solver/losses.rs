@@ -3,6 +3,16 @@ use crate::inverse::pinn::ml::burn_wave_equation_3d::config::BurnLossWeights3D;
 use burn::tensor::{backend::Backend, Tensor, TensorData};
 use kwavers_core::error::KwaversResult;
 
+/// Decomposed physics-informed loss components returned by
+/// `compute_physics_loss`: `(total, data, pde, boundary, initial)` scalar losses.
+type PhysicsLossComponents3D<B> = (
+    Tensor<B, 1>,
+    Tensor<B, 1>,
+    Tensor<B, 1>,
+    Tensor<B, 1>,
+    Tensor<B, 1>,
+);
+
 /// Adaptive loss scaling for normalization
 ///
 /// Tracks exponential moving averages of loss component magnitudes
@@ -60,6 +70,10 @@ impl<B: Backend> BurnPINN3DWave<B> {
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
+    // Independent data/collocation/initial tensors plus weights and mutable
+    // loss-scale state with no cohesive sub-grouping; bundling would not clarify
+    // the call site.
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn compute_physics_loss(
         &self,
         x_data: Tensor<B, 2>,
@@ -79,13 +93,7 @@ impl<B: Backend> BurnPINN3DWave<B> {
         v_ic: Option<&Tensor<B, 2>>,
         weights: &BurnLossWeights3D,
         loss_scales: &mut LossScales,
-    ) -> KwaversResult<(
-        Tensor<B, 1>,
-        Tensor<B, 1>,
-        Tensor<B, 1>,
-        Tensor<B, 1>,
-        Tensor<B, 1>,
-    )> {
+    ) -> KwaversResult<PhysicsLossComponents3D<B>> {
         // Data loss: MSE between predictions and training data
         let u_pred = self.pinn.forward(x_data, y_data, z_data, t_data);
         let data_loss_raw = (u_pred.clone() - u_data).powf_scalar(2.0).mean();

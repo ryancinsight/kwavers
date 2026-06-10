@@ -112,18 +112,18 @@ pub(crate) fn weighted_partition_sizes(
     }
 
     if remaining > 0 {
-        for idx in 0..sizes.len() {
+        for size in sizes.iter_mut() {
             if remaining == 0 {
                 break;
             }
 
-            if sizes[idx] >= batch_size {
+            if *size >= batch_size {
                 continue;
             }
 
-            let available = batch_size - sizes[idx];
+            let available = batch_size - *size;
             let add = available.min(remaining);
-            sizes[idx] += add;
+            *size += add;
             remaining -= add;
         }
     }

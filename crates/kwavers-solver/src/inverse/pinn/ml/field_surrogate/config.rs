@@ -71,7 +71,7 @@ impl ParamFieldPINNConfig {
                 "ParamFieldPINNConfig.hidden_layers must be non-empty".into(),
             ));
         }
-        if self.hidden_layers.iter().any(|&h| h == 0) {
+        if self.hidden_layers.contains(&0) {
             return Err(KwaversError::InvalidInput(
                 "ParamFieldPINNConfig.hidden_layers entries must be > 0".into(),
             ));

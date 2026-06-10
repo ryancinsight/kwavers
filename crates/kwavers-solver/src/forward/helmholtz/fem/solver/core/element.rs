@@ -4,6 +4,14 @@ use nalgebra::{Matrix3, Vector3};
 use ndarray::{Array1, Array2};
 use num_complex::Complex64;
 
+/// Per-element FEM assembly arrays: stiffness `K_e`, consistent mass `M_e`, and
+/// RHS `f_e`, one entry per mesh element.
+type ElementMatrices = (
+    Vec<Array2<Complex64>>,
+    Vec<Array2<Complex64>>,
+    Vec<Array1<Complex64>>,
+);
+
 impl FemHelmholtzSolver {
     /// Compute per-element stiffness K_e, consistent mass M_e, and RHS f_e.
     ///
@@ -16,13 +24,7 @@ impl FemHelmholtzSolver {
     /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
-    pub(super) fn compute_element_matrices(
-        &self,
-    ) -> KwaversResult<(
-        Vec<Array2<Complex64>>,
-        Vec<Array2<Complex64>>,
-        Vec<Array1<Complex64>>,
-    )> {
+    pub(super) fn compute_element_matrices(&self) -> KwaversResult<ElementMatrices> {
         let mut element_stiffness = Vec::with_capacity(self.mesh.elements.len());
         let mut element_mass = Vec::with_capacity(self.mesh.elements.len());
         let mut element_rhs = Vec::with_capacity(self.mesh.elements.len());

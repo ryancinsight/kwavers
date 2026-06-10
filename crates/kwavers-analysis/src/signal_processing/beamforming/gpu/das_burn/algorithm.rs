@@ -18,6 +18,10 @@ impl<B: Backend> BurnDasBeamformer<B> {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
+    // GPU kernel-dispatch entry: each argument is an independent tensor/scalar
+    // input to the beamforming kernel; bundling them into a struct would add an
+    // indirection without clarifying the dispatch contract.
+    #[allow(clippy::too_many_arguments)]
     pub(super) fn beamform_batch_tensor(
         &self,
         rf_tensor: &Tensor<B, 3>,

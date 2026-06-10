@@ -16,6 +16,9 @@ use log::info;
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 use std::collections::HashMap;
+
+/// Training outcome: `(final named loss components, per-epoch loss history)`.
+type TrainingOutcome = (HashMap<String, f64>, Vec<HashMap<String, f64>>);
 use std::time::Instant;
 
 impl<B: AutodiffBackend> UniversalPINNSolver<B> {
@@ -208,7 +211,7 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
         collocation_points: &[(f64, f64, f64)],
         physics_params: &PinnDomainPhysicsParameters,
         config: &UniversalTrainingConfig,
-    ) -> KwaversResult<(HashMap<String, f64>, Vec<HashMap<String, f64>>)> {
+    ) -> KwaversResult<TrainingOutcome> {
         let start_time = Instant::now();
         let n_points = collocation_points.len();
         let x_coords: Vec<f32> = collocation_points

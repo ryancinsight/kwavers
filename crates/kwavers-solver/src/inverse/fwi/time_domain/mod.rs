@@ -23,10 +23,21 @@
 //!
 //! 1. **L2 residual theorem.** The Fréchet derivative of `J` with respect to
 //!    the data is `d_syn - d_obs`. This fixes the sign of the adjoint source.
-//! 2. **Time-reversal theorem.** Injecting the reversed residual on the receiver
-//!    mask produces the discrete adjoint wavefield for the acoustic linearized
-//!    operator, provided the forward and adjoint solvers share the same stencil
-//!    and boundary treatment.
+//! 2. **Time-reversal (approximate adjoint).** Injecting the reversed residual
+//!    on the receiver mask produces an *approximate* discrete adjoint wavefield
+//!    for the acoustic linearized operator. It is an exact discrete transpose
+//!    only when the source injection, receiver sampling, spatial stencil, and
+//!    absorbing boundary are each self-adjoint; the present FDTD/PSTD path is
+//!    not (the additive source carries the k-Wave `2·dt·c₀/(N·dx)` scaling while
+//!    receivers sample pressure directly, and the PML/leapfrog stepping is not
+//!    self-adjoint). The resulting gradient is therefore correct in *direction*
+//!    (a valid descent direction, sign-verified) but carries a global scale
+//!    offset (~200×) and a mild direction-dependent shape error (~20%), both
+//!    absorbed by the line search. See
+//!    `tests::gradient::test_fwi_adjoint_gradient_is_valid_descent_direction`.
+//!    For the **exact** gradient (`κ ≈ 1`), select
+//!    [`FwiEngine::SecondOrderSelfAdjoint`] (the dedicated self-adjoint
+//!    second-order engine, ADR 016) instead of the default [`FwiEngine::Solver`].
 //! 3. **Chain-rule theorem.** The sound-speed gradient follows from
 //!    `m = c⁻²` by `dm/dc = -2 c⁻³`.
 //!
@@ -57,7 +68,9 @@ mod forward;
 mod frequency_continuation;
 mod gradient;
 mod inversion;
+pub mod mofi;
 mod search;
+mod self_adjoint;
 
 pub mod geometry;
 
@@ -66,11 +79,23 @@ pub use adjoint_state::{
 };
 pub use encoded_source::{encode_shots, hadamard_codes};
 pub use geometry::FwiGeometry;
+pub use mofi::{
+    align as mofi_align, align_from as mofi_align_from, align_homotopy as mofi_align_homotopy,
+    align_nonrigid as mofi_align_nonrigid, align_pipeline as mofi_align_pipeline,
+    align_with_calibration as mofi_align_with_calibration,
+    coarse_pose_search as mofi_coarse_pose_search, default_homotopy as mofi_default_homotopy,
+    recommended_search_misfit as mofi_recommended_search_misfit,
+    sample_displacement as mofi_sample_displacement, transform as mofi_transform,
+    CoarseSearchConfig as MofiCoarseSearchConfig, FfdBasis as MofiFfdBasis,
+    FfdConfig as MofiFfdConfig, FfdField as MofiFfdField, FfdResult as MofiFfdResult,
+    MofiCalibratedResult, MofiConfig, MofiResult, MofiStage, PipelineConfig as MofiPipelineConfig,
+    PipelineResult as MofiPipelineResult, RigidTransform,
+};
 
 #[cfg(test)]
 mod tests;
 
-use crate::inverse::reconstruction::seismic::MisfitType;
+use crate::inverse::reconstruction::seismic::{DataWeighting, MisfitType};
 use crate::inverse::seismic::parameters::FwiParameters;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
@@ -86,6 +111,27 @@ use ndarray::Array3;
 ///
 /// Reference: Gardner, G.H.F. et al. (1974). Geophysics 39(6), 770–780.
 pub(super) const RHO_SEISMIC_REF: f64 = 2000.0; // kg/m³
+
+/// Forward/adjoint engine backing a [`FwiProcessor`].
+///
+/// The default [`FwiEngine::Solver`] drives the shared FDTD/PSTD
+/// `Box<dyn Solver>` and produces a correct *descent direction* but an
+/// **approximate** adjoint (global scale offset + ~20% shape error; the Armijo
+/// line search absorbs both). [`FwiEngine::SecondOrderSelfAdjoint`] uses the
+/// dedicated self-adjoint second-order acoustic engine
+/// ([`self_adjoint`]) whose discrete adjoint is the literal algebraic gradient
+/// of the discrete objective, so the finite-difference gradient test returns
+/// `κ ≈ 1`. Choose it when the absolute gradient magnitude matters
+/// (Gauss-Newton, Hessian-vector products, fixed-step updates, gradient-norm
+/// stopping). See ADR 016.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum FwiEngine {
+    /// Shared FDTD/PSTD `Box<dyn Solver>` (approximate adjoint; default).
+    #[default]
+    Solver,
+    /// Self-adjoint second-order acoustic engine (exact gradient, `κ ≈ 1`).
+    SecondOrderSelfAdjoint,
+}
 
 /// Full Waveform Inversion processor (time-domain, FDTD-driven).
 ///
@@ -142,6 +188,19 @@ pub struct FwiProcessor {
     /// driver per multiscale stage; see [`Self::with_band_limit`] and
     /// [`Self::invert_multiscale`].
     pub(super) band_limit_hz: Option<f64>,
+    /// Forward/adjoint engine. Default [`FwiEngine::Solver`] (approximate
+    /// adjoint); [`FwiEngine::SecondOrderSelfAdjoint`] for the exact gradient.
+    pub(super) engine: FwiEngine,
+    /// Optional self-adjoint absorbing sponge `b(x) ≥ 0` for the
+    /// [`FwiEngine::SecondOrderSelfAdjoint`] engine. `None` (default) uses
+    /// lossless reflecting boundaries; a symmetric diagonal sponge keeps the
+    /// discrete adjoint exact (`κ ≈ 1`) while absorbing outgoing waves.
+    pub(super) sa_damping: Option<Array3<f64>>,
+    /// Data-fidelity weighting for the L2 misfit (the low-dose-CT PWLS lesson).
+    /// Default [`DataWeighting::Uniform`] is plain least squares;
+    /// [`DataWeighting::InverseNoiseVariance`] weights each trace by its inverse
+    /// noise variance (MBIR/PWLS). Applied only to [`MisfitType::L2Norm`].
+    pub(super) data_weighting: DataWeighting,
 }
 
 impl FwiProcessor {
@@ -155,7 +214,54 @@ impl FwiProcessor {
             density_model: None,
             misfit_type: MisfitType::L2Norm,
             band_limit_hz: None,
+            engine: FwiEngine::default(),
+            sa_damping: None,
+            data_weighting: DataWeighting::default(),
         }
+    }
+
+    /// Select the data-fidelity weighting for the L2 misfit (the low-dose-CT PWLS
+    /// lesson). [`DataWeighting::Uniform`] (default) is plain least squares;
+    /// [`DataWeighting::InverseNoiseVariance`] weights each trace by its inverse
+    /// noise variance — the maximum-likelihood estimator under heteroscedastic
+    /// noise, and the FWI analogue of CT model-based iterative reconstruction
+    /// (Sauer & Bouman 1993; Thibault et al. 2007). Applies to
+    /// [`MisfitType::L2Norm`]; other misfits ignore it.
+    #[must_use]
+    pub fn with_data_weighting(mut self, weighting: DataWeighting) -> Self {
+        self.data_weighting = weighting;
+        self
+    }
+
+    /// Supply a self-adjoint absorbing sponge `b(x) ≥ 0` for the
+    /// [`FwiEngine::SecondOrderSelfAdjoint`] engine (ignored by the default
+    /// solver engine). Must match the grid shape and be finite and non-negative.
+    ///
+    /// ## Errors
+    /// Returns [`KwaversError::Validation`] if any value is negative or non-finite.
+    pub fn with_self_adjoint_damping(mut self, damping: Array3<f64>) -> KwaversResult<Self> {
+        for &b in damping.iter() {
+            if !b.is_finite() || b < 0.0 {
+                return Err(KwaversError::Validation(
+                    ValidationError::ConstraintViolation {
+                        message: format!("self-adjoint damping must be finite and ≥ 0; got {b}"),
+                    },
+                ));
+            }
+        }
+        self.sa_damping = Some(damping);
+        Ok(self)
+    }
+
+    /// Select the forward/adjoint engine.
+    ///
+    /// [`FwiEngine::SecondOrderSelfAdjoint`] yields the exact discrete gradient
+    /// (`κ ≈ 1`); [`FwiEngine::Solver`] (default) is the shared FDTD/PSTD path
+    /// (approximate adjoint, correct descent direction). See ADR 016.
+    #[must_use]
+    pub fn with_engine(mut self, engine: FwiEngine) -> Self {
+        self.engine = engine;
+        self
     }
 
     /// Select the data-misfit functional used by the inversion driver.

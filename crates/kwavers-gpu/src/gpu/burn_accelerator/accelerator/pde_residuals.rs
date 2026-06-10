@@ -1,6 +1,6 @@
 //! PDE residual computation for physics-informed learning (wave, heat, diffusion, Navier-Stokes).
 
-use super::super::super::types::{EquationType, GpuPhysicsParameters};
+use super::super::types::{EquationType, GpuPhysicsParameters};
 use super::BurnGpuAccelerator;
 use burn::prelude::*;
 use burn::tensor::backend::Backend;

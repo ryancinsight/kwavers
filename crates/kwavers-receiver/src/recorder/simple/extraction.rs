@@ -6,6 +6,11 @@ use ndarray::{Array1, Array2, ArrayView2};
 
 use super::SensorRecorder;
 
+/// Per-statistic fill function: writes one pressure statistic at the sampled
+/// sensor positions into the output vector.
+type PressureStatFill =
+    fn(&PressureFieldStatistics, &[(usize, usize, usize)], &mut Array1<f64>) -> KwaversResult<()>;
+
 impl SensorRecorder {
     /// Sensor indices in Fortran order (x-fastest).
     #[must_use]
@@ -155,11 +160,7 @@ impl SensorRecorder {
         &self,
         out: &mut Array1<f64>,
         field: &str,
-        fill: fn(
-            &PressureFieldStatistics,
-            &[(usize, usize, usize)],
-            &mut Array1<f64>,
-        ) -> KwaversResult<()>,
+        fill: PressureStatFill,
     ) -> KwaversResult<()> {
         let Some(stats) = self.stats.as_ref() else {
             return Err(KwaversError::InvalidInput(format!(

@@ -130,3 +130,6 @@ __pycache__/
 # Root Python files
 /*.py
 target_opt/
+
+# Confidential folder (never tracked or uploaded)
+leoneuro/

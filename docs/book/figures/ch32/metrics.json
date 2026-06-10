@@ -1,272 +1,175 @@
 {
   "chapter": 32,
-  "analysis": "segmentation-driven transducer placement and focal spot shaping",
-  "dataset": {
-    "source": "LiTS17 sample liver CT",
-    "ct_path": "D:\\kwavers\\data\\lits17_sample\\volume-0.nii",
-    "segmentation_path": "D:\\kwavers\\data\\lits17_sample\\segmentation-0.nii",
-    "slice_index": 58,
-    "native_shape": [
-      512,
-      512,
-      75
+  "analysis": "segmentation-driven HistoSonics liver histotripsy: 3-D bowl placement + nonlinear FWI theranostic reconstruction",
+  "placement": {
+    "anatomy_label": "liver",
+    "element_count": 256,
+    "transducer_radius_m": 0.14186595631915436,
+    "geometry_model": "ct_derived_abdominal_256_element_focused_bowl_on_skin",
+    "synthetic_phantom": false,
+    "focus_m": [
+      -0.052979630521270825,
+      0.0312849856028088,
+      0.1320611532484902
     ],
-    "native_spacing_mm": [
-      0.703125,
-      0.703125,
-      5.0
+    "skin_contact_m": [
+      -0.09088411885042412,
+      0.10327172052414815,
+      0.13101653364068963
+    ]
+  },
+  "simulation": {
+    "anatomy": "liver",
+    "device_model": "focused_bowl_256_element_skin_coupled_arc",
+    "geometry_model": "focused_bowl_256_element_skin_coupled_arc",
+    "exposure_model": "source_encoded_time_domain_acoustic_peak_pressure_exposure",
+    "operator_model": "finite_frequency_same_aperture_graph_laplacian_pcg",
+    "waveform_model": "source_encoded_time_domain_acoustic_adjoint_rtm",
+    "waveform_misfit": "charbonnier",
+    "is_full_wave_inversion": false,
+    "uses_nonlinear_wave_propagation": false,
+    "iterative_elastic_fwi": true,
+    "element_count": 256,
+    "frequencies_hz": [
+      650000.0,
+      1300000.0,
+      1950000.0
     ],
-    "crop_bounds": {
-      "i0": 24,
-      "i1": 380,
-      "j0": 65,
-      "j1": 421,
-      "width_vox": 356
+    "source_pressure_pa": 2500000.0,
+    "spacing_m": 0.0049108886718750005
+  },
+  "convergence": {
+    "fwi_iterations": 65,
+    "fwi_initial_objective": 0.9499092521804999,
+    "fwi_final_objective": 0.1412688695725703,
+    "fwi_objective_history": [
+      0.9499092521804999,
+      0.3137962683091108,
+      0.24816247958783288,
+      0.22526539689801478,
+      0.21162617923913724,
+      0.19990992606596641,
+      0.1863887336045872,
+      0.16875594581635364,
+      0.14898234351356,
+      0.13352696199804986,
+      0.12006741507651215,
+      0.10838118174941257,
+      0.09954878327000657,
+      0.001764686956355317,
+      0.0005395643509452907,
+      0.0004926194067768149,
+      0.00047729035862750086,
+      0.00045828607956679225,
+      0.0004276147881778803,
+      0.00037694440459345015,
+      0.00032226328442321516,
+      0.00029385584087786445,
+      0.0002735311163857564,
+      0.0002622660578864148,
+      0.00025443422415108517,
+      0.0002479482950525924,
+      1.7577363852218175,
+      0.46506734176359776,
+      0.45478146104109896,
+      0.4292605952713701,
+      0.33625304534737,
+      0.27481135855948047,
+      0.2619959043617997,
+      0.25744127118411386,
+      0.25336594354643216,
+      0.24770207386165685,
+      0.23594700590517875,
+      0.21560655442784904,
+      0.20157391075796954,
+      3.860487501779337,
+      1.064186130188235,
+      0.5588521428151487,
+      0.39539588668007497,
+      0.3346906132178885,
+      0.2718502271183793,
+      0.24311275270200722,
+      0.215993834529408,
+      0.20139199324539386,
+      0.18851180394981826,
+      0.17882470893116054,
+      0.17153580684814906,
+      0.16539090942700913,
+      1.0622315395109885,
+      0.3233903603811594,
+      0.3011916555802163,
+      0.2950342443227182,
+      0.26772303508317474,
+      0.20642215387078386,
+      0.18429983785658804,
+      0.1787733844844254,
+      0.17598836070714358,
+      0.17338134764710086,
+      0.16553098402645622,
+      0.15145925666384236,
+      0.1412688695725703
+    ],
+    "elastic_fwi_iterations": 3,
+    "elastic_fwi_objective_history": [
+      1.7046893151319062e-11,
+      1.5518303598837457e-11,
+      1.5518303598837457e-11
+    ]
+  },
+  "metrics": {
+    "anatomy": {
+      "pearson": 0.20154699806402737,
+      "nrmse": 0.14619665765544715,
+      "dice_equal_area": 0.024691358024691357,
+      "cnr": -0.05869489473062465
     },
-    "output_size": 112,
-    "spacing_m": 0.002234933035714286,
-    "segmentation_labels": {
-      "normal": 1,
-      "tumor": 2
+    "active_lesion": {
+      "pearson": 0.8456303242231739,
+      "nrmse": 0.04533616536547635,
+      "dice_equal_area": 1.0,
+      "cnr": 20.603033130780975
     },
-    "target_rule": "largest connected label-2 component on selected slice",
-    "derived_labels": {
-      "air": "HU < -700 or outside body mask",
-      "fat": "-500 <= HU < -100 outside liver/tumor",
-      "bone": "HU >= 200 outside liver/tumor",
-      "avoid": "160 < HU < 400 inside liver label, excluding tumor"
+    "waveform_rtm": {
+      "pearson": -0.017206912631837455,
+      "nrmse": 0.0764976396122907,
+      "dice_equal_area": 0.0,
+      "cnr": -0.22200621329944964
+    },
+    "elastic_shear": {
+      "pearson": 0.4325612411341953,
+      "nrmse": 0.12966386031202615,
+      "dice_equal_area": 0.6,
+      "cnr": 6.321857328129797
+    },
+    "subharmonic": {
+      "pearson": 0.7882749296793014,
+      "nrmse": 0.052129408416870804,
+      "dice_equal_area": 1.0,
+      "cnr": 16.724281957557718
+    },
+    "harmonic": {
+      "pearson": 0.9135711634427661,
+      "nrmse": 0.04302557612710634,
+      "dice_equal_area": 1.0,
+      "cnr": 29.84716049167878
+    },
+    "ultraharmonic": {
+      "pearson": 0.8922208982564186,
+      "nrmse": 0.0490632960969231,
+      "dice_equal_area": 1.0,
+      "cnr": 26.561064881273133
+    },
+    "fusion": {
+      "pearson": 0.978403768887431,
+      "nrmse": 0.015078196351991886,
+      "dice_equal_area": 1.0,
+      "cnr": 83.21552508863127
     }
   },
-  "segmentation_voxels": {
-    "air": 3002,
-    "normal": 7937,
-    "fat": 1007,
-    "bone": 433,
-    "tumor": 37,
-    "avoid": 128
-  },
-  "config": {
-    "frequency_hz": 650000.0,
-    "element_count": 10,
-    "aperture_width_m": 0.032,
-    "standoff_m": 0.016,
-    "candidate_angles_deg": [
-      -170.0,
-      -130.0,
-      -90.0,
-      -50.0,
-      -10.0,
-      30.0,
-      70.0,
-      110.0,
-      150.0
-    ],
-    "crossfire_aperture_count": 3,
-    "crossfire_min_angle_separation_deg": 60.0,
-    "max_target_points": 36,
-    "max_avoid_points": 24,
-    "max_normal_points": 48,
-    "max_sidelobe_points": 256,
-    "max_hotspot_points": 96,
-    "ray_samples": 48,
-    "ridge": 0.01,
-    "target_weight": 1.0,
-    "avoid_weight": 6.0,
-    "normal_weight": 1.2,
-    "sidelobe_weight": 5.0,
-    "hotspot_weight": 28.0,
-    "air_path_penalty": 4.5,
-    "bone_path_penalty": 5.5,
-    "fat_path_penalty": 0.7,
-    "protected_peak_penalty": 4.0,
-    "off_target_penalty": 1.1,
-    "sidelobe_peak_penalty": 1.8,
-    "sidelobe_exclusion_radius_m": 0.01,
-    "target_dominance_ratio": 1.0,
-    "hotspot_min_spacing_m": 0.006,
-    "hotspot_refinement_rounds": 5,
-    "spot_major_axis_m": 0.01,
-    "spot_minor_axis_m": 0.0045,
-    "spot_angle_deg": -18.0
-  },
-  "selected_aperture": {
-    "angle_deg": -90.0,
-    "source_angles_deg": [
-      -90.0,
-      -170.0,
-      -10.0
-    ],
-    "center_m": [
-      0.005226873920723647,
-      -0.06379566513090555
-    ],
-    "element_count": 30
-  },
-  "summary": {
-    "candidate_count": 10,
-    "selected_angle_deg": -90.0,
-    "selected_source_angles_deg": [
-      -90.0,
-      -170.0,
-      -10.0
-    ],
-    "selected_score": -1.6685911402342815,
-    "tumor_mean_intensity": 0.534252386715249,
-    "tumor_coverage_fraction": 0.7837837837837838,
-    "protected_peak_ratio": 0.2958651403757349,
-    "normal_mean_ratio": 0.04270457927055009,
-    "body_sidelobe_peak_ratio": 0.7395404024847666,
-    "body_sidelobe_p99_ratio": 0.3297347520675772,
-    "target_dominant": true,
-    "air_path_fraction": 0.003477700061599821,
-    "bone_path_fraction": 0.032944540572524016,
-    "fat_path_fraction": 0.10741304109258655
-  },
-  "candidate_metrics": [
-    {
-      "angle_deg": -170.0,
-      "score": -7.745283027940596,
-      "target_mean": 0.6525549311373788,
-      "target_coverage_fraction": 0.8055555555555556,
-      "protected_peak_ratio": 1.2428095390696017,
-      "normal_mean_ratio": 0.33320919391704323,
-      "sidelobe_peak_ratio": 1.745548188447024,
-      "sidelobe_mean_ratio": 0.09946505320754928,
-      "air_path_fraction": 0.0009332087983295978,
-      "bone_path_fraction": 0.020949514616048565,
-      "fat_path_fraction": 0.11515089249981725,
-      "drive_nonuniformity": 0.25019946326892745
-    },
-    {
-      "angle_deg": -130.0,
-      "score": -3.5147791431155477,
-      "target_mean": 0.31187975965916065,
-      "target_coverage_fraction": 0.3333333333333333,
-      "protected_peak_ratio": 0.14673118059649204,
-      "normal_mean_ratio": 0.16373208419292848,
-      "sidelobe_peak_ratio": 1.5530151411275828,
-      "sidelobe_mean_ratio": 0.08145320591478711,
-      "air_path_fraction": 0.03035806907665745,
-      "bone_path_fraction": 0.021293807280131666,
-      "fat_path_fraction": 0.18163007075407717,
-      "drive_nonuniformity": 0.27569691447734823
-    },
-    {
-      "angle_deg": -90.0,
-      "score": -2.496822518400491,
-      "target_mean": 0.6049143155588189,
-      "target_coverage_fraction": 0.8333333333333334,
-      "protected_peak_ratio": 0.24328260838005583,
-      "normal_mean_ratio": 0.18029655776863437,
-      "sidelobe_peak_ratio": 1.0662234468083436,
-      "sidelobe_mean_ratio": 0.0451025977226437,
-      "air_path_fraction": 0.009879126196282317,
-      "bone_path_fraction": 0.0355233591005172,
-      "fat_path_fraction": 0.08987158052731715,
-      "drive_nonuniformity": 0.227846616047173
-    },
-    {
-      "angle_deg": -50.0,
-      "score": -19.13947098395322,
-      "target_mean": 0.38077128027884366,
-      "target_coverage_fraction": 0.4166666666666667,
-      "protected_peak_ratio": 0.9723561267408348,
-      "normal_mean_ratio": 0.4006774939469497,
-      "sidelobe_peak_ratio": 8.22246425488551,
-      "sidelobe_mean_ratio": 0.4979709792312268,
-      "air_path_fraction": 0.015287445076356956,
-      "bone_path_fraction": 0.0751093155445696,
-      "fat_path_fraction": 0.07653635732535821,
-      "drive_nonuniformity": 0.24623747637921423
-    },
-    {
-      "angle_deg": -10.0,
-      "score": -6.09447770291356,
-      "target_mean": 0.4790696036110821,
-      "target_coverage_fraction": 0.7777777777777778,
-      "protected_peak_ratio": 0.32204334178308974,
-      "normal_mean_ratio": 0.225479645169858,
-      "sidelobe_peak_ratio": 2.7883527870271525,
-      "sidelobe_mean_ratio": 0.16633981670702136,
-      "air_path_fraction": 0.0,
-      "bone_path_fraction": 0.05046987751628864,
-      "fat_path_fraction": 0.018498869913141286,
-      "drive_nonuniformity": 0.25580140942035906
-    },
-    {
-      "angle_deg": 30.0,
-      "score": -17.805806780448457,
-      "target_mean": 0.5485390054470298,
-      "target_coverage_fraction": 0.7222222222222222,
-      "protected_peak_ratio": 0.7722504199153106,
-      "normal_mean_ratio": 0.4115123284117724,
-      "sidelobe_peak_ratio": 8.024862909747236,
-      "sidelobe_mean_ratio": 0.48938285458991443,
-      "air_path_fraction": 0.0008809193642496067,
-      "bone_path_fraction": 0.1057712092763511,
-      "fat_path_fraction": 0.04999899579283948,
-      "drive_nonuniformity": 0.34408105315556037
-    },
-    {
-      "angle_deg": 70.0,
-      "score": -21.39639763196472,
-      "target_mean": 0.4812683010049328,
-      "target_coverage_fraction": 0.6111111111111112,
-      "protected_peak_ratio": 2.050017899709155,
-      "normal_mean_ratio": 0.24977150761877823,
-      "sidelobe_peak_ratio": 7.4242454641196,
-      "sidelobe_mean_ratio": 0.38222401901568054,
-      "air_path_fraction": 0.0002799132642483026,
-      "bone_path_fraction": 0.030156826368335585,
-      "fat_path_fraction": 0.12281510644432095,
-      "drive_nonuniformity": 0.24507264887380034
-    },
-    {
-      "angle_deg": 110.0,
-      "score": -8.052698810006143,
-      "target_mean": 0.4383100466678169,
-      "target_coverage_fraction": 0.5277777777777778,
-      "protected_peak_ratio": 0.8790778528221255,
-      "normal_mean_ratio": 0.24521575149278715,
-      "sidelobe_peak_ratio": 2.6190934154431655,
-      "sidelobe_mean_ratio": 0.15612563561509812,
-      "air_path_fraction": 0.0004410181429164746,
-      "bone_path_fraction": 0.013435192571907699,
-      "fat_path_fraction": 0.14205150339900027,
-      "drive_nonuniformity": 0.2430603058409349
-    },
-    {
-      "angle_deg": 150.0,
-      "score": -4.530289642580497,
-      "target_mean": 0.42889716650053805,
-      "target_coverage_fraction": 0.5833333333333334,
-      "protected_peak_ratio": 0.380777206064901,
-      "normal_mean_ratio": 0.22147601662387803,
-      "sidelobe_peak_ratio": 1.7889372483553065,
-      "sidelobe_mean_ratio": 0.12334471516633363,
-      "air_path_fraction": 0.0006346627315100263,
-      "bone_path_fraction": 0.016171418051671053,
-      "fat_path_fraction": 0.12105029226613455,
-      "drive_nonuniformity": 0.24513637203424118
-    },
-    {
-      "angle_deg": -90.0,
-      "score": -1.6685911402342815,
-      "target_mean": 0.5346931630121545,
-      "target_coverage_fraction": 0.7777777777777778,
-      "protected_peak_ratio": 0.19345922410527874,
-      "normal_mean_ratio": 0.11634786275248594,
-      "sidelobe_peak_ratio": 0.723140682127176,
-      "sidelobe_mean_ratio": 0.16536323081924525,
-      "air_path_fraction": 0.003477700061599821,
-      "bone_path_fraction": 0.032944540572524016,
-      "fat_path_fraction": 0.10741304109258655,
-      "drive_nonuniformity": 0.2552784491083271
-    }
-  ],
   "figures": [
-    "D:\\kwavers\\docs\\book\\figures\\ch32\\fig01_segmentation_candidate_scores.png",
-    "D:\\kwavers\\docs\\book\\figures\\ch32\\fig02_optimized_spot_and_avoidance.png",
-    "D:\\kwavers\\docs\\book\\figures\\ch32\\fig03_hybrid_solver_tradeoffs.png"
+    "D:\\kwavers\\docs\\book\\figures\\ch32\\fig01_bowl_placement_3d.png",
+    "D:\\kwavers\\docs\\book\\figures\\ch32\\fig02_exposure_and_segmentation.png",
+    "D:\\kwavers\\docs\\book\\figures\\ch32\\fig03_multimodal_reconstruction.png",
+    "D:\\kwavers\\docs\\book\\figures\\ch32\\fig04_fwi_convergence.png"
   ]
 }

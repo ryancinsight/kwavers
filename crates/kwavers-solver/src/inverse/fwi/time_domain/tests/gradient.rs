@@ -3,7 +3,7 @@ use crate::inverse::seismic::parameters::FwiParameters;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_grid::Grid;
 use kwavers_source::{GridSource, SourceMode};
-use ndarray::{Array2, Array3};
+use ndarray::{Array2, Array3, Zip};
 
 /// Verify the post-correlation velocity-gradient scaling applies the
 /// per-voxel `-2 / (ρ(x) · c(x)³)` factor exactly.
@@ -124,6 +124,256 @@ fn test_fwi_velocity_gradient_scaling_rejects_non_physical_inputs() {
     assert!(
         apply_velocity_gradient_scaling(correlation.view_mut(), model.view(), bad_rho.view(),)
             .is_err()
+    );
+}
+
+/// Finite-difference verification that the adjoint-state gradient is a valid
+/// descent direction (the FWI "gradient/adjoint test", Fichtner 2010 §A;
+/// Plessix 2006 §3; Virieux & Operto 2009 §3.3).
+///
+/// ## What is verified
+/// Let `J(m)` be the data misfit, `g = ∇J(m)` the adjoint-state gradient, and
+/// `dJ/ds|_{δm}` the true directional derivative along a perturbation `δm`,
+/// measured by a Richardson-extrapolated central finite difference of the
+/// *actual* objective the inversion minimises. For two spatially independent
+/// directions the test asserts:
+/// 1. **Sign / descent correctness** — `g·δm` and `dJ/ds` share sign, so `−g`
+///    is a genuine descent direction. This exercises the entire chain end to
+///    end (forward solve → residual → time-reversed adjoint injection →
+///    `p̈`-cross-correlation imaging condition → `−2/(ρc³)` velocity scaling); a
+///    sign error anywhere flips it.
+/// 2. **Approximate shape proportionality** — the per-direction ratio
+///    `κ = (g·δm)/(dJ/ds)` stays comparable across directions, guarding against
+///    gross corruption of the gradient's spatial structure.
+///
+/// ## What is NOT verified, and why (a real, root-caused defect)
+/// An *exact* discrete adjoint would give `κ ≡ 1`. This implementation is an
+/// **approximate** adjoint: measured `κ_a ≈ 238`, `κ_b ≈ 191` (both stable under
+/// step refinement). Causes — a ~200× global scale offset because the adjoint
+/// re-injects the residual through the scaled additive-source path
+/// (`2·dt·c₀/(N·dx)`, forward/fdtd/source_handler/scaling.rs) while the forward
+/// receiver operator samples pressure directly (not exact transposes); and a
+/// ~20% direction-dependent shape error from PML non-self-adjointness and the
+/// leapfrog/staggered-grid time-stepping. Both are absorbed by the Armijo line
+/// search (so FWI converges), but the gradient is **not** the exact `∇J`. The
+/// exact-gradient path (`κ ≈ 1` to <1e-4) is the self-adjoint engine
+/// (`FwiEngine::SecondOrderSelfAdjoint`, ADR 016), verified by
+/// `self_adjoint::tests::self_adjoint_gradient_matches_finite_difference_kappa_one`;
+/// this test characterises the retained approximate-adjoint `FwiEngine::Solver`
+/// default.
+/// # Panics
+/// - Panics on any assertion failure or solver error.
+#[test]
+fn test_fwi_adjoint_gradient_is_valid_descent_direction() {
+    let (nx, ny, nz) = (12usize, 12, 12);
+    let dx = 1e-3;
+    let grid = Grid::new(nx, ny, nz, dx, dx, dx).expect("grid");
+    let dims = (nx, ny, nz);
+    let c0 = SOUND_SPEED_WATER_SIM;
+
+    // Acquisition: one pressure source on the left, a receiver plane on the
+    // right. Both are kept clear of the perturbation support below.
+    let mut p_mask = Array3::from_elem(dims, 0.0_f64);
+    p_mask[[2, 6, 6]] = 1.0;
+    let nt = 80usize;
+    let dt = 1e-7; // CFL = c0·dt/dx ≈ 0.15, well inside the 3-D FDTD limit.
+    let mut p_signal = Array2::zeros((1, nt));
+    for t in 0..20 {
+        let phase = (t as f64) * 0.35;
+        p_signal[[0, t]] = (-phase * phase * 0.25).exp() * (2.0 * phase).sin();
+    }
+    let source = GridSource {
+        p0: None,
+        u0: None,
+        p_mask: Some(p_mask),
+        p_signal: Some(p_signal),
+        p_mode: SourceMode::Additive,
+        u_mask: None,
+        u_signal: None,
+        u_mode: SourceMode::default(),
+    };
+    let mut sensor_mask = Array3::from_elem(dims, false);
+    for iy in 3..9 {
+        for iz in 3..9 {
+            sensor_mask[[9, iy, iz]] = true;
+        }
+    }
+    let geometry = FwiGeometry::new(source, sensor_mask);
+
+    let parameters = FwiParameters {
+        nt,
+        dt,
+        frequency: 5e5,
+        ..FwiParameters::default()
+    };
+    let processor = FwiProcessor::new(parameters);
+
+    // Boundary-clear perturbation direction `δm` (max magnitude 1): a smooth
+    // slab spanning the full cross-section between the source (ix=2) and the
+    // receiver plane (ix=9). A transmission perturbation of this kind changes
+    // the arrival time of the through-going wave at every receiver, producing a
+    // data misfit and gradient well above the round-off floor (a localised
+    // point scatterer in transmission does not). Hard-zeroed within 2 cells of
+    // every face so it never overlaps the source, the receiver plane, or the PML.
+    let mut delta_m = Array3::zeros(dims);
+    for ((ix, iy, iz), value) in delta_m.indexed_iter_mut() {
+        let near_boundary =
+            ix < 2 || iy < 2 || iz < 2 || ix >= nx - 2 || iy >= ny - 2 || iz >= nz - 2;
+        if near_boundary {
+            continue;
+        }
+        // Smooth slab centred at ix=6.5 (between source ix=2 and receivers
+        // ix=9), flat in y,z. Kept clear of the source's near field: a
+        // perturbation within ~2 cells of the source overlaps the region where
+        // the gradient is dominated by the source-wavelet imprint (huge p̈) and
+        // is not a faithful ∂J/∂c — exactly what the near-source mute removes.
+        let axial = (-((ix as f64 - 6.5).powi(2)) / 0.98).exp();
+        *value = axial;
+    }
+    // Source-voxel mute applied to the adjoint gradient (Sun & Symes 1991;
+    // Virieux & Operto 2009). δm is already ~0 in this region, so it does not
+    // bias g·δm, but muting keeps the gradient consistent with production runs.
+    let mut source_mute = Array3::zeros(dims);
+    source_mute[[2, 6, 6]] = 1.0;
+
+    // "True" model carries the slab; the starting model is homogeneous, so the
+    // data misfit — and therefore the gradient — is non-trivial at `m`.
+    let mut true_model = Array3::from_elem(dims, c0);
+    Zip::from(&mut true_model)
+        .and(&delta_m)
+        .for_each(|c, &d| *c += 100.0 * d);
+    let model = Array3::from_elem(dims, c0);
+
+    let observed = processor
+        .generate_synthetic_data(&true_model, &geometry, &grid)
+        .expect("observed data");
+
+    // Adjoint-state gradient at `m`.
+    let (synth0, history0) = processor
+        .forward_model(&model, &geometry, &grid)
+        .expect("forward at m");
+    let j0 = processor
+        .compute_misfit_objective(&observed, &synth0)
+        .expect("J(m)");
+    let residual = processor
+        .compute_adjoint_source(&observed, &synth0)
+        .expect("adjoint source");
+    let adjoint_source = processor
+        .build_adjoint_source(&residual, &geometry)
+        .expect("adjoint grid source");
+    let gradient = processor
+        .adjoint_model(
+            &adjoint_source,
+            &model,
+            &grid,
+            &history0,
+            Some(&source_mute),
+        )
+        .expect("adjoint gradient");
+
+    assert!(
+        j0 > 0.0,
+        "data misfit at the starting model must be non-zero; J(m) = {j0:e}"
+    );
+
+    // Second, spatially distinct perturbation direction: the same slab tapered
+    // by a transverse ramp in y. It overlaps a different sub-volume, so its
+    // directional derivative is independent of δm_a's.
+    let mut delta_m_b = delta_m.clone();
+    for ((_, iy, _), value) in delta_m_b.indexed_iter_mut() {
+        *value *= (iy as f64) / (ny as f64);
+    }
+
+    // Directional derivative g · δm for a direction.
+    let directional = |dir: &Array3<f64>| -> f64 {
+        Zip::from(&gradient)
+            .and(dir)
+            .fold(0.0, |acc, &g, &d| acc + g * d)
+    };
+
+    // Richardson-extrapolated central finite-difference slope dJ/ds along `dir`,
+    // s the step amplitude. Central differences carry an O(ε²) curvature error;
+    // `(4·D(ε/2) − D(ε))/3` cancels it, leaving O(ε⁴), so the result is the
+    // true ε→0 directional derivative to high accuracy.
+    let fd_slope = |dir: &Array3<f64>| -> f64 {
+        let central = |eps: f64| -> f64 {
+            let objective_at = |scale: f64| -> f64 {
+                let mut perturbed = model.clone();
+                Zip::from(&mut perturbed)
+                    .and(dir)
+                    .for_each(|c, &d| *c += scale * d);
+                let synth = processor
+                    .generate_synthetic_data(&perturbed, &geometry, &grid)
+                    .expect("forward at perturbed model");
+                processor
+                    .compute_misfit_objective(&observed, &synth)
+                    .expect("perturbed objective")
+            };
+            (objective_at(eps) - objective_at(-eps)) / (2.0 * eps)
+        };
+        let eps = 4.0_f64; // [m/s]; differences stay well above the round-off floor.
+        (4.0 * central(eps / 2.0) - central(eps)) / 3.0
+    };
+
+    let g_a = directional(&delta_m);
+    let g_b = directional(&delta_m_b);
+    let fd_a = fd_slope(&delta_m);
+    let fd_b = fd_slope(&delta_m_b);
+
+    assert!(
+        g_a.abs() > 0.0 && g_b.abs() > 0.0,
+        "directional derivatives must be non-trivial; g·δm_a = {g_a:e}, g·δm_b = {g_b:e}"
+    );
+
+    // (1) Descent-direction correctness: the adjoint directional derivative must
+    // agree in SIGN with the finite difference for both directions. A sign error
+    // anywhere in the residual → time-reversed injection → p̈-correlation →
+    // velocity-scaling chain flips this and fails here.
+    assert!(
+        g_a * fd_a > 0.0,
+        "direction A: adjoint and finite difference must share sign; g·δm_a = {g_a:e}, FD = {fd_a:e}"
+    );
+    assert!(
+        g_b * fd_b > 0.0,
+        "direction B: adjoint and finite difference must share sign; g·δm_b = {g_b:e}, FD = {fd_b:e}"
+    );
+
+    // (2) Approximate-proportionality (characterisation guard, NOT exactness).
+    //
+    // Define κ = (g·δm) / (dJ/ds). For an EXACT discrete adjoint, κ ≡ 1 for every
+    // direction. This implementation is an APPROXIMATE adjoint, so κ ≠ 1 and is
+    // mildly direction-dependent; the measured values are κ_a ≈ 238, κ_b ≈ 191
+    // (both stable under step-size refinement — a real effect, not FD error). Two
+    // distinct, root-caused causes:
+    //   • Global scale offset (~200×): the adjoint re-injects the residual through
+    //     the SCALED additive-source path (`p_scale = 2·dt·c₀/(N·dx)`, see
+    //     forward/fdtd/source_handler/scaling.rs) while the forward receiver
+    //     operator samples pressure directly — the two are not exact discrete
+    //     transposes.
+    //   • Direction-dependent shape error (~20%): PML non-self-adjointness and the
+    //     leapfrog/staggered-grid time-stepping whose exact transpose is not the
+    //     plain time-reversal used here.
+    // Both are absorbed by the Armijo line search (κ>0 ⇒ valid descent), so FWI
+    // converges; neither is acceptable for any consumer of the ABSOLUTE gradient
+    // magnitude. The exact discrete-adjoint fix is tracked as a [major] item in
+    // docs/book/backlog.md; when it lands, replace this guard with κ ≈ 1.
+    //
+    // This bound only guards against gross corruption of the gradient shape (a
+    // future regression that scaled one direction's sensitivity by >~1.6× would
+    // fail); it deliberately does not assert the defective magnitudes as a spec.
+    let kappa_a = g_a / fd_a;
+    let kappa_b = g_b / fd_b;
+    assert!(
+        kappa_a > 0.0 && kappa_b > 0.0,
+        "κ must be positive for a descent direction; κ_a = {kappa_a:.3}, κ_b = {kappa_b:.3}"
+    );
+    let kappa_ratio = kappa_b / kappa_a;
+    assert!(
+        (0.6..=1.6).contains(&kappa_ratio),
+        "adjoint gradient shape must remain approximately proportional to the true \
+         gradient across independent directions (current approximate-adjoint spread \
+         ~20%): κ_a = {kappa_a:.3} (g·δm_a={g_a:e}, FD_a={fd_a:e}), \
+         κ_b = {kappa_b:.3} (g·δm_b={g_b:e}, FD_b={fd_b:e}), ratio = {kappa_ratio:.4}"
     );
 }
 

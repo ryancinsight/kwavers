@@ -112,7 +112,7 @@ impl DataPipeline {
     pub async fn new() -> KwaversResult<Self> {
         info!("Initializing GPU data pipeline for visualization");
 
-        let instance = Instance::new(InstanceDescriptor {
+        let instance = Instance::new(&InstanceDescriptor {
             backends: Backends::all(),
             ..Default::default()
         });
@@ -124,22 +124,20 @@ impl DataPipeline {
                 force_fallback_adapter: false,
             })
             .await
-            .ok_or_else(|| {
+            .map_err(|_| {
                 KwaversError::System(kwavers_core::error::SystemError::ResourceUnavailable {
                     resource: "GPU adapter for visualization".to_string(),
                 })
             })?;
 
         let (device, queue) = adapter
-            .request_device(
-                &DeviceDescriptor {
-                    label: Some("Kwavers Visualization Device"),
-                    required_features: Features::empty(),
-                    required_limits: Limits::default(),
-                    memory_hints: MemoryHints::default(),
-                },
-                None,
-            )
+            .request_device(&DeviceDescriptor {
+                label: Some("Kwavers Visualization Device"),
+                required_features: Features::empty(),
+                required_limits: Limits::default(),
+                memory_hints: MemoryHints::default(),
+                trace: Trace::Off,
+            })
             .await
             .map_err(|e| {
                 KwaversError::System(kwavers_core::error::SystemError::ResourceUnavailable {
@@ -228,7 +226,7 @@ impl DataPipeline {
             .write_buffer(buffer, 0, bytemuck::cast_slice(&data_f32));
 
         if self.transfer_options.mode == TransferMode::Blocking {
-            self.device.poll(Maintain::Wait);
+            let _ = self.device.poll(PollType::Wait);
         }
 
         let elapsed = start.elapsed();

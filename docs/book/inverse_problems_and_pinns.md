@@ -106,6 +106,51 @@ Preconditioned L-BFGS uses the approximate inverse Hessian from the last $q$ gra
 typically achieving superlinear convergence near the solution. The preconditioner accounts for the
 illumination pattern of the source array, correcting for the geometric spreading of energy.
 
+### 2.5 Discrete Adjoint Exactness: Approximate vs Exact Engine
+
+The gradient formula of §2.3 is exact in the *continuous* setting. Whether the *discrete*
+implementation reproduces it depends on the forward solver being **self-adjoint** — the discrete
+adjoint must be the exact algebraic transpose of the discrete forward operator. kwavers exposes two
+engines through `FwiProcessor::with_engine(FwiEngine::…)` (ADR 016), and they differ sharply on this
+point.
+
+**Approximate adjoint (`FwiEngine::Solver`, default).** Running the shared FDTD/PSTD
+`Box<dyn Solver>` in reverse time with the residual injected at receivers gives a gradient that is a
+valid *descent direction* but **not** the exact discrete $\nabla J$. The dot-product (Taylor) test
+$\kappa = (g\cdot\delta m)/(\mathrm{d}J/\mathrm{d}s)$, with $\mathrm{d}J/\mathrm{d}s$ a
+Richardson-extrapolated finite difference of the *actual* objective, gives $\kappa \approx 238$ for
+one perturbation direction and $\approx 191$ for another (both stable under step refinement). Two
+root causes: a global scale offset because the additive source injection carries the k-Wave
+$2\,\mathrm{d}t\,c_0/(N\,\mathrm{d}x)$ factor while receivers sample pressure directly (so source
+injection is not the transpose of receiver sampling), and a $\sim 20\%$ direction-dependent shape
+error from the non-self-adjoint CPML and the leapfrog/staggered-grid time stepping. The Armijo line
+search absorbs both — steepest-descent and L-BFGS FWI converge — but the absolute magnitude is wrong,
+which is fatal for Gauss–Newton, fixed-step updates, gradient-norm stopping, and cross-shot weighting.
+
+**Exact adjoint (`FwiEngine::SecondOrderSelfAdjoint`).** A dedicated self-adjoint second-order
+acoustic engine in energy form, $W\,\ddot p = D p + s$ with $W=\mathrm{diag}(1/(\rho c^2))$ and
+$D=\nabla\!\cdot(\tfrac1\rho\nabla)$ a **symmetric** heterogeneous Dirichlet Laplacian, uses a
+3-point leapfrog and matched source/receiver injection. Because $D=D^\top$ and the 3-point time
+operator is self-adjoint under reversal, its discrete adjoint is the *same scheme run backward*, and
+the reduced gradient
+$$g_x = -\frac{2}{\rho_x c_x^3}\sum_{n} \xi_x^{\,n}\,\bigl(p^{n+1}-2p^{n}+p^{n-1}\bigr)_x$$
+is the literal algebraic gradient of the discrete objective. The dot-product test then returns
+$\kappa \approx 1$ to $<10^{-4}$ for every direction. An optional self-adjoint absorbing sponge
+(damped leapfrog $W\ddot p + B\dot p = Dp + s$ with symmetric diagonal $B\ge 0$) preserves $\kappa\approx 1$
+while removing $>70\%$ of outgoing-wave energy versus reflecting walls. Choose this engine whenever
+the absolute gradient — not merely its direction — matters.
+
+*Memory.* Storing the full forward history $p^0\ldots p^{N_t-1}$ for the imaging condition costs
+$O(N_t N^3)$ (e.g. $\sim$0.8 GB/shot at $N_t=400$, $64^3$). Because the **lossless** leapfrog is
+energy-conserving and hence exactly time-reversible ($c_{\text{prev}}=1$, so
+$p^{n-1}=\mathrm{inv\_a^+}\!\cdot\!(Dp^n)+c_{\text{curr}}p^n+\mathrm{inv\_a^+}s^n-p^{n+1}$), the
+default lossless path keeps only the final two states and **reconstructs** the forward field backward
+in lockstep with the adjoint sweep (`forward_tail` + `gradient_reconstructed`), cutting peak memory to
+$O(N^3)$ for one extra Helmholtz apply per backward step — the standard memory↔recompute trade, and
+the exact (full-reversal) limit of Griewank *revolve* checkpointing. The reconstructed gradient
+matches the stored-history gradient to $<10^{-9}$ relative. The damped (sponge) engine anti-amplifies
+under reverse stepping, so it retains the stored history.
+
 ---
 
 ## 3. Born Approximation for Linearized Inversion
@@ -270,8 +315,15 @@ and $\hat{n}_\phi = (\cos\phi, \sin\phi)$. FBP achieves $O(N^2 \log N)$ complexi
 using the FFT-based implementation of the 1D convolutions.
 
 For curved ray paths (ray bending by tissue heterogeneity), iterative algebraic reconstruction
-(SIRT, ART) or FWI-based methods are required. The linear ray approximation introduces systematic bias
-when $|\nabla c|/c$ is non-negligible over path lengths exceeding one wavelength.
+(SIRT, ART) over **traced bent rays** is required. The linear ray approximation introduces systematic
+bias when $|\nabla c|/c$ is non-negligible over path lengths exceeding one wavelength. The bent-ray
+forward operator — the Fermat (least-traveltime) path through the slowness field, traced as a
+shortest path so its per-voxel path lengths form the iterative-reconstruction system-matrix row —
+is implemented in `kwavers_diagnostics::reconstruction::bent_ray` (ADR 020). The **end-to-end
+inversion** `reconstruction::bent_ray_tomography::reconstruct_bent_ray_tomography` closes the loop:
+the nonlinear trace↔solve fixed point re-traces rays through the evolving slowness model and refines
+it by sparse-ART sweeps over the path-length rows, recovering a slow/fast anomaly from transmission
+traveltimes (verified: anomaly localization + correlation with truth + monotone misfit reduction).
 
 ### 6.2 Reflection CT: Reflectivity Reconstruction
 
@@ -293,9 +345,11 @@ efficient backprojection reconstruction at the cost of sidelobe artifacts.
 > `kwavers_diagnostics::reconstruction::radon` (`radon_transform`, `filtered_backprojection`;
 > ADR 013). Other quantitative sound-speed paths: frequency-domain FWI / convergent-Born-series
 > and linear Born inversion (§8), and the straight-/curved-ray speed-of-sound *shift* tomography
-> in the Diagnostic Imaging chapter. Reflection-CT reflectivity reconstruction and bent-ray
-> correction (iterative SIRT/ART over traced rays) remain — `reconstruction::real_time_sirt`
-> provides the iterative path.
+> in the Diagnostic Imaging chapter. **Bent-ray correction** (Fermat shortest-path ray tracing
+> through the slowness field, feeding the iterative SIRT/ART/OSEM reconstructor) is now implemented
+> in `reconstruction::bent_ray` (ADR 020); SIRT/ART/OSEM live in
+> `kwavers_solver::…::unified_sirt`, with `reconstruction::real_time_sirt` the streaming pipeline.
+> Reflection-CT reflectivity reconstruction (distinct acquisition geometry) remains a follow-on.
 
 ---
 
@@ -348,13 +402,21 @@ kwavers_solver::inverse
 ├── fwi/
 │   ├── time_domain/
 │   │   ├── FwiProcessor             # forward+adjoint orchestration, gradient, regularization, line search
+│   │   │                            #   FwiEngine::{Solver (approx. adjoint, κ≈238), SecondOrderSelfAdjoint (exact, κ≈1)}
+│   │   ├── self_adjoint             # exact-adjoint 2nd-order engine + optional self-adjoint sponge (ADR 016)
 │   │   ├── adjoint_state            # l2_residual, reverse_time_axis, accumulate_signed_correlation
 │   │   ├── frequency_continuation   # multiscale Butterworth band-limiting (Bunks 1995)
 │   │   ├── encoded_source           # Hadamard-coded simultaneous sources
+│   │   ├── mofi/                    # guidance-free SE(2) skull-template registration (ADR 017/018)
+│   │   │                            #   align · align_homotopy · coarse_pose_search · align_with_calibration
+│   │   │                            #   align_nonrigid (FfdBasis::{Bilinear,CubicBSpline}) · align_pipeline
 │   │   └── search                   # Armijo line search (line_search / line_search_multi, step-halving)
 │   └── frequency_domain/            # CBS (convergent Born series) FWI  [PyO3: invert_breast_fwi]
+├── marchenko/                       # 1-D iterative redatuming (operators verified; redatum experimental, ADR 019)
+│                                    #   + marchenko_wasserstein_misfit J=W₁(G⁻_obs,G⁻_mod)
 ├── reconstruction/seismic/misfit
-│   └── MisfitType                   # L2 | L1 | Envelope | Phase | Correlation | Wasserstein (optimal transport)
+│   ├── MisfitType                   # L2 | L1 | Envelope | Phase | Correlation | Wasserstein (optimal transport)
+│   └── DataWeighting                # Uniform | InverseNoiseVariance (PWLS / low-dose-CT MBIR; per-trace 1/σ²)
 ├── linear_born_inversion/           # LinearBornInversionConfig, VolumeOperator, pcg_invert
 ├── pinn/                            # Burn-backed PINN (feature = "pinn")
 │   ├── elastic_2d::model::ElasticPINN2D<B>      # MLP, tanh, trainable (λ, μ, ρ)
@@ -430,8 +492,12 @@ the `burn::backend::Backend` trait, consistent with kwavers' `ComputeBackend` ab
 A 2D Marmousi-style phantom (sound speed range 1480–3500 m/s) is reconstructed from 32 sources and
 128 receivers at 250 kHz. Convergence criterion: $\|m^{(k+1)} - m^{(k)}\|/\|m^{(k)}\| < 10^{-4}$.
 Armijo-backtracking gradient descent (the shipped `FwiProcessor` line search) with multiscale
-frequency continuation reaches the convergence criterion; gradient accuracy is verified by a
-finite-difference check $\|g - g_{\text{FD}}\|/\|g\| < 10^{-5}$. A quasi-Newton L-BFGS driver is
+frequency continuation reaches the convergence criterion. Gradient accuracy is verified by the
+finite-difference dot-product (Taylor) test of §2.5: the **exact** self-adjoint engine
+(`FwiEngine::SecondOrderSelfAdjoint`) matches the finite difference with $\kappa \approx 1$ to
+$<10^{-4}$ for every perturbation direction; the default FDTD/PSTD engine yields only a valid
+*descent direction* ($\kappa \approx 238$, magnitude not exact — §2.5), which is sufficient for the
+line-searched drivers below but not for absolute-gradient consumers. A quasi-Newton L-BFGS driver is
 also available: `FwiProcessor::invert_lbfgs(observed, initial, geometry, grid, memory)` replaces
 the normalized steepest-descent direction with the limited-memory BFGS direction $d=-H g$, where
 the implicit inverse Hessian $H$ comes from the Nocedal two-loop recursion over the last `memory`
@@ -473,6 +539,55 @@ PINN; the 1-D/3-D scalar-wave training figures are illustrative — that PINN is
 
 ---
 
+## 10. Guidance-Free Registration and Prior-Less FWI
+
+Pixel-wise FWI is high-dimensional and cycle-skipping-prone. Two reduced or restructured inversions
+address the two dominant practical failure modes — a poor model *prior* and the cycle-skipping
+*objective*.
+
+### 10.1 Manifold Optimisation for FWI (MOFI): rigid skull-template registration
+
+When the unknown is mainly a *pose* error of a known template (e.g. a CT-derived skull aligned to a
+patient), MOFI (Bates et al. 2026; ADR 017/018) replaces the pixel-wise update with a low-dimensional
+**rigid SE(2) reparametrisation** $c_\varphi(\mathbf{x}) = c_{\text{template}}(T_\varphi^{-1}\mathbf{x})$,
+$\varphi=\{\theta,\delta_1,\delta_2\}$, and minimises the *acoustic* misfit over just those three
+parameters — no MRI guidance image. The chained gradient is
+$$\partial J/\partial\varphi = (\partial c_\varphi/\partial\varphi)^\top\,\partial J/\partial c,$$
+with $\partial J/\partial c$ the **exact** self-adjoint gradient (§2.5) and $\partial c_\varphi/\partial\varphi$
+the analytic Jacobian of the bilinear-resampled rigid transform; updates use the SE(2) Lie-group
+log/exp maps. kwavers ships the full pathway in `inverse::fwi::time_domain::mofi`:
+
+- `align` / `align_from` — single rigid alignment (recovers a known pose to $<1°$ / $<1$ mm);
+- `align_homotopy` — a misfit anneal (Wasserstein → envelope → L2) that widens the capture basin
+  (recovers a $28°$ rotation where single-misfit L2 cycle-skips);
+- `coarse_pose_search` — a brute-force global pose seed using an arrival-time-sensitive misfit
+  (`recommended_search_misfit()` = Wasserstein; envelope is phase-blind and seeds the wrong rotation);
+- `align_with_calibration` — block-coordinate pose + a global sound-speed contrast scale
+  $c = c_\text{bg} + \alpha(c_\text{template}-c_\text{bg})$, correcting the CT→speed systematic error;
+- `align_nonrigid` — a control-lattice free-form deformation (`FfdBasis::{Bilinear, CubicBSpline}`,
+  bending-energy-regularised) for residual non-rigid mismatch;
+- `align_pipeline` — coarse search → rigid + calibration → non-rigid, chained.
+
+### 10.2 Marchenko redatuming + Wasserstein (prior-less FWI)
+
+The "ultimate prior-less" formulation combines two methods (ADR 019). **Marchenko redatuming**
+retrieves the focusing functions $f_1^\pm$ and Green's functions $G^\pm$ between the surface and a
+virtual subsurface point from the surface reflection response $R(t)$ and only the one-way time
+$t_d$ — *without the overburden model* — using internal multiples correctly. The combined objective
+compares *redatumed* Green's functions with the cycle-skipping-robust optimal-transport distance,
+$$J(m) = W_p\bigl(G^-_{\text{obs}},\, G^-_{\text{mod}}(m)\bigr).$$
+The Wasserstein half is production-ready (it is convex in time shift, defeating cycle-skipping;
+verified by `wasserstein_is_convex_in_shift_on_positive_distribution`). The Marchenko half ships as
+`inverse::marchenko`: the windowed convolution/correlation operators are unit-tested, and
+`marchenko_wasserstein_misfit` composes the redatuming with the verified Wasserstein misfit. The 1-D
+iterative `redatum` itself is **experimental** — its quantitative focusing is not yet validated
+against the layered-medium oracle (built and `#[ignore]`d in `marchenko::oracle_tests`: current
+$\mathrm{corr}(\text{Marchenko},\text{true})\approx 0.14$, with the window/record-geometry,
+convolution-convention, and amplitude blockers root-caused in ADR 019). It is documented honestly as
+a staged research milestone, not a validated result.
+
+---
+
 ## References
 
 1. Virieux, J. & Operto, S. (2009). An overview of full-waveform inversion in exploration geophysics.
@@ -490,3 +605,24 @@ PINN; the 1-D/3-D scalar-wave training figures are illustrative — that PINN is
    networks for approximating PDEs. *IMA Journal of Numerical Analysis*, 43(1), 1–43.
 7. Griewank, A. & Walther, A. (2008). *Evaluating Derivatives: Principles and Techniques of
    Algorithmic Differentiation* (2nd ed.). SIAM.
+8. Plessix, R.-E. (2006). A review of the adjoint-state method for computing the gradient of a
+   functional with geophysical applications. *Geophysical Journal International*, 167(2), 495–503.
+9. Bates, O., Cueto, C., Coleman, C., Smith, C.A.B., Guasch, L. & Calderon Agudo, O. (2026). Automatic
+   skull-template alignment without a guidance image. *Ultrasound in Medicine & Biology* (in press).
+   doi:10.1016/j.ultrasmedbio.2026.05.003.
+10. Métivier, L., Brossier, R., Mérigot, Q., Oudet, É. & Virieux, J. (2016). Measuring the misfit
+    between seismograms using an optimal transport distance. *Geophysical Journal International*,
+    205(1), 345–377.
+11. Wapenaar, K., Thorbecke, J., van der Neut, J., Broggini, F., Slob, E. & Snieder, R. (2014).
+    Marchenko imaging. *Geophysics*, 79(3), WA39–WA57.
+12. Rueckert, D., Sonoda, L.I., Hayes, C., et al. (1999). Nonrigid registration using free-form
+    deformations. *IEEE Transactions on Medical Imaging*, 18(8), 712–721.
+13. Sauer, K. & Bouman, C. (1993). A local update strategy for iterative reconstruction from
+    projections. *IEEE Transactions on Signal Processing*, 41(2), 534–548. (PWLS data weighting.)
+14. Thibault, J.-B., Sauer, K., Bouman, C. & Hsieh, J. (2007). A three-dimensional statistical
+    approach to improved image quality for multislice helical CT. *Medical Physics*, 34(11),
+    4526–4544. (Low-dose CT model-based iterative reconstruction.)
+15. Venkatakrishnan, S.V., Bouman, C.A. & Wohlberg, B. (2013). Plug-and-Play priors for model-based
+    reconstruction. *IEEE GlobalSIP*, 945–948.
+16. Lustig, M., Donoho, D. & Pauly, J.M. (2007). Sparse MRI: the application of compressed sensing
+    for rapid MR imaging. *Magnetic Resonance in Medicine*, 58(6), 1182–1195.

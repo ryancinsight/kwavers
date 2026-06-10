@@ -27,8 +27,6 @@ fn test_checkpoint_manager() {
     let manager = CheckpointManager {
         checkpoint_dir: std::path::PathBuf::from("test_checkpoints"),
         max_checkpoints: 3,
-        checkpoint_interval: 100,
-        auto_save: true,
     };
 
     assert!(manager.ensure_checkpoint_dir().is_ok());

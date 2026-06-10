@@ -82,11 +82,9 @@ impl MultiGpuManager {
     async fn discover_gpu_devices() -> KwaversResult<Vec<PinnMultiGpuDeviceInfo>> {
         use super::types::PinnGpuCapabilities;
 
-        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
             backends: wgpu::Backends::all(),
-            flags: wgpu::InstanceFlags::default(),
-            dx12_shader_compiler: Default::default(),
-            gles_minor_version: wgpu::Gles3MinorVersion::Automatic,
+            ..Default::default()
         });
 
         let mut devices = Vec::new();

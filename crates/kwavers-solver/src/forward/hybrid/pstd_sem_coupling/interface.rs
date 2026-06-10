@@ -4,6 +4,9 @@ use kwavers_grid::Grid;
 use kwavers_mesh::tetrahedral::TetrahedralMesh;
 use ndarray::Array2;
 
+/// Paired interface region: PSTD grid points and the matching SEM node indices.
+type PstdSemRegion = (Vec<(usize, usize, usize)>, Vec<usize>);
+
 impl SpectralCouplingInterface {
     /// Create spectral coupling interface
     /// # Errors
@@ -34,7 +37,7 @@ impl SpectralCouplingInterface {
         pstd_grid: &Grid,
         sem_mesh: &TetrahedralMesh,
         overlap_thickness: usize,
-    ) -> KwaversResult<(Vec<(usize, usize, usize)>, Vec<usize>)> {
+    ) -> KwaversResult<PstdSemRegion> {
         let mut pstd_points = Vec::new();
         let mut sem_nodes = Vec::new();
 

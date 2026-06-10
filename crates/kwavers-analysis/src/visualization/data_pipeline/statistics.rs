@@ -42,11 +42,9 @@ impl TransferStatistics {
 
     /// Get average transfer size
     pub fn average_transfer_size(&self) -> usize {
-        if self.num_transfers > 0 {
-            self.total_bytes_transferred / self.num_transfers
-        } else {
-            0
-        }
+        self.total_bytes_transferred
+            .checked_div(self.num_transfers)
+            .unwrap_or(0)
     }
 
     /// Get average transfer time

@@ -7,6 +7,12 @@ use burn::tensor::{backend::AutodiffBackend, Tensor};
 
 use super::spatial::compute_divergence_2d;
 
+/// 2D gradient component pair `(∂/∂x, ∂/∂y)`, each `[batch, 1]`.
+type GradientPair2D<B> = (
+    Tensor<<B as AutodiffBackend>::InnerBackend, 2>,
+    Tensor<<B as AutodiffBackend>::InnerBackend, 2>,
+);
+
 /// Compute second-order spatial derivative ∂²u/∂xᵢ² via central finite differences.
 ///
 /// # Arguments
@@ -141,10 +147,7 @@ where
 pub fn compute_gradient_of_divergence_2d<B, F>(
     forward_fn: F,
     input: &Tensor<B, 2>,
-) -> Result<
-    (Tensor<B::InnerBackend, 2>, Tensor<B::InnerBackend, 2>),
-    kwavers_core::error::KwaversError,
->
+) -> Result<GradientPair2D<B>, kwavers_core::error::KwaversError>
 where
     B: AutodiffBackend,
     F: Fn(Tensor<B, 2>) -> Tensor<B, 2> + Clone,

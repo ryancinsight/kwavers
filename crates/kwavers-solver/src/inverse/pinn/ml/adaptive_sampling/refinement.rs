@@ -3,6 +3,11 @@ use burn::tensor::{backend::AutodiffBackend, Tensor};
 use kwavers_core::error::KwaversResult;
 use rand::Rng;
 
+/// Per-cell accumulator keyed by integer grid index `(gx, gy, gt)`, holding the
+/// `(x, y, t, priority)` values of every point that fell into that cell.
+type GridCellAccumulator =
+    std::collections::HashMap<(usize, usize, usize), (Vec<f32>, Vec<f32>, Vec<f32>, Vec<f32>)>;
+
 impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
     /// Adaptive refinement.
     /// # Errors
@@ -124,10 +129,7 @@ impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
 
         let num_points = points_vec.len() / 3;
 
-        let mut grid_cells: std::collections::HashMap<
-            (usize, usize, usize),
-            (Vec<f32>, Vec<f32>, Vec<f32>, Vec<f32>),
-        > = std::collections::HashMap::new();
+        let mut grid_cells: GridCellAccumulator = std::collections::HashMap::new();
 
         for i in 0..num_points {
             let x = points_vec[i * 3];

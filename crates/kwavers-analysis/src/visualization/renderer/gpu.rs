@@ -23,11 +23,9 @@ impl RendererGpuContext {
         #[cfg(feature = "gpu-visualization")]
         {
             // Initialize GPU
-            let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+            let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
                 backends: wgpu::Backends::all(),
-                dx12_shader_compiler: Default::default(),
-                flags: wgpu::InstanceFlags::default(),
-                gles_minor_version: wgpu::Gles3MinorVersion::Automatic,
+                ..Default::default()
             });
 
             let adapter =
@@ -36,26 +34,25 @@ impl RendererGpuContext {
                     compatible_surface: None,
                     force_fallback_adapter: false,
                 }))
-                .ok_or_else(|| {
+                .map_err(|_| {
                     KwaversError::System(kwavers_core::error::SystemError::ResourceUnavailable {
                         resource: "GPU adapter".to_string(),
                     })
                 })?;
 
-            let (device, queue) = pollster::block_on(adapter.request_device(
-                &wgpu::DeviceDescriptor {
+            let (device, queue) =
+                pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
                     label: Some("Kwavers GPU Device"),
                     required_features: wgpu::Features::empty(),
                     required_limits: wgpu::Limits::default(),
                     memory_hints: Default::default(),
-                },
-                None,
-            ))
-            .map_err(|e| {
-                KwaversError::System(kwavers_core::error::SystemError::ResourceUnavailable {
-                    resource: format!("GPU device: {}", e),
-                })
-            })?;
+                    trace: wgpu::Trace::Off,
+                }))
+                .map_err(|e| {
+                    KwaversError::System(kwavers_core::error::SystemError::ResourceUnavailable {
+                        resource: format!("GPU device: {}", e),
+                    })
+                })?;
 
             Ok(Self {
                 device: std::sync::Arc::new(device),

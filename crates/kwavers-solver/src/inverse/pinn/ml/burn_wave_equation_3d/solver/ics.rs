@@ -2,6 +2,15 @@ use super::core::BurnPINN3DWave;
 use burn::tensor::{backend::Backend, Tensor, TensorData};
 use kwavers_core::error::{KwaversError, KwaversResult};
 
+/// Initial-condition coordinate/value tensors `(x, y, z, t, u)`, each `[N, 1]`.
+type InitialConditionTensors<B> = (
+    Tensor<B, 2>,
+    Tensor<B, 2>,
+    Tensor<B, 2>,
+    Tensor<B, 2>,
+    Tensor<B, 2>,
+);
+
 impl<B: Backend> BurnPINN3DWave<B> {
     /// Compute temporal derivative ∂u/∂t at t=0 via forward finite difference
     ///
@@ -111,13 +120,7 @@ impl<B: Backend> BurnPINN3DWave<B> {
         t_data: &[f32],
         u_data: &[f32],
         device: &B::Device,
-    ) -> KwaversResult<(
-        Tensor<B, 2>,
-        Tensor<B, 2>,
-        Tensor<B, 2>,
-        Tensor<B, 2>,
-        Tensor<B, 2>,
-    )> {
+    ) -> KwaversResult<InitialConditionTensors<B>> {
         let min_t = t_data.iter().copied().fold(f32::INFINITY, |a, b| a.min(b));
         if !min_t.is_finite() {
             return Err(KwaversError::InvalidInput(

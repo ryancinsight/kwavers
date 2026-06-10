@@ -74,7 +74,13 @@ impl CmutCell {
     /// In-vacuo membrane resonance \[Hz].
     #[must_use]
     pub fn vacuum_resonance(&self) -> f64 {
-        plate::vacuum_resonance(self.youngs, self.thickness, self.poisson, self.density, self.radius)
+        plate::vacuum_resonance(
+            self.youngs,
+            self.thickness,
+            self.poisson,
+            self.density,
+            self.radius,
+        )
     }
 
     /// Immersion (fluid-loaded) resonance \[Hz].
@@ -112,6 +118,72 @@ impl CmutCell {
             return 0.0;
         }
         ((bias_voltage / vc).powi(2)).min(0.85)
+    }
+
+    /// Static **DC pull-down** as a fraction `u = x/g₀` of the gap, the stable
+    /// electrostatic equilibrium of the lumped parallel-plate membrane under bias.
+    ///
+    /// # Nonlinear electrostatics
+    ///
+    /// Force balance `k x = ε₀ A V²/(2(g₀−x)²)` non-dimensionalises (with
+    /// `V_c² = 8 k g₀³/(27 ε₀ A)`) to
+    ///
+    /// ```text
+    /// u (1−u)² = (4/27)(V/V_c)²,   u ∈ [0, 1/3].
+    /// ```
+    ///
+    /// `g(u)=u(1−u)²` is strictly increasing on `[0, 1/3]` (so the root is
+    /// unique, found by bisection) and reaches its maximum `4/27` at the
+    /// **pull-in** point `u = 1/3` exactly when `V = V_c`. Returns `None` for
+    /// `V ≥ V_c` (collapse — no stable equilibrium) or invalid geometry.
+    #[must_use]
+    pub fn bias_pulldown_fraction(&self, bias_voltage: f64) -> Option<f64> {
+        let vc = self.collapse_voltage();
+        if vc <= 0.0 || bias_voltage < 0.0 || bias_voltage >= vc {
+            return None;
+        }
+        let target = 4.0 / 27.0 * (bias_voltage / vc).powi(2);
+        // Bisection on the strictly-increasing branch u ∈ [0, 1/3].
+        let (mut lo, mut hi) = (0.0_f64, 1.0 / 3.0);
+        for _ in 0..80 {
+            let mid = 0.5 * (lo + hi);
+            if mid * (1.0 - mid) * (1.0 - mid) < target {
+                lo = mid;
+            } else {
+                hi = mid;
+            }
+        }
+        Some(0.5 * (lo + hi))
+    }
+
+    /// Biased operating gap `g₀(1 − u)` \[m] under DC bias (the membrane is
+    /// pulled down by the electrostatic force). `None` once collapsed (`V ≥ V_c`).
+    #[must_use]
+    pub fn biased_gap(&self, bias_voltage: f64) -> Option<f64> {
+        self.bias_pulldown_fraction(bias_voltage)
+            .map(|u| self.gap * (1.0 - u))
+    }
+
+    /// Biased small-signal capacitance `C(V) = ε₀ A /(g₀(1−u)) = C₀/(1−u)` \[F].
+    /// Rises above `C₀` as the bias pulls the membrane in. `None` once collapsed.
+    #[must_use]
+    pub fn biased_capacitance(&self, bias_voltage: f64) -> Option<f64> {
+        self.bias_pulldown_fraction(bias_voltage)
+            .map(|u| self.capacitance() / (1.0 - u))
+    }
+
+    /// **Spring-softened** resonance under DC bias \[Hz]: the electrostatic force
+    /// reduces the effective stiffness to `k_eff = k(1 − 2u/(1−u))`, so the
+    /// immersion resonance drops as `f(V) = f_imm·√(k_eff/k)` and **vanishes at
+    /// pull-in** (`u = 1/3`, `V = V_c`) — the classic CMUT collapse instability.
+    ///
+    /// The softened-stiffness factor comes from `dF_elec/dx = 2k u/(1−u)` at the
+    /// biased equilibrium. `None` once collapsed.
+    #[must_use]
+    pub fn bias_softened_resonance(&self, bias_voltage: f64, density_fluid: f64) -> Option<f64> {
+        let u = self.bias_pulldown_fraction(bias_voltage)?;
+        let stiffness_ratio = (2.0 * u / (1.0 - u)).mul_add(-1.0, 1.0).max(0.0);
+        Some(self.immersion_resonance(density_fluid) * stiffness_ratio.sqrt())
     }
 
     /// Dielectric self-heating power `P = π f C V_ac² tanδ` \[W] at drive `V_ac`/`freq`.
@@ -165,7 +237,12 @@ impl CmutCell {
     /// `p = ρ c · v_peak` \[Pa]. The defining transmit limitation of CMUTs for
     /// **therapy**: output is capped by the (sub-micron) gap, not the drive.
     #[must_use]
-    pub fn max_output_pressure(&self, density_fluid: f64, sound_speed_fluid: f64, swing_fraction: f64) -> f64 {
+    pub fn max_output_pressure(
+        &self,
+        density_fluid: f64,
+        sound_speed_fluid: f64,
+        swing_fraction: f64,
+    ) -> f64 {
         density_fluid * sound_speed_fluid * self.max_surface_velocity(density_fluid, swing_fraction)
     }
 
@@ -238,8 +315,79 @@ mod tests {
         let b = CmutCell::silicon(14e-6, 0.4e-6, 0.20e-6).unwrap(); // 2× gap
         let ratio = b.collapse_voltage() / a.collapse_voltage();
         // V_c ∝ g^{3/2}  (k and A unchanged) → ratio = 2^1.5
-        assert!((ratio - 2.0_f64.powf(1.5)).abs() / ratio < 1e-6, "ratio {ratio}");
+        assert!(
+            (ratio - 2.0_f64.powf(1.5)).abs() / ratio < 1e-6,
+            "ratio {ratio}"
+        );
         assert!(a.collapse_voltage() > 0.0);
+    }
+
+    #[test]
+    fn bias_pulldown_satisfies_force_balance_and_pullin_limit() {
+        let c = CmutCell::silicon(60e-6, 2.0e-6, 0.2e-6).unwrap();
+        let vc = c.collapse_voltage();
+        let k = c.modal_stiffness();
+        let eps_a = VACUUM_PERMITTIVITY * c.area();
+
+        // No bias ⇒ no pull-down.
+        assert!(c.bias_pulldown_fraction(0.0).unwrap() < 1e-9);
+
+        // Monotone increase toward pull-in.
+        let u_low = c.bias_pulldown_fraction(0.5 * vc).unwrap();
+        let u_high = c.bias_pulldown_fraction(0.9 * vc).unwrap();
+        assert!(u_low < u_high && u_high < 1.0 / 3.0);
+
+        // Approaches the pull-in displacement g₀/3 as V → V_c⁻. The approach is
+        // √-slow (g(u) is flat at its maximum), so even at 0.999 V_c the gap to
+        // 1/3 is ~0.017; require it strictly below 1/3 and within 0.03, and that
+        // a closer bias gets closer still.
+        let u_999 = c.bias_pulldown_fraction(0.999 * vc).unwrap();
+        let u_9999 = c.bias_pulldown_fraction(0.9999 * vc).unwrap();
+        assert!(u_999 < 1.0 / 3.0 && (1.0 / 3.0 - u_999) < 0.03, "near-collapse u={u_999}");
+        assert!(u_9999 > u_999 && u_9999 < 1.0 / 3.0, "tighter bias → closer to pull-in");
+
+        // Differential check: the equilibrium x satisfies kx = ε₀AV²/(2(g₀−x)²).
+        for frac in [0.3, 0.6, 0.85] {
+            let v = frac * vc;
+            let x = c.bias_pulldown_fraction(v).unwrap() * c.gap;
+            let spring = k * x;
+            let electro = eps_a * v * v / (2.0 * (c.gap - x).powi(2));
+            assert!(
+                (spring - electro).abs() <= 1e-6 * spring.max(electro),
+                "force balance at V={v}: {spring} vs {electro}"
+            );
+        }
+
+        // Collapsed (V ≥ V_c) ⇒ no stable equilibrium.
+        assert!(c.bias_pulldown_fraction(vc).is_none());
+        assert!(c.bias_pulldown_fraction(1.5 * vc).is_none());
+    }
+
+    #[test]
+    fn biased_capacitance_rises_and_resonance_softens_to_collapse() {
+        let c = CmutCell::silicon(60e-6, 2.0e-6, 0.2e-6).unwrap();
+        let vc = c.collapse_voltage();
+        let rho = 1000.0; // water
+
+        // Capacitance C₀/(1−u) exceeds C₀ and grows with bias.
+        let c0 = c.capacitance();
+        let cap_low = c.biased_capacitance(0.5 * vc).unwrap();
+        let cap_high = c.biased_capacitance(0.9 * vc).unwrap();
+        assert!(c0 < cap_low && cap_low < cap_high);
+
+        // Resonance softens monotonically with bias (k_eff → 0 at pull-in). The
+        // factor is (1−(V/V_c)²)^{1/4}-like near collapse, so it decreases
+        // steadily but reaches 0 only at exactly V_c.
+        let f0 = c.immersion_resonance(rho);
+        let f_low = c.bias_softened_resonance(0.5 * vc, rho).unwrap();
+        let f_high = c.bias_softened_resonance(0.9 * vc, rho).unwrap();
+        assert!(f_high < f_low && f_low < f0, "spring softening: {f_high} < {f_low} < {f0}");
+        // At 0.999 V_c the resonance is already strongly reduced (≈0.28 f0)…
+        let f_999 = c.bias_softened_resonance(0.999 * vc, rho).unwrap();
+        assert!(f_999 < 0.35 * f0, "resonance strongly softened near pull-in: {f_999}");
+        // …and keeps falling as the bias closes on V_c.
+        let f_9999 = c.bias_softened_resonance(0.9999 * vc, rho).unwrap();
+        assert!(f_9999 < f_999, "resonance continues to collapse: {f_9999} < {f_999}");
     }
 
     #[test]
@@ -254,7 +402,7 @@ mod tests {
     fn cmut_is_wide_band_in_blood() {
         let c = ivus_cmut();
         let fbw = c.fractional_bandwidth(1060.0); // blood
-        // CMUTs are fluid-coupling dominated → broad fractional bandwidth (>60%)
+                                                  // CMUTs are fluid-coupling dominated → broad fractional bandwidth (>60%)
         assert!(fbw > 0.6, "CMUT FBW {fbw} should be wide");
     }
 
@@ -277,13 +425,23 @@ mod tests {
         let c = CmutCell::silicon(20e-6, 0.5e-6, 0.2e-6).unwrap();
         let c2a = CmutCell::silicon(40e-6, 0.5e-6, 0.2e-6).unwrap(); // 2× radius
         let c2g = CmutCell::silicon(20e-6, 0.5e-6, 0.4e-6).unwrap(); // 2× gap
-        // c ∝ a⁴ → ×16 ; c ∝ 1/g³ → ÷8
-        assert!((c2a.squeeze_film_damping(AIR_VISC) / c.squeeze_film_damping(AIR_VISC) - 16.0).abs() < 1e-6);
-        assert!((c2g.squeeze_film_damping(AIR_VISC) / c.squeeze_film_damping(AIR_VISC) - 0.125).abs() < 1e-9);
+                                                                     // c ∝ a⁴ → ×16 ; c ∝ 1/g³ → ÷8
+        assert!(
+            (c2a.squeeze_film_damping(AIR_VISC) / c.squeeze_film_damping(AIR_VISC) - 16.0).abs()
+                < 1e-6
+        );
+        assert!(
+            (c2g.squeeze_film_damping(AIR_VISC) / c.squeeze_film_damping(AIR_VISC) - 0.125).abs()
+                < 1e-9
+        );
         // more viscous gas → more damping → lower Q
-        assert!(c.squeeze_film_quality_factor(2.0 * AIR_VISC) < c.squeeze_film_quality_factor(AIR_VISC));
+        assert!(
+            c.squeeze_film_quality_factor(2.0 * AIR_VISC) < c.squeeze_film_quality_factor(AIR_VISC)
+        );
         // squeeze number rises with frequency
-        assert!(c.squeeze_number(AIR_VISC, 101325.0, 2e6) > c.squeeze_number(AIR_VISC, 101325.0, 1e6));
+        assert!(
+            c.squeeze_number(AIR_VISC, 101325.0, 2e6) > c.squeeze_number(AIR_VISC, 101325.0, 1e6)
+        );
         assert!(c.squeeze_film_quality_factor(AIR_VISC) > 0.0);
     }
 
@@ -294,7 +452,10 @@ mod tests {
         let flat = c.flex_gap_derating(0.0);
         let wrapped = c.flex_gap_derating(1.0 / 1.0e-3); // 1 mm radius of curvature
         assert!((flat - 1.0).abs() < 1e-12, "flat = no derating");
-        assert!(wrapped < flat, "flexing must reduce output: {wrapped} < {flat}");
+        assert!(
+            wrapped < flat,
+            "flexing must reduce output: {wrapped} < {flat}"
+        );
         // a tighter gap is hurt more by the same curvature (the user's concern)
         let tight = CmutCell::silicon(60e-6, 2.0e-6, 0.1e-6).unwrap();
         assert!(tight.flex_gap_derating(1.0 / 1.0e-3) < wrapped);

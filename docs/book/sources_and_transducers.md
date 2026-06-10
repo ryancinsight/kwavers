@@ -735,8 +735,13 @@ through the kwavers Rust core (`kw.circular_piston_directivity`, `kw.focused_bow
 rendering. The k-Wave parity results quoted in §11 are produced by the `at_focused_bowl_3D`,
 `at_focused_annular_array_3D`, and `sd_focussed_detector_3D` comparison scripts.
 
-CMUT and Mason-circuit (piezoelectric resonance) figures are intentionally absent: those
-models are documented as theory (§2) and are not implemented in kwavers.
+CMUT and Mason-circuit (piezoelectric resonance) models are implemented since this chapter was
+first drafted: the **Mason/IEEE thickness-mode resonator** is
+`kwavers_transducer::bulk_piezo::BulkPiezoResonator` (stiffened sound speed, antiresonance, clamped
+capacitance, `k_t²` round-trip), and **CMUT/PMUT** micromachined cells are
+`kwavers_transducer::mems::{CmutCell, PmutCell}` (clamped-plate resonance, collapse voltage +
+pre-collapse nonlinear electrostatics, coupling, self-heating, fluid-loaded bandwidth, inter-element
+crosstalk). Their figures live in Chapter 33 (`cmut_vs_pmut.md`).
 
 ---
 

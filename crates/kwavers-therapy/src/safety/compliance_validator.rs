@@ -4,6 +4,11 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Instant;
 
+/// Predicate evaluating one compliance requirement against a system configuration.
+/// `Send + Sync` so the validator registry can be shared across threads.
+type ComplianceValidationFn =
+    Arc<dyn Fn(&SystemConfiguration) -> KwaversResult<ComplianceResult> + Send + Sync>;
+
 /// IEC 60601-2-37 compliance validator
 #[derive(Debug)]
 pub struct ComplianceValidator {
@@ -148,8 +153,7 @@ struct ComplianceCheck {
     id: String,
     name: String,
     requirement: String,
-    validation_function:
-        Arc<dyn Fn(&SystemConfiguration) -> KwaversResult<ComplianceResult> + Send + Sync>,
+    validation_function: ComplianceValidationFn,
 }
 
 impl std::fmt::Debug for ComplianceCheck {

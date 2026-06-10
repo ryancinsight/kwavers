@@ -35,6 +35,67 @@ pub fn minnaert_resonance_hz(r0_m: f64, gamma: f64, p0_pa: f64, rho: f64) -> f64
     1.0 / (TWO_PI * r0_m) * (3.0 * gamma * p0_pa / rho).sqrt()
 }
 
+/// Minnaert resonance frequency **with the surface-tension correction**.
+///
+/// The equilibrium gas pressure is raised by the Young–Laplace pressure
+/// `P_g0 = P₀ + 2σ/R₀`, and surface tension contributes a negative `−2σ/R₀`
+/// stiffness term, giving (Leighton 1994 *The Acoustic Bubble* Eq. 3.38)
+///
+/// ```text
+/// f₀ = 1/(2π·R₀) · √( [3γ(P₀ + 2σ/R₀) − 2σ/R₀] / ρ )
+///    = 1/(2π·R₀) · √( [3γP₀ + (3γ−1)·2σ/R₀] / ρ )   [Hz]
+/// ```
+///
+/// As `σ → 0` this reduces exactly to [`minnaert_resonance_hz`] (the
+/// large-bubble approximation). The `2σ/R₀` terms scale as `1/R₀`, so the
+/// correction is negligible for large bubbles but dominant for sub-micron
+/// bubbles (in water, `2σ/R₀ ≈ 1.4·P₀` already at `R₀ = 1 µm`), where the
+/// uncorrected form under-predicts `f₀` by tens of percent.
+///
+/// Returns `0` for non-finite/non-positive inputs, or when the effective
+/// stiffness `3γP₀ + (3γ−1)·2σ/R₀` is non-positive (surface tension
+/// destabilises the bubble — no real resonance).
+///
+/// # Arguments
+/// * `r0_m` – equilibrium bubble radius [m]
+/// * `gamma` – polytropic exponent of the gas (1.4 for air)
+/// * `p0_pa` – ambient pressure [Pa]
+/// * `rho` – liquid density [kg/m³]
+/// * `sigma_n_m` – surface-tension coefficient [N/m] (water ≈ 0.0725)
+///
+/// # Reference
+/// Leighton, T. G. (1994). *The Acoustic Bubble*, §3.2; Minnaert (1933).
+#[must_use]
+#[inline]
+pub fn minnaert_resonance_corrected_hz(
+    r0_m: f64,
+    gamma: f64,
+    p0_pa: f64,
+    rho: f64,
+    sigma_n_m: f64,
+) -> f64 {
+    if !(r0_m.is_finite()
+        && gamma.is_finite()
+        && p0_pa.is_finite()
+        && rho.is_finite()
+        && sigma_n_m.is_finite()
+        && r0_m > 0.0
+        && gamma > 0.0
+        && p0_pa > 0.0
+        && rho > 0.0
+        && sigma_n_m >= 0.0)
+    {
+        return 0.0;
+    }
+    let laplace = young_laplace_pressure(sigma_n_m, r0_m); // 2σ/R₀
+    // Effective stiffness: 3γ(P₀ + 2σ/R₀) − 2σ/R₀ = 3γP₀ + (3γ−1)·2σ/R₀.
+    let stiffness = (3.0 * gamma).mul_add(p0_pa, (3.0 * gamma - 1.0) * laplace);
+    if stiffness <= 0.0 {
+        return 0.0;
+    }
+    1.0 / (TWO_PI * r0_m) * (stiffness / rho).sqrt()
+}
+
 /// Blake threshold pressure (inertial cavitation onset).
 ///
 /// Approximate closed-form expression derived from the static equilibrium of a

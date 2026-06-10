@@ -146,6 +146,8 @@ impl ComputeManager {
     /// # Errors
     /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
+    // Args are independent field arrays and scalar grid/medium/step parameters with no cohesive grouping.
+    #[allow(clippy::too_many_arguments)]
     pub fn fdtd_update(
         &self,
         pressure: &mut Array3<f64>,
@@ -178,6 +180,8 @@ impl ComputeManager {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
+    // Args are independent field arrays and scalar grid/medium/step parameters with no cohesive grouping.
+    #[allow(clippy::too_many_arguments)]
     fn fdtd_cpu(
         &self,
         pressure: &mut Array3<f64>,

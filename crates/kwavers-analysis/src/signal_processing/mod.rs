@@ -177,6 +177,12 @@ pub mod estimation_bounds;
 // Based on: Demené et al. (2015), Nouhoum et al. (2021)
 pub mod clutter_filter;
 
+// SWE-based clinical tissue staging (METAVIR liver fibrosis, Algorithm 11.5)
+pub mod tissue_staging;
+
+// Direct spatial shear-wavelength estimation (autocorrelation, §11.10)
+pub mod wavelength_estimation;
+
 // Re-export main types from implemented modules
 pub use beamforming::{
     alignment_shifts_s, delay_and_sum, relative_delays_s, DelayReference, DEFAULT_DELAY_REFERENCE,

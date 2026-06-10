@@ -135,6 +135,24 @@ LD_LEVELS = (0.25, 0.50, 0.75, 0.99)   # LD25, LD50, LD75, LD100 (≈99 % kill, 
 T_BODY_C, T_BOIL_C = 37.0, 100.0
 DELTA_T_BOIL = T_BOIL_C - T_BODY_C
 
+
+def _reference_dose(dose_flat: np.ndarray, target_idx: np.ndarray) -> float:
+    """Robust reference dose for the Weibull characteristic-dose (d0) calibration.
+
+    Returns the MEDIAN of the non-zero cumulative dose over the fully-treated
+    target voxels (the GTV core) — the dose a well-treated core voxel actually
+    receives. This is robust to ellipsoid-overlap hot-spots, unlike the global
+    peak: keying d0 to the peak would inflate the threshold and make the ablated
+    core read far below its true ≈LD100 kill. Falls back to the global peak only
+    when the target carries no dose.
+    """
+    if target_idx.size:
+        td = dose_flat[target_idx]
+        td = td[td > 0.0]
+        if td.size:
+            return float(np.median(td))
+    return float(dose_flat.max())
+
 # ── Tissue characterization from the kwavers-domain database ─────────────────
 _C_LIVER, _RHO_LIVER, _ALPHA_DB, _BA, _Z_LIVER_MRAYL = kw.tissue_properties("liver")
 _C_FAT, _RHO_FAT, _, _, _Z_FAT_MRAYL = kw.tissue_properties("fat")
@@ -1266,7 +1284,14 @@ def compute_bioeffect_progress(geom, plan, mon, n_steps=80):
     final_dose = np.zeros(nvox)
     for idx, n_pulse, w, _t0, _t1 in items:
         final_dose[idx] += w * n_pulse
-    d0 = max(KILL_D0_FRAC * float(final_dose.max()), 1e-30)
+    # Weibull characteristic dose d0 (≈63 % kill) is referenced to the dose the
+    # FULLY-TREATED TARGET — the GTV core — actually receives, NOT the global peak.
+    # The peak is an ellipsoid-overlap hot-spot; keying d0 to it inflates the
+    # threshold and spuriously suppresses every typical core voxel (the core mean
+    # then reads ≈LD25). Using the robust median of the GTV-core dose makes a
+    # well-treated core voxel reach LD100 — as intended for the ablated target —
+    # while the lower-dose CTV/PTV margins still grade down (radial gradient).
+    d0 = max(KILL_D0_FRAC * _reference_dose(final_dose, flat["GTV core"]), 1e-30)
     for tcut in ts:
         lsurv[:] = 0.0; dose[:] = 0.0
         for idx, n_pulse, w, t0, t1 in items:
@@ -1306,7 +1331,10 @@ def _final_kill_volume(geom, plan):
                         int(np.ceil(ll / dx)) + 1, int(np.ceil(la / dx)) + 1)
         w = (float(s["delivered"]) / P_TARGET_FOCAL_PA) ** 3
         dose[np.flatnonzero(tmp)] += w * max(int(s["pulses"]), 1)
-    d0 = max(KILL_D0_FRAC * float(dose.max()), 1e-30)
+    # d0 referenced to the GTV-core dose (the fully-treated target), robust to
+    # ellipsoid-overlap hot-spots — consistent with _kill_curves so the final
+    # lesion volume and the live curves use the same kill calibration.
+    d0 = max(KILL_D0_FRAC * _reference_dose(dose, np.flatnonzero(geom["gtv"])), 1e-30)
     kf = np.asarray(kw.delivered_histotripsy_progress(
         np.ascontiguousarray(dose), d0, KILL_WEIBULL_K), float)
     return kf.reshape(shape)
@@ -1557,7 +1585,7 @@ def _save(fig, name, facecolor="white"):
 def main():
     import focal_field_models as ffm
 
-    print("Loading CT + segmenting tumour, building sonication raster…")
+    print("Loading CT + segmenting tumour, building sonication raster...")
     geom = build_geometry()
     print(f"  {len(geom['region_centers'])} candidate regions, "
           f"{len(geom['subspot_offsets'])} sub-spots/region")
@@ -1570,7 +1598,7 @@ def main():
     fields = {"analytic": ffm.gaussian_profile(SIGMA_LAT),
               "pstd_nonlinear": ffm.pstd_profile_callable(rc, prof)}
 
-    print("Planning treatment with BOTH focal-field models…")
+    print("Planning treatment with BOTH focal-field models...")
     plans = {}
     for name, B in fields.items():
         pl = plan_treatment(geom, B)
@@ -1581,36 +1609,39 @@ def main():
               f"treatment {pl['treatment_s']:.0f} s; {pl.get('n_groups', 0)} hybrid groups "
               f"(~{grp_s:.0f} s/group)")
 
-    print("Fig — focal-field comparison (analytic vs PSTD-nonlinear)…")
+    print("Fig - focal-field comparison (analytic vs PSTD-nonlinear)...")
     figure_field_comparison(geom, fields, meta, plans)
 
-    print("Planning canonical treatment with steered 3-D aperture transmission…")
+    print("Planning canonical treatment with steered 3-D aperture transmission...")
     plan = plan_treatment(geom, None)
     print(f"  [steered_aperture] {plan['n_regions_active']} regions, {len(plan['spots'])} spots, "
           f"{plan['onsets'].size} pulses; coverage {plan['coverage']*100:.1f}%; "
           f"treatment {plan['treatment_s']:.0f} s")
-    print("Fig A — whole-tumour pulse train…")
+    print("Fig A - whole-tumour pulse train...")
     figure_pulsing_pattern(plan)
-    print("Fig B — sensor-recorded cavitation monitor…")
+    print("Fig B - sensor-recorded cavitation monitor...")
     mon = simulate_measured_sonication(plan, geom)
-    print("Computing graded cell-kill (LD25/LD50/LD75/LD100) progress…")
+    print("Computing graded cell-kill (LD25/LD50/LD75/LD100) progress...")
     prog = compute_bioeffect_progress(geom, plan, mon)
     figure_monitor(mon, prog)
     tv = prog["tier_vol"]
-    print(f"  PTV cell-kill (final): ≥LD100 {tv['LD100'][-1]:.0f}%, ≥LD75 {tv['LD75'][-1]:.0f}%, "
-          f"≥LD50 {tv['LD50'][-1]:.0f}%, ≥LD25 {tv['LD25'][-1]:.0f}%")
+    rg = prog["ring"]
+    print(f"  PTV cell-kill (final): >=LD100 {tv['LD100'][-1]:.0f}%, >=LD75 {tv['LD75'][-1]:.0f}%, "
+          f">=LD50 {tv['LD50'][-1]:.0f}%, >=LD25 {tv['LD25'][-1]:.0f}%")
+    print(f"  shell mean kill (final): GTV core {rg['GTV core'][-1]:.0f}%, "
+          f"CTV ring {rg['CTV ring'][-1]:.0f}%, PTV margin {rg['PTV margin'][-1]:.0f}%")
     eq = mon["equality"]
     print(f"  residual-bubble equality (mean efficiency): hybrid {eq['interleaved'].mean()*100:.0f}% "
           f"vs sequential {eq['sequential'].mean()*100:.0f}%")
     figure_raster_equality(mon)
-    print("Fig D — resolved standing-wave/shadow field through a lacuna (full-3D PSTD)…")
+    print("Fig D - resolved standing-wave/shadow field through a lacuna (full-3D PSTD)...")
     figure_lacuna_field(ffm)
-    print("Fig E — 3-D lesioned volume across image slices…")
+    print("Fig E - 3-D lesioned volume across image slices...")
     cov3 = figure_volume_slices(geom, plan)
-    print(f"  3-D volume coverage: whole-GTV ≥LD50 = {cov3:.0f}%")
-    print("Reconstructing real-time B-mode frames (simulated receive → DAS)…")
+    print(f"  3-D volume coverage: whole-GTV >=LD50 = {cov3:.0f}%")
+    print("Reconstructing real-time B-mode frames (simulated receive -> DAS)...")
     bmode = reconstruct_bmode_frames(geom, plan, mon["t"])
-    print("Fig C — animated treatment console (GIF, PSTD-nonlinear field + B-mode PIP)…")
+    print("Fig C - animated treatment console (GIF, PSTD-nonlinear field + B-mode PIP)...")
     make_treatment_gif(geom, plan, mon, prog, bmode=bmode)
     print("Done.")
 

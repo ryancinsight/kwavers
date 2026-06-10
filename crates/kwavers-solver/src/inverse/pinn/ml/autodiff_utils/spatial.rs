@@ -5,6 +5,12 @@
 
 use burn::tensor::{backend::AutodiffBackend, Tensor};
 
+/// 2D gradient component pair `(∂u/∂x, ∂u/∂y)`, each `[batch, 1]`.
+type GradientPair2D<B> = (
+    Tensor<<B as AutodiffBackend>::InnerBackend, 2>,
+    Tensor<<B as AutodiffBackend>::InnerBackend, 2>,
+);
+
 /// Compute spatial gradient ∂u/∂x and ∂u/∂y for a 2D displacement field.
 ///
 /// # Arguments
@@ -24,10 +30,7 @@ pub fn compute_spatial_gradient_2d<B, F>(
     forward_fn: F,
     input: &Tensor<B, 2>,
     output_component: usize,
-) -> Result<
-    (Tensor<B::InnerBackend, 2>, Tensor<B::InnerBackend, 2>),
-    kwavers_core::error::KwaversError,
->
+) -> Result<GradientPair2D<B>, kwavers_core::error::KwaversError>
 where
     B: AutodiffBackend,
     F: Fn(Tensor<B, 2>) -> Tensor<B, 2>,

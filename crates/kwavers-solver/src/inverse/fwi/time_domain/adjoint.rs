@@ -4,7 +4,10 @@ use super::{geometry::FwiGeometry, FwiProcessor};
 use crate::inverse::fwi::time_domain::{
     accumulate_signed_correlation, l2_objective, l2_residual, reverse_time_axis,
 };
-use crate::inverse::reconstruction::seismic::{MisfitFunction, MisfitType};
+use crate::inverse::reconstruction::seismic::{
+    trace_weights, weighted_l2_objective, weighted_l2_residual, DataWeighting, MisfitFunction,
+    MisfitType,
+};
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
 use kwavers_source::{GridSource, SourceMode};
@@ -66,8 +69,11 @@ impl FwiProcessor {
     /// Compute the acoustic L2 objective between observed and synthetic data.
     ///
     /// ## Theorem
-    /// `J = (dt / 2) Σ_{r,t} (d_syn - d_obs)²` is non-negative and vanishes
-    /// iff the synthetic and observed traces match pointwise.
+    /// `J = (dt / 2) Σ_{r,t} w_{r,t} (d_syn - d_obs)²` is non-negative and vanishes
+    /// iff the synthetic and observed traces match pointwise. For the default
+    /// [`DataWeighting::Uniform`] (`w ≡ 1`) this is the classical L2 objective; for
+    /// [`DataWeighting::InverseNoiseVariance`] it is the PWLS / MBIR objective
+    /// (the low-dose-CT lesson), with per-trace weights derived from `observed`.
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
@@ -76,7 +82,13 @@ impl FwiProcessor {
         observed: &Array2<f64>,
         synthetic: &Array2<f64>,
     ) -> KwaversResult<f64> {
-        l2_objective(self.parameters.dt, observed, synthetic)
+        match self.data_weighting {
+            DataWeighting::Uniform => l2_objective(self.parameters.dt, observed, synthetic),
+            weighting => {
+                let w = trace_weights(observed, weighting);
+                weighted_l2_objective(self.parameters.dt, observed, synthetic, &w)
+            }
+        }
     }
 
     /// Compute the data misfit for the configured [`MisfitType`].
@@ -164,7 +176,15 @@ impl FwiProcessor {
         synthetic: &Array2<f64>,
     ) -> KwaversResult<Array2<f64>> {
         match self.misfit_type {
-            MisfitType::L2Norm => l2_residual(observed, synthetic),
+            MisfitType::L2Norm => match self.data_weighting {
+                DataWeighting::Uniform => l2_residual(observed, synthetic),
+                weighting => {
+                    // PWLS adjoint source w ⊙ (d_syn − d_obs): the gradient of the
+                    // weighted L2 objective, matching compute_l2_objective (SSOT).
+                    let w = trace_weights(observed, weighting);
+                    weighted_l2_residual(observed, synthetic, &w)
+                }
+            },
             other => MisfitFunction::new(other).compute_adjoint_source(observed, synthetic),
         }
     }
@@ -269,10 +289,18 @@ impl FwiProcessor {
     ///
     /// The adjoint solver is constructed through the same `build_fdtd_boxed` /
     /// `build_pstd_boxed` helpers as the forward pass (dispatching on the same
-    /// `FwiParameters::solver_type`).  This guarantees that the discrete adjoint
-    /// operator is the exact time-reversal of the forward operator — the
-    /// time-reversal theorem holds if and only if forward and adjoint share the
-    /// same stencil and boundary treatment.
+    /// `FwiParameters::solver_type`), so forward and adjoint share the same
+    /// stencil and boundary treatment.  This makes the adjoint a faithful
+    /// *approximation* of the discrete transpose — sufficient for a correct
+    /// descent direction — but NOT the exact discrete adjoint: the additive
+    /// source injection (scaled by `2·dt·c₀/(N·dx)`) is not the transpose of the
+    /// direct-pressure receiver sampling, and the PML/leapfrog stepping is not
+    /// self-adjoint. The gradient is consequently off by a global constant
+    /// (~200×) plus a ~20% direction-dependent shape error, both absorbed by the
+    /// Armijo line search. Verified by
+    /// `tests::gradient::test_fwi_adjoint_gradient_is_valid_descent_direction`.
+    /// For the exact gradient (`κ ≈ 1`) use the self-adjoint engine
+    /// (`super::FwiEngine::SecondOrderSelfAdjoint`, ADR 016) instead of this path.
     ///
     /// ## Density handling
     ///

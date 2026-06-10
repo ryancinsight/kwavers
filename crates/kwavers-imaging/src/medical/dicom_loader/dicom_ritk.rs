@@ -120,7 +120,7 @@ pub fn load_series_with_uid<P: AsRef<Path>>(
 
     let info = series
         .into_iter()
-        .find(|s| s.series_instance_uid == series_uid)
+        .find(|s| s.series_instance_uid.as_str() == series_uid)
         .ok_or_else(|| {
             KwaversError::InvalidInput(format!(
                 "DICOM series UID '{series_uid}' not found in '{}'",
@@ -160,7 +160,7 @@ pub fn load_series(info: &DicomSeriesInfo) -> KwaversResult<DicomSeriesVolume> {
         affine: vol.affine,
         data_type: format!("{} via ritk-io (f32 → f64)", info.modality),
         intensity_range: vol.intensity_range,
-        modality: info.modality.clone(),
+        modality: info.modality.to_string(),
     };
 
     Ok(DicomSeriesVolume {

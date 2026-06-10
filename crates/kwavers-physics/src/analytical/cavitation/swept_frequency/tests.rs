@@ -201,6 +201,62 @@ fn no_fragmentation_recovers_passive() {
     assert!((c.void_fraction_swept - c.void_fraction_passive).abs() < 1e-12);
 }
 
+// ── staged sonication sweep (single up-down across the sonication) ───────────
+
+#[test]
+fn staged_sweep_cavitation_peaks_mid_sonication() {
+    let d = NucleiSizeDistribution::new(3.3e-6, 1.7).unwrap();
+    let m = CavitationMedium::soft_tissue();
+    let cfg = small_cfg();
+    // Turn frequency = empirically cavitation-optimal frequency in the band;
+    // the quiet endpoint is the high-threshold edge (least cavitation).
+    let (f_peak, _) = cavitation_optimal_frequency(&d, &m, 0.5e6, 1.6e6, 0.15e6, 5e-3, 9, &cfg);
+    let f_quiet = 1.6e6; // high-frequency, high-threshold "quiet" endpoint
+    let params = tissue_gas_diffusion(0.7);
+    let prof = staged_sonication_sweep(
+        &d, &m, f_quiet, f_peak, 0.15e6, 5e-3, 21, 10.0, 0.02, 6e-6, 8.0, params, &cfg,
+    );
+    assert_eq!(prof.stage.len(), 21);
+    // Frequency is a single up-down triangle: ends at f_quiet, turns at f_peak.
+    assert!((prof.frequency_hz[0] - f_quiet).abs() / f_quiet < 0.05);
+    assert!((prof.frequency_hz[20] - f_quiet).abs() / f_quiet < 0.05);
+    assert!((prof.frequency_hz[10] - f_peak).abs() / f_peak < 0.1);
+    // Cavitation activity peaks in the middle third of the sonication, not at an end.
+    assert!(
+        prof.peak_activity_stage > 0.25 && prof.peak_activity_stage < 0.75,
+        "peak activity at stage {}",
+        prof.peak_activity_stage
+    );
+    let mid = prof.cavitation_activity[10];
+    assert!(
+        mid >= prof.cavitation_activity[0] && mid >= prof.cavitation_activity[20],
+        "mid {} not >= ends {} {}",
+        mid,
+        prof.cavitation_activity[0],
+        prof.cavitation_activity[20]
+    );
+}
+
+#[test]
+fn staged_sweep_wind_down_clears_residual() {
+    let d = NucleiSizeDistribution::new(3.3e-6, 1.7).unwrap();
+    let m = CavitationMedium::soft_tissue();
+    let cfg = small_cfg();
+    let (f_peak, _) = cavitation_optimal_frequency(&d, &m, 0.5e6, 1.6e6, 0.15e6, 5e-3, 9, &cfg);
+    let params = tissue_gas_diffusion(0.7);
+    let prof = staged_sonication_sweep(
+        &d, &m, 1.6e6, f_peak, 0.15e6, 5e-3, 21, 10.0, 0.02, 6e-6, 8.0, params, &cfg,
+    );
+    // The wind-down half drives the residual below its peak: the field is left
+    // cleaner for the next sonication than at the height of the build phase.
+    assert!(
+        prof.residual_at_end < prof.residual_peak,
+        "end {} not < peak {}",
+        prof.residual_at_end,
+        prof.residual_peak
+    );
+}
+
 #[test]
 fn dissolution_time_scales_with_radius_squared() {
     let params = tissue_gas_diffusion(0.5);

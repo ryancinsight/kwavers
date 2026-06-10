@@ -8,9 +8,11 @@
 
 pub mod cmut;
 pub mod comparison;
+pub mod crosstalk;
 pub mod plate;
 pub mod pmut;
 
 pub use cmut::CmutCell;
 pub use comparison::{evaluate_ivus, IvusVerdict, IvusWeights, MutKind};
+pub use crosstalk::{crosstalk_matrix, mutual_radiation_impedance};
 pub use pmut::{PiezoFilm, PmutCell};

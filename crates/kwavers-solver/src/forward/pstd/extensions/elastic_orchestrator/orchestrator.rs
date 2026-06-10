@@ -183,79 +183,23 @@ impl ElasticPstdOrchestrator {
         for step in 0..n_steps {
             if let Some(src) = source {
                 inject_velocity_source(&mut self.velocity, src, step);
-            }
-
-            if let (Some(pml), Some(state)) =
-                (self.split_pml.as_ref(), self.split_pml_state.as_mut())
-            {
-                // ── Bérenger split-field PML path ─────────────────────────
+                // ── Bérenger split-field PML source coupling ──────────────
                 // Phase 4 of the split-field step overwrites `velocity` with
                 // the sum of velocity sub-fields.  To ensure source-injected
                 // velocity carries through to Phase 4, the source is also
                 // injected into the x-directional velocity sub-fields before
                 // the step.  The invariant `vx = vxx + vxy + vxz` is then
                 // maintained: vxx absorbs the source, vxy/vxz are unchanged.
-                if let Some(src) = source {
-                    inject_velocity_source_subfields(state.as_mut(), src, step);
-                }
-                propagate_split_field_step(
-                    &mut self.velocity,
-                    SpectralScratch {
-                        stress: &mut self.spectral_stress,
-                        stress_next: &mut self.spectral_stress_next,
-                        velocity_in: &mut self.spectral_velocity_in,
-                        velocity_next: &mut self.spectral_velocity_next,
-                    },
-                    pml,
-                    state.as_mut(),
-                    &self.medium,
-                    SpectralOperators {
-                        dkx_neg: &self.derivative_ops.dkx_neg,
-                        dky_neg: &self.derivative_ops.dky_neg,
-                        dkz_neg: &self.derivative_ops.dkz_neg,
-                        dkx_pos: &self.derivative_ops.dkx_pos,
-                        dky_pos: &self.derivative_ops.dky_pos,
-                        dkz_pos: &self.derivative_ops.dkz_pos,
-                        kappa: &self.kappa,
-                    },
-                    &mut self.scratch_r,
-                );
-            } else if self.split_pml.is_some() {
-                return Err(kwavers_core::error::KwaversError::InvalidInput(
-                    "Split-field PML requires persistent split-field state".to_owned(),
-                ));
-            } else {
-                // ── Standard leapfrog path (no split-field PML) ───────────
-                // Coefficients (λ, μ, 1/ρ) are applied in REAL space after each
-                // k-space derivative IFFT, so heterogeneous media propagate at
-                // the correct local speed (see `super::leapfrog_step`).
-                let ops = SpectralOperators {
-                    dkx_neg: &self.derivative_ops.dkx_neg,
-                    dky_neg: &self.derivative_ops.dky_neg,
-                    dkz_neg: &self.derivative_ops.dkz_neg,
-                    dkx_pos: &self.derivative_ops.dkx_pos,
-                    dky_pos: &self.derivative_ops.dky_pos,
-                    dkz_pos: &self.derivative_ops.dkz_pos,
-                    kappa: &self.kappa,
-                };
-                propagate_leapfrog_step(
-                    &mut self.velocity,
-                    &mut self.stress,
-                    &self.medium,
-                    &ops,
-                    &mut self.spectral_velocity_in,
-                    &mut self.spectral_stress,
-                    &mut self.spectral_stress_next,
-                    &mut self.scratch_r,
-                    self.dt,
-                );
-
-                if let Some(pml) = self.pml.as_ref() {
-                    pml.apply_to_field(&mut self.velocity.vx);
-                    pml.apply_to_field(&mut self.velocity.vy);
-                    pml.apply_to_field(&mut self.velocity.vz);
+                // Injected here (rather than inside `step`) because `step` is
+                // the source-agnostic single-step primitive.
+                if self.split_pml.is_some() {
+                    if let Some(state) = self.split_pml_state.as_mut() {
+                        inject_velocity_source_subfields(state.as_mut(), src, step);
+                    }
                 }
             }
+
+            self.step()?;
 
             if n_sensors > 0 {
                 record_sensors(
@@ -267,8 +211,6 @@ impl ElasticPstdOrchestrator {
                     &mut sensor_vz,
                 );
             }
-
-            self.step_index += 1;
         }
 
         Ok(ElasticPstdSensorData {
@@ -276,6 +218,125 @@ impl ElasticPstdOrchestrator {
             vy: sensor_vy,
             vz: sensor_vz,
         })
+    }
+
+    /// Advance the elastic stress–velocity state by **exactly one** leapfrog
+    /// step. This is the single-step SSOT primitive that [`propagate`] iterates.
+    ///
+    /// Source injection (into [`velocity_mut`]) and sensor recording are the
+    /// caller's responsibility; for the split-field-PML path the caller must
+    /// also inject the source into the PML sub-fields *before* calling `step`
+    /// (see [`propagate`]). Selects the split-field PML path when one is
+    /// attached, else the standard real-space-coefficient leapfrog with an
+    /// optional scalar exponential PML.
+    ///
+    /// [`propagate`]: Self::propagate
+    /// [`velocity_mut`]: Self::velocity_mut
+    ///
+    /// # Errors
+    /// - Returns [`Err`] if a split-field PML is configured without its
+    ///   persistent sub-field state.
+    pub fn step(&mut self) -> KwaversResult<()> {
+        if let (Some(pml), Some(state)) = (self.split_pml.as_ref(), self.split_pml_state.as_mut()) {
+            // ── Bérenger split-field PML path ─────────────────────────────
+            propagate_split_field_step(
+                &mut self.velocity,
+                SpectralScratch {
+                    stress: &mut self.spectral_stress,
+                    stress_next: &mut self.spectral_stress_next,
+                    velocity_in: &mut self.spectral_velocity_in,
+                    velocity_next: &mut self.spectral_velocity_next,
+                },
+                pml,
+                state.as_mut(),
+                &self.medium,
+                SpectralOperators {
+                    dkx_neg: &self.derivative_ops.dkx_neg,
+                    dky_neg: &self.derivative_ops.dky_neg,
+                    dkz_neg: &self.derivative_ops.dkz_neg,
+                    dkx_pos: &self.derivative_ops.dkx_pos,
+                    dky_pos: &self.derivative_ops.dky_pos,
+                    dkz_pos: &self.derivative_ops.dkz_pos,
+                    kappa: &self.kappa,
+                },
+                &mut self.scratch_r,
+            );
+        } else if self.split_pml.is_some() {
+            return Err(kwavers_core::error::KwaversError::InvalidInput(
+                "Split-field PML requires persistent split-field state".to_owned(),
+            ));
+        } else {
+            // ── Standard leapfrog path (no split-field PML) ───────────────
+            // Coefficients (λ, μ, 1/ρ) are applied in REAL space after each
+            // k-space derivative IFFT, so heterogeneous media propagate at
+            // the correct local speed (see `super::leapfrog_step`).
+            let ops = SpectralOperators {
+                dkx_neg: &self.derivative_ops.dkx_neg,
+                dky_neg: &self.derivative_ops.dky_neg,
+                dkz_neg: &self.derivative_ops.dkz_neg,
+                dkx_pos: &self.derivative_ops.dkx_pos,
+                dky_pos: &self.derivative_ops.dky_pos,
+                dkz_pos: &self.derivative_ops.dkz_pos,
+                kappa: &self.kappa,
+            };
+            propagate_leapfrog_step(
+                &mut self.velocity,
+                &mut self.stress,
+                &self.medium,
+                &ops,
+                &mut self.spectral_velocity_in,
+                &mut self.spectral_stress,
+                &mut self.spectral_stress_next,
+                &mut self.scratch_r,
+                self.dt,
+            );
+
+            if let Some(pml) = self.pml.as_ref() {
+                pml.apply_to_field(&mut self.velocity.vx);
+                pml.apply_to_field(&mut self.velocity.vy);
+                pml.apply_to_field(&mut self.velocity.vz);
+            }
+        }
+
+        self.step_index += 1;
+        Ok(())
+    }
+
+    /// Isotropic acoustic pressure `p = -⅓ tr(σ) = -⅓(σxx + σyy + σzz)`
+    /// computed from the current **real-space** stress state.
+    ///
+    /// Bridges the elastic stress tensor to the scalar-acoustic pipeline: with
+    /// shear modulus `μ ≡ 0` the three normal stresses are equal and collapse
+    /// to `-p` exactly, so this reproduces the acoustic pressure; with `μ > 0`
+    /// it is the mechanical pressure (negative mean normal stress). Valid on
+    /// the standard (non-split-field) leapfrog path, which maintains `stress`
+    /// in real space.
+    #[must_use]
+    pub fn pressure_field(&self) -> Array3<f64> {
+        let mut p = self.stress.txx.clone();
+        p += &self.stress.tyy;
+        p += &self.stress.tzz;
+        p.mapv_inplace(|v| -v / 3.0);
+        p
+    }
+
+    /// Mutable access to the real-space velocity field, for source injection
+    /// or initial-condition seeding prior to [`step`](Self::step).
+    pub fn velocity_mut(&mut self) -> &mut VelocityFields {
+        &mut self.velocity
+    }
+
+    /// Read access to the real-space stress field (standard leapfrog path).
+    #[must_use]
+    pub fn stress(&self) -> &StressFields {
+        &self.stress
+    }
+
+    /// Mutable access to the real-space stress field, for initial-condition
+    /// seeding (e.g. an isotropic compressional perturbation `σxx=σyy=σzz=-p₀`)
+    /// prior to [`step`](Self::step).
+    pub fn stress_mut(&mut self) -> &mut StressFields {
+        &mut self.stress
     }
 
     /// Seed the initial stress from an initial-value-problem displacement.
@@ -394,5 +455,113 @@ impl ElasticPstdOrchestrator {
     #[must_use]
     pub fn step_index(&self) -> usize {
         self.step_index
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ndarray::Array3;
+
+    fn small_grid() -> Grid {
+        Grid::new(16, 16, 1, 1e-3, 1e-3, 1e-3).expect("grid")
+    }
+
+    fn solid_medium(shape: (usize, usize, usize)) -> ElasticPstdMedium {
+        // c_p = 1500, c_s = 80, ρ = 1000 ⇒ μ = ρc_s², λ = ρ(c_p² − 2c_s²).
+        let rho = 1000.0;
+        let mu = rho * 80.0 * 80.0;
+        let lambda = rho * 1500.0f64.mul_add(1500.0, -(2.0 * 80.0 * 80.0));
+        ElasticPstdMedium {
+            lame_lambda: Array3::from_elem(shape, lambda),
+            lame_mu: Array3::from_elem(shape, mu),
+            density: Array3::from_elem(shape, rho),
+        }
+    }
+
+    fn seed_centre_compression(orch: &mut ElasticPstdOrchestrator, p0: f64) {
+        let (nx, ny, _) = orch.grid_shape;
+        let s = orch.stress_mut();
+        s.txx[[nx / 2, ny / 2, 0]] = -p0;
+        s.tyy[[nx / 2, ny / 2, 0]] = -p0;
+        s.tzz[[nx / 2, ny / 2, 0]] = -p0;
+    }
+
+    /// `propagate(n, None, None)` must equal `step()` iterated `n` times from
+    /// the same seeded state — pins the plugin's single-step usage to the
+    /// validated batch path and guards the loop-body extraction against drift.
+    #[test]
+    fn step_iterated_matches_propagate_bit_for_bit() {
+        let grid = small_grid();
+        let shape = grid.dimensions();
+        let dt = 5e-8;
+        let n = 5;
+
+        let mut batch =
+            ElasticPstdOrchestrator::new(&grid, solid_medium(shape), dt).expect("batch");
+        let mut manual =
+            ElasticPstdOrchestrator::new(&grid, solid_medium(shape), dt).expect("manual");
+        seed_centre_compression(&mut batch, 1.0e5);
+        seed_centre_compression(&mut manual, 1.0e5);
+
+        batch.propagate(n, None, None).expect("propagate");
+        for _ in 0..n {
+            manual.step().expect("step");
+        }
+
+        let pb = batch.pressure_field();
+        let pm = manual.pressure_field();
+        for (b, m) in pb.iter().zip(pm.iter()) {
+            assert_eq!(*b, *m, "step-loop must reproduce propagate exactly");
+        }
+        assert_eq!(batch.step_index(), manual.step_index());
+    }
+
+    /// `pressure_field` is exactly `−⅓(σxx+σyy+σzz)` element-wise.
+    #[test]
+    fn pressure_field_is_negative_mean_normal_stress() {
+        let grid = small_grid();
+        let shape = grid.dimensions();
+        let mut orch =
+            ElasticPstdOrchestrator::new(&grid, solid_medium(shape), 5e-8).expect("orch");
+        {
+            let s = orch.stress_mut();
+            s.txx.fill(2.0);
+            s.tyy.fill(4.0);
+            s.tzz.fill(6.0);
+        }
+        let p = orch.pressure_field();
+        // −(2+4+6)/3 = −4.
+        for v in p.iter() {
+            assert!((v - (-4.0)).abs() < 1e-12, "expected −4, got {v}");
+        }
+    }
+
+    /// A transverse (shear) velocity perturbation generates shear stress under
+    /// `μ > 0` — behaviour an acoustic (μ = 0) stepper cannot produce, proving
+    /// the elastic path is genuinely elastic and not an acoustic alias.
+    #[test]
+    fn shear_velocity_generates_shear_stress_when_mu_positive() {
+        let grid = small_grid();
+        let shape = grid.dimensions();
+        let mut orch =
+            ElasticPstdOrchestrator::new(&grid, solid_medium(shape), 5e-8).expect("orch");
+        // vy varying along x ⇒ ∂vy/∂x ≠ 0 ⇒ σxy develops.
+        {
+            let v = orch.velocity_mut();
+            for i in 0..shape.0 {
+                let x = i as f64 / shape.0 as f64;
+                let amp = (std::f64::consts::TAU * x).sin();
+                for j in 0..shape.1 {
+                    v.vy[[i, j, 0]] = amp;
+                }
+            }
+        }
+        orch.step().expect("step");
+        let max_txy = orch.stress().txy.iter().fold(0.0_f64, |m, &v| m.max(v.abs()));
+        assert!(
+            max_txy > 1e-6,
+            "shear velocity gradient must induce non-zero σxy (got {max_txy})"
+        );
     }
 }

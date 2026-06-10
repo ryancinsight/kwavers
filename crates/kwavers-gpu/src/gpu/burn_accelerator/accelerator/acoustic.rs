@@ -13,6 +13,8 @@ impl<B: Backend> BurnGpuAccelerator<B> {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
+    // Args are independent field arrays and scalar grid/step parameters with no cohesive grouping.
+    #[allow(clippy::too_many_arguments)]
     pub fn propagate_acoustic_wave(
         &self,
         pressure: &Array3<f64>,

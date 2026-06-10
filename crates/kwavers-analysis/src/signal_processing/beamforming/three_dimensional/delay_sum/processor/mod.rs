@@ -4,12 +4,7 @@ mod dispatch;
 pub(crate) mod dynamic_focus_dispatch;
 
 #[cfg(feature = "gpu")]
-use super::params::Params;
-#[cfg(feature = "gpu")]
 use crate::signal_processing::beamforming::three_dimensional::config::BeamformingConfig3D;
-
-#[cfg(feature = "gpu")]
-use wgpu::util::DeviceExt;
 
 /// GPU delay-and-sum beamforming implementation.
 ///

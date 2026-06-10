@@ -1,4 +1,7 @@
 use super::*;
+// Canonical type was renamed `SamplingStrategy` → `ElasticAdaptiveSamplingStrategy`;
+// alias keeps these tests reading against the public name.
+use super::ElasticAdaptiveSamplingStrategy as SamplingStrategy;
 
 #[test]
 fn test_adaptive_sampler_creation() {

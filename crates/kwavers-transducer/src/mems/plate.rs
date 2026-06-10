@@ -33,8 +33,15 @@ pub fn flexural_rigidity(youngs: f64, thickness: f64, poisson: f64) -> f64 {
 
 /// In-vacuo fundamental resonance of a clamped circular plate \[Hz].
 #[must_use]
-pub fn vacuum_resonance(youngs: f64, thickness: f64, poisson: f64, density: f64, radius: f64) -> f64 {
-    (CLAMPED_PLATE_LAMBDA_SQ / TAU) * (thickness / (radius * radius))
+pub fn vacuum_resonance(
+    youngs: f64,
+    thickness: f64,
+    poisson: f64,
+    density: f64,
+    radius: f64,
+) -> f64 {
+    (CLAMPED_PLATE_LAMBDA_SQ / TAU)
+        * (thickness / (radius * radius))
         * (youngs / (12.0 * density * (1.0 - poisson * poisson))).sqrt()
 }
 
@@ -68,7 +75,12 @@ pub fn modal_stiffness(resonance: f64, modal_mass: f64) -> f64 {
 /// structural areal mass. Larger `β` (lighter structure) ⇒ stronger fluid coupling
 /// ⇒ broader bandwidth.
 #[must_use]
-pub fn fluid_loading_beta(density_fluid: f64, density_struct: f64, thickness: f64, radius: f64) -> f64 {
+pub fn fluid_loading_beta(
+    density_fluid: f64,
+    density_struct: f64,
+    thickness: f64,
+    radius: f64,
+) -> f64 {
     LAMB_GAMMA * density_fluid * radius / (density_struct * thickness)
 }
 
@@ -126,7 +138,10 @@ mod tests {
     fn immersion_lowers_resonance() {
         let f_vac = vacuum_resonance(169e9, 1e-6, 0.22, 2330.0, 20e-6);
         let f_imm = immersion_resonance(f_vac, 2330.0, 1e-6, 1060.0, 20e-6); // blood
-        assert!(f_imm < f_vac, "immersion {f_imm} should be below vacuum {f_vac}");
+        assert!(
+            f_imm < f_vac,
+            "immersion {f_imm} should be below vacuum {f_vac}"
+        );
     }
 
     #[test]

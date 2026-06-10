@@ -43,6 +43,9 @@ impl<B: AutodiffBackend> BurnPINN2DTrainer<B> {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
+    // Independent training data arrays and hyperparameters with no cohesive
+    // sub-grouping; bundling would not clarify the call site.
+    #[allow(clippy::too_many_arguments)]
     pub fn train(
         &mut self,
         x_data: &Array1<f64>,

@@ -1,5 +1,7 @@
 use numpy::PyArray2;
 use numpy::PyReadonlyArray3;
+// Only referenced by the `#[cfg(not(feature = "gpu"))]` "feature not enabled" branches.
+#[cfg(not(feature = "gpu"))]
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 

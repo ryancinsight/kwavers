@@ -390,7 +390,7 @@ fn required_refinement(dx_coarse: f64, c_min: f64, frequency_hz: f64) -> usize {
         return 1;
     }
     let r = (dx_coarse / dx_target).ceil() as usize;
-    r.max(1).min(MAX_REFINEMENT)
+    r.clamp(1, MAX_REFINEMENT)
 }
 
 /// Nearest-neighbour upsample: each coarse cell `[ix, iy]` is replicated

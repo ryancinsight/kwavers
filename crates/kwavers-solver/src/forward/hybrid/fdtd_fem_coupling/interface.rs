@@ -2,6 +2,11 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
 use kwavers_mesh::tetrahedral::TetrahedralMesh;
 
+/// Paired interface nodes: FDTD grid indices and the matching FEM node indices.
+type InterfaceNodePair = (Vec<(usize, usize, usize)>, Vec<usize>);
+/// Per-interface-point geometry: outward `(x, y, z)` normals and surface areas.
+type InterfaceGeometryData = (Vec<(f64, f64, f64)>, Vec<f64>);
+
 /// Interface definition between FDTD and FEM domains
 #[derive(Debug, Clone)]
 pub struct FdtdFemInterface {
@@ -44,7 +49,7 @@ impl FdtdFemInterface {
     fn find_interface_nodes(
         fdtd_grid: &Grid,
         fem_mesh: &TetrahedralMesh,
-    ) -> KwaversResult<(Vec<(usize, usize, usize)>, Vec<usize>)> {
+    ) -> KwaversResult<InterfaceNodePair> {
         let mut fdtd_indices = Vec::new();
         let mut fem_indices = Vec::new();
 
@@ -116,7 +121,7 @@ impl FdtdFemInterface {
     fn compute_interface_geometry(
         fdtd_indices: &[(usize, usize, usize)],
         fdtd_grid: &Grid,
-    ) -> KwaversResult<(Vec<(f64, f64, f64)>, Vec<f64>)> {
+    ) -> KwaversResult<InterfaceGeometryData> {
         let mut normals = Vec::new();
         let mut areas = Vec::new();
 

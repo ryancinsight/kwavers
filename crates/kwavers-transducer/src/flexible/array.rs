@@ -250,6 +250,39 @@ impl FlexibleTransducerArray {
     pub fn calibration_confidence(&self) -> f64 {
         self.calibration_processor.get_confidence()
     }
+
+    /// Conformal delay-and-sum **focusing delays** \[s] for the array's current
+    /// (tracked, possibly deformed) geometry, focusing at `focus` \[m] in a
+    /// medium of sound speed `c`. Recompute after each [`update_geometry`] to
+    /// keep the focus on target as the array bends.
+    ///
+    /// [`update_geometry`]: Self::update_geometry
+    #[must_use]
+    pub fn focusing_delays(&self, focus: [f64; 3], c: f64) -> Vec<f64> {
+        super::beamforming::focusing_delays(
+            &self.geometry_state.element_positions.view(),
+            focus,
+            c,
+        )
+    }
+
+    /// Far-field **plane-wave steering delays** \[s] toward unit direction `dir`
+    /// for the current geometry.
+    #[must_use]
+    pub fn steering_delays(&self, dir: [f64; 3], c: f64) -> Vec<f64> {
+        super::beamforming::steering_delays(&self.geometry_state.element_positions.view(), dir, c)
+    }
+
+    /// Per-element transmit apodization from the CMUT flex-derating at each
+    /// element's locally-measured curvature — the conformal array "populated" by
+    /// the [`CmutCell`](crate::mems::CmutCell) model. Output falls where the
+    /// array is tightly wrapped (sub-micron gap perturbed by the sag, §33.8).
+    #[must_use]
+    pub fn cmut_flex_apodization(&self, cell: &crate::mems::CmutCell) -> Vec<f64> {
+        let curvatures =
+            super::beamforming::per_element_curvature(&self.geometry_state.element_positions.view());
+        super::beamforming::cmut_flex_apodization(&curvatures, cell)
+    }
 }
 
 impl Source for FlexibleTransducerArray {

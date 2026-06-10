@@ -18,5 +18,10 @@
 pub mod das;
 pub mod mvdr;
 
+// Consumed by the `cfg(not(gpu))` CPU path in `processing::algorithms` and by
+// tests (via `super::cpu::*`). Under `gpu` the non-test consumers vanish, so the
+// lib build reports them unused; silence only there.
+#[cfg_attr(feature = "gpu", allow(unused_imports))]
 pub use das::delay_and_sum_cpu;
+#[cfg_attr(feature = "gpu", allow(unused_imports))]
 pub use mvdr::mvdr_cpu;

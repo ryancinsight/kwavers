@@ -4,7 +4,7 @@ mod acoustic;
 mod electromagnetic;
 mod pde_residuals;
 
-use super::super::types::{GpuConfig, GpuPhysicsParameters};
+use super::types::GpuConfig;
 use burn::prelude::*;
 use burn::tensor::backend::Backend;
 use kwavers_core::error::{KwaversError, KwaversResult};

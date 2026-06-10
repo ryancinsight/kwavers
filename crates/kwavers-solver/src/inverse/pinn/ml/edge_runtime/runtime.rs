@@ -98,18 +98,17 @@ impl EdgeRuntime {
             ));
         }
 
-        match &model.quantization_params.scheme {
-            crate::inverse::pinn::ml::QuantizationScheme::None => {
-                if !self.hardware_caps.has_fpu {
-                    return Err(KwaversError::System(
-                        kwavers_core::error::SystemError::InvalidConfiguration {
-                            parameter: "quantization".to_string(),
-                            reason: "FP32 model requires FPU support".to_string(),
-                        },
-                    ));
-                }
+        if let crate::inverse::pinn::ml::QuantizationScheme::None =
+            &model.quantization_params.scheme
+        {
+            if !self.hardware_caps.has_fpu {
+                return Err(KwaversError::System(
+                    kwavers_core::error::SystemError::InvalidConfiguration {
+                        parameter: "quantization".to_string(),
+                        reason: "FP32 model requires FPU support".to_string(),
+                    },
+                ));
             }
-            _ => {}
         }
 
         let required_simd = match &model.quantization_params.scheme {

@@ -305,10 +305,7 @@ fn try_run_gpu_pstd_transmit(
         pml_inside: config.cpml_thickness_cells > 0,
         pml_alpha_xyz: None,
     };
-    match run_gpu_pstd(grid, medium, source, &sensor_mask, gpu_config) {
-        Ok(traces) => Some(traces),
-        Err(_) => None,
-    }
+    run_gpu_pstd(grid, medium, source, &sensor_mask, gpu_config).ok()
 }
 
 #[cfg(test)]

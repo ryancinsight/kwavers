@@ -1,5 +1,9 @@
 use ndarray::{Array1, Array2, Array3};
 
+/// Per-element skull-path correction: `(phases_rad, delays_s, skull_lengths_m,
+/// amplitude_weights)`, one value per transducer element.
+type SkullPathCorrection = (Array1<f64>, Array1<f64>, Array1<f64>, Array1<f64>);
+
 use kwavers_core::constants::acoustic_parameters::DB_TO_NP;
 use kwavers_core::constants::ct_acoustics::{
     DENSITY_SKULL_CORTICAL_RANGE, DENSITY_SKULL_MIN, HU_BONE_THRESHOLD, HU_SKULL_RANGE,
@@ -54,7 +58,7 @@ pub(super) struct SkullPathPhaseCorrectionInput<'a> {
 
 pub(super) fn skull_path_phase_correction(
     input: SkullPathPhaseCorrectionInput<'_>,
-) -> KwaversResult<(Array1<f64>, Array1<f64>, Array1<f64>, Array1<f64>)> {
+) -> KwaversResult<SkullPathCorrection> {
     let SkullPathPhaseCorrectionInput {
         ct_hu,
         spacing_m,

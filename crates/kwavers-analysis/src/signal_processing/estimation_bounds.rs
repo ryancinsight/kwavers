@@ -114,6 +114,106 @@ pub fn shear_wave_speed_crlb_std(
     (c_s * c_s) / denom
 }
 
+/// A bootstrap confidence interval for a scalar estimate.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct BootstrapCi {
+    /// Point estimate (the statistic on the full sample) — here the sample mean.
+    pub point: f64,
+    /// Lower confidence bound (the `(1−level)/2` percentile of the resamples).
+    pub lower: f64,
+    /// Upper confidence bound (the `(1+level)/2` percentile of the resamples).
+    pub upper: f64,
+}
+
+/// One `splitmix64` step — a small, fully-deterministic PRNG so bootstrap CIs
+/// are reproducible from a seed (no global RNG state, no `rand` dependency).
+#[inline]
+fn splitmix64(state: &mut u64) -> u64 {
+    *state = state.wrapping_add(0x9E37_79B9_7F4A_7C15);
+    let mut z = *state;
+    z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+    z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+    z ^ (z >> 31)
+}
+
+/// The `q`-quantile (`q ∈ [0, 1]`) of `sorted` (ascending) by linear
+/// interpolation between order statistics.
+#[inline]
+fn quantile_sorted(sorted: &[f64], q: f64) -> f64 {
+    let n = sorted.len();
+    if n == 1 {
+        return sorted[0];
+    }
+    let pos = q.clamp(0.0, 1.0) * (n - 1) as f64;
+    let lo = pos.floor() as usize;
+    let hi = (lo + 1).min(n - 1);
+    let frac = pos - lo as f64;
+    sorted[hi].mul_add(frac, sorted[lo] * (1.0 - frac))
+}
+
+/// **Percentile bootstrap confidence interval** for the *mean* of `samples` at
+/// confidence `level` (e.g. `0.95`), from `n_resamples` resamples with
+/// replacement, using a deterministic seeded PRNG (`seed`).
+///
+/// Each resample draws `samples.len()` values with replacement and records its
+/// mean; the CI is the `[(1−level)/2, (1+level)/2]` percentiles of those
+/// resample means (Efron 1979). The point estimate is the full-sample mean. The
+/// CI width tracks the standard error `σ/√N`, so it narrows with more samples
+/// and widens with sample spread — without assuming a distributional form.
+///
+/// Returns `None` for an empty sample, `level ∉ (0, 1)`, or `n_resamples == 0`.
+/// A single sample yields a degenerate (zero-width) interval at that value.
+///
+/// # References
+/// - Efron, B. (1979). "Bootstrap methods: another look at the jackknife."
+///   *Ann. Statist.* 7(1), 1–26.
+#[must_use]
+pub fn bootstrap_ci_mean(
+    samples: &[f64],
+    level: f64,
+    n_resamples: usize,
+    seed: u64,
+) -> Option<BootstrapCi> {
+    let n = samples.len();
+    if n == 0 || n_resamples == 0 || !(level > 0.0 && level < 1.0) || !all_finite(samples) {
+        return None;
+    }
+    let point = samples.iter().sum::<f64>() / n as f64;
+    if n == 1 {
+        return Some(BootstrapCi {
+            point,
+            lower: point,
+            upper: point,
+        });
+    }
+
+    let mut state = seed ^ 0xD1B5_4A32_D192_ED03; // de-bias all-zero seeds
+    let mut means = Vec::with_capacity(n_resamples);
+    for _ in 0..n_resamples {
+        let mut acc = 0.0;
+        for _ in 0..n {
+            let idx = (splitmix64(&mut state) % n as u64) as usize;
+            acc += samples[idx];
+        }
+        means.push(acc / n as f64);
+    }
+    means.sort_by(|a, b| a.partial_cmp(b).unwrap_or(core::cmp::Ordering::Equal));
+
+    let lower = quantile_sorted(&means, 0.5 * (1.0 - level));
+    let upper = quantile_sorted(&means, 0.5 * (1.0 + level));
+    Some(BootstrapCi {
+        point,
+        lower,
+        upper,
+    })
+}
+
+/// Guard: every value finite (no NaN/Inf).
+#[inline]
+fn all_finite(values: &[f64]) -> bool {
+    values.iter().all(|v| v.is_finite())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -181,5 +281,84 @@ mod tests {
         assert!(time_delay_crlb_variance(0.0, 1.0e-6, 100.0).is_infinite());
         assert!(strain_crlb_std(1540.0, 5.0e6, 1.0e-6, 0.0, 1.0e-3).is_infinite());
         assert!(shear_wave_speed_crlb_std(3.0, 0.0, 0.02, 64.0, 50.0).is_infinite());
+    }
+
+    // ── Bootstrap confidence intervals ──────────────────────────────────────
+
+    /// Synthetic σ₀ estimates over a cardiac cycle (kPa), mean ≈ 12.
+    fn sigma_samples() -> Vec<f64> {
+        vec![
+            10.2, 11.8, 12.5, 13.1, 11.0, 12.9, 10.7, 13.4, 12.1, 11.5, 12.7, 13.0, 10.9, 12.3,
+            11.7, 12.6,
+        ]
+    }
+
+    /// The CI brackets the point estimate, is ordered, and is reproducible from
+    /// a fixed seed.
+    #[test]
+    fn bootstrap_ci_brackets_point_and_is_deterministic() {
+        let s = sigma_samples();
+        let ci = bootstrap_ci_mean(&s, 0.95, 2000, 42).expect("ci");
+        let mean = s.iter().sum::<f64>() / s.len() as f64;
+        assert!((ci.point - mean).abs() < 1e-12, "point = sample mean");
+        assert!(ci.lower <= ci.point && ci.point <= ci.upper, "CI brackets the point");
+        // Same seed ⇒ bit-identical CI (deterministic PRNG).
+        let ci2 = bootstrap_ci_mean(&s, 0.95, 2000, 42).expect("ci");
+        assert_eq!(ci, ci2);
+    }
+
+    /// The 95% bootstrap CI half-width of the mean tracks the standard error:
+    /// it is within a modest factor of the analytical `1.96·σ/√N`.
+    #[test]
+    fn bootstrap_ci_halfwidth_tracks_standard_error() {
+        let s = sigma_samples();
+        let n = s.len() as f64;
+        let mean = s.iter().sum::<f64>() / n;
+        let var = s.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / (n - 1.0);
+        let se = (var / n).sqrt();
+
+        let ci = bootstrap_ci_mean(&s, 0.95, 5000, 7).expect("ci");
+        let half = 0.5 * (ci.upper - ci.lower);
+        let normal_half = 1.96 * se;
+        assert!(
+            (half / normal_half - 1.0).abs() < 0.35,
+            "bootstrap half-width {half} must track 1.96·SE {normal_half}"
+        );
+    }
+
+    /// A higher-spread sample (same mean) yields a wider CI; a higher confidence
+    /// level widens the CI for the same data.
+    #[test]
+    fn bootstrap_ci_widens_with_spread_and_confidence() {
+        let tight: Vec<f64> = vec![11.9, 12.0, 12.1, 11.95, 12.05, 12.0, 11.98, 12.02];
+        let wide: Vec<f64> = vec![8.0, 16.0, 9.0, 15.0, 10.0, 14.0, 11.0, 13.0]; // same mean 12
+        let tw = bootstrap_ci_mean(&tight, 0.95, 3000, 3).unwrap();
+        let wd = bootstrap_ci_mean(&wide, 0.95, 3000, 3).unwrap();
+        assert!(
+            (wd.upper - wd.lower) > (tw.upper - tw.lower),
+            "more spread ⇒ wider CI"
+        );
+
+        let s = sigma_samples();
+        let ci95 = bootstrap_ci_mean(&s, 0.95, 3000, 9).unwrap();
+        let ci99 = bootstrap_ci_mean(&s, 0.99, 3000, 9).unwrap();
+        assert!(
+            (ci99.upper - ci99.lower) > (ci95.upper - ci95.lower),
+            "higher confidence ⇒ wider CI"
+        );
+    }
+
+    /// Degenerate cases: empty → None; single sample → zero-width CI; invalid
+    /// level/resamples → None.
+    #[test]
+    fn bootstrap_ci_degenerate_cases() {
+        assert!(bootstrap_ci_mean(&[], 0.95, 1000, 1).is_none());
+        assert!(bootstrap_ci_mean(&[1.0, 2.0], 0.0, 1000, 1).is_none());
+        assert!(bootstrap_ci_mean(&[1.0, 2.0], 1.0, 1000, 1).is_none());
+        assert!(bootstrap_ci_mean(&[1.0, 2.0], 0.95, 0, 1).is_none());
+        let single = bootstrap_ci_mean(&[7.5], 0.95, 1000, 1).unwrap();
+        assert_eq!(single.point, 7.5);
+        assert_eq!(single.lower, 7.5);
+        assert_eq!(single.upper, 7.5);
     }
 }

@@ -77,6 +77,7 @@ impl FocalSpot {
     ///   foci require the Rayleigh–Sommerfeld / full-wave field.
     /// - **Homogeneous water-like medium**: uses `SOUND_SPEED_WATER_SIM` and
     ///   `DENSITY_WATER_NOMINAL`; no tissue heterogeneity or aberration.
+    ///
     /// Outside this regime treat the result as a planning sanity-check only and
     /// validate against the FDTD/k-space field (see `gap_audit.md` CLD-3).
     ///

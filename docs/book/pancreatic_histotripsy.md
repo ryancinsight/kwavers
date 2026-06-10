@@ -1,12 +1,27 @@
 # Chapter 32 — Pancreatic Cancer Histotripsy: PDAC Treatment Planning
 
-Chapter 21f implements treatment-planning simulations for histotripsy of
+This chapter presents the treatment-planning model for histotripsy of
 pancreatic ductal adenocarcinoma (PDAC). It loads an abdominal CT with
 pancreas and tumour segmentation from the Medical Segmentation Decathlon
 Task07_Pancreas dataset (or a calibrated synthetic phantom when the dataset
-is absent) and runs three clinical histotripsy exposure regimes through a
+is absent) and plans three clinical histotripsy exposure regimes through a
 128-element curved abdominal therapy array placed on the anterior skin
-surface.
+surface. The planning physics below — the Rayleigh–Sommerfeld forward field,
+intrinsic-threshold cavitation probability, Pennes thermal dose, and the
+raster superposition — is implemented in
+`kwavers_physics::analytical::cavitation` (`build_sonication_schedule`,
+`histotripsy_pulses_for_lesion_radius`, `histotripsy_kill_fraction`, …) and is
+the source of the planning figures in this chapter.
+
+> **Executable note.** The companion script
+> `pykwavers/examples/book/ch21f_real_pancreatic_ct_histotripsy.py` has been
+> migrated to demonstrate the **same-aperture theranostic FWI** reconstruction
+> on the pancreatic CT (`kw.run_theranostic_inverse_from_ritk`,
+> `anatomy="pancreas"`), so running it now writes reconstruction-channel
+> figures (`fig00_transducer_placement_3d`, `fig01_ct_and_anatomy`,
+> `fig02_lesion_channels`, `fig03_passive_channels`) rather than the analytic
+> planning panels shown here. The analytic planning model itself remains in the
+> Rust core under `analytical::cavitation`.
 
 ## Clinical Context
 
@@ -200,13 +215,22 @@ spot achieves full erosion; 8-spot interleave gives 80 Hz effective PRF.
 
 ## Figures
 
-- `fig01_pdac_histotripsy_overview.png`: CT + labels, pressure field,
-  lesion mask, and cavitation-dose heatmap for each regime.
-- `fig02_pdac_thermal.png`: Transient temperature, steady-state temperature,
-  and log₁₀(CEM43) for each regime.
-- `embedded_figures.md`: Base64-inlined PNGs and tabulated metrics.
-- `metrics.json`: Scenario-level coverage, lesion volume, treatment time,
-  peak temperature, array parameters, and dataset provenance.
+The planning figures (from the `analytical::cavitation` model) are in
+`docs/book/figures/ch21f/`:
+
+![PDAC histotripsy planning overview: CT + labels, pressure field, lesion mask, and cavitation-dose heatmap per regime.](figures/ch21f/fig01_pdac_histotripsy_overview.png)
+
+*Figure 32.1. Per-regime planning overview (§Mathematical Contract / §Exposure Regimes): CT with derived labels, the Rayleigh–Sommerfeld focal pressure, the intrinsic-threshold lesion mask, and the accumulated cavitation-dose heatmap for the μs-intrinsic, ms-shock-vapor, and ms-sub-threshold regimes.*
+
+![PDAC thermal safety: transient and steady-state temperature with log₁₀(CEM43) per regime.](figures/ch21f/fig02_pdac_thermal.png)
+
+*Figure 32.2. Thermal safety (§Thermal model): per-pulse transient ΔT, Pennes steady-state ΔT, and log₁₀(CEM43) for each regime — distinguishing the non-thermal μs-intrinsic regime from the thermally-active ms-shock-vapor regime.*
+
+`metrics.json` records scenario-level coverage, lesion volume, treatment time,
+peak temperature, array parameters, and dataset provenance.
+
+(A previous base64-inlined `embedded_figures.md` bundle was removed: it
+duplicated the committed PNGs above and bloated the repository by tens of MB.)
 
 ## Scope Limits
 

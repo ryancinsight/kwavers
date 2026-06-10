@@ -149,6 +149,36 @@ pub fn minnaert_resonance_hz(r0_m: f64, gamma: f64, p0_pa: f64, rho: f64) -> PyR
     Ok(cavitation::minnaert_resonance_hz(r0_m, gamma, p0_pa, rho))
 }
 
+/// Minnaert resonance frequency with the surface-tension correction (Eq. 5.6).
+///
+/// f₀ = 1/(2πR₀)·√([3γP₀ + (3γ−1)·2σ/R₀]/ρ); reduces to `minnaert_resonance_hz`
+/// as σ→0. Required for sub-micron bubbles (R₀ ≲ 1 µm), where it exceeds the
+/// uncorrected value by >10%.
+///
+/// Args:
+///     r0_m: Equilibrium bubble radius [m].
+///     gamma: Polytropic index.
+///     p0_pa: Ambient pressure [Pa].
+///     rho: Liquid density [kg/m³].
+///     sigma_n_m: Surface-tension coefficient [N/m] (water ≈ 0.0725).
+///
+/// Returns:
+///     Resonance frequency [Hz] (0 if inputs are invalid or the bubble is
+///     surface-tension destabilised).
+#[pyfunction]
+#[pyo3(signature = (r0_m, gamma, p0_pa, rho, sigma_n_m))]
+pub fn minnaert_resonance_corrected_hz(
+    r0_m: f64,
+    gamma: f64,
+    p0_pa: f64,
+    rho: f64,
+    sigma_n_m: f64,
+) -> PyResult<f64> {
+    Ok(cavitation::minnaert_resonance_corrected_hz(
+        r0_m, gamma, p0_pa, rho, sigma_n_m,
+    ))
+}
+
 /// Compute the Blake cavitation threshold pressure.
 ///
 /// Args:
@@ -1663,4 +1693,142 @@ pub fn inter_pulse_residual_clearance(
 pub fn residual_dissolution_time_s(r0_m: f64, saturation_fraction: f64) -> PyResult<Option<f64>> {
     let params = cavitation::tissue_gas_diffusion(saturation_fraction);
     Ok(cavitation::residual_dissolution_time_s(r0_m, params))
+}
+
+/// Cavitation-optimal drive frequency in a band (engaged-fraction argmax).
+///
+/// At sub-saturation amplitudes the engaged fraction is set by the inertial
+/// threshold (lower frequency → larger, lower-threshold nuclei) as much as by
+/// resonance, so the optimum is found by a direct scan.
+///
+/// Returns:
+///     (f_optimal_hz, engaged_fraction_at_optimum).
+#[pyfunction]
+#[allow(clippy::too_many_arguments)]
+#[pyo3(signature = (
+    median_radius_m, geometric_std, f_lo_hz, f_hi_hz, amplitude_pa, pulse_duration_s,
+    n_scan=15, n_size_samples=21,
+    p0_pa=101_325.0, rho=1050.0, sigma=0.060, mu=1.5e-3, kappa=1.4,
+    p_v_pa=2339.0, c_liquid=1540.0
+))]
+pub fn cavitation_optimal_frequency(
+    median_radius_m: f64,
+    geometric_std: f64,
+    f_lo_hz: f64,
+    f_hi_hz: f64,
+    amplitude_pa: f64,
+    pulse_duration_s: f64,
+    n_scan: usize,
+    n_size_samples: usize,
+    p0_pa: f64,
+    rho: f64,
+    sigma: f64,
+    mu: f64,
+    kappa: f64,
+    p_v_pa: f64,
+    c_liquid: f64,
+) -> PyResult<(f64, f64)> {
+    let dist = cavitation::NucleiSizeDistribution::new(median_radius_m, geometric_std)
+        .ok_or_else(|| PyRuntimeError::new_err("invalid nuclei size distribution parameters"))?;
+    let medium = tissue_medium(p0_pa, rho, sigma, mu, kappa, p_v_pa, c_liquid);
+    let cfg = cavitation::EngagementConfig {
+        n_size_samples,
+        ..cavitation::EngagementConfig::default()
+    };
+    Ok(cavitation::cavitation_optimal_frequency(
+        &dist,
+        &medium,
+        f_lo_hz,
+        f_hi_hz,
+        amplitude_pa,
+        pulse_duration_s,
+        n_scan,
+        &cfg,
+    ))
+}
+
+/// Staged-sonication frequency program: one slow up-and-down sweep across the
+/// whole per-spot exposure.
+///
+/// The build half (stage 0→½) rises from the quiet frequency to the
+/// cavitation-optimal turn (`f_peak_hz`), driving cavitation activity to a peak;
+/// the wind-down half (½→1) returns to the quiet frequency, tapering new
+/// cavitation and (with fragmentation enabled) clearing the residual so the next
+/// sonication starts clean.
+///
+/// Returns:
+///     (stage[], frequency_hz[], cavitation_activity[], residual_void[],
+///      peak_activity_stage, residual_peak, residual_at_end).
+#[pyfunction]
+#[allow(clippy::too_many_arguments)]
+#[pyo3(signature = (
+    median_radius_m, geometric_std, f_quiet_hz, f_peak_hz, amplitude_pa, pulse_duration_s,
+    n_pulses, prf_hz, void_deposit_per_activity=0.02, residual_radius_m=6e-6,
+    clearing_fragment_count=8.0, saturation_fraction=0.7, n_size_samples=21,
+    p0_pa=101_325.0, rho=1050.0, sigma=0.060, mu=1.5e-3, kappa=1.4,
+    p_v_pa=2339.0, c_liquid=1540.0
+))]
+pub fn staged_sonication_sweep(
+    py: Python<'_>,
+    median_radius_m: f64,
+    geometric_std: f64,
+    f_quiet_hz: f64,
+    f_peak_hz: f64,
+    amplitude_pa: f64,
+    pulse_duration_s: f64,
+    n_pulses: usize,
+    prf_hz: f64,
+    void_deposit_per_activity: f64,
+    residual_radius_m: f64,
+    clearing_fragment_count: f64,
+    saturation_fraction: f64,
+    n_size_samples: usize,
+    p0_pa: f64,
+    rho: f64,
+    sigma: f64,
+    mu: f64,
+    kappa: f64,
+    p_v_pa: f64,
+    c_liquid: f64,
+) -> PyResult<(
+    Py<PyArray1<f64>>,
+    Py<PyArray1<f64>>,
+    Py<PyArray1<f64>>,
+    Py<PyArray1<f64>>,
+    f64,
+    f64,
+    f64,
+)> {
+    let dist = cavitation::NucleiSizeDistribution::new(median_radius_m, geometric_std)
+        .ok_or_else(|| PyRuntimeError::new_err("invalid nuclei size distribution parameters"))?;
+    let medium = tissue_medium(p0_pa, rho, sigma, mu, kappa, p_v_pa, c_liquid);
+    let diffusion = cavitation::tissue_gas_diffusion(saturation_fraction);
+    let cfg = cavitation::EngagementConfig {
+        n_size_samples,
+        ..cavitation::EngagementConfig::default()
+    };
+    let p = cavitation::staged_sonication_sweep(
+        &dist,
+        &medium,
+        f_quiet_hz,
+        f_peak_hz,
+        amplitude_pa,
+        pulse_duration_s,
+        n_pulses,
+        prf_hz,
+        void_deposit_per_activity,
+        residual_radius_m,
+        clearing_fragment_count,
+        diffusion,
+        &cfg,
+    );
+    Ok((
+        p.stage.into_pyarray(py).unbind(),
+        p.frequency_hz.into_pyarray(py).unbind(),
+        p.cavitation_activity.into_pyarray(py).unbind(),
+        p.residual_void.into_pyarray(py).unbind(),
+        p.peak_activity_stage,
+        p.residual_peak,
+        p.residual_at_end,
+    ))
 }

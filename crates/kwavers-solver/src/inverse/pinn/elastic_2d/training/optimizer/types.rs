@@ -3,12 +3,12 @@
 /// Supported optimization algorithms
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum OptimizerAlgorithm {
-    /// Stochastic Gradient Descent
+    /// Stochastic Gradient Descent.
     SGD,
-    /// SGD with momentum
+    /// SGD with a momentum-scaled step.
     SGDMomentum,
-    /// Adam optimizer
+    /// Adam (burn's built-in: full first/second-moment update + bias correction).
     Adam,
-    /// Adam with decoupled weight decay
+    /// AdamW (Adam with decoupled weight decay; burn's built-in).
     AdamW,
 }

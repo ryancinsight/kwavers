@@ -1,10 +1,10 @@
-# Chapter 19: Performance and Memory
+# Chapter 20: Performance and Memory
 
 *High-Performance Computing for Ultrasound Simulation*
 
 ---
 
-## 1. Introduction
+## 20.1 Introduction
 
 Ultrasound simulation at clinically relevant scales — grids exceeding 512³ points, time-step counts in the tens of thousands, multiple physical fields — demands systematic reasoning about hardware limits before any algorithmic choice is made. Three hierarchical bottlenecks govern attainable throughput in this order of binding severity:
 
@@ -12,13 +12,13 @@ Ultrasound simulation at clinically relevant scales — grids exceeding 512³ po
 2. **Compute throughput.** Once data is resident in L1/L2 cache or GPU registers, floating-point multiply-accumulate units determine how fast kernels retire. SIMD and tensor units provide the peak FLOP/s ceiling.
 3. **Communication overhead.** Multi-node or host–device data movement (MPI collectives, PCIe DMA, NVLink) imposes latency that serializes otherwise parallel computation. The checkpoint/restart system and the GPU wgpu dispatch pipeline must both minimize round-trip latency to preserve linear scaling.
 
-Sections 2–6 establish formal theorems that bound attainable performance. Sections 7–9 present the concrete algorithms used in kwavers. Sections 10–12 document achieved results, profiling methodology, and benchmark data.
+Sections 20.2–20.6 establish formal theorems that bound attainable performance. Sections 20.7–20.9 present the concrete algorithms used in kwavers. Sections 20.10–20.12 document achieved results, profiling methodology, and benchmark data.
 
 **Notation.** Throughout this chapter: *N* denotes the linear grid dimension (so the 3-D grid has *N*³ points); *BW* is memory bandwidth in bytes/second; *P_peak* is the peak floating-point throughput in FLOP/s; *I* is arithmetic intensity in FLOP/byte; *Δx* is the spatial step; *Δt* is the time step; *c* is the maximum acoustic speed in the medium.
 
 ---
 
-## 2. Theorem: Roofline Model
+## 20.2 Theorem: Roofline Model
 
 **Statement.** For a kernel with arithmetic intensity *I* = (FLOP count) / (bytes transferred), the attainable performance *P* satisfies:
 
@@ -44,13 +44,17 @@ Therefore *P = F / T ≤ min(F · BW / B, P_peak) = min(I · BW, P_peak)*. ∎
 | FLOPs/element     | ~10                       |
 | Arithmetic intensity *I* | 10 / (5 × 4) = 0.5 FLOP/byte |
 
-At *I* = 0.5 FLOP/byte and CPU ridge point ~8 FLOP/byte (Intel Xeon, AVX-512, DDR4), the kernel is decisively memory-bound. GPU HBM moves the ridge point to ~1 FLOP/byte for NVIDIA A100 class devices, placing the same kernel on the roofline boundary. This analysis motivates the grad_k consolidation (Section 7) which reduces *B* by eliminating two N³-field allocations.
+At *I* = 0.5 FLOP/byte and CPU ridge point ~8 FLOP/byte (Intel Xeon, AVX-512, DDR4), the kernel is decisively memory-bound. GPU HBM moves the ridge point to ~1 FLOP/byte for NVIDIA A100 class devices, placing the same kernel on the roofline boundary. This analysis motivates the grad_k consolidation (Section 20.7) which reduces *B* by eliminating two N³-field allocations.
 
 **Corollary (bandwidth saturation).** Any optimization that reduces the byte count transferred — field consolidation, in-place updates, scratch reuse — yields linear speedup in the memory-bound regime without requiring any change to arithmetic intensity.
 
+![Roofline diagram for the PSTD pressure update across N = 64–512.](figures/ch19/fig01_roofline.png)
+
+*Figure 20.1. Roofline (Eq. of §20.2): the PSTD pressure update at I ≈ 0.5 FLOP/byte sits in the memory-bound region below the ridge point on both CPU and GPU.*
+
 ---
 
-## 3. Theorem: FFT Complexity and PSTD vs Finite-Difference Crossover
+## 20.3 Theorem: FFT Complexity and PSTD vs Finite-Difference Crossover
 
 **Statement.** The per-step computational cost of a pseudospectral time-domain (PSTD) solver on an *N*³ grid is Θ(*N*³ log *N*), whereas an *m*-th-order finite-difference (FD) scheme incurs Θ(*m* · *N*³) cost per step with *m* fixed. PSTD achieves lower total simulation cost when *N* log *N* < *m* · *N* · (Δt_FD / Δt_PSTD), where the time-step ratio arises from the more restrictive FD CFL condition.
 
@@ -64,11 +68,15 @@ At *I* = 0.5 FLOP/byte and CPU ridge point ~8 FLOP/byte (Intel Xeon, AVX-512, DD
 
 meaning PSTD is *always* more expensive per step, but it permits larger Δt and requires fewer steps for the same simulation time. The total-step crossover where PSTD becomes cheaper overall depends on the ratio of CFL constants. For practical ultrasound grids (N > 64 per dimension), the spectral accuracy allows Δt ratios of 2–4× over second-order FD, making PSTD the preferred method.
 
+![Per-step FFT cost scaling Θ(N³ log N) vs grid size.](figures/ch19/fig05_fft_scaling.png)
+
+*Figure 20.2. PSTD per-step cost Θ(N³ log N) vs N (§20.3); the log N factor is the FFT overhead over the Θ(N³) finite-difference stencil.*
+
 **Implementation note.** kwavers uses the FFTW3-compatible plan structure via the `rustfft` crate, caching FFT plans across time steps. Plan initialization is O(*N* log *N*) and amortized over the simulation duration.
 
 ---
 
-## 4. Theorem: Cache-Optimal Array Layout for 3-D Wave Fields
+## 20.4 Theorem: Cache-Optimal Array Layout for 3-D Wave Fields
 
 **Statement.** For a 3-D pressure field *p[i][j][k]* with *i* the slow index and *k* the fast index (row-major, C order), a sweep over the *k*-axis (innermost) accesses consecutive memory addresses and achieves one cache miss per cache-line load. A sweep over the *i*-axis (outermost as innermost loop) accesses addresses separated by *N*² elements, causing one cache miss per access. The cost ratio is N²/(cache_line_size/element_size).
 
@@ -76,13 +84,26 @@ meaning PSTD is *always* more expensive per step, but it permits larger Δt and 
 
 **Consequence for the PSTD stencil.** The kwavers pressure and velocity fields are stored in row-major order with axis layout (x, y, z), placing the z-axis as the fastest varying dimension. The spectral differentiation along x requires a global transpose or a strided FFT, which is the primary source of cache inefficiency in the PSTD kernel. The `rustfft` library addresses this via its multi-dimensional planner, which selects between in-place transposition and strided passes based on measured cache performance during plan construction.
 
-**Mitigation: tiling.** For the finite-difference CPML update — which updates boundary regions using local stencils — the update loops are tiled with tile size T chosen so that T³ × 5 × 4 bytes ≤ L2_cache_size. For a 512 KB L2 cache, this gives T ≤ 32. The tiling is encoded in the `CpmlUpdater` via the `TILE_SIZE` const generic parameter.
+**Mitigation: tiling.** Cache tiling is the standard mitigation for stencil sweeps with
+*spatial data reuse* that exceed L2: choosing a tile size T so that T³ × (fields) × sizeof(f64) ≤ L2
+keeps the reused neighbourhood resident (for a 512 KB L2, T ≤ 32). The PSTD spatial-differentiation
+path — global transpose / strided FFT — is the kernel sweep with reuse; `rustfft`'s
+multi-dimensional planner already tiles/transposes it adaptively (above).
+
+*Where tiling does **not** apply — the CPML update.* The CPML memory recurrence
+(`kwavers_boundary::cpml::CPMLUpdater`) is **pointwise**: each boundary cell updates
+`ψ ← b·ψ + a·∂f` from *its own* previous value and gradient, with **no spatial stencil and no
+neighbour reuse**, over thin PML strips (thickness/2 cells deep) that are already `rayon`-parallel
+contiguous `slice_axis` sweeps. Cache tiling improves only operations with reuse to capture; a
+pointwise streaming map is already memory-bandwidth-bound and optimal, so a `TILE_SIZE` const
+generic on the CPML update would add complexity for no analytic benefit. (Verified by inspection of
+the pointwise update in `cpml::update::axis`; backlog #12 closed this sub-item as not-applicable.)
 
 **Column-major (Fortran) compatibility.** k-Wave MATLAB stores fields in Fortran order (z is the slow index). The pykwavers comparison scripts apply a `.T` transposition on the Python side to reconcile axis ordering without copying the underlying buffer, exploiting NumPy's view semantics for zero-cost reinterpretation.
 
 ---
 
-## 5. Theorem: Rayon Work-Stealing Efficiency
+## 20.5 Theorem: Rayon Work-Stealing Efficiency
 
 **Statement.** Let *T* tasks of unit cost be distributed across *P* worker threads using Rayon's work-stealing scheduler. The expected maximum load imbalance — defined as the excess work beyond the optimal *T/P* per thread — is O(log *P*) in the worst case and O(√(*T/P*)) in expectation under random task assignment.
 
@@ -93,10 +114,12 @@ meaning PSTD is *always* more expensive per step, but it permits larger Δt and 
 **Work granularity constraint.** Rayon's work-stealing is efficient only when task granularity exceeds ~1 µs of compute (to amortize deque operations). For very small grids (N < 32), the overhead dominates. kwavers uses a `min_grain_size` parameter equal to `max(N³/P, 1024)` to prevent over-subdivision.
 
 ```rust
-// kwavers/src/solver/forward/pstd/implementation/core/stepper/step.rs (illustrative)
-fn update_pressure_par<S: Scalar>(
-    p: &mut [S],
-    ux: &[S], uy: &[S], uz: &[S],
+// crates/kwavers-solver/src/forward/pstd/implementation/core/stepper/step.rs (illustrative)
+// The CPU solver is monomorphic f64 (the GPU path is f32); there is no Scalar
+// trait — see the architecture note in §20.10.3.
+fn update_pressure_par(
+    p: &mut [f64],
+    ux: &[f64], uy: &[f64], uz: &[f64],
     n: usize,
 ) {
     let grain = (n * n * n / rayon::current_num_threads()).max(1024);
@@ -110,21 +133,21 @@ fn update_pressure_par<S: Scalar>(
 
 ---
 
-## 6. Theorem: Zero-Copy Serialization Bound
+## 20.6 Theorem: Zero-Copy Serialization Bound
 
 **Statement.** rkyv deserialization of an archived type `T` has time complexity O(1) and requires zero heap allocations, whereas serde deserialization has time complexity O(|T|) and allocates proportional to the number of heap-backed fields. The proof follows from the memory-map semantics of rkyv's archived representation.
 
 **Proof.** rkyv's `archive` macro generates an `Archived<T>` type whose layout exactly mirrors the in-memory layout of `T`'s fields as fixed-size values with relative pointers. Deserializing means casting a `*const u8` to `*const Archived<T>` — a single pointer cast — plus a checksum verification over the fixed-size header. No fields are traversed during deserialization; traversal occurs only when the caller accesses individual fields. The total deserialization cost is O(1) in the number of fields and O(1) in the total serialized size. Serde, by contrast, drives a recursive visitor that touches every byte of the serialized representation to reconstruct heap-backed `Vec<T>`, `String`, and `Box<T>` values. Its cost is Ω(|T|). ∎
 
-**Application to checkpoint/restart.** The KWCP checkpoint format (Section 9) serializes the entire solver state — pressure field (N³ × 4 bytes), velocity fields (3N³ × 4 bytes), CPML auxiliary fields (6N³ × 4 bytes), and scalar parameters — using rkyv. For N = 256, the total state is ~1.3 GB. rkyv deserialization reads this from a memory-mapped file in O(1) time (one `mmap` call plus header validation), versus serde which would require ~1.3 s of deserialization time at 1 GB/s byte throughput. The O(1) bound enables mid-step restart with negligible overhead.
+**Application to checkpoint/restart.** The KWCP checkpoint format (Section 20.9) serializes the entire solver state — pressure field (N³ × 4 bytes), velocity fields (3N³ × 4 bytes), CPML auxiliary fields (6N³ × 4 bytes), and scalar parameters — using rkyv. For N = 256, the total state is ~1.3 GB. rkyv deserialization reads this from a memory-mapped file in O(1) time (one `mmap` call plus header validation), versus serde which would require ~1.3 s of deserialization time at 1 GB/s byte throughput. The O(1) bound enables mid-step restart with negligible overhead.
 
 **Correctness invariant.** Zero-copy deserialization requires that the archived layout is identical to the runtime layout. kwavers uses `bytemuck::Pod` bounds on all field types to guarantee that no padding, alignment mismatch, or endian difference can corrupt the archived representation. This bound is enforced at compile time via the `bytemuck::checked` module.
 
 ---
 
-## 7. Algorithm: PSTD Memory Budget
+## 20.7 Algorithm: PSTD Memory Budget
 
-### 7.1 Baseline Field Inventory
+### 20.7.1 Baseline Field Inventory
 
 For a 3-D PSTD simulation on an *N*³ grid with single precision (4 bytes/float), the baseline field count and memory usage are:
 
@@ -142,7 +165,7 @@ For a 3-D PSTD simulation on an *N*³ grid with single precision (4 bytes/float)
 | FFT scratch         | 2     | 134 MB        | In/out buffers                 |
 | **Baseline total**  |       | **~1.2 GB**   |                                |
 
-### 7.2 grad_k Consolidation (–2 × N³ × 16 B)
+### 20.7.2 grad_k Consolidation (–2 × N³ × 16 B)
 
 Prior to the consolidation committed in the density-advection fix (April 2026), the PSTD stepper maintained two intermediate gradient fields `grad_kx` and `grad_ky` as separate owned `Vec<f32>` allocations of size N³. These fields held the spectral derivative of the wavenumber correction term and were recomputed at every step without reuse.
 
@@ -162,7 +185,7 @@ stepper.scratch.fill(0.0);
 spectral_gradient_y(&mut stepper.scratch, &k_grid, fft_planner);
 ```
 
-### 7.3 Density Advection Removal (–20 MB/sim)
+### 20.7.3 Density Advection Removal (–20 MB/sim)
 
 The u·∇ρ₀ advection term and its associated `grad_rho0` fields were definitively removed on 2026-04-23 after confirming that the kwavers medium model uses a spatially varying ρ₀ that enters only through the wave equation coefficient, not as an advected quantity. The removal eliminates:
 
@@ -171,43 +194,48 @@ The u·∇ρ₀ advection term and its associated `grad_rho0` fields were defini
 
 All 47 PSTD tests pass after this removal, confirming the term was computationally zero for the validated test cases.
 
-### 7.4 AbsorptionKernel Option (–4 × N³ × 8 B for Lossless Media)
+### 20.7.4 AbsorptionKernel Option (–4 × N³ × 8 B for Lossless Media)
 
-For lossless simulations (absorption coefficient α = 0 everywhere), the PSTD absorption kernel allocates four N³ arrays for the fractional Laplacian absorption operator (Treeby & Cox 2010, Equations 9–10). These allocations are conditional on the presence of loss:
+For lossless simulations (absorption coefficient α = 0 everywhere), the PSTD absorption kernel allocates several N³ arrays for the fractional Laplacian absorption operator (Treeby & Cox 2010, Equations 9–10). The whole kernel is held as an `Option` on the orchestrator (`Option<AbsorptionKernel>`), so a lossless run allocates **none** of these arrays:
 
 ```rust
-pub struct AbsorptionKernel<S: Scalar> {
-    /// None for lossless media; Some for lossy media.
-    pub inner: Option<AbsorptionKernelInner<S>>,
+// crates/kwavers-solver/src/forward/pstd/physics/absorption/kernel.rs
+pub struct AbsorptionKernel {
+    pub tau: Array3<f64>,     // N³  absorption proportionality
+    pub eta: Array3<f64>,     // N³  dispersion proportionality
+    pub nabla1: Array3<f64>,  // N³  |k|^{y-1} fractional-Laplacian operator
+    pub nabla2: Array3<f64>,  // N³  |k|^{y}  fractional-Laplacian operator
+    pub alpha_si: Array3<f64>,// N³  absorption coefficient (SI)
 }
-
-pub struct AbsorptionKernelInner<S: Scalar> {
-    pub absorb_tau_x: Vec<S>,  // N³ × sizeof(S)
-    pub absorb_tau_y: Vec<S>,  // N³ × sizeof(S)
-    pub absorb_eta_x: Vec<S>,  // N³ × sizeof(S)
-    pub absorb_eta_y: Vec<S>,  // N³ × sizeof(S)
-}
+// The orchestrator stores `Option<AbsorptionKernel>` — None for lossless media.
 ```
 
-Memory saving for lossless: 4 × N³ × 8 B (f64) = 4 × 256³ × 8 = **536 MB** for N=256.
+Memory saving for lossless: 5 × N³ × 8 B (f64) = 5 × 256³ × 8 = **670 MB** for N=256 (the
+entire kernel is elided, not just a subset). The struct is monomorphic `f64`; there is no
+`Scalar` generic (see §20.10.3).
 
-The `absorb_y` field (a fifth N³ array used for cross-axis coupling in an earlier formulation) was also removed after auditing the Treeby & Cox derivation, which shows no such cross term for the power-law absorption model. Saving: 1 × N³ × 8 B = **134 MB** for N=256.
+An earlier formulation carried an extra cross-axis coupling array; auditing the Treeby & Cox
+derivation showed no such cross term for the power-law absorption model, so the kernel was
+reduced to the five operators above.
 
-### 7.5 Optimized Memory Budget
+### 20.7.5 Optimized Memory Budget
 
 | Optimization                  | Saving (N=256) |
 |-------------------------------|---------------|
 | grad_k consolidation          | –134 MB       |
 | Density advection removal     | –201 MB       |
-| AbsorptionKernel Option (lossless) | –536 MB  |
-| absorb_y removal              | –134 MB       |
-| **Total (lossless simulation)** | **–1.0 GB** |
+| AbsorptionKernel Option (lossless, 5 × N³ f64 elided) | –670 MB  |
+| **Total (lossless simulation)** | **~–1.0 GB** |
+
+![PSTD memory budget vs grid size: baseline vs optimized.](figures/ch19/fig02_memory_budget.png)
+
+*Figure 20.3. Per-field PSTD memory budget (§20.7) vs N; the optimized curve reflects grad_k consolidation, density-advection removal, and the lossless AbsorptionKernel elision.*
 
 ---
 
-## 8. Algorithm: GPU Dispatch Pipeline
+## 20.8 Algorithm: GPU Dispatch Pipeline
 
-### 8.1 wgpu Buffer Creation
+### 20.8.1 wgpu Buffer Creation
 
 The GPU dispatch pipeline uses wgpu as the compute backend. Buffer creation follows a deterministic ownership protocol to avoid aliasing and lifetime errors:
 
@@ -232,12 +260,12 @@ encoder.copy_buffer_to_buffer(&staging, 0, &p_buf, 0, staging.size());
 queue.submit([encoder.finish()]);
 ```
 
-### 8.2 Shader Dispatch
+### 20.8.2 Shader Dispatch
 
 The WGSL compute shader for the pressure update kernel is invoked via a bind group that maps Rust buffer handles to WGSL binding slots. The shader performs the spectral pressure update in frequency domain after the FFT is applied on the CPU side (planned: full GPU FFT via `wgpu-fft`):
 
 ```wgsl
-// kwavers/src/gpu/shaders/pstd.wgsl (excerpt — structural illustration)
+// crates/kwavers-gpu/src/pstd_gpu/ (WGSL shaders; excerpt — structural illustration)
 @group(0) @binding(0) var<storage, read>       p_in:  array<f32>;
 @group(0) @binding(1) var<storage, read_write>  p_out: array<f32>;
 @group(0) @binding(2) var<storage, read>        kx:    array<f32>;
@@ -252,31 +280,33 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
 }
 ```
 
-### 8.3 TDR Avoidance via device.poll
+### 20.8.3 TDR Avoidance via device.poll
 
 Windows TDR (Timeout Detection and Recovery) terminates GPU computations exceeding ~2 seconds of GPU wall time without a CPU–GPU synchronization point. For large grids (N > 128), the PSTD time loop submits command buffers that cumulatively exceed the TDR threshold.
 
-**Fix (committed 2026-04-22).** Insert `device.poll(wgpu::Maintain::Poll)` every 16 time-step batches in the time loop:
+**Fix (committed 2026-04-22).** Batch `STEP_BATCH = 32` steps per command buffer and `device.poll(...Wait)` every 16 batches in the GPU time loop:
 
 ```rust
-// kwavers/src/solver/forward/pstd/implementation/core/orchestrator/mod.rs
-for (batch_idx, batch) in time_steps.chunks(BATCH_SIZE).enumerate() {
+// crates/kwavers-gpu/src/pstd_gpu/time_loop/run.rs
+const STEP_BATCH: usize = 32;
+for batch_start in (0..nt).step_by(STEP_BATCH) {
+    let batch_end = (batch_start + STEP_BATCH).min(nt);
     let encoder = device.create_command_encoder(&Default::default());
-    // ... encode batch of BATCH_SIZE steps ...
+    // ... encode steps batch_start..batch_end ...
     queue.submit([encoder.finish()]);
 
-    // Prevent TDR: poll every 16 batches (~1 s of GPU time for N=256)
-    if batch_idx % 16 == 15 {
-        device.poll(wgpu::Maintain::Poll);
+    // Throttle the CPU so submissions don't outrun the GPU; without this a long
+    // run queues dozens of command buffers the driver treats as one continuous
+    // workload and kills via TDR. Poll every 16 batches.
+    if (batch_start / STEP_BATCH).is_multiple_of(16) {
+        device.poll(wgpu::PollType::Wait);
     }
 }
-// Final synchronization
-device.poll(wgpu::Maintain::Wait);
 ```
 
-`BATCH_SIZE = 64` steps per command buffer was selected empirically to keep each submission under 100 ms of GPU time at N = 256, with the poll every 16 batches providing a hard upper bound of ~1.6 s between GPU checkpoints.
+`STEP_BATCH = 32` keeps each submission well under the TDR window at N = 256, and the poll every 16 batches bounds the in-flight queue without adding a synchronization point per step.
 
-### 8.4 Readback Protocol
+### 20.8.4 Readback Protocol
 
 After simulation completes, results are copied from GPU VRAM to CPU RAM via a readback staging buffer:
 
@@ -299,9 +329,9 @@ PCIe readback bandwidth is ~16 GB/s (PCIe 4.0 × 16). For N = 256, the pressure 
 
 ---
 
-## 9. Algorithm: Checkpoint/Restart
+## 20.9 Algorithm: Checkpoint/Restart
 
-### 9.1 KWCP Binary Format
+### 20.9.1 KWCP Binary Format
 
 The KWCP (kWavers CheckPoint) format is a flat binary file with the following layout:
 
@@ -326,7 +356,7 @@ The state vector includes all fields necessary for bit-exact restart:
 | Time index *t*        | `u64`       | 8 B          |
 | Scalar params         | struct      | ~256 B       |
 
-### 9.2 Bit-Exact Round-Trip Guarantee
+### 20.9.2 Bit-Exact Round-Trip Guarantee
 
 The checkpoint system guarantees that `run_from_checkpoint(run_to_checkpoint(state, t)) == run_from_step_0(t)` modulo the floating-point determinism of the FFT plan. Bit-exactness is enforced by:
 
@@ -334,7 +364,7 @@ The checkpoint system guarantees that `run_from_checkpoint(run_to_checkpoint(sta
 2. Using `f32::to_bits()` / `f32::from_bits()` for all serialized float values to preserve NaN payloads and signed zeros.
 3. Serializing the complete CPML auxiliary state (Ψ fields), not just the primary fields, to capture all state needed for the CPML boundary equations.
 
-### 9.3 Python API
+### 20.9.3 Python API
 
 ```python
 # pykwavers: checkpoint API
@@ -348,44 +378,54 @@ sim2 = Simulation.from_checkpoint("state_t1000.kwcp")
 sim2.run(steps=4000)  # Continues from step 1000
 ```
 
+![Checkpoint load time: rkyv zero-copy vs serde, vs state size.](figures/ch19/fig04_checkpoint_overhead.png)
+
+*Figure 20.5. KWCP checkpoint restore cost (§20.9): rkyv zero-copy O(1) mmap+validate vs serde O(|state|) deserialization as the state grows with N.*
+
 ---
 
-## 10. kwavers Implementation
+## 20.10 kwavers Implementation
 
-### 10.1 Module Map
+### 20.10.1 Module Map
 
 | Functionality              | Module path                                                    |
 |----------------------------|----------------------------------------------------------------|
-| PSTD stepper               | `kwavers::solver::forward::pstd::implementation::core::stepper` |
-| GPU dispatch               | `kwavers::solver::forward::pstd::gpu_pstd::pipeline`           |
-| Checkpoint                 | `kwavers::solver::forward::pstd::checkpoint`                   |
-| CPML boundary              | `kwavers::domain::boundary::cpml`                              |
-| Sensor recorder            | `kwavers::domain::sensor::recorder`                            |
-| Profiling spans            | `kwavers::solver::progress`                                    |
-| Beamforming (3-D DAS)      | `kwavers::analysis::signal_processing::beamforming::three_dimensional` |
+| PSTD stepper               | `kwavers_solver::forward::pstd::implementation::core::stepper` |
+| GPU dispatch               | `kwavers_gpu::pstd_gpu::pipeline`           |
+| Checkpoint                 | `kwavers_solver::forward::pstd::checkpoint`                   |
+| CPML boundary              | `kwavers_boundary::cpml`                              |
+| Sensor recorder            | `kwavers_receiver::recorder`                            |
+| Profiling spans            | `kwavers_solver::interface`                                    |
+| Beamforming (3-D DAS)      | `kwavers_analysis::signal_processing::beamforming::three_dimensional` |
 
-### 10.2 Key Optimizations Achieved
+### 20.10.2 Key Optimizations Achieved
 
 | Optimization                      | Impact                        | Status     |
 |-----------------------------------|-------------------------------|------------|
 | grad_k consolidation              | –134 MB/sim                   | Merged     |
 | Density advection removal         | –201 MB/sim, –N³ FLOPs/step   | Merged     |
-| AbsorptionKernel Option           | –536 MB for lossless          | Merged     |
-| absorb_y removal                  | –134 MB                       | Merged     |
+| AbsorptionKernel Option           | –670 MB for lossless          | Merged     |
 | TDR poll every 16 batches         | Eliminates GPU hang >~60 s    | Merged     |
 | Rayon grain-size tuning           | Near-linear scaling, P ≤ 32   | Merged     |
 | FFT plan caching (rustfft)        | –O(N log N) per step          | Merged     |
 | rkyv checkpoint serialization     | O(1) load vs O(N) serde       | Merged     |
 
-### 10.3 Architectural Notes
+### 20.10.3 Architectural Notes
 
-All field buffers are owned by the stepper struct as `Vec<S>` where `S: Scalar`. The `Scalar` trait is parameterized over `f32` / `f64` via const generics, enabling compile-time selection of precision without cloning the algorithm. GPU buffers are typed as `wgpu::Buffer` inside the `GpuPstdPipeline` struct and are never aliased across pipeline stages. The checkpoint system uses `rkyv::Archive` + `rkyv::Serialize` derive macros with `bytemuck::Pod` bounds to guarantee layout stability.
+Field buffers are owned by the stepper as `ndarray::Array3<f64>` / `Vec<f64>`: the CPU PSTD
+solver is **monomorphic `f64`** and the GPU path is **`f32`** (WGSL `array<f32>`). There is at
+present **no `Scalar` trait** abstracting precision — the two precision tiers are separate code
+paths, not one generic kernel. (A genuine zero-cost `Scalar`-trait genericization, per the
+project's architecture standards, is tracked as a future `[arch]` item — see backlog.) GPU
+buffers are typed `wgpu::Buffer` inside the GPU pipeline struct and are never aliased across
+stages. The checkpoint system uses `rkyv` archiving (`bytemuck::Pod` field bounds) to guarantee
+layout stability for the zero-copy restore.
 
 ---
 
-## 11. Benchmarks
+## 20.11 Benchmarks
 
-### 11.1 PSTD Throughput vs Grid Size (CPU, 16 threads, Ryzen 9 5950X)
+### 20.11.1 PSTD Throughput vs Grid Size (CPU, 16 threads, Ryzen 9 5950X)
 
 | Grid (*N*³)  | Steps | Wall time | Throughput (MVox/s) | Memory usage |
 |-------------|-------|-----------|---------------------|--------------|
@@ -394,9 +434,9 @@ All field buffers are owned by the stepper struct as `Vec<S>` where `S: Scalar`.
 | 256³        | 1000  | 82 s      | 204                 | 4.1 GB       |
 | 512³        | 500   | 1420 s    | 94                  | 32 GB        |
 
-Throughput remains approximately constant (200 MVox/s) for grids up to 256³, confirming memory-bandwidth-bound behavior (expected from the roofline analysis of Section 2). The 512³ case falls below this line because L3 cache capacity is exceeded and DRAM latency dominates.
+Throughput remains approximately constant (200 MVox/s) for grids up to 256³, confirming memory-bandwidth-bound behavior (expected from the roofline analysis of Section 20.2). The 512³ case falls below this line because L3 cache capacity is exceeded and DRAM latency dominates.
 
-### 11.2 GPU vs CPU Speedup (NVIDIA RTX 3080, N=256)
+### 20.11.2 GPU vs CPU Speedup (NVIDIA RTX 3080, N=256)
 
 | Kernel              | CPU (16T) | GPU      | Speedup |
 |---------------------|-----------|----------|---------|
@@ -409,9 +449,13 @@ Throughput remains approximately constant (200 MVox/s) for grids up to 256³, co
 
 The 14× speedup matches the project memory record (project_phased_array_parity.md: 14× speedup vs k-wave GPU comparison).
 
-### 11.3 Memory Usage vs Grid Size
+![GPU vs CPU per-kernel throughput at N = 256.](figures/ch19/fig03_gpu_cpu_throughput.png)
 
-The chart below (referenced as Figure 11.1) illustrates the memory savings from the absorptionkernel optimization:
+*Figure 20.4. GPU (RTX 3080) vs 16-thread CPU per-kernel step time at N = 256 (§20.11.2); the ~14× full-step speedup is consistent across pressure, velocity, CPML, and FFT kernels.*
+
+### 20.11.3 Memory Usage vs Grid Size
+
+The chart below (see Figure 20.3) illustrates the memory savings from the AbsorptionKernel optimization:
 
 ```
 Memory (MB)
@@ -428,9 +472,9 @@ Memory (MB)
 
 ---
 
-## 12. Profiling Guide
+## 20.12 Profiling Guide
 
-### 12.1 cargo flamegraph
+### 20.12.1 cargo flamegraph
 
 Install `cargo-flamegraph` (requires `perf` on Linux or DTrace on macOS):
 
@@ -451,7 +495,7 @@ The flame graph for the PSTD loop shows the following typical hot-path distribut
 | Sensor sampling            | 5%          |
 | Source injection           | 3%          |
 
-### 12.2 tracing Spans
+### 20.12.2 tracing Spans
 
 kwavers instruments the simulation loop with `tracing` spans at three granularities:
 
@@ -475,7 +519,7 @@ tracing::subscriber::set_global_default(guard.0).unwrap();
 
 Load `pstd_trace.json` in `chrome://tracing` or Perfetto UI to visualize per-step kernel timing.
 
-### 12.3 wgpu Timestamp Queries
+### 20.12.3 wgpu Timestamp Queries
 
 wgpu supports timestamp queries on adapters that expose `Features::TIMESTAMP_QUERY`:
 
@@ -495,21 +539,25 @@ The timestamp period (nanoseconds per tick) is available via `queue.get_timestam
 
 ---
 
-## 13. Figure References
+## 20.13 Figure Index
 
-| Figure | Caption | Source |
-|--------|---------|--------|
-| 13.1   | Roofline diagram for PSTD pressure update (N=64–512) | Benchmark §11.1 |
-| 13.2   | Flamegraph: PSTD CPU 256³, 100 steps | cargo flamegraph output |
-| 13.3   | GPU vs CPU step time (log scale) | Benchmark §11.2 |
-| 13.4   | Memory usage vs N: baseline vs optimized | Benchmark §11.3 |
-| 13.5   | Checkpoint file layout (KWCP binary format) | Algorithm §9.1 |
+The figures embedded inline above are generated by
+`pykwavers/examples/book/ch19_performance_and_memory.py` into `docs/book/figures/ch19/`:
 
-Figures are generated by the benchmark harness in `kwavers/benches/` and stored as SVG in `docs/book/figures/`.
+| Figure | Caption | Section | File |
+|--------|---------|---------|------|
+| 20.1 | Roofline diagram for the PSTD pressure update | §20.2 | `fig01_roofline` |
+| 20.2 | Per-step FFT cost scaling Θ(N³ log N) | §20.3 | `fig05_fft_scaling` |
+| 20.3 | PSTD memory budget: baseline vs optimized | §20.7 | `fig02_memory_budget` |
+| 20.4 | GPU vs CPU per-kernel throughput | §20.11.2 | `fig03_gpu_cpu_throughput` |
+| 20.5 | Checkpoint load: rkyv zero-copy vs serde | §20.9 | `fig04_checkpoint_overhead` |
+
+A flamegraph (§20.12.1) and a KWCP-layout diagram (§20.9.1) are described in the text but not
+generated as standalone figures; see backlog.
 
 ---
 
-## 14. References
+## 20.14 References
 
 1. **Williams, S., Waterman, A., and Patterson, D.** (2009). Roofline: An Insightful Visual Performance Model for Multicore Architectures. *Communications of the ACM*, 52(4), 65–76.
 
@@ -537,4 +585,4 @@ Figures are generated by the benchmark harness in `kwavers/benches/` and stored 
 
 ---
 
-*Module ownership: `kwavers::solver::forward::pstd`, `kwavers::gpu`, `kwavers::domain::boundary::cpml`, `kwavers::solver::progress`. Chapter version: 0.4.0.*
+*Module ownership: `kwavers_solver::forward::pstd`, `kwavers_gpu`, `kwavers_boundary::cpml`, `kwavers_solver::interface`. Chapter version: 0.4.0.*

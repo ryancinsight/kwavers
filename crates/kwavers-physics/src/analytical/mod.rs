@@ -16,7 +16,8 @@
 //! | [`safety`] | Dosimetry, MI, TI, CEM43 | ch15 |
 //! | [`skull`] | Transcranial, CT-to-medium | ch16, ch25 |
 //! | [`photoacoustics`] | PA signal, spectroscopy | ch13 |
-//! | [`elastography`] | Shear waves, MRE | ch10 |
+//! | [`elastography`] | Shear waves, MRE, acousto-elastic | ch10 |
+//! | [`murnaghan`] | Third-order (Murnaghan) elastic constitutive law | ch10, ch11 |
 //! | [`imaging`] | PSF, Doppler, compounding, CEUS | ch05, ch24 |
 //! | [`thermal`] | Bioheat, HIFU, Beer-Lambert Q(z) | ch06 |
 //! | [`inverse`] | Tikhonov, Born inversion | ch17 |
@@ -29,6 +30,7 @@ pub mod cavitation;
 pub mod elastography;
 pub mod imaging;
 pub mod inverse;
+pub mod murnaghan;
 pub mod photoacoustics;
 pub mod pulse_echo;
 pub mod rtm;

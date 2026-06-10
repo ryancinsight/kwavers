@@ -219,7 +219,7 @@ mod tests {
     fn test_module_exports() {
         // Verify all types are accessible
         let _config = MetaLearningConfig::default();
-        let _sampling_strategy = SamplingStrategy::Random;
+        let _sampling_strategy = MetaLearningSamplingStrategy::Random;
         let _pde_type = PdeType::Wave;
         let _params = MetaLearningPhysicsParameters::default();
         let _data = TaskData::default();

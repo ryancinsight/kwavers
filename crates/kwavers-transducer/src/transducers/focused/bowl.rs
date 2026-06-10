@@ -26,6 +26,10 @@ pub use span::BowlAngularBounds;
 #[cfg(test)]
 mod tests;
 
+/// Discretized bowl surface: per-element centre positions, outward normals, and
+/// surface areas (parallel vectors, one entry per element).
+type BowlElements = (Vec<[f64; 3]>, Vec<[f64; 3]>, Vec<f64>);
+
 /// Configuration for a focused bowl transducer
 #[derive(Debug, Clone)]
 pub struct BowlConfig {
@@ -202,7 +206,7 @@ impl BowlTransducer {
     fn discretize_bowl(
         config: &BowlConfig,
         discretization: BowlDiscretization,
-    ) -> KwaversResult<(Vec<[f64; 3]>, Vec<[f64; 3]>, Vec<f64>)> {
+    ) -> KwaversResult<BowlElements> {
         let r = config.radius_of_curvature;
         let a = config.diameter / 2.0;
         let theta_max = (a / r).asin();

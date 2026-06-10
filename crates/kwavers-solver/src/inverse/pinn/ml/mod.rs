@@ -170,10 +170,6 @@ pub mod electromagnetic;
 #[cfg(feature = "pinn")]
 pub mod sonoluminescence_coupled;
 
-#[cfg(all(feature = "pinn", feature = "gpu"))]
-#[path = "electromagnetic_gpu/mod.rs"]
-pub mod electromagnetic_gpu;
-
 #[cfg(feature = "pinn")]
 pub mod universal_solver;
 
@@ -249,9 +245,6 @@ pub use electromagnetic::{EMProblemType, ElectromagneticBoundarySpec, Electromag
 
 #[cfg(feature = "pinn")]
 pub use sonoluminescence_coupled::{SonoluminescenceCoupledDomain, SonoluminescenceCouplingConfig};
-
-#[cfg(all(feature = "pinn", feature = "gpu"))]
-pub use electromagnetic_gpu::{EMConfig, EMFieldData, ElectromagneticBc, GPUEMSolver};
 
 #[cfg(feature = "pinn")]
 pub use universal_solver::{

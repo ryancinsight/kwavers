@@ -125,6 +125,85 @@ impl KelvinVoigtModel {
     pub fn attenuation(&self, omega: f64) -> f64 {
         self.complex_wavenumber(omega).im.abs()
     }
+
+    /// Shear viscosity `η_s` \[Pa·s].
+    #[must_use]
+    pub fn shear_viscosity(&self) -> f64 {
+        self.shear_viscosity
+    }
+
+    /// **Dispersion-fitting inversion** (shear-wave spectroscopy): recover a
+    /// Kelvin–Voigt model from measured shear-wave dispersion samples
+    /// `(ω, c_p, α)` and a known density.
+    ///
+    /// Per frequency the complex modulus is recovered model-agnostically via
+    /// [`recover_complex_modulus`] (`G* = ρ(ω/k)²`, `k = ω/c_p + iα`). For the
+    /// Kelvin–Voigt model `G* = μ + iωη_s`, so the storage part is the constant
+    /// `μ` and the loss part is `ωη_s`; the fit takes
+    /// `μ = ⟨Re G*⟩` and `η_s = ⟨Im G* / ω⟩` (the maximum-likelihood estimate
+    /// under i.i.d. sample noise). Returns `None` for empty input, non-positive
+    /// density, or a non-physical recovered `μ ≤ 0`.
+    ///
+    /// # References
+    /// - Catheline et al. (2004), *J. Acoust. Soc. Am.* 116(6) — inverse-problem
+    ///   viscoelastic recovery from transient elastography.
+    /// - Deffieux et al. (2009), *IEEE TMI* 28(3) — shear-wave spectroscopy.
+    #[must_use]
+    pub fn fit_dispersion(samples: &[DispersionSample], density: f64) -> Option<Self> {
+        if samples.is_empty() || density <= 0.0 {
+            return None;
+        }
+        let mut sum_mu = 0.0;
+        let mut sum_eta = 0.0;
+        let mut n = 0.0;
+        for s in samples {
+            if s.omega <= 0.0 {
+                continue;
+            }
+            let g = recover_complex_modulus(s.omega, s.phase_velocity, s.attenuation, density);
+            sum_mu += g.re; // G' = μ (frequency-independent for Kelvin–Voigt)
+            sum_eta += g.im / s.omega; // G'' = ωη_s ⇒ η_s = G''/ω
+            n += 1.0;
+        }
+        if n == 0.0 {
+            return None;
+        }
+        Self::new(sum_mu / n, (sum_eta / n).max(0.0), density)
+    }
+}
+
+/// A measured shear-wave dispersion sample for [`KelvinVoigtModel::fit_dispersion`].
+#[derive(Debug, Clone, Copy)]
+pub struct DispersionSample {
+    /// Angular frequency `ω` \[rad·s⁻¹].
+    pub omega: f64,
+    /// Measured phase velocity `c_p(ω)` \[m·s⁻¹].
+    pub phase_velocity: f64,
+    /// Measured attenuation `α(ω)` \[Np·m⁻¹].
+    pub attenuation: f64,
+}
+
+/// Recover the complex shear modulus `G*(ω)` \[Pa] from a measured phase
+/// velocity and attenuation (model-agnostic rheological inversion).
+///
+/// Inverts the dispersion relation `k = ω√(ρ/G*)` used by the forward models.
+/// On the physical branch `Im(k) < 0` for a dissipative `G* = μ + iωη_s`
+/// (`α = |Im k|`), so the measured complex wavenumber is `k = ω/c_p − iα` and
+/// `G* = ρ(ω/k)²`. For a lossless medium (`α = 0`) this returns the real
+/// `ρ c_p²`. Returns `0` for non-positive `ω`, `c_p`, or `ρ`.
+#[must_use]
+pub fn recover_complex_modulus(
+    omega: f64,
+    phase_velocity: f64,
+    attenuation: f64,
+    density: f64,
+) -> Complex64 {
+    if omega <= 0.0 || phase_velocity <= 0.0 || density <= 0.0 {
+        return Complex64::new(0.0, 0.0);
+    }
+    let k = Complex64::new(omega / phase_velocity, -attenuation);
+    let ratio = Complex64::new(omega, 0.0) / k;
+    Complex64::new(density, 0.0) * ratio * ratio
 }
 
 /// Standard linear solid (**Zener**) viscoelastic model — a spring in parallel
@@ -225,6 +304,141 @@ impl ZenerModel {
         }
         omega / k.re
     }
+
+    /// Shear-wave **attenuation** `α(ω) = |Im(k)|` \[Np·m⁻¹], `k = ω√(ρ/G*)`.
+    #[must_use]
+    pub fn attenuation(&self, omega: f64) -> f64 {
+        if omega == 0.0 {
+            return 0.0;
+        }
+        let ratio = Complex64::new(self.density, 0.0) / self.complex_modulus(omega);
+        (ratio.sqrt() * omega).im.abs()
+    }
+
+    /// Relaxed (low-frequency) shear modulus `G_r` \[Pa].
+    #[must_use]
+    pub fn relaxed_modulus(&self) -> f64 {
+        self.relaxed_modulus
+    }
+
+    /// Unrelaxed (high-frequency) shear modulus `G_u` \[Pa].
+    #[must_use]
+    pub fn unrelaxed_modulus(&self) -> f64 {
+        self.unrelaxed_modulus
+    }
+
+    /// Relaxation time `τ` \[s].
+    #[must_use]
+    pub fn relaxation_time(&self) -> f64 {
+        self.relaxation_time
+    }
+
+    /// **Dispersion-fitting inversion** of the Zener (standard-linear-solid)
+    /// model from measured shear-wave dispersion `(ω, c_p, α)` and density.
+    ///
+    /// # Separable least squares
+    ///
+    /// Per frequency the complex modulus `G*(ω_k)` is recovered via
+    /// [`recover_complex_modulus`]. For the Zener model the storage/loss parts
+    /// are, with `x = ωτ`,
+    /// `G' = G_r + Δ·x²/(1+x²)`, `G'' = Δ·x/(1+x²)`, `Δ = G_u − G_r`.
+    /// For a **fixed `τ`** both are *linear* in `(G_r, Δ)`, so the optimal
+    /// `(G_r, Δ)` is a closed-form 2×2 least-squares solve; the only nonlinear
+    /// parameter `τ` is found by a 1-D search (coarse logarithmic scan +
+    /// golden-section refinement) minimising the stacked `G'/G''` residual.
+    ///
+    /// Returns `None` for empty input, non-positive density, or a recovered
+    /// model that violates `0 < G_r ≤ G_u`.
+    ///
+    /// # References
+    /// - Catheline et al. (2004); Deffieux et al. (2009) — shear-wave spectroscopy.
+    #[must_use]
+    pub fn fit_dispersion(samples: &[DispersionSample], density: f64) -> Option<Self> {
+        if samples.is_empty() || density <= 0.0 {
+            return None;
+        }
+        // Recover G*(ω_k) once; the τ-search reuses these.
+        let moduli: Vec<(f64, f64, f64)> = samples
+            .iter()
+            .filter(|s| s.omega > 0.0)
+            .map(|s| {
+                let g = recover_complex_modulus(s.omega, s.phase_velocity, s.attenuation, density);
+                (s.omega, g.re, g.im) // (ω, G', G'')
+            })
+            .collect();
+        if moduli.len() < 2 {
+            return None;
+        }
+
+        // Residual of the best (G_r, Δ) for a given τ (separable LS).
+        let residual_at = |tau: f64| -> (f64, f64, f64) {
+            // Normal-equations accumulation for p = [G_r, Δ].
+            let (mut m00, mut m01, mut m11) = (0.0, 0.0, 0.0);
+            let (mut v0, mut v1) = (0.0, 0.0);
+            for &(omega, gp, gpp) in &moduli {
+                let x = omega * tau;
+                let denom = 1.0 + x * x;
+                let a = x * x / denom; // G' coefficient on Δ
+                let b = x / denom; // G'' coefficient on Δ
+                // G' equation: [1, a]·p = G'
+                m00 += 1.0;
+                m01 += a;
+                m11 += a * a;
+                v0 += gp;
+                v1 += a * gp;
+                // G'' equation: [0, b]·p = G''
+                m11 += b * b;
+                v1 += b * gpp;
+            }
+            let det = m00 * m11 - m01 * m01;
+            if det.abs() < 1e-30 {
+                return (f64::INFINITY, 0.0, 0.0);
+            }
+            let g_r = (v0 * m11 - v1 * m01) / det;
+            let delta = (m00 * v1 - m01 * v0) / det;
+            // Residual ‖G'_pred − G'‖² + ‖G''_pred − G''‖².
+            let mut res = 0.0;
+            for &(omega, gp, gpp) in &moduli {
+                let x = omega * tau;
+                let denom = 1.0 + x * x;
+                let gp_pred = (g_r) + delta * (x * x / denom);
+                let gpp_pred = delta * (x / denom);
+                res += (gp_pred - gp).powi(2) + (gpp_pred - gpp).powi(2);
+            }
+            (res, g_r, delta)
+        };
+
+        // Coarse logarithmic scan over τ ∈ [1e-6, 1] s (60 points), then refine.
+        let (lo_exp, hi_exp, steps) = (-6.0_f64, 0.0_f64, 60usize);
+        let mut best_tau = 10f64.powf(lo_exp);
+        let mut best_res = f64::INFINITY;
+        for i in 0..=steps {
+            let tau = 10f64.powf((hi_exp - lo_exp).mul_add(i as f64 / steps as f64, lo_exp));
+            let (res, _, _) = residual_at(tau);
+            if res < best_res {
+                best_res = res;
+                best_tau = tau;
+            }
+        }
+        // Golden-section refinement in the bracketing decade around best_tau.
+        let mut a = best_tau / 3.0;
+        let mut b = best_tau * 3.0;
+        const PHI_INV: f64 = 0.618_033_988_749_895;
+        let mut c = b - (b - a) * PHI_INV;
+        let mut d = a + (b - a) * PHI_INV;
+        for _ in 0..60 {
+            if residual_at(c).0 < residual_at(d).0 {
+                b = d;
+            } else {
+                a = c;
+            }
+            c = b - (b - a) * PHI_INV;
+            d = a + (b - a) * PHI_INV;
+        }
+        let tau = 0.5 * (a + b);
+        let (_, g_r, delta) = residual_at(tau);
+        ZenerModel::new(g_r, g_r + delta.max(0.0), tau, density)
+    }
 }
 
 #[cfg(test)]
@@ -239,6 +453,113 @@ mod tests {
     // Zener tissue: G_r = 2 kPa, G_u = 6 kPa, τ = 1 ms, ρ = 1000.
     fn zener() -> ZenerModel {
         ZenerModel::new(2000.0, 6000.0, 1.0e-3, 1000.0).unwrap()
+    }
+
+    /// `recover_complex_modulus` exactly inverts the forward dispersion: for a
+    /// Kelvin–Voigt model, `G*` recovered from its own `(c_p, α)` equals
+    /// `complex_modulus(ω)`.
+    #[test]
+    fn recover_complex_modulus_inverts_forward_dispersion() {
+        let kv = liver();
+        for &f in &[50.0, 100.0, 300.0, 800.0] {
+            let omega = std::f64::consts::TAU * f;
+            let g = recover_complex_modulus(
+                omega,
+                kv.phase_velocity(omega),
+                kv.attenuation(omega),
+                1000.0,
+            );
+            let truth = kv.complex_modulus(omega);
+            assert!(
+                (g - truth).norm() <= 1e-6 * truth.norm(),
+                "G* recovery at {f} Hz: {g} vs {truth}"
+            );
+        }
+        // Degenerate inputs → 0.
+        assert_eq!(
+            recover_complex_modulus(0.0, 2.0, 0.0, 1000.0),
+            num_complex::Complex64::new(0.0, 0.0)
+        );
+    }
+
+    /// Dispersion-fitting round-trip: synthetic `(ω, c_p, α)` from a known
+    /// Kelvin–Voigt model are inverted back to (μ, η_s) — shear-wave spectroscopy.
+    #[test]
+    fn fit_dispersion_recovers_known_kelvin_voigt_parameters() {
+        let truth = KelvinVoigtModel::new(4200.0, 2.3, 1000.0).unwrap(); // μ, η_s, ρ
+        let samples: Vec<DispersionSample> = [40.0, 80.0, 160.0, 320.0, 640.0]
+            .iter()
+            .map(|&f| {
+                let omega = std::f64::consts::TAU * f;
+                DispersionSample {
+                    omega,
+                    phase_velocity: truth.phase_velocity(omega),
+                    attenuation: truth.attenuation(omega),
+                }
+            })
+            .collect();
+
+        let fit = KelvinVoigtModel::fit_dispersion(&samples, 1000.0).expect("fit");
+        assert!(
+            (fit.storage_modulus(0.0) - 4200.0).abs() <= 1e-3 * 4200.0,
+            "μ recovered = {}",
+            fit.storage_modulus(0.0)
+        );
+        assert!(
+            (fit.shear_viscosity() - 2.3).abs() <= 1e-3 * 2.3,
+            "η_s recovered = {}",
+            fit.shear_viscosity()
+        );
+
+        // Empty input ⇒ None.
+        assert!(KelvinVoigtModel::fit_dispersion(&[], 1000.0).is_none());
+    }
+
+    /// Zener separable-LS dispersion fit recovers the three SLS parameters
+    /// `(G_r, G_u, τ)` from synthetic `(ω, c_p, α)` spanning the loss peak.
+    #[test]
+    fn zener_fit_dispersion_recovers_three_parameters() {
+        let truth = ZenerModel::new(2000.0, 6000.0, 1.0e-3, 1000.0).unwrap(); // G_r,G_u,τ,ρ
+        // Frequencies spanning ωτ ≈ 0.06 … 6 (around the ωτ=1 Debye peak).
+        let samples: Vec<DispersionSample> = [10.0, 30.0, 80.0, 160.0, 320.0, 640.0, 1000.0]
+            .iter()
+            .map(|&f| {
+                let omega = std::f64::consts::TAU * f;
+                DispersionSample {
+                    omega,
+                    phase_velocity: truth.phase_velocity(omega),
+                    attenuation: truth.attenuation(omega),
+                }
+            })
+            .collect();
+
+        let fit = ZenerModel::fit_dispersion(&samples, 1000.0).expect("zener fit");
+        assert!(
+            (fit.relaxed_modulus() - 2000.0).abs() <= 0.01 * 2000.0,
+            "G_r = {}",
+            fit.relaxed_modulus()
+        );
+        assert!(
+            (fit.unrelaxed_modulus() - 6000.0).abs() <= 0.01 * 6000.0,
+            "G_u = {}",
+            fit.unrelaxed_modulus()
+        );
+        assert!(
+            (fit.relaxation_time() - 1.0e-3).abs() <= 0.02 * 1.0e-3,
+            "τ = {}",
+            fit.relaxation_time()
+        );
+
+        // Recovered model reproduces the dispersion it was fit from.
+        for &f in &[20.0, 200.0, 800.0] {
+            let omega = std::f64::consts::TAU * f;
+            assert!(
+                (fit.phase_velocity(omega) - truth.phase_velocity(omega)).abs()
+                    <= 1e-2 * truth.phase_velocity(omega),
+                "c_p mismatch at {f} Hz"
+            );
+        }
+        assert!(ZenerModel::fit_dispersion(&[], 1000.0).is_none());
     }
 
     #[test]

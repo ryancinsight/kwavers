@@ -3,6 +3,9 @@ use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
 use ndarray::{Array1, Array2};
 use num_complex::Complex;
 
+/// `(Q, R)` factor pair from a complex QR decomposition.
+type ComplexQr = (Array2<Complex<f64>>, Array2<Complex<f64>>);
+
 impl EigenSolver {
     /// Verify hermitian.
     /// # Errors
@@ -35,7 +38,7 @@ impl EigenSolver {
     pub(super) fn qr_decomposition(
         matrix: &Array2<Complex<f64>>,
         n: usize,
-    ) -> KwaversResult<(Array2<Complex<f64>>, Array2<Complex<f64>>)> {
+    ) -> KwaversResult<ComplexQr> {
         let mut h = matrix.clone();
         let mut q = Array2::eye(n).mapv(|x| Complex::new(x, 0.0));
 

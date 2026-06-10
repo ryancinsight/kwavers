@@ -707,7 +707,7 @@ OUTPUT: Complex shear modulus map μ*[x,y,z]
 5.  Compute loss tangent: tan δ = μ''/μ'.
 ```
 
-Implementation: the algebraic local inversion $\mu = -\rho\omega^2 u_i/\nabla^2 u_i$ is the `direct` (Gauss-Seidel) method of `kwavers_solver::inverse::elastography::linear_methods::ShearWaveInversion`. A regularised global Helmholtz / LFE inversion is not yet implemented.
+Implementation: the algebraic local inversion $\mu = -\rho\omega^2 u_i/\nabla^2 u_i$ is the `direct` method of `kwavers_solver::inverse::elastography::linear_methods` — which is in fact a **regularised global Helmholtz** inversion: it minimises $J(k^2) = \lVert \nabla^2 u + k^2 u\rVert^2 + \lambda\lVert\nabla k^2\rVert^2$ by Gauss–Seidel (the $\lambda$ term is the smoothness regulariser). **Local Frequency Estimation** is also implemented (`InversionMethod::LocalFrequencyEstimation`, the windowed energy-ratio $|k|^2\approx\langle|\nabla u|^2\rangle/\langle u^2\rangle$, §11.7.3), alongside directional phase-gradient (Wang 2014) and 3-D time-of-flight methods.
 
 ![MRE harmonic displacement field](figures/ch10/fig05_mre_displacement.png)
 
@@ -848,8 +848,16 @@ functions `voigt_complex_modulus` / `voigt_shear_wave_dispersion` in
 viscosity (`kwavers_medium::viscous::ViscousProperties`); the frequency-domain constitutive
 models are in `kwavers_medium::viscoelastic` — `KelvinVoigtModel` (complex modulus, dispersion,
 attenuation, Q) and `ZenerModel` (standard linear solid: bounded dispersion between relaxed and
-unrelaxed moduli, Debye loss peak at ωτ=1). A dispersion-fitting inversion kernel is not yet
-implemented.
+unrelaxed moduli, Debye loss peak at ωτ=1). The **dispersion-fitting inversion** (shear-wave
+spectroscopy, Catheline 2004 / Deffieux 2009) is implemented: `recover_complex_modulus(ω,c_p,α,ρ)`
+inverts `G* = ρ(ω/k)²` (`k = ω/c_p − iα`) per frequency, and `KelvinVoigtModel::fit_dispersion`
+recovers `(μ, η_s)` from a set of `(ω, c_p, α)` samples (`μ=⟨\mathrm{Re}\,G^*⟩`,
+`η_s=⟨\mathrm{Im}\,G^*/ω⟩`). Verified by a forward→inverse round-trip recovering the known
+parameters to <0.1%. The **Zener three-parameter fit** `ZenerModel::fit_dispersion` is also
+implemented by **separable least squares**: for a fixed `τ` the storage/loss parts are linear in
+`(G_r, Δ=G_u-G_r)` (closed-form 2×2 solve), and the single nonlinear `τ` is found by a logarithmic
+scan + golden-section refinement of the stacked `G'/G''` residual; a round-trip recovers `(G_r, G_u,
+τ)` spanning the `ωτ=1` Debye peak to ≤2%.
 
 ---
 
@@ -918,11 +926,28 @@ OUTPUT: Pre-stress field σ_0[x, y, z, t_cardiac]
 inversion (Algorithm 11.4) are implemented in
 `kwavers_physics::analytical::elastography`: `acoustoelastic_sensitivity`
 (`A=(m+n)/(2(λ+μ))`), `acoustoelastic_shear_speed` (`c_S=√((μ+Aσ₀)/ρ)`), and
-`estimate_prestress` / `estimate_prestress_sequence` (`σ₀=ρ(c_S²−c_S0²)/A`) — ADR 014. The
-second-order `O(σ₀²)` terms and a full 3rd-order (Murnaghan) elastic-wave *PDE* solver remain;
-the available nonlinear forward path,
-`kwavers_solver::forward::elastic::nonlinear::NonlinearElasticWaveSolver`, uses hyperelastic
-constitutive models (Neo-Hookean, Mooney-Rivlin, Ogden) — a distinct formulation.
+`estimate_prestress` / `estimate_prestress_sequence` (`σ₀=ρ(c_S²−c_S0²)/A`) — ADR 014.
+
+The **Murnaghan third-order constitutive model** of §11.9.1 is now implemented in
+`kwavers_physics::analytical::murnaghan` (ADR 022): `MurnaghanConstants{λ,μ,l,m,n}` with the exact
+strain-energy density `W(E)` above, the second Piola–Kirchhoff stress
+`S = ∂W/∂E = [λ\,\mathrm{tr}E + l(\mathrm{tr}E)^2 + m\,\mathrm{tr}E^2]I + (2\mu+2m\,\mathrm{tr}E)E + 3nE^2`,
+the reference tangent (recovering Lamé `λ,μ`), and the **finite-strain material tangent**
+`\mathbb{C}(E)=\partial^2 W/\partial E^2 = \partial S/\partial E` (`material_tangent`). It uses the
+**same power-sum `(l,m,n)` convention** as §11.9.1 and `acoustoelastic_sensitivity`, so the constants
+are shared. Verified by value-semantic tests: St-Venant–Kirchhoff reduction (`l=m=n=0`), the
+linear/Hooke small-strain limit, the uniaxial closed form `S_{xx}=(\lambda+2\mu)e+(l+3m+3n)e^2`,
+energy–stress consistency `S=\partial W/\partial E` and tangent consistency
+`\mathbb{C}(E):H=\partial S/\partial E\cdot H` by finite difference, and tangent major symmetry.
+
+Two staged follow-ons remain (ADR 022): (1) the **small-on-large acousto-elastic acoustic tensor**
+`A^0_{ijkl}=\mathbb{C}(E_0)+\text{initial-stress geometric terms}` and the Christoffel eigenproblem
+linking this model to the first-order `A` and the `O(σ₀²)` terms — the material tangent (energy
+curvature) alone is insufficient; reproducing the specific `A=(m+n)/(2(λ+μ))` requires the
+Hughes-Kelly configuration assumptions plus the Thurston–Brugger geometric terms; (2) the
+**time-domain 3rd-order forward PDE** consuming the Murnaghan `S`. The separate hyperelastic path
+`kwavers_solver::forward::elastic::nonlinear::NonlinearElasticWaveSolver` (Neo-Hookean,
+Mooney-Rivlin, Ogden) is a distinct finite-strain formulation.
 
 ---
 
@@ -995,7 +1020,7 @@ At depth $> 5\,\text{cm}$ shear-wave SNR limits the usable frequency to below
 $300\,\text{Hz}$ in most clinical systems, giving resolution worse than $3\,\text{mm}$
 for normal liver and worse than $15\,\text{mm}$ for fibrotic liver.
 
-Implementation: the shear wavelength $\lambda_S = c_S/f$ follows directly from `kwavers_physics::analytical::elastography::shear_wave_speed`; no dedicated wavelength estimator is implemented.
+Implementation: the shear wavelength $\lambda_S = c_S/f$ follows directly from `kwavers_physics::analytical::elastography::shear_wave_speed` when $c_S$ is known. When it is not, $\lambda_S$ is estimated **directly from a displacement profile** by `kwavers_analysis::signal_processing::wavelength_estimation::estimate_shear_wavelength` — the (biased) spatial autocorrelation $R(m)\propto\cos(2\pi m\,dx/\lambda)$ has its first post-zero-crossing peak at lag $\lambda$, refined by parabolic interpolation. Value-semantic tests recover a known wavelength to <2% (sub-sample), are DC-offset-invariant, scale linearly with $\lambda$, and reject constant/monotone/too-short inputs.
 
 
 ---
@@ -1080,7 +1105,15 @@ OUTPUT: Per-ROI classification with confidence
 7.  Flag if ROI depth > 7 cm (SNR degradation risk) or ROI size < 2·λ_S (resolution limit).
 ```
 
-Implementation: the organ-specific staging cut-offs in §11.11 are reference tables; no dedicated elastography tissue classifier is implemented (the unrelated `kwavers_analysis::ml::models` classifier is a generic ML utility).
+Implementation: the **METAVIR liver-fibrosis classifier** of this algorithm is
+`kwavers_analysis::signal_processing::tissue_staging` — `classify_liver_fibrosis(μ_kPa)` and
+`classify_liver_fibrosis_from_speed(c_S, ρ)` map a shear modulus / shear-wave speed to a
+`FibrosisStage ∈ {F0…F4}` via the validated cut-offs (`METAVIR_SHEAR_MODULUS_CUTOFFS_KPA = [1.7, 2.9,
+4.8, 9.0]`, half-open intervals), and `classify_liver_roi(samples)` implements Algorithm 11.5's
+ROI logic (median stage + heterogeneity flag when `IQR > 0.3·median`). Value-semantic tests cover
+every stage, the boundary convention, the speed→μ path, and the heterogeneity flag. (The other-organ
+tables — prostate, thyroid, breast — remain reference data; the unrelated `kwavers_analysis::ml::models`
+classifier is a generic ML utility.)
 
 ---
 
@@ -1138,8 +1171,12 @@ Directional (f-k-style) filtering is provided by the
 `directional_phase_gradient_inversion()` method of `ShearWaveInversion`. The
 The Cramér–Rao expressions in §11.12.1–§11.12.2 are implemented in
 `kwavers_analysis::signal_processing::estimation_bounds` (`time_delay_crlb_variance`,
-`strain_crlb_std`, `shear_wave_speed_crlb_std`); bootstrap confidence intervals are not yet
-implemented.
+`strain_crlb_std`, `shear_wave_speed_crlb_std`). **Bootstrap confidence intervals** (the σ₀-map CI
+over the cardiac cycle, Algorithm 11.4 step 3) are implemented as `bootstrap_ci_mean(samples, level,
+n_resamples, seed) → BootstrapCi{point, lower, upper}` — the percentile bootstrap (Efron 1979) of
+the mean with a deterministic seeded PRNG (reproducible). Verified value-semantically: the CI
+brackets the point estimate, its half-width tracks the analytical standard error `1.96·σ/√N`, and it
+widens with sample spread and confidence level.
 
 ---
 
@@ -1174,9 +1211,14 @@ kwavers_medium
 kwavers_physics::analytical::elastography   (PyO3-exposed; generates the chapter figures)
 └── shear_wave_speed · voigt_complex_modulus · voigt_shear_wave_dispersion
 
+Implemented since first draft (formerly theory-only):
+  • Murnaghan third-order constitutive model (§11.9) — analytical::murnaghan (ADR 022); and the
+    first-order acousto-elastic pre-stress inversion — analytical::elastography::estimate_prestress
+    (ADR 014). Remaining: the small-on-large acousto-elastic tensor + time-domain 3rd-order PDE.
+  • bootstrap confidence intervals (§11.12) — estimation_bounds::bootstrap_ci_mean.
+  • METAVIR liver-fibrosis staging classifier (§11.11) — signal_processing::tissue_staging.
 Theory only — covered in this chapter but NOT yet implemented as kwavers kernels:
-  • Murnaghan third-order / acousto-elastic pre-stress inversion (§11.9);
-  • bootstrap confidence intervals (§11.12) and an organ-staging classifier (§11.11).
+  • prostate / thyroid / breast staging classifiers (§11.11) remain reference tables.
 ```
 
 ### 11.13.2 Data Flow

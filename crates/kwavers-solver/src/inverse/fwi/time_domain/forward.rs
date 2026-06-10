@@ -15,7 +15,7 @@
 //!   CPML is embedded in `PSTDConfig::boundary` at construction time so no
 //!   separate `enable_cpml` call is needed.
 
-use super::{geometry::FwiGeometry, FwiProcessor};
+use super::{geometry::FwiGeometry, self_adjoint, FwiEngine, FwiProcessor};
 use crate::config::SolverType;
 use crate::interface::Solver;
 use kwavers_boundary::cpml::{CPMLConfig, PerDimensionPML};
@@ -24,6 +24,16 @@ use kwavers_grid::Grid;
 use kwavers_medium::heterogeneous::HeterogeneousFactory;
 use kwavers_source::GridSource;
 use ndarray::{s, Array2, Array3, Array4};
+
+/// A boxed forward solver paired with its grid dimensions and validated time step.
+type ForwardSolverBundle = (Box<dyn Solver>, (usize, usize, usize), f64);
+/// Self-adjoint acquisition parts: source voxels, source signal, receiver voxels
+/// (voxel lists in the recorder's Fortran order).
+type SelfAdjointGeometryParts = (
+    Vec<(usize, usize, usize)>,
+    Array2<f64>,
+    Vec<(usize, usize, usize)>,
+);
 
 impl FwiProcessor {
     /// Generate receiver-time synthetic data for a model and acquisition geometry.
@@ -73,7 +83,7 @@ impl FwiProcessor {
         model: &Array3<f64>,
         geometry: &FwiGeometry,
         grid: &Grid,
-    ) -> KwaversResult<(Box<dyn Solver>, (usize, usize, usize), f64)> {
+    ) -> KwaversResult<ForwardSolverBundle> {
         geometry.validate(grid, self.parameters.nt)?;
         let dt = self.validate_time_step(model, grid)?;
         let (nx, ny, nz) = grid.dimensions();
@@ -234,6 +244,9 @@ impl FwiProcessor {
         geometry: &FwiGeometry,
         grid: &Grid,
     ) -> KwaversResult<(Array2<f64>, Array4<f64>)> {
+        if self.engine == FwiEngine::SecondOrderSelfAdjoint {
+            return self.forward_model_self_adjoint(model, geometry, grid);
+        }
         let (mut solver, (nx, ny, nz), _dt) =
             self.build_solver_for_forward(model, geometry, grid)?;
 
@@ -279,6 +292,9 @@ impl FwiProcessor {
         geometry: &FwiGeometry,
         grid: &Grid,
     ) -> KwaversResult<Array2<f64>> {
+        if self.engine == FwiEngine::SecondOrderSelfAdjoint {
+            return self.forward_model_sensor_only_self_adjoint(model, geometry, grid);
+        }
         let (mut solver, _dims, _dt) = self.build_solver_for_forward(model, geometry, grid)?;
 
         for _ in 0..self.parameters.nt {
@@ -294,4 +310,207 @@ impl FwiProcessor {
 
         Ok(synthetic)
     }
+}
+
+/// Self-adjoint engine adapters (ADR 016): translate [`FwiGeometry`] into the
+/// engine's [`self_adjoint::Acquisition`] and drive the exact-gradient engine.
+impl FwiProcessor {
+    fn sa_config(&self) -> self_adjoint::SelfAdjointConfig {
+        self_adjoint::SelfAdjointConfig {
+            nt: self.parameters.nt,
+            dt: self.parameters.dt,
+        }
+    }
+
+    /// Extract `(source_voxels, source_signal, receiver_voxels)` from the
+    /// geometry. Both voxel lists use the recorder's Fortran order
+    /// (`collect_fortran_indices`), so the self-adjoint synthetic rows align
+    /// with the `Box<dyn Solver>` recorder convention and the residual produced
+    /// by [`FwiProcessor::compute_adjoint_source`] maps row-for-row.
+    fn sa_geometry_parts(&self, geometry: &FwiGeometry) -> KwaversResult<SelfAdjointGeometryParts> {
+        let source_mask = geometry.source.p_mask.as_ref().ok_or_else(|| {
+            KwaversError::Validation(ValidationError::ConstraintViolation {
+                message: "self-adjoint FWI requires a pressure source mask".to_owned(),
+            })
+        })?;
+        let signal = geometry.source.p_signal.as_ref().ok_or_else(|| {
+            KwaversError::Validation(ValidationError::ConstraintViolation {
+                message: "self-adjoint FWI requires a pressure source signal".to_owned(),
+            })
+        })?;
+        let (nx, ny, nz) = source_mask.dim();
+        let mut source_voxels = Vec::new();
+        for k in 0..nz {
+            for j in 0..ny {
+                for i in 0..nx {
+                    if source_mask[[i, j, k]] > 0.5 {
+                        source_voxels.push((i, j, k));
+                    }
+                }
+            }
+        }
+        let receiver_voxels = FwiGeometry::collect_fortran_indices(&geometry.sensor_mask);
+        Ok((source_voxels, signal.clone(), receiver_voxels))
+    }
+
+    /// Forward self-adjoint model returning `(synthetic, history)`.
+    /// # Errors
+    /// - Propagates validation/solve errors from the self-adjoint engine.
+    pub(super) fn forward_model_self_adjoint(
+        &self,
+        model: &Array3<f64>,
+        geometry: &FwiGeometry,
+        grid: &Grid,
+    ) -> KwaversResult<(Array2<f64>, Array4<f64>)> {
+        geometry.validate(grid, self.parameters.nt)?;
+        let density = self.resolved_density(grid)?;
+        let (src_voxels, signal, recv_voxels) = self.sa_geometry_parts(geometry)?;
+        let acq = self_adjoint::Acquisition {
+            source_voxels: &src_voxels,
+            source_signal: signal.view(),
+            receiver_voxels: &recv_voxels,
+        };
+        self_adjoint::forward(
+            model.view(),
+            density.view(),
+            grid,
+            &self.sa_config(),
+            &acq,
+            self.sa_damping.as_ref().map(ndarray::ArrayBase::view),
+        )
+    }
+
+    /// Sensor-only self-adjoint forward (no history).
+    /// # Errors
+    /// - Propagates validation/solve errors from the self-adjoint engine.
+    pub(super) fn forward_model_sensor_only_self_adjoint(
+        &self,
+        model: &Array3<f64>,
+        geometry: &FwiGeometry,
+        grid: &Grid,
+    ) -> KwaversResult<Array2<f64>> {
+        geometry.validate(grid, self.parameters.nt)?;
+        let density = self.resolved_density(grid)?;
+        let (src_voxels, signal, recv_voxels) = self.sa_geometry_parts(geometry)?;
+        let acq = self_adjoint::Acquisition {
+            source_voxels: &src_voxels,
+            source_signal: signal.view(),
+            receiver_voxels: &recv_voxels,
+        };
+        self_adjoint::forward_sensor_only(
+            model.view(),
+            density.view(),
+            grid,
+            &self.sa_config(),
+            &acq,
+            self.sa_damping.as_ref().map(ndarray::ArrayBase::view),
+        )
+    }
+
+    /// Exact reduced gradient via the self-adjoint engine.
+    ///
+    /// `residual` is the misfit-specific adjoint source `∂J/∂d` in recorder
+    /// (Fortran) row order, as returned by
+    /// [`FwiProcessor::compute_adjoint_source`] — for L2 this is `d_syn − d_obs`
+    /// (un-reversed; the engine performs the backward sweep internally).
+    /// # Errors
+    /// - Propagates validation/solve errors from the self-adjoint engine.
+    pub(super) fn adjoint_gradient_self_adjoint(
+        &self,
+        residual: &Array2<f64>,
+        model: &Array3<f64>,
+        geometry: &FwiGeometry,
+        grid: &Grid,
+        forward_history: &Array4<f64>,
+        source_mask: Option<&Array3<f64>>,
+    ) -> KwaversResult<Array3<f64>> {
+        let density = self.resolved_density(grid)?;
+        let (src_voxels, signal, recv_voxels) = self.sa_geometry_parts(geometry)?;
+        let acq = self_adjoint::Acquisition {
+            source_voxels: &src_voxels,
+            source_signal: signal.view(),
+            receiver_voxels: &recv_voxels,
+        };
+        self_adjoint::gradient(
+            residual.view(),
+            model.view(),
+            density.view(),
+            grid,
+            &self.sa_config(),
+            &acq,
+            forward_history.view(),
+            source_mask.map(ndarray::ArrayBase::view),
+            self.sa_damping.as_ref().map(ndarray::ArrayBase::view),
+        )
+    }
+
+    /// Memory-efficient lossless self-adjoint forward: returns
+    /// `(synthetic, p_last, p_second_last)` keeping only the final two states
+    /// (`O(N)`) for the reverse-reconstruction gradient. Only valid without a
+    /// sponge (`sa_damping.is_none()`).
+    /// # Errors
+    /// - Propagates validation/solve errors from the self-adjoint engine.
+    pub(super) fn forward_model_self_adjoint_tail(
+        &self,
+        model: &Array3<f64>,
+        geometry: &FwiGeometry,
+        grid: &Grid,
+    ) -> KwaversResult<(Array2<f64>, Array3<f64>, Array3<f64>)> {
+        geometry.validate(grid, self.parameters.nt)?;
+        let density = self.resolved_density(grid)?;
+        let (src_voxels, signal, recv_voxels) = self.sa_geometry_parts(geometry)?;
+        let acq = self_adjoint::Acquisition {
+            source_voxels: &src_voxels,
+            source_signal: signal.view(),
+            receiver_voxels: &recv_voxels,
+        };
+        self_adjoint::forward_tail(model.view(), density.view(), grid, &self.sa_config(), &acq)
+    }
+
+    /// Exact reduced gradient via the lossless reverse-reconstruction path
+    /// (`O(N)` memory; identical result to [`Self::adjoint_gradient_self_adjoint`]).
+    /// Seeded by the final two forward states from
+    /// [`Self::forward_model_self_adjoint_tail`].
+    /// # Errors
+    /// - Propagates validation/solve errors from the self-adjoint engine.
+    pub(super) fn adjoint_gradient_self_adjoint_reconstructed(
+        &self,
+        residual: &Array2<f64>,
+        model: &Array3<f64>,
+        geometry: &FwiGeometry,
+        grid: &Grid,
+        seed: ReconstructionSeed<'_>,
+        source_mask: Option<&Array3<f64>>,
+    ) -> KwaversResult<Array3<f64>> {
+        let density = self.resolved_density(grid)?;
+        let (src_voxels, signal, recv_voxels) = self.sa_geometry_parts(geometry)?;
+        let acq = self_adjoint::Acquisition {
+            source_voxels: &src_voxels,
+            source_signal: signal.view(),
+            receiver_voxels: &recv_voxels,
+        };
+        self_adjoint::gradient_reconstructed(
+            residual.view(),
+            model.view(),
+            density.view(),
+            grid,
+            &self.sa_config(),
+            &acq,
+            seed.p_last.view(),
+            seed.p_second_last.view(),
+            source_mask.map(ndarray::ArrayBase::view),
+        )
+    }
+}
+
+/// The final two forward wavefield states `(p^{N-1}, p^{N-2})` that seed the
+/// lossless reverse reconstruction (see
+/// [`FwiProcessor::adjoint_gradient_self_adjoint_reconstructed`]). Bundling the
+/// pair keeps the gradient call signature within the argument-count budget and
+/// names the reconstruction-seed concept explicitly.
+pub(super) struct ReconstructionSeed<'a> {
+    /// Final forward state `p^{N-1}`.
+    pub p_last: &'a Array3<f64>,
+    /// Penultimate forward state `p^{N-2}`.
+    pub p_second_last: &'a Array3<f64>,
 }

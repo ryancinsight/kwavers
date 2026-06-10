@@ -103,7 +103,7 @@ fn test_set_sampling_switches_mode_idempotently() {
 fn test_uniform_sampling_empirical_histogram_is_flat() {
     let sampler = make_cube_sampler();
     let device = Default::default();
-    let mut counts = vec![0usize; sampler.len()];
+    let counts = vec![0usize; sampler.len()];
     let n_batches = 50usize;
     let batch_size = 256usize;
     for step in 0..n_batches {

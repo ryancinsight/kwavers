@@ -18,6 +18,7 @@
 
 pub mod cavitation;
 pub mod lithotripsy;
+pub mod neuromodulation;
 pub mod sonogenetics;
 
 // Re-exports

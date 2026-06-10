@@ -1,5 +1,7 @@
 use super::super::config::Beamforming3dApodizationWindow;
 use super::super::processor::BeamformingProcessor3D;
+#[cfg(feature = "gpu")]
+use kwavers_core::error::KwaversError;
 use kwavers_core::error::KwaversResult;
 use ndarray::{Array3, Array4};
 

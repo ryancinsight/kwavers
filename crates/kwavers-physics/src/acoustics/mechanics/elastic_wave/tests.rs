@@ -8,10 +8,8 @@
 use crate::acoustics::mechanics::elastic_wave::{
     mode_conversion::{ModeConversionConfig, ViscoelasticConfig},
     properties::AnisotropicElasticProperties,
-    spectral_fields::SpectralStressFields,
     ElasticWave,
 };
-use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_grid::Grid;
 use ndarray::Array4;

@@ -82,10 +82,29 @@ impl FwiProcessor {
         let mut x: Vec<f64> = model.iter().copied().collect();
         let mut g: Vec<f64> = grad_arr.iter().copied().collect();
 
+        // Convergence is judged RELATIVE to the initial gradient norm: the FWI
+        // gradient magnitude is problem-scale-dependent (e.g. the self-adjoint
+        // engine's dt²·ρc² source injection yields ‖g‖∞ ~ 1e-18 for unit-amplitude
+        // data), so an absolute floor would falsely report "zero gradient" and
+        // stall immediately. A finite, strictly-positive `g0_inf` is guaranteed by
+        // the non-stationary-start check below.
+        let g0_inf = inf_norm(&g);
+        const GRAD_REL_TOL: f64 = 1e-8;
+        if g0_inf <= f64::MIN_POSITIVE {
+            log::info!("FWI(L-BFGS): initial gradient is identically zero, stopping");
+            return Array3::from_shape_vec(dim, x).map_err(|e| {
+                KwaversError::Validation(ValidationError::ConstraintViolation {
+                    message: format!("L-BFGS model reshape failed: {e}"),
+                })
+            });
+        }
+
         for iteration in 0..self.parameters.max_iterations {
             let g_inf = inf_norm(&g);
-            if g_inf <= f64::EPSILON {
-                log::info!("FWI(L-BFGS) iter {iteration}: zero gradient, stopping");
+            if g_inf <= GRAD_REL_TOL * g0_inf {
+                log::info!(
+                    "FWI(L-BFGS) iter {iteration}: gradient reduced below {GRAD_REL_TOL:e}·‖g₀‖∞, stopping"
+                );
                 break;
             }
 

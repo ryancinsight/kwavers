@@ -15,8 +15,9 @@ mod tests;
 mod therapy_delivery;
 
 pub use dynamics::{
-    blake_threshold_pa, keller_miksis_rk4, keller_miksis_shelled_rk4, minnaert_resonance_hz,
-    rayleigh_collapse_time_s, rayleigh_plesset_rk4,
+    blake_threshold_pa, keller_miksis_rk4, keller_miksis_shelled_rk4,
+    minnaert_resonance_corrected_hz, minnaert_resonance_hz, rayleigh_collapse_time_s,
+    rayleigh_plesset_rk4,
 };
 pub use histotripsy::{
     cumulative_cavitation_probability, frequency_dependent_intrinsic_threshold_pa,
@@ -38,10 +39,11 @@ pub use sonication::{
     received_signal_fraction, SonicationOrder, SonicationSchedule,
 };
 pub use swept_frequency::{
-    chirped_keller_miksis_rk4, chirped_peak_expansion_ratio, inter_pulse_residual_clearance,
-    monochromatic_engaged_fraction, residual_dissolution_time_s, swept_engaged_fraction,
-    swept_vs_monochromatic_engagement, tissue_gas_diffusion, CavitationMedium, EngagementConfig,
-    EngagementResult, FrequencySweep, InterPulseClearance, NucleiSizeDistribution, SweepProfile,
+    cavitation_optimal_frequency, chirped_keller_miksis_rk4, chirped_peak_expansion_ratio,
+    inter_pulse_residual_clearance, monochromatic_engaged_fraction, residual_dissolution_time_s,
+    staged_sonication_sweep, swept_engaged_fraction, swept_vs_monochromatic_engagement,
+    tissue_gas_diffusion, CavitationMedium, EngagementConfig, EngagementResult, FrequencySweep,
+    InterPulseClearance, NucleiSizeDistribution, StagedSonication, SweepProfile,
 };
 pub use therapy_delivery::{
     boiling_lesion_from_pressure_profile, boiling_time_profile_from_pressure,

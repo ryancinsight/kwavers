@@ -238,4 +238,3 @@ pub fn safe_steering_halfangle(steer_theta: &[f64], glr: &[f64], threshold: f64)
     }
     steer_theta[hi].abs().min(steer_theta[lo].abs())
 }
-

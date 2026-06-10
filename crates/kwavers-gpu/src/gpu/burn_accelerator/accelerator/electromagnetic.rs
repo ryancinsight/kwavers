@@ -6,6 +6,16 @@ use burn::tensor::Tensor;
 use kwavers_core::error::KwaversResult;
 use ndarray::Array3;
 
+/// The six electromagnetic field components `(Ex, Ey, Ez, Hx, Hy, Hz)` returned after a Yee step.
+type EmFieldComponents = (
+    Array3<f64>,
+    Array3<f64>,
+    Array3<f64>,
+    Array3<f64>,
+    Array3<f64>,
+    Array3<f64>,
+);
+
 impl<B: Backend> BurnGpuAccelerator<B> {
     /// Execute electromagnetic wave propagation on GPU (one Yee leap-frog step).
     ///
@@ -13,6 +23,8 @@ impl<B: Backend> BurnGpuAccelerator<B> {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
+    // Args are independent field arrays and scalar grid/step parameters with no cohesive grouping.
+    #[allow(clippy::too_many_arguments)]
     pub fn propagate_electromagnetic_wave(
         &self,
         ex: &Array3<f64>,
@@ -28,14 +40,7 @@ impl<B: Backend> BurnGpuAccelerator<B> {
         dx: f64,
         dy: f64,
         dz: f64,
-    ) -> KwaversResult<(
-        Array3<f64>,
-        Array3<f64>,
-        Array3<f64>,
-        Array3<f64>,
-        Array3<f64>,
-        Array3<f64>,
-    )> {
+    ) -> KwaversResult<EmFieldComponents> {
         let ex_t = self.array_to_tensor(ex);
         let ey_t = self.array_to_tensor(ey);
         let ez_t = self.array_to_tensor(ez);
@@ -66,6 +71,8 @@ impl<B: Backend> BurnGpuAccelerator<B> {
         ))
     }
 
+    // Args are independent field tensors and scalar grid/step parameters with no cohesive grouping.
+    #[allow(clippy::too_many_arguments)]
     fn update_magnetic_field(
         &self,
         hx: &Tensor<B, 3>,
@@ -91,6 +98,8 @@ impl<B: Backend> BurnGpuAccelerator<B> {
         (hx_new, hy_new, hz_new)
     }
 
+    // Args are independent field tensors and scalar grid/step parameters with no cohesive grouping.
+    #[allow(clippy::too_many_arguments)]
     fn update_electric_field(
         &self,
         ex: &Tensor<B, 3>,

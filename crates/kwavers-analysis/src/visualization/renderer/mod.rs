@@ -4,13 +4,11 @@
 
 pub mod gpu;
 pub mod isosurface;
-pub mod pipeline;
 pub mod uniforms;
 pub mod volume;
 
 pub use gpu::RendererGpuContext;
 pub use isosurface::IsosurfaceExtractor;
-pub use pipeline::{ComputePipeline, RenderPipeline};
 pub use uniforms::VolumeUniforms;
 pub use volume::VolumeRenderer;
 

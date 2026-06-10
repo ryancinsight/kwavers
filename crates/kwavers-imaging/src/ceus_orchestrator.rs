@@ -45,13 +45,16 @@ pub trait CEUSOrchestrator: Send + Sync + std::fmt::Debug {
     fn name(&self) -> &str;
 }
 
+/// Boxed factory closure constructing a CEUS orchestrator from a grid, medium,
+/// and two scalar parameters.
+type CeusOrchestratorCreator =
+    Box<dyn Fn(&Grid, &dyn Medium, f64, f64) -> KwaversResult<Box<dyn CEUSOrchestrator>>>;
+
 /// Factory for creating CEUS orchestrators
 ///
 /// Allows different implementations to be registered and instantiated at runtime.
 pub struct CEUSOrchestrators {
-    default_creator: Option<
-        Box<dyn Fn(&Grid, &dyn Medium, f64, f64) -> KwaversResult<Box<dyn CEUSOrchestrator>>>,
-    >,
+    default_creator: Option<CeusOrchestratorCreator>,
 }
 
 impl std::fmt::Debug for CEUSOrchestrators {

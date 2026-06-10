@@ -64,6 +64,9 @@ impl<B: AutodiffBackend> BurnPINNTrainer<B> {
     /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
     ///
+    // Independent training data arrays, hyperparameters, and a callback with no
+    // cohesive sub-grouping; bundling would not clarify the call site.
+    #[allow(clippy::too_many_arguments)]
     pub fn train_with_callback<F>(
         &mut self,
         x_data: &Array1<f64>,

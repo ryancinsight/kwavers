@@ -37,8 +37,6 @@ impl BeamformingProcessor3D {
         rf_data: &Array4<f32>,
         algorithm: &BeamformingAlgorithm3D,
     ) -> KwaversResult<Array3<f32>> {
-        use super::config::Beamforming3dApodizationWindow;
-
         let start_time = std::time::Instant::now();
         self.validate_input(rf_data)?;
 

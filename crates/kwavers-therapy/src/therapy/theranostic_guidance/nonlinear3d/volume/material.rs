@@ -2,6 +2,17 @@
 
 use ndarray::Array3;
 
+/// Per-voxel acoustic material maps for the nonlinear 3-D solver:
+/// `(sound speed, density, nonlinearity β, attenuation, power-law exponent y)`,
+/// all sharing the input CT volume shape.
+type MaterialMaps = (
+    Array3<f64>,
+    Array3<f64>,
+    Array3<f64>,
+    Array3<f64>,
+    Array3<f64>,
+);
+
 use super::super::super::AnatomyKind;
 use super::attenuation::{attenuation_np_per_m_mhz_from_hu, attenuation_power_law_y_from_hu};
 use kwavers_core::constants::acoustic_parameters::SOUND_SPEED_SKULL;
@@ -117,13 +128,7 @@ pub(super) fn material_maps(
     ct: &Array3<f64>,
     label: &Array3<i16>,
     body: &Array3<bool>,
-) -> (
-    Array3<f64>,
-    Array3<f64>,
-    Array3<f64>,
-    Array3<f64>,
-    Array3<f64>,
-) {
+) -> MaterialMaps {
     let speed = Array3::from_shape_fn(ct.dim(), |idx| {
         if body[idx] {
             speed_from_hu(anatomy, ct[idx], label[idx])

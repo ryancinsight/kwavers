@@ -36,14 +36,11 @@ pub struct ParamRanges {
 /// sampled ~the same total amount as the far rim); `2.0` further
 /// concentrates samples near the peak. Closes the focal-peak
 /// underprediction observed under uniform sampling.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub enum SamplingMode {
+    #[default]
     Uniform,
-    ImportanceByMagnitude { exponent: f32 },
-}
-
-impl Default for SamplingMode {
-    fn default() -> Self {
-        SamplingMode::Uniform
-    }
+    ImportanceByMagnitude {
+        exponent: f32,
+    },
 }

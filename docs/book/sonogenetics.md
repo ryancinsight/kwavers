@@ -1,7 +1,7 @@
 # Chapter 17: Sonogenetics: Acoustic Control of Genetically Encoded Mechanosensitive Systems
 
-> **Module ownership**: `kwavers::physics::acoustics::therapy::sonogenetics`,
-> `kwavers::clinical::therapy`, `kwavers::domain::therapy::microbubble`
+> **Module ownership**: `kwavers_physics::acoustics::therapy::sonogenetics`,
+> `kwavers_therapy::therapy::therapy_integration`, `kwavers_therapy::therapy::microbubble_dynamics`
 
 ---
 
@@ -31,8 +31,11 @@ The sonogenetic pipeline couples three physical layers:
    is integrated into a leaky integrate-and-fire (LIF) neuron model to predict spike
    probability and firing rate.
 
-The unique feature relative to pure transcranial focused ultrasound neuromodulation (Chapter
-10) is that genetically expressed channels provide cell-type specificity: neurons expressing
+![Sonogenetic transduction pipeline schematic.](figures/ch18/fig06_pipeline_schematic.png)
+
+*Figure 17.7. The transduction chain (§17.1.1): acoustic field → radiation force (`VolumetricArfField`) → membrane tension (Laplace, `compute_membrane_tension`) → channel gating (`boltzmann_p_open`) → ion current (`ion_current`) → LIF spike (`LifNeuron::step`).*
+
+The unique feature relative to pure transcranial focused ultrasound neuromodulation (Chapter 15) is that genetically expressed channels provide cell-type specificity: neurons expressing
 MscL-G22S, Piezo1, TRPC6, or hsTRPA1 respond selectively to acoustic stimulation, while
 unmodified cells in the same region remain quiescent.
 
@@ -120,6 +123,10 @@ increasing function of membrane tension. □
 
 Values from: Xian 2023; Li 2026; Cox 2016; Shimojo 2024; Hamill & Martinac 2001.
 
+![Boltzmann open probability vs membrane tension for the five channel variants at T = 310 K.](figures/ch18/fig01_channel_gating.png)
+
+*Figure 17.1. Two-state Boltzmann gating curves P_open(ΔT) (Eq. 17.1) for MscL-G22S/G22N, MscS, Piezo1, TRPC6 (`sonogenetics::channels::gating::boltzmann_p_open`); lower T_half shifts activation to lower tension.*
+
 ---
 
 ## 17.3 Theorem: Acoustic Radiation Force on a Cell — Yosioka–Kawasima Formula
@@ -191,9 +198,13 @@ motor protein — and is sufficient to gate mechanosensitive channels with picon
 gating thresholds.
 
 **kwavers implementation.** `VolumetricArfField` in
-`kwavers::physics::acoustics::therapy::sonogenetics::arf_field` implements equation (17.5)
+`kwavers_physics::acoustics::therapy::sonogenetics::arf_field` implements equation (17.5)
 by accumulating ⟨p²⟩ over complete acoustic cycles and computing F = 2·α·I/c at each voxel.
 The `finalize` method requires at least one accumulated pressure snapshot.
+
+![Volumetric acoustic radiation force density vs intensity / absorption.](figures/ch18/fig02_radiation_force.png)
+
+*Figure 17.2. ARF body-force density F_vol = 2αI/c (Eq. 17.5; `VolumetricArfField`) — the per-voxel force that loads the membrane.*
 
 ---
 
@@ -227,7 +238,7 @@ loading is valid when the acoustic period T_ac = 1/f ≫ τ_membrane (membrane r
 quasi-static approximation holds for f < 1 MHz in this context.
 
 **kwavers implementation.** `compute_membrane_tension` in
-`kwavers::physics::acoustics::therapy::sonogenetics::membrane` evaluates equation (17.6)
+`kwavers_physics::acoustics::therapy::sonogenetics::membrane` evaluates equation (17.6)
 element-wise:
 
 ```rust
@@ -271,7 +282,7 @@ where u is the streaming (dc) velocity and the right-hand side contains the time
 viscous body force. For a plane progressive wave, the body force per unit volume is
 
 ```text
-f_stream = 2α · I / c   [N/m³]   (same as the ARF density, eq. 11.5)
+f_stream = 2α · I / c   [N/m³]   (same as the ARF density, eq. 17.5)
 ```
 
 In the far field, balancing this body force against the viscous resistance ρ·ω_visc·v_s
@@ -287,6 +298,10 @@ P_mem(τ_s) = P_baseline · [1 + ΔP_max / (1 + exp(−k_τ · (τ_s − τ_half
 This enhanced permeability supports macromolecule uptake (sonoporation) and is exploited
 in gene delivery sonogenetics protocols combining focused ultrasound with viral vector or
 plasmid DNA injection.
+
+![Acoustic-streaming wall shear stress vs intensity, with the permeabilization threshold.](figures/ch18/fig03_streaming_shear.png)
+
+*Figure 17.3. Streaming wall shear stress τ_s (Eqs. 17.7–17.8) vs intensity; above τ_threshold ≈ 0.5 Pa membrane permeability rises (Eq. 17.9).*
 
 ---
 
@@ -317,6 +332,10 @@ channel is sub-threshold. Achieving P_rad ≈ 35 Pa requires I ≈ 52.5 kW/m² =
 is above safety limits for continuous exposure but achievable with pulsed protocols (duty
 cycle 1–5%).
 
+![Channel activation P_open vs I_SPPA for MscL-G22S, TRPC6, and hsTRPA1.](figures/ch18/fig05_activation_comparison.png)
+
+*Figure 17.4. Activation P_open vs spatial-peak pulse-average intensity for tension-gated (MscL-G22S, TRPC6) and pressure-gated (hsTRPA1) channels at R = 10 µm, c = 1500 m/s, T = 310 K.*
+
 ---
 
 ## 17.7 Theorem: Ion Current and Channel Density
@@ -338,7 +357,7 @@ P_open, the expected current is:
 ```
 
 **kwavers implementation.** `ion_current` in
-`kwavers::physics::acoustics::therapy::sonogenetics::channels::current` evaluates
+`kwavers_physics::acoustics::therapy::sonogenetics::channels::current` evaluates
 equation (17.11) element-wise for a given channel identity and open probability field.
 
 ---
@@ -391,6 +410,10 @@ CEM43 = 0.01 × 120 × 0.25^(43 − 37.022) = 1.2 × 0.25^5.978 ≈ 1.2 × 2.4×
 
 Well below the 0.1 min safety limit; the safety margin exceeds 300×.
 
+![Thermal-dose CEM43 vs duty cycle for three frequencies, with the 0.1-min safety threshold.](figures/ch18/fig04_safety_budget.png)
+
+*Figure 17.5. Sonogenetics thermal-safety budget (Eqs. 17.12–17.13): CEM43 vs duty cycle at 250 kHz / 500 kHz / 1 MHz for I_SPPA = 500 W/m²; the CEM43 = 0.1 min limit is overlaid.*
+
 ---
 
 ## 17.9 Algorithm: Sonogenetic Stimulation Protocol
@@ -405,8 +428,8 @@ Phase 1 — Parameter Validation
 1.  Look up C in MechanoChannel enum: retrieve A_gate, T_half, g_single, E_rev.
 2.  Compute MI = p_neg / √(f/10⁶):
     Require MI ≤ 1.9 (FDA general limit).
-    Require ΔT_brain < 0.5°C (equation 11.12).
-    Require CEM43 < 0.1 min (equation 11.13).
+    Require ΔT_brain < 0.5°C (equation 17.12).
+    Require CEM43 < 0.1 min (equation 17.13).
     If any constraint violated: reduce p_neg or DC until all satisfied.
 
 Phase 2 — Acoustic Field Computation
@@ -419,7 +442,7 @@ Phase 2 — Acoustic Field Computation
 
 Phase 3 — Membrane Biophysics
 8.  Compute P_rad(x) = I(x) / c(x).
-9.  Compute ΔT_membrane(x) = I(x) · R / (2·c(x))   [Laplace, eq. 11.6].
+9.  Compute ΔT_membrane(x) = I(x) · R / (2·c(x))   [Laplace, eq. 17.6].
 10. Select gating model for channel C:
     if Boltzmann:
         P_open(x) = boltzmann_p_open(ΔT_membrane, params_C, T_body_K)
@@ -435,8 +458,8 @@ Phase 4 — Neural Response
     Record spike_times[x] and firing_rate[x].
 
 Phase 5 — Safety Report
-13. Compute ΔT_skull (if transcranial: equation 10.15), ΔT_brain (equation 11.12).
-14. Compute CEM43 at all target and off-target voxels (equation 11.13).
+13. Compute ΔT_skull (if transcranial: equation 15.15), ΔT_brain (equation 17.12).
+14. Compute CEM43 at all target and off-target voxels (equation 17.13).
 15. Compute MI at focus.
 16. Output: P_open map, spike probability, CEM43 map, MI, ΔT_brain, ΔT_skull.
 ```
@@ -458,6 +481,10 @@ The lower frequency limit (250 kHz) is set by the minimum focal volume for milli
 targeting. The upper limit (650 kHz) balances skull transmission losses with focal resolution.
 In the absence of a skull (in vitro, or with a pre-existing craniotomy), frequencies up to
 2 MHz provide sub-millimetre resolution.
+
+![LIF spike raster across pulse duty cycles, with the firing-rate trend.](figures/ch18/fig07_lif_raster_vs_duty.png)
+
+*Figure 17.8. Duty-cycle dependence of the neural response: a pulsed sonogenetic ion current (10 Hz PRF) integrated by the Rust LIF neuron (`simulate_lif_neuron_py`) — higher duty cycle deposits more per-pulse charge, raising the spike count (raster, left) and firing rate (right).*
 
 ---
 
@@ -502,7 +529,7 @@ Output: required acoustic parameters {f, p_neg, DC} achieving I_ion = I_thresh
            = 4.7e-3 + (1.38e-23 × 310 / 6.5e-18) · ln(0.0198/0.9802)
            = 4.7e-3 + 6.57e-4 × (−3.91) = 4.7e-3 − 2.57e-3 = 2.13 mN/m.
 
-4.  From Laplace law (eq. 11.6): I_req = ΔT_req · 2c / R
+4.  From Laplace law (eq. 17.6): I_req = ΔT_req · 2c / R
         = 2.13e-3 × 2 × 1500 / 10e-6 = 6.39×10⁸ W/m².
     This is unreachable without focusing. Apply duty cycle DC = 1%:
         I_SPPA = I_req / DC = 6.39×10¹⁰ W/m². Still unphysical.
@@ -535,35 +562,38 @@ Output: required acoustic parameters {f, p_neg, DC} achieving I_ion = I_thresh
 
 | Module path | Functionality |
 |---|---|
-| `kwavers::physics::acoustics::therapy::sonogenetics::arf_field` | Volumetric ARF accumulation and computation |
-| `kwavers::physics::acoustics::therapy::sonogenetics::membrane` | Laplace membrane tension; radiation pressure |
-| `kwavers::physics::acoustics::therapy::sonogenetics::channels::gating` | Boltzmann and pressure-threshold P_open |
-| `kwavers::physics::acoustics::therapy::sonogenetics::channels::current` | Ion current calculation |
-| `kwavers::physics::acoustics::therapy::sonogenetics::channels::identity` | MechanoChannel enum, canonical parameters |
-| `kwavers::physics::acoustics::therapy::sonogenetics::channels::params` | BoltzmannGatingParams, PressureThresholdParams |
-| `kwavers::physics::acoustics::therapy::sonogenetics::channels::constants` | k_B, T_body_K |
-| `kwavers::physics::acoustics::therapy::sonogenetics::neuron` | LifNeuron, LifParams |
+| `kwavers_physics::acoustics::therapy::sonogenetics::arf_field` | Volumetric ARF accumulation and computation |
+| `kwavers_physics::acoustics::therapy::sonogenetics::membrane` | Laplace membrane tension; radiation pressure |
+| `kwavers_physics::acoustics::therapy::sonogenetics::channels::gating` | Boltzmann and pressure-threshold P_open |
+| `kwavers_physics::acoustics::therapy::sonogenetics::channels::current` | Ion current calculation |
+| `kwavers_physics::acoustics::therapy::sonogenetics::channels::identity` | MechanoChannel enum, canonical parameters |
+| `kwavers_physics::acoustics::therapy::sonogenetics::channels::params` | BoltzmannGatingParams, PressureThresholdParams |
+| `kwavers_physics::acoustics::therapy::sonogenetics::channels::constants` | `K_B` (re-exported); body temperature is `kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_K` |
+| `kwavers_physics::acoustics::therapy::sonogenetics::neuron` | LifNeuron, LifParams |
 
 ### 17.11.2 End-to-End Simulation Example
 
 ```rust
-use kwavers::physics::acoustics::therapy::sonogenetics::{
+use kwavers_physics::acoustics::therapy::sonogenetics::{
     VolumetricArfField,
     compute_membrane_tension, compute_radiation_pressure, CellMembraneParams,
     boltzmann_p_open, ion_current,
     MechanoChannel, BoltzmannGatingParams,
-    LifNeuron, LifParams, BODY_TEMP_K,
+    LifNeuron, LifParams,
 };
-use kwavers::solver::forward::pstd::PSTDSolver;
+use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_K;
+use kwavers_solver::forward::pstd::PSTDSolver;
 
-// 1. Build solver with tissue-specific medium
+// 1. Build solver with tissue-specific medium, add the focused source
+//    (constructed as an Arc<dyn Source>; see kwavers_source for array helpers).
 let mut solver = PSTDSolver::new(&medium, &grid_config, &solver_config)?;
-solver.add_focused_transducer(array_config, f_hz, p_neg_pa);
+solver.add_source_arc(focused_array_source);
 
-// 2. Accumulate ARF field over simulation
+// 2. Accumulate ARF field over the simulation, one step at a time
 let mut arf = VolumetricArfField::new(nx, ny, nz);
-for _step in solver.run_steps(n_steps) {
-    arf.accumulate(solver.pressure());
+for _ in 0..n_steps {
+    solver.step_forward()?;
+    arf.accumulate(solver.pressure_field());
 }
 arf.finalize(&medium.absorption, &medium.sound_speed, &medium.density)?;
 
@@ -577,7 +607,7 @@ let mscl_params = BoltzmannGatingParams {
     single_channel_conductance_s: 25e-12, // 25 pS
     reversal_potential_v: 0.0,         // non-selective cation
 };
-let p_open = boltzmann_p_open(&membrane_tension, &mscl_params, BODY_TEMP_K)?;
+let p_open = boltzmann_p_open(&membrane_tension, &mscl_params, BODY_TEMPERATURE_K)?;
 
 // 4. Ion current
 let n_channels: f64 = 1e7;
@@ -605,7 +635,7 @@ println!("Firing rate: {:.1} Hz", neuron.mean_firing_rate(t_son));
 
 ### 17.11.3 Parameter Validation
 
-`MechanoChannel` in `kwavers::physics::acoustics::therapy::sonogenetics::channels::identity`
+`MechanoChannel` in `kwavers_physics::acoustics::therapy::sonogenetics::channels::identity`
 holds the canonical parameter set for each channel variant. Before any simulation, parameters
 are validated:
 
@@ -619,7 +649,7 @@ with a `KwaversError::Validation` error.
 
 ### 17.11.4 Safety Checks in the Clinical Integration Layer
 
-`kwavers::clinical::therapy` orchestrates sonogenetics protocols and enforces:
+`kwavers_therapy::therapy::therapy_integration` orchestrates sonogenetics protocols and enforces:
 
 1. MI ≤ 1.9 at all skull voxels (computed from peak negative pressure map).
 2. CEM43 < 0.1 min at focus (computed from time-temperature integral).
@@ -628,7 +658,8 @@ with a `KwaversError::Validation` error.
 
 If any check fails, the protocol reduces duty cycle by 20% and re-evaluates. If the
 minimum duty cycle (0.1%) still fails thermal criteria, the protocol is rejected and
-returns a `ClinicalSafetyError`.
+returns a `KwaversError::Validation` (the workspace uses the unified `KwaversError`
+type; there is no separate `ClinicalSafetyError`).
 
 ---
 
@@ -702,8 +733,13 @@ current stimulation (tDCS). Potential targets:
 Combining focused ultrasound with acoustically responsive gene expression systems
 (mechanoresponsive promoters or viral capsids functionalized with acoustic contrast
 agents) enables spatially controlled gene delivery and expression. The sonogenetics
-pipeline in kwavers models the acoustic field component; the gene expression kinetics
-require coupling to a pharmacokinetic model (not implemented in the current version).
+pipeline in kwavers models the acoustic field component and now also the **downstream expression
+kinetics**: `kwavers_physics::analytical::sonogenetics::GeneExpressionKinetics` is the linear
+two-stage central-dogma / PK–PD cascade `dm/dt = β·a − δ_m m`, `dp/dt = κ·m − δ_p p`, driven by the
+acoustic channel-activation level `a(t)` (e.g. `hill_activation_probability` over a pulse train);
+`integrate` returns the mRNA/protein trajectory and `steady_state` the closed form
+`m_ss=βa/δ_m`, `p_ss=κβa/(δ_m δ_p)`. (Full molecular-biology promoter/capsid kinetics remain a
+research extension; this is the standard lumped linear model used for dose–response planning.)
 
 ### 17.13.3 Cell Sorting and Immune Cell Activation
 
@@ -726,20 +762,22 @@ channels at tumour sites, combining spatial targeting with immune activation.
 
 ---
 
-## 17.14 Figure References
+## 17.14 Figure Index
 
-- **Figure 17.1**: Sonogenetics pipeline schematic: acoustic field → ARF → membrane tension →
-  P_open → ion current → LIF spike. Located at `docs/book/figures/sonogenetics_pipeline.svg`.
-- **Figure 17.2**: Boltzmann P_open vs membrane tension for MscL-G22S, MscL-G22N, MscS,
-  Piezo1, TRPC6 at T = 310 K.
-- **Figure 17.3**: Acoustic radiation force body force density F(x) [N/m³] from a 500-kHz
-  focused transducer; 3D cross-section through focus.
-- **Figure 17.4**: LIF neuron response to sonogenetic drive: I_ion(t) (top), V_m(t) (middle),
-  raster plot of spikes vs pulse duty cycle (bottom).
-- **Figure 17.5**: Thermal safety budget: CEM43 vs duty cycle for three frequencies
-  (250 kHz, 500 kHz, 1 MHz) at I_SPPA = 500 W/m²; safety threshold CEM43 = 0.1 min overlaid.
-- **Figure 17.6**: Channel activation comparison: P_open vs I_SPPA for MscL-G22S, TRPC6,
-  and hsTRPA1 at R = 10 μm, c = 1500 m/s, T = 310 K.
+The figures embedded inline above are generated by `pykwavers/examples/book/ch18_sonogenetics.py`
+into `docs/book/figures/ch18/`:
+
+- **Figure 17.1** (§17.2): Boltzmann P_open vs membrane tension for the five channels
+  (`fig01_channel_gating`).
+- **Figure 17.2** (§17.3): volumetric ARF body-force density (`fig02_radiation_force`).
+- **Figure 17.3** (§17.5): acoustic-streaming wall shear stress vs intensity (`fig03_streaming_shear`).
+- **Figure 17.4** (§17.6): channel activation P_open vs I_SPPA for MscL-G22S / TRPC6 / hsTRPA1
+  (`fig05_activation_comparison`).
+- **Figure 17.5** (§17.8): thermal-safety budget CEM43 vs duty cycle (`fig04_safety_budget`).
+- **Figure 17.7** (§17.1.1): sonogenetic transduction pipeline schematic
+  (`fig06_pipeline_schematic`).
+- **Figure 17.8** (§17.9.1): LIF spike-raster vs duty cycle, driven by the Rust LIF neuron
+  (`fig07_lif_raster_vs_duty`).
 
 ---
 
@@ -824,5 +862,5 @@ channels at tumour sites, combining spatial targeting with immune activation.
 
 *Chapter authored for the kwavers ultrasound physics textbook series.
 Simulation results are reproducible via the example scripts in `pykwavers/examples/`
-using the `kwavers::physics::acoustics::therapy::sonogenetics` module and the
-PSTD solver backend (`kwavers::solver::forward::pstd`).*
+using the `kwavers_physics::acoustics::therapy::sonogenetics` module and the
+PSTD solver backend (`kwavers_solver::forward::pstd`).*

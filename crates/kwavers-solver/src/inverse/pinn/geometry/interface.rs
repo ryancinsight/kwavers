@@ -4,6 +4,12 @@ use ndarray::Array2;
 
 use kwavers_grid::geometry::{GeometricDomain, PointLocation};
 
+/// User-defined interface-residual closure: maps the two regions' field values,
+/// their 2×2 first-derivative tensors, and the interface normal to a scalar
+/// residual. `Send + Sync` so trained models remain shareable across threads.
+type InterfaceResidualFn =
+    Arc<dyn Fn(&[f64], &[f64], &[[f64; 2]; 2], &[[f64; 2]; 2], &[f64]) -> f64 + Send + Sync>;
+
 /// Interface condition specification for multi-region PINN training
 ///
 /// Defines how the neural network solution should behave at internal boundaries
@@ -26,11 +32,7 @@ pub enum PinnGeometryInterfaceCondition {
     AcousticElastic { fluid_density: f64 },
 
     /// Custom interface condition with user-defined residual function
-    Custom {
-        residual_fn: Arc<
-            dyn Fn(&[f64], &[f64], &[[f64; 2]; 2], &[[f64; 2]; 2], &[f64]) -> f64 + Send + Sync,
-        >,
-    },
+    Custom { residual_fn: InterfaceResidualFn },
 }
 
 impl std::fmt::Debug for PinnGeometryInterfaceCondition {

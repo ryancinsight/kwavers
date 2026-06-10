@@ -142,10 +142,11 @@ impl RealtimeSimulationOrchestrator {
             t += result.dt;
             step += 1;
 
-            if step % self.config.checkpoint_interval as u64 == 0 && self.config.enable_async_io {
-                if self.config.verbose {
-                    debug!("Checkpoint at step {} (time={:.3e})", step, t);
-                }
+            if step.is_multiple_of(self.config.checkpoint_interval as u64)
+                && self.config.enable_async_io
+                && self.config.verbose
+            {
+                debug!("Checkpoint at step {} (time={:.3e})", step, t);
             }
         }
 

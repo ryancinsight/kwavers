@@ -1099,9 +1099,13 @@ published experimental data:
 1. **Minnaert frequency:** `kwavers_analysis::validation::theorem_validation`
    checks that computed $f_0$ matches the large-bubble approximation (5.7)
    within $0.01\%$ across $R_0 \in [1, 100]\,\mu\text{m}$.
-   The full surface-tension correction (5.6) is not implemented;
-   for $R_0 \lesssim 1\,\mu\text{m}$ the discrepancy between (5.6) and (5.7)
-   exceeds $10\%$ and (5.6) must be used.
+   The full surface-tension correction (5.6) is implemented as
+   `kwavers_physics::analytical::cavitation::minnaert_resonance_corrected_hz`
+   ($f_0 = \frac{1}{2\pi R_0}\sqrt{[3\gamma P_0 + (3\gamma-1)\,2\sigma/R_0]/\rho}$,
+   reducing to (5.7) as $\sigma\to0$); for $R_0 \lesssim 1\,\mu\text{m}$ the
+   discrepancy between (5.6) and (5.7) exceeds $10\%$ and (5.6) must be used.
+   Value-semantic tests verify the $\sigma\to0$ reduction, the closed form, the
+   negligible large-bubble limit, and the $>10\%$ sub-micron correction.
 
 2. **Rayleigh collapse time:** Integration of (5.1) with zero gas pressure
    is compared to the analytical result (5.10); agreement within $0.1\%$ is

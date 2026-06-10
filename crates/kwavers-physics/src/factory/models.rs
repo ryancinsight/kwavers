@@ -34,6 +34,22 @@ pub enum PhysicsModelType {
     ThermalDiffusion { bioheat: bool, perfusion: bool },
     /// Optical propagation and absorption
     OpticalPropagation { scattering: bool, anisotropy: f64 },
+    /// Elastic (mechanical) stress–velocity propagation in a solid (λ, μ).
+    ///
+    /// Distinct from [`LinearAcoustics`](Self::LinearAcoustics): the shear
+    /// modulus `μ > 0` supports shear waves, which the acoustic-fluid path
+    /// cannot represent. See ADR 021.
+    MechanicalStress { wave_kind: ElasticWaveKind },
+}
+
+/// Elastic-wave propagation mode for [`PhysicsModelType::MechanicalStress`].
+///
+/// Additive-by-design: new modes (anisotropic, nonlinear) extend this enum
+/// without a breaking change to the acoustic capability surface.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ElasticWaveKind {
+    /// Isotropic linear elastic stress–velocity propagation (Lamé `λ`, `μ`).
+    Isotropic,
 }
 
 /// Acoustic solver types

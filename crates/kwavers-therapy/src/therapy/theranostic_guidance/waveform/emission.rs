@@ -87,6 +87,10 @@ const BAND_BANDWIDTH_FRACTION: f64 = 0.125;
 /// Returns [`KwaversError::InvalidInput`] if there are fewer than three
 /// receivers, no emission points, no grid points, no bands, a non-positive sound
 /// speed, or a non-positive fundamental frequency.
+// The acquisition geometry, configuration, point sets, and frequency parameters
+// are independent inputs with no cohesive sub-grouping; bundling them would add a
+// single-use struct without clarifying the passive-mapping call site.
+#[allow(clippy::too_many_arguments)]
 pub fn passive_acoustic_maps(
     prepared: &PreparedTheranosticSlice,
     layout: &DeviceLayout,

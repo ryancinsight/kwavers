@@ -9,6 +9,8 @@ impl NeuralNetworkShader {
     /// - Returns [`KwaversError::DimensionMismatch`] if the precondition for mismatched array or grid dimensions is violated.
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
+    // Args are independent data slices and scalar quantization/shape parameters with no cohesive grouping.
+    #[allow(clippy::too_many_arguments)]
     pub fn matmul(
         &self,
         input: &[f32],
@@ -183,6 +185,8 @@ impl NeuralNetworkShader {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
+    // Args are independent data slices and scalar quantization/shape parameters with no cohesive grouping.
+    #[allow(clippy::too_many_arguments)]
     pub(super) fn matmul_cpu_quantized(
         &self,
         input: &[f32],

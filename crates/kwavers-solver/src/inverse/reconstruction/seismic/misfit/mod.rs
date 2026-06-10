@@ -8,7 +8,9 @@
 
 mod envelope_phase;
 mod norm_metrics;
+mod pwls;
 mod types;
 mod wasserstein;
 
+pub use pwls::{trace_weights, weighted_l2_objective, weighted_l2_residual, DataWeighting};
 pub use types::{MisfitFunction, MisfitType};

@@ -195,8 +195,10 @@ impl Simulation {
         // i.e. a transparent/periodic boundary. Leaving it `None` (the previous
         // behaviour) silently fell back to the default ~20-cell absorbing PML
         // regardless of the requested `pml_size`.
-        let mut pml_config = KwaversPmlConfig::default();
-        pml_config.size = pml_size;
+        let pml_config = KwaversPmlConfig {
+            size: pml_size,
+            ..KwaversPmlConfig::default()
+        };
 
         Ok(Simulation {
             grid,

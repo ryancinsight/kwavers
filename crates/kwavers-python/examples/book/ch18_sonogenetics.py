@@ -280,6 +280,87 @@ def fig05_activation_comparison() -> None:
     plt.close(fig)
 
 
+# ── Figure 06: Sonogenetic transduction pipeline schematic ────────────────────
+def fig06_pipeline_schematic() -> None:
+    """Box-and-arrow schematic of the acoustic→mechanical→chemical→electrical chain."""
+    stages = [
+        ("Acoustic field\n$p(x,t)$", "PSTD / FDTD\nforward solve"),
+        ("Radiation force\n$F=2\\alpha I/c$", "$VolumetricArfField$"),
+        ("Membrane tension\n$\\Delta\\gamma=I R/2c$", "Laplace law\n$compute\\_membrane\\_tension$"),
+        ("Channel gating\n$P_{open}(\\Delta\\gamma)$", "Boltzmann\n$boltzmann\\_p\\_open$"),
+        ("Ion current\n$I_{ion}=gNAP_{open}\\Delta V$", "$ion\\_current$"),
+        ("LIF spike\n$V_m(t)\\to$ AP", "$LifNeuron::step$"),
+    ]
+    fig, ax = plt.subplots(figsize=(12, 3.2))
+    n = len(stages)
+    box_w, box_h, gap = 1.55, 1.0, 0.45
+    for i, (label, impl) in enumerate(stages):
+        x = i * (box_w + gap)
+        ax.add_patch(plt.Rectangle((x, 0), box_w, box_h, fill=True,
+                                   facecolor="#eaf2fb", edgecolor="#2b6cb0", lw=1.4))
+        ax.text(x + box_w / 2, box_h * 0.62, label, ha="center", va="center", fontsize=9)
+        ax.text(x + box_w / 2, box_h * 0.20, impl, ha="center", va="center",
+                fontsize=7, style="italic", color="#555")
+        if i < n - 1:
+            ax.annotate("", xy=(x + box_w + gap, box_h / 2), xytext=(x + box_w, box_h / 2),
+                        arrowprops=dict(arrowstyle="-|>", color="#c05621", lw=1.6))
+    ax.set_xlim(-0.2, n * (box_w + gap))
+    ax.set_ylim(-0.2, box_h + 0.2)
+    ax.axis("off")
+    ax.set_title("Sonogenetic transduction pipeline: acoustic → mechanical → chemical → electrical",
+                 fontsize=11)
+    fig.tight_layout()
+    savefig("fig06_pipeline_schematic")
+    plt.close(fig)
+
+
+# ── Figure 07: LIF spike raster vs duty cycle ─────────────────────────────────
+def fig07_lif_raster_vs_duty() -> None:
+    """LIF spike raster across pulse duty cycles, driven by a pulsed sonogenetic current.
+
+    The ion current is a square-pulse train (PRF fixed) whose ON fraction is the
+    duty cycle. simulate_lif_neuron_py (Rust LIF, Koch 1999) integrates V_m(t) and
+    returns spike times; higher duty cycle deposits more charge → more spikes.
+    """
+    if not _HAS_PYKWAVERS:
+        print("  [skip fig07] pykwavers unavailable")
+        return
+    dt_s = 1.0e-4
+    t_total = 1.0  # s
+    n = int(t_total / dt_s)
+    t = np.arange(n) * dt_s
+    prf = 10.0  # Hz pulse-repetition frequency
+    i_on = 4.0e-10  # A — supra-threshold on-pulse current
+    duty_cycles = [0.02, 0.05, 0.10, 0.20, 0.50]
+
+    fig, (ax_r, ax_n) = plt.subplots(1, 2, figsize=(12, 4.2),
+                                     gridspec_kw={"width_ratios": [2.2, 1]})
+    rates = []
+    for row, dc in enumerate(duty_cycles):
+        phase = (t * prf) % 1.0
+        i_ion = np.where(phase < dc, i_on, 0.0).astype(np.float64)
+        res = kw.simulate_lif_neuron_py(np.ascontiguousarray(i_ion), dt_s)
+        spikes = np.asarray(res["spike_times_s"], dtype=np.float64)
+        ax_r.vlines(spikes, row + 0.6, row + 1.4, color="#2b6cb0", lw=1.0)
+        rates.append(spikes.size / t_total)
+    ax_r.set_yticks(range(1, len(duty_cycles) + 1))
+    ax_r.set_yticklabels([f"{int(dc*100)}%" for dc in duty_cycles])
+    ax_r.set_xlabel("Time [s]")
+    ax_r.set_ylabel("Duty cycle")
+    ax_r.set_title("LIF spike raster vs duty cycle (10 Hz PRF, fixed on-current)")
+    ax_r.set_xlim(0, t_total)
+    ax_r.grid(True, axis="x", lw=0.3, alpha=0.5)
+
+    ax_n.plot([dc * 100 for dc in duty_cycles], rates, "o-", color="#c05621")
+    ax_n.set_xlabel("Duty cycle [%]")
+    ax_n.set_ylabel("Firing rate [Hz]")
+    ax_n.set_title("Rate vs duty cycle")
+    ax_n.grid(True, lw=0.3, alpha=0.5)
+    fig.tight_layout()
+    savefig("fig07_lif_raster_vs_duty")
+    plt.close(fig)
+
+
 if __name__ == "__main__":
     print("Generating Chapter 18 figures (Sonogenetics)...")
     fig01_channel_gating()
@@ -287,4 +368,6 @@ if __name__ == "__main__":
     fig03_streaming_shear()
     fig04_safety_budget()
     fig05_activation_comparison()
+    fig06_pipeline_schematic()
+    fig07_lif_raster_vs_duty()
     print("Done. Output: docs/book/figures/ch18/")

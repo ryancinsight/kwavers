@@ -79,9 +79,19 @@ pub struct PmutCell {
 impl PmutCell {
     /// Construct a PMUT cell; `None` for non-positive geometry.
     #[must_use]
-    pub fn new(radius: f64, piezo_thickness: f64, passive_thickness: f64, film: PiezoFilm) -> Option<Self> {
+    pub fn new(
+        radius: f64,
+        piezo_thickness: f64,
+        passive_thickness: f64,
+        film: PiezoFilm,
+    ) -> Option<Self> {
         if radius > 0.0 && piezo_thickness > 0.0 && passive_thickness > 0.0 {
-            Some(Self { radius, piezo_thickness, passive_thickness, film })
+            Some(Self {
+                radius,
+                piezo_thickness,
+                passive_thickness,
+                film,
+            })
         } else {
             None
         }
@@ -115,7 +125,8 @@ impl PmutCell {
             PiezoFilm::Aln => 3260.0,
             PiezoFilm::Pzt => 7600.0,
         };
-        (rho_film * self.piezo_thickness + SI_DENSITY * self.passive_thickness) / self.total_thickness()
+        (rho_film * self.piezo_thickness + SI_DENSITY * self.passive_thickness)
+            / self.total_thickness()
     }
 
     /// In-vacuo composite-plate resonance \[Hz].
@@ -154,14 +165,19 @@ impl PmutCell {
     pub fn coupling_k2(&self) -> f64 {
         const GEOMETRIC_FACTOR: f64 = 0.5;
         let e = self.film.e31f();
-        let k_mat2 = e * e / (VACUUM_PERMITTIVITY * self.film.rel_permittivity() * self.film.youngs());
+        let k_mat2 =
+            e * e / (VACUUM_PERMITTIVITY * self.film.rel_permittivity() * self.film.youngs());
         (GEOMETRIC_FACTOR * k_mat2).min(0.95)
     }
 
     /// Dielectric self-heating power `P = π f C V_ac² tan δ` \[W].
     #[must_use]
     pub fn self_heating_power(&self, drive_voltage_ac: f64, freq: f64) -> f64 {
-        PI * freq * self.capacitance() * drive_voltage_ac * drive_voltage_ac * self.film.loss_tangent()
+        PI * freq
+            * self.capacitance()
+            * drive_voltage_ac
+            * drive_voltage_ac
+            * self.film.loss_tangent()
     }
 
     /// Relative transmit sensitivity (output pressure per drive volt), `∝ e₃₁,f / t_p`.
@@ -175,7 +191,11 @@ impl PmutCell {
     pub fn radiation_q(&self, density_fluid: f64, sound_speed_fluid: f64) -> f64 {
         let f0 = self.immersion_resonance(density_fluid);
         let w0 = TAU * f0;
-        let m = plate::modal_mass(self.effective_density(), self.total_thickness(), self.radius);
+        let m = plate::modal_mass(
+            self.effective_density(),
+            self.total_thickness(),
+            self.radius,
+        );
         let ka = w0 * self.radius / sound_speed_fluid;
         let r_rad = density_fluid * sound_speed_fluid * self.area() * ka * ka / 2.0;
         if r_rad <= 0.0 {
@@ -187,7 +207,12 @@ impl PmutCell {
     /// Fluid-loading ratio `β = Γ ρ_f a/(ρ_eff t_total)` (composite areal mass).
     #[must_use]
     pub fn fluid_loading_beta(&self, density_fluid: f64) -> f64 {
-        plate::fluid_loading_beta(density_fluid, self.effective_density(), self.total_thickness(), self.radius)
+        plate::fluid_loading_beta(
+            density_fluid,
+            self.effective_density(),
+            self.total_thickness(),
+            self.radius,
+        )
     }
 
     /// −6 dB fractional bandwidth from fluid loading. PMUT plates are heavier and
@@ -212,7 +237,12 @@ impl PmutCell {
     /// radiation), `p = ρ c · ω · (w/V)·V` \[Pa]. Scales with drive — the
     /// transmit advantage of PMUTs for therapy.
     #[must_use]
-    pub fn max_output_pressure(&self, drive_voltage: f64, density_fluid: f64, sound_speed_fluid: f64) -> f64 {
+    pub fn max_output_pressure(
+        &self,
+        drive_voltage: f64,
+        density_fluid: f64,
+        sound_speed_fluid: f64,
+    ) -> f64 {
         let f = self.immersion_resonance(density_fluid);
         let w = self.deflection_per_volt() * drive_voltage;
         density_fluid * sound_speed_fluid * TAU * f * w

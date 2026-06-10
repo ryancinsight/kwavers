@@ -201,6 +201,9 @@ impl MetaLearningConfig {
     ///
     /// # Errors
     /// Returns error if any validation rule is violated
+    // Independent meta-learning hyperparameters and network dimensions with no
+    // cohesive sub-grouping; bundling would not clarify the call site.
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         inner_lr: f64,
         outer_lr: f64,

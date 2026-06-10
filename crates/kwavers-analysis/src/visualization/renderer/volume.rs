@@ -82,11 +82,7 @@ impl VolumeRenderer {
             .iter()
             .fold(0.0_f32, |acc, &v| acc.max(v.abs() as f32));
 
-        let step = if samples == 0 {
-            1
-        } else {
-            (nz / samples).max(1)
-        };
+        let step = nz.checked_div(samples).map_or(1, |q| q.max(1));
 
         for i in 0..nx {
             for j in 0..ny {

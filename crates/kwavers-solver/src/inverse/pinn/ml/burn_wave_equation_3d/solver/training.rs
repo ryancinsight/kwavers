@@ -47,6 +47,9 @@ impl<B: AutodiffBackend> BurnPINN3DWave<B> {
     /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
+    // Independent training data slices and hyperparameters with no cohesive
+    // sub-grouping; bundling would not clarify the call site.
+    #[allow(clippy::too_many_arguments)]
     pub fn train(
         &mut self,
         x_data: &[f32],

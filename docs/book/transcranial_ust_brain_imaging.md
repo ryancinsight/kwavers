@@ -1,6 +1,6 @@
 # Chapter 26 - Transcranial UST Brain Imaging
 
-> **Prerequisite:** Chapter 15 (Transcranial Ultrasound), Chapter 17
+> **Prerequisite:** Chapter 15 (Transcranial Ultrasound), Chapter 18
 > (Inverse Problems and PINNs), Chapter 24 (Transcranial HIFU and BBB
 > Treatment Planning), and Chapter 25 (Neuromodulation).
 
@@ -54,8 +54,8 @@ The executable chapter script is:
 The production implementation is not in the plotting script.  The computation is
 owned by:
 
-- `kwavers::clinical::imaging::reconstruction::transcranial_ust`
-- `pykwavers::run_transcranial_ust_volume_inversion_from_ritk_ct`
+- `kwavers_diagnostics::reconstruction::transcranial_ust`
+- `pykwavers.run_transcranial_ust_volume_inversion_from_ritk_ct`
 - `ritk-io` for CT NIfTI ingestion
 
 No SciPy, nibabel, or pydicom dependency is required for this chapter path.
@@ -244,6 +244,115 @@ transcranial examples.  The same CT grid also produces the attenuation map used
 by the acquisition model.  The skull remains fixed during inversion; only voxels
 in the CT-derived central brain mask are updated.
 
+### 26.4.1 Guidance-free skull-template alignment (MOFI)
+
+Freezing the CT skull presumes it is correctly *aligned* to the patient. In a
+clinical session the CT and the ultrasound cap are acquired separately, so the
+skull template carries a rigid pose error. The classical remedy registers the CT
+to a concurrent MRI guidance image; MOFI (manifold optimisation for FWI; Bates et
+al. 2026) removes that requirement by aligning the template using **only the
+acoustic data**. It minimises the FWI misfit over a low-dimensional rigid SE(2)
+reparametrisation of the template, $\varphi=\{\theta,\delta_1,\delta_2\}$, with the
+chained gradient $\partial J/\partial\varphi=(\partial c_\varphi/\partial\varphi)^\top\,\partial J/\partial c$
+evaluated on the exact self-adjoint gradient (Inverse-Problems chapter §2.5). The
+shipped pipeline (`inverse::fwi::time_domain::mofi`, ADR 017/018) composes a
+Wasserstein global pose search, a Wasserstein→envelope→L2 misfit homotopy
+(cycle-skipping-robust at large pose error), a block-coordinate sound-speed
+calibration that corrects the CT→speed mapping, and an optional cubic-B-spline
+free-form deformation for residual non-rigid mismatch. In silico it recovers a
+known pose to $<1°$ / $<1$ mm. Once the template is aligned and calibrated, the
+frozen-skull brain inversion below proceeds as described.
+
+The frozen-skull brain inversion can be further regularised with a **Plug-and-Play
+(PnP) prior** borrowed from medical-imaging reconstruction. Compressed-sensing MRI
+(Lustig et al. 2007) and model-based iterative CT (MBIR) reconstruct by alternating
+a data-fidelity step with an edge-preserving **denoiser** applied to the image
+estimate; the PnP framework (Venkatakrishnan et al. 2013) makes any such denoiser a
+drop-in proximal operator. Here the denoiser is the ROF total-variation proximal map
+solved by Chambolle's dual algorithm (`kwavers_math::inverse_problems::tv_denoise_chambolle`),
+alternated with short masked-FWI bursts and applied only to the updatable brain
+(the known skull is frozen and excluded from the difference stencils). As Figure
+26.12 shows, this removes high-frequency streak/checkerboard artefacts while
+preserving the lesion boundary, but it cannot remove the **coherent**
+limited-aperture artefacts that dominate the through-skull residual — priors
+complement, rather than replace, better data and misfits.
+
+The PnP prior is the *image-domain* half of MBIR; low-dose CT also teaches a
+*data-domain* lesson. Model-based iterative CT does not minimise an unweighted
+least-squares data misfit — it minimises a **penalized weighted least squares
+(PWLS)** objective `J = ½ (d − f(c))ᵀ W (d − f(c)) + β R(c)` with `W = diag(1/σ_i²)`,
+so that low-photon rays through dense bone — which are noise-dominated — are
+*down-weighted* instead of corrupting the reconstruction with equal authority
+(Sauer & Bouman 1993; Thibault et al. 2007). The transcranial ultrasound analogue
+is exact: traces that traverse the skull are strongly attenuated and noise-dominated,
+yet the default unweighted L2 FWI misfit lets every trace drive the gradient
+equally. Weighting each trace by its inverse noise variance is the maximum-likelihood
+estimator under heteroscedastic Gaussian noise (the Gauss–Markov / BLUE result).
+kwavers implements this as `FwiProcessor::with_data_weighting(DataWeighting::
+InverseNoiseVariance { noise_window })`, estimating each trace's noise level from a
+quiet pre-first-arrival window (there is no closed-form photon-count variance as in
+CT). A differential test (`pwls_robustness`) confirms that when a minority of
+channels is much noisier — faulty, poorly-coupled, or skull-shadowed elements — the
+PWLS reconstruction recovers the lesion contrast more accurately than the
+equally-weighted L2 reconstruction. The trade-off mirrors CT's: down-weighting
+noisy channels reduces effective aperture, so PWLS protects the
+quantity-of-interest where there is *redundant* coverage (thousands of CT rays;
+large clinical FWI arrays) but is not a free lunch on a sparse aperture.
+
+![MOFI guidance-free skull/brain reconstruction from acoustic data alone.](figures/ch27/fig08_mofi_skull_brain_reconstruction.png)
+
+*Figure 26.11. MOFI pose **identifiability/registration** verification (§26.4.1) —
+not a brain reconstruction. A 2-D head phantom (skull annulus 2600 m/s, brain
+1540 m/s with ventricles, falx, lesion) is placed at an unknown rigid pose
+(top-left); from the upright CT template (top-right) MOFI recovers the pose with a
+Wasserstein→envelope→L2 homotopy on the exact self-adjoint gradient
+(bottom-left), error map bottom-right. **Honesty note:** this is an idealised
+self-consistency test (an "inverse crime") — the data are generated by the same
+solver, grid, and template the inversion fits, and no noise is added, so a pose
+exists that drives the misfit to round-off ($8.9\times10^{-3}\!\to\!10^{-19}$;
+$\theta$ to $<0.01°$). It demonstrates that the rigid pose is **identifiable from
+acoustic data and that the exact-adjoint optimiser finds it** — the brain
+interior is taken from the template, not reconstructed. For a genuine
+brain-tissue reconstruction (unknown anomaly recovered from noisy data) see
+Figure 26.12.*
+
+![Genuine transcranial brain FWI with a Plug-and-Play prior: partial recovery of an unknown lesion from noisy data.](figures/ch27/fig09_brain_fwi_reconstruction.png)
+
+*Figure 26.12. **Genuine** transcranial brain-FWI reconstruction (contrast with
+the idealised Figure 26.11), generated by the Rust example
+`transcranial_brain_fwi` and rendered by `ch26_brain_fwi_reconstruction.py`. The
+skull (frozen to its known value) surrounds a homogeneous brain into which an
+unknown +160 m/s lesion is embedded (top-left). Starting from the homogeneous
+brain, pixel-wise masked FWI (`invert_multi_source_masked`, exact self-adjoint
+gradient, 8 shots, 5 % additive noise) recovers the lesion at the correct
+location but **only partially** — ≈64 % of its sound-speed contrast, RMS
+≈43 m/s over the brain, with realistic limited-aperture streak artefacts
+(top-right). The bottom-left panel adds a **Plug-and-Play (PnP) total-variation
+prior** — the canonical compressed-sensing-MRI / CT model-based iterative
+reconstruction regulariser (Lustig 2007; Venkatakrishnan 2013), here
+`kwavers_math::inverse_problems::tv_denoise_chambolle` — alternated with short
+masked-FWI bursts (7 bursts of 4 iterations, ROF weight 0.4). The
+prior–minus–plain difference (bottom-right) shows the PnP step removing
+**high-frequency** streak/checkerboard structure while preserving the lesion
+edge, but the net metric change is small (lesion ≈61 %, RMS ≈42 m/s): the
+residual is dominated by **coherent** limited-aperture artefacts that a
+denoising prior cannot remove. This is the honest behaviour of an ill-posed,
+limited-aperture, through-skull inversion — unlike the registration of Figure
+26.11 the misfit does **not** collapse to round-off, and full recovery would
+require lower-frequency data, more shots, multiscale continuation, and
+crime-free (cross-grid) data. The brain structure here is genuinely
+reconstructed from data, not copied from a template. The instructive conclusion:
+priors **complement** but do not **replace** better data and misfits in
+transcranial FWI.*
+
+![CT volume and 1024-element hemispherical acquisition geometry.](figures/ch27/fig01_ct_geometry.png)
+
+*Figure 26.1. CT-derived acquisition geometry (§26.3): the resampled head CT and the 1024-element hemispherical source/receiver cap.*
+
+![CT-derived acoustic model: skull/brain sound-speed and attenuation.](figures/ch27/fig02_acoustic_model.png)
+
+*Figure 26.2. CT-to-acoustic mapping (§26.4): the bone-volume-fraction skull speed $c_\mathrm{skull}(\mathrm{HU})$, brain sound-speed target, and attenuation map with the frozen skull / updatable brain masks.*
+
 ---
 
 ## 26.5 Optimization
@@ -292,12 +401,41 @@ checkerboard artifacts without imposing the CT target.  The
 chapter script repeats the run over an iteration schedule and keeps the first
 run that satisfies the visible-reconstruction contract.
 
+For a time-domain, gradient-based refinement (rather than the frequency-domain
+linear-Born normal equations above), the exact self-adjoint engine
+(`FwiEngine::SecondOrderSelfAdjoint`; Inverse-Problems chapter §2.5) supplies a
+machine-accurate $\partial J/\partial c$ ($\kappa\approx 1$), which is required
+when the absolute gradient magnitude is used — Gauss–Newton, fixed-step updates,
+or the MOFI pose/calibration chained gradient of §26.4.1. The default FDTD/PSTD
+adjoint gives only a correct descent direction (line-search-absorbed) and is
+adequate for the steepest-descent and L-BFGS drivers.
+
 The returned enhanced volume and the Figure 06 regularized FWI row are display
 products, not second physical estimates.  The Figure 06 display applies
 mask-aware diffusion plus clipped residual detail to the accepted FWI
 sound-speed field so checkerboard artifacts do not dominate the sliced book
 figure.  It uses only the FWI reconstruction and brain mask; metrics remain tied
 to the physical FWI reconstruction.
+
+![Brain sound-speed reconstruction vs CT target.](figures/ch27/fig03_brain_reconstruction.png)
+
+*Figure 26.3. Born-FWI brain sound-speed reconstruction (§26.5) against the CT-derived target over the active brain mask.*
+
+![Objective history and encoded acquisition data.](figures/ch27/fig04_optimization_and_data.png)
+
+*Figure 26.4. Optimization diagnostics (§26.5): the multiscale objective history and the encoded finite-frequency data used by the inversion.*
+
+![Single-pass adjoint-migration reconstruction from simulated data.](figures/ch27/fig05_simulated_ultrasound_reconstruction.png)
+
+*Figure 26.5. Adjoint-migration baseline (§26.5): the diagonal-normalized $A^\mathrm{T}d$ image that verifies spatial brain-speed contrast before iterative FWI.*
+
+![Multi-slice CT / target / FWI / error reconstruction stack.](figures/ch27/fig06_multislice_reconstruction_stack.png)
+
+*Figure 26.6. Multi-slice stack (§26.5): CT HU, CT-derived acoustic target, regularized FWI reconstruction, and error across thirteen planes of the reconstructed 3-D volume.*
+
+![Centroid-cropped pons-through-thalamus reconstruction ROI.](figures/ch27/fig07_centroid_pons_thalamus_roi.png)
+
+*Figure 26.7. Centroid ROI (§26.5): deep-midline crop around the CT brain-mask centroid as a pons-through-thalamus coverage proxy (not an anatomical segmentation).*
 
 ---
 
@@ -395,7 +533,7 @@ The `run_transcranial_ust_volume_inversion_from_ritk_ct` call performs all
 computation in Rust: CT ingest via RITK, acoustic model assembly, Born
 sensitivity matrix construction, adjoint migration, and the regularized
 PCG iteration.  The 1024-element hemispherical focused-bowl geometry satisfies
-the same-device aperture contract (§29.2): every element index used as a
+the same-device aperture contract (§28.2): every element index used as a
 transmitter also appears as a receiver.
 
 ## 26.8 Reproducible figures
@@ -469,6 +607,18 @@ each reconstruction family. The latest generated fusion metrics are:
 | compact intrinsic | 0.897 | 0.724 | 3.74 |
 | shock elongated | 0.826 | 0.802 | 3.90 |
 | multi-packet | 0.933 | 0.995 | 3.96 |
+
+![Histotripsy lesion reconstruction across three synthetic lesion states.](figures/ch27/fig08_histotripsy_custom_reconstruction_scenarios.png)
+
+*Figure 26.8. Histotripsy-monitoring reconstructions (§26.6): FWI, multiparameter, weak-harmonic, and fused images for compact, shock-elongated, and multi-packet lesions.*
+
+![Histotripsy reconstruction metrics (Dice / AUPRC / CNR).](figures/ch27/fig09_histotripsy_reconstruction_metrics.png)
+
+*Figure 26.9. Per-family reconstruction metrics (§26.6): equal-area Dice, AUPRC, and CNR across the reconstruction families.*
+
+![Passive multiband RTM and subharmonic cavitation-source imaging.](figures/ch27/fig10_histotripsy_passive_band_rtm.png)
+
+*Figure 26.10. Passive-emission monitoring (§26.6): multiband RTM and the subharmonic cavitation-source FWI image used as cavitation support in the fusion.*
 
 ---
 

@@ -1,6 +1,6 @@
 # Chapter 23 — LIFU-Mediated Blood–Brain Barrier Opening
 
-> **Prerequisite:** Chapter 5 (Cavitation and Bubble Dynamics), Chapter 15
+> **Prerequisite:** Chapter 5 (Cavitation and Bubble Dynamics), Chapter 16
 > (Safety and Dosimetry), Chapter 22 (Passive Acoustic Mapping).
 > Familiarity with Pennes bioheat transfer and Keller–Miksis bubble dynamics
 > is assumed.
@@ -61,6 +61,10 @@ the finite-$c$ correction adds the $O(R_0/\lambda)$ radiation term.  $\square$
 For SonoVue at $R_0 = 1.5\;\mu\text{m}$ in blood this gives $f_{res} \approx 2.0\;\text{MHz}$,
 supporting the clinical choice of 0.5–1.5 MHz for sub-resonance driving.
 
+![Keller–Miksis microbubble radius dynamics at three LIFU pressure levels.](figures/ch24/fig01_keller_miksis_dynamics.png)
+
+*Figure 23.1. Keller–Miksis R(t) (§23.2) for a SonoVue-type shelled bubble at three drive pressures, from stable sub-resonance oscillation to incipient inertial collapse.*
+
 ---
 
 ## 23.3 LIFU safety parameter space
@@ -94,6 +98,10 @@ sensitisation factor is derived from the shell-modified equilibrium condition
 $P_0 + 2\sigma_{eff}/R_0 = p_{gas,0}$ where $\sigma_{eff} < \sigma_{water}$.
 $\square$
 
+![LIFU MI vs frequency safety parameter space.](figures/ch24/fig02_lifu_parameter_space.png)
+
+*Figure 23.2. The $(f,\text{MI})$ safety plane (§23.3): the stable-cavitation onset, the BBB-opening window, and the inertial-cavitation (Blake) threshold separate reversible permeabilisation from haemorrhage risk.*
+
 ---
 
 ## 23.4 Permeability enhancement model
@@ -125,6 +133,10 @@ to lower cavitation nucleation density).  The window $[D_{min}, D_{max}]$
 is non-empty iff $D_{50} < D_{dam}$, which holds in the SC regime by
 construction.  $\square$
 
+![BBB permeability vs acoustic dose (Hill model).](figures/ch24/fig03_bbb_permeability_dose.png)
+
+*Figure 23.3. Hill-function dose–response (§23.4): permeability $P(D)=P_{max}D^n/(D_{50}^n+D^n)$ with the damage-free operating window $[D_{min},D_{max}]$ (Theorem 23.3) shaded.*
+
 ---
 
 ## 23.5 Thermal safety
@@ -153,6 +165,10 @@ $$
 > for sonication durations below 120 s — well below the 0.25 min brain
 > damage threshold (O'Reilly & Hynynen 2012).*
 
+![LIFU thermal safety: focal temperature rise and CEM43 accumulation.](figures/ch24/fig04_lifu_thermal_safety.png)
+
+*Figure 23.4. Pennes-bioheat focal ΔT and CEM43 (§23.5) for a clinical LIFU duty cycle; both stay far below the brain damage thresholds (Corollary 23.1).*
+
 ---
 
 ## 23.6 BBB closure kinetics
@@ -170,6 +186,17 @@ $\tau_{slow} \approx 6\;\text{h}$ (vesicular transport clearance).
 The *drug delivery window* — the interval during which BBB permeability
 exceeds 50% of peak opening — spans approximately 1–8 hours post-sonication
 for the stable-cavitation dose range.
+
+![Bi-exponential BBB closure kinetics / drug-delivery window.](figures/ch24/fig06_bbb_opening_window.png)
+
+*Figure 23.5. BBB closure (§23.6): the bi-exponential recovery $P(t)=P_{peak}[0.6\,e^{-t/\tau_{fast}}+0.4\,e^{-t/\tau_{slow}}]$ and the >50 % drug-delivery window.*
+
+Contrast-enhanced ultrasound (CEUS) of the microbubble population provides an
+independent readout of the contrast agent available to drive cavitation:
+
+![CEUS backscatter signal vs microbubble concentration.](figures/ch24/fig05_ceus_signal_vs_concentration.png)
+
+*Figure 23.6. CEUS backscatter vs microbubble concentration (§23.1): the nonlinear contrast response that tracks the circulating microbubble dose during a BBB-opening session.*
 
 ---
 
@@ -202,7 +229,7 @@ p(\mathbf{r}) = \sum_i w_i\, e^{-\mathrm{i}\,k\,r_i(\mathbf{r})},
 $$
 
 which is the exact narrowband focusing solution and places a focus at every
-$\mathbf{r}_f^{(j)}$ at once (Fink 1992; Ebbini & Cain 1989). Figure 4.16
+$\mathbf{r}_f^{(j)}$ at once (Fink 1992; Ebbini & Cain 1989). Figure 23.7
 illustrates a six sub-spot montage: panel (A) the straight-ray paths to each
 sub-spot, panel (B) the per-sub-spot delay-to-target laws, and panel (C) the
 synthesised simultaneous multi-focus field with all six foci formed coherently.
@@ -327,7 +354,7 @@ detects), the per-bubble spectra are estimated with a Hann window
 (`hann_windowed_power_spectrum`, leakage-suppressed so the broadband band is
 genuine), incoherently power-summed across the receive aperture
 (`integrate_receiver_array_psd` — the array integral over $V_s$), decomposed
-into bands (`cavitation_emission_bands`), time-integrated into SCD/ICD
+into bands (`decompose_emission_spectrum`), time-integrated into SCD/ICD
 (`cumulative_cavitation_dose`), and fed to the closed-loop pressure law
 (`cavitation_controller_pressure`). Sub- and ultraharmonic emission emerges
 sharply near $\text{MI}\approx0.15$ and the broadband floor rises toward
@@ -356,10 +383,12 @@ mechanical repositioning.
 ## 23.10 Simulation workflow
 
 ```rust
-use kwavers::plugin::*;
-use kwavers::{Grid, AcousticSolver, BoundaryType, PhysicsModelType,
-              PhysicsModelConfig, PhysicsConfig, PhysicsCatalog,
-              BubbleModel};
+use kwavers_solver::plugin::{PhysicsCatalog, PluginManager};
+use kwavers_physics::factory::{
+    PhysicsConfig, PhysicsModelConfig,
+    models::{PhysicsModelType, AcousticSolver, PhysicsBoundaryCondition, BubbleModel},
+};
+use kwavers_grid::Grid;
 
 let mut config = PhysicsConfig::new();
 
@@ -367,7 +396,18 @@ let mut config = PhysicsConfig::new();
 config.models.push(PhysicsModelConfig {
     model_type: PhysicsModelType::LinearAcoustics {
         solver_type: AcousticSolver::PSTD { spectral_accuracy: true },
-        boundary_conditions: BoundaryType::Absorbing { pml_layers: 12 },
+        boundary_conditions: PhysicsBoundaryCondition::Absorbing { pml_layers: 12 },
+    },
+    enabled: true,
+    parameters: Default::default(),
+});
+
+// Microbubble cavitation (Keller–Miksis) — the catalog builds the real
+// BubbleDynamicsPlugin for this variant.
+config.models.push(PhysicsModelConfig {
+    model_type: PhysicsModelType::BubbleDynamics {
+        model: BubbleModel::KellerMiksis,
+        nucleation: true,
     },
     enabled: true,
     parameters: Default::default(),
@@ -386,37 +426,38 @@ config.models.push(PhysicsModelConfig {
 let manager = PhysicsCatalog::build(&config, &grid, &brain_medium, dt)?;
 ```
 
-The BubbleDynamics capability (Keller–Miksis plugin) is a near-term roadmap
-item in `PhysicsCatalog::build_plugin`; the current implementation returns a
-structured `ConfigError::InvalidValue` identifying the gap explicitly (see
-Chapter 21 §4, Theorem 21.1).
+The `BubbleDynamics` capability is **wired** into `PhysicsCatalog::build_plugin`:
+the `BubbleDynamics { model, nucleation }` arm constructs a real
+`BubbleDynamicsPlugin` (`kwavers_solver::forward::bubble_dynamics`) over the
+selected `BubbleModel` (`KellerMiksis` / `RayleighPlesset` / `Gilmore`); see
+Chapter 21 §21.4, Theorem 21.1 (catalog determinism and exhaustiveness).
 
 ---
 
-## 23.11 Figure sources
+## 23.11 Figure index
 
-```bash
-python pykwavers/examples/book/ch24_bbb_lifu_opening.py
-```
+The figures embedded inline above are generated by
+`pykwavers/examples/book/ch24_bbb_lifu_opening.py` into `docs/book/figures/ch24/`
+(PDF + PNG). The analytical content runs in the kwavers Rust core
+(`kwavers_physics::analytical::{transducer::beam, cavitation::passive_dose}`);
+the Python script only renders.
 
-Outputs to `docs/book/figures/ch24/` (PDF and PNG).
-
-| Figure | Content |
-|--------|---------|
-| fig01  | Keller–Miksis MB dynamics at three LIFU pressure levels |
-| fig02  | MI vs frequency safety parameter space |
-| fig03  | BBB permeability vs acoustic dose (Hill model) |
-| fig04  | LIFU thermal safety: temperature rise + CEM43 |
-| fig05  | CEUS backscatter signal vs MB concentration |
-| fig06  | BBB opening window: bi-exponential closure kinetics |
-| fig07  | Multi-spot ray paths, delay-to-target laws, and synthesised simultaneous six-focus field |
-| fig08  | Sparse aperiodic array treatment envelope: periodic (dense) vs aperiodic (sparse) layout at one frequency, grating-lobe-safe steering half-angle |
-| fig09  | Passive-cavitation harmonic-dose monitoring: $V_s$-integrated emission spectrum, stable/inertial cavitation dose vs MI, and the closed-loop dose controller |
-| fig10  | Real-time cavitation monitor: acoustic spectrum + filter, live cavitation/power trace, cumulative dose-to-goal, and per-subspot dose vs electronic steering + attenuation |
+| Figure | Content | Section | File |
+|--------|---------|---------|------|
+| 23.1 | Keller–Miksis MB dynamics at three LIFU pressure levels | §23.2 | `fig01_keller_miksis_dynamics` |
+| 23.2 | MI vs frequency safety parameter space | §23.3 | `fig02_lifu_parameter_space` |
+| 23.3 | BBB permeability vs acoustic dose (Hill model) | §23.4 | `fig03_bbb_permeability_dose` |
+| 23.4 | LIFU thermal safety: temperature rise + CEM43 | §23.5 | `fig04_lifu_thermal_safety` |
+| 23.6 | CEUS backscatter signal vs MB concentration | §23.6 | `fig05_ceus_signal_vs_concentration` |
+| 23.5 | BBB opening window: bi-exponential closure kinetics | §23.6 | `fig06_bbb_opening_window` |
+| 23.7 | Multi-spot ray paths, delay laws, six-focus field | §23.7 | `fig07_multispot_ray_paths_delays` |
+| 23.8 | Sparse aperiodic array treatment envelope | §23.8 | `fig08_sparse_treatment_envelope` |
+| 23.9 | Passive-cavitation harmonic-dose monitoring | §23.9 | `fig09_cavitation_harmonic_dose` |
+| 23.10 | Real-time cavitation monitor (4-panel console) | §23.9 | `fig10_cavitation_monitor` |
 
 ---
 
-## 23.11 References
+## 23.12 References
 
 - Hynynen K., McDannold N., Vykhodtseva N., Jolesz F.A. *Noninvasive MR
   imaging-guided focal opening of the blood-brain barrier in rabbits.*

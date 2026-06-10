@@ -6,7 +6,7 @@
 //! homogeneous starting model. L-BFGS must (a) drive the data misfit well below
 //! the starting misfit and (b) move the model toward the truth at the anomaly.
 
-use super::super::{FwiGeometry, FwiProcessor};
+use super::super::{FwiEngine, FwiGeometry, FwiProcessor};
 use crate::inverse::seismic::parameters::FwiParameters;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_grid::Grid;
@@ -165,6 +165,65 @@ fn lbfgs_reduces_misfit_and_recovers_anomaly() {
         "illuminated-region RMS model error must decrease: init = {}, recovered = {}",
         region_rms(&initial),
         region_rms(&recovered)
+    );
+}
+
+/// The **exact-gradient** self-adjoint engine (ADR 016) drives the same
+/// orchestration (forward → exact adjoint → L-BFGS) end to end: misfit drops and
+/// the anomaly is recovered. This exercises the `FwiEngine::SecondOrderSelfAdjoint`
+/// dispatch through `forward_model`, `misfit_and_gradient`, and the line search.
+/// # Panics
+/// - Panics on any assertion failure or solver error.
+#[test]
+fn self_adjoint_engine_lbfgs_reduces_misfit_and_recovers_anomaly() {
+    let anomaly = 60.0_f64;
+    let (grid, geometry, parameters, truth, initial) = build_problem(anomaly);
+
+    // No source-amplitude rescaling: the self-adjoint engine's dt²·ρc²·s injection
+    // gives J≈5e-17 and ‖g‖∞~1e-18, but invert_lbfgs now judges convergence
+    // RELATIVE to the initial gradient norm, so small-amplitude data is handled
+    // directly (no absolute f64::EPSILON guard to trip).
+    let processor = FwiProcessor::new(parameters).with_engine(FwiEngine::SecondOrderSelfAdjoint);
+
+    // "Observed" data must come from the same (self-adjoint) forward map.
+    let (observed, _history) = processor
+        .forward_model(&truth, &geometry, &grid)
+        .expect("observed forward (self-adjoint)");
+
+    let initial_misfit = processor
+        .compute_objective(&initial, &observed, &geometry, &grid)
+        .expect("initial misfit");
+    assert!(
+        initial_misfit > 0.0,
+        "initial misfit must be non-zero; got {initial_misfit:e}"
+    );
+
+    let recovered = processor
+        .invert_lbfgs(&observed, &initial, &geometry, &grid, 6)
+        .expect("self-adjoint L-BFGS inversion");
+
+    let final_misfit = processor
+        .compute_objective(&recovered, &observed, &geometry, &grid)
+        .expect("final misfit");
+    assert!(
+        final_misfit < 0.5 * initial_misfit,
+        "self-adjoint FWI must at least halve the misfit; initial = {initial_misfit:e}, \
+         final = {final_misfit:e}"
+    );
+
+    let c_init = initial[[3, 3, 3]];
+    let c_true = truth[[3, 3, 3]];
+    let c_rec = recovered[[3, 3, 3]];
+    assert!(
+        c_rec > c_init,
+        "recovered anomaly must rise above the homogeneous start; init = {c_init}, rec = {c_rec}"
+    );
+    assert!(
+        (c_rec - c_true).abs() < (c_init - c_true).abs(),
+        "recovered model must be closer to truth at the anomaly; \
+         |init−true| = {}, |rec−true| = {}",
+        (c_init - c_true).abs(),
+        (c_rec - c_true).abs()
     );
 }
 
