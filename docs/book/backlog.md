@@ -17,6 +17,14 @@ claimed struct name) before implementing. Confirmed corrections below.
 
 ## Done
 
+- ✅ **`LinearAlgebra::qr_decomposition` — returned Qᵀ; fixed via nalgebra** — `[patch]` (2026-06-10,
+  codebase audit). The hand-rolled Householder QR accumulated `Q ← Hⱼ·Q` (left-multiply) → `Q = Hₙ…H₁
+  = Qᵀ`, so `A = QᵀR` not `A = QR` (the documented contract). It was **untested and unused** (dead
+  public API; the eigendecomposition QR is a separate, correct helper). Delegated to nalgebra's
+  Householder QR (same pattern as `svd` in the same file), removing the buggy hand-rolled version,
+  and documented it as the reduced (thin) QR `A=Q·R`, `Q` m×k orthonormal, `R` k×n upper-triangular.
+  New test: reconstruction `A=Q·R` + `QᵀQ=I` + upper-triangular `R` for square and over-determined
+  matrices.
 - ✅ **Real symmetric eigendecomposition — malformed Jacobi angle fix** — `[patch]` (2026-06-10,
   codebase audit). `EigenDecomposition::eigendecomposition` (real symmetric, used by MVDR
   beamforming) had a **mathematically malformed Jacobi rotation angle** in its `else` branch:

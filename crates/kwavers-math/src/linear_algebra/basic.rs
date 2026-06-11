@@ -5,7 +5,7 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
 use nalgebra::DMatrix;
-use ndarray::{s, Array1, Array2};
+use ndarray::{Array1, Array2};
 
 /// Basic linear algebra operations for real-valued matrices
 #[derive(Debug)]
@@ -126,65 +126,30 @@ impl LinearAlgebra {
         Ok(result)
     }
 
-    /// Compute QR decomposition of a matrix
+    /// Compute the reduced (thin) QR decomposition of a matrix.
     ///
     /// # Arguments
     /// * `matrix` - Input matrix (m×n)
     ///
     /// # Returns
-    /// Tuple (Q, R) where Q is orthogonal (m×m) and R is upper triangular (m×n)
+    /// Tuple `(Q, R)` with `Q` (m×k) having orthonormal columns, `R` (k×n) upper
+    /// triangular, `k = min(m, n)`, such that `A = Q·R`. For a square matrix
+    /// `Q` is m×m (fully orthogonal). Delegates to nalgebra's Householder QR
+    /// (same pattern as [`svd`](Self::svd)).
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn qr_decomposition(matrix: &Array2<f64>) -> KwaversResult<(Array2<f64>, Array2<f64>)> {
         let (m, n) = (matrix.nrows(), matrix.ncols());
-        let mut q = Array2::eye(m);
-        let mut r = matrix.clone();
+        let na = DMatrix::from_fn(m, n, |i, j| matrix[[i, j]]);
+        let qr = na.qr();
+        let q_na = qr.q();
+        let r_na = qr.r();
 
-        // Householder QR decomposition
-        for j in 0..n.min(m) {
-            // Extract column j from j to m-1
-            let col_j = r.column(j).slice(s![j..]).to_owned();
-
-            // Compute Householder vector
-            let norm = col_j.iter().map(|&x| x * x).sum::<f64>().sqrt();
-            let mut v = col_j.clone();
-            if v[0] >= 0.0 {
-                v[0] += norm;
-            } else {
-                v[0] -= norm;
-            }
-
-            let v_norm = v.iter().map(|&x| x * x).sum::<f64>().sqrt();
-            if v_norm > 1e-12 {
-                v /= v_norm;
-
-                // Apply Householder reflection to R
-                for k in j..n {
-                    let dot_product = v
-                        .iter()
-                        .zip(r.column(k).slice(s![j..]))
-                        .map(|(&a, &b)| a * b)
-                        .sum::<f64>();
-                    for (i, &vi) in v.iter().enumerate() {
-                        r[[j + i, k]] -= 2.0 * vi * dot_product;
-                    }
-                }
-
-                // Apply Householder reflection to Q
-                for k in 0..m {
-                    let dot_product = v
-                        .iter()
-                        .zip(q.column(k).slice(s![j..]))
-                        .map(|(&a, &b)| a * b)
-                        .sum::<f64>();
-                    for (i, &vi) in v.iter().enumerate() {
-                        q[[j + i, k]] -= 2.0 * vi * dot_product;
-                    }
-                }
-            }
-        }
-
+        let (qr_rows, qr_cols) = q_na.shape();
+        let q = Array2::from_shape_fn((qr_rows, qr_cols), |(i, j)| q_na[(i, j)]);
+        let (rr_rows, rr_cols) = r_na.shape();
+        let r = Array2::from_shape_fn((rr_rows, rr_cols), |(i, j)| r_na[(i, j)]);
         Ok((q, r))
     }
 
@@ -288,6 +253,46 @@ mod tests {
             for j in 0..2 {
                 let expected = if i == j { 1.0 } else { 0.0 };
                 assert!((identity[[i, j]] - expected).abs() < 1e-10);
+            }
+        }
+    }
+
+    #[test]
+    fn test_qr_reconstruction_and_orthogonality() {
+        // Square and over-determined (m > n) cases: A = Q·R with Qᵀ Q = I.
+        let cases = [
+            Array2::from_shape_vec((3, 3), vec![1.0, 2.0, 0.0, 0.0, 1.0, 3.0, 4.0, 0.0, 1.0])
+                .unwrap(),
+            Array2::from_shape_vec((4, 2), vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]).unwrap(),
+        ];
+        for a in &cases {
+            let (q, r) = LinearAlgebra::qr_decomposition(a).unwrap();
+            // Reconstruction A = Q·R.
+            let recon = q.dot(&r);
+            assert_eq!(recon.dim(), a.dim());
+            for i in 0..a.nrows() {
+                for j in 0..a.ncols() {
+                    assert!(
+                        (recon[[i, j]] - a[[i, j]]).abs() < 1e-9,
+                        "QR reconstruction mismatch at [{i},{j}]: {} vs {}",
+                        recon[[i, j]],
+                        a[[i, j]]
+                    );
+                }
+            }
+            // Q has orthonormal columns: Qᵀ Q = I (k×k).
+            let qtq = q.t().dot(&q);
+            for i in 0..qtq.nrows() {
+                for j in 0..qtq.ncols() {
+                    let expected = if i == j { 1.0 } else { 0.0 };
+                    assert!((qtq[[i, j]] - expected).abs() < 1e-9, "Q not orthonormal");
+                }
+            }
+            // R is upper triangular.
+            for i in 0..r.nrows() {
+                for j in 0..i.min(r.ncols()) {
+                    assert!(r[[i, j]].abs() < 1e-9, "R not upper triangular at [{i},{j}]");
+                }
             }
         }
     }
