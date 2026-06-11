@@ -55,6 +55,14 @@ integration = { max-threads = 2 }
 # Even with parallel speculative evaluation the 64×64 liver grid exceeds 60 s.
 # 90 s per test is the documented upper bound; see nextest.toml for policy.
 elastic-fwi = { max-threads = 1 }
+# Heavy full-grid FDTD/PSTD acoustic simulation tests internally parallelise with
+# rayon across all 24 cores. Under the default num-cpus test concurrency, N such
+# tests run at once × N rayon threads each = severe oversubscription, so each
+# crawls and the heaviest cross the 60 s per-test cap purely from contention (they
+# finish in ~40 s with adequate cores and pass in release). Capping concurrency to
+# 2 gives each ~half the machine, so all finish well inside the *unchanged* 60 s
+# cap. This is a scheduler hint — the timeout and every assertion are untouched.
+heavy-sim = { max-threads = 2 }
 
 # ── Elastic FWI / theranostic integration tests: full-wave physics, 90 s ceiling ─
 # These tests run the complete elastic PSTD wave equation + theranostic inverse
@@ -64,6 +72,12 @@ elastic-fwi = { max-threads = 1 }
 filter = 'test(abdominal_preprocessing_selects_one_connected_treatment_component) | test(abdominal_theranostic_inverse_recovers_lesion_support) | test(abdominal_preprocessing_keeps_external_skin_between_target_and_aperture) | test(brain_focused_bowl_layout_uses_requested_element_count)'
 test-group = 'elastic-fwi'
 slow-timeout = { period = "90s", terminate-after = 1, grace-period = "10s" }
+
+# Heavy full-grid FDTD/PSTD acoustic-simulation binaries → capped concurrency so
+# their rayon-parallel solvers do not oversubscribe the CPU (see heavy-sim above).
+[[profile.default.overrides]]
+filter = 'package(kwavers) & (binary(fdtd_pstd_comparison) | binary(property_based_tests) | binary(session2_source_injection_test) | binary(test_plane_wave_injection_fixed))'
+test-group = 'heavy-sim'
 
 [[profile.ci.overrides]]
 filter = 'test(/integration/)'
