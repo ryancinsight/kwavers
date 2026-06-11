@@ -692,7 +692,101 @@ Tumour volume: 13.55 cm³. All scenarios use the same anatomy and HCC sphere; di
 
 ---
 
-## 14.12 Cross-References
+## 14.12 Cavitation-Shielding Control: Frequency Sweeping and Millisecond Pulsing
+
+A bubble cloud that accumulates at the focus is itself a strong acoustic
+scatterer. As the local **void fraction** $\beta$ grows, the cloud attenuates the
+incoming drive (resonant Commander–Prosperetti scattering), so the *delivered*
+focal pressure
+
+$$
+p_\text{focus}(t) = p_\text{drive}\,\exp\!\big[-\big(\alpha_\text{tissue} + \alpha_\text{gas}(f,\beta)\big)\,L\big]
+$$
+
+*falls* as the cloud builds. Cavitation production then self-limits — the
+**shielding** that caps HIFU and histotripsy efficacy and that, untreated, drives
+the focus into a "screen-then-decay" relaxation where the cloud blocks its own
+drive. Two exposure controls suppress it; both emerge from a single void-fraction
+balance rather than ad-hoc switches.
+
+### 14.12.1 Void-fraction balance
+
+$$
+\frac{d\beta}{dt} = \underbrace{k_\text{prod}\Big(\tfrac{p_\text{focus}-p_\text{thr}}{p_\text{ref}}\Big)_{\!+}^{\,n}\Big(1-\tfrac{\beta}{\beta_\text{max}}\Big)\,[\text{ON}]}_{\text{threshold-supralinear production}} \;-\; \underbrace{\frac{\beta}{\tau_\text{diss}}}_{\text{Epstein–Plesset clearance}}
+$$
+
+The production term is gated by the pulse protocol and driven by the
+*delivered* (post-shielding) pressure, so the shielding closes a genuine feedback
+loop. The clearance time constant $\tau_\text{diss} = R_0^2 / \big(2 D L_\text{Ostwald}(1-f_\text{sat})\big)$
+is the audited Epstein–Plesset dissolution time of the residual bubble.
+
+### 14.12.2 Millisecond pulsing
+
+During the OFF interval, production halts and the residual cloud dissolves with
+$\tau_\text{diss}$. An OFF interval comparable to $\tau_\text{diss}$ relaxes
+$\beta$ toward zero each cycle, so the next pulse sees a transparent focus —
+$\beta$ strictly decreases through every OFF interval
+(`off_interval_dissolves_residual_cloud`). The control knob is the PRF, and the
+literature reports an *optimum*: too-short an OFF accumulates the cloud, too-long
+wastes treatment time. This is the integrated-timeline counterpart of the
+single-interval fragmentation clearance of §14.7.
+
+### 14.12.3 Frequency sweeping
+
+The accumulated cloud scatters most strongly at its Minnaert resonance. A swept
+(chirp) drive spends most of each period *off* that resonance, so the
+instantaneous $\alpha_\text{gas}(f(t),\beta)$ it experiences is smaller than a
+fixed tone parked on resonance — less self-shielding, more delivered energy. This
+is captured exactly by evaluating the same C–P attenuation at the instantaneous
+swept frequency; no separate de-coherence factor is introduced
+(`sweeping_reduces_shielding_versus_on_resonance_tone`). The Wang (2017) thesis
+finds a **short sweep time and large sweep range** preferred, consistent with the
+intra-pulse engagement enhancement of §14.7: the sweep must traverse its band
+within the pulse to realise the benefit, so the gain is large for ms pulses and
+negligible for µs pulses.
+
+The two controls compose — a swept *and* pulsed drive both lowers the per-pulse
+attenuation and clears the residual between pulses, the regime the references
+identify as optimal.
+
+### 14.12.4 API
+
+The model lives in `kwavers_physics::analytical::cavitation`:
+
+```rust
+use kwavers_physics::analytical::cavitation::{
+    compare_shielding_control, CavitationProduction, FrequencySweep,
+    PulseProtocol, ShieldingConfig, ShieldingMedium, SweepProfile,
+};
+
+let sweep = FrequencySweep::new(1.2e6, 2.0e6, 0.5e-3, SweepProfile::Triangular).unwrap();
+let cmp = compare_shielding_control(
+    2.0e6,                                 // surface drive pressure [Pa]
+    &sweep,                                // fixed tone uses sweep.mean_frequency_hz()
+    &PulseProtocol::pulsed(5.0e-3, 0.4),   // 5 ms ON / 400 ms OFF
+    &CavitationProduction::default(),
+    &ShieldingMedium::soft_tissue(),
+    &ShieldingConfig { total_time_s: 2.0, dt_s: 5.0e-4 },
+);
+// cmp.{cw_fixed, cw_swept, pulsed_fixed, pulsed_swept}: the 2×2 control matrix;
+// pulsed_swept delivers the most focal energy of the four.
+```
+
+`simulate_shielding` returns the full per-sample trace (void fraction, delivered
+pressure, delivered fraction) plus the scalar summaries (peak/mean void fraction,
+mean delivered transmission, delivered vs unshielded energy, shielding-loss
+fraction).
+
+> **Model tier.** This is a reduced-order *phenomenological balance* for the focal
+> void fraction, not a bubble-by-bubble cloud simulation. The shielding law
+> ($\alpha_\text{gas}$, Commander–Prosperetti) and the clearance ($\tau_\text{diss}$,
+> Epstein–Plesset) are the audited first-principles pieces; the production term is a
+> threshold-supralinear source set by its parameters. Claims rest on the ODE
+> structure (property-tested limiting cases) plus those audited sub-models.
+
+---
+
+## 14.13 Cross-References
 
 - **Chapter 5 (Cavitation and Bubble Dynamics):** Rayleigh–Plesset / Keller–Miksis
   derivations underlying the inertial collapse model.
@@ -704,7 +798,7 @@ Tumour volume: 13.55 cm³. All scenarios use the same anatomy and HCC sphere; di
 
 ---
 
-## 14.13 References
+## 14.14 References
 
 1. Maxwell A.D., Cain C.A., Hall T.L., Fowlkes J.B., Xu Z. (2013).
    "Probability of cavitation for single ultrasound pulses applied to
@@ -776,3 +870,19 @@ Tumour volume: 13.55 cm³. All scenarios use the same anatomy and HCC sphere; di
     "Histotripsy methods at the focus and through aberrating layers:
     update on mechanisms and clinical translation."
     *International Journal of Hyperthermia*, 41(1), 2316110.
+19. Wang M. (2017). "High intensity focused ultrasound (HIFU) ablation
+    using the frequency sweeping excitation." PhD thesis, School of
+    Mechanical and Aerospace Engineering, Nanyang Technological University.
+    Findings: chirp enhances both stable and inertial cavitation; a short
+    sweep time and large sweep range are preferred; ~50 % lesion
+    enlargement (0.9–1.1 MHz at 300 kPa surface; 3.1–3.5 MHz swept within
+    1 ms). dr.ntu.edu.sg bitstream 278ee356-83e2-4d75-a2cb-c5ad65d71f42.
+20. "Enhancement and quenching of high-intensity focused ultrasound
+    cavitation activity via short frequency sweep gaps."
+    *Ultrasonics Sonochemistry* (2015). ScienceDirect PII
+    S1350417715300419. (Sweep direction and short inter-sweep gaps
+    raise or quench inertial-cavitation/sonochemical yield.)
+21. *LWT — Food Science and Technology* (2021). ScienceDirect PII
+    S0023643821010756. (Pulsed-mode ultrasound: the OFF interval lets
+    sub-resonant residual bubbles dissolve, resetting the cloud and
+    removing the cavitation-shielding layer.)

@@ -8,6 +8,7 @@ mod dynamics;
 mod histotripsy;
 mod passive_dose;
 mod power_spectrum;
+mod shielding;
 mod sonication;
 mod swept_frequency;
 #[cfg(test)]
@@ -32,6 +33,11 @@ pub use passive_dose::{
     CavitationBandEnergies, ShellDriveConfig,
 };
 pub use power_spectrum::{bubble_power_spectrum, period_doubling_ratio};
+pub use shielding::{
+    compare_shielding_control, simulate_shielding, CavitationProduction, DriveFrequency,
+    PulseProtocol, ShieldingComparison, ShieldingConfig, ShieldingMedium, ShieldingSummary,
+    ShieldingTrace,
+};
 pub use sonication::{
     build_sonication_schedule, forward_delivery_fraction, histotripsy_kill_fraction,
     histotripsy_lethal_dose, histotripsy_pulses_for_lesion_radius, interface_pressure_enhancement,
