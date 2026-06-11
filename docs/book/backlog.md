@@ -17,6 +17,17 @@ claimed struct name) before implementing. Confirmed corrections below.
 
 ## Done
 
+- ✅ **Real symmetric eigendecomposition — malformed Jacobi angle fix** — `[patch]` (2026-06-10,
+  codebase audit). `EigenDecomposition::eigendecomposition` (real symmetric, used by MVDR
+  beamforming) had a **mathematically malformed Jacobi rotation angle** in its `else` branch:
+  `0.5(a_qq−a_pp)/atan2(a_pq, (a_qq−a_pp)/(2a_pq))` — not the Jacobi angle `½atan(2a_pq/(a_pp−a_qq))`.
+  A wrong angle never annihilates the off-diagonal, so it can't converge → wrong eigenvalues for any
+  **unequal-diagonal** matrix. The only test used `[[2,1],[1,2]]` (equal diagonals → correct π/4
+  branch), hiding the bug. Fixed by **delegating the real path to the correct, reconstruction-tested
+  complex Hermitian Jacobi** (a real symmetric matrix is Hermitian; eigenvectors stay real → `.re`),
+  deleting ~70 lines of broken hand-rolled real Jacobi (DRY). 2 new tests: `[[4,1],[1,2]]` recovers
+  `3±√2` with `Av=λv` + `A=VΛVᵀ`; a 3×3 reconstructs exactly with `Σλ=tr` + descending order. 50
+  linear-algebra tests pass.
 - ✅ **Christoffel anisotropic wave-speed solver — HARD-violation + degenerate-case fix** — `[patch]`
   (2026-06-10, codebase audit). `ChristoffelEquation::phase_velocities` used a hand-rolled Cardano
   cubic solver with a hardcoded `[1.0, 1.0, 1.0]` **fallback** when the discriminant ≤ 0 — a

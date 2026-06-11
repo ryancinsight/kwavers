@@ -39,76 +39,15 @@ impl EigenDecomposition {
             }
         }
 
-        let mut a = matrix.clone();
-        let mut eigenvectors = Array2::eye(n);
-        let mut eigenvalues = Array1::zeros(n);
-
-        let max_iterations = 100;
-        let tolerance = 1e-10;
-
-        for _ in 0..max_iterations {
-            let mut max_val = 0.0;
-            let mut p = 0;
-            let mut q = 1;
-
-            for i in 0..n {
-                for j in (i + 1)..n {
-                    if a[[i, j]].abs() > max_val {
-                        max_val = a[[i, j]].abs();
-                        p = i;
-                        q = j;
-                    }
-                }
-            }
-
-            if max_val < tolerance {
-                break;
-            }
-
-            let theta = if a[[p, p]] == a[[q, q]] {
-                std::f64::consts::PI / 4.0
-            } else {
-                0.5 * (a[[q, q]] - a[[p, p]])
-                    / a[[p, q]].atan2((a[[q, q]] - a[[p, p]]) / (2.0 * a[[p, q]]))
-            };
-
-            let c = theta.cos();
-            let s = theta.sin();
-
-            for i in 0..n {
-                let a_ip = a[[i, p]];
-                let a_iq = a[[i, q]];
-                a[[i, p]] = c * a_ip - s * a_iq;
-                a[[i, q]] = s * a_ip + c * a_iq;
-            }
-
-            for i in 0..n {
-                let a_pi = a[[p, i]];
-                let a_qi = a[[q, i]];
-                a[[p, i]] = c * a_pi - s * a_qi;
-                a[[q, i]] = s * a_pi + c * a_qi;
-            }
-
-            for i in 0..n {
-                let v_ip = eigenvectors[[i, p]];
-                let v_iq = eigenvectors[[i, q]];
-                eigenvectors[[i, p]] = c * v_ip - s * v_iq;
-                eigenvectors[[i, q]] = s * v_ip + c * v_iq;
-            }
-        }
-
-        for i in 0..n {
-            eigenvalues[i] = a[[i, i]];
-        }
-
-        let mut indices: Vec<usize> = (0..n).collect();
-        indices.sort_by(|&i, &j| eigenvalues[j].total_cmp(&eigenvalues[i]));
-
-        let sorted_eigenvals = Array1::from_shape_fn(n, |i| eigenvalues[indices[i]]);
-        let sorted_eigenvecs =
-            Array2::from_shape_fn((n, n), |(i, j)| eigenvectors[[i, indices[j]]]);
-
-        Ok((sorted_eigenvals, sorted_eigenvecs))
+        // A real symmetric matrix is Hermitian; delegate to the (correct,
+        // reconstruction-tested) complex Jacobi solver rather than maintaining a
+        // second hand-rolled real Jacobi. On a real input every rotation stays
+        // real (the Givens phase is ±1), so the eigenvectors are real and the
+        // imaginary part is exactly zero — extract the real part.
+        let complex = matrix.mapv(|x| Complex::new(x, 0.0));
+        let (eigenvalues, eigenvectors_c) = Self::hermitian_eigendecomposition_complex(&complex)?;
+        let eigenvectors = eigenvectors_c.mapv(|z| z.re);
+        Ok((eigenvalues, eigenvectors))
     }
 
     /// Compute eigendecomposition of a complex Hermitian matrix H ∈ ℂ^(n×n).

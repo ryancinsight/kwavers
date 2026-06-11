@@ -20,6 +20,66 @@ fn test_real_symmetric_eigendecomposition() {
     }
 }
 
+/// Previously broken: a real symmetric matrix with **unequal diagonal**
+/// elements drove the malformed `else`-branch Jacobi angle (the equal-diagonal
+/// case took the correct π/4 branch and hid the bug). Verify exact eigenvalues,
+/// the eigen-relation `Av = λv`, and the reconstruction `A = VΛVᵀ`.
+#[test]
+fn test_real_symmetric_unequal_diagonal() {
+    // [[4,1],[1,2]] ⇒ λ = 3 ± √2.
+    let matrix = Array2::from_shape_vec((2, 2), vec![4.0, 1.0, 1.0, 2.0]).unwrap();
+    let (vals, vecs) = EigenDecomposition::eigendecomposition(&matrix).unwrap();
+
+    let hi = 3.0 + 2.0_f64.sqrt();
+    let lo = 3.0 - 2.0_f64.sqrt();
+    assert!((vals[0] - hi).abs() < 1e-8, "λ_max {} vs {hi}", vals[0]);
+    assert!((vals[1] - lo).abs() < 1e-8, "λ_min {} vs {lo}", vals[1]);
+
+    // Av = λv for each mode.
+    for i in 0..2 {
+        let v = vecs.column(i).to_owned();
+        let av = matrix.dot(&v);
+        for j in 0..2 {
+            assert!((av[j] - vals[i] * v[j]).abs() < 1e-8);
+        }
+    }
+    // Reconstruction A = V Λ Vᵀ.
+    let lambda = Array2::from_diag(&vals);
+    let recon = vecs.dot(&lambda).dot(&vecs.t());
+    for i in 0..2 {
+        for j in 0..2 {
+            assert!((recon[[i, j]] - matrix[[i, j]]).abs() < 1e-8);
+        }
+    }
+}
+
+/// A 3×3 real symmetric matrix with all-distinct, unequal-diagonal structure
+/// reconstructs exactly — exercising the delegated solver beyond 2×2.
+#[test]
+fn test_real_symmetric_3x3_reconstruction() {
+    let matrix =
+        Array2::from_shape_vec((3, 3), vec![6.0, 2.0, 1.0, 2.0, 5.0, 3.0, 1.0, 3.0, 4.0]).unwrap();
+    let (vals, vecs) = EigenDecomposition::eigendecomposition(&matrix).unwrap();
+    // Trace and determinant invariants.
+    let trace = matrix[[0, 0]] + matrix[[1, 1]] + matrix[[2, 2]];
+    assert!((vals.sum() - trace).abs() < 1e-8, "Σλ {} vs tr {trace}", vals.sum());
+    // Reconstruction.
+    let lambda = Array2::from_diag(&vals);
+    let recon = vecs.dot(&lambda).dot(&vecs.t());
+    for i in 0..3 {
+        for j in 0..3 {
+            assert!(
+                (recon[[i, j]] - matrix[[i, j]]).abs() < 1e-7,
+                "recon[{i}][{j}] {} vs {}",
+                recon[[i, j]],
+                matrix[[i, j]]
+            );
+        }
+    }
+    // Descending order.
+    assert!(vals[0] >= vals[1] && vals[1] >= vals[2]);
+}
+
 #[test]
 fn test_hermitian_eigendecomposition_identity() {
     let n = 3;
