@@ -115,7 +115,12 @@ fn cortical_fs_rests_near_canonical_potential() {
     let g = fs.resting_gates(CorticalNeuron::V_REST_FS_MV);
     let i = fs.ionic_current(&g, CorticalNeuron::V_REST_FS_MV);
     assert!(i.abs() < 2.0, "FS resting net current {i} µA/cm²");
-    assert!(g[0] < 0.1 && g[1] > 0.5, "FS gating not quiescent: m={} h={}", g[0], g[1]);
+    assert!(
+        g[0] < 0.1 && g[1] > 0.5,
+        "FS gating not quiescent: m={} h={}",
+        g[0],
+        g[1]
+    );
     // RS and FS are genuinely different cells (FS has higher Na, lower Kd).
     let rs = CorticalNeuron::regular_spiking();
     assert!(fs.g_na_ms_cm2 != rs.g_na_ms_cm2 && fs.g_kd_ms_cm2 != rs.g_kd_ms_cm2);

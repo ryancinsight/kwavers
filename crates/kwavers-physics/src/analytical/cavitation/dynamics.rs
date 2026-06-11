@@ -88,7 +88,7 @@ pub fn minnaert_resonance_corrected_hz(
         return 0.0;
     }
     let laplace = young_laplace_pressure(sigma_n_m, r0_m); // 2σ/R₀
-    // Effective stiffness: 3γ(P₀ + 2σ/R₀) − 2σ/R₀ = 3γP₀ + (3γ−1)·2σ/R₀.
+                                                           // Effective stiffness: 3γ(P₀ + 2σ/R₀) − 2σ/R₀ = 3γP₀ + (3γ−1)·2σ/R₀.
     let stiffness = (3.0 * gamma).mul_add(p0_pa, (3.0 * gamma - 1.0) * laplace);
     if stiffness <= 0.0 {
         return 0.0;

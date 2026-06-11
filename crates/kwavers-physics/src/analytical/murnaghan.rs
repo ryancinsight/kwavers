@@ -153,9 +153,10 @@ impl MurnaghanConstants {
         let e2 = matmul(e, e);
         let tr_e3 = double_dot(&e2, e); // tr(E³) for symmetric E
         let second = self.mu.mul_add(tr_e2, 0.5 * self.lambda * i1 * i1);
-        let third = self
-            .n
-            .mul_add(tr_e3, self.m.mul_add(i1 * tr_e2, self.l / 3.0 * i1 * i1 * i1));
+        let third = self.n.mul_add(
+            tr_e3,
+            self.m.mul_add(i1 * tr_e2, self.l / 3.0 * i1 * i1 * i1),
+        );
         second + third
     }
 
@@ -167,7 +168,9 @@ impl MurnaghanConstants {
         let tr_e2 = trace_of_square(e);
         let e2 = matmul(e, e);
         // S = [λ I₁ + l I₁² + m tr(E²)] I + (2μ + 2m I₁) E + 3n E²
-        let coeff_i = self.m.mul_add(tr_e2, self.l.mul_add(i1 * i1, self.lambda * i1));
+        let coeff_i = self
+            .m
+            .mul_add(tr_e2, self.l.mul_add(i1 * i1, self.lambda * i1));
         let coeff_e = 2.0_f64.mul_add(self.m * i1, 2.0 * self.mu);
         combine(coeff_i, coeff_e, e, 3.0 * self.n, &e2)
     }
@@ -215,10 +218,7 @@ impl MurnaghanConstants {
                 let geom = he[i][j] + eh[i][j];
                 *cell = coeff_geom.mul_add(
                     geom,
-                    coeff_h.mul_add(
-                        h[i][j],
-                        coeff_e.mul_add(e[i][j], coeff_i * IDENTITY[i][j]),
-                    ),
+                    coeff_h.mul_add(h[i][j], coeff_e.mul_add(e[i][j], coeff_i * IDENTITY[i][j])),
                 );
             }
         }
@@ -479,7 +479,11 @@ mod tests {
     #[test]
     fn material_tangent_output_is_symmetric() {
         let c = constants();
-        let e: Tensor3 = [[0.01, 0.005, 0.0], [0.005, -0.004, 0.002], [0.0, 0.002, 0.006]];
+        let e: Tensor3 = [
+            [0.01, 0.005, 0.0],
+            [0.005, -0.004, 0.002],
+            [0.0, 0.002, 0.006],
+        ];
         let h: Tensor3 = [[0.2, 0.3, -0.1], [0.3, 0.1, 0.4], [-0.1, 0.4, 0.5]];
         let out = c.material_tangent(&e, &h);
         for (i, j) in [(0, 1), (0, 2), (1, 2)] {

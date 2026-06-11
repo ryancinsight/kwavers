@@ -396,6 +396,8 @@ from ._pykwavers import (
     residual_dissolution_time_s,
     cavitation_optimal_frequency,
     staged_sonication_sweep,
+    simulate_shielding_trace,
+    compare_shielding_control,
     clipped_lateral_radius_for_clearance,
     ellipsoid_respects_allowed_mask,
     scale_measured_emission_spectrum,
@@ -756,6 +758,8 @@ __all__ = [
     "residual_dissolution_time_s",
     "cavitation_optimal_frequency",
     "staged_sonication_sweep",
+    "simulate_shielding_trace",
+    "compare_shielding_control",
     # ── Analytical medium / tissue properties ────────────────────────────────
     "water_sound_speed_temperature",
     "water_density_temperature",

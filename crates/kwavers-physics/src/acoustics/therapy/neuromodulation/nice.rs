@@ -165,8 +165,18 @@ pub fn simulate_nice<M: Membrane, C: CapacitanceSource>(cfg: &NiceConfig<M, C>) 
         let (cm2, dcm2) = cm_at(t + 0.5 * dt);
         let (cm4, dcm4) = cm_at(t + dt);
         let (dv1, dg1) = deriv(v, &gates, cm1, dcm1);
-        let (dv2, dg2) = deriv(v + 0.5 * dt * dv1, &axpy_gates(&gates, &dg1, 0.5 * dt), cm2, dcm2);
-        let (dv3, dg3) = deriv(v + 0.5 * dt * dv2, &axpy_gates(&gates, &dg2, 0.5 * dt), cm2, dcm2);
+        let (dv2, dg2) = deriv(
+            v + 0.5 * dt * dv1,
+            &axpy_gates(&gates, &dg1, 0.5 * dt),
+            cm2,
+            dcm2,
+        );
+        let (dv3, dg3) = deriv(
+            v + 0.5 * dt * dv2,
+            &axpy_gates(&gates, &dg2, 0.5 * dt),
+            cm2,
+            dcm2,
+        );
         let (dv4, dg4) = deriv(v + dt * dv3, &axpy_gates(&gates, &dg3, dt), cm4, dcm4);
         v += dt / 6.0 * (dv1 + 2.0 * dv2 + 2.0 * dv3 + dv4);
         gates = rk4_combine_gates(&gates, &dg1, &dg2, &dg3, &dg4, dt);

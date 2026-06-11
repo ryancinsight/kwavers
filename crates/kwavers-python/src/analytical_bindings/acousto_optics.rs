@@ -46,11 +46,7 @@ pub fn raman_nath_parameter(
 /// m = −max_order..=max_order (index m + max_order).
 #[pyfunction]
 #[pyo3(signature = (nu, max_order))]
-pub fn raman_nath_order_intensities(
-    py: Python<'_>,
-    nu: f64,
-    max_order: u32,
-) -> Py<PyArray1<f64>> {
+pub fn raman_nath_order_intensities(py: Python<'_>, nu: f64, max_order: u32) -> Py<PyArray1<f64>> {
     acousto_optics::raman_nath_order_intensities(nu, max_order)
         .into_pyarray(py)
         .unbind()
@@ -96,8 +92,12 @@ pub fn bragg_angle_rad(
     refractive_index: f64,
     acoustic_wavelength_m: f64,
 ) -> f64 {
-    acousto_optics::bragg_angle_rad(optical_wavelength_m, refractive_index, acoustic_wavelength_m)
-        .unwrap_or(f64::NAN)
+    acousto_optics::bragg_angle_rad(
+        optical_wavelength_m,
+        refractive_index,
+        acoustic_wavelength_m,
+    )
+    .unwrap_or(f64::NAN)
 }
 
 /// General Klein–Cook coupled-wave solver: exit order intensities |Eₗ(1)|² for

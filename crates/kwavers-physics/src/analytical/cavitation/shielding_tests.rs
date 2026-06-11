@@ -6,10 +6,10 @@
 //! transmission); (iii) with the drive OFF, β strictly dissolves through the
 //! interval (Epstein–Plesset clearance); (iv) a sweep crossing the cloud
 //! resonance sees a lower band-average attenuation than a fixed tone on
-//! resonance, so the combined pulsed+swept drive delivers the most focal energy.
-//! Whether pulsing lowers the *time-averaged* β is deliberately not asserted —
-//! it is regime-dependent (the literature reports an optimal PRF), so the tests
-//! pin only the regime-independent mechanisms.
+//! resonance, so sweeping lowers the shielding loss and raises the delivered
+//! transmission *at any fixed duty cycle*. The CW-vs-pulsed comparison is
+//! deliberately not asserted — it is regime-dependent (the literature reports an
+//! optimal PRF), so the tests pin only the regime-independent mechanisms.
 
 use super::*;
 use crate::analytical::cavitation::SweepProfile;
@@ -141,19 +141,33 @@ fn sweeping_reduces_shielding_versus_on_resonance_tone() {
             dt_s: 5.0e-4,
         },
     );
-    // Sweep-only beats fixed-only: a sweep crossing the cloud resonance sees a
-    // lower band-average attenuation than a fixed tone on resonance.
+    // The regime-independent claim is that *sweeping helps at any fixed pulsing*:
+    // a sweep crossing the cloud resonance sees a lower band-average attenuation
+    // than a fixed tone on resonance, so at both duty cycles the swept drive has
+    // the lower shielding loss and the higher mean delivered transmission while
+    // driving. The CW-vs-pulsed comparison is deliberately NOT asserted — it has
+    // an optimal PRF and is genuinely regime-dependent (CW can self-shield into
+    // silence; pulsing can accumulate across incompletely-cleared OFF intervals).
     assert!(
         cmp.cw_swept.shielding_loss_fraction <= cmp.cw_fixed.shielding_loss_fraction,
-        "swept loss {} should not exceed fixed loss {}",
+        "swept loss {} ≤ fixed loss {} (CW)",
         cmp.cw_swept.shielding_loss_fraction,
         cmp.cw_fixed.shielding_loss_fraction
     );
-    // Combined control delivers the most energy of the four exposures.
-    let best = cmp.pulsed_swept.delivered_energy;
-    assert!(best >= cmp.cw_fixed.delivered_energy);
-    assert!(best >= cmp.pulsed_fixed.delivered_energy);
-    assert!(best >= cmp.cw_swept.delivered_energy);
+    assert!(
+        cmp.pulsed_swept.shielding_loss_fraction <= cmp.pulsed_fixed.shielding_loss_fraction,
+        "swept loss {} ≤ fixed loss {} (pulsed)",
+        cmp.pulsed_swept.shielding_loss_fraction,
+        cmp.pulsed_fixed.shielding_loss_fraction
+    );
+    assert!(
+        cmp.cw_swept.mean_delivered_fraction_on >= cmp.cw_fixed.mean_delivered_fraction_on,
+        "swept transmission ≥ fixed (CW)"
+    );
+    assert!(
+        cmp.pulsed_swept.mean_delivered_fraction_on >= cmp.pulsed_fixed.mean_delivered_fraction_on,
+        "swept transmission ≥ fixed (pulsed)"
+    );
 }
 
 #[test]

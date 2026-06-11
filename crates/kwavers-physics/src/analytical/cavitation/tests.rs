@@ -31,7 +31,10 @@ fn minnaert_surface_tension_correction_matches_closed_form_and_scales_with_radiu
     let laplace = 2.0 * SIGMA / r0;
     let stiffness = 3.0 * gamma * ATMOSPHERIC_PRESSURE + (3.0 * gamma - 1.0) * laplace;
     let expected = (stiffness / rho).sqrt() / (TWO_PI * r0);
-    assert!((f - expected).abs() <= 1e-9 * expected, "f={f} expected={expected}");
+    assert!(
+        (f - expected).abs() <= 1e-9 * expected,
+        "f={f} expected={expected}"
+    );
 
     // Large bubble (R₀ = 1 mm): 2σ/R₀ ≪ P₀ ⇒ correction is negligible (<0.1%).
     // (At 100 µm it is already a non-negligible ~0.5%, consistent with the 1/R₀
@@ -39,7 +42,10 @@ fn minnaert_surface_tension_correction_matches_closed_form_and_scales_with_radiu
     let r_big = 1e-3;
     let big_corr = minnaert_resonance_corrected_hz(r_big, gamma, ATMOSPHERIC_PRESSURE, rho, SIGMA);
     let big_unc = minnaert_resonance_hz(r_big, gamma, ATMOSPHERIC_PRESSURE, rho);
-    assert!((big_corr - big_unc).abs() / big_unc < 1e-3, "large-bubble correction must be tiny");
+    assert!(
+        (big_corr - big_unc).abs() / big_unc < 1e-3,
+        "large-bubble correction must be tiny"
+    );
 
     // Small bubble (R₀ = 1 µm): surface tension raises f₀ by >10% (chapter §5).
     let small_corr = minnaert_resonance_corrected_hz(r0, gamma, ATMOSPHERIC_PRESSURE, rho, SIGMA);

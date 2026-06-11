@@ -239,7 +239,10 @@ fn quasistatic_source_evokes_post_stimulus_ap() {
     };
     assert!(cfg.is_valid());
     let tr = simulate_nice(&cfg);
-    assert!(tr.spike_count() >= 1, "no post-stimulus AP (pressure-driven)");
+    assert!(
+        tr.spike_count() >= 1,
+        "no post-stimulus AP (pressure-driven)"
+    );
     assert!(tr.spike_times_ms.iter().all(|&t| t >= cfg.onset_ms));
     let v_max = tr.voltage_mv.iter().cloned().fold(f64::MIN, f64::max);
     assert!(v_max > 20.0, "AP overshoot only {v_max} mV");
@@ -271,7 +274,10 @@ fn bls_dynamics_reproduces_plaksin_fig1_deflection() {
         qm0,
         super::super::bls::pressures::rest_gap(qm0),
     );
-    assert!(z500 > zqs, "dynamic {z500} should exceed quasi-static {zqs}");
+    assert!(
+        z500 > zqs,
+        "dynamic {z500} should exceed quasi-static {zqs}"
+    );
 }
 
 #[test]
@@ -292,7 +298,10 @@ fn bls_dynamics_source_evokes_post_stimulus_ap() {
     };
     assert!(cfg.is_valid());
     let tr = simulate_nice(&cfg);
-    assert!(tr.spike_count() >= 1, "no post-stimulus AP (dynamic source)");
+    assert!(
+        tr.spike_count() >= 1,
+        "no post-stimulus AP (dynamic source)"
+    );
     assert!(tr.spike_times_ms.iter().all(|&t| t >= cfg.onset_ms));
     assert!(tr.voltage_mv.iter().cloned().fold(f64::MIN, f64::max) > 20.0);
 }
@@ -314,7 +323,11 @@ fn cortical_rs_fires_under_current_clamp_via_nice_zero_drive() {
         t_end_ms: 120.0,
     };
     let tr = simulate_nice(&cfg);
-    assert!(tr.spike_count() >= 2, "RS did not fire: {}", tr.spike_count());
+    assert!(
+        tr.spike_count() >= 2,
+        "RS did not fire: {}",
+        tr.spike_count()
+    );
     let v_max = tr.voltage_mv.iter().cloned().fold(f64::MIN, f64::max);
     assert!(v_max > 0.0, "no AP overshoot: {v_max} mV");
 }
@@ -366,7 +379,11 @@ fn cortical_rs_and_fs_differ_under_identical_drive() {
     );
 }
 
-fn sonic_cfg(zmax_nm: f64, offset_ms: f64, t_end_ms: f64) -> super::super::sonic::SonicConfig<HhParams> {
+fn sonic_cfg(
+    zmax_nm: f64,
+    offset_ms: f64,
+    t_end_ms: f64,
+) -> super::super::sonic::SonicConfig<HhParams> {
     super::super::sonic::SonicConfig {
         membrane: HhParams::default(),
         v_rest_mv: V_REST,
@@ -455,7 +472,13 @@ fn threshold_pressure_is_bracketed() {
     let thr = q
         .threshold_pressure_pa(50.0e3, 600.0e3, 6, &make)
         .expect("a firing threshold should exist within [50, 600] kPa");
-    assert!((50.0e3..600.0e3).contains(&thr), "threshold {thr} Pa out of range");
+    assert!(
+        (50.0e3..600.0e3).contains(&thr),
+        "threshold {thr} Pa out of range"
+    );
     assert!(q.fires(thr * 1.15, &make), "above threshold should fire");
-    assert!(!q.fires(thr * 0.5, &make), "well below threshold should not fire");
+    assert!(
+        !q.fires(thr * 0.5, &make),
+        "well below threshold should not fire"
+    );
 }

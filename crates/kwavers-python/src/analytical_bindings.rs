@@ -292,6 +292,8 @@ pub fn register_book(m: &Bound<'_, PyModule>) -> PyResult<()> {
         m
     )?)?;
     m.add_function(wrap_pyfunction!(cavitation::staged_sonication_sweep, m)?)?;
+    m.add_function(wrap_pyfunction!(cavitation::simulate_shielding_trace, m)?)?;
+    m.add_function(wrap_pyfunction!(cavitation::compare_shielding_control, m)?)?;
     // tissue
     m.add_function(wrap_pyfunction!(tissue::water_sound_speed_temperature, m)?)?;
     m.add_function(wrap_pyfunction!(tissue::water_density_temperature, m)?)?;

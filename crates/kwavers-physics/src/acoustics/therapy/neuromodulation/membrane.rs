@@ -63,7 +63,14 @@ pub fn axpy_gates(base: &Gates, delta: &Gates, w: f64) -> Gates {
 /// Weighted RK4 combination `base + (dt/6)·(k1 + 2k2 + 2k3 + k4)`, gates clamped.
 #[inline]
 #[must_use]
-pub fn rk4_combine_gates(base: &Gates, k1: &Gates, k2: &Gates, k3: &Gates, k4: &Gates, dt: f64) -> Gates {
+pub fn rk4_combine_gates(
+    base: &Gates,
+    k1: &Gates,
+    k2: &Gates,
+    k3: &Gates,
+    k4: &Gates,
+    dt: f64,
+) -> Gates {
     let mut out = *base;
     for i in 0..4 {
         out[i] = (base[i] + dt / 6.0 * (k1[i] + 2.0 * k2[i] + 2.0 * k3[i] + k4[i])).clamp(0.0, 1.0);

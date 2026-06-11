@@ -34,13 +34,13 @@
 //! - Plaksin, M., Shoham, S. & Kimmel, E. (2014). *Phys. Rev. X* 4, 011004 (Eq. 2).
 //! - Lemaire, T. et al. (2019). *J. Neural Eng.* 16, 046007 (PySONIC `bls.py`).
 
+use super::super::intramembrane_cavitation::{CapacitanceSource, PhaseCycle};
 use super::capacitance::bls_capacitance;
 use super::pressures::{
     curvature_radius, elastic_pressure, electrical_pressure, gas_pressure, initial_gas_mol,
     molecular_pressure, rest_gap, A_RADIUS_M, C0_MOL_M3, DELTA0_M, DGL_M2_S, KH_PA_M3_MOL,
     MU_L_PA_S, MU_S_PA_S, P0_PA, RHO_L_KG_M3, XI_M,
 };
-use super::super::intramembrane_cavitation::{CapacitanceSource, PhaseCycle};
 use std::f64::consts::PI;
 
 /// Relative lower bound on deflection (critical compression), `Z_min = −0.49·Δ`
@@ -100,15 +100,7 @@ fn gas_flux(z: f64, pg: f64) -> f64 {
 /// caller (an O(1) table lookup during integration; see [`PmTable`]), keeping the
 /// hot path free of the per-step quadrature.
 #[inline]
-fn derivatives(
-    u: f64,
-    z: f64,
-    ng: f64,
-    qm: f64,
-    pac: f64,
-    delta: f64,
-    pm: f64,
-) -> (f64, f64, f64) {
+fn derivatives(u: f64, z: f64, ng: f64, qm: f64, pac: f64, delta: f64, pm: f64) -> (f64, f64, f64) {
     let r = curvature_radius(z);
     let ptot = pm + gas_pressure(ng, z, delta) - P0_PA - pac
         + elastic_pressure(z)

@@ -110,11 +110,11 @@ pub use bls::{
 };
 pub use cortical::CorticalNeuron;
 pub use hodgkin_huxley::{simulate_hh, HhParams, HhState, HhTrace, SPIKE_THRESHOLD_MV};
-pub use membrane::{Gates, Membrane};
 pub use intramembrane_cavitation::{
     modulation_depth_from_pressure, CapacitanceModulation, CapacitanceSource, PhaseCycle,
     BILAYER_AREA_MODULUS_N_M,
 };
+pub use membrane::{Gates, Membrane};
 pub use nice::{simulate_nice, NiceConfig};
 pub use protocol::{
     itrusst_assess, tissue_dosimetry, ItrusstAssessment, PulseTrainDosimetry, PulseTrainProtocol,

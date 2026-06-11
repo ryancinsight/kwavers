@@ -1832,3 +1832,259 @@ pub fn staged_sonication_sweep(
         p.residual_at_end,
     ))
 }
+
+/// Build a `ShieldingMedium` from explicit focal-region parameters.
+#[allow(clippy::too_many_arguments)]
+fn shielding_medium(
+    c_liquid: f64,
+    rho_liquid: f64,
+    mu_liquid: f64,
+    p0_pa: f64,
+    polytropic: f64,
+    r0_m: f64,
+    alpha_tissue_np_m: f64,
+    path_len_m: f64,
+    saturation_fraction: f64,
+) -> cavitation::ShieldingMedium {
+    cavitation::ShieldingMedium {
+        c_liquid,
+        rho_liquid,
+        mu_liquid,
+        p0_pa,
+        polytropic,
+        r0_m,
+        alpha_tissue_np_m,
+        path_len_m,
+        saturation_fraction,
+    }
+}
+
+/// Build a `CavitationProduction` source from explicit parameters.
+fn shielding_production(
+    k_prod_per_s: f64,
+    beta_max: f64,
+    p_threshold_pa: f64,
+    p_ref_pa: f64,
+    supralinearity: f64,
+) -> cavitation::CavitationProduction {
+    cavitation::CavitationProduction {
+        k_prod_per_s,
+        beta_max,
+        p_threshold_pa,
+        p_ref_pa,
+        supralinearity,
+    }
+}
+
+/// Time-resolved cavitation-shielding trace under a pulsed, optionally swept drive.
+///
+/// Integrates the focal void-fraction balance with self-shielding feedback (the
+/// delivered focal pressure is derated by Commander–Prosperetti attenuation of
+/// the accumulating cloud) and Epstein–Plesset inter-pulse clearance. `freq_mode`
+/// is `"fixed"` (constant `f_fixed_hz`) or `"swept"` (chirp over
+/// `[f_start_hz, f_end_hz]` with `sweep_period_s` and `profile`).
+///
+/// Returns:
+///     (time_s, void_fraction, delivered_fraction, delivered_pressure_pa,
+///      peak_void_fraction, mean_void_fraction, mean_delivered_fraction_on,
+///      delivered_energy, unshielded_energy, shielding_loss_fraction).
+#[pyfunction]
+#[allow(clippy::too_many_arguments)]
+#[pyo3(signature = (
+    drive_pressure_pa, freq_mode, f_fixed_hz, f_start_hz, f_end_hz, sweep_period_s,
+    profile, pulse_on_s, pulse_off_s, total_time_s, dt_s,
+    k_prod_per_s=50.0, beta_max=1.0e-2, p_threshold_pa=1.0e6, p_ref_pa=1.0e6,
+    supralinearity=3.0, c_liquid=1540.0, rho_liquid=1050.0, mu_liquid=1.5e-3,
+    p0_pa=101_325.0, polytropic=1.4, r0_m=2.0e-6, alpha_tissue_np_m=5.0,
+    path_len_m=0.04, saturation_fraction=0.9
+))]
+pub fn simulate_shielding_trace(
+    py: Python<'_>,
+    drive_pressure_pa: f64,
+    freq_mode: &str,
+    f_fixed_hz: f64,
+    f_start_hz: f64,
+    f_end_hz: f64,
+    sweep_period_s: f64,
+    profile: &str,
+    pulse_on_s: f64,
+    pulse_off_s: f64,
+    total_time_s: f64,
+    dt_s: f64,
+    k_prod_per_s: f64,
+    beta_max: f64,
+    p_threshold_pa: f64,
+    p_ref_pa: f64,
+    supralinearity: f64,
+    c_liquid: f64,
+    rho_liquid: f64,
+    mu_liquid: f64,
+    p0_pa: f64,
+    polytropic: f64,
+    r0_m: f64,
+    alpha_tissue_np_m: f64,
+    path_len_m: f64,
+    saturation_fraction: f64,
+) -> PyResult<(
+    Py<PyArray1<f64>>,
+    Py<PyArray1<f64>>,
+    Py<PyArray1<f64>>,
+    Py<PyArray1<f64>>,
+    f64,
+    f64,
+    f64,
+    f64,
+    f64,
+    f64,
+)> {
+    let freq = match freq_mode.to_ascii_lowercase().as_str() {
+        "fixed" => cavitation::DriveFrequency::Fixed(f_fixed_hz),
+        "swept" => {
+            let sweep = cavitation::FrequencySweep::new(
+                f_start_hz,
+                f_end_hz,
+                sweep_period_s,
+                parse_sweep_profile(profile)?,
+            )
+            .ok_or_else(|| PyRuntimeError::new_err("invalid frequency-sweep parameters"))?;
+            cavitation::DriveFrequency::Swept(sweep)
+        }
+        other => {
+            return Err(PyRuntimeError::new_err(format!(
+                "unknown freq_mode '{other}' (expected 'fixed' or 'swept')"
+            )))
+        }
+    };
+    let protocol = cavitation::PulseProtocol::pulsed(pulse_on_s, pulse_off_s);
+    let prod = shielding_production(
+        k_prod_per_s,
+        beta_max,
+        p_threshold_pa,
+        p_ref_pa,
+        supralinearity,
+    );
+    let medium = shielding_medium(
+        c_liquid,
+        rho_liquid,
+        mu_liquid,
+        p0_pa,
+        polytropic,
+        r0_m,
+        alpha_tissue_np_m,
+        path_len_m,
+        saturation_fraction,
+    );
+    let cfg = cavitation::ShieldingConfig { total_time_s, dt_s };
+    let t =
+        cavitation::simulate_shielding(drive_pressure_pa, &freq, &protocol, &prod, &medium, &cfg);
+    Ok((
+        t.time_s.into_pyarray(py).unbind(),
+        t.void_fraction.into_pyarray(py).unbind(),
+        t.delivered_fraction.into_pyarray(py).unbind(),
+        t.delivered_pressure_pa.into_pyarray(py).unbind(),
+        t.peak_void_fraction,
+        t.mean_void_fraction,
+        t.mean_delivered_fraction_on,
+        t.delivered_energy,
+        t.unshielded_energy,
+        t.shielding_loss_fraction,
+    ))
+}
+
+/// 2×2 cavitation-shielding control comparison: {CW, pulsed} × {fixed, swept}.
+///
+/// The fixed tone uses the sweep mean frequency, so the rows isolate the control
+/// strategy. Each row is summarised by five metrics `(peak_void_fraction,
+/// mean_void_fraction, mean_delivered_fraction_on, delivered_energy,
+/// shielding_loss_fraction)`. `mean_delivered_fraction_on` is the duty-fair
+/// efficacy metric (transmission while driving); `delivered_energy` is absolute
+/// and therefore scales with duty cycle.
+///
+/// Returns a flat 20-element list ordered cw_fixed, cw_swept, pulsed_fixed,
+/// pulsed_swept, each contributing its five metrics in the order above.
+#[pyfunction]
+#[allow(clippy::too_many_arguments)]
+#[pyo3(signature = (
+    drive_pressure_pa, f_start_hz, f_end_hz, sweep_period_s, profile,
+    pulse_on_s, pulse_off_s, total_time_s, dt_s,
+    k_prod_per_s=50.0, beta_max=1.0e-2, p_threshold_pa=1.0e6, p_ref_pa=1.0e6,
+    supralinearity=3.0, c_liquid=1540.0, rho_liquid=1050.0, mu_liquid=1.5e-3,
+    p0_pa=101_325.0, polytropic=1.4, r0_m=2.0e-6, alpha_tissue_np_m=5.0,
+    path_len_m=0.04, saturation_fraction=0.9
+))]
+pub fn compare_shielding_control(
+    drive_pressure_pa: f64,
+    f_start_hz: f64,
+    f_end_hz: f64,
+    sweep_period_s: f64,
+    profile: &str,
+    pulse_on_s: f64,
+    pulse_off_s: f64,
+    total_time_s: f64,
+    dt_s: f64,
+    k_prod_per_s: f64,
+    beta_max: f64,
+    p_threshold_pa: f64,
+    p_ref_pa: f64,
+    supralinearity: f64,
+    c_liquid: f64,
+    rho_liquid: f64,
+    mu_liquid: f64,
+    p0_pa: f64,
+    polytropic: f64,
+    r0_m: f64,
+    alpha_tissue_np_m: f64,
+    path_len_m: f64,
+    saturation_fraction: f64,
+) -> PyResult<Vec<f64>> {
+    let sweep = cavitation::FrequencySweep::new(
+        f_start_hz,
+        f_end_hz,
+        sweep_period_s,
+        parse_sweep_profile(profile)?,
+    )
+    .ok_or_else(|| PyRuntimeError::new_err("invalid frequency-sweep parameters"))?;
+    let protocol = cavitation::PulseProtocol::pulsed(pulse_on_s, pulse_off_s);
+    let prod = shielding_production(
+        k_prod_per_s,
+        beta_max,
+        p_threshold_pa,
+        p_ref_pa,
+        supralinearity,
+    );
+    let medium = shielding_medium(
+        c_liquid,
+        rho_liquid,
+        mu_liquid,
+        p0_pa,
+        polytropic,
+        r0_m,
+        alpha_tissue_np_m,
+        path_len_m,
+        saturation_fraction,
+    );
+    let cfg = cavitation::ShieldingConfig { total_time_s, dt_s };
+    let c = cavitation::compare_shielding_control(
+        drive_pressure_pa,
+        &sweep,
+        &protocol,
+        &prod,
+        &medium,
+        &cfg,
+    );
+    let row = |s: &cavitation::ShieldingSummary| {
+        [
+            s.peak_void_fraction,
+            s.mean_void_fraction,
+            s.mean_delivered_fraction_on,
+            s.delivered_energy,
+            s.shielding_loss_fraction,
+        ]
+    };
+    let mut out = Vec::with_capacity(20);
+    out.extend_from_slice(&row(&c.cw_fixed));
+    out.extend_from_slice(&row(&c.cw_swept));
+    out.extend_from_slice(&row(&c.pulsed_fixed));
+    out.extend_from_slice(&row(&c.pulsed_swept));
+    Ok(out)
+}

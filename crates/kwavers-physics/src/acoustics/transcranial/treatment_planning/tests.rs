@@ -35,7 +35,11 @@ fn test_treatment_plan_generation() {
 /// Grid + spec + target sized so the focused bowl (radius = focal_distance)
 /// lies entirely inside the CT volume, so the aberration ray-trace samples real
 /// voxels rather than clamped edges.
-fn aberration_fixture() -> (Grid, TranscranialTransducerSpecification, TranscranialTargetVolume) {
+fn aberration_fixture() -> (
+    Grid,
+    TranscranialTransducerSpecification,
+    TranscranialTargetVolume,
+) {
     let grid = Grid::new(40, 40, 40, 1e-3, 1e-3, 1e-3).unwrap(); // 40 mm cube
     let spec = TranscranialTransducerSpecification {
         num_elements: 64,

@@ -339,7 +339,11 @@ mod tests {
         let nu = 2.0;
         let max = 12;
         let intensities = solve_coupled_orders(nu, 0.0, 0.0, max, 2000);
-        assert!((sum(&intensities) - 1.0).abs() < 1e-6, "energy {}", sum(&intensities));
+        assert!(
+            (sum(&intensities) - 1.0).abs() < 1e-6,
+            "energy {}",
+            sum(&intensities)
+        );
         for m in 0..=6u32 {
             let analytic = {
                 let j = jn(m, nu);
@@ -360,13 +364,21 @@ mod tests {
         let nu = 1.2;
         let max = 6;
         let intensities = solve_coupled_orders(nu, 60.0, -0.5, max, 4000);
-        assert!((sum(&intensities) - 1.0).abs() < 1e-5, "energy {}", sum(&intensities));
+        assert!(
+            (sum(&intensities) - 1.0).abs() < 1e-5,
+            "energy {}",
+            sum(&intensities)
+        );
 
         let i0 = intensities[max as usize];
         let i1 = intensities[(max + 1) as usize];
         let eta = bragg_diffraction_efficiency(nu); // sin²(ν/2)
         assert!((i1 - eta).abs() < 2e-2, "Bragg η: {i1} vs {eta}");
-        assert!((i0 - (1.0 - eta)).abs() < 2e-2, "Bragg I₀: {i0} vs {}", 1.0 - eta);
+        assert!(
+            (i0 - (1.0 - eta)).abs() < 2e-2,
+            "Bragg I₀: {i0} vs {}",
+            1.0 - eta
+        );
         // Spurious orders (≥2 and the −1 mismatched order) are suppressed.
         assert!(intensities[(max + 2) as usize] < 1e-2);
         assert!(intensities[(max - 1) as usize] < 1e-2);
@@ -377,7 +389,10 @@ mod tests {
     fn coupled_solver_conserves_energy_in_all_regimes() {
         for &(nu, q, alpha) in &[(3.0, 1.0, 0.0), (1.5, 8.0, -0.5), (4.0, 0.5, 0.2)] {
             let s = sum(&solve_coupled_orders(nu, q, alpha, 16, 3000));
-            assert!((s - 1.0).abs() < 1e-5, "energy {s} for ν={nu},Q={q},α={alpha}");
+            assert!(
+                (s - 1.0).abs() < 1e-5,
+                "energy {s} for ν={nu},Q={q},α={alpha}"
+            );
         }
     }
 
