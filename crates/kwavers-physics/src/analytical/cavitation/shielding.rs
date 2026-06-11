@@ -472,7 +472,8 @@ pub struct ShieldingComparison {
     pub cw_swept: ShieldingSummary,
     /// Pulsed fixed-frequency drive (pulse-only control).
     pub pulsed_fixed: ShieldingSummary,
-    /// Pulsed swept drive (combined control — expected best delivery).
+    /// Pulsed swept drive (both controls applied). Sweeping lowers the shielding
+    /// at this duty; whether pulsing beats CW is regime-dependent (optimal PRF).
     pub pulsed_swept: ShieldingSummary,
 }
 

@@ -5,7 +5,8 @@
 use kwavers_physics::acoustics::therapy::neuromodulation::{
     bls_capacitance, itrusst_assess, quasistatic_deflection, rest_gap, simulate_hh, simulate_nice,
     simulate_sonic, BilayerSonophore, BilayerSonophoreDynamic, BilayerSonophoreQuasistatic,
-    CorticalNeuron, HhParams, Membrane, NiceConfig, PulseTrainProtocol, SonicConfig, ThresholdQuery,
+    CorticalNeuron, HhParams, Membrane, NiceConfig, PulseTrainProtocol, SonicConfig,
+    ThresholdQuery,
 };
 use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
@@ -239,7 +240,9 @@ pub fn nice_quasistatic_response(
         t_end_ms,
     };
     if !cfg.is_valid() {
-        return Err(PyValueError::new_err("invalid quasi-static NICE configuration"));
+        return Err(PyValueError::new_err(
+            "invalid quasi-static NICE configuration",
+        ));
     }
     let trace = simulate_nice(&cfg);
     Ok((

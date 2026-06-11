@@ -116,7 +116,10 @@ impl CapacitanceCycle {
             })
             .collect();
         let inv_cm_mean = inv_cm.iter().sum::<f64>() / n as f64;
-        Self { inv_cm, inv_cm_mean }
+        Self {
+            inv_cm,
+            inv_cm_mean,
+        }
     }
 }
 
@@ -172,7 +175,10 @@ pub fn simulate_sonic<M: Membrane>(cfg: &SonicConfig<M>) -> HhTrace {
             (cfg.i_bias_ua_cm2 - i_ionic, dg)
         } else {
             let v = q / cm0;
-            (cfg.i_bias_ua_cm2 - mem.ionic_current(g, v), mem.gate_rates(g, v))
+            (
+                cfg.i_bias_ua_cm2 - mem.ionic_current(g, v),
+                mem.gate_rates(g, v),
+            )
         }
     };
 
@@ -184,8 +190,16 @@ pub fn simulate_sonic<M: Membrane>(cfg: &SonicConfig<M>) -> HhTrace {
         let v_prev = vmean_of(q, on0);
 
         let (dq1, dg1) = deriv(q, &gates, on0);
-        let (dq2, dg2) = deriv(q + 0.5 * dt * dq1, &axpy_gates(&gates, &dg1, 0.5 * dt), on_mid);
-        let (dq3, dg3) = deriv(q + 0.5 * dt * dq2, &axpy_gates(&gates, &dg2, 0.5 * dt), on_mid);
+        let (dq2, dg2) = deriv(
+            q + 0.5 * dt * dq1,
+            &axpy_gates(&gates, &dg1, 0.5 * dt),
+            on_mid,
+        );
+        let (dq3, dg3) = deriv(
+            q + 0.5 * dt * dq2,
+            &axpy_gates(&gates, &dg2, 0.5 * dt),
+            on_mid,
+        );
         let (dq4, dg4) = deriv(q + dt * dq3, &axpy_gates(&gates, &dg3, dt), on_end);
         q += dt / 6.0 * (dq1 + 2.0 * dq2 + 2.0 * dq3 + dq4);
         gates = rk4_combine_gates(&gates, &dg1, &dg2, &dg3, &dg4, dt);

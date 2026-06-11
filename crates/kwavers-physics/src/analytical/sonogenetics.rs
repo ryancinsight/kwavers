@@ -275,14 +275,8 @@ impl GeneExpressionKinetics {
         let k3 = self.derivative(add(state, k2, 0.5 * dt), activation);
         let k4 = self.derivative(add(state, k3, dt), activation);
         ExpressionState {
-            mrna: (dt / 6.0).mul_add(
-                k4.0 + 2.0 * (k2.0 + k3.0) + k1.0,
-                state.mrna,
-            ),
-            protein: (dt / 6.0).mul_add(
-                k4.1 + 2.0 * (k2.1 + k3.1) + k1.1,
-                state.protein,
-            ),
+            mrna: (dt / 6.0).mul_add(k4.0 + 2.0 * (k2.0 + k3.0) + k1.0, state.mrna),
+            protein: (dt / 6.0).mul_add(k4.1 + 2.0 * (k2.1 + k3.1) + k1.1, state.protein),
         }
     }
 
@@ -461,7 +455,7 @@ mod tests {
     fn gene_expression_integrates_to_closed_form_steady_state() {
         let k = kinetics();
         let a = 0.8; // sustained activation
-        // Drive long enough to reach steady state (protein τ = 1/δ_p = 10 s).
+                     // Drive long enough to reach steady state (protein τ = 1/δ_p = 10 s).
         let dt = 0.01;
         let n = (200.0 / dt) as usize; // 200 s ≫ 10 s
         let series = vec![a; n];
@@ -520,6 +514,9 @@ mod tests {
         let traj = k.integrate(&series, dt);
         let peak = traj[399].protein;
         let end = traj.last().unwrap().protein;
-        assert!(end < 0.05 * peak, "expression must wash out: {end} vs peak {peak}");
+        assert!(
+            end < 0.05 * peak,
+            "expression must wash out: {end} vs peak {peak}"
+        );
     }
 }

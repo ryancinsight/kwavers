@@ -45,8 +45,8 @@
 //!   (Eqs. 2–8).
 //! - Lemaire, T. et al. (2019). *J. Neural Eng.* 16, 046007 (PySONIC).
 
-use super::capacitance::bls_capacitance;
 use super::super::intramembrane_cavitation::{CapacitanceSource, PhaseCycle};
+use super::capacitance::bls_capacitance;
 use kwavers_core::constants::fundamental::GAS_CONSTANT;
 use std::f64::consts::PI;
 
@@ -177,7 +177,9 @@ pub fn elastic_pressure(z: f64) -> f64 {
 #[inline]
 #[must_use]
 pub fn cavity_volume(z: f64, delta: f64) -> f64 {
-    PI * A_RADIUS_M * A_RADIUS_M * delta
+    PI * A_RADIUS_M
+        * A_RADIUS_M
+        * delta
         * (1.0 + (z / (3.0 * delta)) * (z * z / (A_RADIUS_M * A_RADIUS_M) + 3.0))
 }
 
@@ -224,13 +226,7 @@ pub fn rest_gap(qm0_c_m2: f64) -> f64 {
 /// Static total pressure on the leaflet (inertia- and viscosity-free):
 /// `P_M + P_gas − P₀ − P_ac + P_elastic + P_elec`.
 #[must_use]
-pub fn static_total_pressure(
-    z: f64,
-    ng_mol: f64,
-    qm_c_m2: f64,
-    pac_pa: f64,
-    delta: f64,
-) -> f64 {
+pub fn static_total_pressure(z: f64, ng_mol: f64, qm_c_m2: f64, pac_pa: f64, delta: f64) -> f64 {
     molecular_pressure(z, delta) + gas_pressure(ng_mol, z, delta) - P0_PA - pac_pa
         + elastic_pressure(z)
         + electrical_pressure(z, qm_c_m2)
