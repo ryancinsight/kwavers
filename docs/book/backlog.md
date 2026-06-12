@@ -17,6 +17,15 @@ claimed struct name) before implementing. Confirmed corrections below.
 
 ## Done
 
+- ✅ **Anisotropic group (energy) velocity** — `[minor]` (2026-06-10). The (now-correct) Christoffel
+  solver had phase velocities + polarizations but **no group/energy velocity** — the quantity along
+  which energy actually propagates (it walks off the phase direction in anisotropic media). Added
+  `ChristoffelEquation::group_velocities` = `V_{g,i} = (1/ρV_p) Σ_jkl C_ijkl p_j p_k n̂_l` (Auld 1973
+  §7), with a Voigt→full-tensor `c_ijkl` accessor (consistent with `christoffel_matrix`). 2
+  value-semantic tests: **isotropic `V_g = V_p·n̂`** exactly for qP and both qS modes off-axis
+  (magnitude = phase speed, parallel to n — the discriminating contraction check); TI medium gives
+  finite components with an axial qP energy velocity on the symmetry axis; degenerate inputs rejected.
+  Completes the anisotropic-wave API (phase velocity + polarization + group velocity).
 - ✅ **`LinearAlgebra::qr_decomposition` — returned Qᵀ; fixed via nalgebra** — `[patch]` (2026-06-10,
   codebase audit). The hand-rolled Householder QR accumulated `Q ← Hⱼ·Q` (left-multiply) → `Q = Hₙ…H₁
   = Qᵀ`, so `A = QᵀR` not `A = QR` (the documented contract). It was **untested and unused** (dead
