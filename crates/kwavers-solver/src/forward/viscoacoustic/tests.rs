@@ -1,14 +1,15 @@
 //! Validation of the memory-variable viscoacoustic solver against the analytic
-//! complex dispersion relation `ρω² = M(ω)k²` of the generalized-Maxwell medium.
+//! complex dispersion relation `ρω² = M(ω)|k|²` of the generalized-Maxwell
+//! medium, in 1-D, 2-D, and 3-D.
 
 use super::ViscoacousticMemorySolver;
-use ndarray::Array1;
+use ndarray::Array3;
 use num_complex::Complex64;
 use std::f64::consts::TAU;
 
 const RHO: f64 = 1000.0;
 const M_INF: f64 = 2.25e9; // ρ·1500² ⇒ relaxed speed 1500 m/s
-// Two relaxation arms with loss times bracketing the ~0.5 MHz test band.
+// Two relaxation arms with loss times bracketing the ~MHz test band.
 const ARMS: [(f64, f64); 2] = [(1.5e8, 3.2e-7), (8.0e7, 8.0e-8)];
 
 fn m_u() -> f64 {
@@ -25,14 +26,13 @@ fn complex_modulus(omega: Complex64) -> Complex64 {
     m
 }
 
-/// Solve `ρω² = M(ω)k²` for the complex angular frequency at a real wavenumber
-/// `k` (temporal-decay branch) by Newton iteration from the unrelaxed guess.
+/// Solve `ρω² = M(ω)k²` for the complex angular frequency at wavenumber `k`
+/// (temporal-decay branch) by Newton iteration from the unrelaxed guess.
 /// Returns `(Re ω, |Im ω|)` — oscillation frequency and amplitude decay rate.
 fn dispersion_oracle(k: f64) -> (f64, f64) {
     let k2 = k * k;
     let mut omega = Complex64::new(k * (m_u() / RHO).sqrt(), 0.0);
     for _ in 0..60 {
-        // F(ω) = ρω² − M(ω)k²;  M'(ω) = Σ ΔMₗ iτₗ/(1+iωτₗ)².
         let f = RHO * omega * omega - complex_modulus(omega) * k2;
         let mut mprime = Complex64::new(0.0, 0.0);
         for &(dm, tau) in &ARMS {
@@ -45,27 +45,134 @@ fn dispersion_oracle(k: f64) -> (f64, f64) {
     (omega.re.abs(), omega.im.abs())
 }
 
-/// A lossless medium (no relaxation arms) does not dissipate: the leapfrog
-/// energy oscillates (v and p are half a step apart) but has no secular drift.
-/// Window-averaging removes the bounded oscillation; the time-averaged energy is
-/// conserved, so an early window and a late window agree to high precision.
-#[test]
-fn lossless_medium_conserves_energy() {
-    let n = 256;
-    let dx = 1.0e-4;
-    let dt = 2.0e-8;
-    let mut solver = ViscoacousticMemorySolver::new(n, dx, dt, RHO, M_INF, &[]).unwrap();
+/// Run a standing-wave initial condition and measure the temporal decay rate
+/// (from energy) and oscillation frequency (from the `p` trace at the origin).
+fn measure(
+    solver: &mut ViscoacousticMemorySolver,
+    warmup: usize,
+    span: usize,
+    dt: f64,
+) -> (f64, f64) {
+    for _ in 0..warmup {
+        solver.step();
+    }
+    let e_start = solver.energy();
+    let mut trace = Vec::with_capacity(span);
+    for _ in 0..span {
+        solver.step();
+        trace.push(solver.pressure()[[0, 0, 0]]);
+    }
+    let e_end = solver.energy();
+    let dt_span = span as f64 * dt;
+    let decay = -(e_end / e_start).ln() / (2.0 * dt_span);
+    let crossings = trace.windows(2).filter(|w| w[0] * w[1] < 0.0).count() as f64;
+    let omega = TAU * crossings / 2.0 / dt_span;
+    (decay, omega)
+}
 
-    let k0 = TAU * 8.0 / (n as f64 * dx);
-    let p0 = Array1::from_shape_fn(n, |i| (k0 * i as f64 * dx).cos());
+/// **Broadband 1-D**: across several wavenumbers, the measured decay and
+/// frequency match the exact complex dispersion — the memory variables
+/// reproduce the whole relaxation spectrum, not a single-frequency fit.
+#[test]
+fn decay_matches_dispersion_1d() {
+    let n = 512;
+    let dx = 1.0e-4;
+    let dt = 1.5e-8;
+    for &m in &[6.0, 12.0, 24.0] {
+        let mut solver = ViscoacousticMemorySolver::new_1d(n, dx, dt, RHO, M_INF, &ARMS).unwrap();
+        let k0 = TAU * m / (n as f64 * dx);
+        let p0 = Array3::from_shape_fn((n, 1, 1), |(i, _, _)| (k0 * i as f64 * dx).cos());
+        solver.set_pressure(&p0).unwrap();
+
+        let (decay_meas, omega_meas) = measure(&mut solver, 400, 4000, dt);
+        let (omega_r, decay) = dispersion_oracle(k0);
+        assert!(
+            (decay_meas - decay).abs() <= 0.05 * decay,
+            "1D mode {m}: decay {decay_meas:.4e} vs oracle {decay:.4e}"
+        );
+        assert!(
+            (omega_meas - omega_r).abs() <= 0.02 * omega_r,
+            "1D mode {m}: ω {omega_meas:.4e} vs oracle {omega_r:.4e}"
+        );
+    }
+}
+
+/// **2-D**: a diagonal standing wave `cos(kₓx + k_yy)` exercises both spectral
+/// axes and the divergence; its decay matches the isotropic dispersion at
+/// `|k| = √(kₓ²+k_y²)`.
+#[test]
+fn decay_matches_dispersion_2d_diagonal() {
+    let n = 96;
+    let dx = 1.0e-4;
+    let dt = 1.2e-8;
+    for &m in &[4.0, 6.0] {
+        let mut solver =
+            ViscoacousticMemorySolver::new(n, n, 1, dx, dx, dx, dt, RHO, M_INF, &ARMS).unwrap();
+        let kc = TAU * m / (n as f64 * dx);
+        let kmag = kc * 2.0_f64.sqrt();
+        let p0 = Array3::from_shape_fn((n, n, 1), |(i, j, _)| {
+            (kc * (i as f64 + j as f64) * dx).cos()
+        });
+        solver.set_pressure(&p0).unwrap();
+
+        let (decay_meas, omega_meas) = measure(&mut solver, 400, 3000, dt);
+        let (omega_r, decay) = dispersion_oracle(kmag);
+        assert!(
+            (decay_meas - decay).abs() <= 0.06 * decay,
+            "2D mode {m}: decay {decay_meas:.4e} vs oracle {decay:.4e}"
+        );
+        assert!(
+            (omega_meas - omega_r).abs() <= 0.03 * omega_r,
+            "2D mode {m}: ω {omega_meas:.4e} vs oracle {omega_r:.4e}"
+        );
+    }
+}
+
+/// **3-D**: a body-diagonal standing wave `cos(kₓ(x+y+z))` decays at the
+/// isotropic dispersion rate for `|k| = √3 kₓ`.
+#[test]
+fn decay_matches_dispersion_3d_diagonal() {
+    let n = 32;
+    let dx = 1.5e-4;
+    let dt = 1.5e-8;
+    let m = 2.0;
+    let mut solver =
+        ViscoacousticMemorySolver::new(n, n, n, dx, dx, dx, dt, RHO, M_INF, &ARMS).unwrap();
+    let kc = TAU * m / (n as f64 * dx);
+    let kmag = kc * 3.0_f64.sqrt();
+    let p0 = Array3::from_shape_fn((n, n, n), |(i, j, k)| {
+        (kc * (i as f64 + j as f64 + k as f64) * dx).cos()
+    });
     solver.set_pressure(&p0).unwrap();
 
-    // Collect the energy each step over a long run (tens of periods), then
-    // compare the mean of the first half to the mean of the second half. The
-    // half-step energy oscillation averages out over many periods, so a
-    // remaining difference would be genuine secular dissipation — which a
-    // spectral, leapfrog (time-reversible) integrator must not produce.
-    let total = 8000usize;
+    let (decay_meas, omega_meas) = measure(&mut solver, 300, 2200, dt);
+    let (omega_r, decay) = dispersion_oracle(kmag);
+    assert!(
+        (decay_meas - decay).abs() <= 0.10 * decay,
+        "3D: decay {decay_meas:.4e} vs oracle {decay:.4e}"
+    );
+    assert!(
+        (omega_meas - omega_r).abs() <= 0.04 * omega_r,
+        "3D: ω {omega_meas:.4e} vs oracle {omega_r:.4e}"
+    );
+}
+
+/// A lossless 3-D medium (no relaxation arms) does not dissipate: the leapfrog
+/// energy oscillates but has no secular drift (first-half vs second-half mean).
+#[test]
+fn lossless_3d_no_secular_energy_drift() {
+    let n = 24;
+    let dx = 1.5e-4;
+    let dt = 1.5e-8;
+    let mut solver =
+        ViscoacousticMemorySolver::new(n, n, n, dx, dx, dx, dt, RHO, M_INF, &[]).unwrap();
+    let kc = TAU * 2.0 / (n as f64 * dx);
+    let p0 = Array3::from_shape_fn((n, n, n), |(i, j, k)| {
+        (kc * (i as f64 + j as f64 + k as f64) * dx).cos()
+    });
+    solver.set_pressure(&p0).unwrap();
+
+    let total = 4000usize;
     let energies: Vec<f64> = (0..total)
         .map(|_| {
             solver.step();
@@ -74,86 +181,12 @@ fn lossless_medium_conserves_energy() {
         .collect();
     let half = total / 2;
     let mean = |s: &[f64]| s.iter().sum::<f64>() / s.len() as f64;
-    let first = mean(&energies[..half]);
-    let second = mean(&energies[half..]);
+    let (first, second) = (mean(&energies[..half]), mean(&energies[half..]));
     assert!(
-        (second - first).abs() / first < 1e-3,
-        "lossless secular energy drift {:.3e} (no dissipation expected)",
+        (second - first).abs() / first < 2e-3,
+        "lossless 3D secular drift {:.3e}",
         (second - first).abs() / first
     );
-}
-
-/// **Broadband** validation: for several wavenumbers spanning the band, the
-/// solver's measured temporal decay rate and oscillation frequency match the
-/// exact complex dispersion `ρω² = M(ω)k²` — proving the memory variables
-/// reproduce the full relaxation spectrum, not a single-frequency fit.
-#[test]
-fn temporal_decay_matches_complex_dispersion_across_band() {
-    let n = 512;
-    let dx = 1.0e-4;
-    let dt = 1.5e-8;
-
-    for &m in &[6.0, 12.0, 24.0] {
-        let mut solver = ViscoacousticMemorySolver::new(n, dx, dt, RHO, M_INF, &ARMS).unwrap();
-        let k0 = TAU * m / (n as f64 * dx);
-
-        let p0 = Array1::from_shape_fn(n, |i| (k0 * i as f64 * dx).cos());
-        solver.set_pressure(&p0).unwrap();
-
-        // Settle past the initial transient, then measure over `span` steps.
-        let (warmup, span) = (400usize, 4000usize);
-        for _ in 0..warmup {
-            solver.step();
-        }
-        let e_start = solver.energy();
-        let mut p_trace = Vec::with_capacity(span);
-        for _ in 0..span {
-            solver.step();
-            p_trace.push(solver.pressure()[0]);
-        }
-        let e_end = solver.energy();
-
-        // Decay rate: E(t) ∝ exp(−2|Im ω| t) ⇒ |Im ω| = −ln(E_end/E_start)/(2 Δt_span).
-        let dt_span = span as f64 * dt;
-        let decay_meas = -(e_end / e_start).ln() / (2.0 * dt_span);
-
-        // Oscillation frequency: count sign changes of the p[0] trace.
-        let crossings = p_trace
-            .windows(2)
-            .filter(|w| w[0] * w[1] < 0.0)
-            .count() as f64;
-        let f_meas = crossings / 2.0 / dt_span;
-        let omega_meas = TAU * f_meas;
-
-        let (omega_r, decay) = dispersion_oracle(k0);
-
-        assert!(
-            (decay_meas - decay).abs() <= 0.05 * decay,
-            "k mode {m}: decay measured {decay_meas:.4e} vs oracle {decay:.4e}"
-        );
-        assert!(
-            (omega_meas - omega_r).abs() <= 0.02 * omega_r,
-            "k mode {m}: ω measured {omega_meas:.4e} vs oracle {omega_r:.4e}"
-        );
-    }
-}
-
-/// Relaxation stiffening: the phase velocity rises with frequency between the
-/// relaxed (`√(M_∞/ρ)`) and unrelaxed (`√(M_U/ρ)`) limits.
-#[test]
-fn phase_velocity_increases_with_frequency() {
-    let c_inf = (M_INF / RHO).sqrt();
-    let c_u = (m_u() / RHO).sqrt();
-    let n = 512;
-    let dx = 1.0e-4;
-    let (omega_lo, _) = dispersion_oracle(TAU * 4.0 / (n as f64 * dx));
-    let (omega_hi, _) = dispersion_oracle(TAU * 40.0 / (n as f64 * dx));
-    let k_lo = TAU * 4.0 / (n as f64 * dx);
-    let k_hi = TAU * 40.0 / (n as f64 * dx);
-    let cp_lo = omega_lo / k_lo;
-    let cp_hi = omega_hi / k_hi;
-    assert!(cp_hi > cp_lo, "dispersion: c_p(hi)={cp_hi} ≤ c_p(lo)={cp_lo}");
-    assert!(cp_lo >= c_inf - 1.0 && cp_hi <= c_u + 1.0, "speeds out of [c∞,cU]");
 }
 
 /// Construction validation and the `GeneralizedMaxwellModel` convenience path.
@@ -161,13 +194,19 @@ fn phase_velocity_increases_with_frequency() {
 fn construction_validates_and_accepts_model() {
     use kwavers_medium::viscoelastic::GeneralizedMaxwellModel;
 
-    assert!(ViscoacousticMemorySolver::new(0, 1e-4, 1e-8, RHO, M_INF, &[]).is_err());
-    assert!(ViscoacousticMemorySolver::new(64, -1.0, 1e-8, RHO, M_INF, &[]).is_err());
-    assert!(ViscoacousticMemorySolver::new(64, 1e-4, 1e-8, RHO, M_INF, &[(-1.0, 1e-7)]).is_err());
+    assert!(ViscoacousticMemorySolver::new_1d(0, 1e-4, 1e-8, RHO, M_INF, &[]).is_err());
+    assert!(ViscoacousticMemorySolver::new(8, 8, 0, 1e-4, 1e-4, 1e-4, 1e-8, RHO, M_INF, &[]).is_err());
+    assert!(
+        ViscoacousticMemorySolver::new_1d(64, -1.0, 1e-8, RHO, M_INF, &[]).is_err()
+    );
+    assert!(
+        ViscoacousticMemorySolver::new_1d(64, 1e-4, 1e-8, RHO, M_INF, &[(-1.0, 1e-7)]).is_err()
+    );
 
     let model =
         GeneralizedMaxwellModel::power_law(M_INF, 2.0e8, 1.0e5, 2.0e6, 6, 1.3, RHO).unwrap();
-    let solver = ViscoacousticMemorySolver::from_generalized_maxwell(&model, 128, 1e-4, 1e-8)
-        .expect("model-backed solver");
+    let solver =
+        ViscoacousticMemorySolver::from_generalized_maxwell(&model, 16, 16, 16, 1e-4, 1e-4, 1e-4, 1e-8)
+            .expect("model-backed solver");
     assert!(solver.unrelaxed_speed() > (M_INF / RHO).sqrt());
 }

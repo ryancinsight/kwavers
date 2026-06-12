@@ -27,6 +27,16 @@ claimed struct name) before implementing. Confirmed corrections below.
   method to it. Test: closed form, `T>1` into stiffer medium, `T=1+R`, lossless balance
   `R²+(Z_i/Z_t)T²=1`, matched-impedance `T=1`. (The skull/transducer siblings correctly use the
   *intensity* `4Z₁Z₂/(Z₁+Z₂)²` — left as-is, documented.)
+- ✅ **Viscoacoustic memory-variable solver → 2-D/3-D (N-D canonical)** — `[major]` (2026-06-11).
+  Generalized `ViscoacousticMemorySolver` from 1-D to a single canonical N-D implementation: a
+  `(n,1,1)` grid is 1-D, `(nx,ny,1)` 2-D, `(nx,ny,nz)` 3-D (singleton-axis spectral derivative
+  vanishes ⇒ exact reduction, no special-casing). Velocity is now a vector field (vx,vy,vz), ∇·v and
+  ∇p via the shared `SpectralDerivativeOperator` (enhanced with memory-efficient in-place
+  `derivative_{x,y,z}_into` — no per-call alloc; reused by both PSTD and this solver). Buffers gx/gy/gz
+  reused as divergence + relax accumulator → no per-step heap alloc. 6 tests: decay+frequency vs exact
+  isotropic complex dispersion `ρω²=M(ω)|k|²` in 1-D, 2-D-diagonal, 3-D-diagonal (exercises all axes);
+  3-D lossless no-secular-drift; construction. Existing PSTD derivative tests unchanged. Apollo FFT
+  unchanged (existing N-D pencil-FFT infra sufficed). Book §4.8.4. clippy clean.
 - ✅ **Broadband time-domain memory-variable viscoacoustic solver** — `[major]` (2026-06-11). The
   deferred faithful broadband alternative to the drive-frequency relaxation realization. New
   `kwavers_solver::forward::viscoacoustic::ViscoacousticMemorySolver` (1-D pseudospectral): carries one

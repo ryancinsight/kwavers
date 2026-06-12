@@ -226,6 +226,58 @@ impl SpectralDerivativeOperator {
         Ok(derivative)
     }
 
+    /// In-place x-derivative into a preallocated `out` (no allocation). The
+    /// finiteness scan of [`Self::derivative_x`] is skipped for hot-path reuse;
+    /// `out` must already have the grid shape.
+    /// # Errors
+    /// - Shape mismatch of `field` or `out`.
+    pub fn derivative_x_into(
+        &self,
+        field: &ArrayView3<f64>,
+        out: &mut Array3<f64>,
+    ) -> KwaversResult<()> {
+        self.check_shapes(field, out)?;
+        self.derivative_along_x_impl(field, out)
+    }
+
+    /// In-place y-derivative into a preallocated `out`. See [`Self::derivative_x_into`].
+    /// # Errors
+    /// - Shape mismatch of `field` or `out`.
+    pub fn derivative_y_into(
+        &self,
+        field: &ArrayView3<f64>,
+        out: &mut Array3<f64>,
+    ) -> KwaversResult<()> {
+        self.check_shapes(field, out)?;
+        self.derivative_along_y_impl(field, out)
+    }
+
+    /// In-place z-derivative into a preallocated `out`. See [`Self::derivative_x_into`].
+    /// # Errors
+    /// - Shape mismatch of `field` or `out`.
+    pub fn derivative_z_into(
+        &self,
+        field: &ArrayView3<f64>,
+        out: &mut Array3<f64>,
+    ) -> KwaversResult<()> {
+        self.check_shapes(field, out)?;
+        self.derivative_along_z_impl(field, out)
+    }
+
+    #[inline]
+    fn check_shapes(&self, field: &ArrayView3<f64>, out: &Array3<f64>) -> KwaversResult<()> {
+        let expected = [self.nx, self.ny, self.nz];
+        if field.shape() != expected || out.shape() != expected {
+            return Err(KwaversError::InvalidInput(format!(
+                "derivative shape mismatch: field {:?}, out {:?}, grid {:?}",
+                field.shape(),
+                out.shape(),
+                expected
+            )));
+        }
+        Ok(())
+    }
+
     #[inline]
     fn validate_field(&self, field: &ArrayView3<f64>) -> KwaversResult<()> {
         if field.shape() != [self.nx, self.ny, self.nz] {

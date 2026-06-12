@@ -1,11 +1,14 @@
-//! 1-D pseudospectral memory-variable viscoacoustic solver.
+//! N-dimensional pseudospectral memory-variable viscoacoustic solver.
+//!
+//! One canonical implementation covers 1-D, 2-D, and 3-D: a `(n,1,1)` grid is
+//! 1-D, `(nx,ny,1)` is 2-D, and `(nx,ny,nz)` is full 3-D — the spectral
+//! derivative along a singleton axis is identically zero, so the lower-D cases
+//! reduce exactly with no special-casing.
 
-use kwavers_core::constants::numerical::TWO_PI;
+use crate::forward::pstd::SpectralDerivativeOperator;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_math::fft::{Complex64, Fft1d, Shape1D, FFT_CACHE_1D};
 use kwavers_medium::viscoelastic::GeneralizedMaxwellModel;
-use ndarray::Array1;
-use std::sync::Arc;
+use ndarray::{Array3, Zip};
 
 /// One relaxation arm with its precomputed exponential-integrator coefficients.
 #[derive(Debug, Clone, Copy)]
@@ -20,40 +23,45 @@ struct Arm {
     forcing: f64,
 }
 
-/// Time-domain memory-variable viscoacoustic solver (1-D, pseudospectral).
+/// Time-domain memory-variable viscoacoustic solver (1-D/2-D/3-D, pseudospectral).
 ///
 /// Construct from a [`GeneralizedMaxwellModel`] (the relaxation spectrum) or from
 /// raw moduli, then call [`Self::step`] to advance the velocity–pressure state.
 #[derive(Clone)]
 pub struct ViscoacousticMemorySolver {
-    n: usize,
-    dx: f64,
+    nx: usize,
+    ny: usize,
+    nz: usize,
+    cell_volume: f64, // dx·dy·dz
     dt: f64,
     rho: f64,
     /// Unrelaxed (instantaneous) modulus `M_U = M_∞ + Σ ΔMₗ` \[Pa].
     m_u: f64,
-    /// Equilibrium (relaxed) modulus `M_∞` \[Pa] — sets the potential energy norm.
+    /// Equilibrium (relaxed) modulus `M_∞` \[Pa] — sets the potential-energy norm.
     m_inf: f64,
     arms: Vec<Arm>,
+    deriv: SpectralDerivativeOperator,
 
-    // State (all length n).
-    p: Array1<f64>,
-    v: Array1<f64>,
-    sigma: Vec<Array1<f64>>, // one memory field per arm
+    // State.
+    p: Array3<f64>,
+    vx: Array3<f64>,
+    vy: Array3<f64>,
+    vz: Array3<f64>,
+    sigma: Vec<Array3<f64>>, // one memory field per arm
 
-    // Preallocated work buffers (no per-step allocation).
-    dvdx: Array1<f64>,
-    dpdx: Array1<f64>,
-    fft: Arc<Fft1d>,
-    ikd: Vec<Complex64>,         // i·k spectral first-derivative multiplier
-    scratch: Array1<Complex64>,  // FFT line buffer
+    // Preallocated derivative buffers (gx is reused as the divergence ∇·v and gy
+    // as the relaxation accumulator after the velocity-divergence pass).
+    gx: Array3<f64>,
+    gy: Array3<f64>,
+    gz: Array3<f64>,
 }
 
 impl std::fmt::Debug for ViscoacousticMemorySolver {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ViscoacousticMemorySolver")
-            .field("n", &self.n)
-            .field("dx", &self.dx)
+            .field("nx", &self.nx)
+            .field("ny", &self.ny)
+            .field("nz", &self.nz)
             .field("dt", &self.dt)
             .field("rho", &self.rho)
             .field("m_u", &self.m_u)
@@ -63,23 +71,37 @@ impl std::fmt::Debug for ViscoacousticMemorySolver {
 }
 
 impl ViscoacousticMemorySolver {
-    /// Build from raw parameters: grid `n`/`dx`, time step `dt`, density `ρ`,
-    /// equilibrium modulus `M_∞`, and relaxation arms `(ΔMₗ, τₗ)`.
-    ///
-    /// An empty arm list yields the lossless wave equation (modulus `M_∞`).
+    /// Build from raw parameters: grid `(nx,ny,nz)` with spacings `(dx,dy,dz)`,
+    /// time step `dt`, density `ρ`, equilibrium modulus `M_∞`, and relaxation
+    /// arms `(ΔMₗ, τₗ)`. An empty arm list yields the lossless wave equation.
     /// # Errors
-    /// - `n == 0`, or non-positive `dx`/`dt`/`ρ`/`M_∞`, or any non-positive arm.
+    /// - Any zero dimension, non-positive `dx`/`dy`/`dz`/`dt`/`ρ`/`M_∞`, or a
+    ///   non-positive arm parameter.
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
-        n: usize,
+        nx: usize,
+        ny: usize,
+        nz: usize,
         dx: f64,
+        dy: f64,
+        dz: f64,
         dt: f64,
         rho: f64,
         m_inf: f64,
         arms: &[(f64, f64)],
     ) -> KwaversResult<Self> {
-        if n == 0 || dx <= 0.0 || dt <= 0.0 || rho <= 0.0 || m_inf <= 0.0 {
+        if nx == 0
+            || ny == 0
+            || nz == 0
+            || dx <= 0.0
+            || dy <= 0.0
+            || dz <= 0.0
+            || dt <= 0.0
+            || rho <= 0.0
+            || m_inf <= 0.0
+        {
             return Err(KwaversError::InvalidInput(
-                "viscoacoustic solver requires n>0 and positive dx, dt, ρ, M_∞".to_owned(),
+                "viscoacoustic solver requires positive grid, spacings, dt, ρ, M_∞".to_owned(),
             ));
         }
         if arms.iter().any(|&(dm, tau)| dm <= 0.0 || tau <= 0.0) {
@@ -102,48 +124,65 @@ impl ViscoacousticMemorySolver {
             })
             .collect();
 
-        // Spectral i·k multiplier (FFT wavenumber order).
-        let norm = TWO_PI / (n as f64 * dx);
-        let ikd: Vec<Complex64> = (0..n)
-            .map(|i| {
-                let m = if i < n / 2 { i as f64 } else { i as f64 - n as f64 };
-                Complex64::new(0.0, m * norm)
-            })
-            .collect();
-
-        let sigma = vec![Array1::zeros(n); built.len()];
+        let shape = (nx, ny, nz);
         Ok(Self {
-            n,
-            dx,
+            nx,
+            ny,
+            nz,
+            cell_volume: dx * dy * dz,
             dt,
             rho,
             m_u,
             m_inf,
-            arms: built,
-            p: Array1::zeros(n),
-            v: Array1::zeros(n),
-            sigma,
-            dvdx: Array1::zeros(n),
-            dpdx: Array1::zeros(n),
-            fft: FFT_CACHE_1D.get_or_create(Shape1D { n }),
-            ikd,
-            scratch: Array1::from_elem(n, Complex64::default()),
+            arms: built.clone(),
+            deriv: SpectralDerivativeOperator::new(nx, ny, nz, dx, dy, dz),
+            p: Array3::zeros(shape),
+            vx: Array3::zeros(shape),
+            vy: Array3::zeros(shape),
+            vz: Array3::zeros(shape),
+            sigma: vec![Array3::zeros(shape); built.len()],
+            gx: Array3::zeros(shape),
+            gy: Array3::zeros(shape),
+            gz: Array3::zeros(shape),
         })
     }
 
-    /// Build from a [`GeneralizedMaxwellModel`] (its `M_∞`, arms `(ΔMₗ, τₗ)`, and
-    /// density define the medium) plus the grid and time step.
+    /// 1-D convenience constructor (`ny = nz = 1`).
     /// # Errors
     /// - Propagates [`Self::new`] validation failures.
-    pub fn from_generalized_maxwell(
-        model: &GeneralizedMaxwellModel,
+    pub fn new_1d(
         n: usize,
         dx: f64,
         dt: f64,
+        rho: f64,
+        m_inf: f64,
+        arms: &[(f64, f64)],
+    ) -> KwaversResult<Self> {
+        Self::new(n, 1, 1, dx, 1.0, 1.0, dt, rho, m_inf, arms)
+    }
+
+    /// Build from a [`GeneralizedMaxwellModel`] (its `M_∞`, arms, and density)
+    /// plus the grid and time step.
+    /// # Errors
+    /// - Propagates [`Self::new`] validation failures.
+    #[allow(clippy::too_many_arguments)]
+    pub fn from_generalized_maxwell(
+        model: &GeneralizedMaxwellModel,
+        nx: usize,
+        ny: usize,
+        nz: usize,
+        dx: f64,
+        dy: f64,
+        dz: f64,
+        dt: f64,
     ) -> KwaversResult<Self> {
         Self::new(
-            n,
+            nx,
+            ny,
+            nz,
             dx,
+            dy,
+            dz,
             dt,
             model.density(),
             model.equilibrium_modulus(),
@@ -159,86 +198,101 @@ impl ViscoacousticMemorySolver {
 
     /// Pressure field \[Pa].
     #[must_use]
-    pub fn pressure(&self) -> &Array1<f64> {
+    pub fn pressure(&self) -> &Array3<f64> {
         &self.p
     }
 
-    /// Overwrite the pressure field (length must equal `n`); resets velocity and
-    /// memory to zero. Used to set an initial condition.
+    /// Overwrite the pressure field (shape must match the grid); resets velocity
+    /// and memory variables to zero. Used to set an initial condition.
     /// # Errors
-    /// - Length mismatch.
-    pub fn set_pressure(&mut self, p: &Array1<f64>) -> KwaversResult<()> {
-        if p.len() != self.n {
+    /// - Shape mismatch.
+    pub fn set_pressure(&mut self, p: &Array3<f64>) -> KwaversResult<()> {
+        if p.shape() != [self.nx, self.ny, self.nz] {
             return Err(KwaversError::InvalidInput(
-                "pressure length must equal grid size".to_owned(),
+                "pressure shape must equal the grid".to_owned(),
             ));
         }
         self.p.assign(p);
-        self.v.fill(0.0);
+        self.vx.fill(0.0);
+        self.vy.fill(0.0);
+        self.vz.fill(0.0);
         for s in &mut self.sigma {
             s.fill(0.0);
         }
         Ok(())
     }
 
-    /// Acoustic energy `Σₓ [p²/(2M_∞) + ρv²/2] Δx` \[J·m⁻²]. Conserved (to
-    /// leapfrog round-off) for the lossless medium; decays monotonically with
-    /// relaxation.
+    /// Acoustic energy `Σ [p²/(2M_∞) + ρ|v|²/2] ΔV` \[J]. Conserved (to leapfrog
+    /// round-off) for the lossless medium; decays monotonically with relaxation.
     #[must_use]
     pub fn energy(&self) -> f64 {
         let pe: f64 = self.p.iter().map(|&p| p * p).sum::<f64>() / (2.0 * self.m_inf);
-        let ke: f64 = self.v.iter().map(|&v| v * v).sum::<f64>() * (self.rho / 2.0);
-        (pe + ke) * self.dx
-    }
-
-    /// In-place spectral first derivative `∂field/∂x → out` (periodic).
-    fn derivative(
-        fft: &Fft1d,
-        ikd: &[Complex64],
-        scratch: &mut Array1<Complex64>,
-        field: &Array1<f64>,
-        out: &mut Array1<f64>,
-    ) {
-        for (s, &f) in scratch.iter_mut().zip(field.iter()) {
-            *s = Complex64::new(f, 0.0);
-        }
-        fft.forward_complex_inplace(scratch);
-        for (s, &ik) in scratch.iter_mut().zip(ikd.iter()) {
-            *s *= ik;
-        }
-        fft.inverse_complex_inplace(scratch);
-        for (o, s) in out.iter_mut().zip(scratch.iter()) {
-            *o = s.re;
-        }
+        let ke: f64 = self
+            .vx
+            .iter()
+            .chain(self.vy.iter())
+            .chain(self.vz.iter())
+            .map(|&v| v * v)
+            .sum::<f64>()
+            * (self.rho / 2.0);
+        (pe + ke) * self.cell_volume
     }
 
     /// Advance the state by one time step `Δt`.
     pub fn step(&mut self) {
-        // 1. Velocity half-step: v += -(Δt/ρ) ∂p/∂x.
-        Self::derivative(&self.fft, &self.ikd, &mut self.scratch, &self.p, &mut self.dpdx);
+        const INV: &str = "invariant: solver buffers are grid-shaped by construction";
+
+        // 1. Velocity half-step: v += -(Δt/ρ) ∇p (per component).
         let cv = -self.dt / self.rho;
-        for (v, &dpdx) in self.v.iter_mut().zip(self.dpdx.iter()) {
-            *v += cv * dpdx;
+        self.deriv
+            .derivative_x_into(&self.p.view(), &mut self.gx)
+            .expect(INV);
+        self.deriv
+            .derivative_y_into(&self.p.view(), &mut self.gy)
+            .expect(INV);
+        self.deriv
+            .derivative_z_into(&self.p.view(), &mut self.gz)
+            .expect(INV);
+        Zip::from(&mut self.vx).and(&self.gx).for_each(|v, &g| *v += cv * g);
+        Zip::from(&mut self.vy).and(&self.gy).for_each(|v, &g| *v += cv * g);
+        Zip::from(&mut self.vz).and(&self.gz).for_each(|v, &g| *v += cv * g);
+
+        // 2. Dilatation rate D = ∇·v (accumulated into gx).
+        self.deriv
+            .derivative_x_into(&self.vx.view(), &mut self.gx)
+            .expect(INV);
+        self.deriv
+            .derivative_y_into(&self.vy.view(), &mut self.gy)
+            .expect(INV);
+        self.deriv
+            .derivative_z_into(&self.vz.view(), &mut self.gz)
+            .expect(INV);
+        Zip::from(&mut self.gx)
+            .and(&self.gy)
+            .and(&self.gz)
+            .for_each(|d, &y, &z| *d += y + z); // gx = ∂vx/∂x + ∂vy/∂y + ∂vz/∂z
+
+        // 3. Advance each σ_l with the exact exponential integrator and accumulate
+        //    its trapezoidal pressure contribution into gy (reused as the relax sum).
+        self.gy.fill(0.0);
+        for (arm, sigma) in self.arms.iter().zip(self.sigma.iter_mut()) {
+            let arm = *arm;
+            Zip::from(sigma)
+                .and(&self.gx)
+                .and(&mut self.gy)
+                .for_each(|s, &d, r| {
+                    let old = *s;
+                    let new = arm.decay.mul_add(old, -arm.delta_m * d * arm.forcing);
+                    *r += 0.5 * (old + new) * arm.inv_tau;
+                    *s = new;
+                });
         }
 
-        // 2. Dilatation rate D = ∂v/∂x at the half step.
-        Self::derivative(&self.fft, &self.ikd, &mut self.scratch, &self.v, &mut self.dvdx);
-
-        // 3. Pressure update with the trapezoidal relaxation contribution:
-        //    p += -Δt (M_U D + Σ_l ½(σ_l + σ_l^new)/τ_l), advancing each σ_l with
-        //    the exact exponential integrator σ_l^new = decay σ_l − ΔM_l D τ_l(1−decay).
-        let dt = self.dt;
-        let m_u = self.m_u;
-        for idx in 0..self.n {
-            let d = self.dvdx[idx];
-            let mut relax = 0.0;
-            for (arm, sigma) in self.arms.iter().zip(self.sigma.iter_mut()) {
-                let old = sigma[idx];
-                let new = arm.decay.mul_add(old, -arm.delta_m * d * arm.forcing);
-                relax += 0.5 * (old + new) * arm.inv_tau;
-                sigma[idx] = new;
-            }
-            self.p[idx] -= dt * (m_u * d + relax);
-        }
+        // 4. Pressure update: p += -Δt (M_U D + Σ_l ½(σ_l+σ_l^new)/τ_l).
+        let (m_u, dt) = (self.m_u, self.dt);
+        Zip::from(&mut self.p)
+            .and(&self.gx)
+            .and(&self.gy)
+            .for_each(|p, &d, &relax| *p -= dt * (m_u * d + relax));
     }
 }
