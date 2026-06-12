@@ -108,6 +108,10 @@ thread_local! {
     /// transposed-axis inverse, kept separate from the caller's scratch argument
     /// (which some callers reuse as an input across calls).
     static R2C_HALF_SCRATCH: RefCell<Array3<Complex64>> = RefCell::new(Array3::zeros((0, 0, 0)));
+
+    /// Per-thread `(nx, ny, nz/2)` packed-real working buffer for the even-nz
+    /// forward r2c z-pass (`FftPlan3D::forward_real_z_into`).
+    static R2C_PACK_SCRATCH: RefCell<Array3<Complex64>> = RefCell::new(Array3::zeros((0, 0, 0)));
 }
 
 /// Full-spectrum (nx, ny, nz) complex-to-complex 3-D transforms with caller-owned
@@ -140,14 +144,14 @@ pub trait Fft3dInOutExt {
     );
 
     /// Forward real-to-complex 3-D FFT writing the **half-spectrum** `(nx, ny,
-    /// nz/2+1)` of a real field. Apollo exposes no native half-spectrum r2c, so
-    /// this transforms along the contiguous z-axis on a full thread-local scratch,
-    /// truncates to `nz_c = nz/2+1` (the conjugate-redundant upper z-bins carry no
-    /// new information for a real field), then transforms along the transposed y
-    /// and x axes on that **half** using apollo's batched tiled per-axis FFT. The
-    /// y/x passes are per-z-slice independent, so the result is bit-identical to a
-    /// full c2c followed by truncation — at ~half the cost of the expensive
-    /// transposed y/x passes. `half_out` must have shape `(nx, ny, nz/2+1)`.
+    /// nz/2+1)` of a real field. The contiguous z-axis is transformed to the
+    /// half-spectrum — for even `nz` via apollo's **packed-real** transform
+    /// (`forward_real_z_into`: a length-`nz/2` complex FFT + Hermitian unpack, half
+    /// the z-FFT work and z scratch), for odd `nz` via a full c2c z-pass then
+    /// truncation — after which the transposed y and x axes are transformed on the
+    /// **half** with apollo's batched tiled per-axis FFT. The y/x passes are
+    /// per-z-slice independent, so the result is bit-identical to a full c2c
+    /// followed by truncation. `half_out` must have shape `(nx, ny, nz/2+1)`.
     fn forward_r2c_into(&self, real: &Array3<f64>, half_out: &mut Array3<Complex64>);
 
     /// Inverse complex-to-real 3-D FFT from a **half-spectrum** `(nx, ny,
@@ -280,27 +284,38 @@ impl Fft3dInOutExt for Fft3d {
             (nx, ny, nz_c),
             "forward_r2c_into: half_out must be (nx, ny, nz/2+1)"
         );
-        R2C_FULL_SCRATCH.with(|cell| {
-            let mut borrow = cell.borrow_mut();
-            if borrow.dim() != (nx, ny, nz) {
-                *borrow = Array3::<Complex64>::zeros((nx, ny, nz));
-            }
-            let full: &mut Array3<Complex64> = &mut borrow;
-            Zip::from(full.view_mut())
-                .and(real)
-                .par_for_each(|dst, &src| *dst = Complex64::new(src, 0.0));
-            // Transform along the contiguous z-axis on the full array, then keep
-            // only the independent half-spectrum (k ∈ [0, nz_c)) and transform
-            // along the transposed y/x axes on that half. The y/x passes are
-            // per-z-slice independent, so this is bit-identical to a full c2c
-            // followed by truncation — but does the expensive tiled-transpose y/x
-            // passes on ~half the data (nz_c ≈ nz/2).
-            self.forward_axis_complex_inplace(full, 2);
-            half_out.assign(&full.slice(s![.., .., 0..nz_c]));
-            let half_plan = get_fft_for_grid(nx, ny, nz_c);
-            half_plan.forward_axis_complex_inplace(half_out, 1);
-            half_plan.forward_axis_complex_inplace(half_out, 0);
-        });
+        // Transform the contiguous z-axis to the half-spectrum, then the
+        // transposed y/x axes on that half (per-z-slice independent ⇒ bit-
+        // identical to a full c2c + truncation, at ~half the y/x work). For even
+        // nz the z-pass is a **packed-real** transform (length-nz/2 complex FFT +
+        // Hermitian unpack), halving the z-FFT work and z scratch; odd nz falls
+        // back to a full c2c z-pass on the thread-local full scratch.
+        if nz % 2 == 0 {
+            R2C_PACK_SCRATCH.with(|cell| {
+                let mut borrow = cell.borrow_mut();
+                let m = nz / 2;
+                if borrow.dim() != (nx, ny, m) {
+                    *borrow = Array3::<Complex64>::zeros((nx, ny, m));
+                }
+                self.forward_real_z_into(real, half_out, &mut borrow);
+            });
+        } else {
+            R2C_FULL_SCRATCH.with(|cell| {
+                let mut borrow = cell.borrow_mut();
+                if borrow.dim() != (nx, ny, nz) {
+                    *borrow = Array3::<Complex64>::zeros((nx, ny, nz));
+                }
+                let full: &mut Array3<Complex64> = &mut borrow;
+                Zip::from(full.view_mut())
+                    .and(real)
+                    .par_for_each(|dst, &src| *dst = Complex64::new(src, 0.0));
+                self.forward_axis_complex_inplace(full, 2);
+                half_out.assign(&full.slice(s![.., .., 0..nz_c]));
+            });
+        }
+        let half_plan = get_fft_for_grid(nx, ny, nz_c);
+        half_plan.forward_axis_complex_inplace(half_out, 1);
+        half_plan.forward_axis_complex_inplace(half_out, 0);
     }
 
     #[inline]

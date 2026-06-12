@@ -41,11 +41,16 @@ claimed struct name) before implementing. Confirmed corrections below.
   CT→broadband-tissue-sim path (HuAcousticModel/CtMediumBuilder → solver). Validated: a medium built for
   α=5 Np/m at 0.5 MHz reproduces the target absorption in simulation (measured vs power-law-scaled
   target, ≤15%). clippy clean; book §4.8.4.
-- ⬜ **Apollo packed-real z-FFT** `[minor, low priority]` — a true real-input FFT on the contiguous
-  z-axis (pack nz→nz/2 complex + unpack twiddles) would shave the remaining z-axis r2c redundancy. Lower
-  marginal value than the already-delivered y/x-transposed halving (z is the cheap contiguous axis);
-  deferred as small-win/delicate. Apollo v0.14 line (richer) is blocked by a stale mnemosyne→themis pin
-  (separate dependency-migration task).
+- ✅ **Apollo packed-real forward z-FFT (PSTD r2c)** — `[minor]` (2026-06-12). True real-input FFT on
+  the contiguous z-axis: new `FftPlan3D<f64>::forward_real_z_into(real, half_out, packed_scratch)` in
+  apollo packs each real z-pencil (nz reals) → nz/2 complex, runs a length-nz/2 complex FFT, and unpacks
+  the real spectrum by Hermitian symmetry — **half** the z-FFT work and z scratch vs a full length-nz
+  c2c+truncation. Apollo branch `feat/expose-axis-fft-0.12` commit e1a9a1a (caller-owned packed scratch
+  ⇒ zero per-call alloc; bit-exact apollo test ≤1e-10); kwavers repinned. Wired into kwavers-math
+  `forward_r2c_into` (even nz → packed-real via a thread-local `R2C_PACK_SCRATCH`; odd nz → full c2c
+  fallback). r2c differential test still ≤1e-9 bit-identical + round-trips; 172 PSTD tests pass
+  (parity-grade dispersion/plane-wave/etc.). clippy clean. Apollo v0.14 line (richer) remains blocked by
+  a stale mnemosyne→themis^0.8 vs themis-0.9.1 pin (a separate atlas-stack dependency migration).
 - ✅ **Heterogeneous viscoacoustic solver (per-voxel ρ, M_∞, relaxation arms)** — `[major]`
   (2026-06-12). Generalized `ViscoacousticMemorySolver` from scalar to per-voxel medium so a
   CT-derived tissue model (§4.5) can drive the broadband solver with spatially-varying viscoacoustic
