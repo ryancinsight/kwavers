@@ -27,6 +27,25 @@ claimed struct name) before implementing. Confirmed corrections below.
   method to it. Test: closed form, `T>1` into stiffer medium, `T=1+R`, lossless balance
   `R²+(Z_i/Z_t)T²=1`, matched-impedance `T=1`. (The skull/transducer siblings correctly use the
   *intensity* `4Z₁Z₂/(Z₁+Z₂)²` — left as-is, documented.)
+- ✅ **Viscoacoustic solver source injection + sensor recording** — `[minor]` (2026-06-12). Makes
+  `ViscoacousticMemorySolver` usable for driven simulations: `add_pressure_source(index, signal)` (soft
+  additive, `p[index] += signal[step]`), `add_pressure_sensor(index) -> id` (records `p[index]` each
+  step), `sensor_trace(id)`. `set_pressure` resets the step clock + traces. Validated end-to-end: a
+  Gaussian source pulse arrives at a downstream sensor at the time-of-flight `d/c` with no pre-arrival
+  leakage. clippy clean.
+- ✅ **CT power-law medium → viscoacoustic relaxation spectrum** — `[major]` (2026-06-12).
+  `ViscoacousticMemorySolver::from_power_law_fields(ρ(x), c(x), α(x)@f_ref, y, [f_min,f_max], N, f_ref)`
+  fits a per-voxel relaxation spectrum to a CT-derived power-law absorption: shared log-spaced τ-grid +
+  normalized Fung `ΔMₗ∝τₗ^{1-y}` weights, per-voxel strength calibrated (via the analytic
+  `relaxation_attenuation` α(ω)=|Im k|) so `α(ω_ref)` matches the target; `M_∞=ρc²`. Completes the
+  CT→broadband-tissue-sim path (HuAcousticModel/CtMediumBuilder → solver). Validated: a medium built for
+  α=5 Np/m at 0.5 MHz reproduces the target absorption in simulation (measured vs power-law-scaled
+  target, ≤15%). clippy clean; book §4.8.4.
+- ⬜ **Apollo packed-real z-FFT** `[minor, low priority]` — a true real-input FFT on the contiguous
+  z-axis (pack nz→nz/2 complex + unpack twiddles) would shave the remaining z-axis r2c redundancy. Lower
+  marginal value than the already-delivered y/x-transposed halving (z is the cheap contiguous axis);
+  deferred as small-win/delicate. Apollo v0.14 line (richer) is blocked by a stale mnemosyne→themis pin
+  (separate dependency-migration task).
 - ✅ **Heterogeneous viscoacoustic solver (per-voxel ρ, M_∞, relaxation arms)** — `[major]`
   (2026-06-12). Generalized `ViscoacousticMemorySolver` from scalar to per-voxel medium so a
   CT-derived tissue model (§4.5) can drive the broadband solver with spatially-varying viscoacoustic

@@ -843,6 +843,12 @@ standard k-space-pseudospectral treatment of heterogeneous media. The exponentia
 coefficients become per-voxel fields. A modulus interface reflects an incident pulse with the
 analytical coefficient `R = (Z_B-Z_A)/(Z_B+Z_A)`, `Z=√(ρM)` (verified to ±0.06 for `R=1/3`).
 
+`from_power_law_fields(ρ(x), c(x), α(x)@f_ref, y, [f_min,f_max], N, f_ref)` bridges the §4.5 tissue
+pipeline to the broadband solver: it fits a per-voxel relaxation spectrum to a CT-derived power-law
+absorption (shared log-spaced τ-grid, Fung `ΔMₗ ∝ τₗ^{1-y}` weights, per-voxel strength calibrated so
+`α(ω_ref)` matches the target; `M_∞ = ρc²`), so a `HuAcousticModel`/`CtMediumBuilder` medium can drive
+the time-domain solver directly — verified to reproduce the target absorption in simulation.
+
 For **driven simulations**, `add_pressure_source(index, signal)` registers a soft (additive)
 pressure source (`p[index] += signal[step]`) and `add_pressure_sensor(index)` records the pressure
 trace at a point; a time-of-flight test confirms a source pulse arrives at a downstream sensor at

@@ -373,6 +373,101 @@ impl ViscoacousticMemorySolver {
         )
     }
 
+    /// Build from a **CT-derived power-law medium**: per-voxel density `ρ(x)`,
+    /// sound speed `c(x)`, and target amplitude attenuation `α(x)` \[Np·m⁻¹] at
+    /// the reference frequency `f_ref`, with a (uniform) power-law exponent `y`.
+    ///
+    /// A relaxation spectrum reproducing this absorption is fitted with a **shared**
+    /// log-spaced relaxation-time grid `τₗ` over `[f_min, f_max]` and Fung (1993)
+    /// weights `ΔMₗ ∝ τₗ^{1-y}`, scaled **per voxel** so the spectrum's analytic
+    /// `α(ω_ref)` matches the target (the equilibrium modulus is `M_∞ = ρ c²`).
+    /// This is the bridge from the `HuAcousticModel`/`CtMediumBuilder` tissue
+    /// pipeline (book §4.5) to the broadband solver.
+    /// # Errors
+    /// - Field shape ≠ grid, non-positive `ρ`/`c`/`α`, `y ∉ (0,2)`, bad band, or
+    ///   `n_arms == 0`.
+    #[allow(clippy::too_many_arguments)]
+    pub fn from_power_law_fields(
+        nx: usize,
+        ny: usize,
+        nz: usize,
+        dx: f64,
+        dy: f64,
+        dz: f64,
+        dt: f64,
+        rho: &Array3<f64>,
+        c: &Array3<f64>,
+        alpha_np_m: &Array3<f64>,
+        y: f64,
+        f_min: f64,
+        f_max: f64,
+        n_arms: usize,
+        f_ref: f64,
+    ) -> KwaversResult<Self> {
+        let shape = [nx, ny, nz];
+        let ok = |a: &Array3<f64>, positive: bool| {
+            a.shape() == shape && (!positive || a.iter().all(|&v| v > 0.0))
+        };
+        if !ok(rho, true) || !ok(c, true) || !ok(alpha_np_m, false) {
+            return Err(KwaversError::InvalidInput(
+                "ρ, c, α fields must be grid-shaped (ρ, c positive)".to_owned(),
+            ));
+        }
+        if !(y > 0.0 && y < 2.0 && f_min > 0.0 && f_max > f_min && n_arms >= 1 && f_ref > 0.0) {
+            return Err(KwaversError::InvalidInput(
+                "require 0<y<2, 0<f_min<f_max, n_arms≥1, f_ref>0".to_owned(),
+            ));
+        }
+
+        // Shared log-spaced relaxation times and normalised Fung weights (Σ=1).
+        let tau_max = 1.0 / (TWO_PI * f_min);
+        let tau_min = 1.0 / (TWO_PI * f_max);
+        let (ln_lo, ln_hi) = (tau_min.ln(), tau_max.ln());
+        let taus: Vec<f64> = (0..n_arms)
+            .map(|l| {
+                let frac = if n_arms == 1 {
+                    0.5
+                } else {
+                    l as f64 / (n_arms - 1) as f64
+                };
+                ((ln_hi - ln_lo) * frac + ln_lo).exp()
+            })
+            .collect();
+        let raw: Vec<f64> = taus.iter().map(|&t| t.powf(1.0 - y)).collect();
+        let raw_sum: f64 = raw.iter().sum();
+        let base: Vec<f64> = raw.iter().map(|&r| r / raw_sum).collect(); // Σ = 1
+
+        // Per-voxel: M_∞ = ρc², calibrate the total relaxation strength so the
+        // spectrum's α(ω_ref) equals the target (α scales ~linearly with strength).
+        let omega_ref = TWO_PI * f_ref;
+        let m_inf = Zip::from(rho).and(c).map_collect(|&r, &cc| r * cc * cc);
+        let mut scale = Array3::<f64>::zeros((nx, ny, nz));
+        Zip::from(&mut scale)
+            .and(rho)
+            .and(&m_inf)
+            .and(alpha_np_m)
+            .for_each(|sc, &r, &mi, &a_target| {
+                // α for unit total strength (weights = `base`, summing to 1 Pa).
+                let a_unit = relaxation_attenuation(omega_ref, r, mi, &base, &taus);
+                *sc = if a_unit > 0.0 && a_target > 0.0 {
+                    a_target / a_unit
+                } else {
+                    0.0
+                };
+            });
+
+        // Arm fields: ΔMₗ(x) = scale(x)·baseₗ, τₗ uniform.
+        let arms: Vec<(Array3<f64>, Array3<f64>)> = (0..n_arms)
+            .map(|l| {
+                let dm = scale.mapv(|s| (s * base[l]).max(f64::MIN_POSITIVE));
+                let tau = Array3::from_elem((nx, ny, nz), taus[l]);
+                (dm, tau)
+            })
+            .collect();
+
+        Self::new_heterogeneous(nx, ny, nz, dx, dy, dz, dt, rho, &m_inf, &arms)
+    }
+
     /// Maximum unrelaxed (high-frequency) sound speed `max √(M_U(x)/ρ(x))`
     /// \[m·s⁻¹] over the grid — the CFL reference speed.
     #[must_use]
@@ -560,6 +655,19 @@ impl ViscoacousticMemorySolver {
         }
         self.step_count += 1;
     }
+}
+
+/// Analytic amplitude attenuation `α(ω) = |Im k|`, `k = ω√(ρ/M*(ω))` of a
+/// generalized-Maxwell spectrum `M*(ω) = M_∞ + Σ ΔMₗ iωτₗ/(1+iωτₗ)` \[Np·m⁻¹].
+/// Used to calibrate the per-voxel relaxation strength against a target absorption.
+fn relaxation_attenuation(omega: f64, rho: f64, m_inf: f64, weights: &[f64], taus: &[f64]) -> f64 {
+    let mut mstar = Complex64::new(m_inf, 0.0);
+    for (&w, &t) in weights.iter().zip(taus) {
+        let iwt = Complex64::new(0.0, omega * t);
+        mstar += w * iwt / (1.0 + iwt);
+    }
+    let k = (Complex64::new(rho, 0.0) / mstar).sqrt() * omega;
+    k.im.abs()
 }
 
 /// FFT-order signed wavenumbers `k[m] = 2π m'/(n·Δx)` with `m' = m` for `m < n/2`

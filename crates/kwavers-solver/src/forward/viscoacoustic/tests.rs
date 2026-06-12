@@ -282,6 +282,44 @@ fn heterogeneous_interface_reflects_with_analytical_coefficient() {
     );
 }
 
+/// **CT power-law → relaxation spectrum**: a medium built from a target power-law
+/// absorption `α(ω_ref)` via `from_power_law_fields` reproduces that absorption in
+/// simulation — the fitted relaxation spectrum's measured decay matches the target.
+#[test]
+fn power_law_medium_reproduces_target_absorption() {
+    let n = 512;
+    let dx = 1.0e-4;
+    let dt = 1.0e-8;
+    let c = 1500.0_f64;
+    let rho = 1000.0_f64;
+    let y = 1.1_f64;
+    let f_ref = 5.0e5_f64;
+    let alpha_target = 5.0_f64; // Np/m at f_ref
+
+    let rho_f = Array3::from_elem((n, 1, 1), rho);
+    let c_f = Array3::from_elem((n, 1, 1), c);
+    let alpha_f = Array3::from_elem((n, 1, 1), alpha_target);
+    let mut s = ViscoacousticMemorySolver::from_power_law_fields(
+        n, 1, 1, dx, 1.0, 1.0, dt, &rho_f, &c_f, &alpha_f, y, 1.0e5, 2.0e6, 6, f_ref,
+    )
+    .unwrap();
+
+    // Standing wave near f_ref (k ≈ 2π f_ref / c) → measure temporal decay γ;
+    // spatial α(ω) = γ/c_p, compare to the target scaled by the power law.
+    let k0 = TAU * 17.0 / (n as f64 * dx); // ω_r ≈ c·k0 ≈ 2π·498 kHz
+    let p0 = Array3::from_shape_fn((n, 1, 1), |(i, _, _)| (k0 * i as f64 * dx).cos());
+    s.set_pressure(&p0).unwrap();
+    let (decay, omega) = measure(&mut s, 400, 4000, dt);
+
+    let cp = omega / k0;
+    let alpha_measured = decay / cp; // Np/m at ω
+    let alpha_expected = alpha_target * (omega / (TAU * f_ref)).powf(y);
+    assert!(
+        (alpha_measured - alpha_expected).abs() <= 0.15 * alpha_expected,
+        "α measured {alpha_measured:.3} vs target {alpha_expected:.3} Np/m at ω={omega:.2e}"
+    );
+}
+
 /// **Driven simulation**: a soft pressure source emits a pulse that arrives at a
 /// downstream sensor at the time-of-flight `d/c`, validating source injection,
 /// propagation, and sensor recording end-to-end.
