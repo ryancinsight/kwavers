@@ -798,6 +798,37 @@ wavenumber $k = \omega\sqrt{\rho/G^*}$; the shared `recover_complex_modulus` plu
 the `fit_dispersion` inversions recover model parameters from measured shear-wave
 dispersion (shear-wave spectroscopy).
 
+### 4.8.4 Time-domain memory-variable solver (broadband)
+
+The generalized-Maxwell modulus has **three** numerical realizations in kwavers, each
+appropriate to a different regime:
+
+| Realization | Domain | Fidelity | Home |
+|---|---|---|---|
+| `GeneralizedMaxwellModel` | frequency | exact $M(\omega)$ | `kwavers_medium::viscoelastic` |
+| Fractional-Laplacian / relaxation modes (§4.4.3) | time-stepping spectral | exact at the drive frequency | `pstd::…::absorption` |
+| `ViscoacousticMemorySolver` | time-stepping | **exact broadband** | `kwavers_solver::forward::viscoacoustic` |
+
+The memory-variable solver carries one auxiliary field $\sigma_l$ per relaxation arm. From
+the Maxwell-arm law $\dot\sigma_l = -\sigma_l/\tau_l + \Delta M_l\,\dot\theta$ (with
+dilatation rate $\dot\theta = -\nabla\!\cdot\!\mathbf v$), the closed first-order system is
+
+$$
+\partial_t \mathbf v = -\tfrac{1}{\rho}\nabla p,\quad
+\partial_t p = -M_U(\nabla\!\cdot\!\mathbf v) - \sum_l \sigma_l/\tau_l,\quad
+\partial_t \sigma_l = -\sigma_l/\tau_l - \Delta M_l(\nabla\!\cdot\!\mathbf v),
+$$
+
+with $M_U = M_\infty + \sum_l \Delta M_l$ the unrelaxed modulus. Eliminating $\sigma_l$ in
+the frequency domain recovers $M(\omega)$ exactly, so the plane-wave absorption and phase
+velocity match `GeneralizedMaxwellModel` across the **entire band** — not just at a single
+frequency. The implementation uses pseudospectral spatial derivatives, a velocity–pressure
+leapfrog, and an **exact exponential integrator** for the stiff relaxation ODE (so $\Delta t$
+is bounded only by the unrelaxed-speed CFL, never by the smallest $\tau_l$); all work buffers
+are preallocated. Validation solves the exact complex dispersion $\rho\omega^2 = M(\omega)k^2$
+by Newton iteration and confirms the solver's measured temporal decay and oscillation frequency
+match it at several wavenumbers spanning the band, with energy conserved in the lossless limit.
+
 ---
 
 ## 4.9 Skull and Bone Acoustics

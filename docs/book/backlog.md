@@ -27,6 +27,21 @@ claimed struct name) before implementing. Confirmed corrections below.
   method to it. Test: closed form, `T>1` into stiffer medium, `T=1+R`, lossless balance
   `R²+(Z_i/Z_t)T²=1`, matched-impedance `T=1`. (The skull/transducer siblings correctly use the
   *intensity* `4Z₁Z₂/(Z₁+Z₂)²` — left as-is, documented.)
+- ✅ **Broadband time-domain memory-variable viscoacoustic solver** — `[major]` (2026-06-11). The
+  deferred faithful broadband alternative to the drive-frequency relaxation realization. New
+  `kwavers_solver::forward::viscoacoustic::ViscoacousticMemorySolver` (1-D pseudospectral): carries one
+  memory variable σₗ per Maxwell arm, derived first-principles from the arm law
+  `σ̇ₗ=-σₗ/τₗ+ΔMₗθ̇` → closed velocity-pressure system reproducing the exact generalized-Maxwell
+  `M(ω)` across the WHOLE band (not a single-frequency fit). Exact exponential integrator for the
+  stiff relaxation (Δt bounded only by unrelaxed-speed CFL, not min τₗ); preallocated buffers, no
+  per-step alloc; precomputed `exp(-Δt/τₗ)` + `i·k`. Constructs from `GeneralizedMaxwellModel` (added
+  `density()` accessor) or raw moduli. 4 tests incl. the centerpiece: measured temporal decay +
+  oscillation frequency match the exact complex dispersion `ρω²=M(ω)k²` (Newton oracle) at 3
+  wavenumbers spanning the band (≤5% γ, ≤2% ω); lossless no-secular-drift (first/second-half energy
+  means <1e-3); relaxation stiffening dispersion. Completes the 3-realization story (freq-domain
+  GeneralizedMaxwell · drive-freq fractional-Laplacian · broadband memory-variable). Book §4.8.4.
+  clippy clean. (Current solver is 1-D; the memory-variable formulation is pointwise-scalar and
+  extends directly to N-D.)
 - ✅ **Relaxation absorption modes (`MultiRelaxation`/`Causal`) — were unimplemented stubs** —
   `[minor]` (2026-06-11, codebase audit). Both `AbsorptionMode` variants returned "not supported by
   spectral solver" errors in PSTD init + apply. Added `kwavers_physics::…::mechanics::

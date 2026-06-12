@@ -83,6 +83,7 @@ pub mod poroelastic;
 pub mod pstd;
 pub mod thermal;
 pub mod thermal_diffusion;
+pub mod viscoacoustic;
 
 // ── Domain-grouped layout (Phase 1 of ADR 005) ───────────────────────────────
 //

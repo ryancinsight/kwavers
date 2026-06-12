@@ -201,6 +201,12 @@ impl GeneralizedMaxwellModel {
     pub fn arms(&self) -> &[(f64, f64)] {
         &self.arms
     }
+
+    /// Mass density `ρ` \[kg·m⁻³].
+    #[must_use]
+    pub fn density(&self) -> f64 {
+        self.density
+    }
 }
 
 #[cfg(test)]
