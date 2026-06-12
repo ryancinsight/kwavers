@@ -27,6 +27,17 @@ claimed struct name) before implementing. Confirmed corrections below.
   method to it. Test: closed form, `T>1` into stiffer medium, `T=1+R`, lossless balance
   `R²+(Z_i/Z_t)T²=1`, matched-impedance `T=1`. (The skull/transducer siblings correctly use the
   *intensity* `4Z₁Z₂/(Z₁+Z₂)²` — left as-is, documented.)
+- ✅ **Relaxation absorption modes (`MultiRelaxation`/`Causal`) — were unimplemented stubs** —
+  `[minor]` (2026-06-11, codebase audit). Both `AbsorptionMode` variants returned "not supported by
+  spectral solver" errors in PSTD init + apply. Added `kwavers_physics::…::mechanics::
+  RelaxationAbsorption` — exact Nachman–Smith–Waag spectrum `α(ω)=(ω²/2c₀)Σ wₗτₗ/(1+ω²τₗ²)` + analytic
+  local exponent `d ln α/d ln ω` (4 tests: viscous ω² limit, high-ω plateau, derivative vs FD,
+  rejection). Wired both modes via the validated §4.4.3 fractional-Laplacian path at the drive
+  frequency (the established `np_m_to_power_law_db_cm` realization, exact at ω_ref; exponent kept off
+  the y=1 singularity) — `build_relaxation_kernel` in init.rs; apply.rs now treats them like PowerLaw.
+  Solver test: MultiRelaxation builds a kernel and reproduces α(ω_ref) to 1e-6, apply runs. All 27
+  existing absorption tests unchanged. Book §4.4.2 updated. clippy clean. (Faithful broadband
+  time-domain memory-variable solver remains a deferred [major] alternative.)
 - ✅ **Generalized Maxwell viscoelastic model (documented-but-missing) + module split** — `[minor]`
   (2026-06-11, codebase audit). Chapter §4.8.3 documented the generalized-Maxwell model
   (`G* = E_∞ + Σ E_j iωτ_j/(1+iωτ_j)`, power-law absorption via `E_j ∝ τ_j^{1-y}`, Fung 1993) but

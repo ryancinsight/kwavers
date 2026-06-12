@@ -34,8 +34,9 @@ use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_physics::acoustics::mechanics::absorption::{
-    power_law_db_cm_to_np_omega_m, AbsorptionMode,
+    np_m_to_power_law_db_cm, power_law_db_cm_to_np_omega_m, AbsorptionMode,
 };
+use kwavers_physics::acoustics::mechanics::RelaxationAbsorption;
 use ndarray::Array3;
 
 /// Initialize absorption operators τ, η, spatially-varying exponent y, and the
@@ -232,11 +233,108 @@ pub(crate) fn initialize_absorption_operators(
                 strata,
             }))
         }
-        AbsorptionMode::MultiRelaxation { .. } | AbsorptionMode::Causal { .. } => Err(
-            KwaversError::Validation(ValidationError::ConstraintViolation {
-                message: "Relaxation absorption modes are not supported by spectral solver"
-                    .to_owned(),
-            }),
-        ),
+        AbsorptionMode::MultiRelaxation { tau, weights } => {
+            let relaxation =
+                RelaxationAbsorption::new(tau.clone(), weights.clone()).ok_or_else(invalid_relax)?;
+            build_relaxation_kernel(grid, medium, k_mag, &relaxation, None)
+        }
+        AbsorptionMode::Causal {
+            relaxation_times,
+            alpha_0,
+        } => {
+            let relaxation =
+                RelaxationAbsorption::unit_weights(relaxation_times.clone()).ok_or_else(invalid_relax)?;
+            build_relaxation_kernel(grid, medium, k_mag, &relaxation, Some(*alpha_0))
+        }
     }
+}
+
+/// Error for an ill-formed relaxation spectrum.
+fn invalid_relax() -> KwaversError {
+    KwaversError::Validation(ValidationError::ConstraintViolation {
+        message: "relaxation absorption requires non-empty, positive (τ, weight) pairs".to_owned(),
+    })
+}
+
+/// Keep a realized power-law exponent away from the `y = 1` singularity of the
+/// fractional dispersion term `tan(πy/2)` and inside the model's valid `(0, 2)`
+/// range. Relaxation media operating exactly at a loss peak (`y_eff ≈ 1`) are
+/// nudged to the nearest side; the `±0.05` band bounds the realization error.
+fn clamp_fractional_exponent(y: f64) -> f64 {
+    // y = 2 (viscous/Stokes) is valid: tan(π) = 0 ⇒ no dispersion term.
+    let y = y.clamp(0.1, 2.0);
+    if (y - 1.0).abs() < 0.05 {
+        if y >= 1.0 {
+            1.05
+        } else {
+            0.95
+        }
+    } else {
+        y
+    }
+}
+
+/// Realize a relaxation absorption spectrum through the fractional-Laplacian
+/// path at the medium drive frequency. `α(ω_ref)` (or `causal_alpha_0` when set)
+/// and the spectrum's local exponent `y_eff = d ln α/d ln ω` define an equivalent
+/// power-law prefactor per voxel; the exponent is `c₀`-independent, so a single
+/// spectral symbol suffices (no strata). Exact at `ω_ref` (book §4.4.2/§4.4.3).
+fn build_relaxation_kernel(
+    grid: &Grid,
+    medium: &dyn Medium,
+    k_mag: &Array3<f64>,
+    relaxation: &RelaxationAbsorption,
+    causal_alpha_0: Option<f64>,
+) -> KwaversResult<Option<AbsorptionKernel>> {
+    let shape = (grid.nx, grid.ny, grid.nz);
+    let f_ref = medium.reference_frequency();
+    let omega_ref = 2.0 * std::f64::consts::PI * f_ref;
+    let y_eff = clamp_fractional_exponent(relaxation.local_exponent(omega_ref));
+
+    let mut tau = Array3::zeros(shape);
+    let mut eta = Array3::zeros(shape);
+    let mut alpha_si_field = Array3::zeros(shape);
+
+    for k in 0..grid.nz {
+        for j in 0..grid.ny {
+            for i in 0..grid.nx {
+                let c0_val = medium.sound_speed(i, j, k);
+                let alpha_np_m =
+                    causal_alpha_0.unwrap_or_else(|| relaxation.attenuation(omega_ref, c0_val));
+                let alpha_db_cm = np_m_to_power_law_db_cm(alpha_np_m, f_ref, y_eff);
+                let alpha_0_si = power_law_db_cm_to_np_omega_m(alpha_db_cm, y_eff);
+
+                tau[[i, j, k]] = -2.0 * alpha_0_si * c0_val.powf(y_eff - 1.0);
+                eta[[i, j, k]] = 2.0
+                    * alpha_0_si
+                    * c0_val.powf(y_eff)
+                    * (std::f64::consts::PI * y_eff / 2.0).tan();
+                alpha_si_field[[i, j, k]] = alpha_0_si;
+            }
+        }
+    }
+
+    let nabla1 = k_mag.mapv(|k| {
+        if k > ABSORPTION_SINGULARITY_THRESHOLD {
+            k.powf(y_eff - 2.0)
+        } else {
+            0.0
+        }
+    });
+    let nabla2 = k_mag.mapv(|k| {
+        if k > ABSORPTION_SINGULARITY_THRESHOLD {
+            k.powf(y_eff - 1.0)
+        } else {
+            0.0
+        }
+    });
+
+    Ok(Some(AbsorptionKernel {
+        tau,
+        eta,
+        nabla1,
+        nabla2,
+        alpha_si: alpha_si_field,
+        strata: None, // y_eff is c₀-independent ⇒ spatially uniform exponent
+    }))
 }

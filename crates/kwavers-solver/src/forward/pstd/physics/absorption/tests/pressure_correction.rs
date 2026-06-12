@@ -372,6 +372,61 @@ fn test_update_pressure_linear_eos_populates_div_u_and_p() {
     }
 }
 
+/// The `MultiRelaxation` absorption mode now builds a kernel (no longer errors)
+/// and realizes the exact Nachman–Smith–Waag absorption at the drive frequency:
+/// the kernel's per-voxel `α_SI · ω_ref^{y_eff}` reproduces `α(ω_ref)` from the
+/// relaxation spectrum, and `apply_absorption_to_pressure` runs.
+#[test]
+fn multi_relaxation_mode_realizes_spectrum_at_drive_frequency() {
+    use kwavers_physics::acoustics::mechanics::RelaxationAbsorption;
+
+    let grid = Grid::new(16, 16, 16, 1e-4, 1e-4, 1e-4).unwrap();
+    let medium = HomogeneousMedium::new(
+        DENSITY_WATER_NOMINAL,
+        SOUND_SPEED_WATER_SIM,
+        0.0,
+        0.0,
+        &grid,
+    );
+    let (tau, weights) = (vec![1.0e-9, 4.0e-9], vec![6.0e8, 3.0e8]);
+    let config = PSTDConfig {
+        absorption_mode: AbsorptionMode::MultiRelaxation {
+            tau: tau.clone(),
+            weights: weights.clone(),
+        },
+        dt: 1e-7,
+        ..PSTDConfig::default()
+    };
+
+    let mut solver = PSTDSolver::new(config, grid.clone(), &medium, GridSource::default()).unwrap();
+
+    // The mode is now supported: a kernel is present.
+    let abs = solver
+        .absorption
+        .as_ref()
+        .expect("relaxation mode must build an absorption kernel");
+
+    // Realized absorption at ω_ref equals the relaxation spectrum's α(ω_ref).
+    let relax = RelaxationAbsorption::new(tau, weights).unwrap();
+    let f_ref = kwavers_medium::CoreMedium::reference_frequency(&medium);
+    let omega_ref = TWO_PI * f_ref;
+    let y_eff = relax.local_exponent(omega_ref).clamp(0.1, 2.0);
+    let expected = relax.attenuation(omega_ref, SOUND_SPEED_WATER_SIM);
+    let realized = abs.alpha_si[[8, 8, 8]] * omega_ref.powf(y_eff);
+    assert!(
+        (realized - expected).abs() <= 1e-6 * expected,
+        "realized α(ω_ref) {realized} vs spectrum {expected} Np/m"
+    );
+
+    // Apply path runs without error for the relaxation mode.
+    solver.div_ux.fill(0.3);
+    solver.div_uy.fill(0.1);
+    solver.div_uz.fill(0.0);
+    solver.div_u.fill(1.0);
+    solver.fields.p.fill(0.0);
+    solver.apply_absorption_to_pressure().unwrap();
+}
+
 /// Differential validation of the **stratified** spatially-varying-exponent
 /// absorption operator (beyond k-Wave's single global exponent).
 ///

@@ -278,6 +278,15 @@ a distribution of relaxation times; the medium carries memory of its acoustic hi
 is the physical mechanism encoded by the fractional-derivative operators of §4.4.3
 (full treatment in Foundations §1.9.3).
 
+`kwavers_physics::acoustics::mechanics::RelaxationAbsorption` evaluates the discrete
+spectrum `α(ω) = (ω²/2c₀) Σ_l w_l τ_l/(1+ω²τ_l²)` and its local exponent
+`y(ω) = d\ln α/d\ln ω` exactly. The PSTD `AbsorptionMode::MultiRelaxation`/`Causal` modes
+realize a relaxation spectrum through the validated §4.4.3 fractional-Laplacian path at the
+medium drive frequency `ω_ref`: `(α(ω_ref), y(ω_ref))` set the equivalent power-law prefactor
+(the same `np_m_to_power_law_db_cm` realization used for resonant bubble-cloud absorption).
+The realization is exact at `ω_ref` and follows `f^{y(ω_ref)}` off-frequency; the exponent is
+kept clear of the `y = 1` dispersion singularity.
+
 ### 4.4.3 Causal dispersion and the fractional-Laplacian model
 
 Causality links this absorption to a specific phase-velocity dispersion (Kramers–Kronig),

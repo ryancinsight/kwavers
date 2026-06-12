@@ -40,7 +40,7 @@
 //!   the parity scripts.
 
 use crate::pstd::PSTDSolver;
-use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
+use kwavers_core::error::KwaversResult;
 use kwavers_math::fft::Fft3dInOutExt;
 use kwavers_physics::acoustics::mechanics::absorption::AbsorptionMode;
 use ndarray::{s, Zip};
@@ -66,15 +66,13 @@ impl PSTDSolver {
     pub(crate) fn apply_absorption_to_pressure(&mut self) -> KwaversResult<()> {
         match self.config.absorption_mode {
             AbsorptionMode::Lossless => return Ok(()),
-            AbsorptionMode::Stokes | AbsorptionMode::PowerLaw { .. } => {}
-            AbsorptionMode::MultiRelaxation { .. } | AbsorptionMode::Causal { .. } => {
-                return Err(KwaversError::Validation(
-                    ValidationError::ConstraintViolation {
-                        message: "Relaxation absorption modes are not supported by spectral solver"
-                            .to_owned(),
-                    },
-                ));
-            }
+            // PowerLaw, Stokes, and the relaxation modes (MultiRelaxation, Causal)
+            // are all realized through the fractional-Laplacian kernel built in
+            // `initialize_absorption_operators`; the apply path is identical.
+            AbsorptionMode::Stokes
+            | AbsorptionMode::PowerLaw { .. }
+            | AbsorptionMode::MultiRelaxation { .. }
+            | AbsorptionMode::Causal { .. } => {}
         }
 
         let Some(ref abs) = self.absorption else {
