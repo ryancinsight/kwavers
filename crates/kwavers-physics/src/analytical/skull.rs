@@ -4,7 +4,7 @@
 //! Hounsfield unit conversions (Schneider 1996), Strehl ratio, semi-infinite
 //! solid surface temperature rise, and transfer-matrix skull transmission.
 
-use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
+use kwavers_core::constants::hu_mapping::HuAcousticModel;
 use kwavers_core::constants::numerical::TWO_PI;
 use num_complex::Complex64;
 use rand::SeedableRng;
@@ -58,41 +58,38 @@ pub fn skull_phase_screen(n: usize, sigma_phi_rad: f64, seed: u64) -> Vec<f64> {
 
 // ─── CT conversions ───────────────────────────────────────────────────────────
 
-/// Convert Hounsfield Units to acoustic sound speed (Schneider 1996).
+/// Convert Hounsfield Units to acoustic sound speed (Schneider 1996), batched.
 ///
 /// ```text
 /// c(HU) = 1500 + 0.50·HU   for HU < 0
 /// c(HU) = 1500 + 0.76·HU   for HU ≥ 0   [m/s]
 /// ```
 ///
+/// Thin batch wrapper over the canonical [`HuAcousticModel`] (the SSOT for the
+/// HU→property fit); the default model *is* the Schneider calibration.
+///
 /// # Reference
 /// Schneider et al. (1996), *Phys. Med. Biol.* 41, 111.
 #[must_use]
 pub fn hu_to_sound_speed_schneider(hu: &[f64]) -> Vec<f64> {
-    hu.iter()
-        .map(|&h| {
-            if h < 0.0 {
-                SOUND_SPEED_WATER_SIM + 0.50 * h
-            } else {
-                SOUND_SPEED_WATER_SIM + 0.76 * h
-            }
-        })
-        .collect()
+    let model = HuAcousticModel::default();
+    hu.iter().map(|&h| model.sound_speed(h)).collect()
 }
 
-/// Convert Hounsfield Units to density (Schneider 1996).
+/// Convert Hounsfield Units to density (Schneider 1996), batched.
 ///
 /// ```text
 /// ρ(HU) = 1000 + 0.96·HU   [kg/m³]
 /// ```
 ///
+/// Thin batch wrapper over the canonical [`HuAcousticModel`].
+///
 /// # Reference
 /// Schneider et al. (1996), *Phys. Med. Biol.* 41, 111.
 #[must_use]
 pub fn hu_to_density_schneider(hu: &[f64]) -> Vec<f64> {
-    hu.iter()
-        .map(|&h| DENSITY_WATER_NOMINAL + 0.96 * h)
-        .collect()
+    let model = HuAcousticModel::default();
+    hu.iter().map(|&h| model.density(h)).collect()
 }
 
 // ─── Strehl ratio ─────────────────────────────────────────────────────────────
@@ -224,6 +221,7 @@ pub fn skull_transmission_spectrum(
 mod tests {
     use super::*;
     use kwavers_core::constants::acoustic_parameters::{BONE_DENSITY, SOUND_SPEED_SKULL};
+    use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use kwavers_core::constants::numerical::MHZ_TO_HZ;
     use kwavers_core::constants::tissue_thermal::SPECIFIC_HEAT_BONE;
 

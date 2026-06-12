@@ -9,6 +9,7 @@ pub mod chemistry;
 pub mod ct_acoustics;
 pub mod fundamental;
 pub mod hounsfield;
+pub mod hu_mapping;
 pub mod implants;
 pub mod medical;
 pub mod numerical;
@@ -57,6 +58,9 @@ pub use tissue_acoustics::{
     SOUND_SPEED_NANOPARTICLE_SUSPENSION, SOUND_SPEED_ULTRASOUND_GEL, SOUND_SPEED_URINE,
     WATER_ABSORPTION_ALPHA_0_DB_CM_MHZ2, WATER_ABSORPTION_POWER_Y,
 };
+
+// Continuous tissue-varying HU → {ρ, c, α₀} mapping (standard-HU convention)
+pub use hu_mapping::HuAcousticModel;
 
 // CT / Hounsfield-unit thresholds and skull density model (SSOT: ct_acoustics)
 pub use ct_acoustics::{

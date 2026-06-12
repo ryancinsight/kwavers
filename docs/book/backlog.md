@@ -27,6 +27,20 @@ claimed struct name) before implementing. Confirmed corrections below.
   method to it. Test: closed form, `T>1` into stiffer medium, `T=1+R`, lossless balance
   `R²+(Z_i/Z_t)T²=1`, matched-impedance `T=1`. (The skull/transducer siblings correctly use the
   *intensity* `4Z₁Z₂/(Z₁+Z₂)²` — left as-is, documented.)
+- ✅ **Continuous tissue-varying CT→acoustic mapping (resolve binary-collapse)** — `[minor]`
+  (2026-06-11). The `CTImageLoader` HU→density/sound-speed model was a **binary threshold** (HU>700
+  bone; all soft tissue forced to ρ=1000, c=1500), erasing fat/muscle/liver/marrow contrast — unfit
+  for full patient simulations. Added canonical `kwavers_core::constants::hu_mapping::HuAcousticModel`
+  — a continuous, **scanner-calibration-configurable** (public coefficient fields) standard-HU →
+  {ρ, c, α₀} map defaulting to Schneider 1996 (ρ=1000+0.96·HU; c=1500+{0.5,0.76}·HU) + Aubry/Connor
+  soft↔cortical absorption blend + air floors for gas voxels. Rewired `CTImageLoader::hu_to_*` (+new
+  `hu_to_absorption`), batched `hu_to_*_schneider`, and `HeterogeneousSkull::from_ct` to delegate to
+  it (SSOT, removed duplicated Schneider formula + binary `from_ct` attenuation). Research-grounded:
+  Webb 2018 (slope 0.37–1.8 m/s/HU is scanner-dependent → configurability; Schneider 0.76 matches
+  120-kVp 0.75), BabelBrain 2023, Aubry review 2022. 5 new value-semantic tests (distinct
+  soft-tissue resolution, water anchor exact, C⁰ at HU=0, air-floor clamp, absorption blend);
+  corrected 4 loader tests that encoded the binary bug (derivations recorded). Chapter Ch4 §4.5.3
+  rewritten as the continuous-default home; +Webb reference. clippy clean on core/imaging/physics.
 - ✅ **CT Hounsfield→density mapping: tests + chapter** — `[patch]` (2026-06-11, codebase audit).
   The canonical `HounsfieldUnits` (Mast 2000 / k-wave-parity 4-segment piecewise density fit, the
   most foundational HU→ρ converter) was **untested** despite claiming k-wave-python parity. Added 5

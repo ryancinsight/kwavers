@@ -364,19 +364,45 @@ let z   = HounsfieldUnits::to_impedance(1300.0);   // ρc
 `HounsfieldUnits` lives in `kwavers-core` as the constants SSOT; `classify_tissue` returns the
 coarse tissue label (Air/Fat/Water/Soft Tissue/Muscle/Liver/Trabecular/Cortical Bone).
 
-### 4.5.3 Linear skull models (Schneider, Marsac)
+### 4.5.3 Continuous tissue-varying model — `HuAcousticModel` (default)
 
-For skull-only transcranial work the standard-HU linear fits are simpler and well validated:
+The workhorse for whole-volume, tissue-varying simulation is the **Schneider (1996)** continuous
+linear fit, which resolves the entire HU axis rather than thresholding bone:
 
-| Model | Sound speed | Density |
-|---|---|---|
-| **Schneider (1996)** | $c = 1500 + 0.50\,\text{HU}$ (HU < 0); $1500 + 0.76\,\text{HU}$ (HU ≥ 0) | $\rho = 1000 + 0.96\,\text{HU}$ |
-| **Marsac (2017)** bone fraction | $c = 1500(1-\phi) + 2900\,\phi$ | (Voigt, see §4.5.4) |
+| Property | Relation (standard HU) |
+|---|---|
+| Density | $\rho = \max\!\big(1000 + 0.96\,\text{HU},\; \rho_{\text{air}}\big)$ kg m⁻³ |
+| Sound speed | $c = \max\!\big(1500 + s\,\text{HU},\; c_{\text{air}}\big)$, $s = 0.50$ (HU < 0), $0.76$ (HU ≥ 0) m s⁻¹ |
+| Absorption | $\alpha_0 = (1-\phi)\,\alpha_{\text{soft}} + \phi\,\alpha_{\text{bone}}$, $\phi = \text{clamp}(\text{HU}/1000,0,1)$ |
 
-with porosity proxy $\phi = \text{clamp}(\text{HU}/1000,\,0,\,1)$. Schneider lives in
-`kwavers_physics::analytical::skull` (`hu_to_sound_speed_schneider`, `hu_to_density_schneider`);
-Marsac drives the active transcranial planning path in
-`kwavers_therapy::theranostic_guidance::medium`.
+This distinguishes fat (HU ≈ −100 → 904 kg m⁻³, 1450 m s⁻¹), water (0 → 1000, 1500), muscle
+(≈ 50 → 1048, 1576), and cortical bone (1000 → 1960, 2640) — contrast a binary bone/soft
+threshold erases. The air **floors** clamp gas voxels (HU ≪ −1000) to physical air values rather
+than the negative density / sub-300 m s⁻¹ the bare line extrapolates, which matters for abdominal
+and lung-adjacent simulations. Schneider's 0.76 m s⁻¹ HU⁻¹ bone slope matches Webb et al. (2018)'s
+120-kVp bone-kernel measurement (0.75), and its HU=1500 speed (2640 m s⁻¹) sits inside Webb's
+measured 1996–3114 m s⁻¹ skull range.
+
+```rust
+use kwavers_core::constants::hu_mapping::HuAcousticModel;
+
+let m = HuAcousticModel::default();              // Schneider 1996 + Aubry absorption
+let (rho, c, a) = (m.density(50.0), m.sound_speed(50.0), m.absorption(50.0)); // muscle
+```
+
+`HuAcousticModel` is the `kwavers-core` SSOT for the HU→property fit; the CT image loader
+(`CTImageLoader::hu_to_{density,sound_speed,absorption}`), the batched
+`kwavers_physics::analytical::skull::hu_to_*_schneider`, and `HeterogeneousSkull::from_ct` all
+delegate to it.
+
+**Calibration is scanner-dependent.** Webb et al. (2018) showed the HU→velocity slope in skull
+bone spans ~0.37–1.8 m s⁻¹ HU⁻¹ across photon energy and reconstruction kernel (best R² ≈ 0.53),
+so **no single mapping is universal**. Every coefficient on `HuAcousticModel` is therefore a public
+field: the default is Schneider/Aubry, and a caller substitutes a scanner-specific calibration by
+overriding fields. The alternative **Marsac (2017)** transcranial path
+($c = 1500(1-\phi) + 2900\,\phi$, $\phi = \text{clamp}(\text{HU}/1000,0,1)$) lives in
+`kwavers_therapy::theranostic_guidance::medium`; the density-linear skull relation
+$c = 1.33\rho + 167$ (BabelBrain, Pichardo) is realized by the bone-fraction mixing of §4.5.4.
 
 ### 4.5.4 Bone-volume-fraction mixing (Aubry / Hill)
 
@@ -409,19 +435,20 @@ let skull = HeterogeneousSkull::from_ct_hill(&ct, 3100.0, 2100.0, 20.0)?;
 // skull.density, skull.sound_speed, skull.attenuation feed the heterogeneous medium (§4.6.4)
 ```
 
-`from_ct_hill` (Hill-averaged) and the simpler binary-threshold `from_ct` both live in
+`from_ct_hill` (Hill-averaged) and `from_ct` (continuous Schneider, §4.5.3) both live in
 `kwavers_physics::acoustics::skull::heterogeneous`; the produced fields route directly into the
 heterogeneous medium of §4.6.4. CT volumes are ingested from NIfTI by
 `kwavers_imaging::medical::CTImageLoader` (ritk-backed).
 
 ### 4.5.5 Choosing a model
 
-- **Soft-tissue / abdominal, k-wave cross-validation** → `HounsfieldUnits` (§4.5.2).
-- **Transcranial skull-only, fast linear** → Schneider or Marsac (§4.5.3).
-- **Heterogeneous skull with diplöe gradient** → `from_ct_hill` BVF mixing (§4.5.4).
+- **Whole-volume, tissue-varying (default)** → `HuAcousticModel` / `from_ct` (§4.5.3) — resolves
+  every soft tissue plus bone, with scanner-configurable coefficients.
+- **Soft-tissue / abdominal, k-wave cross-validation** → `HounsfieldUnits` (§4.5.2, CT-number).
+- **Transcranial skull with diplöe gradient (porous mixing)** → `from_ct_hill` BVF + Hill (§4.5.4).
 
-All three are reference-backed and unit-tested against their published anchor values; none
-collapses distinct tissues to a single hardcoded density.
+All paths are reference-backed and unit-tested against published anchors; none collapses distinct
+tissues to a single hardcoded density.
 
 ---
 
@@ -1173,4 +1200,8 @@ This chapter established:
 - Treeby, B.E. & Cox, B.T. (2010). "Modeling power law absorption and dispersion for
   acoustic propagation using the fractional Laplacian." *J. Acoust. Soc. Am.* 127(5),
   2712–2719.
+- Webb, T.D., Leung, S.A., Rosenberg, J., Ghanouni, P., Dahl, J.J., Pelc, N.J. & Pauly, K.B.
+  (2018). "Measurements of the relationship between CT Hounsfield units and acoustic velocity
+  and how it changes with photon energy and reconstruction method." *IEEE Trans. Ultrason.
+  Ferroelectr. Freq. Control* 65(7), 1111–1124.
 

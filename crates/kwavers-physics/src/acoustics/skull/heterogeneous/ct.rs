@@ -7,23 +7,23 @@ use super::model::HeterogeneousSkull;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 
 impl HeterogeneousSkull {
-    /// Create heterogeneous skull from CT data using the legacy CTImageLoader
-    /// pipeline. The binary threshold HU > 700 selects bone; attenuation uses
-    /// the provided props value for bone voxels.
+    /// Create a heterogeneous skull from CT data using the continuous
+    /// tissue-varying [`HuAcousticModel`] (Schneider 1996) for density and sound
+    /// speed. Attenuation blends linearly from water (`ALPHA_WATER`) to the
+    /// provided bone `props.attenuation_coeff` by bone volume fraction, so every
+    /// tissue type maps to distinct properties (no binary bone/soft split).
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn from_ct(ct_data: &Array3<f64>, props: &AcousticSkullProperties) -> KwaversResult<Self> {
-        use kwavers_imaging::medical::CTImageLoader;
+        use kwavers_core::constants::hu_mapping::HuAcousticModel;
 
-        let sound_speed = ct_data.mapv(CTImageLoader::hu_to_sound_speed);
-        let density = ct_data.mapv(CTImageLoader::hu_to_density);
+        let model = HuAcousticModel::default();
+        let sound_speed = ct_data.mapv(|hu| model.sound_speed(hu));
+        let density = ct_data.mapv(|hu| model.density(hu));
         let attenuation = ct_data.mapv(|hu| {
-            if hu > 700.0 {
-                props.attenuation_coeff
-            } else {
-                ALPHA_WATER
-            }
+            let phi = model.bone_fraction(hu);
+            (1.0 - phi).mul_add(ALPHA_WATER, phi * props.attenuation_coeff)
         });
 
         Ok(Self {

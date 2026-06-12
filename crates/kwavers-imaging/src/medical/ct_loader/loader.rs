@@ -2,7 +2,7 @@
 
 use super::types::CTMetadata;
 use crate::medical::{MedicalImageLoader, MedicalImageMetadata};
-use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use kwavers_core::constants::hu_mapping::HuAcousticModel;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use log::warn;
 use ndarray::Array3;
@@ -204,29 +204,29 @@ impl CTImageLoader {
         ]
     }
 
-    /// Convert HU to sound speed (Aubry et al. 2003).
+    /// Convert HU to sound speed [m/s] via the continuous tissue-varying model.
     ///
-    /// Bone (HU > 700): c(HU) = 2800 + (HU - 700) × 2.0 m/s
-    /// Soft tissue: c = 1500 m/s
+    /// Delegates to [`HuAcousticModel::default`] (Schneider 1996 bilinear fit),
+    /// so every tissue type — fat, water, muscle, marrow, cortical bone — maps to
+    /// a distinct speed rather than a binary bone/soft split. See book Ch4 §4.5.
     #[must_use]
     pub fn hu_to_sound_speed(hu: f64) -> f64 {
-        if hu > 700.0 {
-            (hu - 700.0).mul_add(2.0, 2800.0)
-        } else {
-            SOUND_SPEED_WATER_SIM
-        }
+        HuAcousticModel::default().sound_speed(hu)
     }
 
-    /// Convert HU to density.
+    /// Convert HU to mass density [kg/m³] via the continuous tissue-varying model.
     ///
-    /// Bone (HU > 700): ρ(HU) = 1700 + (HU - 700) × 0.2 kg/m³
-    /// Soft tissue: ρ = 1000 kg/m³
+    /// Delegates to [`HuAcousticModel::default`] (Schneider 1996), resolving the
+    /// full soft-tissue contrast a threshold model erases. See book Ch4 §4.5.
     #[must_use]
     pub fn hu_to_density(hu: f64) -> f64 {
-        if hu > 700.0 {
-            (hu - 700.0).mul_add(0.2, 1700.0)
-        } else {
-            1000.0
-        }
+        HuAcousticModel::default().density(hu)
+    }
+
+    /// Convert HU to power-law absorption prefactor α₀ [dB·cm⁻¹·MHz⁻ʸ] via the
+    /// continuous tissue-varying model (soft↔cortical blend, Aubry 2003).
+    #[must_use]
+    pub fn hu_to_absorption(hu: f64) -> f64 {
+        HuAcousticModel::default().absorption(hu)
     }
 }
