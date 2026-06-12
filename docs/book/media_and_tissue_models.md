@@ -843,7 +843,10 @@ standard k-space-pseudospectral treatment of heterogeneous media. The exponentia
 coefficients become per-voxel fields. A modulus interface reflects an incident pulse with the
 analytical coefficient `R = (Z_B-Z_A)/(Z_B+Z_A)`, `Z=√(ρM)` (verified to ±0.06 for `R=1/3`).
 
-An optional **absorbing boundary layer** (`enable_absorbing_layer(thickness, γ_max)`) suppresses
+For **driven simulations**, `add_pressure_source(index, signal)` registers a soft (additive)
+pressure source (`p[index] += signal[step]`) and `add_pressure_sensor(index)` records the pressure
+trace at a point; a time-of-flight test confirms a source pulse arrives at a downstream sensor at
+`d/c`. An optional **absorbing boundary layer** (`enable_absorbing_layer(thickness, γ_max)`) suppresses
 the periodic wrap-around: a quadratic damping profile $\gamma(d) = \gamma_{\max}((L-d)/L)^2$ ramps
 from zero at the interior edge to $\gamma_{\max}$ at each face and is applied as a multiplicative
 decay $\exp(-\gamma\,\Delta t)$ to $p$ and $\mathbf v$ each step (summed across axes so corners

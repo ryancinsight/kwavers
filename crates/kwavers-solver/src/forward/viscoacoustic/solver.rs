@@ -86,6 +86,14 @@ pub struct ViscoacousticMemorySolver {
     // applied to `p` and `v` each step, with `γ` ramping up inside the boundary
     // layer and zero in the interior (`None` ⇒ periodic, non-absorbing).
     damping_decay: Option<Array3<f64>>,
+
+    // Driven-simulation I/O.
+    step_count: usize,
+    /// Additive (soft) pressure sources: `(grid index, time signal)`.
+    pressure_sources: Vec<((usize, usize, usize), Vec<f64>)>,
+    /// Pressure-sensor grid indices and their recorded time traces.
+    pressure_sensors: Vec<(usize, usize, usize)>,
+    sensor_record: Vec<Vec<f64>>,
 }
 
 impl std::fmt::Debug for ViscoacousticMemorySolver {
@@ -275,6 +283,10 @@ impl ViscoacousticMemorySolver {
             gy: Array3::zeros(shape),
             gz: Array3::zeros(shape),
             damping_decay: None,
+            step_count: 0,
+            pressure_sources: Vec::new(),
+            pressure_sensors: Vec::new(),
+            sensor_record: Vec::new(),
         }
     }
 
@@ -391,7 +403,53 @@ impl ViscoacousticMemorySolver {
         for s in &mut self.sigma {
             s.fill(0.0);
         }
+        // Restart the simulation clock and sensor traces (sources/sensors kept).
+        self.step_count = 0;
+        for trace in &mut self.sensor_record {
+            trace.clear();
+        }
         Ok(())
+    }
+
+    /// Register a **soft (additive) pressure source** at `index` with a per-step
+    /// time `signal`: `p[index] += signal[step]` while `step < signal.len()`.
+    /// # Errors
+    /// - `index` out of grid bounds.
+    pub fn add_pressure_source(
+        &mut self,
+        index: (usize, usize, usize),
+        signal: Vec<f64>,
+    ) -> KwaversResult<()> {
+        self.check_index(index)?;
+        self.pressure_sources.push((index, signal));
+        Ok(())
+    }
+
+    /// Register a pressure sensor at `index`; [`Self::step`] appends `p[index]`
+    /// to its trace each step. Returns the sensor id (its index in the record).
+    /// # Errors
+    /// - `index` out of grid bounds.
+    pub fn add_pressure_sensor(&mut self, index: (usize, usize, usize)) -> KwaversResult<usize> {
+        self.check_index(index)?;
+        self.pressure_sensors.push(index);
+        self.sensor_record.push(Vec::new());
+        Ok(self.pressure_sensors.len() - 1)
+    }
+
+    /// Recorded pressure time trace for sensor `id`.
+    #[must_use]
+    pub fn sensor_trace(&self, id: usize) -> &[f64] {
+        &self.sensor_record[id]
+    }
+
+    fn check_index(&self, (i, j, k): (usize, usize, usize)) -> KwaversResult<()> {
+        if i < self.nx && j < self.ny && k < self.nz {
+            Ok(())
+        } else {
+            Err(KwaversError::InvalidInput(
+                "source/sensor index out of grid bounds".to_owned(),
+            ))
+        }
     }
 
     /// Acoustic energy `Σ [p²/(2M_∞) + ρ|v|²/2] ΔV` \[J]. Conserved (to leapfrog
@@ -481,13 +539,26 @@ impl ViscoacousticMemorySolver {
             .and(&self.m_u)
             .for_each(|p, &d, &relax, &mu| *p -= dt * (mu * d + relax));
 
-        // 5. Absorbing boundary: damp p and v inside the sponge layer.
+        // 5. Soft pressure sources: p[index] += signal[step].
+        for (index, signal) in &self.pressure_sources {
+            if let Some(&s) = signal.get(self.step_count) {
+                self.p[[index.0, index.1, index.2]] += s;
+            }
+        }
+
+        // 6. Absorbing boundary: damp p and v inside the sponge layer.
         if let Some(decay) = &self.damping_decay {
             Zip::from(&mut self.p).and(decay).for_each(|p, &d| *p *= d);
             Zip::from(&mut self.vx).and(decay).for_each(|v, &d| *v *= d);
             Zip::from(&mut self.vy).and(decay).for_each(|v, &d| *v *= d);
             Zip::from(&mut self.vz).and(decay).for_each(|v, &d| *v *= d);
         }
+
+        // 7. Record sensor traces, then advance the simulation clock.
+        for (trace, &index) in self.sensor_record.iter_mut().zip(self.pressure_sensors.iter()) {
+            trace.push(self.p[[index.0, index.1, index.2]]);
+        }
+        self.step_count += 1;
     }
 }
 

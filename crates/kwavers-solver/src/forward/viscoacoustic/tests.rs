@@ -282,6 +282,56 @@ fn heterogeneous_interface_reflects_with_analytical_coefficient() {
     );
 }
 
+/// **Driven simulation**: a soft pressure source emits a pulse that arrives at a
+/// downstream sensor at the time-of-flight `d/c`, validating source injection,
+/// propagation, and sensor recording end-to-end.
+#[test]
+fn source_pulse_arrives_at_sensor_at_time_of_flight() {
+    let n = 512;
+    let dx = 1.0e-4;
+    let dt = 8.0e-9; // c=1500 ⇒ 0.12 cell/step
+    let (x_s, x_r) = (64usize, 300usize);
+    let mut s = ViscoacousticMemorySolver::new_1d(n, dx, dt, RHO, M_INF, &[]).unwrap();
+    s.enable_absorbing_layer(48, 2.0e6);
+    s.set_pressure(&Array3::zeros((n, 1, 1))).unwrap(); // quiescent start
+
+    // Gaussian source pulse, peak at step 20.
+    let signal: Vec<f64> = (0..40)
+        .map(|k| {
+            let d = (k as f64 - 20.0) / 8.0;
+            (-d * d).exp()
+        })
+        .collect();
+    s.add_pressure_source((x_s, 0, 0), signal).unwrap();
+    let sensor = s.add_pressure_sensor((x_r, 0, 0)).unwrap();
+
+    for _ in 0..2500 {
+        s.step();
+    }
+
+    let trace = s.sensor_trace(sensor);
+    let peak = trace.iter().cloned().fold(0.0_f64, |m, v| m.max(v.abs()));
+    assert!(peak > 1e-3, "sensor recorded no arrival (peak {peak:.2e})");
+    let arrival = trace
+        .iter()
+        .enumerate()
+        .max_by(|a, b| a.1.abs().partial_cmp(&b.1.abs()).unwrap())
+        .map(|(i, _)| i)
+        .unwrap();
+    // Peak emitted at step 20 travels (x_r-x_s)=236 cells at 0.12 cell/step.
+    let c = (M_INF / RHO).sqrt();
+    let expected = 20.0 + (x_r - x_s) as f64 * dx / (c * dt);
+    assert!(
+        (arrival as f64 - expected).abs() < 40.0,
+        "arrival step {arrival} vs time-of-flight {expected:.0}"
+    );
+    // The sensor was quiet before the wave could possibly arrive.
+    let early_peak = trace[..(expected as usize - 200)]
+        .iter()
+        .fold(0.0_f64, |m, &v| m.max(v.abs()));
+    assert!(early_peak < 0.05 * peak, "pre-arrival leakage {early_peak:.2e}");
+}
+
 /// Construction validation and the `GeneralizedMaxwellModel` convenience path.
 #[test]
 fn construction_validates_and_accepts_model() {
