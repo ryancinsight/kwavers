@@ -4,7 +4,7 @@
 > `kwavers_physics::acoustics::bubble_dynamics` (Rayleigh–Plesset, Keller–Miksis,
 > encapsulated shell models, Bjerknes forces, adaptive integration, Epstein–Plesset
 > dissolution), `kwavers_physics::acoustics::therapy::cavitation` (detection,
-> thresholds, metrics), `kwavers_domain::therapy::microbubble` (contrast-agent shell
+> thresholds, metrics), `kwavers_physics::therapy::microbubble` (contrast-agent shell
 > state, drug payload, radiation force), and
 > `kwavers_solver::forward::ode::bubble_symplectic` (symplectic time integration).
 
@@ -845,7 +845,7 @@ modulus $G_S$ and shell viscosity $\mu_S$.
 `kwavers_physics::acoustics::bubble_dynamics::encapsulated::model`:
 `MarmottantModel` (struct with fields `chi`, `r_buck`, `r_rupt`, `kappa_s`) and
 `ChurchModel` (struct with fields `g_s`, `mu_s`, `shell_thickness`).
-`kwavers_domain::therapy::microbubble::shell` stores the run-time shell state
+`kwavers_physics::therapy::microbubble::shell` stores the run-time shell state
 and transitions.
 
 ### 5.10.4 Modified Resonance Frequency

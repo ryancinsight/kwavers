@@ -133,7 +133,7 @@ to arrive simultaneously, element n must be fired earlier by the excess path
 non-negative. □
 
 This is the canonical delay law implemented in
-`kwavers_domain::source::kwave_array::accessors::beamforming`.
+`kwavers_transducer::kwave_array::accessors::beamforming`.
 
 ### 7.3.2 Lateral Resolution at Focus
 

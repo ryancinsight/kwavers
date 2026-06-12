@@ -1,7 +1,7 @@
 # Chapter 4: Media and Tissue Models
 
-**Module ownership:** `kwavers_domain::medium`, `kwavers_domain::medium::absorption`,
-`kwavers_domain::medium::heterogeneous`, `kwavers_domain::medium::homogeneous`,
+**Module ownership:** `kwavers_medium`, `kwavers_medium::absorption`,
+`kwavers_medium::heterogeneous`, `kwavers_medium::homogeneous`,
 `kwavers_physics::acoustics`, `kwavers_physics::thermal`
 
 ---
@@ -85,7 +85,7 @@ the temperature-dependent `c₀(T)` correction in coupled thermal–acoustic run
 
 Sources: Duck (1990), ICRU Report 61 (1998), Goss et al. (1978), Szabo (1994).
 
-These values are encoded directly in `kwavers_domain::medium::properties::tissue` as
+These values are encoded directly in `kwavers_medium::properties::tissue` as
 compile-time constants of type `TissueProperties`. The canonical definitions are, for
 example:
 
@@ -225,7 +225,7 @@ $$
 
 Typical values: water $y = 2$, soft tissue $y \approx 1.0$–$1.5$, bone $y \approx 1.0$.
 
-The kwavers implementation is `kwavers_domain::medium::absorption::power_law::PowerLawAbsorption`:
+The kwavers implementation is `kwavers_medium::absorption::power_law::PowerLawAbsorption`:
 
 ```rust
 // PowerLawAbsorption::absorption_at_frequency
@@ -292,7 +292,7 @@ in **Foundations §1.9.3 (Theorem 1.7)** — the canonical home for the absorpti
 they are not repeated here.
 
 kwavers implements the power law in
-`kwavers_domain::medium::absorption::power_law::PowerLawAbsorption` and applies the
+`kwavers_medium::absorption::power_law::PowerLawAbsorption` and applies the
 fractional-Laplacian correction on the **pressure side** of the equation of state,
 $p \mathrel{+}= c_0^2\bigl(\tau\,\mathcal{L}_1[\rho_0\nabla\!\cdot\!\mathbf u]
 - \eta\,\mathcal{L}_2[\rho]\bigr)$ with $\mathcal{L}_1 = (-\nabla^2)^{(y-2)/2}$ and
@@ -586,7 +586,7 @@ an $O(10\%)$ correction to the wave operator at 1 MHz.
 
 ### 4.6.3 kwavers implementation
 
-Spatial heterogeneity is managed by `kwavers_domain::medium::heterogeneous::HeterogeneousMedium`.
+Spatial heterogeneity is managed by `kwavers_medium::heterogeneous::HeterogeneousMedium`.
 Properties are stored as `Array3<f64>` voxel grids and accessed through the
 `HeterogeneousAcousticProperties` trait:
 
@@ -687,9 +687,9 @@ longer than a typical HIFU sonication ($\sim$5–30 s), justifying the adiabatic
 during sonication.
 
 The thermal properties are stored in
-`kwavers_domain::medium::properties::thermal::ThermalProperties` and per-voxel in
+`kwavers_medium::thermal::ThermalProperties` and per-voxel in
 `HeterogeneousMedium` through the `HeterogeneousThermalProperties` trait
-(`kwavers_domain::medium::heterogeneous::traits::thermal`).
+(`kwavers_medium::heterogeneous::traits::thermal`).
 
 ![Pennes bioheat temperature profile](figures/ch12/fig05_bioheat.png)
 
@@ -843,8 +843,8 @@ For propagation perpendicular to the axis:
 $v_L = \sqrt{C_{11}/\rho} \approx 3800$ m s$^{-1}$.
 
 The anisotropy tensors are implemented in
-`kwavers_domain::medium::anisotropic::christoffel` (Christoffel matrix construction) and
-`kwavers_domain::medium::anisotropic::stiffness` (stiffness tensor storage).
+`kwavers_medium::anisotropic::christoffel` (Christoffel matrix construction) and
+`kwavers_medium::anisotropic::stiffness` (stiffness tensor storage).
 
 ---
 
@@ -1012,7 +1012,7 @@ Output: (c₀, ρ₀, α₀, y, B/A) with uncertainties
 
 ### 4.12.1 Architecture
 
-`kwavers_domain::medium::homogeneous::HomogeneousMedium` is the canonical representation
+`kwavers_medium::homogeneous::HomogeneousMedium` is the canonical representation
 for spatially uniform media. Its internal layout is:
 
 ```rust
@@ -1115,8 +1115,8 @@ ultrasound simulation targeting a 30 mm deep liver lesion through 10 mm of subcu
 **Step 1 — Medium construction.**
 
 ```rust
-use kwavers_domain::medium::heterogeneous::{HeterogeneousFactory, TissueFactory};
-use kwavers_domain::medium::properties::tissue::{FAT, LIVER};
+use kwavers_medium::heterogeneous::{HeterogeneousFactory, TissueFactory};
+use kwavers_medium::properties::tissue::{FAT, LIVER};
 
 let medium = TissueFactory::two_layer(
     &grid,

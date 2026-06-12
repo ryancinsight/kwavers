@@ -269,7 +269,7 @@ which is a second-order accurate centered-difference approximation to `ρ ∂u_x
 For simulation steps where velocity sensors are active, kwavers records the three staggered
 velocity components at the nearest grid node to each sensor position. The staggered-to-collocated
 interpolation (averaging two adjacent nodes) is performed post-hoc in
-`kwavers_domain::sensor::recorder::velocity_statistics::interpolate_staggered_to_collocated`
+`kwavers_receiver::recorder::velocity_statistics::interpolate_staggered_to_collocated`
 to produce a co-located velocity estimate for output:
 ```rust
 pub fn interpolate_staggered_to_collocated(
@@ -452,7 +452,7 @@ active_fortran = np.argwhere(mask.T).T  # transpose mask before argwhere → x v
 flat_indices = np.flatnonzero(mask.ravel(order='F'))  # Fortran-order flat indices
 ```
 
-In the kwavers Rust implementation (`kwavers_domain::sensor::recorder`), the active cell
+In the kwavers Rust implementation (`kwavers_receiver::recorder`), the active cell
 enumeration iterates with x as the outer loop and z as the inner loop by convention,
 producing the Fortran-order sequence without explicit transposition.
 
@@ -626,7 +626,7 @@ signal-to-noise-ratio dependent and rejects uncorrelated noise naturally.
 ### Module Structure
 
 ```
-kwavers_domain::sensor
+kwavers_receiver
 ├── mod.rs                          Sensor trait, SensorType, SensorField
 ├── array.rs                        SensorArray: multi-element sensor collections
 ├── grid_sampling.rs                Sensor mask sampling, interpolation weights

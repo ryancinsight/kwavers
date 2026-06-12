@@ -729,7 +729,7 @@ with the $20\,°\text{C}$ and $37\,°\text{C}$ (body-temperature) reference poin
 marked.  The non-monotonic-looking rise peaks near $74\,°\text{C}$.
 
 **Implementation reference.**  kwavers stores $c_0$ as a 3D scalar field in
-`kwavers_domain::medium::material_fields::GenericMaterialFields`.  The
+`kwavers_medium::material_fields::GenericMaterialFields`.  The
 temperature-dependent correction (1.28) can be applied by updating the field
 after each thermal step in a coupled simulation (see Chapter 12).
 

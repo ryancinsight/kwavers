@@ -27,6 +27,18 @@ claimed struct name) before implementing. Confirmed corrections below.
   method to it. Test: closed form, `T>1` into stiffer medium, `T=1+R`, lossless balance
   `R²+(Z_i/Z_t)T²=1`, matched-impedance `T=1`. (The skull/transducer siblings correctly use the
   *intensity* `4Z₁Z₂/(Z₁+Z₂)²` — left as-is, documented.)
+- ✅ **Book path drift: stale `kwavers_domain::` module paths** — `[patch]` (2026-06-11, codebase
+  audit). The `kwavers-domain` mega-crate was split into 12 crates and deleted, but 24 module-path
+  references across 6 chapters still pointed at `kwavers_domain::…` (dead paths). Corrected each to
+  its verified real crate path and confirmed the capability exists there: `kwavers_medium::{absorption
+  ::power_law::PowerLawAbsorption, heterogeneous::HeterogeneousMedium, homogeneous::HomogeneousMedium,
+  anisotropic::{christoffel,stiffness}, thermal::ThermalProperties, material_fields::
+  GenericMaterialFields, properties::tissue::{FAT,LIVER}, heterogeneous::{HeterogeneousFactory,
+  TissueFactory}}`, `kwavers_boundary::cpml::CPMLBoundary`, `kwavers_receiver::recorder`,
+  `kwavers_transducer::kwave_array::accessors::beamforming`, `kwavers_physics::therapy::microbubble::
+  shell`. Files: media_and_tissue_models, foundations, numerical_methods, sensors_and_measurements,
+  beamforming_and_image_formation, cavitation_and_bubbles. No missing capability surfaced — all
+  documented symbols verified present.
 - ✅ **Stratified fractional-Laplacian absorption — spatially-varying exponent y(x) (beyond k-Wave)**
   — `[major]` (2026-06-11). The PSTD power-law absorption operator applied `|k|^{y−2}`/`|k|^{y−1}`
   with a SINGLE global exponent (k-Wave's limitation), so a CT body model's bone (y≈1.0) and soft

@@ -459,7 +459,7 @@ conductivity ramp.  The CPML formulation (Roden & Gedney 2000) improves on the
 split-field PML by using memory variables, reducing reflection to
 $\sim 10^{-6}$ for a 20-cell layer.
 
-**kwavers implementation:** `kwavers_domain::boundary::cpml::CPMLBoundary`,
+**kwavers implementation:** `kwavers_boundary::cpml::CPMLBoundary`,
 used by both FDTD and PSTD solvers.
 
 ---
