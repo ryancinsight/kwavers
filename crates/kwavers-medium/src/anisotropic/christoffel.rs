@@ -253,6 +253,63 @@ impl ChristoffelEquation {
         }
         Ok(out)
     }
+
+    /// Maximum **quasi-longitudinal** phase speed over propagation directions
+    /// \[m·s⁻¹] — the reference speed for an anisotropic-medium CFL/timestep
+    /// bound. Computed by sampling the unit sphere (principal axes, face/body
+    /// diagonals, and a deterministic Fibonacci sphere) and taking the largest
+    /// qP speed; phase velocity is `n → −n` symmetric so a sampled set suffices.
+    ///
+    /// For an isotropic medium this returns `c_P = √((λ+2μ)/ρ)` exactly (the
+    /// speed is direction-independent). For strongly anisotropic media apply the
+    /// usual CFL safety margin, since this is a sampled (not analytic) supremum.
+    /// # Errors
+    /// - Propagates errors from [`phase_velocities`](Self::phase_velocities).
+    pub fn max_phase_velocity(&self) -> KwaversResult<f64> {
+        let mut v_max = 0.0_f64;
+        for dir in sample_propagation_directions() {
+            let v = self.phase_velocities(&dir)?;
+            v_max = v_max.max(v[0]); // v[0] is the (descending-sorted) qP speed
+        }
+        Ok(v_max)
+    }
+}
+
+/// Deterministic set of unit propagation directions covering a hemisphere
+/// (phase velocity is even in `n`): principal axes, face/body diagonals, and a
+/// Fibonacci sphere for general anisotropy.
+fn sample_propagation_directions() -> Vec<[f64; 3]> {
+    let mut dirs = vec![[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]];
+    let s2 = 1.0 / 2.0_f64.sqrt();
+    for &(a, b, c) in &[
+        (1.0, 1.0, 0.0),
+        (1.0, -1.0, 0.0),
+        (1.0, 0.0, 1.0),
+        (1.0, 0.0, -1.0),
+        (0.0, 1.0, 1.0),
+        (0.0, 1.0, -1.0),
+    ] {
+        dirs.push([a * s2, b * s2, c * s2]);
+    }
+    let s3 = 1.0 / 3.0_f64.sqrt();
+    for &(a, b, c) in &[
+        (1.0, 1.0, 1.0),
+        (1.0, 1.0, -1.0),
+        (1.0, -1.0, 1.0),
+        (1.0, -1.0, -1.0),
+    ] {
+        dirs.push([a * s3, b * s3, c * s3]);
+    }
+    // Fibonacci sphere (golden-angle spiral) for off-symmetry extrema.
+    const N: usize = 96;
+    const GOLDEN_ANGLE: f64 = 2.399_963_229_728_653; // π(3 − √5)
+    for i in 0..N {
+        let z = 1.0 - (2.0 * i as f64 + 1.0) / N as f64;
+        let r = (1.0 - z * z).max(0.0).sqrt();
+        let theta = GOLDEN_ANGLE * i as f64;
+        dirs.push([r * theta.cos(), r * theta.sin(), z]);
+    }
+    dirs
 }
 
 /// Voigt index of a tensor index pair: `(0,0)→0, (1,1)→1, (2,2)→2,
@@ -384,6 +441,31 @@ mod tests {
                 assert!(vg[m][i].is_finite());
             }
         }
+    }
+
+    /// `max_phase_velocity` returns the isotropic `c_P` exactly (the speed is
+    /// direction-independent, so every sampled direction agrees), and for a TI
+    /// medium it is at least the on-axis quasi-P speed (a sampled supremum).
+    #[test]
+    fn max_phase_velocity_isotropic_and_ti() {
+        let (lambda, mu, rho) = (5.0e9, 2.0e9, 2000.0);
+        let iso = ChristoffelEquation::create(
+            AnisotropicStiffnessTensor::isotropic(lambda, mu),
+            rho,
+        );
+        let c_p = ((lambda + 2.0 * mu) / rho).sqrt();
+        let vmax = iso.max_phase_velocity().unwrap();
+        assert!((vmax - c_p).abs() < 1e-6 * c_p, "isotropic v_max {vmax} vs c_P {c_p}");
+
+        let ti = ChristoffelEquation::create(
+            AnisotropicStiffnessTensor::transversely_isotropic(10.0e9, 8.0e9, 4.0e9, 12.0e9, 3.0e9)
+                .unwrap(),
+            1500.0,
+        );
+        let vmax_ti = ti.max_phase_velocity().unwrap();
+        let on_axis_qp = ti.phase_velocities(&[0.0, 0.0, 1.0]).unwrap()[0];
+        assert!(vmax_ti >= on_axis_qp - 1e-6, "TI v_max {vmax_ti} ≥ on-axis qP {on_axis_qp}");
+        assert!(vmax_ti.is_finite() && vmax_ti > 0.0);
     }
 
     /// In an isotropic medium the quasi-longitudinal polarization is parallel to

@@ -27,6 +27,11 @@ claimed struct name) before implementing. Confirmed corrections below.
   method to it. Test: closed form, `T>1` into stiffer medium, `T=1+R`, lossless balance
   `R²+(Z_i/Z_t)T²=1`, matched-impedance `T=1`. (The skull/transducer siblings correctly use the
   *intensity* `4Z₁Z₂/(Z₁+Z₂)²` — left as-is, documented.)
+- ✅ **Wire Christoffel into `AnisotropicStiffnessTensor`** — `[minor]` (2026-06-11). The Christoffel
+  solver was export-only/unwired; the stiffness tensor (SSOT held by media) now exposes Christoffel-
+  backed `phase_velocities`/`group_velocities` and `max_phase_velocity` (CFL reference speed — the
+  direction supremum of the quasi-P branch, sampled over principal/face/body axes + a 96-point
+  Fibonacci sphere). 1 test: isotropic `max == √((λ+2μ)/ρ)` exactly; TI `max ≥` on-axis qP.
 - ✅ **Anisotropic group (energy) velocity** — `[minor]` (2026-06-10). The (now-correct) Christoffel
   solver had phase velocities + polarizations but **no group/energy velocity** — the quantity along
   which energy actually propagates (it walks off the phase direction in anisotropic media). Added

@@ -131,6 +131,46 @@ impl AnisotropicStiffnessTensor {
         })
     }
 
+    /// Phase velocities `[qP, qS1, qS2]` \[m·s⁻¹] along unit `direction` at
+    /// `density`, computed from this stiffness tensor via the **Christoffel
+    /// equation** (`Γ = Cₙ`, eigenvalues `ρv²`). Sorted descending
+    /// (quasi-longitudinal first).
+    /// # Errors
+    /// - Returns [`Err`] if `density ≤ 0`.
+    pub fn phase_velocities(
+        &self,
+        direction: &[f64; 3],
+        density: f64,
+    ) -> KwaversResult<[f64; 3]> {
+        super::christoffel::ChristoffelEquation::create(self.clone(), density)
+            .phase_velocities(direction)
+    }
+
+    /// Group (energy) velocity vector for each mode along `direction` at
+    /// `density`, via the Christoffel equation. Energy walks off the phase
+    /// direction in anisotropic media.
+    /// # Errors
+    /// - Returns [`Err`] for non-positive density or zero direction.
+    pub fn group_velocities(
+        &self,
+        direction: &[f64; 3],
+        density: f64,
+    ) -> KwaversResult<[[f64; 3]; 3]> {
+        super::christoffel::ChristoffelEquation::create(self.clone(), density)
+            .group_velocities(direction)
+    }
+
+    /// Maximum quasi-longitudinal phase speed over all propagation directions
+    /// \[m·s⁻¹] — the CFL reference speed for this anisotropic medium (isotropic
+    /// → `√((λ+2μ)/ρ)` exactly). See [`ChristoffelEquation::max_phase_velocity`].
+    ///
+    /// [`ChristoffelEquation::max_phase_velocity`]: super::christoffel::ChristoffelEquation::max_phase_velocity
+    /// # Errors
+    /// - Returns [`Err`] if `density ≤ 0`.
+    pub fn max_phase_velocity(&self, density: f64) -> KwaversResult<f64> {
+        super::christoffel::ChristoffelEquation::create(self.clone(), density).max_phase_velocity()
+    }
+
     /// Check if tensor is positive definite
     #[must_use]
     pub fn is_positive_definite(&self) -> bool {
