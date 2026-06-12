@@ -103,6 +103,11 @@ thread_local! {
     /// layout the PSTD core still uses. Resized on grid-shape change, then reused
     /// across timesteps (zero steady-state allocation for a fixed grid).
     static R2C_FULL_SCRATCH: RefCell<Array3<Complex64>> = RefCell::new(Array3::zeros((0, 0, 0)));
+
+    /// Per-thread half-spectrum `(nx, ny, nz_c)` complex scratch for the c2r
+    /// transposed-axis inverse, kept separate from the caller's scratch argument
+    /// (which some callers reuse as an input across calls).
+    static R2C_HALF_SCRATCH: RefCell<Array3<Complex64>> = RefCell::new(Array3::zeros((0, 0, 0)));
 }
 
 /// Full-spectrum (nx, ny, nz) complex-to-complex 3-D transforms with caller-owned
@@ -135,20 +140,26 @@ pub trait Fft3dInOutExt {
     );
 
     /// Forward real-to-complex 3-D FFT writing the **half-spectrum** `(nx, ny,
-    /// nz/2+1)` of a real field. Emulated over apollo's full-spectrum complex
-    /// plan (apollo removed its public r2c API): the full spectrum is computed
-    /// in a thread-local scratch, then truncated along z to `nz_c = nz/2+1`
-    /// (the conjugate-redundant upper bins carry no new information for a real
-    /// field). `half_out` must have shape `(nx, ny, nz/2+1)`.
+    /// nz/2+1)` of a real field. Apollo exposes no native half-spectrum r2c, so
+    /// this transforms along the contiguous z-axis on a full thread-local scratch,
+    /// truncates to `nz_c = nz/2+1` (the conjugate-redundant upper z-bins carry no
+    /// new information for a real field), then transforms along the transposed y
+    /// and x axes on that **half** using apollo's batched tiled per-axis FFT. The
+    /// y/x passes are per-z-slice independent, so the result is bit-identical to a
+    /// full c2c followed by truncation — at ~half the cost of the expensive
+    /// transposed y/x passes. `half_out` must have shape `(nx, ny, nz/2+1)`.
     fn forward_r2c_into(&self, real: &Array3<f64>, half_out: &mut Array3<Complex64>);
 
     /// Inverse complex-to-real 3-D FFT from a **half-spectrum** `(nx, ny,
-    /// nz/2+1)` into a real field. The full `(nx, ny, nz)` spectrum is
-    /// reconstructed by Hermitian (conjugate) symmetry
-    /// `F[i,j,k] = conj(F[(nx-i)%nx, (ny-j)%ny, nz-k])` in a thread-local
-    /// scratch, inverse-transformed, and the real part written to `out`. The
-    /// `scratch` argument is retained for call-site compatibility and is unused
-    /// by this emulation. `half_in` must have shape `(nx, ny, nz/2+1)`.
+    /// nz/2+1)` into a real field. Inverse-transforms the transposed x and y axes
+    /// on the half-spectrum first (per-z-slice independent), reconstructs the full
+    /// z-spectrum — after the x/y inverse the upper z-slices are the plain
+    /// conjugate z-mirror of the lower (the `(nx-i, ny-j)` reflection is absorbed
+    /// by `IDFT(conj(X[-n])) = conj(IDFT(X))`) — then inverses along z. Bit-
+    /// identical to a full Hermitian reconstruction + full c2c inverse, at ~half
+    /// the transposed x/y work. The `scratch` argument is retained for call-site
+    /// compatibility and is unused (a thread-local half scratch is used instead).
+    /// `half_in` must have shape `(nx, ny, nz/2+1)`.
     fn inverse_c2r_into(
         &self,
         half_in: &Array3<Complex64>,
@@ -278,8 +289,17 @@ impl Fft3dInOutExt for Fft3d {
             Zip::from(full.view_mut())
                 .and(real)
                 .par_for_each(|dst, &src| *dst = Complex64::new(src, 0.0));
-            self.forward_complex_inplace(full);
+            // Transform along the contiguous z-axis on the full array, then keep
+            // only the independent half-spectrum (k ∈ [0, nz_c)) and transform
+            // along the transposed y/x axes on that half. The y/x passes are
+            // per-z-slice independent, so this is bit-identical to a full c2c
+            // followed by truncation — but does the expensive tiled-transpose y/x
+            // passes on ~half the data (nz_c ≈ nz/2).
+            self.forward_axis_complex_inplace(full, 2);
             half_out.assign(&full.slice(s![.., .., 0..nz_c]));
+            let half_plan = get_fft_for_grid(nx, ny, nz_c);
+            half_plan.forward_axis_complex_inplace(half_out, 1);
+            half_plan.forward_axis_complex_inplace(half_out, 0);
         });
     }
 
@@ -297,30 +317,45 @@ impl Fft3dInOutExt for Fft3d {
             (nx, ny, nz_c),
             "inverse_c2r_into: half_in must be (nx, ny, nz/2+1)"
         );
-        R2C_FULL_SCRATCH.with(|cell| {
-            let mut borrow = cell.borrow_mut();
-            if borrow.dim() != (nx, ny, nz) {
-                *borrow = Array3::<Complex64>::zeros((nx, ny, nz));
+        // Inverse along the transposed x and y axes on the half-spectrum first
+        // (per-z-slice independent, on a thread-local half scratch so the caller's
+        // `_scratch` — which some callers reuse as a later input — is untouched),
+        // then reconstruct the full z-spectrum and inverse along z. After the x/y
+        // inverse the upper z-slices are the plain conjugate z-mirror of the lower
+        // — the (nx-i, ny-j) reflection of the Hermitian symmetry is absorbed by
+        // the identity `IDFT(conj(X[-n])) = conj(IDFT(X))` — so this is bit-
+        // identical to a full Hermitian reconstruction followed by a full c2c
+        // inverse, at ~half the tiled-transpose x/y work.
+        R2C_HALF_SCRATCH.with(|hcell| {
+            let mut hborrow = hcell.borrow_mut();
+            if hborrow.dim() != (nx, ny, nz_c) {
+                *hborrow = Array3::<Complex64>::zeros((nx, ny, nz_c));
             }
-            let full: &mut Array3<Complex64> = &mut borrow;
-            // Lower half (k ∈ [0, nz_c)) is the stored independent set.
-            full.slice_mut(s![.., .., 0..nz_c]).assign(half_in);
-            // Upper half (k ∈ [nz_c, nz)) by Hermitian symmetry of a real field:
-            // F[i,j,k] = conj(F[(nx-i)%nx, (ny-j)%ny, nz-k]), with nz-k ∈ [1, nz_c).
-            for k in nz_c..nz {
-                let kk = nz - k;
-                for i in 0..nx {
-                    let ii = (nx - i) % nx;
-                    for j in 0..ny {
-                        let jj = (ny - j) % ny;
-                        full[[i, j, k]] = half_in[[ii, jj, kk]].conj();
+            let half: &mut Array3<Complex64> = &mut hborrow;
+            half.assign(half_in);
+            let half_plan = get_fft_for_grid(nx, ny, nz_c);
+            half_plan.inverse_axis_complex_inplace(half, 0);
+            half_plan.inverse_axis_complex_inplace(half, 1);
+            R2C_FULL_SCRATCH.with(|cell| {
+                let mut borrow = cell.borrow_mut();
+                if borrow.dim() != (nx, ny, nz) {
+                    *borrow = Array3::<Complex64>::zeros((nx, ny, nz));
+                }
+                let full: &mut Array3<Complex64> = &mut borrow;
+                full.slice_mut(s![.., .., 0..nz_c]).assign(half);
+                for k in nz_c..nz {
+                    let kk = nz - k;
+                    for i in 0..nx {
+                        for j in 0..ny {
+                            full[[i, j, k]] = half[[i, j, kk]].conj();
+                        }
                     }
                 }
-            }
-            self.inverse_complex_inplace(full);
-            Zip::from(out.view_mut())
-                .and(full.view())
-                .par_for_each(|dst, src| *dst = src.re);
+                self.inverse_axis_complex_inplace(full, 2);
+                Zip::from(out.view_mut())
+                    .and(full.view())
+                    .par_for_each(|dst, src| *dst = src.re);
+            });
         });
     }
 
@@ -336,5 +371,56 @@ impl Fft3dInOutExt for Fft3d {
         let mut tmp = spectrum.clone();
         self.inverse_complex_inplace(&mut tmp);
         tmp.mapv(|c| c.re)
+    }
+}
+
+#[cfg(test)]
+mod r2c_optimized_tests {
+    use super::{get_fft_for_grid, Fft3dInOutExt};
+    use ndarray::{s, Array3};
+    use num_complex::Complex64;
+
+    fn check_shape(nx: usize, ny: usize, nz: usize) {
+        let nz_c = nz / 2 + 1;
+        let fft = get_fft_for_grid(nx, ny, nz);
+        let real = Array3::from_shape_fn((nx, ny, nz), |(i, j, k)| {
+            let x = ((i * 131 + j * 17 + k * 7) % 101) as f64 / 101.0 - 0.5;
+            (x * 6.283).sin() + 0.3 * x + 0.1
+        });
+
+        // (1) Optimized forward_r2c is bit-identical to a full c2c + truncation.
+        let mut half_new = Array3::zeros((nx, ny, nz_c));
+        fft.forward_r2c_into(&real, &mut half_new);
+        let mut full = real.mapv(|v| Complex64::new(v, 0.0));
+        fft.forward_complex_inplace(&mut full);
+        let ref_half = full.slice(s![.., .., 0..nz_c]).to_owned();
+        let fwd_err = half_new
+            .iter()
+            .zip(ref_half.iter())
+            .map(|(a, b)| (a - b).norm())
+            .fold(0.0_f64, f64::max);
+        assert!(
+            fwd_err < 1e-9,
+            "forward_r2c({nx},{ny},{nz}) vs full-c2c reference: {fwd_err:.2e}"
+        );
+
+        // (2) Optimized inverse_c2r recovers the real field (round-trip).
+        let mut out = Array3::zeros((nx, ny, nz));
+        let mut scratch = Array3::zeros((nx, ny, nz_c));
+        fft.inverse_c2r_into(&half_new, &mut out, &mut scratch);
+        let rt_err = out
+            .iter()
+            .zip(real.iter())
+            .map(|(a, b)| (a - b).abs())
+            .fold(0.0_f64, f64::max);
+        assert!(rt_err < 1e-9, "r2c→c2r round-trip ({nx},{ny},{nz}): {rt_err:.2e}");
+    }
+
+    #[test]
+    fn optimized_r2c_c2r_matches_reference_and_roundtrips() {
+        check_shape(8, 6, 10); // even nz
+        check_shape(7, 5, 9); // odd nz
+        check_shape(16, 16, 16); // power-of-two cube
+        check_shape(12, 1, 8); // degenerate y (2-D-like)
     }
 }

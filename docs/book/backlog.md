@@ -27,6 +27,19 @@ claimed struct name) before implementing. Confirmed corrections below.
   method to it. Test: closed form, `T>1` into stiffer medium, `T=1+R`, lossless balance
   `R²+(Z_i/Z_t)T²=1`, matched-impedance `T=1`. (The skull/transducer siblings correctly use the
   *intensity* `4Z₁Z₂/(Z₁+Z₂)²` — left as-is, documented.)
+- ✅ **PSTD r2c/c2r ~half-cost via apollo per-axis FFT (parity-safe)** — `[major]` (2026-06-12). The
+  PSTD hot path (10–14 transforms/step) used `forward_r2c_into`/`inverse_c2r_into` in kwavers-math,
+  which *emulated* r2c by running a FULL c2c FFT then truncating/Hermitian-expanding — ~2× wasteful.
+  Rewrote both over apollo's batched tiled per-axis FFT: forward = z-FFT on full → truncate to nz_c →
+  y/x FFT on the **half** (per-z-slice independent ⇒ identical to full-c2c+truncate); inverse = x/y
+  inverse on the half → conjugate z-mirror reconstruction → z-inverse (the (nx-i,ny-j) reflection is
+  absorbed by IDFT(conj X[-n])=conj(IDFT X)). The expensive tiled-transpose y/x passes now run on ~half
+  the data (nz_c≈nz/2). **Provably bit-identical** to the emulation — a differential test confirms the
+  new r2c matches a full-c2c reference to ≤1e-9 + round-trips across even/odd/PoT/degenerate shapes;
+  used a thread-local half scratch (NOT the caller's `_scratch`, which filter.rs reuses as a later
+  input — caught that aliasing). Integration-validated: all 7 absorption + 6 PSTD numerical-accuracy
+  (dispersion/plane-wave/gaussian/array/point/phase-velocity) tests pass. No apollo change needed
+  (reuses the already-wired axis-FFT). clippy clean.
 - ✅ **Wire apollo batched per-axis FFT into the viscoacoustic solver** — `[major]` (2026-06-12).
   Resolved the integration block by backporting the per-axis FFT exposure onto the apollo version
   kwavers pins (v0.12.24, 78044d3) — which already had the tiled (32×32) rayon-parallel
