@@ -230,6 +230,58 @@ fn absorbing_layer_suppresses_boundary_reflection() {
     );
 }
 
+/// **Heterogeneous medium**: a modulus interface reflects an incident pulse with
+/// the analytical coefficient `R = (Z_B − Z_A)/(Z_B + Z_A)`, `Z = √(ρ M)`. With
+/// `M_B = 4 M_A` (same ρ) the impedance ratio is 2, so `R = 1/3`. This validates
+/// the per-voxel `M_U(x)`/`ρ(x)` coupling, not just the uniform limit.
+#[test]
+fn heterogeneous_interface_reflects_with_analytical_coefficient() {
+    let n = 512;
+    let dx = 1.0e-4;
+    let dt = 8.0e-9;
+    let interface = 256usize;
+    let (m_a, m_b) = (M_INF, 4.0 * M_INF); // Z_B/Z_A = 2 ⇒ R = 1/3
+
+    let rho = Array3::from_elem((n, 1, 1), RHO);
+    let m_inf = Array3::from_shape_fn((n, 1, 1), |(i, _, _)| if i < interface { m_a } else { m_b });
+    let mut s =
+        ViscoacousticMemorySolver::new_heterogeneous(n, 1, 1, dx, 1.0, 1.0, dt, &rho, &m_inf, &[])
+            .unwrap();
+    s.enable_absorbing_layer(64, 2.0e6); // absorb the leftward half + transmitted wave
+
+    // Zero-velocity Gaussian at x0=128 (region A) splits into ± halves of
+    // amplitude 0.5·peak; the rightward half (incident) hits the interface.
+    let (x0, w) = (128.0_f64, 10.0_f64);
+    let p0 = Array3::from_shape_fn((n, 1, 1), |(i, _, _)| {
+        let d = (i as f64 - x0) / w;
+        (-d * d).exp()
+    });
+    s.set_pressure(&p0).unwrap();
+    let incident = 0.5; // half of the unit Gaussian peak travels right
+
+    // The pulse advances ≈0.12 cell/step (c_A=1500). The incident half leaves the
+    // [70,240] window by ~step 930 and the reflected half enters by ~step 1200,
+    // so warm up to 1300, then track the reflected pulse's peak in the interior
+    // (away from the left layer and the interface).
+    for _ in 0..1300 {
+        s.step();
+    }
+    let mut reflected = 0.0_f64;
+    for _ in 0..1300 {
+        s.step();
+        for i in 70..240 {
+            reflected = reflected.max(s.pressure()[[i, 0, 0]].abs());
+        }
+    }
+
+    let r_meas = reflected / incident;
+    let r_analytic = 1.0 / 3.0;
+    assert!(
+        (r_meas - r_analytic).abs() < 0.06,
+        "interface reflection R = {r_meas:.3} vs analytic {r_analytic:.3}"
+    );
+}
+
 /// Construction validation and the `GeneralizedMaxwellModel` convenience path.
 #[test]
 fn construction_validates_and_accepts_model() {

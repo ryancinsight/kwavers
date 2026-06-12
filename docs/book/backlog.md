@@ -27,6 +27,18 @@ claimed struct name) before implementing. Confirmed corrections below.
   method to it. Test: closed form, `T>1` into stiffer medium, `T=1+R`, lossless balance
   `R²+(Z_i/Z_t)T²=1`, matched-impedance `T=1`. (The skull/transducer siblings correctly use the
   *intensity* `4Z₁Z₂/(Z₁+Z₂)²` — left as-is, documented.)
+- ✅ **Heterogeneous viscoacoustic solver (per-voxel ρ, M_∞, relaxation arms)** — `[major]`
+  (2026-06-12). Generalized `ViscoacousticMemorySolver` from scalar to per-voxel medium so a
+  CT-derived tissue model (§4.5) can drive the broadband solver with spatially-varying viscoacoustic
+  properties (1-D/2-D/3-D). Refactored medium coefficients to `Array3` fields (`inv_rho`, `m_u`,
+  `m_inf`, per-arm `decay`/`gain`/`inv_tau`); density/modulus enter the update in real space (standard
+  k-space-pseudospectral heterogeneous treatment) while derivatives stay spectral. New
+  `new_heterogeneous(…, ρ(x), M_∞(x), [(ΔMₗ(x), τₗ(x))])` constructor; homogeneous `new`/`new_1d`/
+  `from_generalized_maxwell` now broadcast to uniform fields and share an `assemble` core (so the 6
+  existing dispersion/absorbing/lossless tests now exercise the heterogeneous path with uniform
+  fields). New test: a modulus interface reflects an incident pulse with the analytical
+  `R=(Z_B-Z_A)/(Z_B+Z_A)` (Z=√(ρM)) — measured 0.333 vs 1/3 for M_B=4M_A. No apollo change (FFT
+  derivative unchanged). clippy clean; book §4.8.4.
 - ✅ **PSTD r2c/c2r ~half-cost via apollo per-axis FFT (parity-safe)** — `[major]` (2026-06-12). The
   PSTD hot path (10–14 transforms/step) used `forward_r2c_into`/`inverse_c2r_into` in kwavers-math,
   which *emulated* r2c by running a FULL c2c FFT then truncating/Hermitian-expanding — ~2× wasteful.

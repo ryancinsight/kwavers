@@ -835,6 +835,14 @@ exact complex dispersion $\rho\omega^2 = M(\omega)|\mathbf k|^2$ by Newton itera
 the measured temporal decay and oscillation frequency match it for 1-D, 2-D-diagonal, and
 3-D-diagonal standing waves spanning the band, with energy conserved in the lossless limit.
 
+The solver is **heterogeneous**: `new_heterogeneous(…, ρ(x), M_∞(x), [(ΔMₗ(x), τₗ(x))])` takes
+per-voxel fields, so a CT-derived tissue medium (§4.5) drives the broadband solver with
+spatially-varying viscoacoustic properties. Density and modulus enter the update in real space
+(`∂v/∂t = -ρ(x)^{-1}∇p`, `∂p/∂t = -M_U(x)∇·v - Σσₗ/τₗ(x)`) while the derivatives stay spectral — the
+standard k-space-pseudospectral treatment of heterogeneous media. The exponential-integrator
+coefficients become per-voxel fields. A modulus interface reflects an incident pulse with the
+analytical coefficient `R = (Z_B-Z_A)/(Z_B+Z_A)`, `Z=√(ρM)` (verified to ±0.06 for `R=1/3`).
+
 An optional **absorbing boundary layer** (`enable_absorbing_layer(thickness, γ_max)`) suppresses
 the periodic wrap-around: a quadratic damping profile $\gamma(d) = \gamma_{\max}((L-d)/L)^2$ ramps
 from zero at the interior edge to $\gamma_{\max}$ at each face and is applied as a multiplicative

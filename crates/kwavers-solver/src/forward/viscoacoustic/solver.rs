@@ -12,17 +12,32 @@ use kwavers_medium::viscoelastic::GeneralizedMaxwellModel;
 use ndarray::{Array3, Axis, Zip};
 use std::sync::Arc;
 
-/// One relaxation arm with its precomputed exponential-integrator coefficients.
-#[derive(Debug, Clone, Copy)]
+/// One relaxation arm with its precomputed per-voxel exponential-integrator
+/// coefficients (uniform fields for a homogeneous medium).
+#[derive(Debug, Clone)]
 struct Arm {
-    /// Relaxation strength `ΔMₗ` \[Pa].
-    delta_m: f64,
-    /// `1/τₗ` \[s⁻¹].
-    inv_tau: f64,
-    /// `e^{-Δt/τₗ}` (decay over one step).
-    decay: f64,
-    /// `τₗ (1 − e^{-Δt/τₗ})` — the forcing weight in the exponential integrator.
-    forcing: f64,
+    /// `e^{-Δt/τₗ(x)}` (decay over one step).
+    decay: Array3<f64>,
+    /// `−ΔMₗ(x)·τₗ(x)·(1 − e^{-Δt/τₗ})` — coefficient of `∇·v` in the σ update.
+    gain: Array3<f64>,
+    /// `1/τₗ(x)` \[s⁻¹] — for the trapezoidal pressure contribution.
+    inv_tau: Array3<f64>,
+}
+
+/// Build an arm's exponential-integrator coefficient fields from per-voxel
+/// relaxation strength `ΔMₗ(x)` and time `τₗ(x)`.
+fn build_arm(delta_m: &Array3<f64>, tau: &Array3<f64>, dt: f64) -> Arm {
+    let decay = tau.mapv(|t| (-dt / t).exp());
+    let inv_tau = tau.mapv(|t| 1.0 / t);
+    let gain = Zip::from(delta_m)
+        .and(tau)
+        .and(&decay)
+        .map_collect(|&dm, &t, &dc| -dm * t * (1.0 - dc));
+    Arm {
+        decay,
+        gain,
+        inv_tau,
+    }
 }
 
 /// Time-domain memory-variable viscoacoustic solver (1-D/2-D/3-D, pseudospectral).
@@ -36,11 +51,14 @@ pub struct ViscoacousticMemorySolver {
     nz: usize,
     cell_volume: f64, // dx·dy·dz
     dt: f64,
-    rho: f64,
-    /// Unrelaxed (instantaneous) modulus `M_U = M_∞ + Σ ΔMₗ` \[Pa].
-    m_u: f64,
-    /// Equilibrium (relaxed) modulus `M_∞` \[Pa] — sets the potential-energy norm.
-    m_inf: f64,
+    /// Per-voxel `1/ρ(x)` \[m³·kg⁻¹] for the velocity update.
+    inv_rho: Array3<f64>,
+    /// Per-voxel unrelaxed (instantaneous) modulus `M_U(x) = M_∞(x) + Σ ΔMₗ(x)` \[Pa].
+    m_u: Array3<f64>,
+    /// Per-voxel equilibrium (relaxed) modulus `M_∞(x)` \[Pa] — potential-energy norm.
+    m_inf: Array3<f64>,
+    /// Maximum unrelaxed sound speed over the grid \[m·s⁻¹] — the CFL reference.
+    max_unrelaxed_speed: f64,
     arms: Vec<Arm>,
 
     // Spectral derivative: apollo's batched, cache-tiled, parallel per-axis 3-D
@@ -77,8 +95,7 @@ impl std::fmt::Debug for ViscoacousticMemorySolver {
             .field("ny", &self.ny)
             .field("nz", &self.nz)
             .field("dt", &self.dt)
-            .field("rho", &self.rho)
-            .field("m_u", &self.m_u)
+            .field("max_unrelaxed_speed", &self.max_unrelaxed_speed)
             .field("arms", &self.arms.len())
             .finish()
     }
@@ -124,31 +141,127 @@ impl ViscoacousticMemorySolver {
             ));
         }
 
-        let m_u = m_inf + arms.iter().map(|&(dm, _)| dm).sum::<f64>();
-        let built: Vec<Arm> = arms
+        // Homogeneous medium: broadcast the scalar parameters to uniform fields
+        // and delegate to the per-voxel assembler.
+        let shape = (nx, ny, nz);
+        let inv_rho = Array3::from_elem(shape, 1.0 / rho);
+        let m_inf_field = Array3::from_elem(shape, m_inf);
+        let arm_fields: Vec<Arm> = arms
             .iter()
-            .map(|&(delta_m, tau)| {
-                let decay = (-dt / tau).exp();
-                Arm {
-                    delta_m,
-                    inv_tau: 1.0 / tau,
-                    decay,
-                    forcing: tau * (1.0 - decay),
-                }
+            .map(|&(dm, tau)| {
+                build_arm(
+                    &Array3::from_elem(shape, dm),
+                    &Array3::from_elem(shape, tau),
+                    dt,
+                )
             })
             .collect();
+        Ok(Self::assemble(
+            nx, ny, nz, dx, dy, dz, dt, inv_rho, m_inf_field, arm_fields,
+        ))
+    }
 
+    /// Build a **heterogeneous** medium from per-voxel fields: density `ρ(x)`,
+    /// equilibrium modulus `M_∞(x)`, and relaxation arms `(ΔMₗ(x), τₗ(x))` (all of
+    /// grid shape). This lets a CT-derived tissue model (§4.5) drive the broadband
+    /// solver with spatially-varying viscoacoustic properties.
+    /// # Errors
+    /// - Any field shape ≠ `(nx,ny,nz)`, a non-positive `ρ`/`M_∞`/`ΔM`/`τ`, or
+    ///   non-positive grid/spacing/`dt`.
+    #[allow(clippy::too_many_arguments)]
+    pub fn new_heterogeneous(
+        nx: usize,
+        ny: usize,
+        nz: usize,
+        dx: f64,
+        dy: f64,
+        dz: f64,
+        dt: f64,
+        rho: &Array3<f64>,
+        m_inf: &Array3<f64>,
+        arms: &[(Array3<f64>, Array3<f64>)],
+    ) -> KwaversResult<Self> {
+        let shape = [nx, ny, nz];
+        let ok_shape = |a: &Array3<f64>| a.shape() == shape;
+        if nx == 0 || ny == 0 || nz == 0 || dx <= 0.0 || dy <= 0.0 || dz <= 0.0 || dt <= 0.0 {
+            return Err(KwaversError::InvalidInput(
+                "viscoacoustic solver requires positive grid, spacings, dt".to_owned(),
+            ));
+        }
+        if !ok_shape(rho) || !ok_shape(m_inf) || rho.iter().any(|&r| r <= 0.0) || m_inf.iter().any(|&m| m <= 0.0) {
+            return Err(KwaversError::InvalidInput(
+                "ρ and M_∞ fields must be grid-shaped and positive".to_owned(),
+            ));
+        }
+        if arms
+            .iter()
+            .any(|(dm, tau)| !ok_shape(dm) || !ok_shape(tau) || dm.iter().any(|&v| v <= 0.0) || tau.iter().any(|&v| v <= 0.0))
+        {
+            return Err(KwaversError::InvalidInput(
+                "relaxation arm fields must be grid-shaped with ΔM>0 and τ>0".to_owned(),
+            ));
+        }
+
+        let inv_rho = rho.mapv(|r| 1.0 / r);
+        let arm_fields: Vec<Arm> = arms.iter().map(|(dm, tau)| build_arm(dm, tau, dt)).collect();
+        Ok(Self::assemble(
+            nx,
+            ny,
+            nz,
+            dx,
+            dy,
+            dz,
+            dt,
+            inv_rho,
+            m_inf.clone(),
+            arm_fields,
+        ))
+    }
+
+    /// Allocate state/scratch and assemble the solver from prepared per-voxel
+    /// `inv_rho`, `m_inf`, and arm coefficient fields. `M_U = M_∞ + Σ ΔMₗ` is
+    /// recovered from the arm gains; the CFL speed is the grid max of `√(M_U/ρ)`.
+    #[allow(clippy::too_many_arguments)]
+    fn assemble(
+        nx: usize,
+        ny: usize,
+        nz: usize,
+        dx: f64,
+        dy: f64,
+        dz: f64,
+        dt: f64,
+        inv_rho: Array3<f64>,
+        m_inf: Array3<f64>,
+        arms: Vec<Arm>,
+    ) -> Self {
         let shape = (nx, ny, nz);
-        Ok(Self {
+        // M_U(x) = M_∞(x) + Σ ΔMₗ(x); recover ΔMₗ = −gain / (τ(1−decay)) = −gain·inv_tau/(1−decay).
+        let mut m_u = m_inf.clone();
+        for arm in &arms {
+            Zip::from(&mut m_u)
+                .and(&arm.gain)
+                .and(&arm.decay)
+                .and(&arm.inv_tau)
+                .for_each(|mu, &gain, &decay, &inv_tau| {
+                    *mu += -gain * inv_tau / (1.0 - decay);
+                });
+        }
+        let max_unrelaxed_speed = Zip::from(&m_u)
+            .and(&inv_rho)
+            .fold(0.0_f64, |acc, &mu, &ir| acc.max((mu * ir).sqrt()));
+
+        Self {
             nx,
             ny,
             nz,
             cell_volume: dx * dy * dz,
             dt,
-            rho,
+            inv_rho,
             m_u,
             m_inf,
-            arms: built.clone(),
+            max_unrelaxed_speed,
+            sigma: vec![Array3::zeros(shape); arms.len()],
+            arms,
             fft: get_fft_for_grid(nx, ny, nz),
             kx: fft_wavenumbers(nx, dx),
             ky: fft_wavenumbers(ny, dy),
@@ -158,12 +271,11 @@ impl ViscoacousticMemorySolver {
             vx: Array3::zeros(shape),
             vy: Array3::zeros(shape),
             vz: Array3::zeros(shape),
-            sigma: vec![Array3::zeros(shape); built.len()],
             gx: Array3::zeros(shape),
             gy: Array3::zeros(shape),
             gz: Array3::zeros(shape),
             damping_decay: None,
-        })
+        }
     }
 
     /// Enable an **absorbing boundary layer** (sponge) of `thickness` cells on
@@ -249,10 +361,11 @@ impl ViscoacousticMemorySolver {
         )
     }
 
-    /// Unrelaxed (high-frequency) sound speed `√(M_U/ρ)` \[m·s⁻¹] — the CFL speed.
+    /// Maximum unrelaxed (high-frequency) sound speed `max √(M_U(x)/ρ(x))`
+    /// \[m·s⁻¹] over the grid — the CFL reference speed.
     #[must_use]
     pub fn unrelaxed_speed(&self) -> f64 {
-        (self.m_u / self.rho).sqrt()
+        self.max_unrelaxed_speed
     }
 
     /// Pressure field \[Pa].
@@ -285,15 +398,17 @@ impl ViscoacousticMemorySolver {
     /// round-off) for the lossless medium; decays monotonically with relaxation.
     #[must_use]
     pub fn energy(&self) -> f64 {
-        let pe: f64 = self.p.iter().map(|&p| p * p).sum::<f64>() / (2.0 * self.m_inf);
-        let ke: f64 = self
-            .vx
-            .iter()
-            .chain(self.vy.iter())
-            .chain(self.vz.iter())
-            .map(|&v| v * v)
-            .sum::<f64>()
-            * (self.rho / 2.0);
+        // PE = Σ p²/(2 M_∞(x));  KE = Σ ρ(x)|v|²/2 = Σ |v|²/(2/ρ) = Σ |v|²·inv_rho⁻¹/2.
+        let pe = Zip::from(&self.p)
+            .and(&self.m_inf)
+            .fold(0.0_f64, |acc, &p, &mi| acc + p * p / (2.0 * mi));
+        let ke = Zip::from(&self.vx)
+            .and(&self.vy)
+            .and(&self.vz)
+            .and(&self.inv_rho)
+            .fold(0.0_f64, |acc, &vx, &vy, &vz, &ir| {
+                acc + (vx * vx + vy * vy + vz * vz) / (2.0 * ir)
+            });
         (pe + ke) * self.cell_volume
     }
 
@@ -322,14 +437,14 @@ impl ViscoacousticMemorySolver {
 
     /// Advance the state by one time step `Δt`.
     pub fn step(&mut self) {
-        // 1. Velocity half-step: v += -(Δt/ρ) ∇p (per component).
-        let cv = -self.dt / self.rho;
+        // 1. Velocity half-step: v += -(Δt/ρ(x)) ∇p (per component, per voxel).
+        let dt = self.dt;
         Self::axis_derivative(&self.fft, &self.kx, 0, &self.p, &mut self.cbuf, &mut self.gx);
         Self::axis_derivative(&self.fft, &self.ky, 1, &self.p, &mut self.cbuf, &mut self.gy);
         Self::axis_derivative(&self.fft, &self.kz, 2, &self.p, &mut self.cbuf, &mut self.gz);
-        Zip::from(&mut self.vx).and(&self.gx).for_each(|v, &g| *v += cv * g);
-        Zip::from(&mut self.vy).and(&self.gy).for_each(|v, &g| *v += cv * g);
-        Zip::from(&mut self.vz).and(&self.gz).for_each(|v, &g| *v += cv * g);
+        Zip::from(&mut self.vx).and(&self.gx).and(&self.inv_rho).for_each(|v, &g, &ir| *v += -dt * ir * g);
+        Zip::from(&mut self.vy).and(&self.gy).and(&self.inv_rho).for_each(|v, &g, &ir| *v += -dt * ir * g);
+        Zip::from(&mut self.vz).and(&self.gz).and(&self.inv_rho).for_each(|v, &g, &ir| *v += -dt * ir * g);
 
         // 2. Dilatation rate D = ∇·v (accumulated into gx).
         Self::axis_derivative(&self.fft, &self.kx, 0, &self.vx, &mut self.cbuf, &mut self.gx);
@@ -340,28 +455,31 @@ impl ViscoacousticMemorySolver {
             .and(&self.gz)
             .for_each(|d, &y, &z| *d += y + z); // gx = ∂vx/∂x + ∂vy/∂y + ∂vz/∂z
 
-        // 3. Advance each σ_l with the exact exponential integrator and accumulate
-        //    its trapezoidal pressure contribution into gy (reused as the relax sum).
+        // 3. Advance each σ_l with the exact exponential integrator (per-voxel
+        //    coefficients) and accumulate its trapezoidal pressure contribution
+        //    into gy (reused as the relax sum): σ_new = decay·σ + gain·D.
         self.gy.fill(0.0);
         for (arm, sigma) in self.arms.iter().zip(self.sigma.iter_mut()) {
-            let arm = *arm;
             Zip::from(sigma)
                 .and(&self.gx)
                 .and(&mut self.gy)
-                .for_each(|s, &d, r| {
+                .and(&arm.decay)
+                .and(&arm.gain)
+                .and(&arm.inv_tau)
+                .for_each(|s, &d, r, &decay, &gain, &inv_tau| {
                     let old = *s;
-                    let new = arm.decay.mul_add(old, -arm.delta_m * d * arm.forcing);
-                    *r += 0.5 * (old + new) * arm.inv_tau;
+                    let new = decay.mul_add(old, gain * d);
+                    *r += 0.5 * (old + new) * inv_tau;
                     *s = new;
                 });
         }
 
-        // 4. Pressure update: p += -Δt (M_U D + Σ_l ½(σ_l+σ_l^new)/τ_l).
-        let (m_u, dt) = (self.m_u, self.dt);
+        // 4. Pressure update: p += -Δt (M_U(x) D + Σ_l ½(σ_l+σ_l^new)/τ_l(x)).
         Zip::from(&mut self.p)
             .and(&self.gx)
             .and(&self.gy)
-            .for_each(|p, &d, &relax| *p -= dt * (m_u * d + relax));
+            .and(&self.m_u)
+            .for_each(|p, &d, &relax, &mu| *p -= dt * (mu * d + relax));
 
         // 5. Absorbing boundary: damp p and v inside the sponge layer.
         if let Some(decay) = &self.damping_decay {
