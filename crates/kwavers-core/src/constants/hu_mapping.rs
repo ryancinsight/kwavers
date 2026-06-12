@@ -31,7 +31,8 @@
 
 use super::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_AIR, SOUND_SPEED_WATER_SIM};
 use super::tissue_acoustics::{
-    ACOUSTIC_ABSORPTION_BRAIN, ACOUSTIC_ABSORPTION_SKULL_MIN, DENSITY_AIR,
+    ACOUSTIC_ABSORPTION_BRAIN, ACOUSTIC_ABSORPTION_SKULL_MIN, B_OVER_A_BONE, B_OVER_A_SOFT_TISSUE,
+    DENSITY_AIR, SOFT_TISSUE_ABSORPTION_POWER_Y,
 };
 
 /// Continuous, calibration-parameterized HU → {ρ, c, α₀} map (standard HU).
@@ -60,6 +61,14 @@ pub struct HuAcousticModel {
     pub absorption_soft: f64,
     /// Cortical-bone absorption prefactor α₀ [dB·cm⁻¹·MHz⁻ʸ].
     pub absorption_bone: f64,
+    /// Soft-tissue power-law absorption exponent y (α ∝ fʸ).
+    pub exponent_soft: f64,
+    /// Cortical-bone power-law absorption exponent y.
+    pub exponent_bone: f64,
+    /// Soft-tissue acoustic nonlinearity parameter B/A.
+    pub bovera_soft: f64,
+    /// Cortical-bone acoustic nonlinearity parameter B/A.
+    pub bovera_bone: f64,
 }
 
 impl Default for HuAcousticModel {
@@ -77,6 +86,10 @@ impl Default for HuAcousticModel {
             cortical_hu: 1000.0,                  // HU of fully cortical bone
             absorption_soft: ACOUSTIC_ABSORPTION_BRAIN, // 0.5 dB/cm/MHz
             absorption_bone: ACOUSTIC_ABSORPTION_SKULL_MIN, // 8.0 dB/cm/MHz
+            exponent_soft: SOFT_TISSUE_ABSORPTION_POWER_Y, // 1.1 (Duck 1990)
+            exponent_bone: 1.0, // skull α ∝ f¹ (Connor & Hynynen 2002)
+            bovera_soft: B_OVER_A_SOFT_TISSUE, // 6.5 (Duck 1990)
+            bovera_bone: B_OVER_A_BONE,         // 8.0
         }
     }
 }
@@ -124,6 +137,23 @@ impl HuAcousticModel {
     pub fn absorption(&self, hu: f64) -> f64 {
         let phi = self.bone_fraction(hu);
         (1.0 - phi).mul_add(self.absorption_soft, phi * self.absorption_bone)
+    }
+
+    /// Power-law absorption exponent y (α ∝ fʸ), blended soft → cortical by
+    /// [`Self::bone_fraction`]. Soft tissue ≈ 1.1, skull ≈ 1.0 — both branches
+    /// of the CT-derived medium need their own exponent, not a single global y.
+    #[must_use]
+    pub fn power_law_exponent(&self, hu: f64) -> f64 {
+        let phi = self.bone_fraction(hu);
+        (1.0 - phi).mul_add(self.exponent_soft, phi * self.exponent_bone)
+    }
+
+    /// Acoustic nonlinearity parameter B/A, blended soft → cortical bone by
+    /// [`Self::bone_fraction`].
+    #[must_use]
+    pub fn nonlinearity(&self, hu: f64) -> f64 {
+        let phi = self.bone_fraction(hu);
+        (1.0 - phi).mul_add(self.bovera_soft, phi * self.bovera_bone)
     }
 }
 
@@ -196,5 +226,22 @@ mod tests {
             "midpoint absorption {mid} not the soft/bone average"
         );
         assert!(m.bone_fraction(-200.0) == 0.0 && m.bone_fraction(3000.0) == 1.0);
+    }
+
+    // Power-law exponent and B/A blend monotonically soft → bone, hitting the
+    // calibrated endpoints exactly: a complete CT-derived medium needs per-voxel
+    // y and B/A, not just ρ, c, α₀.
+    #[test]
+    fn exponent_and_nonlinearity_blend_soft_to_bone() {
+        let m = HuAcousticModel::default();
+        assert!((m.power_law_exponent(0.0) - m.exponent_soft).abs() < 1e-12);
+        assert!((m.power_law_exponent(1000.0) - m.exponent_bone).abs() < 1e-12);
+        assert!((m.nonlinearity(0.0) - m.bovera_soft).abs() < 1e-12);
+        assert!((m.nonlinearity(1000.0) - m.bovera_bone).abs() < 1e-12);
+        // Soft tissue (1.1) decreases toward skull (1.0) as bone fraction rises.
+        assert!(m.power_law_exponent(500.0) < m.exponent_soft);
+        assert!(m.power_law_exponent(500.0) > m.exponent_bone);
+        // B/A rises soft → bone.
+        assert!(m.nonlinearity(500.0) > m.bovera_soft && m.nonlinearity(500.0) < m.bovera_bone);
     }
 }

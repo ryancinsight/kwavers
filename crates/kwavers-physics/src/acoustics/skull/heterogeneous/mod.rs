@@ -24,6 +24,7 @@
 
 mod constants;
 mod ct;
+mod ct_medium;
 mod mask;
 mod model;
 mod properties;
@@ -33,5 +34,6 @@ mod types;
 mod tests;
 
 pub use constants::{ALPHA_WATER, HU_CORTICAL, HU_WATER};
+pub use ct_medium::CtMediumBuilder;
 pub use model::HeterogeneousSkull;
 pub use types::SkullLayer;

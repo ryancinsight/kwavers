@@ -27,6 +27,17 @@ claimed struct name) before implementing. Confirmed corrections below.
   method to it. Test: closed form, `T>1` into stiffer medium, `T=1+R`, lossless balance
   `R²+(Z_i/Z_t)T²=1`, matched-impedance `T=1`. (The skull/transducer siblings correctly use the
   *intensity* `4Z₁Z₂/(Z₁+Z₂)²` — left as-is, documented.)
+- ✅ **Complete tissue-varying CT→simulation-medium modeling** — `[minor]` (2026-06-11). Extended
+  the CT-derived model to a *complete* acoustic medium: `HuAcousticModel` now also maps the power-law
+  **exponent** y (soft 1.1 Duck → skull 1.0 Connor&Hynynen) and **nonlinearity** B/A (6.5→8.0),
+  blended by bone fraction. New `kwavers_physics::…::heterogeneous::CtMediumBuilder` assembles a
+  solver-ready `HeterogeneousMedium` (impl `Medium`) mapping EVERY acoustic field — ρ, c, α₀, y, B/A —
+  per voxel from HU, broadcasting non-acoustic fields from a configurable homogeneous background via
+  `from_homogeneous` (SSOT, no new Medium impl). So bone and soft tissue now attenuate with their own
+  frequency dependence (per-voxel α₀ AND y), not a single global exponent. Closes the gap flagged in
+  the prior `from_ct` note. 3 new builder tests (per-voxel field resolution thru Medium trait,
+  shape-mismatch rejection, freq+tissue-dependent absorption) + 1 hu_mapping test; book Ch4 §4.5.5–6.
+  clippy clean on core+physics.
 - ✅ **Continuous tissue-varying CT→acoustic mapping (resolve binary-collapse)** — `[minor]`
   (2026-06-11). The `CTImageLoader` HU→density/sound-speed model was a **binary threshold** (HU>700
   bone; all soft tissue forced to ρ=1000, c=1500), erasing fat/muscle/liver/marrow contrast — unfit

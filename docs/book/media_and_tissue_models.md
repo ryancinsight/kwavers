@@ -440,10 +440,37 @@ let skull = HeterogeneousSkull::from_ct_hill(&ct, 3100.0, 2100.0, 20.0)?;
 heterogeneous medium of §4.6.4. CT volumes are ingested from NIfTI by
 `kwavers_imaging::medical::CTImageLoader` (ritk-backed).
 
-### 4.5.5 Choosing a model
+### 4.5.5 Complete simulation medium — `CtMediumBuilder`
 
-- **Whole-volume, tissue-varying (default)** → `HuAcousticModel` / `from_ct` (§4.5.3) — resolves
-  every soft tissue plus bone, with scanner-configurable coefficients.
+The mappings above produce property *arrays*; a forward simulation needs a `Medium` (§4.6.3).
+`HeterogeneousSkull`/`from_ct` give ρ, c, and α₀, but a *complete* acoustic medium also varies the
+power-law **exponent** $y$ and the **nonlinearity** $B/A$ by tissue — soft tissue absorbs as
+$f^{1.1}$ (Duck 1990) while skull absorbs roughly as $f^{1.0}$ (Connor & Hynynen 2002), and $B/A$
+rises from ≈ 6.5 (soft tissue) to ≈ 8 (bone). `HuAcousticModel` therefore also exposes
+`power_law_exponent(HU)` and `nonlinearity(HU)`, both blended soft → cortical by bone fraction.
+
+`kwavers_physics::acoustics::skull::heterogeneous::CtMediumBuilder` assembles all of this into a
+solver-ready `HeterogeneousMedium`: it maps **every** acoustic field — density, sound speed,
+absorption prefactor α₀, exponent $y$, and $B/A$ — per voxel from HU, and broadcasts the
+non-acoustic fields (thermal, optical, bubble, elastic, viscous) from a homogeneous background.
+
+```rust
+use kwavers_physics::acoustics::skull::heterogeneous::CtMediumBuilder;
+
+// ct: Array3<f64> of standard-HU voxels, grid: simulation Grid
+let medium = CtMediumBuilder::new(&ct, &grid).build()?;   // -> HeterogeneousMedium (impl Medium)
+// .with_model(custom_calibration) and .with_background(HomogeneousMedium::tissue(&grid)) override defaults
+```
+
+The result drives PSTD/FDTD directly: the absorption operator reads the per-voxel α₀ and $y$, so
+bone and soft tissue attenuate with their own frequency dependence rather than a single global
+exponent. The medium is validated against the grid before return.
+
+### 4.5.6 Choosing a model
+
+- **Full forward simulation, tissue-varying (default)** → `CtMediumBuilder` (§4.5.5) — complete
+  ρ, c, α₀, $y$, $B/A$ medium, scanner-configurable.
+- **Property arrays only (ρ, c, α)** → `HuAcousticModel` / `from_ct` (§4.5.3).
 - **Soft-tissue / abdominal, k-wave cross-validation** → `HounsfieldUnits` (§4.5.2, CT-number).
 - **Transcranial skull with diplöe gradient (porous mixing)** → `from_ct_hill` BVF + Hill (§4.5.4).
 
