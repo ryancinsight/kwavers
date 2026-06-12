@@ -17,6 +17,16 @@ claimed struct name) before implementing. Confirmed corrections below.
 
 ## Done
 
+- ✅ **Acoustic transmission coefficient — `1−|R|` corrected to pressure `T=2Z_t/(Z_i+Z_t)`** —
+  `[patch]` (2026-06-10, audit). `AcousticMaterialProperties::transmission_coefficient` returned
+  `1 − |R|` — **neither** the pressure amplitude (`T_p=1+R=2Z_t/(Z_i+Z_t)`) nor the intensity
+  (`T_I=1−R²`) transmission, and energy-non-conserving. For `Z_t>Z_i` (`R>0`) it gave `1−R` instead of
+  `1+R` (wrong; only accidentally correct when `Z_t<Z_i`). The sibling `acoustic_elastic` coupling
+  trait already had the correct `2Z₂/(Z₁+Z₂)`. Added an SSOT free `transmission_coefficient(z_i,z_t)`
+  (pressure `T_p`, companion to the existing pressure `reflection_coefficient`) and delegated the
+  method to it. Test: closed form, `T>1` into stiffer medium, `T=1+R`, lossless balance
+  `R²+(Z_i/Z_t)T²=1`, matched-impedance `T=1`. (The skull/transducer siblings correctly use the
+  *intensity* `4Z₁Z₂/(Z₁+Z₂)²` — left as-is, documented.)
 - ✅ **Anisotropic group (energy) velocity** — `[minor]` (2026-06-10). The (now-correct) Christoffel
   solver had phase velocities + polarizations but **no group/energy velocity** — the quantity along
   which energy actually propagates (it walks off the phase direction in anisotropic media). Added

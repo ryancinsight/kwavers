@@ -141,6 +141,18 @@ pub fn reflection_coefficient(z_incident: f64, z_transmitted: f64) -> f64 {
     (z_transmitted - z_incident) / (z_transmitted + z_incident)
 }
 
+/// Pressure-amplitude transmission coefficient at a normal-incidence planar
+/// interface (workspace SSOT): `T = 2 Z_t / (Z_i + Z_t)` [both rayl]. This is
+/// the pressure-amplitude companion of [`reflection_coefficient`] and satisfies
+/// the exact relation `T = 1 + R` (so `T` can exceed 1 when transmitting into a
+/// higher-impedance medium); the lossless energy balance is
+/// `R² + (Z_i/Z_t)·T² = 1`.
+#[inline]
+#[must_use]
+pub fn transmission_coefficient(z_incident: f64, z_transmitted: f64) -> f64 {
+    2.0 * z_transmitted / (z_incident + z_transmitted)
+}
+
 impl AcousticMaterialProperties {
     /// Create material properties with core parameters
     #[must_use]
@@ -271,10 +283,14 @@ impl AcousticMaterialProperties {
         reflection_coefficient(self.impedance, other.impedance).abs()
     }
 
-    /// Calculate transmission coefficient at normal incidence
+    /// Pressure-amplitude transmission coefficient `T = 2 Z_other/(Z_self + Z_other)`
+    /// at normal incidence (the pressure companion of [`reflection_coefficient`],
+    /// satisfying `T = 1 + R` with the *signed* `R`).
+    ///
+    /// [`reflection_coefficient`]: Self::reflection_coefficient
     #[must_use]
     pub fn transmission_coefficient(&self, other: &Self) -> f64 {
-        1.0 - self.reflection_coefficient(other)
+        transmission_coefficient(self.impedance, other.impedance)
     }
 
     /// Absorption coefficient at given frequency
@@ -354,6 +370,37 @@ mod tests {
             0.6,
         );
         assert!((mat.reflection_coefficient(&same)).abs() < 1e-6);
+    }
+
+    #[test]
+    fn transmission_coefficient_is_pressure_amplitude() {
+        // Water (Z≈1.5 MRayl) → bone-like (Z≈5.7 MRayl): Z_t > Z_i ⇒ R > 0 and
+        // the pressure transmission T = 1 + R EXCEEDS 1 (the case the old
+        // `1 − |R|` form got wrong).
+        let water = AcousticMaterialProperties::new(
+            SOUND_SPEED_WATER_SIM,
+            DENSITY_WATER_NOMINAL,
+            0.002,
+            SPECIFIC_HEAT_WATER,
+            0.6,
+        );
+        let bone =
+            AcousticMaterialProperties::new(3000.0, 1900.0, 0.002, SPECIFIC_HEAT_WATER, 0.6);
+        let (zi, zt) = (water.impedance, bone.impedance);
+
+        let t = water.transmission_coefficient(&bone);
+        // Closed form 2 Z_t/(Z_i+Z_t).
+        assert!((t - 2.0 * zt / (zi + zt)).abs() < 1e-9);
+        // Pressure transmission exceeds unity into the stiffer medium.
+        assert!(t > 1.0, "T into higher impedance must exceed 1, got {t}");
+        // Relation T = 1 + R (signed reflection).
+        let r = super::reflection_coefficient(zi, zt);
+        assert!((t - (1.0 + r)).abs() < 1e-12);
+        // Lossless energy balance R² + (Z_i/Z_t)·T² = 1.
+        assert!((r.mul_add(r, (zi / zt) * t * t) - 1.0).abs() < 1e-9);
+
+        // Matched impedance ⇒ R = 0, T = 1.
+        assert!((water.transmission_coefficient(&water) - 1.0).abs() < 1e-12);
     }
 
     #[test]
