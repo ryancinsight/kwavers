@@ -27,6 +27,19 @@ claimed struct name) before implementing. Confirmed corrections below.
   method to it. Test: closed form, `T>1` into stiffer medium, `T=1+R`, lossless balance
   `R²+(Z_i/Z_t)T²=1`, matched-impedance `T=1`. (The skull/transducer siblings correctly use the
   *intensity* `4Z₁Z₂/(Z₁+Z₂)²` — left as-is, documented.)
+- ✅ **Apollo native batched/tiled per-axis FFT (exposed) + viscoacoustic absorbing boundary** —
+  `[major]` (2026-06-11). **(1) Apollo:** apollo-fft already had SOTA separable multi-D (32×32 tiled
+  gather/scatter, Moirai-parallel pencils, hermes-SIMD, Stockham/Winograd/Good-Thomas/Rader dispatch)
+  but the per-axis batched primitive was `pub(crate)`. Added public `FftPlan3D::{forward,inverse}_axis_
+  complex_inplace` wrapping the validated `axis_pass_complex` (test: per-axis passes compose to the full
+  forward + round-trip identity). Committed + pushed to apollo `main` (311d938). **Integration BLOCKED:**
+  kwavers pins apollo v0.12.24 (78044d3, pre-`axis_pass` refactor); apollo `main` (v0.14) carries a stale
+  internal `mnemosyne→themis ^0.6` pin while themis is now 0.8.0, so `cargo update -p apollo-fft` fails.
+  Wiring the new API into kwavers needs an apollo v0.12→v0.14 upgrade + atlas-stack mnemosyne/themis
+  re-pin — a separate dependency migration, deferred rather than rushed. **(2) Absorbing boundary:**
+  `ViscoacousticMemorySolver::enable_absorbing_layer(thickness, γ_max)` — quadratic sponge `γ(d)=γ_max
+  ((L-d)/L)²`, multiplicative `exp(-γΔt)` decay on p/v each step, summed across axes. Test: outgoing
+  pulse absorbed (<10% energy survives) vs conserved/wrapped (>90%) without it. Book §4.8.4. clippy clean.
 - ✅ **Viscoacoustic memory-variable solver → 2-D/3-D (N-D canonical)** — `[major]` (2026-06-11).
   Generalized `ViscoacousticMemorySolver` from 1-D to a single canonical N-D implementation: a
   `(n,1,1)` grid is 1-D, `(nx,ny,1)` 2-D, `(nx,ny,nz)` 3-D (singleton-axis spectral derivative

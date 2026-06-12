@@ -189,6 +189,47 @@ fn lossless_3d_no_secular_energy_drift() {
     );
 }
 
+/// The absorbing boundary layer suppresses reflection: a pulse launched toward
+/// the boundary is absorbed (little energy remains), whereas with periodic
+/// boundaries the lossless pulse merely wraps around and its energy is conserved.
+#[test]
+fn absorbing_layer_suppresses_boundary_reflection() {
+    let n = 512;
+    let dx = 1.0e-4;
+    let dt = 2.0e-8;
+
+    let remaining = |absorbing: bool| -> f64 {
+        let mut s = ViscoacousticMemorySolver::new_1d(n, dx, dt, RHO, M_INF, &[]).unwrap();
+        if absorbing {
+            s.enable_absorbing_layer(n / 4, 2.0e6);
+        }
+        // A zero-velocity Gaussian splits into two counter-propagating halves
+        // that travel out toward both (absorbing) boundaries.
+        let (x0, w) = (n as f64 / 2.0, 12.0);
+        let p0 = Array3::from_shape_fn((n, 1, 1), |(i, _, _)| {
+            let d = (i as f64 - x0) / w;
+            (-d * d).exp()
+        });
+        s.set_pressure(&p0).unwrap();
+        let e0 = s.energy();
+        for _ in 0..2000 {
+            s.step();
+        }
+        s.energy() / e0
+    };
+
+    let periodic = remaining(false);
+    let absorbed = remaining(true);
+    assert!(
+        periodic > 0.9,
+        "lossless periodic energy should be ~conserved, got {periodic:.3}"
+    );
+    assert!(
+        absorbed < 0.1,
+        "absorbing layer should remove most energy, {absorbed:.3} remains"
+    );
+}
+
 /// Construction validation and the `GeneralizedMaxwellModel` convenience path.
 #[test]
 fn construction_validates_and_accepts_model() {

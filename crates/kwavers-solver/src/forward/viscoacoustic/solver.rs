@@ -54,6 +54,11 @@ pub struct ViscoacousticMemorySolver {
     gx: Array3<f64>,
     gy: Array3<f64>,
     gz: Array3<f64>,
+
+    // Optional absorbing boundary: per-cell multiplicative decay `exp(-γ Δt)`
+    // applied to `p` and `v` each step, with `γ` ramping up inside the boundary
+    // layer and zero in the interior (`None` ⇒ periodic, non-absorbing).
+    damping_decay: Option<Array3<f64>>,
 }
 
 impl std::fmt::Debug for ViscoacousticMemorySolver {
@@ -144,7 +149,48 @@ impl ViscoacousticMemorySolver {
             gx: Array3::zeros(shape),
             gy: Array3::zeros(shape),
             gz: Array3::zeros(shape),
+            damping_decay: None,
         })
+    }
+
+    /// Enable an **absorbing boundary layer** (sponge) of `thickness` cells on
+    /// every face whose axis is long enough to hold it. Outgoing waves entering
+    /// the layer are damped before they reach (and wrap around) the periodic
+    /// boundary, suppressing artificial reflections.
+    ///
+    /// `gamma_max` \[s⁻¹] is the peak damping rate at the outermost cell; the
+    /// rate ramps in as a quadratic profile `γ(d) = γ_max ((L-d)/L)²` over the
+    /// layer depth `d ∈ [0, L)` (zero in the interior), summed across axes so
+    /// corners damp in every direction. A smooth ramp keeps layer reflection low.
+    /// Calling again rebuilds the profile; `thickness = 0` disables it.
+    pub fn enable_absorbing_layer(&mut self, thickness: usize, gamma_max: f64) {
+        if thickness == 0 || gamma_max <= 0.0 {
+            self.damping_decay = None;
+            return;
+        }
+        // Per-axis ramp: γ contribution at index `i` along an axis of extent `n`.
+        let ramp = |i: usize, n: usize| -> f64 {
+            if n <= 2 * thickness {
+                return 0.0; // axis too short to host the layer (e.g. singleton)
+            }
+            let l = thickness as f64;
+            let depth = if i < thickness {
+                (thickness - i) as f64 // distance from the low boundary
+            } else if i >= n - thickness {
+                (i - (n - thickness) + 1) as f64 // distance from the high boundary
+            } else {
+                0.0
+            };
+            let frac = depth / l;
+            gamma_max * frac * frac
+        };
+
+        let dt = self.dt;
+        let decay = Array3::from_shape_fn((self.nx, self.ny, self.nz), |(i, j, k)| {
+            let gamma = ramp(i, self.nx) + ramp(j, self.ny) + ramp(k, self.nz);
+            (-gamma * dt).exp()
+        });
+        self.damping_decay = Some(decay);
     }
 
     /// 1-D convenience constructor (`ny = nz = 1`).
@@ -294,5 +340,13 @@ impl ViscoacousticMemorySolver {
             .and(&self.gx)
             .and(&self.gy)
             .for_each(|p, &d, &relax| *p -= dt * (m_u * d + relax));
+
+        // 5. Absorbing boundary: damp p and v inside the sponge layer.
+        if let Some(decay) = &self.damping_decay {
+            Zip::from(&mut self.p).and(decay).for_each(|p, &d| *p *= d);
+            Zip::from(&mut self.vx).and(decay).for_each(|v, &d| *v *= d);
+            Zip::from(&mut self.vy).and(decay).for_each(|v, &d| *v *= d);
+            Zip::from(&mut self.vz).and(decay).for_each(|v, &d| *v *= d);
+        }
     }
 }

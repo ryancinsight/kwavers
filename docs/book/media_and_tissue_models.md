@@ -833,6 +833,14 @@ exact complex dispersion $\rho\omega^2 = M(\omega)|\mathbf k|^2$ by Newton itera
 the measured temporal decay and oscillation frequency match it for 1-D, 2-D-diagonal, and
 3-D-diagonal standing waves spanning the band, with energy conserved in the lossless limit.
 
+An optional **absorbing boundary layer** (`enable_absorbing_layer(thickness, γ_max)`) suppresses
+the periodic wrap-around: a quadratic damping profile $\gamma(d) = \gamma_{\max}((L-d)/L)^2$ ramps
+from zero at the interior edge to $\gamma_{\max}$ at each face and is applied as a multiplicative
+decay $\exp(-\gamma\,\Delta t)$ to $p$ and $\mathbf v$ each step (summed across axes so corners
+damp in every direction). A pulse launched at the boundary is absorbed rather than reflected — the
+test confirms $<10\%$ of the energy survives with the layer versus the conserved (wrapped) energy
+without it.
+
 ---
 
 ## 4.9 Skull and Bone Acoustics
