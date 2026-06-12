@@ -776,6 +776,19 @@ reproduces an arbitrary power-law $\alpha \propto \omega^y$ when the weights fol
 $E_j \propto \tau_j^{1-y}$ (Fung 1993). This is the discrete analog of the fractional
 Laplacian operator of §4.4.3.
 
+kwavers implements all three frequency-domain shear models in
+`kwavers_medium::viscoelastic`: `KelvinVoigtModel` (unbounded dispersion),
+`ZenerModel` (single relaxation arm, bounded dispersion), and
+`GeneralizedMaxwellModel` ($N$ arms). The latter's `power_law(E_∞, ΔE, f_min,
+f_max, N, y, ρ)` constructor places $N$ log-spaced relaxation times across the band
+and sets $E_j \propto \tau_j^{1-y}$, so the loss modulus follows $G''(\omega)
+\propto \omega^{y-1}$ — verified by a log-log-slope test — and a single arm is
+differentially identical to `ZenerModel`. Each model exposes the
+complex/storage/loss modulus, phase velocity, and attenuation via the complex
+wavenumber $k = \omega\sqrt{\rho/G^*}$; the shared `recover_complex_modulus` plus
+the `fit_dispersion` inversions recover model parameters from measured shear-wave
+dispersion (shear-wave spectroscopy).
+
 ---
 
 ## 4.9 Skull and Bone Acoustics

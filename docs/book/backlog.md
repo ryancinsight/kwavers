@@ -27,6 +27,17 @@ claimed struct name) before implementing. Confirmed corrections below.
   method to it. Test: closed form, `T>1` into stiffer medium, `T=1+R`, lossless balance
   `R²+(Z_i/Z_t)T²=1`, matched-impedance `T=1`. (The skull/transducer siblings correctly use the
   *intensity* `4Z₁Z₂/(Z₁+Z₂)²` — left as-is, documented.)
+- ✅ **Generalized Maxwell viscoelastic model (documented-but-missing) + module split** — `[minor]`
+  (2026-06-11, codebase audit). Chapter §4.8.3 documented the generalized-Maxwell model
+  (`G* = E_∞ + Σ E_j iωτ_j/(1+iωτ_j)`, power-law absorption via `E_j ∝ τ_j^{1-y}`, Fung 1993) but
+  only `KelvinVoigtModel` + `ZenerModel` existed. Added `GeneralizedMaxwellModel` (N arms) with a
+  `power_law(E_∞,ΔE,f_min,f_max,N,y,ρ)` constructor (log-spaced τ_j, weights τ_j^{1-y}) +
+  complex/storage/loss modulus, phase velocity, attenuation, relaxed/unrelaxed speeds. 4 value-
+  semantic tests: single-arm ≡ ZenerModel (differential), G''(ω) log-log slope == y-1, complex =
+  storage+i·loss with rising α, unphysical rejection. Split the 660-line `viscoelastic.rs` (over the
+  500-line limit) into a vertical module `viscoelastic/{mod,kelvin_voigt,zener,generalized_maxwell}.rs`
+  — public API unchanged (no external call sites), all 12 existing tests preserved. §4.8.3 updated
+  with the impl note. clippy clean.
 - ✅ **Book path drift: stale `kwavers_domain::` module paths** — `[patch]` (2026-06-11, codebase
   audit). The `kwavers-domain` mega-crate was split into 12 crates and deleted, but 24 module-path
   references across 6 chapters still pointed at `kwavers_domain::…` (dead paths). Corrected each to
