@@ -27,6 +27,16 @@ claimed struct name) before implementing. Confirmed corrections below.
   method to it. Test: closed form, `T>1` into stiffer medium, `T=1+R`, lossless balance
   `R²+(Z_i/Z_t)T²=1`, matched-impedance `T=1`. (The skull/transducer siblings correctly use the
   *intensity* `4Z₁Z₂/(Z₁+Z₂)²` — left as-is, documented.)
+- ✅ **CT Hounsfield→density mapping: tests + chapter** — `[patch]` (2026-06-11, codebase audit).
+  The canonical `HounsfieldUnits` (Mast 2000 / k-wave-parity 4-segment piecewise density fit, the
+  most foundational HU→ρ converter) was **untested** despite claiming k-wave-python parity. Added 5
+  value-semantic tests: C⁰-continuity at all 3 segment breakpoints (930/1098/1260), physiological
+  density bands (water→1011.9, bone→1210), strict monotonicity, Mast `c=(ρ+349)/0.893` + inverse +
+  impedance identities, classification boundaries. Documented the whole CT→medium pipeline in new
+  **Ch4 §4.5 "CT-Derived Acoustic Media: Hounsfield Unit Mapping"** — the standard-HU vs CT-number
+  convention footgun, Mast piecewise (§4.5.2), Schneider/Marsac linear (§4.5.3), Aubry/Hill
+  bone-volume-fraction mixing (§4.5.4), model-selection guide (§4.5.5); +5 references. No code gap
+  (all 6 conversions exist + reference-backed); the gap was test coverage of the SSOT + a chapter.
 - ✅ **Wire Christoffel into `AnisotropicStiffnessTensor`** — `[minor]` (2026-06-11). The Christoffel
   solver was export-only/unwired; the stiffness tensor (SSOT held by media) now exposes Christoffel-
   backed `phase_velocities`/`group_velocities` and `max_phase_velocity` (CFL reference speed — the

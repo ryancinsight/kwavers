@@ -79,3 +79,79 @@ impl HounsfieldUnits {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::HounsfieldUnits;
+
+    // The k-wave-python `hounsfield2density` fit uses the CT-number convention
+    // (water ≈ 1000 HU). The four piecewise segments must join continuously
+    // (C⁰) at the breakpoints HU = 930, 1098, 1260 — otherwise a CT volume
+    // would produce density discontinuities the segmentation never intended.
+    #[test]
+    fn density_is_continuous_at_segment_breakpoints() {
+        for &bp in &[930.0_f64, 1098.0, 1260.0] {
+            // Approach the breakpoint from below and above; the fit is C⁰, so
+            // the one-sided limits must agree to within rounding of the linear
+            // evaluation (≪ 1 kg/m³).
+            let below = HounsfieldUnits::to_density(bp - 1e-6);
+            let above = HounsfieldUnits::to_density(bp + 1e-6);
+            assert!(
+                (below - above).abs() < 1e-3,
+                "density discontinuity at HU={bp}: {below} vs {above}"
+            );
+        }
+    }
+
+    // Water (HU ≈ 1000 in the CT-number convention) and cortical bone (HU ≈
+    // 1300) must land in their physiological density bands — an independent
+    // physical check, not a restatement of the fit coefficients.
+    #[test]
+    fn density_lands_in_physiological_bands() {
+        let rho_water = HounsfieldUnits::to_density(1000.0);
+        assert!(
+            (1000.0..=1025.0).contains(&rho_water),
+            "water density {rho_water} kg/m³ outside [1000, 1025]"
+        );
+        let rho_bone = HounsfieldUnits::to_density(1300.0);
+        assert!(
+            (1150.0..=1300.0).contains(&rho_bone),
+            "cortical-bone density {rho_bone} kg/m³ outside [1150, 1300]"
+        );
+    }
+
+    // Density is strictly increasing in HU across the full clinical range:
+    // denser tissue ⇒ higher CT attenuation ⇒ higher HU.
+    #[test]
+    fn density_is_strictly_increasing() {
+        let mut prev = HounsfieldUnits::to_density(0.0);
+        for hu_centi in 1..=400 {
+            let hu = hu_centi as f64 * 5.0; // 5 … 2000 HU
+            let rho = HounsfieldUnits::to_density(hu);
+            assert!(rho > prev, "density not increasing at HU={hu}: {rho} ≤ {prev}");
+            prev = rho;
+        }
+    }
+
+    // Sound speed is the Mast (2000) affine image of density, c = (ρ+349)/0.893,
+    // and the round-trip density↔HU inverse recovers the soft-tissue segment.
+    #[test]
+    fn sound_speed_and_inverse_are_consistent() {
+        let hu = 1000.0_f64;
+        let rho = HounsfieldUnits::to_density(hu);
+        let c = HounsfieldUnits::to_sound_speed(hu);
+        assert!((c - (rho + 349.0) / 0.893).abs() < 1e-9);
+        assert!((1480.0..=1560.0).contains(&c), "water speed {c} m/s out of band");
+        // from_density inverts the soft-tissue segment (930 ≤ HU ≤ 1098).
+        assert!((HounsfieldUnits::from_density(rho) - hu).abs() < 1e-6);
+        // Impedance identity.
+        assert!((HounsfieldUnits::to_impedance(hu) - rho * c).abs() < 1e-6);
+    }
+
+    #[test]
+    fn tissue_classification_boundaries() {
+        assert_eq!(HounsfieldUnits::classify_tissue(-1500.0), "Air");
+        assert_eq!(HounsfieldUnits::classify_tissue(0.0), "Soft Tissue");
+        assert_eq!(HounsfieldUnits::classify_tissue(1000.0), "Cortical Bone");
+    }
+}

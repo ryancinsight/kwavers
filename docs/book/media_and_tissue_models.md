@@ -306,6 +306,125 @@ the fractional-Laplacian operator used in the PSTD solver (§4.4.3).
 
 ---
 
+## 4.5 CT-Derived Acoustic Media: Hounsfield Unit Mapping
+
+Patient-specific simulations — transcranial focusing, skull aberration correction, abdominal
+HIFU planning — start from a clinical CT volume, not a hand-built phantom. A CT scanner reports
+each voxel as a **Hounsfield Unit** (HU), a normalized X-ray attenuation
+$\text{HU} = 1000\,(\mu - \mu_{\text{water}})/(\mu_{\text{water}} - \mu_{\text{air}})$, so that
+water $= 0$ HU and air $= -1000$ HU by definition. To drive a wave solver, every voxel HU must
+be mapped to the three acoustic fields the variable-coefficient equation (§4.6) consumes: mass
+density $\rho_0$, sound speed $c_0$, and power-law absorption $\alpha_0$. This section is the
+canonical home for that mapping; §4.9 covers the *physics* of bone, this section covers
+*reconstructing the medium from imaging*.
+
+### 4.5.1 A convention warning: HU vs. CT-number
+
+Two scalings appear in the literature and in kwavers, and conflating them shifts every density
+by ~1000 kg m⁻³:
+
+- **Standard HU** — water $= 0$, air $= -1000$, cortical bone $\approx +1000$ to $+2000$.
+  Schneider (1996), Marsac (2017), Aubry (2003), and the bone-volume-fraction model all use this.
+- **CT-number ($\text{HU} + 1000$)** — water $\approx 1000$, used by k-wave's `hounsfield2density`
+  so that the piecewise breakpoints land at 930/1098/1260. kwavers' `HounsfieldUnits` mirrors
+  this for bit-level k-wave parity.
+
+kwavers keeps both because each serves a distinct consumer; a CT volume must be matched to the
+model expecting its convention before mapping. The discontinuity-free k-wave fit and the
+linear/bone-fraction models below are *not* interchangeable input scalings.
+
+### 4.5.2 Soft-tissue piecewise fit (Mast 2000 / k-wave parity)
+
+For full-range soft-tissue work, kwavers uses k-wave-python's four-segment linear fit to
+experimental CT density data (CT-number convention):
+
+$$
+\rho(\text{HU}) =
+\begin{cases}
+1.025793\,\text{HU} - 5.680404, & \text{HU} < 930, \\
+0.908271\,\text{HU} + 103.615, & 930 \le \text{HU} \le 1098, \\
+0.510837\,\text{HU} + 539.998, & 1098 < \text{HU} < 1260, \\
+0.662537\,\text{HU} + 348.856, & \text{HU} \ge 1260.
+\end{cases}
+$$
+
+The segments are **C⁰-continuous** at all three breakpoints (verified to $<10^{-3}$ kg m⁻³ in
+the unit tests). Sound speed follows the Mast (2000) affine density relation
+$c = (\rho + 349)/0.893$, and impedance is $Z = \rho c$. At the water anchor (HU = 1000) this
+yields $\rho \approx 1011.9$ kg m⁻³ and $c \approx 1524$ m s⁻¹.
+
+```rust
+use kwavers_core::constants::hounsfield::HounsfieldUnits;
+
+let rho = HounsfieldUnits::to_density(1300.0);     // cortical bone ≈ 1210 kg/m³
+let c   = HounsfieldUnits::to_sound_speed(1300.0); // ≈ 1746 m/s
+let z   = HounsfieldUnits::to_impedance(1300.0);   // ρc
+```
+
+`HounsfieldUnits` lives in `kwavers-core` as the constants SSOT; `classify_tissue` returns the
+coarse tissue label (Air/Fat/Water/Soft Tissue/Muscle/Liver/Trabecular/Cortical Bone).
+
+### 4.5.3 Linear skull models (Schneider, Marsac)
+
+For skull-only transcranial work the standard-HU linear fits are simpler and well validated:
+
+| Model | Sound speed | Density |
+|---|---|---|
+| **Schneider (1996)** | $c = 1500 + 0.50\,\text{HU}$ (HU < 0); $1500 + 0.76\,\text{HU}$ (HU ≥ 0) | $\rho = 1000 + 0.96\,\text{HU}$ |
+| **Marsac (2017)** bone fraction | $c = 1500(1-\phi) + 2900\,\phi$ | (Voigt, see §4.5.4) |
+
+with porosity proxy $\phi = \text{clamp}(\text{HU}/1000,\,0,\,1)$. Schneider lives in
+`kwavers_physics::analytical::skull` (`hu_to_sound_speed_schneider`, `hu_to_density_schneider`);
+Marsac drives the active transcranial planning path in
+`kwavers_therapy::theranostic_guidance::medium`.
+
+### 4.5.4 Bone-volume-fraction mixing (Aubry / Hill)
+
+The most physically grounded route treats a CT voxel as a water–bone mixture with bone volume
+fraction $\phi(\text{HU}) = \text{clamp}\!\big((\text{HU} - \text{HU}_{\text{water}})/
+(\text{HU}_{\text{cortical}} - \text{HU}_{\text{water}}),\,0,\,1\big)$ (standard HU,
+$\text{HU}_{\text{water}}=0$, $\text{HU}_{\text{cortical}}=1000$). Density follows the **Voigt
+(volume-average) rule** and the effective modulus the **Hill average** of the Voigt and Reuss
+bounds:
+
+$$
+\rho_{\text{eff}} = \phi\,\rho_{\text{bone}} + (1-\phi)\,\rho_{\text{water}}, \qquad
+K_{\text{H}} = \tfrac12\!\left(K_V + K_R\right), \quad
+K_V = \phi K_b + (1-\phi)K_w, \;\;
+K_R = \left(\tfrac{\phi}{K_b} + \tfrac{1-\phi}{K_w}\right)^{-1},
+$$
+
+with $c_{\text{eff}} = \sqrt{K_{\text{H}}/\rho_{\text{eff}}}$ and linearly mixed attenuation
+$\alpha_{\text{eff}} = \phi\,\alpha_{\text{bone}} + (1-\phi)\,\alpha_{\text{water}}$. Because the
+Hill modulus is bounded above by the Voigt modulus, $c_{\text{eff}}$ never exceeds the
+Voigt-modulus speed (a property the test suite asserts across $\phi$). The pure-water limit
+($\phi=0$) recovers $c_{\text{water}}$ and the pure-cortical limit ($\phi=1$) recovers
+$c_{\text{bone}}$ exactly.
+
+```rust
+use kwavers_physics::acoustics::skull::HeterogeneousSkull;
+
+// ct: Array3<f64> of standard-HU voxels → density/sound_speed/attenuation grids
+let skull = HeterogeneousSkull::from_ct_hill(&ct, 3100.0, 2100.0, 20.0)?;
+// skull.density, skull.sound_speed, skull.attenuation feed the heterogeneous medium (§4.6.4)
+```
+
+`from_ct_hill` (Hill-averaged) and the simpler binary-threshold `from_ct` both live in
+`kwavers_physics::acoustics::skull::heterogeneous`; the produced fields route directly into the
+heterogeneous medium of §4.6.4. CT volumes are ingested from NIfTI by
+`kwavers_imaging::medical::CTImageLoader` (ritk-backed).
+
+### 4.5.5 Choosing a model
+
+- **Soft-tissue / abdominal, k-wave cross-validation** → `HounsfieldUnits` (§4.5.2).
+- **Transcranial skull-only, fast linear** → Schneider or Marsac (§4.5.3).
+- **Heterogeneous skull with diplöe gradient** → `from_ct_hill` BVF mixing (§4.5.4).
+
+All three are reference-backed and unit-tested against their published anchor values; none
+collapses distinct tissues to a single hardcoded density.
+
+---
+
 ## 4.6 Heterogeneous Media
 
 ### 4.6.1 Variable-coefficient wave equation
@@ -1018,6 +1137,9 @@ This chapter established:
 
 ## References
 
+- Aubry, J.-F., Tanter, M., Pernot, M., Thomas, J.-L. & Fink, M. (2003). "Experimental
+  demonstration of noninvasive transskull adaptive focusing based on prior computed
+  tomography scans." *J. Acoust. Soc. Am.* 113(1), 84–93.
 - Biot, M.A. (1956). "Theory of propagation of elastic waves in a fluid-saturated porous
   solid." *J. Acoust. Soc. Am.* 28(2), 168–178.
 - Bjørnø, L. (1986). "Acoustic nonlinearity of bubbly liquids." *Appl. Sci. Res.* 43, 31–41.
@@ -1031,12 +1153,21 @@ This chapter established:
 - ICRU Report 61 (1998). *Tissue Substitutes, Phantoms and Computational Modelling in
   Medical Ultrasound.* International Commission on Radiation Units and Measurements,
   Bethesda, MD.
+- Hill, R. (1952). "The elastic behaviour of a crystalline aggregate." *Proc. Phys. Soc. A*
+  65(5), 349–354.
 - Liu, D.L. & Waag, R.C. (1998). "Propagation and backpropagation for ultrasonic wavefront
   aberration correction." *IEEE Trans. Ultrason. Ferroelect. Freq. Contr.* 45(3), 645–659.
+- Marquet, F., Pernot, M., Aubry, J.-F., Montaldo, G., Marsac, L., Tanter, M. & Fink, M.
+  (2009). "Non-invasive transcranial ultrasound therapy based on a 3D CT scan: protocol
+  validation and in vitro results." *Phys. Med. Biol.* 54(9), 2597–2613.
+- Mast, T.D. (2000). "Empirical relationships between acoustic parameters in human soft
+  tissues." *Acoust. Res. Lett. Online* 1(2), 37–42.
 - O'Brien, W.D. (2007). "Ultrasound–biophysics mechanisms." *Prog. Biophys. Mol. Biol.*
   93(1–3), 212–255.
 - Pennes, H.H. (1948). "Analysis of tissue and arterial blood temperatures in the resting
   human forearm." *J. Appl. Physiol.* 1(2), 93–122.
+- Schneider, U., Pedroni, E. & Lomax, A. (1996). "The calibration of CT Hounsfield units for
+  radiotherapy treatment planning." *Phys. Med. Biol.* 41(1), 111–124.
 - Szabo, T.L. (1994). "Time domain wave equations for lossy media obeying a frequency power
   law." *J. Acoust. Soc. Am.* 96(1), 491–500.
 - Treeby, B.E. & Cox, B.T. (2010). "Modeling power law absorption and dispersion for
