@@ -1,6 +1,7 @@
 mod apply;
 mod init;
 mod kernel;
+mod strata;
 #[cfg(test)]
 mod tests;
 

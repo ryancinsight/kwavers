@@ -27,6 +27,19 @@ claimed struct name) before implementing. Confirmed corrections below.
   method to it. Test: closed form, `T>1` into stiffer medium, `T=1+R`, lossless balance
   `R²+(Z_i/Z_t)T²=1`, matched-impedance `T=1`. (The skull/transducer siblings correctly use the
   *intensity* `4Z₁Z₂/(Z₁+Z₂)²` — left as-is, documented.)
+- ✅ **Stratified fractional-Laplacian absorption — spatially-varying exponent y(x) (beyond k-Wave)**
+  — `[major]` (2026-06-11). The PSTD power-law absorption operator applied `|k|^{y−2}`/`|k|^{y−1}`
+  with a SINGLE global exponent (k-Wave's limitation), so a CT body model's bone (y≈1.0) and soft
+  tissue (y≈1.1) shared one frequency dependence. New `absorption::strata::ExponentStrata` +
+  `build_exponent_strata`: represents the distinct exponents as ≤`MAX_STRATA` strata (linspace for a
+  continuum), each with its own spectral symbol, blended per-voxel between bracketing strata by a
+  partition-of-unity (index,weight) — exact at every tissue's exponent, convexity-bounded between.
+  Gated: built only when y(x) non-uniform (`AbsorptionKernel.strata: Option`); lossless/single-y keep
+  the bit-identical uniform path (27 existing tests unchanged). Apply shares one forward FFT across
+  strata, no new buffers (rebuilds input from divergence cache), reuses div_ux as scratch — memory-
+  neutral for the common case. Validation: rigorous differential test — a 2-tissue-y medium's
+  stratified result equals, per region, the uniform operator built with that region's y to FFT
+  round-off; + 3 construction tests. clippy clean. Book Ch4 §4.5.5.
 - ✅ **Complete tissue-varying CT→simulation-medium modeling** — `[minor]` (2026-06-11). Extended
   the CT-derived model to a *complete* acoustic medium: `HuAcousticModel` now also maps the power-law
   **exponent** y (soft 1.1 Duck → skull 1.0 Connor&Hynynen) and **nonlinearity** B/A (6.5→8.0),

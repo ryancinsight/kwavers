@@ -27,6 +27,7 @@
 //! - Caputo (1967). Geophys. J. Int. 13(5), 529–539. (fractional calculus)
 
 use super::kernel::AbsorptionKernel;
+use super::strata::build_exponent_strata;
 use crate::forward::pstd::config::PSTDConfig;
 use kwavers_core::constants::ABSORPTION_SINGULARITY_THRESHOLD;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
@@ -142,6 +143,7 @@ pub(crate) fn initialize_absorption_operators(
                 nabla1,
                 nabla2,
                 alpha_si: alpha_si_stokes,
+                strata: None, // Stokes ⇒ y = 2 everywhere (uniform exponent)
             }))
         }
         AbsorptionMode::PowerLaw {
@@ -161,6 +163,9 @@ pub(crate) fn initialize_absorption_operators(
             let mut tau = Array3::zeros(shape);
             let mut eta = Array3::zeros(shape);
             let mut alpha_si_field = Array3::zeros(shape);
+            // Per-voxel exponent field — drives the stratified spectral operator
+            // when the medium carries a spatially-varying y (beyond k-Wave).
+            let mut y_field = Array3::from_elem(shape, y_config);
 
             for k in 0..grid.nz {
                 for j in 0..grid.ny {
@@ -191,9 +196,14 @@ pub(crate) fn initialize_absorption_operators(
                             * c0_val.powf(y)
                             * (std::f64::consts::PI * y / 2.0).tan();
                         alpha_si_field[[i, j, k]] = alpha_0_si;
+                        y_field[[i, j, k]] = y;
                     }
                 }
             }
+
+            // Stratified spectral operators when y(x) is non-uniform; `None`
+            // collapses to the cheaper single-symbol nabla1/nabla2 path below.
+            let strata = build_exponent_strata(&y_field, k_mag);
 
             // Spectral nabla operators — precomputed in FFT wavenumber order.
             // nabla1 = |k|^(y_config − 2),  nabla2 = |k|^(y_config − 1)
@@ -219,6 +229,7 @@ pub(crate) fn initialize_absorption_operators(
                 nabla1,
                 nabla2,
                 alpha_si: alpha_si_field,
+                strata,
             }))
         }
         AbsorptionMode::MultiRelaxation { .. } | AbsorptionMode::Causal { .. } => Err(

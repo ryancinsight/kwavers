@@ -371,3 +371,105 @@ fn test_update_pressure_linear_eos_populates_div_u_and_p() {
         }
     }
 }
+
+/// Differential validation of the **stratified** spatially-varying-exponent
+/// absorption operator (beyond k-Wave's single global exponent).
+///
+/// A medium split into two tissues with distinct power-law exponents y_a, y_b
+/// (uniform ρ, c, α₀) must, under the stratified operator, reproduce in each
+/// region *exactly* what the uniform single-exponent operator built with that
+/// region's exponent produces — because at a stratum-exact voxel the bracket
+/// weight is 0/1 and the global fractional Laplacian for that exponent is
+/// selected verbatim. Agreement to FFT round-off proves the stratified machinery
+/// computes the per-voxel-correct operator, not a single blurred global one.
+#[test]
+fn stratified_exponent_matches_per_tissue_uniform_operator() {
+    use kwavers_medium::heterogeneous::HeterogeneousMedium;
+    use ndarray::Array3;
+
+    let grid = Grid::new(16, 16, 16, 1e-4, 1e-4, 1e-4).unwrap();
+    let (rho, c, alpha0) = (DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.5);
+    let (ya, yb) = (1.1_f64, 1.5_f64);
+    let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
+
+    // Deterministic, non-DC input fields shared by all three solvers.
+    let pattern = |scale: f64| {
+        Array3::from_shape_fn((nx, ny, nz), |(i, j, k)| {
+            scale
+                * ((TWO_PI * i as f64 / nx as f64).sin()
+                    + (TWO_PI * j as f64 / ny as f64).cos()
+                    + 0.5 * (TWO_PI * k as f64 / nz as f64).sin())
+        })
+    };
+    let (div_ux, div_uy, div_uz, rho_total) =
+        (pattern(1.0), pattern(0.7), pattern(0.4), pattern(1.3));
+
+    let run = |mut solver: PSTDSolver| -> Array3<f64> {
+        solver.div_ux.assign(&div_ux);
+        solver.div_uy.assign(&div_uy);
+        solver.div_uz.assign(&div_uz);
+        solver.div_u.assign(&rho_total);
+        solver.fields.p.fill(0.0);
+        solver.apply_absorption_to_pressure().unwrap();
+        solver.fields.p.clone()
+    };
+
+    // Uniform single-exponent references (config exponent drives the symbol).
+    let uniform = |y: f64| {
+        let mut med = HomogeneousMedium::new(rho, c, 0.0, 0.0, &grid);
+        med.set_acoustic_properties(alpha0, y, 0.0).unwrap();
+        let cfg = PSTDConfig {
+            absorption_mode: AbsorptionMode::PowerLaw {
+                alpha_coeff: alpha0,
+                alpha_power: y,
+            },
+            dt: 1e-7,
+            ..PSTDConfig::default()
+        };
+        PSTDSolver::new(cfg, grid.clone(), &med, GridSource::default()).unwrap()
+    };
+    let p_a = run(uniform(ya));
+    let p_b = run(uniform(yb));
+
+    // Heterogeneous-exponent medium: x < nx/2 → y_a, else y_b (uniform ρ, c, α₀).
+    let bg = HomogeneousMedium::new(rho, c, 0.0, 0.0, &grid);
+    let mut het = HeterogeneousMedium::from_homogeneous(&bg, &grid);
+    het.use_trilinear_interpolation = false; // piecewise-constant exponent lookup
+    het.absorption.fill(alpha0);
+    het.alpha0.fill(alpha0);
+    for ((i, _, _), a) in het.alpha_power.indexed_iter_mut() {
+        *a = if i < nx / 2 { ya } else { yb };
+    }
+    let cfg = PSTDConfig {
+        absorption_mode: AbsorptionMode::PowerLaw {
+            alpha_coeff: alpha0,
+            alpha_power: ya,
+        },
+        dt: 1e-7,
+        ..PSTDConfig::default()
+    };
+    let strat = PSTDSolver::new(cfg, grid.clone(), &het, GridSource::default()).unwrap();
+    assert!(
+        strat.absorption.as_ref().unwrap().strata.is_some(),
+        "heterogeneous exponent must engage the stratified operator"
+    );
+    let p_s = run(strat);
+
+    // Per region, stratified == uniform-operator-at-that-exponent, to round-off.
+    let scale = p_a
+        .iter()
+        .chain(p_b.iter())
+        .fold(0.0_f64, |m, &v| m.max(v.abs()))
+        .max(1e-30);
+    for ((i, j, k), &ps) in p_s.indexed_iter() {
+        let expected = if i < nx / 2 {
+            p_a[[i, j, k]]
+        } else {
+            p_b[[i, j, k]]
+        };
+        assert!(
+            (ps - expected).abs() < 1e-9 * scale,
+            "voxel ({i},{j},{k}): stratified {ps} != per-tissue uniform {expected}"
+        );
+    }
+}

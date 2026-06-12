@@ -84,56 +84,116 @@ impl PSTDSolver {
         // R2C output is half-spectrum along z: shape (nx, ny, nz_c=nz/2+1).
         let nz_c = self.grad_k.dim().2;
 
-        // ── Step 1 (Opt-7 + Opt-12): build ρ₀·∇·u directly into dpx from div_u* cache.
-        //
-        // `update_density_cartesian` writes ∂u_α/∂α into `div_ux`/`div_uy`/`div_uz`
-        // (the divergence cache).  `apply_pressure_sources` zeros `dpx` but never
-        // touches `div_ux`/`div_uy`/`div_uz`, so the cache is always current here.
-        //
-        // Opt-7: eliminated 3 N-element assigns (div_u* → dpx/dpy/dpz) with a
-        // single fused Zip writing the accumulator directly.
-        // Opt-12: `dpz` is eliminated; `dpx` replaces it as the accumulator.
-        //   - Safety: dpx was last written by the velocity z-axis gradient IFFT and
-        //     its content was fully consumed by the uz Zip before this step runs.
-        //   - dpx (Step 1 content) is consumed by the Step 3 FFT before the Step 3
-        //     IFFT overwrites dpx with L1 — no aliasing.
-        //
-        // Saves: 3 × N-element memcpy (≈ 6.3 MB bandwidth at N=64³) per step (Opt-7)
-        // + 1 × N×8 bytes of solver memory (Opt-12: dpz eliminated).
-        Zip::from(&mut self.dpx)
-            .and(&self.div_ux)
-            .and(&self.div_uy)
-            .and(&self.div_uz)
-            .and(&self.materials.rho0)
-            .par_for_each(|d, &x, &y, &z, &r0| {
-                *d = r0 * (x + y + z);
-            });
+        if let Some(strata) = &abs.strata {
+            // ── Stratified path: spatially-varying exponent y(x) (beyond k-Wave).
+            // For each Laplacian, accumulate the per-stratum operator weighted by
+            // the per-voxel bracket weights, reproducing each tissue's own power
+            // law. One forward FFT is re-formed per stratum (no extra buffers);
+            // strata exist only for genuinely heterogeneous-y media.
+            let m_count = strata.exponents.len();
 
-        // ── Step 3: L1 = IFFT( |k|^(y−2) · FFT(ρ₀·∇·u) ) → dpx (clobbered).
-        // FFT reads dpx (Step 1 content); IFFT then safely overwrites dpx with L1.
-        self.fft.forward_r2c_into(&self.dpx, &mut self.grad_k);
-        {
-            let n1 = abs.nabla1.slice(s![.., .., ..nz_c]);
-            Zip::from(&mut self.grad_k).and(&n1).par_for_each(|gk, &n| {
-                *gk *= n; // n: f64; nabla1 is real-valued
-            });
-        }
-        self.fft
-            .inverse_c2r_into(&self.grad_k, &mut self.dpx, &mut self.ux_k);
-        // dpx now holds L1.
+            // L1 = Σ_m w_m(x) · IFFT( |k|^(y_m−2) · FFT(ρ₀·∇·u) ) → dpx.
+            self.dpx.fill(0.0);
+            for m in 0..m_count {
+                // Rebuild ρ₀·∇·u into dpy from the divergence cache (cheap, no FFT).
+                Zip::from(&mut self.dpy)
+                    .and(&self.div_ux)
+                    .and(&self.div_uy)
+                    .and(&self.div_uz)
+                    .and(&self.materials.rho0)
+                    .par_for_each(|d, &x, &y, &z, &r0| *d = r0 * (x + y + z));
+                self.fft.forward_r2c_into(&self.dpy, &mut self.grad_k);
+                Zip::from(&mut self.grad_k)
+                    .and(&strata.nabla1[m])
+                    .par_for_each(|gk, &n| *gk *= n);
+                self.fft
+                    .inverse_c2r_into(&self.grad_k, &mut self.dpy, &mut self.ux_k);
+                let mm = m as u32;
+                Zip::from(&mut self.dpx)
+                    .and(&self.dpy)
+                    .and(&strata.bracket_lo)
+                    .and(&strata.weight_hi)
+                    .par_for_each(|acc, &v, &lo, &t| {
+                        let w = if lo == mm {
+                            1.0 - t
+                        } else if lo + 1 == mm {
+                            t
+                        } else {
+                            0.0
+                        };
+                        *acc += w * v;
+                    });
+            }
 
-        // ── Step 4: L2 = IFFT( |k|^(y−1) · FFT(ρ_total) ) → dpy (clobbered).
-        // div_u still holds ρ_total from the EOS step in update_pressure.
-        self.fft.forward_r2c_into(&self.div_u, &mut self.grad_k);
-        {
-            let n2 = abs.nabla2.slice(s![.., .., ..nz_c]);
-            Zip::from(&mut self.grad_k).and(&n2).par_for_each(|gk, &n| {
-                *gk *= n; // n: f64; nabla2 is real-valued
-            });
+            // L2 = Σ_m w_m(x) · IFFT( |k|^(y_m−1) · FFT(ρ_total) ) → dpy.
+            // div_u holds ρ_total; div_ux is reused as the per-stratum scratch
+            // (the divergence cache is no longer needed this step).
+            self.dpy.fill(0.0);
+            for m in 0..m_count {
+                self.fft.forward_r2c_into(&self.div_u, &mut self.grad_k);
+                Zip::from(&mut self.grad_k)
+                    .and(&strata.nabla2[m])
+                    .par_for_each(|gk, &n| *gk *= n);
+                self.fft
+                    .inverse_c2r_into(&self.grad_k, &mut self.div_ux, &mut self.ux_k);
+                let mm = m as u32;
+                Zip::from(&mut self.dpy)
+                    .and(&self.div_ux)
+                    .and(&strata.bracket_lo)
+                    .and(&strata.weight_hi)
+                    .par_for_each(|acc, &v, &lo, &t| {
+                        let w = if lo == mm {
+                            1.0 - t
+                        } else if lo + 1 == mm {
+                            t
+                        } else {
+                            0.0
+                        };
+                        *acc += w * v;
+                    });
+            }
+        } else {
+            // ── Uniform path (single global exponent, k-Wave-equivalent).
+            //
+            // Step 1 (Opt-7 + Opt-12): build ρ₀·∇·u directly into dpx from div_u*
+            // cache. `update_density_cartesian` writes ∂u_α/∂α into
+            // `div_ux`/`div_uy`/`div_uz`; `apply_pressure_sources` zeros `dpx` but
+            // never touches the cache, so it is current here. dpx (Step 1 content)
+            // is consumed by the Step 3 FFT before the IFFT overwrites dpx with L1.
+            Zip::from(&mut self.dpx)
+                .and(&self.div_ux)
+                .and(&self.div_uy)
+                .and(&self.div_uz)
+                .and(&self.materials.rho0)
+                .par_for_each(|d, &x, &y, &z, &r0| {
+                    *d = r0 * (x + y + z);
+                });
+
+            // Step 3: L1 = IFFT( |k|^(y−2) · FFT(ρ₀·∇·u) ) → dpx (clobbered).
+            self.fft.forward_r2c_into(&self.dpx, &mut self.grad_k);
+            {
+                let n1 = abs.nabla1.slice(s![.., .., ..nz_c]);
+                Zip::from(&mut self.grad_k).and(&n1).par_for_each(|gk, &n| {
+                    *gk *= n; // n: f64; nabla1 is real-valued
+                });
+            }
+            self.fft
+                .inverse_c2r_into(&self.grad_k, &mut self.dpx, &mut self.ux_k);
+            // dpx now holds L1.
+
+            // Step 4: L2 = IFFT( |k|^(y−1) · FFT(ρ_total) ) → dpy (clobbered).
+            // div_u still holds ρ_total from the EOS step in update_pressure.
+            self.fft.forward_r2c_into(&self.div_u, &mut self.grad_k);
+            {
+                let n2 = abs.nabla2.slice(s![.., .., ..nz_c]);
+                Zip::from(&mut self.grad_k).and(&n2).par_for_each(|gk, &n| {
+                    *gk *= n; // n: f64; nabla2 is real-valued
+                });
+            }
+            self.fft
+                .inverse_c2r_into(&self.grad_k, &mut self.dpy, &mut self.ux_k);
+            // dpy now holds L2.
         }
-        self.fft
-            .inverse_c2r_into(&self.grad_k, &mut self.dpy, &mut self.ux_k);
-        // dpy now holds L2.
 
         // ── Step 5: p += c₀² · (τ · L1 − η · L2).
         Zip::from(&mut self.fields.p)

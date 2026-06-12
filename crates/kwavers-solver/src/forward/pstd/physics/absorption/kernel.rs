@@ -1,3 +1,4 @@
+use super::strata::ExponentStrata;
 use ndarray::Array3;
 
 /// Precomputed spectral absorption arrays for power-law fractional Laplacian.
@@ -19,4 +20,11 @@ pub(crate) struct AbsorptionKernel {
     /// `α(ω_c) [Np/m] = alpha_si · ω_c^y`.
     /// Used by `PSTDSolver::compute_acoustic_heat_source()` for thermal coupling.
     pub alpha_si: Array3<f64>,
+    /// Stratified spectral operators for a **spatially-varying** exponent y(x).
+    ///
+    /// `None` when y is uniform (the `nabla1`/`nabla2` single-symbol path is used,
+    /// matching k-Wave); `Some` when the medium carries per-voxel exponents (e.g.
+    /// a CT-derived tissue medium), in which case the apply path blends per-voxel
+    /// across exponent strata — beyond k-Wave's single global exponent.
+    pub strata: Option<ExponentStrata>,
 }

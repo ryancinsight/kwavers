@@ -466,6 +466,22 @@ The result drives PSTD/FDTD directly: the absorption operator reads the per-voxe
 bone and soft tissue attenuate with their own frequency dependence rather than a single global
 exponent. The medium is validated against the grid before return.
 
+**Beyond k-Wave — spatially-varying exponent.** The fractional-Laplacian absorption term
+(Treeby & Cox 2010) applies the spectral symbols $|k|^{y-2}$ and $|k|^{y-1}$, which depend on $y$;
+a single FFT-domain operator can therefore represent only one global exponent, and k-Wave (like
+the uniform path here) fixes one $y$ for the whole domain. kwavers adds a **stratified**
+operator: the distinct exponents present are represented as a small set of strata
+$y_0<\dots<y_{M-1}$ (capped at `MAX_STRATA`, an `MAX_STRATA`-point linspace for a continuum), each
+with its own spectral symbol, and every voxel is blended between its two bracketing strata by a
+partition-of-unity weight. This is *exact* wherever $y(x)$ equals a stratum exponent — every
+distinct tissue exponent — and bounds the error by the convexity of $s\mapsto|k|^s$ over one bin
+elsewhere. It engages only when $y(x)$ is genuinely non-uniform (lossless and single-exponent
+media keep the cheaper one-symbol path), shares one forward FFT across strata, and stores a
+compact per-voxel `(index, weight)` rather than $M$ masks — so a CT body model with both soft
+tissue ($y\approx1.1$) and bone ($y\approx1.0$) is resolved with each tissue's true power law. A
+differential test confirms the stratified result reproduces, per tissue region, the single-exponent
+operator built with that region's $y$ to FFT round-off.
+
 ### 4.5.6 Choosing a model
 
 - **Full forward simulation, tissue-varying (default)** → `CtMediumBuilder` (§4.5.5) — complete
