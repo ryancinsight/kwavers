@@ -27,6 +27,18 @@ claimed struct name) before implementing. Confirmed corrections below.
   method to it. Test: closed form, `T>1` into stiffer medium, `T=1+R`, lossless balance
   `R²+(Z_i/Z_t)T²=1`, matched-impedance `T=1`. (The skull/transducer siblings correctly use the
   *intensity* `4Z₁Z₂/(Z₁+Z₂)²` — left as-is, documented.)
+- ✅ **Wire apollo batched per-axis FFT into the viscoacoustic solver** — `[major]` (2026-06-12).
+  Resolved the integration block by backporting the per-axis FFT exposure onto the apollo version
+  kwavers pins (v0.12.24, 78044d3) — which already had the tiled (32×32) rayon-parallel
+  `axis_pass_complex` internally — via worktree branch `feat/expose-axis-fft-0.12` (pushed, commit
+  adf6fa4), avoiding the v0.14 mnemosyne/themis migration entirely. Repinned kwavers' apollo dep to
+  that rev (Cargo.toml + lock; same dep graph, clean update). Rewired `ViscoacousticMemorySolver`
+  spatial derivatives from `SpectralDerivativeOperator` (per-pencil 1-D loop, per-call alloc) to
+  `Fft3d::{forward,inverse}_axis_complex_inplace` (`forward_axis → ·ik → inverse_axis`) reusing one
+  owned complex scratch — **zero per-step heap allocation**, apollo's tiled/parallel batched path,
+  one axis transform per derivative (vs ~4× for a full 3-D FFT). All 6 viscoacoustic tests still pass
+  (the 1-D/2-D/3-D exact-complex-dispersion validation proves the new derivative is correct); clippy
+  clean. Book §4.8.4.
 - ✅ **Apollo native batched/tiled per-axis FFT (exposed) + viscoacoustic absorbing boundary** —
   `[major]` (2026-06-11). **(1) Apollo:** apollo-fft already had SOTA separable multi-D (32×32 tiled
   gather/scatter, Moirai-parallel pencils, hermes-SIMD, Stockham/Winograd/Good-Thomas/Rader dispatch)

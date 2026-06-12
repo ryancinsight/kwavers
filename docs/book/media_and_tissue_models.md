@@ -822,11 +822,13 @@ $$
 with $M_U = M_\infty + \sum_l \Delta M_l$ the unrelaxed modulus. Eliminating $\sigma_l$ in
 the frequency domain recovers $M(\omega)$ exactly, so the plane-wave absorption and phase
 velocity match `GeneralizedMaxwellModel` across the **entire band** — not just at a single
-frequency. The implementation uses pseudospectral spatial derivatives (the shared
-`SpectralDerivativeOperator`), a velocity–pressure leapfrog, and an **exact exponential
-integrator** for the stiff relaxation ODE (so $\Delta t$ is bounded only by the unrelaxed-speed
-CFL, never by the smallest $\tau_l$); all work buffers are preallocated (no per-step
-allocation). One canonical solver covers **1-D, 2-D, and 3-D** — a `(n,1,1)` grid is 1-D,
+frequency. The implementation uses pseudospectral spatial derivatives — apollo's **batched,
+cache-tiled, parallel** single-axis 3-D FFT (`forward_axis → ·ik → inverse_axis`), one axis
+transform per derivative rather than a full 3-D transform (~4× the work) — a velocity–pressure
+leapfrog, and an **exact exponential integrator** for the stiff relaxation ODE (so $\Delta t$ is
+bounded only by the unrelaxed-speed CFL, never by the smallest $\tau_l$); all work buffers
+(including one complex FFT scratch) are preallocated, so a step makes no heap allocation. One
+canonical solver covers **1-D, 2-D, and 3-D** — a `(n,1,1)` grid is 1-D,
 `(n_x,n_y,1)` is 2-D, full `(n_x,n_y,n_z)` is 3-D — since the spectral derivative along a
 singleton axis vanishes, so the lower-dimensional cases reduce exactly. Validation solves the
 exact complex dispersion $\rho\omega^2 = M(\omega)|\mathbf k|^2$ by Newton iteration and confirms

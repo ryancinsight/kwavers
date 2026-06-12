@@ -5,10 +5,12 @@
 //! derivative along a singleton axis is identically zero, so the lower-D cases
 //! reduce exactly with no special-casing.
 
-use crate::forward::pstd::SpectralDerivativeOperator;
+use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_math::fft::{get_fft_for_grid, Complex64, Fft3d};
 use kwavers_medium::viscoelastic::GeneralizedMaxwellModel;
-use ndarray::{Array3, Zip};
+use ndarray::{Array3, Axis, Zip};
+use std::sync::Arc;
 
 /// One relaxation arm with its precomputed exponential-integrator coefficients.
 #[derive(Debug, Clone, Copy)]
@@ -40,7 +42,14 @@ pub struct ViscoacousticMemorySolver {
     /// Equilibrium (relaxed) modulus `M_∞` \[Pa] — sets the potential-energy norm.
     m_inf: f64,
     arms: Vec<Arm>,
-    deriv: SpectralDerivativeOperator,
+
+    // Spectral derivative: apollo's batched, cache-tiled, parallel per-axis 3-D
+    // FFT (forward_axis → ·ik → inverse_axis) reusing one complex scratch.
+    fft: Arc<Fft3d>,
+    kx: Vec<f64>,
+    ky: Vec<f64>,
+    kz: Vec<f64>,
+    cbuf: Array3<Complex64>,
 
     // State.
     p: Array3<f64>,
@@ -140,7 +149,11 @@ impl ViscoacousticMemorySolver {
             m_u,
             m_inf,
             arms: built.clone(),
-            deriv: SpectralDerivativeOperator::new(nx, ny, nz, dx, dy, dz),
+            fft: get_fft_for_grid(nx, ny, nz),
+            kx: fft_wavenumbers(nx, dx),
+            ky: fft_wavenumbers(ny, dy),
+            kz: fft_wavenumbers(nz, dz),
+            cbuf: Array3::from_elem(shape, Complex64::new(0.0, 0.0)),
             p: Array3::zeros(shape),
             vx: Array3::zeros(shape),
             vy: Array3::zeros(shape),
@@ -284,35 +297,44 @@ impl ViscoacousticMemorySolver {
         (pe + ke) * self.cell_volume
     }
 
+    /// Spectral derivative `∂field/∂xₐ → out` via apollo's batched tiled per-axis
+    /// 3-D FFT: forward along `axis`, multiply by `i·k`, inverse along `axis`.
+    /// Reuses the owned complex scratch `cbuf` (no allocation).
+    fn axis_derivative(
+        fft: &Fft3d,
+        k: &[f64],
+        axis: usize,
+        field: &Array3<f64>,
+        cbuf: &mut Array3<Complex64>,
+        out: &mut Array3<f64>,
+    ) {
+        Zip::from(&mut *cbuf)
+            .and(field)
+            .for_each(|c, &f| *c = Complex64::new(f, 0.0));
+        fft.forward_axis_complex_inplace(cbuf, axis);
+        for (m, mut lane) in cbuf.axis_iter_mut(Axis(axis)).enumerate() {
+            let factor = Complex64::new(0.0, k[m]);
+            lane.mapv_inplace(|v| v * factor);
+        }
+        fft.inverse_axis_complex_inplace(cbuf, axis);
+        Zip::from(&mut *out).and(&*cbuf).for_each(|o, c| *o = c.re);
+    }
+
     /// Advance the state by one time step `Δt`.
     pub fn step(&mut self) {
-        const INV: &str = "invariant: solver buffers are grid-shaped by construction";
-
         // 1. Velocity half-step: v += -(Δt/ρ) ∇p (per component).
         let cv = -self.dt / self.rho;
-        self.deriv
-            .derivative_x_into(&self.p.view(), &mut self.gx)
-            .expect(INV);
-        self.deriv
-            .derivative_y_into(&self.p.view(), &mut self.gy)
-            .expect(INV);
-        self.deriv
-            .derivative_z_into(&self.p.view(), &mut self.gz)
-            .expect(INV);
+        Self::axis_derivative(&self.fft, &self.kx, 0, &self.p, &mut self.cbuf, &mut self.gx);
+        Self::axis_derivative(&self.fft, &self.ky, 1, &self.p, &mut self.cbuf, &mut self.gy);
+        Self::axis_derivative(&self.fft, &self.kz, 2, &self.p, &mut self.cbuf, &mut self.gz);
         Zip::from(&mut self.vx).and(&self.gx).for_each(|v, &g| *v += cv * g);
         Zip::from(&mut self.vy).and(&self.gy).for_each(|v, &g| *v += cv * g);
         Zip::from(&mut self.vz).and(&self.gz).for_each(|v, &g| *v += cv * g);
 
         // 2. Dilatation rate D = ∇·v (accumulated into gx).
-        self.deriv
-            .derivative_x_into(&self.vx.view(), &mut self.gx)
-            .expect(INV);
-        self.deriv
-            .derivative_y_into(&self.vy.view(), &mut self.gy)
-            .expect(INV);
-        self.deriv
-            .derivative_z_into(&self.vz.view(), &mut self.gz)
-            .expect(INV);
+        Self::axis_derivative(&self.fft, &self.kx, 0, &self.vx, &mut self.cbuf, &mut self.gx);
+        Self::axis_derivative(&self.fft, &self.ky, 1, &self.vy, &mut self.cbuf, &mut self.gy);
+        Self::axis_derivative(&self.fft, &self.kz, 2, &self.vz, &mut self.cbuf, &mut self.gz);
         Zip::from(&mut self.gx)
             .and(&self.gy)
             .and(&self.gz)
@@ -349,4 +371,17 @@ impl ViscoacousticMemorySolver {
             Zip::from(&mut self.vz).and(decay).for_each(|v, &d| *v *= d);
         }
     }
+}
+
+/// FFT-order signed wavenumbers `k[m] = 2π m'/(n·Δx)` with `m' = m` for `m < n/2`
+/// and `m' = m − n` otherwise. For `n = 1` this is `[0]` (derivative along a
+/// singleton axis is zero).
+fn fft_wavenumbers(n: usize, dx: f64) -> Vec<f64> {
+    let norm = TWO_PI / (n as f64 * dx);
+    (0..n)
+        .map(|m| {
+            let signed = if m < n / 2 { m as f64 } else { m as f64 - n as f64 };
+            signed * norm
+        })
+        .collect()
 }

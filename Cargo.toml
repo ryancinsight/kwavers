@@ -11,8 +11,8 @@ resolver = "2"
 ritk-core = { git = "https://github.com/ryancinsight/ritk" }
 ritk-io = { git = "https://github.com/ryancinsight/ritk" }
 ritk-registration = { git = "https://github.com/ryancinsight/ritk" }
-apollo = { git = "https://github.com/ryancinsight/apollo", package = "apollo-fft" }
-apollofft-wgpu = { git = "https://github.com/ryancinsight/apollo", package = "apollo-fft-wgpu" }
+apollo = { git = "https://github.com/ryancinsight/apollo", rev = "adf6fa43e76f72b2c3bd8c2e331f1be3657a8259", package = "apollo-fft" }
+apollofft-wgpu = { git = "https://github.com/ryancinsight/apollo", rev = "adf6fa43e76f72b2c3bd8c2e331f1be3657a8259", package = "apollo-fft-wgpu" }
 burn = { version = "0.19", features = ["wgpu", "autodiff"] }
 burn-ndarray = "0.19"
 pyo3 = { version = "0.22", features = ["extension-module", "abi3-py39"] }

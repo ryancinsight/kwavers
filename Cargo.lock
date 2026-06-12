@@ -156,7 +156,7 @@ checksum = "a23eb6b1614318a8071c9b2521f36b424b2c83db5eb3a0fead4a6c0809af6e61"
 [[package]]
 name = "apollo-fft"
 version = "0.12.24"
-source = "git+https://github.com/ryancinsight/apollo#78044d3bf6e400afb3b9b1d6ab0f7ed370079017"
+source = "git+https://github.com/ryancinsight/apollo?rev=adf6fa43e76f72b2c3bd8c2e331f1be3657a8259#adf6fa43e76f72b2c3bd8c2e331f1be3657a8259"
 dependencies = [
  "apollo-fft-macros",
  "half",
@@ -177,7 +177,7 @@ dependencies = [
 [[package]]
 name = "apollo-fft-macros"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/apollo#78044d3bf6e400afb3b9b1d6ab0f7ed370079017"
+source = "git+https://github.com/ryancinsight/apollo?rev=adf6fa43e76f72b2c3bd8c2e331f1be3657a8259#adf6fa43e76f72b2c3bd8c2e331f1be3657a8259"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -187,7 +187,7 @@ dependencies = [
 [[package]]
 name = "apollo-fft-wgpu"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/apollo#78044d3bf6e400afb3b9b1d6ab0f7ed370079017"
+source = "git+https://github.com/ryancinsight/apollo?rev=adf6fa43e76f72b2c3bd8c2e331f1be3657a8259#adf6fa43e76f72b2c3bd8c2e331f1be3657a8259"
 dependencies = [
  "apollo-fft",
  "bytemuck",
@@ -1444,7 +1444,7 @@ checksum = "fe6d2e5af09e8c8ad56c969f2157a3d4238cebc7c55f0a517728c38f7b200f81"
 dependencies = [
  "serde",
  "termcolor",
- "unicode-width 0.2.0",
+ "unicode-width 0.1.14",
 ]
 
 [[package]]
@@ -2620,7 +2620,7 @@ dependencies = [
  "libc",
  "option-ext",
  "redox_users",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -2972,7 +2972,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -4170,7 +4170,7 @@ dependencies = [
  "libc",
  "percent-encoding",
  "pin-project-lite",
- "socket2 0.6.1",
+ "socket2 0.5.10",
  "tokio",
  "tower-service",
  "tracing",
@@ -4481,7 +4481,7 @@ checksum = "3640c1c38b8e4e43584d8df18be5fc6b0aa314ce6ebf51b53313d4306cca8e46"
 dependencies = [
  "hermit-abi 0.5.2",
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -6001,7 +6001,7 @@ version = "0.50.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7957b9740744892f114936ab4a57b3f487491bbeafaf8083688b16841a4240e5"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -6145,7 +6145,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7aac2e6a6e4468ffa092ad43c39b81c79196c2bb773b8db4085f695efe3bba17"
 dependencies = [
  "libc",
- "ndarray 0.16.1",
+ "ndarray 0.15.6",
  "num-complex",
  "num-integer",
  "num-traits",
@@ -6994,7 +6994,7 @@ dependencies = [
  "quinn-udp",
  "rustc-hash 2.1.1",
  "rustls",
- "socket2 0.6.1",
+ "socket2 0.5.10",
  "thiserror 2.0.17",
  "tokio",
  "tracing",
@@ -7031,9 +7031,9 @@ dependencies = [
  "cfg_aliases",
  "libc",
  "once_cell",
- "socket2 0.6.1",
+ "socket2 0.5.10",
  "tracing",
- "windows-sys 0.60.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -7869,7 +7869,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys 0.11.0",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -8754,7 +8754,7 @@ dependencies = [
  "getrandom 0.3.4",
  "once_cell",
  "rustix 1.1.2",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -8773,7 +8773,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "230a1b821ccbd75b185820a1f1ff7b14d21da1e442e22c0863ea5f08771a8874"
 dependencies = [
  "rustix 1.1.2",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -9983,7 +9983,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.48.0",
 ]
 
 [[package]]
