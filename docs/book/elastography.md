@@ -1216,9 +1216,13 @@ Implemented since first draft (formerly theory-only):
     first-order acousto-elastic pre-stress inversion — analytical::elastography::estimate_prestress
     (ADR 014). Remaining: the small-on-large acousto-elastic tensor + time-domain 3rd-order PDE.
   • bootstrap confidence intervals (§11.12) — estimation_bounds::bootstrap_ci_mean.
-  • METAVIR liver-fibrosis staging classifier (§11.11) — signal_processing::tissue_staging.
+  • METAVIR liver-fibrosis staging classifier (§11.11.1) — signal_processing::tissue_staging.
+  • prostate / thyroid / breast SWE classifiers (§11.11.2–4) — signal_processing::tissue_staging
+    (`classify_prostate` μ, `classify_thyroid`/`classify_breast` E≈3μ; ordered cut-offs taken from
+    the published reference-range onsets, conservative overlap resolution, ±15 % protocol caveat and
+    the documented breast soft-malignancy (mucinous/medullary) exception).
 Theory only — covered in this chapter but NOT yet implemented as kwavers kernels:
-  • prostate / thyroid / breast staging classifiers (§11.11) remain reference tables.
+  • none remaining in §11.11 (all four organ classifiers implemented).
 ```
 
 ### 11.13.2 Data Flow

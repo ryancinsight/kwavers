@@ -117,6 +117,129 @@ pub fn classify_liver_roi(shear_modulus_kpa: &[f64]) -> Option<RoiFibrosisStagin
     })
 }
 
+// ─── Other-organ SWE classification (§11.11.2–4) ────────────────────────────
+//
+// Unlike METAVIR liver staging, these organ tables (§11.11.2–4) are reference
+// *ranges* with overlap, not independently-validated cut-offs. The classifiers
+// below use the published **category-onset boundaries** (lower bound of each
+// successively stiffer category) as ordered cut-offs, so a value is assigned the
+// most-advanced category whose range it has entered — a conservative,
+// screening-oriented reading. The same ±15 % protocol/manufacturer sensitivity
+// (§11.11.1) applies, plus the organ-specific caveats noted on each function.
+//
+// Young's vs shear modulus: liver/prostate tables report the shear modulus `μ`,
+// thyroid/breast report Young's modulus `E ≈ 3μ` (incompressible tissue,
+// `E = 2μ(1+ν)`, `ν ≈ 0.5`); [`youngs_from_shear`] converts.
+
+/// Young's modulus `E ≈ 3μ` \[same units] for nearly-incompressible tissue
+/// (`E = 2μ(1+ν)`, `ν ≈ 0.5`). SWE devices report one or the other.
+#[must_use]
+pub fn youngs_from_shear(shear_modulus: f64) -> f64 {
+    3.0 * shear_modulus
+}
+
+/// Prostate peripheral-zone SWE category (§11.11.2, Table 10.5), ordered by
+/// increasing stiffness / Gleason correlation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum ProstateCategory {
+    /// Benign peripheral-zone tissue.
+    Benign,
+    /// Prostatitis (inflammatory stiffening).
+    Prostatitis,
+    /// Low-grade prostate cancer (Gleason 6).
+    LowGradePca,
+    /// High-grade prostate cancer (Gleason 7–10).
+    HighGradePca,
+}
+
+/// Prostate shear-modulus `μ` \[kPa] category-onset cut-offs (Table 10.5 lower
+/// bounds: prostatitis 5, low-grade PCa 8, high-grade PCa 20).
+pub const PROSTATE_SHEAR_MODULUS_CUTOFFS_KPA: [f64; 3] = [5.0, 8.0, 20.0];
+
+/// Classify prostate SWE from shear modulus `μ` \[kPa] (§11.11.2). Confounded by
+/// zonal anatomy (stiffer transition zone), capsule artefacts, and BPH; for the
+/// peripheral zone. `μ ≤ 0`/non-finite → `Benign`.
+#[must_use]
+pub fn classify_prostate(shear_modulus_kpa: f64) -> ProstateCategory {
+    let c = &PROSTATE_SHEAR_MODULUS_CUTOFFS_KPA;
+    if !(shear_modulus_kpa.is_finite() && shear_modulus_kpa >= c[0]) {
+        ProstateCategory::Benign
+    } else if shear_modulus_kpa < c[1] {
+        ProstateCategory::Prostatitis
+    } else if shear_modulus_kpa < c[2] {
+        ProstateCategory::LowGradePca
+    } else {
+        ProstateCategory::HighGradePca
+    }
+}
+
+/// Thyroid-nodule malignancy risk from SWE (§11.11.3, Table 10.6), ordered.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum ThyroidMalignancyRisk {
+    /// Benign colloid nodule.
+    Low,
+    /// Follicular adenoma (low–intermediate).
+    LowIntermediate,
+    /// Papillary carcinoma.
+    High,
+    /// Anaplastic carcinoma.
+    VeryHigh,
+}
+
+/// Thyroid Young's-modulus `E` \[kPa] category-onset cut-offs (Table 10.6 lower
+/// bounds: follicular adenoma 15, papillary carcinoma 40, anaplastic 200).
+pub const THYROID_YOUNGS_MODULUS_CUTOFFS_KPA: [f64; 3] = [15.0, 40.0, 200.0];
+
+/// Classify thyroid-nodule malignancy risk from Young's modulus `E` \[kPa]
+/// (§11.11.3). `E ≤ 0`/non-finite → `Low`.
+#[must_use]
+pub fn classify_thyroid(youngs_modulus_kpa: f64) -> ThyroidMalignancyRisk {
+    let c = &THYROID_YOUNGS_MODULUS_CUTOFFS_KPA;
+    if !(youngs_modulus_kpa.is_finite() && youngs_modulus_kpa >= c[0]) {
+        ThyroidMalignancyRisk::Low
+    } else if youngs_modulus_kpa < c[1] {
+        ThyroidMalignancyRisk::LowIntermediate
+    } else if youngs_modulus_kpa < c[2] {
+        ThyroidMalignancyRisk::High
+    } else {
+        ThyroidMalignancyRisk::VeryHigh
+    }
+}
+
+/// Breast-lesion BI-RADS upgrade likelihood from SWE (§11.11.4, Table 10.7).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum BiradsUpgradeLikelihood {
+    /// Minimal upgrade likelihood (cyst / fibroadenoma stiffness range).
+    Minimal,
+    /// Moderate upgrade likelihood (DCIS / soft-malignancy range).
+    Moderate,
+    /// High upgrade likelihood (invasive ductal carcinoma range).
+    High,
+}
+
+/// Breast maximum Young's-modulus `E_max` \[kPa] category-onset cut-offs
+/// (Table 10.7: DCIS-onset 30, IDC-onset 60).
+pub const BREAST_YOUNGS_MAX_CUTOFFS_KPA: [f64; 2] = [30.0, 60.0];
+
+/// Classify breast-lesion BI-RADS upgrade likelihood from `E_max` \[kPa]
+/// (§11.11.4).
+///
+/// **Caveat:** mucinous and medullary carcinomas present as *soft* on SWE
+/// (`E_max` as low as 15 kPa) and must **not** be down-classified on stiffness
+/// alone — a `Minimal`/`Moderate` result does not exclude these. `E ≤ 0`/non-finite
+/// → `Minimal`.
+#[must_use]
+pub fn classify_breast(youngs_max_kpa: f64) -> BiradsUpgradeLikelihood {
+    let c = &BREAST_YOUNGS_MAX_CUTOFFS_KPA;
+    if !(youngs_max_kpa.is_finite() && youngs_max_kpa >= c[0]) {
+        BiradsUpgradeLikelihood::Minimal
+    } else if youngs_max_kpa < c[1] {
+        BiradsUpgradeLikelihood::Moderate
+    } else {
+        BiradsUpgradeLikelihood::High
+    }
+}
+
 /// The `q`-quantile (`q ∈ [0, 1]`) of `sorted` (ascending) by linear
 /// interpolation between order statistics.
 #[inline]
@@ -206,5 +329,75 @@ mod tests {
         assert_eq!(cleaned.stage, FibrosisStage::F2);
         assert!(classify_liver_roi(&[f64::NAN, -1.0]).is_none());
         assert!(classify_liver_roi(&[]).is_none());
+    }
+
+    /// Prostate: each category selected by a representative `μ`; half-open
+    /// `[onset, next)` boundaries; monotone with stiffness; non-physical → Benign.
+    #[test]
+    fn classifies_prostate_categories() {
+        assert_eq!(classify_prostate(3.0), ProstateCategory::Benign); // 1.5–5
+        assert_eq!(classify_prostate(6.0), ProstateCategory::Prostatitis); // 5–8
+        assert_eq!(classify_prostate(12.0), ProstateCategory::LowGradePca); // 8–20
+        assert_eq!(classify_prostate(40.0), ProstateCategory::HighGradePca); // ≥20
+        // Onsets round up to the stiffer category.
+        assert_eq!(classify_prostate(5.0), ProstateCategory::Prostatitis);
+        assert_eq!(classify_prostate(5.0 - 1e-9), ProstateCategory::Benign);
+        assert_eq!(classify_prostate(20.0), ProstateCategory::HighGradePca);
+        assert_eq!(classify_prostate(20.0 - 1e-9), ProstateCategory::LowGradePca);
+        assert_eq!(classify_prostate(-1.0), ProstateCategory::Benign);
+        assert_eq!(classify_prostate(f64::NAN), ProstateCategory::Benign);
+        // Monotone.
+        let mu = [3.0, 6.0, 12.0, 40.0];
+        for w in mu.windows(2) {
+            assert!(classify_prostate(w[0]) < classify_prostate(w[1]));
+        }
+    }
+
+    /// Thyroid: malignancy risk rises with Young's modulus `E`; the `E ≈ 3μ`
+    /// conversion places a μ-measured nodule on the correct `E` cut-off.
+    #[test]
+    fn classifies_thyroid_risk() {
+        assert_eq!(classify_thyroid(10.0), ThyroidMalignancyRisk::Low); // colloid <15
+        assert_eq!(classify_thyroid(25.0), ThyroidMalignancyRisk::LowIntermediate); // adenoma 15–40
+        assert_eq!(classify_thyroid(80.0), ThyroidMalignancyRisk::High); // papillary 40–200
+        assert_eq!(classify_thyroid(250.0), ThyroidMalignancyRisk::VeryHigh); // anaplastic ≥200
+        assert_eq!(classify_thyroid(40.0), ThyroidMalignancyRisk::High);
+        assert_eq!(classify_thyroid(40.0 - 1e-9), ThyroidMalignancyRisk::LowIntermediate);
+        assert_eq!(classify_thyroid(0.0), ThyroidMalignancyRisk::Low);
+        // E = 3μ: μ = 20 kPa ⇒ E = 60 kPa ⇒ High (papillary band).
+        assert_eq!(
+            classify_thyroid(youngs_from_shear(20.0)),
+            ThyroidMalignancyRisk::High
+        );
+        let e = [10.0, 25.0, 80.0, 250.0];
+        for w in e.windows(2) {
+            assert!(classify_thyroid(w[0]) < classify_thyroid(w[1]));
+        }
+    }
+
+    /// Breast: BI-RADS upgrade likelihood from `E_max`; soft-malignancy caveat
+    /// means a low value is `Minimal`/`Moderate` (does not exclude mucinous).
+    #[test]
+    fn classifies_breast_upgrade_likelihood() {
+        assert_eq!(classify_breast(15.0), BiradsUpgradeLikelihood::Minimal); // cyst/fibroadenoma <30
+        assert_eq!(classify_breast(45.0), BiradsUpgradeLikelihood::Moderate); // DCIS 30–60
+        assert_eq!(classify_breast(120.0), BiradsUpgradeLikelihood::High); // IDC ≥60
+        assert_eq!(classify_breast(30.0), BiradsUpgradeLikelihood::Moderate);
+        assert_eq!(classify_breast(30.0 - 1e-9), BiradsUpgradeLikelihood::Minimal);
+        assert_eq!(classify_breast(60.0), BiradsUpgradeLikelihood::High);
+        assert_eq!(classify_breast(-1.0), BiradsUpgradeLikelihood::Minimal);
+        // Soft mucinous carcinoma (E_max = 15 kPa) reads Minimal by stiffness —
+        // documented exception, not a contradiction.
+        assert_eq!(classify_breast(15.0), BiradsUpgradeLikelihood::Minimal);
+        let e = [15.0, 45.0, 120.0];
+        for w in e.windows(2) {
+            assert!(classify_breast(w[0]) < classify_breast(w[1]));
+        }
+    }
+
+    /// `E ≈ 3μ` for incompressible tissue.
+    #[test]
+    fn youngs_modulus_is_triple_shear() {
+        assert!((youngs_from_shear(10.0) - 30.0).abs() < 1e-12);
     }
 }
