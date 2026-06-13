@@ -75,29 +75,37 @@ pub fn classify_liver_fibrosis_from_speed(shear_speed_m_s: f64, density_kg_m3: f
     classify_liver_fibrosis(mu_kpa)
 }
 
-/// Region-of-interest fibrosis staging (Algorithm 11.5): the stage of the ROI
-/// **median** modulus, plus a **heterogeneity flag**.
+/// Region-of-interest SWE staging (Algorithm 11.5 steps 2, 4, 6): the organ
+/// `category` of the ROI **median** modulus, the ROI median and IQR, and a
+/// **heterogeneity flag**. Generic over the organ category `C` produced by the
+/// point classifier ([`FibrosisStage`], [`ProstateCategory`],
+/// [`ThyroidMalignancyRisk`], [`BiradsUpgradeLikelihood`]).
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct RoiFibrosisStaging {
-    /// Stage assigned from the ROI median modulus.
-    pub stage: FibrosisStage,
-    /// ROI median shear modulus \[kPa].
+pub struct RoiStaging<C> {
+    /// Category assigned from the ROI median modulus.
+    pub category: C,
+    /// ROI median modulus \[kPa].
     pub median_kpa: f64,
     /// ROI inter-quartile range of the modulus \[kPa].
     pub iqr_kpa: f64,
     /// `true` when `IQR > 0.3·median` — the ROI is heterogeneous and the single
-    /// stage label should be treated with caution (Algorithm 11.5 step 6).
+    /// label should be treated with caution (Algorithm 11.5 step 6).
     pub heterogeneous: bool,
 }
 
-/// Stage a liver ROI from its shear-modulus samples \[kPa] (Algorithm 11.5):
-/// classify the median and flag heterogeneity (`IQR > 0.3·median`).
+/// Stage an ROI from its modulus samples \[kPa] (Algorithm 11.5): classify the
+/// **median** with the organ point classifier `classify` and flag heterogeneity
+/// (`IQR > 0.3·median`). The single ROI-statistics implementation for every
+/// organ — the organ varies only through `classify` and the modulus convention
+/// (`μ` for liver/prostate, `E` for thyroid/breast).
 ///
 /// Non-finite/non-positive samples are dropped. Returns `None` if no valid
 /// sample remains.
-#[must_use]
-pub fn classify_liver_roi(shear_modulus_kpa: &[f64]) -> Option<RoiFibrosisStaging> {
-    let mut vals: Vec<f64> = shear_modulus_kpa
+pub fn classify_roi<C>(
+    samples_kpa: &[f64],
+    classify: impl Fn(f64) -> C,
+) -> Option<RoiStaging<C>> {
+    let mut vals: Vec<f64> = samples_kpa
         .iter()
         .copied()
         .filter(|v| v.is_finite() && *v > 0.0)
@@ -109,12 +117,40 @@ pub fn classify_liver_roi(shear_modulus_kpa: &[f64]) -> Option<RoiFibrosisStagin
 
     let median = quantile_sorted(&vals, 0.5);
     let iqr = quantile_sorted(&vals, 0.75) - quantile_sorted(&vals, 0.25);
-    Some(RoiFibrosisStaging {
-        stage: classify_liver_fibrosis(median),
+    Some(RoiStaging {
+        category: classify(median),
         median_kpa: median,
         iqr_kpa: iqr,
         heterogeneous: iqr > 0.3 * median,
     })
+}
+
+/// Liver-fibrosis ROI staging (Algorithm 11.5): METAVIR stage of the ROI median
+/// shear modulus `μ` \[kPa] plus the heterogeneity flag.
+#[must_use]
+pub fn classify_liver_roi(shear_modulus_kpa: &[f64]) -> Option<RoiStaging<FibrosisStage>> {
+    classify_roi(shear_modulus_kpa, classify_liver_fibrosis)
+}
+
+/// Prostate ROI staging (§11.11.2) from shear-modulus `μ` \[kPa] samples.
+#[must_use]
+pub fn classify_prostate_roi(shear_modulus_kpa: &[f64]) -> Option<RoiStaging<ProstateCategory>> {
+    classify_roi(shear_modulus_kpa, classify_prostate)
+}
+
+/// Thyroid ROI staging (§11.11.3) from Young's-modulus `E` \[kPa] samples.
+#[must_use]
+pub fn classify_thyroid_roi(
+    youngs_modulus_kpa: &[f64],
+) -> Option<RoiStaging<ThyroidMalignancyRisk>> {
+    classify_roi(youngs_modulus_kpa, classify_thyroid)
+}
+
+/// Breast ROI staging (§11.11.4) from `E_max` \[kPa] samples. The
+/// soft-malignancy caveat on [`classify_breast`] applies to the median category.
+#[must_use]
+pub fn classify_breast_roi(youngs_max_kpa: &[f64]) -> Option<RoiStaging<BiradsUpgradeLikelihood>> {
+    classify_roi(youngs_max_kpa, classify_breast)
 }
 
 // ─── Other-organ SWE classification (§11.11.2–4) ────────────────────────────
@@ -315,7 +351,7 @@ mod tests {
         // Homogeneous F2 ROI (tight spread around ~3.5 kPa).
         let homo = [3.3, 3.4, 3.5, 3.6, 3.7];
         let r = classify_liver_roi(&homo).expect("roi");
-        assert_eq!(r.stage, FibrosisStage::F2);
+        assert_eq!(r.category, FibrosisStage::F2);
         assert!((r.median_kpa - 3.5).abs() < 1e-9);
         assert!(!r.heterogeneous, "tight ROI must not be flagged");
 
@@ -326,9 +362,40 @@ mod tests {
 
         // Drops invalid samples; empty after filtering → None.
         let cleaned = classify_liver_roi(&[f64::NAN, -1.0, 4.0]).expect("roi");
-        assert_eq!(cleaned.stage, FibrosisStage::F2);
+        assert_eq!(cleaned.category, FibrosisStage::F2);
         assert!(classify_liver_roi(&[f64::NAN, -1.0]).is_none());
         assert!(classify_liver_roi(&[]).is_none());
+    }
+
+    /// The generic ROI core classifies the median for every organ and shares the
+    /// median/IQR/heterogeneity logic (Algorithm 11.5 steps 2, 4, 6).
+    #[test]
+    fn roi_staging_generalizes_to_all_organs() {
+        // Prostate μ ROI: median 12 kPa ⇒ LowGradePca; tight ⇒ homogeneous.
+        let p = classify_prostate_roi(&[11.0, 11.5, 12.0, 12.5, 13.0]).expect("roi");
+        assert_eq!(p.category, ProstateCategory::LowGradePca);
+        assert!((p.median_kpa - 12.0).abs() < 1e-9);
+        assert!(!p.heterogeneous);
+
+        // Thyroid E ROI: median 80 kPa ⇒ High (papillary band).
+        let t = classify_thyroid_roi(&[70.0, 75.0, 80.0, 85.0, 90.0]).expect("roi");
+        assert_eq!(t.category, ThyroidMalignancyRisk::High);
+        assert!((t.median_kpa - 80.0).abs() < 1e-9);
+
+        // Breast E_max ROI: wide spread ⇒ heterogeneous; median 60 ⇒ High.
+        let b = classify_breast_roi(&[20.0, 40.0, 60.0, 120.0, 200.0]).expect("roi");
+        assert_eq!(b.category, BiradsUpgradeLikelihood::High);
+        assert!(b.heterogeneous, "wide ROI must be flagged: iqr={}", b.iqr_kpa);
+
+        // Invalid-sample drop + empty → None hold for every organ wrapper.
+        assert_eq!(
+            classify_prostate_roi(&[f64::NAN, -1.0, 6.0])
+                .expect("roi")
+                .category,
+            ProstateCategory::Prostatitis
+        );
+        assert!(classify_thyroid_roi(&[]).is_none());
+        assert!(classify_breast_roi(&[f64::NAN, -2.0]).is_none());
     }
 
     /// Prostate: each category selected by a representative `μ`; half-open

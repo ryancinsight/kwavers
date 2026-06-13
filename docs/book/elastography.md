@@ -1105,15 +1105,20 @@ OUTPUT: Per-ROI classification with confidence
 7.  Flag if ROI depth > 7 cm (SNR degradation risk) or ROI size < 2·λ_S (resolution limit).
 ```
 
-Implementation: the **METAVIR liver-fibrosis classifier** of this algorithm is
-`kwavers_analysis::signal_processing::tissue_staging` — `classify_liver_fibrosis(μ_kPa)` and
-`classify_liver_fibrosis_from_speed(c_S, ρ)` map a shear modulus / shear-wave speed to a
-`FibrosisStage ∈ {F0…F4}` via the validated cut-offs (`METAVIR_SHEAR_MODULUS_CUTOFFS_KPA = [1.7, 2.9,
-4.8, 9.0]`, half-open intervals), and `classify_liver_roi(samples)` implements Algorithm 11.5's
-ROI logic (median stage + heterogeneity flag when `IQR > 0.3·median`). Value-semantic tests cover
-every stage, the boundary convention, the speed→μ path, and the heterogeneity flag. (The other-organ
-tables — prostate, thyroid, breast — remain reference data; the unrelated `kwavers_analysis::ml::models`
-classifier is a generic ML utility.)
+Implementation: all four organ classifiers live in
+`kwavers_analysis::signal_processing::tissue_staging`. The **METAVIR liver** classifier is
+`classify_liver_fibrosis(μ_kPa)` / `classify_liver_fibrosis_from_speed(c_S, ρ)`, mapping a shear
+modulus / shear-wave speed to a `FibrosisStage ∈ {F0…F4}` via the validated cut-offs
+(`METAVIR_SHEAR_MODULUS_CUTOFFS_KPA = [1.7, 2.9, 4.8, 9.0]`, half-open intervals). The other organs
+(§11.11.2–4) are `classify_prostate(μ_kPa) → ProstateCategory`,
+`classify_thyroid(E_kPa) → ThyroidMalignancyRisk`, and `classify_breast(E_max_kPa) →
+BiradsUpgradeLikelihood`, with `youngs_from_shear(μ) = 3μ` bridging the `μ`-reported and `E`-reported
+tables. Algorithm 11.5's ROI logic (steps 2, 4, 6 — median category + heterogeneity flag when
+`IQR > 0.3·median`) is the single generic `classify_roi(samples, classify) → RoiStaging<C>`, exposed
+per organ as `classify_{liver,prostate,thyroid,breast}_roi`. Value-semantic tests cover every
+category, the half-open boundaries, monotonicity, the speed/`E`-conversion paths, and the
+heterogeneity flag across organs. (The unrelated `kwavers_analysis::ml::models` classifier is a
+generic ML utility.)
 
 ---
 
