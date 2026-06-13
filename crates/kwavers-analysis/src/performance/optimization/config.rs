@@ -1,47 +1,5 @@
 //! Optimization configuration
 
-/// Performance optimization configuration
-#[derive(Debug, Clone)]
-pub struct HardwareOptimizationConfig {
-    /// Enable SIMD vectorization
-    pub enable_simd: bool,
-    /// SIMD instruction set to use
-    pub simd_level: PerfOptSimdLevel,
-    /// Enable cache blocking
-    pub cache_blocking: bool,
-    /// Cache block size (in elements)
-    pub cache_block_size: usize,
-    /// Enable memory prefetching
-    pub prefetching: bool,
-    /// Prefetch distance (in cache lines)
-    pub prefetch_distance: usize,
-    /// Enable kernel fusion on GPU
-    pub kernel_fusion: bool,
-    /// Enable asynchronous execution
-    pub async_execution: bool,
-    /// Number of GPU streams
-    pub gpu_streams: usize,
-    /// Enable multi-GPU
-    pub multi_gpu: bool,
-}
-
-impl Default for HardwareOptimizationConfig {
-    fn default() -> Self {
-        Self {
-            enable_simd: true,
-            simd_level: PerfOptSimdLevel::detect_best(),
-            cache_blocking: true,
-            cache_block_size: 64, // Typical L1 cache line
-            prefetching: true,
-            prefetch_distance: 8,
-            kernel_fusion: true,
-            async_execution: true,
-            gpu_streams: 4,
-            multi_gpu: true,
-        }
-    }
-}
-
 /// SIMD instruction set level
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum PerfOptSimdLevel {

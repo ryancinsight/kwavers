@@ -2,19 +2,15 @@
 
 pub mod cache;
 pub mod config;
-pub mod gpu;
 pub mod memory;
 pub mod parallel;
 pub mod simd;
 
 pub use cache::{AccessPattern, CacheOptimizer};
-pub use config::{HardwareOptimizationConfig, PerfOptSimdLevel};
-pub use gpu::GpuOptimizer;
+pub use config::PerfOptSimdLevel;
 pub use memory::{BandwidthOptimizer, MemoryOptimizer, PrefetchStrategy};
 pub use parallel::ParallelOptimizer;
 pub use simd::SimdOptimizer;
-
-use kwavers_core::error::KwaversResult;
 
 /// Stencil kernel for finite difference computations
 #[derive(Debug, Clone)]
@@ -51,72 +47,5 @@ impl StencilKernel {
         }
 
         result
-    }
-}
-
-/// Main optimization orchestrator.
-///
-/// `ParallelOptimizer` is re-exported from the `parallel` sub-module and can be
-/// used independently; it is not stored as a field here until the parallel
-/// dispatch strategy is wired into `apply_optimizations`.
-#[derive(Debug)]
-pub struct PerformanceOptimizer {
-    config: HardwareOptimizationConfig,
-    simd: SimdOptimizer,
-    cache: CacheOptimizer,
-    memory: MemoryOptimizer,
-    gpu: Option<GpuOptimizer>,
-}
-
-impl PerformanceOptimizer {
-    /// Create a new optimizer with the given configuration
-    /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
-    ///
-    pub fn new(config: HardwareOptimizationConfig) -> KwaversResult<Self> {
-        let simd = SimdOptimizer::new(config.simd_level);
-        let cache = CacheOptimizer::new(config.cache_block_size);
-        let memory = MemoryOptimizer::new(config.prefetch_distance);
-
-        let gpu = if config.multi_gpu || config.kernel_fusion {
-            Some(GpuOptimizer::new(config.gpu_streams)?)
-        } else {
-            None
-        };
-
-        Ok(Self {
-            config,
-            simd,
-            cache,
-            memory,
-            gpu,
-        })
-    }
-
-    /// Apply all optimizations based on configuration
-    /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
-    ///
-    pub fn optimize(&self) -> KwaversResult<()> {
-        if self.config.enable_simd {
-            self.simd.apply_optimizations()?;
-        }
-
-        if self.config.cache_blocking {
-            self.cache.optimize_blocking()?;
-        }
-
-        // Note: Parallel optimization is applied automatically through rayon
-        // when using parallel iterators - no explicit optimization needed
-
-        if self.config.prefetching {
-            self.memory.enable_prefetching()?;
-        }
-
-        if let Some(ref gpu) = self.gpu {
-            gpu.optimize_kernels()?;
-        }
-
-        Ok(())
     }
 }

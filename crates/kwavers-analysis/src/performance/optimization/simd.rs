@@ -1,7 +1,6 @@
 //! SIMD optimization implementations
 
 use super::config::PerfOptSimdLevel;
-use kwavers_core::error::KwaversResult;
 
 /// SIMD optimizer for vectorized operations
 #[derive(Debug)]
@@ -21,21 +20,6 @@ impl SimdOptimizer {
             level,
             vector_width: level.vector_width(),
         }
-    }
-
-    /// Apply SIMD optimizations
-    /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
-    ///
-    pub fn apply_optimizations(&self) -> KwaversResult<()> {
-        // SIMD optimizations are applied at compile time through
-        // architecture-specific code paths
-        log::info!(
-            "SIMD optimization level: {:?} (width: {})",
-            self.level,
-            self.vector_width
-        );
-        Ok(())
     }
 
     /// Vectorized dot product using SIMD

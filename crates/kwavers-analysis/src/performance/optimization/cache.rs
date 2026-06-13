@@ -1,7 +1,5 @@
 //! Cache optimization strategies
 
-use kwavers_core::error::KwaversResult;
-
 /// Memory access pattern types
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum AccessPattern {
@@ -17,39 +15,26 @@ pub enum AccessPattern {
 
 /// Cache optimizer for improving memory access patterns.
 ///
-/// Block-size tiling strategy uses L1 cache size (32 KiB) to derive optimal
-/// tile dimensions.  L2 size and cache-line size are not yet incorporated into
-/// the tiling model; they are tracked in `backlog.md` as a cache-hierarchy
+/// The tiling strategy uses L1 cache size (32 KiB) to derive optimal tile
+/// dimensions.  L2 size and cache-line size are not yet incorporated into the
+/// tiling model; they are tracked in `backlog.md` as a cache-hierarchy
 /// optimization task.
 #[derive(Debug)]
 pub struct CacheOptimizer {
-    block_size: usize,
     /// L1 cache size in bytes — used by `optimal_block_size_3d`.
     l1_cache_size: usize,
 }
 
-impl CacheOptimizer {
-    /// Create a new cache optimizer.
-    #[must_use]
-    pub fn new(block_size: usize) -> Self {
+impl Default for CacheOptimizer {
+    /// 32 KiB typical L1 cache.
+    fn default() -> Self {
         Self {
-            block_size,
-            l1_cache_size: 32 * 1024, // 32 KiB typical L1
+            l1_cache_size: 32 * 1024,
         }
     }
+}
 
-    /// Optimize memory access through cache blocking
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
-    pub fn optimize_blocking(&self) -> KwaversResult<()> {
-        log::info!(
-            "Cache blocking enabled with block size: {}",
-            self.block_size
-        );
-        Ok(())
-    }
-
+impl CacheOptimizer {
     /// Calculate optimal block size for 3D arrays
     #[must_use]
     pub fn optimal_block_size_3d(&self, nx: usize, ny: usize, nz: usize) -> (usize, usize, usize) {
@@ -152,7 +137,7 @@ mod tests {
     /// For nx=ny=nz=100: bx=by=bz = min(10, 100) = 10.
     #[test]
     fn cache_optimal_block_size_3d_large_grid_is_ten_cubed() {
-        let optimizer = CacheOptimizer::new(16);
+        let optimizer = CacheOptimizer::default();
         let (bx, by, bz) = optimizer.optimal_block_size_3d(100, 100, 100);
         assert_eq!(bx, 10, "bx = {bx} (expected 10)");
         assert_eq!(by, 10, "by = {by} (expected 10)");
@@ -164,7 +149,7 @@ mod tests {
     /// With nx=ny=nz=3, the block_dim=10 > 3 so each dim clamps to 3.
     #[test]
     fn cache_optimal_block_size_3d_small_grid_clamps_to_grid_dim() {
-        let optimizer = CacheOptimizer::new(16);
+        let optimizer = CacheOptimizer::default();
         let (bx, by, bz) = optimizer.optimal_block_size_3d(3, 3, 3);
         assert_eq!(bx, 3, "bx for 3×3×3 grid must clamp to 3, got {bx}");
         assert_eq!(by, 3, "by for 3×3×3 grid must clamp to 3, got {by}");
@@ -176,7 +161,7 @@ mod tests {
     /// nx=5, ny=100, nz=100: bx=min(10,5)=5; by=bz=min(10,100)=10.
     #[test]
     fn cache_optimal_block_size_3d_non_uniform_grid_clamps_per_axis() {
-        let optimizer = CacheOptimizer::new(16);
+        let optimizer = CacheOptimizer::default();
         let (bx, by, bz) = optimizer.optimal_block_size_3d(5, 100, 100);
         assert_eq!(bx, 5, "bx for narrow x-axis must clamp to 5, got {bx}");
         assert_eq!(by, 10, "by = {by} (expected 10)");
@@ -192,7 +177,7 @@ mod tests {
         let nx = 5usize;
         let ny = 7usize;
         let nz = 6usize;
-        let optimizer = CacheOptimizer::new(16);
+        let optimizer = CacheOptimizer::default();
         let mut visit_count = vec![0u32; nx * ny * nz];
         optimizer.tile_3d_loop(nx, ny, nz, |i, j, k| {
             visit_count[i * ny * nz + j * nz + k] += 1;

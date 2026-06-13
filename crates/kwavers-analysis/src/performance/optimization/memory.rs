@@ -52,35 +52,17 @@ impl BandwidthOptimizer {
 /// Memory optimizer for efficient memory management
 #[derive(Debug)]
 pub struct MemoryOptimizer {
-    prefetch_distance: usize,
     alignment: usize,
 }
 
+impl Default for MemoryOptimizer {
+    /// 64-byte cache-line alignment.
+    fn default() -> Self {
+        Self { alignment: 64 }
+    }
+}
+
 impl MemoryOptimizer {
-    /// Create a new memory optimizer
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
-    #[must_use]
-    pub fn new(prefetch_distance: usize) -> Self {
-        Self {
-            prefetch_distance,
-            alignment: 64, // Cache line alignment
-        }
-    }
-
-    /// Enable memory prefetching
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
-    pub fn enable_prefetching(&self) -> KwaversResult<()> {
-        log::info!(
-            "Memory prefetching enabled with distance: {}",
-            self.prefetch_distance
-        );
-        Ok(())
-    }
-
     /// Allocate aligned memory for better cache performance
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
@@ -323,7 +305,7 @@ mod tests {
     ///   [4]=A[0,2]=3, [5]=A[1,2]=6 → [1,4,2,5,3,6].
     #[test]
     fn memory_optimizer_transpose_2x3_exact() {
-        let optimizer = MemoryOptimizer::new(16);
+        let optimizer = MemoryOptimizer::default();
         let data = vec![1u32, 2, 3, 4, 5, 6];
         let result = optimizer.transpose_for_column_major(&data, 2, 3);
         assert_eq!(
@@ -338,7 +320,7 @@ mod tests {
     /// rows=3, cols=1: result[0*3+i] = data[i*1+0] → result[i] = data[i].
     #[test]
     fn memory_optimizer_transpose_column_vector_is_identity() {
-        let optimizer = MemoryOptimizer::new(16);
+        let optimizer = MemoryOptimizer::default();
         let data = vec![7.0f64, 8.0, 9.0];
         let result = optimizer.transpose_for_column_major(&data, 3, 1);
         assert_eq!(result, data, "transpose of column vector must equal input");
@@ -349,7 +331,7 @@ mod tests {
     /// rows=1, cols=4: result[j*1+0] = data[0*4+j] = data[j] → identical.
     #[test]
     fn memory_optimizer_transpose_row_vector_is_identity() {
-        let optimizer = MemoryOptimizer::new(16);
+        let optimizer = MemoryOptimizer::default();
         let data = vec![10i32, 20, 30, 40];
         let result = optimizer.transpose_for_column_major(&data, 1, 4);
         assert_eq!(result, data, "transpose of row vector must equal input");
