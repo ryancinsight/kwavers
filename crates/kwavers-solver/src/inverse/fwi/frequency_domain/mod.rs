@@ -51,6 +51,7 @@
 pub mod cbs;
 mod finite_window;
 mod forward;
+mod gauss_newton;
 mod gradient;
 mod inversion;
 pub mod operator;
@@ -70,5 +71,6 @@ pub use finite_window::{
     simulate_pstd_finite_window_born_second_order_observation, PstdFiniteWindowBornConfig,
 };
 pub use forward::simulate_frequency_observation;
+pub use gauss_newton::{invert_gauss_newton, GaussNewtonConfig};
 pub use inversion::invert;
 pub use types::{Config, FrequencyObservation, InversionResult, FREQUENCY_DOMAIN_FWI_SOLVER_MODEL};

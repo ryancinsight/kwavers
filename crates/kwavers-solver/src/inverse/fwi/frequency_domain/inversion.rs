@@ -91,7 +91,7 @@ pub fn invert(
     })
 }
 
-fn clamp_slowness(slowness: &mut Array3<f64>, config: &Config) {
+pub(super) fn clamp_slowness(slowness: &mut Array3<f64>, config: &Config) {
     let min_slowness = 1.0 / config.max_sound_speed_m_s;
     let max_slowness = 1.0 / config.min_sound_speed_m_s;
     slowness.mapv_inplace(|value| value.clamp(min_slowness, max_slowness));
