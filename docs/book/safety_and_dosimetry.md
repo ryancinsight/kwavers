@@ -334,12 +334,20 @@ formulation is more conservative than TIS for scenarios with bone near the focus
 TIC applies to transcranial applications where the beam traverses the adult
 skull.  The skull is located between the transducer and the brain, so the
 heating occurs at the skin–skull interface, not at the focus.  TIC is computed
-from the total radiated power:
+from the total radiated power and the aperture geometry:
 
-$$\mathrm{TIC} = \frac{W_{\mathrm{0}} \cdot f}{(40\;\text{W/MHz})},$$
+$$\mathrm{TIC} = \frac{W_{0}}{C_{\mathrm{TIC}}\,D_{\mathrm{eq}}}, \qquad
+C_{\mathrm{TIC}} = 40\;\text{mW/cm},$$
 
-where $W_0$ is the total acoustic power at the transducer face.  TIC is typically
-the dominant thermal constraint for transcranial ultrasound and HIFU.
+where $W_0$ is the total acoustic power at the transducer face (mW) and
+$D_{\mathrm{eq}} = \sqrt{4 A_{\mathrm{aprt}}/\pi}$ is the equivalent aperture
+diameter (cm).  Unlike TIS and TIB, **TIC carries no frequency weighting** (IEC
+62359 §8.5): the worst-case heating is at the skin–skull interface near the
+transducer, where the full source power is deposited over the aperture rather
+than concentrated by focal absorption.  TIC is typically the dominant thermal
+constraint for transcranial ultrasound and HIFU.  kwavers implements this as
+`analytical::safety::thermal_index_cranial(w0_mw, aperture_diameter_cm)`
+(constant `IEC_TIC_COEFFICIENT_MW_PER_CM = 40`).
 
 ### 16.4.5 FDA and AIUM Limits
 

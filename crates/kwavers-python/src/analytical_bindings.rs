@@ -308,6 +308,7 @@ pub fn register_book(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(safety::mechanical_index_field, m)?)?;
     m.add_function(wrap_pyfunction!(safety::thermal_index_soft_tissue, m)?)?;
     m.add_function(wrap_pyfunction!(safety::thermal_index_bone, m)?)?;
+    m.add_function(wrap_pyfunction!(safety::thermal_index_cranial, m)?)?;
     m.add_function(wrap_pyfunction!(safety::cem43_cumulative, m)?)?;
     m.add_function(wrap_pyfunction!(safety::arrhenius_damage_integral, m)?)?;
     m.add_function(wrap_pyfunction!(safety::arrhenius_cumulative, m)?)?;

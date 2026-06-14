@@ -1,13 +1,13 @@
 //! Ultrasound dosimetry and safety indices for book chapter ch15.
 //!
-//! Covers: Mechanical Index (MI), Thermal Index soft tissue (TIS) and bone
-//! (TIB), CEM43 cumulative dose, Arrhenius damage integral, and FDA output
-//! limits.
+//! Covers: Mechanical Index (MI), Thermal Index soft tissue (TIS), bone (TIB),
+//! and cranial bone (TIC), CEM43 cumulative dose, Arrhenius damage integral, and
+//! FDA output limits.
 
 use kwavers_core::constants::fundamental::GAS_CONSTANT;
 use kwavers_core::constants::medical::{
-    IEC_TIB_DIVISOR, IEC_TIS_DIVISOR, THERMAL_DOSE_REFERENCE_TEMP_C, THERMAL_DOSE_R_ABOVE_43C,
-    THERMAL_DOSE_R_BELOW_43C,
+    IEC_TIB_DIVISOR, IEC_TIC_COEFFICIENT_MW_PER_CM, IEC_TIS_DIVISOR, THERMAL_DOSE_REFERENCE_TEMP_C,
+    THERMAL_DOSE_R_ABOVE_43C, THERMAL_DOSE_R_BELOW_43C,
 };
 use kwavers_core::constants::numerical::SECONDS_PER_MINUTE;
 use kwavers_core::constants::thermodynamic::KELVIN_OFFSET_C;
@@ -90,6 +90,36 @@ pub fn thermal_index_bone(w_mw: f64, f_mhz: f64) -> f64 {
         return 0.0;
     }
     w_mw * f_mhz / IEC_TIB_DIVISOR
+}
+
+/// Thermal Index for cranial bone (TIC).
+///
+/// Frequency-independent (IEC 62359 §8.5): for transcranial exposure the
+/// worst-case heating is at the skin–skull interface near the transducer, where
+/// the full source power is deposited over the aperture rather than concentrated
+/// by focal absorption — so TIC carries no `f` weighting (unlike TIS/TIB).
+/// ```text
+/// TIC = W_0 [mW] / (40 [mW/cm] · D_eq [cm])
+/// ```
+/// `W_0` is the total acoustic power at the transducer face and `D_eq` the
+/// equivalent aperture diameter `√(4·A_aprt/π)`.
+///
+/// # Arguments
+/// * `w0_mw` – total acoustic power at the transducer face [mW]
+/// * `aperture_diameter_cm` – equivalent aperture diameter `D_eq` [cm]
+///
+/// # Reference
+/// IEC 62359 (2017) §8.5; AIUM/NEMA UD-3:2012.
+#[inline]
+pub fn thermal_index_cranial(w0_mw: f64, aperture_diameter_cm: f64) -> f64 {
+    if !(w0_mw.is_finite()
+        && aperture_diameter_cm.is_finite()
+        && w0_mw >= 0.0
+        && aperture_diameter_cm > 0.0)
+    {
+        return 0.0;
+    }
+    w0_mw / (IEC_TIC_COEFFICIENT_MW_PER_CM * aperture_diameter_cm)
 }
 
 /// CEM43 cumulative equivalent minutes at 43 °C.
@@ -366,6 +396,21 @@ mod tests {
         assert_eq!(thermal_index_bone(-1.0, 1.0), 0.0);
         assert_eq!(thermal_index_bone(1.0, -1.0), 0.0);
         assert_eq!(thermal_index_bone(1.0, f64::INFINITY), 0.0);
+    }
+
+    #[test]
+    fn thermal_index_cranial_matches_iec_definition() {
+        // TIC = W_0 / (40·D_eq): W_0 = 80 mW, D_eq = 2 cm ⇒ 80/(40·2) = 1.0.
+        assert!((thermal_index_cranial(80.0, 2.0) - 1.0).abs() < 1e-12);
+        // Frequency-independent and linear in power: doubling W_0 doubles TIC.
+        assert!((thermal_index_cranial(160.0, 2.0) - 2.0).abs() < 1e-12);
+        // A larger aperture spreads the same power ⇒ strictly lower TIC.
+        assert!(thermal_index_cranial(80.0, 4.0) < thermal_index_cranial(80.0, 2.0));
+        // Invalid domains → 0 (aperture must be strictly positive).
+        assert_eq!(thermal_index_cranial(-1.0, 2.0), 0.0);
+        assert_eq!(thermal_index_cranial(80.0, 0.0), 0.0);
+        assert_eq!(thermal_index_cranial(f64::NAN, 2.0), 0.0);
+        assert_eq!(thermal_index_cranial(80.0, f64::INFINITY), 0.0);
     }
 
     #[test]

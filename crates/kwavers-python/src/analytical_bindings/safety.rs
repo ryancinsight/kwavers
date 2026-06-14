@@ -76,6 +76,22 @@ pub fn thermal_index_bone(w_mw: f64, f_mhz: f64) -> PyResult<f64> {
     Ok(safety::thermal_index_bone(w_mw, f_mhz))
 }
 
+/// Compute the Thermal Index for cranial bone (TIC).
+///
+/// Frequency-independent (IEC 62359 §8.5): TIC = W_0 / (40·D_eq).
+///
+/// Args:
+///     w0_mw: Total acoustic power at the transducer face [mW].
+///     aperture_diameter_cm: Equivalent aperture diameter D_eq = sqrt(4·A/pi) [cm].
+///
+/// Returns:
+///     TIC value.
+#[pyfunction]
+#[pyo3(signature = (w0_mw, aperture_diameter_cm))]
+pub fn thermal_index_cranial(w0_mw: f64, aperture_diameter_cm: f64) -> PyResult<f64> {
+    Ok(safety::thermal_index_cranial(w0_mw, aperture_diameter_cm))
+}
+
 /// Compute the cumulative CEM43 thermal dose over a temperature time series.
 ///
 /// Args:

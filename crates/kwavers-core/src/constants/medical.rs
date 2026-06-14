@@ -133,6 +133,17 @@ pub const IEC_TIS_DIVISOR: f64 = 210.0;
 /// related to medical diagnostic ultrasonic fields.*
 pub const IEC_TIB_DIVISOR: f64 = 40.0;
 
+/// IEC 62359 (2017) §8.5 — Thermal Index cranial bone (TIC) reference-power
+/// coefficient [mW · cm⁻¹].
+///
+/// TIC = W_0 [mW] / (IEC_TIC_COEFFICIENT_MW_PER_CM · D_eq [cm]), where D_eq is the
+/// equivalent aperture diameter √(4·A_aprt/π). Unlike TIS/TIB, TIC carries **no**
+/// frequency weighting: cranial heating occurs at the skin–skull interface and is
+/// governed by total source power spread over the aperture, not focal absorption.
+///
+/// Reference: IEC 62359 (2017) §8.5; AIUM/NEMA UD-3:2012 Output Display Standard.
+pub const IEC_TIC_COEFFICIENT_MW_PER_CM: f64 = 40.0;
+
 /// Default ultrasound frequency (Hz)
 pub const DEFAULT_ULTRASOUND_FREQUENCY: f64 = 1e6;
 
