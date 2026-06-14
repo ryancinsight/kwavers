@@ -10,7 +10,6 @@ use ndarray::Array2;
 /// - Panics if an internal invariant assumed to hold at this call site is violated.
 ///
 #[test]
-#[ignore = "Tier 3: Comprehensive validation (>30s execution time)"]
 fn test_gaussian_beam_propagation() {
     let mut config = KZKConfig {
         nx: 64,

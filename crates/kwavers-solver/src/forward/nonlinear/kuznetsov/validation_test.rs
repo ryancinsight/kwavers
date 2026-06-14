@@ -7,7 +7,7 @@
 #[cfg(test)]
 mod tests {
     use super::super::{AcousticEquationMode, KuznetsovConfig, KuznetsovWave};
-    use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
+    use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA, TWO_PI};
     use kwavers_core::constants::{DENSITY_WATER, SOUND_SPEED_WATER};
     use kwavers_grid::Grid;
     use kwavers_medium::HomogeneousMedium;
@@ -103,7 +103,6 @@ mod tests {
     /// - Panics if an internal invariant assumed to hold at this call site is violated.
     ///
     #[test]
-    #[ignore = "Tier 3: Comprehensive validation (>30s execution time)"]
     fn test_energy_conservation_linear() {
         let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3).unwrap();
         let dt = 5e-8; // Small timestep for stability
@@ -326,49 +325,84 @@ mod tests {
     ///
     #[test]
     fn test_nonlinear_harmonic_generation_fast() {
-        let grid = Grid::new(32, 16, 16, 1e-4, 1e-3, 1e-3).unwrap();
-        let dt = 1e-8;
+        // Value-semantic nonlinear-harmonic-generation check. A finite-amplitude
+        // spatial sinusoid (the source-free initial condition, driven through the
+        // null source so the only forcing is the medium's Westervelt nonlinearity)
+        // self-steepens, pumping a **second spatial harmonic** that is absent from
+        // the pure-tone start. We assert the harmonic is generated and stays
+        // weak-shock-bounded below the fundamental. (The quantitative match to the
+        // exact Fubini/Aanonsen-1984 harmonic amplitudes is the plane-wave KZK
+        // `test_aanonsen_1984_harmonic_amplitudes`; this guards the Kuznetsov
+        // nonlinear operator qualitatively at low cost.)
+        use kwavers_math::fft::fft_1d_array;
+        use kwavers_source::NullSource;
+        use ndarray::Array1;
 
+        let (nx, m) = (64usize, 4usize); // 4 spatial periods ⇒ fundamental bin 4, 2nd bin 8.
+        let grid = Grid::new(nx, 16, 16, 1e-4, 1e-3, 1e-3).unwrap();
+        let dt = 1e-9;
         let config = KuznetsovConfig {
-            equation_mode: AcousticEquationMode::Westervelt, // Nonlinear, no diffusion
-            nonlinearity_coefficient: 5.2,                   // Water B/A parameter
+            equation_mode: AcousticEquationMode::Westervelt, // nonlinear, no diffusion
+            nonlinearity_coefficient: 5.2,                   // water B/A
             acoustic_diffusivity: 0.0,
             ..Default::default()
         };
-
         let mut solver = KuznetsovWave::new(config, &grid).unwrap();
         let medium = HomogeneousMedium::new(DENSITY_WATER, SOUND_SPEED_WATER, 0.0, 0.0, &grid);
+        let source = NullSource::new();
 
-        // Sinusoidal source
-        let frequency = MHZ_TO_HZ; // 1 MHz
-        use kwavers_signal::{Signal, SineWave};
-        use std::sync::Arc;
-        let signal: Arc<dyn Signal> = Arc::new(SineWave::new(frequency, MPA_TO_PA, 0.0));
-        let position = grid.indices_to_coordinates(5, grid.ny / 2, grid.nz / 2);
-        let source = PointSource::new(position, signal);
-
+        // Finite-amplitude pure-tone initial condition (uniform in y, z).
+        let amplitude = 0.5 * MPA_TO_PA; // 0.5 MPa — drives measurable nonlinearity.
         let mut fields = Array4::zeros((1, grid.nx, grid.ny, grid.nz));
-        let prev_pressure = fields.index_axis(ndarray::Axis(0), 0).to_owned();
+        for ((_, i, _, _), p) in fields.indexed_iter_mut() {
+            *p = amplitude * (TWO_PI * m as f64 * i as f64 / nx as f64).sin();
+        }
+        let prev = fields.index_axis(ndarray::Axis(0), 0).to_owned();
 
-        // Propagate fewer steps for fast validation
-        let n_steps = 50;
+        // The pure tone has zero second-harmonic content at t = 0.
+        let line0: Vec<f64> = (0..nx).map(|i| fields[[0, i, 8, 8]]).collect();
+        let spec0 = fft_1d_array(&Array1::from_vec(line0));
+        let init_2nd = spec0[2 * m].norm();
+
+        // Propagate; track the peak second-harmonic spatial content (a standing
+        // pattern, so its instantaneous amplitude pulses — take the running max).
+        let n_steps = 300;
+        let mut max_p1 = 0.0_f64;
+        let mut max_p2 = 0.0_f64;
         for step in 0..n_steps {
-            let t = step as f64 * dt;
             solver
-                .update_wave(&mut fields, &prev_pressure, &source, &grid, &medium, dt, t)
+                .update_wave(
+                    &mut fields,
+                    &prev,
+                    &source,
+                    &grid,
+                    &medium,
+                    dt,
+                    step as f64 * dt,
+                )
                 .unwrap();
+            let line: Vec<f64> = (0..nx).map(|i| fields[[0, i, 8, 8]]).collect();
+            assert!(
+                line.iter().all(|p| p.is_finite()),
+                "Kuznetsov field diverged"
+            );
+            let spec = fft_1d_array(&Array1::from_vec(line));
+            max_p1 = max_p1.max(spec[m].norm());
+            max_p2 = max_p2.max(spec[2 * m].norm());
         }
 
-        // Analyze spectrum at a propagated distance
-        let pressure = fields.index_axis(ndarray::Axis(0), 0);
-        let probe_value = pressure[[grid.nx * 3 / 4, grid.ny / 2, grid.nz / 2]];
-
-        // Nonlinear propagation produces energy at harmonics
-        // **Test scope**: Validates non-zero pressure propagation (functional fast test)
-        // Full spectral validation requires FFT harmonic analysis (see integration tests)
+        // Nonlinearity must *grow* the second harmonic well above its (≈0) start,
+        // to a measurable fraction of the fundamental, but stay below it (pre-shock).
         assert!(
-            probe_value.abs() > 0.0,
-            "Should have non-zero pressure at probe point"
+            max_p2 > 10.0 * init_2nd && max_p2 > 1.0e-3 * max_p1,
+            "no second-harmonic generation: init |P₂|={init_2nd:.2e}, \
+             max |P₂|={max_p2:.2e}, max |P₁|={max_p1:.2e}"
+        );
+        assert!(
+            max_p2 < max_p1,
+            "second harmonic exceeds fundamental (unphysical pre-shock): \
+             |P₂|/|P₁| = {:.2e}",
+            max_p2 / max_p1
         );
     }
 }

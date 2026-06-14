@@ -17,7 +17,6 @@ mod tests {
     /// - Panics if an internal invariant assumed to hold at this call site is violated.
     ///
     #[test]
-    #[ignore = "Tier 3: Comprehensive validation (>60s execution time)"]
     fn test_gaussian_beam_diffraction() {
         let config = KZKConfig {
             nx: DEFAULT_GRID_SIZE,

@@ -98,7 +98,6 @@ mod tests {
     /// - Panics if `KZK solve failed`.
     ///
     #[test]
-    #[ignore = "Tier 2: Literature validation (~10-30s depending on grid)"]
     fn test_aanonsen_1984_harmonic_amplitudes() {
         use kwavers_math::fft::fft_1d_array;
         use ndarray::Array1;
