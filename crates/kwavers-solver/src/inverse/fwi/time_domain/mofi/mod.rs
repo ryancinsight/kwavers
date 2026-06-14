@@ -47,6 +47,7 @@ use crate::inverse::reconstruction::seismic::MisfitType;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
 use ndarray::{Array2, Array3};
+use rayon::prelude::*;
 use transform::{project_gradient, transform_template, transform_with_jacobian, PlaneGeometry};
 
 /// MOFI optimisation settings.
@@ -341,24 +342,39 @@ pub fn coarse_pose_search(
     let thetas = linspace(search.theta_max_rad, search.theta_steps);
     let deltas = linspace(search.delta_max_m, search.delta_steps);
 
-    let mut best = RigidTransform::identity();
-    let mut best_misfit = f64::INFINITY;
+    // Enumerate the (θ, δ₁, δ₂) grid; each pose's misfit is an independent
+    // sensor-only forward solve (~55 MB/call, documented parallel-safe), so the
+    // search runs over Rayon. `collect` preserves grid order, so reducing with a
+    // strict `<` reproduces the serial first-minimum tie-break exactly.
+    let mut candidates: Vec<RigidTransform> =
+        Vec::with_capacity(thetas.len() * deltas.len() * deltas.len());
     for &theta in &thetas {
         for &dx in &deltas {
             for &dy in &deltas {
-                let phi = RigidTransform {
+                candidates.push(RigidTransform {
                     theta_rad: theta,
                     delta_x_m: dx,
                     delta_y_m: dy,
-                };
-                let model = transform_template(template, &phi, &geom, search.background_c);
-                let synth = processor.forward_model_sensor_only(&model, geometry, grid)?;
-                let misfit = processor.compute_misfit_objective(observed, &synth)?;
-                if misfit < best_misfit {
-                    best_misfit = misfit;
-                    best = phi;
-                }
+                });
             }
+        }
+    }
+    let misfits: Vec<KwaversResult<f64>> = candidates
+        .par_iter()
+        .map(|phi| {
+            let model = transform_template(template, phi, &geom, search.background_c);
+            let synth = processor.forward_model_sensor_only(&model, geometry, grid)?;
+            processor.compute_misfit_objective(observed, &synth)
+        })
+        .collect();
+
+    let mut best = RigidTransform::identity();
+    let mut best_misfit = f64::INFINITY;
+    for (phi, misfit) in candidates.iter().zip(misfits) {
+        let misfit = misfit?;
+        if misfit < best_misfit {
+            best_misfit = misfit;
+            best = *phi;
         }
     }
     Ok((best, best_misfit))
