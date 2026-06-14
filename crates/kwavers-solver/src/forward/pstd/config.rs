@@ -23,9 +23,15 @@ pub enum CompatibilityMode {
 pub enum KSpaceMethod {
     /// Standard PSTD with spectral corrections (default)
     StandardPSTD,
-    /// Full k-space pseudospectral method (k-Wave style, eliminates dispersion)
+    /// Full k-space pseudospectral method: exact second-order dispersion-free
+    /// pressure propagator `pⁿ⁺¹ = 2cos(c·|k|·Δt)·pⁿ − pⁿ⁻¹` (Mast 2001, Tabei
+    /// 2002). Exact only for HOMOGENEOUS `c`; for heterogeneous media use
+    /// [`Self::StandardPSTD`].
     FullKSpace,
-    /// Hybrid approach (k-space for low frequencies, PSTD for high frequencies)
+    /// Hybrid (k-space low band / PSTD high band) — NOT YET IMPLEMENTED. Selecting
+    /// it currently routes to the [`Self::StandardPSTD`] kernel (a correct, fully
+    /// dispersion-corrected solver), not a true band-split hybrid. Documented here
+    /// so the fall-through is explicit rather than silent.
     Hybrid,
 }
 

@@ -10,6 +10,13 @@ use ndarray::{Array3, Zip};
 pub struct PSTDKSOperators {
     pub k_grid: PSTDKSGrid,
     pub fft_processor: std::sync::Arc<Fft3d>,
+    /// Previous-step pressure pⁿ⁻¹ for the exact second-order k-space leapfrog
+    /// `pⁿ⁺¹ = 2cos(c·|k|·Δt)·pⁿ − pⁿ⁻¹`. `None` before the first FullKSpace step;
+    /// the first step uses the zero-velocity IVP half-coefficient instead.
+    pub p_prev: Option<Array3<f64>>,
+    /// Exact homogeneous wave-propagation coefficient `2·cos(c_ref·|k|·Δt)` over the
+    /// full spectrum, lazily built on the first FullKSpace step (needs `c_ref·Δt`).
+    pub wave_coeff: Option<Array3<f64>>,
 }
 
 impl PSTDKSOperators {
@@ -23,7 +30,23 @@ impl PSTDKSOperators {
         Self {
             k_grid,
             fft_processor: std::sync::Arc::new(Fft3d::new(Shape3D { nx, ny, nz })),
+            p_prev: None,
+            wave_coeff: None,
         }
+    }
+
+    /// Build (or return) the exact second-order propagation coefficient
+    /// `2·cos(c_ref·|k|·Δt)` for every spectral bin. Computed once and cached in
+    /// `wave_coeff`. Each bin depends only on its own `|k|` → race-free.
+    pub fn ensure_wave_coeff(&mut self, c_ref: f64, dt: f64) -> &Array3<f64> {
+        if self.wave_coeff.is_none() {
+            let cdt = c_ref * dt;
+            let coeff = self.k_grid.k_mag.mapv(|k| 2.0 * (cdt * k).cos());
+            self.wave_coeff = Some(coeff);
+        }
+        self.wave_coeff
+            .as_ref()
+            .expect("invariant: wave_coeff populated immediately above")
     }
 
     /// Apply Helmholtz operator: (∇² + k₀²)p in wavenumber domain

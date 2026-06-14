@@ -18,6 +18,9 @@ impl PSTDSolver {
         let dt = self.config.dt;
         let time_index = self.time_step_index;
 
+        // FullKSpace → exact second-order k-space pressure propagator. StandardPSTD
+        // and Hybrid both fall through to the split-field first-order kernel below
+        // (Hybrid is not yet a true band-split; see KSpaceMethod::Hybrid docs).
         if self.config.kspace_method == KSpaceMethod::FullKSpace {
             return self.step_forward_kspace(dt, time_index);
         }
@@ -162,7 +165,7 @@ impl PSTDSolver {
             }
         }
 
-        let ops = self.kspace_operators.take().ok_or_else(|| {
+        let mut ops = self.kspace_operators.take().ok_or_else(|| {
             KwaversError::Config(kwavers_core::error::ConfigError::InvalidValue {
                 parameter: "kspace_operators".to_owned(),
                 value: "None".to_owned(),
@@ -172,7 +175,7 @@ impl PSTDSolver {
         })?;
 
         let source_term = std::mem::replace(&mut self.dpx, Array3::zeros((0, 0, 0)));
-        self.propagate_kspace(dt, &source_term, &ops)?;
+        self.propagate_kspace(dt, &source_term, &mut ops)?;
         self.dpx = source_term;
         self.kspace_operators = Some(ops);
 
@@ -190,16 +193,37 @@ impl PSTDSolver {
         Ok(())
     }
 
-    /// Propagate wave using the k-space spectral Laplacian.
+    /// Advance the pressure field one step with the EXACT second-order
+    /// dispersion-free k-space wave-equation propagator (homogeneous `c_ref`).
     ///
-    /// ## Theorem: spectral Laplacian identity
+    /// ## Scheme
     ///
-    /// For a field `p` on an `N`-point uniform grid with spacing `Δx`:
+    /// For the lossless wave equation `∂²p/∂t² = c²∇²p`, every spectral mode is a
+    /// harmonic oscillator `d²p̂/dt² = −(c|k|)² p̂` whose exact discrete recurrence is
     /// ```text
-    /// ∇²p  ↔  −|k|² p̂    (k = wavenumber vector, p̂ = FFT(p))
+    /// p̂ⁿ⁺¹ = 2cos(c·|k|·Δt)·p̂ⁿ − p̂ⁿ⁻¹
     /// ```
+    /// This is EXACT for any Δt (no CFL limit, no numerical dispersion) when `c` is
+    /// constant — the defining property of the k-space method (Mast et al. 2001;
+    /// Tabei, Mast & Waag 2002). The previous implementation applied a first-order
+    /// forward Euler of `∂p/∂t = c²∇²p` (a diffusion equation, not the wave
+    /// equation), which is the wrong PDE and unconditionally unstable.
     ///
-    /// `apply_helmholtz(p, 0.0)` evaluates `IFFT[(-|k|² + 0²) · FFT(p)] = ∇²p`.
+    /// **First step (zero-velocity IVP).** With `∂p/∂t(0)=0` the solution is even in
+    /// time, so `p̂⁻¹ = p̂¹` and the recurrence collapses to `p̂¹ = cos(c·|k|·Δt)·p̂⁰`
+    /// (half the leapfrog coefficient). `kspace_ops.p_prev == None` selects this
+    /// branch; thereafter the full `2cos` coefficient with explicit `pⁿ⁻¹`.
+    ///
+    /// **Sources.** `source_term` (assembled in `step_forward_kspace`) is added as an
+    /// additive per-step pressure increment. Only the source-FREE propagation is
+    /// reference-validated (vs. the analytical 3-D Gaussian IVP in
+    /// `pstd_fullkspace_gaussian_ivp_matches_analytical`); the additive source
+    /// scaling for FullKSpace has not been validated against an external oracle.
+    ///
+    /// **Homogeneity.** `c_ref = medium.max_sound_speed()` is used for every mode,
+    /// so this propagator is exact only for homogeneous media. Heterogeneous media
+    /// must use `StandardPSTD`, whose first-order split-field system carries `c(x)`
+    /// in the equation of state.
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
@@ -207,14 +231,38 @@ impl PSTDSolver {
         &mut self,
         dt: f64,
         source_term: &Array3<f64>,
-        kspace_ops: &PSTDKSOperators,
+        kspace_ops: &mut PSTDKSOperators,
     ) -> KwaversResult<()> {
-        let laplacian = kspace_ops.apply_helmholtz(&self.fields.p, 0.0)?;
-        let c_sq = self.c_ref * self.c_ref;
-        Zip::from(&mut self.fields.p)
-            .and(&laplacian)
-            .and(source_term)
-            .par_for_each(|p, &lap, &s| *p += dt * c_sq.mul_add(lap, s));
+        let c_ref = self.c_ref;
+        kspace_ops.ensure_wave_coeff(c_ref, dt);
+        let p_prev_old = kspace_ops.p_prev.take(); // pⁿ⁻¹ (None on the first step)
+        let is_first = p_prev_old.is_none();
+
+        let mut p_hat = kspace_ops.forward_fft_3d(&self.fields.p)?;
+        {
+            let coeff = kspace_ops
+                .wave_coeff
+                .as_ref()
+                .expect("invariant: ensure_wave_coeff populated wave_coeff");
+            Zip::from(&mut p_hat).and(coeff).par_for_each(|ph, &c| {
+                *ph *= if is_first { 0.5 * c } else { c };
+            });
+        }
+        let mut new_p = kspace_ops.inverse_fft_3d(&p_hat)?;
+
+        if let Some(prev) = &p_prev_old {
+            Zip::from(&mut new_p)
+                .and(prev)
+                .and(source_term)
+                .par_for_each(|np, &pp, &s| *np += s - pp);
+        } else {
+            Zip::from(&mut new_p)
+                .and(source_term)
+                .par_for_each(|np, &s| *np += s);
+        }
+
+        // pⁿ becomes pⁿ⁻¹ for the next step; new_p becomes the current pressure.
+        kspace_ops.p_prev = Some(std::mem::replace(&mut self.fields.p, new_p));
         Ok(())
     }
 }
