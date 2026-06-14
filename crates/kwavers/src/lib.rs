@@ -44,6 +44,8 @@
 
 use std::collections::HashMap;
 
+pub mod theranostic;
+
 /// Initialize logging for the kwavers application.
 /// # Errors
 /// - Returns [`Err`] if an internal constraint is violated.
