@@ -2,20 +2,17 @@ use super::config::AdaptiveBubbleConfig;
 use super::integrator::AdaptiveBubbleIntegrator;
 use crate::acoustics::bubble_dynamics::{BubbleParameters, BubbleState, KellerMiksisModel};
 
-/// Test adaptive time integration for bubble dynamics
+/// Test adaptive time integration for bubble dynamics on the Keller–Miksis model.
 ///
-/// **ARCHITECTURAL STUB TEST**: This test is temporarily ignored until Sprint 111+
-/// when the full Keller-Miksis acceleration computation is implemented.
-///
-/// The test validates the adaptive time-stepping algorithm for bubble dynamics,
-/// but depends on the complete implementation of acceleration computation.
-///
-/// Will be re-enabled in Sprint 111 with microbubble dynamics implementation.
+/// Drives a default microbubble with 0.1 bar acoustic forcing over a 1 µs step and
+/// checks the embedded-RK error-controlled sub-stepping: either it integrates to a
+/// positive radius with sub-cycling, or it stops with a small (`< 1e-3`) residual
+/// in a stiff regime. (The Keller–Miksis acceleration is fully implemented; the
+/// former "Sprint 111" gate is obsolete.)
 /// # Panics
 /// - Panics if `Integration failed`.
 ///
 #[test]
-#[ignore = "Requires Sprint 111+ Keller-Miksis full implementation (PRD FR-014)"]
 fn test_adaptive_integration() {
     let params = BubbleParameters::default();
     let solver = KellerMiksisModel::new(params.clone());

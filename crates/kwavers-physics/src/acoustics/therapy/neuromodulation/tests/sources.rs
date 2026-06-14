@@ -204,3 +204,56 @@ fn phase_cycle_interpolates_and_differentiates() {
     let t = 0.37 * period;
     assert!((pc.capacitance(t) - pc.capacitance(t + period)).abs() < 1e-9);
 }
+
+#[test]
+fn bls_dynamic_deflection_strength_curve_vs_plaksin_fig1() {
+    // ADR 023 validation harness: the transient leaflet deflection as a function
+    // of acoustic amplitude at 0.5 MHz (cortical RS rest), the strength curve of
+    // Plaksin et al. (2014) Fig. 1. Pins the model's genuine `Z_peak(P_ac)` at
+    // three amplitudes and checks the qualitative reference behaviour.
+    //
+    // | P_ac    | model Z_peak | Plaksin Fig. 1 (≈) |
+    // |---------|--------------|--------------------|
+    // | 100 kPa | 5.37 nm      | —                  |
+    // | 300 kPa | 8.59 nm      | —                  |
+    // | 500 kPa | 10.45 nm     | ≈12 nm             |
+    //
+    // The reduced single-`Z` model is overdamped/below-resonance: the deflection
+    // reaches steady amplitude within one carrier cycle (no resonant build-up) and
+    // sits ≈13 % below Fig. 1 at 500 kPa. Closing the gap to <5 % across this whole
+    // curve is the [major] reference-calibration tracked by ADR 023; it needs the
+    // digitised Fig. 1 curve + a PySONIC differential audit and must NOT be reached
+    // by tuning the leaflet damping (fitting-to-target).
+    use super::super::bls::{pressures as bp, BilayerSonophoreDynamic};
+    let qm0 = 1.0e-2 * (-71.9e-3);
+    let delta = bp::rest_gap(qm0);
+
+    let peaks_nm: Vec<f64> = [100.0e3, 300.0e3, 500.0e3]
+        .iter()
+        .map(|&p| BilayerSonophoreDynamic::new(1.0, 0.5, p, -71.9).peak_deflection_m() * 1.0e9)
+        .collect();
+
+    // Monotone increasing with amplitude (strength curve).
+    assert!(
+        peaks_nm.windows(2).all(|w| w[1] > w[0]),
+        "Z_peak(P) must increase with amplitude: {peaks_nm:?} nm"
+    );
+    // Each transient peak is at least the quasi-static deflection at that pressure
+    // (inertial dynamics never deflect *less* than the static balance).
+    for (&p, &zd) in [100.0e3, 300.0e3, 500.0e3].iter().zip(&peaks_nm) {
+        let zq = bp::quasistatic_deflection(-p, qm0, delta) * 1.0e9;
+        assert!(
+            zd >= zq - 1.0e-3,
+            "transient {zd:.2} nm below quasi-static {zq:.2} nm at {:.0} kPa",
+            p / 1.0e3
+        );
+    }
+    // Pin the genuine model values (regression guard on the documented numbers).
+    let expected = [5.37, 8.59, 10.45];
+    for (i, (&got, &exp)) in peaks_nm.iter().zip(&expected).enumerate() {
+        assert!(
+            (got - exp).abs() < 0.4,
+            "amplitude {i}: Z_peak {got:.2} nm drifted from documented {exp:.2} nm"
+        );
+    }
+}

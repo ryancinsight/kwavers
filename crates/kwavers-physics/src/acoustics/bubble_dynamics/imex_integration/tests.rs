@@ -5,7 +5,6 @@ use crate::acoustics::bubble_dynamics::{BubbleParameters, BubbleState, KellerMik
 use std::sync::Arc;
 
 #[test]
-#[ignore = "Requires Sprint 111+ Keller-Miksis full implementation (PRD FR-014)"]
 fn test_imex_integration() {
     let params = BubbleParameters::default();
     let solver = Arc::new(KellerMiksisModel::new(params.clone()));
