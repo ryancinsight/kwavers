@@ -288,6 +288,41 @@ fn coeffs(wm1: &Array3<f64>, damping: Option<ArrayView3<'_, f64>>, dt: f64) -> C
     }
 }
 
+/// Invariant message for the flat-slice leapfrog/stencil kernels: every operand
+/// is a full standard-layout (C-order) array, so `as_slice` is always `Some`.
+const FLAT_INV: &str = "invariant: self-adjoint leapfrog operands are full standard-layout arrays";
+
+/// Single-pass fused leapfrog update over flat contiguous slices:
+/// `next = inv_a_plus·dlap + (c_curr·curr − c_prev·prev)`.
+///
+/// `next` is fully overwritten (assignment, not accumulation), so it may be a
+/// reused, un-zeroed buffer — no per-step allocation is needed. The
+/// parenthesisation reproduces the previous two-pass form (`next = iap·dl; next
+/// += c_curr·curr − c_prev·prev`) bitwise, so the exact discrete operator
+/// (ADR 016) is unchanged; this is verified by the gradient-vs-FD and
+/// reconstructed==stored differential tests.
+fn leapfrog_combine(
+    next: &mut Array3<f64>,
+    dlap: &Array3<f64>,
+    co: &Coeffs,
+    curr: &Array3<f64>,
+    prev: &Array3<f64>,
+) {
+    let n = next.as_slice_mut().expect(FLAT_INV);
+    let len = n.len();
+    // Resliced to `len` up front so the per-element indexing carries no bounds
+    // check (all operands share the grid shape), which lets the loop vectorize.
+    let dl = &dlap.as_slice().expect(FLAT_INV)[..len];
+    let iap = &co.inv_a_plus.as_slice().expect(FLAT_INV)[..len];
+    let cc = &co.c_curr.as_slice().expect(FLAT_INV)[..len];
+    let cp = &co.c_prev.as_slice().expect(FLAT_INV)[..len];
+    let pc = &curr.as_slice().expect(FLAT_INV)[..len];
+    let pp = &prev.as_slice().expect(FLAT_INV)[..len];
+    for idx in 0..len {
+        n[idx] = iap[idx] * dl[idx] + (cc[idx] * pc[idx] - cp[idx] * pp[idx]);
+    }
+}
+
 /// Build a self-adjoint edge sponge: a symmetric diagonal damping `b(x) ≥ 0`
 /// rising quadratically from 0 in the interior to `b_max` at the domain faces,
 /// over `thickness` cells. Being a diagonal (hence symmetric) operator, it keeps
@@ -344,22 +379,13 @@ pub(crate) fn forward(
     let mut history = Array4::<f64>::zeros((cfg.nt, nx, ny, nz));
     let mut p_prev = Array3::<f64>::zeros((nx, ny, nz)); // p^{n-1}
     let mut p_curr = Array3::<f64>::zeros((nx, ny, nz)); // p^{n}
+    let mut p_next = Array3::<f64>::zeros((nx, ny, nz)); // reused scratch (fully overwritten)
     let mut dlap = Array3::<f64>::zeros((nx, ny, nz));
 
     // history[0] = p^0 = 0 (already zero).
     for n in 0..cfg.nt - 1 {
         apply_helmholtz(p_curr.view(), inv_rho.view(), &sp, &mut dlap);
-        let mut p_next = Array3::<f64>::zeros((nx, ny, nz));
-        Zip::from(&mut p_next)
-            .and(&dlap)
-            .and(&co.inv_a_plus)
-            .for_each(|pn, &dl, &iap| *pn = iap * dl);
-        Zip::from(&mut p_next)
-            .and(&p_curr)
-            .and(&p_prev)
-            .and(&co.c_curr)
-            .and(&co.c_prev)
-            .for_each(|pn, &pc, &pp, &cc, &cp| *pn += cc * pc - cp * pp);
+        leapfrog_combine(&mut p_next, &dlap, &co, &p_curr, &p_prev);
         for (idx, &(i, j, k)) in acq.source_voxels.iter().enumerate() {
             let s = if scalar_src {
                 acq.source_signal[[0, n]]
@@ -369,8 +395,10 @@ pub(crate) fn forward(
             p_next[[i, j, k]] += co.inv_a_plus[[i, j, k]] * s;
         }
         history.index_axis_mut(Axis(0), n + 1).assign(&p_next);
+        // Rotate buffers (p_prev, p_curr, p_next) ← (p_curr, p_next, old p_prev):
+        // two pointer swaps, no allocation; old p_prev becomes next step's scratch.
         std::mem::swap(&mut p_prev, &mut p_curr);
-        p_curr = p_next;
+        std::mem::swap(&mut p_curr, &mut p_next);
     }
 
     let mut synthetic = Array2::<f64>::zeros((acq.receiver_voxels.len(), cfg.nt));
@@ -401,22 +429,13 @@ pub(crate) fn forward_sensor_only(
 
     let mut p_prev = Array3::<f64>::zeros((nx, ny, nz));
     let mut p_curr = Array3::<f64>::zeros((nx, ny, nz));
+    let mut p_next = Array3::<f64>::zeros((nx, ny, nz)); // reused scratch (fully overwritten)
     let mut dlap = Array3::<f64>::zeros((nx, ny, nz));
     let mut synthetic = Array2::<f64>::zeros((acq.receiver_voxels.len(), cfg.nt));
     // n = 0 trace is p^0 = 0 (already zero).
     for n in 0..cfg.nt - 1 {
         apply_helmholtz(p_curr.view(), inv_rho.view(), &sp, &mut dlap);
-        let mut p_next = Array3::<f64>::zeros((nx, ny, nz));
-        Zip::from(&mut p_next)
-            .and(&dlap)
-            .and(&co.inv_a_plus)
-            .for_each(|pn, &dl, &iap| *pn = iap * dl);
-        Zip::from(&mut p_next)
-            .and(&p_curr)
-            .and(&p_prev)
-            .and(&co.c_curr)
-            .and(&co.c_prev)
-            .for_each(|pn, &pc, &pp, &cc, &cp| *pn += cc * pc - cp * pp);
+        leapfrog_combine(&mut p_next, &dlap, &co, &p_curr, &p_prev);
         for (idx, &(i, j, k)) in acq.source_voxels.iter().enumerate() {
             let s = if scalar_src {
                 acq.source_signal[[0, n]]
@@ -429,7 +448,7 @@ pub(crate) fn forward_sensor_only(
             synthetic[[r, n + 1]] = p_next[[i, j, k]];
         }
         std::mem::swap(&mut p_prev, &mut p_curr);
-        p_curr = p_next;
+        std::mem::swap(&mut p_curr, &mut p_next);
     }
     Ok(synthetic)
 }
@@ -461,21 +480,12 @@ pub(crate) fn forward_tail(
 
     let mut p_prev = Array3::<f64>::zeros((nx, ny, nz));
     let mut p_curr = Array3::<f64>::zeros((nx, ny, nz));
+    let mut p_next = Array3::<f64>::zeros((nx, ny, nz)); // reused scratch (fully overwritten)
     let mut dlap = Array3::<f64>::zeros((nx, ny, nz));
     let mut synthetic = Array2::<f64>::zeros((acq.receiver_voxels.len(), cfg.nt));
     for n in 0..cfg.nt - 1 {
         apply_helmholtz(p_curr.view(), inv_rho.view(), &sp, &mut dlap);
-        let mut p_next = Array3::<f64>::zeros((nx, ny, nz));
-        Zip::from(&mut p_next)
-            .and(&dlap)
-            .and(&co.inv_a_plus)
-            .for_each(|pn, &dl, &iap| *pn = iap * dl);
-        Zip::from(&mut p_next)
-            .and(&p_curr)
-            .and(&p_prev)
-            .and(&co.c_curr)
-            .and(&co.c_prev)
-            .for_each(|pn, &pc, &pp, &cc, &cp| *pn += cc * pc - cp * pp);
+        leapfrog_combine(&mut p_next, &dlap, &co, &p_curr, &p_prev);
         for (idx, &(i, j, k)) in acq.source_voxels.iter().enumerate() {
             let s = if scalar_src {
                 acq.source_signal[[0, n]]
@@ -488,7 +498,7 @@ pub(crate) fn forward_tail(
             synthetic[[r, n + 1]] = p_next[[i, j, k]];
         }
         std::mem::swap(&mut p_prev, &mut p_curr);
-        p_curr = p_next;
+        std::mem::swap(&mut p_curr, &mut p_next);
     }
     // After the loop: p_curr = p^{N-1}, p_prev = p^{N-2}.
     Ok((synthetic, p_curr, p_prev))
@@ -559,6 +569,7 @@ pub(crate) fn gradient(
 
     let mut xi_next = Array3::<f64>::zeros(dims); // ξ^{m+1}
     let mut xi_curr = Array3::<f64>::zeros(dims); // ξ^{m}   (ξ^{N-1} = 0)
+    let mut xi_prev = Array3::<f64>::zeros(dims); // reused scratch (fully overwritten)
     let mut dlap = Array3::<f64>::zeros(dims);
     let mut gradient = Array3::<f64>::zeros(dims);
 
@@ -566,17 +577,7 @@ pub(crate) fn gradient(
     // ξ^{m-1} = (1/a⁺)[ (m_diag + D) ξ^m − a⁻ ξ^{m+1} − dt Rᵀ r^m ].
     for m in (1..cfg.nt).rev() {
         apply_helmholtz(xi_curr.view(), inv_rho.view(), &sp, &mut dlap);
-        let mut xi_prev = Array3::<f64>::zeros(dims);
-        Zip::from(&mut xi_prev)
-            .and(&dlap)
-            .and(&co.inv_a_plus)
-            .for_each(|xp, &dl, &iap| *xp = iap * dl);
-        Zip::from(&mut xi_prev)
-            .and(&xi_curr)
-            .and(&xi_next)
-            .and(&co.c_curr)
-            .and(&co.c_prev)
-            .for_each(|xp, &xc, &xn, &cc, &cp| *xp += cc * xc - cp * xn);
+        leapfrog_combine(&mut xi_prev, &dlap, &co, &xi_curr, &xi_next);
         // Adjoint source −dt Rᵀ r^m injected at receiver voxels (through 1/a⁺).
         for (r, &(i, j, k)) in acq.receiver_voxels.iter().enumerate() {
             xi_prev[[i, j, k]] -= co.inv_a_plus[[i, j, k]] * dt * residual[[r, m]];
@@ -599,8 +600,10 @@ pub(crate) fn gradient(
                 *g += cf * xi * (pm - 2.0 * pm1 + pm2);
             });
 
+        // Rotate (xi_next, xi_curr, xi_prev) ← (xi_curr, xi_prev, old xi_next):
+        // old xi_next becomes next step's scratch; no per-step allocation.
         std::mem::swap(&mut xi_next, &mut xi_curr);
-        xi_curr = xi_prev;
+        std::mem::swap(&mut xi_curr, &mut xi_prev);
     }
 
     if let Some(mute) = source_mute {
@@ -686,6 +689,7 @@ pub(crate) fn gradient_reconstructed(
 
     let mut xi_next = Array3::<f64>::zeros(dims); // ξ^{m+1}
     let mut xi_curr = Array3::<f64>::zeros(dims); // ξ^{m}
+    let mut xi_prev = Array3::<f64>::zeros(dims); // reused scratch (fully overwritten)
     let mut dlap = Array3::<f64>::zeros(dims); // adjoint Laplacian
     let mut dlap_fwd = Array3::<f64>::zeros(dims); // forward-reconstruction Laplacian
     let mut gradient = Array3::<f64>::zeros(dims);
@@ -693,39 +697,24 @@ pub(crate) fn gradient_reconstructed(
     // Forward window during the backward sweep: pf_m = p^m, pf_m1 = p^{m-1}.
     let mut pf_m = p_last.to_owned(); // p^{N-1}
     let mut pf_m1 = p_second_last.to_owned(); // p^{N-2}
+    let mut pf_m2 = Array3::<f64>::zeros(dims); // reused scratch (overwritten, or zeroed at m=1)
 
     for m in (1..cfg.nt).rev() {
         // Adjoint step: ξ^{m-1} from ξ^m, ξ^{m+1}, and the receiver residual.
         apply_helmholtz(xi_curr.view(), inv_rho.view(), &sp, &mut dlap);
-        let mut xi_prev = Array3::<f64>::zeros(dims);
-        Zip::from(&mut xi_prev)
-            .and(&dlap)
-            .and(&co.inv_a_plus)
-            .for_each(|xp, &dl, &iap| *xp = iap * dl);
-        Zip::from(&mut xi_prev)
-            .and(&xi_curr)
-            .and(&xi_next)
-            .and(&co.c_curr)
-            .and(&co.c_prev)
-            .for_each(|xp, &xc, &xn, &cc, &cp| *xp += cc * xc - cp * xn);
+        leapfrog_combine(&mut xi_prev, &dlap, &co, &xi_curr, &xi_next);
         for (r, &(i, j, k)) in acq.receiver_voxels.iter().enumerate() {
             xi_prev[[i, j, k]] -= co.inv_a_plus[[i, j, k]] * dt * residual[[r, m]];
         }
 
         // Reconstruct p^{m-2} (only needed for m ≥ 2; reverse leapfrog, n = m-1):
         // p^{m-2} = inv_a_plus·(D p^{m-1}) + c_curr·p^{m-1} + inv_a_plus·s^{m-1} − p^m.
-        let mut pf_m2 = Array3::<f64>::zeros(dims);
+        // The lossless coeffs give c_prev = 1 exactly, so `leapfrog_combine` with
+        // (curr = pf_m1, prev = pf_m) reproduces `iap·dl + (c_curr·pf_m1 − pf_m)`
+        // bitwise. At m = 1 the window has no p^{m-2}, so it is zero.
         if m >= 2 {
             apply_helmholtz(pf_m1.view(), inv_rho.view(), &sp, &mut dlap_fwd);
-            Zip::from(&mut pf_m2)
-                .and(&dlap_fwd)
-                .and(&co.inv_a_plus)
-                .for_each(|p2, &dl, &iap| *p2 = iap * dl);
-            Zip::from(&mut pf_m2)
-                .and(&pf_m1)
-                .and(&pf_m)
-                .and(&co.c_curr)
-                .for_each(|p2, &pm1, &pm, &cc| *p2 += cc * pm1 - pm);
+            leapfrog_combine(&mut pf_m2, &dlap_fwd, &co, &pf_m1, &pf_m);
             for (idx, &(i, j, k)) in acq.source_voxels.iter().enumerate() {
                 let s = if scalar_src {
                     acq.source_signal[[0, m - 1]]
@@ -734,6 +723,8 @@ pub(crate) fn gradient_reconstructed(
                 };
                 pf_m2[[i, j, k]] += co.inv_a_plus[[i, j, k]] * s;
             }
+        } else {
+            pf_m2.fill(0.0);
         }
 
         // Imaging condition for n = m-1: g += coeff · ξ^{m-1} · (p^m − 2p^{m-1} + p^{m-2}).
@@ -747,11 +738,12 @@ pub(crate) fn gradient_reconstructed(
                 *g += cf * xi * (pm - 2.0 * pm1 + pm2);
             });
 
-        // Slide windows for the next (m-1) iteration.
+        // Slide both windows for the next (m-1) iteration via pointer swaps
+        // (old head buffer becomes the next step's reused scratch; no allocation).
         std::mem::swap(&mut xi_next, &mut xi_curr);
-        xi_curr = xi_prev;
+        std::mem::swap(&mut xi_curr, &mut xi_prev);
         std::mem::swap(&mut pf_m, &mut pf_m1);
-        pf_m1 = pf_m2;
+        std::mem::swap(&mut pf_m1, &mut pf_m2);
     }
 
     if let Some(mute) = source_mute {
