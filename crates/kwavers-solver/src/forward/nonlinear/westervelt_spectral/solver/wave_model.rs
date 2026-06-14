@@ -21,7 +21,7 @@ impl AcousticWaveModel for WesterveltWave {
     fn update_wave(
         &mut self,
         fields: &mut Array4<f64>,
-        prev_pressure: &Array3<f64>,
+        _prev_pressure: &Array3<f64>,
         source: &dyn Source,
         grid: &Grid,
         medium: &dyn Medium,
@@ -38,7 +38,10 @@ impl AcousticWaveModel for WesterveltWave {
             return Ok(());
         }
 
-        if self.buffer_indices[1] == self.buffer_indices[2] {
+        // Seed the leapfrog history on the first step: previous = current = p(t=0)
+        // (zero initial velocity, the standard IVP start). Without this the
+        // previous buffer is zero on step 0, injecting a spurious velocity kick.
+        if self.current_step == 0 {
             let initial_pressure = fields.index_axis(Axis(0), UnifiedFieldType::Pressure.index());
             self.initialize_buffers(initial_pressure);
         }
@@ -60,11 +63,12 @@ impl AcousticWaveModel for WesterveltWave {
         debug_assert_ne!(curr_idx, prev_idx);
 
         let pressure_current = &self.pressure_buffers[curr_idx];
-        let pressure_previous = if prev_pressure.dim() == pressure_current.dim() {
-            prev_pressure
-        } else {
-            &self.pressure_buffers[prev_idx]
-        };
+        // Authoritative history is the solver's internal ring buffer (seeded on
+        // the first step), matching the Kuznetsov solver. An external
+        // `prev_pressure` is intentionally ignored: a constant caller-supplied
+        // buffer (e.g. zeros every step) would degenerate the leapfrog
+        // `p_next = 2·p_curr − p_prev + …` into `2·p_curr + …`, which diverges.
+        let pressure_previous = &self.pressure_buffers[prev_idx];
 
         let c_arr = medium.sound_speed_array();
 
@@ -120,6 +124,9 @@ impl AcousticWaveModel for WesterveltWave {
             grid,
             dt,
         );
+        if self.damping_scaling != 1.0 {
+            self.damping_scratch *= self.damping_scaling;
+        }
         {
             let mut metrics = self.metrics.lock().unwrap();
             metrics.record_nonlinear(start.elapsed());
@@ -155,11 +162,7 @@ impl AcousticWaveModel for WesterveltWave {
                 &mut self.pressure_buffers,
                 self.buffer_indices,
             );
-        let pressure_previous = if prev_pressure.dim() == pressure_current.dim() {
-            prev_pressure
-        } else {
-            pressure_previous_buffer
-        };
+        let pressure_previous = pressure_previous_buffer;
         let nonlinear_slice = self
             .nonlinear_scratch
             .as_slice()
@@ -216,5 +219,13 @@ impl AcousticWaveModel for WesterveltWave {
 
     fn set_nonlinearity_scaling(&mut self, scaling: f64) {
         self.nonlinearity_scaling = scaling;
+    }
+}
+
+impl WesterveltWave {
+    /// Scale the viscoelastic damping term. Set to `0.0` for a lossless linear
+    /// run (matching the lossless modes of the FDTD/PSTD/Kuznetsov solvers).
+    pub fn set_damping_scaling(&mut self, scaling: f64) {
+        self.damping_scaling = scaling;
     }
 }

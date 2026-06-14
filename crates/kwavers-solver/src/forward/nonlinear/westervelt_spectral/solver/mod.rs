@@ -67,6 +67,12 @@ pub(super) struct MediumProperties {
 pub struct WesterveltWave {
     pub(super) k_squared: Option<Array3<f64>>,
     pub(super) nonlinearity_scaling: f64,
+    /// Scales the viscoelastic damping term `c²δ∇²(∂p/∂t)`. Default 1.0; set to
+    /// 0.0 for a lossless linear run. NOTE: the explicit FD discretization of this
+    /// term is only conditionally stable (its high-wavenumber amplification grows
+    /// as `dt·c²δ·k²`); lossy runs require a damping-CFL-safe `dt` or a k-space
+    /// treatment. See ADR/spawn task on Westervelt absorption stability.
+    pub(super) damping_scaling: f64,
     /// Pressure history using buffer rotation for zero-allocation updates.
     pub(super) pressure_buffers: [Array3<f64>; 3],
     pub(super) buffer_indices: [usize; 3], // [next, current, previous]
@@ -100,6 +106,7 @@ impl WesterveltWave {
         Self {
             k_squared: Some(k_squared),
             nonlinearity_scaling: 1.0,
+            damping_scaling: 1.0,
             pressure_buffers: [
                 Array3::zeros(shape),
                 Array3::zeros(shape),
