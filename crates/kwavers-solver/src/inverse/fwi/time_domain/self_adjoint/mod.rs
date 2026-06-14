@@ -159,55 +159,77 @@ fn apply_helmholtz(
     out: &mut Array3<f64>,
 ) {
     let (nx, ny, nz) = p.dim();
-    Zip::indexed(out).for_each(|(i, j, k), o| {
-        let pc = p[[i, j, k]];
-        let irc = inv_rho[[i, j, k]];
-        let mut acc = 0.0;
+    // Flat contiguous traversal: the inputs are always full standard-layout
+    // (C-order) arrays here, so the strided neighbour offsets are computed once
+    // (`stride_i = ny·nz`, `stride_j = nz`, `stride_k = 1`) and the linear index
+    // `off` is advanced by 1 per voxel instead of recomputing a 3-D offset (with
+    // bounds checks) for each of the ~13 indexed accesses. The arithmetic is
+    // unchanged from the indexed form, so the result is bitwise-identical (the
+    // exact discrete self-adjoint operator, ADR 016, is preserved).
+    const INV: &str = "invariant: self-adjoint Helmholtz operands are full standard-layout arrays";
+    let ps = p.as_slice().expect(INV);
+    let irs = inv_rho.as_slice().expect(INV);
+    let os = out.as_slice_mut().expect(INV);
+    let stride_i = ny * nz;
+    let stride_j = nz;
+    let (inv_dx2, inv_dy2, inv_dz2) = (sp.inv_dx2, sp.inv_dy2, sp.inv_dz2);
 
-        if sp.inv_dx2 != 0.0 {
-            let (pn, irn) = if i + 1 < nx {
-                (p[[i + 1, j, k]], inv_rho[[i + 1, j, k]])
-            } else {
-                (0.0, irc)
-            };
-            acc += 0.5 * (irc + irn) * (pn - pc) * sp.inv_dx2;
-            let (pp, irp) = if i > 0 {
-                (p[[i - 1, j, k]], inv_rho[[i - 1, j, k]])
-            } else {
-                (0.0, irc)
-            };
-            acc += 0.5 * (irc + irp) * (pp - pc) * sp.inv_dx2;
+    let mut off = 0usize;
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                // off == (i·ny + j)·nz + k by construction.
+                let pc = ps[off];
+                let irc = irs[off];
+                let mut acc = 0.0;
+
+                if inv_dx2 != 0.0 {
+                    let (pn, irn) = if i + 1 < nx {
+                        (ps[off + stride_i], irs[off + stride_i])
+                    } else {
+                        (0.0, irc)
+                    };
+                    acc += 0.5 * (irc + irn) * (pn - pc) * inv_dx2;
+                    let (pp, irp) = if i > 0 {
+                        (ps[off - stride_i], irs[off - stride_i])
+                    } else {
+                        (0.0, irc)
+                    };
+                    acc += 0.5 * (irc + irp) * (pp - pc) * inv_dx2;
+                }
+                if inv_dy2 != 0.0 {
+                    let (pn, irn) = if j + 1 < ny {
+                        (ps[off + stride_j], irs[off + stride_j])
+                    } else {
+                        (0.0, irc)
+                    };
+                    acc += 0.5 * (irc + irn) * (pn - pc) * inv_dy2;
+                    let (pp, irp) = if j > 0 {
+                        (ps[off - stride_j], irs[off - stride_j])
+                    } else {
+                        (0.0, irc)
+                    };
+                    acc += 0.5 * (irc + irp) * (pp - pc) * inv_dy2;
+                }
+                if inv_dz2 != 0.0 {
+                    let (pn, irn) = if k + 1 < nz {
+                        (ps[off + 1], irs[off + 1])
+                    } else {
+                        (0.0, irc)
+                    };
+                    acc += 0.5 * (irc + irn) * (pn - pc) * inv_dz2;
+                    let (pp, irp) = if k > 0 {
+                        (ps[off - 1], irs[off - 1])
+                    } else {
+                        (0.0, irc)
+                    };
+                    acc += 0.5 * (irc + irp) * (pp - pc) * inv_dz2;
+                }
+                os[off] = acc;
+                off += 1;
+            }
         }
-        if sp.inv_dy2 != 0.0 {
-            let (pn, irn) = if j + 1 < ny {
-                (p[[i, j + 1, k]], inv_rho[[i, j + 1, k]])
-            } else {
-                (0.0, irc)
-            };
-            acc += 0.5 * (irc + irn) * (pn - pc) * sp.inv_dy2;
-            let (pp, irp) = if j > 0 {
-                (p[[i, j - 1, k]], inv_rho[[i, j - 1, k]])
-            } else {
-                (0.0, irc)
-            };
-            acc += 0.5 * (irc + irp) * (pp - pc) * sp.inv_dy2;
-        }
-        if sp.inv_dz2 != 0.0 {
-            let (pn, irn) = if k + 1 < nz {
-                (p[[i, j, k + 1]], inv_rho[[i, j, k + 1]])
-            } else {
-                (0.0, irc)
-            };
-            acc += 0.5 * (irc + irn) * (pn - pc) * sp.inv_dz2;
-            let (pp, irp) = if k > 0 {
-                (p[[i, j, k - 1]], inv_rho[[i, j, k - 1]])
-            } else {
-                (0.0, irc)
-            };
-            acc += 0.5 * (irc + irp) * (pp - pc) * sp.inv_dz2;
-        }
-        *o = acc;
-    });
+    }
 }
 
 /// `W⁻¹ = ρc²` (the inverse of the energy weight `W = 1/(ρc²)`).
