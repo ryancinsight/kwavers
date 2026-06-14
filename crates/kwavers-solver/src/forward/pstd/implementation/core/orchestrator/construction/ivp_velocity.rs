@@ -6,6 +6,39 @@ use kwavers_math::fft::Fft3dInOutExt;
 use ndarray::Zip;
 
 impl PSTDSolver {
+    /// Seed the full PSTD state for a zero-initial-velocity initial-value problem
+    /// from an externally-supplied initial pressure already stored in
+    /// `self.fields.p`.
+    ///
+    /// PSTD's state variables are the partial densities `(ρx, ρy, ρz)` with
+    /// pressure *derived* via the equation of state `p = c²·(ρx+ρy+ρz)`. Setting
+    /// only `fields.p` is therefore insufficient — the densities must be seeded so
+    /// the EOS reproduces `p₀` and each directional density can evolve from its own
+    /// divergence. The total perturbation `ρ = p₀/c²` is split equally among the
+    /// **active** spatial dimensions (matching the construction-time IVP path):
+    /// 3-D → `/3`, 2-D → `/2`, 1-D → `/1`. The half-step velocity is then seeded by
+    /// [`Self::initialize_ivp_velocity`].
+    ///
+    /// # Errors
+    /// Propagates [`Self::initialize_ivp_velocity`] failures.
+    pub(crate) fn seed_ivp_from_pressure(&mut self) -> KwaversResult<()> {
+        let has_y = self.grid.ny > 1;
+        let has_z = self.grid.nz > 1;
+        let divisor = (1 + has_y as usize + has_z as usize) as f64;
+        Zip::from(&mut self.rhox)
+            .and(&mut self.rhoy)
+            .and(&mut self.rhoz)
+            .and(&self.fields.p)
+            .and(&self.materials.c0)
+            .par_for_each(|rx, ry, rz, &p, &c| {
+                let share = if c > 1e-6 { p / (c * c) / divisor } else { 0.0 };
+                *rx = share;
+                *ry = if has_y { share } else { 0.0 };
+                *rz = if has_z { share } else { 0.0 };
+            });
+        self.initialize_ivp_velocity()
+    }
+
     /// Initialize velocity fields at t = −dt/2 for exact IVP staggered leapfrog start.
     ///
     /// Matches k-Wave convention (kspaceFirstOrder2D.m line 920):

@@ -18,6 +18,9 @@ pub struct PSTDPlugin {
     state: PluginState,
     solver: Option<PSTDSolver>,
     config: PSTDConfig,
+    /// Whether the zero-velocity IVP has been seeded from the externally-injected
+    /// initial pressure (done once, on the first `update`).
+    ivp_seeded: bool,
 }
 
 impl PSTDPlugin {
@@ -38,6 +41,7 @@ impl PSTDPlugin {
             state: PluginState::Created,
             solver: None,
             config,
+            ivp_seeded: false,
         })
     }
 }
@@ -79,6 +83,7 @@ impl crate::plugin::Plugin for PSTDPlugin {
         let source = GridSource::default();
         let solver = PSTDSolver::new(self.config.clone(), grid.clone(), medium, source)?;
         self.solver = Some(solver);
+        self.ivp_seeded = false;
         self.state = PluginState::Initialized;
         Ok(())
     }
@@ -108,45 +113,36 @@ impl crate::plugin::Plugin for PSTDPlugin {
             .fields
             .p
             .assign(&fields.index_axis(ndarray::Axis(0), pressure_idx));
-        solver
-            .fields
-            .ux
-            .assign(&fields.index_axis(ndarray::Axis(0), vx_idx));
-        solver
-            .fields
-            .uy
-            .assign(&fields.index_axis(ndarray::Axis(0), vy_idx));
-        solver
-            .fields
-            .uz
-            .assign(&fields.index_axis(ndarray::Axis(0), vz_idx));
 
-        // Sync density from pressure (Linear EOS approximation) to ensure consistency.
-        //
-        // Not yet implemented: higher-order PSTD methods. Absent: 4th-order k-space
-        // derivative schemes; Tait or stiffened-gas nonlinear equation of state for
-        // shock formation; multi-scale inter-band frequency coupling; anisotropic
-        // dispersion correction for broadband pulses; PML absorbing boundaries; and
-        // GPU acceleration for large-scale 3D domains.
-        // rho = p / c0^2, split across rhox/rhoy/rhoz
-        ndarray::Zip::from(&mut solver.rhox)
-            .and(&mut solver.rhoy)
-            .and(&mut solver.rhoz)
-            .and(&solver.fields.p)
-            .and(&solver.materials.c0)
-            .par_for_each(|rx, ry, rz, &p, &c| {
-                if c > 1e-6 {
-                    let rho = p / (c * c);
-                    let split = rho / 3.0;
-                    *rx = split;
-                    *ry = split;
-                    *rz = split;
-                } else {
-                    *rx = 0.0;
-                    *ry = 0.0;
-                    *rz = 0.0;
-                }
-            });
+        if self.ivp_seeded {
+            // Steady state: velocity is genuine evolving state, sync it in. The
+            // partial densities (ρx, ρy, ρz) are the solver's own leapfrog state
+            // and MUST persist across steps — they are NOT re-derived from the
+            // pressure here. Re-splitting ρ = p/c² equally every step destroys the
+            // directional density information and collapses the wave amplitude
+            // (the historical bug this replaces).
+            solver
+                .fields
+                .ux
+                .assign(&fields.index_axis(ndarray::Axis(0), vx_idx));
+            solver
+                .fields
+                .uy
+                .assign(&fields.index_axis(ndarray::Axis(0), vy_idx));
+            solver
+                .fields
+                .uz
+                .assign(&fields.index_axis(ndarray::Axis(0), vz_idx));
+        } else {
+            // First step: the field array carries the zero-velocity IVP initial
+            // pressure (`fields.p` just synced). PSTD's state is the partial
+            // densities with pressure derived via the EOS, so seed both the
+            // densities (ρ = p₀/c², split over active dims) and the half-step
+            // velocity. The incoming velocity is zero by construction, so it is not
+            // synced over the seeded half-step velocity.
+            solver.seed_ivp_from_pressure()?;
+            self.ivp_seeded = true;
+        }
 
         // Perform time step
         solver.step_forward()?;
