@@ -6145,7 +6145,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7aac2e6a6e4468ffa092ad43c39b81c79196c2bb773b8db4085f695efe3bba17"
 dependencies = [
  "libc",
- "ndarray 0.15.6",
+ "ndarray 0.16.1",
  "num-complex",
  "num-integer",
  "num-traits",
