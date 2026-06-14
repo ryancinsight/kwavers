@@ -35,6 +35,13 @@ pub struct PamMonitorConfig {
     pub nz: usize,
 }
 
+/// Strictly positive and non-NaN: a NaN fails `> 0.0`, so it is rejected too.
+/// Used for input-validation guards (a NaN sound speed / sample rate is invalid).
+#[inline]
+fn is_positive(x: f64) -> bool {
+    x > 0.0
+}
+
 #[inline]
 fn distance(a: [f64; 3], b: [f64; 3]) -> f64 {
     let (dx, dy, dz) = (a[0] - b[0], a[1] - b[1], a[2] - b[2]);
@@ -73,7 +80,7 @@ pub fn passive_acoustic_map(
             element_positions.len()
         )));
     }
-    if !(cfg.sound_speed_m_s > 0.0) || !(sample_rate > 0.0) {
+    if !is_positive(cfg.sound_speed_m_s) || !is_positive(sample_rate) {
         return Err(KwaversError::InvalidInput(
             "PAM: sound speed and sample rate must be positive".to_owned(),
         ));
@@ -124,7 +131,10 @@ pub fn synthesize_emission(
     n_samples: usize,
     pulse_halfwidth_samples: f64,
 ) -> KwaversResult<Array3<f64>> {
-    if !(sound_speed_m_s > 0.0) || !(sample_rate > 0.0) || pulse_halfwidth_samples <= 0.0 {
+    if !is_positive(sound_speed_m_s)
+        || !is_positive(sample_rate)
+        || !is_positive(pulse_halfwidth_samples)
+    {
         return Err(KwaversError::InvalidInput(
             "PAM synth: sound speed, sample rate, and pulse width must be positive".to_owned(),
         ));

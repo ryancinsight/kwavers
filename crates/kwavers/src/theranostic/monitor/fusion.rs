@@ -58,10 +58,13 @@ fn normalize_abs(map: &Array2<f64>) -> Array2<f64> {
         hi = hi.max(a);
     }
     let span = hi - lo;
-    if !(span > 0.0) {
-        return Array2::zeros(map.raw_dim());
+    // `span > 0.0` is false for a zero/negative span and for NaN, so the else
+    // branch (all-zeros, "no signal") covers the degenerate cases.
+    if span > 0.0 {
+        map.mapv(|v| (v.abs() - lo) / span)
+    } else {
+        Array2::zeros(map.raw_dim())
     }
-    map.mapv(|v| (v.abs() - lo) / span)
 }
 
 /// Fuse the quantitative Δc map and the passive PAM map into agreement and union
