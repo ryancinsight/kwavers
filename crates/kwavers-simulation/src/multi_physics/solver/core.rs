@@ -110,56 +110,82 @@ impl SimulationMultiPhysicsSolver {
         }
     }
 
-    fn solve_explicit_coupling(&mut self, dt: f64) -> KwaversResult<f64> {
+    /// One Jacobi coupling sweep: snapshot every domain's pressure, transfer each
+    /// snapshot to all other domains as (relaxed) coupling forcing, advance every
+    /// solver one step, and return the L∞ field change (the coupling residual),
+    /// recording it in `convergence_history`.
+    ///
+    /// This is the shared per-sweep physics for all multi-domain strategies — they
+    /// differ only in how many sweeps they run, not in the sweep itself. Jacobi:
+    /// every source uses the pre-sweep field, so the result is order-independent.
+    /// (Previously the explicit/implicit paths stepped solvers WITHOUT any
+    /// `transfer_field`, so the domains never actually coupled.)
+    fn coupled_jacobi_sweep(&mut self, dt: f64) -> KwaversResult<f64> {
+        let domains: Vec<SimulationPhysicsDomain> = self.solvers.keys().copied().collect();
         let mut snapshots: HashMap<SimulationPhysicsDomain, Array3<f64>> = HashMap::new();
-        for (domain, solver) in &self.solvers {
+        for (&domain, solver) in &self.solvers {
             if let Ok(field) = solver.get_field("pressure") {
-                snapshots.insert(*domain, field.to_owned());
+                snapshots.insert(domain, field.to_owned());
+            }
+        }
+        for &src in &domains {
+            for &tgt in &domains {
+                if src == tgt {
+                    continue;
+                }
+                let Some(src_snapshot) = snapshots.get(&src) else {
+                    continue;
+                };
+                let Some(mut tgt_solver) = self.solvers.remove(&tgt) else {
+                    continue;
+                };
+                let _ = self.coupler.transfer_field_array(
+                    src,
+                    tgt,
+                    "pressure",
+                    src_snapshot.view(),
+                    tgt_solver.as_mut(),
+                    self.config.relaxation_factor,
+                );
+                self.solvers.insert(tgt, tgt_solver);
             }
         }
         for solver in self.solvers.values_mut() {
             solver.step(dt)?;
         }
-        let mut max_residual = 0.0_f64;
-        for (domain, solver) in &self.solvers {
-            if let Some(old_field) = snapshots.get(domain) {
+        let mut residual = 0.0_f64;
+        for (&domain, solver) in &self.solvers {
+            if let Some(old_field) = snapshots.get(&domain) {
                 if let Ok(new_field) = solver.get_field("pressure") {
-                    let residual = max_abs_difference(new_field, old_field.view())?;
-                    max_residual = max_residual.max(residual);
+                    residual = residual.max(max_abs_difference(new_field, old_field.view())?);
                 }
             }
         }
-        self.convergence_history.push(max_residual);
-        Ok(max_residual)
+        self.convergence_history.push(residual);
+        Ok(residual)
     }
 
-    fn solve_implicit_coupling(&mut self, dt: f64) -> KwaversResult<f64> {
+    /// Iterate the Jacobi sweep to a coupling fixed point (strong coupling).
+    fn iterate_coupled_to_fixed_point(&mut self, dt: f64) -> KwaversResult<f64> {
         let mut residual = f64::MAX;
         for _iteration in 0..self.config.max_iterations {
-            let mut snapshots: HashMap<SimulationPhysicsDomain, Array3<f64>> = HashMap::new();
-            for (domain, solver) in &self.solvers {
-                if let Ok(field) = solver.get_field("pressure") {
-                    snapshots.insert(*domain, field.to_owned());
-                }
-            }
-            for solver in self.solvers.values_mut() {
-                solver.step(dt)?;
-            }
-            residual = 0.0;
-            for (domain, solver) in &self.solvers {
-                if let Some(old_field) = snapshots.get(domain) {
-                    if let Ok(new_field) = solver.get_field("pressure") {
-                        let r = max_abs_difference(new_field, old_field.view())?;
-                        residual = residual.max(r);
-                    }
-                }
-            }
-            self.convergence_history.push(residual);
+            residual = self.coupled_jacobi_sweep(dt)?;
             if residual < self.config.tolerance {
                 break;
             }
         }
         Ok(residual)
+    }
+
+    fn solve_explicit_coupling(&mut self, dt: f64) -> KwaversResult<f64> {
+        // Loose (staggered-explicit) coupling: exactly one exchange+step sweep.
+        self.coupled_jacobi_sweep(dt)
+    }
+
+    fn solve_implicit_coupling(&mut self, dt: f64) -> KwaversResult<f64> {
+        // Strong (implicit) coupling: sub-iterate the exchange+step sweep to a
+        // fixed point within the time step.
+        self.iterate_coupled_to_fixed_point(dt)
     }
 
     fn solve_partitioned_coupling(&mut self, dt: f64) -> KwaversResult<f64> {
@@ -207,56 +233,9 @@ impl SimulationMultiPhysicsSolver {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     fn solve_monolithic_coupling(&mut self, dt: f64) -> KwaversResult<f64> {
-        let domains: Vec<SimulationPhysicsDomain> = self.solvers.keys().copied().collect();
-        let mut residual = f64::MAX;
-        for _iteration in 0..self.config.max_iterations {
-            let mut snapshots: HashMap<SimulationPhysicsDomain, Array3<f64>> = HashMap::new();
-            for (&domain, solver) in &self.solvers {
-                if let Ok(field) = solver.get_field("pressure") {
-                    snapshots.insert(domain, field.to_owned());
-                }
-            }
-            for &src in &domains {
-                for &tgt in &domains {
-                    if src == tgt {
-                        continue;
-                    }
-                    let Some(src_snapshot) = snapshots.get(&src) else {
-                        continue;
-                    };
-                    let Some(mut tgt_solver) = self.solvers.remove(&tgt) else {
-                        continue;
-                    };
-                    let _ = self.coupler.transfer_field_array(
-                        src,
-                        tgt,
-                        "pressure",
-                        src_snapshot.view(),
-                        tgt_solver.as_mut(),
-                        self.config.relaxation_factor,
-                    );
-                    self.solvers.insert(tgt, tgt_solver);
-                }
-            }
-            for solver in self.solvers.values_mut() {
-                solver.step(dt)?;
-            }
-            residual = 0.0_f64;
-            for (&domain, solver) in &self.solvers {
-                let Some(old_field) = snapshots.get(&domain) else {
-                    continue;
-                };
-                if let Ok(new_field) = solver.get_field("pressure") {
-                    let r = max_abs_difference(new_field, old_field.view())?;
-                    residual = residual.max(r);
-                }
-            }
-            self.convergence_history.push(residual);
-            if residual < self.config.tolerance {
-                break;
-            }
-        }
-        Ok(residual)
+        // Jacobi fixed-point iteration of the shared exchange+step sweep (steps 1–4
+        // of the algorithm above). Same per-sweep physics as the implicit strategy.
+        self.iterate_coupled_to_fixed_point(dt)
     }
 
     /// Get convergence history
