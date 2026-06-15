@@ -59,7 +59,10 @@ impl ThermalAcousticCoupler {
 
     /// Advance thermal equation (Pennes bioheat) one time step.
     ///
-    /// `ρc ∂T/∂t = ∇·(k∇T) + w_b·c_b·(T_a − T) + Q_met + Q_ac`
+    /// Solved in temperature-rate form (canonical Pennes divided by `ρc`):
+    /// `∂T/∂t = α∇²T + w_b·(T_a − T) + (Q_met + Q_ac)/(ρc)`, where `α = k/(ρc)` and
+    /// `w_b` is the lumped volumetric perfusion rate `[1/s]` (= ω_b·ρ_b·c_b/(ρc)),
+    /// so no separate `c_b`/`ρc` factor is applied to the perfusion term.
     ///
     /// Interior uses explicit FD Laplacian with reads from `temperature_prev`
     /// (no dependency between elements) → fully data-parallel.

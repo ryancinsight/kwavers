@@ -11,9 +11,10 @@
 //! ∂p/∂t = -ρ(T) c²(T) ∇·u + Q_ac
 //! ```
 //!
-//! **Thermal System** (Pennes bioheat):
+//! **Thermal System** (Pennes bioheat), divided through by `ρc` so the perfusion
+//! coefficient `w_b` is the lumped volumetric rate `[1/s]` (= ω_b·ρ_b·c_b/(ρc)):
 //! ```text
-//! ρc ∂T/∂t = ∇·(k∇T) + w_b c_b (T_a - T) + Q_m + Q_ac
+//! ∂T/∂t = α ∇²T + w_b (T_a - T) + (Q_m + Q_ac)/(ρc)      [α = k/(ρc)]
 //! ```
 //!
 //! **Coupling**:
