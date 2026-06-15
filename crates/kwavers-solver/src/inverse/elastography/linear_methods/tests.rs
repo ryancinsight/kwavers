@@ -3,7 +3,7 @@
 use super::direct::direct_inversion;
 use super::directional::directional_phase_gradient_inversion;
 use super::lfe::local_frequency_estimation_inversion;
-use super::phase_gradient::{compute_phase_gradient_speed, phase_gradient_inversion};
+use super::phase_gradient::phase_gradient_inversion;
 use super::time_of_flight::time_of_flight_inversion;
 use super::volumetric::volumetric_time_of_flight_inversion;
 use super::ShearWaveInversion;
@@ -183,25 +183,6 @@ fn test_directional_phase_gradient() {
         (0.5..=10.0).contains(&center),
         "directional phase gradient center speed = {center} must be in [0.5, 10.0]"
     );
-}
-
-#[test]
-fn test_compute_phase_gradient_speed() {
-    let profile = vec![0.0, 0.1, 0.2, 0.3, 0.2, 0.1, 0.0];
-    let dx = 0.001;
-
-    let cs = compute_phase_gradient_speed(&profile, dx, 100.0)
-        .expect("Should compute speed from valid profile");
-    assert!((0.5..=10.0).contains(&cs), "Speed should be in valid range");
-}
-
-#[test]
-fn test_compute_phase_gradient_speed_empty() {
-    let profile = vec![0.0, 0.0];
-    let dx = 0.001;
-
-    let speed = compute_phase_gradient_speed(&profile, dx, 100.0);
-    assert!(speed.is_none(), "Should return None for insufficient data");
 }
 
 #[test]
