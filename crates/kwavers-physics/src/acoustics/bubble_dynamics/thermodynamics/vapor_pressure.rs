@@ -4,7 +4,7 @@ use kwavers_core::constants::fundamental::{ATMOSPHERIC_PRESSURE, GAS_CONSTANT as
 use kwavers_core::constants::numerical::{MMHG_TO_PA, MPA_TO_PA};
 use kwavers_core::constants::thermodynamic::{WATER_ANTOINE_A, WATER_ANTOINE_B, WATER_ANTOINE_C};
 use kwavers_core::constants::{
-    H_VAP_WATER_100C, P_CRITICAL_WATER, P_TRIPLE_WATER, T_BOILING_WATER, T_CRITICAL_WATER,
+    H_VAP_WATER_100C, M_WATER, P_CRITICAL_WATER, P_TRIPLE_WATER, T_BOILING_WATER, T_CRITICAL_WATER,
     T_TRIPLE_WATER,
 };
 
@@ -39,7 +39,12 @@ impl Default for ThermodynamicsCalculator {
     fn default() -> Self {
         Self {
             model: VaporPressureModel::Wagner, // Reference model for water
-            h_vap: H_VAP_WATER_100C,           // Water at 100°C [J/mol]
+            // Clausius-Clapeyron uses h_vap/R_GAS with R_GAS in J/(mol·K), so
+            // h_vap MUST be molar [J/mol]. H_VAP_WATER_100C is the specific
+            // enthalpy [J/kg] (2.257e6); multiply by the molar mass M_WATER
+            // [kg/mol] to get ≈40.66 kJ/mol. (Previously the J/kg value was used
+            // directly, overstating the exponent by 1/M_WATER ≈ 55× away from t_ref.)
+            h_vap: H_VAP_WATER_100C * M_WATER, // Water at 100°C [J/mol]
             t_ref: T_BOILING_WATER,            // 100°C
             p_ref: ATMOSPHERIC_PRESSURE,       // 1 atm
         }
