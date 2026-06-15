@@ -11,7 +11,9 @@ impl IterativeMethods {
     /// Each entry A[s, v] = Green's function G(r_sv) × voxel_volume × solid_angle(r_sv),
     /// using G(r) = 1/(4πr) for spherical wave propagation.
     ///
-    /// Physical grid is assumed to span GRID_PHYSICAL_SIZE = 50 mm.
+    /// Voxel positions and volume use the config's physical `grid_spacing`, so the
+    /// matrix geometry shares the sensor-position coordinate frame (the physical
+    /// extent is `grid_size · grid_spacing`, not a fixed assumed domain size).
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
@@ -24,10 +26,7 @@ impl IterativeMethods {
         let n_voxels = grid_size[0] * grid_size[1] * grid_size[2];
         let mut matrix = Array2::zeros((n_sensors, n_voxels));
 
-        const GRID_PHYSICAL_SIZE: f64 = 0.05; // 50 mm imaging region
-        let dx = GRID_PHYSICAL_SIZE / grid_size[0] as f64;
-        let dy = GRID_PHYSICAL_SIZE / grid_size[1] as f64;
-        let dz = GRID_PHYSICAL_SIZE / grid_size[2] as f64;
+        let [dx, dy, dz] = self.grid_spacing;
 
         let voxel_volume = dx * dy * dz;
 

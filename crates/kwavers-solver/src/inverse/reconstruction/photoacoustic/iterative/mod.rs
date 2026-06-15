@@ -30,6 +30,10 @@ pub struct IterativeMethods {
     pub(super) iterations: usize,
     pub(super) relaxation_factor: f64,
     pub(super) regularization_parameter: f64,
+    /// Physical voxel spacing `[dx, dy, dz]` (m) from the reconstruction config.
+    /// Used to place voxels and size the Green's-function system matrix in the
+    /// same physical frame as the sensor positions.
+    pub(super) grid_spacing: [f64; 3],
 }
 
 impl IterativeMethods {
@@ -52,6 +56,7 @@ impl IterativeMethods {
             iterations,
             relaxation_factor,
             regularization_parameter: config.regularization_parameter,
+            grid_spacing: config.grid_spacing,
         }
     }
 
