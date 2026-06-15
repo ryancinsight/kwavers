@@ -199,3 +199,60 @@ impl SpectralUnmixer {
         &self.extinction_matrix
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::signal_processing::spectroscopy::types::SpectralUnmixingConfig;
+    use ndarray::array;
+
+    /// End-to-end blood-oxygenation recovery. Build a 2-chromophore (HbO₂, Hb)
+    /// extinction matrix from the corrected Prahl/OMLC near-infrared values
+    /// (per-tetramer ×4, here ÷1000 for numerical scale; `sO₂` is scale-free),
+    /// forward-model `μ = E·c` for a known oxygenation, and confirm the unmixer
+    /// recovers sO₂. The 700–900 nm window straddles the ~800 nm isosbestic, so
+    /// the HbO₂/Hb crossover makes `E` well-conditioned and the system
+    /// invertible — a regression guard on both the unmixer and the extinction
+    /// spectra (the previously-incorrect HbO₂ < Hb everywhere would not invert).
+    #[test]
+    fn recovers_known_oxygen_saturation_from_hemoglobin_spectra() {
+        // Columns: [HbO₂, Hb]; rows: 700/750/800/850/900 nm.
+        let e = array![
+            [1.160, 7.177_12],
+            [2.072, 5.620_96],
+            [3.264, 3.046_88],
+            [4.232, 2.765_28],
+            [4.792, 3.047_36],
+        ];
+        let config = SpectralUnmixingConfig {
+            regularization_lambda: 1e-6,
+            non_negative: true,
+            min_condition_number: 1e-6,
+        };
+        let unmixer = SpectralUnmixer::new(
+            e.clone(),
+            vec![700.0, 750.0, 800.0, 850.0, 900.0],
+            vec!["HbO2".to_string(), "Hb".to_string()],
+            config,
+        )
+        .expect("well-conditioned unmixer");
+
+        for &true_so2 in &[0.98_f64, 0.70, 0.50] {
+            let c_true = array![true_so2, 1.0 - true_so2];
+            let mu = e.dot(&c_true); // forward model μ = E·c
+            let result = unmixer.unmix_single(&mu).expect("unmix");
+            let (hbo2, hb) = (result.concentrations[0], result.concentrations[1]);
+            let so2 = hbo2 / (hbo2 + hb);
+            assert!(
+                (so2 - true_so2).abs() < 0.01,
+                "sO₂ recovery: true={true_so2}, got={so2} (HbO₂={hbo2}, Hb={hb})"
+            );
+            // Exact synthetic data ⇒ near-zero residual confirms consistency.
+            assert!(
+                result.relative_residual < 1e-3,
+                "relative residual {} too large",
+                result.relative_residual
+            );
+        }
+    }
+}
