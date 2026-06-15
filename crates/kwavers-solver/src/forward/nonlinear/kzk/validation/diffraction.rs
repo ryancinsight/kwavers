@@ -17,6 +17,9 @@ mod tests {
     /// - Panics if an internal invariant assumed to hold at this call site is violated.
     ///
     #[test]
+    #[ignore = "Tier 3 comprehensive validation: full-Rayleigh-distance KZK diffraction \
+                exceeds the 60 s default per-test budget even in isolation (debug profile). \
+                Run via `cargo nextest run --profile heavy` or `cargo test -- --ignored`."]
     fn test_gaussian_beam_diffraction() {
         let config = KZKConfig {
             nx: DEFAULT_GRID_SIZE,

@@ -103,6 +103,9 @@ mod tests {
     /// - Panics if an internal invariant assumed to hold at this call site is violated.
     ///
     #[test]
+    #[ignore = "Tier 3 comprehensive validation: 200 steps on a 64³ grid exceeds the \
+                60 s default per-test budget even in isolation (debug profile). Run via \
+                `cargo nextest run --profile heavy` or `cargo test -- --ignored`."]
     fn test_energy_conservation_linear() {
         let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3).unwrap();
         let dt = 5e-8; // Small timestep for stability
