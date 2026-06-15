@@ -153,6 +153,46 @@ pub fn transmission_coefficient(z_incident: f64, z_transmitted: f64) -> f64 {
     2.0 * z_transmitted / (z_incident + z_transmitted)
 }
 
+/// Intensity reflection coefficient at a normal-incidence planar interface
+/// (Chapter 1 Corollary 1.2): `R_I = R² = ((Z_t − Z_i)/(Z_t + Z_i))²` — the
+/// fraction of incident acoustic intensity reflected. Lossless energy balance:
+/// `R_I + T_I = 1`.
+#[inline]
+#[must_use]
+pub fn intensity_reflection_coefficient(z_incident: f64, z_transmitted: f64) -> f64 {
+    let r = reflection_coefficient(z_incident, z_transmitted);
+    r * r
+}
+
+/// Intensity transmission coefficient at a normal-incidence planar interface
+/// (Chapter 1 Corollary 1.2): `T_I = 1 − R_I = 4 Z_i Z_t / (Z_i + Z_t)²` — the
+/// fraction of incident acoustic intensity transmitted. Returns 0 for a
+/// non-positive total impedance.
+#[inline]
+#[must_use]
+pub fn intensity_transmission_coefficient(z_incident: f64, z_transmitted: f64) -> f64 {
+    let sum = z_incident + z_transmitted;
+    if sum > 0.0 {
+        4.0 * z_incident * z_transmitted / (sum * sum)
+    } else {
+        0.0
+    }
+}
+
+/// Time-averaged acoustic intensity of a harmonic plane wave (Chapter 1
+/// Theorem 1.6): `I = A² / (2 Z) = p_rms² / Z`, for pressure amplitude `A` [Pa]
+/// and specific acoustic impedance `Z = ρ₀c₀` [rayl]. Returns 0 for non-positive
+/// impedance.
+#[inline]
+#[must_use]
+pub fn plane_wave_intensity(pressure_amplitude: f64, impedance: f64) -> f64 {
+    if impedance > 0.0 {
+        pressure_amplitude * pressure_amplitude / (2.0 * impedance)
+    } else {
+        0.0
+    }
+}
+
 impl AcousticMaterialProperties {
     /// Create material properties with core parameters
     #[must_use]
@@ -401,6 +441,42 @@ mod tests {
 
         // Matched impedance ⇒ R = 0, T = 1.
         assert!((water.transmission_coefficient(&water) - 1.0).abs() < 1e-12);
+    }
+
+    /// Corollary 1.2: R_I = R², T_I = 4 Z_i Z_t/(Z_i+Z_t)², and the lossless
+    /// energy balance R_I + T_I = 1.
+    #[test]
+    fn intensity_coefficients_conserve_energy() {
+        // Water → bone-like.
+        let (zi, zt) = (1.5e6, 5.7e6);
+        let r_i = intensity_reflection_coefficient(zi, zt);
+        let t_i = intensity_transmission_coefficient(zi, zt);
+        let r = reflection_coefficient(zi, zt);
+        assert!((r_i - r * r).abs() < 1e-12, "R_I must equal R²");
+        assert!(
+            (t_i - 4.0 * zi * zt / ((zi + zt) * (zi + zt))).abs() < 1e-9,
+            "T_I closed form"
+        );
+        assert!((r_i + t_i - 1.0).abs() < 1e-12, "R_I + T_I must equal 1");
+        // Matched impedance ⇒ no reflection, full transmission.
+        assert!(intensity_reflection_coefficient(zi, zi).abs() < 1e-12);
+        assert!((intensity_transmission_coefficient(zi, zi) - 1.0).abs() < 1e-12);
+        // Degenerate (zero impedance sum) guard.
+        assert_eq!(intensity_transmission_coefficient(0.0, 0.0), 0.0);
+    }
+
+    /// Theorem 1.6: I = A²/(2Z) = p_rms²/Z for a harmonic plane wave.
+    #[test]
+    fn plane_wave_intensity_matches_theorem() {
+        let z = DENSITY_WATER_NOMINAL * SOUND_SPEED_WATER_SIM; // rayl
+        let amp = 1.0e6; // 1 MPa
+        let i = plane_wave_intensity(amp, z);
+        assert!((i - amp * amp / (2.0 * z)).abs() < 1e-6);
+        // Equivalent p_rms form: p_rms = A/√2 ⇒ I = p_rms²/Z.
+        let p_rms = amp / 2.0_f64.sqrt();
+        assert!((i - p_rms * p_rms / z).abs() < 1e-3);
+        // Non-positive impedance ⇒ 0.
+        assert_eq!(plane_wave_intensity(amp, 0.0), 0.0);
     }
 
     #[test]

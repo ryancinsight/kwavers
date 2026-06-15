@@ -405,6 +405,13 @@ media, computed from (1.17).  Note the near-total reflection at the
 tissue–air ($R_I \approx 99.9\,\%$) and strong reflection at the tissue–bone
 interface, motivating coupling gel and the difficulty of transcranial imaging.
 
+**Implementation reference.**  The Theorem 1.4 pressure coefficients and the
+Corollary 1.2 intensity coefficients are the workspace SSOT in
+`kwavers_medium::properties`: `reflection_coefficient`, `transmission_coefficient`
+($\mathcal{T}=1+\mathcal{R}$), `intensity_reflection_coefficient` ($R_I=\mathcal{R}^2$),
+and `intensity_transmission_coefficient` ($T_I=4Z_1Z_2/(Z_1+Z_2)^2$), with the
+lossless balance $R_I+T_I=1$ value-tested.
+
 ---
 
 ## 1.8 Acoustic energy and intensity
@@ -456,7 +463,8 @@ $$
 **Proof.**  $\langle \cos^2(\omega t) \rangle = 1/2$; substitute.  $\square$
 
 **Definition 1.4 (RMS pressure).**  $p_\mathrm{rms} = A/\sqrt{2}$ for a single
-harmonic.  Thus $\langle I \rangle = p_\mathrm{rms}^2 / Z_0$.
+harmonic.  Thus $\langle I \rangle = p_\mathrm{rms}^2 / Z_0$. Equation (1.21) is
+`kwavers_medium::properties::plane_wave_intensity(A, Z)`.
 
 **Clinical intensity scales:**
 

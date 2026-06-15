@@ -84,7 +84,10 @@ pub use acoustic::AcousticPropertyData;
 pub use composite::MaterialPropertiesBuilder;
 pub use elastic::ElasticPropertyData;
 pub use electromagnetic::ElectromagneticPropertyData;
-pub use material::{reflection_coefficient, AcousticMaterialProperties}; // SSOT for unified material properties + interface reflection
+pub use material::{
+    intensity_reflection_coefficient, intensity_transmission_coefficient, plane_wave_intensity,
+    reflection_coefficient, transmission_coefficient, AcousticMaterialProperties,
+}; // SSOT: material properties + interface reflection/transmission + intensity (Ch1 §1.7–1.8)
 pub use optical::OpticalPropertyData;
 pub use strength::StrengthPropertyData;
 pub use temperature_dependent::{
