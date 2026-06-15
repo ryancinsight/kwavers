@@ -182,20 +182,6 @@ mod tests {
         a
     }
 
-    fn pearson(a: &Array2<f64>, b: &Array2<f64>) -> f64 {
-        let n = a.len() as f64;
-        let (ma, mb) = (a.sum() / n, b.sum() / n);
-        let mut cov = 0.0;
-        let mut va = 0.0;
-        let mut vb = 0.0;
-        for (x, y) in a.iter().zip(b.iter()) {
-            cov += (x - ma) * (y - mb);
-            va += (x - ma).powi(2);
-            vb += (y - mb).powi(2);
-        }
-        cov / (va.sqrt() * vb.sqrt())
-    }
-
     fn positive_centroid(a: &Array2<f64>) -> (f64, f64) {
         let (ny, nx) = a.dim();
         let (mut sx, mut sy, mut sw) = (0.0, 0.0, 0.0);
@@ -216,7 +202,10 @@ mod tests {
         let phantom = disk(n, 31.5, 31.5, 12.0);
         let sino = radon_transform(&phantom, 180);
         let recon = filtered_backprojection(&sino, n);
-        let r = pearson(&phantom, &recon);
+        let r = kwavers_math::statistics::pearson(
+            &phantom.iter().copied().collect::<Vec<_>>(),
+            &recon.iter().copied().collect::<Vec<_>>(),
+        );
         assert!(r > 0.8, "FBP recon correlation {r} too low");
         // reconstructed mass centroid is at the image centre
         let (cx, cy) = positive_centroid(&recon);

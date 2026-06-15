@@ -197,24 +197,6 @@ mod tests {
         }
     }
 
-    fn correlation(a: &Array2<f64>, b: &Array2<f64>) -> f64 {
-        let n = a.len() as f64;
-        let ma = a.sum() / n;
-        let mb = b.sum() / n;
-        let mut cov = 0.0;
-        let mut va = 0.0;
-        let mut vb = 0.0;
-        for (x, y) in a.iter().zip(b.iter()) {
-            cov += (x - ma) * (y - mb);
-            va += (x - ma).powi(2);
-            vb += (y - mb).powi(2);
-        }
-        if va <= 0.0 || vb <= 0.0 {
-            return 0.0;
-        }
-        cov / (va.sqrt() * vb.sqrt())
-    }
-
     /// A wrong uniform initial guess converges to the true uniform slowness
     /// (a homogeneous medium has straight rays; ART must recover the constant).
     #[test]
@@ -299,7 +281,10 @@ mod tests {
         assert!(last < first, "misfit must fall: {last} !< {first}");
 
         // (b) The reconstruction correlates with the truth.
-        let corr = correlation(&result.slowness, &truth);
+        let corr = kwavers_math::statistics::pearson(
+            &result.slowness.iter().copied().collect::<Vec<_>>(),
+            &truth.iter().copied().collect::<Vec<_>>(),
+        );
         assert!(corr > 0.5, "reconstruction correlation {corr} must exceed 0.5");
 
         // (c) The anomaly region is reconstructed slower than the background
