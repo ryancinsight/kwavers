@@ -111,17 +111,25 @@ P_open = 1 / [1 + exp((ΔG_0 − A_gate · ΔT) / k_B T)]
 is strictly positive for A_gate > 0 and 0 < T < ∞, confirming that P_open is a monotone
 increasing function of membrane tension. □
 
-**Channel parameter table (kwavers canonical values).**
+**Channel parameter table (kwavers canonical values).** These are exactly the
+values returned by `MechanoChannel::canonical_params()` and locked by
+`test_canonical_boltzmann_values_match_documented_table`; the per-channel
+literature citations live in that function's rustdoc.
 
-| Channel    | Organism         | A_gate (nm²) | T_half (mN/m) | g_single (pS) | E_rev (mV) |
-|------------|------------------|-------------|---------------|---------------|------------|
-| MscL-G22S  | E. coli (GOF)    | 6.5         | 4.7           | 25            | 0          |
-| MscL-G22N  | E. coli (GOF)    | 6.5         | 8.2           | 25            | 0          |
-| MscS       | E. coli          | 4.0         | 11.0          | 1             | 0          |
-| Piezo1     | Mammalian        | 20.0        | 0.7           | 25            | 0          |
-| TRPC6      | Mammalian        | 10.0        | 2.0           | 35            | 0          |
+| Channel    | Organism         | A_gate (nm²) | T_half (mN/m) | g_single | E_rev (mV) |
+|------------|------------------|-------------|---------------|----------|------------|
+| MscL-G22S  | E. coli (GOF)    | 6.5         | 4.7           | 3.0 nS   | 0          |
+| MscL-G22N  | E. coli (GOF)    | 6.5         | 2.35          | 3.0 nS   | 0          |
+| MscS       | E. coli          | 1.2         | 5.5           | 1.0 nS   | 0          |
+| Piezo1     | Mammalian        | 20.0        | 2.5           | 35 pS    | 0          |
+| TRPC6      | Mammalian        | 4.5         | 5.0           | 28 pS    | +5         |
 
-Values from: Xian 2023; Li 2026; Cox 2016; Shimojo 2024; Hamill & Martinac 2001.
+MscL and MscS are large-conductance bacterial channels (single-channel
+conductance ∼1–3 nS — MscL is the largest-conductance channel known); the
+mammalian channels Piezo1/TRPC6 carry ∼30 pS. Sources (per-channel, from the
+`canonical_params` rustdoc): MscL-G22S — Sukharev 1997, Duque 2023; G22N —
+Sawada 2015, Li 2026; MscS — Nomura 2012; Piezo1 — Cox 2016; TRPC6 —
+Suchyna 2000, Matsushita 2024.
 
 ![Boltzmann open probability vs membrane tension for the five channel variants at T = 310 K.](figures/ch18/fig01_channel_gating.png)
 

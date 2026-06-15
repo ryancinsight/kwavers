@@ -246,3 +246,30 @@ fn test_bacterial_channel_variant_ordering() {
         "MscS must remain lower-conductance than MscL variants"
     );
 }
+
+/// Lock the exact canonical Boltzmann parameters for every tension-gated
+/// channel. These are the SSOT values rendered in the chapter 17 §17.2 table;
+/// this test fails if either side silently drifts. Conductances: MscL/MscS are
+/// large-conductance bacterial channels (∼1–3 nS), the mammalian channels ∼30 pS.
+/// # Panics
+/// - Panics if a channel does not use the expected Boltzmann model.
+#[test]
+fn test_canonical_boltzmann_values_match_documented_table() {
+    // (channel, A_gate [m²], T_half [N/m], g_single [S], E_rev [V])
+    let table = [
+        (MechanoChannel::MscLG22S, 6.5e-18, 4.7e-3, 3.0e-9, 0.0),
+        (MechanoChannel::MscLG22N, 6.5e-18, 2.35e-3, 3.0e-9, 0.0),
+        (MechanoChannel::MscS, 1.2e-18, 5.5e-3, 1.0e-9, 0.0),
+        (MechanoChannel::Piezo1, 20.0e-18, 2.5e-3, 35.0e-12, 0.0),
+        (MechanoChannel::Trpc6, 4.5e-18, 5.0e-3, 28.0e-12, 5.0e-3),
+    ];
+    for (ch, a_gate, t_half, g, e_rev) in table {
+        let GatingModel::Boltzmann(p) = ch.canonical_params() else {
+            panic!("{ch:?} must use the Boltzmann model");
+        };
+        assert_relative_eq!(p.gating_area_m2, a_gate, max_relative = 1e-12);
+        assert_relative_eq!(p.half_tension_n_per_m, t_half, max_relative = 1e-12);
+        assert_relative_eq!(p.single_channel_conductance_s, g, max_relative = 1e-12);
+        assert_relative_eq!(p.reversal_potential_v, e_rev, max_relative = 1e-12);
+    }
+}
