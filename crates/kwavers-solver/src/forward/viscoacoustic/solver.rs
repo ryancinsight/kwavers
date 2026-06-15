@@ -673,10 +673,19 @@ fn relaxation_attenuation(omega: f64, rho: f64, m_inf: f64, weights: &[f64], tau
 /// FFT-order signed wavenumbers `k[m] = 2π m'/(n·Δx)` with `m' = m` for `m < n/2`
 /// and `m' = m − n` otherwise. For `n = 1` this is `[0]` (derivative along a
 /// singleton axis is zero).
+///
+/// The Nyquist bin (`m = n/2`, even `n`) is forced to 0: the first-derivative
+/// operator `i·k` is purely imaginary there, so a nonzero Nyquist wavenumber
+/// would inject a spurious antisymmetric (non-real) component into `∂p/∂α` of a
+/// real field. Zeroing it guarantees a real-valued spectral derivative, matching
+/// the KZK τ-derivative convention (`kzk::nonlinearity`).
 fn fft_wavenumbers(n: usize, dx: f64) -> Vec<f64> {
     let norm = TWO_PI / (n as f64 * dx);
     (0..n)
         .map(|m| {
+            if n % 2 == 0 && m == n / 2 {
+                return 0.0;
+            }
             let signed = if m < n / 2 { m as f64 } else { m as f64 - n as f64 };
             signed * norm
         })
