@@ -18,85 +18,82 @@ impl HemoglobinDatabase {
     ///
     /// ## Units and Normalisation
     ///
-    /// Values are molar extinction coefficients in M⁻¹·cm⁻¹ normalised to the
-    /// MOLAR CONCENTRATION OF HEMOGLOBIN TETRAMER in whole blood
-    /// (molar mass ≈ 64 500 g/mol; typical whole-blood [Hb] ≈ 2.3 mmol/L).
-    /// They are **not** per-heme values (×4 smaller) as tabulated at OMLC
-    /// (Prahl 1999).  This choice keeps the Beer-Lambert formula consistent
-    /// with `typical_blood_parameters()`, which returns
-    /// `(total_Hb [mol/L], SO₂_arterial, SO₂_venous)` in tetramer-molar units:
+    /// Values are molar extinction coefficients in M⁻¹·cm⁻¹ for the hemoglobin
+    /// **tetramer** — the per-heme OMLC/Prahl values × 4, since a tetramer
+    /// carries four heme groups. Concentrations are therefore tetramer-molar, to
+    /// match `typical_blood_parameters()` (whole-blood [Hb] ≈ 2.3 mmol/L
+    /// tetramer; tetramer molar mass ≈ 64 500 g/mol). Beer-Lambert:
     ///
     /// ```text
-    /// μ_a = ln(10) × Σ_i ε_i [M⁻¹·cm⁻¹] × c_i [mol/L] × 100 [cm/m]
+    /// μ_a = ln(10) × Σ_i ε_i [M⁻¹·cm⁻¹] × c_i [mol/L] × 100 [cm/m]   →  [m⁻¹]
     /// ```
     ///
-    /// Cross-check: HbO₂-saturated blood at 800 nm (ε = 6 896 M⁻¹·cm⁻¹,
-    /// [Hb] = 2.3 mmol/L) → μ_a ≈ 3.7 mm⁻¹, consistent with published
-    /// experimental values of 2–5 mm⁻¹ for oxygenated whole blood
-    /// (Jacques 2013, *Phys. Med. Biol.* 58, R37, Table 1).
+    /// Spectral check: the HbO₂ and Hb curves cross at the isosbestic points
+    /// (`isosbestic_points()`). In the red (e.g. 650 nm) deoxy-Hb absorbs far
+    /// more than HbO₂ (ε_Hb ≈ 10× ε_HbO₂); in the near-infrared (> 800 nm) HbO₂
+    /// exceeds Hb — the basis of pulse oximetry. Near 800 nm the two are
+    /// approximately equal (the isosbestic point at ≈ 797 nm).
     ///
     /// ## Source
     ///
-    /// Derived from Matcher SJ et al. (1997). "Performance comparison of
-    /// several published tissue near-infrared spectroscopy algorithms."
-    /// *Anal. Biochem.* **227**(1), 54–68. DOI: 10.1006/abio.1995.1268.
-    /// Values have been scaled from per-heme (Prahl 1999 OMLC) to per-tetramer
-    /// by multiplying by 4 and corrected for the effective hematocrit packing
-    /// factor at 45% packed cell volume.
+    /// Prahl SA (1999), *Optical Absorption of Hemoglobin*, OMLC compiled
+    /// tabulation (Gratzer / Kollias), per-heme molar extinction scaled ×4 to
+    /// the tetramer. <https://omlc.org/spectra/hemoglobin/summary.html>
     #[must_use]
     pub fn standard() -> Self {
+        // Per-tetramer = per-heme Prahl/OMLC molar extinction × 4.
         let hbo2_data = vec![
-            (450, 106_112.0),
-            (475, 88_872.0),
-            (500, 64_568.0),
-            (525, 40_944.0),
-            (532, 35_464.0),
-            (550, 24_424.0),
-            (575, 17_304.0),
-            (600, 11_800.0),
-            (625, 8_168.0),
-            (650, 5_824.0),
-            (675, 4_784.0),
-            (700, 4_448.0),
-            (725, 4_656.0),
-            (750, 5_144.0),
-            (775, 5_904.0),
-            (800, 6_896.0),
-            (825, 8_136.0),
-            (850, 9_632.0),
-            (875, 11_360.0),
-            (900, 13_328.0),
-            (925, 15_536.0),
-            (950, 17_984.0),
-            (975, 20_672.0),
-            (1000, 23_600.0),
+            (450, 251_264.0),
+            (475, 120_454.4),
+            (500, 83_731.2),
+            (525, 117_076.8),
+            (532, 175_504.0),
+            (550, 172_064.0),
+            (575, 196_688.0),
+            (600, 12_800.0),
+            (625, 3_096.0),
+            (650, 1_472.0),
+            (675, 1_142.4),
+            (700, 1_160.0),
+            (725, 1_560.0),
+            (750, 2_072.0),
+            (775, 2_708.8),
+            (800, 3_264.0),
+            (825, 3_825.6),
+            (850, 4_232.0),
+            (875, 4_550.4),
+            (900, 4_792.0),
+            (925, 4_907.2),
+            (950, 4_816.0),
+            (975, 4_576.0),
+            (1000, 4_096.0),
         ];
 
         let hb_data = vec![
-            (450, 112_736.0),
-            (475, 97_088.0),
-            (500, 78_272.0),
-            (525, 60_096.0),
-            (532, 54_664.0),
-            (550, 43_760.0),
-            (575, 31_352.0),
-            (600, 20_944.0),
-            (625, 13_600.0),
-            (650, 9_440.0),
-            (675, 7_632.0),
-            (700, 7_072.0),
-            (725, 7_376.0),
-            (750, 8_176.0),
-            (775, 9_472.0),
-            (800, 11_264.0),
-            (825, 13_552.0),
-            (850, 16_336.0),
-            (875, 19_616.0),
-            (900, 23_392.0),
-            (925, 27_664.0),
-            (950, 32_432.0),
-            (975, 37_696.0),
-            (1000, 43_456.0),
+            (450, 413_168.0),
+            (475, 60_193.6),
+            (500, 83_448.0),
+            (525, 137_590.4),
+            (532, 162_336.0),
+            (550, 213_648.0),
+            (575, 173_360.0),
+            (600, 58_708.8),
+            (625, 23_627.2),
+            (650, 15_000.48),
+            (675, 10_510.56),
+            (700, 7_177.12),
+            (725, 4_408.8),
+            (750, 5_620.96),
+            (775, 4_852.0),
+            (800, 3_046.88),
+            (825, 2_773.28),
+            (850, 2_765.28),
+            (875, 2_856.32),
+            (900, 3_047.36),
+            (925, 3_089.44),
+            (950, 2_408.96),
+            (975, 1_557.152),
+            (1000, 827.136),
         ];
 
         Self {
