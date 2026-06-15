@@ -98,6 +98,8 @@ The first term is a property of the signal's dynamic range (crest factor); the s
 
 **Caveat: PSNR sensitivity to normalization.** If A and B are normalized differently, PSNR changes by 20 log₁₀(scale_factor). kwavers parity scripts normalize both fields by the reference's L∞ norm before computing PSNR to remove scale-factor ambiguity.
 
+**Implementation.** The Pearson coefficient (§19.2), absolute RMSE, and PSNR (`MAX_B = max|Bᵢ|`) are implemented in Rust in `kwavers_math::statistics` as `pearson`, `rmse`, and `psnr`, so Rust-side differential tests use the same fidelity metrics as the Python parity harness. `pearson` is value-tested against the `r = cos φ` phase-sensitivity theorem (§19.2); `psnr` against the 40 dB ⇔ 1 %-peak-error correspondence.
+
 ![PSNR vs relative amplitude error, with 40 dB / 60 dB markers.](figures/ch20/fig02_psnr_amplitude.png)
 
 *Figure 19.2. PSNR vs RMS amplitude error (§19.3): 40 dB ≈ 1 % peak error, 60 dB ≈ 0.1 %.*
