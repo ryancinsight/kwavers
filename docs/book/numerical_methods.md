@@ -228,6 +228,11 @@ shortest wavelength).  kwavers validates this via `Grid::validate_ppw(min_ppw=10
 vanishes at the Nyquist limit $k\Delta x = \pi$; higher order delays the onset of
 dispersion.  The spectral PSTD operator is the flat line $\tilde{k}/k \equiv 1$.
 
+**Implementation reference.**  The Theorem 2.3 phase error, the spectrally-exact
+PSTD curve, the k-space temporal-correction residual (§2.7), and the CFL limit
+(§2.3) are `kwavers_physics::analytical::wave::dispersion::{fdtd_phase_error_1d,
+pstd_phase_error, kspace_correction_error, fdtd_cfl_limit}`.
+
 
 ---
 

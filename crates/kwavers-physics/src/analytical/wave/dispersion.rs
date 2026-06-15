@@ -1,11 +1,14 @@
-/// Relative phase-velocity error of the 1-D FDTD scheme.
+/// Relative phase-velocity error of the 1-D FDTD scheme (Chapter 2 §2.4,
+/// Theorem 2.3).
 ///
-/// The staggered-grid leap-frog FDTD modified wavenumber is:
+/// The staggered-grid leap-frog FDTD modified wavenumber (`kh = k·Δx`,
+/// `CFL = c₀Δt/Δx`) is
 /// ```text
-/// k'h = 2 · arcsin(CFL · sin(kh / (2·CFL))) / CFL
-///                               (where kh = k·Δx)
+/// k'h = 2 · arcsin(CFL · sin(kh / 2)) / CFL
 /// ```
-/// Relative error returned: `(k' − k) / k`.
+/// so the relative error returned, `(k' − k) / k = arcsin(CFL·sin(kh/2))/(CFL·kh/2) − 1`,
+/// equals the relative phase-velocity error `(c̃ − c₀)/c₀` of Theorem 2.3. It
+/// vanishes at `CFL = 1` (the 1-D magic time step) and grows as `kh → π`.
 ///
 /// # Reference
 /// Taflove & Hagness (2005) *Computational Electrodynamics*, §4.5.
