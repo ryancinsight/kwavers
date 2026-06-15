@@ -563,6 +563,7 @@ reparameterization by the change-of-variables theorem. □
 | Vasculature segmentation | `kwavers_analysis::signal_processing::vasculature` | `VesselSegmentation::segment` (Frangi vesselness) |
 | Speed-of-sound shift | `kwavers_diagnostics::reconstruction::sound_speed_shift` | `reconstruct_sound_speed_shift()` |
 | OpenPros shift benchmark | `kwavers_diagnostics::reconstruction::sound_speed_shift` | `run_openpros_shift_benchmark()` |
+| Image-quality metrics (§9.8) | `kwavers_analysis::signal_processing::image_quality` | `contrast_ratio_db` / `contrast_to_noise_ratio` / `generalized_cnr` / `fwhm` |
 
 
 ---

@@ -177,6 +177,9 @@ pub mod estimation_bounds;
 // Based on: Demené et al. (2015), Nouhoum et al. (2021)
 pub mod clutter_filter;
 
+// Image-quality metrics: CR / CNR / gCNR / FWHM (Chapter 9 §9.8)
+pub mod image_quality;
+
 // SWE-based clinical tissue staging (METAVIR liver fibrosis, Algorithm 11.5)
 pub mod tissue_staging;
 
