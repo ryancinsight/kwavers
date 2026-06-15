@@ -211,11 +211,15 @@ to a uniform transmit-uniform receive combination.
 
 ### 7.4.2 kwavers Apodization Implementation
 
-Apodization is implemented in `kwavers_transducer::transducers::apodization` (the KWave
-window enum is `kwavers_transducer::kwave_array::KwaveApodizationWindow`: Rectangular, Hann,
-Hamming). Weight arrays are computed at construction time; the beamforming module in
-`kwavers_transducer::transducers::phased_array::beamforming` applies them when computing
-transmit delays and signals.
+Apodization is implemented in `kwavers_transducer::transducers::apodization`. The KWave
+window enum `kwavers_transducer::kwave_array::KwaveApodizationWindow` covers every code key
+in the table above: `Rectangular`, `Hann`, `Hamming`, `Blackman`, and `Tukey(r)` (cosine
+fraction `r ∈ [0, 1]`: rectangular at `r = 0`, Hann at `r = 1`). All weights delegate to the
+canonical window SSOT `kwavers_math::signal::ApodizationType` (in turn `kwavers_math::signal::window`),
+so the formulas live in exactly one place and are shared with `kwavers_signal::SignalWindowType`
+and the `kwavers_source` apodization structs. Weight arrays are computed at construction time;
+the beamforming module in `kwavers_transducer::transducers::phased_array::beamforming` applies
+them when computing transmit delays and signals.
 
 ---
 

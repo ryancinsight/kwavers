@@ -77,6 +77,32 @@ impl Apodization for GaussianApodization {
     }
 }
 
+/// Tukey (tapered-cosine) apodization with cosine fraction `alpha ∈ [0, 1]`:
+/// rectangular at `alpha = 0`, Hann at `alpha = 1`.
+#[derive(Debug, Clone)]
+pub struct TukeyApodization {
+    alpha: f64,
+}
+
+impl TukeyApodization {
+    /// New Tukey apodization with cosine fraction `alpha` (clamped to `[0, 1]`
+    /// by the underlying window).
+    #[must_use]
+    pub fn new(alpha: f64) -> Self {
+        Self { alpha }
+    }
+}
+
+impl Apodization for TukeyApodization {
+    fn weight(&self, position_idx: usize, total_elements: usize) -> f64 {
+        windowed_weight(
+            SignalWindowType::Tukey { alpha: self.alpha },
+            position_idx,
+            total_elements,
+        )
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct RectangularApodization;
 

@@ -1,6 +1,3 @@
-use std::f64::consts::PI;
-
-use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::signal::window as window_coeff;
 
@@ -31,19 +28,9 @@ pub fn window_value(window: SignalWindowType, normalized_time: f64) -> f64 {
             let arg = (normalized_time - 0.5) / sigma;
             (-0.5 * arg * arg).exp()
         }
-        SignalWindowType::Tukey { alpha } => {
-            if alpha <= 0.0 {
-                1.0
-            } else if alpha >= 1.0 {
-                0.5 * (1.0 - (TWO_PI * normalized_time).cos())
-            } else if normalized_time < alpha / 2.0 {
-                0.5 * (1.0 + (TWO_PI * normalized_time / alpha - PI).cos())
-            } else if normalized_time <= 1.0 - alpha / 2.0 {
-                1.0
-            } else {
-                0.5 * (1.0 + (TWO_PI * (normalized_time - 1.0) / alpha + PI).cos())
-            }
-        }
+        // Tukey delegates to the kwavers-math window SSOT (`alpha` = cosine
+        // fraction `r`, clamped to [0, 1]: rectangular at 0, Hann at 1).
+        SignalWindowType::Tukey { alpha } => window_coeff::tukey(normalized_time, alpha),
     }
 }
 

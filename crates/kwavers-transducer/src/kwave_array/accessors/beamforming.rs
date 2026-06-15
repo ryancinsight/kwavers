@@ -1,5 +1,5 @@
 use super::super::{KWaveArray, KwaveApodizationWindow};
-use kwavers_core::constants::numerical::TWO_PI;
+use kwavers_math::signal::ApodizationType;
 
 impl KWaveArray {
     /// Calculate focus delays `(s)` for each element to a target point
@@ -66,6 +66,12 @@ impl KWaveArray {
     /// - `Rectangular`: `wᵢ = 1.0`
     /// - `Hann`:        `wᵢ = 0.5·(1 − cos(2π·i/(N−1)))` if N > 1, else 1.0
     /// - `Hamming`:     `wᵢ = 0.54 − 0.46·cos(2π·i/(N−1))` if N > 1, else 1.0
+    /// - `Blackman`:    `wᵢ = 0.42 − 0.5·cos(2π·i/(N−1)) + 0.08·cos(4π·i/(N−1))`
+    /// - `Tukey(r)`:    tapered cosine, fraction `r ∈ [0, 1]` (rect at 0, Hann at 1)
+    ///
+    /// Weights delegate to the canonical window SSOT
+    /// ([`kwavers_math::signal::ApodizationType`]) so the formulas live in one
+    /// place; returns an empty vector when the array has no elements.
     ///
     /// Reference: Harris, F.J. (1978). Proc. IEEE 66(1):51–83.
     #[must_use]
@@ -74,24 +80,13 @@ impl KWaveArray {
         if n == 0 {
             return Vec::new();
         }
-        match window {
-            KwaveApodizationWindow::Rectangular => vec![1.0; n],
-            KwaveApodizationWindow::Hann => {
-                if n == 1 {
-                    return vec![1.0];
-                }
-                (0..n)
-                    .map(|i| 0.5 * (1.0 - (TWO_PI * i as f64 / (n - 1) as f64).cos()))
-                    .collect()
-            }
-            KwaveApodizationWindow::Hamming => {
-                if n == 1 {
-                    return vec![1.0];
-                }
-                (0..n)
-                    .map(|i| 0.46f64.mul_add(-(TWO_PI * i as f64 / (n - 1) as f64).cos(), 0.54))
-                    .collect()
-            }
-        }
+        let apodization = match window {
+            KwaveApodizationWindow::Rectangular => ApodizationType::Uniform,
+            KwaveApodizationWindow::Hann => ApodizationType::Hanning,
+            KwaveApodizationWindow::Hamming => ApodizationType::Hamming,
+            KwaveApodizationWindow::Blackman => ApodizationType::Blackman,
+            KwaveApodizationWindow::Tukey(r) => ApodizationType::Tukey { r },
+        };
+        apodization.weights(n)
     }
 }

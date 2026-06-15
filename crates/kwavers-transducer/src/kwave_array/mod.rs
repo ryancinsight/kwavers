@@ -47,6 +47,11 @@ pub enum KwaveApodizationWindow {
     Hann,
     /// Hamming window — −43 dB sidelobes
     Hamming,
+    /// Blackman window — −57 dB sidelobes
+    Blackman,
+    /// Tukey (tapered-cosine) window with cosine fraction `r ∈ [0, 1]`:
+    /// rectangular at `r = 0`, Hann at `r = 1`; `r` is clamped to `[0, 1]`.
+    Tukey(f64),
 }
 
 /// Element shape types for custom transducer arrays.

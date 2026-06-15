@@ -45,6 +45,9 @@ pub enum ApodizationType {
     Hanning,
     /// Blackman window: w(i) = 0.42 − 0.5·cos(2πi/(N−1)) + 0.08·cos(4πi/(N−1))
     Blackman,
+    /// Tukey (tapered-cosine) window with cosine fraction `r ∈ [0, 1]`:
+    /// rectangular at `r = 0`, Hann at `r = 1`. `r` is clamped to `[0, 1]`.
+    Tukey { r: f64 },
     /// Kaiser–Bessel window. Higher `beta` trades wider main-lobe for lower
     /// sidelobes; `beta = 8.6` gives ≈ −80 dB.
     Kaiser { beta: f64 },
@@ -71,6 +74,7 @@ impl ApodizationType {
             Self::Hamming => (0..n).map(|i| window::hamming(i as f64 / denom)).collect(),
             Self::Hanning => (0..n).map(|i| window::hann(i as f64 / denom)).collect(),
             Self::Blackman => (0..n).map(|i| window::blackman(i as f64 / denom)).collect(),
+            Self::Tukey { r } => (0..n).map(|i| window::tukey(i as f64 / denom, r)).collect(),
             Self::Kaiser { beta } => {
                 let i0_beta = i0(beta);
                 (0..n)
@@ -157,12 +161,32 @@ mod tests {
     }
 
     #[test]
+    fn tukey_interpolates_between_rectangular_and_hann() {
+        let n = 33;
+        // r = 0 ≡ rectangular; r = 1 ≡ Hann.
+        let rect = ApodizationType::Uniform.weights(n);
+        let t0 = ApodizationType::Tukey { r: 0.0 }.weights(n);
+        let hann = ApodizationType::Hanning.weights(n);
+        let t1 = ApodizationType::Tukey { r: 1.0 }.weights(n);
+        for i in 0..n {
+            assert!((t0[i] - rect[i]).abs() < 1e-12, "Tukey(0) == rect at {i}");
+            assert!((t1[i] - hann[i]).abs() < 1e-12, "Tukey(1) == Hann at {i}");
+        }
+        // r = 0.5: zero edges, unity centre, flat interior.
+        let t = ApodizationType::Tukey { r: 0.5 }.weights(n);
+        assert!(t[0].abs() < 1e-12);
+        assert!(t[n - 1].abs() < 1e-12);
+        assert!((t[n / 2] - 1.0).abs() < 1e-12);
+    }
+
+    #[test]
     fn weights_n_one_returns_singleton() {
         for &apod in &[
             ApodizationType::Uniform,
             ApodizationType::Hamming,
             ApodizationType::Hanning,
             ApodizationType::Blackman,
+            ApodizationType::Tukey { r: 0.5 },
         ] {
             let w = apod.weights(1);
             assert_eq!(w, vec![1.0]);

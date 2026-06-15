@@ -48,6 +48,7 @@ pub(crate) fn apodization_to_string(apodization: &KwaversApodizationType) -> Str
         KwaversApodizationType::Hanning => "Hanning".to_string(),
         KwaversApodizationType::Hamming => "Hamming".to_string(),
         KwaversApodizationType::Blackman => "Blackman".to_string(),
+        KwaversApodizationType::Tukey { r } => format!("Tukey(r={})", r),
         KwaversApodizationType::Gaussian { sigma } => format!("Gaussian(sigma={})", sigma),
         KwaversApodizationType::Kaiser { beta } => format!("Kaiser(beta={})", beta),
     }

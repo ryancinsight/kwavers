@@ -34,7 +34,7 @@ pub use types::{Source, SourceEMWaveType, SourceField, SourcePolarization, Sourc
 // Apodization windows (shared low-level math)
 pub use apodization::{
     Apodization, BlackmanApodization, GaussianApodization, HammingApodization, HanningApodization,
-    RectangularApodization,
+    RectangularApodization, TukeyApodization,
 };
 
 // Custom / arbitrary-signal sources

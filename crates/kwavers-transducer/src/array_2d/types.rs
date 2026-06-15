@@ -3,7 +3,7 @@
 pub use kwavers_math::signal::ApodizationType;
 use kwavers_source::{
     Apodization, BlackmanApodization, GaussianApodization, HammingApodization, HanningApodization,
-    RectangularApodization,
+    RectangularApodization, TukeyApodization,
 };
 
 /// Create an apodization implementation from an `ApodizationType`.
@@ -13,6 +13,7 @@ pub(super) fn create_apodization(apo: &ApodizationType) -> Box<dyn Apodization> 
         ApodizationType::Hanning => Box::new(HanningApodization),
         ApodizationType::Hamming => Box::new(HammingApodization),
         ApodizationType::Blackman => Box::new(BlackmanApodization),
+        ApodizationType::Tukey { r } => Box::new(TukeyApodization::new(*r)),
         ApodizationType::Gaussian { sigma } => Box::new(GaussianApodization::new(*sigma)),
         ApodizationType::Kaiser { .. } => Box::new(HammingApodization),
     }
