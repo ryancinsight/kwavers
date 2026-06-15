@@ -381,7 +381,7 @@ The "biological optical window" at 700–1000 nm arises from the combined spectr
 - **Water**: absorbs strongly below 300 nm and above 1300 nm.
 - **Lipids**: prominent absorption at 1210 nm and 1720 nm.
 
-In the window 700–900 nm, tissue $\mu_a \approx 0.1\text{–}1\,\text{cm}^{-1}$ and $\mu_s' \approx 5\text{–}15\,\text{cm}^{-1}$, giving $\mu_{\text{eff}} \approx 0.5\text{–}3\,\text{cm}^{-1}$ and penetration depths of 3–20 mm for diffuse imaging. The hemoglobin database is implemented in `kwavers_optics::chromophores::HemoglobinDatabase`.
+In the window 700–900 nm, tissue $\mu_a \approx 0.1\text{–}1\,\text{cm}^{-1}$ and $\mu_s' \approx 5\text{–}15\,\text{cm}^{-1}$, giving $\mu_{\text{eff}} \approx 0.5\text{–}3\,\text{cm}^{-1}$ and penetration depths of 3–20 mm for diffuse imaging. The hemoglobin database is implemented in `kwavers_optics::chromophores::HemoglobinDatabase`, and the diffusion-approximation transport quantities of this section — `reduced_scattering` ($\mu_s'=\mu_s(1-g)$), `diffusion_coefficient` ($D$), `effective_attenuation` ($\mu_{\text{eff}}$, Theorem 4.1), `penetration_depth` ($\delta=1/\mu_{\text{eff}}$), `planar_fluence_at_depth` ($F(z)=F_0e^{-\mu_{\text{eff}}z}$), and `initial_pressure` ($p_0=\Gamma\mu_a F$) — in `kwavers_optics::optical_transport`.
 
 ![Near-IR optical absorption spectra of HbO2 and Hb](figures/ch13/fig01_absorption_spectra.png)
 

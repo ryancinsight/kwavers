@@ -4,5 +4,6 @@
 //! extinction spectra), parallel to the acoustic `kwavers-medium` primitives.
 
 pub mod chromophores;
+pub mod optical_transport;
 
 pub use chromophores::{ExtinctionSpectrum, HemoglobinDatabase};
