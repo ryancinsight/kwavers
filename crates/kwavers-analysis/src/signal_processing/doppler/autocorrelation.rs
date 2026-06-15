@@ -91,10 +91,16 @@ impl AutocorrelationConfig {
         (self.prf * self.speed_of_sound) / (4.0 * self.center_frequency * self.beam_angle.cos())
     }
 
-    /// Calculate velocity resolution (minimum detectable velocity difference)
+    /// Calculate velocity resolution (minimum detectable velocity difference).
+    ///
+    /// The autocorrelation phase is resolved into `ensemble_size` spectral bins
+    /// spanning the full unambiguous range `[-v_nyq, +v_nyq]`, so the bin width
+    /// is `Δv = 2·v_nyq / N = c·PRF / (2·f₀·N·cosθ)`. (Velocity resolution
+    /// *improves* — gets smaller — with a larger ensemble, not with PRF in the
+    /// denominator.)
     #[must_use]
     pub fn velocity_resolution(&self) -> f64 {
-        self.speed_of_sound / (2.0 * self.center_frequency * self.prf * (self.ensemble_size as f64))
+        2.0 * self.nyquist_velocity() / (self.ensemble_size as f64)
     }
 }
 
@@ -280,12 +286,24 @@ mod tests {
         let v_nyquist = config.nyquist_velocity();
         assert!(v_nyquist > 0.0, "Nyquist velocity should be positive");
 
-        // Check velocity resolution
+        // Velocity resolution = full Nyquist span / ensemble bins = 2·v_nyq/N,
+        // equivalently c·PRF/(2·f₀·N·cosθ). Value-semantic check against the
+        // closed form (catches the inverted-PRF formula that gave ~5e-9 m/s).
         let v_res = config.velocity_resolution();
-        assert!(
-            v_res > 0.0 && v_res < v_nyquist,
-            "Velocity resolution should be positive and less than Nyquist"
+        let expected = config.speed_of_sound * config.prf
+            / (2.0 * config.center_frequency * config.ensemble_size as f64 * config.beam_angle.cos());
+        assert_relative_eq!(v_res, expected, max_relative = 1e-12);
+        assert_relative_eq!(
+            v_res,
+            2.0 * v_nyquist / config.ensemble_size as f64,
+            max_relative = 1e-12
         );
+        // A real-world sanity band: tens of mm/s, well below Nyquist.
+        assert!(
+            (0.01..0.2).contains(&v_res),
+            "velocity resolution {v_res} m/s outside the physically plausible band"
+        );
+        assert!(v_res < v_nyquist, "resolution must be finer than Nyquist span");
     }
 
     #[test]
