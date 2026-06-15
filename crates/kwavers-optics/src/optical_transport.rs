@@ -76,6 +76,29 @@ pub fn initial_pressure(grueneisen: f64, mu_a: f64, fluence: f64) -> f64 {
     grueneisen * mu_a * fluence
 }
 
+/// Apparent (depth-biased) absorption coefficient inferred from a raw PA signal
+/// **without** fluence compensation: `μ̃_a = μ_a·exp(−μ_eff·z)` (Theorem 10.1).
+/// The true `μ_a` is underestimated by `exp(−μ_eff·z)` at depth `z` — e.g. ≈40 %
+/// at `z = 1/μ_eff`.
+#[must_use]
+pub fn apparent_absorption(mu_a_true: f64, mu_eff: f64, z: f64) -> f64 {
+    mu_a_true * (-mu_eff * z).exp()
+}
+
+/// Quantitative-PA fluence compensation: recover the true absorption coefficient
+/// from a measured PA signal by dividing out the Grüneisen-weighted fluence,
+/// `μ_a = S / (Γ·F)` (§10.2) — the inverse of [`initial_pressure`]. Returns `0`
+/// when `Γ·F` is non-positive (no usable signal to invert).
+#[must_use]
+pub fn compensate_fluence(signal: f64, grueneisen: f64, fluence: f64) -> f64 {
+    let denom = grueneisen * fluence;
+    if denom > 0.0 {
+        signal / denom
+    } else {
+        0.0
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -132,5 +155,27 @@ mod tests {
         // Γ = 0.2, μ_a = 5 m⁻¹, F = 1000 J/m² ⇒ p₀ = 1000 Pa.
         assert!((initial_pressure(0.2, 5.0, 1000.0) - 1000.0).abs() < 1e-9);
         assert_eq!(initial_pressure(0.2, 0.0, 1000.0), 0.0); // no absorber, no source
+    }
+
+    /// Theorem 10.1: apparent μ_a is the true value times exp(−μ_eff·z); at one
+    /// penetration depth the underestimation factor is 1/e (≈ 37 %).
+    #[test]
+    fn apparent_absorption_underestimates_by_depth_bias() {
+        let (mu_a, mu_eff) = (1.0, 2.0);
+        let z = penetration_depth(mu_eff); // = 0.5
+        assert!((apparent_absorption(mu_a, mu_eff, z) - mu_a / std::f64::consts::E).abs() < 1e-12);
+        // At the surface there is no bias.
+        assert!((apparent_absorption(mu_a, mu_eff, 0.0) - mu_a).abs() < 1e-12);
+    }
+
+    /// Fluence compensation inverts the forward PA model: dividing the synthetic
+    /// signal S = Γ·μ_a·F by Γ·F recovers the true μ_a (§10.2).
+    #[test]
+    fn compensate_fluence_recovers_true_absorption() {
+        let (gamma, mu_a, f) = (0.2, 7.5, 1500.0);
+        let signal = initial_pressure(gamma, mu_a, f);
+        assert!((compensate_fluence(signal, gamma, f) - mu_a).abs() < 1e-9);
+        // Degenerate (zero Grüneisen·fluence) ⇒ 0.
+        assert_eq!(compensate_fluence(signal, 0.0, f), 0.0);
     }
 }

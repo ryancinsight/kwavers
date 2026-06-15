@@ -814,7 +814,7 @@ If the observer attributes the full signal to $\mu_a$ (assuming $F = F_0$), the 
 
 ### 10.2 Fluence Estimation via Diffusion Equation
 
-Quantitative PA (qPA) imaging requires estimating $F(\mathbf{r})$ independently and dividing out the fluence artifact. The optical fluence satisfies the diffusion equation (4.4). Given an estimate of the optical properties $(\mu_a, \mu_s')$, the fluence can be computed numerically; this is a forward solve in `kwavers_simulation::photoacoustics::vertical::optical::DiffusionOpticalSolver`.
+Quantitative PA (qPA) imaging requires estimating $F(\mathbf{r})$ independently and dividing out the fluence artifact. The optical fluence satisfies the diffusion equation (4.4). Given an estimate of the optical properties $(\mu_a, \mu_s')$, the fluence can be computed numerically; this is a forward solve in `kwavers_simulation::photoacoustics::vertical::optical::DiffusionOpticalSolver`. For the homogeneous-medium closed forms, `kwavers_optics::optical_transport` provides `apparent_absorption` (the depth bias of Theorem 10.1) and `compensate_fluence` (the per-step correction $\mu_a = S/(\Gamma F)$).
 
 In practice, $\mu_a(\mathbf{r})$ is the unknown being sought (chicken-and-egg problem). The iterative approach solves alternately:
 
