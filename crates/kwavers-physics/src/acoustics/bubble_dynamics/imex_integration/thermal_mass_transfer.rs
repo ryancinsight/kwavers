@@ -46,7 +46,12 @@ impl BubbleIMEXIntegrator {
             let nusselt = NUSSELT_PECLET_COEFF.mul_add(peclet.sqrt(), NUSSELT_CONSTANT);
             let h = nusselt * params.thermal_conductivity / (2.0 * r);
 
-            let compression_heating = -(gamma - 1.0) * temperature * v / r;
+            // Adiabatic compression heating: T·V^{γ-1}=const, V=(4/3)πR³ ⟹
+            // dT/dt = -3(γ-1)·T·Ṙ/R. The factor of 3 comes from dV/V = 3·dR/R
+            // for a sphere (Brennen 1995 §2.22), matching the canonical SSOT in
+            // keller_miksis::thermodynamics::temperature. (Previously missing the
+            // 3, making IMEX adiabatic heating 3× too small.)
+            let compression_heating = -3.0 * (gamma - 1.0) * temperature * v / r;
             let heat_transfer = -h * (temperature - T_AMBIENT) / (n_gas + n_vapor);
 
             compression_heating + heat_transfer
