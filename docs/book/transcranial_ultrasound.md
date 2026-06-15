@@ -700,14 +700,18 @@ $\dot{C}_m = \omega \Delta C_m \cos(\omega t)$, giving equation (15.23). $\squar
 
 This current enters the Hodgkin–Huxley equations as an additional drive term, and
 for sufficient $\Delta C_m$ (achieved at MI $\gtrsim 0.3$) can trigger action
-potentials. The NICE / intramembrane-cavitation mechanism described here is a
-*theoretical* candidate and is **not** currently a kwavers module. The
-neuromodulation pathway kwavers does implement is the complementary
-mechanosensitive-channel (membrane-tension-gated) model —
-`kwavers_physics::acoustics::therapy::sonogenetics` (`channels`, `membrane`,
-`neuron`, `arf_field`) — developed in full in the dedicated **Neuromodulation**
-chapter (Ch26), which is the canonical home for the FUS-neuromodulation mechanism
-and its clinical parameter space.
+potentials. kwavers implements this NICE / intramembrane-cavitation pathway in
+`kwavers_physics::acoustics::therapy::neuromodulation`: a grounded Bilayer
+Sonophore (`bls`) drives the oscillating membrane capacitance into a genuine
+Hodgkin–Huxley neuron (`hodgkin_huxley`), exposed as `simulate_nice` (the
+carrier-resolved NICE simulation, `nice`) and `simulate_sonic` (the Lemaire
+cycle-averaged SONIC reduction, `sonic`), with pulse-train protocol and dosimetry
+(`protocol`). The complementary mechanosensitive-channel (membrane-tension-gated)
+pathway — `kwavers_physics::acoustics::therapy::sonogenetics` (`channels`,
+`membrane`, `neuron`, `arf_field`) — is implemented alongside it. Both mechanisms
+are developed in full in the dedicated **Neuromodulation** chapter (Ch26), the
+canonical home for the FUS-neuromodulation mechanisms and their clinical
+parameter space.
 
 ### 15.9.3 Reference
 
