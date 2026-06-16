@@ -1,6 +1,6 @@
 # Chapter 8: Sensors and Measurements
 
-## 1. Introduction
+## 8.1 Introduction
 
 This chapter develops the mathematical foundation for ultrasound sensor modeling, signal
 acquisition, and measurement as implemented in kwavers. The scope covers hydrophone
@@ -42,7 +42,7 @@ not a styling choice.
 
 ---
 
-## 2. Theorem: Hydrophone Directivity
+## 8.2 Hydrophone Directivity
 
 ### Statement
 
@@ -116,13 +116,13 @@ H(-3 dB angle) ≈ arcsin(1.6 / (ka))   (angular half-power width)
 
 ![Hydrophone directivity H(theta) for ka=0.5,1,2](figures/ch14/fig01_hydrophone_directivity.png)
 
-**Figure 6.1.** Circular-hydrophone receive directivity H(θ) = 2J₁(ka sinθ)/(ka sinθ) for
+**Figure 8.1.** Circular-hydrophone receive directivity H(θ) = 2J₁(ka sinθ)/(ka sinθ) for
 ka = 0.5, 1, 2. Smaller elements (ka ≤ 1) stay near-omnidirectional; larger elements
 narrow and develop sidelobes — the receive analog of the piston pattern (Sources §6.3).
 
 ---
 
-## 3. Theorem: Spatial Nyquist Criterion
+## 8.3 Spatial Nyquist Criterion
 
 ### Statement
 
@@ -191,12 +191,12 @@ array with no geometric constraint enforced at construction time.
 
 ![Grating lobes: d=lambda/2 vs d=lambda](figures/ch14/fig02_grating_lobes.png)
 
-**Figure 6.2.** Array beam pattern at d = λ/2 (no grating lobes) versus d = λ, where a
+**Figure 8.2.** Array beam pattern at d = λ/2 (no grating lobes) versus d = λ, where a
 broadside signal aliases to end-fire — the spatial-Nyquist limit of §3.
 
 ---
 
-## 4. Theorem: Pressure-Velocity Relationship
+## 8.4 Pressure-Velocity Relationship
 
 ### Statement
 
@@ -281,12 +281,12 @@ pub fn interpolate_staggered_to_collocated(
 
 ![Pressure and particle-velocity waveforms](figures/ch14/fig03_pressure_velocity.png)
 
-**Figure 6.3.** Pressure and particle-velocity waveforms for a progressive plane wave:
+**Figure 8.3.** Pressure and particle-velocity waveforms for a progressive plane wave:
 u = p/(ρc) (in phase), with the ratio fixed by the specific acoustic impedance Z = ρc.
 
 ---
 
-## 5. Theorem: Time-Reversal Focusing
+## 8.5 Time-Reversal Focusing
 
 ### Statement
 
@@ -377,19 +377,19 @@ diffraction limit (super-resolution time reversal, Derode et al., 2003).
 
 ![Time-reversal focal spot vs DAS](figures/ch14/fig04_time_reversal.png)
 
-**Figure 6.4.** Time-reversal focusing in a homogeneous medium: re-emitting the
+**Figure 8.4.** Time-reversal focusing in a homogeneous medium: re-emitting the
 phase-conjugated recordings reconstructs a diffraction-limited focus at the original
-source location, matching delay-and-sum beamforming (§5).
+source location, matching delay-and-sum beamforming (§8.5).
 
 ---
 
-## 6. Algorithm: Sensor Recording Contract
+## 8.6 Sensor Recording Contract
 
 The sensor recording contract defines the invariants that govern how the kwavers sensor
 recorder accumulates field data during simulation and outputs it to Python (pykwavers)
 or to binary checkpoint files.
 
-### Algorithm 6.1 — Sensor Recording Contract
+### Algorithm 8.1 — Sensor Recording Contract
 
 ```
 Input:
@@ -486,12 +486,12 @@ invariant is preserved across checkpoint boundaries.
 
 ![Recorded vs reference sensor signal](figures/ch14/fig05_signal_comparison.png)
 
-**Figure 6.5.** Recorded sensor time series versus the analytic/k-Wave reference,
+**Figure 8.5.** Recorded sensor time series versus the analytic/k-Wave reference,
 validating the recording contract and Fortran-order convention of §6.
 
 ---
 
-## 7. Algorithm: Photoacoustic Array Measurement
+## 8.7 Photoacoustic Array Measurement
 
 Photoacoustic (optoacoustic) imaging uses a pulsed laser to deposit thermal energy that
 generates a broadband ultrasound signal. The initial pressure rise is
@@ -503,7 +503,7 @@ p_0(r) = Γ(r) · μ_a(r) · Φ(r)
 where `Γ` is the Grüneisen parameter (dimensionless, ≈ 0.2 for soft tissue), `μ_a` is the
 optical absorption coefficient (m⁻¹), and `Φ` is the optical fluence (J m⁻²).
 
-### Algorithm 7.1 — Photoacoustic Forward Measurement
+### Algorithm 8.2 — Photoacoustic Forward Measurement
 
 ```
 Input:
@@ -518,7 +518,7 @@ Algorithm:
 
   2. Run forward PSTD simulation for T_sim = 2 * domain_diagonal / c_min seconds:
      — No external source injection (photoacoustic initial-value problem).
-     — Record pressure at sensor mask according to Algorithm 6.1.
+     — Record pressure at sensor mask according to Algorithm 8.1.
 
   3. Optionally apply bandpass filter to recorded signals:
        H_BP(ω) = exp(-(ω - ω_c)² / (2σ²))   where σ = BW · ω_c / 2.355
@@ -557,9 +557,9 @@ thermal–acoustic run is the remaining step.
 
 ---
 
-## 8. Algorithm: Time-Reversal Reconstruction
+## 8.8 Time-Reversal Reconstruction
 
-### Algorithm 8.1 — Iterative Time-Reversal for Photoacoustic Imaging
+### Algorithm 8.3 — Iterative Time-Reversal for Photoacoustic Imaging
 
 ```
 Input:
@@ -621,7 +621,7 @@ signal-to-noise-ratio dependent and rejects uncorrelated noise naturally.
 
 ---
 
-## 9. kwavers Implementation
+## 8.9 kwavers Implementation
 
 ### Module Structure
 
@@ -736,7 +736,7 @@ pub enum RecordingMode {
 
 ---
 
-## 10. Calibration and Error Budgets
+## 8.10 Calibration and Error Budgets
 
 ### Absolute Pressure Calibration
 
@@ -789,9 +789,9 @@ contributions to signal contamination are:
 
 ---
 
-## 11. Figure Generation
+## 8.11 Figure Generation
 
-Figures 6.1–6.5 are generated by
+Figures 8.1–8.5 are generated by
 `crates/kwavers-python/examples/book/ch14_sensors_and_measurements.py` and written to
 `docs/book/figures/ch14/`. Each derives from the analytic expressions in this chapter
 (directivity, array factor, impedance, time-reversal focus) with the field samples
@@ -799,7 +799,7 @@ produced by the kwavers solver where a simulation is required.
 
 ---
 
-## 12. References
+## 8.12 References
 
 1. **Selfridge, A.R. (1985)**. "Approximate material properties in isotropic materials."
    *IEEE Transactions on Sonics and Ultrasonics*, 32(3):381–394.
@@ -815,7 +815,7 @@ produced by the kwavers solver where a simulation is required.
    *IEEE Transactions on Ultrasonics, Ferroelectrics and Frequency Control*,
    39(5):555–566.
    doi:10.1109/58.156174
-   — Time-reversal focusing theory and proof (Section 5, Algorithm 8.1).
+   — Time-reversal focusing theory and proof (Section 5, Algorithm 8.3).
 
 4. **Treeby, B.E. and Cox, B.T. (2010)**. "k-Wave: MATLAB toolbox for the simulation and
    reconstruction of photoacoustic wave fields."
