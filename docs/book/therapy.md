@@ -45,7 +45,7 @@ For a HIFU focused bowl of aperture 2a, focal length R_f, face pressure P₀, su
 intensity I_face = P₀²/(2ρ₀c₀):
 
 ```
-I_focal = G² I_face    G = k a²/(2R_f)    (Ch. 6 §4, Focusing Gain)                   (12.2)
+I_focal = G² I_face    G = k a²/(2R_f)    (Ch. 6 §6.4, Focusing Gain)                   (12.2)
 ```
 
 For a = 30 mm, f = 1 MHz, R_f = 60 mm: G ≈ 31, I_focal/I_face ≈ 961.
@@ -321,7 +321,7 @@ Output: thermal dose map CEM43(r), peak pressure field, MI/TI
 6. SAFETY: compute MI = P_neg/√f₀; TI = W/W_deg; compare to FDA limits.
 7. VALIDATE:
    a. Homogeneous medium: ΔT against Eq. (12.4) within 5%.
-   b. Focal pressure gain against the Ch. 6 §4 focusing-gain result within 10%.
+   b. Focal pressure gain against the Ch. 6 §6.4 focusing-gain result within 10%.
    c. CEM43 ablation zone volume against k-Wave reference within 15%.
 ```
 
