@@ -449,7 +449,7 @@ claimed struct name) before implementing. Confirmed corrections below.
   antiresonance `f_p=c_D/2t`, clamped capacitance, series resonance `f_s` via bisection of the
   IEEE `k_t²=(πf_s/2f_p)tan(π(f_p−f_s)/2f_p)` relation, and `coupling_from_frequencies`. 4
   value-semantic tests (f_p∝1/t, sound-speed/capacitance formulas, f_s<f_p + kt² round-trip,
-  stronger coupling widens the resonance gap). Closes the Sources §2 Mason theory gap; the bulk
+  stronger coupling widens the resonance gap). Closes the Sources §6.2 Mason theory gap; the bulk
   PZT therapy workhorse behind Chapter 33 §33.9.
 - ✅ **CMUT/PMUT therapeutic-regime extension (output pressure + flexible limitation)** —
   `[minor]` (Chapter 33 §33.9). `CmutCell::{max_surface_velocity, max_output_pressure (gap-limited

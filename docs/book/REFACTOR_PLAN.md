@@ -102,7 +102,7 @@ in Rust where a real computation applies, embedded with a descriptive caption.
    multi-element beam-forming (array factor/grating lobes §4.2, focusing/resolution
    §4.3, apodization §4.4, receive DAS/MVDR §4.5, configs §4.7, steering §4.12).
    Stripped Beamforming §4.1/§4.6/§4.8 → cross-refs to Sources (preserved the unique
-   on-axis near-field pressure formula into Sources §3); added reciprocal scope-boundary
+   on-axis near-field pressure formula into Sources §6.3); added reciprocal scope-boundary
    notes to both intros; fixed dangling eq ref + stale paths in beamforming scope.
    (3 residual stale `kwavers::analysis/clinical` paths deferred to the chapter's full
    audit, item 5.)
@@ -787,7 +787,7 @@ in Rust where a real computation applies, embedded with a descriptive caption.
 19. ✅ **IMPLEMENTED: Bulk-piezo thickness-mode resonator (Mason/IEEE)** (future-enhancement #8).
    `kwavers_transducer::bulk_piezo::BulkPiezoResonator` — stiffened sound speed, antiresonance
    `f_p=c_D/2t`, clamped capacitance, series resonance via bisection of the IEEE thickness `k_t²`
-   relation, `coupling_from_frequencies`. 4 value-semantic tests green. Closes the Sources §2
+   relation, `coupling_from_frequencies`. 4 value-semantic tests green. Closes the Sources §6.2
    Mason theory gap; the bulk-PZT therapy workhorse behind Chapter 33 §33.9.
 
 18. ✅ **CMUT/PMUT therapeutic-regime extension** (user follow-up: therapy needs high pressure at
@@ -809,7 +809,7 @@ in Rust where a real computation applies, embedded with a descriptive caption.
    `ivus_figure_of_merit` bindings (kwavers-python compiles); new Chapter 33
    `cmut_vs_pmut.md` (electrical, manufacturing, heating, bandwidth, flexible/IVUS verdict —
    CMUT favoured by the simulation) + `ch33_cmut_vs_pmut.py` figure script; README Part VIII
-   added (book now 1–33); Sources §2 cross-referenced. ch33 figure PNGs pending a maturin
+   added (book now 1–33); Sources §6.2 cross-referenced. ch33 figure PNGs pending a maturin
    rebuild. **Backlog queue now empty** — all documented-but-missing components implemented;
    future-enhancement list recorded in backlog.md.
 

@@ -5,7 +5,7 @@ array factor and grating-lobe theorem, transmit/receive focusing and steering,
 apodization, delay-and-sum (DAS) and adaptive (MVDR) receive beamforming, and the spatial
 resolution they achieve. The **single-element** physics it builds on — element
 directivity, focused-bowl gain, and BLI source rasterization onto the grid — is derived in
-the companion **Sources and Transducers** chapter (§3, §4, §6, §8) and only summarised
+the companion **Sources and Transducers** chapter (§6.3, §6.4, §6.6, §6.8) and only summarised
 here; this chapter cross-references it rather than repeating the derivations. Code connects to the `kwavers_transducer` crate (`kwavers_transducer::transducers`)
 and the BLI rasterizer in `kwavers_transducer::kwave_array`.
 
@@ -27,7 +27,7 @@ separable form `D = sinc(kaₓ sin θₓ)·sinc(ka_y sin θ_y)`.
 
 > The full Huygens–Fresnel derivation of (7.1), the on-axis near-field pressure, the
 > first-null/half-pressure table, and CMUT directivity are given in **Sources and
-> Transducers §3 (Piston Directivity Function)** — the canonical home for
+> Transducers §6.3 (Piston Directivity Function)** — the canonical home for
 > single-element radiation. This chapter uses `D(θ)` as the element factor that
 > multiplies the array factor (§7.2) to form the array beam pattern.
 
@@ -104,7 +104,7 @@ The full radiation pattern of the phased array is
 P(θ) = D(θ) · AF(θ)                                                       (7.10)
 ```
 
-where D(θ) is the single-element directivity (7.1) (Sources §3). D(θ) modulates the envelope
+where D(θ) is the single-element directivity (7.1) (Sources §6.3). D(θ) modulates the envelope
 of AF(θ), attenuating grating lobes that fall in the D(θ) sidelobe structure.
 
 ---
@@ -301,7 +301,7 @@ In clinical applications R_xx is regularized: R_xx → R_xx + ε·I with ε ~ 1/
 Mapping a continuous transducer surface onto the discrete grid with spectral accuracy
 (the Wise 2019 BLI rasterization, with sinc-stencil weight `w_i = sinc(π(x_i−x)/Δx)`
 and hexagonal disc-packing of curved surfaces) is a **source-representation** topic and
-is derived in **Sources and Transducers §6 (BLI Rasterization Accuracy)** and §8
+is derived in **Sources and Transducers §6.6 (BLI Rasterization Accuracy)** and §6.8
 (Focused Bowl Discretization). It is summarised here only because the same machinery
 maps array-element apertures onto the grid before the beamforming operations below.
 
@@ -361,7 +361,7 @@ A fixed-geometry spherically focused transducer (aperture radius `a`, focal leng
 `R_f`, f-number `F# = R_f/(2a)`) produces an on-axis focal pressure gain
 `G = π a²/(λ R_f)`, with focal gains of 10–50 typical for therapy bowls. The full O'Neil
 derivation of `G`, the near-focus axial pressure profile, and the focal-zone dimensions
-are given in **Sources and Transducers §4 (Focusing Gain of a Spherical Bowl)** and its
+are given in **Sources and Transducers §6.4 (Focusing Gain of a Spherical Bowl)** and its
 grid discretization in §8 (Focused Bowl Discretization) — the canonical home for
 single-transducer focusing. Beamforming uses `G` as the transmit focusing gain; the
 *dynamic* receive focusing that complements it is §7.3 and §7.5.

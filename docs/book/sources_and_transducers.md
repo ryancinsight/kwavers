@@ -1,13 +1,13 @@
 # Chapter 6: Sources and Transducers
 
-## 1. Introduction
+## 6.1 Introduction
 
 This chapter develops the mathematical foundation for ultrasound source modeling and
 transducer physics in kwavers. The scope covers far-field directivity of planar piston
 sources, focused spherical bowl transducers, phased-array delay laws, annular arrays,
 band-limited interpolation (BLI) rasterization of arbitrary aperture geometries, and the
 source contract that governs how all geometric descriptions are converted to grid-compatible
-excitation fields inside kwavers. Piezoelectric constitutive relations (§2) and CMUT response
+excitation fields inside kwavers. Piezoelectric constitutive relations (§6.2) and CMUT response
 are included as foundational transducer theory; they are **not** modelled in kwavers, which
 treats the transducer surface as a prescribed geometric/kinematic source rather than solving
 the electromechanical problem.
@@ -16,8 +16,8 @@ the electromechanical problem.
 single-transducer** physics and for putting a source onto the computational grid. The
 *multi-element beam pattern* — array factor, grating lobes, transmit/receive steering and
 focusing delays, apodization, and delay-and-sum image formation — is derived in the
-companion **Beamforming and Image Formation** chapter; the phased-array delay law (§5) and
-grating-lobe condition (§9) below are stated for completeness and cross-reference that
+companion **Beamforming and Image Formation** chapter; the phased-array delay law (§6.5) and
+grating-lobe condition (§6.9) below are stated for completeness and cross-reference that
 chapter for the full beam-pattern analysis.
 
 ### Notation
@@ -50,7 +50,7 @@ consistent with k-Wave MATLAB and kwavers' internal PSTD implementation.
 
 ---
 
-## 2. Theorem: Piezoelectric Constitutive Relations
+## 6.2 Piezoelectric Constitutive Relations
 
 ### Statement
 
@@ -130,7 +130,7 @@ in `kwavers_source::config`).
 ---
 
 > **Implementation status.** For *array-field* simulation, kwavers injects a prescribed surface
-> velocity/pressure (§7 source contract) and the resonance/bandwidth of a real element is
+> velocity/pressure (§6.7 source contract) and the resonance/bandwidth of a real element is
 > supplied as an input pulse spectrum (`PulseParameters`) — not derived from the bulk-piezo
 > Mason circuit above (which remains foundational theory). **Micromachined** element
 > electromechanics *are* modelled: CMUT (capacitive) and PMUT (piezoelectric) cells —
@@ -142,7 +142,7 @@ in `kwavers_source::config`).
 
 ---
 
-## 3. Theorem: Piston Directivity Function
+## 6.3 Piston Directivity Function
 
 ### Statement
 
@@ -228,11 +228,11 @@ stiffness is reduced and the center frequency shifts downward by the factor
 
 ![Piston source directivity](figures/ch11/fig01_piston_directivity.png)
 
-*Figure 1. Circular-piston directivity H(θ)=2J₁(ka sinθ)/(ka sinθ) for ka = 2, 5, 10 (`kw.circular_piston_directivity`, §3). Larger ka narrows the main lobe and adds sidelobes.*
+*Figure 6.1. Circular-piston directivity H(θ)=2J₁(ka sinθ)/(ka sinθ) for ka = 2, 5, 10 (`kw.circular_piston_directivity`, §6.3). Larger ka narrows the main lobe and adds sidelobes.*
 
 ---
 
-## 4. Theorem: Focusing Gain of a Spherical Bowl
+## 6.4 Focusing Gain of a Spherical Bowl
 
 ### Statement
 
@@ -297,11 +297,11 @@ These are standard approximations from Zemanek (1971), valid for `f_# ≥ 1`.
 
 ![Focused-bowl on-axis pressure](figures/ch11/fig02_focused_bowl_onaxis.png)
 
-*Figure 2. On-axis pressure of a focused bowl vs depth (`kw.focused_bowl_onaxis`, §4); the peak near the geometric focus shows the focusing gain G = πa²/(λF).*
+*Figure 6.2. On-axis pressure of a focused bowl vs depth (`kw.focused_bowl_onaxis`, §6.4); the peak near the geometric focus shows the focusing gain G = πa²/(λF).*
 
 ---
 
-## 5. Theorem: Delay Law for a Phased Array
+## 6.5 Delay Law for a Phased Array
 
 ### Statement
 
@@ -365,11 +365,11 @@ reduces sidelobes at the cost of increased main lobe width.
 
 ![Phased-array delay law](figures/ch11/fig04_delay_law.png)
 
-*Figure 3. Linear-array element delays vs steering angle (§5); the far-field ramp is linear in element index with slope ∝ sin θ_s.*
+*Figure 6.3. Linear-array element delays vs steering angle (§6.5); the far-field ramp is linear in element index with slope ∝ sin θ_s.*
 
 ---
 
-## 6. Theorem: BLI Rasterization Accuracy
+## 6.6 BLI Rasterization Accuracy
 
 ### Statement
 
@@ -427,16 +427,16 @@ strongly recommend `ppw ≥ 10` for aperture-shaped sources.
 
 ![BLI rasterization accuracy](figures/ch11/fig05_bli_accuracy.png)
 
-*Figure 4. BLI rasterization accuracy vs grid points per wavelength (§6); spectral convergence of the sinc-stencil source representation (Wise 2019).*
+*Figure 6.4. BLI rasterization accuracy vs grid points per wavelength (§6.6); spectral convergence of the sinc-stencil source representation (Wise 2019).*
 
 ---
 
-## 7. Algorithm: Source Contract
+## 6.7 Source Contract
 
 The source contract defines the invariants that every source implementation in kwavers must
 satisfy from geometric support definition through to solver injection.
 
-### Algorithm 7.1 — Source Contract
+### Algorithm 6.1 — Source Contract
 
 ```
 Input:
@@ -487,9 +487,9 @@ additional permutation.
 
 ---
 
-## 8. Algorithm: Focused Bowl Discretization
+## 6.8 Focused Bowl Discretization
 
-### Algorithm 8.1 — Spherical Cap Rasterization
+### Algorithm 6.2 — Spherical Cap Rasterization
 
 ```
 Input:
@@ -519,7 +519,7 @@ Algorithm:
 
   3. Add apex point: p_apex = center + F n̂
 
-  4. Rasterize all surface samples via Algorithm 7.1 BLI stencil.
+  4. Rasterize all surface samples via Algorithm 6.1 BLI stencil.
 
   5. Validate: bowl arc length ≈ F α, sample density ≥ 1 sample per grid cell.
 ```
@@ -539,9 +539,9 @@ a cell and introduces a systematic phase error (see project_annular_array_coordi
 
 ---
 
-## 9. Algorithm: Phased Array Steering
+## 6.9 Phased Array Steering
 
-### Algorithm 9.1 — Delay-and-Sum Excitation Construction
+### Algorithm 6.3 — Delay-and-Sum Excitation Construction
 
 ```
 Input:
@@ -601,11 +601,11 @@ kwavers constructs annular arrays through `KWaveArray::add_annular_element`
 
 ![Linear phased-array beam pattern](figures/ch11/fig03_array_beam_pattern.png)
 
-*Figure 5. Linear phased-array beam pattern steered to 0°, 15°, 30° (`kw.linear_array_factor`, §9); the main lobe tracks the steering angle.*
+*Figure 6.5. Linear phased-array beam pattern steered to 0°, 15°, 30° (`kw.linear_array_factor`, §6.9); the main lobe tracks the steering angle.*
 
 ---
 
-## 10. kwavers Implementation
+## 6.10 kwavers Implementation
 
 ### Module Structure
 
@@ -692,7 +692,7 @@ before disc-basis computation to orient the element tangent plane correctly in 3
 
 ---
 
-## 11. Validation Against k-Wave
+## 6.11 Validation Against k-Wave
 
 ### Parity Metrics
 
@@ -726,13 +726,13 @@ MATLAB for equivalent grid sizes (see project_gpu_pstd_perf_regression.md).
 
 ---
 
-## 12. Figure References
+## 6.12 Figure References
 
-Figures 1–5 (embedded in §3–§9) are generated by
+Figures 6.1–6.5 (embedded in §6.3–§6.9) are generated by
 `pykwavers/examples/book/ch11_sources_and_transducers.py`, which computes every quantity
 through the kwavers Rust core (`kw.circular_piston_directivity`, `kw.focused_bowl_onaxis`,
 `kw.linear_array_factor` → `kwavers_physics::analytical::transducer`) and performs only
-rendering. The k-Wave parity results quoted in §11 are produced by the `at_focused_bowl_3D`,
+rendering. The k-Wave parity results quoted in §6.11 are produced by the `at_focused_bowl_3D`,
 `at_focused_annular_array_3D`, and `sd_focussed_detector_3D` comparison scripts.
 
 CMUT and Mason-circuit (piezoelectric resonance) models are implemented since this chapter was
@@ -745,7 +745,7 @@ crosstalk). Their figures live in Chapter 33 (`cmut_vs_pmut.md`).
 
 ---
 
-## 13. References
+## 6.13 References
 
 1. **Selfridge, A.R. (1985)**. "Approximate material properties in isotropic materials."
    *IEEE Transactions on Sonics and Ultrasonics*, 32(3):381–394.

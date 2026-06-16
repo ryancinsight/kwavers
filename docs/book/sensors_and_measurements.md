@@ -118,7 +118,7 @@ H(-3 dB angle) ≈ arcsin(1.6 / (ka))   (angular half-power width)
 
 **Figure 6.1.** Circular-hydrophone receive directivity H(θ) = 2J₁(ka sinθ)/(ka sinθ) for
 ka = 0.5, 1, 2. Smaller elements (ka ≤ 1) stay near-omnidirectional; larger elements
-narrow and develop sidelobes — the receive analog of the piston pattern (Sources §3).
+narrow and develop sidelobes — the receive analog of the piston pattern (Sources §6.3).
 
 ---
 
