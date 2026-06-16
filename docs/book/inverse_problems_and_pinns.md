@@ -1,6 +1,6 @@
 # Chapter 18: Inverse Problems and Physics-Informed Neural Networks
 
-## 1. Inverse Problem Formulation
+## 18.1 Inverse Problem Formulation
 
 An inverse problem in acoustics seeks the medium parameters $m$ (sound speed, density, absorption) from
 observed pressure data $d$. The forward operator $F: \mathcal{M} \to \mathcal{D}$ maps parameters to
@@ -29,7 +29,7 @@ $$R_{\text{TV}}^{\text{disc}}(m) = \sum_{i,j,k} \sqrt{(\Delta_x m_{ijk})^2 + (\D
 
 where $\varepsilon \sim 10^{-8}$ smooths the non-differentiable point at zero.
 
-### 1.1 Well-Posedness and the Hadamard Conditions
+### 18.1.1 Well-Posedness and the Hadamard Conditions
 
 An inverse problem is well-posed (Hadamard) if a solution exists, is unique, and depends continuously
 on the data. Acoustic inverse problems are ill-posed: small perturbations in $d$ can cause large
@@ -52,17 +52,17 @@ strictly convex. $\square$
 
 ![Singular-value spectrum of the forward map](figures/ch17/fig01_svd_spectrum.png)
 
-*Figure 1. Singular-value spectrum of the 2-D Helmholtz forward map (§1.1): the rapid decay is the ill-conditioning that makes the inverse problem ill-posed and motivates regularization.*
+*Figure 18.1. Singular-value spectrum of the 2-D Helmholtz forward map (§18.1.1): the rapid decay is the ill-conditioning that makes the inverse problem ill-posed and motivates regularization.*
 
 ---
 
-## 2. Full-Waveform Inversion and the Adjoint State Method
+## 18.2 Full-Waveform Inversion and the Adjoint State Method
 
 Full-waveform inversion (FWI) minimizes $J(m)$ by gradient-based descent, where the gradient
 $\delta J/\delta m$ is computed via the adjoint state method at cost equal to two forward solves,
 independent of the number of parameters.
 
-### 2.1 Forward Wave Equation
+### 18.2.1 Forward Wave Equation
 
 The acoustic wave equation with model $m = \{c(\mathbf{r}), \rho(\mathbf{r})\}$ is
 
@@ -71,7 +71,7 @@ $$\frac{1}{c(\mathbf{r})^2}\frac{\partial^2 u}{\partial t^2} - \nabla \cdot \lef
 with initial conditions $u(\mathbf{r},0) = 0$, $\partial_t u(\mathbf{r},0) = 0$ and absorbing boundary
 conditions on $\partial\Omega$.
 
-### 2.2 Adjoint Wave Equation
+### 18.2.2 Adjoint Wave Equation
 
 The adjoint state $u^{\dagger}(\mathbf{r},t)$ satisfies the time-reversed wave equation with residual source:
 
@@ -80,7 +80,7 @@ $$\frac{1}{c(\mathbf{r})^2}\frac{\partial^2 u^{\dagger}}{\partial t^2} - \nabla 
 where $\delta d(\mathbf{r}_s, t) = [F(m)](\mathbf{r}_s, t) - d(\mathbf{r}_s, t)$ is the data residual
 at sensor positions $\mathbf{r}_s$, injected time-reversed as a virtual source.
 
-### 2.3 Gradient Formula
+### 18.2.3 Gradient Formula
 
 **Theorem (Adjoint Gradient):** The Fréchet derivative of $J$ with respect to perturbation $\delta c$ is
 
@@ -96,7 +96,7 @@ integrate by parts twice in time (boundary terms vanish by initial/terminal cond
 The result yields $\delta J = \langle \delta d, \mathcal{L}\delta m\rangle = \langle \mathcal{L}^*\delta d, \delta m\rangle$
 where $\mathcal{L}^*$ is the adjoint operator. Reading off the kernel gives the stated formula. $\square$
 
-### 2.4 FWI Update Step
+### 18.2.4 FWI Update Step
 
 The steepest descent update for iteration $k$ is
 
@@ -106,9 +106,9 @@ Preconditioned L-BFGS uses the approximate inverse Hessian from the last $q$ gra
 typically achieving superlinear convergence near the solution. The preconditioner accounts for the
 illumination pattern of the source array, correcting for the geometric spreading of energy.
 
-### 2.5 Discrete Adjoint Exactness: Approximate vs Exact Engine
+### 18.2.5 Discrete Adjoint Exactness: Approximate vs Exact Engine
 
-The gradient formula of §2.3 is exact in the *continuous* setting. Whether the *discrete*
+The gradient formula of §18.2.3 is exact in the *continuous* setting. Whether the *discrete*
 implementation reproduces it depends on the forward solver being **self-adjoint** — the discrete
 adjoint must be the exact algebraic transpose of the discrete forward operator. kwavers exposes two
 engines through `FwiProcessor::with_engine(FwiEngine::…)` (ADR 016), and they differ sharply on this
@@ -153,12 +153,12 @@ under reverse stepping, so it retains the stored history.
 
 ---
 
-## 3. Born Approximation for Linearized Inversion
+## 18.3 Born Approximation for Linearized Inversion
 
 When the medium perturbation is weak ($\|\delta c / c_0\| \ll 1$), the scattered field can be approximated
 by a single interaction with the perturbation, linearizing the inversion problem.
 
-### 3.1 Derivation
+### 18.3.1 Derivation
 
 Split the sound speed as $c(\mathbf{r}) = c_0 + \delta c(\mathbf{r})$ and the pressure field as
 $p = p_{\text{inc}} + p_{\text{sc}}$ where $p_{\text{inc}}$ satisfies the homogeneous equation at $c_0$.
@@ -179,7 +179,7 @@ of the scattering region. For 1 MHz ultrasound ($k \approx 420$ rad/m) and a 10 
 $\delta c/c_0 = 0.05$: $kL\delta c/c_0 \approx 0.21$, marginally valid. For $\delta c/c_0 > 0.1$,
 iterative Born (Distorted Born Iterative) or full nonlinear inversion is required.
 
-### 3.2 Linearized Inversion via Backprojection
+### 18.3.2 Linearized Inversion via Backprojection
 
 The Born forward operator $\mathcal{L}: \delta c \mapsto p_{\text{sc}}$ is linear. The least-squares
 solution minimizes $\|p_{\text{sc}}^{\text{obs}} - \mathcal{L}\delta c\|^2$, giving the normal equations
@@ -189,12 +189,12 @@ Hessian, approximated by the pseudo-inverse with Tikhonov damping.
 
 ---
 
-## 4. Physics-Informed Neural Networks
+## 18.4 Physics-Informed Neural Networks
 
 Physics-informed neural networks (PINNs) embed the governing PDE as a soft constraint in the training loss,
 enabling mesh-free PDE solution and inverse problem solution when data are sparse.
 
-### 4.1 Network Architecture
+### 18.4.1 Network Architecture
 
 The PINN approximates the solution field $u(\mathbf{x}, t)$ by a feedforward neural network
 $u_\theta: \mathbb{R}^{n+1} \to \mathbb{R}$ parameterized by weights and biases $\theta$:
@@ -217,7 +217,7 @@ measure $\mu$ such that $\int \sigma(\mathbf{w}^\top \mathbf{x} + b) \, d\mu = 0
 Hornik (1991) extended this to non-sigmoidal activations by showing that any non-polynomial function
 satisfies the required discriminatory property via the Fourier transform. $\square$
 
-### 4.2 PINN Loss Function
+### 18.4.2 PINN Loss Function
 
 The composite training loss for a wave-equation PINN is
 
@@ -236,7 +236,7 @@ $$\mathcal{L}_{\text{data}} = \frac{1}{N_d}\sum_{l=1}^{N_d} [u_\theta(\mathbf{x}
 The weights $\lambda_{\text{BC}}, \lambda_{\text{IC}}, \lambda_{\text{data}}$ balance constraint stiffness;
 self-adaptive weighting methods update them during training.
 
-### 4.3 Automatic Differentiation for PDE Residuals
+### 18.4.3 Automatic Differentiation for PDE Residuals
 
 The second-order partial derivatives $\partial^2 u_\theta/\partial t^2$ and $\nabla^2 u_\theta$ are computed
 exactly (to floating-point precision) by reverse-mode automatic differentiation through the network graph.
@@ -248,11 +248,11 @@ stencil approximation is used; the PDE residual is exact given the network appro
 
 ![PINN composite loss landscape](figures/ch17/fig03_pinn_loss.png)
 
-*Figure 2. PINN composite loss: the physics (PDE) residual and the data-misfit terms, and their weighting (§4.2). Balancing the two controls constraint stiffness during training.*
+*Figure 18.2. PINN composite loss: the physics (PDE) residual and the data-misfit terms, and their weighting (§18.4.2). Balancing the two controls constraint stiffness during training.*
 
 ---
 
-## 5. PINN for the Wave Equation
+## 18.5 PINN for the Wave Equation
 
 For the 3D linear acoustic wave equation $\partial_{tt}p = c^2\nabla^2 p$, the PINN enforces:
 
@@ -261,7 +261,7 @@ $$\mathcal{L}_{\text{PDE}} = \left\|\partial_{tt}u_\theta - c(\mathbf{x})^2 \nab
 where the norm is evaluated at $N_c$ collocation points drawn from $\Omega \times [0,T]$ (typically
 uniform random or quasi-random Sobol sequence for better space-filling).
 
-### 5.1 Convergence Requirements
+### 18.5.1 Convergence Requirements
 
 The PINN approximation error is bounded by (Mishra & Molinaro 2022):
 
@@ -275,7 +275,7 @@ For a 1 MHz wave in a 5 cm domain ($kL \approx 210$ wavelengths), the stiffness 
 $\omega T / 2\pi \approx 5\times 10^4$ cycles requires $N_c \gtrsim 10^6$ to resolve the oscillations.
 Standard PINN training uses Adam optimizer with learning rate $10^{-3}$ followed by L-BFGS refinement.
 
-### 5.2 Inverse PINN: Sound Speed Reconstruction
+### 18.5.2 Inverse PINN: Sound Speed Reconstruction
 
 For inverse problems, $c(\mathbf{x})$ is also parameterized by a network $c_\phi(\mathbf{x})$ or by a
 finite-dimensional parameter vector. The joint optimization over $(\theta, \phi)$ minimizes
@@ -287,15 +287,15 @@ Gradient descent alternates between $\theta$ and $\phi$ updates or performs simu
 
 > **Implementation note.** The scalar-wave PINN above is the pedagogical template. The PINN
 > actually shipped in kwavers is a **2-D elastic** PINN (`ElasticPINN2D<B: Backend>`,
-> §8.5) that learns the displacement field $(u_x, u_y)$ with trainable Lamé parameters
+> §18.8.5) that learns the displacement field $(u_x, u_y)$ with trainable Lamé parameters
 > $(\lambda, \mu, \rho)$; it is Burn-backed (autodiff) and trained with Adam/AdamW. A
 > general scalar-wave / 3-D PINN is not yet implemented.
 
 ---
 
-## 6. Acoustic Computed Tomography
+## 18.6 Acoustic Computed Tomography
 
-### 6.1 Transmission CT: Time-of-Flight Reconstruction
+### 18.6.1 Transmission CT: Time-of-Flight Reconstruction
 
 In transmission CT, a transducer array surrounds the object. For source at $\mathbf{r}_s$ and receiver at
 $\mathbf{r}_r$, the measured time of flight along ray path $\Gamma_{sr}$ is
@@ -325,7 +325,7 @@ the nonlinear trace↔solve fixed point re-traces rays through the evolving slow
 it by sparse-ART sweeps over the path-length rows, recovering a slow/fast anomaly from transmission
 traveltimes (verified: anomaly localization + correlation with truth + monotone misfit reduction).
 
-### 6.2 Reflection CT: Reflectivity Reconstruction
+### 18.6.2 Reflection CT: Reflectivity Reconstruction
 
 Backscattered signals from focused transmissions carry information about acoustic impedance mismatches
 $Z(\mathbf{r}) = \rho(\mathbf{r})c(\mathbf{r})$. The reflectivity is defined as
@@ -344,7 +344,7 @@ efficient backprojection reconstruction at the cost of sidelobe artifacts.
 > the slowness field and its **filtered-backprojection (Ram-Lak)** inverse — is implemented in
 > `kwavers_diagnostics::reconstruction::radon` (`radon_transform`, `filtered_backprojection`;
 > ADR 013). Other quantitative sound-speed paths: frequency-domain FWI / convergent-Born-series
-> and linear Born inversion (§8), and the straight-/curved-ray speed-of-sound *shift* tomography
+> and linear Born inversion (§18.8), and the straight-/curved-ray speed-of-sound *shift* tomography
 > in the Diagnostic Imaging chapter. **Bent-ray correction** (Fermat shortest-path ray tracing
 > through the slowness field, feeding the iterative SIRT/ART/OSEM reconstructor) is now implemented
 > in `reconstruction::bent_ray` (ADR 020); SIRT/ART/OSEM live in
@@ -353,9 +353,9 @@ efficient backprojection reconstruction at the cost of sidelobe artifacts.
 
 ---
 
-## 7. Regularization Strategies and Parameter Selection
+## 18.7 Regularization Strategies and Parameter Selection
 
-### 7.1 L-Curve Method
+### 18.7.1 L-Curve Method
 
 For Tikhonov regularization, plot $\log\|F(m_\lambda) - d\|$ vs $\log\|m_\lambda\|$ as $\lambda$ varies.
 The resulting L-shaped curve has a corner at the optimal $\lambda^*$ that balances data fit and
@@ -368,7 +368,7 @@ to $\log\lambda$. For discrete data with known noise level $\|\varepsilon\| = \d
 discrepancy principle provides an alternative: choose $\lambda^*$ such that
 $\|F(m_{\lambda^*}) - d\| = \delta$.
 
-### 7.2 Morozov Discrepancy Principle
+### 18.7.2 Morozov Discrepancy Principle
 
 **Theorem:** Under the assumption that the data residual $d = F(m_{\text{true}}) + \varepsilon$ with
 $\|\varepsilon\| \leq \delta$, there exists a unique $\lambda^*(\delta)$ such that
@@ -387,13 +387,13 @@ the bound $\|m_{\lambda^*} - m_{\text{true}}\| \leq C\delta^{1/2}$ (or faster fo
 
 ![Tikhonov L-curve](figures/ch17/fig02_lcurve.png)
 
-*Figure 3. Tikhonov L-curve for a 1-D deconvolution (§7): the corner trades residual norm against solution norm and selects the regularization weight λ.*
+*Figure 18.3. Tikhonov L-curve for a 1-D deconvolution (§18.7): the corner trades residual norm against solution norm and selects the regularization weight λ.*
 
 ---
 
-## 8. kwavers Inverse Solver Modules
+## 18.8 kwavers Inverse Solver Modules
 
-### 8.1 Module Architecture
+### 18.8.1 Module Architecture
 
 The inverse solver hierarchy in kwavers follows a strict dependency inversion architecture:
 
@@ -430,7 +430,7 @@ kwavers_math::inverse_problems::regularization
 └── ModelRegularizer3D              # apply_tikhonov | apply_total_variation (Huber) | apply_smoothness | apply_l1
 ```
 
-### 8.2 Adjoint Gradient (`FwiProcessor`)
+### 18.8.2 Adjoint Gradient (`FwiProcessor`)
 
 The time-domain adjoint gradient is orchestrated by `FwiProcessor` (not a generic
 `AdjointState<S>` wrapper). It runs a forward solve, then an adjoint solve driven by the
@@ -447,7 +447,7 @@ to $O(qN^3 + N_t/q)$ at the cost of $\sqrt{N_t}$ extra forward solves is the sta
 (documented here as the design target; the shipped processor stores/streams the forward field
 rather than using a generic revolve scheduler).
 
-### 8.3 Gradient Assembly and Regularization
+### 18.8.3 Gradient Assembly and Regularization
 
 Gradient assembly is performed by `FwiProcessor` methods rather than a generic
 `GradientComputer<M>` trait: `calculate_interaction()` forms the forward × adjoint product,
@@ -459,7 +459,7 @@ terms — the same functionals exposed standalone by
 the primary target; multi-parameter (density/absorption) gradients are not separate
 `GradientComputer` impls.
 
-### 8.4 Box-Constrained Inversion
+### 18.8.4 Box-Constrained Inversion
 
 Projected-gradient box constraints $m^{(k+1)} = \Pi_{[m_{\min}, m_{\max}]}(m^{(k)} -
 \alpha_k\,\delta J/\delta m)$ — with physiological tissue bounds ($c \in [1400, 1650]$ m/s,
@@ -473,7 +473,7 @@ additionally uses Armijo step-halving line search; nonlinear elastography invers
 Bayesian posterior sampling (`nonlinear_methods::bayesian`) as an alternative to hard box
 constraints.
 
-### 8.5 PINN Integration with Burn
+### 18.8.5 PINN Integration with Burn
 
 The kwavers PINN module (`pinn`, gated behind the `pinn` Cargo feature) uses the **Burn 0.19**
 deep-learning framework (features `ndarray`, `autodiff`, `wgpu`) for automatic differentiation and
@@ -485,18 +485,18 @@ the `burn::backend::Backend` trait, consistent with kwavers' `ComputeBackend` ab
 
 ---
 
-## 9. Validation and Benchmarks
+## 18.9 Validation and Benchmarks
 
-### 9.1 FWI Convergence Test
+### 18.9.1 FWI Convergence Test
 
 A 2D Marmousi-style phantom (sound speed range 1480–3500 m/s) is reconstructed from 32 sources and
 128 receivers at 250 kHz. Convergence criterion: $\|m^{(k+1)} - m^{(k)}\|/\|m^{(k)}\| < 10^{-4}$.
 Armijo-backtracking gradient descent (the shipped `FwiProcessor` line search) with multiscale
 frequency continuation reaches the convergence criterion. Gradient accuracy is verified by the
-finite-difference dot-product (Taylor) test of §2.5: the **exact** self-adjoint engine
+finite-difference dot-product (Taylor) test of §18.2.5: the **exact** self-adjoint engine
 (`FwiEngine::SecondOrderSelfAdjoint`) matches the finite difference with $\kappa \approx 1$ to
 $<10^{-4}$ for every perturbation direction; the default FDTD/PSTD engine yields only a valid
-*descent direction* ($\kappa \approx 238$, magnitude not exact — §2.5), which is sufficient for the
+*descent direction* ($\kappa \approx 238$, magnitude not exact — §18.2.5), which is sufficient for the
 line-searched drivers below but not for absolute-gradient consumers. A quasi-Newton L-BFGS driver is
 also available: `FwiProcessor::invert_lbfgs(observed, initial, geometry, grid, memory)` replaces
 the normalized steepest-descent direction with the limited-memory BFGS direction $d=-H g$, where
@@ -506,14 +506,14 @@ implementation shared with the standalone `minimize`). It reuses the same forwar
 gradient, misfit, regularization, and model constraints as the steepest driver but feeds L-BFGS
 the **un-normalized** gradient so the curvature pairs $(s, y=\Delta g)$ retain physical scaling.
 Preconditioning by the (approximate) inverse Hessian conditions the gradient against the
-illumination imbalance discussed in §2, giving superlinear convergence near the minimiser.
+illumination imbalance discussed in §18.2, giving superlinear convergence near the minimiser.
 
 ![CBS vs Born FWI convergence](figures/ch17/fig04_convergence_comparison.png)
 
-*Figure 4. FWI objective history: kwavers linear Born vs convergent-Born-series (CBS) frequency-domain FWI on a 2-D phantom (`kw.invert_breast_fwi`, §9.1).*
+*Figure 18.4. FWI objective history: kwavers linear Born vs convergent-Born-series (CBS) frequency-domain FWI on a 2-D phantom (`kw.invert_breast_fwi`, §18.9.1).*
 
 
-### 9.2 Born Approximation Error Budget
+### 18.9.2 Born Approximation Error Budget
 
 For a spherical inclusion of radius $a=3$ mm with $\delta c/c_0 = 0.05$ at $f = 1$ MHz:
 - Born parameter: $ka\delta c/c_0 \approx 0.063 \ll 1$ — Born approximation valid.
@@ -522,10 +522,10 @@ For a spherical inclusion of radius $a=3$ mm with $\delta c/c_0 = 0.05$ at $f = 
 
 ![Sound-speed reconstruction](figures/ch17/fig05_sound_speed_reconstruction.png)
 
-*Figure 5. Reconstructed sound-speed map: kwavers Born vs CBS FWI on a 2-D breast phantom (§9.1).*
+*Figure 18.5. Reconstructed sound-speed map: kwavers Born vs CBS FWI on a 2-D breast phantom (§18.9.1).*
 
 
-### 9.3 PINN Training Metrics
+### 18.9.3 PINN Training Metrics
 
 The shipped `ElasticPINN2D` is validated on a 2-D elastic forward/inverse problem with a manufactured
 displacement field:
@@ -534,18 +534,18 @@ displacement field:
 - PDE + BC + IC + data losses balanced by `LossWeights`, with the trainable Lamé parameters
   $(\lambda, \mu, \rho)$ recovered in the inverse configuration.
 
-The scalar-wave error bounds of §5.1 (Mishra & Molinaro) are the analytical target for a general
+The scalar-wave error bounds of §18.5.1 (Mishra & Molinaro) are the analytical target for a general
 PINN; the 1-D/3-D scalar-wave training figures are illustrative — that PINN is not yet shipped.
 
 ---
 
-## 10. Guidance-Free Registration and Prior-Less FWI
+## 18.10 Guidance-Free Registration and Prior-Less FWI
 
 Pixel-wise FWI is high-dimensional and cycle-skipping-prone. Two reduced or restructured inversions
 address the two dominant practical failure modes — a poor model *prior* and the cycle-skipping
 *objective*.
 
-### 10.1 Manifold Optimisation for FWI (MOFI): rigid skull-template registration
+### 18.10.1 Manifold Optimisation for FWI (MOFI): rigid skull-template registration
 
 When the unknown is mainly a *pose* error of a known template (e.g. a CT-derived skull aligned to a
 patient), MOFI (Bates et al. 2026; ADR 017/018) replaces the pixel-wise update with a low-dimensional
@@ -553,7 +553,7 @@ patient), MOFI (Bates et al. 2026; ADR 017/018) replaces the pixel-wise update w
 $\varphi=\{\theta,\delta_1,\delta_2\}$, and minimises the *acoustic* misfit over just those three
 parameters — no MRI guidance image. The chained gradient is
 $$\partial J/\partial\varphi = (\partial c_\varphi/\partial\varphi)^\top\,\partial J/\partial c,$$
-with $\partial J/\partial c$ the **exact** self-adjoint gradient (§2.5) and $\partial c_\varphi/\partial\varphi$
+with $\partial J/\partial c$ the **exact** self-adjoint gradient (§18.2.5) and $\partial c_\varphi/\partial\varphi$
 the analytic Jacobian of the bilinear-resampled rigid transform; updates use the SE(2) Lie-group
 log/exp maps. kwavers ships the full pathway in `inverse::fwi::time_domain::mofi`:
 
@@ -568,7 +568,7 @@ log/exp maps. kwavers ships the full pathway in `inverse::fwi::time_domain::mofi
   bending-energy-regularised) for residual non-rigid mismatch;
 - `align_pipeline` — coarse search → rigid + calibration → non-rigid, chained.
 
-### 10.2 Marchenko redatuming + Wasserstein (prior-less FWI)
+### 18.10.2 Marchenko redatuming + Wasserstein (prior-less FWI)
 
 The "ultimate prior-less" formulation combines two methods (ADR 019). **Marchenko redatuming**
 retrieves the focusing functions $f_1^\pm$ and Green's functions $G^\pm$ between the surface and a
@@ -585,6 +585,92 @@ against the layered-medium oracle (built and `#[ignore]`d in `marchenko::oracle_
 $\mathrm{corr}(\text{Marchenko},\text{true})\approx 0.14$, with the window/record-geometry,
 convolution-convention, and amplitude blockers root-caused in ADR 019). It is documented honestly as
 a staged research milestone, not a validated result.
+
+---
+
+## 18.11 Traveltime Imaging: Eikonal, Kirchhoff, Rytov, and Optimal Transport
+
+Full-waveform inversion (§18.2) is the most complete but most expensive imaging
+operator. This section collects the complementary *traveltime-* and
+*linearization-*based tools that span the cost/accuracy spectrum, all
+implemented in `kwavers`.
+
+### 18.11.1 Eikonal Traveltimes by Fast Sweeping
+
+First-arrival traveltimes `T(x)` from a source solve the eikonal equation
+`|∇T| = s(x)` with slowness `s = 1/c`. The **Fast Sweeping Method** (Zhao 2005)
+applies Gauss–Seidel iterations with a Godunov upwind discretization, alternating
+the sweep direction over the `2^d` diagonal orderings so every characteristic is
+followed; it converges in a fixed number of sweeps independent of grid size.
+
+At each node the upwind update solves, for the `p` smallest neighbour values
+`a_1 ≤ … ≤ a_p` with spacings `h_i`,
+
+$$
+\sum_{i=1}^{p} \left(\frac{T - a_i}{h_i}\right)^2 = s^2,
+$$
+
+taking the largest root consistent with `T ≥ a_p`. **Theorem (axis exactness).**
+In a homogeneous medium the 1-D update reproduces `T = i\,h\,s` exactly along a
+grid axis; the scheme is first-order elsewhere, with a *scale-invariant* diagonal
+anisotropy of ≈ 8 % at 45° (independent of `h` for a self-similar point source —
+the motivation for higher-order or factored variants). Implemented as
+`kwavers_physics::acoustics::imaging::seismic::EikonalSolver`, validated against
+the analytic `|x − x_src|/c` (axis error < 10⁻⁹, diagonal bound and
+scale-invariance asserted).
+
+### 18.11.2 Kirchhoff Migration
+
+Given eikonal traveltime tables, **Kirchhoff (diffraction-stack) migration** forms
+an image by summing each recorded trace at the two-way traveltime of every image
+point:
+
+$$
+I(x) = \sum_{(s,r)} d_{s,r}\big(T_s(x) + T_r(x)\big).
+$$
+
+True scatterers reinforce constructively while diffraction tails cancel. Because
+the traveltimes come from the eikonal solver, heterogeneous velocity is handled
+natively (unlike straight-ray migration). `KirchhoffMigrator` is validated by the
+canonical test: Born data from a point scatterer migrates to a focus at the true
+location (peak within 1.5 cells).
+
+### 18.11.3 Rytov Linearization
+
+The Born approximation (§18.3) perturbs the field additively, `u = u_inc + u_B`;
+the **Rytov** approximation perturbs the complex phase multiplicatively,
+
+$$
+u = u_{inc}\,e^{\psi}, \qquad \psi \approx \frac{u_B}{u_{inc}}.
+$$
+
+Both agree to first order (`e^ψ ≈ 1 + ψ`), but Rytov accumulates phase correctly
+for large smooth perturbations: for a pure phase delay it preserves
+`|u| = |u_inc|`, where Born distorts the amplitude. For inversion the **Rytov
+data** is `ψ_obs = ln(u_total/u_inc)`, linear in the scattering potential through
+the *same* Born kernel — so a Born forward operator becomes a Rytov operator by
+predicting `ψ`. Implemented in `kwavers_solver::inverse::rytov`; tests pin the
+phase round-trip, the exact second-order Born/Rytov gap `u_inc·ψ²/2`, and the
+pure-phase amplitude invariance.
+
+### 18.11.4 Optimal-Transport Misfit
+
+Cycle-skipping makes the L2 misfit non-convex in a time shift. The
+**1-Wasserstein** distance, computed for normalized traces as the L1 distance
+between their CDFs (Engquist & Froese 2014; Métivier et al. 2016), is convex in
+the shift and so widens the basin of attraction. `MisfitType::Wasserstein` and
+the companion `Correlation` (normalized cross-correlation) misfit are validated
+value-semantically: `W₁(d,d) = 0`, `W₁` equals the transport distance `|a−b|/n`
+for impulses at `a, b`, `W₁` grows monotonically with shift; the correlation
+misfit is `0`/`1`/`2` for identical/orthogonal/anti-correlated data and its
+adjoint source is orthogonal to the synthetic trace.
+
+![Eikonal traveltimes and Kirchhoff migration](figures/ch17/fig06_eikonal_kirchhoff.png)
+
+*Figure 18.6. (a) Fast-sweeping eikonal first-arrival traveltimes through a
+low-velocity lens (isochrones bend toward the slow region). (b) Kirchhoff
+diffraction-stack migration collapses point-scatterer diffractions to foci at the
+true locations (§18.11.1–11.2).*
 
 ---
 
