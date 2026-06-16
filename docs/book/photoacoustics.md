@@ -633,7 +633,7 @@ In a heterogeneous medium with known sound speed $c_s(\mathbf{r})$, time reversa
 
 ### 10.7.4 Aperture Completeness
 
-**Corollary 7.1.** *For an incomplete (open) aperture, the time-reversal reconstruction introduces artifacts proportional to $1 - \Omega/\Omega_0$, where $\Omega$ is the solid angle covered by the detector aperture and $\Omega_0 = 4\pi$ is the full sphere.*
+**Corollary 10.1.** *For an incomplete (open) aperture, the time-reversal reconstruction introduces artifacts proportional to $1 - \Omega/\Omega_0$, where $\Omega$ is the solid angle covered by the detector aperture and $\Omega_0 = 4\pi$ is the full sphere.*
 
 **Proof.** From (10.61), the reconstruction kernel is $\text{Im}[G]$ integrated over $S_0$. For an incomplete aperture covering solid angle $\Omega$, the integral acquires a weighting $\Omega/\Omega_0$ relative to the full-aperture result, introducing a residual error of amplitude $|1 - \Omega/\Omega_0|$ in the frequency components whose propagation directions are not sampled by the aperture. $\blacksquare$
 
