@@ -6,7 +6,7 @@
 > dissolution), `kwavers_physics::acoustics::therapy::cavitation` (detection,
 > thresholds, metrics), `kwavers_physics::therapy::microbubble` (contrast-agent shell
 > state, drug payload, radiation force), and
-> `kwavers_solver::forward::ode::bubble_symplectic` (symplectic time integration).
+> `kwavers_math::numerics::symplectic` (Störmer–Verlet / Yoshida symplectic time integration).
 
 ---
 
@@ -961,17 +961,26 @@ Output: Collapse time t_c, state y(t_c)
 
 ### 5.11.4 Symplectic Integration for Long-Time Stability
 
-For stable cavitation over many acoustic cycles, symplectic (energy-preserving)
-integration is preferred.  The Störmer–Verlet and Yoshida 4th-order
-compositions implemented in
-`kwavers_solver::forward::ode::bubble_symplectic` conserve a modified
-Hamiltonian to order $O(h^p)$, preventing secular energy drift that would
-falsely indicate inertial collapse.
+For stable cavitation studied over many acoustic cycles, the *conservative*
+part of the bubble dynamics (the undamped Rayleigh–Plesset oscillator) is
+Hamiltonian, and a symplectic integrator is preferred: it conserves a modified
+Hamiltonian to the order of the method and exhibits **no secular energy drift**,
+which a non-symplectic scheme would accumulate into a spurious indication of
+growth or collapse. The Störmer–Verlet (2nd order) and Yoshida 4th-order
+compositions are implemented generically for a separable Hamiltonian
+$H(q,p) = T(p) + V(q)$ in
+`kwavers_math::numerics::symplectic::{stormer_verlet_step, yoshida4_step}`,
+verified by bounded energy error over thousands of periods and 2nd/4th-order
+convergence on the harmonic oscillator.
 
-The RP equation can be written in near-Hamiltonian form with generalized
-coordinate $q = R^{3/2}$ and conjugate momentum
-$\pi = (\tfrac{2}{3})\rho_L q\dot{q}$ (see
-`kwavers_solver::forward::ode::bubble_symplectic::stormer_verlet`).
+The conservative RP oscillator itself has the Hamiltonian structure
+$H = p^2/(2M(R)) + U(R)$, where the conjugate momentum is $p = M(R)\dot{R}$ with
+the position-dependent effective liquid mass $M(R) = 4\pi\rho_L R^3$ (so the
+kinetic energy is the liquid kinetic energy $T = 2\pi\rho_L R^3\dot{R}^2$), and
+$U(R)$ collects the gas-compression, surface-tension, and ambient-pressure work.
+Because $M$ depends on $R$, the system is not separable in $(R, p)$; applying the
+generic separable integrator requires a canonical change of variables to
+$H(q,p) = T(p) + V(q)$ first.
 
 ### 5.11.5 Algorithm: Yoshida 4th-Order Symplectic Integrator
 
@@ -985,16 +994,22 @@ Output: Phase-space trajectory {(q_n, π_n)}
 1. Coefficients:
    $w_1 = 1/(2 - 2^{1/3})$,
    $w_0 = -2^{1/3}/(2 - 2^{1/3})$,
-   $c_i = (w_0, w_1, w_1, w_0)/2$,
-   $d_i = (w_1, w_0, w_1)$.
+   drift weights $c = (w_1,\; w_0+w_1,\; w_0+w_1,\; w_1)/2$,
+   kick weights $d = (w_1,\; w_0,\; w_1)$.
+   The drift weights sum to $2w_1 + w_0 = 1$, so the four sub-drifts advance
+   time by exactly $h$; the central $w_0 < 0$ back-step cancels the 3rd-order
+   error. (Equivalently, compose three Störmer–Verlet steps of length
+   $w_1 h,\, w_0 h,\, w_1 h$.)
 2. For each step $n = 0, 1, \ldots, N-1$:
-   - For $i = 1, 2, 3, 4$: $q \mathrel{+}= c_i h\,\partial H/\partial\pi$.
-   - For $i = 1, 2, 3$: $\pi \mathrel{-}= d_i h\,\partial H/\partial q$.
+   - $q \mathrel{+}= c_1 h\,\partial H/\partial p$;
+     then for $i = 1, 2, 3$: $p \mathrel{-}= d_i h\,\partial H/\partial q$,
+     $q \mathrel{+}= c_{i+1} h\,\partial H/\partial p$.
 3. Return trajectory.
 
 The Yoshida method has global order 4; the modified Hamiltonian
-$\tilde{H} = H + O(h^4)$ is preserved to machine precision over the full
-integration. Implemented in `kwavers_solver::forward::ode::bubble_symplectic::yoshida`.
+$\tilde{H} = H + O(h^4)$ stays bounded (no secular drift) over the full
+integration. Implemented as `yoshida4_step` (the three-Störmer–Verlet
+composition) in `kwavers_math::numerics::symplectic`.
 
 ---
 

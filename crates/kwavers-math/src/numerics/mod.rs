@@ -51,13 +51,14 @@
 //!   Springer.
 
 pub mod operators;
+pub mod symplectic;
 
 // Integration and transforms to be implemented in future phases
-// pub mod integration;
 // pub mod transforms;
 
 // Re-export commonly used traits for convenience
 pub use operators::{DifferentialOperator, Interpolator, SpectralOperatorTrait};
+pub use symplectic::{stormer_verlet_step, yoshida4_step};
 
 #[cfg(test)]
 mod tests {
