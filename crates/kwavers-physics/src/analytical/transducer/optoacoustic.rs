@@ -122,6 +122,36 @@ pub fn acoustic_resolution_lateral(sound_speed: f64, na: f64, freq_hz: f64) -> f
     0.71 * sound_speed / (na * freq_hz)
 }
 
+/// Centre frequency of a single-cycle optoacoustic pulse from its temporal
+/// width:
+///
+/// ```text
+/// f_center ≈ 1 / τ_FWHM.
+/// ```
+///
+/// The emitted optoacoustic pulse is a single bipolar cycle whose duration is
+/// set by the absorber nanostructure (a thinner, more strongly absorbing layer
+/// of smaller particles confines the thermoelastic stress to a shorter time).
+/// For a one-cycle pulse the spectral centre is the reciprocal of its duration;
+/// the four Li et al. (2022) absorbers confirm `f·τ ≈ 0.9–1.45`, so this places
+/// each material in its band to ~30 %: candle soot (55 nm particles, τ≈0.09 µs)
+/// → ~15 MHz, while the larger carbon-nanotube / nanoparticle aggregates and
+/// the bulk heat-shrink membrane (τ≈0.24–0.31 µs) fall in the 3–5 MHz band.
+/// This is the design knob that selects the array's operating frequency through
+/// the choice of absorber material.
+///
+/// # Reference
+/// Li et al. (2022), Fig. 1g,h; Kim et al. (2019), *IEEE Nanotechnol. Mag.* 13,
+/// 13 (candle-soot photoacoustic bandwidth vs structure).
+#[must_use]
+#[inline]
+pub fn optoacoustic_center_frequency(pulse_fwhm_s: f64) -> f64 {
+    if pulse_fwhm_s <= 0.0 {
+        return 0.0;
+    }
+    1.0 / pulse_fwhm_s
+}
+
 /// Optical fluence at the flat tip of a fiber delivering a pulse of energy
 /// `E_pulse` [J] through a core of diameter `d` [m]:
 ///
@@ -288,6 +318,23 @@ mod tests {
     }
 
     #[test]
+    fn center_frequency_from_pulse_width_places_materials_in_band() {
+        // Single-cycle spectral estimate f ≈ 1/τ lands each Li et al. absorber
+        // in its measured band (~30 %).
+        let cs = optoacoustic_center_frequency(0.09e-6); // candle soot, 55 nm
+        let cnt = optoacoustic_center_frequency(0.24e-6); // carbon nanotube
+        let cnp = optoacoustic_center_frequency(0.29e-6); // carbon nanoparticle
+        let hsm = optoacoustic_center_frequency(0.31e-6); // heat-shrink membrane
+        assert!(cs > 10.0e6, "CS {cs} not high-frequency");
+        // CNT and CNP sit in the target 3–6 MHz band; HSM near 3 MHz.
+        assert!((3.0e6..=6.0e6).contains(&cnt), "CNT {cnt}");
+        assert!((3.0e6..=6.0e6).contains(&cnp), "CNP {cnp}");
+        assert!((2.5e6..=4.0e6).contains(&hsm), "HSM {hsm}");
+        // Monotone: shorter pulse ⇒ higher frequency.
+        assert!(cs > cnt && cnt > cnp && cnp > hsm);
+    }
+
+    #[test]
     fn focused_aperture_gain_matches_filled_piston() {
         // A filled circular aperture: G = π a²/(λ F) = A/(λ F).
         let a = 1e-3_f64;
@@ -318,5 +365,52 @@ mod tests {
         let lumen_area = std::f64::consts::PI * (0.8e-3_f64).powi(2);
         let fill = 96.0 * fiber_area / lumen_area;
         assert!(fill < 1.0, "catheter fill factor {fill} ≥ 1 (does not fit)");
+    }
+
+    #[test]
+    fn endovascular_5mhz_array_reaches_one_mpa() {
+        // A 3–5 MHz design (CNT-/CNP-PDMS, λ ≈ 308 µm in tissue at 5 MHz) loses
+        // focal gain relative to 15 MHz (G ∝ 1/λ ∝ f), so it focuses closer
+        // (3 mm) to keep G_focus near unity. 96×100 µm cores then reach 1 MPa at
+        // a damage-safe ~1.25 MPa per fiber (≈4.5 mJ/cm²).
+        let element_area = std::f64::consts::PI * (50e-6_f64).powi(2);
+        let lambda = 1540.0 / (5.0 * MHZ_TO_HZ);
+        let p_focus = optoacoustic_array_focal_pressure(1.25e6, 96, element_area, lambda, 3e-3);
+        assert!(p_focus >= 1.0e6, "5 MHz focal pressure {p_focus} Pa < 1 MPa");
+        // The lower-frequency gain is below the 15 MHz device, as expected.
+        let lambda_15 = 1540.0 / (15.0 * MHZ_TO_HZ);
+        let g5 = focused_aperture_gain(96.0 * element_area, lambda, 3e-3);
+        let g15 = focused_aperture_gain(96.0 * element_area, lambda_15, 3e-3);
+        assert!(g15 > g5, "15 MHz gain {g15} should exceed 5 MHz gain {g5}");
+    }
+
+    #[test]
+    fn imec_footprint_array_reaches_one_mpa_at_40mm() {
+        // IMEC form factor: a 24 mm × 5 mm strip of 96 elements travelling along
+        // the SSS, focused 40 mm into the brain at 5 MHz (λ ≈ 308 µm). At this
+        // long focus a SPARSE bundle of bare 100 µm fiber tips collapses
+        // (A_active ≈ 0.75 mm² ⇒ G ≈ 0.06, p₀ would exceed the damage limit), so
+        // the 96 elements must be sub-aperture optoacoustic TILES that fill the
+        // face — exactly the IMEC channel layout.
+        let lambda = 1540.0 / (5.0 * MHZ_TO_HZ);
+        let f_focus = 40e-3;
+
+        // Sparse bare-tip bundle fails: 1 MPa would need a supra-damage p₀.
+        let tip_area = std::f64::consts::PI * (50e-6_f64).powi(2);
+        let g_sparse = focused_aperture_gain(96.0 * tip_area, lambda, f_focus);
+        assert!(g_sparse < 0.1, "sparse-tip gain {g_sparse} unexpectedly large");
+        assert!(1.0e6 / g_sparse > 10.0e6, "sparse tips would need < damage p₀");
+
+        // Filled tiles succeed: 96 tiles each ≈0.8 mm² radiating (0.5 mm
+        // effective radius) over the 24×5 mm = 120 mm² face (≈0.63 fill).
+        let tile_area = std::f64::consts::PI * (0.5e-3_f64).powi(2);
+        let g_filled = focused_aperture_gain(96.0 * tile_area, lambda, f_focus);
+        assert!(g_filled > 5.0, "filled-aperture gain {g_filled} too low");
+        // A damage-safe 0.6 MPa per tile (≈2.2 mJ/cm²) clears 1 MPa with margin
+        // wide enough to survive a 3× derate for the anisotropic (line-focus)
+        // aperture — the 5 mm width is past its 20 mm near field at 40 mm.
+        let p_focus = optoacoustic_array_focal_pressure(0.6e6, 96, tile_area, lambda, f_focus);
+        assert!(p_focus >= 3.0e6, "filled-aperture focal pressure {p_focus} Pa");
+        assert!(p_focus / 3.0 >= 1.0e6, "3× anisotropy derate still < 1 MPa");
     }
 }
