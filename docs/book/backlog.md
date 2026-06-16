@@ -827,6 +827,19 @@ needs an ADR first.
    and the physics fusion algorithms. Chapters 13 §13.7 and 19 §19.10.2 corrected to cite it.
    (Lesson: verify by algorithm, not by the guessed type name `DeformableRegistration`/`RITK`.)
 
+## Residual doc artifacts
+
+- **Regenerate Figure 6.2 `fig02_focused_bowl_onaxis`** `[patch]` — the
+  `focused_bowl_onaxis` O'Neil kernel was corrected (commit `f8a0340be`: added
+  the `F/(F−z)` focusing prefactor + sagitta edge-ray distance; the old form
+  produced no focal peak). The committed PNG/PDF in `docs/book/figures/ch11/`
+  was rendered with the buggy kernel and misrepresents the on-axis curve. Re-run
+  `crates/kwavers-python/examples/book/ch11_sources_and_transducers.py::fig02`
+  after the next `maturin develop --release` rebuild of pykwavers (deferred: the
+  cone crate is under the in-flight ritk migration and a concurrent cargo build
+  risks corrupting the shared target). Rust kernel is fixed + tested; only the
+  figure artifact is stale.
+
 ## Notes
 
 - `[major]` items each get an ADR before implementation (see `docs/adr/013–015`).
