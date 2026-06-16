@@ -24,8 +24,9 @@ pub use beam::{
 };
 pub use interpolation::bli_stencil_weights;
 pub use optoacoustic::{
-    acoustic_resolution_lateral, f_number_from_na, na_from_f_number,
-    numerical_aperture_from_geometry, soap_focal_gain,
+    acoustic_resolution_lateral, f_number_from_na, fiber_tip_fluence, focused_aperture_gain,
+    na_from_f_number, numerical_aperture_from_geometry, optoacoustic_array_focal_pressure,
+    soap_focal_gain,
 };
 pub use steering::electronic_steering_efficiency;
 

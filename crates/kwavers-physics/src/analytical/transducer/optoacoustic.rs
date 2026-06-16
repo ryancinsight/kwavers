@@ -122,6 +122,81 @@ pub fn acoustic_resolution_lateral(sound_speed: f64, na: f64, freq_hz: f64) -> f
     0.71 * sound_speed / (na * freq_hz)
 }
 
+/// Optical fluence at the flat tip of a fiber delivering a pulse of energy
+/// `E_pulse` [J] through a core of diameter `d` [m]:
+///
+/// ```text
+/// F = E_pulse / A_tip = E_pulse / (π (d/2)²) = 4 E_pulse / (π d²).
+/// ```
+///
+/// This is the lever behind fiber-optic optoacoustic emitters: the optoacoustic
+/// surface pressure is `p₀ = Γ μ_a F` (the source law of §10.1 / `OptoacousticEmitter`),
+/// and concentrating a fixed pulse energy into a smaller core raises the fluence
+/// — and hence the pressure — as `1/d²`. The achievable pressure is therefore
+/// bounded not by the laser but by the absorber's optical-damage fluence; a
+/// CS-PDMS coating tolerates tens of mJ/cm², far above the few mJ/cm² needed for
+/// MPa-level output.
+///
+/// # Reference
+/// Jiang et al. (2020), *Nat. Commun.* 11, 881; Shi et al. (2021), *Light: Sci.
+/// Appl.* 10, 143 (tapered fiber optoacoustic emitters).
+#[must_use]
+#[inline]
+pub fn fiber_tip_fluence(pulse_energy_j: f64, core_diameter_m: f64) -> f64 {
+    if core_diameter_m <= 0.0 {
+        return 0.0;
+    }
+    pulse_energy_j / (std::f64::consts::PI * (0.5 * core_diameter_m).powi(2))
+}
+
+/// Diffraction focal gain of a planar aperture of active radiating area
+/// `A_active` [m²], electronically focused at distance `F_focus` [m] for
+/// acoustic wavelength `λ` [m]:
+///
+/// ```text
+/// G_focus = A_active / (λ · F_focus).
+/// ```
+///
+/// For a filled circular aperture (`A_active = π a²`) this is the textbook
+/// focused-piston focal gain `π a²/(λ F)`. For a **sparse** array (e.g. a bundle
+/// of fiber tips) `A_active` is the summed tip area; the main-focus pressure
+/// still scales with the total radiating area when the contributions are phased
+/// to arrive in phase at the focus, at the cost of grating-lobe sidelobes from
+/// the sparse sampling. Distinct from the spherical-cap gain `k h`
+/// ([`soap_focal_gain`]): this is the gain of a *flat, delay-focused* array.
+#[must_use]
+#[inline]
+pub fn focused_aperture_gain(active_area_m2: f64, wavelength_m: f64, focal_distance_m: f64) -> f64 {
+    if wavelength_m <= 0.0 || focal_distance_m <= 0.0 {
+        return 0.0;
+    }
+    active_area_m2 / (wavelength_m * focal_distance_m)
+}
+
+/// Focal pressure of a coherently-focused optoacoustic matrix array of
+/// `n_elements` fiber tips, each of radiating area `element_area_m2` [m²] and
+/// surface pressure `surface_pressure_pa` [Pa], focused at `focal_distance_m`:
+///
+/// ```text
+/// p_focus = p₀ · G_focus,   G_focus = (n · A_element) / (λ · F_focus).
+/// ```
+///
+/// Combines the per-fiber optoacoustic surface pressure (`p₀ = Γ μ_a F`, from
+/// [`fiber_tip_fluence`] and the emitter material) with the array focal gain
+/// ([`focused_aperture_gain`]). This is the design relation for an endovascular
+/// fiber-optoacoustic matrix array.
+#[must_use]
+pub fn optoacoustic_array_focal_pressure(
+    surface_pressure_pa: f64,
+    n_elements: usize,
+    element_area_m2: f64,
+    wavelength_m: f64,
+    focal_distance_m: f64,
+) -> f64 {
+    let active_area = n_elements as f64 * element_area_m2;
+    surface_pressure_pa * focused_aperture_gain(active_area, wavelength_m, focal_distance_m)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -198,5 +273,50 @@ mod tests {
 
         // Fit constant: R_L[µm]·NA = 0.71·c/f = 71.0 µm at the device point.
         assert!((r_l * na * 1e6 - 71.0).abs() < 0.5, "fit = {}", r_l * na * 1e6);
+    }
+
+    #[test]
+    fn fiber_fluence_scales_inverse_square_with_core() {
+        let e = 1.0e-7; // 0.1 µJ pulse
+        let f_100 = fiber_tip_fluence(e, 100e-6);
+        let f_50 = fiber_tip_fluence(e, 50e-6);
+        // Halving the core diameter quadruples the fluence (∝ 1/d²): this is how
+        // a small fiber reaches a high optoacoustic pressure from a modest pulse.
+        assert!((f_50 / f_100 - 4.0).abs() < 1e-9);
+        // 0.1 µJ into a 100 µm core ≈ 12.7 J/m² (1.27 mJ/cm²).
+        assert!((f_100 - 12.73e0).abs() / f_100 < 0.01, "F = {f_100} J/m²");
+    }
+
+    #[test]
+    fn focused_aperture_gain_matches_filled_piston() {
+        // A filled circular aperture: G = π a²/(λ F) = A/(λ F).
+        let a = 1e-3_f64;
+        let area = std::f64::consts::PI * a * a;
+        let (lambda, f_focus) = (1.0267e-4, 5e-3);
+        let g = focused_aperture_gain(area, lambda, f_focus);
+        assert!((g - area / (lambda * f_focus)).abs() < 1e-9);
+    }
+
+    #[test]
+    fn endovascular_96_fiber_array_reaches_one_mpa() {
+        // 96 fibers, 100 µm core, coherently focused 5 mm into cortex at 15 MHz
+        // (λ ≈ 103 µm in tissue, c = 1540 m/s). A modest per-fiber surface
+        // pressure of 0.7 MPa — reached at ≈2.5 mJ/cm² on a CS-PDMS tip, far
+        // below the absorber's tens-of-mJ/cm² damage fluence — clears 1 MPa.
+        let element_area = std::f64::consts::PI * (50e-6_f64).powi(2);
+        let lambda = 1540.0 / (15.0 * MHZ_TO_HZ);
+        let p_focus = optoacoustic_array_focal_pressure(0.7e6, 96, element_area, lambda, 5e-3);
+        assert!(p_focus >= 1.0e6, "focal pressure {p_focus} Pa < 1 MPa");
+        // Headroom: a damage-safe 3 MPa per-fiber surface pressure exceeds 4 MPa
+        // at the focus.
+        let p_hot = optoacoustic_array_focal_pressure(3.0e6, 96, element_area, lambda, 5e-3);
+        assert!(p_hot > 4.0e6, "hot-case focal pressure {p_hot} Pa");
+
+        // Geometric fit: 96 fibers of 125 µm cladding occupy less than the lumen
+        // of a 1.6 mm (≈6 Fr) catheter — fill factor < 1.
+        let fiber_area = std::f64::consts::PI * (62.5e-6_f64).powi(2);
+        let lumen_area = std::f64::consts::PI * (0.8e-3_f64).powi(2);
+        let fill = 96.0 * fiber_area / lumen_area;
+        assert!(fill < 1.0, "catheter fill factor {fill} ≥ 1 (does not fit)");
     }
 }
