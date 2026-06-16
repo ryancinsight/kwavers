@@ -49,3 +49,4 @@
 - [Segmented Tissue Transducer Planning](segmented_tissue_transducer_planning.md)
 - [Pancreatic Cancer Histotripsy: PDAC Treatment Planning](pancreatic_histotripsy.md)
 - [CMUT vs PMUT: Micromachined and Flexible Transducers for IVUS](cmut_vs_pmut.md)
+- [Optically-Generated Focused Ultrasound for Ultrahigh-Precision Neuromodulation](optoacoustic_focused_ultrasound.md)
