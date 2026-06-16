@@ -20,14 +20,14 @@ Consider a tissue volume illuminated by a pulsed laser with fluence $F(\mathbf{r
 
 $$
 H(\mathbf{r}) = \mu_a(\mathbf{r})\, F(\mathbf{r}) \quad [\text{J m}^{-3}].
-\tag{1.1}
+\tag{10.1}
 $$
 
 The time-dependent absorbed power density during a pulse of duration $\tau_L$ and temporal profile $I(t)$ is
 
 $$
 \dot{H}(\mathbf{r},t) = H(\mathbf{r})\, \phi(t), \quad \int_{-\infty}^{\infty} \phi(t)\, dt = 1,
-\tag{1.2}
+\tag{10.2}
 $$
 
 where $\phi(t)$ is the normalized pulse shape [s$^{-1}$].
@@ -38,14 +38,14 @@ Let $d$ be the characteristic dimension of the absorbing structure and $c_s$ the
 
 $$
 \tau_{\text{stress}} = \frac{d}{c_s}.
-\tag{1.3}
+\tag{10.3}
 $$
 
 **Stress confinement condition:** $\tau_L \ll \tau_{\text{stress}}$, i.e.,
 
 $$
 \tau_L \ll \frac{d}{c_s}.
-\tag{1.4}
+\tag{10.4}
 $$
 
 Under this condition the acoustic wave does not propagate appreciably during optical energy deposition. The absorber is mechanically constrained (isochoric heating), so the full thermoelastic stress is retained as a coherent initial pressure rather than being partially relieved by radiation during the pulse.
@@ -58,14 +58,14 @@ The thermal diffusion length during the laser pulse is $l_T = \sqrt{4 D_T \tau_L
 
 $$
 \tau_{\text{thermal}} = \frac{d^2}{4 D_T}.
-\tag{1.5}
+\tag{10.5}
 $$
 
 **Thermal confinement condition:** $\tau_L \ll \tau_{\text{thermal}}$, i.e.,
 
 $$
 \tau_L \ll \frac{d^2}{4 D_T}.
-\tag{1.6}
+\tag{10.6}
 $$
 
 Under thermal confinement, heat redistribution during the pulse is negligible; the temperature rise produced by absorption is fully localized within the absorber. For soft tissue $D_T \approx 1.4 \times 10^{-7}\,\text{m}^2\,\text{s}^{-1}$, giving $\tau_{\text{thermal}} \approx 40\,\text{ms}$ for a $150\,\mu\text{m}$ absorber—six orders of magnitude larger than a typical nanosecond pulse. Both confinement conditions are routinely satisfied in practice.
@@ -76,7 +76,7 @@ Under thermal confinement, heat redistribution during the pulse is negligible; t
 
 $$
 p_0(\mathbf{r}) = \Gamma(\mathbf{r})\, H(\mathbf{r}),
-\tag{1.7}
+\tag{10.7}
 $$
 
 *where $\Gamma$ is the dimensionless Grüneisen parameter.*
@@ -85,28 +85,28 @@ $$
 
 $$
 \Delta T = \frac{H}{\rho C_V},
-\tag{1.8}
+\tag{10.8}
 $$
 
 where $\rho$ is the mass density [kg m$^{-3}$] and $C_V$ is the specific heat at constant volume [J kg$^{-1}$ K$^{-1}$]. The resulting thermoelastic stress in an isotropic elastic solid is $\sigma_{ij} = -\beta K \Delta T \delta_{ij}$, where $\beta$ [K$^{-1}$] is the volumetric thermal expansion coefficient and $K$ [Pa] is the bulk modulus. The acoustic pressure (negative of the mean normal stress) is
 
 $$
 p_0 = \beta K \Delta T = \frac{\beta K}{\rho C_V} H.
-\tag{1.9}
+\tag{10.9}
 $$
 
 For a fluid, the isentropic bulk modulus satisfies $K = \rho c_s^2$ (where $c_s$ is the adiabatic speed of sound), and under the isobaric condition $C_p \approx C_V$ for liquids and soft tissue (the difference is of order $(\beta T)^2/\kappa_T \rho C_p \sim 10^{-3}$ for water at 37°C, negligible here). Substituting:
 
 $$
 p_0 = \frac{\beta \rho c_s^2}{\rho C_p} H = \frac{\beta c_s^2}{C_p} H = \Gamma H,
-\tag{1.10}
+\tag{10.10}
 $$
 
 where
 
 $$
 \Gamma \equiv \frac{\beta c_s^2}{C_p}
-\tag{1.11}
+\tag{10.11}
 $$
 
 is the Grüneisen parameter. The conversion factor from absorbed optical energy to acoustic pressure amplitude is therefore $\Gamma$ [Pa / (J m$^{-3}$)] = [dimensionless], as required. $\blacksquare$
@@ -115,7 +115,7 @@ The time-domain source pressure, incorporating the pulse temporal profile, is
 
 $$
 p(\mathbf{r}, t) = \Gamma\, H(\mathbf{r})\, \delta(t)
-\tag{1.12}
+\tag{10.12}
 $$
 
 in the limit $\tau_L \to 0$ (stress confinement becomes exact). This delta-function source is the standard starting point for all PA reconstruction theories.
@@ -130,7 +130,7 @@ in the limit $\tau_L \to 0$ (stress confinement becomes exact). This delta-funct
 
 $$
 \Gamma = \frac{\beta c_s^2}{C_p} = \frac{\beta}{\rho\, \kappa_T\, C_p},
-\tag{2.1}
+\tag{10.13}
 $$
 
 *where $\beta$ is the isobaric volumetric thermal expansion coefficient, $c_s$ is the adiabatic speed of sound, $\rho$ is the mass density, $C_p$ is the specific heat at constant pressure, and $\kappa_T = 1/K_T$ is the isothermal compressibility. The second equality holds in the weak-thermoelastic limit $\kappa_S \approx \kappa_T$ (justified below).*
@@ -139,21 +139,21 @@ $$
 
 $$
 \kappa_S = \kappa_T - \frac{T \beta^2}{\rho C_p},
-\tag{2.2}
+\tag{10.14}
 $$
 
-where $\kappa_T = 1/K_T$ is the isothermal compressibility. For water and soft tissue at physiological conditions, $T \beta^2 / (\rho C_p \kappa_T) \approx 0.01 \ll 1$, so $\kappa_S \approx \kappa_T$ and $c_s^2 \approx 1/(\rho \kappa_T)$. Substituting into (1.11):
+where $\kappa_T = 1/K_T$ is the isothermal compressibility. For water and soft tissue at physiological conditions, $T \beta^2 / (\rho C_p \kappa_T) \approx 0.01 \ll 1$, so $\kappa_S \approx \kappa_T$ and $c_s^2 \approx 1/(\rho \kappa_T)$. Substituting into (10.11):
 
 $$
 \Gamma = \frac{\beta}{\rho C_p} \cdot \frac{1}{\kappa_T} = \frac{\beta}{\rho \kappa_T C_p}.
-\tag{2.3}
+\tag{10.15}
 $$
 
-Equation (2.3) is the second form of (2.1). Re-expressing it through $c_s^2 \approx 1/(\rho\kappa_T)$ recovers the adiabatic-speed form, so the two are identical in the weak-thermoelastic limit:
+Equation (10.15) is the second form of (10.13). Re-expressing it through $c_s^2 \approx 1/(\rho\kappa_T)$ recovers the adiabatic-speed form, so the two are identical in the weak-thermoelastic limit:
 
 $$
 \Gamma = \frac{\beta c_s^2}{C_p} = \frac{\beta}{\rho\, \kappa_T\, C_p},
-\tag{2.4}
+\tag{10.16}
 $$
 
 which completes the proof. $\blacksquare$
@@ -162,7 +162,7 @@ The Grüneisen parameter is also expressible through the Mie-Grüneisen equation
 
 $$
 \Gamma = \frac{\gamma_G}{V}\left(\frac{\partial U}{\partial V}\right)_S^{-1} = \frac{\alpha_V c_s^2}{C_V},
-\tag{2.5}
+\tag{10.17}
 $$
 
 where $\alpha_V$ is the cubic thermal expansion coefficient.
@@ -173,7 +173,7 @@ In biological tissue, $\Gamma$ depends on temperature $T$ through the temperatur
 
 $$
 \beta(T) = \beta_0 + a_1 (T - T_0) + a_2 (T - T_0)^2,
-\tag{2.6}
+\tag{10.18}
 $$
 
 where $T_0 = 293\,\text{K}$, $\beta_0 = 2.1 \times 10^{-4}\,\text{K}^{-1}$, $a_1 = 1.6 \times 10^{-5}\,\text{K}^{-2}$. This makes PA signal amplitude a thermometer: $\partial p_0 / \partial T = (\partial \Gamma / \partial T) H$. The kwavers module `kwavers_physics::photoacoustics::thermoelasticity::GrueneisenModel` implements this temperature-dependent model.
@@ -204,7 +204,7 @@ The high Grüneisen parameter of fat ($\Gamma \approx 0.7$) is exploited in lipi
 
 $$
 \frac{1}{c_s^2}\frac{\partial^2 p}{\partial t^2} - \nabla^2 p = \frac{\beta}{C_p}\frac{\partial H}{\partial t}.
-\tag{3.1}
+\tag{10.19}
 $$
 
 **Proof.** Start from the linearized acoustic equations with a volumetric heat source:
@@ -212,55 +212,55 @@ $$
 1. Continuity with thermal expansion:
 $$
 \frac{\partial \rho'}{\partial t} + \rho_0 \nabla \cdot \mathbf{u} = -\rho_0 \beta \frac{\partial T'}{\partial t},
-\tag{3.2}
+\tag{10.20}
 $$
 
 2. Momentum (Euler equation, no viscosity):
 $$
 \rho_0 \frac{\partial \mathbf{u}}{\partial t} = -\nabla p,
-\tag{3.3}
+\tag{10.21}
 $$
 
 3. State equation: $p = c_s^2 \rho'$ (adiabatic),
 4. Energy: $\rho_0 C_p \partial T'/\partial t = \dot{H}(\mathbf{r},t)$ (thermal confinement; heat diffusion neglected).
 
-Take $\partial/\partial t$ of (3.2), substitute (3.3) via $\rho_0 \nabla \cdot \dot{\mathbf{u}} = -\nabla^2 p$, and use the state equation $\rho' = p/c_s^2$:
+Take $\partial/\partial t$ of (10.20), substitute (10.21) via $\rho_0 \nabla \cdot \dot{\mathbf{u}} = -\nabla^2 p$, and use the state equation $\rho' = p/c_s^2$:
 
 $$
 \frac{1}{c_s^2}\frac{\partial^2 p}{\partial t^2} - \nabla^2 p = -\rho_0 \beta \frac{\partial^2 T'}{\partial t^2}.
-\tag{3.4}
+\tag{10.22}
 $$
 
 From the energy equation, $\partial T'/\partial t = \dot{H}/(\rho_0 C_p)$, hence $\partial^2 T'/\partial t^2 = \ddot{H}/(\rho_0 C_p)$. Substituting:
 
 $$
 \frac{1}{c_s^2}\frac{\partial^2 p}{\partial t^2} - \nabla^2 p = -\frac{\beta}{\rho_0 C_p}\rho_0 \frac{\partial^2}{\partial t^2}\int_0^t \dot{H}\,dt' = \frac{\beta}{C_p}\frac{\partial \dot{H}}{\partial t}.
-\tag{3.5}
+\tag{10.23}
 $$
 
-Under thermal confinement, $\dot{H}(\mathbf{r},t) = H(\mathbf{r})\phi(t)$, so the right-hand side is $(\beta/C_p) H(\mathbf{r}) \dot{\phi}(t)$. In the stress-confinement limit $\phi(t) \to \delta(t)$, giving $\dot{\phi}(t) \to \delta'(t)$ and the source becomes a dipole in time. Equivalently, writing $\partial H/\partial t = H(\mathbf{r})\delta'(t)$, equation (3.1) is recovered. $\blacksquare$
+Under thermal confinement, $\dot{H}(\mathbf{r},t) = H(\mathbf{r})\phi(t)$, so the right-hand side is $(\beta/C_p) H(\mathbf{r}) \dot{\phi}(t)$. In the stress-confinement limit $\phi(t) \to \delta(t)$, giving $\dot{\phi}(t) \to \delta'(t)$ and the source becomes a dipole in time. Equivalently, writing $\partial H/\partial t = H(\mathbf{r})\delta'(t)$, equation (10.19) is recovered. $\blacksquare$
 
 ### 10.3.2 Green's Function Solution
 
-**Theorem 10.4 (Green's Function Solution).** *The free-space solution to (3.1) with source $(\beta/C_p)\partial H/\partial t$ and causal boundary conditions is*
+**Theorem 10.4 (Green's Function Solution).** *The free-space solution to (10.19) with source $(\beta/C_p)\partial H/\partial t$ and causal boundary conditions is*
 
 $$
 p(\mathbf{r},t) = \frac{\beta}{4\pi C_p}\frac{\partial}{\partial t}\int_V \frac{H(\mathbf{r}')}{|\mathbf{r}-\mathbf{r}'|}\, \delta\!\left(t - \frac{|\mathbf{r}-\mathbf{r}'|}{c_s}\right) dV'.
-\tag{3.6}
+\tag{10.24}
 $$
 
 **Proof.** The free-space Green's function for the scalar wave equation
 
 $$
 \frac{1}{c_s^2}\frac{\partial^2 G}{\partial t^2} - \nabla^2 G = \delta(\mathbf{r}-\mathbf{r}')\delta(t-t')
-\tag{3.7}
+\tag{10.25}
 $$
 
 with causal (retarded) boundary conditions is
 
 $$
 G(\mathbf{r},t;\mathbf{r}',t') = \frac{\delta(t - t' - |\mathbf{r}-\mathbf{r}'|/c_s)}{4\pi|\mathbf{r}-\mathbf{r}'|}.
-\tag{3.8}
+\tag{10.26}
 $$
 
 This follows from the standard spherical wave solution: the delta-function source generates a spherical wavefront expanding at speed $c_s$, with amplitude decaying as $1/(4\pi R)$ where $R = |\mathbf{r}-\mathbf{r}'|$, as required by energy conservation in three dimensions.
@@ -269,26 +269,26 @@ The general solution is the convolution of the Green's function with the source:
 
 $$
 p(\mathbf{r},t) = \int_0^{\infty} dt' \int_V G(\mathbf{r},t;\mathbf{r}',t')\, \frac{\beta}{C_p}\frac{\partial H(\mathbf{r}',t')}{\partial t'}\, dV'.
-\tag{3.9}
+\tag{10.27}
 $$
 
-Substituting (3.8) and performing the $t'$ integral by the sifting property of the delta function:
+Substituting (10.26) and performing the $t'$ integral by the sifting property of the delta function:
 
 $$
 p(\mathbf{r},t) = \frac{\beta}{4\pi C_p}\int_V \frac{1}{|\mathbf{r}-\mathbf{r}'|}\frac{\partial H(\mathbf{r}', t - |\mathbf{r}-\mathbf{r}'|/c_s)}{\partial t}\, dV'.
-\tag{3.10}
+\tag{10.28}
 $$
 
 In the stress-confinement limit, $H(\mathbf{r}',t') = H(\mathbf{r}')\delta(t')$, so $\partial H/\partial t = H(\mathbf{r}')\delta'(t')$. The convolution with the Green's function gives:
 
 $$
 p(\mathbf{r},t) = \frac{\beta}{4\pi C_p}\frac{\partial}{\partial t}\int_V \frac{H(\mathbf{r}')}{|\mathbf{r}-\mathbf{r}'|}\, \delta\!\left(t - \frac{|\mathbf{r}-\mathbf{r}'|}{c_s}\right) dV',
-\tag{3.11}
+\tag{10.29}
 $$
 
-which is equation (3.6). The time derivative acts on the retarded-time argument of the integrand. $\blacksquare$
+which is equation (10.24). The time derivative acts on the retarded-time argument of the integrand. $\blacksquare$
 
-Equation (3.6) has a clear geometric interpretation: $p(\mathbf{r},t)$ at time $t$ receives contributions from all source voxels $\mathbf{r}'$ at distance $c_s t$ from $\mathbf{r}$, i.e., from a spherical shell of radius $c_s t$ centered at $\mathbf{r}$. This spherical Radon transform structure underlies all back-projection reconstruction algorithms.
+Equation (10.24) has a clear geometric interpretation: $p(\mathbf{r},t)$ at time $t$ receives contributions from all source voxels $\mathbf{r}'$ at distance $c_s t$ from $\mathbf{r}$, i.e., from a spherical shell of radius $c_s t$ centered at $\mathbf{r}$. This spherical Radon transform structure underlies all back-projection reconstruction algorithms.
 
 
 ---
@@ -301,14 +301,14 @@ In a non-scattering, homogeneously absorbing medium, the intensity of a collimat
 
 $$
 I(z) = I_0\, e^{-\mu_a z},
-\tag{4.1}
+\tag{10.30}
 $$
 
 where $I_0$ [W m$^{-2}$] is the incident irradiance and $\mu_a$ [m$^{-1}$] is the absorption coefficient. The absorbed power density is $\dot{H} = \mu_a I(z)$, and the fluence (time-integrated irradiance) satisfies
 
 $$
 F(z) = F_0\, e^{-\mu_a z}.
-\tag{4.2}
+\tag{10.31}
 $$
 
 **Proof of Beer-Lambert.** Consider a thin slab of thickness $dz$ at depth $z$. The fractional decrease in intensity is proportional to the number of absorbers per unit area, giving $dI/dz = -\mu_a I$. Separating variables and integrating: $\ln(I/I_0) = -\mu_a z$, so $I(z) = I_0 e^{-\mu_a z}$. $\blacksquare$
@@ -319,7 +319,7 @@ Biological tissue is strongly scattering ($\mu_s \gg \mu_a$ at near-infrared wav
 
 $$
 \mu_s' = \mu_s(1-g),
-\tag{4.3}
+\tag{10.32}
 $$
 
 where $\mu_s$ [m$^{-1}$] is the scattering coefficient and $g \in [-1,1]$ is the mean cosine of the scattering angle (anisotropy factor). For tissue, $g \approx 0.9$ so $\mu_s' \approx 0.1 \mu_s$.
@@ -328,14 +328,14 @@ In the diffusion regime ($\mu_s' \gg \mu_a$, depth $\gg 1/\mu_s'$), the photon f
 
 $$
 -\nabla \cdot [D(\mathbf{r}) \nabla \Phi(\mathbf{r})] + \mu_a(\mathbf{r})\Phi(\mathbf{r}) = q(\mathbf{r}),
-\tag{4.4}
+\tag{10.33}
 $$
 
 where $q(\mathbf{r})$ is the source term [W m$^{-3}$] and the diffusion coefficient is
 
 $$
 D = \frac{1}{3(\mu_a + \mu_s')}.
-\tag{4.5}
+\tag{10.34}
 $$
 
 This is the governing equation solved by `kwavers_simulation::photoacoustics::vertical::optical::DiffusionOpticalSolver`.
@@ -346,31 +346,31 @@ This is the governing equation solved by `kwavers_simulation::photoacoustics::ve
 
 $$
 \mu_{\text{eff}} = \sqrt{3\mu_a(\mu_a + \mu_s')}.
-\tag{4.6}
+\tag{10.35}
 $$
 
-**Proof.** For an isotropic point source $q = q_0 \delta(\mathbf{r})$ in a homogeneous medium, equation (4.4) becomes
+**Proof.** For an isotropic point source $q = q_0 \delta(\mathbf{r})$ in a homogeneous medium, equation (10.33) becomes
 
 $$
 -D \nabla^2 \Phi + \mu_a \Phi = q_0 \delta(\mathbf{r}).
-\tag{4.7}
+\tag{10.36}
 $$
 
-In spherical coordinates with radial symmetry, $\nabla^2 \Phi = (1/r^2)(d/dr)(r^2 d\Phi/dr)$. Let $\Phi(r) = u(r)/r$; then $\nabla^2 \Phi = u''/r$ and (4.7) becomes
+In spherical coordinates with radial symmetry, $\nabla^2 \Phi = (1/r^2)(d/dr)(r^2 d\Phi/dr)$. Let $\Phi(r) = u(r)/r$; then $\nabla^2 \Phi = u''/r$ and (10.36) becomes
 
 $$
 -D u'' + \mu_a u = 0, \quad r > 0.
-\tag{4.8}
+\tag{10.37}
 $$
 
 This has the general solution $u(r) = A e^{-\mu_{\text{eff}} r} + B e^{+\mu_{\text{eff}} r}$ with $\mu_{\text{eff}} = \sqrt{\mu_a/D}$. The physically admissible (causal) solution requires $B = 0$, giving $\Phi(r) = A e^{-\mu_{\text{eff}} r}/r$. Substituting $D = 1/[3(\mu_a + \mu_s')]$:
 
 $$
 \mu_{\text{eff}} = \sqrt{\frac{\mu_a}{D}} = \sqrt{3\mu_a(\mu_a + \mu_s')},
-\tag{4.9}
+\tag{10.38}
 $$
 
-which is (4.6). The constant $A$ is fixed by the source strength via the boundary condition $\lim_{r\to 0} 4\pi r^2 (-D d\Phi/dr) = q_0$. $\blacksquare$
+which is (10.35). The constant $A$ is fixed by the source strength via the boundary condition $\lim_{r\to 0} 4\pi r^2 (-D d\Phi/dr) = q_0$. $\blacksquare$
 
 ### 10.4.4 Near-Infrared Optical Window
 
@@ -397,7 +397,7 @@ At each spatial location $\mathbf{r}$, the absorption coefficient at wavelength 
 
 $$
 \mu_a(\mathbf{r}, \lambda) = \sum_{j=1}^{N} \varepsilon_j(\lambda)\, c_j(\mathbf{r}),
-\tag{5.1}
+\tag{10.39}
 $$
 
 where $\varepsilon_j(\lambda)$ [cm$^{-1}$ M$^{-1}$] is the molar extinction coefficient of chromophore $j$ and $c_j(\mathbf{r})$ [M] is its molar concentration. For blood oxygenation, $N=2$ with chromophores HbO$_2$ and Hb.
@@ -406,14 +406,14 @@ The measured PA signal at wavelength $\lambda_i$ is proportional to the local ab
 
 $$
 S(\mathbf{r}, \lambda_i) \propto \mu_a(\mathbf{r}, \lambda_i)\, \Gamma(\mathbf{r})\, F(\mathbf{r}, \lambda_i),
-\tag{5.2}
+\tag{10.40}
 $$
 
 where $F(\mathbf{r}, \lambda_i)$ is the local optical fluence. Under the approximation of spatially uniform fluence (valid near the surface or after fluence compensation), the system at $M$ wavelengths and $N$ chromophores becomes
 
 $$
 \underbrace{\begin{pmatrix} S(\lambda_1) \\ S(\lambda_2) \\ \vdots \\ S(\lambda_M) \end{pmatrix}}_{\mathbf{s}} = \underbrace{\begin{pmatrix} \varepsilon_1(\lambda_1) & \cdots & \varepsilon_N(\lambda_1) \\ \varepsilon_1(\lambda_2) & \cdots & \varepsilon_N(\lambda_2) \\ \vdots & & \vdots \\ \varepsilon_1(\lambda_M) & \cdots & \varepsilon_N(\lambda_M) \end{pmatrix}}_{\mathbf{E}} \underbrace{\begin{pmatrix} c_1 \\ \vdots \\ c_N \end{pmatrix}}_{\mathbf{c}},
-\tag{5.3}
+\tag{10.41}
 $$
 
 absorbing the $\Gamma F$ factor into the proportionality constant.
@@ -424,31 +424,31 @@ absorbing the $\Gamma F$ factor into the proportionality constant.
 
 $$
 \mathbf{E} = \begin{pmatrix} \varepsilon_{\text{HbO}_2}(\lambda_1) & \varepsilon_{\text{Hb}}(\lambda_1) \\ \varepsilon_{\text{HbO}_2}(\lambda_2) & \varepsilon_{\text{Hb}}(\lambda_2) \end{pmatrix},
-\tag{5.4}
+\tag{10.42}
 $$
 
 *the chromophore concentrations are recovered as*
 
 $$
 \begin{pmatrix} c_{\text{HbO}_2} \\ c_{\text{Hb}} \end{pmatrix} = \mathbf{E}^{-1} \begin{pmatrix} S(\lambda_1)/(\Gamma F(\lambda_1)) \\ S(\lambda_2)/(\Gamma F(\lambda_2)) \end{pmatrix},
-\tag{5.5}
+\tag{10.43}
 $$
 
 *and the blood oxygen saturation is*
 
 $$
 \text{sO}_2 = \frac{c_{\text{HbO}_2}}{c_{\text{HbO}_2} + c_{\text{Hb}}}.
-\tag{5.6}
+\tag{10.44}
 $$
 
-**Proof.** The system (5.3) with $M=N=2$ is $\mathbf{s} = \mathbf{E}\mathbf{c}$. It has a unique solution if and only if $\det(\mathbf{E}) \neq 0$:
+**Proof.** The system (10.41) with $M=N=2$ is $\mathbf{s} = \mathbf{E}\mathbf{c}$. It has a unique solution if and only if $\det(\mathbf{E}) \neq 0$:
 
 $$
 \det(\mathbf{E}) = \varepsilon_{\text{HbO}_2}(\lambda_1)\varepsilon_{\text{Hb}}(\lambda_2) - \varepsilon_{\text{HbO}_2}(\lambda_2)\varepsilon_{\text{Hb}}(\lambda_1).
-\tag{5.7}
+\tag{10.45}
 $$
 
-The condition $\det(\mathbf{E}) = 0$ occurs when $\lambda_1 = \lambda_2$ (trivially) or when the ratio $\varepsilon_{\text{HbO}_2}/\varepsilon_{\text{Hb}}$ is the same at both wavelengths (isosbestic points). Away from these degenerate cases, $\mathbf{E}$ is invertible and the unique solution is (5.5). The sO$_2$ formula (5.6) follows directly from the definition of fractional saturation. $\blacksquare$
+The condition $\det(\mathbf{E}) = 0$ occurs when $\lambda_1 = \lambda_2$ (trivially) or when the ratio $\varepsilon_{\text{HbO}_2}/\varepsilon_{\text{Hb}}$ is the same at both wavelengths (isosbestic points). Away from these degenerate cases, $\mathbf{E}$ is invertible and the unique solution is (10.43). The sO$_2$ formula (10.44) follows directly from the definition of fractional saturation. $\blacksquare$
 
 ### 10.5.3 Condition Number and Wavelength Selection
 
@@ -456,7 +456,7 @@ The accuracy of the unmixing is governed by the condition number $\kappa(\mathbf
 
 $$
 \frac{\|\delta\mathbf{c}\|}{\|\mathbf{c}\|} \leq \kappa(\mathbf{E}) \frac{\|\delta\mathbf{s}\|}{\|\mathbf{s}\|}.
-\tag{5.8}
+\tag{10.46}
 $$
 
 **Claim.** $\kappa(\mathbf{E})$ is minimized when the two wavelengths are chosen such that the ratio $\varepsilon_{\text{HbO}_2}(\lambda_1)/\varepsilon_{\text{Hb}}(\lambda_1)$ differs maximally from $\varepsilon_{\text{HbO}_2}(\lambda_2)/\varepsilon_{\text{Hb}}(\lambda_2)$.
@@ -465,14 +465,14 @@ $$
 
 $$
 \mathbf{E} = \text{diag}(\varepsilon_{\text{Hb}}(\lambda_1), \varepsilon_{\text{Hb}}(\lambda_2)) \begin{pmatrix} r_1 & 1 \\ r_2 & 1 \end{pmatrix}.
-\tag{5.9}
+\tag{10.47}
 $$
 
 The determinant of the normalized matrix is $r_1 - r_2$. When $r_1 \approx r_2$, the matrix is nearly singular and $\kappa \to \infty$. The condition number is minimized by maximizing $|r_1 - r_2|$, which is achieved by choosing wavelengths on opposite sides of the isosbestic point (e.g., 760 nm and 850 nm), where HbO$_2$ and Hb absorption exchange dominance. $\blacksquare$
 
 ![Two-chromophore spectroscopic unmixing](figures/ch13/fig05_spectroscopic_unmixing.png)
 
-*Figure 10.4. Least-squares HbO₂/Hb unmixing at 760/850 nm (`kw.spectroscopic_unmixing_lstsq`), recovering sO₂ from the 2×2 system (5.5)–(5.6). Wavelengths straddle the isosbestic point to minimize κ(E) (§10.5.3).*
+*Figure 10.4. Least-squares HbO₂/Hb unmixing at 760/850 nm (`kw.spectroscopic_unmixing_lstsq`), recovering sO₂ from the 2×2 system (10.43)–(10.44). Wavelengths straddle the isosbestic point to minimize κ(E) (§10.5.3).*
 
 
 The spectral unmixing is implemented in `kwavers_analysis::signal_processing::spectroscopy::SpectralUnmixer`.
@@ -483,25 +483,25 @@ The spectral unmixing is implemented in `kwavers_analysis::signal_processing::sp
 
 ### 10.6.1 Spherical Radon Transform
 
-The forward PA signal at detector $\mathbf{r}_s$ is, from (3.6):
+The forward PA signal at detector $\mathbf{r}_s$ is, from (10.24):
 
 $$
 p(\mathbf{r}_s, t) = \frac{\beta}{4\pi C_p}\frac{\partial}{\partial t}\int_V \frac{p_0(\mathbf{r}')}{|\mathbf{r}_s - \mathbf{r}'|}\, \delta\!\left(t - \frac{|\mathbf{r}_s - \mathbf{r}'|}{c_s}\right) dV',
-\tag{6.1}
+\tag{10.48}
 $$
 
 where $p_0(\mathbf{r}) = \Gamma H(\mathbf{r})$. Define the spherical Radon transform (SRT) of $p_0$ as
 
 $$
 \mathcal{R}[p_0](\mathbf{r}_s, R) = \int_{|\mathbf{r}'-\mathbf{r}_s|=R} p_0(\mathbf{r}')\, dS',
-\tag{6.2}
+\tag{10.49}
 $$
 
 the integral of $p_0$ over a sphere of radius $R$ centered at $\mathbf{r}_s$. Then $p(\mathbf{r}_s,t)$ is related to $\mathcal{R}[p_0]$ by
 
 $$
 p(\mathbf{r}_s, t) = \frac{\beta}{4\pi C_p} \frac{1}{c_s t}\frac{\partial}{\partial t}\bigl[c_s t\cdot \mathcal{R}[p_0](\mathbf{r}_s, c_s t)\bigr].
-\tag{6.3}
+\tag{10.50}
 $$
 
 PA reconstruction is therefore equivalent to inverting the SRT.
@@ -512,51 +512,51 @@ PA reconstruction is therefore equivalent to inverting the SRT.
 
 $$
 p_0(\mathbf{r}) = \frac{2}{\Omega_0} \oint_{S_0} \left[\frac{2p(\mathbf{r}_s, t)}{t} - 2\frac{\partial p(\mathbf{r}_s,t)}{\partial t}\right]_{t=|\mathbf{r}-\mathbf{r}_s|/c_s} \frac{d\Omega}{|\mathbf{r}-\mathbf{r}_s|^0},
-\tag{6.4}
+\tag{10.51}
 $$
 
 *where $d\Omega$ is the solid angle element at $\mathbf{r}$ subtended by $d S_0$ at $\mathbf{r}_s$, and the factor $\Omega_0 = 4\pi$ for a closed surface, $2\pi$ for a planar surface.*
 
-**Proof.** We derive (6.4) from the exact inversion of the SRT on a closed surface. The key identity is the Kirchhoff–Huygens representation: for a function $f(\mathbf{r})$ satisfying $\nabla^2 f = 0$ exterior to a closed surface $S_0$,
+**Proof.** We derive (10.51) from the exact inversion of the SRT on a closed surface. The key identity is the Kirchhoff–Huygens representation: for a function $f(\mathbf{r})$ satisfying $\nabla^2 f = 0$ exterior to a closed surface $S_0$,
 
 $$
 f(\mathbf{r}) = \frac{1}{4\pi}\oint_{S_0} \left[\frac{1}{R}\frac{\partial f}{\partial n} - f\frac{\partial}{\partial n}\frac{1}{R}\right] dS,
-\tag{6.5}
+\tag{10.52}
 $$
 
 where $R = |\mathbf{r} - \mathbf{r}_s|$ and $\partial/\partial n$ is the outward normal derivative. This is Green's third identity with the free-space Laplacian Green's function $G_0 = 1/(4\pi R)$.
 
-For the wave equation solution $p(\mathbf{r},t)$, apply the temporal Radon transform: define $\tilde{p}(\mathbf{r},k) = \int p(\mathbf{r},t) e^{-ikc_s t} dt$ (the $k$-space representation). The wave equation transforms to the Helmholtz equation $(\nabla^2 + k^2)\tilde{p} = 0$ in $k$-space. Apply (6.5) to $\tilde{p}$, then invert the $k$-transform. After the angular integration over $k$-space using the identity
+For the wave equation solution $p(\mathbf{r},t)$, apply the temporal Radon transform: define $\tilde{p}(\mathbf{r},k) = \int p(\mathbf{r},t) e^{-ikc_s t} dt$ (the $k$-space representation). The wave equation transforms to the Helmholtz equation $(\nabla^2 + k^2)\tilde{p} = 0$ in $k$-space. Apply (10.52) to $\tilde{p}$, then invert the $k$-transform. After the angular integration over $k$-space using the identity
 
 $$
 \int_0^{\infty} k\sin(kR) e^{-ikc_s t} dk = \frac{d}{dt}\left[\frac{\pi}{2}\delta(c_s t - R)\right],
-\tag{6.6}
+\tag{10.53}
 $$
 
-the back-projection formula (6.4) emerges. The explicit steps are as follows.
+the back-projection formula (10.51) emerges. The explicit steps are as follows.
 
-Step 1. Write (6.1) as $p(\mathbf{r}_s,t) = (\partial/\partial t)[\mathcal{R}[p_0](\mathbf{r}_s, c_s t)/(4\pi c_s t)]$ (suppressing $\beta/C_p$ by normalizing units). Define the "back-projection integrand"
+Step 1. Write (10.48) as $p(\mathbf{r}_s,t) = (\partial/\partial t)[\mathcal{R}[p_0](\mathbf{r}_s, c_s t)/(4\pi c_s t)]$ (suppressing $\beta/C_p$ by normalizing units). Define the "back-projection integrand"
 
 $$
 b(\mathbf{r}_s,t) = \left[\frac{2p}{t} - 2\dot{p}\right]_{t = R/c_s}, \quad R = |\mathbf{r}-\mathbf{r}_s|.
-\tag{6.7}
+\tag{10.54}
 $$
 
 Step 2. Show that $\oint_{S_0} b(\mathbf{r}_s, R/c_s) d\Omega / \Omega_0 = p_0(\mathbf{r})$ by expanding $b$ in terms of $\mathcal{R}[p_0]$:
 
 $$
 b = \left[\frac{2}{t}\cdot\frac{\partial}{\partial t}(R\cdot\mathcal{R}) - 2\frac{\partial^2}{\partial t^2}(R\cdot\mathcal{R})\right] \cdot \frac{c_s}{4\pi R^2},
-\tag{6.8}
+\tag{10.55}
 $$
 
 where $R = c_s t$ in the time-retarded sense. Integration by parts over $R$ and the SRT inversion identity
 
 $$
 \int_0^{\infty}\frac{d}{dR}\mathcal{R}[p_0](\mathbf{r}_s, R)\cdot R\, dR = \int_V p_0(\mathbf{r}') \delta(|\mathbf{r}_s - \mathbf{r}'| - R)\, dV'
-\tag{6.9}
+\tag{10.56}
 $$
 
-yields, upon angular integration $\oint d\Omega$, the sum $\Omega_0 p_0(\mathbf{r})$. Dividing by $\Omega_0$ gives (6.4). $\blacksquare$
+yields, upon angular integration $\oint d\Omega$, the sum $\Omega_0 p_0(\mathbf{r})$. Dividing by $\Omega_0$ gives (10.51). $\blacksquare$
 
 ### 10.6.3 Planar and Linear Sensor Geometries
 
@@ -566,10 +566,10 @@ For a linear array, the 2D cross-sectional image is reconstructed by delay-and-s
 
 $$
 p_0(\mathbf{r}) = \frac{1}{N_s}\sum_{s=1}^{N_s} w_s\, b\!\left(\mathbf{r}_s,\, \frac{|\mathbf{r}-\mathbf{r}_s|}{c_s}\right),
-\tag{6.10}
+\tag{10.57}
 $$
 
-where $w_s$ are apodization weights. DAS is the discrete approximation of (6.4) applied to a finite aperture; it degrades for sparse or incomplete apertures.
+where $w_s$ are apodization weights. DAS is the discrete approximation of (10.51) applied to a finite aperture; it degrades for sparse or incomplete apertures.
 
 
 ---
@@ -595,7 +595,7 @@ Step 1 (Forward propagation). The Fourier-domain wavefield is
 
 $$
 \hat{p}(\mathbf{r}, \omega) = \hat{p}_0(\mathbf{k}) \cdot e^{i\mathbf{k}\cdot\mathbf{r}}, \quad |\mathbf{k}| = \omega/c_s,
-\tag{7.1}
+\tag{10.58}
 $$
 
 where $\hat{p}_0(\mathbf{k})$ is the spatial Fourier transform of $p_0(\mathbf{r})$.
@@ -608,21 +608,21 @@ Step 4 (Back-propagation). Re-emitting the time-reversed field from $S_0$ genera
 
 $$
 p^{\text{TR}}(\mathbf{r}, T) = \int_{S_0} G(\mathbf{r},T;\mathbf{r}_s,0)\, p^*(\mathbf{r}_s,\omega)\, dS_s.
-\tag{7.2}
+\tag{10.59}
 $$
 
 Step 5 (Identity on closed surface). By the optical theorem / Kirchhoff integral theorem, integrating $G(\mathbf{r},T;\mathbf{r}_s,0)$ over a closed surface $S_0$ enclosing $\mathbf{r}$ gives
 
 $$
 \oint_{S_0} G(\mathbf{r};\mathbf{r}_s) \cdot G^*(\mathbf{r}';\mathbf{r}_s)\, dS_s = \text{Im}[G(\mathbf{r};\mathbf{r}')],
-\tag{7.3}
+\tag{10.60}
 $$
 
 the optical theorem. For the outgoing Green's function $G = e^{ikR}/(4\pi R)$, $\text{Im}[G(\mathbf{r};\mathbf{r})] = k/(4\pi)$. Assembling the chain:
 
 $$
 \mathcal{T}[p_0](\mathbf{r}) = \frac{\omega}{\pi c_s} \int_V p_0(\mathbf{r}')\, \text{Im}[G(\mathbf{r},\mathbf{r}')]\, dV' \to p_0(\mathbf{r}) \text{ as } S_0 \to \text{closed}.
-\tag{7.4}
+\tag{10.61}
 $$
 
 For a discrete set of $N_s$ detectors uniformly sampling $S_0$, the quadrature error is $O(1/N_s)$ by the standard quadrature bound for smooth integrands, proving the stated convergence rate. $\blacksquare$
@@ -635,7 +635,7 @@ In a heterogeneous medium with known sound speed $c_s(\mathbf{r})$, time reversa
 
 **Corollary 7.1.** *For an incomplete (open) aperture, the time-reversal reconstruction introduces artifacts proportional to $1 - \Omega/\Omega_0$, where $\Omega$ is the solid angle covered by the detector aperture and $\Omega_0 = 4\pi$ is the full sphere.*
 
-**Proof.** From (7.4), the reconstruction kernel is $\text{Im}[G]$ integrated over $S_0$. For an incomplete aperture covering solid angle $\Omega$, the integral acquires a weighting $\Omega/\Omega_0$ relative to the full-aperture result, introducing a residual error of amplitude $|1 - \Omega/\Omega_0|$ in the frequency components whose propagation directions are not sampled by the aperture. $\blacksquare$
+**Proof.** From (10.61), the reconstruction kernel is $\text{Im}[G]$ integrated over $S_0$. For an incomplete aperture covering solid angle $\Omega$, the integral acquires a weighting $\Omega/\Omega_0$ relative to the full-aperture result, introducing a residual error of amplitude $|1 - \Omega/\Omega_0|$ in the frequency components whose propagation directions are not sampled by the aperture. $\blacksquare$
 
 In clinical linear-array PA systems, the limited aperture causes streak artifacts in directions perpendicular to the array axis; compounding (multi-angle illumination) reduces this artifact by sampling additional angular components.
 
@@ -651,7 +651,7 @@ The PA signal bandwidth is determined by the temporal profile of the initial pre
 
 $$
 B \approx \frac{c_s}{d},
-\tag{8.1}
+\tag{10.62}
 $$
 
 *and the corresponding spatial resolution of the PA image is $\delta_z \approx c_s / (2B) = d/2$.*
@@ -660,23 +660,23 @@ $$
 
 $$
 \hat{p}_0(k) = \Gamma \mu_a F \cdot 4\pi \int_0^a r^2 \frac{\sin(kr)}{kr}\, dr = \Gamma \mu_a F \cdot 4\pi a^3 j_1(ka)/(ka),
-\tag{8.2}
+\tag{10.63}
 $$
 
 where $j_1(x) = \sin(x)/x^2 - \cos(x)/x$ is the first spherical Bessel function. The first zero of $|{\hat{p}_0}(k)|$ occurs at $ka \approx 4.49$, giving the $-6\,\text{dB}$ bandwidth
 
 $$
 k_{-6\text{dB}} \approx \frac{\pi}{a}, \quad B = \frac{c_s k_{-6\text{dB}}}{2\pi} = \frac{c_s}{2a} = \frac{c_s}{d},
-\tag{8.3}
+\tag{10.64}
 $$
 
-establishing (8.1). The axial resolution of a matched-filter PA image is $\delta_z = c_s/(2B) = d/2$, consistent with the Rayleigh criterion applied to the PA point spread function. $\blacksquare$
+establishing (10.62). The axial resolution of a matched-filter PA image is $\delta_z = c_s/(2B) = d/2$, consistent with the Rayleigh criterion applied to the PA point spread function. $\blacksquare$
 
 *Numerical example.* For $d = 150\,\mu\text{m}$ (capillary diameter) and $c_s = 1500\,\text{m s}^{-1}$:
 
 $$
 B = \frac{1500}{150 \times 10^{-6}} = 10\,\text{MHz}.
-\tag{8.4}
+\tag{10.65}
 $$
 
 This is the operating bandwidth for OR-PAM and high-frequency PA imaging systems. Blood vessels and red blood cells are the primary resolution-limiting structures at this scale.
@@ -692,7 +692,7 @@ The PA SNR scales as
 
 $$
 \text{SNR} \propto \mu_a \cdot \Gamma \cdot F \cdot \sqrt{N_{\text{avg}}},
-\tag{8.5}
+\tag{10.66}
 $$
 
 where $N_{\text{avg}}$ is the number of signal averages. The $\sqrt{N_{\text{avg}}}$ factor arises from the standard deviation of the sample mean of $N_{\text{avg}}$ independent Gaussian noise realizations with variance $\sigma_n^2$:
@@ -701,10 +701,10 @@ where $N_{\text{avg}}$ is the number of signal averages. The $\sqrt{N_{\text{avg
 
 $$
 \text{SNR} = \frac{S}{\sqrt{\text{Var}[\bar{S}]}} = \frac{S\sqrt{N_{\text{avg}}}}{\sigma_n} \propto S \sqrt{N_{\text{avg}}},
-\tag{8.6}
+\tag{10.67}
 $$
 
-and since $S \propto \mu_a \Gamma F$, relation (8.5) follows. $\blacksquare$
+and since $S \propto \mu_a \Gamma F$, relation (10.66) follows. $\blacksquare$
 
 The laser fluence $F$ at depth $z$ decays exponentially: $F(z) = F_0 e^{-\mu_{\text{eff}} z}$, so the PA signal amplitude decays with depth and the SNR is limited by the combination of optical attenuation and detector noise floor. Signal averaging $N_{\text{avg}}$ improves SNR at the cost of imaging speed.
 
@@ -720,7 +720,7 @@ Photoacoustic microscopy (PAM) achieves the highest spatial resolution by focusi
 
 $$
 \delta_r^{\text{OR}} \approx \frac{0.51\,\lambda_{\text{opt}}}{\text{NA}_{\text{opt}}},
-\tag{9.1}
+\tag{10.68}
 $$
 
 where $\lambda_{\text{opt}}$ is the optical wavelength and $\text{NA}_{\text{opt}} = n\sin\theta$ is the numerical aperture. For $\lambda_{\text{opt}} = 532\,\text{nm}$ and $\text{NA} = 0.1$, $\delta_r^{\text{OR}} \approx 2.7\,\mu\text{m}$.
@@ -729,7 +729,7 @@ where $\lambda_{\text{opt}}$ is the optical wavelength and $\text{NA}_{\text{opt
 
 $$
 \delta_r^{\text{AR}} \approx \frac{0.71\,\lambda_{\text{us}}}{\text{NA}_{\text{us}}},
-\tag{9.2}
+\tag{10.69}
 $$
 
 where $\lambda_{\text{us}} = c_s/f_0$ is the acoustic wavelength and $\text{NA}_{\text{us}} = D/(2f)$ is the acoustic numerical aperture (with $D$ the transducer aperture and $f$ the focal length).
@@ -742,31 +742,31 @@ where $\lambda_{\text{us}} = c_s/f_0$ is the acoustic wavelength and $\text{NA}_
 
 $$
 I(\rho) = I_0 \left[\frac{2J_1(k_{\text{opt}}\rho\,\text{NA})}{k_{\text{opt}}\rho\,\text{NA}}\right]^2,
-\tag{9.3}
+\tag{10.70}
 $$
 
 where $J_1$ is the Bessel function of the first kind, $\rho$ is the radial distance from the axis, and $k_{\text{opt}} = 2\pi/\lambda_{\text{opt}}$. The first zero of $J_1(x)$ occurs at $x = 3.8317$, giving the Rayleigh radius
 
 $$
 \rho_R = \frac{3.8317}{k_{\text{opt}}\,\text{NA}} = \frac{3.8317\,\lambda_{\text{opt}}}{2\pi\,\text{NA}} \approx \frac{0.61\,\lambda_{\text{opt}}}{\text{NA}}.
-\tag{9.4}
+\tag{10.71}
 $$
 
 The PA signal is proportional to $\mu_a \cdot I(\rho)$ (absorbed energy), so the PA lateral point spread function is also Airy-like but with the first zero at $\rho_R^{\text{PA}} = \rho_R / \sqrt{2}$ because the PA amplitude is proportional to the optical intensity (not amplitude), giving a narrower effective PSF:
 
 $$
 \delta_r^{\text{OR}} \approx \frac{0.61\,\lambda_{\text{opt}}}{\sqrt{2}\,\text{NA}} \approx \frac{0.51\,\lambda_{\text{opt}}}{\text{NA}}.
-\tag{9.5}
+\tag{10.72}
 $$
 
 For AR-PAM, the acoustic focal region is described by the Fresnel integral for a circular aperture. The $-6\,\text{dB}$ lateral resolution of a focused transducer is (Kossoff 1979):
 
 $$
 \delta_r^{\text{AR}} \approx \frac{0.71\,\lambda_{\text{us}}}{\text{NA}_{\text{us}}},
-\tag{9.6}
+\tag{10.73}
 $$
 
-which is (9.2). This differs from the Rayleigh criterion by the factor $0.71/0.61 \approx 1.16$ because PA detection integrates acoustic pressure over a finite area, producing a slightly broader effective PSF than pure Rayleigh optics. $\blacksquare$
+which is (10.69). This differs from the Rayleigh criterion by the factor $0.71/0.61 \approx 1.16$ because PA detection integrates acoustic pressure over a finite area, producing a slightly broader effective PSF than pure Rayleigh optics. $\blacksquare$
 
 ### 10.9.3 Depth–Resolution Trade-off
 
@@ -789,7 +789,7 @@ The measured PA signal is
 
 $$
 S(\mathbf{r}, \lambda) = \Gamma(\mathbf{r})\, \mu_a(\mathbf{r}, \lambda)\, F(\mathbf{r}, \lambda),
-\tag{10.1}
+\tag{10.74}
 $$
 
 where $F(\mathbf{r}, \lambda)$ is the local optical fluence, which decays with depth due to scattering and absorption. Without knowledge of $F(\mathbf{r})$, the PA image represents $\mu_a \cdot F$, not $\mu_a$ alone.
@@ -798,27 +798,27 @@ where $F(\mathbf{r}, \lambda)$ is the local optical fluence, which decays with d
 
 $$
 \tilde{\mu}_a(\mathbf{r}) = \mu_a(\mathbf{r})\, e^{-\mu_{\text{eff}} z},
-\tag{10.2}
+\tag{10.75}
 $$
 
 *which underestimates the true $\mu_a$ by a factor $e^{-\mu_{\text{eff}} z}$ at depth $z$.*
 
-**Proof.** For pencil-beam illumination in a homogeneous medium, the fluence at depth $z$ is $F(z) = F_0 e^{-\mu_{\text{eff}} z}$ (from Beer-Lambert for the effective attenuation derived in Theorem 10.5). Substituting into (10.1):
+**Proof.** For pencil-beam illumination in a homogeneous medium, the fluence at depth $z$ is $F(z) = F_0 e^{-\mu_{\text{eff}} z}$ (from Beer-Lambert for the effective attenuation derived in Theorem 10.5). Substituting into (10.74):
 
 $$
 S(z) = \Gamma \mu_a(z) F_0 e^{-\mu_{\text{eff}} z}.
-\tag{10.3}
+\tag{10.76}
 $$
 
-If the observer attributes the full signal to $\mu_a$ (assuming $F = F_0$), the apparent absorption is $\tilde{\mu}_a(z) = S(z)/(\Gamma F_0) = \mu_a(z) e^{-\mu_{\text{eff}} z}$, which is (10.2). For $\mu_{\text{eff}} = 0.5\,\text{cm}^{-1}$ (near-infrared tissue), at depth $z = 1\,\text{cm}$, the signal is attenuated by $e^{-0.5} \approx 0.6$—a 40% underestimation. $\blacksquare$
+If the observer attributes the full signal to $\mu_a$ (assuming $F = F_0$), the apparent absorption is $\tilde{\mu}_a(z) = S(z)/(\Gamma F_0) = \mu_a(z) e^{-\mu_{\text{eff}} z}$, which is (10.75). For $\mu_{\text{eff}} = 0.5\,\text{cm}^{-1}$ (near-infrared tissue), at depth $z = 1\,\text{cm}$, the signal is attenuated by $e^{-0.5} \approx 0.6$—a 40% underestimation. $\blacksquare$
 
 ### 10.10.2 Fluence Estimation via Diffusion Equation
 
-Quantitative PA (qPA) imaging requires estimating $F(\mathbf{r})$ independently and dividing out the fluence artifact. The optical fluence satisfies the diffusion equation (4.4). Given an estimate of the optical properties $(\mu_a, \mu_s')$, the fluence can be computed numerically; this is a forward solve in `kwavers_simulation::photoacoustics::vertical::optical::DiffusionOpticalSolver`. For the homogeneous-medium closed forms, `kwavers_optics::optical_transport` provides `apparent_absorption` (the depth bias of Theorem 10.11) and `compensate_fluence` (the per-step correction $\mu_a = S/(\Gamma F)$).
+Quantitative PA (qPA) imaging requires estimating $F(\mathbf{r})$ independently and dividing out the fluence artifact. The optical fluence satisfies the diffusion equation (10.33). Given an estimate of the optical properties $(\mu_a, \mu_s')$, the fluence can be computed numerically; this is a forward solve in `kwavers_simulation::photoacoustics::vertical::optical::DiffusionOpticalSolver`. For the homogeneous-medium closed forms, `kwavers_optics::optical_transport` provides `apparent_absorption` (the depth bias of Theorem 10.11) and `compensate_fluence` (the per-step correction $\mu_a = S/(\Gamma F)$).
 
 In practice, $\mu_a(\mathbf{r})$ is the unknown being sought (chicken-and-egg problem). The iterative approach solves alternately:
 
-1. Given an initial estimate $\mu_a^{(0)}$, solve (4.4) for $F^{(0)}(\mathbf{r})$.
+1. Given an initial estimate $\mu_a^{(0)}$, solve (10.33) for $F^{(0)}(\mathbf{r})$.
 2. Compute $\mu_a^{(1)} = S/(\Gamma F^{(0)})$.
 3. Repeat until convergence: $\|\mu_a^{(k+1)} - \mu_a^{(k)}\| < \epsilon$.
 
@@ -828,7 +828,7 @@ In practice, $\mu_a(\mathbf{r})$ is the unknown being sought (chicken-and-egg pr
 
 $$
 D\mathcal{F}[\mu_a]\,\delta\mu_a = -\frac{S}{\Gamma F[\mu_a]^2} \cdot \frac{dF}{d\mu_a}\,\delta\mu_a.
-\tag{10.4}
+\tag{10.77}
 $$
 
 The operator norm satisfies $\|D\mathcal{F}\| = \|\mu_a\| \cdot \|dF/d\mu_a\| / F^2 \cdot \text{(geometry factor)}$. In the diffusion regime, $F[\mu_a]$ is a monotone decreasing function of $\mu_a$ with $\|dF/d\mu_a\|_{L^2}$ bounded by the smallest eigenvalue of the diffusion operator. When $\mu_s' \gg \mu_a$ (strong scattering), this eigenvalue is of order $\mu_s'^{-1} \ll 1$, so the contraction condition is satisfied and convergence is guaranteed. $\blacksquare$
@@ -839,7 +839,7 @@ A fully model-based qPA approach minimizes the objective
 
 $$
 \mathcal{J}(\mu_a) = \frac{1}{2}\sum_{s,\lambda}\left[S^{\text{meas}}(\mathbf{r}_s,\lambda) - \Gamma\,\mu_a(\mathbf{r})\,F[\mu_a](\mathbf{r}_s,\lambda)\right]^2 + \mathcal{R}(\mu_a),
-\tag{10.5}
+\tag{10.78}
 $$
 
 where $\mathcal{R}$ is a regularization functional (total variation, Tikhonov, or sparsity-promoting). The gradient $\partial\mathcal{J}/\partial\mu_a$ is computed via the adjoint of the diffusion equation, enabling gradient-based optimization. This approach achieves quantitative accuracy of $<10\%$ error in the diffusion regime at depths up to several centimeters.
@@ -881,7 +881,7 @@ The thermoelastic source model in `kwavers_simulation::photoacoustics::vertical:
 
 $$
 p_0[i,j,k] = \Gamma(\text{tissue})\, \mu_a[i,j,k]\, F[i,j,k]
-\tag{11.1}
+\tag{10.79}
 $$
 
 cell by cell over the optical map, using the temperature-dependent `GrueneisenModel::soft_tissue()` evaluated at 37°C. The result is passed as the initial condition to the forward acoustic solver.
@@ -898,7 +898,7 @@ Detection is by trilinear interpolation of the pressure field at detector positi
 
 ### 10.11.4 Spectral Unmixing Pipeline
 
-The `SpectralUnmixer` in `kwavers_analysis::signal_processing::spectroscopy` solves the linear system (5.3) using QR decomposition (for $M \geq N$) or the Moore-Penrose pseudoinverse $\mathbf{E}^+ = (\mathbf{E}^T\mathbf{E})^{-1}\mathbf{E}^T$ (least-squares, $M > N$). The condition number $\kappa(\mathbf{E})$ is computed and flagged if $\kappa > 100$ (indicating poor wavelength selection).
+The `SpectralUnmixer` in `kwavers_analysis::signal_processing::spectroscopy` solves the linear system (10.41) using QR decomposition (for $M \geq N$) or the Moore-Penrose pseudoinverse $\mathbf{E}^+ = (\mathbf{E}^T\mathbf{E})^{-1}\mathbf{E}^T$ (least-squares, $M > N$). The condition number $\kappa(\mathbf{E})$ is computed and flagged if $\kappa > 100$ (indicating poor wavelength selection).
 
 ### 10.11.5 Signal Analysis
 
@@ -974,19 +974,19 @@ solver reproduces **both** the Raman–Nath (`Q→0`) and Bragg (`Q≫1`) limits
 
 | Topic | Key Result | Equation |
 |-------|-----------|----------|
-| Initial pressure | $p_0 = \Gamma \mu_a F$ under dual confinement | (1.7), (1.10) |
-| Grüneisen parameter | $\Gamma = \beta c_s^2 / C_p$ | (1.11) |
-| PA wave equation | $(1/c_s^2)\ddot{p} - \nabla^2 p = (\beta/C_p)\dot{H}$ | (3.1) |
-| Green's function | Spherical retarded wave solution | (3.6) |
-| Beer-Lambert | $I(z) = I_0 e^{-\mu_a z}$ | (4.1) |
-| Effective attenuation | $\mu_{\text{eff}} = \sqrt{3\mu_a(\mu_a+\mu_s')}$ | (4.6) |
-| Spectral unmixing | Linear system $\mathbf{s} = \mathbf{E}\mathbf{c}$, sO$_2$ from inversion | (5.3)–(5.6) |
-| Back-projection | Universal BP formula (Xu & Wang 2005) | (6.4) |
+| Initial pressure | $p_0 = \Gamma \mu_a F$ under dual confinement | (10.7), (10.10) |
+| Grüneisen parameter | $\Gamma = \beta c_s^2 / C_p$ | (10.11) |
+| PA wave equation | $(1/c_s^2)\ddot{p} - \nabla^2 p = (\beta/C_p)\dot{H}$ | (10.19) |
+| Green's function | Spherical retarded wave solution | (10.24) |
+| Beer-Lambert | $I(z) = I_0 e^{-\mu_a z}$ | (10.30) |
+| Effective attenuation | $\mu_{\text{eff}} = \sqrt{3\mu_a(\mu_a+\mu_s')}$ | (10.35) |
+| Spectral unmixing | Linear system $\mathbf{s} = \mathbf{E}\mathbf{c}$, sO$_2$ from inversion | (10.41)–(10.44) |
+| Back-projection | Universal BP formula (Xu & Wang 2005) | (10.51) |
 | Time reversal | Convergence $O(1/N_s)$ on closed surface | Theorem 10.8 |
-| Bandwidth | $B \approx c_s/d$ for absorber diameter $d$ | (8.1) |
-| OR-PAM resolution | $\delta_r \approx 0.51\lambda_{\text{opt}}/\text{NA}$ | (9.1) |
-| AR-PAM resolution | $\delta_r \approx 0.71\lambda_{\text{us}}/\text{NA}_{\text{us}}$ | (9.2) |
-| Depth bias | $\tilde{\mu}_a = \mu_a e^{-\mu_{\text{eff}} z}$ without compensation | (10.2) |
+| Bandwidth | $B \approx c_s/d$ for absorber diameter $d$ | (10.62) |
+| OR-PAM resolution | $\delta_r \approx 0.51\lambda_{\text{opt}}/\text{NA}$ | (10.68) |
+| AR-PAM resolution | $\delta_r \approx 0.71\lambda_{\text{us}}/\text{NA}_{\text{us}}$ | (10.69) |
+| Depth bias | $\tilde{\mu}_a = \mu_a e^{-\mu_{\text{eff}} z}$ without compensation | (10.75) |
 
 ---
 
