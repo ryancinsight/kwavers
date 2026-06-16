@@ -151,7 +151,7 @@ p_{g0}\!\left(\frac{R_0}{R}\right)^{3\gamma}
 - p_\infty(t) - \frac{2\sigma}{R} - \frac{4\mu\dot{R}}{R}
 \right]
 }
-\tag{7.1}
+\tag{5.1}
 $$
 
 **Theorem 5.1 (Rayleigh–Plesset).** *Under assumptions 1–6 of Section 5.2.1,
@@ -198,7 +198,7 @@ $$
 = \left(1 + \frac{\dot{R}}{c_L}\right)\frac{p_b - p_\infty}{\rho_L}
   + \frac{R}{\rho_L c_L}\frac{dp_b}{dt}
 }
-\tag{7.2}
+\tag{5.2}
 $$
 
 The $dp_b/dt$ term captures radiation from the accelerating wall.  The
@@ -237,7 +237,7 @@ In a static field ($p_\infty = \text{const}$, $\dot{R} = \ddot{R} = 0$) equation
 $$
 p_\infty = p_g - \frac{2\sigma}{R}
 = p_{g0}\!\left(\frac{R_0}{R}\right)^{3\gamma} - \frac{2\sigma}{R}.
-\tag{7.3}
+\tag{5.3}
 $$
 
 For $\gamma = 1$ and small surface tension relative to ambient pressure,
@@ -254,7 +254,7 @@ $$
 P_B = p_0 - \frac{4\sigma}{3}
 \left(\frac{3 p_{g0}}{8\sigma}\right)^{1/3}\!\!\cdot
 \!\left(\frac{R_0^3\, p_{g0}}{p_0 + 2\sigma/R_0}\right)^{-1/3}
-\tag{7.4}
+\tag{5.4}
 $$
 
 *or, equivalently, the Blake critical radius is*
@@ -262,7 +262,7 @@ $$
 $$
 R^* = \sqrt{\frac{3 p_{g0} R_0^3}{2\sigma/R_0 + p_0}}\cdot
 \left(\frac{2\sigma}{3 p_{g0}}\right)^{1/2}.
-\tag{7.5}
+\tag{5.5}
 $$
 
 *Proof.* At the turning point of $p_\infty(R)$, both
@@ -318,7 +318,7 @@ radial oscillations, has natural angular frequency*
 $$
 \omega_0^2 = \frac{3\gamma\!\left(p_0 + \tfrac{2\sigma}{R_0}\right)}{\rho_L R_0^2}
 - \frac{2\sigma}{\rho_L R_0^3}.
-\tag{7.6}
+\tag{5.6}
 $$
 
 *Proof.* Let $R(t) = R_0 + x(t)$ with $|x| \ll R_0$.  Expand (5.1) to first
@@ -374,7 +374,7 @@ $$
 \omega_0 \approx \frac{1}{R_0}\sqrt{\frac{3\gamma p_0}{\rho_L}},
 \qquad
 f_0 = \frac{\omega_0}{2\pi} = \frac{1}{2\pi R_0}\sqrt{\frac{3\gamma p_0}{\rho_L}}.
-\tag{7.7}
+\tag{5.7}
 $$
 
 This is the **Minnaert formula** (1933).
@@ -436,7 +436,7 @@ $Q(t) = 4\pi R^2 \dot{R}$.  The radiated pressure at distance $r$ is
 $$
 p_{\text{rad}}(r,t) = \frac{\rho_L}{r}\frac{d}{dt}\!\bigl[R^2\dot{R}\bigr]
 = \frac{\rho_L}{r}\bigl[2R\dot{R}^2 + R^2\ddot{R}\bigr].
-\tag{7.8}
+\tag{5.8}
 $$
 
 The spectrum of $p_{\text{rad}}$ contains distinct components depending on the
@@ -494,7 +494,7 @@ surface tension, and viscosity, the collapse velocity diverges as $R \to 0$:*
 $$
 \dot{R} = -\sqrt{\frac{2 p_\infty}{3\rho_L}}
 \left[\left(\frac{R_0}{R}\right)^3 - 1\right]^{1/2}.
-\tag{7.9}
+\tag{5.9}
 $$
 
 *Proof.* Set $p_g = \sigma = \mu = 0$ in (5.1):
@@ -540,7 +540,7 @@ surface tension, no viscosity) is*
 
 $$
 t_c = 0.9147\, R_0 \sqrt{\frac{\rho_L}{p_\infty}}.
-\tag{7.10}
+\tag{5.10}
 $$
 
 *Proof.* The energy integral of RP (zero gas, no surface tension, no viscosity)
@@ -626,7 +626,7 @@ to the pressure gradient across its volume.  The instantaneous force is
 
 $$
 \mathbf{F}_1(t) = -V(t)\,\nabla p(\mathbf{x}_b, t),
-\tag{7.11}
+\tag{5.11}
 $$
 
 where $V(t) = \tfrac{4}{3}\pi R^3(t)$ is the instantaneous volume and
@@ -640,7 +640,7 @@ force is*
 $$
 \langle \mathbf{F}_1 \rangle = \frac{1}{2}\text{Re}\!\left[
 -\hat{V}^*\,\nabla \hat{p}\right],
-\tag{7.12}
+\tag{5.12}
 $$
 
 *where $\hat{V}$ and $\hat{p}$ are complex amplitudes.  Bubbles smaller than
@@ -671,7 +671,7 @@ The force on bubble 2 due to this field is $F_{21} = -V_2(t)\,\partial p_1/\part
 
 $$
 F_{12}(t) = -\frac{\rho_L}{4\pi d^2}\,\ddot{V}_1(t)\,V_2(t).
-\tag{7.13}
+\tag{5.13}
 $$
 
 By symmetry $F_{21}(t) = -F_{12}(t)$; the force is along the line joining the
@@ -680,7 +680,7 @@ bubble centers.  The time-averaged force is
 $$
 \langle F_{12}\rangle = -\frac{\rho_L}{4\pi d^2}
 \langle \ddot{V}_1 V_2\rangle.
-\tag{7.14}
+\tag{5.14}
 $$
 
 **Theorem 5.8 (Secondary Bjerknes attraction/repulsion).** *Two identically
@@ -720,14 +720,14 @@ of radius $r^*$ is
 
 $$
 \Delta G^* = \frac{16\pi\sigma^3}{3\bigl(p_v - p_\infty\bigr)^2},
-\tag{7.15}
+\tag{5.15}
 $$
 
 and the critical radius is
 
 $$
 r^* = \frac{2\sigma}{p_v - p_\infty},
-\tag{7.16}
+\tag{5.16}
 $$
 
 where $p_v$ is the vapor pressure.  Significant nucleation rates require
@@ -746,7 +746,7 @@ fractionation.
 
 $$
 MI = \frac{p^-_{\max}\,[\text{MPa}]}{f_c^{1/2}\,[\text{MHz}]^{1/2}}
-\tag{7.17}
+\tag{5.17}
 $$
 
 is used clinically to characterize cavitation risk.  Histotripsy operates at
@@ -811,7 +811,7 @@ $$
 = p_g - p_0 - p_\infty(t)
 - \frac{2\sigma_{\text{eff}}(R)}{R} - \frac{4\mu_L\dot{R}}{R}
 - \frac{4\kappa_s\dot{R}}{R^2},
-\tag{7.18}
+\tag{5.18}
 $$
 
 where $\kappa_s$ is the shell viscosity (surface dilatational viscosity,
@@ -824,7 +824,7 @@ $$
 & R_{\text{buck}} < R < R_{\text{rupt}} \\[4pt]
 \sigma_{\text{water}} & R \geq R_{\text{rupt}}
 \end{cases}
-\tag{7.19}
+\tag{5.19}
 $$
 
 Here $\chi$ is the shell elastic modulus (N/m), $R_{\text{buck}}$ is the
@@ -842,7 +842,7 @@ $$
 - \frac{4\mu_L \dot{R}_1}{R_1}
 - \frac{2\sigma_1}{R_1}
 + \frac{\rho_S}{\rho_L}\left[\cdots\right]_{\text{shell}},
-\tag{7.20}
+\tag{5.20}
 $$
 
 where the shell stress tensor contributes terms proportional to the shell shear
@@ -864,7 +864,7 @@ $$
 \omega_{\text{eff}}^2 = \frac{1}{\rho_L R_0^2}\!\left[
 3\gamma p_{g0} + \frac{2(3\gamma-1)\sigma_0}{R_0} + \frac{4\chi}{R_0}
 \right] - \frac{2\sigma_0}{\rho_L R_0^3},
-\tag{7.21}
+\tag{5.21}
 $$
 
 where $\sigma_0 = \sigma_{\text{eff}}(R_0)$.  The shell elasticity $\chi$
@@ -883,13 +883,13 @@ $\mathbf{y} = (y_1, y_2)^\top = (R, \dot{R})^\top$:
 
 $$
 \dot{y}_1 = y_2,
-\tag{7.22}
+\tag{5.22}
 $$
 
 $$
 \dot{y}_2 = \frac{1}{D(y_1, y_2)}
 \left[\text{RHS}(y_1, y_2, t) - \tfrac{3}{2}y_2^2\right],
-\tag{7.23}
+\tag{5.23}
 $$
 
 where for Keller–Miksis:
@@ -1008,7 +1008,7 @@ $$
 \frac{dR}{dt} = -\frac{D\,c_s}{\rho_g R}
 \left(1 - \frac{c_\infty}{c_s} - \frac{2\sigma M}{RT\rho_g R}\right)
 \left(1 + \frac{R}{\ell_D(t)}\right),
-\tag{7.24}
+\tag{5.24}
 $$
 
 where $D$ is the gas diffusivity in liquid, $c_s$ is the saturation
@@ -1032,7 +1032,7 @@ temperature:
 
 $$
 T_{\max} \approx T_0\!\left(\frac{R_0}{R_{\min}}\right)^{3(\gamma-1)},
-\tag{7.25}
+\tag{5.25}
 $$
 
 for adiabatic compression ($\gamma_{\text{eff}} \approx 1.4$ for air).
@@ -1059,7 +1059,7 @@ volumetric bubble response.  The linearized coupled system is:
 $$
 \frac{1}{c_{\text{eff}}^2(\omega)}\frac{\partial^2 p}{\partial t^2}
 - \nabla^2 p = 0,
-\tag{7.26}
+\tag{5.26}
 $$
 
 with the effective compressibility
@@ -1067,7 +1067,7 @@ with the effective compressibility
 $$
 \frac{1}{c_{\text{eff}}^2(\omega)} = \frac{1}{c_L^2}
 + \frac{n_b \cdot 4\pi R_0}{\omega_0^2 - \omega^2 + 2i\beta\omega},
-\tag{7.27}
+\tag{5.27}
 $$
 
 where $n_b$ is the bubble number density, $\omega_0$ the Minnaert frequency,
@@ -1088,7 +1088,7 @@ inhomogeneous sound speed field that can incorporate bubble-cloud effects.
 |---|---|---|
 | RP equation | $R\ddot R + \tfrac{3}{2}\dot R^2 = (p_b - p_\infty)/\rho_L$ | `bubble_dynamics::rayleigh_plesset` |
 | KM equation | $(1-\dot R/c_L)R\ddot R + \cdots$ | `bubble_dynamics::keller_miksis` |
-| Minnaert $f_0$ (large-bubble limit) | $(2\pi R_0)^{-1}\sqrt{3\gamma p_0/\rho_L}$ (7.7; $R_0 \gg 2\sigma/p_0$) | `bubble_dynamics::bubble_state` |
+| Minnaert $f_0$ (large-bubble limit) | $(2\pi R_0)^{-1}\sqrt{3\gamma p_0/\rho_L}$ (5.7; $R_0 \gg 2\sigma/p_0$) | `bubble_dynamics::bubble_state` |
 | Blake threshold | $P_B = p_{g0}(R_0/R^*)^3 - 2\sigma/R^*$ | `therapy::cavitation::constants` |
 | Rayleigh collapse time | $t_c = 0.9147 R_0\sqrt{\rho_L/p_\infty}$ (= $B(2/3,1/2)/\sqrt{6}$) | `thermodynamics::collapse` |
 | Primary Bjerknes | $\mathbf{F}_1 = -V\nabla p$ | `bjerknes_forces::primary` |
