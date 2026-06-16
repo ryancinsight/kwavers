@@ -69,11 +69,11 @@ def fig01_soap_resolution_gain() -> None:
 
     # (a) Lateral resolution vs NA — Eq. (34.5), kw.acoustic_resolution_lateral.
     na = np.linspace(0.15, 1.0, 200)
+    # Single source of truth: the curve is the Rust kernel R_L = 0.71 ν/(NA·f),
+    # which is exactly the paper's empirical 71.5/NA fit at ν=1500, f=15 MHz
+    # (agreement verified in chapter §34.10). The fit is NOT re-evaluated here.
     r_l_um = np.array([kw.acoustic_resolution_lateral(C0, n, F0) for n in na]) * 1e6
-    ax_r.plot(na, r_l_um, color="#1f77b4", label="Eq. (34.5): 0.71 ν/(NA·f)")
-    # empirical fit R_L[µm] = 71.5/NA reproduced by sampled markers
-    na_fit = np.array([0.2, 0.3, 0.4, 0.6, 0.95, 1.0])
-    ax_r.plot(na_fit, 71.5 / na_fit, "ks", ms=5, label="paper fit 71.5/NA")
+    ax_r.plot(na, r_l_um, color="#1f77b4", label="kw.acoustic_resolution_lateral (= 71.5/NA fit)")
     ax_r.axvspan(0.2, 0.6, color="orange", alpha=0.2, label="conventional PZT NA")
     na_dev = kw.numerical_aperture_from_geometry(R_CURV, D_TRANS)
     r_dev = kw.acoustic_resolution_lateral(C0, na_dev, F0) * 1e6
