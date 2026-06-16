@@ -23,7 +23,7 @@ the source of the planning figures in this chapter.
 > planning panels shown here. The analytic planning model itself remains in the
 > Rust core under `analytical::cavitation`.
 
-## Clinical Context
+## 32.1 Clinical Context
 
 Pancreatic ductal adenocarcinoma accounts for approximately 90% of
 pancreatic cancers and carries a five-year survival rate below 12% because
@@ -45,7 +45,7 @@ vascular injury in the 72-hour follow-up window. The HOPE4PANCREAS
 investigational programme extends the concept to human subjects
 (NCT05370300; first-in-human enrolment ongoing at time of writing).
 
-## Acoustic Access: Subcostal Hepatic Window
+## 32.2 Acoustic Access: Subcostal Hepatic Window
 
 Pancreatic histotripsy faces a unique acoustic challenge absent from kidney
 and liver applications: the pancreatic head and body lie retroperitoneally
@@ -62,7 +62,7 @@ anterior skin to the PDAC centroid and selects the column minimising gas
 voxels while maximising hepatic tissue. This acoustic-window selection
 mirrors clinical scanning practice and feeds the transducer placement step.
 
-## Aperture Contract
+## 32.3 Aperture Contract
 
 The therapy array is a 128-element curved abdominal array with 70 mm outer
 aperture, 100 mm radius of curvature, and 500 kHz centre frequency. These
@@ -85,7 +85,7 @@ aspect ratio of approximately 7:1. Electronic beam-steering interleaves
 across multiple focal sub-positions to improve lateral coverage per unit
 transducer time.
 
-## Tissue Properties
+## 32.4 Tissue Properties
 
 All acoustic and thermal properties follow Duck (1990) and the IT'IS
 Foundation v4.1 database (Hasgall et al. 2022). Cavitation thresholds
@@ -113,9 +113,9 @@ At 500 kHz the frequency-dependent correction (Vlaisavljevich 2015 Eq. 9)
 shifts p_t downward by 1.4 · log₁₀(0.5) ≈ −0.42 MPa, giving an effective
 PDAC threshold of approximately 25.6 MPa at the operating frequency.
 
-## Mathematical Contract
+## 32.5 Mathematical Contract
 
-### Forward propagation
+### 32.5.1 Forward propagation
 
 The acoustic pressure field is computed by the paraxial Rayleigh-Sommerfeld
 model with 3-D attenuation. Let (x, y, z) be the AP, RL, and SI axes;
@@ -138,7 +138,7 @@ and the cumulative attenuation integral is evaluated as a running product
 of the per-voxel attenuation (in Np/m, converted from dB/cm by
 1 dB/cm = 11.513 Np/m).
 
-### Cavitation probability
+### 32.5.2 Cavitation probability
 
 The intrinsic threshold is tissue- and frequency-dependent
 (Vlaisavljevich 2015/2016, Maxwell 2013):
@@ -151,7 +151,7 @@ P_cav(x)  = 0.5 · (1 + erf((|p(x)| − p_t) / (σ · √2)))
 Temperature correction (−0.3 MPa/°C) uses the transient temperature
 computed from the per-pulse heat deposition.
 
-### Thermal model
+### 32.5.3 Thermal model
 
 Per-pulse heat deposition:
 
@@ -177,7 +177,7 @@ CEM43 = R^(43 − T) · t_treatment / 60,    R = 0.5 (T ≥ 43 °C), 0.25 (T < 4
 
 Thermal ablation threshold: CEM43 ≥ 240 min (Dewey 1994).
 
-### Raster superposition
+### 32.5.4 Raster superposition
 
 Per-shot lesion footprints are superposed on a farthest-point raster
 whose pitch is half the per-shot half-extent, ensuring > 60% overlap.
@@ -187,7 +187,7 @@ into healthy pancreatic parenchyma is reported as a confinement metric.
 Total treatment time accounts for electronic beam-steering interleaving
 across multiple focal sub-positions.
 
-## Exposure Regimes
+## 32.6 Exposure Regimes
 
 Three regimes adapted for 500 kHz pancreatic access:
 
@@ -213,7 +213,7 @@ PRF dithering (Bader 2018, Mancia 2020) drives cumulative cavitation-cloud
 erosion without stable thermal elevation. Fifty pulses/spot at 10 Hz per
 spot achieves full erosion; 8-spot interleave gives 80 Hz effective PRF.
 
-## Figures
+## 32.7 Figures
 
 The planning figures (from the `analytical::cavitation` model) are in
 `docs/book/figures/ch21f/`:
@@ -232,7 +232,7 @@ peak temperature, array parameters, and dataset provenance.
 (A previous base64-inlined `embedded_figures.md` bundle was removed: it
 duplicated the committed PNGs above and bloated the repository by tens of MB.)
 
-## Scope Limits
+## 32.8 Scope Limits
 
 All figures are model-consistent forward simulation outputs, not measured
 hardware data. The forward model is a paraxial single-frequency Gaussian
@@ -249,7 +249,7 @@ The tissue segmentation is derived automatically from CECT HU thresholds;
 it does not use radiologist-reviewed contours and may misclassify
 peripancreatic structures in patients with atypical anatomy.
 
-## Data Source
+## 32.9 Data Source
 
 MSD Task07_Pancreas: Antonelli et al. (2022, Nature Commun 13:4128).
 License: CC-BY-SA 4.0.

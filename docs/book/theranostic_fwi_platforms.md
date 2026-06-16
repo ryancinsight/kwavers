@@ -54,9 +54,9 @@ therefore a research simulation of a plausible same-aperture therapy/monitoring
 platform, not a claim that HistoSonics or INSIGHTEC currently ship therapeutic
 FWI reconstruction.
 
-## Mathematical Contract
+## 28.1 Mathematical Contract
 
-### Definition: Same-Device Aperture Contract
+### 28.1.1 Definition: Same-Device Aperture Contract
 
 Let `E = {e_k ∈ ℝ³ : k = 1, …, N}` be the N element positions of the treatment
 array in the patient coordinate frame.  The same-device contract holds iff
@@ -80,7 +80,7 @@ field data (the same or coaxial receive elements).  The contractual constraint
 is that this be a single physical device position — no offline imaging session
 with a separate probe.
 
-### Theorem: Same-Aperture Operator Rank
+### 28.1.2 Theorem: Same-Aperture Operator Rank
 
 Let `A ∈ ℝ^(m × n)` be the same-device active Born operator with `m` pitch-catch
 pairs drawn from `N` element positions and `n` active tissue voxels.  The
@@ -119,7 +119,7 @@ at `1.5f0`. Fusion gates the active lesion inverse by passive subharmonic
 support plus harmonic and ultraharmonic contrast; the generated metrics report
 the fused map separately from the individual channels.
 
-### Same-Device Send/Receive Passive Acoustic Mapping
+### 28.1.3 Same-Device Send/Receive Passive Acoustic Mapping
 
 The passive cavitation channels (subharmonic `f0/2`, ultraharmonic `3f0/2`)
 support a second, forward-simulated reconstruction mode selected by
@@ -233,7 +233,7 @@ display while being the physically more faithful diagnostic; the raw field
 localizes whether the divergence originates in medium scattering, steering
 delays, or the downstream inverse channels.
 
-### Theorem: Exposure Backend Static-Dispatch Contract
+### 28.1.4 Theorem: Exposure Backend Static-Dispatch Contract
 
 Let `B` be a theranostic exposure backend implementing the peak-pressure
 contract
@@ -256,7 +256,7 @@ backend method is statically resolved at compile time. Since the time-step loop
 receives concrete slices and arrays from that implementation, backend
 abstraction contributes no runtime dispatch term to the propagation recurrence.
 
-### Theorem: Rolling Peak-Pressure Workspace Bound
+### 28.1.5 Theorem: Rolling Peak-Pressure Workspace Bound
 
 For a 2-D grid with `N = nx * ny` cells, the reference exposure backend retains
 only:
@@ -300,7 +300,7 @@ and residual migration. Metrics expose
 energies. The finite-frequency Born, passive, harmonic, and ultraharmonic
 channels still use the matrix-free same-aperture PCG operators.
 
-### Definition: Patient-Adaptive Focused Transmit Schedule
+### 28.1.6 Definition: Patient-Adaptive Focused Transmit Schedule
 
 The patient-adaptive transmit experiment is inspired by van Nierop et al.
 `arXiv:2508.08782`, where sparse focused transmit selections are evaluated
@@ -337,7 +337,7 @@ It writes `fig07_patient_adaptive_transmit_budget.png` and
 `adaptive_transmit_metrics.json`, reporting active inverse Dice/CNR and
 measurement counts for brain, kidney, and liver schedules at matched budgets.
 
-### Theorem: Deterministic Encoded Normal Equations
+### 28.1.7 Theorem: Deterministic Encoded Normal Equations
 
 Let `A in R^(m x n)` be one same-aperture active, passive, harmonic, or
 ultraharmonic sensitivity operator. Let `C in R^(k x m)` contain disjoint
@@ -359,7 +359,7 @@ encoded quadratic
 for the configured encoding. This reduces the number of PCG residual rows but
 does not change the physics contract into nonlinear full-waveform inversion.
 
-### Theorem: Linear Acoustic RTM Imaging Condition
+### 28.1.8 Theorem: Linear Acoustic RTM Imaging Condition
 
 Let `p0(x,t)` solve the scalar acoustic wave equation in the baseline
 CT-derived medium and let `p1(x,t)` solve the same equation after the lesion
@@ -378,7 +378,7 @@ is not a nonlinear treatment-physics model because cavitation, temperature,
 elastic conversion, density inversion, and attenuation inversion remain outside
 this linear PDE contract.
 
-### Theorem: Bounded Robust RTM Residual
+### 28.1.9 Theorem: Bounded Robust RTM Residual
 
 For receiver residual `r = d1 - d0` and scale `epsilon > 0`, the Charbonnier
 objective
@@ -399,7 +399,7 @@ The Chapter 28 RTM channel uses this derivative for receiver injection by
 default. Setting `waveform_misfit = "l2"` recovers the unbounded least-squares
 adjoint source `psi(r) = r`.
 
-### Theorem: Discrete Westervelt FWI Adjoint
+### 28.1.10 Theorem: Discrete Westervelt FWI Adjoint
 
 The nonlinear 3-D branch advances pressure by the heterogeneous finite-amplitude
 Westervelt recurrence
@@ -462,7 +462,7 @@ CT-like abdominal fixture, and
 `forward_westervelt_exhibits_physical_forward_steepening_with_corrected_sign`
 asserts the forward physics is sign-correct.
 
-### Algorithm: Rayleigh-Plesset Cavitation Inverse
+### 28.1.11 Algorithm: Rayleigh-Plesset Cavitation Inverse
 
 For each body voxel, the nonlinear branch first evaluates the FDA mechanical
 index `MI = |P-|[MPa] / sqrt(f0[MHz])`. Voxels below the configured inertial
@@ -547,7 +547,7 @@ behind the current RK4 state. The passive simulated data is generated from the
 same MI-gated source-support vector used by the Green-operator columns, so the
 receiver data and inverse model share the same physically admissible support.
 
-### Theorem: Positive Normal Operator
+### 28.1.12 Theorem: Positive Normal Operator
 
 Let `A` be the finite-frequency same-aperture sensitivity matrix, `lambda > 0`,
 `gamma >= 0`, and `L` the four-neighbor graph Laplacian on the CT-derived active
@@ -568,7 +568,7 @@ Proof: `A^T A` is positive semidefinite by construction. The graph Laplacian
 satisfies `m^T L m = sum_(i,j in E) (m_i - m_j)^2 >= 0`. Adding
 `lambda I` makes the quadratic form strictly positive for every nonzero `m`.
 
-### Algorithm: Same-Aperture Monitoring Loop
+### 28.1.13 Algorithm: Same-Aperture Monitoring Loop
 
 1. Load CT/NIfTI with RITK and convert intensities into anatomy-specific
    acoustic property maps.
@@ -593,7 +593,7 @@ satisfies `m^T L m = sum_(i,j in E) (m_i - m_j)^2 >= 0`. Adding
 9. Fuse active lesion inverse output with passive and harmonic support maps for the
    monitoring image.
 
-### Algorithm: Nonlinear 3-D Branch
+### 28.1.14 Algorithm: Nonlinear 3-D Branch
 
 1. Load the same CT/NIfTI inputs with RITK.
 2. Resample a target-and-skin/calvarium 3-D support into an isotropic bounded
@@ -626,7 +626,7 @@ satisfies `m^T L m = sum_(i,j in E) (m_i - m_j)^2 >= 0`. Adding
    estimate, so passive evidence can add support without suppressing the
    active estimate when cavitation is absent or spatially weak.
 
-## Device Placement
+## 28.2 Device Placement
 
 The brain case reads the CT-aligned target and transducer pose from
 `CANONICAL_BRAIN_SCENE` in
@@ -697,7 +697,7 @@ energy fractions. Those dB diagnostics separate finite-frequency aperture
 sidelobes from treated tissue response; coherent rings visible in the same-
 aperture inverse maps are point-spread-function structure, not additional targets.
 
-## Minimal Usage Example
+## 28.3 Minimal Usage Example
 
 ```python
 import pykwavers as kw
@@ -755,7 +755,7 @@ print("uses_nonlinear_wave_propagation:",
       nonlinear_result["uses_nonlinear_wave_propagation"])                    # True
 ```
 
-## Figures
+## 28.4 Figures
 
 Run:
 
@@ -961,7 +961,7 @@ electronic-steering delay law. For skull, the phase correction is the scalar
 straight-ray slowness integral through the CT-derived sound-speed map; it is not
 an elastic skull correction with shear mode conversion or refracted ray bending.
 
-### Acoustic Scalar Model
+### 28.4.1 Acoustic Scalar Model
 
 The Figure 5 nonlinear branch is a scalar acoustic pressure model. It uses
 CT-derived sound speed, density, nonlinearity coefficient, attenuation, a
@@ -980,7 +980,7 @@ delays. The body mask distinguishes these cases by flood-filling
 boundary-connected exterior air first; enclosed HU `< -700` label-0 voxels are
 kept as internal gas, while boundary-connected CT air remains coupling fluid.
 
-### FDTD/PSTD Choice
+### 28.4.2 FDTD/PSTD Choice
 
 The nonlinear branch uses FDTD for the Westervelt forward and discrete adjoint
 because every operator in the inversion has a local transpose: heterogeneous
@@ -997,7 +997,7 @@ fractional-Laplacian absorption operator; the primary Westervelt inverse remains
 FDTD until a full spectral forward/adjoint pair is implemented and differentially
 verified.
 
-## Research Alignment
+## 28.5 Research Alignment
 
 The implemented channels follow the current research direction as of
 2026-05-13:

@@ -25,9 +25,9 @@ parameters match published research system specifications.  See Chapter 28 for
 the mathematical contract of the inversion and Chapter 15 for transcranial skull
 aberration correction.
 
-## Mathematical Foundation
+## 30.1 Mathematical Foundation
 
-### Theorem: Focused Spherical-Cap Bowl Geometry
+### 30.1.1 Theorem: Focused Spherical-Cap Bowl Geometry
 
 Let the organ centroid be **F** ∈ ℝ³ [m] (the acoustic focus target) and let
 **S** ∈ ℝ³ be the point on the exterior body surface that minimises ‖**S** −
@@ -64,7 +64,7 @@ Equality holds only at `θ = θ_max` (rim elements at skin level); interior
 elements (`θ < θ_max`) satisfy `δ(θ) > 0` — they are displaced further from
 the body than **S**.  No element is inside the patient. □
 
-### Corollary: Rim–Skin Coincidence and Path Optimality
+### 30.1.2 Corollary: Rim–Skin Coincidence and Path Optimality
 
 The rim element at `θ = θ_max` satisfies `δ(θ_max) = 0`, meaning rim elements
 lie exactly at the skin surface depth.  Since `R = d_f / cos(θ_max)`, the focal
@@ -77,7 +77,7 @@ to an approach-angle penalty).  Minimising `d_f` simultaneously minimises `R`
 and therefore the solid angle subtended at the focus, maximising element density
 per unit aperture and minimising off-axis insertion loss through ribs or skull.
 
-### Theorem: Uniform Area Distribution on a Spherical Cap
+### 30.1.3 Theorem: Uniform Area Distribution on a Spherical Cap
 
 To achieve uniform element density on the spherical cap (equal solid-angle
 coverage per element), the polar angle `θ` must be sampled via the
@@ -101,7 +101,7 @@ solving for `cos(θ)` yields the formula above.  The golden-spiral azimuthal
 sequence distributes points with discrepancy `O(1/N)`, which is asymptotically
 optimal for spherical caps (Álvarez & González-Aranda, 2019).
 
-### Parameter Choices
+### 30.1.4 Parameter Choices
 
 | Parameter | Value | Justification |
 |-----------|-------|---------------|
@@ -109,7 +109,7 @@ optimal for spherical caps (Álvarez & González-Aranda, 2019).
 | `θ_max` | 0.960 rad (≈ 55°) | Aperture half-angle; F-number ≈ 0.87 at stated focal length (Parsons et al. 2006) |
 | R | ‖F−S‖ / cos(θ_max) | Rim element at θ_max lies exactly at skin level; vertex (θ→θ_cutout) is well outside. Minimum 60 mm. |
 
-### Theorem: Calvarium Focused-Bowl Coverage
+### 30.1.5 Theorem: Calvarium Focused-Bowl Coverage
 
 The transcranial focused bowl uses the Fibonacci golden-spiral parameterisation on a sphere
 of radius `R_bowl` centred at the brain focus, restricted to the unit-sphere
@@ -133,7 +133,7 @@ is at `z_m = −0.28 × 0.15 ≈ −0.042 m`, which is above the level of the
 external auditory canal (typically at `z ≈ −0.04 m`), safely within the
 calvarium and away from the neck.
 
-### Algorithm: CT-Derived Exterior Skin Surface Extraction
+### 30.1.6 Algorithm: CT-Derived Exterior Skin Surface Extraction
 
 Naïve 6-connected boundary detection flags any body voxel adjacent to a
 non-body voxel.  In real CT volumes, intestinal gas, bile ducts, vessel lumens,
@@ -182,7 +182,7 @@ flood-fill.
 O(B_ext) for the penalised scan over exterior skin candidates `B_ext ≪ B`
 (where `B` = total boundary voxels); O(B_ext/s) surface points.
 
-### Algorithm: Organ Surface and Centroid
+### 30.1.7 Algorithm: Organ Surface and Centroid
 
 The organ segmentation label `L > 0` defines the organ mask `M_organ`.  Its
 centroid in index coordinates is:
@@ -195,9 +195,9 @@ Physical centroid: `F = (C − C_body) · Δ_spacing`.  The organ surface is
 extracted identically to the skin surface (6-connected boundary + stride
 sampling).
 
-## Focused-Bowl Configurations
+## 30.2 Focused-Bowl Configurations
 
-### Skin-Coupled Abdominal Focused Bowl
+### 30.2.1 Skin-Coupled Abdominal Focused Bowl
 
 A representative abdominal histotripsy configuration uses a 256-element,
 1.5 MHz focused bowl transducer with a central imaging cutout. Published
@@ -218,7 +218,7 @@ rib shadowing by traversing the costal margin.
 or lateral flank skin.  The nearest-skin-point selection automatically identifies
 the posterior or lateral approach, not the anterior.
 
-### Transcranial Calvarium Focused Bowl
+### 30.2.2 Transcranial Calvarium Focused Bowl
 
 The transcranial scenario uses a 1024-element, 650 kHz focused-bowl cap with
 CT-planned phase correction for skull aberration. The focused-bowl aperture
@@ -230,7 +230,7 @@ This chapter models:
 - Skull surface extracted from the CT at `skull_hu_threshold = 300 HU`.
 - Beam–skull intersection fraction reported as a geometry quality metric.
 
-### TFUScapes Case Import Contract
+### 30.2.3 TFUScapes Case Import Contract
 
 TFUScapes is imported through
 `pykwavers/examples/book/transcranial_planning/tfuscapes.py`, which reuses the
@@ -279,7 +279,7 @@ summary = run_tfuscapes_skull_adaptive_benchmark(
 )
 ```
 
-## Implementation: Rust Core Functions
+## 30.3 Implementation: Rust Core Functions
 
 The Rust implementation lives in two modules:
 
@@ -318,13 +318,13 @@ Each function returns a dict with:
 | `skin_contact_m` | `(3,)` | Bowl vertex (nearest skin point) [m] |
 | `transducer_radius_m` | scalar | Bowl spherical radius (focal length) [m] |
 
-## Figures
+## 30.4 Figures
 
 All figures are generated by
 `pykwavers/examples/book/ch31_clinical_device_geometry.py`.
 Physics and geometry are computed in Rust; Python renders the matplotlib panels.
 
-### Figure 01 — Liver: Skin-Coupled Focused Bowl on Abdominal Skin
+### 30.4.1 Figure 01 — Liver: Skin-Coupled Focused Bowl on Abdominal Skin
 
 ![Liver 3-D geometry](figures/ch31/fig01_liver_array_3d_geometry.png)
 
@@ -333,14 +333,14 @@ Physics and geometry are computed in Rust; Python renders the matplotlib panels.
 lime circle marks the bowl vertex on the skin.  Two views: oblique and side
 profile.
 
-### Figure 02 — Kidney: Skin-Coupled Focused Bowl on Abdominal Skin
+### 30.4.2 Figure 02 — Kidney: Skin-Coupled Focused Bowl on Abdominal Skin
 
 ![Kidney 3-D geometry](figures/ch31/fig02_kidney_array_3d_geometry.png)
 
 Same visualisation for the kidney scenario.  The nearest-skin selection places
 the bowl on the posterior/lateral flank for retroperitoneal kidneys.
 
-### Figure 03 — Brain: Transcranial Focused Bowl at Calvarium Level
+### 30.4.3 Figure 03 — Brain: Transcranial Focused Bowl at Calvarium Level
 
 ![Brain focused-bowl 3-D calvarium](figures/ch31/fig03_brain_focused_bowl_3d_calvarium.png)
 
@@ -351,7 +351,7 @@ the top of the skull, not the neck. Top-down view (right) confirms circular
 aperture centred on the vertex. Yellow points are CT-derived skull entry
 locations.
 
-### Figure 04 — Simulated Pressure Exposure Comparison
+### 30.4.4 Figure 04 — Simulated Pressure Exposure Comparison
 
 ![Exposure comparison](figures/ch31/fig04_exposure_comparison.png)
 
@@ -359,7 +359,7 @@ locations.
 are therapy element positions projected onto the slice; blue dots are imaging
 aperture positions.  White contour delineates the target organ.
 
-### Figure 05 — Reconstruction Fidelity Metrics
+### 30.4.5 Figure 05 — Reconstruction Fidelity Metrics
 
 ![Reconstruction metrics](figures/ch31/fig05_reconstruction_metrics.png)
 
@@ -367,7 +367,7 @@ Dice coefficient (equal-area threshold) and CNR for each reconstruction
 channel (active Born inverse, linear RTM, subharmonic, harmonic, ultraharmonic,
 and fused) across the three anatomies.
 
-## Validation
+## 30.5 Validation
 
 The geometry contract is validated by three property tests in
 `crates/kwavers-therapy/src/therapy/theranostic_guidance/abdominal3d/tests.rs`:
@@ -381,7 +381,7 @@ The geometry contract is validated by three property tests in
 
 The brain focused-bowl property tests reside in `transcranial_focused_bowl3d.rs` (Chapter 28).
 
-## References
+## 30.6 References
 
 - Vlaisavljevich E et al. (2014) Image-guided non-invasive ultrasound liver
   ablation using histotripsy: feasibility study in an in vivo porcine model.
