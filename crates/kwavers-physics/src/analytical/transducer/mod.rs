@@ -53,6 +53,34 @@ mod tests {
     }
 
     #[test]
+    fn apodization_tukey_tapers_to_zero_symmetrically() {
+        // Regression: the prior inline Tukey reimplementation had a sign error
+        // in its falling edge and returned 1.0 (not 0) at the last element.
+        // A symmetric Tukey window tapers to 0 at both ends with a flat
+        // interior. r = 0.25 ⇒ taper over the outer 0.125 fraction per side.
+        let n = 64;
+        let w = apodization_weights(n, "tukey25");
+        assert!(w[0].abs() < 1e-12, "left endpoint {} != 0", w[0]);
+        assert!(w[n - 1].abs() < 1e-12, "right endpoint {} != 0", w[n - 1]);
+        // Mid-array is in the flat unit-gain region.
+        assert!((w[n / 2] - 1.0).abs() < 1e-12, "centre {} != 1", w[n / 2]);
+        // Symmetric about the array centre.
+        for i in 0..n {
+            assert!((w[i] - w[n - 1 - i]).abs() < 1e-12, "asymmetry at {i}");
+        }
+    }
+
+    #[test]
+    fn apodization_hann_matches_known_endpoints() {
+        // Hann tapers to 0 at both ends; Hamming to 0.08; both peak at 1 mid-array.
+        let hann = apodization_weights(65, "hann");
+        assert!(hann[0].abs() < 1e-12 && hann[64].abs() < 1e-12);
+        assert!((hann[32] - 1.0).abs() < 1e-12);
+        let hamm = apodization_weights(65, "hamming");
+        assert!((hamm[0] - 0.08).abs() < 1e-12 && (hamm[64] - 0.08).abs() < 1e-12);
+    }
+
+    #[test]
     fn bli_stencil_dc_preservation() {
         let ws = bli_stencil_weights(&[0.0, 0.25, 0.5, 0.75], 8);
         for w in &ws {

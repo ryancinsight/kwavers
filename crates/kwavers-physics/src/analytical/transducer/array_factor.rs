@@ -4,6 +4,7 @@
 //! grating-lobe prediction, and apodization windows.
 
 use kwavers_core::constants::numerical::TWO_PI;
+use kwavers_math::signal::ApodizationType;
 use kwavers_math::special::bessel::j1;
 
 // ─── Directivity ──────────────────────────────────────────────────────────────
@@ -162,51 +163,35 @@ pub fn grating_lobe_angles(k: f64, d_m: f64, steer_rad: f64) -> Vec<f64> {
 
 /// Apodization (window) weights for an N-element array.
 ///
-/// Supported window types:
+/// Supported window keys:
 /// * `"uniform"` – all ones (rectangular window)
 /// * `"hamming"` – Hamming window
 /// * `"hann"` – Hann (von Hann) window
 /// * `"blackman"` – Blackman window
-/// * `"tukey25"` – Tukey window with α = 0.25
+/// * `"tukey25"` – Tukey window with cosine fraction r = 0.25
 ///
-/// Unknown types fall back to uniform.
+/// Unknown keys fall back to uniform.
+///
+/// The window math is **not** reimplemented here: this is a thin string-keyed
+/// wrapper over the canonical SSOT `kwavers_math::signal::ApodizationType`
+/// (which in turn delegates to `kwavers_math::signal::window`), so the
+/// coefficients live in exactly one place and the symmetric (N−1) convention,
+/// endpoint tapering, and `n ≤ 1` handling are shared with the rest of the
+/// workspace.
 ///
 /// # Reference
 /// Harris (1978), *Proc. IEEE* 66, 51.
 #[must_use]
 pub fn apodization_weights(n: usize, window_type: &str) -> Vec<f64> {
-    let nm1 = (n - 1) as f64;
-    match window_type {
-        "uniform" => vec![1.0; n],
-        "hamming" => (0..n)
-            .map(|i| 0.54 - 0.46 * (TWO_PI * i as f64 / nm1).cos())
-            .collect(),
-        "hann" => (0..n)
-            .map(|i| 0.5 * (1.0 - (TWO_PI * i as f64 / nm1).cos()))
-            .collect(),
-        "blackman" => (0..n)
-            .map(|i| {
-                let t = TWO_PI * i as f64 / nm1;
-                0.42 - 0.5 * t.cos() + 0.08 * (2.0 * t).cos()
-            })
-            .collect(),
-        "tukey25" => {
-            let alpha = 0.25_f64;
-            (0..n)
-                .map(|i| {
-                    let x = i as f64 / nm1;
-                    if x < alpha / 2.0 {
-                        0.5 * (1.0 - (TWO_PI * x / alpha).cos())
-                    } else if x <= 1.0 - alpha / 2.0 {
-                        1.0
-                    } else {
-                        0.5 * (1.0 - (TWO_PI * (x - 1.0 + alpha / 2.0) / alpha).cos())
-                    }
-                })
-                .collect()
-        }
-        _ => vec![1.0; n], // fallback: uniform
-    }
+    let window = match window_type {
+        "hamming" => ApodizationType::Hamming,
+        "hann" => ApodizationType::Hanning,
+        "blackman" => ApodizationType::Blackman,
+        "tukey25" => ApodizationType::Tukey { r: 0.25 },
+        // "uniform" and any unrecognised key → rectangular window.
+        _ => ApodizationType::Uniform,
+    };
+    window.weights(n)
 }
 
 // J₁ for circular-piston directivity is the workspace SSOT
