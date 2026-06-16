@@ -73,6 +73,7 @@ mod electromagnetic;
 pub mod fluids; // Fluid property catalogs
 pub mod implants;
 pub mod material; // Unified AcousticMaterialProperties (consolidated from physics/materials)
+pub mod optoacoustic; // Laser-driven optoacoustic emitter materials (SOAP/OFUS absorbers)
 mod optical;
 mod strength;
 pub mod temperature_dependent; // Temperature-dependent material properties
@@ -90,6 +91,9 @@ pub use material::{
     transmission_coefficient, AcousticMaterialProperties,
 }; // SSOT: material properties + interface reflection/transmission/intensity (Ch1 §1.7–1.8) + β (Ch3 §3.1)
 pub use optical::OpticalPropertyData;
+pub use optoacoustic::{
+    all_absorbers, OptoacousticEmitter, CNP_PDMS, CNT_PDMS, CS_PDMS, HSM, PDMS,
+};
 pub use strength::StrengthPropertyData;
 pub use temperature_dependent::{
     MaterialPropertiesAtT, TemperatureDependentAcoustic, TemperatureDependentMaterial,
