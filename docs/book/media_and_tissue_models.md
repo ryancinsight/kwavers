@@ -193,6 +193,14 @@ The measured values in Table 4.1 reflect the molecular structure of the tissue:
 - **Bone** ($B/A \approx 8.0$): mineral matrix reduces compressibility; nonlinearity
   reflects the mixed mineral–protein structure.
 
+> **Reference-data note.** These chapter values follow Bjørnø (1986) / Everbach &
+> Apfel (1995); the simulation constants in `kwavers_core::constants::tissue_acoustics`
+> (and the Ch3 §3.1.2 table) follow Law (1985) / Sehgal (1984) for several tissues
+> (e.g. blood $6.1$, fat $9.6$). $B/A$ is genuinely source- and
+> temperature-dependent; these differences are within the literature spread, not
+> errors. A single-source reconciliation across chapters and constants is tracked
+> as a separate data-curation task.
+
 The nonlinearity parameter is stored per voxel in `HomogeneousMedium::nonlinearity` and in
 the per-voxel `nonlinearity_cache: Array3<f64>` field, so that the PSTD solver can apply the
 correct second-order correction at every grid point without per-call allocation.
