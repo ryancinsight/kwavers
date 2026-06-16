@@ -34,7 +34,10 @@ impl BubbleField {
             if let Err(e) =
                 integrate_bubble_dynamics_adaptive(&self.solver, state, p_effective, dp_dt, dt, t)
             {
-                eprintln!("Bubble dynamics integration failed at ({i}, {j}, {k}): {e:?}");
+                // One bubble's adaptive-step failure must not abort the whole
+                // field; log at a meaningful boundary and continue with the
+                // remaining bubbles.
+                log::warn!("bubble dynamics integration failed at ({i}, {j}, {k}): {e:?}");
             }
         }
 

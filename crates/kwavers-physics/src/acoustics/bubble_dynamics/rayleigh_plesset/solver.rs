@@ -40,34 +40,10 @@ impl RayleighPlessetSolver {
         // correct pv floor as r → ∞.
         let p_gas = self.calculate_internal_pressure(state);
 
-        // Debug output for equilibrium testing
-        #[cfg(test)]
-        if r == self.params.r0 && v == 0.0 && p_acoustic == 0.0 && t == 0.0 {
-            println!("Debug calculate_acceleration at equilibrium:");
-            println!("  p_gas: {} Pa", p_gas);
-            println!("  p_liquid_far: {} Pa", p_liquid_far);
-            println!(
-                "  Expected p_gas at eq: {} Pa",
-                self.params.p0 + self.params.surface_tension_pressure(self.params.r0)
-            );
-        }
-
         // Forces on bubble wall (Pa)
         let pressure_diff = p_gas - p_liquid_far;
         let surface_tension = self.params.surface_tension_pressure(r);
         let viscous_stress = self.params.viscous_wall_stress(v, r);
-
-        #[cfg(test)]
-        if r == self.params.r0 && v == 0.0 && p_acoustic == 0.0 && t == 0.0 {
-            println!("  pressure_diff: {} Pa", pressure_diff);
-            println!("  surface_tension: {} Pa", surface_tension);
-            println!("  viscous_stress: {} Pa", viscous_stress);
-            println!(
-                "  net_pressure: {} Pa",
-                pressure_diff - surface_tension - viscous_stress
-            );
-            println!("  denominator: {} kg/m²", self.params.rho_liquid * r);
-        }
 
         // Rayleigh-Plesset equation: ρ(RR̈ + 3/2Ṙ²) = Δp
         // Solving for R̈: R̈ = (Δp/ρR) - (3/2)(Ṙ²/R)
