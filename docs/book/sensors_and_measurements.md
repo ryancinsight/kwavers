@@ -192,7 +192,7 @@ array with no geometric constraint enforced at construction time.
 ![Grating lobes: d=lambda/2 vs d=lambda](figures/ch14/fig02_grating_lobes.png)
 
 **Figure 8.2.** Array beam pattern at d = λ/2 (no grating lobes) versus d = λ, where a
-broadside signal aliases to end-fire — the spatial-Nyquist limit of §3.
+broadside signal aliases to end-fire — the spatial-Nyquist limit of §8.3.
 
 ---
 
@@ -487,7 +487,7 @@ invariant is preserved across checkpoint boundaries.
 ![Recorded vs reference sensor signal](figures/ch14/fig05_signal_comparison.png)
 
 **Figure 8.5.** Recorded sensor time series versus the analytic/k-Wave reference,
-validating the recording contract and Fortran-order convention of §6.
+validating the recording contract and Fortran-order convention of §8.6.
 
 ---
 
@@ -804,18 +804,18 @@ produced by the kwavers solver where a simulation is required.
 1. **Selfridge, A.R. (1985)**. "Approximate material properties in isotropic materials."
    *IEEE Transactions on Sonics and Ultrasonics*, 32(3):381–394.
    doi:10.1109/T-SU.1985.31608
-   — Material properties for hydrophone element modeling (Section 2).
+   — Material properties for hydrophone element modeling (§8.2).
 
 2. **IEC 61685:2001**. "Ultrasonics — Flow measurement systems — Test methods for
    the determination of system accuracy."
    International Electrotechnical Commission, Geneva.
-   — Three-transducer reciprocity calibration method (Section 2).
+   — Three-transducer reciprocity calibration method (§8.2).
 
 3. **Fink, M. (1992)**. "Time reversal of ultrasonic fields — Part I: Basic principles."
    *IEEE Transactions on Ultrasonics, Ferroelectrics and Frequency Control*,
    39(5):555–566.
    doi:10.1109/58.156174
-   — Time-reversal focusing theory and proof (Section 5, Algorithm 8.3).
+   — Time-reversal focusing theory and proof (§8.5, Algorithm 8.3).
 
 4. **Treeby, B.E. and Cox, B.T. (2010)**. "k-Wave: MATLAB toolbox for the simulation and
    reconstruction of photoacoustic wave fields."
@@ -827,31 +827,31 @@ produced by the kwavers solver where a simulation is required.
    acoustic source and sensor distributions in Fourier collocation methods."
    *Journal of the Acoustical Society of America*, 146(1):278–288.
    doi:10.1121/1.5116132
-   — BLI sensor rasterization, Algorithm 1 (Section 6, sensor mask construction).
+   — BLI sensor rasterization, Algorithm 1 (§8.6, sensor mask construction).
 
 6. **Azar, L., Shi, Y., and Wooh, S.C. (2000)**. "Beam focusing behavior of linear
    phased arrays."
    *NDT and E International*, 33(3):189–198.
    doi:10.1016/S0963-8695(99)00043-2
-   — 2-D array spatial Nyquist conditions for hexagonal grids (Section 3).
+   — 2-D array spatial Nyquist conditions for hexagonal grids (§8.3).
 
 7. **Derode, A., Roux, P., and Fink, M. (1995)**. "Robust acoustic time reversal with
    high-order multiple scattering."
    *Physical Review Letters*, 75(23):4206–4209.
    doi:10.1103/PhysRevLett.75.4206
-   — Super-resolution time reversal in random media (Section 5).
+   — Super-resolution time reversal in random media (§8.5).
 
 8. **Xu, M. and Wang, L.V. (2006)**. "Photoacoustic imaging in biomedicine."
    *Review of Scientific Instruments*, 77(4):041101.
    doi:10.1063/1.2195024
-   — Photoacoustic forward measurement and reconstruction (Section 7).
+   — Photoacoustic forward measurement and reconstruction (§8.7).
 
 9. **Synnevag, J.F., Austeng, A., and Holm, S. (2007)**. "Adaptive beamforming applied
    to medical ultrasound imaging."
    *IEEE Transactions on Ultrasonics, Ferroelectrics and Frequency Control*,
    54(8):1606–1613.
    doi:10.1109/TUFFC.2007.406
-   — Short-lag spatial coherence and coherence-based weighting (Section 8).
+   — Short-lag spatial coherence and coherence-based weighting (§8.8).
 
 10. **Pierce, A.D. (1989)**. *Acoustics: An Introduction to Its Physical Principles and
     Applications*. Acoustical Society of America, Woodbury, NY. ISBN 0-88318-612-8.

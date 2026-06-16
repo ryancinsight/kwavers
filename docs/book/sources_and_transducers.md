@@ -750,17 +750,17 @@ crosstalk). Their figures live in Chapter 33 (`cmut_vs_pmut.md`).
 1. **Selfridge, A.R. (1985)**. "Approximate material properties in isotropic materials."
    *IEEE Transactions on Sonics and Ultrasonics*, 32(3):381–394.
    doi:10.1109/T-SU.1985.31608
-   — Source of piezoelectric material constants tabulated in Section 2.
+   — Source of piezoelectric material constants tabulated in §6.2.
 
 2. **O'Neil, H.T. (1949)**. "Theory of focusing radiators."
    *Journal of the Acoustical Society of America*, 21(5):516–526.
    doi:10.1121/1.1906542
-   — Original derivation of on-axis pressure for spherical bowl transducers (Section 4).
+   — Original derivation of on-axis pressure for spherical bowl transducers (§6.4).
 
 3. **Thomenius, K.E. (1996)**. "Evolution of ultrasound beamformers."
    *Proceedings of IEEE Ultrasonics Symposium*, 2:1615–1622.
    doi:10.1109/ULTSYM.1996.584398
-   — Phased array delay law and apodization; grating lobe analysis (Section 5, 9).
+   — Phased array delay law and apodization; grating lobe analysis (§6.5, §6.9).
 
 4. **Treeby, B.E. and Cox, B.T. (2010)**. "k-Wave: MATLAB toolbox for the simulation and
    reconstruction of photoacoustic wave fields."
@@ -772,27 +772,27 @@ crosstalk). Their figures live in Chapter 33 (`cmut_vs_pmut.md`).
    acoustic source and sensor distributions in Fourier collocation methods."
    *Journal of the Acoustical Society of America*, 146(1):278–288.
    doi:10.1121/1.5116132
-   — BLI stencil derivation; Algorithm 1 is the canonical reference for Section 6–7.
+   — BLI stencil derivation; Algorithm 1 is the canonical reference for §6.6–6.7.
 
 6. **Zemanek, J. (1971)**. "Beam behavior within the nearfield of a vibrating piston."
    *Journal of the Acoustical Society of America*, 49(1B):181–191.
    doi:10.1121/1.1912316
-   — Focal zone length and width approximations (Section 4).
+   — Focal zone length and width approximations (§6.4).
 
 7. **Ladabaum, I., Jin, X., Soh, H.T., Atalar, A., and Khuri-Yakub, B.T. (1998)**.
    "Surface micromachined capacitive ultrasonic transducers."
    *IEEE Transactions on Ultrasonics, Ferroelectrics and Frequency Control*,
    45(3):678–690.
    doi:10.1109/58.677612
-   — CMUT electrostatic pull-in and center frequency shift (Section 3).
+   — CMUT electrostatic pull-in and center frequency shift (§6.3).
 
 8. **IEEE Standard 176 (1987)**. "IEEE Standard on Piezoelectricity."
    IEEE, New York.
-   — Constitutive relations and resonance condition (Section 2).
+   — Constitutive relations and resonance condition (§6.2).
 
 9. **Mason, W.P. (1948)**. *Electromechanical Transducers and Wave Filters*, 2nd ed.
    Van Nostrand, New York.
-   — Mason equivalent circuit derivation (Section 2, Step 3).
+   — Mason equivalent circuit derivation (§6.2, Step 3).
 
 10. **Cobbold, R.S.C. (2007)**. *Foundations of Biomedical Ultrasound*.
     Oxford University Press, Oxford. ISBN 978-0-19-516960-5.
