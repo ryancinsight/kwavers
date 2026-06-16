@@ -1,9 +1,9 @@
-//! Optical transport in the diffusion approximation (Photoacoustics chapter §4).
+//! Optical transport in the diffusion approximation (Photoacoustics chapter §10.4).
 //!
 //! Closed-form light-transport quantities that supply the optical fluence to the
 //! photoacoustic forward model `p₀ = Γ·μ_a·Φ`: the reduced scattering
 //! coefficient, the diffusion coefficient, the effective attenuation
-//! (Theorem 4.1), the penetration depth, and the diffuse fluence decay with
+//! (Theorem 10.5), the penetration depth, and the diffuse fluence decay with
 //! depth.
 //!
 //! All optical coefficients (`μ_a`, `μ_s`, `μ_s'`, `μ_eff`) share consistent
@@ -16,7 +16,7 @@
 //! - Cox, B., et al. (2012). "Quantitative spectroscopic photoacoustic imaging."
 //!   *Applied Optics* 51(5), 1245–1259.
 
-/// Reduced scattering coefficient `μ_s' = μ_s·(1 − g)` (§4.2), where `g ∈ [−1, 1]`
+/// Reduced scattering coefficient `μ_s' = μ_s·(1 − g)` (§10.4.2), where `g ∈ [−1, 1]`
 /// is the scattering anisotropy (mean cosine of the scattering angle). For soft
 /// tissue `g ≈ 0.9`, so `μ_s' ≈ 0.1·μ_s`.
 #[must_use]
@@ -24,7 +24,7 @@ pub fn reduced_scattering(mu_s: f64, g: f64) -> f64 {
     mu_s * (1.0 - g)
 }
 
-/// Optical diffusion coefficient `D = 1 / (3·(μ_a + μ_s'))` (§4.2).
+/// Optical diffusion coefficient `D = 1 / (3·(μ_a + μ_s'))` (§10.4.2).
 ///
 /// Returns `0.0` when the transport coefficient `μ_a + μ_s'` is non-positive.
 #[must_use]
@@ -38,7 +38,7 @@ pub fn diffusion_coefficient(mu_a: f64, mu_s_prime: f64) -> f64 {
 }
 
 /// Effective attenuation coefficient `μ_eff = √(3·μ_a·(μ_a + μ_s'))`
-/// (Theorem 4.1) — the `1/e` decay rate of the diffuse fluence rate, equal to
+/// (Theorem 10.5) — the `1/e` decay rate of the diffuse fluence rate, equal to
 /// `√(μ_a / D)`.
 ///
 /// The radicand is clamped to `≥ 0` before the square root so non-physical
@@ -60,14 +60,14 @@ pub fn penetration_depth(mu_eff: f64) -> f64 {
 }
 
 /// Diffuse optical fluence at depth `z` under planar surface illumination,
-/// `F(z) = F₀·exp(−μ_eff·z)` (§9–§10). `z ≥ 0` measures depth below the surface;
+/// `F(z) = F₀·exp(−μ_eff·z)` (§10.4). `z ≥ 0` measures depth below the surface;
 /// negative `z` extrapolates the exponential.
 #[must_use]
 pub fn planar_fluence_at_depth(surface_fluence: f64, mu_eff: f64, z: f64) -> f64 {
     surface_fluence * (-mu_eff * z).exp()
 }
 
-/// Photoacoustic initial pressure `p₀ = Γ·μ_a·F` (§1) — the Grüneisen-weighted
+/// Photoacoustic initial pressure `p₀ = Γ·μ_a·F` (§10.1) — the Grüneisen-weighted
 /// absorbed optical energy density that seeds the acoustic field, given the
 /// dimensionless Grüneisen parameter `Γ`, absorption `μ_a`, and local fluence
 /// `F`.
@@ -77,7 +77,7 @@ pub fn initial_pressure(grueneisen: f64, mu_a: f64, fluence: f64) -> f64 {
 }
 
 /// Apparent (depth-biased) absorption coefficient inferred from a raw PA signal
-/// **without** fluence compensation: `μ̃_a = μ_a·exp(−μ_eff·z)` (Theorem 10.1).
+/// **without** fluence compensation: `μ̃_a = μ_a·exp(−μ_eff·z)` (Theorem 10.11).
 /// The true `μ_a` is underestimated by `exp(−μ_eff·z)` at depth `z` — e.g. ≈40 %
 /// at `z = 1/μ_eff`.
 #[must_use]
@@ -103,14 +103,14 @@ pub fn compensate_fluence(signal: f64, grueneisen: f64, fluence: f64) -> f64 {
 mod tests {
     use super::*;
 
-    /// μ_s' = μ_s(1 − g); g ≈ 0.9 ⇒ μ_s' ≈ 0.1·μ_s (§4.2).
+    /// μ_s' = μ_s(1 − g); g ≈ 0.9 ⇒ μ_s' ≈ 0.1·μ_s (§10.4.2).
     #[test]
     fn reduced_scattering_matches_definition() {
         assert!((reduced_scattering(100.0, 0.9) - 10.0).abs() < 1e-12);
         assert!((reduced_scattering(100.0, 0.0) - 100.0).abs() < 1e-12); // isotropic
     }
 
-    /// Theorem 4.1: μ_eff = √(3 μ_a (μ_a + μ_s')) and equivalently √(μ_a / D).
+    /// Theorem 10.5: μ_eff = √(3 μ_a (μ_a + μ_s')) and equivalently √(μ_a / D).
     /// For NIR tissue (μ_a = 0.1, μ_s' = 10 cm⁻¹) ⇒ μ_eff ≈ 1.74 cm⁻¹, inside the
     /// chapter's 0.5–3 cm⁻¹ band.
     #[test]
@@ -149,7 +149,7 @@ mod tests {
         assert!((f_delta - f0 / std::f64::consts::E).abs() < 1e-12);
     }
 
-    /// p₀ = Γ·μ_a·F (§1).
+    /// p₀ = Γ·μ_a·F (§10.1).
     #[test]
     fn initial_pressure_is_grueneisen_weighted_absorption() {
         // Γ = 0.2, μ_a = 5 m⁻¹, F = 1000 J/m² ⇒ p₀ = 1000 Pa.
@@ -157,7 +157,7 @@ mod tests {
         assert_eq!(initial_pressure(0.2, 0.0, 1000.0), 0.0); // no absorber, no source
     }
 
-    /// Theorem 10.1: apparent μ_a is the true value times exp(−μ_eff·z); at one
+    /// Theorem 10.11: apparent μ_a is the true value times exp(−μ_eff·z); at one
     /// penetration depth the underestimation factor is 1/e (≈ 37 %).
     #[test]
     fn apparent_absorption_underestimates_by_depth_bias() {
