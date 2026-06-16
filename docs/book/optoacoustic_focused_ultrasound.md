@@ -235,6 +235,9 @@ non-cavitational mechanism.
 | Lateral resolution | (34.5) | `…::acoustic_resolution_lateral` |
 | Optoacoustic source `p₀=Γμ_aF` | (34.1) | `kwavers_optics::optical_transport::initial_pressure` |
 | Absorber materials & sensitivity | (34.6) | `kwavers_medium::properties::optoacoustic::OptoacousticEmitter` |
+| Fiber-tip fluence | (34.7) | `…::optoacoustic::fiber_tip_fluence` |
+| Delay-focused aperture gain | (34.8) | `…::optoacoustic::focused_aperture_gain` |
+| Fiber-array focal pressure | (34.9) | `…::optoacoustic::optoacoustic_array_focal_pressure` |
 | Focused-bowl on-axis field | §6.4 | `analytical::transducer::focused_bowl_onaxis` |
 
 ## 34.10 Verification Against Li et al. (2022)
@@ -255,7 +258,101 @@ Each row is checked by a value-semantic test in the corresponding crate
 `OptoacousticEmitter::focal_pressure` against the 48 MPa calibration). This is
 empirical-tier agreement with the published device.
 
-## 34.11 Figure Generation
+## 34.11 Fiber-Optic Optoacoustic Emitters and Endovascular Matrix Arrays
+
+The SOAP focuses a large curved aperture from outside the head. The same
+optoacoustic conversion can instead be delivered through an **optical fiber**:
+coat a fiber tip with the CS-PDMS absorber, send the nanosecond pulse down the
+core, and the tip becomes a millimetre- or micrometre-scale ultrasound source.
+Fiber emitters trade the SOAP's transcranial reach for miniaturisation and direct
+placement — exactly what an intravascular or stereotactic probe needs (these
+emitters must be implanted, since they exploit near-field ultrasound).
+
+### 34.11.1 How a Fiber Reaches High Pressure: Fluence Concentration
+
+A fiber tip has no focal gain — it is a small flat source — yet fiber emitters
+routinely reach megapascal pressures. The mechanism is **fluence concentration**,
+not amplification. The optoacoustic surface pressure is the source law (34.1),
+`p₀ = Γ μ_a F`, and the fluence a fiber of core diameter `d` delivers from a pulse
+of energy `E` is
+
+```math
+F = \frac{E}{A_\text{tip}} = \frac{4E}{\pi d^{2}}.                              (34.7)
+```
+
+**Theorem 34.2 (Inverse-square pressure scaling).** *At fixed pulse energy `E`,
+the optoacoustic surface pressure of a fiber emitter scales as the inverse square
+of the core diameter:* `p₀ = Γ μ_a · 4E/(π d²) ∝ 1/d²`.
+
+*Proof.* Substitute (34.7) into (34.1); `Γ`, `μ_a`, and `E` are independent of
+`d`. □
+
+The achievable pressure is therefore bounded by the absorber's optical **damage
+fluence**, not by the laser. Calibrating against the SOAP, the CS-PDMS surface
+sensitivity is `S = p₀/F = (48\,\text{MPa}/280)/6.2\,\text{J m}^{-2} ≈ 27.6
+\,\text{kPa}` per `\text{J m}^{-2}` (§34.6). Reaching `p₀ = 1\,\text{MPa}` at a
+fiber tip thus needs `F ≈ 36\,\text{J m}^{-2} = 3.6\,\text{mJ cm}^{-2}` — six
+times the SOAP operating fluence but still an order of magnitude below the
+tens-of-mJ/cm² at which CS-PDMS ablates. `fiber_tip_fluence` implements (34.7);
+for a 100 µm core that fluence is only 0.28 µJ per pulse, trivially within a
+nanosecond laser's budget.
+
+### 34.11.2 How Small Can the Fiber Be?
+
+Optical fibers span single-mode cores of 4–9 µm (125 µm cladding), multimode
+cores of 50–200 µm, up to tapered tips drawn to ~20 µm — the diameter at which
+fiber optoacoustic emitters act as sub-cellular point sources. Because the pulse
+energy needed falls as `d²` (a 20 µm core needs ~11 nJ for 1 MPa by Theorem 34.2),
+the limit is not the optics but the mechanical robustness and uniformity of the
+absorber coating and heat dissipation at the tip. Robust emitters use 50–200 µm
+cores; tapered designs reach the tens-of-µm regime for single-cell work.
+
+### 34.11.3 An Endovascular 96-Element Fiber Matrix Array
+
+Miniaturisation makes a *matrix* of fibers in a catheter feasible — a sparse,
+delay-focused optoacoustic array placed inside a vessel and focused a few
+millimetres into adjacent tissue. Two questions decide feasibility.
+
+**Geometry.** A 96-element matrix (a 10×10 grid less the corners) of standard
+125 µm-clad fibers occupies `96·π(62.5\,\mu m)^2 ≈ 1.18\,\text{mm}^2`, which fits
+the `π(0.8\,\text{mm})^2 ≈ 2.0\,\text{mm}^2` lumen of a 1.6 mm (≈6 French)
+catheter at a 0.59 fill factor — comfortably, with thinner (80 µm) cladding
+giving more room still.
+
+**Pressure.** Per-element laser delays focus the pulses coherently at a chosen
+depth. The focal gain of a delay-focused planar aperture of active radiating area
+`A_\text{active}` is
+
+```math
+G_\text{focus} = \frac{A_\text{active}}{\lambda\,F_\text{focus}},               (34.8)
+```
+
+(`focused_aperture_gain`; distinct from the spherical-cap gain `k h` of §34.4),
+so the array focal pressure is
+
+```math
+p_\text{focus} = p_0\,\frac{n\,A_\text{element}}{\lambda\,F_\text{focus}}.       (34.9)
+```
+
+(`optoacoustic_array_focal_pressure`). For 96 fibers of 100 µm core focused
+`F_\text{focus} = 5\,\text{mm}` into cortex at 15 MHz (`λ = c/f = 1540/15\,\text{MHz}
+≈ 103\,\mu m`), the gain is `G_\text{focus} ≈ 1.47`. Reaching the **1 MPa** target
+therefore requires only a per-fiber surface pressure of `p_0 = 1\,\text{MPa}/1.47
+≈ 0.68\,\text{MPa}` — `≈ 2.5\,\text{mJ cm}^{-2}` per tip, well inside the
+damage-safe range. At a damage-safe 3 MPa per tip the focus exceeds 4 MPa, giving
+wide therapeutic headroom.
+
+**Conclusion.** A 96-fiber CS-PDMS matrix array fits a 6 Fr catheter and reaches
+≥1 MPa several millimetres from the vessel wall at modest, damage-safe per-fiber
+fluence — confirmed by the value-semantic test
+`endovascular_96_fiber_array_reaches_one_mpa`. The cost of the sparse layout is
+grating-lobe sidelobes (the 100 µm tips are spaced wider than `λ/2`, the
+condition of §6.9); aperiodic fiber placement suppresses them, and for
+neuromodulation the main-focus pressure governs activation. The result is a
+physically realisable all-optical, metal-free, MRI-compatible endovascular
+neuromodulation probe.
+
+## 34.12 Figure Generation
 
 `fig01_soap_resolution_gain` is produced by
 `crates/kwavers-python/examples/book/ch34_optoacoustic_focused_ultrasound.py`,
@@ -263,7 +360,7 @@ which calls the Rust kernels `kw.acoustic_resolution_lateral` and
 `kw.soap_focal_gain` (the single source of truth for Eqs. 34.4–34.5) and overlays
 the paper's `71.5/NA` fit and the `G_max ≈ 280` device point.
 
-## 34.12 References
+## 34.13 References
 
 1. Li, Y., Jiang, Y., Lan, L. *et al.* Optically-generated focused ultrasound for
    noninvasive brain stimulation with ultrahigh precision. *Light: Sci. Appl.*
@@ -277,3 +374,8 @@ the paper's `71.5/NA` fit and the `G_max ≈ 280` device point.
    758–778 (2013) — acoustic-resolution lateral resolution (34.5).
 5. Baac, H. W. *et al.* Carbon-nanotube optoacoustic lens for focused ultrasound
    generation. *Sci. Rep.* **2**, 989 (2012) — optoacoustic focusing.
+6. Jiang, Y. *et al.* Optoacoustic brain stimulation at submillimeter spatial
+   precision. *Nat. Commun.* **11**, 881 (2020) — fiber optoacoustic emitter (§34.11).
+7. Shi, L. *et al.* Non-genetic photoacoustic stimulation of single neurons by a
+   tapered fiber optoacoustic emitter. *Light: Sci. Appl.* **10**, 143 (2021) —
+   ~20 µm tapered fiber emitters (§34.11.2).
