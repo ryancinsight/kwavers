@@ -36,7 +36,7 @@ impl NonlinearParameters {
             density: DENSITY_TISSUE,
             sound_speed: SOUND_SPEED_TISSUE,
             b_over_a,
-            beta: 1.0 + b_over_a / 2.0,
+            beta: kwavers_medium::properties::coefficient_of_nonlinearity(b_over_a),
             // 0.5 dB/(cm·MHz) → Np/(m·MHz): / CM_TO_M / NP_TO_DB (SSOT-sourced)
             attenuation_coeff: 0.5 / CM_TO_M / NP_TO_DB,
             attenuation_exponent: 1.1, // Typical for soft tissue
@@ -52,7 +52,7 @@ impl NonlinearParameters {
             density: DENSITY_WATER,
             sound_speed: C_WATER,
             b_over_a,
-            beta: 1.0 + b_over_a / 2.0,
+            beta: kwavers_medium::properties::coefficient_of_nonlinearity(b_over_a),
             // WATER_ABSORPTION_ALPHA_0 dB/(cm·MHz²) → Np/(m·MHz²) — water classical f² absorption.
             attenuation_coeff: WATER_ABSORPTION_ALPHA_0 / CM_TO_M / NP_TO_DB,
             attenuation_exponent: 2.0,

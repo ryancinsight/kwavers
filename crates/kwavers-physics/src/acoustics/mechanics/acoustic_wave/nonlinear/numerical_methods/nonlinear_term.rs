@@ -98,8 +98,8 @@ impl NonlinearWave {
                         medium, x, y, z, grid,
                     );
 
-                    // β = 1 + B/(2A); prefactor 2β·dt²/ρ₀ from Westervelt Ch. 3.
-                    let beta = 1.0 + b_over_a / 2.0;
+                    // β = 1 + B/(2A) (Def 3.2, SSOT); prefactor 2β·dt²/ρ₀ from Westervelt Ch. 3.
+                    let beta = kwavers_medium::properties::coefficient_of_nonlinearity(b_over_a);
                     let prefactor = 2.0 * beta * self.dt.powi(2) / density;
 
                     let p_lap = p_filt[[i, j, k]] * laplacian[[i, j, k]];

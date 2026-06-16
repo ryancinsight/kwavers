@@ -74,7 +74,8 @@ propagate at c₀ + β·p/(ρ₀c₀) > c₀ while rarefactions propagate at a l
 | Breast tissue     | 6.6  | 4.30            | 37              | Duck (1990)            |
 
 In kwavers the B/A value is stored in `KuznetsovConfig::nonlinearity_coefficient` and
-`KZKConfig::b_over_a`; β is computed internally as `1.0 + b_over_a / 2.0`.
+`KZKConfig::b_over_a`; β (Definition 3.2) is computed through the workspace SSOT
+`kwavers_medium::properties::coefficient_of_nonlinearity(b_over_a) = 1 + B/(2A)`.
 
 ---
 

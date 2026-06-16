@@ -193,6 +193,16 @@ pub fn plane_wave_intensity(pressure_amplitude: f64, impedance: f64) -> f64 {
     }
 }
 
+/// Coefficient of nonlinearity `β = 1 + B/(2A)` from the parameter of
+/// nonlinearity `B/A` (Chapter 3 Definition 3.2) — the workspace SSOT for this
+/// conversion. `β` is the coefficient in the Westervelt/Burgers nonlinear term;
+/// e.g. water `B/A ≈ 5` ⇒ `β ≈ 3.5`.
+#[inline]
+#[must_use]
+pub fn coefficient_of_nonlinearity(b_over_a: f64) -> f64 {
+    1.0 + b_over_a / 2.0
+}
+
 impl AcousticMaterialProperties {
     /// Create material properties with core parameters
     #[must_use]
@@ -477,6 +487,14 @@ mod tests {
         assert!((i - p_rms * p_rms / z).abs() < 1e-3);
         // Non-positive impedance ⇒ 0.
         assert_eq!(plane_wave_intensity(amp, 0.0), 0.0);
+    }
+
+    /// Definition 3.2: β = 1 + B/(2A). Water B/A = 5 ⇒ β = 3.5; B/A = 0 ⇒ β = 1.
+    #[test]
+    fn coefficient_of_nonlinearity_matches_definition() {
+        assert!((coefficient_of_nonlinearity(5.0) - 3.5).abs() < 1e-12);
+        assert!((coefficient_of_nonlinearity(0.0) - 1.0).abs() < 1e-12);
+        assert!((coefficient_of_nonlinearity(9.6) - 5.8).abs() < 1e-12); // fat
     }
 
     #[test]

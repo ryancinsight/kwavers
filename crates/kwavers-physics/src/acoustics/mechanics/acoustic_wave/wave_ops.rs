@@ -65,8 +65,8 @@ pub fn compute_nonlinearity_coefficient<M: Medium + ?Sized>(
     z: f64,
     grid: &Grid,
 ) -> f64 {
-    // nonlinearity_parameter returns B/A; β = 1 + B/(2A)
+    // nonlinearity_parameter returns B/A; β = 1 + B/(2A) (Def 3.2, SSOT).
     let b_over_a =
         kwavers_medium::AcousticProperties::nonlinearity_parameter(medium, x, y, z, grid);
-    1.0 + b_over_a / 2.0
+    kwavers_medium::properties::coefficient_of_nonlinearity(b_over_a)
 }
