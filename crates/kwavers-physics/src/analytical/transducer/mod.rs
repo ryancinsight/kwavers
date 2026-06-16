@@ -7,6 +7,7 @@
 pub mod array_factor;
 pub mod beam;
 pub mod interpolation;
+pub mod optoacoustic;
 pub mod steering;
 
 pub use array_factor::{
@@ -22,6 +23,10 @@ pub use beam::{
     steered_beam_pattern_1d, steering_focus_point, steering_grating_lobe_ratio_1d,
 };
 pub use interpolation::bli_stencil_weights;
+pub use optoacoustic::{
+    acoustic_resolution_lateral, f_number_from_na, na_from_f_number,
+    numerical_aperture_from_geometry, soap_focal_gain,
+};
 pub use steering::electronic_steering_efficiency;
 
 #[cfg(test)]
