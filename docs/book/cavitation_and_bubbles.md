@@ -297,6 +297,13 @@ a tensile pressure $|P_B|$ must be applied to trigger unbounded growth. $\blacks
 
 *Figure 5.2: Computed from `kwavers_physics::acoustics::therapy::cavitation::constants`.*
 
+**Implementation.**  Both saddle-point quantities of Theorem 5.3 are in
+`kwavers_physics::acoustics::mechanics::cavitation`: `blake_threshold` returns the
+acoustic rarefaction amplitude $P_0 - P_B$, and `blake_critical_radius` returns
+the critical radius $R_c = R_0\sqrt{3 P_{g0} R_0/(2\sigma)}$ (value-tested
+$R_c > R_0$). The surface-tension-corrected Minnaert frequency (§5.5,
+Theorem 5.4) is `analytical::cavitation::minnaert_resonance_corrected_hz`.
+
 ---
 
 ## 5.5 Minnaert Resonance Frequency

@@ -12,7 +12,8 @@ pub use growth::rectified_diffusion_rate;
 pub use model::{CavitationCore, CavitationModel};
 pub use state::{CavitationDose, CavitationMechanicsState};
 pub use thresholds::{
-    blake_threshold, flynn_criterion, flynn_threshold, neppiras_threshold, ThresholdModel,
+    blake_critical_radius, blake_threshold, flynn_criterion, flynn_threshold, neppiras_threshold,
+    ThresholdModel,
 };
 
 #[cfg(test)]

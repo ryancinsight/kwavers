@@ -89,6 +89,34 @@ pub fn blake_threshold(
     (ambient_pressure - p_blake).max(0.0)
 }
 
+/// Blake critical radius `R_c` \[m]: the radius at which a gas nucleus of
+/// undeformed radius `initial_radius` crosses the static-stability saddle point
+/// and begins unbounded growth (Chapter 5 Theorem 5.3). Companion to
+/// [`blake_threshold`], which returns the pressure at the same saddle point.
+///
+/// ```text
+/// P_g0 = P_0 − P_v + 2σ/R_0           [Young-Laplace equilibrium gas pressure]
+/// R_c  = R_0 · √(3 P_g0 R_0 / (2σ))
+/// ```
+///
+/// `R_c > R_0` whenever `P_0 > P_v` (the bubble must grow past equilibrium to go
+/// unstable). Returns `f64::INFINITY` for non-positive surface tension or radius
+/// (no restoring curvature ⇒ no finite saddle).
+#[must_use]
+pub fn blake_critical_radius(
+    surface_tension: f64,  // [N/m]
+    initial_radius: f64,   // [m]
+    ambient_pressure: f64, // [Pa]
+    vapor_pressure: f64,   // [Pa]
+) -> f64 {
+    if surface_tension <= 0.0 || initial_radius <= 0.0 {
+        return f64::INFINITY;
+    }
+    let p_g0 = (ambient_pressure - vapor_pressure + 2.0 * surface_tension / initial_radius)
+        .max(f64::EPSILON);
+    initial_radius * (3.0 * p_g0 * initial_radius / (2.0 * surface_tension)).sqrt()
+}
+
 /// Calculate Neppiras threshold
 /// Based on Neppiras (1980): "Acoustic cavitation"
 #[must_use]
@@ -170,6 +198,25 @@ mod tests {
         assert!(got > 0.0, "Blake threshold must be positive (got {got:.1})");
         // Range check: threshold > (P₀ − Pᵥ) because surface tension adds a positive offset.
         assert!(got > P0 - PV - 1.0, "Blake > P_0 − P_v for finite R_0");
+    }
+
+    /// Blake critical radius R_c = R_0·√(3 P_g0 R_0/(2σ)) (Theorem 5.3), the
+    /// companion saddle-point quantity to the Blake threshold.
+    #[test]
+    fn blake_critical_radius_matches_theorem() {
+        let p_g0 = P0 - PV + 2.0 * SIGMA / R0;
+        let expected = R0 * (3.0 * p_g0 * R0 / (2.0 * SIGMA)).sqrt();
+        let got = blake_critical_radius(SIGMA, R0, P0, PV);
+        assert!(
+            (got - expected).abs() < 1e-15,
+            "R_c: got {got:e} expected {expected:e}"
+        );
+        // The critical radius exceeds the equilibrium radius (the bubble must grow
+        // past equilibrium to cross the instability saddle).
+        assert!(got > R0, "Blake critical radius {got:e} must exceed R_0 {R0:e}");
+        // Non-physical surface tension / radius ⇒ no finite saddle.
+        assert!(blake_critical_radius(0.0, R0, P0, PV).is_infinite());
+        assert!(blake_critical_radius(SIGMA, 0.0, P0, PV).is_infinite());
     }
 
     /// Neppiras threshold: P_N = 0.5 · ((P₀ − Pᵥ) + 2σ/R₀).
