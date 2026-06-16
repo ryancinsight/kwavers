@@ -921,7 +921,7 @@ requires:
 5. Verify that the $\Omega = 1$ boundary is within the target and that the
    thermal margin at sensitive structures (nerves, vessels) is CEM43 $< 1\;\text{min}$.
 
-This pipeline is implemented in `kwavers_clinical::therapy::hifu_planning` with
+This pipeline is implemented in `kwavers_therapy::therapy::hifu_planning` with
 the thermal coupling solver in `kwavers_physics::thermal::coupling`.
 
 ### 16.12.2 Tissue Selectivity
