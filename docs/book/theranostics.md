@@ -79,12 +79,15 @@ Output: P_{n+1}
 (PRF) in water-containing tissues shifts linearly with temperature:
 
 ```
-f_MR(T) = f_0(1 − α_PRFS T)    α_PRFS ≈ −0.0102 ppm/°C                 (13.1)
+f_MR(T) = f_0(1 + α_PRFS T)    α_PRFS ≈ −0.0102 ppm/°C                 (13.1)
 ```
+
+Because `α_PRFS < 0`, the proton resonance frequency *falls* as the tissue heats.
 
 *Proof.* Hydrogen bonding in liquid water modulates the electron shielding constant σ_c.
 The temperature coefficient of σ_c is α_PRFS = dσ_c/dT, which is empirically −0.0102 ppm/°C
-for aqueous tissue (De Poorter 1995). The frequency shift Δf = f_0 α_PRFS ΔT. □
+for aqueous tissue (De Poorter 1995). The frequency shift is therefore
+Δf = f_0 α_PRFS ΔT (negative for heating), consistent with the sign of (13.2). □
 
 Phase difference between reference and post-heating MR images gives ΔT:
 
@@ -234,6 +237,7 @@ dynamics in `kwavers_therapy::therapy::lithotripsy::cavitation_cloud` (`Cavitati
 
 | Concept | kwavers module | Key struct |
 |---------|---------------|------------|
+| MR thermometry (PRFS, Thm 13.1, Eq. 13.2) | `kwavers_physics::analytical::thermal` | `prfs_phase_shift`, `prfs_temperature_change`, `PRFS_COEFFICIENT_PER_C` |
 | Bubble ODE (Rayleigh–Plesset, Keller–Miksis) | `kwavers_physics::acoustics::bubble_dynamics::{rayleigh_plesset, keller_miksis}` | `RayleighPlessetSolver`, `KellerMiksisModel` |
 | Passive cavitation detection (SC/IC) | `kwavers_physics::acoustics::bubble_dynamics::cavitation_control::detection` | `BroadbandDetector` / `SpectralDetector` / `SubharmonicDetector` |
 | Microbubble dynamics | `kwavers_therapy::therapy::microbubble_dynamics::service` | `MicrobubbleDynamicsService` |

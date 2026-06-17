@@ -324,3 +324,52 @@ pub fn adiabatic_temperature_rise_kelvin(
     let n = q_arr.len().min(tau_arr.len());
     (0..n).map(|i| q_arr[i] * tau_arr[i] * inv_rho_cp).collect()
 }
+
+// ─── MR thermometry (proton resonance frequency shift) ────────────────────────
+
+/// Proton-resonance-frequency-shift (PRFS) thermal coefficient of aqueous
+/// tissue, `α_PRFS ≈ −0.0102 ppm/°C` (De Poorter 1995), as a *signed fractional*
+/// shift per degree Celsius. Negative: the water-proton resonance frequency
+/// falls as the tissue heats.
+pub const PRFS_COEFFICIENT_PER_C: f64 = -0.0102e-6;
+
+/// MR phase shift [rad] accumulated over echo time `te_s` for a temperature
+/// change `dt_c`, by the PRFS method (book §13.3):
+///
+/// ```text
+/// Δφ = 2π·f₀·α_PRFS·ΔT·TE.
+/// ```
+///
+/// `larmor_freq_hz` is the proton Larmor frequency `f₀` (≈127.7 MHz at 3 T). The
+/// forward map of [`prfs_temperature_change`]. With `α_PRFS < 0` a positive `ΔT`
+/// gives a negative phase shift (the resonance frequency drops on heating).
+#[must_use]
+#[inline]
+pub fn prfs_phase_shift(dt_c: f64, larmor_freq_hz: f64, alpha_prfs_per_c: f64, te_s: f64) -> f64 {
+    2.0 * PI * larmor_freq_hz * alpha_prfs_per_c * dt_c * te_s
+}
+
+/// Temperature change [°C] recovered from an MR phase difference by the PRFS
+/// method (book Eq. 13.2):
+///
+/// ```text
+/// ΔT = Δφ / (2π·f₀·α_PRFS·TE).
+/// ```
+///
+/// Inverse of [`prfs_phase_shift`]. Returns `0.0` when the denominator vanishes
+/// (zero frequency, coefficient, or echo time).
+#[must_use]
+#[inline]
+pub fn prfs_temperature_change(
+    phase_change_rad: f64,
+    larmor_freq_hz: f64,
+    alpha_prfs_per_c: f64,
+    te_s: f64,
+) -> f64 {
+    let denom = 2.0 * PI * larmor_freq_hz * alpha_prfs_per_c * te_s;
+    if denom == 0.0 {
+        0.0
+    } else {
+        phase_change_rad / denom
+    }
+}

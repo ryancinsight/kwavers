@@ -222,3 +222,40 @@ fn acoustic_intensity_heat_source_identity() {
         2.0 * alpha * i
     );
 }
+
+// 3 T proton Larmor frequency [Hz] and a typical PRFS echo time [s].
+const LARMOR_3T_HZ: f64 = 127.7e6;
+const PRFS_TE_S: f64 = 15.0e-3;
+
+#[test]
+fn prfs_round_trip_recovers_temperature() {
+    // Phase produced by a known ΔT must invert back to that ΔT (Eqs. 13.1–13.2).
+    let dt = 10.0_f64;
+    let phase = prfs_phase_shift(dt, LARMOR_3T_HZ, PRFS_COEFFICIENT_PER_C, PRFS_TE_S);
+    let recovered = prfs_temperature_change(phase, LARMOR_3T_HZ, PRFS_COEFFICIENT_PER_C, PRFS_TE_S);
+    assert!((recovered - dt).abs() < 1e-9, "recovered {recovered} != {dt}");
+}
+
+#[test]
+fn prfs_heating_lowers_resonance_and_stays_unwrapped() {
+    // Heating (ΔT > 0) with α_PRFS < 0 gives a negative phase shift (the PRF
+    // drops), and 10 °C at 3 T / 15 ms TE is ≈ −1.23 rad — well inside (−π, π),
+    // so the phase does not wrap.
+    let phase = prfs_phase_shift(10.0, LARMOR_3T_HZ, PRFS_COEFFICIENT_PER_C, PRFS_TE_S);
+    assert!(phase < 0.0, "phase {phase} should be negative on heating");
+    assert!((phase + 1.228).abs() < 0.01, "phase {phase} != −1.228 rad");
+    assert!(phase.abs() < std::f64::consts::PI, "phase wraps");
+    // Linear in ΔT: doubling the temperature doubles the phase.
+    let phase2 = prfs_phase_shift(20.0, LARMOR_3T_HZ, PRFS_COEFFICIENT_PER_C, PRFS_TE_S);
+    assert!((phase2 - 2.0 * phase).abs() < 1e-12);
+}
+
+#[test]
+fn prfs_temperature_change_handles_degenerate_inputs() {
+    // Zero echo time (or zero coefficient) ⇒ no phase-to-temperature mapping.
+    assert_eq!(
+        prfs_temperature_change(1.0, LARMOR_3T_HZ, PRFS_COEFFICIENT_PER_C, 0.0),
+        0.0
+    );
+    assert_eq!(prfs_temperature_change(1.0, LARMOR_3T_HZ, 0.0, PRFS_TE_S), 0.0);
+}
