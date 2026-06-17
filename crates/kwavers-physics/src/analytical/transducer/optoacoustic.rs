@@ -211,9 +211,9 @@ pub fn focused_aperture_gain(active_area_m2: f64, wavelength_m: f64, focal_dista
 /// p_focus = p₀ · G_focus,   G_focus = (n · A_element) / (λ · F_focus).
 /// ```
 ///
-/// Combines the per-fiber optoacoustic surface pressure (`p₀ = Γ μ_a F`, from
+/// Combines the per-element optoacoustic surface pressure (`p₀ = Γ μ_a F`, from
 /// [`fiber_tip_fluence`] and the emitter material) with the array focal gain
-/// ([`focused_aperture_gain`]). This is the design relation for an endovascular
+/// ([`focused_aperture_gain`]). This is the design relation for a delay-focused
 /// fiber-optoacoustic matrix array.
 #[must_use]
 pub fn optoacoustic_array_focal_pressure(
@@ -345,39 +345,32 @@ mod tests {
     }
 
     #[test]
-    fn endovascular_96_fiber_array_reaches_one_mpa() {
-        // 96 fibers, 100 µm core, coherently focused 5 mm into cortex at 15 MHz
-        // (λ ≈ 103 µm in tissue, c = 1540 m/s). A modest per-fiber surface
-        // pressure of 0.7 MPa — reached at ≈2.5 mJ/cm² on a CS-PDMS tip, far
-        // below the absorber's tens-of-mJ/cm² damage fluence — clears 1 MPa.
+    fn dense_fiber_array_reaches_one_mpa_at_short_focus() {
+        // 96 fibers, 100 µm core, coherently focused 5 mm into tissue at 15 MHz
+        // (λ ≈ 103 µm, c = 1540 m/s). A modest per-element surface pressure of
+        // 0.7 MPa — reached at ≈2.5 mJ/cm² on a CS-PDMS tip, far below the
+        // absorber's tens-of-mJ/cm² damage fluence — clears 1 MPa.
         let element_area = std::f64::consts::PI * (50e-6_f64).powi(2);
         let lambda = 1540.0 / (15.0 * MHZ_TO_HZ);
         let p_focus = optoacoustic_array_focal_pressure(0.7e6, 96, element_area, lambda, 5e-3);
         assert!(p_focus >= 1.0e6, "focal pressure {p_focus} Pa < 1 MPa");
-        // Headroom: a damage-safe 3 MPa per-fiber surface pressure exceeds 4 MPa
-        // at the focus.
+        // Headroom: a damage-safe 3 MPa per-element surface pressure exceeds
+        // 4 MPa at the focus.
         let p_hot = optoacoustic_array_focal_pressure(3.0e6, 96, element_area, lambda, 5e-3);
         assert!(p_hot > 4.0e6, "hot-case focal pressure {p_hot} Pa");
-
-        // Geometric fit: 96 fibers of 125 µm cladding occupy less than the lumen
-        // of a 1.6 mm (≈6 Fr) catheter — fill factor < 1.
-        let fiber_area = std::f64::consts::PI * (62.5e-6_f64).powi(2);
-        let lumen_area = std::f64::consts::PI * (0.8e-3_f64).powi(2);
-        let fill = 96.0 * fiber_area / lumen_area;
-        assert!(fill < 1.0, "catheter fill factor {fill} ≥ 1 (does not fit)");
     }
 
     #[test]
-    fn endovascular_5mhz_array_reaches_one_mpa() {
-        // A 3–5 MHz design (CNT-/CNP-PDMS, λ ≈ 308 µm in tissue at 5 MHz) loses
-        // focal gain relative to 15 MHz (G ∝ 1/λ ∝ f), so it focuses closer
-        // (3 mm) to keep G_focus near unity. 96×100 µm cores then reach 1 MPa at
-        // a damage-safe ~1.25 MPa per fiber (≈4.5 mJ/cm²).
+    fn low_frequency_array_focuses_closer_for_one_mpa() {
+        // A 3–5 MHz design (CNT-/CNP-PDMS, λ ≈ 308 µm at 5 MHz) loses focal gain
+        // relative to 15 MHz (G ∝ 1/λ ∝ f), so it focuses closer (3 mm) to keep
+        // G_focus near unity. 96×100 µm cores then reach 1 MPa at a damage-safe
+        // ~1.25 MPa per element (≈4.5 mJ/cm²).
         let element_area = std::f64::consts::PI * (50e-6_f64).powi(2);
         let lambda = 1540.0 / (5.0 * MHZ_TO_HZ);
         let p_focus = optoacoustic_array_focal_pressure(1.25e6, 96, element_area, lambda, 3e-3);
         assert!(p_focus >= 1.0e6, "5 MHz focal pressure {p_focus} Pa < 1 MPa");
-        // The lower-frequency gain is below the 15 MHz device, as expected.
+        // The lower-frequency gain is below the 15 MHz case, as expected.
         let lambda_15 = 1540.0 / (15.0 * MHZ_TO_HZ);
         let g5 = focused_aperture_gain(96.0 * element_area, lambda, 3e-3);
         let g15 = focused_aperture_gain(96.0 * element_area, lambda_15, 3e-3);
@@ -385,13 +378,12 @@ mod tests {
     }
 
     #[test]
-    fn imec_footprint_array_reaches_one_mpa_at_40mm() {
-        // IMEC form factor: a 24 mm × 5 mm strip of 96 elements travelling along
-        // the SSS, focused 40 mm into the brain at 5 MHz (λ ≈ 308 µm). At this
-        // long focus a SPARSE bundle of bare 100 µm fiber tips collapses
-        // (A_active ≈ 0.75 mm² ⇒ G ≈ 0.06, p₀ would exceed the damage limit), so
-        // the 96 elements must be sub-aperture optoacoustic TILES that fill the
-        // face — exactly the IMEC channel layout.
+    fn filled_aperture_beats_sparse_tips_at_deep_focus() {
+        // A 24 mm × 5 mm strip of 96 elements focused 40 mm deep at 5 MHz
+        // (λ ≈ 308 µm). At this long focus a SPARSE bundle of bare 100 µm fiber
+        // tips collapses (A_active ≈ 0.75 mm² ⇒ G ≈ 0.06, p₀ would exceed the
+        // damage limit), so the 96 elements must be sub-aperture TILES that fill
+        // the face.
         let lambda = 1540.0 / (5.0 * MHZ_TO_HZ);
         let f_focus = 40e-3;
 
@@ -412,5 +404,25 @@ mod tests {
         let p_focus = optoacoustic_array_focal_pressure(0.6e6, 96, tile_area, lambda, f_focus);
         assert!(p_focus >= 3.0e6, "filled-aperture focal pressure {p_focus} Pa");
         assert!(p_focus / 3.0 >= 1.0e6, "3× anisotropy derate still < 1 MPa");
+    }
+
+    #[test]
+    fn optoacoustic_array_has_no_focal_gain_advantage_over_piezo() {
+        // Proof that an optoacoustic array does not out-perform a piezoelectric
+        // array of the same geometry: the focused-aperture gain A/(λF) is pure
+        // diffraction, independent of the transduction mechanism, so the focal
+        // pressure ratio of two same-geometry arrays equals their surface-
+        // pressure ratio. A piezo element's surface pressure (several MPa)
+        // exceeds the optoacoustic p₀ = Γμ_aF (sub-MPa at damage-safe fluence),
+        // hence the piezo array focuses HIGHER pressure, not lower.
+        let (a_active, lambda, f) = (7.5e-5, 308e-6, 40e-3);
+        let g = focused_aperture_gain(a_active, lambda, f);
+        let (p0_oa, p0_piezo) = (0.6e6, 3.0e6); // surface pressures
+        let p_oa = p0_oa * g;
+        let p_piezo = p0_piezo * g;
+        // Identical gain ⇒ focal ratio equals the surface-pressure ratio.
+        assert!((p_piezo / p_oa - p0_piezo / p0_oa).abs() < 1e-9);
+        // Piezo wins at equal geometry — no optoacoustic focusing advantage.
+        assert!(p_piezo > p_oa);
     }
 }

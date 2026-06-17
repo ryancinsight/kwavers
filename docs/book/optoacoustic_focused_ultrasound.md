@@ -258,15 +258,14 @@ Each row is checked by a value-semantic test in the corresponding crate
 `OptoacousticEmitter::focal_pressure` against the 48 MPa calibration). This is
 empirical-tier agreement with the published device.
 
-## 34.11 Fiber-Optic Optoacoustic Emitters and Endovascular Matrix Arrays
+## 34.11 Fiber-Optic Optoacoustic Emitters and Delay-Focused Arrays
 
 The SOAP focuses a large curved aperture from outside the head. The same
 optoacoustic conversion can instead be delivered through an **optical fiber**:
 coat a fiber tip with the CS-PDMS absorber, send the nanosecond pulse down the
 core, and the tip becomes a millimetre- or micrometre-scale ultrasound source.
-Fiber emitters trade the SOAP's transcranial reach for miniaturisation and direct
-placement — exactly what an intravascular or stereotactic probe needs (these
-emitters must be implanted, since they exploit near-field ultrasound).
+Fiber emitters trade the SOAP's transcranial reach for miniaturisation and
+contact placement (Jiang et al. 2020; Shi et al. 2021).
 
 ### 34.11.1 How a Fiber Reaches High Pressure: Fluence Concentration
 
@@ -307,21 +306,11 @@ the limit is not the optics but the mechanical robustness and uniformity of the
 absorber coating and heat dissipation at the tip. Robust emitters use 50–200 µm
 cores; tapered designs reach the tens-of-µm regime for single-cell work.
 
-### 34.11.3 An Endovascular 96-Element Fiber Matrix Array
+### 34.11.3 Delay-Focused Fiber Arrays and the Comparison with Piezo
 
-Miniaturisation makes a *matrix* of fibers in a catheter feasible — a sparse,
-delay-focused optoacoustic array placed inside a vessel and focused a few
-millimetres into adjacent tissue. Two questions decide feasibility.
-
-**Geometry.** A 96-element matrix (a 10×10 grid less the corners) of standard
-125 µm-clad fibers occupies `96·π(62.5\,\mu m)^2 ≈ 1.18\,\text{mm}^2`, which fits
-the `π(0.8\,\text{mm})^2 ≈ 2.0\,\text{mm}^2` lumen of a 1.6 mm (≈6 French)
-catheter at a 0.59 fill factor — comfortably, with thinner (80 µm) cladding
-giving more room still.
-
-**Pressure.** Per-element laser delays focus the pulses coherently at a chosen
-depth. The focal gain of a delay-focused planar aperture of active radiating area
-`A_\text{active}` is
+Multiple fiber emitters fired with per-element laser delays form a delay-focused
+optoacoustic array. The focal gain of a delay-focused planar aperture of active
+radiating area `A_\text{active}` is
 
 ```math
 G_\text{focus} = \frac{A_\text{active}}{\lambda\,F_\text{focus}},               (34.8)
@@ -334,23 +323,31 @@ so the array focal pressure is
 p_\text{focus} = p_0\,\frac{n\,A_\text{element}}{\lambda\,F_\text{focus}}.       (34.9)
 ```
 
-(`optoacoustic_array_focal_pressure`). For 96 fibers of 100 µm core focused
-`F_\text{focus} = 5\,\text{mm}` into cortex at 15 MHz (`λ = c/f = 1540/15\,\text{MHz}
-≈ 103\,\mu m`), the gain is `G_\text{focus} ≈ 1.47`. Reaching the **1 MPa** target
-therefore requires only a per-fiber surface pressure of `p_0 = 1\,\text{MPa}/1.47
-≈ 0.68\,\text{MPa}` — `≈ 2.5\,\text{mJ cm}^{-2}` per tip, well inside the
-damage-safe range. At a damage-safe 3 MPa per tip the focus exceeds 4 MPa, giving
-wide therapeutic headroom.
+(`optoacoustic_array_focal_pressure`).
 
-**Conclusion.** A 96-fiber CS-PDMS matrix array fits a 6 Fr catheter and reaches
-≥1 MPa several millimetres from the vessel wall at modest, damage-safe per-fiber
-fluence — confirmed by the value-semantic test
-`endovascular_96_fiber_array_reaches_one_mpa`. The cost of the sparse layout is
-grating-lobe sidelobes (the 100 µm tips are spaced wider than `λ/2`, the
-condition of §6.9); aperiodic fiber placement suppresses them, and for
-neuromodulation the main-focus pressure governs activation. The result is a
-physically realisable all-optical, metal-free, MRI-compatible endovascular
-neuromodulation probe.
+**The array has no focusing advantage over a piezoelectric transducer.** Equation
+(34.8) is pure diffraction — it depends only on aperture area, wavelength, and
+focal distance — so an optoacoustic and a piezo array of the *same* geometry and
+frequency share the *same* focal gain. Per element the optoacoustic source is the
+weaker of the two: its surface pressure `p_0 = Γ μ_a F` (with `Γ ≈ 0.1–0.2`) is a
+fraction of a megapascal at damage-safe fluence, below the several megapascals a
+piezo element delivers, and its optical→acoustic conversion efficiency is on the
+order of 0.1 % against tens of percent for piezo. The optoacoustic advantage is
+therefore not acoustic output but integration — no metal, no wires, no electrical
+leakage or dielectric breakdown, MRI compatibility, broadband single-cycle
+pulses. The genuine *acoustic* edge (§34.4) is confined to the high-NA **curved**
+SOAP, where the soft absorber reaches `NA ≈ 0.95` that a crack-prone piezo cannot;
+it does not carry over to a flat array.
+
+**Radiating-area requirement.** Because the focal gain scales with the total
+*radiating* area, an array must fill its aperture to focus at depth: a sparse
+bundle of bare ~100 µm fiber tips has negligible active area and a focal gain well
+below unity at a centimetre-scale focus, whereas tiling the aperture with
+sub-aperture optoacoustic patches recovers `G ≈ A/(λF)`. The
+`focused_aperture_gain` / `optoacoustic_array_focal_pressure` kernels make this
+explicit, and the sparse-versus-filled contrast — including the source-agnostic
+equality with a same-geometry piezo array — is exercised by the module's
+value-semantic tests.
 
 ## 34.12 Figure Generation
 
