@@ -251,47 +251,42 @@ minimum external pressure required to prevent unbounded bubble growth (the Blake
 threshold) is*
 
 $$
-P_B = p_0 - \frac{4\sigma}{3}
-\left(\frac{3 p_{g0}}{8\sigma}\right)^{1/3}\!\!\cdot
-\!\left(\frac{R_0^3\, p_{g0}}{p_0 + 2\sigma/R_0}\right)^{-1/3}
+P_B = -\frac{4\sigma}{3R_0}\sqrt{\frac{2\sigma}{3\,p_{g0}\,R_0}}
+\qquad (p_{g0} = p_0 + 2\sigma/R_0)
 \tag{5.4}
 $$
 
-*or, equivalently, the Blake critical radius is*
+*attained at the Blake critical radius*
 
 $$
-R^* = \sqrt{\frac{3 p_{g0} R_0^3}{2\sigma/R_0 + p_0}}\cdot
-\left(\frac{2\sigma}{3 p_{g0}}\right)^{1/2}.
+R^* = R_0\sqrt{\frac{3\,p_{g0}\,R_0}{2\sigma}}
+    = \sqrt{\frac{3\,p_{g0}\,R_0^3}{2\sigma}} \;>\; R_0 .
 \tag{5.5}
 $$
 
-*Proof.* At the turning point of $p_\infty(R)$, both
-$dp_\infty/dR = 0$ and $p_\infty$ is at its minimum.  From (5.3) with $\gamma=1$:
+*Proof.* At the turning point of the static equilibrium pressure
+$p_\infty(R) = p_{g0}(R_0/R)^3 - 2\sigma/R$ (Eq. 5.3 with $\gamma = 1$),
 
 $$
 \frac{dp_\infty}{dR}
 = -\frac{3 p_{g0} R_0^3}{R^4} + \frac{2\sigma}{R^2} = 0
-\implies R^{*2} = \frac{3 p_{g0} R_0^3}{2\sigma}.
+\implies R^{*2} = \frac{3 p_{g0} R_0^3}{2\sigma},
 $$
 
-Substituting $R^*$ into (5.3):
+which is (5.5). Evaluating $p_\infty$ at $R^*$ and using
+$(R_0/R^*)^3 = R_0^3/(R^{*2} R^*) = 2\sigma/(3 p_{g0} R^*)$, so that
+$p_{g0}(R_0/R^*)^3 = 2\sigma/(3R^*)$,
 
 $$
-P_B = p_{g0}\left(\frac{R_0}{R^*}\right)^3 - \frac{2\sigma}{R^*}.
+P_B = p_\infty(R^*) = \frac{2\sigma}{3R^*} - \frac{2\sigma}{R^*}
+     = -\frac{4\sigma}{3R^*},
 $$
 
-Using $R^{*3} = (R^{*2})(R^{*}) = (3p_{g0}R_0^3/2\sigma)R^*$ and
-$(R_0/R^*)^3 = 2\sigma R^{*} / (3 p_{g0} R_0^3)$ is cumbersome; the compact
-form follows from eliminating $R^*$ algebraically.  With
-$p_{g0} = p_0 + 2\sigma/R_0$:
-
-$$
-P_B = \frac{4\sigma}{3R^*} - p_0,
-\quad R^* = \left(\frac{3p_{g0}R_0^3}{2\sigma}\right)^{1/2},
-$$
-
-which yields (5.4) after substituting and simplifying.  Negative $P_B$ means
-a tensile pressure $|P_B|$ must be applied to trigger unbounded growth. $\blacksquare$
+and substituting $R^* = R_0\sqrt{3 p_{g0} R_0/(2\sigma)}$ gives (5.4). Since
+$P_B < 0$, a *tensile* (rarefactional) pressure is required; the acoustic
+amplitude threshold is $p_0 - P_B = p_0 + 4\sigma/(3R^*)$ — the quantity
+`blake_threshold` returns, which additionally carries the vapour pressure
+($p_0 \to p_0 - p_v$ inside $p_{g0}$, and $+p_v$ in $P_B$). $\blacksquare$
 
 ![Static equilibrium curve $p_\infty(R)$ for an air bubble in water at 1 atm.  The Blake threshold $P_B$ marks the turning point; no static equilibrium exists below this pressure.](figures/ch09/fig03_blake_threshold.png)
 
