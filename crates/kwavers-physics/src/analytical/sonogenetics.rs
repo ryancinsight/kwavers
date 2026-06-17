@@ -1,7 +1,8 @@
-//! Sonogenetics physics for book chapter ch18.
+//! Sonogenetics physics for book chapter ch17.
 //!
-//! Covers: Hill activation probability, acoustic radiation force,
-//! acoustic streaming velocity, and ISPTA calculation.
+//! Covers: Hill activation probability, acoustic radiation force (bulk
+//! absorption and the Gorkov/Yosioka–Kawasima force on a small cell), acoustic
+//! streaming velocity, and ISPTA calculation.
 
 // ─── Hill activation ──────────────────────────────────────────────────────────
 
@@ -88,6 +89,83 @@ pub fn radiation_force_1d(intensity_w_m2: &[f64], alpha_np_m: f64, c: f64) -> Ve
             }
         })
         .collect()
+}
+
+// ─── Gorkov / Yosioka–Kawasima force on a small cell ──────────────────────────
+
+/// Monopole (compressibility) acoustic contrast factor `f₁ = 1 − κ̃`, where
+/// `κ̃ = κ_cell/κ_medium` is the compressibility ratio (Gorkov 1962, Eq. 17.3).
+#[must_use]
+#[inline]
+pub fn acoustic_monopole_contrast(compressibility_ratio: f64) -> f64 {
+    1.0 - compressibility_ratio
+}
+
+/// Dipole (density) acoustic contrast factor `f₂ = 2(ρ̃ − 1)/(2ρ̃ + 1)`, where
+/// `ρ̃ = ρ_cell/ρ_medium` is the density ratio (Gorkov 1962, Eq. 17.3).
+#[must_use]
+#[inline]
+pub fn acoustic_dipole_contrast(density_ratio: f64) -> f64 {
+    let denom = 2.0 * density_ratio + 1.0;
+    if denom == 0.0 {
+        0.0
+    } else {
+        2.0 * (density_ratio - 1.0) / denom
+    }
+}
+
+/// Gorkov acoustic radiation potential `U` [J] of a small sphere (`r ≪ λ`, e.g.
+/// a cell) in a field with mean-square pressure `⟨p²⟩` and velocity `⟨v²⟩`
+/// (Gorkov 1962; Yosioka–Kawasima 1955):
+///
+/// ```text
+/// U = (2π r³/3)·[ f₁·⟨p²⟩/(ρ_m c_m²) − (3/2)·f₂·ρ_m·⟨v²⟩ ].
+/// ```
+#[must_use]
+pub fn gorkov_potential(
+    radius_m: f64,
+    mean_pressure_sq: f64,
+    mean_velocity_sq: f64,
+    rho_medium: f64,
+    c_medium: f64,
+    density_ratio: f64,
+    compressibility_ratio: f64,
+) -> f64 {
+    let f1 = acoustic_monopole_contrast(compressibility_ratio);
+    let f2 = acoustic_dipole_contrast(density_ratio);
+    let prefactor = 2.0 * std::f64::consts::PI * radius_m.powi(3) / 3.0;
+    let monopole = f1 * mean_pressure_sq / (rho_medium * c_medium * c_medium);
+    let dipole = 1.5 * f2 * rho_medium * mean_velocity_sq;
+    prefactor * (monopole - dipole)
+}
+
+/// One-dimensional primary acoustic radiation force `F = −dU/dx` [N] on a small
+/// sphere, from the spatial gradients of `⟨p²⟩` and `⟨v²⟩` (Yosioka–Kawasima /
+/// Gorkov, the corrected Eq. 17.2):
+///
+/// ```text
+/// F = −(2π r³/3)·[ f₁·d⟨p²⟩/dx / (ρ_m c_m²) − (3/2)·f₂·ρ_m·d⟨v²⟩/dx ].
+/// ```
+///
+/// A positive-contrast cell (`f₁, f₂ > 0`, denser and stiffer than the medium)
+/// is driven toward the pressure node of a standing wave; a negative-contrast
+/// inclusion (e.g. a gas bubble, `κ̃ > 1`) is driven toward the antinode.
+#[must_use]
+pub fn gorkov_radiation_force_1d(
+    radius_m: f64,
+    grad_pressure_sq: f64,
+    grad_velocity_sq: f64,
+    rho_medium: f64,
+    c_medium: f64,
+    density_ratio: f64,
+    compressibility_ratio: f64,
+) -> f64 {
+    let f1 = acoustic_monopole_contrast(compressibility_ratio);
+    let f2 = acoustic_dipole_contrast(density_ratio);
+    let prefactor = 2.0 * std::f64::consts::PI * radius_m.powi(3) / 3.0;
+    let monopole = f1 * grad_pressure_sq / (rho_medium * c_medium * c_medium);
+    let dipole = 1.5 * f2 * rho_medium * grad_velocity_sq;
+    -prefactor * (monopole - dipole)
 }
 
 // ─── Acoustic streaming ───────────────────────────────────────────────────────
@@ -518,5 +596,47 @@ mod tests {
             end < 0.05 * peak,
             "expression must wash out: {end} vs peak {peak}"
         );
+    }
+
+    #[test]
+    fn acoustic_contrast_factors_match_known_limits() {
+        // Density-matched, compressibility-matched ⇒ both factors vanish.
+        assert!((acoustic_monopole_contrast(1.0)).abs() < 1e-12);
+        assert!((acoustic_dipole_contrast(1.0)).abs() < 1e-12);
+        // Rigid-limit dipole factor saturates at 1 as ρ̃ → ∞.
+        assert!(acoustic_dipole_contrast(1.0e9) > 0.999);
+        // ρ̃ = 2 ⇒ f₂ = 2(1)/5 = 0.4.
+        assert!((acoustic_dipole_contrast(2.0) - 0.4).abs() < 1e-12);
+        // A typical cell (slightly denser, slightly stiffer than water) has a
+        // small positive contrast ⇒ migrates to the pressure node.
+        let (f1, f2) = (acoustic_monopole_contrast(0.95), acoustic_dipole_contrast(1.05));
+        let phi = f1 / 3.0 + f2 / 2.0; // acoustophoretic contrast Φ
+        assert!(phi > 0.0, "cell contrast Φ = {phi} should be positive");
+    }
+
+    #[test]
+    fn gorkov_force_pushes_positive_contrast_to_pressure_node() {
+        // In a region where ⟨p²⟩ increases (∇⟨p²⟩ > 0), a positive-monopole-
+        // contrast cell feels a force toward decreasing ⟨p²⟩ (the node): F < 0.
+        let (rho, c) = (1000.0, 1500.0);
+        let f = gorkov_radiation_force_1d(5e-6, 1.0e6, 0.0, rho, c, 1.05, 0.9);
+        assert!(f < 0.0, "positive-contrast cell must move toward node, F = {f}");
+        // A gas bubble (κ̃ > 1 ⇒ f₁ < 0) reverses the sign — toward the antinode.
+        let f_bubble = gorkov_radiation_force_1d(5e-6, 1.0e6, 0.0, rho, c, 0.1, 50.0);
+        assert!(f_bubble > 0.0, "bubble must move toward antinode, F = {f_bubble}");
+    }
+
+    #[test]
+    fn gorkov_force_is_negative_gradient_of_potential() {
+        // F = −dU/dx: a finite-difference of the potential through a linear
+        // ⟨p²⟩ ramp must match the closed-form force to high precision.
+        let (rho, c, r, rho_t, kappa_t) = (1000.0, 1500.0, 5e-6, 1.05, 0.9);
+        let dx = 1e-4;
+        let (p_lo, p_hi) = (1.0e8, 1.0e8 + 2.0e6 * dx); // ⟨p²⟩ ramp, slope 2e6
+        let u_lo = gorkov_potential(r, p_lo, 0.0, rho, c, rho_t, kappa_t);
+        let u_hi = gorkov_potential(r, p_hi, 0.0, rho, c, rho_t, kappa_t);
+        let f_fd = -(u_hi - u_lo) / dx;
+        let f_cf = gorkov_radiation_force_1d(r, 2.0e6, 0.0, rho, c, rho_t, kappa_t);
+        assert!((f_fd - f_cf).abs() / f_cf.abs() < 1e-9, "F_fd {f_fd} != F_cf {f_cf}");
     }
 }

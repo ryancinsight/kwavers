@@ -144,11 +144,12 @@ frequency ω, density contrast ρ̃ = ρ_cell/ρ_medium, and compressibility con
 κ̃ = κ_cell/κ_medium experiences an acoustic radiation force (time-averaged):
 
 ```text
-F_rad = (2π r³ / 3c) · [f_1 · κ̃ · d(P²)/dx − (3/2) f_2 · ρ̃ · d(v²)/dx]   (17.2)
+F_rad = −(2π r³ / 3) · [f_1 · d⟨p²⟩/dx / (ρ c²) − (3/2) f_2 · ρ · d⟨v²⟩/dx]   (17.2)
 ```
 
-where c is the medium sound speed, P is the acoustic pressure amplitude, v is the particle
-velocity amplitude, and the Gorkov coefficients are
+This is `F = −∇U` of the Gorkov potential derived below; `⟨p²⟩` and `⟨v²⟩` are the
+time-averaged mean-square pressure and velocity, `ρ` and `c` the medium density and
+sound speed, and the Gorkov contrast coefficients are
 
 ```text
 f_1 = 1 − κ̃,   f_2 = 2(ρ̃ − 1) / (2ρ̃ + 1).   (17.3)
@@ -570,7 +571,8 @@ Output: required acoustic parameters {f, p_neg, DC} achieving I_ion = I_thresh
 
 | Module path | Functionality |
 |---|---|
-| `kwavers_physics::acoustics::therapy::sonogenetics::arf_field` | Volumetric ARF accumulation and computation |
+| `kwavers_physics::acoustics::therapy::sonogenetics::arf_field` | Volumetric (bulk-absorption) ARF `F = 2αI/c` (Eq. 17.4) |
+| `kwavers_physics::analytical::sonogenetics` | Yosioka–Kawasima/Gorkov cell force: `acoustic_monopole_contrast`/`acoustic_dipole_contrast` (Eq. 17.3 `f₁,f₂`), `gorkov_potential`, `gorkov_radiation_force_1d` (Eq. 17.2) |
 | `kwavers_physics::acoustics::therapy::sonogenetics::membrane` | Laplace membrane tension; radiation pressure |
 | `kwavers_physics::acoustics::therapy::sonogenetics::channels::gating` | Boltzmann and pressure-threshold P_open |
 | `kwavers_physics::acoustics::therapy::sonogenetics::channels::current` | Ion current calculation |
