@@ -124,7 +124,7 @@ equation. Setting additionally δ = 0 recovers the lossless d'Alembertian. ∎
 
 **Lemma 3.2 (KZK paraxial reduction).** Applying the slowly-varying envelope approximation
 ∂²/∂z² ≈ 2k ∂/∂z to (3.5) for a beam propagating along z, then transforming to retarded
-time τ = t − z/c₀, recovers the KZK equation (Theorem 3.3 below). ∎
+time τ = t − z/c₀, recovers the KZK equation (Theorem 3.5 below). ∎
 
 ### 3.2.2 Diffusivity of Sound
 
@@ -279,13 +279,26 @@ with ∇⊥² = ∂²/∂x² + ∂²/∂y² the transverse Laplacian and τ the 
 ∇²p − (1/c₀²)∂²p/∂t² = (∂/∂z + (1/c₀)∂/∂t)(∂/∂z − (1/c₀)∂/∂t)p + ∇⊥²p
 ```
 
-*Step 2: Paraxial approximation.* For a wave traveling predominantly in +z:
-∂p/∂z ≈ −(1/c₀)∂p/∂t + slow envelope. The backward operator (∂/∂z + (1/c₀)∂/∂t)
-acts slowly compared to (∂/∂z − (1/c₀)∂/∂t). Applying the approximation
-(∂/∂z + (1/c₀)∂/∂t) ≈ 2(1/c₀)∂/∂τ and substituting τ = t − z/c₀ gives
+*Step 2: Paraxial approximation.* Transform to retarded coordinates
+(z, τ = t − z/c₀), under which ∂/∂t = ∂/∂τ and ∂/∂z|_t = ∂/∂z|_τ − (1/c₀)∂/∂τ.
+The two factors of the d'Alembertian become
 
 ```
-2(1/c₀)∂/∂τ · ∂p/∂z = ∇⊥²p + (δ/c₀⁴)∂³p/∂τ³ + (β/ρ₀c₀⁴)∂²(p²)/∂τ²
+(∂/∂z + (1/c₀)∂/∂t) = ∂/∂z|_τ                       (slow envelope derivative)
+(∂/∂z − (1/c₀)∂/∂t) = ∂/∂z|_τ − (2/c₀)∂/∂τ ≈ −(2/c₀)∂/∂τ   (fast, +z-traveling)
+```
+
+For a wave traveling predominantly in +z the envelope ∂/∂z|_τ is slow, so the
+forward factor is dominated by −(2/c₀)∂/∂τ. The d'Alembertian therefore reduces to
+
+```
+∇²p − (1/c₀²)∂²p/∂t² ≈ −(2/c₀) ∂²p/∂z∂τ + ∇⊥²p
+```
+
+Substituting into the Westervelt equation (3.5) and rearranging gives
+
+```
+(2/c₀) ∂²p/∂z∂τ = ∇⊥²p + (δ/c₀⁴)∂³p/∂τ³ + (β/ρ₀c₀⁴)∂²(p²)/∂τ²
 ```
 
 Multiply through by c₀/2 to obtain (3.17). □
