@@ -744,12 +744,16 @@ c(\omega) = \frac{\omega}{\text{Re}\,k^*(\omega)}
 $$
 
 $$
-\alpha(\omega) = \text{Im}[k^*(\omega)]
+\alpha(\omega) = -\,\text{Im}[k^*(\omega)]
 \approx \frac{\omega^2\tau}{2c_0}
 \quad (\omega\tau \ll 1),
 $$
 
-where $\tau = \eta/E$ and $c_0 = \sqrt{E/\rho_0}$.
+where $\tau = \eta/E$ and $c_0 = \sqrt{E/\rho_0}$. (We use the
+$e^{+\mathrm{i}\omega t}$ convention, so $E^* = E(1+\mathrm{i}\omega\tau)$ has a
+positive loss modulus $E'' = \omega\eta$ — §4.8.2 — and a forward wave
+$\propto e^{\mathrm{i}(\omega t - k^* x)}$ decays when $\text{Im}\,k^* < 0$;
+hence the absorption is $\alpha = -\text{Im}\,k^*$.)
 
 *Proof.* Write $E^* = E(1 + \mathrm{i}\omega\tau)$. Then
 
@@ -763,10 +767,12 @@ Expand $(1 + \mathrm{i}\omega\tau)^{-1/2} = 1 - \frac{\mathrm{i}\omega\tau}{2}
 $$
 k^* \approx \frac{\omega}{c_0}
 \left(1 - \frac{3(\omega\tau)^2}{8}\right)
-+ \mathrm{i}\frac{\omega^2\tau}{2c_0}.
+- \mathrm{i}\frac{\omega^2\tau}{2c_0}.
 $$
 
-Taking real and imaginary parts gives the stated approximations. $\square$
+Taking the real part gives $c(\omega) = \omega/\text{Re}\,k^*$ and the negative
+imaginary part gives the absorption $\alpha = -\text{Im}\,k^* \approx
+\omega^2\tau/(2c_0) > 0$. $\square$
 
 ### 4.8.2 Storage and loss moduli
 
