@@ -189,7 +189,7 @@ millisecond-pulse histotripsy exposures.
 
 ![cem43 accumulation](figures/ch21/fig04_cem43_accumulation.png)
 CEM43 per single pulse computed via Sapareto-Dewey on the bioheat
-trajectories of Fig. 21.3. The classical regime stays at CEM43 $\ll 1\,$min;
+trajectories of Fig. 14.3. The classical regime stays at CEM43 $\ll 1\,$min;
 the millisecond regime exceeds CEM43 $= 240\,$min within a fraction of a
 single pulse, despite the lesion mechanism being mechanical.
 

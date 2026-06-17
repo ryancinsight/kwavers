@@ -15,7 +15,7 @@
 //! 5. [`receiver`] – integrate the multi-element receiver array (and PAM source
 //!    maps) over the sonication volume `V_s`.
 //!
-//! All physics lives here; the book chapters (ch21e histotripsy, ch24 BBB) call
+//! All physics lives here; the book chapters (Ch14 histotripsy, Ch23 BBB) call
 //! these via PyO3 and only plot.
 
 mod dose;

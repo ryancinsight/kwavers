@@ -7,7 +7,7 @@ use kwavers_math::special::erf;
 /// cumulative distribution function with threshold `p_T` and width `σ`:
 ///
 /// ```text
-/// P_cav(|p⁻|) = ½ · (1 + erf((|p⁻| − p_T) / (σ · √2)))   [Theorem 21.1]
+/// P_cav(|p⁻|) = ½ · (1 + erf((|p⁻| − p_T) / (σ · √2)))   [Theorem 14.1]
 /// ```
 ///
 /// At `|p⁻| = p_T` → `P_cav = 0.5` (50 % probability per pulse).
