@@ -8,32 +8,45 @@
 //! ## Hamiltonian Structure
 //!
 //! The undamped, undriven bubble oscillation is a Hamiltonian system with
-//! generalised coordinate `q = R` (radius) and velocity `v = Ṙ` (wall velocity):
+//! coordinate `R` (radius) and wall velocity `Ṙ`. Per unit solid angle (i.e.
+//! dividing the liquid energy `2πρ_L R³Ṙ² − ∫p_net·4πR'²dR'` by `4π`):
 //! ```text
 //! H(R, Ṙ) = ½ ρ_L R³ Ṙ²  +  V_eff(R)
 //! ```
-//! where `V_eff(R) = −∫ p_net(R′) R′² dR′` and `p_net = p_gas − p₀ − 2σ/R`.
+//! where `V_eff(R) = −∫ p_net(R′) R′² dR′` and `p_net = p_gas − p₀ − 2σ/R`. The
+//! `4π` factor is omitted consistently from both terms, so it cancels in the
+//! dimensionless energy-drift ratio `H(t)/H(0)`.
 //!
 //! The equations of motion are `dR/dt = Ṙ` and `d(Ṙ)/dt = f(R, Ṙ)` where
 //! `f = R̈` is evaluated by the Keller-Miksis RHS (see `equation.rs`).
 //!
-//! ## Störmer-Verlet Integrator
+//! ## Störmer-Verlet (velocity-Verlet) integrator
 //!
-//! **Theorem (Hairer, Lubich & Wanner 2006, Theorem VI.2.2).**
-//! The Störmer-Verlet map Φ_h: (R_n, V_n) → (R_{n+1}, V_{n+1}) defined by
+//! The map Φ_h: (R_n, Ṙ_n) → (R_{n+1}, Ṙ_{n+1}) defined by
 //! ```text
 //! V_{n+½} = V_n   + (h/2) f(R_n, V_n)
 //! R_{n+1} = R_n   + h · V_{n+½}
 //! V_{n+1} = V_{n+½} + (h/2) f(R_{n+1}, V_{n+½})
 //! ```
-//! satisfies (Φ_h)* ω = ω, where ω = dR ∧ dV is the canonical symplectic 2-form.
-//! **Proof:** Direct computation shows det ∂(R_{n+1}, V_{n+1})/∂(R_n, V_n) = 1.
-//! **Consequence:** There exists a modified Hamiltonian H̃ = H + h²H₂ + O(h⁴)
-//! that is exactly conserved, so the energy error is bounded (no secular drift).
-//! **Global error:** O(h²).
+//! is **2nd-order accurate** (global error O(h²)).
+//!
+//! **It is NOT canonically symplectic for this system.** Velocity-Verlet
+//! preserves `ω = dR ∧ dṘ` only when the force is *position-only*, `f = f(R)`
+//! (separable `H = T(p) + V(q)`); the textbook `det J = 1` argument relies on
+//! `∂f/∂Ṙ = 0`. The RP wall acceleration is **velocity-dependent**,
+//! `f = (p_B−p_∞)/(ρ_L R) − (3/2)Ṙ²/R`, whose geometric term `−3Ṙ²/(2R)` reflects
+//! the position-dependent effective mass `M(R) ∝ R³` (so the canonical momentum is
+//! `p = M(R)Ṙ`, not `Ṙ`), and Keller-Miksis adds velocity-dependent radiation
+//! damping. Consequently no modified Hamiltonian is conserved to O(h²): the energy
+//! oscillation is O(h), measured at ≈17 % over 1000 conservative periods at
+//! `h = T/200` (vs the ≪1 % of a separable symplectic scheme). The energy is
+//! nonetheless **bounded** (no secular drift — it stays in `[0.5 H₀, H₀]`), which
+//! with 2nd-order accuracy is what this integrator actually guarantees. A genuinely
+//! separable symplectic integrator lives in `kwavers_math::numerics::symplectic`.
 //!
 //! Reference: Hairer, E., Lubich, C. & Wanner, G. (2006).
-//! *Geometric Numerical Integration*, 2nd ed. Springer. §VI.1–VI.4.
+//! *Geometric Numerical Integration*, 2nd ed. Springer. §VI (velocity-Verlet is
+//! symplectic only for separable Hamiltonians).
 //!
 //! ## Yoshida 4th-Order Composition
 //!
@@ -47,8 +60,13 @@
 //! w₁ =  1 / (2 − 2^{1/3}) ≈  1.3512071919596577
 //! w₂ = −2^{1/3} / (2 − 2^{1/3}) ≈ −1.7024143839193153
 //! ```
-//! is a 4th-order symplectic integrator.
-//! **Proof:** Baker-Campbell-Hausdorff formula. Consistency: 2w₁ + w₂ = 1.
+//! raises the order of `Φ_h` from 2 to 4 (global error O(h⁴)); the result is
+//! symplectic *iff* the base `Φ_h` is. Here `Φ_h` is the velocity-Verlet step
+//! above, which is symplectic only for a position-only force — so for the
+//! velocity-dependent RP/Keller-Miksis force this composition is **4th-order
+//! accurate but not canonically symplectic** (bounded, not modified-Hamiltonian-
+//! conserved, long-time energy).
+//! **Order proof:** Baker-Campbell-Hausdorff. Consistency: 2w₁ + w₂ = 1.
 //! Leading error cancellation: 2w₁³ + w₂³ = 0. These two equations have the
 //! unique solution above. Global error: O(h⁴).
 //!
@@ -60,12 +78,18 @@
 //!
 //! ## Comparison with Existing Integrators
 //!
-//! | Integrator | Order | Symplectic | Long-time accuracy |
+//! | Integrator | Order | Canonically symplectic? | Long-time energy |
 //! |------------|-------|------------|-------------------|
-//! | Forward Euler (`integration.rs`) | 1 | No | Energy drift O(h) per step |
+//! | Forward Euler (`integration.rs`) | 1 | No | Secular drift O(h)/step |
 //! | SSP-IMEX ERK2 (`bubble_imex.rs`) | 2 | No | Bounded for stiff thermal |
-//! | **Störmer-Verlet** (this file) | 2 | **Yes** | Modified H conserved |
-//! | **Yoshida4** (this file) | 4 | **Yes** | High accuracy long-time |
+//! | **Störmer-Verlet** (this file) | 2 | No¹ | Bounded, O(h) oscillation |
+//! | **Yoshida4** (this file) | 4 | No¹ | Bounded, smaller oscillation |
+//!
+//! ¹ Velocity-Verlet/Yoshida are symplectic only for a position-only force. The
+//!   RP/Keller-Miksis wall acceleration is velocity-dependent, so these are
+//!   2nd/4th-order accurate with *bounded* (not modified-Hamiltonian-conserved)
+//!   long-time energy. See `kwavers_math::numerics::symplectic` for a genuinely
+//!   symplectic integrator on a separable Hamiltonian.
 //!
 //! # Module layout
 //!

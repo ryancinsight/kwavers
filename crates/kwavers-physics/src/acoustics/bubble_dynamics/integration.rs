@@ -16,28 +16,40 @@
 //! | Driven + thermal coupling | IMEX Euler in `physics::acoustics::bubble_dynamics::imex_integration` |
 //! | Highest accuracy, long-time | Yoshida 4th-order in `physics::acoustics::bubble_dynamics::symplectic_integration` |
 //!
-//! ## Theorem — Störmer-Verlet Symplecticity
+//! ## Störmer-Verlet (velocity-Verlet) integration
 //!
-//! Let `(R, V)` be the generalised coordinate and momentum of the Rayleigh-Plesset
-//! mechanical sub-system with Hamiltonian `H(R, V) = ½ρ_L R³ V² + V_eff(R)`.
-//! The Störmer-Verlet map Φ_h preserves the symplectic 2-form ω = dR ∧ dV:
+//! Let `(R, Ṙ)` be the bubble radius and wall velocity. The integrator is the
+//! velocity-Verlet map
 //!
 //! ```text
 //!   V_{n+½} = V_n   + (h/2) f(R_n,  V_n)
 //!   R_{n+1} = R_n   + h     V_{n+½}
 //!   V_{n+1} = V_{n+½} + (h/2) f(R_{n+1}, V_{n+½})
 //! ```
+//! where `f = R̈` is the Rayleigh-Plesset / Keller-Miksis wall acceleration.
+//! **Accuracy: 2nd order** (global error O(h²)).
 //!
-//! **Proof sketch**: ∂(R_{n+1}, V_{n+1})/∂(R_n, V_n) is symplectic — its
-//! transpose-inverse equals itself w.r.t. J = `[[0,1],[-1,0]]`.
-//!
-//! **Consequence**: ∃ modified Hamiltonian H̃ = H + h²H₂ + O(h⁴) that is exactly
-//! conserved, so `|H(t) − H(0)|` remains bounded (no secular drift).
+//! **Not canonically symplectic for this system.** Velocity-Verlet is symplectic
+//! only for a *position-only* force `f(R)` (separable `H = T(p) + V(q)`). The
+//! conservative RP acceleration is **velocity-dependent**,
+//! `f = (p_B − p_∞)/(ρ_L R) − (3/2)Ṙ²/R`, whose geometric term `−3Ṙ²/(2R)`
+//! reflects the position-dependent effective liquid mass `M(R) ∝ R³`; Keller-Miksis
+//! adds further velocity-dependent radiation damping. Hence `(R, Ṙ)` are **not** a
+//! canonical coordinate/momentum pair — the canonical momentum is `p = M(R)Ṙ`, not
+//! `Ṙ` — and the map does **not** preserve `dR ∧ dṘ` (the `det J = 1` argument holds
+//! only for `f = f(R)`). The energy stays *bounded* (no secular drift: it remains in
+//! `[0.5 H₀, H₀]`, ≈17 % oscillation over 1000 conservative periods at `h = T/200`),
+//! but this is the O(h) bounded oscillation of a velocity-dependent force, **not**
+//! the tight O(h²)/machine-level conservation of a separable symplectic scheme. For
+//! the damped, driven Keller-Miksis equation there is no conserved Hamiltonian at
+//! all; the value of this scheme is its 2nd-order accuracy and bounded long-time
+//! energy, not symplecticity. A genuinely separable symplectic integrator
+//! (Störmer-Verlet / Yoshida) lives in `kwavers_math::numerics::symplectic`.
 //!
 //! ## References
 //!
 //! - Hairer E, Lubich C, Wanner G (2006). *Geometric Numerical Integration*, 2nd ed.
-//!   Springer. Theorem VI.2.2. DOI:10.1007/3-540-30666-8
+//!   Springer. §VI (velocity-Verlet symplectic only for separable H).
 //! - Yoshida H (1990). Phys. Lett. A **150**(5-7):262–268.
 //! - Brennen CE (1995). *Cavitation and Bubble Dynamics*. Oxford. §2.3.
 
