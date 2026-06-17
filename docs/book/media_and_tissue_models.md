@@ -528,7 +528,7 @@ can be combined into the single scalar equation
 
 $$
 \boxed{
-\frac{1}{c_0^2(\mathbf{x})} \frac{\partial^2 p}{\partial t^2}
+\frac{1}{\rho_0(\mathbf{x})\,c_0^2(\mathbf{x})} \frac{\partial^2 p}{\partial t^2}
 - \nabla \cdot \!\left(\frac{1}{\rho_0(\mathbf{x})} \nabla p\right) = S(\mathbf{x},t).
 }
 \tag{4.HWE}
@@ -538,45 +538,39 @@ $$
 the unique second-order wave equation derivable from the linearized Euler and continuity
 equations when $\rho_0$ and $c_0$ vary smoothly in space.
 
-*Proof.* Start from the linearized momentum equation:
+*Proof.* Start from the two first-order equations above: the momentum equation
 
 $$
-\rho_0 \frac{\partial \mathbf{u}}{\partial t} = -\nabla p.
+\rho_0 \frac{\partial \mathbf{u}}{\partial t} = -\nabla p
+\quad\Longrightarrow\quad
+\frac{\partial \mathbf{u}}{\partial t} = -\frac{1}{\rho_0}\nabla p,
 \tag{M}
 $$
 
-Differentiate the linearized continuity equation
+and the pressure relation (linearized state + mass conservation), which keeps the
+spatially varying stiffness $\rho_0 c_0^2$ together,
 
 $$
-\frac{\partial \varrho}{\partial t} + \nabla \cdot (\rho_0 \mathbf{u}) = 0
-\tag{C}
+\frac{\partial p}{\partial t} = -\rho_0 c_0^2\, \nabla \cdot \mathbf{u}.
+\tag{P}
 $$
 
-with respect to time and use $p = c_0^2 \varrho$:
+Differentiate (P) in time (with $\rho_0$, $c_0$ time-independent) and substitute (M):
 
 $$
-\frac{1}{c_0^2} \frac{\partial^2 p}{\partial t^2}
-+ \nabla \cdot \!\left(\rho_0 \frac{\partial \mathbf{u}}{\partial t}\right) = 0.
+\frac{\partial^2 p}{\partial t^2}
+= -\rho_0 c_0^2\, \nabla \cdot \frac{\partial \mathbf{u}}{\partial t}
+= -\rho_0 c_0^2\, \nabla \cdot \!\left(-\frac{1}{\rho_0}\nabla p\right)
+= \rho_0 c_0^2\, \nabla \cdot \!\left(\frac{1}{\rho_0}\nabla p\right).
 $$
 
-Substitute (M):
-
-$$
-\frac{1}{c_0^2} \frac{\partial^2 p}{\partial t^2}
-+ \nabla \cdot (-\nabla p) = 0,
-$$
-
-which is incorrect because $\nabla \cdot (\rho_0 \partial_t \mathbf{u}) \ne \rho_0 \nabla \cdot \partial_t \mathbf{u}$ when $\rho_0$ is not constant. The correct substitution is
-
-$$
-\nabla \cdot \!\left(\rho_0 \frac{\partial \mathbf{u}}{\partial t}\right)
-= \nabla \cdot (-\nabla p)
-\quad \Longrightarrow \quad
-\nabla \cdot \!\left(\frac{1}{\rho_0}\nabla p\right)
-= -\frac{1}{\rho_0} \nabla \cdot (\rho_0 \partial_t \mathbf{u}),
-$$
-
-which, combined with (M), gives exactly Eq.~(4.HWE). $\square$
+Dividing by $\rho_0 c_0^2$ and adding the source $S$ gives Eq.~(4.HWE). The key is
+to keep $\rho_0 c_0^2$ inside (P) rather than splitting it via $p = c_0^2\varrho$,
+which would instead absorb the density into the spatial operator and yield the
+*constant*-density form $c_0^{-2}\partial_{tt}p - \nabla^2 p = 0$. The spatial
+operator $\nabla\!\cdot\!(\rho_0^{-1}\nabla\,\cdot\,)$ is self-adjoint, so (4.HWE)
+is the symmetric form used by the time-reversal and FWI adjoint solvers (Plessix
+2006). $\square$
 
 ### 4.6.2 Comparison with the scalar Laplacian form
 
