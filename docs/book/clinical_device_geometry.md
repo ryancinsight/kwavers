@@ -84,7 +84,7 @@ coverage per element), the polar angle `θ` must be sampled via the
 area-weighted CDF:
 
 ```text
-cos(θᵢ) = cos(θ_cutout) − (i/(N−1)) · [cos(θ_cutout) − cos(θ_max)],
+cos(θᵢ) = cos(θ_cutout) − ((i + ½)/N) · [cos(θ_cutout) − cos(θ_max)],
          i = 0, 1, …, N−1
 ```
 
@@ -96,8 +96,11 @@ and the azimuthal angle `φᵢ` is the golden-spiral sequence:
 
 **Proof:** The area element on the sphere is `dA = R² sin(θ) dθ dφ`.  The
 cumulative area of the cap from `θ_cutout` to `θ` is
-`A(θ) = 2π R² [cos(θ_cutout) − cos(θ)]`.  Setting `A(θ) / A(θ_max) = i/N` and
-solving for `cos(θ)` yields the formula above.  The golden-spiral azimuthal
+`A(θ) = 2π R² [cos(θ_cutout) − cos(θ)]`.  Placing element `i` at the centroid of
+its equal-area bin sets `A(θ) / A(θ_max) = (i + ½)/N`; solving for `cos(θ)`
+yields the formula above (the midpoint convention used by `SphericalCapLayout`,
+which avoids the rim/centre clustering of the endpoint-inclusive `i/(N−1)`
+form).  The golden-spiral azimuthal
 sequence distributes points with discrepancy `O(1/N)`, which is asymptotically
 optimal for spherical caps (Álvarez & González-Aranda, 2019).
 
