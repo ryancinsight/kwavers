@@ -11,10 +11,12 @@
 //! All higher-level inverse solvers (SIRT, FWI, etc.) use these foundational components.
 
 pub mod constrained;
+pub mod parameter_selection;
 pub mod pnp;
 pub mod regularization;
 
 pub use constrained::{projected_gradient_descent, BoxConstraints};
+pub use parameter_selection::{l_curve_corner, morozov_lambda};
 pub use pnp::tv_denoise_chambolle;
 pub use regularization::{
     ModelRegularizer1D, ModelRegularizer2D, ModelRegularizer3D, RegularizationConfig,

@@ -383,6 +383,13 @@ $\phi(\lambda^*) = \tau\delta$ exists. Uniqueness follows from strict monotonici
 $m_{\lambda^*(\delta)} \to m_{\text{true}}$ as $\delta \to 0$ follows from the compactness of $F^*F$ and
 the bound $\|m_{\lambda^*} - m_{\text{true}}\| \leq C\delta^{1/2}$ (or faster for smoother $m_{\text{true}}$). $\square$
 
+Both selectors are implemented in `kwavers_math::inverse_problems::parameter_selection`:
+`l_curve_corner` returns the maximum-curvature index of a sampled $(\rho, \eta)$
+trade-off curve (the discrete form of $\kappa(\lambda)$ above), and
+`morozov_lambda` interpolates the weight at which $\|F(m_\lambda) - d\| = \tau\delta$.
+They consume a precomputed $\lambda$-sweep, so they compose with the FWI and SIRT
+drivers without re-running the inversion.
+
 ---
 
 ![Tikhonov L-curve](figures/ch17/fig02_lcurve.png)
