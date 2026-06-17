@@ -353,6 +353,11 @@ from ._pykwavers import (
     steering_grating_lobe_ratio_1d,
     safe_steering_halfangle,
     electronic_steering_efficiency,
+    # ── Optoacoustic / SOAP focused ultrasound (Ch34) ────────────────────────
+    numerical_aperture_from_geometry,
+    f_number_from_na,
+    soap_focal_gain,
+    acoustic_resolution_lateral,
     # ── Analytical cavitation physics ────────────────────────────────────────
     intrinsic_threshold_cavitation_probability,
     frequency_dependent_intrinsic_threshold_pa,
@@ -709,6 +714,11 @@ __all__ = [
     "steering_grating_lobe_ratio_1d",
     "safe_steering_halfangle",
     "electronic_steering_efficiency",
+    # ── Optoacoustic / SOAP focused ultrasound (Ch34) ────────────────────────
+    "numerical_aperture_from_geometry",
+    "f_number_from_na",
+    "soap_focal_gain",
+    "acoustic_resolution_lateral",
     # ── Analytical cavitation physics ────────────────────────────────────────
     "intrinsic_threshold_cavitation_probability",
     "frequency_dependent_intrinsic_threshold_pa",

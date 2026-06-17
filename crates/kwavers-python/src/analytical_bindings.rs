@@ -145,6 +145,14 @@ pub fn register_book(m: &Bound<'_, PyModule>) -> PyResult<()> {
         transducer::electronic_steering_efficiency,
         m
     )?)?;
+    // optoacoustic / SOAP (Ch34)
+    m.add_function(wrap_pyfunction!(
+        transducer::numerical_aperture_from_geometry,
+        m
+    )?)?;
+    m.add_function(wrap_pyfunction!(transducer::f_number_from_na, m)?)?;
+    m.add_function(wrap_pyfunction!(transducer::soap_focal_gain, m)?)?;
+    m.add_function(wrap_pyfunction!(transducer::acoustic_resolution_lateral, m)?)?;
     // cavitation
     m.add_function(wrap_pyfunction!(
         cavitation::intrinsic_threshold_cavitation_probability,
