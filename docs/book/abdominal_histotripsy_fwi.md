@@ -88,9 +88,15 @@ Rayleigh-Plesset radius integration driven by the simulated lesion pressure:
 
 ```text
 rho (R R_ddot + 3/2 R_dot^2)
-  = p_g0 (R0/R)^(3 gamma) - p_v - p0 - p_ac(t)
+  = p_g0 (R0/R)^(3 gamma) + p_v - p0 - p_ac(t)
     - 2 sigma/R - 4 mu R_dot/R
 ```
+
+The vapor pressure `p_v` is the bubble's internal vapor and adds to the outward
+internal pressure, matching the kwavers solver
+(`rayleigh_plesset`: `p_gas = (p0 + 2σ/R0 − p_v)(R0/R)^{3γ} + p_v`, where the
+non-condensable gas partial pressure `p_g0 = p0 + 2σ/R0 − p_v` scales
+polytropically and the near-constant vapor term is added back).
 
 The emitted source density is the demodulated `f0/2` response of
 `(R/R0)^3 - 1` inside the deterministic lesion core. The inversion rows remain
