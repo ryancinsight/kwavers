@@ -671,8 +671,10 @@ p_2(x) \approx \frac{\beta \omega p_0^2}{2 \rho_0 c_0^3} \, x
 \tag{1.27}
 $$
 
-*where $\sigma(x) = x / x_\text{sh}$ is the dimensionless Gol'dberg distance and
-$x_\text{sh} = \rho_0 c_0^3/(\beta p_0 \omega)$ is the shock-formation distance.*
+*where $\sigma(x) = x / x_\text{sh}$ is the dimensionless Gol'dberg shock
+parameter (Gol'dberg 1957) and $x_\text{sh} = \rho_0 c_0^3/(\beta p_0 \omega)$ is
+the shock-formation distance. (Not to be confused with the Gol'dberg number
+$\Gamma = 1/(\alpha\, x_\text{sh})$, the nonlinear-to-absorption ratio.)*
 
 **Proof sketch.**  Substitute $p = p_0\cos(kx - \omega t) + p_2$ into the
 Westervelt equation (see Chapter 3, eq. 3.1) and collect terms at frequency
