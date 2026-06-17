@@ -118,7 +118,9 @@ P(D) = P_{max}\;\frac{D^n}{D_{50}^n + D^n}
 $$
 
 with $D_{50} \approx 1.2\;\text{MI}^2\text{·s}$ and $n \approx 2.5$ for stable
-cavitation (fit to Evans-blue extravasation data, McDannold 2008).
+cavitation (fit to Evans-blue extravasation data, McDannold 2008). The dose of
+Definition 23.1 and this Hill response are
+`kwavers_physics::acoustics::transcranial::bbb_opening::dose_response::{bbb_acoustic_dose, bbb_permeability_hill}`.
 
 > **Theorem 23.3 (Damage-free operating window).**
 > *There exists a dose interval $[D_{min}, D_{max}]$ such that:*
@@ -183,9 +185,12 @@ $$
 where $\tau_{fast} \approx 0.5\;\text{h}$ (tight-junction re-assembly) and
 $\tau_{slow} \approx 6\;\text{h}$ (vesicular transport clearance).
 
-The *drug delivery window* — the interval during which BBB permeability
-exceeds 50% of peak opening — spans approximately 1–8 hours post-sonication
-for the stable-cavitation dose range.
+For the parameters above the response crosses 50 % of peak at `t ≈ 0.7 h` (the
+fast tight-junction phase), so the *drug-delivery window* — during which
+permeability stays meaningfully elevated above baseline — is governed by the
+slow vesicular-clearance term and spans roughly 1–8 hours post-sonication for
+the stable-cavitation dose range. The closure curve is
+`bbb_opening::dose_response::bbb_closure_permeability`.
 
 ![Bi-exponential BBB closure kinetics / drug-delivery window.](figures/ch24/fig06_bbb_opening_window.png)
 
