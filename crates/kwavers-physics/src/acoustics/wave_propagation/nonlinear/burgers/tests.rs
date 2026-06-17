@@ -1,6 +1,6 @@
 use super::*;
 use crate::acoustics::wave_propagation::NonlinearParameters;
-use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA, TWO_PI};
+use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 
 #[test]
 fn bessel_j0_at_zero() {
@@ -103,8 +103,12 @@ fn fubini_b2_at_half_shock() {
 
 #[test]
 fn fubini_post_shock_sawtooth() {
+    // Post-shock Fay sawtooth: B_n = 2/(n(1+sigma)) (Blackstock 1966). At
+    // sigma = 2 the fundamental is B1 = 2/(1·3) = 2/3. (The earlier 2/(2π)
+    // came from a wrong 2/(nπσ) branch that gave B1(sigma=1)=0.637 instead of
+    // the physically required full amplitude 1.)
     let b1 = fubini_harmonic_amplitude(1, 2.0);
-    let expected = 2.0 / (TWO_PI);
+    let expected = 2.0 / 3.0;
     assert!(
         (b1 - expected).abs() < 1e-14,
         "B1(sigma=2) = {b1}, expected {expected}"
