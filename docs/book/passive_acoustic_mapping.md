@@ -164,6 +164,20 @@ the steering vector to the candidate focus.
 
 *Figure 22.5. Cross-spectral-matrix singular values (Theorem 22.2): the $K$ source eigenvalues ($\sigma_s^2+\sigma_n^2$) separate from the $N-K$ noise eigenvalues ($\sigma_n^2$), defining the signal-subspace projector $\mathbf{P}_S$.*
 
+### kwavers implementation status
+
+The eigendecomposition-and-projection machinery used here is implemented for
+*adaptive (active)* beamforming in
+`kwavers_analysis::signal_processing::beamforming::adaptive::subspace`
+(eigenspace–minimum-variance and MUSIC). For *passive* mapping, the production
+`PAMConfig::beamforming` selector currently wires `DelayAndSum`,
+`CaponDiagonalLoading`, and `TimeExposureAcoustics`; the `EigenspaceMinVariance`
+and `Music` PAM variants return an explicit error pending connection to that
+shared subspace code, so use DAS or diagonally-loaded Capon for passive
+cavitation maps today. The eigenspace result above is therefore presented as the
+theory and the (active-beamforming) subspace decomposition, not yet as a wired
+passive-map mode.
+
 ---
 
 ## 22.5 Transcranial SNR budget
