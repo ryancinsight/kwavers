@@ -6,12 +6,22 @@ pancreas and tumour segmentation from the Medical Segmentation Decathlon
 Task07_Pancreas dataset (or a calibrated synthetic phantom when the dataset
 is absent) and plans three clinical histotripsy exposure regimes through a
 128-element curved abdominal therapy array placed on the anterior skin
-surface. The planning physics below — the Rayleigh–Sommerfeld forward field,
-intrinsic-threshold cavitation probability, Pennes thermal dose, and the
-raster superposition — is implemented in
-`kwavers_physics::analytical::cavitation` (`build_sonication_schedule`,
-`histotripsy_pulses_for_lesion_radius`, `histotripsy_kill_fraction`, …) and is
-the source of the planning figures in this chapter.
+surface. The cavitation and sonication-planning physics below — the
+intrinsic-threshold cavitation probability, its log-linear frequency dependence,
+the temperature correction, the cumulative-pulse statistics, and the
+raster/interleave schedule — is implemented in
+`kwavers_physics::analytical::cavitation`
+(`intrinsic_threshold_cavitation_probability`,
+`frequency_dependent_intrinsic_threshold_pa`,
+`intrinsic_threshold_thermal_correction_pa`, `cumulative_cavitation_probability`,
+`build_sonication_schedule`, `histotripsy_pulses_for_lesion_radius`,
+`histotripsy_kill_fraction`, …). The CEM43 thermal-dose accumulation (§32.5.3)
+is the shared HIFU implementation
+`kwavers_physics::acoustics::imaging::modalities::ultrasound::hifu::thermal_dose`
+(Sapareto–Dewey `R^(43−T)` law), and the steady-state focal temperature uses the
+Pennes bioheat solver. The Rayleigh–Sommerfeld focal-Gaussian forward field
+(§32.5.1) is an analytic planning envelope. These are the source of the planning
+figures in this chapter.
 
 > **Executable note.** The companion script
 > `pykwavers/examples/book/ch21f_real_pancreatic_ct_histotripsy.py` has been

@@ -23,7 +23,8 @@ pub use dynamics::{
 pub use histotripsy::{
     cumulative_cavitation_probability, frequency_dependent_intrinsic_threshold_pa,
     histotripsy_lesion_radius_m, inertial_cavitation_dose,
-    intrinsic_threshold_cavitation_probability, mechanical_index, prf_efficacy_factor,
+    intrinsic_threshold_cavitation_probability, intrinsic_threshold_thermal_correction_pa,
+    mechanical_index, prf_efficacy_factor,
 };
 pub use passive_dose::{
     bubble_acoustic_emission_pressure, cavitation_controller_pressure, cumulative_cavitation_dose,

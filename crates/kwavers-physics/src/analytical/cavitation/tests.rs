@@ -406,6 +406,32 @@ fn period_doubling_ratio_dominant_subharmonic_exceeds_one() {
 }
 
 #[test]
+fn thermal_threshold_correction_lowers_threshold_above_baseline_only() {
+    let slope = 0.3e6; // 0.3 MPa/°C (book §32.5.2)
+    let t_ref = 20.0;
+    // At or below the 20 °C baseline: no correction.
+    assert_eq!(
+        intrinsic_threshold_thermal_correction_pa(20.0, slope, t_ref),
+        0.0
+    );
+    assert_eq!(
+        intrinsic_threshold_thermal_correction_pa(10.0, slope, t_ref),
+        0.0
+    );
+    // 37 °C body temperature: −0.3 MPa/°C × 17 °C = −5.1 MPa.
+    assert!((intrinsic_threshold_thermal_correction_pa(37.0, slope, t_ref) + 5.1e6).abs() < 1.0);
+    // Composes additively with the frequency model: p_T(0.5 MHz, 37 °C) = p_T(0.5 MHz) − 5.1 MPa.
+    let pt_freq = frequency_dependent_intrinsic_threshold_pa(&[0.5e6], 28.2e6, 1.4e6)[0];
+    let pt_ft = pt_freq + intrinsic_threshold_thermal_correction_pa(37.0, slope, t_ref);
+    assert!((pt_ft - (pt_freq - 5.1e6)).abs() < 1.0);
+    // Strictly more negative (lower threshold) as temperature rises.
+    assert!(
+        intrinsic_threshold_thermal_correction_pa(50.0, slope, t_ref)
+            < intrinsic_threshold_thermal_correction_pa(40.0, slope, t_ref)
+    );
+}
+
+#[test]
 fn bubble_spectrum_length() {
     let r: Vec<f64> = (0..64)
         .map(|i| 10e-6 + 1e-7 * (i as f64 * 0.1).sin())

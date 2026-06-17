@@ -75,6 +75,38 @@ pub fn frequency_dependent_intrinsic_threshold_pa(
         .collect()
 }
 
+/// Thermal correction to the intrinsic cavitation threshold (Vlaisavljevich 2016).
+///
+/// The mean intrinsic-threshold peak negative pressure falls approximately
+/// linearly as the tissue warms above a baseline temperature: the rising vapour
+/// pressure and falling surface tension lower the nucleation barrier. The
+/// correction is a threshold *reduction* (≤ 0):
+///
+/// ```text
+/// Δp_T(T) = −slope · max(0, T − T_ref)   [Pa]
+/// ```
+///
+/// so the temperature-corrected threshold composes additively with the
+/// frequency model:
+/// `p_T(f, T) = frequency_dependent_intrinsic_threshold_pa(f) + Δp_T(T)`.
+///
+/// Below `T_ref` the correction is exactly `0` (no spurious threshold increase
+/// for cooled tissue). Canonical pancreatic-histotripsy planning values
+/// (book §32.5.2): `slope ≈ 0.3 MPa/°C`, `T_ref = 20 °C`.
+///
+/// # Reference
+/// Vlaisavljevich et al. (2016), *Phys. Med. Biol.* 61, 663 — temperature
+/// dependence of the histotripsy intrinsic threshold.
+#[must_use]
+#[inline]
+pub fn intrinsic_threshold_thermal_correction_pa(
+    temperature_c: f64,
+    slope_pa_per_c: f64,
+    t_ref_c: f64,
+) -> f64 {
+    -slope_pa_per_c * (temperature_c - t_ref_c).max(0.0)
+}
+
 /// Cumulative cavitation probability over N independent single-pulse trials.
 ///
 /// Each pulse produces cavitation with probability P_single (Maxwell 2013 erf-CDF
