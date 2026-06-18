@@ -238,7 +238,7 @@ stiffness is reduced and the center frequency shifts downward by the factor
 
 For a spherical bowl transducer of aperture radius `a`, radius of curvature (focal length)
 `F`, and surface velocity amplitude `U_0`, the on-axis pressure at axial distance `r` from
-the geometric focus in the nearfield (`r ≈ F`) is
+the transducer vertex (so `r = F` is the geometric focus) near the focal region (`r ≈ F`) is
 
 ```
 P(r) ≈ P_peak · |sin(k (F - r) / 2)| / |k (F - r) / 2|,   r near F
