@@ -266,17 +266,17 @@ which is a second-order accurate centered-difference approximation to `ρ ∂u_x
 
 ### Sensor Velocity Acquisition
 
-For simulation steps where velocity sensors are active, kwavers records the three staggered
+For simulation steps where velocity sensors are active, kwavers records the staggered
 velocity components at the nearest grid node to each sensor position. The staggered-to-collocated
-interpolation (averaging two adjacent nodes) is performed post-hoc in
-`kwavers_receiver::recorder::velocity_statistics::interpolate_staggered_to_collocated`
-to produce a co-located velocity estimate for output:
+interpolation shifts each component back a half cell along its own axis by averaging the two
+adjacent nodes — `u_ns[i] = ½(u[i] + u[i−1])` (k-Wave `u_non_staggered`, with a ghost-cell-zero
+boundary at `i = 0`). It is performed post-hoc, once per component, in
+`kwavers_receiver::recorder::velocity_statistics::interpolate_staggered_to_collocated`:
 ```rust
 pub fn interpolate_staggered_to_collocated(
-    ux_staggered: &Array3<f64>,
-    uy_staggered: &Array3<f64>,
-    uz_staggered: &Array3<f64>,
-) -> (Array3<f64>, Array3<f64>, Array3<f64>)
+    u: &Array3<f64>,   // one staggered velocity component
+    axis: usize,       // half-cell-shift axis: 0 = x, 1 = y, 2 = z
+) -> Array3<f64>       // collocated component at pressure-grid nodes
 ```
 
 ![Pressure and particle-velocity waveforms](figures/ch14/fig03_pressure_velocity.png)
