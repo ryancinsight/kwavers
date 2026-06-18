@@ -40,7 +40,7 @@ pub use tracking::TrackingFilter;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
 use ndarray::Array3;
-use ritk_registration::ImageRegistration;
+use ritk_registration::{AffineTransform, ImageRegistration};
 
 /// Affine transformation matrix (3×4) for image registration
 /// Row-major: [R11 R12 R13 Tx; R21 R22 R23 Ty; R31 R32 R33 Tz]
@@ -129,21 +129,18 @@ impl FunctionalUltrasoundGPS {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     pub fn register_to_atlas(&mut self, image: &Array3<f64>) -> KwaversResult<AffineTransform3D> {
-        let initial_transform = [
-            1f64, 0., 0., 0., 0., 1., 0., 0., 0., 0., 1., 0., 0., 0., 0., 1.,
-        ];
         let result = self
             .registration
             .affine_registration_mutual_info(
                 image,
                 self.atlas.reference_image_ref(),
-                &initial_transform,
+                &AffineTransform::IDENTITY,
             )
             .map_err(|e| {
                 KwaversError::InvalidInput(format!("RITK Atlas registration failed: {:?}", e))
             })?;
 
-        let m = result.transform;
+        let m = result.transform.as_array();
         Ok(AffineTransform3D {
             matrix: [
                 [m[0], m[1], m[2], m[3]],

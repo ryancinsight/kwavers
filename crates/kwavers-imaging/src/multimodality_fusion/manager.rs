@@ -1,7 +1,7 @@
 use super::{FusionEngine, FusionParameters, ImageData, RegistrationTransform, TransformationType};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use ndarray::Array3;
-use ritk_registration::ImageRegistration;
+use ritk_registration::{AffineTransform as RitkAffineTransform, ImageRegistration};
 use std::collections::HashMap;
 
 /// Multi-modality imaging session
@@ -106,21 +106,22 @@ impl MultimodalityFusionManager {
             .as_ref()
             .ok_or_else(|| KwaversError::InvalidInput("Floating image not loaded".to_owned()))?;
 
-        // Identity matrix [4x4] flat row major for initialization
-        let initial_transform = [
-            1f64, 0., 0., 0., 0., 1., 0., 0., 0., 0., 1., 0., 0., 0., 0., 1.,
-        ];
         let transform_result = self
             .registration_engine
-            .rigid_registration_mutual_info(&reference.data, &floating.data, &initial_transform)
+            .rigid_registration_mutual_info(
+                &reference.data,
+                &floating.data,
+                &RitkAffineTransform::IDENTITY,
+            )
             .map_err(|e| {
                 KwaversError::InvalidInput(format!("RITK Registration failed: {:?}", e))
             })?;
 
-        let matrix = ndarray::Array2::from_shape_vec((4, 4), transform_result.transform.to_vec())
-            .map_err(|e| {
-            KwaversError::InvalidInput(format!("RITK Transform generation failed: {:?}", e))
-        })?;
+        let matrix =
+            ndarray::Array2::from_shape_vec((4, 4), transform_result.transform.as_array().to_vec())
+                .map_err(|e| {
+                    KwaversError::InvalidInput(format!("RITK Transform generation failed: {:?}", e))
+                })?;
 
         let transform = RegistrationTransform {
             transform_type: TransformationType::Rigid,

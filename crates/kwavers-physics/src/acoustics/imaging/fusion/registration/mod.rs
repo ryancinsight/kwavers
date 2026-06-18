@@ -10,6 +10,18 @@ pub mod resampling;
 pub mod transforms;
 pub mod validation;
 
+/// Identity 4×4 homogeneous transform, flattened row-major.
+///
+/// Single source of truth for the seed passed to ritk's intensity-based
+/// registration (`rigid_registration_mutual_info` / `affine_registration_mutual_info`),
+/// which now accept a raw `&[f64; 16]` rather than a dedicated transform type.
+pub const IDENTITY_HOMOGENEOUS: [f64; 16] = [
+    1.0, 0.0, 0.0, 0.0, //
+    0.0, 1.0, 0.0, 0.0, //
+    0.0, 0.0, 1.0, 0.0, //
+    0.0, 0.0, 0.0, 1.0,
+];
+
 pub use adapter::{
     FusionBenchmarkCase, FusionRegistrationResult, FusionValidationCase, RitkRegistrationEngine,
 };

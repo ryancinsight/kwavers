@@ -1,7 +1,10 @@
 use super::config::{PAMConfig, PamBeamformingConfig};
 use super::processor::PAMProcessor;
 use super::PamBeamformingMethod;
-use kwavers_core::error::{KwaversError, KwaversResult};
+use crate::signal_processing::beamforming::narrowband::{
+    subspace_spatial_spectrum_point, SubspaceMethod, SubspaceSpectrumConfig,
+};
+use kwavers_core::error::KwaversResult;
 use kwavers_transducer::beamforming::processor::BeamformingProcessor;
 use kwavers_transducer::beamforming::BeamformingCoreConfig;
 use kwavers_transducer::passive_acoustic_mapping::geometry::PamArrayGeometry;
@@ -58,15 +61,26 @@ impl PassiveAcousticMapper {
             PamBeamformingMethod::CaponDiagonalLoading { diagonal_loading } => self
                 .beamformer
                 .mvdr_unsteered_weights_time_series(sensor_data, diagonal_loading)?,
-            PamBeamformingMethod::Music { .. } => {
-                return Err(KwaversError::InvalidInput(
-                    "PAM beamforming: MUSIC is not yet wired to the shared subspace implementation. Use DelayAndSum or CaponDiagonalLoading for PAM mapping.".to_owned(),
-                ));
+            // Subspace localizers (Theorem 22.2) produce a per-focal-point
+            // localization power, not a beamformed time series, so they bypass the
+            // time-series cavitation-spectrum processor and return the map directly.
+            PamBeamformingMethod::Music { num_sources } => {
+                return self.subspace_localization_map(
+                    sensor_data,
+                    sample_rate,
+                    SubspaceMethod::Music,
+                    num_sources,
+                );
             }
-            PamBeamformingMethod::EigenspaceMinVariance { .. } => {
-                return Err(KwaversError::InvalidInput(
-                    "PAM beamforming: EigenspaceMinVariance is not yet wired to the shared subspace implementation. Use DelayAndSum or CaponDiagonalLoading for PAM mapping.".to_owned(),
-                ));
+            PamBeamformingMethod::EigenspaceMinVariance {
+                signal_subspace_dimension,
+            } => {
+                return self.subspace_localization_map(
+                    sensor_data,
+                    sample_rate,
+                    SubspaceMethod::EigenspaceMv,
+                    signal_subspace_dimension,
+                );
             }
             PamBeamformingMethod::TimeExposureAcoustics => {
                 let weights = vec![1.0; self.beamformer.num_sensors()];
@@ -95,6 +109,51 @@ impl PassiveAcousticMapper {
         };
 
         self.processor.process(&beamformed)
+    }
+
+    /// Evaluate a narrowband subspace localization map (Eigenspace-MV or MUSIC) at
+    /// the configured focal point (PAM Theorem 22.2).
+    ///
+    /// Returns a `(1, 1, 1)` map holding the localization power at the focus — high
+    /// when a cavitation source sits there, low otherwise. The cross-spectral
+    /// matrix, eigendecomposition, and steering reuse the shared narrowband
+    /// `subspace_spectrum` code (no duplication). The emission frequency is the
+    /// centre of the configured `frequency_range`; the sampling rate is the rate of
+    /// the supplied `sensor_data`.
+    ///
+    /// # Errors
+    /// - Propagates snapshot-extraction, covariance, steering, and eigendecomposition errors.
+    fn subspace_localization_map(
+        &self,
+        sensor_data: &Array3<f64>,
+        sample_rate: f64,
+        method: SubspaceMethod,
+        num_sources: usize,
+    ) -> KwaversResult<Array3<f64>> {
+        let config = self.processor.config();
+        let core = &config.beamforming.core;
+        let (f_min, f_max) = config.beamforming.frequency_range;
+
+        let cfg = SubspaceSpectrumConfig {
+            frequency_hz: 0.5 * (f_min + f_max),
+            sampling_frequency_hz: sample_rate,
+            sound_speed: core.sound_speed,
+            num_sources,
+            diagonal_loading: core.diagonal_loading,
+        };
+
+        let positions = self.beamformer.sensor_positions().to_vec();
+        let power = subspace_spatial_spectrum_point(
+            method,
+            sensor_data,
+            &positions,
+            config.beamforming.focal_point,
+            &cfg,
+        )?;
+
+        let mut map = Array3::<f64>::zeros((1, 1, 1));
+        map[[0, 0, 0]] = power;
+        Ok(map)
     }
     /// Config.
     /// # Errors

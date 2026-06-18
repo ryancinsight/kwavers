@@ -68,16 +68,23 @@
 
 pub mod autocorrelation;
 pub mod color_flow;
+pub mod continuous_wave;
 pub mod pulsed_wave;
 pub mod spectral;
 pub mod types;
+pub mod vector_flow;
 pub mod wall_filter;
+
+#[cfg(test)]
+mod cw_vector_tests;
 
 pub use autocorrelation::{AutocorrelationConfig, AutocorrelationEstimator};
 pub use color_flow::{ColorFlowConfig, ColorFlowImaging, VelocityMap};
+pub use continuous_wave::{ContinuousWaveDoppler, CwDopplerConfig, CwSpectrum};
 pub use pulsed_wave::{PWDConfig, PulsedWaveDoppler, SpectralWaveform};
 pub use spectral::{SpectralAnalysis, SpectralConfig};
 pub use types::{DopplerResult, FlowDirection, VelocityEstimate};
+pub use vector_flow::{VectorFlowEstimator, VectorVelocity};
 pub use wall_filter::{WallFilter, WallFilterConfig, WallFilterType};
 
 /// Default Doppler imaging parameters for clinical ultrasound

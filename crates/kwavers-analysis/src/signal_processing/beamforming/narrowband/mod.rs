@@ -217,6 +217,7 @@
 pub mod capon; // Capon/MVDR spatial spectrum (migrated from domain::sensor)
 pub mod snapshots; // Narrowband snapshot extraction (migrated from domain::sensor)
 pub mod steering; // Narrowband steering vectors (migrated from domain::sensor)
+pub mod subspace_spectrum; // Eigenspace-MV and MUSIC spatial spectra (PAM Theorem 22.2)
 
 // Integration tests (Day 4)
 #[cfg(test)]
@@ -233,6 +234,10 @@ pub use snapshots::{
     SnapshotSelection, StftBinConfig, WindowFunction,
 };
 pub use steering::{steering_from_delays_s, NarrowbandSteering, NarrowbandSteeringVector};
+pub use subspace_spectrum::{
+    eigenspace_mv_spatial_spectrum_point, music_spatial_spectrum_point,
+    subspace_spatial_spectrum_point, SubspaceMethod, SubspaceSpectrumConfig,
+};
 
 #[cfg(test)]
 mod tests {

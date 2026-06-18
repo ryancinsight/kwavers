@@ -30,8 +30,8 @@
 //!
 //! # Tier
 //!
-//! `#[ignore]`'d as Tier-2 (~10 s runtime). Run on demand with
-//! `cargo test --lib --package kwavers -- --ignored harmonic_generation`.
+//! Tier-1: a single 48³ forward run completes in ~0.19 s, well within the
+//! 30 s nextest budget, so it executes by default in CI.
 
 use super::super::encoding::SourceEncoding;
 use super::super::forward::{forward_with_schedule, ForwardInput, TimeSchedule};
@@ -43,7 +43,6 @@ use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WA
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 
 #[test]
-#[ignore = "Tier 2: Harmonic-generation presence check, ~10s runtime"]
 fn westervelt_fdtd_point_source_generates_measurable_second_harmonic_content() {
     // Cubic grid required by the `ForwardInput` API. Single source cell at
     // the center of one face; receiver on the central axis downstream.

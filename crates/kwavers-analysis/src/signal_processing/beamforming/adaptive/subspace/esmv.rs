@@ -153,4 +153,81 @@ impl EigenspaceMV {
 
         Ok(weights)
     }
+
+    /// Eigenspace signal-subspace projector response `b_ES = |aᴴ P_s a|²`.
+    ///
+    /// This is the localization map of Theorem 22.2 (passive acoustic mapping):
+    /// the steering vector `a(r_f)` is projected onto the signal subspace
+    /// `P_s = E_s E_sᴴ` spanned by the `num_sources` largest eigenvectors of `R`.
+    /// Because `P_s` is a Hermitian projector, `aᴴ P_s a = ‖P_s a‖² ≥ 0` is real;
+    /// the returned value is its square, peaking where `a(r_f)` aligns with the
+    /// source subspace and collapsing toward the noise-only directions.
+    ///
+    /// Unlike [`Self::compute_weights`], no covariance inverse is formed — this is
+    /// a pure subspace-projection map, so it does not require `R` to be invertible.
+    ///
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] for a non-square/empty `covariance`,
+    ///   a steering-length mismatch, or `num_sources >= N`.
+    /// - Returns [`KwaversError::Numerical`] for non-finite steering input or output.
+    /// - Propagates eigendecomposition failures.
+    pub fn signal_subspace_response(
+        &self,
+        covariance: &Array2<Complex64>,
+        steering: &Array1<Complex64>,
+    ) -> KwaversResult<f64> {
+        let n = covariance.nrows();
+
+        if n == 0 || covariance.ncols() != n {
+            return Err(KwaversError::InvalidInput(
+                "EigenspaceMV::signal_subspace_response: covariance must be non-empty square matrix"
+                    .to_owned(),
+            ));
+        }
+        if steering.len() != n {
+            return Err(KwaversError::InvalidInput(format!(
+                "EigenspaceMV::signal_subspace_response: steering length {} != covariance dim {n}",
+                steering.len()
+            )));
+        }
+        if self.num_sources == 0 || self.num_sources >= n {
+            return Err(KwaversError::InvalidInput(format!(
+                "EigenspaceMV::signal_subspace_response: num_sources {} must satisfy 0 < K < N {n}",
+                self.num_sources
+            )));
+        }
+        for &val in steering {
+            if !val.is_finite() {
+                return Err(KwaversError::Numerical(NumericalError::NaN {
+                    operation: "EigenspaceMV::signal_subspace_response".to_owned(),
+                    inputs: "steering vector contains non-finite values".to_owned(),
+                }));
+            }
+        }
+
+        let (eigenvalues, eigenvectors) =
+            EigenDecomposition::hermitian_eigendecomposition_complex(covariance)?;
+
+        let mut indices: Vec<usize> = (0..n).collect();
+        indices.sort_by(|&i, &j| eigenvalues[j].total_cmp(&eigenvalues[i]));
+
+        // aᴴ P_s a = Σ_{k<K} |e_kᴴ a|²  (P_s = Σ_{k<K} e_k e_kᴴ, Hermitian projector).
+        let mut projection_power = 0.0_f64;
+        for &idx in indices.iter().take(self.num_sources) {
+            let eigenvec = eigenvectors.slice(s![.., idx]);
+            let mut e_h_a = Complex64::zero();
+            for j in 0..n {
+                e_h_a += eigenvec[j].conj() * steering[j];
+            }
+            projection_power += e_h_a.norm_sqr();
+        }
+
+        let response = projection_power * projection_power; // |aᴴ P_s a|²
+        if !response.is_finite() {
+            return Err(KwaversError::Numerical(NumericalError::InvalidOperation(
+                "EigenspaceMV::signal_subspace_response: non-finite response".to_owned(),
+            )));
+        }
+        Ok(response)
+    }
 }

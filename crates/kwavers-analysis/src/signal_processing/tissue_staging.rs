@@ -63,7 +63,10 @@ pub fn classify_liver_fibrosis(shear_modulus_kpa: f64) -> FibrosisStage {
 /// density `ρ` \[kg·m⁻³], via `μ = ρ c_S²` (then [`classify_liver_fibrosis`] in
 /// kPa). Non-positive `c_S`/`ρ` returns `F0`.
 #[must_use]
-pub fn classify_liver_fibrosis_from_speed(shear_speed_m_s: f64, density_kg_m3: f64) -> FibrosisStage {
+pub fn classify_liver_fibrosis_from_speed(
+    shear_speed_m_s: f64,
+    density_kg_m3: f64,
+) -> FibrosisStage {
     if !(shear_speed_m_s.is_finite()
         && density_kg_m3.is_finite()
         && shear_speed_m_s > 0.0
@@ -101,10 +104,7 @@ pub struct RoiStaging<C> {
 ///
 /// Non-finite/non-positive samples are dropped. Returns `None` if no valid
 /// sample remains.
-pub fn classify_roi<C>(
-    samples_kpa: &[f64],
-    classify: impl Fn(f64) -> C,
-) -> Option<RoiStaging<C>> {
+pub fn classify_roi<C>(samples_kpa: &[f64], classify: impl Fn(f64) -> C) -> Option<RoiStaging<C>> {
     let mut vals: Vec<f64> = samples_kpa
         .iter()
         .copied()
@@ -358,7 +358,11 @@ mod tests {
         // Heterogeneous ROI: wide spread (IQR/median > 0.3).
         let hetero = [2.0, 2.5, 3.5, 7.0, 9.0];
         let h = classify_liver_roi(&hetero).expect("roi");
-        assert!(h.heterogeneous, "wide ROI must be flagged: iqr={}", h.iqr_kpa);
+        assert!(
+            h.heterogeneous,
+            "wide ROI must be flagged: iqr={}",
+            h.iqr_kpa
+        );
 
         // Drops invalid samples; empty after filtering → None.
         let cleaned = classify_liver_roi(&[f64::NAN, -1.0, 4.0]).expect("roi");
@@ -385,7 +389,11 @@ mod tests {
         // Breast E_max ROI: wide spread ⇒ heterogeneous; median 60 ⇒ High.
         let b = classify_breast_roi(&[20.0, 40.0, 60.0, 120.0, 200.0]).expect("roi");
         assert_eq!(b.category, BiradsUpgradeLikelihood::High);
-        assert!(b.heterogeneous, "wide ROI must be flagged: iqr={}", b.iqr_kpa);
+        assert!(
+            b.heterogeneous,
+            "wide ROI must be flagged: iqr={}",
+            b.iqr_kpa
+        );
 
         // Invalid-sample drop + empty → None hold for every organ wrapper.
         assert_eq!(
@@ -406,11 +414,14 @@ mod tests {
         assert_eq!(classify_prostate(6.0), ProstateCategory::Prostatitis); // 5–8
         assert_eq!(classify_prostate(12.0), ProstateCategory::LowGradePca); // 8–20
         assert_eq!(classify_prostate(40.0), ProstateCategory::HighGradePca); // ≥20
-        // Onsets round up to the stiffer category.
+                                                                             // Onsets round up to the stiffer category.
         assert_eq!(classify_prostate(5.0), ProstateCategory::Prostatitis);
         assert_eq!(classify_prostate(5.0 - 1e-9), ProstateCategory::Benign);
         assert_eq!(classify_prostate(20.0), ProstateCategory::HighGradePca);
-        assert_eq!(classify_prostate(20.0 - 1e-9), ProstateCategory::LowGradePca);
+        assert_eq!(
+            classify_prostate(20.0 - 1e-9),
+            ProstateCategory::LowGradePca
+        );
         assert_eq!(classify_prostate(-1.0), ProstateCategory::Benign);
         assert_eq!(classify_prostate(f64::NAN), ProstateCategory::Benign);
         // Monotone.
@@ -425,11 +436,17 @@ mod tests {
     #[test]
     fn classifies_thyroid_risk() {
         assert_eq!(classify_thyroid(10.0), ThyroidMalignancyRisk::Low); // colloid <15
-        assert_eq!(classify_thyroid(25.0), ThyroidMalignancyRisk::LowIntermediate); // adenoma 15–40
+        assert_eq!(
+            classify_thyroid(25.0),
+            ThyroidMalignancyRisk::LowIntermediate
+        ); // adenoma 15–40
         assert_eq!(classify_thyroid(80.0), ThyroidMalignancyRisk::High); // papillary 40–200
         assert_eq!(classify_thyroid(250.0), ThyroidMalignancyRisk::VeryHigh); // anaplastic ≥200
         assert_eq!(classify_thyroid(40.0), ThyroidMalignancyRisk::High);
-        assert_eq!(classify_thyroid(40.0 - 1e-9), ThyroidMalignancyRisk::LowIntermediate);
+        assert_eq!(
+            classify_thyroid(40.0 - 1e-9),
+            ThyroidMalignancyRisk::LowIntermediate
+        );
         assert_eq!(classify_thyroid(0.0), ThyroidMalignancyRisk::Low);
         // E = 3μ: μ = 20 kPa ⇒ E = 60 kPa ⇒ High (papillary band).
         assert_eq!(
@@ -450,7 +467,10 @@ mod tests {
         assert_eq!(classify_breast(45.0), BiradsUpgradeLikelihood::Moderate); // DCIS 30–60
         assert_eq!(classify_breast(120.0), BiradsUpgradeLikelihood::High); // IDC ≥60
         assert_eq!(classify_breast(30.0), BiradsUpgradeLikelihood::Moderate);
-        assert_eq!(classify_breast(30.0 - 1e-9), BiradsUpgradeLikelihood::Minimal);
+        assert_eq!(
+            classify_breast(30.0 - 1e-9),
+            BiradsUpgradeLikelihood::Minimal
+        );
         assert_eq!(classify_breast(60.0), BiradsUpgradeLikelihood::High);
         assert_eq!(classify_breast(-1.0), BiradsUpgradeLikelihood::Minimal);
         // Soft mucinous carcinoma (E_max = 15 kPa) reads Minimal by stiffness —

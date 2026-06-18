@@ -291,7 +291,10 @@ mod tests {
         // closed form (catches the inverted-PRF formula that gave ~5e-9 m/s).
         let v_res = config.velocity_resolution();
         let expected = config.speed_of_sound * config.prf
-            / (2.0 * config.center_frequency * config.ensemble_size as f64 * config.beam_angle.cos());
+            / (2.0
+                * config.center_frequency
+                * config.ensemble_size as f64
+                * config.beam_angle.cos());
         assert_relative_eq!(v_res, expected, max_relative = 1e-12);
         assert_relative_eq!(
             v_res,
@@ -303,7 +306,10 @@ mod tests {
             (0.01..0.2).contains(&v_res),
             "velocity resolution {v_res} m/s outside the physically plausible band"
         );
-        assert!(v_res < v_nyquist, "resolution must be finer than Nyquist span");
+        assert!(
+            v_res < v_nyquist,
+            "resolution must be finer than Nyquist span"
+        );
     }
 
     #[test]

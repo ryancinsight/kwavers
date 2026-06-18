@@ -15,6 +15,7 @@ fig02  P-wave vs S-wave velocity ratio as function of Poisson's ratio
 fig03  Voigt model: storage G'(ω) and loss G''(ω) moduli vs frequency
 fig04  Wave speed dispersion: shear wave group vs phase velocity (Voigt)
 fig05  MRE harmonic displacement field (cylindrical scatterer, analytical)
+fig06  Thermal strain thermometry (NCC tracking → strain → ΔT, Theorem 11.12.2)
 
 References
 ----------
@@ -280,6 +281,147 @@ def fig05_mre_displacement() -> None:
     plt.close(fig)
 
 
+# Soft-tissue thermoacoustic SSOT (mirrors kwavers_core::constants).
+C0_TISSUE = 1540.0          # m/s
+DC_DT_TISSUE = 2.0          # m/s per °C
+ALPHA_TH_TISSUE = 3.0e-4    # 1/°C
+
+
+def _combined_coefficient(c0: float, dc_dt: float, alpha_th: float) -> float:
+    """k_T = α_th − (1/c0)·(dc/dT), thermal strain per unit ΔT [1/°C]."""
+    return alpha_th - dc_dt / c0
+
+
+def _track_axial_shift(reference: np.ndarray, tracked: np.ndarray,
+                       window_half: int, max_lag: int) -> np.ndarray:
+    """Windowed NCC axial displacement (samples) with parabolic sub-sample.
+
+    Mirrors ``thermal_strain::tracking`` in the Rust SSOT for visualization.
+    """
+    nz = reference.size
+    disp = np.zeros(nz)
+    guard = window_half + max_lag
+
+    def ncc(a, b):
+        a = a - a.mean()
+        b = b - b.mean()
+        den = np.sqrt((a * a).sum() * (b * b).sum())
+        return 0.0 if den < 1e-300 else float((a * b).sum() / den)
+
+    for z in range(guard, nz - guard):
+        ref_win = reference[z - window_half: z + window_half + 1]
+        corr = np.array([
+            ncc(ref_win, tracked[z + lag - window_half: z + lag + window_half + 1])
+            for lag in range(-max_lag, max_lag + 1)
+        ])
+        k = int(np.argmax(corr))
+        sub = 0.0
+        if 0 < k < corr.size - 1:
+            denom = corr[k - 1] - 2 * corr[k] + corr[k + 1]
+            if denom < 0:
+                sub = np.clip(0.5 * (corr[k - 1] - corr[k + 1]) / denom, -0.5, 0.5)
+        disp[z] = (k - max_lag) + sub
+    return disp
+
+
+def fig06_thermal_strain() -> None:
+    """Thermal strain thermometry on a synthetic uniformly-heated block.
+
+    Illustrates Theorem 11.12.2: ε_T = k_T·ΔT. Generates broadband speckle RF,
+    warps it by the apparent displacement u(z)=k_T·ΔT·z of a uniform ΔT, recovers
+    the shift by NCC, differentiates (least squares) to strain, and inverts to ΔT.
+    """
+    rng = np.random.default_rng(2024)
+    fs = 40e6
+    dz = C0_TISSUE / (2 * fs)
+    nz = 384
+    delta_t_true = 6.0  # °C, uniform
+    k_t = _combined_coefficient(C0_TISSUE, DC_DT_TISSUE, ALPHA_TH_TISSUE)
+
+    # Lateral lines of independent broadband speckle (the block is laterally
+    # uniform); spatial averaging suppresses per-line tracking jitter, as a real
+    # thermal-strain system does.
+    n_lines = 24
+    spc = 5.0  # samples per carrier cycle
+    idx = np.arange(nz)
+    carrier = np.cos(2 * np.pi * idx / spc)
+    win = 11
+    half = win // 2
+    src = np.clip(idx - k_t * delta_t_true * idx, 0, nz - 1)
+    lo = np.floor(src).astype(int)
+    frac = src - lo
+    hi = np.minimum(lo + 1, nz - 1)
+
+    strain_lines = np.zeros((n_lines, nz))
+    ref0 = tracked0 = None
+    for line in range(n_lines):
+        refl = rng.uniform(-1.0, 1.0, nz)
+        refl = 0.5 * (refl + np.roll(refl, 1))
+        ref = refl * carrier
+        tracked = ref[lo] * (1 - frac) + ref[hi] * frac
+        if line == 0:
+            ref0, tracked0 = ref, tracked
+        u = _track_axial_shift(ref, tracked, window_half=12, max_lag=6) * dz
+        for z in range(nz):
+            a, b = max(0, z - half), min(nz, z + half + 1)
+            seg = u[a:b]
+            if seg.size >= 2:
+                zc = np.arange(seg.size) * dz
+                zc -= zc.mean()
+                strain_lines[line, z] = float(
+                    (zc * (seg - seg.mean())).sum() / (zc * zc).sum())
+
+    strain = strain_lines.mean(axis=0)
+    strain_std = strain_lines.std(axis=0)
+    delta_t = strain / k_t
+    delta_t_std = strain_std / abs(k_t)
+
+    depth_mm = idx * dz * 1e3
+    guard = 12 + 6 + win
+    interior = slice(guard, nz - guard)
+
+    fig, axes = plt.subplots(1, 3, figsize=(15, 4.2))
+
+    ax = axes[0]
+    ax.plot(depth_mm[:120], ref0[:120], lw=0.8, label="pre-heating")
+    ax.plot(depth_mm[:120], tracked0[:120], lw=0.8, label="post-heating")
+    ax.set_xlabel("depth (mm)")
+    ax.set_ylabel("RF amplitude")
+    ax.set_title("(a) RF echo shift from heating")
+    ax.legend(fontsize=8)
+
+    di = depth_mm[interior]
+    ax = axes[1]
+    s = strain[interior] * 1e3
+    ssd = strain_std[interior] * 1e3
+    ax.plot(s, di, color="C3", label="mean over lines")
+    ax.fill_betweenx(di, s - ssd, s + ssd, color="C3", alpha=0.25, label="±1 std")
+    ax.axvline(k_t * delta_t_true * 1e3, ls="--", color="k",
+               label=r"$k_T\,\Delta T$ (truth)")
+    ax.invert_yaxis()
+    ax.set_xlabel(r"thermal strain $\varepsilon_T$ ($\times10^{-3}$)")
+    ax.set_ylabel("depth (mm)")
+    ax.set_title("(b) Negative strain (water-based)")
+    ax.legend(fontsize=8)
+
+    ax = axes[2]
+    dt = delta_t[interior]
+    dtsd = delta_t_std[interior]
+    ax.plot(dt, di, color="C0", label="recovered")
+    ax.fill_betweenx(di, dt - dtsd, dt + dtsd, color="C0", alpha=0.25, label="±1 std")
+    ax.axvline(delta_t_true, ls="--", color="k", label="ground truth")
+    ax.invert_yaxis()
+    ax.set_xlabel(r"$\Delta T$ (°C)")
+    ax.set_ylabel("depth (mm)")
+    ax.set_title(rf"(c) Reconstructed $\Delta T$ ($k_T={k_t:.2e}$/°C)")
+    ax.legend(fontsize=8)
+
+    fig.suptitle("Thermal Strain Imaging — Ultrasound Thermometry (Theorem 11.12.2)")
+    fig.tight_layout()
+    savefig("fig06_thermal_strain")
+    plt.close(fig)
+
+
 if __name__ == "__main__":
     print("Generating Chapter 10 figures (Elastography)...")
     fig01_shear_wave_speed()
@@ -287,4 +429,5 @@ if __name__ == "__main__":
     fig03_voigt_viscoelastic()
     fig04_shear_dispersion()
     fig05_mre_displacement()
+    fig06_thermal_strain()
     print("Done. Output: docs/book/figures/ch10/")

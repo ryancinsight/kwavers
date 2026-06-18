@@ -21,6 +21,7 @@
 
 pub mod fusion;
 pub mod modalities;
+pub mod seismic;
 
 // NOTE: Wildcard re-exports removed to prevent namespace pollution.
 // Access specific types via: physics::acoustics::imaging::submodule::Type

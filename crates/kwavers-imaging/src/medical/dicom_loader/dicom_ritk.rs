@@ -76,8 +76,8 @@ pub fn select_unique_series<P: AsRef<Path>>(path: P) -> KwaversResult<DicomSerie
             for item in &series {
                 report.push_str(&format!(
                     "  uid={} modality={} description={} files={}\n",
-                    item.series_instance_uid,
-                    item.modality,
+                    item.series_instance_uid(),
+                    item.modality(),
                     item.series_description,
                     item.file_paths.len()
                 ));
@@ -120,7 +120,7 @@ pub fn load_series_with_uid<P: AsRef<Path>>(
 
     let info = series
         .into_iter()
-        .find(|s| s.series_instance_uid.as_str() == series_uid)
+        .find(|s| s.series_instance_uid() == series_uid)
         .ok_or_else(|| {
             KwaversError::InvalidInput(format!(
                 "DICOM series UID '{series_uid}' not found in '{}'",
@@ -143,7 +143,7 @@ pub fn load_series(info: &DicomSeriesInfo) -> KwaversResult<DicomSeriesVolume> {
     let image = load_dicom_series::<AdapterBackend>(info, &device).map_err(|e| {
         KwaversError::InternalError(format!(
             "ritk-io failed to decode DICOM series '{}': {e}",
-            info.series_instance_uid
+            info.series_instance_uid()
         ))
     })?;
 
@@ -158,9 +158,9 @@ pub fn load_series(info: &DicomSeriesInfo) -> KwaversResult<DicomSeriesVolume> {
         ),
         voxel_spacing_mm: vol.voxel_spacing_mm,
         affine: vol.affine,
-        data_type: format!("{} via ritk-io (f32 → f64)", info.modality),
+        data_type: format!("{} via ritk-io (f32 → f64)", info.modality()),
         intensity_range: vol.intensity_range,
-        modality: info.modality.to_string(),
+        modality: info.modality().to_string(),
     };
 
     Ok(DicomSeriesVolume {

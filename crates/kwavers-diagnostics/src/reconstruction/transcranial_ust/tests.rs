@@ -137,6 +137,114 @@ fn transcranial_ust_volume_inversion_reconstructs_coupled_three_dimensional_arra
     );
 }
 
+/// Build a 2-D CT phantom: a circular skull ring of bone HU enclosing brain
+/// tissue, air outside. `skull_hu == None` yields a skull-free uniform-tissue
+/// head (used to isolate the travel-time reduction).
+fn ct_head_phantom(n: usize, skull_hu: Option<f64>) -> Array2<f64> {
+    let center = (n - 1) as f64 / 2.0;
+    let r_outer = 0.42 * n as f64;
+    let r_inner = 0.34 * n as f64;
+    let mut hu = Array2::<f64>::from_elem((n, n), -1000.0);
+    for ix in 0..n {
+        for iy in 0..n {
+            let r = ((ix as f64 - center).powi(2) + (iy as f64 - center).powi(2)).sqrt();
+            hu[[ix, iy]] = match skull_hu {
+                Some(bone) if (r_inner..=r_outer).contains(&r) => bone,
+                _ if r < r_outer => 40.0, // brain / soft tissue
+                _ => -1000.0,             // air
+            };
+        }
+    }
+    hu
+}
+
+// The CT-derived skull travel-time τ = ∫dl/c through a bony ring is SHORTER than
+// the same straight ray through a skull-free soft-tissue head, because the skull
+// sound speed (~2.6 km/s) far exceeds brain tissue (~1.55 km/s). This phase
+// advance is the dominant transcranial aberration the kernel must model.
+#[test]
+fn transcranial_skull_traveltime_is_shorter_than_soft_tissue_path() {
+    let n = 40usize;
+    let spacing = 1.0e-3;
+    let skull = AcousticSlice::from_ct_hu(ct_head_phantom(n, Some(820.0)), spacing).unwrap();
+    let soft = AcousticSlice::from_ct_hu(ct_head_phantom(n, None), spacing).unwrap();
+
+    // A diametric ray crossing the ring on both sides (well inside the grid).
+    let half = 0.018;
+    let tau_skull =
+        super::sensitivity::slowness_line_integral(&skull, -half, 0.0, 0.0, half, 0.0, 0.0);
+    let tau_soft =
+        super::sensitivity::slowness_line_integral(&soft, -half, 0.0, 0.0, half, 0.0, 0.0);
+
+    assert!(tau_skull > 0.0 && tau_soft > 0.0);
+    assert!(
+        tau_skull < 0.97 * tau_soft,
+        "skull travel time {tau_skull:.3e}s must be meaningfully shorter than soft-tissue {tau_soft:.3e}s"
+    );
+}
+
+// For a homogeneous-speed head the travel-time integral must reduce to the
+// constant-speed phase: τ = L / c. This is what makes the aberration kernel a
+// strict generalization that collapses to the original constant-tissue kernel.
+#[test]
+fn transcranial_traveltime_reduces_to_distance_over_speed_for_uniform_medium() {
+    let n = 40usize;
+    let spacing = 1.0e-3;
+    // Fully uniform soft-tissue head (HU = 40 everywhere) so every sampled point
+    // along any interior ray has the same speed and τ = L/c is exact.
+    let soft = AcousticSlice::from_ct_hu(Array2::from_elem((n, n), 40.0), spacing).unwrap();
+    let c = soft.sound_speed_m_s[[n / 2, n / 2]];
+    assert!(soft.sound_speed_m_s.iter().all(|&v| (v - c).abs() < 1.0e-12));
+
+    let (ax, bx) = (-0.012_f64, 0.013_f64);
+    let (ay, by) = (-0.009_f64, 0.011_f64);
+    let tau = super::sensitivity::slowness_line_integral(&soft, ax, ay, 0.0, bx, by, 0.0);
+    let length = ((bx - ax).powi(2) + (by - ay).powi(2)).sqrt();
+    let expected = length / c;
+    assert!(
+        (tau - expected).abs() <= 1.0e-9 * expected,
+        "uniform-medium τ {tau:.6e} must equal L/c {expected:.6e}"
+    );
+}
+
+// The CT-derived skull sound speed must change the encoded measurement: with the
+// aberration model on, the skull phase advance shifts the finite-frequency data
+// relative to the constant-tissue-speed kernel. Mirrors the attenuation-model
+// data-sensitivity check below.
+#[test]
+fn transcranial_ct_aberration_changes_encoded_data() {
+    let n = 32usize;
+    let medium = AcousticSlice::from_ct_hu(ct_head_phantom(n, Some(800.0)), 3.0e-3).unwrap();
+    let config = TranscranialUstBornInversionConfig {
+        element_count: 48,
+        radius_m: 0.07,
+        aberration_model: true,
+        linear: LinearBornInversionConfig {
+            frequencies_hz: vec![220_000.0, 360_000.0],
+            receiver_offsets: vec![24, 12, 36],
+            iterations: 4,
+            ..LinearBornInversionConfig::default()
+        },
+        ..TranscranialUstBornInversionConfig::default()
+    };
+    let with_aberration = reconstruct_brain_slice(&medium, &config).unwrap();
+
+    let mut without = config.clone();
+    without.aberration_model = false;
+    let no_aberration = reconstruct_brain_slice(&medium, &without).unwrap();
+
+    let data_difference: f64 = with_aberration
+        .synthetic_data
+        .iter()
+        .zip(no_aberration.synthetic_data.iter())
+        .map(|(a, b)| (a - b).abs())
+        .sum();
+    assert!(
+        data_difference > 1.0e-6,
+        "CT-derived skull travel time must change the encoded data (got {data_difference:.3e})"
+    );
+}
+
 #[test]
 fn transcranial_ust_inversion_reduces_data_objective_and_recovers_contrast() {
     let mut hu = Array2::<f64>::from_elem((32, 32), -1000.0);

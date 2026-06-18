@@ -141,7 +141,7 @@ mod tests {
         assert!(estimate_shear_wavelength(&[1.0; 4], 1e-3).is_none()); // too short
         assert!(estimate_shear_wavelength(&[2.5; 64], 1e-3).is_none()); // constant
         assert!(estimate_shear_wavelength(&sinusoid(4e-3, 2e-4, 64, 1.0, 0.0), 0.0).is_none()); // dx≤0
-        // A monotone ramp never oscillates ⇒ no peak.
+                                                                                                // A monotone ramp never oscillates ⇒ no peak.
         let ramp: Vec<f64> = (0..64).map(|i| i as f64).collect();
         assert!(estimate_shear_wavelength(&ramp, 1e-3).is_none());
     }

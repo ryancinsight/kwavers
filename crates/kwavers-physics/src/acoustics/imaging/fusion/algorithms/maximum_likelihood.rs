@@ -3,7 +3,7 @@ use crate::acoustics::imaging::fusion::registration;
 use crate::acoustics::imaging::fusion::types::{AffineTransform, FusedImageResult};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use ndarray::{Array3, CowArray, Zip};
-use ritk_registration::ImageRegistration;
+use ritk_registration::{AffineTransform as RitkAffineTransform, ImageRegistration};
 use std::collections::HashMap;
 
 /// Maximum likelihood estimation fusion
@@ -76,9 +76,7 @@ pub(crate) fn fuse_maximum_likelihood(
     }
     let mut contexts = Vec::new();
 
-    let identity_transform = [
-        1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
-    ];
+    let identity_transform = registration::IDENTITY_HOMOGENEOUS;
 
     for modality_name in &modality_names {
         let modality = fusion.registered_data.get(modality_name.as_str()).unwrap();
@@ -88,24 +86,25 @@ pub(crate) fn fuse_maximum_likelihood(
         let registration_result = image_reg.rigid_registration_mutual_info(
             &reference_modality.data,
             &modality.data,
-            &identity_transform,
+            &RitkAffineTransform::IDENTITY,
         )?;
 
-        let affine_transform = AffineTransform::from_homogeneous(&registration_result.transform);
+        let affine_transform =
+            AffineTransform::from_homogeneous(registration_result.transform.as_array());
         registration_transforms.insert(modality_name.to_string(), affine_transform);
 
         // Resample
-        let resampled_data = if modality.data.dim() == target_dims
-            && registration_result.transform == identity_transform
-        {
-            CowArray::from(modality.data.view())
-        } else {
-            CowArray::from(registration::resample_to_target_grid(
-                &modality.data,
-                &registration_result.transform,
-                target_dims,
-            ))
-        };
+        let transform = *registration_result.transform.as_array();
+        let resampled_data =
+            if modality.data.dim() == target_dims && transform == identity_transform {
+                CowArray::from(modality.data.view())
+            } else {
+                CowArray::from(registration::resample_to_target_grid(
+                    &modality.data,
+                    &transform,
+                    target_dims,
+                ))
+            };
 
         // Initialize variance based on quality score
         // Higher quality -> lower variance

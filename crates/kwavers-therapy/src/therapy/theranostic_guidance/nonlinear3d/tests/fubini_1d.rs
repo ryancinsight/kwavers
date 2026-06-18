@@ -33,15 +33,14 @@
 //!
 //! # Tier
 //!
-//! `#[ignore]`'d (~2 s runtime). Run on demand with
-//! `cargo test --lib --package kwavers -- --ignored fubini_absolute`.
+//! Tier-1 literature validation: the 1-D harness runs in ~0.07 s, well within
+//! the 30 s nextest budget, so it executes by default in CI.
 
 use super::bessel::{bessel_j1, bessel_j2};
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 
 #[test]
-#[ignore = "Tier 2: Literature validation (Aanonsen 1984 Fubini-absolute, 1-D harness), ~2s runtime"]
 fn westervelt_recurrence_fubini_absolute_at_gamma_half_matches_aanonsen_1984() {
     // Physical parameters chosen so Γ = 0.5 lies inside the 1-D domain.
     // Resolution: 30 pts/wavelength at fundamental, 15 pts/wavelength at 2nd

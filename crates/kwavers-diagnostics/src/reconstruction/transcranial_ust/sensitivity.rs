@@ -23,6 +23,7 @@ pub(super) fn build_sensitivity_matrix(
     config: &LinearBornInversionConfig,
     geometry: &TranscranialBowlGeometry,
     active: &[ActiveVoxel],
+    aberration_model: bool,
 ) -> Vec<f64> {
     let offset_count = config.receiver_offsets.len();
     let frequency_count = config.frequencies_hz.len();
@@ -35,6 +36,12 @@ pub(super) fn build_sensitivity_matrix(
     let attenuation_integrals = config
         .attenuation_model
         .then(|| build_element_voxel_attenuation_integrals(medium, geometry, active));
+    // Skull-aberration phase: per-element→voxel travel-time τ = ∫dl/c(x) through
+    // the CT-derived sound-speed map. When disabled the kernel falls back to a
+    // constant reference-tissue phase k·(ds+dr). Precomputed per element-voxel pair
+    // (mirrors the attenuation integrals) so each row reuses both legs.
+    let traveltime_integrals =
+        aberration_model.then(|| build_element_voxel_traveltime_integrals(medium, geometry, active));
 
     matrix
         .par_chunks_mut(ncols)
@@ -52,6 +59,7 @@ pub(super) fn build_sensitivity_matrix(
             let channel_frequency_hz = harmonic_order as f64 * frequency_hz;
             let frequency_mhz = channel_frequency_hz * 1.0e-6;
             let k = TAU * channel_frequency_hz / SOUND_SPEED_TISSUE;
+            let omega = TAU * channel_frequency_hz;
             let mut norm2 = 0.0;
 
             for (col, voxel) in active.iter().enumerate() {
@@ -77,7 +85,19 @@ pub(super) fn build_sensitivity_matrix(
                 } else {
                     second_harmonic_factor(config, frequency_hz, ds + dr)
                 };
-                let value = pixel_area * attenuation * harmonic * (k * (ds + dr)).cos() / spreading;
+                // Phase: CT-derived skull travel-time ω·(τ_s+τ_r) when the
+                // aberration model is active, else the constant-tissue phase
+                // k·(ds+dr). The two coincide for a homogeneous c = SOUND_SPEED_TISSUE
+                // medium since τ = (ds+dr)/SOUND_SPEED_TISSUE there.
+                let phase = traveltime_integrals.as_ref().map_or_else(
+                    || k * (ds + dr),
+                    |integrals| {
+                        omega
+                            * (integrals[source_idx * ncols + col]
+                                + integrals[receiver_idx * ncols + col])
+                    },
+                );
+                let value = pixel_area * attenuation * harmonic * phase.cos() / spreading;
                 row_values[col] = value;
                 norm2 += value * value;
             }
@@ -156,6 +176,64 @@ fn attenuation_line_integral(
     integral
 }
 
+/// Per-element→active-voxel acoustic travel time `τ = ∫ dl / c(x)` [s] along the
+/// straight ray, integrating the CT-derived sound-speed map. Layout matches the
+/// attenuation integrals: `integrals[element_idx * ncols + col]`.
+fn build_element_voxel_traveltime_integrals(
+    medium: &AcousticSlice,
+    geometry: &TranscranialBowlGeometry,
+    active: &[ActiveVoxel],
+) -> Vec<f64> {
+    let ncols = active.len();
+    let mut integrals = vec![0.0; geometry.len() * ncols];
+    integrals
+        .par_chunks_mut(ncols)
+        .enumerate()
+        .for_each(|(element_idx, row)| {
+            let element = geometry.elements[element_idx];
+            for (col, voxel) in active.iter().enumerate() {
+                row[col] = slowness_line_integral(
+                    medium,
+                    element.x_m,
+                    element.y_m,
+                    element.z_m,
+                    voxel.x_m,
+                    voxel.y_m,
+                    voxel.z_m,
+                );
+            }
+        });
+    integrals
+}
+
+/// Acoustic travel time `τ = ∫ dl / c(x)` [s] along the straight segment A→B,
+/// midpoint-sampling the CT-derived sound-speed map. For a homogeneous map this
+/// reduces exactly to `|A−B| / c`.
+pub(super) fn slowness_line_integral(
+    medium: &AcousticSlice,
+    ax: f64,
+    ay: f64,
+    az: f64,
+    bx: f64,
+    by: f64,
+    bz: f64,
+) -> f64 {
+    let length = distance(ax, ay, az, bx, by, bz);
+    if length == 0.0 {
+        return 0.0;
+    }
+    let steps = (length / medium.spacing_m).ceil().max(1.0) as usize;
+    let ds = length / steps as f64;
+    let mut integral = 0.0;
+    for step in 0..steps {
+        let t = (step as f64 + 0.5) / steps as f64;
+        let x = ax + t * (bx - ax);
+        let y = ay + t * (by - ay);
+        integral += ds / sound_speed_at(medium, x, y);
+    }
+    integral
+}
+
 fn attenuation_at(medium: &AcousticSlice, x_m: f64, y_m: f64) -> f64 {
     let (nx, ny) = medium.attenuation_np_per_m_mhz.dim();
     let ix = x_m / medium.spacing_m + (nx - 1) as f64 / 2.0;
@@ -174,6 +252,27 @@ fn attenuation_at(medium: &AcousticSlice, x_m: f64, y_m: f64) -> f64 {
     let a01 = medium.attenuation_np_per_m_mhz[[x0, y1]];
     let a11 = medium.attenuation_np_per_m_mhz[[x1, y1]];
     (1.0 - tx) * (1.0 - ty) * a00 + tx * (1.0 - ty) * a10 + (1.0 - tx) * ty * a01 + tx * ty * a11
+}
+
+/// Bilinearly sample the CT-derived sound-speed map [m/s] at physical (x, y).
+/// Out-of-domain samples clamp to the nearest edge speed so a ray leg outside the
+/// reconstruction grid still carries a finite, physical travel time (never zero,
+/// which would make τ singular).
+fn sound_speed_at(medium: &AcousticSlice, x_m: f64, y_m: f64) -> f64 {
+    let (nx, ny) = medium.sound_speed_m_s.dim();
+    let ix = (x_m / medium.spacing_m + (nx - 1) as f64 / 2.0).clamp(0.0, (nx - 1) as f64);
+    let iy = (y_m / medium.spacing_m + (ny - 1) as f64 / 2.0).clamp(0.0, (ny - 1) as f64);
+    let x0 = ix.floor() as usize;
+    let y0 = iy.floor() as usize;
+    let x1 = (x0 + 1).min(nx - 1);
+    let y1 = (y0 + 1).min(ny - 1);
+    let tx = ix - x0 as f64;
+    let ty = iy - y0 as f64;
+    let c00 = medium.sound_speed_m_s[[x0, y0]];
+    let c10 = medium.sound_speed_m_s[[x1, y0]];
+    let c01 = medium.sound_speed_m_s[[x0, y1]];
+    let c11 = medium.sound_speed_m_s[[x1, y1]];
+    (1.0 - tx) * (1.0 - ty) * c00 + tx * (1.0 - ty) * c10 + (1.0 - tx) * ty * c01 + tx * ty * c11
 }
 
 fn distance(ax: f64, ay: f64, az: f64, bx: f64, by: f64, bz: f64) -> f64 {

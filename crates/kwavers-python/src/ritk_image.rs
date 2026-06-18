@@ -36,7 +36,7 @@ pub fn load_ritk_nifti(path: &Path) -> PyResult<(Array3<f64>, [f64; 3])> {
         ))
     })?;
     let [depth, rows, cols] = image.shape();
-    let spacing = image.spacing().to_vec();
+    let spacing = image.spacing().as_slice().to_vec();
     if spacing.len() != 3 {
         return Err(PyRuntimeError::new_err(format!(
             "RITK image spacing rank {} is not 3",

@@ -18,8 +18,10 @@
 //!
 //! # Tier
 //!
-//! `#[ignore]`'d (~10 s runtime, two forward runs). Run on demand with
-//! `cargo test --lib --package kwavers -- --ignored absorption_decay`.
+//! Tier-3 comprehensive validation: two 96³ forward runs take ~47 s combined,
+//! exceeding the 30 s nextest per-test budget, so it stays `#[ignore]`'d. Run
+//! on demand with
+//! `cargo nextest run -p kwavers-therapy --run-ignored ignored-only -E 'test(absorption_decay)'`.
 
 use super::super::encoding::SourceEncoding;
 use super::super::forward::{forward_with_schedule, ForwardInput, TimeSchedule};
@@ -31,7 +33,7 @@ use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WA
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 
 #[test]
-#[ignore = "Tier 2: Literature validation (Treeby-Cox 2010 plane-wave decay), ~10s runtime"]
+#[ignore = "Tier 3: Literature validation (Treeby-Cox 2010 plane-wave decay), ~47s (two 96³ forward runs) exceeds 30s budget"]
 fn fractional_laplacian_absorption_decay_ratio_matches_alpha_omega_y_power_law() {
     let n: usize = 96;
     let cells = n * n * n;

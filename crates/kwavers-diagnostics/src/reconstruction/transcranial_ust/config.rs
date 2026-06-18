@@ -37,6 +37,21 @@ pub struct TranscranialUstBornInversionConfig {
     pub radius_m: f64,
     /// Source-domain focused-bowl aperture.
     pub aperture: BowlAngularBounds,
+    /// Use the CT-derived sound-speed map for the Born kernel phase
+    /// (skull-aberration travel-time `ω·∫dl/c(x)`) instead of a constant
+    /// reference-tissue speed.
+    ///
+    /// The skull (c ≈ 2900 m/s) advances the acoustic phase far more than it
+    /// attenuates it; this is the dominant transcranial aberration. When `true`,
+    /// the round-trip phase integrates the local slowness `1/c(x)` along each
+    /// source→voxel→receiver ray through the CT speed map — symmetric with the
+    /// CT-derived attenuation line integral already applied when
+    /// `linear.attenuation_model` is set. For a homogeneous-speed medium the
+    /// travel-time phase reduces exactly to the constant-speed kernel, so this is
+    /// a strict generalization. Applies to the 2-D slice path
+    /// ([`reconstruct_brain_slice`](super::reconstruct_brain_slice)); the 3-D
+    /// volume path uses the lumped solver operator and is unaffected.
+    pub aberration_model: bool,
 }
 
 impl Default for TranscranialUstBornInversionConfig {
@@ -54,6 +69,7 @@ impl Default for TranscranialUstBornInversionConfig {
             element_count: TRANSCRANIAL_FOCUSED_BOWL_ELEMENT_COUNT,
             radius_m: 0.11,
             aperture: BowlAngularBounds::hemisphere(),
+            aberration_model: true,
         }
     }
 }

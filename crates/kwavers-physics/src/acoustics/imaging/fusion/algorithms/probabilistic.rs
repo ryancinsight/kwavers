@@ -4,7 +4,7 @@ use crate::acoustics::imaging::fusion::registration;
 use crate::acoustics::imaging::fusion::types::{AffineTransform, FusedImageResult};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use ndarray::{Array3, CowArray};
-use ritk_registration::ImageRegistration;
+use ritk_registration::{AffineTransform as RitkAffineTransform, ImageRegistration};
 use std::collections::HashMap;
 
 /// Probabilistic fusion with uncertainty modeling
@@ -67,31 +67,30 @@ pub(crate) fn fuse_probabilistic(fusion: &MultiModalFusion) -> KwaversResult<Fus
         modality_quality.insert(modality_name.clone(), modality.quality_score);
 
         // Register modality
-        let identity_transform = [
-            1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
-        ];
+        let identity_transform = registration::IDENTITY_HOMOGENEOUS;
 
         let registration_result = registration.rigid_registration_mutual_info(
             &reference_modality.data,
             &modality.data,
-            &identity_transform,
+            &RitkAffineTransform::IDENTITY,
         )?;
 
-        let affine_transform = AffineTransform::from_homogeneous(&registration_result.transform);
+        let affine_transform =
+            AffineTransform::from_homogeneous(registration_result.transform.as_array());
         registration_transforms.insert(modality_name.clone(), affine_transform);
 
         // Resample to common grid
-        let resampled_data = if modality.data.dim() == target_dims
-            && registration_result.transform == identity_transform
-        {
-            CowArray::from(modality.data.view())
-        } else {
-            CowArray::from(registration::resample_to_target_grid(
-                &modality.data,
-                &registration_result.transform,
-                target_dims,
-            ))
-        };
+        let transform = *registration_result.transform.as_array();
+        let resampled_data =
+            if modality.data.dim() == target_dims && transform == identity_transform {
+                CowArray::from(modality.data.view())
+            } else {
+                CowArray::from(registration::resample_to_target_grid(
+                    &modality.data,
+                    &transform,
+                    target_dims,
+                ))
+            };
 
         modality_data.push((
             resampled_data,

@@ -160,6 +160,7 @@
 //! - `deconvolution`: Point spread function deconvolution for resolution enhancement
 //! - `reconstruction`: Advanced image reconstruction algorithms
 
+pub mod b_mode;
 pub mod beamforming;
 pub mod doppler;
 pub mod filtering;

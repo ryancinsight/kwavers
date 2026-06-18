@@ -79,11 +79,50 @@ CNR = |μ_l − μ_b| / σ_b                                                   (
 
 **Definition 9.3 (Contrast Ratio).** CR = 20 log₁₀(μ_l/μ_b) [dB].
 
+### 9.1.5 Display Back-End: Log Compression and Scan Conversion
+
+After TGC (§9.1.2) and envelope detection (§9.1.3), two stages produce the
+displayed grayscale frame.
+
+**Log compression.** Tissue echo amplitudes span 50–70 dB, far beyond a
+display's perceptual range. The envelope `e` is compressed relative to its peak,
+
+```text
+I = clamp( (20·log₁₀(e/e_max) + D) / D , 0, 1 ),                          (9.7)
+```
+
+mapping the peak to 1, a point `D` dB below the peak to 0, and clamping the rest.
+The dynamic range `D` (typically 40–60 dB) is the operator "contrast" control.
+
+**Scan conversion.** Sector (phased) and convex arrays acquire data along beams
+that fan out in `(range, angle)` space; the display is Cartesian. Each Cartesian
+pixel `(x, z)` maps back to polar coordinates `r = √(x²+z²)`,
+`θ = atan2(x, z)`, and — when `(r, θ)` lies inside the acquired fan — is
+bilinearly interpolated from the four surrounding beam samples:
+
+```text
+I(x, z) = bilerp( beam[(θ − θ_min)/Δθ, (r − r₀)/Δr] ),                    (9.8)
+```
+
+with apex radius `r₀ = 0` for a sector array and `r₀ > 0` for a convex array.
+Pixels outside the fan are background. This pipeline is implemented in
+`kwavers_analysis::signal_processing::b_mode` (`TgcConfig`, `envelope`,
+`log_compress`, `ScanConverter`); value-semantic tests verify that TGC exactly
+flattens attenuated reflectors, that log compression maps the −20 dB and −40 dB
+points to 0.5 and 0, and that a beam sample lands at its analytic Cartesian
+location after conversion.
+
 ---
 
 ![Pulse-echo point-spread-function profiles](figures/ch05/fig01_psf_profiles.png)
 
 *Figure 9.1. Lateral and axial point-spread-function profiles of the pulse-echo system (§9.1); the −6 dB widths set lateral and axial resolution (Theorem 7.4).*
+
+![B-mode display back-end](figures/ch05/fig12_bmode_pipeline.png)
+
+*Figure 9.2b. B-mode display back-end (§9.1.5): TGC flattens the depth-dependent
+echo decay, log compression fits the dynamic range, and scan conversion maps the
+polar sector beams to a Cartesian image.*
 
 ---
 
@@ -207,11 +246,70 @@ wall filter (`kwavers_analysis::signal_processing::doppler::WallFilter`) suppres
 tissue clutter (typically by high-pass FIR filter with cutoff ≈ 100–500 Hz) before the
 autocorrelation step.
 
+### 9.3.4 Continuous-Wave Doppler
+
+Pulsed-wave Doppler trades velocity range for range resolution: its
+pulse-repetition frequency `f_PRF` caps the unambiguous Doppler shift at the
+Nyquist limit `f_PRF/2`, giving a maximum velocity
+
+```text
+v_Nyquist = c · f_PRF / (4 f₀ cos θ).
+```
+
+**Continuous-wave (CW) Doppler** insonifies with an unmodulated tone and receives
+on a separate element. With no pulsing there is **no PRF and hence no Nyquist
+velocity limit**: the full Doppler spectrum is recovered without aliasing, at the
+cost of range resolution (all scatterers along the beam contribute). This is the
+method of choice for high-velocity jets (aortic stenosis, mitral regurgitation)
+that alias under PW Doppler.
+
+The processor (`ContinuousWaveDoppler`) quadrature-demodulates the received tone
+against the transmit carrier `f₀`, producing a complex baseband whose signed
+instantaneous frequency is the Doppler shift `f_d`. Decimating to a baseband rate
+`f_bb` (chosen by the receiver, **independent of depth or PRF**) sets the velocity
+resolution `Δv = c·f_bb/(2 f₀ N_bb)` and an unambiguous range `±c·f_bb/(4 f₀)`
+that is made arbitrarily large. The two-sided baseband spectrum maps bin frequency
+to signed velocity via `v = f_d c/(2 f₀ cos θ)`; the sign encodes flow direction.
+
+### 9.3.5 Vector Flow Imaging
+
+Conventional Doppler measures only the velocity *component along the beam*,
+`v_i = v · d̂_i`, and must assume the beam-to-flow angle `θ` to report a speed.
+**Cross-beam vector flow** removes this ambiguity by insonifying the same sample
+volume from two or more directions.
+
+**Theorem 9.4 (Cross-Beam Velocity Recovery).** Given Doppler measurements
+`{v_i}` along unit beam directions `{d̂_i}` (i = 1..N, N ≥ 2 non-collinear), the
+velocity vector `v` minimizing `Σ_i (d̂_i · v − v_i)²` is the unique solution of
+the normal equations
+
+$$
+\Big(\sum_i \hat d_i \hat d_i^{\mathsf T}\Big)\, v \;=\; \sum_i v_i\, \hat d_i .
+$$
+
+*Proof.* The objective `J(v) = Σ_i (d̂_iᵀ v − v_i)²` is convex quadratic with
+gradient `∇J = 2 Σ_i d̂_i(d̂_iᵀ v − v_i)`. Setting `∇J = 0` gives the normal
+equations. The Hessian `M = Σ_i d̂_i d̂_iᵀ` is symmetric positive-definite iff the
+directions span the plane (non-collinear), so the stationary point is the unique
+minimizer. For two non-collinear beams the fit is exact (`N = 2` equations,
+2 unknowns). $\blacksquare$
+
+The estimator (`VectorFlowEstimator`) precomputes `M` and solves the 2×2 system
+by Cramer's rule per pixel, returning the full `(v_x, v_z)` vector — hence
+angle-independent speed `‖v‖` and direction `atan2(v_x, v_z)`. Collinear or
+single-beam geometries are rejected (singular `M`).
+
 ---
 
 ![Doppler power spectrum and velocity estimate](figures/ch05/fig03_doppler_spectrum.png)
 
 *Figure 9.3. Doppler power spectrum and the autocorrelation (Kasai) mean-velocity estimate (§9.3).*
+
+![Continuous-wave and vector flow Doppler](figures/ch05/fig11_cw_vector_doppler.png)
+
+*Figure 9.4. (a) CW Doppler resolves a high-velocity jet that aliases under PW
+Doppler (Theorem above, §9.3.4). (b) Cross-beam vector flow recovers the full
+velocity vector from two angled beams, removing the angle assumption (§9.3.5).*
 
 ---
 

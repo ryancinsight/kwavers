@@ -4,7 +4,7 @@ use crate::acoustics::imaging::fusion::registration;
 use crate::acoustics::imaging::fusion::types::{AffineTransform, FusedImageResult};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use ndarray::{Array3, CowArray};
-use ritk_registration::ImageRegistration;
+use ritk_registration::{AffineTransform as RitkAffineTransform, ImageRegistration};
 use std::collections::HashMap;
 
 /// Feature-based fusion using complementary tissue properties
@@ -65,9 +65,7 @@ pub(crate) fn fuse_feature_based(fusion: &MultiModalFusion) -> KwaversResult<Fus
         weight: f64,
     }
     let mut channels = Vec::new();
-    let identity = [
-        1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
-    ];
+    let identity = registration::IDENTITY_HOMOGENEOUS;
 
     let mut registration_transforms = HashMap::new();
     let mut modality_quality = HashMap::new();
@@ -85,21 +83,22 @@ pub(crate) fn fuse_feature_based(fusion: &MultiModalFusion) -> KwaversResult<Fus
         let reg_result = registration.rigid_registration_mutual_info(
             &reference_modality.data,
             &modality.data,
-            &identity,
+            &RitkAffineTransform::IDENTITY,
         )?;
 
         registration_transforms.insert(
             name.clone(),
-            AffineTransform::from_homogeneous(&reg_result.transform),
+            AffineTransform::from_homogeneous(reg_result.transform.as_array()),
         );
 
         // Optimization: Skip resampling if transform is identity and dimensions match
-        let resampled = if modality.data.dim() == target_dims && reg_result.transform == identity {
+        let transform = *reg_result.transform.as_array();
+        let resampled = if modality.data.dim() == target_dims && transform == identity {
             CowArray::from(modality.data.view())
         } else {
             CowArray::from(registration::resample_to_target_grid(
                 &modality.data,
-                &reg_result.transform,
+                &transform,
                 target_dims,
             ))
         };

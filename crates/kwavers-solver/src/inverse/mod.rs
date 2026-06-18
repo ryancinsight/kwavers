@@ -24,6 +24,7 @@ pub mod linear_born_inversion;
 pub mod marchenko;
 pub mod pinn;
 pub mod reconstruction;
+pub mod rytov;
 pub mod same_aperture;
 pub mod seismic;
 pub mod time_reversal;

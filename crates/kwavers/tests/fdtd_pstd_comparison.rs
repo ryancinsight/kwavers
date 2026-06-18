@@ -26,6 +26,43 @@ use std::fs;
 
 const FIGURE_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/test-figures");
 
+/// Transparent (no-op) boundary: leaves the field untouched so the spectral
+/// solvers run on a lossless **periodic** domain. The PML-specific trait methods
+/// default to `apply_acoustic`, so a no-op `apply_acoustic` makes every variant
+/// transparent. Used to drive PSTD/FDTD as energy-conserving resonators, against
+/// which the analytical d'Alembert standing wave is the correct oracle.
+#[derive(Debug)]
+struct NullBoundary;
+
+impl kwavers_boundary::Boundary for NullBoundary {
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+    fn apply_acoustic(
+        &mut self,
+        _field: ndarray::ArrayViewMut3<f64>,
+        _grid: &Grid,
+        _time_step: usize,
+    ) -> KwaversResult<()> {
+        Ok(())
+    }
+    fn apply_acoustic_freq(
+        &mut self,
+        _field: &mut Array3<kwavers_math::fft::Complex64>,
+        _grid: &Grid,
+        _time_step: usize,
+    ) -> KwaversResult<()> {
+        Ok(())
+    }
+    fn apply_light(
+        &mut self,
+        _field: ndarray::ArrayViewMut3<f64>,
+        _grid: &Grid,
+        _time_step: usize,
+    ) {
+    }
+}
+
 // ─── Color palette ───────────────────────────────────────────────────────────
 
 const COLOR_FDTD: RGBColor = RGBColor(0, 80, 220);
@@ -633,21 +670,31 @@ fn analytical_gaussian_ivp(grid: &Grid, sigma: f64, amplitude: f64, c: f64, t: f
     field
 }
 
-/// Analytical d'Alembert solution for the standing-wave initial condition.
-///
-/// IC: p(x, 0) = sin(i·0.2) × 1e5 Pa with dx = 1e-3 m
-///     ↔ p(x, 0) = sin(kx) × 1e5   with k = 0.2/dx = 200 rad/m
-/// Solution (d'Alembert, periodic BC, k·L = π/5·32 ≈ 6.4 rad, lossless):
-///   p(x, t) = sin(kx) · cos(ωt) · 1e5   where ω = k·c = 300 000 rad/s
-fn analytical_standing_wave(grid: &Grid, t: f64) -> Vec<f64> {
-    let k = 0.2 / grid.dx; // wavenumber [rad/m]
-    let omega = k * 1500.0; // angular frequency [rad/s]
+/// Analytical d'Alembert solution for a sinusoidal standing-wave IVP
+/// `p(x,0) = A·sin(kx)`, `u(x,0) = 0` in a **lossless** domain:
+///   `p(x, t) = A · sin(kx) · cos(ωt)`,  `ω = c·k`,  c = 1500 m/s.
+/// Valid only when `k` is a periodic eigenmode of the box (`k·L = 2π·m`); the
+/// central-line samples are returned along x.
+fn analytical_standing_wave(grid: &Grid, k: f64, amplitude: f64, t: f64) -> Vec<f64> {
+    let omega = k * 1500.0;
     (0..grid.nx)
         .map(|i| {
             let x = i as f64 * grid.dx;
-            (k * x).sin() * 1e5 * (omega * t).cos()
+            (k * x).sin() * amplitude * (omega * t).cos()
         })
         .collect()
+}
+
+/// Relative L2 error `‖a − b‖₂ / ‖b‖₂` between two central-line profiles.
+fn relative_l2(a: &[f64], b: &[f64]) -> f64 {
+    let num: f64 = a
+        .iter()
+        .zip(b)
+        .map(|(x, y)| (x - y).powi(2))
+        .sum::<f64>()
+        .sqrt();
+    let den: f64 = b.iter().map(|y| y * y).sum::<f64>().sqrt();
+    num / den.max(1e-30)
 }
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
@@ -813,67 +860,85 @@ fn test_plane_wave_propagation() -> KwaversResult<()> {
     Ok(())
 }
 
-/// Sinusoidal standing-wave IC: compare all solvers against the analytical
-/// d'Alembert solution p(x,t) = sin(kx) · cos(ωt) · 1e5.
+/// Sinusoidal standing-wave validation against the analytical d'Alembert
+/// solution `p(x,t) = A·sin(kx)·cos(ωt)` on a LOSSLESS PERIODIC resonator.
+///
+/// The original figure compared PML-bounded / non-eigenmode runs against a
+/// lossless single-mode oracle (an apples-to-oranges setup that is why the
+/// solvers "collapsed"). This test fixes all three mismatches — see
+/// `diagnose_standing_wave_collapse_source` for the supporting evidence:
+///   * EIGENMODE IC `k·L = 2π·2` — a true periodic eigenmode, so the single-mode
+///     analytical is exact (a non-eigenmode k dephases across DFT bins and the
+///     closed form no longer describes the field).
+///   * Transparent boundary (no PML) — the analytical assumes energy
+///     conservation; an absorbing layer drains the standing wave.
+///   * Spectral solvers only (Westervelt, Kuznetsov, PSTD), which are lossless
+///     and periodic. The 4th-order staggered FDTD is not periodic-stable without
+///     its absorbing layer, so it cannot model a lossless resonator here; its
+///     zero-velocity IVP is validated against the free-space Gaussian in
+///     `pstd_gaussian_propagation_matches_analytical` and the plane-wave figure.
 #[test]
 fn test_standing_wave_analytical() -> KwaversResult<()> {
-    let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3)?;
+    // 16³ keeps each plugin run within the 30 s test budget; the m = 2 eigenmode
+    // is exactly representable by the spectral basis, so the physics is unchanged.
+    let grid = Grid::new(16, 16, 16, 1e-3, 1e-3, 1e-3)?;
     let medium = HomogeneousMedium::water(&grid);
+    let c = 1500.0_f64;
+    let amplitude = 1e5_f64;
+    let l = grid.nx as f64 * grid.dx;
 
-    let mut initial_pressure = Array3::zeros((grid.nx, grid.ny, grid.nz));
+    // Eigenmode k·L = 2π·2 (k·dx ≈ 0.79 ⇒ 8 cells/λ, exactly on a DFT bin).
+    let k = 2.0 * std::f64::consts::PI * 2.0 / l;
+    let omega = c * k;
+    let ic = sinusoidal_ic(&grid, k, amplitude);
+
+    // Shared timeline. dt = the (conservative) FDTD CFL dt; the spectral CFL is
+    // more lenient, so this is stable for all three. Stop at ≈ 2.5 periods, where
+    // the analytical sits near its −A0 extremum, so the comparison is robust to
+    // the sub-1% leapfrog temporal dispersion (phase error has minimal amplitude
+    // impact at a cosine extremum).
+    let dt = fdtd_dt(&grid, c);
+    let period = 2.0 * std::f64::consts::PI / omega;
+    let n_steps = (2.5 * period / dt).round() as usize;
+    let t_end = n_steps as f64 * dt;
+
+    let wes = run_westervelt_lossless(&grid, &medium, &ic, dt, n_steps, None)?;
+    let kuz = run_kuznetsov_lossless(&grid, &medium, &ic, dt, n_steps, None)?;
+    let pstd = run_pstd_lossless(&grid, &medium, &ic, dt, n_steps, None)?;
+
     let hy = grid.ny / 2;
     let hz = grid.nz / 2;
-    for i in 0..grid.nx {
-        initial_pressure[[i, hy, hz]] = (i as f64 * 0.2).sin() * 1e5;
-    }
+    let line = |f: &Array3<f64>| -> Vec<f64> { (0..grid.nx).map(|i| f[[i, hy, hz]]).collect() };
+    let analytical_line = analytical_standing_wave(&grid, k, amplitude, t_end);
+    let wes_line = line(&wes);
+    let kuz_line = line(&kuz);
+    let pstd_line = line(&pstd);
 
-    let t_end = 50e-6;
-    let fdtd_result = run_fdtd_simulation_with_time(&grid, &medium, &initial_pressure, t_end)?;
-    let pstd_result = run_pstd_simulation_with_time(&grid, &medium, &initial_pressure, t_end)?;
-    let kuz_result = run_kuznetsov_simulation_with_time(&grid, &medium, &initial_pressure, t_end)?;
-    let wes_result = run_westervelt_simulation_with_time(&grid, &medium, &initial_pressure, t_end)?;
-
-    // All solvers must produce finite values.
-    for (name, result) in &[
-        ("FDTD", &fdtd_result),
-        ("PSTD", &pstd_result),
-        ("Kuznetsov-L", &kuz_result),
-        ("Westervelt-L", &wes_result),
+    // Value-semantic check: each lossless spectral solver reproduces the
+    // d'Alembert standing wave. Tolerance 8% bounds the leapfrog temporal
+    // dispersion (ω_num error ≈ (cΔt·k)²/6 ≈ 4·10⁻⁴ ⇒ < 1% over 2.5 periods),
+    // central-line sampling, and the PSTD κ-correction residual.
+    const TOL: f64 = 0.08;
+    for (name, prof) in [
+        ("Westervelt", &wes_line),
+        ("Kuznetsov", &kuz_line),
+        ("PSTD", &pstd_line),
     ] {
-        let max_val = result
-            .mapv(f64::abs)
-            .iter()
-            .copied()
-            .fold(0.0_f64, f64::max);
+        let err = relative_l2(prof, &analytical_line);
         assert!(
-            max_val.is_finite(),
-            "{name} produced non-finite values: {max_val}"
+            err < TOL,
+            "{name} standing wave deviates from the d'Alembert analytical: relative-L2 = {err:.4} \
+             ≥ {TOL} (lossless eigenmode resonator, t = {t_end:.3e} s ≈ 2.5 periods)",
         );
     }
 
-    // Analytical d'Alembert at t_end on the midplane.
-    // The Kuznetsov FDTD dt may differ from the exact t_end; use a representative t.
-    let dt_approx = fdtd_dt(&grid, 1500.0);
-    let n_steps_approx = (t_end / dt_approx).ceil() as usize;
-    let t_actual = n_steps_approx as f64 * dt_approx;
-    let analytical_line = analytical_standing_wave(&grid, t_actual);
-
     let x_mm: Vec<f64> = (0..grid.nx).map(|i| i as f64 * grid.dx * 1e3).collect();
-    let initial_line: Vec<f64> = (0..grid.nx)
-        .map(|i| initial_pressure[[i, hy, hz]])
-        .collect();
-    let fdtd_line: Vec<f64> = (0..grid.nx).map(|i| fdtd_result[[i, hy, hz]]).collect();
-    let pstd_line: Vec<f64> = (0..grid.nx).map(|i| pstd_result[[i, hy, hz]]).collect();
-    let kuz_line: Vec<f64> = (0..grid.nx).map(|i| kuz_result[[i, hy, hz]]).collect();
-    let wes_line: Vec<f64> = (0..grid.nx).map(|i| wes_result[[i, hy, hz]]).collect();
-
+    let initial_line = line(&ic);
     let curves: &[(&str, Vec<f64>)] = &[
-        ("FDTD", fdtd_line),
-        ("PSTD", pstd_line),
-        ("Kuznetsov-L", kuz_line),
         ("Westervelt-L", wes_line),
+        ("Kuznetsov-L", kuz_line),
+        ("PSTD", pstd_line),
     ];
-
     if let Err(e) = save_solver_comparison_figure(
         "standing_wave",
         &x_mm,
@@ -883,6 +948,321 @@ fn test_standing_wave_analytical() -> KwaversResult<()> {
     ) {
         eprintln!("Warning: figure save failed: {e}");
     }
+    Ok(())
+}
+
+/// Build a 1-D sinusoidal standing-wave IC `p(x)=A·sin(k·x)`, uniform in y,z,
+/// on the central line and across the whole volume (so every solver sees the
+/// same field). `k` in rad/m.
+fn sinusoidal_ic(grid: &Grid, k: f64, amplitude: f64) -> Array3<f64> {
+    let mut p = Array3::zeros((grid.nx, grid.ny, grid.nz));
+    for i in 0..grid.nx {
+        let x = i as f64 * grid.dx;
+        let v = amplitude * (k * x).sin();
+        for j in 0..grid.ny {
+            for kz in 0..grid.nz {
+                p[[i, j, kz]] = v;
+            }
+        }
+    }
+    p
+}
+
+/// Peak `max|p|` over the grid (the standing-wave amplitude envelope sample).
+/// Takes a view so per-step sampling does not allocate.
+fn max_abs(field: ndarray::ArrayView3<f64>) -> f64 {
+    field.iter().copied().fold(0.0_f64, |m, v| m.max(v.abs()))
+}
+
+/// Drive the lossless linear Westervelt solver (spectral, periodic) for
+/// `n_steps` from the pressure-only initial condition `ic` (zero initial
+/// velocity, seeded internally on step 0). Returns the final pressure volume;
+/// when `amps` is `Some`, also records `max|p|` after each step.
+fn run_westervelt_lossless(
+    grid: &Grid,
+    medium: &dyn kwavers_medium::Medium,
+    ic: &Array3<f64>,
+    dt: f64,
+    n_steps: usize,
+    mut amps: Option<&mut Vec<f64>>,
+) -> KwaversResult<Array3<f64>> {
+    let mut solver = WesterveltWave::new(grid);
+    solver.set_nonlinearity_scaling(0.0);
+    solver.set_damping_scaling(0.0);
+    let mut fields = Array4::zeros((1, grid.nx, grid.ny, grid.nz));
+    fields.slice_mut(ndarray::s![0, .., .., ..]).assign(ic);
+    let source = NullSource::new();
+    let prev = Array3::zeros((grid.nx, grid.ny, grid.nz));
+    for step in 0..n_steps {
+        solver.update_wave(
+            &mut fields,
+            &prev,
+            &source,
+            grid,
+            medium,
+            dt,
+            step as f64 * dt,
+        )?;
+        if let Some(a) = amps.as_deref_mut() {
+            a.push(max_abs(fields.slice(ndarray::s![0, .., .., ..])));
+        }
+    }
+    Ok(fields.slice(ndarray::s![0, .., .., ..]).to_owned())
+}
+
+/// As [`run_westervelt_lossless`] for the linear Kuznetsov solver.
+fn run_kuznetsov_lossless(
+    grid: &Grid,
+    medium: &dyn kwavers_medium::Medium,
+    ic: &Array3<f64>,
+    dt: f64,
+    n_steps: usize,
+    mut amps: Option<&mut Vec<f64>>,
+) -> KwaversResult<Array3<f64>> {
+    let mut solver = KuznetsovWave::new(KuznetsovConfig::linear(), grid)?;
+    let mut fields = Array4::zeros((1, grid.nx, grid.ny, grid.nz));
+    fields.slice_mut(ndarray::s![0, .., .., ..]).assign(ic);
+    let source = NullSource::new();
+    let prev = Array3::zeros((grid.nx, grid.ny, grid.nz));
+    for step in 0..n_steps {
+        solver.update_wave(
+            &mut fields,
+            &prev,
+            &source,
+            grid,
+            medium,
+            dt,
+            step as f64 * dt,
+        )?;
+        if let Some(a) = amps.as_deref_mut() {
+            a.push(max_abs(fields.slice(ndarray::s![0, .., .., ..])));
+        }
+    }
+    Ok(fields.slice(ndarray::s![0, .., .., ..]).to_owned())
+}
+
+/// As [`run_westervelt_lossless`] for the PSTD solver run with a transparent
+/// [`NullBoundary`] (no PML) so the domain is a lossless periodic resonator.
+fn run_pstd_lossless(
+    grid: &Grid,
+    medium: &dyn kwavers_medium::Medium,
+    ic: &Array3<f64>,
+    dt: f64,
+    n_steps: usize,
+    mut amps: Option<&mut Vec<f64>>,
+) -> KwaversResult<Array3<f64>> {
+    let mut config = PSTDConfig::default();
+    config.spectral_correction.enabled = true;
+    config.spectral_correction.method = SpectralCorrectionMethod::Treeby2010;
+    config.absorption_mode = AbsorptionMode::Lossless;
+    config.boundary = kwavers_solver::pstd::config::BoundaryConfig::None;
+    config.dt = dt;
+    let mut plugin_manager = PluginManager::new();
+    plugin_manager.add_plugin(Box::new(PSTDPlugin::new(config, grid)?))?;
+    let mut fields = Array4::zeros((17, grid.nx, grid.ny, grid.nz));
+    fields.slice_mut(ndarray::s![0, .., .., ..]).assign(ic);
+    plugin_manager.initialize(grid, medium)?;
+    let sources = Vec::new();
+    let mut boundary = NullBoundary;
+    for step in 0..n_steps {
+        plugin_manager.execute(
+            &mut fields,
+            grid,
+            medium,
+            &sources,
+            &mut boundary,
+            dt,
+            step as f64 * dt,
+        )?;
+        if let Some(a) = amps.as_deref_mut() {
+            a.push(max_abs(fields.slice(ndarray::s![0, .., .., ..])));
+        }
+    }
+    Ok(fields.slice(ndarray::s![0, .., .., ..]).to_owned())
+}
+
+/// As [`run_pstd_lossless`] for the 4th-order staggered FDTD solver with a
+/// transparent boundary. NOTE: the 4th-order staggered stencil is not
+/// periodic-stable without its absorbing layer — used only by the diagnostic to
+/// demonstrate the resulting growth, never as a validated lossless path.
+fn run_fdtd_lossless(
+    grid: &Grid,
+    medium: &dyn kwavers_medium::Medium,
+    ic: &Array3<f64>,
+    dt: f64,
+    n_steps: usize,
+    mut amps: Option<&mut Vec<f64>>,
+) -> KwaversResult<Array3<f64>> {
+    let config = FdtdConfig {
+        spatial_order: 4,
+        staggered_grid: true,
+        cfl_factor: 0.95,
+        nt: n_steps,
+        dt,
+        sensor_mask: None,
+        ..Default::default()
+    };
+    let mut plugin_manager = PluginManager::new();
+    plugin_manager.add_plugin(Box::new(FdtdPlugin::new(config, grid)?))?;
+    let mut fields = Array4::zeros((17, grid.nx, grid.ny, grid.nz));
+    fields.slice_mut(ndarray::s![0, .., .., ..]).assign(ic);
+    plugin_manager.initialize(grid, medium)?;
+    let sources = Vec::new();
+    let mut boundary = NullBoundary;
+    for step in 0..n_steps {
+        plugin_manager.execute(
+            &mut fields,
+            grid,
+            medium,
+            &sources,
+            &mut boundary,
+            dt,
+            step as f64 * dt,
+        )?;
+        if let Some(a) = amps.as_deref_mut() {
+            a.push(max_abs(fields.slice(ndarray::s![0, .., .., ..])));
+        }
+    }
+    Ok(fields.slice(ndarray::s![0, .., .., ..]).to_owned())
+}
+
+/// Isolate the standing-wave "collapse": is it (a) the absorbing PML, (b) a
+/// non-eigenmode IC that dephases across the periodic spectral basis, or (c) a
+/// real dissipative defect in a propagator's zero-velocity IVP?
+///
+/// Method: drive the two spectral solvers (Kuznetsov-linear, Westervelt-lossless,
+/// both inherently periodic with NO boundary applied) and PSTD with the external
+/// PML removed, on a **lossless** domain. For a lossless standing wave
+/// `p=A·sin(kx)·cos(ωt)`, `max|p|` returns to `A` once per half period, so the
+/// per-period **peak** of the envelope is conserved iff the solver is lossless.
+///
+/// EIGENMODE IC (`k·L = 2πm`, a true periodic eigenmode) ⇒ a clean single-mode
+/// standing wave: the per-period peak MUST stay ≈ A (no dissipation, correct IVP).
+/// NON-EIGENMODE IC (`k·L = 6.4`, the original figure's choice) ⇒ energy leaks
+/// into neighbouring DFT bins at different ω, so the **projected** amplitude
+/// dephases and the envelope shrinks WITHOUT any energy loss — the real cause of
+/// the spectral curves sitting near zero in `fig standing_wave`.
+#[test]
+fn diagnose_standing_wave_collapse_source() -> KwaversResult<()> {
+    // 16³ keeps each plugin run within the 30 s test budget; the m = 2 eigenmode
+    // (k·dx ≈ 0.79, 8 cells/λ) is exactly representable by the spectral basis, so
+    // the physics under test is unchanged.
+    let grid = Grid::new(16, 16, 16, 1e-3, 1e-3, 1e-3)?;
+    let medium = HomogeneousMedium::water(&grid);
+    let c = 1500.0_f64;
+    let amplitude = 1e5_f64;
+    let l = grid.nx as f64 * grid.dx; // 0.016 m
+
+    // Eigenmode: k·L = 2π·m exactly ⇒ a true periodic eigenmode (m = 2).
+    let k_eig = 2.0 * std::f64::consts::PI * 2.0 / l;
+    // Non-eigenmode: the original figure's k = 0.2/dx = 200 rad/m (k·L = 6.4).
+    let k_bad = 0.2 / grid.dx;
+
+    let dt = fdtd_dt(&grid, c);
+    let period = |k: f64| 2.0 * std::f64::consts::PI / (c * k);
+    let steps_for = |k: f64, periods: f64| (periods * period(k) / dt).ceil() as usize;
+
+    // Per-period envelope-peak ratio (last full period vs first full period).
+    // Returns (peak_first, peak_last) of max|p| sampled every step.
+    let envelope_peaks = |amps: &[f64], steps_per_period: usize| -> (f64, f64) {
+        let first = amps[..steps_per_period.min(amps.len())]
+            .iter()
+            .copied()
+            .fold(0.0_f64, f64::max);
+        let last_start = amps.len().saturating_sub(steps_per_period);
+        let last = amps[last_start..].iter().copied().fold(0.0_f64, f64::max);
+        (first, last)
+    };
+
+    // ── Drive each solver losslessly via the shared helpers ──────────────────
+    let periods = 2.0;
+    let spp_eig = (period(k_eig) / dt).round() as usize;
+    let n_eig = steps_for(k_eig, periods);
+    let spp_bad = (period(k_bad) / dt).round() as usize;
+    let n_bad = steps_for(k_bad, periods);
+    let ic_eig = sinusoidal_ic(&grid, k_eig, amplitude);
+    let ic_bad = sinusoidal_ic(&grid, k_bad, amplitude);
+
+    let mut wes_eig = Vec::new();
+    run_westervelt_lossless(&grid, &medium, &ic_eig, dt, n_eig, Some(&mut wes_eig))?;
+    let mut kuz_eig = Vec::new();
+    run_kuznetsov_lossless(&grid, &medium, &ic_eig, dt, n_eig, Some(&mut kuz_eig))?;
+    let mut pstd_eig = Vec::new();
+    run_pstd_lossless(&grid, &medium, &ic_eig, dt, n_eig, Some(&mut pstd_eig))?;
+    let mut fdtd_eig = Vec::new();
+    run_fdtd_lossless(&grid, &medium, &ic_eig, dt, n_eig, Some(&mut fdtd_eig))?;
+    let mut wes_bad = Vec::new();
+    run_westervelt_lossless(&grid, &medium, &ic_bad, dt, n_bad, Some(&mut wes_bad))?;
+
+    let (wf, wl) = envelope_peaks(&wes_eig, spp_eig);
+    let (kf, kl) = envelope_peaks(&kuz_eig, spp_eig);
+    let (pf, pl) = envelope_peaks(&pstd_eig, spp_eig);
+    let (ff, fl) = envelope_peaks(&fdtd_eig, spp_eig);
+    let (bf, bl) = envelope_peaks(&wes_bad, spp_bad);
+
+    eprintln!("── standing-wave collapse isolation (lossless, NullBoundary) ──");
+    eprintln!("EIGENMODE  k·L = 2π·2  (A0 = {amplitude:.3e} Pa, {periods} periods):");
+    eprintln!(
+        "  Westervelt  env. peak: first {wf:.3e} → last {wl:.3e}  (ratio {:.3})",
+        wl / wf
+    );
+    eprintln!(
+        "  Kuznetsov   env. peak: first {kf:.3e} → last {kl:.3e}  (ratio {:.3})",
+        kl / kf
+    );
+    eprintln!(
+        "  PSTD(noPML) env. peak: first {pf:.3e} → last {pl:.3e}  (ratio {:.3})",
+        pl / pf
+    );
+    eprintln!(
+        "  FDTD(noPML) env. peak: first {ff:.3e} → last {fl:.3e}  (ratio {:.3})",
+        fl / ff
+    );
+    eprintln!("NON-EIGENMODE k·L = 6.4 (original figure IC):");
+    eprintln!(
+        "  Westervelt  env. peak: first {bf:.3e} → last {bl:.3e}  (ratio {:.3})",
+        bl / bf
+    );
+
+    // The spectral solvers are lossless + periodic with a correct zero-velocity
+    // IVP: the per-period envelope peak is CONSERVED (ratio ≈ 1) AND reaches A0.
+    // This proves the `fig standing_wave` collapse is NOT dissipation and NOT the
+    // IVP seed for these three solvers.
+    for (name, first, last) in [
+        ("Westervelt", wf, wl),
+        ("Kuznetsov", kf, kl),
+        ("PSTD(noPML)", pf, pl),
+    ] {
+        let ratio = last / first;
+        assert!(
+            (0.9..=1.1).contains(&ratio),
+            "{name} must CONSERVE a lossless eigenmode standing wave: envelope peak \
+             {first:.3e} → {last:.3e} (ratio {ratio:.3} ∉ [0.9, 1.1]) — a real IVP/dissipation defect",
+        );
+        assert!(
+            (first - amplitude).abs() <= 0.1 * amplitude,
+            "{name} eigenmode first-period peak {first:.3e} must equal A0 = {amplitude:.3e} (±10%)",
+        );
+    }
+
+    // FDTD's 4th-order staggered stencil is NOT periodic-stable without its
+    // absorbing layer: with a transparent boundary the eigenmode grows far above
+    // A0 within the first period. This pins why FDTD is excluded from the lossless
+    // resonator comparison (its IVP is validated on the free-space Gaussian test).
+    // If FDTD ever conserves here, this guard fires → re-add it to the comparison.
+    assert!(
+        ff > 1.5 * amplitude,
+        "expected FDTD(noPML) to be periodic-unstable (first-period peak ≫ A0); got \
+         {ff:.3e} vs A0 {amplitude:.3e} — if FDTD now conserves, re-include it in the lossless test",
+    );
+
+    // The NON-eigenmode IC ALSO conserves energy (ratio ≈ 1): the figure collapse
+    // is single-mode-oracle dephasing, not amplitude loss.
+    let bad_ratio = bl / bf;
+    assert!(
+        (0.9..=1.1).contains(&bad_ratio),
+        "non-eigenmode Westervelt must still conserve energy (ratio ≈ 1); got {bad_ratio:.3}",
+    );
 
     Ok(())
 }
@@ -983,7 +1363,15 @@ fn pstd_gaussian_propagation_matches_analytical() -> KwaversResult<()> {
         let sources = Vec::new();
         let mut boundary = DomainPMLBoundary::new(DomainPmlConfig::default().with_thickness(8))?;
         for step in 0..n_steps {
-            pm.execute(&mut fields, &grid, &medium, &sources, &mut boundary, solver_dt, step as f64 * solver_dt)?;
+            pm.execute(
+                &mut fields,
+                &grid,
+                &medium,
+                &sources,
+                &mut boundary,
+                solver_dt,
+                step as f64 * solver_dt,
+            )?;
         }
         Ok(rel_l2(&fields.slice(ndarray::s![0, .., .., ..]).to_owned()))
     };
@@ -1041,11 +1429,13 @@ fn pstd_fullkspace_gaussian_ivp_matches_analytical() -> KwaversResult<()> {
     let analytical = analytical_gaussian_ivp(&grid, sigma, 1e6, c, t_end);
 
     let cfl_dt = 0.15 * dx / c;
-    let mut config = PSTDConfig::default();
-    config.kspace_method = KSpaceMethod::FullKSpace;
-    config.absorption_mode = AbsorptionMode::Lossless;
-    config.boundary = BoundaryConfig::None;
-    config.dt = cfl_dt;
+    let config = PSTDConfig {
+        kspace_method: KSpaceMethod::FullKSpace,
+        absorption_mode: AbsorptionMode::Lossless,
+        boundary: BoundaryConfig::None,
+        dt: cfl_dt,
+        ..Default::default()
+    };
     let n_steps = (t_end / cfl_dt).ceil() as usize;
 
     let mut pm = PluginManager::new();
@@ -1056,7 +1446,15 @@ fn pstd_fullkspace_gaussian_ivp_matches_analytical() -> KwaversResult<()> {
     let sources = Vec::new();
     let mut boundary = DomainPMLBoundary::new(DomainPmlConfig::default().with_thickness(8))?;
     for step in 0..n_steps {
-        pm.execute(&mut fields, &grid, &medium, &sources, &mut boundary, cfl_dt, step as f64 * cfl_dt)?;
+        pm.execute(
+            &mut fields,
+            &grid,
+            &medium,
+            &sources,
+            &mut boundary,
+            cfl_dt,
+            step as f64 * cfl_dt,
+        )?;
     }
     let out = fields.slice(ndarray::s![0, .., .., ..]).to_owned();
 

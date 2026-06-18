@@ -41,6 +41,9 @@ kwavers-therapy = { path = "../kwavers-therapy" }
 # allocation profiling); the heavy wgpu/WGSL paths activate via `kwavers-gpu/gpu`.
 kwavers-gpu = { path = "../kwavers-gpu" }
 
+# Optional NIfTI reader for real CT/MRI example I/O (enabled by the `nifti` feature).
+nifti = { workspace = true, optional = true }
+
 # Essential numerical computing
 ndarray = { version = "0.16", features = ["rayon", "serde"] }
 rayon = "1.10"
@@ -156,7 +159,7 @@ gpu = ["kwavers-gpu/gpu", "dep:wgpu", "dep:bytemuck", "dep:pollster", "dep:apoll
 plotting = ["dep:plotly", "kwavers-analysis/plotting"]
 # Additional features referenced in code
 dicom = []             # No-op alias retained for back-compat; DICOM I/O is unconditional via ritk-io.
-nifti = ["kwavers-core/nifti", "kwavers-simulation/nifti", "kwavers-therapy/nifti"]   # Medical imaging support (forwards to kwavers-core)
+nifti = ["dep:nifti", "kwavers-core/nifti", "kwavers-simulation/nifti", "kwavers-therapy/nifti"]   # Medical imaging support (forwards to kwavers-core; dep:nifti for example NIfTI I/O)
 nightly = []           # Nightly Rust features
 simd = []              # SIMD acceleration support
 fpu = []               # FPU acceleration support
@@ -401,3 +404,16 @@ required-features = ["pinn"]
 name = "liver_theranostic_reconstruction"
 path = "examples/liver_theranostic_reconstruction.rs"
 required-features = ["nifti"]
+
+[[example]]
+name = "transcranial_ct_mri_reconstruction"
+path = "examples/transcranial_ct_mri_reconstruction.rs"
+required-features = ["nifti"]
+
+[[example]]
+name = "brain_theranostic_monitor"
+path = "examples/brain_theranostic_monitor.rs"
+
+[[example]]
+name = "hybrid_lesion_monitor"
+path = "examples/hybrid_lesion_monitor.rs"

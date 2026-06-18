@@ -11,6 +11,15 @@
 use kwavers_grid::Grid;
 use ndarray::Array3;
 
+pub mod eikonal;
+pub mod kirchhoff;
+
+#[cfg(test)]
+mod tests;
+
+pub use eikonal::EikonalSolver;
+pub use kirchhoff::{KirchhoffMigrator, Trace};
+
 /// Seismic imaging method types
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum SeismicMethod {

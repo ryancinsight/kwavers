@@ -39,26 +39,12 @@ pub(crate) struct RitkVolume {
 ///
 /// # Errors
 ///
-/// Returns [`KwaversError::InternalError`] if ritk-io returns a non-rank-3
-/// spacing/origin, a non-contiguous-`f32` tensor, or a tensor whose length does
-/// not match the reported shape.
+/// Returns [`KwaversError::InternalError`] if ritk-io returns a non-contiguous
+/// `f32` tensor or a tensor whose length does not match the reported shape.
 pub(crate) fn image_to_volume(image: &Image<AdapterBackend, 3>) -> KwaversResult<RitkVolume> {
     let [depth, rows, cols] = image.shape();
-
-    let spacing_mm = image.spacing().to_vec();
-    if spacing_mm.len() != 3 {
-        return Err(KwaversError::InternalError(format!(
-            "ritk-io returned spacing rank {} (expected 3)",
-            spacing_mm.len()
-        )));
-    }
-    let origin_mm = image.origin().to_vec();
-    if origin_mm.len() != 3 {
-        return Err(KwaversError::InternalError(format!(
-            "ritk-io returned origin rank {} (expected 3)",
-            origin_mm.len()
-        )));
-    }
+    let spacing_mm = image.spacing().to_array();
+    let origin_mm = image.origin().to_array();
 
     let tensor_data: TensorData = image.data().clone().into_data();
     let values = tensor_data.as_slice::<f32>().map_err(|err| {

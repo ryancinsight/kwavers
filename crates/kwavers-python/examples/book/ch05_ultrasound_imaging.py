@@ -391,6 +391,163 @@ savefig("fig06_shear_wave_elastography")
 plt.close()
 
 # ─────────────────────────────────────────────────────────────────────────────
+# fig11 — Continuous-wave Doppler (no Nyquist limit) and cross-beam vector flow
+#         Mirrors kwavers_analysis::signal_processing::doppler {continuous_wave,
+#         vector_flow}; §9.3.4–9.3.5.
+# ─────────────────────────────────────────────────────────────────────────────
+
+C_SOUND = 1540.0
+
+
+def _cw_spectrum(rf, f0, fs, f_bb):
+    """Mix → decimate-by-averaging → FFT; signed velocity axis. Mirrors Rust."""
+    d = max(1, round(fs / f_bb))
+    n_bb = len(rf) // d
+    i = np.arange(len(rf))
+    mixed = 2.0 * rf * np.exp(-1j * 2 * np.pi * f0 * i / fs)
+    bb = mixed[: n_bb * d].reshape(n_bb, d).mean(axis=1)
+    spec = np.fft.fftshift(np.fft.fft(bb))
+    freqs = np.fft.fftshift(np.fft.fftfreq(n_bb, d=1.0 / f_bb))
+    vel = freqs * C_SOUND / (2 * f0)  # θ = 0
+    return vel, np.abs(spec) ** 2
+
+
+fig, axes = plt.subplots(1, 2, figsize=(12, 4.6))
+
+# (a) CW Doppler resolves a jet that aliases under PW Doppler.
+f0 = 2.5e6
+fs = 20e6
+f_bb = 100e3
+v_jet = 2.0  # m/s
+f_d = 2 * v_jet * f0 / C_SOUND
+n = 200 * 2048
+t = np.arange(n) / fs
+rf = np.cos(2 * np.pi * (f0 + f_d) * t)
+vel, power = _cw_spectrum(rf, f0, fs, f_bb)
+pw_prf = 5e3
+v_nyq_pw = pw_prf * C_SOUND / (4 * f0)
+
+ax = axes[0]
+ax.plot(vel, power / power.max(), color="C0")
+ax.axvspan(-v_nyq_pw, v_nyq_pw, color="C2", alpha=0.15,
+           label=f"PW unaliased band (±{v_nyq_pw:.2f} m/s)")
+ax.axvline(v_jet, ls="--", color="C3", label=f"jet {v_jet} m/s (PW aliases)")
+ax.set_xlim(-3, 3)
+ax.set_xlabel("velocity (m/s)")
+ax.set_ylabel("normalized power")
+ax.set_title("(a) CW Doppler — no Nyquist limit")
+ax.legend(fontsize=8)
+ax.grid(True, ls=":", alpha=0.4)
+
+# (b) Cross-beam vector flow recovers the full velocity vector.
+v_true = np.array([0.35, 0.55])  # (vx, vz)
+angles = np.deg2rad([25.0, -25.0])
+dirs = np.array([[np.sin(a), np.cos(a)] for a in angles])
+projected = dirs @ v_true
+M = dirs.T @ dirs
+b = dirs.T @ projected
+v_rec = np.linalg.solve(M, b)
+
+ax = axes[1]
+ax.quiver(0, 0, v_true[0], v_true[1], angles="xy", scale_units="xy", scale=1,
+          color="k", width=0.012, label="true v")
+ax.quiver(0, 0, v_rec[0], v_rec[1], angles="xy", scale_units="xy", scale=1,
+          color="C3", width=0.006, label="recovered v")
+for a, d in zip(angles, dirs):
+    ax.plot([0, d[0]], [0, d[1]], color="C0", ls=":", lw=1)
+    ax.annotate(f"beam {np.rad2deg(a):.0f}°", xy=(d[0], d[1]), fontsize=7,
+                color="C0")
+ax.set_xlim(-0.2, 0.8)
+ax.set_ylim(0, 0.8)
+ax.set_aspect("equal")
+ax.set_xlabel("$v_x$ (m/s)")
+ax.set_ylabel("$v_z$ (m/s)")
+err = np.linalg.norm(v_rec - v_true)
+ax.set_title(f"(b) Cross-beam vector flow (err={err:.1e} m/s)")
+ax.legend(fontsize=8, loc="lower right")
+ax.grid(True, ls=":", alpha=0.4)
+
+fig.suptitle("Continuous-Wave and Vector Flow Doppler (§9.3.4–9.3.5)")
+plt.tight_layout()
+savefig("fig11_cw_vector_doppler")
+plt.close()
+
+# ─────────────────────────────────────────────────────────────────────────────
+# fig12 — B-mode display back-end: TGC, log compression, scan conversion.
+#         Mirrors kwavers_analysis::signal_processing::b_mode; §9.1.5.
+# ─────────────────────────────────────────────────────────────────────────────
+
+fig, axes = plt.subplots(1, 3, figsize=(15, 4.4))
+
+# (a) TGC flattens depth-dependent attenuation.
+a0, f_mhz, c0, fs = 0.5, 5.0, 1540.0, 40e6
+n = 8000
+depth_cm = (c0 * np.arange(n) / (2 * fs)) * 100.0
+atten = 10 ** (-(2 * a0 * f_mhz * depth_cm) / 20.0)  # equal reflectors, attenuated
+gain = 10 ** ((2 * a0 * f_mhz * depth_cm) / 20.0)
+ax = axes[0]
+ax.plot(depth_cm, atten, label="raw echoes", color="C0")
+ax.plot(depth_cm, atten * gain, label="after TGC", color="C3")
+ax.set_xlabel("depth (cm)")
+ax.set_ylabel("echo amplitude")
+ax.set_title("(a) Time-gain compensation")
+ax.set_ylim(0, 1.3)
+ax.legend(fontsize=8)
+ax.grid(True, ls=":", alpha=0.4)
+
+# (b) Log compression curve.
+dr = 50.0
+e_over_max = np.logspace(-3, 0, 400)
+disp = np.clip((20 * np.log10(e_over_max) + dr) / dr, 0, 1)
+ax = axes[1]
+ax.plot(20 * np.log10(e_over_max), disp, color="C2")
+ax.axvline(-dr, ls="--", color="k", lw=0.8)
+ax.set_xlabel("envelope relative to peak (dB)")
+ax.set_ylabel("display value")
+ax.set_title(f"(b) Log compression (DR={dr:.0f} dB)")
+ax.grid(True, ls=":", alpha=0.4)
+
+# (c) Scan conversion: polar sector with point targets → Cartesian.
+n_lines, n_samples = 121, 400
+dr_m = 1.5e-4
+ang = np.deg2rad(np.linspace(-30, 30, n_lines))
+beam = np.zeros((n_lines, n_samples))
+for (li, si) in [(30, 150), (60, 250), (90, 150), (60, 350)]:
+    beam[li - 2:li + 3, si - 2:si + 3] = 1.0  # point targets (5x5 patches)
+W, H = 240, 260
+x_axis = np.linspace(-0.04, 0.04, W)
+z_axis = np.linspace(0.0, 0.06, H)
+img = np.zeros((H, W))
+amin, astep = ang[0], ang[1] - ang[0]
+for row, z in enumerate(z_axis):
+    for col, x in enumerate(x_axis):
+        r = np.hypot(x, z)
+        th = np.arctan2(x, z)
+        lf = (th - amin) / astep
+        sf = r / dr_m
+        l0, s0 = int(np.floor(lf)), int(np.floor(sf))
+        if 0 <= l0 < n_lines - 1 and 0 <= s0 < n_samples - 1:
+            fl, fsa = lf - l0, sf - s0
+            img[row, col] = (
+                beam[l0, s0] * (1 - fl) * (1 - fsa)
+                + beam[l0 + 1, s0] * fl * (1 - fsa)
+                + beam[l0, s0 + 1] * (1 - fl) * fsa
+                + beam[l0 + 1, s0 + 1] * fl * fsa
+            )
+ax = axes[2]
+ax.imshow(img, cmap="gray", origin="upper",
+          extent=[x_axis[0] * 1e3, x_axis[-1] * 1e3, z_axis[-1] * 1e3, z_axis[0] * 1e3],
+          aspect="equal")
+ax.set_xlabel("lateral (mm)")
+ax.set_ylabel("depth (mm)")
+ax.set_title("(c) Scan conversion (sector → Cartesian)")
+
+fig.suptitle("B-Mode Display Back-End (§9.1.5)")
+plt.tight_layout()
+savefig("fig12_bmode_pipeline")
+plt.close()
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Summary
 # ─────────────────────────────────────────────────────────────────────────────
 

@@ -77,7 +77,11 @@ pub fn contrast_to_noise_ratio(lesion: &[f64], background: &[f64]) -> Option<f64
 #[must_use]
 pub fn generalized_cnr(lesion: &[f64], background: &[f64], n_bins: usize) -> f64 {
     let l: Vec<f64> = lesion.iter().copied().filter(|v| v.is_finite()).collect();
-    let b: Vec<f64> = background.iter().copied().filter(|v| v.is_finite()).collect();
+    let b: Vec<f64> = background
+        .iter()
+        .copied()
+        .filter(|v| v.is_finite())
+        .collect();
     if l.is_empty() || b.is_empty() || n_bins == 0 {
         return 0.0;
     }
@@ -207,13 +211,19 @@ mod tests {
         // Exact affine invariance: x → 3x + 5.
         let aff = |v: &[f64]| v.iter().map(|x| 3.0 * x + 5.0).collect::<Vec<_>>();
         let g_aff = generalized_cnr(&aff(&lesion), &aff(&background), 64);
-        assert!((g0 - g_aff).abs() < 1e-12, "gCNR not affine-invariant: {g0} vs {g_aff}");
+        assert!(
+            (g0 - g_aff).abs() < 1e-12,
+            "gCNR not affine-invariant: {g0} vs {g_aff}"
+        );
 
         // Nonlinear monotone map x → x² (positive data): gCNR stays invariant to
         // within the histogram-binning error…
         let sq = |v: &[f64]| v.iter().map(|x| x * x).collect::<Vec<_>>();
         let g_sq = generalized_cnr(&sq(&lesion), &sq(&background), 64);
-        assert!((g0 - g_sq).abs() < 0.05, "gCNR drifted under x²: {g0} vs {g_sq}");
+        assert!(
+            (g0 - g_sq).abs() < 0.05,
+            "gCNR drifted under x²: {g0} vs {g_sq}"
+        );
 
         // …whereas CNR is sensitive to the same nonlinear map: it shifts by a
         // few percent, confirming it is *not* transform-invariant (Theorem 9.9).

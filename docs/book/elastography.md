@@ -1122,9 +1122,113 @@ generic ML utility.)
 
 ---
 
-## 11.12 Uncertainty Quantification in Elastography
+## 11.12 Thermal Strain Imaging (Ultrasound Thermometry)
 
-### 11.12.1 Cramér–Rao Lower Bound for Time-Delay Estimation
+The same RF speckle-tracking machinery that measures mechanical strain (§11.5)
+also measures *thermal* strain — the apparent tissue deformation produced by a
+small temperature change. This turns a B-mode probe into a non-invasive
+thermometer for monitoring thermal therapy.
+
+### 11.12.1 Physical Origin
+
+Heating tissue by $\Delta T$ perturbs the round-trip echo time through two
+first-order mechanisms:
+
+1. **Thermal expansion.** Tissue lengthens by its linear coefficient of thermal
+   expansion $\alpha_\text{th}$ (for water-based soft tissue
+   $\alpha_\text{th}\approx 3\times10^{-4}\,\text{°C}^{-1}$).
+2. **Sound-speed change.** The speed obeys $c(T)=c_0[1+\beta_c\,\Delta T]$ with
+   the fractional coefficient $\beta_c=(1/c_0)\,(\mathrm dc/\mathrm dT)$. For
+   water-based tissue $\mathrm dc/\mathrm dT\approx +2\,\text{m s}^{-1}\text{°C}^{-1}$,
+   so $\beta_c\approx +1.3\times10^{-3}\,\text{°C}^{-1}$; for lipid (fat)
+   $\mathrm dc/\mathrm dT<0$.
+
+### 11.12.2 Theorem: Thermal Strain is Proportional to Temperature Change
+
+#### Statement
+
+Let a transducer at $z=0$ estimate scatterer positions using the fixed reference
+speed $c_0$. To first order in $\Delta T$, the apparent axial displacement of an
+echo originally at depth $z$ is
+
+$$
+u(z) = \int_0^z \big(\alpha_\text{th}-\beta_c\big)\,\Delta T(z')\,\mathrm dz',
+$$
+
+and hence the **thermal strain** is
+
+$$
+\varepsilon_T(z) \;=\; \frac{\partial u}{\partial z} \;=\; \big(\alpha_\text{th}-\beta_c\big)\,\Delta T(z) \;=\; k_T\,\Delta T(z),
+\qquad k_T \equiv \alpha_\text{th}-\beta_c .
+$$
+
+#### Proof
+
+A material element between $0$ and $z$ expands, moving the scatterer physically
+to $z_\text{phys}=z+\int_0^z\alpha_\text{th}\,\Delta T\,\mathrm dz'$. The
+instrument estimates position by integrating the round-trip time at the fixed
+reference speed,
+$\hat z=\int_0^{z_\text{phys}}(c_0/c(s))\,\mathrm ds$. Expanding the integrand,
+$c_0/c(s)=1-\beta_c\,\Delta T(s)+O(\Delta T^2)$, and splitting at $z$,
+
+$$
+\hat z = \int_0^z\!\big[1-\beta_c\Delta T(s)\big]\mathrm ds
+       + \frac{c_0}{c(z)}\!\int_0^z\!\alpha_\text{th}\Delta T\,\mathrm ds
+       = z + \int_0^z\!\big(\alpha_\text{th}-\beta_c\big)\Delta T(s)\,\mathrm ds + O(\Delta T^2),
+$$
+
+where $c_0/c(z)=1+O(\Delta T)$ multiplies an $O(\Delta T)$ expansion term. The
+apparent displacement is $u(z)=\hat z-z$; differentiating in $z$ (Leibniz) gives
+$\varepsilon_T(z)=(\alpha_\text{th}-\beta_c)\,\Delta T(z)$. $\blacksquare$
+
+Inverting, $\Delta T(z)=\varepsilon_T(z)/k_T$.
+
+#### Sign and the water/lipid contrast
+
+For water-based tissue $\beta_c$ dominates $\alpha_\text{th}$, so $k_T<0$:
+heating raises the sound speed, echoes arrive *earlier*, and the apparent strain
+is **negative**. For lipid, $\mathrm dc/\mathrm dT<0$ flips $k_T>0$. With the
+kwavers soft-tissue defaults ($c_0=1540$, $\mathrm dc/\mathrm dT=2$,
+$\alpha_\text{th}=3\times10^{-4}$):
+
+$$
+k_T = 3\times10^{-4} - \frac{2}{1540} \approx -1.0\times10^{-3}\,\text{°C}^{-1},
+$$
+
+so a $1\,\text{°C}$ rise produces $\approx -10^{-3}$ (–0.1 %) apparent strain.
+This sign reversal between water- and lipid-based tissue is the basis of
+thermal-strain *tissue discrimination* (e.g. lipid detection in atherosclerotic
+plaque).
+
+### 11.12.3 Algorithm 11.6 — Thermal Strain Thermometry Pipeline
+
+1. Acquire a pre-heating reference RF volume and a post-heating tracked volume.
+2. **Displacement:** estimate $u(z)$ by windowed normalized cross-correlation
+   with parabolic sub-sample peak refinement (Pinton 2006), axial spacing
+   $\Delta z=c_0/(2f_s)$.
+3. **Strain:** $\varepsilon_T=\partial u/\partial z$ via the Kallel–Ophir moving
+   least-squares estimator (§11.5.2) for noise suppression.
+4. **Temperature:** $\Delta T=\varepsilon_T/k_T$ pointwise.
+
+This is implemented in `kwavers_physics::acoustics::imaging::modalities::`
+`elastography::thermal_strain` (`ThermalStrainImager`); the thermoacoustic
+coefficients come from the constant SSOT (`DC_DT_SOFT_TISSUE`,
+`THERMAL_EXPANSION_SOFT_TISSUE`). Value-semantic tests verify the coefficient
+sign and magnitude, the strain↔temperature round-trip, exact least-squares
+strain on a displacement ramp, sub-sample NCC recovery on synthetic RF, and an
+end-to-end uniformly-heated-block reconstruction of a known $\Delta T$.
+
+*Figure 11.6. Thermal strain thermometry on a synthetic uniformly-heated block:
+(left) pre/post RF lines and the recovered sub-sample echo shift; (centre) the
+negative thermal strain field for water-based tissue; (right) the reconstructed
+$\Delta T$ map versus ground truth. Mirrors the verified
+`ThermalStrainImager` pipeline.*
+
+---
+
+## 11.13 Uncertainty Quantification in Elastography
+
+### 11.13.1 Cramér–Rao Lower Bound for Time-Delay Estimation
 
 The variance of any unbiased time-delay estimator from cross-correlation of
 bandlimited signals satisfies the Cramér–Rao lower bound (Walker and Trahey, 1995):
@@ -1144,7 +1248,7 @@ $$
 This sets a fundamental limit on strain sensitivity for a given transducer
 centre frequency, window length, and SNR.
 
-### 11.12.2 Shear-Wave Speed Uncertainty
+### 11.13.2 Shear-Wave Speed Uncertainty
 
 For the phase-gradient estimator with phase estimated from the analytic signal,
 the standard deviation of $\hat{c}_S$ scales as
@@ -1157,7 +1261,7 @@ where $L_x$ is the lateral aperture over which the phase gradient is computed
 and $N_t$ is the number of temporal samples used in the time-frequency analysis.
 Larger push apertures and higher tracking SNR reduce speed uncertainty linearly.
 
-### 11.12.3 Bias from Boundary Reflections
+### 11.13.3 Bias from Boundary Reflections
 
 Near an inclusion boundary, reflected shear waves interfere with the incident
 wave, creating standing-wave components that bias the phase-gradient speed
@@ -1185,9 +1289,9 @@ widens with sample spread and confidence level.
 
 ---
 
-## 11.13 Implementation Architecture in kwavers
+## 11.14 Implementation Architecture in kwavers
 
-### 11.13.1 Module Topology
+### 11.14.1 Module Topology
 
 ```
 kwavers_solver::inverse::elastography::linear_methods
@@ -1230,7 +1334,7 @@ Theory only — covered in this chapter but NOT yet implemented as kwavers kerne
   • none remaining in §11.11 (all four organ classifiers implemented).
 ```
 
-### 11.13.2 Data Flow
+### 11.14.2 Data Flow
 
 ```
 ARFI/external vibrator excitation
@@ -1251,7 +1355,7 @@ Shear modulus map  ──►  μ[x,z]  [kPa]
 Tissue classification  ──►  stage, confidence, uncertainty map
 ```
 
-### 11.13.3 Validation Protocol
+### 11.14.3 Validation Protocol
 
 **Algorithm 11.6 — Elastography Validation Against Analytical Phantoms**
 
@@ -1278,7 +1382,7 @@ OUTPUT: Bias, RMSE, spatial resolution confirmed against analytical expectation
 
 ---
 
-## 11.14 Summary and Key Equations
+## 11.15 Summary and Key Equations
 
 | Quantity | Formula | Reference |
 |----------|---------|-----------|

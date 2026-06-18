@@ -301,7 +301,10 @@ mod tests {
         let ci = bootstrap_ci_mean(&s, 0.95, 2000, 42).expect("ci");
         let mean = s.iter().sum::<f64>() / s.len() as f64;
         assert!((ci.point - mean).abs() < 1e-12, "point = sample mean");
-        assert!(ci.lower <= ci.point && ci.point <= ci.upper, "CI brackets the point");
+        assert!(
+            ci.lower <= ci.point && ci.point <= ci.upper,
+            "CI brackets the point"
+        );
         // Same seed ⇒ bit-identical CI (deterministic PRNG).
         let ci2 = bootstrap_ci_mean(&s, 0.95, 2000, 42).expect("ci");
         assert_eq!(ci, ci2);

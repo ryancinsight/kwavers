@@ -400,6 +400,116 @@ def fig05_sound_speed_reconstruction() -> None:
     plt.close(fig)
 
 
+def _fast_sweep_eikonal(slowness, d, source, iters=6):
+    """2-D Fast Sweeping Method eikonal solver. Mirrors the Rust SSOT
+    (kwavers_physics::...::seismic::EikonalSolver)."""
+    n0, n1 = slowness.shape
+    FAR = 1e30
+    t = np.full((n0, n1), FAR)
+    si, sj = source
+    t[si, sj] = 0.0
+    s0 = slowness[si, sj]
+    for di in (-1, 0, 1):
+        for dj in (-1, 0, 1):
+            i, j = si + di, sj + dj
+            if 0 <= i < n0 and 0 <= j < n1:
+                t[i, j] = min(t[i, j], s0 * np.hypot(di * d, dj * d))
+
+    def update(i, j):
+        a = min(t[i - 1, j] if i > 0 else FAR, t[i + 1, j] if i + 1 < n0 else FAR)
+        b = min(t[i, j - 1] if j > 0 else FAR, t[i, j + 1] if j + 1 < n1 else FAR)
+        f = slowness[i, j] * d
+        lo, hi = (a, b) if a <= b else (b, a)
+        if hi == FAR or hi - lo >= f:
+            cand = lo + f
+        else:
+            cand = 0.5 * (lo + hi + np.sqrt(2 * f * f - (hi - lo) ** 2))
+        return min(t[i, j], cand)
+
+    for _ in range(iters):
+        for oi in (range(n0), range(n0 - 1, -1, -1)):
+            for oj in (range(n1), range(n1 - 1, -1, -1)):
+                for i in oi:
+                    for j in oj:
+                        t[i, j] = update(i, j)
+    return t
+
+
+def fig06_eikonal_kirchhoff() -> None:
+    """Eikonal traveltimes through a low-velocity lens and Kirchhoff migration."""
+    n = 81
+    d = 1.0
+    c0 = 1500.0
+    speed = np.full((n, n), c0)
+    # Low-velocity circular lens in the centre.
+    yy, xx = np.mgrid[0:n, 0:n]
+    lens = (xx - n // 2) ** 2 + (yy - n // 2) ** 2 < 12 ** 2
+    speed[lens] = 1000.0
+    slowness = 1.0 / speed
+
+    t_src = _fast_sweep_eikonal(slowness, d, (n // 2, 0))
+
+    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+    ax = axes[0]
+    im = ax.imshow(t_src * 1e3, cmap="viridis", origin="upper")
+    ax.contour(t_src * 1e3, levels=18, colors="white", linewidths=0.5)
+    circ = plt.Circle((n // 2, n // 2), 12, fill=False, color="r", ls="--", lw=1)
+    ax.add_patch(circ)
+    ax.set_title("(a) Eikonal traveltimes through a slow lens")
+    ax.set_xlabel("x (cells)")
+    ax.set_ylabel("z (cells)")
+    fig.colorbar(im, ax=ax, label="traveltime (ms)", shrink=0.8)
+
+    # (b) Kirchhoff migration of two point scatterers (homogeneous, surface array).
+    # Physical millimetre cells so the two-way traveltimes fall inside the window.
+    m = 41
+    d_b = 1e-3  # 1 mm cells
+    slow_h = np.full((m, m), 1.0 / c0)
+    aperture = [(0, k) for k in range(0, m, 4)]  # sources/receivers along z=0 row
+    tt = [_fast_sweep_eikonal(slow_h, d_b, src) for src in aperture]
+    scatterers = [(22, 14), (28, 28)]
+    dt = 2e-7
+    nt = 700
+
+    def ricker(t0, n_t, dt_, f0=5.0e5):
+        tt_ = (np.arange(n_t) * dt_) - t0
+        a = (np.pi * f0 * tt_) ** 2
+        return (1 - 2 * a) * np.exp(-a)
+
+    traces = []
+    for s in range(len(aperture)):
+        for r in range(len(aperture)):
+            samples = np.zeros(nt)
+            for (zi, xi) in scatterers:
+                tw = tt[s][zi, xi] + tt[r][zi, xi]
+                samples += ricker(tw, nt, dt)
+            traces.append((s, r, samples))
+    image = np.zeros((m, m))
+    for (s, r, samples) in traces:
+        tw = tt[s] + tt[r]
+        idx = tw / dt
+        i0 = np.floor(idx).astype(int)
+        frac = idx - i0
+        valid = (i0 >= 0) & (i0 + 1 < nt)
+        contrib = np.zeros((m, m))
+        ii = np.clip(i0, 0, nt - 2)
+        contrib = samples[ii] * (1 - frac) + samples[ii + 1] * frac
+        image += np.where(valid, contrib, 0.0)
+    ax = axes[1]
+    env = np.abs(image)
+    ax.imshow(env / env.max(), cmap="hot", origin="upper")
+    for (zi, xi) in scatterers:
+        ax.plot(xi, zi, "c+", ms=12, mew=2)
+    ax.set_title("(b) Kirchhoff migration (cyan + = true scatterers)")
+    ax.set_xlabel("x (cells)")
+    ax.set_ylabel("z (cells)")
+
+    fig.suptitle("Eikonal Traveltimes and Kirchhoff Migration (§11.1–11.2)")
+    plt.tight_layout()
+    savefig("fig06_eikonal_kirchhoff")
+    plt.close(fig)
+
+
 if __name__ == "__main__":
     print("Generating Chapter 17 figures (Inverse Problems and PINNs)...")
     fig01_svd_spectrum()
@@ -407,3 +517,4 @@ if __name__ == "__main__":
     fig03_pinn_loss()
     fig04_convergence_comparison()
     fig05_sound_speed_reconstruction()
+    fig06_eikonal_kirchhoff()

@@ -170,17 +170,22 @@ the steering vector to the candidate focus.
 
 ### kwavers implementation status
 
-The eigendecomposition-and-projection machinery used here is implemented for
-*adaptive (active)* beamforming in
+The eigendecomposition itself is the SSOT
 `kwavers_analysis::signal_processing::beamforming::adaptive::subspace`
-(eigenspace–minimum-variance and MUSIC). For *passive* mapping, the production
-`PAMConfig::beamforming` selector currently wires `DelayAndSum`,
-`CaponDiagonalLoading`, and `TimeExposureAcoustics`; the `EigenspaceMinVariance`
-and `Music` PAM variants return an explicit error pending connection to that
-shared subspace code, so use DAS or diagonally-loaded Capon for passive
-cavitation maps today. The eigenspace result above is therefore presented as the
-theory and the (active-beamforming) subspace decomposition, not yet as a wired
-passive-map mode.
+(`EigenspaceMV`, `MUSIC`). The passive narrowband localizers wire it to the PAM
+data flow — cross-spectral matrix from narrowband snapshots, phase-only steering
+`a(r_f) = exp(-j2πfτ)`, then the maps of Theorem 22.2 — in
+`kwavers_analysis::signal_processing::beamforming::narrowband::subspace_spectrum`:
+`eigenspace_mv_spatial_spectrum_point` returns `b_ES = |aᴴ P_s a|²` and
+`music_spatial_spectrum_point` returns `P_MUSIC = 1/‖U_nᴴ a‖²`. All four
+`PAMConfig::beamforming` selectors are now live: `DelayAndSum`,
+`CaponDiagonalLoading`, `TimeExposureAcoustics`, and the subspace
+`EigenspaceMinVariance { signal_subspace_dimension }` / `Music { num_sources }`
+modes (the latter dispatched by `PassiveAcousticMapper` to the
+`subspace_spectrum` localizers, which return the per-focal-point localization
+power rather than a beamformed time series). The eigenvalue split of Theorem 22.2
+(`σ_s²+σ_n²` vs `σ_n²`) and the super-resolution advantage over DAS are covered by
+value-semantic tests in `subspace_spectrum::tests`.
 
 ---
 
