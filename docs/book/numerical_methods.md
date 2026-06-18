@@ -364,8 +364,18 @@ exact solution is the harmonic oscillator (2.11).  $\square$
 **kwavers implementation.**  The k-space propagator is available as an optional
 mode (`PSTDConfig::kspace_correction = KspaceMode::FullSpectral`) in
 `kwavers_solver::forward::pstd::implementation::core::stepper::step_forward_kspace`.
-It completely eliminates temporal dispersion at the cost of storing
-$\hat{\dot{p}}_\mathbf{k}$.
+Rather than storing $\hat{\dot{p}}_\mathbf{k}$, the implementation uses the
+mathematically equivalent **two-step recurrence** for the harmonic oscillator,
+$$
+\hat{p}_\mathbf{k}^{\,n+1} = 2\cos(\omega_k\Delta t)\,\hat{p}_\mathbf{k}^{\,n}
+- \hat{p}_\mathbf{k}^{\,n-1},
+$$
+storing the previous spectral field $\hat{p}_\mathbf{k}^{\,n-1}$.  For the
+zero-velocity IVP ($\hat{\dot{p}}_\mathbf{k}(0)=0$) the solution is even in time
+($\hat{p}^{-1}=\hat{p}^{1}$), so the first step collapses to
+$\hat{p}^{1}=\cos(\omega_k\Delta t)\,\hat{p}^{0}$.  Both forms are exact in time —
+no temporal discretisation error — and exact only for a homogeneous $c_0$ (a
+single $c_{\text{ref}}$ is used for every mode).
 
 ![k-space temporal correction factor](figures/ch02/fig03_kspace_temporal_correction.png)
 
