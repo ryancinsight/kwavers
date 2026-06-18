@@ -120,9 +120,11 @@ $$
 T_I^{(2)} \approx T_I^2 \approx 0.505 \quad (\approx -3 \;\text{dB}).
 $$
 
-Adding absorption ($\alpha \approx 15$ dB cm$^{-1}$ over $\sim 0.5$ cm of bone at
-each cortex) raises the insertion loss to approximately $3 + 2 \times 2 = 7$ dB,
-consistent with published clinical measurements (Aubry & Tanter 2010).
+Adding absorption ($\alpha \approx 15$ dB cm$^{-1}$ MHz$^{-1}$, i.e. $\approx 4$ dB
+cm$^{-1}$ at the $\sim 0.25$ MHz typical of deep transcranial therapy, over
+$\sim 0.5$ cm of bone at each cortex $\Rightarrow \sim 2$ dB per cortex) raises the
+insertion loss to approximately $3 + 2 \times 2 = 7$ dB, consistent with published
+clinical measurements (Aubry & Tanter 2010).
 
 > **Note.** The figure $T_p \approx 0.47$ quoted in the chapter heading applies to the
 > single cortex-to-tissue interface evaluated at rounded impedance values
