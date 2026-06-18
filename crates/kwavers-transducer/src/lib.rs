@@ -11,6 +11,7 @@ pub mod array_2d;
 pub mod basic;
 pub mod beamforming;
 pub mod bulk_piezo;
+pub mod design;
 pub mod factory;
 pub mod flexible;
 pub mod hemispherical;
@@ -19,6 +20,12 @@ pub mod mems;
 pub mod passive_acoustic_mapping;
 pub mod transducers;
 pub mod ultrafast;
+
+// Aperture-driven design synthesis (size + frequency → element layout + wiring)
+pub use design::{
+    design_array, ApertureDesignSpec, ArrayDesign, ChannelWiring, DEFAULT_KERF_FRACTION,
+    NYQUIST_PITCH_FRACTION,
+};
 
 // Source factory
 pub use factory::SourceFactory;
