@@ -146,10 +146,15 @@ width L focused at depth z_f in the far field (z_f ≫ L), the −6 dB lateral r
 
 where F# = z_f/L is the f-number of the transducer.
 
-*Proof.* The pressure at the focal plane is the Fourier transform of the aperture function.
-For a uniform aperture of width L, the focal field is a sinc function with first zero at
-Δx = λz_f/L. The −6 dB full width (half-amplitude) of |sinc(πx/(λz_f/L))|
-corresponds to x/[λz_f/L] = ±0.443, giving FWHM = 2 × 0.443 λ z_f/L = 0.886 λ F#. □
+*Proof.* The focal-plane pressure is the Fourier transform of the aperture function. For a
+uniform aperture of width L the one-way focal field is a sinc with first zero at
+Δx = λz_f/L. Imaging resolution is governed by the **two-way (pulse-echo)** response —
+transmit × receive — whose lateral PSF is sinc²(Lx/(λz_f)). Its −6 dB (half-amplitude)
+points satisfy sinc² = ½, i.e. sinc = 1/√2 = 0.707, reached at Lx/(λz_f) = ±0.443, so
+FWHM = 2 × 0.443 λ z_f/L = 0.886 λ F#. (The same 0.443 point is the −3 dB
+half-power width of the one-way sinc; squaring for pulse-echo turns it into the −6 dB
+width.) This matches the sinc² PSF used by `lateral_psf_sinc2` /
+`lateral_resolution_m` (`analytical::imaging`). □
 
 ![Lateral resolution vs depth](figures/ch04/fig04_lateral_resolution_vs_depth.png)
 
