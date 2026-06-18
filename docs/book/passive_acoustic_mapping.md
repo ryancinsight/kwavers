@@ -70,18 +70,22 @@ where $\tau_i = |\mathbf{r}_f - \mathbf{r}_i| / c$ is the focusing delay and
 $w_i$ is an apodisation weight.
 
 > **Theorem 22.1 (DAS resolution).**
-> *For an incoherent source at position **r**₀, the DAS mainlobe half-width
-> (−6 dB) in the lateral dimension is approximately*
-> $$\delta_\perp \approx \lambda \, z / D$$
+> *For an incoherent source at position **r**₀, the DAS lateral resolution is
+> set by the aperture diffraction limit:*
+> $$\delta_\perp^{\text{(null)}} = \lambda \, z / D, \qquad
+> \delta_\perp^{(-6\,\text{dB})} \approx 0.886\,\lambda \, z / D$$
 > *where $\lambda = c/f_0$, $z$ is the axial depth of the source, and $D$
-> is the aperture width.*
+> is the aperture width; $\delta_\perp^{\text{(null)}}$ is the first-null
+> (Rayleigh) width and $\delta_\perp^{(-6\,\text{dB})}$ the −6 dB FWHM.*
 
-**Proof sketch.**  The DAS output is proportional to the array factor
-$|A(\mathbf{r}_f)|$ = $|\sum_i \exp(j\phi_i)|$ where $\phi_i$ is the
+**Proof sketch.**  The DAS power output is the squared array factor
+$b \propto |A(\mathbf{r}_f)|^2$, $A = \sum_i \exp(j\phi_i)$, where $\phi_i$ is the
 phase error for a candidate focus at offset $\delta x$ from the true source.
-For a linear aperture with uniform spacing $d$, the standard Fraunhofer
-diffraction analysis (Goodman 2005, §4.2) yields a sinc mainlobe of width
-$\lambda z / D$.  $\square$
+For a linear aperture of width $D$, Fraunhofer diffraction (Goodman 2005, §4.2)
+makes $A$ a sinc with first null at $\lambda z / D$, so the power PSF $|A|^2$ is a
+sinc² whose half-amplitude (−6 dB) full width is $0.886\,\lambda z / D$ — the same
+sinc² −6 dB factor as the pulse-echo lateral resolution of Chapter 7
+(Theorem 7.4).  $\square$
 
 The DAS beamformer is signal-subspace blind: it uses no prior knowledge of the
 noise rank and suffers from grating-lobe artefacts when element spacing exceeds
@@ -89,7 +93,7 @@ $\lambda/2$.
 
 ![Passive DAS sensitivity map vs focal depth.](figures/ch23/fig02_das_sensitivity_map.png)
 
-*Figure 22.3. DAS point-spread sensitivity (Theorem 22.1): the −6 dB lateral width $\delta_\perp \approx \lambda z/D$ broadens with depth $z$.*
+*Figure 22.3. DAS point-spread sensitivity (Theorem 22.1): the −6 dB lateral width $\delta_\perp \approx 0.886\,\lambda z/D$ broadens with depth $z$.*
 
 ![Van Cittert–Zernike spatial coherence across the aperture.](figures/ch23/fig03_vcz_coherence.png)
 
