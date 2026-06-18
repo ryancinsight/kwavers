@@ -71,6 +71,22 @@ pulse duration $\tau_p$ or the cycle count $N_c = \tau_p f_0$ above the
 threshold of one cycle. This decouples the mechanical mechanism from
 thermal accumulation.
 
+**Remark 14.1 (Frequency and temperature dependence of $p_t$).** The mean
+threshold $p_t$ is not a universal constant: it rises weakly with frequency and
+falls as the tissue warms (rising vapour pressure and falling surface tension
+lower the nucleation barrier). The composed model is
+$$
+p_t(f, T) = p_{t,1\,\mathrm{MHz}} + 1.4\,\log_{10}(f / 1\,\mathrm{MHz})
+- s_T \max(0,\, T - T_\text{ref})\;\mathrm{MPa},
+$$
+with $s_T \approx 0.3\,\mathrm{MPa/{}^\circ C}$ and $T_\text{ref}=20\,^\circ\mathrm{C}$
+(Vlaisavljevich 2016). The two corrections are the
+`frequency_dependent_intrinsic_threshold_pa` and
+`intrinsic_threshold_thermal_correction_pa` terms of
+`kwavers_physics::analytical::cavitation::histotripsy`; the temperature term is
+applied in transient-heated planning (§32.5.2). The single-cycle CDF above uses
+the local value $p_t = p_t(f, T)$.
+
 ---
 
 ## 14.2 Millisecond-Pulse Collapse Theorem
