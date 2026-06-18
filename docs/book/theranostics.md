@@ -104,8 +104,12 @@ MR thermometry precision: ~1–2 °C at 3 T with TE = 15 ms.
 CEM43 dose at step k and u_k ≥ 0 the acoustic power.  Define the CEM43 dose rate:
 
 ```
-φ(T) = R(T)^(T − 43)   where R(T) = 0.25 (T > 43 °C), R(T) = 0.50 (T ≤ 43 °C)
+φ(T) = R(T)^(43 − T)   where R(T) = 0.50 (T ≥ 43 °C), R(T) = 0.25 (T < 43 °C)
 ```
+
+This is the Sapareto–Dewey CEM43 dose rate (identical to Chapter 12, Def. 12.1, and
+to `ThermalDoseCalculator::update_dose`): above 43 °C the exponent `43 − T < 0` makes
+`φ = 0.5^(43−T) = 2^(T−43) > 1`, so dose accrues *faster* than real time.
 
 The dose update
 
@@ -116,7 +120,7 @@ D_{k+1} = D_k + φ(T_k) Δt                                                (13.3
 is monotone non-decreasing: D_{k+1} ≥ D_k for all k.
 
 *Proof.* Since `R(T) ∈ {0.25, 0.50} ⊂ (0, 1]`, every real power `R^x = exp(x ln R)`
-is strictly positive.  Therefore `φ(T) = R^(T−43) > 0` for all finite `T`.  With
+is strictly positive.  Therefore `φ(T) = R^(43−T) > 0` for all finite `T`.  With
 `Δt > 0`, `D_{k+1} − D_k = φ(T_k) Δt > 0`.  By induction the sequence {D_k} is
 strictly increasing. □
 
@@ -183,17 +187,20 @@ Oscillating microbubbles increase local permeability via:
 fractional drug uptake enhancement ε relative to passive diffusion scales as
 
 ```
-ε ∝ R₀² f₀ p_A / (μ_l c₀)                                               (13.5)
+ε ∝ μ_l R₀ f₀ p_A / (ρ_l c₀ δ)                                          (13.5)
 ```
 
-where p_A is the driving pressure amplitude and f₀ the frequency.
+where p_A is the driving pressure amplitude, f₀ the frequency, R₀ the equilibrium
+bubble radius, μ_l and ρ_l the liquid dynamic viscosity and density, and δ the Stokes
+boundary-layer (pore) thickness. Equivalently, with kinematic viscosity ν_l = μ_l/ρ_l,
+ε ∝ ν_l R₀ f₀ p_A / (c₀ δ).
 
 *Proof sketch (dilute-bubble approximation, one bubble per voxel).* Microstreaming
 velocity near a single oscillating bubble in unbounded fluid scales as
 `u_s ∝ R₀ f₀ p_A/(ρ_l c₀)` (Longuet-Higgins 1998; streaming is proportional to
 the oscillation velocity `Ṙ_max ≈ p_A/(ρ_l c₀)` and to the bubble size `R₀`).
 Membrane shear stress `τ ∝ μ_l u_s / δ` (Stokes boundary layer, `δ = pore size`).
-Drug uptake per-bubble ∝ permeability ∝ τ ∝ `R₀ f₀ p_A / (ρ_l c₀ δ)`. The ratio
+Drug uptake per-bubble ∝ permeability ∝ τ ∝ `μ_l R₀ f₀ p_A / (ρ_l c₀ δ)`. The ratio
 to passive diffusion (τ = 0, i.e. p_A → 0) gives (13.5).
 
 **Scope limitation.** The scaling (13.5) holds for a single isolated bubble in the
