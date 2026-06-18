@@ -278,7 +278,7 @@ Conventional Doppler measures only the velocity *component along the beam*,
 **Cross-beam vector flow** removes this ambiguity by insonifying the same sample
 volume from two or more directions.
 
-**Theorem 9.4 (Cross-Beam Velocity Recovery).** Given Doppler measurements
+**Theorem 9.5 (Cross-Beam Velocity Recovery).** Given Doppler measurements
 `{v_i}` along unit beam directions `{d̂_i}` (i = 1..N, N ≥ 2 non-collinear), the
 velocity vector `v` minimizing `Σ_i (d̂_i · v − v_i)²` is the unique solution of
 the normal equations
@@ -317,7 +317,7 @@ velocity vector from two angled beams, removing the angle assumption (§9.3.5).*
 
 ### 9.4.1 Microbubble Scattering
 
-**Theorem 9.5 (Rayleigh–Plesset Bubble Dynamics — linearized).** For a microbubble of
+**Theorem 9.6 (Rayleigh–Plesset Bubble Dynamics — linearized).** For a microbubble of
 equilibrium radius R₀, shell stiffness χ, shell viscosity κ_s, and internal gas pressure
 p_gas, driven by an incident pressure p_inc(t), the linearized radius perturbation
 x = R − R₀ satisfies
@@ -341,7 +341,7 @@ diagnostic frequencies.
 *Proof sketch.* The full Rayleigh-Plesset equation linearized about R₀ gives a damped
 harmonic oscillator (9.13). Natural frequency follows from the restoring coefficient. □
 
-**Theorem 9.6 (Scattered Pressure from a Single Bubble).** In the far field
+**Theorem 9.7 (Scattered Pressure from a Single Bubble).** In the far field
 (`kr ≫ 1`, equivalently `r ≫ λ/(2π) ≈ R₀/kR₀`; for `R₀ = 2 μm` and `f = 2 MHz`,
 `λ/(2π) ≈ 119 μm`, so the approximation holds for `r ≳ 1 mm` — well within
 clinical imaging depth), the scattered pressure is
@@ -606,21 +606,21 @@ Implemented in `kwavers_diagnostics::reconstruction::sound_speed_shift`.
 
 ### 9.8.1 Spatial Resolution Metrics
 
-**Definition 9.8 (FWHM).** Full-width at half-maximum of the PSF cross-section. Measured
+**Definition 9.7 (FWHM).** Full-width at half-maximum of the PSF cross-section. Measured
 from a point target or wire phantom.
 
-**Definition 9.9 (Lateral Resolution, Axial Resolution).** Measured FWHM in lateral and
+**Definition 9.8 (Lateral Resolution, Axial Resolution).** Measured FWHM in lateral and
 axial directions for the combined transmit-receive PSF h(x,z).
 
 ### 9.8.2 Contrast Metrics
 
-**Definition 9.10 (CR, CNR, gCNR).** For lesion intensity distribution p_l and background
+**Definition 9.9 (CR, CNR, gCNR).** For lesion intensity distribution p_l and background
 p_b:
 - CR = 20 log₁₀(μ_l/μ_b) [dB]
 - CNR = |μ_l − μ_b| / √(σ_l² + σ_b²)
 - gCNR = 1 − OVL(p_l, p_b), where OVL is the overlap integral of the two distributions
 
-**Theorem 9.9 (gCNR Bound).** For any monotone increasing transformation of the image
+**Theorem 9.8 (gCNR Bound).** For any monotone increasing transformation of the image
 data (log compression, TGC), gCNR is invariant. CNR is not invariant under nonlinear
 transformations.
 
