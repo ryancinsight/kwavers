@@ -81,7 +81,8 @@ pub fn gruneisen_parameter_soft_tissue(t_celsius: &[f64]) -> Vec<f64> {
 /// Far-field photoacoustic pressure from an absorbing sphere.
 ///
 /// Based on the N-wave approximation for a sphere of radius R₀ with uniform
-/// initial pressure p₀ = Γ·μ_a·F_fluence·ρ·c:
+/// initial pressure p₀ = Γ·μ_a·F_fluence (= Γ·H, the absorbed energy density;
+/// Pa = J·m⁻³):
 /// ```text
 /// p(r, t) ≈ p₀·R₀ / (2·r) · [δ(t − (r−R₀)/c) − δ(t − (r+R₀)/c)]
 /// ```
@@ -100,7 +101,7 @@ pub fn gruneisen_parameter_soft_tissue(t_celsius: &[f64]) -> Vec<f64> {
 /// * `mua_per_m` – absorption coefficient [m⁻¹]
 /// * `c` – sound speed [m/s]
 /// * `r_det_m` – detector distance from sphere centre [m]
-/// * `initial_pressure_pa` – Γ·μ_a·F·ρ·c (pre-computed initial pressure) [Pa]
+/// * `initial_pressure_pa` – Γ·μ_a·F (pre-computed initial pressure p₀ = Γ·H) [Pa]
 ///
 /// # Reference
 /// Xu & Wang (2006), *Rev. Sci. Instrum.* 77, 041101, eq. (13).
