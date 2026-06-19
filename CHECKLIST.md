@@ -65,17 +65,30 @@ Committed (branch `feat/cov1-coherence-factor`):
 Every PLC item done/closed/specced; every substantive COV gap filled. 14 commits
 on branch `feat/cov1-coherence-factor` (off `main`, not pushed/merged).
 
-### Remaining (focused follow-up sessions)
-- **[arch] PLC-3 remainder EXECUTION** (the one substantive item left): fold
-  `therapy/microbubble/shell::MarmottantShellProperties` (2nd Marmottant) and
+### COVERAGE PHASE COMPLETE (2026-06-19)
+- [x] COV-1 coherence factor · COV-2 active DMAS · COV-3 curvilinear array ·
+      COV-4 point-scatterer RF (core) · COV-5 Hoff+Sarkar · COV-6 Mason/KLM
+      impedance · COV-7 MRE front end · COV-10 Shepp-Logan
+- [x] COV-8/COV-9 false positives
+- Deferred with reasons: COV-5 de Jong (PDF-verify prefactor), Herring
+  (free-bubble EOM, not a shell model); COV-11 Mur (WONTFIX).
+
+### One substantive consolidation item left
+- **[arch] PLC-3 remainder EXECUTION** — fold
+  `therapy/microbubble/shell::MarmottantShellProperties` (2nd Marmottant) +
   `ceus/microbubble/dynamics::wall_acceleration` (3rd RP integrator) onto
   `EncapsulatedShellModel`; move therapy-in-physics planning to `kwavers-therapy`.
-  Numeric-equivalence-sensitive → ADR + value-semantic verification, fresh context.
-- **Coverage (low priority):** COV-5 de Jong (PDF-verify prefactor) + Herring;
-  COV-6 KLM/Mason, COV-7 MRE, COV-10 Shepp-Logan.
-- **Follow-ups:** COV-4 finite-aperture SIR; CPML empirical reflection benchmark +
-  α_max=π·f₀ plumbing + DG-solver CPML (3rd impl) consolidation; PLC-2 [patch]
-  perfusion-param-extraction unify.
+  Numeric-equivalence-sensitive → ADR + value-semantic differential tests, fresh
+  context (do NOT rush — different parameterizations could silently drift results).
+
+### Low-value follow-ups
+- COV-4 finite-aperture SIR; COV-6 loaded matching/backing transmission line;
+  CPML empirical reflection benchmark + α_max=π·f₀ plumbing + DG-solver CPML
+  consolidation; PLC-2 [patch] perfusion-param-extraction unify.
+
+### Residual risk
+- 18 commits on `feat/cov1-coherence-factor` (off `main`) NOT pushed/merged —
+  flagged per git discipline; recommend push/PR before the PLC-3 session.
 
 ## Sprint A (verify C-tier suspicions) — COMPLETE (2026-05-31)
 - [x] SOL-4 Westervelt `d²(p²)/dt²` FMA — FALSE POSITIVE (exact + FMA precision gain)
