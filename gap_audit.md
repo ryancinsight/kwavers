@@ -266,3 +266,68 @@ Standing facts (do NOT re-flag):
 
 See [backlog.md](backlog.md) for sprint sequencing and [CHECKLIST.md](CHECKLIST.md)
 for the active increment.
+
+---
+
+# Coverage & placement audit (2026-06-19)
+
+**Different axis from Sprints A–E above.** Those audited *internal correctness* of
+existing code. This audit asks two new questions: (1) **coverage** — what ultrasound
+physics do peer libraries (k-Wave, Field II, FOCUS, Stride, j-Wave, mSOUND, USTB,
+MUST, BabelBrain) implement that kwavers lacks? (2) **placement** — what physics is
+duplicated across crates or living in the wrong layer?
+
+**Method:** four parallel read-only coverage explorers (forward solvers; bubble/
+thermal/chemistry; transducer/imaging/beamforming; inverse/therapy/medium), then
+**direct verification** of every `ABSENT`/`NOT FOUND` claim by targeted grep — the
+explorers are pattern-matchers and over-call gaps (one example: explorer flagged
+"Kirchhoff migration ABSENT" — it exists at
+`kwavers-physics/src/acoustics/imaging/seismic/kirchhoff.rs`, with `eikonal.rs`
+alongside). Only grep-confirmed gaps are listed.
+
+**Headline:** kwavers' physics breadth meets or exceeds every peer surveyed
+(uniquely: frequency-domain CBS-FWI, full PINN stack, neuromodulation HH+NICE,
+sonochemistry, transcranial CT aberration). Gaps are narrow and concentrated in
+classic **imaging-pipeline beamforming refinements** and a few **bubble-shell
+models**; the larger risk is **cross-crate fragmentation** of three modality
+verticals.
+
+## Coverage gaps (grep-verified absent)
+
+| ID | Sev | Area | Gap (peer that has it) | Notes |
+|----|-----|------|------------------------|-------|
+| COV-1 | ~~M~~ **DONE (2026-06-19)** | beamforming | Added `time_domain::coherence` — Mallart-Fink amplitude CF + Camacho sign CF (SCF) behind one `CoherenceFactor` enum + `delay_and_sum_coherence`; DAS refactored onto SSOT `align_channels`/`sum_aligned`. 11 value-semantic tests. **Surfaced + fixed a real bug:** SAFT 3-D CF squared `Σ|x|` instead of summing energies (coherent aperture → 1/N not 1); consolidated onto canonical `amplitude_coherence_from_sums`. NB: SLSC (Lediju 2011) + SAFT-CF already existed — gap was the canonical DAS-path CF/SCF, now filled. **Follow-up [minor]:** PCF (phase, needs analytic signal) + GCF (Li 2003, FFT). | done |
+| COV-2 | M | beamforming | **DMAS as an active B-mode beamformer** (Matrone 2015) absent; DMAS exists only for **passive** PAM (`pam/delay_and_sum`, theranostic_guidance). | Generalize the passive DMAS kernel to the active DAS path, don't clone. |
+| COV-3 | M | transducer | **Curvilinear/convex transmit array** absent as a source geometry (clinical abdominal probe). The `curved_array` under `kwavers-diagnostics/.../sound_speed_shift` is a *reconstruction acquisition geometry*, not a transmit transducer. | Field II/USTB/Verasonics standard. Home: `kwavers-transducer`. |
+| COV-4 | M | phantom/source | **Discrete point-scatterer model + spatial-impulse-response RF synthesis** (the core Field II abstraction) absent — no scatterer-cloud → echo synthesis for synthetic B-mode. | `kwavers-phantom` has voxel/tissue builders but no discrete scatterers; only seismic-test + fk_migration mention "scatterer". |
+| COV-5 | M | bubble dynamics | **Encapsulated-shell models Sarkar, de Jong, Hoff, Herring** absent. Present: Marmottant, Church only (`bubble_dynamics/encapsulated/model/`). | de Jong 1994 / Sarkar 2005 / Hoff 2000 widely used for contrast-agent calibration; ties to PHY-13 (de Jong scattering test). |
+| COV-6 | L | transducer | **KLM / Mason equivalent-circuit** transducer model absent; impulse response handled analytically (`pulse_echo.rs`). | Field II/PiezoCAD feature; needed only for electro-mechanical bandwidth design, not field sim. Defer unless a design use-case appears. |
+| COV-7 | L | elastography | **MRE-specific inversion** (harmonic MR displacement → modulus) absent; SWE/ARFI/thermal-strain present, viscoelastic Voigt/Maxwell/Zener present. | Most MRE machinery (LFE, direct inversion) already exists in `inverse/elastography/linear_methods`; gap is the MR displacement-field front end. |
+| COV-8 | L | sonoluminescence | **Cherenkov emission is a stub** (`optics/sonoluminescence/cherenkov/`). | Minor mechanism; blackbody+bremsstrahlung+plasma are complete. |
+| COV-9 | L | inverse | **Sobolev-norm regularization** is a config option with no operator (`linear_born_inversion/config.rs`). | TV/Tikhonov/Charbonnier present; either implement or remove the dead config variant. |
+| COV-10 | L | phantom | **Shepp-Logan / standard numerical test phantom** absent. | Test-fixture convenience, not physics; low priority. |
+| COV-11 | L | boundary | **Mur absorbing BC** absent. | CPML/PML present and superior; **WONTFIX** unless a thin-PML budget case appears. |
+
+**Confirmed NON-gaps (explorer false positives — do NOT re-flag):** Kirchhoff
+migration (`seismic/kirchhoff.rs`), eikonal (`seismic/eikonal.rs`), Rytov
+(`inverse/rytov.rs`), power/vector Doppler, ULM super-resolution, axisymmetric PSTD,
+fractional-Laplacian + multi-relaxation absorption, anisotropic Christoffel —
+all present and accounted for.
+
+## Placement / SSOT gaps (cross-crate fragmentation — grep-verified)
+
+| ID | Sev | Concern | Evidence | Resolution direction |
+|----|-----|---------|----------|----------------------|
+| PLC-1 | arch | **Photoacoustic spread across 5 crates** incl. **two parallel impls inside `kwavers-simulation`** (`modalities/photoacoustic/` AND `photoacoustics/vertical/`), plus `kwavers-physics/photoacoustics`, `kwavers-imaging/photoacoustic`, `kwavers-diagnostics/photoacoustic`, and `kwavers-solver/.../reconstruction/photoacoustic` (inversion — legitimately separate). | Extends and **supersedes DEBT-3** (which recorded only the 2 in-simulation copies). The fragmentation is wider than DEBT-3 states. | Pick ONE canonical forward modality (physics) + ONE recon home (solver); collapse the simulation duplicate and fold imaging/diagnostics shims into orchestration-only. ADR required. |
+| PLC-2 | arch | **CEUS spread across 4 crates with duplicated physics** — `perfusion` modeled in BOTH `kwavers-imaging/ultrasound/ceus/perfusion.rs` AND `kwavers-physics/.../ceus/perfusion/`; microbubble scattering/dynamics in both; plus `kwavers-simulation/imaging/ceus.rs` and `kwavers-imaging/ceus_orchestrator.rs`. | Perfusion kinetics + bubble scattering are physics; modeling them in `kwavers-imaging` is an upward-layer duplicate. | Consolidate CEUS *physics* (microbubble response, scattering, perfusion kinetics) into `kwavers-physics`; leave only acquisition/orchestration in `kwavers-imaging`. |
+| PLC-3 | arch | **Microbubble dynamics duplicated within `kwavers-physics`** (`acoustics/imaging/modalities/ceus/microbubble` vs `therapy/microbubble`) AND a **`therapy/` subtree living in the physics crate** (`kwavers-physics/src/therapy/microbubble`, and `acoustics/therapy/{neuromodulation,sonogenetics}`, `acoustics/transcranial/bbb_opening`) parallel to `kwavers-therapy`. | Two shell/state bubble models in one crate; therapy-domain code in the physics layer alongside the dedicated therapy crate. | Single canonical encapsulated-bubble model (ties to COV-5); decide therapy-physics home (physics provides models, therapy consumes) — likely move `kwavers-physics/src/therapy/*` consumers into `kwavers-therapy`, keep shared bubble-shell model in physics. |
+| PLC-4 | M | **Time-reversal in 3 locations** — `physics/.../transcranial/aberration_correction/time_reversal.rs`, `simulation/modalities/photoacoustic/reconstruction/`, `solver/inverse/time_reversal` + `solver/.../reconstruction/photoacoustic/time_reversal.rs`. | Likely 3 *distinct* uses (aberration vs PA recon vs general TR), but the TR k-space propagator core should be one SSOT (cf. memory `project_tr_ssot_may26`). | Verify whether the propagator kernel is shared; if cloned, hoist to one `solver` entry point. **[verify] before asserting dup.** |
+| PLC-5 | L | **Histotripsy parameters in 3 crates** — `kwavers-medium/absorption/histotripsy.rs` (absorption db), `kwavers-physics/analytical/cavitation/histotripsy.rs` (intrinsic threshold), `kwavers-therapy/.../lithotripsy`. | These are arguably *distinct concerns* (medium props vs cavitation threshold vs therapy planning) — likely correct layering, not duplication. | **Low priority / probably WONTFIX**; confirm no shared-constant drift. |
+
+**Severity:** `arch` cross-cutting structural · `M` real but bounded · `L` cleanup.
+Placement items are **[verify]-gated for duplication**: confirm the logic is actually
+cloned (not legitimately layered forward-vs-inverse) before consolidating — same
+discipline that turned 6/6 Sprint-A suspicions into 4 false positives.
+
+See [backlog.md](backlog.md) for sprint sequencing and [CHECKLIST.md](CHECKLIST.md)
+for the active increment.

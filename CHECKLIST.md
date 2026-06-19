@@ -9,6 +9,40 @@
 > decision rationale + migration guide are recorded in CHANGELOG.md.
 > Gap inventory: [gap_audit.md](gap_audit.md) · Strategy: [backlog.md](backlog.md).
 
+## Sprint F (coverage & placement audit) — AUDIT COMPLETE, fixes OPEN (2026-06-19)
+Axis: physics coverage vs peer libs + cross-crate placement (see
+[gap_audit.md → Coverage & placement audit](gap_audit.md#coverage--placement-audit-2026-06-19),
+[backlog.md → Coverage & placement gap audit](backlog.md)).
+- [x] Four parallel coverage explorers (forward/bubble-thermal/imaging/inverse) +
+      direct grep verification of every ABSENT claim.
+- [x] Logged 11 coverage gaps (COV-1..11) + 5 placement gaps (PLC-1..5) in gap_audit.
+- [x] Caught explorer false positives (Kirchhoff/eikonal/Rytov present) — not re-flagged.
+- **Outcome:** breadth meets/exceeds all peers surveyed; gaps narrow (beamforming
+  refinements + bubble-shell models); main risk = modality-vertical fragmentation
+  (photoacoustic 5 crates / CEUS 4 crates).
+- **Deferred:** PLC-5 (histotripsy — likely distinct concerns), COV-11 (Mur BC) = WONTFIX.
+
+### COV-1 coherence factor — DONE (2026-06-19)
+- [x] New `time_domain::coherence`: Mallart-Fink amplitude CF + Camacho sign CF
+      (one `CoherenceFactor` enum + `delay_and_sum_coherence`). 11 value-semantic tests.
+- [x] DAS refactored onto SSOT `align_channels` + `sum_aligned` (value-identical;
+      10 existing DAS tests still pass).
+- [x] **Real bug fixed:** SAFT 3-D CF squared `Σ|x|` → coherent aperture capped at
+      1/N; consolidated onto canonical `amplitude_coherence_from_sums`, test corrected
+      with derivation. clippy clean (kwavers-analysis), 34 targeted tests pass.
+- **Follow-up [minor]:** phase CF (PCF, analytic signal) + generalized CF (GCF, FFT).
+
+### CPML → CFS-PML upgrade — research DONE, impl OPEN (2026-06-19)
+- [x] Background literature synthesis (2020–2026) → concrete single-pole CFS-PML
+      spec recorded in [backlog.md](backlog.md) (graded κ/α, runtime σ_max, defaults).
+- [ ] **Next increment (WIP candidate):** implement single-pole CFS-PML in the FDTD
+      `kwavers-boundary/cpml` path (add κ_max/α_max/R₀ params + ψ recursion);
+      differential grazing-reflection test vs current σ-only CPML. ADR for the
+      boundary-API change. PSTD path = reduced σ_max-profile upgrade only.
+- **Alternatives if deferring CPML:** next coverage slice COV-2 (active DMAS —
+      generalize the passive PAM kernel) or COV-5 (bubble-shell models), or the
+      [arch] PLC-1 photoacoustic-consolidation ADR.
+
 ## Sprint A (verify C-tier suspicions) — COMPLETE (2026-05-31)
 - [x] SOL-4 Westervelt `d²(p²)/dt²` FMA — FALSE POSITIVE (exact + FMA precision gain)
 - [x] PHY-1 Gilmore vapor correction — FALSE POSITIVE (`p_eq` subtracts pv, line 211)

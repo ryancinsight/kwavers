@@ -7,6 +7,7 @@ use std::f64::consts::PI;
 
 use super::super::{BeamformingAlgorithm3D, BeamformingConfig3D};
 use super::config::SaftConfig;
+use crate::signal_processing::beamforming::time_domain::coherence::amplitude_coherence_from_sums;
 use kwavers_core::constants::numerical::TWO_PI;
 
 /// Euclidean distance between two 3D points.
@@ -101,24 +102,6 @@ impl SaftProcessor {
         0.46f64.mul_add((PI * normalized_pos).cos(), 0.54)
     }
 
-    /// Coherence factor (Mallart & Fink 1994).
-    pub(super) fn compute_coherence_factor(
-        &self,
-        coherent_sum: f64,
-        incoherent_sum: f64,
-        num_contributions: usize,
-    ) -> f64 {
-        if num_contributions == 0 {
-            return 0.0;
-        }
-        let denominator = num_contributions as f64 * incoherent_sum.powi(2);
-        if denominator > 0.0 {
-            (coherent_sum.abs().powi(2)) / denominator
-        } else {
-            0.0
-        }
-    }
-
     /// Reconstruct a 3D volume using SAFT with carrier-phase demodulation.
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
@@ -166,7 +149,11 @@ impl SaftProcessor {
 
                     let mut sum_i = 0.0_f64;
                     let mut sum_q = 0.0_f64;
-                    let mut incoherent_sum = 0.0_f64;
+                    // Σ per-element energies for the Mallart & Fink coherence
+                    // factor. Demodulation is a phase rotation (I²+Q² = sample²),
+                    // so the apodized per-element magnitude is `apod·|sample|`
+                    // and its energy is `(apod·sample)²`.
+                    let mut sum_of_squares = 0.0_f64;
                     let mut num_contributions = 0usize;
 
                     for tx_idx in 0..num_tx {
@@ -200,7 +187,7 @@ impl SaftProcessor {
 
                             sum_i += apod * i_comp;
                             sum_q += apod * q_comp;
-                            incoherent_sum += apod * sample.abs();
+                            sum_of_squares += (apod * sample).powi(2);
                             num_contributions += 1;
                         }
                     }
@@ -210,9 +197,9 @@ impl SaftProcessor {
                     volume[[i, j, k]] =
                         if self.config.coherence_factor_enabled && num_contributions > 0 {
                             let coherent_mag = sum_i.hypot(sum_q);
-                            let cf = self.compute_coherence_factor(
+                            let cf = amplitude_coherence_from_sums(
                                 coherent_mag,
-                                incoherent_sum,
+                                sum_of_squares,
                                 num_contributions,
                             );
                             intensity * cf

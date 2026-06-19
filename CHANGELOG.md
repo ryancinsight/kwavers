@@ -2,6 +2,34 @@
 
 ## Unreleased
 
+### Added (2026-06-19) — Coherence-factor beamforming (COV-1)
+
+- [minor] **Coherence-factor adaptive weighting for time-domain DAS**
+  (`kwavers-analysis::signal_processing::beamforming::time_domain::coherence`):
+  the Mallart & Fink (1994) amplitude coherence factor `CF = |Σx|²/(N·Σx²)` and
+  the Camacho et al. (2009) sign coherence factor
+  `SCF = (1−√(1−b̄²))^p`, behind one `CoherenceFactor` enum + a
+  `delay_and_sum_coherence` entry point returning the CF-weighted image and the
+  per-sample coherence map. Coherence is measured on the **unapodized** aligned
+  aperture so a perfectly coherent wavefront yields CF=1 regardless of the DAS
+  taper. 11 value-semantic tests (closed-form CF/SCF values, Cauchy–Schwarz
+  range, DAS×CF identity). Closes gap-audit **COV-1**.
+- [patch] **DAS refactor to SSOT alignment**: extracted `align_channels` +
+  `sum_aligned` from `delay_and_sum` so the delay-alignment step is shared by the
+  sum and the coherence factor (value-identical; existing DAS tests unchanged).
+
+### Fixed (2026-06-19) — SAFT coherence-factor over-suppression
+
+- [patch] **SAFT 3-D coherence factor was wrong** (`beamforming::
+  three_dimensional::saft`): it computed `|Σx|²/(N·(Σ|x|)²)` — squaring the sum
+  of magnitudes instead of summing energies — capping a perfectly coherent
+  aperture at CF=1/N (10-element probe over-suppressed every voxel ~10×). Now
+  accumulates `Σ(apod·sample)²` and routes through the canonical
+  `amplitude_coherence_from_sums` helper (SSOT with the DAS path); a coherent
+  aperture correctly yields CF=1. The prior unit test had baked the buggy formula
+  into its assertion (abstract inputs `→0.4`); replaced with value-semantic
+  assertions and the derivation recorded inline.
+
 ### Fixed (2026-06-05) - Comparison-example parity restored + elastic-PSTD solver fixes
 
 - [patch] Repaired every kwavers↔k-wave-python / KWave.jl comparison script

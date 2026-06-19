@@ -6,4 +6,4 @@ pub mod core;
 #[cfg(test)]
 mod tests;
 
-pub use core::{delay_and_sum, DEFAULT_DELAY_REFERENCE};
+pub use core::{align_channels, delay_and_sum, sum_aligned, DEFAULT_DELAY_REFERENCE};
