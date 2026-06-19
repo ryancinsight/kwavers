@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### Added (2026-06-19) — MRE harmonic-displacement front end (COV-7)
+
+- [minor] **`kwavers-physics::acoustics::imaging::modalities::elastography::mre`**:
+  the magnetic-resonance-elastography front end that converts a motion-encoded
+  phase-offset stack into the `DisplacementField` the existing elastography
+  inversions (LFE, direct, phase-gradient) consume. `extract_first_harmonic`
+  computes the per-voxel complex first-harmonic via a single-bin temporal DFT
+  `C=(2/N)Σ φ[k]e^{−i2πk/N}` and divides by the encoding sensitivity κ
+  (`φ=κ·u`); it rejects DC (B0) bias. `harmonic_snapshot` gives a real in-phase
+  snapshot and `mre_displacement_field_z` builds the z-encoded field. 6 analytic
+  value-semantic tests (amplitude/phase recovery, DC rejection, snapshot
+  quadrature, input validation). Closes gap-audit **COV-7** (the modulus
+  inversion already existed).
+
 ### Added (2026-06-19) — Shepp–Logan numerical phantom (COV-10)
 
 - [minor] **`kwavers-phantom::shepp_logan::SheppLogan`**: the standard 10-ellipse
