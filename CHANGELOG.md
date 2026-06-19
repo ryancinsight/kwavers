@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+### Added (2026-06-19) — Inter-bubble acoustic coupling in the cavitation cloud (CLD-1, ADR 028) [major]
+
+- [major] **`kwavers-therapy::...::lithotripsy::cavitation_cloud`** gains the leading
+  **collective** effect: inter-bubble acoustic coupling. Each pulsating bubble
+  radiates the incompressible near-field pressure
+  `bubble_radiated_pressure = (ρ/d)·(R²R̈ + 2RṘ²)`, which adds to its neighbours'
+  driving field; `evolve_cloud` is now two-pass (explicit/lagged source strengths,
+  then per-cell integration under `p_ext + Σ_{j≠i}(ρ/d_ij)S_j`). `CloudParameters`
+  gains `cell_spacing`, `coupling_enabled`, `interaction_radius`. **Opt-in (default
+  off):** the `O(active²)` sum amplifies the drive into the stiff regime, so
+  enabling it by default made the full-grid orchestrator sim exceed the test
+  ceiling — it is enabled per-study on tractable sizes (with a cutoff). A single
+  active cell or coupling-off reduces **exactly** to ADR 027 (keystone preserved).
+  Per-cell integrator non-convergence under the amplified drive is now handled
+  gracefully (re-nucleate at R₀) instead of crashing. 5 new value-semantic tests
+  (radiated-pressure closed form, 1/d scaling, coupling alters a two-bubble
+  trajectory, closer-bubbles-couple-more, lone bubble unaffected). See ADR 028.
+  **Still open** (CLD-1): self-consistent/implicit coupling, cloud-scale energy
+  focusing/shielding (Maeda & Colonius 2018), cloud-interface instabilities,
+  compressible retarded coupling.
+
 ### Changed (2026-06-19) — Time-resolved per-cell cavitation-cloud dynamics (CLD-1, ADR 027) [major]
 
 - [major] **`kwavers-therapy::...::lithotripsy::cavitation_cloud`**: each cloud cell

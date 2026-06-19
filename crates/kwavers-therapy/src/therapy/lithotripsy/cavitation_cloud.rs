@@ -37,6 +37,19 @@ pub struct CloudParameters {
     /// rarefactional half-cycle duration ≈ 1/(2f) sets how large a bubble grows;
     /// set per modality (lithotripsy shock tail ≈ 0.25–0.5 MHz; histotripsy ≈ 1 MHz).
     pub drive_frequency: f64,
+    /// Grid cell spacing `(dx, dy, dz)` [m] — sets inter-bubble distances for the
+    /// acoustic coupling (ADR 028).
+    pub cell_spacing: [f64; 3],
+    /// Enable inter-bubble acoustic coupling (radiated-pressure perturbation of
+    /// neighbours, ADR 028). **Opt-in** (default `false`): the coupling sum is
+    /// `O(active²)` per step and amplifies the drive into the stiff
+    /// violent-collapse regime, so enabling it on a large cloud is costly — set a
+    /// finite `interaction_radius` cutoff there. Off ⇒ the independent-oscillator
+    /// model (ADR 027). When enabled, prefer tractable problem sizes / cutoffs.
+    pub coupling_enabled: bool,
+    /// Cutoff distance [m] beyond which inter-bubble coupling is neglected, bounding
+    /// the `O(active²)` coupling sum. `INFINITY` ⇒ all active pairs.
+    pub interaction_radius: f64,
 }
 
 impl Default for CloudParameters {
@@ -49,18 +62,37 @@ impl Default for CloudParameters {
             viscosity: VISCOSITY_WATER,
             erosion_efficiency: 1e-12, // kg/J (empirical, Sapozhnikov et al. 2002)
             drive_frequency: 1.0e6,    // 1 MHz representative cavitation drive
+            cell_spacing: [1.0e-3; 3],          // 1 mm
+            coupling_enabled: false,            // opt-in (O(active²); see field docs)
+            interaction_radius: f64::INFINITY,
         }
     }
+}
+
+/// Incompressible near-field pressure [Pa] radiated by a pulsating bubble of
+/// radius `r`, wall velocity `r_dot`, and wall acceleration `r_ddot` at distance
+/// `d > 0`:  `p_rad = (ρ_L/d)·(r²·r̈ + 2·r·ṙ²) = (ρ_L/d)·d/dt(r²ṙ)`.
+///
+/// This is the coupling pressure a bubble adds to its neighbours' driving field
+/// (Mettin et al. 1997; Ida 2002). Returns `0` for non-positive distance.
+#[must_use]
+pub fn bubble_radiated_pressure(rho: f64, distance: f64, r: f64, r_dot: f64, r_ddot: f64) -> f64 {
+    if distance <= 0.0 {
+        return 0.0;
+    }
+    let source_strength = r_ddot.mul_add(r * r, 2.0 * r * r_dot * r_dot); // r²r̈ + 2rṙ²
+    rho * source_strength / distance
 }
 
 /// Cavitation cloud dynamics model.
 ///
 /// Each cell carries a **real, time-resolved representative bubble** — its radius
 /// `R(t)` and wall velocity `Ṙ(t)` are integrated across [`Self::evolve_cloud`]
-/// calls by the canonical adaptive Keller-Miksis solver under the local
-/// instantaneous pressure (ADR 027). `density_field` is the seeded bubble *number
-/// density* (nuclei per cell); erosion is deposited per genuine inertial collapse.
-/// Cells are independent oscillators — collective coupling is not modeled (CLD-1).
+/// calls by the canonical adaptive Keller-Miksis solver under its **total**
+/// driving pressure (local external + inter-bubble acoustic coupling, ADR 028).
+/// `density_field` is the seeded bubble *number density* (nuclei per cell); erosion
+/// is deposited per genuine inertial collapse. Coupling is the explicit incompressible
+/// radiated-pressure model; cloud-scale focusing/instabilities remain open (CLD-1).
 #[derive(Debug, Clone)]
 pub struct CavitationCloudDynamics {
     /// Cloud parameters
@@ -72,9 +104,9 @@ pub struct CavitationCloudDynamics {
     /// Per-cell representative wall velocity `Ṙ(t)` [m/s]
     velocity_field: Array3<f64>,
     /// Local pressure at the previous step [Pa] (for the `dp/dt` finite difference)
-    prev_pressure: Array3<f64>,
-    /// Whether `prev_pressure` has been seeded by a first call
-    pressure_seeded: bool,
+    prev_total_pressure: Array3<f64>,
+    /// Whether `prev_total_pressure` has been seeded by a first call
+    total_seeded: bool,
     /// Total eroded mass accumulated
     accumulated_eroded_mass: f64,
 }
@@ -88,8 +120,8 @@ impl CavitationCloudDynamics {
             density_field: Array3::zeros(dimensions),
             radius_field: Array3::from_elem(dimensions, r0),
             velocity_field: Array3::zeros(dimensions),
-            prev_pressure: Array3::zeros(dimensions),
-            pressure_seeded: false,
+            prev_total_pressure: Array3::zeros(dimensions),
+            total_seeded: false,
             accumulated_eroded_mass: 0.0,
             parameters,
         }
@@ -124,13 +156,13 @@ impl CavitationCloudDynamics {
             self.density_field = Array3::zeros(pressure.dim());
             self.radius_field = Array3::from_elem(pressure.dim(), r0);
             self.velocity_field = Array3::zeros(pressure.dim());
-            self.prev_pressure = Array3::zeros(pressure.dim());
-            self.pressure_seeded = false;
+            self.prev_total_pressure = Array3::zeros(pressure.dim());
+            self.total_seeded = false;
         } else {
             // Reset the representative bubbles to equilibrium for a fresh run.
             self.radius_field.fill(r0);
             self.velocity_field.fill(0.0);
-            self.pressure_seeded = false;
+            self.total_seeded = false;
         }
         // Simple init: nucleate bubbles where pressure < threshold (-1 MPa) and near stone
         let threshold = -MPA_TO_PA;
@@ -144,20 +176,71 @@ impl CavitationCloudDynamics {
         }
     }
 
+    /// Position [m] of cell `(i,j,k)` from the configured cell spacing.
+    #[inline]
+    fn cell_position(&self, i: usize, j: usize, k: usize) -> [f64; 3] {
+        let [dx, dy, dz] = self.parameters.cell_spacing;
+        [i as f64 * dx, j as f64 * dy, k as f64 * dz]
+    }
+
+    /// Inter-bubble acoustic source strengths `S_j = R_j² R̈_j + 2 R_j Ṙ_j²` for
+    /// every active cell, with positions, evaluated explicitly at the previous
+    /// total driving pressure (ADR 028, Pass 1). Empty when coupling is disabled.
+    fn coupling_sources(
+        &self,
+        solver: &KellerMiksisModel,
+        params: &BubbleParameters,
+        time: f64,
+    ) -> Vec<([f64; 3], f64)> {
+        if !self.parameters.coupling_enabled {
+            return Vec::new();
+        }
+        let (nx, ny, nz) = self.density_field.dim();
+        let mut sources = Vec::new();
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                    let idx = [i, j, k];
+                    if self.density_field[idx] <= 0.0 {
+                        continue;
+                    }
+                    let r = self.radius_field[idx].max(1e-12);
+                    let v = self.velocity_field[idx];
+                    let mut state = BubbleState::new(params);
+                    state.radius = r;
+                    state.wall_velocity = v;
+                    // Explicit (lagged) source acceleration from the previous total
+                    // driving pressure (no implicit all-bubble solve).
+                    let p_src = if self.total_seeded {
+                        self.prev_total_pressure[idx]
+                    } else {
+                        0.0
+                    };
+                    let accel = solver
+                        .calculate_acceleration(&mut state, p_src, 0.0, time)
+                        .unwrap_or(0.0);
+                    let strength = accel.mul_add(r * r, 2.0 * r * v * v); // R²R̈ + 2RṘ²
+                    if strength.is_finite() {
+                        sources.push((self.cell_position(i, j, k), strength));
+                    }
+                }
+            }
+        }
+        sources
+    }
+
     /// Evolve the cloud by one time step under the instantaneous pressure field.
     ///
     /// Each seeded cell (`density > 0`) carries a real representative bubble whose
     /// `(R, Ṙ)` is advanced by `dt` with the canonical **adaptive Keller-Miksis**
-    /// integrator under the local instantaneous pressure (and `dp/dt` from the
-    /// previous call), resolving violent collapse via sub-stepping. Bubble history
-    /// is carried across calls in `radius_field`/`velocity_field`, so calling this
-    /// at acoustic-resolution time steps reproduces the true `R(t)` waveform per
-    /// cell (ADR 027). Erosion is the compression work `∫p dV` done on each
-    /// collapsing bubble (`∫p dV ≈` the Rayleigh collapse energy over a full
-    /// collapse), localized per cell.
-    ///
-    /// Cells are independent oscillators — inter-bubble coupling and cloud-scale
-    /// collective collapse are not modeled (CLD-1, research frontier).
+    /// integrator under its **total** driving pressure — the local external
+    /// pressure plus the **inter-bubble acoustic coupling** `Σ_{j≠i}(ρ/d_ij)·S_j`
+    /// from neighbouring bubbles (ADR 028) — resolving collapse via sub-stepping.
+    /// Bubble history is carried across calls, so acoustic-resolution stepping
+    /// reproduces the coupled per-cell `R(t)`. With one active cell or coupling
+    /// disabled this reduces exactly to the independent-oscillator model (ADR 027).
+    /// Erosion is the compression work `∫p dV` on each collapsing bubble
+    /// (≈ Rayleigh collapse energy over a full collapse), localized per cell.
     ///
     /// # Errors
     /// - [`KwaversError::InvalidInput`] if the pressure field shape mismatches or
@@ -182,42 +265,62 @@ impl CavitationCloudDynamics {
         let params = self.bubble_parameters();
         let solver = KellerMiksisModel::new(params.clone());
         let r0 = params.r0;
+        let rho = params.rho_liquid;
         let p_vapor = VAPOR_PRESSURE_WATER;
         let efficiency = self.parameters.erosion_efficiency;
+        let r_cut = self.parameters.interaction_radius;
         let (nx, ny, nz) = self.density_field.dim();
 
+        // Pass 1: explicit inter-bubble acoustic source strengths (ADR 028).
+        let sources = self.coupling_sources(&solver, &params, time);
+
+        // Pass 2: per-cell total driving pressure (external + coupling) and integrate.
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {
                     let idx = [i, j, k];
-                    let p_local = pressure[idx];
-                    let p_prev = if self.pressure_seeded {
-                        self.prev_pressure[idx]
-                    } else {
-                        p_local // first call: dp/dt = 0
-                    };
-                    self.prev_pressure[idx] = p_local;
-
                     let density = self.density_field[idx];
                     if density <= 0.0 {
-                        continue; // no nuclei here — representative radius stays at R₀
+                        // No nuclei: radius stays at R₀; still track prev pressure.
+                        self.prev_total_pressure[idx] = pressure[idx];
+                        continue;
                     }
 
-                    let dp_dt = (p_local - p_prev) / dt;
-                    let r_before = self.radius_field[idx].max(1e-12);
+                    // Coupling pressure from all other active bubbles within cutoff.
+                    let pos_i = self.cell_position(i, j, k);
+                    let mut p_couple = 0.0;
+                    for &(pos_j, strength) in &sources {
+                        let dx = pos_i[0] - pos_j[0];
+                        let dy = pos_i[1] - pos_j[1];
+                        let dz = pos_i[2] - pos_j[2];
+                        let d = (dx * dx + dy * dy + dz * dz).sqrt();
+                        if d > 0.0 && d <= r_cut {
+                            p_couple += rho * strength / d; // (ρ/d)·S_j
+                        }
+                    }
 
-                    // Reconstruct the (R, Ṙ) state (pure-mechanical bubble) and
-                    // advance adaptively by dt under the local instantaneous pressure.
+                    let p_total = pressure[idx] + p_couple;
+                    let p_prev = if self.total_seeded {
+                        self.prev_total_pressure[idx]
+                    } else {
+                        p_total // first call: dp/dt = 0
+                    };
+                    self.prev_total_pressure[idx] = p_total;
+                    let dp_dt = (p_total - p_prev) / dt;
+
+                    let r_before = self.radius_field[idx].max(1e-12);
                     let mut state = BubbleState::new(&params);
                     state.radius = r_before;
                     state.wall_velocity = self.velocity_field[idx];
-                    integrate_bubble_dynamics_adaptive(
-                        &solver, &mut state, p_local, dp_dt, dt, time,
-                    )?;
+                    let integration =
+                        integrate_bubble_dynamics_adaptive(&solver, &mut state, p_total, dp_dt, dt, time);
 
-                    if !state.radius.is_finite() || state.radius <= 0.0 {
-                        // Destructive collapse beyond the integrator's range —
-                        // re-nucleate at R₀ (a fresh bubble) for the next cycle.
+                    // A single bubble's adaptive non-convergence or non-finite state
+                    // signals a destructive inertial collapse beyond the integrator's
+                    // range (more frequent once coupling amplifies the drive). Handle
+                    // it gracefully — re-nucleate at R₀ — rather than crashing the whole
+                    // cloud; the prior r_before > R₀ still deposits the collapse work below.
+                    if integration.is_err() || !state.radius.is_finite() || state.radius <= 0.0 {
                         state.radius = r0;
                         state.wall_velocity = 0.0;
                     }
@@ -225,10 +328,9 @@ impl CavitationCloudDynamics {
 
                     // Erosion = compression work on the collapsing bubble:
                     // dE = (p∞ − p_v)·(−dV) when the bubble shrinks under net
-                    // compression. Integrated over a full collapse this is the
-                    // Rayleigh collapse energy; per step it is robust and local.
+                    // compression (≈ Rayleigh collapse energy over a full collapse).
                     if r_after < r_before {
-                        let p_drive = (p_local - p_vapor).max(0.0);
+                        let p_drive = (p_total - p_vapor).max(0.0);
                         let dv = (4.0 / 3.0) * PI * (r_before.powi(3) - r_after.powi(3));
                         let erosion = density * p_drive * dv * efficiency;
                         self.accumulated_eroded_mass += erosion.max(0.0);
@@ -239,7 +341,7 @@ impl CavitationCloudDynamics {
                 }
             }
         }
-        self.pressure_seeded = true;
+        self.total_seeded = true;
         Ok(())
     }
 
@@ -456,5 +558,99 @@ mod tests {
         let e_weak = cloud.inertial_collapse_energy(3.0 * MPA_TO_PA);
         let e_strong = cloud.inertial_collapse_energy(12.0 * MPA_TO_PA);
         assert!(e_weak > 0.0 && e_strong > e_weak, "collapse energy must rise with drive");
+    }
+
+    // ── Inter-bubble acoustic coupling (ADR 028) ──────────────────────────────
+
+    #[test]
+    fn radiated_pressure_matches_closed_form() {
+        // p_rad = (ρ/d)(r²r̈ + 2rṙ²).
+        let (rho, d, r, rdot, rddot) = (1000.0, 2.0e-3, 5.0e-6, 0.3, 1.0e9);
+        let expected = rho / d * (r * r * rddot + 2.0 * r * rdot * rdot);
+        let got = bubble_radiated_pressure(rho, d, r, rdot, rddot);
+        assert!((got - expected).abs() < 1e-9 * expected.abs(), "expected {expected}, got {got}");
+        // Zero/negative distance guarded.
+        assert_eq!(bubble_radiated_pressure(rho, 0.0, r, rdot, rddot), 0.0);
+    }
+
+    #[test]
+    fn radiated_pressure_scales_inverse_distance() {
+        let p1 = bubble_radiated_pressure(1000.0, 1.0e-3, 5.0e-6, 0.3, 1.0e9);
+        let p2 = bubble_radiated_pressure(1000.0, 2.0e-3, 5.0e-6, 0.3, 1.0e9);
+        assert!((p1 - 2.0 * p2).abs() < 1e-9 * p1.abs(), "doubling distance must halve p_rad");
+    }
+
+    /// Drive a 2-cell cloud (separated by `spacing` along x) and return cell-0 radius.
+    fn drive_two_cells(coupling: bool, spacing: f64, amplitudes: &[f64], dt: f64) -> f64 {
+        let params = CloudParameters {
+            coupling_enabled: coupling,
+            cell_spacing: [spacing, 1.0, 1.0],
+            ..CloudParameters::default()
+        };
+        let mut cloud = CavitationCloudDynamics::new(params.clone(), (2, 1, 1));
+        cloud.density_field.fill(params.bubble_density);
+        for (n, &amp) in amplitudes.iter().enumerate() {
+            let t = n as f64 * dt;
+            cloud
+                .evolve_cloud(dt, t, &Array3::from_elem((2, 1, 1), amp))
+                .unwrap();
+        }
+        cloud.cloud_radius()[[0, 0, 0]]
+    }
+
+    fn sinusoid(amp: f64, f: f64, dt: f64, n: usize) -> Vec<f64> {
+        (0..n).map(|m| amp * (2.0 * PI * f * (m as f64 * dt)).sin()).collect()
+    }
+
+    #[test]
+    fn coupling_changes_two_bubble_trajectory() {
+        let f = CloudParameters::default().drive_frequency;
+        let dt = (1.0 / f) / 200.0;
+        let seq = sinusoid(0.5e6, f, dt, 200);
+        let r_on = drive_two_cells(true, 1.0e-3, &seq, dt);
+        let r_off = drive_two_cells(false, 1.0e-3, &seq, dt);
+        assert!(
+            (r_on - r_off).abs() > 1e-12 * r_off.max(1e-9),
+            "coupling must change the two-bubble trajectory: on={r_on}, off={r_off}"
+        );
+    }
+
+    #[test]
+    fn closer_bubbles_couple_more_strongly() {
+        let f = CloudParameters::default().drive_frequency;
+        let dt = (1.0 / f) / 200.0;
+        let seq = sinusoid(0.5e6, f, dt, 200);
+        let deviation = |spacing: f64| {
+            (drive_two_cells(true, spacing, &seq, dt) - drive_two_cells(false, spacing, &seq, dt))
+                .abs()
+        };
+        assert!(
+            deviation(0.5e-3) > deviation(2.0e-3),
+            "closer bubbles must couple more strongly (1/d)"
+        );
+    }
+
+    #[test]
+    fn lone_active_cell_is_unaffected_by_coupling() {
+        // Multi-cell grid with a single active bubble ⇒ no neighbours ⇒ coupling
+        // on/off identical (reduces exactly to ADR 027).
+        let f = CloudParameters::default().drive_frequency;
+        let dt = (1.0 / f) / 200.0;
+        let seq = sinusoid(0.5e6, f, dt, 100);
+        let run = |coupling: bool| {
+            let params = CloudParameters {
+                coupling_enabled: coupling,
+                ..CloudParameters::default()
+            };
+            let mut cloud = CavitationCloudDynamics::new(params.clone(), (3, 1, 1));
+            cloud.density_field[[1, 0, 0]] = params.bubble_density; // only the middle cell
+            for (n, &amp) in seq.iter().enumerate() {
+                cloud
+                    .evolve_cloud(dt, n as f64 * dt, &Array3::from_elem((3, 1, 1), amp))
+                    .unwrap();
+            }
+            cloud.cloud_radius()[[1, 0, 0]]
+        };
+        assert_eq!(run(true), run(false), "a lone bubble must be unaffected by coupling");
     }
 }
