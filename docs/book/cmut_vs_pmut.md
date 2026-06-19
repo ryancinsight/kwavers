@@ -98,6 +98,29 @@ $$
 CMUTs are therefore biased just below collapse (or operated in *collapse mode*) to maximise
 coupling — a defining operational constraint.
 
+**DC pull-down and spring softening.** Under a sub-collapse bias the membrane settles at a
+static deflection `u = x/g₀` set by the force balance `k x = ε₀ A V²/(2(g₀−x)²)`, which
+non-dimensionalises (using `V_c`) to
+
+$$
+u\,(1-u)^2 = \tfrac{4}{27}\left(\frac{V_\text{DC}}{V_\text{collapse}}\right)^2,
+\qquad u \in [0, \tfrac13].
+$$
+
+`g(u)=u(1-u)^2` increases monotonically to its maximum `4/27` at `u = 1/3`, which is reached
+exactly at `V = V_c` — the **pull-in** instability (no stable equilibrium beyond it). The bias
+raises the small-signal capacitance to `C(V)=C₀/(1−u)` and **softens** the effective stiffness,
+because the electrostatic force adds a negative spring `dF_\text{elec}/dx = 2k\,u/(1-u)`:
+
+$$
+k_\text{eff} = k\left(1 - \frac{2u}{1-u}\right),
+\qquad f(V) = f_\text{imm}\sqrt{k_\text{eff}/k},
+$$
+
+so the resonance falls with bias and **vanishes at pull-in** (`u = 1/3 ⇒ k_eff = 0`). These are
+`CmutCell::{bias_pulldown_fraction, biased_gap, biased_capacitance, bias_softened_resonance}`
+(`kwavers_transducer::mems::cmut`), solved by bisection on the monotone branch `u ∈ [0, 1/3]`.
+
 ### 33.3.2 PMUT — film capacitance, fixed coupling, low voltage
 
 A PMUT is driven through the piezoelectric film capacitance `C₀ = ε₀ ε_r A / t_p`. Its coupling
