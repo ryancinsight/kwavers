@@ -53,15 +53,19 @@ Committed (branch `feat/cov1-coherence-factor`):
 - [x] COV-3 curvilinear (convex) array geometry
 - [x] COV-8/COV-9 verified false positives
 
+### Sprint F additions (2026-06-19, cont.)
+- [x] COV-4 point-scatterer + synthetic-aperture RF synthesis (core)
+- [x] PLC-4 time-reversal SSOT — CLOSED (verified not duplicated)
+- [x] PLC-1 photoacoustic consolidation — DONE (ADR 026; removed dead 1325-LOC pipeline)
+
 ### Remaining (next sessions)
-- **Coverage:** COV-4 point-scatterer/SIR RF synth (largest); COV-5 de Jong
-  (PDF-verify prefactor) + Herring (free-bubble EOM, not a shell model);
-  COV-6 KLM/Mason, COV-7 MRE, COV-10 Shepp-Logan (low priority).
-- **Consolidation phase ("refactor & cleanup"):** PLC-1 photoacoustic (5-crate,
-  ADR first), PLC-2 CEUS (4-crate), PLC-3 remainder (ceus-vs-therapy microbubble
-  dedup + therapy-in-physics layering), PLC-4 time-reversal SSOT [verify].
-- **CPML follow-ups:** empirical oblique-incidence reflection benchmark;
-  α_max=π·f₀ plumbing; consolidate the DG-solver CPML (3rd impl).
+- **Consolidation:** PLC-2 CEUS (4-crate — perfusion/microbubble physics dup
+  imaging-vs-physics; needs investigate→ADR→execute), PLC-3 remainder
+  (ceus-vs-therapy microbubble dedup + therapy-in-physics layering).
+- **Coverage (low priority):** COV-5 de Jong (PDF-verify prefactor) + Herring
+  (free-bubble EOM); COV-6 KLM/Mason, COV-7 MRE, COV-10 Shepp-Logan.
+- **Follow-ups:** COV-4 finite-aperture SIR; CPML empirical reflection benchmark +
+  α_max=π·f₀ plumbing + DG-solver CPML (3rd impl) consolidation.
 
 ## Sprint A (verify C-tier suspicions) — COMPLETE (2026-05-31)
 - [x] SOL-4 Westervelt `d²(p²)/dt²` FMA — FALSE POSITIVE (exact + FMA precision gain)
