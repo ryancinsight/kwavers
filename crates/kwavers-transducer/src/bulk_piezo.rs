@@ -25,6 +25,7 @@
 
 use core::f64::consts::PI;
 use kwavers_core::constants::fundamental::VACUUM_PERMITTIVITY;
+use num_complex::Complex64;
 
 /// A bulk piezoelectric thickness-mode resonator.
 #[derive(Debug, Clone, Copy)]
@@ -114,6 +115,52 @@ impl BulkPiezoResonator {
         let f_p = self.antiresonance_frequency();
         (f_p - self.resonance_frequency()) / f_p
     }
+
+    /// Specific acoustic impedance `Z = ρ·c_D` \[Rayl = Pa·s·m⁻¹] of the plate,
+    /// used to design quarter-wave matching layers (`Z_match = √(Z·Z_load)`).
+    #[must_use]
+    pub fn acoustic_impedance(&self) -> f64 {
+        self.density * self.sound_speed()
+    }
+
+    /// Free (constant-stress) capacitance `C^T = C₀/(1 − k_t²)` \[F] — the
+    /// low-frequency electrical capacitance, larger than the clamped `C₀`.
+    #[must_use]
+    pub fn free_capacitance(&self) -> f64 {
+        self.clamped_capacitance() / (1.0 - self.coupling_kt2)
+    }
+
+    /// Electrical input impedance \[Ω] of the free (air-loaded both faces)
+    /// thickness-mode plate at `frequency` \[Hz] — the Mason/KLM equivalent-circuit
+    /// response.
+    ///
+    /// ```text
+    /// Z_e(ω) = 1/(jωC₀) · [ 1 − k_t² · tan(X)/X ],   X = π f / (2 f_p)
+    /// ```
+    ///
+    /// Lossless free plate ⇒ `Z_e` is purely reactive (`Re = 0`). The bracket
+    /// vanishes at the series resonance `f_s` (`Z_e → 0`, identical to the IEEE
+    /// `f_s` since `tan(X_s)/X_s = 1/k_t²`) and diverges at the antiresonance
+    /// `f_p` (`X = π/2`). As `f → 0`, `Z_e → 1/(jω·C^T)` (free capacitance).
+    /// Returns `Z_e = 0` at `frequency = 0` (DC short of the model's reactance).
+    ///
+    /// Air-loaded both faces is the open-circuit limit; matching/backing layers
+    /// (a loaded transmission line) are a documented follow-up.
+    #[must_use]
+    pub fn electrical_impedance(&self, frequency: f64) -> Complex64 {
+        if frequency <= 0.0 {
+            return Complex64::new(0.0, 0.0);
+        }
+        let f_p = self.antiresonance_frequency();
+        let omega = 2.0 * PI * frequency;
+        let c0 = self.clamped_capacitance();
+        let x = PI * frequency / (2.0 * f_p);
+        // tan(X)/X → 1 as X → 0 (removable singularity).
+        let tanx_over_x = if x.abs() < 1e-12 { 1.0 } else { x.tan() / x };
+        let bracket = 1.0 - self.coupling_kt2 * tanx_over_x;
+        // 1/(jωC₀) = −i/(ωC₀); the lossless plate gives a purely reactive Z_e.
+        Complex64::new(0.0, -1.0 / (omega * c0)) * bracket
+    }
 }
 
 #[cfg(test)]
@@ -169,5 +216,58 @@ mod tests {
         let mut none = therapy_pzt();
         none.coupling_kt2 = 1e-9;
         assert!(none.resonance_gap() < 1e-3);
+    }
+
+    #[test]
+    fn acoustic_impedance_and_free_capacitance() {
+        let p = therapy_pzt();
+        assert!((p.acoustic_impedance() - 7500.0 * p.sound_speed()).abs() < 1e-6);
+        // C^T = C₀/(1−k_t²) > C₀.
+        let expected = p.clamped_capacitance() / (1.0 - p.coupling_kt2);
+        assert!((p.free_capacitance() - expected).abs() / expected < 1e-12);
+        assert!(p.free_capacitance() > p.clamped_capacitance());
+    }
+
+    #[test]
+    fn electrical_impedance_is_purely_reactive_and_free_capacitive_at_low_freq() {
+        let p = therapy_pzt();
+        // Lossless free plate ⇒ Re{Z_e} = 0 at every frequency.
+        for &f in &[1e3, 1e5, 0.5e6, 0.9e6] {
+            assert_eq!(p.electrical_impedance(f).re, 0.0, "Z_e must be purely reactive at {f} Hz");
+        }
+        // f → 0: Z_e.im → −1/(ω·C^T) (free capacitance).
+        let f = p.antiresonance_frequency() / 1.0e4;
+        let omega = 2.0 * PI * f;
+        let z = p.electrical_impedance(f);
+        let expected_im = -1.0 / (omega * p.free_capacitance());
+        assert!(
+            (z.im - expected_im).abs() / expected_im.abs() < 1e-3,
+            "low-freq reactance {} vs free-cap {expected_im}",
+            z.im
+        );
+    }
+
+    #[test]
+    fn electrical_impedance_vanishes_at_series_resonance() {
+        // The free-plate Z_e = 0 condition (1 − k_t² tan X/X = 0) is identical to
+        // the IEEE series resonance, so |Z_e(f_s)| must be far below the midband.
+        let p = therapy_pzt();
+        let f_s = p.resonance_frequency();
+        let z_res = p.electrical_impedance(f_s).norm();
+        let z_mid = p.electrical_impedance(0.5 * f_s).norm();
+        assert!(
+            z_res < 1e-3 * z_mid,
+            "|Z_e(f_s)|={z_res} should be ≪ midband |Z_e|={z_mid}"
+        );
+    }
+
+    #[test]
+    fn electrical_impedance_diverges_near_antiresonance() {
+        let p = therapy_pzt();
+        let f_p = p.antiresonance_frequency();
+        // Approach f_p closely: tan(X)→∞ at X=π/2 dominates the 1/ω scaling.
+        let z_near = p.electrical_impedance(0.9999 * f_p).norm();
+        let z_mid = p.electrical_impedance(0.5 * f_p).norm();
+        assert!(z_near > 100.0 * z_mid, "|Z_e| must blow up near f_p: {z_near} vs {z_mid}");
     }
 }

@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### Added (2026-06-19) — Mason/KLM transducer electrical impedance (COV-6)
+
+- [minor] Extended `kwavers-transducer::bulk_piezo::BulkPiezoResonator` with the
+  Mason/KLM equivalent-circuit response: `electrical_impedance(f)` (free-plate
+  `Z_e = 1/(jωC₀)·[1 − k_t²·tan(X)/X]`, `X = πf/2f_p`), `acoustic_impedance`
+  (specific Rayl, for quarter-wave matching-layer design), and `free_capacitance`
+  (`C^T = C₀/(1−k_t²)`). The thickness-mode resonator scalars (antiresonance,
+  series resonance, clamped capacitance, IEEE `k_t²` relation) were already
+  present — this adds the frequency-dependent impedance curve that was the actual
+  gap. 5 analytic value-semantic tests, including that `Z_e` vanishes exactly at
+  the existing IEEE series resonance `f_s` (non-self-referential cross-check) and
+  diverges at the antiresonance `f_p`. Closes gap-audit **COV-6**; the explorer's
+  "KLM/Mason absent" was an over-call (it searched only the literal names).
+  Loaded matching/backing transmission line is a documented follow-up.
+
 ### Added (2026-06-19) — MRE harmonic-displacement front end (COV-7)
 
 - [minor] **`kwavers-physics::acoustics::imaging::modalities::elastography::mre`**:
