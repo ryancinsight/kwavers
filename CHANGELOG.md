@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Added (2026-06-19) — Shepp–Logan numerical phantom (COV-10)
+
+- [minor] **`kwavers-phantom::shepp_logan::SheppLogan`**: the standard 10-ellipse
+  head phantom for reconstruction testing, with `Original` (Shepp & Logan 1974)
+  and `Modified` (Toft 1996) intensity variants over the shared geometry,
+  `value_at(x,y)` (sum of containing-ellipse intensities) and `rasterize(n)`
+  (n×n image over [−1,1]²). 7 analytic value-semantic tests (origin = 1.02 /
+  0.2, outside-head = 0, offset-inclusion sum, semi-axis membership, raster
+  shape). Closes gap-audit **COV-10**.
+
 ### Removed (2026-06-19) — Dead photoacoustic forward pipeline (PLC-1, ADR 026)
 
 - [patch] Removed the unused parallel photoacoustic forward pipeline

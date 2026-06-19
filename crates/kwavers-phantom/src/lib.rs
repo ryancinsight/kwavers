@@ -6,6 +6,7 @@
 pub mod builder;
 pub mod presets;
 pub mod scatterers;
+pub mod shepp_logan;
 pub mod types;
 pub mod utils;
 
@@ -15,6 +16,7 @@ pub use builder::{
 };
 pub use presets::ClinicalPhantoms;
 pub use scatterers::{PointScatterer, RfSynthesisConfig, ScattererCloud};
+pub use shepp_logan::{Ellipse, SheppLogan, SheppLoganVariant};
 pub use types::{LayerSpec, PhantomTissueType, PhantomType, TumorSpec, VesselSpec};
 
 #[cfg(test)]

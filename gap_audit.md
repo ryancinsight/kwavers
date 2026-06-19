@@ -305,7 +305,7 @@ verticals.
 | COV-7 | L | elastography | **MRE-specific inversion** (harmonic MR displacement → modulus) absent; SWE/ARFI/thermal-strain present, viscoelastic Voigt/Maxwell/Zener present. | Most MRE machinery (LFE, direct inversion) already exists in `inverse/elastography/linear_methods`; gap is the MR displacement-field front end. |
 | COV-8 | ~~L~~ **FALSE POSITIVE (2026-06-19)** | sonoluminescence | NOT a stub: `cherenkov/model.rs` has the full Frank-Tamm formula (Jackson 1999 §13.5) — `frank_tamm_factor`, `spectral_intensity ∝ f`, `emission_spectrum ∝ 1/λ³`, threshold logic. Complete + literature-grounded. No gap. | — |
 | COV-9 | ~~L~~ **FALSE POSITIVE (2026-06-19)** | inverse | NOT a dead config: `apply_sobolev_preconditioner_3d` (`linear_born_inversion/pcg.rs:232`) is a real Sobolev-gradient smoothing preconditioner (`smooth_active_values_3d` + convex blend), wired into the PCG iteration (pcg.rs:210). No gap. | — |
-| COV-10 | L | phantom | **Shepp-Logan / standard numerical test phantom** absent. | Test-fixture convenience, not physics; low priority. |
+| COV-10 | ~~L~~ **DONE (2026-06-19)** | phantom | Added `kwavers-phantom::shepp_logan::SheppLogan` — 10-ellipse phantom, Original (1974) + Modified (Toft 1996) intensity variants, `value_at`/`rasterize`. 7 analytic tests (origin=1.02/0.2, outside=0, inclusion sum, semi-axis membership, raster shape). | done |
 | COV-11 | L | boundary | **Mur absorbing BC** absent. | CPML/PML present and superior; **WONTFIX** unless a thin-PML budget case appears. |
 
 **Confirmed NON-gaps (explorer false positives — do NOT re-flag):** Kirchhoff
