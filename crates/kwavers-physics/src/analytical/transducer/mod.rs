@@ -8,6 +8,7 @@ pub mod array_factor;
 pub mod beam;
 pub mod interpolation;
 pub mod optoacoustic;
+pub mod spatial_impulse_response;
 pub mod steering;
 
 pub use array_factor::{
@@ -28,6 +29,7 @@ pub use optoacoustic::{
     na_from_f_number, numerical_aperture_from_geometry, optoacoustic_array_focal_pressure,
     optoacoustic_center_frequency, soap_focal_gain,
 };
+pub use spatial_impulse_response::CircularPistonSir;
 pub use steering::electronic_steering_efficiency;
 
 #[cfg(test)]
