@@ -198,7 +198,24 @@ For *vented* or non-evacuated CMUTs a second damping channel appears: **squeeze-
 the gas in the gap, `c = 3π μ a⁴/(2g₀³)` (`CmutCell::squeeze_film_damping`). Its steep `a⁴/g₀³`
 scaling makes it dominant for wide, narrow-gap cells, and the squeeze number `σ = 12μωa²/(p_a g₀²)`
 sets the crossover from viscous damping (`σ≪1`) to a trapped-gas spring (`σ≫1`). A sealed-vacuum
-immersion CMUT (the IVUS case) has no gap gas and is radiation-damped instead.
+immersion CMUT (the IVUS case) has no gap gas and is **radiation-damped** instead: the loading
+fluid carries energy away through the baffled-piston radiation resistance, which in the
+small-`ka` limit is
+
+$$
+R_\text{rad} \approx \tfrac12\,\rho_f c_f A\,(ka)^2,\qquad ka = \omega_0 a / c_f,
+$$
+
+giving a radiation-limited quality factor and bandwidth
+
+$$
+Q_\text{rad} = \frac{\omega_0 m}{R_\text{rad}},\qquad \text{FBW} \approx \frac{1}{Q_\text{rad}},
+$$
+
+with `m` the modal mass (§33.2). Because `R_rad ∝ (ka)²` rises steeply with size and frequency,
+the small, high-frequency IVUS cell radiates efficiently (low `Q`, broad band) — the physical
+reason a sealed immersion CMUT reaches the wide FBW of Figure 33.4. This is
+`CmutCell::radiation_q` (and `fractional_bandwidth` via the fluid-loading ratio `β`).
 
 ![Fractional bandwidth and axial resolution](figures/ch33/fig04_bandwidth.png)
 
