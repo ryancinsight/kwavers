@@ -11,6 +11,7 @@ pub mod array_2d;
 pub mod basic;
 pub mod beamforming;
 pub mod bulk_piezo;
+pub mod curvilinear;
 pub mod design;
 pub mod factory;
 pub mod flexible;

@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Added (2026-06-19) — Curvilinear (convex) array geometry (COV-3)
+
+- [minor] **`kwavers-transducer::curvilinear::ConvexArrayGeometry`**: the clinical
+  curved/abdominal probe geometry — N elements on a convex circular arc of radius
+  R_c, each facing radially outward. Provides element positions
+  `(R_c sinθ, 0, R_c(cosθ−1))`, outward unit normals, along-array tangents,
+  arc/angular pitch and aperture-chord width, and transmit-focusing delays
+  `(d_max−d_i)/c`. Built from angular pitch, arc pitch, or total angular span.
+  Feeds the `kwave_array` Rect/Arc element model or a `Source`. 8 analytic
+  value-semantic tests (on-arc invariant, apex, unit-radial normals,
+  chord-width formula, zero relative delay focusing at the curvature centre,
+  on-axis delay symmetry). Closes gap-audit **COV-3**.
+
 ### Added (2026-06-19) — Encapsulated-bubble shell models + SSOT trait (COV-5, PLC-3)
 
 - [minor] **`EncapsulatedShellModel` trait** (`bubble_dynamics::encapsulated::model`):
