@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+### Fixed (2026-06-19) — Therapy Marmottant negative surface tension (PLC-3a)
+
+- [patch] **`kwavers-physics::therapy::microbubble::shell::MarmottantShellProperties`
+  produced negative surface tension.** Its elastic-regime `χ(R)` was referenced to
+  R_equilibrium (`κ_s(R²/R₀²−1)`), so for `R ∈ [R_buckling, R₀)` it returned
+  `χ < 0` — unphysical — and was discontinuous at the buckling radius
+  (`χ(R_buckling) = κ_s(0.85²−1) ≈ −0.28 κ_s` instead of 0). Corrected to the
+  Marmottant (2005, eq. 1) R_buckling reference `κ_s(R²/R_buckling²−1)`, so
+  `χ(R_buckling)=0`, continuous and non-negative — matching the canonical
+  `bubble_dynamics::encapsulated::MarmottantModel` (resolves the σ(R)-convention
+  divergence flagged in PLC-3a). `surface_tension_derivative` updated to match.
+  The two value-semantic tests that encoded the R₀ reference were corrected with
+  the derivation; the kwavers-therapy microbubble-service consumers pass
+  unchanged. **Behavioral change to clinical microbubble simulations** (the shell
+  now carries non-zero tension at equilibrium, per Marmottant).
+
 ### Added (2026-06-19) — Mason/KLM transducer electrical impedance (COV-6)
 
 - [minor] Extended `kwavers-transducer::bulk_piezo::BulkPiezoResonator` with the

@@ -122,21 +122,28 @@ impl MarmottantShellProperties {
         Self::new(radius_equilibrium, 0.3, 0.5e-9, 0.80, 1.4)
     }
 
-    /// Calculate surface tension χ(R) (Marmottant 2005).
+    /// Calculate surface tension χ(R) (Marmottant 2005, eq. 1).
     ///
     /// ```text
-    /// χ(R) = ⎧ 0                      R < R_buckling
-    ///        ⎨ κ_s(R²/R₀² − 1)       R_buckling ≤ R ≤ R_rupture
-    ///        ⎩ σ_water                R > R_rupture
+    /// χ(R) = ⎧ 0                          R < R_buckling
+    ///        ⎨ κ_s(R²/R_buckling² − 1)    R_buckling ≤ R ≤ R_rupture
+    ///        ⎩ σ_water                    R > R_rupture
     /// ```
+    ///
+    /// The elastic regime is referenced to **R_buckling** (Marmottant 2005), so
+    /// χ(R_buckling) = 0 — the surface tension is continuous and non-negative
+    /// throughout. (A prior R_equilibrium reference gave χ(R_buckling) =
+    /// κ_s(R_buckling²/R₀² − 1) < 0, an unphysical negative surface tension over
+    /// `R ∈ [R_buckling, R₀)`; this matches the canonical
+    /// `bubble_dynamics::encapsulated::MarmottantModel`.)
     #[must_use]
     pub fn surface_tension(&self, radius: f64) -> f64 {
         if radius < self.radius_buckling {
             0.0
         } else if radius <= self.radius_rupture {
-            let r0_sq = self.radius_equilibrium * self.radius_equilibrium;
+            let r_b_sq = self.radius_buckling * self.radius_buckling;
             let r_sq = radius * radius;
-            self.elasticity * (r_sq / r0_sq - 1.0)
+            self.elasticity * (r_sq / r_b_sq - 1.0)
         } else {
             self.surface_tension_water
         }
@@ -144,14 +151,15 @@ impl MarmottantShellProperties {
 
     /// Calculate d(χ)/dR.
     ///
-    /// Elastic regime: d(χ)/dR = 2κ_s·R/R₀²
+    /// Elastic regime: d(χ)/dR = 2κ_s·R/R_buckling² (referenced to R_buckling
+    /// per Marmottant 2005, consistent with [`Self::surface_tension`]).
     #[must_use]
     pub fn surface_tension_derivative(&self, radius: f64) -> f64 {
         if radius < self.radius_buckling {
             0.0
         } else if radius <= self.radius_rupture {
-            let r0_sq = self.radius_equilibrium * self.radius_equilibrium;
-            2.0 * self.elasticity * radius / r0_sq
+            let r_b_sq = self.radius_buckling * self.radius_buckling;
+            2.0 * self.elasticity * radius / r_b_sq
         } else {
             0.0
         }
