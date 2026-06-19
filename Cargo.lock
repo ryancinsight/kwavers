@@ -5087,6 +5087,7 @@ dependencies = [
  "kwavers-grid",
  "kwavers-medium",
  "kwavers-optics",
+ "ndarray 0.16.1",
 ]
 
 [[package]]
