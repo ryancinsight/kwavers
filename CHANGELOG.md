@@ -2,6 +2,173 @@
 
 ## Unreleased
 
+### Added (2026-06-19) — Mason/KLM transducer electrical impedance (COV-6)
+
+- [minor] Extended `kwavers-transducer::bulk_piezo::BulkPiezoResonator` with the
+  Mason/KLM equivalent-circuit response: `electrical_impedance(f)` (free-plate
+  `Z_e = 1/(jωC₀)·[1 − k_t²·tan(X)/X]`, `X = πf/2f_p`), `acoustic_impedance`
+  (specific Rayl, for quarter-wave matching-layer design), and `free_capacitance`
+  (`C^T = C₀/(1−k_t²)`). The thickness-mode resonator scalars (antiresonance,
+  series resonance, clamped capacitance, IEEE `k_t²` relation) were already
+  present — this adds the frequency-dependent impedance curve that was the actual
+  gap. 5 analytic value-semantic tests, including that `Z_e` vanishes exactly at
+  the existing IEEE series resonance `f_s` (non-self-referential cross-check) and
+  diverges at the antiresonance `f_p`. Closes gap-audit **COV-6**; the explorer's
+  "KLM/Mason absent" was an over-call (it searched only the literal names).
+  Loaded matching/backing transmission line is a documented follow-up.
+
+### Added (2026-06-19) — MRE harmonic-displacement front end (COV-7)
+
+- [minor] **`kwavers-physics::acoustics::imaging::modalities::elastography::mre`**:
+  the magnetic-resonance-elastography front end that converts a motion-encoded
+  phase-offset stack into the `DisplacementField` the existing elastography
+  inversions (LFE, direct, phase-gradient) consume. `extract_first_harmonic`
+  computes the per-voxel complex first-harmonic via a single-bin temporal DFT
+  `C=(2/N)Σ φ[k]e^{−i2πk/N}` and divides by the encoding sensitivity κ
+  (`φ=κ·u`); it rejects DC (B0) bias. `harmonic_snapshot` gives a real in-phase
+  snapshot and `mre_displacement_field_z` builds the z-encoded field. 6 analytic
+  value-semantic tests (amplitude/phase recovery, DC rejection, snapshot
+  quadrature, input validation). Closes gap-audit **COV-7** (the modulus
+  inversion already existed).
+
+### Added (2026-06-19) — Shepp–Logan numerical phantom (COV-10)
+
+- [minor] **`kwavers-phantom::shepp_logan::SheppLogan`**: the standard 10-ellipse
+  head phantom for reconstruction testing, with `Original` (Shepp & Logan 1974)
+  and `Modified` (Toft 1996) intensity variants over the shared geometry,
+  `value_at(x,y)` (sum of containing-ellipse intensities) and `rasterize(n)`
+  (n×n image over [−1,1]²). 7 analytic value-semantic tests (origin = 1.02 /
+  0.2, outside-head = 0, offset-inclusion sum, semi-axis membership, raster
+  shape). Closes gap-audit **COV-10**.
+
+### Removed (2026-06-19) — Dead photoacoustic forward pipeline (PLC-1, ADR 026)
+
+- [patch] Removed the unused parallel photoacoustic forward pipeline
+  `kwavers-simulation::photoacoustics` (`PhotoacousticOrchestrator`,
+  `PhotoacousticRunner`, and the `vertical/{optical,source,acoustic,reconstruction}`
+  subtree, ~1325 LOC) plus its `pub mod photoacoustics` and
+  `pub use photoacoustics::PhotoacousticRunner` in `lib.rs`. A consumer analysis
+  (ADR 026) found it referenced only by its own internal files and one re-export
+  that nothing consumed; the live forward pipeline is
+  `kwavers-simulation::modalities::photoacoustic::PhotoacousticSimulator` (used by
+  the PA example and the proptest/validation/physics-validation suites), which has
+  zero dependency on the removed subtree. Resolves the in-simulation half of
+  DEBT-3 / **PLC-1**. No behavioral change (removed code was unreachable).
+
+### Added (2026-06-19) — Point-scatterer cloud + RF synthesis (COV-4)
+
+- [minor] **`kwavers-phantom::scatterers`**: the Field II core abstraction — a
+  `ScattererCloud` of discrete `PointScatterer`s (position + amplitude) and
+  `synthesize_rf`, which produces per-element pulse-echo RF under the monostatic
+  synthetic-aperture point-element model `RF_e(t) = Σ_s (a_s/r²)·pulse(t−2r/c)`
+  (round-trip spherical spreading + time-of-flight). 7 analytic value-semantic
+  tests (round-trip delay sample, 1/r² amplitude, superposition, linearity, pulse
+  placement, near-field guard, input validation). Closes gap-audit **COV-4** core.
+  Follow-up: finite-aperture Tupholme–Stepanishen spatial impulse response (the
+  point-element model is the exact far-field limit) and frequency-dependent
+  attenuation. Adds `ndarray` as a direct dep of `kwavers-phantom`.
+
+### Added (2026-06-19) — Curvilinear (convex) array geometry (COV-3)
+
+- [minor] **`kwavers-transducer::curvilinear::ConvexArrayGeometry`**: the clinical
+  curved/abdominal probe geometry — N elements on a convex circular arc of radius
+  R_c, each facing radially outward. Provides element positions
+  `(R_c sinθ, 0, R_c(cosθ−1))`, outward unit normals, along-array tangents,
+  arc/angular pitch and aperture-chord width, and transmit-focusing delays
+  `(d_max−d_i)/c`. Built from angular pitch, arc pitch, or total angular span.
+  Feeds the `kwave_array` Rect/Arc element model or a `Source`. 8 analytic
+  value-semantic tests (on-arc invariant, apex, unit-radial normals,
+  chord-width formula, zero relative delay focusing at the curvature centre,
+  on-axis delay symmetry). Closes gap-audit **COV-3**.
+
+### Added (2026-06-19) — Encapsulated-bubble shell models + SSOT trait (COV-5, PLC-3)
+
+- [minor] **`EncapsulatedShellModel` trait** (`bubble_dynamics::encapsulated::model`):
+  one Rayleigh-Plesset driver shared by every shelled-microbubble model; each model
+  supplies only its effective surface tension σ_eff(R), equilibrium gas pressure,
+  and shell stress S(R,Ṙ). Church and Marmottant refactored onto it
+  (behavior-preserving — existing tests unchanged) — **PLC-3 shell-model SSOT**:
+  removes the duplicated RP arithmetic that the placement audit flagged.
+- [minor] **Hoff (2000)** model — thin-shell, linear-displacement elastic restoring
+  `12 G_s(d/R)[1−R0/R]` + viscous `12 μ_s d Ṙ/R²` (identical to Church; reduces to
+  Church exactly when G_s=0, a differential-verified property).
+- [minor] **Sarkar (2005)** model — interfacial elasticity σ(R)=σ0+E_s(R²/R0²−1)
+  + surface dilatational viscosity `4 κ_s Ṙ/R²`. Closes **COV-5** for these two
+  models; 8 value-semantic tests (equilibrium balance, restoring/damping signs,
+  σ(R) form). Evidence tier: literature (Doinikov & Bouakaz 2011 review) validated
+  by analytic equilibrium + property checks.
+  **Deferred:** de Jong (lumped-parameter prefactor is convention-dependent —
+  needs source verification) and Herring (free-bubble compressible EOM, not a
+  shell model) — tracked in backlog.
+
+### Added (2026-06-19) — Active DMAS beamforming (COV-2)
+
+- [minor] **Delay-multiply-and-sum (DMAS) for time-domain DAS**
+  (`beamforming::time_domain::dmas`): the canonical `dmas_combine` (Matrone et al.
+  2015 sign-preserving pairwise closed form `½[(Σŝ)²−Σŝ²]`, `ŝᵢ=sign(xᵢ)√|xᵢ|`)
+  plus an active `delay_and_sum_dmas` reusing the shared `align_channels`. 8
+  value-semantic tests. Closes gap-audit **COV-2**.
+- [patch] **Consolidation:** the passive PAM beamformer (`pam::delay_and_sum`)
+  now routes through the shared `dmas_combine` instead of an inline-duplicated
+  copy of the same closed form (SSOT; behavior preserved — PAM sharpening test
+  still passes).
+
+### Added (2026-06-19) — CFS-PML upgrade for the FDTD CPML boundary
+
+- [minor] **Complex-frequency-shifted PML (CFS-PML)** in `kwavers-boundary/cpml`:
+  the convolutional (FDTD) boundary now supports the graded real stretch
+  `κ(q) = 1 + (κ_max−1)·q⁴` and frequency shift `α(q) = α_max·(1−q)` on top of the
+  k-Wave σ profile, with the canonical Roden & Gedney (2000) recursion
+  `b = exp[−(σ/κ+α)Δt]`, `a = σ(b−1)/[κ(σ+κα)]`. Reduces spurious reflections at
+  grazing incidence and for evanescent/low-frequency energy (Komatitsch & Martin
+  2007/2009). Enabled via the new `CPMLConfig::with_cfs_pml(kappa_max, alpha_max)`
+  builder; recommended κ_max∈[5,20], α_max≈π·f₀. The split-field (PSTD/k-Wave)
+  decay factors derive from σ alone and are unchanged (parity preserved). New
+  value-semantic test pins the κ/α grading and the wall recursion coefficients.
+  Evidence tier: formula-correct (analytical) + exact reduction to the validated
+  σ-only case; the empirical grazing-reflection benefit rests on the literature
+  and the analytical CFS property (full oblique-incidence FDTD benchmark deferred).
+
+### Fixed (2026-06-19) — CPML dead config + wrong adjoint coefficient doc
+
+- [patch] **`CPMLConfig.kappa_max`/`alpha_max` were dead config**: the defaults
+  (15.0 / 0.24) were never read by the profile kernel, which hardwired κ=1, α=0.
+  The fields are now consumed (CFS-PML above) and the defaults reset to κ_max=1.0,
+  α_max=0.0 — matching the behavior that was always *effective*, so existing FDTD
+  results are bit-identical (94 boundary + 81 FDTD/CPML solver tests pass). The
+  prior 0.24 was physically negligible vs the correct α_max≈π·f₀.
+- [patch] Corrected the recursive-convolution `a` coefficient in the CPML module
+  doc: the documented `a = (σ/κ)(b−1)/(σ/κ+α)` was missing a factor of `1/κ`
+  (wrong for κ≠1); now states the canonical `a = σ(b−1)/[κ(σ+κα)]`.
+
+### Added (2026-06-19) — Coherence-factor beamforming (COV-1)
+
+- [minor] **Coherence-factor adaptive weighting for time-domain DAS**
+  (`kwavers-analysis::signal_processing::beamforming::time_domain::coherence`):
+  the Mallart & Fink (1994) amplitude coherence factor `CF = |Σx|²/(N·Σx²)` and
+  the Camacho et al. (2009) sign coherence factor
+  `SCF = (1−√(1−b̄²))^p`, behind one `CoherenceFactor` enum + a
+  `delay_and_sum_coherence` entry point returning the CF-weighted image and the
+  per-sample coherence map. Coherence is measured on the **unapodized** aligned
+  aperture so a perfectly coherent wavefront yields CF=1 regardless of the DAS
+  taper. 11 value-semantic tests (closed-form CF/SCF values, Cauchy–Schwarz
+  range, DAS×CF identity). Closes gap-audit **COV-1**.
+- [patch] **DAS refactor to SSOT alignment**: extracted `align_channels` +
+  `sum_aligned` from `delay_and_sum` so the delay-alignment step is shared by the
+  sum and the coherence factor (value-identical; existing DAS tests unchanged).
+
+### Fixed (2026-06-19) — SAFT coherence-factor over-suppression
+
+- [patch] **SAFT 3-D coherence factor was wrong** (`beamforming::
+  three_dimensional::saft`): it computed `|Σx|²/(N·(Σ|x|)²)` — squaring the sum
+  of magnitudes instead of summing energies — capping a perfectly coherent
+  aperture at CF=1/N (10-element probe over-suppressed every voxel ~10×). Now
+  accumulates `Σ(apod·sample)²` and routes through the canonical
+  `amplitude_coherence_from_sums` helper (SSOT with the DAS path); a coherent
+  aperture correctly yields CF=1. The prior unit test had baked the buggy formula
+  into its assertion (abstract inputs `→0.4`); replaced with value-semantic
+  assertions and the derivation recorded inline.
+
 ### Fixed (2026-06-05) - Comparison-example parity restored + elastic-PSTD solver fixes
 
 - [patch] Repaired every kwavers↔k-wave-python / KWave.jl comparison script

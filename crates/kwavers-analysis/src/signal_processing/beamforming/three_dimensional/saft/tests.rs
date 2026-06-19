@@ -73,10 +73,25 @@ fn test_apodization_weight() {
 
 #[test]
 fn test_coherence_factor() {
-    let processor = make_processor(32, 32, 32, 8, 8);
-    // CF = 100 / (10 * 25) = 0.4
-    let cf = processor.compute_coherence_factor(10.0, 5.0, 10);
-    assert!((cf - 0.4).abs() < 1e-10);
+    use crate::signal_processing::beamforming::time_domain::coherence::amplitude_coherence_from_sums;
+    // Mallart & Fink 1994: CF = |Σx|² / (N · Σx²).
+    //
+    // Derivation note: the previous assertion `compute_coherence_factor(10,5,10)==0.4`
+    // encoded `coherent²/(N·incoherent²)`, where the call site passed
+    // `incoherent = Σ|x|` — i.e. it squared the sum of magnitudes instead of
+    // using the sum of energies Σ|x|². That formula caps a *perfectly coherent*
+    // aperture at CF = 1/N (here 0.1), not 1, over-suppressing every voxel by N.
+    // The canonical helper takes `sum_of_squares = Σx²` and is now SSOT.
+
+    // Perfectly coherent aperture of N=10 unit elements: coherent = Σx = 10,
+    // sum_of_squares = Σx² = 10 ⇒ CF = 100/(10·10) = 1.
+    let coherent = amplitude_coherence_from_sums(10.0, 10.0, 10);
+    assert!((coherent - 1.0).abs() < 1e-12, "coherent aperture CF should be 1, got {coherent}");
+
+    // Partially coherent: coherent = 5, sum_of_squares = 10, N = 10
+    // ⇒ CF = 25/(10·10) = 0.25; bounded in [0,1].
+    let partial = amplitude_coherence_from_sums(5.0, 10.0, 10);
+    assert!((partial - 0.25).abs() < 1e-12, "expected 0.25, got {partial}");
 }
 
 #[test]

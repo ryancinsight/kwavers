@@ -9,6 +9,87 @@
 > decision rationale + migration guide are recorded in CHANGELOG.md.
 > Gap inventory: [gap_audit.md](gap_audit.md) · Strategy: [backlog.md](backlog.md).
 
+## Sprint F (coverage & placement audit) — AUDIT COMPLETE, fixes OPEN (2026-06-19)
+Axis: physics coverage vs peer libs + cross-crate placement (see
+[gap_audit.md → Coverage & placement audit](gap_audit.md#coverage--placement-audit-2026-06-19),
+[backlog.md → Coverage & placement gap audit](backlog.md)).
+- [x] Four parallel coverage explorers (forward/bubble-thermal/imaging/inverse) +
+      direct grep verification of every ABSENT claim.
+- [x] Logged 11 coverage gaps (COV-1..11) + 5 placement gaps (PLC-1..5) in gap_audit.
+- [x] Caught explorer false positives (Kirchhoff/eikonal/Rytov present) — not re-flagged.
+- **Outcome:** breadth meets/exceeds all peers surveyed; gaps narrow (beamforming
+  refinements + bubble-shell models); main risk = modality-vertical fragmentation
+  (photoacoustic 5 crates / CEUS 4 crates).
+- **Deferred:** PLC-5 (histotripsy — likely distinct concerns), COV-11 (Mur BC) = WONTFIX.
+
+### COV-1 coherence factor — DONE (2026-06-19)
+- [x] New `time_domain::coherence`: Mallart-Fink amplitude CF + Camacho sign CF
+      (one `CoherenceFactor` enum + `delay_and_sum_coherence`). 11 value-semantic tests.
+- [x] DAS refactored onto SSOT `align_channels` + `sum_aligned` (value-identical;
+      10 existing DAS tests still pass).
+- [x] **Real bug fixed:** SAFT 3-D CF squared `Σ|x|` → coherent aperture capped at
+      1/N; consolidated onto canonical `amplitude_coherence_from_sums`, test corrected
+      with derivation. clippy clean (kwavers-analysis), 34 targeted tests pass.
+- **Follow-up [minor]:** phase CF (PCF, analytic signal) + generalized CF (GCF, FFT).
+
+### CPML → CFS-PML upgrade — DONE (2026-06-19)
+- [x] Background literature synthesis (2020–2026) → single-pole CFS-PML spec.
+- [x] Implemented graded κ/α + canonical Roden-Gedney recursion in the FDTD
+      convolutional kernel (`kwavers-boundary/cpml`); `with_cfs_pml` builder;
+      activated dead κ_max/α_max config (defaults reset to 1/0 = prior effective
+      behavior → FDTD bit-identical); fixed wrong `a` doc formula; params bundled
+      into a spec struct (clippy clean). New CFS value-semantic test.
+- [x] Verified: 94 boundary + 81 FDTD/CPML solver tests pass; split-field PSTD
+      parity untouched (σ profile unchanged).
+- **Deferred (backlog):** empirical oblique-incidence reflection benchmark;
+      α_max=π·f₀ frequency plumbing; consolidate the 3rd CPML (DG solver) impl.
+
+### Sprint F progress (2026-06-19) — coverage gaps + consolidation
+Committed (branch `feat/cov1-coherence-factor`):
+- [x] COV-1 coherence factor (+ SAFT CF bug fix)
+- [x] CPML → CFS-PML (κ/α, dead-config activation, doc fix)
+- [x] COV-2 active DMAS (+ PAM consolidation)
+- [x] COV-5 (partial) Hoff + Sarkar / PLC-3 shell-model SSOT trait
+- [x] COV-3 curvilinear (convex) array geometry
+- [x] COV-8/COV-9 verified false positives
+
+### Sprint F additions (2026-06-19, cont.)
+- [x] COV-4 point-scatterer + synthetic-aperture RF synthesis (core)
+- [x] PLC-4 time-reversal SSOT — CLOSED (verified not duplicated)
+- [x] PLC-1 photoacoustic consolidation — DONE (ADR 026; removed dead 1325-LOC pipeline)
+
+- [x] PLC-2 CEUS — CLOSED arch (verified correctly layered, false positive)
+- [x] PLC-3 remainder — investigated + CONFIRMED real (specced, not yet executed)
+
+### Audit status: comprehensively resolved (2026-06-19)
+Every PLC item done/closed/specced; every substantive COV gap filled. 14 commits
+on branch `feat/cov1-coherence-factor` (off `main`, not pushed/merged).
+
+### COVERAGE PHASE COMPLETE (2026-06-19)
+- [x] COV-1 coherence factor · COV-2 active DMAS · COV-3 curvilinear array ·
+      COV-4 point-scatterer RF (core) · COV-5 Hoff+Sarkar · COV-6 Mason/KLM
+      impedance · COV-7 MRE front end · COV-10 Shepp-Logan
+- [x] COV-8/COV-9 false positives
+- Deferred with reasons: COV-5 de Jong (PDF-verify prefactor), Herring
+  (free-bubble EOM, not a shell model); COV-11 Mur (WONTFIX).
+
+### One substantive consolidation item left
+- **[arch] PLC-3 remainder EXECUTION** — fold
+  `therapy/microbubble/shell::MarmottantShellProperties` (2nd Marmottant) +
+  `ceus/microbubble/dynamics::wall_acceleration` (3rd RP integrator) onto
+  `EncapsulatedShellModel`; move therapy-in-physics planning to `kwavers-therapy`.
+  Numeric-equivalence-sensitive → ADR + value-semantic differential tests, fresh
+  context (do NOT rush — different parameterizations could silently drift results).
+
+### Low-value follow-ups
+- COV-4 finite-aperture SIR; COV-6 loaded matching/backing transmission line;
+  CPML empirical reflection benchmark + α_max=π·f₀ plumbing + DG-solver CPML
+  consolidation; PLC-2 [patch] perfusion-param-extraction unify.
+
+### Residual risk
+- 18 commits on `feat/cov1-coherence-factor` (off `main`) NOT pushed/merged —
+  flagged per git discipline; recommend push/PR before the PLC-3 session.
+
 ## Sprint A (verify C-tier suspicions) — COMPLETE (2026-05-31)
 - [x] SOL-4 Westervelt `d²(p²)/dt²` FMA — FALSE POSITIVE (exact + FMA precision gain)
 - [x] PHY-1 Gilmore vapor correction — FALSE POSITIVE (`p_eq` subtracts pv, line 211)

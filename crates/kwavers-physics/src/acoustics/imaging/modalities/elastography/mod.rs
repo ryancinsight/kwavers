@@ -13,11 +13,13 @@
 //!
 pub mod displacement;
 pub mod harmonic_detection;
+pub mod mre;
 pub mod radiation_force;
 pub mod thermal_strain;
 
 // Re-exports
 pub use displacement::DisplacementField;
+pub use mre::{extract_first_harmonic, harmonic_snapshot, mre_displacement_field_z};
 pub use thermal_strain::{ThermalStrainConfig, ThermalStrainImager, ThermalStrainResult};
 
 // Note: Solver components have been moved to enforce architectural boundaries:

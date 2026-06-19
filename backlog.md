@@ -3,6 +3,123 @@
 > Active strategy at top; CLOSED history retained below for traceability.
 > Full gap inventory: [gap_audit.md](gap_audit.md). Active increment: [CHECKLIST.md](CHECKLIST.md).
 
+## OPEN: Coverage & placement gap audit (opened 2026-06-19)
+
+Source: [gap_audit.md → Coverage & placement audit](gap_audit.md#coverage--placement-audit-2026-06-19).
+Axis is physics *coverage vs peer libraries* + cross-crate *placement* (distinct
+from the Sprint A–E internal-correctness pass). Headline: breadth meets/exceeds
+all peers surveyed; gaps are narrow (imaging-pipeline beamforming refinements +
+a few bubble-shell models) and the main risk is fragmentation of three modality
+verticals. All placement items are **[verify]-gated** — confirm logic is cloned,
+not legitimately forward-vs-inverse layered, before consolidating.
+
+Triage (correctness/arch → tests → features), one WIP item at a time:
+
+1. **[arch] PLC-1 photoacoustic consolidation** — ✅ **DONE (2026-06-19, ADR 026):**
+   consumer analysis showed the 5 locations are mostly layered, not duplicates; the
+   real dup was the two `kwavers-simulation` forward pipelines. Removed the dead
+   `photoacoustics/` pipeline (1325 LOC); `modalities::photoacoustic` is canonical.
+2. **PLC-2 CEUS consolidation** — ✅ **CLOSED arch (2026-06-19):** verified mostly
+   FALSE POSITIVE. CEUS is correctly layered — `Microbubble`/`MicrobubblePopulation`
+   types live in `kwavers-imaging` and physics CEUS re-exports them (not a dup);
+   perfusion is image-analysis (imaging) vs forward transport-PDE (physics), distinct
+   concerns. Optional [patch] residue: unify perfusion-param extraction
+   (`analyze_tic` vs `from_samples`).
+3. **[arch] PLC-3 microbubble SSOT + therapy-physics layering** — shell-model SSOT
+   ✅ DONE (EncapsulatedShellModel trait). **Remainder CONFIRMED real (2026-06-19),
+   needs ADR + careful merge:**
+   - (a) `therapy/microbubble/shell/properties.rs::MarmottantShellProperties` =
+     a 2nd Marmottant impl → fold onto canonical `MarmottantModel`/`EncapsulatedShellModel`.
+   - (b) `ceus/microbubble/dynamics/integration.rs::wall_acceleration` = a 3rd
+     RP-with-shell integrator → route through `EncapsulatedShellModel::acceleration`.
+   - (c) therapy-domain code in `kwavers-physics` (therapy/*, acoustics/therapy/*,
+     transcranial/bbb_opening) → keep physics models, move therapy planning to
+     `kwavers-therapy` (large cross-crate move, own ADR).
+   Risk: (a)/(b) change therapy/ceus numerics (different parameterization) — verify
+   value-semantic equivalence; do as a focused increment with fresh context.
+4. **PLC-4 time-reversal propagator SSOT** — ✅ **CLOSED (2026-06-19):** verified
+   NOT duplicated. General TR delegates to a plugin solver; simulation TR delegates
+   to the solver PA reconstructor; PA TR holds the canonical k-space propagator;
+   transcranial TR is distinct aberration-correction phase conjugation. Correct
+   layering, no consolidation. PLC-5 histotripsy likely WONTFIX (distinct concerns).
+5. **[minor] COV-1 coherence-factor weighting** — ✅ **DONE (2026-06-19):**
+   Mallart-Fink amplitude CF + Camacho sign CF on the DAS path; fixed a real SAFT
+   CF over-suppression bug en route (consolidated to one canonical helper).
+   Follow-up [minor]: phase CF (PCF, analytic signal) + generalized CF (GCF, FFT).
+6. **[minor] COV-2 active DMAS** — ✅ **DONE (2026-06-19):** `time_domain::dmas`
+   (`dmas_combine` + `delay_and_sum_dmas`); passive PAM consolidated onto the
+   shared combiner. **[minor] COV-3 curvilinear transmit array** in
+   `kwavers-transducer`. **[minor] COV-4 discrete point-scatterer + SIR RF synth**
+   (Field II core) in `kwavers-phantom`/`kwavers-source`.
+7. **[minor] COV-5 Sarkar/de Jong/Hoff/Herring** bubble-shell models (one generic
+   `EncapsulatedModel` impl set; ties PHY-13 de Jong scattering test).
+8. **[patch/L] COV-6/7/10** — KLM/Mason circuit, MRE front end, Shepp-Logan
+   fixture. **COV-8 (Cherenkov) + COV-9 (Sobolev) = verified FALSE POSITIVES**
+   (both fully implemented; see gap_audit). COV-11 Mur BC = WONTFIX (CPML superior).
+
+### Remaining genuine coverage gaps (post-verification), best as focused increments:
+- **COV-3 curvilinear/convex transmit array** [minor] — `kwavers-transducer`. The
+  `kwave_array` already has Arc/Bowl element primitives + `rasterizer_curved`; add
+  a convex-array layout helper placing N elements along a curvature arc.
+- **COV-4 discrete point-scatterer + spatial-impulse-response RF synthesis** [minor/major]
+  — Field II core; largest. Home `kwavers-phantom` (scatterer cloud) + `kwavers-source`/
+  analysis (SIR convolution → RF).
+- **COV-5 bubble shell models** [minor] — ✅ **PARTIAL DONE (2026-06-19):**
+  `EncapsulatedShellModel` trait + RP driver (PLC-3 shell-model SSOT); Church/
+  Marmottant refactored on; **Hoff + Sarkar added** with validation. **Deferred:**
+  de Jong (verify lumped S_p/S_f prefactor against Doinikov&Bouakaz 2011 PDF before
+  asserting — convention-dependent) and Herring (free-bubble compressible EOM —
+  belongs with KM/Gilmore in `bubble_dynamics`, not the encapsulated shell models).
+- **COV-6 KLM/Mason** [L], **COV-7 MRE front-end** [L], **COV-10 Shepp-Logan** [L].
+
+## CPML → single-pole CFS-PML upgrade [minor] — DONE (2026-06-19)
+
+✅ Implemented in `kwavers-boundary/cpml`: graded κ/α + canonical Roden-Gedney
+recursion wired into the convolutional (FDTD) kernel; `with_cfs_pml` builder;
+dead `kappa_max`/`alpha_max` config activated (defaults reset 15/0.24 → 1/0 =
+prior effective behavior, FDTD bit-identical); fixed the wrong `a` doc formula.
+94 boundary + 81 FDTD/CPML solver tests pass; clippy clean. Split-field PSTD
+parity untouched (σ profile unchanged).
+**Deferred (tracked):** (a) full oblique-incidence FDTD differential benchmark
+proving the grazing-reflection reduction empirically (currently formula-tier +
+literature-cited); (b) plumb α_max≈π·f₀ from the source frequency instead of an
+absolute value; (c) **3rd CPML impl** found — `solver/forward/pstd/dg/cpml` (DG
+solver) is a separate CPML; evaluate consolidating onto `kwavers-boundary` or
+documenting the split. (d) double-pole CFS for >16:1 bandwidth (Feng 2017).
+
+### Original spec (retained for the deferred items)
+## OPEN: CPML → single-pole CFS-PML upgrade [minor] (opened 2026-06-19)
+
+Literature synthesis (2020–2026, background research; primary refs Roden & Gedney
+2000, Komatitsch & Martin 2007/2009, Collino & Tsogka 2001, SEISMIC_CPML verbatim).
+Current kwavers `kwavers-boundary/cpml` is σ-only (κ=1, α=0) — a degenerate
+CFS-PML. **Highest accuracy-per-effort upgrade: add the graded κ (real stretch)
+and α (complex frequency shift) terms** → single-pole CFS-PML. Order-of-magnitude
+fewer spurious reflections at grazing incidence + evanescent/low-freq energy +
+better late-time stability.
+
+Concrete spec (normalized depth d∈[0,1], d=0 inner interface → d=1 outer wall):
+- `σ(d) = σ_max·dᵐ`, `κ(d) = 1 + (κ_max−1)·dᵐ`, `α(d) = α_max·(1−d)` — **α grades
+  OPPOSITE to σ/κ (max at interface, 0 at wall); inverting it is a silent
+  amplification bug.**
+- `σ_max = −(m+1)·c_max·ln(R₀)/(2·N·dx)` — derive at runtime, do NOT hardcode.
+- Recursion: `b = exp[−(σ/κ+α)·dt]`, `a = σ·(b−1)/[κ·(σ+κα)]` (guard a=0 where
+  σ+κα=0); `ψₙ = b·ψₙ₋₁ + a·∂field`; `∂̃ = (1/κ)·∂field + ψ`.
+- Defaults: m=2–3; R₀=1e-3 @10 cells / 1e-5..1e-6 @20; **κ_max=5–7** (the term
+  currently fixed at 1); **α_max=π·f₀**; c=c_max.
+- Single-pole is the default; expose double-pole (Feng 2017) only as optional for
+  >16:1 bandwidth / transcranial skull-grazing.
+
+Scope notes: cleanest in the **FDTD** CPML path. The **PSTD/k-space** path uses
+k-Wave-style split-field exponential-decay PML (global FFT derivative can't fuse a
+local convolution) — there the reduced upgrade is the analytically-derived σ_max
+profile + optional κ, NOT a full convolutional port. Acoustic + isotropic-elastic
+are intrinsically stable (Bécache 2003: V_p·V_g≥0); anisotropic-elastic needs
+M-PML (Meza-Fajardo 2008) — out of scope unless an anisotropic instability appears.
+Acceptance: differential reflection test vs current σ-only CPML showing reduced
+grazing-incidence reflection; reflection-decay property test retained. ADR advised
+(boundary-API surface change: κ_max/α_max/R₀ params).
+
 ## OPEN: kwavers-gpu extraction + internal-folder teardown [arch] (opened 2026-06-03)
 
 Goal: dissolve the leftover internal `kwavers/src` code (post-split) into the

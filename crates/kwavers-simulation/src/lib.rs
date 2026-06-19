@@ -15,7 +15,6 @@ pub mod manager;
 pub mod modalities;
 pub mod multi_physics;
 pub mod parameters;
-pub mod photoacoustics;
 pub mod runner;
 pub mod setup;
 pub mod solver_adapters;
@@ -38,7 +37,6 @@ pub use multi_physics::{
 pub use parameters::{
     OutputFieldType, OutputFormat, OutputParameters, PerformanceParameters, SimulationParameters,
 };
-pub use photoacoustics::PhotoacousticRunner;
 pub use runner::SimulationRunner;
 pub use setup::{SimulationComponents, SimulationSetup};
 pub use types::{

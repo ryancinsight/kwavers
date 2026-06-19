@@ -344,26 +344,26 @@ impl DelayAndSumPAM {
         delays_samples: &[f64],
         apodization: &[f64],
     ) -> f64 {
+        use crate::signal_processing::beamforming::time_domain::dmas::dmas_combine;
+
         let num_samples = passive_data.ncols();
         let window_size = self.config.window_size.min(num_samples).max(1);
         let mut energy = 0.0_f64;
+        // Reused buffer for the apodized, time-aligned aperture column at each t.
+        let mut column = Vec::with_capacity(delays_samples.len());
 
         for t in 0..window_size {
-            let mut sum_sqrt = 0.0_f64; // Σᵢ ŝᵢ
-            let mut sum_sq = 0.0_f64; // Σᵢ ŝᵢ²
+            column.clear();
             for (sensor_idx, &delay) in delays_samples.iter().enumerate() {
                 let sample_pos = t as f64 + delay;
                 if let Some(interpolated) =
                     Self::interpolate(passive_data, sensor_idx, sample_pos, num_samples)
                 {
-                    let contribution = apodization[sensor_idx] * interpolated;
-                    let signed_root = contribution.signum() * contribution.abs().sqrt();
-                    sum_sqrt += signed_root;
-                    sum_sq += signed_root * signed_root;
+                    column.push(apodization[sensor_idx] * interpolated);
                 }
             }
-            // y = Σ_{i<j} ŝᵢŝⱼ = ½[(Σŝᵢ)² − Σŝᵢ²]; intensity accumulates y².
-            let dmas_sample = 0.5 * sum_sqrt.mul_add(sum_sqrt, -sum_sq);
+            // y = Σ_{i<j} ŝᵢŝⱼ (canonical SSOT combiner); intensity accumulates y².
+            let dmas_sample = dmas_combine(&column);
             energy += dmas_sample * dmas_sample;
         }
 
