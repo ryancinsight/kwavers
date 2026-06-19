@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### Removed (2026-06-19) — Dead photoacoustic forward pipeline (PLC-1, ADR 026)
+
+- [patch] Removed the unused parallel photoacoustic forward pipeline
+  `kwavers-simulation::photoacoustics` (`PhotoacousticOrchestrator`,
+  `PhotoacousticRunner`, and the `vertical/{optical,source,acoustic,reconstruction}`
+  subtree, ~1325 LOC) plus its `pub mod photoacoustics` and
+  `pub use photoacoustics::PhotoacousticRunner` in `lib.rs`. A consumer analysis
+  (ADR 026) found it referenced only by its own internal files and one re-export
+  that nothing consumed; the live forward pipeline is
+  `kwavers-simulation::modalities::photoacoustic::PhotoacousticSimulator` (used by
+  the PA example and the proptest/validation/physics-validation suites), which has
+  zero dependency on the removed subtree. Resolves the in-simulation half of
+  DEBT-3 / **PLC-1**. No behavioral change (removed code was unreachable).
+
 ### Added (2026-06-19) — Point-scatterer cloud + RF synthesis (COV-4)
 
 - [minor] **`kwavers-phantom::scatterers`**: the Field II core abstraction — a

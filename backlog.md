@@ -15,10 +15,10 @@ not legitimately forward-vs-inverse layered, before consolidating.
 
 Triage (correctness/arch → tests → features), one WIP item at a time:
 
-1. **[arch] PLC-1 photoacoustic consolidation** — 5 crates, 2 parallel impls in
-   `kwavers-simulation`. Supersedes DEBT-3 (wider than recorded). ADR + pick one
-   forward modality (physics) + one recon home (solver); collapse the simulation
-   duplicate. Highest-risk structural item.
+1. **[arch] PLC-1 photoacoustic consolidation** — ✅ **DONE (2026-06-19, ADR 026):**
+   consumer analysis showed the 5 locations are mostly layered, not duplicates; the
+   real dup was the two `kwavers-simulation` forward pipelines. Removed the dead
+   `photoacoustics/` pipeline (1325 LOC); `modalities::photoacoustic` is canonical.
 2. **[arch] PLC-2 CEUS consolidation** — perfusion + microbubble physics duplicated
    between `kwavers-imaging` and `kwavers-physics`. Move physics down, leave
    orchestration in imaging.
