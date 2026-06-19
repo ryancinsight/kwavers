@@ -25,9 +25,11 @@ Triage (correctness/arch → tests → features), one WIP item at a time:
 3. **[arch] PLC-3 microbubble SSOT + therapy-physics layering** — dedupe the two
    encapsulated-bubble models inside `kwavers-physics`; decide `kwavers-physics/
    src/therapy/*` home vs `kwavers-therapy`. Couples to COV-5.
-4. **[verify→M] PLC-4 time-reversal propagator SSOT** — confirm the k-space TR
-   kernel is shared across the 3 TR sites (cf. `project_tr_ssot_may26`); hoist if
-   cloned. PLC-5 histotripsy likely WONTFIX (distinct concerns).
+4. **PLC-4 time-reversal propagator SSOT** — ✅ **CLOSED (2026-06-19):** verified
+   NOT duplicated. General TR delegates to a plugin solver; simulation TR delegates
+   to the solver PA reconstructor; PA TR holds the canonical k-space propagator;
+   transcranial TR is distinct aberration-correction phase conjugation. Correct
+   layering, no consolidation. PLC-5 histotripsy likely WONTFIX (distinct concerns).
 5. **[minor] COV-1 coherence-factor weighting** — ✅ **DONE (2026-06-19):**
    Mallart-Fink amplitude CF + Camacho sign CF on the DAS path; fixed a real SAFT
    CF over-suppression bug en route (consolidated to one canonical helper).
