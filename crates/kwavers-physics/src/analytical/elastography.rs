@@ -28,6 +28,30 @@ pub fn shear_wave_speed(mu_pa: f64, rho: f64) -> f64 {
     (mu_pa / rho).sqrt()
 }
 
+/// Ratio of compressional (P) to shear (S) wave speed as a function of Poisson's
+/// ratio (book §11.2):
+///
+/// ```text
+/// c_P/c_S = √( (λ + 2μ)/μ ) = √( 2(1 − ν)/(1 − 2ν) )
+/// ```
+///
+/// using the isotropic identity `λ/μ = 2ν/(1 − 2ν)`. The ratio diverges as the
+/// medium approaches incompressibility (`ν → ½⁻`), which is why soft tissue —
+/// nearly incompressible (`ν ≈ 0.4999`) — has `c_P ≫ c_S` and SWE can treat the
+/// P-wave background as instantaneous. Returns `f64::INFINITY` at `ν ≥ ½`.
+///
+/// # Reference
+/// Achenbach (1973), *Wave Propagation in Elastic Solids*, §4.
+#[must_use]
+#[inline]
+pub fn pwave_to_swave_velocity_ratio(poisson_ratio: f64) -> f64 {
+    let denom = 1.0 - 2.0 * poisson_ratio;
+    if denom <= 0.0 {
+        return f64::INFINITY;
+    }
+    (2.0 * (1.0 - poisson_ratio) / denom).sqrt()
+}
+
 // ─── Viscoelastic models ──────────────────────────────────────────────────────
 
 /// Voigt–Kelvin complex shear modulus.
@@ -278,6 +302,22 @@ mod tests {
         // Liver-like: μ = 2000 Pa, ρ = 1060 kg/m³ → c_s ≈ 1.37 m/s
         let cs = shear_wave_speed(2000.0, DENSITY_BLOOD);
         assert!((cs - (2000.0_f64 / DENSITY_BLOOD).sqrt()).abs() < 1e-10);
+    }
+
+    #[test]
+    fn pwave_to_swave_ratio_matches_closed_form_and_diverges_at_incompressible() {
+        // ν = 0 (no lateral coupling): c_P/c_S = √2.
+        assert!((pwave_to_swave_velocity_ratio(0.0) - 2.0_f64.sqrt()).abs() < 1e-12);
+        // ν = 1/3: √(2·(2/3)/(1/3)) = √4 = 2.
+        assert!((pwave_to_swave_velocity_ratio(1.0 / 3.0) - 2.0).abs() < 1e-12);
+        // Soft tissue ν → ½⁻: ratio is large (≈ √(2·0.5001/1e-4) ≈ 100).
+        assert!(pwave_to_swave_velocity_ratio(0.49995) > 50.0);
+        // ν ≥ ½ (incompressible / non-physical): diverges.
+        assert!(pwave_to_swave_velocity_ratio(0.5).is_infinite());
+        // Monotone increasing toward incompressibility.
+        assert!(
+            pwave_to_swave_velocity_ratio(0.45) > pwave_to_swave_velocity_ratio(0.30)
+        );
     }
 
     #[test]

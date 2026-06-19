@@ -458,7 +458,9 @@ from ._pykwavers import (
     spectroscopic_unmixing_lstsq,
     # ── Elastography ─────────────────────────────────────────────────────────
     shear_wave_speed,
+    pwave_to_swave_velocity_ratio,
     voigt_complex_modulus,
+    voigt_shear_wave_dispersion,
     springpot_complex_modulus,
     # ── Bubble dynamics (Keller–Miksis / CEM43) ──────────────────────────────
     solve_rayleigh_plesset,
@@ -819,7 +821,9 @@ __all__ = [
     "spectroscopic_unmixing_lstsq",
     # ── Elastography ─────────────────────────────────────────────────────────
     "shear_wave_speed",
+    "pwave_to_swave_velocity_ratio",
     "voigt_complex_modulus",
+    "voigt_shear_wave_dispersion",
     "springpot_complex_modulus",
     # ── Bubble dynamics (Keller–Miksis / CEM43) ──────────────────────────────
     "solve_rayleigh_plesset",

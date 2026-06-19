@@ -22,6 +22,21 @@ pub fn shear_wave_speed(mu_pa: f64, rho: f64) -> PyResult<f64> {
     Ok(elastography::shear_wave_speed(mu_pa, rho))
 }
 
+/// Ratio of compressional (P) to shear (S) wave speed from Poisson's ratio.
+///
+/// c_P/c_S = sqrt(2(1-nu)/(1-2nu)) (book §11.2); diverges as nu -> 1/2.
+///
+/// Args:
+///     poisson_ratio: Poisson's ratio nu (dimensionless, < 0.5).
+///
+/// Returns:
+///     c_P/c_S ratio (dimensionless; inf for nu >= 0.5).
+#[pyfunction]
+#[pyo3(signature = (poisson_ratio))]
+pub fn pwave_to_swave_velocity_ratio(poisson_ratio: f64) -> PyResult<f64> {
+    Ok(elastography::pwave_to_swave_velocity_ratio(poisson_ratio))
+}
+
 /// Compute the Voigt complex shear modulus G*(ω).
 ///
 /// G*(ω) = mu + i*omega*eta

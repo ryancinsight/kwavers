@@ -362,6 +362,10 @@ pub fn register_book(m: &Bound<'_, PyModule>) -> PyResult<()> {
     )?)?;
     // elastography
     m.add_function(wrap_pyfunction!(elastography::shear_wave_speed, m)?)?;
+    m.add_function(wrap_pyfunction!(
+        elastography::pwave_to_swave_velocity_ratio,
+        m
+    )?)?;
     m.add_function(wrap_pyfunction!(elastography::voigt_complex_modulus, m)?)?;
     m.add_function(wrap_pyfunction!(
         elastography::springpot_complex_modulus,

@@ -108,11 +108,12 @@ def fig01_shear_wave_speed() -> None:
 # ── Figure 02: P-wave vs S-wave velocity ratio vs Poisson's ratio ─────────────
 def fig02_wave_velocity_ratio() -> None:
     """
-    c_p / c_s = √((1-ν)/((1-2ν)·(1+ν)/2)) = √(2(1-ν)/(1-2ν))
+    c_p / c_s = √(2(1-ν)/(1-2ν)), via kw.pwave_to_swave_velocity_ratio (Rust kernel).
     For incompressible tissue ν→0.5: c_p/c_s → ∞.
     """
     nu = np.linspace(0.0, 0.499, 500)
-    ratio = np.sqrt(2 * (1 - nu) / (1 - 2 * nu))
+    # Single source of truth: the Rust analytical kernel (§11.2). Not re-derived here.
+    ratio = np.array([kw.pwave_to_swave_velocity_ratio(float(n)) for n in nu])
 
     fig, ax = plt.subplots(figsize=(7, 4.5))
     ax.semilogy(nu, ratio, color="#1f77b4")
@@ -176,26 +177,22 @@ def fig03_voigt_viscoelastic() -> None:
 # ── Figure 04: Shear wave dispersion (Voigt model) ───────────────────────────
 def fig04_shear_dispersion() -> None:
     """
-    Complex shear modulus G*(ω) = G_e + iωη.
-    Computed via kw.voigt_complex_modulus(omega_arr, G_e, eta) → (real_arr, imag_arr).
-    Complex wavenumber: k_s(ω) = ω √(ρ / G*(ω)).
-    Phase velocity: c_ph = ω / Re(k_s).
+    Voigt shear-wave phase velocity c_ph(ω) for G*(ω) = G_e + iωη.
+    Computed via kw.voigt_shear_wave_dispersion(f_Hz, G_e, eta, RHO) (Rust kernel,
+    §11.8.3) — the closed-form c_ph = √(2(μ²+ω²η²)/(ρ(μ+√(μ²+ω²η²)))). Not
+    re-derived from the complex modulus here.
     Elastic limit via kw.shear_wave_speed(G_e, RHO).
     """
     if not _HAS_PYKWAVERS:
         raise ImportError("pykwavers is required for fig04 (shear wave dispersion)")
     f_Hz = np.logspace(0, 3, 500)
-    omega = 2 * np.pi * f_Hz
 
     G_e = 2e3
     eta_values = [(0.1, r"$\eta=0.1$ Pa·s"), (1.0, r"$\eta=1$ Pa·s"), (5.0, r"$\eta=5$ Pa·s")]
 
     fig, ax = plt.subplots(figsize=(7, 4.5))
     for eta, lbl in eta_values:
-        G_re, G_im = kw.voigt_complex_modulus(omega, G_e, eta)
-        G_star = np.asarray(G_re) + 1j * np.asarray(G_im)
-        k_s = omega * np.sqrt(RHO / G_star)
-        c_ph = omega / np.real(k_s)
+        c_ph = np.asarray(kw.voigt_shear_wave_dispersion(f_Hz, G_e, eta, RHO))
         ax.semilogx(f_Hz, c_ph, label=lbl)
 
     # Elastic limit: c_s = sqrt(G_e / rho) via Rust kernel
