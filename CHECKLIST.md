@@ -44,9 +44,24 @@ Axis: physics coverage vs peer libs + cross-crate placement (see
 - **Deferred (backlog):** empirical oblique-incidence reflection benchmark;
       α_max=π·f₀ frequency plumbing; consolidate the 3rd CPML (DG solver) impl.
 
-### Next increment (WIP candidate)
-- COV-2 active DMAS (generalize passive PAM kernel) / COV-5 bubble-shell models /
-  COV-3 curvilinear transmit array, or the [arch] PLC-1 photoacoustic ADR.
+### Sprint F progress (2026-06-19) — coverage gaps + consolidation
+Committed (branch `feat/cov1-coherence-factor`):
+- [x] COV-1 coherence factor (+ SAFT CF bug fix)
+- [x] CPML → CFS-PML (κ/α, dead-config activation, doc fix)
+- [x] COV-2 active DMAS (+ PAM consolidation)
+- [x] COV-5 (partial) Hoff + Sarkar / PLC-3 shell-model SSOT trait
+- [x] COV-3 curvilinear (convex) array geometry
+- [x] COV-8/COV-9 verified false positives
+
+### Remaining (next sessions)
+- **Coverage:** COV-4 point-scatterer/SIR RF synth (largest); COV-5 de Jong
+  (PDF-verify prefactor) + Herring (free-bubble EOM, not a shell model);
+  COV-6 KLM/Mason, COV-7 MRE, COV-10 Shepp-Logan (low priority).
+- **Consolidation phase ("refactor & cleanup"):** PLC-1 photoacoustic (5-crate,
+  ADR first), PLC-2 CEUS (4-crate), PLC-3 remainder (ceus-vs-therapy microbubble
+  dedup + therapy-in-physics layering), PLC-4 time-reversal SSOT [verify].
+- **CPML follow-ups:** empirical oblique-incidence reflection benchmark;
+  α_max=π·f₀ plumbing; consolidate the DG-solver CPML (3rd impl).
 
 ## Sprint A (verify C-tier suspicions) — COMPLETE (2026-05-31)
 - [x] SOL-4 Westervelt `d²(p²)/dt²` FMA — FALSE POSITIVE (exact + FMA precision gain)
