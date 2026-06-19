@@ -25,9 +25,18 @@ Triage (correctness/arch → tests → features), one WIP item at a time:
    perfusion is image-analysis (imaging) vs forward transport-PDE (physics), distinct
    concerns. Optional [patch] residue: unify perfusion-param extraction
    (`analyze_tic` vs `from_samples`).
-3. **[arch] PLC-3 microbubble SSOT + therapy-physics layering** — dedupe the two
-   encapsulated-bubble models inside `kwavers-physics`; decide `kwavers-physics/
-   src/therapy/*` home vs `kwavers-therapy`. Couples to COV-5.
+3. **[arch] PLC-3 microbubble SSOT + therapy-physics layering** — shell-model SSOT
+   ✅ DONE (EncapsulatedShellModel trait). **Remainder CONFIRMED real (2026-06-19),
+   needs ADR + careful merge:**
+   - (a) `therapy/microbubble/shell/properties.rs::MarmottantShellProperties` =
+     a 2nd Marmottant impl → fold onto canonical `MarmottantModel`/`EncapsulatedShellModel`.
+   - (b) `ceus/microbubble/dynamics/integration.rs::wall_acceleration` = a 3rd
+     RP-with-shell integrator → route through `EncapsulatedShellModel::acceleration`.
+   - (c) therapy-domain code in `kwavers-physics` (therapy/*, acoustics/therapy/*,
+     transcranial/bbb_opening) → keep physics models, move therapy planning to
+     `kwavers-therapy` (large cross-crate move, own ADR).
+   Risk: (a)/(b) change therapy/ceus numerics (different parameterization) — verify
+   value-semantic equivalence; do as a focused increment with fresh context.
 4. **PLC-4 time-reversal propagator SSOT** — ✅ **CLOSED (2026-06-19):** verified
    NOT duplicated. General TR delegates to a plugin solver; simulation TR delegates
    to the solver PA reconstructor; PA TR holds the canonical k-space propagator;
