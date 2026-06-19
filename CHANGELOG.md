@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+### Added (2026-06-19) — Transient spatial impulse response (COV-4 follow-up)
+
+- [minor] **`kwavers-physics::analytical::transducer::spatial_impulse_response::CircularPistonSir`**:
+  the transient (broadband) spatial impulse response of a flat circular piston
+  (Stepanishen 1971), the Field II diffraction kernel — the impulse/pulse-echo
+  complement to the existing continuous-wave Fast Nearfield Method.
+  `evaluate(r, z, t)` returns the closed-form `h(r,z,t)` (on-axis rectangular
+  pulse of height c; off-axis plateau + arccos arc), with `first/last_arrival_time`
+  for the support. 6 analytic value-semantic tests, including `∫h dt = √(z²+a²)−z`
+  (the on-axis path-difference identity). Completes the COV-4 finite-aperture
+  follow-up (the scatterer RF synthesis used the point-element far-field limit).
+
 ### Fixed (2026-06-19) — Therapy Marmottant negative surface tension (PLC-3a)
 
 - [patch] **`kwavers-physics::therapy::microbubble::shell::MarmottantShellProperties`
