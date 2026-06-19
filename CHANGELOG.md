@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+### Changed (2026-06-19) — Real Gilmore bubble dynamics for histotripsy cloud erosion (CLD-1)
+
+- [minor] **`kwavers-therapy::...::lithotripsy::cavitation_cloud`** now drives
+  cloud erosion with the **real Gilmore (1952) compressible single-bubble
+  collapse** instead of a static-R₀ linear `(p−ambient)` proxy. New
+  `representative_max_radius`/`inertial_collapse_energy` integrate the existing
+  `GilmoreSolver` to capture inertial growth under rarefaction (`R_max ≫ R₀`) and
+  the Rayleigh collapse energy `(4/3)π R_max³ (p₀−p_v)`; the per-cell erosion now
+  scales with the collapsing-bubble count × this physics-based energy. Adds a
+  `drive_frequency` field to `CloudParameters` (defaults via `Default`, only
+  construction site unaffected). 4 new value-semantic tests (`R_max(12 MPa)>3·R₀`,
+  energy scales with drive, deeper rarefaction erodes more); the prior
+  pure-compression erosion test was updated to a realistic rarefaction+compression
+  field (the static-R₀ proxy "eroded" without any bubble growth). Implements the
+  "Gilmore + Mach corrections" the code itself flagged as absent (CLD-1).
+  **Still open** (collective/research-frontier): multi-bubble coupling, cloud-scale
+  energy focusing (Maeda & Colonius 2018), cloud instabilities, time-resolved
+  per-cell coupling — no library is "100% accurate" for collective cloud collapse.
+
 ### Added (2026-06-19) — Transient spatial impulse response (COV-4 follow-up)
 
 - [minor] **`kwavers-physics::analytical::transducer::spatial_impulse_response::CircularPistonSir`**:
