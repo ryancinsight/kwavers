@@ -282,7 +282,7 @@ used. $\square$
 
 **Remark on uniqueness.** The density $\rho$ must be known or separately
 estimated. In practice $\rho$ varies by only $\pm 5\,\%$ across soft tissues
-(Table 10.1), so the dominant source of contrast in shear modulus maps is $c_S$,
+(Table 11.1), so the dominant source of contrast in shear modulus maps is $c_S$,
 not $\rho$.
 
 ![Shear-wave speed vs shear modulus](figures/ch10/fig01_shear_wave_speed.png)
@@ -292,7 +292,7 @@ not $\rho$.
 
 ### 11.3.1 Tissue Reference Values
 
-**Table 10.1 — Shear-wave speed and shear modulus in representative soft tissues**
+**Table 11.1 — Shear-wave speed and shear modulus in representative soft tissues**
 
 | Tissue | $c_S$ (m s$^{-1}$) | $\mu$ (kPa) | Notes |
 |--------|---------------------|--------------|-------|
@@ -745,7 +745,11 @@ $$
 \boxed{E^*(\omega) = E + i\omega\eta = E'(\omega) + iE''(\omega),}
 $$
 
-with storage modulus $E' = E$ and loss modulus $E'' = \omega\eta$.
+with storage modulus $E' = E$ and loss modulus $E'' = \omega\eta$. In the shear
+channel relevant to elastography the same construction gives the **complex shear
+modulus** $G^*(\omega) = \mu + i\omega\eta$ (storage $G' = \mu$, loss
+$G'' = \omega\eta$) — this is what `voigt_complex_modulus` returns and Figure 11.4
+plots, and what enters the shear-wave dispersion of §11.8.3 (read $E \to \mu$ there).
 
 ![Voigt storage and loss moduli vs frequency](figures/ch10/fig03_voigt_viscoelastic.png)
 
@@ -826,7 +830,7 @@ of $d(k'/\omega)/d\omega < 0$ using the above closed form. $\square$
 
 ### 11.8.4 Tissue Viscosity Reference Values
 
-**Table 10.2 — Voigt model parameters for soft tissue at 100 Hz shear excitation**
+**Table 11.2 — Voigt model parameters for soft tissue at 100 Hz shear excitation**
 
 | Tissue | $\mu$ (kPa) | $\eta$ (Pa·s) | Loss tangent $\eta\omega/\mu$ |
 |--------|-------------|----------------|-------------------------------|
@@ -1007,7 +1011,7 @@ depths to build a full 2-D stiffness map.
 
 ### 11.10.3 Resolution–Depth Trade-off
 
-**Table 10.3 — Shear wavelength vs push frequency for two tissue stiffness values**
+**Table 11.3 — Shear wavelength vs push frequency for two tissue stiffness values**
 
 | $f_S$ (Hz) | $c_S = 1\,\text{m/s}$ (soft) | $c_S = 5\,\text{m/s}$ (stiff) |
 |------------|-------------------------------|--------------------------------|
@@ -1032,7 +1036,7 @@ Implementation: the shear wavelength $\lambda_S = c_S/f$ follows directly from `
 Liver fibrosis is the leading clinical application of shear-wave elastography.
 The METAVIR scoring system classifies fibrosis in five stages $F0$–$F4$:
 
-**Table 10.4 — SWE-based liver fibrosis staging (METAVIR, 2D-SWE, fasting)**
+**Table 11.4 — SWE-based liver fibrosis staging (METAVIR, 2D-SWE, fasting)**
 
 | Stage | Pathology | $c_S$ (m s$^{-1}$) | $\mu$ (kPa) | $E$ (kPa) |
 |-------|-----------|---------------------|--------------|------------|
@@ -1048,7 +1052,7 @@ systematically by up to $\pm 15\,\%$.
 
 ### 11.11.2 Prostate
 
-**Table 10.5 — Prostate SWE (peripheral zone)**
+**Table 11.5 — Prostate SWE (peripheral zone)**
 
 | Tissue status | $\mu$ (kPa) | Gleason score correlation |
 |---------------|-------------|---------------------------|
@@ -1062,7 +1066,7 @@ stiffer than peripheral zone), capsule artefacts, and BPH.
 
 ### 11.11.3 Thyroid
 
-**Table 10.6 — Thyroid SWE**
+**Table 11.6 — Thyroid SWE**
 
 | Nodule type | $E$ (kPa) | Malignancy risk |
 |-------------|-----------|-----------------|
@@ -1073,7 +1077,7 @@ stiffer than peripheral zone), capsule artefacts, and BPH.
 
 ### 11.11.4 Breast (ACR BI-RADS SWE Supplement)
 
-**Table 10.7 — Breast SWE (BI-RADS complementary data)**
+**Table 11.7 — Breast SWE (BI-RADS complementary data)**
 
 | Lesion | $E_{\max}$ (kPa) | BI-RADS upgrade likelihood |
 |--------|-------------------|---------------------------|
