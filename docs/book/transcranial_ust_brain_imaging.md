@@ -254,7 +254,7 @@ al. 2026) removes that requirement by aligning the template using **only the
 acoustic data**. It minimises the FWI misfit over a low-dimensional rigid SE(2)
 reparametrisation of the template, $\varphi=\{\theta,\delta_1,\delta_2\}$, with the
 chained gradient $\partial J/\partial\varphi=(\partial c_\varphi/\partial\varphi)^\top\,\partial J/\partial c$
-evaluated on the exact self-adjoint gradient (Inverse-Problems chapter §2.5). The
+evaluated on the exact self-adjoint gradient (Inverse-Problems chapter §18.2.5). The
 shipped pipeline (`inverse::fwi::time_domain::mofi`, ADR 017/018) composes a
 Wasserstein global pose search, a Wasserstein→envelope→L2 misfit homotopy
 (cycle-skipping-robust at large pose error), a block-coordinate sound-speed
@@ -403,7 +403,7 @@ run that satisfies the visible-reconstruction contract.
 
 For a time-domain, gradient-based refinement (rather than the frequency-domain
 linear-Born normal equations above), the exact self-adjoint engine
-(`FwiEngine::SecondOrderSelfAdjoint`; Inverse-Problems chapter §2.5) supplies a
+(`FwiEngine::SecondOrderSelfAdjoint`; Inverse-Problems chapter §18.2.5) supplies a
 machine-accurate $\partial J/\partial c$ ($\kappa\approx 1$), which is required
 when the absolute gradient magnitude is used — Gauss–Newton, fixed-step updates,
 or the MOFI pose/calibration chained gradient of §26.4.1. The default FDTD/PSTD
