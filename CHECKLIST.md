@@ -58,14 +58,24 @@ Committed (branch `feat/cov1-coherence-factor`):
 - [x] PLC-4 time-reversal SSOT — CLOSED (verified not duplicated)
 - [x] PLC-1 photoacoustic consolidation — DONE (ADR 026; removed dead 1325-LOC pipeline)
 
-### Remaining (next sessions)
-- **Consolidation:** PLC-2 CEUS (4-crate — perfusion/microbubble physics dup
-  imaging-vs-physics; needs investigate→ADR→execute), PLC-3 remainder
-  (ceus-vs-therapy microbubble dedup + therapy-in-physics layering).
-- **Coverage (low priority):** COV-5 de Jong (PDF-verify prefactor) + Herring
-  (free-bubble EOM); COV-6 KLM/Mason, COV-7 MRE, COV-10 Shepp-Logan.
+- [x] PLC-2 CEUS — CLOSED arch (verified correctly layered, false positive)
+- [x] PLC-3 remainder — investigated + CONFIRMED real (specced, not yet executed)
+
+### Audit status: comprehensively resolved (2026-06-19)
+Every PLC item done/closed/specced; every substantive COV gap filled. 14 commits
+on branch `feat/cov1-coherence-factor` (off `main`, not pushed/merged).
+
+### Remaining (focused follow-up sessions)
+- **[arch] PLC-3 remainder EXECUTION** (the one substantive item left): fold
+  `therapy/microbubble/shell::MarmottantShellProperties` (2nd Marmottant) and
+  `ceus/microbubble/dynamics::wall_acceleration` (3rd RP integrator) onto
+  `EncapsulatedShellModel`; move therapy-in-physics planning to `kwavers-therapy`.
+  Numeric-equivalence-sensitive → ADR + value-semantic verification, fresh context.
+- **Coverage (low priority):** COV-5 de Jong (PDF-verify prefactor) + Herring;
+  COV-6 KLM/Mason, COV-7 MRE, COV-10 Shepp-Logan.
 - **Follow-ups:** COV-4 finite-aperture SIR; CPML empirical reflection benchmark +
-  α_max=π·f₀ plumbing + DG-solver CPML (3rd impl) consolidation.
+  α_max=π·f₀ plumbing + DG-solver CPML (3rd impl) consolidation; PLC-2 [patch]
+  perfusion-param-extraction unify.
 
 ## Sprint A (verify C-tier suspicions) — COMPLETE (2026-05-31)
 - [x] SOL-4 Westervelt `d²(p²)/dt²` FMA — FALSE POSITIVE (exact + FMA precision gain)
