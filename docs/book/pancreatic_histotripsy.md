@@ -24,7 +24,7 @@ Pennes bioheat solver. The Rayleigh–Sommerfeld focal-Gaussian forward field
 figures in this chapter.
 
 > **Executable note.** The companion script
-> `pykwavers/examples/book/ch21f_real_pancreatic_ct_histotripsy.py` has been
+> `crates/kwavers-python/examples/book/ch21f_real_pancreatic_ct_histotripsy.py` has been
 > migrated to demonstrate the **same-aperture theranostic FWI** reconstruction
 > on the pancreatic CT (`kw.run_theranostic_inverse_from_ritk`,
 > `anatomy="pancreas"`), so running it now writes reconstruction-channel

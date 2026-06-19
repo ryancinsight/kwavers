@@ -49,7 +49,7 @@ transcranial arrays.
 
 The executable chapter script is:
 
-`pykwavers/examples/book/ch27_transcranial_ust_brain_imaging.py`
+`crates/kwavers-python/examples/book/ch27_transcranial_ust_brain_imaging.py`
 
 The production implementation is not in the plotting script.  The computation is
 owned by:
@@ -464,7 +464,7 @@ components.
 
 The custom executable monitoring simulation is:
 
-`pykwavers/examples/book/ch27_histotripsy_fwi_rtm.py`
+`crates/kwavers-python/examples/book/ch27_histotripsy_fwi_rtm.py`
 
 It uses the RITK-backed Chapter 26 CT baseline, all 1024 receiver elements,
 active continuation stages (`110 kHz`, `160 kHz`, `220 kHz`) ending at the
@@ -541,7 +541,7 @@ transmitter also appears as a receiver.
 Run:
 
 ```powershell
-python pykwavers/examples/book/ch27_transcranial_ust_brain_imaging.py
+python crates/kwavers-python/examples/book/ch27_transcranial_ust_brain_imaging.py
 ```
 
 The script writes:
@@ -580,7 +580,7 @@ $env:KWAVERS_CH27_EDGE_PRESERVING_WEIGHT="0.0001"
 $env:KWAVERS_CH27_EDGE_PRESERVING_EPSILON="0.004"
 $env:KWAVERS_CH27_EDGE_PRESERVING_STEP="0.12"
 $env:KWAVERS_CH27_EDGE_PRESERVING_ITERATIONS="1"
-python pykwavers/examples/book/ch27_transcranial_ust_brain_imaging.py
+python crates/kwavers-python/examples/book/ch27_transcranial_ust_brain_imaging.py
 ```
 
 `KWAVERS_CH27_STACK_OFFSETS` is relative to the source index in the resampled
@@ -596,7 +596,7 @@ anatomical segmentation.
 Run the custom histotripsy-monitoring simulation separately:
 
 ```powershell
-python pykwavers/examples/book/ch27_histotripsy_fwi_rtm.py
+python crates/kwavers-python/examples/book/ch27_histotripsy_fwi_rtm.py
 ```
 
 Its metrics file records equal-area Dice, AUPRC, and contrast-to-noise ratio for

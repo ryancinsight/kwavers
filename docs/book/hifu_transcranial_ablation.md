@@ -4,7 +4,7 @@
 
 This chapter extends the histotripsy treatment-planning pattern from Chapter 14
 to transcranial focused-ultrasound therapy.  The executable chapter script is
-`pykwavers/examples/book/ch25_transcranial_brain_fus_planning.py`.
+`crates/kwavers-python/examples/book/ch25_transcranial_brain_fus_planning.py`.
 
 The chapter has two independent execution contracts:
 
@@ -37,7 +37,7 @@ The workflow covers:
   24 acoustic-dose convention.
 
 The CT-aligned brain target and transducer pose are stored once in
-`pykwavers/examples/book/transcranial_planning/scene.py` as
+`crates/kwavers-python/examples/book/transcranial_planning/scene.py` as
 `CANONICAL_BRAIN_SCENE`. Figure 2 phase-correction output, the transcranial brain-imaging nonlinear-reconstruction figure, the 3-D bowl-aperture placement view, and the
 skull-adaptive transcranial benchmark resolve their target index from this
 scene definition instead of carrying separate centroid or element-count
@@ -317,7 +317,7 @@ The result contains the reference and baseline pressure volumes, active element
 mask, element coordinates, phase delays, skull path lengths, amplitude weights,
 the resolved `target_fraction_xyz`, placement metadata, metric values, and a
 `paper_structural_comparison` record.
-The helper `pykwavers/examples/book/transcranial_planning/benchmark.py` converts
+The helper `crates/kwavers-python/examples/book/transcranial_planning/benchmark.py` converts
 that result into a JSON-serializable summary for book scripts and notebooks.
 
 Structural comparison to the paper:
@@ -332,8 +332,8 @@ Structural comparison to the paper:
 
 The focused tests are:
 
-- `pykwavers/tests/test_transcranial_planning.py`
-- `pykwavers/tests/test_book_therapy_chapters.py`
+- `crates/kwavers-python/tests/test_transcranial_planning.py`
+- `crates/kwavers-python/tests/test_book_therapy_chapters.py`
 
 The tests assert the canonical brain scene target index, 1024-element geometry,
 skull-dependent phase correction,

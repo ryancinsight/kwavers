@@ -990,4 +990,4 @@ transfer-matrix model (§15.2; `kwavers_physics::analytical::skull`).*
 
 *Chapter authored for the kwavers ultrasound physics textbook series.
 Simulation results are reproducible via the example scripts in
-`pykwavers/examples/` using the `kwavers_solver::forward` PSTD backend.*
+`crates/kwavers-python/examples/` using the `kwavers_solver::forward` PSTD backend.*

@@ -236,7 +236,7 @@ correctness guarantee is unchanged.
 
 ## 21.7 Visualisation: the dependency DAG of an enabled config
 
-The companion script `pykwavers/examples/book/ch22_simulation_orchestration.py`
+The companion script `crates/kwavers-python/examples/book/ch22_simulation_orchestration.py`
 renders the capability fan-out and the field-dependency DAG for a
 representative multi-capability config (PSTD acoustics + thermal diffusion +
 elastic stress). It produces two figures committed to
@@ -258,7 +258,7 @@ elastic stress). It produces two figures committed to
 Run it with
 
 ```bash
-python pykwavers/examples/book/ch22_simulation_orchestration.py
+python crates/kwavers-python/examples/book/ch22_simulation_orchestration.py
 ```
 
 The script depends only on `matplotlib` and `networkx`; no compiled crate

@@ -330,7 +330,7 @@ forcing aperture diversity. The reproducible comparison runs with:
 
 ```powershell
 $env:KWAVERS_CH29_RENDER_SCOPE="adaptive_transmit"
-python pykwavers/examples/book/ch29_theranostic_fwi_platforms.py
+python crates/kwavers-python/examples/book/ch29_theranostic_fwi_platforms.py
 ```
 
 It writes `fig07_patient_adaptive_transmit_budget.png` and
@@ -630,7 +630,7 @@ satisfies `m^T L m = sum_(i,j in E) (m_i - m_j)^2 >= 0`. Adding
 
 The brain case reads the CT-aligned target and transducer pose from
 `CANONICAL_BRAIN_SCENE` in
-`pykwavers/examples/book/transcranial_planning/scene.py`. The slice-level
+`crates/kwavers-python/examples/book/transcranial_planning/scene.py`. The slice-level
 finite-frequency inverse, Figure 5 nonlinear branch, and separate CT-derived
 3-D focused-bowl placement resolve the same target fraction against their CT support
 and use the same 1024-element, 650 kHz, 0.150 m focused-bowl definition. The 3-D view
@@ -760,7 +760,7 @@ print("uses_nonlinear_wave_propagation:",
 Run:
 
 ```powershell
-python pykwavers/examples/book/ch29_theranostic_fwi_platforms.py
+python crates/kwavers-python/examples/book/ch29_theranostic_fwi_platforms.py
 ```
 
 Outputs:
