@@ -1,9 +1,7 @@
 use super::super::shell::ShellProperties;
-use crate::acoustics::bubble_dynamics::bubble_state::{
-    young_laplace_pressure, BubbleParameters, BubbleState,
-};
+use super::shell_model::EncapsulatedShellModel;
+use crate::acoustics::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};
 use kwavers_core::constants::cavitation::SURFACE_TENSION_WATER;
-use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
 
 /// Marmottant model for encapsulated bubbles with buckling/rupture
@@ -68,7 +66,12 @@ impl MarmottantModel {
         }
     }
 
-    /// Calculate bubble wall acceleration with Marmottant shell model
+    /// Calculate bubble wall acceleration with the Marmottant shell model.
+    ///
+    /// Delegates to the shared [`EncapsulatedShellModel`] Rayleigh-Plesset driver
+    /// (Marmottant et al. 2005, JASA 118(6), eq. 3); the Marmottant-specific
+    /// pieces — buckling/rupture surface tension σ(R) and the shell viscous
+    /// stress — are its trait methods below.
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
@@ -78,46 +81,7 @@ impl MarmottantModel {
         p_acoustic: f64,
         t: f64,
     ) -> KwaversResult<f64> {
-        let r = state.radius;
-        let v = state.wall_velocity;
-        let r0 = self.params.r0;
-
-        // Acoustic forcing
-        let omega = TWO_PI * self.params.driving_frequency;
-        let p_acoustic_inst = p_acoustic * (omega * t).sin();
-        let p_inf = self.params.p0 + p_acoustic_inst;
-
-        // Internal gas pressure (polytropic)
-        let gamma = state.gas_species.gamma();
-        let p_eq = self.params.p0 + 2.0 * self.shell.sigma_initial / r0;
-        let p_gas = p_eq * (r0 / r).powf(3.0 * gamma);
-
-        // Variable surface tension (Marmottant 2005, eq. 1 — σ(R) is R-dependent
-        // but enters the pressure balance as just 2σ(R)/R; no separate dσ/dR rate term).
-        let sigma = self.surface_tension(r);
-
-        // Surface tension term: 2σ(R)/R — variable σ from Marmottant state, free-function form.
-        let surface_term = young_laplace_pressure(sigma, r);
-
-        // Viscous damping (liquid + shell). Shell term: 4·κ_s·Ṙ/R² with
-        // κ_s = 3·μ_s·d for a thin shell, giving 12·μ_s·d·Ṙ/R².
-        let viscous_liquid = self.params.viscous_wall_stress(v, r);
-        let d = self.shell.thickness;
-        let mu_s = self.shell.shear_viscosity;
-        let viscous_shell = 12.0 * mu_s * (d / r) * v / r;
-
-        // Net pressure difference (Marmottant et al. 2005, JASA 118(6), eq. 3)
-        let net_pressure = p_gas - p_inf - surface_term - viscous_liquid - viscous_shell;
-
-        // Solve for R̈ from modified Rayleigh-Plesset equation
-        let accel = (net_pressure / (self.params.rho_liquid * r)) - (1.5 * v * v / r);
-
-        // Update state
-        state.wall_acceleration = accel;
-        state.pressure_internal = p_gas;
-        state.pressure_liquid = p_inf;
-
-        Ok(accel)
+        EncapsulatedShellModel::acceleration(self, state, p_acoustic, t)
     }
 
     /// Get shell properties
@@ -148,5 +112,29 @@ impl MarmottantModel {
         } else {
             "elastic"
         }
+    }
+}
+
+impl EncapsulatedShellModel for MarmottantModel {
+    fn params(&self) -> &BubbleParameters {
+        &self.params
+    }
+
+    fn equilibrium_gas_pressure(&self) -> f64 {
+        // Reference uses the shell's initial tension (Marmottant 2005).
+        self.params.p0 + 2.0 * self.shell.sigma_initial / self.params.r0
+    }
+
+    fn effective_surface_tension(&self, r: f64) -> f64 {
+        // Radius-dependent σ(R) with buckling/rupture branches (eq. 1).
+        self.surface_tension(r)
+    }
+
+    fn shell_stress(&self, r: f64, v: f64) -> f64 {
+        // Shell viscous damping 4·κ_s·Ṙ/R² with κ_s = 3·μ_s·d (thin shell) =
+        // 12·μ_s·d·Ṙ/R². Shell elasticity is carried by σ(R), not here.
+        let d = self.shell.thickness;
+        let mu_s = self.shell.shear_viscosity;
+        12.0 * mu_s * (d / r) * v / r
     }
 }

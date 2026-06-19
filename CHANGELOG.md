@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+### Added (2026-06-19) — Encapsulated-bubble shell models + SSOT trait (COV-5, PLC-3)
+
+- [minor] **`EncapsulatedShellModel` trait** (`bubble_dynamics::encapsulated::model`):
+  one Rayleigh-Plesset driver shared by every shelled-microbubble model; each model
+  supplies only its effective surface tension σ_eff(R), equilibrium gas pressure,
+  and shell stress S(R,Ṙ). Church and Marmottant refactored onto it
+  (behavior-preserving — existing tests unchanged) — **PLC-3 shell-model SSOT**:
+  removes the duplicated RP arithmetic that the placement audit flagged.
+- [minor] **Hoff (2000)** model — thin-shell, linear-displacement elastic restoring
+  `12 G_s(d/R)[1−R0/R]` + viscous `12 μ_s d Ṙ/R²` (identical to Church; reduces to
+  Church exactly when G_s=0, a differential-verified property).
+- [minor] **Sarkar (2005)** model — interfacial elasticity σ(R)=σ0+E_s(R²/R0²−1)
+  + surface dilatational viscosity `4 κ_s Ṙ/R²`. Closes **COV-5** for these two
+  models; 8 value-semantic tests (equilibrium balance, restoring/damping signs,
+  σ(R) form). Evidence tier: literature (Doinikov & Bouakaz 2011 review) validated
+  by analytic equilibrium + property checks.
+  **Deferred:** de Jong (lumped-parameter prefactor is convention-dependent —
+  needs source verification) and Herring (free-bubble compressible EOM, not a
+  shell model) — tracked in backlog.
+
 ### Added (2026-06-19) — Active DMAS beamforming (COV-2)
 
 - [minor] **Delay-multiply-and-sum (DMAS) for time-domain DAS**

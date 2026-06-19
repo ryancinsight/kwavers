@@ -50,11 +50,12 @@ Triage (correctness/arch → tests → features), one WIP item at a time:
 - **COV-4 discrete point-scatterer + spatial-impulse-response RF synthesis** [minor/major]
   — Field II core; largest. Home `kwavers-phantom` (scatterer cloud) + `kwavers-source`/
   analysis (SIR convolution → RF).
-- **COV-5 Sarkar/de Jong/Hoff/Herring bubble models** [minor] — `kwavers-physics`.
-  Pair with **PLC-3**: introduce a shared `EncapsulatedShellModel` trait (common RP
-  core + per-model shell-stress term) and add the 3 contrast-shell models as impls
-  (Herring is a free-bubble compressible EOM, separate sub-item). Needs per-model
-  literature equations + linearized resonance/damping validation tests.
+- **COV-5 bubble shell models** [minor] — ✅ **PARTIAL DONE (2026-06-19):**
+  `EncapsulatedShellModel` trait + RP driver (PLC-3 shell-model SSOT); Church/
+  Marmottant refactored on; **Hoff + Sarkar added** with validation. **Deferred:**
+  de Jong (verify lumped S_p/S_f prefactor against Doinikov&Bouakaz 2011 PDF before
+  asserting — convention-dependent) and Herring (free-bubble compressible EOM —
+  belongs with KM/Gilmore in `bubble_dynamics`, not the encapsulated shell models).
 - **COV-6 KLM/Mason** [L], **COV-7 MRE front-end** [L], **COV-10 Shepp-Logan** [L].
 
 ## CPML → single-pole CFS-PML upgrade [minor] — DONE (2026-06-19)

@@ -3,36 +3,43 @@ use super::shell_model::EncapsulatedShellModel;
 use crate::acoustics::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};
 use kwavers_core::error::KwaversResult;
 
-/// Church model for encapsulated bubbles with elastic shell
+/// Hoff, Sontum & Hovem (2000) thin-shell encapsulated-bubble model.
 ///
-/// Implements the linearized shell model from Church (1995) which adds
-/// shell elasticity and viscosity terms to the Rayleigh-Plesset equation.
+/// Like Church (1995) it parameterizes the shell by its shear modulus `G_s`,
+/// shear viscosity `μ_s`, and thickness `d`, but its **elastic restoring stress
+/// is linear in the relative displacement** `[1 − R0/R]` rather than Church's
+/// quadratic strain `[(R/R0)² − 1]`. The viscous damping stress is identical to
+/// Church (`12 μ_s d Ṙ/R²`), so with `G_s = 0` the two models coincide exactly.
+///
+/// # Equations (Doinikov & Bouakaz 2011 review of Hoff et al. 2000)
+/// ```text
+/// S_elastic = 12 G_s (d/R) [1 − R0/R]
+/// S_viscous = 12 μ_s (d/R) Ṙ/R = 12 μ_s d Ṙ/R²
+/// ```
+/// This is the common thin-shell linearization. Hoff's original incompressible
+/// shell additionally scales both terms by `(R0/R)³` (constant shell volume);
+/// that refinement is not applied here and is noted as a follow-up.
+///
+/// # Evidence tier
+/// Literature-recall (Hoff 2000 / Doinikov & Bouakaz 2011); the viscous term and
+/// the `G_s = 0` reduction to Church are differentially verified in tests.
 #[derive(Debug, Clone)]
-pub struct ChurchModel {
+pub struct HoffModel {
     params: BubbleParameters,
     shell: ShellProperties,
 }
 
-impl ChurchModel {
-    /// Create new Church model with shell properties
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
+impl HoffModel {
+    /// Create a Hoff model from bubble parameters and shell properties.
     #[must_use]
     pub fn new(params: BubbleParameters, mut shell: ShellProperties) -> Self {
-        // Compute critical radii for the shell
         shell.compute_critical_radii(params.r0, params.p0);
-
         Self { params, shell }
     }
 
-    /// Calculate bubble wall acceleration with shell effects (Church model).
-    ///
-    /// Delegates to the shared [`EncapsulatedShellModel`] Rayleigh-Plesset driver;
-    /// the Church-specific pieces are its trait methods below.
+    /// Calculate bubble-wall acceleration (delegates to the shared RP driver).
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn calculate_acceleration(
         &self,
         state: &mut BubbleState,
@@ -42,26 +49,23 @@ impl ChurchModel {
         EncapsulatedShellModel::acceleration(self, state, p_acoustic, t)
     }
 
-    /// Get shell properties
+    /// Get shell properties.
     #[must_use]
     pub fn shell_properties(&self) -> &ShellProperties {
         &self.shell
     }
 }
 
-impl EncapsulatedShellModel for ChurchModel {
+impl EncapsulatedShellModel for HoffModel {
     fn params(&self) -> &BubbleParameters {
         &self.params
     }
 
     fn equilibrium_gas_pressure(&self) -> f64 {
-        // p_eq = p0 + 2σ/R0 (Young-Laplace at equilibrium).
         self.params.p0 + self.params.surface_tension_pressure(self.params.r0)
     }
 
     fn effective_surface_tension(&self, _r: f64) -> f64 {
-        // Constant liquid surface tension; shell elasticity is carried by the
-        // separate shell-stress term, not by σ.
         self.params.sigma
     }
 
@@ -70,8 +74,8 @@ impl EncapsulatedShellModel for ChurchModel {
         let d = self.shell.thickness;
         let g = self.shell.shear_modulus;
         let mu_s = self.shell.shear_viscosity;
-        // Church (1995): elastic 12 G (d/R)[(R/R₀)² − 1] + viscous 12 μ_s (d/R) Ṙ/R.
-        let shell_elastic = 12.0 * g * (d / r) * (r / r0).mul_add(r / r0, -1.0);
+        // Elastic: 12 G_s (d/R)[1 − R0/R]; viscous: 12 μ_s (d/R) Ṙ/R.
+        let shell_elastic = 12.0 * g * (d / r) * (1.0 - r0 / r);
         let shell_viscous = 12.0 * mu_s * (d / r) * v / r;
         shell_elastic + shell_viscous
     }

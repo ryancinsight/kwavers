@@ -1,5 +1,7 @@
 use super::church::ChurchModel;
+use super::hoff::HoffModel;
 use super::marmottant::MarmottantModel;
+use super::sarkar::SarkarModel;
 use crate::acoustics::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};
 use crate::acoustics::bubble_dynamics::encapsulated::shell::ShellProperties;
 
@@ -165,4 +167,122 @@ fn test_marmottant_buckling_reduces_stiffness() {
 
     // Buckled state should have zero or much lower surface tension
     assert!(sigma_buckled < sigma_elastic);
+}
+
+// ---- Hoff (2000) ----
+
+#[test]
+fn test_hoff_equilibrium_acceleration_is_zero() {
+    // R=R0, v=0, p_ac=0: elastic [1−R0/R0]=0, p_gas=p_eq, surface=2σ/R0 ⇒ accel=0.
+    let params = BubbleParameters::default();
+    let model = HoffModel::new(params.clone(), ShellProperties::lipid_shell());
+    let mut state = BubbleState::at_equilibrium(&params);
+    let accel = model.calculate_acceleration(&mut state, 0.0, 0.0).unwrap();
+    assert!(accel.abs() < 1e-9, "Hoff equilibrium acceleration must be ~0, got {accel}");
+}
+
+#[test]
+fn test_hoff_compressed_bubble_restores_outward() {
+    let params = BubbleParameters::default();
+    let model = HoffModel::new(params.clone(), ShellProperties::lipid_shell());
+    let mut state = BubbleState::new(&params);
+    state.radius = 0.8 * params.r0;
+    state.wall_velocity = 0.0;
+    let accel = model.calculate_acceleration(&mut state, 0.0, 0.0).unwrap();
+    assert!(accel > 0.0, "Compressed Hoff bubble must restore outward, got {accel}");
+}
+
+#[test]
+fn test_hoff_shell_viscosity_resists_expansion() {
+    // At R=R0 with outward velocity, shell + liquid viscous damping ⇒ accel < 0.
+    let params = BubbleParameters::default();
+    let model = HoffModel::new(params.clone(), ShellProperties::lipid_shell());
+    let mut state = BubbleState::at_equilibrium(&params);
+    state.wall_velocity = 1.0;
+    let accel = model.calculate_acceleration(&mut state, 0.0, 0.0).unwrap();
+    assert!(accel < 0.0, "Outward velocity must be damped (accel<0), got {accel}");
+}
+
+#[test]
+fn test_hoff_reduces_to_church_when_shear_modulus_zero() {
+    // Differential check: Hoff and Church differ ONLY in the elastic strain
+    // measure; their viscous term (12 μ_s d Ṙ/R²) and the shared RP driver are
+    // identical. With G_s = 0 the elastic terms both vanish ⇒ bit-identical accel.
+    let params = BubbleParameters::default();
+    let mut shell = ShellProperties::lipid_shell();
+    shell.shear_modulus = 0.0;
+    let church = ChurchModel::new(params.clone(), shell.clone());
+    let hoff = HoffModel::new(params.clone(), shell);
+
+    let mut s_church = BubbleState::new(&params);
+    s_church.radius = 1.3 * params.r0;
+    s_church.wall_velocity = 2.5;
+    let mut s_hoff = s_church.clone();
+
+    let a_church = church.calculate_acceleration(&mut s_church, 5e4, 1e-6).unwrap();
+    let a_hoff = hoff.calculate_acceleration(&mut s_hoff, 5e4, 1e-6).unwrap();
+    assert!(
+        (a_church - a_hoff).abs() < 1e-9 * a_church.abs().max(1.0),
+        "G_s=0 ⇒ Hoff must equal Church: church={a_church}, hoff={a_hoff}"
+    );
+}
+
+// ---- Sarkar (2005) ----
+
+#[test]
+fn test_sarkar_surface_tension_form() {
+    // σ(R) = σ0 + E_s(R²/R0² − 1): σ(R0)=σ0; σ(√2 R0)=σ0+E_s.
+    let params = BubbleParameters::default();
+    let (sigma0, e_s, kappa_s) = (0.04, 1.0, 1e-8);
+    let model = SarkarModel::new(params.clone(), sigma0, e_s, kappa_s);
+    let r0 = params.r0;
+    assert!((model.surface_tension(r0) - sigma0).abs() < 1e-12);
+    let r = std::f64::consts::SQRT_2 * r0;
+    assert!(
+        (model.surface_tension(r) - (sigma0 + e_s)).abs() < 1e-12,
+        "σ(√2·R0) should be σ0+E_s"
+    );
+}
+
+#[test]
+fn test_sarkar_equilibrium_acceleration_is_zero() {
+    // σ(R0)=σ0, p_eq=p0+2σ0/R0, shell viscous=0 ⇒ accel=0 exactly at equilibrium.
+    let params = BubbleParameters::default();
+    let model = SarkarModel::new(params.clone(), 0.04, 1.0, 1e-8);
+    let mut state = BubbleState::at_equilibrium(&params);
+    let accel = model.calculate_acceleration(&mut state, 0.0, 0.0).unwrap();
+    assert!(accel.abs() < 1e-9, "Sarkar equilibrium acceleration must be ~0, got {accel}");
+}
+
+#[test]
+fn test_sarkar_surface_viscosity_resists_expansion() {
+    // At R=R0 with outward velocity, the 4κ_s Ṙ/R² surface viscous stress (plus
+    // liquid viscosity and inertia) gives accel < 0.
+    let params = BubbleParameters::default();
+    let model = SarkarModel::new(params.clone(), 0.04, 1.0, 1e-8);
+    let mut state = BubbleState::at_equilibrium(&params);
+    state.wall_velocity = 1.0;
+    let accel = model.calculate_acceleration(&mut state, 0.0, 0.0).unwrap();
+    assert!(accel < 0.0, "Surface viscosity must damp expansion (accel<0), got {accel}");
+}
+
+#[test]
+fn test_sarkar_higher_elasticity_increases_restoring_stiffness() {
+    // Larger E_s ⇒ stronger restoring at fixed compression: the surface-tension
+    // term 2σ(R)/R is smaller at R<R0 for larger E_s (σ drops more), but the
+    // dominant effect on the *expanded* side (R>R0) is a larger inward σ, i.e.
+    // a stiffer restoring. Compare net inward stress at R = 1.2 R0, v = 0.
+    let params = BubbleParameters::default();
+    let soft = SarkarModel::new(params.clone(), 0.04, 0.2, 1e-8);
+    let stiff = SarkarModel::new(params.clone(), 0.04, 2.0, 1e-8);
+    let mut s1 = BubbleState::new(&params);
+    s1.radius = 1.2 * params.r0;
+    let mut s2 = s1.clone();
+    let a_soft = soft.calculate_acceleration(&mut s1, 0.0, 0.0).unwrap();
+    let a_stiff = stiff.calculate_acceleration(&mut s2, 0.0, 0.0).unwrap();
+    // Stiffer shell pulls the expanded bubble back harder ⇒ more negative accel.
+    assert!(
+        a_stiff < a_soft,
+        "Higher E_s must give stronger inward restoring at R>R0: stiff={a_stiff}, soft={a_soft}"
+    );
 }
