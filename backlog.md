@@ -19,9 +19,12 @@ Triage (correctness/arch → tests → features), one WIP item at a time:
    consumer analysis showed the 5 locations are mostly layered, not duplicates; the
    real dup was the two `kwavers-simulation` forward pipelines. Removed the dead
    `photoacoustics/` pipeline (1325 LOC); `modalities::photoacoustic` is canonical.
-2. **[arch] PLC-2 CEUS consolidation** — perfusion + microbubble physics duplicated
-   between `kwavers-imaging` and `kwavers-physics`. Move physics down, leave
-   orchestration in imaging.
+2. **PLC-2 CEUS consolidation** — ✅ **CLOSED arch (2026-06-19):** verified mostly
+   FALSE POSITIVE. CEUS is correctly layered — `Microbubble`/`MicrobubblePopulation`
+   types live in `kwavers-imaging` and physics CEUS re-exports them (not a dup);
+   perfusion is image-analysis (imaging) vs forward transport-PDE (physics), distinct
+   concerns. Optional [patch] residue: unify perfusion-param extraction
+   (`analyze_tic` vs `from_samples`).
 3. **[arch] PLC-3 microbubble SSOT + therapy-physics layering** — dedupe the two
    encapsulated-bubble models inside `kwavers-physics`; decide `kwavers-physics/
    src/therapy/*` home vs `kwavers-therapy`. Couples to COV-5.
