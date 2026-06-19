@@ -39,9 +39,23 @@ Triage (correctness/arch → tests → features), one WIP item at a time:
    (Field II core) in `kwavers-phantom`/`kwavers-source`.
 7. **[minor] COV-5 Sarkar/de Jong/Hoff/Herring** bubble-shell models (one generic
    `EncapsulatedModel` impl set; ties PHY-13 de Jong scattering test).
-8. **[patch/L] COV-6..11** — KLM/Mason circuit, MRE front end, Cherenkov stub,
-   Sobolev operator-or-delete, Shepp-Logan fixture; COV-11 Mur BC = WONTFIX (CPML
-   superior).
+8. **[patch/L] COV-6/7/10** — KLM/Mason circuit, MRE front end, Shepp-Logan
+   fixture. **COV-8 (Cherenkov) + COV-9 (Sobolev) = verified FALSE POSITIVES**
+   (both fully implemented; see gap_audit). COV-11 Mur BC = WONTFIX (CPML superior).
+
+### Remaining genuine coverage gaps (post-verification), best as focused increments:
+- **COV-3 curvilinear/convex transmit array** [minor] — `kwavers-transducer`. The
+  `kwave_array` already has Arc/Bowl element primitives + `rasterizer_curved`; add
+  a convex-array layout helper placing N elements along a curvature arc.
+- **COV-4 discrete point-scatterer + spatial-impulse-response RF synthesis** [minor/major]
+  — Field II core; largest. Home `kwavers-phantom` (scatterer cloud) + `kwavers-source`/
+  analysis (SIR convolution → RF).
+- **COV-5 Sarkar/de Jong/Hoff/Herring bubble models** [minor] — `kwavers-physics`.
+  Pair with **PLC-3**: introduce a shared `EncapsulatedShellModel` trait (common RP
+  core + per-model shell-stress term) and add the 3 contrast-shell models as impls
+  (Herring is a free-bubble compressible EOM, separate sub-item). Needs per-model
+  literature equations + linearized resonance/damping validation tests.
+- **COV-6 KLM/Mason** [L], **COV-7 MRE front-end** [L], **COV-10 Shepp-Logan** [L].
 
 ## CPML → single-pole CFS-PML upgrade [minor] — DONE (2026-06-19)
 
