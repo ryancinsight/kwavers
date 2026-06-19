@@ -20,9 +20,13 @@ pub struct CPMLConfig {
     pub sigma_factor: f64,
     /// Per-dimension sigma scaling factors (k-Wave `pml_alpha` vector).
     pub per_dimension_alpha: PerDimensionAlpha,
-    /// Maximum κ (coordinate stretching) value.
+    /// Maximum κ (real coordinate stretch) at the PML wall; `≥ 1`. `1` disables
+    /// the κ term (σ-only CPML). CFS-PML uses `≈ 5–20` to absorb grazing-incidence
+    /// energy (Komatitsch & Martin 2009). Set via [`Self::with_cfs_pml`].
     pub kappa_max: f64,
-    /// Maximum α (frequency shifting) value.
+    /// Maximum α (complex frequency shift) at the physical-domain interface; `≥ 0`.
+    /// `0` disables the α term. CFS-PML uses `≈ π·f₀` to absorb evanescent and
+    /// low-frequency/grazing energy (Roden & Gedney 2000). Set via [`Self::with_cfs_pml`].
     pub alpha_max: f64,
     /// Target reflection coefficient (e.g., 1e-6).
     pub target_reflection: f64,
@@ -41,8 +45,12 @@ impl Default for CPMLConfig {
             polynomial_order: 3.0,
             sigma_factor: 2.0,
             per_dimension_alpha: PerDimensionAlpha::default(),
-            kappa_max: 15.0,
-            alpha_max: 0.24,
+            // σ-only CPML by default (κ=1, α=0). These match the behavior that
+            // was always effective: the prior 15.0/0.24 defaults were never read
+            // by the profile kernel (dead config), and 0.24 is negligible vs the
+            // physically-correct α_max ≈ π·f₀. CFS-PML is opt-in via with_cfs_pml.
+            kappa_max: 1.0,
+            alpha_max: 0.0,
             target_reflection: 1e-6,
             grazing_angle_absorption: true,
             radial_inner_z_transparent: false,
@@ -89,6 +97,31 @@ impl CPMLConfig {
         Self {
             sigma_factor: alpha,
             per_dimension_alpha: PerDimensionAlpha::uniform(alpha),
+            ..self
+        }
+    }
+
+    /// Enable complex-frequency-shifted PML (CFS-PML) with the given maxima (builder).
+    ///
+    /// Adds the graded real stretch `κ(q) = 1 + (κ_max−1)·q⁴` and frequency shift
+    /// `α(q) = α_max·(1−q)` to the σ-only CPML, reducing spurious reflections at
+    /// grazing incidence and for evanescent/low-frequency energy. This affects the
+    /// convolutional (FDTD) boundary path; the k-Wave split-field (PSTD) decay
+    /// factors derive from σ alone and are unchanged.
+    ///
+    /// Recommended: `kappa_max ∈ [5, 20]`, `alpha_max ≈ π·f₀` (f₀ = dominant
+    /// source frequency). `kappa_max = 1`, `alpha_max = 0` reduces exactly to
+    /// σ-only CPML.
+    ///
+    /// # Panics
+    /// Panics if `kappa_max < 1.0` or `alpha_max < 0.0` (invalid CFS parameters).
+    #[must_use]
+    pub fn with_cfs_pml(self, kappa_max: f64, alpha_max: f64) -> Self {
+        assert!(kappa_max >= 1.0, "with_cfs_pml: kappa_max must be >= 1.0, got {kappa_max}");
+        assert!(alpha_max >= 0.0, "with_cfs_pml: alpha_max must be >= 0.0, got {alpha_max}");
+        Self {
+            kappa_max,
+            alpha_max,
             ..self
         }
     }

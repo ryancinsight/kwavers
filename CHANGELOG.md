@@ -2,6 +2,34 @@
 
 ## Unreleased
 
+### Added (2026-06-19) — CFS-PML upgrade for the FDTD CPML boundary
+
+- [minor] **Complex-frequency-shifted PML (CFS-PML)** in `kwavers-boundary/cpml`:
+  the convolutional (FDTD) boundary now supports the graded real stretch
+  `κ(q) = 1 + (κ_max−1)·q⁴` and frequency shift `α(q) = α_max·(1−q)` on top of the
+  k-Wave σ profile, with the canonical Roden & Gedney (2000) recursion
+  `b = exp[−(σ/κ+α)Δt]`, `a = σ(b−1)/[κ(σ+κα)]`. Reduces spurious reflections at
+  grazing incidence and for evanescent/low-frequency energy (Komatitsch & Martin
+  2007/2009). Enabled via the new `CPMLConfig::with_cfs_pml(kappa_max, alpha_max)`
+  builder; recommended κ_max∈[5,20], α_max≈π·f₀. The split-field (PSTD/k-Wave)
+  decay factors derive from σ alone and are unchanged (parity preserved). New
+  value-semantic test pins the κ/α grading and the wall recursion coefficients.
+  Evidence tier: formula-correct (analytical) + exact reduction to the validated
+  σ-only case; the empirical grazing-reflection benefit rests on the literature
+  and the analytical CFS property (full oblique-incidence FDTD benchmark deferred).
+
+### Fixed (2026-06-19) — CPML dead config + wrong adjoint coefficient doc
+
+- [patch] **`CPMLConfig.kappa_max`/`alpha_max` were dead config**: the defaults
+  (15.0 / 0.24) were never read by the profile kernel, which hardwired κ=1, α=0.
+  The fields are now consumed (CFS-PML above) and the defaults reset to κ_max=1.0,
+  α_max=0.0 — matching the behavior that was always *effective*, so existing FDTD
+  results are bit-identical (94 boundary + 81 FDTD/CPML solver tests pass). The
+  prior 0.24 was physically negligible vs the correct α_max≈π·f₀.
+- [patch] Corrected the recursive-convolution `a` coefficient in the CPML module
+  doc: the documented `a = (σ/κ)(b−1)/(σ/κ+α)` was missing a factor of `1/κ`
+  (wrong for κ≠1); now states the canonical `a = σ(b−1)/[κ(σ+κα)]`.
+
 ### Added (2026-06-19) — Coherence-factor beamforming (COV-1)
 
 - [minor] **Coherence-factor adaptive weighting for time-domain DAS**

@@ -32,16 +32,21 @@ Axis: physics coverage vs peer libs + cross-crate placement (see
       with derivation. clippy clean (kwavers-analysis), 34 targeted tests pass.
 - **Follow-up [minor]:** phase CF (PCF, analytic signal) + generalized CF (GCF, FFT).
 
-### CPML → CFS-PML upgrade — research DONE, impl OPEN (2026-06-19)
-- [x] Background literature synthesis (2020–2026) → concrete single-pole CFS-PML
-      spec recorded in [backlog.md](backlog.md) (graded κ/α, runtime σ_max, defaults).
-- [ ] **Next increment (WIP candidate):** implement single-pole CFS-PML in the FDTD
-      `kwavers-boundary/cpml` path (add κ_max/α_max/R₀ params + ψ recursion);
-      differential grazing-reflection test vs current σ-only CPML. ADR for the
-      boundary-API change. PSTD path = reduced σ_max-profile upgrade only.
-- **Alternatives if deferring CPML:** next coverage slice COV-2 (active DMAS —
-      generalize the passive PAM kernel) or COV-5 (bubble-shell models), or the
-      [arch] PLC-1 photoacoustic-consolidation ADR.
+### CPML → CFS-PML upgrade — DONE (2026-06-19)
+- [x] Background literature synthesis (2020–2026) → single-pole CFS-PML spec.
+- [x] Implemented graded κ/α + canonical Roden-Gedney recursion in the FDTD
+      convolutional kernel (`kwavers-boundary/cpml`); `with_cfs_pml` builder;
+      activated dead κ_max/α_max config (defaults reset to 1/0 = prior effective
+      behavior → FDTD bit-identical); fixed wrong `a` doc formula; params bundled
+      into a spec struct (clippy clean). New CFS value-semantic test.
+- [x] Verified: 94 boundary + 81 FDTD/CPML solver tests pass; split-field PSTD
+      parity untouched (σ profile unchanged).
+- **Deferred (backlog):** empirical oblique-incidence reflection benchmark;
+      α_max=π·f₀ frequency plumbing; consolidate the 3rd CPML (DG solver) impl.
+
+### Next increment (WIP candidate)
+- COV-2 active DMAS (generalize passive PAM kernel) / COV-5 bubble-shell models /
+  COV-3 curvilinear transmit array, or the [arch] PLC-1 photoacoustic ADR.
 
 ## Sprint A (verify C-tier suspicions) — COMPLETE (2026-05-31)
 - [x] SOL-4 Westervelt `d²(p²)/dt²` FMA — FALSE POSITIVE (exact + FMA precision gain)

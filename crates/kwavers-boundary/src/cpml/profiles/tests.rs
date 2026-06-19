@@ -270,3 +270,86 @@ fn test_cpml_recursive_convolution_coefficients() {
         profiles.a_x[mid]
     );
 }
+
+/// CFS-PML grading and canonical recursion coefficients (Roden & Gedney 2000).
+///
+/// With `with_cfs_pml(κ_max, α_max)`:
+/// - `κ(q) = 1 + (κ_max−1)·q⁴` ⇒ wall cell (q=1) has κ = κ_max; κ decays toward 1
+///   at the interface.
+/// - `α(q) = α_max·(1−q)` ⇒ wall cell has α = 0; α grows toward α_max at the
+///   interface (opposite grading to σ/κ — the load-bearing CFS detail).
+/// - At the wall: `b = exp(−σ·Δt/κ_max)`, `a = (b−1)/κ_max` (since α=0 there).
+#[test]
+fn test_cfs_pml_grading_and_coefficients() {
+    let c0 = SOUND_SPEED_WATER_SIM;
+    let dx = 1e-3_f64;
+    let pml_size = 10_usize;
+    let dt = 1e-7_f64;
+    let pml_alpha = 2.0_f64;
+    let kappa_max = 7.0_f64;
+    let alpha_max = 1.0e6_f64; // ≈ π·f₀ scale for a ~0.3 MHz source
+
+    let nx = 32;
+    let grid = Grid::new(nx, nx, nx, dx, dx, dx).expect("grid");
+    let config = CPMLConfig::with_thickness(pml_size)
+        .with_alpha(pml_alpha)
+        .with_cfs_pml(kappa_max, alpha_max);
+    let p = CPMLProfiles::new(&config, &grid, c0, dt).expect("CPMLProfiles::new");
+
+    // Wall cell (index 0, q = 1): κ = κ_max exactly, α = 0 exactly.
+    assert!(
+        (p.kappa_x[0] - kappa_max).abs() < 1e-12,
+        "κ at wall should be κ_max={kappa_max}, got {}",
+        p.kappa_x[0]
+    );
+    assert!(p.alpha_x[0].abs() < 1e-12, "α at wall should be 0, got {}", p.alpha_x[0]);
+
+    // Innermost PML cell (index pml_size−1, q = 1/pml_size): κ ≈ 1, α near α_max.
+    let inner = pml_size - 1;
+    let q_inner = 1.0 / pml_size as f64;
+    let expected_kappa_inner = (kappa_max - 1.0).mul_add(q_inner.powi(4), 1.0);
+    let expected_alpha_inner = alpha_max * (1.0 - q_inner);
+    assert!(
+        (p.kappa_x[inner] - expected_kappa_inner).abs() < 1e-9,
+        "κ at interface: expected {expected_kappa_inner}, got {}",
+        p.kappa_x[inner]
+    );
+    assert!(
+        (p.alpha_x[inner] - expected_alpha_inner).abs() < 1e-6,
+        "α at interface: expected {expected_alpha_inner}, got {}",
+        p.alpha_x[inner]
+    );
+
+    // κ grades monotonically wall→interface (decreasing); α grades opposite.
+    assert!(p.kappa_x[0] > p.kappa_x[inner], "κ must decrease wall→interface");
+    assert!(p.alpha_x[0] < p.alpha_x[inner], "α must increase wall→interface");
+
+    // Canonical recursion at the wall (α=0): b = exp(−σ/κ_max·dt), a = (b−1)/κ_max.
+    let sigma_wall = p.sigma_x[0];
+    let expected_b = (-sigma_wall / kappa_max * dt).exp();
+    let expected_a = (expected_b - 1.0) / kappa_max;
+    assert!(
+        (p.b_x[0] - expected_b).abs() < 1e-12,
+        "b at wall: expected {expected_b:.12}, got {:.12}",
+        p.b_x[0]
+    );
+    assert!(
+        (p.a_x[0] - expected_a).abs() < 1e-12,
+        "a at wall: expected {expected_a:.12}, got {:.12}",
+        p.a_x[0]
+    );
+
+    // The split-field σ profile (PSTD parity path) is unaffected by CFS terms.
+    let sigma_only = CPMLProfiles::new(
+        &CPMLConfig::with_thickness(pml_size).with_alpha(pml_alpha),
+        &grid,
+        c0,
+        dt,
+    )
+    .expect("σ-only profiles");
+    assert_eq!(
+        p.sigma_x, sigma_only.sigma_x,
+        "CFS must not change the σ damping profile (split-field parity)"
+    );
+    assert_eq!(p.pml_den_x, sigma_only.pml_den_x, "split-field decay factors must be unchanged");
+}

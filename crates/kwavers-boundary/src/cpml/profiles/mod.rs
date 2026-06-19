@@ -23,17 +23,23 @@
 //! `alpha = 0`, with `sigma = pml_alpha * (c / dx) * q^4`.
 //!
 //! ## Theorem (Recursive Convolution Coefficients)
-//! With complex-frequency-shift parameters `sigma`, `kappa`, and `alpha`:
+//! With complex-frequency-shift parameters `sigma`, `kappa`, and `alpha`
+//! (canonical SEISMIC_CPML / Roden & Gedney 2000 form):
 //!
 //! ```text
 //! b = exp(-(sigma/kappa + alpha) dt)
-//! a = (sigma/kappa) (b - 1) / (sigma/kappa + alpha)
+//! a = sigma (b - 1) / [kappa (sigma + kappa alpha)]   (a = 0 where sigma + kappa alpha = 0)
 //! ```
 //!
-//! The specialization used here has `alpha = 0` and `kappa = 1`, therefore
-//! `b = exp(-sigma dt)` and `a = b - 1`. If the memory variable starts at
-//! zero, the first corrected gradient is `b * grad`, so the boundary attenuates
-//! rather than amplifies the outgoing field.
+//! The CFS terms are opt-in via [`CPMLConfig::with_cfs_pml`]; the default
+//! configuration (`kappa_max = 1`, `alpha_max = 0`) reduces this **exactly** to
+//! the σ-only CPML `b = exp(-sigma dt)`, `a = b - 1`. If the memory variable
+//! starts at zero, the first corrected gradient is `b * grad`, so the boundary
+//! attenuates rather than amplifies the outgoing field. Adding the graded
+//! `kappa` (real stretch) and `alpha` (frequency shift) reduces spurious
+//! reflections at grazing incidence and for evanescent/low-frequency energy
+//! (Komatitsch & Martin 2007/2009); recommended `kappa_max in [5,20]`,
+//! `alpha_max ~ pi*f0`.
 //!
 //! ## References
 //! - Roden & Gedney (2000). Microwave Opt. Tech. Lett. 27(5), 334-339.
@@ -209,6 +215,16 @@ impl CPMLProfiles {
         let alpha_y = config.sigma_factor_for_dimension(1)?;
         let alpha_z = config.sigma_factor_for_dimension(2)?;
 
+        let spec = |dx: f64, thickness: usize, pml_alpha: f64| kernels::CollocatedProfileSpec {
+            dx,
+            thickness,
+            pml_alpha,
+            sound_speed,
+            dt,
+            kappa_max: config.kappa_max,
+            alpha_max: config.alpha_max,
+        };
+
         kernels::compute_collocated_profile(
             kernels::CollocatedProfileMut::new(
                 &mut self.sigma_x,
@@ -218,11 +234,7 @@ impl CPMLProfiles {
                 &mut self.b_x,
             ),
             grid.nx,
-            grid.dx,
-            config.per_dimension.x,
-            alpha_x,
-            sound_speed,
-            dt,
+            &spec(grid.dx, config.per_dimension.x, alpha_x),
         );
         kernels::compute_collocated_profile(
             kernels::CollocatedProfileMut::new(
@@ -233,11 +245,7 @@ impl CPMLProfiles {
                 &mut self.b_y,
             ),
             grid.ny,
-            grid.dy,
-            config.per_dimension.y,
-            alpha_y,
-            sound_speed,
-            dt,
+            &spec(grid.dy, config.per_dimension.y, alpha_y),
         );
         kernels::compute_collocated_profile(
             kernels::CollocatedProfileMut::new(
@@ -248,11 +256,7 @@ impl CPMLProfiles {
                 &mut self.b_z,
             ),
             grid.nz,
-            grid.dz,
-            config.per_dimension.z,
-            alpha_z,
-            sound_speed,
-            dt,
+            &spec(grid.dz, config.per_dimension.z, alpha_z),
         );
 
         kernels::compute_staggered_profile(

@@ -42,6 +42,22 @@ Triage (correctness/arch → tests → features), one WIP item at a time:
    Sobolev operator-or-delete, Shepp-Logan fixture; COV-11 Mur BC = WONTFIX (CPML
    superior).
 
+## CPML → single-pole CFS-PML upgrade [minor] — DONE (2026-06-19)
+
+✅ Implemented in `kwavers-boundary/cpml`: graded κ/α + canonical Roden-Gedney
+recursion wired into the convolutional (FDTD) kernel; `with_cfs_pml` builder;
+dead `kappa_max`/`alpha_max` config activated (defaults reset 15/0.24 → 1/0 =
+prior effective behavior, FDTD bit-identical); fixed the wrong `a` doc formula.
+94 boundary + 81 FDTD/CPML solver tests pass; clippy clean. Split-field PSTD
+parity untouched (σ profile unchanged).
+**Deferred (tracked):** (a) full oblique-incidence FDTD differential benchmark
+proving the grazing-reflection reduction empirically (currently formula-tier +
+literature-cited); (b) plumb α_max≈π·f₀ from the source frequency instead of an
+absolute value; (c) **3rd CPML impl** found — `solver/forward/pstd/dg/cpml` (DG
+solver) is a separate CPML; evaluate consolidating onto `kwavers-boundary` or
+documenting the split. (d) double-pole CFS for >16:1 bandwidth (Feng 2017).
+
+### Original spec (retained for the deferred items)
 ## OPEN: CPML → single-pole CFS-PML upgrade [minor] (opened 2026-06-19)
 
 Literature synthesis (2020–2026, background research; primary refs Roden & Gedney
