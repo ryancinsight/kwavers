@@ -5,6 +5,7 @@
 
 pub mod builder;
 pub mod presets;
+pub mod scatterers;
 pub mod types;
 pub mod utils;
 
@@ -13,6 +14,7 @@ pub use builder::{
     TumorDetectionPhantomBuilder, VascularPhantomBuilder,
 };
 pub use presets::ClinicalPhantoms;
+pub use scatterers::{PointScatterer, RfSynthesisConfig, ScattererCloud};
 pub use types::{LayerSpec, PhantomTissueType, PhantomType, TumorSpec, VesselSpec};
 
 #[cfg(test)]

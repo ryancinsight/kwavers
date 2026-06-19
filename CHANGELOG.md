@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Added (2026-06-19) — Point-scatterer cloud + RF synthesis (COV-4)
+
+- [minor] **`kwavers-phantom::scatterers`**: the Field II core abstraction — a
+  `ScattererCloud` of discrete `PointScatterer`s (position + amplitude) and
+  `synthesize_rf`, which produces per-element pulse-echo RF under the monostatic
+  synthetic-aperture point-element model `RF_e(t) = Σ_s (a_s/r²)·pulse(t−2r/c)`
+  (round-trip spherical spreading + time-of-flight). 7 analytic value-semantic
+  tests (round-trip delay sample, 1/r² amplitude, superposition, linearity, pulse
+  placement, near-field guard, input validation). Closes gap-audit **COV-4** core.
+  Follow-up: finite-aperture Tupholme–Stepanishen spatial impulse response (the
+  point-element model is the exact far-field limit) and frequency-dependent
+  attenuation. Adds `ndarray` as a direct dep of `kwavers-phantom`.
+
 ### Added (2026-06-19) — Curvilinear (convex) array geometry (COV-3)
 
 - [minor] **`kwavers-transducer::curvilinear::ConvexArrayGeometry`**: the clinical
