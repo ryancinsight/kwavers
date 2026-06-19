@@ -376,6 +376,14 @@ pub fn register_book(m: &Bound<'_, PyModule>) -> PyResult<()> {
         m
     )?)?;
     m.add_function(wrap_pyfunction!(elastography::mre_displacement_field, m)?)?;
+    m.add_function(wrap_pyfunction!(
+        elastography::thermal_strain_combined_coefficient,
+        m
+    )?)?;
+    m.add_function(wrap_pyfunction!(
+        elastography::thermal_strain_reconstruct,
+        m
+    )?)?;
     // imaging
     m.add_function(wrap_pyfunction!(imaging::lateral_psf_sinc2, m)?)?;
     m.add_function(wrap_pyfunction!(imaging::axial_psf_rect, m)?)?;

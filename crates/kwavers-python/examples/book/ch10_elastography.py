@@ -284,43 +284,6 @@ DC_DT_TISSUE = 2.0          # m/s per °C
 ALPHA_TH_TISSUE = 3.0e-4    # 1/°C
 
 
-def _combined_coefficient(c0: float, dc_dt: float, alpha_th: float) -> float:
-    """k_T = α_th − (1/c0)·(dc/dT), thermal strain per unit ΔT [1/°C]."""
-    return alpha_th - dc_dt / c0
-
-
-def _track_axial_shift(reference: np.ndarray, tracked: np.ndarray,
-                       window_half: int, max_lag: int) -> np.ndarray:
-    """Windowed NCC axial displacement (samples) with parabolic sub-sample.
-
-    Mirrors ``thermal_strain::tracking`` in the Rust SSOT for visualization.
-    """
-    nz = reference.size
-    disp = np.zeros(nz)
-    guard = window_half + max_lag
-
-    def ncc(a, b):
-        a = a - a.mean()
-        b = b - b.mean()
-        den = np.sqrt((a * a).sum() * (b * b).sum())
-        return 0.0 if den < 1e-300 else float((a * b).sum() / den)
-
-    for z in range(guard, nz - guard):
-        ref_win = reference[z - window_half: z + window_half + 1]
-        corr = np.array([
-            ncc(ref_win, tracked[z + lag - window_half: z + lag + window_half + 1])
-            for lag in range(-max_lag, max_lag + 1)
-        ])
-        k = int(np.argmax(corr))
-        sub = 0.0
-        if 0 < k < corr.size - 1:
-            denom = corr[k - 1] - 2 * corr[k] + corr[k + 1]
-            if denom < 0:
-                sub = np.clip(0.5 * (corr[k - 1] - corr[k + 1]) / denom, -0.5, 0.5)
-        disp[z] = (k - max_lag) + sub
-    return disp
-
-
 def fig06_thermal_strain() -> None:
     """Thermal strain thermometry on a synthetic uniformly-heated block.
 
@@ -330,48 +293,50 @@ def fig06_thermal_strain() -> None:
     """
     rng = np.random.default_rng(2024)
     fs = 40e6
-    dz = C0_TISSUE / (2 * fs)
+    dz = C0_TISSUE / (2 * fs)  # axial sample spacing (depth-axis geometry only)
     nz = 384
     delta_t_true = 6.0  # °C, uniform
-    k_t = _combined_coefficient(C0_TISSUE, DC_DT_TISSUE, ALPHA_TH_TISSUE)
+    win = 11                       # least-squares strain window (odd, ≥ 3)
+    window_half, max_lag = 12, 6   # NCC tracking kernel half-length and search lag
+    # k_T and the full tracking → strain → ΔT pipeline come from the Rust core
+    # (kwavers_physics ThermalStrainImager); no physics is computed in Python here.
+    k_t = kw.thermal_strain_combined_coefficient(C0_TISSUE, DC_DT_TISSUE, ALPHA_TH_TISSUE)
 
-    # Lateral lines of independent broadband speckle (the block is laterally
-    # uniform); spatial averaging suppresses per-line tracking jitter, as a real
-    # thermal-strain system does.
+    # Synthetic RF only: lateral lines of independent broadband speckle (the block
+    # is laterally uniform), each warped by the apparent displacement u(z)=k_T·ΔT·z
+    # of a uniform ΔT. Spatial averaging over lines suppresses per-line jitter.
     n_lines = 24
     spc = 5.0  # samples per carrier cycle
     idx = np.arange(nz)
     carrier = np.cos(2 * np.pi * idx / spc)
-    win = 11
-    half = win // 2
     src = np.clip(idx - k_t * delta_t_true * idx, 0, nz - 1)
     lo = np.floor(src).astype(int)
     frac = src - lo
     hi = np.minimum(lo + 1, nz - 1)
 
-    strain_lines = np.zeros((n_lines, nz))
-    ref0 = tracked0 = None
+    ref_vol = np.zeros((n_lines, 1, nz))
+    trk_vol = np.zeros((n_lines, 1, nz))
     for line in range(n_lines):
         refl = rng.uniform(-1.0, 1.0, nz)
         refl = 0.5 * (refl + np.roll(refl, 1))
         ref = refl * carrier
-        tracked = ref[lo] * (1 - frac) + ref[hi] * frac
-        if line == 0:
-            ref0, tracked0 = ref, tracked
-        u = _track_axial_shift(ref, tracked, window_half=12, max_lag=6) * dz
-        for z in range(nz):
-            a, b = max(0, z - half), min(nz, z + half + 1)
-            seg = u[a:b]
-            if seg.size >= 2:
-                zc = np.arange(seg.size) * dz
-                zc -= zc.mean()
-                strain_lines[line, z] = float(
-                    (zc * (seg - seg.mean())).sum() / (zc * zc).sum())
+        ref_vol[line, 0] = ref
+        trk_vol[line, 0] = ref[lo] * (1 - frac) + ref[hi] * frac
+
+    # Rust SSOT: NCC axial tracking → least-squares strain → ΔT = ε_T/k_T (§11.12).
+    _disp, strain_vol, dt_vol = kw.thermal_strain_reconstruct(
+        ref_vol, trk_vol,
+        C0_TISSUE, DC_DT_TISSUE, ALPHA_TH_TISSUE,
+        win, fs, window_half, max_lag,
+    )
+    strain_lines = np.asarray(strain_vol)[:, 0, :]
+    dt_lines = np.asarray(dt_vol)[:, 0, :]
+    ref0, tracked0 = ref_vol[0, 0], trk_vol[0, 0]
 
     strain = strain_lines.mean(axis=0)
     strain_std = strain_lines.std(axis=0)
-    delta_t = strain / k_t
-    delta_t_std = strain_std / abs(k_t)
+    delta_t = dt_lines.mean(axis=0)
+    delta_t_std = dt_lines.std(axis=0)
 
     depth_mm = idx * dz * 1e3
     guard = 12 + 6 + win

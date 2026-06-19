@@ -462,6 +462,8 @@ from ._pykwavers import (
     voigt_complex_modulus,
     voigt_shear_wave_dispersion,
     springpot_complex_modulus,
+    thermal_strain_combined_coefficient,
+    thermal_strain_reconstruct,
     # ── Bubble dynamics (Keller–Miksis / CEM43) ──────────────────────────────
     solve_rayleigh_plesset,
     solve_keller_miksis,
@@ -825,6 +827,8 @@ __all__ = [
     "voigt_complex_modulus",
     "voigt_shear_wave_dispersion",
     "springpot_complex_modulus",
+    "thermal_strain_combined_coefficient",
+    "thermal_strain_reconstruct",
     # ── Bubble dynamics (Keller–Miksis / CEM43) ──────────────────────────────
     "solve_rayleigh_plesset",
     "solve_keller_miksis",

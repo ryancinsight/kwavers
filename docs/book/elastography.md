@@ -1222,6 +1222,8 @@ sign and magnitude, the strain↔temperature round-trip, exact least-squares
 strain on a displacement ramp, sub-sample NCC recovery on synthetic RF, and an
 end-to-end uniformly-heated-block reconstruction of a known $\Delta T$.
 
+![Thermal strain thermometry on a synthetic uniformly-heated block](figures/ch10/fig06_thermal_strain.png)
+
 *Figure 11.6. Thermal strain thermometry on a synthetic uniformly-heated block:
 (left) pre/post RF lines and the recovered sub-sample echo shift; (centre) the
 negative thermal strain field for water-based tissue; (right) the reconstructed
