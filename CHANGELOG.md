@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+### Changed (2026-06-19) — Time-resolved per-cell cavitation-cloud dynamics (CLD-1, ADR 027) [major]
+
+- [major] **`kwavers-therapy::...::lithotripsy::cavitation_cloud`**: each cloud cell
+  now carries a **real, time-resolved representative bubble** — its `(R, Ṙ)` is
+  integrated across `evolve_cloud` calls by the canonical **adaptive Keller-Miksis**
+  solver under the local instantaneous pressure (with `dp/dt` from the previous
+  call), resolving violent collapse via sub-stepping. Bubble history is carried per
+  cell (`radius_field`/`velocity_field`), so stepping at acoustic resolution
+  reproduces the true `R(t)` waveform per cell — removing the snapshot/field-peak
+  limitation of the prior increment. Erosion is the compression work `∫p dV` on each
+  collapsing bubble (≈ the Rayleigh collapse energy over a full collapse), localized
+  per cell. `CloudParameters` gains `drive_frequency`; `cloud_radius()` accessor
+  added. **Keystone test**: a 1-cell cloud reproduces the standalone adaptive
+  Keller-Miksis integrator bit-for-bit (the cell *is* a real bubble, not a
+  surrogate). Density is now the seeded nuclei count (the ad-hoc growth/collapse
+  *rate* model is removed). 7 value-semantic tests. See ADR 027. **Still open**
+  (collective/research-frontier, CLD-1): inter-bubble coupling, cloud-scale energy
+  focusing (Maeda & Colonius 2018), cloud instabilities — cells remain independent
+  oscillators.
+
 ### Changed (2026-06-19) — Real Gilmore bubble dynamics for histotripsy cloud erosion (CLD-1)
 
 - [minor] **`kwavers-therapy::...::lithotripsy::cavitation_cloud`** now drives
