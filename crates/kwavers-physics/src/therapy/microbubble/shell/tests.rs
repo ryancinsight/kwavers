@@ -26,11 +26,24 @@ fn test_surface_tension_buckled() {
 
 #[test]
 fn test_surface_tension_elastic() {
+    // Marmottant 2005 references the elastic regime to R_buckling (= 0.85·R0
+    // here), so χ(R) = κ_s(R²/R_buckling² − 1). The previous assertion used the
+    // R_equilibrium reference (R²/R0² − 1), which is analytically incorrect: it
+    // yields χ(R_buckling) = κ_s(0.85² − 1) < 0, an unphysical negative surface
+    // tension. See `surface_tension` for the derivation.
     let shell = MarmottantShellProperties::new(1.0e-6, 1.0, 1.0e-9, 0.85, 1.6).unwrap();
     let r = 1.1e-6;
+    let r_buckling = shell.radius_buckling;
     let chi = shell.surface_tension(r);
-    let expected = 1.0 * ((1.1 * 1.1) / (1.0 * 1.0) - 1.0);
-    assert!((chi - expected).abs() < 1e-10);
+    let expected = 1.0 * ((r * r) / (r_buckling * r_buckling) - 1.0);
+    assert!((chi - expected).abs() < 1e-10, "expected {expected}, got {chi}");
+    // Continuity / non-negativity: χ(R_buckling) = 0 exactly (was −0.2775 before).
+    assert!(shell.surface_tension(r_buckling).abs() < 1e-12);
+    // And χ ≥ 0 across the elastic regime (no negative surface tension).
+    for k in 0..=20 {
+        let rr = r_buckling + (shell.radius_rupture - r_buckling) * f64::from(k) / 20.0;
+        assert!(shell.surface_tension(rr) >= -1e-12, "negative χ at R={rr}");
+    }
 }
 
 #[test]
@@ -99,11 +112,14 @@ fn test_validation_invalid_rupture_ratio() {
 
 #[test]
 fn test_surface_tension_derivative() {
+    // dχ/dR = 2κ_s·R/R_buckling² (R_buckling reference per Marmottant 2005),
+    // consistent with the χ(R) correctness fix above.
     let shell = MarmottantShellProperties::new(1.0e-6, 1.0, 1.0e-9, 0.85, 1.6).unwrap();
     let r = 1.0e-6;
+    let r_buckling = shell.radius_buckling;
     let dchi_dr = shell.surface_tension_derivative(r);
-    let expected = 2.0 * 1.0 * r / (1.0e-6 * 1.0e-6);
-    assert!((dchi_dr - expected).abs() < 1e-10);
+    let expected = 2.0 * 1.0 * r / (r_buckling * r_buckling);
+    assert!((dchi_dr - expected).abs() < 1e-10, "expected {expected}, got {dchi_dr}");
     assert_eq!(shell.surface_tension_derivative(0.8e-6), 0.0);
     assert_eq!(shell.surface_tension_derivative(2.0e-6), 0.0);
 }
