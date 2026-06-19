@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+### Added (2026-06-19) — Active DMAS beamforming (COV-2)
+
+- [minor] **Delay-multiply-and-sum (DMAS) for time-domain DAS**
+  (`beamforming::time_domain::dmas`): the canonical `dmas_combine` (Matrone et al.
+  2015 sign-preserving pairwise closed form `½[(Σŝ)²−Σŝ²]`, `ŝᵢ=sign(xᵢ)√|xᵢ|`)
+  plus an active `delay_and_sum_dmas` reusing the shared `align_channels`. 8
+  value-semantic tests. Closes gap-audit **COV-2**.
+- [patch] **Consolidation:** the passive PAM beamformer (`pam::delay_and_sum`)
+  now routes through the shared `dmas_combine` instead of an inline-duplicated
+  copy of the same closed form (SSOT; behavior preserved — PAM sharpening test
+  still passes).
+
 ### Added (2026-06-19) — CFS-PML upgrade for the FDTD CPML boundary
 
 - [minor] **Complex-frequency-shifted PML (CFS-PML)** in `kwavers-boundary/cpml`:

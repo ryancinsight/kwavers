@@ -32,8 +32,9 @@ Triage (correctness/arch → tests → features), one WIP item at a time:
    Mallart-Fink amplitude CF + Camacho sign CF on the DAS path; fixed a real SAFT
    CF over-suppression bug en route (consolidated to one canonical helper).
    Follow-up [minor]: phase CF (PCF, analytic signal) + generalized CF (GCF, FFT).
-6. **[minor] COV-2 active DMAS** — generalize the passive PAM DMAS kernel to the
-   active DAS path (no clone). **[minor] COV-3 curvilinear transmit array** in
+6. **[minor] COV-2 active DMAS** — ✅ **DONE (2026-06-19):** `time_domain::dmas`
+   (`dmas_combine` + `delay_and_sum_dmas`); passive PAM consolidated onto the
+   shared combiner. **[minor] COV-3 curvilinear transmit array** in
    `kwavers-transducer`. **[minor] COV-4 discrete point-scatterer + SIR RF synth**
    (Field II core) in `kwavers-phantom`/`kwavers-source`.
 7. **[minor] COV-5 Sarkar/de Jong/Hoff/Herring** bubble-shell models (one generic

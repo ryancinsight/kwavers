@@ -209,9 +209,11 @@
 pub mod coherence;
 pub mod das;
 pub mod delay_reference;
+pub mod dmas;
 
 // Re-exports: keep domain terms discoverable at the `time_domain` level.
 pub use coherence::{amplitude_coherence_from_sums, delay_and_sum_coherence, CoherenceFactor};
+pub use dmas::{delay_and_sum_dmas, dmas_combine};
 pub use das::{align_channels, delay_and_sum, sum_aligned, DEFAULT_DELAY_REFERENCE};
 pub use delay_reference::{alignment_shifts_s, relative_delays_s, DelayReference};
 
