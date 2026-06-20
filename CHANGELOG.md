@@ -2,6 +2,36 @@
 
 ## Unreleased
 
+### Fixed (2026-06-20) — audit-table remediation pass (SOL/PHY/CLD/AMC) [patch]
+
+Drove the remaining Sprint A–E audit findings to terminal states; each verified
+against current code first (several were already adequate / false positives).
+
+- [patch] **SOL-5** `kwavers-solver` — `HASConfig::validate()` SSOT now also rejects
+  a non-positive `reference_frequency` (which produced `(f/MHz)^y = NaN` in the
+  HAS power-law absorption) and a non-finite/negative `attenuation_coeff`;
+  `HasAbsorptionOperator::new` is fallible and re-validates at the boundary so a
+  `default()` + field-mutation bypass is caught. Negative test per invariant.
+- [patch] **SOL-8** `debug_assert!` the AVX-512 leapfrog/velocity coefficients are
+  finite at construction. **SOL-9** documented the discretization-error rationale
+  for the 5%/10%/2% benchmark tolerances.
+- [patch] **PHY-14** `kwavers-physics` — the Gilmore RK4 `|u|→c` validity-boundary
+  clamp is surfaced via `log::trace!` (`stage_acceleration`) instead of a silent
+  `unwrap_or(0.0)` that froze the wall.
+- [patch] **CLD-8** `kwavers-boundary` — BEM assembly `.last().unwrap()` →
+  `.last().copied() == Some(col)` (no unwrap, identical behavior). **CLD-7**
+  documented the uniform-concentration limitation of `update_microbubble_dynamics`.
+- [docs] **AMC-2** documented that the MVDR `.re`-only denominator check is
+  exhaustive (aᴴR⁻¹a is provably real for the upstream-Hermitian-validated R).
+- [docs] Closed as adequate / false-positive (no change): **AMC-7** (covariance
+  accumulation is sequential/deterministic; only scaling is parallel), **PHY-15**
+  (KZK/RP validity bounds already cited), **AMC-6** (PAM bounds-checks; out-of-
+  window → zero is correct), **PHY-12** (16π/3 is f32-representable), **AMC-3**
+  (standard MUSIC regularization), **AMC-8** (absolute-ε floor defensible).
+- [docs] Reconciled the **PLC-3** CHECKLIST↔gap_audit drift: the shell-model
+  consolidation is closed as "do not merge" (over-abstraction across divergent
+  consumers), not pending execution.
+
 ### Fixed (2026-06-20) — complete the phase coherence factor (PCF) dispatch (COV-1) [minor]
 
 - [minor] **`kwavers-analysis::...::beamforming::time_domain::coherence`** completes

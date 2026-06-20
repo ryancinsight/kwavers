@@ -239,6 +239,71 @@ Standing facts (do NOT re-flag):
 | AMC-11 | ~~L~~ DONE (2026-06-01) | `localization/music/mod.rs:86` | "Dup" was FALSE — `processor.rs:116` takes `frequency` as a param, not `fs/4`. Single site; named `DEFAULT_CENTER_FREQUENCY_NYQUIST_FRACTION=0.25` + justified (midpoint of Nyquist band). | done |
 | AMC-12 | ~~L~~ **DONE (verified 2026-06-20)** | PAM `MUSIC`/`EigenspaceMinVariance` | **Stale entry — already fully wired, not stubs.** `pam::mapper::subspace_localization_map` dispatches both methods to the shared narrowband `subspace_spatial_spectrum_point` (`{music,eigenspace_mv}_spatial_spectrum_point`): real Hermitian eigendecomposition (`EigenDecomposition::hermitian_eigendecomposition_complex`) partitioning the rank-K signal/noise subspaces + steering, producing a per-focal-point localization power (PAM Theorem 22.2). Tested: `eigenvalue_split_matches_theorem_22_2` (σ_s²+σ_n² vs σ_n²), MUSIC/ESMV point-spectrum peak-at-source. No duplication (SSOT subspace code). | done (no-op) |
 
+### Audit-table remediation pass (2026-06-20)
+
+Drove every remaining row above to a terminal state. Each was re-verified against
+current code before acting (verify-first); several "open" rows were already
+adequate or false positives.
+
+**Fixed (committed):**
+- **SOL-5** — `HASConfig::validate()` SSOT (adds `reference_frequency>0`, finite
+  non-negative `attenuation_coeff`); re-checked at the now-fallible
+  `HasAbsorptionOperator::new`. Negative test per invariant.
+- **SOL-8** — `debug_assert!` finite leapfrog/velocity coeffs at AVX-512 stencil
+  construction.
+- **SOL-9** — documented the discretization-error rationale for the 5%/10%/2%
+  benchmark tolerances (no fabricated citation).
+- **PHY-14** — Gilmore RK4 `unwrap_or(0.0)` at `|u|→c` now routed through
+  `stage_acceleration`, which `log::trace!`s the validity-boundary clamp instead
+  of silently freezing the wall (anti-defensive-slop).
+- **CLD-7** — documented the uniform-concentration limitation of
+  `update_microbubble_dynamics`.
+- **CLD-8** — BEM assembly `.last().unwrap()` → `.last().copied() == Some(col)`
+  (no unwrap, identical behavior).
+- **AMC-2** — documented that the MVDR `.re`-only denominator check is exhaustive
+  (aᴴR⁻¹a is provably real for the upstream-Hermitian-validated R) — no redundant
+  magic-ε guard.
+
+**Closed — already adequate / false positive (verify-first, no change):**
+- **AMC-7** — FALSE POSITIVE: covariance accumulation is a *sequential* triple
+  loop (deterministic); the only parallel op (`par_mapv_inplace`) is element-wise
+  scaling with no cross-element ordering. No FP hazard.
+- **PHY-15** — ADEQUATE: KZK already documents the θ<17° parabolic-validity bound
+  and cites Zabolotskaya & Khokhlov 1969; Rayleigh-Plesset already cites its
+  Mach<0.3 / <100 MHz bounds. Cited gap does not exist.
+- **AMC-6** — ADEQUATE: PAM interpolation already bounds-checks; a delay outside
+  the recording window correctly contributes zero (physically correct), so a hard
+  delay-vs-duration rejection would wrongly reject legitimate far-field points.
+- **PHY-12** — NO REAL DEFECT: `16π/3 ≈ 16.76` is representable in f32/f64, so
+  `T::from(16π/3).expect(...)` does not panic for the supported `Scalar` types;
+  the `expect` message already states the invariant.
+- **AMC-3** — the MUSIC pseudospectrum cap (1e12/1e30) is the standard MUSIC
+  regularization at exact source alignment (1/distance→∞), not a masked error;
+  legitimate sentinel.
+- **AMC-8** — the absolute `f32::EPSILON` L2-normalization floor is defensible
+  (guards 0/0; a nonzero row of any scale still normalizes to a unit vector);
+  relative-ε is a marginal preference, not a defect.
+
+**Deferred with recorded reason (not fabricating evidence):**
+- **PHY-6 / PHY-7** — emissivity/optical-depth defaults and Arrhenius prefactors
+  need an external literature citation to ground; will not fabricate one. Open
+  [patch]: cite from source, or make the SL params required constructor inputs.
+- **AMC-5** — normalizing the PINN wave-eq residual MSE by field scale changes
+  training numerics; own [minor] increment with a scale-invariance test, not a
+  drive-by edit.
+- **SOL-6** — coupled density-gradient CFL bound needs a stability derivation +
+  test; own increment.
+- **SOL-10** — ~30% public-fn Rustdoc gap across kwavers-solver is an ongoing
+  sweep, not a single increment (won't silently mass-stub docs).
+- **SOL-11** — wiring the k-Wave validators into CI is infra (workflow + runtime
+  budget); own change.
+- **CLD-2 (KZK wiring)** — routing the KZK plugin into the HIFU therapy path is a
+  ~50–100 LOC [minor] with a return-type adapter; documented limitation already
+  in place.
+- **PHY-13 / CLD-9 / CLD-10 / PHY-11**, **COV-5 de Jong/Herring** — need external
+  k-Wave / experimental / published baselines (or paywalled convention PDFs);
+  deferred until a real oracle is available rather than asserting a fabricated one.
+
 ---
 
 ## Triage order (per `CLAUDE.md` sprint policy: correctness → architecture → tests → docs)

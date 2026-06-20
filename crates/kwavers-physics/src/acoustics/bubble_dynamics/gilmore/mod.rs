@@ -284,9 +284,7 @@ impl GilmoreSolver {
     pub fn step_rk4(&self, state: &BubbleState, p_acoustic: f64, t: f64, dt: f64) -> BubbleState {
         // ── k₁ : evaluated at (t, y_n) ─────────────────────────────────────
         let k1_r = state.wall_velocity;
-        let k1_v = self
-            .calculate_acceleration(state, p_acoustic, t)
-            .unwrap_or(0.0);
+        let k1_v = self.stage_acceleration(state, p_acoustic, t);
 
         // ── k₂ : evaluated at (t + dt/2, y_n + dt/2·k₁) ───────────────────
         let mut s2 = *state;
@@ -295,9 +293,7 @@ impl GilmoreSolver {
             .max(f64::MIN_POSITIVE);
         s2.wall_velocity = (0.5 * dt).mul_add(k1_v, state.wall_velocity);
         let k2_r = s2.wall_velocity;
-        let k2_v = self
-            .calculate_acceleration(&s2, p_acoustic, 0.5f64.mul_add(dt, t))
-            .unwrap_or(0.0);
+        let k2_v = self.stage_acceleration(&s2, p_acoustic, 0.5f64.mul_add(dt, t));
 
         // ── k₃ : evaluated at (t + dt/2, y_n + dt/2·k₂) ───────────────────
         let mut s3 = *state;
@@ -306,18 +302,14 @@ impl GilmoreSolver {
             .max(f64::MIN_POSITIVE);
         s3.wall_velocity = (0.5 * dt).mul_add(k2_v, state.wall_velocity);
         let k3_r = s3.wall_velocity;
-        let k3_v = self
-            .calculate_acceleration(&s3, p_acoustic, 0.5f64.mul_add(dt, t))
-            .unwrap_or(0.0);
+        let k3_v = self.stage_acceleration(&s3, p_acoustic, 0.5f64.mul_add(dt, t));
 
         // ── k₄ : evaluated at (t + dt, y_n + dt·k₃) ───────────────────────
         let mut s4 = *state;
         s4.radius = dt.mul_add(k3_r, state.radius).max(f64::MIN_POSITIVE);
         s4.wall_velocity = dt.mul_add(k3_v, state.wall_velocity);
         let k4_r = s4.wall_velocity;
-        let k4_v = self
-            .calculate_acceleration(&s4, p_acoustic, t + dt)
-            .unwrap_or(0.0);
+        let k4_v = self.stage_acceleration(&s4, p_acoustic, t + dt);
 
         // ── Combine via standard Butcher weights (shared RK4 SSOT) ──────────
         use crate::acoustics::bubble_dynamics::integration::rk4_weighted_sum;
@@ -329,6 +321,30 @@ impl GilmoreSolver {
         // acceleration at the end of the step (used by downstream diagnostics).
         out.wall_acceleration = k4_v;
         out
+    }
+
+    /// Wall acceleration for one RK4 stage, clamped to `0` at the Gilmore
+    /// validity boundary.
+    ///
+    /// `calculate_acceleration` returns `Err` only as the wall Mach number
+    /// `|u|/c → 1`, where the Gilmore enthalpy formulation is singular (its model
+    /// validity limit). Rather than fail the whole step or silently swallow the
+    /// condition, the stage acceleration is clamped to `0` and the event is
+    /// logged at `trace` level so a run that repeatedly grazes the boundary is
+    /// observable instead of quietly producing a frozen-wall artifact.
+    fn stage_acceleration(&self, state: &BubbleState, p_acoustic: f64, t: f64) -> f64 {
+        match self.calculate_acceleration(state, p_acoustic, t) {
+            Ok(a) => a,
+            Err(_) => {
+                log::trace!(
+                    "Gilmore acceleration undefined at |u|→c (R={}, u={}, Mach={}); clamping RK4 stage to 0",
+                    state.radius,
+                    state.wall_velocity,
+                    state.wall_velocity.abs() / self.params.c_liquid
+                );
+                0.0
+            }
+        }
     }
 
     /// Check if conditions warrant using Gilmore over simpler models

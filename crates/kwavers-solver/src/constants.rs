@@ -77,12 +77,28 @@ pub const MAX_SOLVER_ITERATIONS: usize = 1000;
 // ============================================================================
 // Benchmark Tolerances
 // ============================================================================
+//
+// These are acceptance tolerances for the analytical-reference benchmark suite,
+// not physical constants. Their relative magnitudes follow the discretization
+// error of each test, not an external standard:
+//   - plane wave (5%): the cleanest case — a single mode on a uniform grid; error
+//     is dominated by numerical dispersion ~O((kΔx)²), small at the benchmark
+//     resolution.
+//   - point source (10%): loosest — the source singularity is unresolved on the
+//     grid, so near-field amplitude carries an irreducible discretization error
+//     larger than the plane-wave case.
+//   - dispersion (2%): tightest — phase velocity is measured from a fitted slope
+//     over many wavelengths, which averages out per-sample noise.
+// Tightening any of these is a signal to refine the solver, never to relax here.
 
-/// Maximum acceptable error for plane wave benchmarks
+/// Maximum acceptable amplitude error for plane-wave benchmarks (numerical
+/// dispersion dominated; see module note).
 pub const PLANE_WAVE_ERROR_TOLERANCE: f64 = 0.05; // 5%
 
-/// Maximum acceptable error for point source benchmarks  
+/// Maximum acceptable amplitude error for point-source benchmarks (source-
+/// singularity discretization dominated; see module note).
 pub const POINT_SOURCE_ERROR_TOLERANCE: f64 = 0.1; // 10%
 
-/// Maximum acceptable error for dispersion benchmarks
+/// Maximum acceptable error for dispersion (phase-velocity) benchmarks
+/// (slope-fit averaged; see module note).
 pub const DISPERSION_ERROR_TOLERANCE: f64 = 0.02; // 2%

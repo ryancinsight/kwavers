@@ -33,6 +33,10 @@ impl MinimumVariance {
             .map(|(a, y_i)| a.conj() * y_i)
             .sum();
 
+        // For a Hermitian positive-definite R (validated upstream by the
+        // covariance estimator's `is_hermitian` check), aᴴR⁻¹a is provably real,
+        // so `denom.im` is zero up to round-off and `denom.re` carries the full
+        // magnitude — the checks below on `.re` are therefore exhaustive.
         let denom_re = denom.re;
         if !denom_re.is_finite() {
             return Err(KwaversError::Numerical(
