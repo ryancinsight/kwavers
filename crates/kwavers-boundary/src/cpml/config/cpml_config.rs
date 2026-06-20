@@ -117,13 +117,39 @@ impl CPMLConfig {
     /// Panics if `kappa_max < 1.0` or `alpha_max < 0.0` (invalid CFS parameters).
     #[must_use]
     pub fn with_cfs_pml(self, kappa_max: f64, alpha_max: f64) -> Self {
-        assert!(kappa_max >= 1.0, "with_cfs_pml: kappa_max must be >= 1.0, got {kappa_max}");
-        assert!(alpha_max >= 0.0, "with_cfs_pml: alpha_max must be >= 0.0, got {alpha_max}");
+        assert!(
+            kappa_max >= 1.0,
+            "with_cfs_pml: kappa_max must be >= 1.0, got {kappa_max}"
+        );
+        assert!(
+            alpha_max >= 0.0,
+            "with_cfs_pml: alpha_max must be >= 0.0, got {alpha_max}"
+        );
         Self {
             kappa_max,
             alpha_max,
             ..self
         }
+    }
+
+    /// Enable CFS-PML choosing `alpha_max = π·f₀` from the dominant source
+    /// frequency `f₀` (builder).
+    ///
+    /// `α_max ≈ π·f₀` is the canonical complex-frequency-shift for the CFS-PML
+    /// (Roden & Gedney 2000): it places the shift pole near the source band so
+    /// evanescent and grazing-incidence energy is absorbed without reflecting
+    /// propagating waves. Equivalent to
+    /// `self.with_cfs_pml(kappa_max, std::f64::consts::PI * center_frequency_hz)`.
+    ///
+    /// # Panics
+    /// Panics if `kappa_max < 1.0` or `center_frequency_hz < 0.0`.
+    #[must_use]
+    pub fn with_cfs_pml_for_frequency(self, kappa_max: f64, center_frequency_hz: f64) -> Self {
+        assert!(
+            center_frequency_hz >= 0.0,
+            "with_cfs_pml_for_frequency: center_frequency_hz must be >= 0.0, got {center_frequency_hz}"
+        );
+        self.with_cfs_pml(kappa_max, std::f64::consts::PI * center_frequency_hz)
     }
 
     /// Suppress inner z-PML cells for one-sided axisymmetric radial PML (builder).
@@ -267,5 +293,33 @@ impl CPMLConfig {
         let sigma_max =
             self.sigma_factor * (m + 1.0) * sound_speed / (150.0 * std::f64::consts::PI * dx);
         Ok(self.target_reflection * (-(m + 1.0) * sigma_max * thickness * cos_theta).exp())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::f64::consts::PI;
+
+    #[test]
+    fn cfs_pml_for_frequency_sets_alpha_to_pi_f0() {
+        let f0 = 1.5e6;
+        let cfg = CPMLConfig::default().with_cfs_pml_for_frequency(10.0, f0);
+        assert!(
+            (cfg.alpha_max - PI * f0).abs() / (PI * f0) < 1e-12,
+            "alpha_max {} should equal π·f₀ = {}",
+            cfg.alpha_max,
+            PI * f0
+        );
+        assert!((cfg.kappa_max - 10.0).abs() < 1e-12);
+        cfg.validate().expect("π·f₀ CFS config must be valid");
+    }
+
+    #[test]
+    fn cfs_pml_for_frequency_zero_reduces_to_sigma_only() {
+        // f₀ = 0 ⇒ α_max = 0, i.e. σ-only CPML with the chosen κ.
+        let cfg = CPMLConfig::default().with_cfs_pml_for_frequency(1.0, 0.0);
+        assert_eq!(cfg.alpha_max, 0.0);
+        assert_eq!(cfg.kappa_max, 1.0);
     }
 }
