@@ -139,6 +139,43 @@ impl CircularPistonSir {
         let arg = ((rho_sq + r * r - a * a) / (2.0 * r * rho)).clamp(-1.0, 1.0);
         (c / PI) * arg.acos()
     }
+
+    /// Two-way (monostatic pulse-echo) diffraction kernel `(h ⊛ h)(t)` at field
+    /// point `(r, z)`, sampled at step `dt` over `[0, n_samples·dt)`.
+    ///
+    /// For an element that both transmits and receives, the pulse-echo spatial
+    /// response is the convolution of the transmit and receive SIRs; with a single
+    /// aperture `h_tx = h_rx = h`, so the diffraction part is `h ⊛ h` (Jensen 1991).
+    /// Convolving this with the electrical excitation gives the Field II echo — the
+    /// finite-aperture refinement of the point-element `1/r²` model. The one-way
+    /// SIR is sampled at bin midpoints and discretely auto-convolved.
+    ///
+    /// To capture the full kernel choose `n_samples ≥ ⌈2·last_arrival_time/dt⌉`
+    /// (the two-way support ends at `2·d_max/c`). The convolution integral
+    /// factorizes, `∫(h⊛h)dt = (∫h dt)²`, and on-axis `∫h dt = √(z²+a²) − z`, so
+    /// `Σ_k out[k]·dt = (√(z²+a²) − z)²` — the exact normalization.
+    ///
+    /// # Panics
+    /// Panics if `dt ≤ 0` (a non-positive sample step is a caller bug).
+    #[must_use]
+    pub fn round_trip_response(&self, r: f64, z: f64, dt: f64, n_samples: usize) -> Vec<f64> {
+        assert!(dt > 0.0, "round_trip_response requires dt > 0, got {dt}");
+        // One-way SIR sampled at bin midpoints on the dt grid.
+        let h: Vec<f64> = (0..n_samples)
+            .map(|k| self.evaluate(r, z, (k as f64 + 0.5) * dt))
+            .collect();
+        // Discrete auto-convolution (h ⊛ h)(k·dt) ≈ Σ_i h[i]·h[k−i]·dt, truncated.
+        let mut out = vec![0.0_f64; n_samples];
+        for (i, &hi) in h.iter().enumerate() {
+            if hi == 0.0 {
+                continue;
+            }
+            for (j, &hj) in h.iter().enumerate().take(n_samples - i) {
+                out[i + j] += hi * hj * dt;
+            }
+        }
+        out
+    }
 }
 
 /// A flat rectangular piston in an infinite rigid baffle, centered on the axis

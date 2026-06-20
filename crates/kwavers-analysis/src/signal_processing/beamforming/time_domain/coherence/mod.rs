@@ -44,6 +44,7 @@ use super::delay_reference::DelayReference;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::analytic_signal_1d;
 use ndarray::{Array1, Array2, Array3};
+use num_complex::Complex64;
 use std::f64::consts::PI;
 
 /// Amplitude coherence factor from pre-accumulated aperture sums
@@ -130,6 +131,40 @@ fn instantaneous_phase_matrix(aligned: &Array2<f64>) -> Array2<f64> {
         }
     }
     phase
+}
+
+/// Phase coherence factor (Camacho et al. 2009) from a **complex IQ/baseband**
+/// aperture `(n_elements, n_samples)`, length-`n_samples` weights in `[0, 1]`.
+///
+/// Identical to [`CoherenceFactor::Phase`] but takes pre-formed analytic/IQ data
+/// directly — each per-element instantaneous phase is `arg(iq[i, j])` — bypassing
+/// the Hilbert transform of the real-RF path. Use this when the front end already
+/// provides baseband I/Q (e.g. a quadrature demodulator or narrowband snapshot
+/// extraction); it routes through the same [`phase_coherence_from_phases`] core.
+///
+/// # Errors
+/// - [`KwaversError::InvalidInput`] on an empty aperture (`n_elements == 0`) or a
+///   non-finite / `< 0` sensitivity.
+pub fn phase_coherence_from_iq_aperture(
+    iq: &Array2<Complex64>,
+    sensitivity: f64,
+) -> KwaversResult<Array1<f64>> {
+    CoherenceFactor::Phase { sensitivity }.validate()?;
+    let (n_elements, n_samples) = iq.dim();
+    if n_elements == 0 {
+        return Err(KwaversError::InvalidInput(
+            "phase_coherence_from_iq_aperture requires n_elements > 0".to_owned(),
+        ));
+    }
+    let mut cf = Array1::<f64>::zeros(n_samples);
+    let mut phases = vec![0.0_f64; n_elements];
+    for j in 0..n_samples {
+        for (i, slot) in phases.iter_mut().enumerate() {
+            *slot = iq[[i, j]].arg();
+        }
+        cf[j] = phase_coherence_from_phases(&phases, sensitivity);
+    }
+    Ok(cf)
 }
 
 /// Per-output-sample coherence-factor estimator.

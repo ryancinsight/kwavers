@@ -300,9 +300,40 @@ adequate or false positives.
 - **CLD-2 (KZK wiring)** — routing the KZK plugin into the HIFU therapy path is a
   ~50–100 LOC [minor] with a return-type adapter; documented limitation already
   in place.
-- **PHY-13 / CLD-9 / CLD-10 / PHY-11**, **COV-5 de Jong/Herring** — need external
-  k-Wave / experimental / published baselines (or paywalled convention PDFs);
+- **PHY-11**, **COV-5 de Jong/Herring** — need an external experimental baseline
+  (Lauterborn collapse) or a paywalled convention PDF (de Jong S_p/S_f prefactor);
   deferred until a real oracle is available rather than asserting a fabricated one.
+- **PHY-13 / CLD-9 / CLD-10** — initially deferred as "needs k-Wave"; **RESOLVED
+  2026-06-20** via *analytical* oracles instead (no external data) — see the
+  remaining-items pass below.
+
+### Remaining-items resolution pass (2026-06-20)
+
+Every open item driven to a terminal state. Implemented where an analytical oracle
+existed; closed the rest without fabricating.
+
+**Implemented (analytical oracle):**
+- **COV-4 finite-aperture SIR** — `CircularPistonSir::round_trip_response`, the
+  two-way pulse-echo diffraction kernel `h⊛h`. Oracle: convolution factorization
+  `∫(h⊛h)dt=(∫h dt)²` (exact vs same discretization) + on-axis triangle support
+  `[2z,2√(z²+a²)]/c`.
+- **CLD-9 / CLD-10** — focused-bowl discretization vs O'Neil (1949): a discrete
+  Rayleigh–Sommerfeld element sum at the focus reproduces the analytical focal gain
+  `|p(F)|/p₀ = k·h` (all spherical-cap elements are one `F` away → coherent sum =
+  `(k/2π)A_total/F = k·h`). Numerical-vs-analytical, no k-Wave needed.
+- **PHY-13** — bubble scattering cross-section resonance closed form
+  `σ_s(ω₀)=4πR²(ka₀)²/δ_tot²` (δ_tot re-derived independently, Church 1995) + the
+  low-frequency `σ_s ∝ ω²` scaling. No de Jong PDF needed.
+- **COV-1 PCF-IQ** — `phase_coherence_from_iq_aperture` (native complex/baseband
+  path bypassing Hilbert), keystone-equivalent to the RF phase core.
+
+**Closed (no groundable oracle / correct-layering):**
+- **COV-6 loaded-Mason Z_e** — no verified closed form for the loaded electrical
+  impedance; implementing from memory = fabrication risk. `AcousticLayer` covers
+  matching/backing design. Deferred pending a cited Mason/KLM reference.
+- **DG-solver CPML** — legitimately different discretization (per-GLL flux-based
+  memory + joint SSP-RK3 ≠ FDTD recursive convolution); consolidation would distort
+  both. Verify-first false-positive, correct-layering.
 
 ---
 

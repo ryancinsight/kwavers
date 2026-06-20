@@ -2,6 +2,44 @@
 
 ## Unreleased
 
+### Added (2026-06-20) — resolve remaining open items (PHY-13, COV-4 SIR, CLD-9/10, PCF-IQ) [minor]
+
+Implemented every remaining item with a checkable analytical oracle; closed the
+rest honestly (no fabricated formulas/baselines).
+
+- [minor] **PHY-13** `kwavers-imaging` — analytical-limit tests for the Hoff (2000)
+  bubble scattering cross-section: the resonance closed form
+  `σ_s(ω₀)=4πR²(ka₀)²/δ_tot²` (independently re-derived δ_tot, Church 1995) and the
+  low-frequency `σ_s ∝ ω²` scaling. No external (de Jong) data needed.
+- [minor] **COV-4** `kwavers-physics` — `CircularPistonSir::round_trip_response`, the
+  two-way (monostatic pulse-echo) diffraction kernel `h⊛h` (finite-aperture
+  refinement of the point-element model). Grounded by the convolution factorization
+  `∫(h⊛h)dt=(∫h dt)²` and the on-axis triangle support `[2z, 2√(z²+a²)]/c`.
+- [minor] **CLD-9/CLD-10** `kwavers-transducer` — focused-bowl discretization validated
+  against the O'Neil (1949) analytical focal gain via a discrete Rayleigh–Sommerfeld
+  element sum at the focus (`|p(F)|/p₀ = k·h`) — a numerical-vs-analytical
+  differential, replacing the prior self-consistency-only tests.
+- [minor] **COV-1 (PCF-IQ)** `kwavers-analysis` — `phase_coherence_from_iq_aperture`,
+  a native complex/baseband I/Q phase-coherence path that bypasses the Hilbert
+  transform of the real-RF `CoherenceFactor::Phase` and routes through the same
+  `phase_coherence_from_phases` core (keystone equivalence test).
+
+### Closed (2026-06-20) — remaining items resolved as WONTFIX/deferred (verify-first)
+
+- **COV-6 loaded-Mason Z_e** — no groundable closed-form oracle for the loaded
+  electrical impedance without a verified Mason/KLM reference; implementing from
+  memory would risk a fabricated formula. The `AcousticLayer` transmission-line
+  transform already covers matching/backing design. Deferred pending a cited reference.
+- **DG-solver CPML consolidation** — verify-first verdict: legitimately different
+  discretization (per-GLL-node flux-based memory + joint SSP-RK3 ≠ FDTD recursive
+  convolution); consolidating would distort both. Correct-layering, closed.
+- **SOL-10** (workspace Rustdoc sweep), **SOL-11** (k-Wave validators → CI),
+  **SOL-6** (coupled-CFL stability test), **AMC-5** (PINN loss normalization),
+  **PHY-6/PHY-7** (magic-default citations), **PHY-11** (Lauterborn collapse
+  regression), **COV-5 de Jong/Herring** — each needs an external baseline,
+  paywalled reference, CI infra, or is an open-ended sweep / own numerics-changing
+  increment; documented-deferred rather than fabricated.
+
 ### Added (2026-06-20) — coverage follow-up features (COV-6, COV-4, CFS-PML) [minor]
 
 - [minor] **COV-6** `kwavers-transducer::bulk_piezo` — loaded acoustic

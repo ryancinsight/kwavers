@@ -235,3 +235,72 @@ fn rect_rejects_invalid_parameters() {
     assert!(RectangularPistonSir::new(WX, WY, 0.0).is_err());
     assert!(RectangularPistonSir::new(WX, WY, f64::NAN).is_err());
 }
+
+// --- Two-way (pulse-echo) diffraction kernel h⊛h (COV-4 finite-aperture) ---
+
+#[test]
+fn round_trip_kernel_integral_equals_oneway_squared() {
+    // KEYSTONE: the convolution integral factorizes, ∫(h⊛h)dt = (∫h dt)², and
+    // on-axis ∫h dt = √(z²+a²)−z, so Σ_k out[k]·dt = (√(z²+a²)−z)² exactly.
+    let s = sir();
+    let dt = 2e-9;
+    let last = s.last_arrival_time(0.0, Z);
+    let n = (2.2 * last / dt).ceil() as usize; // cover the two-way support 2·d_max
+    let kernel = s.round_trip_response(0.0, Z, dt, n);
+    let integral: f64 = kernel.iter().sum::<f64>() * dt;
+
+    // Exact (to machine precision) factorization against the SAME discretization
+    // of the one-way SIR — this is the convolution identity ∫(h⊛h)dt = (∫h dt)².
+    let oneway_discrete: f64 = (0..n)
+        .map(|k| s.evaluate(0.0, Z, (k as f64 + 0.5) * dt))
+        .sum::<f64>()
+        * dt;
+    assert!(
+        (integral - oneway_discrete * oneway_discrete).abs() / (oneway_discrete * oneway_discrete)
+            < 1e-9,
+        "∫(h⊛h)dt = {integral} must equal (∫h dt)² = {}",
+        oneway_discrete * oneway_discrete
+    );
+    // And the one-way integral matches the Stepanishen closed form √(z²+a²)−z to
+    // within the O(dt) rect-edge discretization (~1%).
+    let oneway_closed = (Z * Z + A * A).sqrt() - Z;
+    assert!(
+        (oneway_discrete - oneway_closed).abs() / oneway_closed < 1e-2,
+        "discrete ∫h dt = {oneway_discrete} vs closed form {oneway_closed}"
+    );
+}
+
+#[test]
+fn round_trip_kernel_is_a_triangle_over_the_two_way_support() {
+    // On-axis the one-way SIR is a rect over [z, √(z²+a²)]/c, so its
+    // auto-convolution is a triangle over [2z, 2√(z²+a²)]/c peaking at
+    // (z+√(z²+a²))/c. Verify onset and peak location.
+    let s = sir();
+    let dt = 2e-9;
+    let t1 = Z / C; // one-way first arrival
+    let t2 = (Z * Z + A * A).sqrt() / C; // one-way last arrival
+    let n = (2.2 * t2 / dt).ceil() as usize;
+    let kernel = s.round_trip_response(0.0, Z, dt, n);
+
+    // No echo before the round-trip onset 2·t1 (allow a couple bins of slack).
+    let n_onset = (2.0 * t1 / dt) as usize;
+    assert!(
+        kernel[..n_onset.saturating_sub(3)]
+            .iter()
+            .all(|&v| v == 0.0),
+        "two-way kernel must be zero before 2·t1"
+    );
+    // Peak near (t1 + t2).
+    let k_peak = kernel
+        .iter()
+        .enumerate()
+        .max_by(|a, b| a.1.partial_cmp(b.1).unwrap())
+        .unwrap()
+        .0;
+    let t_peak = (k_peak as f64 + 0.5) * dt;
+    assert!(
+        (t_peak - (t1 + t2)).abs() < 5.0 * dt,
+        "triangle peak at {t_peak}, expected {}",
+        t1 + t2
+    );
+}

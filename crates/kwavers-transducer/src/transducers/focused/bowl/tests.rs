@@ -452,3 +452,57 @@ fn assert_validation_error(config: BowlConfig) {
     let error = BowlTransducer::new(config).unwrap_err();
     assert!(matches!(error, KwaversError::Validation(_)));
 }
+
+/// CLD-9/CLD-10: the discretized bowl must reproduce the O'Neil (1949) analytical
+/// focal pressure — not just be self-consistent. At the geometric focus every
+/// spherical-cap element is one radius-of-curvature `F` away, so the
+/// Rayleigh–Sommerfeld element sum is fully coherent and collapses to
+/// `|p(F)|/p₀ = (k/2π)·A_total/F = k·h`, where `h = F − √(F²−a²)` is the cap
+/// sagitta (cap area `A_total = 2πF h`). This is the analytical focal gain O'Neil
+/// derives via L'Hôpital at `z = F`. (ρ, c cancel in `|p|/p₀`, so no medium dep
+/// and no cross-crate call is needed.)
+#[test]
+fn bowl_focal_gain_matches_oneil_via_rayleigh_sommerfeld() {
+    use kwavers_core::constants::fundamental::SOUND_SPEED_WATER;
+    use num_complex::Complex64;
+
+    let f0 = MHZ_TO_HZ; // 1 MHz
+    let c = SOUND_SPEED_WATER;
+    let config = BowlConfig {
+        radius_of_curvature: 0.064,
+        diameter: 0.04,
+        center: [0.0, 0.0, 0.0],
+        focus: [0.0, 0.0, 0.064],
+        frequency: f0,
+        amplitude: MPA_TO_PA,
+        ..Default::default()
+    };
+    // Fine discretization (element ≪ λ = 1.5 mm) for the continuum limit.
+    let bowl = BowlTransducer::with_element_count(config.clone(), 4000).unwrap();
+
+    let k = TWO_PI * f0 / c;
+    let focus = config.focus;
+    // Discrete Rayleigh–Sommerfeld sum at the focus: p(F)/p₀ = (k/2π) Σ (A_e/d_e) e^{−j k d_e}.
+    let mut acc = Complex64::new(0.0, 0.0);
+    for (pos, &area) in bowl
+        .element_positions()
+        .iter()
+        .zip(bowl.element_areas().iter())
+    {
+        let dx = pos[0] - focus[0];
+        let dy = pos[1] - focus[1];
+        let dz = pos[2] - focus[2];
+        let d = (dx * dx + dy * dy + dz * dz).sqrt();
+        acc += Complex64::from_polar(area / d, -k * d);
+    }
+    let gain = (k / TWO_PI) * acc.norm();
+
+    let a = config.diameter / 2.0;
+    let big_f = config.radius_of_curvature;
+    let h = big_f - (big_f * big_f - a * a).sqrt();
+    let expected = k * h; // O'Neil focal gain
+    assert!(
+        (gain - expected).abs() / expected < 0.02,
+        "discrete RS focal gain {gain} vs O'Neil k·h {expected}"
+    );
+}
