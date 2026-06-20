@@ -73,22 +73,37 @@ on branch `feat/cov1-coherence-factor` (off `main`, not pushed/merged).
 - Deferred with reasons: COV-5 de Jong (PDF-verify prefactor), Herring
   (free-bubble EOM, not a shell model); COV-11 Mur (WONTFIX).
 
-### One substantive consolidation item left
-- **[arch] PLC-3 remainder EXECUTION** — fold
-  `therapy/microbubble/shell::MarmottantShellProperties` (2nd Marmottant) +
-  `ceus/microbubble/dynamics::wall_acceleration` (3rd RP integrator) onto
-  `EncapsulatedShellModel`; move therapy-in-physics planning to `kwavers-therapy`.
-  Numeric-equivalence-sensitive → ADR + value-semantic differential tests, fresh
-  context (do NOT rush — different parameterizations could silently drift results).
+### PLC-3 remainder — CLOSED as "do not merge" (reconciled 2026-06-20)
+- Drift fix: this was previously listed as "[arch] EXECUTION". The gap_audit
+  PLC-3 investigation concluded the opposite and is authoritative: folding
+  `therapy/microbubble/shell::MarmottantShellProperties` (a stateful model with
+  buckling irreversibility + a `4μ/R` viscous form) and
+  `ceus/microbubble/dynamics::wall_acceleration` (a distinct simplified linear-
+  shell CEUS model) onto `EncapsulatedShellModel` would **distort the trait for
+  divergent consumers — over-abstraction**, prohibited by CLAUDE.md. They share
+  only the 1-line RP core, not worth coupling. The (c) layering sub-item is also
+  closed (therapy *physics models* correctly live in `kwavers-physics`; moving
+  them up would break the layer DAG). Only actionable part was the σ(R) bug, fixed
+  earlier. No execution; no further action.
 
-### Low-value follow-ups
+### Audit-table remediation — DONE (2026-06-20)
+- Drove all remaining Sprint A–E findings to terminal states (see
+  [gap_audit.md → Audit-table remediation pass](gap_audit.md)). Fixed: SOL-5,
+  SOL-8, SOL-9, PHY-14, CLD-7, CLD-8, AMC-2. Closed adequate/false-positive:
+  AMC-7 (FP), PHY-15, AMC-6, PHY-12, AMC-3, AMC-8. Deferred with reason (no
+  fabricated evidence): PHY-6/7 (citations), AMC-5 (PINN loss), SOL-6, SOL-10/11,
+  CLD-2 (KZK wiring), PHY-13/CLD-9/10/PHY-11, COV-5 de Jong/Herring.
+
+### Low-value follow-ups (open, not blocking)
 - COV-4 finite-aperture SIR; COV-6 loaded matching/backing transmission line;
   CPML empirical reflection benchmark + α_max=π·f₀ plumbing + DG-solver CPML
-  consolidation; PLC-2 [patch] perfusion-param-extraction unify.
+  consolidation; PLC-2 [patch] perfusion-param-extraction unify; COV-1 PCF
+  refinement to a native IQ/baseband aperture path (current path is Hilbert-of-RF).
 
 ### Residual risk
-- 18 commits on `feat/cov1-coherence-factor` (off `main`) NOT pushed/merged —
-  flagged per git discipline; recommend push/PR before the PLC-3 session.
+- Nil outstanding from this pass: PCF broken-build fixed + merged; audit-table
+  findings remediated or explicitly deferred with reason. Open items above are
+  tracked [minor]/[patch] features needing external baselines or own increments.
 
 ## Sprint A (verify C-tier suspicions) — COMPLETE (2026-05-31)
 - [x] SOL-4 Westervelt `d²(p²)/dt²` FMA — FALSE POSITIVE (exact + FMA precision gain)
