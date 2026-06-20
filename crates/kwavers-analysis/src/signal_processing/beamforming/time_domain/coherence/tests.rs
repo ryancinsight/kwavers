@@ -3,10 +3,14 @@
 //! Expected values are derived analytically from the closed-form definitions in
 //! [`super`]; no tolerance is wider than the f64 round-off of the arithmetic.
 
-use super::{delay_and_sum_coherence, phase_coherence_from_phases, CoherenceFactor};
+use super::{
+    delay_and_sum_coherence, phase_coherence_from_iq_aperture, phase_coherence_from_phases,
+    CoherenceFactor,
+};
 use crate::signal_processing::beamforming::time_domain::das::delay_and_sum;
 use crate::signal_processing::beamforming::time_domain::delay_reference::DelayReference;
 use ndarray::{Array2, Array3};
+use num_complex::Complex64;
 use std::f64::consts::PI;
 
 /// Build a single-sample aligned aperture column `(n_elements, 1)`.
@@ -483,4 +487,52 @@ fn pcf_rejects_invalid_sensitivity() {
     }
     .weights(&aligned)
     .is_err());
+}
+
+// --- Native IQ/baseband phase coherence path (COV-1 follow-up) ---
+
+#[test]
+fn pcf_iq_matches_the_phase_scalar_core() {
+    // KEYSTONE: feeding e^{iφ} per element to the IQ path must equal the scalar
+    // `phase_coherence_from_phases` on φ — the IQ path is just `arg` + the same core.
+    let phases = [0.2_f64, -0.5, 1.1, -2.0, 0.7];
+    let n = phases.len();
+    let mut iq = Array2::<Complex64>::zeros((n, 1));
+    for (i, &p) in phases.iter().enumerate() {
+        iq[[i, 0]] = Complex64::from_polar(2.3, p); // magnitude is irrelevant to phase CF
+    }
+    let cf_iq = phase_coherence_from_iq_aperture(&iq, 1.0).expect("iq pcf");
+    let cf_phase = phase_coherence_from_phases(&phases, 1.0);
+    assert!(
+        (cf_iq[0] - cf_phase).abs() < 1e-12,
+        "IQ path {} must equal phase core {}",
+        cf_iq[0],
+        cf_phase
+    );
+}
+
+#[test]
+fn pcf_iq_is_unity_for_a_phase_aligned_aperture() {
+    // All elements share the same complex phase ⇒ σ = 0 ⇒ PCF = 1 at every sample,
+    // regardless of per-element magnitude.
+    let mags = [1.0, 0.3, 5.0];
+    let mut iq = Array2::<Complex64>::zeros((3, 4));
+    for j in 0..4 {
+        for (i, &m) in mags.iter().enumerate() {
+            iq[[i, j]] = Complex64::from_polar(m, 0.8); // common phase 0.8 rad
+        }
+    }
+    let cf = phase_coherence_from_iq_aperture(&iq, 1.0).expect("iq pcf");
+    for &v in cf.iter() {
+        assert!((v - 1.0).abs() < 1e-12, "phase-aligned IQ ⇒ PCF 1, got {v}");
+    }
+}
+
+#[test]
+fn pcf_iq_rejects_empty_aperture_and_bad_sensitivity() {
+    let iq = Array2::<Complex64>::zeros((0, 4));
+    assert!(phase_coherence_from_iq_aperture(&iq, 1.0).is_err());
+    let ok = Array2::<Complex64>::from_elem((2, 1), Complex64::new(1.0, 0.0));
+    assert!(phase_coherence_from_iq_aperture(&ok, -1.0).is_err());
+    assert!(phase_coherence_from_iq_aperture(&ok, f64::NAN).is_err());
 }
