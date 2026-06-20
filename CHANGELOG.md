@@ -2,6 +2,29 @@
 
 ## Unreleased
 
+### Added (2026-06-19) — Strong-regime coupling solver: direct + under-relaxed (CLD-1, ADR 031) [major]
+
+- [major] **`kwavers-therapy::...::lithotripsy::cavitation_cloud`** makes the
+  self-consistent inter-bubble coupling robust in the strong-coupling regime where
+  the plain fixed point (ADR 030) diverges. The `implicit_coupling: bool` is replaced
+  by a **`CouplingScheme`** enum (`Explicit` / `ImplicitFixedPoint { under_relaxation }`
+  / `ImplicitDirect`):
+  - **`ImplicitDirect`** assembles the affine coupling system `(I − D·G)·S = e`
+    (the Keller-Miksis acceleration is affine in the driving pressure, so the
+    coefficients `c_j, d_j` come from two exact acceleration evaluations) and solves
+    it with the validated `kwavers_math::LinearAlgebra::solve_linear_system` — the
+    exact self-consistent solution, robust regardless of coupling strength; it falls
+    back to an under-relaxed fixed point if the system is singular.
+  - **Under-relaxation** in `ImplicitFixedPoint { under_relaxation: ω }`
+    (`p_couple ← (1−ω)·old + ω·new`) extends the fixed point's convergence radius.
+  Opt-in (default `Explicit`); coupling-off / single cell reduces exactly to
+  ADR 027/028. The coupling code is consolidated into one matrix `G` reused by all
+  schemes. 2 new value-semantic tests: the direct solve is self-consistent to ~1e-9
+  even at 20 µm (strong) coupling, and matches the converged fixed point in the weak
+  regime. 34 lithotripsy tests pass; clippy-clean. See ADR 031.
+  **Still open** (CLD-1): `dp/dt` coupling, `R(t)`-dependent shielding, cloud-interface
+  instabilities, sparse direct solve for very large active counts, k-Wave comparison.
+
 ### Added (2026-06-19) — Self-consistent (implicit) inter-bubble coupling (CLD-1, ADR 030) [major]
 
 - [major] **`kwavers-therapy::...::lithotripsy::cavitation_cloud`** can now solve the

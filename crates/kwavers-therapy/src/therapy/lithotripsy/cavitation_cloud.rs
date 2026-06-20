@@ -15,8 +15,27 @@ use kwavers_physics::acoustics::bubble_dynamics::bubbly_medium::commander_prospe
 use kwavers_physics::acoustics::bubble_dynamics::gilmore::GilmoreSolver;
 use kwavers_physics::acoustics::bubble_dynamics::keller_miksis::KellerMiksisModel;
 use kwavers_physics::acoustics::bubble_dynamics::{BubbleParameters, BubbleState};
-use ndarray::Array3;
+use kwavers_math::linear_algebra::LinearAlgebra;
+use ndarray::{Array1, Array2, Array3};
 use std::f64::consts::PI;
+
+/// How the inter-bubble acoustic coupling is solved each step.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum CouplingScheme {
+    /// Explicit/lagged single pass — source strengths from the previous total
+    /// pressure (ADR 028). Cheapest; correct for small `dt`.
+    Explicit,
+    /// Self-consistent fixed-point iteration with under-relaxation `ω ∈ (0,1]`
+    /// (ADR 030/031). `ω = 1` is plain Jacobi; `ω < 1` damps the divergence for
+    /// stronger coupling. `O(iterations·active²)`.
+    ImplicitFixedPoint {
+        /// Under-relaxation factor `ω ∈ (0, 1]`.
+        under_relaxation: f64,
+    },
+    /// Direct linear solve of the affine coupling system `(I − D·G)·S = e`
+    /// (ADR 031): exact and robust regardless of coupling strength. `O(active³)`.
+    ImplicitDirect,
+}
 
 /// Parameters for cavitation cloud dynamics.
 #[derive(Debug, Clone)]
@@ -61,10 +80,10 @@ pub struct CloudParameters {
     /// Whether the incident wave enters from the high-index face (and travels
     /// toward index 0) instead of the low-index face.
     pub incident_from_high: bool,
-    /// Solve the inter-bubble coupling **self-consistently** (fixed-point) within
-    /// each step instead of the explicit/lagged single pass (ADR 030). Opt-in
-    /// (default `false`); only relevant when `coupling_enabled`.
-    pub implicit_coupling: bool,
+    /// How the inter-bubble coupling is solved (explicit / self-consistent
+    /// fixed-point / direct linear solve). Default [`CouplingScheme::Explicit`];
+    /// only relevant when `coupling_enabled` (ADR 028/030/031).
+    pub coupling_scheme: CouplingScheme,
     /// Max fixed-point iterations for the self-consistent coupling solve.
     pub coupling_max_iterations: usize,
     /// Relative convergence tolerance for the self-consistent coupling solve.
@@ -87,7 +106,7 @@ impl Default for CloudParameters {
             shielding_enabled: false,           // opt-in (ADR 029)
             incident_axis: 2,                   // z by default
             incident_from_high: false,
-            implicit_coupling: false,           // opt-in (ADR 030)
+            coupling_scheme: CouplingScheme::Explicit, // ADR 028; opt into implicit
             coupling_max_iterations: 16,
             coupling_tolerance: 1e-3,
         }
@@ -298,8 +317,9 @@ impl CavitationCloudDynamics {
         cells
     }
 
-    /// Source strength `S = R²R̈ + 2RṘ²` of one bubble driven at `p_drive`.
-    fn source_strength(
+    /// Keller-Miksis wall acceleration `R̈` of one bubble at `(R, Ṙ)` driven by
+    /// `p_drive` (instantaneous). `0` if non-finite.
+    fn raw_acceleration(
         solver: &KellerMiksisModel,
         params: &BubbleParameters,
         r: f64,
@@ -310,9 +330,26 @@ impl CavitationCloudDynamics {
         let mut state = BubbleState::new(params);
         state.radius = r;
         state.wall_velocity = v;
-        let accel = solver
+        let a = solver
             .calculate_acceleration(&mut state, p_drive, 0.0, time)
             .unwrap_or(0.0);
+        if a.is_finite() {
+            a
+        } else {
+            0.0
+        }
+    }
+
+    /// Source strength `S = R²R̈ + 2RṘ²` of one bubble driven at `p_drive`.
+    fn source_strength(
+        solver: &KellerMiksisModel,
+        params: &BubbleParameters,
+        r: f64,
+        v: f64,
+        p_drive: f64,
+        time: f64,
+    ) -> f64 {
+        let accel = Self::raw_acceleration(solver, params, r, v, p_drive, time);
         let s = accel.mul_add(r * r, 2.0 * r * v * v);
         if s.is_finite() {
             s
@@ -321,12 +358,12 @@ impl CavitationCloudDynamics {
         }
     }
 
-    /// Inter-bubble acoustic coupling pressure per cell (ADR 028 explicit / ADR 030
-    /// self-consistent). Returns a zero field when coupling is disabled.
-    ///
-    /// Explicit: one pass with lagged source strengths (from the previous total
-    /// pressure). Implicit: fixed-point iteration where each bubble's source and its
-    /// neighbours' driving co-determine each other, to `coupling_tolerance`.
+    /// Inter-bubble acoustic coupling pressure per cell. Returns a zero field when
+    /// coupling is disabled. The scheme is selected by `coupling_scheme`:
+    /// [`CouplingScheme::Explicit`] (lagged single pass, ADR 028),
+    /// [`CouplingScheme::ImplicitFixedPoint`] (under-relaxed self-consistent
+    /// iteration, ADR 030/031), or [`CouplingScheme::ImplicitDirect`] (exact linear
+    /// solve of `(I − D·G)·S = e`, robust in the strong regime, ADR 031).
     fn coupling_pressure_field(
         &self,
         solver: &KellerMiksisModel,
@@ -346,77 +383,142 @@ impl CavitationCloudDynamics {
             return field;
         }
 
-        // Precompute pairwise coupling kernels K_ab = ρ/d_ab (within cutoff), 0 self.
-        let kernel = |a: usize, b: usize| -> f64 {
-            if a == b {
-                return 0.0;
-            }
-            let (pa, pb) = (cells[a].1, cells[b].1);
-            let d = ((pa[0] - pb[0]).powi(2) + (pa[1] - pb[1]).powi(2) + (pa[2] - pb[2]).powi(2))
+        // Precompute the pairwise coupling matrix G_ab = ρ/d_ab (within cutoff;
+        // 0 on the diagonal). p_couple = G·S for any source-strength vector S.
+        let mut g = Array2::<f64>::zeros((n, n));
+        for a in 0..n {
+            for b in 0..n {
+                if a == b {
+                    continue;
+                }
+                let (pa, pb) = (cells[a].1, cells[b].1);
+                let dist = ((pa[0] - pb[0]).powi(2)
+                    + (pa[1] - pb[1]).powi(2)
+                    + (pa[2] - pb[2]).powi(2))
                 .sqrt();
-            if d > 0.0 && d <= r_cut {
-                rho / d
-            } else {
-                0.0
+                if dist > 0.0 && dist <= r_cut {
+                    g[[a, b]] = rho / dist;
+                }
+            }
+        }
+        let apply_g = |s: &[f64]| -> Vec<f64> {
+            (0..n)
+                .map(|a| (0..n).map(|b| g[[a, b]] * s[b]).sum())
+                .collect()
+        };
+
+        let p_couple: Vec<f64> = match self.parameters.coupling_scheme {
+            CouplingScheme::Explicit => {
+                // Lagged source strengths from the previous total pressure (ADR 028).
+                let strengths: Vec<f64> = cells
+                    .iter()
+                    .map(|&(idx, _, r, v)| {
+                        let p_src = if self.total_seeded {
+                            self.prev_total_pressure[idx]
+                        } else {
+                            0.0
+                        };
+                        Self::source_strength(solver, params, r, v, p_src, time)
+                    })
+                    .collect();
+                apply_g(&strengths)
+            }
+            CouplingScheme::ImplicitFixedPoint { under_relaxation } => {
+                self.fixed_point_coupling(solver, params, driving, time, &g, under_relaxation)
+            }
+            CouplingScheme::ImplicitDirect => {
+                self.direct_coupling(solver, params, driving, time, &g, &apply_g)
             }
         };
 
-        if self.parameters.implicit_coupling {
-            // Self-consistent fixed point (ADR 030): iterate p_couple until the
-            // source strengths and the coupling they induce agree.
-            let scale = driving.iter().fold(0.0_f64, |m, &p| m.max(p.abs())) + params.p0;
-            let tol = self.parameters.coupling_tolerance * scale.max(1.0);
-            let mut p_couple = vec![0.0_f64; n];
-            for _ in 0..self.parameters.coupling_max_iterations.max(1) {
-                // Source strengths at the current self-consistent driving.
-                let strengths: Vec<f64> = (0..n)
-                    .map(|a| {
-                        let (idx, _, r, v) = cells[a];
-                        let p_drive = driving[idx] + p_couple[a];
-                        Self::source_strength(solver, params, r, v, p_drive, time)
-                    })
-                    .collect();
-                // Recompute the coupling each cell feels and measure the change.
-                let mut residual = 0.0_f64;
-                let mut next = vec![0.0_f64; n];
-                for a in 0..n {
-                    let mut sum = 0.0;
-                    for (b, &sb) in strengths.iter().enumerate() {
-                        sum += kernel(a, b) * sb;
-                    }
-                    residual = residual.max((sum - p_couple[a]).abs());
-                    next[a] = sum;
-                }
-                p_couple = next;
-                if residual < tol {
-                    break;
-                }
-            }
-            for (a, &(idx, ..)) in cells.iter().enumerate() {
-                field[idx] = p_couple[a];
-            }
-        } else {
-            // Explicit (ADR 028): lagged source strengths from the previous total.
-            let strengths: Vec<f64> = cells
-                .iter()
-                .map(|&(idx, _, r, v)| {
-                    let p_src = if self.total_seeded {
-                        self.prev_total_pressure[idx]
-                    } else {
-                        0.0
-                    };
-                    Self::source_strength(solver, params, r, v, p_src, time)
-                })
-                .collect();
-            for a in 0..n {
-                let mut sum = 0.0;
-                for (b, &sb) in strengths.iter().enumerate() {
-                    sum += kernel(a, b) * sb;
-                }
-                field[cells[a].0] = sum;
-            }
+        for (a, &(idx, ..)) in cells.iter().enumerate() {
+            field[idx] = p_couple[a];
         }
         field
+    }
+
+    /// Self-consistent coupling by under-relaxed fixed-point iteration (ADR 030/031).
+    /// `cells`/`g` describe the active bubbles and their coupling matrix.
+    fn fixed_point_coupling(
+        &self,
+        solver: &KellerMiksisModel,
+        params: &BubbleParameters,
+        driving: &Array3<f64>,
+        time: f64,
+        g: &Array2<f64>,
+        under_relaxation: f64,
+    ) -> Vec<f64> {
+        let cells = self.active_cells();
+        let n = cells.len();
+        let omega = under_relaxation.clamp(1e-3, 1.0);
+        let scale = driving.iter().fold(0.0_f64, |m, &p| m.max(p.abs())) + params.p0;
+        let tol = self.parameters.coupling_tolerance * scale.max(1.0);
+        let mut p_couple = vec![0.0_f64; n];
+        for _ in 0..self.parameters.coupling_max_iterations.max(1) {
+            let strengths: Vec<f64> = (0..n)
+                .map(|a| {
+                    let (idx, _, r, v) = cells[a];
+                    Self::source_strength(solver, params, r, v, driving[idx] + p_couple[a], time)
+                })
+                .collect();
+            let mut residual = 0.0_f64;
+            for a in 0..n {
+                let computed: f64 = (0..n).map(|b| g[[a, b]] * strengths[b]).sum();
+                let updated = (1.0 - omega).mul_add(p_couple[a], omega * computed);
+                residual = residual.max((updated - p_couple[a]).abs());
+                p_couple[a] = updated;
+            }
+            if residual < tol {
+                break;
+            }
+        }
+        p_couple
+    }
+
+    /// Direct linear solve of the affine coupling system `(I − D·G)·S = e` (ADR 031),
+    /// robust regardless of coupling strength. Falls back to an under-relaxed
+    /// fixed point if the system is singular/ill-posed.
+    fn direct_coupling(
+        &self,
+        solver: &KellerMiksisModel,
+        params: &BubbleParameters,
+        driving: &Array3<f64>,
+        time: f64,
+        g: &Array2<f64>,
+        apply_g: &dyn Fn(&[f64]) -> Vec<f64>,
+    ) -> Vec<f64> {
+        let cells = self.active_cells();
+        let n = cells.len();
+        // Affine coefficients S_a = c_a + d_a·p_drive_a (R̈ is affine in p ⇒ exact
+        // from two evaluations at p = 0 and p = p_ref).
+        let p_ref = params.p0.max(1.0);
+        let mut c = vec![0.0_f64; n];
+        let mut d = vec![0.0_f64; n];
+        for a in 0..n {
+            let (_, _, r, v) = cells[a];
+            let accel0 = Self::raw_acceleration(solver, params, r, v, 0.0, time);
+            let accel_ref = Self::raw_acceleration(solver, params, r, v, p_ref, time);
+            let b_coef = (accel_ref - accel0) / p_ref;
+            c[a] = (r * r).mul_add(accel0, 2.0 * r * v * v); // R²·R̈(0) + 2RṘ²
+            d[a] = r * r * b_coef; // R²·∂R̈/∂p
+        }
+        // M = I − D·G ; e = c + D·p_ext.
+        let mut m = Array2::<f64>::eye(n);
+        let mut e = Array1::<f64>::zeros(n);
+        for a in 0..n {
+            e[a] = d[a].mul_add(driving[cells[a].0], c[a]);
+            for b in 0..n {
+                m[[a, b]] -= d[a] * g[[a, b]];
+            }
+        }
+        match LinearAlgebra::solve_linear_system(&m, &e) {
+            Ok(s) => apply_g(s.as_slice().unwrap_or(&[])),
+            Err(_) => {
+                // Singular/ill-posed system: surface via the fallback path (a damped
+                // fixed point), never silent zeros.
+                self.fixed_point_coupling(solver, params, driving, time, g, 0.5)
+            }
+        }
     }
 
     /// Evolve the cloud by one time step under the instantaneous pressure field.
@@ -931,7 +1033,7 @@ mod tests {
         let d = 1.0e-3;
         let params = CloudParameters {
             coupling_enabled: true,
-            implicit_coupling: true,
+            coupling_scheme: CouplingScheme::ImplicitFixedPoint { under_relaxation: 1.0 },
             cell_spacing: [d, 1.0, 1.0],
             coupling_tolerance: 1e-9,
             coupling_max_iterations: 200,
@@ -969,11 +1071,16 @@ mod tests {
         assert!((field[[1, 0, 0]] - expect1).abs() < tol, "cell1 not self-consistent: {} vs {expect1}", field[[1, 0, 0]]);
     }
 
-    /// Drive a 2-cell cloud with explicit or implicit coupling; return cell-0 radius.
-    fn drive_two_cells_mode(implicit: bool, spacing: f64, amplitudes: &[f64], dt: f64) -> f64 {
+    /// Drive a 2-cell cloud with a given coupling scheme; return cell-0 radius.
+    fn drive_two_cells_scheme(
+        scheme: CouplingScheme,
+        spacing: f64,
+        amplitudes: &[f64],
+        dt: f64,
+    ) -> f64 {
         let params = CloudParameters {
             coupling_enabled: true,
-            implicit_coupling: implicit,
+            coupling_scheme: scheme,
             cell_spacing: [spacing, 1.0, 1.0],
             ..CloudParameters::default()
         };
@@ -994,11 +1101,107 @@ mod tests {
         let f = CloudParameters::default().drive_frequency;
         let dt = (1.0 / f) / 200.0;
         let seq = sinusoid(0.5e6, f, dt, 150);
-        let r_impl = drive_two_cells_mode(true, 0.5e-3, &seq, dt);
-        let r_expl = drive_two_cells_mode(false, 0.5e-3, &seq, dt);
+        let r_impl = drive_two_cells_scheme(
+            CouplingScheme::ImplicitFixedPoint { under_relaxation: 1.0 },
+            0.5e-3,
+            &seq,
+            dt,
+        );
+        let r_expl = drive_two_cells_scheme(CouplingScheme::Explicit, 0.5e-3, &seq, dt);
         assert!(
             (r_impl - r_expl).abs() > 1e-12 * r_expl.max(1e-9),
             "implicit and explicit coupling must differ: impl={r_impl}, expl={r_expl}"
         );
+    }
+
+    // ── Strong-regime direct solver (ADR 031) ─────────────────────────────────
+
+    /// Build a perturbed 2-bubble cloud at separation `spacing` with `scheme`.
+    fn two_bubble_cloud(scheme: CouplingScheme, spacing: f64) -> CavitationCloudDynamics {
+        let params = CloudParameters {
+            coupling_enabled: true,
+            coupling_scheme: scheme,
+            cell_spacing: [spacing, 1.0, 1.0],
+            ..CloudParameters::default()
+        };
+        let mut cloud = CavitationCloudDynamics::new(params.clone(), (2, 1, 1));
+        cloud.density_field.fill(params.bubble_density);
+        cloud.radius_field[[0, 0, 0]] = 1.6e-6;
+        cloud.velocity_field[[0, 0, 0]] = 2.5;
+        cloud.radius_field[[1, 0, 0]] = 1.3e-6;
+        cloud.velocity_field[[1, 0, 0]] = -1.8;
+        cloud
+    }
+
+    /// Max relative self-consistency residual of a coupling field: how far
+    /// `field_i` is from `(ρ/d)·S_j(p_ext+field_j)` (the fixed-point equation).
+    fn self_consistency_residual(
+        cloud: &CavitationCloudDynamics,
+        field: &Array3<f64>,
+        spacing: f64,
+        p_in: f64,
+    ) -> f64 {
+        let bp = cloud.bubble_parameters();
+        let solver = KellerMiksisModel::new(bp.clone());
+        let s = |idx: [usize; 3]| {
+            CavitationCloudDynamics::source_strength(
+                &solver,
+                &bp,
+                cloud.radius_field[idx],
+                cloud.velocity_field[idx],
+                p_in + field[idx],
+                0.0,
+            )
+        };
+        let coeff = bp.rho_liquid / spacing;
+        let r0 = (field[[0, 0, 0]] - coeff * s([1, 0, 0])).abs();
+        let r1 = (field[[1, 0, 0]] - coeff * s([0, 0, 0])).abs();
+        let scale = field[[0, 0, 0]].abs().max(field[[1, 0, 0]].abs()).max(1.0);
+        r0.max(r1) / scale
+    }
+
+    #[test]
+    fn direct_solve_is_self_consistent_even_in_strong_regime() {
+        // KEYSTONE (ADR 031): the exact linear solve satisfies the fixed-point
+        // equation to ~machine precision even at close (strong) coupling where the
+        // plain Jacobi fixed point would diverge.
+        let spacing = 2.0e-5; // 20 µm — strong coupling
+        let cloud = two_bubble_cloud(CouplingScheme::ImplicitDirect, spacing);
+        let bp = cloud.bubble_parameters();
+        let solver = KellerMiksisModel::new(bp.clone());
+        let p_in = 0.5e6;
+        let driving = Array3::from_elem((2, 1, 1), p_in);
+        let field = cloud.coupling_pressure_field(&solver, &bp, &driving, 0.0);
+        let residual = self_consistency_residual(&cloud, &field, spacing, p_in);
+        assert!(residual < 1e-9, "direct solve must be self-consistent: residual {residual}");
+    }
+
+    #[test]
+    fn direct_matches_fixed_point_in_weak_regime() {
+        // Where the fixed point converges (weak coupling), the direct solve agrees.
+        let spacing = 3.0e-3; // far apart — weak coupling, Jacobi converges
+        let p_in = 0.5e6;
+        let driving = Array3::from_elem((2, 1, 1), p_in);
+
+        let direct = two_bubble_cloud(CouplingScheme::ImplicitDirect, spacing);
+        let bp = direct.bubble_parameters();
+        let solver = KellerMiksisModel::new(bp.clone());
+        let f_direct = direct.coupling_pressure_field(&solver, &bp, &driving, 0.0);
+
+        let fp = two_bubble_cloud(
+            CouplingScheme::ImplicitFixedPoint { under_relaxation: 1.0 },
+            spacing,
+        );
+        let f_fp = fp.coupling_pressure_field(&solver, &bp, &driving, 0.0);
+
+        for idx in [[0, 0, 0], [1, 0, 0]] {
+            let scale = f_direct[idx].abs().max(1.0);
+            assert!(
+                (f_direct[idx] - f_fp[idx]).abs() <= 1e-3 * scale,
+                "direct and converged fixed point must agree (weak): {} vs {}",
+                f_direct[idx],
+                f_fp[idx]
+            );
+        }
     }
 }
