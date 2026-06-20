@@ -81,9 +81,11 @@ impl BemBoundaryManager {
 
             row_entries.sort_by_key(|e| e.0);
             for (col, val) in row_entries {
-                if !a_col_indices.is_empty()
-                    && *a_col_indices.last().unwrap() == col
-                    && a_values.len() > a_row_pointers[i]
+                // Coalesce into the previous entry only when it is the same column
+                // within the current row. `last().copied()` makes the empty case a
+                // `None` mismatch (no unwrap), and the row-pointer bound prevents
+                // merging across the row boundary.
+                if a_col_indices.last().copied() == Some(col) && a_values.len() > a_row_pointers[i]
                 {
                     let last_idx = a_values.len() - 1;
                     a_values[last_idx] += val;

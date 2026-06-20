@@ -132,6 +132,17 @@ use super::super::state::AcousticField;
 /// - Plesset & Prosperetti (1977): "Bubble dynamics and cavitation"
 /// - Blake (1986): "Bjerknes forces in stationary sound fields"
 /// - Ferrara et al. (2007): "Ultrasound microbubble contrast agents"
+///
+/// # Limitation (CLD-7)
+///
+/// The microbubble concentration is modelled as a **spatially uniform** field
+/// (the population's base concentration), with a single-voxel reduction at the
+/// tracked bubble's location once it cavitates or ruptures. It does **not** model
+/// advection of the bubble cloud, Bjerknes-force-driven clustering, or spatial
+/// depletion gradients. Treat the resulting concentration field as a
+/// zeroth-order estimate; a transport model (advection–diffusion of the
+/// population density) is the intended extension.
+///
 /// # Errors
 /// - Propagates any [`KwaversError`] returned by called functions.
 ///

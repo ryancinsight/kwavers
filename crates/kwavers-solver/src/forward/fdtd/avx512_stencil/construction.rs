@@ -42,11 +42,22 @@ impl FdtdAvx512StencilProcessor {
         // propagating / amplifying numerics. Fixed to the canonical leapfrog.
         let pressure_coeff = c_sq * config.dt * config.dt / (config.dx * config.dx);
         let pressure_central_coeff = 6.0f64.mul_add(-pressure_coeff, 2.0);
+        // The leapfrog coefficients drive every stencil tap; a non-finite value
+        // (from a zero/NaN spacing or overflow in c²Δt²) would silently poison the
+        // whole field. Catch it at construction in debug/test builds.
+        debug_assert!(
+            pressure_coeff.is_finite() && pressure_central_coeff.is_finite(),
+            "non-finite leapfrog coeffs: r={pressure_coeff}, central={pressure_central_coeff}"
+        );
         // Centered-difference momentum equation
         //   u^(n+1) = u^n − (Δt / (2 ρ Δx))·(p[+1] − p[−1])
         // The factor 1/2 from the centered difference was previously omitted,
         // making the velocity update twice as aggressive.
         let velocity_coeff = -config.dt / (2.0 * config.density * config.dx);
+        debug_assert!(
+            velocity_coeff.is_finite(),
+            "non-finite velocity coeff: {velocity_coeff}"
+        );
 
         let simd_config = SimdConfig::detect();
 
