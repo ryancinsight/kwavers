@@ -170,7 +170,11 @@ impl BulkPiezoResonator {
     /// antiresonance for the chosen layer `sound_speed` — at that frequency the
     /// layer transforms `z_load` back to `Z_plate`, eliminating the reflection.
     #[must_use]
-    pub fn quarter_wave_matching_layer(&self, z_load: f64, layer_sound_speed: f64) -> AcousticLayer {
+    pub fn quarter_wave_matching_layer(
+        &self,
+        z_load: f64,
+        layer_sound_speed: f64,
+    ) -> AcousticLayer {
         let impedance = quarter_wave_match_impedance(self.acoustic_impedance(), z_load);
         AcousticLayer::quarter_wave(impedance, layer_sound_speed, self.antiresonance_frequency())
     }
@@ -315,7 +319,11 @@ mod tests {
         let p = therapy_pzt();
         // Lossless free plate ⇒ Re{Z_e} = 0 at every frequency.
         for &f in &[1e3, 1e5, 0.5e6, 0.9e6] {
-            assert_eq!(p.electrical_impedance(f).re, 0.0, "Z_e must be purely reactive at {f} Hz");
+            assert_eq!(
+                p.electrical_impedance(f).re,
+                0.0,
+                "Z_e must be purely reactive at {f} Hz"
+            );
         }
         // f → 0: Z_e.im → −1/(ω·C^T) (free capacitance).
         let f = p.antiresonance_frequency() / 1.0e4;
@@ -350,7 +358,10 @@ mod tests {
         // Approach f_p closely: tan(X)→∞ at X=π/2 dominates the 1/ω scaling.
         let z_near = p.electrical_impedance(0.9999 * f_p).norm();
         let z_mid = p.electrical_impedance(0.5 * f_p).norm();
-        assert!(z_near > 100.0 * z_mid, "|Z_e| must blow up near f_p: {z_near} vs {z_mid}");
+        assert!(
+            z_near > 100.0 * z_mid,
+            "|Z_e| must blow up near f_p: {z_near} vs {z_mid}"
+        );
     }
 
     // ── Loaded matching/backing transmission line (COV-6 follow-up) ──────────
@@ -375,7 +386,10 @@ mod tests {
         };
         let z_load = Complex64::new(Z_WATER, 0.0);
         let z_in = layer.input_impedance(z_load, f);
-        assert!((z_in.re - Z_WATER).abs() / Z_WATER < 1e-6, "half-wave Re {z_in}");
+        assert!(
+            (z_in.re - Z_WATER).abs() / Z_WATER < 1e-6,
+            "half-wave Re {z_in}"
+        );
         assert!(z_in.im.abs() / Z_WATER < 1e-6, "half-wave Im {z_in}");
     }
 
@@ -387,7 +401,10 @@ mod tests {
         let z_load = Complex64::new(Z_WATER, 0.0);
         let z_in = layer.input_impedance(z_load, f);
         let expected = 5.0e6_f64 * 5.0e6 / Z_WATER;
-        assert!((z_in.re - expected).abs() / expected < 1e-6, "λ/4 invert Re {z_in}");
+        assert!(
+            (z_in.re - expected).abs() / expected < 1e-6,
+            "λ/4 invert Re {z_in}"
+        );
         assert!(z_in.im.abs() / expected < 1e-6, "λ/4 invert Im {z_in}");
     }
 
@@ -402,7 +419,10 @@ mod tests {
                 thickness: d_frac * 2000.0 / f,
             };
             let z_in = layer.input_impedance(Complex64::new(Z_WATER, 0.0), f);
-            assert!((z_in.re - Z_WATER).abs() / Z_WATER < 1e-9, "matched Re at d={d_frac}");
+            assert!(
+                (z_in.re - Z_WATER).abs() / Z_WATER < 1e-9,
+                "matched Re at d={d_frac}"
+            );
             assert!(z_in.im.abs() / Z_WATER < 1e-9, "matched Im at d={d_frac}");
         }
     }
@@ -416,13 +436,18 @@ mod tests {
         let z_plate = p.acoustic_impedance();
         let layer = p.quarter_wave_matching_layer(Z_WATER, 2000.0);
         // Designed impedance is the geometric mean.
-        assert!(
-            (layer.impedance - (z_plate * Z_WATER).sqrt()).abs() / layer.impedance < 1e-12
-        );
+        assert!((layer.impedance - (z_plate * Z_WATER).sqrt()).abs() / layer.impedance < 1e-12);
         let z_in = layer.input_impedance(Complex64::new(Z_WATER, 0.0), f_p);
-        assert!((z_in.re - z_plate).abs() / z_plate < 1e-6, "matched Z_in {z_in} vs Z_plate {z_plate}");
+        assert!(
+            (z_in.re - z_plate).abs() / z_plate < 1e-6,
+            "matched Z_in {z_in} vs Z_plate {z_plate}"
+        );
         let gamma = layer.reflection_coefficient(z_plate, Complex64::new(Z_WATER, 0.0), f_p);
-        assert!(gamma.norm() < 1e-6, "matched reflection |Γ|={}", gamma.norm());
+        assert!(
+            gamma.norm() < 1e-6,
+            "matched reflection |Γ|={}",
+            gamma.norm()
+        );
     }
 
     #[test]

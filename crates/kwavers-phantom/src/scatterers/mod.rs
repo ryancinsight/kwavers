@@ -102,14 +102,20 @@ impl ScattererCloud {
             scatterers: positions
                 .iter()
                 .zip(amplitudes)
-                .map(|(&position, &amplitude)| PointScatterer { position, amplitude })
+                .map(|(&position, &amplitude)| PointScatterer {
+                    position,
+                    amplitude,
+                })
                 .collect(),
         })
     }
 
     /// Append a scatterer.
     pub fn push(&mut self, position: [f64; 3], amplitude: f64) {
-        self.scatterers.push(PointScatterer { position, amplitude });
+        self.scatterers.push(PointScatterer {
+            position,
+            amplitude,
+        });
     }
 
     /// The scatterers.
@@ -194,7 +200,8 @@ impl ScattererCloud {
         // Power-law attenuation coefficient at the centre frequency, in Np/m:
         // α₀[dB/(cm·MHz)] · f₀[MHz] · 100[cm/m] / NP_TO_DB[dB/Np].  Zero ⇒ lossless.
         let alpha_np_m = if config.attenuation_db_cm_mhz > 0.0 {
-            config.attenuation_db_cm_mhz * (config.center_frequency_hz / MHZ_TO_HZ) * 100.0 / NP_TO_DB
+            config.attenuation_db_cm_mhz * (config.center_frequency_hz / MHZ_TO_HZ) * 100.0
+                / NP_TO_DB
         } else {
             0.0
         };

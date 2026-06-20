@@ -39,16 +39,16 @@ fn single_scatterer_lands_at_round_trip_delay_with_inverse_square_amplitude() {
     );
     // Energy is concentrated at the delay sample only (impulse pulse).
     let total: f64 = rf.row(0).iter().map(|&v| v.abs()).sum();
-    assert!((total - expected_amp).abs() < 1e-9, "echo must be a single nonzero sample");
+    assert!(
+        (total - expected_amp).abs() < 1e-9,
+        "echo must be a single nonzero sample"
+    );
 }
 
 #[test]
 fn echoes_superpose_linearly() {
-    let cloud = ScattererCloud::from_points(
-        &[[0.0, 0.0, 0.01], [0.0, 0.0, 0.02]],
-        &[2.0, 5.0],
-    )
-    .unwrap();
+    let cloud =
+        ScattererCloud::from_points(&[[0.0, 0.0, 0.01], [0.0, 0.0, 0.02]], &[2.0, 5.0]).unwrap();
     let element = [[0.0, 0.0, 0.0]];
     let pulse = [1.0];
     let n = 4096;
@@ -56,7 +56,10 @@ fn echoes_superpose_linearly() {
 
     for (d, a) in [(0.01, 2.0), (0.02, 5.0)] {
         let n_delay = ((2.0 * d / C) * FS).round() as usize;
-        assert!((rf[[0, n_delay]] - a / (d * d)).abs() < 1e-9, "scatterer at {d} m");
+        assert!(
+            (rf[[0, n_delay]] - a / (d * d)).abs() < 1e-9,
+            "scatterer at {d} m"
+        );
     }
 }
 
@@ -74,7 +77,10 @@ fn amplitude_scales_linearly_with_reflectivity() {
         .synthesize_rf(&element, &pulse, &cfg(n))
         .unwrap();
     for (x, y) in a.iter().zip(b.iter()) {
-        assert!((2.0 * x - y).abs() < 1e-12, "RF must be linear in amplitude");
+        assert!(
+            (2.0 * x - y).abs() < 1e-12,
+            "RF must be linear in amplitude"
+        );
     }
 }
 
@@ -101,7 +107,10 @@ fn pulse_is_placed_starting_at_the_delay_sample() {
     let n_delay = ((2.0 * d / C) * FS).round() as usize;
     let scale = amp / (d * d);
     for (k, &p) in pulse.iter().enumerate() {
-        assert!((rf[[0, n_delay + k]] - scale * p).abs() < 1e-9, "pulse sample {k}");
+        assert!(
+            (rf[[0, n_delay + k]] - scale * p).abs() < 1e-9,
+            "pulse sample {k}"
+        );
     }
 }
 
@@ -121,13 +130,38 @@ fn min_distance_guard_skips_near_scatterers() {
 fn rejects_invalid_config_and_mismatched_lengths() {
     let cloud = ScattererCloud::from_points(&[[0.0, 0.0, 0.02]], &[1.0]).unwrap();
     let el = [[0.0, 0.0, 0.0]];
-    assert!(cloud.synthesize_rf(&el, &[1.0], &{ let mut c = cfg(10); c.sound_speed = 0.0; c }).is_err());
-    assert!(cloud.synthesize_rf(&el, &[1.0], &{ let mut c = cfg(10); c.sampling_frequency = -1.0; c }).is_err());
+    assert!(cloud
+        .synthesize_rf(&el, &[1.0], &{
+            let mut c = cfg(10);
+            c.sound_speed = 0.0;
+            c
+        })
+        .is_err());
+    assert!(cloud
+        .synthesize_rf(&el, &[1.0], &{
+            let mut c = cfg(10);
+            c.sampling_frequency = -1.0;
+            c
+        })
+        .is_err());
     assert!(cloud.synthesize_rf(&el, &[1.0], &cfg(0)).is_err());
     assert!(cloud.synthesize_rf(&el, &[], &cfg(10)).is_err());
     // Negative attenuation, and enabled attenuation with no centre frequency.
-    assert!(cloud.synthesize_rf(&el, &[1.0], &{ let mut c = cfg(10); c.attenuation_db_cm_mhz = -1.0; c }).is_err());
-    assert!(cloud.synthesize_rf(&el, &[1.0], &{ let mut c = cfg(10); c.attenuation_db_cm_mhz = 0.5; c.center_frequency_hz = 0.0; c }).is_err());
+    assert!(cloud
+        .synthesize_rf(&el, &[1.0], &{
+            let mut c = cfg(10);
+            c.attenuation_db_cm_mhz = -1.0;
+            c
+        })
+        .is_err());
+    assert!(cloud
+        .synthesize_rf(&el, &[1.0], &{
+            let mut c = cfg(10);
+            c.attenuation_db_cm_mhz = 0.5;
+            c.center_frequency_hz = 0.0;
+            c
+        })
+        .is_err());
     assert!(ScattererCloud::from_points(&[[0.0, 0.0, 0.0]], &[1.0, 2.0]).is_err());
 }
 
@@ -163,7 +197,10 @@ fn power_law_attenuation_applies_round_trip_decay() {
         "round-trip attenuation factor {ratio} vs analytic {expected_factor}"
     );
     // Attenuation strictly reduces the echo (0 < factor < 1 here).
-    assert!(ratio > 0.0 && ratio < 1.0, "factor must be in (0,1): {ratio}");
+    assert!(
+        ratio > 0.0 && ratio < 1.0,
+        "factor must be in (0,1): {ratio}"
+    );
 }
 
 #[test]
