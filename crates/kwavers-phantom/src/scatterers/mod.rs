@@ -20,11 +20,14 @@
 //! receive). This is the correct far-field point-element limit and the basis of
 //! synthetic-aperture imaging.
 //!
+//! Optional power-law tissue attenuation scales each echo by the round-trip
+//! amplitude factor `exp(−α(f₀)·2r)` (see [`RfSynthesisConfig`]); with it
+//! disabled the model reduces to pure spreading.
+//!
 //! It does **not** model finite-aperture diffraction — the Tupholme–Stepanishen
-//! spatial impulse response that Field II convolves in for extended elements — nor
-//! frequency-dependent attenuation. Those refine the near-field response and are a
-//! tracked follow-up; the point-element model is exact for point elements and
-//! far-field scatterers.
+//! spatial impulse response that Field II convolves in for extended elements.
+//! That refines the near-field response and is a tracked follow-up; the
+//! point-element model is exact for point elements and far-field scatterers.
 //!
 //! # References
 //! - Jensen, J. A. (1991). "A model for the propagation and scattering of
@@ -33,6 +36,8 @@
 //!   arbitrarily shaped, apodized, and excited ultrasound transducers."
 //!   *IEEE Trans. UFFC* 39(2), 262–267 (spatial impulse response).
 
+use kwavers_core::constants::acoustic_parameters::NP_TO_DB;
+use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use ndarray::Array2;
 
@@ -64,6 +69,14 @@ pub struct RfSynthesisConfig {
     /// avoid the `1/r²` singularity (a scatterer inside the element footprint is
     /// outside the far-field point model).
     pub min_distance: f64,
+    /// Power-law tissue attenuation `α₀` in dB/(cm·MHz). `0` ⇒ lossless (the
+    /// pure spreading model). When positive, each echo is scaled by the
+    /// round-trip amplitude factor `exp(−α(f₀)·2r)` evaluated at
+    /// `center_frequency_hz`.
+    pub attenuation_db_cm_mhz: f64,
+    /// Pulse centre frequency `f₀` [Hz] for the power-law attenuation. Only used
+    /// when `attenuation_db_cm_mhz > 0`.
+    pub center_frequency_hz: f64,
 }
 
 impl ScattererCloud {
@@ -160,10 +173,31 @@ impl ScattererCloud {
                 config.min_distance
             )));
         }
+        if !config.attenuation_db_cm_mhz.is_finite() || config.attenuation_db_cm_mhz < 0.0 {
+            return Err(KwaversError::InvalidInput(format!(
+                "synthesize_rf requires attenuation_db_cm_mhz >= 0, got {}",
+                config.attenuation_db_cm_mhz
+            )));
+        }
+        if config.attenuation_db_cm_mhz > 0.0
+            && (!config.center_frequency_hz.is_finite() || config.center_frequency_hz <= 0.0)
+        {
+            return Err(KwaversError::InvalidInput(format!(
+                "synthesize_rf requires center_frequency_hz > 0 when attenuation is enabled, got {}",
+                config.center_frequency_hz
+            )));
+        }
 
         let n_elements = element_positions.len();
         let mut rf = Array2::<f64>::zeros((n_elements, config.num_samples));
         let two_over_c = 2.0 / config.sound_speed;
+        // Power-law attenuation coefficient at the centre frequency, in Np/m:
+        // α₀[dB/(cm·MHz)] · f₀[MHz] · 100[cm/m] / NP_TO_DB[dB/Np].  Zero ⇒ lossless.
+        let alpha_np_m = if config.attenuation_db_cm_mhz > 0.0 {
+            config.attenuation_db_cm_mhz * (config.center_frequency_hz / MHZ_TO_HZ) * 100.0 / NP_TO_DB
+        } else {
+            0.0
+        };
 
         for (e_idx, &e) in element_positions.iter().enumerate() {
             for s in &self.scatterers {
@@ -174,8 +208,13 @@ impl ScattererCloud {
                 if r < config.min_distance || r <= 0.0 {
                     continue;
                 }
-                // Round-trip spherical spreading (1/r transmit × 1/r receive).
-                let amp = s.amplitude / (r * r);
+                // Round-trip spherical spreading (1/r transmit × 1/r receive),
+                // times the round-trip power-law attenuation exp(−α·2r) (1 when
+                // lossless).
+                let mut amp = s.amplitude / (r * r);
+                if alpha_np_m > 0.0 {
+                    amp *= (-alpha_np_m * 2.0 * r).exp();
+                }
                 let tof = r * two_over_c; // 2r/c
                 let n_delay = (tof * config.sampling_frequency).round();
                 if !n_delay.is_finite() || n_delay < 0.0 {
