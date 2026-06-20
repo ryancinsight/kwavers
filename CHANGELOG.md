@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+### Added (2026-06-19) — Cloud-scale acoustic shielding of the cavitation cloud (CLD-1, ADR 029) [major]
+
+- [major] **`kwavers-therapy::...::lithotripsy::cavitation_cloud`** gains the second
+  cloud-scale collective effect: **acoustic shielding**. The incident field is
+  screened by the cloud's void fraction as it penetrates, so the periphery shields
+  the interior (Maeda & Colonius 2018). `shielded_pressure` computes the void
+  fraction `β = n·(4/3)πR³` per cell, gets the per-cell attenuation `α` from the
+  validated `commander_prosperetti_attenuation` (reuse, SSOT), and applies
+  Beer–Lambert screening `p_eff = p_ext·exp(−∫α dl)` along the configured incident
+  axis (`O(N)`, a prefix sum per column); `evolve_cloud` drives the bubbles with
+  the screened field (coupling added on top). `CloudParameters` gains
+  `shielding_enabled` (opt-in, default off), `incident_axis`, `incident_from_high`.
+  Zero void fraction or shielding-off ⇒ `p_eff = p_ext`, reducing **exactly** to
+  ADR 027/028. 3 new value-semantic tests (Beer–Lambert exponential decay vs the
+  closed-form `α`, no-nuclei pass-through, denser-cloud-screens-more). See ADR 029.
+  **Still open** (CLD-1): `R(t)`-dependent (vs `R0`-linearized) attenuation,
+  multi-directional/scattered screening, cloud-interface instabilities, and a
+  self-consistent implicit coupled shielding+collapse solve.
+
 ### Added (2026-06-19) — Inter-bubble acoustic coupling in the cavitation cloud (CLD-1, ADR 028) [major]
 
 - [major] **`kwavers-therapy::...::lithotripsy::cavitation_cloud`** gains the leading
