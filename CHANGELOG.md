@@ -2,6 +2,51 @@
 
 ## Unreleased
 
+### Added (2026-06-20) — CPML Courant-vs-thickness stability test (CLD-11) + AMC-12 verified
+
+- [patch] **`kwavers/tests/cpml_absorption_quality.rs`** adds
+  `test_cpml_stable_across_thicknesses` (Komatitsch & Martin 2007): sweeping the PML
+  thickness `{6,8,10,12}` at a fixed CFL `dt`, the post-propagation domain energy
+  stays finite (no blow-up), decays below the initial energy (stably absorbing), and
+  absorption is monotone non-decreasing in thickness — empirical confirmation that
+  the CFS-CPML preserves CFL stability independent of layer thickness. Refactored the
+  existing single-thickness test onto a shared `run_cpml_absorption(thickness)` helper
+  (SSOT). Closes the CLD-11 Courant sub-item.
+- [docs] **AMC-12** marked DONE after verification (no code change): the PAM
+  `MUSIC`/`EigenspaceMinVariance` methods are already fully wired through
+  `pam::mapper::subspace_localization_map` → the shared narrowband
+  `subspace_spatial_spectrum_point` (real Hermitian eigendecomposition + steering),
+  not "not yet wired" stubs. The gap_audit entry was stale.
+
+### Added (2026-06-20) — Rectangular-element spatial impulse response (COV-4) [minor]
+
+- [minor] **`kwavers-physics::analytical::transducer::RectangularPistonSir`**
+  (Lockwood & Willette 1973): the transient SIR of a flat rectangular piston,
+  `h = (c/2π)·Φ(ρ)`, where `Φ` is the angular measure of the wavefront-intersection
+  circle (radius `ρ=√((ct)²−z²)`, centered at the field-point projection) lying
+  within the rectangle. `Φ` is evaluated **exactly** from the `arccos`/`arcsin`
+  band breakpoints (membership constant between breakpoints) — no numerical
+  integration — and handles projection inside / on-edge / at-corner / outside
+  uniformly. Sibling of `CircularPistonSir`; both exported. 5 tests: on-axis
+  plateau `h=c` until the nearest edge, a keystone differential of the analytic
+  `Φ` against an independent θ-sampling oracle across 7 geometries × 5 radii,
+  reflection symmetry, `[0,c]` bound, and parameter validation.
+
+### Added (2026-06-20) — Generalized coherence factor (GCF, Li & Li 2003) (COV-1) [minor]
+
+- [minor] **`kwavers-analysis::...::beamforming::time_domain::coherence`** adds
+  `CoherenceFactor::Generalized { m0 }`, the generalized coherence factor: the
+  fraction of delay-aligned aperture **spectral** energy in the low-spatial-frequency
+  passband `|k| ≤ m0` (spatial DFT across elements) over the Parseval total
+  `N·Σxᵢ²`. `m0 = 0` counts only the DC bin and reduces **exactly** to
+  `CoherenceFactor::Amplitude` (Mallart-Fink); `m0 ≥ N/2 ⇒ GCF = 1`. Routes through
+  the existing `delay_and_sum_coherence` unchanged. 5 value-semantic tests: the
+  `m0=0 ≡ amplitude CF` keystone (differential), full-passband unity, monotonic
+  non-decreasing in `m0`, and exact spectral localization on a pure two-cycle
+  aperture (GCF jumps 0→1 as `m0` crosses the signal's spatial frequency).
+  **Deferred [minor]:** PCF (phase coherence, Camacho 2009) needs an analytic-signal
+  (complex) aperture path, not fabricable from real RF.
+
 ### Added (2026-06-20) — Cloud-model refinements: dp/dt coupling, R(t) shielding, RT/RM diagnostic, sparse solver (CLD-1, ADR 032) [major]
 
 - [major] **`kwavers-therapy::...::lithotripsy::cavitation_cloud`** closes four CLD-1

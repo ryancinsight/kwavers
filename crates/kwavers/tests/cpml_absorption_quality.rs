@@ -122,17 +122,13 @@ fn test_cpml_a_coeff_equals_b_minus_1() -> KwaversResult<()> {
     Ok(())
 }
 
-/// Theorem (CPML energy absorption, Treeby & Cox 2010):
-/// With CPML active, acoustic energy in the domain decays after the source is removed,
-/// because waves propagating into PML regions are attenuated.
-/// Without CPML, hard-wall reflections recirculate energy indefinitely.
-///
-/// Test: run FDTD with a pressure source for N_src steps, then remove source and
-/// run N_free steps. The energy at the end should be strictly less than the peak energy.
-#[test]
-fn test_cpml_absorbs_outgoing_waves() -> KwaversResult<()> {
+/// Run the central-Gaussian-pulse CPML absorption scenario with a given PML
+/// `thickness` (fixed CFL `dt = 0.3·dx/c`, 300 steps). Returns
+/// `(energy_0, energy_final)` — the domain acoustic energy before propagation and
+/// after the pulse has reached and been absorbed by the PML. SSOT for the
+/// single-thickness absorption test and the thickness-sweep stability test.
+fn run_cpml_absorption(thickness: usize) -> KwaversResult<(f64, f64)> {
     let nx = 40;
-    let thickness = 10;
     let dx = 1e-3;
     let c0 = 1500.0;
     let rho0 = 1000.0;
@@ -141,7 +137,6 @@ fn test_cpml_absorbs_outgoing_waves() -> KwaversResult<()> {
     let medium = HomogeneousMedium::new(rho0, c0, 0.0, 0.0, &grid);
 
     let dt = 0.3 * dx / c0;
-    // Run for long enough that waves reach the PML
     let n_total = 300;
 
     let config = FdtdConfig {
@@ -154,15 +149,13 @@ fn test_cpml_absorbs_outgoing_waves() -> KwaversResult<()> {
     };
 
     let source = GridSource::new_empty();
-    let mut solver = FdtdSolver::new(config.clone(), &grid, &medium, source)?;
+    let mut solver = FdtdSolver::new(config, &grid, &medium, source)?;
 
     let cpml_config = CPMLConfig::with_thickness(thickness);
     solver.enable_cpml(cpml_config, dt, c0)?;
 
     // Inject a Gaussian pressure pulse at the center (width = 3 cells).
-    let cx = (nx / 2) as f64;
-    let cy = (nx / 2) as f64;
-    let cz = (nx / 2) as f64;
+    let (cx, cy, cz) = ((nx / 2) as f64, (nx / 2) as f64, (nx / 2) as f64);
     let width_sq = 9.0; // (3 cells)²
     for i in 0..nx {
         for j in 0..nx {
@@ -174,27 +167,63 @@ fn test_cpml_absorbs_outgoing_waves() -> KwaversResult<()> {
         }
     }
 
-    // Measure initial energy
     let energy_0: f64 = solver.fields.p.iter().map(|&v| v * v).sum::<f64>() * dx.powi(3);
-
-    // Run all steps (no active source — the Gaussian pulse propagates and hits PML)
     for _ in 0..n_total {
         solver.step_forward()?;
     }
-
-    // Measure final energy after the wave has been absorbed
     let energy_final: f64 = solver.fields.p.iter().map(|&v| v * v).sum::<f64>() * dx.powi(3);
+    Ok((energy_0, energy_final))
+}
 
-    // Final energy must be much less than initial (CPML absorbed the wave)
-    // With 10-cell PML and 300 steps (wave crosses ~8 PML lengths), expect > 90% absorption
+/// Theorem (CPML energy absorption, Treeby & Cox 2010):
+/// With CPML active, acoustic energy in the domain decays after the source is removed,
+/// because waves propagating into PML regions are attenuated.
+/// Without CPML, hard-wall reflections recirculate energy indefinitely.
+///
+/// Test: run FDTD with a pressure source for N_src steps, then remove source and
+/// run N_free steps. The energy at the end should be strictly less than the peak energy.
+#[test]
+fn test_cpml_absorbs_outgoing_waves() -> KwaversResult<()> {
+    let (energy_0, energy_final) = run_cpml_absorption(10)?;
+    // With 10-cell PML and 300 steps (wave crosses ~8 PML lengths), expect > 50% absorption
     assert!(
         energy_final < 0.5 * energy_0,
-        "CPML should have absorbed outgoing wave significantly: energy_0={:.3e}, energy_final={:.3e}, ratio={:.3}",
-        energy_0,
-        energy_final,
+        "CPML should have absorbed outgoing wave significantly: energy_0={energy_0:.3e}, energy_final={energy_final:.3e}, ratio={:.3}",
         energy_final / energy_0
     );
+    Ok(())
+}
 
+/// Theorem (CPML preserves CFL stability across thicknesses, Komatitsch & Martin 2007):
+/// The CFS-CPML recursion `b = exp[−(σ/κ+α)Δt] ∈ (0,1]` is non-amplifying, so for a
+/// fixed CFL-respecting `Δt` the augmented scheme stays stable independent of PML
+/// thickness — thicker layers absorb *more*, never destabilize. A thin layer that
+/// imposed a stricter CFL (or a thick one that blew up) would violate this.
+///
+/// Test: sweep the PML thickness; for each, the post-propagation energy must stay
+/// finite (no blow-up) and decay below the initial energy (stable absorption), and
+/// absorption must be monotone non-decreasing in thickness.
+#[test]
+fn test_cpml_stable_across_thicknesses() -> KwaversResult<()> {
+    let mut prev_ratio = f64::INFINITY;
+    for thickness in [6usize, 8, 10, 12] {
+        let (energy_0, energy_final) = run_cpml_absorption(thickness)?;
+        assert!(
+            energy_final.is_finite(),
+            "thickness={thickness}: CPML must not blow up (energy_final={energy_final})"
+        );
+        assert!(
+            energy_final < energy_0,
+            "thickness={thickness}: CPML must remain stably absorbing: e0={energy_0:.3e}, ef={energy_final:.3e}"
+        );
+        let ratio = energy_final / energy_0;
+        // Thicker PML absorbs at least as well (allow small FP slack for the discrete profile).
+        assert!(
+            ratio <= prev_ratio + 1e-3,
+            "thickness={thickness}: absorption must not worsen with thickness: ratio={ratio:.4} vs prev={prev_ratio:.4}"
+        );
+        prev_ratio = ratio;
+    }
     Ok(())
 }
 

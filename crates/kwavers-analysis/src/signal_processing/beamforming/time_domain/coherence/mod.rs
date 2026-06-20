@@ -18,6 +18,11 @@
 //!   factor, the ratio of coherent to total aperture energy.
 //! - [`CoherenceFactor::Sign`] — Camacho, Fritsch & Cruza (2009) sign coherence
 //!   factor, robust to amplitude outliers.
+//! - [`CoherenceFactor::Phase`] — Camacho et al. (2009) phase coherence factor,
+//!   the aperture instantaneous-phase dispersion (uses the analytic signal).
+//! - [`CoherenceFactor::Generalized`] — Li & Li (2003) generalized coherence
+//!   factor, the fraction of aperture spectral energy in a low-spatial-frequency
+//!   passband; `m0 = 0` reduces exactly to the amplitude CF.
 //!
 //! # References
 //!
@@ -30,11 +35,16 @@
 //! - Camacho, J., Parrilla, M., & Fritsch, C. (2009). "Phase coherence imaging."
 //!   *IEEE Trans. Ultrason. Ferroelectr. Freq. Control* 56(5), 958–974. — sign
 //!   and phase coherence factors.
+//! - Li, P.-C., & Li, M.-L. (2003). "Adaptive imaging using the generalized
+//!   coherence factor." *IEEE Trans. Ultrason. Ferroelectr. Freq. Control*
+//!   50(2), 128–141. — GCF as low-spatial-frequency spectral energy ratio.
 
 use super::das::{align_channels, sum_aligned};
 use super::delay_reference::DelayReference;
 use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_math::fft::analytic_signal_1d;
 use ndarray::{Array1, Array2, Array3};
+use std::f64::consts::PI;
 
 /// Amplitude coherence factor from pre-accumulated aperture sums
 /// (Mallart & Fink 1994).
@@ -59,6 +69,67 @@ pub fn amplitude_coherence_from_sums(coherent_sum: f64, sum_of_squares: f64, n: 
         return 0.0;
     }
     ((coherent_sum * coherent_sum) / denom).clamp(0.0, 1.0)
+}
+
+/// Phase coherence factor from a set of per-element aperture phases
+/// (Camacho, Parrilla & Fritsch 2009).
+///
+/// `PCF = max(0, 1 − (γ / σ₀)·s)`, where `s = min(σ(φ), σ(ψ))` is the smaller of
+/// the population standard deviations of the aperture phases `φᵢ` and of the
+/// auxiliary phases `ψᵢ = φᵢ − sign(φᵢ)·π`, `σ₀ = π/√3` is the standard
+/// deviation of a phase uniformly distributed on `[−π, π]` (full incoherence),
+/// and `γ = sensitivity ≥ 0` (canonical `1.0`).
+///
+/// The auxiliary phase shifts the wrap discontinuity off `±π`, so a wavefront
+/// whose phases are coherent but straddle the `±π` branch cut is scored with the
+/// small `σ(ψ)` rather than the spuriously large `σ(φ)` — the defining feature of
+/// the phase (vs sign) coherence factor. A perfectly coherent aperture
+/// (`s = 0`) yields `1`; fully incoherent (`s = σ₀`, `γ = 1`) yields `0`.
+/// Returns `0` for an empty aperture.
+///
+/// This is the canonical scalar entry point; the matrix-column path
+/// ([`CoherenceFactor::weights`] with [`CoherenceFactor::Phase`]) derives the
+/// per-element phases from the analytic signal and routes through it.
+#[must_use]
+pub fn phase_coherence_from_phases(phases: &[f64], sensitivity: f64) -> f64 {
+    let n = phases.len();
+    if n == 0 {
+        return 0.0;
+    }
+    let nf = n as f64;
+    // Population standard deviation of a per-phase transform.
+    let std_of = |f: &dyn Fn(f64) -> f64| -> f64 {
+        let mean = phases.iter().map(|&p| f(p)).sum::<f64>() / nf;
+        let var = phases
+            .iter()
+            .map(|&p| {
+                let d = f(p) - mean;
+                d * d
+            })
+            .sum::<f64>()
+            / nf;
+        var.sqrt()
+    };
+    let s_phi = std_of(&|p| p);
+    let s_aux = std_of(&|p| p - p.signum() * PI);
+    let s = s_phi.min(s_aux);
+    let sigma_ref = PI / 3.0_f64.sqrt();
+    (1.0 - (sensitivity / sigma_ref) * s).clamp(0.0, 1.0)
+}
+
+/// Per-element instantaneous phase (`arg` of the analytic signal) of each aligned
+/// aperture row, shape `(n_elements, n_samples)` — the input to the phase
+/// coherence factor.
+fn instantaneous_phase_matrix(aligned: &Array2<f64>) -> Array2<f64> {
+    let (n_elements, n_samples) = aligned.dim();
+    let mut phase = Array2::<f64>::zeros((n_elements, n_samples));
+    for (i, row) in aligned.outer_iter().enumerate() {
+        let analytic = analytic_signal_1d(&row.to_owned());
+        for (j, z) in analytic.iter().enumerate() {
+            phase[[i, j]] = z.arg();
+        }
+    }
+    phase
 }
 
 /// Per-output-sample coherence-factor estimator.
@@ -86,20 +157,61 @@ pub enum CoherenceFactor {
         /// Exponent `p ≥ 1`; larger values reject incoherent energy more aggressively.
         sensitivity: f64,
     },
+    /// Camacho et al. (2009) phase coherence factor:
+    /// `PCF = max(0, 1 − (γ/σ₀)·min(σ(φ), σ(ψ)))`, where `φᵢ` are the per-element
+    /// instantaneous phases (`arg` of the analytic signal), `ψᵢ = φᵢ − sign(φᵢ)·π`
+    /// the auxiliary phases, `σ₀ = π/√3`, and `γ = sensitivity`.
+    ///
+    /// Unlike [`CoherenceFactor::Sign`] (which uses only the sign bit), PCF uses
+    /// the full instantaneous phase; the auxiliary-phase minimum makes it immune
+    /// to the `±π` branch cut. Computed from the analytic signal of each aperture
+    /// row, so the column path requires `n_samples ≥ 2`. `sensitivity = 1.0` is
+    /// the canonical default.
+    Phase {
+        /// Scaling `γ ≥ 0`; larger values reject phase dispersion more aggressively.
+        sensitivity: f64,
+    },
+    /// Li & Li (2003) generalized coherence factor:
+    /// `GCF = (Σ_{|k|≤m0} |Xₖ|²) / (Σₖ |Xₖ|²)`, where `Xₖ` is the spatial DFT of
+    /// the aperture column across elements.
+    ///
+    /// The numerator is the aperture spectral energy in the low-spatial-frequency
+    /// passband `|k| ≤ m0` (the coherent wavefront concentrates at low spatial
+    /// frequency); the denominator is the total energy (`= N·Σ xᵢ²` by Parseval).
+    /// `m0 = 0` counts only the DC bin and reduces **exactly** to
+    /// [`CoherenceFactor::Amplitude`]; larger `m0` admits more aperture spatial
+    /// frequencies as coherent, relaxing the factor toward `1`
+    /// (`m0 ≥ N/2 ⇒ GCF = 1`).
+    Generalized {
+        /// Low-frequency cutoff `M₀`: spatial-frequency bins each side of DC
+        /// counted as coherent. `0` ⇒ amplitude CF.
+        m0: usize,
+    },
 }
 
 impl CoherenceFactor {
     /// Validate variant parameters.
     ///
     /// # Errors
-    /// - [`KwaversError::InvalidInput`] if `Sign::sensitivity` is non-finite or `< 1`.
+    /// - [`KwaversError::InvalidInput`] if `Sign::sensitivity` is non-finite or
+    ///   `< 1`, or if `Phase::sensitivity` is non-finite or `< 0`.
     pub fn validate(&self) -> KwaversResult<()> {
-        if let CoherenceFactor::Sign { sensitivity } = *self {
-            if !sensitivity.is_finite() || sensitivity < 1.0 {
-                return Err(KwaversError::InvalidInput(format!(
-                    "CoherenceFactor::Sign requires finite sensitivity >= 1.0; got {sensitivity}"
-                )));
+        match *self {
+            CoherenceFactor::Sign { sensitivity } => {
+                if !sensitivity.is_finite() || sensitivity < 1.0 {
+                    return Err(KwaversError::InvalidInput(format!(
+                        "CoherenceFactor::Sign requires finite sensitivity >= 1.0; got {sensitivity}"
+                    )));
+                }
             }
+            CoherenceFactor::Phase { sensitivity } => {
+                if !sensitivity.is_finite() || sensitivity < 0.0 {
+                    return Err(KwaversError::InvalidInput(format!(
+                        "CoherenceFactor::Phase requires finite sensitivity >= 0.0; got {sensitivity}"
+                    )));
+                }
+            }
+            CoherenceFactor::Amplitude | CoherenceFactor::Generalized { .. } => {}
         }
         Ok(())
     }
@@ -137,6 +249,39 @@ impl CoherenceFactor {
                 let b = sign_sum / (n as f64); // b̄ ∈ [-1, 1]
                 let base = 1.0 - (1.0 - b * b).max(0.0).sqrt();
                 base.clamp(0.0, 1.0).powf(sensitivity)
+            }
+            CoherenceFactor::Generalized { m0 } => {
+                // Total aperture energy via Parseval: Σₖ|Xₖ|² = N·Σᵢxᵢ².
+                let sum_sq: f64 = column.iter().map(|&x| x * x).sum();
+                let denom = (n as f64) * sum_sq;
+                if denom <= 0.0 {
+                    return 0.0;
+                }
+                // Spatial DFT energy |Xₖ|² = |Σₜ xₜ e^{-j2πkt/N}|².
+                let nf = n as f64;
+                let dft_energy = |k: usize| -> f64 {
+                    let w = -2.0 * PI * (k as f64) / nf;
+                    let (mut re, mut im) = (0.0_f64, 0.0_f64);
+                    for (t, &x) in column.iter().enumerate() {
+                        let ang = w * (t as f64);
+                        re += x * ang.cos();
+                        im += x * ang.sin();
+                    }
+                    re * re + im * im
+                };
+                // Sum |Xₖ|² over the passband k ∈ {0, ±1, …, ±m0} (mod N). For real
+                // input |X_{N−k}| = |Xₖ|, so the ±k pair is `2·|Xₖ|²`; the DC bin
+                // (k=0) and, when N is even, the Nyquist bin (k=N/2) are single.
+                let kmax = m0.min(n / 2);
+                let mut numer = dft_energy(0); // DC always coherent
+                for k in 1..=kmax {
+                    if k == n - k {
+                        numer += dft_energy(k); // Nyquist (N even): single bin
+                    } else {
+                        numer += 2.0 * dft_energy(k); // ±k conjugate pair
+                    }
+                }
+                (numer / denom).clamp(0.0, 1.0)
             }
         }
     }
@@ -192,7 +337,13 @@ pub fn delay_and_sum_coherence(
     factor: CoherenceFactor,
 ) -> KwaversResult<(Array3<f64>, Array1<f64>)> {
     factor.validate()?;
-    let aligned = align_channels(sensor_data, sampling_frequency_hz, delays_s, weights, reference)?;
+    let aligned = align_channels(
+        sensor_data,
+        sampling_frequency_hz,
+        delays_s,
+        weights,
+        reference,
+    )?;
     let cf = factor.weights(&aligned)?;
     let mut output = sum_aligned(&aligned, weights);
     for (j, &w) in cf.iter().enumerate() {

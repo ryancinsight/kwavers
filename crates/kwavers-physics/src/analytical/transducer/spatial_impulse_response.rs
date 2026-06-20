@@ -1,4 +1,4 @@
-//! Transient spatial impulse response (SIR) of a flat circular piston.
+//! Transient spatial impulse response (SIR) of flat pistons (circular & rectangular).
 //!
 //! The spatial impulse response `h(r, z, t)` is the velocity-potential response
 //! at a field point to an impulsive uniform normal velocity of the aperture — the
@@ -27,9 +27,24 @@
 //! On axis (`r = 0`) this reduces to the rectangular pulse `h = c` over
 //! `z/c ≤ t < √(z²+a²)/c`.
 //!
+//! # Closed form (flat rectangular piston, half-widths `wx`, `wy`)
+//!
+//! For a field point `(x, y, z)` whose projection onto the aperture plane is
+//! `(x, y)`, the SIR is `h = (c/2π)·Φ(ρ)`, where `ρ = √((ct)²−z²)` is the radius
+//! of the wavefront's intersection circle (centered at the projection) and `Φ` is
+//! the **angular measure** of that circle lying within the rectangle
+//! `[−wx,wx]×[−wy,wy]`. A point on the circle, `(x+ρcosθ, y+ρsinθ)`, is inside iff
+//! `cosθ ∈ [(−wx−x)/ρ, (wx−x)/ρ]` and `sinθ ∈ [(−wy−y)/ρ, (wy−y)/ρ]`; `Φ` is the
+//! measure of the `θ` satisfying both bands, evaluated exactly from the
+//! `arccos`/`arcsin` breakpoints (Lockwood & Willette 1973). Circle fully inside
+//! ⇒ `Φ = 2π ⇒ h = c` (the near-field plateau).
+//!
 //! # References
 //! - Stepanishen, P. R. (1971). "Transient radiation from pistons in an infinite
 //!   planar baffle." *J. Acoust. Soc. Am.* 49(5B), 1629–1638.
+//! - Lockwood, J. C., & Willette, J. G. (1973). "High-speed method for computing
+//!   the exact solution for the pressure variations in the nearfield of a baffled
+//!   piston." *J. Acoust. Soc. Am.* 53(3), 735–741. — rectangular piston SIR.
 //! - Jensen, J. A. (1999). "A new calculation procedure for spatial impulse
 //!   responses in ultrasound." *J. Acoust. Soc. Am.* 105(6), 3266–3274.
 
@@ -60,7 +75,10 @@ impl CircularPistonSir {
                 "CircularPistonSir requires sound_speed > 0, got {sound_speed}"
             )));
         }
-        Ok(Self { radius, sound_speed })
+        Ok(Self {
+            radius,
+            sound_speed,
+        })
     }
 
     /// First-arrival time [s] at field point `(r, z)` — the nearest aperture point.
@@ -120,6 +138,131 @@ impl CircularPistonSir {
         let rho = rho_sq.sqrt();
         let arg = ((rho_sq + r * r - a * a) / (2.0 * r * rho)).clamp(-1.0, 1.0);
         (c / PI) * arg.acos()
+    }
+}
+
+/// A flat rectangular piston in an infinite rigid baffle, centered on the axis
+/// with half-widths `wx`, `wy` (full aperture `2·wx × 2·wy`).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct RectangularPistonSir {
+    half_width_x: f64,
+    half_width_y: f64,
+    sound_speed: f64,
+}
+
+impl RectangularPistonSir {
+    /// Create a rectangular-piston SIR model from the **half**-widths.
+    ///
+    /// # Errors
+    /// - [`KwaversError::InvalidInput`] if any half-width or `sound_speed` is
+    ///   non-finite or `≤ 0`.
+    pub fn new(half_width_x: f64, half_width_y: f64, sound_speed: f64) -> KwaversResult<Self> {
+        for (name, v) in [
+            ("half_width_x", half_width_x),
+            ("half_width_y", half_width_y),
+            ("sound_speed", sound_speed),
+        ] {
+            if !v.is_finite() || v <= 0.0 {
+                return Err(KwaversError::InvalidInput(format!(
+                    "RectangularPistonSir requires {name} > 0, got {v}"
+                )));
+            }
+        }
+        Ok(Self {
+            half_width_x,
+            half_width_y,
+            sound_speed,
+        })
+    }
+
+    /// First-arrival time [s] at `(x, y, z)` — the nearest aperture point (the
+    /// projection clamped into the rectangle).
+    #[must_use]
+    pub fn first_arrival_time(&self, x: f64, y: f64, z: f64) -> f64 {
+        let cx = x.clamp(-self.half_width_x, self.half_width_x);
+        let cy = y.clamp(-self.half_width_y, self.half_width_y);
+        (z * z + (x - cx).powi(2) + (y - cy).powi(2)).sqrt() / self.sound_speed
+    }
+
+    /// Last-arrival time [s] at `(x, y, z)` — the farthest aperture corner.
+    #[must_use]
+    pub fn last_arrival_time(&self, x: f64, y: f64, z: f64) -> f64 {
+        let dx = (x - self.half_width_x)
+            .abs()
+            .max((x + self.half_width_x).abs());
+        let dy = (y - self.half_width_y)
+            .abs()
+            .max((y + self.half_width_y).abs());
+        (z * z + dx * dx + dy * dy).sqrt() / self.sound_speed
+    }
+
+    /// Spatial impulse response `h(x, y, z, t)` [m/s] at a field point.
+    ///
+    /// `(x, y)` is the lateral position (projection onto the aperture plane), `z`
+    /// the axial distance, `t` the time [s]. Returns `0` outside the support.
+    #[must_use]
+    pub fn evaluate(&self, x: f64, y: f64, z: f64, t: f64) -> f64 {
+        let c = self.sound_speed;
+        let z = z.abs();
+        let ct = c * t;
+        let rho_sq = ct * ct - z * z;
+        if rho_sq <= 0.0 {
+            return 0.0; // wavefront has not reached the aperture plane
+        }
+        let rho = rho_sq.sqrt();
+        (c / (2.0 * PI)) * self.arc_angle_inside(x, y, rho)
+    }
+
+    /// Angular measure `Φ ∈ [0, 2π]` of the circle of radius `rho` centered at
+    /// `(x, y)` that lies within the rectangle `[−wx,wx]×[−wy,wy]`.
+    ///
+    /// A point `(x+ρcosθ, y+ρsinθ)` is inside iff `cosθ ∈ [cxlo, cxhi]` and
+    /// `sinθ ∈ [sylo, syhi]`. The membership can only change at the `θ` where one
+    /// of these four bounds is hit (exact `arccos`/`arcsin` roots); between
+    /// consecutive breakpoints membership is constant, so `Φ` is the sum of the
+    /// breakpoint intervals whose midpoint is inside both bands.
+    fn arc_angle_inside(&self, x: f64, y: f64, rho: f64) -> f64 {
+        let (wx, wy) = (self.half_width_x, self.half_width_y);
+        // Band bounds (may fall outside [-1,1] ⇒ that side is unconstrained).
+        let cx_lo = (-wx - x) / rho;
+        let cx_hi = (wx - x) / rho;
+        let sy_lo = (-wy - y) / rho;
+        let sy_hi = (wy - y) / rho;
+
+        // Critical angles where membership can change, plus the [0, 2π] ends.
+        let mut breakpoints = vec![0.0_f64, 2.0 * PI];
+        for &v in &[cx_lo, cx_hi] {
+            if (-1.0..=1.0).contains(&v) {
+                let a = v.acos(); // cosθ = v ⇒ θ = ±a (mod 2π)
+                breakpoints.push(a);
+                breakpoints.push(2.0 * PI - a);
+            }
+        }
+        for &w in &[sy_lo, sy_hi] {
+            if (-1.0..=1.0).contains(&w) {
+                let a = w.asin(); // sinθ = w ⇒ θ = a (mod 2π) or π − a
+                breakpoints.push(a.rem_euclid(2.0 * PI));
+                breakpoints.push((PI - a).rem_euclid(2.0 * PI));
+            }
+        }
+        breakpoints.sort_by(|p, q| p.partial_cmp(q).expect("finite breakpoints"));
+
+        let inside = |theta: f64| {
+            let (s, cth) = theta.sin_cos();
+            cth >= cx_lo && cth <= cx_hi && s >= sy_lo && s <= sy_hi
+        };
+
+        let mut phi = 0.0_f64;
+        for pair in breakpoints.windows(2) {
+            let (lo, hi) = (pair[0], pair[1]);
+            if hi - lo <= 0.0 {
+                continue;
+            }
+            if inside(0.5 * (lo + hi)) {
+                phi += hi - lo;
+            }
+        }
+        phi
     }
 }
 
