@@ -80,6 +80,12 @@ behaviour. The capability set is `PhysicsModelType`:
 since `μ > 0`. It is *not* the previously-deleted `μ ≡ 0` `ElasticWavePlugin` duplicate. The
 `ElasticWaveKind` enum is additive-by-design, leaving room for anisotropic/nonlinear modes.)
 
+All three `NonlinearAcoustics` equation types now resolve to real plugins: `KzkSolverPlugin`,
+`WesterveltSolverPlugin`, and `KuznetsovSolverPlugin`. The latter two are thin `Plugin`
+adapters that forward `update` to the validated `WesterveltWave` / `KuznetsovWave` full-wave
+solvers of Chapter 3 (`forward::nonlinear::{westervelt_spectral, kuznetsov}`) via
+`AcousticWaveModel::update_wave` — no physics is duplicated in the adapter.
+
 A `PhysicsConfig` is just a list of these (each tagged `enabled: bool`) plus
 a string-keyed parameter bag for global state. Two key properties:
 

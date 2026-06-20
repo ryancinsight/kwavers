@@ -27,8 +27,8 @@
 //! | `LinearAcoustics { DG }`                 | unsupported via plugin path; use     |
 //! |                                          | [`HybridSpectralDGSolver`] directly  |
 //! | `NonlinearAcoustics { KZK }`             | [`KzkSolverPlugin`]                  |
-//! | `NonlinearAcoustics { Westervelt }`      | not yet wired                        |
-//! | `NonlinearAcoustics { Kuznetsov }`       | not yet wired                        |
+//! | `NonlinearAcoustics { Westervelt }`      | [`WesterveltSolverPlugin`]          |
+//! | `NonlinearAcoustics { Kuznetsov }`       | [`KuznetsovSolverPlugin`]           |
 //! | `ThermalDiffusion`                       | [`ThermalDiffusionPlugin`]           |
 //! | `BubbleDynamics { KellerMiksis }`       | [`BubbleDynamicsPlugin`] (adaptive KM ODE) |
 //! | `BubbleDynamics { RayleighPlesset }`   | [`BubbleDynamicsPlugin`] (KM, compressibility off) |
@@ -43,7 +43,9 @@
 use crate::fdtd::FdtdConfig;
 use crate::forward::bubble_dynamics::plugin::{BubbleDynamicsConfig, BubbleDynamicsPlugin};
 use crate::forward::fdtd::plugin::FdtdPlugin;
+use crate::forward::nonlinear::kuznetsov_solver_plugin::KuznetsovSolverPlugin;
 use crate::forward::nonlinear::kzk_solver_plugin::KzkSolverPlugin;
+use crate::forward::nonlinear::westervelt_solver_plugin::WesterveltSolverPlugin;
 use crate::forward::pstd::extensions::MechanicalStressPlugin;
 use crate::forward::pstd::plugin::PSTDPlugin;
 use crate::forward::thermal_diffusion::plugin::ThermalDiffusionPlugin;
@@ -129,16 +131,8 @@ impl PhysicsCatalog {
             },
             PhysicsModelType::NonlinearAcoustics { equation_type, .. } => match equation_type {
                 NonlinearEquation::KZK => Ok(Box::new(KzkSolverPlugin::new())),
-                NonlinearEquation::Westervelt => Err(unsupported(
-                    idx,
-                    "NonlinearAcoustics{Westervelt}",
-                    "no Plugin adapter yet; use NonlinearWave directly.",
-                )),
-                NonlinearEquation::Kuznetsov => Err(unsupported(
-                    idx,
-                    "NonlinearAcoustics{Kuznetsov}",
-                    "no Plugin adapter yet; use KuznetsovWave directly.",
-                )),
+                NonlinearEquation::Westervelt => Ok(Box::new(WesterveltSolverPlugin::new())),
+                NonlinearEquation::Kuznetsov => Ok(Box::new(KuznetsovSolverPlugin::new())),
             },
             PhysicsModelType::ThermalDiffusion { .. } => Ok(Box::new(ThermalDiffusionPlugin::new(
                 ThermalDiffusionConfig::default(),
@@ -159,9 +153,7 @@ impl PhysicsCatalog {
             PhysicsModelType::MechanicalStress { wave_kind } => match wave_kind {
                 // Isotropic elastic stress–velocity propagation; the orchestrator
                 // reads λ/μ/ρ from the medium in `Plugin::initialize`. ADR 021.
-                ElasticWaveKind::Isotropic => {
-                    Ok(Box::new(MechanicalStressPlugin::new(dt)))
-                }
+                ElasticWaveKind::Isotropic => Ok(Box::new(MechanicalStressPlugin::new(dt))),
             },
         }
     }
@@ -438,5 +430,107 @@ mod tests {
             2,
             "two plugins expected for PSTD + BubbleDynamics config"
         );
+    }
+
+    fn nonlinear_config(equation: NonlinearEquation) -> PhysicsConfig {
+        // Nonlinear models require a non-empty parameter map (config validator).
+        let mut parameters = std::collections::HashMap::new();
+        parameters.insert("source_frequency".to_owned(), 1.0e6);
+        let mut config = PhysicsConfig::new();
+        config.models.clear();
+        config.models.push(PhysicsModelConfig {
+            model_type: PhysicsModelType::NonlinearAcoustics {
+                equation_type: equation,
+                harmonics: 4,
+            },
+            enabled: true,
+            parameters,
+        });
+        config
+    }
+
+    #[test]
+    fn westervelt_variant_builds_one_plugin() {
+        let grid = small_grid();
+        let medium = water(&grid);
+        let manager = PhysicsCatalog::build(
+            &nonlinear_config(NonlinearEquation::Westervelt),
+            &grid,
+            &medium,
+            1e-7,
+        )
+        .expect("Westervelt capability should build (plugin path now wired)");
+        assert_eq!(manager.plugin_count(), 1, "one Westervelt plugin expected");
+    }
+
+    #[test]
+    fn kuznetsov_variant_builds_one_plugin() {
+        let grid = small_grid();
+        let medium = water(&grid);
+        let manager = PhysicsCatalog::build(
+            &nonlinear_config(NonlinearEquation::Kuznetsov),
+            &grid,
+            &medium,
+            1e-7,
+        )
+        .expect("Kuznetsov capability should build (plugin path now wired)");
+        assert_eq!(manager.plugin_count(), 1, "one Kuznetsov plugin expected");
+    }
+
+    /// The wired plugins must drive the REAL solver step: from a centred pressure
+    /// pulse in lossless water, a few steps evolve the field to a finite, bounded,
+    /// strictly-changed state (not a no-op, input-sensitive). Stability budget:
+    /// CFL = c·dt/dx = 1500·5e-8/1e-3 = 0.075.
+    fn assert_plugin_evolves_field(mut plugin: Box<dyn Plugin>) {
+        use crate::plugin::test_support::{make_context, null_plugin_fields, NullBoundary};
+        use ndarray::Array4;
+
+        let grid = Grid::new(16, 16, 16, 1e-3, 1e-3, 1e-3).expect("grid");
+        let medium = water(&grid);
+        plugin.initialize(&grid, &medium).expect("initialize");
+
+        // One field; PRESSURE_IDX = 0. Centre pulse of 100 kPa.
+        let mut fields = Array4::<f64>::zeros((1, grid.nx, grid.ny, grid.nz));
+        fields[[0, 8, 8, 8]] = 1.0e5;
+        let before = fields.clone();
+
+        let extra = null_plugin_fields(&grid);
+        let mut boundary = NullBoundary;
+        let mut ctx = make_context(&extra, &mut boundary);
+
+        let dt = 5.0e-8;
+        for step in 0..5 {
+            plugin
+                .update(&mut fields, &grid, &medium, dt, step as f64 * dt, &mut ctx)
+                .expect("plugin update must drive the solver");
+        }
+
+        assert!(
+            fields.iter().all(|v| v.is_finite()),
+            "field must remain finite (stable step)"
+        );
+        let max_change = fields
+            .iter()
+            .zip(before.iter())
+            .map(|(a, b)| (a - b).abs())
+            .fold(0.0_f64, f64::max);
+        assert!(
+            max_change > 1.0,
+            "plugin must evolve the field (real computation); max change = {max_change} Pa"
+        );
+    }
+
+    #[test]
+    fn westervelt_plugin_evolves_real_field() {
+        assert_plugin_evolves_field(Box::new(
+            crate::forward::nonlinear::WesterveltSolverPlugin::new(),
+        ));
+    }
+
+    #[test]
+    fn kuznetsov_plugin_evolves_real_field() {
+        assert_plugin_evolves_field(Box::new(
+            crate::forward::nonlinear::KuznetsovSolverPlugin::new(),
+        ));
     }
 }
