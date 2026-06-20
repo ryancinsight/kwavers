@@ -250,6 +250,11 @@ impl CoherenceFactor {
                 let base = 1.0 - (1.0 - b * b).max(0.0).sqrt();
                 base.clamp(0.0, 1.0).powf(sensitivity)
             }
+            // The `column` here is a column of instantaneous phases (see
+            // `weights`), not raw RF amplitudes.
+            CoherenceFactor::Phase { sensitivity } => {
+                phase_coherence_from_phases(column, sensitivity)
+            }
             CoherenceFactor::Generalized { m0 } => {
                 // Total aperture energy via Parseval: Σₖ|Xₖ|² = N·Σᵢxᵢ².
                 let sum_sq: f64 = column.iter().map(|&x| x * x).sum();
@@ -302,11 +307,19 @@ impl CoherenceFactor {
                 "CoherenceFactor::weights requires n_elements > 0".to_owned(),
             ));
         }
+        // The phase CF measures aperture *phase* coherence, so it reduces the
+        // per-element instantaneous phase (arg of the analytic signal) rather
+        // than the raw RF amplitude; every other variant reduces the RF directly.
+        let phase_matrix = match self {
+            CoherenceFactor::Phase { .. } => Some(instantaneous_phase_matrix(aligned)),
+            _ => None,
+        };
+        let feature = phase_matrix.as_ref().unwrap_or(aligned);
         let mut cf = Array1::<f64>::zeros(n_samples);
         let mut column = vec![0.0_f64; n_elements];
         for j in 0..n_samples {
             for (i, slot) in column.iter_mut().enumerate() {
-                *slot = aligned[[i, j]];
+                *slot = feature[[i, j]];
             }
             cf[j] = self.weight_for_column(&column);
         }

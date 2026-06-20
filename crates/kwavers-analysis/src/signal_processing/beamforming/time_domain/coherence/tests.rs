@@ -3,7 +3,7 @@
 //! Expected values are derived analytically from the closed-form definitions in
 //! [`super`]; no tolerance is wider than the f64 round-off of the arithmetic.
 
-use super::{delay_and_sum_coherence, CoherenceFactor};
+use super::{delay_and_sum_coherence, phase_coherence_from_phases, CoherenceFactor};
 use crate::signal_processing::beamforming::time_domain::das::delay_and_sum;
 use crate::signal_processing::beamforming::time_domain::delay_reference::DelayReference;
 use ndarray::{Array2, Array3};
@@ -340,4 +340,147 @@ fn gcf_is_zero_for_all_zero_column() {
         .weights(&aligned)
         .expect("gcf");
     assert_eq!(gcf[0], 0.0);
+}
+
+// --- Phase coherence factor (Camacho, Parrilla & Fritsch 2009) ---
+//
+// σ₀ = π/√3 is the std of a phase uniform on [−π, π]; below it is reused as the
+// analytic reference for every derived expected value.
+
+/// `√3/π = 1/σ₀` — the PCF slope per unit phase std at sensitivity 1.
+fn inv_sigma_ref() -> f64 {
+    3.0_f64.sqrt() / PI
+}
+
+#[test]
+fn pcf_is_unity_for_a_perfectly_coherent_aperture() {
+    // All phases equal ⇒ σ(φ) = σ(ψ) = 0 ⇒ PCF = 1, independent of the phase.
+    assert!((phase_coherence_from_phases(&[0.3, 0.3, 0.3, 0.3], 1.0) - 1.0).abs() < 1e-12);
+}
+
+#[test]
+fn pcf_matches_closed_form_for_a_small_symmetric_spread() {
+    // φ = [0.1, −0.1, 0.1, −0.1]: σ(φ) = 0.1; ψ shifts these near ±π so
+    // σ(ψ) ≈ π−0.1 ≫ σ(φ) ⇒ s = 0.1 ⇒ PCF = 1 − 0.1/σ₀.
+    let pcf = phase_coherence_from_phases(&[0.1, -0.1, 0.1, -0.1], 1.0);
+    let expected = 1.0 - 0.1 * inv_sigma_ref();
+    assert!((pcf - expected).abs() < 1e-12, "PCF {pcf} vs {expected}");
+}
+
+#[test]
+fn pcf_auxiliary_phase_rescues_wraparound_coherence() {
+    // KEYSTONE: a wavefront coherent but straddling the ±π branch cut. The naive
+    // phase std σ(φ) ≈ π−0.05 (spuriously near-incoherent), but the auxiliary
+    // phase ψ = φ − sign(φ)·π collapses to ±0.05 ⇒ σ(ψ) = 0.05 ⇒ PCF high.
+    // This is exactly what distinguishes the phase CF from the sign CF.
+    let phases = [PI - 0.05, -PI + 0.05, PI - 0.05, -PI + 0.05];
+    let pcf = phase_coherence_from_phases(&phases, 1.0);
+    let expected = 1.0 - 0.05 * inv_sigma_ref();
+    assert!((pcf - expected).abs() < 1e-12, "PCF {pcf} vs {expected}");
+    assert!(
+        pcf > 0.97,
+        "wraparound-coherent aperture must score high: {pcf}"
+    );
+}
+
+#[test]
+fn pcf_matches_closed_form_for_a_ninety_degree_spread() {
+    // φ = [−π/2, π/2]: σ(φ) = π/2; ψ = [π/2, −π/2] ⇒ σ(ψ) = π/2 ⇒ s = π/2 ⇒
+    // PCF = 1 − (π/2)/σ₀ = 1 − √3/2.
+    let pcf = phase_coherence_from_phases(&[-PI / 2.0, PI / 2.0], 1.0);
+    let expected = 1.0 - 3.0_f64.sqrt() / 2.0;
+    assert!((pcf - expected).abs() < 1e-12, "PCF {pcf} vs {expected}");
+}
+
+#[test]
+fn pcf_is_near_zero_for_an_evenly_spread_aperture() {
+    // φ = [−3π/4, −π/4, π/4, 3π/4] (step π/2): an arithmetic sequence with
+    // population std (π/2)·√((4²−1)/12) = (π/2)·√1.25, and ψ maps the set onto
+    // itself ⇒ s identical ⇒ PCF = 1 − s/σ₀ ≈ 0.032 (near full incoherence).
+    let phases = [-3.0 * PI / 4.0, -PI / 4.0, PI / 4.0, 3.0 * PI / 4.0];
+    let s = (PI / 2.0) * (15.0_f64 / 12.0).sqrt();
+    let expected = (1.0 - s * inv_sigma_ref()).max(0.0);
+    let pcf = phase_coherence_from_phases(&phases, 1.0);
+    assert!((pcf - expected).abs() < 1e-12, "PCF {pcf} vs {expected}");
+    assert!(
+        pcf < 0.05,
+        "evenly-spread aperture must be near-incoherent: {pcf}"
+    );
+}
+
+#[test]
+fn pcf_sensitivity_scales_the_rejection_linearly() {
+    // PCF(γ) = 1 − γ·s/σ₀; doubling γ doubles the deficit from 1.
+    let phases = [0.1, -0.1, 0.1, -0.1];
+    let p1 = phase_coherence_from_phases(&phases, 1.0);
+    let p2 = phase_coherence_from_phases(&phases, 2.0);
+    let expected2 = 1.0 - 2.0 * 0.1 * inv_sigma_ref();
+    assert!(
+        (p2 - expected2).abs() < 1e-12,
+        "PCF(γ=2) {p2} vs {expected2}"
+    );
+    assert!(p2 < p1, "higher sensitivity must reject more: {p2} !< {p1}");
+}
+
+#[test]
+fn pcf_is_zero_for_an_empty_aperture() {
+    assert_eq!(phase_coherence_from_phases(&[], 1.0), 0.0);
+}
+
+#[test]
+fn pcf_via_weights_is_unity_for_identical_rows() {
+    // Identical RF rows ⇒ identical analytic-signal phase per column ⇒ σ = 0 ⇒
+    // PCF = 1 at every sample, exactly (the column-path wiring check).
+    let row = [0.0, 1.0, 0.5, -0.3, 0.8, -0.2, 0.1, -0.6];
+    let mut aligned = Array2::<f64>::zeros((3, row.len()));
+    for mut r in aligned.rows_mut() {
+        for (slot, &v) in r.iter_mut().zip(row.iter()) {
+            *slot = v;
+        }
+    }
+    let cf = CoherenceFactor::Phase { sensitivity: 1.0 }
+        .weights(&aligned)
+        .expect("pcf weights");
+    for &v in cf.iter() {
+        assert!((v - 1.0).abs() < 1e-12, "identical rows ⇒ PCF 1, got {v}");
+    }
+}
+
+#[test]
+fn pcf_via_weights_is_low_for_a_quadrature_spread_aperture() {
+    // Four elements driven 90° apart: cos(ωt − iπ/2), i = 0..3. The analytic
+    // phases at each sample are {θ, θ−π/2, θ−π, θ−3π/2} — the evenly-spread
+    // π/2-step set ⇒ PCF ≈ 0.03 (cf. `pcf_is_near_zero_for_an_evenly_spread`).
+    let n = 64usize;
+    let omega = 2.0 * PI * 2.0 / n as f64; // 2 cycles
+    let mut aligned = Array2::<f64>::zeros((4, n));
+    for (i, mut r) in aligned.rows_mut().into_iter().enumerate() {
+        for (t, slot) in r.iter_mut().enumerate() {
+            *slot = (omega * t as f64 - i as f64 * PI / 2.0).cos();
+        }
+    }
+    let cf = CoherenceFactor::Phase { sensitivity: 1.0 }
+        .weights(&aligned)
+        .expect("pcf weights");
+    // Interior samples (away from Hilbert edge transients) are near-incoherent.
+    for &v in cf.slice(ndarray::s![16..48]).iter() {
+        assert!((0.0..=1.0).contains(&v), "PCF out of [0,1]: {v}");
+        assert!(
+            v < 0.2,
+            "quadrature-spread aperture must score low, got {v}"
+        );
+    }
+}
+
+#[test]
+fn pcf_rejects_invalid_sensitivity() {
+    let aligned = column(&[1.0, 1.0]);
+    assert!(CoherenceFactor::Phase { sensitivity: -1.0 }
+        .weights(&aligned)
+        .is_err());
+    assert!(CoherenceFactor::Phase {
+        sensitivity: f64::NAN
+    }
+    .weights(&aligned)
+    .is_err());
 }
