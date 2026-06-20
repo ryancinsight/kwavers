@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+### Fixed (2026-06-20) — complete the phase coherence factor (PCF) dispatch (COV-1) [minor]
+
+- [minor] **`kwavers-analysis::...::beamforming::time_domain::coherence`** completes
+  `CoherenceFactor::Phase`, the phase coherence factor (Camacho et al. 2009):
+  `PCF = max(0, 1 − (γ/σ₀)·min(σ(φ), σ(ψ)))`, where `φᵢ` are the per-element
+  instantaneous phases (`arg` of the analytic signal), `ψᵢ = φᵢ − sign(φᵢ)·π` the
+  auxiliary phases (shifting the wrap discontinuity off `±π`), `σ₀ = π/√3` the
+  std of a uniform phase, and `γ = sensitivity`. Adds the canonical scalar
+  `phase_coherence_from_phases` and derives phases via the analytic-signal SSOT
+  `kwavers_math::fft::analytic_signal_1d`.
+- [fix] The variant, validate arm, and helpers had landed without the
+  `weight_for_column` dispatch or the `weights()` analytic-phase path, leaving the
+  match non-exhaustive (**E0004**) — `kwavers-analysis` did not compile and
+  `instantaneous_phase_matrix` was dead. This wires the missing dispatch.
+- 11 value-semantic tests: exact closed forms (coherent → 1, 90°-spread → 1−√3/2,
+  linear sensitivity scaling), the keystone auxiliary-phase wrap rescue
+  (`±π`-straddling coherence scored high), near-zero for an evenly-spread aperture,
+  and the column-path wiring (identical rows → 1; quadrature-spread → low) through
+  the analytic signal. The coherence-factor family (amplitude / sign / phase /
+  generalized) is now complete; 39/39 coherence tests pass, clippy clean.
+
 ### Added (2026-06-20) — CPML Courant-vs-thickness stability test (CLD-11) + AMC-12 verified
 
 - [patch] **`kwavers/tests/cpml_absorption_quality.rs`** adds
