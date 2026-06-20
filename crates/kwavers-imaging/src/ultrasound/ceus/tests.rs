@@ -73,3 +73,56 @@ fn test_scattering_decreases_above_resonance() {
         "σ_s should decrease above resonance: σ(1.5·f_r)={s1:.3e} σ(3·f_r)={s2:.3e}"
     );
 }
+
+/// PHY-13: at resonance the Hoff (2000) Lorentzian denominator collapses to
+/// `δ_tot²` (the `(1−Ω²)²` term vanishes at Ω=1), so the peak cross-section has
+/// the closed form `σ_s(ω₀) = 4π R² (ω₀R/c_L)² / δ_tot²` with `δ_tot` the sum of
+/// the radiation/liquid-viscous/shell-viscous dimensionless damping (Church 1995).
+/// This re-derives δ_tot independently and checks the assembled Lorentzian peak.
+#[test]
+fn test_scattering_resonance_matches_closed_form() {
+    use kwavers_core::constants::cavitation::VISCOSITY_WATER;
+    use kwavers_core::constants::fundamental::SOUND_SPEED_WATER;
+    use std::f64::consts::PI;
+
+    let mb = Microbubble::sono_vue();
+    let r = mb.radius_eq;
+    let c_l = SOUND_SPEED_WATER;
+    let rho_l = DENSITY_WATER_NOMINAL;
+    let mu_l = VISCOSITY_WATER;
+    let omega0 = 2.0 * PI * mb.resonance_frequency(ATMOSPHERIC_PRESSURE, rho_l);
+
+    // Independent δ_tot (Church 1995 A3–A5), matching the documented model.
+    let delta_rad = omega0 * r / c_l;
+    let delta_vis = 4.0 * mu_l / (omega0 * rho_l * r * r);
+    let delta_sh = 4.0 * mb.shell_thickness * mb.shell_viscosity / (omega0 * rho_l * r * r * r);
+    let delta_tot = delta_rad + delta_vis + delta_sh;
+
+    let ka0 = omega0 * r / c_l;
+    let expected = FOUR_PI * r * r * ka0 * ka0 / (delta_tot * delta_tot);
+    let f_r = mb.resonance_frequency(ATMOSPHERIC_PRESSURE, rho_l);
+    let actual = mb.scattering_cross_section(f_r);
+    assert!(
+        (actual - expected).abs() / expected < 1e-9,
+        "resonance σ_s {actual:.6e} vs closed form {expected:.6e}"
+    );
+}
+
+/// PHY-13: well below resonance the Lorentzian denominator → 1, so the model
+/// reduces to the geometric coupling `σ_s ≈ 4π R² (ωR/c_L)² ∝ ω²` — doubling the
+/// frequency quadruples the cross-section. Needs no internal parameters.
+#[test]
+fn test_scattering_low_frequency_omega_squared_scaling() {
+    let mb = Microbubble::sono_vue();
+    let f_r = mb.resonance_frequency(ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL);
+    // Far below resonance (Ω ≪ 1/δ_tot) ⇒ both the (1−Ω²)² and (δ_tot·Ω)²
+    // denominator terms → their Ω→0 limits ⇒ denom ≈ 1 ⇒ σ_s ≈ 4πR²(ka)² ∝ ω².
+    let f = f_r / 1000.0;
+    let s1 = mb.scattering_cross_section(f);
+    let s2 = mb.scattering_cross_section(2.0 * f);
+    assert!(
+        (s2 / s1 - 4.0).abs() < 0.01,
+        "low-frequency σ_s must scale as ω² (ratio≈4): got {}",
+        s2 / s1
+    );
+}
