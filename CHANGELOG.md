@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+### Added (2026-06-19) — Self-consistent (implicit) inter-bubble coupling (CLD-1, ADR 030) [major]
+
+- [major] **`kwavers-therapy::...::lithotripsy::cavitation_cloud`** can now solve the
+  inter-bubble coupling **self-consistently** within each step (ADR 030) instead of
+  the explicit/lagged single pass (ADR 028). The coupling is refactored into one
+  `coupling_pressure_field`: the explicit branch is the prior lagged pass; the new
+  implicit branch fixed-point-iterates the coupling field — each bubble's source
+  strength `S = R²R̈ + 2RṘ²` and the coupling its neighbours feel co-determined,
+  reusing the canonical Keller-Miksis acceleration each iterate — to
+  `coupling_tolerance`. `CloudParameters` gains `implicit_coupling` (opt-in, default
+  off), `coupling_max_iterations`, `coupling_tolerance`. Off, or coupling-disabled,
+  or a single cell ⇒ reduces **exactly** to ADR 028/027. 2 new value-semantic tests
+  (the returned field satisfies its own fixed-point equation; implicit differs from
+  explicit under close coupling). 32 lithotripsy tests pass, clippy-clean.
+  **Still open** (CLD-1): direct linear solve / under-relaxation for the strong
+  (non-contractive) regime, `dp/dt` coupling, cloud-interface instabilities, k-Wave
+  comparison.
+
 ### Added (2026-06-19) — Cloud-scale acoustic shielding of the cavitation cloud (CLD-1, ADR 029) [major]
 
 - [major] **`kwavers-therapy::...::lithotripsy::cavitation_cloud`** gains the second

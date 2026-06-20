@@ -61,6 +61,14 @@ pub struct CloudParameters {
     /// Whether the incident wave enters from the high-index face (and travels
     /// toward index 0) instead of the low-index face.
     pub incident_from_high: bool,
+    /// Solve the inter-bubble coupling **self-consistently** (fixed-point) within
+    /// each step instead of the explicit/lagged single pass (ADR 030). Opt-in
+    /// (default `false`); only relevant when `coupling_enabled`.
+    pub implicit_coupling: bool,
+    /// Max fixed-point iterations for the self-consistent coupling solve.
+    pub coupling_max_iterations: usize,
+    /// Relative convergence tolerance for the self-consistent coupling solve.
+    pub coupling_tolerance: f64,
 }
 
 impl Default for CloudParameters {
@@ -79,6 +87,9 @@ impl Default for CloudParameters {
             shielding_enabled: false,           // opt-in (ADR 029)
             incident_axis: 2,                   // z by default
             incident_from_high: false,
+            implicit_coupling: false,           // opt-in (ADR 030)
+            coupling_max_iterations: 16,
+            coupling_tolerance: 1e-3,
         }
     }
 }
@@ -265,50 +276,147 @@ impl CavitationCloudDynamics {
         [i as f64 * dx, j as f64 * dy, k as f64 * dz]
     }
 
-    /// Inter-bubble acoustic source strengths `S_j = R_j² R̈_j + 2 R_j Ṙ_j²` for
-    /// every active cell, with positions, evaluated explicitly at the previous
-    /// total driving pressure (ADR 028, Pass 1). Empty when coupling is disabled.
-    fn coupling_sources(
-        &self,
-        solver: &KellerMiksisModel,
-        params: &BubbleParameters,
-        time: f64,
-    ) -> Vec<([f64; 3], f64)> {
-        if !self.parameters.coupling_enabled {
-            return Vec::new();
-        }
+    /// Active cells `(idx, position, R, Ṙ)` with seeded bubbles.
+    fn active_cells(&self) -> Vec<([usize; 3], [f64; 3], f64, f64)> {
         let (nx, ny, nz) = self.density_field.dim();
-        let mut sources = Vec::new();
+        let mut cells = Vec::new();
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {
                     let idx = [i, j, k];
-                    if self.density_field[idx] <= 0.0 {
-                        continue;
+                    if self.density_field[idx] > 0.0 {
+                        cells.push((
+                            idx,
+                            self.cell_position(i, j, k),
+                            self.radius_field[idx].max(1e-12),
+                            self.velocity_field[idx],
+                        ));
                     }
-                    let r = self.radius_field[idx].max(1e-12);
-                    let v = self.velocity_field[idx];
-                    let mut state = BubbleState::new(params);
-                    state.radius = r;
-                    state.wall_velocity = v;
-                    // Explicit (lagged) source acceleration from the previous total
-                    // driving pressure (no implicit all-bubble solve).
+                }
+            }
+        }
+        cells
+    }
+
+    /// Source strength `S = R²R̈ + 2RṘ²` of one bubble driven at `p_drive`.
+    fn source_strength(
+        solver: &KellerMiksisModel,
+        params: &BubbleParameters,
+        r: f64,
+        v: f64,
+        p_drive: f64,
+        time: f64,
+    ) -> f64 {
+        let mut state = BubbleState::new(params);
+        state.radius = r;
+        state.wall_velocity = v;
+        let accel = solver
+            .calculate_acceleration(&mut state, p_drive, 0.0, time)
+            .unwrap_or(0.0);
+        let s = accel.mul_add(r * r, 2.0 * r * v * v);
+        if s.is_finite() {
+            s
+        } else {
+            0.0
+        }
+    }
+
+    /// Inter-bubble acoustic coupling pressure per cell (ADR 028 explicit / ADR 030
+    /// self-consistent). Returns a zero field when coupling is disabled.
+    ///
+    /// Explicit: one pass with lagged source strengths (from the previous total
+    /// pressure). Implicit: fixed-point iteration where each bubble's source and its
+    /// neighbours' driving co-determine each other, to `coupling_tolerance`.
+    fn coupling_pressure_field(
+        &self,
+        solver: &KellerMiksisModel,
+        params: &BubbleParameters,
+        driving: &Array3<f64>,
+        time: f64,
+    ) -> Array3<f64> {
+        let mut field = Array3::<f64>::zeros(self.density_field.dim());
+        if !self.parameters.coupling_enabled {
+            return field;
+        }
+        let rho = params.rho_liquid;
+        let r_cut = self.parameters.interaction_radius;
+        let cells = self.active_cells();
+        let n = cells.len();
+        if n == 0 {
+            return field;
+        }
+
+        // Precompute pairwise coupling kernels K_ab = ρ/d_ab (within cutoff), 0 self.
+        let kernel = |a: usize, b: usize| -> f64 {
+            if a == b {
+                return 0.0;
+            }
+            let (pa, pb) = (cells[a].1, cells[b].1);
+            let d = ((pa[0] - pb[0]).powi(2) + (pa[1] - pb[1]).powi(2) + (pa[2] - pb[2]).powi(2))
+                .sqrt();
+            if d > 0.0 && d <= r_cut {
+                rho / d
+            } else {
+                0.0
+            }
+        };
+
+        if self.parameters.implicit_coupling {
+            // Self-consistent fixed point (ADR 030): iterate p_couple until the
+            // source strengths and the coupling they induce agree.
+            let scale = driving.iter().fold(0.0_f64, |m, &p| m.max(p.abs())) + params.p0;
+            let tol = self.parameters.coupling_tolerance * scale.max(1.0);
+            let mut p_couple = vec![0.0_f64; n];
+            for _ in 0..self.parameters.coupling_max_iterations.max(1) {
+                // Source strengths at the current self-consistent driving.
+                let strengths: Vec<f64> = (0..n)
+                    .map(|a| {
+                        let (idx, _, r, v) = cells[a];
+                        let p_drive = driving[idx] + p_couple[a];
+                        Self::source_strength(solver, params, r, v, p_drive, time)
+                    })
+                    .collect();
+                // Recompute the coupling each cell feels and measure the change.
+                let mut residual = 0.0_f64;
+                let mut next = vec![0.0_f64; n];
+                for a in 0..n {
+                    let mut sum = 0.0;
+                    for (b, &sb) in strengths.iter().enumerate() {
+                        sum += kernel(a, b) * sb;
+                    }
+                    residual = residual.max((sum - p_couple[a]).abs());
+                    next[a] = sum;
+                }
+                p_couple = next;
+                if residual < tol {
+                    break;
+                }
+            }
+            for (a, &(idx, ..)) in cells.iter().enumerate() {
+                field[idx] = p_couple[a];
+            }
+        } else {
+            // Explicit (ADR 028): lagged source strengths from the previous total.
+            let strengths: Vec<f64> = cells
+                .iter()
+                .map(|&(idx, _, r, v)| {
                     let p_src = if self.total_seeded {
                         self.prev_total_pressure[idx]
                     } else {
                         0.0
                     };
-                    let accel = solver
-                        .calculate_acceleration(&mut state, p_src, 0.0, time)
-                        .unwrap_or(0.0);
-                    let strength = accel.mul_add(r * r, 2.0 * r * v * v); // R²R̈ + 2RṘ²
-                    if strength.is_finite() {
-                        sources.push((self.cell_position(i, j, k), strength));
-                    }
+                    Self::source_strength(solver, params, r, v, p_src, time)
+                })
+                .collect();
+            for a in 0..n {
+                let mut sum = 0.0;
+                for (b, &sb) in strengths.iter().enumerate() {
+                    sum += kernel(a, b) * sb;
                 }
+                field[cells[a].0] = sum;
             }
         }
-        sources
+        field
     }
 
     /// Evolve the cloud by one time step under the instantaneous pressure field.
@@ -347,10 +455,8 @@ impl CavitationCloudDynamics {
         let params = self.bubble_parameters();
         let solver = KellerMiksisModel::new(params.clone());
         let r0 = params.r0;
-        let rho = params.rho_liquid;
         let p_vapor = VAPOR_PRESSURE_WATER;
         let efficiency = self.parameters.erosion_efficiency;
-        let r_cut = self.parameters.interaction_radius;
         let (nx, ny, nz) = self.density_field.dim();
 
         // Cloud-scale shielding (ADR 029): screen the incident field by the cloud's
@@ -363,8 +469,8 @@ impl CavitationCloudDynamics {
             pressure
         };
 
-        // Pass 1: explicit inter-bubble acoustic source strengths (ADR 028).
-        let sources = self.coupling_sources(&solver, &params, time);
+        // Inter-bubble acoustic coupling field (ADR 028 explicit / ADR 030 implicit).
+        let coupling = self.coupling_pressure_field(&solver, &params, driving, time);
 
         // Pass 2: per-cell total driving pressure (screened external + coupling).
         for i in 0..nx {
@@ -378,20 +484,7 @@ impl CavitationCloudDynamics {
                         continue;
                     }
 
-                    // Coupling pressure from all other active bubbles within cutoff.
-                    let pos_i = self.cell_position(i, j, k);
-                    let mut p_couple = 0.0;
-                    for &(pos_j, strength) in &sources {
-                        let dx = pos_i[0] - pos_j[0];
-                        let dy = pos_i[1] - pos_j[1];
-                        let dz = pos_i[2] - pos_j[2];
-                        let d = (dx * dx + dy * dy + dz * dz).sqrt();
-                        if d > 0.0 && d <= r_cut {
-                            p_couple += rho * strength / d; // (ρ/d)·S_j
-                        }
-                    }
-
-                    let p_total = driving[idx] + p_couple;
+                    let p_total = driving[idx] + coupling[idx];
                     let p_prev = if self.total_seeded {
                         self.prev_total_pressure[idx]
                     } else {
@@ -825,6 +918,87 @@ mod tests {
         assert!(
             interior(1.0e16) < interior(1.0e15),
             "a denser cloud must screen its interior more strongly"
+        );
+    }
+
+    // ── Self-consistent (implicit) coupling (ADR 030) ─────────────────────────
+
+    #[test]
+    fn implicit_coupling_field_is_self_consistent() {
+        // KEYSTONE (ADR 030): the returned coupling field satisfies its own
+        // fixed-point equation — recomputing p_couple from the final source
+        // strengths reproduces it. Two bubbles, distance d.
+        let d = 1.0e-3;
+        let params = CloudParameters {
+            coupling_enabled: true,
+            implicit_coupling: true,
+            cell_spacing: [d, 1.0, 1.0],
+            coupling_tolerance: 1e-9,
+            coupling_max_iterations: 200,
+            ..CloudParameters::default()
+        };
+        let mut cloud = CavitationCloudDynamics::new(params.clone(), (2, 1, 1));
+        cloud.density_field.fill(params.bubble_density);
+        cloud.radius_field[[0, 0, 0]] = 1.5e-6;
+        cloud.velocity_field[[0, 0, 0]] = 2.0;
+        cloud.radius_field[[1, 0, 0]] = 1.2e-6;
+        cloud.velocity_field[[1, 0, 0]] = -1.5;
+
+        let bp = cloud.bubble_parameters();
+        let solver = KellerMiksisModel::new(bp.clone());
+        let p_in = 0.5e6;
+        let driving = Array3::from_elem((2, 1, 1), p_in);
+        let field = cloud.coupling_pressure_field(&solver, &bp, &driving, 0.0);
+
+        // Fixed point: field[i] = (ρ/d)·S_j(driving_j + field_j), j the other cell.
+        let s = |idx: [usize; 3]| {
+            CavitationCloudDynamics::source_strength(
+                &solver,
+                &bp,
+                cloud.radius_field[idx],
+                cloud.velocity_field[idx],
+                p_in + field[idx],
+                0.0,
+            )
+        };
+        let coeff = bp.rho_liquid / d;
+        let expect0 = coeff * s([1, 0, 0]);
+        let expect1 = coeff * s([0, 0, 0]);
+        let tol = 1e-6 * (field[[0, 0, 0]].abs().max(field[[1, 0, 0]].abs()).max(1.0));
+        assert!((field[[0, 0, 0]] - expect0).abs() < tol, "cell0 not self-consistent: {} vs {expect0}", field[[0, 0, 0]]);
+        assert!((field[[1, 0, 0]] - expect1).abs() < tol, "cell1 not self-consistent: {} vs {expect1}", field[[1, 0, 0]]);
+    }
+
+    /// Drive a 2-cell cloud with explicit or implicit coupling; return cell-0 radius.
+    fn drive_two_cells_mode(implicit: bool, spacing: f64, amplitudes: &[f64], dt: f64) -> f64 {
+        let params = CloudParameters {
+            coupling_enabled: true,
+            implicit_coupling: implicit,
+            cell_spacing: [spacing, 1.0, 1.0],
+            ..CloudParameters::default()
+        };
+        let mut cloud = CavitationCloudDynamics::new(params.clone(), (2, 1, 1));
+        cloud.density_field.fill(params.bubble_density);
+        for (n, &amp) in amplitudes.iter().enumerate() {
+            cloud
+                .evolve_cloud(dt, n as f64 * dt, &Array3::from_elem((2, 1, 1), amp))
+                .unwrap();
+        }
+        cloud.cloud_radius()[[0, 0, 0]]
+    }
+
+    #[test]
+    fn implicit_differs_from_explicit_under_coupling() {
+        // The self-consistent solve removes the explicit lag, so the two schemes
+        // give different trajectories for close (non-negligible) coupling.
+        let f = CloudParameters::default().drive_frequency;
+        let dt = (1.0 / f) / 200.0;
+        let seq = sinusoid(0.5e6, f, dt, 150);
+        let r_impl = drive_two_cells_mode(true, 0.5e-3, &seq, dt);
+        let r_expl = drive_two_cells_mode(false, 0.5e-3, &seq, dt);
+        assert!(
+            (r_impl - r_expl).abs() > 1e-12 * r_expl.max(1e-9),
+            "implicit and explicit coupling must differ: impl={r_impl}, expl={r_expl}"
         );
     }
 }
