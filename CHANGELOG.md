@@ -2,6 +2,39 @@
 
 ## Unreleased
 
+### Added (2026-06-20) — Cloud-model refinements: dp/dt coupling, R(t) shielding, RT/RM diagnostic, sparse solver (CLD-1, ADR 032) [major]
+
+- [major] **`kwavers-therapy::...::lithotripsy::cavitation_cloud`** closes four CLD-1
+  frontier items, each **opt-in** (defaults reproduce ADR 027-031 exactly):
+  - **`dp/dt` coupling** (`couple_pressure_rate`): the coupling source strengths
+    `S = R²R̈ + 2RṘ²` now carry the Keller-Miksis acoustic-radiation term by feeding
+    the per-cell lagged finite-difference rate `(driving − prev_total)/dt` into the
+    source/affine acceleration. Because `R̈` is affine in `dp/dt`, the direct/iterative
+    linear system stays exact (the rate folds into the constant `c_j`; slope `d_j`
+    unchanged). Test: a non-zero `dp/dt` changes the source strength and the
+    two-bubble trajectory; off ⇒ identical to ADR 031.
+  - **`R(t)`-dependent shielding** (`shielding_radius_dependent`): the
+    Commander-Prosperetti resonance in `shielded_pressure` uses the instantaneous
+    per-cell radius `R(t)` instead of the equilibrium `R0` (quasi-static extension).
+    Test: equals the `R0` screen at `R = R0`, differs otherwise, and matches
+    Beer-Lambert with the instantaneous radius.
+  - **Cloud-interface instability diagnostic** (`interface_instability`): linear
+    Rayleigh-Taylor `σ = √(A·k·a)` and Richtmyer-Meshkov `ȧ = k·Δv·a₀·A` growth
+    rates at the cloud edge, Atwood number `A = β/(2−β)` from the Wood mixture density
+    (`representative_void_fraction`). A **diagnostic** (growth rates), not a nonlinear
+    interface simulation. Tests: both match their closed forms; RT is stable
+    (rate 0) when the light fluid is on top.
+  - **Sparse / matrix-free coupling solver** (`CouplingScheme::ImplicitIterative`):
+    solves the same `(I − D·G)·S = e` with the validated `solve_lsqr_matfree` and a
+    `MatFreeOperator` that computes `G_ab = ρ/d_ab` on the fly within the cutoff —
+    `O(active)` memory, `O(active·neighbours)` per matvec — for very large active
+    counts where the dense `ImplicitDirect` (`O(active³)`/`O(active²)`) is intractable.
+    Tests: matches the dense direct solve to 1e-6 and is self-consistent.
+  Coupling matrix building consolidated into `coupling_matrix`/`pair_distance` (SSOT,
+  reused by all schemes). 26 cavitation-cloud tests pass; clippy-clean. See ADR 032.
+  **Still open** (CLD-1): nonlinear RT/RM interface evolution, fully implicit `dp/dt`,
+  nonlinear (large-amplitude) cloud scattering, k-Wave/experimental erosion comparison.
+
 ### Added (2026-06-19) — Cavitation/bubble validation example (pykwavers)
 
 - [patch] **`crates/kwavers-python/examples/cavitation_bubble_validation.py`**: a

@@ -15,6 +15,9 @@ use kwavers_physics::acoustics::bubble_dynamics::bubbly_medium::commander_prospe
 use kwavers_physics::acoustics::bubble_dynamics::gilmore::GilmoreSolver;
 use kwavers_physics::acoustics::bubble_dynamics::keller_miksis::KellerMiksisModel;
 use kwavers_physics::acoustics::bubble_dynamics::{BubbleParameters, BubbleState};
+use kwavers_math::linear_algebra::iterative::lsqr::{
+    solve_lsqr_matfree, LsqrConfig, MatFreeOperator,
+};
 use kwavers_math::linear_algebra::LinearAlgebra;
 use ndarray::{Array1, Array2, Array3};
 use std::f64::consts::PI;
@@ -35,6 +38,10 @@ pub enum CouplingScheme {
     /// Direct linear solve of the affine coupling system `(I − D·G)·S = e`
     /// (ADR 031): exact and robust regardless of coupling strength. `O(active³)`.
     ImplicitDirect,
+    /// Matrix-free iterative (LSQR) solve of the same affine system (ADR 032):
+    /// `O(active·neighbours)` memory, for very large active clouds where the dense
+    /// direct solve is intractable.
+    ImplicitIterative,
 }
 
 /// Parameters for cavitation cloud dynamics.
@@ -88,6 +95,17 @@ pub struct CloudParameters {
     pub coupling_max_iterations: usize,
     /// Relative convergence tolerance for the self-consistent coupling solve.
     pub coupling_tolerance: f64,
+    /// Include the driving-pressure **rate** `dp/dt` in the coupling source
+    /// strengths (ADR 032). The Keller-Miksis acceleration is affine in both `p`
+    /// and `dp/dt`; when enabled, the per-cell lagged finite-difference rate
+    /// `(driving − prev_total)/dt` is fed into the source/affine acceleration so
+    /// the radiated strengths carry the acoustic-radiation term. Opt-in (default
+    /// `false`); the rate is explicit (lagged one step).
+    pub couple_pressure_rate: bool,
+    /// Use the instantaneous per-cell radius `R(t)` (not the equilibrium `R0`) for
+    /// the Commander-Prosperetti resonance in the shielding screen (ADR 032).
+    /// Quasi-static extension of the linear CP theory; opt-in (default `false`).
+    pub shielding_radius_dependent: bool,
 }
 
 impl Default for CloudParameters {
@@ -109,6 +127,8 @@ impl Default for CloudParameters {
             coupling_scheme: CouplingScheme::Explicit, // ADR 028; opt into implicit
             coupling_max_iterations: 16,
             coupling_tolerance: 1e-3,
+            couple_pressure_rate: false, // opt-in (ADR 032)
+            shielding_radius_dependent: false, // opt-in (ADR 032)
         }
     }
 }
@@ -126,6 +146,93 @@ pub fn bubble_radiated_pressure(rho: f64, distance: f64, r: f64, r_dot: f64, r_d
     }
     let source_strength = r_ddot.mul_add(r * r, 2.0 * r * r_dot * r_dot); // r²r̈ + 2rṙ²
     rho * source_strength / distance
+}
+
+/// Euclidean distance [m] between two cell positions.
+#[inline]
+fn pair_distance(a: [f64; 3], b: [f64; 3]) -> f64 {
+    ((a[0] - b[0]).powi(2) + (a[1] - b[1]).powi(2) + (a[2] - b[2]).powi(2)).sqrt()
+}
+
+/// Matrix-free linear operator for the coupling system `M = I − D·G` (ADR 032).
+///
+/// `G_ab = ρ/d_ab` (within the cutoff, 0 on the diagonal) is computed on the fly
+/// from cell positions, so no `n×n` matrix is stored: `O(n)` memory,
+/// `O(n·neighbours)` per matvec. `G` is symmetric (`d_ab = d_ba`), so
+/// `Mᵀ = (I − D·G)ᵀ = I − G·D`.
+struct CouplingOperator {
+    positions: Vec<[f64; 3]>,
+    /// Per-cell affine slope `d_a = R_a²·∂R̈_a/∂p`.
+    d: Vec<f64>,
+    rho: f64,
+    r_cut: f64,
+}
+
+impl CouplingOperator {
+    /// `(G·s)_a = Σ_{b≠a, d_ab≤cut} (ρ/d_ab)·s_b`.
+    fn apply_g(&self, s: &[f64]) -> Vec<f64> {
+        let n = self.positions.len();
+        (0..n)
+            .map(|a| {
+                let mut acc = 0.0_f64;
+                for (b, (&pos_b, &s_b)) in self.positions.iter().zip(s.iter()).enumerate() {
+                    if a == b {
+                        continue;
+                    }
+                    let dist = pair_distance(self.positions[a], pos_b);
+                    if dist > 0.0 && dist <= self.r_cut {
+                        acc += self.rho / dist * s_b;
+                    }
+                }
+                acc
+            })
+            .collect()
+    }
+}
+
+impl MatFreeOperator for CouplingOperator {
+    fn rows(&self) -> usize {
+        self.positions.len()
+    }
+    fn cols(&self) -> usize {
+        self.positions.len()
+    }
+    /// `y = M·x = x − D·(G·x)`.
+    fn matvec(&self, x: &[f64], y: &mut [f64]) {
+        let gx = self.apply_g(x);
+        for a in 0..self.positions.len() {
+            y[a] = self.d[a].mul_add(-gx[a], x[a]);
+        }
+    }
+    /// `x = Mᵀ·y = y − G·(D·y)` (`G` symmetric).
+    fn t_matvec(&self, y: &[f64], x: &mut [f64]) {
+        let dy: Vec<f64> = y.iter().zip(self.d.iter()).map(|(&yi, &di)| di * yi).collect();
+        let g_dy = self.apply_g(&dy);
+        for a in 0..self.positions.len() {
+            x[a] = y[a] - g_dy[a];
+        }
+    }
+}
+
+/// Linear growth-rate **diagnostic** for cloud-interface instabilities (ADR 032).
+///
+/// The bubbly cloud (effective Wood mixture density `ρ_mix = (1−β)·ρ_L`) is the
+/// **light** fluid; the surrounding liquid (`ρ_L`) is the **heavy** fluid. This is
+/// a *linear* diagnostic — closed-form growth rates of a small perturbation at the
+/// cloud edge — not a nonlinear interface simulation (no mushrooms / mixing).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct InterfaceInstability {
+    /// Representative cloud void fraction `β` used for the mixture density.
+    pub void_fraction: f64,
+    /// Atwood number `A = (ρ_L − ρ_mix)/(ρ_L + ρ_mix) = β/(2−β)`.
+    pub atwood: f64,
+    /// Rayleigh-Taylor growth rate `σ = √(A·k·a)` [1/s] (0 when stable, i.e. the
+    /// heavy fluid is not accelerated into the light one, `a ≤ 0`). The
+    /// perturbation grows as `exp(σ t)`.
+    pub rayleigh_taylor_rate: f64,
+    /// Richtmyer-Meshkov (impulsive) linear amplitude growth rate
+    /// `ȧ = k·Δv·a₀·A` [m/s] (Richtmyer 1960); constant in the linear regime.
+    pub richtmyer_meshkov_rate: f64,
 }
 
 /// Cavitation cloud dynamics model.
@@ -273,7 +380,14 @@ impl CavitationCloudDynamics {
                     let alpha = if n > 0.0 && r > 0.0 {
                         // Void fraction β = n·(4/3)π R³ (clamped for CP validity).
                         let beta = (n * (4.0 / 3.0) * PI * r.powi(3)).clamp(0.0, 1.0 - 1e-9);
-                        commander_prosperetti_attenuation(f, beta, r0, c, rho, mu, p0, gamma)
+                        // CP resonance radius: equilibrium R₀, or the instantaneous
+                        // R(t) when the quasi-static refinement is enabled (ADR 032).
+                        let r_res = if self.parameters.shielding_radius_dependent {
+                            r
+                        } else {
+                            r0
+                        };
+                        commander_prosperetti_attenuation(f, beta, r_res, c, rho, mu, p0, gamma)
                             .max(0.0)
                     } else {
                         0.0
@@ -318,20 +432,22 @@ impl CavitationCloudDynamics {
     }
 
     /// Keller-Miksis wall acceleration `R̈` of one bubble at `(R, Ṙ)` driven by
-    /// `p_drive` (instantaneous). `0` if non-finite.
+    /// `p_drive` with rate `dp_dt` (ADR 032; `dp_dt = 0` ⇒ instantaneous-only).
+    /// `0` if non-finite.
     fn raw_acceleration(
         solver: &KellerMiksisModel,
         params: &BubbleParameters,
         r: f64,
         v: f64,
         p_drive: f64,
+        dp_dt: f64,
         time: f64,
     ) -> f64 {
         let mut state = BubbleState::new(params);
         state.radius = r;
         state.wall_velocity = v;
         let a = solver
-            .calculate_acceleration(&mut state, p_drive, 0.0, time)
+            .calculate_acceleration(&mut state, p_drive, dp_dt, time)
             .unwrap_or(0.0);
         if a.is_finite() {
             a
@@ -340,16 +456,18 @@ impl CavitationCloudDynamics {
         }
     }
 
-    /// Source strength `S = R²R̈ + 2RṘ²` of one bubble driven at `p_drive`.
+    /// Source strength `S = R²R̈ + 2RṘ²` of one bubble driven at `p_drive` with
+    /// rate `dp_dt` (ADR 032).
     fn source_strength(
         solver: &KellerMiksisModel,
         params: &BubbleParameters,
         r: f64,
         v: f64,
         p_drive: f64,
+        dp_dt: f64,
         time: f64,
     ) -> f64 {
-        let accel = Self::raw_acceleration(solver, params, r, v, p_drive, time);
+        let accel = Self::raw_acceleration(solver, params, r, v, p_drive, dp_dt, time);
         let s = accel.mul_add(r * r, 2.0 * r * v * v);
         if s.is_finite() {
             s
@@ -369,38 +487,38 @@ impl CavitationCloudDynamics {
         solver: &KellerMiksisModel,
         params: &BubbleParameters,
         driving: &Array3<f64>,
+        dt: f64,
         time: f64,
     ) -> Array3<f64> {
         let mut field = Array3::<f64>::zeros(self.density_field.dim());
         if !self.parameters.coupling_enabled {
             return field;
         }
-        let rho = params.rho_liquid;
-        let r_cut = self.parameters.interaction_radius;
         let cells = self.active_cells();
         let n = cells.len();
         if n == 0 {
             return field;
         }
 
+        // Per-cell driving-rate dp/dt for the source strengths (ADR 032). Lagged
+        // finite difference against the previous total pressure; 0 unless the
+        // `couple_pressure_rate` refinement is enabled (then defaults reduce to
+        // the instantaneous-only ADR 028/031 behaviour exactly).
+        let rates: Vec<f64> = cells
+            .iter()
+            .map(|&(idx, ..)| {
+                if self.parameters.couple_pressure_rate && self.total_seeded {
+                    (driving[idx] - self.prev_total_pressure[idx]) / dt
+                } else {
+                    0.0
+                }
+            })
+            .collect();
+
         // Precompute the pairwise coupling matrix G_ab = ρ/d_ab (within cutoff;
         // 0 on the diagonal). p_couple = G·S for any source-strength vector S.
-        let mut g = Array2::<f64>::zeros((n, n));
-        for a in 0..n {
-            for b in 0..n {
-                if a == b {
-                    continue;
-                }
-                let (pa, pb) = (cells[a].1, cells[b].1);
-                let dist = ((pa[0] - pb[0]).powi(2)
-                    + (pa[1] - pb[1]).powi(2)
-                    + (pa[2] - pb[2]).powi(2))
-                .sqrt();
-                if dist > 0.0 && dist <= r_cut {
-                    g[[a, b]] = rho / dist;
-                }
-            }
-        }
+        // (`ImplicitIterative` is matrix-free and never forms this dense matrix.)
+        let g = self.coupling_matrix(&cells);
         let apply_g = |s: &[f64]| -> Vec<f64> {
             (0..n)
                 .map(|a| (0..n).map(|b| g[[a, b]] * s[b]).sum())
@@ -412,22 +530,32 @@ impl CavitationCloudDynamics {
                 // Lagged source strengths from the previous total pressure (ADR 028).
                 let strengths: Vec<f64> = cells
                     .iter()
-                    .map(|&(idx, _, r, v)| {
+                    .enumerate()
+                    .map(|(a, &(idx, _, r, v))| {
                         let p_src = if self.total_seeded {
                             self.prev_total_pressure[idx]
                         } else {
                             0.0
                         };
-                        Self::source_strength(solver, params, r, v, p_src, time)
+                        Self::source_strength(solver, params, r, v, p_src, rates[a], time)
                     })
                     .collect();
                 apply_g(&strengths)
             }
-            CouplingScheme::ImplicitFixedPoint { under_relaxation } => {
-                self.fixed_point_coupling(solver, params, driving, time, &g, under_relaxation)
-            }
+            CouplingScheme::ImplicitFixedPoint { under_relaxation } => self.fixed_point_coupling(
+                solver,
+                params,
+                driving,
+                time,
+                &g,
+                &rates,
+                under_relaxation,
+            ),
             CouplingScheme::ImplicitDirect => {
-                self.direct_coupling(solver, params, driving, time, &g, &apply_g)
+                self.direct_coupling(solver, params, driving, time, &g, &rates, &apply_g)
+            }
+            CouplingScheme::ImplicitIterative => {
+                self.iterative_coupling(solver, params, driving, time, &cells, &rates)
             }
         };
 
@@ -439,6 +567,9 @@ impl CavitationCloudDynamics {
 
     /// Self-consistent coupling by under-relaxed fixed-point iteration (ADR 030/031).
     /// `cells`/`g` describe the active bubbles and their coupling matrix.
+    // Coupling-solve inputs (solver/params/driving/time/G/rates) are intrinsic to
+    // the affine system; bundling them buys no clarity here.
+    #[allow(clippy::too_many_arguments)]
     fn fixed_point_coupling(
         &self,
         solver: &KellerMiksisModel,
@@ -446,6 +577,7 @@ impl CavitationCloudDynamics {
         driving: &Array3<f64>,
         time: f64,
         g: &Array2<f64>,
+        rates: &[f64],
         under_relaxation: f64,
     ) -> Vec<f64> {
         let cells = self.active_cells();
@@ -458,7 +590,15 @@ impl CavitationCloudDynamics {
             let strengths: Vec<f64> = (0..n)
                 .map(|a| {
                     let (idx, _, r, v) = cells[a];
-                    Self::source_strength(solver, params, r, v, driving[idx] + p_couple[a], time)
+                    Self::source_strength(
+                        solver,
+                        params,
+                        r,
+                        v,
+                        driving[idx] + p_couple[a],
+                        rates[a],
+                        time,
+                    )
                 })
                 .collect();
             let mut residual = 0.0_f64;
@@ -478,6 +618,34 @@ impl CavitationCloudDynamics {
     /// Direct linear solve of the affine coupling system `(I − D·G)·S = e` (ADR 031),
     /// robust regardless of coupling strength. Falls back to an under-relaxed
     /// fixed point if the system is singular/ill-posed.
+    /// Affine source-strength coefficients `(c_a, d_a)` with `S_a = c_a + d_a·p_a`
+    /// for each active cell `a`. `R̈` is affine in the driving pressure (and in
+    /// `dp/dt`), so two acceleration evaluations at `p = 0` and `p = p_ref` (the
+    /// same `dp/dt = rates[a]`) reconstruct it exactly; the `dp/dt` term is folded
+    /// into `c_a` and leaves the slope `d_a` unchanged (ADR 031/032).
+    fn affine_coeffs(
+        &self,
+        solver: &KellerMiksisModel,
+        params: &BubbleParameters,
+        cells: &[([usize; 3], [f64; 3], f64, f64)],
+        rates: &[f64],
+        time: f64,
+    ) -> (Vec<f64>, Vec<f64>) {
+        let p_ref = params.p0.max(1.0);
+        let mut c = vec![0.0_f64; cells.len()];
+        let mut d = vec![0.0_f64; cells.len()];
+        for (a, &(_, _, r, v)) in cells.iter().enumerate() {
+            let accel0 = Self::raw_acceleration(solver, params, r, v, 0.0, rates[a], time);
+            let accel_ref = Self::raw_acceleration(solver, params, r, v, p_ref, rates[a], time);
+            let b_coef = (accel_ref - accel0) / p_ref;
+            c[a] = (r * r).mul_add(accel0, 2.0 * r * v * v); // R²·R̈(0,dp/dt) + 2RṘ²
+            d[a] = r * r * b_coef; // R²·∂R̈/∂p
+        }
+        (c, d)
+    }
+
+    // Coupling-solve inputs are intrinsic to the affine system (see above).
+    #[allow(clippy::too_many_arguments)]
     fn direct_coupling(
         &self,
         solver: &KellerMiksisModel,
@@ -485,23 +653,12 @@ impl CavitationCloudDynamics {
         driving: &Array3<f64>,
         time: f64,
         g: &Array2<f64>,
+        rates: &[f64],
         apply_g: &dyn Fn(&[f64]) -> Vec<f64>,
     ) -> Vec<f64> {
         let cells = self.active_cells();
         let n = cells.len();
-        // Affine coefficients S_a = c_a + d_a·p_drive_a (R̈ is affine in p ⇒ exact
-        // from two evaluations at p = 0 and p = p_ref).
-        let p_ref = params.p0.max(1.0);
-        let mut c = vec![0.0_f64; n];
-        let mut d = vec![0.0_f64; n];
-        for a in 0..n {
-            let (_, _, r, v) = cells[a];
-            let accel0 = Self::raw_acceleration(solver, params, r, v, 0.0, time);
-            let accel_ref = Self::raw_acceleration(solver, params, r, v, p_ref, time);
-            let b_coef = (accel_ref - accel0) / p_ref;
-            c[a] = (r * r).mul_add(accel0, 2.0 * r * v * v); // R²·R̈(0) + 2RṘ²
-            d[a] = r * r * b_coef; // R²·∂R̈/∂p
-        }
+        let (c, d) = self.affine_coeffs(solver, params, &cells, rates, time);
         // M = I − D·G ; e = c + D·p_ext.
         let mut m = Array2::<f64>::eye(n);
         let mut e = Array1::<f64>::zeros(n);
@@ -516,8 +673,134 @@ impl CavitationCloudDynamics {
             Err(_) => {
                 // Singular/ill-posed system: surface via the fallback path (a damped
                 // fixed point), never silent zeros.
-                self.fixed_point_coupling(solver, params, driving, time, g, 0.5)
+                self.fixed_point_coupling(solver, params, driving, time, g, rates, 0.5)
             }
+        }
+    }
+
+    /// Matrix-free iterative solve of the affine coupling system `(I − D·G)·S = e`
+    /// (ADR 032) via damped LSQR. Builds no `n×n` matrix: the operator applies
+    /// `M·x = x − D·(G·x)` (and `Mᵀ = I − G·D`, `G` symmetric) computing
+    /// `G_ab = ρ/d_ab` on the fly within the cutoff — `O(n)` memory,
+    /// `O(n·neighbours)` per matvec — for very large active counts. Returns
+    /// `p_couple = G·S`. Falls back to a damped fixed point on non-convergence.
+    fn iterative_coupling(
+        &self,
+        solver: &KellerMiksisModel,
+        params: &BubbleParameters,
+        driving: &Array3<f64>,
+        time: f64,
+        cells: &[([usize; 3], [f64; 3], f64, f64)],
+        rates: &[f64],
+    ) -> Vec<f64> {
+        let n = cells.len();
+        let (c, d) = self.affine_coeffs(solver, params, cells, rates, time);
+        let e: Vec<f64> = (0..n)
+            .map(|a| d[a].mul_add(driving[cells[a].0], c[a]))
+            .collect();
+        let op = CouplingOperator {
+            positions: cells.iter().map(|&(_, p, ..)| p).collect(),
+            d,
+            rho: params.rho_liquid,
+            r_cut: self.parameters.interaction_radius,
+        };
+        let scale = e.iter().fold(0.0_f64, |m, &v| m.max(v.abs())).max(1.0);
+        let tol = self.parameters.coupling_tolerance * scale;
+        let config = LsqrConfig {
+            max_iterations: self.parameters.coupling_max_iterations.max(1),
+            tolerance: self.parameters.coupling_tolerance,
+            damping: 0.0,
+            atol: tol,
+            btol: tol,
+        };
+        let result = solve_lsqr_matfree(&op, &e, &config);
+        let s = result.solution;
+        // p_couple = G·S (matrix-free apply, consistent with the dense `apply_g`).
+        let g_s = op.apply_g(&s);
+        // Fall back to a damped fixed point if the source strengths diverged.
+        if g_s.iter().all(|x| x.is_finite()) {
+            g_s
+        } else {
+            let g = self.coupling_matrix(cells);
+            self.fixed_point_coupling(solver, params, driving, time, &g, rates, 0.5)
+        }
+    }
+
+    /// Dense pairwise coupling matrix `G_ab = ρ/d_ab` (0 on the diagonal / beyond
+    /// the cutoff) for the active `cells`.
+    fn coupling_matrix(&self, cells: &[([usize; 3], [f64; 3], f64, f64)]) -> Array2<f64> {
+        let n = cells.len();
+        let rho = self.bubble_parameters().rho_liquid;
+        let r_cut = self.parameters.interaction_radius;
+        let mut g = Array2::<f64>::zeros((n, n));
+        for a in 0..n {
+            for b in 0..n {
+                if a == b {
+                    continue;
+                }
+                let dist = pair_distance(cells[a].1, cells[b].1);
+                if dist > 0.0 && dist <= r_cut {
+                    g[[a, b]] = rho / dist;
+                }
+            }
+        }
+        g
+    }
+
+    /// Representative cloud void fraction `β = mean over seeded cells of
+    /// n·(4/3)π R(t)³`, clamped to `[0, 1)`. `0` if no cells are seeded.
+    #[must_use]
+    pub fn representative_void_fraction(&self) -> f64 {
+        let mut sum = 0.0_f64;
+        let mut count = 0usize;
+        for (&n, &r) in self.density_field.iter().zip(self.radius_field.iter()) {
+            if n > 0.0 {
+                sum += (n * (4.0 / 3.0) * PI * r.max(0.0).powi(3)).clamp(0.0, 1.0 - 1e-9);
+                count += 1;
+            }
+        }
+        if count == 0 {
+            0.0
+        } else {
+            sum / count as f64
+        }
+    }
+
+    /// Linear growth-rate **diagnostic** for cloud-interface (Rayleigh-Taylor /
+    /// Richtmyer-Meshkov) instabilities (ADR 032).
+    ///
+    /// The cloud (Wood mixture density `ρ_mix = (1−β)·ρ_L`, the light fluid) borders
+    /// the liquid (`ρ_L`, heavy), giving Atwood number `A = β/(2−β)`. For a
+    /// perturbation of wavenumber `wavenumber` [1/m]:
+    /// - Rayleigh-Taylor: `σ = √(A·k·a)` [1/s], real only when the interface
+    ///   `acceleration` `a` [m/s²] drives the heavy fluid into the light
+    ///   (`a > 0`); `a ≤ 0` ⇒ stable (rate `0`).
+    /// - Richtmyer-Meshkov: `ȧ = k·Δv·a₀·A` [m/s] for impulsive velocity jump
+    ///   `velocity_jump` `Δv` [m/s] and initial amplitude `initial_amplitude` `a₀`
+    ///   [m] (Richtmyer 1960).
+    ///
+    /// This returns growth **rates**; it does not evolve the interface (the
+    /// nonlinear evolution remains out of scope, CLD-1).
+    #[must_use]
+    pub fn interface_instability(
+        &self,
+        wavenumber: f64,
+        acceleration: f64,
+        velocity_jump: f64,
+        initial_amplitude: f64,
+    ) -> InterfaceInstability {
+        let beta = self.representative_void_fraction();
+        // ρ_mix = (1−β)·ρ_L ⇒ A = (ρ_L − ρ_mix)/(ρ_L + ρ_mix) = β/(2−β).
+        let atwood = beta / (2.0 - beta);
+        let k = wavenumber.max(0.0);
+        let rt_arg = atwood * k * acceleration;
+        let rayleigh_taylor_rate = if rt_arg > 0.0 { rt_arg.sqrt() } else { 0.0 };
+        let richtmyer_meshkov_rate = k * velocity_jump * initial_amplitude * atwood;
+        InterfaceInstability {
+            void_fraction: beta,
+            atwood,
+            rayleigh_taylor_rate,
+            richtmyer_meshkov_rate,
         }
     }
 
@@ -572,7 +855,7 @@ impl CavitationCloudDynamics {
         };
 
         // Inter-bubble acoustic coupling field (ADR 028 explicit / ADR 030 implicit).
-        let coupling = self.coupling_pressure_field(&solver, &params, driving, time);
+        let coupling = self.coupling_pressure_field(&solver, &params, driving, dt, time);
 
         // Pass 2: per-cell total driving pressure (screened external + coupling).
         for i in 0..nx {
@@ -1050,7 +1333,7 @@ mod tests {
         let solver = KellerMiksisModel::new(bp.clone());
         let p_in = 0.5e6;
         let driving = Array3::from_elem((2, 1, 1), p_in);
-        let field = cloud.coupling_pressure_field(&solver, &bp, &driving, 0.0);
+        let field = cloud.coupling_pressure_field(&solver, &bp, &driving, 1.0, 0.0);
 
         // Fixed point: field[i] = (ρ/d)·S_j(driving_j + field_j), j the other cell.
         let s = |idx: [usize; 3]| {
@@ -1060,6 +1343,7 @@ mod tests {
                 cloud.radius_field[idx],
                 cloud.velocity_field[idx],
                 p_in + field[idx],
+                0.0,
                 0.0,
             )
         };
@@ -1151,6 +1435,7 @@ mod tests {
                 cloud.velocity_field[idx],
                 p_in + field[idx],
                 0.0,
+                0.0,
             )
         };
         let coeff = bp.rho_liquid / spacing;
@@ -1171,7 +1456,7 @@ mod tests {
         let solver = KellerMiksisModel::new(bp.clone());
         let p_in = 0.5e6;
         let driving = Array3::from_elem((2, 1, 1), p_in);
-        let field = cloud.coupling_pressure_field(&solver, &bp, &driving, 0.0);
+        let field = cloud.coupling_pressure_field(&solver, &bp, &driving, 1.0, 0.0);
         let residual = self_consistency_residual(&cloud, &field, spacing, p_in);
         assert!(residual < 1e-9, "direct solve must be self-consistent: residual {residual}");
     }
@@ -1186,13 +1471,13 @@ mod tests {
         let direct = two_bubble_cloud(CouplingScheme::ImplicitDirect, spacing);
         let bp = direct.bubble_parameters();
         let solver = KellerMiksisModel::new(bp.clone());
-        let f_direct = direct.coupling_pressure_field(&solver, &bp, &driving, 0.0);
+        let f_direct = direct.coupling_pressure_field(&solver, &bp, &driving, 1.0, 0.0);
 
         let fp = two_bubble_cloud(
             CouplingScheme::ImplicitFixedPoint { under_relaxation: 1.0 },
             spacing,
         );
-        let f_fp = fp.coupling_pressure_field(&solver, &bp, &driving, 0.0);
+        let f_fp = fp.coupling_pressure_field(&solver, &bp, &driving, 1.0, 0.0);
 
         for idx in [[0, 0, 0], [1, 0, 0]] {
             let scale = f_direct[idx].abs().max(1.0);
@@ -1203,5 +1488,224 @@ mod tests {
                 f_fp[idx]
             );
         }
+    }
+
+    // ── dp/dt coupling (ADR 032) ──────────────────────────────────────────────
+
+    #[test]
+    fn source_strength_responds_to_pressure_rate() {
+        // R̈ depends on dp/dt (acoustic-radiation term): a non-zero rate changes
+        // the source strength; dp/dt = 0 reproduces the instantaneous-only value.
+        let params = CloudParameters::default();
+        let cloud = CavitationCloudDynamics::new(params, (1, 1, 1));
+        let bp = cloud.bubble_parameters();
+        let solver = KellerMiksisModel::new(bp.clone());
+        let (r, v, p) = (1.4e-6, 1.0, 0.5e6);
+        let s0 = CavitationCloudDynamics::source_strength(&solver, &bp, r, v, p, 0.0, 0.0);
+        let s_rate = CavitationCloudDynamics::source_strength(&solver, &bp, r, v, p, 1.0e12, 0.0);
+        assert!(s0.is_finite() && s_rate.is_finite());
+        assert!(
+            (s0 - s_rate).abs() > 1e-12 * s0.abs().max(1e-30),
+            "dp/dt must change the source strength: s0={s0}, s_rate={s_rate}"
+        );
+    }
+
+    #[test]
+    fn pressure_rate_coupling_changes_trajectory_and_is_opt_in() {
+        // With couple_pressure_rate on, the coupled source strengths carry the
+        // dp/dt term ⇒ a different two-bubble trajectory than rate-off; the default
+        // (off) is unchanged from ADR 028/031.
+        let f = CloudParameters::default().drive_frequency;
+        let dt = (1.0 / f) / 200.0;
+        let seq = sinusoid(0.5e6, f, dt, 150);
+        let run = |rate: bool| {
+            let params = CloudParameters {
+                coupling_enabled: true,
+                coupling_scheme: CouplingScheme::ImplicitDirect,
+                cell_spacing: [0.5e-3, 1.0, 1.0],
+                couple_pressure_rate: rate,
+                ..CloudParameters::default()
+            };
+            let mut cloud = CavitationCloudDynamics::new(params.clone(), (2, 1, 1));
+            cloud.density_field.fill(params.bubble_density);
+            for (n, &amp) in seq.iter().enumerate() {
+                cloud
+                    .evolve_cloud(dt, n as f64 * dt, &Array3::from_elem((2, 1, 1), amp))
+                    .unwrap();
+            }
+            cloud.cloud_radius()[[0, 0, 0]]
+        };
+        assert!(
+            (run(true) - run(false)).abs() > 1e-12 * run(false).max(1e-9),
+            "dp/dt coupling must change the trajectory"
+        );
+    }
+
+    // ── R(t)-dependent shielding (ADR 032) ────────────────────────────────────
+
+    #[test]
+    fn radius_dependent_shielding_uses_instantaneous_radius() {
+        use kwavers_physics::acoustics::bubble_dynamics::bubbly_medium::commander_prosperetti_attenuation;
+        // A cloud expanded above R₀: the R(t)-dependent screen differs from the
+        // R₀ screen, and at R = R₀ they coincide.
+        // Moderate density / short path ⇒ partial (non-saturating) attenuation, so
+        // the resonance-radius dependence is observable (a dense cloud screens to
+        // ~0 either way and would mask it).
+        let base = CloudParameters {
+            shielding_enabled: true,
+            incident_axis: 2,
+            bubble_density: 1.0e11,
+            drive_frequency: 3.0e6,
+            ..CloudParameters::default()
+        };
+        let nz = 2;
+        let p_in = 1.0e6;
+        let pressure = Array3::from_elem((1, 1, nz), p_in);
+
+        let screen = |radius_dependent: bool, r: f64| {
+            let params = CloudParameters {
+                shielding_radius_dependent: radius_dependent,
+                ..base.clone()
+            };
+            let mut cloud = CavitationCloudDynamics::new(params.clone(), (1, 1, nz));
+            cloud.density_field.fill(params.bubble_density);
+            cloud.radius_field.fill(r);
+            cloud.shielded_pressure(&pressure)[[0, 0, nz - 1]]
+        };
+
+        let bp = CavitationCloudDynamics::new(base.clone(), (1, 1, 1)).bubble_parameters();
+        // At R = R₀ the two paths must agree (same resonance radius).
+        assert!(
+            (screen(true, bp.r0) - screen(false, bp.r0)).abs() <= 1e-9 * p_in,
+            "R(t) screen at R=R₀ must equal the R₀ screen"
+        );
+        // At R = 2·R₀ the resonance shifts ⇒ different attenuation, and the
+        // value must match an independent Beer-Lambert with the instantaneous R.
+        let r_big = 2.0 * bp.r0;
+        let differ = (screen(true, r_big) - screen(false, r_big)).abs();
+        assert!(
+            differ > 1e-6 * p_in,
+            "R(t) screen must differ from R₀ screen when R≠R₀: true={}, false={}",
+            screen(true, r_big),
+            screen(false, r_big)
+        );
+
+        let beta = (base.bubble_density * (4.0 / 3.0) * PI * r_big.powi(3)).clamp(0.0, 1.0 - 1e-9);
+        let alpha = commander_prosperetti_attenuation(
+            bp.driving_frequency,
+            beta,
+            r_big, // instantaneous radius
+            bp.c_liquid,
+            bp.rho_liquid,
+            bp.mu_liquid,
+            bp.p0,
+            bp.gamma,
+        );
+        let ds = base.cell_spacing[2];
+        let expected = p_in * (-(alpha * ds * (nz as f64 - 1.0 + 0.5))).exp();
+        assert!(
+            (screen(true, r_big) - expected).abs() <= 1e-9 * p_in,
+            "R(t) screen must match Beer-Lambert with the instantaneous radius"
+        );
+    }
+
+    // ── Interface-instability diagnostic (ADR 032) ────────────────────────────
+
+    #[test]
+    fn rayleigh_taylor_rate_matches_closed_form() {
+        // σ = √(A·k·a), A = β/(2−β); stable (0) when the heavy fluid is not
+        // accelerated into the light one (a ≤ 0).
+        let params = CloudParameters {
+            bubble_density: 1.0e15,
+            ..CloudParameters::default()
+        };
+        let mut cloud = CavitationCloudDynamics::new(params.clone(), (2, 2, 2));
+        cloud.density_field.fill(params.bubble_density); // radius at R₀
+        let (k, accel, dv, a0) = (1.0e3, 1.0e8, 0.0, 0.0);
+        let diag = cloud.interface_instability(k, accel, dv, a0);
+
+        let beta = cloud.representative_void_fraction();
+        let atwood = beta / (2.0 - beta);
+        assert!(beta > 0.0 && (diag.void_fraction - beta).abs() < 1e-15);
+        assert!((diag.atwood - atwood).abs() < 1e-15);
+        let expected = (atwood * k * accel).sqrt();
+        assert!(
+            (diag.rayleigh_taylor_rate - expected).abs() <= 1e-9 * expected,
+            "RT rate {} vs closed form {expected}",
+            diag.rayleigh_taylor_rate
+        );
+
+        // Reversed acceleration ⇒ stable (no real growth).
+        let stable = cloud.interface_instability(k, -accel, dv, a0);
+        assert_eq!(stable.rayleigh_taylor_rate, 0.0, "light-over-heavy must be stable");
+    }
+
+    #[test]
+    fn richtmyer_meshkov_rate_matches_impulsive_form() {
+        // ȧ = k·Δv·a₀·A.
+        let params = CloudParameters {
+            bubble_density: 1.0e15,
+            ..CloudParameters::default()
+        };
+        let mut cloud = CavitationCloudDynamics::new(params.clone(), (2, 2, 2));
+        cloud.density_field.fill(params.bubble_density);
+        let (k, dv, a0) = (2.0e3, 5.0, 1.0e-5);
+        let diag = cloud.interface_instability(k, 0.0, dv, a0);
+        let expected = k * dv * a0 * diag.atwood;
+        assert!(
+            (diag.richtmyer_meshkov_rate - expected).abs() <= 1e-12 * expected.abs(),
+            "RM rate {} vs impulsive form {expected}",
+            diag.richtmyer_meshkov_rate
+        );
+        assert!(diag.atwood > 0.0, "expected a positive Atwood number for a seeded cloud");
+    }
+
+    // ── Sparse / matrix-free coupling solver (ADR 032) ────────────────────────
+
+    #[test]
+    fn iterative_solve_matches_direct_solve() {
+        // The matrix-free LSQR solve of (I − D·G)·S = e reproduces the dense
+        // direct solve to the solver tolerance on a moderate cloud.
+        let spacing = 8.0e-4; // weak-moderate coupling
+        let p_in = 0.5e6;
+        let driving = Array3::from_elem((2, 1, 1), p_in);
+
+        let mut direct = two_bubble_cloud(CouplingScheme::ImplicitDirect, spacing);
+        direct.parameters.coupling_tolerance = 1e-10;
+        direct.parameters.coupling_max_iterations = 500;
+        let bp = direct.bubble_parameters();
+        let solver = KellerMiksisModel::new(bp.clone());
+        let f_direct = direct.coupling_pressure_field(&solver, &bp, &driving, 1.0, 0.0);
+
+        let mut iter = two_bubble_cloud(CouplingScheme::ImplicitIterative, spacing);
+        iter.parameters.coupling_tolerance = 1e-10;
+        iter.parameters.coupling_max_iterations = 500;
+        let f_iter = iter.coupling_pressure_field(&solver, &bp, &driving, 1.0, 0.0);
+
+        for idx in [[0, 0, 0], [1, 0, 0]] {
+            let scale = f_direct[idx].abs().max(1.0);
+            assert!(
+                (f_direct[idx] - f_iter[idx]).abs() <= 1e-6 * scale,
+                "iterative must match direct: {} vs {}",
+                f_iter[idx],
+                f_direct[idx]
+            );
+        }
+    }
+
+    #[test]
+    fn iterative_solve_is_self_consistent() {
+        // The matrix-free solution satisfies the fixed-point equation directly.
+        let spacing = 6.0e-4;
+        let p_in = 0.5e6;
+        let driving = Array3::from_elem((2, 1, 1), p_in);
+        let mut cloud = two_bubble_cloud(CouplingScheme::ImplicitIterative, spacing);
+        cloud.parameters.coupling_tolerance = 1e-10;
+        cloud.parameters.coupling_max_iterations = 500;
+        let bp = cloud.bubble_parameters();
+        let solver = KellerMiksisModel::new(bp.clone());
+        let field = cloud.coupling_pressure_field(&solver, &bp, &driving, 1.0, 0.0);
+        let residual = self_consistency_residual(&cloud, &field, spacing, p_in);
+        assert!(residual < 1e-6, "iterative solve must be self-consistent: residual {residual}");
     }
 }
