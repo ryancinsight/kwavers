@@ -145,7 +145,7 @@ impl BulkPiezoResonator {
     /// Returns `Z_e = 0` at `frequency = 0` (DC short of the model's reactance).
     ///
     /// Air-loaded both faces is the open-circuit limit; matching/backing layers
-    /// (a loaded transmission line) are a documented follow-up.
+    /// are modelled by the loaded acoustic transmission line ([`AcousticLayer`]).
     #[must_use]
     pub fn electrical_impedance(&self, frequency: f64) -> Complex64 {
         if frequency <= 0.0 {
@@ -160,6 +160,88 @@ impl BulkPiezoResonator {
         let bracket = 1.0 - self.coupling_kt2 * tanx_over_x;
         // 1/(jωC₀) = −i/(ωC₀); the lossless plate gives a purely reactive Z_e.
         Complex64::new(0.0, -1.0 / (omega * c0)) * bracket
+    }
+
+    /// Design a quarter-wave **matching layer** coupling this plate's acoustic
+    /// impedance to an external acoustic `z_load` (e.g. water/tissue ≈ 1.5 MRayl).
+    ///
+    /// The layer impedance is the geometric mean `√(Z_plate·Z_load)`
+    /// ([`quarter_wave_match_impedance`]) and the thickness is λ/4 at the
+    /// antiresonance for the chosen layer `sound_speed` — at that frequency the
+    /// layer transforms `z_load` back to `Z_plate`, eliminating the reflection.
+    #[must_use]
+    pub fn quarter_wave_matching_layer(&self, z_load: f64, layer_sound_speed: f64) -> AcousticLayer {
+        let impedance = quarter_wave_match_impedance(self.acoustic_impedance(), z_load);
+        AcousticLayer::quarter_wave(impedance, layer_sound_speed, self.antiresonance_frequency())
+    }
+}
+
+/// Specific acoustic impedance of a single-layer quarter-wave matching transformer
+/// coupling `z_source` to `z_load`: `Z = √(Z_source·Z_load)` \[Rayl].
+///
+/// A layer of this impedance, one quarter-wavelength thick at the design
+/// frequency, presents `Z_in = Z_source` to the source — zero reflection
+/// (the acoustic analogue of the λ/4 transmission-line transformer).
+#[must_use]
+pub fn quarter_wave_match_impedance(z_source: f64, z_load: f64) -> f64 {
+    (z_source * z_load).sqrt()
+}
+
+/// A single lossless acoustic layer (matching layer or backing) in a 1-D
+/// transmission-line stack.
+#[derive(Debug, Clone, Copy)]
+pub struct AcousticLayer {
+    /// Specific acoustic impedance `Z = ρ·c` \[Rayl].
+    pub impedance: f64,
+    /// Layer thickness `d` \[m].
+    pub thickness: f64,
+    /// Layer longitudinal sound speed `c` \[m·s⁻¹].
+    pub sound_speed: f64,
+}
+
+impl AcousticLayer {
+    /// Construct a layer one quarter-wavelength thick at `frequency`
+    /// (`d = c/(4f)`).
+    #[must_use]
+    pub fn quarter_wave(impedance: f64, sound_speed: f64, frequency: f64) -> Self {
+        Self {
+            impedance,
+            sound_speed,
+            thickness: sound_speed / (4.0 * frequency),
+        }
+    }
+
+    /// Input acoustic impedance looking into the layer terminated by `z_load`, at
+    /// `frequency` — the lossless transmission-line (telegrapher) transform:
+    ///
+    /// ```text
+    /// Z_in = Z · (Z_load + j Z tan(kd)) / (Z + j Z_load tan(kd)),   k = 2πf/c.
+    /// ```
+    ///
+    /// Quarter-wave (`kd = π/2`) ⇒ `Z_in = Z²/Z_load` (impedance inverter);
+    /// half-wave (`kd = π`) ⇒ `Z_in = Z_load` (pass-through); a matched layer
+    /// (`Z = Z_load`) ⇒ `Z_in = Z` at any thickness.
+    #[must_use]
+    pub fn input_impedance(&self, z_load: Complex64, frequency: f64) -> Complex64 {
+        let kd = 2.0 * PI * frequency / self.sound_speed * self.thickness;
+        let z = Complex64::new(self.impedance, 0.0);
+        let jt = Complex64::new(0.0, kd.tan());
+        z * (z_load + z * jt) / (z + z_load * jt)
+    }
+
+    /// Pressure reflection coefficient `Γ = (Z_in − Z_source)/(Z_in + Z_source)`
+    /// seen by a source medium of impedance `z_source` looking into this layer
+    /// terminated by `z_load`. `|Γ| = 0` is a perfect match.
+    #[must_use]
+    pub fn reflection_coefficient(
+        &self,
+        z_source: f64,
+        z_load: Complex64,
+        frequency: f64,
+    ) -> Complex64 {
+        let z_in = self.input_impedance(z_load, frequency);
+        let zs = Complex64::new(z_source, 0.0);
+        (z_in - zs) / (z_in + zs)
     }
 }
 
@@ -269,5 +351,91 @@ mod tests {
         let z_near = p.electrical_impedance(0.9999 * f_p).norm();
         let z_mid = p.electrical_impedance(0.5 * f_p).norm();
         assert!(z_near > 100.0 * z_mid, "|Z_e| must blow up near f_p: {z_near} vs {z_mid}");
+    }
+
+    // ── Loaded matching/backing transmission line (COV-6 follow-up) ──────────
+
+    const Z_WATER: f64 = 1.5e6; // ≈ 1.5 MRayl
+
+    #[test]
+    fn match_impedance_is_geometric_mean() {
+        let z = quarter_wave_match_impedance(30.0e6, Z_WATER); // PZT ~30 MRayl → water
+        assert!((z - (30.0e6_f64 * Z_WATER).sqrt()).abs() / z < 1e-12);
+    }
+
+    #[test]
+    fn half_wave_layer_is_a_passthrough() {
+        // kd = π ⇒ tan = 0 ⇒ Z_in = Z_load, independent of the layer impedance.
+        let f = 1.0e6;
+        let c = 2000.0;
+        let layer = AcousticLayer {
+            impedance: 5.0e6,
+            sound_speed: c,
+            thickness: c / (2.0 * f), // λ/2
+        };
+        let z_load = Complex64::new(Z_WATER, 0.0);
+        let z_in = layer.input_impedance(z_load, f);
+        assert!((z_in.re - Z_WATER).abs() / Z_WATER < 1e-6, "half-wave Re {z_in}");
+        assert!(z_in.im.abs() / Z_WATER < 1e-6, "half-wave Im {z_in}");
+    }
+
+    #[test]
+    fn quarter_wave_layer_inverts_impedance() {
+        // kd = π/2 ⇒ Z_in = Z²/Z_load.
+        let f = 1.0e6;
+        let layer = AcousticLayer::quarter_wave(5.0e6, 2000.0, f);
+        let z_load = Complex64::new(Z_WATER, 0.0);
+        let z_in = layer.input_impedance(z_load, f);
+        let expected = 5.0e6_f64 * 5.0e6 / Z_WATER;
+        assert!((z_in.re - expected).abs() / expected < 1e-6, "λ/4 invert Re {z_in}");
+        assert!(z_in.im.abs() / expected < 1e-6, "λ/4 invert Im {z_in}");
+    }
+
+    #[test]
+    fn matched_layer_transforms_to_its_own_impedance_at_any_thickness() {
+        // Z = Z_load ⇒ no internal reflection ⇒ Z_in = Z for every kd.
+        let f = 1.0e6;
+        for &d_frac in &[0.1, 0.37, 0.5, 0.83] {
+            let layer = AcousticLayer {
+                impedance: Z_WATER,
+                sound_speed: 2000.0,
+                thickness: d_frac * 2000.0 / f,
+            };
+            let z_in = layer.input_impedance(Complex64::new(Z_WATER, 0.0), f);
+            assert!((z_in.re - Z_WATER).abs() / Z_WATER < 1e-9, "matched Re at d={d_frac}");
+            assert!(z_in.im.abs() / Z_WATER < 1e-9, "matched Im at d={d_frac}");
+        }
+    }
+
+    #[test]
+    fn quarter_wave_match_eliminates_reflection_into_water() {
+        // A λ/4 layer of impedance √(Z_plate·Z_water) at f_p transforms the water
+        // load back to the plate impedance ⇒ Z_in = Z_plate, Γ = 0.
+        let p = therapy_pzt();
+        let f_p = p.antiresonance_frequency();
+        let z_plate = p.acoustic_impedance();
+        let layer = p.quarter_wave_matching_layer(Z_WATER, 2000.0);
+        // Designed impedance is the geometric mean.
+        assert!(
+            (layer.impedance - (z_plate * Z_WATER).sqrt()).abs() / layer.impedance < 1e-12
+        );
+        let z_in = layer.input_impedance(Complex64::new(Z_WATER, 0.0), f_p);
+        assert!((z_in.re - z_plate).abs() / z_plate < 1e-6, "matched Z_in {z_in} vs Z_plate {z_plate}");
+        let gamma = layer.reflection_coefficient(z_plate, Complex64::new(Z_WATER, 0.0), f_p);
+        assert!(gamma.norm() < 1e-6, "matched reflection |Γ|={}", gamma.norm());
+    }
+
+    #[test]
+    fn unmatched_plate_into_water_reflects_strongly() {
+        // Sanity: without a matching layer the plate↔water mismatch is severe.
+        // Direct interface Γ = (Z_water − Z_plate)/(Z_water + Z_plate).
+        let p = therapy_pzt();
+        let z_plate = p.acoustic_impedance();
+        let gamma_direct = (Z_WATER - z_plate) / (Z_WATER + z_plate);
+        assert!(
+            gamma_direct.abs() > 0.8,
+            "bare PZT↔water mismatch should reflect >80%: |Γ|={}",
+            gamma_direct.abs()
+        );
     }
 }
