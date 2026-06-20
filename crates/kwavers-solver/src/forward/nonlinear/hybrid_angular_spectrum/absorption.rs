@@ -47,14 +47,22 @@ pub struct HasAbsorptionOperator {
 }
 
 impl HasAbsorptionOperator {
-    /// Construct an `HasAbsorptionOperator` from a `HASConfig`.
-    #[must_use]
-    pub fn new(config: &HASConfig) -> Self {
-        Self {
+    /// Construct an `HasAbsorptionOperator` from a validated `HASConfig`.
+    ///
+    /// The config is re-validated at this boundary ([`HASConfig::validate`]) so a
+    /// config reached via `default()` + field mutation — bypassing
+    /// [`HASConfig::new`] — cannot drive the power-law absorption with a
+    /// non-positive reference frequency or a negative attenuation coefficient.
+    ///
+    /// # Errors
+    /// - [`KwaversError::InvalidInput`] if `config` fails [`HASConfig::validate`].
+    pub fn new(config: &HASConfig) -> KwaversResult<Self> {
+        config.validate()?;
+        Ok(Self {
             attenuation_coeff: config.attenuation_coeff,
             power_law_exp: config.power_law_exponent,
             reference_freq: config.reference_frequency,
-        }
+        })
     }
 
     /// Apply CW absorption over propagation step `dz`.
@@ -151,7 +159,7 @@ mod tests {
     fn test_absorption_zero_attenuation_identity() {
         let mut config = default_config();
         config.attenuation_coeff = 0.0;
-        let op = HasAbsorptionOperator::new(&config);
+        let op = HasAbsorptionOperator::new(&config).unwrap();
 
         let pressure = Array3::from_shape_fn((4, 4, 4), |(i, j, k)| (i + j + k) as f64 + 1.0);
         let result = op.apply(&pressure, 0.05).unwrap();
@@ -178,7 +186,7 @@ mod tests {
                                                 // Set so that α_np_m = 10.0 Np/m
         config.attenuation_coeff = 10.0 * NP_TO_DB / 100.0; // dB/cm/MHz
 
-        let op = HasAbsorptionOperator::new(&config);
+        let op = HasAbsorptionOperator::new(&config).unwrap();
         let dz = 0.01; // 1 cm
         let expected_factor = (-10.0_f64 * dz).exp(); // exp(-0.1)
 
@@ -199,7 +207,7 @@ mod tests {
     #[test]
     fn test_absorption_broadband_cw_agreement() {
         let config = default_config();
-        let op = HasAbsorptionOperator::new(&config);
+        let op = HasAbsorptionOperator::new(&config).unwrap();
         let f0 = config.reference_frequency;
         let dz = 0.005;
 
@@ -227,7 +235,7 @@ mod tests {
         let mut config = default_config();
         config.power_law_exponent = 2.0;
         config.attenuation_coeff = 0.5;
-        let op = HasAbsorptionOperator::new(&config);
+        let op = HasAbsorptionOperator::new(&config).unwrap();
         let dz = 0.01;
         let f0 = config.reference_frequency;
 
@@ -264,5 +272,36 @@ mod tests {
         // NP_TO_DB = 20/ln(10) exactly
         let exact = 20.0 / f64::ln(10.0);
         assert_abs_diff_eq!(NP_TO_DB, exact, epsilon = f64::EPSILON * 10.0);
+    }
+
+    /// SOL-5: the operator rejects a config whose validation invariants were
+    /// broken by post-`default` field mutation (the bypass around `HASConfig::new`).
+    /// A non-positive reference frequency would otherwise drive `(f/MHz)^y → NaN`,
+    /// and a negative attenuation coefficient is unphysical.
+    #[test]
+    fn test_absorption_rejects_invalid_config() {
+        let mut bad_freq = default_config();
+        bad_freq.reference_frequency = 0.0;
+        assert!(
+            HasAbsorptionOperator::new(&bad_freq).is_err(),
+            "non-positive reference frequency must be rejected"
+        );
+
+        let mut neg_atten = default_config();
+        neg_atten.attenuation_coeff = -1.0;
+        assert!(
+            HasAbsorptionOperator::new(&neg_atten).is_err(),
+            "negative attenuation coefficient must be rejected"
+        );
+
+        let mut bad_exp = default_config();
+        bad_exp.power_law_exponent = 4.0; // outside [0, 3]
+        assert!(
+            HasAbsorptionOperator::new(&bad_exp).is_err(),
+            "out-of-range power-law exponent must be rejected"
+        );
+
+        // A valid (default) config still constructs.
+        assert!(HasAbsorptionOperator::new(&default_config()).is_ok());
     }
 }

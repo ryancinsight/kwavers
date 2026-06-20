@@ -93,7 +93,7 @@ impl HybridAngularSpectrumSolver {
     pub fn new(grid: &Grid, config: &HASConfig) -> KwaversResult<Self> {
         let diffraction = HybridAsDiffractionOperator::new(grid, config)?;
         let nonlinearity = HybridAsNonlinearOperator::new(config);
-        let absorption = HasAbsorptionOperator::new(config);
+        let absorption = HasAbsorptionOperator::new(config)?;
 
         Ok(Self {
             diffraction,

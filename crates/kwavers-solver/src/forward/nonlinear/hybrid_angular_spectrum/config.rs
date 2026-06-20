@@ -55,27 +55,7 @@ impl HASConfig {
         dz: f64,
         reference_frequency: f64,
     ) -> KwaversResult<Self> {
-        if sound_speed <= 0.0 {
-            return Err(KwaversError::InvalidInput(
-                "Sound speed must be positive".to_owned(),
-            ));
-        }
-        if density <= 0.0 {
-            return Err(KwaversError::InvalidInput(
-                "Density must be positive".to_owned(),
-            ));
-        }
-        if dz <= 0.0 {
-            return Err(KwaversError::InvalidInput(
-                "Step size must be positive".to_owned(),
-            ));
-        }
-        if !(0.0..=3.0).contains(&power_law_exponent) {
-            return Err(KwaversError::InvalidInput(
-                "Power law exponent should be between 0 and 3".to_owned(),
-            ));
-        }
-        Ok(Self {
+        let config = Self {
             sound_speed,
             density,
             nonlinearity,
@@ -83,7 +63,55 @@ impl HASConfig {
             power_law_exponent,
             dz,
             reference_frequency,
-        })
+        };
+        config.validate()?;
+        Ok(config)
+    }
+
+    /// Validate the physical-range invariants of the configuration.
+    ///
+    /// This is the SSOT for HAS configuration validity, called by
+    /// [`HASConfig::new`] and re-checked by consumers (e.g. the absorption
+    /// operator) so a config reached via `default()` + field mutation cannot
+    /// drive the power-law absorption with a non-positive reference frequency
+    /// (`f^y → NaN`) or a negative attenuation coefficient.
+    ///
+    /// # Errors
+    /// - [`KwaversError::InvalidInput`] if any parameter is out of its physical range.
+    pub fn validate(&self) -> KwaversResult<()> {
+        if self.sound_speed <= 0.0 {
+            return Err(KwaversError::InvalidInput(
+                "Sound speed must be positive".to_owned(),
+            ));
+        }
+        if self.density <= 0.0 {
+            return Err(KwaversError::InvalidInput(
+                "Density must be positive".to_owned(),
+            ));
+        }
+        if self.dz <= 0.0 {
+            return Err(KwaversError::InvalidInput(
+                "Step size must be positive".to_owned(),
+            ));
+        }
+        if !(0.0..=3.0).contains(&self.power_law_exponent) {
+            return Err(KwaversError::InvalidInput(
+                "Power law exponent should be between 0 and 3".to_owned(),
+            ));
+        }
+        // The power-law absorption raises `(f_ref/MHz)^y`, well-defined only for a
+        // positive frequency; reject NaN explicitly (it is neither > nor <= 0).
+        if self.reference_frequency.is_nan() || self.reference_frequency <= 0.0 {
+            return Err(KwaversError::InvalidInput(
+                "Reference frequency must be positive".to_owned(),
+            ));
+        }
+        if !self.attenuation_coeff.is_finite() || self.attenuation_coeff < 0.0 {
+            return Err(KwaversError::InvalidInput(
+                "Attenuation coefficient must be finite and non-negative".to_owned(),
+            ));
+        }
+        Ok(())
     }
 
     /// Acoustic impedance Z = ρ·c (Pa·s/m).
