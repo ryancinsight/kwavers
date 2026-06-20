@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+### Added (2026-06-20) — coverage follow-up features (COV-6, COV-4, CFS-PML) [minor]
+
+- [minor] **COV-6** `kwavers-transducer::bulk_piezo` — loaded acoustic
+  transmission line for matching/backing design: `AcousticLayer` with the
+  lossless telegrapher input-impedance transform and a reflection-coefficient
+  helper, `quarter_wave_match_impedance = √(Z_s·Z_L)`, and
+  `BulkPiezoResonator::quarter_wave_matching_layer`. Extends the free-plate KLM
+  model to loaded faces. 6 closed-form tests (λ/4 inversion, λ/2 pass-through,
+  matched-layer identity, Γ→0 matching into water).
+- [minor] **COV-4** `kwavers-phantom::scatterers` — opt-in power-law tissue
+  attenuation in the monostatic pulse-echo RF synthesis: each echo scaled by the
+  round-trip factor `exp(−α(f₀)·2r)` (α₀ in dB/(cm·MHz); α₀=0 ⇒ prior lossless
+  model). Validated against the closed-form factor + a deeper-scatterer
+  differential.
+- [minor] **CFS-PML** `kwavers-boundary` — `CPMLConfig::with_cfs_pml_for_frequency`
+  sets `alpha_max = π·f₀` (Roden & Gedney 2000) so callers need not compute the
+  complex-frequency-shift by hand.
+
 ### Fixed (2026-06-20) — audit-table remediation pass (SOL/PHY/CLD/AMC) [patch]
 
 Drove the remaining Sprint A–E audit findings to terminal states; each verified

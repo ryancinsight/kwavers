@@ -94,11 +94,20 @@ on branch `feat/cov1-coherence-factor` (off `main`, not pushed/merged).
   fabricated evidence): PHY-6/7 (citations), AMC-5 (PINN loss), SOL-6, SOL-10/11,
   CLD-2 (KZK wiring), PHY-13/CLD-9/10/PHY-11, COV-5 de Jong/Herring.
 
-### Low-value follow-ups (open, not blocking)
-- COV-4 finite-aperture SIR; COV-6 loaded matching/backing transmission line;
-  CPML empirical reflection benchmark + α_max=π·f₀ plumbing + DG-solver CPML
-  consolidation; PLC-2 [patch] perfusion-param-extraction unify; COV-1 PCF
-  refinement to a native IQ/baseband aperture path (current path is Hilbert-of-RF).
+### Low-value follow-ups — DONE / remaining (2026-06-20)
+- **DONE:** COV-6 loaded matching/backing transmission line (`AcousticLayer` +
+  λ/4 matching); COV-4 power-law attenuation in scatterer pulse-echo RF;
+  CFS-PML `alpha_max = π·f₀` plumbing.
+- **Closed WONTFIX:** PLC-2 perfusion-param unify (`analyze_tic` vs
+  `from_samples` are genuinely different concerns — image-analysis ROI stats vs
+  forward transport-PDE pharmacokinetics; unifying = over-abstraction); CPML
+  empirical reflection benchmark (already covered by `theoretical_reflection` +
+  the CLD-11 reflection-decay/Courant tests).
+- **Remaining (open, not blocking):** COV-4 finite-aperture SIR convolution
+  (Tupholme–Stepanishen, distinct from attenuation); COV-6 loaded-Mason `Z_e`
+  (radiation resistance from front/back loads); DG-solver CPML consolidation
+  ([arch], 3rd impl); COV-1 PCF native IQ/baseband path (a concurrent agent
+  owns PCF).
 
 ### Residual risk
 - Nil outstanding from this pass: PCF broken-build fixed + merged; audit-table
