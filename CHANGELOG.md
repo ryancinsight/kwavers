@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Added (2026-06-19) — Cavitation/bubble validation example (pykwavers)
+
+- [patch] **`crates/kwavers-python/examples/cavitation_bubble_validation.py`**: a
+  runnable validation of the cavitation-cloud foundations (ADRs 027-030) against
+  **analytical bubble theory** with plots — Keller-Miksis forced resonance peaks at
+  the surface-tension-corrected Minnaert frequency (1.9% rel err), Wood mixture
+  sound speed matches the closed-form Wood equation to machine precision
+  (2.7e-16), and the Commander-Prosperetti attenuation peaks at the bubble
+  resonance (1.6%). Saves `output/cavitation_bubble_validation.png` + a metrics
+  report, all checks PASS. Documents why k-Wave is not the oracle here (it has no
+  bubble-dynamics model — the k-Wave *acoustic* parity is the `at_*_compare.py`
+  suite).
+
 ### Added (2026-06-19) — Strong-regime coupling solver: direct + under-relaxed (CLD-1, ADR 031) [major]
 
 - [major] **`kwavers-therapy::...::lithotripsy::cavitation_cloud`** makes the
