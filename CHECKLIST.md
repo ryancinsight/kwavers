@@ -103,16 +103,26 @@ on branch `feat/cov1-coherence-factor` (off `main`, not pushed/merged).
   forward transport-PDE pharmacokinetics; unifying = over-abstraction); CPML
   empirical reflection benchmark (already covered by `theoretical_reflection` +
   the CLD-11 reflection-decay/Courant tests).
-- **Remaining (open, not blocking):** COV-4 finite-aperture SIR convolution
-  (Tupholme–Stepanishen, distinct from attenuation); COV-6 loaded-Mason `Z_e`
-  (radiation resistance from front/back loads); DG-solver CPML consolidation
-  ([arch], 3rd impl); COV-1 PCF native IQ/baseband path (a concurrent agent
-  owns PCF).
+### Remaining-items resolution — DONE / CLOSED (2026-06-20)
+- **DONE (analytical oracle):** COV-4 finite-aperture two-way SIR kernel
+  (`CircularPistonSir::round_trip_response`, `∫(h⊛h)=(∫h)²`); CLD-9/CLD-10
+  focused-bowl O'Neil focal gain via discrete Rayleigh–Sommerfeld; PHY-13 bubble
+  scattering resonance closed form + ω² low-freq scaling; COV-1 PCF native IQ path
+  (`phase_coherence_from_iq_aperture`).
+- **CLOSED — no groundable oracle / correct-layering:** COV-6 loaded-Mason `Z_e`
+  (no verified closed form → would fabricate; `AcousticLayer` covers the design
+  use case); DG-solver CPML (legitimately different discretization — flux-based
+  per-GLL memory + joint RK3 ≠ FDTD convolution; verify-first false-positive).
+- **DEFERRED — external baseline / infra / own increment (won't fabricate):**
+  SOL-10 (Rustdoc sweep), SOL-11 (CI wiring), SOL-6 (coupled-CFL test), AMC-5
+  (PINN loss normalization), PHY-6/7 (citations), PHY-11 (Lauterborn), COV-5
+  de Jong/Herring (paywalled convention PDF).
 
 ### Residual risk
-- Nil outstanding from this pass: PCF broken-build fixed + merged; audit-table
-  findings remediated or explicitly deferred with reason. Open items above are
-  tracked [minor]/[patch] features needing external baselines or own increments.
+- Every audit/coverage item is now at a terminal state (implemented, closed as
+  correct-layering/no-oracle, or deferred with a recorded external blocker). The
+  deferred set is blocked on resources not in-repo (published baselines, CI infra,
+  paywalled references), not on engineering — none are silent gaps.
 
 ## Sprint A (verify C-tier suspicions) — COMPLETE (2026-05-31)
 - [x] SOL-4 Westervelt `d²(p²)/dt²` FMA — FALSE POSITIVE (exact + FMA precision gain)
