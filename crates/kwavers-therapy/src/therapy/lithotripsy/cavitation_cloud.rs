@@ -11,6 +11,7 @@ use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use kwavers_core::constants::numerical::MPA_TO_PA;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_physics::acoustics::bubble_dynamics::adaptive_integration::integrate_bubble_dynamics_adaptive;
+use kwavers_physics::acoustics::bubble_dynamics::bubbly_medium::commander_prosperetti_attenuation;
 use kwavers_physics::acoustics::bubble_dynamics::gilmore::GilmoreSolver;
 use kwavers_physics::acoustics::bubble_dynamics::keller_miksis::KellerMiksisModel;
 use kwavers_physics::acoustics::bubble_dynamics::{BubbleParameters, BubbleState};
@@ -50,6 +51,16 @@ pub struct CloudParameters {
     /// Cutoff distance [m] beyond which inter-bubble coupling is neglected, bounding
     /// the `O(active²)` coupling sum. `INFINITY` ⇒ all active pairs.
     pub interaction_radius: f64,
+    /// Enable cloud-scale acoustic shielding: the incident field is attenuated by
+    /// the cloud's void fraction (Commander–Prosperetti) as it penetrates, so the
+    /// periphery screens the interior (ADR 029). Opt-in (default `false`); `O(N)`.
+    pub shielding_enabled: bool,
+    /// Axis (0=x, 1=y, 2=z) along which the incident wave penetrates the cloud
+    /// for the shielding screen.
+    pub incident_axis: usize,
+    /// Whether the incident wave enters from the high-index face (and travels
+    /// toward index 0) instead of the low-index face.
+    pub incident_from_high: bool,
 }
 
 impl Default for CloudParameters {
@@ -65,6 +76,9 @@ impl Default for CloudParameters {
             cell_spacing: [1.0e-3; 3],          // 1 mm
             coupling_enabled: false,            // opt-in (O(active²); see field docs)
             interaction_radius: f64::INFINITY,
+            shielding_enabled: false,           // opt-in (ADR 029)
+            incident_axis: 2,                   // z by default
+            incident_from_high: false,
         }
     }
 }
@@ -91,8 +105,10 @@ pub fn bubble_radiated_pressure(rho: f64, distance: f64, r: f64, r_dot: f64, r_d
 /// calls by the canonical adaptive Keller-Miksis solver under its **total**
 /// driving pressure (local external + inter-bubble acoustic coupling, ADR 028).
 /// `density_field` is the seeded bubble *number density* (nuclei per cell); erosion
-/// is deposited per genuine inertial collapse. Coupling is the explicit incompressible
-/// radiated-pressure model; cloud-scale focusing/instabilities remain open (CLD-1).
+/// is deposited per genuine inertial collapse. Two cloud-scale collective effects
+/// are available (opt-in): inter-bubble acoustic coupling (ADR 028) and void-fraction
+/// shielding of the incident field (ADR 029). Cloud-interface instabilities and a
+/// self-consistent collective solve remain open (CLD-1).
 #[derive(Debug, Clone)]
 pub struct CavitationCloudDynamics {
     /// Cloud parameters
@@ -174,6 +190,72 @@ impl CavitationCloudDynamics {
                 self.density_field[[i, j, k]] = 0.0;
             }
         }
+    }
+
+    /// Cloud-scale acoustic shielding (ADR 029): return the incident `pressure`
+    /// field screened by the cloud's void fraction along the incident axis, via
+    /// Beer-Lambert with the Commander-Prosperetti attenuation. Bubbles between
+    /// the entry face and a cell reduce the field driving that cell, so the
+    /// periphery shields the interior. `O(N)` (one prefix sum per column).
+    #[must_use]
+    pub fn shielded_pressure(&self, pressure: &Array3<f64>) -> Array3<f64> {
+        let params = self.bubble_parameters();
+        let (f, c, rho, mu, p0, gamma, r0) = (
+            params.driving_frequency,
+            params.c_liquid,
+            params.rho_liquid,
+            params.mu_liquid,
+            params.p0,
+            params.gamma,
+            params.r0,
+        );
+        let axis = self.parameters.incident_axis.min(2);
+        let ds = self.parameters.cell_spacing[axis];
+        let (nx, ny, nz) = pressure.dim();
+        let n_axis = [nx, ny, nz][axis];
+        let (n_a, n_b) = match axis {
+            0 => (ny, nz),
+            1 => (nx, nz),
+            _ => (nx, ny),
+        };
+        let make_idx = |m: usize, a: usize, b: usize| -> [usize; 3] {
+            match axis {
+                0 => [m, a, b],
+                1 => [a, m, b],
+                _ => [a, b, m],
+            }
+        };
+
+        let mut out = pressure.clone();
+        for a in 0..n_a {
+            for b in 0..n_b {
+                let mut optical_depth = 0.0_f64; // Σ α·Δs from the entry face
+                for step in 0..n_axis {
+                    // Walk the axis in propagation order (from the entry face).
+                    let m = if self.parameters.incident_from_high {
+                        n_axis - 1 - step
+                    } else {
+                        step
+                    };
+                    let idx = make_idx(m, a, b);
+                    let n = self.density_field[idx];
+                    let r = self.radius_field[idx].max(0.0);
+                    let alpha = if n > 0.0 && r > 0.0 {
+                        // Void fraction β = n·(4/3)π R³ (clamped for CP validity).
+                        let beta = (n * (4.0 / 3.0) * PI * r.powi(3)).clamp(0.0, 1.0 - 1e-9);
+                        commander_prosperetti_attenuation(f, beta, r0, c, rho, mu, p0, gamma)
+                            .max(0.0)
+                    } else {
+                        0.0
+                    };
+                    // Attenuate by all bubbles before this cell + half the local cell.
+                    let tau_center = alpha.mul_add(0.5 * ds, optical_depth);
+                    out[idx] = pressure[idx] * (-tau_center).exp();
+                    optical_depth += alpha * ds;
+                }
+            }
+        }
+        out
     }
 
     /// Position [m] of cell `(i,j,k)` from the configured cell spacing.
@@ -271,10 +353,20 @@ impl CavitationCloudDynamics {
         let r_cut = self.parameters.interaction_radius;
         let (nx, ny, nz) = self.density_field.dim();
 
+        // Cloud-scale shielding (ADR 029): screen the incident field by the cloud's
+        // void fraction before it drives the bubbles (avoids cloning when off).
+        let shielded_field;
+        let driving: &Array3<f64> = if self.parameters.shielding_enabled {
+            shielded_field = self.shielded_pressure(pressure);
+            &shielded_field
+        } else {
+            pressure
+        };
+
         // Pass 1: explicit inter-bubble acoustic source strengths (ADR 028).
         let sources = self.coupling_sources(&solver, &params, time);
 
-        // Pass 2: per-cell total driving pressure (external + coupling) and integrate.
+        // Pass 2: per-cell total driving pressure (screened external + coupling).
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {
@@ -282,7 +374,7 @@ impl CavitationCloudDynamics {
                     let density = self.density_field[idx];
                     if density <= 0.0 {
                         // No nuclei: radius stays at R₀; still track prev pressure.
-                        self.prev_total_pressure[idx] = pressure[idx];
+                        self.prev_total_pressure[idx] = driving[idx];
                         continue;
                     }
 
@@ -299,7 +391,7 @@ impl CavitationCloudDynamics {
                         }
                     }
 
-                    let p_total = pressure[idx] + p_couple;
+                    let p_total = driving[idx] + p_couple;
                     let p_prev = if self.total_seeded {
                         self.prev_total_pressure[idx]
                     } else {
@@ -652,5 +744,87 @@ mod tests {
             cloud.cloud_radius()[[1, 0, 0]]
         };
         assert_eq!(run(true), run(false), "a lone bubble must be unaffected by coupling");
+    }
+
+    // ── Cloud-scale acoustic shielding (ADR 029) ──────────────────────────────
+
+    #[test]
+    fn shielding_is_beer_lambert_exponential_decay() {
+        use kwavers_physics::acoustics::bubble_dynamics::bubbly_medium::commander_prosperetti_attenuation;
+        // Uniform dense cloud, drive near the bubble resonance ⇒ measurable α.
+        let params = CloudParameters {
+            shielding_enabled: true,
+            incident_axis: 2,
+            bubble_density: 1.0e15,
+            drive_frequency: 3.0e6,
+            ..CloudParameters::default()
+        };
+        let nz = 6;
+        let mut cloud = CavitationCloudDynamics::new(params.clone(), (1, 1, nz));
+        cloud.density_field.fill(params.bubble_density); // radius_field stays at R₀
+        let p_in = 1.0e6;
+        let pressure = Array3::from_elem((1, 1, nz), p_in);
+        let screened = cloud.shielded_pressure(&pressure);
+
+        let bp = cloud.bubble_parameters();
+        let beta = params.bubble_density * (4.0 / 3.0) * PI * bp.r0.powi(3);
+        let alpha = commander_prosperetti_attenuation(
+            bp.driving_frequency,
+            beta,
+            bp.r0,
+            bp.c_liquid,
+            bp.rho_liquid,
+            bp.mu_liquid,
+            bp.p0,
+            bp.gamma,
+        );
+        assert!(alpha > 0.0, "expected positive attenuation for this cloud");
+        let ds = params.cell_spacing[2];
+        for k in 0..nz {
+            let expected = p_in * (-(alpha * ds * (k as f64 + 0.5))).exp();
+            assert!(
+                (screened[[0, 0, k]] - expected).abs() <= 1e-9 * p_in,
+                "k={k}: {} vs Beer-Lambert {expected}",
+                screened[[0, 0, k]]
+            );
+        }
+        assert!(
+            screened[[0, 0, nz - 1]] < screened[[0, 0, 0]],
+            "interior must be screened below the entry face"
+        );
+    }
+
+    #[test]
+    fn no_nuclei_means_no_shielding() {
+        // β = 0 ⇒ α = 0 ⇒ the field passes through unattenuated.
+        let params = CloudParameters {
+            shielding_enabled: true,
+            ..CloudParameters::default()
+        };
+        let cloud = CavitationCloudDynamics::new(params, (1, 1, 4)); // density_field = 0
+        let pressure = Array3::from_elem((1, 1, 4), 2.0e6);
+        let screened = cloud.shielded_pressure(&pressure);
+        assert!(screened.iter().all(|&v| (v - 2.0e6).abs() < 1e-9));
+    }
+
+    #[test]
+    fn denser_cloud_screens_interior_more() {
+        let interior = |density: f64| {
+            let params = CloudParameters {
+                shielding_enabled: true,
+                bubble_density: density,
+                drive_frequency: 3.0e6,
+                ..CloudParameters::default()
+            };
+            let nz = 6;
+            let mut cloud = CavitationCloudDynamics::new(params, (1, 1, nz));
+            cloud.density_field.fill(density);
+            let pressure = Array3::from_elem((1, 1, nz), 1.0e6);
+            cloud.shielded_pressure(&pressure)[[0, 0, nz - 1]]
+        };
+        assert!(
+            interior(1.0e16) < interior(1.0e15),
+            "a denser cloud must screen its interior more strongly"
+        );
     }
 }
