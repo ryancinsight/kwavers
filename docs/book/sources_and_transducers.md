@@ -761,14 +761,15 @@ This is the single-element, electronics-free analogue of the phased array's
 delay-law steering (§6.9): one passive lens plus a stereotaxic stage replaces a
 1372-element driver.
 
-![Single-element corrective lens: isoplanatic steering and phase-to-thickness](figures/ch11/fig07_lens_steering.png)
+![Isoplanatic mechanical steering of a corrective lens](figures/ch11/fig07_lens_steering.png)
 
-*Figure 6.7. (a) Isoplanatic mechanical steering of a fixed corrective lens
-(`kw.isoplanatic_steering_curve`, F = 61 mm): `θ_y = arcsin(x/F)` and
-`T_z = F − √(F²−x²)`; the Maimbourg (2020) Figure-2 table points fall on the curve,
-and the ±11 mm operating range is shaded. (b) A synthetic skull-correction phase
-mapped to castable lens thickness via Eq. 1 (`kw.corrective_lens_thickness`), floored
-at the minimal thickness K = 2 mm.*
+*Figure 6.7. Isoplanatic mechanical steering of a fixed corrective lens
+(`kw.isoplanatic_steering_curve`, F = 61 mm): rotation `θ_y = arcsin(x/F)` and axial
+pullback `T_z = F − √(F²−x²)` versus transverse focus offset. The Maimbourg (2020)
+Figure-2 table points fall on the computed curve, and the ±11 mm operating range is
+shaded. The phase→thickness map (Eq. 1, `corrective_lens_thickness`) is exercised by the
+unit tests; a rendered lens profile requires a patient skull-aberration phase from
+Ch24 §24.3 (`aberration_correction`) rather than a fabricated one.*
 
 The reconfigurable (dynamic) delay law is plotted in **Figure 6.3** (§6.5): the static
 lens of §6.11.2 imposes that same focusing phase `τ(r)` fixed in material, whereas the
