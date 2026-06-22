@@ -712,6 +712,25 @@ Graded-sound-speed (GRIN) focusing — continuous refraction rather than a singl
 surface — is modelled by Fermat ray bending in
 `kwavers_diagnostics::reconstruction::bent_ray`.
 
+### 6.11.4 Diffractive (Fresnel zone-plate) lens
+
+A Fresnel zone plate replaces the bulk refractive lens with a thin, flat set of
+concentric zones that focus by **diffraction**. The zone boundaries lie at radii
+where the path to the focus grows by half a wavelength,
+
+```
+r_n = √(n λ F + (n λ / 2)²)  ≈  √(n λ F)   (paraxial),   n = 1, 2, 3, …,
+```
+
+so the alternate (blocked, in a Soret plate, or phase-reversed) zones interfere
+constructively at `F`. The plate is thin and conformable — attractive for
+low-profile or very large apertures — at the cost of secondary foci at
+`F/3, F/5, …` and lower efficiency than a full refractive lens. This is
+`kwavers_transducer::transducers::physics::materials::FresnelZonePlate`
+(`zone_radius`, `zone_radii`, `num_zones`, `f_number`); the half-wave path
+condition `√(r_n²+F²) − F = nλ/2` and the paraxial `√(nλF)` limit are asserted in
+its unit tests.
+
 The reconfigurable (dynamic) delay law is plotted in **Figure 6.3** (§6.5): the static
 lens of §6.11.2 imposes that same focusing phase `τ(r)` fixed in material, whereas the
 array sets it per transmit. The closed-form lens profile is supplied analytically by

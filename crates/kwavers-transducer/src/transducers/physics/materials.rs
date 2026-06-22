@@ -388,6 +388,81 @@ impl AcousticLens {
     }
 }
 
+/// Acoustic **Fresnel zone plate**: focuses by *diffraction* from concentric
+/// zones rather than refraction through bulk material.
+///
+/// The zone boundaries sit at radii where the path from the aperture to the
+/// focus grows by half a wavelength, so the central and even/odd zones interfere
+/// constructively at `F`. A Soret (amplitude) plate blocks alternate zones; a
+/// phase-reversal plate inverts them for higher efficiency. The plate is thin and
+/// flat (no lens sagitta), at the cost of secondary foci at `F/3, F/5, …` and
+/// reduced efficiency. Conventions follow Hecht, *Optics*, §10.3.5 (the acoustic
+/// case is identical with `λ = c/f`).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct FresnelZonePlate {
+    /// Primary focal length `F` \[m].
+    pub focal_length: f64,
+    /// Design wavelength `λ = c/f` \[m].
+    pub wavelength: f64,
+    /// Outer aperture radius \[m].
+    pub aperture_radius: f64,
+}
+
+impl FresnelZonePlate {
+    /// Create a zone plate for a target focal length, wavelength, and aperture.
+    #[must_use]
+    pub fn new(focal_length: f64, wavelength: f64, aperture_radius: f64) -> Self {
+        Self {
+            focal_length,
+            wavelength,
+            aperture_radius,
+        }
+    }
+
+    /// `n`-th zone boundary radius (exact, not paraxial):
+    ///
+    /// ```text
+    /// r_n = √(n λ F + (n λ / 2)²),
+    /// ```
+    ///
+    /// from the half-wave path condition `√(r_n² + F²) − F = n λ / 2`. Reduces to
+    /// the familiar `√(n λ F)` when `F ≫ n λ`.
+    #[must_use]
+    pub fn zone_radius(&self, n: usize) -> f64 {
+        let nl = n as f64 * self.wavelength;
+        nl.mul_add(self.focal_length, (0.5 * nl).powi(2)).sqrt()
+    }
+
+    /// All zone-boundary radii that fall within the aperture (`r_n ≤ a`),
+    /// in increasing order.
+    #[must_use]
+    pub fn zone_radii(&self) -> Vec<f64> {
+        let mut radii = Vec::new();
+        let mut n = 1usize;
+        loop {
+            let r = self.zone_radius(n);
+            if r > self.aperture_radius || !r.is_finite() {
+                break;
+            }
+            radii.push(r);
+            n += 1;
+        }
+        radii
+    }
+
+    /// Number of full Fresnel zones inside the aperture.
+    #[must_use]
+    pub fn num_zones(&self) -> usize {
+        self.zone_radii().len()
+    }
+
+    /// f-number `F / D` of the primary focus (`D = 2·aperture_radius`).
+    #[must_use]
+    pub fn f_number(&self) -> f64 {
+        self.focal_length / (2.0 * self.aperture_radius)
+    }
+}
+
 #[cfg(test)]
 mod lens_tests {
     use super::*;
@@ -454,5 +529,50 @@ mod lens_tests {
     #[test]
     fn validate_rejects_zero_radius() {
         assert!(custom_lens(0.0, 1000.0).validate().is_err());
+    }
+
+    #[test]
+    fn fresnel_zone_radius_satisfies_half_wave_path_condition() {
+        // λ = 0.5 mm (≈3 MHz, water), F = 40 mm, aperture 15 mm.
+        let (lambda, f) = (0.5e-3, 40.0e-3);
+        let zp = FresnelZonePlate::new(f, lambda, 15.0e-3);
+        // Closed form for n = 1..4.
+        for n in 1..=4 {
+            let r = zp.zone_radius(n);
+            // The defining condition: √(r_n² + F²) − F = n λ/2.
+            let path_excess = (r * r + f * f).sqrt() - f;
+            assert!(
+                (path_excess - n as f64 * lambda / 2.0).abs() < 1e-12,
+                "zone {n}: path excess {path_excess} != nλ/2"
+            );
+        }
+    }
+
+    #[test]
+    fn fresnel_zone_radii_are_paraxial_sqrt_and_increasing() {
+        let (lambda, f) = (0.5e-3, 40.0e-3);
+        let zp = FresnelZonePlate::new(f, lambda, 15.0e-3);
+        let radii = zp.zone_radii();
+        // Several zones fit (paraxial count ≈ a²/(λF) = 0.0225/2e-5 ≈ 11).
+        assert!(radii.len() >= 10, "expected ≥10 zones, got {}", radii.len());
+        for w in radii.windows(2) {
+            assert!(w[1] > w[0], "zone radii must increase");
+        }
+        // Paraxial r_n ≈ √(n λ F) within 1% for the inner zones (n ≪ F/λ).
+        let r1_paraxial = (lambda * f).sqrt();
+        assert!(
+            (radii[0] - r1_paraxial).abs() / r1_paraxial < 0.01,
+            "r₁ {} vs paraxial {r1_paraxial}",
+            radii[0]
+        );
+        // All within the aperture; the next zone would exceed it.
+        assert!(radii.iter().all(|&r| r <= 15.0e-3));
+        assert!(zp.zone_radius(radii.len() + 1) > 15.0e-3);
+    }
+
+    #[test]
+    fn fresnel_f_number_is_focal_over_diameter() {
+        let zp = FresnelZonePlate::new(40.0e-3, 0.5e-3, 10.0e-3);
+        assert!((zp.f_number() - 40.0e-3 / 20.0e-3).abs() < 1e-12);
     }
 }
