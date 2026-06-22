@@ -267,24 +267,23 @@ def fig06_acoustic_lens() -> None:
 
     fig, axes = plt.subplots(1, 2, figsize=(11, 4.5))
 
-    # (a) Static lens delay profile vs paraxial.
+    # (a) Static lens focusing delay tau(r) -- the lens IS a passive delay law.
+    #     All physics from kw.acoustic_lens_delay_profile (Rust); Python only plots.
     tau = np.asarray(kw.acoustic_lens_delay_profile(radii, F, aperture, C0))
-    tau_paraxial = radii**2 / (2.0 * C0 * F)
     axes[0].plot(radii * 1e3, tau * 1e6, lw=2, label=r"lens $\tau(r)=(\sqrt{F^2+r^2}-F)/c$")
-    axes[0].plot(radii * 1e3, tau_paraxial * 1e6, "--", label=r"paraxial $r^2/(2cF)$")
     axes[0].set_xlabel("Aperture radius r (mm)")
     axes[0].set_ylabel(r"Focusing delay $\tau$ (µs)")
     axes[0].set_title("Static lens = passive delay law (F = 50 mm)")
     axes[0].legend()
     axes[0].grid(True, alpha=0.3)
 
-    # (b) Fresnel zone plate boundary radii at two frequencies, vs sqrt(n).
+    # (b) Fresnel zone-plate boundary radii (kw.fresnel_zone_radii, Rust) at two
+    #     frequencies; the sqrt(n) bunching is visible directly in the markers.
     for freq_mhz, ax_color in [(1.0, "#1f77b4"), (3.0, "#d62728")]:
-        lam = C0 / (freq_mhz * 1e6)
-        zr = np.asarray(kw.fresnel_zone_radii(F, lam, aperture / 2))
+        wavelength_m = C0 / (freq_mhz * 1e6)  # input argument to the binding
+        zr = np.asarray(kw.fresnel_zone_radii(F, wavelength_m, aperture / 2))
         n = np.arange(1, len(zr) + 1)
         axes[1].plot(n, zr * 1e3, "o-", color=ax_color, label=f"{freq_mhz:.0f} MHz ({len(zr)} zones)")
-        axes[1].plot(n, np.sqrt(n * lam * F) * 1e3, ":", color=ax_color, alpha=0.6)
     axes[1].set_xlabel("Zone index n")
     axes[1].set_ylabel(r"Zone radius $r_n$ (mm)")
     axes[1].set_title(r"Fresnel zone plate: $r_n=\sqrt{n\lambda F+(n\lambda/2)^2}$")

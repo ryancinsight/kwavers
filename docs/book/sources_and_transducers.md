@@ -777,10 +777,10 @@ array sets it per transmit.
 ![Acoustic lenses: refractive delay law and Fresnel zone plate](figures/ch11/fig06_acoustic_lens.png)
 
 *Figure 6.6. (a) The static refractive lens delay `τ(r)=(√(F²+r²)−F)/c`
-(`kw.acoustic_lens_delay_profile`) is the passive form of the phased-array delay law and
-matches the paraxial `r²/(2cF)` for `r ≪ F` (§6.11.2). (b) Fresnel zone-plate boundary
-radii `r_n` (`kw.fresnel_zone_radii`) bunch as `√n`, with more zones at higher frequency
-(§6.11.4).*
+(`kw.acoustic_lens_delay_profile`) is the passive form of the phased-array delay law
+(§6.11.2). (b) Fresnel zone-plate boundary radii `r_n` (`kw.fresnel_zone_radii`) bunch as
+`√n`, with more zones at higher frequency (§6.11.4). All quantities are computed by the
+Rust kernels; the example only plots them.*
 
 ---
 
