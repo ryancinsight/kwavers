@@ -463,6 +463,69 @@ impl FresnelZonePlate {
     }
 }
 
+/// **Corrective acoustic-lens thickness** from a per-point aberration phase
+/// (Maimbourg et al. 2020, *IEEE TBME*, Eq. 1).
+///
+/// A single-element transducer is made target/skull-specific by casting a lens
+/// whose local thickness `p(M)` imposes the correction phase `φ̃(M)` (the
+/// unwrapped skull-aberration phase, e.g. from
+/// `kwavers_physics::…::aberration_correction::phase_correction`). A slab of
+/// thickness `p` and speed `c_lens` replacing the coupling medium `c_water`
+/// advances the phase by `Δφ = 2π f₀ p (1/c_water − 1/c_lens)`, so inverting,
+///
+/// ```text
+/// p(M) = φ̃(M) / (2π f₀) · 1 / (1/c_water − 1/c_lens) + K,
+/// ```
+///
+/// where `K` (here `min_thickness_m`) sets the *minimum* lens thickness so the
+/// whole profile is castable (`p ≥ min_thickness_m`). Returns one thickness per
+/// supplied phase sample; the relative profile is the physics, the constant
+/// offset is fabrication headroom.
+///
+/// # Panics
+/// Never; an empty `phase_rad` yields an empty vector.
+#[must_use]
+pub fn corrective_lens_thickness(
+    phase_rad: &[f64],
+    frequency_hz: f64,
+    c_water: f64,
+    c_lens: f64,
+    min_thickness_m: f64,
+) -> Vec<f64> {
+    let denom = 2.0 * std::f64::consts::PI * frequency_hz * (c_water.recip() - c_lens.recip());
+    if denom == 0.0 || phase_rad.is_empty() {
+        return vec![min_thickness_m; phase_rad.len()];
+    }
+    let raw: Vec<f64> = phase_rad.iter().map(|&phi| phi / denom).collect();
+    let min_raw = raw.iter().copied().fold(f64::INFINITY, f64::min);
+    // Offset so the thinnest point equals the minimal castable thickness.
+    raw.iter().map(|&p| p - min_raw + min_thickness_m).collect()
+}
+
+/// **Isoplanatic mechanical-steering pose** for a lens-coupled single-element
+/// transducer (Maimbourg et al. 2020, Eq. 2).
+///
+/// A lens corrected for the on-axis target steers the focus to a transverse
+/// offset `x` by *mechanically* rotating the transducer/lens pair by `θ_y` and
+/// translating it along the beam axis by `T_z`, exploiting the skull's
+/// isoplanatic angle (nearby targets share the same aberration):
+///
+/// ```text
+/// θ_y = arcsin(x / F),    T_z = F − √(F² − x²),
+/// ```
+///
+/// for focal length `F`. Returns `(θ_y [rad], T_z [m])`, or `None` for the
+/// unphysical `|x| > F`.
+#[must_use]
+pub fn isoplanatic_steering_pose(x_offset_m: f64, focal_length_m: f64) -> Option<(f64, f64)> {
+    if focal_length_m <= 0.0 || x_offset_m.abs() > focal_length_m {
+        return None;
+    }
+    let theta_y = (x_offset_m / focal_length_m).asin();
+    let t_z = focal_length_m - (focal_length_m * focal_length_m - x_offset_m * x_offset_m).sqrt();
+    Some((theta_y, t_z))
+}
+
 #[cfg(test)]
 mod lens_tests {
     use super::*;
@@ -574,5 +637,52 @@ mod lens_tests {
     fn fresnel_f_number_is_focal_over_diameter() {
         let zp = FresnelZonePlate::new(40.0e-3, 0.5e-3, 10.0e-3);
         assert!((zp.f_number() - 40.0e-3 / 20.0e-3).abs() < 1e-12);
+    }
+
+    #[test]
+    fn corrective_lens_thickness_inverts_phase_to_thickness() {
+        // Maimbourg 2020: f₀=914 kHz, c_water=1485, c_lens=1000, K=2 mm.
+        let (f0, c_w, c_l, k) = (914.0e3, 1485.0, 1000.0, 2.0e-3);
+        // Uniform phase ⇒ uniform thickness equal to the minimal thickness K.
+        let flat = corrective_lens_thickness(&[1.3; 5], f0, c_w, c_l, k);
+        assert!(flat.iter().all(|&p| (p - k).abs() < 1e-15));
+
+        // A 2π phase difference maps to a one-wavelength-equivalent thickness
+        // step |Δp| = 1/(f₀·|1/c_w − 1/c_l|).
+        let two_pi = 2.0 * std::f64::consts::PI;
+        let p = corrective_lens_thickness(&[0.0, two_pi], f0, c_w, c_l, k);
+        let expected_step = 1.0 / (f0 * (c_w.recip() - c_l.recip()).abs());
+        assert!(
+            ((p[1] - p[0]).abs() - expected_step).abs() < 1e-9,
+            "Δthickness {} != {expected_step}",
+            (p[1] - p[0]).abs()
+        );
+        // Thinnest point is exactly the minimal castable thickness.
+        let pmin = p.iter().copied().fold(f64::INFINITY, f64::min);
+        assert!((pmin - k).abs() < 1e-15);
+    }
+
+    #[test]
+    fn isoplanatic_steering_pose_matches_maimbourg_table() {
+        let f = 61.0e-3; // 61 mm focal length (H101 transducer)
+                         // On-axis: no rotation, no pullback.
+        let (th0, tz0) = isoplanatic_steering_pose(0.0, f).expect("on-axis");
+        assert!(th0.abs() < 1e-15 && tz0.abs() < 1e-15);
+
+        // Paper Figure 2, x = 11.2 mm ⇒ θ_y = 10°35′ ≈ 10.583°, z-stage ≈ 1.0 mm.
+        let (theta, t_z) = isoplanatic_steering_pose(11.2e-3, f).expect("steered");
+        let theta_deg = theta.to_degrees();
+        assert!(
+            (theta_deg - (10.0 + 35.0 / 60.0)).abs() < 0.02,
+            "θ_y {theta_deg}° != 10°35′"
+        );
+        assert!(
+            (t_z - 1.0e-3).abs() < 0.05e-3,
+            "T_z {} mm != ~1.0 mm",
+            t_z * 1e3
+        );
+
+        // |x| > F is unphysical.
+        assert!(isoplanatic_steering_pose(70.0e-3, f).is_none());
     }
 }

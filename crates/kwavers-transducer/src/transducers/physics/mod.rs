@@ -25,8 +25,8 @@ pub use directivity::TransducerDirectivityPattern;
 pub use frequency::FrequencyResponse;
 pub use geometry::ElementGeometry;
 pub use materials::{
-    AcousticLens, BackingLayer, BackingMaterial, FresnelZonePlate, LensMaterial, MatchingLayer,
-    PiezoMaterial, PiezoType,
+    corrective_lens_thickness, isoplanatic_steering_pose, AcousticLens, BackingLayer,
+    BackingMaterial, FresnelZonePlate, LensMaterial, MatchingLayer, PiezoMaterial, PiezoType,
 };
 pub use sensitivity::TransducerSensitivity;
 

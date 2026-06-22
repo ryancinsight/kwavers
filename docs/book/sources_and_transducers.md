@@ -731,6 +731,36 @@ low-profile or very large apertures — at the cost of secondary foci at
 condition `√(r_n²+F²) − F = nλ/2` and the paraxial `√(nλF)` limit are asserted in
 its unit tests.
 
+### 6.11.5 Corrective and steerable single-element lens (transcranial)
+
+A cast or 3-D-printed lens can also carry an **aberration correction**, turning a
+single-element transducer into a patient-specific transcranial therapy device
+(Maimbourg et al. 2020). The skull correction phase `φ̃(M)` — computed through the
+CT-derived medium exactly as in Ch24 §24.3 — is baked into the lens *thickness*,
+because a slab of speed `c_lens` over thickness `p` advances the phase by
+`Δφ = 2π f₀ p (1/c_water − 1/c_lens)`; inverting,
+
+```
+p(M) = φ̃(M) / (2π f₀) · 1 / (1/c_water − 1/c_lens) + K,
+```
+
+(`corrective_lens_thickness`), with `K` the minimal castable thickness.
+
+Although such a lens is fixed for one target, the focus steers to **nearby**
+targets *mechanically* by exploiting the skull's **isoplanatic** angle
+(neighbouring targets share essentially the same aberration). Steering to a
+transverse offset `x` rotates and translates the transducer/lens pair by
+
+```
+θ_y = arcsin(x / F),     T_z = F − √(F² − x²),
+```
+
+(`isoplanatic_steering_pose`), restoring a single −3 dB focal spot over roughly
+±11 mm transverse / ±10 mm longitudinal at 914 kHz for a 61 mm-focus transducer.
+This is the single-element, electronics-free analogue of the phased array's
+delay-law steering (§6.9): one passive lens plus a stereotaxic stage replaces a
+1372-element driver.
+
 The reconfigurable (dynamic) delay law is plotted in **Figure 6.3** (§6.5): the static
 lens of §6.11.2 imposes that same focusing phase `τ(r)` fixed in material, whereas the
 array sets it per transmit.
