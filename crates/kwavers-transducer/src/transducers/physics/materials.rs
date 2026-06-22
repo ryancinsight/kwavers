@@ -335,6 +335,34 @@ impl AcousticLens {
         self.focal_length(medium_sound_speed) / aperture
     }
 
+    /// Focusing **delay profile** the lens imposes across its aperture.
+    ///
+    /// A passive refractive lens of focal length `F` (see [`Self::focal_length`])
+    /// curves the wavefront exactly like the phased-array delay law (Sources &
+    /// Transducers §6.5): the geometric focusing delay from aperture radius `r`
+    /// to the focus, relative to the lens centre, is
+    ///
+    /// ```text
+    /// τ(r) = (√(F² + r²) − F) / c_medium       [s],
+    /// ```
+    ///
+    /// which is `0` at the centre, monotone-increasing in `r`, and reduces to the
+    /// paraxial `r² / (2 c_medium F)` for `r ≪ F`. This is the static-lens
+    /// analogue of the per-element delay `τ_i` of a phased array — a fixed lens is
+    /// a passive, non-steerable delay law. `F = |focal_length|` so the magnitude is
+    /// returned for both converging and diverging designs.
+    ///
+    /// Returns one delay per supplied aperture radius.
+    #[must_use]
+    pub fn aperture_delay_profile(&self, radii_m: &[f64], medium_sound_speed: f64) -> Vec<f64> {
+        let f = self.focal_length(medium_sound_speed).abs();
+        let inv_c = 1.0 / medium_sound_speed;
+        radii_m
+            .iter()
+            .map(|&r| (f.mul_add(f, r * r).sqrt() - f) * inv_c)
+            .collect()
+    }
+
     /// Validate lens design
     /// # Errors
     /// - Returns [`KwaversError::Config`] if the precondition for a Config-class constraint is violated.
@@ -357,5 +385,74 @@ impl AcousticLens {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod lens_tests {
+    use super::*;
+
+    fn custom_lens(radius_m: f64, c_lens: f64) -> AcousticLens {
+        AcousticLens {
+            material: LensMaterial::Custom,
+            radius_of_curvature: radius_m,
+            center_thickness: 1.0e-3,
+            sound_speed: c_lens,
+            acoustic_impedance: 1.0,
+            attenuation: 1.0,
+        }
+    }
+
+    #[test]
+    fn lensmaker_focal_length_formula() {
+        // Plano-concave slow lens (c_lens = 1000) in c_medium = 1500, R = 10 mm.
+        // Lensmaker (single refractive surface): F = R·c_m/(c_m − c_lens).
+        let lens = custom_lens(10.0e-3, 1000.0);
+        let f = lens.focal_length(1500.0);
+        let expected = 10.0e-3 * 1500.0 / (1500.0 - 1000.0); // = 30 mm
+        assert!((f - expected).abs() < 1e-12, "F {f} != {expected}");
+        assert!((f - 0.030).abs() < 1e-9, "expected 30 mm focus");
+    }
+
+    #[test]
+    fn silicone_constructor_round_trips_focal_length_and_f_number() {
+        let (f_design, aperture) = (50.0e-3, 20.0e-3);
+        let lens = AcousticLens::silicone(f_design, aperture);
+        let f = lens.focal_length(SOUND_SPEED_TISSUE);
+        // silicone() sets R = F(c_t − c_l)/c_t, which focal_length inverts back to F.
+        assert!(
+            (f - f_design).abs() < 1e-9,
+            "focal length {f} != design {f_design}"
+        );
+        assert!(
+            (lens.f_number(aperture, SOUND_SPEED_TISSUE) - f_design / aperture).abs() < 1e-9,
+            "f-number must equal F/aperture"
+        );
+    }
+
+    #[test]
+    fn aperture_delay_profile_is_zero_centred_monotone_and_paraxial() {
+        let (f_design, c_m) = (50.0e-3, SOUND_SPEED_TISSUE);
+        let lens = AcousticLens::silicone(f_design, 20.0e-3);
+        let radii: Vec<f64> = (0..6).map(|i| i as f64 * 1.0e-3).collect(); // 0..5 mm
+        let tau = lens.aperture_delay_profile(&radii, c_m);
+
+        assert!(tau[0].abs() < 1e-18, "τ(0) must be 0");
+        for w in tau.windows(2) {
+            assert!(w[1] > w[0], "τ(r) must strictly increase with r");
+        }
+        // Paraxial limit τ(r) ≈ r²/(2 c F): relative error ~ r²/(4F²) ≈ 0.25% at r=5mm.
+        let r = 5.0e-3;
+        let exact = lens.aperture_delay_profile(&[r], c_m)[0];
+        let paraxial = r * r / (2.0 * c_m * f_design);
+        assert!(
+            (exact - paraxial).abs() / paraxial < 0.02,
+            "τ {exact} vs paraxial {paraxial}"
+        );
+    }
+
+    #[test]
+    fn validate_rejects_zero_radius() {
+        assert!(custom_lens(0.0, 1000.0).validate().is_err());
     }
 }
