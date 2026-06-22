@@ -108,6 +108,8 @@ pub fn register_book(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(transducer::focused_bowl_onaxis, m)?)?;
     m.add_function(wrap_pyfunction!(transducer::acoustic_lens_delay_profile, m)?)?;
     m.add_function(wrap_pyfunction!(transducer::fresnel_zone_radii, m)?)?;
+    m.add_function(wrap_pyfunction!(transducer::isoplanatic_steering_curve, m)?)?;
+    m.add_function(wrap_pyfunction!(transducer::corrective_lens_thickness, m)?)?;
     m.add_function(wrap_pyfunction!(transducer::bli_stencil_weights, m)?)?;
     m.add_function(wrap_pyfunction!(transducer::linear_array_positions, m)?)?;
     m.add_function(wrap_pyfunction!(

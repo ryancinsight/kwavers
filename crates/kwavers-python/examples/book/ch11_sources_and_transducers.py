@@ -297,6 +297,64 @@ def fig06_acoustic_lens() -> None:
     plt.close(fig)
 
 
+# ── Figure 07: single-element corrective lens steering (Maimbourg 2020) ────────
+def fig07_lens_steering() -> None:
+    """
+    (a) Isoplanatic mechanical steering of a fixed corrective lens
+        (kw.isoplanatic_steering_curve): theta_y=asin(x/F), T_z=F-sqrt(F^2-x^2)
+        for F=61 mm, with the Maimbourg Figure-2 table points overlaid and the
+        +/-11 mm operating range shaded.
+    (b) Corrective-lens thickness (kw.corrective_lens_thickness) from a synthetic
+        skull-correction phase across the 67 mm aperture: the phase map becomes a
+        castable thickness profile (Eq. 1), min thickness K=2 mm.
+    """
+    if not _HAS_PYKWAVERS:
+        raise ImportError("pykwavers is required for fig07 (lens steering)")
+    F = 0.061  # 61 mm focal length (H101 transducer)
+
+    fig, axes = plt.subplots(1, 2, figsize=(11, 4.5))
+
+    # (a) Steering geometry over ±15 mm; physical limit at |x|=F.
+    x = np.linspace(-0.015, 0.015, 200)
+    theta, t_z = kw.isoplanatic_steering_curve(x, F)
+    theta = np.degrees(np.asarray(theta))
+    t_z = np.asarray(t_z) * 1e3
+    ax = axes[0]
+    ln1 = ax.plot(x * 1e3, theta, color="#1f77b4", label=r"$\theta_y=\arcsin(x/F)$")
+    ax.set_xlabel("Transverse focus offset x (mm)")
+    ax.set_ylabel(r"Rotation $\theta_y$ (deg)", color="#1f77b4")
+    ax2 = ax.twinx()
+    ln2 = ax2.plot(x * 1e3, t_z, color="#d62728", ls="--", label=r"$T_z=F-\sqrt{F^2-x^2}$")
+    ax2.set_ylabel(r"Pullback $T_z$ (mm)", color="#d62728")
+    # Maimbourg Fig. 2 table: x (mm) -> theta_y (deg, from deg+arcmin).
+    tbl_x = np.array([2.3, 4.5, 6.8, 9.0, 11.2])
+    tbl_theta = np.array([2 + 7/60, 4 + 14/60, 6 + 21/60, 8 + 28/60, 10 + 35/60])
+    ax.plot(tbl_x, tbl_theta, "o", color="#1f77b4", ms=5, label="Maimbourg 2020 table")
+    ax.axvspan(-11, 11, color="gray", alpha=0.12, label="±11 mm range")
+    ax.set_title("Isoplanatic mechanical steering (F = 61 mm)")
+    lns = ln1 + ln2 + [ax.lines[-1]]
+    ax.legend(lns, [l.get_label() for l in lns], loc="upper left", fontsize=8)
+
+    # (b) Corrective lens thickness from a synthetic skull-correction phase.
+    r = np.linspace(-0.0335, 0.0335, 200)  # 67 mm aperture
+    # Synthetic skull-like unwrapped correction phase (a few rad of low-order
+    # variation); the THICKNESS mapping below is the real kw.corrective_lens_thickness.
+    phi = 6.0 * (r / 0.0335) ** 2 + 1.5 * np.cos(2 * np.pi * r / 0.025)
+    p = np.asarray(kw.corrective_lens_thickness(phi, 914e3, 1485.0, 1000.0, 2.0e-3))
+    axes[1].plot(r * 1e3, p * 1e3, color="#2ca02c")
+    axes[1].axhline(2.0, color="gray", ls=":", lw=1, label="min thickness K = 2 mm")
+    axes[1].set_xlabel("Aperture coordinate r (mm)")
+    axes[1].set_ylabel("Lens thickness p (mm)")
+    axes[1].set_title(r"Corrective lens: $p(M)=\tilde\varphi/(2\pi f_0)\,/(1/c_w-1/c_l)+K$")
+    axes[1].legend(fontsize=8)
+    axes[1].grid(True, alpha=0.3)
+
+    fig.suptitle("Single-element corrective lens: isoplanatic steering (a) and phase->thickness (b)", y=1.01)
+    fig.tight_layout()
+    savefig("fig07_lens_steering")
+    plt.close(fig)
+
+
 if __name__ == "__main__":
     print("Generating Chapter 11 figures (Sources and Transducers)...")
     fig01_piston_directivity()
@@ -305,4 +363,5 @@ if __name__ == "__main__":
     fig04_delay_law()
     fig05_bli_accuracy()
     fig06_acoustic_lens()
+    fig07_lens_steering()
     print("Done. Output: docs/book/figures/ch11/")

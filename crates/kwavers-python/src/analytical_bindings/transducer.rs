@@ -1012,3 +1012,73 @@ pub fn fresnel_zone_radii(
     let zp = FresnelZonePlate::new(focal_length_m, wavelength_m, aperture_radius_m);
     Ok(ndarray::Array1::from(zp.zone_radii()).into_pyarray(py).unbind())
 }
+
+/// Isoplanatic mechanical-steering pose curve for a single-element corrective
+/// lens (Maimbourg 2020, Eq. 2): θ_y = arcsin(x/F), T_z = F − √(F²−x²).
+///
+/// Args:
+///     x_offsets_m: Transverse focus offsets [m].
+///     focal_length_m: Transducer focal length F [m].
+///
+/// Returns:
+///     (theta_y_rad, t_z_m) arrays; NaN where |x| > F (unphysical).
+#[pyfunction]
+#[pyo3(signature = (x_offsets_m, focal_length_m))]
+pub fn isoplanatic_steering_curve(
+    py: Python<'_>,
+    x_offsets_m: PyReadonlyArray1<f64>,
+    focal_length_m: f64,
+) -> PyResult<(Py<PyArray1<f64>>, Py<PyArray1<f64>>)> {
+    use kwavers_transducer::transducers::physics::materials::isoplanatic_steering_pose;
+    let xs = x_offsets_m
+        .as_slice()
+        .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+    let mut thetas = Vec::with_capacity(xs.len());
+    let mut tzs = Vec::with_capacity(xs.len());
+    for &x in xs {
+        match isoplanatic_steering_pose(x, focal_length_m) {
+            Some((th, tz)) => {
+                thetas.push(th);
+                tzs.push(tz);
+            }
+            None => {
+                thetas.push(f64::NAN);
+                tzs.push(f64::NAN);
+            }
+        }
+    }
+    Ok((
+        ndarray::Array1::from(thetas).into_pyarray(py).unbind(),
+        ndarray::Array1::from(tzs).into_pyarray(py).unbind(),
+    ))
+}
+
+/// Corrective-lens thickness from a per-point aberration phase (Maimbourg 2020,
+/// Eq. 1): p(M) = φ̃/(2πf₀)·1/(1/c_water − 1/c_lens) + K.
+///
+/// Args:
+///     phase_rad: Unwrapped correction phase φ̃ at each surface point [rad].
+///     frequency_hz: Drive frequency f₀ [Hz].
+///     c_water: Coupling-medium sound speed [m/s].
+///     c_lens: Lens sound speed [m/s].
+///     min_thickness_m: Minimal castable lens thickness K [m].
+///
+/// Returns:
+///     Lens thickness p(M) [m] at each point (min equals min_thickness_m).
+#[pyfunction]
+#[pyo3(signature = (phase_rad, frequency_hz, c_water, c_lens, min_thickness_m))]
+pub fn corrective_lens_thickness(
+    py: Python<'_>,
+    phase_rad: PyReadonlyArray1<f64>,
+    frequency_hz: f64,
+    c_water: f64,
+    c_lens: f64,
+    min_thickness_m: f64,
+) -> PyResult<Py<PyArray1<f64>>> {
+    use kwavers_transducer::transducers::physics::materials::corrective_lens_thickness as clt;
+    let phase = phase_rad
+        .as_slice()
+        .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+    let p = clt(phase, frequency_hz, c_water, c_lens, min_thickness_m);
+    Ok(ndarray::Array1::from(p).into_pyarray(py).unbind())
+}
