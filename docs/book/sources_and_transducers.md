@@ -733,9 +733,15 @@ its unit tests.
 
 The reconfigurable (dynamic) delay law is plotted in **Figure 6.3** (§6.5): the static
 lens of §6.11.2 imposes that same focusing phase `τ(r)` fixed in material, whereas the
-array sets it per transmit. The closed-form lens profile is supplied analytically by
-`AcousticLens::aperture_delay_profile`, so a static-lens focal-profile render can be
-generated directly from it.
+array sets it per transmit.
+
+![Acoustic lenses: refractive delay law and Fresnel zone plate](figures/ch11/fig06_acoustic_lens.png)
+
+*Figure 6.6. (a) The static refractive lens delay `τ(r)=(√(F²+r²)−F)/c`
+(`kw.acoustic_lens_delay_profile`) is the passive form of the phased-array delay law and
+matches the paraxial `r²/(2cF)` for `r ≪ F` (§6.11.2). (b) Fresnel zone-plate boundary
+radii `r_n` (`kw.fresnel_zone_radii`) bunch as `√n`, with more zones at higher frequency
+(§6.11.4).*
 
 ---
 

@@ -957,3 +957,58 @@ pub fn soap_focal_gain(freq_hz: f64, c0: f64, radius_m: f64, f_number: f64) -> f
 pub fn acoustic_resolution_lateral(sound_speed: f64, na: f64, freq_hz: f64) -> f64 {
     transducer::acoustic_resolution_lateral(sound_speed, na, freq_hz)
 }
+
+/// Static acoustic-lens focusing delay profile τ(r) across the aperture.
+///
+/// A silicone refractive lens designed for `focal_length_m` imposes the same
+/// focusing delay as the phased-array delay law: τ(r) = (√(F²+r²) − F)/c_medium.
+///
+/// Args:
+///     radii_m: Aperture radii [m].
+///     focal_length_m: Design focal length F [m].
+///     aperture_m: Lens aperture (full width) [m].
+///     medium_sound_speed: Medium sound speed c_medium [m/s].
+///
+/// Returns:
+///     Focusing delay τ(r) [s] at each radius (0 at centre, monotone increasing).
+#[pyfunction]
+#[pyo3(signature = (radii_m, focal_length_m, aperture_m, medium_sound_speed))]
+pub fn acoustic_lens_delay_profile(
+    py: Python<'_>,
+    radii_m: PyReadonlyArray1<f64>,
+    focal_length_m: f64,
+    aperture_m: f64,
+    medium_sound_speed: f64,
+) -> PyResult<Py<PyArray1<f64>>> {
+    use kwavers_transducer::transducers::physics::materials::AcousticLens;
+    let radii = radii_m
+        .as_slice()
+        .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+    let lens = AcousticLens::silicone(focal_length_m, aperture_m);
+    let tau = lens.aperture_delay_profile(radii, medium_sound_speed);
+    Ok(ndarray::Array1::from(tau).into_pyarray(py).unbind())
+}
+
+/// Fresnel zone-plate boundary radii within the aperture.
+///
+/// r_n = √(n·λ·F + (n·λ/2)²) for n = 1, 2, … while r_n ≤ aperture_radius_m.
+///
+/// Args:
+///     focal_length_m: Primary focal length F [m].
+///     wavelength_m: Design wavelength λ = c/f [m].
+///     aperture_radius_m: Outer aperture radius [m].
+///
+/// Returns:
+///     Zone boundary radii [m], increasing.
+#[pyfunction]
+#[pyo3(signature = (focal_length_m, wavelength_m, aperture_radius_m))]
+pub fn fresnel_zone_radii(
+    py: Python<'_>,
+    focal_length_m: f64,
+    wavelength_m: f64,
+    aperture_radius_m: f64,
+) -> PyResult<Py<PyArray1<f64>>> {
+    use kwavers_transducer::transducers::physics::materials::FresnelZonePlate;
+    let zp = FresnelZonePlate::new(focal_length_m, wavelength_m, aperture_radius_m);
+    Ok(ndarray::Array1::from(zp.zone_radii()).into_pyarray(py).unbind())
+}
