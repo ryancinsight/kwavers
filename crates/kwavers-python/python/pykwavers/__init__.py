@@ -494,6 +494,9 @@ from ._pykwavers import (
     coupled_channel_drive_py,
     gaussian_beam_pressure_field_py,
     simulate_lif_neuron_py,
+    acoustic_monopole_contrast,
+    acoustic_dipole_contrast,
+    gorkov_radiation_force_1d,
     # ── Neuromodulation: Hodgkin–Huxley + NICE intramembrane cavitation ───────
     hodgkin_huxley_response,
     nice_bilayer_sonophore_response,
@@ -863,6 +866,9 @@ __all__ = [
     "coupled_channel_drive_py",
     "gaussian_beam_pressure_field_py",
     "simulate_lif_neuron_py",
+    "acoustic_monopole_contrast",
+    "acoustic_dipole_contrast",
+    "gorkov_radiation_force_1d",
     # ── Neuromodulation: Hodgkin–Huxley + NICE intramembrane cavitation ───────
     "hodgkin_huxley_response",
     "nice_bilayer_sonophore_response",

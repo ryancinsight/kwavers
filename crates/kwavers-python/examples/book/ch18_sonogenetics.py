@@ -96,37 +96,47 @@ def fig01_channel_gating() -> None:
 # ── Figure 02: Acoustic radiation force on a cell ────────────────────────────
 def fig02_radiation_force() -> None:
     """
-    Primary radiation force (Yosioka-Kawasima 1955, Gorkov 1962):
-    F_rad ∝ (2π r³/3c) · [f₁ κ̃ - (3/2) f₂ ρ̃] · d<p²>/dx
-    For a cell in a standing wave, F ~ r³ P²/c.
-    Show F_rad vs cell radius (r = 1–20 µm) and vs frequency.
+    Primary Gor'kov radiation force on a small sphere (cell) at the steepest-
+    gradient point of a 1-D standing wave, computed by kw.gorkov_radiation_force_1d
+    (Eq. 17.2). The Gor'kov contrast factors f₁=1−κ̃, f₂=2(ρ̃−1)/(2ρ̃+1) (Eq. 17.3)
+    come from kw.acoustic_monopole_contrast / kw.acoustic_dipole_contrast. All
+    physics is in the Rust core; only the analytic standing-wave field set-up
+    (the gradients of ⟨p²⟩ and ⟨v²⟩) is assembled in Python.
     """
+    rho, c = 1000.0, 1500.0   # water
+    rho_tilde = 1.07          # cell/medium density ratio
+    kappa_tilde = 0.8         # cell/medium compressibility ratio
+    f_hz = 1.0e6
+    k = 2.0 * np.pi * f_hz / c
+
+    # f₁, f₂ from the Rust contrast kernels (sign/scale reference, Eq. 17.3).
+    f1 = kw.acoustic_monopole_contrast(kappa_tilde)
+    f2 = kw.acoustic_dipole_contrast(rho_tilde)
+
+    # Steepest-gradient point of a standing wave p = P·cos(kx)·cos(ωt):
+    #   peak ∂⟨p²⟩/∂x = −½ P² k ,  peak ∂⟨v²⟩/∂x = ½ (P/ρc)² k.
+    def gorkov_force_pN(radius_m, p_amp):
+        grad_p2 = -0.5 * p_amp**2 * k
+        grad_v2 = 0.5 * (p_amp / (rho * c)) ** 2 * k
+        return abs(kw.gorkov_radiation_force_1d(
+            radius_m, grad_p2, grad_v2, rho, c, rho_tilde, kappa_tilde)) * 1e12
+
     P_rms = 5e4   # Pa (50 kPa)
-    c = 1500.0
-    kappa_water = 1.0  # relative
-    rho_cell = 1.07    # normalised density (relative to water)
-    kappa_cell = 0.8   # relative compressibility
-
-    # Gorkov potential acoustic contrast factor
-    f1 = 1 - kappa_cell / kappa_water
-    f2 = 2 * (rho_cell - 1) / (2 * rho_cell + 1)
-    Phi = (f1 / 3) - f2 / 2  # acoustic contrast factor
-
     r_um = np.linspace(0.5, 20, 200)
-    r_m = r_um * 1e-6
-    F_pN = abs(Phi) * 4 * np.pi * r_m**3 * P_rms**2 / (3 * c * 1480) * 1e12  # pN
+    F_pN = np.array([gorkov_force_pN(r * 1e-6, P_rms) for r in r_um])
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 4.5))
     ax1.plot(r_um, F_pN, color="#1f77b4")
     ax1.set_xlabel(r"Cell radius $r$ (µm)")
     ax1.set_ylabel(r"Radiation force $F_\mathrm{rad}$ (pN)")
-    ax1.set_title(r"ARF vs cell radius" "\n" r"($P_\mathrm{rms}=50$ kPa, $f=1$ MHz)")
+    ax1.set_title(r"Gor'kov ARF vs cell radius" "\n"
+                  rf"($P=50$ kPa, $f=1$ MHz, $f_1={f1:.2f}$, $f_2={f2:.3f}$)")
     ax1.grid(True, alpha=0.3)
 
     # vs pressure (at fixed r = 10 µm)
     P_arr = np.linspace(1e3, 5e5, 300)  # 1 kPa to 500 kPa
     r_fixed = 10e-6
-    F_pN2 = abs(Phi) * 4 * np.pi * r_fixed**3 * P_arr**2 / (3 * c * 1480) * 1e12
+    F_pN2 = np.array([gorkov_force_pN(r_fixed, P) for P in P_arr])
     ax2.plot(P_arr * 1e-3, F_pN2, color="#d62728")
     ax2.set_xlabel("Peak pressure $P$ (kPa)")
     ax2.set_ylabel(r"Radiation force $F_\mathrm{rad}$ (pN)")

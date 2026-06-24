@@ -438,6 +438,18 @@ pub fn register_book(m: &Bound<'_, PyModule>) -> PyResult<()> {
     )?)?;
     m.add_function(wrap_pyfunction!(sonogenetics::radiation_force_1d, m)?)?;
     m.add_function(wrap_pyfunction!(
+        sonogenetics::acoustic_monopole_contrast,
+        m
+    )?)?;
+    m.add_function(wrap_pyfunction!(
+        sonogenetics::acoustic_dipole_contrast,
+        m
+    )?)?;
+    m.add_function(wrap_pyfunction!(
+        sonogenetics::gorkov_radiation_force_1d,
+        m
+    )?)?;
+    m.add_function(wrap_pyfunction!(
         sonogenetics::acoustic_streaming_velocity,
         m
     )?)?;
