@@ -56,10 +56,10 @@ pub fn l_curve_corner(
         let rho_p = (rho[i + 1] - rho[i - 1]) / dt_cen;
         let eta_p = (eta[i + 1] - eta[i - 1]) / dt_cen;
         // Non-uniform central second derivatives.
-        let rho_pp = 2.0 * ((rho[i + 1] - rho[i]) / dt_fwd - (rho[i] - rho[i - 1]) / dt_back)
-            / dt_cen;
-        let eta_pp = 2.0 * ((eta[i + 1] - eta[i]) / dt_fwd - (eta[i] - eta[i - 1]) / dt_back)
-            / dt_cen;
+        let rho_pp =
+            2.0 * ((rho[i + 1] - rho[i]) / dt_fwd - (rho[i] - rho[i - 1]) / dt_back) / dt_cen;
+        let eta_pp =
+            2.0 * ((eta[i + 1] - eta[i]) / dt_fwd - (eta[i] - eta[i - 1]) / dt_back) / dt_cen;
         let denom = (eta_p * eta_p + rho_p * rho_p).powf(1.5);
         if denom <= 0.0 {
             continue;
@@ -134,14 +134,20 @@ mod tests {
         let model = [81.0, 27.0, 9.0, 3.0, 1.3, 1.1, 1.05, 1.02, 1.0];
         let corner = l_curve_corner(&residual, &model, &lambdas).expect("corner");
         // The corner sits in the bend region (where both curves turn).
-        assert!((3..=5).contains(&corner), "corner index {corner} not at the bend");
+        assert!(
+            (3..=5).contains(&corner),
+            "corner index {corner} not at the bend"
+        );
     }
 
     #[test]
     fn l_curve_rejects_degenerate_input() {
         assert_eq!(l_curve_corner(&[1.0, 2.0], &[1.0, 2.0], &[1.0, 2.0]), None);
         let l = [1e-3, 1e-2, 1e-1, 1.0, 10.0];
-        assert_eq!(l_curve_corner(&[1.0, 1.0, 1.0, 1.0, -1.0], &[1.0; 5], &l), None);
+        assert_eq!(
+            l_curve_corner(&[1.0, 1.0, 1.0, 1.0, -1.0], &[1.0; 5], &l),
+            None
+        );
     }
 
     #[test]
