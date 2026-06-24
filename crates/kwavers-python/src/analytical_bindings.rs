@@ -107,7 +107,10 @@ pub fn register_book(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(transducer::beam_pattern_2d, m)?)?;
     m.add_function(wrap_pyfunction!(transducer::circular_piston_onaxis, m)?)?;
     m.add_function(wrap_pyfunction!(transducer::focused_bowl_onaxis, m)?)?;
-    m.add_function(wrap_pyfunction!(transducer::acoustic_lens_delay_profile, m)?)?;
+    m.add_function(wrap_pyfunction!(
+        transducer::acoustic_lens_delay_profile,
+        m
+    )?)?;
     m.add_function(wrap_pyfunction!(transducer::fresnel_zone_radii, m)?)?;
     m.add_function(wrap_pyfunction!(transducer::isoplanatic_steering_curve, m)?)?;
     m.add_function(wrap_pyfunction!(transducer::corrective_lens_thickness, m)?)?;
@@ -157,7 +160,10 @@ pub fn register_book(m: &Bound<'_, PyModule>) -> PyResult<()> {
     )?)?;
     m.add_function(wrap_pyfunction!(transducer::f_number_from_na, m)?)?;
     m.add_function(wrap_pyfunction!(transducer::soap_focal_gain, m)?)?;
-    m.add_function(wrap_pyfunction!(transducer::acoustic_resolution_lateral, m)?)?;
+    m.add_function(wrap_pyfunction!(
+        transducer::acoustic_resolution_lateral,
+        m
+    )?)?;
     // cavitation
     m.add_function(wrap_pyfunction!(
         cavitation::intrinsic_threshold_cavitation_probability,
@@ -449,10 +455,7 @@ pub fn register_book(m: &Bound<'_, PyModule>) -> PyResult<()> {
         sonogenetics::acoustic_monopole_contrast,
         m
     )?)?;
-    m.add_function(wrap_pyfunction!(
-        sonogenetics::acoustic_dipole_contrast,
-        m
-    )?)?;
+    m.add_function(wrap_pyfunction!(sonogenetics::acoustic_dipole_contrast, m)?)?;
     m.add_function(wrap_pyfunction!(
         sonogenetics::gorkov_radiation_force_1d,
         m

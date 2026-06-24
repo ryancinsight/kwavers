@@ -1010,7 +1010,9 @@ pub fn fresnel_zone_radii(
 ) -> PyResult<Py<PyArray1<f64>>> {
     use kwavers_transducer::transducers::physics::materials::FresnelZonePlate;
     let zp = FresnelZonePlate::new(focal_length_m, wavelength_m, aperture_radius_m);
-    Ok(ndarray::Array1::from(zp.zone_radii()).into_pyarray(py).unbind())
+    Ok(ndarray::Array1::from(zp.zone_radii())
+        .into_pyarray(py)
+        .unbind())
 }
 
 /// Isoplanatic mechanical-steering pose curve for a single-element corrective
