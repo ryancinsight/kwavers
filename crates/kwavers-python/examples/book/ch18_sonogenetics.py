@@ -62,32 +62,51 @@ T_body = 310.0  # K (37°C)
 # ── Figure 01: Boltzmann channel gating ──────────────────────────────────────
 def fig01_channel_gating() -> None:
     """
-    Two-state Boltzmann model:
-    P_open(F) = 1 / (1 + exp(-(F - F_0) / (kB T)))
-    where F = ΔP · A_m (force on membrane patch of area A_m).
-    Calibrated to MscL-G22S (Ibsen 2015): F_0 ≈ 15 pN, kBT ≈ 4.28 pN·nm.
+    Two-state Boltzmann gating (book §17.2, Eq. 17.1):
+        P_open(γ) = 1 / [1 + exp(−A_gate·(γ − T_half)/(k_B·θ))],
+    a logistic in membrane tension γ [mN/m]. Computed by
+    kw.boltzmann_open_probability_py (Rust core); only the tension sweep and
+    plotting are in Python.
+
+    Per-channel (T_half, A_gate) are the canonical kwavers values
+    (`sonogenetics::channels::ChannelIdentity::canonical_params`, identity.rs);
+    the e-fold tension slope is slope = k_B·θ/A_gate. References: MscL-G22S/G22N
+    Sukharev 1997 / Sawada 2015 / Li 2026; MscS Nomura 2012; Piezo1 Cox 2016;
+    TRPC6 Suchyna 2000 / Matsushita 2024.
     """
-    # Parameters for three channels (representative)
+    if not _HAS_PYKWAVERS:
+        raise ImportError("pykwavers is required for fig01 (channel gating)")
+    T_K = 310.0           # body temperature θ [K]
+    k_B = 1.380649e-23    # J/K
+
+    # (name, T_half [mN/m], A_gate [nm²], colour) — kwavers canonical_params SSOT,
+    # ordered by sensitivity (lowest half-tension first).
     channels = [
-        ("MscL-G22S (low threshold)", 5.0, 2.0, "#1f77b4"),
-        ("MscL wildtype", 15.0, 3.0, "#ff7f0e"),
-        ("Piezo1", 30.0, 5.0, "#2ca02c"),
+        ("MscL-G22N", 2.35, 6.5, "#9467bd"),
+        ("Piezo1", 2.5, 20.0, "#2ca02c"),
+        ("MscL-G22S", 4.7, 6.5, "#1f77b4"),
+        ("TRPC6", 5.0, 4.5, "#d62728"),
+        ("MscS", 5.5, 1.2, "#ff7f0e"),
     ]
+    gamma = np.ascontiguousarray(np.linspace(0.0, 10.0, 600))  # tension [mN/m]
 
-    F_pN = np.linspace(-10, 60, 500)  # pN
-
-    fig, ax = plt.subplots(figsize=(7, 4.5))
-    for name, F0, kT, col in channels:
-        P_open = 1.0 / (1.0 + np.exp(-(F_pN - F0) / kT))
-        ax.plot(F_pN, P_open, color=col, label=name)
+    fig, ax = plt.subplots(figsize=(7.5, 4.5))
+    for name, t_half_mn, a_gate_nm2, col in channels:
+        # e-fold tension slope from the canonical gating area: slope = k_B·θ/A_gate.
+        slope_mn = k_B * T_K / (a_gate_nm2 * 1e-18) * 1e3
+        p_open = np.asarray(kw.boltzmann_open_probability_py(gamma, t_half_mn, slope_mn, T_K))
+        ax.plot(gamma, p_open, color=col,
+                label=rf"{name} ($T_{{1/2}}$={t_half_mn} mN/m, $A_g$={a_gate_nm2} nm$^2$)")
 
     ax.axhline(0.5, color="k", linewidth=0.5, linestyle="--", label=r"$P_\mathrm{open}=0.5$")
-    ax.set_xlabel("Membrane force $F$ (pN)")
-    ax.set_ylabel("Open probability $P_\\mathrm{open}$")
-    ax.set_title(r"Boltzmann channel gating: $P_\mathrm{open}(F) = [1 + e^{-(F-F_0)/k_BT}]^{-1}$")
-    ax.legend(fontsize=8)
+    ax.set_xlabel(r"Membrane tension $\gamma$ (mN/m)")
+    ax.set_ylabel(r"Open probability $P_\mathrm{open}$")
+    ax.set_title(r"Boltzmann channel gating (§17.2): "
+                 r"$P_\mathrm{open}(\gamma)=[1+e^{-A_g(\gamma-T_{1/2})/k_B\theta}]^{-1}$")
+    ax.legend(fontsize=7.5)
     ax.grid(True, alpha=0.3)
-    ax.set_xlim(-10, 60)
+    ax.set_xlim(0, 10)
+    ax.set_ylim(0, 1.02)
     fig.tight_layout()
     savefig("fig01_channel_gating")
     plt.close(fig)
