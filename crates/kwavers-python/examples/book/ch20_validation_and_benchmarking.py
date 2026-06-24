@@ -31,6 +31,13 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
+try:
+    import pykwavers as kw
+    _PYKWAVERS = True
+except ImportError:
+    kw = None
+    _PYKWAVERS = False
+
 REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
 OUT_DIR = os.path.join(REPO_ROOT, "docs", "book", "figures", "ch20")
 os.makedirs(OUT_DIR, exist_ok=True)
@@ -158,25 +165,30 @@ def fig04_side_by_side_parity() -> None:
     Analytical (O'Neil 1949) vs kwavers CPU-PSTD (simulated analytically here).
     Demonstrate the side-by-side comparison format used in compare_*.py scripts.
     """
+    if not _PYKWAVERS:
+        raise ImportError("pykwavers is required for fig04 (parity metrics)")
     F = 0.06     # 60 mm focal length
     a = 0.015    # 15 mm aperture
     f = 1.0e6    # 1 MHz
-    k = 2 * np.pi * f / 1500.0
+    c = 1500.0
 
-    z = np.linspace(0.001, 0.12, 500)
-    r1 = np.sqrt(z**2 + a**2)
-    p_exact = 2 * np.abs(np.sin(k * (r1 - z) / 2))
+    # Analytical O'Neil (1949) circular-piston on-axis reference — the independent
+    # validation oracle — from the Rust kernel (Ch6 §6.4).
+    z = np.ascontiguousarray(np.linspace(0.001, 0.12, 500))
+    p_exact = np.asarray(kw.circular_piston_onaxis(z, a, f, 1.0, c))
     p_focus = p_exact[np.argmin(np.abs(z - F))]
-    p_exact /= p_focus
+    p_exact = np.ascontiguousarray(p_exact / p_focus)
 
-    # Simulate kwavers output: exact + small numerical noise + slight phase drift
+    # Stand-in kwavers PSTD output: oracle + small numerical noise + phase drift.
     rng = np.random.default_rng(42)
     phase_drift = 0.002 * np.sin(np.linspace(0, 3 * np.pi, 500))
-    p_kwavers = p_exact * (1 + 0.005 * rng.standard_normal(500) + phase_drift)
+    p_kwavers = np.ascontiguousarray(
+        p_exact * (1 + 0.005 * rng.standard_normal(500) + phase_drift))
 
-    pearson = np.corrcoef(p_exact, p_kwavers)[0, 1]
-    rmse = np.sqrt(np.mean((p_kwavers - p_exact)**2))
-    psnr = 20 * np.log10(p_exact.max() / rmse)
+    # Parity metrics from the Rust core (§19.2 Pearson, §19.3 PSNR/RMSE).
+    pearson = kw.pearson(p_kwavers, p_exact)
+    rmse = kw.rmse(p_kwavers, p_exact)
+    psnr = kw.psnr(p_kwavers, p_exact)
 
     fig, axes = plt.subplots(1, 2, figsize=(12, 5))
 

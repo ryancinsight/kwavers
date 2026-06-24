@@ -23,6 +23,7 @@ pub mod rtm;
 pub mod safety;
 pub mod skull;
 pub mod sonogenetics;
+pub mod statistics;
 pub mod thermal;
 pub mod tissue;
 pub mod transducer;
@@ -433,6 +434,10 @@ pub fn register_book(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(inverse::adjoint_gradient_convergence, m)?)?;
     m.add_function(wrap_pyfunction!(inverse::l_curve_corner, m)?)?;
     m.add_function(wrap_pyfunction!(inverse::morozov_lambda, m)?)?;
+    // validation statistics (Ch19)
+    m.add_function(wrap_pyfunction!(statistics::pearson, m)?)?;
+    m.add_function(wrap_pyfunction!(statistics::rmse, m)?)?;
+    m.add_function(wrap_pyfunction!(statistics::psnr, m)?)?;
     // sonogenetics
     m.add_function(wrap_pyfunction!(
         sonogenetics::hill_activation_probability,

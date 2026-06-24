@@ -268,6 +268,10 @@ from ._pykwavers import (
     adjoint_gradient_convergence,
     l_curve_corner,
     morozov_lambda,
+    # ── Validation statistics (Ch19) ─────────────────────────────────────────
+    pearson,
+    rmse,
+    psnr,
     time_reversal_reconstruction,
     passive_acoustic_map_das,
     beamform_image_delay_and_sum,
@@ -612,6 +616,10 @@ __all__ = [
     "adjoint_gradient_convergence",
     "l_curve_corner",
     "morozov_lambda",
+    # ── Validation statistics (Ch19) ─────────────────────────────────────────
+    "pearson",
+    "rmse",
+    "psnr",
     "run_transcranial_fus_planning_from_ritk_ct",
     "run_transcranial_skull_adaptive_benchmark_from_ritk_ct",
     "ali_2025_breast_fwi_frequency_sweep_hz",
