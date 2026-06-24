@@ -41,7 +41,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 import numpy as np
-from scipy.linalg import svd
+import pykwavers as kw
 from scipy.signal import welch
 
 REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
@@ -138,47 +138,53 @@ savefig("fig01_cavitation_spectra")
 plt.close(fig)
 
 
-# ── Figure 02: DAS sensitivity map vs focal depth ─────────────────────────────
-print("[fig02] Passive DAS sensitivity map vs focal depth")
+# ── Figure 02: DAS point-spread / sensitivity map ────────────────────────────
+print("[fig02] Passive DAS localization map (kw.passive_acoustic_map_das)")
 
-def _das_sensitivity(x_src: float, z_src: float,
-                     el_positions: np.ndarray, c: float, fs: float) -> float:
-    """
-    Coherent DAS gain for a point source at (x_src, z_src).
-
-    Each element delay τ_i = r_i / c where r_i is the element-to-source distance.
-    After delay-and-sum, the coherent pressure amplitude is Σ_i w_i · p(t - τ_i).
-    For a unit-amplitude CW source the coherent output amplitude equals
-    |Σ_i w_i · exp(j ω τ_i)| which, for uniform weights, is N only at the
-    steering focus and decays as a sinc-like spatial pattern away from it.
-
-    Here we compute the Fraunhofer diffraction integral numerically on a 2-D
-    lateral × depth grid for a linear aperture.
-    """
-    r = np.sqrt((el_positions - x_src) ** 2 + z_src ** 2)
-    phase = 2.0 * np.pi * F0 * r / c
-    return float(np.abs(np.sum(np.exp(-1j * phase))) / len(el_positions))
-
+# Synthetic passive RF only: a single cavitation point source at (0, 40 mm)
+# radiates a short 3-cycle pulse; sensor i records it delayed by r_i/c with 1/r
+# spreading. The delay-and-sum localization map is then computed by the kwavers
+# PAM kernel (§22.3) — no beamforming physics is reimplemented in Python.
 el_x = (np.arange(N_EL) - (N_EL - 1) / 2.0) * PITCH
-x_range = np.linspace(-15e-3, 15e-3, 120)
-z_range = np.linspace(5e-3, 80e-3, 140)
-sens = np.zeros((len(z_range), len(x_range)))
-for iz, z in enumerate(z_range):
-    for ix, x in enumerate(x_range):
-        sens[iz, ix] = _das_sensitivity(x, z, el_x, C0, FS)
+sensor_xyz = np.column_stack([el_x, np.zeros(N_EL), np.zeros(N_EL)])
+src = np.array([0.0, 0.0, 40e-3])
+
+N_SAMP = 1800
+t_axis = np.arange(N_SAMP) / FS
+N_CYCLES = 3.0
+passive = np.zeros((N_EL, N_SAMP))
+for i in range(N_EL):
+    r_i = float(np.linalg.norm(sensor_xyz[i] - src))
+    tau = r_i / C0
+    env = np.exp(-0.5 * ((t_axis - tau) * F0 / (N_CYCLES / 2.0)) ** 2)
+    passive[i] = env * np.sin(2.0 * np.pi * F0 * (t_axis - tau)) / max(r_i, 1e-6)
+
+x_range = np.linspace(-15e-3, 15e-3, 100)
+z_range = np.linspace(10e-3, 70e-3, 120)
+xx, zz = np.meshgrid(x_range, z_range)
+grid = np.column_stack([xx.ravel(), np.zeros(xx.size), zz.ravel()])
+
+das_map = np.asarray(kw.passive_acoustic_map_das(
+    np.ascontiguousarray(passive),
+    np.ascontiguousarray(sensor_xyz),
+    np.ascontiguousarray(grid),
+    C0, FS, window_size=256, apodization="hamming", coherence_weighting=True,
+)).reshape(len(z_range), len(x_range))
 
 fig, ax = plt.subplots(figsize=(7, 6))
 im = ax.imshow(
-    20 * np.log10(sens / sens.max() + 1e-12),
+    10 * np.log10(das_map / das_map.max() + 1e-12),  # intensity map → 10·log10
     extent=[x_range[0] * 1e3, x_range[-1] * 1e3, z_range[-1] * 1e3, z_range[0] * 1e3],
     aspect="auto", cmap="hot", vmin=-40, vmax=0,
 )
+ax.plot(src[0] * 1e3, src[2] * 1e3, "c+", ms=12, mew=2, label="true source")
 cb = fig.colorbar(im, ax=ax)
-cb.set_label("Sensitivity (dB re peak)")
+cb.set_label("DAS energy (dB re peak)")
 ax.set_xlabel("Lateral position (mm)")
 ax.set_ylabel("Depth (mm)")
-ax.set_title(f"Passive DAS sensitivity — {N_EL}-element aperture, pitch {PITCH*1e3:.1f} mm\n"
-             f"$f_0$ = {F0/1e6:.1f} MHz,  $c$ = {C0:.0f} m/s")
+ax.set_title(f"Passive DAS localization — {N_EL}-element aperture, pitch {PITCH*1e3:.1f} mm\n"
+             f"kw.passive_acoustic_map_das,  $f_0$ = {F0/1e6:.1f} MHz")
+ax.legend(loc="upper right", fontsize=8)
 fig.tight_layout()
 savefig("fig02_das_sensitivity_map")
 plt.close(fig)
@@ -264,7 +270,11 @@ def _build_csd_matrix(
     return R
 
 R = _build_csd_matrix(n_el=N_EL, n_src=5, n_snap=256, signal_power=10.0, noise_power=1.0)
-_, sv, _ = svd(R)
+# Signal/noise eigenvalue split from the Rust core (§22.4). For the Hermitian PSD
+# CSD matrix the eigenvalues equal the singular values; the synthetic R is the
+# only Python-side fixture.
+sv = np.asarray(kw.hermitian_eigenvalues_complex(
+    np.ascontiguousarray(R.real), np.ascontiguousarray(R.imag)))
 
 fig, ax = plt.subplots(figsize=(7, 4))
 ax.semilogy(np.arange(1, len(sv) + 1), sv, "o-", color="#2166ac",

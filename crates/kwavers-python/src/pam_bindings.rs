@@ -4,19 +4,114 @@
 //! read-only ndarray views and the authoritative validation/beamforming contract
 //! lives in `kwavers_analysis::signal_processing::pam`.
 
+use kwavers_analysis::signal_processing::beamforming::adaptive::subspace::MUSIC;
 use kwavers_analysis::signal_processing::beamforming::{
     beamform_image_das, ImagingDasApodization, ImagingDasConfig,
 };
 use kwavers_analysis::signal_processing::pam::delay_and_sum::ApodizationType;
 use kwavers_analysis::signal_processing::pam::{DelayAndSumConfig, DelayAndSumPAM};
-use numpy::{PyArray1, PyReadonlyArray2};
+use kwavers_math::linear_algebra::EigenDecomposition;
+use ndarray::{Array1, Array2};
+use num_complex::Complex64;
+use numpy::{PyArray1, PyReadonlyArray1, PyReadonlyArray2};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
 pub fn register_pam(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(passive_acoustic_map_das, m)?)?;
     m.add_function(wrap_pyfunction!(beamform_image_delay_and_sum, m)?)?;
+    m.add_function(wrap_pyfunction!(hermitian_eigenvalues_complex, m)?)?;
+    m.add_function(wrap_pyfunction!(music_pseudospectrum, m)?)?;
     Ok(())
+}
+
+/// Build a Hermitian `Array2<Complex64>` from real/imag parts, symmetrised to
+/// `½(R + Rᴴ)` to absorb float round-off so the strict Hermitian check passes.
+fn hermitian_from_parts(
+    re: &PyReadonlyArray2<f64>,
+    im: &PyReadonlyArray2<f64>,
+) -> PyResult<Array2<Complex64>> {
+    let re = re.as_array();
+    let im = im.as_array();
+    let n = re.nrows();
+    if re.ncols() != n || im.dim() != (n, n) {
+        return Err(PyValueError::new_err(
+            "covariance real/imag parts must be the same square (N×N) shape",
+        ));
+    }
+    let mut r = Array2::<Complex64>::zeros((n, n));
+    for i in 0..n {
+        for j in 0..n {
+            r[[i, j]] = Complex64::new(re[[i, j]], im[[i, j]]);
+        }
+    }
+    // Hermitian symmetrisation: H = ½(R + Rᴴ).
+    let mut h = Array2::<Complex64>::zeros((n, n));
+    for i in 0..n {
+        for j in 0..n {
+            h[[i, j]] = 0.5 * (r[[i, j]] + r[[j, i]].conj());
+        }
+    }
+    Ok(h)
+}
+
+/// Eigenvalues of a Hermitian covariance / cross-spectral matrix, sorted
+/// descending — the signal/noise eigenvalue split underlying MUSIC and
+/// eigenspace-MV (book §22.4). The matrix is passed as separate real and
+/// imaginary `N×N` parts and symmetrised before the eigendecomposition.
+///
+/// Returns the `N` real eigenvalues (descending).
+#[pyfunction]
+#[pyo3(signature = (covariance_real, covariance_imag))]
+fn hermitian_eigenvalues_complex(
+    py: Python<'_>,
+    covariance_real: PyReadonlyArray2<f64>,
+    covariance_imag: PyReadonlyArray2<f64>,
+) -> PyResult<Py<PyArray1<f64>>> {
+    let h = hermitian_from_parts(&covariance_real, &covariance_imag)?;
+    let (mut eigenvalues, _) = EigenDecomposition::hermitian_eigendecomposition_complex(&h)
+        .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+    let mut v = eigenvalues.to_vec();
+    v.sort_by(|a, b| b.total_cmp(a));
+    eigenvalues = Array1::from(v);
+    Ok(PyArray1::from_owned_array(py, eigenvalues).into())
+}
+
+/// MUSIC noise-subspace pseudospectrum `P(θ) = 1/‖E_nᴴ a(θ)‖²` for one steering
+/// vector against a Hermitian covariance matrix (Schmidt 1986; book §22.4).
+///
+/// `covariance_{real,imag}` are the `N×N` parts; `steering_{real,imag}` are the
+/// length-`N` steering-vector parts; `num_sources` is the signal-subspace
+/// dimension `K` (must satisfy `0 < K < N`).
+#[pyfunction]
+#[pyo3(signature = (covariance_real, covariance_imag, steering_real, steering_imag, num_sources))]
+fn music_pseudospectrum(
+    covariance_real: PyReadonlyArray2<f64>,
+    covariance_imag: PyReadonlyArray2<f64>,
+    steering_real: PyReadonlyArray1<f64>,
+    steering_imag: PyReadonlyArray1<f64>,
+    num_sources: usize,
+) -> PyResult<f64> {
+    let h = hermitian_from_parts(&covariance_real, &covariance_imag)?;
+    let sr = steering_real
+        .as_slice()
+        .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+    let si = steering_imag
+        .as_slice()
+        .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+    if sr.len() != h.nrows() || si.len() != h.nrows() {
+        return Err(PyValueError::new_err(
+            "steering real/imag parts must have length N matching the covariance",
+        ));
+    }
+    let steering = Array1::from_iter(
+        sr.iter()
+            .zip(si.iter())
+            .map(|(&a, &b)| Complex64::new(a, b)),
+    );
+    MUSIC::new(num_sources)
+        .pseudospectrum(&h, &steering)
+        .map_err(|e| PyRuntimeError::new_err(e.to_string()))
 }
 
 #[pyfunction]

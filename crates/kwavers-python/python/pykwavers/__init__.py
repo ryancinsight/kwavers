@@ -274,6 +274,8 @@ from ._pykwavers import (
     psnr,
     time_reversal_reconstruction,
     passive_acoustic_map_das,
+    hermitian_eigenvalues_complex,
+    music_pseudospectrum,
     beamform_image_delay_and_sum,
     simulate_receive_rf,
     # Signal generation
@@ -647,6 +649,8 @@ __all__ = [
     "derive_breast_fwi_reduced_array_plan",
     "invert_breast_fwi",
     "passive_acoustic_map_das",
+    "hermitian_eigenvalues_complex",
+    "music_pseudospectrum",
     "beamform_image_delay_and_sum",
     "simulate_receive_rf",
     # Submodules
