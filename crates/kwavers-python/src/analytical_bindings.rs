@@ -425,6 +425,7 @@ pub fn register_book(m: &Bound<'_, PyModule>) -> PyResult<()> {
     // bbb
     m.add_function(wrap_pyfunction!(bbb::bbb_permeability_hill, m)?)?;
     m.add_function(wrap_pyfunction!(bbb::bbb_closure_kinetics, m)?)?;
+    m.add_function(wrap_pyfunction!(bbb::bbb_closure_permeability, m)?)?;
     m.add_function(wrap_pyfunction!(bbb::ceus_backscatter_signal, m)?)?;
     // inverse
     m.add_function(wrap_pyfunction!(inverse::helmholtz_1d_fd_matrix, m)?)?;

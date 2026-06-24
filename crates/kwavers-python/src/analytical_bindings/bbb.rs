@@ -93,3 +93,41 @@ pub fn ceus_backscatter_signal(
     let result = bbb_mod::ceus_backscatter_signal(c_s, sigma_bs_m2, thickness_m);
     Ok(result.into_pyarray(py).unbind())
 }
+
+/// Bi-exponential post-sonication BBB closure (book §23.6) with explicit fast and
+/// slow recovery time constants:
+///
+///     P(t) = P_peak · [0.6·e^(−t/τ_fast) + 0.4·e^(−t/τ_slow)]
+///
+/// The fast component (τ_fast ≈ 0.5 h) is tight-junction re-assembly; the slow
+/// component (τ_slow ≈ 6 h) is vesicular-transport clearance (Deffieux &
+/// Konofagou 2010). This is the function the chapter names — it sets τ_fast and
+/// τ_slow independently (unlike `bbb_closure_kinetics`, which locks τ_slow = 6·τ_fast).
+///
+/// Args:
+///     t_h: Time post-sonication [h].
+///     p_peak: Peak permeability enhancement at t = 0.
+///     tau_fast_h: Fast recovery time constant [h].
+///     tau_slow_h: Slow recovery time constant [h].
+///
+/// Returns:
+///     Permeability enhancement P(t) over the time array.
+#[pyfunction]
+#[pyo3(signature = (t_h, p_peak, tau_fast_h, tau_slow_h))]
+pub fn bbb_closure_permeability(
+    py: Python<'_>,
+    t_h: PyReadonlyArray1<f64>,
+    p_peak: f64,
+    tau_fast_h: f64,
+    tau_slow_h: f64,
+) -> PyResult<Py<PyArray1<f64>>> {
+    use kwavers_physics::acoustics::transcranial::bbb_opening::bbb_closure_permeability as closure;
+    let t_s = t_h
+        .as_slice()
+        .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+    let result: Vec<f64> = t_s
+        .iter()
+        .map(|&t| closure(t, p_peak, tau_fast_h, tau_slow_h))
+        .collect();
+    Ok(result.into_pyarray(py).unbind())
+}

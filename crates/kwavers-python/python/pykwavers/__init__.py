@@ -502,6 +502,7 @@ from ._pykwavers import (
     # ── BBB permeability, closure kinetics, CEUS ─────────────────────────────
     bbb_permeability_hill,
     bbb_closure_kinetics,
+    bbb_closure_permeability,
     ceus_backscatter_signal,
     # ── Sonogenetics / neuromodulation ───────────────────────────────────────
     compute_acoustic_membrane_tension_py,
@@ -889,6 +890,7 @@ __all__ = [
     # ── BBB permeability, closure kinetics, CEUS ─────────────────────────────
     "bbb_permeability_hill",
     "bbb_closure_kinetics",
+    "bbb_closure_permeability",
     "ceus_backscatter_signal",
     # ── Sonogenetics / neuromodulation ───────────────────────────────────────
     "compute_acoustic_membrane_tension_py",

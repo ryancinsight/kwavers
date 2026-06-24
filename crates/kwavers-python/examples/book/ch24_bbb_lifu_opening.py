@@ -349,18 +349,20 @@ print("[fig06] BBB opening window: permeability vs time post-sonication")
 
 t_h = np.linspace(0.0, 48.0, 800)  # hours post-sonication
 
-# Three parameter regimes (McDannold 2008 / Tung 2010)
+# Three dose regimes (McDannold 2008 / Tung 2010): (τ_fast h, τ_slow h, P_peak).
+# Higher dose / inertial cavitation prolongs both recovery constants.
 scenarios = [
-    (1.0, 0.85, "#2166ac", "Low dose (MI=0.3, stable SC)"),
-    (2.0, 0.92, "#4dac26", "Moderate dose (MI=0.45, stable SC)"),
-    (5.0, 0.98, "#d6604d", "High dose (MI=0.65, mixed SC/IC)"),
+    (0.4, 4.0, 0.85, "#2166ac", "Low dose (MI=0.3, stable SC)"),
+    (0.5, 6.0, 0.92, "#4dac26", "Moderate dose (MI=0.45, stable SC)"),
+    (1.0, 10.0, 0.98, "#d6604d", "High dose (MI=0.65, mixed SC/IC)"),
 ]
 
 fig, ax = plt.subplots(figsize=(8, 4))
-for tau_close, perm_pk, col, lbl in scenarios:
-    # P(t) = perm_peak·[0.6·exp(-t/τ_fast)+0.4·exp(-t/τ_slow)]
-    # via kw.bbb_closure_kinetics (Deffieux & Konofagou 2010 §IV)
-    p = np.asarray(kw.bbb_closure_kinetics(t_h, tau_close, perm_pk))
+for tau_fast, tau_slow, perm_pk, col, lbl in scenarios:
+    # P(t) = P_peak·[0.6·exp(-t/τ_fast)+0.4·exp(-t/τ_slow)] via the §23.6 Rust
+    # kernel kw.bbb_closure_permeability (Deffieux & Konofagou 2010 §IV), which
+    # sets τ_fast and τ_slow independently (canonical 0.5 h / 6 h, moderate dose).
+    p = np.asarray(kw.bbb_closure_permeability(t_h, perm_pk, tau_fast, tau_slow))
     ax.plot(t_h, p, color=col, lw=1.6, label=lbl)
 
 # Baseline permeability
