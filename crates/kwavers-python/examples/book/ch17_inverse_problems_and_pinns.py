@@ -26,7 +26,6 @@ from __future__ import annotations
 
 import os
 import numpy as np
-from scipy.linalg import svd
 import matplotlib
 
 matplotlib.use("Agg")
@@ -59,9 +58,13 @@ plt.rcParams.update({
 # ── Figure 01: SVD spectrum of discretised Helmholtz operator ─────────────────
 def fig01_svd_spectrum() -> None:
     """
-    1D Helmholtz operator: (d²/dx² + k²) discretised with second-order FD.
-    Singular values σ_i of the forward map G show rapid decay → ill-conditioning.
+    1D Helmholtz operator (d²/dx² + k²), second-order FD (Dirichlet BCs), built by
+    kw.helmholtz_1d_fd_matrix; its singular values via kw.matrix_singular_values
+    (Rust core). Their rapid decay → ill-conditioning. Physics is in the Rust
+    core; only the sweep over grid size N and plotting are in Python.
     """
+    if not _PYKWAVERS:
+        raise ImportError("pykwavers is required for fig01 (Helmholtz SVD spectrum)")
     N_arr = [32, 64, 128]
     k = 10.0  # wavenumber
 
@@ -69,17 +72,9 @@ def fig01_svd_spectrum() -> None:
     colors = ["#1f77b4", "#ff7f0e", "#2ca02c"]
     for N, col in zip(N_arr, colors):
         dx = 1.0 / N
-        # Second-order FD Helmholtz matrix (Dirichlet BCs)
-        diag = -2.0 / dx**2 + k**2
-        offdiag = 1.0 / dx**2
-        A = (
-            np.diag(diag * np.ones(N))
-            + np.diag(offdiag * np.ones(N - 1), 1)
-            + np.diag(offdiag * np.ones(N - 1), -1)
-        )
-        sv = svd(A, compute_uv=False)
-        sv_sorted = np.sort(np.abs(sv))[::-1]
-        sv_norm = sv_sorted / sv_sorted[0]
+        a = np.ascontiguousarray(kw.helmholtz_1d_fd_matrix(N, k, dx))
+        sv = np.asarray(kw.matrix_singular_values(a, N, N))  # sorted descending
+        sv_norm = sv / sv[0]
         idx = np.arange(1, len(sv_norm) + 1)
         ax.semilogy(idx, sv_norm, color=col, label=f"$N={N}$")
 
@@ -97,61 +92,50 @@ def fig01_svd_spectrum() -> None:
 # ── Figure 02: L-curve for Tikhonov regularization ───────────────────────────
 def fig02_lcurve() -> None:
     """
-    1D deconvolution: y = Ax + ε, where A is a Gaussian convolution matrix.
-    Tikhonov solution: x_λ = (A^T A + λI)^{-1} A^T y.
-    L-curve: ||Ax_λ - y|| vs ||x_λ|| as λ varies.
+    1D Gaussian-deconvolution test problem y = Ax + ε. The Tikhonov L-curve
+    (‖Ax_λ−y‖ vs ‖x_λ‖ over a λ sweep) is computed by kw.tikhonov_lcurve, and the
+    maximum-curvature corner (§18.7, Hansen 1992) by kw.l_curve_corner — both in
+    the Rust core. Only the synthetic A, x_true, y fixture and plotting are in
+    Python; no inversion or corner-finding is reimplemented here.
     """
+    if not _PYKWAVERS:
+        raise ImportError("pykwavers is required for fig02 (Tikhonov L-curve)")
     N = 64
     t = np.linspace(0, 1, N)
 
-    # Gaussian convolution kernel
+    # Synthetic ill-posed fixture: Gaussian convolution matrix + two-bump signal.
     sigma = 0.05
     A = np.exp(-0.5 * ((t[:, None] - t[None, :]) ** 2) / sigma**2) / (
         sigma * np.sqrt(2 * np.pi)
     )
     A /= N
-
-    # True signal: sum of Gaussians
     x_true = np.exp(-0.5 * ((t - 0.3) ** 2) / 0.01) + 0.7 * np.exp(
         -0.5 * ((t - 0.7) ** 2) / 0.01
     )
-
     rng = np.random.default_rng(42)
     y = A @ x_true + 0.01 * rng.standard_normal(N)
 
-    ATA = A.T @ A
-    ATy = A.T @ y
+    # Rust SSOT: the L-curve and its corner.
+    lambdas = np.ascontiguousarray(np.logspace(-6, 2, 100))
+    res_norms, sol_norms = kw.tikhonov_lcurve(
+        np.ascontiguousarray(A), np.ascontiguousarray(y), N, N, lambdas)
+    res_norms = np.asarray(res_norms)
+    sol_norms = np.asarray(sol_norms)
+    corner = kw.l_curve_corner(res_norms, sol_norms, lambdas)
 
-    lambdas = np.logspace(-6, 2, 100)
-    res_norms = []
-    sol_norms = []
-
-    for lam in lambdas:
-        x_lam = np.linalg.solve(ATA + lam * np.eye(N), ATy)
-        res_norms.append(np.linalg.norm(A @ x_lam - y))
-        sol_norms.append(np.linalg.norm(x_lam))
-
-    # L-curve corner (maximum curvature region)
     fig, ax = plt.subplots(figsize=(7, 5))
     ax.loglog(res_norms, sol_norms, "b-", linewidth=1.5)
-    # Mark a few lambda values
-    for idx, lam in [
-        (10, r"$\lambda=10^{-4}$"),
-        (50, r"$\lambda=10^{-1}$"),
-        (90, r"$\lambda=10^{1}$"),
-    ]:
-        ax.scatter(res_norms[idx], sol_norms[idx], s=80, color="r", zorder=5)
-        ax.annotate(
-            lam,
-            (res_norms[idx], sol_norms[idx]),
-            textcoords="offset points",
-            xytext=(5, 5),
-            fontsize=8,
-        )
+    if corner is not None:
+        ax.scatter(res_norms[corner], sol_norms[corner], s=110, color="r",
+                   zorder=5, label=rf"L-curve corner ($\lambda={lambdas[corner]:.2e}$)")
+        ax.annotate("corner", (res_norms[corner], sol_norms[corner]),
+                    textcoords="offset points", xytext=(8, 8), fontsize=9, color="r")
+        ax.legend()
 
     ax.set_xlabel(r"Residual norm $\|Ax_\lambda - y\|$")
     ax.set_ylabel(r"Solution norm $\|x_\lambda\|$")
-    ax.set_title("L-curve for Tikhonov regularization\n1D Gaussian deconvolution")
+    ax.set_title("L-curve for Tikhonov regularization (§18.7)\n"
+                 "1D Gaussian deconvolution; corner via kw.l_curve_corner")
     ax.grid(True, which="both", alpha=0.3)
     fig.tight_layout()
     savefig("fig02_lcurve")

@@ -431,6 +431,8 @@ pub fn register_book(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(inverse::tikhonov_lcurve, m)?)?;
     m.add_function(wrap_pyfunction!(inverse::born_inversion_regularized, m)?)?;
     m.add_function(wrap_pyfunction!(inverse::adjoint_gradient_convergence, m)?)?;
+    m.add_function(wrap_pyfunction!(inverse::l_curve_corner, m)?)?;
+    m.add_function(wrap_pyfunction!(inverse::morozov_lambda, m)?)?;
     // sonogenetics
     m.add_function(wrap_pyfunction!(
         sonogenetics::hill_activation_probability,
