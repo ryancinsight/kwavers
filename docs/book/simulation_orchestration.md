@@ -317,161 +317,49 @@ the wall Mach number.
 
 ### 21.8.3 Visualization: bubble radius dynamics under three models
 
-Run the following script to generate figure 21-B (radius–time curves for
-KM, RP, and Gilmore under a 1-MHz 200 kPa driving pressure):
+The companion example
+`crates/kwavers-python/examples/book/ch21_simulation_orchestration.py` drives all
+three bubble solvers through the PyO3 binding layer — the same Rayleigh–Plesset,
+Keller–Miksis, and Gilmore integrators the plugin catalog dispatches to (§21.4) —
+and produces Figure 21.3. No ODE is reimplemented in Python; only the drive
+set-up and plotting live there:
 
 ```python
-"""
-fig_21B_bubble_ode_comparison.py
-=================================
-Plots R(t) for Keller-Miksis, Rayleigh-Plesset, and Gilmore bubble ODEs
-under a 1-MHz 200 kPa sinusoidal driving pressure.
-
-Reproduces the qualitative features of Fig. 3 in:
-  Brennen C.E. (1995) Cavitation and Bubble Dynamics, Oxford UP, §4.2.
-"""
 import numpy as np
-from scipy.integrate import solve_ivp
-import matplotlib.pyplot as plt
+import pykwavers as kw
 
-# Physical constants (SI)
-RHO = 1000.0     # liquid density [kg/m³]
-C0  = 1500.0     # sound speed [m/s]
-P0  = 101325.0   # ambient pressure [Pa]
-SIGMA = 0.0725   # surface tension [N/m]
-MU  = 0.001      # viscosity [Pa·s]
-GAMMA = 1.4      # adiabatic index (air)
-R0  = 5e-6       # equilibrium radius [m]
-# True equilibrium pressure accounting for surface tension:
-P_GAS0 = P0 + 2.0 * SIGMA / R0  # [Pa]
+# 5-µm air bubble in water, 1 MHz, 200 kPa, 4 acoustic periods.
+R0, RHO, C0, P0 = 5e-6, 1000.0, 1500.0, 101325.0
+SIGMA, MU, GAMMA, PV = 0.0725, 1e-3, 1.4, 0.0
+F0, PA = 1.0e6, 200_000.0
+T_END, N = 4.0 / F0, 8000
 
-# Driving
-F0  = 1.0e6      # frequency [Hz]
-PA  = 200_000.0  # amplitude [Pa]
-OMEGA = 2.0 * np.pi * F0
-
-T_END = 4.0 / F0    # 4 acoustic periods
-DT    = 1.0 / (40 * F0)   # 40 pts per period
-
-def p_drive(t):
-    """Instantaneous acoustic driving pressure [Pa]."""
-    return PA * np.sin(OMEGA * t)
-
-def p_inf(t):
-    return P0 + p_drive(t)
-
-# ── Rayleigh-Plesset ODE ───────────────────────────────────────────────────
-# R·R̈ + (3/2)·Ṙ² = (1/ρ)·[p_B - p∞(t)]
-# p_B = p_gas0·(R₀/R)^(3γ) - 2σ/R - 4µṘ/R
-def rp_rhs(t, y):
-    R, Rdot = y
-    R = max(R, 1e-10)
-    p_B = P_GAS0 * (R0 / R) ** (3 * GAMMA) - 2 * SIGMA / R - 4 * MU * Rdot / R
-    Rddot = (p_B - p_inf(t)) / (RHO * R) - 1.5 * Rdot**2 / R
-    return [Rdot, Rddot]
-
-# ── Keller-Miksis ODE ─────────────────────────────────────────────────────
-# (1 - Ṙ/C)·R·R̈ + (3/2)·(1 - Ṙ/(3C))·Ṙ² =
-#   (1 + Ṙ/C)·(p_B - p∞)/ρ + R/ρC · dp_B/dt
-def km_rhs(t, y):
-    R, Rdot = y
-    R = max(R, 1e-10)
-    p_B = P_GAS0 * (R0 / R) ** (3 * GAMMA) - 2 * SIGMA / R - 4 * MU * Rdot / R
-    dp_B_dt = -3 * GAMMA * P_GAS0 * (R0 / R) ** (3 * GAMMA) / R * Rdot \
-              + 2 * SIGMA / R**2 * Rdot \
-              + 4 * MU * Rdot**2 / R**2 \
-              - 4 * MU / R  # ignoring R̈ term (implicit)
-    dp_inf_dt = PA * OMEGA * np.cos(OMEGA * t)
-    u_c = Rdot / C0
-    if abs(u_c) > 0.99:
-        return [Rdot, 0.0]
-    lhs_coeff = R * (1.0 - u_c)
-    rhs = (1.0 + u_c) * (p_B - p_inf(t)) / RHO \
-          + R / (RHO * C0) * (dp_B_dt - dp_inf_dt)
-    nl = 1.5 * (1.0 - u_c / 3.0) * Rdot**2
-    return [Rdot, (rhs - nl) / lhs_coeff]
-
-# ── Gilmore-Tait ODE ──────────────────────────────────────────────────────
-# Uses Tait EOS: h = n/(n-1) · (p+B)/ρ₀ · [(p+B)/(p₀+B)]^((n-1)/n)
-# C² = n(p+B)/ρ;  H = H_wall - H_∞
-TAIT_B = 3.046e8   # [Pa]
-TAIT_N = 7.15
-
-def tait_enthalpy(p):
-    return (TAIT_N / (TAIT_N - 1.0)) * (p + TAIT_B) / RHO \
-           * ((p + TAIT_B) / (P0 + TAIT_B)) ** ((TAIT_N - 1.0) / TAIT_N)
-
-def gilmore_rhs(t, y):
-    R, Rdot = y
-    R = max(R, 1e-10)
-    p_B = P_GAS0 * (R0 / R) ** (3 * GAMMA) - 2 * SIGMA / R - 4 * MU * Rdot / R
-    C_wall = np.sqrt(TAIT_N * (p_B + TAIT_B) / RHO)
-    H = tait_enthalpy(p_B) - tait_enthalpy(p_inf(t))
-    dH_dt = (1.0 / RHO) * PA * OMEGA * np.cos(OMEGA * t)  # quasi-static
-    u_c = Rdot / C_wall
-    if abs(u_c) > 0.99:
-        return [Rdot, 0.0]
-    rhs = (1.0 + u_c) * H + (1.0 - u_c) * R / C_wall * dH_dt
-    nl = 1.5 * (1.0 - u_c / 3.0) * Rdot**2
-    Rddot = (rhs - nl) / (R * (1.0 - u_c))
-    return [Rdot, Rddot]
-
-# ── Integrate all three ───────────────────────────────────────────────────
-t_span = (0.0, T_END)
-t_eval = np.arange(0, T_END + DT, DT)
-y0 = [R0, 0.0]
-opts = dict(method="Radau", rtol=1e-8, atol=1e-12, dense_output=False)
-
-sol_rp  = solve_ivp(rp_rhs,     t_span, y0, t_eval=t_eval, **opts)
-sol_km  = solve_ivp(km_rhs,     t_span, y0, t_eval=t_eval, **opts)
-sol_gil = solve_ivp(gilmore_rhs, t_span, y0, t_eval=t_eval, **opts)
-
-t_us = t_eval * 1e6  # µs
-
-fig, axes = plt.subplots(1, 2, figsize=(12, 5))
-fig.suptitle(
-    f"Bubble R(t) under 1 MHz, 200 kPa driving  (R₀ = {R0*1e6:.0f} µm)\n"
-    "Keller-Miksis vs Rayleigh-Plesset vs Gilmore-Tait",
-    fontsize=11,
-)
-
-ax = axes[0]
-ax.plot(t_us, sol_rp.y[0] * 1e6,  label="Rayleigh-Plesset (RP)", lw=1.5, color="tab:blue")
-ax.plot(t_us, sol_km.y[0] * 1e6,  label="Keller-Miksis (KM)",    lw=1.5, color="tab:orange", ls="--")
-ax.plot(t_us, sol_gil.y[0] * 1e6, label="Gilmore-Tait",           lw=1.5, color="tab:green",  ls=":")
-ax.axhline(R0 * 1e6, color="k", lw=0.6, ls="--", alpha=0.5, label=f"R₀ = {R0*1e6:.0f} µm")
-ax.set_xlabel("Time [µs]")
-ax.set_ylabel("Radius [µm]")
-ax.set_title("Full time history")
-ax.legend(fontsize=9)
-ax.grid(True, lw=0.4, alpha=0.5)
-
-# Zoom on first collapse
-ax2 = axes[1]
-zoom_mask = t_eval <= 1.5e-6
-ax2.plot(t_us[zoom_mask], sol_rp.y[0][zoom_mask]  * 1e6, label="RP",     lw=1.5, color="tab:blue")
-ax2.plot(t_us[zoom_mask], sol_km.y[0][zoom_mask]  * 1e6, label="KM",     lw=1.5, color="tab:orange", ls="--")
-ax2.plot(t_us[zoom_mask], sol_gil.y[0][zoom_mask] * 1e6, label="Gilmore",lw=1.5, color="tab:green",  ls=":")
-ax2.set_xlabel("Time [µs]")
-ax2.set_ylabel("Radius [µm]")
-ax2.set_title("First acoustic period (model divergence visible near collapse)")
-ax2.legend(fontsize=9)
-ax2.grid(True, lw=0.4, alpha=0.5)
-
-fig.tight_layout()
-fig.savefig("fig_21B_bubble_ode_comparison.pdf", dpi=200, bbox_inches="tight")
-plt.show()
-print("Saved: fig_21B_bubble_ode_comparison.pdf")
+# All physics in the Rust core (the plugin catalog's three bubble models).
+t,  r_rp,  _    = kw.solve_rayleigh_plesset(R0, 0.0, P0, PA, F0, T_END, N,
+                                            RHO, SIGMA, GAMMA, MU, PV)
+_,  r_km,  _    = kw.solve_keller_miksis(R0, 0.0, P0, PA, F0, T_END, N,
+                                         RHO, SIGMA, GAMMA, MU, PV, C0)
+_,  r_gil, rdot = kw.solve_gilmore(R0, 0.0, P0, PA, F0, T_END, N,
+                                   RHO, SIGMA, GAMMA, MU, PV, C0)
+# plot r_rp/R0, r_km/R0, r_gil/R0 vs t and rdot (see the example script)
 ```
 
-**Figure 21-B interpretation:** RP and KM agree in the linear regime (first
-quarter period).  During collapse, KM diverges from RP by ~5–15% in peak
-radius due to the O(Mach) compressibility correction.  Gilmore produces the
-strongest collapse (smallest minimum radius) because the Tait enthalpy
-function correctly accounts for liquid compressibility at wall Mach numbers
-approaching unity.  At 200 kPa the models bracket a spread of ≈8% in minimum
-radius — the selection rule `GilmoreSolver::should_use_gilmore` triggers at
-wall Mach > 0.1, which occurs during the collapse phase at this amplitude.
+![Bubble radius dynamics under the three kwavers solvers.](figures/ch21sim/fig01_bubble_ode_comparison.png)
+
+*Figure 21.3. Normalised radius R(t)/R₀ (left) and Gilmore wall velocity (right)
+for a 5-µm air bubble in water under a 1-MHz, 200-kPa drive, integrated by
+`kw.solve_rayleigh_plesset` / `kw.solve_keller_miksis` / `kw.solve_gilmore`
+(§21.8.3). The bubble expands to ≈1.85 R₀ and collapses to ≈0.54 R₀.*
+
+**Interpretation.** At this modest 200-kPa amplitude the three models agree
+closely. Rayleigh–Plesset slightly overshoots the expansion peaks because it
+carries no acoustic-radiation loss, while Keller–Miksis and Gilmore — which add
+the O(Mach) liquid-compressibility correction — nearly coincide and damp the peaks
+a few percent lower. The Gilmore wall velocity shows the sharp inertial
+collapse/rebound (≈ ±19 m/s near t ≈ 3.7 µs). The plugin selection rule
+`GilmoreSolver::should_use_gilmore` switches to the Tait-enthalpy formulation once
+the wall Mach number exceeds 0.1, which at higher drive amplitudes than shown
+here produces the strongest (smallest-minimum-radius) collapse.
 
 ### 21.8.4 Theorem 21.3 — Gilmore RK4 positivity, equilibrium, and forced-contraction invariants
 

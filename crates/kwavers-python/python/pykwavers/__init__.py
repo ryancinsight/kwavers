@@ -483,6 +483,7 @@ from ._pykwavers import (
     # ── Bubble dynamics (Keller–Miksis / CEM43) ──────────────────────────────
     solve_rayleigh_plesset,
     solve_keller_miksis,
+    solve_gilmore,
     compute_cem43,
     cem43_at_temperatures,
     compute_arrhenius_damage,
@@ -867,6 +868,7 @@ __all__ = [
     # ── Bubble dynamics (Keller–Miksis / CEM43) ──────────────────────────────
     "solve_rayleigh_plesset",
     "solve_keller_miksis",
+    "solve_gilmore",
     "compute_cem43",
     "cem43_at_temperatures",
     "compute_arrhenius_damage",
