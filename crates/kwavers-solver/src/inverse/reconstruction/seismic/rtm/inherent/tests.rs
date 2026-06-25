@@ -20,6 +20,29 @@ mod tests {
         ReverseTimeMigration::new(config, Array3::from_elem((3, 3, 3), SOUND_SPEED_WATER_SIM))
     }
 
+    /// The derivative-based Laplacian imaging condition must return a typed error
+    /// on a 2-D (`nz = 1`) grid — which has no 3-D interior — rather than panicking
+    /// via an `nz - 2` slice underflow (library code must not panic on input).
+    #[test]
+    fn laplacian_errors_on_2d_grid_instead_of_panicking() {
+        let rtm = rtm_with_condition(RtmImagingCondition::Laplacian);
+        assert!(
+            rtm.compute_laplacian(&Array3::<f64>::zeros((8, 8, 1)))
+                .is_err(),
+            "2-D grid must yield a typed error, not a panic"
+        );
+        // 3-D still computes correctly: the Laplacian of a linear ramp f(i)=i is
+        // zero in the interior (the second difference of a linear function).
+        let ramp = Array3::from_shape_fn((4, 4, 4), |(i, _, _)| i as f64);
+        let lap = rtm.compute_laplacian(&ramp).expect("3-D laplacian");
+        assert_eq!(lap.dim(), (4, 4, 4));
+        assert!(
+            lap[[1, 1, 1]].abs() < 1e-12,
+            "interior Laplacian of a linear ramp must be 0, got {}",
+            lap[[1, 1, 1]]
+        );
+    }
+
     /// `EnergyNormalized`: I = (Σ_t S·R) / (Σ_t S²)
     ///
     /// S = 2, R = 3, 2 time steps:

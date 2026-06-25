@@ -180,6 +180,7 @@ impl ReverseTimeMigration {
             // Three sequential Zip passes, 5 arrays each (1 mut + 4 read).
             RtmImagingCondition::Poynting => {
                 let (_, nx, ny, nz) = source_wavefield.dim();
+                Self::ensure_3d_interior((nx, ny, nz))?;
                 let inn = s![1..nx - 1, 1..ny - 1, 1..nz - 1];
 
                 for t in 0..n_time_steps {
