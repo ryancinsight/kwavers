@@ -161,10 +161,18 @@ clamped to a physical `[μ_min, μ_max]`.
    muting + illumination preconditioner (+ Tikhonov/TV available); the
    stiff-inclusion recovery test.
 4. **PARTIAL — Worked example/figure DONE; differential vs `ShearWaveInversion`
-   deferred.** The `elastic_shear_fwi_lesion` example + Ch11 §11.6.6 fig07
-   demonstrate a lesion reconstruction (the book's "result"). The quantitative
-   differential against the linear baseline still needs a shared synthetic
-   harness (the linear method consumes a tracked displacement field).
+   deferred (with evidence).** The `elastic_shear_fwi_lesion` example + Ch11
+   §11.6.6 fig07 demonstrate a lesion reconstruction (the book's "result"). A
+   prototype differential surfaced two concrete blockers, the first now fixed:
+   (a) the linear `ShearWaveInversion` panicked on the FWI's `nz = 1` plane-strain
+   geometry (`algorithms::fill_boundaries` indexed a non-existent `z+1` layer) —
+   **fixed** (singleton-axis guard + regression test); (b) a *fair* comparison
+   still needs a properly-conditioned **steady harmonic** displacement field for
+   the linear `LocalFrequencyEstimation` (`|k|² = ⟨|∇u|²⟩/⟨u²⟩`) — a transient
+   CW snapshot drives it to the speed clamp (≈400 kPa everywhere), so generating a
+   well-established harmonic field is its own increment. The same prototype
+   reconfirmed the FWI recovers the lesion to peak ≈ ground truth (12.75 vs
+   12.0 kPa).
 5. **PARTIAL — PyO3 binding DONE; optimal checkpointing, 3-D, joint `λ/ρ`,
    L-BFGS deferred.** `pykwavers.elastic_shear_fwi_reconstruct` (thin layer over
    `reconstruct_lesion_transmission`) exposes the inversion to Python with a
