@@ -237,6 +237,8 @@ from ._pykwavers import (
     derive_breast_fwi_reduced_array_geometry,
     derive_breast_fwi_reduced_array_plan,
     invert_breast_fwi,
+    # Elastic shear-wave FWI (ADR 033)
+    elastic_shear_fwi_reconstruct,
     # Thermal diffusion / Pennes bioheat (KWaveDiffusion equivalent)
     ThermalSimulation,
     ThermalResult,
@@ -650,6 +652,7 @@ __all__ = [
     "derive_breast_fwi_reduced_array_geometry",
     "derive_breast_fwi_reduced_array_plan",
     "invert_breast_fwi",
+    "elastic_shear_fwi_reconstruct",
     "passive_acoustic_map_das",
     "hermitian_eigenvalues_complex",
     "music_pseudospectrum",

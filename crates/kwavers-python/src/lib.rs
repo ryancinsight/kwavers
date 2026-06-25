@@ -69,6 +69,7 @@ use pyo3::prelude::*;
 
 mod analytical_bindings;
 mod breast_fwi_bindings;
+mod elastic_fwi_bindings;
 mod pam_bindings;
 
 // ============================================================================
@@ -236,6 +237,7 @@ fn _pykwavers(m: &Bound<'_, PyModule>) -> PyResult<()> {
     imaging_bindings::register(m)?;
     theranostic_bindings::register(m)?;
     breast_fwi_bindings::register(m)?;
+    elastic_fwi_bindings::register(m)?;
     fft_bindings::register(m)?;
     analytical_bindings::register_book(m)?;
     bubble_bindings::register_bubble(m)?;
