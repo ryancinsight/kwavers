@@ -134,7 +134,7 @@ pub use types::{
 };
 
 pub use boundary::{ElasticSwePMLBoundary, SwePmlConfig};
-pub use core::ElasticWaveSolver;
+pub use core::{ElasticPointForce, ElasticWaveSolver};
 pub use gpu::{AdaptiveResolution, GPUDevice, GPUElasticWaveSolver3D};
 pub use integration::TimeIntegrator;
 pub use scratch::ElasticStepScratch;

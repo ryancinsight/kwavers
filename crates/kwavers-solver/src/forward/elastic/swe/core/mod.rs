@@ -4,4 +4,4 @@ mod solver;
 #[cfg(test)]
 mod tests;
 
-pub use solver::ElasticWaveSolver;
+pub use solver::{ElasticPointForce, ElasticWaveSolver};
