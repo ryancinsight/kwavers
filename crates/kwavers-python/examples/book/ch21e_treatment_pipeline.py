@@ -37,7 +37,6 @@ from matplotlib.colors import LinearSegmentedColormap, LogNorm
 import pykwavers as kw
 
 from scipy.ndimage import binary_dilation, distance_transform_edt, label, zoom
-from scipy.signal import hilbert
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, _HERE)
@@ -544,7 +543,10 @@ def reconstruct_bmode_frames(geom, plan, times, seed=7):
                                                IMAGING_FS_HZ, IMAGING_F0_HZ, n_samples, IMAGING_FRAC_BW))
         img = np.asarray(kw.beamform_image_delay_and_sum(
             rf, elem_pos, grid_pts, C_LIVER, IMAGING_FS_HZ, apodization="hann")).reshape(yy.shape)
-        env = np.abs(hilbert(img, axis=0))
+        # Hilbert-transform envelope per axial line (§9.1.3) from the Rust core.
+        env = np.empty_like(img)
+        for col in range(img.shape[1]):
+            env[:, col] = np.asarray(kw.bmode_envelope(np.ascontiguousarray(img[:, col])))
         envelopes.append(np.ascontiguousarray(env.ravel()))
     baseline = envelopes[0] if envelopes else np.ones(1)
     reference = float(np.max(baseline)) + 1e-30
