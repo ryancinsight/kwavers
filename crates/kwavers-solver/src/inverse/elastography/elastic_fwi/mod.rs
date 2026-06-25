@@ -33,10 +33,16 @@
 //! self-adjoint reconstruction trick (ADR 016) does not apply. PyO3 bindings,
 //! optimal checkpointing, joint `λ/ρ`, and 3-D are deferred (ADR 033 increment 5).
 
+pub mod acquisition;
 mod gradient;
 mod inversion;
 #[cfg(test)]
 mod tests;
+
+pub use acquisition::{
+    four_side_transmission_acquisition, reconstruct_lesion_transmission, ForceAxis,
+    TransmissionFwiParams,
+};
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
