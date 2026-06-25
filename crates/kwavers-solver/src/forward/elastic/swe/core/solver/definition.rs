@@ -81,4 +81,41 @@ impl ElasticWaveSolver {
     pub fn set_volumetric_config(&mut self, volumetric_config: VolumetricWaveConfig) {
         self.volumetric_config = volumetric_config;
     }
+
+    /// Per-voxel shear modulus `μ` \[Pa] — the elastic-FWI inversion parameter.
+    #[must_use]
+    pub fn mu(&self) -> &Array3<f64> {
+        &self.mu
+    }
+
+    /// Per-voxel first Lamé parameter `λ` \[Pa].
+    #[must_use]
+    pub fn lambda(&self) -> &Array3<f64> {
+        &self.lambda
+    }
+
+    /// Per-voxel mass density `ρ` \[kg/m³].
+    #[must_use]
+    pub fn density(&self) -> &Array3<f64> {
+        &self.density
+    }
+
+    /// Replace the shear-modulus field `μ` (elastic-FWI model update / FD-gradient
+    /// perturbation). The PML profile is intentionally left unchanged: it is a
+    /// robust damping layer keyed to the initial maximum P-wave speed, and modest
+    /// per-iteration `μ` changes do not require re-tuning it.
+    ///
+    /// # Errors
+    /// Returns [`KwaversError::Validation`] when `new_mu` does not match the grid shape.
+    pub fn set_mu(&mut self, new_mu: &Array3<f64>) -> KwaversResult<()> {
+        if new_mu.dim() != self.mu.dim() {
+            return Err(kwavers_core::error::ValidationError::DimensionMismatch {
+                expected: format!("{:?}", self.mu.dim()),
+                actual: format!("{:?}", new_mu.dim()),
+            }
+            .into());
+        }
+        self.mu.assign(new_mu);
+        Ok(())
+    }
 }
