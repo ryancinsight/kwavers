@@ -338,7 +338,7 @@ D = \frac{1}{3(\mu_a + \mu_s')}.
 \tag{10.34}
 $$
 
-This is the governing equation solved by `kwavers_simulation::photoacoustics::vertical::optical::DiffusionOpticalSolver`.
+This is the governing equation solved by `kwavers_solver::forward::optical::diffusion::DiffusionSolver`.
 
 ### 10.4.3 Effective Attenuation Coefficient
 
@@ -560,7 +560,7 @@ yields, upon angular integration $\oint d\Omega$, the sum $\Omega_0 p_0(\mathbf{
 
 ### 10.6.3 Planar and Linear Sensor Geometries
 
-For a planar detector array spanning the $z=0$ plane, $\Omega_0 = 2\pi$ and the back-projection simplifies to a 2D integration. The Fourier-domain equivalent (k-Wave planar reconstruction) is equivalent to a matched filter applied in the $(\mathbf{k}_\perp, \omega)$ domain. This is implemented in `kwavers_simulation::photoacoustics::vertical::reconstruction::PlanarSensorFftReconstruction`.
+For a planar detector array spanning the $z=0$ plane, $\Omega_0 = 2\pi$ and the back-projection simplifies to a 2D integration. The Fourier-domain equivalent (k-Wave planar reconstruction) is equivalent to a matched filter applied in the $(\mathbf{k}_\perp, \omega)$ domain. This is implemented in `kwavers_solver::inverse::reconstruction::photoacoustic::PhotoacousticReconstructor::fourier_domain_reconstruction`.
 
 For a linear array, the 2D cross-sectional image is reconstructed by delay-and-sum (DAS) back-projection:
 
@@ -629,7 +629,7 @@ For a discrete set of $N_s$ detectors uniformly sampling $S_0$, the quadrature e
 
 ### 10.7.3 Heterogeneous Media
 
-In a heterogeneous medium with known sound speed $c_s(\mathbf{r})$, time reversal is performed with the same spatially varying $c_s(\mathbf{r})$, and exact reconstruction is achieved when $c_s(\mathbf{r})$ is known precisely. This requires replacing the free-space Green's function in step 4 with the full heterogeneous Green's function, solved numerically by the PSTD or FDTD solver in `kwavers_solver::forward::pstd`. The time-reversal reconstruction path in kwavers is `kwavers_simulation::photoacoustics::vertical::reconstruction::TimeReversalReconstruction`.
+In a heterogeneous medium with known sound speed $c_s(\mathbf{r})$, time reversal is performed with the same spatially varying $c_s(\mathbf{r})$, and exact reconstruction is achieved when $c_s(\mathbf{r})$ is known precisely. This requires replacing the free-space Green's function in step 4 with the full heterogeneous Green's function, solved numerically by the PSTD or FDTD solver in `kwavers_solver::forward::pstd`. The time-reversal reconstruction path in kwavers is `kwavers_solver::inverse::reconstruction::photoacoustic::PhotoacousticReconstructor::time_reversal_reconstruction`.
 
 ### 10.7.4 Aperture Completeness
 
@@ -814,7 +814,7 @@ If the observer attributes the full signal to $\mu_a$ (assuming $F = F_0$), the 
 
 ### 10.10.2 Fluence Estimation via Diffusion Equation
 
-Quantitative PA (qPA) imaging requires estimating $F(\mathbf{r})$ independently and dividing out the fluence artifact. The optical fluence satisfies the diffusion equation (10.33). Given an estimate of the optical properties $(\mu_a, \mu_s')$, the fluence can be computed numerically; this is a forward solve in `kwavers_simulation::photoacoustics::vertical::optical::DiffusionOpticalSolver`. For the homogeneous-medium closed forms, `kwavers_optics::optical_transport` provides `apparent_absorption` (the depth bias of Theorem 10.11) and `compensate_fluence` (the per-step correction $\mu_a = S/(\Gamma F)$).
+Quantitative PA (qPA) imaging requires estimating $F(\mathbf{r})$ independently and dividing out the fluence artifact. The optical fluence satisfies the diffusion equation (10.33). Given an estimate of the optical properties $(\mu_a, \mu_s')$, the fluence can be computed numerically; this is a forward solve in `kwavers_solver::forward::optical::diffusion::DiffusionSolver`. For the homogeneous-medium closed forms, `kwavers_optics::optical_transport` provides `apparent_absorption` (the depth bias of Theorem 10.11) and `compensate_fluence` (the per-step correction $\mu_a = S/(\Gamma F)$).
 
 In practice, $\mu_a(\mathbf{r})$ is the unknown being sought (chicken-and-egg problem). The iterative approach solves alternately:
 
@@ -853,17 +853,24 @@ where $\mathcal{R}$ is a regularization functional (total variation, Tikhonov, o
 The photoacoustics pipeline in kwavers is organized as follows:
 
 ```
-kwavers_simulation::photoacoustics::vertical
-├── source
-│   └── thermoelastic   # PhotoacousticSourceModel: p₀ = Γ μₐ F  (Theorem 10.1)
-├── optical
-│   ├── DiffusionOpticalSolver   # diffusion eq. (Eq. 4.4); re-exports kwavers_solver::forward::optical::diffusion
-│   └── MonteCarloOpticalSolver  # RTE/Henyey-Greenstein; physics in kwavers_physics::optics::monte_carlo
-└── reconstruction
-    ├── PlanarSensorFftReconstruction   # k-space planar algorithm
-    ├── LineSensorFftReconstruction     # linear array FFT reconstruction
-    ├── TimeReversalReconstruction      # Theorem 10.8 (drives kwavers_solver::forward::pstd)
-    └── PhotoacousticReconstructionModel::reconstruct  # geometry-aware dispatch
+kwavers_simulation                                       # high-level PA pipeline
+├── PhotoacousticSimulator                               # end-to-end p₀ = Γ μₐ F → field → recon
+└── modalities::photoacoustic
+    ├── acoustics::pressure::compute_initial_pressure    # p₀ = Γ μₐ F  (Theorem 10.1)
+    └── reconstruction::time_reversal_reconstruction     # Theorem 10.8 wrapper
+
+kwavers_solver::forward::optical::diffusion
+└── DiffusionSolver                                      # diffusion eq. (Eq. 10.33)
+
+kwavers_physics::optics::monte_carlo                     # RTE / Henyey–Greenstein transport
+
+kwavers_solver::inverse::reconstruction::photoacoustic
+├── PhotoacousticReconstructor
+│   ├── universal_back_projection      # Theorem 10.7 (§10.6.2)
+│   ├── filtered_back_projection
+│   ├── fourier_domain_reconstruction  # k-space planar algorithm (§10.6.1)
+│   └── time_reversal_reconstruction   # Theorem 10.8 (drives kwavers_solver::forward::pstd)
+└── line_reconstruction::kspace_line_recon               # linear-array k-space FFT reconstruction
 
 kwavers_physics::photoacoustics
 └── thermoelasticity::GrueneisenModel   # Γ(T), soft_tissue() (§10.2.2)
@@ -877,7 +884,7 @@ kwavers_analysis::signal_processing
 
 ### 10.11.2 Source Term Computation
 
-The thermoelastic source model in `kwavers_simulation::photoacoustics::vertical::source::thermoelastic` evaluates
+The thermoelastic source model in `kwavers_simulation::modalities::photoacoustic::acoustics::pressure` (`compute_initial_pressure`) evaluates
 
 $$
 p_0[i,j,k] = \Gamma(\text{tissue})\, \mu_a[i,j,k]\, F[i,j,k]
