@@ -206,12 +206,14 @@
 // Public API modules
 pub mod algorithms;
 pub mod config;
+pub mod elastic_fwi;
 pub mod linear_methods;
 pub mod nonlinear_methods;
 pub mod types;
 
 // Re-export primary types for convenience
 pub use config::{NonlinearInversionConfig, ShearWaveInversionConfig};
+pub use elastic_fwi::{ElasticFwi, ElasticFwiConfig};
 pub use linear_methods::ShearWaveInversion;
 pub use nonlinear_methods::NonlinearInversion;
 pub use types::{elasticity_map_from_speed, ElasticityMapExt, NonlinearParameterMapExt};
