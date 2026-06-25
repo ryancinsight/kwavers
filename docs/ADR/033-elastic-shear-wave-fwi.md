@@ -165,8 +165,11 @@ clamped to a physical `[μ_min, μ_max]`.
    demonstrate a lesion reconstruction (the book's "result"). The quantitative
    differential against the linear baseline still needs a shared synthetic
    harness (the linear method consumes a tracked displacement field).
-5. **Deferred — PyO3 binding `run_elastic_fwi_*`, optimal checkpointing, 3-D,
-   joint `λ/ρ`, L-BFGS.**
+5. **PARTIAL — PyO3 binding DONE; optimal checkpointing, 3-D, joint `λ/ρ`,
+   L-BFGS deferred.** `pykwavers.elastic_shear_fwi_reconstruct` (thin layer over
+   `reconstruct_lesion_transmission`) exposes the inversion to Python with a
+   binding-surface pytest. The acquisition setup is consolidated in
+   `elastic_fwi::acquisition` and shared by the example and the binding.
 
 The book Ch26 §26 / Ch11 §11.14 "not implemented" disclosures are updated to point
 at the real module (`inverse::elastography::elastic_fwi`).

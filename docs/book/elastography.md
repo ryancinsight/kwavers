@@ -661,6 +661,9 @@ reproduce a perfectly sharp step).
 
 Implementation: `kwavers_solver::inverse::elastography::elastic_fwi::ElasticFwi`
 (μ-only, 2-D; ADR 033), the full-waveform refinement of `ShearWaveInversion`. The
+convenience entry point `reconstruct_lesion_transmission` builds the four-side
+acquisition, synthesises the data, and runs the inversion; it is exposed to Python
+as `pykwavers.elastic_shear_fwi_reconstruct(mu_true_pa, dx, rho, c_s, c_p, …)`. The
 figure is produced by the Rust example `elastic_shear_fwi_lesion` (physics) and the
 script `ch10_elastic_fwi_lesion.py` (plotting). The linear estimators remain the
 fast default; the FWI is the higher-cost, higher-resolution refinement.
