@@ -47,9 +47,14 @@ pub(super) fn directional_phase_gradient_inversion(
     let (nx, ny, nz) = displacement.uz.dim();
     let mut shear_wave_speed = Array3::zeros((nx, ny, nz));
 
-    for i in 1..nx - 1 {
-        for j in 1..ny - 1 {
-            for k in 1..nz - 1 {
+    // 2-D plane-strain input (nz < 3) has no z-variation, so ∂u/∂z = 0; the
+    // in-plane gradients carry the directional wavenumber estimate. Without this
+    // guard the 3-D interior loop is empty for nz = 1 (silent default fill).
+    let has_z_interior = nz >= 3;
+    let (k_lo, k_hi) = if has_z_interior { (1, nz - 1) } else { (0, nz) };
+    for i in 1..nx.saturating_sub(1) {
+        for j in 1..ny.saturating_sub(1) {
+            for k in k_lo..k_hi {
                 let displacement_val = displacement.uz[[i, j, k]];
 
                 if displacement_val.abs() > 1e-12 {
@@ -57,8 +62,12 @@ pub(super) fn directional_phase_gradient_inversion(
                         / (2.0 * grid.dx);
                     let grad_y = (displacement.uz[[i, j + 1, k]] - displacement.uz[[i, j - 1, k]])
                         / (2.0 * grid.dy);
-                    let grad_z = (displacement.uz[[i, j, k + 1]] - displacement.uz[[i, j, k - 1]])
-                        / (2.0 * grid.dz);
+                    let grad_z = if has_z_interior {
+                        (displacement.uz[[i, j, k + 1]] - displacement.uz[[i, j, k - 1]])
+                            / (2.0 * grid.dz)
+                    } else {
+                        0.0
+                    };
 
                     let kx = grad_x.abs() / displacement_val.abs().max(1e-12);
                     let ky = grad_y.abs() / displacement_val.abs().max(1e-12);

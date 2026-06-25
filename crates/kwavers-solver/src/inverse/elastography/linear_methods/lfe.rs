@@ -90,12 +90,24 @@ pub(super) fn local_frequency_estimation_inversion(
         }
     }
 
+    // A central z-difference needs an interior along z (nz ≥ 3). For a 2-D
+    // plane-strain field (nz = 1, or a thin nz = 2 slab) there is no z-variation,
+    // so ∂u/∂z = 0 and every z-layer carries the in-plane wavenumber — this is the
+    // conventional clinical SWE case (a 2-D imaging plane). Without this guard the
+    // 3-D interior loop `1..nz-1` is empty for nz = 1 and the estimate collapses
+    // to the speed clamp (silent garbage on 2-D input).
+    let has_z_interior = nz >= 3;
+    let (k_lo, k_hi) = if has_z_interior { (1, nz - 1) } else { (0, nz) };
     for i in 1..nx.saturating_sub(1) {
         for j in 1..ny.saturating_sub(1) {
-            for k in 1..nz.saturating_sub(1) {
+            for k in k_lo..k_hi {
                 let du_dx = (u[[i + 1, j, k]] - u[[i - 1, j, k]]) * inv_2dx;
                 let du_dy = (u[[i, j + 1, k]] - u[[i, j - 1, k]]) * inv_2dy;
-                let du_dz = (u[[i, j, k + 1]] - u[[i, j, k - 1]]) * inv_2dz;
+                let du_dz = if has_z_interior {
+                    (u[[i, j, k + 1]] - u[[i, j, k - 1]]) * inv_2dz
+                } else {
+                    0.0
+                };
                 grad_energy[[i, j, k]] = du_dx.mul_add(du_dx, du_dy.mul_add(du_dy, du_dz * du_dz));
             }
         }

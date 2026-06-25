@@ -115,17 +115,26 @@ fn compute_laplacian(field: &Array3<f64>, grid: &Grid) -> Array3<f64> {
     let idy2 = 1.0 / (grid.dy * grid.dy);
     let idz2 = 1.0 / (grid.dz * grid.dz);
 
-    for i in 1..nx - 1 {
-        for j in 1..ny - 1 {
-            for k in 1..nz - 1 {
+    // 2-D plane-strain input (nz < 3) has no z-curvature, so ∂²u/∂z² = 0 and the
+    // in-plane Laplacian carries the inversion. Without this guard the 3-D
+    // interior loop is empty for nz = 1, leaving a zero Laplacian and a degenerate
+    // μ = -ρω²u/∇²u (silent garbage on a 2-D imaging plane).
+    let has_z_interior = nz >= 3;
+    let (k_lo, k_hi) = if has_z_interior { (1, nz - 1) } else { (0, nz) };
+    for i in 1..nx.saturating_sub(1) {
+        for j in 1..ny.saturating_sub(1) {
+            for k in k_lo..k_hi {
                 let center = field[[i, j, k]];
 
                 let d2x =
                     (2.0f64.mul_add(-center, field[[i + 1, j, k]]) + field[[i - 1, j, k]]) * idx2;
                 let d2y =
                     (2.0f64.mul_add(-center, field[[i, j + 1, k]]) + field[[i, j - 1, k]]) * idy2;
-                let d2z =
-                    (2.0f64.mul_add(-center, field[[i, j, k + 1]]) + field[[i, j, k - 1]]) * idz2;
+                let d2z = if has_z_interior {
+                    (2.0f64.mul_add(-center, field[[i, j, k + 1]]) + field[[i, j, k - 1]]) * idz2
+                } else {
+                    0.0
+                };
 
                 laplacian[[i, j, k]] = d2x + d2y + d2z;
             }

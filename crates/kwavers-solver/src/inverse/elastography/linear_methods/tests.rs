@@ -123,6 +123,38 @@ fn test_local_frequency_estimation_recovers_known_speed() {
     );
 }
 
+/// Regression: the LFE inversion works on a 2-D plane-strain field (`nz = 1`),
+/// the conventional clinical SWE imaging plane. Before the singleton-axis guard
+/// the 3-D interior loop was empty for `nz = 1`, collapsing the estimate to the
+/// 20 m/s speed clamp (silent garbage). Same plane shear wave as the 3-D test.
+#[test]
+fn test_local_frequency_estimation_2d_plane() {
+    let dx = 0.001;
+    let (nx, ny, nz) = (64, 8, 1);
+    let grid = Grid::new(nx, ny, nz, dx, dx, dx).unwrap();
+
+    let frequency = 100.0;
+    let cs_true = 1.0;
+    let k_wave = TWO_PI * frequency / cs_true;
+
+    let mut displacement = DisplacementField::zeros(nx, ny, nz);
+    for i in 0..nx {
+        let val = (k_wave * (i as f64 * dx)).cos();
+        for j in 0..ny {
+            displacement.uz[[i, j, 0]] = val;
+        }
+    }
+
+    let map =
+        local_frequency_estimation_inversion(&displacement, &grid, 1000.0, frequency).unwrap();
+    let center = map.shear_wave_speed[[nx / 2, ny / 2, 0]];
+    assert!(
+        (center - cs_true).abs() < 0.4,
+        "2-D LFE center speed = {center} should recover cs_true = {cs_true} (±0.4), \
+         not the 20 m/s clamp"
+    );
+}
+
 #[test]
 fn test_all_inversion_methods() {
     let grid = Grid::new(20, 20, 20, 0.001, 0.001, 0.001).unwrap();

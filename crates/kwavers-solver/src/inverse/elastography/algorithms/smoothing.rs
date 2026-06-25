@@ -15,9 +15,14 @@ pub fn spatial_smoothing(speed_field: &mut Array3<f64>) {
     let (nx, ny, nz) = speed_field.dim();
     let mut smoothed = speed_field.clone();
 
-    for i in 1..nx - 1 {
-        for j in 1..ny - 1 {
-            for k in 1..nz - 1 {
+    // Smooth all z-layers for a 2-D plane (nz < 3); the 27-voxel window is
+    // bounds-checked below, so it clips correctly at a singleton z. Without this
+    // the interior loop `1..nz-1` is empty for nz = 1 and no smoothing is applied
+    // (the LFE/Helmholtz windowed averages then never form on 2-D input).
+    let (k_lo, k_hi) = if nz >= 3 { (1, nz - 1) } else { (0, nz) };
+    for i in 1..nx.saturating_sub(1) {
+        for j in 1..ny.saturating_sub(1) {
+            for k in k_lo..k_hi {
                 let mut sum = 0.0;
                 let mut count = 0;
 
@@ -54,9 +59,10 @@ pub fn volumetric_smoothing(speed_field: &mut Array3<f64>) {
     let (nx, ny, nz) = speed_field.dim();
     let mut smoothed = speed_field.clone();
 
-    for i in 1..nx - 1 {
-        for j in 1..ny - 1 {
-            for k in 1..nz - 1 {
+    let (k_lo, k_hi) = if nz >= 3 { (1, nz - 1) } else { (0, nz) };
+    for i in 1..nx.saturating_sub(1) {
+        for j in 1..ny.saturating_sub(1) {
+            for k in k_lo..k_hi {
                 let center = speed_field[[i, j, k]];
                 let mut sum = 0.0;
                 let mut weight_sum = 0.0;
@@ -96,16 +102,28 @@ pub fn directional_smoothing(speed_field: &mut Array3<f64>) {
     let (nx, ny, nz) = speed_field.dim();
     let mut smoothed = speed_field.clone();
 
-    for i in 1..nx - 1 {
-        for j in 1..ny - 1 {
-            for k in 1..nz - 1 {
+    // For a 2-D plane (nz < 3) there is no z-neighbour pair; fold the z-weight
+    // into the centre so the in-plane directional average still sums to one.
+    let has_z_interior = nz >= 3;
+    let (k_lo, k_hi) = if has_z_interior { (1, nz - 1) } else { (0, nz) };
+    for i in 1..nx.saturating_sub(1) {
+        for j in 1..ny.saturating_sub(1) {
+            for k in k_lo..k_hi {
                 let center = speed_field[[i, j, k]];
                 let x_dir = (speed_field[[i - 1, j, k]] + speed_field[[i + 1, j, k]]) / 2.0;
                 let y_dir = (speed_field[[i, j - 1, k]] + speed_field[[i, j + 1, k]]) / 2.0;
-                let z_dir = (speed_field[[i, j, k - 1]] + speed_field[[i, j, k + 1]]) / 2.0;
+                let (z_dir, z_w, c_w) = if has_z_interior {
+                    (
+                        (speed_field[[i, j, k - 1]] + speed_field[[i, j, k + 1]]) / 2.0,
+                        0.2,
+                        0.4,
+                    )
+                } else {
+                    (0.0, 0.0, 0.6)
+                };
 
                 smoothed[[i, j, k]] =
-                    (center.mul_add(0.4, x_dir * 0.2) + y_dir * 0.2 + z_dir * 0.2).clamp(0.5, 10.0);
+                    (center.mul_add(c_w, x_dir * 0.2) + y_dir * 0.2 + z_dir * z_w).clamp(0.5, 10.0);
             }
         }
     }
