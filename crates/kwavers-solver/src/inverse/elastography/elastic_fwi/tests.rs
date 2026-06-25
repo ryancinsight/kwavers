@@ -22,6 +22,130 @@ fn grid(nx: usize, ny: usize) -> Grid {
     Grid::new(nx, ny, 1, DX, DX, DX).expect("grid")
 }
 
+/// Increment 4 (ADR 033): the elastic FWI reconstructs the same stiff lesion
+/// **more accurately** than the linear `LocalFrequencyEstimation` baseline —
+/// validating the Ch11 §11.6.6 claim that full-waveform inversion resolves
+/// stiffness contrast the local estimator blurs/biases.
+///
+/// Both invert the same phantom: the linear method from a single CW shear-wave
+/// snapshot (its natural input), the FWI from four-side transmission data. The
+/// FWI recovers an accurate background and lesion peak; the LFE is biased high
+/// and blurred (it is sensitive to the single-snapshot field quality). The
+/// assertions compare each method's accuracy against ground truth.
+#[test]
+fn fwi_outperforms_linear_inversion() {
+    use crate::forward::elastic::swe::ElasticPointForce;
+    use crate::inverse::elastography::{ShearWaveInversion, ShearWaveInversionConfig};
+    use kwavers_imaging::ultrasound::elastography::InversionMethod;
+    use kwavers_physics::acoustics::imaging::modalities::elastography::displacement::DisplacementField;
+
+    let n = 36usize;
+    let g = grid(n, n);
+    let m = medium(&g);
+    let mu_incl = 3.0 * MU_BG;
+    let c = n as f64 / 2.0;
+    let mut mu_true = Array3::from_elem(g.dimensions(), MU_BG);
+    for i in 0..n {
+        for j in 0..n {
+            if (i as f64 - c).hypot(j as f64 - c) <= 5.0 {
+                mu_true[[i, j, 0]] = mu_incl;
+            }
+        }
+    }
+
+    // Linear baseline: a CW harmonic shear plane wave from the left, snapshot the
+    // in-plane displacement, run LocalFrequencyEstimation.
+    let f0 = 250.0;
+    let n_steps = 420;
+    let dt = {
+        let mut s = ElasticWaveSolver::new(&g, &m, swe_config()).expect("s");
+        s.set_mu(&Array3::from_elem(g.dimensions(), mu_incl))
+            .expect("set");
+        s.recommended_timestep(0.3)
+    };
+    let mut solver = ElasticWaveSolver::new(&g, &m, swe_config()).expect("s");
+    solver.set_mu(&mu_true).expect("set");
+    let sig: Vec<f64> = (0..n_steps)
+        .map(|s| 1.0e7 * (2.0 * std::f64::consts::PI * f0 * s as f64 * dt).sin())
+        .collect();
+    let sources: Vec<ElasticPointForce> = (8..n - 8)
+        .map(|j| ElasticPointForce {
+            index: (8, j, 0),
+            fx: vec![0.0; n_steps],
+            fy: sig.clone(),
+            fz: vec![0.0; n_steps],
+        })
+        .collect();
+    let hist = solver
+        .propagate_point_forces(n_steps, dt, &sources)
+        .expect("prop");
+    let last = hist.last().expect("nonempty");
+    let mut disp = DisplacementField::zeros(n, n, 1);
+    disp.uz.assign(&last.uy); // LFE reads `uz`; the in-plane shear component is uy.
+    let mu_lin = ShearWaveInversion::new(
+        ShearWaveInversionConfig::new(InversionMethod::LocalFrequencyEstimation)
+            .with_density(RHO)
+            .with_frequency(f0),
+    )
+    .reconstruct(&disp, &g)
+    .expect("lin")
+    .shear_modulus;
+
+    // Elastic FWI on four-side transmission data.
+    let params = TransmissionFwiParams {
+        n_steps: 200,
+        iterations: 20,
+        ..TransmissionFwiParams::default()
+    };
+    let mu_fwi = reconstruct_lesion_transmission(&g, &m, &mu_true, &params).expect("fwi");
+
+    let stat = |mask_in: bool, arr: &Array3<f64>| {
+        let (mut sum, mut peak, mut cnt) = (0.0, 0.0_f64, 0);
+        for i in 8..28 {
+            for j in 8..28 {
+                let inside = (i as f64 - c).hypot(j as f64 - c) <= 5.0;
+                if inside == mask_in {
+                    let v = arr[[i, j, 0]];
+                    sum += v;
+                    peak = peak.max(v);
+                    cnt += 1;
+                }
+            }
+        }
+        (sum / cnt as f64, peak)
+    };
+    let (lin_bg, _) = stat(false, &mu_lin);
+    let (_, lin_peak) = stat(true, &mu_lin);
+    let (fwi_bg, _) = stat(false, &mu_fwi);
+    let (_, fwi_peak) = stat(true, &mu_fwi);
+
+    // FWI is accurate in absolute terms.
+    assert!(
+        (fwi_bg - MU_BG).abs() <= 0.15 * MU_BG,
+        "FWI background {fwi_bg:.0} should be within 15% of {MU_BG:.0}"
+    );
+    assert!(
+        fwi_peak >= 2.5 * MU_BG,
+        "FWI should recover most of the 3× lesion contrast (peak {fwi_peak:.0} ≥ {:.0})",
+        2.5 * MU_BG
+    );
+    // FWI is more accurate than the linear baseline on both background and peak —
+    // the §11.6.6 claim. (Measured: FWI bg ~2.5% vs linear ~59% error; FWI peak
+    // ~6% vs linear ~41% error.)
+    assert!(
+        (fwi_bg - MU_BG).abs() < (lin_bg - MU_BG).abs(),
+        "FWI background error {:.0} should be smaller than linear {:.0}",
+        (fwi_bg - MU_BG).abs(),
+        (lin_bg - MU_BG).abs()
+    );
+    assert!(
+        (fwi_peak - mu_incl).abs() < (lin_peak - mu_incl).abs(),
+        "FWI peak error {:.0} should be smaller than linear {:.0}",
+        (fwi_peak - mu_incl).abs(),
+        (lin_peak - mu_incl).abs()
+    );
+}
+
 fn medium(g: &Grid) -> HomogeneousMedium {
     HomogeneousMedium::elastic_homogeneous(RHO, C_P, C_S, g).expect("elastic medium")
 }

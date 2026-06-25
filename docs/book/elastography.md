@@ -666,7 +666,13 @@ acquisition, synthesises the data, and runs the inversion; it is exposed to Pyth
 as `pykwavers.elastic_shear_fwi_reconstruct(mu_true_pa, dx, rho, c_s, c_p, …)`. The
 figure is produced by the Rust example `elastic_shear_fwi_lesion` (physics) and the
 script `ch10_elastic_fwi_lesion.py` (plotting). The linear estimators remain the
-fast default; the FWI is the higher-cost, higher-resolution refinement.
+fast default; the FWI is the higher-cost, higher-resolution refinement. On a
+stiff-lesion phantom the FWI recovers the background and lesion peak far more
+accurately than the linear local-frequency estimator (≈2.5 % vs ≈59 % background
+error, ≈6 % vs ≈41 % peak error; differential test
+`fwi_outperforms_linear_inversion`), which is biased and blurred on a single
+shear-wave snapshot — quantifying why the full-waveform refinement is worth its
+cost.
 
 
 ---

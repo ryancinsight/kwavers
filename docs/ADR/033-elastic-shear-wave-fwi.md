@@ -160,19 +160,22 @@ clamped to a physical `[μ_min, μ_max]`.
 3. **DONE — Inversion loop.** Steepest descent + Armijo line search + acquisition
    muting + illumination preconditioner (+ Tikhonov/TV available); the
    stiff-inclusion recovery test.
-4. **PARTIAL — Worked example/figure DONE; differential vs `ShearWaveInversion`
-   deferred (with evidence).** The `elastic_shear_fwi_lesion` example + Ch11
-   §11.6.6 fig07 demonstrate a lesion reconstruction (the book's "result"). A
-   prototype differential surfaced two concrete blockers, the first now fixed:
-   (a) the linear `ShearWaveInversion` panicked on the FWI's `nz = 1` plane-strain
-   geometry (`algorithms::fill_boundaries` indexed a non-existent `z+1` layer) —
-   **fixed** (singleton-axis guard + regression test); (b) a *fair* comparison
-   still needs a properly-conditioned **steady harmonic** displacement field for
-   the linear `LocalFrequencyEstimation` (`|k|² = ⟨|∇u|²⟩/⟨u²⟩`) — a transient
-   CW snapshot drives it to the speed clamp (≈400 kPa everywhere), so generating a
-   well-established harmonic field is its own increment. The same prototype
-   reconfirmed the FWI recovers the lesion to peak ≈ ground truth (12.75 vs
-   12.0 kPa).
+4. **DONE — Worked example/figure + differential vs `ShearWaveInversion`.** The
+   `elastic_shear_fwi_lesion` example + Ch11 §11.6.6 fig07 demonstrate the
+   reconstruction (the book's "result"). The differential is the value-semantic
+   test `fwi_outperforms_linear_inversion`: on the same phantom the FWI recovers
+   background and lesion peak far more accurately than the linear
+   `LocalFrequencyEstimation` (measured: FWI background ≈2.5 % vs linear ≈59 %
+   error; FWI peak ≈6 % vs linear ≈41 %), validating the §11.6.6 claim.
+
+   Getting there required fixing two real defects the prototype surfaced in the
+   linear `ShearWaveInversion`, both genuine "no deviation" bugs: (a) a **panic**
+   on the `nz = 1` plane-strain geometry (`algorithms::fill_boundaries` indexed a
+   non-existent `z+1` layer); (b) **silent clamp-garbage** on 2-D input across the
+   LFE / Helmholtz / directional inversions and their shared smoothers (the 3-D
+   interior loops `1..nz-1` are empty for `nz = 1`). Both fixed with singleton-axis
+   guards + regression tests, so shear-wave elastography — conventionally a 2-D
+   imaging plane — now inverts correctly in 2-D.
 5. **PARTIAL — PyO3 binding DONE; optimal checkpointing, 3-D, joint `λ/ρ`,
    L-BFGS deferred.** `pykwavers.elastic_shear_fwi_reconstruct` (thin layer over
    `reconstruct_lesion_transmission`) exposes the inversion to Python with a
