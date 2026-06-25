@@ -1309,6 +1309,14 @@ kwavers_solver::inverse::elastography::linear_methods
     ├── directional_phase_gradient_inversion()— 3-D directional / f-k filtering (§11.12.3)
     └── LocalFrequencyEstimation               — windowed energy-ratio |k|²=⟨|∇u|²⟩/⟨u²⟩ (§11.7.2)
 
+kwavers_solver::inverse::elastography::elastic_fwi
+└── ElasticFwi                   — adjoint-state full-waveform inversion of μ (ADR 033)
+    ├── forward_misfit() / run()              — forward → residual → adjoint → K_μ → line search
+    └── K_μ strain cross-correlation kernel   — Tromp 2005 / Köhn 2011 (μ-only, 2-D)
+    The full-waveform refinement of ShearWaveInversion: it fits the entire shear
+    waveform (resolving sub-wavelength stiffness contrast), where the linear methods
+    resolve only a smooth c_S map. Higher cost; the linear methods stay the default.
+
 kwavers_physics::acoustics::imaging::modalities::elastography
 ├── displacement::DisplacementEstimator       — windowed RF cross-correlation (§11.5.1)
 ├── harmonic_detection::HarmonicDetector       — multi-frequency displacement spectra

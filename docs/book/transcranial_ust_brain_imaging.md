@@ -449,7 +449,7 @@ to the physical FWI reconstruction.
 | Tissue-harmonic FWI | Active inter-burst harmonic bands | `c`, `alpha`, `beta` | Nonlinear contrast at `2f0` | Weak second-harmonic row model |
 | Passive cavitation source inversion | Passive intra-burst | `q_cav(x,t)` | Real-time bubble-cloud tracking | Subharmonic source FWI in custom simulator |
 | Bubble-dynamics nonlinear FWI | Passive and active | Bubble state plus acoustic fields | Sub/ultraharmonic histotripsy feedback | Emission-band diagnostics; bubble state pending |
-| Elastic/shear FWI | Post-burst mechanical wave data | `mu`, `lambda`, `rho` | Lesion stiffness confirmation | Not implemented; deferred to a future therapy-tracking orchestrator (requires shear-wave forward model outside current Born acoustic operator) |
+| Elastic/shear FWI | Post-burst mechanical wave data | `mu` (`lambda`, `rho` fixed) | Lesion stiffness confirmation | Implemented (μ-only, 2-D): `kwavers_solver::inverse::elastography::elastic_fwi::ElasticFwi` — adjoint-state FWI over the `swe::ElasticWaveSolver` forward model with the `K_μ` strain-cross-correlation kernel (ADR 033). Joint `λ`/`ρ` and 3-D deferred |
 
 Therapy monitoring must separate active inter-burst transmissions from passive
 cavitation emissions during therapy bursts.  The current implementation covers
