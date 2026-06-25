@@ -274,10 +274,17 @@ def simulate_bmode(
     rf = phantom.backscatter[ix, iy] * attenuation
     rf += 0.10 * np.exp(-((rr - design.catheter_radius_m) / 0.22e-3) ** 2)
 
-    kernel = gaussian_kernel(11, 1.8)
+    # Hilbert-transform envelope |z(t)| (§9.1.3, Theorem 9.1) per RF line. The
+    # analytic-signal magnitude comes from the Rust core; the Gaussian-smoothing
+    # path is only a no-pykwavers fallback (not a true envelope).
     envelope = np.empty_like(rf)
-    for col in range(angle_samples):
-        envelope[:, col] = np.convolve(rf[:, col], kernel, mode="same")
+    if _HAS_PYKWAVERS:
+        for col in range(angle_samples):
+            envelope[:, col] = np.asarray(kw.bmode_envelope(np.ascontiguousarray(rf[:, col])))
+    else:
+        kernel = gaussian_kernel(11, 1.8)
+        for col in range(angle_samples):
+            envelope[:, col] = np.convolve(rf[:, col], kernel, mode="same")
     envelope = np.maximum(envelope, 1.0e-9)
     # Log-compression in the Rust core (db is clamped to [-60, 0]); the final
     # normalized image is identical to the unclamped-then-clip form.

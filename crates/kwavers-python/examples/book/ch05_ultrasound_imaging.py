@@ -87,7 +87,12 @@ pulse[idx_in] = (
     np.sin(2 * np.pi * F0 * t_ax[idx_in])
     * np.hanning(np.sum(idx_in))
 )
-envelope_ax = np.abs(hilbert(pulse))
+# Hilbert-transform envelope |z(t)| (§9.1.3, Theorem 9.1) from the Rust core.
+envelope_ax = (
+    np.asarray(kw.bmode_envelope(np.ascontiguousarray(pulse)))
+    if _HAS_PYKWAVERS
+    else np.abs(hilbert(pulse))
+)
 z_ax = t_ax * C0 / 2 * 1e3  # mm
 
 # Lateral: sinc² beam for several F-numbers

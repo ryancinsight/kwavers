@@ -1,5 +1,6 @@
 //! PyO3 bindings for `kwavers_physics::analytical::imaging`.
 
+use kwavers_analysis::signal_processing::b_mode::envelope as core_bmode_envelope;
 use kwavers_physics::analytical::imaging;
 use kwavers_physics::analytical::pulse_echo::{
     bmode_db_fixed_reference as core_bmode_db_fixed_reference,
@@ -164,6 +165,23 @@ pub fn simulate_receive_rf<'py>(
     }
     let rf = core_simulate_receive_rf(sp, sa, ep, c, fs, f0, frac_bw, n_samples);
     Ok(rf.into_pyarray(py).unbind())
+}
+
+/// B-mode envelope detection: the analytic-signal magnitude `|z(t)|`, where
+/// `z = s + i·H{s}` and `H` is the Hilbert transform (book §9.1.3, Theorem 9.1).
+/// For a narrowband RF line this recovers the modulating amplitude `A(t)`.
+///
+/// Args:
+///     rf: Beamformed RF line.
+///
+/// Returns:
+///     Envelope `|z(t)|`, same length as `rf`.
+#[pyfunction]
+#[pyo3(signature = (rf,))]
+pub fn bmode_envelope(py: Python<'_>, rf: PyReadonlyArray1<f64>) -> PyResult<Py<PyArray1<f64>>> {
+    let rf_arr = rf.as_array().to_owned();
+    let env = py.detach(|| core_bmode_envelope(&rf_arr));
+    Ok(env.into_pyarray(py).unbind())
 }
 
 /// Log-compress an envelope image with a fixed sequence reference.

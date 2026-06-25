@@ -402,6 +402,7 @@ pub fn register_book(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(imaging::pw_compounding_lateral_psf, m)?)?;
     m.add_function(wrap_pyfunction!(imaging::lateral_resolution_m, m)?)?;
     m.add_function(wrap_pyfunction!(imaging::simulate_receive_rf, m)?)?;
+    m.add_function(wrap_pyfunction!(imaging::bmode_envelope, m)?)?;
     m.add_function(wrap_pyfunction!(imaging::bmode_db_fixed_reference, m)?)?;
     m.add_function(wrap_pyfunction!(imaging::delta_bmode_db, m)?)?;
     // thermal
