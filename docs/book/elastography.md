@@ -625,6 +625,46 @@ OUTPUT: Shear modulus map μ[x, y, z]
 
 Implementation: `kwavers_solver::inverse::elastography::linear_methods::ShearWaveInversion` (time-of-flight and phase-gradient methods).
 
+### 11.6.6 Full-Waveform Refinement: Elastic FWI
+
+The time-of-flight and phase-gradient estimators above reduce the shear field to a
+single local wavenumber, so they resolve only a smooth $c_S(\mathbf{x})$ map and
+blur stiffness contrasts smaller than a shear wavelength. **Full-waveform
+inversion (FWI)** instead fits the *entire* recorded displacement waveform, and so
+resolves sub-wavelength stiffness contrast, reflections, and mode conversion that
+the local estimators cannot.
+
+The shear modulus is recovered by adjoint-state minimisation of the waveform misfit
+$J(\mu)=\tfrac{\Delta t}{2}\sum_{r}\sum_{n}\lVert \mathbf{u}(\mathbf{x}_r,t_n)-\mathbf{d}_{\mathrm{obs}}\rVert^2$.
+The Fréchet derivative is the shear-strain cross-correlation imaging condition
+(Tromp, Tape & Liu 2005; Köhn 2011)
+
+$$
+K_\mu(\mathbf{x}) = -\int_0^T \sum_{ij}
+\big(\partial_i u_j + \partial_j u_i\big)_{\text{fwd}}\,
+\big(\partial_i u_j + \partial_j u_i\big)_{\text{adj}}\; dt,
+$$
+
+where the adjoint field $\mathbf{u}_{\text{adj}}$ is the time-reversed receiver
+residual propagated back through the (self-adjoint) elastic operator. The gradient
+is muted at the transducers, illumination-preconditioned, and descended with an
+Armijo line search.
+
+Figure 11.7 shows a reconstruction: a stiff disk ($\mu_{\text{lesion}}=3\,\mu_{\text{bg}}$)
+in a homogeneous slab, recovered from crossed four-side transmission shear-wave data.
+The FWI localises the lesion and recovers its $3\times$ stiffness; the residual
+texture and edge smoothing are the expected band-limited signature (the inclusion is
+$\approx1.5$ shear wavelengths across, so the $\approx\lambda_S/2$ resolution cannot
+reproduce a perfectly sharp step).
+
+![Elastic shear-wave FWI reconstruction of a stiff lesion: true shear modulus (left), FWI reconstruction (centre), and a profile through the lesion centre (right).](figures/ch10/fig07_elastic_fwi_lesion.pdf)
+
+Implementation: `kwavers_solver::inverse::elastography::elastic_fwi::ElasticFwi`
+(μ-only, 2-D; ADR 033), the full-waveform refinement of `ShearWaveInversion`. The
+figure is produced by the Rust example `elastic_shear_fwi_lesion` (physics) and the
+script `ch10_elastic_fwi_lesion.py` (plotting). The linear estimators remain the
+fast default; the FWI is the higher-cost, higher-resolution refinement.
+
 
 ---
 

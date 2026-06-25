@@ -80,7 +80,7 @@ pub struct ElasticFwiConfig {
     pub mute_radius: usize,
     /// Illumination-preconditioner floor as a fraction of the peak forward
     /// strain-energy (`ε` in `g̃ = K_μ/(W + ε·max W)`). Stabilizes division in
-    /// dark regions; typical `1e-2`.
+    /// dark regions; typical `1e-2`. Set `0` to use the raw gradient.
     pub precond_eps: f64,
 }
 
