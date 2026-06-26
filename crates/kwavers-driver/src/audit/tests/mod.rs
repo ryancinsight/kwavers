@@ -2,7 +2,6 @@ use super::*;
 use crate::board::{Board, LayerId, NetClassKind, Pad, Track, Via, ViaKind, Zone, ZoneFill};
 use crate::geom::{GridSpec, Nm, Point};
 use crate::place::{Component, FootprintDef, Role};
-use crate::audit::detect_power::{detect_charge_recycling_violations_board, detect_pulse_skip_violations};
 use crate::rules::DesignRules;
 
 mod diff_pair;
