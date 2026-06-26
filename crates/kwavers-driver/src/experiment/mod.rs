@@ -27,7 +27,7 @@
 //!
 //! * [`stimulus::DefaultStimulus`] — borrows `manifest.tile_profiles` verbatim.
 //! * [`acoustic::InCrateAcousticSim`] — the default; uses [`crate::physics::acoustic`] functions.
-//! * [`acoustic::KwaversSim`] — `--features kwavers`; calls `kwavers_transducer::design_array` for
+//! * `acoustic::KwaversSim` (feature `kwavers`) — calls `kwavers_transducer::design_array` for
 //!   the exact element geometry (realized channel count + aperture after pitch quantization).
 //! * [`runner::run_experiment`] — the public entry point.
 

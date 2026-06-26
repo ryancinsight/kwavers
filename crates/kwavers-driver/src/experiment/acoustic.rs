@@ -6,8 +6,8 @@
 //! already-computed [`crate::validate::KwaversBeamStep`] + [`crate::manifest::EnergyBudgetReport`]
 //! pair — no manifest required at simulation time.
 //!
-//! When the `kwavers` Cargo feature is on, [`KwaversSim`] is in scope. It calls
-//! [`kwavers_transducer::design_array`] to synthesize the exact element geometry from the step
+//! When the `kwavers` Cargo feature is on, `KwaversSim` is in scope. It calls
+//! `kwavers_transducer::design_array` to synthesize the exact element geometry from the step
 //! parameters, then computes the pressure field from the realized channel count and aperture —
 //! more accurate than the in-crate model for arrays where pitch quantization shifts the channel
 //! count away from the nominal `step.lanes` value.

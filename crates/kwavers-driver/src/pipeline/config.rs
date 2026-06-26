@@ -7,7 +7,7 @@ use crate::place::footprint::FootprintDef;
 #[derive(Debug, Clone, Copy)]
 pub struct CoOpt {
     /// Maximum annealed feedback rounds after the seed floorplan has been judged once.
-    /// Must be `>= 1`; `rounds = 0` is a programmer error that causes a panic in [`cooptimize`].
+    /// Must be `>= 1`; `rounds = 0` is a programmer error that causes a panic in [`crate::pipeline::cooptimize`].
     /// [`CoOpt::default`] sets `4`.
     pub rounds: usize,
     /// Stop early after this many rounds with no improvement in the best score.

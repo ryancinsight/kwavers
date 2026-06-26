@@ -6,7 +6,7 @@ use crate::place::footprint::FootprintDef;
 use super::config::CoOpt;
 use super::cooptimize::component_clearance_clean;
 
-/// Outcome of [`cooptimize`].
+/// Outcome of [`crate::pipeline::cooptimize`].
 pub struct CoOptResult {
     /// Best routed board.
     pub board: crate::board::Board,

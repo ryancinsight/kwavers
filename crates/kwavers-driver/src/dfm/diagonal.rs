@@ -14,7 +14,7 @@ use crate::rules::DesignRules;
 /// converting EVERY diagonal unconditionally guarantees the emitted copper contains no
 /// diagonal segments and no acid traps, while preserving the superior routing-path topology
 /// the diagonal search found (the route still uses the same channels; only the copper shape
-/// per segment changes). Call [`merge_collinear`] afterward to consolidate duplicate axial
+/// per segment changes). Call [`crate::dfm::merge_collinear`] afterward to consolidate duplicate axial
 /// legs the replacement may introduce.
 ///
 /// Returns the number of diagonal segments replaced (0 if diagonal routing was not used).
@@ -74,7 +74,7 @@ pub fn convert_diagonals_to_orthogonal(board: &mut Board) -> usize {
 ///    `(start.x, end.y)`; if both corners are foreign-owned, keeps the diagonal unchanged.
 /// 3. Updates the cell map as it goes so that successive conversions see newly claimed corners.
 ///
-/// Returns the number of diagonal segments converted. Call [`merge_collinear`] afterwards to
+/// Returns the number of diagonal segments converted. Call [`crate::dfm::merge_collinear`] afterwards to
 /// fold any duplicate axial legs the conversion may produce.
 pub fn convert_diagonals_to_orthogonal_safe(board: &mut Board) -> usize {
     use std::collections::HashMap;
@@ -209,7 +209,7 @@ pub fn convert_diagonals_to_orthogonal_safe(board: &mut Board) -> usize {
 /// pocket (acid trap) — a DFM reject. Pure Manhattan routing never produces this; diagonal routing
 /// can when the search exits a diagonal run onto an axial that heads in a "similar" direction at a
 /// Steiner branch or at a turn. The L-shape replacement maintains connectivity and copper area
-/// while guaranteeing every junction is ≥ 90°. After this pass, call [`merge_collinear`] again to
+/// while guaranteeing every junction is ≥ 90°. After this pass, call [`crate::dfm::merge_collinear`] again to
 /// fold any duplicate axial segments the replacement may create (e.g., when the L-corner lands on
 /// the endpoint of an adjacent axial segment going the same direction).
 ///

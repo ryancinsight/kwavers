@@ -25,7 +25,7 @@ pub struct ThermalState {
 /// Propagate device dissipation from `budget` through package θ_jc (K/W) to a [`ThermalState`].
 ///
 /// * `theta_jc_k_per_w` — junction-to-case thermal resistance (K/W) for the pulser IC package.
-///   The HV7355-class default is 40 K/W (same constant as [`crate::driver::DEFAULT_THETA_JC_K_PER_W`]).
+///   The HV7355-class default is 40 K/W (same value used by the HV7355 driver baseline).
 /// * `dt_max_k` — maximum allowed steady-state junction temperature rise above ambient
 ///   (K); the design limit the copper area and heat-spreading must satisfy.
 ///

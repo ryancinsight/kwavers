@@ -6,7 +6,7 @@
 //! 1. Validate the manifest + budget into a typed [`crate::validate::KwaversBeamStep`].
 //! 2. Simulate the acoustic field via the injected [`AcousticSimulator`].
 //! 3. Propagate device dissipation to a [`ThermalState`] via the package θ_jc.
-//! 4. Build the 4-check [`PhysicsReport`] from the simulated scalars.
+//! 4. Build the 4-check [`crate::validate::PhysicsReport`] from the simulated scalars.
 //! 5. Assemble and return an [`ExperimentReport`].
 //!
 //! All dependency injection is by trait bound (`S: AcousticSimulator`); the orchestrator has no
@@ -37,7 +37,7 @@ pub struct ExperimentReport {
 /// * `manifest` — full-stack v2 manifest (96 lanes, 4 tile profiles, no legacy stim block).
 /// * `budget` — pre-computed energy budget from [`DriverManifest::validate_v2_energy_budget`].
 /// * `simulator` — an [`AcousticSimulator`] impl (inject [`super::acoustic::InCrateAcousticSim`]
-///   for the in-crate model, or [`super::acoustic::KwaversSim`] when the `kwavers` feature is on).
+///   for the in-crate model, or `super::acoustic::KwaversSim` when the `kwavers` feature is on).
 /// * `theta_jc_k_per_w` — package junction-to-case thermal resistance (K/W).
 /// * `dt_max_k` — design thermal budget (K); headroom is `dt_max_k − peak_rise_k`.
 ///

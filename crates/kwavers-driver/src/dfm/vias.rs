@@ -142,7 +142,7 @@ pub fn teardrops(board: &mut Board) -> usize {
 /// the pour. Returns `(tracks_removed, stitch_vias_added)`.
 ///
 /// Precondition: `net` is already poured on every layer in `plane_layers` (e.g. via
-/// [`ground_pour`]). Inner-layer pours are full-board, so a stitching via to an inner plane always
+/// [`crate::dfm::ground_pour`]). Inner-layer pours are full-board, so a stitching via to an inner plane always
 /// lands in copper; an outer pour covers the net's own feature hull. A pad already on a poured
 /// layer (a thru-hole barrel, or an SMD pad on an outer poured layer) needs no via — the filler
 /// connects it directly.

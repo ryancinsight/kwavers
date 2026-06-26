@@ -23,7 +23,7 @@ use crate::rules::DesignRules;
 /// unchanged. Each apex is processed at most once; a track shared by two apices is shortened
 /// only at the first apex encountered.
 ///
-/// Returns the number of corners mitered. Call [`merge_collinear`] afterwards to fold any
+/// Returns the number of corners mitered. Call [`crate::dfm::merge_collinear`] afterwards to fold any
 /// collinear stub pairs the chamfer may create (e.g. when P1 abuts another collinear H segment).
 /// Replace 90° H+V track junctions with mitered 135°–45°–135° bends.
 ///
