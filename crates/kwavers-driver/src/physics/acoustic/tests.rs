@@ -346,3 +346,40 @@ fn ssot_distinction_isppa_vs_intensity() {
          cycle-averaged continuous-intensity figure ({i_cts_full})"
     );
 }
+
+// ───────── Boundary conditions for safety kernels ─────────
+
+#[test]
+fn mechanical_index_boundary_conditions() {
+    // freq_mhz = 0 ⇒ ∞ (implementation: returns INFINITY when freq_mhz ≤ 0).
+    assert!(
+        mechanical_index(1.0, 0.0).is_infinite(),
+        "MI at zero frequency must be +∞"
+    );
+    // freq_mhz < 0 ⇒ ∞ (same guard).
+    assert!(
+        mechanical_index(1.0, -1.0).is_infinite(),
+        "MI at negative frequency must be +∞"
+    );
+    // NaN frequency propagates: NaN ≤ 0 is false in IEEE 754 so we reach p / sqrt(NaN) = NaN.
+    assert!(
+        mechanical_index(1.0, f64::NAN).is_nan(),
+        "NaN frequency must produce NaN MI"
+    );
+    // NaN pressure propagates: NaN / sqrt(2.0) = NaN.
+    assert!(
+        mechanical_index(f64::NAN, 2.0).is_nan(),
+        "NaN pressure must produce NaN MI"
+    );
+    // Infinite pressure ⇒ infinite MI (physically: any finite frequency, infinite rarefaction).
+    assert!(
+        mechanical_index(f64::INFINITY, 2.0).is_infinite(),
+        "infinite pressure must produce +∞ MI"
+    );
+    // Infinite frequency ⇒ zero MI (p / sqrt(∞) = 0 — infinitely high freq, no cavitation risk).
+    assert_eq!(
+        mechanical_index(1.0, f64::INFINITY),
+        0.0,
+        "infinite frequency must produce zero MI"
+    );
+}

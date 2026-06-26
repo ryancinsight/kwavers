@@ -220,3 +220,24 @@ fn ir_drop_uses_power_oz_tracks_have_different_drop() {
         d1.max_drop_v
     );
 }
+
+#[test]
+fn ir_drop_boundary_zero_current() {
+    // With zero load current every node stays at supply potential ⇒ max drop = 0 V exactly.
+    let (b, vpp, supply) = board_with_chain(0.25);
+    let d = ir_drop(&b, vpp, supply, 0.0, 1.0, 100).unwrap();
+    assert_eq!(d.max_drop_v, 0.0, "zero current must produce zero IR drop");
+}
+
+#[test]
+fn ir_drop_boundary_no_tracks_returns_none() {
+    // An empty board has no routed tracks on the net ⇒ function returns None.
+    let spec = GridSpec::cover(Nm::from_mm(60.0), Nm::from_mm(10.0), Nm::from_mm(0.5), 2).unwrap();
+    let mut b = Board::new(spec);
+    let vpp = b.add_net("VPP", NetClassKind::Hv);
+    let supply = Point::new(Nm::from_mm(0.0), Nm::from_mm(5.0));
+    assert!(
+        ir_drop(&b, vpp, supply, 1.0, 1.0, 100).is_none(),
+        "a net with no routed tracks must produce None"
+    );
+}

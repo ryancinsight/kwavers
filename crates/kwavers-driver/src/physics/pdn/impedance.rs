@@ -33,7 +33,7 @@ pub fn self_resonant_freq_hz(esl_h: f64, c_f: f64) -> f64 {
 /// looks capacitive (|Z| falls), above it inductive (|Z| rises). At SRF |Z| = ESR.
 #[must_use]
 pub fn pdn_impedance_at_freq(caps: &[(f64, f64, f64)], f_hz: f64) -> f64 {
-    if caps.is_empty() || f_hz < 0.0 {
+    if caps.is_empty() || f_hz <= 0.0 {
         return f64::INFINITY;
     }
     let omega = 2.0 * std::f64::consts::PI * f_hz;

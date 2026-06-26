@@ -70,6 +70,31 @@ fn parallel_caps_lower_impedance() {
 }
 
 #[test]
+fn pdn_impedance_boundary_conditions() {
+    let cap = &[(100e-9_f64, 50e-3_f64, 0.5e-9_f64)];
+    // DC (f = 0): capacitors are open circuits ⇒ bank impedance = ∞.
+    assert!(
+        pdn_impedance_at_freq(cap, 0.0).is_infinite(),
+        "DC impedance of a cap bank must be +∞"
+    );
+    // Negative frequency: physically meaningless ⇒ ∞.
+    assert!(
+        pdn_impedance_at_freq(cap, -1e6).is_infinite(),
+        "negative-frequency impedance must be +∞"
+    );
+    // NaN frequency: propagates through the model; result must not be a normal finite value.
+    let z_nan = pdn_impedance_at_freq(cap, f64::NAN);
+    assert!(
+        z_nan.is_nan() || z_nan.is_infinite(),
+        "NaN frequency must produce NaN or ∞, got {z_nan}"
+    );
+    // self_resonant_freq_hz: degenerate inputs ⇒ ∞.
+    assert!(self_resonant_freq_hz(0.0, 100e-9).is_infinite());
+    assert!(self_resonant_freq_hz(0.5e-9, 0.0).is_infinite());
+    assert!(self_resonant_freq_hz(-1e-9, 100e-9).is_infinite());
+}
+
+#[test]
 fn anti_resonance_between_bulk_and_local_cap() {
     // Bulk: 10 µH, local: 100 nF. f_ar = 1/(2π√(10e-6·100e-9)) ≈ 159 kHz.
     let f = anti_resonance_hz(10e-6, 100e-9);
