@@ -136,3 +136,7 @@ target_opt/
 
 # Confidential folder (never tracked or uploaded)
 leoneuro/
+
+# kwavers-driver: proprietary board geometry and driver examples (CONFIDENTIAL)
+crates/kwavers-driver/examples/
+crates/kwavers-driver/tests/fixtures/boards/

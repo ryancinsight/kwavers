@@ -1,0 +1,9 @@
+# kicad-routing nextest configuration.
+#
+# Per-project timeout policy (AGENTS.md engineering_gates):
+#   slow threshold = 30 s  — crossing this is a performance defect in the real code under test.
+#   termination    = 60 s  — crossing this is a hang/deadlock to root-cause.
+# Never raise these limits to skip slow tests; optimize the real components instead.
+
+[profile.default]
+slow-timeout = { period = "30s", terminate-after = 2 }

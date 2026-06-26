@@ -1,0 +1,41 @@
+//! Physics vertical-slice tree (Phase 0 placeholder).
+//!
+//! # Phase 1+ plan
+//!
+//! Phase 1 will migrate the flat physics modules (`src/ampacity.rs`, `src/dielectric.rs`,
+//! `src/thermal.rs`, `src/emi.rs`, `src/pdn.rs`, `src/si.rs`, `src/acoustic.rs`) into the
+//! sub-submodules under this tree:
+//!
+//! ```text
+//! src/physics/
+//! ├── mod.rs
+//! ├── ampacity/    ← was src/ampacity.rs
+//! ├── dielectric/  ← was src/dielectric.rs
+//! ├── thermal/     ← was src/thermal.rs
+//! ├── emi/         ← was src/emi.rs
+//! ├── pdn/         ← was src/pdn.rs
+//! ├── si/          ← was src/si.rs
+//! └── acoustic/    ← was src/acoustic.rs (delegates to kwavers-transducer)
+//! ```
+//!
+//! Each physics subtree will own its own types + impls + tests, with zero cross-physics
+//! coupling (DIP: each leaf depends only on `crate::geometry::newtype::*`,
+//! `crate::board::*`, and Twiggy primitives).
+//!
+//! # SSOT for the slice
+//!
+//! * `pub mod ampacity` — IPC-2221 width + Black electromigration + skin depth
+//! * `pub mod dielectric` — Paschen + IPC-2221 voltage + CAF TTF
+//! * `pub mod thermal` — 2-D heat-conduction + electro-thermal + thermal vias
+//! * `pub mod emi` — commutation-loop inductance + switching/gate/recovery loss
+//! * `pub mod pdn` — IR drop + target impedance + hold-up C
+//! * `pub mod si` — microstrip impedance + propagation delay + skew
+//! * `pub mod acoustic` — wavelength + grating-lobe + BVD resonance + f-number
+//!
+//! # Phase 0 marker
+//!
+//! Empty namespace. The existing flat `pub mod ampacity;` / `pub mod acoustic;` / etc.
+//! declarations in `src/lib.rs` stay authoritative until Phase 1 cuts over.
+//
+// Phase 0 marker — empty placeholder. The actual types live in their flat `src/<name>.rs`
+//! modules until the Phase 1 cut-over.

@@ -1,0 +1,43 @@
+### Footprint positions - created on 2026-06-21T15:42:47 ###
+### Printed by KiCad version 10.0.3
+## Unit = inches, Angle = deg.
+## Side : All
+# Ref     Val          Package                PosX       PosY       Rot  Side
+C1        C0402        C0402                1.3973    -1.2169  -90.0000  top
+C2        C0402        C0402                1.6127    -1.7999  180.0000  top
+C3        C0402        C0402                1.3977    -1.0818  -90.0000  top
+C4        C0402        C0402                1.7791    -1.7195  -90.0000  top
+FID                    FIDUCIAL             0.3165    -1.8882    0.0000  top
+FID                    FIDUCIAL             0.3165    -0.3165    0.0000  top
+FID                    FIDUCIAL             2.4394    -0.3165    0.0000  top
+ISO1      ISO7740DBQR  ISO7740DBQR          1.5442    -0.8083  -90.0000  top
+ISO2      ISO7740DBQR  ISO7740DBQR          1.2285    -0.9963   90.0000  top
+ISO3      ISO7740DBQR  ISO7740DBQR          1.0663    -1.4770   90.0000  top
+ISO4      ISO7740DBQR  ISO7740DBQR          1.1553    -1.1978   90.0000  top
+J1        J_PWR        J_PWR                2.0028    -1.6019  -90.0000  top
+J3        J_TX         J_TX                 2.0516    -0.9309  -90.0000  top
+J_STACK   J_STACK      J_STACK              1.3780    -0.2756    0.0000  top
+MH                     MountingHole         0.1984    -0.1984    0.0000  top
+MH                     MountingHole         2.5575    -0.1984    0.0000  top
+MH                     MountingHole         0.1984    -2.0063    0.0000  top
+MH                     MountingHole         2.5575    -2.0063    0.0000  top
+R0        R0402        R0402                1.8065    -0.6851    0.0000  top
+R1        R0402        R0402                1.7687    -1.3267  -90.0000  top
+R2        R0402        R0402                2.2134    -0.8322   90.0000  top
+R3        R0402        R0402                1.8621    -0.9843    0.0000  top
+R4        R0402        R0402                2.3019    -1.0685   90.0000  top
+R5        R0402        R0402                1.8658    -1.1809    0.0000  top
+R6        R0402        R0402                2.2327    -1.2638  180.0000  top
+R7        R0402        R0402                1.8654    -1.2904  -90.0000  top
+R8        R0402        R0402                2.2252    -1.3820   90.0000  top
+R9        R0402        R0402                1.3353    -1.4124   90.0000  top
+R10       R0402        R0402                2.2449    -1.4981  180.0000  top
+R11       R0402        R0402                1.7505    -1.8491  -90.0000  top
+R12       R0402        R0402                1.8786    -1.8623    0.0000  top
+R13       R0402        R0402                2.2130    -1.1284   90.0000  top
+R14       R0402        R0402                1.8501    -1.9701  -90.0000  top
+R15       R0402        R0402                2.2149    -0.9791   90.0000  top
+U1        HV7355K6-G   HV7355K6-G           1.6184    -1.0852   90.0000  top
+U2        HV7355K6-G   HV7355K6-G           1.5584    -1.5781  180.0000  top
+U3        SIPO16       SIPO16               1.1701    -0.6417    0.0000  top
+## End

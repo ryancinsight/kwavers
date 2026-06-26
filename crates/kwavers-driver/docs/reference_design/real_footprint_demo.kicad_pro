@@ -1,0 +1,5 @@
+{
+  "board": { "design_settings": { "rule_severities": { "lib_footprint_issues": "ignore", "lib_footprint_mismatch": "ignore" } } },
+  "erc": { "rule_severities": { "lib_symbol_issues": "ignore" } },
+  "meta": { "filename": "../design/real_footprint_demo.kicad_pcb.kicad_pro", "version": 3 }
+}

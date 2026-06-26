@@ -1,0 +1,2046 @@
+(export
+	(version "E")
+	(design
+		(source "D:\\kwavers\\leoneuro\\driver\\design\\fpga_tile.kicad_sch")
+		(date "2026-06-21T15:43:04")
+		(tool "Eeschema 10.0.3")
+		(sheet
+			(number "1")
+			(name "/")
+			(tstamps "/")
+			(title_block
+				(title)
+				(company)
+				(rev)
+				(date)
+				(source "fpga_tile.kicad_sch")
+				(comment
+					(number "1")
+					(value "")
+				)
+				(comment
+					(number "2")
+					(value "")
+				)
+				(comment
+					(number "3")
+					(value "")
+				)
+				(comment
+					(number "4")
+					(value "")
+				)
+				(comment
+					(number "5")
+					(value "")
+				)
+				(comment
+					(number "6")
+					(value "")
+				)
+				(comment
+					(number "7")
+					(value "")
+				)
+				(comment
+					(number "8")
+					(value "")
+				)
+				(comment
+					(number "9")
+					(value "")
+				)
+			)
+		)
+	)
+	(components
+		(comp
+			(ref "C1")
+			(value "C0402")
+			(fields
+				(field
+					(name "Footprint")
+				)
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description")
+				)
+			)
+			(libsource
+				(lib "kicad-routing")
+				(part "C0402")
+				(description "")
+			)
+			(property
+				(name "Sheetname")
+				(value "")
+			)
+			(property
+				(name "Sheetfile")
+				(value "fpga_tile.kicad_sch")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "00000000-0000-0000-0000-00000000004f")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "C2")
+			(value "C0402")
+			(fields
+				(field
+					(name "Footprint")
+				)
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description")
+				)
+			)
+			(libsource
+				(lib "kicad-routing")
+				(part "C0402")
+				(description "")
+			)
+			(property
+				(name "Sheetname")
+				(value "")
+			)
+			(property
+				(name "Sheetfile")
+				(value "fpga_tile.kicad_sch")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "00000000-0000-0000-0000-000000000054")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "C3")
+			(value "C0402")
+			(fields
+				(field
+					(name "Footprint")
+				)
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description")
+				)
+			)
+			(libsource
+				(lib "kicad-routing")
+				(part "C0402")
+				(description "")
+			)
+			(property
+				(name "Sheetname")
+				(value "")
+			)
+			(property
+				(name "Sheetfile")
+				(value "fpga_tile.kicad_sch")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "00000000-0000-0000-0000-000000000059")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "C4")
+			(value "C0402")
+			(fields
+				(field
+					(name "Footprint")
+				)
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description")
+				)
+			)
+			(libsource
+				(lib "kicad-routing")
+				(part "C0402")
+				(description "")
+			)
+			(property
+				(name "Sheetname")
+				(value "")
+			)
+			(property
+				(name "Sheetfile")
+				(value "fpga_tile.kicad_sch")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "00000000-0000-0000-0000-00000000005e")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "J1")
+			(value "J_PWR")
+			(fields
+				(field
+					(name "Footprint")
+				)
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description")
+				)
+			)
+			(libsource
+				(lib "kicad-routing")
+				(part "J_PWR")
+				(description "")
+			)
+			(property
+				(name "Sheetname")
+				(value "")
+			)
+			(property
+				(name "Sheetfile")
+				(value "fpga_tile.kicad_sch")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "00000000-0000-0000-0000-000000000072")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+						(pin
+							(num "3")
+						)
+						(pin
+							(num "4")
+						)
+						(pin
+							(num "5")
+						)
+						(pin
+							(num "6")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "J3")
+			(value "J_JTAG")
+			(fields
+				(field
+					(name "Footprint")
+				)
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description")
+				)
+			)
+			(libsource
+				(lib "kicad-routing")
+				(part "J_JTAG")
+				(description "")
+			)
+			(property
+				(name "Sheetname")
+				(value "")
+			)
+			(property
+				(name "Sheetfile")
+				(value "fpga_tile.kicad_sch")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "00000000-0000-0000-0000-00000000007f")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+						(pin
+							(num "3")
+						)
+						(pin
+							(num "4")
+						)
+						(pin
+							(num "5")
+						)
+						(pin
+							(num "6")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "J_STACK")
+			(value "J_STACK")
+			(fields
+				(field
+					(name "Footprint")
+				)
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description")
+				)
+			)
+			(libsource
+				(lib "kicad-routing")
+				(part "J_STACK")
+				(description "")
+			)
+			(property
+				(name "Sheetname")
+				(value "")
+			)
+			(property
+				(name "Sheetfile")
+				(value "fpga_tile.kicad_sch")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "00000000-0000-0000-0000-00000000008c")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+						(pin
+							(num "3")
+						)
+						(pin
+							(num "4")
+						)
+						(pin
+							(num "5")
+						)
+						(pin
+							(num "6")
+						)
+						(pin
+							(num "7")
+						)
+						(pin
+							(num "8")
+						)
+						(pin
+							(num "9")
+						)
+						(pin
+							(num "10")
+						)
+						(pin
+							(num "11")
+						)
+						(pin
+							(num "12")
+						)
+						(pin
+							(num "13")
+						)
+						(pin
+							(num "14")
+						)
+						(pin
+							(num "15")
+						)
+						(pin
+							(num "16")
+						)
+						(pin
+							(num "17")
+						)
+						(pin
+							(num "18")
+						)
+						(pin
+							(num "19")
+						)
+						(pin
+							(num "20")
+						)
+						(pin
+							(num "21")
+						)
+						(pin
+							(num "22")
+						)
+						(pin
+							(num "23")
+						)
+						(pin
+							(num "24")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "R1")
+			(value "R0402")
+			(fields
+				(field
+					(name "Footprint")
+				)
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description")
+				)
+			)
+			(libsource
+				(lib "kicad-routing")
+				(part "R0402")
+				(description "")
+			)
+			(property
+				(name "Sheetname")
+				(value "")
+			)
+			(property
+				(name "Sheetfile")
+				(value "fpga_tile.kicad_sch")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "00000000-0000-0000-0000-000000000063")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "R2")
+			(value "R0402")
+			(fields
+				(field
+					(name "Footprint")
+				)
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description")
+				)
+			)
+			(libsource
+				(lib "kicad-routing")
+				(part "R0402")
+				(description "")
+			)
+			(property
+				(name "Sheetname")
+				(value "")
+			)
+			(property
+				(name "Sheetfile")
+				(value "fpga_tile.kicad_sch")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "00000000-0000-0000-0000-000000000068")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "R3")
+			(value "R0402")
+			(fields
+				(field
+					(name "Footprint")
+				)
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description")
+				)
+			)
+			(libsource
+				(lib "kicad-routing")
+				(part "R0402")
+				(description "")
+			)
+			(property
+				(name "Sheetname")
+				(value "")
+			)
+			(property
+				(name "Sheetfile")
+				(value "fpga_tile.kicad_sch")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "00000000-0000-0000-0000-00000000006d")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "U1")
+			(value "XC7A-QFP")
+			(fields
+				(field
+					(name "Footprint")
+				)
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description")
+				)
+			)
+			(libsource
+				(lib "kicad-routing")
+				(part "XC7A-QFP")
+				(description "")
+			)
+			(property
+				(name "Sheetname")
+				(value "")
+			)
+			(property
+				(name "Sheetfile")
+				(value "fpga_tile.kicad_sch")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "00000000-0000-0000-0000-000000000002")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+						(pin
+							(num "3")
+						)
+						(pin
+							(num "4")
+						)
+						(pin
+							(num "5")
+						)
+						(pin
+							(num "6")
+						)
+						(pin
+							(num "7")
+						)
+						(pin
+							(num "8")
+						)
+						(pin
+							(num "9")
+						)
+						(pin
+							(num "10")
+						)
+						(pin
+							(num "11")
+						)
+						(pin
+							(num "12")
+						)
+						(pin
+							(num "13")
+						)
+						(pin
+							(num "14")
+						)
+						(pin
+							(num "15")
+						)
+						(pin
+							(num "16")
+						)
+						(pin
+							(num "17")
+						)
+						(pin
+							(num "18")
+						)
+						(pin
+							(num "19")
+						)
+						(pin
+							(num "20")
+						)
+						(pin
+							(num "21")
+						)
+						(pin
+							(num "22")
+						)
+						(pin
+							(num "23")
+						)
+						(pin
+							(num "24")
+						)
+						(pin
+							(num "25")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "U2")
+			(value "W25Q128")
+			(fields
+				(field
+					(name "Footprint")
+				)
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description")
+				)
+			)
+			(libsource
+				(lib "kicad-routing")
+				(part "W25Q128")
+				(description "")
+			)
+			(property
+				(name "Sheetname")
+				(value "")
+			)
+			(property
+				(name "Sheetfile")
+				(value "fpga_tile.kicad_sch")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "00000000-0000-0000-0000-000000000035")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+						(pin
+							(num "3")
+						)
+						(pin
+							(num "4")
+						)
+						(pin
+							(num "5")
+						)
+						(pin
+							(num "6")
+						)
+						(pin
+							(num "7")
+						)
+						(pin
+							(num "8")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "Y1")
+			(value "OSC_ASEM1")
+			(fields
+				(field
+					(name "Footprint")
+				)
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description")
+				)
+			)
+			(libsource
+				(lib "kicad-routing")
+				(part "OSC_ASEM1")
+				(description "")
+			)
+			(property
+				(name "Sheetname")
+				(value "")
+			)
+			(property
+				(name "Sheetfile")
+				(value "fpga_tile.kicad_sch")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "00000000-0000-0000-0000-000000000046")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+						(pin
+							(num "3")
+						)
+						(pin
+							(num "4")
+						)
+					)
+				)
+			)
+		)
+	)
+	(groups)
+	(variants)
+	(libparts
+		(libpart
+			(lib "kicad-routing")
+			(part "C0402")
+			(fields
+				(field
+					(name "Reference") "U")
+				(field
+					(name "Value") "C0402")
+				(field
+					(name "Footprint")
+				)
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description")
+				)
+			)
+			(pins
+				(pin
+					(num "1")
+					(name "P0")
+					(type "passive")
+				)
+				(pin
+					(num "2")
+					(name "P1")
+					(type "passive")
+				)
+			)
+		)
+		(libpart
+			(lib "kicad-routing")
+			(part "J_JTAG")
+			(fields
+				(field
+					(name "Reference") "U")
+				(field
+					(name "Value") "J_JTAG")
+				(field
+					(name "Footprint")
+				)
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description")
+				)
+			)
+			(pins
+				(pin
+					(num "1")
+					(name "P0")
+					(type "passive")
+				)
+				(pin
+					(num "2")
+					(name "P1")
+					(type "passive")
+				)
+				(pin
+					(num "3")
+					(name "P2")
+					(type "passive")
+				)
+				(pin
+					(num "4")
+					(name "P3")
+					(type "passive")
+				)
+				(pin
+					(num "5")
+					(name "P4")
+					(type "passive")
+				)
+				(pin
+					(num "6")
+					(name "P5")
+					(type "passive")
+				)
+			)
+		)
+		(libpart
+			(lib "kicad-routing")
+			(part "J_PWR")
+			(fields
+				(field
+					(name "Reference") "U")
+				(field
+					(name "Value") "J_PWR")
+				(field
+					(name "Footprint")
+				)
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description")
+				)
+			)
+			(pins
+				(pin
+					(num "1")
+					(name "P0")
+					(type "passive")
+				)
+				(pin
+					(num "2")
+					(name "P1")
+					(type "passive")
+				)
+				(pin
+					(num "3")
+					(name "P2")
+					(type "passive")
+				)
+				(pin
+					(num "4")
+					(name "P3")
+					(type "passive")
+				)
+				(pin
+					(num "5")
+					(name "P4")
+					(type "passive")
+				)
+				(pin
+					(num "6")
+					(name "P5")
+					(type "passive")
+				)
+			)
+		)
+		(libpart
+			(lib "kicad-routing")
+			(part "J_STACK")
+			(fields
+				(field
+					(name "Reference") "U")
+				(field
+					(name "Value") "J_STACK")
+				(field
+					(name "Footprint")
+				)
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description")
+				)
+			)
+			(pins
+				(pin
+					(num "1")
+					(name "P0")
+					(type "passive")
+				)
+				(pin
+					(num "2")
+					(name "P1")
+					(type "passive")
+				)
+				(pin
+					(num "3")
+					(name "P2")
+					(type "passive")
+				)
+				(pin
+					(num "4")
+					(name "P3")
+					(type "passive")
+				)
+				(pin
+					(num "5")
+					(name "P4")
+					(type "passive")
+				)
+				(pin
+					(num "6")
+					(name "P5")
+					(type "passive")
+				)
+				(pin
+					(num "7")
+					(name "P6")
+					(type "passive")
+				)
+				(pin
+					(num "8")
+					(name "P7")
+					(type "passive")
+				)
+				(pin
+					(num "9")
+					(name "P8")
+					(type "passive")
+				)
+				(pin
+					(num "10")
+					(name "P9")
+					(type "passive")
+				)
+				(pin
+					(num "11")
+					(name "P10")
+					(type "passive")
+				)
+				(pin
+					(num "12")
+					(name "P11")
+					(type "passive")
+				)
+				(pin
+					(num "13")
+					(name "P12")
+					(type "passive")
+				)
+				(pin
+					(num "14")
+					(name "P13")
+					(type "passive")
+				)
+				(pin
+					(num "15")
+					(name "P14")
+					(type "passive")
+				)
+				(pin
+					(num "16")
+					(name "P15")
+					(type "passive")
+				)
+				(pin
+					(num "17")
+					(name "P16")
+					(type "passive")
+				)
+				(pin
+					(num "18")
+					(name "P17")
+					(type "passive")
+				)
+				(pin
+					(num "19")
+					(name "P18")
+					(type "passive")
+				)
+				(pin
+					(num "20")
+					(name "P19")
+					(type "passive")
+				)
+				(pin
+					(num "21")
+					(name "P20")
+					(type "passive")
+				)
+				(pin
+					(num "22")
+					(name "P21")
+					(type "passive")
+				)
+				(pin
+					(num "23")
+					(name "P22")
+					(type "passive")
+				)
+				(pin
+					(num "24")
+					(name "P23")
+					(type "passive")
+				)
+			)
+		)
+		(libpart
+			(lib "kicad-routing")
+			(part "OSC_ASEM1")
+			(fields
+				(field
+					(name "Reference") "U")
+				(field
+					(name "Value") "OSC_ASEM1")
+				(field
+					(name "Footprint")
+				)
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description")
+				)
+			)
+			(pins
+				(pin
+					(num "1")
+					(name "P0")
+					(type "passive")
+				)
+				(pin
+					(num "2")
+					(name "P1")
+					(type "passive")
+				)
+				(pin
+					(num "3")
+					(name "P2")
+					(type "passive")
+				)
+				(pin
+					(num "4")
+					(name "P3")
+					(type "passive")
+				)
+			)
+		)
+		(libpart
+			(lib "kicad-routing")
+			(part "R0402")
+			(fields
+				(field
+					(name "Reference") "U")
+				(field
+					(name "Value") "R0402")
+				(field
+					(name "Footprint")
+				)
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description")
+				)
+			)
+			(pins
+				(pin
+					(num "1")
+					(name "P0")
+					(type "passive")
+				)
+				(pin
+					(num "2")
+					(name "P1")
+					(type "passive")
+				)
+			)
+		)
+		(libpart
+			(lib "kicad-routing")
+			(part "W25Q128")
+			(fields
+				(field
+					(name "Reference") "U")
+				(field
+					(name "Value") "W25Q128")
+				(field
+					(name "Footprint")
+				)
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description")
+				)
+			)
+			(pins
+				(pin
+					(num "1")
+					(name "P0")
+					(type "passive")
+				)
+				(pin
+					(num "2")
+					(name "P1")
+					(type "passive")
+				)
+				(pin
+					(num "3")
+					(name "P2")
+					(type "passive")
+				)
+				(pin
+					(num "4")
+					(name "P3")
+					(type "passive")
+				)
+				(pin
+					(num "5")
+					(name "P4")
+					(type "passive")
+				)
+				(pin
+					(num "6")
+					(name "P5")
+					(type "passive")
+				)
+				(pin
+					(num "7")
+					(name "P6")
+					(type "passive")
+				)
+				(pin
+					(num "8")
+					(name "P7")
+					(type "passive")
+				)
+			)
+		)
+		(libpart
+			(lib "kicad-routing")
+			(part "XC7A-QFP")
+			(fields
+				(field
+					(name "Reference") "U")
+				(field
+					(name "Value") "XC7A-QFP")
+				(field
+					(name "Footprint")
+				)
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description")
+				)
+			)
+			(pins
+				(pin
+					(num "1")
+					(name "P0")
+					(type "passive")
+				)
+				(pin
+					(num "2")
+					(name "P1")
+					(type "passive")
+				)
+				(pin
+					(num "3")
+					(name "P2")
+					(type "passive")
+				)
+				(pin
+					(num "4")
+					(name "P3")
+					(type "passive")
+				)
+				(pin
+					(num "5")
+					(name "P4")
+					(type "passive")
+				)
+				(pin
+					(num "6")
+					(name "P5")
+					(type "passive")
+				)
+				(pin
+					(num "7")
+					(name "P6")
+					(type "passive")
+				)
+				(pin
+					(num "8")
+					(name "P7")
+					(type "passive")
+				)
+				(pin
+					(num "9")
+					(name "P8")
+					(type "passive")
+				)
+				(pin
+					(num "10")
+					(name "P9")
+					(type "passive")
+				)
+				(pin
+					(num "11")
+					(name "P10")
+					(type "passive")
+				)
+				(pin
+					(num "12")
+					(name "P11")
+					(type "passive")
+				)
+				(pin
+					(num "13")
+					(name "P12")
+					(type "passive")
+				)
+				(pin
+					(num "14")
+					(name "P13")
+					(type "passive")
+				)
+				(pin
+					(num "15")
+					(name "P14")
+					(type "passive")
+				)
+				(pin
+					(num "16")
+					(name "P15")
+					(type "passive")
+				)
+				(pin
+					(num "17")
+					(name "P16")
+					(type "passive")
+				)
+				(pin
+					(num "18")
+					(name "P17")
+					(type "passive")
+				)
+				(pin
+					(num "19")
+					(name "P18")
+					(type "passive")
+				)
+				(pin
+					(num "20")
+					(name "P19")
+					(type "passive")
+				)
+				(pin
+					(num "21")
+					(name "P20")
+					(type "passive")
+				)
+				(pin
+					(num "22")
+					(name "P21")
+					(type "passive")
+				)
+				(pin
+					(num "23")
+					(name "P22")
+					(type "passive")
+				)
+				(pin
+					(num "24")
+					(name "P23")
+					(type "passive")
+				)
+				(pin
+					(num "25")
+					(name "P24")
+					(type "passive")
+				)
+			)
+		)
+	)
+	(libraries)
+	(nets
+		(net
+			(code "1")
+			(name "BUS_LATCH")
+			(class "Default")
+			(node
+				(ref "J_STACK")
+				(pin "15")
+				(pinfunction "P14_15")
+				(pintype "passive")
+			)
+			(node
+				(ref "U1")
+				(pin "22")
+				(pinfunction "P21_22")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "2")
+			(name "BUS_SCLK")
+			(class "Default")
+			(node
+				(ref "J_STACK")
+				(pin "9")
+				(pinfunction "P8_9")
+				(pintype "passive")
+			)
+			(node
+				(ref "U1")
+				(pin "19")
+				(pinfunction "P18_19")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "3")
+			(name "BUS_SDI")
+			(class "Default")
+			(node
+				(ref "J_STACK")
+				(pin "11")
+				(pinfunction "P10_11")
+				(pintype "passive")
+			)
+			(node
+				(ref "U1")
+				(pin "20")
+				(pinfunction "P19_20")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "4")
+			(name "BUS_SDO")
+			(class "Default")
+			(node
+				(ref "J_STACK")
+				(pin "13")
+				(pinfunction "P12_13")
+				(pintype "passive")
+			)
+			(node
+				(ref "U1")
+				(pin "21")
+				(pinfunction "P20_21")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "5")
+			(name "BUS_nRST")
+			(class "Default")
+			(node
+				(ref "J_STACK")
+				(pin "17")
+				(pinfunction "P16_17")
+				(pintype "passive")
+			)
+			(node
+				(ref "U1")
+				(pin "23")
+				(pinfunction "P22_23")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "6")
+			(name "CCLK")
+			(class "Default")
+			(node
+				(ref "U1")
+				(pin "8")
+				(pinfunction "P7_8")
+				(pintype "passive")
+			)
+			(node
+				(ref "U2")
+				(pin "1")
+				(pinfunction "P0_1")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "7")
+			(name "CFG_CS")
+			(class "Default")
+			(node
+				(ref "U1")
+				(pin "11")
+				(pinfunction "P10_11")
+				(pintype "passive")
+			)
+			(node
+				(ref "U2")
+				(pin "4")
+				(pinfunction "P3_4")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "8")
+			(name "CHAIN_IN")
+			(class "Default")
+			(node
+				(ref "J_STACK")
+				(pin "19")
+				(pinfunction "P18_19")
+				(pintype "passive")
+			)
+			(node
+				(ref "U1")
+				(pin "24")
+				(pinfunction "P23_24")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "9")
+			(name "CHAIN_OUT")
+			(class "Default")
+			(node
+				(ref "J_STACK")
+				(pin "21")
+				(pinfunction "P20_21")
+				(pintype "passive")
+			)
+			(node
+				(ref "U1")
+				(pin "25")
+				(pinfunction "P24_25")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "10")
+			(name "CLK")
+			(class "Default")
+			(node
+				(ref "U1")
+				(pin "7")
+				(pinfunction "P6_7")
+				(pintype "passive")
+			)
+			(node
+				(ref "Y1")
+				(pin "3")
+				(pinfunction "P2_3")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "11")
+			(name "DIN")
+			(class "Default")
+			(node
+				(ref "U1")
+				(pin "9")
+				(pinfunction "P8_9")
+				(pintype "passive")
+			)
+			(node
+				(ref "U2")
+				(pin "2")
+				(pinfunction "P1_2")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "12")
+			(name "DONE")
+			(class "Default")
+			(node
+				(ref "R2")
+				(pin "1")
+				(pinfunction "P0_1")
+				(pintype "passive")
+			)
+			(node
+				(ref "U1")
+				(pin "13")
+				(pinfunction "P12_13")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "13")
+			(name "DOUT")
+			(class "Default")
+			(node
+				(ref "U1")
+				(pin "10")
+				(pinfunction "P9_10")
+				(pintype "passive")
+			)
+			(node
+				(ref "U2")
+				(pin "3")
+				(pinfunction "P2_3")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "14")
+			(name "GND")
+			(class "Default")
+			(node
+				(ref "C1")
+				(pin "2")
+				(pinfunction "P1_2")
+				(pintype "passive")
+			)
+			(node
+				(ref "C2")
+				(pin "2")
+				(pinfunction "P1_2")
+				(pintype "passive")
+			)
+			(node
+				(ref "C3")
+				(pin "2")
+				(pinfunction "P1_2")
+				(pintype "passive")
+			)
+			(node
+				(ref "C4")
+				(pin "2")
+				(pinfunction "P1_2")
+				(pintype "passive")
+			)
+			(node
+				(ref "J1")
+				(pin "4")
+				(pinfunction "P3_4")
+				(pintype "passive")
+			)
+			(node
+				(ref "J3")
+				(pin "6")
+				(pinfunction "P5_6")
+				(pintype "passive")
+			)
+			(node
+				(ref "J_STACK")
+				(pin "10")
+				(pinfunction "P9_10")
+				(pintype "passive")
+			)
+			(node
+				(ref "J_STACK")
+				(pin "12")
+				(pinfunction "P11_12")
+				(pintype "passive")
+			)
+			(node
+				(ref "J_STACK")
+				(pin "14")
+				(pinfunction "P13_14")
+				(pintype "passive")
+			)
+			(node
+				(ref "J_STACK")
+				(pin "16")
+				(pinfunction "P15_16")
+				(pintype "passive")
+			)
+			(node
+				(ref "J_STACK")
+				(pin "18")
+				(pinfunction "P17_18")
+				(pintype "passive")
+			)
+			(node
+				(ref "J_STACK")
+				(pin "2")
+				(pinfunction "P1_2")
+				(pintype "passive")
+			)
+			(node
+				(ref "J_STACK")
+				(pin "20")
+				(pinfunction "P19_20")
+				(pintype "passive")
+			)
+			(node
+				(ref "J_STACK")
+				(pin "22")
+				(pinfunction "P21_22")
+				(pintype "passive")
+			)
+			(node
+				(ref "J_STACK")
+				(pin "24")
+				(pinfunction "P23_24")
+				(pintype "passive")
+			)
+			(node
+				(ref "J_STACK")
+				(pin "4")
+				(pinfunction "P3_4")
+				(pintype "passive")
+			)
+			(node
+				(ref "J_STACK")
+				(pin "6")
+				(pinfunction "P5_6")
+				(pintype "passive")
+			)
+			(node
+				(ref "J_STACK")
+				(pin "8")
+				(pinfunction "P7_8")
+				(pintype "passive")
+			)
+			(node
+				(ref "U1")
+				(pin "4")
+				(pinfunction "P3_4")
+				(pintype "passive")
+			)
+			(node
+				(ref "U1")
+				(pin "5")
+				(pinfunction "P4_5")
+				(pintype "passive")
+			)
+			(node
+				(ref "U1")
+				(pin "6")
+				(pinfunction "P5_6")
+				(pintype "passive")
+			)
+			(node
+				(ref "U2")
+				(pin "8")
+				(pinfunction "P7_8")
+				(pintype "passive")
+			)
+			(node
+				(ref "Y1")
+				(pin "2")
+				(pinfunction "P1_2")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "15")
+			(name "INIT")
+			(class "Default")
+			(node
+				(ref "R3")
+				(pin "1")
+				(pinfunction "P0_1")
+				(pintype "passive")
+			)
+			(node
+				(ref "U1")
+				(pin "14")
+				(pinfunction "P13_14")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "16")
+			(name "P5V")
+			(class "Default")
+			(node
+				(ref "J1")
+				(pin "5")
+				(pinfunction "P4_5")
+				(pintype "passive")
+			)
+			(node
+				(ref "J_STACK")
+				(pin "5")
+				(pinfunction "P4_5")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "17")
+			(name "PROG")
+			(class "Default")
+			(node
+				(ref "R1")
+				(pin "1")
+				(pinfunction "P0_1")
+				(pintype "passive")
+			)
+			(node
+				(ref "U1")
+				(pin "12")
+				(pinfunction "P11_12")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "18")
+			(name "TCK")
+			(class "Default")
+			(node
+				(ref "J3")
+				(pin "1")
+				(pinfunction "P0_1")
+				(pintype "passive")
+			)
+			(node
+				(ref "U1")
+				(pin "15")
+				(pinfunction "P14_15")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "19")
+			(name "TDI")
+			(class "Default")
+			(node
+				(ref "J3")
+				(pin "3")
+				(pinfunction "P2_3")
+				(pintype "passive")
+			)
+			(node
+				(ref "U1")
+				(pin "17")
+				(pinfunction "P16_17")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "20")
+			(name "TDO")
+			(class "Default")
+			(node
+				(ref "J3")
+				(pin "4")
+				(pinfunction "P3_4")
+				(pintype "passive")
+			)
+			(node
+				(ref "U1")
+				(pin "18")
+				(pinfunction "P17_18")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "21")
+			(name "TMS")
+			(class "Default")
+			(node
+				(ref "J3")
+				(pin "2")
+				(pinfunction "P1_2")
+				(pintype "passive")
+			)
+			(node
+				(ref "U1")
+				(pin "16")
+				(pinfunction "P15_16")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "22")
+			(name "VCCAUX")
+			(class "Default")
+			(node
+				(ref "C2")
+				(pin "1")
+				(pinfunction "P0_1")
+				(pintype "passive")
+			)
+			(node
+				(ref "J1")
+				(pin "2")
+				(pinfunction "P1_2")
+				(pintype "passive")
+			)
+			(node
+				(ref "U1")
+				(pin "2")
+				(pinfunction "P1_2")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "23")
+			(name "VCCINT")
+			(class "Default")
+			(node
+				(ref "C1")
+				(pin "1")
+				(pinfunction "P0_1")
+				(pintype "passive")
+			)
+			(node
+				(ref "J1")
+				(pin "1")
+				(pinfunction "P0_1")
+				(pintype "passive")
+			)
+			(node
+				(ref "U1")
+				(pin "1")
+				(pinfunction "P0_1")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "24")
+			(name "VCCO_3V3")
+			(class "Default")
+			(node
+				(ref "C3")
+				(pin "1")
+				(pinfunction "P0_1")
+				(pintype "passive")
+			)
+			(node
+				(ref "C4")
+				(pin "1")
+				(pinfunction "P0_1")
+				(pintype "passive")
+			)
+			(node
+				(ref "J1")
+				(pin "3")
+				(pinfunction "P2_3")
+				(pintype "passive")
+			)
+			(node
+				(ref "J3")
+				(pin "5")
+				(pinfunction "P4_5")
+				(pintype "passive")
+			)
+			(node
+				(ref "J_STACK")
+				(pin "23")
+				(pinfunction "P22_23")
+				(pintype "passive")
+			)
+			(node
+				(ref "J_STACK")
+				(pin "7")
+				(pinfunction "P6_7")
+				(pintype "passive")
+			)
+			(node
+				(ref "R1")
+				(pin "2")
+				(pinfunction "P1_2")
+				(pintype "passive")
+			)
+			(node
+				(ref "R2")
+				(pin "2")
+				(pinfunction "P1_2")
+				(pintype "passive")
+			)
+			(node
+				(ref "R3")
+				(pin "2")
+				(pinfunction "P1_2")
+				(pintype "passive")
+			)
+			(node
+				(ref "U1")
+				(pin "3")
+				(pinfunction "P2_3")
+				(pintype "passive")
+			)
+			(node
+				(ref "U2")
+				(pin "5")
+				(pinfunction "P4_5")
+				(pintype "passive")
+			)
+			(node
+				(ref "U2")
+				(pin "6")
+				(pinfunction "P5_6")
+				(pintype "passive")
+			)
+			(node
+				(ref "U2")
+				(pin "7")
+				(pinfunction "P6_7")
+				(pintype "passive")
+			)
+			(node
+				(ref "Y1")
+				(pin "1")
+				(pinfunction "P0_1")
+				(pintype "passive")
+			)
+			(node
+				(ref "Y1")
+				(pin "4")
+				(pinfunction "P3_4")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "25")
+			(name "VPP")
+			(class "Default")
+			(node
+				(ref "J1")
+				(pin "6")
+				(pinfunction "P5_6")
+				(pintype "passive")
+			)
+			(node
+				(ref "J_STACK")
+				(pin "1")
+				(pinfunction "P0_1")
+				(pintype "passive")
+			)
+			(node
+				(ref "J_STACK")
+				(pin "3")
+				(pinfunction "P2_3")
+				(pintype "passive")
+			)
+		)
+	)
+)

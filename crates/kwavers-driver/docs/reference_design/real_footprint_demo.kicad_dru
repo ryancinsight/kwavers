@@ -1,0 +1,7 @@
+(version 1)
+(rule "track_min" (constraint track_width (min 0.150mm)))
+(rule "clearance_min" (constraint clearance (min 0.130mm)))
+(rule "via_min" (constraint via_diameter (min 0.460mm)))
+(rule "hole_min" (constraint hole_size (min 0.200mm)))
+(rule "annular_min" (constraint annular_width (min 0.130mm)))
+(rule "HV_creepage" (condition "A.NetClass == 'HV' && B.NetClass != 'HV'") (constraint clearance (min 0.500mm)))

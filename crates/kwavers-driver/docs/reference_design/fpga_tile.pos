@@ -1,0 +1,26 @@
+### Footprint positions - created on 2026-06-21T15:43:04 ###
+### Printed by KiCad version 10.0.3
+## Unit = inches, Angle = deg.
+## Side : All
+# Ref     Val        Package                PosX       PosY       Rot  Side
+C1        C0402      C0402                1.8752    -1.3231  180.0000  top
+C2        C0402      C0402                1.4027    -1.3232    0.0000  top
+C3        C0402      C0402                1.6073    -1.3232    0.0000  top
+C4        C0402      C0402                1.1520    -0.7629    0.0000  top
+FID                  FIDUCIAL             0.3165    -0.3165    0.0000  top
+FID                  FIDUCIAL             2.4394    -0.3165    0.0000  top
+FID                  FIDUCIAL             0.3165    -1.8882    0.0000  top
+J1        J_PWR      J_PWR                0.8074    -1.0522  180.0000  top
+J3        J_JTAG     J_JTAG               1.1224    -0.5686    0.0000  top
+J_STACK   J_STACK    J_STACK              1.3780    -0.2756    0.0000  top
+MH                   MountingHole         0.1984    -0.1984    0.0000  top
+MH                   MountingHole         2.5575    -0.1984    0.0000  top
+MH                   MountingHole         0.1984    -2.0063    0.0000  top
+MH                   MountingHole         2.5575    -2.0063    0.0000  top
+R1        R0402      R0402                1.3648    -0.5668    0.0000  top
+R2        R0402      R0402                0.8971    -0.6212   90.0000  top
+R3        R0402      R0402                1.4091    -1.4104  180.0000  top
+U1        XC7A-QFP   XC7A-QFP             1.6349    -0.9451  180.0000  top
+U2        W25Q128    W25Q128              1.1817    -0.9049  -90.0000  top
+Y1        OSC_ASEM1  OSC_ASEM1            1.2305    -1.2225   90.0000  top
+## End

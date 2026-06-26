@@ -1,0 +1,25 @@
+# Source-of-truth pointers:
+# * docs/MIGRATION.md     — phased refactor plan from kicad-routing → kwavers-driver
+# * docs/ARCHITECTURE.md  — vertical-slice tree spec + DIP trait catalogue + SSOT module layout
+
+[package]
+name = "kwavers-driver"
+version = "0.3.13"
+edition = "2021"
+rust-version = "1.80"
+description = "Physics-guided, manufacturing-aware driver electronics design for kwavers"
+license = "MIT"
+repository = "https://github.com/ryancinsight/kwavers"
+authors = ["Ryan Clanton <ryanclanton@outlook.com>"]
+
+[dependencies]
+thiserror = "1"
+kwavers-transducer = { path = "../kwavers-transducer", optional = true }
+
+[features]
+default = ["io"]
+io = []
+kwavers = ["dep:kwavers-transducer"]
+
+[lib]
+name = "kwavers_driver"
