@@ -55,6 +55,52 @@ pub(crate) fn detect_decoupling_power_layer_violations(
     (count, pts)
 }
 
+/// Decoupling capacitors placed farther than `rules.max_decoupling_cap_distance` from their
+/// associated IC power pin.
+///
+/// The article ("most common PCB mistakes") requires decoupling caps to be placed "as close
+/// as possible" to the component power pins. This check enforces a hard ceiling on the
+/// Euclidean distance from the cap centroid to the nearest power pin of its associated IC,
+/// irrespective of layer. Vacuous when no cap has an `assoc_ic` link.
+pub(crate) fn detect_decoupling_cap_distance_violations(
+    comps: &[Component],
+    lib: &[FootprintDef],
+    rules: &DesignRules,
+) -> (usize, Vec<Point>) {
+    let max_dist = rules.max_decoupling_cap_distance.0 as f64;
+    let mut count = 0;
+    let mut pts = Vec::new();
+
+    for cap in comps {
+        if cap.fp >= lib.len() || !matches!(lib[cap.fp].role, Role::Decoupling) {
+            continue;
+        }
+        let Some(ic_idx) = cap.assoc_ic else { continue };
+        let Some(ic) = comps.get(ic_idx) else { continue };
+        if ic.fp >= lib.len() {
+            continue;
+        }
+        let ic_fp = &lib[ic.fp];
+
+        // Measure distance to the nearest IC power-pin pad.
+        let mut nearest: f64 = f64::INFINITY;
+        for (pad_idx, ic_pad) in ic_fp.pads.iter().enumerate() {
+            if !ic_pad.power_pin {
+                continue;
+            }
+            let d = cap.placement.pos.euclid(ic.pad_pos(lib, pad_idx));
+            if d < nearest {
+                nearest = d;
+            }
+        }
+        if nearest.is_finite() && nearest > max_dist {
+            count += 1;
+            pts.push(cap.placement.pos);
+        }
+    }
+    (count, pts)
+}
+
 pub(crate) fn detect_decoupling_loop_area_violations(
     comps: &[Component],
     lib: &[FootprintDef],
@@ -150,4 +196,77 @@ pub(crate) fn detect_charge_reservoir_violations(
         }
     }
     (count, pts)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::geom::Nm;
+    use crate::place::{PadDef, Placement};
+
+    fn ic_fp() -> FootprintDef {
+        FootprintDef::new(
+            "U",
+            (Nm::from_mm(4.0), Nm::from_mm(4.0)),
+            Role::ActiveIc,
+            vec![PadDef {
+                offset: crate::geom::Point::new(Nm(0), Nm(0)),
+                size: (Nm::from_mm(0.5), Nm::from_mm(0.5)),
+                layers: vec![crate::board::LayerId(0)],
+                power_pin: true,
+            }],
+        )
+    }
+
+    fn cap_fp() -> FootprintDef {
+        FootprintDef::new(
+            "C",
+            (Nm::from_mm(1.0), Nm::from_mm(0.5)),
+            Role::Decoupling,
+            vec![],
+        )
+    }
+
+    fn make_comp(fp: usize, x: f64, y: f64, assoc: Option<usize>) -> Component {
+        Component {
+            fp,
+            refdes: String::new(),
+            nets: vec![],
+            placement: Placement {
+                pos: crate::geom::Point::new(Nm::from_mm(x), Nm::from_mm(y)),
+                ..Placement::default()
+            },
+            assoc_ic: assoc,
+            ..Component::default()
+        }
+    }
+
+    /// IC at (10,10); cap at (10,10) is 0 mm from the power pin — passes the 3 mm budget.
+    /// Cap at (20,10) is 10 mm away — exceeds the 3 mm budget.
+    #[test]
+    fn flags_cap_too_far_from_ic_power_pin() {
+        let lib = vec![ic_fp(), cap_fp()];
+        let comps = vec![
+            make_comp(0, 10.0, 10.0, None),    // IC (index 0)
+            make_comp(1, 10.0, 10.0, Some(0)), // NEAR cap: 0 mm from pin
+            make_comp(1, 20.0, 10.0, Some(0)), // FAR cap: 10 mm from pin
+        ];
+        let mut rules = DesignRules::holohv();
+        rules.max_decoupling_cap_distance = Nm::from_mm(3.0);
+        let (n, pts) = detect_decoupling_cap_distance_violations(&comps, &lib, &rules);
+        assert_eq!(n, 1, "only the far cap must be flagged");
+        assert!((pts[0].x.to_mm() - 20.0).abs() < 1e-3);
+    }
+
+    #[test]
+    fn passes_when_all_caps_within_budget() {
+        let lib = vec![ic_fp(), cap_fp()];
+        let comps = vec![
+            make_comp(0, 10.0, 10.0, None),    // IC
+            make_comp(1, 11.0, 10.0, Some(0)), // 1 mm away — passes 3 mm budget
+        ];
+        let rules = DesignRules::holohv();
+        let (n, _) = detect_decoupling_cap_distance_violations(&comps, &lib, &rules);
+        assert_eq!(n, 0);
+    }
 }

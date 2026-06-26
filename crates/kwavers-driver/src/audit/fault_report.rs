@@ -201,6 +201,19 @@ pub struct FaultReport {
     pub high_speed_parallel_spacing_violations: usize,
     /// Unrelated high-speed traces routed in parallel on adjacent copper layers.
     pub high_speed_adjacent_layer_parallel_violations: usize,
+    /// High-speed or clock-like nets whose total routed length exceeds λ/10 for the board's
+    /// characteristic frequency. Traces that long must be treated as controlled-impedance
+    /// transmission lines with termination; without it they cause signal reflections and EMI
+    /// (IPC-2141A).
+    pub transmission_line_length_violations: usize,
+    /// Decoupling capacitors placed farther than `DesignRules::max_decoupling_cap_distance`
+    /// from their nearest associated IC power pin. Excess distance raises loop inductance and
+    /// undermines high-frequency bypass action.
+    pub decoupling_cap_distance_violations: usize,
+    /// Antenna-connected traces whose computed microstrip characteristic impedance deviates from
+    /// the 50 Ω target by more than `DesignRules::antenna_impedance_tolerance_ohm`. Impedance
+    /// mismatch creates standing waves and degrades RF range.
+    pub antenna_impedance_violations: usize,
     /// Aggregate risk score (higher = worse); HV-involved faults weighted up.
     pub risk_score: f64,
     /// Board locations of the worst weaknesses (drives the feedback field).
@@ -270,6 +283,9 @@ impl FaultReport {
             && self.unfilled_via_in_pad_violations == 0
             && self.surge_suppressor_via_violations == 0
             && self.split_plane_crossings == 0
+            && self.transmission_line_length_violations == 0
+            && self.decoupling_cap_distance_violations == 0
+            && self.antenna_impedance_violations == 0
     }
 }
 

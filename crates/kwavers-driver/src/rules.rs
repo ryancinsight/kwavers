@@ -194,6 +194,30 @@ pub struct DesignRules {
     /// Tolerable RMS pressure error fraction from pulse skipping (0..1). Default `0.05` (5%)
     /// per the TBME-2025 threshold used in [`crate::pulse_skip::rms_pressure_error_fraction`].
     pub pressure_error_tol: f64,
+    /// Characteristic signal frequency (Hz) used for the λ/10 transmission-line length check.
+    /// A trace longer than c₀ / (10·f·√εr_eff) must be treated as a controlled-impedance
+    /// transmission line and requires impedance matching. `0.0` makes the check vacuous.
+    /// Typical: 1e8 (100 MHz USB/GPIO) … 5e9 (5 GHz PCIE/WiFi).
+    pub high_speed_frequency_hz: f64,
+    /// Relative permittivity of the board dielectric — both for the λ/10 effective-medium
+    /// calculation and the microstrip impedance formula. FR4 ≈ 4.5; Rogers RO4003 ≈ 3.55.
+    pub dielectric_er: f64,
+    /// Prepreg/core thickness (mm) of the signal layer above its adjacent reference plane.
+    /// Used with [`Self::dielectric_er`] to compute microstrip characteristic impedance for
+    /// the antenna trace impedance mismatch check. Typical 4-layer: 0.2 mm.
+    pub dielectric_height_mm: f64,
+    /// Maximum Euclidean distance (nm) from a decoupling capacitor to its associated IC power
+    /// pin. The article mandates placement "as close as possible"; this is the hard ceiling
+    /// enforced by `detect_decoupling_cap_distance_violations`. Typical: 3 mm.
+    pub max_decoupling_cap_distance: Nm,
+    /// Target characteristic impedance (Ω) for antenna-connected traces. Standard RF practice
+    /// is 50 Ω for the trace connecting a transceiver to its antenna. `0.0` makes the check
+    /// vacuous.
+    pub antenna_impedance_ohm: f64,
+    /// Tolerance (Ω) around [`Self::antenna_impedance_ohm`] before a trace is flagged. A
+    /// computed |Z − target| > tolerance triggers `detect_antenna_impedance_mismatch`. Default
+    /// 10 Ω (±20 % of the 50 Ω standard target).
+    pub antenna_impedance_tolerance_ohm: f64,
 }
 
 impl DesignRules {
@@ -252,6 +276,12 @@ impl DesignRules {
             ic_switching_risetime_s: 5e-9,
             max_skip_fraction: 0.0, // vacuous — caller sets this for a real operating point
             pressure_error_tol: 0.05, // 5 % per TBME-2025
+            high_speed_frequency_hz: 1.0e8, // 100 MHz — conservative threshold for USB / GPIO
+            dielectric_er: 4.5,             // FR4 nominal
+            dielectric_height_mm: 0.2,      // typical 4-layer prepreg/core thickness
+            max_decoupling_cap_distance: Nm::from_mm(3.0), // "as close as possible" ceiling
+            antenna_impedance_ohm: 50.0,    // universal RF 50-Ω convention
+            antenna_impedance_tolerance_ohm: 10.0, // ±20 % of 50 Ω
         }
     }
 

@@ -20,7 +20,7 @@ use crate::rules::DesignRules;
         );
 
         type FaultMarker = fn(&mut FaultReport);
-        let dirty_fields: [(&str, FaultMarker); 59] = [
+        let dirty_fields: [(&str, FaultMarker); 62] = [
             ("clearance violations", |r: &mut FaultReport| {
                 r.clearance_violations = 1;
             }),
@@ -211,6 +211,15 @@ use crate::rules::DesignRules;
             }),
             ("split-plane crossing", |r: &mut FaultReport| {
                 r.split_plane_crossings = 1;
+            }),
+            ("transmission line length", |r: &mut FaultReport| {
+                r.transmission_line_length_violations = 1;
+            }),
+            ("decoupling cap distance", |r: &mut FaultReport| {
+                r.decoupling_cap_distance_violations = 1;
+            }),
+            ("antenna impedance", |r: &mut FaultReport| {
+                r.antenna_impedance_violations = 1;
             }),
         ];
 

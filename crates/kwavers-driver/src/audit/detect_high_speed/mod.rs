@@ -3,9 +3,10 @@
 //! Covers board-edge clearance, component edge clearance, termination placement,
 //! parallel spacing (same and adjacent layer), reference-plane margin/absence/
 //! intrusion/stitching, split-domain crossings, via stub/transition/terminal,
-//! via diameter, and blind/buried via drill size.
+//! via diameter, blind/buried via drill size, and the λ/10 transmission-line length rule.
 
 mod edge_spacing;
+mod trace_length;
 mod via_termination;
 mod reference_plane;
 mod split_domain;
@@ -16,6 +17,8 @@ pub(crate) use edge_spacing::{
     detect_high_speed_parallel_spacing_violations,
     detect_high_speed_adjacent_layer_parallel_violations,
 };
+
+pub(crate) use trace_length::detect_transmission_line_length_violations;
 
 pub(crate) use via_termination::{
     detect_high_speed_termination_placement_violations,

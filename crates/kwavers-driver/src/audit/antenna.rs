@@ -4,6 +4,8 @@ use crate::board::Board;
 use crate::geom::{
     Nm, Point,
 };
+use crate::rules::DesignRules;
+
 ///
 /// Track-track junctions coincide exactly (grid-cell centres), matched exactly by endpoint count. A
 /// track end meets a pad/via *within a tolerance* (the router snaps terminals to the nearest cell
@@ -173,4 +175,133 @@ pub(crate) fn crosstalk(board: &Board, coupling: Nm) -> usize {
         }
     }
     count
+}
+
+/// Detects antenna-connected traces whose characteristic impedance deviates from the 50 Ω
+/// standard by more than `rules.antenna_impedance_tolerance_ohm`.
+///
+/// Antenna traces must be controlled-impedance 50 Ω transmission lines; a mismatch causes
+/// standing waves, reduced range, and conducted/radiated EMI (article Mistake 9). The
+/// Hammerstad microstrip formula is used: `Z = f(w, h, εr)` with `rules.dielectric_er` and
+/// `rules.dielectric_height_mm`. Nets whose name (case-insensitive) starts with `"ANT"` are
+/// treated as antenna nets. Each violating track segment contributes 1 violation.
+///
+/// # Vacuous condition
+///
+/// Returns `(0, [])` when `rules.antenna_impedance_ohm <= 0` or
+/// `rules.dielectric_height_mm <= 0`.
+pub(crate) fn detect_antenna_impedance_mismatch(
+    board: &Board,
+    rules: &DesignRules,
+) -> (usize, Vec<Point>) {
+    let target = rules.antenna_impedance_ohm;
+    let tol = rules.antenna_impedance_tolerance_ohm;
+    if target <= 0.0 || rules.dielectric_height_mm <= 0.0 {
+        return (0, Vec::new());
+    }
+
+    let mut count = 0;
+    let mut pts = Vec::new();
+
+    for t in &board.tracks {
+        let net_idx = t.net.0 as usize;
+        if net_idx >= board.nets.len() {
+            continue;
+        }
+        let name = &board.nets[net_idx].name;
+        if !name.to_ascii_uppercase().starts_with("ANT") {
+            continue;
+        }
+        let w_mm = t.width.to_mm();
+        let h_mm = rules.dielectric_height_mm;
+        let er = rules.dielectric_er.max(1.0);
+        let z = crate::physics::si::impedance::microstrip_impedance(w_mm, h_mm, er);
+        if (z - target).abs() > tol {
+            count += 1;
+            pts.push(Point::new(
+                Nm((t.start.x.0 + t.end.x.0) / 2),
+                Nm((t.start.y.0 + t.end.y.0) / 2),
+            ));
+        }
+    }
+    (count, pts)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::board::{LayerId, NetClassKind, Track};
+    use crate::geom::GridSpec;
+
+    fn make_ant_board(track_width_mm: f64) -> Board {
+        let spec = GridSpec::cover(
+            Nm::from_mm(50.0),
+            Nm::from_mm(50.0),
+            Nm::from_mm(0.5),
+            2,
+        )
+        .unwrap();
+        let mut b = Board::new(spec);
+        let net = b.add_net("ANT_TX", NetClassKind::Signal);
+        b.tracks.push(Track {
+            start: Point::new(Nm(0), Nm(0)),
+            end: Point::new(Nm::from_mm(10.0), Nm(0)),
+            width: Nm::from_mm(track_width_mm),
+            net,
+            layer: LayerId(0),
+        });
+        b
+    }
+
+    /// A 50-Ω microstrip on FR4 (εr=4.5, h=0.2 mm) has w≈0.374 mm.
+    /// Tracks far outside this width must be flagged; a width very close to 0.374 mm must pass.
+    #[test]
+    fn flags_wide_antenna_trace_impedance_mismatch() {
+        // 2.0 mm wide → very low Z (well under 10 Ω) → mismatch
+        let b = make_ant_board(2.0);
+        let rules = DesignRules::holohv();
+        let (n, _) = detect_antenna_impedance_mismatch(&b, &rules);
+        assert_eq!(n, 1, "2 mm wide ANT trace must fail 50-Ω check");
+    }
+
+    #[test]
+    fn passes_matched_antenna_trace() {
+        // 0.374 mm ≈ 50 Ω on standard 4-layer prepreg (εr=4.5, h=0.2 mm); tolerance ±10 Ω
+        let b = make_ant_board(0.374);
+        let rules = DesignRules::holohv();
+        let (n, _) = detect_antenna_impedance_mismatch(&b, &rules);
+        assert_eq!(n, 0, "0.374 mm wide ANT trace should be near 50 Ω");
+    }
+
+    #[test]
+    fn ignores_non_ant_nets() {
+        let spec = GridSpec::cover(
+            Nm::from_mm(50.0),
+            Nm::from_mm(50.0),
+            Nm::from_mm(0.5),
+            2,
+        )
+        .unwrap();
+        let mut b = Board::new(spec);
+        let net = b.add_net("SPI_CLK", NetClassKind::Signal);
+        b.tracks.push(Track {
+            start: Point::new(Nm(0), Nm(0)),
+            end: Point::new(Nm::from_mm(10.0), Nm(0)),
+            width: Nm::from_mm(2.0),
+            net,
+            layer: LayerId(0),
+        });
+        let rules = DesignRules::holohv();
+        let (n, _) = detect_antenna_impedance_mismatch(&b, &rules);
+        assert_eq!(n, 0, "non-ANT nets must not be impedance-checked");
+    }
+
+    #[test]
+    fn vacuous_when_target_impedance_is_zero() {
+        let b = make_ant_board(2.0);
+        let mut rules = DesignRules::holohv();
+        rules.antenna_impedance_ohm = 0.0;
+        let (n, _) = detect_antenna_impedance_mismatch(&b, &rules);
+        assert_eq!(n, 0, "zero target impedance makes check vacuous");
+    }
 }

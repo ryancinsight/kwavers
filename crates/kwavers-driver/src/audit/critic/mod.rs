@@ -251,6 +251,15 @@ pub fn audit(
         detect_charge_recycling_violations_board(board, comps, lib);
     hotspots.extend(charge_recycling_violations_pts);
     let (pulse_skip_violations, _) = detect_pulse_skip_violations(board, rules);
+    let (transmission_line_length_violations, transmission_line_pts) =
+        detect_transmission_line_length_violations(board, rules);
+    hotspots.extend(transmission_line_pts);
+    let (decoupling_cap_distance_violations, decoupling_cap_distance_pts) =
+        detect_decoupling_cap_distance_violations(comps, lib, rules);
+    hotspots.extend(decoupling_cap_distance_pts);
+    let (antenna_impedance_violations, antenna_impedance_pts) =
+        detect_antenna_impedance_mismatch(board, rules);
+    hotspots.extend(antenna_impedance_pts);
 
     FaultReport {
         crossings,
@@ -321,6 +330,9 @@ pub fn audit(
         split_plane_crossings,
         charge_recycling_violations,
         pulse_skip_violations,
+        transmission_line_length_violations,
+        decoupling_cap_distance_violations,
+        antenna_impedance_violations,
         // Weights reflect fab severity: a clearance violation, dangling end, or acid trap is a hard
         // reject; via-adjacency overlaps annular rings; near-shorts/crossings are graded margins;
         // via_count is a mild cost term (drill defect probability proportional to count).
@@ -391,7 +403,10 @@ pub fn audit(
             + unfilled_via_in_pad_violations as f64 * 15.0
             + split_plane_crossings as f64 * 25.0
             + charge_recycling_violations as f64 * 10.0
-            + pulse_skip_violations as f64 * 8.0,
+            + pulse_skip_violations as f64 * 8.0
+            + transmission_line_length_violations as f64 * 12.0
+            + decoupling_cap_distance_violations as f64 * 12.0
+            + antenna_impedance_violations as f64 * 15.0,
         hotspots,
     }
 }
