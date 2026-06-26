@@ -83,17 +83,15 @@ pub(crate) fn non_power_signal_net_count(c: &Component, fp: &FootprintDef) -> us
         .len()
 }
 
+/// Index (0=left, 1=right, 2=bottom, 3=top) of the board edge closest to `p`.
+#[inline]
+fn nearest_edge_idx(p: Point, width: f64, height: f64) -> usize {
+    let d = [p.x.to_mm(), width - p.x.to_mm(), p.y.to_mm(), height - p.y.to_mm()];
+    d.iter().enumerate().min_by(|a, b| a.1.total_cmp(b.1)).map(|(i, _)| i).unwrap_or(0)
+}
+
 pub(crate) fn nearest_board_edge_point(p: Point, width: f64, height: f64) -> Point {
-    let x = p.x.to_mm();
-    let y = p.y.to_mm();
-    let distances = [x, width - x, y, height - y];
-    let mut nearest = 0;
-    for idx in 1..distances.len() {
-        if distances[idx] < distances[nearest] {
-            nearest = idx;
-        }
-    }
-    match nearest {
+    match nearest_edge_idx(p, width, height) {
         0 => Point::new(Nm::from_mm(0.0), p.y),
         1 => Point::new(Nm::from_mm(width), p.y),
         2 => Point::new(p.x, Nm::from_mm(0.0)),
@@ -102,16 +100,7 @@ pub(crate) fn nearest_board_edge_point(p: Point, width: f64, height: f64) -> Poi
 }
 
 pub(crate) fn connector_ingress_unit(p: Point, width: f64, height: f64) -> (f64, f64) {
-    let x = p.x.to_mm();
-    let y = p.y.to_mm();
-    let distances = [x, width - x, y, height - y];
-    let mut nearest = 0;
-    for idx in 1..distances.len() {
-        if distances[idx] < distances[nearest] {
-            nearest = idx;
-        }
-    }
-    match nearest {
+    match nearest_edge_idx(p, width, height) {
         0 => (1.0, 0.0),
         1 => (-1.0, 0.0),
         2 => (0.0, 1.0),
