@@ -169,11 +169,14 @@ pub use five_level::{
     compare_drive_topologies, nlevel_dynamic_loss_w, nlevel_efficiency, nlevel_energy_per_cycle_j,
     nlevel_power_saving_w, nlevel_rails, typical_cr_efficiency, LevelComparison,
 };
-pub use geom::{convex_hull, dist_point_seg, dist_seg_seg, GridSpec, Point};
+pub use geom::{
+    convex_hull, dist_point_seg, dist_seg_seg, mechanical_features, GridSpec, MechFeature,
+    MechKind, Point,
+};
 #[cfg(feature = "io")]
 pub use io::{
-    duplicate_pcb_uuids, mechanical_features, save_kicad_pcb, save_kicad_project, save_kicad_sch,
-    write_kicad_pcb, write_kicad_sch, MechFeature, MechKind,
+    duplicate_pcb_uuids, save_kicad_pcb, save_kicad_project, save_kicad_sch, write_kicad_pcb,
+    write_kicad_sch,
 };
 #[cfg(feature = "io")]
 pub use kicad_cli::{DrcOptions, DrcReport, FabBundle, KiCadCli};

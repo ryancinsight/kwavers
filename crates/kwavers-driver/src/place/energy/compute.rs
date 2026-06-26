@@ -31,7 +31,7 @@ pub fn energy(
     // Fixed mechanical-feature keepouts (fiducials, mounting holes) as square keep-out regions the
     // annealer must keep component courtyards out of. Built from the same source as the router keepout
     // ([`block_mechanical`]) and emission, so the placer clears exactly the drilled/printed features.
-    let mech_keepouts: Vec<Rect> = crate::io::mechanical_features(w, h)
+    let mech_keepouts: Vec<Rect> = crate::geom::mechanical_features(w, h)
         .iter()
         .map(|f| {
             let r = Nm::from_mm(f.keepout_mm());

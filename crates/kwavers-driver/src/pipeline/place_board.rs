@@ -189,13 +189,13 @@ pub(super) fn block_component_bodies(
 }
 
 /// Block routing cells under every board mechanical feature (fiducials, mounting holes) on all
-/// layers, by its keepout radius. Shares [`crate::io::mechanical_features`] with emission so the
+/// layers, by its keepout radius. Shares [`crate::geom::mechanical_features`] with emission so the
 /// reserved holes are exactly the drilled holes.
 pub(super) fn block_mechanical(grid: &mut crate::route::Grid, spec: crate::geom::GridSpec) {
     use crate::route::grid::NodeId;
     let w = (spec.nx as i64 - 1) as f64 * spec.pitch.0 as f64 / 1.0e6;
     let h = (spec.ny as i64 - 1) as f64 * spec.pitch.0 as f64 / 1.0e6;
-    for f in crate::io::mechanical_features(w, h) {
+    for f in crate::geom::mechanical_features(w, h) {
         let r = Nm::from_mm(f.keepout_mm());
         let center = crate::geom::Point::new(Nm::from_mm(f.x), Nm::from_mm(f.y));
         for (ix, iy) in spec.cells_in_rect(center, r, r) {

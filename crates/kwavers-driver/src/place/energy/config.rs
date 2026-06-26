@@ -59,7 +59,7 @@ pub struct PlaceWeights {
     /// Component courtyard overlapping a fixed board mechanical-feature keepout (fiducial / mounting
     /// hole). A fiducial must sit in clear copper for pick-and-place vision and a hole must keep its
     /// barrel clear, so a part may not be floor-planned on top of one. Shares
-    /// [`crate::io::mechanical_features`] with the router keepout and emission, so the placer avoids
+    /// [`crate::geom::mechanical_features`] with the router keepout and emission, so the placer avoids
     /// exactly the features that get drilled/printed. **Default `0.0`** (opt-in): turning it on
     /// perturbs the annealer's solution, which can shift a previously-tuned dense board into new
     /// collisions, so each board opts in (`weights.mech_keepout > 0`) once its floorplan has room —

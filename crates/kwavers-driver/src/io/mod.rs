@@ -4,9 +4,9 @@
 //! format** (pcb / sch / dru / pro / project), with this `mod.rs` carrying the format-agnostic
 //! helpers that every emission kernel reaches via the `#[macro_use]` scope-inheritance trick:
 //!
-//! * `MechKind` / `MechFeature` + `mechanical_features` — the SSOT for board mechanical
-//!   features (4 corner MountingHole + 3 fiducials) shared by [`crate::io::pcb_emit`] (PCB
-//!   emission) AND by [`crate::pipeline`] (router keepout reservation).
+//! * [`crate::geom::MechKind`] / [`crate::geom::MechFeature`] + [`crate::geom::mechanical_features`]
+//!   — the SSOT for board mechanical features (4 corner MountingHole + 3 fiducials); defined in
+//!   `crate::geom` (always available) and re-exported here for use by the emission kernels.
 //! * `Uuid` — sequential, deterministic UUID generator (no clock / RNG; keeps emission
 //!   reproducible across runs).
 //! * `w!` / `wln!` macros — the `String`-buffer `format!` writer helpers used by every
@@ -109,60 +109,11 @@ pub(super) fn mm(p: i64) -> f64 {
     p as f64 * 1.0e-6
 }
 
-/// Kind of board mechanical feature (drives its emitted footprint and copper keepout radius).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum MechKind {
-    /// Pick-and-place vision target (small SMD copper dot, soldermask opening).
-    Fiducial,
-    /// Non-plated mounting hole (3.2 mm drill) for screw fixing.
-    MountingHole,
-}
-
-/// A board mechanical feature at `(x, y)` mm.
-#[derive(Debug, Clone, Copy)]
-pub struct MechFeature {
-    /// X position (mm).
-    pub x: f64,
-    /// Y position (mm).
-    pub y: f64,
-    /// Feature kind.
-    pub kind: MechKind,
-}
-
-impl MechFeature {
-    /// Copper-keepout radius (mm) the router must hold clear around the feature: the fiducial pad
-    /// plus clearance, or the mounting-hole barrel plus a washer-class annulus.
-    #[must_use]
-    pub fn keepout_mm(&self) -> f64 {
-        match self.kind {
-            MechKind::Fiducial => 1.5,
-            MechKind::MountingHole => 2.8,
-        }
-    }
-}
-
-/// The board's mechanical features (3 fiducials in an L for unambiguous orientation + 4 corner
-/// mounting holes), positioned relative to the board size `(w_mm, h_mm)` so they scale with the
-/// board. Single source of truth shared by [`crate::io::pcb_emit::write_kicad_pcb`] (emission)
-/// and the router (keepout reservation in [`crate::pipeline`]/`crate::place::energy`), so the
-/// holes the router avoids are exactly the holes that get drilled.
-#[must_use]
-pub fn mechanical_features(w_mm: f64, h_mm: f64) -> Vec<MechFeature> {
-    // Inset corners proportionally but clamped, so the features stay near the corners on a large
-    // board yet remain inside a small one.
-    let mi = (w_mm.min(h_mm) * 0.09).clamp(3.0, 8.0); // mounting-hole inset
-    let fi = mi + 3.0; // fiducials sit just inboard of the mounting holes
-    let f = |x, y, kind| MechFeature { x, y, kind };
-    vec![
-        f(mi, mi, MechKind::MountingHole),
-        f(w_mm - mi, mi, MechKind::MountingHole),
-        f(mi, h_mm - mi, MechKind::MountingHole),
-        f(w_mm - mi, h_mm - mi, MechKind::MountingHole),
-        f(fi, fi, MechKind::Fiducial),
-        f(w_mm - fi, fi, MechKind::Fiducial),
-        f(fi, h_mm - fi, MechKind::Fiducial),
-    ]
-}
+// `MechKind`, `MechFeature`, and `mechanical_features` are board geometry — they live in
+// `crate::geom` (always available, not gated on the `io` feature) and are re-exported here so
+// the emission kernels can reach them via `use super::{..., mechanical_features}` without a
+// separate `crate::geom` import.
+pub use crate::geom::{mechanical_features, MechFeature, MechKind};
 
 /// Return duplicate UUID values from a KiCad PCB text, sorted lexicographically.
 ///
