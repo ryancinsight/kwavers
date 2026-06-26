@@ -15,6 +15,10 @@
 //! * `kwavers_beam` — the driver→transducer beam-validation seam: the typed [`KwaversBeamStep`] the
 //!   `kwavers-transducer` simulator consumes, [`manifest_to_kwavers_beam_step`], the
 //!   [`KwaversBeamValidation`] prediction set, and [`validate_against_budget`].
+//! * `transmission_line` — λ/10 trace-length check ([`check_transmission_line_lengths`],
+//!   [`transmission_line_threshold_mm`], [`TransmissionLineViolation`]). Covers PCB design
+//!   article mistake #7: traces that exceed λ/10 behave as antennas and require controlled
+//!   impedance / termination.
 //!
 //! Kwavers safety bounds, `Check` names, water Z₀, and SI-prefix scalars are the single source of
 //! truth in [`crate::ssot`]; the sub-files import them from there.
@@ -22,6 +26,7 @@
 mod board_checks;
 mod check;
 mod kwavers_beam;
+mod transmission_line;
 
 #[cfg(test)]
 mod tests;
@@ -33,4 +38,7 @@ pub use board_checks::{
 pub use check::{Check, PhysicsReport};
 pub use kwavers_beam::{
     manifest_to_kwavers_beam_step, validate_against_budget, KwaversBeamStep, KwaversBeamValidation,
+};
+pub use transmission_line::{
+    check_transmission_line_lengths, transmission_line_threshold_mm, TransmissionLineViolation,
 };

@@ -175,8 +175,8 @@ pub use geom::{
 };
 #[cfg(feature = "io")]
 pub use io::{
-    duplicate_pcb_uuids, save_kicad_pcb, save_kicad_project, save_kicad_sch, write_kicad_pcb,
-    write_kicad_sch,
+    duplicate_pcb_uuids, parse_kicad_pcb, save_kicad_pcb, save_kicad_project, save_kicad_sch,
+    write_kicad_pcb, write_kicad_sch,
 };
 #[cfg(feature = "io")]
 pub use kicad_cli::{DrcOptions, DrcReport, FabBundle, KiCadCli};
@@ -231,10 +231,10 @@ pub use tr_switch::{
 };
 pub use units::{Amp, Celsius, Coulomb, Farad, Henry, Hz, Kelvin, Nm, Ohm, Volt, Watt};
 pub use validate::{
-    core_checks, group_skew_mm, manifest_to_kwavers_beam_step, microvia_aspect_check,
-    min_hv_spacing_mm, net_length_mm, validate_against_budget, via_census,
-    worst_ampacity_margin_mm, Check, KwaversBeamStep, KwaversBeamValidation, PhysicsReport,
-    ViaCensus,
+    check_transmission_line_lengths, core_checks, group_skew_mm, manifest_to_kwavers_beam_step,
+    microvia_aspect_check, min_hv_spacing_mm, net_length_mm, transmission_line_threshold_mm,
+    validate_against_budget, via_census, worst_ampacity_margin_mm, Check, KwaversBeamStep,
+    KwaversBeamValidation, PhysicsReport, TransmissionLineViolation, ViaCensus,
 };
 pub use verify::{
     assembly, bom, decoupling_proximity, erc, keepin, lvs, parasitic_ac_coupling_check,

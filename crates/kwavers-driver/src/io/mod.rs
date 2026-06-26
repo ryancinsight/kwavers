@@ -187,6 +187,10 @@ mod facade_tests {}
 // of this file into the submodule's lexical scope via Rust 2018+ scope-inheritance.
 // ============================================================================
 
+pub mod pcb_parse;
+
+pub use pcb_parse::parse_kicad_pcb;
+
 #[macro_use]
 pub mod dru_emit;
 #[macro_use]

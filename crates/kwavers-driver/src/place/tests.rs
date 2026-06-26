@@ -8,17 +8,16 @@
 //! external reviewer can grep `tests.rs` once and see the entire place-slice
 //! behaviour contract.
 //!
-//! Private parser items (`Sexpr`, `parse_sexpr`, `child`, `num`, `xyz_child`) at
-//! `crate::place::footprint_import` are exposed `pub(super)` so the byte-tracking
+//! The S-expression kernel (`Sexpr`, `parse_sexpr`, `child`, `num`, `xyz_child`) now lives at
+//! `crate::place::sexpr` (`pub(crate)`) — the SSOT shared with `io::pcb_parse`. The byte-tracking
 //! pinning tests here (`parse_sexpr_unclosed_*`,
 //! `parse_sexpr_unicode_byte_offset_differs_from_char_offset`,
 //! `imported_model_offset_is_recentered_with_pads`,
-//! `imports_model_offset_and_rotation`) reach them through the sibling-module
-//! path. No external visibility leaked.
+//! `imports_model_offset_and_rotation`) reach them via `use crate::place::sexpr::*`.
 
 use crate::board::{LayerId, NetId};
 use crate::geom::{GridSpec, Nm, Point};
-use crate::place::footprint_import::{child, parse_sexpr, xyz_child};
+use crate::place::sexpr::{child, parse_sexpr, xyz_child};
 use crate::place::{
     anneal, energy, import_kicad_mod, import_symbol_pinmap, AnnealParams, Component,
     CongestionField, FootprintDef, PadDef, PinMap, PlaceConfig, PlaceWeights, Placement, Rect,
@@ -2111,9 +2110,8 @@ fn fine_pitch_triggers_escape_and_coarse_does_not() {
 // Section C — Tests lifted from src/place/footprint_import.rs::tests
 // (sexpr parser byte-tracking pinning + realshift vendor importer tests).
 //
-// The parser's privacy lift (Sexpr + parse_sexpr + child + num + xyz_child
-// → `pub(super)` at Phase 2c) lets these tests call directly:
-//   `crate::place::footprint_import::{parse_sexpr, child, num, xyz_child, Sexpr}`.
+// The S-expression kernel (`Sexpr`, `parse_sexpr`, `child`, `num`, `xyz_child`) is now at
+// `crate::place::sexpr` (`pub(crate)`); these tests reach it via `use crate::place::sexpr::*`.
 // The DOCS path is preserved verbatim from the original inline module so the
 // committed vendor files stay the differential oracle.
 // ────────────────────────────────────────────────────────────────────────────

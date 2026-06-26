@@ -13,7 +13,7 @@
 //! needed for place-and-route and is ignored.
 //!
 //! The S-expression kernel (`Sexpr`, `parse_sexpr`, `child`, `num`, `xyz_child`) lives in
-//! [`super::sexpr`] (`pub(crate)`) so `io::pcb_parse` (a second consumer) shares the same SSOT
+//! `place::sexpr` (`pub(crate)`) so `io::pcb_parse` (a second consumer) shares the same SSOT
 //! instead of duplicating the parser.
 //!
 //! Evidence tier: value-semantic unit tests parse real vendor files committed under `docs/` and assert

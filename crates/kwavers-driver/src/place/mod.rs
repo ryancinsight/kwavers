@@ -28,6 +28,8 @@
 //!   pin-name wiring + model-recentring).
 //! * `rotation` — 4-variant ZST `Rot` marker + 3-variant `RotationPolicy` (placement rotation
 //!   freedom) and its `for_role` helper. Carved out of `footprint.rs` at Phase 2c.
+//! * `sexpr` — KiCad S-expression kernel (`Sexpr`, `parse_sexpr`, `child`, `num`, `xyz_child`)
+//!   shared by `footprint_import` and `io::pcb_parse`; `pub(crate)` SSOT for both parsers.
 //! * `symbol_import` — the `.kicad_sym` pin-name↔number-map importer.
 //! * `tests` (gated `#[cfg(test)]`) — the 55 place-slice tests collected from the previously
 //!   inline `mod tests { … }` blocks of `mod.rs`, `footprint.rs`, `footprint_import.rs`,
@@ -39,6 +41,7 @@ pub mod energy;
 pub mod footprint;
 pub mod footprint_import;
 pub mod rotation;
+pub(crate) mod sexpr;
 pub mod symbol_import;
 
 pub use anneal::{anneal, AnnealParams};
