@@ -49,6 +49,7 @@ pub enum SplitDomain {
 
 impl NetClassKind {
     /// Whether this class is a low-voltage domain (the side HV must keep creepage from).
+    #[inline]
     #[must_use]
     pub fn is_low_voltage(self) -> bool {
         matches!(
@@ -263,12 +264,14 @@ impl Board {
     }
 
     /// Electrical class of a net.
+    #[inline]
     #[must_use]
     pub fn class_of(&self, net: NetId) -> NetClassKind {
         self.nets[net.0 as usize].class
     }
 
     /// Pads belonging to a net.
+    #[inline]
     pub fn pads_of(&self, net: NetId) -> impl Iterator<Item = &Pad> {
         self.pads.iter().filter(move |p| p.net == Some(net))
     }

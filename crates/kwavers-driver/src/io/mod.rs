@@ -84,13 +84,13 @@ impl Uuid {
 
 /// KiCad copper-layer name for `LayerId(l)` on an `nlayers` stack: layer 0 = `F.Cu`, the last =
 /// `B.Cu`, inner layers = `In{l}.Cu`. Pub(super) so `pcb_emit` + `sch_emit` reach it.
-pub(super) fn layer_name(l: u16, nlayers: usize) -> String {
+pub(super) fn layer_name(l: u16, nlayers: usize) -> std::borrow::Cow<'static, str> {
     if l == 0 {
-        "F.Cu".to_string()
+        "F.Cu".into()
     } else if l as usize == nlayers - 1 {
-        "B.Cu".to_string()
+        "B.Cu".into()
     } else {
-        format!("In{l}.Cu")
+        format!("In{l}.Cu").into()
     }
 }
 

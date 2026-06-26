@@ -39,6 +39,9 @@ impl RoutingCost for PhysicsCost {
     fn node_base(&self, p: Point, layer: LayerId, class: NetClassKind) -> f64 {
         let (ix, iy) = self.spec.cell_of(p);
         let c = iy * self.spec.nx + ix;
+        // Hoist layer-dependent offset used by every per-layer penalty below.
+        let layer_idx = layer.0 as usize;
+        let lc = layer_idx * self.spec.nx * self.spec.ny + c;
         let hazard = match class {
             // HV avoids low-voltage features.
             NetClassKind::Hv => self.lv_field[c] as f64,
@@ -47,22 +50,18 @@ impl RoutingCost for PhysicsCost {
         };
         let reference_penalty = match class {
             NetClassKind::Hv | NetClassKind::Signal => {
-                let layer_idx = layer.0 as usize;
-                self.reference_field[layer_idx * self.spec.nx * self.spec.ny + c] as f64
-                    * REFERENCE_PLANE_PENALTY
+                self.reference_field[lc] as f64 * REFERENCE_PLANE_PENALTY
             }
             NetClassKind::Power | NetClassKind::Ground => 0.0,
         };
         let reference_margin_penalty = match class {
             NetClassKind::Hv | NetClassKind::Signal => {
-                let layer_idx = layer.0 as usize;
                 let budget = match class {
                     NetClassKind::Hv => self.hv_reference_margin_budget,
                     NetClassKind::Signal => self.signal_reference_margin_budget,
                     NetClassKind::Power | NetClassKind::Ground => 0.0,
                 };
-                let margin =
-                    self.reference_margin_nm[layer_idx * self.spec.nx * self.spec.ny + c] as f64;
+                let margin = self.reference_margin_nm[lc] as f64;
                 if budget > 0.0 && margin.is_finite() {
                     ((budget - margin) / budget).clamp(0.0, 1.0) * REFERENCE_MARGIN_PENALTY
                 } else {
@@ -79,28 +78,21 @@ impl RoutingCost for PhysicsCost {
         };
         let inner_ground_penalty = match class {
             NetClassKind::Hv | NetClassKind::Signal => {
-                let layer_idx = layer.0 as usize;
-                self.inner_dual_ground_field[layer_idx * self.spec.nx * self.spec.ny + c] as f64
-                    * INNER_DUAL_GROUND_PENALTY
+                self.inner_dual_ground_field[lc] as f64 * INNER_DUAL_GROUND_PENALTY
             }
             NetClassKind::Power | NetClassKind::Ground => 0.0,
         };
         let high_speed_spacing_penalty = match class {
             NetClassKind::Hv | NetClassKind::Signal => {
-                let layer_idx = layer.0 as usize;
-                self.high_speed_spacing_field[layer_idx * self.spec.nx * self.spec.ny + c] as f64
-                    * HIGH_SPEED_SPACING_PENALTY
-                    + self.high_speed_adjacent_layer_spacing_field
-                        [layer_idx * self.spec.nx * self.spec.ny + c] as f64
+                self.high_speed_spacing_field[lc] as f64 * HIGH_SPEED_SPACING_PENALTY
+                    + self.high_speed_adjacent_layer_spacing_field[lc] as f64
                         * HIGH_SPEED_SPACING_PENALTY
             }
             NetClassKind::Power | NetClassKind::Ground => 0.0,
         };
         let power_reference_penalty = match class {
             NetClassKind::Hv | NetClassKind::Signal => {
-                let layer_idx = layer.0 as usize;
-                self.power_reference_field[layer_idx * self.spec.nx * self.spec.ny + c] as f64
-                    * POWER_REFERENCE_PENALTY
+                self.power_reference_field[lc] as f64 * POWER_REFERENCE_PENALTY
             }
             NetClassKind::Power | NetClassKind::Ground => 0.0,
         };
