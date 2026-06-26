@@ -141,22 +141,30 @@ pub(crate) fn pad_entry_stubs(
             if would_violate {
                 continue;
             }
-            let layers: Vec<LayerId> = if pad.layers.len() > 1 {
-                (0..spec.nlayers)
-                    .map(|layer| LayerId(layer as u16))
-                    .collect()
+            // Thru-hole pads get a stub on every layer; SMD pads use their single layer.
+            // No intermediate Vec: push inline in each branch to avoid the heap allocation.
+            if pad.layers.len() > 1 {
+                for l in 0..spec.nlayers {
+                    board.tracks.push(Track {
+                        start: snapped,
+                        end: exact,
+                        width: track_width,
+                        layer: LayerId(l as u16),
+                        net,
+                    });
+                    added += 1;
+                }
             } else {
-                pad.layers.clone()
-            };
-            for layer in layers {
-                board.tracks.push(Track {
-                    start: snapped,
-                    end: exact,
-                    width: track_width,
-                    layer,
-                    net,
-                });
-                added += 1;
+                for &layer in &pad.layers {
+                    board.tracks.push(Track {
+                        start: snapped,
+                        end: exact,
+                        width: track_width,
+                        layer,
+                        net,
+                    });
+                    added += 1;
+                }
             }
         }
     }

@@ -14,12 +14,14 @@ pub struct Nm(pub i64);
 
 impl Nm {
     /// Construct from millimetres, rounding to the nearest nanometre.
+    #[inline]
     #[must_use]
     pub fn from_mm(mm: f64) -> Self {
         Nm((mm * 1.0e6).round() as i64)
     }
 
     /// Construct from microns, rounding to the nearest nanometre.
+    #[inline]
     #[must_use]
     pub fn from_um(um: f64) -> Self {
         Nm((um * 1.0e3).round() as i64)
@@ -27,18 +29,21 @@ impl Nm {
 
     /// Value in millimetres (f64). The escape hatch for display / emission /
     /// plotting / division by a non-`Nm` quantity.
+    #[inline]
     #[must_use]
     pub fn to_mm(self) -> f64 {
         (self.0 as f64) * 1.0e-6
     }
 
     /// Value in microns (f64).
+    #[inline]
     #[must_use]
     pub fn to_um(self) -> f64 {
         (self.0 as f64) * 1.0e-3
     }
 
     /// Absolute value.
+    #[inline]
     #[must_use]
     pub fn abs(self) -> Self {
         Nm(self.0.abs())
@@ -47,24 +52,28 @@ impl Nm {
 
 impl Add for Nm {
     type Output = Nm;
+    #[inline]
     fn add(self, rhs: Nm) -> Nm {
         Nm(self.0 + rhs.0)
     }
 }
 impl Sub for Nm {
     type Output = Nm;
+    #[inline]
     fn sub(self, rhs: Nm) -> Nm {
         Nm(self.0 - rhs.0)
     }
 }
 impl Mul<i64> for Nm {
     type Output = Nm;
+    #[inline]
     fn mul(self, rhs: i64) -> Nm {
         Nm(self.0 * rhs)
     }
 }
 impl Neg for Nm {
     type Output = Nm;
+    #[inline]
     fn neg(self) -> Nm {
         Nm(-self.0)
     }

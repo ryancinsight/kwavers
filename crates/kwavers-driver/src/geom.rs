@@ -26,18 +26,21 @@ pub struct Point {
 
 impl Point {
     /// Construct a point from two nanometre coordinates.
+    #[inline]
     #[must_use]
     pub fn new(x: Nm, y: Nm) -> Self {
         Point { x, y }
     }
 
     /// Manhattan (L1) distance to another point, in nanometres.
+    #[inline]
     #[must_use]
     pub fn manhattan(self, other: Point) -> Nm {
         (self.x - other.x).abs() + (self.y - other.y).abs()
     }
 
     /// Euclidean distance to another point, in nanometres (as `f64`).
+    #[inline]
     #[must_use]
     pub fn euclid(self, other: Point) -> f64 {
         let dx = (self.x.0 - other.x.0) as f64;
@@ -48,6 +51,7 @@ impl Point {
 
 /// Signed orientation of the triplet `(a, b, c)` (twice the signed triangle area): `>0` left turn,
 /// `<0` right turn, `0` collinear. Exact integer arithmetic (nm coordinates fit in `i128`).
+#[inline]
 #[must_use]
 pub fn orient(a: Point, b: Point, c: Point) -> i128 {
     let (ax, ay) = (a.x.0 as i128, a.y.0 as i128);
@@ -58,6 +62,7 @@ pub fn orient(a: Point, b: Point, c: Point) -> i128 {
 
 /// Whether segments `p1p2` and `p3p4` *properly* cross (intersect at an interior point of both).
 /// Shared endpoints and collinear overlap are not counted — this measures genuine lane crossings.
+#[inline]
 #[must_use]
 pub fn segments_cross(p1: Point, p2: Point, p3: Point, p4: Point) -> bool {
     let d1 = orient(p3, p4, p1);
@@ -69,6 +74,7 @@ pub fn segments_cross(p1: Point, p2: Point, p3: Point, p4: Point) -> bool {
 
 /// Euclidean distance (nm, as `f64`) from point `p` to segment `ab` — the closest approach, with
 /// the foot clamped to the segment endpoints. Degenerate (zero-length) `ab` reduces to point distance.
+#[inline]
 #[must_use]
 pub fn dist_point_seg(p: Point, a: Point, b: Point) -> f64 {
     let (ax, ay) = (a.x.0 as f64, a.y.0 as f64);
@@ -87,6 +93,7 @@ pub fn dist_point_seg(p: Point, a: Point, b: Point) -> f64 {
 /// Minimum Euclidean distance (nm, as `f64`) between segments `ab` and `cd`. Zero if they cross or
 /// touch; otherwise the smallest of the four endpoint-to-opposite-segment distances (exact for the
 /// non-crossing case, since the closest pair then involves at least one endpoint).
+#[inline]
 #[must_use]
 pub fn dist_seg_seg(a: Point, b: Point, c: Point, d: Point) -> f64 {
     if segments_cross(a, b, c, d) {

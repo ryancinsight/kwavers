@@ -23,7 +23,6 @@ pub fn widen_for_ampacity(
     let clr = min_clearance.0 as f64;
     // Conservative foreign-feature radii (board pads carry no size here): a ~0.6 mm pad ⇒ 0.3 mm.
     let pad_r = Nm::from_mm(0.3).0 as f64;
-    let tracks: Vec<Track> = board.tracks.clone();
     let plane_nets: std::collections::HashSet<u32> = board.zones.iter().map(|z| z.net.0).collect();
     let mut widened = 0;
     for i in 0..board.tracks.len() {
@@ -41,11 +40,12 @@ pub fn widen_for_ampacity(
             continue; // already adequate
         }
         // Largest half-width keeping `min_clearance` to every foreign feature on this track's layer.
-        // A foreign track may itself widen in this same pass, so reserve room for its *potential*
-        // (ampacity-target) half-width — otherwise two mutually-widening neighbours collide.
+        // A foreign track's o_target = max(ipc_min_width(o), o.width): once widened, o.width ≥
+        // ipc_min_width(o), so o_target is idempotent — iterating board.tracks directly is correct.
         let edge_half = track_edge_half_limit(board.spec, &t, edge_clearance);
         let mut max_half = edge_half;
-        for o in &tracks {
+        for j in 0..board.tracks.len() {
+            let o = board.tracks[j];
             if o.net == t.net || o.layer != t.layer {
                 continue;
             }
