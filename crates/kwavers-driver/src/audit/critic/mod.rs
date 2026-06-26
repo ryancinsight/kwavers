@@ -5,9 +5,18 @@
 //! Hotspot rasterisation and efficiency-audit helpers for the placement feedback
 //! loop are also exposed here.
 
+pub mod congestion;
+pub mod diagnostics;
+
+pub use congestion::{rasterize_hotspots, rasterize_hotspots_radius, weakness_field};
+pub use diagnostics::{
+    charge_recycling_efficiency_audit, ChargeRecyclingReport, pulse_skip_interference_audit,
+    PulseSkipInterferenceReport,
+};
+
 use crate::board::Board;
-use crate::geom::{GridSpec, Nm, Point};
-use crate::place::{CongestionField, Component, FootprintDef};
+use crate::geom::{Nm, Point};
+use crate::place::{Component, FootprintDef};
 use crate::rules::DesignRules;
 use crate::verify::{parasitic_ac_coupling_check, schematic_isolation_bfs};
 use crate::audit::fault_report::FaultReport;
@@ -384,189 +393,5 @@ pub fn audit(
             + charge_recycling_violations as f64 * 10.0
             + pulse_skip_violations as f64 * 8.0,
         hotspots,
-    }
-}
-
-/// Rasterise a set of board points into a per-column penalty field for congestion-style
-/// feedback to the next placement.
-///
-/// One hit per point in the point's cell; shared by every feedback source (geometry
-/// weaknesses, thermal hotspots, …) so they compose on one map.
-#[must_use]
-pub fn rasterize_hotspots(points: &[Point], spec: GridSpec, weight: f64) -> CongestionField {
-    let mut per_column = vec![0.0f32; spec.nx * spec.ny];
-    for &p in points {
-        let (ix, iy) = spec.cell_of(p);
-        per_column[iy * spec.nx + ix] += 1.0;
-    }
-    CongestionField {
-        spec,
-        per_column,
-        weight,
-    }
-}
-
-/// Rasterise each hotspot into a circular penalty footprint with the supplied board-space radius.
-#[must_use]
-pub fn rasterize_hotspots_radius(
-    points: &[Point],
-    spec: GridSpec,
-    radius: Nm,
-    weight: f64,
-) -> CongestionField {
-    let mut per_column = vec![0.0f32; spec.nx * spec.ny];
-    let r2 = (radius.0 as i128) * (radius.0 as i128);
-    for &p in points {
-        let (cx, cy) = spec.cell_of(p);
-        let cells = (radius.0 / spec.pitch.0).max(0) as usize + 1;
-        let y0 = cy.saturating_sub(cells);
-        let y1 = (cy + cells).min(spec.ny - 1);
-        let x0 = cx.saturating_sub(cells);
-        let x1 = (cx + cells).min(spec.nx - 1);
-        for iy in y0..=y1 {
-            for ix in x0..=x1 {
-                let q = spec.point_of(ix, iy);
-                let dx = (q.x.0 - p.x.0) as i128;
-                let dy = (q.y.0 - p.y.0) as i128;
-                if dx * dx + dy * dy <= r2 {
-                    per_column[iy * spec.nx + ix] += 1.0;
-                }
-            }
-        }
-    }
-    CongestionField {
-        spec,
-        per_column,
-        weight,
-    }
-}
-
-/// Rasterise a report's hotspots into a per-column weakness field for congestion-style
-/// feedback to the next placement (the adversary's penalty map).
-#[must_use]
-pub fn weakness_field(report: &FaultReport, spec: GridSpec, weight: f64) -> CongestionField {
-    rasterize_hotspots(&report.hotspots, spec, weight)
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// Charge-recycling efficiency audit
-// ──────────────────────────────────────────────────────────────────────────────
-
-/// Result of a charge-recycling efficiency audit.
-#[derive(Debug, Clone)]
-pub struct ChargeRecyclingReport {
-    /// Estimated fraction of dynamic loss recoverable via charge-recycling.
-    pub recovery_fraction: f64,
-    /// Dynamic loss without recycling (W) — in a 3-level driver.
-    pub loss_no_cr_w: f64,
-    /// Dynamic loss with N-level + charge-recycling (W).
-    pub loss_with_cr_w: f64,
-    /// Power saved by charge-recycling (W).
-    pub power_saved_w: f64,
-    /// Whether charge-recycling is applicable (N-level driver with CR capability).
-    pub charge_recycling_applicable: bool,
-}
-
-/// Audit the board's driver topology for charge-recycling efficiency.
-///
-/// Examines pulser IC footprints and estimates the power savings if
-/// N-level + charge-recycling drivers are used vs conventional 3-level.
-///
-/// # Errors
-///
-/// This function is infallible; it returns a report with zero savings when no
-/// N-level ICs are found or when the input power parameters are zero.
-#[must_use]
-#[allow(clippy::too_many_arguments)] // physics kernel: each argument is irreducible
-pub fn charge_recycling_efficiency_audit(
-    _board: &Board,
-    lib: &[FootprintDef],
-    n_levels: usize,
-    cr_efficiency: f64,
-    c_load_f: f64,
-    v_pp: f64,
-    freq_hz: f64,
-    duty: f64,
-) -> ChargeRecyclingReport {
-    use crate::five_level::{nlevel_dynamic_loss_w, nlevel_power_saving_w};
-
-    let p_3lv = duty * freq_hz * c_load_f * v_pp * v_pp;
-    let p_cr = nlevel_dynamic_loss_w(p_3lv, n_levels, cr_efficiency);
-    let saved = nlevel_power_saving_w(p_3lv, n_levels, cr_efficiency);
-
-    let has_nlevel_ic = lib.iter().any(|fp| {
-        let name = fp.name.to_uppercase();
-        name.contains("STHVUP32") || name.contains("MAX14815") || name.contains("MD1715")
-    });
-
-    ChargeRecyclingReport {
-        recovery_fraction: if p_3lv > 0.0 { saved / p_3lv } else { 0.0 },
-        loss_no_cr_w: p_3lv,
-        loss_with_cr_w: p_cr,
-        power_saved_w: saved,
-        charge_recycling_applicable: has_nlevel_ic && n_levels >= 5,
-    }
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// Pulse-skipping pattern interference audit
-// ──────────────────────────────────────────────────────────────────────────────
-
-/// Result of a pulse-skipping interference audit.
-#[derive(Debug, Clone)]
-pub struct PulseSkipInterferenceReport {
-    /// Pressure error fraction from pulse skipping.
-    pub pressure_error_frac: f64,
-    /// Grating-lobe level from skip pattern periodicity (0..1).
-    pub grating_lobe_level: f64,
-    /// Worst-case tonal spur (dB below carrier).
-    pub tonal_spur_dbc: f64,
-    /// Recommended maximum skip fraction.
-    pub max_skip_fraction: f64,
-    /// Whether interference is acceptable.
-    pub tolerable: bool,
-}
-
-/// Audit the board for interference from pulse-skipping patterns.
-///
-/// A random (Bernoulli) skip pattern distributes skip events uniformly
-/// across channels and time, so grating-lobe and tonal spur artifacts
-/// are negligible. This function checks those assumptions.
-///
-/// # Errors
-///
-/// This function is infallible; `tolerable` in the returned report indicates
-/// whether the computed interference level is within acceptable bounds.
-#[must_use]
-pub fn pulse_skip_interference_audit(
-    n_channels: usize,
-    pitch_m: f64,
-    lambda_m: f64,
-    skip_fraction: f64,
-    steer_deg: f64,
-    _speed_m_s: f64,
-    f_drive_hz: f64,
-) -> PulseSkipInterferenceReport {
-    use crate::pulse_skip::{
-        max_skip_spur_dbc, rms_pressure_error_fraction, skip_induced_grating_lobe,
-    };
-
-    let pressure_err = rms_pressure_error_fraction(n_channels, skip_fraction);
-    let grating_lobe =
-        skip_induced_grating_lobe(n_channels, pitch_m, lambda_m, skip_fraction, steer_deg);
-    let tonal_spur = max_skip_spur_dbc(skip_fraction, n_channels, f_drive_hz, f_drive_hz);
-
-    let max_skip = if pressure_err > 0.05 {
-        (0.05 * 0.05 * n_channels as f64).min(0.9)
-    } else {
-        skip_fraction
-    };
-
-    PulseSkipInterferenceReport {
-        pressure_error_frac: pressure_err,
-        grating_lobe_level: grating_lobe,
-        tonal_spur_dbc: tonal_spur,
-        max_skip_fraction: max_skip,
-        tolerable: pressure_err < 0.05 && grating_lobe < 0.01,
     }
 }
