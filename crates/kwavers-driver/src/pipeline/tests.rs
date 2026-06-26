@@ -71,8 +71,9 @@ fn manufacturing_clean_requires_internal_drc_lvs_and_route_status() {
 #[test]
 fn bga_balls_fan_out_via_in_pad_to_an_inner_layer() {
     // A 3×3 BGA at 1 mm pitch with two nets on two balls. `place_to_board` must drop each used
-    // ball via-in-pad to the first inner layer (a fanout via at the ball, terminal on layer 1) —
-    // so the buried balls become routable off the congested top layer.
+    // ball via-in-pad and escape it off the congested top layer; successive balls fan out
+    // **round-robin across the inner layers** (multi-layer fanout) so a dense field does not pile
+    // every escape onto one layer — here the two balls land on layers 1 and 2.
     let spec = GridSpec::cover(Nm::from_mm(20.0), Nm::from_mm(20.0), Nm::from_mm(0.5), 4).unwrap();
     let mut board = Board::new(spec);
     let a = board.add_net("A", NetClassKind::Signal);
@@ -105,13 +106,21 @@ fn bga_balls_fan_out_via_in_pad_to_an_inner_layer() {
             && v.filled),
         "standard stackup ⇒ filled through-hole (VIPPO) in pad"
     );
+    let mut esc_layers: Vec<usize> = Vec::new();
     for t in &inputs.terminals {
         for group in &t.terminal_groups {
             assert_eq!(group.len(), 1, "BGA access is the escaped inner node");
             let (_, _, layer) = spec.node_coords(group[0].0);
-            assert_eq!(layer, 1, "BGA terminal escaped to the inner layer");
+            assert!((1..4).contains(&layer), "BGA terminal escaped off the top layer");
+            esc_layers.push(layer);
         }
     }
+    esc_layers.sort_unstable();
+    assert_eq!(
+        esc_layers,
+        vec![1, 2],
+        "two balls fan out round-robin across distinct inner layers, not both onto layer 1"
+    );
 
     // HDI stackup: the same escape is a laser **micro-via in pad, plated over** (F.Cu→In1).
     let mut board2 = Board::new(spec);

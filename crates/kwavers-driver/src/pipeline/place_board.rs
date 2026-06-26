@@ -248,8 +248,22 @@ pub fn place_to_board(
     let mut terminals: HashMap<NetId, Vec<Vec<NodeId>>> = HashMap::new();
     let mut obstacles: Vec<PadObstacle> = Vec::new();
 
+    // Layers a via-in-pad escape may land its routing on. A dense fine-pitch / BGA pad field has far
+    // more nets to escape than one inner layer's channels can carry, so successive escaping pads are
+    // distributed round-robin across all non-top layers (multi-layer fanout, standard practice). This
+    // changes only the layer a net *routes* on after the fanout via — the drilled span is still set by
+    // the via policy (a through-hole barrel is full-stack regardless). One layer ⇒ no distribution.
+    let escape_layers: Vec<usize> = if spec.nlayers > 1 {
+        (1..spec.nlayers).collect()
+    } else {
+        vec![0]
+    };
+
     for c in comps {
         let fp = &lib[c.fp];
+        // Per-component escape counter so each part spreads its own fanout across the layer set,
+        // independent of how many parts came before it.
+        let mut escape_idx = 0usize;
         for (k, pad) in fp.pads.iter().enumerate() {
             let pos = c.pad_pos(lib, k);
             let net = c.nets[k];
@@ -355,7 +369,10 @@ pub fn place_to_board(
                     && rules.via_policy == crate::rules::ViaPolicy::Hdi))
                 && spec.nlayers > 1
             {
-                let inner = 1usize;
+                // Distribute this pad's escape across the inner layers (round-robin) instead of
+                // piling every fanout onto layer 1, where a dense field overruns the escape channels.
+                let inner = escape_layers[escape_idx % escape_layers.len()];
+                escape_idx += 1;
                 // A BGA/fine-pitch escape is a **via-in-pad, plated over (VIPPO)** — filled and capped
                 // so the ball pad stays solderable. Its construction follows the board's via policy:
                 // a filled through-hole on a standard stackup, a laser micro-via on an HDI stackup.
