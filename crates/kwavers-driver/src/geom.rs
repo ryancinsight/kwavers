@@ -231,6 +231,7 @@ impl GridSpec {
     }
 
     /// Nearest in-plane cell `(ix, iy)` to a board point, clamped to grid bounds.
+    #[inline]
     #[must_use]
     pub fn cell_of(&self, p: Point) -> (usize, usize) {
         let rel_x = (p.x - self.origin.x).0;
@@ -241,6 +242,7 @@ impl GridSpec {
     }
 
     /// Board-space centre of a cell.
+    #[inline]
     #[must_use]
     pub fn point_of(&self, ix: usize, iy: usize) -> Point {
         Point::new(
@@ -251,6 +253,7 @@ impl GridSpec {
 
     /// Flatten `(ix, iy, layer)` to a node index. Layout is layer-major so that all nodes of a
     /// layer are contiguous (cache-friendly plane sweeps).
+    #[inline]
     #[must_use]
     pub fn node_index(&self, ix: usize, iy: usize, layer: usize) -> usize {
         (layer * self.ny + iy) * self.nx + ix
@@ -275,6 +278,7 @@ impl GridSpec {
     }
 
     /// Inverse of [`GridSpec::node_index`].
+    #[inline]
     #[must_use]
     pub fn node_coords(&self, node: usize) -> (usize, usize, usize) {
         let layer = node / (self.nx * self.ny);

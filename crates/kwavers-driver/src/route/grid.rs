@@ -107,6 +107,7 @@ impl Grid {
     }
 
     /// Net id owning a routed node, or [`NO_OWNER`] when the node is empty.
+    #[inline]
     #[must_use]
     pub fn owner(&self, node: NodeId) -> i32 {
         self.owner[node.0]
@@ -149,6 +150,7 @@ impl Grid {
     }
 
     /// In-plane column index `iy*nx + ix` of a node.
+    #[inline]
     #[must_use]
     pub fn column_of(&self, node: NodeId) -> usize {
         let (ix, iy, _) = self.spec.node_coords(node.0);
@@ -156,6 +158,7 @@ impl Grid {
     }
 
     /// The net owning a via in a node's column, or [`NO_VIA`].
+    #[inline]
     #[must_use]
     pub fn via_owner(&self, node: NodeId) -> i32 {
         self.via_owner[self.column_of(node)]
@@ -205,12 +208,14 @@ impl Grid {
     }
 
     /// Record that `net` placed a via in this node's column.
+    #[inline]
     pub fn set_via(&mut self, node: NodeId, net: i32) {
         let c = self.column_of(node);
         self.via_owner[c] = net;
     }
 
     /// Clear a via record from a node's column.
+    #[inline]
     pub fn clear_via(&mut self, node: NodeId) {
         let c = self.column_of(node);
         self.via_owner[c] = NO_VIA;
@@ -271,18 +276,21 @@ impl Grid {
     }
 
     /// Current occupancy of a node.
+    #[inline]
     #[must_use]
     pub fn occupancy(&self, node: NodeId) -> u16 {
         self.occ[node.0]
     }
 
     /// Over-capacity amount of a node (`0` when legal).
+    #[inline]
     #[must_use]
     pub fn overuse(&self, node: NodeId) -> u16 {
         self.occ[node.0].saturating_sub(CAPACITY)
     }
 
     /// History cost accumulated on a node.
+    #[inline]
     #[must_use]
     pub fn history(&self, node: NodeId) -> f32 {
         self.hist[node.0]
@@ -290,6 +298,7 @@ impl Grid {
 
     /// Claim one unit of a node for `net`, recording it as the node's owner (for width-aware
     /// clearance — a foreign net's copper within the halo of this node then registers as a violation).
+    #[inline]
     pub fn claim(&mut self, node: NodeId, net: i32) {
         self.occ[node.0] += 1;
         self.owner[node.0] = net;
@@ -297,6 +306,7 @@ impl Grid {
 
     /// Release one unit of a node previously claimed; clears ownership once the node is empty so a
     /// stale owner cannot keep repelling foreign copper from a freed cell.
+    #[inline]
     pub fn release(&mut self, node: NodeId) {
         self.occ[node.0] = self.occ[node.0].saturating_sub(1);
         if self.occ[node.0] == 0 {
@@ -305,6 +315,7 @@ impl Grid {
     }
 
     /// Add `delta` to a node's history cost (called once per iteration on over-used nodes).
+    #[inline]
     pub fn bump_history(&mut self, node: NodeId, delta: f32) {
         self.hist[node.0] += delta;
     }
