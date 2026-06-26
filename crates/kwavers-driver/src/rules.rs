@@ -230,8 +230,8 @@ pub struct DesignRules {
     pub min_signal_via_return_count: usize,
     /// Minimum acceptable dielectric grade for decoupling capacitors (TI SLYP173 §5-17/5-20).
     /// Caps with a grade worse than this are flagged by `detect_cap_dielectric_grade_violations`.
-    /// Default [`DielectricGrade::X7r`] flags Z5U and Y5V; set to [`DielectricGrade::Unknown`]
-    /// to make the check vacuous (skip all grade checks).
+    /// Default `X7r` flags Z5U and Y5V; set to
+    /// [`crate::place::footprint::DielectricGrade::Unknown`] to make the check vacuous.
     pub min_decoupling_cap_grade: crate::place::footprint::DielectricGrade,
 }
 

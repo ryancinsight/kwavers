@@ -41,7 +41,7 @@ pub enum DielectricGrade {
 impl DielectricGrade {
     /// `true` if this grade meets or exceeds `min_required`.
     ///
-    /// [`Unknown`] is always accepted (no grade information → vacuous pass). The ordering is
+    /// `Unknown` is always accepted (no grade information → vacuous pass). The ordering is
     /// `Cog (4) ≥ X7r (3) ≥ Z5u (2) ≥ Y5v (1)`; `Unknown` (0) bypasses the check.
     #[must_use]
     pub fn meets_minimum(self, min_required: Self) -> bool {
@@ -65,7 +65,7 @@ impl DielectricGrade {
 /// Physical package form factor of a component.
 ///
 /// Through-hole/leaded packages carry higher lead inductance than SMT equivalents (TI
-/// SLYP173 §5-20/5-21, §5-30). The default [`Unknown`] leaves the check vacuous.
+/// SLYP173 §5-20/5-21, §5-30). The default [`PackageFormFactor::Unknown`] leaves the check vacuous.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum PackageFormFactor {
     /// Unknown or unspecified; through-hole check is vacuous for this component.
