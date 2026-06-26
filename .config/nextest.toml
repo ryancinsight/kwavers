@@ -69,7 +69,7 @@ heavy-sim = { max-threads = 2 }
 # solver over real grid dimensions.  The 60 s default is insufficient; 90 s is
 # the upper bound.  max-threads=1 prevents inter-test rayon oversubscription.
 [[profile.default.overrides]]
-filter = 'test(abdominal_preprocessing_selects_one_connected_treatment_component) | test(abdominal_theranostic_inverse_recovers_lesion_support) | test(abdominal_preprocessing_keeps_external_skin_between_target_and_aperture) | test(brain_focused_bowl_layout_uses_requested_element_count) | test(recovers_stiff_inclusion) | test(fwi_outperforms_linear_inversion) | test(lbfgs_reconstructs_stiff_inclusion)'
+filter = 'test(abdominal_preprocessing_selects_one_connected_treatment_component) | test(abdominal_theranostic_inverse_recovers_lesion_support) | test(abdominal_preprocessing_keeps_external_skin_between_target_and_aperture) | test(brain_focused_bowl_layout_uses_requested_element_count) | test(recovers_stiff_inclusion) | test(fwi_outperforms_linear_inversion) | test(lbfgs_reconstructs_stiff_inclusion) | test(k_mu_gradient_3d_is_valid_descent_direction)'
 test-group = 'elastic-fwi'
 slow-timeout = { period = "90s", terminate-after = 1, grace-period = "10s" }
 
@@ -84,7 +84,7 @@ filter = 'test(/integration/)'
 test-group = 'integration'
 
 [[profile.ci.overrides]]
-filter = 'test(abdominal_preprocessing_selects_one_connected_treatment_component) | test(abdominal_theranostic_inverse_recovers_lesion_support) | test(abdominal_preprocessing_keeps_external_skin_between_target_and_aperture) | test(brain_focused_bowl_layout_uses_requested_element_count) | test(recovers_stiff_inclusion) | test(fwi_outperforms_linear_inversion) | test(lbfgs_reconstructs_stiff_inclusion)'
+filter = 'test(abdominal_preprocessing_selects_one_connected_treatment_component) | test(abdominal_theranostic_inverse_recovers_lesion_support) | test(abdominal_preprocessing_keeps_external_skin_between_target_and_aperture) | test(brain_focused_bowl_layout_uses_requested_element_count) | test(recovers_stiff_inclusion) | test(fwi_outperforms_linear_inversion) | test(lbfgs_reconstructs_stiff_inclusion) | test(k_mu_gradient_3d_is_valid_descent_direction)'
 test-group = 'elastic-fwi'
 slow-timeout = { period = "90s", terminate-after = 1, grace-period = "10s" }
 

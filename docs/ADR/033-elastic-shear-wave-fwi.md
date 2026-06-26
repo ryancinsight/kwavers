@@ -176,17 +176,27 @@ clamped to a physical `[μ_min, μ_max]`.
    interior loops `1..nz-1` are empty for `nz = 1`). Both fixed with singleton-axis
    guards + regression tests, so shear-wave elastography — conventionally a 2-D
    imaging plane — now inverts correctly in 2-D.
-5. **PARTIAL — PyO3 binding + L-BFGS DONE; optimal checkpointing, 3-D, joint
-   `λ/ρ` deferred.** `pykwavers.elastic_shear_fwi_reconstruct` (thin layer over
-   `reconstruct_lesion_transmission`) exposes the inversion to Python with a
-   binding-surface pytest; the acquisition setup is consolidated in
-   `elastic_fwi::acquisition`, shared by the example and the binding.
-   `ElasticFwi::run_lbfgs` adds the quasi-Newton optimizer (reusing
-   `kwavers_math::LbfgsMemory`, mirroring the acoustic `invert_lbfgs`): it uses
-   the **true** gradient `∂J/∂μ` (raw `K_μ` + regularization, no preconditioner —
-   the inverse-Hessian subsumes that role) for a valid Armijo line search, and
-   recovers the stiff inclusion in ~7 s vs the steepest-descent ~17–40 s
-   (`lbfgs_reconstructs_stiff_inclusion`).
+5. **PARTIAL — PyO3 binding + L-BFGS + 3-D DONE; optimal checkpointing, joint
+   `λ/ρ` deferred.**
+   - **PyO3 binding**: `pykwavers.elastic_shear_fwi_reconstruct` (thin layer over
+     `reconstruct_lesion_transmission`) with a binding-surface pytest; acquisition
+     setup consolidated in `elastic_fwi::acquisition`, shared by example + binding.
+   - **L-BFGS**: `ElasticFwi::run_lbfgs` (reuses `kwavers_math::LbfgsMemory`,
+     mirrors the acoustic `invert_lbfgs`) uses the **true** gradient `∂J/∂μ` (raw
+     `K_μ` + regularization, no preconditioner — the inverse-Hessian subsumes that
+     role) for a valid Armijo line search; recovers the inclusion in ~7 s vs the
+     steepest-descent ~17–40 s (`lbfgs_reconstructs_stiff_inclusion`).
+   - **3-D**: `k_mu_kernel` generalized to the full 3-D strain cross-correlation
+     (the `zz`/`xz`/`yz` terms; `ddz`; `ForceAxis::Z`; 3-D mute) — it reduces to
+     the 2-D form for `nz = 1`, so the 2-D tests are unchanged. The 3-D gradient is
+     a validated descent direction (`k_mu_gradient_3d_is_valid_descent_direction`,
+     κ > 0 stable). Full 3-D *convergence* to a sharp sphere is slower (≈4.5× more
+     unknowns) and is an iteration-budget matter, not a correctness one.
+   - **Deferred**: optimal checkpointing (the `O(n_t·N)` full-history adjoint is
+     fine at present sizes — YAGNI until a memory problem appears), joint `λ/ρ`
+     (the `K_λ`/`K_ρ` kernels of §2; `μ`-only is the lesion-stiffness use case),
+     and a 3-D TV regularizer (the current TV is the `k = 0` plane only; opt-in,
+     default off).
 
 The book Ch26 §26 / Ch11 §11.14 "not implemented" disclosures are updated to point
 at the real module (`inverse::elastography::elastic_fwi`).

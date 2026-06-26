@@ -13,13 +13,15 @@ use ndarray::Array3;
 use super::{ElasticFwi, ElasticFwiConfig};
 use crate::forward::elastic::swe::{ElasticPointForce, ElasticWaveConfig, ElasticWaveSolver};
 
-/// In-plane force component for [`ricker_point_force`].
+/// Force component for [`ricker_point_force`].
 #[derive(Clone, Copy)]
 pub enum ForceAxis {
     /// Force along x.
     X,
     /// Force along y.
     Y,
+    /// Force along z.
+    Z,
 }
 
 /// A Ricker (Mexican-hat) point force at `index` along `axis`, amplitude `amp`
@@ -43,6 +45,7 @@ pub fn ricker_point_force(
         match axis {
             ForceAxis::X => f.fx[n] = v,
             ForceAxis::Y => f.fy[n] = v,
+            ForceAxis::Z => f.fz[n] = v,
         }
     }
     f

@@ -29,8 +29,7 @@ impl ElasticFwi {
         let adj_forces = build_adjoint_forces(&residual, &self.config.receivers, n);
         let adj = self.solver.propagate_point_forces(n, dt, &adj_forces)?;
 
-        let (dx, dy, _dz) = self.grid_spacing;
-        let (grad, illum) = k_mu_kernel(&fwd, &adj, dt, dx, dy);
+        let (grad, illum) = k_mu_kernel(&fwd, &adj, dt, self.grid_spacing);
         Ok((j, grad, illum))
     }
 
@@ -82,7 +81,7 @@ impl ElasticFwi {
         if r == 0 {
             return;
         }
-        let (nx, ny, _nz) = grad.dim();
+        let (nx, ny, nz) = grad.dim();
         let r2 = (r * r) as i64;
         let centers = self
             .config
@@ -90,13 +89,16 @@ impl ElasticFwi {
             .iter()
             .copied()
             .chain(self.config.source.iter().map(|f| f.index));
-        for (ci, cj, _ck) in centers {
+        for (ci, cj, ck) in centers {
             for i in 0..nx {
                 for j in 0..ny {
-                    let di = i as i64 - ci as i64;
-                    let dj = j as i64 - cj as i64;
-                    if di * di + dj * dj <= r2 {
-                        grad[[i, j, 0]] = 0.0;
+                    for k in 0..nz {
+                        let di = i as i64 - ci as i64;
+                        let dj = j as i64 - cj as i64;
+                        let dk = k as i64 - ck as i64;
+                        if di * di + dj * dj + dk * dk <= r2 {
+                            grad[[i, j, k]] = 0.0;
+                        }
                     }
                 }
             }
@@ -144,26 +146,32 @@ fn build_adjoint_forces(
 
 /// Shear-modulus sensitivity kernel (Tromp, Tape & Liu 2005; Köhn 2011):
 ///
-/// `K_μ(x) = −∫₀ᵀ Σ_ij (∂_i u_j + ∂_j u_i)_fwd (∂_i u_j + ∂_j u_i)_adj dt`.
+/// `K_μ(x) = −∫₀ᵀ Σ_ij (∂_i u_j + ∂_j u_i)_fwd (∂_i u_j + ∂_j u_i)_adj dt`,
+///
+/// the full 3-D strain cross-correlation
+///
+/// `S = 4(ε_xx^f ε_xx^a + ε_yy^f ε_yy^a + ε_zz^f ε_zz^a)
+///    + 2(γ_xy^f γ_xy^a + γ_xz^f γ_xz^a + γ_yz^f γ_yz^a)`
+///
+/// with `ε_ii = ∂_i u_i` and `γ_ij = ∂_i u_j + ∂_j u_i` (`f` = forward, `a` =
+/// adjoint). For 2-D plane strain (`nz = 1`) the out-of-plane displacement and
+/// every `∂_z` vanish, so the `zz`, `xz`, `yz` terms drop and `S` reduces to the
+/// in-plane form — the 3-D kernel subsumes the 2-D case exactly.
 ///
 /// `adj` is in reverse time order (forward-run adjoint), so the adjoint field at
-/// physical step `n` is `adj[N−1−n]`. For 2-D plane strain (`nz = 1`) the
-/// out-of-plane displacement and all `∂_z` vanish, leaving the in-plane sum
-///
-/// `S = 4 ∂_x u_x ∂_x w_x + 4 ∂_y u_y ∂_y w_y + 2(∂_x u_y + ∂_y u_x)(∂_x w_y + ∂_y w_x)`
-///
-/// where `u = u_fwd`, `w = u_adj`. Spatial derivatives use second-order central
-/// differences (zero at the grid boundary, inside the PML).
+/// physical step `n` is `adj[N−1−n]`. Spatial derivatives use second-order
+/// central differences (zero at the grid boundary, inside the PML). The second
+/// returned array is the forward strain-energy (pseudo-Hessian diagonal /
+/// illumination): the same auto-correlation with `f` in both slots.
 fn k_mu_kernel(
     fwd: &[ElasticWaveField],
     adj: &[ElasticWaveField],
     dt: f64,
-    dx: f64,
-    dy: f64,
+    (dx, dy, dz): (f64, f64, f64),
 ) -> (Array3<f64>, Array3<f64>) {
     let n = fwd.len();
     let dim = fwd[0].ux.dim();
-    let (nx, ny, _nz) = dim;
+    let (nx, ny, nz) = dim;
     let mut grad = Array3::<f64>::zeros(dim);
     let mut illum = Array3::<f64>::zeros(dim);
 
@@ -172,55 +180,67 @@ fn k_mu_kernel(
         let ua = &adj[n - 1 - step];
         for i in 0..nx {
             for j in 0..ny {
-                let dx_uxf = ddx(&uf.ux, i, j, nx, dx);
-                let dy_uyf = ddy(&uf.uy, i, j, ny, dy);
-                let dx_uyf = ddx(&uf.uy, i, j, nx, dx);
-                let dy_uxf = ddy(&uf.ux, i, j, ny, dy);
+                for k in 0..nz {
+                    // Forward strains.
+                    let exx_f = ddx(&uf.ux, i, j, k, nx, dx);
+                    let eyy_f = ddy(&uf.uy, i, j, k, ny, dy);
+                    let ezz_f = ddz(&uf.uz, i, j, k, nz, dz);
+                    let gxy_f = ddx(&uf.uy, i, j, k, nx, dx) + ddy(&uf.ux, i, j, k, ny, dy);
+                    let gxz_f = ddx(&uf.uz, i, j, k, nx, dx) + ddz(&uf.ux, i, j, k, nz, dz);
+                    let gyz_f = ddy(&uf.uz, i, j, k, ny, dy) + ddz(&uf.uy, i, j, k, nz, dz);
+                    // Adjoint strains.
+                    let exx_a = ddx(&ua.ux, i, j, k, nx, dx);
+                    let eyy_a = ddy(&ua.uy, i, j, k, ny, dy);
+                    let ezz_a = ddz(&ua.uz, i, j, k, nz, dz);
+                    let gxy_a = ddx(&ua.uy, i, j, k, nx, dx) + ddy(&ua.ux, i, j, k, ny, dy);
+                    let gxz_a = ddx(&ua.uz, i, j, k, nx, dx) + ddz(&ua.ux, i, j, k, nz, dz);
+                    let gyz_a = ddy(&ua.uz, i, j, k, ny, dy) + ddz(&ua.uy, i, j, k, nz, dz);
 
-                let dx_uxa = ddx(&ua.ux, i, j, nx, dx);
-                let dy_uya = ddy(&ua.uy, i, j, ny, dy);
-                let dx_uya = ddx(&ua.uy, i, j, nx, dx);
-                let dy_uxa = ddy(&ua.ux, i, j, ny, dy);
-
-                let shear_f = dx_uyf + dy_uxf;
-                let shear_a = dx_uya + dy_uxa;
-                // Forward strain-energy (pseudo-Hessian diagonal): the f·f
-                // auto-correlation with the same operator weights as the kernel.
-                illum[[i, j, 0]] += dt
-                    * 4.0f64.mul_add(
-                        dx_uxf * dx_uxf,
-                        2.0f64.mul_add(shear_f * shear_f, 4.0 * dy_uyf * dy_uyf),
+                    illum[[i, j, k]] += dt
+                        * 2.0f64.mul_add(
+                            gxy_f.mul_add(gxy_f, gxz_f.mul_add(gxz_f, gyz_f * gyz_f)),
+                            4.0 * exx_f.mul_add(exx_f, eyy_f.mul_add(eyy_f, ezz_f * ezz_f)),
+                        );
+                    let s = 4.0f64.mul_add(
+                        exx_f.mul_add(exx_a, eyy_f.mul_add(eyy_a, ezz_f * ezz_a)),
+                        2.0 * gxy_f.mul_add(gxy_a, gxz_f.mul_add(gxz_a, gyz_f * gyz_a)),
                     );
-                let s = 4.0 * dx_uxf * dx_uxa + 4.0 * dy_uyf * dy_uya + 2.0 * shear_f * shear_a;
-                // `K_μ = −∫ S dt` (ADR 033 §2). With the adjoint source taken as
-                // the raw residual (d_syn − d_obs) injected as a body force and
-                // the forward-run reverse-time adjoint, the directional gradient
-                // check `k_mu_gradient_is_valid_descent_direction` confirms this
-                // minus sign yields κ = (g·δ)/FD ≈ +1.4 (stable, positive across
-                // spatial bands) — a valid descent direction. κ ≠ 1 is the
-                // expected approximate-adjoint deviation (PML + velocity-Verlet
-                // are not an exact discrete self-adjoint pair; ADR §Verification).
-                grad[[i, j, 0]] -= dt * s;
+                    // `K_μ = −∫ S dt` (ADR 033 §2). The minus sign yields a valid
+                    // descent direction (κ ≈ +1.4, stable) per the directional
+                    // gradient check; κ ≠ 1 is the approximate-adjoint deviation
+                    // (PML + velocity-Verlet are not an exact self-adjoint pair).
+                    grad[[i, j, k]] -= dt * s;
+                }
             }
         }
     }
     (grad, illum)
 }
 
-/// Second-order central difference along x at `(i, j, 0)`; zero at the x-edges.
+/// Second-order central difference along x at `(i, j, k)`; zero at the x-edges.
 #[inline]
-fn ddx(a: &Array3<f64>, i: usize, j: usize, nx: usize, dx: f64) -> f64 {
+fn ddx(a: &Array3<f64>, i: usize, j: usize, k: usize, nx: usize, dx: f64) -> f64 {
     if i == 0 || i + 1 >= nx {
         return 0.0;
     }
-    (a[[i + 1, j, 0]] - a[[i - 1, j, 0]]) / (2.0 * dx)
+    (a[[i + 1, j, k]] - a[[i - 1, j, k]]) / (2.0 * dx)
 }
 
-/// Second-order central difference along y at `(i, j, 0)`; zero at the y-edges.
+/// Second-order central difference along y at `(i, j, k)`; zero at the y-edges.
 #[inline]
-fn ddy(a: &Array3<f64>, i: usize, j: usize, ny: usize, dy: f64) -> f64 {
+fn ddy(a: &Array3<f64>, i: usize, j: usize, k: usize, ny: usize, dy: f64) -> f64 {
     if j == 0 || j + 1 >= ny {
         return 0.0;
     }
-    (a[[i, j + 1, 0]] - a[[i, j - 1, 0]]) / (2.0 * dy)
+    (a[[i, j + 1, k]] - a[[i, j - 1, k]]) / (2.0 * dy)
+}
+
+/// Second-order central difference along z at `(i, j, k)`; zero at the z-edges
+/// (so a singleton `nz = 1` axis contributes no out-of-plane derivative).
+#[inline]
+fn ddz(a: &Array3<f64>, i: usize, j: usize, k: usize, nz: usize, dz: f64) -> f64 {
+    if k == 0 || k + 1 >= nz {
+        return 0.0;
+    }
+    (a[[i, j, k + 1]] - a[[i, j, k - 1]]) / (2.0 * dz)
 }

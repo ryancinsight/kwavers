@@ -660,7 +660,7 @@ reproduce a perfectly sharp step).
 ![Elastic shear-wave FWI reconstruction of a stiff lesion: true shear modulus (left), FWI reconstruction (centre), and a profile through the lesion centre (right).](figures/ch10/fig07_elastic_fwi_lesion.pdf)
 
 Implementation: `kwavers_solver::inverse::elastography::elastic_fwi::ElasticFwi`
-(μ-only, 2-D; ADR 033), the full-waveform refinement of `ShearWaveInversion`. The
+(μ-only, 2-D & 3-D; ADR 033), the full-waveform refinement of `ShearWaveInversion`. The
 convenience entry point `reconstruct_lesion_transmission` builds the four-side
 acquisition, synthesises the data, and runs the inversion; it is exposed to Python
 as `pykwavers.elastic_shear_fwi_reconstruct(mu_true_pa, dx, rho, c_s, c_p, …)`. The
@@ -1361,7 +1361,7 @@ kwavers_solver::inverse::elastography::linear_methods
 kwavers_solver::inverse::elastography::elastic_fwi
 └── ElasticFwi                   — adjoint-state full-waveform inversion of μ (ADR 033)
     ├── forward_misfit() / run()              — forward → residual → adjoint → K_μ → line search
-    └── K_μ strain cross-correlation kernel   — Tromp 2005 / Köhn 2011 (μ-only, 2-D)
+    └── K_μ strain cross-correlation kernel   — Tromp 2005 / Köhn 2011 (μ-only; 2-D & 3-D)
     The full-waveform refinement of ShearWaveInversion: it fits the entire shear
     waveform (resolving sub-wavelength stiffness contrast), where the linear methods
     resolve only a smooth c_S map. Higher cost; the linear methods stay the default.

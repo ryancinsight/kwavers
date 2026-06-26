@@ -445,6 +445,135 @@ fn pearson(a: &[f64], b: &[f64]) -> f64 {
     cov / (va.sqrt() * vb.sqrt())
 }
 
+/// ADR-033 increment 5: the **3-D** `K_μ` kernel is correct. On a 3-D cube with a
+/// localized stiffness bump, the gradient (which now includes the out-of-plane
+/// `zz`/`xz`/`yz` strain terms that vanish in 2-D) is a valid descent direction —
+/// its directional derivative agrees in sign with a central finite difference,
+/// with κ stable across spatial bands. This validates the 3-D physics directly;
+/// full 3-D convergence to a sharp sphere is a separate (iteration-bound) matter.
+#[test]
+fn k_mu_gradient_3d_is_valid_descent_direction() {
+    use super::acquisition::{ricker_point_force, ForceAxis};
+
+    let n = 16usize;
+    let g = Grid::new(n, n, n, DX, DX, DX).expect("3-D grid");
+    let m = medium(&g);
+
+    // True model: a localized stiffness bump so the residual (hence gradient) is
+    // non-trivial; the gradient is evaluated at the uniform background.
+    let mut mu_true = Array3::from_elem(g.dimensions(), MU_BG);
+    for i in 6..10 {
+        for j in 6..10 {
+            for k in 6..10 {
+                mu_true[[i, j, k]] = 1.6 * MU_BG;
+            }
+        }
+    }
+
+    let swe3d = || ElasticWaveConfig {
+        time_step: 0.0,
+        save_every: 1,
+        pml_thickness: 4,
+        ..ElasticWaveConfig::default()
+    };
+    let n_steps = 110;
+    let dt = {
+        let mut s = ElasticWaveSolver::new(&g, &m, swe3d()).expect("s");
+        s.set_mu(&Array3::from_elem(g.dimensions(), 1.6 * MU_BG))
+            .expect("set");
+        s.recommended_timestep(0.3)
+    };
+
+    // Three-direction transmission (one source line per axis) — enough to make
+    // the bump observable; avoids the standing-wave interference of opposite-face
+    // coherent sources.
+    let (lo, hi) = (5usize, 11usize);
+    let probes = [6usize, 8, 10];
+    let mut sources = Vec::new();
+    let mut receivers = Vec::new();
+    for &a in &probes {
+        for &b in &probes {
+            sources.push(ricker_point_force(
+                (lo, a, b),
+                n_steps,
+                dt,
+                300.0,
+                1.0e7,
+                ForceAxis::Y,
+            ));
+            receivers.push((hi, a, b));
+            sources.push(ricker_point_force(
+                (a, lo, b),
+                n_steps,
+                dt,
+                300.0,
+                1.0e7,
+                ForceAxis::Z,
+            ));
+            receivers.push((a, hi, b));
+            sources.push(ricker_point_force(
+                (a, b, lo),
+                n_steps,
+                dt,
+                300.0,
+                1.0e7,
+                ForceAxis::X,
+            ));
+            receivers.push((a, b, hi));
+        }
+    }
+
+    let mu0 = Array3::from_elem(g.dimensions(), MU_BG);
+    let mut cfg = ElasticFwiConfig::new(n_steps, dt, receivers, sources);
+    cfg.mute_radius = 0; // check the raw kernel gradient (muting is an inversion aid)
+    let observed = ElasticFwi::synthesize_observed(&g, swe3d(), &m, &mu_true, &cfg).expect("synth");
+    let mut fwi = ElasticFwi::new(&g, swe3d(), &m, mu0.clone(), observed, cfg).expect("fwi");
+
+    let (_j, grad) = fwi.data_misfit_and_gradient(&mu0).expect("gradient");
+
+    // Directional-derivative descent check along the gradient, split into three
+    // disjoint x-bands → three independent probe directions (see the 2-D analogue).
+    let bands = [(4usize, 8usize), (8, 11), (11, 13)];
+    let ginf = grad.iter().fold(0.0_f64, |mm, &v| mm.max(v.abs()));
+    let eps = 0.05 * MU_BG / ginf;
+    let mut kappas = Vec::new();
+    for &(blo, bhi) in &bands {
+        let mut delta = Array3::<f64>::zeros(g.dimensions());
+        let mut analytic = 0.0;
+        for i in blo..bhi.min(n) {
+            for j in 4..12 {
+                for k in 4..12 {
+                    let gv = grad[[i, j, k]];
+                    delta[[i, j, k]] = gv;
+                    analytic += gv * gv;
+                }
+            }
+        }
+        let mut mu_p = mu0.clone();
+        let mut mu_m = mu0.clone();
+        ndarray::Zip::from(&mut mu_p)
+            .and(&delta)
+            .for_each(|mm, &d| *mm += eps * d);
+        ndarray::Zip::from(&mut mu_m)
+            .and(&delta)
+            .for_each(|mm, &d| *mm -= eps * d);
+        let fd = (fwi.forward_misfit(&mu_p).expect("J+") - fwi.forward_misfit(&mu_m).expect("J-"))
+            / (2.0 * eps);
+        kappas.push(analytic / fd);
+    }
+
+    let kmin = kappas.iter().cloned().fold(f64::INFINITY, f64::min);
+    let kmax = kappas.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+    assert!(
+        kmin > 0.0,
+        "3-D gradient is not a descent direction in every band: κ = {kappas:?}"
+    );
+    assert!(
+        kmax / kmin < 6.0,
+        "3-D κ spread too large across directions: {kappas:?}"
+    );
+}
+
 /// ADR-033 increment 5: the L-BFGS optimizer reconstructs the stiff inclusion —
 /// substantial misfit reduction, correct contrast, preserved background — the
 /// faster-converging alternative to steepest descent. Validates `run_lbfgs`.
