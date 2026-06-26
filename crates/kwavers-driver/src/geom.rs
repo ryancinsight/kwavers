@@ -192,7 +192,10 @@ pub struct GridSpec {
 impl GridSpec {
     /// Build a grid spec covering `[0, width] x [0, height]` with the given pitch and layer count.
     ///
-    /// Returns [`crate::error::Geometry::EmptyGrid`] if the resulting cell count is zero on any axis.
+    /// # Errors
+    ///
+    /// Returns [`crate::error::Geometry::EmptyGrid`] when `pitch ≤ 0`, `nlayers == 0`, or the
+    /// computed cell count on either axis is zero.
     pub fn cover(width: Nm, height: Nm, pitch: Nm, nlayers: usize) -> crate::Result<Self> {
         let nx = (width.0 / pitch.0).max(0) as usize + 1;
         let ny = (height.0 / pitch.0).max(0) as usize + 1;

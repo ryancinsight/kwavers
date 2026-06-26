@@ -94,6 +94,17 @@ impl DriverManifest {
 
     /// Parse deterministic key-value text. Accepts v1 (no stimulation block) and v2
     /// (with `stim_*` keys) for backwards compatibility.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err(String)` when:
+    /// - any line lacks a `=` separator
+    /// - `format` is missing or is not a recognised version tag
+    /// - a required key is absent
+    /// - a numeric key cannot be parsed as `f64`
+    /// - both `stim_tile_*` and legacy `stim_*` keys are present (mixed-schema guard)
+    /// - the tile sequence has a gap (partial-tile-form guard)
+    /// - `tx_nets` is empty
     pub fn from_text(text: &str) -> Result<Self, String> {
         let mut map = std::collections::BTreeMap::new();
         for line in text.lines().filter(|l| !l.trim().is_empty()) {
@@ -228,6 +239,11 @@ impl DriverManifest {
     }
 
     /// Read a manifest from disk.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err(String)` when the file cannot be read (`std::io::Error`), or when
+    /// [`Self::from_text`] fails on the file contents.
     pub fn read(path: &Path) -> Result<Self, String> {
         let text = std::fs::read_to_string(path)
             .map_err(|e| format!("failed to read {}: {e}", path.display()))?;

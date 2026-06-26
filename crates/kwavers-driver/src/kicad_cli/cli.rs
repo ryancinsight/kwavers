@@ -49,6 +49,11 @@ pub struct DrcOptions {
 
 impl KiCadCli {
     /// Locate the binary; return an error string naming the searched paths when none is found.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err(String)` when `kicad-cli` is absent from `PATH` and none of the
+    /// default probe paths (`DEFAULT_PROBE_PATHS`) exist on the filesystem.
     pub fn locate() -> Result<Self, String> {
         if let Ok(p) = locate_on_path("kicad-cli") {
             return Ok(Self { path: p });
@@ -91,12 +96,22 @@ impl KiCadCli {
     /// Run **design-rule check** with JSON output to a temp file. Parses the JSON for violation,
     /// unconnected_items and warning counts; the full text is retained in [`DrcReport::raw_json`]
     /// so callers can produce pretty diagnostics for any non-zero count.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err(String)` when the `kicad-cli pcb drc` process fails to spawn, exits
+    /// non-zero, or the JSON report cannot be read back from the temp file.
     pub fn drc(&self, pcb: &Path) -> Result<DrcReport, String> {
         let tmp = std::env::temp_dir().join("kicad-routing-drc.json");
         self.drc_to(pcb, &tmp)
     }
 
     /// Run design-rule check and persist the KiCad JSON report at `out_json`.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err(String)` when either path is non-UTF-8, the `kicad-cli` subprocess exits
+    /// non-zero, or the JSON report file cannot be read after the run.
     pub fn drc_to(&self, pcb: &Path, out_json: &Path) -> Result<DrcReport, String> {
         self.drc_to_with_options(pcb, out_json, DrcOptions::default())
     }
@@ -132,6 +147,11 @@ impl KiCadCli {
 
     /// Render the board as a PNG (top + side views by default). The renderer path string is logged
     /// so the caller can decide which one to ship to the fab bundle.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err(String)` when either path is non-UTF-8, or the `kicad-cli pcb render`
+    /// subprocess fails to spawn or exits non-zero.
     pub fn render(&self, pcb: &Path, out_png: &Path) -> Result<(), String> {
         let pcb_str = pcb
             .to_str()
@@ -215,6 +235,11 @@ impl KiCadCli {
     }
 
     /// Print the kicad-cli version (useful diagnostic when a vendor install misbehaves).
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err(String)` when the `kicad-cli version` subprocess fails to spawn or
+    /// exits non-zero.
     pub fn version(&self) -> Result<String, String> {
         self.run(&["version"])
     }

@@ -105,6 +105,12 @@ fn quoted_events(
 /// `path` accepts any `AsRef<Path>` (typically `&Path`, `PathBuf`, or `&str`). All call
 /// sites funnel through one concrete `PathBuf` so downstream `.to_path_buf()` /
 /// `Display` / `read_to_string()` calls resolve to a known type.
+///
+/// # Errors
+///
+/// Returns `Err(crate::Error)` when the file cannot be read (`crate::error::manifest::io_at`
+/// wrapping the `io::Error`), or when a `(name "…"` or `(number "…"` token is opened but
+/// never closed in the symbol source (`crate::error::Manifest::Parse`).
 pub fn import_symbol_pinmap(path: impl AsRef<std::path::Path>) -> Result<PinMap, crate::Error> {
     let path_buf: std::path::PathBuf = path.as_ref().to_path_buf();
     // Use the cross-file SSOT constructor at `crate::error::manifest::io_at` so the

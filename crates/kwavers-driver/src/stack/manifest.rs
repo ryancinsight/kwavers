@@ -53,6 +53,12 @@ impl StackBoardManifest {
     }
 
     /// Parse stack board manifest text.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err(String)` when a line lacks a `=` separator, `format` is not
+    /// `"kicad-routing-stack-board-v1"`, a required key is absent, a numeric key
+    /// cannot be parsed as `f64`, or `role` is not a recognised [`StackBoardRole`] variant.
     pub fn from_text(text: &str) -> Result<Self, String> {
         let mut map = std::collections::BTreeMap::new();
         for line in text.lines().filter(|l| !l.trim().is_empty()) {
@@ -93,6 +99,11 @@ impl StackBoardManifest {
     }
 
     /// Read a stack board manifest from disk.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err(String)` when the file cannot be read (`std::io::Error`), or when
+    /// [`Self::from_text`] fails on the file contents.
     pub fn read(path: &Path) -> Result<Self, String> {
         let text = std::fs::read_to_string(path)
             .map_err(|e| format!("failed to read {}: {e}", path.display()))?;
