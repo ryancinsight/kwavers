@@ -591,6 +591,110 @@ fn thermal_feedback_flattens_the_temperature_field() {
 }
 
 #[test]
+fn density_feedback_spreads_the_whole_bom() {
+    // Five identical PASSIVE parts — so the active-IC `thermal`/`ic_spread` terms never act on them
+    // — each on its OWN self-contained 2-pad net (routing is a trivial internal stub for any layout,
+    // isolating the density objective). Enabling the density guidance (`density_weight > 0`) must
+    // reach a *strictly lower* peak component-area density than the density-blind ablation: the
+    // electrostatic area-as-charge spreading must measurably flatten the density field, not merely
+    // be wired in. `thermal_spacing = 0` removes the hard pairwise pad, so the physics alone spreads.
+    let spec = GridSpec::cover(Nm::from_mm(60.0), Nm::from_mm(40.0), Nm::from_mm(0.5), 4).unwrap();
+    let mut tmpl = Board::new(spec);
+    let nets: Vec<NetId> = (0..5)
+        .map(|i| tmpl.add_net(format!("N{i}"), NetClassKind::Signal))
+        .collect();
+    let part = FootprintDef::new(
+        "PASV",
+        (Nm::from_mm(4.0), Nm::from_mm(4.0)),
+        Role::Passive,
+        vec![
+            PadDef {
+                offset: Point::new(-Nm::from_mm(1.0), Nm(0)),
+                size: (Nm::from_mm(0.8), Nm::from_mm(0.8)),
+                layers: vec![LayerId(0)],
+                power_pin: false,
+            },
+            PadDef {
+                offset: Point::new(Nm::from_mm(1.0), Nm(0)),
+                size: (Nm::from_mm(0.8), Nm::from_mm(0.8)),
+                layers: vec![LayerId(0)],
+                power_pin: false,
+            },
+        ],
+    );
+    let lib = vec![part];
+    let mk = |net: NetId, x, y| Component {
+        fp: 0,
+        nets: vec![Some(net), Some(net)],
+        refdes: "R".into(),
+        placement: Placement {
+            pos: Point::new(Nm::from_mm(x), Nm::from_mm(y)),
+            rot: Rot::R0,
+        },
+        assoc_ic: None,
+        locked: false,
+        ..Default::default()
+    };
+    // Clustered in the centre so there is headroom to spread.
+    let comps = vec![
+        mk(nets[0], 28.0, 20.0),
+        mk(nets[1], 30.0, 20.0),
+        mk(nets[2], 32.0, 20.0),
+        mk(nets[3], 30.0, 18.0),
+        mk(nets[4], 30.0, 22.0),
+    ];
+    let base = crate::place::PlaceConfig {
+        board: (Nm::from_mm(60.0), Nm::from_mm(40.0)),
+        margin: Nm::from_mm(2.0),
+        thermal_spacing: Nm::from_mm(0.0), // no hard padding — the density physics must spread them
+        courtyard_clearance: Nm::from_mm(0.5),
+        weights: crate::place::PlaceWeights::default(),
+        isolation_axis: crate::place::Axis::X,
+    };
+    let anneal = crate::place::AnnealParams {
+        steps: 4_000,
+        ..Default::default()
+    };
+    let run = |dw: f64| -> CoOptResult {
+        let cfg = CoOpt {
+            rounds: 5,
+            patience: 5,
+            place: base,
+            anneal,
+            density_weight: dw,
+            seed_groups: false, // start clustered so density guidance must do the spreading
+            ..Default::default()
+        };
+        cooptimize(&tmpl, comps.clone(), &lib, &DesignRules::holohv(), &cfg)
+    };
+    // Peak of the same area-sourced Poisson field the guidance minimises: lower ⇒ flatter ⇒ spread.
+    let density_peak = |r: &CoOptResult| -> f64 {
+        crate::physics::thermal::solve_board(
+            spec,
+            &r.comps,
+            &lib,
+            |fp| {
+                let (w, h) = fp.courtyard;
+                w.to_mm() * h.to_mm()
+            },
+            20.0,
+            1.6e-3,
+            10.0,
+            150,
+        )
+        .peak()
+    };
+    let off = run(0.0);
+    let on = run(10.0);
+    assert!(off.complete && on.complete, "both placements must route");
+    let (peak_off, peak_on) = (density_peak(&off), density_peak(&on));
+    assert!(
+        peak_on < peak_off,
+        "density guidance must flatten the area-density field: on={peak_on:.5} off={peak_off:.5}"
+    );
+}
+
+#[test]
 fn emi_guidance_separates_hv_from_lv() {
     // An HV driver and an LV controller, each a 2-pad part on its own net, on a roomy board. EMI
     // guidance must pull the HV and LV pads apart — fewer HV↔LV close pairs than the EMI-blind

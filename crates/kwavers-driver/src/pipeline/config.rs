@@ -30,6 +30,15 @@ pub struct CoOpt {
     /// Weight of the EMI hotspot field (HV↔LV pad proximity) folded into the placement feedback.
     /// Biases the placer to separate the HV switching node from sensitive low-voltage control.
     pub emi_weight: f64,
+    /// Weight of the **component-density field** folded into the placement feedback. Each
+    /// component's courtyard *area* is deposited as a source and diffused by the same Poisson
+    /// solver that produces the thermal field ([`crate::physics::thermal::solve_board`]); the
+    /// resulting potential peaks where parts cluster, so biasing the next placement away from it
+    /// spreads the **whole** BOM to fill the board — not just the dissipative parts the thermal
+    /// field covers. This is the electrostatic density-equalisation of analytical placement
+    /// (ePlace/RePlAce): area-as-charge, ∇²ψ = ρ, force = −∇ψ. It removes the need for hand-tuned
+    /// `thermal_spacing` / courtyard-padding to force spread. `0.0` disables it (ablation).
+    pub density_weight: f64,
     /// Per-footprint steady-state dissipation (W) sourcing the in-loop thermal-feedback field.
     /// Defaults to a coarse role estimate; a transducer driver overrides it with its derived pulser
     /// loss model ([`crate::driver::pulser_dissipation`]) so the placer actively spreads the real
@@ -89,6 +98,9 @@ impl Default for CoOpt {
             feedback_weight: 0.05,
             thermal_weight: 8.0,
             emi_weight: 6.0,
+            // On par with the thermal field: a primary spreading signal that fills the board from
+            // the whole BOM's area, so dense central clusters relax without per-design padding.
+            density_weight: 10.0,
             dissipation_w: role_footprint_dissipation_w,
             seed_groups: true,
             pathfinder_max_iter: 40,

@@ -14,6 +14,15 @@ use super::place_board::{
 };
 use super::result::CoOptResult;
 
+/// Courtyard area (mm²) of a footprint — the "charge" deposited by the component-density field
+/// ([`crate::physics::thermal::solve_board`] sourced by area instead of dissipation). A larger
+/// part pushes harder on its neighbours, exactly as a larger charge does in the electrostatic
+/// density-equalisation analogy of analytical placement.
+fn footprint_area_mm2(fp: &FootprintDef) -> f64 {
+    let (w, h) = fp.courtyard;
+    w.to_mm() * h.to_mm()
+}
+
 /// Distinct copper layers carrying tracks or vias on a board.
 fn layers_used(board: &crate::board::Board) -> usize {
     let mut seen = std::collections::BTreeSet::new();
@@ -220,6 +229,7 @@ pub fn cooptimize(
         std::cmp::Reverse<i64>,
         std::cmp::Reverse<i64>,
         std::cmp::Reverse<i64>,
+        std::cmp::Reverse<i64>,
     );
     let mut best: Option<(
         crate::board::Board,
@@ -367,15 +377,37 @@ pub fn cooptimize(
         // placement separates the switching node from sensitive control.
         let emi_points = crate::audit::emi_hotspots(&rb, Nm::from_mm(6.0));
         let emi = crate::audit::rasterize_hotspots_radius(&emi_points, spec, Nm::from_mm(3.0), 1.0);
+        // Density guidance: diffuse every component's courtyard *area* through the same Poisson
+        // solver as the thermal field, giving a potential that peaks where parts cluster. Folded
+        // into the feedback it spreads the whole BOM to fill the board (ePlace area-as-charge),
+        // so no per-design `thermal_spacing` padding is needed to relax a dense central cluster.
+        let dfield = crate::physics::thermal::solve_board(
+            spec,
+            &comps,
+            lib,
+            footprint_area_mm2,
+            20.0,
+            1.6e-3,
+            10.0,
+            150,
+        );
+        let dpeak = dfield.peak();
+        let density_per_column: Vec<f32> = if dpeak > 0.0 {
+            dfield.temp.iter().map(|d| (d / dpeak) as f32).collect()
+        } else {
+            vec![0.0; spec.nx * spec.ny]
+        };
         let fw = cfg.feedback_weight as f32;
         let tw = cfg.thermal_weight as f32;
         let ew = cfg.emi_weight as f32;
+        let dw = cfg.density_weight as f32;
         let per_column: Vec<f32> = (0..cong.len())
             .map(|i| {
                 cong[i] * fw
                     + weak.per_column[i] * 40.0 * fw
                     + thermal_per_column[i] * tw
                     + emi.per_column[i] * ew
+                    + density_per_column[i] * dw
             })
             .collect();
         feedback = Some(CongestionField {
@@ -396,6 +428,17 @@ pub fn cooptimize(
         } else {
             std::cmp::Reverse(0)
         };
+        // Density is the **final** tiebreaker (ranked below risk): among placements that are equally
+        // hard-DRC-clean and equally low-risk, prefer the one whose component-area field is flattest
+        // (most spread). On a real board, congestion already shows up in `risk_score`, so this rarely
+        // overrides it — it just resolves the ties a trivial-routing layout leaves, and makes the
+        // spreading a genuine selected objective rather than only a placement bias. Constant at 0
+        // when density guidance is off (clean ablation).
+        let density_term = if cfg.density_weight > 0.0 {
+            std::cmp::Reverse((dfield.peak() * 1000.0) as i64)
+        } else {
+            std::cmp::Reverse(0)
+        };
         // **Verified** completeness, not the router's claim: extract the actual copper connectivity
         // from the emitted geometry (tracks + vias + pads) and require zero opens. The router's
         // `outcome.complete` only asserts every terminal was *reached during search*; a subsequent
@@ -413,6 +456,7 @@ pub fn cooptimize(
             emi_term,
             tpeak_term,
             std::cmp::Reverse((report.risk_score * 1000.0) as i64),
+            density_term,
         );
         let improved = best.as_ref().map(|(_, _, _, s)| score > *s).unwrap_or(true);
         if improved {
