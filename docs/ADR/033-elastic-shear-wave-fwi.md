@@ -192,11 +192,21 @@ clamped to a physical `[μ_min, μ_max]`.
      a validated descent direction (`k_mu_gradient_3d_is_valid_descent_direction`,
      κ > 0 stable). Full 3-D *convergence* to a sharp sphere is slower (≈4.5× more
      unknowns) and is an iteration-budget matter, not a correctness one.
-   - **Deferred**: optimal checkpointing (the `O(n_t·N)` full-history adjoint is
-     fine at present sizes — YAGNI until a memory problem appears), joint `λ/ρ`
-     (the `K_λ`/`K_ρ` kernels of §2; `μ`-only is the lesion-stiffness use case),
-     and a 3-D TV regularizer (the current TV is the `k = 0` plane only; opt-in,
-     default off).
+   - **Deferred, with rationale**:
+     - *Joint `λ/ρ`* — deferred on **physical** grounds, not just effort: a
+       shear wave is insensitive to the bulk modulus, so `λ` is **unobservable**
+       from shear-wave data, and density trades off with `μ` through
+       `c_S = √(μ/ρ)`, leaving `ρ` weakly constrained. Joint `λ/ρ/μ` inversion
+       from shear-wave transmission is therefore ill-posed; `μ`-only is the
+       well-posed, physically correct parameterization for lesion stiffness. (The
+       `K_λ = −∫(∇·u_f)(∇·u_a)` and `K_ρ = −∫∂_t u_f·∂_t u_a` kernels of §2 would
+       only be well-constrained with *compressional* data, i.e. acoustic FWI.)
+     - *Optimal checkpointing* — the `O(n_t·N)` full-history adjoint is fine at
+       present (2-D + slice / small-3-D) sizes; YAGNI until a memory problem
+       appears (the ADR-016 reconstruction trick is unavailable here — PML +
+       velocity-Verlet are not time-reversible).
+     - *3-D TV regularizer* — the current TV covers the `k = 0` plane only; opt-in
+       and default off, so not on the critical path.
 
 The book Ch26 §26 / Ch11 §11.14 "not implemented" disclosures are updated to point
 at the real module (`inverse::elastography::elastic_fwi`).
