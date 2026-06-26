@@ -1,4 +1,5 @@
 /// Copper skin depth (m) at frequency `f` (Hz): `δ = √(ρ / (π·f·μ₀))` (copper µ_r ≈ 1).
+#[inline]
 #[must_use]
 pub fn skin_depth_m(freq_hz: f64) -> f64 {
     if freq_hz <= 0.0 {

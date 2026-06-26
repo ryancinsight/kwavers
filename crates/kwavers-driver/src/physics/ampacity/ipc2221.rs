@@ -2,6 +2,7 @@ use crate::board::{Board, NetId};
 use crate::geom::Nm;
 
 /// Copper thickness in metres for a weight in ounces (1 oz ≈ 34.8 µm).
+#[inline]
 #[must_use]
 pub fn copper_thickness_m(copper_oz: f64) -> f64 {
     copper_oz * 34.8e-6
