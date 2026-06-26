@@ -87,7 +87,7 @@ pub fn merge_collinear(board: &mut Board) -> usize {
 /// explicit as copper in the board model. For a drilled pad, the plated barrel is accessible from
 /// every copper layer, so a short stub is emitted on every layer; for SMD pads, only their declared
 /// copper layers are used. Returns the number of stubs added.
-pub fn pad_entry_stubs(
+pub(crate) fn pad_entry_stubs(
     board: &mut Board,
     comps: &[Component],
     lib: &[FootprintDef],
@@ -168,7 +168,7 @@ pub fn pad_entry_stubs(
 /// KiCad DRC treats an endpoint touching a segment body as an unsplit junction for manufacturing
 /// checks such as `track_dangling`. Splitting the body segment at that coordinate preserves copper
 /// area exactly while making the electrical/DFM junction explicit in the board model.
-pub fn split_track_body_junctions(board: &mut Board) -> usize {
+pub(crate) fn split_track_body_junctions(board: &mut Board) -> usize {
     let mut split_points: Vec<Vec<Point>> = vec![Vec::new(); board.tracks.len()];
     for (endpoint_idx, endpoint_track) in board.tracks.iter().enumerate() {
         for endpoint in [endpoint_track.start, endpoint_track.end] {
@@ -299,7 +299,7 @@ pub fn trim_dangling_stubs(board: &mut Board) -> usize {
 /// across each pad's layers, plus a geometric touch-union of overlapping same-net tracks (so a stub
 /// joined to a pad only by overlapping copper is *not* mistaken for an orphan). Returns the number of
 /// track + via segments removed.
-pub fn remove_orphan_copper(board: &mut Board) -> usize {
+pub(crate) fn remove_orphan_copper(board: &mut Board) -> usize {
     let spec = board.spec;
     let stride = spec.nx * spec.ny;
     let n = stride * spec.nlayers;

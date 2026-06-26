@@ -16,13 +16,9 @@ mod vias;
 mod tests;
 
 pub use copper::{ground_pour, quietest_layer, widen_for_ampacity};
-pub use diagonal::{
-    chamfer_diagonal_traps, convert_diagonals_to_orthogonal, convert_diagonals_to_orthogonal_safe,
-    resolve_diagonal_via_clearance,
-};
+pub(crate) use diagonal::chamfer_diagonal_traps;
+pub use diagonal::resolve_diagonal_via_clearance;
 pub use miter::miter_right_angle_corners;
-pub use tracks::{
-    merge_collinear, pad_entry_stubs, remove_orphan_copper, split_track_body_junctions,
-    trim_dangling_stubs,
-};
+pub use tracks::{merge_collinear, trim_dangling_stubs};
+pub(crate) use tracks::{pad_entry_stubs, remove_orphan_copper, split_track_body_junctions};
 pub use vias::{dedup_vias, plane_distribute_net, teardrops};
