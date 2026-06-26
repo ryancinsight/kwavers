@@ -198,9 +198,9 @@ pub use pipeline::{
 };
 pub use place::{
     anneal, component_clearance_violations, energy, import_kicad_mod, import_symbol_pinmap,
-    AnnealParams, Axis, Component, ComponentClearanceViolation, CongestionField, EnergyTerms,
-    FootprintDef, IsolationDomain, PadDef, PinMap, PlaceConfig, PlaceWeights, Placement, Role, Rot,
-    RotationPolicy,
+    AnnealParams, Axis, Component, ComponentClearanceViolation, CongestionField, DielectricGrade,
+    EnergyTerms, FootprintDef, IsolationDomain, PackageFormFactor, PadDef, PinMap, PlaceConfig,
+    PlaceWeights, Placement, Role, Rot, RotationPolicy,
 };
 pub use pulse_skip::{
     channel_skip_pattern, max_skip_spur_dbc, optimal_skip_fraction, optimize_skip,
