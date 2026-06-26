@@ -73,22 +73,38 @@ fn openpros_benchmark_runs_dense_and_sparse_reconstructions() {
     );
     assert!(result.dense_metrics.stored_weight_count > result.dense_metrics.rows_used);
     assert!(result.sparse_metrics.stored_weight_count > result.sparse_metrics.rows_used);
-    assert!(result.dense_metrics.objective_reduction_fraction > 0.0);
-    assert!(result.sparse_metrics.objective_reduction_fraction >= 0.0);
-    assert!(result
-        .dense_metrics
-        .normalized_root_mean_square_error
-        .is_finite());
-    assert!(result
-        .sparse_metrics
-        .normalized_root_mean_square_error
-        .is_finite());
+    // Value-semantic recovery quality (measured: dense pearson≈0.74, nrmse≈0.61,
+    // obj-reduction≈0.9999; sparse pearson≈0.58, nrmse≈0.74). Thresholds bound the
+    // recovered shift well above a broken reconstruction (pearson≈0, nrmse≈1) yet
+    // below the achieved values, so a regression that degraded the inversion fails.
+    assert!(
+        result.dense_metrics.objective_reduction_fraction > 0.9,
+        "dense inversion must strongly fit the data, got obj-reduction {}",
+        result.dense_metrics.objective_reduction_fraction
+    );
+    assert!(
+        result.dense_metrics.pearson_correlation > 0.6,
+        "dense reconstruction must correlate with the truth shift, got r {}",
+        result.dense_metrics.pearson_correlation
+    );
+    assert!(
+        result.dense_metrics.normalized_root_mean_square_error < 0.7,
+        "dense NRMSE must be bounded, got {}",
+        result.dense_metrics.normalized_root_mean_square_error
+    );
+    assert!(
+        result.sparse_metrics.pearson_correlation > 0.4,
+        "sparse reconstruction must still correlate with the truth shift, got r {}",
+        result.sparse_metrics.pearson_correlation
+    );
+    // Dense uses every available row, so it must be at least as accurate as sparse.
     assert!(
         result.dense_metrics.normalized_root_mean_square_error
-            <= result.sparse_metrics.normalized_root_mean_square_error
+            <= result.sparse_metrics.normalized_root_mean_square_error,
+        "dense NRMSE {} must not exceed sparse {}",
+        result.dense_metrics.normalized_root_mean_square_error,
+        result.sparse_metrics.normalized_root_mean_square_error
     );
-    assert!(result.dense_metrics.pearson_correlation.is_finite());
-    assert!(result.sparse_metrics.pearson_correlation.is_finite());
 }
 
 #[test]
