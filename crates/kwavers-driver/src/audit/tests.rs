@@ -20,7 +20,7 @@ use crate::rules::DesignRules;
         );
 
         type FaultMarker = fn(&mut FaultReport);
-        let dirty_fields: [(&str, FaultMarker); 62] = [
+        let dirty_fields: [(&str, FaultMarker); 64] = [
             ("clearance violations", |r: &mut FaultReport| {
                 r.clearance_violations = 1;
             }),
@@ -220,6 +220,12 @@ use crate::rules::DesignRules;
             }),
             ("antenna impedance", |r: &mut FaultReport| {
                 r.antenna_impedance_violations = 1;
+            }),
+            ("ground via stitching", |r: &mut FaultReport| {
+                r.ground_via_stitching_violations = 1;
+            }),
+            ("via return count", |r: &mut FaultReport| {
+                r.high_speed_via_return_count_violations = 1;
             }),
         ];
 

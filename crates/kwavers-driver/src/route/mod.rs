@@ -9,6 +9,8 @@
 //!
 //! * `grid` — the 3D grid resource model (per-node capacity, occupancy, history).
 //! * `search` — the A*-style per-net grow-loop (state machine + cost-driven expansion).
+//! * `search_guards` — diagonal-routing geometry guards (foreign-edge crossing, via-column
+//!   clearance) extracted from `search` as a dedicated leaf module (SoC, ≤500 lines).
 //! * `pathfinder` — the iterative PathFinder *negotiation* loop (rip-up → re-route →
 //!   history accumulate → break on convergence). Hosts `Router`, `RouteOutcome`, plus
 //!   the per-net `forbidden` / `via_forbidden` set construction + the schedule-driven
@@ -34,6 +36,7 @@ pub mod emission;
 pub mod grid;
 pub mod pathfinder;
 pub mod search;
+pub(crate) mod search_guards;
 pub mod tree;
 
 pub use grid::{Grid, NodeId};

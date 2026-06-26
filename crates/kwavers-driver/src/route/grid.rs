@@ -11,7 +11,7 @@ use crate::geom::{GridSpec, Nm};
 pub struct NodeId(pub usize);
 
 /// Unit capacity of a routing node (one net per cell per layer).
-pub const CAPACITY: u16 = 1;
+pub(crate) const CAPACITY: u16 = 1;
 
 /// A move from one node to an adjacent node.
 #[derive(Debug, Clone, Copy)]
@@ -33,7 +33,7 @@ pub struct Grid {
     occ: Vec<u16>,
     hist: Vec<f32>,
     blocked: Vec<bool>,
-    /// Per-node net id of the (last) net occupying it, or [`NO_OWNER`]. Drives **width-aware
+    /// Per-node net id of the (last) net occupying it, or `NO_OWNER`. Drives **width-aware
     /// clearance**: foreign copper within [`clearance_radius`] cells of a routed cell is a clearance
     /// violation, so the same cell can carry a net's own copper (radius is intra-layer, same-net
     /// exempt) while repelling other nets' copper that the bare grid pitch is too fine to separate.
@@ -55,9 +55,9 @@ pub struct Grid {
 }
 
 /// Sentinel for "no via in this column".
-pub const NO_VIA: i32 = -1;
+pub(crate) const NO_VIA: i32 = -1;
 /// Sentinel for "no net owns this node".
-pub const NO_OWNER: i32 = -1;
+pub(crate) const NO_OWNER: i32 = -1;
 
 impl Grid {
     /// Build an empty grid (no occupancy, no history, nothing blocked) over a spec.
@@ -106,7 +106,7 @@ impl Grid {
         self.diagonal_routing
     }
 
-    /// Net id owning a routed node, or [`NO_OWNER`] when the node is empty.
+    /// Net id owning a routed node, or `NO_OWNER` when the node is empty.
     #[inline]
     #[must_use]
     pub fn owner(&self, node: NodeId) -> i32 {
@@ -117,6 +117,7 @@ impl Grid {
     /// `clearance_radius` (Chebyshev, in-plane on the node's layer, excluding the node itself) that
     /// are occupied by a net other than `net`. `0` when the halo is disabled (`clearance_radius == 0`)
     /// or the node is clear — the negotiated-clearance load that a fine grid adds to a cell's cost.
+    #[inline]
     #[must_use]
     pub fn foreign_halo_load(&self, node: NodeId, net: i32) -> u32 {
         let r = self.clearance_radius;
@@ -157,7 +158,7 @@ impl Grid {
         iy * self.spec.nx + ix
     }
 
-    /// The net owning a via in a node's column, or [`NO_VIA`].
+    /// The net owning a via in a node's column, or `NO_VIA`.
     #[inline]
     #[must_use]
     pub fn via_owner(&self, node: NodeId) -> i32 {
@@ -167,6 +168,7 @@ impl Grid {
     /// Whether placing a via at `node`'s column would sit in, or orthogonally adjacent to, a column
     /// already holding a *foreign* net's via — i.e. the two annular rings would clash. Used to keep
     /// different-net vias a clear cell apart (the via-spacing rule).
+    #[inline]
     #[must_use]
     pub fn near_foreign_via(&self, node: NodeId, net: i32) -> bool {
         let (ix, iy, _) = self.spec.node_coords(node.0);
@@ -327,7 +329,7 @@ impl Grid {
     }
 
     /// Compute a per-node over-capacity flag vector. `result[i]` is `true` iff `NodeId(i)`
-    /// exceeds [`CAPACITY`] (occupancy > 1). Used by the targeted rip-up heuristic in the
+    /// exceeds `CAPACITY` (occupancy > 1). Used by the targeted rip-up heuristic in the
     /// PathFinder loop to identify which nets must be re-routed each iteration.
     #[must_use]
     pub fn overuse_bitset(&self) -> Vec<bool> {

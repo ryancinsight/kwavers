@@ -260,6 +260,12 @@ pub fn audit(
     let (antenna_impedance_violations, antenna_impedance_pts) =
         detect_antenna_impedance_mismatch(board, rules);
     hotspots.extend(antenna_impedance_pts);
+    let (ground_via_stitching_violations, ground_via_stitching_pts) =
+        detect_ground_via_stitching_violations(board, rules);
+    hotspots.extend(ground_via_stitching_pts);
+    let (high_speed_via_return_count_violations, via_return_count_pts) =
+        detect_high_speed_via_return_count_violations(board, rules);
+    hotspots.extend(via_return_count_pts);
 
     FaultReport {
         crossings,
@@ -333,6 +339,8 @@ pub fn audit(
         transmission_line_length_violations,
         decoupling_cap_distance_violations,
         antenna_impedance_violations,
+        ground_via_stitching_violations,
+        high_speed_via_return_count_violations,
         // Weights reflect fab severity: a clearance violation, dangling end, or acid trap is a hard
         // reject; via-adjacency overlaps annular rings; near-shorts/crossings are graded margins;
         // via_count is a mild cost term (drill defect probability proportional to count).
@@ -406,7 +414,9 @@ pub fn audit(
             + pulse_skip_violations as f64 * 8.0
             + transmission_line_length_violations as f64 * 12.0
             + decoupling_cap_distance_violations as f64 * 12.0
-            + antenna_impedance_violations as f64 * 15.0,
+            + antenna_impedance_violations as f64 * 15.0
+            + ground_via_stitching_violations as f64 * 12.0
+            + high_speed_via_return_count_violations as f64 * 12.0,
         hotspots,
     }
 }

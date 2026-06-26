@@ -218,6 +218,16 @@ pub struct DesignRules {
     /// computed |Z − target| > tolerance triggers `detect_antenna_impedance_mismatch`. Default
     /// 10 Ω (±20 % of the 50 Ω standard target).
     pub antenna_impedance_tolerance_ohm: f64,
+    /// Maximum distance from any point along a high-speed/clock trace to the nearest ground
+    /// via, enforcing the TI SLYP173 §5-12/5-13 rule: "Ground vias should be spaced no more
+    /// than 0.25 cm (0.1″) apart for the entire trace length." `Nm(0)` makes the check vacuous.
+    pub max_ground_via_stitching_spacing: Nm,
+    /// Minimum number of ground transition vias required within
+    /// [`Self::high_speed_transition_ground_via_distance`] of each high-speed layer-transition
+    /// via. TI SLYP173 §5-15/5-17 recommends 4 return vias; the existing transition check
+    /// requires ≥ 1 (any-or-nothing); this threshold enforces the higher minimum. `0` makes
+    /// the check vacuous.
+    pub min_signal_via_return_count: usize,
 }
 
 impl DesignRules {
@@ -282,6 +292,8 @@ impl DesignRules {
             max_decoupling_cap_distance: Nm::from_mm(3.0), // "as close as possible" ceiling
             antenna_impedance_ohm: 50.0,    // universal RF 50-Ω convention
             antenna_impedance_tolerance_ohm: 10.0, // ±20 % of 50 Ω
+            max_ground_via_stitching_spacing: Nm::from_mm(2.5), // 0.25 cm per TI SLYP173
+            min_signal_via_return_count: 2, // TI SLYP173 recommends 4; 2 is pragmatic floor
         }
     }
 

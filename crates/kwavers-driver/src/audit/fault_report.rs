@@ -214,6 +214,15 @@ pub struct FaultReport {
     /// the 50 Ω target by more than `DesignRules::antenna_impedance_tolerance_ohm`. Impedance
     /// mismatch creates standing waves and degrades RF range.
     pub antenna_impedance_violations: usize,
+    /// High-speed/clock track segments where at least one sampled point along the segment is
+    /// farther than `DesignRules::max_ground_via_stitching_spacing` from the nearest ground via.
+    /// TI SLYP173 §5-12/5-13 requires ground vias at ≤ 0.25 cm intervals along high-speed traces
+    /// to maintain a low-impedance return path and minimise radiation.
+    pub ground_via_stitching_violations: usize,
+    /// High-speed layer-transition vias with fewer than `DesignRules::min_signal_via_return_count`
+    /// ground transition vias within the transition search radius. TI SLYP173 §5-15/5-17
+    /// recommends 4 return vias per signal via for controlled-impedance via transitions.
+    pub high_speed_via_return_count_violations: usize,
     /// Aggregate risk score (higher = worse); HV-involved faults weighted up.
     pub risk_score: f64,
     /// Board locations of the worst weaknesses (drives the feedback field).
@@ -286,6 +295,8 @@ impl FaultReport {
             && self.transmission_line_length_violations == 0
             && self.decoupling_cap_distance_violations == 0
             && self.antenna_impedance_violations == 0
+            && self.ground_via_stitching_violations == 0
+            && self.high_speed_via_return_count_violations == 0
     }
 }
 

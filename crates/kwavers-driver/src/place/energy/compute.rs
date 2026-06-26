@@ -302,10 +302,13 @@ pub fn energy(
     }
 
     let mut net_centers: BTreeMap<NetId, Vec<(usize, Point)>> = BTreeMap::new();
+    // Hoisted outside the loop so each component iteration reuses the allocation.
+    // Typical capacity: 2–8 entries (one per distinct net on the component's pads).
+    let mut sum_by_net: Vec<(NetId, (i64, i64, i64))> = Vec::with_capacity(8);
     for (idx, c) in comps.iter().enumerate() {
         // Each component typically has 2–8 pads across 1–4 nets; a Vec linear scan is
         // faster than a BTreeMap allocation for this small N (no heap per-node overhead).
-        let mut sum_by_net: Vec<(NetId, (i64, i64, i64))> = Vec::new();
+        sum_by_net.clear();
         for (pos, _layers, net) in c.placed_pads(lib) {
             if let Some(n) = net {
                 if let Some(e) = sum_by_net.iter_mut().find(|(id, _)| *id == n) {
@@ -320,7 +323,7 @@ pub fn energy(
         // Sort by NetId before inserting so net_centers iteration order matches the outer
         // BTreeMap's determinism requirement (same insertion order → same HPWL sum).
         sum_by_net.sort_unstable_by_key(|(id, _)| *id);
-        for (net, (sx, sy, count)) in sum_by_net {
+        for (net, (sx, sy, count)) in sum_by_net.drain(..) {
             net_centers
                 .entry(net)
                 .or_default()
