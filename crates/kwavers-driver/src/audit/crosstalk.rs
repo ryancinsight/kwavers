@@ -1,16 +1,10 @@
-use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use crate::board::{
-    split_domain_from_name, Board, LayerId, NetClassKind, NetId, SplitDomain, Track, ZoneFill,
+    Board, NetId,
 };
 use crate::geom::{
-    dist_point_seg, dist_seg_seg, distance_to_polygon_boundary, point_in_polygon, segments_cross,
-    GridSpec, Nm, Point,
+    segments_cross, Nm, Point,
 };
-use crate::place::component::is_surge_suppressor_refdes;
-use crate::place::{Component, CongestionField, FootprintDef, Role};
-use crate::rules::DesignRules;
-use crate::verify::{parasitic_ac_coupling_check, schematic_isolation_bfs};
 use crate::audit::fault_report::is_hv;
 /// HV↔LV pad pairs closer than `coupling` — EMI aggressor↔victim zones the next placement should pull apart.
 /// Unlike `near_shorts` (any different-net copper), this specifically targets the HV-class-vs-non-HV-class

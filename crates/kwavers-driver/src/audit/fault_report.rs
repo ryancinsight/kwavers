@@ -18,19 +18,11 @@
 //! * **Antenna / dangling** — a track end not landing on a pad, via, or another track is an
 //!   etch/ESD antenna and a likely open fault.
 
-use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use crate::board::{
-    split_domain_from_name, Board, LayerId, NetClassKind, NetId, SplitDomain, Track, ZoneFill,
+    Board, NetClassKind, NetId,
 };
-use crate::geom::{
-    dist_point_seg, dist_seg_seg, distance_to_polygon_boundary, point_in_polygon, segments_cross,
-    GridSpec, Nm, Point,
-};
-use crate::place::component::is_surge_suppressor_refdes;
-use crate::place::{Component, CongestionField, FootprintDef, Role};
-use crate::rules::DesignRules;
-use crate::verify::{parasitic_ac_coupling_check, schematic_isolation_bfs};
+use crate::geom::Point;
 
 /// Structured result of an adversarial audit.
 #[derive(Debug, Clone, Default)]

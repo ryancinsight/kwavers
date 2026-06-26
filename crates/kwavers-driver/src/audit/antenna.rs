@@ -1,17 +1,9 @@
-use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::collections::HashMap;
 
-use crate::board::{
-    split_domain_from_name, Board, LayerId, NetClassKind, NetId, SplitDomain, Track, ZoneFill,
-};
+use crate::board::Board;
 use crate::geom::{
-    dist_point_seg, dist_seg_seg, distance_to_polygon_boundary, point_in_polygon, segments_cross,
-    GridSpec, Nm, Point,
+    Nm, Point,
 };
-use crate::place::component::is_surge_suppressor_refdes;
-use crate::place::{Component, CongestionField, FootprintDef, Role};
-use crate::rules::DesignRules;
-use crate::verify::{parasitic_ac_coupling_check, schematic_isolation_bfs};
-use crate::audit::fault_report::is_hv;
 ///
 /// Track-track junctions coincide exactly (grid-cell centres), matched exactly by endpoint count. A
 /// track end meets a pad/via *within a tolerance* (the router snaps terminals to the nearest cell
