@@ -228,7 +228,8 @@ pub fn import_kicad_mod(
     for item in items {
         match item.head() {
             Some("pad") => {
-                let list = item.as_list().unwrap();
+                let list = item.as_list()
+                    .expect("invariant: head() returned Some implies item is a list");
                 // (pad "<name>" <type> <shape> (at x y [rot]) (size w h) (layers ...) ...)
                 let pad_type = list.get(2).and_then(|s| s.as_atom()).unwrap_or("smd");
                 // A non-plated thru-hole (`np_thru_hole`) is a *mechanical* feature — a board-lock or
@@ -293,8 +294,8 @@ pub fn import_kicad_mod(
                 for (key, idx) in [("start", 1), ("end", 1)] {
                     if let Some(p) = child(item, key) {
                         if let (Some(px), Some(py)) = (
-                            num(p.as_list().unwrap(), idx),
-                            num(p.as_list().unwrap(), idx + 1),
+                            num(p.as_list().expect("invariant: KiCad (start/end x y) nodes are lists"), idx),
+                            num(p.as_list().expect("invariant: KiCad (start/end x y) nodes are lists"), idx + 1),
                         ) {
                             crtyd_min = (crtyd_min.0.min(px), crtyd_min.1.min(py));
                             crtyd_max = (crtyd_max.0.max(px), crtyd_max.1.max(py));
@@ -303,7 +304,10 @@ pub fn import_kicad_mod(
                 }
             }
             Some("model") => {
-                let p = item.as_list().unwrap().get(1).and_then(|s| s.as_atom());
+                let p = item.as_list()
+                    .expect("invariant: head() returned Some implies item is a list")
+                    .get(1)
+                    .and_then(|s| s.as_atom());
                 if let Some(p) = p {
                     let offset = xyz_child(item, "offset").unwrap_or((0.0, 0.0, 0.0));
                     let rotate = xyz_child(item, "rotate").unwrap_or((0.0, 0.0, 0.0));
