@@ -1,5 +1,5 @@
 use super::*;
-use crate::board::{Board, LayerId, NetClassKind, NetId, Pad, Track, Via, ViaKind, Zone, ZoneFill};
+use crate::board::{Board, LayerId, NetClassKind, Pad, Track, Via, ViaKind, Zone, ZoneFill};
 use crate::geom::{GridSpec, Nm, Point};
 use crate::place::{Component, FootprintDef, Role};
 use crate::audit::detect_power::{detect_charge_recycling_violations_board, detect_pulse_skip_violations};
@@ -12,7 +12,7 @@ mod routing;
 mod via;
 mod integration;
 
-pub(super) fn board() -> Board {
+pub(crate) fn board() -> Board {
     let spec =
         GridSpec::cover(Nm::from_mm(20.0), Nm::from_mm(20.0), Nm::from_mm(0.5), 2).unwrap();
     Board::new(spec)

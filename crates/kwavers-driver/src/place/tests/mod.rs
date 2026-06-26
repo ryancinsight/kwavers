@@ -19,11 +19,12 @@ use crate::board::{LayerId, NetId};
 use crate::geom::{GridSpec, Nm, Point};
 use crate::place::sexpr::{child, parse_sexpr, xyz_child};
 use crate::place::{
-    anneal, energy as energy_fn, import_kicad_mod, import_symbol_pinmap, AnnealParams, Component,
-    CongestionField, FootprintDef, PadDef, PinMap, PlaceConfig, PlaceWeights, Placement, Rect,
-    Role, Rot, RotationPolicy,
+    anneal as anneal_fn, energy as energy_fn, import_kicad_mod, import_symbol_pinmap, AnnealParams,
+    Component, CongestionField, FootprintDef, PadDef, PinMap, PlaceConfig, PlaceWeights, Placement,
+    Rect, Role, Rot, RotationPolicy,
 };
 
+mod anneal;
 mod energy;
 mod geometry;
 mod import;
