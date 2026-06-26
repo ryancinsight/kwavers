@@ -2,7 +2,7 @@
 
 use crate::board::{Board, NetClassKind};
 use crate::geom::Point;
-use crate::place::{Component, FootprintDef, Role};
+use crate::place::{Component, DielectricGrade, FootprintDef, Role};
 use crate::rules::DesignRules;
 
 pub(crate) fn detect_decoupling_power_layer_violations(
@@ -198,6 +198,42 @@ pub(crate) fn detect_charge_reservoir_violations(
     (count, pts)
 }
 
+/// Flags decoupling capacitors whose ceramic dielectric grade is worse than
+/// `rules.min_decoupling_cap_grade` (TI SLYP173 §5-17/5-20).
+///
+/// Poor dielectric grades (Z5U, Y5V) exhibit severe capacitance drop with temperature and
+/// voltage, undermining bypass action exactly at the operating extremes where it is needed
+/// most. The check is vacuous when `rules.min_decoupling_cap_grade` is
+/// [`DielectricGrade::Unknown`] (no grade preference) or when a cap's
+/// `dielectric_grade` is [`DielectricGrade::Unknown`] (no grade metadata available).
+///
+/// # Vacuous condition
+///
+/// Returns `(0, [])` when `rules.min_decoupling_cap_grade == DielectricGrade::Unknown`.
+pub(crate) fn detect_cap_dielectric_grade_violations(
+    comps: &[Component],
+    lib: &[FootprintDef],
+    rules: &DesignRules,
+) -> (usize, Vec<Point>) {
+    if rules.min_decoupling_cap_grade == DielectricGrade::Unknown {
+        return (0, Vec::new());
+    }
+    let min_grade = rules.min_decoupling_cap_grade;
+    let mut count = 0;
+    let mut pts = Vec::new();
+    for cap in comps {
+        if cap.fp >= lib.len() || !matches!(lib[cap.fp].role, Role::Decoupling) {
+            continue;
+        }
+        let grade = lib[cap.fp].dielectric_grade;
+        if !grade.meets_minimum(min_grade) {
+            count += 1;
+            pts.push(cap.placement.pos);
+        }
+    }
+    (count, pts)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -268,5 +304,76 @@ mod tests {
         let rules = DesignRules::holohv();
         let (n, _) = detect_decoupling_cap_distance_violations(&comps, &lib, &rules);
         assert_eq!(n, 0);
+    }
+
+    // ---- dielectric grade tests ------------------------------------------
+
+    fn make_decoupling_fp_with_grade(grade: DielectricGrade) -> FootprintDef {
+        cap_fp().with_dielectric_grade(grade)
+    }
+
+    fn make_decoupling_comp(fp: usize) -> Component {
+        make_comp(fp, 5.0, 5.0, None)
+    }
+
+    /// A Y5V cap must be flagged when min_grade is X7R.
+    #[test]
+    fn flags_y5v_cap_when_min_grade_is_x7r() {
+        let lib = vec![make_decoupling_fp_with_grade(DielectricGrade::Y5v)];
+        let comps = vec![make_decoupling_comp(0)];
+        let rules = DesignRules::holohv(); // min_decoupling_cap_grade = X7r
+        let (n, _) = detect_cap_dielectric_grade_violations(&comps, &lib, &rules);
+        assert_eq!(n, 1, "Y5V is below X7R floor and must be flagged");
+    }
+
+    /// A Z5U cap must also be flagged when min_grade is X7R.
+    #[test]
+    fn flags_z5u_cap_when_min_grade_is_x7r() {
+        let lib = vec![make_decoupling_fp_with_grade(DielectricGrade::Z5u)];
+        let comps = vec![make_decoupling_comp(0)];
+        let rules = DesignRules::holohv();
+        let (n, _) = detect_cap_dielectric_grade_violations(&comps, &lib, &rules);
+        assert_eq!(n, 1, "Z5U is below X7R floor and must be flagged");
+    }
+
+    /// An X7R cap exactly meets the floor — must pass.
+    #[test]
+    fn passes_x7r_cap_at_x7r_floor() {
+        let lib = vec![make_decoupling_fp_with_grade(DielectricGrade::X7r)];
+        let comps = vec![make_decoupling_comp(0)];
+        let rules = DesignRules::holohv();
+        let (n, _) = detect_cap_dielectric_grade_violations(&comps, &lib, &rules);
+        assert_eq!(n, 0, "X7R at X7R floor must pass");
+    }
+
+    /// A COG cap exceeds the floor — must pass.
+    #[test]
+    fn passes_cog_cap_at_x7r_floor() {
+        let lib = vec![make_decoupling_fp_with_grade(DielectricGrade::Cog)];
+        let comps = vec![make_decoupling_comp(0)];
+        let rules = DesignRules::holohv();
+        let (n, _) = detect_cap_dielectric_grade_violations(&comps, &lib, &rules);
+        assert_eq!(n, 0, "COG is better than X7R floor — must pass");
+    }
+
+    /// An Unknown-grade cap is vacuous — must pass regardless of floor.
+    #[test]
+    fn passes_unknown_grade_regardless_of_floor() {
+        let lib = vec![cap_fp()]; // DielectricGrade::Unknown (default)
+        let comps = vec![make_decoupling_comp(0)];
+        let rules = DesignRules::holohv();
+        let (n, _) = detect_cap_dielectric_grade_violations(&comps, &lib, &rules);
+        assert_eq!(n, 0, "Unknown grade is vacuous — must not be flagged");
+    }
+
+    /// min_decoupling_cap_grade == Unknown makes the entire check vacuous.
+    #[test]
+    fn vacuous_when_min_grade_is_unknown() {
+        let lib = vec![make_decoupling_fp_with_grade(DielectricGrade::Y5v)];
+        let comps = vec![make_decoupling_comp(0)];
+        let mut rules = DesignRules::holohv();
+        rules.min_decoupling_cap_grade = DielectricGrade::Unknown;
+        let (n, _) = detect_cap_dielectric_grade_violations(&comps, &lib, &rules);
+        assert_eq!(n, 0, "Unknown min grade makes check vacuous");
     }
 }

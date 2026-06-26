@@ -201,5 +201,7 @@ pub fn import_kicad_mod(
         ball_pitch: None,
         i_dd_a: 0.0,
         capacitance_f: 0.0,
+        dielectric_grade: crate::place::footprint::DielectricGrade::Unknown,
+        package_form_factor: crate::place::footprint::PackageFormFactor::Unknown,
     })
 }

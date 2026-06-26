@@ -11,6 +11,7 @@ mod plane;
 mod via;
 
 pub(crate) use decoupling::{
+    detect_cap_dielectric_grade_violations,
     detect_charge_reservoir_violations,
     detect_decoupling_cap_distance_violations,
     detect_decoupling_loop_area_violations,

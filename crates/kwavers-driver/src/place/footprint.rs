@@ -15,6 +15,69 @@ use super::rotation::RotationPolicy;
 use crate::board::LayerId;
 use crate::geom::{Nm, Point};
 
+/// Ceramic capacitor dielectric material grade (TI SLYP173 §5-17/5-20).
+///
+/// Each grade has materially different capacitance stability over temperature, voltage, and
+/// frequency. The default [`DielectricGrade::Unknown`] leaves the check vacuous so existing
+/// footprints without a grade assigned are never falsely flagged — add a grade only when the
+/// datasheet is known.
+///
+/// Ordering (best→worst): `Cog > X7r > Z5u > Y5v`. `Unknown` is neutral (vacuous).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum DielectricGrade {
+    /// Unknown or unspecified; check is vacuous for this component.
+    #[default]
+    Unknown,
+    /// **COG (NP0)** — ±30 ppm/°C, flat vs. frequency and voltage; best grade.
+    Cog,
+    /// **X7R** — ±15 % over −55 °C … +125 °C; acceptable mid-grade for bypass.
+    X7r,
+    /// **Z5U** — +22 %/−56 % over +10 °C … +85 °C; variable, lower quality.
+    Z5u,
+    /// **Y5V** — +22 %/−82 % over −30 °C … +85 °C; worst grade; avoid for high-speed.
+    Y5v,
+}
+
+impl DielectricGrade {
+    /// `true` if this grade meets or exceeds `min_required`.
+    ///
+    /// [`Unknown`] is always accepted (no grade information → vacuous pass). The ordering is
+    /// `Cog (4) ≥ X7r (3) ≥ Z5u (2) ≥ Y5v (1)`; `Unknown` (0) bypasses the check.
+    #[must_use]
+    pub fn meets_minimum(self, min_required: Self) -> bool {
+        if self == Self::Unknown || min_required == Self::Unknown {
+            return true;
+        }
+        self.rank() >= min_required.rank()
+    }
+
+    fn rank(self) -> u8 {
+        match self {
+            Self::Unknown => 0,
+            Self::Y5v => 1,
+            Self::Z5u => 2,
+            Self::X7r => 3,
+            Self::Cog => 4,
+        }
+    }
+}
+
+/// Physical package form factor of a component.
+///
+/// Through-hole/leaded packages carry higher lead inductance than SMT equivalents (TI
+/// SLYP173 §5-20/5-21, §5-30). The default [`Unknown`] leaves the check vacuous.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum PackageFormFactor {
+    /// Unknown or unspecified; through-hole check is vacuous for this component.
+    #[default]
+    Unknown,
+    /// **SMT** (surface-mount): 0402, 0603, QFN, SOIC, BGA, etc. Preferred for high-speed.
+    Smt,
+    /// **Through-hole / leaded**: DIP, TO-220, axial/radial resistors, leaded caps.
+    /// High lead inductance; avoid for high-speed signal paths (TI SLYP173 §5-21, §5-30).
+    ThroughHole,
+}
+
 /// Placement role — drives where a part *wants* to sit in the placement energy.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Role {
@@ -110,6 +173,16 @@ pub struct FootprintDef {
     /// as under-provisioned (`Σ_i_i_cap = 0 ≪ I_dd`) so the operator notices the gap.
     /// Pass `with_capacitance_f(f64)` on the footprint builder to silence.
     pub capacitance_f: f64,
+    /// Ceramic dielectric material grade (TI SLYP173 §5-17/5-20). Default
+    /// [`DielectricGrade::Unknown`] makes the grade check vacuous — set only for caps whose
+    /// datasheet grade is known. The audit flags decoupling caps whose grade is worse than
+    /// [`crate::rules::DesignRules::min_decoupling_cap_grade`].
+    pub dielectric_grade: DielectricGrade,
+    /// Physical package form factor. Default [`PackageFormFactor::Unknown`] makes the through-hole
+    /// check vacuous — set to [`PackageFormFactor::ThroughHole`] for DIP, TO-220, axial, and
+    /// radial leaded components so `detect_through_hole_high_speed_violations` can flag them when
+    /// connected to high-speed nets (TI SLYP173 §5-20/5-21, §5-30).
+    pub package_form_factor: PackageFormFactor,
 }
 
 impl FootprintDef {
@@ -130,11 +203,12 @@ impl FootprintDef {
             pad_names: Vec::new(),
             model: None,
             ball_pitch: None,
-            // Per-part electrical specs default to `0.0` so existing FootprintDef::new(…) call
-            // sites continue to compile unchanged; `\u{0.0}` selects the vacuous branch in
-            // [`crate::audit::detect_charge_reservoir_violations`] (no rating ⇒ skip silently).
+            // Per-part electrical specs default to `0.0` / enum defaults so existing
+            // FootprintDef::new(…) call sites continue to compile unchanged.
             i_dd_a: 0.0,
             capacitance_f: 0.0,
+            dielectric_grade: DielectricGrade::Unknown,
+            package_form_factor: PackageFormFactor::Unknown,
         }
     }
 
@@ -160,6 +234,20 @@ impl FootprintDef {
     #[must_use]
     pub fn with_capacitance_f(mut self, c_f: f64) -> Self {
         self.capacitance_f = c_f;
+        self
+    }
+
+    /// Set the ceramic capacitor dielectric grade for the grade-quality audit.
+    #[must_use]
+    pub fn with_dielectric_grade(mut self, grade: DielectricGrade) -> Self {
+        self.dielectric_grade = grade;
+        self
+    }
+
+    /// Set the physical package form factor for the through-hole detection audit.
+    #[must_use]
+    pub fn with_package_form_factor(mut self, form: PackageFormFactor) -> Self {
+        self.package_form_factor = form;
         self
     }
 

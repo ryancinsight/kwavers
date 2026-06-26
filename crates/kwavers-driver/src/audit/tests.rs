@@ -20,7 +20,7 @@ use crate::rules::DesignRules;
         );
 
         type FaultMarker = fn(&mut FaultReport);
-        let dirty_fields: [(&str, FaultMarker); 64] = [
+        let dirty_fields: [(&str, FaultMarker); 66] = [
             ("clearance violations", |r: &mut FaultReport| {
                 r.clearance_violations = 1;
             }),
@@ -226,6 +226,12 @@ use crate::rules::DesignRules;
             }),
             ("via return count", |r: &mut FaultReport| {
                 r.high_speed_via_return_count_violations = 1;
+            }),
+            ("cap dielectric grade", |r: &mut FaultReport| {
+                r.cap_dielectric_grade_violations = 1;
+            }),
+            ("through-hole high-speed", |r: &mut FaultReport| {
+                r.through_hole_high_speed_violations = 1;
             }),
         ];
 
@@ -3493,6 +3499,8 @@ use crate::place::rotation::{Rot};
             ball_pitch: None,
             i_dd_a: 0.0,
             capacitance_f: 0.0,
+            dielectric_grade: crate::place::footprint::DielectricGrade::Unknown,
+            package_form_factor: crate::place::footprint::PackageFormFactor::Unknown,
         }];
 
         // Low-voltage control net source component (connector J2)

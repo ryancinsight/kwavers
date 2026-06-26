@@ -228,6 +228,11 @@ pub struct DesignRules {
     /// requires ≥ 1 (any-or-nothing); this threshold enforces the higher minimum. `0` makes
     /// the check vacuous.
     pub min_signal_via_return_count: usize,
+    /// Minimum acceptable dielectric grade for decoupling capacitors (TI SLYP173 §5-17/5-20).
+    /// Caps with a grade worse than this are flagged by `detect_cap_dielectric_grade_violations`.
+    /// Default [`DielectricGrade::X7r`] flags Z5U and Y5V; set to [`DielectricGrade::Unknown`]
+    /// to make the check vacuous (skip all grade checks).
+    pub min_decoupling_cap_grade: crate::place::footprint::DielectricGrade,
 }
 
 impl DesignRules {
@@ -294,6 +299,7 @@ impl DesignRules {
             antenna_impedance_tolerance_ohm: 10.0, // ±20 % of 50 Ω
             max_ground_via_stitching_spacing: Nm::from_mm(2.5), // 0.25 cm per TI SLYP173
             min_signal_via_return_count: 2, // TI SLYP173 recommends 4; 2 is pragmatic floor
+            min_decoupling_cap_grade: crate::place::footprint::DielectricGrade::X7r,
         }
     }
 

@@ -4,10 +4,12 @@
 //! parallel spacing (same and adjacent layer), reference-plane margin/absence/
 //! intrusion/stitching, split-domain crossings, via stub/transition/terminal,
 //! via diameter, blind/buried via drill size, the λ/10 transmission-line length
-//! rule, ground-via stitching density, and signal-via return-via count.
+//! rule, ground-via stitching density, signal-via return-via count, and
+//! through-hole/leaded package detection.
 
 mod edge_spacing;
 mod ground_via_stitching;
+mod package_form;
 mod trace_length;
 mod via_termination;
 mod reference_plane;
@@ -24,6 +26,8 @@ pub(crate) use ground_via_stitching::{
     detect_ground_via_stitching_violations,
     detect_high_speed_via_return_count_violations,
 };
+
+pub(crate) use package_form::detect_through_hole_high_speed_violations;
 
 pub(crate) use trace_length::detect_transmission_line_length_violations;
 

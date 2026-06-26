@@ -49,7 +49,7 @@ pub use component::{
     component_clearance_violations, Component, ComponentClearanceViolation, Placement, Rect,
 };
 pub use energy::{energy, Axis, CongestionField, EnergyTerms, PlaceConfig, PlaceWeights};
-pub use footprint::{FootprintDef, IsolationDomain, PadDef, Role};
+pub use footprint::{DielectricGrade, FootprintDef, IsolationDomain, PackageFormFactor, PadDef, Role};
 pub use footprint_import::import_kicad_mod;
 pub use rotation::{Rot, RotationPolicy};
 pub use symbol_import::{import_symbol_pinmap, PinMap};

@@ -223,6 +223,14 @@ pub struct FaultReport {
     /// ground transition vias within the transition search radius. TI SLYP173 §5-15/5-17
     /// recommends 4 return vias per signal via for controlled-impedance via transitions.
     pub high_speed_via_return_count_violations: usize,
+    /// Decoupling capacitors whose ceramic dielectric grade is worse than
+    /// `DesignRules::min_decoupling_cap_grade` (TI SLYP173 §5-17/5-20). Poor grades (Z5U, Y5V)
+    /// exhibit severe capacitance drop under temperature and voltage, undermining bypass action.
+    pub cap_dielectric_grade_violations: usize,
+    /// Active ICs, decoupling caps, or high-speed-net components using a through-hole/leaded
+    /// package (TI SLYP173 §5-20/5-21, §5-30). Lead inductance (2–20 nH/pin) degrades SI and
+    /// high-frequency bypass action; SMT packages are required on high-speed signal paths.
+    pub through_hole_high_speed_violations: usize,
     /// Aggregate risk score (higher = worse); HV-involved faults weighted up.
     pub risk_score: f64,
     /// Board locations of the worst weaknesses (drives the feedback field).
@@ -297,6 +305,8 @@ impl FaultReport {
             && self.antenna_impedance_violations == 0
             && self.ground_via_stitching_violations == 0
             && self.high_speed_via_return_count_violations == 0
+            && self.cap_dielectric_grade_violations == 0
+            && self.through_hole_high_speed_violations == 0
     }
 }
 
