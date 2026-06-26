@@ -27,7 +27,7 @@ pub fn widen_for_ampacity(
     let plane_nets: std::collections::HashSet<u32> = board.zones.iter().map(|z| z.net.0).collect();
     let mut widened = 0;
     for i in 0..board.tracks.len() {
-        let t = board.tracks[i].clone();
+        let t = board.tracks[i];
         if plane_nets.contains(&t.net.0) {
             continue;
         }

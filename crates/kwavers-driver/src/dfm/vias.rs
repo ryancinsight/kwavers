@@ -28,7 +28,7 @@ pub fn dedup_vias(board: &mut Board, rules: &DesignRules) -> usize {
                 v.from.0.min(v.to.0),
                 v.from.0.max(v.to.0),
                 v.filled,
-                v.clone(),
+                v,
             ));
     }
     let mut out: Vec<crate::board::Via> = by_key

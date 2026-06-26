@@ -156,7 +156,7 @@ pub fn miter_right_angle_corners(
     let mut additions: Vec<Track> = Vec::new();
 
     for (h_idx, h_is_start, v_idx, v_is_start, p1, p2, width) in miters {
-        let h_track = board.tracks[h_idx].clone();
+        let h_track = board.tracks[h_idx];
 
         // Shorten each track at the apex end. A segment can legitimately have right-angle corners
         // at both ends; patch start/end independently so the second miter's diagonal lands on a real

@@ -38,14 +38,16 @@ pub fn is_exact_footprint(fp: &FootprintDef) -> bool {
 #[must_use]
 pub fn fabrication_readiness(comps: &[Component], lib: &[FootprintDef]) -> FabReadiness {
     let mut r = FabReadiness::default();
-    let mut seen = std::collections::BTreeSet::new();
+    // Deduplicate by footprint library index (integer, no heap alloc) so the name is cloned
+    // at most once per distinct abstraction footprint rather than twice per occurrence.
+    let mut seen: std::collections::BTreeSet<usize> = std::collections::BTreeSet::new();
     for c in comps {
         let fp = &lib[c.fp];
         if is_exact_footprint(fp) {
             r.exact += 1;
         } else {
             r.abstraction += 1;
-            if seen.insert(fp.name.clone()) {
+            if seen.insert(c.fp) {
                 r.abstraction_footprints.push(fp.name.clone());
             }
         }

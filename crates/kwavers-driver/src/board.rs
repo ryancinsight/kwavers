@@ -108,7 +108,7 @@ pub struct Pad {
 }
 
 /// A routed copper track segment.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Track {
     /// Segment start.
     pub start: Point,
@@ -138,7 +138,7 @@ pub enum ViaKind {
 }
 
 /// A routed via connecting two layers.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Via {
     /// Via centre.
     pub pos: Point,
