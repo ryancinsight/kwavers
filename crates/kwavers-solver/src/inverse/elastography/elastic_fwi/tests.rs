@@ -444,3 +444,71 @@ fn pearson(a: &[f64], b: &[f64]) -> f64 {
     }
     cov / (va.sqrt() * vb.sqrt())
 }
+
+/// ADR-033 increment 5: the L-BFGS optimizer reconstructs the stiff inclusion —
+/// substantial misfit reduction, correct contrast, preserved background — the
+/// faster-converging alternative to steepest descent. Validates `run_lbfgs`.
+#[test]
+fn lbfgs_reconstructs_stiff_inclusion() {
+    let n = 36usize;
+    let g = grid(n, n);
+    let m = medium(&g);
+    let mu_incl = 3.0 * MU_BG;
+    let c = n as f64 / 2.0;
+    let mut mu_true = Array3::from_elem(g.dimensions(), MU_BG);
+    for i in 0..n {
+        for j in 0..n {
+            if (i as f64 - c).hypot(j as f64 - c) <= 5.0 {
+                mu_true[[i, j, 0]] = mu_incl;
+            }
+        }
+    }
+
+    let n_steps = 200;
+    let dt = stable_dt(&g, &m, mu_incl, 0.3);
+    let (sources, receivers) = four_side_transmission_acquisition(&g, n_steps, dt, 300.0, 1.0e7);
+
+    let mu0 = Array3::from_elem(g.dimensions(), MU_BG);
+    let mut cfg = ElasticFwiConfig::new(n_steps, dt, receivers, sources);
+    cfg.iterations = 12;
+    cfg.step_size = MU_BG;
+    cfg.mu_min = 0.25 * MU_BG;
+    cfg.mu_max = 8.0 * MU_BG;
+    cfg.mute_radius = 4;
+
+    let observed =
+        ElasticFwi::synthesize_observed(&g, swe_config(), &m, &mu_true, &cfg).expect("synth");
+    let mut fwi = ElasticFwi::new(&g, swe_config(), &m, mu0.clone(), observed, cfg).expect("fwi");
+    let j0 = fwi.forward_misfit(&mu0).expect("j0");
+    let mu_rec = fwi.run_lbfgs(7).expect("lbfgs");
+    let jf = fwi.forward_misfit(&mu_rec).expect("jf");
+
+    assert!(
+        jf <= 0.5 * j0,
+        "L-BFGS must reduce the misfit: J0={j0:e} Jf={jf:e}"
+    );
+
+    let mut peak = 0.0_f64;
+    let mut bg_sum = 0.0;
+    let mut bg_n = 0;
+    for i in 8..28 {
+        for j in 8..28 {
+            let v = mu_rec[[i, j, 0]];
+            if (i as f64 - c).hypot(j as f64 - c) <= 5.0 {
+                peak = peak.max(v);
+            } else {
+                bg_sum += v;
+                bg_n += 1;
+            }
+        }
+    }
+    assert!(
+        peak >= 2.0 * MU_BG,
+        "L-BFGS lesion peak {peak:.0} < 2×MU_BG"
+    );
+    let bg_mean = bg_sum / bg_n as f64;
+    assert!(
+        (bg_mean - MU_BG).abs() <= 0.2 * MU_BG,
+        "L-BFGS background {bg_mean:.0} drifted from {MU_BG:.0}"
+    );
+}

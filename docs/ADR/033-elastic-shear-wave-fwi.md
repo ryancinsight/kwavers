@@ -176,11 +176,17 @@ clamped to a physical `[μ_min, μ_max]`.
    interior loops `1..nz-1` are empty for `nz = 1`). Both fixed with singleton-axis
    guards + regression tests, so shear-wave elastography — conventionally a 2-D
    imaging plane — now inverts correctly in 2-D.
-5. **PARTIAL — PyO3 binding DONE; optimal checkpointing, 3-D, joint `λ/ρ`,
-   L-BFGS deferred.** `pykwavers.elastic_shear_fwi_reconstruct` (thin layer over
+5. **PARTIAL — PyO3 binding + L-BFGS DONE; optimal checkpointing, 3-D, joint
+   `λ/ρ` deferred.** `pykwavers.elastic_shear_fwi_reconstruct` (thin layer over
    `reconstruct_lesion_transmission`) exposes the inversion to Python with a
-   binding-surface pytest. The acquisition setup is consolidated in
-   `elastic_fwi::acquisition` and shared by the example and the binding.
+   binding-surface pytest; the acquisition setup is consolidated in
+   `elastic_fwi::acquisition`, shared by the example and the binding.
+   `ElasticFwi::run_lbfgs` adds the quasi-Newton optimizer (reusing
+   `kwavers_math::LbfgsMemory`, mirroring the acoustic `invert_lbfgs`): it uses
+   the **true** gradient `∂J/∂μ` (raw `K_μ` + regularization, no preconditioner —
+   the inverse-Hessian subsumes that role) for a valid Armijo line search, and
+   recovers the stiff inclusion in ~7 s vs the steepest-descent ~17–40 s
+   (`lbfgs_reconstructs_stiff_inclusion`).
 
 The book Ch26 §26 / Ch11 §11.14 "not implemented" disclosures are updated to point
 at the real module (`inverse::elastography::elastic_fwi`).

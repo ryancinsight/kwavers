@@ -2,6 +2,7 @@
 //! inversion loop with Armijo line search (ADR 033 increment 3).
 
 use kwavers_core::error::KwaversResult;
+use kwavers_math::optimization::LbfgsMemory;
 use ndarray::Array3;
 
 use super::ElasticFwi;
@@ -77,6 +78,99 @@ impl ElasticFwi {
         Ok(mu)
     }
 
+    /// Reconstruct `μ` by L-BFGS quasi-Newton with Armijo backtracking — the
+    /// faster-converging alternative to [`Self::run`] (steepest descent), and the
+    /// ADR-033 increment-5 optimizer. Uses the **true** gradient `∂J/∂μ` (raw
+    /// `K_μ` + regularization, *no* illumination preconditioner: the inverse-
+    /// Hessian approximation subsumes that role), so the Armijo directional
+    /// derivative `gᵀd` is exact. `memory` is the number of stored curvature pairs
+    /// (typically 5–10). Mirrors the acoustic `FwiProcessor::invert_lbfgs`.
+    ///
+    /// # Errors
+    /// Propagates solver errors.
+    pub fn run_lbfgs(&mut self, memory: usize) -> KwaversResult<Array3<f64>> {
+        let dim = self.solver.mu().dim();
+        let mut model = self.solver.mu().clone();
+        model.mapv_inplace(|m| m.clamp(self.config.mu_min, self.config.mu_max));
+
+        let mut mem = LbfgsMemory::new(memory);
+        let (mut objective, grad0) = self.misfit_and_true_gradient(&model)?;
+        let mut x: Vec<f64> = model.iter().copied().collect();
+        let mut g: Vec<f64> = grad0.iter().copied().collect();
+
+        let g0_inf = inf_norm(&g);
+        if g0_inf <= f64::MIN_POSITIVE {
+            return Ok(model);
+        }
+        const GRAD_REL_TOL: f64 = 1.0e-8;
+
+        for _iter in 0..self.config.iterations {
+            if inf_norm(&g) <= GRAD_REL_TOL * g0_inf {
+                break;
+            }
+            let dir = mem.direction(&g); // descent direction d = −H·g
+            let gd = dot(&g, &dir);
+            if gd >= 0.0 {
+                break; // not a descent direction
+            }
+            // First step scales steepest descent to the configured step; once
+            // L-BFGS has curvature it carries the units, so start at α = 1.
+            let mut step = if mem.is_empty() {
+                (self.config.step_size / inf_norm(&g)).max(f64::MIN_POSITIVE)
+            } else {
+                1.0
+            };
+            let mut accepted: Option<Vec<f64>> = None;
+            for _ in 0..12 {
+                let trial: Vec<f64> = x
+                    .iter()
+                    .zip(&dir)
+                    .map(|(&xi, &di)| {
+                        step.mul_add(di, xi)
+                            .clamp(self.config.mu_min, self.config.mu_max)
+                    })
+                    .collect();
+                let trial_arr =
+                    Array3::from_shape_vec(dim, trial.clone()).expect("trial shares model shape");
+                if self.objective(&trial_arr)? <= 1e-4f64.mul_add(step * gd, objective) {
+                    accepted = Some(trial);
+                    break;
+                }
+                step *= 0.5;
+            }
+            let Some(x_new) = accepted else {
+                break; // line search stalled
+            };
+            let model_new = Array3::from_shape_vec(dim, x_new.clone()).expect("model shares shape");
+            let (obj_new, grad_new) = self.misfit_and_true_gradient(&model_new)?;
+            let g_new: Vec<f64> = grad_new.iter().copied().collect();
+            // Curvature pair: s = xₖ₊₁ − xₖ, y = ∇Jₖ₊₁ − ∇Jₖ.
+            let s: Vec<f64> = x_new.iter().zip(&x).map(|(&a, &b)| a - b).collect();
+            let y: Vec<f64> = g_new.iter().zip(&g).map(|(&a, &b)| a - b).collect();
+            mem.push(s, y);
+            x = x_new;
+            g = g_new;
+            objective = obj_new;
+        }
+
+        let mu = Array3::from_shape_vec(dim, x).expect("model shares shape");
+        self.solver.set_mu(&mu)?;
+        Ok(mu)
+    }
+
+    /// Total objective and the **true** gradient `∂J/∂μ` (raw `K_μ` +
+    /// regularization, no illumination preconditioner) — the consistent
+    /// objective/gradient pair L-BFGS requires for a valid Armijo line search.
+    ///
+    /// # Errors
+    /// Propagates solver errors.
+    fn misfit_and_true_gradient(&mut self, mu: &Array3<f64>) -> KwaversResult<(f64, Array3<f64>)> {
+        let (j_data, mut grad) = self.data_misfit_and_gradient(mu)?;
+        let penalty = self.regularization_penalty(mu);
+        self.add_regularization_gradient(&mut grad, mu);
+        Ok((j_data + penalty, grad))
+    }
+
     /// `clamp(μ − α·grad, μ_min, μ_max)`.
     fn stepped_model(&self, mu: &Array3<f64>, grad: &Array3<f64>, alpha: f64) -> Array3<f64> {
         let mut out = mu.clone();
@@ -119,6 +213,16 @@ impl ElasticFwi {
             add_tv_gradient(grad, mu, self.config.tv_weight);
         }
     }
+}
+
+/// Max-norm `‖v‖∞`.
+fn inf_norm(v: &[f64]) -> f64 {
+    v.iter().fold(0.0_f64, |m, &x| m.max(x.abs()))
+}
+
+/// Euclidean dot product `a·b`.
+fn dot(a: &[f64], b: &[f64]) -> f64 {
+    a.iter().zip(b).map(|(&x, &y)| x * y).sum()
 }
 
 /// Isotropic Huber-smoothed total variation `Σ √(ε² + (∂_x μ)² + (∂_y μ)²)` over
