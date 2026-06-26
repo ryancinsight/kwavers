@@ -43,7 +43,6 @@ pub mod shorts;
 #[cfg(test)]
 mod tests;
 
-#[allow(missing_docs)]  // Phase 4c carve: re-exports carry docs from their source axes.
 pub use fault_report::FaultReport;
 pub use crosstalk::emi_hotspots;
 pub use antenna::{copper_area_per_layer, copper_imbalance};

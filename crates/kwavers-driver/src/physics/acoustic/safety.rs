@@ -107,10 +107,10 @@ pub fn isppa_w_per_m2(peak_negative_pa: f64, z0_rayl: f64, duty_factor: f64) -> 
 /// in time-gain-compensation (TGC) curves and any pulse-echo imaging budget.
 ///
 /// Distinction from [`tissue_attenuation_db`]: the one-way form (`α · f · z`) suits
-/// transmit-only pressure budgets; pulse-echo imaging traverses the tissue twice (transmit
-/// + receive), so the relevant figure is `2 · α · f · z`. The two are easily confused at a
-/// call site — the SSOT-distinction test in `crate::physics::acoustic::tests` pins the
-/// factor of two.
+/// transmit-only pressure budgets; pulse-echo imaging traverses the tissue twice
+/// (transmit + receive), so the relevant figure is `2 · α · f · z`. The two are easily
+/// confused at a call site — the SSOT-distinction test in
+/// `crate::physics::acoustic::tests` pins the factor of two.
 ///
 /// Boundary behaviour:
 /// * `alpha_db_cm_mhz < 0` OR `freq_mhz < 0` OR `depth_cm < 0` ⇒ returns `f64::INFINITY`

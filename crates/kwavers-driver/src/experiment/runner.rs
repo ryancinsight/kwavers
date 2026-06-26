@@ -55,7 +55,7 @@ pub fn run_experiment<S: AcousticSimulator>(
 ) -> crate::error::Result<ExperimentReport> {
     // 1. Validate manifest + budget into the typed pre-step.
     let step = manifest_to_kwavers_beam_step(manifest, budget)
-        .map_err(|msg| Validate::KwaversBeamStepContract(msg))?;
+        .map_err(Validate::KwaversBeamStepContract)?;
 
     // 2. Acoustic simulation via the injected simulator.
     let pressure_map = simulator.simulate(&step, budget)?;

@@ -52,25 +52,25 @@
 //! * `pub mod emi` (Phase 3d; MIGRATION.md formal numbering) — owns the commutation-loop
 //!   inductance / EMI kernel split into 8 sub-modules: `scene.rs` holds [`CommutationLoop`](crate::physics::emi::CommutationLoop)
 //!   + the `commutation_loops` scene walker + private `pad_on_net` helper;
-//!   `losses.rs` / `overshoot.rs` / `radiated.rs` / `trace_partial.rs` hold the seven
-//!   kernel fns; `loop.rs` (`pub mod r#loop;` in the slice facade — `loop` is a Rust
-//!   keyword, raw-identifier escape on the mod decl, filename remains `loop.rs`) holds the
-//!   slice-private `polygon_area_mm2` (shoelace helper, `pub(super)`) and the public
-//!   `loop_inductance_nh` (μ₀·√area). The flat `src/emi.rs` was retired; 8 lifted tests
-//!   consolidated into `tests.rs`. Re-exported at the crate root under
-//!   `pub use physics::emi::{...}` so the `crate::loop_inductance_nh`-style API surface
-//!   is preserved verbatim.
+//!     `losses.rs` / `overshoot.rs` / `radiated.rs` / `trace_partial.rs` hold the seven
+//!     kernel fns; `loop.rs` (`pub mod r#loop;` in the slice facade — `loop` is a Rust
+//!     keyword, raw-identifier escape on the mod decl, filename remains `loop.rs`) holds the
+//!     slice-private `polygon_area_mm2` (shoelace helper, `pub(super)`) and the public
+//!     `loop_inductance_nh` (μ₀·√area). The flat `src/emi.rs` was retired; 8 lifted tests
+//!     consolidated into `tests.rs`. Re-exported at the crate root under
+//!     `pub use physics::emi::{...}` so the `crate::loop_inductance_nh`-style API surface
+//!     is preserved verbatim.
 //!
-//! Phase 3e `pdn` is DONE (5 files: mod.rs + target_impedance.rs + impedance.rs + cavity.rs
-//! + tests.rs; 7 fns carved across three per-concern submodules — flat `src/pdn.rs` retired,
+//! Phase 3e `pdn` is DONE (5 files: mod.rs + target_impedance.rs + impedance.rs +
+//! cavity.rs + tests.rs; 7 fns carved across three per-concern submodules — flat `src/pdn.rs` retired,
 //! callers re-routed to `crate::physics::pdn::*`). Phase 3f `si` is also DONE (5 files:
 //! mod.rs + impedance.rs + propagation.rs + crosstalk.rs + tests.rs; 8 existing fns carried
 //! across + 3 new APIs — `impedance_target` (signal-line branching-match target),
 //! `return_loss_db` (single-call RL for caller-loop iteration over freq bands), and
 //! `channel_operating_margin_db` (IEEE amplitude-ratio COM) — added to fill out the
 //! frequency-band-aware impedance-budget surface; flat `src/si.rs` retired, crate-root
-//! re-export at `crate::physics::si::{...}`). Phase 3g `acoustic` is also DONE — 8 files (mod.rs
-//! + wavelength.rs + grating.rs + focus.rs + element.rs + safety.rs + nonlinear.rs + tests.rs);
+//! re-export at `crate::physics::si::{...}`). Phase 3g `acoustic` is also DONE — 8 files
+//! (mod.rs + wavelength.rs + grating.rs + focus.rs + element.rs + safety.rs + nonlinear.rs + tests.rs);
 //! 18 prior pub fns carried across + 3 NEW APIs (`bvd_anti_resonance_hz` for the parallel-
 //! branch BVD equivalent-circuit resonance, `isppa_w_per_m2` for FDA Track-3 spatial-peak
 //! pulse-average intensity, `round_trip_attenuation_db` for the pulse-echo two-way loss). Flat
