@@ -9,7 +9,7 @@ use crate::manifest::{
 };
 use crate::ssot::*;
 
-use super::acoustic::{AcousticSimulator, InCrateAcousticSim, PressureMap};
+use super::acoustic::{AcousticSimulator, InCrateAcousticSim};
 use super::dispatch::TileDispatch;
 use super::metrics::{build_beam_report, ExperimentMetrics};
 use super::recorder::artifact_key;

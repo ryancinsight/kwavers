@@ -2,7 +2,7 @@
 //! `mod tests` block; `super::*` resolves the slice facade.
 
 use super::*;
-use crate::board::{Board, LayerId, NetClassKind, NetId, Pad, Track, Via, ViaKind, Zone, ZoneFill};
+use crate::board::{Board, LayerId, NetClassKind, NetId, Track, ZoneFill};
 use crate::geom::{GridSpec, Nm, Point};
 use crate::rules::DesignRules;
 

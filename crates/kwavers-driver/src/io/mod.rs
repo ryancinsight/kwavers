@@ -227,9 +227,7 @@ fn is_uuid_shape(value: &str) -> bool {
 // (`duplicate_pcb_uuids_reports_only_repeated_values` ↔
 //  `tests.rs::duplicate_pcb_uuids_reports_only_repeated_uuid_values`).
 #[cfg(test)]
-mod facade_tests {
-    use super::*;
-}
+mod facade_tests {}
 
 // ============================================================================
 // Sub-module declarations at the BOTTOM of the file (idiomatic Rust ordering).

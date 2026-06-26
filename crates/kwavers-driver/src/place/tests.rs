@@ -18,9 +18,9 @@
 
 use crate::board::{LayerId, NetId};
 use crate::geom::{GridSpec, Nm, Point};
-use crate::place::footprint_import::{child, num, parse_sexpr, xyz_child};
+use crate::place::footprint_import::{child, parse_sexpr, xyz_child};
 use crate::place::{
-    anneal, energy, import_kicad_mod, import_symbol_pinmap, AnnealParams, Axis, Component,
+    anneal, energy, import_kicad_mod, import_symbol_pinmap, AnnealParams, Component,
     CongestionField, FootprintDef, PadDef, PinMap, PlaceConfig, PlaceWeights, Placement, Rect,
     Role, Rot, RotationPolicy,
 };
