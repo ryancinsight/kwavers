@@ -12,7 +12,7 @@ use crate::rules::DesignRules;
 use crate::verify::{parasitic_ac_coupling_check, schematic_isolation_bfs};
 use crate::audit::fault_report::FaultReport;
 use crate::audit::detect_power::*;
-use crate::audit::{antenna::*, crosstalk::*, detect_routing::*, shorts::*};
+use crate::audit::{antenna::*, crosstalk::*, detect_diff_pair::*, detect_high_speed::*, detect_track::*, shorts::*};
 
 /// Run the full adversarial manufacturing and physics audit over a routed board.
 #[must_use]

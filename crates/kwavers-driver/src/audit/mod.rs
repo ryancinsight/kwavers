@@ -30,9 +30,12 @@
 pub mod antenna;
 pub mod critic;
 pub mod crosstalk;
+pub mod detect_diff_pair;
+pub mod detect_high_speed;
 pub mod detect_power;
-pub mod detect_routing;
+pub mod detect_track;
 pub mod fault_report;
+pub mod net_util;
 pub mod shorts;
 
 /// Integration tests — `#[cfg(test)]` so the test surface stays out of the
