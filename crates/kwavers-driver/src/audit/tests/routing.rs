@@ -1,6 +1,50 @@
 use super::*;
 
 #[test]
+fn point_feature_clearance_is_layer_aware() {
+    // A 0→1 HDI micro-via of net A and a foreign-net track passing 0.1 mm from its centre — well
+    // inside the via's 0.125 mm copper plus clearance. On layer 3 (which the via barrel does NOT
+    // reach) there is no copper to clash with, so per-layer DRC reports nothing; the same track on
+    // layer 0 (which the via spans) is a real clearance violation. This guards the layer gate that
+    // stops a buried/micro via from being false-flagged against tracks on layers it never touches.
+    let spec = GridSpec::cover(Nm::from_mm(20.0), Nm::from_mm(20.0), Nm::from_mm(0.5), 4).unwrap();
+    let mut b = Board::new(spec);
+    let a = b.add_net("A", NetClassKind::Signal);
+    let bn = b.add_net("B", NetClassKind::Signal);
+    b.vias.push(Via {
+        pos: Point::new(Nm::from_mm(10.0), Nm::from_mm(10.0)),
+        net: a,
+        from: LayerId(0),
+        to: LayerId(1),
+        kind: ViaKind::Micro,
+        drill: Nm::from_mm(0.1),
+        diameter: Nm::from_mm(0.25),
+        filled: true,
+    });
+    let track = |layer| Track {
+        start: Point::new(Nm::from_mm(10.1), Nm::from_mm(8.0)),
+        end: Point::new(Nm::from_mm(10.1), Nm::from_mm(12.0)),
+        width: Nm::from_mm(0.15),
+        layer,
+        net: bn,
+    };
+
+    b.tracks.push(track(LayerId(3)));
+    assert_eq!(
+        audit(&b, &[], &[], &DesignRules::holohv()).clearance_violations,
+        0,
+        "a 0→1 micro-via has no copper on layer 3, so a foreign track there is not a clearance violation"
+    );
+
+    b.tracks[0] = track(LayerId(0));
+    assert_eq!(
+        audit(&b, &[], &[], &DesignRules::holohv()).clearance_violations,
+        1,
+        "the same track on layer 0 — which the via barrel spans — is a real clearance violation"
+    );
+}
+
+#[test]
 fn serpentine_spacing_uses_edge_gap_not_centerline_gap() {
     let mut b = board();
     let sig = b.add_net("SERP", NetClassKind::Signal);

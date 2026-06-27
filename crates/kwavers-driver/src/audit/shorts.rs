@@ -58,40 +58,45 @@ pub(crate) fn near_shorts(board: &Board, risk_margin: Nm) -> (usize, f64, Vec<Po
         }
     }
 
-    // (b) point feature ↔ track edge (a via/pad near a foreign track) on the track's layer. The
-    // feature's own copper radius is subtracted so the gap is copper-edge-to-copper-edge.
+    // (b) point feature ↔ track edge (a via/pad near a foreign track) **on a layer the feature's
+    // copper actually occupies**. The feature's own copper radius is subtracted so the gap is
+    // copper-edge-to-copper-edge. The layer gate is what stops a 0→1 HDI micro-via from being
+    // counted against a track on layer 2/3 it never touches (the dominant false-positive source).
     let feats = point_features(board);
-    for &(p, n, hv0, rad) in &feats {
+    for ft in &feats {
         for t in tr {
-            if t.net == n {
+            if t.net == ft.net || !ft.on_layer(t.layer.0) {
                 continue;
             }
-            let gap = crate::geom::dist_point_seg(p, t.start, t.end) - t.width.0 as f64 / 2.0 - rad;
-            let hv = hv0 || is_hv(board, t.net);
-            hit(gap, hv, p, &mut count, &mut score);
+            let gap = crate::geom::dist_point_seg(ft.pos, t.start, t.end)
+                - t.width.0 as f64 / 2.0
+                - ft.radius;
+            let hv = ft.hv || is_hv(board, t.net);
+            hit(gap, hv, ft.pos, &mut count, &mut score);
         }
     }
 
     // (c) point ↔ point (via/pad copper of different nets): edge-to-edge gap is centre distance
-    // minus both copper radii. The bbox reject widens by the radii so a near pair is not culled.
+    // minus both copper radii, but only when their **layer spans overlap** (two discs on disjoint
+    // layers cannot clash). The bbox reject widens by the radii so a near pair is not culled.
     for i in 0..feats.len() {
-        let (pi, ni, hvi, ri) = feats[i];
-        for &(pj, nj, hvj, rj) in feats.iter().skip(i + 1) {
-            if ni == nj {
+        let fi = &feats[i];
+        for fj in feats.iter().skip(i + 1) {
+            if fi.net == fj.net || !fi.spans_overlap(fj) {
                 continue;
             }
-            let reach = m + ri + rj;
-            if (pi.x.0 - pj.x.0).abs() as f64 > reach || (pi.y.0 - pj.y.0).abs() as f64 > reach {
+            let reach = m + fi.radius + fj.radius;
+            if (fi.pos.x.0 - fj.pos.x.0).abs() as f64 > reach
+                || (fi.pos.y.0 - fj.pos.y.0).abs() as f64 > reach
+            {
                 continue;
             }
-            let at = Point::new(Nm((pi.x.0 + pj.x.0) / 2), Nm((pi.y.0 + pj.y.0) / 2));
-            hit(
-                pi.euclid(pj) - ri - rj,
-                hvi || hvj,
-                at,
-                &mut count,
-                &mut score,
+            let at = Point::new(
+                Nm((fi.pos.x.0 + fj.pos.x.0) / 2),
+                Nm((fi.pos.y.0 + fj.pos.y.0) / 2),
             );
+            let gap = fi.pos.euclid(fj.pos) - fi.radius - fj.radius;
+            hit(gap, fi.hv || fj.hv, at, &mut count, &mut score);
         }
     }
 

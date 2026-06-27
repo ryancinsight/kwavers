@@ -101,25 +101,77 @@ pub(crate) fn flight_crossings(board: &Board) -> (usize, Vec<Point>) {
     (count, pts)
 }
 
-/// Point copper "features" — via and pad centres (each is layer-spanning copper), as
-/// `(point, net, is_hv)`. Track copper is handled by edge-to-edge segment proximity, not points, so
-/// the metric is independent of how finely the router segmented a run (post-`merge_collinear`, a
-/// straight run has no interior endpoints to spuriously count).
-pub(crate) fn point_features(board: &Board) -> Vec<(Point, NetId, bool, f64)> {
+/// Point copper "features" — via and pad centres, each a copper disc of `radius` that exists only
+/// on the inclusive layer span `[lo, hi]` (a via barrel's drilled span, or a pad's copper layers).
+/// Track copper is handled by edge-to-edge segment proximity, not points, so the metric is
+/// independent of how finely the router segmented a run (post-`merge_collinear`, a straight run has
+/// no interior endpoints to spuriously count).
+pub(crate) fn point_features(board: &Board) -> Vec<PointFeature> {
     let mut f = Vec::new();
     for v in &board.vias {
         // A via is copper of radius `diameter/2` (the annular pad), not a zero-area point — the
         // clearance check must subtract that radius or it over-estimates the gap and misses the
-        // violation kicad-cli flags against the via's copper edge.
-        f.push((v.pos, v.net, is_hv(board, v.net), v.diameter.0 as f64 / 2.0));
+        // violation kicad-cli flags against the via's copper edge. The barrel only exists on the
+        // layers it spans (`from..=to`): a 0→1 HDI micro-via is **not** copper on layers 2/3, so a
+        // foreign track there is no conflict — the layer span gates the clearance check.
+        let (lo, hi) = (v.from.0.min(v.to.0), v.from.0.max(v.to.0));
+        f.push(PointFeature {
+            pos: v.pos,
+            net: v.net,
+            hv: is_hv(board, v.net),
+            radius: v.diameter.0 as f64 / 2.0,
+            lo,
+            hi,
+        });
     }
     for p in &board.pads {
         if let Some(n) = p.net {
             // `board.pads` carries no size, so the pad's copper extent is unknown here; treat it as a
             // point (radius 0). This is a conservative under-estimate for pad clearance — a documented
-            // residual until board pads carry their footprint copper extent.
-            f.push((p.pos, n, is_hv(board, n), 0.0));
+            // residual until board pads carry their footprint copper extent. The pad's copper exists
+            // only on its own layers, so an SMD top pad does not conflict with an inner-layer track.
+            let lo = p.layers.iter().map(|l| l.0).min().unwrap_or(0);
+            let hi = p.layers.iter().map(|l| l.0).max().unwrap_or(0);
+            f.push(PointFeature {
+                pos: p.pos,
+                net: n,
+                hv: is_hv(board, n),
+                radius: 0.0,
+                lo,
+                hi,
+            });
         }
     }
     f
+}
+
+/// A via/pad copper feature for clearance checks: a point with a copper `radius` that exists only on
+/// the inclusive layer span `[lo, hi]`.
+pub(crate) struct PointFeature {
+    /// Centre of the feature.
+    pub pos: Point,
+    /// Owning net.
+    pub net: NetId,
+    /// Whether the net is high-voltage (weights the clearance score 2×).
+    pub hv: bool,
+    /// Copper radius (annular ring for a via; `0` for a board pad with unknown extent).
+    pub radius: f64,
+    /// Lowest copper layer the feature occupies.
+    pub lo: u16,
+    /// Highest copper layer the feature occupies.
+    pub hi: u16,
+}
+
+impl PointFeature {
+    /// Whether this feature's copper overlaps `layer`.
+    #[must_use]
+    pub fn on_layer(&self, layer: u16) -> bool {
+        self.lo <= layer && layer <= self.hi
+    }
+
+    /// Whether this feature's layer span overlaps `other`'s (they can clash in 3-D).
+    #[must_use]
+    pub fn spans_overlap(&self, other: &PointFeature) -> bool {
+        self.lo <= other.hi && other.lo <= self.hi
+    }
 }
