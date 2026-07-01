@@ -10,7 +10,7 @@ repository = "https://github.com/ryancinsight/kwavers"
 [dependencies]
 kwavers-core = { path = "../kwavers-core" }
 kwavers-grid = { path = "../kwavers-grid" }
-ndarray = { version = "0.16", features = ["rayon", "serde"] }
+ndarray = { version = "0.16", features = ["serde"] }
 num-complex = "0.4"
 
 [dev-dependencies]

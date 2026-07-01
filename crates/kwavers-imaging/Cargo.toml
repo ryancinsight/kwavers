@@ -11,7 +11,7 @@ repository = "https://github.com/ryancinsight/kwavers"
 kwavers-core = { path = "../kwavers-core", features = ["registration", "nifti"] }
 kwavers-grid = { path = "../kwavers-grid" }
 kwavers-medium = { path = "../kwavers-medium" }
-ndarray = { version = "0.16", features = ["rayon", "serde"] }
+ndarray = { version = "0.16", features = ["serde"] }
 log = "0.4"
 burn = { version = "0.19", features = ["ndarray"] }
 ritk-core = { workspace = true }

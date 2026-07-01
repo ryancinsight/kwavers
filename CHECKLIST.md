@@ -59,6 +59,18 @@
       `cargo tree -p kwavers-transducer --depth 1` shows `moirai-parallel` and
       no direct `rayon` dependency, and `rg` finds no direct Rayon call sites in
       `crates/kwavers-transducer`.
+- [x] [patch] Low-level unused ndarray Rayon feature cleanup: remove ndarray's
+      `rayon` feature from `kwavers-field`, `kwavers-signal`,
+      `kwavers-source`, and `kwavers-imaging` after confirming those crate
+      trees contain no direct Rayon/Tokio/ndarray-parallel call sites.
+      Completion condition: `cargo fmt -p kwavers-source -p kwavers-field -p
+      kwavers-signal -p kwavers-imaging --check` passes, `cargo check -p
+      kwavers-source -p kwavers-field -p kwavers-signal -p kwavers-imaging`
+      passes, `cargo clippy -p kwavers-source -p kwavers-field -p
+      kwavers-signal -p kwavers-imaging --all-targets -- -D warnings` passes,
+      `cargo nextest run -p kwavers-source -p kwavers-field -p kwavers-signal
+      -p kwavers-imaging` passes 136/136, and `cargo tree -p` for the four
+      crates shows no direct `rayon` dependency.
 - [ ] [patch] Next provider-owned migration slice: audit the remaining direct
       `rayon`/`tokio` call sites outside `kwavers-core`, choose the smallest
       crate-local edge that can move to Moirai without changing public physics

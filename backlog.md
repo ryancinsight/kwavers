@@ -3,6 +3,23 @@
 > Active strategy at top; CLOSED history retained below for traceability.
 > Full gap inventory: [gap_audit.md](gap_audit.md). Active increment: [CHECKLIST.md](CHECKLIST.md).
 
+## CLOSED: low-level unused ndarray Rayon feature cleanup (2026-07-01)
+
+Removed ndarray's `rayon` feature from `kwavers-field`, `kwavers-signal`,
+`kwavers-source`, and `kwavers-imaging` after a crate-local search confirmed
+no direct Rayon, Tokio, or ndarray-parallel call sites in those crate trees.
+This reduces accidental provider activation while preserving existing Ritk and
+Burn dependencies where they are still present. Evidence tier: static analysis
+plus package tests. Verification: `cargo fmt -p kwavers-source -p
+kwavers-field -p kwavers-signal -p kwavers-imaging --check`, `cargo check -p
+kwavers-source -p kwavers-field -p kwavers-signal -p kwavers-imaging`, `cargo
+clippy -p kwavers-source -p kwavers-field -p kwavers-signal -p
+kwavers-imaging --all-targets -- -D warnings`, `cargo nextest run -p
+kwavers-source -p kwavers-field -p kwavers-signal -p kwavers-imaging`
+(136/136), `cargo tree -p kwavers-source -p kwavers-field -p kwavers-signal
+-p kwavers-imaging --depth 1`, and `rg` over the four crate trees for direct
+Rayon/Tokio/ndarray-parallel call sites.
+
 ## CLOSED: kwavers-transducer Moirai source-field slice (2026-07-01)
 
 Replaced the direct `rayon` edge in `kwavers-transducer` with workspace

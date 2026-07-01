@@ -25,6 +25,9 @@
 - [patch] Replaced `kwavers-transducer`'s direct `rayon` dependency with
   `moirai-parallel` for focus-delay and source-field indexed buffer writes, and
   removed ndarray's `rayon` feature from `kwavers-transducer`.
+- [patch] Removed unused ndarray `rayon` feature activation from
+  `kwavers-field`, `kwavers-signal`, `kwavers-source`, and `kwavers-imaging`
+  after confirming those crate trees have no direct parallel call sites.
 
 ### Changed (2026-07-01) - Cavitation passive-map bindings [patch]
 

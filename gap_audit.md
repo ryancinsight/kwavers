@@ -59,6 +59,14 @@ do not assert an unconfirmed physics error.
   --all-targets -- -D warnings`, `cargo nextest run -p kwavers-transducer`
   (203/203, 1 skipped), and `cargo tree -p kwavers-transducer --depth 1` pass,
   with `moirai-parallel` as the direct parallel provider.
+- **Unused low-level ndarray Rayon features — RESOLVED [patch].**
+  `kwavers-field`, `kwavers-signal`, `kwavers-source`, and `kwavers-imaging`
+  no longer enable ndarray's `rayon` feature. A crate-local source search found
+  no direct Rayon, Tokio, or ndarray-parallel call sites in those trees, so the
+  feature activation was not an active computation provider. Evidence tier:
+  static analysis plus package tests; the four-crate fmt, check, clippy, and
+  nextest gates pass, and `cargo tree -p` for the four crates shows no direct
+  `rayon` dependency.
 - **Remaining workspace Rayon/Tokio usage — OPEN [patch].** Root workspace
   dependencies and non-core crates still contain direct `rayon`/`tokio` usage.
   Next closure increment: audit call sites by crate, replace the smallest
