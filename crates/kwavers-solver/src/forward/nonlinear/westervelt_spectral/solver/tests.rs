@@ -238,7 +238,15 @@ fn lossy_westervelt_stays_finite_and_bounded() {
 
     for step in 0..80 {
         solver
-            .update_wave(&mut fields, &prev, &source, &grid, &medium, dt, step as f64 * dt)
+            .update_wave(
+                &mut fields,
+                &prev,
+                &source,
+                &grid,
+                &medium,
+                dt,
+                step as f64 * dt,
+            )
             .unwrap();
     }
 
@@ -398,7 +406,10 @@ fn lossy_westervelt_absorption_rate_matches_stokes_end_to_end() {
         }
     }
 
-    assert!(p.iter().all(|v| v.is_finite()), "lossy single-mode run must stay finite");
+    assert!(
+        p.iter().all(|v| v.is_finite()),
+        "lossy single-mode run must stay finite"
+    );
     let t_span = (n_steps - window) as f64 * dt;
     let gamma_measured = -(max_late / max_early).ln() / t_span;
     let rel_err = (gamma_measured - gamma_analytic).abs() / gamma_analytic;

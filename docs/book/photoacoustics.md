@@ -472,7 +472,7 @@ The determinant of the normalized matrix is $r_1 - r_2$. When $r_1 \approx r_2$,
 
 ![Two-chromophore spectroscopic unmixing](figures/ch13/fig05_spectroscopic_unmixing.png)
 
-*Figure 10.4. Least-squares HbO₂/Hb unmixing at 760/850 nm (`kw.spectroscopic_unmixing_lstsq`), recovering sO₂ from the 2×2 system (10.43)–(10.44). Wavelengths straddle the isosbestic point to minimize κ(E) (§10.5.3).*
+*Figure 10.4. Least-squares HbO₂/Hb unmixing at 760/850 nm (`kw.spectroscopic_unmixing_so2_sweep`), recovering sO₂ from the 2×2 system (10.43)–(10.44) under deterministic measurement perturbations. Rust/PyO3 owns the perturbation sweep, clipping, and sO₂ ratio calculation; Python plots the returned curves. Wavelengths straddle the isosbestic point to minimize κ(E) (§10.5.3).*
 
 
 The spectral unmixing is implemented in `kwavers_analysis::signal_processing::spectroscopy::SpectralUnmixer`.

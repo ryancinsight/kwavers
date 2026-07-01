@@ -24,6 +24,14 @@ pub const MECHANICAL_INDEX_LIMIT: f64 = kwavers_core::constants::medical::MI_LIM
 /// Default filter time constant (seconds)
 pub const DEFAULT_FILTER_TIME_CONSTANT: f64 = 0.1;
 
+const _: () = {
+    assert!(MIN_DUTY_CYCLE < DEFAULT_DUTY_CYCLE);
+    assert!(DEFAULT_DUTY_CYCLE < MAX_DUTY_CYCLE);
+    assert!(MAX_DUTY_CYCLE < 1.0);
+    assert!(MECHANICAL_INDEX_LIMIT > 0.0);
+    assert!(MAX_AMPLITUDE_RATE > 0.0);
+};
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -31,28 +39,20 @@ mod tests {
     /// Duty cycle constants satisfy: MIN < DEFAULT < MAX, all in (0, 1).
     #[test]
     fn duty_cycle_ordering() {
-        assert!(
-            MIN_DUTY_CYCLE < DEFAULT_DUTY_CYCLE,
-            "MIN_DUTY_CYCLE ({}) must be < DEFAULT_DUTY_CYCLE ({})",
-            MIN_DUTY_CYCLE,
-            DEFAULT_DUTY_CYCLE
-        );
-        assert!(
-            DEFAULT_DUTY_CYCLE < MAX_DUTY_CYCLE,
-            "DEFAULT_DUTY_CYCLE ({}) must be < MAX_DUTY_CYCLE ({})",
-            DEFAULT_DUTY_CYCLE,
-            MAX_DUTY_CYCLE
-        );
-        assert!(
-            MAX_DUTY_CYCLE < 1.0,
-            "MAX_DUTY_CYCLE must be < 1.0 (safety margin)"
-        );
+        let min_duty_cycle = MIN_DUTY_CYCLE;
+        let default_duty_cycle = DEFAULT_DUTY_CYCLE;
+        let max_duty_cycle = MAX_DUTY_CYCLE;
+        assert!(min_duty_cycle < default_duty_cycle);
+        assert!(default_duty_cycle < max_duty_cycle);
+        assert!(max_duty_cycle < 1.0);
     }
 
     /// Safety-critical constants are positive.
     #[test]
     fn safety_constants_positive() {
-        assert!(MECHANICAL_INDEX_LIMIT > 0.0);
-        assert!(MAX_AMPLITUDE_RATE > 0.0);
+        let mechanical_index_limit = MECHANICAL_INDEX_LIMIT;
+        let max_amplitude_rate = MAX_AMPLITUDE_RATE;
+        assert!(mechanical_index_limit.is_sign_positive());
+        assert!(max_amplitude_rate.is_sign_positive());
     }
 }

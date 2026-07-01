@@ -118,13 +118,24 @@ SRC2_IZ = N // 2 + 5                               # 37  (off-axis by 5 pts)
 PML_SIZE = 10                       # default k-wave PML (pml_inside=True)
 
 # ---------------------------------------------------------------------------
-# Parity targets (CW trace comparison; looser than B-mode imaging)
+# Parity targets (CW trace comparison; source-position specific)
 # ---------------------------------------------------------------------------
 PARITY_THRESHOLDS = {
-    "pearson_r":    0.93,
-    "rms_ratio_min": 0.80,
-    "rms_ratio_max": 1.25,
-    "psnr_db":      18.0,
+    "src1_on_axis": {
+        "pearson_r": 0.99,
+        "rms_ratio_min": 1.0 - 1e-5,
+        "rms_ratio_max": 1.0 + 1e-5,
+        "psnr_db": 110.0,
+    },
+    "src2_off_axis": {
+        "pearson_r": 0.99,
+        "rms_ratio_min": 1.0 - 1e-4,
+        "rms_ratio_max": 1.0 + 1e-4,
+        "psnr_db": 100.0,
+    },
+    "directivity": {
+        "ratio_min": 1.0,
+    },
 }
 
 # ---------------------------------------------------------------------------
@@ -435,12 +446,12 @@ def main() -> None:
     print("\n--- Parity evaluation ---")
     all_pass       = True
     report_sections: list[str] = []
-    thr = PARITY_THRESHOLDS
 
     for label, kw, pkw_res in [
         ("src1_on_axis",   kw1, pkw1),
         ("src2_off_axis",  kw2, pkw2),
     ]:
+        thr = PARITY_THRESHOLDS[label]
         metrics = compute_image_metrics(kw["trace"], pkw_res["trace"])
         checks  = {
             "pearson_r":  metrics["pearson_r"]  >= thr["pearson_r"],
@@ -479,11 +490,13 @@ def main() -> None:
     # Directivity test: on-axis peak > off-axis peak for both engines
     kw_dir_ratio  = float(np.abs(kw1["trace"]).max())  / (float(np.abs(kw2["trace"]).max())  + 1e-30)
     pkw_dir_ratio = float(np.abs(pkw1["trace"]).max()) / (float(np.abs(pkw2["trace"]).max()) + 1e-30)
-    dir_pass = kw_dir_ratio > 1.0 and pkw_dir_ratio > 1.0
+    directivity_thresholds = PARITY_THRESHOLDS["directivity"]
+    ratio_min = directivity_thresholds["ratio_min"]
+    dir_pass = kw_dir_ratio > ratio_min and pkw_dir_ratio > ratio_min
 
     print(f"\n  Directivity (on-axis peak / off-axis peak):")
-    print(f"    k-wave-python : {kw_dir_ratio:.3f}  {'OK' if kw_dir_ratio > 1 else 'FAIL'}")
-    print(f"    pykwavers     : {pkw_dir_ratio:.3f}  {'OK' if pkw_dir_ratio > 1 else 'FAIL'}")
+    print(f"    k-wave-python : {kw_dir_ratio:.3f}  {'OK' if kw_dir_ratio > ratio_min else 'FAIL'}")
+    print(f"    pykwavers     : {pkw_dir_ratio:.3f}  {'OK' if pkw_dir_ratio > ratio_min else 'FAIL'}")
     all_pass = all_pass and dir_pass
 
     report_sections.extend([

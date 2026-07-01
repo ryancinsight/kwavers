@@ -1,13 +1,13 @@
 use std::collections::BTreeSet;
 
-use crate::board::{Board, LayerId, NetId, Track};
-use crate::geom::{dist_seg_seg, Nm, Point};
-use crate::place::{Component, FootprintDef};
-use crate::rules::DesignRules;
 use crate::audit::net_util::{
     diff_pair_layer_segment_lengths, diff_pair_member_to_pair, diff_pair_members,
     diff_pair_pad_entry_distances, diff_pair_prefix,
 };
+use crate::board::{Board, LayerId, NetId, Track};
+use crate::geom::{dist_seg_seg, Nm, Point};
+use crate::place::{Component, FootprintDef};
+use crate::rules::DesignRules;
 
 use super::PairAxis;
 
@@ -427,7 +427,10 @@ pub(crate) fn detect_diff_pair_violations(
     )
 }
 
-pub(crate) fn detect_diff_pair_keepout_violations(board: &Board, rules: &DesignRules) -> (usize, Vec<Point>) {
+pub(crate) fn detect_diff_pair_keepout_violations(
+    board: &Board,
+    rules: &DesignRules,
+) -> (usize, Vec<Point>) {
     let pairs = diff_pair_members(board);
     let member_pair = diff_pair_member_to_pair(&pairs);
     let mut violations = BTreeSet::new();

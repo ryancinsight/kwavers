@@ -61,7 +61,11 @@ pub fn transmission_line_threshold_mm(freq_hz: f64, epsilon_r: Option<f64>) -> f
         return f64::INFINITY;
     }
     let er = epsilon_r.unwrap_or(FR4_EPSILON_R);
-    let vf = if er > 0.0 { 1.0 / er.sqrt() } else { FR4_VELOCITY_FACTOR };
+    let vf = if er > 0.0 {
+        1.0 / er.sqrt()
+    } else {
+        FR4_VELOCITY_FACTOR
+    };
     // λ/10 in metres, then converted to mm.
     (C0_M_S * vf / (10.0 * freq_hz)) * 1000.0
 }
@@ -209,7 +213,10 @@ mod tests {
             net,
         });
         let violations = check_transmission_line_lengths(&board, 1e9, &[], None);
-        assert!(violations.is_empty(), "5 mm trace at 1 GHz must not trigger");
+        assert!(
+            violations.is_empty(),
+            "5 mm trace at 1 GHz must not trigger"
+        );
     }
 
     #[test]
@@ -228,7 +235,11 @@ mod tests {
         let v = &violations[0];
         assert_eq!(v.net_name, "CLK");
         assert!((v.length_mm - 30.0).abs() < 0.1, "length: {}", v.length_mm);
-        assert!(v.excess_mm() > 0.0, "excess must be positive: {}", v.excess_mm());
+        assert!(
+            v.excess_mm() > 0.0,
+            "excess must be positive: {}",
+            v.excess_mm()
+        );
     }
 
     #[test]

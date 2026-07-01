@@ -1,6 +1,6 @@
 //! Annulus, bowl, and per-element source tests for [`KWaveArray`].
 
-use super::super::KWaveArray;
+use super::super::{DiscSourceProfile, KWaveArray};
 
 /// Annulus has strictly fewer active cells than the full bowl of the same
 /// outer diameter, and the surface-area formula satisfies the closed form:
@@ -109,5 +109,105 @@ fn test_build_per_element_source_superposition() {
                 "cell ({i},{j},{k}) t={t}: got {got}, expected {expected}",
             );
         }
+    }
+}
+
+#[test]
+fn test_disc_source_profile_radial_power_contract() {
+    let profile = DiscSourceProfile::radial_power(2.0).expect("profile");
+    assert_eq!(profile.weight_at_normalized_radius(0.0), 0.0);
+    assert!((profile.weight_at_normalized_radius(0.5) - 0.5).abs() < f64::EPSILON);
+    assert!((profile.weight_at_normalized_radius(1.0) - 2.0).abs() < f64::EPSILON);
+    assert!(DiscSourceProfile::radial_power(-1.0).is_err());
+    assert!(DiscSourceProfile::radial_power(f64::NAN).is_err());
+}
+
+#[test]
+fn test_profiled_disc_enters_per_element_source_weights() {
+    use kwavers_grid::Grid;
+    use ndarray::Array2;
+
+    let dx = 5.0e-4;
+    let grid = Grid::new(61, 61, 61, dx, dx, dx).expect("grid");
+    let center = (30.0 * dx, 30.0 * dx, 30.0 * dx);
+    let diameter = 6.0e-3;
+
+    let mut uniform = KWaveArray::new();
+    uniform.add_disc_element(center, diameter, None);
+    let uniform_weights = uniform.get_array_weighted_mask(&grid);
+
+    let mut profiled = KWaveArray::new();
+    profiled.add_profiled_disc_element(
+        center,
+        diameter,
+        None,
+        DiscSourceProfile::radial_power(2.0).expect("profile"),
+    );
+    let profiled_weights = profiled.get_array_weighted_mask(&grid);
+
+    let weight_delta: f64 = uniform_weights
+        .iter()
+        .zip(profiled_weights.iter())
+        .map(|(&uniform, &profiled)| (uniform - profiled).abs())
+        .sum();
+    assert!(
+        weight_delta > 1.0,
+        "profiled disc must change the finite-source weight map"
+    );
+    assert!(profiled_weights.sum() > 0.0);
+
+    let signal = Array2::<f64>::ones((1, 1));
+    let (mask, per_cell) = profiled
+        .build_per_element_source(&grid, &signal)
+        .expect("profiled source");
+    let active_cells = KWaveArray::active_cells_fortran_order(&mask);
+    assert_eq!(active_cells.len(), per_cell.nrows());
+    assert!(!active_cells.is_empty());
+    for (row, &(i, j, k)) in active_cells.iter().enumerate() {
+        assert!(
+            (per_cell[[row, 0]] - profiled_weights[[i, j, k]]).abs()
+                <= 1.0e-12 * profiled_weights[[i, j, k]].abs().max(1.0),
+            "profiled source row {row} did not preserve BLI weight"
+        );
+    }
+}
+
+#[test]
+fn test_many_profiled_discs_per_element_source_matches_weighted_mask() {
+    // Regression: per-element source assembly must preserve the weighted-mask
+    // superposition contract without requiring one dense 3-D mask per element.
+    use kwavers_grid::Grid;
+    use ndarray::Array2;
+
+    let dx = 5.0e-4;
+    let grid = Grid::new(41, 41, 9, dx, dx, dx).expect("grid");
+    let mut arr = KWaveArray::new();
+    let center_z = 4.0 * dx;
+    for ix in 0..8 {
+        for iy in 0..8 {
+            let center = ((8 + ix * 3) as f64 * dx, (8 + iy * 3) as f64 * dx, center_z);
+            let profile = DiscSourceProfile::radial_power(((ix + iy) % 3) as f64)
+                .expect("finite radial profile");
+            arr.add_profiled_disc_element(center, 7.5e-4, None, profile);
+        }
+    }
+
+    assert_eq!(arr.num_elements(), 64);
+    let signal = Array2::<f64>::ones((arr.num_elements(), 1));
+    let (mask, per_cell) = arr
+        .build_per_element_source(&grid, &signal)
+        .expect("many-element source");
+    let weighted = arr.get_array_weighted_mask(&grid);
+    let active_cells = KWaveArray::active_cells_fortran_order(&mask);
+
+    assert_eq!(active_cells.len(), per_cell.nrows());
+    assert!(!active_cells.is_empty());
+    for (row, &(i, j, k)) in active_cells.iter().enumerate() {
+        let expected = weighted[[i, j, k]];
+        let got = per_cell[[row, 0]];
+        assert!(
+            (got - expected).abs() <= 1.0e-10 * expected.abs().max(1.0),
+            "row {row} cell ({i},{j},{k}): got {got}, expected {expected}"
+        );
     }
 }

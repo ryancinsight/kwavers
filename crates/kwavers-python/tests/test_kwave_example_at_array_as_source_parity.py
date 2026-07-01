@@ -14,6 +14,7 @@ import numpy as np
 import pytest
 
 from conftest import requires_kwave
+from parity_test_utils import assert_decodable_nonblank_png, report_metric_value
 
 
 skip_kwave = os.getenv("KWAVERS_SKIP_KWAVE", "0") == "1"
@@ -32,6 +33,69 @@ def _load_example_module():
     assert spec.loader is not None
     spec.loader.exec_module(module)
     return module
+
+
+def _assert_metric_contract(metric, thresholds):
+    if "pearson_r" in thresholds:
+        assert metric["pearson_r"] >= thresholds["pearson_r"]
+    if "max_abs_diff" in thresholds:
+        assert metric["max_abs_diff"] < thresholds["max_abs_diff"]
+    if "rms_ratio_min" in thresholds:
+        assert thresholds["rms_ratio_min"] <= metric["rms_ratio"]
+    if "rms_ratio_max" in thresholds:
+        assert metric["rms_ratio"] <= thresholds["rms_ratio_max"]
+    if "rmse" in thresholds:
+        assert metric["rmse"] < thresholds["rmse"]
+    if "psnr_db" in thresholds:
+        assert metric["psnr_db"] > thresholds["psnr_db"]
+
+
+def _assert_report_section_contract(text: str, section: str, thresholds):
+    if "pearson_r" in thresholds:
+        assert report_metric_value(text, "pearson_r", section) >= thresholds["pearson_r"]
+    if "max_abs_diff" in thresholds:
+        assert report_metric_value(text, "max_abs_diff", section) < thresholds["max_abs_diff"]
+    if "rms_ratio_min" in thresholds or "rms_ratio_max" in thresholds:
+        rms_ratio = report_metric_value(text, "rms_ratio", section)
+        if "rms_ratio_min" in thresholds:
+            assert thresholds["rms_ratio_min"] <= rms_ratio
+        if "rms_ratio_max" in thresholds:
+            assert rms_ratio <= thresholds["rms_ratio_max"]
+    if "rmse" in thresholds:
+        assert report_metric_value(text, "rmse", section) < thresholds["rmse"]
+    if "psnr_db" in thresholds:
+        assert report_metric_value(text, "psnr_db", section) > thresholds["psnr_db"]
+
+
+def _assert_report_contract(module, text: str):
+    thresholds = module.PARITY_THRESHOLDS
+
+    assert "parity_status: PASS" in text
+    _assert_report_section_contract(text, "source mask:", thresholds["source_mask"])
+    _assert_report_section_contract(
+        text,
+        "source weighted mask:",
+        thresholds["source_weighted_mask"],
+    )
+    _assert_report_section_contract(
+        text,
+        "distributed source signal:",
+        thresholds["source_signal"],
+    )
+    _assert_report_section_contract(text, "p_rms:", thresholds["p_rms"])
+    _assert_report_section_contract(text, "p_max:", thresholds["p_max"])
+
+
+@requires_kwave
+@pytest.mark.skipif(skip_kwave, reason="KWAVERS_SKIP_KWAVE=1")
+def test_current_at_array_as_source_artifacts_match_thresholds():
+    module = _load_example_module()
+    text = module.METRICS_PATH.read_text(encoding="utf-8")
+
+    assert module.METRICS_PATH.exists()
+    assert module.FIGURE_PATH.exists()
+    _assert_report_contract(module, text)
+    assert_decodable_nonblank_png(module.FIGURE_PATH)
 
 
 @requires_kwave
@@ -72,20 +136,8 @@ class TestKWaveExampleParityAtArrayAsSource:
         assert np.allclose(kw_p_max, py_p_max, rtol=1e-5, atol=1e-5)
         assert np.allclose(kw_p_rms, py_p_rms, rtol=1e-3, atol=3e-4)
 
-        assert metrics["source_mask"]["pearson_r"] > 0.999999
-        assert metrics["source_weighted_mask"]["pearson_r"] > 0.999999
-        assert metrics["source_signal"]["pearson_r"] > 0.999999
-        assert metrics["p_max"]["pearson_r"] > 0.999999
-        assert metrics["p_rms"]["pearson_r"] > 0.999999
-        assert metrics["source_weighted_mask"]["max_abs_diff"] < 1e-12
-        assert metrics["source_signal"]["max_abs_diff"] < 1e-12
-        assert metrics["p_max"]["max_abs_diff"] < 1e-5
-        assert metrics["p_rms"]["max_abs_diff"] < 2e-4
-        assert abs(metrics["p_max"]["rms_ratio"] - 1.0) < 1e-6
-        assert abs(metrics["p_max"]["rmse"]) < 1e-5
-        assert abs(metrics["p_rms"]["rms_ratio"] - 1.0) < 1e-3
-        assert metrics["p_rms"]["rmse"] < 1e-4
-        assert metrics["p_rms"]["psnr_db"] > 70.0
+        for metric_name, thresholds in module.PARITY_THRESHOLDS.items():
+            _assert_metric_contract(metrics[metric_name], thresholds)
 
 
 if __name__ == "__main__":

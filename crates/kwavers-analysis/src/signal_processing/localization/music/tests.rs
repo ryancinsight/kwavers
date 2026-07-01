@@ -14,16 +14,20 @@ fn test_music_processor_creation() {
 
 #[test]
 fn test_music_invalid_num_sources_zero() {
-    let mut config = MUSICConfig::default();
-    config.num_sources = Some(0);
+    let config = MUSICConfig {
+        num_sources: Some(0),
+        ..Default::default()
+    };
     let result = MUSICProcessor::new(&config);
     assert!(result.is_err());
 }
 
 #[test]
 fn test_music_invalid_num_sources_too_many() {
-    let mut config = MUSICConfig::default();
-    config.num_sources = Some(10); // More than sensors
+    let config = MUSICConfig {
+        num_sources: Some(10), // More than sensors
+        ..Default::default()
+    };
     let result = MUSICProcessor::new(&config);
     assert!(result.is_err());
 }
@@ -79,10 +83,12 @@ fn test_steering_vector() {
 
 #[test]
 fn test_music_run_single_source() {
-    let mut config = MUSICConfig::default();
-    config.num_sources = Some(1);
-    config.grid_resolution = 10;
-    config.num_snapshots = 50;
+    let config = MUSICConfig {
+        num_sources: Some(1),
+        grid_resolution: 10,
+        num_snapshots: 50,
+        ..Default::default()
+    };
 
     let processor = MUSICProcessor::new(&config).unwrap();
 
@@ -98,10 +104,12 @@ fn test_music_run_single_source() {
 
 #[test]
 fn test_music_automatic_source_detection() {
-    let mut config = MUSICConfig::default();
-    config.num_sources = None;
-    config.num_snapshots = 100;
-    config.model_order_criterion = ModelOrderCriterion::MDL;
+    let config = MUSICConfig {
+        num_sources: None,
+        num_snapshots: 100,
+        model_order_criterion: ModelOrderCriterion::MDL,
+        ..Default::default()
+    };
 
     let processor = MUSICProcessor::new(&config).unwrap();
 
@@ -146,8 +154,8 @@ fn music_trait_localize_uses_time_delay_physics() {
         .localize(&arrival_times, &sensor_positions)
         .unwrap();
 
-    for axis in 0..3 {
-        assert!((result.position[axis] - source[axis]).abs() < 1e-4);
+    for (&actual, &expected) in result.position.iter().zip(source.iter()) {
+        assert!((actual - expected).abs() < 1e-4);
     }
     assert!(result.confidence > 0.0);
     assert!(result.uncertainty < 1e-4);

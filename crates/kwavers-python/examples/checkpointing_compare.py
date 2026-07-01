@@ -68,6 +68,47 @@ OUTPUT_DIR = DEFAULT_OUTPUT_DIR
 FIGURE_PATH = OUTPUT_DIR / "checkpointing_compare.png"
 METRICS_PATH = OUTPUT_DIR / "checkpointing_metrics.txt"
 
+CHECKPOINT_CONTRACT = {
+    "max_absolute_error": 0.0,
+    "bit_exact": True,
+    "checkpoint_deleted": True,
+    "min_checkpoint_size_bytes": 1,
+}
+
+
+def expected_sensor_shape() -> tuple[int, int]:
+    """Return the full-grid sensor matrix shape for the checkpointing fixture."""
+    return (NX * NY * NZ, NT)
+
+
+def evaluate_checkpoint_contract(result: dict[str, object]) -> dict[str, bool]:
+    """Evaluate checkpoint save/resume result against the bit-exact contract."""
+    metrics = result["metrics"]
+    reference = result["reference"]
+    resumed = result["resumed"]
+    checkpoint = result["checkpoint"]
+    expected_shape = expected_sensor_shape()
+    return {
+        "status": result["status"] == "PASS",
+        "bit_exact": metrics["bit_exact"] is CHECKPOINT_CONTRACT["bit_exact"],
+        "max_absolute_error": (
+            metrics["max_absolute_error"]
+            == CHECKPOINT_CONTRACT["max_absolute_error"]
+        ),
+        "reference_shape": metrics["reference_shape"] == expected_shape,
+        "resumed_shape": metrics["resumed_shape"] == expected_shape,
+        "reference_payload_shape": reference["shape"] == expected_shape,
+        "resumed_payload_shape": resumed["shape"] == expected_shape,
+        "reference_runtime_s": reference["runtime_s"] > 0.0,
+        "checkpoint_runtime_s": checkpoint["checkpoint_runtime_s"] > 0.0,
+        "resume_runtime_s": checkpoint["resume_runtime_s"] > 0.0,
+        "checkpoint_size_bytes": (
+            checkpoint["checkpoint_size_bytes"]
+            >= CHECKPOINT_CONTRACT["min_checkpoint_size_bytes"]
+        ),
+        "checkpoint_deleted": checkpoint["checkpoint_deleted"] is CHECKPOINT_CONTRACT["checkpoint_deleted"],
+    }
+
 
 def _build_problem() -> tuple[object, object, object, object]:
     grid = pkw.Grid(nx=NX, ny=NY, nz=NZ, dx=DX, dy=DX, dz=DX)
@@ -246,6 +287,10 @@ def run_comparison() -> dict[str, object]:
         "plot_path": str(FIGURE_PATH),
         "metrics_path": str(METRICS_PATH),
     }
+
+    contract_checks = evaluate_checkpoint_contract(result)
+    result["contract_checks"] = contract_checks
+    result["status"] = "PASS" if all(contract_checks.values()) else "FAIL"
 
     save_text_report(METRICS_PATH, "checkpointing parity report", build_report_lines(result))
     _save_plot(reference_data, resumed_data, max_abs_error, bit_exact)

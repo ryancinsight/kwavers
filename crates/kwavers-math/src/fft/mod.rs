@@ -428,7 +428,10 @@ mod r2c_optimized_tests {
             .zip(real.iter())
             .map(|(a, b)| (a - b).abs())
             .fold(0.0_f64, f64::max);
-        assert!(rt_err < 1e-9, "r2c→c2r round-trip ({nx},{ny},{nz}): {rt_err:.2e}");
+        assert!(
+            rt_err < 1e-9,
+            "r2c→c2r round-trip ({nx},{ny},{nz}): {rt_err:.2e}"
+        );
     }
 
     #[test]

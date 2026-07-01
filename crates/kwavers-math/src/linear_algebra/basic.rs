@@ -291,7 +291,10 @@ mod tests {
             // R is upper triangular.
             for i in 0..r.nrows() {
                 for j in 0..i.min(r.ncols()) {
-                    assert!(r[[i, j]].abs() < 1e-9, "R not upper triangular at [{i},{j}]");
+                    assert!(
+                        r[[i, j]].abs() < 1e-9,
+                        "R not upper triangular at [{i},{j}]"
+                    );
                 }
             }
         }

@@ -5,15 +5,17 @@ Direct k-wave-python example parity tests for `us_bmode_phased_array`.
 
 from __future__ import annotations
 
-import importlib.util
 import os
-import sys
-from pathlib import Path
 
 import numpy as np
 import pytest
 
 from conftest import requires_kwave
+from parity_test_utils import (
+    assert_decodable_nonblank_png,
+    load_example_module,
+    report_metric_value,
+)
 
 
 skip_kwave = os.getenv("KWAVERS_SKIP_KWAVE", "0") == "1"
@@ -22,16 +24,37 @@ slow_reason = "Set KWAVERS_RUN_SLOW=1 to run slow k-wave-python tests"
 
 
 def _load_example_module():
-    root = Path(__file__).resolve().parents[1]
-    module_path = root / "examples" / "us_bmode_phased_array_compare.py"
-    examples_dir = str(root / "examples")
-    if examples_dir not in sys.path:
-        sys.path.insert(0, examples_dir)
-    spec = importlib.util.spec_from_file_location("us_bmode_phased_array_compare", module_path)
-    module = importlib.util.module_from_spec(spec)
-    assert spec.loader is not None
-    spec.loader.exec_module(module)
-    return module
+    return load_example_module("us_bmode_phased_array_compare.py")
+
+
+def _assert_band_metrics(text: str, section: str, thresholds: dict[str, float]) -> None:
+    pearson = report_metric_value(text, "pearson_r", section)
+    rms_ratio = report_metric_value(text, "rms_ratio", section)
+    psnr_db = report_metric_value(text, "psnr_db", section)
+
+    assert pearson > thresholds["pearson_r"]
+    assert thresholds["rms_ratio_min"] < rms_ratio
+    assert rms_ratio < thresholds["rms_ratio_max"]
+    assert psnr_db > thresholds["psnr_db"]
+
+
+@requires_kwave
+@pytest.mark.skipif(skip_kwave, reason="KWAVERS_SKIP_KWAVE=1")
+def test_current_us_bmode_phased_array_artifacts_match_thresholds():
+    module = _load_example_module()
+    thresholds = module.PARITY_THRESHOLDS["quick"]
+
+    assert module.METRICS_PATH.exists()
+    assert module.FIGURE_PATH.exists()
+    assert module.DEBUG_FACE_TRACE_PATH.exists()
+    text = module.METRICS_PATH.read_text(encoding="utf-8")
+
+    assert "parity_status: PASS" in text
+    assert "steering_angles: 9/33" in text
+    _assert_band_metrics(text, "fundamental:", thresholds["fundamental"])
+    _assert_band_metrics(text, "harmonic:", thresholds["harmonic"])
+    assert_decodable_nonblank_png(module.FIGURE_PATH)
+    assert_decodable_nonblank_png(module.DEBUG_FACE_TRACE_PATH)
 
 
 @requires_kwave
@@ -119,14 +142,15 @@ class TestKWaveExampleParityUsbmodePhasedArray:
         assert np.max(np.abs(kw_bmode_harm)) > 0.0
         assert np.max(np.abs(pkw_bmode_harm)) > 0.0
 
-        assert metrics_fund["pearson_r"] > 0.999
-        assert metrics_fund["rms_ratio"] > 1.0
-        assert metrics_fund["rms_ratio"] < 1.01
-        assert metrics_fund["psnr_db"] > 45.0
-        assert metrics_harm["pearson_r"] > 0.996
-        assert metrics_harm["rms_ratio"] > 1.03
-        assert metrics_harm["rms_ratio"] < 1.04
-        assert metrics_harm["psnr_db"] > 40.0
+        thresholds = module.PARITY_THRESHOLDS["quick"]
+        assert metrics_fund["pearson_r"] > thresholds["fundamental"]["pearson_r"]
+        assert metrics_fund["rms_ratio"] > thresholds["fundamental"]["rms_ratio_min"]
+        assert metrics_fund["rms_ratio"] < thresholds["fundamental"]["rms_ratio_max"]
+        assert metrics_fund["psnr_db"] > thresholds["fundamental"]["psnr_db"]
+        assert metrics_harm["pearson_r"] > thresholds["harmonic"]["pearson_r"]
+        assert metrics_harm["rms_ratio"] > thresholds["harmonic"]["rms_ratio_min"]
+        assert metrics_harm["rms_ratio"] < thresholds["harmonic"]["rms_ratio_max"]
+        assert metrics_harm["psnr_db"] > thresholds["harmonic"]["psnr_db"]
         assert report_lines[0] == "parity_status: PASS"
         assert any(line == "  status    = PASS" for line in report_lines)
         assert pkw_profile is not None

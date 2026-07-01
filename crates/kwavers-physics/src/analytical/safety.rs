@@ -11,6 +11,8 @@ use kwavers_core::constants::medical::{
 };
 use kwavers_core::constants::numerical::SECONDS_PER_MINUTE;
 use kwavers_core::constants::thermodynamic::KELVIN_OFFSET_C;
+use rand::{Rng, SeedableRng};
+use rand_chacha::ChaCha8Rng;
 
 /// Mechanical Index (MI).
 ///
@@ -52,6 +54,60 @@ pub fn mechanical_index(p_neg_pa: f64, f_hz: f64) -> f64 {
 #[inline]
 pub fn mechanical_index_field(p_field: &[f64], f_hz: f64) -> Vec<f64> {
     p_field.iter().map(|&p| mechanical_index(p, f_hz)).collect()
+}
+
+/// Mechanical Index for one pressure threshold over a frequency sweep.
+///
+/// Applies [`mechanical_index`] element-wise to `f_hz` while holding the peak
+/// rarefactional pressure fixed. This is the canonical safety-curve form used
+/// by BBB/LIFU parameter-space plots where an inertial-cavitation pressure
+/// threshold is visualized across frequency.
+#[must_use]
+#[inline]
+pub fn mechanical_index_frequency_sweep(p_neg_pa: f64, f_hz: &[f64]) -> Vec<f64> {
+    f_hz.iter()
+        .map(|&f| mechanical_index(p_neg_pa, f))
+        .collect()
+}
+
+/// Cavitation-risk probability as a logistic function of Mechanical Index.
+///
+/// ```text
+/// P_risk(MI) = 1 / (1 + exp[-s · (MI − MI_thr)])
+/// ```
+///
+/// `MI_thr` is the MI value at 50% risk and `s` controls the transition
+/// steepness. The model is a phenomenological safety-envelope map used by the
+/// neuromodulation book examples to turn MI into a smooth risk contour; it is
+/// not a substitute for a validated cavitation-threshold experiment.
+///
+/// Non-finite MI values are mapped to zero risk. Non-finite thresholds or
+/// non-positive/non-finite slopes make the model invalid, so the returned field
+/// is all zeros.
+///
+/// # Arguments
+/// * `mechanical_index` – Mechanical Index samples [-]
+/// * `threshold_mi` – MI at 50% cavitation risk [-]
+/// * `slope` – logistic slope in reciprocal MI units; must be positive
+#[must_use]
+pub fn mechanical_index_cavitation_risk(
+    mechanical_index: &[f64],
+    threshold_mi: f64,
+    slope: f64,
+) -> Vec<f64> {
+    if !(threshold_mi.is_finite() && slope.is_finite() && slope > 0.0) {
+        return vec![0.0; mechanical_index.len()];
+    }
+    mechanical_index
+        .iter()
+        .map(|&mi| {
+            if mi.is_finite() {
+                1.0 / (1.0 + (-(slope * (mi - threshold_mi))).exp())
+            } else {
+                0.0
+            }
+        })
+        .collect()
 }
 
 /// Thermal Index for soft tissue (TIS).
@@ -155,6 +211,113 @@ pub fn cem43_cumulative(t_celsius: &[f64], dt_s: f64) -> Vec<f64> {
             cem
         })
         .collect()
+}
+
+/// Rust-owned Chapter 7 focal-temperature and CEM43 dose fixture.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ClosedLoopCem43Fixture {
+    /// Time axis [s].
+    pub time_s: Vec<f64>,
+    /// Fixed-power focal temperature trace [deg C].
+    pub fixed_temperature_c: Vec<f64>,
+    /// Feedback-controlled focal temperature trace [deg C].
+    pub feedback_temperature_c: Vec<f64>,
+    /// Under-driven focal temperature trace [deg C].
+    pub underdrive_temperature_c: Vec<f64>,
+    /// Cumulative CEM43 for the fixed-power trace [min].
+    pub fixed_cem43_min: Vec<f64>,
+    /// Cumulative CEM43 for the feedback trace [min].
+    pub feedback_cem43_min: Vec<f64>,
+    /// Cumulative CEM43 for the under-driven trace [min].
+    pub underdrive_cem43_min: Vec<f64>,
+}
+
+/// Generate the Chapter 7 closed-loop thermal-dose fixture.
+///
+/// The fixed-power and underdrive traces are deterministic ramp-and-hold
+/// references. The feedback trace models controller overshoot followed by
+/// damped convergence, with deterministic seed-controlled MR-thermometry jitter.
+/// CEM43 integration delegates to [`cem43_cumulative`] so the temperature
+/// fixture and dose contract share one implementation.
+pub fn closed_loop_cem43_fixture(
+    n_steps: usize,
+    dt_s: f64,
+    body_temperature_c: f64,
+    target_temperature_c: f64,
+    seed: u64,
+) -> Result<ClosedLoopCem43Fixture, &'static str> {
+    if n_steps == 0 {
+        return Err("n_steps must be positive");
+    }
+    if !(dt_s.is_finite() && dt_s > 0.0) {
+        return Err("dt_s must be finite and positive");
+    }
+    if !(body_temperature_c.is_finite() && target_temperature_c.is_finite()) {
+        return Err("temperatures must be finite");
+    }
+    if target_temperature_c <= body_temperature_c {
+        return Err("target_temperature_c must exceed body_temperature_c");
+    }
+
+    let mut rng = ChaCha8Rng::seed_from_u64(seed);
+    let steps: Vec<f64> = (0..n_steps).map(|i| i as f64).collect();
+    let time_s: Vec<f64> = steps.iter().map(|&step| step * dt_s).collect();
+
+    let fixed_temperature_c: Vec<f64> = steps
+        .iter()
+        .map(|&step| {
+            if step < 30.0 {
+                body_temperature_c + (target_temperature_c - body_temperature_c) * step / 30.0
+            } else {
+                target_temperature_c
+            }
+        })
+        .collect();
+
+    let feedback_temperature_c: Vec<f64> = steps
+        .iter()
+        .map(|&step| {
+            if step < 20.0 {
+                body_temperature_c
+                    + (target_temperature_c + 10.0 - body_temperature_c) * step / 20.0
+            } else {
+                target_temperature_c
+                    + 5.0 * (-0.15 * (step - 20.0)).exp()
+                    + 2.0 * sample_standard_normal(&mut rng)
+            }
+        })
+        .collect();
+
+    let underdrive_temperature_c: Vec<f64> = steps
+        .iter()
+        .map(|&step| {
+            if step < 40.0 {
+                body_temperature_c + (56.0 - body_temperature_c) * step / 40.0
+            } else {
+                56.0
+            }
+        })
+        .collect();
+
+    let fixed_cem43_min = cem43_cumulative(&fixed_temperature_c, dt_s);
+    let feedback_cem43_min = cem43_cumulative(&feedback_temperature_c, dt_s);
+    let underdrive_cem43_min = cem43_cumulative(&underdrive_temperature_c, dt_s);
+
+    Ok(ClosedLoopCem43Fixture {
+        time_s,
+        fixed_temperature_c,
+        feedback_temperature_c,
+        underdrive_temperature_c,
+        fixed_cem43_min,
+        feedback_cem43_min,
+        underdrive_cem43_min,
+    })
+}
+
+fn sample_standard_normal(rng: &mut ChaCha8Rng) -> f64 {
+    let u1 = rng.r#gen::<f64>().clamp(f64::MIN_POSITIVE, 1.0);
+    let u2 = rng.r#gen::<f64>();
+    (-2.0 * u1.ln()).sqrt() * (2.0 * std::f64::consts::PI * u2).cos()
 }
 
 /// Arrhenius thermal damage integral.
@@ -437,6 +600,56 @@ mod tests {
     }
 
     #[test]
+    fn closed_loop_cem43_fixture_is_seeded_and_uses_cem43_contract() {
+        let fixture = closed_loop_cem43_fixture(60, 0.5, 37.0, 60.0, 42)
+            .expect("valid closed-loop CEM43 fixture");
+        let repeated = closed_loop_cem43_fixture(60, 0.5, 37.0, 60.0, 42)
+            .expect("valid closed-loop CEM43 fixture");
+        let shifted_seed = closed_loop_cem43_fixture(60, 0.5, 37.0, 60.0, 43)
+            .expect("valid closed-loop CEM43 fixture");
+
+        assert_eq!(fixture, repeated);
+        assert_ne!(
+            fixture.feedback_temperature_c,
+            shifted_seed.feedback_temperature_c
+        );
+        assert_eq!(fixture.time_s.len(), 60);
+        assert_eq!(fixture.time_s[0], 0.0);
+        assert_eq!(fixture.time_s[1], 0.5);
+        assert_eq!(fixture.fixed_temperature_c[0], 37.0);
+        assert_eq!(fixture.fixed_temperature_c[30], 60.0);
+        assert_eq!(fixture.underdrive_temperature_c[40], 56.0);
+
+        assert_eq!(
+            fixture.fixed_cem43_min,
+            cem43_cumulative(&fixture.fixed_temperature_c, 0.5)
+        );
+        assert_eq!(
+            fixture.feedback_cem43_min,
+            cem43_cumulative(&fixture.feedback_temperature_c, 0.5)
+        );
+        assert_eq!(
+            fixture.underdrive_cem43_min,
+            cem43_cumulative(&fixture.underdrive_temperature_c, 0.5)
+        );
+        for dose in [
+            &fixture.fixed_cem43_min,
+            &fixture.feedback_cem43_min,
+            &fixture.underdrive_cem43_min,
+        ] {
+            assert!(dose.windows(2).all(|w| w[1] >= w[0]));
+        }
+    }
+
+    #[test]
+    fn closed_loop_cem43_fixture_rejects_invalid_inputs() {
+        assert!(closed_loop_cem43_fixture(0, 0.5, 37.0, 60.0, 0).is_err());
+        assert!(closed_loop_cem43_fixture(60, 0.0, 37.0, 60.0, 0).is_err());
+        assert!(closed_loop_cem43_fixture(60, 0.5, f64::NAN, 60.0, 0).is_err());
+        assert!(closed_loop_cem43_fixture(60, 0.5, 37.0, 37.0, 0).is_err());
+    }
+
+    #[test]
     fn arrhenius_positive() {
         // 70°C for 1 s with muscle parameters (A ≈ 3.1e98, Ea ≈ 6.28e5 J/mol)
         let t = vec![70.0; 100];
@@ -534,5 +747,89 @@ mod tests {
                 "field={mi_field} scalar={mi_scalar}"
             );
         }
+    }
+
+    #[test]
+    fn mechanical_index_frequency_sweep_matches_scalar() {
+        let pressure = -0.45 * MPA_TO_PA;
+        let frequencies = [0.25 * MHZ_TO_HZ, MHZ_TO_HZ, 2.25 * MHZ_TO_HZ];
+        let sweep = mechanical_index_frequency_sweep(pressure, &frequencies);
+
+        for (&f_hz, &mi_sweep) in frequencies.iter().zip(sweep.iter()) {
+            let mi_scalar = mechanical_index(pressure, f_hz);
+            assert!(
+                (mi_sweep - mi_scalar).abs() < 1e-12,
+                "sweep={mi_sweep} scalar={mi_scalar}"
+            );
+        }
+        assert!(sweep[0] > sweep[1]);
+        assert!(sweep[1] > sweep[2]);
+    }
+
+    #[test]
+    fn mechanical_index_cavitation_risk_at_threshold_is_half() {
+        let risk = mechanical_index_cavitation_risk(&[0.7], 0.7, 18.0);
+        assert!(
+            (risk[0] - 0.5).abs() < 1e-12,
+            "P_risk(MI_thr)={} != 0.5",
+            risk[0]
+        );
+    }
+
+    #[test]
+    fn mechanical_index_cavitation_risk_matches_logistic_formula() {
+        let mi = [0.2, 0.7, 1.0, 1.9];
+        let threshold = 0.7_f64;
+        let slope = 18.0_f64;
+        let risk = mechanical_index_cavitation_risk(&mi, threshold, slope);
+        for (actual, mi_value) in risk.iter().zip(mi) {
+            let expected = 1.0 / (1.0 + (-(slope * (mi_value - threshold))).exp());
+            assert!(
+                (actual - expected).abs() < 1e-12,
+                "P_risk({mi_value})={actual} != {expected}"
+            );
+        }
+    }
+
+    #[test]
+    fn mechanical_index_cavitation_risk_is_bounded_and_monotone() {
+        let mi: Vec<f64> = (0..=20).map(|i| i as f64 * 0.1).collect();
+        let risk = mechanical_index_cavitation_risk(&mi, 0.7, 18.0);
+        for (k, &value) in risk.iter().enumerate() {
+            assert!(
+                (0.0..=1.0).contains(&value),
+                "P_risk[{k}]={value} is outside [0, 1]"
+            );
+        }
+        for k in 1..risk.len() {
+            assert!(
+                risk[k] >= risk[k - 1],
+                "P_risk[{}]={} < P_risk[{}]={}",
+                k,
+                risk[k],
+                k - 1,
+                risk[k - 1]
+            );
+        }
+    }
+
+    #[test]
+    fn mechanical_index_cavitation_risk_rejects_invalid_domains() {
+        assert_eq!(
+            mechanical_index_cavitation_risk(&[0.7, f64::NAN], 0.7, 18.0),
+            vec![0.5, 0.0]
+        );
+        assert_eq!(
+            mechanical_index_cavitation_risk(&[0.7, 1.0], f64::NAN, 18.0),
+            vec![0.0, 0.0]
+        );
+        assert_eq!(
+            mechanical_index_cavitation_risk(&[0.7, 1.0], 0.7, 0.0),
+            vec![0.0, 0.0]
+        );
+        assert_eq!(
+            mechanical_index_cavitation_risk(&[0.7, 1.0], 0.7, f64::INFINITY),
+            vec![0.0, 0.0]
+        );
     }
 }

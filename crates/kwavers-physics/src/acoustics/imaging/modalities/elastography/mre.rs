@@ -25,8 +25,8 @@
 //!   mapping of tissue elasticity." *Med. Image Anal.* 5(4), 237–254.
 
 use super::displacement::DisplacementField;
-use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_core::constants::numerical::TWO_PI;
+use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::Complex64;
 use ndarray::{Array3, Array4};
 

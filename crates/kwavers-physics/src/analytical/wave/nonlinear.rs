@@ -1,5 +1,8 @@
 use kwavers_core::constants::numerical::TWO_PI;
+use kwavers_math::fft::fft_1d_array;
+use kwavers_math::signal::window::hann;
 use kwavers_math::special::bessel::jn;
+use ndarray::Array1;
 
 /// Evaluate the normalised amplitude of the nth harmonic at nonlinear parameter σ.
 ///
@@ -34,6 +37,86 @@ pub fn fubini_harmonic_spectrum(n_max: u32, sigma: f64) -> Vec<f64> {
     (1..=n_max)
         .map(|n| fubini_harmonic_amplitude(n, sigma))
         .collect()
+}
+
+/// Extract Hann-windowed harmonic amplitudes from row-major time traces.
+///
+/// Each row is multiplied by the symmetric Hann window and transformed with the
+/// workspace FFT facade.  The returned matrix is row-major with shape
+/// `n_traces × n_harmonics`; column `0` is the fundamental, column `1` is the
+/// second harmonic, and so on.  The amplitude normalization matches the
+/// standard one-sided sinusoid estimate `2·|X[k]| / Σw`.
+///
+/// # Errors
+/// Returns an error when dimensions are inconsistent, scalar parameters are not
+/// positive finite values, the trace is too short for a symmetric Hann window,
+/// or any input sample is non-finite.
+pub fn hann_windowed_harmonic_amplitudes(
+    traces: &[f64],
+    n_traces: usize,
+    n_samples: usize,
+    dt_s: f64,
+    fundamental_hz: f64,
+    n_harmonics: usize,
+) -> Result<Vec<f64>, String> {
+    if n_traces == 0 {
+        return Err("n_traces must be positive".to_owned());
+    }
+    if n_samples < 2 {
+        return Err("n_samples must be at least two for a symmetric Hann window".to_owned());
+    }
+    if n_harmonics == 0 {
+        return Err("n_harmonics must be positive".to_owned());
+    }
+    if traces.len() != n_traces * n_samples {
+        return Err("traces length must equal n_traces * n_samples".to_owned());
+    }
+    if !(dt_s.is_finite() && dt_s > 0.0) {
+        return Err("dt_s must be positive and finite".to_owned());
+    }
+    if !(fundamental_hz.is_finite() && fundamental_hz > 0.0) {
+        return Err("fundamental_hz must be positive and finite".to_owned());
+    }
+    if !traces.iter().all(|sample| sample.is_finite()) {
+        return Err("traces must contain only finite samples".to_owned());
+    }
+
+    let window_denominator = n_samples as f64 - 1.0;
+    let mut window = Vec::with_capacity(n_samples);
+    for idx in 0..n_samples {
+        window.push(hann(idx as f64 / window_denominator));
+    }
+    let window_sum = window.iter().sum::<f64>();
+    if !(window_sum.is_finite() && window_sum > 0.0) {
+        return Err("Hann window sum must be positive and finite".to_owned());
+    }
+
+    let df_hz = 1.0 / (n_samples as f64 * dt_s);
+    let n_positive = n_samples / 2 + 1;
+    let mut amplitudes = Vec::with_capacity(n_traces * n_harmonics);
+    for row in traces.chunks_exact(n_samples) {
+        let windowed: Vec<f64> = row
+            .iter()
+            .zip(window.iter())
+            .map(|(&sample, &weight)| sample * weight)
+            .collect();
+        let spectrum = fft_1d_array(&Array1::from_vec(windowed));
+        for harmonic in 1..=n_harmonics {
+            let bin = (harmonic as f64 * fundamental_hz / df_hz).round();
+            let amp = if bin.is_finite() && bin >= 0.0 {
+                let idx = bin as usize;
+                if idx < n_positive {
+                    2.0 * spectrum[idx].norm() / window_sum
+                } else {
+                    0.0
+                }
+            } else {
+                0.0
+            };
+            amplitudes.push(amp);
+        }
+    }
+    Ok(amplitudes)
 }
 
 /// Normalised amplitude of the nth harmonic in the **post-shock sawtooth (Fay)
@@ -412,6 +495,80 @@ pub fn westervelt_harmonic_evolution(
                 .collect()
         })
         .collect()
+}
+
+#[cfg(test)]
+mod hann_windowed_harmonic_tests {
+    use super::hann_windowed_harmonic_amplitudes;
+    use kwavers_core::constants::numerical::TWO_PI;
+    use kwavers_math::signal::window::hann;
+
+    fn manual_harmonic_amplitude(
+        signal: &[f64],
+        dt_s: f64,
+        fundamental_hz: f64,
+        harmonic: usize,
+    ) -> f64 {
+        let n = signal.len();
+        let df_hz = 1.0 / (n as f64 * dt_s);
+        let bin = (harmonic as f64 * fundamental_hz / df_hz).round() as usize;
+        let mut real = 0.0;
+        let mut imag = 0.0;
+        let mut window_sum = 0.0;
+        for (idx, &sample) in signal.iter().enumerate() {
+            let weight = hann(idx as f64 / (n as f64 - 1.0));
+            window_sum += weight;
+            let phase = -TWO_PI * bin as f64 * idx as f64 / n as f64;
+            real += sample * weight * phase.cos();
+            imag += sample * weight * phase.sin();
+        }
+        2.0 * real.hypot(imag) / window_sum
+    }
+
+    #[test]
+    fn hann_windowed_harmonics_match_manual_dft_bins() {
+        let n_samples = 64;
+        let dt_s = 1.0 / 16_000.0;
+        let fundamental_hz = 1_000.0;
+        let mut traces = Vec::with_capacity(2 * n_samples);
+        for row in 0..2 {
+            for idx in 0..n_samples {
+                let t = idx as f64 * dt_s;
+                let signal = if row == 0 {
+                    3.0 * (TWO_PI * fundamental_hz * t).sin()
+                        + 0.5 * (TWO_PI * 2.0 * fundamental_hz * t).sin()
+                } else {
+                    1.5 * (TWO_PI * 3.0 * fundamental_hz * t).sin()
+                };
+                traces.push(signal);
+            }
+        }
+
+        let amplitudes =
+            hann_windowed_harmonic_amplitudes(&traces, 2, n_samples, dt_s, fundamental_hz, 3)
+                .expect("invariant: finite exact-bin traces define harmonic amplitudes");
+
+        assert_eq!(amplitudes.len(), 6);
+        for row in 0..2 {
+            let signal = &traces[row * n_samples..(row + 1) * n_samples];
+            for harmonic in 1..=3 {
+                let expected = manual_harmonic_amplitude(signal, dt_s, fundamental_hz, harmonic);
+                let got = amplitudes[row * 3 + harmonic - 1];
+                assert!(
+                    (got - expected).abs() <= 1.0e-12,
+                    "row {row} harmonic {harmonic}: got {got}, expected {expected}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn hann_windowed_harmonics_reject_invalid_inputs() {
+        assert!(hann_windowed_harmonic_amplitudes(&[0.0, 1.0], 1, 2, 0.0, 1.0, 1).is_err());
+        assert!(hann_windowed_harmonic_amplitudes(&[0.0, f64::NAN], 1, 2, 1.0, 1.0, 1).is_err());
+        assert!(hann_windowed_harmonic_amplitudes(&[0.0, 1.0], 1, 2, 1.0, 1.0, 0).is_err());
+        assert!(hann_windowed_harmonic_amplitudes(&[0.0], 1, 2, 1.0, 1.0, 1).is_err());
+    }
 }
 
 #[cfg(test)]

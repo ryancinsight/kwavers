@@ -24,7 +24,8 @@ pub mod ultrafast;
 
 // Aperture-driven design synthesis (size + frequency → element layout + wiring)
 pub use design::{
-    design_array, ApertureDesignSpec, ArrayDesign, ChannelWiring, DEFAULT_KERF_FRACTION,
+    design_array, propagate_focused_linear_array, ApertureDesignSpec, ArrayDesign, ChannelWiring,
+    FocusedLinearArrayPropagationSpec, FocusedPressureMap, DEFAULT_KERF_FRACTION,
     NYQUIST_PITCH_FRACTION,
 };
 
@@ -57,7 +58,7 @@ pub use hemispherical::{
 };
 
 // k-Wave array compatibility
-pub use kwave_array::{ElementShape, KWaveArray};
+pub use kwave_array::{DiscSourceProfile, ElementShape, KWaveArray};
 
 // Transducer device families
 pub use transducers::{

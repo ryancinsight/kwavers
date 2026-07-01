@@ -62,7 +62,11 @@ fn test_real_symmetric_3x3_reconstruction() {
     let (vals, vecs) = EigenDecomposition::eigendecomposition(&matrix).unwrap();
     // Trace and determinant invariants.
     let trace = matrix[[0, 0]] + matrix[[1, 1]] + matrix[[2, 2]];
-    assert!((vals.sum() - trace).abs() < 1e-8, "Σλ {} vs tr {trace}", vals.sum());
+    assert!(
+        (vals.sum() - trace).abs() < 1e-8,
+        "Σλ {} vs tr {trace}",
+        vals.sum()
+    );
     // Reconstruction.
     let lambda = Array2::from_diag(&vals);
     let recon = vecs.dot(&lambda).dot(&vecs.t());

@@ -14,7 +14,7 @@ fig01  Shear wave speed vs shear modulus (normal and pathological tissue)
 fig02  P-wave vs S-wave velocity ratio as function of Poisson's ratio
 fig03  Voigt model: storage G'(ω) and loss G''(ω) moduli vs frequency
 fig04  Wave speed dispersion: shear wave group vs phase velocity (Voigt)
-fig05  MRE harmonic displacement field (cylindrical scatterer, analytical)
+fig05  MRE harmonic displacement field (Rust analytical kernel)
 fig06  Thermal strain thermometry (NCC tracking → strain → ΔT, Theorem 11.12.2)
 
 References
@@ -32,15 +32,7 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from matplotlib.colors import Normalize
-from matplotlib.cm import ScalarMappable
-
-try:
-    import pykwavers as kw
-    _HAS_PYKWAVERS = True
-except ImportError:
-    kw = None
-    _HAS_PYKWAVERS = False
+import pykwavers as kw
 
 REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
 OUT_DIR = os.path.join(REPO_ROOT, "docs", "book", "figures", "ch10")
@@ -69,8 +61,6 @@ def fig01_shear_wave_speed() -> None:
     Computed via kw.shear_wave_speed(g_pa, rho_kg_m3) (Rust kernel).
     Representative tissues from Sinkus 2005 and Deffieux 2011.
     """
-    if not _HAS_PYKWAVERS:
-        raise ImportError("pykwavers is required for fig01 (shear wave speed)")
     tissues = [
         ("Brain (GM)",    2.0e3),
         ("Liver (normal)", 5.0e3),
@@ -140,8 +130,6 @@ def fig03_voigt_viscoelastic() -> None:
     Computed via kw.voigt_complex_modulus(omega_arr, mu_pa, eta_pa_s) → (real_arr, imag_arr).
     Representative values: G_e = 2 kPa, η = 1 Pa·s.
     """
-    if not _HAS_PYKWAVERS:
-        raise ImportError("pykwavers is required for fig03 (Voigt viscoelastic model)")
     f_Hz = np.logspace(0, 3, 500)   # 1 Hz → 1 kHz
     omega = 2 * np.pi * f_Hz
 
@@ -183,8 +171,6 @@ def fig04_shear_dispersion() -> None:
     re-derived from the complex modulus here.
     Elastic limit via kw.shear_wave_speed(G_e, RHO).
     """
-    if not _HAS_PYKWAVERS:
-        raise ImportError("pykwavers is required for fig04 (shear wave dispersion)")
     f_Hz = np.logspace(0, 3, 500)
 
     G_e = 2e3
@@ -214,64 +200,53 @@ def fig04_shear_dispersion() -> None:
 # ── Figure 05: MRE harmonic displacement field ────────────────────────────────
 def fig05_mre_displacement() -> None:
     """
-    Displacement field of a shear wave propagating in the x-direction
-    with a cylindrical stiff inclusion (radius r_inc, G_inc > G_bg).
-    Outside: plane shear wave u_y = A sin(k_s x - ωt).
-    Inside scatterer: standing wave with modified wavenumber (Born approx).
-    Wavenumbers: k = ω / c_s, c_s via kw.shear_wave_speed(G, rho).
+    Displacement field of a damped harmonic shear wave.
+    The field is computed by kw.mre_displacement_field (Rust analytical kernel):
+    u(x,z) = A sin(k_s z) exp(-z / d_pen), with k_s = 2πf / c_s.
     """
-    if not _HAS_PYKWAVERS:
-        raise ImportError("pykwavers is required for fig05 (MRE displacement field)")
-    nx, ny = 300, 300
+    nx, nz = 300, 300
     x = np.linspace(-0.05, 0.05, nx)   # ±50 mm
-    y = np.linspace(-0.05, 0.05, ny)
-    X, Y = np.meshgrid(x, y)
+    z = np.linspace(0.0, 0.08, nz)      # 0-80 mm depth
 
     G_bg = 2e3    # Pa background shear modulus
-    G_inc = 20e3  # Pa inclusion shear modulus (tumour-like)
-    r_inc = 0.01  # 10 mm radius
     rho = RHO
     f = 100.0     # 100 Hz MRE frequency
-    omega = 2 * np.pi * f
+    amplitude_m = 25e-6
+    penetration_depth_m = 0.035
 
-    # k = ω / c_s, c_s from Rust kernel so wavenumbers are consistent with fig01/04
+    # k = omega / c_s; both c_s and the field are from Rust kernels.
     c_bg = kw.shear_wave_speed(G_bg, rho)
-    c_inc = kw.shear_wave_speed(G_inc, rho)
-    k_bg = omega / c_bg
-    k_inc = omega / c_inc
-
-    # Incident shear wave propagating in +x
-    u_incident = np.sin(k_bg * X)
-
-    # Inside cylinder: faster phase (higher G → higher c → lower k)
-    r = np.sqrt(X**2 + Y**2)
-    mask_inc = r < r_inc
-
-    u_field = u_incident.copy()
-    u_field[mask_inc] = np.sin(k_inc * X[mask_inc])
+    u_field = np.asarray(
+        kw.mre_displacement_field(
+            np.ascontiguousarray(x),
+            np.ascontiguousarray(z),
+            c_bg,
+            f,
+            amplitude_m,
+            penetration_depth_m,
+        )
+    )
 
     fig, axes = plt.subplots(1, 2, figsize=(11, 4.5))
-    im0 = axes[0].pcolormesh(x * 1e3, y * 1e3, u_field, cmap="RdBu_r", shading="auto")
-    circle = plt.Circle((0, 0), r_inc * 1e3, fill=False, color="k", linewidth=1.5, linestyle="--")
-    axes[0].add_patch(circle)
+    im0 = axes[0].pcolormesh(x * 1e3, z * 1e3, u_field.T * 1e6, cmap="RdBu_r", shading="auto")
     axes[0].set_xlabel("x (mm)")
-    axes[0].set_ylabel("y (mm)")
-    axes[0].set_title(r"MRE displacement $u_y(x,y)$" "\n"
-                       rf"$G_\mathrm{{bg}}={G_bg/1e3:.0f}$ kPa, $G_\mathrm{{inc}}={G_inc/1e3:.0f}$ kPa, $f={f:.0f}$ Hz")
+    axes[0].set_ylabel("z (mm)")
+    axes[0].set_title(r"MRE displacement $u_y(x,z)$" "\n"
+                       rf"$G={G_bg/1e3:.0f}$ kPa, $f={f:.0f}$ Hz, $d_{{pen}}={penetration_depth_m*1e3:.0f}$ mm")
     axes[0].set_aspect("equal")
-    plt.colorbar(im0, ax=axes[0], label="Normalised displacement")
+    plt.colorbar(im0, ax=axes[0], label="displacement (μm)")
 
-    # Local wavelength map
-    lam_field = np.full_like(r, 2 * np.pi / k_bg)
-    lam_field[mask_inc] = 2 * np.pi / k_inc
-    im1 = axes[1].pcolormesh(x * 1e3, y * 1e3, lam_field * 1e3, cmap="viridis", shading="auto")
-    circle2 = plt.Circle((0, 0), r_inc * 1e3, fill=False, color="w", linewidth=1.5, linestyle="--")
-    axes[1].add_patch(circle2)
-    axes[1].set_xlabel("x (mm)")
-    axes[1].set_ylabel("y (mm)")
-    axes[1].set_title("Local wavelength map\n(shorter λ → higher G)")
-    axes[1].set_aspect("equal")
-    plt.colorbar(im1, ax=axes[1], label="Wavelength (mm)")
+    centerline = u_field[nx // 2] * 1e6
+    envelope = np.asarray(kw.mre_displacement_envelope(z, amplitude_m, penetration_depth_m)) * 1e6
+    axes[1].plot(centerline, z * 1e3, color="C0", label="centerline")
+    axes[1].plot(envelope, z * 1e3, "k--", linewidth=1.0, label="± exponential envelope")
+    axes[1].plot(-envelope, z * 1e3, "k--", linewidth=1.0)
+    axes[1].invert_yaxis()
+    axes[1].set_xlabel("displacement (μm)")
+    axes[1].set_ylabel("z (mm)")
+    axes[1].set_title(rf"Rust kernel centerline; $c_s={c_bg:.2f}$ m/s")
+    axes[1].legend(fontsize=8)
+    axes[1].grid(True, alpha=0.3)
 
     fig.tight_layout()
     savefig("fig05_mre_displacement")
@@ -291,7 +266,6 @@ def fig06_thermal_strain() -> None:
     warps it by the apparent displacement u(z)=k_T·ΔT·z of a uniform ΔT, recovers
     the shift by NCC, differentiates (least squares) to strain, and inverts to ΔT.
     """
-    rng = np.random.default_rng(2024)
     fs = 40e6
     dz = C0_TISSUE / (2 * fs)  # axial sample spacing (depth-axis geometry only)
     nz = 384
@@ -302,26 +276,17 @@ def fig06_thermal_strain() -> None:
     # (kwavers_physics ThermalStrainImager); no physics is computed in Python here.
     k_t = kw.thermal_strain_combined_coefficient(C0_TISSUE, DC_DT_TISSUE, ALPHA_TH_TISSUE)
 
-    # Synthetic RF only: lateral lines of independent broadband speckle (the block
-    # is laterally uniform), each warped by the apparent displacement u(z)=k_T·ΔT·z
-    # of a uniform ΔT. Spatial averaging over lines suppresses per-line jitter.
+    # Rust-owned synthetic RF fixture: lateral lines of independent broadband
+    # speckle, carrier modulation, and the apparent displacement warp
+    # u(z)=k_T·ΔT·z for a uniform ΔT.
     n_lines = 24
     spc = 5.0  # samples per carrier cycle
     idx = np.arange(nz)
-    carrier = np.cos(2 * np.pi * idx / spc)
-    src = np.clip(idx - k_t * delta_t_true * idx, 0, nz - 1)
-    lo = np.floor(src).astype(int)
-    frac = src - lo
-    hi = np.minimum(lo + 1, nz - 1)
-
-    ref_vol = np.zeros((n_lines, 1, nz))
-    trk_vol = np.zeros((n_lines, 1, nz))
-    for line in range(n_lines):
-        refl = rng.uniform(-1.0, 1.0, nz)
-        refl = 0.5 * (refl + np.roll(refl, 1))
-        ref = refl * carrier
-        ref_vol[line, 0] = ref
-        trk_vol[line, 0] = ref[lo] * (1 - frac) + ref[hi] * frac
+    ref_vol, trk_vol = kw.thermal_strain_rf_fixture(
+        n_lines, nz, k_t, delta_t_true, spc, 2024
+    )
+    ref_vol = np.asarray(ref_vol)
+    trk_vol = np.asarray(trk_vol)
 
     # Rust SSOT: NCC axial tracking → least-squares strain → ΔT = ε_T/k_T (§11.12).
     _disp, strain_vol, dt_vol = kw.thermal_strain_reconstruct(

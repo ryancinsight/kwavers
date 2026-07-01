@@ -6,12 +6,12 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use super::config::{Axis, CongestionField, EnergyTerms, PlaceConfig};
+use super::geom::rotation_axis;
 use crate::board::NetId;
 use crate::geom::Nm;
 use crate::place::component::Component;
 use crate::place::footprint::{FootprintDef, IsolationDomain, Role};
-use super::config::{Axis, CongestionField, EnergyTerms, PlaceConfig};
-use super::geom::rotation_axis;
 
 /// Grouping key for a functional region.
 ///

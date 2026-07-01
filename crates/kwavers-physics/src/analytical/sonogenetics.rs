@@ -609,7 +609,10 @@ mod tests {
         assert!((acoustic_dipole_contrast(2.0) - 0.4).abs() < 1e-12);
         // A typical cell (slightly denser, slightly stiffer than water) has a
         // small positive contrast ⇒ migrates to the pressure node.
-        let (f1, f2) = (acoustic_monopole_contrast(0.95), acoustic_dipole_contrast(1.05));
+        let (f1, f2) = (
+            acoustic_monopole_contrast(0.95),
+            acoustic_dipole_contrast(1.05),
+        );
         let phi = f1 / 3.0 + f2 / 2.0; // acoustophoretic contrast Φ
         assert!(phi > 0.0, "cell contrast Φ = {phi} should be positive");
     }
@@ -620,10 +623,16 @@ mod tests {
         // contrast cell feels a force toward decreasing ⟨p²⟩ (the node): F < 0.
         let (rho, c) = (1000.0, 1500.0);
         let f = gorkov_radiation_force_1d(5e-6, 1.0e6, 0.0, rho, c, 1.05, 0.9);
-        assert!(f < 0.0, "positive-contrast cell must move toward node, F = {f}");
+        assert!(
+            f < 0.0,
+            "positive-contrast cell must move toward node, F = {f}"
+        );
         // A gas bubble (κ̃ > 1 ⇒ f₁ < 0) reverses the sign — toward the antinode.
         let f_bubble = gorkov_radiation_force_1d(5e-6, 1.0e6, 0.0, rho, c, 0.1, 50.0);
-        assert!(f_bubble > 0.0, "bubble must move toward antinode, F = {f_bubble}");
+        assert!(
+            f_bubble > 0.0,
+            "bubble must move toward antinode, F = {f_bubble}"
+        );
     }
 
     #[test]
@@ -637,6 +646,9 @@ mod tests {
         let u_hi = gorkov_potential(r, p_hi, 0.0, rho, c, rho_t, kappa_t);
         let f_fd = -(u_hi - u_lo) / dx;
         let f_cf = gorkov_radiation_force_1d(r, 2.0e6, 0.0, rho, c, rho_t, kappa_t);
-        assert!((f_fd - f_cf).abs() / f_cf.abs() < 1e-9, "F_fd {f_fd} != F_cf {f_cf}");
+        assert!(
+            (f_fd - f_cf).abs() / f_cf.abs() < 1e-9,
+            "F_fd {f_fd} != F_cf {f_cf}"
+        );
     }
 }

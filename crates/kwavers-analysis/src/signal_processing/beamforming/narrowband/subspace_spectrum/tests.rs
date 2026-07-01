@@ -48,17 +48,18 @@ fn eigenvalue_split_matches_theorem_22_2() {
     let mut e: Vec<Array1<Complex64>> = Vec::new();
     for col in 0..k {
         let mut v = Array1::<Complex64>::zeros(n);
-        for row in 0..n {
+        for (row, value) in v.iter_mut().enumerate() {
             let phase = TWO_PI * (col as f64 + 1.0) * (row as f64) / (n as f64);
-            v[row] = Complex64::new(0.0, phase).exp() / (n as f64).sqrt();
+            *value = Complex64::new(0.0, phase).exp() / (n as f64).sqrt();
         }
         e.push(v);
     }
     // Orthonormality sanity (distinct DFT columns are orthogonal).
-    let mut cross = Complex64::new(0.0, 0.0);
-    for row in 0..n {
-        cross += e[0][row].conj() * e[1][row];
-    }
+    let cross: Complex64 = e[0]
+        .iter()
+        .zip(e[1].iter())
+        .map(|(a, b)| a.conj() * b)
+        .sum();
     assert!(cross.norm() < 1e-12, "signal vectors must be orthonormal");
 
     // R = σ_n² I + σ_s² Σ_k e_k e_kᴴ.

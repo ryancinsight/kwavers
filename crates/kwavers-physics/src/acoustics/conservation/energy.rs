@@ -43,23 +43,20 @@ mod tests {
     use kwavers_grid::Grid;
     use ndarray::Array3;
 
+    type AcousticFields = (
+        Array3<f64>,
+        Array3<f64>,
+        Array3<f64>,
+        Array3<f64>,
+        Array3<f64>,
+        Array3<f64>,
+    );
+
     fn small_grid() -> Grid {
         Grid::new(4, 4, 4, 1e-3, 1e-3, 1e-3).unwrap()
     }
 
-    fn make_fields(
-        p: f64,
-        v: f64,
-        rho: f64,
-        c: f64,
-    ) -> (
-        Array3<f64>,
-        Array3<f64>,
-        Array3<f64>,
-        Array3<f64>,
-        Array3<f64>,
-        Array3<f64>,
-    ) {
+    fn make_fields(p: f64, v: f64, rho: f64, c: f64) -> AcousticFields {
         let s = (4, 4, 4);
         let pressure = Array3::from_elem(s, p);
         let velocity_x = Array3::from_elem(s, v);

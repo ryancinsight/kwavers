@@ -261,8 +261,8 @@ mod tests {
         assert_eq!(s[2][5], 0.0, "c36");
 
         // Symmetry invariant
-        for i in 0..6 {
-            for j in i + 1..6 {
+        for (i, _) in s.iter().enumerate() {
+            for (j, _) in s.iter().enumerate().skip(i + 1) {
                 assert!((s[i][j] - s[j][i]).abs() < tol, "symmetry C[{i}][{j}]");
             }
         }

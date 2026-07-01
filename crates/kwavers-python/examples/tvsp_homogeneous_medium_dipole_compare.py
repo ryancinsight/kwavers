@@ -361,6 +361,7 @@ def main() -> int:
     checks = {
         "pearson_r": metrics["pearson_r"]  >= thr["pearson_r"],
         "rms_ratio": thr["rms_ratio_min"] <= metrics["rms_ratio"] <= thr["rms_ratio_max"],
+        "psnr_db":   metrics["psnr_db"]    >= thr["psnr_db"],
     }
     status = "PASS" if all(checks.values()) else "FAIL"
 
@@ -368,6 +369,7 @@ def main() -> int:
     print(f"  Status    : {status}")
     print(f"  pearson_r : {metrics['pearson_r']:.6f}  {'OK' if checks['pearson_r'] else 'FAIL'}")
     print(f"  rms_ratio : {metrics['rms_ratio']:.6f}  {'OK' if checks['rms_ratio'] else 'FAIL'}")
+    print(f"  psnr_db   : {metrics['psnr_db']:.2f} dB  {'OK' if checks['psnr_db'] else 'FAIL'}")
     print(f"  runtime   : k-wave={kw['runtime_s']:.1f}s  pykwavers={pkw_res['runtime_s']:.1f}s")
 
     plot_comparison(kw, pkw_res, metrics, status=status)
@@ -387,6 +389,7 @@ def main() -> int:
     report = [
         f"pearson_r  = {metrics['pearson_r']:.6f}  (target >= {thr['pearson_r']})",
         f"rms_ratio  = {metrics['rms_ratio']:.6f}  (target [{thr['rms_ratio_min']}, {thr['rms_ratio_max']}])",
+        f"psnr_db    = {metrics['psnr_db']:.2f} dB  (target >= {thr['psnr_db']} dB)",
         f"rmse       = {metrics['rmse']:.6e} Pa",
         f"peak_kwave_Pa     = {float(np.abs(kw_p).max()):.6e}",
         f"peak_pykwavers_Pa = {float(np.abs(py_p).max()):.6e}",

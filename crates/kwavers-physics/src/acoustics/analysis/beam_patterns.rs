@@ -116,7 +116,7 @@ mod tests {
         for &theta in &angles {
             let d = BeamPatterns::directivity(theta, aperture, wavelength);
             assert!(
-                d >= 0.0 && d <= 1.0 + 1e-12,
+                (0.0..=1.0 + 1e-12).contains(&d),
                 "directivity={d:.4} out of [0,1] at theta={theta:.3} rad"
             );
         }

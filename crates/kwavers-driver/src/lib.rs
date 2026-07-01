@@ -102,31 +102,19 @@ pub mod verify;
 // a real entry point at Phase 1a; declared here as `pub mod prelude;` alongside the other
 // top-level modules.
 pub mod experiment;
+#[cfg(feature = "kwavers")]
+pub use experiment::KwaversSim;
 pub use experiment::{
     artifact_key, build_beam_report, propagate_thermal, run_experiment, AcousticSimulator,
     DefaultStimulus, ExperimentMetrics, ExperimentRecord, ExperimentReport, InCrateAcousticSim,
     LaneBinding, PressureMap, Stimulus, ThermalState, TileDispatch,
 };
-#[cfg(feature = "kwavers")]
-pub use experiment::KwaversSim;
 pub mod geometry;
 pub mod physics;
 pub mod prelude;
 pub mod ssot;
 pub mod units;
 
-pub use physics::acoustic::{
-    acoustic_intensity_w_per_m2, array_factor, bvd_anti_resonance_hz,
-    bvd_series_resonance_hz, element_factor, f_number, focal_pressure_gain,
-    focused_delay_profile_s, grating_lobe_angle_deg, isppa_w_per_m2,
-    max_delay_quantization_error_s, max_grating_free_steer_deg, mechanical_index,
-    near_field_distance_m, nonlinear_shock_parameter, pitch_from_aperture_m, pressure_derating,
-    quantize_delays_s, round_trip_attenuation_db, tissue_attenuation_db, wavelength_m,
-};    pub use physics::ampacity::{
-        ac_resistance_factor, ampacity_check, annular_ring_mm, black_mttf_relative,
-        copper_thickness_m, current_density_a_per_mm2, ipc2221_min_width,
-        pth_aspect_ratio, skin_depth_m, track_resistance, AmpacityDeficit,
-    };
 pub use audit::{
     audit, charge_recycling_efficiency_audit, copper_area_per_layer, copper_imbalance,
     pulse_skip_interference_audit, weakness_field, ChargeRecyclingReport, FaultReport,
@@ -147,21 +135,12 @@ pub use dfm::{
     dedup_vias, ground_pour, merge_collinear, miter_right_angle_corners, quietest_layer,
     resolve_diagonal_via_clearance, teardrops, widen_for_ampacity,
 };
-pub use physics::dielectric::{
-    air_breakdown_possible, caf_ttf_relative, ipc2221_min_spacing_mm, paschen_breakdown_v,
-    paschen_min_air,
-};
 pub use driver::{
     chip_power_rating_w, compare_driver_ics_at, damping_resistor_ohm, driver_efficiency,
     find_best_freq, load_quality_factor, max_safe_duty, power_rating_check, pulser_dissipation,
     reactive_drive_power_w, ringdown_cycles, sweep_driver_loss, switching_node_ringing_v,
     thermally_derated_efficiency, tuning_inductor_h, ComponentComparison, FreqSweepPoint,
     PowerRatingReport, PulserDissipation, PulserOp,
-};
-pub use physics::emi::{
-    capacitive_drive_current_a, commutation_loops, gate_drive_power_w, inductive_overshoot_v,
-    loop_inductance_nh, radiated_emi_dbuv_m, reverse_recovery_loss_w, switching_loss_w,
-    trace_partial_inductance_nh, CommutationLoop,
 };
 pub use error::{Error, Result};
 pub use fabrication::{fabrication_readiness, is_exact_footprint, FabReadiness};
@@ -188,9 +167,40 @@ pub use optim::{
     evaluate_design_point, hot_track_resistance, max_safe_duty_thermal, ringing_exceeds_breakdown,
     ArrayGeometry, DesignReport, EmiContext, PdnConfig, ThermalContext,
 };
+pub use physics::acoustic::{
+    acoustic_intensity_w_per_m2, array_factor, bvd_anti_resonance_hz, bvd_series_resonance_hz,
+    element_factor, f_number, focal_pressure_gain, focused_delay_profile_s, grating_lobe_angle_deg,
+    isppa_w_per_m2, max_delay_quantization_error_s, max_grating_free_steer_deg, mechanical_index,
+    near_field_distance_m, nonlinear_shock_parameter, pitch_from_aperture_m, pressure_derating,
+    quantize_delays_s, round_trip_attenuation_db, tissue_attenuation_db, wavelength_m,
+};
+pub use physics::ampacity::{
+    ac_resistance_factor, ampacity_check, annular_ring_mm, black_mttf_relative, copper_thickness_m,
+    current_density_a_per_mm2, ipc2221_min_width, pth_aspect_ratio, skin_depth_m, track_resistance,
+    AmpacityDeficit,
+};
+pub use physics::dielectric::{
+    air_breakdown_possible, caf_ttf_relative, ipc2221_min_spacing_mm, paschen_breakdown_v,
+    paschen_min_air,
+};
+pub use physics::emi::{
+    capacitive_drive_current_a, commutation_loops, gate_drive_power_w, inductive_overshoot_v,
+    loop_inductance_nh, radiated_emi_dbuv_m, reverse_recovery_loss_w, switching_loss_w,
+    trace_partial_inductance_nh, CommutationLoop,
+};
 pub use physics::pdn::{
     anti_resonance_hz, holdup_capacitance_f, max_decoupling_distance_mm, pdn_impedance_at_freq,
     plane_resonance_hz, self_resonant_freq_hz, target_impedance_ohm,
+};
+pub use physics::si::{
+    channel_operating_margin_db, crosstalk_coupling, differential_microstrip_impedance,
+    impedance_target, microstrip_delay_s_per_m, microstrip_impedance, return_loss_db,
+    risetime_degradation_ps_per_m, stripline_impedance, within_skew,
+};
+pub use physics::thermal::{
+    ir_drop, junction_temperature_k, solve_board, solve_electrothermal,
+    temperature_derated_resistance, thermal_time_constant_s, thermal_via_conductance,
+    transient_rise_k, IrDrop, ThermalField,
 };
 pub use pipeline::{
     cooptimize, cooptimize_min_area, cooptimize_min_layers, place_to_board, CoOpt, CoOptResult,
@@ -210,20 +220,11 @@ pub use pulse_skip::{
 pub use render::{render_board_svg, save_board_svg};
 pub use route::{NetTerminals, PathFinderParams, RouteOutcome, Router};
 pub use rules::{CreepageRule, DesignRules, ViaPolicy};
-pub use physics::si::{
-    channel_operating_margin_db, crosstalk_coupling, differential_microstrip_impedance,
-    impedance_target, microstrip_delay_s_per_m, microstrip_impedance,
-    risetime_degradation_ps_per_m, return_loss_db, stripline_impedance, within_skew,
-};
 pub use stack::{
     assemble_shield_stack, board_rise_k, optimize_shield_stack, optimize_stack,
     stack_board_manifest_from_board, verify_stack_pair, ShieldStackAssembly, ShieldStackPlan,
     StackBoardInstance, StackBoardManifest, StackBoardRole, StackCompatibility, StackConstraints,
     StackPlan, StackTileChannelMap,
-};
-pub use physics::thermal::{
-    ir_drop, junction_temperature_k, solve_board, solve_electrothermal, temperature_derated_resistance,
-    thermal_time_constant_s, thermal_via_conductance, transient_rise_k, IrDrop, ThermalField,
 };
 pub use tr_switch::{
     tr_adequate, tr_area_saving_mm2, tr_clamp_dissipation_w, tr_noise_figure_db,

@@ -94,7 +94,7 @@ mod tests {
         for _ in 0..16 {
             let p = tr.generate_phase();
             assert!(
-                p >= 0.0 && p < MAX_PHASE_SHIFT,
+                (0.0..MAX_PHASE_SHIFT).contains(&p),
                 "phase {p} out of [0, MAX_PHASE_SHIFT)"
             );
         }

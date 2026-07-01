@@ -259,11 +259,7 @@ impl FlexibleTransducerArray {
     /// [`update_geometry`]: Self::update_geometry
     #[must_use]
     pub fn focusing_delays(&self, focus: [f64; 3], c: f64) -> Vec<f64> {
-        super::beamforming::focusing_delays(
-            &self.geometry_state.element_positions.view(),
-            focus,
-            c,
-        )
+        super::beamforming::focusing_delays(&self.geometry_state.element_positions.view(), focus, c)
     }
 
     /// Far-field **plane-wave steering delays** \[s] toward unit direction `dir`
@@ -279,8 +275,9 @@ impl FlexibleTransducerArray {
     /// array is tightly wrapped (sub-micron gap perturbed by the sag, §33.8).
     #[must_use]
     pub fn cmut_flex_apodization(&self, cell: &crate::mems::CmutCell) -> Vec<f64> {
-        let curvatures =
-            super::beamforming::per_element_curvature(&self.geometry_state.element_positions.view());
+        let curvatures = super::beamforming::per_element_curvature(
+            &self.geometry_state.element_positions.view(),
+        );
         super::beamforming::cmut_flex_apodization(&curvatures, cell)
     }
 }

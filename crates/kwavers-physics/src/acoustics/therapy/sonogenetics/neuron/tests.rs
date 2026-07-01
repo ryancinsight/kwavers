@@ -126,8 +126,10 @@ fn test_time_constant() {
 fn test_params_validity() {
     let valid = LifParams::default();
     assert!(valid.is_valid());
-    let mut bad = LifParams::default();
-    bad.capacitance_f = 0.0;
+    let bad = LifParams {
+        capacitance_f: 0.0,
+        ..Default::default()
+    };
     assert!(!bad.is_valid());
     let mut bad2 = LifParams::default();
     bad2.threshold_v = bad2.reset_v - 1e-3;

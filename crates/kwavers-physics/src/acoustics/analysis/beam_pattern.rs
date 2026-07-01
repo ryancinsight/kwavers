@@ -297,7 +297,7 @@ mod tests {
             "pattern shape must match angular sampling"
         );
         assert!(
-            pattern.iter().all(|&v| v >= 0.0 && v <= 1.0 + 1e-10),
+            pattern.iter().all(|&v| (0.0..=1.0 + 1e-10).contains(&v)),
             "all pattern values must be in [0, 1]"
         );
         let max_val = pattern.iter().cloned().fold(0.0_f64, f64::max);

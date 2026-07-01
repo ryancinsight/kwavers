@@ -6,6 +6,8 @@
 
 use kwavers_core::constants::numerical::TWO_PI;
 use num_complex::Complex64;
+use rand::{Rng, SeedableRng};
+use rand_chacha::ChaCha8Rng;
 use std::f64::consts::PI;
 
 // ─── Shear wave speed ─────────────────────────────────────────────────────────
@@ -177,6 +179,104 @@ pub fn mre_displacement_field(
     out
 }
 
+/// Exponential MRE displacement envelope `A · exp(-z / d_pen)`.
+///
+/// The returned vector has the same length as `z_arr` and contains the
+/// positive envelope in meters. The caller plots both signs when showing the
+/// symmetric displacement bound.
+///
+/// # Errors
+/// Returns an error when any coordinate is non-finite, the amplitude is
+/// non-finite, or the penetration depth is not positive and finite.
+pub fn mre_displacement_envelope(
+    z_arr: &[f64],
+    amplitude_m: f64,
+    penetration_depth_m: f64,
+) -> Result<Vec<f64>, String> {
+    if !amplitude_m.is_finite() {
+        return Err("amplitude_m must be finite".to_owned());
+    }
+    if !penetration_depth_m.is_finite() || penetration_depth_m <= 0.0 {
+        return Err("penetration_depth_m must be positive and finite".to_owned());
+    }
+    if z_arr.iter().any(|z| !z.is_finite()) {
+        return Err("z_arr must contain only finite values".to_owned());
+    }
+
+    Ok(z_arr
+        .iter()
+        .map(|&z| amplitude_m * (-z / penetration_depth_m).exp())
+        .collect())
+}
+
+/// Deterministic RF fixture for thermal-strain thermometry validation.
+///
+/// Generates `n_lines` independent axial RF lines, applies a sinusoidal carrier
+/// to smoothed speckle reflectivity, then warps each post-heating line by the
+/// apparent displacement `u(i) = k_T · ΔT · i` in sample coordinates.  The
+/// returned pair is row-major with shape `n_lines × nz`; PyO3 reshapes it to
+/// `[n_lines, 1, nz]` for [`crate::acoustics::imaging::modalities::elastography`].
+///
+/// # Errors
+/// Returns an error if dimensions are zero, `samples_per_carrier` is not
+/// positive and finite, or either thermal scalar is non-finite.
+pub fn thermal_strain_rf_fixture(
+    n_lines: usize,
+    nz: usize,
+    k_t: f64,
+    delta_t_c: f64,
+    samples_per_carrier: f64,
+    seed: u64,
+) -> Result<(Vec<f64>, Vec<f64>), String> {
+    if n_lines == 0 {
+        return Err("n_lines must be positive".to_owned());
+    }
+    if nz < 2 {
+        return Err("nz must be at least two".to_owned());
+    }
+    if !(k_t.is_finite() && delta_t_c.is_finite()) {
+        return Err("k_t and delta_t_c must be finite".to_owned());
+    }
+    if !(samples_per_carrier.is_finite() && samples_per_carrier > 0.0) {
+        return Err("samples_per_carrier must be positive and finite".to_owned());
+    }
+
+    let mut rng = ChaCha8Rng::seed_from_u64(seed);
+    let mut reference = Vec::with_capacity(n_lines * nz);
+    let mut tracked = Vec::with_capacity(n_lines * nz);
+    let mut reflectivity = vec![0.0; nz];
+    let mut smoothed = vec![0.0; nz];
+    let mut rf_line = vec![0.0; nz];
+
+    for _ in 0..n_lines {
+        for value in &mut reflectivity {
+            *value = rng.gen_range(-1.0..1.0);
+        }
+        for idx in 0..nz {
+            let previous = if idx == 0 {
+                reflectivity[nz - 1]
+            } else {
+                reflectivity[idx - 1]
+            };
+            smoothed[idx] = 0.5 * (reflectivity[idx] + previous);
+        }
+        for idx in 0..nz {
+            let carrier = (TWO_PI * idx as f64 / samples_per_carrier).cos();
+            rf_line[idx] = smoothed[idx] * carrier;
+            reference.push(rf_line[idx]);
+        }
+        for idx in 0..nz {
+            let src = (idx as f64 - k_t * delta_t_c * idx as f64).clamp(0.0, (nz - 1) as f64);
+            let lo = src.floor() as usize;
+            let hi = (lo + 1).min(nz - 1);
+            let frac = src - lo as f64;
+            tracked.push(rf_line[lo] * (1.0 - frac) + rf_line[hi] * frac);
+        }
+    }
+
+    Ok((reference, tracked))
+}
+
 /// Acousto-elastic sensitivity coefficient `A = (m + n) / (2(λ + μ))` relating the
 /// shear-modulus shift to applied uniaxial pre-stress (Murnaghan constants `m, n`;
 /// Lamé `λ, μ`). Units: Pa·shift per Pa·stress (dimensionless slope of `ρc_S²` vs `σ₀`).
@@ -315,9 +415,7 @@ mod tests {
         // ν ≥ ½ (incompressible / non-physical): diverges.
         assert!(pwave_to_swave_velocity_ratio(0.5).is_infinite());
         // Monotone increasing toward incompressibility.
-        assert!(
-            pwave_to_swave_velocity_ratio(0.45) > pwave_to_swave_velocity_ratio(0.30)
-        );
+        assert!(pwave_to_swave_velocity_ratio(0.45) > pwave_to_swave_velocity_ratio(0.30));
     }
 
     #[test]
@@ -350,5 +448,62 @@ mod tests {
         let z = vec![0.0, 0.005, 0.01, 0.015];
         let u = mre_displacement_field(&x, &z, 1.5, 100.0, 1e-5, 0.02);
         assert_eq!(u.len(), 12);
+    }
+
+    #[test]
+    fn mre_displacement_envelope_matches_decay_law() {
+        let z = [0.0, 0.035, 0.070];
+        let envelope =
+            mre_displacement_envelope(&z, 25.0e-6, 0.035).expect("valid MRE envelope parameters");
+
+        assert_eq!(envelope.len(), z.len());
+        assert_eq!(envelope[0], 25.0e-6);
+        assert!(
+            (envelope[1] - 25.0e-6 / std::f64::consts::E).abs() <= 1.0e-20,
+            "one-depth envelope={} expected {}",
+            envelope[1],
+            25.0e-6 / std::f64::consts::E
+        );
+        assert!(envelope[2] < envelope[1]);
+    }
+
+    #[test]
+    fn mre_displacement_envelope_rejects_invalid_inputs() {
+        assert!(mre_displacement_envelope(&[0.0], f64::NAN, 0.035).is_err());
+        assert!(mre_displacement_envelope(&[0.0], 25.0e-6, 0.0).is_err());
+        assert!(mre_displacement_envelope(&[f64::NAN], 25.0e-6, 0.035).is_err());
+    }
+
+    #[test]
+    fn thermal_strain_rf_fixture_is_seeded_and_input_sensitive() {
+        let (ref_a, tracked_a) = thermal_strain_rf_fixture(3, 32, -1.0e-3, 6.0, 5.0, 2024)
+            .expect("invariant: valid fixture parameters generate RF");
+        let (ref_b, tracked_b) = thermal_strain_rf_fixture(3, 32, -1.0e-3, 6.0, 5.0, 2024)
+            .expect("invariant: valid fixture parameters generate RF");
+        let (ref_c, _) = thermal_strain_rf_fixture(3, 32, -1.0e-3, 6.0, 5.0, 2025)
+            .expect("invariant: valid fixture parameters generate RF");
+
+        assert_eq!(ref_a.len(), 96);
+        assert_eq!(tracked_a.len(), 96);
+        assert_eq!(ref_a, ref_b);
+        assert_eq!(tracked_a, tracked_b);
+        assert_ne!(ref_a, ref_c);
+        assert_ne!(ref_a, tracked_a);
+    }
+
+    #[test]
+    fn thermal_strain_rf_fixture_zero_shift_preserves_reference() {
+        let (reference, tracked) = thermal_strain_rf_fixture(2, 24, -1.0e-3, 0.0, 5.0, 7)
+            .expect("invariant: zero temperature shift is valid");
+
+        assert_eq!(reference, tracked);
+    }
+
+    #[test]
+    fn thermal_strain_rf_fixture_rejects_invalid_inputs() {
+        assert!(thermal_strain_rf_fixture(0, 24, -1.0e-3, 6.0, 5.0, 1).is_err());
+        assert!(thermal_strain_rf_fixture(1, 1, -1.0e-3, 6.0, 5.0, 1).is_err());
+        assert!(thermal_strain_rf_fixture(1, 24, f64::NAN, 6.0, 5.0, 1).is_err());
+        assert!(thermal_strain_rf_fixture(1, 24, -1.0e-3, 6.0, 0.0, 1).is_err());
     }
 }

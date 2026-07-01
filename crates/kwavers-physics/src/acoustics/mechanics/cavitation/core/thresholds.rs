@@ -213,7 +213,10 @@ mod tests {
         );
         // The critical radius exceeds the equilibrium radius (the bubble must grow
         // past equilibrium to cross the instability saddle).
-        assert!(got > R0, "Blake critical radius {got:e} must exceed R_0 {R0:e}");
+        assert!(
+            got > R0,
+            "Blake critical radius {got:e} must exceed R_0 {R0:e}"
+        );
         // Non-physical surface tension / radius ⇒ no finite saddle.
         assert!(blake_critical_radius(0.0, R0, P0, PV).is_infinite());
         assert!(blake_critical_radius(SIGMA, 0.0, P0, PV).is_infinite());

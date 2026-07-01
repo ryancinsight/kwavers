@@ -84,21 +84,17 @@ fig, axes = plt.subplots(1, 3, figsize=(13, 4), sharey=True)
 for ax, d_ratio in zip(axes, pitches_lambda):
     d = d_ratio * LAM
     k = 2 * np.pi / LAM
-    af = kw.linear_array_factor(N_elements, d, LAM, theta_rad, steer_rad)
-    d_elem = kw.circular_piston_directivity(theta_rad, k * d / 2.0)
-    beam = 20 * np.log10(np.abs(af * d_elem) / N_elements + 1e-10)
+    beam_mag = kw.beam_pattern_magnitude(theta_rad, k, d, N_elements, steer_rad, k * d / 2.0)
+    beam = 20 * np.log10(np.maximum(beam_mag, 1e-10))
 
     ax.plot(theta, beam, lw=1.2)
     ax.axhline(-6, color="k", lw=0.7, ls=":")
     ax.axhline(-20, color="grey", lw=0.6, ls=":")
     ax.axvline(steer_deg, color="C1", lw=1.0, ls="--", label=f"theta_s = {steer_deg} deg")
 
-    for m in [-2, -1, 1, 2]:
-        sin_gl = np.sin(steer_rad) + m * LAM / d
-        if -1 <= sin_gl <= 1:
-            gl_angle = np.rad2deg(np.arcsin(sin_gl))
-            ax.axvline(gl_angle, color="red", lw=0.8, ls=":", alpha=0.7)
-            ax.text(gl_angle, 2, f"m={m}", color="red", fontsize=7, ha="center")
+    for gl_angle in np.rad2deg(kw.grating_lobe_angles(k, d, steer_rad)):
+        ax.axvline(gl_angle, color="red", lw=0.8, ls=":", alpha=0.7)
+        ax.text(gl_angle, 2, f"{gl_angle:.0f} deg", color="red", fontsize=7, ha="center")
 
     ax.set_title(f"$d = {d_ratio}\\lambda$\n{'(grating lobe)' if d_ratio > 0.5 else '(GL-free)'}")
     ax.set_xlabel(r"Angle $\theta$ (deg)")
@@ -122,20 +118,18 @@ N_ap = 64
 n = np.arange(N_ap)
 window_names = ["Uniform", "Hann", "Hamming", "Blackman", "Tukey_05"]
 colors_w = ["C0", "C1", "C2", "C3", "C4"]
-windows_data = {}
-for wname in window_names:
-    windows_data[wname] = kw.apodization_weights(N_ap, wname)
 
 NFFT = 4096
-freq_ax = np.linspace(-0.5, 0.5, NFFT)
 
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4.5))
-for (wname, w), col in zip(windows_data.items(), colors_w):
+for wname, col in zip(window_names, colors_w):
     label = wname.replace("_05", " (r=0.5)")
+    w, spatial_freq, W_dB = kw.apodization_window_response(N_ap, wname, NFFT)
+    w = np.asarray(w)
+    spatial_freq = np.asarray(spatial_freq)
+    W_dB = np.asarray(W_dB)
     ax1.plot(n, w / w.max(), label=label, color=col)
-    W = np.fft.fftshift(np.fft.fft(w, n=NFFT))
-    W_dB = 20 * np.log10(np.abs(W) / np.abs(W).max() + 1e-12)
-    ax2.plot(freq_ax * N_ap, W_dB, label=label, color=col)
+    ax2.plot(spatial_freq, W_dB, label=label, color=col)
 
 ax1.set_xlabel("Element index $n$")
 ax1.set_ylabel("Normalized weight $w_n$")
@@ -159,7 +153,10 @@ apertures_mm = [10, 20, 38.4]
 
 fig, ax = plt.subplots(figsize=(7, 4.5))
 for L_mm, col in zip(apertures_mm, ["C0", "C1", "C2"]):
-    delta_x_mm = kw.lateral_resolution_m(depths_mm * 1e-3, L_mm * 1e-3, LAM) * 1e3
+    aperture_m = L_mm * 1e-3
+    delta_x_mm = np.asarray(
+        [kw.lateral_resolution_m(float(depth_m / aperture_m), LAM) for depth_m in depths_mm * 1e-3]
+    ) * 1e3
     ax.plot(depths_mm, delta_x_mm, color=col, label=f"$L = {L_mm}$ mm")
 
 ax.set_xlabel("Depth (mm)")
@@ -181,14 +178,14 @@ L = N_el * D_el
 Z_F = 0.04
 x_pts = np.linspace(-10e-3, 10e-3, 400)
 z_pts = np.linspace(5e-3, 60e-3, 400)
-X, Z = np.meshgrid(x_pts, z_pts)
 
 el_positions = (np.arange(N_el) - (N_el - 1) / 2.0) * D_el
+el_z = np.zeros_like(el_positions)
 w_hann = kw.apodization_weights(N_el, "Hann")
-delays = kw.delay_law_focus_2d(el_positions, 0.0, Z_F, C0)
+delays = kw.delay_law_focus_2d(el_positions, el_z, 0.0, Z_F, C0)
 
-p_field = kw.beam_pattern_2d(X.ravel(), Z.ravel(), el_positions, w_hann, delays, C0, F0)
-p_field = p_field.reshape(X.shape)
+field_re, field_im = kw.beam_pattern_2d(x_pts, z_pts, el_positions, el_z, F0, C0, w_hann, delays)
+p_field = np.hypot(field_re, field_im).T
 p_dB = 20 * np.log10(np.abs(p_field) / np.abs(p_field).max() + 1e-12)
 p_dB = np.clip(p_dB, -60, 0)
 
@@ -212,13 +209,13 @@ plt.close()
 print("[fig06] BLI stencil weights")
 
 EPS_BLI = 0.05
-N_sub = int(np.ceil(1.0 / (np.pi * EPS_BLI)))
+N_STENCIL = 2 * int(np.ceil(1.0 / (np.pi * EPS_BLI)))
 offsets = np.linspace(0, 0.5, 5)
-grid_idx = np.arange(-N_sub, N_sub + 1)
+grid_idx = np.arange(N_STENCIL) - N_STENCIL // 2
 
 fig, axes = plt.subplots(1, len(offsets), figsize=(14, 3.5), sharey=True)
 for ax, frac_offset in zip(axes, offsets):
-    weights = kw.bli_stencil_weights(grid_idx.astype(float), frac_offset, EPS_BLI)
+    weights = np.asarray(kw.bli_stencil_weights(np.asarray([frac_offset]), N_STENCIL))[0]
     markerline, stemline, baseline = ax.stem(
         grid_idx, weights, linefmt="C0-", markerfmt="C0o", basefmt="k-"
     )
@@ -227,10 +224,10 @@ for ax, frac_offset in zip(axes, offsets):
     ax.set_xlabel("Grid index $i$")
     ax.axhline(EPS_BLI, color="r", lw=0.7, ls=":")
     ax.axhline(-EPS_BLI, color="r", lw=0.7, ls=":")
-    ax.set_xlim(-N_sub - 0.5, N_sub + 0.5)
+    ax.set_xlim(grid_idx[0] - 0.5, grid_idx[-1] + 0.5)
 
 axes[0].set_ylabel("BLI weight $w_i$")
-fig.suptitle(f"BLI Stencil Weights (Eq. 4.18) - N_sub = {N_sub}, eps = {EPS_BLI}", y=1.02)
+fig.suptitle(f"BLI Stencil Weights (Eq. 4.18) - N = {N_STENCIL}, eps = {EPS_BLI}", y=1.02)
 plt.tight_layout()
 savefig("fig06_bli_stencil_weights")
 plt.close()

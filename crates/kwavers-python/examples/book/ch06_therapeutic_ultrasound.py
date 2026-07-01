@@ -42,6 +42,13 @@ def savefig(name: str) -> None:
     print(f"  saved: docs/book/figures/ch06/{name}.{{pdf,png}}")
 
 
+def pressure_amplitude_from_intensity(intensity_w_m2: float) -> float:
+    values = kw.acoustic_pressure_amplitude_from_intensity(
+        np.asarray([intensity_w_m2], dtype=np.float64), RHO0, C0
+    )
+    return float(np.asarray(values, dtype=float)[0])
+
+
 plt.rcParams.update(
     {
         "font.family": "serif",
@@ -114,7 +121,7 @@ intensities = [1e7, 5e7, 1e8, 5e8]  # W/m² — focal intensity
 fig, ax = plt.subplots(figsize=(7, 4.5))
 for I in intensities:
     # Source pressure corresponding to focal intensity I = p₀²/(2ρc).
-    p0 = float(np.sqrt(2.0 * RHO0 * C0 * I))
+    p0 = pressure_amplitude_from_intensity(I)
     # Q shape (1, NX_T1) — axis 0 = radial (r=0), axis 1 = depth z.
     Q_profile = np.asarray(kw.gaussian_power_deposition_2d(
         R_ON_AXIS, Z_AX_T1, F0, Z_FOCUS_T1, p0, C0, RHO0, ALPHA_ABS, W0_T1,
@@ -277,7 +284,7 @@ IZ_FOC5 = NZ_T5 // 2  # lateral center
 # Beam waist w₀ = 1 mm (lateral σ = 2 cells × 0.5 mm); focal intensity I = 5e8 W/m².
 # Source pressure p₀ = √(2ρcI) so focal intensity I₀ = p₀²/(2ρc) ≡ I_FOCAL.
 I_FOCAL = 5e8   # W/m² focal intensity
-P0_T5 = float(np.sqrt(2.0 * RHO0 * C0 * I_FOCAL))
+P0_T5 = pressure_amplitude_from_intensity(I_FOCAL)
 W0_T5 = 2.0 * DX_T5  # 1 mm beam waist at focus (lateral)
 Z_DEPTH_T5 = np.ascontiguousarray(np.arange(NX_T5, dtype=np.float64) * DX_T5)
 R_LAT_T5 = np.ascontiguousarray(

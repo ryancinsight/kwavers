@@ -18,6 +18,7 @@ References
 
 import math
 
+import numpy as np
 import pytest
 
 import pykwavers
@@ -87,6 +88,40 @@ def test_bubble_field_different_grid_sizes() -> None:
     for nx, ny, nz in [(8, 8, 8), (32, 16, 16), (64, 64, 64)]:
         bf = pykwavers.BubbleField(nx, ny, nz)
         assert bf.num_bubbles() == 0
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Keller–Herring / Keller–Miksis Python binding tests
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+def test_solve_keller_herring_returns_valid_trajectory() -> None:
+    """`solve_keller_herring` returns finite time, radius, and wall-velocity arrays."""
+    n_steps = 64
+    t_end = 2.0e-6
+
+    time, r, rdot = pykwavers.solve_keller_herring(
+        5e-6,  # equilibrium radius
+        0.0,  # initial wall velocity
+        1.0e5,  # ambient pressure
+        2.0e4,  # driving acoustic pressure
+        5.0e5,  # frequency
+        t_end,
+        n_steps,
+        _RHO_WATER,  # density
+        0.072,  # surface tension
+        1.4,  # gamma
+        1.0e-3,  # viscosity
+        2.3e3,  # vapor pressure
+        1.48e3,  # sound speed
+    )
+
+    assert len(time) == n_steps + 1
+    assert len(r) == n_steps + 1
+    assert len(rdot) == n_steps + 1
+    assert all(x > 0.0 for x in r), "bubble radius must stay positive"
+    assert all(np.isfinite(x) for x in r), "radius values must be finite"
+    assert all(np.isfinite(x) for x in rdot), "wall velocity values must be finite"
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -160,6 +195,21 @@ def test_minnaert_frequency_density_dependence() -> None:
     assert abs(ratio - expected) < 1e-10, (
         f"f(ρ)/f(2ρ) = {ratio:.6f}, expected √2 = {expected:.6f}"
     )
+
+
+def test_cloud_erosion_validation_metrics_scale_model_curve() -> None:
+    """The PyO3 erosion comparator fits the empirical erosion-efficiency scalar."""
+    reference = np.asarray([0.0, 2.0, 4.0, 6.0], dtype=float)
+    model = np.asarray([0.0, 1.0, 2.0, 3.0], dtype=float)
+    metrics = pykwavers.cloud_erosion_validation_metrics(reference, model)
+    assert metrics is not None
+    scale, rmse, nrmse, max_abs, _max_rel, pearson_r, sample_count = metrics
+    assert scale == pytest.approx(2.0, abs=1e-12)
+    assert rmse == pytest.approx(0.0, abs=1e-12)
+    assert nrmse == pytest.approx(0.0, abs=1e-12)
+    assert max_abs == pytest.approx(0.0, abs=1e-12)
+    assert pearson_r == pytest.approx(1.0, abs=1e-12)
+    assert sample_count == 4
 
 
 # ──────────────────────────────────────────────────────────────────────────────

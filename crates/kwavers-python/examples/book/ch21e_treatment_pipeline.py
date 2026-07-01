@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import os
 import sys
+import json
 
 import matplotlib
 
@@ -861,7 +862,7 @@ def figure_pulsing_pattern(plan):
 SPEC_F = np.linspace(0.0, 4.0e6, 240)
 
 
-def _emission_tables(rng, p_grid):
+def _emission_tables(seed, p_grid):
     """Genuine emission (stable+broadband) and PSD spectrum vs delivered focal
     pressure, from microbubble-population Keller–Miksis sims (one per pressure).
     Returns (stable[p], broadband[p], spectra[p, SPEC_F])."""
@@ -869,7 +870,7 @@ def _emission_tables(rng, p_grid):
     spec = np.zeros((p_grid.size, SPEC_F.size))
     for i, p in enumerate(p_grid):
         r = simulate_population_emission(kw, drive_pa=float(p), f0=F0, medium=MEDIUM,
-                                         n_bubbles=14, rng=rng, n_cycles=8.0,
+                                         n_bubbles=14, seed=int(seed) + i, n_cycles=8.0,
                                          n_out=4096, steps_per_cycle=1500)
         st[i] = r["stable"]; br[i] = r["broadband"]
         fr = np.asarray(r["freqs"]); ps = np.asarray(r["psd"])
@@ -1042,7 +1043,7 @@ def simulate_measured_sonication(plan, geom, n_pulses=80, seed=11):
     # Emission curve spans up to the interface-enhanced peak (delivered × interface
     # enhancement, which can exceed the conformal target near tissue boundaries).
     p_grid = np.linspace(P_MIN_PA, 1.7 * P_TARGET_FOCAL_PA, 10)
-    emis_st, emis_br, spec_tab = _emission_tables(rng, p_grid)
+    emis_st, emis_br, spec_tab = _emission_tables(seed, p_grid)
     emis_tot = emis_st + emis_br
     cap = max(float(emis_br.max()), 1e-30)
     bg, fwd_tab, recv_tab = _gas_tables(FOCAL_DEPTH_M)
@@ -1317,6 +1318,115 @@ def compute_bioeffect_progress(geom, plan, mon, n_steps=80):
     return {"t": ts, "ring": ring, "ld_levels": LD_LEVELS, "ld_keys": ld_keys,
             "tier_vol": tier_vol, "kill_slices": kill_slices,
             "dose_slices": dose_slices, "dose_peak": max(dose_peak, 1e-30)}
+
+
+def _load_external_cloud_erosion_reference():
+    """Load an optional k-wave/experimental erosion CSV.
+
+    The CSV must contain a time column and a normalized erosion column. Header
+    names containing ``time`` and ``erosion`` are preferred; otherwise the first
+    two numeric columns are used. The comparator itself lives in Rust.
+    """
+    path = os.environ.get("CH21E_CLOUD_EROSION_REFERENCE_CSV")
+    if not path:
+        return None
+    arr = np.genfromtxt(path, delimiter=",", names=True)
+    if arr.size == 0:
+        raise ValueError(f"empty cloud-erosion reference CSV: {path}")
+    names = arr.dtype.names
+    if names:
+        time_name = next((names[k] for k in range(len(names)) if "time" in names[k].lower()), None)
+        erosion_name = next((names[k] for k in range(len(names)) if "erosion" in names[k].lower()), None)
+        if time_name is None or erosion_name is None:
+            if len(names) < 2:
+                raise ValueError(f"cloud-erosion reference CSV needs at least two columns: {path}")
+            time_name, erosion_name = names[0], names[1]
+        time_s = np.atleast_1d(np.asarray(arr[time_name], dtype=float))
+        erosion = np.atleast_1d(np.asarray(arr[erosion_name], dtype=float))
+    else:
+        raw = np.atleast_2d(np.genfromtxt(path, delimiter=","))
+        if raw.shape[1] < 2:
+            raise ValueError(f"cloud-erosion reference CSV needs at least two columns: {path}")
+        time_s = np.asarray(raw[:, 0], dtype=float)
+        erosion = np.asarray(raw[:, 1], dtype=float)
+    if time_s.size < 2 or erosion.size != time_s.size:
+        raise ValueError(f"cloud-erosion reference CSV has invalid paired samples: {path}")
+    order = np.argsort(time_s)
+    return {"path": os.path.abspath(path), "time_s": time_s[order], "erosion": erosion[order]}
+
+
+def write_cloud_erosion_validation_evidence(plan, mon, prog, plans):
+    """Write the Chapter 21e cavitation-cloud erosion evidence JSON.
+
+    The candidate trajectory is the Rust-derived measured cavitation accumulation
+    from the actual treatment schedule. If ``CH21E_CLOUD_EROSION_REFERENCE_CSV``
+    points at a k-wave or experimental erosion row, the Rust validation metric
+    compares the model curve against it after one non-negative erosion-efficiency
+    calibration. Without that external row, the file records the current candidate
+    trajectory and explicitly marks the external-validation tier as not executed.
+    """
+    model_time = np.asarray(mon["t"], dtype=float)
+    model_erosion = np.asarray(mon["cumulative"], dtype=float) / max(float(mon["goal"]), 1e-30)
+    model_erosion = np.maximum.accumulate(np.clip(model_erosion, 0.0, None))
+    external = _load_external_cloud_erosion_reference()
+    metrics = None
+    if external is not None:
+        candidate = np.interp(external["time_s"], model_time, model_erosion,
+                              left=model_erosion[0], right=model_erosion[-1])
+        raw_metrics = kw.cloud_erosion_validation_metrics(
+            np.ascontiguousarray(external["erosion"], dtype=float),
+            np.ascontiguousarray(candidate, dtype=float))
+        if raw_metrics is None:
+            raise ValueError("cloud erosion validation rejected the paired reference/model samples")
+        metrics = {
+            "model_scale": raw_metrics[0],
+            "rmse": raw_metrics[1],
+            "normalized_rmse": raw_metrics[2],
+            "max_abs_error": raw_metrics[3],
+            "max_relative_error": raw_metrics[4],
+            "pearson_r": raw_metrics[5],
+            "sample_count": int(raw_metrics[6]),
+        }
+
+    pstd = plans.get("pstd_nonlinear", {})
+    analytic = plans.get("analytic", {})
+    payload = {
+        "evidence_tier": "empirical validation path; external k-wave/experimental row required for external agreement metrics",
+        "external_reference": {
+            "loaded": external is not None,
+            "path": external["path"] if external is not None else None,
+        },
+        "validation_metrics": metrics,
+        "candidate_model": {
+            "source": "Chapter 21e measured cavitation accumulation from Rust/PyO3 therapy helpers",
+            "sample_count": int(model_time.size),
+            "final_normalized_erosion": float(model_erosion[-1]) if model_erosion.size else 0.0,
+            "peak_void_fraction": float(np.max(mon["beta"])) if np.asarray(mon["beta"]).size else 0.0,
+            "hybrid_mean_efficiency": float(np.mean(mon["equality"]["interleaved"])),
+            "sequential_mean_efficiency": float(np.mean(mon["equality"]["sequential"])),
+        },
+        "therapy_outcome": {
+            "spots": int(len(plan["spots"])),
+            "pulses": int(plan["onsets"].size),
+            "coverage_fraction": float(plan["coverage"]),
+            "treatment_s": float(plan["treatment_s"]),
+            "gtv_core_final_kill_fraction": float(prog["ring"]["GTV core"][-1] / 100.0),
+            "ctv_ring_final_kill_fraction": float(prog["ring"]["CTV ring"][-1] / 100.0),
+            "ptv_margin_final_kill_fraction": float(prog["ring"]["PTV margin"][-1] / 100.0),
+            "ptv_ld50_volume_fraction": float(prog["tier_vol"]["LD50"][-1] / 100.0),
+        },
+        "field_model_crosscheck": {
+            "analytic_coverage_fraction": float(analytic.get("coverage", 0.0)),
+            "pstd_nonlinear_coverage_fraction": float(pstd.get("coverage", 0.0)),
+            "analytic_pulses": int(analytic.get("onsets", np.array([])).size),
+            "pstd_nonlinear_pulses": int(pstd.get("onsets", np.array([])).size),
+        },
+    }
+    path = os.path.join(OUT_DIR, "cloud_erosion_validation_metrics.json")
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(payload, f, indent=2, sort_keys=True)
+        f.write("\n")
+    print(f"  wrote {path}")
 
 
 def _final_kill_volume(geom, plan):
@@ -1635,6 +1745,8 @@ def main():
     eq = mon["equality"]
     print(f"  residual-bubble equality (mean efficiency): hybrid {eq['interleaved'].mean()*100:.0f}% "
           f"vs sequential {eq['sequential'].mean()*100:.0f}%")
+    print("Writing cavitation-cloud erosion validation evidence...")
+    write_cloud_erosion_validation_evidence(plan, mon, prog, plans)
     figure_raster_equality(mon)
     print("Fig D - resolved standing-wave/shadow field through a lacuna (full-3D PSTD)...")
     figure_lacuna_field(ffm)

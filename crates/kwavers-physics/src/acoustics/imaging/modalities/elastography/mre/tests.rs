@@ -22,7 +22,11 @@ fn recovers_amplitude_and_phase_of_a_pure_harmonic() {
     let stack = single_voxel_stack(amplitude, theta);
     let h = extract_first_harmonic(&stack, KAPPA).expect("extract");
     let u = h[[0, 0, 0]];
-    assert!((u.norm() - amplitude).abs() < 1e-15, "amplitude: got {}", u.norm());
+    assert!(
+        (u.norm() - amplitude).abs() < 1e-15,
+        "amplitude: got {}",
+        u.norm()
+    );
     assert!((u.arg() - theta).abs() < 1e-12, "phase: got {}", u.arg());
 }
 
@@ -35,7 +39,10 @@ fn rejects_dc_phase_offset() {
     let mut stack = single_voxel_stack(amplitude, theta);
     stack.mapv_inplace(|v| v + 3.3); // add DC bias
     let h = extract_first_harmonic(&stack, KAPPA).expect("extract");
-    assert!((h[[0, 0, 0]].norm() - amplitude).abs() < 1e-12, "DC must not affect fundamental");
+    assert!(
+        (h[[0, 0, 0]].norm() - amplitude).abs() < 1e-12,
+        "DC must not affect fundamental"
+    );
 }
 
 #[test]
@@ -45,7 +52,11 @@ fn snapshot_recovers_amplitude_at_matched_phase() {
     let theta = 1.1;
     let h = extract_first_harmonic(&single_voxel_stack(amplitude, theta), KAPPA).expect("extract");
     let snap = harmonic_snapshot(&h, -theta);
-    assert!((snap[[0, 0, 0]] - amplitude).abs() < 1e-12, "got {}", snap[[0, 0, 0]]);
+    assert!(
+        (snap[[0, 0, 0]] - amplitude).abs() < 1e-12,
+        "got {}",
+        snap[[0, 0, 0]]
+    );
     // At quadrature (θ_snap = −θ + π/2) the in-phase projection is ~0.
     let quad = harmonic_snapshot(&h, -theta + PI / 2.0);
     assert!(quad[[0, 0, 0]].abs() < 1e-12);
@@ -63,8 +74,13 @@ fn displacement_field_z_carries_the_harmonic_snapshot() {
     // uz at θ=0 snapshot = A·cos(θ) for φ[k]=κ·A·cos(2πk/N+θ).
     let amplitude = 4.0e-6;
     let theta = 0.0; // in-phase ⇒ snapshot at 0 equals amplitude
-    let field = mre_displacement_field_z(&single_voxel_stack(amplitude, theta), KAPPA).expect("field");
-    assert!((field.uz[[0, 0, 0]] - amplitude).abs() < 1e-12, "got {}", field.uz[[0, 0, 0]]);
+    let field =
+        mre_displacement_field_z(&single_voxel_stack(amplitude, theta), KAPPA).expect("field");
+    assert!(
+        (field.uz[[0, 0, 0]] - amplitude).abs() < 1e-12,
+        "got {}",
+        field.uz[[0, 0, 0]]
+    );
     assert_eq!(field.ux[[0, 0, 0]], 0.0);
     assert_eq!(field.uy[[0, 0, 0]], 0.0);
 }

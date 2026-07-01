@@ -98,10 +98,16 @@ mod fwi_demo {
             .and_then(|p| p.parent())
             .map(PathBuf::from)
             .unwrap_or_default();
-        let ct_path = std::env::var("KWAVERS_CT_PATH")
-            .unwrap_or_else(|_| root.join("data/cfb_gbm_sample/ct.nii.gz").display().to_string());
-        let mri_path = std::env::var("KWAVERS_MRI_PATH")
-            .unwrap_or_else(|_| root.join("data/cfb_gbm_sample/t1.nii.gz").display().to_string());
+        let ct_path = std::env::var("KWAVERS_CT_PATH").unwrap_or_else(|_| {
+            root.join("data/cfb_gbm_sample/ct.nii.gz")
+                .display()
+                .to_string()
+        });
+        let mri_path = std::env::var("KWAVERS_MRI_PATH").unwrap_or_else(|_| {
+            root.join("data/cfb_gbm_sample/t1.nii.gz")
+                .display()
+                .to_string()
+        });
 
         let Some(ct) = load_nifti(&ct_path) else {
             println!(
@@ -225,7 +231,10 @@ mod fwi_demo {
         // κ≈1 and is inaccurate for the c≈2900 m/s skull (it anti-correlates here).
         let fwi = FwiProcessor::new(params).with_density(density.clone())?;
 
-        println!("Generating {} shots (FDTD forward through the CT medium) …", elems.len());
+        println!(
+            "Generating {} shots (FDTD forward through the CT medium) …",
+            elems.len()
+        );
         let t_fwd = Instant::now();
         let mut shots: Vec<(FwiGeometry, Array2<f64>)> = Vec::new();
         for &src in &elems {
@@ -233,7 +242,10 @@ mod fwi_demo {
             let obs = fwi.generate_synthetic_data(&true_c, &geom, &grid)?;
             shots.push((geom, obs));
         }
-        println!("  forward data generated in {:.1} s", t_fwd.elapsed().as_secs_f64());
+        println!(
+            "  forward data generated in {:.1} s",
+            t_fwd.elapsed().as_secs_f64()
+        );
 
         // ── Masked FWI: skull/water frozen, brain reconstructed ──────────────
         println!("Running masked FWI ({ITERS} iters; skull frozen to CT) …");
@@ -324,8 +336,14 @@ mod fwi_demo {
         // ── Figures (PGM: dev-dep `image` carries no PNG encoder) ────────────
         let out_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("test-figures");
         std::fs::create_dir_all(&out_dir).ok();
-        save_pgm(&out_dir.join("transcranial_ct_true_speed.pgm"), &slice_xy(&true_c));
-        save_pgm(&out_dir.join("transcranial_fwi_reconstruction.pgm"), &slice_xy(&recon));
+        save_pgm(
+            &out_dir.join("transcranial_ct_true_speed.pgm"),
+            &slice_xy(&true_c),
+        );
+        save_pgm(
+            &out_dir.join("transcranial_fwi_reconstruction.pgm"),
+            &slice_xy(&recon),
+        );
         if let Some(mri_slice) = mri_grid {
             save_pgm(&out_dir.join("transcranial_mri_reference.pgm"), &mri_slice);
         }
@@ -450,8 +468,16 @@ mod fwi_demo {
         use kwavers_math::numerics::operators::interpolation::trilinear_index_space;
         let grid = ct_slice.hu.dim().0;
         let [x0, x1, y0, y1] = ct_slice.crop_bounds_index;
-        let scale_x = if grid > 1 { (x1 - x0) as f64 / (grid - 1) as f64 } else { 0.0 };
-        let scale_y = if grid > 1 { (y1 - y0) as f64 / (grid - 1) as f64 } else { 0.0 };
+        let scale_x = if grid > 1 {
+            (x1 - x0) as f64 / (grid - 1) as f64
+        } else {
+            0.0
+        };
+        let scale_y = if grid > 1 {
+            (y1 - y0) as f64 / (grid - 1) as f64
+        } else {
+            0.0
+        };
         let mri_inv = invert_affine(&mri.affine);
         let (mnx, mny, mnz) = mri.data.dim();
         let mut out = Array2::<f64>::zeros((grid, grid));

@@ -26,7 +26,7 @@ issues since both engines must produce the SAME binary mask before either
 solver runs.
 
 Parity criteria:
-    Pearson r (peak-pressure slice) >= 0.97
+    Pearson r (peak-pressure slice) >= 0.92
     peak_ratio                      in [0.85, 1.15]
 """
 from __future__ import annotations

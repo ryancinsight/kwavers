@@ -182,4 +182,18 @@ mod tests {
         };
         assert!(pk(&near) < pk(&far));
     }
+
+    #[test]
+    fn bmode_db_fixed_reference_clamps_to_floor_and_zero_db() {
+        let db = bmode_db_fixed_reference(&[1.0, 0.1, 1.0e-3, 0.0], 1.0, -40.0);
+        let expected = [0.0, -20.0, -40.0, -40.0];
+
+        assert_eq!(db.len(), expected.len());
+        for (actual, expected) in db.iter().zip(expected) {
+            assert!(
+                (actual - expected).abs() <= 1.0e-12,
+                "actual={actual} expected={expected}"
+            );
+        }
+    }
 }

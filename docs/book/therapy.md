@@ -116,7 +116,7 @@ numerator; the result has units of °C, not °C/s).  Tissue reaches 60 °C
 
 ![Pennes bioheat temperature rise](figures/ch06/fig01_temperature_rise.png)
 
-*Figure 12.3. Temperature rise vs depth from the real `ThermalDiffusionSolver` (Pennes bioheat, §12.2); perfusion and conduction limit the focal ΔT below the adiabatic estimate.*
+*Figure 12.3. Temperature rise vs depth from the real `ThermalDiffusionSolver` (Pennes bioheat, §12.2); focal pressure is derived from intensity by `kw.acoustic_pressure_amplitude_from_intensity`, and perfusion and conduction limit the focal ΔT below the adiabatic estimate.*
 
 ---
 

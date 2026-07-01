@@ -40,8 +40,8 @@ pub(super) fn build_sensitivity_matrix(
     // the CT-derived sound-speed map. When disabled the kernel falls back to a
     // constant reference-tissue phase k·(ds+dr). Precomputed per element-voxel pair
     // (mirrors the attenuation integrals) so each row reuses both legs.
-    let traveltime_integrals =
-        aberration_model.then(|| build_element_voxel_traveltime_integrals(medium, geometry, active));
+    let traveltime_integrals = aberration_model
+        .then(|| build_element_voxel_traveltime_integrals(medium, geometry, active));
 
     matrix
         .par_chunks_mut(ncols)

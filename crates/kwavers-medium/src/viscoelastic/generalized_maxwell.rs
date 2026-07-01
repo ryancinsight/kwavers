@@ -257,7 +257,10 @@ mod tests {
         // Storage rises from E_∞ to E_∞ + Σ E_j; modulus is well ordered.
         assert!((m.storage_modulus(0.0) - 5000.0).abs() < 1.0);
         let g_u = m.storage_modulus(1.0e9);
-        assert!((g_u - 8000.0).abs() < 50.0, "unrelaxed storage {g_u} ≈ 8000");
+        assert!(
+            (g_u - 8000.0).abs() < 50.0,
+            "unrelaxed storage {g_u} ≈ 8000"
+        );
         assert!(m.unrelaxed_shear_speed() > m.relaxed_shear_speed());
     }
 

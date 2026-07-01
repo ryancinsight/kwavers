@@ -3,9 +3,9 @@
 //! Provides hotspot rasterisation helpers used by the board-level DFM critic
 //! to build per-column penalty maps for the next placement pass.
 
+use crate::audit::fault_report::FaultReport;
 use crate::geom::{GridSpec, Nm, Point};
 use crate::place::CongestionField;
-use crate::audit::fault_report::FaultReport;
 
 /// Rasterise a set of board points into a per-column penalty field for congestion-style
 /// feedback to the next placement.

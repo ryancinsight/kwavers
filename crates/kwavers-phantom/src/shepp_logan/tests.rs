@@ -8,14 +8,22 @@ fn origin_value_is_outer_plus_inner_ellipse_original() {
     // At (0,0) only ellipses 1 (A=2.0, centred 0,0) and 2 (A=-0.98, centred
     // 0,-0.0184) contain the point — all others are offset/too small. Sum = 1.02.
     let p = SheppLogan::original();
-    assert!((p.value_at(0.0, 0.0) - 1.02).abs() < 1e-12, "got {}", p.value_at(0.0, 0.0));
+    assert!(
+        (p.value_at(0.0, 0.0) - 1.02).abs() < 1e-12,
+        "got {}",
+        p.value_at(0.0, 0.0)
+    );
 }
 
 #[test]
 fn origin_value_is_outer_plus_inner_ellipse_modified() {
     // Same geometry; modified intensities 1.0 + (−0.8) = 0.2 at the origin.
     let p = SheppLogan::modified();
-    assert!((p.value_at(0.0, 0.0) - 0.2).abs() < 1e-12, "got {}", p.value_at(0.0, 0.0));
+    assert!(
+        (p.value_at(0.0, 0.0) - 0.2).abs() < 1e-12,
+        "got {}",
+        p.value_at(0.0, 0.0)
+    );
 }
 
 #[test]
@@ -34,7 +42,10 @@ fn point_inside_an_offset_inclusion_sums_three_ellipses_modified() {
     // (0.1) = 0.3.
     let p = SheppLogan::modified();
     let v = p.value_at(0.0, -0.1);
-    assert!((v - 0.3).abs() < 1e-12, "expected 0.3 at inclusion centre, got {v}");
+    assert!(
+        (v - 0.3).abs() < 1e-12,
+        "expected 0.3 at inclusion centre, got {v}"
+    );
 }
 
 #[test]
@@ -64,7 +75,13 @@ fn rasterize_has_expected_shape_and_finite_values() {
 
 #[test]
 fn variant_selection_matches_named_constructors() {
-    assert_eq!(SheppLogan::new(SheppLoganVariant::Original), SheppLogan::original());
-    assert_eq!(SheppLogan::new(SheppLoganVariant::Modified), SheppLogan::modified());
+    assert_eq!(
+        SheppLogan::new(SheppLoganVariant::Original),
+        SheppLogan::original()
+    );
+    assert_eq!(
+        SheppLogan::new(SheppLoganVariant::Modified),
+        SheppLogan::modified()
+    );
     assert_eq!(SheppLogan::original().ellipses().len(), 10);
 }

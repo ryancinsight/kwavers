@@ -34,7 +34,7 @@ fn clean_board_has_no_faults() {
 #[test]
 fn detects_via_in_surge_suppressor_connector_path() {
     use crate::place::footprint::{PadDef, Role};
-use crate::place::rotation::{Rot};
+    use crate::place::rotation::Rot;
     use crate::place::Placement;
 
     let lib = vec![

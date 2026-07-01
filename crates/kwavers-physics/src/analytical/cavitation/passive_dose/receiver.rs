@@ -9,6 +9,65 @@
 //! is available instead, the emission energy is integrated over the spatial
 //! `V_s` mask.
 
+use kwavers_core::constants::numerical::TWO_PI;
+
+/// Synthetic passive RF received from one cavitation point source.
+///
+/// For each receiver element at position `r_i`, this evaluates
+/// `p_i(t) = exp(-0.5*((t-|r_i-r_s|/c)*f0/(n_cycles/2))^2)
+///          * sin(2*pi*f0*(t-|r_i-r_s|/c)) / |r_i-r_s|`.
+/// The helper is the deterministic forward model used by the passive acoustic
+/// mapping book figure before the returned traces are passed to the DAS-PAM
+/// beamformer. Receiver positions are row-major `[x, y, z]`.
+#[must_use]
+pub fn passive_cavitation_point_source_rf(
+    receiver_xyz: &[f64],
+    source_xyz: [f64; 3],
+    n_samples: usize,
+    sampling_frequency_hz: f64,
+    sound_speed_m_s: f64,
+    frequency_hz: f64,
+    n_cycles: f64,
+) -> Vec<f64> {
+    if receiver_xyz.is_empty()
+        || !receiver_xyz.len().is_multiple_of(3)
+        || n_samples == 0
+        || !(sampling_frequency_hz.is_finite() && sampling_frequency_hz > 0.0)
+        || !(sound_speed_m_s.is_finite() && sound_speed_m_s > 0.0)
+        || !(frequency_hz.is_finite() && frequency_hz > 0.0)
+        || !(n_cycles.is_finite() && n_cycles > 0.0)
+        || source_xyz.iter().any(|value| !value.is_finite())
+        || receiver_xyz.iter().any(|value| !value.is_finite())
+    {
+        return Vec::new();
+    }
+
+    let n_receivers = receiver_xyz.len() / 3;
+    let mut out = vec![0.0_f64; n_receivers * n_samples];
+    let dt_s = 1.0 / sampling_frequency_hz;
+    let envelope_scale_s = n_cycles / (2.0 * frequency_hz);
+
+    for receiver in 0..n_receivers {
+        let base_xyz = receiver * 3;
+        let dx = receiver_xyz[base_xyz] - source_xyz[0];
+        let dy = receiver_xyz[base_xyz + 1] - source_xyz[1];
+        let dz = receiver_xyz[base_xyz + 2] - source_xyz[2];
+        let distance_m = (dx * dx + dy * dy + dz * dz).sqrt().max(1.0e-6);
+        let delay_s = distance_m / sound_speed_m_s;
+        let row = receiver * n_samples;
+
+        for sample in 0..n_samples {
+            let centered_time_s = sample as f64 * dt_s - delay_s;
+            let envelope_arg = centered_time_s / envelope_scale_s;
+            let envelope = (-0.5 * envelope_arg * envelope_arg).exp();
+            out[row + sample] =
+                envelope * (TWO_PI * frequency_hz * centered_time_s).sin() / distance_m;
+        }
+    }
+
+    out
+}
+
 /// Incoherent power sum of per-element PCD spectra (array integration over `V_s`).
 ///
 /// Given `n_channels` receive-element power spectra each of length `n_bins`,

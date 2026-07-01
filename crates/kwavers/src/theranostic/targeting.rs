@@ -99,7 +99,11 @@ mod tests {
         mask[[0, 2, 0]] = true;
 
         let sel = TargetSelection::max_in_mask(&score, &mask, [0.0; 3], [1e-3; 3]).unwrap();
-        assert_eq!(sel.voxel, (2, 0, 0), "max within mask, ignoring outside-mask peak");
+        assert_eq!(
+            sel.voxel,
+            (2, 0, 0),
+            "max within mask, ignoring outside-mask peak"
+        );
         assert!((sel.score - 7.0).abs() < 1e-12);
         assert!((sel.position_m[0] - 2e-3).abs() < 1e-12);
     }

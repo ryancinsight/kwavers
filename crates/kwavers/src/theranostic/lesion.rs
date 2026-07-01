@@ -147,7 +147,10 @@ mod tests {
         let coeff = TemperatureCoefficients::soft_tissue();
         let out = thermal_perturbed_sound_speed(&base, &temp, 37.0, &coeff);
         for &c in out.iter() {
-            assert!((c - 1560.0).abs() < 1e-9, "expected 1540 + 2·10 = 1560, got {c}");
+            assert!(
+                (c - 1560.0).abs() < 1e-9,
+                "expected 1540 + 2·10 = 1560, got {c}"
+            );
         }
     }
 
@@ -188,7 +191,10 @@ mod tests {
             "larger β lowers c further: {c_large} !< {c_small}"
         );
         // β = 10⁻⁴ already drops c below ~1000 m/s (Wood 1930 regime).
-        assert!(c_small < 1000.0, "β=1e-4 should collapse c below 1000, got {c_small}");
+        assert!(
+            c_small < 1000.0,
+            "β=1e-4 should collapse c below 1000, got {c_small}"
+        );
     }
 
     #[test]

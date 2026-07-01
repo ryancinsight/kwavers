@@ -188,7 +188,7 @@ impl ZenerModel {
                 let denom = 1.0 + x * x;
                 let a = x * x / denom; // G' coefficient on Δ
                 let b = x / denom; // G'' coefficient on Δ
-                // G' equation: [1, a]·p = G'
+                                   // G' equation: [1, a]·p = G'
                 m00 += 1.0;
                 m01 += a;
                 m11 += a * a;
@@ -263,7 +263,7 @@ mod tests {
     #[test]
     fn zener_fit_dispersion_recovers_three_parameters() {
         let truth = ZenerModel::new(2000.0, 6000.0, 1.0e-3, 1000.0).unwrap(); // G_r,G_u,τ,ρ
-        // Frequencies spanning ωτ ≈ 0.06 … 6 (around the ωτ=1 Debye peak).
+                                                                              // Frequencies spanning ωτ ≈ 0.06 … 6 (around the ωτ=1 Debye peak).
         let samples: Vec<DispersionSample> = [10.0, 30.0, 80.0, 160.0, 320.0, 640.0, 1000.0]
             .iter()
             .map(|&f| {
@@ -329,7 +329,10 @@ mod tests {
         let w_peak = core::f64::consts::TAU * f_peak; // ωτ = 1
         let g_peak = z.loss_modulus(w_peak);
         // peak value is (G_u − G_r)/2
-        assert!((g_peak - 2000.0).abs() < 1.0, "G''_peak {g_peak} ≈ (G_u−G_r)/2");
+        assert!(
+            (g_peak - 2000.0).abs() < 1.0,
+            "G''_peak {g_peak} ≈ (G_u−G_r)/2"
+        );
         // it is a maximum
         assert!(g_peak > z.loss_modulus(0.1 * w_peak));
         assert!(g_peak > z.loss_modulus(10.0 * w_peak));
@@ -340,8 +343,14 @@ mod tests {
         let z = zener();
         let lo = z.phase_velocity(1.0);
         let hi = z.phase_velocity(1.0e7);
-        assert!((lo - z.relaxed_shear_speed()).abs() / lo < 1e-2, "low-ω → relaxed speed");
-        assert!((hi - z.unrelaxed_shear_speed()).abs() / hi < 1e-2, "high-ω → unrelaxed speed");
+        assert!(
+            (lo - z.relaxed_shear_speed()).abs() / lo < 1e-2,
+            "low-ω → relaxed speed"
+        );
+        assert!(
+            (hi - z.unrelaxed_shear_speed()).abs() / hi < 1e-2,
+            "high-ω → unrelaxed speed"
+        );
         // every phase velocity stays within [relaxed, unrelaxed] (bounded, unlike Kelvin–Voigt)
         for &f in &[1.0, 1e2, 1e3, 1e4, 1e5, 1e6] {
             let c = z.phase_velocity(core::f64::consts::TAU * f);

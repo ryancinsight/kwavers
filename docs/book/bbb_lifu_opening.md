@@ -407,11 +407,11 @@ config.models.push(PhysicsModelConfig {
     parameters: Default::default(),
 });
 
-// Microbubble cavitation (Keller–Miksis) — the catalog builds the real
+// Microbubble cavitation (Keller–Miksis variant) — the catalog builds the real
 // BubbleDynamicsPlugin for this variant.
 config.models.push(PhysicsModelConfig {
-    model_type: PhysicsModelType::BubbleDynamics {
-        model: BubbleModel::KellerMiksis,
+        model_type: PhysicsModelType::BubbleDynamics {
+        model: BubbleModel::KellerMiksis, // or KellerHerring / RayleighPlesset
         nucleation: true,
     },
     enabled: true,
@@ -434,7 +434,8 @@ let manager = PhysicsCatalog::build(&config, &grid, &brain_medium, dt)?;
 The `BubbleDynamics` capability is **wired** into `PhysicsCatalog::build_plugin`:
 the `BubbleDynamics { model, nucleation }` arm constructs a real
 `BubbleDynamicsPlugin` (`kwavers_solver::forward::bubble_dynamics`) over the
-selected `BubbleModel` (`KellerMiksis` / `RayleighPlesset` / `Gilmore`); see
+selected `BubbleModel` (`KellerMiksis` / `KellerHerring` / `RayleighPlesset` /
+`Gilmore`); see
 Chapter 21 §21.4, Theorem 21.1 (catalog determinism and exhaustiveness).
 
 ---

@@ -1,9 +1,7 @@
 use std::collections::HashMap;
 
 use crate::board::Board;
-use crate::geom::{
-    Nm, Point,
-};
+use crate::geom::{Nm, Point};
 use crate::rules::DesignRules;
 
 ///
@@ -234,13 +232,8 @@ mod tests {
     use crate::geom::GridSpec;
 
     fn make_ant_board(track_width_mm: f64) -> Board {
-        let spec = GridSpec::cover(
-            Nm::from_mm(50.0),
-            Nm::from_mm(50.0),
-            Nm::from_mm(0.5),
-            2,
-        )
-        .unwrap();
+        let spec =
+            GridSpec::cover(Nm::from_mm(50.0), Nm::from_mm(50.0), Nm::from_mm(0.5), 2).unwrap();
         let mut b = Board::new(spec);
         let net = b.add_net("ANT_TX", NetClassKind::Signal);
         b.tracks.push(Track {
@@ -275,13 +268,8 @@ mod tests {
 
     #[test]
     fn ignores_non_ant_nets() {
-        let spec = GridSpec::cover(
-            Nm::from_mm(50.0),
-            Nm::from_mm(50.0),
-            Nm::from_mm(0.5),
-            2,
-        )
-        .unwrap();
+        let spec =
+            GridSpec::cover(Nm::from_mm(50.0), Nm::from_mm(50.0), Nm::from_mm(0.5), 2).unwrap();
         let mut b = Board::new(spec);
         let net = b.add_net("SPI_CLK", NetClassKind::Signal);
         b.tracks.push(Track {

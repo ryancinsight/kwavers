@@ -14,6 +14,7 @@ import numpy as np
 import pytest
 
 from conftest import requires_kwave
+from parity_test_utils import assert_decodable_nonblank_png, report_metric_value
 
 
 skip_kwave = os.getenv("KWAVERS_SKIP_KWAVE", "0") == "1"
@@ -32,6 +33,55 @@ def _load_example_module():
     assert spec.loader is not None
     spec.loader.exec_module(module)
     return module
+
+
+def _assert_trace_contract(metrics, thresholds):
+    assert metrics["pearson_r"] >= thresholds["pearson_r"]
+    assert thresholds["rms_ratio_min"] <= metrics["rms_ratio"]
+    assert metrics["rms_ratio"] <= thresholds["rms_ratio_max"]
+    assert metrics["rmse"] <= thresholds["rmse"]
+    assert thresholds["peak_ratio_min"] <= metrics["peak_ratio"]
+    assert metrics["peak_ratio"] <= thresholds["peak_ratio_max"]
+
+
+def _assert_directivity_contract(metrics, thresholds):
+    assert metrics["kwave_ratio"] > thresholds["ratio_min"]
+    assert metrics["pykwavers_ratio"] > thresholds["ratio_min"]
+    assert metrics["relative_error"] <= thresholds["relative_error"]
+
+
+def _assert_report_contract(module, text: str):
+    trace_thresholds = module.PARITY_THRESHOLDS["trace"]
+    directivity_thresholds = module.PARITY_THRESHOLDS["directivity"]
+
+    assert "parity_status: PASS" in text
+    assert report_metric_value(text, "kwave_directivity_ratio") > directivity_thresholds["ratio_min"]
+    assert report_metric_value(text, "pykwavers_directivity_ratio") > directivity_thresholds["ratio_min"]
+    assert report_metric_value(text, "directivity_relative_error") <= directivity_thresholds["relative_error"]
+
+    for section in ("on_axis:", "off_axis:"):
+        assert report_metric_value(text, "pearson_r", section) >= trace_thresholds["pearson_r"]
+        rms_ratio = report_metric_value(text, "rms_ratio", section)
+        assert trace_thresholds["rms_ratio_min"] <= rms_ratio
+        assert rms_ratio <= trace_thresholds["rms_ratio_max"]
+        assert report_metric_value(text, "rmse", section) <= trace_thresholds["rmse"]
+        peak_ratio = report_metric_value(text, "peak_ratio", section)
+        assert trace_thresholds["peak_ratio_min"] <= peak_ratio
+        assert peak_ratio <= trace_thresholds["peak_ratio_max"]
+
+
+@requires_kwave
+@pytest.mark.skipif(skip_kwave, reason="KWAVERS_SKIP_KWAVE=1")
+def test_current_sd_focussed_detector_2d_artifacts_match_thresholds():
+    module = _load_example_module()
+
+    assert module.METRICS_PATH.exists()
+    assert module.FIGURE_PATH.exists()
+    assert module.DIRECTIVITY_FIGURE_PATH.exists()
+    text = module.METRICS_PATH.read_text(encoding="utf-8")
+    _assert_report_contract(module, text)
+    assert_decodable_nonblank_png(module.FIGURE_PATH)
+    assert_decodable_nonblank_png(module.DIRECTIVITY_FIGURE_PATH)
 
 
 @requires_kwave
@@ -64,16 +114,11 @@ class TestKWaveExampleParitySDFocussedDetector2D:
         assert np.max(np.abs(kw_off)) > 0.0
         assert np.max(np.abs(py_off)) > 0.0
 
+        thresholds = module.PARITY_THRESHOLDS
         for tag in ("on_axis", "off_axis"):
-            metrics = trace_metrics[tag]
-            assert metrics["pearson_r"] > 0.999
-            assert abs(metrics["rms_ratio"] - 1.0) < 1e-2
-            assert metrics["rmse"] < 1e-2
-            assert abs(metrics["peak_ratio"] - 1.0) < 1e-2
+            _assert_trace_contract(trace_metrics[tag], thresholds["trace"])
 
-        assert directivity["kwave_ratio"] > 1.0
-        assert directivity["pykwavers_ratio"] > 1.0
-        assert directivity["relative_error"] < 1e-2
+        _assert_directivity_contract(directivity, thresholds["directivity"])
 
 
 if __name__ == "__main__":

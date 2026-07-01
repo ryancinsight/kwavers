@@ -234,16 +234,16 @@ pub(crate) fn initialize_absorption_operators(
             }))
         }
         AbsorptionMode::MultiRelaxation { tau, weights } => {
-            let relaxation =
-                RelaxationAbsorption::new(tau.clone(), weights.clone()).ok_or_else(invalid_relax)?;
+            let relaxation = RelaxationAbsorption::new(tau.clone(), weights.clone())
+                .ok_or_else(invalid_relax)?;
             build_relaxation_kernel(grid, medium, k_mag, &relaxation, None)
         }
         AbsorptionMode::Causal {
             relaxation_times,
             alpha_0,
         } => {
-            let relaxation =
-                RelaxationAbsorption::unit_weights(relaxation_times.clone()).ok_or_else(invalid_relax)?;
+            let relaxation = RelaxationAbsorption::unit_weights(relaxation_times.clone())
+                .ok_or_else(invalid_relax)?;
             build_relaxation_kernel(grid, medium, k_mag, &relaxation, Some(*alpha_0))
         }
     }

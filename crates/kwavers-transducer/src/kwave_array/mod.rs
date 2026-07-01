@@ -54,6 +54,61 @@ pub enum KwaveApodizationWindow {
     Tukey(f64),
 }
 
+/// Normalized source-pressure profile over a finite disc element.
+///
+/// The profile scales each disc surface sample before BLI rasterization. This
+/// models mode-dependent finite-source shapes while preserving the original
+/// uniform-disc API. The radial-power profile uses
+/// `w(r) = (p + 2) r^p / 2`, whose continuous area average over the unit disc is
+/// one for `p >= 0`.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DiscSourceProfile {
+    radial_power_exponent: f64,
+}
+
+impl DiscSourceProfile {
+    /// Uniform finite-disc source pressure.
+    #[must_use]
+    pub const fn uniform() -> Self {
+        Self {
+            radial_power_exponent: 0.0,
+        }
+    }
+
+    /// Edge-weighted radial-power source profile.
+    ///
+    /// # Errors
+    /// Returns an error when `exponent` is non-finite or negative.
+    pub fn radial_power(exponent: f64) -> Result<Self, String> {
+        if exponent.is_finite() && exponent >= 0.0 {
+            Ok(Self {
+                radial_power_exponent: exponent,
+            })
+        } else {
+            Err(format!(
+                "disc source radial-power exponent must be finite and nonnegative, got {exponent}"
+            ))
+        }
+    }
+
+    /// Weight at normalized radius `r/R`, clamped to `[0, 1]`.
+    #[must_use]
+    pub fn weight_at_normalized_radius(self, radius_fraction: f64) -> f64 {
+        let r = radius_fraction.clamp(0.0, 1.0);
+        if self.radial_power_exponent == 0.0 {
+            1.0
+        } else {
+            0.5 * (self.radial_power_exponent + 2.0) * r.powf(self.radial_power_exponent)
+        }
+    }
+}
+
+impl Default for DiscSourceProfile {
+    fn default() -> Self {
+        Self::uniform()
+    }
+}
+
 /// Element shape types for custom transducer arrays.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum ElementShape {
@@ -81,6 +136,13 @@ pub enum ElementShape {
         position: (f64, f64, f64),
         diameter: f64,
         focus_position: Option<(f64, f64, f64)>,
+    },
+    /// Disc/circular element with finite-source surface profile.
+    ProfiledDisc {
+        position: (f64, f64, f64),
+        diameter: f64,
+        focus_position: Option<(f64, f64, f64)>,
+        profile: DiscSourceProfile,
     },
     /// Bowl/spherical-cap element
     Bowl {

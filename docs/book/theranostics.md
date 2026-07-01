@@ -20,8 +20,10 @@ Theranostic cavitation control rests on the single-bubble physics derived in ful
   `ρ_l(R R̈ + 3/2 Ṙ²) = p_g(R) − p_∞(t) − p_0 − 4μ_l Ṙ/R − 2σ/R`
   with polytropic gas law `p_g = (p_0 + 2σ/R_0)(R_0/R)^{3κ}` — *Cavitation §5.2*, and the
   Keller–Miksis compressible extension for high-amplitude drive — *Cavitation §5.3*.
-- **Minnaert resonance** `f_M = (1/2πR_0)√(3κp_0/ρ_l)` (1 μm → 3.3 MHz, 5 μm → 0.65 MHz)
-  — *Cavitation §5.5*.
+- **Minnaert resonance** `f_M = (1/2πR_0)√(3κp_0/ρ_l)` and inverse
+  `R_0(f_M)` marker radii are evaluated by Rust/PyO3 helpers
+  `minnaert_resonance_hz` and `minnaert_radius_for_frequency_m` (1 μm → 3.3 MHz,
+  5 μm → 0.65 MHz) — *Cavitation §5.5*.
 - **Blake threshold** for the onset of inertial collapse — *Cavitation §5.4*.
 
 These ODEs are integrated in kwavers by
@@ -107,8 +109,9 @@ CEM43 dose at step k and u_k ≥ 0 the acoustic power.  Define the CEM43 dose ra
 φ(T) = R(T)^(43 − T)   where R(T) = 0.50 (T ≥ 43 °C), R(T) = 0.25 (T < 43 °C)
 ```
 
-This is the Sapareto–Dewey CEM43 dose rate (identical to Chapter 12, Def. 12.1, and
-to `ThermalDoseCalculator::update_dose`): above 43 °C the exponent `43 − T < 0` makes
+This is the Sapareto–Dewey CEM43 dose rate (identical to Chapter 12, Def. 12.1,
+and to `kwavers_physics::analytical::safety::cem43_cumulative`, exposed to
+Python as `kw.cem43_cumulative`): above 43 °C the exponent `43 − T < 0` makes
 `φ = 0.5^(43−T) = 2^(T−43) > 1`, so dose accrues *faster* than real time.
 
 The dose update

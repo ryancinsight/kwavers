@@ -45,6 +45,7 @@
 //! - Li, J., Stoica, P., & Wang, Z. (2003). "On robust Capon beamforming." *IEEE TSP*, 51(7).
 
 use kwavers_core::constants::numerical::DEFAULT_DIAGONAL_LOADING;
+use kwavers_core::error::{KwaversError, KwaversResult};
 use num_complex::Complex64;
 
 /// Minimum Variance Distortionless Response (MVDR / Capon) beamformer.
@@ -131,6 +132,53 @@ impl MinimumVariance {
 
         Ok(r_loaded)
     }
+}
+
+pub(super) fn validate_real_positive_denominator(
+    denom: Complex64,
+    terms: usize,
+    context: &str,
+) -> KwaversResult<f64> {
+    if !denom.re.is_finite() || !denom.im.is_finite() {
+        return Err(KwaversError::Numerical(
+            kwavers_core::error::NumericalError::InvalidOperation(format!(
+                "{context}: non-finite denominator a^H R^{{-1}} a = {denom}"
+            )),
+        ));
+    }
+
+    if denom.re <= 0.0 {
+        return Err(KwaversError::Numerical(
+            kwavers_core::error::NumericalError::InvalidOperation(format!(
+                "{context}: non-positive denominator a^H R^{{-1}} a = {}",
+                denom.re
+            )),
+        ));
+    }
+
+    let tolerance = denominator_imag_tolerance(denom, terms);
+    if denom.im.abs() > tolerance {
+        return Err(KwaversError::Numerical(
+            kwavers_core::error::NumericalError::InvalidOperation(format!(
+                "{context}: denominator a^H R^{{-1}} a has imaginary component {} larger than roundoff bound {tolerance}",
+                denom.im
+            )),
+        ));
+    }
+
+    Ok(denom.re)
+}
+
+fn denominator_imag_tolerance(denom: Complex64, terms: usize) -> f64 {
+    let operations = 8.0 * terms.max(1) as f64;
+    let eps = f64::EPSILON;
+    let denominator = 1.0 - operations * eps;
+    let gamma = if denominator > 0.0 {
+        operations * eps / denominator
+    } else {
+        f64::INFINITY
+    };
+    gamma * denom.norm().max(1.0)
 }
 
 mod spectrum;

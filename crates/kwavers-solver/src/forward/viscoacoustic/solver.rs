@@ -165,7 +165,16 @@ impl ViscoacousticMemorySolver {
             })
             .collect();
         Ok(Self::assemble(
-            nx, ny, nz, dx, dy, dz, dt, inv_rho, m_inf_field, arm_fields,
+            nx,
+            ny,
+            nz,
+            dx,
+            dy,
+            dz,
+            dt,
+            inv_rho,
+            m_inf_field,
+            arm_fields,
         ))
     }
 
@@ -196,22 +205,31 @@ impl ViscoacousticMemorySolver {
                 "viscoacoustic solver requires positive grid, spacings, dt".to_owned(),
             ));
         }
-        if !ok_shape(rho) || !ok_shape(m_inf) || rho.iter().any(|&r| r <= 0.0) || m_inf.iter().any(|&m| m <= 0.0) {
+        if !ok_shape(rho)
+            || !ok_shape(m_inf)
+            || rho.iter().any(|&r| r <= 0.0)
+            || m_inf.iter().any(|&m| m <= 0.0)
+        {
             return Err(KwaversError::InvalidInput(
                 "ρ and M_∞ fields must be grid-shaped and positive".to_owned(),
             ));
         }
-        if arms
-            .iter()
-            .any(|(dm, tau)| !ok_shape(dm) || !ok_shape(tau) || dm.iter().any(|&v| v <= 0.0) || tau.iter().any(|&v| v <= 0.0))
-        {
+        if arms.iter().any(|(dm, tau)| {
+            !ok_shape(dm)
+                || !ok_shape(tau)
+                || dm.iter().any(|&v| v <= 0.0)
+                || tau.iter().any(|&v| v <= 0.0)
+        }) {
             return Err(KwaversError::InvalidInput(
                 "relaxation arm fields must be grid-shaped with ΔM>0 and τ>0".to_owned(),
             ));
         }
 
         let inv_rho = rho.mapv(|r| 1.0 / r);
-        let arm_fields: Vec<Arm> = arms.iter().map(|(dm, tau)| build_arm(dm, tau, dt)).collect();
+        let arm_fields: Vec<Arm> = arms
+            .iter()
+            .map(|(dm, tau)| build_arm(dm, tau, dt))
+            .collect();
         Ok(Self::assemble(
             nx,
             ny,
@@ -592,17 +610,68 @@ impl ViscoacousticMemorySolver {
     pub fn step(&mut self) {
         // 1. Velocity half-step: v += -(Δt/ρ(x)) ∇p (per component, per voxel).
         let dt = self.dt;
-        Self::axis_derivative(&self.fft, &self.kx, 0, &self.p, &mut self.cbuf, &mut self.gx);
-        Self::axis_derivative(&self.fft, &self.ky, 1, &self.p, &mut self.cbuf, &mut self.gy);
-        Self::axis_derivative(&self.fft, &self.kz, 2, &self.p, &mut self.cbuf, &mut self.gz);
-        Zip::from(&mut self.vx).and(&self.gx).and(&self.inv_rho).for_each(|v, &g, &ir| *v += -dt * ir * g);
-        Zip::from(&mut self.vy).and(&self.gy).and(&self.inv_rho).for_each(|v, &g, &ir| *v += -dt * ir * g);
-        Zip::from(&mut self.vz).and(&self.gz).and(&self.inv_rho).for_each(|v, &g, &ir| *v += -dt * ir * g);
+        Self::axis_derivative(
+            &self.fft,
+            &self.kx,
+            0,
+            &self.p,
+            &mut self.cbuf,
+            &mut self.gx,
+        );
+        Self::axis_derivative(
+            &self.fft,
+            &self.ky,
+            1,
+            &self.p,
+            &mut self.cbuf,
+            &mut self.gy,
+        );
+        Self::axis_derivative(
+            &self.fft,
+            &self.kz,
+            2,
+            &self.p,
+            &mut self.cbuf,
+            &mut self.gz,
+        );
+        Zip::from(&mut self.vx)
+            .and(&self.gx)
+            .and(&self.inv_rho)
+            .for_each(|v, &g, &ir| *v += -dt * ir * g);
+        Zip::from(&mut self.vy)
+            .and(&self.gy)
+            .and(&self.inv_rho)
+            .for_each(|v, &g, &ir| *v += -dt * ir * g);
+        Zip::from(&mut self.vz)
+            .and(&self.gz)
+            .and(&self.inv_rho)
+            .for_each(|v, &g, &ir| *v += -dt * ir * g);
 
         // 2. Dilatation rate D = ∇·v (accumulated into gx).
-        Self::axis_derivative(&self.fft, &self.kx, 0, &self.vx, &mut self.cbuf, &mut self.gx);
-        Self::axis_derivative(&self.fft, &self.ky, 1, &self.vy, &mut self.cbuf, &mut self.gy);
-        Self::axis_derivative(&self.fft, &self.kz, 2, &self.vz, &mut self.cbuf, &mut self.gz);
+        Self::axis_derivative(
+            &self.fft,
+            &self.kx,
+            0,
+            &self.vx,
+            &mut self.cbuf,
+            &mut self.gx,
+        );
+        Self::axis_derivative(
+            &self.fft,
+            &self.ky,
+            1,
+            &self.vy,
+            &mut self.cbuf,
+            &mut self.gy,
+        );
+        Self::axis_derivative(
+            &self.fft,
+            &self.kz,
+            2,
+            &self.vz,
+            &mut self.cbuf,
+            &mut self.gz,
+        );
         Zip::from(&mut self.gx)
             .and(&self.gy)
             .and(&self.gz)
@@ -650,7 +719,11 @@ impl ViscoacousticMemorySolver {
         }
 
         // 7. Record sensor traces, then advance the simulation clock.
-        for (trace, &index) in self.sensor_record.iter_mut().zip(self.pressure_sensors.iter()) {
+        for (trace, &index) in self
+            .sensor_record
+            .iter_mut()
+            .zip(self.pressure_sensors.iter())
+        {
             trace.push(self.p[[index.0, index.1, index.2]]);
         }
         self.step_count += 1;
@@ -683,10 +756,14 @@ fn fft_wavenumbers(n: usize, dx: f64) -> Vec<f64> {
     let norm = TWO_PI / (n as f64 * dx);
     (0..n)
         .map(|m| {
-            if n % 2 == 0 && m == n / 2 {
+            if n.is_multiple_of(2) && m == n / 2 {
                 return 0.0;
             }
-            let signed = if m < n / 2 { m as f64 } else { m as f64 - n as f64 };
+            let signed = if m < n / 2 {
+                m as f64
+            } else {
+                m as f64 - n as f64
+            };
             signed * norm
         })
         .collect()

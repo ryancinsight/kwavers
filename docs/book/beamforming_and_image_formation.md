@@ -314,7 +314,7 @@ maps array-element apertures onto the grid before the beamforming operations bel
 
 ![BLI sinc-stencil weights](figures/ch04/fig06_bli_stencil_weights.png)
 
-*Figure 7.6. Bandlimited-interpolation sinc-stencil weights for off-grid source rasterization (§7.6; Wise 2019).*
+*Figure 7.6. Bandlimited-interpolation windowed-sinc stencil weights for off-grid source rasterization (§7.6; Rust `kw.bli_stencil_weights`, N = 14).*
 
 ---
 

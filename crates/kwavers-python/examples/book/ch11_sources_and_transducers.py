@@ -14,7 +14,9 @@ fig01  Piston source directivity H(θ) = 2J₁(ka sinθ)/(ka sinθ) vs angle
 fig02  On-axis pressure of a focused bowl transducer vs depth
 fig03  Linear phased array beam pattern: steering at 0°, 15°, 30°
 fig04  Delay law for a linear array: element delays vs steering angle
-fig05  BLI rasterization accuracy vs grid points per wavelength
+fig05  BLI interpolation accuracy from the Rust BLI stencil kernel
+fig06  Acoustic lens delay law and Fresnel zone radii
+fig07  Isoplanatic corrective-lens steering
 
 References
 ----------
@@ -31,13 +33,7 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-
-try:
-    import pykwavers as kw
-    _HAS_PYKWAVERS = True
-except ImportError:
-    kw = None
-    _HAS_PYKWAVERS = False
+import pykwavers as kw
 
 REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
 OUT_DIR = os.path.join(REPO_ROOT, "docs", "book", "figures", "ch11")
@@ -66,8 +62,6 @@ def fig01_piston_directivity() -> None:
     Computed via kw.circular_piston_directivity (Rust kernel, normalised to unity on-axis).
     Sinc-like pattern; first null at ka sinθ = 1.22π.
     """
-    if not _HAS_PYKWAVERS:
-        raise ImportError("pykwavers is required for fig01 (piston directivity)")
     theta = np.linspace(-np.pi / 2 + 1e-6, np.pi / 2 - 1e-6, 3600)
 
     fig, axes = plt.subplots(1, 2, figsize=(11, 4.5))
@@ -103,8 +97,6 @@ def fig02_focused_bowl_onaxis() -> None:
     Computed via kw.focused_bowl_onaxis (Rust kernel, exact Rayleigh integral on axis).
     Args: bowl_radius_m = aperture radius a, focal_length_m = F.
     """
-    if not _HAS_PYKWAVERS:
-        raise ImportError("pykwavers is required for fig02 (focused bowl on-axis pressure)")
     F = 0.06    # 60 mm focal length
     a = 0.015   # 15 mm aperture radius
     f = 1.0e6   # 1 MHz
@@ -136,8 +128,6 @@ def fig03_array_beam_pattern() -> None:
     Far-field array factor: AF(θ) = Σ_{n=0}^{N-1} exp(i·n·kd·(sinθ - sinθ_s)).
     Computed via kw.linear_array_factor (Rust kernel, rectangular apodization).
     """
-    if not _HAS_PYKWAVERS:
-        raise ImportError("pykwavers is required for fig03 (array beam pattern)")
     N = 64          # elements
     d = 0.3e-3      # 0.3 mm pitch (half-wavelength at 2.5 MHz)
     f = 2.5e6
@@ -151,7 +141,7 @@ def fig03_array_beam_pattern() -> None:
     for ang_deg, col in zip(steer_angles_deg, colors):
         theta_s = np.radians(ang_deg)
         AF = np.asarray(kw.linear_array_factor(theta, k, d, N, theta_s))
-        AF_dB = 20 * np.log10(AF + 1e-12)
+        AF_dB = 20 * np.log10(np.abs(AF) + 1e-12)
         ax.plot(np.degrees(theta), np.clip(AF_dB, -60, 0),
                 color=col, label=rf"$\theta_s = {ang_deg:.0f}°$")
 
@@ -174,8 +164,6 @@ def fig04_delay_law() -> None:
     Steering: focus placed at (z_far · sin θ_s, z_far) with z_far = 1e3 m (far-field limit).
     Focusing: near-field focus at (x_f, z_f) in the (x, z) plane.
     """
-    if not _HAS_PYKWAVERS:
-        raise ImportError("pykwavers is required for fig04 (delay law)")
     N = 64
     d = 0.3e-3
     elem_x = (np.arange(N) - (N - 1) / 2) * d
@@ -218,28 +206,30 @@ def fig04_delay_law() -> None:
 # ── Figure 05: BLI rasterization accuracy ─────────────────────────────────────
 def fig05_bli_accuracy() -> None:
     """
-    Rasterization error vs points per wavelength (PPW).
-    For a sinusoidal source mask, BLI preserves the exact continuous
-    Fourier content up to the Nyquist limit. Error decays as 1/PPW.
-    Analytical: aliasing error ~ sinc²(π/PPW) for spectral content at Nyquist.
+    Sub-sample interpolation error vs points per wavelength (PPW).
+
+    Rust computes both the BLI stencil weights and the deterministic sinusoid
+    reconstruction error curves; Python only converts RMS error to dB and plots.
     """
-    ppw = np.linspace(2.1, 20.0, 200)  # points per wavelength
+    ppw = np.linspace(2.25, 20.0, 160)  # points per wavelength
+    delta = np.linspace(0.0, 1.0, 256, endpoint=False)
+    n_stencil = 8
+    nn_rms, bli_rms = kw.bli_interpolation_error_curves(
+        np.ascontiguousarray(ppw),
+        np.ascontiguousarray(delta),
+        n_stencil,
+    )
 
-    # Spectral leakage from sampling (normalised Fourier amplitude at Nyquist)
-    # For a rect window of N points: worst-case aliasing ~ 1/N
-    aliasing_error_dB = 20 * np.log10(1.0 / ppw)  # linear decay in amplitude
-
-    # More accurate BLI bound: residual after Whittaker-Shannon interpolation
-    # E(ppw) = max_x |f(x) - f_BLI(x)| ~ π²/(6 ppw²) for band-limited signals
-    bli_error_dB = 20 * np.log10(np.pi**2 / (6 * ppw**2))
+    nn_error_dB = 20 * np.log10(np.maximum(nn_rms, 1e-15))
+    bli_error_dB = 20 * np.log10(np.maximum(bli_rms, 1e-15))
 
     fig, ax = plt.subplots(figsize=(7, 4.5))
-    ax.plot(ppw, aliasing_error_dB, label="Nearest-neighbour rasterization error")
-    ax.plot(ppw, bli_error_dB, "--", label="BLI rasterization error (Whittaker-Shannon)")
+    ax.plot(ppw, nn_error_dB, label="Nearest-neighbour sub-sample error")
+    ax.plot(ppw, bli_error_dB, "--", label=f"BLI stencil error (N={n_stencil})")
     ax.axvline(4, color="gray", linestyle=":", linewidth=1, label="PPW = 4 (typical k-Wave default)")
     ax.set_xlabel("Points per wavelength (PPW)")
-    ax.set_ylabel("Amplitude error (dB)")
-    ax.set_title("Rasterization accuracy vs grid resolution")
+    ax.set_ylabel("RMS interpolation error (dB re unit amplitude)")
+    ax.set_title("Rust BLI stencil accuracy vs grid resolution")
     ax.legend()
     ax.grid(True, alpha=0.3)
     ax.set_ylim(-80, 5)
@@ -259,8 +249,6 @@ def fig06_acoustic_lens() -> None:
         (kw.fresnel_zone_radii) bunch as sqrt(n); alternate zones focus by
         diffraction.
     """
-    if not _HAS_PYKWAVERS:
-        raise ImportError("pykwavers is required for fig06 (acoustic lens)")
     F = 0.05            # 50 mm focal length
     aperture = 0.030    # 30 mm full aperture
     radii = np.linspace(0.0, aperture / 2, 200)
@@ -305,8 +293,6 @@ def fig07_lens_steering() -> None:
     overlaid (literature data) and the +/-11 mm operating range is shaded.
     All physics is from kwavers; Python only plots and converts units.
     """
-    if not _HAS_PYKWAVERS:
-        raise ImportError("pykwavers is required for fig07 (lens steering)")
     F = 0.061  # 61 mm focal length (H101 transducer)
 
     fig, ax = plt.subplots(figsize=(7.5, 4.8))

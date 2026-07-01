@@ -10,7 +10,7 @@ pub mod streaming;
 pub mod viscosity;
 
 pub use cavitation::CavitationModel;
-pub use relaxation::RelaxationAbsorption;
 pub use elastic_wave::ElasticWave;
+pub use relaxation::RelaxationAbsorption;
 pub use streaming::StreamingModel;
 pub use viscosity::ViscosityModel;

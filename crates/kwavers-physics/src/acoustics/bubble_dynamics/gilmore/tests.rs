@@ -133,7 +133,7 @@ fn enthalpy_derivative_uses_state_wall_acceleration() {
     state_a.wall_velocity = 0.0; // U = 0 isolates the R̈ term
     state_a.wall_acceleration = 0.0;
 
-    let mut state_b = state_a.clone();
+    let mut state_b = state_a;
     state_b.wall_acceleration = 1.0e6; // non-zero R̈ affects dp_wall/dt
 
     let p_acoustic = 1.0e5; // 100 kPa driving

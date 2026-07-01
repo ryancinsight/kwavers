@@ -14,6 +14,7 @@ import numpy as np
 import pytest
 
 from conftest import requires_kwave
+from parity_test_utils import assert_decodable_nonblank_png, report_metric_value
 
 
 skip_kwave = os.getenv("KWAVERS_SKIP_KWAVE", "0") == "1"
@@ -32,6 +33,43 @@ def _load_example_module():
     assert spec.loader is not None
     spec.loader.exec_module(module)
     return module
+
+
+def _assert_trace_contract(metrics, thresholds):
+    assert metrics["pearson_r"] >= thresholds["pearson_r"]
+    assert thresholds["rms_ratio_min"] <= metrics["rms_ratio"]
+    assert metrics["rms_ratio"] <= thresholds["rms_ratio_max"]
+    assert np.isfinite(metrics["peak_ratio"])
+    assert np.isfinite(metrics["rmse"])
+    assert np.isfinite(metrics["max_abs_diff"])
+
+
+def _assert_report_contract(module, text: str):
+    thresholds = module.TRACE_THRESHOLDS
+
+    assert "parity_status: PASS" in text
+    for sensor_idx in range(1, 4):
+        section = f"sensor_{sensor_idx}: PASS"
+        assert section in text
+        assert report_metric_value(text, "pearson_r", section) >= thresholds["pearson_r"]
+        rms_ratio = report_metric_value(text, "rms_ratio", section)
+        assert thresholds["rms_ratio_min"] <= rms_ratio
+        assert rms_ratio <= thresholds["rms_ratio_max"]
+        assert np.isfinite(report_metric_value(text, "peak_ratio", section))
+        assert np.isfinite(report_metric_value(text, "rmse", section))
+        assert np.isfinite(report_metric_value(text, "max_abs_diff", section))
+
+
+@requires_kwave
+@pytest.mark.skipif(skip_kwave, reason="KWAVERS_SKIP_KWAVE=1")
+def test_current_us_defining_transducer_artifacts_match_thresholds():
+    module = _load_example_module()
+
+    assert module.METRICS_PATH.exists()
+    assert module.FIGURE_PATH.exists()
+    text = module.METRICS_PATH.read_text(encoding="utf-8")
+    _assert_report_contract(module, text)
+    assert_decodable_nonblank_png(module.FIGURE_PATH)
 
 
 @requires_kwave
@@ -58,17 +96,10 @@ class TestKWaveExampleParityUsDefiningTransducer:
 
         for idx in range(kw_pressure.shape[0]):
             metrics = module.compute_trace_metrics(kw_pressure[idx], py_pressure[idx])
-            assert metrics["pearson_r"] > 0.99
-            assert 0.99 <= metrics["rms_ratio"] <= 1.15
-            assert 0.99 <= metrics["peak_ratio"] <= 1.13
-            assert metrics["rmse"] < 1.2e4
-            assert metrics["max_abs_diff"] < 5.0e4
+            _assert_trace_contract(metrics, module.TRACE_THRESHOLDS)
 
         report_lines = module.build_report_lines(kwave, pykwavers)
-        assert report_lines[0] == "parity_status: PASS"
-        assert any(line == "sensor_1: PASS" for line in report_lines)
-        assert any(line == "sensor_2: PASS" for line in report_lines)
-        assert any(line == "sensor_3: PASS" for line in report_lines)
+        _assert_report_contract(module, "\n".join(report_lines))
 
 
 if __name__ == "__main__":

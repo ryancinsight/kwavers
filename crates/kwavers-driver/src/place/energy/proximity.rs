@@ -4,11 +4,11 @@
 //! Extracted from `compute::energy()` — lines 160–281 of the original `compute.rs`.
 //! All arithmetic is bit-for-bit identical to the original; no logic was changed.
 
+use super::config::{EnergyTerms, PlaceConfig};
+use super::geom::{carries_connected_signal, rect_gap_mm};
 use crate::geom::Nm;
 use crate::place::component::{is_crystal_refdes, is_surge_suppressor_refdes, Component};
 use crate::place::footprint::{FootprintDef, Role};
-use super::config::{EnergyTerms, PlaceConfig};
-use super::geom::{carries_connected_signal, rect_gap_mm};
 
 /// Accumulate connector-EMI, decoupling, termination, surge-suppressor, and crystal proximity
 /// penalty terms.

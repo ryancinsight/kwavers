@@ -135,8 +135,7 @@ fn gate_and_recovery_losses_are_qvf() {
     assert!((gate_drive_power_w(20e-9, 5.0, 2.0e6) - 0.2).abs() < 1e-3);
     // Both scale linearly with frequency.
     assert!(
-        reverse_recovery_loss_w(5e-9, 150.0, 2.0e6)
-            > reverse_recovery_loss_w(5e-9, 150.0, 1.0e6)
+        reverse_recovery_loss_w(5e-9, 150.0, 2.0e6) > reverse_recovery_loss_w(5e-9, 150.0, 1.0e6)
     );
 }
 

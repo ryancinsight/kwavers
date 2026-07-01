@@ -279,8 +279,13 @@ mod tests {
         assert!((CNP_PDMS.focal_pressure(F_PAPER, G_MAX) - 8.0e6).abs() < 1.0e3);
         assert!((HSM.focal_pressure(F_PAPER, G_MAX) - 1.6e6).abs() < 1.0e3);
         // CS is 6× CNT and 30× HSM.
-        assert!((CS_PDMS.optoacoustic_sensitivity / CNT_PDMS.optoacoustic_sensitivity - 6.0).abs() < 1e-9);
-        assert!((CS_PDMS.optoacoustic_sensitivity / HSM.optoacoustic_sensitivity - 30.0).abs() < 1e-9);
+        assert!(
+            (CS_PDMS.optoacoustic_sensitivity / CNT_PDMS.optoacoustic_sensitivity - 6.0).abs()
+                < 1e-9
+        );
+        assert!(
+            (CS_PDMS.optoacoustic_sensitivity / HSM.optoacoustic_sensitivity - 30.0).abs() < 1e-9
+        );
     }
 
     #[test]

@@ -68,8 +68,10 @@ SIGMA = 3e-3            # Gaussian half-width [m]; σ_k ≈ 1/σ ≈ 333 rad/m �
 P0 = 1.0                # source pressure amplitude [Pa]
 Z_M = 20e-3             # measurement plane distance [m]
 
-PEARSON_THRESHOLD = 0.9999
-PSNR_THRESHOLD_DB = 55.0
+PARITY_THRESHOLDS = {
+    "pearson_r": 0.9999,
+    "psnr_db": 55.0,
+}
 
 FIGURE_PATH = DEFAULT_OUTPUT_DIR / "tvsp_equivalent_source_holography_compare.png"
 METRICS_PATH = DEFAULT_OUTPUT_DIR / "tvsp_equivalent_source_holography_metrics.txt"
@@ -166,7 +168,12 @@ def main() -> int:
     )
     max_abs_err = float(np.max(np.abs(recon_abs - src_abs)))
 
-    status = "PASS" if pearson_r >= PEARSON_THRESHOLD and psnr_db >= PSNR_THRESHOLD_DB else "FAIL"
+    status = (
+        "PASS"
+        if pearson_r >= PARITY_THRESHOLDS["pearson_r"]
+        and psnr_db >= PARITY_THRESHOLDS["psnr_db"]
+        else "FAIL"
+    )
 
     report_lines = [
         "tvsp_equivalent_source_holography parity report",
@@ -185,8 +192,8 @@ def main() -> int:
         "",
         "|Pressure| reconstruction parity metrics",
         "----------------------------------------",
-        f"  pearson_r:   {pearson_r:.6f}  (threshold ≥ {PEARSON_THRESHOLD})",
-        f"  psnr_db:     {psnr_db:.2f} dB  (threshold ≥ {PSNR_THRESHOLD_DB} dB)",
+        f"  pearson_r:   {pearson_r:.6f}  (threshold ≥ {PARITY_THRESHOLDS['pearson_r']})",
+        f"  psnr_db:     {psnr_db:.2f} dB  (threshold ≥ {PARITY_THRESHOLDS['psnr_db']} dB)",
         f"  rms_ratio:   {rms_ratio:.6f}",
         f"  max_abs_err: {max_abs_err:.4e} Pa",
         "",

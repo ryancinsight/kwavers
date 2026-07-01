@@ -243,6 +243,8 @@ def compute_trace_metrics(reference: np.ndarray, candidate: np.ndarray) -> dict[
     ref_peak = float(np.max(np.abs(ref)))
     cand_peak = float(np.max(np.abs(cand)))
     peak_ratio = cand_peak / (ref_peak + 1e-30)
+    peak = float(max(ref_peak, cand_peak))
+    psnr_db = float(20.0 * np.log10(peak / (rmse + 1e-30)))
 
     return {
         "pearson_r": corr,
@@ -252,6 +254,7 @@ def compute_trace_metrics(reference: np.ndarray, candidate: np.ndarray) -> dict[
         "reference_peak": ref_peak,
         "candidate_peak": cand_peak,
         "peak_ratio": peak_ratio,
+        "psnr_db": psnr_db,
     }
 
 

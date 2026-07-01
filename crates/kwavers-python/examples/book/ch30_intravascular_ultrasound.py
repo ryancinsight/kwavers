@@ -8,7 +8,6 @@ localized microbubble delivery field under docs/book/figures/ch30/.
 from __future__ import annotations
 
 import json
-import os
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
@@ -17,14 +16,8 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
+import pykwavers as kw
 from matplotlib.patches import Circle, Wedge
-
-try:
-    import pykwavers as kw
-    _HAS_PYKWAVERS = True
-except ImportError:
-    kw = None
-    _HAS_PYKWAVERS = False
 
 
 BOOK_DIR = Path(__file__).resolve().parent
@@ -35,7 +28,6 @@ RHO_TISSUE_KG_M3 = 1060.0
 C_TISSUE_M_S = 1540.0
 CP_TISSUE_J_KG_K = 3600.0
 T0_C = 37.0
-DB_CM_MHZ_TO_NP_M_MHZ = 100.0 / 8.686
 
 
 @dataclass(frozen=True)
@@ -101,10 +93,6 @@ def default_dataset_spec() -> DatasetSpec:
     )
 
 
-def angle_difference(a: np.ndarray | float, b: float) -> np.ndarray:
-    return np.angle(np.exp(1j * (np.asarray(a) - b)))
-
-
 def vessel_phantom(
     n: int = 384,
     fov_m: float = 12.0e-3,
@@ -112,150 +100,31 @@ def vessel_phantom(
     seed: int = 30,
 ) -> VesselPhantom:
     design = design or TransducerDesign()
-    axis = np.linspace(-0.5 * fov_m, 0.5 * fov_m, n, dtype=float)
-    x_m, y_m = np.meshgrid(axis, axis, indexing="ij")
-    radius_m = np.hypot(x_m, y_m)
-    theta_rad = np.arctan2(y_m, x_m)
-
-    plaque_angle = angle_difference(theta_rad, design.therapy_azimuth_rad)
-    plaque_weight = np.exp(-0.5 * (plaque_angle / 0.60) ** 2)
-    lumen_boundary = (
-        1.70e-3
-        - 0.45e-3 * plaque_weight
-        + 0.08e-3 * np.cos(3.0 * theta_rad + 0.30)
+    phantom = kw.ivus_vessel_phantom(
+        int(n),
+        float(fov_m),
+        float(design.catheter_radius_m),
+        float(design.therapy_azimuth_rad),
+        int(seed),
     )
-    eel_boundary = (
-        3.20e-3
-        + 0.22e-3 * plaque_weight
-        + 0.10e-3 * np.sin(2.0 * theta_rad - 0.40)
-    )
-
-    catheter = radius_m <= design.catheter_radius_m
-    lumen = (radius_m > design.catheter_radius_m) & (radius_m <= lumen_boundary)
-    wall = (radius_m > lumen_boundary) & (radius_m <= eel_boundary)
-    plaque = wall & (plaque_weight > 0.28)
-    cap = plaque & ((radius_m - lumen_boundary) < 0.24e-3)
-    lipid = plaque & ((radius_m - lumen_boundary) > 0.45e-3) & (plaque_weight > 0.62)
-    calcium_angle = angle_difference(theta_rad, 1.35)
-    calcium = wall & (np.abs(calcium_angle) < 0.20) & (radius_m > eel_boundary - 0.42e-3)
-    eel_mask = radius_m <= eel_boundary
-
-    labels = np.zeros((n, n), dtype=np.uint8)
-    labels[catheter] = 1
-    labels[lumen] = 2
-    labels[wall] = 3
-    labels[plaque] = 4
-    labels[cap] = 5
-    labels[lipid] = 6
-    labels[calcium] = 7
-
-    sound_speed = np.full((n, n), 343.0, dtype=float)
-    density = np.full((n, n), 1.2, dtype=float)
-    attenuation = np.full((n, n), 0.02, dtype=float)
-    sound_speed[lumen] = 1570.0
-    density[lumen] = 1060.0
-    attenuation[lumen] = 0.12
-    sound_speed[wall] = 1585.0
-    density[wall] = 1080.0
-    attenuation[wall] = 0.65
-    sound_speed[plaque] = 1520.0
-    density[plaque] = 1040.0
-    attenuation[plaque] = 0.95
-    sound_speed[cap] = 1630.0
-    density[cap] = 1120.0
-    attenuation[cap] = 0.70
-    sound_speed[lipid] = 1450.0
-    density[lipid] = 980.0
-    attenuation[lipid] = 1.15
-    sound_speed[calcium] = 2900.0
-    density[calcium] = 1850.0
-    attenuation[calcium] = 4.0
-
-    rng = np.random.default_rng(seed)
-    impedance = sound_speed * density
-    gx, gy = np.gradient(impedance)
-    interface_echo = np.hypot(gx, gy)
-    interface_echo /= max(float(interface_echo.max()), 1.0)
-    speckle = rng.rayleigh(scale=0.18, size=(n, n))
-    backscatter = interface_echo + speckle * (0.15 * lumen + 0.80 * wall + 0.55 * lipid)
-    backscatter[catheter] = 0.0
-    backscatter /= max(float(backscatter.max()), 1.0)
 
     return VesselPhantom(
-        x_m=x_m,
-        y_m=y_m,
-        radius_m=radius_m,
-        theta_rad=theta_rad,
-        labels=labels,
-        sound_speed_m_s=sound_speed,
-        density_kg_m3=density,
-        attenuation_db_cm_mhz=attenuation,
-        backscatter=backscatter,
-        lumen_mask=lumen,
-        eel_mask=eel_mask,
-        plaque_mask=plaque,
-        fibrous_cap_mask=cap,
-        lipid_mask=lipid,
-        calcium_mask=calcium,
+        x_m=np.asarray(phantom["x_m"], dtype=float),
+        y_m=np.asarray(phantom["y_m"], dtype=float),
+        radius_m=np.asarray(phantom["radius_m"], dtype=float),
+        theta_rad=np.asarray(phantom["theta_rad"], dtype=float),
+        labels=np.asarray(phantom["labels"], dtype=np.uint8),
+        sound_speed_m_s=np.asarray(phantom["sound_speed_m_s"], dtype=float),
+        density_kg_m3=np.asarray(phantom["density_kg_m3"], dtype=float),
+        attenuation_db_cm_mhz=np.asarray(phantom["attenuation_db_cm_mhz"], dtype=float),
+        backscatter=np.asarray(phantom["backscatter"], dtype=float),
+        lumen_mask=np.asarray(phantom["lumen_mask"], dtype=bool),
+        eel_mask=np.asarray(phantom["eel_mask"], dtype=bool),
+        plaque_mask=np.asarray(phantom["plaque_mask"], dtype=bool),
+        fibrous_cap_mask=np.asarray(phantom["fibrous_cap_mask"], dtype=bool),
+        lipid_mask=np.asarray(phantom["lipid_mask"], dtype=bool),
+        calcium_mask=np.asarray(phantom["calcium_mask"], dtype=bool),
     )
-
-
-def nearest_indices(phantom: VesselPhantom, x: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    n = phantom.x_m.shape[0]
-    x0 = float(phantom.x_m[0, 0])
-    y0 = float(phantom.y_m[0, 0])
-    dx = float(phantom.x_m[1, 0] - phantom.x_m[0, 0])
-    dy = float(phantom.y_m[0, 1] - phantom.y_m[0, 0])
-    ix = np.clip(np.rint((x - x0) / dx).astype(int), 0, n - 1)
-    iy = np.clip(np.rint((y - y0) / dy).astype(int), 0, n - 1)
-    return ix, iy
-
-
-def gaussian_kernel(samples: int, sigma: float) -> np.ndarray:
-    x = np.arange(samples, dtype=float) - 0.5 * (samples - 1)
-    kernel = np.exp(-0.5 * (x / sigma) ** 2)
-    return kernel / float(kernel.sum())
-
-
-# --- Physics delegated to the kwavers Rust core (PyO3 kernels) -----------------
-# pykwavers is a thin PyO3 wrapper: the closed-form acoustic relations below run
-# in Rust (kwavers_python::analytical_bindings::{thermal, imaging}). The Python
-# fallbacks are bit-identical to the kernels and only run when the compiled
-# extension is unavailable so the book can still build.
-
-
-def intensity_w_m2(pressure: np.ndarray, rho: float, c: float) -> np.ndarray:
-    """Time-averaged intensity I = p²/(2ρc) [W/m²] via kw.acoustic_intensity_from_amplitude."""
-    if _HAS_PYKWAVERS:
-        flat = np.ascontiguousarray(pressure.ravel(), dtype=np.float64)
-        return np.asarray(
-            kw.acoustic_intensity_from_amplitude(flat, float(rho), float(c))
-        ).reshape(pressure.shape)
-    return pressure**2 / (2.0 * rho * c)
-
-
-def adiabatic_delta_t_kelvin(
-    heat_source: np.ndarray, tau_s: float, rho: float, specific_heat: float
-) -> np.ndarray:
-    """No-perfusion ΔT = Q·τ/(ρ·c_p) [K] via kw.adiabatic_temperature_rise_kelvin."""
-    if _HAS_PYKWAVERS:
-        q_flat = np.ascontiguousarray(heat_source.ravel(), dtype=np.float64)
-        tau = np.full(q_flat.size, float(tau_s), dtype=np.float64)
-        return np.asarray(
-            kw.adiabatic_temperature_rise_kelvin(q_flat, tau, float(rho), float(specific_heat))
-        ).reshape(heat_source.shape)
-    return heat_source * tau_s / (rho * specific_heat)
-
-
-def bmode_log_compress(envelope: np.ndarray, reference: float, floor_db: float = -60.0) -> np.ndarray:
-    """Fixed-reference log compression db = clip(20·log10(env/ref), floor, 0) via kw.bmode_db_fixed_reference."""
-    if _HAS_PYKWAVERS:
-        flat = np.ascontiguousarray(envelope.ravel(), dtype=np.float64)
-        return np.asarray(
-            kw.bmode_db_fixed_reference(flat, float(reference), float(floor_db))
-        ).reshape(envelope.shape)
-    db = 20.0 * np.log10(np.maximum(np.maximum(envelope, 0.0) / max(reference, 1.0e-300), 1.0e-12))
-    return np.clip(db, floor_db, 0.0)
 
 
 def simulate_bmode(
@@ -266,109 +135,66 @@ def simulate_bmode(
 ) -> dict[str, np.ndarray]:
     r_axis = np.linspace(design.catheter_radius_m, design.maximum_imaging_radius_m, radial_samples)
     theta_axis = np.linspace(-np.pi, np.pi, angle_samples, endpoint=False)
-    rr, tt = np.meshgrid(r_axis, theta_axis, indexing="ij")
-    ix, iy = nearest_indices(phantom, rr * np.cos(tt), rr * np.sin(tt))
-    alpha_np = phantom.attenuation_db_cm_mhz[ix, iy] * DB_CM_MHZ_TO_NP_M_MHZ
-    frequency_mhz = design.imaging_frequency_hz / 1.0e6
-    attenuation = np.exp(-2.0 * alpha_np * frequency_mhz * (rr - design.catheter_radius_m))
-    rf = phantom.backscatter[ix, iy] * attenuation
-    rf += 0.10 * np.exp(-((rr - design.catheter_radius_m) / 0.22e-3) ** 2)
-
-    # Hilbert-transform envelope |z(t)| (§9.1.3, Theorem 9.1) per RF line. The
-    # analytic-signal magnitude comes from the Rust core; the Gaussian-smoothing
-    # path is only a no-pykwavers fallback (not a true envelope).
-    envelope = np.empty_like(rf)
-    if _HAS_PYKWAVERS:
-        for col in range(angle_samples):
-            envelope[:, col] = np.asarray(kw.bmode_envelope(np.ascontiguousarray(rf[:, col])))
-    else:
-        kernel = gaussian_kernel(11, 1.8)
-        for col in range(angle_samples):
-            envelope[:, col] = np.convolve(rf[:, col], kernel, mode="same")
-    envelope = np.maximum(envelope, 1.0e-9)
-    # Log-compression in the Rust core (db is clamped to [-60, 0]); the final
-    # normalized image is identical to the unclamped-then-clip form.
-    db = bmode_log_compress(envelope, float(envelope.max()), -60.0)
-    bmode = np.clip((db + 60.0) / 60.0, 0.0, 1.0)
-    cartesian = scan_convert(bmode, r_axis, theta_axis, phantom)
+    image = kw.ivus_bmode_image(
+        np.ascontiguousarray(phantom.x_m, dtype=np.float64),
+        np.ascontiguousarray(phantom.y_m, dtype=np.float64),
+        np.ascontiguousarray(phantom.backscatter, dtype=np.float64),
+        np.ascontiguousarray(phantom.attenuation_db_cm_mhz, dtype=np.float64),
+        np.ascontiguousarray(r_axis, dtype=np.float64),
+        np.ascontiguousarray(theta_axis, dtype=np.float64),
+        np.ascontiguousarray(phantom.radius_m, dtype=np.float64),
+        np.ascontiguousarray(phantom.theta_rad, dtype=np.float64),
+        float(design.catheter_radius_m),
+        float(design.imaging_frequency_hz),
+        -60.0,
+    )
     return {
         "r_axis_m": r_axis,
         "theta_axis_rad": theta_axis,
-        "polar": bmode,
-        "cartesian": cartesian,
-        "db": db,
+        "polar": np.asarray(image["polar"]).reshape((radial_samples, angle_samples)),
+        "cartesian": np.asarray(image["cartesian"]).reshape(phantom.radius_m.shape),
+        "db": np.asarray(image["db"]).reshape((radial_samples, angle_samples)),
     }
 
 
-def scan_convert(
-    polar: np.ndarray,
-    r_axis: np.ndarray,
-    theta_axis: np.ndarray,
-    phantom: VesselPhantom,
-) -> np.ndarray:
-    r = phantom.radius_m
-    theta = phantom.theta_rad
-    dr = float(r_axis[1] - r_axis[0])
-    dtheta = float(theta_axis[1] - theta_axis[0])
-    ri = np.clip(np.rint((r - r_axis[0]) / dr).astype(int), 0, r_axis.size - 1)
-    ti = np.mod(np.rint((theta - theta_axis[0]) / dtheta).astype(int), theta_axis.size)
-    image = polar[ri, ti]
-    image[r < r_axis[0]] = 0.0
-    image[r > r_axis[-1]] = 0.0
-    return image
-
-
 def simulate_therapy(phantom: VesselPhantom, design: TransducerDesign) -> dict[str, np.ndarray | float]:
-    angle_gain = np.exp(
-        -0.5 * (angle_difference(phantom.theta_rad, design.therapy_azimuth_rad) / design.therapy_sector_width_rad) ** 2
+    fields = kw.ivus_therapy_fields(
+        np.ascontiguousarray(phantom.radius_m, dtype=np.float64),
+        np.ascontiguousarray(phantom.theta_rad, dtype=np.float64),
+        np.ascontiguousarray(phantom.attenuation_db_cm_mhz, dtype=np.float64),
+        np.ascontiguousarray(phantom.eel_mask, dtype=bool),
+        np.ascontiguousarray(phantom.lumen_mask, dtype=bool),
+        np.ascontiguousarray(phantom.fibrous_cap_mask, dtype=bool),
+        np.ascontiguousarray(phantom.lipid_mask, dtype=bool),
+        np.ascontiguousarray(phantom.plaque_mask, dtype=bool),
+        float(design.catheter_radius_m),
+        float(design.therapy_pressure_pa),
+        float(design.therapy_azimuth_rad),
+        float(design.therapy_sector_width_rad),
+        3.2e-3,
+        float(design.therapy_frequency_hz),
+        float(design.therapy_duty_cycle),
+        float(design.therapy_sonication_s),
+        RHO_TISSUE_KG_M3,
+        C_TISSUE_M_S,
+        CP_TISSUE_J_KG_K,
+        1.75e-3,
+        1.2e-3,
     )
-    range_m = np.maximum(phantom.radius_m - design.catheter_radius_m, 0.0)
-    pressure = design.therapy_pressure_pa * angle_gain * np.exp(-range_m / 3.2e-3)
-    pressure[phantom.radius_m <= design.catheter_radius_m] = 0.0
-
-    # Effective amplitude attenuation [Np/m] at the therapy frequency. It is a
-    # spatially-varying tissue field, so the scalar-α acoustic_heat_source_density
-    # kernel cannot consume it directly; instead I = p²/(2ρc) is computed by the
-    # Rust intensity kernel and the per-voxel Beer–Lambert weighting (Q = 2αI) is
-    # applied to that Rust intensity.
-    alpha_np = phantom.attenuation_db_cm_mhz * DB_CM_MHZ_TO_NP_M_MHZ
-    frequency_mhz = design.therapy_frequency_hz / 1.0e6
-    alpha_eff_np_m = alpha_np * frequency_mhz
-    intensity = intensity_w_m2(pressure, RHO_TISSUE_KG_M3, C_TISSUE_M_S)
-    absorbed_power = 2.0 * alpha_eff_np_m * intensity * design.therapy_duty_cycle
-    delta_t = adiabatic_delta_t_kelvin(
-        absorbed_power, design.therapy_sonication_s, RHO_TISSUE_KG_M3, CP_TISSUE_J_KG_K
-    )
-
-    wall = phantom.eel_mask & ~phantom.lumen_mask
-    wall_target = phantom.fibrous_cap_mask | phantom.lipid_mask
-    radial_band = np.exp(-((range_m - 1.75e-3) / 1.2e-3) ** 2)
-    acoustic_radiation_force = 2.0 * alpha_eff_np_m * intensity / C_TISSUE_M_S
-    deposition = acoustic_radiation_force * radial_band * (0.20 * wall + 0.80 * wall_target)
-    deposition /= max(float(deposition.max()), 1.0e-12)
-    delivered_fraction = 1.0 - np.exp(-3.0 * deposition)
-    # MI = p_neg [MPa] / sqrt(f [MHz]) via kw.mechanical_index(p_neg_pa, f_hz)
-    peak_p_pa = float(np.max(pressure))
-    mechanical_index = (kw.mechanical_index(peak_p_pa, design.therapy_frequency_hz)
-                        if _HAS_PYKWAVERS
-                        else peak_p_pa / 1.0e6 / np.sqrt(frequency_mhz))
+    pressure = np.asarray(fields["pressure_pa"]).reshape(phantom.radius_m.shape)
+    intensity = np.asarray(fields["intensity_w_m2"]).reshape(phantom.radius_m.shape)
+    delta_t = np.asarray(fields["temperature_rise_k"]).reshape(phantom.radius_m.shape)
+    delivered_fraction = np.asarray(fields["deposition"]).reshape(phantom.radius_m.shape)
 
     return {
         "pressure_pa": pressure,
         "intensity_w_m2": intensity,
         "temperature_c": T0_C + delta_t,
         "deposition": delivered_fraction,
-        "mechanical_index": mechanical_index,
-        "target_to_offtarget_ratio": target_to_offtarget_ratio(delivered_fraction, wall_target, phantom.plaque_mask),
-        "peak_delta_t_c": float(np.max(delta_t)),
+        "mechanical_index": float(fields["mechanical_index"]),
+        "target_to_offtarget_ratio": float(fields["target_to_offtarget_ratio"]),
+        "peak_delta_t_c": float(fields["peak_delta_t_k"]),
     }
-
-
-def target_to_offtarget_ratio(field: np.ndarray, target: np.ndarray, plaque: np.ndarray) -> float:
-    target_mean = float(np.mean(field[target]))
-    off_target = (~plaque) & (field > 0.0)
-    off_mean = float(np.mean(field[off_target]))
-    return target_mean / max(off_mean, 1.0e-12)
 
 
 def axis_extent_mm(phantom: VesselPhantom) -> list[float]:
@@ -500,36 +326,32 @@ def write_metrics(
     therapy: dict[str, np.ndarray | float],
     figures: list[Path],
 ) -> Path:
+    computed_metrics = kw.ivus_chapter_metrics(
+        np.ascontiguousarray(phantom.x_m, dtype=np.float64),
+        np.ascontiguousarray(phantom.y_m, dtype=np.float64),
+        np.ascontiguousarray(phantom.lumen_mask, dtype=bool),
+        np.ascontiguousarray(phantom.eel_mask, dtype=bool),
+        np.ascontiguousarray(phantom.plaque_mask, dtype=bool),
+        np.ascontiguousarray(bmode["cartesian"], dtype=np.float64),
+        C_TISSUE_M_S,
+        float(design.imaging_frequency_hz),
+        float(design.therapy_frequency_hz),
+        60.0,
+        float(therapy["mechanical_index"]),
+        float(therapy["peak_delta_t_c"]),
+        float(therapy["target_to_offtarget_ratio"]),
+    )
     payload = {
         "chapter": 30,
         "analysis": "intravascular ultrasound imaging plus localized microbubble therapy",
         "dataset": asdict(spec),
         "transducer": asdict(design),
-        "computed_metrics": {
-            "imaging_wavelength_um": C_TISSUE_M_S / design.imaging_frequency_hz * 1.0e6,
-            "therapy_wavelength_mm": C_TISSUE_M_S / design.therapy_frequency_hz * 1.0e3,
-            "lumen_area_mm2": float(np.count_nonzero(phantom.lumen_mask) * pixel_area_m2(phantom) * 1.0e6),
-            "plaque_area_mm2": float(np.count_nonzero(phantom.plaque_mask) * pixel_area_m2(phantom) * 1.0e6),
-            "bmode_dynamic_range_db": 60.0,
-            "bmode_mean_lumen_intensity": float(np.mean(bmode["cartesian"][phantom.lumen_mask])),
-            "bmode_mean_wall_intensity": float(np.mean(bmode["cartesian"][phantom.eel_mask & ~phantom.lumen_mask])),
-            "therapy_mechanical_index": float(therapy["mechanical_index"]),
-            "therapy_peak_delta_t_c": float(therapy["peak_delta_t_c"]),
-            "therapy_target_to_offtarget_deposition_ratio": float(therapy["target_to_offtarget_ratio"]),
-        },
+        "computed_metrics": dict(computed_metrics),
         "figures": [str(path) for path in figures],
     }
     path = OUT_DIR / "metrics.json"
     path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     return path
-
-
-def pixel_area_m2(phantom: VesselPhantom) -> float:
-    dx = float(phantom.x_m[1, 0] - phantom.x_m[0, 0])
-    dy = float(phantom.y_m[0, 1] - phantom.y_m[0, 0])
-    return dx * dy
-
-
 def run() -> dict[str, object]:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     spec = default_dataset_spec()

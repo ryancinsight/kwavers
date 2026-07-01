@@ -22,6 +22,7 @@ from pathlib import Path
 
 import matplotlib
 import numpy as np
+import pykwavers as kw
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -49,26 +50,17 @@ plt.rcParams.update(
 )
 
 
-def fd_symbol(theta: np.ndarray, order: int) -> np.ndarray:
-    """Return first-derivative modified wavenumber k* dx for centered stencils."""
-    if order == 2:
-        return np.sin(theta)
-    if order == 4:
-        return (8.0 * np.sin(theta) - np.sin(2.0 * theta)) / 6.0
-    if order == 6:
-        return (45.0 * np.sin(theta) - 9.0 * np.sin(2.0 * theta) + np.sin(3.0 * theta)) / 30.0
-    raise ValueError(f"unsupported order {order}")
-
-
 # Figure 01: CFL stability region for 2-D explicit wave stepping.
 print("[fig01] FDTD CFL stability region")
 cfl_x = np.linspace(0.0, 1.2, 350)
 cfl_z = np.linspace(0.0, 1.2, 350)
 cx, cz = np.meshgrid(cfl_x, cfl_z, indexing="ij")
-stable = cx * cx + cz * cz <= 1.0
+stable = np.asarray(kw.fdtd_cfl_stability_region_2d(cfl_x, cfl_z), dtype=float).reshape(
+    (cfl_x.size, cfl_z.size)
+)
 plt.figure(figsize=(6.3, 5.2))
-plt.contourf(cx, cz, stable.astype(float), levels=[-0.1, 0.5, 1.1], colors=["#f4b6b6", "#b9dfc5"])
-plt.contour(cx, cz, cx * cx + cz * cz, levels=[1.0], colors="k", linewidths=1.8)
+plt.contourf(cx, cz, stable, levels=[-0.1, 0.5, 1.1], colors=["#f4b6b6", "#b9dfc5"])
+plt.contour(cx, cz, stable, levels=[0.5], colors="k", linewidths=1.8)
 plt.xlabel("CFL_x = c dt / dx")
 plt.ylabel("CFL_z = c dt / dz")
 plt.title("2-D explicit acoustic CFL region: CFL_x^2 + CFL_z^2 <= 1")
@@ -84,7 +76,7 @@ print("[fig02] Modified-wavenumber phase error")
 theta = np.linspace(1.0e-6, np.pi, 700)
 plt.figure(figsize=(7.2, 4.8))
 for order in (2, 4, 6):
-    ratio = fd_symbol(theta, order) / theta
+    ratio = np.asarray(kw.centered_fd_modified_wavenumber(theta, order), dtype=float) / theta
     _ord = {2: "2nd", 4: "4th", 6: "6th"}.get(order, f"{order}th")
     plt.plot(theta / np.pi, ratio, label=f"{_ord}-order centered")
 plt.axhline(1.0, color="k", linewidth=0.9, linestyle=":")
@@ -103,10 +95,7 @@ cfl_values = (0.1, 0.3, 0.5, 0.7)
 theta = np.linspace(0.0, np.pi, 700)
 plt.figure(figsize=(7.2, 4.8))
 for cfl in cfl_values:
-    x = 0.5 * cfl * theta
-    correction = np.ones_like(theta)
-    mask = x != 0.0
-    correction[mask] = np.sin(x[mask]) / x[mask]
+    correction = np.asarray(kw.kspace_temporal_correction(theta, cfl), dtype=float)
     plt.plot(theta / np.pi, correction, label=f"CFL={cfl:.1f}")
 plt.xlabel("k dx / pi")
 plt.ylabel("sinc(c k dt / 2)")
@@ -123,7 +112,8 @@ theta = np.linspace(0.0, np.pi, 700)
 plt.figure(figsize=(7.2, 4.8))
 plt.plot(theta / np.pi, theta / np.pi, color="k", label="spectral derivative")
 for order in (2, 4, 6):
-    plt.plot(theta / np.pi, fd_symbol(theta, order) / np.pi, linestyle="--", label=f"FD {order}")
+    symbol = np.asarray(kw.centered_fd_modified_wavenumber(theta, order), dtype=float)
+    plt.plot(theta / np.pi, symbol / np.pi, linestyle="--", label=f"FD {order}")
 plt.xlabel("k dx / pi")
 plt.ylabel("k* dx / pi")
 plt.title("Derivative-symbol accuracy before Nyquist")

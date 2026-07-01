@@ -760,7 +760,7 @@ Implementation: the algebraic local inversion $\mu = -\rho\omega^2 u_i/\nabla^2 
 
 ![MRE harmonic displacement field](figures/ch10/fig05_mre_displacement.png)
 
-*Figure 11.3. Analytical MRE harmonic displacement field for a stiff cylindrical inclusion (k=ω/c_S via `kw.shear_wave_speed`); the local-Helmholtz inversion μ=−ρω²u/∇²u (§11.7.2) recovers the inclusion modulus.*
+*Figure 11.3. Rust-backed MRE harmonic displacement field from `kw.mre_displacement_field`: \(u(x,z)=A\sin(k_S z)\exp(-z/d_{\mathrm{pen}})\), with \(k_S=\omega/c_S\) and \(c_S\) from `kw.shear_wave_speed`.*
 
 ---
 

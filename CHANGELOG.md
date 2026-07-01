@@ -2,6 +2,1055 @@
 
 ## Unreleased
 
+### Changed (2026-07-01) - Cavitation passive-map bindings [patch]
+
+- [patch] Split `kwavers-python` cavitation receiver-array PSD integration and
+  passive-map emission-energy bindings into a dedicated child module, leaving
+  the parent cavitation facade as a re-export surface.
+
+### Changed (2026-07-01) - Cavitation chirp bindings [patch]
+
+- [patch] Split `kwavers-python` cavitation frequency-swept engagement,
+  residual-clearance, staged-sonication, and shielding-control bindings into a
+  dedicated child module while preserving the registered Python function names.
+
+### Changed (2026-07-01) - Cavitation monitor bindings [patch]
+
+- [patch] Split `kwavers-python` cavitation monitor, closed-loop control,
+  raster pulsing, therapeutic-window, and per-spot dose-grid bindings into a
+  dedicated child module while preserving the registered Python function names.
+
+### Changed (2026-07-01) - Cavitation spectrum bindings [patch]
+
+- [patch] Split `kwavers-python` cavitation spectrum, emission-band,
+  PCD-controller, cumulative-dose, and passive-dose fixture bindings into a
+  dedicated child module while preserving the registered Python function names.
+- [patch] Repaired bubble-dynamics compile blockers by removing an invalid
+  `AdaptiveBubbleModel` self re-export and deriving `Debug` for `BubbleField`.
+
+### Changed (2026-07-01) - Cavitation emission bindings [patch]
+
+- [patch] Split `kwavers-python` cavitation free/coated bubble, population, and
+  focal-volume emission simulation bindings into a dedicated child module while
+  preserving the registered Python function names.
+
+### Changed (2026-07-01) - Cavitation passive-receive bindings [patch]
+
+- [patch] Split `kwavers-python` cavitation passive receiver PSD/RF and
+  Van Cittert-Zernike coherence bindings into a dedicated child module while
+  preserving the registered Python function names.
+
+### Changed (2026-07-01) - Cavitation lesion bindings [patch]
+
+- [patch] Split `kwavers-python` cavitation lesion-state, boiling-profile,
+  lacuna void-fraction, lesion-radius, and inertial-dose bindings into a
+  dedicated child module while preserving the registered Python function names.
+
+### Changed (2026-07-01) - Cavitation therapy bindings [patch]
+
+- [patch] Split `kwavers-python` cavitation therapy-delivery, lesion-response,
+  focal-mask, measured-emission scaling, and erosion-validation bindings into
+  a dedicated child module while preserving the registered Python function
+  names.
+
+### Changed (2026-07-01) - Cavitation medium bindings [patch]
+
+- [patch] Split `kwavers-python` cavitation residual-gas dissolution and
+  bubbly-medium propagation bindings into a dedicated child module while
+  preserving the registered Python function names.
+
+### Changed (2026-07-01) - Cavitation single-bubble bindings [patch]
+
+- [patch] Split `kwavers-python` cavitation Minnaert, Blake-threshold, and
+  Rayleigh collapse-time bindings into a dedicated child module while
+  preserving the registered Python function names.
+
+### Changed (2026-07-01) - Cavitation probability bindings [patch]
+
+- [patch] Split `kwavers-python` cavitation probability, threshold, and PRF
+  efficacy bindings into a dedicated child module while preserving the
+  registered Python function names.
+
+### Changed (2026-07-01) - Neuromodulation bindings [patch]
+
+- [patch] Split `kwavers-python` neuromodulation response, bilayer curve,
+  threshold-search, and safety/dosimetry bindings into dedicated child modules
+  while preserving the registered Python function names.
+
+### Changed (2026-07-01) - Inverse-problem bindings [patch]
+
+- [patch] Split `kwavers-python` inverse-problem operator, reconstruction,
+  convergence, and parameter-selection bindings into dedicated child modules
+  while preserving the registered Python function names and consolidating
+  repeated 2-D array conversion code.
+
+### Changed (2026-07-01) - RTM analytical bindings [patch]
+
+- [patch] Split `kwavers-python` RTM field, imaging/fusion, and standing-wave
+  suppression bindings into dedicated child modules while preserving the
+  registered Python function names and consolidating repeated 2-D array
+  conversion code.
+
+### Changed (2026-07-01) - Skull analytical bindings [patch]
+
+- [patch] Split `kwavers-python` skull attenuation/aberration, Hounsfield
+  conversion, thermal rise, and layered transmission bindings into dedicated
+  child modules while preserving the registered Python function names.
+
+### Changed (2026-07-01) - Sonogenetics bindings [patch]
+
+- [patch] Split `kwavers-python` sonogenetics channel-activation,
+  force/streaming, and ISPTA dosimetry bindings into dedicated child modules
+  while preserving the registered Python function names.
+
+### Changed (2026-07-01) - MEMS CMUT/PMUT bindings [patch]
+
+- [patch] Split `kwavers-python` MEMS plate, CMUT, PMUT, and comparison
+  figure-of-merit bindings into dedicated child modules while preserving the
+  registered Python function names.
+
+### Changed (2026-07-01) - Acousto-optics bindings [patch]
+
+- [patch] Split `kwavers-python` acousto-optics regime, geometry, and
+  diffraction-order bindings into dedicated child modules while preserving the
+  registered Python function names.
+
+### Changed (2026-07-01) - Tissue analytical bindings [patch]
+
+- [patch] Split `kwavers-python` tissue water-property,
+  attenuation/dispersion, and tissue-property lookup bindings into dedicated
+  child modules while preserving the registered Python function names.
+
+### Changed (2026-07-01) - Statistics validation bindings [patch]
+
+- [patch] Split `kwavers-python` statistics correlation/phase and RMSE/PSNR
+  validation bindings into dedicated child modules while preserving the
+  registered Python function names.
+
+### Changed (2026-07-01) - BBB and CEUS bindings [patch]
+
+- [patch] Split `kwavers-python` BBB permeability/closure and CEUS
+  backscatter/display bindings into dedicated child modules while preserving
+  the registered Python function names.
+
+### Changed (2026-07-01) - Photoacoustics bindings [patch]
+
+- [patch] Split `kwavers-python` photoacoustics spectral, source/signal, and
+  reconstruction bindings into dedicated child modules while preserving the
+  registered Python function names and removing an avoidable transient
+  allocation in the sO2 sweep wrapper.
+
+### Changed (2026-07-01) - Elastography thermal-strain bindings [patch]
+
+- [patch] Split `kwavers-python` elastography thermal-strain fixture,
+  coefficient, and reconstruction bindings into a dedicated child module while
+  preserving the registered Python function names.
+
+### Changed (2026-07-01) - Safety damage bindings [patch]
+
+- [patch] Split `kwavers-python` safety Arrhenius damage, thermal kill, and
+  combined kill-probability bindings into a dedicated child module while
+  preserving the registered Python function names.
+
+### Changed (2026-07-01) - Safety thermal bindings [patch]
+
+- [patch] Split `kwavers-python` safety thermal-index and CEM43 dose bindings
+  into a dedicated child module while preserving the registered Python function
+  names.
+
+### Changed (2026-07-01) - Safety mechanical bindings [patch]
+
+- [patch] Split `kwavers-python` safety Mechanical Index and cavitation-risk
+  bindings into a dedicated child module while preserving the registered Python
+  function names.
+
+### Changed (2026-07-01) - Thermal acoustic bindings [patch]
+
+- [patch] Split `kwavers-python` thermal acoustic gain, power deposition,
+  pressure/intensity conversion, and heat-source bindings into a dedicated child
+  module while preserving the registered Python function names.
+
+### Changed (2026-07-01) - Inverse seismic bindings [patch]
+
+- [patch] Split `kwavers-python` inverse eikonal traveltime and Kirchhoff
+  point-scatterer imaging bindings into a dedicated child module while
+  preserving the registered Python function names.
+
+### Changed (2026-07-01) - Imaging IVUS B-mode bindings [patch]
+
+- [patch] Split `kwavers-python` IVUS polar RF, scan conversion, complete
+  B-mode image, and Chapter 30 metric bindings into dedicated child modules,
+  leaving the imaging facade as module topology and re-exports only.
+
+### Changed (2026-07-01) - Imaging IVUS therapy bindings [patch]
+
+- [patch] Split `kwavers-python` IVUS therapy pressure, delivery, response, and
+  aggregate field bindings into a dedicated child module while preserving the
+  registered Python function names.
+
+### Changed (2026-07-01) - Imaging IVUS phantom bindings [patch]
+
+- [patch] Split `kwavers-python` IVUS vessel-phantom bindings and square-array
+  materialization into a dedicated child module while preserving the registered
+  Python function name.
+
+### Changed (2026-07-01) - Imaging PSF bindings [patch]
+
+- [patch] Split `kwavers-python` imaging point-spread and lateral-resolution
+  bindings into a dedicated child module while preserving the registered
+  Python function names.
+
+### Changed (2026-07-01) - Imaging pulse-echo bindings [patch]
+
+- [patch] Split `kwavers-python` imaging pulse-echo RF and B-mode bindings into
+  a dedicated child module while preserving the registered Python function
+  names.
+
+### Changed (2026-07-01) - Imaging Doppler bindings [patch]
+
+- [patch] Split `kwavers-python` imaging Doppler and vector-flow bindings into
+  a dedicated child module while preserving the registered Python function
+  names.
+
+### Changed (2026-07-01) - Transducer beam bindings [patch]
+
+- [patch] Split `kwavers-python` transducer 2-D focus and beam-pattern bindings
+  into a dedicated child module, leaving the transducer facade as module
+  topology and re-exports only.
+
+### Changed (2026-07-01) - Transducer basic bindings [patch]
+
+- [patch] Split `kwavers-python` transducer directivity, apodization,
+  linear-array factor, grating-lobe, and on-axis pressure bindings into a
+  dedicated child module while preserving the registered Python function names.
+
+### Changed (2026-07-01) - Transducer multi-focus bindings [patch]
+
+- [patch] Split `kwavers-python` transducer multi-focus delay-law and
+  field-magnitude bindings into a dedicated child module while preserving the
+  registered Python function names.
+
+### Changed (2026-07-01) - Transducer aperture bindings [patch]
+
+- [patch] Split `kwavers-python` transducer aperture geometry and 3-D pressure
+  bindings into a dedicated child module while preserving the registered Python
+  function names.
+
+### Changed (2026-07-01) - Transducer interpolation bindings [patch]
+
+- [patch] Split `kwavers-python` transducer band-limited-interpolation
+  bindings into a dedicated child module while preserving the registered
+  Python function names.
+
+### Changed (2026-07-01) - Transducer steering bindings [patch]
+
+- [patch] Split `kwavers-python` transducer steering, sparse-aperture,
+  grating-lobe, and electronic-efficiency bindings into a dedicated child
+  module while preserving the registered Python function names.
+
+### Changed (2026-07-01) - Transducer binding structure [patch]
+
+- [patch] Split `kwavers-python` transducer analytical bindings into dedicated
+  optoacoustic and acoustic-lens child modules while preserving the registered
+  Python function names.
+
+### Changed (2026-07-01) - GPU PSTD session sources [patch]
+
+- [patch] Split `kwavers-python` GPU PSTD session source/sensor packing into a
+  dedicated child module and removed cached-run empty source-vector allocations
+  by passing empty slices directly to the solver.
+
+### Changed (2026-07-01) - GPU PSTD session structure [patch]
+
+- [patch] Split `kwavers-python` GPU PSTD session construction helpers into
+  absorption-kernel and PML-array child modules, preserving the public PyO3
+  `GpuPstdSession` facade while reducing constructor-module responsibility.
+
+### Fixed (2026-07-01) - Therapy chapter guards [patch]
+
+- [patch] Corrected the focused therapy chapter test's docs-root calculation
+  for the current crate layout and removed residual vendor-style source labels
+  from the active Chapter 31 clinical-device script.
+
+### Added (2026-07-01) - Chapter 24 CEUS display [patch]
+
+- [patch] Added Rust/PyO3 `ceus_backscatter_display` and routed Chapter 24's
+  CEUS signal, peak-normalised dB values, and optimal concentration marker
+  through the Rust-owned helper instead of local Python normalization and peak
+  selection.
+
+### Added (2026-07-01) - Chapter 30 IVUS therapy fields [patch]
+
+- [patch] Added Rust/PyO3 `ivus_therapy_fields` and routed Chapter 30's
+  therapy pressure field plus response fields through the Rust-owned aggregate
+  helper instead of local Python orchestration across split pressure/response
+  kernels.
+
+### Added (2026-07-01) - Chapter 30 IVUS metrics [patch]
+
+- [patch] Added Rust/PyO3 `ivus_chapter_metrics` and routed Chapter 30's
+  wavelength, lumen/plaque area, masked B-mode means, and therapy summary
+  metrics through the Rust-owned helper instead of Python-side scalar formulas.
+
+### Added (2026-07-01) - Chapter 30 IVUS B-mode image [patch]
+
+- [patch] Added Rust/PyO3 `ivus_bmode_image` and routed Chapter 30's polar RF,
+  Hilbert-envelope detection, fixed-reference log compression, normalized
+  polar image, and Cartesian scan conversion through the Rust-owned helper
+  instead of local Python B-mode image assembly.
+
+### Added (2026-07-01) - Chapter 30 IVUS therapy response [patch]
+
+- [patch] Added Rust/PyO3 `ivus_therapy_response` and routed Chapter 30's
+  therapy intensity, absorption, temperature rise, delivery masks, mechanical
+  index, and target/off-target deposition ratio through the Rust-owned helper
+  instead of local Python therapy-response algebra.
+
+### Added (2026-07-01) - Chapter 30 IVUS scan conversion [patch]
+
+- [patch] Added Rust/PyO3 `ivus_scan_convert` and routed Chapter 30's polar
+  B-mode image projection through the Rust-owned nearest-bin radius/theta mapper
+  instead of local Python scan-conversion indexing.
+
+### Added (2026-07-01) - Chapter 30 IVUS polar RF [patch]
+
+- [patch] Added Rust/PyO3 `ivus_polar_bmode_rf` and routed Chapter 30's IVUS
+  B-mode RF fixture through the Rust-owned polar grid sampling, two-way
+  attenuation, and catheter-ring echo helper instead of local Python RF
+  construction.
+
+### Added (2026-07-01) - Chapter 30 IVUS delivery fraction [patch]
+
+- [patch] Added Rust/PyO3 `ivus_microbubble_delivery_fraction` and routed
+  Chapter 30's microbubble delivery map through the Rust-owned acoustic
+  radiation force, radial targeting, normalization, and exponential delivery
+  helper instead of local Python deposition algebra.
+
+### Added (2026-07-01) - Chapter 30 IVUS pressure field [patch]
+
+- [patch] Added Rust/PyO3 `ivus_therapy_pressure_field` and routed Chapter
+  30's microbubble-therapy pressure map through the Rust-owned sector aperture
+  and radial decay helper instead of local Python angular Gaussian and
+  exponential pressure algebra.
+
+### Added (2026-07-01) - Chapter 20 PSNR curve [patch]
+
+- [patch] Added Rust/PyO3 `validation_psnr_from_relative_rmse` and routed
+  Chapter 20's PSNR-vs-relative-RMSE figure through the Rust-owned validation
+  theorem helper instead of local Python `-20 * np.log10(eps)` algebra.
+
+### Added (2026-07-01) - Chapter 20 phase sensitivity [patch]
+
+- [patch] Added Rust/PyO3 `phase_shift_correlation_curve` and
+  `phase_error_degrees_for_correlation`, then routed Chapter 20's Pearson
+  phase-sensitivity figure through those Rust-owned theorem helpers instead of
+  local Python `np.cos`/`np.arccos` algebra.
+
+### Added (2026-07-01) - Chapter 17 PINN convergence curve [patch]
+
+- [patch] Added Rust/PyO3 `exponential_convergence_curve` and routed Chapter
+  17's PINN loss convergence illustration through the Rust-owned exponential
+  decay-with-floor helper instead of local Python `np.exp` fixture logic.
+
+### Added (2026-07-01) - Chapter 17 deconvolution fixture [patch]
+
+- [patch] Added Rust/PyO3 `gaussian_deconvolution_fixture` and routed Chapter
+  17's Tikhonov L-curve fixture through the Rust-owned Gaussian convolution,
+  two-bump truth, and deterministic perturbation generator instead of local
+  Python fixture algebra.
+
+### Added (2026-07-01) - Chapter 10 MRE envelope [patch]
+
+- [patch] Added Rust/PyO3 `mre_displacement_envelope` and routed Chapter 10's
+  MRE displacement-envelope overlay through the Rust-owned exponential decay
+  helper instead of Python `np.exp`.
+
+### Added (2026-07-01) - Chapter 23 VCZ coherence [patch]
+
+- [patch] Added Rust/PyO3 `van_cittert_zernike_coherence` and routed Chapter
+  23 spatial-coherence plotting through the Rust-owned Van Cittert-Zernike sinc
+  law instead of Python `np.sinc`; removed the stale SciPy requirement text.
+
+### Changed (2026-07-01) - Chapter 3 source waveform routing [patch]
+
+- [patch] Routed the Chapter 3 Westervelt PSTD source waveform through existing
+  Rust/PyO3 `fubini_waveform` at `sigma=0` instead of local Python sinusoid
+  construction, and removed stale SciPy requirement text from the script header.
+
+### Changed (2026-06-30) - Chapter 1 standing wave routing [patch]
+
+- [patch] Routed Chapter 1 standing-wave initial-condition and analytic overlay
+  generation through existing Rust/PyO3 `standing_wave_1d` and corrected the
+  wrapper formula documentation to match the Rust core contract.
+
+### Added (2026-06-30) - Chapter 5 axial RF pulse [patch]
+
+- [patch] Added Rust/PyO3 `centered_hann_tone_burst_waveform` and routed the
+  Chapter 5 B-mode PSF axial RF pulse through the Rust-owned centered
+  discrete-Hann tone-burst helper instead of Python `np.hanning` and local
+  carrier multiplication.
+
+### Added (2026-06-30) - Chapter 25 RTM axial spectrum [patch]
+
+- [patch] Added Rust/PyO3 `demeaned_hann_power_spectrum_1d` and routed Chapter
+  25 RTM axial spatial-spectrum plotting through the Rust-owned Hann-windowed
+  one-sided power spectrum helper instead of Python `np.hanning` and
+  `np.fft.rfft`.
+
+### Changed (2026-06-30) - Population emission seed boundary [patch]
+
+- [patch] Changed the shared book population-emission helper and Chapter
+  24/21e callers to pass deterministic seeds directly to Rust/PyO3
+  `simulate_population_emission` instead of deriving Rust seeds from Python
+  RNG objects.
+
+### Added (2026-06-30) - Chapter 7 CEM43 fixture [patch]
+
+- [patch] Added Rust/PyO3 `closed_loop_cem43_fixture` and routed Chapter 7
+  closed-loop focal-temperature and CEM43 dose curves through Rust-owned
+  fixed-power, feedback, and underdrive traces instead of Python-side RNG and
+  per-trace dose calls.
+
+### Added (2026-06-30) - Chapter 23 cavitation dose fixture [patch]
+
+- [patch] Added Rust/PyO3 `passive_cavitation_dose_fixture` and routed Chapter
+  23 passive-cavitation dose accumulation through Rust-owned stable-dose and
+  seeded compound-Poisson inertial-dose traces instead of Python-side RNG loops.
+
+### Changed (2026-06-30) - Chapter 5 shear-wave speed routing [patch]
+
+- [patch] Routed Chapter 5 shear-wave elastography tissue-range speed
+  conversion through Rust/PyO3 `shear_wave_speed` instead of Python-side
+  `sqrt(mu/rho)` in the book plotting script.
+
+### Added (2026-06-30) - Chapter 4 apodization response [patch]
+
+- [patch] Added Rust/PyO3 `apodization_window_response` and routed Chapter 4
+  apodization-window response plotting through Rust-owned zero-padded,
+  FFT-shifted spatial-frequency response calculation instead of Python
+  `np.fft`.
+
+### Added (2026-06-30) - Chapter 10 thermal-strain RF fixture [patch]
+
+- [patch] Added Rust/PyO3 `thermal_strain_rf_fixture` and routed the Chapter 10
+  thermal-strain synthetic RF generation through Rust-owned seeded speckle,
+  carrier modulation, and apparent-displacement warp interpolation.
+
+### Added (2026-06-30) - Chapter 3 harmonic extraction [patch]
+
+- [patch] Added Rust/PyO3 `hann_windowed_harmonic_amplitudes` and routed the
+  Chapter 3 PSTD-vs-Fubini harmonic-amplitude extraction through Rust-owned
+  Hann-windowed FFT bin extraction instead of Python `np.fft.rfft`.
+
+### Added (2026-06-30) - Chapter 7 PCD fixtures [patch]
+
+- [patch] Added Rust/PyO3 `keller_miksis_pcd_spectrum` and
+  `keller_miksis_pcd_controller_trace`, then routed Chapter 7 PCD spectrum and
+  controller figures through Rust-owned Keller-Miksis FFT band extraction and
+  SC/IC pressure stepping.
+
+### Added (2026-06-30) - Chapter 5 PA Gaussian fixture [patch]
+
+- [patch] Added Rust/PyO3 `gaussian_absorber_photoacoustic_profile` and routed
+  Chapter 5 Figure 04 through Rust-owned Gaussian initial pressure and analytic
+  bipolar surface-signal computation.
+
+### Added (2026-06-30) - Transcranial subspot BBB bindings [patch]
+
+- [patch] Exposed Rust-owned transcranial GBM subspot rastering and BBB
+  subspot-dose fields through thin PyO3 helpers, then routed the Chapter 25
+  transcranial planning adapters through those helpers so Python only packages
+  returned arrays for plotting and downstream book figures.
+
+### Fixed (2026-06-30) - Transcranial planning PyO3 contract [patch]
+
+- [patch] Removed optional `pykwavers` fallback branches from the book
+  transcranial planning helpers. Acoustic observables, cavitation risk, BBB
+  permeability, and HU material mapping now route through existing Rust/PyO3
+  bindings, and the top-level package facade exports the existing transcranial
+  array planner and Pennes thermal-dose binding used by the book scripts.
+
+### Fixed (2026-06-30) - Chapter 24 CEM43 vector dose [patch]
+
+- [patch] Routed Chapter 24 focal CEM43 accumulation through Rust/PyO3
+  `cem43_cumulative` instead of Python-side sparse prefix calls to
+  `compute_cem43`, and removed the ignored `max_nucleation_cycles` keyword from
+  the shared cavitation population book helper and callers.
+
+### Fixed (2026-06-30) - kwavers-physics all-target clippy gate [patch]
+
+- [patch] Cleared the current `kwavers-physics --all-targets` clippy blockers
+  by replacing manual range predicates, moving test modules after exported
+  items, converting constant invariants to compile-time assertions, removing
+  redundant `clone()` calls on `Copy` values, and naming a test helper tuple
+  type.
+
+### Added (2026-06-30) - Chapter 26 response smoothing helper [patch]
+
+- [patch] Added Rust/PyO3 `lif_response_probability_py` and routed Chapter 26
+  neural-response smoothing through Rust-owned spike-train sampling and
+  Gaussian response probability computation. The Chapter 26 focal thermal-dose
+  trace now uses Rust/PyO3 `cem43_cumulative` instead of Python-side sparse
+  prefix-dose interpolation.
+
+### Added (2026-06-30) - Chapter 5 CW/vector Doppler fixture [patch]
+
+- [patch] Added Rust/PyO3 `continuous_wave_vector_flow_fixture` and routed
+  Chapter 5 Figure 9.4 through Rust-owned RF tone synthesis, CW
+  demodulation/FFT, PW Nyquist comparison, cross-beam projection, and
+  vector-flow recovery.
+
+### Added (2026-06-30) - Chapter 13 unmixing sweep helper [patch]
+
+- [patch] Added Rust/PyO3 `spectroscopic_unmixing_so2_sweep` and routed Chapter
+  13 Figure 10.4 through Rust-owned HbO2/Hb deterministic perturbation sweeps,
+  nonnegative concentration clipping, and sO2 ratio calculation.
+
+### Added (2026-06-30) - Chapter 5 Doppler spectrum helper [patch]
+
+- [patch] Added Rust/PyO3 `contrast_agent_doppler_spectrum` and routed Chapter
+  5 Figure 9.3 through Rust-owned contrast-agent IQ synthesis, finite-tone
+  spectrum power, velocity-axis mapping, Nyquist velocity, and Kasai estimate.
+
+### Added (2026-06-30) - Chapter 23 PAM eigenspace spectrum [patch]
+
+- [patch] Added Rust/PyO3 `eigenspace_covariance_eigenvalues` and routed
+  Chapter 23 Figure 22.5 through the deterministic Theorem 22.2 signal/noise
+  eigenvalue split instead of a Python-local stochastic CSD fixture.
+
+### Changed (2026-06-30) - KWaveArray compact per-element sources [patch]
+
+- [patch] Changed `KWaveArray::build_per_element_source` to stream sparse
+  BLI-weighted cell contributions from each element instead of storing one
+  dense 3-D mask per element. The per-cell signal contract and
+  MATLAB/Fortran-order active-cell row ordering are preserved by value tests.
+
+### Added (2026-06-30) - Chapter 14 plane-wave velocity helper [patch]
+
+- [patch] Added Rust/PyO3 `plane_wave_pressure_velocity_1d` and routed Chapter
+  14 Figure 8.3 through it so Rust owns the pressure/particle-velocity plane
+  wave pair and the impedance ratio `u = p/(rho*c)`.
+
+### Added (2026-06-30) - Chapter 23 PAM RF helper [patch]
+
+- [patch] Added Rust/PyO3 `passive_cavitation_point_source_rf` and routed the
+  Chapter 23 passive DAS sensitivity panel through it so Rust owns point-source
+  receive delays, Gaussian emission envelope, carrier phase, and `1/r`
+  spreading before the existing `passive_acoustic_map_das` reconstruction.
+
+### Added (2026-06-30) - Chapter 11 BLI error curves [patch]
+
+- [patch] Added Rust/PyO3 `bli_interpolation_error_curves` and routed the
+  Chapter 11 BLI accuracy panel through it so Rust owns the deterministic
+  sinusoid reconstruction RMS curves; Python now converts the returned RMS
+  series to dB and plots.
+
+### Changed (2026-06-30) - Chapter 7 vector CEM43 binding [patch]
+
+- [patch] Routed Chapter 7 closed-loop CEM43 dose accumulation through the
+  vector Rust/PyO3 `cem43_cumulative` binding instead of an O(n²) Python prefix
+  loop around `compute_cem43`.
+
+### Added (2026-06-30) - Chapter 22 PAM spectrum helper [patch]
+
+- [patch] Added Rust/PyO3
+  `normalized_cavitation_emission_spectrum` and routed Chapter 22/23 passive
+  acoustic mapping Figure 22.1 through it instead of carrying the Lorentzian
+  harmonic/subharmonic and inertial broadband spectrum model in Python.
+
+### Changed (2026-06-30) - Chapter 21 Rust pressure inversion [patch]
+
+- [patch] Routed the Chapter 21 histotripsy comparison's millisecond-pulse
+  intensity-to-pressure inversion through Rust/PyO3
+  `acoustic_pressure_amplitude_from_intensity` before the thermal heat-source
+  calculation.
+
+### Changed (2026-06-30) - Chapter 4 beamforming binding contracts [patch]
+
+- [patch] Routed Chapter 4 transducer-array beam-pattern, grating-lobe,
+  lateral-resolution, 2-D beam-field, and BLI stencil panels through the current
+  Rust/PyO3 binding contracts. The 2-D beam-field panel now passes x/z axes
+  directly to `beam_pattern_2d` instead of allocating a Python mesh.
+
+### Changed (2026-06-30) - Chapter 18 Rust pressure conversion [patch]
+
+- [patch] Routed Chapter 18 sonogenetics activation pressure reconstruction
+  through Rust/PyO3 `acoustic_pressure_amplitude_from_intensity` instead of
+  duplicating `sqrt(2*rho*c*I)` in Python.
+
+### Changed (2026-06-30) - Chapter 33 MEMS book guard [patch]
+
+- [patch] Removed the redundant optional `pykwavers` import branch from Chapter
+  33 CMUT/PMUT figure generation and added focused Python tests proving the
+  script routes MEMS physics through Rust/PyO3 bindings.
+
+### Added (2026-06-30) - Chapter 7 Rust Minnaert inverse [patch]
+
+- [patch] Added Rust/PyO3 `minnaert_radius_for_frequency_m` and routed Chapter
+  7 resonance-marker radii through it instead of duplicating the inverse
+  Minnaert formula in Python.
+
+### Added (2026-06-30) - Chapter 6 Rust intensity conversion [patch]
+
+- [patch] Added Rust/PyO3 `acoustic_pressure_amplitude_from_intensity` and
+  routed Chapter 6 HIFU heat-source pressure setup through that helper instead
+  of duplicating `sqrt(2*rho*c*I)` in Python.
+
+### Added (2026-06-30) - Chapter 8 Rust spreading envelopes [patch]
+
+- [patch] Added Rust/PyO3 `geometric_spreading_intensity_envelopes` and routed
+  the retained Chapter 8 acoustic-propagation spreading-law figure through that
+  helper instead of deriving the normalized `1/r^2` and `1/r` envelopes in
+  Python.
+
+### Changed (2026-06-30) - Chapter 3 Rust Fubini waveform [patch]
+
+- [patch] Routed Chapter 3 Fubini waveform evolution through the existing
+  Rust/PyO3 `fubini_waveform` helper instead of reconstructing the harmonic
+  series in Python. Added focused Rust and PyO3 value-semantic tests for the
+  waveform sinusoid limit and harmonic expansion.
+
+### Added (2026-06-30) - Chapter 2 Rust numerical-method helpers [patch]
+
+- [patch] Added Rust/PyO3 `centered_fd_modified_wavenumber`,
+  `kspace_temporal_correction`, and `fdtd_cfl_stability_region_2d`, then routed
+  Chapter 2 CFL, modified-wavenumber, and k-space correction figure data through
+  those helpers instead of Python-side stencil and sinc formulas.
+
+### Added (2026-06-30) - Chapter 1 Rust wave helpers [patch]
+
+- [patch] Added Rust/PyO3 `gaussian_modulated_pulse_1d` and
+  `dalembert_split_solution_1d`, then routed Chapter 1 Figure 1.1's
+  travelling-pulse source profile and d'Alembert reference through those helpers
+  instead of Python-side Gaussian/carrier and interpolation formulas.
+
+### Added (2026-06-30) - k-Wave cache parity manifest [patch]
+
+- [patch] **`kwavers-python` k-Wave/KWave.jl validation inventory** - added a
+  fast cache-manifest regression that classifies every current k-Wave reference
+  cache as paired pykwavers parity data or explicitly reference-only, verifies at
+  least 40 paired cache families, checks finite nonzero numeric payloads for
+  paired k-Wave/pykwavers outputs, validates every current KWave.jl comparison
+  report as `RESULT: PASS`, parses the report metrics against each script's
+  executable `PARITY_THRESHOLDS`, checks finite metadata plus nonzero CSV/NPY
+  numeric payloads, and decodes each comparison PNG as a finite nonblank image
+  for all six KWave.jl artifact families.
+- [patch] The same manifest now classifies every `*_compare.py` /
+  `compare_*.py` driver as directly pytest-covered or reference/diagnostic, and
+  verifies that each directly covered driver is actually referenced by a
+  `test_kwave*.py` file. It also rejects reference/diagnostic drivers that still
+  have a standard paired k-Wave/pykwavers cache. This prevents silent drift
+  between example drivers, cache artifacts, and the parity suite.
+- [patch] Hardened the direct-coverage reference guard so it no longer counts
+  `test_kwave_cache_manifest.py`'s own manifest literals as pytest coverage. The
+  guard now proves each directly covered driver is referenced by a non-manifest
+  `test_kwave*.py` file, except KWave.jl drivers whose semantic metric/metadata/
+  PNG validation is intentionally owned by the manifest itself.
+- [patch] Hardened the direct `us_bmode_linear_transducer` parity test so it no
+  longer duplicates quick-mode thresholds in the test body. The test now parses
+  the raw scan-line physics-parity block, enforces the report-owned target line
+  emitted by `pykwavers.parity_targets.evaluate_parity`, and decodes both
+  generated B-mode PNG artifacts as finite nonblank images.
+- [patch] Updated the validation chapter parity summary so it reports the
+  current raw B-mode scan-line metrics, moves the log-compressed display panels
+  out of the active physics-validation table, and records the closed
+  axisymmetric circular-piston, focused-bowl, and IVP Gaussian reports.
+  Regenerated the Chapter 20 validation scatter from the same current metrics
+  and updated the sensors chapter's B-mode RMS target note to match the raw
+  scan-line oracle. The acceptance text now distinguishes strict field-tier
+  reference lines from driver-owned quick-tier thresholds, so B-mode raw
+  scan-line PASS is no longer contradicted by a stale global PSNR target.
+  Chapter 20 `fig04` no longer fabricates a noisy pseudo-kwavers trace; it
+  repackages the current cached `at_focused_bowl_AS_compare.py` PASS artifact.
+  The comparison pseudocode now reads scenario-owned `PARITY_THRESHOLDS` instead
+  of duplicating strict field-tier constants. The manifest test now rejects
+  synthetic Chapter 20 parity patterns and verifies that the cached focused-bowl
+  source PNG plus regenerated book PNG remain decodable and nonblank. The
+  Chapter 20 scatter now reads the closed-validation markdown table instead of
+  carrying a second hardcoded metric list, and the manifest verifies the parsed
+  row set. Figures 19.1 and 19.2 now label r = 0.99 and PSNR = 40 dB as strict
+  field-tier references rather than universal acceptance thresholds. The Python
+  parity command block now uses the current `crates/kwavers-python/tests` paths
+  and Miniforge interpreter instead of the obsolete `cd pykwavers` layout, with
+  a manifest regression preventing the stale command form from returning.
+  The manifest also parses the Chapter 20 figure index and verifies each listed
+  PNG decodes plus each paired PDF exists.
+- [patch] Hardened the Chapter 5 diagnostic-imaging figure script so its axial
+  envelope, lateral PSF, Doppler shift, and contrast-bubble amplitude route
+  through `pykwavers` Rust/PyO3 bindings without a SciPy Hilbert fallback or
+  random Python-generated Doppler noise. The manifest now rejects the removed
+  fallback/random tokens, requires the Rust binding calls to remain present,
+  checks the top-level `pykwavers` re-exports for the imaging helper bindings,
+  and decodes all regenerated Chapter 5 PNG/PDF figure artifacts.
+- [patch] Hardened the Chapter 10 elastography figure script so `pykwavers` is a
+  required dependency, optional import guards are removed, the MRE figure uses
+  the Rust `mre_displacement_field` analytical kernel instead of a Python-only
+  cylindrical-inclusion sketch, and the top-level `pykwavers` package exports
+  the MRE helper. The book caption now describes the implemented damped
+  plane-wave model, and the manifest checks Chapter 10 Rust-binding calls,
+  top-level exports, and all six PNG/PDF figure artifacts.
+- [patch] Hardened the Chapter 11 sources/transducers figure script so
+  `pykwavers` is required, optional import guards are removed, array-factor dB
+  rendering uses magnitude to avoid non-finite log paths, and the BLI accuracy
+  panel is computed from the Rust `bli_interpolation_error_curves` helper rather
+  than a duplicate Python formula. The sources chapter caption now names the
+  Rust BLI helper, and the manifest checks Chapter 11 Rust-binding calls,
+  top-level exports, and all seven PNG/PDF figure artifacts.
+- [patch] Hardened the Chapter 12 media/tissue figure script so `pykwavers` is
+  required, optional import guards are removed, and the Pennes steady-state
+  slab profile is computed by the Rust
+  `pennes_steady_state_temperature_profile` analytical kernel rather than a
+  Python-side closed-form duplicate. The media chapter captions now name the
+  Rust bindings used for sound speed, tissue properties, B/A, power-law
+  attenuation, and Pennes bioheat, and the manifest checks Chapter 12
+  Rust-binding calls, top-level exports, and all five PNG/PDF figure artifacts.
+- [patch] Hardened the Chapter 13 photoacoustics figure script so `pykwavers` is
+  required, optional import guards are removed, and the spectroscopic unmixing
+  panel uses deterministic measurement perturbations instead of random
+  Python-generated noise. The photoacoustics chapter caption now describes the
+  deterministic perturbation model, and the manifest checks Chapter 13
+  Rust-binding calls, top-level exports, and all five PNG/PDF figure artifacts.
+- [patch] Hardened the Chapter 14 sensors/measurements figure script so
+  `pykwavers` is required, optional import guards are removed, the hydrophone
+  directivity panel uses Rust `circular_piston_directivity` instead of a
+  mismatched Python rectangular-sinc model, and the noisy sensor recording panel
+  uses seeded Rust `add_noise` instead of Python RNG. The sensors chapter
+  captions now name those Rust binding sources, and the manifest checks Chapter
+  14 Rust-binding calls, top-level exports, and all five PNG/PDF figure
+  artifacts.
+- [patch] Hardened the Chapter 17 inverse-problems figure script so `pykwavers`
+  is required, optional FWI skip paths are removed, and the Tikhonov L-curve
+  fixture uses deterministic measurement perturbation instead of Python RNG.
+  The inverse-problems chapter now labels the SVD panel as the implemented
+  1-D Helmholtz finite-difference Rust helper and names the Rust L-curve/corner
+  helpers behind Figure 18.3. The manifest checks Chapter 17 Rust-binding calls,
+  top-level exports, and all six PNG/PDF figure artifacts. Added Rust/PyO3
+  `eikonal_traveltime_2d` and `kirchhoff_point_scatterer_image_2d`, and routed
+  Figure 18.6 through them instead of Python-side fast-sweeping and
+  diffraction-stack loops.
+- [patch] Hardened the Chapter 18 sonogenetics figure script so `pykwavers` is
+  required, optional import/skip branches are removed, the streaming panel uses
+  Rust `acoustic_streaming_velocity`, and the activation panel now matches the
+  book contract: tension-gated MscL-G22S/TRPC6 route through Rust membrane
+  tension plus Boltzmann gating, while hsTRPA1 routes through a new thin PyO3
+  wrapper over the existing Rust pressure-threshold gate. The sonogenetics
+  captions now match the generated Gorkov, streaming, activation, and CEM43
+  panels, and the manifest checks Chapter 18 Rust-binding calls, top-level
+  exports, and all seven PNG/PDF figure artifacts.
+- [patch] Hardened the Chapter 21 simulation-orchestration figure script so
+  `pykwavers` is required and the bubble-radius comparison routes through the
+  Rust Rayleigh-Plesset, Keller-Miksis, and Gilmore PyO3 solver bindings. The
+  manifest rejects optional import fallbacks, checks the three solver exports,
+  verifies the book text still names the Rust-owned ODE path, and decodes the
+  regenerated PNG/PDF figure artifact.
+- [patch] Hardened the Chapter 34 optoacoustic focused-ultrasound figure script
+  so `pykwavers` is required and the SOAP resolution/gain figure routes through
+  the Rust/PyO3 optoacoustic transducer kernels for numerical aperture,
+  f-number, lateral resolution, and focal gain. The manifest rejects optional
+  import fallbacks, checks the four top-level exports, verifies the book text
+  keeps the Rust single-source-of-truth claim for Eqs. 34.4-34.5, and decodes
+  the regenerated PNG/PDF figure artifact.
+- [patch] Hardened the Chapter 29 pressure-diagnostics helper so `pykwavers` is
+  required and mechanical-index diagnostics route through the Rust/PyO3
+  `kw.mechanical_index` safety kernel. The Python fallback formula and optional
+  import branch were removed, and the Chapter 29 therapy-chapter tests now pin
+  both the computed MI value and the absence of those fallback tokens.
+- [patch] Hardened the Chapter 30 intravascular-ultrasound figure script so
+  `pykwavers` is required and the IVUS helper path has no extension-unavailable
+  fallback branches. Intensity, adiabatic temperature rise, B-mode log
+  compression, RF-line envelope detection, and mechanical index now call the
+  Rust/PyO3 kernels unconditionally, with source regressions guarding against
+  the removed Python duplicate formulas. Added Rust/PyO3 `ivus_vessel_phantom`
+  for the deterministic vessel anatomy, tissue-property fields,
+  impedance-gradient reflectivity, and seeded Rayleigh speckle fixture, leaving
+  Python responsible only for array adaptation and plotting.
+- [patch] Hardened the Chapter 24 BBB-LIFU and Chapter 26 neuromodulation book
+  scripts so `pykwavers` is a direct required import rather than an optional
+  try/except branch with `_HAS_KW` state. The Chapter 24 helper-module import now
+  uses an explicit script-directory path before import, and the therapy-chapter
+  tests guard against reintroducing optional PyO3 import fallbacks while checking
+  the key Rust binding calls remain present. Added
+  `mechanical_index_frequency_sweep` as a Rust/PyO3 safety helper and routed
+  Chapter 24's inertial-cavitation MI frequency curves through it instead of
+  Python-side `constant / sqrt(f_MHz)` formulas. The passive-cavitation drive
+  pressure sweep now uses the existing Rust/PyO3 `mechanical_index_field`
+  helper instead of duplicating the MI equation in Python. Added the Rust/PyO3
+  `bbb_inertial_damage_probability` BBB helper and routed Chapter 24's
+  inertial-cavitation damage-risk curve through it instead of inline NumPy
+  logistic algebra. Added the Rust/PyO3
+  `mechanical_index_cavitation_risk` safety helper and routed Chapter 26's
+  neuromodulation cavitation-risk contour through it instead of inline NumPy
+  logistic algebra. Added the Rust/PyO3
+  `cavitation_therapeutic_window_indices` passive-dose helper and routed
+  Chapter 24's stable-onset, inertial-onset, and controller-cap classification
+  through it instead of Python-side band-ratio scans. Added the Rust/PyO3
+  `cavitation_inertial_fraction_onset_index` passive-dose helper and routed
+  Chapter 24's population-monitor operating-point selection through it instead
+  of Python-side broadband-fraction scans. Added the Rust/PyO3
+  `per_spot_cavitation_dose_grid` delivery helper and routed Chapter 24's
+  per-spot cavitation monitor raster through it instead of Python-side nested
+  steering/interpolation loops. Added the Rust/PyO3
+  `cavitation_monitor_timeseries` helper and routed the shared curve-driven
+  cavitation-monitor trace through it instead of Python-side interpolation,
+  seeded jitter, controller stepping, and dose accumulation. Added the Rust/PyO3
+  `closed_loop_cavitation_sonication` helper and routed the Chapter 24
+  passive-cavitation closed-loop sonication trace through it instead of
+  Python-side stable/inertial interpolation, controller stepping, and dose
+  accumulation. Added the Rust/PyO3 `raster_cavitation_pulsing` delivery helper
+  and routed the shared raster-pulsing monitor through it instead of Python-side
+  steering derating, pressure-sweep interpolation, schedule expansion,
+  residual-bubble shielding, thermal relaxation, coverage, and cumulative-dose
+  resampling. Added the Rust/PyO3 `simulate_population_emission` helper and
+  routed the shared one-pressure population-emission helper through it instead
+  of Python-side bubble-population sampling, per-bubble solver dispatch, trace
+  rejection, Hann FFT spectrum construction, and cavitation-band decomposition.
+  Added the Rust/PyO3 `simulated_population_monitor_timeseries` helper and
+  routed the shared simulated per-pulse population monitor through it instead
+  of Python-side per-pulse population-emission dispatch, controller stepping,
+  acoustic-power scaling, and cumulative-dose integration. Added the Rust/PyO3
+  `population_emission_sweep` helper and routed the Chapter 24 population
+  pressure sweep through it instead of Python-side per-pressure aggregation over
+  the one-pressure population helper. Added the Rust/PyO3
+  `volume_emission_spectrum` and `volume_emission_sweep` helpers and routed the
+  Chapter 24 V_s-integrated analytic spectrum and pressure sweep through them
+  instead of Python-side Keller-Miksis loops, emission conversion, PSD
+  construction, receiver integration, and band decomposition. Classified the
+  remaining summary fraction formatting as presentation-only over Rust-returned
+  arrays, not domain physics.
+- [patch] Reduced the cached-parity PNG sanity helper's peak memory use by
+  replacing Matplotlib float-array image decoding with Pillow size/extrema
+  checks. This preserves nonblank artifact validation while avoiding the
+  dashboard PNG float allocation failure.
+- [patch] Hardened the axisymmetric aperture parity regressions for
+  `at_circular_piston_AS_compare.py` and `at_focused_bowl_AS_compare.py`.
+  Both tests now reuse each example's `PARITY_THRESHOLDS`, `METRICS_PATH`, and
+  `FIGURE_PATH`, add fast current-artifact checks that decode the generated PNGs,
+  and keep the slow full-regeneration tests behind `KWAVERS_RUN_SLOW=1`.
+  The circular-piston analytical comparison now asserts bounded agreement between
+  k-wave-python and pykwavers analytical correlations instead of assuming one
+  solver's correlation must be lower. The analytical-reference thresholds now
+  live in the compare drivers, and the focused-bowl plot path masks the O'Neil
+  singularity so regenerated artifacts no longer emit non-finite analytical
+  curve warnings.
+- [patch] Hardened the 3-D circular-piston and focused-bowl aperture parity
+  regressions so their tests consume script-owned `PARITY_THRESHOLDS` instead
+  of duplicate stale literals. Both tests now add fast current-artifact
+  PASS/PNG checks while keeping full simulator regeneration behind
+  `KWAVERS_RUN_SLOW=1`.
+- [patch] Hardened the direct `at_array_as_source` parity regression by moving
+  the executable PASS contract into `PARITY_THRESHOLDS`, emitting
+  `max_abs_diff` and `peak_ratio` in each report section, and adding a fast
+  report/PNG artifact check. The stale slow-test-only `p_max` absolute-error
+  literal is no longer used as a hidden contract; exact source-mask and
+  distributed-signal invariants remain thresholded at the driver boundary.
+- [patch] Hardened the direct `at_array_as_sensor` parity regression the same
+  way: the driver now owns `PARITY_THRESHOLDS`, emits PSNR, max-absolute
+  difference, and trace extrema needed by fast artifact checks, and makes
+  `combine_sensor_data(..., order="F")` explicit to preserve the current
+  k-wave-python ordering contract.
+- [patch] Hardened the direct `at_linear_array_transducer` parity regression by
+  moving source-mask, source-weighted-mask, and `p_max` field targets into
+  script-owned `PARITY_THRESHOLDS`, adding a fast report/PNG artifact check, and
+  removing the stale slow-test-only `p_max` PSNR literal that contradicted the
+  current executable PASS report.
+- [patch] Hardened the direct `us_defining_transducer` parity regression so its
+  pytest no longer carries duplicate per-sensor trace thresholds. The default
+  test now validates the current PASS report against the example-owned
+  `TRACE_THRESHOLDS`, confirms diagnostic trace metrics are finite, decodes the
+  comparison PNG, and leaves the full simulator regeneration behind
+  `KWAVERS_RUN_SLOW=1`.
+- [patch] Hardened the direct `ivp_photoacoustic_waveforms` parity regression so
+  the example owns the single-trace Pearson/RMS/PSNR/peak-ratio target map, the
+  default pytest path validates the current PASS report plus nonblank PNG, and
+  the slow full 3-D regeneration no longer relies on hidden test-local threshold
+  literals.
+- [patch] Hardened the direct `pr_2D_FFT_line_sensor` parity regression so the
+  example owns reconstruction and ground-truth metric thresholds, emits the
+  reference RMS/PSNR diagnostics needed by the report contract, and the default
+  pytest path validates the PASS report plus both reconstruction and pressure
+  PNG artifacts.
+- [patch] Hardened the direct `pr_2D_TR_line_sensor` parity regression with a
+  driver-owned threshold map for the lossy time-reversal reconstruction, the
+  near-exact FFT reconstruction, and reconstruction-vs-ground-truth diagnostics.
+  The report now emits the reference RMS/PSNR diagnostics, the default pytest
+  path validates all three generated PNG artifacts, and stale slow-test-only
+  time-reversal literals were replaced by the regenerated executable report
+  contract.
+- [patch] Hardened the direct `pr_3D_TR_planar_sensor` parity regression so the
+  example owns its time-reversal and ground-truth thresholds, emits reference
+  RMS/PSNR diagnostics, and the default pytest path validates the PASS report
+  plus time-reversal and pressure PNG artifacts before the slow full simulator
+  path.
+- [patch] Hardened the direct `na_controlling_the_pml` parity regression so the
+  example-owned `PARITY_THRESHOLDS` also covers waveform max-absolute
+  difference and HDF5 writer parity, and the default pytest path validates the
+  current PASS report plus nonblank comparison PNG before the slow full PML
+  sweep.
+- [patch] Hardened the direct `sd_focussed_detector_2D` parity regression so
+  the example owns trace and directivity thresholds, and the default pytest path
+  validates the current PASS report plus both detector-trace and directivity PNG
+  artifacts.
+- [patch] Hardened the direct `sd_focussed_detector_3D` parity regression so
+  the example owns source-specific trace and directivity thresholds, and the
+  default pytest path validates the current PASS report plus both 3-D detector
+  PNG artifacts before the slow full simulator path.
+- [patch] Hardened the direct `sd_directivity_modelling_2D` parity regression so
+  the example owns matrix, trace-summary, and directivity thresholds, and the
+  default pytest path validates the current PASS report plus both trace-matrix
+  and directivity PNG artifacts before the slow full simulator path.
+- [patch] Hardened the direct `ivp_saving_movie_files` parity regression so its
+  default pytest path validates the current PASS report and comparison PNG
+  against the driver-owned `PARITY_THRESHOLDS`. The driver now crops the
+  pykwavers `p_final` field to the same PML-excluded physical interior emitted
+  by k-wave-python before comparing or plotting the final pressure field.
+- [patch] Hardened the direct `na_optimising_performance` parity regression so
+  its default pytest path validates the current PASS report and comparison PNG
+  against the driver-owned `PARITY_THRESHOLDS`. The driver now crops pykwavers
+  `p_final` to the same PML-excluded physical interior emitted by k-wave-python,
+  and the test source-image path now resolves to the repo-root
+  `external/k-wave-python/tests/EXAMPLE_source_two.bmp` path used by the driver.
+- [patch] Hardened the direct `us_bmode_phased_array` parity regression so the
+  strict quick-tier fundamental/harmonic image thresholds live in the compare
+  driver instead of hidden test literals. The default pytest path now validates
+  the current PASS report against those thresholds and decodes both the B-mode
+  comparison PNG and transducer-face debug PNG as finite nonblank images.
+- [patch] Hardened the direct `checkpointing` parity regression so the exact
+  save/resume contract lives in `checkpointing_compare.py`. The default pytest
+  path now validates the current bit-exact PASS report, checkpoint lifecycle
+  metrics, full-grid sensor shape, and comparison PNG without rerunning the
+  slow checkpoint simulation.
+- [patch] Hardened the direct `pr_3D_FFT_planar_sensor` parity regression so
+  the driver owns summary and representative-trace thresholds. Removed a stale
+  one-sample alignment shift after cache inspection showed the raw k-wave-python
+  and pykwavers matrices match at zero lag; the regenerated report records mean
+  Pearson 1.000000, mean RMS ratio 0.999941, and max absolute difference
+  6.219181e-05. The default pytest path now validates the current PASS report
+  and pressure PNG before the slow full simulator regeneration path.
+- [patch] The manifest also enumerates all 51 vendored
+  `external/k-wave-python/examples/**/*.py` sources. Fifty standalone examples
+  must map to an existing local compare/dashboard script; the only current
+  non-standalone source is
+  `legacy/us_bmode_linear_transducer/example_utils.py`. This is a source
+  inventory guard rather than a fresh simulator rerun.
+- [patch] The dashboard source manifest now explicitly classifies the three
+  current non-compare dashboard artifacts:
+  `cavitation_bubble_validation.py`, `hifu_procedure_simulation.py`, and
+  `phase_compare_minimal.py`. Any new non-compare dashboard row must be added to
+  that manifest before the fast parity gate passes.
+- [patch] The manifest now verifies every current dashboard metrics report is
+  nonempty, explicitly records PASS, and contains no non-finite numeric tokens.
+  Regenerated `us_bmode_phased_array_tiny_metrics.txt` with finite image Pearson,
+  PSNR, and RMS-ratio fields instead of an unsupported SSIM `nan`.
+- [patch] Hardened the remaining reference/diagnostic reports that already
+  expose executable thresholds:
+  `diff_homogeneous_medium_diffusion_compare.py`,
+  `diff_homogeneous_medium_source_compare.py`,
+  `ivp_opposing_corners_sensor_mask_compare.py`,
+  `tvsp_acoustic_field_propagator_compare.py`,
+  `tvsp_angular_spectrum_method_compare.py`, and
+  `tvsp_equivalent_source_holography_compare.py`, plus
+  `tvsp_transducer_field_patterns_compare.py`. The manifest now parses the
+  current reports against those driver-owned `PARITY_THRESHOLDS` contracts while
+  decoding each comparison PNG, and self-audits that every reference/diagnostic
+  compare driver exporting `PARITY_THRESHOLDS` is covered by that semantic
+  parser set.
+- [patch] Regenerated the tracked parity dashboard from current metric files and
+  hardened `parity_dashboard.py` so metric rows map back to real current example
+  sources. The dashboard now excludes orphan canonical metric files from totals
+  while listing their filenames, resolves nonstandard source names such as
+  `compare_initial_pressure.py`,
+  `ivp_axisymmetric_simulation_compare.py`, and `hifu_procedure_simulation.py`,
+  classifies standalone analytical validation artifacts under the
+  analytical/canonical backend, records 79/79 PASS current artifacts, resolves
+  report-declared `figure:` / `figure_*:` PNG artifacts, rejects dangling
+  declared figure references, and decodes at least one current per-example PNG
+  for every dashboard row.
+- [patch] Promoted `at_focused_annular_array_3D_compare.py`,
+  `at_focused_annular_array_3D_full_compare.py`, `us_beam_patterns_compare.py`,
+  `na_modelling_absorption_compare.py`, `ivp_3D_simulation_compare.py`,
+  `tvsp_3D_simulation_compare.py`, `tvsp_snells_law_compare.py`, and
+  `na_source_smoothing_compare.py` from reference/diagnostic to direct cached
+  parity coverage, and promoted `us_bmode_phased_array_tiny_compare.py` after
+  factoring its aggregate scan-line thresholds into a reusable
+  `PARITY_THRESHOLDS` contract. The parameterized regression loads the existing
+  k-Wave and pykwavers caches, applies the same k-Wave row permutation as the 3-D
+  planar sensor scripts, verifies finite nonzero image/trace payloads, requires a
+  PASS status in each example report, decodes each comparison PNG as finite and
+  nonblank, and enforces each example's documented metric thresholds. Current
+  cached metrics:
+  annular axial amplitude Pearson 0.999999/0.999892, RMS ratio
+  0.999678/0.992681, PSNR 69.18/45.23 dB;
+  `us_beam_patterns` `p_rms` Pearson 0.999688, RMS ratio 0.921284, PSNR 30.46 dB;
+  `us_beam_patterns` `p_max` Pearson 0.997555, RMS ratio 0.982948, PSNR 34.96 dB;
+  `na_modelling_absorption` pressure Pearson 1.000000, RMS ratio 1.000004, PSNR
+  90.34 dB; `ivp_3D_simulation` pressure Pearson 0.985404, RMS ratio 1.034993,
+  PSNR 50.62 dB; `tvsp_3D_simulation` pressure Pearson 0.966665, RMS ratio
+  1.102110, PSNR 29.94 dB; `tvsp_snells_law` `p_final` Pearson 1.000000, RMS
+  ratio 1.000000, PSNR 239.45 dB; `na_source_smoothing` no-window/Hanning/
+  Blackman traces Pearson 0.999680/1.000000/1.000000 and RMS ratio
+  1.001548/1.000000/1.000000; tiny phased-array scan lines mean Pearson
+  1.000000, mean RMS ratio 0.946366, image RMS ratio 0.946361.
+- [patch] Promoted seven more vendored k-wave-python scenarios from
+  reference/diagnostic to direct cached parity coverage:
+  `na_filtering_part_1_compare.py`, `na_filtering_part_2_compare.py`,
+  `na_filtering_part_3_compare.py`, `na_modelling_nonlinearity_compare.py`,
+  `sd_directivity_modelling_3D_compare.py`,
+  `tvsp_homogeneous_medium_monopole_compare.py`, and
+  `tvsp_steering_linear_array_compare.py`.
+- [patch] Promoted `ivp_1D_simulation_compare.py` to direct cached parity
+  coverage using its global matrix metric contract, including PSNR. The cached
+  report records Pearson 0.999994, RMS ratio 1.000000, and PSNR 63.81 dB
+  against the k-wave-python reference.
+- [patch] Added PSNR to the shared trace metric helper and promoted
+  `tvsp_doppler_effect_compare.py` plus
+  `tvsp_homogeneous_medium_dipole_compare.py` to direct cached parity coverage.
+  The regenerated reports record `tvsp_doppler_effect` Pearson 0.995260, RMS
+  ratio 1.000039, PSNR 28.35 dB and `tvsp_homogeneous_medium_dipole` Pearson
+  0.992315, RMS ratio 0.976013, PSNR 23.70 dB. The direct cached parity gate
+  covers these through the shared parameterized driver.
+- [patch] Promoted four row-permuted IVP drivers to direct cached parity
+  coverage using each script's `sensor_row_perm` contract:
+  `ivp_binary_sensor_mask_compare.py`, `ivp_heterogeneous_medium_compare.py`,
+  `ivp_homogeneous_medium_compare.py`, and
+  `ivp_loading_external_image_compare.py`. Cached report metrics:
+  binary-mask Pearson 1.000000, RMS ratio 1.000000, PSNR 303.35 dB;
+  heterogeneous Pearson 0.999945, RMS ratio 0.999745, PSNR 56.11 dB;
+  homogeneous Pearson 1.000000, RMS ratio 1.000000, PSNR 303.99 dB;
+  external-image Pearson 1.000000, RMS ratio 1.000000, PSNR 302.38 dB.
+  The direct cached parity gate now covers these through the shared
+  parameterized driver.
+- [patch] Promoted the final two upstream-mapped residual drivers to direct
+  cached parity coverage with driver-specific value-semantic contracts.
+  `sd_directional_array_elements_compare.py` compares the script-owned
+  13-element averaged matrix rather than raw sensor rows and records Pearson
+  0.992761, RMS ratio 0.996054, and PSNR 30.69 dB.
+  `ivp_recording_particle_velocity_compare.py` now writes real k-wave-python and
+  pykwavers NPZ caches for pressure plus `ux`/`uy`; the direct test applies the
+  script's sensor-order permutation, gates pressure on all four sensors at
+  Pearson >= 0.99, gates only the dominant velocity component at each sensor at
+  Pearson >= 0.95, and verifies pykwavers directional dominance. Cached report
+  metrics include pressure Pearson 0.998047/0.998047/0.997855/0.997855 and
+  dominant-velocity Pearson 0.986909/0.986909/0.967838/0.967838. The focused
+  parity gate now covers 25 direct cached tests: 22 parameterized cache-backed
+  drivers, two driver-specific contracts, and the tiny phased-array aggregate.
+- [patch] Consolidated cached parity test utilities into
+  `crates/kwavers-python/tests/parity_test_utils.py`, making example-module
+  loading, numeric cache loading, nonzero-payload checks, and PNG validation one
+  shared implementation across the manifest and direct cached parity tests.
+
+### Fixed (2026-06-30) - MVDR denominator guard (AMC-2) [patch]
+
+- [patch] **AMC-2** `kwavers-analysis` - MVDR `compute_weights` and
+  `pseudospectrum` now share a denominator validator for `a^H R^{-1} a`.
+  The validator rejects non-finite values, non-positive real values, and imaginary
+  components larger than a Higham-style complex dot-product roundoff bound. This
+  closes the prior `.re`-only path that silently accepted non-Hermitian covariance
+  defects. Added value-semantic regression tests for both public paths.
+- [patch] **`kwavers-analysis` test hygiene** - cleared package clippy blockers
+  exposed by the gate: default-mutate test configs now use struct initializers,
+  the narrowband plane-wave fixture uses a typed spec, the vacuous GPU compile
+  assertion was removed, and iterator-based assertions replaced index-only loops.
+
 ### Added (2026-06-20) — resolve remaining open items (PHY-13, COV-4 SIR, CLD-9/10, PCF-IQ) [minor]
 
 Implemented every remaining item with a checkable analytical oracle; closed the

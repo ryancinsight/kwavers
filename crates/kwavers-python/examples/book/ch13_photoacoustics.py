@@ -34,12 +34,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-try:
-    import pykwavers as kw
-    _HAS_PYKWAVERS = True
-except ImportError:
-    kw = None
-    _HAS_PYKWAVERS = False
+import pykwavers as kw
 
 REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
 OUT_DIR = os.path.join(REPO_ROOT, "docs", "book", "figures", "ch13")
@@ -69,8 +64,6 @@ def fig01_absorption_spectra() -> None:
     Water: simplified near-IR model — no Rust binding; kept as Python.
     All curves normalised to [0, 1] for direct comparison.
     """
-    if not _HAS_PYKWAVERS:
-        raise ImportError("pykwavers is required for fig01 (HbO2/Hb absorption spectra)")
     lam_nm = np.linspace(650, 1000, 500)
 
     HbO2 = np.asarray(kw.hbo2_molar_absorption(lam_nm))
@@ -113,8 +106,6 @@ def fig02_gruneisen_temperature() -> None:
     Γ = 0 at T ≈ −0.81 °C (where thermal expansion vanishes).
     At 37 °C: Γ ≈ 0.200.
     """
-    if not _HAS_PYKWAVERS:
-        raise ImportError("pykwavers is required for fig02 (Grüneisen parameter)")
     T = np.linspace(0, 80, 300)
     Gamma = np.asarray(kw.gruneisen_parameter_water(T))
 
@@ -144,8 +135,6 @@ def fig03_pa_sphere_signal() -> None:
     initial_pressure_pa = Γ · μ_a · Φ  [Pa] — absorbed energy rise.
     Xu & Wang (2006) Rev. Sci. Instrum. 77:041101, eq. (13).
     """
-    if not _HAS_PYKWAVERS:
-        raise ImportError("pykwavers is required for fig03 (PA sphere signal)")
     R = 0.001    # 1 mm sphere radius
     r_d = 0.05  # 50 mm detector distance
     c = 1500.0
@@ -185,8 +174,6 @@ def fig04_bandwidth_vs_radius() -> None:
     Equivalently: minimum detectable sphere radius R ≈ δz / 2 for transducer BW.
     Xu & Wang (2006) Rev. Sci. Instrum. 77:041101.
     """
-    if not _HAS_PYKWAVERS:
-        raise ImportError("pykwavers is required for fig04 (PA axial resolution)")
     c = 1500.0
     B_Hz = np.logspace(5, 9, 300)   # 0.1 MHz to 1 GHz
     dz_mm = np.array([kw.pa_axial_resolution(b, c) * 1e3 for b in B_Hz])
@@ -220,45 +207,27 @@ def fig05_spectroscopic_unmixing() -> None:
       ε from kw.hbo2_molar_absorption / kw.hb_molar_absorption (Prahl 1999).
     Unmixing via kw.spectroscopic_unmixing_lstsq(spectra_matrix, measurements)
       which solves (AᵀA)x = Aᵀb by Gaussian elimination (Beard 2011).
-    Plot: sO₂ estimate vs true sO₂ for different noise levels.
+    Plot: sO₂ estimate vs true sO₂ for deterministic measurement perturbations.
     """
-    if not _HAS_PYKWAVERS:
-        raise ImportError("pykwavers is required for fig05 (spectroscopic unmixing)")
-
-    # Molar extinction at 760 nm and 850 nm from Rust kernel (Prahl 1999 poly fit)
     lam_unmix = np.array([760.0, 850.0])
-    eps_HbO2 = np.asarray(kw.hbo2_molar_absorption(lam_unmix))  # shape (2,)
-    eps_Hb = np.asarray(kw.hb_molar_absorption(lam_unmix))      # shape (2,)
-    # Extinction matrix: A (n_wavelengths × n_chromophores)
-    E = np.column_stack([eps_HbO2, eps_Hb])   # shape (2, 2)
-
-    # True sO₂ sweep
-    sO2_true = np.linspace(0.0, 1.0, 100)
-    c_HbO2 = sO2_true
-    c_Hb = 1.0 - sO2_true
-    C_true = np.column_stack([c_HbO2, c_Hb])  # (100, 2)
+    perturbations = np.array([0.0, 0.02, 0.05])
+    sweep = kw.spectroscopic_unmixing_so2_sweep(
+        lam_unmix, 0.0, 1.0, 100, perturbations
+    )
+    sO2_true = np.asarray(sweep["true_so2"])
+    sO2_estimates = np.asarray(sweep["estimated_so2_by_perturbation"])
 
     fig, ax = plt.subplots(figsize=(7, 4.5))
-    for noise_level, col, lbl in [(0.0, "#1f77b4", "No noise"),
-                                   (0.02, "#ff7f0e", "2% noise"),
-                                   (0.05, "#2ca02c", "5% noise")]:
-        rng = np.random.default_rng(42)
-        sO2_est_all = []
-        for i in range(len(sO2_true)):
-            PA = E @ C_true[i]   # 2-wavelength PA measurement [a.u.]
-            PA_noisy = PA + noise_level * rng.standard_normal(2) * PA.max()
-            # Rust least-squares unmixing: (AᵀA)x = Aᵀb
-            c_est = np.asarray(kw.spectroscopic_unmixing_lstsq(E, PA_noisy))
-            c_est = np.clip(c_est, 0, None)
-            s = c_est[0] / (c_est.sum() + 1e-30)
-            sO2_est_all.append(float(s))
-        ax.plot(sO2_true, sO2_est_all, color=col, label=lbl)
+    labels = ["No perturbation", "2% perturbation", "5% perturbation"]
+    colors = ["#1f77b4", "#ff7f0e", "#2ca02c"]
+    for estimate, col, lbl in zip(sO2_estimates, colors, labels):
+        ax.plot(sO2_true, estimate, color=col, label=lbl)
 
     ax.plot([0, 1], [0, 1], "k--", linewidth=1, label="Ideal")
     ax.set_xlabel(r"True $sO_2$")
     ax.set_ylabel(r"Estimated $sO_2$")
     ax.set_title("Spectroscopic unmixing: HbO₂/Hb at 760/850 nm\n"
-                 "(kw.spectroscopic_unmixing_lstsq, Beard 2011)")
+                 "(kw.spectroscopic_unmixing_so2_sweep, Beard 2011)")
     ax.legend()
     ax.grid(True, alpha=0.3)
     ax.set_xlim(0, 1)

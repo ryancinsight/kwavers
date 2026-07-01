@@ -1,6 +1,7 @@
 //! Value-semantic tests for continuous-wave Doppler and cross-beam vector flow.
 
 use super::continuous_wave::{ContinuousWaveDoppler, CwDopplerConfig, CwSpectrum};
+use super::continuous_wave_vector_flow_fixture;
 use super::vector_flow::{VectorFlowEstimator, VectorVelocity};
 use std::f64::consts::PI;
 
@@ -140,4 +141,68 @@ fn single_beam_is_rejected() {
 fn projected_length_mismatch_is_rejected() {
     let est = VectorFlowEstimator::new(&[beam(0.3), beam(-0.3)]).unwrap();
     assert!(est.estimate(&[0.1]).is_err());
+}
+
+#[test]
+fn continuous_wave_vector_flow_fixture_uses_rust_doppler_kernels() {
+    let fixture = continuous_wave_vector_flow_fixture(
+        2.5e6,
+        CW_FS,
+        100e3,
+        2.0,
+        5e3,
+        1540.0,
+        2048,
+        VectorVelocity { vx: 0.35, vz: 0.55 },
+        &[25.0_f64.to_radians(), (-25.0_f64).to_radians()],
+    )
+    .unwrap();
+
+    let peak_index = fixture
+        .cw_power
+        .iter()
+        .enumerate()
+        .max_by(|(_, lhs), (_, rhs)| lhs.total_cmp(rhs))
+        .map(|(index, _)| index)
+        .unwrap();
+    let v_peak = fixture.cw_velocity_m_s[peak_index];
+    let dv = (fixture.cw_velocity_m_s[1] - fixture.cw_velocity_m_s[0]).abs();
+    assert!(
+        (v_peak - 2.0).abs() < 3.0 * dv,
+        "CW peak {v_peak} vs 2.0 m/s with dv {dv}"
+    );
+    assert!(
+        2.0 > fixture.pulsed_wave_nyquist_velocity_m_s,
+        "test premise: CW jet exceeds PW Nyquist"
+    );
+    assert!(fixture.vector_error_m_s < 1e-12);
+    assert_eq!(fixture.beam_directions.len(), 2);
+}
+
+#[test]
+fn continuous_wave_vector_flow_fixture_rejects_invalid_domains() {
+    assert!(continuous_wave_vector_flow_fixture(
+        2.5e6,
+        CW_FS,
+        100e3,
+        2.0,
+        5e3,
+        1540.0,
+        0,
+        VectorVelocity { vx: 0.35, vz: 0.55 },
+        &[25.0_f64.to_radians(), (-25.0_f64).to_radians()],
+    )
+    .is_err());
+    assert!(continuous_wave_vector_flow_fixture(
+        2.5e6,
+        CW_FS,
+        100e3,
+        2.0,
+        5e3,
+        1540.0,
+        2048,
+        VectorVelocity { vx: 0.35, vz: 0.55 },
+        &[0.25, 0.25],
+    )
+    .is_err());
 }

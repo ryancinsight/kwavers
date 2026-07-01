@@ -159,6 +159,62 @@ pub fn tikhonov_lcurve(
     (res_norms, sol_norms)
 }
 
+/// Deterministic 1-D Gaussian-deconvolution fixture for L-curve examples.
+///
+/// Builds the row-major Gaussian convolution matrix, two-bump truth signal, and
+/// deterministic sinusoidal perturbation used by the Chapter 17 Tikhonov
+/// L-curve figure.
+///
+/// # Errors
+/// Returns an error if `n < 2`, `sigma <= 0`, or any scalar parameter is
+/// non-finite.
+pub fn gaussian_deconvolution_fixture(
+    n: usize,
+    sigma: f64,
+    perturbation_scale: f64,
+) -> Result<(Vec<f64>, Vec<f64>, Vec<f64>), String> {
+    if n < 2 {
+        return Err("n must be at least two".to_owned());
+    }
+    if !sigma.is_finite() || sigma <= 0.0 {
+        return Err("sigma must be positive and finite".to_owned());
+    }
+    if !perturbation_scale.is_finite() {
+        return Err("perturbation_scale must be finite".to_owned());
+    }
+
+    let inv_n_minus_one = 1.0 / (n - 1) as f64;
+    let t: Vec<f64> = (0..n).map(|i| i as f64 * inv_n_minus_one).collect();
+    let gaussian_norm = sigma * (2.0 * std::f64::consts::PI).sqrt();
+    let mut a = vec![0.0_f64; n * n];
+    for row in 0..n {
+        for col in 0..n {
+            let delta = t[row] - t[col];
+            a[row * n + col] =
+                (-0.5 * delta * delta / (sigma * sigma)).exp() / gaussian_norm / n as f64;
+        }
+    }
+
+    let x_true: Vec<f64> = t
+        .iter()
+        .map(|&ti| {
+            (-0.5 * (ti - 0.3).powi(2) / 0.01).exp()
+                + 0.7 * (-0.5 * (ti - 0.7).powi(2) / 0.01).exp()
+        })
+        .collect();
+    let mut y = vec![0.0_f64; n];
+    for row in 0..n {
+        y[row] = (0..n)
+            .map(|col| a[row * n + col] * x_true[col])
+            .sum::<f64>()
+            + perturbation_scale
+                * ((2.0 * std::f64::consts::PI * 7.0 * t[row]).sin()
+                    + 0.5 * (2.0 * std::f64::consts::PI * 11.0 * t[row]).cos());
+    }
+
+    Ok((a, x_true, y))
+}
+
 // ─── Born inversion ───────────────────────────────────────────────────────────
 
 /// Regularised Born inversion via normal equations.
@@ -269,6 +325,39 @@ pub fn adjoint_gradient_convergence(n_iter: usize, initial_error: f64, decay: f6
     (0..n_iter)
         .map(|i| initial_error * decay.powi(i as i32))
         .collect()
+}
+
+/// Exponential convergence curve with an additive asymptotic floor.
+///
+/// Computes `L(epoch) = initial_value * exp(-epoch / time_constant) + floor`
+/// for each supplied epoch. This owns the Chapter 17 PINN loss-illustration
+/// curve shape while leaving the weighting labels and plotting in Python.
+///
+/// # Errors
+/// Returns an error when `time_constant <= 0` or any input value is non-finite.
+pub fn exponential_convergence_curve(
+    epochs: &[f64],
+    initial_value: f64,
+    time_constant: f64,
+    floor: f64,
+) -> Result<Vec<f64>, String> {
+    if !initial_value.is_finite() {
+        return Err("initial_value must be finite".to_owned());
+    }
+    if !time_constant.is_finite() || time_constant <= 0.0 {
+        return Err("time_constant must be positive and finite".to_owned());
+    }
+    if !floor.is_finite() {
+        return Err("floor must be finite".to_owned());
+    }
+    if epochs.iter().any(|epoch| !epoch.is_finite()) {
+        return Err("epochs must contain only finite values".to_owned());
+    }
+
+    Ok(epochs
+        .iter()
+        .map(|&epoch| initial_value * (-epoch / time_constant).exp() + floor)
+        .collect())
 }
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
@@ -382,7 +471,7 @@ mod tests {
         let mat = helmholtz_1d_fd_matrix(5, k, dx);
         // Interior diagonal: 2/dx² − k²
         let expected_diag = 2.0 / (dx * dx) - k * k;
-        assert!((mat[1 * 5 + 1] - expected_diag).abs() < 1e-6);
+        assert!((mat[6] - expected_diag).abs() < 1e-6);
     }
 
     #[test]
@@ -413,11 +502,64 @@ mod tests {
     }
 
     #[test]
+    fn gaussian_deconvolution_fixture_matches_closed_form_samples() {
+        let (a, x_true, y) =
+            gaussian_deconvolution_fixture(5, 0.05, 0.01).expect("valid fixture parameters");
+
+        assert_eq!(a.len(), 25);
+        assert_eq!(x_true.len(), 5);
+        assert_eq!(y.len(), 5);
+
+        let gaussian_norm = 0.05 * (2.0 * std::f64::consts::PI).sqrt();
+        assert!((a[0] - 1.0 / gaussian_norm / 5.0).abs() <= 1.0e-15);
+        let expected_first_truth = (-0.5_f64 * (0.0_f64 - 0.3_f64).powi(2) / 0.01_f64).exp()
+            + 0.7_f64 * (-0.5_f64 * (0.0_f64 - 0.7_f64).powi(2) / 0.01_f64).exp();
+        assert!((x_true[0] - expected_first_truth).abs() <= 1.0e-15);
+
+        let unperturbed = gaussian_deconvolution_fixture(5, 0.05, 0.0)
+            .expect("valid fixture parameters")
+            .2;
+        assert_ne!(y, unperturbed);
+    }
+
+    #[test]
+    fn gaussian_deconvolution_fixture_rejects_invalid_inputs() {
+        assert!(gaussian_deconvolution_fixture(1, 0.05, 0.01).is_err());
+        assert!(gaussian_deconvolution_fixture(5, 0.0, 0.01).is_err());
+        assert!(gaussian_deconvolution_fixture(5, 0.05, f64::NAN).is_err());
+    }
+
+    #[test]
     fn adjoint_convergence_geometric() {
         let curve = adjoint_gradient_convergence(5, 1.0, 0.5);
         assert!((curve[0] - 1.0).abs() < 1e-12);
         assert!((curve[1] - 0.5).abs() < 1e-12);
         assert!((curve[4] - 0.0625).abs() < 1e-12);
+    }
+
+    #[test]
+    fn exponential_convergence_curve_matches_closed_form() {
+        let epochs = [0.0, 2.0, 4.0];
+        let curve = exponential_convergence_curve(&epochs, 0.5, 2.0, 1.0e-4)
+            .expect("valid convergence parameters");
+
+        assert_eq!(curve.len(), epochs.len());
+        assert_eq!(curve[0], 0.5001);
+        assert!(
+            (curve[1] - (0.5_f64 / std::f64::consts::E + 1.0e-4)).abs() <= 1.0e-15,
+            "epoch-one-tau curve={} expected {}",
+            curve[1],
+            0.5_f64 / std::f64::consts::E + 1.0e-4
+        );
+        assert!(curve[2] < curve[1]);
+    }
+
+    #[test]
+    fn exponential_convergence_curve_rejects_invalid_inputs() {
+        assert!(exponential_convergence_curve(&[0.0], f64::NAN, 1.0, 0.0).is_err());
+        assert!(exponential_convergence_curve(&[0.0], 1.0, 0.0, 0.0).is_err());
+        assert!(exponential_convergence_curve(&[0.0], 1.0, 1.0, f64::NAN).is_err());
+        assert!(exponential_convergence_curve(&[f64::NAN], 1.0, 1.0, 0.0).is_err());
     }
 
     #[test]

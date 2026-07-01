@@ -142,7 +142,13 @@ pub fn delay_and_sum(
     weights: &[f64],
     reference: DelayReference,
 ) -> KwaversResult<Array3<f64>> {
-    let aligned = align_channels(sensor_data, sampling_frequency_hz, delays_s, weights, reference)?;
+    let aligned = align_channels(
+        sensor_data,
+        sampling_frequency_hz,
+        delays_s,
+        weights,
+        reference,
+    )?;
     Ok(sum_aligned(&aligned, weights))
 }
 

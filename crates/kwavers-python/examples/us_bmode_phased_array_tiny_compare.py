@@ -91,6 +91,11 @@ KWAVE_CACHE = OUTPUT_DIR / "us_bmode_phased_array_tiny_kwave_cache.npz"
 PYKWAVERS_CACHE = OUTPUT_DIR / "us_bmode_phased_array_tiny_pykwavers_cache.npz"
 REFRESH_CACHE = os.getenv("KWAVERS_REFRESH_CACHE", "0") == "1"
 CACHE_VERSION = 1
+PARITY_THRESHOLDS: dict[str, float] = {
+    "mean_pearson_r": 0.98,
+    "mean_rms_ratio_min": 0.90,
+    "mean_rms_ratio_max": 1.10,
+}
 
 
 # ── Cache helpers ─────────────────────────────────────────────────────────────
@@ -407,7 +412,7 @@ def main() -> int:
         "us_bmode_phased_array_tiny parity metrics",
         f"grid: {TOTAL_GRID.x}x{TOTAL_GRID.y}x{TOTAL_GRID.z}, PML={PML_SIZE.x}",
         f"transducer: {N_ELEMENTS} elements x {ELEMENT_WIDTH}w x {ELEMENT_LENGTH}l",
-        f"angles: {list(STEERING_ANGLES)}",
+        f"angles: {[int(angle) for angle in STEERING_ANGLES]}",
         f"solver: {label}",
         "",
         "Per-angle (kwave vs pkw scan-line trace):",
@@ -418,16 +423,21 @@ def main() -> int:
         "",
         f"Mean rms_ratio : {mean_rms:.6f}",
         f"Mean pearson_r : {mean_r:.6f}",
-        f"Image SSIM     : {img_m.get('ssim', float('nan')):.6f}",
-        f"Image RMS ratio: {img_m.get('rms_ratio', float('nan')):.6f}",
+        f"Image pearson_r: {img_m['pearson_r']:.6f}",
+        f"Image PSNR dB  : {img_m['psnr_db']:.6f}",
+        f"Image RMS ratio: {img_m['rms_ratio']:.6f}",
         "",
         f"k-wave time    : {kw_time:.1f}s",
         f"pykwavers time : {pkw_time:.1f}s",
     ]
-    _R_TARGET = 0.98
-    _RMS_MIN = 0.90
-    _RMS_MAX = 1.10
-    overall_status = "PASS" if mean_r >= _R_TARGET and _RMS_MIN <= mean_rms <= _RMS_MAX else "FAIL"
+    overall_status = (
+        "PASS"
+        if mean_r >= PARITY_THRESHOLDS["mean_pearson_r"]
+        and PARITY_THRESHOLDS["mean_rms_ratio_min"]
+        <= mean_rms
+        <= PARITY_THRESHOLDS["mean_rms_ratio_max"]
+        else "FAIL"
+    )
     report.append(f"parity_status: {overall_status}")
     save_text_report(METRICS_PATH, "us_bmode_phased_array_tiny metrics", report)
     print(f"Status: {overall_status}")

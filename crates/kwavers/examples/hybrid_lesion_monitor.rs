@@ -70,8 +70,15 @@ fn with_lesion(background: &Array3<f64>, radius: f64) -> Array3<f64> {
 /// Write a normalized grayscale PNG of a 2-D field.
 fn write_png(path: &str, field: &Array2<f64>) {
     let (nx, nz) = field.dim();
-    let hi = field.iter().copied().fold(f64::NEG_INFINITY, f64::max).max(1e-12);
-    let bytes: Vec<u8> = field.iter().map(|&v| ((v / hi).clamp(0.0, 1.0) * 255.0) as u8).collect();
+    let hi = field
+        .iter()
+        .copied()
+        .fold(f64::NEG_INFINITY, f64::max)
+        .max(1e-12);
+    let bytes: Vec<u8> = field
+        .iter()
+        .map(|&v| ((v / hi).clamp(0.0, 1.0) * 255.0) as u8)
+        .collect();
     let Ok(file) = std::fs::File::create(path) else {
         eprintln!("  PNG write failed: {path}");
         return;
@@ -182,7 +189,10 @@ fn main() -> KwaversResult<()> {
             "   {:3}  | {:8.2} | {:15.2} | ({:2},{:2})    | {:11}",
             frame, radius, centre_dc, pi, pj, extent
         );
-        write_png(&format!("hybrid_lesion_frame{frame:02}.png"), &fused.agreement);
+        write_png(
+            &format!("hybrid_lesion_frame{frame:02}.png"),
+            &fused.agreement,
+        );
     }
 
     println!("\n  Wrote {N_FRAMES} fused lesion-image frames (hybrid_lesion_frameNN.png).");

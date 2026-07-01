@@ -338,7 +338,7 @@ neuromodulation should not depend on cavitation or BBB-opening mechanisms.
 
 ![Pennes temperature rise and CEM43 across pressure and duty cycle.](figures/ch26/fig04_thermal_safety.png)
 
-*Figure 25.4. Thermal safety (§25.6): focal ΔT and CEM43 (`kw.acoustic_heat_source_density`, `kw.compute_cem43`) across the pressure / duty-cycle plane, with the ΔT < 2 °C and CEM43 < 0.25 min guardrails.*
+*Figure 25.4. Thermal safety (§25.6): focal ΔT and CEM43 (`kw.acoustic_heat_source_density`, `kw.cem43_cumulative`) across the pressure / duty-cycle plane, with the ΔT < 2 °C and CEM43 < 0.25 min guardrails.*
 
 ---
 
@@ -378,7 +378,7 @@ All physics runs in the kwavers Rust core via PyO3 kernels
 (`kw.{gaussian_beam_pressure_field_py, mechanical_index_field,
 acoustic_intensity_from_amplitude, compute_acoustic_membrane_tension_py,
 boltzmann_open_probability_py, coupled_channel_drive_py, acoustic_heat_source_density,
-compute_cem43, simulate_lif_neuron_py}`); the Python script only orchestrates and
+cem43_cumulative, simulate_lif_neuron_py, lif_response_probability_py}`); the Python script only orchestrates and
 plots. The closed-loop guidance map (Figure 25.6) sweeps the feasible region.
 
 ![Closed-loop parameter map constrained by MI, intensity, heating, and cavitation.](figures/ch26/fig06_guidance_map.png)

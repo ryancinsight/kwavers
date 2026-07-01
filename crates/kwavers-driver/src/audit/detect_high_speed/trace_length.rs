@@ -63,18 +63,9 @@ mod tests {
     use crate::board::{LayerId, NetClassKind, Track};
     use crate::geom::{GridSpec, Nm};
 
-    fn make_board_with_track(
-        net_name: &str,
-        class: NetClassKind,
-        track_length_mm: f64,
-    ) -> Board {
-        let spec = GridSpec::cover(
-            Nm::from_mm(100.0),
-            Nm::from_mm(100.0),
-            Nm::from_mm(0.5),
-            2,
-        )
-        .unwrap();
+    fn make_board_with_track(net_name: &str, class: NetClassKind, track_length_mm: f64) -> Board {
+        let spec =
+            GridSpec::cover(Nm::from_mm(100.0), Nm::from_mm(100.0), Nm::from_mm(0.5), 2).unwrap();
         let mut b = Board::new(spec);
         let net = b.add_net(net_name, class);
         let len = Nm::from_mm(track_length_mm);

@@ -112,6 +112,9 @@ PARITY_THRESHOLDS = {
     "rms_ratio_min": 0.95,
     "rms_ratio_max": 1.05,
     "psnr_db": 30.0,
+    "max_abs_diff": 1.0,
+    "hdf5_dataset_max_abs_diff_max": 0.0,
+    "hdf5_root_attr_mismatch_count": 0,
 }
 
 FIGURE_PATH = DEFAULT_OUTPUT_DIR / "na_controlling_the_pml_compare.png"
@@ -612,6 +615,7 @@ def _run_sweep(*, no_cache: bool) -> dict[str, object]:
         and summary["rms_ratio_min"] >= PARITY_THRESHOLDS["rms_ratio_min"]
         and summary["rms_ratio_max"] <= PARITY_THRESHOLDS["rms_ratio_max"]
         and summary["psnr_db_min"] >= PARITY_THRESHOLDS["psnr_db"]
+        and summary["max_abs_diff_max"] <= PARITY_THRESHOLDS["max_abs_diff"]
     ) else "FAIL"
 
     return {

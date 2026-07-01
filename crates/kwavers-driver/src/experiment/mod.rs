@@ -14,7 +14,7 @@
 //! ├── mod.rs        ← this file (re-exports + public surface)
 //! ├── stimulus.rs   ← Stimulus trait + DefaultStimulus (DIP seam, manifest-agnostic)
 //! ├── acoustic.rs   ← AcousticSimulator trait + PressureMap + InCrateAcousticSim +
-//! │                   (feature-gated) KwaversSim (kwavers-transducer design_array backend)
+//! │                   (feature-gated) KwaversSim (kwavers-transducer propagation backend)
 //! ├── thermal.rs    ← ThermalState + propagate_thermal
 //! ├── dispatch.rs   ← LaneBinding + TileDispatch (lane→tile equal-partition)
 //! ├── metrics.rs    ← ExperimentMetrics + build_beam_report
@@ -27,8 +27,8 @@
 //!
 //! * [`stimulus::DefaultStimulus`] — borrows `manifest.tile_profiles` verbatim.
 //! * [`acoustic::InCrateAcousticSim`] — the default; uses [`crate::physics::acoustic`] functions.
-//! * `acoustic::KwaversSim` (feature `kwavers`) — calls `kwavers_transducer::design_array` for
-//!   the exact element geometry (realized channel count + aperture after pitch quantization).
+//! * `acoustic::KwaversSim` (feature `kwavers`) — calls `kwavers-transducer` to synthesize the
+//!   realized channel geometry and propagate the focused pressure envelope.
 //! * [`runner::run_experiment`] — the public entry point.
 
 pub mod acoustic;

@@ -22,9 +22,8 @@ fn eikonal_homog(n: usize, d: f64, c0: f64) -> (f64, f64) {
     let mut diag_err = 0.0_f64; // everywhere
     for i in 0..n {
         for j in 0..n {
-            let dist = (((i as f64 - m as f64) * d).powi(2)
-                + ((j as f64 - m as f64) * d).powi(2))
-            .sqrt();
+            let dist =
+                (((i as f64 - m as f64) * d).powi(2) + ((j as f64 - m as f64) * d).powi(2)).sqrt();
             if dist < 3.0 * d {
                 continue;
             }
@@ -45,7 +44,10 @@ fn eikonal_is_exact_on_axes_and_bounded_on_diagonals() {
     assert!(axis < 1e-9, "axis error {axis} must be ~0");
     // The first-order FSM diagonal anisotropy is the worst case; the measured
     // constant is ≈ 8.05% (see scale-invariance test), bounded below.
-    assert!(diag < 0.085, "diagonal error {diag} exceeds first-order FSM bound");
+    assert!(
+        diag < 0.085,
+        "diagonal error {diag} exceeds first-order FSM bound"
+    );
 }
 
 #[test]
@@ -82,7 +84,10 @@ fn eikonal_is_slower_through_a_high_slowness_region() {
     // delay across the 6-cell half-speed slab (~ 6·d/750 vs 6·d/1500).
     let t_far = t[[nx - 1, 2, 0]];
     let homog = (nx as f64 - 1.0) * d / 1500.0;
-    assert!(t_far > homog, "slow slab must increase traveltime ({t_far} vs {homog})");
+    assert!(
+        t_far > homog,
+        "slow slab must increase traveltime ({t_far} vs {homog})"
+    );
 }
 
 #[test]
@@ -108,12 +113,8 @@ fn kirchhoff_focuses_a_point_scatterer() {
     let solver = EikonalSolver::from_sound_speed(&grid, &speed).unwrap();
 
     // Aperture: 6 colocated source/receiver positions along j = 0.
-    let aperture: Vec<(usize, usize, usize)> =
-        (0..6).map(|m| (5 * m, 0usize, 0usize)).collect();
-    let tt: Vec<_> = aperture
-        .iter()
-        .map(|&p| solver.solve(p).unwrap())
-        .collect();
+    let aperture: Vec<(usize, usize, usize)> = (0..6).map(|m| (5 * m, 0usize, 0usize)).collect();
+    let tt: Vec<_> = aperture.iter().map(|&p| solver.solve(p).unwrap()).collect();
 
     // True scatterer.
     let scat = (15usize, 18usize, 0usize);

@@ -91,7 +91,6 @@ impl BesselSource {
         self.config.order
     }
 
-
     /// Calculate Bessel beam amplitude at position (x, y, z)
     fn bessel_amplitude(&self, x: f64, y: f64, z: f64) -> f64 {
         // Calculate distance from center
@@ -137,7 +136,6 @@ impl BesselSource {
         // Total amplitude
         bessel_value * phase_term.cos()
     }
-
 }
 
 impl Source for BesselSource {

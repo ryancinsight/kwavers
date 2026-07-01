@@ -118,8 +118,7 @@ fn charge_reservoir_violations_fire_on_under_provisioned_ic() {
         "exactly balanced (I_supply ≋ I_dd) must not flag a violation"
     );
 
-    let spec =
-        GridSpec::cover(Nm::from_mm(20.0), Nm::from_mm(20.0), Nm::from_mm(0.5), 2).unwrap();
+    let spec = GridSpec::cover(Nm::from_mm(20.0), Nm::from_mm(20.0), Nm::from_mm(0.5), 2).unwrap();
     let mut b4 = Board::new(spec);
     let vcc = b4.add_net("+3V3", NetClassKind::Power);
     let gnd = b4.add_net("GND", NetClassKind::Ground);
@@ -277,8 +276,7 @@ fn charge_reservoir_violations_fire_on_under_provisioned_buck() {
         "hotspot must mark the buck's V_IN pad at x = 6.0 mm, not the cap",
     );
 
-    let spec4 =
-        GridSpec::cover(Nm::from_mm(20.0), Nm::from_mm(20.0), Nm::from_mm(0.5), 2).unwrap();
+    let spec4 = GridSpec::cover(Nm::from_mm(20.0), Nm::from_mm(20.0), Nm::from_mm(0.5), 2).unwrap();
     let mut b4 = Board::new(spec4);
     let vin4 = b4.add_net("+12V_IN", NetClassKind::Power);
     let gnd4 = b4.add_net("GND", NetClassKind::Ground);
@@ -400,8 +398,7 @@ fn charge_recycling_passes_when_cr_net_present() {
 #[test]
 fn pulse_skip_fires_when_error_exceeds_tolerance() {
     use crate::audit::detect_power::detect_pulse_skip_violations;
-    let spec =
-        GridSpec::cover(Nm::from_mm(10.0), Nm::from_mm(10.0), Nm::from_mm(0.5), 2).unwrap();
+    let spec = GridSpec::cover(Nm::from_mm(10.0), Nm::from_mm(10.0), Nm::from_mm(0.5), 2).unwrap();
     let mut board = Board::new(spec);
     for i in 0..4 {
         board.add_net(format!("TX_{i}"), NetClassKind::Hv);
@@ -416,8 +413,7 @@ fn pulse_skip_fires_when_error_exceeds_tolerance() {
 #[test]
 fn pulse_skip_passes_within_tolerance() {
     use crate::audit::detect_power::detect_pulse_skip_violations;
-    let spec =
-        GridSpec::cover(Nm::from_mm(10.0), Nm::from_mm(10.0), Nm::from_mm(0.5), 2).unwrap();
+    let spec = GridSpec::cover(Nm::from_mm(10.0), Nm::from_mm(10.0), Nm::from_mm(0.5), 2).unwrap();
     let mut board = Board::new(spec);
     for i in 0..96 {
         board.add_net(format!("TX_{i}"), NetClassKind::Hv);

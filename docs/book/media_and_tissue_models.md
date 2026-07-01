@@ -65,8 +65,9 @@ The following table consolidates values from Duck (1990), Goss et al. (1978), an
 
 ![Sound speed in water vs temperature](figures/ch12/fig01_sound_speed_temperature.png)
 
-**Figure 4.1.** Sound speed in water versus temperature (Del Grosso–Mader); the basis for
-the temperature-dependent `c₀(T)` correction in coupled thermal–acoustic runs.
+**Figure 4.1.** Sound speed in water versus temperature, computed by the Rust
+`kw.water_sound_speed_temperature` binding using the Del Grosso–Mader relation; the basis
+for the temperature-dependent `c₀(T)` correction in coupled thermal–acoustic runs.
 
 **Table 4.1 — Acoustic parameters of biological tissues at 37 °C**
 
@@ -106,9 +107,9 @@ The module also exposes `WATER`, `BLOOD`, `BRAIN_WHITE_MATTER`, `BRAIN_GRAY_MATT
 
 ![Acoustic impedance by tissue](figures/ch12/fig02_impedance_bar.png)
 
-**Figure 4.2.** Acoustic impedance Z₀ = ρ₀c₀ across tissues, from ~1.3 MRayl (fat) to
-~7.8 MRayl (cortical bone); the large tissue–bone and tissue–air mismatches drive the
-reflections of §4.2.1.
+**Figure 4.2.** Acoustic impedance Z₀ = ρ₀c₀ across tissues, with soft-tissue values
+computed through Rust `kw.tissue_properties`; the large tissue–bone and tissue–air
+mismatches drive the reflections of §4.2.1.
 
 ---
 
@@ -207,8 +208,9 @@ correct second-order correction at every grid point without per-call allocation.
 
 ![Nonlinearity parameter B/A by tissue](figures/ch12/fig03_ba_parameter.png)
 
-**Figure 4.3.** Nonlinearity parameter B/A by tissue (Table 4.1); fat's high B/A ≈ 10
-makes subcutaneous layers a dominant source of harmonic generation.
+**Figure 4.3.** Nonlinearity parameter B/A by tissue from the Rust `kw.ba_parameter`
+binding; fat's high B/A ≈ 10 makes subcutaneous layers a dominant source of harmonic
+generation.
 
 ---
 
@@ -318,8 +320,9 @@ $\mathcal{L}_2 = (-\nabla^2)^{(y-1)/2}$, in
 
 ![Power-law absorption and fractional-Laplacian fit](figures/ch12/fig04_fractional_absorption.png)
 
-**Figure 4.4.** Power-law absorption α(f) = α₀fʸ for representative tissues, reproduced by
-the fractional-Laplacian operator used in the PSTD solver (§4.4.3).
+**Figure 4.4.** Power-law absorption α(f) = α₀fʸ from the Rust
+`kw.power_law_attenuation_np_m` binding, matching the fractional-Laplacian operator used
+in the PSTD solver (§4.4.3).
 
 ---
 
@@ -704,8 +707,9 @@ The thermal properties are stored in
 
 ![Pennes bioheat temperature profile](figures/ch12/fig05_bioheat.png)
 
-**Figure 4.5.** Pennes bioheat steady-state temperature rise around an absorbing focus —
-the balance of acoustic heating, thermal conduction, and blood perfusion (§4.7).
+**Figure 4.5.** Pennes bioheat steady-state temperature rise through a uniformly heated
+tissue slab, computed by Rust `kw.pennes_steady_state_temperature_profile`; the profile
+shows the balance of acoustic heating, thermal conduction, and blood perfusion (§4.7).
 
 ---
 
@@ -1339,4 +1343,3 @@ This chapter established:
   (2018). "Measurements of the relationship between CT Hounsfield units and acoustic velocity
   and how it changes with photon energy and reconstruction method." *IEEE Trans. Ultrason.
   Ferroelectr. Freq. Control* 65(7), 1111–1124.
-

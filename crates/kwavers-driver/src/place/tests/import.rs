@@ -22,6 +22,7 @@ use super::*;
 
 // Path to the committed vendor footprints, relative to the crate root.
 const DOCS: &str = "docs/cad_models";
+const CAD_ARCHIVES: &str = "docs/cad_archives/components";
 
 #[test]
 fn imports_real_xc7a100t_fgg484_bga() {
@@ -215,6 +216,29 @@ fn imports_real_hv7355_qfn56() {
     let fp = import_kicad_mod(&p, Role::ActiveIc, &[]).unwrap();
     assert_eq!(fp.pads.len(), 57, "real QFN56 pad map");
     assert_eq!(fp.pad_names.len(), fp.pads.len());
+}
+
+#[test]
+fn imports_real_tc8020_qfn56_and_symbol_map() {
+    let fp_path = format!(
+        "{CAD_ARCHIVES}/hv_driver/TC8020K6_G/KiCADv6/footprints.pretty/QFN56_8X8MC_MCH.kicad_mod"
+    );
+    let sym_path =
+        format!("{CAD_ARCHIVES}/hv_driver/TC8020K6_G/KiCADv6/2026-06-26_20-49-41.kicad_sym");
+    let fp = import_kicad_mod(&fp_path, Role::Power, &["22", "49", "57"]).unwrap();
+    let pins = import_symbol_pinmap(&sym_path).unwrap();
+
+    assert_eq!(fp.pads.len(), 57, "TC8020 QFN56 plus exposed pad");
+    assert_eq!(fp.pad_names.len(), fp.pads.len());
+    assert_eq!(pins.number_of("GP1"), Some("55"));
+    assert_eq!(pins.number_of("GN1"), Some("1"));
+    assert_eq!(pins.number_of("DP1"), Some("41"));
+    assert_eq!(pins.number_of("DN1"), Some("42"));
+    assert_eq!(pins.number_of("SP1"), Some("47"));
+    assert_eq!(pins.number_of("SN1"), Some("51"));
+    assert!(fp.pads[fp.pad_index("22").unwrap()].power_pin);
+    assert!(fp.pads[fp.pad_index("49").unwrap()].power_pin);
+    assert!(fp.pads[fp.pad_index("57").unwrap()].power_pin);
 }
 
 #[test]

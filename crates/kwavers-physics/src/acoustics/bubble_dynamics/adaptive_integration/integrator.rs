@@ -1,6 +1,6 @@
 use super::config::AdaptiveBubbleConfig;
 use super::statistics::IntegrationStatistics;
-use crate::acoustics::bubble_dynamics::keller_miksis::KellerMiksisModel;
+use super::AdaptiveBubbleModel;
 use crate::acoustics::bubble_dynamics::BubbleState;
 use kwavers_core::constants::cavitation::{MAX_RADIUS, MIN_RADIUS};
 use kwavers_core::constants::numerical::{
@@ -11,8 +11,8 @@ use kwavers_core::error::{KwaversResult, PhysicsError};
 
 /// Adaptive integrator for bubble dynamics with sub-cycling
 #[derive(Debug)]
-pub struct AdaptiveBubbleIntegrator<'a> {
-    solver: &'a KellerMiksisModel,
+pub struct AdaptiveBubbleIntegrator<'a, Model: AdaptiveBubbleModel> {
+    solver: &'a Model,
     config: AdaptiveBubbleConfig,
     /// Current adaptive time step
     dt_adaptive: f64,
@@ -23,10 +23,13 @@ pub struct AdaptiveBubbleIntegrator<'a> {
     max_dt_used: f64,
 }
 
-impl<'a> AdaptiveBubbleIntegrator<'a> {
+impl<'a, Model> AdaptiveBubbleIntegrator<'a, Model>
+where
+    Model: AdaptiveBubbleModel,
+{
     /// Create new adaptive integrator
     #[must_use]
-    pub fn new(solver: &'a KellerMiksisModel, config: AdaptiveBubbleConfig) -> Self {
+    pub fn new(solver: &'a Model, config: AdaptiveBubbleConfig) -> Self {
         let dt_adaptive = config.dt_max * INITIAL_TIME_STEP_FRACTION; // Start conservatively
 
         Self {

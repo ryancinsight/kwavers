@@ -137,13 +137,8 @@ mod tests {
     use crate::geom::{GridSpec, Nm};
 
     fn make_board() -> Board {
-        let spec = GridSpec::cover(
-            Nm::from_mm(50.0),
-            Nm::from_mm(50.0),
-            Nm::from_mm(0.5),
-            2,
-        )
-        .unwrap();
+        let spec =
+            GridSpec::cover(Nm::from_mm(50.0), Nm::from_mm(50.0), Nm::from_mm(0.5), 2).unwrap();
         Board::new(spec)
     }
 

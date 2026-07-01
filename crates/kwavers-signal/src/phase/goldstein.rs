@@ -96,10 +96,18 @@ pub fn masked_unwrap_2d(wrapped: &Array2<f64>, mask: &Array2<bool>) -> Array2<f6
     while let Some((r, c)) = queue.pop_front() {
         let cur = out[[r, c]];
         let mut neigh: Vec<(usize, usize)> = Vec::with_capacity(4);
-        if r > 0 { neigh.push((r - 1, c)); }
-        if r + 1 < nr { neigh.push((r + 1, c)); }
-        if c > 0 { neigh.push((r, c - 1)); }
-        if c + 1 < nc { neigh.push((r, c + 1)); }
+        if r > 0 {
+            neigh.push((r - 1, c));
+        }
+        if r + 1 < nr {
+            neigh.push((r + 1, c));
+        }
+        if c > 0 {
+            neigh.push((r, c - 1));
+        }
+        if c + 1 < nc {
+            neigh.push((r, c + 1));
+        }
         for (nr_, nc_) in neigh {
             if mask[[nr_, nc_]] && out[[nr_, nc_]].is_nan() {
                 out[[nr_, nc_]] = cur + wrap_to_pi(wrapped[[nr_, nc_]] - cur);
@@ -197,7 +205,10 @@ mod tests {
         let res = phase_residues(&w);
         let total: i32 = res.iter().sum();
         let nonzero = res.iter().filter(|&&v| v != 0).count();
-        assert_eq!(nonzero, 1, "a single vortex → exactly one residue plaquette");
+        assert_eq!(
+            nonzero, 1,
+            "a single vortex → exactly one residue plaquette"
+        );
         assert_eq!(total.abs(), 1, "residue charge ±1");
         assert!(!is_unwrap_reliable(&w));
     }
@@ -224,7 +235,10 @@ mod tests {
             for c in 0..nc {
                 if mask[[r, c]] {
                     // exact recovery on the valid region (φ(0,0)=0 anchor)
-                    assert!((out[[r, c]] - truth[[r, c]]).abs() < 1e-9, "recover ({r},{c})");
+                    assert!(
+                        (out[[r, c]] - truth[[r, c]]).abs() < 1e-9,
+                        "recover ({r},{c})"
+                    );
                     // re-wrap consistency: only multiples of 2π were added
                     assert!((wrap(out[[r, c]]) - w[[r, c]]).abs() < 1e-9);
                 } else {
@@ -287,15 +301,24 @@ mod tests {
                 }
                 unwrapped += 1;
                 if r + 1 < nr && !out[[r + 1, c]].is_nan() {
-                    assert!((out[[r + 1, c]] - out[[r, c]]).abs() < PI, "row seam at ({r},{c})");
+                    assert!(
+                        (out[[r + 1, c]] - out[[r, c]]).abs() < PI,
+                        "row seam at ({r},{c})"
+                    );
                 }
                 if c + 1 < nc && !out[[r, c + 1]].is_nan() {
-                    assert!((out[[r, c + 1]] - out[[r, c]]).abs() < PI, "col seam at ({r},{c})");
+                    assert!(
+                        (out[[r, c + 1]] - out[[r, c]]).abs() < PI,
+                        "col seam at ({r},{c})"
+                    );
                 }
             }
         }
         // most of the field is unwrapped (only the thin grounded cuts are excluded)
-        assert!(unwrapped as f64 > 0.85 * (nr * nc) as f64, "only {unwrapped} unwrapped");
+        assert!(
+            unwrapped as f64 > 0.85 * (nr * nc) as f64,
+            "only {unwrapped} unwrapped"
+        );
     }
 
     #[test]

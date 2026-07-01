@@ -25,8 +25,8 @@ Usage::
     python ch03_nonlinear_acoustics.py
 
 All figures are saved as both PDF (vector, for LaTeX) and PNG (rasterized, for web).
-Requires: numpy, matplotlib, scipy
-Optional: pykwavers (fig06 only; skips gracefully if absent)
+Requires: numpy, matplotlib
+Requires: pykwavers Rust/PyO3 analytical kernels
 """
 
 import os
@@ -91,10 +91,7 @@ Z_S = kw.shock_formation_distance(P0, F0, C0, RHO0, BETA_WATER)
 
 
 def fubini_waveform(tau: np.ndarray, sigma: float, P0: float, N_harm: int = 30) -> np.ndarray:
-    """Evaluate the Fubini solution (3.21) at normalized distance sigma.
-
-    Bₙ(σ) = 2/(nσ) Jₙ(nσ) from kw.fubini_harmonic_spectrum (Rust kernel).
-    p(τ) = P₀ Σₙ Bₙ(σ) sin(nω₀τ)  — sin synthesis is signal processing.
+    """Evaluate the Rust/PyO3 Fubini solution (3.21) at normalized distance sigma.
 
     Args:
         tau:     Array of retarded-time samples [s].
@@ -105,15 +102,7 @@ def fubini_waveform(tau: np.ndarray, sigma: float, P0: float, N_harm: int = 30) 
     Returns:
         Pressure waveform [Pa] at position sigma*z_s.
     """
-    p = np.zeros_like(tau)
-    if sigma < 1e-12:
-        return P0 * np.sin(OMEGA0 * tau)
-    # Bₙ(σ) normalised amplitudes from Rust (len = N_harm)
-    bn = np.asarray(kw.fubini_harmonic_spectrum(N_harm, sigma))
-    for n_idx, bn_val in enumerate(bn):
-        n = n_idx + 1
-        p += P0 * bn_val * np.sin(n * OMEGA0 * tau)
-    return p
+    return np.asarray(kw.fubini_waveform(tau, P0, F0, sigma, N_harm), dtype=float)
 
 
 def fubini_harmonic_amplitude(n: int, sigma: float, P0: float) -> float:
@@ -357,7 +346,9 @@ if True:
     src_mask_f[src_ix, 0, 0] = 1.0
 
     t_src = np.arange(N_STEPS_SIM) * DT_SIM
-    signal_2d = (P0 * np.sin(OMEGA0 * t_src)).reshape(1, N_STEPS_SIM)
+    signal_2d = np.asarray(kw.fubini_waveform(t_src, P0, F0, 0.0, 1), dtype=float).reshape(
+        1, N_STEPS_SIM
+    )
 
     source = kw.Source.from_mask(src_mask_f, signal_2d, F0)
 
@@ -383,21 +374,18 @@ if True:
     )
     result = sim.run(time_steps=N_STEPS_SIM, dt=DT_SIM)
 
-    # ── Extract harmonic amplitudes via windowed FFT ───────────────────────────
+    # ── Extract harmonic amplitudes via Rust-owned windowed FFT ────────────────
     sensor_data = np.asarray(result.sensor_data)  # (4, N_STEPS_SIM)
     dt_run = float(result.dt)
     n_steady_samp = int(N_STEADY_PERIODS / (F0 * dt_run))
     N_HARM = 3  # harmonics n = 1, 2, 3
 
-    pstd_amps = np.zeros((len(SENSOR_IX), N_HARM))
-    for i_s in range(len(SENSOR_IX)):
-        ts = sensor_data[i_s, -n_steady_samp:]
-        win = np.hanning(len(ts))
-        P_f = np.abs(np.fft.rfft(ts * win)) * 2.0 / win.sum()
-        df = 1.0 / (len(ts) * dt_run)
-        for n in range(1, N_HARM + 1):
-            idx_f = int(round(n * F0 / df))
-            pstd_amps[i_s, n - 1] = P_f[idx_f] if idx_f < len(P_f) else 0.0
+    pstd_amps = np.asarray(
+        kw.hann_windowed_harmonic_amplitudes(
+            sensor_data[:, -n_steady_samp:], dt_run, F0, N_HARM
+        ),
+        dtype=float,
+    )
 
     fubini_amps = np.zeros((len(SENSOR_IX), N_HARM))
     for i_s, ix in enumerate(SENSOR_IX):

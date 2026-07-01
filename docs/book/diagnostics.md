@@ -303,13 +303,16 @@ single-beam geometries are rejected (singular `M`).
 
 ![Doppler power spectrum and velocity estimate](figures/ch05/fig03_doppler_spectrum.png)
 
-*Figure 9.3. Doppler power spectrum and the autocorrelation (Kasai) mean-velocity estimate (§9.3).*
+*Figure 9.3. Doppler power spectrum and the autocorrelation (Kasai) mean-velocity estimate (§9.3). Rust/PyO3 `contrast_agent_doppler_spectrum` generates the contrast-agent IQ trace, finite-tone spectrum, velocity axis, and Kasai estimate after `solve_rayleigh_plesset` supplies the bubble-scattering amplitude.*
 
 ![Continuous-wave and vector flow Doppler](figures/ch05/fig11_cw_vector_doppler.png)
 
-*Figure 9.4. (a) CW Doppler resolves a high-velocity jet that aliases under PW
-Doppler (Theorem above, §9.3.4). (b) Cross-beam vector flow recovers the full
-velocity vector from two angled beams, removing the angle assumption (§9.3.5).*
+*Figure 9.4. Rust/PyO3 `continuous_wave_vector_flow_fixture` synthesizes the CW
+tone, computes the Rust `ContinuousWaveDoppler` spectrum, projects beam
+velocities, and recovers the vector with Rust `VectorFlowEstimator`. (a) CW
+Doppler resolves a high-velocity jet that aliases under PW Doppler (Theorem
+above, §9.3.4). (b) Cross-beam vector flow recovers the full velocity vector
+from two angled beams, removing the angle assumption (§9.3.5).*
 
 ---
 

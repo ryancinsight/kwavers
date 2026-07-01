@@ -91,9 +91,7 @@ pub(crate) fn build_exponent_strata(
         distinct
     } else {
         (0..MAX_STRATA)
-            .map(|m| {
-                y_min + (y_max - y_min) * (m as f64) / ((MAX_STRATA - 1) as f64)
-            })
+            .map(|m| y_min + (y_max - y_min) * (m as f64) / ((MAX_STRATA - 1) as f64))
             .collect()
     };
     let m_count = exponents.len();
@@ -121,12 +119,11 @@ pub(crate) fn build_exponent_strata(
         .and(y_field)
         .for_each(|lo, t, &y| {
             // Largest m with exponents[m] ≤ y, clamped so m+1 is in range.
-            let m = match exponents.binary_search_by(|e| {
-                e.partial_cmp(&y).expect("finite exponent")
-            }) {
-                Ok(i) => i.min(m_count - 2),
-                Err(i) => i.saturating_sub(1).min(m_count - 2),
-            };
+            let m =
+                match exponents.binary_search_by(|e| e.partial_cmp(&y).expect("finite exponent")) {
+                    Ok(i) => i.min(m_count - 2),
+                    Err(i) => i.saturating_sub(1).min(m_count - 2),
+                };
             let denom = exponents[m + 1] - exponents[m];
             *lo = m as u32;
             *t = if denom > 0.0 {

@@ -128,7 +128,10 @@ mod tests {
         for hu_centi in 1..=400 {
             let hu = hu_centi as f64 * 5.0; // 5 … 2000 HU
             let rho = HounsfieldUnits::to_density(hu);
-            assert!(rho > prev, "density not increasing at HU={hu}: {rho} ≤ {prev}");
+            assert!(
+                rho > prev,
+                "density not increasing at HU={hu}: {rho} ≤ {prev}"
+            );
             prev = rho;
         }
     }
@@ -141,7 +144,10 @@ mod tests {
         let rho = HounsfieldUnits::to_density(hu);
         let c = HounsfieldUnits::to_sound_speed(hu);
         assert!((c - (rho + 349.0) / 0.893).abs() < 1e-9);
-        assert!((1480.0..=1560.0).contains(&c), "water speed {c} m/s out of band");
+        assert!(
+            (1480.0..=1560.0).contains(&c),
+            "water speed {c} m/s out of band"
+        );
         // from_density inverts the soft-tissue segment (930 ≤ HU ≤ 1098).
         assert!((HounsfieldUnits::from_density(rho) - hu).abs() < 1e-6);
         // Impedance identity.

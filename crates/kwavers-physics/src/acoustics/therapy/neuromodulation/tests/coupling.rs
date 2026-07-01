@@ -73,7 +73,7 @@ fn window_mean_mv(eps: f64) -> f64 {
         .time_ms
         .iter()
         .zip(simulate_nice(&cfg).voltage_mv)
-        .filter(|(&t, _)| t >= 3.0 && t <= 11.0)
+        .filter(|(&t, _)| (3.0..=11.0).contains(&t))
         .map(|(_, v)| v)
         .collect();
     win.iter().sum::<f64>() / win.len() as f64
@@ -173,7 +173,7 @@ fn bls_accumulates_membrane_charge() {
             .zip(&tr.charge_nc_cm2)
             .filter(|(&t, _)| t < cfg.offset_ms)
             .map(|(_, &q)| q)
-            .last()
+            .next_back()
             .unwrap();
         q_end - 1.0 * V_REST // minus resting charge (C_m0·V_rest, C_m0 = 1)
     };

@@ -149,6 +149,12 @@ PARITY_THRESHOLDS = {
     "rms_ratio_min": 0.75,
     "rms_ratio_max": 1.30,
     "psnr_db":      14.0,
+    "source_pearson_r": 0.995,
+    "source_rms_ratio_min": 0.99,
+    "source_rms_ratio_max": 1.01,
+    "source_peak_ratio_min": 0.99,
+    "source_peak_ratio_max": 1.01,
+    "source_rmse_max": 1e-2,
 }
 
 # ---------------------------------------------------------------------------

@@ -31,12 +31,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-try:
-    import pykwavers as kw
-    _HAS_PYKWAVERS = True
-except ImportError:
-    kw = None
-    _HAS_PYKWAVERS = False
+import pykwavers as kw
 
 REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
 OUT_DIR = os.path.join(REPO_ROOT, "docs", "book", "figures", "ch18")
@@ -59,6 +54,20 @@ kB = 1.38e-23  # J/K
 T_body = 310.0  # K (37°C)
 
 
+SONOGENETIC_CHANNELS = [
+    ("MscL-G22N", 2.35, 6.5, "#9467bd"),
+    ("Piezo1", 2.5, 20.0, "#2ca02c"),
+    ("MscL-G22S", 4.7, 6.5, "#1f77b4"),
+    ("TRPC6", 5.0, 4.5, "#d62728"),
+    ("MscS", 5.5, 1.2, "#ff7f0e"),
+]
+
+
+def boltzmann_slope_mn_m(gating_area_nm2: float, temperature_k: float = T_body) -> float:
+    """Convert gating area [nm²] to the Rust binding's tension slope [mN/m]."""
+    return kB * temperature_k / (gating_area_nm2 * 1e-18) * 1e3
+
+
 # ── Figure 01: Boltzmann channel gating ──────────────────────────────────────
 def fig01_channel_gating() -> None:
     """
@@ -74,26 +83,13 @@ def fig01_channel_gating() -> None:
     Sukharev 1997 / Sawada 2015 / Li 2026; MscS Nomura 2012; Piezo1 Cox 2016;
     TRPC6 Suchyna 2000 / Matsushita 2024.
     """
-    if not _HAS_PYKWAVERS:
-        raise ImportError("pykwavers is required for fig01 (channel gating)")
     T_K = 310.0           # body temperature θ [K]
-    k_B = 1.380649e-23    # J/K
-
-    # (name, T_half [mN/m], A_gate [nm²], colour) — kwavers canonical_params SSOT,
-    # ordered by sensitivity (lowest half-tension first).
-    channels = [
-        ("MscL-G22N", 2.35, 6.5, "#9467bd"),
-        ("Piezo1", 2.5, 20.0, "#2ca02c"),
-        ("MscL-G22S", 4.7, 6.5, "#1f77b4"),
-        ("TRPC6", 5.0, 4.5, "#d62728"),
-        ("MscS", 5.5, 1.2, "#ff7f0e"),
-    ]
     gamma = np.ascontiguousarray(np.linspace(0.0, 10.0, 600))  # tension [mN/m]
 
     fig, ax = plt.subplots(figsize=(7.5, 4.5))
-    for name, t_half_mn, a_gate_nm2, col in channels:
+    for name, t_half_mn, a_gate_nm2, col in SONOGENETIC_CHANNELS:
         # e-fold tension slope from the canonical gating area: slope = k_B·θ/A_gate.
-        slope_mn = k_B * T_K / (a_gate_nm2 * 1e-18) * 1e3
+        slope_mn = boltzmann_slope_mn_m(a_gate_nm2, T_K)
         p_open = np.asarray(kw.boltzmann_open_probability_py(gamma, t_half_mn, slope_mn, T_K))
         ax.plot(gamma, p_open, color=col,
                 label=rf"{name} ($T_{{1/2}}$={t_half_mn} mN/m, $A_g$={a_gate_nm2} nm$^2$)")
@@ -173,23 +169,24 @@ def fig02_radiation_force() -> None:
 # ── Figure 03: Streaming shear stress ────────────────────────────────────────
 def fig03_streaming_shear() -> None:
     """
-    Acoustic streaming velocity: v_s = I α / (2 ρ c² f)  [Nyborg 1953]
+    Acoustic streaming velocity: v_s = α I L²/(2 μ c)  [Eckart 1948]
     Shear stress on membrane: τ = η v_s / δ_BL  where δ_BL is boundary layer.
+    The streaming velocity is computed by kw.acoustic_streaming_velocity; Python
+    only sweeps intensity and converts velocity to wall shear for plotting.
     """
     I_Wcm2 = np.logspace(-1, 3, 300)  # 0.1 to 1000 W/cm²
     I_Wm2 = I_Wcm2 * 1e4
 
     alpha = 1.0    # Np/m at 1 MHz (water)
-    rho = 998.0
     c = 1500.0
-    f = 1e6
     eta = 1e-3     # Pa·s dynamic viscosity
     delta_BL = 0.56e-6  # boundary layer ~0.56 µm at 1 MHz
+    path_length_m = 50e-6
 
-    v_s = I_Wm2 * alpha / (2 * rho * c**2)  # but this is Eckart streaming...
-    # More standard: v_s = 2 alpha I / (rho omega)
-    omega = 2 * np.pi * f
-    v_s_eckart = 2 * alpha * I_Wm2 / (rho * omega)
+    v_s_eckart = np.array([
+        kw.acoustic_streaming_velocity(float(i), eta, alpha, c, path_length_m)
+        for i in I_Wm2
+    ])
 
     tau = eta * v_s_eckart / delta_BL  # Pa
 
@@ -197,7 +194,7 @@ def fig03_streaming_shear() -> None:
     ax1.loglog(I_Wcm2, v_s_eckart * 1e6, color="#1f77b4")
     ax1.set_xlabel(r"Intensity $I$ (W/cm²)")
     ax1.set_ylabel(r"Streaming velocity $v_s$ (µm/s)")
-    ax1.set_title(r"Acoustic streaming: $v_s = 2\alpha I/(\rho\omega)$")
+    ax1.set_title(r"Acoustic streaming: $v_s = \alpha I L^2/(2\mu c)$")
     ax1.grid(True, which="both", alpha=0.3)
 
     ax2.loglog(I_Wcm2, tau, color="#d62728")
@@ -222,8 +219,6 @@ def fig04_safety_budget() -> None:
     CEM43 dose via kw.cem43_at_temperatures(T_arr, t_on_s) [Rust kernel, min].
     t_on = t_stim · DC (on-time in seconds varies per DC).
     """
-    if not _HAS_PYKWAVERS:
-        raise ImportError("pykwavers is required for fig04 (CEM43 safety budget)")
     DC = np.linspace(0.001, 0.5, 300)  # 0.1% to 50%
     alpha_tissue = 2.0  # Np/m at 0.5 MHz
     rho_b = 1040.0
@@ -258,50 +253,59 @@ def fig04_safety_budget() -> None:
 # ── Figure 05: Activation threshold comparison ────────────────────────────────
 def fig05_activation_comparison() -> None:
     """
-    Compare activation parameters:
-    - Optogenetics: μW/mm² light intensity, ms resolution
-    - Sonogenetics: mW/cm² ultrasound, ms resolution
-    Show spatial resolution vs energy per pulse for both.
+    Channel open probability vs spatial-peak pulse-average intensity.
+
+    Tension-gated channels use kw.compute_acoustic_membrane_tension_py followed
+    by kw.boltzmann_open_probability_py. hsTRPA1 uses radiation pressure I/c and
+    kw.pressure_threshold_open_probability_py.
     """
-    # Representative data points (approximate from literature)
-    methods = {
-        "Optogenetics (ChR2)": {
-            "spatial_um": 10,   # µm resolution
-            "energy_nJ": 0.01,  # nJ/pulse
-            "col": "#1f77b4", "mk": "o",
-        },
-        "Optogenetics (C1V1)": {
-            "spatial_um": 10,
-            "energy_nJ": 0.1,
-            "col": "#ff7f0e", "mk": "o",
-        },
-        "Sonogenetics (MscL-G22S)": {
-            "spatial_um": 1000,  # ~1 mm with focused US
-            "energy_nJ": 1000,   # ~1 µJ
-            "col": "#d62728", "mk": "^",
-        },
-        "Sonogenetics (TRPA1)": {
-            "spatial_um": 2000,
-            "energy_nJ": 5000,
-            "col": "#9467bd", "mk": "^",
-        },
-        "Focused TUS (neuromod)": {
-            "spatial_um": 5000,
-            "energy_nJ": 50000,
-            "col": "#8c564b", "mk": "s",
-        },
-    }
+    rho = 1000.0
+    c = 1500.0
+    radius_m = 10e-6
+    intensity_w_m2 = np.ascontiguousarray(np.logspace(2.0, 6.0, 500))
+    pressure_pa = np.ascontiguousarray(
+        kw.acoustic_pressure_amplitude_from_intensity(intensity_w_m2, rho, c)
+    )
+    tension_mn_m = np.asarray(
+        kw.compute_acoustic_membrane_tension_py(pressure_pa, rho, c, radius_m)
+    )
+    radiation_pressure_pa = np.ascontiguousarray(intensity_w_m2 / c)
+
+    curves = []
+    for name, half_tension_mn_m, gating_area_nm2, color in [
+        ("MscL-G22S", 4.7, 6.5, "#1f77b4"),
+        ("TRPC6", 5.0, 4.5, "#d62728"),
+    ]:
+        p_open = np.asarray(
+            kw.boltzmann_open_probability_py(
+                tension_mn_m,
+                half_tension_mn_m,
+                boltzmann_slope_mn_m(gating_area_nm2),
+                T_body,
+            )
+        )
+        curves.append((name, p_open, color))
+
+    hs_trpa1 = np.asarray(
+        kw.pressure_threshold_open_probability_py(
+            radiation_pressure_pa,
+            35.6,
+            10.0,
+        )
+    )
+    curves.append(("hsTRPA1", hs_trpa1, "#9467bd"))
 
     fig, ax = plt.subplots(figsize=(8, 5))
-    for name, d in methods.items():
-        ax.scatter(d["energy_nJ"], d["spatial_um"],
-                   s=120, color=d["col"], marker=d["mk"], zorder=5, label=name)
+    for name, p_open, color in curves:
+        ax.semilogx(intensity_w_m2, p_open, color=color, label=name)
 
+    ax.axhline(0.5, color="k", linestyle="--", linewidth=0.8, label=r"$P_\mathrm{open}=0.5$")
+    ax.axvline(500.0, color="#666", linestyle=":", linewidth=1.0, label=r"500 W/m$^2$")
+    ax.set_xlabel(r"Spatial-peak pulse-average intensity $I_\mathrm{SPPA}$ (W/m²)")
+    ax.set_ylabel(r"Open probability $P_\mathrm{open}$")
+    ax.set_title("Sonogenetic channel activation vs ultrasound intensity")
+    ax.set_ylim(0, 1.02)
     ax.set_xscale("log")
-    ax.set_yscale("log")
-    ax.set_xlabel("Energy per pulse (nJ)")
-    ax.set_ylabel("Spatial resolution (µm)")
-    ax.set_title("Activation threshold: sonogenetics vs optogenetics")
     ax.legend(fontsize=8)
     ax.grid(True, which="both", alpha=0.3)
     fig.tight_layout()
@@ -351,9 +355,6 @@ def fig07_lif_raster_vs_duty() -> None:
     duty cycle. simulate_lif_neuron_py (Rust LIF, Koch 1999) integrates V_m(t) and
     returns spike times; higher duty cycle deposits more charge → more spikes.
     """
-    if not _HAS_PYKWAVERS:
-        print("  [skip fig07] pykwavers unavailable")
-        return
     dt_s = 1.0e-4
     t_total = 1.0  # s
     n = int(t_total / dt_s)

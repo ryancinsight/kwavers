@@ -5,6 +5,19 @@ use ndarray::Array3;
 use num_complex::Complex64;
 use std::f64::consts::PI;
 
+/// Parameters for deterministic plane-wave fixture generation.
+#[derive(Clone, Copy, Debug)]
+pub(super) struct PlaneWaveDataSpec {
+    pub(super) n_sensors: usize,
+    pub(super) sensor_spacing_m: f64,
+    pub(super) n_samples: usize,
+    pub(super) sampling_frequency_hz: f64,
+    pub(super) signal_frequency_hz: f64,
+    pub(super) angle_deg: f64,
+    pub(super) sound_speed_m_per_s: f64,
+    pub(super) snr_db: f64,
+}
+
 /// Generate synthetic array data with a plane wave from a known direction.
 ///
 /// # Mathematical Model
@@ -18,24 +31,19 @@ use std::f64::consts::PI;
 /// - k = 2πf₀/c (wavenumber)
 /// - d_m = position of sensor m
 /// - θ = angle of arrival
-pub(super) fn generate_plane_wave_data(
-    n_sensors: usize,
-    sensor_spacing_m: f64,
-    n_samples: usize,
-    sampling_frequency_hz: f64,
-    signal_frequency_hz: f64,
-    angle_deg: f64,
-    sound_speed_m_per_s: f64,
-    snr_db: f64,
-) -> Array3<f64> {
+pub(super) fn generate_plane_wave_data(spec: PlaneWaveDataSpec) -> Array3<f64> {
+    let n_sensors = spec.n_sensors;
+    let sensor_spacing_m = spec.sensor_spacing_m;
+    let n_samples = spec.n_samples;
+    let sampling_frequency_hz = spec.sampling_frequency_hz;
+    let signal_frequency_hz = spec.signal_frequency_hz;
+    let angle_rad = spec.angle_deg * PI / 180.0;
+    let k = TWO_PI * signal_frequency_hz / spec.sound_speed_m_per_s;
     let mut data = Array3::<f64>::zeros((n_sensors, 1, n_samples));
-
-    let angle_rad = angle_deg * PI / 180.0;
-    let k = TWO_PI * signal_frequency_hz / sound_speed_m_per_s;
 
     // Signal power (assuming unit amplitude)
     let signal_power = 0.5; // RMS power of cos wave with amplitude 1
-    let noise_power = signal_power / 10.0_f64.powf(snr_db / 10.0);
+    let noise_power = signal_power / 10.0_f64.powf(spec.snr_db / 10.0);
     let noise_std = noise_power.sqrt();
 
     for sensor_idx in 0..n_sensors {

@@ -7,12 +7,15 @@ Figures produced:
   fig02: Minnaert resonance frequency vs bubble radius (Theorem 7.2)
   fig03: PCD spectrum — FFT of bubble wall velocity (Keller-Miksis, SC vs IC)
   fig04: PCD-feedback controller convergence — KM-derived SC/IC signals
-  fig05: Closed-loop dose accumulation — CEM43 vs time (pykwavers.compute_cem43)
+  fig05: Closed-loop dose accumulation — CEM43 vs time (pykwavers.cem43_cumulative)
 
 Physics:
   Bubble dynamics: pykwavers.solve_keller_miksis (Keller & Miksis 1980, Rust RK4).
-  Thermal dosimetry: pykwavers.compute_cem43 (Sapareto & Dewey 1984).
-  Python is used only for FFT, control logic, and plotting.
+  Minnaert inverse marker radii: pykwavers.minnaert_radius_for_frequency_m.
+  PCD spectra and controller traces: pykwavers.keller_miksis_pcd_spectrum and
+  pykwavers.keller_miksis_pcd_controller_trace.
+  Thermal dosimetry: pykwavers.cem43_cumulative (Sapareto & Dewey 1984).
+  Python is used only for axis adaptation and plotting.
 
 Output directory: docs/book/figures/ch07/
 Requires: numpy, matplotlib, pykwavers
@@ -61,7 +64,6 @@ KAPPA = 1.4          # polytropic index (adiabatic)
 C_L = 1500.0         # sound speed [m/s]
 PV = 2338.0          # vapour pressure at 20°C [Pa]
 F0_DRV = 1.0e6       # driving frequency [Hz]
-OMEGA = 2 * np.pi * F0_DRV
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Helper: run Keller-Miksis integrator (Rust RK4)
@@ -129,8 +131,8 @@ fig, ax = plt.subplots(figsize=(7, 4.5))
 ax.loglog(R0_arr * 1e6, f_minnaert / 1e6, color="C0", lw=2, label="Minnaert (Eq. 7.3)")
 
 for f_mark, label_m, col_m in [(1, "1 MHz", "C1"), (5, "5 MHz", "C2"), (0.5, "0.5 MHz", "C3")]:
-    # Inverse Minnaert: R₀ = (1/2π f)·√(3κP₀/ρ) — algebraic rearrangement, no binding.
-    R_mark = (1.0 / (2 * np.pi * f_mark * 1e6)) * np.sqrt(3 * KAPPA * P0 / RHO_L)
+    # Inverse Minnaert marker radius is computed by the Rust/PyO3 closed-form helper.
+    R_mark = kw.minnaert_radius_for_frequency_m(f_mark * 1e6, KAPPA, P0, RHO_L)
     ax.axvline(R_mark * 1e6, color=col_m, lw=1.0, ls=":", alpha=0.7)
     ax.axhline(f_mark, color=col_m, lw=0.8, ls=":")
     ax.text(
@@ -171,18 +173,23 @@ p_cases = [(50e3, "Stable Cavitation (SC)\n$P_a = 50$ kPa, MI = 0.050", "C0"),
 
 fig, axes = plt.subplots(1, 2, figsize=(12, 4.5), sharey=True)
 for ax, (p_a, title_s, col) in zip(axes, p_cases):
-    _, _, rdot = _km(R0_PCD, p_a, N_CYC_PCD, N_PER_PCD)
-    dt_km = (N_CYC_PCD / F0_DRV) / (N_CYC_PCD * N_PER_PCD)
-
-    # Discard first 20 cycles (transient), use remaining 30 cycles
-    n_trans = 20 * N_PER_PCD
-    rdot_s = rdot[n_trans:]
-    rdot_s = rdot_s - rdot_s.mean()
-    window = np.hanning(len(rdot_s))
-    spec = np.abs(np.fft.rfft(rdot_s * window)) ** 2
-    freq = np.fft.rfftfreq(len(rdot_s), d=dt_km) / 1e6  # MHz
-
-    spec_dB = 10 * np.log10(spec / spec.max() + 1e-12)
+    spectrum = kw.keller_miksis_pcd_spectrum(
+        R0_PCD,
+        p_a,
+        F0_DRV,
+        N_CYC_PCD,
+        N_PER_PCD,
+        20,
+        P0,
+        RHO_L,
+        SIGMA,
+        MU_L,
+        KAPPA,
+        PV,
+        C_L,
+    )
+    freq = np.asarray(spectrum["frequency_hz"]) / 1e6
+    spec_dB = np.asarray(spectrum["normalized_psd_db"])
     ax.plot(freq, spec_dB, color=col, lw=0.8)
 
     for n in range(1, 5):
@@ -215,28 +222,6 @@ N_PER_CTRL = 1000   # steps per cycle (speed-optimised for 40 controller steps)
 N_CYC_CTRL = 5      # cycles per controller evaluation
 
 
-def _km_signals(p_a_pa: float) -> tuple[float, float]:
-    """Return (sc_signal, ic_signal) from KM Rdot FFT for a given pressure."""
-    _, _, rdot = _km(R0_PCD, p_a_pa, N_CYC_CTRL, N_PER_CTRL)
-    dt_ctrl = (N_CYC_CTRL / F0_DRV) / (N_CYC_CTRL * N_PER_CTRL)
-    # Discard first 2 cycles
-    rdot_s = rdot[2 * N_PER_CTRL:] - rdot[2 * N_PER_CTRL:].mean()
-    window = np.hanning(len(rdot_s))
-    spec = np.abs(np.fft.rfft(rdot_s * window)) ** 2
-    freq = np.fft.rfftfreq(len(rdot_s), d=dt_ctrl)  # Hz
-
-    fund_mask = (freq > 0.85 * F0_DRV) & (freq < 1.15 * F0_DRV)
-    sub_mask = (freq > 0.40 * F0_DRV) & (freq < 0.60 * F0_DRV)
-    broad_mask = (freq > 1.5 * F0_DRV) & (freq < 4.5 * F0_DRV)
-
-    fund_pwr = float(spec[fund_mask].sum()) if fund_mask.any() else 1.0
-    if fund_pwr < 1e-30:
-        fund_pwr = 1e-30
-    sc_sig = float(spec[sub_mask].sum()) / fund_pwr if sub_mask.any() else 0.0
-    ic_sig = float(spec[broad_mask].sum()) / fund_pwr if broad_mask.any() else 0.0
-    return sc_sig, ic_sig
-
-
 # Controller parameters
 N_PULSES = 40
 P_INIT = 50e3     # Pa
@@ -246,36 +231,35 @@ GAMMA_UP = 1.05
 GAMMA_DOWN = 0.80
 P_MIN, P_MAX = 10e3, 500e3
 
-P = P_INIT
-P_trace = [P / 1e3]   # kPa
-SC_trace: list[float] = []
-IC_trace: list[float] = []
-
-print("  running KM for each controller pulse …", end="", flush=True)
-for pulse in range(N_PULSES - 1):
-    sc, ic = _km_signals(P)
-    SC_trace.append(sc)
-    IC_trace.append(ic)
-
-    # Thresholds: IC > 0.5× broadband signal at P_IC; SC onset when sub-harmonic appears
-    if ic > 0.3:
-        P = max(P_MIN, GAMMA_DOWN * P)
-    elif sc < 0.05:
-        P = min(P_MAX, GAMMA_UP * P)
-    P_trace.append(P / 1e3)
-
-sc_last, ic_last = _km_signals(P)
-SC_trace.append(sc_last)
-IC_trace.append(ic_last)
+print("  running Rust KM/PCD controller trace ...", end="", flush=True)
+controller = kw.keller_miksis_pcd_controller_trace(
+    R0_PCD,
+    F0_DRV,
+    N_PULSES,
+    P_INIT,
+    N_CYC_CTRL,
+    N_PER_CTRL,
+    2,
+    0.05,
+    0.3,
+    GAMMA_UP,
+    GAMMA_DOWN,
+    P_MIN,
+    P_MAX,
+    P0,
+    RHO_L,
+    SIGMA,
+    MU_L,
+    KAPPA,
+    PV,
+    C_L,
+)
 print(" done")
 
-pulses = np.arange(1, N_PULSES + 1)
-SC_arr = np.array(SC_trace)
-IC_arr = np.array(IC_trace)
-
-# Normalize for display
-SC_norm = SC_arr / (SC_arr.max() + 1e-30)
-IC_norm = IC_arr / (IC_arr.max() + 1e-30)
+pulses = np.asarray(controller["pulse_index"])
+P_trace = np.asarray(controller["pressure_kpa"])
+SC_norm = np.asarray(controller["stable_signal_normalized"])
+IC_norm = np.asarray(controller["inertial_signal_normalized"])
 
 fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 6), sharex=True)
 ax1.plot(pulses, P_trace, color="C0", lw=1.8, label="Driving pressure")
@@ -298,13 +282,13 @@ savefig("fig04_pcd_controller_convergence")
 plt.close()
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Figure 05: Closed-loop dose accumulation — CEM43 via pykwavers.compute_cem43
+# Figure 05: Closed-loop dose accumulation — CEM43 via pykwavers.cem43_cumulative
 # Temperature histories represent feedback-controlled focal temperatures
 # (as measured by MR thermometry in clinical HIFU).  CEM43 integration uses
 # the canonical kwavers Rust implementation (Sapareto & Dewey 1984).
 # ─────────────────────────────────────────────────────────────────────────────
 
-print("[fig05] Closed-loop CEM43 dose accumulation (pykwavers.compute_cem43)")
+print("[fig05] Closed-loop CEM43 dose accumulation (pykwavers.cem43_cumulative)")
 
 N_STEPS = 60
 DT_SON = 0.5   # s per sonication step
@@ -312,44 +296,14 @@ T_BASE = 37.0
 T_TARGET = 60.0
 D_ABLATION = 240.0  # CEM43 ablation threshold [min]
 
-steps_idx = np.arange(N_STEPS)
-
-# (a) Fixed power: linear heating to 60°C in 30 steps, maintained thereafter
-T_a = np.where(
-    steps_idx < 30,
-    T_BASE + (T_TARGET - T_BASE) * steps_idx / 30,
-    T_TARGET,
-)
-
-# (b) Feedback: T overshoots then converges (represents controller action)
-rng = np.random.default_rng(42)
-T_b = np.where(
-    steps_idx < 20,
-    T_BASE + (T_TARGET + 10 - T_BASE) * steps_idx / 20,
-    T_TARGET + 5 * np.exp(-0.15 * (steps_idx - 20)) + 2.0 * rng.standard_normal(N_STEPS),
-)
-
-# (c) Underdrive: T only reaches 56°C
-T_c = np.where(
-    steps_idx < 40,
-    T_BASE + (56 - T_BASE) * steps_idx / 40,
-    56.0,
-)
-
-# Cumulative CEM43 via pykwavers.compute_cem43 (Rust Sapareto & Dewey kernel)
-def _cumulative_cem43(T_arr: np.ndarray, dt_s: float) -> np.ndarray:
-    """Return cumulative CEM43 at each step using pykwavers.compute_cem43."""
-    out = np.empty(len(T_arr))
-    for i in range(len(T_arr)):
-        out[i] = kw.compute_cem43(T_arr[: i + 1].astype(float), dt_s)
-    return out
-
-
-D_a = _cumulative_cem43(T_a, DT_SON)
-D_b = _cumulative_cem43(T_b, DT_SON)
-D_c = _cumulative_cem43(T_c, DT_SON)
-
-t_axis = steps_idx * DT_SON
+thermal_trace = kw.closed_loop_cem43_fixture(N_STEPS, DT_SON, T_BASE, T_TARGET, seed=42)
+T_a = np.asarray(thermal_trace["fixed_temperature_c"])
+T_b = np.asarray(thermal_trace["feedback_temperature_c"])
+T_c = np.asarray(thermal_trace["underdrive_temperature_c"])
+D_a = np.asarray(thermal_trace["fixed_cem43_min"])
+D_b = np.asarray(thermal_trace["feedback_cem43_min"])
+D_c = np.asarray(thermal_trace["underdrive_cem43_min"])
+t_axis = np.asarray(thermal_trace["time_s"])
 
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4.5))
 ax1.plot(t_axis, T_a, color="C0", label="Fixed power (a)")
@@ -368,7 +322,7 @@ ax2.semilogy(t_axis, np.maximum(D_c, 1e-4), color="C3", ls="--", label="Underdri
 ax2.axhline(D_ABLATION, color="red", lw=1.0, ls="--", label="Ablation 240 min")
 ax2.set_xlabel("Time (s)")
 ax2.set_ylabel("CEM43 (min)")
-ax2.set_title("Monotone Dose Accumulation (Theorem 7.6)\npykwavers.compute_cem43")
+ax2.set_title("Monotone Dose Accumulation (Theorem 7.6)\npykwavers.cem43_cumulative")
 ax2.legend(fontsize=8)
 ax2.grid(True, which="both", ls=":", alpha=0.3)
 
@@ -382,5 +336,5 @@ print(
     "  fig02_minnaert_resonance.*       -- f_res vs R0 [analytical Minnaert formula]\n"
     "  fig03_pcd_spectrum.*             -- KM Rdot FFT: SC (50 kPa) vs IC (400 kPa)\n"
     "  fig04_pcd_controller_convergence.* -- Controller with KM-derived SC/IC signals\n"
-    "  fig05_closed_loop_cem43.*        -- pykwavers.compute_cem43 dose accumulation\n"
+    "  fig05_closed_loop_cem43.*        -- pykwavers.cem43_cumulative dose accumulation\n"
 )

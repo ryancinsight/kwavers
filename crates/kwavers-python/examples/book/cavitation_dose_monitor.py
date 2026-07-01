@@ -2,12 +2,11 @@
 
 Used by ch24 (BBB LIFU) and ch21e (liver histotripsy). This module is pure
 glue: every physics step is a call into the kwavers Rust core
-(`solve_keller_miksis`, `bubble_acoustic_emission_pressure`,
-`bubble_power_spectrum`, `integrate_receiver_array_psd`,
-`cavitation_emission_bands`, `cumulative_cavitation_dose`,
-`cavitation_controller_pressure`). No domain math lives here — the only
-Python-side numeric step is decimating the fine Keller–Miksis emission series
-before the O(N²) reference DFT, which is sampling, not physics.
+(`volume_emission_spectrum`, `volume_emission_sweep`,
+`simulate_population_emission`, `population_emission_sweep`,
+`simulated_population_monitor_timeseries`, `cumulative_cavitation_dose`,
+`cavitation_controller_pressure`). No domain math lives here; Python adapts
+arguments, formats labels, and plots returned arrays.
 
 Pipeline (InsighTec Exablate-style cavitation dose):
   drive each microbubble in the focal volume V_s (Keller–Miksis)
@@ -39,12 +38,6 @@ class BubbleMedium:
     xi_s: float = 0.0   # shell viscosity [Pa·s·m] (0 = bare bubble)
 
 
-def _decimate(x: np.ndarray, n_target: int) -> tuple[np.ndarray, int]:
-    """Return (decimated x, stride). Slicing only — no filtering/physics."""
-    stride = max(1, x.size // max(n_target, 1))
-    return np.ascontiguousarray(x[::stride]), stride
-
-
 def vs_emission_spectrum(
     kw,
     *,
@@ -66,51 +59,25 @@ def vs_emission_spectrum(
 
     Returns ``(freqs, psd_vs)`` for the volume-integrated spectrum.
     """
-    t_end = n_cycles / f0
-    n_steps = int(round(n_cycles * steps_per_cycle))
-    channel_psds = []
-    freqs_dec = None
-    for r0 in np.atleast_1d(r0_population_m):
-        _t, r_m, rdot = kw.solve_keller_miksis(
-            float(r0), 0.0, medium.p0, drive_pa, f0, t_end, n_steps,
-            medium.rho, medium.sigma, medium.gamma, medium.mu, medium.pv,
-            medium.c_l, medium.xi_s,
-        )
-        r_m = np.asarray(r_m, dtype=float)
-        rdot = np.asarray(rdot, dtype=float)
-        if not (np.all(np.isfinite(r_m)) and np.all(np.isfinite(rdot))):
-            # Keller–Miksis went stiff/unstable at this amplitude for this R0;
-            # skip the bubble rather than poison the population spectrum.
-            continue
-        dt = t_end / n_steps
-        emit = np.asarray(
-            kw.bubble_acoustic_emission_pressure(r_m, rdot, dt, medium.rho, r_obs_m),
-            dtype=float,
-        )
-        if emit.size == 0 or not np.all(np.isfinite(emit)):
-            continue
-        # Drop the ring-up transient and keep the steady-state tail so the
-        # reference (rectangular-window) DFT sees a (near-)periodic record and
-        # broadband reflects true inharmonic emission, not startup leakage.
-        i0 = int(transient_fraction * emit.size)
-        emit_ss = emit[i0:]
-        emit_dec, stride = _decimate(emit_ss, n_fft)
-        dt_dec = dt * stride
-        # Hann-windowed PSD: suppresses harmonic-line leakage so the broadband
-        # (inertial) band is genuine inharmonic emission, not DFT skirts.
-        f, psd = kw.hann_windowed_power_spectrum(emit_dec, dt_dec, emit_dec.size)
-        freqs_dec = np.asarray(f, dtype=float)
-        channel_psds.append(np.asarray(psd, dtype=float))
-
-    if not channel_psds or freqs_dec is None:
-        return np.zeros(1), np.zeros(1)
-
-    # Pad to a common length and incoherently power-sum across the population
-    # (receiver-array integration over V_s).
-    n_bins = min(p.size for p in channel_psds)
-    stacked = np.array([p[:n_bins] for p in channel_psds])
-    psd_vs = np.asarray(kw.integrate_receiver_array_psd(stacked), dtype=float)
-    return freqs_dec[:n_bins], psd_vs
+    freqs, psd, _n_active = kw.volume_emission_spectrum(
+        float(drive_pa),
+        float(f0),
+        np.atleast_1d(r0_population_m).astype(float),
+        float(n_cycles),
+        int(steps_per_cycle),
+        float(r_obs_m),
+        int(n_fft),
+        float(transient_fraction),
+        medium.p0,
+        medium.rho,
+        medium.sigma,
+        medium.gamma,
+        medium.mu,
+        medium.pv,
+        medium.c_l,
+        medium.xi_s,
+    )
+    return np.asarray(freqs, dtype=float), np.asarray(psd, dtype=float)
 
 
 def simulate_population_emission(
@@ -120,12 +87,11 @@ def simulate_population_emission(
     f0: float,
     medium: BubbleMedium,
     n_bubbles: int,
-    rng,
+    seed: int,
     r0_median_m: float = 1.5e-6,
     r0_sigma_ln: float = 0.4,
     n_cycles: float = 12.0,
     n_out: int = 8192,
-    max_nucleation_cycles: float = 2.0,
     r_obs_m: float = 5.0e-2,
     n_fft: int = 4096,
     rel_halfwidth: float = 0.12,
@@ -160,75 +126,58 @@ def simulate_population_emission(
     therefore an EMERGENT property of the simulated nonlinear dynamics — nothing
     is tuned to a target shape.
 
-    ``rng`` is a ``numpy.random.Generator`` (seed it for reproducible figures).
+    ``seed`` is passed directly to the Rust population simulator for
+    reproducible figures.
     Returns dict: ``freqs``, ``psd``, ``fundamental``, ``subharmonic``,
     ``ultraharmonic``, ``broadband``, ``stable`` (sub+ultra), ``total``,
     ``n_active``, ``max_compression``, ``max_mach``.
     """
-    t_end = n_cycles / f0
-    traces = []
-    max_c = 0.0
-    max_m = 0.0
-    for _ in range(n_bubbles):
-        r0 = float(rng.lognormal(np.log(r0_median_m), r0_sigma_ln))
-        if coated:
-            _t, _r, _rd, emit, mc, mm, _ncol, _conv = kw.simulate_coated_bubble_emission(
-                r0, drive_pa, f0, n_cycles, n_out, r_obs_m,
-                chi=chi, shell_viscosity=shell_viscosity, shell_thickness=shell_thickness,
-                sigma_initial=sigma_initial, steps_per_cycle=steps_per_cycle,
-                p0_pa=medium.p0, rho=medium.rho, c_liquid=medium.c_l, mu=medium.mu,
-                gamma=medium.gamma)
-        else:
-            _t, _r, _rd, emit, mc, mm, _ncol, _conv = kw.simulate_bubble_emission(
-                r0, drive_pa, f0, n_cycles, n_out, r_obs_m,
-                p0_pa=medium.p0, rho=medium.rho, c_liquid=medium.c_l, mu=medium.mu,
-                sigma=medium.sigma, pv=medium.pv, gamma=medium.gamma,
-                thermal_effects=thermal_effects)
-        emit = np.asarray(emit, dtype=float)
-        # Reject non-finite traces and unphysical spikes (a fixed-step collapse
-        # can emit a near-singular value just before the radius bound truncates
-        # it — a far-field emission at r_obs ≫ R0 cannot exceed ~10 MPa).
-        if emit.size < 16 or not np.all(np.isfinite(emit)) or np.abs(emit).max() > 1.0e7:
-            continue
-        traces.append(emit)
-        max_c = max(max_c, float(mc))
-        max_m = max(max_m, float(mm))
-
-    empty = {"freqs": np.zeros(1), "psd": np.zeros(1), "fundamental": 0.0,
-             "subharmonic": 0.0, "ultraharmonic": 0.0, "broadband": 0.0,
-             "stable": 0.0, "total": 0.0, "n_active": 0,
-             "max_compression": 0.0, "max_mach": 0.0}
-    if not traces:
-        return empty
-
-    # The fully-converged length spans exactly n_cycles whole periods → the
-    # fundamental lands ON an FFT bin (no leakage). Pad truncated-collapse traces
-    # to that length (they emit, then go silent) so all share one bin grid.
-    full_len = max(t.size for t in traces)
-    dt_emit = t_end / (full_len - 1)
-    freqs = np.fft.rfftfreq(full_len, dt_emit)
-    win = np.hanning(full_len)
-    psd_sum = np.zeros(freqs.size)
-    for emit in traces:
-        if emit.size < full_len:
-            emit = np.concatenate([emit, np.zeros(full_len - emit.size)])
-        # Incoherent power summation across the focal population (asynchronous
-        # bubbles → powers add): keeps each band at its true single-bubble level,
-        # broadband only from genuinely inertial collapse — no coherent-sum
-        # cross-term artifacts.
-        spec = np.fft.rfft((emit - emit.mean()) * win)
-        psd_sum = psd_sum + np.abs(spec) ** 2
-    n_active = len(traces)
-
-    f = np.ascontiguousarray(freqs)
-    psd = np.ascontiguousarray(psd_sum)
-    fund, sub, ultra, broad = kw.cavitation_emission_bands(
-        f, psd, f0, rel_halfwidth, noise_floor)
+    (
+        freqs,
+        psd,
+        fund,
+        sub,
+        ultra,
+        broad,
+        stable,
+        total,
+        n_active,
+        max_c,
+        max_m,
+    ) = kw.simulate_population_emission(
+        drive_pa,
+        f0,
+        int(n_bubbles),
+        int(seed),
+        r0_median_m,
+        r0_sigma_ln,
+        n_cycles,
+        int(n_out),
+        r_obs_m,
+        rel_halfwidth,
+        noise_floor,
+        thermal_effects,
+        coated,
+        chi,
+        shell_viscosity,
+        shell_thickness,
+        sigma_initial,
+        int(steps_per_cycle),
+        medium.p0,
+        medium.rho,
+        medium.c_l,
+        medium.mu,
+        medium.sigma,
+        medium.pv,
+        medium.gamma,
+    )
+    f = np.asarray(freqs, dtype=float)
+    psd = np.asarray(psd, dtype=float)
     return {
         "freqs": f, "psd": psd,
         "fundamental": fund, "subharmonic": sub, "ultraharmonic": ultra,
-        "broadband": broad, "stable": sub + ultra,
-        "total": fund + sub + ultra + broad, "n_active": n_active,
+        "broadband": broad, "stable": stable,
+        "total": total, "n_active": int(n_active),
         "max_compression": max_c, "max_mach": max_m,
     }
 
@@ -251,20 +200,72 @@ def population_dose_vs_pressure(
     ``inertial`` (= broadband), ``signal`` (= stable + inertial).
     """
     pressures_pa = np.atleast_1d(pressures_pa).astype(float)
-    keys = ("harmonic", "subharmonic", "ultraharmonic", "stable", "inertial", "signal")
-    out = {k: np.zeros(pressures_pa.size) for k in keys}
-    rng = np.random.default_rng(seed)
-    for i, pa in enumerate(pressures_pa):
-        r = simulate_population_emission(
-            kw, drive_pa=float(pa), f0=f0, medium=medium,
-            n_bubbles=n_bubbles, rng=rng, **sim_kwargs)
-        out["harmonic"][i] = r["fundamental"]
-        out["subharmonic"][i] = r["subharmonic"]
-        out["ultraharmonic"][i] = r["ultraharmonic"]
-        out["stable"][i] = r["stable"]
-        out["inertial"][i] = r["broadband"]
-        out["signal"][i] = r["stable"] + r["broadband"]
-    return out
+    sim_kwargs = dict(sim_kwargs)
+    sim_kwargs.pop("medium", None)
+    sim_kwargs.pop("n_bubbles", None)
+    r0_median_m = sim_kwargs.pop("r0_median_m", 1.5e-6)
+    r0_sigma_ln = sim_kwargs.pop("r0_sigma_ln", 0.4)
+    n_cycles = sim_kwargs.pop("n_cycles", 12.0)
+    n_out = sim_kwargs.pop("n_out", 8192)
+    r_obs_m = sim_kwargs.pop("r_obs_m", 5.0e-2)
+    rel_halfwidth = sim_kwargs.pop("rel_halfwidth", 0.12)
+    noise_floor = sim_kwargs.pop("noise_floor", 0.0)
+    thermal_effects = sim_kwargs.pop("thermal_effects", False)
+    coated = sim_kwargs.pop("coated", False)
+    chi = sim_kwargs.pop("chi", 0.5)
+    shell_viscosity = sim_kwargs.pop("shell_viscosity", 0.5)
+    shell_thickness = sim_kwargs.pop("shell_thickness", 3.0e-9)
+    sigma_initial = sim_kwargs.pop("sigma_initial", 0.04)
+    steps_per_cycle = sim_kwargs.pop("steps_per_cycle", 2000)
+    if sim_kwargs:
+        unknown = ", ".join(sorted(sim_kwargs))
+        raise TypeError(f"unknown population-sweep kwargs: {unknown}")
+
+    (
+        harmonic,
+        subharmonic,
+        ultraharmonic,
+        stable,
+        inertial,
+        signal,
+        _n_active,
+        _max_compression,
+        _max_mach,
+    ) = kw.population_emission_sweep(
+        pressures_pa,
+        f0,
+        int(n_bubbles),
+        int(seed),
+        r0_median_m,
+        r0_sigma_ln,
+        n_cycles,
+        int(n_out),
+        r_obs_m,
+        rel_halfwidth,
+        noise_floor,
+        thermal_effects,
+        coated,
+        chi,
+        shell_viscosity,
+        shell_thickness,
+        sigma_initial,
+        int(steps_per_cycle),
+        medium.p0,
+        medium.rho,
+        medium.c_l,
+        medium.mu,
+        medium.sigma,
+        medium.pv,
+        medium.gamma,
+    )
+    return {
+        "harmonic": np.asarray(harmonic, dtype=float),
+        "subharmonic": np.asarray(subharmonic, dtype=float),
+        "ultraharmonic": np.asarray(ultraharmonic, dtype=float),
+        "stable": np.asarray(stable, dtype=float),
+        "inertial": np.asarray(inertial, dtype=float),
+        "signal": np.asarray(signal, dtype=float),
+    }
 
 
 def dose_vs_pressure(
@@ -286,24 +287,49 @@ def dose_vs_pressure(
       ``subharmonic``, ``ultraharmonic``.
     """
     pressures_pa = np.atleast_1d(pressures_pa).astype(float)
-    out = {k: np.zeros(pressures_pa.size)
-           for k in ("harmonic", "subharmonic", "ultraharmonic",
-                     "stable", "inertial")}
-    for i, pa in enumerate(pressures_pa):
-        freqs, psd = vs_emission_spectrum(
-            kw, drive_pa=float(pa), f0=f0,
-            r0_population_m=r0_population_m, medium=medium,
-            **spectrum_kwargs,
-        )
-        fund, sub, ultra, broad = kw.cavitation_emission_bands(
-            freqs, psd, f0, rel_halfwidth, noise_floor,
-        )
-        out["harmonic"][i] = fund
-        out["subharmonic"][i] = sub
-        out["ultraharmonic"][i] = ultra
-        out["stable"][i] = sub + ultra
-        out["inertial"][i] = broad
-    return out
+    spectrum_kwargs = dict(spectrum_kwargs)
+    n_cycles = spectrum_kwargs.pop("n_cycles", 12.0)
+    steps_per_cycle = spectrum_kwargs.pop("steps_per_cycle", 4000)
+    r_obs_m = spectrum_kwargs.pop("r_obs_m", 5.0e-2)
+    n_fft = spectrum_kwargs.pop("n_fft", 2048)
+    transient_fraction = spectrum_kwargs.pop("transient_fraction", 0.4)
+    if spectrum_kwargs:
+        unknown = ", ".join(sorted(spectrum_kwargs))
+        raise TypeError(f"unknown V_s pressure-sweep kwargs: {unknown}")
+    (
+        harmonic,
+        subharmonic,
+        ultraharmonic,
+        stable,
+        inertial,
+        _n_active,
+    ) = kw.volume_emission_sweep(
+        pressures_pa,
+        float(f0),
+        np.atleast_1d(r0_population_m).astype(float),
+        float(rel_halfwidth),
+        float(noise_floor),
+        float(n_cycles),
+        int(steps_per_cycle),
+        float(r_obs_m),
+        int(n_fft),
+        float(transient_fraction),
+        medium.p0,
+        medium.rho,
+        medium.sigma,
+        medium.gamma,
+        medium.mu,
+        medium.pv,
+        medium.c_l,
+        medium.xi_s,
+    )
+    return {
+        "harmonic": np.asarray(harmonic, dtype=float),
+        "subharmonic": np.asarray(subharmonic, dtype=float),
+        "ultraharmonic": np.asarray(ultraharmonic, dtype=float),
+        "stable": np.asarray(stable, dtype=float),
+        "inertial": np.asarray(inertial, dtype=float),
+    }
 
 
 def closed_loop_sonication(
@@ -333,30 +359,26 @@ def closed_loop_sonication(
     pressures_pa = np.asarray(pressures_pa, dtype=float)
     stable_power = np.asarray(stable_power, dtype=float)
     inertial_power = np.asarray(inertial_power, dtype=float)
-    p_lo, p_hi = float(pressures_pa.min()), float(pressures_pa.max())
-
-    p = float(np.clip(p_start_pa, p_lo, p_hi))
-    p_hist = np.zeros(n_bursts)
-    se_hist = np.zeros(n_bursts)
-    ie_hist = np.zeros(n_bursts)
-    for k in range(n_bursts):
-        se = float(np.interp(p, pressures_pa, stable_power))
-        ie = float(np.interp(p, pressures_pa, inertial_power))
-        p_hist[k] = p
-        se_hist[k] = se
-        ie_hist[k] = ie
-        p = kw.cavitation_controller_pressure(
-            p, se, ie, stable_target, inertial_limit, gain, p_lo, p_hi,
+    p_hist, se_hist, ie_hist, stable_dose, inertial_dose = (
+        kw.closed_loop_cavitation_sonication(
+            pressures_pa,
+            stable_power,
+            inertial_power,
+            int(n_bursts),
+            float(burst_duration_s),
+            float(p_start_pa),
+            float(stable_target),
+            float(inertial_limit),
+            float(gain),
         )
+    )
 
     return {
-        "pressure": p_hist,
-        "stable_emission": se_hist,
-        "inertial_emission": ie_hist,
-        "stable_dose": np.asarray(
-            kw.cumulative_cavitation_dose(se_hist, burst_duration_s), dtype=float),
-        "inertial_dose": np.asarray(
-            kw.cumulative_cavitation_dose(ie_hist, burst_duration_s), dtype=float),
+        "pressure": np.asarray(p_hist, dtype=float),
+        "stable_emission": np.asarray(se_hist, dtype=float),
+        "inertial_emission": np.asarray(ie_hist, dtype=float),
+        "stable_dose": np.asarray(stable_dose, dtype=float),
+        "inertial_dose": np.asarray(inertial_dose, dtype=float),
     }
 
 
@@ -392,31 +414,25 @@ def monitor_timeseries(
     """
     pressures_pa = np.asarray(pressures_pa, dtype=float)
     cavitation_power = np.asarray(cavitation_power, dtype=float)
-    p_lo, p_hi = float(pressures_pa.min()), float(pressures_pa.max())
-    rng = np.random.default_rng(seed)
-    dt = 1.0 / prf_hz
-
-    p = float(np.clip(p_start_pa, p_lo, p_hi))
-    sig = np.zeros(n_pulses)
-    pwr = np.zeros(n_pulses)
-    for k in range(n_pulses):
-        det = float(np.interp(p, pressures_pa, cavitation_power))
-        measured = det * float(rng.lognormal(mean=0.0, sigma=jitter_sigma))
-        sig[k] = measured
-        pwr[k] = (p / p_hi) ** 2 * 100.0  # acoustic power ∝ p²
-        # Controller reacts to the measured signal: cap inertial, else recruit.
-        p = kw.cavitation_controller_pressure(
-            p, measured, measured, target_signal, inertial_cap, gain, p_lo, p_hi)
-
-    t = np.arange(n_pulses) * dt
-    cumulative = np.asarray(kw.cumulative_cavitation_dose(sig, dt), dtype=float)
-    goal = goal_fraction * float(cumulative[-1]) if cumulative[-1] > 0 else 1.0
+    t, sig, pwr, cumulative, goal = kw.cavitation_monitor_timeseries(
+        pressures_pa,
+        cavitation_power,
+        int(n_pulses),
+        float(prf_hz),
+        float(p_start_pa),
+        float(target_signal),
+        float(inertial_cap),
+        float(gain),
+        float(jitter_sigma),
+        float(goal_fraction),
+        int(seed),
+    )
     return {
-        "t": t,
-        "cavitation_signal": sig,
-        "power_pct": pwr,
-        "cumulative_dose": cumulative,
-        "goal": goal,
+        "t": np.asarray(t, dtype=float),
+        "cavitation_signal": np.asarray(sig, dtype=float),
+        "power_pct": np.asarray(pwr, dtype=float),
+        "cumulative_dose": np.asarray(cumulative, dtype=float),
+        "goal": float(goal),
     }
 
 
@@ -457,32 +473,74 @@ def simulated_monitor_timeseries(
     # rode in via a shared population-config dict.
     sim_kwargs.pop("medium", None)
     sim_kwargs.pop("n_bubbles", None)
-    rng = np.random.default_rng(seed)
-    dt = 1.0 / prf_hz
-    p = float(np.clip(p_start_pa, p_lo_pa, p_hi_pa))
-    sig = np.zeros(n_pulses)
-    pwr = np.zeros(n_pulses)
-    stable = np.zeros(n_pulses)
-    broad = np.zeros(n_pulses)
-    for k in range(n_pulses):
-        r = simulate_population_emission(
-            kw, drive_pa=p, f0=f0, medium=medium, n_bubbles=n_bubbles,
-            rng=rng, **sim_kwargs)
-        s_st, s_br = r["stable"], r["broadband"]
-        stable[k] = s_st
-        broad[k] = s_br
-        sig[k] = s_st + s_br
-        pwr[k] = (p / p_hi_pa) ** 2 * 100.0
-        p = kw.cavitation_controller_pressure(
-            p, s_st, s_br, target_signal, inertial_cap, gain, p_lo_pa, p_hi_pa)
-
-    t = np.arange(n_pulses) * dt
-    cumulative = np.asarray(kw.cumulative_cavitation_dose(sig, dt), dtype=float)
-    goal = goal_fraction * float(cumulative[-1]) if cumulative[-1] > 0 else 1.0
+    r0_median_m = sim_kwargs.pop("r0_median_m", 1.5e-6)
+    r0_sigma_ln = sim_kwargs.pop("r0_sigma_ln", 0.4)
+    n_cycles = sim_kwargs.pop("n_cycles", 12.0)
+    n_out = sim_kwargs.pop("n_out", 8192)
+    r_obs_m = sim_kwargs.pop("r_obs_m", 5.0e-2)
+    rel_halfwidth = sim_kwargs.pop("rel_halfwidth", 0.12)
+    noise_floor = sim_kwargs.pop("noise_floor", 0.0)
+    thermal_effects = sim_kwargs.pop("thermal_effects", False)
+    coated = sim_kwargs.pop("coated", False)
+    chi = sim_kwargs.pop("chi", 0.5)
+    shell_viscosity = sim_kwargs.pop("shell_viscosity", 0.5)
+    shell_thickness = sim_kwargs.pop("shell_thickness", 3.0e-9)
+    sigma_initial = sim_kwargs.pop("sigma_initial", 0.04)
+    steps_per_cycle = sim_kwargs.pop("steps_per_cycle", 2000)
+    if sim_kwargs:
+        unknown = ", ".join(sorted(sim_kwargs))
+        raise TypeError(f"unknown simulated-monitor population kwargs: {unknown}")
+    (
+        t,
+        sig,
+        pwr,
+        cumulative,
+        goal,
+        stable,
+        broad,
+    ) = kw.simulated_population_monitor_timeseries(
+        f0,
+        int(n_bubbles),
+        int(n_pulses),
+        prf_hz,
+        p_start_pa,
+        p_lo_pa,
+        p_hi_pa,
+        target_signal,
+        inertial_cap,
+        gain,
+        goal_fraction,
+        int(seed),
+        r0_median_m,
+        r0_sigma_ln,
+        n_cycles,
+        int(n_out),
+        r_obs_m,
+        rel_halfwidth,
+        noise_floor,
+        thermal_effects,
+        coated,
+        chi,
+        shell_viscosity,
+        shell_thickness,
+        sigma_initial,
+        int(steps_per_cycle),
+        medium.p0,
+        medium.rho,
+        medium.c_l,
+        medium.mu,
+        medium.sigma,
+        medium.pv,
+        medium.gamma,
+    )
     return {
-        "t": t, "cavitation_signal": sig, "power_pct": pwr,
-        "cumulative_dose": cumulative, "goal": goal,
-        "stable_signal": stable, "broadband_signal": broad,
+        "t": np.asarray(t, dtype=float),
+        "cavitation_signal": np.asarray(sig, dtype=float),
+        "power_pct": np.asarray(pwr, dtype=float),
+        "cumulative_dose": np.asarray(cumulative, dtype=float),
+        "goal": float(goal),
+        "stable_signal": np.asarray(stable, dtype=float),
+        "broadband_signal": np.asarray(broad, dtype=float),
     }
 
 
@@ -511,9 +569,9 @@ def simulate_raster_pulsing(
 ):
     """Time-resolved subspot-grid pulsing under SEQUENTIAL vs INTERLEAVED order.
 
-    Each subspot's delivered peak pressure is set by the electronic-steering
-    efficiency (Rust ``electronic_steering_efficiency``) and tissue attenuation.
-    The firing order is then either:
+    The Rust ``raster_cavitation_pulsing`` core sets each subspot's delivered
+    peak pressure from electronic-steering efficiency and tissue attenuation,
+    then applies either firing order:
       * ``"sequential"`` — all ``pulses_per_spot`` pulses at spot 0, then spot 1,
         …; consecutive pulses at a spot are 1/PRF apart.
       * ``"interleaved"`` — round-robin over the ``interleave_group`` (default:
@@ -522,8 +580,8 @@ def simulate_raster_pulsing(
 
     Two physical memory effects make the orders differ — both emergent from the
     per-spot inter-pulse interval Δt:
-      * residual-bubble shielding (Macoskey 2018), via the Rust
-        ``prf_efficacy_factor`` at the effective per-spot PRF = 1/Δt — short Δt
+      * residual-bubble shielding (Macoskey 2018), via the Rust steady
+        per-spot efficacy at the effective per-spot PRF = 1/Δt — short Δt
         (sequential) shields and lowers per-pulse cavitation efficacy;
       * thermal accumulation — each pulse adds ΔT ∝ p²; between a spot's pulses
         the temperature relaxes by ``exp(−Δt/τ_thermal)``, so sequential builds
@@ -536,73 +594,52 @@ def simulate_raster_pulsing(
     """
     lat = np.atleast_1d(spot_lateral_m).astype(float)
     ax = np.atleast_1d(spot_axial_m).astype(float)
-    n_spots = lat.size
     cav_pressures_pa = np.asarray(cav_pressures_pa, float)
     cav_dose_per_pulse = np.asarray(cav_dose_per_pulse, float)
+    (
+        time_s,
+        coverage,
+        cumulative_dose,
+        per_spot_dose,
+        per_spot_peak_temp,
+        efficacy,
+        dt_spot_s,
+        treatment_s,
+        p_spot_pa,
+    ) = kw.raster_cavitation_pulsing(
+        lat,
+        ax,
+        p_target_pa,
+        f0_hz,
+        c_m_s,
+        cav_pressures_pa,
+        cav_dose_per_pulse,
+        pulses_per_spot,
+        prf_hz,
+        schedule,
+        interleave_group,
+        attenuation_np_m,
+        apodized,
+        tau_dissolution_s,
+        shielding_g,
+        tau_thermal_s,
+        thermal_gain_k_per_pulse,
+        goal_dose,
+        n_time_samples,
+    )
 
-    # Per-spot delivered pressure and per-pulse base cavitation dose.
-    eps = np.array([
-        kw.electronic_steering_efficiency(float(lat[i]), float(ax[i]), f0_hz, c_m_s, apodized)
-        for i in range(n_spots)])
-    trans = np.exp(-attenuation_np_m * np.maximum(ax, 0.0))
-    p_spot = p_target_pa * eps * trans
-    base_dose = np.interp(p_spot, cav_pressures_pa, cav_dose_per_pulse)
-
-    group = n_spots if interleave_group <= 0 else min(interleave_group, n_spots)
-    if schedule == "sequential":
-        dt_spot = 1.0 / prf_hz
-        order = np.repeat(np.arange(n_spots), pulses_per_spot)
-    else:  # interleaved round-robin
-        dt_spot = group / prf_hz
-        order = np.tile(np.arange(n_spots), pulses_per_spot)
-
-    # Residual-bubble shielding efficacy at the steady per-spot interval (Rust).
-    eff_steady = float(kw.prf_efficacy_factor(
-        np.array([1.0 / dt_spot]), tau_dissolution_s, shielding_g)[0])
-
-    decay = float(np.exp(-dt_spot / max(tau_thermal_s, 1e-12)))
-    dT_pulse = thermal_gain_k_per_pulse * (p_spot / max(p_target_pa, 1.0)) ** 2
-
-    per_spot_dose = np.zeros(n_spots)
-    per_spot_T = np.zeros(n_spots)         # temperature rise over baseline
-    per_spot_peak_T = np.zeros(n_spots)
-    last_fire = np.full(n_spots, -np.inf)
-    n_fire = order.size
-    t_axis = np.zeros(n_fire)
-    cum_dose = np.zeros(n_fire)
-    coverage = np.zeros(n_fire)
-    running = 0.0
-    for k, s in enumerate(order):
-        t = k / prf_hz
-        gap = t - last_fire[s]
-        # First pulse at a spot sees no residual; later pulses see shielding.
-        eff = 1.0 if not np.isfinite(gap) else eff_steady
-        per_spot_dose[s] += base_dose[s] * eff
-        running += base_dose[s] * eff
-        # Thermal relaxation since this spot last fired, then this pulse's rise.
-        cool = 1.0 if not np.isfinite(gap) else float(np.exp(-gap / max(tau_thermal_s, 1e-12)))
-        per_spot_T[s] = per_spot_T[s] * cool + dT_pulse[s]
-        per_spot_peak_T[s] = max(per_spot_peak_T[s], per_spot_T[s])
-        last_fire[s] = t
-        t_axis[k] = t
-        cum_dose[k] = running
-        coverage[k] = float(np.mean(per_spot_dose >= goal_dose)) if goal_dose > 0 else 0.0
-
-    # Resample to a compact uniform time grid for plotting.
-    treatment_s = float(t_axis[-1]) if n_fire else 0.0
-    tq = np.linspace(0.0, max(treatment_s, 1e-9), n_time_samples)
     return {
-        "time": tq,
-        "coverage": np.interp(tq, t_axis, coverage) if n_fire else tq * 0,
-        "cumulative_dose": np.interp(tq, t_axis, cum_dose) if n_fire else tq * 0,
-        "per_spot_dose": per_spot_dose,
-        "per_spot_peak_temp": per_spot_peak_T,
-        "efficacy": eff_steady,
-        "dt_spot_s": dt_spot,
+        "time": np.asarray(time_s, float),
+        "coverage": np.asarray(coverage, float),
+        "cumulative_dose": np.asarray(cumulative_dose, float),
+        "per_spot_dose": np.asarray(per_spot_dose, float),
+        "per_spot_peak_temp": np.asarray(per_spot_peak_temp, float),
+        "efficacy": float(efficacy),
+        "dt_spot_s": float(dt_spot_s),
         "treatment_s": treatment_s,
         "lateral_mm": lat * 1e3,
         "axial_mm": ax * 1e3,
-        "p_spot_pa": p_spot,
+        "p_spot_pa": np.asarray(p_spot_pa, float),
     }
 
 
@@ -640,22 +677,25 @@ def per_spot_dose(
     pressures_pa = np.asarray(pressures_pa, dtype=float)
     cavitation_power = np.asarray(cavitation_power, dtype=float)
 
-    dose = np.zeros((ax.size, lat.size))
-    eff = np.zeros_like(dose)
-    p_spot = np.zeros_like(dose)
-    for i, dz in enumerate(ax):
-        for j, dx in enumerate(lat):
-            e = kw.electronic_steering_efficiency(float(dx), float(dz), f0_hz, c_m_s, apodized)
-            trans = np.exp(-attenuation_np_m * max(float(dz), 0.0))
-            p = p_target_pa * e * trans
-            eff[i, j] = e
-            p_spot[i, j] = p
-            dose[i, j] = n_pulses_per_spot * float(
-                np.interp(p, pressures_pa, cavitation_power))
+    dose, eff, p_spot, goal = kw.per_spot_cavitation_dose_grid(
+        lat,
+        ax,
+        float(p_target_pa),
+        float(f0_hz),
+        float(c_m_s),
+        pressures_pa,
+        cavitation_power,
+        int(n_pulses_per_spot),
+        float(goal_pressure_pa),
+        float(attenuation_np_m),
+        bool(apodized),
+    )
+    grid_shape = (ax.size, lat.size)
+    dose = np.asarray(dose, dtype=float).reshape(grid_shape)
+    eff = np.asarray(eff, dtype=float).reshape(grid_shape)
+    p_spot = np.asarray(p_spot, dtype=float).reshape(grid_shape)
     # Prescribed per-spot dose goal: the dose a spot receives at the minimum
     # effective drive pressure (defines the treatable steering envelope).
-    goal = n_pulses_per_spot * float(
-        np.interp(goal_pressure_pa, pressures_pa, cavitation_power))
     return {
         "dose": dose,
         "efficiency": eff,

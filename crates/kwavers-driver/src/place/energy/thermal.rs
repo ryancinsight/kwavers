@@ -5,11 +5,11 @@
 
 use std::collections::BTreeMap;
 
+use super::config::{EnergyTerms, PlaceConfig};
+use super::geom::{nearest_board_edge_point, segment_intersects_rect};
 use crate::geom::{Nm, Point};
 use crate::place::component::Component;
 use crate::place::footprint::{FootprintDef, Role};
-use super::config::{EnergyTerms, PlaceConfig};
-use super::geom::{nearest_board_edge_point, segment_intersects_rect};
 
 /// Accumulate thermal-spread, IC-spread, and airflow-blockage penalty terms.
 ///

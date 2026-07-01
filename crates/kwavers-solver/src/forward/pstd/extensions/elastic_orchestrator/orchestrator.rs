@@ -558,7 +558,11 @@ mod tests {
             }
         }
         orch.step().expect("step");
-        let max_txy = orch.stress().txy.iter().fold(0.0_f64, |m, &v| m.max(v.abs()));
+        let max_txy = orch
+            .stress()
+            .txy
+            .iter()
+            .fold(0.0_f64, |m, &v| m.max(v.abs()));
         assert!(
             max_txy > 1e-6,
             "shear velocity gradient must induce non-zero σxy (got {max_txy})"

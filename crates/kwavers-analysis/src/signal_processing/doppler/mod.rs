@@ -67,6 +67,7 @@
 //! - Kasai, C. et al. (1985). "Real-time two-dimensional blood flow imaging using an autocorrelation technique". *IEEE Trans. Sonics Ultrason.*, 32(3), 458-464.
 
 pub mod autocorrelation;
+pub mod book_fixture;
 pub mod color_flow;
 pub mod continuous_wave;
 pub mod pulsed_wave;
@@ -79,6 +80,7 @@ pub mod wall_filter;
 mod cw_vector_tests;
 
 pub use autocorrelation::{AutocorrelationConfig, AutocorrelationEstimator};
+pub use book_fixture::{continuous_wave_vector_flow_fixture, ContinuousWaveVectorFlowFixture};
 pub use color_flow::{ColorFlowConfig, ColorFlowImaging, VelocityMap};
 pub use continuous_wave::{ContinuousWaveDoppler, CwDopplerConfig, CwSpectrum};
 pub use pulsed_wave::{PWDConfig, PulsedWaveDoppler, SpectralWaveform};

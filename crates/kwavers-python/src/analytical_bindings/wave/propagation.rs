@@ -3,12 +3,12 @@
 
 use kwavers_physics::analytical::wave;
 use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1};
-use pyo3::exceptions::PyRuntimeError;
+use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
 /// Compute a 1-D standing-wave pressure field.
 ///
-/// p(x, t) = 2 * p0 * cos(k*x) * cos(omega*t)
+/// p(x, t) = p0 * sin(k*x) * cos(omega*t)
 ///
 /// Args:
 ///     p0: Peak amplitude [Pa].
@@ -62,6 +62,76 @@ pub fn plane_wave_pressure_1d(
     Ok(result.into_pyarray(py).unbind())
 }
 
+/// Compute pressure and particle velocity for a 1-D progressive plane wave.
+#[pyfunction]
+#[pyo3(signature = (amplitude_pa, k, x, omega_t, density_kg_m3, sound_speed_m_s))]
+pub fn plane_wave_pressure_velocity_1d(
+    py: Python<'_>,
+    amplitude_pa: f64,
+    k: f64,
+    x: PyReadonlyArray1<f64>,
+    omega_t: f64,
+    density_kg_m3: f64,
+    sound_speed_m_s: f64,
+) -> PyResult<(Py<PyArray1<f64>>, Py<PyArray1<f64>>)> {
+    let x_slice = x
+        .as_slice()
+        .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+    let (pressure, velocity) = wave::plane_wave_pressure_velocity_1d(
+        amplitude_pa,
+        k,
+        x_slice,
+        omega_t,
+        density_kg_m3,
+        sound_speed_m_s,
+    )
+    .map_err(PyValueError::new_err)?;
+    Ok((
+        pressure.into_pyarray(py).unbind(),
+        velocity.into_pyarray(py).unbind(),
+    ))
+}
+
+/// Gaussian-modulated cosine pulse over a 1-D coordinate axis.
+#[pyfunction]
+#[pyo3(signature = (x, center_m, sigma_m, wavelength_m, amplitude_pa))]
+pub fn gaussian_modulated_pulse_1d(
+    py: Python<'_>,
+    x: PyReadonlyArray1<f64>,
+    center_m: f64,
+    sigma_m: f64,
+    wavelength_m: f64,
+    amplitude_pa: f64,
+) -> PyResult<Py<PyArray1<f64>>> {
+    let x_slice = x
+        .as_slice()
+        .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+    let result =
+        wave::gaussian_modulated_pulse_1d(x_slice, center_m, sigma_m, wavelength_m, amplitude_pa)
+            .map_err(PyValueError::new_err)?;
+    Ok(result.into_pyarray(py).unbind())
+}
+
+/// d'Alembert zero-initial-velocity split-pulse solution on a uniform 1-D axis.
+#[pyfunction]
+#[pyo3(signature = (x, initial_pressure, shift_m))]
+pub fn dalembert_split_solution_1d(
+    py: Python<'_>,
+    x: PyReadonlyArray1<f64>,
+    initial_pressure: PyReadonlyArray1<f64>,
+    shift_m: f64,
+) -> PyResult<Py<PyArray1<f64>>> {
+    let x_slice = x
+        .as_slice()
+        .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+    let p_slice = initial_pressure
+        .as_slice()
+        .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+    let result = wave::dalembert_split_solution_1d(x_slice, p_slice, shift_m)
+        .map_err(PyValueError::new_err)?;
+    Ok(result.into_pyarray(py).unbind())
+}
+
 /// Compute spherical-wave pressure at radial distances *r*.
 ///
 /// p(r) = amplitude / r * cos(k*r)
@@ -86,6 +156,24 @@ pub fn spherical_wave_pressure(
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = wave::spherical_wave_pressure(amplitude, k, r_slice);
     Ok(result.into_pyarray(py).unbind())
+}
+
+/// Compute normalized spherical and cylindrical spreading intensity envelopes.
+#[pyfunction]
+#[pyo3(signature = (r,))]
+pub fn geometric_spreading_intensity_envelopes(
+    py: Python<'_>,
+    r: PyReadonlyArray1<f64>,
+) -> PyResult<(Py<PyArray1<f64>>, Py<PyArray1<f64>>)> {
+    let r_slice = r
+        .as_slice()
+        .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+    let (spherical, cylindrical) =
+        wave::geometric_spreading_intensity_envelopes(r_slice).map_err(PyValueError::new_err)?;
+    Ok((
+        spherical.into_pyarray(py).unbind(),
+        cylindrical.into_pyarray(py).unbind(),
+    ))
 }
 
 /// Compute the pressure reflection coefficient at a planar interface.

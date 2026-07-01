@@ -30,7 +30,10 @@ fn test_hu_to_sound_speed_bone() {
     // 1996–3114 m/s skull range measured by Webb (2018). The previous binary
     // ramp gave an unphysical 4400 m/s; that assertion was analytically wrong.
     let c_bone = CTImageLoader::hu_to_sound_speed(1500.0);
-    assert!((2500.0..=3100.0).contains(&c_bone), "skull speed {c_bone} out of band");
+    assert!(
+        (2500.0..=3100.0).contains(&c_bone),
+        "skull speed {c_bone} out of band"
+    );
     let c_very_dense = CTImageLoader::hu_to_sound_speed(2500.0);
     assert!(c_very_dense > c_bone, "speed must increase with HU");
 }
@@ -43,7 +46,10 @@ fn test_hu_to_sound_speed_soft_tissue_is_resolved() {
     let c_water = CTImageLoader::hu_to_sound_speed(0.0);
     assert!((c_water - SOUND_SPEED_WATER_SIM).abs() < 1e-6);
     let c_muscle = CTImageLoader::hu_to_sound_speed(100.0);
-    assert!((c_muscle - 1576.0).abs() < 1e-6, "muscle speed {c_muscle} != 1576");
+    assert!(
+        (c_muscle - 1576.0).abs() < 1e-6,
+        "muscle speed {c_muscle} != 1576"
+    );
     assert!(c_muscle > c_water);
 }
 
@@ -51,7 +57,10 @@ fn test_hu_to_sound_speed_soft_tissue_is_resolved() {
 fn test_hu_to_density_bone() {
     // Schneider: ρ(1000) = 1000 + 0.96·1000 = 1960 kg/m³ (cortical band).
     let rho_bone = CTImageLoader::hu_to_density(1000.0);
-    assert!((1900.0..=2000.0).contains(&rho_bone), "bone density {rho_bone}");
+    assert!(
+        (1900.0..=2000.0).contains(&rho_bone),
+        "bone density {rho_bone}"
+    );
     let rho_very_dense = CTImageLoader::hu_to_density(2000.0);
     assert!(rho_very_dense > rho_bone);
 }
@@ -64,7 +73,10 @@ fn test_hu_to_density_soft_tissue_is_resolved() {
     let rho_water = CTImageLoader::hu_to_density(0.0);
     assert_eq!(rho_water, DENSITY_WATER_NOMINAL);
     let rho_muscle = CTImageLoader::hu_to_density(50.0);
-    assert!((rho_muscle - 1048.0).abs() < 1e-6, "muscle density {rho_muscle} != 1048");
+    assert!(
+        (rho_muscle - 1048.0).abs() < 1e-6,
+        "muscle density {rho_muscle} != 1048"
+    );
     assert!(rho_muscle > rho_water);
 }
 

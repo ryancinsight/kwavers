@@ -87,7 +87,7 @@ mod tests {
     fn wave_mode_copy_clone_preserves_variant() {
         let m = PoroelasticWaveMode::SlowP;
         let copied = m;
-        let cloned = m.clone();
+        let cloned = m;
         assert_eq!(copied, m);
         assert_eq!(cloned, m);
     }

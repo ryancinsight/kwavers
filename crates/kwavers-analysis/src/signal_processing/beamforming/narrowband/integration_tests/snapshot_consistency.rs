@@ -1,7 +1,7 @@
 //! Cross-method snapshot consistency tests.
 
 use super::super::snapshots::{extract_narrowband_snapshots, SnapshotScenario, SnapshotSelection};
-use super::helpers::{compute_sample_covariance, generate_plane_wave_data};
+use super::helpers::{compute_sample_covariance, generate_plane_wave_data, PlaneWaveDataSpec};
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 
@@ -18,7 +18,16 @@ fn snapshot_methods_produce_consistent_covariance_rank() {
     let c = SOUND_SPEED_WATER_SIM;
     let snr_db = 20.0;
 
-    let data = generate_plane_wave_data(n_sensors, spacing_m, n_samples, fs, f0, 0.0, c, snr_db);
+    let data = generate_plane_wave_data(PlaneWaveDataSpec {
+        n_sensors,
+        sensor_spacing_m: spacing_m,
+        n_samples,
+        sampling_frequency_hz: fs,
+        signal_frequency_hz: f0,
+        angle_deg: 0.0,
+        sound_speed_m_per_s: c,
+        snr_db,
+    });
 
     // Method 1: Robust windowed STFT
     let scenario_robust = SnapshotScenario {

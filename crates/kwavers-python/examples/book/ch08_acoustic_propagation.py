@@ -3,8 +3,8 @@ Chapter 8 figure generation — Acoustic Propagation
 ===================================================
 
 Produces publication-quality figures for docs/book/acoustic_propagation.md.
-All figures derive from closed-form analytical expressions; no simulation
-required (pykwavers optional for solver-comparison overlays).
+All figure data derives from Rust/PyO3 analytical kernels; Python is used only
+for sampling axes and plotting.
 
 Output directory: docs/book/figures/ch08/
 
@@ -91,21 +91,11 @@ def fig01_plane_wave_snapshots() -> None:
 
 # ── Figure 02: Spherical vs cylindrical spreading ────────────────────────────
 def fig02_spreading_laws() -> None:
-    # Intensity derived from kw.spherical_wave_pressure (Pierce 1989 §1.6):
-    #   p_sph(r) = A·cos(k·r)/r  → I ∝ p² ∝ cos²(kr)/r² → envelope 1/r²
-    # For the envelope comparison, use |p|² and normalise; this correctly
-    # represents the geometric 1/r² spherical spreading law from Rust physics.
-    # Cylindrical spreading I ∝ 1/r is the 2-D Green's function (Pierce §1.7).
-    # kw.spherical_wave_pressure gives the 3-D (spherical) result; the
-    # cylindrical law is derived as I_cyl ∝ |p_sph| * sqrt(r) squared → 1/r.
-    k_dc = 1e-6  # near-DC wavenumber → cos(kr) ≈ 1 → clean 1/r envelope
     r = np.ascontiguousarray(np.linspace(0.01, 0.20, 500))
-    p_sph_raw = np.asarray(kw.spherical_wave_pressure(1.0, k_dc, r))
-    I_spherical = p_sph_raw ** 2   # ∝ 1/r² at k→0
-    I_cylindrical = np.abs(p_sph_raw)   # ∝ 1/r at k→0  (2-D source envelope)
-    # normalise to 1 at r_min
-    I_spherical /= I_spherical[0]
-    I_cylindrical /= I_cylindrical[0]
+    I_spherical, I_cylindrical = (
+        np.asarray(values, dtype=float)
+        for values in kw.geometric_spreading_intensity_envelopes(r)
+    )
 
     fig, ax = plt.subplots(figsize=(7, 4.5))
     ax.semilogy(r * 100, I_spherical, label=r"Spherical: $I \propto 1/r^2$")

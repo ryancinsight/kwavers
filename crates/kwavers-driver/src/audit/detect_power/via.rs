@@ -2,12 +2,12 @@
 
 use std::collections::BTreeSet;
 
+use crate::audit::net_util::is_high_speed_net;
 use crate::board::{Board, NetClassKind};
 use crate::geom::{dist_point_seg, Point};
+use crate::place::component::is_surge_suppressor_refdes;
 use crate::place::{Component, FootprintDef, Role};
 use crate::rules::DesignRules;
-use crate::audit::net_util::is_high_speed_net;
-use crate::place::component::is_surge_suppressor_refdes;
 
 use super::point_projects_inside_segment;
 

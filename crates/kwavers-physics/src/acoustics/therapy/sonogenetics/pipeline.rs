@@ -35,6 +35,15 @@ pub struct LifTrace {
     pub spike_times_s: Vec<f64>,
 }
 
+/// Output of [`lif_response_probability`].
+#[derive(Debug, Clone, PartialEq)]
+pub struct LifResponseProbability {
+    /// Binary spike train sampled at the neural time step.
+    pub spike_train: Vec<f64>,
+    /// Gaussian-smoothed spike-density response probability in `[0, 1]`.
+    pub response_probability: Vec<f64>,
+}
+
 fn invalid_value(parameter: &'static str, value: f64, reason: &'static str) -> KwaversError {
     KwaversError::Validation(ValidationError::InvalidValue {
         parameter: parameter.to_owned(),
@@ -272,6 +281,79 @@ pub fn simulate_lif_trace(
     })
 }
 
+/// Convert LIF spike times into a Gaussian-smoothed response probability.
+///
+/// The spike train is sampled on the same uniform grid as the LIF trace, then
+/// convolved with a normalized Gaussian kernel and divided by `f_max_hz`.
+///
+/// # Errors
+/// Returns an error when the sample count is zero, `dt_s`, `smoothing_sigma_s`,
+/// or `f_max_hz` is nonpositive/nonfinite, or any spike time is nonfinite.
+pub fn lif_response_probability(
+    spike_times_s: &[f64],
+    n_samples: usize,
+    dt_s: f64,
+    smoothing_sigma_s: f64,
+    f_max_hz: f64,
+) -> KwaversResult<LifResponseProbability> {
+    if n_samples == 0 {
+        return Err(KwaversError::InvalidInput(
+            "n_samples must be greater than zero".to_owned(),
+        ));
+    }
+    validate_positive("dt_s", dt_s)?;
+    validate_positive("smoothing_sigma_s", smoothing_sigma_s)?;
+    validate_positive("f_max_hz", f_max_hz)?;
+    if spike_times_s.iter().any(|value| !value.is_finite()) {
+        return Err(KwaversError::InvalidInput(
+            "spike_times_s contains non-finite values".to_owned(),
+        ));
+    }
+
+    let mut spike_train = vec![0.0; n_samples];
+    for &spike_time_s in spike_times_s {
+        let index = (spike_time_s / dt_s).round();
+        if index >= 0.0 {
+            let index = index as usize;
+            if index < n_samples {
+                spike_train[index] = 1.0;
+            }
+        }
+    }
+
+    let sigma_samples = smoothing_sigma_s / dt_s;
+    let radius = (4.0 * sigma_samples).ceil() as isize;
+    let mut kernel = Vec::with_capacity((2 * radius + 1) as usize);
+    let mut kernel_sum = 0.0;
+    for offset in -radius..=radius {
+        let x = offset as f64 / sigma_samples;
+        let value = (-0.5 * x * x).exp();
+        kernel.push(value);
+        kernel_sum += value;
+    }
+    for value in &mut kernel {
+        *value /= kernel_sum;
+    }
+
+    let mut response_probability = vec![0.0; n_samples];
+    for (sample, output) in response_probability.iter_mut().enumerate() {
+        let mut spike_density_hz = 0.0;
+        for (kernel_index, &weight) in kernel.iter().enumerate() {
+            let offset = kernel_index as isize - radius;
+            let source = sample as isize + offset;
+            if (0..n_samples as isize).contains(&source) {
+                spike_density_hz += spike_train[source as usize] * weight / dt_s;
+            }
+        }
+        *output = (spike_density_hz / f_max_hz).clamp(0.0, 1.0);
+    }
+
+    Ok(LifResponseProbability {
+        spike_train,
+        response_probability,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use approx::assert_relative_eq;
@@ -317,5 +399,30 @@ mod tests {
             simulate_lif_trace(&vec![200.0e-12; 2000], 0.05e-3, LifParams::default()).unwrap();
         assert_eq!(trace.voltage_v.len(), 2000);
         assert!(!trace.spike_times_s.is_empty());
+    }
+
+    #[test]
+    fn lif_response_probability_is_bounded_and_input_sensitive() {
+        let empty = lif_response_probability(&[], 101, 0.001, 0.01, 100.0).unwrap();
+        let active = lif_response_probability(&[0.05], 101, 0.001, 0.01, 100.0).unwrap();
+
+        assert_eq!(active.spike_train.len(), 101);
+        assert_eq!(active.response_probability.len(), 101);
+        assert_eq!(active.spike_train[50], 1.0);
+        assert!(active
+            .response_probability
+            .iter()
+            .all(|value| (0.0..=1.0).contains(value)));
+        assert!(
+            active.response_probability[50] > empty.response_probability[50],
+            "spike should raise the smoothed response"
+        );
+    }
+
+    #[test]
+    fn lif_response_probability_rejects_invalid_domains() {
+        assert!(lif_response_probability(&[0.0], 0, 0.001, 0.01, 100.0).is_err());
+        assert!(lif_response_probability(&[0.0], 10, 0.0, 0.01, 100.0).is_err());
+        assert!(lif_response_probability(&[f64::NAN], 10, 0.001, 0.01, 100.0).is_err());
     }
 }

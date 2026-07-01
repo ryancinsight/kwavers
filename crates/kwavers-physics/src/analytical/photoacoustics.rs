@@ -136,6 +136,70 @@ pub fn pa_sphere_pressure_signal(
         .collect()
 }
 
+/// Initial pressure and surface signal for a one-dimensional Gaussian absorber.
+///
+/// The initial pressure follows the photoacoustic source relation
+/// `p0(z) = Gamma * mu_a * Phi * exp(-0.5 * ((z - z0) / sigma)^2)`.
+/// The plotted surface signal is the analytic spatial derivative
+/// `dp0/dz`, sampled at `z = c * t`, which is the bipolar waveform used by
+/// the Chapter 5 imaging fixture.
+///
+/// # Errors
+///
+/// Returns an error if any axis or scalar is non-finite, `sigma_m <= 0`, or
+/// `sound_speed_m_s <= 0`.
+pub fn gaussian_absorber_photoacoustic_profile(
+    depth_axis_m: &[f64],
+    time_axis_s: &[f64],
+    gruneisen: f64,
+    absorption_per_m: f64,
+    fluence_j_m2: f64,
+    center_m: f64,
+    sigma_m: f64,
+    sound_speed_m_s: f64,
+) -> Result<(Vec<f64>, Vec<f64>), String> {
+    if !depth_axis_m.iter().all(|value| value.is_finite()) {
+        return Err("depth_axis_m must contain only finite values".to_owned());
+    }
+    if !time_axis_s.iter().all(|value| value.is_finite()) {
+        return Err("time_axis_s must contain only finite values".to_owned());
+    }
+    let scalars = [
+        gruneisen,
+        absorption_per_m,
+        fluence_j_m2,
+        center_m,
+        sigma_m,
+        sound_speed_m_s,
+    ];
+    if !scalars.iter().all(|value| value.is_finite()) {
+        return Err("photoacoustic fixture scalars must be finite".to_owned());
+    }
+    if sigma_m <= 0.0 {
+        return Err("sigma_m must be positive".to_owned());
+    }
+    if sound_speed_m_s <= 0.0 {
+        return Err("sound_speed_m_s must be positive".to_owned());
+    }
+
+    let initial_pressure_pa = gruneisen * absorption_per_m * fluence_j_m2;
+    let sigma_sq = sigma_m * sigma_m;
+    let pressure_profile = depth_axis_m
+        .iter()
+        .map(|&z| gaussian_absorber_pressure(z, center_m, sigma_m, initial_pressure_pa))
+        .collect();
+    let surface_signal = time_axis_s
+        .iter()
+        .map(|&t| {
+            let z = sound_speed_m_s * t;
+            let pressure = gaussian_absorber_pressure(z, center_m, sigma_m, initial_pressure_pa);
+            -((z - center_m) / sigma_sq) * pressure
+        })
+        .collect();
+
+    Ok((pressure_profile, surface_signal))
+}
+
 // ─── Axial resolution ─────────────────────────────────────────────────────────
 
 /// Photoacoustic axial resolution for a bandwidth-limited detector.
@@ -206,6 +270,89 @@ pub fn spectroscopic_unmixing_lstsq(spectra_matrix: &[Vec<f64>], measurements: &
     }
 
     gaussian_elimination(&ata, &atb)
+}
+
+/// Spectroscopic unmixing sweep for two haemoglobin chromophores.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SpectroscopicUnmixingSweep {
+    /// True oxygen saturation values.
+    pub true_so2: Vec<f64>,
+    /// Estimated oxygen saturation for each deterministic perturbation.
+    pub estimated_so2_by_perturbation: Vec<Vec<f64>>,
+}
+
+/// Compute deterministic HbO₂/Hb spectroscopic-unmixing curves.
+///
+/// For each true saturation `s`, the concentration vector is `[s, 1-s]`.
+/// Measurements are `E·c` at the two supplied wavelengths, optionally perturbed
+/// by the deterministic book fixture
+/// `perturbation * max(PA) * [sin(2πs), cos(2πs)]`. Negative concentration
+/// estimates are clipped to zero before computing `sO₂ = c_HbO2 / (c_HbO2+c_Hb)`.
+///
+/// # Errors
+///
+/// Returns an error if fewer than two saturation samples are requested, the
+/// wavelength list is not length two, any wavelength or perturbation is
+/// non-finite, or `max_so2 < min_so2`.
+pub fn spectroscopic_unmixing_so2_sweep(
+    wavelengths_nm: &[f64],
+    min_so2: f64,
+    max_so2: f64,
+    n_samples: usize,
+    perturbations: &[f64],
+) -> Result<SpectroscopicUnmixingSweep, String> {
+    if wavelengths_nm.len() != 2 {
+        return Err("wavelengths_nm must contain exactly two wavelengths".to_owned());
+    }
+    if n_samples < 2 {
+        return Err("n_samples must be at least two".to_owned());
+    }
+    if !min_so2.is_finite() || !max_so2.is_finite() || max_so2 < min_so2 {
+        return Err("sO2 bounds must be finite with max_so2 >= min_so2".to_owned());
+    }
+    if !wavelengths_nm.iter().all(|value| value.is_finite()) {
+        return Err("wavelengths_nm must contain only finite values".to_owned());
+    }
+    if !perturbations.iter().all(|value| value.is_finite()) {
+        return Err("perturbations must contain only finite values".to_owned());
+    }
+
+    let eps_hbo2 = hbo2_molar_absorption(wavelengths_nm);
+    let eps_hb = hb_molar_absorption(wavelengths_nm);
+    let spectra = vec![vec![eps_hbo2[0], eps_hb[0]], vec![eps_hbo2[1], eps_hb[1]]];
+
+    let step = (max_so2 - min_so2) / (n_samples - 1) as f64;
+    let true_so2: Vec<f64> = (0..n_samples)
+        .map(|idx| min_so2 + idx as f64 * step)
+        .collect();
+    let mut estimated_so2_by_perturbation = Vec::with_capacity(perturbations.len());
+
+    for &perturbation in perturbations {
+        let mut estimates = Vec::with_capacity(n_samples);
+        for &s in &true_so2 {
+            let concentrations = [s, 1.0 - s];
+            let pa0 = spectra[0][0] * concentrations[0] + spectra[0][1] * concentrations[1];
+            let pa1 = spectra[1][0] * concentrations[0] + spectra[1][1] * concentrations[1];
+            let pa_max = pa0.max(pa1);
+            let phase = 2.0 * std::f64::consts::PI * s;
+            let measurements = vec![
+                pa0 + perturbation * pa_max * phase.sin(),
+                pa1 + perturbation * pa_max * phase.cos(),
+            ];
+            let mut estimate = spectroscopic_unmixing_lstsq(&spectra, &measurements);
+            for value in &mut estimate {
+                *value = value.max(0.0);
+            }
+            let denominator = estimate.iter().sum::<f64>().max(1.0e-30);
+            estimates.push(estimate[0] / denominator);
+        }
+        estimated_so2_by_perturbation.push(estimates);
+    }
+
+    Ok(SpectroscopicUnmixingSweep {
+        true_so2,
+        estimated_so2_by_perturbation,
+    })
 }
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
@@ -288,6 +435,16 @@ fn hb_poly(lam_nm: f64) -> f64 {
     result.max(0.0)
 }
 
+fn gaussian_absorber_pressure(
+    depth_m: f64,
+    center_m: f64,
+    sigma_m: f64,
+    initial_pressure_pa: f64,
+) -> f64 {
+    let normalized_depth = (depth_m - center_m) / sigma_m;
+    initial_pressure_pa * (-0.5 * normalized_depth * normalized_depth).exp()
+}
+
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
@@ -365,9 +522,88 @@ mod tests {
     }
 
     #[test]
+    fn spectroscopic_unmixing_sweep_preserves_unperturbed_so2() {
+        let sweep =
+            spectroscopic_unmixing_so2_sweep(&[760.0, 850.0], 0.0, 1.0, 11, &[0.0]).unwrap();
+
+        assert_eq!(sweep.true_so2.len(), 11);
+        assert_eq!(sweep.estimated_so2_by_perturbation.len(), 1);
+        for (&truth, &estimated) in sweep
+            .true_so2
+            .iter()
+            .zip(&sweep.estimated_so2_by_perturbation[0])
+        {
+            assert!((truth - estimated).abs() < 1.0e-10);
+        }
+    }
+
+    #[test]
+    fn spectroscopic_unmixing_sweep_rejects_invalid_inputs() {
+        assert!(
+            spectroscopic_unmixing_so2_sweep(&[760.0], 0.0, 1.0, 11, &[0.0])
+                .unwrap_err()
+                .contains("exactly two")
+        );
+        assert!(
+            spectroscopic_unmixing_so2_sweep(&[760.0, 850.0], 1.0, 0.0, 11, &[0.0])
+                .unwrap_err()
+                .contains("max_so2")
+        );
+        assert!(
+            spectroscopic_unmixing_so2_sweep(&[760.0, 850.0], 0.0, 1.0, 1, &[0.0])
+                .unwrap_err()
+                .contains("n_samples")
+        );
+    }
+
+    #[test]
     fn pa_sphere_signal_length_matches() {
         let t: Vec<f64> = (0..100).map(|i| i as f64 * 1e-8).collect();
         let p = pa_sphere_pressure_signal(&t, 1e-3, 0.2, 100.0, SOUND_SPEED_WATER_SIM, 0.05, 1e4);
         assert_eq!(p.len(), 100);
+    }
+
+    #[test]
+    fn gaussian_absorber_photoacoustic_profile_matches_closed_form() {
+        let depth = [0.019, 0.020, 0.021];
+        let time = depth.map(|z| z / SOUND_SPEED_WATER_SIM);
+        let (profile, signal) = gaussian_absorber_photoacoustic_profile(
+            &depth,
+            &time,
+            0.18,
+            100.0,
+            0.02,
+            0.020,
+            0.001,
+            SOUND_SPEED_WATER_SIM,
+        )
+        .unwrap();
+
+        let p0 = 0.18 * 100.0 * 0.02;
+        let off_center = p0 * (-0.5_f64).exp();
+        assert!((profile[0] - off_center).abs() < 1.0e-15);
+        assert!((profile[1] - p0).abs() < 1.0e-15);
+        assert!((profile[2] - off_center).abs() < 1.0e-15);
+        assert!(signal[0] > 0.0);
+        assert!(signal[1].abs() < 1.0e-10);
+        assert!(signal[2] < 0.0);
+        assert!((signal[0] + signal[2]).abs() < 1.0e-9);
+    }
+
+    #[test]
+    fn gaussian_absorber_photoacoustic_profile_rejects_invalid_width() {
+        let err = gaussian_absorber_photoacoustic_profile(
+            &[0.0],
+            &[0.0],
+            0.18,
+            100.0,
+            0.02,
+            0.0,
+            0.0,
+            1500.0,
+        )
+        .unwrap_err();
+
+        assert!(err.contains("sigma_m"));
     }
 }

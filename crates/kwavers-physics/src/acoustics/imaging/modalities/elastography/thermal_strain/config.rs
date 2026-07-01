@@ -5,7 +5,9 @@
 //! the acquisition geometry needed to convert echo sample shifts into physical
 //! displacement.
 
-use kwavers_core::constants::{DC_DT_SOFT_TISSUE, SOUND_SPEED_TISSUE, THERMAL_EXPANSION_SOFT_TISSUE};
+use kwavers_core::constants::{
+    DC_DT_SOFT_TISSUE, SOUND_SPEED_TISSUE, THERMAL_EXPANSION_SOFT_TISSUE,
+};
 use kwavers_core::error::{KwaversResult, ValidationError};
 
 /// Material and acquisition parameters for thermal strain thermometry.

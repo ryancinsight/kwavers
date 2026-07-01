@@ -435,7 +435,8 @@ Fubini fundamental is depleted to ≈0.88 P₀ while the sawtooth form starts at
 / `fubini_waveform`; the complementary Fay post-shock sawtooth (3.25b) is
 `sawtooth_harmonic_amplitude` / `sawtooth_harmonic_spectrum`. Value-semantic tests verify
 the 1/n harmonic decay, the 1/(1+σ) distance decay, the closed form, and the Fay–Fubini
-discontinuity at σ=1.
+discontinuity at σ=1. The Chapter 3 figure script calls the `pykwavers.fubini_waveform`
+binding for Figure 3.3 and only plots the returned pressure samples.
 
 **Theorem 3.8 (Quadratic Nonlinearity Generates Harmonics — Proof from First Principles).**
 Let p = P₀ cos(ω₀t) be the incident pressure. The nonlinear term (β/ρ₀c₀⁴)∂²p²/∂t² in

@@ -1,13 +1,16 @@
 //! Board-edge clearance, component-edge clearance, and parallel-spacing
 //! violation detectors for high-speed signals.
 
+use crate::audit::net_util::{are_diff_pair_mates, is_clock_like_net, is_high_speed_net};
 use crate::board::{Board, NetClassKind, NetId};
 use crate::geom::{Nm, Point};
 use crate::place::{Component, FootprintDef, Role};
 use crate::rules::DesignRules;
-use crate::audit::net_util::{are_diff_pair_mates, is_clock_like_net, is_high_speed_net};
 
-pub(crate) fn detect_high_speed_edge_violations(board: &Board, rules: &DesignRules) -> (usize, Vec<Point>) {
+pub(crate) fn detect_high_speed_edge_violations(
+    board: &Board,
+    rules: &DesignRules,
+) -> (usize, Vec<Point>) {
     let is_high_speed = |net: NetId| {
         let name = &board.nets[net.0 as usize].name;
         board.class_of(net) == NetClassKind::Hv

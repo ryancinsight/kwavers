@@ -33,6 +33,20 @@ pub const TEMPORAL_SMOOTHING: f64 = 0.1;
 /// Confidence decay rate
 pub const CONFIDENCE_DECAY: f64 = 0.95;
 
+const _: () = {
+    assert!(SUBHARMONIC_THRESHOLD > 0.0);
+    assert!(BROADBAND_THRESHOLD_DB > 0.0);
+    assert!(HARMONIC_THRESHOLD > 0.0);
+    assert!(MIN_SPECTRAL_POWER > 0.0);
+    assert!(FREQUENCY_TOLERANCE > 0.0);
+    assert!(MIN_SNR_DB > 0.0);
+    assert!(SPECTRAL_WINDOW_SIZE > 0);
+    assert!(WINDOW_OVERLAP_RATIO > 0.0 && WINDOW_OVERLAP_RATIO < 1.0);
+    assert!(MAX_HARMONICS > 0);
+    assert!(TEMPORAL_SMOOTHING > 0.0 && TEMPORAL_SMOOTHING < 1.0);
+    assert!(CONFIDENCE_DECAY > 0.0 && CONFIDENCE_DECAY < 1.0);
+};
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -40,21 +54,28 @@ mod tests {
     /// Threshold constants are in physically meaningful positive ranges.
     #[test]
     fn thresholds_are_positive() {
-        assert!(SUBHARMONIC_THRESHOLD > 0.0);
-        assert!(BROADBAND_THRESHOLD_DB > 0.0);
-        assert!(HARMONIC_THRESHOLD > 0.0);
-        assert!(MIN_SPECTRAL_POWER > 0.0);
-        assert!(FREQUENCY_TOLERANCE > 0.0);
-        assert!(MIN_SNR_DB > 0.0);
+        for value in [
+            SUBHARMONIC_THRESHOLD,
+            BROADBAND_THRESHOLD_DB,
+            HARMONIC_THRESHOLD,
+            MIN_SPECTRAL_POWER,
+            FREQUENCY_TOLERANCE,
+            MIN_SNR_DB,
+        ] {
+            assert!(value.is_sign_positive());
+        }
     }
 
     /// Window and analysis constants are in valid ranges.
     #[test]
     fn window_and_analysis_constants_valid() {
-        assert!(SPECTRAL_WINDOW_SIZE > 0);
-        assert!(WINDOW_OVERLAP_RATIO > 0.0 && WINDOW_OVERLAP_RATIO < 1.0);
-        assert!(MAX_HARMONICS > 0);
-        assert!(TEMPORAL_SMOOTHING > 0.0 && TEMPORAL_SMOOTHING < 1.0);
-        assert!(CONFIDENCE_DECAY > 0.0 && CONFIDENCE_DECAY < 1.0);
+        assert_ne!(SPECTRAL_WINDOW_SIZE, 0);
+        let window_overlap_ratio = WINDOW_OVERLAP_RATIO;
+        assert!((0.0..1.0).contains(&window_overlap_ratio));
+        assert_ne!(MAX_HARMONICS, 0);
+        let temporal_smoothing = TEMPORAL_SMOOTHING;
+        let confidence_decay = CONFIDENCE_DECAY;
+        assert!((0.0..1.0).contains(&temporal_smoothing));
+        assert!((0.0..1.0).contains(&confidence_decay));
     }
 }

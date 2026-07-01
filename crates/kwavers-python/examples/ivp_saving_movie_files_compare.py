@@ -106,7 +106,7 @@ _KWAVE_CACHE = DEFAULT_OUTPUT_DIR / "ivp_saving_movie_files_kwave_cache.npz"
 _PKWAV_CACHE = DEFAULT_OUTPUT_DIR / "ivp_saving_movie_files_pykwavers_cache.npz"
 
 REFRESH_CACHE = os.getenv("KWAVERS_REFRESH_CACHE", "0") == "1"
-CACHE_VERSION = 1
+CACHE_VERSION = 2
 
 
 # ---------------------------------------------------------------------------
@@ -321,9 +321,12 @@ def run_pykwavers(inputs: dict, *, no_cache: bool = False) -> dict:
     if pf is not None:
         p_final_3d = np.asarray(pf, dtype=np.float64)
         p_final = p_final_3d[:, :, 0] if p_final_3d.ndim == 3 else p_final_3d.squeeze()
+        if p_final.shape == (NX, NY):
+            p_final = p_final[PML_SIZE:-PML_SIZE, PML_SIZE:-PML_SIZE]
     else:
         # Fall back to zeroes so the script still produces a valid comparison image
-        p_final = np.zeros((NX, NY), dtype=np.float64)
+        interior = NX - 2 * PML_SIZE
+        p_final = np.zeros((interior, interior), dtype=np.float64)
 
     _save_cache(_PKWAV_CACHE, pressure, p_final, nt, dt, runtime_s, n_sensors)
     return {"pressure": pressure, "p_final": p_final,

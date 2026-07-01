@@ -4,7 +4,7 @@ use super::super::{
     capon::{capon_spatial_spectrum_point, CaponSpectrumConfig},
     snapshots::{extract_narrowband_snapshots, SnapshotScenario, SnapshotSelection},
 };
-use super::helpers::{generate_plane_wave_data, generate_ula_positions};
+use super::helpers::{generate_plane_wave_data, generate_ula_positions, PlaneWaveDataSpec};
 use crate::signal_processing::beamforming::{
     covariance::{CovarianceEstimator, CovariancePostProcess},
     utils::steering::SteeringVectorMethod,
@@ -23,7 +23,16 @@ fn end_to_end_pipeline_produces_finite_spectrum() {
     let c = SOUND_SPEED_WATER_SIM; // sound speed
     let snr_db = 20.0;
 
-    let data = generate_plane_wave_data(n_sensors, spacing_m, n_samples, fs, f0, 0.0, c, snr_db);
+    let data = generate_plane_wave_data(PlaneWaveDataSpec {
+        n_sensors,
+        sensor_spacing_m: spacing_m,
+        n_samples,
+        sampling_frequency_hz: fs,
+        signal_frequency_hz: f0,
+        angle_deg: 0.0,
+        sound_speed_m_per_s: c,
+        snr_db,
+    });
     let positions = generate_ula_positions(n_sensors, spacing_m);
 
     // Pipeline step 1: Extract snapshots
@@ -80,7 +89,16 @@ fn capon_spectrum_varies_across_candidate_grid() {
     let c = SOUND_SPEED_WATER_SIM;
     let snr_db = 30.0; // High SNR
 
-    let data = generate_plane_wave_data(n_sensors, spacing_m, n_samples, fs, f0, 0.0, c, snr_db);
+    let data = generate_plane_wave_data(PlaneWaveDataSpec {
+        n_sensors,
+        sensor_spacing_m: spacing_m,
+        n_samples,
+        sampling_frequency_hz: fs,
+        signal_frequency_hz: f0,
+        angle_deg: 0.0,
+        sound_speed_m_per_s: c,
+        snr_db,
+    });
     let positions = generate_ula_positions(n_sensors, spacing_m);
 
     let scenario = SnapshotScenario {
@@ -162,7 +180,16 @@ fn diagonal_loading_prevents_covariance_singularity() {
     let c = SOUND_SPEED_WATER_SIM;
     let snr_db = 10.0; // Low SNR
 
-    let data = generate_plane_wave_data(n_sensors, spacing_m, n_samples, fs, f0, 0.0, c, snr_db);
+    let data = generate_plane_wave_data(PlaneWaveDataSpec {
+        n_sensors,
+        sensor_spacing_m: spacing_m,
+        n_samples,
+        sampling_frequency_hz: fs,
+        signal_frequency_hz: f0,
+        angle_deg: 0.0,
+        sound_speed_m_per_s: c,
+        snr_db,
+    });
     let positions = generate_ula_positions(n_sensors, spacing_m);
     let candidate = [0.0, 0.0, 0.05];
 

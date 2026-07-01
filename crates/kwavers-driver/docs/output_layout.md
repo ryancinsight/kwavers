@@ -15,7 +15,7 @@ outputs.
 | Folder | Contents |
 |--------|----------|
 | `output/full_driver/` | Stack integration workspace for the FPGA controller, the 24-channel HV shield, stack manifests, stack renders, and fabrication exports. |
-| `output/beamforming/` | Beamforming bitmaps and metrics generated from the driver manifest. |
+| `output/beamforming/` | kwavers-backed beamforming validation sidecar, realized tile geometry CSV, metrics CSV, and deterministic BMP visualizations generated from the driver manifest. |
 | `output/examples/` | Older single-board demos and non-canonical example boards. |
 | `output/manifests/` | Standalone generated manifests not tied to one board folder. |
 | `output/reports/` | Standalone DRC/audit reports. |

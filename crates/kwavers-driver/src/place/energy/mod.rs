@@ -15,13 +15,13 @@
 //! * `floorplan` — functional-region cohesion, board utilization, assembly alignment, LV↔HV
 //!   isolation-barrier drift, and congestion feed-back terms.
 
-pub mod config;
-pub(crate) mod geom;
 pub mod compute;
-pub(super) mod thermal;
-pub(super) mod proximity;
+pub mod config;
 pub(super) mod connectivity;
 pub(super) mod floorplan;
+pub(crate) mod geom;
+pub(super) mod proximity;
+pub(super) mod thermal;
 
-pub use config::{Axis, CongestionField, EnergyTerms, PlaceConfig, PlaceWeights};
 pub use compute::energy;
+pub use config::{Axis, CongestionField, EnergyTerms, PlaceConfig, PlaceWeights};

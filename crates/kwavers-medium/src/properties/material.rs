@@ -434,8 +434,7 @@ mod tests {
             SPECIFIC_HEAT_WATER,
             0.6,
         );
-        let bone =
-            AcousticMaterialProperties::new(3000.0, 1900.0, 0.002, SPECIFIC_HEAT_WATER, 0.6);
+        let bone = AcousticMaterialProperties::new(3000.0, 1900.0, 0.002, SPECIFIC_HEAT_WATER, 0.6);
         let (zi, zt) = (water.impedance, bone.impedance);
 
         let t = water.transmission_coefficient(&bone);

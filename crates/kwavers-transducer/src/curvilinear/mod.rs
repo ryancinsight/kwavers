@@ -92,7 +92,11 @@ impl ConvexArrayGeometry {
                 "ConvexArrayGeometry requires arc_pitch_m > 0, got {arc_pitch_m}"
             )));
         }
-        Self::from_angular_pitch(radius_of_curvature, num_elements, arc_pitch_m / radius_of_curvature)
+        Self::from_angular_pitch(
+            radius_of_curvature,
+            num_elements,
+            arc_pitch_m / radius_of_curvature,
+        )
     }
 
     /// Build from the total angular span `Θ` [rad] of the aperture.
@@ -181,13 +185,17 @@ impl ConvexArrayGeometry {
     /// All element centre positions.
     #[must_use]
     pub fn positions(&self) -> Vec<[f64; 3]> {
-        (0..self.num_elements).map(|i| self.element_position(i)).collect()
+        (0..self.num_elements)
+            .map(|i| self.element_position(i))
+            .collect()
     }
 
     /// All element outward normals.
     #[must_use]
     pub fn normals(&self) -> Vec<[f64; 3]> {
-        (0..self.num_elements).map(|i| self.element_normal(i)).collect()
+        (0..self.num_elements)
+            .map(|i| self.element_normal(i))
+            .collect()
     }
 
     /// Arc-length pitch (centre-to-centre along the arc) `R_c·Δθ` [m].
@@ -237,7 +245,10 @@ impl ConvexArrayGeometry {
             })
             .collect();
         let d_max = distances.iter().copied().fold(f64::NEG_INFINITY, f64::max);
-        Ok(distances.iter().map(|&d| (d_max - d) / sound_speed).collect())
+        Ok(distances
+            .iter()
+            .map(|&d| (d_max - d) / sound_speed)
+            .collect())
     }
 }
 

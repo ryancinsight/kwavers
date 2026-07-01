@@ -283,9 +283,9 @@ fn extract_pads(
 /// [`crate::Error::Geometry`] if the computed grid would be empty.
 pub fn parse_kicad_pcb(text: &str) -> crate::Result<Board> {
     let root = parse_sexpr(text)?;
-    let items = root.as_list().ok_or_else(|| {
-        crate::error::manifest::parse_msg("kicad_pcb root must be a list")
-    })?;
+    let items = root
+        .as_list()
+        .ok_or_else(|| crate::error::manifest::parse_msg("kicad_pcb root must be a list"))?;
 
     // 1. Copper layers → name map.
     let cu = copper_layers(items);
@@ -605,8 +605,18 @@ mod tests {
         let expected_y = nm(8.0);
         let dx = (p.pos.x.0 - expected_x.0).abs();
         let dy = (p.pos.y.0 - expected_y.0).abs();
-        assert!(dx <= 1, "pad X after 90° rotation: expected {}, got {}", expected_x.0, p.pos.x.0);
-        assert!(dy <= 1, "pad Y after 90° rotation: expected {}, got {}", expected_y.0, p.pos.y.0);
+        assert!(
+            dx <= 1,
+            "pad X after 90° rotation: expected {}, got {}",
+            expected_x.0,
+            p.pos.x.0
+        );
+        assert!(
+            dy <= 1,
+            "pad Y after 90° rotation: expected {}, got {}",
+            expected_y.0,
+            p.pos.y.0
+        );
     }
 
     #[test]

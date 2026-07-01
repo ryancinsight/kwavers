@@ -302,7 +302,11 @@ fn test_cfs_pml_grading_and_coefficients() {
         "κ at wall should be κ_max={kappa_max}, got {}",
         p.kappa_x[0]
     );
-    assert!(p.alpha_x[0].abs() < 1e-12, "α at wall should be 0, got {}", p.alpha_x[0]);
+    assert!(
+        p.alpha_x[0].abs() < 1e-12,
+        "α at wall should be 0, got {}",
+        p.alpha_x[0]
+    );
 
     // Innermost PML cell (index pml_size−1, q = 1/pml_size): κ ≈ 1, α near α_max.
     let inner = pml_size - 1;
@@ -321,8 +325,14 @@ fn test_cfs_pml_grading_and_coefficients() {
     );
 
     // κ grades monotonically wall→interface (decreasing); α grades opposite.
-    assert!(p.kappa_x[0] > p.kappa_x[inner], "κ must decrease wall→interface");
-    assert!(p.alpha_x[0] < p.alpha_x[inner], "α must increase wall→interface");
+    assert!(
+        p.kappa_x[0] > p.kappa_x[inner],
+        "κ must decrease wall→interface"
+    );
+    assert!(
+        p.alpha_x[0] < p.alpha_x[inner],
+        "α must increase wall→interface"
+    );
 
     // Canonical recursion at the wall (α=0): b = exp(−σ/κ_max·dt), a = (b−1)/κ_max.
     let sigma_wall = p.sigma_x[0];
@@ -351,5 +361,8 @@ fn test_cfs_pml_grading_and_coefficients() {
         p.sigma_x, sigma_only.sigma_x,
         "CFS must not change the σ damping profile (split-field parity)"
     );
-    assert_eq!(p.pml_den_x, sigma_only.pml_den_x, "split-field decay factors must be unchanged");
+    assert_eq!(
+        p.pml_den_x, sigma_only.pml_den_x,
+        "split-field decay factors must be unchanged"
+    );
 }

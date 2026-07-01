@@ -260,7 +260,10 @@ mod tests {
         );
 
         // The written plane equals the orchestrator's stress-trace pressure.
-        let direct = plugin.orchestrator().expect("orchestrator").pressure_field();
+        let direct = plugin
+            .orchestrator()
+            .expect("orchestrator")
+            .pressure_field();
         for (w, d) in after_two.iter().zip(direct.iter()) {
             assert!(
                 (w - d).abs() <= 1e-9 * d.abs().max(1.0),

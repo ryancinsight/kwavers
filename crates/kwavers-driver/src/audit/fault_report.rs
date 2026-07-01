@@ -18,10 +18,7 @@
 //! * **Antenna / dangling** — a track end not landing on a pad, via, or another track is an
 //!   etch/ESD antenna and a likely open fault.
 
-
-use crate::board::{
-    Board, NetClassKind, NetId,
-};
+use crate::board::{Board, NetClassKind, NetId};
 use crate::geom::Point;
 
 /// Structured result of an adversarial audit.

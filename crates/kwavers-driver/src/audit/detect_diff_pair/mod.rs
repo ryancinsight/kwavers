@@ -4,21 +4,18 @@
 //! entry, coupling caps, interface consistency, keepout, stitching-cap symmetry,
 //! and transition-via symmetry.
 
-mod routing;
 mod cap;
 mod interface;
+mod routing;
 
 pub(crate) use routing::{
-    diff_pair_axis,
-    detect_diff_pair_violations,
-    detect_diff_pair_pad_entry_mismatch_violations,
-    detect_diff_pair_pad_entry_length_violations,
-    detect_diff_pair_keepout_violations,
+    detect_diff_pair_keepout_violations, detect_diff_pair_pad_entry_length_violations,
+    detect_diff_pair_pad_entry_mismatch_violations, detect_diff_pair_violations, diff_pair_axis,
 };
 
 pub(crate) use cap::{
-    detect_diff_pair_coupling_cap_symmetry_violations,
     detect_diff_pair_coupling_cap_package_violations,
+    detect_diff_pair_coupling_cap_symmetry_violations,
     detect_diff_pair_stitching_cap_symmetry_violations,
 };
 

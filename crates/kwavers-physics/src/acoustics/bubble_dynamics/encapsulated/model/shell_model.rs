@@ -53,12 +53,7 @@ pub trait EncapsulatedShellModel {
     ///
     /// # Errors
     /// Returns a model error if a sub-step fails; the base RP path is infallible.
-    fn acceleration(
-        &self,
-        state: &mut BubbleState,
-        p_acoustic: f64,
-        t: f64,
-    ) -> KwaversResult<f64> {
+    fn acceleration(&self, state: &mut BubbleState, p_acoustic: f64, t: f64) -> KwaversResult<f64> {
         let p = self.params();
         let r = state.radius;
         let v = state.wall_velocity;

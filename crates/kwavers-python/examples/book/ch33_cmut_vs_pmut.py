@@ -16,10 +16,7 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 
-try:
-    import pykwavers as kw
-except ImportError as exc:  # pragma: no cover
-    raise ImportError("pykwavers is required (maturin develop --release)") from exc
+import pykwavers as kw
 
 REPO_ROOT = os.path.normpath(
     os.path.join(os.path.dirname(__file__), "..", "..", "..", "..")

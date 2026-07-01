@@ -150,7 +150,13 @@ pub fn reconstruct(
         observations.push(FrequencyObservation::new(frequency_hz, pressure));
     }
     let result = if cfg.use_gauss_newton {
-        invert_gauss_newton(&observations, array, background, &config, &GaussNewtonConfig::default())?
+        invert_gauss_newton(
+            &observations,
+            array,
+            background,
+            &config,
+            &GaussNewtonConfig::default(),
+        )?
     } else {
         invert(&observations, array, background, &config)?
     };
@@ -244,7 +250,10 @@ mod tests {
         let array = ring_around_slice(cfg.ring_elements, cfg.ring_diameter_m).unwrap();
         let homo = slice_with_bump(20, 1500.0, 0.0, 0);
         let recon = reconstruct(&homo, &homo, &array, &cfg).unwrap();
-        let max_dev = recon.iter().map(|&c| (c - 1500.0).abs()).fold(0.0_f64, f64::max);
+        let max_dev = recon
+            .iter()
+            .map(|&c| (c - 1500.0).abs())
+            .fold(0.0_f64, f64::max);
         assert!(max_dev < 5.0, "homogeneous recon drifted by {max_dev} m/s");
     }
 
@@ -278,7 +287,9 @@ mod tests {
 
         let lesion = differential_lesion_map(&background, &perturbed, &array, &cfg).unwrap();
         let centre_dc = lesion[[centre, centre, 0]];
-        eprintln!("differential through-skull lesion centre Δc {centre_dc:+.2} (true +{true_bump})");
+        eprintln!(
+            "differential through-skull lesion centre Δc {centre_dc:+.2} (true +{true_bump})"
+        );
         assert!(centre_dc > 0.0, "must recover positive Δc, got {centre_dc}");
         assert!(
             centre_dc >= 0.3 * true_bump,

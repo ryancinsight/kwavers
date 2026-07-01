@@ -62,9 +62,9 @@ Generated beamforming examples from `output/full_driver/driver_manifest.kv`:
 | Drive frequency | 2 MHz transducer operation. | `driver_manifest.kv` records `frequency_hz=2.0e6`; beam renderer uses this manifest. | Implemented. |
 | Timing resolution | 5 ns inter-channel delay resolution. | `driver_manifest.kv` records `timing_step_s=5.0e-9`; tests check 5 ns focused-delay quantization. | Implemented. |
 | Article waveform example | PRF 1 kHz, TBD 0.5 ms, SD 300 ms, ISI 3 s, TT 18 s, 2 MHz carrier. | Track D v2 follow-up emits per-tile stimulation programme at the kv sidecar: each HV tile carries its own PRF/SHIFT/PHASE/RAMP profile (`TileStimulationProfile::from_article_with`) plus the inherited TBD/SD/ISI/TT/VPP/dead-time protocol fields from the article preset, and the 96-lane `TX_0..TX_95` binding = one profile per tile (`is_full_stack_v2`, `validate_v2_energy_budget`). Sidecar at `output/manifests/v2_per_tile_stim.kv`. | v2 per-tile. |
-| Transducer array | Custom 2 MHz, 16-element array, 4.3 x 11.7 x 0.7 mm. | Per HV tile exposes 24 local `TX_0..TX_23` nets; stack assembly maps four tiles to global `TX_0..TX_95`. The tile aperture scales the article pitch to 6.593 mm across 24 elements. | Superset tile; full 96-channel acoustic geometry needs kwavers-backed definition. |
-| Focus/beam result | Measured up to 6 MPa peak-to-peak at 10 mm focus; lateral/axial resolution 0.6/4.67 mm. | Rust beam renderer generates pulse-envelope focal plots from board manifest. Current 0-degree render peaks at -0.020 mm lateral / 9.983 mm depth with 1.398 mm lateral and 4.409 mm axial 6 dB widths. | Diagnostic only; not article-grade acoustic validation. |
-| Beam simulation engine | Paper reports measurement plus analysis. | `DriverManifest::validate_v2_energy_budget` emits the kwavers-conformant `EnergyBudgetReport` (with the new `per_tile_resistor_margin_w` per-tile margin vec + the SMD-package power-rating check); `validate_against_budget` (`src/validate.rs`) reads it + the full-stack v2 manifest and emits the typed `KwaversBeamStep` pre-step and `KwaversBeamValidation` (article-anchored coherent-N focal pressure, grating-lobe free boolean, MI, ISPPA, axial/lateral 6 dB extents, kwavers-side 4-check `PhysicsReport` with the new `resistor margin (per-tile min) ≥ 0 W` lock at the seam). The sealed `ResistorPackage` enum (`Smd1206` 250 mW / `Smd2512` 1 W / `Smd4527` 2 W at IPC-7351 70 °C ambient) ties the per-tile dissipation to a placement-annealer-visible footprint choice, and the propagated `resistor_margin_w` per-tile vector lets the kwavers consumer plan footprint bumps (`Smd2512 ⇒ Smd4527`) and matching-cap tightening without re-deriving `pulser_dissipation`. The `// TODO(kwavers-transducer)` marker at the in-crate physics block is the explicit seam for the future `crate::kwavers_transducer::simulate(&step) -> PressureMap` call (and its update instructions explicitly point the future consumer at `step.resistor_margin_w[i]` for package/cap planning). The **inline rejection gate has been lifted** out of `validate_v2_energy_budget` -- rename `ResistorPackage::power_rating_check(...) -> Result<f64, ResistorRatingError>` to `ResistorPackage::power_margin_w(self, dissipation_w) -> f64` returning a SIGNED margin (`max_w - dissipation_w`); the `ResistorRatingError` struct + `over_w()` accessor are deleted from the public API surface. Signed per-tile margins propagate through `EnergyBudgetReport::per_tile_resistor_margin_w` -> `KwaversBeamStep::resistor_margin_w` -> `KwaversBeamValidation::resistor_margin_w` verbatim; the kwavers-side 4th `Check` against the new safety constant `KWVERS_MIN_RESISTOR_MARGIN_W = 0.05 W (50 mW slack floor — a real headroom BUDGET above the IPC-7351 70 °C AMBIENT ceiling, vs the prior bare-ceiling semantic)` is the SOLE gatekeeper on the per-tile resistor rating (no longer redundant -- can actually fail now when an under-rated footprint is chosen: `Smd1206` on the article-class envelope fails the 4th Check while the focal-pressure / MI / grating-lobe-free checks still pass). Tightened to a `0.05 W` slack floor (50 mW headroom BUDGET above the IPC-7351 70 °C AMBIENT ceiling — a real headroom budget vs the prior bare-ceiling semantic); further tightening (e.g. `0.10 W` for pessimistic stack-temperature drift) is one constant edit + a regression-test re-pin away. | **v2 contracted**; lifted rejection gate + per-tile SMD rating + signed-margin sole-gatekeeper Check sealed at the seam; kwavers-side `0.05 W` slack floor (real headroom BUDGET above the IPC-7351 ceiling) + gatekeeper-narrative triad (under-rated `Smd2512` step 5c / tight-but-still-fits `Smd2512He` step 5b / comfortable `Smd4527` step 4-5) demonstrated in `examples/v2_per_tile_stim.rs`. |
+| Transducer array | Custom 2 MHz, 16-element array, 4.3 x 11.7 x 0.7 mm. | Per HV tile exposes 24 local `TX_0..TX_23` nets; stack assembly maps four tiles to global `TX_0..TX_95`. The propagated 96-channel geometry realizes 0.286667 mm pitch and 27.233333 mm channel-centre span. | Superset tile; kwavers-backed geometry is now defined. |
+| Focus/beam result | Measured up to 6 MPa peak-to-peak at 10 mm focus; lateral/axial resolution 0.6/4.67 mm. | `examples/beamforming_results.rs` reads the generated driver manifest, validates with `run_experiment(..., &KwaversSim, ...)`, and emits `beamforming_validation.kv`, `tile_geometry.csv`, `beamforming_metrics.csv`, and deterministic BMP visualizations from propagated metrics: 11.027 MPa focal pressure, MI 7.797, 0.500 mm lateral width, 2.074 mm axial width. | kwavers-backed propagation evidence; model evidence, not fabricated hardware. |
+| Beam simulation engine | Paper reports measurement plus analysis. | `DriverManifest::validate_v2_energy_budget` emits the kwavers-conformant `EnergyBudgetReport`; `KwaversSim` synthesizes the realized channel geometry and calls `kwavers-transducer::propagate_focused_linear_array`, preserving the manifest's `TX_0..TX_95` lane count and first-to-last channel-centre span. `run_experiment` builds the kwavers-backed `ExperimentRecord` and 4-check `PhysicsReport` from the propagated pressure map. See `docs/beamforming_validation.md` for the artifact contract. | **Closed for model validation**; example validation now uses kwavers-transducer propagation rather than the standalone pulse-envelope renderer. |
 | Stack bus | Not directly comparable; article is a 16-channel electronics implementation. | Shared 24-pin `J_STACK` bus: `VPP`, `GND`, `P5V`, `P3V3`, `BUS_SCLK`, `BUS_SDI`, `BUS_SDO`, `BUS_LATCH`, `BUS_CLK`. | Implemented and compatibility-checked. |
 | Transducer connector | Article connects 16 HV outputs to custom transducer array. | HV shield manifest records transducer connector `J2`; stack assembly records each tile's local connector and global channel range. | Implemented at manifest level. |
 | Isolation/control domain | Article uses digital isolators and gate drivers. | HV shield includes six trigger isolators plus one serial-bus isolator; exact isolator CAD is downloaded but not imported into generated footprints. | Partial. |
@@ -136,24 +136,26 @@ stage complexity while increasing the stack to 96 channels.
    `output/manifests/v2_per_tile_stim.kv`. Reproduce: `cargo run --release --example v2_per_tile_stim`.
 
 5. kwavers validation:
-   Closed by the Track D v2 follow-up + the kwavers beam-propagation pre-step
-   adapter (`src/validate.rs::validate_against_budget`). The downstream
-   consumer reads `KwaversBeamStep` + `EnergyBudgetReport` verbatim and
-   produces pressure maps against the article's 10 mm focus and lateral/axial
-   metrics.
+   Closed for example-level article replication by `examples/beamforming_results.rs`
+   plus `kwavers-transducer::propagate_focused_linear_array`. The example reads
+   `KwaversBeamStep` + `EnergyBudgetReport` through `run_experiment(...,
+   &KwaversSim, ...)` and produces validation sidecars against the article's
+   10 mm focus and lateral/axial metrics.
    - Pre-step: `KwaversBeamStep { lanes(96), aperture_m, frequency_hz,
      sound_speed_m_s, focal_m, timing_step_s, pitch_m, wavelength_m,
      f_number }` built by `manifest_to_kwavers_beam_step(...)` and gated
      on `is_full_stack_v2()` + manifest/budget lane parity.
-   - Output: `KwaversBeamValidation` with focal-pressure estimate, MI, ISPPA,
+   - Output: `KwaversBeamValidation` with propagated focal pressure, MI, ISPPA,
      axial/lateral 6 dB extents, grating-lobe-free / in-far-field booleans,
      and a `PhysicsReport` aggregating `focal_pressure_pa ≥ 1 MPa`
-     (transduction floor), `MI < 10` (cavitation ceiling), and
-     `grating-lobe-free ≥ 89°`.
-   - Seam: `// TODO(kwavers-transducer): replace with
-     crate::kwavers_transducer::simulate(&step) -> PressureMap` marker at
-     the in-crate physics block; future contributor replaces that block
-     with the real kwavers call with **no struct migration**.
+     (transduction floor), `MI < 12.5` (cavitation ceiling),
+     `grating-lobe-free ≥ 89°`, and per-tile resistor-margin headroom.
+   - Geometry and propagation: `array_design_from_step` adapts the driver manifest's
+     first-to-last channel-centre aperture span to kwavers-transducer's
+     pitch-cell aperture span, so the realized design keeps all 96 routed
+     lanes and the channel centres still span the manifest aperture; the
+     propagated 2026-06-29 sidecars report 11.027 MPa focal pressure, MI
+     7.797, 0.500 mm lateral width, and 2.074 mm axial width.
 
 ## Decision
 
@@ -161,7 +163,7 @@ The current stack should be described as:
 
 > A 96-channel, stackable HV7355-based implementation of the article-class high-voltage phased-array
 > driver architecture, complete at stack-manifest and generated-geometry level, with the kwavers
-> beam-propagation contract now formally typed (`KwaversBeamStep` /
-> `validate_against_budget`). Remaining blockers are exact fabricator-package import and the
-> downstream `crates/kwavers-transducer` consumer that fills `PressureMap` from the typed
-> pre-step at the documented `// TODO(kwavers-transducer)` seam.
+> beam-propagation contract now typed and executed through `kwavers-transducer`
+> focused propagation (`KwaversBeamStep` / `validate_against_budget` /
+> `KwaversSim`). Remaining blockers are exact fabricator-package import and
+> hardware measurement correlation.

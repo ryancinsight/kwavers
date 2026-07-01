@@ -36,7 +36,10 @@ fn test_surface_tension_elastic() {
     let r_buckling = shell.radius_buckling;
     let chi = shell.surface_tension(r);
     let expected = 1.0 * ((r * r) / (r_buckling * r_buckling) - 1.0);
-    assert!((chi - expected).abs() < 1e-10, "expected {expected}, got {chi}");
+    assert!(
+        (chi - expected).abs() < 1e-10,
+        "expected {expected}, got {chi}"
+    );
     // Continuity / non-negativity: χ(R_buckling) = 0 exactly (was −0.2775 before).
     assert!(shell.surface_tension(r_buckling).abs() < 1e-12);
     // And χ ≥ 0 across the elastic regime (no negative surface tension).
@@ -119,7 +122,10 @@ fn test_surface_tension_derivative() {
     let r_buckling = shell.radius_buckling;
     let dchi_dr = shell.surface_tension_derivative(r);
     let expected = 2.0 * 1.0 * r / (r_buckling * r_buckling);
-    assert!((dchi_dr - expected).abs() < 1e-10, "expected {expected}, got {dchi_dr}");
+    assert!(
+        (dchi_dr - expected).abs() < 1e-10,
+        "expected {expected}, got {dchi_dr}"
+    );
     assert_eq!(shell.surface_tension_derivative(0.8e-6), 0.0);
     assert_eq!(shell.surface_tension_derivative(2.0e-6), 0.0);
 }

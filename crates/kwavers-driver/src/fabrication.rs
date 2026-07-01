@@ -62,7 +62,7 @@ mod tests {
     use crate::geom::{Nm, Point};
     use crate::place::component::Placement;
     use crate::place::footprint::{PadDef, Role};
-use crate::place::rotation::{Rot};
+    use crate::place::rotation::Rot;
 
     fn fp_named(name: &str, with_names: bool) -> FootprintDef {
         let mut fp = FootprintDef::new(

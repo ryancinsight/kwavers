@@ -47,6 +47,14 @@ impl KWaveArray {
                 } => {
                     self.rasterize_disc(&mut mask, grid, *position, *diameter, *focus_position);
                 }
+                ElementShape::ProfiledDisc {
+                    position,
+                    diameter,
+                    focus_position,
+                    ..
+                } => {
+                    self.rasterize_disc(&mut mask, grid, *position, *diameter, *focus_position);
+                }
                 ElementShape::Bowl {
                     position,
                     radius,
@@ -101,6 +109,21 @@ impl KWaveArray {
                         *position,
                         *diameter,
                         *focus_position,
+                    );
+                }
+                ElementShape::ProfiledDisc {
+                    position,
+                    diameter,
+                    focus_position,
+                    profile,
+                } => {
+                    self.rasterize_profiled_disc_weighted(
+                        &mut mask,
+                        grid,
+                        *position,
+                        *diameter,
+                        *focus_position,
+                        *profile,
                     );
                 }
                 ElementShape::Arc {

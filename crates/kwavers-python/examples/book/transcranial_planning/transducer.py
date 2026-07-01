@@ -4,12 +4,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-try:
-    import pykwavers as kw
-    _HAS_PYKWAVERS = True
-except ImportError:
-    kw = None
-    _HAS_PYKWAVERS = False
+import pykwavers as kw
 
 from .scene import CANONICAL_BRAIN_SCENE, BrainSceneDefinition
 
@@ -203,13 +198,8 @@ def acoustic_properties_from_hu(
     Frequency-dependent attenuation uses a piecewise brain/bone model; no
     ``kw.*`` binding exists for HU-to-attenuation.
     """
-    if _HAS_PYKWAVERS:
-        sound_speed = kw.hu_to_sound_speed_schneider([hu])[0]
-        density = kw.hu_to_density_schneider([hu])[0]
-    else:
-        # Schneider 1996 linear approximation (fallback when pykwavers absent).
-        sound_speed = 1500.0 + (0.50 * hu if hu < 0.0 else 0.76 * hu)
-        density = 1000.0 + 0.96 * hu
+    sound_speed = kw.hu_to_sound_speed_schneider([hu])[0]
+    density = kw.hu_to_density_schneider([hu])[0]
     # Attenuation: piecewise brain / bone (no kw.* binding for HU→α).
     if hu <= 300.0:
         attenuation_db_cm_mhz = 0.5   # soft tissue / brain

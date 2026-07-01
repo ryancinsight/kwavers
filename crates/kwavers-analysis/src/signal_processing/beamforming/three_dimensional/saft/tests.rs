@@ -86,12 +86,18 @@ fn test_coherence_factor() {
     // Perfectly coherent aperture of N=10 unit elements: coherent = Σx = 10,
     // sum_of_squares = Σx² = 10 ⇒ CF = 100/(10·10) = 1.
     let coherent = amplitude_coherence_from_sums(10.0, 10.0, 10);
-    assert!((coherent - 1.0).abs() < 1e-12, "coherent aperture CF should be 1, got {coherent}");
+    assert!(
+        (coherent - 1.0).abs() < 1e-12,
+        "coherent aperture CF should be 1, got {coherent}"
+    );
 
     // Partially coherent: coherent = 5, sum_of_squares = 10, N = 10
     // ⇒ CF = 25/(10·10) = 0.25; bounded in [0,1].
     let partial = amplitude_coherence_from_sums(5.0, 10.0, 10);
-    assert!((partial - 0.25).abs() < 1e-12, "expected 0.25, got {partial}");
+    assert!(
+        (partial - 0.25).abs() < 1e-12,
+        "expected 0.25, got {partial}"
+    );
 }
 
 #[test]

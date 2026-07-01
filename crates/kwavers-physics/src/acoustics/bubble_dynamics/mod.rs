@@ -73,7 +73,7 @@ pub use imex_integration::{
 };
 pub use integration::integrate_bubble_dynamics_stable; // NEW: Extracted integration utilities
 pub use interactions::{BjerknesForceComputer, BubbleInteractions, CollectiveEffects};
-pub use keller_miksis::KellerMiksisModel; // NEW: Modular Keller-Miksis solver
+pub use keller_miksis::{KellerHerringModel, KellerMiksisModel}; // NEW: Modular Keller-Miksis solvers
 pub use rayleigh_plesset::RayleighPlessetSolver;
 pub use symplectic_integration::{
     integrate_bubble_dynamics_symplectic, stormer_verlet_step, yoshida4_step,

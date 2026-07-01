@@ -36,7 +36,10 @@ fn wasserstein_equals_normalized_transport_distance() {
     let syn = impulse_trace(n, 50);
     let j = m.compute(&obs, &syn).unwrap();
     let expected = 20.0 / n as f64;
-    assert!((j - expected).abs() < 1e-12, "W₁ = {j}, expected {expected}");
+    assert!(
+        (j - expected).abs() < 1e-12,
+        "W₁ = {j}, expected {expected}"
+    );
 }
 
 #[test]
@@ -48,7 +51,10 @@ fn wasserstein_is_monotone_in_shift() {
     let obs = impulse_trace(n, 40);
     let near = m.compute(&obs, &impulse_trace(n, 45)).unwrap();
     let far = m.compute(&obs, &impulse_trace(n, 70)).unwrap();
-    assert!(far > near, "W₁ must grow with shift: far {far} vs near {near}");
+    assert!(
+        far > near,
+        "W₁ must grow with shift: far {far} vs near {near}"
+    );
 }
 
 // ── Normalized cross-correlation ──────────────────────────────────────────────
@@ -82,7 +88,10 @@ fn correlation_misfit_is_two_for_anticorrelated_data() {
     let obs = Array2::from_shape_fn((1, 50), |(_, j)| (j as f64 * 0.3).sin());
     let syn = obs.mapv(|x| -x);
     let j = m.compute(&obs, &syn).unwrap();
-    assert!((j - 2.0).abs() < 1e-10, "anti-correlated ⇒ 1 − (−1) = 2, got {j}");
+    assert!(
+        (j - 2.0).abs() < 1e-10,
+        "anti-correlated ⇒ 1 − (−1) = 2, got {j}"
+    );
 }
 
 #[test]

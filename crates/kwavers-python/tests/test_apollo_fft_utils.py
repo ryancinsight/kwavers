@@ -7,6 +7,7 @@ double-precision floating-point round-off (atol=1e-12).
 
 import numpy as np
 import pytest
+from pathlib import Path
 
 import pykwavers as kw
 
@@ -44,6 +45,49 @@ def test_fft1_spectrum_dc_component():
     assert abs(spectrum[0].real - float(n)) < 1e-12, (
         f"DC bin expected {float(n)} (unnormalised DFT), got {spectrum[0].real}"
     )
+
+
+def test_demeaned_hann_power_spectrum_matches_numpy_rfft_contract():
+    n = 17
+    spacing = 0.25
+    axis = np.arange(n, dtype=np.float64)
+    signal = 2.0 + 0.75 * np.cos(2.0 * np.pi * 3.0 * axis / n)
+
+    freq, power = kw.demeaned_hann_power_spectrum_1d(signal, spacing)
+    expected_windowed = (signal - signal.mean()) * np.hanning(n)
+    expected_freq = np.fft.rfftfreq(n, d=spacing)
+    expected_power = np.abs(np.fft.rfft(expected_windowed)) ** 2
+
+    np.testing.assert_allclose(freq, expected_freq, rtol=0.0, atol=1.0e-12)
+    np.testing.assert_allclose(power, expected_power, rtol=1.0e-12, atol=1.0e-12)
+
+
+def test_demeaned_hann_power_spectrum_rejects_invalid_inputs():
+    with pytest.raises((ValueError, Exception)):
+        kw.demeaned_hann_power_spectrum_1d(np.array([1.0], dtype=np.float64), 1.0)
+    with pytest.raises((ValueError, Exception)):
+        kw.demeaned_hann_power_spectrum_1d(np.array([1.0, 2.0], dtype=np.float64), 0.0)
+    with pytest.raises((ValueError, Exception)):
+        kw.demeaned_hann_power_spectrum_1d(
+            np.array([1.0, np.nan], dtype=np.float64), 1.0
+        )
+
+
+def test_chapter25_rtm_spectrum_routes_to_rust_fft_helper():
+    source = (
+        Path(__file__).resolve().parents[1]
+        / "examples"
+        / "book"
+        / "ch25_rtm_adaptive_beamforming.py"
+    ).read_text(encoding="utf-8")
+    start = source.index("def fig11_standing_wave_spectrum(")
+    end = source.index("\ndef fig12_delay_law_evolution", start)
+    body = source[start:end]
+
+    assert "pykwavers.demeaned_hann_power_spectrum_1d" in body
+    assert "np.fft.rfft" not in body
+    assert "np.fft.rfftfreq" not in body
+    assert "np.hanning" not in body
 
 
 def test_fft3_ifft3_roundtrip_arange():

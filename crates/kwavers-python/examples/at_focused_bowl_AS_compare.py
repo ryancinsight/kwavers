@@ -115,6 +115,9 @@ PARITY_THRESHOLDS = {
     "rms_ratio_max": 1.35,
     "psnr_db":       12.0,
 }
+ANALYTICAL_REFERENCE_THRESHOLDS = {
+    "pearson_agreement_abs_max": 1e-5,
+}
 
 # Paths
 FIGURE_PATH       = DEFAULT_OUTPUT_DIR / "at_focused_bowl_AS_compare.png"
@@ -291,10 +294,11 @@ def run_pykwavers() -> dict:
 # ---------------------------------------------------------------------------
 def analytical_oneil(x_vec_m: np.ndarray) -> np.ndarray:
     """Return O'Neil on-axis pressure amplitude [Pa] at axial positions x_vec_m."""
-    p_ax, _, _ = focused_bowl_oneil(
-        SOURCE_ROC, SOURCE_DIA, SOURCE_AMP[0] / (C0 * RHO0),
-        SOURCE_F0, C0, RHO0, axial_positions=x_vec_m,
-    )
+    with np.errstate(divide="ignore", invalid="ignore"):
+        p_ax, _, _ = focused_bowl_oneil(
+            SOURCE_ROC, SOURCE_DIA, SOURCE_AMP[0] / (C0 * RHO0),
+            SOURCE_F0, C0, RHO0, axial_positions=x_vec_m,
+        )
     return np.asarray(p_ax, dtype=np.float64)
 
 
@@ -368,8 +372,13 @@ def main() -> None:
           f"([{thr['rms_ratio_min']}, {thr['rms_ratio_max']}])")
     print(f"  PSNR       = {metrics['psnr_db']:.2f} dB  (≥ {thr['psnr_db']} dB)")
     print(f"\n--- vs O'Neil analytical ---")
+    analytical_thr = ANALYTICAL_REFERENCE_THRESHOLDS
     print(f"  k-wave vs analytical   pearson r = {r_vs_ref:.4f}")
-    print(f"  pykwavers vs analytical pearson r = {r_vs_pkw:.4f}")
+    print(
+        "  pykwavers vs analytical pearson r = "
+        f"{r_vs_pkw:.4f}  "
+        f"(|Δr| < {analytical_thr['pearson_agreement_abs_max']:.6e})"
+    )
     print(f"\n  k-wave runtime     : {kw['runtime_s']:.1f} s")
     print(f"  pykwavers runtime  : {pw['runtime_s']:.1f} s")
 
@@ -377,9 +386,16 @@ def main() -> None:
     x_mm = x_from_source * 1e3
     x_ref_mm = np.linspace(0, (NX - SOURCE_X_OFFSET) * DX * 1e3, 10000)
     p_ref_full = analytical_oneil(x_ref_mm * 1e-3)
+    finite_ref_full = np.isfinite(p_ref_full)
 
     fig, ax = plt.subplots(figsize=(10, 5))
-    ax.plot(x_ref_mm, p_ref_full * 1e-6, "k-", lw=1.4, label="O'Neil analytical")
+    ax.plot(
+        x_ref_mm[finite_ref_full],
+        p_ref_full[finite_ref_full] * 1e-6,
+        "k-",
+        lw=1.4,
+        label="O'Neil analytical",
+    )
     ax.plot(x_mm, kw_amp * 1e-6, "b-", lw=1.6, alpha=0.8, label="k-wave (kspaceFirstOrderASC)")
     ax.plot(x_mm, pw_amp * 1e-6, "r--", lw=1.4, alpha=0.85, label="pykwavers (WSWA-FFT AS)")
     ax.axvline(SOURCE_ROC * 1e3, color="gray", ls=":", lw=1.0, label=f"focus ({SOURCE_ROC*1e3:.0f} mm)")
@@ -414,6 +430,11 @@ def main() -> None:
         f"psnr_db    = {metrics['psnr_db']:.2f}  (target >= {thr['psnr_db']} dB)",
         f"kwave_vs_analytical_pearson = {r_vs_ref:.6f}",
         f"pkwav_vs_analytical_pearson = {r_vs_pkw:.6f}",
+        (
+            "analytical_pearson_agreement_abs = "
+            f"{abs(r_vs_ref - r_vs_pkw):.6e}  "
+            f"(target < {analytical_thr['pearson_agreement_abs_max']:.6e})"
+        ),
         f"peak_kwave_Pa      = {float(kw_amp.max()):.6e}",
         f"peak_pykwavers_Pa  = {float(pw_amp.max()):.6e}",
     ]

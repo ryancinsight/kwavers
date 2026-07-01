@@ -24,12 +24,7 @@ pub fn dedup_vias(board: &mut Board, rules: &DesignRules) -> usize {
                 *hi = (*hi).max(v.from.0).max(v.to.0);
                 *filled = *filled || v.filled; // a merged stack stays plated-over if any leg was
             })
-            .or_insert((
-                v.from.0.min(v.to.0),
-                v.from.0.max(v.to.0),
-                v.filled,
-                v,
-            ));
+            .or_insert((v.from.0.min(v.to.0), v.from.0.max(v.to.0), v.filled, v));
     }
     let mut out: Vec<crate::board::Via> = by_key
         .into_values()

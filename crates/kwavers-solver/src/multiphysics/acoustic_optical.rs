@@ -125,7 +125,10 @@ mod tests {
         assert!((total - 1.0).abs() < 1e-5, "energy = {total}");
         // Symmetric about the zeroth order (normal incidence, thin grating).
         let c = max as usize;
-        assert!((orders[c + 1] - orders[c - 1]).abs() < 1e-6, "±1 orders symmetric");
+        assert!(
+            (orders[c + 1] - orders[c - 1]).abs() < 1e-6,
+            "±1 orders symmetric"
+        );
         // In the thin-grating limit the solver matches the analytical Raman–Nath
         // result Jₘ²(ν) (cross-check of the coupled solver against the closed form).
         let expected = kwavers_physics::analytical::acousto_optics::raman_nath_order_intensities(
@@ -139,6 +142,10 @@ mod tests {
         for (got, want) in orders.iter().zip(expected.iter()) {
             assert!((got - want).abs() < 1e-3, "{got} vs Raman–Nath {want}");
         }
-        assert!(orders[c] > 0.95, "weak grating: zeroth dominates ({})", orders[c]);
+        assert!(
+            orders[c] > 0.95,
+            "weak grating: zeroth dominates ({})",
+            orders[c]
+        );
     }
 }

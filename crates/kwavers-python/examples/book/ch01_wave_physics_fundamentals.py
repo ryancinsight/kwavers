@@ -87,8 +87,9 @@ def _standing_wave_pstd(L, nx, k, p0):
     om = C0 * k
     dt = 0.2 * dx / C0
     n_steps = int(math.ceil((3 * math.pi / 4 / om) / dt)) + 4
+    standing_initial = np.asarray(kw.standing_wave_1d(p0, k, x, 0.0), dtype=float)
     p0arr = np.zeros((nx, 1, 1))
-    p0arr[:, 0, 0] = p0 * np.sin(k * x)
+    p0arr[:, 0, 0] = standing_initial
     grid = kw.Grid(nx=nx, ny=1, nz=1, dx=dx, dy=dx, dz=dx)
     medium = kw.Medium.homogeneous(sound_speed=C0, density=RHO0)
     src = kw.Source.from_initial_pressure(p0arr.copy())
@@ -101,7 +102,7 @@ def _standing_wave_pstd(L, nx, k, p0):
     res = sim.run(time_steps=n_steps, dt=dt)
     sd = np.asarray(res.sensor_data, dtype=float)
     dt_a = float(res.dt)
-    shape = np.sin(k * x)
+    shape = standing_initial / p0
     proj = (sd.T @ shape) / (shape @ shape)
     n = np.arange(sd.shape[1])
     off = min((0.0, 1.0),
@@ -123,8 +124,7 @@ def _travelling_pulse_fdtd(nx, dx):
     x0 = 0.3 * nx * dx
     sig = 2.5e-3
     lam = 8e-3
-    g = np.exp(-((x - x0) ** 2) / (2 * sig ** 2)) * np.cos(2 * np.pi * (x - x0) / lam)
-    g *= 1.0e5
+    g = np.asarray(kw.gaussian_modulated_pulse_1d(x, x0, sig, lam, 1.0e5), dtype=float)
     ny = nz = 16
     p0arr = np.zeros((nx, ny, nz))
     p0arr[:] = g[:, None, None]
@@ -167,7 +167,7 @@ def fig_standing_wave() -> None:
     for phase, label, color in zip(phases, labels, colors):
         n = max(0, min(int(round((phase / om) / dt_a - off)), sd.shape[1] - 1))
         t = (n + off) * dt_a
-        ana = p0 * np.sin(k * x) * math.cos(om * t)
+        ana = np.asarray(kw.standing_wave_1d(p0, k, x, om * t), dtype=float)
         axa.plot(x * 1e3, ana / 1e3, color=color, lw=1.6, label=label)
         axa.plot(x[::14] * 1e3, sd[::14, n] / 1e3, "o", color=color, ms=4, mfc="none", lw=0)
         max_err_a = max(max_err_a, np.abs(sd[:, n] - ana).max() / p0)
@@ -190,10 +190,7 @@ def fig_standing_wave() -> None:
     dxb = 0.15e-3
     xb, g, sdb, dtb, t_eval, n_eval = _travelling_pulse_fdtd(nxb, dxb)
     ct = C0 * (n_eval * dtb)
-    # d'Alembert: ½[g(x-ct) + g(x+ct)]; interpolate g at shifted coordinates.
-    g_right = np.interp(xb - ct, xb, g, left=0.0, right=0.0)
-    g_left = np.interp(xb + ct, xb, g, left=0.0, right=0.0)
-    dalembert = 0.5 * (g_right + g_left)
+    dalembert = np.asarray(kw.dalembert_split_solution_1d(xb, g, ct), dtype=float)
     err_b = np.abs(sdb[:, n_eval] - dalembert).max() / np.abs(g).max()
 
     axb.plot(xb * 1e3, g / 1e3, color="0.7", lw=1.2, label="initial $g(x)$")

@@ -1,8 +1,9 @@
 //! Phased-array acoustics vertical slice — Phase 3g cut-over from flat `src/acoustic.rs`.
 //!
-//! This module is the DIP seam to `kwavers-transducer` (under the `kwavers` Cargo feature the
-//! call delegates to `kwavers_transducer::simulate(&step) -> PressureMap`; otherwise this slice
-//! runs the in-crate fallback model). At Phase 3g it carries the full 21-fn surface:
+//! This module supplies the in-crate analytical fallback for the driver acoustic seam. Under the
+//! `kwavers` Cargo feature, the experiment layer delegates focused propagation to
+//! `kwavers_transducer::propagate_focused_linear_array`. At Phase 3g this module carries the full
+//! 21-fn fallback surface:
 //!
 //! * [`wavelength`] — [`wavelength::wavelength_m`] + [`wavelength::bvd_series_resonance_hz`] +
 //!   [`wavelength::bvd_anti_resonance_hz`] (the textbook BVD anti-resonance per Kino
@@ -77,9 +78,7 @@ pub mod wavelength;
 pub use element::{
     element_factor, f_number, focal_pressure_gain, near_field_distance_m, pitch_from_aperture_m,
 };
-pub use focus::{
-    focused_delay_profile_s, max_delay_quantization_error_s, quantize_delays_s,
-};
+pub use focus::{focused_delay_profile_s, max_delay_quantization_error_s, quantize_delays_s};
 pub use grating::{array_factor, grating_lobe_angle_deg, max_grating_free_steer_deg};
 pub use nonlinear::nonlinear_shock_parameter;
 pub use safety::{

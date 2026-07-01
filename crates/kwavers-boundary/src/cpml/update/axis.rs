@@ -75,12 +75,14 @@ fn apply_correction_along(
     // Right strip.
     if n > thickness {
         let right_start = n - thickness;
-        Zip::indexed(gradient.slice_axis_mut(Axis(axis), Slice::new(right_start as isize, None, 1)))
-            .and(psi.slice_axis(Axis(axis), Slice::new(thickness as isize, None, 1)))
-            .par_for_each(|(i, j, k), g, &psi| {
-                let c = right_start + [i, j, k][axis];
-                *g = *g / kappa[c] + psi;
-            });
+        Zip::indexed(
+            gradient.slice_axis_mut(Axis(axis), Slice::new(right_start as isize, None, 1)),
+        )
+        .and(psi.slice_axis(Axis(axis), Slice::new(thickness as isize, None, 1)))
+        .par_for_each(|(i, j, k), g, &psi| {
+            let c = right_start + [i, j, k][axis];
+            *g = *g / kappa[c] + psi;
+        });
     }
 }
 

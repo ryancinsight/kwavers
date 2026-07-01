@@ -126,10 +126,9 @@ fn build_phantom() -> (Array3<f64>, Array3<f64>) {
     for i in 0..NX {
         for j in 0..NY {
             for k in 0..NZ {
-                let r = ((i as f64 - cx).powi(2)
-                    + (j as f64 - cy).powi(2)
-                    + (k as f64 - cz).powi(2))
-                .sqrt();
+                let r =
+                    ((i as f64 - cx).powi(2) + (j as f64 - cy).powi(2) + (k as f64 - cz).powi(2))
+                        .sqrt();
                 let (cv, rv) = if r > R_HEAD {
                     (C_WATER, RHO_WATER)
                 } else if r > R_SKULL_OUT {
@@ -181,8 +180,8 @@ fn map_array_to_grid() -> KwaversResult<Vec<(usize, usize, usize)>> {
             continue;
         }
         // Keep only voxels in the water bath outside the head.
-        let r = ((i as f64 - cx).powi(2) + (j as f64 - cy).powi(2) + (k as f64 - cz).powi(2))
-            .sqrt();
+        let r =
+            ((i as f64 - cx).powi(2) + (j as f64 - cy).powi(2) + (k as f64 - cz).powi(2)).sqrt();
         if r <= R_HEAD {
             continue;
         }
@@ -252,7 +251,9 @@ fn bioheat_step(temp: &mut Array3<f64>, q: &Array3<f64>, dt: f64) {
     for i in 1..NX - 1 {
         for j in 1..NY - 1 {
             for k in 1..NZ - 1 {
-                let lap = (prev[[i + 1, j, k]] + prev[[i - 1, j, k]] + prev[[i, j + 1, k]]
+                let lap = (prev[[i + 1, j, k]]
+                    + prev[[i - 1, j, k]]
+                    + prev[[i, j + 1, k]]
                     + prev[[i, j - 1, k]]
                     + prev[[i, j, k + 1]]
                     + prev[[i, j, k - 1]]
@@ -338,7 +339,10 @@ fn main() -> KwaversResult<()> {
     let grid = Grid::new(NX, NY, NZ, DX, DX, DX)?;
     let c_lo = true_c.iter().copied().fold(f64::INFINITY, f64::min);
     let c_hi = true_c.iter().copied().fold(f64::NEG_INFINITY, f64::max);
-    println!("\n[1/5] Phantom {NX}×{NY}×{NZ} @ {:.0} mm — c∈[{c_lo:.0},{c_hi:.0}] m/s", DX * 1e3);
+    println!(
+        "\n[1/5] Phantom {NX}×{NY}×{NZ} @ {:.0} mm — c∈[{c_lo:.0},{c_hi:.0}] m/s",
+        DX * 1e3
+    );
 
     // ── 2. Map the 1024-element hemisphere onto the grid ─────────────────
     let elements = map_array_to_grid()?;
@@ -346,7 +350,10 @@ fn main() -> KwaversResult<()> {
         "[2/5] 1024-element hemisphere → {} distinct grid acquisition voxels",
         elements.len()
     );
-    assert!(elements.len() >= 4, "need ≥4 acquisition elements after mapping");
+    assert!(
+        elements.len() >= 4,
+        "need ≥4 acquisition elements after mapping"
+    );
 
     // ── 3. Low-dose sparse-subset full-brain FWI ─────────────────────────
     let dt = 0.3 * DX / (c_hi * 3.0_f64.sqrt());
@@ -391,20 +398,22 @@ fn main() -> KwaversResult<()> {
     for i in 0..NX {
         for j in 0..NY {
             for k in 0..NZ {
-                let r = ((i as f64 - cx).powi(2) + (j as f64 - cy).powi(2) + (k as f64 - cz).powi(2))
-                    .sqrt();
+                let r =
+                    ((i as f64 - cx).powi(2) + (j as f64 - cy).powi(2) + (k as f64 - cz).powi(2))
+                        .sqrt();
                 brain_mask[[i, j, k]] = r < R_BRAIN;
             }
         }
     }
     // Score: reconstructed sound-speed contrast vs. brain baseline (ROI proxy).
     let score = recon.mapv(|v| (v - C_BRAIN).abs());
-    let target = TargetSelection::max_in_mask(&score, &brain_mask, [0.0; 3], [DX; 3])
-        .unwrap_or(TargetSelection {
+    let target = TargetSelection::max_in_mask(&score, &brain_mask, [0.0; 3], [DX; 3]).unwrap_or(
+        TargetSelection {
             voxel: (NX / 2, NY / 2, NZ / 2),
             position_m: [cx * DX, cy * DX, cz * DX],
             score: 0.0,
-        });
+        },
+    );
     let tgt = target.voxel;
     println!(
         "[4/5] Target voxel {:?}  position {:?} m",
@@ -425,8 +434,14 @@ fn main() -> KwaversResult<()> {
     println!(
         "[5/5] Interleaved schedule: {} frames ({} therapy, {} imaging)",
         schedule.len(),
-        schedule.iter().filter(|f| f.kind == PulseKind::Therapy).count(),
-        schedule.iter().filter(|f| f.kind == PulseKind::Imaging).count(),
+        schedule
+            .iter()
+            .filter(|f| f.kind == PulseKind::Therapy)
+            .count(),
+        schedule
+            .iter()
+            .filter(|f| f.kind == PulseKind::Imaging)
+            .count(),
     );
 
     // Monitored coronal slice through the focus.
@@ -456,15 +471,16 @@ fn main() -> KwaversResult<()> {
 
     // Helper closure: reconstruct the monitored slice of a given medium by FWI
     // from simulated echoes, warm-started from `init`.
-    let recon_slice_of = |medium_slice: &Array3<f64>, init: &Array3<f64>| -> KwaversResult<Array3<f64>> {
-        let mut slice_shots = Vec::new();
-        for &e in &slice_tx {
-            let geom = build_shot(slice_elems[e], &slice_elems, slice_dims, nt_mon, dt);
-            let obs = slice_fwi.generate_synthetic_data(medium_slice, &geom, &slice_grid)?;
-            slice_shots.push((geom, obs));
-        }
-        slice_fwi.invert_multi_source(&slice_shots, init, &slice_grid)
-    };
+    let recon_slice_of =
+        |medium_slice: &Array3<f64>, init: &Array3<f64>| -> KwaversResult<Array3<f64>> {
+            let mut slice_shots = Vec::new();
+            for &e in &slice_tx {
+                let geom = build_shot(slice_elems[e], &slice_elems, slice_dims, nt_mon, dt);
+                let obs = slice_fwi.generate_synthetic_data(medium_slice, &geom, &slice_grid)?;
+                slice_shots.push((geom, obs));
+            }
+            slice_fwi.invert_multi_source(&slice_shots, init, &slice_grid)
+        };
 
     // Pre-therapy baseline: reconstruct the UNPERTURBED slice with the SAME 2-D
     // acquisition, warm-started from the 3-D recon slice. Differencing against
@@ -554,13 +570,17 @@ fn main() -> KwaversResult<()> {
                         roi_max = roi_max.max(d.abs());
                         roi_sum += d;
                         roi_n += 1;
-                        applied_dc = applied_dc.max((perturbed_slice[[i, 0, k]] - true_slice[[i, 0, k]]).abs());
+                        applied_dc = applied_dc
+                            .max((perturbed_slice[[i, 0, k]] - true_slice[[i, 0, k]]).abs());
                     }
                 }
                 let roi_mean = roi_sum / roi_n.max(1) as f64;
 
                 // Metrics from the genuine therapy state (mode-aware lesion count).
-                let max_t = temperature.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+                let max_t = temperature
+                    .iter()
+                    .copied()
+                    .fold(f64::NEG_INFINITY, f64::max);
                 let cem_max = cem43.get_max_dose();
                 let lesion_vox = match mode {
                     lesion::TherapyMode::Thermal => {
@@ -569,14 +589,22 @@ fn main() -> KwaversResult<()> {
                             .filter(|&&b| b)
                             .count()
                     }
-                    lesion::TherapyMode::Cavitation => {
-                        void_fraction.iter().filter(|&&b| b >= CAV_BETA_LESION).count()
-                    }
+                    lesion::TherapyMode::Cavitation => void_fraction
+                        .iter()
+                        .filter(|&&b| b >= CAV_BETA_LESION)
+                        .count(),
                 };
 
                 println!(
                     "   {:3}  | {:5.2} | {:7.2} | {:9.2} | {:10} | {:9.1} | {:6.2}/{:+6.2}",
-                    monitor_frame, frame.time_s, max_t, cem_max, lesion_vox, applied_dc, roi_max, roi_mean
+                    monitor_frame,
+                    frame.time_s,
+                    max_t,
+                    cem_max,
+                    lesion_vox,
+                    applied_dc,
+                    roi_max,
+                    roi_mean
                 );
 
                 // PNG of the reconstructed lesion-difference slice.

@@ -44,10 +44,10 @@ pub(super) const MU0: f64 = 1.256_637_062e-6;
 // identifier escape `r#loop` so the parser does not choke on the keyword. Imports and
 // re-exports inside the slice follow the same convention (`super::r#loop::{...}`,
 // `pub use r#loop::{...}`).
+pub mod r#loop;
 pub mod losses;
 pub mod overshoot;
 pub mod radiated;
-pub mod r#loop;
 pub mod scene;
 pub mod trace_partial;
 
@@ -61,7 +61,7 @@ mod tests;
 // 3c-dielectric discipline (named re-exports so internal `const`s stay slice-private).
 pub use losses::{gate_drive_power_w, reverse_recovery_loss_w, switching_loss_w};
 pub use overshoot::{capacitive_drive_current_a, inductive_overshoot_v};
-pub use radiated::radiated_emi_dbuv_m;
 pub use r#loop::loop_inductance_nh;
+pub use radiated::radiated_emi_dbuv_m;
 pub use scene::{commutation_loops, CommutationLoop};
 pub use trace_partial::trace_partial_inductance_nh;

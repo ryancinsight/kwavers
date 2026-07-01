@@ -1,0 +1,31 @@
+{
+  "board": {
+    "design_settings": {
+      "rule_severities": {
+        "lib_footprint_issues": "ignore",
+        "lib_footprint_mismatch": "ignore"
+      },
+      "rules": {
+        "min_clearance": 0.130,
+        "min_copper_edge_clearance": 0.500,
+        "min_hole_clearance": 0.130,
+        "min_hole_to_hole": 0.200,
+        "min_microvia_diameter": 0.250,
+        "min_microvia_drill": 0.100,
+        "min_through_hole_diameter": 0.200,
+        "min_track_width": 0.150,
+        "min_via_annular_width": 0.130,
+        "min_via_diameter": 0.460
+      }
+    }
+  },
+  "erc": {
+    "rule_severities": {
+      "lib_symbol_issues": "ignore"
+    }
+  },
+  "meta": {
+    "filename": "nsf_neuromod_phased_array.kicad_pro",
+    "version": 3
+  }
+}

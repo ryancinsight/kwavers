@@ -44,9 +44,10 @@ fn manufactured_solution_recovers_sine_field() {
     let w = (ny as f64 - 1.0) * h;
     let kk = std::f64::consts::PI * std::f64::consts::PI * (1.0 / (l * l) + 1.0 / (w * w));
 
-    let exact =
-        |ix: usize, iy: usize| (std::f64::consts::PI * ix as f64 * h / l).sin()
-            * (std::f64::consts::PI * iy as f64 * h / w).sin();
+    let exact = |ix: usize, iy: usize| {
+        (std::f64::consts::PI * ix as f64 * h / l).sin()
+            * (std::f64::consts::PI * iy as f64 * h / w).sin()
+    };
     let mut f = vec![0.0f64; nx * ny];
     for iy in 0..ny {
         for ix in 0..nx {
@@ -101,7 +102,16 @@ fn peak_rises_with_power_and_sits_at_the_source() {
         ..Default::default()
     };
     let watts = |_: &crate::place::footprint::FootprintDef| 2.0;
-    let field = solve_board(spec, &[comp(20.0, 20.0)], &lib, watts, 20.0, 1.6e-3, 10.0, 4000);
+    let field = solve_board(
+        spec,
+        &[comp(20.0, 20.0)],
+        &lib,
+        watts,
+        20.0,
+        1.6e-3,
+        10.0,
+        4000,
+    );
     assert!(
         field.peak() > 0.0,
         "a 2 W source must raise the temperature"

@@ -83,6 +83,21 @@ FIGURE_PATH = DEFAULT_OUTPUT_DIR / "sd_focussed_detector_2D_compare.png"
 DIRECTIVITY_FIGURE_PATH = DEFAULT_OUTPUT_DIR / "sd_focussed_detector_2D_directivity.png"
 METRICS_PATH = DEFAULT_OUTPUT_DIR / "sd_focussed_detector_2D_metrics.txt"
 
+PARITY_THRESHOLDS = {
+    "trace": {
+        "pearson_r": 0.999,
+        "rms_ratio_min": 0.99,
+        "rms_ratio_max": 1.01,
+        "rmse": 1.0e-2,
+        "peak_ratio_min": 0.99,
+        "peak_ratio_max": 1.01,
+    },
+    "directivity": {
+        "ratio_min": 1.0,
+        "relative_error": 1.0e-2,
+    },
+}
+
 KWAVE_CACHE = {
     "on_axis": DEFAULT_OUTPUT_DIR / "sd_focussed_detector_2D_kwave_on_axis.npz",
     "off_axis": DEFAULT_OUTPUT_DIR / "sd_focussed_detector_2D_kwave_off_axis.npz",
@@ -320,6 +335,25 @@ def run_comparison() -> dict[str, object]:
     }
 
 
+def _trace_pass(metrics: dict[str, float]) -> bool:
+    thresholds = PARITY_THRESHOLDS["trace"]
+    return (
+        metrics["pearson_r"] >= thresholds["pearson_r"]
+        and thresholds["rms_ratio_min"] <= metrics["rms_ratio"] <= thresholds["rms_ratio_max"]
+        and metrics["rmse"] <= thresholds["rmse"]
+        and thresholds["peak_ratio_min"] <= metrics["peak_ratio"] <= thresholds["peak_ratio_max"]
+    )
+
+
+def _directivity_pass(metrics: dict[str, float]) -> bool:
+    thresholds = PARITY_THRESHOLDS["directivity"]
+    return (
+        metrics["kwave_ratio"] > thresholds["ratio_min"]
+        and metrics["pykwavers_ratio"] > thresholds["ratio_min"]
+        and metrics["relative_error"] <= thresholds["relative_error"]
+    )
+
+
 def plot_comparison(result: dict[str, object]) -> None:
     """Plot the on-axis and off-axis detector traces."""
     kwave = result["kwave"]  # type: ignore[assignment]
@@ -456,18 +490,8 @@ def main() -> int:
                 "",
             ]
         )
-    trace_ok = all(
-        trace_metrics[tag]["pearson_r"] > 0.999
-        and abs(trace_metrics[tag]["rms_ratio"] - 1.0) < 1e-2
-        and trace_metrics[tag]["rmse"] < 1e-2
-        and abs(trace_metrics[tag]["peak_ratio"] - 1.0) < 1e-2
-        for tag in ("on_axis", "off_axis")
-    )
-    directivity_ok = (
-        directivity["kwave_ratio"] > 1.0
-        and directivity["pykwavers_ratio"] > 1.0
-        and directivity["relative_error"] < 1e-2
-    )
+    trace_ok = all(_trace_pass(trace_metrics[tag]) for tag in ("on_axis", "off_axis"))
+    directivity_ok = _directivity_pass(directivity)
     overall_status = "PASS" if (trace_ok and directivity_ok) else "FAIL"
     report_lines.append(f"parity_status: {overall_status}")
     save_text_report(METRICS_PATH, "sd_focussed_detector_2D parity metrics", report_lines)

@@ -98,6 +98,25 @@ METRICS_PATH = DEFAULT_OUTPUT_DIR / "sd_directivity_modelling_2D_metrics.txt"
 KWAVE_CACHE = DEFAULT_OUTPUT_DIR / "sd_directivity_modelling_2D_kwave_cache.npz"
 PYKWAVERS_CACHE = DEFAULT_OUTPUT_DIR / "sd_directivity_modelling_2D_pykwavers_cache.npz"
 
+PARITY_THRESHOLDS = {
+    "matrix": {
+        "pearson_r": 0.99,
+        "psnr_db": 30.0,
+    },
+    "trace": {
+        "pearson_r_min": 0.99,
+        "rms_ratio_min": 0.99,
+        "rms_ratio_max": 1.01,
+    },
+    "directivity": {
+        "pearson_r": 0.99,
+        "rms_ratio_min": 0.99,
+        "rms_ratio_max": 1.01,
+        "peak_ratio_min": 0.99,
+        "peak_ratio_max": 1.01,
+    },
+}
+
 CACHE_VERSION = 1
 REFRESH_CACHE = os.getenv("KWAVERS_REFRESH_CACHE", "0") == "1"
 
@@ -561,16 +580,25 @@ def main() -> int:
             ]
         )
 
+    matrix_thresholds = PARITY_THRESHOLDS["matrix"]
+    trace_thresholds = PARITY_THRESHOLDS["trace"]
+    directivity_thresholds = PARITY_THRESHOLDS["directivity"]
     trace_ok = (
-        matrix_metrics["pearson_r"] > 0.99
-        and matrix_metrics["psnr_db"] > 30.0
-        and trace_summary["pearson_r_min"] > 0.99
-        and abs(trace_summary["rms_ratio_mean"] - 1.0) < 1e-2
+        matrix_metrics["pearson_r"] > matrix_thresholds["pearson_r"]
+        and matrix_metrics["psnr_db"] > matrix_thresholds["psnr_db"]
+        and trace_summary["pearson_r_min"] > trace_thresholds["pearson_r_min"]
+        and trace_thresholds["rms_ratio_min"]
+        <= trace_summary["rms_ratio_mean"]
+        <= trace_thresholds["rms_ratio_max"]
     )
     directivity_ok = (
-        directivity["pearson_r"] > 0.99
-        and abs(directivity["rms_ratio"] - 1.0) < 1e-2
-        and abs(directivity["peak_ratio"] - 1.0) < 1e-2
+        directivity["pearson_r"] > directivity_thresholds["pearson_r"]
+        and directivity_thresholds["rms_ratio_min"]
+        <= directivity["rms_ratio"]
+        <= directivity_thresholds["rms_ratio_max"]
+        and directivity_thresholds["peak_ratio_min"]
+        <= directivity["peak_ratio"]
+        <= directivity_thresholds["peak_ratio_max"]
     )
     overall_status = "PASS" if (trace_ok and directivity_ok) else "FAIL"
     report_lines.append(f"parity_status: {overall_status}")

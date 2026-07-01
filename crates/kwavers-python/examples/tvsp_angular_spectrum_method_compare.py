@@ -58,8 +58,10 @@ Z_POSITIONS = np.array([5e-3, 10e-3, 20e-3, 40e-3])  # propagation planes [m]
 FIGURE_PATH = DEFAULT_OUTPUT_DIR / "tvsp_angular_spectrum_method_compare.png"
 METRICS_PATH = DEFAULT_OUTPUT_DIR / "tvsp_angular_spectrum_method_metrics.txt"
 
-PEARSON_THRESHOLD = 0.9999
-PSNR_THRESHOLD_DB = 60.0
+PARITY_THRESHOLDS = {
+    "pearson_r_min": 0.9999,
+    "psnr_db_min": 60.0,
+}
 
 
 def _circular_piston_source() -> np.ndarray:
@@ -120,7 +122,10 @@ def _run_scenario(medium_kw, medium_pkw, label: str) -> dict[str, object]:
         "metrics_per_z": metrics_per_z,
         "pearson_min": pearson_min,
         "psnr_min": psnr_min,
-        "pass": pearson_min >= PEARSON_THRESHOLD and psnr_min >= PSNR_THRESHOLD_DB,
+        "pass": (
+            pearson_min >= PARITY_THRESHOLDS["pearson_r_min"]
+            and psnr_min >= PARITY_THRESHOLDS["psnr_db_min"]
+        ),
     }
 
 
@@ -181,7 +186,8 @@ def build_report_lines(scenarios: list[dict]) -> list[str]:
             f"  psnr_db_min={sc['psnr_min']:.2f}"
         )
         lines.append(
-            f"  Thresholds: pearson≥{PEARSON_THRESHOLD}  psnr≥{PSNR_THRESHOLD_DB} dB"
+            f"  Thresholds: pearson≥{PARITY_THRESHOLDS['pearson_r_min']}  "
+            f"psnr≥{PARITY_THRESHOLDS['psnr_db_min']} dB"
         )
         lines.append("")
 

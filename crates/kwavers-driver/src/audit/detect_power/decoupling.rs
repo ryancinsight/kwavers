@@ -76,7 +76,9 @@ pub(crate) fn detect_decoupling_cap_distance_violations(
             continue;
         }
         let Some(ic_idx) = cap.assoc_ic else { continue };
-        let Some(ic) = comps.get(ic_idx) else { continue };
+        let Some(ic) = comps.get(ic_idx) else {
+            continue;
+        };
         if ic.fp >= lib.len() {
             continue;
         }

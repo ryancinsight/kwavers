@@ -25,7 +25,7 @@
 //! 4. **Crosstalk**: capacitive/inductive coupling from parallel adjacent runs.
 //! 5. **Antenna / dangling**: etch/ESD risks from unconnected track ends.
 
-#![allow(missing_docs)]  // Phase 4c carve: `pub mod X;` declarations are slice-private; lint allow covers the entire facade.
+#![allow(missing_docs)] // Phase 4c carve: `pub mod X;` declarations are slice-private; lint allow covers the entire facade.
 
 pub mod antenna;
 pub mod critic;
@@ -43,16 +43,10 @@ pub mod shorts;
 #[cfg(test)]
 mod tests;
 
-pub use fault_report::FaultReport;
-pub use crosstalk::emi_hotspots;
 pub use antenna::{copper_area_per_layer, copper_imbalance};
 pub use critic::{
-    ChargeRecyclingReport,
-    rasterize_hotspots,
-    rasterize_hotspots_radius,
-    PulseSkipInterferenceReport,
-    audit,
-    charge_recycling_efficiency_audit,
-    pulse_skip_interference_audit,
-    weakness_field,
+    audit, charge_recycling_efficiency_audit, pulse_skip_interference_audit, rasterize_hotspots,
+    rasterize_hotspots_radius, weakness_field, ChargeRecyclingReport, PulseSkipInterferenceReport,
 };
+pub use crosstalk::emi_hotspots;
+pub use fault_report::FaultReport;

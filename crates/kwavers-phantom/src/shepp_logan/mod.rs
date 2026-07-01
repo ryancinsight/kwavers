@@ -89,8 +89,7 @@ const INTENSITY_ORIGINAL: [f64; 10] =
     [2.0, -0.98, -0.02, -0.02, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01];
 
 /// Modified Shepp–Logan (Toft 1996) intensities.
-const INTENSITY_MODIFIED: [f64; 10] =
-    [1.0, -0.8, -0.2, -0.2, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1];
+const INTENSITY_MODIFIED: [f64; 10] = [1.0, -0.8, -0.2, -0.2, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1];
 
 impl SheppLogan {
     /// Build a phantom with the given intensity variant.

@@ -1,11 +1,11 @@
+use crate::audit::net_util::{
+    diff_pair_coupling_caps, diff_pair_members, power_reference_zone_for_track, reference_zones,
+    track_midpoint,
+};
 use crate::board::{Board, NetClassKind};
 use crate::geom::Point;
 use crate::place::{Component, FootprintDef};
 use crate::rules::DesignRules;
-use crate::audit::net_util::{
-    diff_pair_coupling_caps, diff_pair_members, power_reference_zone_for_track,
-    reference_zones, track_midpoint,
-};
 
 use super::{diff_pair_axis, PairAxis};
 

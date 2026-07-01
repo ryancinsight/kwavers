@@ -76,20 +76,20 @@ impl Default for HuAcousticModel {
     /// Aubry/Connor soft↔cortical absorption blend and air floors.
     fn default() -> Self {
         Self {
-            density_water: DENSITY_WATER_NOMINAL, // 1000
-            density_per_hu: 0.96,                 // Schneider 1996
-            density_floor: DENSITY_AIR,           // 1.204
-            sound_speed_water: SOUND_SPEED_WATER_SIM, // 1500
-            sound_speed_per_hu_soft: 0.50,        // Schneider, HU < 0
-            sound_speed_per_hu_bone: 0.76,        // Schneider, HU ≥ 0 (≈ Webb 120 kVp 0.75)
-            sound_speed_floor: SOUND_SPEED_AIR,   // 343
-            cortical_hu: 1000.0,                  // HU of fully cortical bone
+            density_water: DENSITY_WATER_NOMINAL,           // 1000
+            density_per_hu: 0.96,                           // Schneider 1996
+            density_floor: DENSITY_AIR,                     // 1.204
+            sound_speed_water: SOUND_SPEED_WATER_SIM,       // 1500
+            sound_speed_per_hu_soft: 0.50,                  // Schneider, HU < 0
+            sound_speed_per_hu_bone: 0.76, // Schneider, HU ≥ 0 (≈ Webb 120 kVp 0.75)
+            sound_speed_floor: SOUND_SPEED_AIR, // 343
+            cortical_hu: 1000.0,           // HU of fully cortical bone
             absorption_soft: ACOUSTIC_ABSORPTION_BRAIN, // 0.5 dB/cm/MHz
             absorption_bone: ACOUSTIC_ABSORPTION_SKULL_MIN, // 8.0 dB/cm/MHz
             exponent_soft: SOFT_TISSUE_ABSORPTION_POWER_Y, // 1.1 (Duck 1990)
-            exponent_bone: 1.0, // skull α ∝ f¹ (Connor & Hynynen 2002)
+            exponent_bone: 1.0,            // skull α ∝ f¹ (Connor & Hynynen 2002)
             bovera_soft: B_OVER_A_SOFT_TISSUE, // 6.5 (Duck 1990)
-            bovera_bone: B_OVER_A_BONE,         // 8.0
+            bovera_bone: B_OVER_A_BONE,    // 8.0
         }
     }
 }
@@ -161,7 +161,7 @@ impl HuAcousticModel {
 mod tests {
     use super::HuAcousticModel;
     use crate::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
-    use crate::constants::tissue_acoustics::{DENSITY_FAT, DENSITY_AIR};
+    use crate::constants::tissue_acoustics::{DENSITY_AIR, DENSITY_FAT};
 
     // Water (HU = 0) recovers the nominal water density and sound speed exactly —
     // the calibration anchor both Schneider segments pass through.
@@ -177,8 +177,12 @@ mod tests {
     #[test]
     fn soft_tissues_are_resolved_distinctly() {
         let m = HuAcousticModel::default();
-        let (rho_fat, rho_water, rho_muscle, rho_bone) =
-            (m.density(-100.0), m.density(0.0), m.density(50.0), m.density(1000.0));
+        let (rho_fat, rho_water, rho_muscle, rho_bone) = (
+            m.density(-100.0),
+            m.density(0.0),
+            m.density(50.0),
+            m.density(1000.0),
+        );
         assert!(
             rho_fat < rho_water && rho_water < rho_muscle && rho_muscle < rho_bone,
             "densities not strictly ordered: fat={rho_fat} water={rho_water} muscle={rho_muscle} bone={rho_bone}"
@@ -189,7 +193,10 @@ mod tests {
             "fat density {rho_fat} far from tabulated {DENSITY_FAT}"
         );
         // Cortical bone at HU = 1000 lands in the physiological band.
-        assert!((1900.0..=2000.0).contains(&rho_bone), "bone density {rho_bone} kg/m³");
+        assert!(
+            (1900.0..=2000.0).contains(&rho_bone),
+            "bone density {rho_bone} kg/m³"
+        );
     }
 
     // Sound speed is continuous at the HU = 0 slope change (both Schneider
@@ -199,7 +206,10 @@ mod tests {
         let m = HuAcousticModel::default();
         let below = m.sound_speed(-1e-6);
         let above = m.sound_speed(1e-6);
-        assert!((below - above).abs() < 1e-3, "discontinuity at HU=0: {below} vs {above}");
+        assert!(
+            (below - above).abs() < 1e-3,
+            "discontinuity at HU=0: {below} vs {above}"
+        );
         // Bone is faster than soft tissue.
         assert!(m.sound_speed(1000.0) > m.sound_speed(0.0));
     }

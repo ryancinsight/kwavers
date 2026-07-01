@@ -1,11 +1,11 @@
 //! Power plane, split-plane crossing, charge-recycling, and pulse-skip violation detectors.
 
+use crate::audit::net_util::reference_zones;
 use crate::board::{Board, NetClassKind, NetId};
+use crate::geom::point_in_polygon;
 use crate::geom::{Nm, Point};
 use crate::place::{Component, FootprintDef, Role};
 use crate::rules::DesignRules;
-use crate::audit::net_util::reference_zones;
-use crate::geom::point_in_polygon;
 
 pub(crate) fn detect_active_ic_power_plane_violations(
     board: &Board,
@@ -182,7 +182,10 @@ pub(crate) fn detect_charge_recycling_violations_board(
 /// and boards that have not configured a skip operating point are unaffected.
 /// The TX channel count is derived directly from the board net list (nets whose name matches
 /// `TX_*`) so no additional operating-point parameters are required beyond the design rules.
-pub(crate) fn detect_pulse_skip_violations(board: &Board, rules: &DesignRules) -> (usize, Vec<Point>) {
+pub(crate) fn detect_pulse_skip_violations(
+    board: &Board,
+    rules: &DesignRules,
+) -> (usize, Vec<Point>) {
     if rules.max_skip_fraction <= 0.0 {
         return (0, Vec::new());
     }

@@ -68,7 +68,7 @@ behaviour. The capability set is `PhysicsModelType`:
 |------------|---------------------|
 | `LinearAcoustics`     | `solver_type: AcousticSolver ∈ {FDTD{order}, PSTD{spectral_accuracy}, DG{polynomial_order}}`, `boundary_conditions: PhysicsBoundaryCondition` |
 | `NonlinearAcoustics`  | `equation_type: NonlinearEquation ∈ {Westervelt, Kuznetsov, KZK}`, `harmonics` |
-| `BubbleDynamics`      | `model: BubbleModel ∈ {RayleighPlesset, KellerMiksis, Gilmore}`, `nucleation` |
+| `BubbleDynamics`      | `model: BubbleModel ∈ {RayleighPlesset, KellerMiksis, KellerHerring, Gilmore}`, `nucleation` |
 | `ThermalDiffusion`    | `bioheat`, `perfusion` |
 | `OpticalPropagation`  | `scattering`, `anisotropy` |
 | `MechanicalStress`    | `wave_kind: ElasticWaveKind ∈ {Isotropic}` |
@@ -273,16 +273,17 @@ state).
 
 ---
 
-## 21.8 The BubbleDynamics sub-graph: three ODEs, one plugin
+## 21.8 The BubbleDynamics sub-graph: four model variants, one plugin
 
 ### 21.8.1 Model selection and the SRP boundary
 
-The `BubbleDynamicsPlugin` exposes a single `Plugin` interface over three
-distinct ODE systems:
+The `BubbleDynamicsPlugin` exposes a single `Plugin` interface over four
+`BubbleModel` variants:
 
 | `BubbleModel` variant | ODE | Integrator | Valid regime |
 |---|---|---|---|
 | `KellerMiksis` | KM (Keller & Miksis 1980) | Adaptive multi-step via `BubbleField` | Linear–moderate nonlinear |
+| `KellerHerring` | KH (typed wrapper over the same KM-family kernel) | Adaptive multi-step via `BubbleField` | Same regime envelope as KM, contractually selected KH |
 | `RayleighPlesset` | RP (Rayleigh 1917) | Same, `use_compressibility = false` | Incompressible, small-amplitude |
 | `Gilmore` | Gilmore-Tait (Gilmore 1952) | Classical RK4 via `GilmoreSolver::step_rk4` | Violent collapse, wall Mach > 0.1 |
 
@@ -315,12 +316,13 @@ The Gilmore path requires no dp/dt because the Tait enthalpy difference
 already encodes the compressible liquid response exactly to second order in
 the wall Mach number.
 
-### 21.8.3 Visualization: bubble radius dynamics under three models
+### 21.8.3 Visualization: bubble radius dynamics under four variants
 
 The companion example
 `crates/kwavers-python/examples/book/ch21_simulation_orchestration.py` drives all
-three bubble solvers through the PyO3 binding layer — the same Rayleigh–Plesset,
-Keller–Miksis, and Gilmore integrators the plugin catalog dispatches to (§21.4) —
+four bubble model variants through the PyO3 binding layer — the same
+Rayleigh–Plesset, Keller–Miksis (plus the KH wrapper alias), and Gilmore paths
+the plugin catalog dispatches to (§21.4) —
 and produces Figure 21.3. No ODE is reimplemented in Python; only the drive
 set-up and plotting live there:
 
@@ -334,24 +336,27 @@ SIGMA, MU, GAMMA, PV = 0.0725, 1e-3, 1.4, 0.0
 F0, PA = 1.0e6, 200_000.0
 T_END, N = 4.0 / F0, 8000
 
-# All physics in the Rust core (the plugin catalog's three bubble models).
+# All physics in the Rust core (the plugin catalog's four bubble variants).
 t,  r_rp,  _    = kw.solve_rayleigh_plesset(R0, 0.0, P0, PA, F0, T_END, N,
                                             RHO, SIGMA, GAMMA, MU, PV)
 _,  r_km,  _    = kw.solve_keller_miksis(R0, 0.0, P0, PA, F0, T_END, N,
                                          RHO, SIGMA, GAMMA, MU, PV, C0)
+_,  r_kh, _     = kw.solve_keller_herring(R0, 0.0, P0, PA, F0, T_END, N,
+                                         RHO, SIGMA, GAMMA, MU, PV, C0)
 _,  r_gil, rdot = kw.solve_gilmore(R0, 0.0, P0, PA, F0, T_END, N,
                                    RHO, SIGMA, GAMMA, MU, PV, C0)
-# plot r_rp/R0, r_km/R0, r_gil/R0 vs t and rdot (see the example script)
+# plot r_rp/R0, r_km/R0, r_kh/R0, r_gil/R0 vs t and rdot (see the example script)
 ```
 
-![Bubble radius dynamics under the three kwavers solvers.](figures/ch21sim/fig01_bubble_ode_comparison.png)
+![Bubble radius dynamics under the four kwavers variants.](figures/ch21sim/fig01_bubble_ode_comparison.png)
 
 *Figure 21.3. Normalised radius R(t)/R₀ (left) and Gilmore wall velocity (right)
 for a 5-µm air bubble in water under a 1-MHz, 200-kPa drive, integrated by
-`kw.solve_rayleigh_plesset` / `kw.solve_keller_miksis` / `kw.solve_gilmore`
+`kw.solve_rayleigh_plesset` / `kw.solve_keller_miksis` / `kw.solve_keller_herring` /
+`kw.solve_gilmore`
 (§21.8.3). The bubble expands to ≈1.85 R₀ and collapses to ≈0.54 R₀.*
 
-**Interpretation.** At this modest 200-kPa amplitude the three models agree
+**Interpretation.** At this modest 200-kPa amplitude the four variants agree
 closely. Rayleigh–Plesset slightly overshoots the expansion peaks because it
 carries no acoustic-radiation loss, while Keller–Miksis and Gilmore — which add
 the O(Mach) liquid-compressibility correction — nearly coincide and damp the peaks

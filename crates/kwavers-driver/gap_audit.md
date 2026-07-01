@@ -1,6 +1,16 @@
 # kicad-routing gap audit
 
 ## Closed This Cycle
+- [patch] Exact TC8020 CAD provenance gap: `nsf_neuromod_phased_array` previously used a synthesized
+  output-stage footprint/package abstraction. It now imports the local `TC8020K6_G` KiCad QFN56
+  footprint and symbol map, maps GP/GN/DP/DN/SP/SN pads by function, and emits the regenerated
+  inspection board with HDI microvia fanout. Evidence tier: empirical generator audit plus focused
+  value-semantic import/escape/HDI tests.
+- [patch] Beamforming validation-contract gap: `beamforming_results` previously generated a
+  standalone near-field pulse-envelope diagnostic. The example now consumes a generated full-stack
+  v2 manifest, routes acoustic validation through `KwaversSim`/kwavers-transducer geometry, emits
+  validation and realized-tile-geometry sidecars, and treats BMPs as visualizations rather than the
+  acoustic oracle.
 - [patch] 32-channel HV7355 KiCad-error gap: the 32-channel example previously failed to produce an
   authoritative board artifact because the 75×52 mm four-layer topology exposed only 16 TX nets and
   left stable LVS opens. The example now emits a 100×80 mm six-layer board with four 8-channel TX
@@ -593,6 +603,10 @@
   by 2.5 mm, from a 5.5 mm clean gap.
 
 ## Residual Risk
+- The regenerated `nsf_neuromod_phased_array` board is complete and LVS-clean, but not
+  manufacturing-clean: internal DRC reports 18 clearance violations and 302 crossing risk markers,
+  and the emitted KiCad board is labelled inspection-only. KiCad CLI is not currently available on
+  PATH in this shell, so external KiCad DRC was not rerun for this board.
 - External KiCad DRC is currently a manual empirical gate invoked through
   `C:/Users/RyanClanton/AppData/Local/Programs/KiCad/10.0/bin/kicad-cli.exe`; it is not yet automated
   in CI. KiCad CLI Gerber/drill/render export fails silently (non-zero exit or zero-output) on the

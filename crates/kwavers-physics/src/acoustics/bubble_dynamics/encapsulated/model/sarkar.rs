@@ -43,7 +43,12 @@ impl SarkarModel {
     /// * `elasticity` — interfacial dilatational elasticity E_s [N/m].
     /// * `surface_viscosity` — interfacial dilatational viscosity κ_s [kg/s].
     #[must_use]
-    pub fn new(params: BubbleParameters, sigma_0: f64, elasticity: f64, surface_viscosity: f64) -> Self {
+    pub fn new(
+        params: BubbleParameters,
+        sigma_0: f64,
+        elasticity: f64,
+        surface_viscosity: f64,
+    ) -> Self {
         Self {
             params,
             sigma_0,

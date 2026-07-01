@@ -238,7 +238,10 @@ mod tests {
             }
         }
         let mean_err = (sum / n - s_true).abs() / s_true;
-        assert!(mean_err < 0.015, "mean interior slowness error {mean_err} must be <1.5%");
+        assert!(
+            mean_err < 0.015,
+            "mean interior slowness error {mean_err} must be <1.5%"
+        );
         assert!(
             well_recovered / n > 0.85,
             "≥85% of interior voxels recovered to <3%; got {}",
@@ -285,7 +288,10 @@ mod tests {
             &result.slowness.iter().copied().collect::<Vec<_>>(),
             &truth.iter().copied().collect::<Vec<_>>(),
         );
-        assert!(corr > 0.5, "reconstruction correlation {corr} must exceed 0.5");
+        assert!(
+            corr > 0.5,
+            "reconstruction correlation {corr} must exceed 0.5"
+        );
 
         // (c) The anomaly region is reconstructed slower than the background
         //     ring — the defining tomographic outcome (correct sign + location).

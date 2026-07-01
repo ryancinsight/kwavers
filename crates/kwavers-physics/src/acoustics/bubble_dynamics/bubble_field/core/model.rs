@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::acoustics::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};
-use crate::acoustics::bubble_dynamics::keller_miksis::KellerMiksisModel;
+use crate::acoustics::bubble_dynamics::keller_miksis::{KellerHerringModel, KellerMiksisModel};
 
 use super::constants::{DEFAULT_COUPLING_THRESHOLD, DEFAULT_GRID_SPACING, DEFAULT_RHO_LIQUID};
 
@@ -10,12 +10,36 @@ use super::constants::{DEFAULT_COUPLING_THRESHOLD, DEFAULT_GRID_SPACING, DEFAULT
 /// Stores all bubble states keyed by 3-D grid index, advances them through time
 /// using the Keller-Miksis ODE, and accounts for secondary Bjerknes pressure
 /// coupling between neighbouring bubbles.
+#[derive(Debug, Clone)]
+pub enum BubbleFieldSolver {
+    /// Keller-Miksis equation (compressible) through the canonical solver.
+    KellerMiksis(KellerMiksisModel),
+    /// Keller-Herring equation variant. Today this delegates to the same kernel
+    /// as `KellerMiksis`; it is represented as a distinct variant to keep the
+    /// plugin and catalog wiring explicit.
+    KellerHerring(KellerHerringModel),
+    /// Rayleigh–Plesset limit of Keller–Miksis (`use_compressibility = false`).
+    RayleighPlesset(KellerMiksisModel),
+}
+
+impl BubbleFieldSolver {
+    #[must_use]
+    pub fn params(&self) -> &BubbleParameters {
+        match self {
+            Self::KellerMiksis(model) => model.params(),
+            Self::KellerHerring(model) => model.params(),
+            Self::RayleighPlesset(model) => model.params(),
+        }
+    }
+}
+
+/// Shared bubble field state and history.
 #[derive(Debug)]
 pub struct BubbleField {
     /// Bubble states indexed by grid position.
     pub bubbles: HashMap<(usize, usize, usize), BubbleState>,
     /// Keller-Miksis ODE solver (shared parameters across all bubbles).
-    pub(super) solver: KellerMiksisModel,
+    pub(super) solver: BubbleFieldSolver,
     /// Default bubble parameters for cloud generation.
     pub bubble_parameters: BubbleParameters,
     /// Grid dimensions (Nx, Ny, Nz).
@@ -36,7 +60,7 @@ impl BubbleField {
     /// Create a new bubble field with default 1 mm isotropic grid spacing.
     #[must_use]
     pub fn new(grid_shape: (usize, usize, usize), params: BubbleParameters) -> Self {
-        Self::with_spacing(grid_shape, params, DEFAULT_GRID_SPACING)
+        Self::with_keller_miksis(grid_shape, params, DEFAULT_GRID_SPACING)
     }
 
     /// Create a new bubble field with explicit physical grid spacing.
@@ -46,10 +70,60 @@ impl BubbleField {
         params: BubbleParameters,
         spacing: (f64, f64, f64),
     ) -> Self {
+        Self::with_keller_miksis(grid_shape, params, spacing)
+    }
+
+    /// Create a new bubble field using the Keller-Miksis variant.
+    #[must_use]
+    pub fn with_keller_miksis(
+        grid_shape: (usize, usize, usize),
+        params: BubbleParameters,
+        spacing: (f64, f64, f64),
+    ) -> Self {
+        Self::with_solver(
+            grid_shape,
+            spacing,
+            BubbleFieldSolver::KellerMiksis(KellerMiksisModel::new(params)),
+        )
+    }
+
+    /// Create a new bubble field using the Rayleigh–Plesset limit.
+    #[must_use]
+    pub fn with_rayleigh_plesset(
+        grid_shape: (usize, usize, usize),
+        params: BubbleParameters,
+        spacing: (f64, f64, f64),
+    ) -> Self {
+        Self::with_solver(
+            grid_shape,
+            spacing,
+            BubbleFieldSolver::RayleighPlesset(KellerMiksisModel::new(params)),
+        )
+    }
+
+    /// Create a new bubble field using the Keller-Herring variant.
+    #[must_use]
+    pub fn with_keller_herring(
+        grid_shape: (usize, usize, usize),
+        params: BubbleParameters,
+        spacing: (f64, f64, f64),
+    ) -> Self {
+        Self::with_solver(
+            grid_shape,
+            spacing,
+            BubbleFieldSolver::KellerHerring(KellerHerringModel::new(params)),
+        )
+    }
+
+    fn with_solver(
+        grid_shape: (usize, usize, usize),
+        spacing: (f64, f64, f64),
+        solver: BubbleFieldSolver,
+    ) -> Self {
         Self {
             bubbles: HashMap::new(),
-            solver: KellerMiksisModel::new(params.clone()),
-            bubble_parameters: params,
+            solver: solver.clone(),
+            bubble_parameters: solver.params().clone(),
             grid_shape,
             grid_spacing: spacing,
             rho_liquid: DEFAULT_RHO_LIQUID,

@@ -6,7 +6,7 @@ use super::benchmark::{
 use super::geometry::focused_cap_positions;
 use super::observables::acoustic_fus_observables;
 use super::skull_ray::acoustic_properties_from_hu;
-use super::subspot::gbm_subspot_raster;
+use super::subspot::{gbm_subspot_covered_fraction, gbm_subspot_raster};
 use super::types::TranscranialFusPlanConfig;
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use kwavers_core::constants::tissue_acoustics::DENSITY_BRAIN;
@@ -74,6 +74,24 @@ fn subspot_raster_nonempty_returns_centroid() {
     let spots = gbm_subspot_raster(&mask, [1.0e-3; 3], 3.0e-3).unwrap();
     assert!(spots.nrows() >= 1);
     assert_eq!(spots.ncols(), 3);
+}
+
+#[test]
+fn subspot_covered_fraction_counts_radius_supported_tumor_voxels() {
+    let mut mask = Array3::from_elem((15, 15, 15), false);
+    for ix in 5..10 {
+        for iy in 5..10 {
+            for iz in 5..10 {
+                mask[[ix, iy, iz]] = true;
+            }
+        }
+    }
+    let spots = gbm_subspot_raster(&mask, [1.0e-3; 3], 2.0e-3).unwrap();
+    let covered = gbm_subspot_covered_fraction(&mask, &spots, [1.0e-3; 3], 2.0e-3);
+    assert!(
+        covered > 0.50,
+        "expected focal support to cover most tumour voxels, got {covered}"
+    );
 }
 
 #[test]

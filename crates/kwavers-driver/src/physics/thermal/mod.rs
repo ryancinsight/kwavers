@@ -65,7 +65,8 @@ pub use electrothermal::{power_source, solve_board, solve_electrothermal, solve_
 pub use ir_drop::{ir_drop, IrDrop};
 pub use joule_source::joule_source;
 pub use transient::{
-    junction_temperature_k, temperature_derated_resistance, thermal_time_constant_s, transient_rise_k,
+    junction_temperature_k, temperature_derated_resistance, thermal_time_constant_s,
+    transient_rise_k,
 };
 pub use via_conductance::thermal_via_conductance;
 

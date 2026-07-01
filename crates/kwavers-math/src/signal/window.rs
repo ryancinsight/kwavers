@@ -88,7 +88,10 @@ mod tests {
         // r = 1 → Hann at every position.
         for k in 0..=10 {
             let x = k as f64 / 10.0;
-            assert!((tukey(x, 1.0) - hann(x)).abs() < 1e-12, "r=1 vs hann at x={x}");
+            assert!(
+                (tukey(x, 1.0) - hann(x)).abs() < 1e-12,
+                "r=1 vs hann at x={x}"
+            );
         }
         // r is clamped: r > 1 behaves like r = 1.
         assert!((tukey(0.3, 2.0) - tukey(0.3, 1.0)).abs() < 1e-12);
@@ -97,13 +100,13 @@ mod tests {
     #[test]
     fn tukey_taper_and_flat_top() {
         let r = 0.5; // half = 0.25
-        // Zero at the symmetric endpoints, unity over the flat interior.
+                     // Zero at the symmetric endpoints, unity over the flat interior.
         assert!((tukey(0.0, r)).abs() < 1e-12);
         assert!((tukey(1.0, r)).abs() < 1e-12);
         assert!((tukey(0.25, r) - 1.0).abs() < 1e-12); // taper meets flat top
         assert!((tukey(0.5, r) - 1.0).abs() < 1e-12); // center is flat
         assert!((tukey(0.75, r) - 1.0).abs() < 1e-12); // flat top meets taper
-        // Symmetric about x = 0.5.
+                                                       // Symmetric about x = 0.5.
         assert!((tukey(0.1, r) - tukey(0.9, r)).abs() < 1e-12);
     }
 }

@@ -5,7 +5,7 @@
 use std::collections::{BTreeMap, HashMap};
 
 use crate::board::{Board, LayerId, NetClassKind, NetId, Track};
-use crate::geom::{Nm, Point, point_in_polygon};
+use crate::geom::{point_in_polygon, Nm, Point};
 
 /// Midpoint of a track segment.
 pub(crate) fn track_midpoint(track: &Track) -> Point {
@@ -16,7 +16,9 @@ pub(crate) fn track_midpoint(track: &Track) -> Point {
 }
 
 /// Cumulative routed length per layer for a set of tracks.
-pub(crate) fn diff_pair_layer_segment_lengths(tracks: &[&Track]) -> BTreeMap<LayerId, (f64, Option<Point>)> {
+pub(crate) fn diff_pair_layer_segment_lengths(
+    tracks: &[&Track],
+) -> BTreeMap<LayerId, (f64, Option<Point>)> {
     let mut lengths = BTreeMap::new();
     for track in tracks {
         let entry = lengths

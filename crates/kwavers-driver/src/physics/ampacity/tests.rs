@@ -5,9 +5,7 @@ use crate::geom::Nm;
 fn ipc2221_canonical_point() {
     let w = ipc2221_min_width(1.0, 10.0, 1.0, false).to_mm();
     assert!((w - 0.30).abs() < 0.05, "expected ~0.30 mm, got {w:.3}");
-    assert!(
-        ipc2221_min_width(2.0, 10.0, 1.0, false) > ipc2221_min_width(1.0, 10.0, 1.0, false)
-    );
+    assert!(ipc2221_min_width(2.0, 10.0, 1.0, false) > ipc2221_min_width(1.0, 10.0, 1.0, false));
     assert!(ipc2221_min_width(1.0, 10.0, 1.0, true) > ipc2221_min_width(1.0, 10.0, 1.0, false));
 }
 
@@ -71,8 +69,7 @@ fn resistance_scales_inversely_with_width() {
 fn detects_undersized_hv_track() {
     use crate::board::{Board, LayerId, NetClassKind, Track};
     use crate::geom::{GridSpec, Point};
-    let spec =
-        GridSpec::cover(Nm::from_mm(20.0), Nm::from_mm(20.0), Nm::from_mm(0.5), 2).unwrap();
+    let spec = GridSpec::cover(Nm::from_mm(20.0), Nm::from_mm(20.0), Nm::from_mm(0.5), 2).unwrap();
     let mut b = Board::new(spec);
     let vpp = b.add_net("VPP", NetClassKind::Hv);
     b.tracks.push(Track {

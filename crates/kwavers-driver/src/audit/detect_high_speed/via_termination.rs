@@ -4,11 +4,11 @@
 
 use std::collections::HashMap;
 
-use crate::board::{Board, NetClassKind, NetId, LayerId};
+use crate::audit::net_util::is_high_speed_net;
+use crate::board::{Board, LayerId, NetClassKind, NetId};
 use crate::geom::{Nm, Point};
 use crate::place::{Component, FootprintDef, Role};
 use crate::rules::DesignRules;
-use crate::audit::net_util::is_high_speed_net;
 
 pub(crate) fn detect_high_speed_termination_placement_violations(
     board: &Board,

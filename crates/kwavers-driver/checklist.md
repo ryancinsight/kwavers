@@ -2,9 +2,34 @@
 
 Sprint target: 0.1.0
 Phase: Closure
-In-flight item: [minor] Phase 6 COMPLETE — crate moved to `crates/kwavers-driver/`, joined parent kwavers workspace, kwavers-transducer path dep wired, `KwaversSim::simulate` filled with real `design_array`-based implementation; 0.3.13.
+In-flight item: [patch] CLOSED — `nsf_neuromod_phased_array` uses exact local `TC8020K6_G`
+CAD/footprint assets; generated board is LVS-clean but inspection-only until clearance cleanup.
 
 ## Completed
+- [x] [patch] Exact TC8020 output-stage CAD flow: `nsf_neuromod_phased_array` imports the local
+      `TC8020K6_G` KiCad QFN56 footprint and symbol pin map, maps GP/GN/DP/DN/SP/SN pins by symbol
+      function instead of synthesized pad order, enables HDI microvia fanout, and regenerates
+      `output/boards/nsf_neuromod_phased_array`. Empirical generator audit: `complete=true`,
+      `legal=true`, `lvs_pass=true`, `layers=6/6`, `vias=248`, `clearance=18`, `crossings=302`,
+      `dangling=0`; the output is marked inspection-only because hard internal DRC is not clean.
+      Verified with focused nextest TC8020 import, fine-pitch escape, and HDI policy tests plus
+      `cargo check -p kwavers-driver --example nsf_neuromod_phased_array`.
+- [x] [minor] kwavers beam-profile propagation integration: `kwavers-transducer` now exports
+      `propagate_focused_linear_array` + focused propagation result types; `KwaversSim::simulate`
+      and feature-enabled `validate_against_budget` call the propagated pressure map instead of
+      the old driver-side coherent-gain/width proxy. Regenerated `output/beamforming` from
+      `output/manifests/v2_per_tile_stim.kv`: 96 channels, 11.027 MPa focal pressure, MI 7.797,
+      ISPPA 4108 W/cm2, 0.500 mm lateral and 2.074 mm axial 6 dB widths, all four checks pass.
+      Verified with `cargo nextest run -p kwavers-transducer -p kwavers-driver --features kwavers`;
+      visual inspection confirmed the -45/0/+45 BMP focus markers align with the rendered lobes.
+- [x] [patch] Beamforming example kwavers-validation contract: `examples/beamforming_results.rs`
+      now requires the `kwavers` feature, reads a generated full-stack v2 driver manifest, validates
+      through `run_experiment(..., &KwaversSim, ...)`, and emits `beamforming_validation.kv`,
+      `tile_geometry.csv`, `beamforming_metrics.csv`, and deterministic BMP visualizations. The
+      kwavers-transducer geometry adapter now preserves the manifest's 96 routed lanes by converting
+      driver center-span aperture to kwavers pitch-cell aperture. Verified with focused `cargo nextest
+      run -p kwavers-driver --features kwavers kwavers_`, example compile, and regenerated
+      `output/beamforming`.
 - [x] [minor] Phase 6 workspace move + kwavers-transducer wiring: crate copied from
       `leoneuro/driver/kicad-routing/` to `crates/kwavers-driver/`; standalone `[workspace]` table
       removed; parent `D:\kwavers\Cargo.toml` members updated; `kwavers-transducer = { path =
@@ -638,7 +663,7 @@ HV7355: clearance=6, vias=16; SVG 45×30 mm; all copper in-bounds.
 32ch HV: external KiCad DRC=0 violations, 0 unconnected; render now shows package/header CAD bodies.
 Resolved this sprint: pad-aware miter skip in `miter_right_angle_corners`; FPGA DRC residues closed;
 duplicate pipeline comment removed.
-Remaining open: kwavers beam-profile propagation integration.
+Remaining open: exact fabricator-package import and hardware measurement correlation.
 
 ## Next Increment
 - [x] [patch] Fix DOUT/TMS LVS short: `convert_diagonals_to_orthogonal_safe` now seeds
@@ -691,7 +716,7 @@ Remaining open: kwavers beam-profile propagation integration.
 - [x] [minor] New example `hv7355_32ch_tile.rs`: 32-channel 4×HV7355 tile, now 100×80 mm,
       six-layer, banked-control/banked-VNN topology. TX_0..TX_31 are all exposed through four
       8-channel output banks. KiCad CLI DRC reports 0 violations and 0 unconnected items.
-- [ ] [minor] Move beam-profile validation onto `kwavers-transducer`/kwavers propagation so the
+- [x] [minor] Move beam-profile validation onto `kwavers-transducer`/kwavers propagation so the
       driver manifest drives the same acoustic model used by the rest of the kwavers stack.
 - [x] [patch] Preserve clean diagonals in the DFM pass: the pipeline now runs selective
       `chamfer_diagonal_traps` instead of unconditional `convert_diagonals_to_orthogonal_safe`.

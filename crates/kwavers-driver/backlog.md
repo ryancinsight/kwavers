@@ -54,6 +54,12 @@ Change-class tags per SemVer. Sprint target: 0.1.0 (Foundation).
       pinout, and four 16-channel HV tile maps covering global `TX_0..TX_63`.
 
 ## Next increments
+- [ ] [patch] **TC8020 nsf board clearance cleanup**. Retain the exact local `TC8020K6_G` QFN56
+      footprint/symbol flow and reduce the regenerated `nsf_neuromod_phased_array` board from
+      `clearance=18`, `crossings=302` to hard internal DRC clean, then run external KiCad DRC when
+      `kicad-cli` is available. Acceptance: board remains `complete=true`, `legal=true`,
+      `lvs_pass=true`, no downgraded or synthesized TC8020 footprint path, internal hard DRC clean,
+      and generated board is no longer labelled inspection-only.
 - [ ] [minor] **`.kicad_pcb` IO boundary** (`io` module, feature-gated). S-expression read of
       footprints/pads/nets and write of tracks/vias. This is what lets the engine run on the real
       holohv8t/16t/24t tiles. The DIP boundary is already in place (the core has zero infra deps),
@@ -76,9 +82,17 @@ Change-class tags per SemVer. Sprint target: 0.1.0 (Foundation).
       with the exact local `QFN56_8X8MC_MCH.kicad_mod` land pattern for both U1 and U2. Acceptance:
       `component_accuracy_hv.kv` reports `exact_complete=true` for the HV pulser rows while
       preserving two HV7355 devices, 16 `TX_*` nets, LVS PASS, and KiCad DRC 0 violations.
-- [x] [minor] **kwavers beam propagation validation** — Track D v2 follow-up closes the
-      schema + validator half of this accept criterion. Reproduce end-to-end with
+- [x] [minor] **kwavers beam propagation validation** — Track D v2 plus the 2026-06-29 propagation
+      close-out closes this accept criterion. Reproduce end-to-end with
       `cargo run --release --example v2_per_tile_stim`. Deliverables:
+      - Close-out 2026-06-29: the driver validation path now executes real
+        `kwavers-transducer` focused propagation. `kwavers-transducer` owns
+        `propagate_focused_linear_array`, and `KwaversSim::simulate` plus
+        feature-enabled `validate_against_budget` consume its pressure map.
+        Regenerated `output/beamforming` from `output/manifests/v2_per_tile_stim.kv`
+        reports 96 channels, 11.027 MPa focal pressure, MI 7.797, 4108 W/cm2
+        ISPPA, 0.500 mm lateral width, 2.074 mm axial width, grating-lobe-free
+        true, far-field false, and all four validation checks passing.
       - Sidecar: `output/v2_per_tile_stim.kv` carrying the 96-lane per-tile schedule.
         Each HV tile emits 10 keys — `stim_tile_{i}_prf_hz` / `shift_s` / `phase_deg`
         / `ramp_s` plus the inherited `tbd_s` / `sd_s` / `isi_s` / `tt_s` / `vpp_v` /
@@ -101,10 +115,10 @@ Change-class tags per SemVer. Sprint target: 0.1.0 (Foundation).
       focal_m, timing_step_s, pitch_m, wavelength_m, f_number }; scalar contract
       EnergyBudgetReport; output struct KwaversBeamValidation { step,
       focal_pressure_pa, grating_lobe_free, in_far_field, isppa_w_cm2,
-      mechanical_index, axial_extent_mm, lateral_extent_mm, report }; seam
-      marker // TODO(kwavers-transducer): replace with
-      crate::kwavers_transducer::simulate(&step) -> PressureMap at the
-      in-crate physics block in validate_against_budget.
+      mechanical_index, axial_extent_mm, lateral_extent_mm, report }. With the
+      `kwavers` feature enabled, `validate_against_budget` fills those scalars
+      from `kwavers_transducer::propagate_focused_linear_array`; the default
+      build keeps the analytical fallback for dependency-size control.
       Sealed at the kwavers seam: the **ResistorPackage** contract (`Smd1206 = 250 mW`,
       `Smd2512 = 1 W`, `Smd4527 = 2 W` at IPC-7351 70 °C ambient) closes the per-tile
       dissipation-vs-footprint gap. New fourth input `damping_footprint: ResistorPackage`
@@ -115,8 +129,7 @@ Change-class tags per SemVer. Sprint target: 0.1.0 (Foundation).
       `KwaversBeamStep::resistor_margin_w` →
       `KwaversBeamValidation::resistor_margin_w`, and a 4th kwavers-side safety check
       `resistor margin (per-tile min) ≥ 0 W` locks the post-rejection invariant at the
-      seam. The future `crate::kwavers_transducer::simulate(&step)` substitute (TODO
-      marker) is documented to read `step.resistor_margin_w[i]` to plan footprint bumps
+      seam. The propagated kwavers path reads `step.resistor_margin_w[i]` to plan footprint bumps
       (`      Smd2512 -> Smd4527`) and matching-cap tightening without re-deriving
       `pulser_dissipation`. Smd4527 covers the article-class envelope (50 pF / 150 V /
       +50 Hz per-tile PRF stagger: tile[0] ~0.98 W, tile[3] ~1.13 W, Smd4527
@@ -159,6 +172,12 @@ Change-class tags per SemVer. Sprint target: 0.1.0 (Foundation).
   above the 0.05 W slack floor on the binding tile), step 5c (Smd2512 under-rated
   tile[3] margin `+0.000859375 W` FP64-exact; kwavers 4th `Check` SHUTS the fixture while
   the other 3 (focal-pressure / MI / grating-lobe-free) STILL pass, n_failing == 1).
+- **Close-out — 2026-06-28.** `examples/beamforming_results.rs` is upgraded from a standalone
+  near-field diagnostic to a kwavers-backed validation example. It reads the generated full-stack
+  v2 manifest, runs `run_experiment(..., &KwaversSim, ...)`, writes `beamforming_validation.kv`,
+  `tile_geometry.csv`, `beamforming_metrics.csv`, and deterministic BMP visualizations, and documents
+  the contract in `docs/beamforming_validation.md`. The geometry adapter now preserves the 96-lane
+  manifest span by converting driver center-span aperture to kwavers pitch-cell aperture.
 - [ ] [minor] **SA placement** (`place` module). Reuse `PhysicsCost`'s hazard field as the
       placement energy (isolation-barrier cost, courtyard overlap, HPWL) — one cost SSOT for place
       and route. Port from `gen_place.py`. Acceptance: places holohv16t with 0 courtyard overlap +
@@ -199,9 +218,10 @@ Change-class tags per SemVer. Sprint target: 0.1.0 (Foundation).
 - The current shield-stack assembly is complete at the stack-manifest level: one controller plus four
   16-channel HV tiles, 12 mm board pitch, and 60 mm total height. It still inherits the per-board
   exact-footprint gaps recorded in `component_accuracy_*.kv`.
-- The current beam images are a near-field pulse-envelope diagnostic in this crate. They now show a
-  focal spot, but they are not yet kwavers propagation output and do not close article-grade acoustic
-  validation.
+- The current beam images are deterministic visualizations of kwavers-backed validation metrics and
+  realized channel geometry, not fabricated acoustic measurements. The validation sidecars
+  (`beamforming_validation.kv`, `tile_geometry.csv`, `beamforming_metrics.csv`) are the evidence
+  artifacts for article-replication work.
 - Direct kwavers dependency integration is deferred while the driver subtree remains confidential and
   standalone. The intended crate name is `kwavers-drivers`, paired with `kwavers-transducer`; revisit
   naming at extraction time if the package scope broadens beyond driver electronics.

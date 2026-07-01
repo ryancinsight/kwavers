@@ -31,6 +31,7 @@
 //! | `NonlinearAcoustics { Kuznetsov }`       | [`KuznetsovSolverPlugin`]           |
 //! | `ThermalDiffusion`                       | [`ThermalDiffusionPlugin`]           |
 //! | `BubbleDynamics { KellerMiksis }`       | [`BubbleDynamicsPlugin`] (adaptive KM ODE) |
+//! | `BubbleDynamics { KellerHerring }`      | [`BubbleDynamicsPlugin`] (KM wrapper path) |
 //! | `BubbleDynamics { RayleighPlesset }`   | [`BubbleDynamicsPlugin`] (KM, compressibility off) |
 //! | `BubbleDynamics { Gilmore }`           | [`BubbleDynamicsPlugin`] (Gilmore/Tait RK4) |
 //! | `OpticalPropagation`                     | not yet wired                        |
@@ -304,6 +305,32 @@ mod tests {
             manager.plugin_count(),
             1,
             "exactly one plugin registered for BubbleDynamics capability"
+        );
+    }
+
+    #[test]
+    fn bubble_dynamics_kh_builds_one_plugin() {
+        use kwavers_physics::factory::models::BubbleModel;
+
+        let mut config = PhysicsConfig::new();
+        config.models.clear();
+        config.models.push(PhysicsModelConfig {
+            model_type: PhysicsModelType::BubbleDynamics {
+                model: BubbleModel::KellerHerring,
+                nucleation: false,
+            },
+            enabled: true,
+            parameters: std::collections::HashMap::new(),
+        });
+
+        let grid = small_grid();
+        let medium = water(&grid);
+        let manager = PhysicsCatalog::build(&config, &grid, &medium, 1e-7)
+            .expect("BubbleDynamics{KellerHerring} must build a plugin");
+        assert_eq!(
+            manager.plugin_count(),
+            1,
+            "exactly one plugin registered for BubbleDynamics{{KellerHerring}}"
         );
     }
 

@@ -13,26 +13,23 @@ Figures produced:
   fig06: Shear-wave elastography — stiffness vs shear speed for tissue types
 
 Physics (pykwavers):
+  fig01: pykwavers.centered_hann_tone_burst_waveform generates the axial RF pulse,
+         pykwavers.bmode_envelope computes the RF Hilbert envelope, and
+         pykwavers.lateral_psf_sinc2 computes lateral PSF curves.
   fig03: pykwavers.solve_rayleigh_plesset gives the contrast-agent bubble scattering
          amplitude A_bubble = (R_max − R₀)/R₀ at the imaging pressure.  The slow-time
-         IQ signal uses this physically-derived amplitude for correct contrast-to-noise
-         ratio.  The Doppler phase and Kasai estimation remain analytically exact.
+         IQ signal uses this physically-derived amplitude, and
+         pykwavers.doppler_frequency_shift computes the Doppler shift used by
+         the Kasai estimator.
 
 Output directory: docs/book/figures/ch05/
-Requires: numpy, matplotlib, scipy, pykwavers
+Requires: numpy, matplotlib, pykwavers
 """
 
 import os
 import numpy as np
-from scipy.signal import hilbert
 import matplotlib
-
-try:
-    import pykwavers as kw
-    _HAS_PYKWAVERS = True
-except ImportError:
-    kw = None
-    _HAS_PYKWAVERS = False
+import pykwavers as kw
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -81,18 +78,9 @@ t_ax = np.arange(-3e-6, 3e-6, 1.0 / FS)
 # Axial: Hann-windowed sinusoid, 2 cycles
 n_cyc = 2
 t_pulse = n_cyc / F0
-idx_in = np.abs(t_ax) < t_pulse / 2
-pulse = np.zeros_like(t_ax)
-pulse[idx_in] = (
-    np.sin(2 * np.pi * F0 * t_ax[idx_in])
-    * np.hanning(np.sum(idx_in))
-)
+pulse = np.asarray(kw.centered_hann_tone_burst_waveform(t_ax, 1.0, F0, n_cyc))
 # Hilbert-transform envelope |z(t)| (§9.1.3, Theorem 9.1) from the Rust core.
-envelope_ax = (
-    np.asarray(kw.bmode_envelope(np.ascontiguousarray(pulse)))
-    if _HAS_PYKWAVERS
-    else np.abs(hilbert(pulse))
-)
+envelope_ax = np.asarray(kw.bmode_envelope(np.ascontiguousarray(pulse)))
 z_ax = t_ax * C0 / 2 * 1e3  # mm
 
 # Lateral: sinc² beam for several F-numbers
@@ -119,9 +107,7 @@ ax1.legend()
 # Lateral
 colors_f = ["C0", "C1", "C2"]
 for fn, col in zip(f_nums, colors_f):
-    sigma_sinc = fwhm_lat[fn] / (2 * np.sqrt(2 * np.log(2)))
-    # Far-field: sinc × gaussian-apodization product approximated as Gaussian
-    beam = np.exp(-0.5 * (x_lat / sigma_sinc) ** 2)
+    beam = np.asarray(kw.lateral_psf_sinc2(np.ascontiguousarray(x_lat * 1e-3), fn, LAM))
     beam_dB = 20 * np.log10(beam + 1e-9)
     ax2.plot(x_lat, beam_dB, color=col, label=f"F# = {fn} (FWHM = {fwhm_lat[fn]:.2f} mm)")
 
@@ -184,54 +170,39 @@ print("[fig03] Doppler spectrum (contrast-agent bubble; KM-derived scattering am
 
 PRF_D = 10000.0  # 10 kHz
 N_ENSEMBLE = 128
-T_prf = 1.0 / PRF_D
-t_slow = np.arange(N_ENSEMBLE) * T_prf
 v_true = 0.3  # m/s true velocity
 alpha_deg = 60.0  # beam-flow angle
 alpha = np.deg2rad(alpha_deg)
-
-# f_D = 2 f₀ v cosα / c₀
-f_D_true = 2 * F0 * v_true * np.cos(alpha) / C0
-v_max = C0 * PRF_D / (4 * F0 * np.cos(alpha))  # Nyquist velocity
 
 # Contrast-agent bubble: use RP (Rust RK4) to compute the normalized scattering
 # amplitude A_bubble = (R_max − R₀)/R₀ at typical contrast imaging pressure.
 # This gives the physically-derived echo amplitude from the nonlinear bubble response.
 P_IMAGING = 0.1e6   # 100 kPa (MI ≈ 0.045 at 5 MHz — contrast imaging regime)
 R0_CONTRAST = 1.5e-6  # 1.5 μm (Definity-like microbubble)
-if _HAS_PYKWAVERS:
-    N_STEPS_IMG = 10000   # 2 cycles × 5000 steps/cycle at 5 MHz
-    T_END_IMG = 2.0 / F0
-    _, R_km, _ = kw.solve_rayleigh_plesset(
-        R0_CONTRAST, 0.0, 101325.0, P_IMAGING, F0,
-        T_END_IMG, N_STEPS_IMG, 998.0, 0.0725, 1.4, 1.002e-3, 2338.0,
-    )
-    R_km = np.asarray(R_km)
-    A_bubble = float((R_km.max() - R0_CONTRAST) / R0_CONTRAST)  # normalized RP amplitude
-else:
-    A_bubble = 1.0  # fallback (no pykwavers)
-
-# Slow-time IQ: contrast-agent Doppler with KM-calibrated amplitude
-rng = np.random.default_rng(42)
-sigma_noise = 0.05 * A_bubble   # 26 dB SNR relative to bubble echo
-iq = A_bubble * np.exp(2j * np.pi * f_D_true * t_slow) + sigma_noise * (
-    rng.standard_normal(N_ENSEMBLE) + 1j * rng.standard_normal(N_ENSEMBLE)
+N_STEPS_IMG = 10000   # 2 cycles × 5000 steps/cycle at 5 MHz
+T_END_IMG = 2.0 / F0
+_, R_km, _ = kw.solve_rayleigh_plesset(
+    R0_CONTRAST, 0.0, 101325.0, P_IMAGING, F0,
+    T_END_IMG, N_STEPS_IMG, 998.0, 0.0725, 1.4, 1.002e-3, 2338.0,
 )
+R_km = np.asarray(R_km)
+A_bubble = float((R_km.max() - R0_CONTRAST) / R0_CONTRAST)  # normalized RP amplitude
 
-# Autocorrelation estimator (Kasai)
-R1 = np.mean(iq[1:] * np.conj(iq[:-1]))
-f_D_hat = np.angle(R1) / (2 * np.pi * T_prf)
-v_hat = C0 * f_D_hat / (2 * F0 * np.cos(alpha))
-
-# Doppler spectrum
-spectrum = np.abs(np.fft.fftshift(np.fft.fft(iq, n=4 * N_ENSEMBLE))) ** 2
-freq_D = np.fft.fftshift(np.fft.fftfreq(4 * N_ENSEMBLE, d=T_prf))
-vel_ax = C0 * freq_D / (2 * F0 * np.cos(alpha))
+doppler = kw.contrast_agent_doppler_spectrum(
+    N_ENSEMBLE, 4, PRF_D, v_true, alpha, F0, C0, A_bubble
+)
+t_slow = np.asarray(doppler["slow_time_s"])
+iq_real = np.asarray(doppler["iq_real"])
+iq_imag = np.asarray(doppler["iq_imag"])
+vel_ax = np.asarray(doppler["velocity_m_s"])
+spectrum = np.asarray(doppler["power"])
+v_hat = float(doppler["estimated_velocity_m_s"])
+v_max = float(doppler["nyquist_velocity_m_s"])
 
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 4))
 
-ax1.plot(t_slow * 1e3, np.real(iq), color="C0", lw=0.8, label="I")
-ax1.plot(t_slow * 1e3, np.imag(iq), color="C1", lw=0.8, ls="--", label="Q")
+ax1.plot(t_slow * 1e3, iq_real, color="C0", lw=0.8, label="I")
+ax1.plot(t_slow * 1e3, iq_imag, color="C1", lw=0.8, ls="--", label="Q")
 ax1.set_xlabel("Slow time (ms)")
 ax1.set_ylabel("IQ amplitude")
 ax1.set_title(f"Slow-time IQ — contrast agent\n$R_0={R0_CONTRAST*1e6:.1f}\\,\\mu$m, $P_a={P_IMAGING/1e3:.0f}$ kPa")
@@ -249,7 +220,7 @@ ax2.set_xlabel("Velocity (cm/s)")
 ax2.set_ylabel("Power (dB)")
 ax2.set_title(
     f"Contrast-Agent Doppler Spectrum — $f_0={F0/1e6:.0f}$ MHz, α={alpha_deg}°\n"
-    f"RP amplitude: $A_{{bubble}}={A_bubble:.3f}$ (pykwavers.solve_rayleigh_plesset)"
+    f"RP amplitude: $A_{{bubble}}={A_bubble:.3f}$; Doppler shift from pykwavers"
 )
 ax2.set_xlim(vel_ax[0] * 100, vel_ax[-1] * 100)
 ax2.set_ylim(-40, 2)
@@ -269,24 +240,24 @@ print("[fig04] Photoacoustic initial pressure and waveform")
 GAMMA = 0.18   # Grüneisen parameter (blood)
 MU_A = 100.0   # optical absorption [m⁻¹]
 PHI = 0.02     # fluence [J/m²]
-p0_blood = GAMMA * MU_A * PHI  # Pa
 
-# Gaussian absorber profile
 z_tissue = np.linspace(0, 50e-3, 1000)  # mm range
 z0 = 20e-3    # absorber depth [m]
 sigma_abs = 1e-3  # absorber width [m]
-absorber = np.exp(-0.5 * ((z_tissue - z0) / sigma_abs) ** 2)
-p0_profile = p0_blood * absorber  # initial pressure [Pa]
-
-# Photoacoustic signal at surface (simplified): derivative of profile
 FS_PA = 50e6
 t_pa = np.arange(0, 50e-3 / C0, 1.0 / FS_PA)  # travel time
-z_range_t = C0 * t_pa  # depth scanned in time
-# Gaussian absorber contribution: bipolar signal ≈ dp0/dz × sign convention
-pa_signal = np.gradient(
-    np.exp(-0.5 * ((z_range_t - z0) / sigma_abs) ** 2) * p0_blood,
-    z_range_t,
+pa_fixture = kw.gaussian_absorber_photoacoustic_profile(
+    z_tissue,
+    t_pa,
+    GAMMA,
+    MU_A,
+    PHI,
+    z0,
+    sigma_abs,
+    C0,
 )
+p0_profile = np.asarray(pa_fixture["initial_pressure_pa"])
+pa_signal = np.asarray(pa_fixture["surface_signal_pa_per_m"])
 
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 4))
 
@@ -370,8 +341,8 @@ fig, ax = plt.subplots(figsize=(8, 5))
 ax.plot(c_s_arr, E_arr, color="k", lw=2, label=r"$E = 3\rho c_s^2$ (Eq. 5.21)")
 
 for name, (mu_lo, mu_hi, col) in tissues.items():
-    cs_lo = np.sqrt(mu_lo * 1e3 / RHO)
-    cs_hi = np.sqrt(mu_hi * 1e3 / RHO)
+    cs_lo = kw.shear_wave_speed(mu_lo * 1e3, RHO)
+    cs_hi = kw.shear_wave_speed(mu_hi * 1e3, RHO)
     E_lo = 3 * mu_lo
     E_hi = 3 * mu_hi
     ax.axvspan(cs_lo, min(cs_hi, c_s_arr[-1]), alpha=0.15, color=col)
@@ -401,37 +372,20 @@ plt.close()
 #         vector_flow}; §9.3.4–9.3.5.
 # ─────────────────────────────────────────────────────────────────────────────
 
-C_SOUND = 1540.0
-
-
-def _cw_spectrum(rf, f0, fs, f_bb):
-    """Mix → decimate-by-averaging → FFT; signed velocity axis. Mirrors Rust."""
-    d = max(1, round(fs / f_bb))
-    n_bb = len(rf) // d
-    i = np.arange(len(rf))
-    mixed = 2.0 * rf * np.exp(-1j * 2 * np.pi * f0 * i / fs)
-    bb = mixed[: n_bb * d].reshape(n_bb, d).mean(axis=1)
-    spec = np.fft.fftshift(np.fft.fft(bb))
-    freqs = np.fft.fftshift(np.fft.fftfreq(n_bb, d=1.0 / f_bb))
-    vel = freqs * C_SOUND / (2 * f0)  # θ = 0
-    return vel, np.abs(spec) ** 2
-
-
 fig, axes = plt.subplots(1, 2, figsize=(12, 4.6))
 
-# (a) CW Doppler resolves a jet that aliases under PW Doppler.
-f0 = 2.5e6
-fs = 20e6
-f_bb = 100e3
-v_jet = 2.0  # m/s
-f_d = 2 * v_jet * f0 / C_SOUND
-n = 200 * 2048
-t = np.arange(n) / fs
-rf = np.cos(2 * np.pi * (f0 + f_d) * t)
-vel, power = _cw_spectrum(rf, f0, fs, f_bb)
-pw_prf = 5e3
-v_nyq_pw = pw_prf * C_SOUND / (4 * f0)
+doppler_fixture = kw.continuous_wave_vector_flow_fixture()
+vel = np.asarray(doppler_fixture["cw_velocity_m_s"])
+power = np.asarray(doppler_fixture["cw_power"])
+v_nyq_pw = float(doppler_fixture["pulsed_wave_nyquist_velocity_m_s"])
+angles = np.asarray(doppler_fixture["beam_angles_rad"])
+dirs = np.asarray(doppler_fixture["beam_directions"])
+v_true = np.asarray(doppler_fixture["true_velocity_m_s"])
+v_rec = np.asarray(doppler_fixture["recovered_velocity_m_s"])
+err = float(doppler_fixture["vector_error_m_s"])
+v_jet = 2.0
 
+# (a) CW Doppler resolves a jet that aliases under PW Doppler.
 ax = axes[0]
 ax.plot(vel, power / power.max(), color="C0")
 ax.axvspan(-v_nyq_pw, v_nyq_pw, color="C2", alpha=0.15,
@@ -445,14 +399,6 @@ ax.legend(fontsize=8)
 ax.grid(True, ls=":", alpha=0.4)
 
 # (b) Cross-beam vector flow recovers the full velocity vector.
-v_true = np.array([0.35, 0.55])  # (vx, vz)
-angles = np.deg2rad([25.0, -25.0])
-dirs = np.array([[np.sin(a), np.cos(a)] for a in angles])
-projected = dirs @ v_true
-M = dirs.T @ dirs
-b = dirs.T @ projected
-v_rec = np.linalg.solve(M, b)
-
 ax = axes[1]
 ax.quiver(0, 0, v_true[0], v_true[1], angles="xy", scale_units="xy", scale=1,
           color="k", width=0.012, label="true v")
@@ -467,7 +413,6 @@ ax.set_ylim(0, 0.8)
 ax.set_aspect("equal")
 ax.set_xlabel("$v_x$ (m/s)")
 ax.set_ylabel("$v_z$ (m/s)")
-err = np.linalg.norm(v_rec - v_true)
 ax.set_title(f"(b) Cross-beam vector flow (err={err:.1e} m/s)")
 ax.legend(fontsize=8, loc="lower right")
 ax.grid(True, ls=":", alpha=0.4)
@@ -558,10 +503,10 @@ plt.close()
 
 print(
     f"\nChapter 5 figures written to: {os.path.relpath(OUT_DIR)}\n"
-    "  fig01_psf_profiles.*            — Axial envelope and lateral cross-sections\n"
-    "  fig02_plane_wave_compounding.*  — SNR and frame rate vs compounding angles\n"
-    "  fig03_doppler_spectrum.*        — IQ slow-time signal and Doppler spectrum\n"
-    "  fig04_photoacoustic_signal.*    — PA initial pressure and surface waveform\n"
-    "  fig05_hemoglobin_spectra.*      — HbO₂ and Hb molar extinction spectra\n"
-    "  fig06_shear_wave_elastography.* — Young's modulus vs shear wave speed\n"
+    "  fig01_psf_profiles.*            - Axial envelope and lateral cross-sections\n"
+    "  fig02_plane_wave_compounding.*  - SNR and frame rate vs compounding angles\n"
+    "  fig03_doppler_spectrum.*        - IQ slow-time signal and Doppler spectrum\n"
+    "  fig04_photoacoustic_signal.*    - PA initial pressure and surface waveform\n"
+    "  fig05_hemoglobin_spectra.*      - HbO2 and Hb molar extinction spectra\n"
+    "  fig06_shear_wave_elastography.* - Young's modulus vs shear wave speed\n"
 )

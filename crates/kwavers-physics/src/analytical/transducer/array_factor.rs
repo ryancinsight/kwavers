@@ -4,8 +4,10 @@
 //! grating-lobe prediction, and apodization windows.
 
 use kwavers_core::constants::numerical::TWO_PI;
+use kwavers_math::fft::fft_1d_array;
 use kwavers_math::signal::ApodizationType;
 use kwavers_math::special::bessel::j1;
+use ndarray::Array1;
 
 // ─── Directivity ──────────────────────────────────────────────────────────────
 
@@ -192,6 +194,56 @@ pub fn apodization_weights(n: usize, window_type: &str) -> Vec<f64> {
         _ => ApodizationType::Uniform,
     };
     window.weights(n)
+}
+
+/// Apodization weights and normalized spatial-frequency response.
+///
+/// Returns `(weights, cycles_per_aperture, response_db)`, where
+/// `response_db = 20·log10(|FFT(w)| / max(|FFT(w)|) + 1e-12)` after FFT-shift.
+/// The frequency axis matches the Chapter 4 plotting convention:
+/// `linspace(-0.5, 0.5, nfft) * n_elements`.
+///
+/// # Errors
+/// Returns an error if the number of elements is zero, the FFT length is zero,
+/// or the FFT length is shorter than the apodization window.
+pub fn apodization_window_response(
+    n_elements: usize,
+    window_type: &str,
+    nfft: usize,
+) -> Result<(Vec<f64>, Vec<f64>, Vec<f64>), String> {
+    if n_elements == 0 {
+        return Err("n_elements must be positive".to_owned());
+    }
+    if nfft == 0 {
+        return Err("nfft must be positive".to_owned());
+    }
+    if nfft < n_elements {
+        return Err("nfft must be at least n_elements".to_owned());
+    }
+
+    let weights = apodization_weights(n_elements, window_type);
+    let mut padded = vec![0.0; nfft];
+    padded[..n_elements].copy_from_slice(&weights);
+    let spectrum = fft_1d_array(&Array1::from_vec(padded));
+    let shift = nfft / 2;
+    let magnitudes: Vec<f64> = (0..nfft)
+        .map(|idx| spectrum[(idx + shift) % nfft].norm())
+        .collect();
+    let peak = magnitudes
+        .iter()
+        .copied()
+        .fold(0.0_f64, f64::max)
+        .max(1.0e-300);
+    let response_db = magnitudes
+        .iter()
+        .map(|&magnitude| 20.0 * ((magnitude / peak) + 1.0e-12).log10())
+        .collect();
+    let denom = (nfft.saturating_sub(1)).max(1) as f64;
+    let cycles_per_aperture = (0..nfft)
+        .map(|idx| (-0.5 + idx as f64 / denom) * n_elements as f64)
+        .collect();
+
+    Ok((weights, cycles_per_aperture, response_db))
 }
 
 // J₁ for circular-piston directivity is the workspace SSOT

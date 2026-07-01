@@ -9,6 +9,1311 @@
 > decision rationale + migration guide are recorded in CHANGELOG.md.
 > Gap inventory: [gap_audit.md](gap_audit.md) · Strategy: [backlog.md](backlog.md).
 
+## Sprint J book physics Rust ownership — IN PROGRESS (2026-06-30)
+- [x] [patch] Cavitation passive-map binding vertical tree cleanup: split
+      receiver-array PSD integration and passive-map emission-energy
+      integration PyO3 wrappers out of `analytical_bindings/cavitation.rs`
+      into `analytical_bindings/cavitation/passive_map.rs`, leaving the parent
+      facade as module declarations plus re-exports only. Completion condition:
+      `cargo fmt -p kwavers-python -p kwavers-physics` passes, `cargo check -p
+      kwavers-python` passes warning-clean, `cargo check -p kwavers-python
+      --features gpu` passes warning-clean, and `cargo nextest run -p
+      kwavers-python` passes.
+- [x] [patch] Cavitation chirp/shielding binding vertical tree cleanup: split
+      swept versus monochromatic engagement, chirped expansion, residual
+      clearance/dissolution, optimal-frequency search, staged sonication sweep,
+      shielding trace simulation, and shielding-control comparison PyO3
+      wrappers out of `analytical_bindings/cavitation.rs` into
+      `analytical_bindings/cavitation/chirp.rs`, preserving registered Python
+      function names through module re-exports. Completion condition: `cargo
+      fmt -p kwavers-python -p kwavers-physics` passes, `cargo check -p
+      kwavers-python` passes warning-clean, `cargo check -p kwavers-python
+      --features gpu` passes warning-clean, and `cargo nextest run -p
+      kwavers-python` passes.
+- [x] [patch] Cavitation monitor/control binding vertical tree cleanup: split
+      monitor traces, simulated population monitor traces, closed-loop
+      sonication, raster pulsing, therapeutic-window classification,
+      inertial-fraction onset, per-spot dose grids, and controller-pressure
+      PyO3 wrappers out of `analytical_bindings/cavitation.rs` into
+      `analytical_bindings/cavitation/monitor.rs`, preserving registered
+      Python function names through module re-exports. Completion condition:
+      `cargo fmt -p kwavers-python -p kwavers-physics` passes, `cargo check -p
+      kwavers-python` passes warning-clean, `cargo check -p kwavers-python
+      --features gpu` passes warning-clean, and `cargo nextest run -p
+      kwavers-python` passes.
+- [x] [patch] Cavitation spectrum and passive-dose binding vertical tree
+      cleanup: split bubble PSD, Hann-windowed PSD, Keller-Miksis PCD spectrum
+      and controller trace, emission pressure, ensemble superposition,
+      emission-band decomposition, normalized spectrum, cumulative dose, and
+      passive-dose fixture PyO3 wrappers out of
+      `analytical_bindings/cavitation.rs` into
+      `analytical_bindings/cavitation/spectrum.rs`, preserving registered
+      Python function names through module re-exports. Also repaired two
+      upstream bubble-dynamics compile blockers encountered during verification:
+      removed an invalid `AdaptiveBubbleModel` self re-export and derived
+      `Debug` for `BubbleField`. Completion condition: `cargo fmt -p
+      kwavers-python -p kwavers-physics` passes, `cargo check -p
+      kwavers-python` passes warning-clean, `cargo check -p kwavers-python
+      --features gpu` passes warning-clean, and `cargo nextest run -p
+      kwavers-python` passes.
+- [x] [patch] Cavitation emission-simulation binding vertical tree cleanup:
+      split free/coated bubble emission, population emission, population
+      pressure sweep, focal-volume emission spectrum, and focal-volume pressure
+      sweep PyO3 wrappers out of `analytical_bindings/cavitation.rs` into
+      `analytical_bindings/cavitation/emission.rs`, preserving registered
+      Python function names through module re-exports. Completion condition:
+      `cargo fmt -p kwavers-python` passes, `cargo check -p kwavers-python`
+      passes warning-clean, `cargo check -p kwavers-python --features gpu`
+      passes warning-clean, and `cargo nextest run -p kwavers-python` passes.
+- [x] [patch] Cavitation passive-receive binding vertical tree cleanup: split
+      receiver-channel PSD propagation, channel PSD integration, passive
+      point-source RF synthesis, and Van Cittert-Zernike coherence PyO3 wrappers
+      out of `analytical_bindings/cavitation.rs` into
+      `analytical_bindings/cavitation/passive_receive.rs`, preserving
+      registered Python function names through module re-exports. Completion
+      condition: `cargo fmt -p kwavers-python` passes, `cargo check -p
+      kwavers-python` passes warning-clean, `cargo check -p kwavers-python
+      --features gpu` passes warning-clean, and `cargo nextest run -p
+      kwavers-python` passes.
+- [x] [patch] Cavitation lesion-state binding vertical tree cleanup: split
+      fractionation backscatter/impedance, boiling-lesion sizing and time
+      profiles, lacuna void fraction, histotripsy lesion-radius conversion, and
+      inertial cavitation dose PyO3 wrappers out of
+      `analytical_bindings/cavitation.rs` into
+      `analytical_bindings/cavitation/lesion.rs`, preserving registered Python
+      function names through module re-exports. Completion condition: `cargo
+      fmt -p kwavers-python` passes, `cargo check -p kwavers-python` passes
+      warning-clean, `cargo check -p kwavers-python --features gpu` passes
+      warning-clean, and `cargo nextest run -p kwavers-python` passes.
+- [x] [patch] Cavitation therapy-delivery binding vertical tree cleanup: split
+      sonication scheduling, forward/receive delivery fractions,
+      interface-pressure scalars, lesion susceptibility, histotripsy
+      dose-response, focal-mask checks, measured-emission scaling, delivered
+      progress, and cloud-erosion validation PyO3 wrappers out of
+      `analytical_bindings/cavitation.rs` into
+      `analytical_bindings/cavitation/therapy.rs`, preserving registered Python
+      function names through module re-exports. Completion condition: `cargo
+      fmt -p kwavers-python` passes, `cargo check -p kwavers-python` passes
+      warning-clean, `cargo check -p kwavers-python --features gpu` passes
+      warning-clean, and `cargo nextest run -p kwavers-python` passes.
+- [x] [patch] Cavitation residual-gas and bubbly-medium binding vertical tree
+      cleanup: split Epstein-Plesset dissolution, shelled dissolution, Wood
+      sound speed, and Commander-Prosperetti attenuation/phase-velocity PyO3
+      wrappers out of `analytical_bindings/cavitation.rs` into
+      `analytical_bindings/cavitation/medium.rs`, preserving registered Python
+      function names through module re-exports. Completion condition: `cargo
+      fmt -p kwavers-python` passes, `cargo check -p kwavers-python` passes
+      warning-clean, `cargo check -p kwavers-python --features gpu` passes
+      warning-clean, and `cargo nextest run -p kwavers-python` passes.
+- [x] [patch] Cavitation single-bubble binding vertical tree cleanup: split
+      Minnaert resonance/radius, surface-tension corrected resonance, Blake
+      threshold, and Rayleigh collapse-time PyO3 wrappers out of
+      `analytical_bindings/cavitation.rs` into
+      `analytical_bindings/cavitation/bubble.rs`, preserving registered Python
+      function names through module re-exports. Completion condition: `cargo
+      fmt -p kwavers-python` passes, `cargo check -p kwavers-python` passes
+      warning-clean, `cargo check -p kwavers-python --features gpu` passes
+      warning-clean, and `cargo nextest run -p kwavers-python` passes.
+- [x] [patch] Cavitation probability binding vertical tree cleanup: split
+      intrinsic-threshold probability, frequency-dependent threshold,
+      cumulative probability, and PRF efficacy PyO3 wrappers out of
+      `analytical_bindings/cavitation.rs` into
+      `analytical_bindings/cavitation/probability.rs`, preserving registered
+      Python function names through module re-exports. Completion condition:
+      `cargo fmt -p kwavers-python` passes, `cargo check -p kwavers-python`
+      passes warning-clean, `cargo check -p kwavers-python --features gpu`
+      passes warning-clean, and `cargo nextest run -p kwavers-python` passes.
+- [x] [patch] Neuromodulation binding vertical tree cleanup: split
+      Hodgkin-Huxley/NICE/SONIC response wrappers, bilayer curve wrappers,
+      threshold search, and ITRUSST/pulse-train dosimetry PyO3 wrappers out of
+      `analytical_bindings/neuromodulation.rs` into dedicated child modules,
+      preserving registered Python function names through module re-exports.
+      Completion condition: `cargo fmt -p kwavers-python` passes, `cargo check
+      -p kwavers-python` passes warning-clean, `cargo check -p kwavers-python
+      --features gpu` passes warning-clean, and `cargo nextest run -p
+      kwavers-python` passes.
+- [x] [patch] Inverse-problem binding vertical tree cleanup: split
+      Helmholtz/SVD/L-curve operators, reconstruction fixtures/Born inversion,
+      convergence curves, and regularization parameter-selection PyO3 wrappers
+      out of `analytical_bindings/inverse.rs` into dedicated child modules with
+      a private array conversion helper, preserving registered Python function
+      names through module re-exports. Completion condition: `cargo fmt -p
+      kwavers-python` passes, `cargo check -p kwavers-python` passes
+      warning-clean, `cargo check -p kwavers-python --features gpu` passes
+      warning-clean, and `cargo nextest run -p kwavers-python` passes.
+- [x] [patch] RTM analytical binding vertical tree cleanup: split field
+      synthesis/backpropagation, imaging/fusion, and standing-wave suppression
+      PyO3 wrappers out of `analytical_bindings/rtm.rs` into dedicated child
+      modules with a private array conversion helper, preserving registered
+      Python function names through module re-exports. Completion condition:
+      `cargo fmt -p kwavers-python` passes, `cargo check -p kwavers-python`
+      passes warning-clean, `cargo check -p kwavers-python --features gpu`
+      passes warning-clean, and `cargo nextest run -p kwavers-python` passes.
+- [x] [patch] Skull analytical binding vertical tree cleanup: split
+      attenuation/aberration, Hounsfield conversion, thermal rise, and layered
+      transmission PyO3 wrappers out of `analytical_bindings/skull.rs` into
+      dedicated child modules, preserving registered Python function names
+      through module re-exports. Completion condition: `cargo fmt -p
+      kwavers-python` passes, `cargo check -p kwavers-python` passes
+      warning-clean, `cargo check -p kwavers-python --features gpu` passes
+      warning-clean, and `cargo nextest run -p kwavers-python` passes.
+- [x] [patch] Sonogenetics binding vertical tree cleanup: split
+      mechanosensitive-channel activation, acoustic force/streaming mechanics,
+      and ISPTA dosimetry PyO3 wrappers out of
+      `analytical_bindings/sonogenetics.rs` into dedicated child modules,
+      preserving registered Python function names through module re-exports.
+      Completion condition: `cargo fmt -p kwavers-python` passes, `cargo check
+      -p kwavers-python` passes warning-clean, `cargo check -p kwavers-python
+      --features gpu` passes warning-clean, and `cargo nextest run -p
+      kwavers-python` passes.
+- [x] [patch] MEMS CMUT/PMUT binding vertical tree cleanup: split clamped
+      plate, CMUT, PMUT, and comparison figure-of-merit PyO3 wrappers out of
+      `analytical_bindings/mems.rs` into dedicated child modules with private
+      binding-layer geometry/film parsing helpers, preserving registered Python
+      function names through module re-exports. Completion condition: `cargo
+      fmt -p kwavers-python` passes, `cargo check -p kwavers-python` passes
+      warning-clean, `cargo check -p kwavers-python --features gpu` passes
+      warning-clean, and `cargo nextest run -p kwavers-python` passes.
+- [x] [patch] Acousto-optics binding vertical tree cleanup: split regime
+      parameters, angle/frequency geometry, and diffraction-order solver PyO3
+      wrappers out of `analytical_bindings/acousto_optics.rs` into dedicated
+      child modules, preserving registered Python function names through module
+      re-exports. Completion condition: `cargo fmt -p kwavers-python` passes,
+      `cargo check -p kwavers-python` passes warning-clean, `cargo check -p
+      kwavers-python --features gpu` passes warning-clean, and `cargo nextest
+      run -p kwavers-python` passes.
+- [x] [patch] Tissue analytical binding vertical tree cleanup: split
+      water-property, attenuation/dispersion, and tissue-property lookup PyO3
+      wrappers out of `analytical_bindings/tissue.rs` into dedicated child
+      modules, preserving registered Python function names through module
+      re-exports. Completion condition: `cargo fmt -p kwavers-python` passes,
+      `cargo check -p kwavers-python` passes warning-clean, `cargo check -p
+      kwavers-python --features gpu` passes warning-clean, and `cargo nextest
+      run -p kwavers-python` passes.
+- [x] [patch] Statistics validation binding vertical tree cleanup: split
+      correlation/phase-sensitivity and RMSE/PSNR metric PyO3 wrappers out of
+      `analytical_bindings/statistics.rs` into dedicated child modules with a
+      private array-slice helper, preserving registered Python function names
+      through module re-exports. Completion condition: `cargo fmt -p
+      kwavers-python` passes, `cargo check -p kwavers-python` passes
+      warning-clean, `cargo check -p kwavers-python --features gpu` passes
+      warning-clean, and `cargo nextest run -p kwavers-python` passes.
+- [x] [patch] BBB and CEUS binding vertical tree cleanup: split BBB
+      permeability/closure and CEUS backscatter/display PyO3 wrappers out of
+      `analytical_bindings/bbb.rs` into `bbb/permeability.rs` and
+      `bbb/ceus.rs`, preserving registered Python function names through module
+      re-exports. Completion condition: `cargo fmt -p kwavers-python` passes,
+      `cargo check -p kwavers-python` passes warning-clean, `cargo check -p
+      kwavers-python --features gpu` passes warning-clean, and `cargo nextest
+      run -p kwavers-python` passes.
+- [x] [patch] Photoacoustics binding vertical tree cleanup: split spectral
+      absorption/Gruneisen, source/signal generation, and axial-resolution/
+      spectroscopic-unmixing PyO3 wrappers out of
+      `analytical_bindings/photoacoustics.rs` into dedicated child modules,
+      preserving registered Python function names through module re-exports
+      and eliminating the transient flatten/rebuild allocation in the sO2
+      sweep wrapper. Completion condition: `cargo fmt -p kwavers-python`
+      passes, `cargo check -p kwavers-python` passes warning-clean, `cargo
+      check -p kwavers-python --features gpu` passes warning-clean, and `cargo
+      nextest run -p kwavers-python` passes.
+- [x] [patch] Elastography thermal-strain binding vertical tree cleanup: split
+      thermal-strain RF fixture, combined coefficient, and reconstruction PyO3
+      wrappers out of `analytical_bindings/elastography.rs` into
+      `elastography/thermal_strain.rs`, preserving registered Python function
+      names through module re-exports. Completion condition: `cargo fmt -p
+      kwavers-python` passes, `cargo check -p kwavers-python` passes
+      warning-clean, `cargo check -p kwavers-python --features gpu` passes
+      warning-clean, and `cargo nextest run -p kwavers-python` passes.
+- [x] [patch] Safety Arrhenius damage binding vertical tree cleanup: split
+      Arrhenius damage integral, cumulative damage, thermal kill probability,
+      steady kill probability, and combined mechanical/thermal kill PyO3
+      wrappers out of `analytical_bindings/safety.rs` into `safety/damage.rs`,
+      preserving registered Python function names through module re-exports and
+      leaving `safety.rs` as topology plus FDA scalar-limit wrappers. Completion
+      condition: `cargo fmt -p kwavers-python` passes, `cargo check -p
+      kwavers-python` passes warning-clean, `cargo check -p kwavers-python
+      --features gpu` passes warning-clean, and `cargo nextest run -p
+      kwavers-python` passes.
+- [x] [patch] Safety thermal-index binding vertical tree cleanup: split soft
+      tissue, bone, cranial thermal index, CEM43 cumulative dose, and closed-loop
+      CEM43 fixture PyO3 wrappers out of `analytical_bindings/safety.rs` into
+      `safety/thermal.rs`, preserving registered Python function names through
+      module re-exports. Completion condition: `cargo fmt -p kwavers-python`
+      passes, `cargo check -p kwavers-python` passes warning-clean, `cargo
+      check -p kwavers-python --features gpu` passes warning-clean, and `cargo
+      nextest run -p kwavers-python` passes.
+- [x] [patch] Safety mechanical-index binding vertical tree cleanup: split
+      scalar MI, field MI, frequency-sweep MI, and MI cavitation-risk PyO3
+      wrappers out of `analytical_bindings/safety.rs` into
+      `safety/mechanical.rs`, preserving registered Python function names
+      through module re-exports. Completion condition: `cargo fmt -p
+      kwavers-python` passes, `cargo check -p kwavers-python` passes
+      warning-clean, `cargo check -p kwavers-python --features gpu` passes
+      warning-clean, and `cargo nextest run -p kwavers-python` passes.
+- [x] [patch] Thermal acoustic binding vertical tree cleanup: split HIFU focal
+      gain, Gaussian power deposition, depth intensity/power deposition,
+      pressure/intensity conversion, and acoustic heat-source PyO3 wrappers out
+      of `analytical_bindings/thermal.rs` into `thermal/acoustic.rs`,
+      preserving registered Python function names through module re-exports.
+      Completion condition: `cargo fmt -p kwavers-python` passes, `cargo check
+      -p kwavers-python` passes warning-clean, `cargo check -p kwavers-python
+      --features gpu` passes warning-clean, and `cargo nextest run -p
+      kwavers-python` passes.
+- [x] [patch] Inverse seismic binding vertical tree cleanup: split eikonal
+      traveltime and Kirchhoff point-scatterer imaging PyO3 wrappers, plus
+      their index validation and Ricker synthesis helpers, out of
+      `analytical_bindings/inverse.rs` into `inverse/seismic.rs`, preserving
+      registered Python function names through module re-exports. Completion
+      condition: `cargo fmt -p kwavers-python` passes, `cargo check -p
+      kwavers-python` passes warning-clean, `cargo check -p kwavers-python
+      --features gpu` passes warning-clean, and `cargo nextest run -p
+      kwavers-python` passes.
+- [x] [patch] Imaging IVUS B-mode and metrics binding vertical tree cleanup:
+      split polar RF, scan conversion, complete B-mode image, and Chapter 30
+      metric PyO3 wrappers out of `analytical_bindings/imaging.rs` into
+      `imaging/bmode.rs` and `imaging/metrics.rs`, leaving the imaging facade
+      as module topology and re-exports only. Completion condition: `cargo fmt
+      -p kwavers-python` passes, `cargo check -p kwavers-python` passes
+      warning-clean, `cargo check -p kwavers-python --features gpu` passes
+      warning-clean, and `cargo nextest run -p kwavers-python` passes.
+- [x] [patch] Imaging IVUS therapy binding vertical tree cleanup: split
+      therapy pressure, microbubble delivery, therapy response, and aggregate
+      therapy fields PyO3 wrappers out of `analytical_bindings/imaging.rs` into
+      `imaging/therapy.rs`, preserving registered Python function names through
+      module re-exports. Completion condition: `cargo fmt -p kwavers-python`
+      passes, `cargo check -p kwavers-python` passes warning-clean, `cargo
+      check -p kwavers-python --features gpu` passes warning-clean, and `cargo
+      nextest run -p kwavers-python` passes.
+- [x] [patch] Imaging IVUS phantom binding vertical tree cleanup: split the
+      deterministic vessel-phantom PyO3 wrapper and its square-array
+      materialization helper out of `analytical_bindings/imaging.rs` into
+      `imaging/phantom.rs`, preserving the registered Python function name
+      through module re-export. Completion condition: `cargo fmt -p
+      kwavers-python` passes, `cargo check -p kwavers-python` passes
+      warning-clean, `cargo check -p kwavers-python --features gpu` passes
+      warning-clean, and `cargo nextest run -p kwavers-python` passes.
+- [x] [patch] Imaging PSF binding vertical tree cleanup: split lateral/axial
+      PSF, plane-wave compounding PSF, and lateral-resolution PyO3 wrappers out
+      of `analytical_bindings/imaging.rs` into `imaging/psf.rs`, preserving
+      registered Python function names through module re-exports. Completion
+      condition: `cargo fmt -p kwavers-python` passes, `cargo check -p
+      kwavers-python` passes warning-clean, `cargo check -p kwavers-python
+      --features gpu` passes warning-clean, and `cargo nextest run -p
+      kwavers-python` passes.
+- [x] [patch] Imaging pulse-echo binding vertical tree cleanup: split
+      synthetic receive RF, B-mode envelope, fixed-reference log compression,
+      and delta B-mode PyO3 wrappers out of `analytical_bindings/imaging.rs`
+      into `imaging/pulse_echo.rs`, preserving registered Python function names
+      through module re-exports. Completion condition: `cargo fmt -p
+      kwavers-python` passes, `cargo check -p kwavers-python` passes
+      warning-clean, `cargo check -p kwavers-python --features gpu` passes
+      warning-clean, and `cargo nextest run -p kwavers-python` passes.
+- [x] [patch] Imaging Doppler binding vertical tree cleanup: split Doppler
+      frequency shift, contrast-agent Doppler spectrum, and continuous-wave
+      vector-flow fixture PyO3 wrappers out of `analytical_bindings/imaging.rs`
+      into `imaging/doppler.rs`, preserving registered Python function names
+      through module re-exports. Completion condition: `cargo fmt -p
+      kwavers-python` passes, `cargo check -p kwavers-python` passes, `cargo
+      check -p kwavers-python --features gpu` passes, and `cargo nextest run -p
+      kwavers-python` passes.
+- [x] [patch] Transducer beam binding vertical tree cleanup: split 2-D focus
+      delay, complex beam-pattern, far-field beam-pattern magnitude, and 2-D
+      beam-magnitude PyO3 wrappers out of `analytical_bindings/transducer.rs`
+      into `transducer/beam.rs`, leaving the facade as module topology and
+      re-exports only. Completion condition: `cargo fmt -p kwavers-python`
+      passes, `cargo check -p kwavers-python` passes, `cargo check -p
+      kwavers-python --features gpu` passes, and `cargo nextest run -p
+      kwavers-python` passes.
+- [x] [patch] Transducer basic binding vertical tree cleanup: split circular
+      piston directivity, linear-array factor/grating-lobe, apodization, and
+      on-axis pressure PyO3 wrappers out of `analytical_bindings/transducer.rs`
+      into `transducer/basic.rs`, preserving registered Python function names
+      through module re-exports. Completion condition: `cargo fmt -p
+      kwavers-python` passes, `cargo check -p kwavers-python` passes, `cargo
+      check -p kwavers-python --features gpu` passes, and `cargo nextest run -p
+      kwavers-python` passes.
+- [x] [patch] Transducer multi-focus binding vertical tree cleanup: split
+      multi-focus delay-law and field-magnitude PyO3 wrappers out of
+      `analytical_bindings/transducer.rs` into `transducer/multi_focus.rs`,
+      preserving registered Python function names through module re-exports.
+      Completion condition: `cargo fmt -p kwavers-python` passes, `cargo check
+      -p kwavers-python` passes, `cargo check -p kwavers-python --features gpu`
+      passes, and `cargo nextest run -p kwavers-python` passes.
+- [x] [patch] Transducer aperture binding vertical tree cleanup: split linear
+      array positioning, focused-bowl element geometry, 3-D focus delays,
+      steered aperture pressure, and focused-bowl pressure-profile PyO3 wrappers
+      out of `analytical_bindings/transducer.rs` into `transducer/aperture.rs`,
+      preserving registered Python function names through module re-exports.
+      Completion condition: `cargo fmt -p kwavers-python` passes, `cargo check
+      -p kwavers-python` passes, `cargo check -p kwavers-python --features gpu`
+      passes, and `cargo nextest run -p kwavers-python` passes.
+- [x] [patch] Transducer interpolation binding vertical tree cleanup: split
+      band-limited interpolation stencil and error-curve PyO3 wrappers out of
+      `analytical_bindings/transducer.rs` into `transducer/interpolation.rs`,
+      preserving registered Python function names through module re-exports.
+      Completion condition: `cargo fmt -p kwavers-python` passes, `cargo check
+      -p kwavers-python` passes, `cargo check -p kwavers-python --features gpu`
+      passes, and `cargo nextest run -p kwavers-python` passes.
+- [x] [patch] Transducer steering binding vertical tree cleanup: split
+      natural-focus steering, sparse-aperture, grating-lobe, safe-steering, and
+      electronic-efficiency PyO3 wrappers out of
+      `analytical_bindings/transducer.rs` into `transducer/steering.rs`,
+      preserving registered Python function names through module re-exports.
+      Completion condition: `cargo fmt -p kwavers-python` passes, `cargo check
+      -p kwavers-python` passes, `cargo check -p kwavers-python --features gpu`
+      passes, and `cargo nextest run -p kwavers-python` passes.
+- [x] [patch] Transducer binding vertical tree cleanup: split SOAP/
+      optoacoustic scalar wrappers and acoustic-lens material wrappers out of
+      the 1162-line `analytical_bindings/transducer.rs` facade into
+      `transducer/optoacoustic.rs` and `transducer/lens.rs`, preserving the
+      registered Python function names through module re-exports. Completion
+      condition: `cargo fmt -p kwavers-python` passes, `cargo check -p
+      kwavers-python` passes, `cargo check -p kwavers-python --features gpu`
+      passes, and `cargo nextest run -p kwavers-python` passes.
+- [x] [patch] GPU PSTD session source/sensor tree cleanup: moved source/sensor
+      index construction and velocity-signal packing from the session facade
+      into `session/source.rs`, and removed cached-run empty source-vector
+      allocations by passing empty slices directly. Completion condition:
+      `cargo fmt -p kwavers-python` passes, `cargo check -p kwavers-python`
+      passes, `cargo check -p kwavers-python --features gpu` passes, and
+      `cargo nextest run -p kwavers-python` passes.
+- [x] [patch] GPU PSTD session construction tree cleanup: split the PyO3 GPU
+      session constructor helpers into `session/absorption.rs` and
+      `session/pml.rs`, leaving `construction.rs` responsible for constructor
+      orchestration and solver setup only. Completion condition: `cargo fmt -p
+      kwavers-python` passes, `cargo check -p kwavers-python` passes,
+      `cargo check -p kwavers-python --features gpu` passes, and `cargo nextest
+      run -p kwavers-python` passes.
+- [x] [patch] Therapy chapter guard repair: corrected the focused therapy test's
+      docs root for the current crate layout and removed residual vendor-style
+      source labels from the active Chapter 31 clinical-device script. Completion
+      condition: focused therapy pytest passes and source scan confirms the
+      guarded labels are absent from the checked active artifacts.
+- [x] [patch] Chapter 24 CEUS backscatter display ownership: added Rust/PyO3
+      `ceus_backscatter_display` and routed the CEUS signal, peak-normalized dB
+      display values, and optimal concentration marker through it instead of
+      Python-side signal normalization and `argmax`. Completion condition:
+      `cargo fmt -p kwavers-physics -p kwavers-python` passes, `cargo check -p
+      kwavers-physics -p kwavers-python` passes, focused `cargo nextest run -p
+      kwavers-physics ceus_backscatter_display` passes, editable `maturin
+      develop` succeeds, focused Chapter 24/26 pytest passes, py-compile
+      passes, source guard confirms local CEUS normalization is absent, and
+      touched-path `git diff --check` is clean.
+- [x] [patch] Chapter 30 IVUS therapy-fields ownership: added Rust/PyO3
+      `ivus_therapy_fields` and routed pressure-field generation plus therapy
+      response assembly through it instead of Python-side helper orchestration.
+      Completion condition: `cargo fmt -p kwavers-physics -p kwavers-python`
+      passes, `cargo check -p kwavers-physics -p kwavers-python` passes,
+      focused `cargo nextest run -p kwavers-physics ivus_therapy_fields`
+      passes, editable `maturin develop` succeeds, focused Chapter 30 pytest
+      passes, py-compile passes, source guard confirms split therapy helper
+      orchestration is absent from the script, and touched-path `git
+      diff --check` is clean.
+- [x] [patch] Chapter 30 IVUS metrics ownership: added Rust/PyO3
+      `ivus_chapter_metrics` and routed wavelength, area, B-mode masked means,
+      and therapy summary metrics through it instead of Python-side scalar
+      metric formulas. Completion condition: `cargo fmt -p kwavers-physics -p
+      kwavers-python` passes, `cargo check -p kwavers-physics -p
+      kwavers-python` passes, focused `cargo nextest run -p kwavers-physics
+      ivus_chapter_metrics` passes, editable `maturin develop` succeeds,
+      focused Chapter 30 pytest passes, py-compile passes, source guard
+      confirms local metric formulas are absent, and touched-path `git
+      diff --check` is clean.
+- [x] [patch] Chapter 30 IVUS B-mode image ownership: added Rust/PyO3
+      `ivus_bmode_image` and routed polar RF generation, Hilbert envelope,
+      fixed-reference log compression, normalization, and scan conversion
+      through it instead of Python-side RF-column loops and display assembly.
+      Completion condition: `cargo fmt -p kwavers-physics -p kwavers-python`
+      passes, `cargo check -p kwavers-physics -p kwavers-python` passes,
+      focused `cargo nextest run -p kwavers-physics ivus_bmode_image` passes,
+      editable `maturin develop` succeeds, focused Chapter 30 pytest passes,
+      py-compile passes, source guard confirms the local B-mode assembly is
+      absent, and touched-path `git diff --check` is clean.
+- [x] [patch] Chapter 30 IVUS therapy-response ownership: added Rust/PyO3
+      `ivus_therapy_response` and routed intensity, effective attenuation,
+      absorbed power, adiabatic temperature rise, delivery masks, MI, and
+      target/off-target deposition ratio through it instead of Python-side
+      therapy algebra. Completion condition: `cargo fmt -p kwavers-physics -p
+      kwavers-python` passes, `cargo check -p kwavers-physics -p
+      kwavers-python` passes, focused `cargo nextest run -p kwavers-physics
+      ivus_therapy_response` passes, editable `maturin develop` succeeds,
+      focused Chapter 30 pytest passes, py-compile passes, source guard
+      confirms the local therapy-response formula/helpers are absent, and
+      touched-path `git diff --check` is clean.
+- [x] [patch] Chapter 30 IVUS scan-conversion ownership: added Rust/PyO3
+      `ivus_scan_convert` and routed the IVUS polar B-mode to Cartesian phantom
+      projection through it instead of Python nearest-bin radius/theta indexing.
+      Completion condition: `cargo fmt -p kwavers-physics -p kwavers-python`
+      passes, `cargo check -p kwavers-physics -p kwavers-python` passes,
+      focused `cargo nextest run -p kwavers-physics ivus_scan_convert` passes,
+      editable `maturin develop` succeeds, focused Chapter 30 pytest passes,
+      py-compile passes, source guard confirms the local scan-conversion
+      helper/indexing is absent, and touched-path `git diff --check` is clean.
+- [x] [patch] Chapter 30 IVUS polar RF ownership: added Rust/PyO3
+      `ivus_polar_bmode_rf` and routed the IVUS B-mode RF fixture through it
+      instead of Python polar grid sampling, two-way attenuation, and catheter
+      ring-echo algebra. Completion condition: `cargo fmt -p kwavers-physics -p
+      kwavers-python` passes, `cargo check -p kwavers-physics -p
+      kwavers-python` passes, focused `cargo nextest run -p kwavers-physics
+      ivus_polar_bmode_rf` passes, editable `maturin develop` succeeds,
+      focused Chapter 30 pytest passes, py-compile passes, source guard
+      confirms the local RF formula/helpers are absent, and touched-path `git
+      diff --check` is clean.
+- [x] [patch] Chapter 30 IVUS delivery-fraction ownership: added Rust/PyO3
+      `ivus_microbubble_delivery_fraction` and routed the IVUS therapy
+      deposition map through it instead of Python acoustic-radiation-force,
+      radial-band, normalization, and exponential-delivery algebra. Completion
+      condition: `cargo fmt -p kwavers-physics -p kwavers-python` passes,
+      `cargo check -p kwavers-physics -p kwavers-python` passes, focused
+      `cargo nextest run -p kwavers-physics ivus_microbubble_delivery_fraction`
+      passes, editable `maturin develop` succeeds, focused Chapter 30 pytest
+      passes, py-compile passes, source guard confirms the local delivery
+      formula is absent, and touched-path `git diff --check` is clean.
+- [x] [patch] Chapter 30 IVUS therapy pressure-field ownership: added
+      Rust/PyO3 `ivus_therapy_pressure_field` and routed the IVUS
+      microbubble-therapy pressure map through it instead of Python angular
+      Gaussian and radial exponential pressure algebra. Completion condition:
+      `cargo fmt -p kwavers-physics -p kwavers-python` passes, `cargo check -p
+      kwavers-physics -p kwavers-python` passes, focused `cargo nextest run -p
+      kwavers-physics ivus_therapy_pressure_field` passes, editable `maturin
+      develop` succeeds, focused Chapter 30 pytest passes, py-compile passes,
+      source guard confirms the local pressure-field formula/helper are absent,
+      and touched-path `git diff --check` is clean.
+- [x] [patch] Chapter 20 PSNR relative-error curve ownership: added
+      Rust/PyO3 `validation_psnr_from_relative_rmse` and routed Figure 02
+      through it instead of Python `-20 * np.log10(eps)` theorem algebra.
+      Completion condition: `cargo fmt -p kwavers-math -p kwavers-python`
+      passes, `cargo check -p kwavers-math -p kwavers-python` passes, focused
+      `cargo nextest run -p kwavers-math validation_psnr` passes, editable
+      `maturin develop` succeeds, focused Chapter 20 manifest pytest passes,
+      py-compile passes, source guard confirms the local PSNR formula is absent
+      from the book script, and touched-path `git diff --check` is clean.
+- [x] [patch] Chapter 20 Pearson phase-sensitivity ownership: added
+      Rust/PyO3 `phase_shift_correlation_curve` and
+      `phase_error_degrees_for_correlation`, then routed Figure 01 through
+      those helpers instead of Python `np.cos`/`np.arccos` theorem algebra.
+      Completion condition: `cargo fmt -p kwavers-math -p kwavers-python`
+      passes, `cargo check -p kwavers-math -p kwavers-python` passes, focused
+      `cargo nextest run -p kwavers-math phase_shift_correlation` passes,
+      editable `maturin develop` succeeds, focused Chapter 20 manifest pytest
+      passes, py-compile passes, source guard confirms the local theorem
+      formulas are absent from the book script, and touched-path `git diff
+      --check` is clean.
+- [x] [patch] Chapter 17 PINN convergence curve ownership: added Rust/PyO3
+      `exponential_convergence_curve` and routed the Figure 03 PINN loss
+      convergence curves through it instead of Python `np.exp` fixture logic.
+      Completion condition: `cargo fmt -p kwavers-physics -p kwavers-python`
+      passes, `cargo check -p kwavers-physics -p kwavers-python` passes,
+      focused `cargo nextest run -p kwavers-physics
+      exponential_convergence_curve` passes, editable `maturin develop`
+      succeeds, focused Chapter 17 manifest pytest passes, py-compile passes,
+      source guard confirms the local convergence formula is absent from the
+      book script, and touched-path `git diff --check` is clean.
+- [x] [patch] Chapter 17 Gaussian deconvolution fixture ownership: added
+      Rust/PyO3 `gaussian_deconvolution_fixture` and routed the Figure 02
+      L-curve fixture through it instead of Python Gaussian matrix, two-bump
+      truth, and sinusoidal perturbation construction. Completion condition:
+      `cargo fmt -p kwavers-physics -p kwavers-python` passes, `cargo check -p
+      kwavers-physics -p kwavers-python` passes, focused `cargo nextest run -p
+      kwavers-physics gaussian_deconvolution_fixture` passes, editable
+      `maturin develop` succeeds, focused Chapter 17 manifest pytest passes,
+      py-compile passes, source guard confirms the local fixture formulas are
+      absent from the book script, and touched-path `git diff --check` is clean.
+- [x] [patch] Chapter 10 MRE envelope ownership: added Rust/PyO3
+      `mre_displacement_envelope` and routed the Figure 05 positive/negative
+      MRE envelope overlay through it instead of Python `np.exp`. Completion
+      condition: `cargo fmt -p kwavers-physics -p kwavers-python` passes,
+      `cargo check -p kwavers-physics -p kwavers-python` passes, focused
+      `cargo nextest run -p kwavers-physics mre_displacement_envelope` passes,
+      editable `maturin develop` succeeds, focused Chapter 10 manifest pytest
+      passes, py-compile passes, source guard confirms the local exponential
+      envelope is absent, and touched-path `git diff --check` is clean.
+- [x] [patch] Chapter 23 VCZ coherence ownership: added Rust/PyO3
+      `van_cittert_zernike_coherence`, routed the Figure 03 spatial-coherence
+      panel through it instead of Python `np.sinc`, and removed stale SciPy
+      requirement text from the script header. Completion condition: `cargo
+      fmt -p kwavers-physics -p kwavers-python` passes, `cargo check -p
+      kwavers-physics -p kwavers-python` passes, focused `cargo nextest run -p
+      kwavers-physics van_cittert_zernike` passes, editable `maturin develop`
+      succeeds, focused Chapter 23 pytest passes, py-compile passes, source
+      guard confirms the local `_vcz_coherence` helper is absent, and
+      touched-path `git diff --check` is clean.
+- [x] [patch] Chapter 3 PSTD source waveform ownership: routed the Figure 06
+      Westervelt PSTD source waveform through existing Rust/PyO3
+      `fubini_waveform(..., sigma=0.0, n_max=1)` instead of local Python
+      `P0 * np.sin(OMEGA0 * t_src)` construction, and removed stale SciPy
+      requirement text from the script header. Completion condition:
+      py-compile passes, focused Chapter 3 nonlinear-acoustics pytest passes,
+      source guard confirms the local source-waveform expression and stale
+      SciPy requirement are absent, and touched-path `git diff --check` is
+      clean.
+- [x] [patch] Chapter 1 standing-wave ownership: routed the Figure 01
+      standing-wave initial condition and analytic overlay through existing
+      Rust/PyO3 `standing_wave_1d` instead of local Python `p0 * sin(kx)`
+      construction, and corrected the PyO3 wrapper formula documentation.
+      Completion condition: py-compile passes, focused Chapter 1 wave pytest
+      passes, `cargo fmt -p kwavers-python` passes, `cargo check -p
+      kwavers-python` passes, source guard confirms the local `p0 * np.sin(k *
+      x)` script expression is absent, and touched-path `git diff --check` is
+      clean.
+- [x] [patch] Chapter 5 axial RF pulse ownership: added Rust/PyO3
+      `centered_hann_tone_burst_waveform` for the centered discrete-Hann
+      diagnostic pulse used by the PSF figure, then routed Chapter 5 Figure 01
+      through it instead of Python `np.hanning` and carrier multiplication.
+      Completion condition: `cargo fmt -p kwavers-physics -p kwavers-python`
+      passes, `cargo check -p kwavers-physics -p kwavers-python` passes,
+      editable `maturin develop` succeeds, focused Rust nextest passes,
+      focused Chapter 5 pytest passes, py-compile passes, source guard
+      confirms the local NumPy pulse block is absent, and touched-path `git
+      diff --check` is clean.
+- [x] [patch] Chapter 25 RTM axial-spectrum FFT ownership: added Rust/PyO3
+      `demeaned_hann_power_spectrum_1d` over the Apollo FFT and workspace Hann
+      window, then routed Figure 11's axial spatial spectrum through it instead
+      of Python `np.hanning`/`np.fft.rfft`/`np.fft.rfftfreq`. Completion
+      condition: `cargo fmt -p kwavers-python` passes, `cargo check -p
+      kwavers-python` passes, editable `maturin develop` succeeds, focused FFT
+      pytest passes, py-compile passes for the touched Python files, source
+      guard confirms Chapter 25 has no local NumPy FFT block, and touched-path
+      `git diff --check` is clean.
+- [x] [patch] Population-emission seed boundary cleanup: removed the Python
+      RNG object from the shared book `simulate_population_emission` helper
+      and updated Chapter 24/21e callers to pass deterministic seeds directly
+      into Rust/PyO3 population simulation. Completion condition: py-compile
+      passes, focused population-emission pytest passes, source guard confirms
+      no `rng=` population-emission calls remain, and touched-path `git diff
+      --check` is clean.
+- [x] [patch] Chapter 7 closed-loop CEM43 fixture ownership: moved the Figure
+      05 fixed-power, feedback, and underdrive focal-temperature traces plus
+      their CEM43 curves into Rust/PyO3 `closed_loop_cem43_fixture`, leaving
+      Python to plot returned arrays. Completion condition: `cargo fmt` passes
+      for touched Rust crates, focused `cargo nextest run -p kwavers-physics
+      closed_loop_cem43_fixture` passes, editable `maturin develop` succeeds,
+      focused Chapter 7 pytest passes, py-compile passes, Chapter 7 script
+      regenerates figures, changed Figure 05 PNG decodes as nonblank, and
+      touched-path `git diff --check` is clean.
+- [x] [patch] Chapter 23 passive-cavitation dose fixture ownership: moved the
+      Figure 06 stable-dose staircase and seeded compound-Poisson inertial-dose
+      traces into Rust/PyO3 `passive_cavitation_dose_fixture`, leaving Python
+      to plot returned arrays. Completion condition: `cargo fmt` passes for
+      touched Rust crates, focused `cargo nextest run -p kwavers-physics
+      passive_cavitation_dose_fixture` passes, editable `maturin develop`
+      succeeds, focused Chapter 23 pytest passes, py-compile passes, Chapter
+      23 script regenerates figures, changed figure PNG decodes as nonblank,
+      and touched-path `git diff --check` is clean.
+- [x] [patch] Chapter 5 shear-wave tissue-range speed ownership: routed Figure
+      06 tissue-range speed conversion through Rust/PyO3 `shear_wave_speed`
+      instead of Python-side `np.sqrt(mu/rho)`, and pinned the Chapter 5 source
+      guard plus closed-form value test. Completion condition: py-compile
+      passes for the touched book script/test, focused Chapter 5 pytest passes,
+      and touched-path `git diff --check` is clean.
+- [x] [patch] Chapter 4 apodization response ownership: moved the
+      zero-padded FFT-shifted apodization frequency-response calculation for
+      Figure 03 into Rust/PyO3 `apodization_window_response`, leaving Python to
+      plot returned weights and dB response. Completion condition: `cargo fmt
+      --check` passes for touched Rust crates, focused `cargo nextest run -p
+      kwavers-physics apodization_response` passes, `cargo check -p
+      kwavers-physics -p kwavers-python` passes, editable `maturin develop`
+      succeeds, focused Chapter 4 pytest passes, py-compile passes, and
+      touched-path `git diff --check` is clean.
+- [x] [patch] Chapter 10 thermal-strain RF fixture ownership: moved the
+      deterministic broadband speckle RF fixture, carrier modulation, and
+      thermal warp interpolation into Rust/PyO3 `thermal_strain_rf_fixture`,
+      leaving Python to call the existing Rust reconstruction kernel and plot
+      returned arrays. Completion condition: `cargo fmt --check` passes for
+      touched Rust crates, focused `cargo nextest run -p kwavers-physics
+      thermal_strain_rf_fixture` passes, `cargo check -p kwavers-physics -p
+      kwavers-python` passes, editable `maturin develop` succeeds, focused
+      Chapter 10 pytest passes, py-compile passes, and touched-path `git diff
+      --check` is clean.
+- [x] [patch] Chapter 3 PSTD harmonic extraction ownership: moved the
+      Hann-windowed harmonic-amplitude FFT used by the nonlinear-acoustics
+      PSTD-vs-Fubini validation panel into Rust/PyO3
+      `hann_windowed_harmonic_amplitudes`, reusing the workspace Hann window
+      and FFT facade. Completion condition: `cargo fmt --check` passes for
+      touched Rust crates, focused `cargo nextest run -p kwavers-physics
+      hann_windowed_harmonic` passes, `cargo check -p kwavers-physics -p
+      kwavers-python` passes, editable `maturin develop` succeeds, focused
+      Chapter 3 pytest passes, py-compile passes, and touched-path `git diff
+      --check` is clean.
+- [x] [patch] Chapter 7 PCD spectrum/controller ownership: moved
+      Hann-windowed FFT band extraction and asymmetric SC/IC pressure-control
+      stepping for the theranostics PCD panels into Rust/PyO3
+      `keller_miksis_pcd_spectrum` and
+      `keller_miksis_pcd_controller_trace`, reusing the Keller-Miksis solver and
+      workspace FFT instead of Python `np.fft`. Completion condition: `cargo
+      fmt` passes for touched Rust crates, focused `cargo nextest run -p
+      kwavers-physics pcd` passes, `cargo check -p kwavers-physics -p
+      kwavers-python` passes, editable `maturin develop` succeeds, focused
+      Chapter 7 pytest passes, Chapter 7 script regenerates figures, all
+      Chapter 7 PNGs decode as finite nonblank images, py-compile passes, and
+      touched-path `git diff --check` is clean.
+- [x] [patch] Chapter 5 Gaussian photoacoustic waveform: expose a
+      Rust-owned Gaussian absorber initial-pressure and analytic surface-signal
+      fixture through thin PyO3, route Figure 04 through it, and pin the source
+      guard/value test so Python remains plotting-only. Completion condition:
+      `cargo fmt` passes for touched Rust crates, focused `cargo nextest run -p
+      kwavers-physics` passes, editable `maturin develop` succeeds, focused
+      Chapter 5 manifest pytest passes, py-compile passes for the touched book
+      script, and touched-path `git diff --check` is clean.
+- [x] [patch] Transcranial subspot/BBB dose Rust ownership: exposed existing
+      Rust transcranial GBM subspot rastering and BBB-opening dose kernels
+      through thin PyO3 helpers, added Rust-owned focal coverage fraction, and
+      routed the book `gbm_subspot_plan` / `bbb_opening_from_subspots` adapters
+      through those helpers. Completion condition: `cargo fmt` passes for
+      touched Rust crates, `cargo check -p kwavers-therapy -p kwavers-python`
+      passes, focused `cargo nextest run -p kwavers-therapy` subspot coverage
+      test passes, editable `maturin develop` succeeds, focused transcranial
+      planning pytest passes, direct binding smoke check passes, py-compile
+      passes, and touched-path `git diff --check` is clean.
+- [x] [patch] Transcranial planning PyO3 contract cleanup: removed optional
+      `pykwavers` import/fallback branches from the book transcranial planning
+      helpers, routed MI fields, cavitation risk, BBB permeability, and HU
+      sound-speed/density mapping through existing Rust/PyO3 bindings, and
+      exposed the existing transcranial array planner plus Pennes thermal-dose
+      binding through the top-level Python facade. Completion condition:
+      py-compile passes for touched Python files, focused transcranial planning
+      pytest passes, top-level binding export check passes, and touched-path
+      `git diff --check` is clean.
+- [x] [patch] Chapter 24 vector thermal dose and population-helper cleanup:
+      routed the LIFU thermal-safety CEM43 trace through Rust/PyO3
+      `cem43_cumulative`, removed the sparse Python prefix loop around
+      `compute_cem43`, and deleted the ignored `max_nucleation_cycles` keyword
+      from the shared population-emission book helper plus callers. Completion
+      condition: py-compile passes, focused Chapter 24/26 source guard passes,
+      Chapter 24 script completes, all Chapter 24 PNGs decode as nonblank, and
+      touched-path `git diff --check` is clean.
+- [x] [patch] `kwavers-physics` all-target clippy gate: cleared the current
+      48-error mechanical lint layer across physics tests/local helpers
+      without behavior changes. Completion condition: `cargo fmt -p
+      kwavers-physics` passes, `cargo clippy -p kwavers-physics --all-targets
+      -- -D warnings` passes, full `cargo nextest run -p kwavers-physics`
+      passes under the committed nextest runner, and touched-path
+      `git diff --check` is clean.
+- [x] [patch] Chapter 26 neural response probability: added Rust/PyO3
+      `lif_response_probability_py`, routed Gaussian spike-density response
+      probability through Rust, and replaced focal thermal-dose sparse
+      `compute_cem43` prefix interpolation with Rust/PyO3 `cem43_cumulative`.
+      Completion condition: focused Rust nextest passes, editable PyO3 rebuild
+      succeeds, focused pytest/source guards pass, Chapter 26 figures
+      regenerate, changed figures decode as nonblank, and touched-crate lib
+      clippy is clean.
+- [x] [patch] Chapter 5 CW/vector Doppler fixture: added Rust/PyO3
+      `continuous_wave_vector_flow_fixture`, routed Figure 9.4 through
+      Rust-owned RF tone synthesis, CW demodulation/FFT, PW Nyquist comparison,
+      beam projection, and vector-flow recovery, leaving Python only to plot
+      returned arrays. Completion condition: focused Rust nextest passes,
+      editable PyO3 rebuild succeeds, focused pytest/manifest checks pass,
+      Chapter 5 figures regenerate, and Figure 9.4 is visually inspected.
+- [x] [patch] Chapter 13 spectroscopic unmixing sweep: added Rust/PyO3
+      `spectroscopic_unmixing_so2_sweep`, routed Figure 10.4 through Rust-owned
+      HbO2/Hb perturbation sweeps, nonnegative concentration clipping, and sO2
+      ratio calculation, leaving Python only to plot the returned curves.
+      Completion condition: focused Rust nextest passes, editable PyO3 rebuild
+      succeeds, focused pytest/manifest checks pass, Chapter 13 figures
+      regenerate, and Figure 10.4 is visually inspected.
+- [x] [patch] Chapter 5 contrast-agent Doppler spectrum: added Rust/PyO3
+      `contrast_agent_doppler_spectrum`, routed Figure 9.3 through Rust-owned
+      IQ synthesis, finite-tone spectrum, velocity-axis mapping, Nyquist
+      velocity, and Kasai estimate after the existing Rayleigh-Plesset amplitude
+      calculation. Completion condition: focused Rust nextest passes, editable
+      PyO3 rebuild succeeds, focused pytest/manifest checks pass, Chapter 5
+      figures regenerate, and Figure 9.3 is visually inspected.
+- [x] [patch] Chapter 23 eigenspace PAM spectrum: added Rust/PyO3
+      `eigenspace_covariance_eigenvalues`, routed Figure 22.5 through the
+      deterministic Theorem 22.2 signal/noise eigenvalue split, and removed the
+      Python-local stochastic CSD fixture. Completion condition: focused Rust
+      nextest passes, editable PyO3 rebuild succeeds, focused pytest passes,
+      Chapter 23 figures regenerate, and Figure 22.5 is visually inspected.
+- [x] [patch] Chapter 14 plane-wave pressure/velocity pair: added Rust/PyO3
+      `plane_wave_pressure_velocity_1d`, routed Figure 8.3 through it, and left
+      Python only with axis selection, unit conversion, and plotting. Completion
+      condition: focused Rust nextest passes, editable PyO3 rebuild succeeds,
+      focused pytest/manifest checks pass, Chapter 14 figures regenerate, and
+      Figure 8.3 is visually inspected.
+- [x] [patch] Chapter 23 passive RF synthesis: added Rust/PyO3
+      `passive_cavitation_point_source_rf`, routed the DAS sensitivity panel's
+      point-source receive traces through it, and left Python only with array
+      layout, dB scaling, and plotting before calling `passive_acoustic_map_das`.
+      Completion condition: focused Rust nextest passes, editable PyO3 rebuild
+      succeeds, focused pytest passes, Chapter 23 figures regenerate, and
+      Figure 22.3 is visually inspected.
+- [x] [patch] Chapter 11 BLI error curves: added Rust/PyO3
+      `bli_interpolation_error_curves`, routed the BLI accuracy panel through
+      Rust-owned nearest-neighbour and BLI RMS curves, and left Python only with
+      dB conversion and plotting. Completion condition: focused Rust nextest
+      passes, editable PyO3 rebuild succeeds, focused pytest passes, Chapter 11
+      figures regenerate, and Figure 6.4 is visually inspected.
+- [x] [patch] Chapter 7 CEM43 vector dose: routed closed-loop dose accumulation
+      through Rust/PyO3 `cem43_cumulative`, removing the Python prefix loop
+      around `compute_cem43`. Completion condition: focused pytest passes,
+      Chapter 7 figures regenerate, and the CEM43 panel is visually inspected.
+- [x] [patch] Chapter 22/23 passive acoustic mapping spectra: added Rust/PyO3
+      `normalized_cavitation_emission_spectrum`, routed Figure 22.1's stable
+      and inertial cavitation PSDs through it, and removed the Python-local
+      Lorentzian/broadband spectrum model. Completion condition: focused Rust
+      nextest passes, editable PyO3 rebuild succeeds, focused pytest passes,
+      Chapter 23 figures regenerate, and Figure 22.1 is visually inspected.
+- [x] [patch] Chapter 21 histotripsy intensity-pressure inversion: routed the
+      millisecond-pulse shock-rich intensity pressure reconstruction through
+      Rust/PyO3 `acoustic_pressure_amplitude_from_intensity` before the
+      Rust-owned heat-source density calculation. Completion condition: focused
+      pytest passes, Chapter 21 comparison figures regenerate, and the
+      pressure-derived thermal/CEM43 figures are visually inspected.
+- [x] [patch] Chapter 4 beamforming call-site closure: routed Figure 2's
+      combined beam-pattern and grating-lobe markers through Rust/PyO3
+      `beam_pattern_magnitude` and `grating_lobe_angles`, updated Figure 4 to
+      the current `lateral_resolution_m(F#, lambda)` binding contract, updated
+      Figure 5 to pass x/z axes directly into `beam_pattern_2d` without a
+      Python mesh allocation, and updated Figure 6 to the current
+      `bli_stencil_weights(delta, n_stencil)` contract. Completion condition:
+      focused pytest passes, all Chapter 4 transducer-array figures regenerate,
+      and changed figures are visually inspected.
+- [x] [patch] Chapter 18 sonogenetics pressure conversion: routed Figure 5's
+      activation-pressure reconstruction through Rust/PyO3
+      `acoustic_pressure_amplitude_from_intensity` instead of Python-side
+      `sqrt(2*rho*c*I)`, and added a focused source/value regression.
+      Completion condition: focused pytest passes, Chapter 18 figures
+      regenerate, and the activation-comparison figure is visually inspected.
+- [x] [patch] Chapter 33 CMUT/PMUT MEMS guard: removed the redundant optional
+      `pykwavers` import branch from the figure script and added focused tests
+      proving the script delegates resonance, collapse voltage, coupling,
+      heating, bandwidth, pressure, flex derating, and IVUS FOM computations to
+      Rust/PyO3 MEMS bindings. Completion condition: focused pytest passes,
+      Chapter 33 figures regenerate, and at least one regenerated figure is
+      visually inspected.
+- [x] [patch] Chapter 7 Minnaert inverse markers: added Rust/PyO3
+      `minnaert_radius_for_frequency_m`, routed the theranostics resonance
+      marker radii through that helper, and added Rust/Python value-semantic
+      round-trip tests. Completion condition: focused Rust nextest and Python
+      pytest pass after the editable extension is rebuilt, and the regenerated
+      Chapter 7 Minnaert figure is visually inspected.
+
+## Sprint I cached k-Wave direct parity — DONE (2026-06-30)
+- [x] [patch] Added
+      `crates/kwavers-python/tests/test_kwave_example_cached_parity.py`
+      as fast direct coverage for cache-backed example drivers. The test loads
+      existing k-Wave and pykwavers cache pairs, verifies finite nonzero payloads,
+      enforces each example's documented Pearson/RMS-ratio/PSNR thresholds,
+      requires a PASS status in each example report, and decodes each comparison
+      PNG as a finite nonblank image.
+- [x] Updated the compare-driver manifest to classify
+      `at_focused_annular_array_3D_compare.py`,
+      `at_focused_annular_array_3D_full_compare.py`,
+      `us_beam_patterns_compare.py`, `na_modelling_absorption_compare.py`,
+      `ivp_3D_simulation_compare.py`, `tvsp_3D_simulation_compare.py`,
+      `tvsp_snells_law_compare.py`, `na_source_smoothing_compare.py`,
+      `ivp_1D_simulation_compare.py`,
+      `ivp_binary_sensor_mask_compare.py`, `ivp_heterogeneous_medium_compare.py`,
+      `ivp_homogeneous_medium_compare.py`,
+      `ivp_loading_external_image_compare.py`,
+      `na_filtering_part_1_compare.py`, `na_filtering_part_2_compare.py`,
+      `na_filtering_part_3_compare.py`, `na_modelling_nonlinearity_compare.py`,
+      `sd_directivity_modelling_3D_compare.py`,
+      `tvsp_doppler_effect_compare.py`,
+      `tvsp_homogeneous_medium_dipole_compare.py`,
+      `tvsp_homogeneous_medium_monopole_compare.py`,
+      `tvsp_steering_linear_array_compare.py`, and
+      `ivp_recording_particle_velocity_compare.py`,
+      `sd_directional_array_elements_compare.py`, and
+      `us_bmode_phased_array_tiny_compare.py` as directly pytest-covered. The
+      tiny phased-array driver now exposes its aggregate scan-line thresholds as
+      `PARITY_THRESHOLDS`.
+- [x] Added driver-specific direct cached coverage for the final two
+      upstream-mapped residual drivers. `sd_directional_array_elements_compare.py`
+      is tested through its 13-element averaged matrix contract, and
+      `ivp_recording_particle_velocity_compare.py` now writes real NPZ caches for
+      pressure plus `ux`/`uy` and is tested with its sensor-order permutation plus
+      dominant-axis velocity contract.
+- [x] Consolidated the cached parity test helper layer into
+      `crates/kwavers-python/tests/parity_test_utils.py` so manifest and direct
+      cached parity tests share module loading, numeric cache loading,
+      nonzero-payload checks, and PNG validation.
+- [x] Hardened `test_directly_tested_compare_scripts_have_pytest_references`
+      so the manifest no longer satisfies coverage by reading its own set
+      literals. Directly covered scripts must now appear in a non-manifest
+      `test_kwave*.py` source, except the KWave.jl scripts that are intentionally
+      covered by the manifest's semantic metric/metadata/PNG validator.
+- [x] Hardened the direct `us_bmode_linear_transducer` coverage so its pytest no
+      longer owns a duplicate quick-mode threshold copy. It now parses the raw
+      scan-line physics-parity block, enforces the emitted target line from
+      `pykwavers.parity_targets.evaluate_parity`, and decodes both generated
+      B-mode PNG artifacts as finite nonblank images.
+- [x] Updated the validation chapter parity summary so the closed-gaps table
+      uses the current raw B-mode scan-line metrics, lists the closed
+      axisymmetric aperture and IVP reports, and no longer presents
+      log-compressed B-mode display residuals as active physics-validation
+      gaps. Regenerated `fig05_validation_scatter` from the same metric set and
+      synced the sensors chapter's raw B-mode RMS note. The validation chapter
+      now distinguishes strict field-tier reference lines from driver-owned
+      quick-tier thresholds for derived observables. Chapter 20 `fig04` now
+      embeds the current cached focused-bowl AS PASS artifact instead of
+      generating a synthetic noisy comparison curve, and the comparison
+      pseudocode uses scenario-owned `PARITY_THRESHOLDS`. The manifest test
+      now guards this by rejecting synthetic Chapter 20 parity patterns and
+      decoding both the cached source PNG and regenerated book PNG. The Chapter
+      20 scatter now parses the closed-validation markdown table instead of
+      carrying a duplicate metric list, and the manifest verifies the parsed row
+      set. Figures 19.1 and 19.2 now label r = 0.99 and PSNR = 40 dB as strict
+      field-tier references rather than universal acceptance thresholds. The
+      Python parity command block now uses current `crates/kwavers-python/tests`
+      paths and the Miniforge interpreter instead of the obsolete `cd pykwavers`
+      layout, with a manifest regression preventing the stale command form from
+      returning. The manifest also parses the Chapter 20 figure index and
+      verifies every listed PNG/PDF artifact.
+- [x] Hardened the Chapter 5 diagnostic-imaging figure script so it requires
+      `pykwavers`, removes the SciPy Hilbert fallback and random Doppler noise,
+      and calls Rust-owned `bmode_envelope`, `lateral_psf_sinc2`,
+      `doppler_frequency_shift`, and `solve_rayleigh_plesset` bindings for the
+      diagnostic physics surfaces now covered by the manifest guard. Rebuilt
+      the editable Miniforge `pykwavers` extension with `maturin develop`,
+      restored the missing top-level helper re-exports, regenerated all Chapter
+      5 figures, and added manifest PNG/PDF artifact decoding coverage.
+- [x] Hardened the Chapter 10 elastography figure script so it requires
+      `pykwavers`, removes optional import guards, routes the MRE displacement
+      panel through `kw.mre_displacement_field`, restores the missing top-level
+      MRE helper export, regenerates all Chapter 10 figures, and updates the
+      elastography caption to match the Rust-owned damped plane-wave model.
+      The manifest now guards Chapter 10 Rust calls, top-level exports, and
+      PNG/PDF artifact decoding.
+- [x] Hardened the Chapter 11 sources/transducers figure script so it requires
+      `pykwavers`, removes optional import guards, uses magnitude for
+      array-factor dB rendering, routes BLI accuracy through
+      `kw.bli_interpolation_error_curves`, regenerates all Chapter 11 figures,
+      and updates the sources chapter caption. The manifest now guards Chapter
+      11 Rust calls, top-level exports, and PNG/PDF artifact decoding.
+- [x] Hardened the Chapter 12 media/tissue figure script so it requires
+      `pykwavers`, removes optional import guards, routes the steady-state
+      Pennes slab profile through `kw.pennes_steady_state_temperature_profile`,
+      regenerates all Chapter 12 figures, and updates the media chapter
+      captions to name the Rust binding sources. The manifest now guards
+      Chapter 12 Rust calls, top-level exports, and PNG/PDF artifact decoding.
+- [x] Hardened the Chapter 13 photoacoustics figure script so it requires
+      `pykwavers`, removes optional import guards, replaces random unmixing
+      noise with deterministic measurement perturbations, regenerates all
+      Chapter 13 figures, and updates the photoacoustics caption. The manifest
+      now guards Chapter 13 Rust calls, top-level exports, and PNG/PDF artifact
+      decoding.
+- [x] Hardened the Chapter 14 sensors/measurements figure script so it requires
+      `pykwavers`, removes optional import guards, routes circular hydrophone
+      directivity through `kw.circular_piston_directivity`, routes seeded sensor
+      noise through `kw.add_noise`, regenerates all Chapter 14 figures, and
+      updates the sensors chapter captions. The manifest now guards Chapter 14
+      Rust calls, top-level exports, and PNG/PDF artifact decoding.
+- [x] Hardened the Chapter 17 inverse-problems figure script so it requires
+      `pykwavers`, removes optional FWI skip branches, replaces random L-curve
+      perturbations with a deterministic measurement perturbation, and updates
+      the SVD/L-curve captions to name the implemented Rust bindings. The
+      manifest now guards Chapter 17 Rust calls, top-level exports, and PNG/PDF
+      artifact decoding. Figure 18.6 now routes eikonal traveltimes through
+      `kw.eikonal_traveltime_2d` and synthetic Kirchhoff migration through
+      `kw.kirchhoff_point_scatterer_image_2d`, keeping Python at array
+      adaptation and plotting.
+- [x] Hardened the Chapter 18 sonogenetics figure script so it requires
+      `pykwavers`, removes optional import/skip branches, routes acoustic
+      streaming through `kw.acoustic_streaming_velocity`, and renders the
+      documented activation panel through Rust pressure-from-intensity,
+      membrane-tension, Boltzmann, and pressure-threshold gates. The
+      sonogenetics captions now match the Gorkov, streaming, activation, and
+      CEM43 panels, and the manifest guards Chapter 18 Rust calls, top-level
+      exports, and PNG/PDF artifact decoding.
+- [x] Hardened the Chapter 21 simulation-orchestration figure script so it
+      requires `pykwavers`, removes the optional import fallback, and routes the
+      bubble-radius comparison through `kw.solve_rayleigh_plesset`,
+      `kw.solve_keller_miksis`, and `kw.solve_gilmore`. The manifest guards the
+      three solver calls, top-level exports, book-text Rust ownership claim, and
+      regenerated PNG/PDF artifact decoding.
+- [x] Hardened the Chapter 34 optoacoustic focused-ultrasound figure script so
+      it requires `pykwavers`, removes the optional import fallback, and routes
+      SOAP numerical aperture, f-number, lateral resolution, and focal gain
+      through `kw.numerical_aperture_from_geometry`, `kw.f_number_from_na`,
+      `kw.acoustic_resolution_lateral`, and `kw.soap_focal_gain`. The manifest
+      guards the four calls, top-level exports, book-text SSOT claim, and
+      regenerated PNG/PDF artifact decoding.
+- [x] Hardened the Chapter 29 pressure-diagnostics helper so it requires
+      `pykwavers`, removes the optional import fallback and duplicate Python MI
+      equation, and routes mechanical-index metrics through
+      `kw.mechanical_index`. The therapy-chapter tests now assert the projected
+      pressure diagnostic MI value and guard against the fallback tokens.
+- [x] Hardened the Chapter 30 intravascular-ultrasound figure script so it
+      requires `pykwavers`, removes extension-unavailable fallback branches, and
+      routes intensity, adiabatic temperature rise, B-mode log compression,
+      RF-line envelope detection, and therapy mechanical index through
+      Rust/PyO3 kernels. The deterministic vessel phantom, tissue fields, and
+      seeded speckle now route through `kw.ivus_vessel_phantom`; Python only
+      adapts arrays into the plotting dataclass. The IVUS chapter tests now
+      guard against the removed Python duplicate formulas, RNG/material
+      generation, and optional import tokens.
+- [x] Hardened the Chapter 1 wave-fundamentals figure script so its travelling
+      pulse source profile and d'Alembert reference route through Rust/PyO3
+      `kw.gaussian_modulated_pulse_1d` and
+      `kw.dalembert_split_solution_1d` instead of Python-side Gaussian/carrier
+      and shifted-interpolation formulas. The foundations chapter caption now
+      names the Rust helpers, and focused Rust/PyO3 tests guard the helper
+      values and script call surface.
+- [x] Hardened the Chapter 2 numerical-methods figure script so its CFL
+      stability region, centered finite-difference modified-wavenumber symbols,
+      and k-space temporal correction factors route through Rust/PyO3
+      `kw.fdtd_cfl_stability_region_2d`,
+      `kw.centered_fd_modified_wavenumber`, and
+      `kw.kspace_temporal_correction` instead of Python-side stencil and sinc
+      formulas. The numerical-methods chapter now names the Rust helper sources,
+      and focused Rust/PyO3 tests guard helper values, invalid inputs, and the
+      script call surface.
+- [x] Hardened the Chapter 3 nonlinear-acoustics figure script so its Fubini
+      waveform evolution routes through Rust/PyO3 `kw.fubini_waveform` instead
+      of reconstructing the harmonic series in Python. The nonlinear-acoustics
+      chapter now names the Rust waveform binding, and focused Rust/PyO3 tests
+      guard the sinusoid limit, harmonic expansion, and script call surface.
+- [x] Hardened the Chapter 6 therapeutic-ultrasound figure script so its HIFU
+      heat-source pressure setup routes intensity-to-pressure conversion
+      through Rust/PyO3 `kw.acoustic_pressure_amplitude_from_intensity` instead
+      of duplicating `sqrt(2*rho*c*I)` in Python. The therapy chapter caption
+      names the Rust helper, and focused Rust/PyO3 tests guard round-trip values,
+      invalid inputs, top-level export, and the script call surface.
+- [x] Hardened the retained Chapter 8 acoustic-propagation figure script so its
+      geometric spreading-law panel routes normalized spherical `1/r^2` and
+      cylindrical `1/r` intensity envelopes through Rust/PyO3
+      `kw.geometric_spreading_intensity_envelopes` instead of deriving them
+      from Python-side pressure samples. Focused Rust/PyO3 tests guard valid
+      values, invalid radii, and the script call surface.
+- [x] Hardened the Chapter 24 BBB-LIFU and Chapter 26 neuromodulation book
+      scripts so `pykwavers` is imported directly with no optional `_HAS_KW`
+      branch. The Chapter 24 local helper import now uses an explicit
+      script-directory path, and the therapy-chapter tests guard the no-fallback
+      import contract plus the required Rust binding call surfaces. Added the
+      Rust/PyO3 `mechanical_index_frequency_sweep` safety helper and routed
+      Chapter 24's inertial-cavitation MI curves through it. The Chapter 24
+      passive-cavitation pressure sweep now routes MI through
+      `kw.mechanical_index_field`. Added the Rust/PyO3
+      `bbb_inertial_damage_probability` BBB helper and routed the Chapter 24
+      inertial-damage probability curve through it instead of inline NumPy
+      logistic algebra. Added the Rust/PyO3
+      `mechanical_index_cavitation_risk` safety helper and routed the Chapter
+      26 neuromodulation cavitation-risk contour through it instead of inline
+      NumPy logistic algebra. Added the Rust/PyO3
+      `cavitation_therapeutic_window_indices` passive-dose helper and routed
+      Chapter 24's stable-onset, inertial-onset, and controller-cap
+      classification through it instead of Python-side band-ratio scans. Added
+      the Rust/PyO3 `cavitation_inertial_fraction_onset_index` passive-dose
+      helper and routed Chapter 24's population-monitor operating-point
+      selection through it instead of Python-side broadband-fraction scans.
+      Added the Rust/PyO3 `per_spot_cavitation_dose_grid` delivery helper and
+      routed Chapter 24's per-spot cavitation monitor raster through it instead
+      of Python-side steering/interpolation loops. Added the Rust/PyO3
+      `cavitation_monitor_timeseries` helper and routed the shared
+      curve-driven cavitation-monitor trace through it instead of Python-side
+      interpolation, seeded jitter, controller stepping, and dose accumulation.
+      Added the Rust/PyO3 `closed_loop_cavitation_sonication` helper and routed
+      the Chapter 24 passive-cavitation closed-loop sonication trace through it
+      instead of Python-side stable/inertial interpolation, controller stepping,
+      and dose accumulation. Added the Rust/PyO3
+      `raster_cavitation_pulsing` helper and routed the shared raster-pulsing
+      monitor through it instead of Python-side steering derating,
+      pressure-sweep interpolation, schedule expansion, residual-bubble
+      shielding, thermal relaxation, coverage, and cumulative-dose resampling.
+      Added the Rust/PyO3 `simulate_population_emission` helper and routed the
+      shared one-pressure population-emission helper through it instead of
+      Python-side bubble-population sampling, per-bubble solver dispatch, trace
+      rejection, Hann FFT spectrum construction, and cavitation-band
+      decomposition. Added the Rust/PyO3
+      `simulated_population_monitor_timeseries` helper and routed the shared
+      simulated per-pulse population monitor through it instead of Python-side
+      population-emission dispatch, controller stepping, acoustic-power
+      scaling, and cumulative-dose integration. Added the Rust/PyO3
+      `population_emission_sweep` helper and routed the Chapter 24 population
+      pressure sweep through it instead of Python-side per-pressure aggregation
+      over the one-pressure population helper. Added the Rust/PyO3
+      `volume_emission_spectrum` and `volume_emission_sweep` helpers and
+      routed the Chapter 24 V_s-integrated analytic spectrum and pressure sweep
+      through them instead of Python-side Keller-Miksis loops, emission
+      conversion, PSD construction, receiver integration, and band
+      decomposition. Classified the remaining summary fraction formatting as
+      presentation-only over Rust-returned arrays, not domain physics.
+- [x] Reduced the manifest PNG decoder's memory footprint by replacing
+      Matplotlib float-array decoding with Pillow size/extrema checks, preserving
+      nonblank artifact validation without the dashboard PNG allocation failure.
+- [x] Hardened the direct axisymmetric aperture coverage for
+      `at_circular_piston_AS_compare.py` and `at_focused_bowl_AS_compare.py`.
+      Both tests now reuse the example-owned `PARITY_THRESHOLDS`, `METRICS_PATH`,
+      and `FIGURE_PATH`, add fast current-artifact threshold/PNG checks, and keep
+      full simulator regeneration in the existing `KWAVERS_RUN_SLOW=1` tests.
+      The circular-piston analytical oracle check now asserts bounded agreement
+      between k-wave-python and pykwavers correlations instead of imposing a
+      false ordering. The analytical-reference thresholds now live in the
+      compare drivers, and the focused-bowl plotting path masks the O'Neil
+      singularity before rendering the dense analytical curve.
+- [x] Hardened the direct 3-D aperture coverage for
+      `at_circular_piston_3D_compare.py` and `at_focused_bowl_3D_compare.py`.
+      Both tests now reuse script-owned `PARITY_THRESHOLDS` and add fast
+      current-artifact PASS/PNG checks while keeping full simulator regeneration
+      in the existing `KWAVERS_RUN_SLOW=1` tests.
+- [x] Hardened the direct `at_array_as_source` coverage so its pytest no longer
+      carries a separate stale `p_max` absolute-error contract. The driver now
+      owns `PARITY_THRESHOLDS`, the report emits `max_abs_diff` and `peak_ratio`
+      for every section, and the default test validates the current report and
+      PNG before the slow regeneration path.
+- [x] Hardened the direct `at_array_as_sensor` coverage so its pytest consumes
+      the driver-owned `PARITY_THRESHOLDS`, validates report/PNG artifacts by
+      default, and records trace extrema in the report. The k-wave-python
+      `combine_sensor_data` order is now explicit (`order="F"`) to avoid future
+      default-order drift.
+- [x] Hardened the direct `at_linear_array_transducer` coverage so its pytest
+      consumes the driver-owned `PARITY_THRESHOLDS` and validates the current
+      report/PNG artifacts by default. The stale slow-test-only `p_max` PSNR
+      literal was removed in favor of the executable report contract.
+- [x] Hardened the direct `us_defining_transducer` coverage so its pytest
+      consumes the driver-owned `TRACE_THRESHOLDS`, validates the current
+      report/PNG artifacts by default, and treats peak ratio, RMSE, and
+      max-absolute difference as finite report diagnostics unless the example
+      promotes them into its executable threshold map.
+- [x] Hardened the direct `ivp_photoacoustic_waveforms` coverage so its pytest
+      consumes the driver-owned `PARITY_THRESHOLDS`, validates the current
+      report/PNG artifacts by default, and uses an explicit peak-ratio threshold
+      instead of stale hidden exact-equality-style literals.
+- [x] Hardened the direct `pr_2D_FFT_line_sensor` coverage so its pytest
+      consumes the driver-owned `PARITY_THRESHOLDS`, validates the current
+      report and both generated PNG artifacts by default, and removes stale
+      hidden reconstruction/reference metric literals from the slow path.
+- [x] Hardened the direct `pr_2D_TR_line_sensor` coverage so its pytest consumes
+      the driver-owned `PARITY_THRESHOLDS`, validates the current report and all
+      three generated PNG artifacts by default, and separates the lossy
+      time-reversal reconstruction band from the near-exact FFT reconstruction
+      contract.
+- [x] Hardened the direct `pr_3D_TR_planar_sensor` coverage so its pytest
+      consumes the driver-owned `PARITY_THRESHOLDS`, validates the current
+      report and both generated PNG artifacts by default, and records reference
+      RMS/PSNR diagnostics in the driver report.
+- [x] Hardened the direct `na_controlling_the_pml` coverage so its pytest
+      consumes the driver-owned `PARITY_THRESHOLDS` for waveform metrics and
+      HDF5 writer parity, validates the current report/PNG artifacts by default,
+      and keeps detailed per-dataset HDF5 checks in the slow regeneration path.
+- [x] Hardened the direct `sd_focussed_detector_2D` coverage so its pytest
+      consumes the driver-owned `PARITY_THRESHOLDS`, validates the current
+      report and both generated PNG artifacts by default, and keeps full
+      simulator regeneration slow-gated.
+- [x] Hardened the direct `sd_focussed_detector_3D` coverage so its pytest
+      consumes source-specific driver-owned `PARITY_THRESHOLDS`, validates the
+      current report and both generated PNG artifacts by default, and keeps full
+      simulator regeneration slow-gated.
+- [x] Hardened the direct `sd_directivity_modelling_2D` coverage so its pytest
+      consumes driver-owned matrix, trace-summary, and directivity
+      `PARITY_THRESHOLDS`, validates the current report and both generated PNG
+      artifacts by default, and keeps full simulator regeneration slow-gated.
+- [x] Hardened the direct `ivp_saving_movie_files` coverage so its pytest
+      validates the current report and comparison PNG by default against the
+      driver-owned `PARITY_THRESHOLDS`, and the driver compares `p_final` after
+      cropping pykwavers output to the same PML-excluded physical interior as
+      k-wave-python.
+- [x] Hardened the direct `na_optimising_performance` coverage so its pytest
+      validates the current report and comparison PNG by default against the
+      driver-owned `PARITY_THRESHOLDS`, the test image path resolves to the
+      repo-root k-wave fixture, and the driver compares `p_final` after cropping
+      pykwavers output to the same PML-excluded physical interior as
+      k-wave-python.
+- [x] Hardened the direct `us_bmode_phased_array` coverage so its pytest
+      consumes the compare-driver-owned strict quick-tier thresholds for the
+      fundamental and harmonic B-mode images, validates the current PASS report
+      by default, and decodes both the B-mode comparison PNG and transducer-face
+      debug PNG as finite nonblank images.
+- [x] Hardened the direct `checkpointing` coverage so its pytest consumes the
+      compare-driver-owned bit-exact save/resume contract, validates the current
+      PASS report and comparison PNG by default, and leaves full checkpoint
+      regeneration slow-gated.
+- [x] Hardened the direct `pr_3D_FFT_planar_sensor` coverage so its pytest
+      consumes driver-owned summary and representative-trace thresholds,
+      validates the current PASS report and pressure PNG by default, and leaves
+      full simulator regeneration slow-gated. The compare driver no longer
+      applies a stale one-sample shift after cache-level inspection showed the
+      raw matrices match at zero lag.
+- [x] Evidence tier: cached differential validation against k-wave-python
+      reference output. Verified metrics: annular axial amplitude Pearson
+      0.999999/0.999892, RMS ratio 0.999678/0.992681, PSNR 69.18/45.23 dB;
+      `p_rms` Pearson 0.999688, RMS ratio
+      0.921284, PSNR 30.46 dB; `p_max` Pearson 0.997555, RMS ratio 0.982948,
+      PSNR 34.96 dB; `na_modelling_absorption` pressure Pearson 1.000000, RMS
+      ratio 1.000004, PSNR 90.34 dB; `ivp_3D_simulation` pressure Pearson
+      0.985404, RMS ratio 1.034993, PSNR 50.62 dB; `tvsp_3D_simulation`
+      pressure Pearson 0.966665, RMS ratio 1.102110, PSNR 29.94 dB;
+      `ivp_binary_sensor_mask` Pearson 1.000000, RMS ratio 1.000000, PSNR
+      303.35 dB; `ivp_heterogeneous_medium` Pearson 0.999945, RMS ratio
+      0.999745, PSNR 56.11 dB; `ivp_homogeneous_medium` Pearson 1.000000, RMS
+      ratio 1.000000, PSNR 303.99 dB; `ivp_loading_external_image` Pearson
+      1.000000, RMS ratio 1.000000, PSNR 302.38 dB;
+      `tvsp_snells_law` `p_final` Pearson 1.000000, RMS ratio 1.000000, PSNR
+      239.45 dB; `na_source_smoothing` no-window/Hanning/Blackman traces
+      Pearson 0.999680/1.000000/1.000000 and RMS ratio
+      1.001548/1.000000/1.000000; `tvsp_doppler_effect` Pearson 0.995260,
+      RMS ratio 1.000039, PSNR 28.35 dB; `tvsp_homogeneous_medium_dipole`
+      Pearson 0.992315, RMS ratio 0.976013, PSNR 23.70 dB; tiny phased-array
+      scan lines mean Pearson
+      1.000000, mean RMS ratio 0.946366, image RMS ratio 0.946361.
+      `sd_directional_array_elements` records Pearson 0.992761, RMS ratio
+      0.996054, PSNR 30.69 dB; `ivp_recording_particle_velocity` records
+      pressure Pearson 0.998047/0.998047/0.997855/0.997855 and dominant-velocity
+      Pearson 0.986909/0.986909/0.967838/0.967838.
+      Verification commands:
+      `D:\miniforge3\python.exe -m pytest
+      crates/kwavers-python/tests/test_kwave_cache_manifest.py
+      crates/kwavers-python/tests/test_kwave_example_cached_parity.py -q` (36/36
+      passed).
+      `D:\miniforge3\python.exe -m pytest
+      crates/kwavers-python/tests/test_kwave_example_us_bmode_linear_transducer_parity.py
+      crates/kwavers-python/tests/test_kwave_cache_manifest.py -q` (12/12
+      passed).
+      `D:\miniforge3\python.exe -m pytest
+      crates/kwavers-python/tests/test_kwave_example_at_circular_piston_as_parity.py
+      crates/kwavers-python/tests/test_kwave_example_at_focused_bowl_as_parity.py
+      crates/kwavers-python/tests/test_kwave_cache_manifest.py -q` (13 passed,
+      2 slow-regeneration tests skipped).
+      `D:\miniforge3\python.exe -m pytest
+      crates/kwavers-python/tests/test_kwave_example_at_circular_piston_3d_parity.py
+      crates/kwavers-python/tests/test_kwave_example_at_focused_bowl_3d_parity.py
+      crates/kwavers-python/tests/test_kwave_cache_manifest.py -q` (13 passed,
+      2 slow-regeneration tests skipped).
+      `D:\miniforge3\python.exe -m pytest
+      crates/kwavers-python/tests/test_kwave_example_at_array_as_source_parity.py
+      crates/kwavers-python/tests/test_kwave_cache_manifest.py -q` (12 passed,
+      1 slow-regeneration test skipped).
+      `D:\miniforge3\python.exe -m pytest
+      crates/kwavers-python/tests/test_kwave_example_at_array_as_sensor_parity.py
+      crates/kwavers-python/tests/test_kwave_cache_manifest.py -q` (12 passed,
+      1 slow-regeneration test skipped).
+      `D:\miniforge3\python.exe -m pytest
+      crates/kwavers-python/tests/test_kwave_example_at_linear_array_transducer_parity.py
+      crates/kwavers-python/tests/test_kwave_cache_manifest.py -q` (12 passed,
+      1 slow-regeneration test skipped).
+      `D:\miniforge3\python.exe -m pytest
+      crates/kwavers-python/tests/test_kwave_example_us_defining_transducer_parity.py
+      crates/kwavers-python/tests/test_kwave_cache_manifest.py -q` (12 passed,
+      1 slow-regeneration test skipped).
+      `D:\miniforge3\python.exe -m pytest
+      crates/kwavers-python/tests/test_kwave_example_ivp_photoacoustic_waveforms_parity.py
+      crates/kwavers-python/tests/test_kwave_cache_manifest.py -q` (12 passed,
+      1 slow-regeneration test skipped).
+      `D:\miniforge3\python.exe -m pytest
+      crates/kwavers-python/tests/test_kwave_example_pr2d_parity.py
+      crates/kwavers-python/tests/test_kwave_cache_manifest.py -q` (12 passed,
+      1 slow-regeneration test skipped).
+      `D:\miniforge3\python.exe -m pytest
+      crates/kwavers-python/tests/test_kwave_example_pr2d_tr_parity.py
+      crates/kwavers-python/tests/test_kwave_cache_manifest.py -q` (12 passed,
+      1 slow-regeneration test skipped).
+      `D:\miniforge3\python.exe -m pytest
+      crates/kwavers-python/tests/test_kwave_example_pr3d_tr_parity.py
+      crates/kwavers-python/tests/test_kwave_cache_manifest.py -q` (12 passed,
+      1 slow-regeneration test skipped).
+      `D:\miniforge3\python.exe -m pytest
+      crates/kwavers-python/tests/test_kwave_example_na_controlling_the_pml_parity.py
+      crates/kwavers-python/tests/test_kwave_cache_manifest.py -q` (12 passed,
+      1 slow-regeneration test skipped).
+      `D:\miniforge3\python.exe -m pytest
+      crates/kwavers-python/tests/test_kwave_example_sd_focussed_detector_2d_parity.py
+      crates/kwavers-python/tests/test_kwave_cache_manifest.py -q` (12 passed,
+      1 slow-regeneration test skipped).
+      `D:\miniforge3\python.exe -m pytest
+      crates/kwavers-python/tests/test_kwave_example_us_bmode_phased_array_parity.py
+      crates/kwavers-python/tests/test_kwave_cache_manifest.py -q` (12 passed,
+      1 slow-regeneration test skipped).
+      `D:\miniforge3\python.exe -m pytest
+      crates/kwavers-python/tests/test_kwave_example_checkpointing_parity.py
+      crates/kwavers-python/tests/test_kwave_cache_manifest.py -q` (12 passed,
+      1 slow-regeneration test skipped).
+      `D:\miniforge3\python.exe -m pytest
+      crates/kwavers-python/tests/test_kwave_example_parity.py
+      crates/kwavers-python/tests/test_kwave_cache_manifest.py -q` (12 passed,
+      1 slow-regeneration test skipped).
+
+## Sprint H k-Wave cache manifest — DONE (2026-06-30)
+- [x] [patch] Added `crates/kwavers-python/tests/test_kwave_cache_manifest.py`
+      as a fast validation-inventory gate over existing k-Wave/k-wave-python and
+      KWave.jl artifacts. The test classifies current k-Wave caches into paired
+      pykwavers parity data or explicit reference-only artifacts, asserts at
+      least 40 paired parity families, and verifies finite nonzero numeric
+      payloads for paired caches.
+- [x] KWave.jl artifact coverage: the manifest test classifies all six
+      `*_jl_compare.py` drivers as directly pytest-covered, verifies each
+      `_metrics.txt` report records `RESULT: PASS`, parses the report's named
+      metrics against that script's executable `PARITY_THRESHOLDS`, checks finite
+      numeric JSON metadata, validates finite nonzero CSV/NPY payloads, and
+      decodes each comparison PNG as a finite nonblank image. The diffusion cache still verifies
+      `diff_homogeneous_medium_source_2d_jl_kwave_cache.npy` against its JSON
+      metadata (`engine`, shape, finite field, and max temperature).
+- [x] Compare-driver inventory: every current `*_compare.py` / `compare_*.py`
+      driver in `crates/kwavers-python/examples/` is classified as directly
+      pytest-covered or reference/diagnostic; directly covered drivers must be
+      referenced by a `test_kwave*.py` file.
+- [x] Vendored k-wave-python source inventory: all 51
+      `external/k-wave-python/examples/**/*.py` sources are classified. Fifty
+      standalone examples map to an existing local compare/dashboard script; the
+      only current non-standalone entry is
+      `legacy/us_bmode_linear_transducer/example_utils.py`.
+- [x] Hidden paired-cache guard: reference/diagnostic drivers must not have a
+      standard `*_kwave_cache.npz` / `*_pykwavers_cache.npz` pair without being
+      promoted to direct pytest coverage.
+- [x] Dashboard currentness guard: `parity_dashboard.py` maps metric files back
+      to real current example sources, lists orphan metric files excluded from
+      dashboard totals, classifies standalone analytical validation artifacts
+      under the analytical/canonical backend, and the tracked dashboard now
+      reports 79/79 PASS current artifacts. The manifest resolves
+      report-declared `figure:` / `figure_*:` PNG artifacts, rejects dangling
+      declared figure references, and decodes at least one current per-example
+      PNG for every dashboard row.
+- [x] Dashboard source classification guard: the three current non-compare
+      dashboard rows (`cavitation_bubble_validation.py`,
+      `hifu_procedure_simulation.py`, and `phase_compare_minimal.py`) are
+      explicitly classified, and no unclassified non-compare dashboard row may
+      enter the tracked dashboard.
+- [x] Metrics-report integrity guard: every current dashboard metrics report must
+      be nonempty, record PASS, and contain no `nan`/`inf` numeric tokens. The
+      tiny phased-array report now emits finite image Pearson, PSNR, and
+      RMS-ratio fields instead of an unsupported SSIM value.
+- [x] Reference-diagnostic threshold guard: diffusion homogeneous-medium
+      source/diffusion, IVP opposing-corners sensor mask, TVSP acoustic-field
+      propagator, TVSP angular-spectrum method, TVSP equivalent-source
+      holography, and TVSP transducer-field-pattern drivers now have their
+      current reports parsed against executable `PARITY_THRESHOLDS` while the
+      manifest decodes each comparison PNG. The guard also self-audits that
+      every reference/diagnostic compare driver exporting `PARITY_THRESHOLDS`
+      is included in the semantic parser set.
+- [x] Evidence tier: cached reference-output validation plus value-semantic
+      manifest classification. Verification command:
+      `D:\miniforge3\python.exe -m pytest
+      crates/kwavers-python/tests/test_kwave_cache_manifest.py -q` (12/12 passed).
+
+## Sprint G MVDR denominator guard — DONE (2026-06-30)
+- [x] [patch] AMC-2: `kwavers-analysis` MVDR `compute_weights` and
+      `pseudospectrum` share a real-positive denominator validator for
+      `a^H R^{-1} a`, including a Higham-style complex-dot roundoff bound for
+      the imaginary component. Non-Hermitian covariance inputs that produce a
+      complex denominator now return a numerical error instead of silently using
+      `.re`.
+- [x] Value-semantic regressions cover both public paths; evidence tier:
+      value-semantic tests plus floating-point error-bound derivation at the
+      assertion boundary. Verification command:
+      `cargo nextest run -p kwavers-analysis mvdr`.
+- [x] Package hygiene gate: `cargo clippy -p kwavers-analysis --all-targets --
+      -D warnings` passes after mechanical test/helper cleanup and one dependency
+      lint fix in `kwavers-solver` (`usize::is_multiple_of`).
+
+## Sprint F cloud-branch reconciliation — DONE (2026-06-28)
+- [x] Compared `main` against `feat/cloud-time-resolved-bubble-dynamics`,
+      `feat/cloud-acoustic-shielding`, `feat/cloud-implicit-coupling`, and
+      `feat/cloud-strong-regime-solver`: all four branch tips are ancestors of
+      current `main`; no branch-only cloud code remained to integrate.
+- [x] Confirmed `main` is ahead of the strongest branch on the cloud model with
+      ADR 032 refinements (`couple_pressure_rate`,
+      `shielding_radius_dependent`, `interface_instability`,
+      `CouplingScheme::ImplicitIterative`) plus the existing value-semantic tests.
+- [x] Verification: `cargo nextest run -p kwavers-therapy --all-features
+      cavitation_cloud` passed 26/26; `D:\miniforge3\python.exe -m pytest
+      crates/kwavers-python/tests/test_bubble_cloud_parity.py -q` passed 19/19.
+- [x] Regenerated chapter 21e treatment-pipeline artifacts with
+      `D:\miniforge3\python.exe
+      crates/kwavers-python/examples/book/ch21e_treatment_pipeline.py`; tracked
+      figure outputs were byte-identical, so no chapter artifact delta landed.
+- **Residual risk:** CLD-1 remains open only for external/experimental validation
+  and deeper nonlinear frontier work, not for missing branch integration.
+
 ## Sprint F (coverage & placement audit) — AUDIT COMPLETE, fixes OPEN (2026-06-19)
 Axis: physics coverage vs peer libs + cross-crate placement (see
 [gap_audit.md → Coverage & placement audit](gap_audit.md#coverage--placement-audit-2026-06-19),
@@ -129,7 +1434,9 @@ on branch `feat/cov1-coherence-factor` (off `main`, not pushed/merged).
 - [x] PHY-1 Gilmore vapor correction — FALSE POSITIVE (`p_eq` subtracts pv, line 211)
 - [x] PHY-3 IAPWS-IF97 Region-4 — FALSE POSITIVE (matches standard K→MPa→Pa)
 - [x] AMC-1 6th-order central difference — FALSE POSITIVE (exact Fornberg expansion)
-- [x] AMC-2 MVDR imag-part guard — REAL, downgraded C→L (happy-path correct; add guard)
+- [x] AMC-2 MVDR imag-part guard — DONE (2026-06-30): shared denominator validator
+      rejects non-finite, non-positive, or roundoff-inconsistent complex
+      denominators in weights and pseudospectrum paths.
 - [x] AMC-4 `acoustic_field.wgsl` BC — REAL, downgraded C→M (persistence BC, undocumented)
 - **Outcome:** 0 confirmed physics bugs; 4 false positives closed, 2 downgraded.
   Verify-first gate validated (automated audit over-rated severity 6/6).

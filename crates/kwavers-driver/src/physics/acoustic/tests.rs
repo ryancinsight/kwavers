@@ -9,13 +9,11 @@
 //! contract.
 
 use crate::physics::acoustic::{
-    acoustic_intensity_w_per_m2, array_factor, bvd_anti_resonance_hz,
-    bvd_series_resonance_hz, element_factor, f_number, focal_pressure_gain,
-    focused_delay_profile_s, grating_lobe_angle_deg, isppa_w_per_m2,
-    max_delay_quantization_error_s, max_grating_free_steer_deg, mechanical_index,
-    near_field_distance_m, nonlinear_shock_parameter, pitch_from_aperture_m,
-    pressure_derating, quantize_delays_s, round_trip_attenuation_db, tissue_attenuation_db,
-    wavelength_m,
+    acoustic_intensity_w_per_m2, array_factor, bvd_anti_resonance_hz, bvd_series_resonance_hz,
+    element_factor, f_number, focal_pressure_gain, focused_delay_profile_s, grating_lobe_angle_deg,
+    isppa_w_per_m2, max_delay_quantization_error_s, max_grating_free_steer_deg, mechanical_index,
+    near_field_distance_m, nonlinear_shock_parameter, pitch_from_aperture_m, pressure_derating,
+    quantize_delays_s, round_trip_attenuation_db, tissue_attenuation_db, wavelength_m,
 };
 
 // ───────── Existing fixtures (lifted verbatim from src/acoustic.rs::mod tests) ─────────

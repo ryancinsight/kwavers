@@ -28,12 +28,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-try:
-    import pykwavers as kw
-    _HAS_PYKWAVERS = True
-except ImportError:
-    kw = None
-    _HAS_PYKWAVERS = False
+import pykwavers as kw
 
 REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
 OUT_DIR = os.path.join(REPO_ROOT, "docs", "book", "figures", "ch21sim")
@@ -62,9 +57,6 @@ N_STEPS = 8000            # 2000 steps/period
 
 
 def fig01_bubble_ode_comparison() -> None:
-    if not _HAS_PYKWAVERS:
-        raise ImportError("pykwavers is required for ch21 fig01 (bubble ODE comparison)")
-
     t_rp, r_rp, _ = kw.solve_rayleigh_plesset(
         R0, 0.0, P0, PA, F0, T_END, N_STEPS, RHO, SIGMA, GAMMA, MU, PV)
     t_km, r_km, _ = kw.solve_keller_miksis(

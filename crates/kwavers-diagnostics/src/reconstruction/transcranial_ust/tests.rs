@@ -194,7 +194,10 @@ fn transcranial_traveltime_reduces_to_distance_over_speed_for_uniform_medium() {
     // along any interior ray has the same speed and τ = L/c is exact.
     let soft = AcousticSlice::from_ct_hu(Array2::from_elem((n, n), 40.0), spacing).unwrap();
     let c = soft.sound_speed_m_s[[n / 2, n / 2]];
-    assert!(soft.sound_speed_m_s.iter().all(|&v| (v - c).abs() < 1.0e-12));
+    assert!(soft
+        .sound_speed_m_s
+        .iter()
+        .all(|&v| (v - c).abs() < 1.0e-12));
 
     let (ax, bx) = (-0.012_f64, 0.013_f64);
     let (ay, by) = (-0.009_f64, 0.011_f64);

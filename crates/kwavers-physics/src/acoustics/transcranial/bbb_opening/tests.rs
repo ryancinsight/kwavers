@@ -43,8 +43,10 @@ fn test_mechanical_index_calculation() {
 #[test]
 fn test_mechanical_index_rejects_invalid_frequency() {
     use super::models::PermeabilityModels;
-    let mut params = BBBParameters::default();
-    params.frequency = 0.0;
+    let params = BBBParameters {
+        frequency: 0.0,
+        ..Default::default()
+    };
 
     let models = PermeabilityModels::new(&params);
     assert_eq!(models.calculate_mechanical_index(1e5), 0.0);

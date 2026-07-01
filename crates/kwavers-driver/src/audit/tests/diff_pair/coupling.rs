@@ -4,7 +4,7 @@ use super::super::*;
 fn detects_differential_pair_keepout() {
     use crate::place::component::Placement;
     use crate::place::footprint::{PadDef, Role};
-    use crate::place::rotation::{Rot};
+    use crate::place::rotation::Rot;
 
     let track = |b: &mut Board, net, y: f64| {
         b.tracks.push(Track {
@@ -100,8 +100,8 @@ fn detects_differential_pair_keepout() {
 #[test]
 fn detects_asymmetric_diff_pair_coupling_caps() {
     use crate::place::component::Placement;
-    use crate::place::footprint::{PadDef};
-    use crate::place::rotation::{Rot};
+    use crate::place::footprint::PadDef;
+    use crate::place::rotation::Rot;
 
     let mut matched = board();
     let p = matched.add_net("MGT_P", NetClassKind::Signal);
@@ -177,8 +177,8 @@ fn detects_asymmetric_diff_pair_coupling_caps() {
 #[test]
 fn detects_oversized_diff_pair_coupling_cap_packages() {
     use crate::place::component::Placement;
-    use crate::place::footprint::{PadDef};
-    use crate::place::rotation::{Rot};
+    use crate::place::footprint::PadDef;
+    use crate::place::rotation::Rot;
 
     let mut b = board();
     let p = b.add_net("USB_P", NetClassKind::Signal);

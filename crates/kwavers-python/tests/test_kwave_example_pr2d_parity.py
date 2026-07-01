@@ -14,6 +14,7 @@ import numpy as np
 import pytest
 
 from conftest import HAS_KWAVE, requires_kwave
+from parity_test_utils import assert_decodable_nonblank_png, report_metric_value
 
 
 skip_kwave = os.getenv("KWAVERS_SKIP_KWAVE", "0") == "1"
@@ -32,6 +33,63 @@ def _load_example_module():
     assert spec.loader is not None
     spec.loader.exec_module(module)
     return module
+
+
+def _assert_metrics_contract(metrics, thresholds):
+    assert metrics["pearson_r"] >= thresholds["pearson_r"]
+    assert thresholds["rms_ratio_min"] <= metrics["rms_ratio"]
+    assert metrics["rms_ratio"] <= thresholds["rms_ratio_max"]
+    assert metrics["psnr_db"] >= thresholds["psnr_db"]
+
+
+def _assert_report_contract(module, text: str):
+    thresholds = module.PARITY_THRESHOLDS
+    reconstruction_section = "FFT line reconstruction (kwave vs pykwavers):"
+    reference_section = "Reconstruction vs ground-truth p0:"
+
+    assert "parity_status: PASS" in text
+    assert (
+        report_metric_value(text, "pearson_r", reconstruction_section)
+        >= thresholds["reconstruction"]["pearson_r"]
+    )
+    rms_ratio = report_metric_value(text, "rms_ratio", reconstruction_section)
+    assert thresholds["reconstruction"]["rms_ratio_min"] <= rms_ratio
+    assert rms_ratio <= thresholds["reconstruction"]["rms_ratio_max"]
+    assert (
+        report_metric_value(text, "psnr_db", reconstruction_section)
+        >= thresholds["reconstruction"]["psnr_db"]
+    )
+
+    labels = {
+        "kwave": "kwave     ",
+        "pykwavers": "pykwavers ",
+    }
+    for prefix, label in labels.items():
+        assert (
+            report_metric_value(text, f"{label}pearson_r", reference_section)
+            >= thresholds["reference"]["pearson_r"]
+        )
+        reference_rms = report_metric_value(text, f"{label}rms_ratio", reference_section)
+        assert thresholds["reference"]["rms_ratio_min"] <= reference_rms
+        assert reference_rms <= thresholds["reference"]["rms_ratio_max"]
+        assert (
+            report_metric_value(text, f"{label}psnr_db", reference_section)
+            >= thresholds["reference"]["psnr_db"]
+        )
+
+
+@requires_kwave
+@pytest.mark.skipif(skip_kwave, reason="KWAVERS_SKIP_KWAVE=1")
+def test_current_pr_2d_fft_line_sensor_artifacts_match_thresholds():
+    module = _load_example_module()
+
+    assert module.METRICS_PATH.exists()
+    assert module.RECON_FIGURE_PATH.exists()
+    assert module.PRESSURE_FIGURE_PATH.exists()
+    text = module.METRICS_PATH.read_text(encoding="utf-8")
+    _assert_report_contract(module, text)
+    assert_decodable_nonblank_png(module.RECON_FIGURE_PATH)
+    assert_decodable_nonblank_png(module.PRESSURE_FIGURE_PATH)
 
 
 @requires_kwave
@@ -66,16 +124,10 @@ class TestKWaveExampleParity2D:
         assert np.max(np.abs(kw_reconstruction)) > 0.0
         assert np.max(np.abs(py_reconstruction)) > 0.0
 
-        assert summary["pearson_r"] > 0.999999
-        assert abs(summary["rms_ratio"] - 1.0) < 1e-4
-        assert summary["psnr_db"] > 90.0
-
-        assert reference_metrics["kwave"]["pearson_r"] > 0.79
-        assert reference_metrics["pykwavers"]["pearson_r"] > 0.79
-        assert 0.64 <= reference_metrics["kwave"]["rms_ratio"] <= 0.70
-        assert 0.64 <= reference_metrics["pykwavers"]["rms_ratio"] <= 0.70
-        assert reference_metrics["kwave"]["psnr_db"] > 23.0
-        assert reference_metrics["pykwavers"]["psnr_db"] > 23.0
+        thresholds = module.PARITY_THRESHOLDS
+        _assert_metrics_contract(summary, thresholds["reconstruction"])
+        _assert_metrics_contract(reference_metrics["kwave"], thresholds["reference"])
+        _assert_metrics_contract(reference_metrics["pykwavers"], thresholds["reference"])
 
         for row, metrics in trace_metrics.items():
             assert np.isfinite(metrics["pearson_r"]), f"sensor row {row} correlation is not finite"

@@ -45,3 +45,44 @@ fn pam_policy_to_core_non_capon_preserves_core_loading_and_sets_reference_freque
     assert!((core.reference_frequency - 2.0 * MHZ_TO_HZ).abs() < 1.0);
     assert!((core.diagonal_loading - embedded_core.diagonal_loading).abs() < 1e-12);
 }
+
+#[test]
+fn eigenspace_covariance_eigenvalues_pin_signal_noise_split() {
+    let eigenvalues = eigenspace_covariance_eigenvalues(8, 3, 10.0, 1.0).unwrap();
+
+    assert_eq!(eigenvalues.len(), 8);
+    assert_eq!(&eigenvalues[..3], &[11.0, 11.0, 11.0]);
+    assert_eq!(&eigenvalues[3..], &[1.0, 1.0, 1.0, 1.0, 1.0]);
+}
+
+#[test]
+fn eigenspace_covariance_eigenvalues_reject_invalid_inputs() {
+    assert_eq!(
+        eigenspace_covariance_eigenvalues(0, 1, 10.0, 1.0),
+        Err(EigenspaceSpectrumError::EmptyAperture)
+    );
+    assert_eq!(
+        eigenspace_covariance_eigenvalues(8, 0, 10.0, 1.0),
+        Err(EigenspaceSpectrumError::InvalidSourceRank {
+            n_elements: 8,
+            n_sources: 0,
+        })
+    );
+    assert_eq!(
+        eigenspace_covariance_eigenvalues(8, 8, 10.0, 1.0),
+        Err(EigenspaceSpectrumError::InvalidSourceRank {
+            n_elements: 8,
+            n_sources: 8,
+        })
+    );
+    match eigenspace_covariance_eigenvalues(8, 3, f64::NAN, 1.0) {
+        Err(EigenspaceSpectrumError::InvalidSignalPower { signal_power }) => {
+            assert!(signal_power.is_nan());
+        }
+        other => panic!("expected invalid signal power error, got {other:?}"),
+    }
+    assert_eq!(
+        eigenspace_covariance_eigenvalues(8, 3, 10.0, 0.0),
+        Err(EigenspaceSpectrumError::InvalidNoisePower { noise_power: 0.0 })
+    );
+}

@@ -8,15 +8,18 @@ k-wave-python examples and asserts on metrics, not only on successful execution.
 
 from __future__ import annotations
 
-import importlib.util
 import os
-import sys
-from pathlib import Path
+import re
 
 import numpy as np
 import pytest
 
-from conftest import HAS_KWAVE, requires_kwave
+from conftest import requires_kwave
+from parity_test_utils import (
+    assert_decodable_nonblank_png,
+    load_example_module,
+    report_metric_value,
+)
 
 
 skip_kwave = os.getenv("KWAVERS_SKIP_KWAVE", "0") == "1"
@@ -25,16 +28,66 @@ slow_reason = "Set KWAVERS_RUN_SLOW=1 to run slow k-wave-python tests"
 
 
 def _load_example_module():
-    root = Path(__file__).resolve().parents[1]
-    module_path = root / "examples" / "compare_pr_3D_FFT_planar_sensor.py"
-    examples_dir = str(root / "examples")
-    if examples_dir not in sys.path:
-        sys.path.insert(0, examples_dir)
-    spec = importlib.util.spec_from_file_location("compare_pr_3D_FFT_planar_sensor", module_path)
-    module = importlib.util.module_from_spec(spec)
-    assert spec.loader is not None
-    spec.loader.exec_module(module)
-    return module
+    return load_example_module("compare_pr_3D_FFT_planar_sensor.py")
+
+
+def _assert_report_summary_contract(text: str, thresholds: dict[str, dict[str, float]]):
+    summary = thresholds["summary"]
+    assert report_metric_value(text, "pearson_r_mean") > summary["pearson_r_mean"]
+    assert report_metric_value(text, "pearson_r_median") > summary["pearson_r_median"]
+
+    rms_mean = report_metric_value(text, "rms_ratio_mean")
+    assert summary["rms_ratio_mean_min"] <= rms_mean <= summary["rms_ratio_mean_max"]
+
+    rms_median = report_metric_value(text, "rms_ratio_median")
+    assert summary["rms_ratio_median_min"] <= rms_median <= summary["rms_ratio_median_max"]
+
+    assert report_metric_value(text, "rmse_median") < summary["rmse_median"]
+    assert report_metric_value(text, "max_abs_diff") < summary["max_abs_diff_max"]
+
+    peak_median = report_metric_value(text, "peak_ratio_median")
+    assert summary["peak_ratio_median_min"] <= peak_median <= summary["peak_ratio_median_max"]
+
+
+def _report_trace_metrics(text: str) -> dict[int, dict[str, float]]:
+    trace_re = re.compile(
+        r"row=(?P<row>\d+):\s+pearson_r=(?P<pearson_r>[0-9.eE+-]+)\s+"
+        r"rms_ratio=(?P<rms_ratio>[0-9.eE+-]+)\s+"
+        r"rmse=(?P<rmse>[0-9.eE+-]+)\s+"
+        r"peak_ratio=(?P<peak_ratio>[0-9.eE+-]+)"
+    )
+    traces = {}
+    for match in trace_re.finditer(text):
+        row = int(match.group("row"))
+        traces[row] = {
+            name: float(match.group(name))
+            for name in ("pearson_r", "rms_ratio", "rmse", "peak_ratio")
+        }
+    assert traces
+    return traces
+
+
+def _assert_report_trace_contract(text: str, thresholds: dict[str, dict[str, float]]):
+    trace = thresholds["trace"]
+    for row, metrics in _report_trace_metrics(text).items():
+        assert metrics["pearson_r"] > trace["pearson_r"], row
+        assert trace["peak_ratio_min"] <= metrics["peak_ratio"] <= trace["peak_ratio_max"], row
+
+
+@requires_kwave
+@pytest.mark.skipif(skip_kwave, reason="KWAVERS_SKIP_KWAVE=1")
+def test_current_pr_3d_fft_planar_sensor_artifacts_match_thresholds():
+    """Current PR 3-D FFT report and PNG satisfy the driver-owned contract."""
+    module = _load_example_module()
+
+    assert module.METRICS_PATH.exists()
+    assert module.PRESSURE_FIGURE_PATH.exists()
+    text = module.METRICS_PATH.read_text(encoding="utf-8")
+
+    assert "parity_status: PASS" in text
+    _assert_report_summary_contract(text, module.PARITY_THRESHOLDS)
+    _assert_report_trace_contract(text, module.PARITY_THRESHOLDS)
+    assert_decodable_nonblank_png(module.PRESSURE_FIGURE_PATH)
 
 
 @requires_kwave
@@ -61,14 +114,7 @@ class TestKWaveExampleParity:
         assert np.max(np.abs(kw_pressure)) > 0.0
         assert np.max(np.abs(py_pressure)) > 0.0
 
-        assert summary["pearson_r_mean"] > 0.999
-        assert summary["pearson_r_median"] > 0.999
-        assert 0.99 <= summary["rms_ratio_mean"] <= 1.01
-        assert 0.99 <= summary["rms_ratio_median"] <= 1.01
-        assert summary["rmse_median"] < 1e-3
-        assert summary["max_abs_diff_max"] < 1e-2
-        assert 0.99 <= summary["peak_ratio_median"] <= 1.01
-
-        for row, metrics in trace_metrics.items():
-            assert metrics["pearson_r"] > 0.999, f"sensor row {row} correlation too low"
-            assert 0.99 <= metrics["peak_ratio"] <= 1.01, f"sensor row {row} peak ratio out of range"
+        assert summary["n_sensors"] == kw_pressure.shape[0]
+        assert len(trace_metrics) == 3
+        checks = module.evaluate_parity_contract(result)
+        assert all(checks.values()), checks

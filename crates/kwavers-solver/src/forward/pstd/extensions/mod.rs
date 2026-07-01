@@ -35,8 +35,8 @@ pub use elastic::{
     PstdElasticPlugin, SpectralElasticConfig, SpectralStressUpdateInputs,
     SpectralVelocityUpdateInputs,
 };
-pub use elastic_plugin::MechanicalStressPlugin;
 pub use elastic_orchestrator::{
     ElasticPml, ElasticPmlSpec, ElasticPstdMedium, ElasticPstdOrchestrator, ElasticPstdSensorData,
     ElasticPstdSourceMode, ElasticPstdVelocitySource,
 };
+pub use elastic_plugin::MechanicalStressPlugin;

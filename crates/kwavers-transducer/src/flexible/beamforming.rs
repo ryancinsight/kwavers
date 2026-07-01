@@ -55,7 +55,9 @@ pub fn focusing_delays(positions: &ArrayView2<f64>, focus: [f64; 3], c: f64) -> 
 #[must_use]
 pub fn steering_delays(positions: &ArrayView2<f64>, dir: [f64; 3], c: f64) -> Vec<f64> {
     let n = positions.nrows();
-    let norm = dir[2].mul_add(dir[2], dir[0].mul_add(dir[0], dir[1] * dir[1])).sqrt();
+    let norm = dir[2]
+        .mul_add(dir[2], dir[0].mul_add(dir[0], dir[1] * dir[1]))
+        .sqrt();
     if n == 0 || c <= 0.0 || norm <= 0.0 {
         return Vec::new();
     }
@@ -176,10 +178,16 @@ mod tests {
             .collect();
         let a0 = arrival[0];
         for a in &arrival {
-            assert!((a - a0).abs() <= 1e-15, "arrivals must coincide: {a} vs {a0}");
+            assert!(
+                (a - a0).abs() <= 1e-15,
+                "arrivals must coincide: {a} vs {a0}"
+            );
         }
         assert!(tau.iter().all(|&t| t >= 0.0));
-        assert!(tau.iter().any(|&t| t.abs() < 1e-15), "farthest element has τ=0");
+        assert!(
+            tau.iter().any(|&t| t.abs() < 1e-15),
+            "farthest element has τ=0"
+        );
     }
 
     /// Flat array, on-axis focus: delays are symmetric and peak at the centre
@@ -219,7 +227,10 @@ mod tests {
         let step = along[0] - along[1];
         assert!(step > 0.0);
         for i in 0..3 {
-            assert!((along[i] - along[i + 1] - step).abs() < 1e-15, "linear ramp");
+            assert!(
+                (along[i] - along[i + 1] - step).abs() < 1e-15,
+                "linear ramp"
+            );
         }
         assert!(along[3].abs() < 1e-15, "leading element fires first");
     }
@@ -250,7 +261,11 @@ mod tests {
         let kappa = per_element_curvature(&arc.view());
         // Interior points recover 1/R.
         for &k in &kappa[1..kappa.len() - 1] {
-            assert!((k - 1.0 / r).abs() <= 1e-3 * (1.0 / r), "circle κ≈1/R: {k} vs {}", 1.0 / r);
+            assert!(
+                (k - 1.0 / r).abs() <= 1e-3 * (1.0 / r),
+                "circle κ≈1/R: {k} vs {}",
+                1.0 / r
+            );
         }
     }
 
@@ -262,7 +277,10 @@ mod tests {
         let curvatures = [0.0, 1.0 / 2.0e-3, 1.0 / 1.0e-3]; // flat, 2 mm, 1 mm radius
         let w = cmut_flex_apodization(&curvatures, &cell);
         assert!((w[0] - 1.0).abs() < 1e-12, "flat element keeps full weight");
-        assert!(w[1] < w[0] && w[2] < w[1], "tighter curvature ⇒ more derating");
+        assert!(
+            w[1] < w[0] && w[2] < w[1],
+            "tighter curvature ⇒ more derating"
+        );
         assert!(w.iter().all(|&x| x > 0.0 && x <= 1.0));
 
         // A tighter-gap cell loses more output at the same curvature.

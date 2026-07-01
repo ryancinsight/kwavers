@@ -9,7 +9,10 @@ use kwavers_analysis::signal_processing::beamforming::{
     beamform_image_das, ImagingDasApodization, ImagingDasConfig,
 };
 use kwavers_analysis::signal_processing::pam::delay_and_sum::ApodizationType;
-use kwavers_analysis::signal_processing::pam::{DelayAndSumConfig, DelayAndSumPAM};
+use kwavers_analysis::signal_processing::pam::{
+    eigenspace_covariance_eigenvalues as compute_eigenspace_covariance_eigenvalues,
+    DelayAndSumConfig, DelayAndSumPAM,
+};
 use kwavers_math::linear_algebra::EigenDecomposition;
 use ndarray::{Array1, Array2};
 use num_complex::Complex64;
@@ -21,6 +24,7 @@ pub fn register_pam(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(passive_acoustic_map_das, m)?)?;
     m.add_function(wrap_pyfunction!(beamform_image_delay_and_sum, m)?)?;
     m.add_function(wrap_pyfunction!(hermitian_eigenvalues_complex, m)?)?;
+    m.add_function(wrap_pyfunction!(eigenspace_covariance_eigenvalues, m)?)?;
     m.add_function(wrap_pyfunction!(music_pseudospectrum, m)?)?;
     Ok(())
 }
@@ -75,6 +79,26 @@ fn hermitian_eigenvalues_complex(
     v.sort_by(|a, b| b.total_cmp(a));
     eigenvalues = Array1::from(v);
     Ok(PyArray1::from_owned_array(py, eigenvalues).into())
+}
+
+/// Deterministic Theorem 22.2 eigenspace PAM covariance eigenvalues.
+///
+/// Returns `n_sources` values equal to `signal_power + noise_power`, followed
+/// by `n_elements - n_sources` values equal to `noise_power`.
+#[pyfunction]
+#[pyo3(signature = (n_elements, n_sources, signal_power, noise_power))]
+fn eigenspace_covariance_eigenvalues(
+    py: Python<'_>,
+    n_elements: usize,
+    n_sources: usize,
+    signal_power: f64,
+    noise_power: f64,
+) -> PyResult<Py<PyArray1<f64>>> {
+    let eigenvalues =
+        compute_eigenspace_covariance_eigenvalues(n_elements, n_sources, signal_power, noise_power)
+            .map_err(|err| PyValueError::new_err(format!("kwavers eigenspace PAM error: {err}")))?;
+
+    Ok(PyArray1::from_vec(py, eigenvalues).into())
 }
 
 /// MUSIC noise-subspace pseudospectrum `P(θ) = 1/‖E_nᴴ a(θ)‖²` for one steering

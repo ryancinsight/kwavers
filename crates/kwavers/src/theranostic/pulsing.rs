@@ -193,8 +193,14 @@ mod tests {
 
         // 5 cycles × (3 therapy + 1 imaging) = 20 frames.
         assert_eq!(frames.len(), 20);
-        let n_therapy = frames.iter().filter(|f| f.kind == PulseKind::Therapy).count();
-        let n_imaging = frames.iter().filter(|f| f.kind == PulseKind::Imaging).count();
+        let n_therapy = frames
+            .iter()
+            .filter(|f| f.kind == PulseKind::Therapy)
+            .count();
+        let n_imaging = frames
+            .iter()
+            .filter(|f| f.kind == PulseKind::Imaging)
+            .count();
         assert_eq!(n_therapy, 15);
         assert_eq!(n_imaging, 5);
 
@@ -206,7 +212,10 @@ mod tests {
         }
 
         // Therapy frames fire the full aperture; imaging frames fire a subset.
-        let first_imaging = frames.iter().find(|f| f.kind == PulseKind::Imaging).unwrap();
+        let first_imaging = frames
+            .iter()
+            .find(|f| f.kind == PulseKind::Imaging)
+            .unwrap();
         assert_eq!(first_imaging.tx_elements.len(), 4);
         assert_eq!(
             frames[0].tx_elements, aperture,
@@ -220,8 +229,10 @@ mod tests {
         let subsets = sparse_transmit_subsets(16, 4);
         // 1 therapy + 1 imaging per cycle, 6 cycles → imaging subset cursor wraps.
         let frames = interleave_schedule(&aperture, &subsets, 1, 1, 6, 1e-3, 5e-4);
-        let imaging: Vec<&PulseFrame> =
-            frames.iter().filter(|f| f.kind == PulseKind::Imaging).collect();
+        let imaging: Vec<&PulseFrame> = frames
+            .iter()
+            .filter(|f| f.kind == PulseKind::Imaging)
+            .collect();
         assert_eq!(imaging.len(), 6);
         // Cursor order: subset 0,1,2,3,0,1.
         assert_eq!(imaging[0].tx_elements, subsets[0]);

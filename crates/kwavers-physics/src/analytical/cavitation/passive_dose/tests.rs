@@ -122,6 +122,69 @@ fn bands_reject_bad_input() {
     assert_eq!(z.broadband, 0.0);
 }
 
+#[test]
+fn normalized_emission_spectrum_has_unit_peak() {
+    let f0 = 1.0e6;
+    let freqs: Vec<f64> = (10..=550).map(|k| k as f64 * 1.0e4).collect();
+    let psd =
+        normalized_cavitation_emission_spectrum(&freqs, f0, CavitationEmissionRegime::Stable, 30.0);
+    assert_eq!(psd.len(), freqs.len());
+    let peak = psd.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+    assert!(
+        (peak - 1.0).abs() < 1e-12,
+        "normalized peak must be one, got {peak}"
+    );
+}
+
+#[test]
+fn inertial_emission_spectrum_elevates_interharmonic_floor() {
+    let f0 = 1.0e6;
+    let freqs: Vec<f64> = (10..=550).map(|k| k as f64 * 1.0e4).collect();
+    let stable =
+        normalized_cavitation_emission_spectrum(&freqs, f0, CavitationEmissionRegime::Stable, 30.0);
+    let inertial = normalized_cavitation_emission_spectrum(
+        &freqs,
+        f0,
+        CavitationEmissionRegime::Inertial,
+        30.0,
+    );
+    let interharmonic = freqs
+        .iter()
+        .position(|&frequency| (frequency - 4.75e6).abs() < 1.0)
+        .expect("frequency grid contains the 4.75 MHz interharmonic bin");
+    assert!(
+        inertial[interharmonic] > 10.0 * stable[interharmonic],
+        "inertial floor {} must exceed stable floor {}",
+        inertial[interharmonic],
+        stable[interharmonic]
+    );
+}
+
+#[test]
+fn normalized_emission_spectrum_rejects_invalid_input() {
+    assert!(normalized_cavitation_emission_spectrum(
+        &[],
+        1.0e6,
+        CavitationEmissionRegime::Stable,
+        30.0,
+    )
+    .is_empty());
+    assert!(normalized_cavitation_emission_spectrum(
+        &[1.0e6],
+        0.0,
+        CavitationEmissionRegime::Stable,
+        30.0,
+    )
+    .is_empty());
+    assert!(normalized_cavitation_emission_spectrum(
+        &[f64::NAN],
+        1.0e6,
+        CavitationEmissionRegime::Stable,
+        30.0,
+    )
+    .is_empty());
+}
+
 // ─── dose accumulation ───────────────────────────────────────────────────────
 
 #[test]
@@ -150,6 +213,190 @@ fn cumulative_dose_monotone_nondecreasing() {
     for k in 1..d.len() {
         assert!(d[k] >= d[k - 1], "dose must not decrease at {k}");
     }
+}
+
+#[test]
+fn passive_cavitation_dose_fixture_is_normalized_and_seeded() {
+    let time_s = [0.0, 0.5, 1.0, 2.0, 4.0];
+
+    let trace = passive_cavitation_dose_fixture(&time_s, 1.0, 0.1, 2.0, 7)
+        .expect("valid dose fixture parameters");
+    let repeated = passive_cavitation_dose_fixture(&time_s, 1.0, 0.1, 2.0, 7)
+        .expect("valid dose fixture parameters");
+    let shifted_seed = passive_cavitation_dose_fixture(&time_s, 1.0, 0.1, 2.0, 8)
+        .expect("valid dose fixture parameters");
+
+    assert_eq!(trace.time_s, time_s);
+    assert_eq!(trace, repeated);
+    assert_ne!(
+        trace.inertial_trial1_dose,
+        shifted_seed.inertial_trial1_dose
+    );
+    for (&observed, expected) in trace.stable_dose.iter().zip([0.25, 0.25, 0.5, 0.75, 1.0]) {
+        assert!((observed - expected).abs() <= 1.0e-15);
+    }
+    assert_eq!(trace.inertial_trial1_dose.last().copied(), Some(1.0));
+    assert_eq!(trace.inertial_trial2_dose.last().copied(), Some(1.0));
+    for dose in [
+        &trace.stable_dose,
+        &trace.inertial_trial1_dose,
+        &trace.inertial_trial2_dose,
+    ] {
+        assert!(dose.windows(2).all(|w| w[1] >= w[0]));
+        assert!(dose.iter().all(|&v| (0.0..=1.0).contains(&v)));
+    }
+}
+
+#[test]
+fn passive_cavitation_dose_fixture_rejects_invalid_inputs() {
+    assert!(passive_cavitation_dose_fixture(&[0.0], 1.0, 0.1, 0.3, 0).is_err());
+    assert!(passive_cavitation_dose_fixture(&[0.0, 1.0], 0.0, 0.1, 0.3, 0).is_err());
+    assert!(passive_cavitation_dose_fixture(&[0.0, 1.0], 1.0, -0.1, 0.3, 0).is_err());
+    assert!(passive_cavitation_dose_fixture(&[0.0, 1.0], 1.0, 0.1, -0.3, 0).is_err());
+    assert!(passive_cavitation_dose_fixture(&[0.0, f64::NAN], 1.0, 0.1, 0.3, 0).is_err());
+    assert!(passive_cavitation_dose_fixture(&[1.0, 0.0], 1.0, 0.1, 0.3, 0).is_err());
+}
+
+#[test]
+fn van_cittert_zernike_coherence_matches_first_zero() {
+    let source_extent_m = 1.0e-3;
+    let depth_m = 40.0e-3;
+    let wavelength_m = 1_500.0 / 1.0e6;
+    let first_zero_m = wavelength_m * depth_m / source_extent_m;
+    let coherence = van_cittert_zernike_coherence(
+        &[0.0, 0.5 * first_zero_m, first_zero_m],
+        source_extent_m,
+        depth_m,
+        wavelength_m,
+    )
+    .expect("valid VCZ geometry");
+
+    assert_eq!(coherence.len(), 3);
+    assert_eq!(coherence[0], 1.0);
+    assert!(
+        (coherence[1] - (2.0 / std::f64::consts::PI)).abs() <= 1.0e-15,
+        "midpoint sinc={} expected {}",
+        coherence[1],
+        2.0 / std::f64::consts::PI
+    );
+    assert!(
+        coherence[2].abs() <= 1.0e-15,
+        "first-zero coherence must vanish, got {}",
+        coherence[2]
+    );
+}
+
+#[test]
+fn van_cittert_zernike_coherence_rejects_invalid_inputs() {
+    assert!(van_cittert_zernike_coherence(&[0.0], 0.0, 1.0, 1.0).is_err());
+    assert!(van_cittert_zernike_coherence(&[0.0], 1.0, 0.0, 1.0).is_err());
+    assert!(van_cittert_zernike_coherence(&[0.0], 1.0, 1.0, 0.0).is_err());
+    assert!(van_cittert_zernike_coherence(&[f64::NAN], 1.0, 1.0, 1.0).is_err());
+}
+
+#[test]
+fn therapeutic_window_indices_match_ratio_crossings() {
+    let harmonic = [10.0, 10.0, 10.0, 10.0, 10.0];
+    let stable = [0.0, 0.05, 0.2, 0.5, 1.0];
+    let inertial = [0.0, 0.1, 0.3, 0.5, 1.2];
+
+    let window = cavitation_therapeutic_window_indices(
+        &harmonic, &stable, &inertial, 0.01, 0.1, 0.04, 1e-30,
+    );
+
+    assert_eq!(window.stable_onset_index, 2);
+    assert_eq!(window.controller_cap_index, 3);
+    assert_eq!(window.inertial_onset_index, 4);
+}
+
+#[test]
+fn therapeutic_window_indices_use_documented_fallbacks() {
+    let harmonic = [10.0, 10.0, 10.0];
+    let stable = [0.0, 0.0, 0.0];
+    let inertial = [0.0, 0.0, 0.0];
+
+    let window = cavitation_therapeutic_window_indices(
+        &harmonic, &stable, &inertial, 0.01, 0.1, 0.04, 1e-30,
+    );
+
+    assert_eq!(window.stable_onset_index, 0);
+    assert_eq!(window.inertial_onset_index, 2);
+    assert_eq!(window.controller_cap_index, 2);
+}
+
+#[test]
+fn therapeutic_window_indices_ignore_invalid_samples_and_empty_inputs() {
+    let harmonic = [10.0, f64::NAN, 10.0, 10.0];
+    let stable = [0.0, 10.0, f64::NAN, 0.2];
+    let inertial = [0.0, 10.0, f64::NAN, 0.5];
+
+    let window = cavitation_therapeutic_window_indices(
+        &harmonic, &stable, &inertial, 0.01, 0.1, 0.04, 1e-30,
+    );
+
+    assert_eq!(window.stable_onset_index, 3);
+    assert_eq!(window.controller_cap_index, 3);
+    assert_eq!(window.inertial_onset_index, 3);
+
+    assert_eq!(
+        cavitation_therapeutic_window_indices(&[], &[], &[], 0.01, 0.1, 0.04, 1e-30),
+        CavitationTherapeuticWindow {
+            stable_onset_index: 0,
+            inertial_onset_index: 0,
+            controller_cap_index: 0,
+        }
+    );
+}
+
+#[test]
+fn inertial_fraction_onset_index_matches_first_total_fraction_crossing() {
+    let harmonic = [10.0, 10.0, 10.0, 10.0];
+    let stable = [1.0, 1.0, 1.0, 1.0];
+    let inertial = [0.0, 2.0, 8.0, 20.0];
+
+    let onset =
+        cavitation_inertial_fraction_onset_index(&harmonic, &stable, &inertial, 0.4, 1e-30, 1);
+
+    assert_eq!(onset, 2);
+}
+
+#[test]
+fn inertial_fraction_onset_index_uses_fallback_and_minimum_index() {
+    let harmonic = [10.0, 10.0, 10.0];
+    let stable = [1.0, 1.0, 1.0];
+    let inertial = [0.0, 1.0, 2.0];
+
+    assert_eq!(
+        cavitation_inertial_fraction_onset_index(&harmonic, &stable, &inertial, 0.95, 1e-30, 1,),
+        2
+    );
+    assert_eq!(
+        cavitation_inertial_fraction_onset_index(
+            &harmonic[..1],
+            &stable[..1],
+            &inertial[..1],
+            0.4,
+            1e-30,
+            1,
+        ),
+        0
+    );
+    assert_eq!(
+        cavitation_inertial_fraction_onset_index(&[], &[], &[], 0.4, 1e-30, 1),
+        0
+    );
+}
+
+#[test]
+fn inertial_fraction_onset_index_skips_invalid_samples() {
+    let harmonic = [10.0, f64::NAN, 10.0, 10.0];
+    let stable = [1.0, 1.0, f64::INFINITY, 1.0];
+    let inertial = [0.0, 20.0, 20.0, 20.0];
+
+    assert_eq!(
+        cavitation_inertial_fraction_onset_index(&harmonic, &stable, &inertial, 0.4, 1e-30, 1,),
+        3
+    );
 }
 
 // ─── controller ──────────────────────────────────────────────────────────────
@@ -188,6 +435,54 @@ fn controller_respects_pressure_clamp() {
 }
 
 // ─── receiver / volume integration ───────────────────────────────────────────
+
+#[test]
+fn passive_point_source_rf_matches_closed_form_sample() {
+    let receivers = [0.0, 0.0, 0.01];
+    let out = passive_cavitation_point_source_rf(
+        &receivers,
+        [0.0, 0.0, 0.0],
+        3,
+        100_000.0,
+        1_000.0,
+        1_000.0,
+        3.0,
+    );
+    assert_eq!(out.len(), 3);
+    let centered_time_s: f64 = -0.01 / 1_000.0;
+    let envelope_scale_s: f64 = 3.0 / (2.0 * 1_000.0);
+    let envelope = (-0.5 * (centered_time_s / envelope_scale_s).powi(2)).exp();
+    let expected = envelope * (std::f64::consts::TAU * 1_000.0 * centered_time_s).sin() / 0.01;
+    assert!(
+        (out[0] - expected).abs() < 1.0e-12,
+        "p[0]={} expected {expected}",
+        out[0]
+    );
+}
+
+#[test]
+fn passive_point_source_rf_rejects_bad_input() {
+    assert!(passive_cavitation_point_source_rf(
+        &[0.0, 0.0],
+        [0.0, 0.0, 0.0],
+        8,
+        40.0e6,
+        1_500.0,
+        1.0e6,
+        3.0,
+    )
+    .is_empty());
+    assert!(passive_cavitation_point_source_rf(
+        &[0.0, 0.0, 0.01],
+        [0.0, 0.0, 0.0],
+        0,
+        40.0e6,
+        1_500.0,
+        1.0e6,
+        3.0,
+    )
+    .is_empty());
+}
 
 #[test]
 fn receiver_array_incoherent_power_sum() {
@@ -415,6 +710,316 @@ fn coated_bubble_emits_subharmonic_above_free_bubble() {
     );
 }
 
+#[test]
+fn population_emission_returns_finite_band_spectrum() {
+    let result = simulate_population_emission(PopulationEmissionInput {
+        drive_pa: 80.0e3,
+        f0_hz: 1.0e6,
+        n_bubbles: 2,
+        seed: 7,
+        r0_median_m: 2.0e-6,
+        r0_sigma_ln: 0.05,
+        n_cycles: 2.0,
+        n_out: 96,
+        r_obs_m: 5.0e-2,
+        rel_halfwidth: 0.12,
+        noise_floor: 0.0,
+        thermal_effects: false,
+        medium: PopulationMedium {
+            p0_pa: 101_325.0,
+            rho: 998.0,
+            c_liquid: 1481.0,
+            mu: 1.0e-3,
+            sigma: 0.0725,
+            pv: 2330.0,
+            gamma: 1.4,
+        },
+        shell: PopulationShell {
+            coated: true,
+            chi: 0.5,
+            shell_viscosity: 0.5,
+            shell_thickness: 3.0e-9,
+            sigma_initial: 0.04,
+            steps_per_cycle: 160,
+        },
+    })
+    .expect("finite population-emission input is valid");
+
+    assert!(result.n_active > 0);
+    assert_eq!(result.freqs_hz.len(), result.psd.len());
+    assert!(result.freqs_hz.len() > 1);
+    assert!(result.freqs_hz.windows(2).all(|w| w[0] < w[1]));
+    assert!(result
+        .psd
+        .iter()
+        .all(|value| value.is_finite() && *value >= 0.0));
+    assert!(
+        result.bands.fundamental
+            + result.bands.subharmonic
+            + result.bands.ultraharmonic
+            + result.bands.broadband
+            > 0.0
+    );
+    assert!(result.max_compression >= 1.0);
+    assert!(result.max_mach >= 0.0);
+}
+
+#[test]
+fn population_emission_rejects_invalid_distribution() {
+    assert_eq!(
+        simulate_population_emission(PopulationEmissionInput {
+            drive_pa: 80.0e3,
+            f0_hz: 1.0e6,
+            n_bubbles: 0,
+            seed: 7,
+            r0_median_m: 2.0e-6,
+            r0_sigma_ln: 0.05,
+            n_cycles: 2.0,
+            n_out: 96,
+            r_obs_m: 5.0e-2,
+            rel_halfwidth: 0.12,
+            noise_floor: 0.0,
+            thermal_effects: false,
+            medium: PopulationMedium {
+                p0_pa: 101_325.0,
+                rho: 998.0,
+                c_liquid: 1481.0,
+                mu: 1.0e-3,
+                sigma: 0.0725,
+                pv: 2330.0,
+                gamma: 1.4,
+            },
+            shell: PopulationShell {
+                coated: false,
+                chi: 0.5,
+                shell_viscosity: 0.5,
+                shell_thickness: 3.0e-9,
+                sigma_initial: 0.04,
+                steps_per_cycle: 160,
+            },
+        }),
+        None
+    );
+}
+
+#[test]
+fn population_emission_sweep_returns_band_vectors() {
+    let sweep = population_emission_sweep(PopulationEmissionSweepInput {
+        pressures_pa: &[70.0e3, 80.0e3],
+        f0_hz: 1.0e6,
+        n_bubbles: 2,
+        seed: 13,
+        r0_median_m: 2.0e-6,
+        r0_sigma_ln: 0.05,
+        n_cycles: 2.0,
+        n_out: 96,
+        r_obs_m: 5.0e-2,
+        rel_halfwidth: 0.12,
+        noise_floor: 0.0,
+        thermal_effects: false,
+        medium: PopulationMedium {
+            p0_pa: 101_325.0,
+            rho: 998.0,
+            c_liquid: 1481.0,
+            mu: 1.0e-3,
+            sigma: 0.0725,
+            pv: 2330.0,
+            gamma: 1.4,
+        },
+        shell: PopulationShell {
+            coated: true,
+            chi: 0.5,
+            shell_viscosity: 0.5,
+            shell_thickness: 3.0e-9,
+            sigma_initial: 0.04,
+            steps_per_cycle: 160,
+        },
+    })
+    .expect("finite population sweep input is valid");
+
+    assert_eq!(sweep.harmonic.len(), 2);
+    assert_eq!(sweep.subharmonic.len(), 2);
+    assert_eq!(sweep.ultraharmonic.len(), 2);
+    assert_eq!(sweep.stable.len(), 2);
+    assert_eq!(sweep.inertial.len(), 2);
+    assert_eq!(sweep.signal.len(), 2);
+    assert_eq!(sweep.n_active.len(), 2);
+    for i in 0..2 {
+        assert!(sweep.n_active[i] > 0);
+        assert!(
+            (sweep.stable[i] - (sweep.subharmonic[i] + sweep.ultraharmonic[i])).abs()
+                <= f64::EPSILON * sweep.stable[i].max(1.0)
+        );
+        assert!(
+            (sweep.signal[i] - (sweep.stable[i] + sweep.inertial[i])).abs()
+                <= f64::EPSILON * sweep.signal[i].max(1.0)
+        );
+        assert!([
+            sweep.harmonic[i],
+            sweep.subharmonic[i],
+            sweep.ultraharmonic[i],
+            sweep.stable[i],
+            sweep.inertial[i],
+            sweep.signal[i],
+            sweep.max_compression[i],
+            sweep.max_mach[i],
+        ]
+        .into_iter()
+        .all(|value| value.is_finite() && value >= 0.0));
+    }
+}
+
+#[test]
+fn population_emission_sweep_rejects_invalid_pressure_axis() {
+    assert_eq!(
+        population_emission_sweep(PopulationEmissionSweepInput {
+            pressures_pa: &[80.0e3, f64::NAN],
+            f0_hz: 1.0e6,
+            n_bubbles: 1,
+            seed: 13,
+            r0_median_m: 2.0e-6,
+            r0_sigma_ln: 0.05,
+            n_cycles: 2.0,
+            n_out: 96,
+            r_obs_m: 5.0e-2,
+            rel_halfwidth: 0.12,
+            noise_floor: 0.0,
+            thermal_effects: false,
+            medium: PopulationMedium {
+                p0_pa: 101_325.0,
+                rho: 998.0,
+                c_liquid: 1481.0,
+                mu: 1.0e-3,
+                sigma: 0.0725,
+                pv: 2330.0,
+                gamma: 1.4,
+            },
+            shell: PopulationShell {
+                coated: false,
+                chi: 0.5,
+                shell_viscosity: 0.5,
+                shell_thickness: 3.0e-9,
+                sigma_initial: 0.04,
+                steps_per_cycle: 160,
+            },
+        }),
+        None
+    );
+}
+
+#[test]
+fn volume_emission_spectrum_integrates_radius_population() {
+    let spectrum = volume_emission_spectrum(VolumeEmissionSpectrumInput {
+        drive_pa: 20.0e3,
+        f0_hz: 1.0e6,
+        r0_population_m: &[1.5e-6, 2.0e-6],
+        medium: VolumeSpectrumMedium {
+            p0_pa: 101_325.0,
+            rho: 998.0,
+            sigma: 0.0725,
+            gamma: 1.4,
+            mu: 1.0e-3,
+            pv_pa: 2330.0,
+            c_liquid: 1481.0,
+            xi_s: 0.0,
+        },
+        n_cycles: 2.0,
+        steps_per_cycle: 64,
+        r_obs_m: 5.0e-2,
+        n_fft: 64,
+        transient_fraction: 0.25,
+    })
+    .expect("finite V_s spectrum input is valid");
+
+    assert_eq!(spectrum.n_active, 2);
+    assert_eq!(spectrum.freqs_hz.len(), spectrum.psd.len());
+    assert!(spectrum.freqs_hz.len() > 1);
+    assert!(spectrum.freqs_hz.windows(2).all(|w| w[0] < w[1]));
+    assert!(spectrum
+        .psd
+        .iter()
+        .all(|value| value.is_finite() && *value >= 0.0));
+    assert!(spectrum.psd.iter().any(|value| *value > 0.0));
+}
+
+#[test]
+fn volume_emission_sweep_returns_band_vectors() {
+    let sweep = volume_emission_sweep(VolumeEmissionSweepInput {
+        pressures_pa: &[20.0e3, 30.0e3],
+        f0_hz: 1.0e6,
+        r0_population_m: &[1.5e-6, 2.0e-6],
+        medium: VolumeSpectrumMedium {
+            p0_pa: 101_325.0,
+            rho: 998.0,
+            sigma: 0.0725,
+            gamma: 1.4,
+            mu: 1.0e-3,
+            pv_pa: 2330.0,
+            c_liquid: 1481.0,
+            xi_s: 0.0,
+        },
+        rel_halfwidth: 0.04,
+        noise_floor: 0.0,
+        n_cycles: 2.0,
+        steps_per_cycle: 64,
+        r_obs_m: 5.0e-2,
+        n_fft: 64,
+        transient_fraction: 0.25,
+    })
+    .expect("finite V_s sweep input is valid");
+
+    assert_eq!(sweep.harmonic.len(), 2);
+    assert_eq!(sweep.subharmonic.len(), 2);
+    assert_eq!(sweep.ultraharmonic.len(), 2);
+    assert_eq!(sweep.stable.len(), 2);
+    assert_eq!(sweep.inertial.len(), 2);
+    assert_eq!(sweep.n_active, vec![2, 2]);
+    for i in 0..2 {
+        assert!(
+            (sweep.stable[i] - (sweep.subharmonic[i] + sweep.ultraharmonic[i])).abs()
+                <= f64::EPSILON * sweep.stable[i].max(1.0)
+        );
+        assert!([
+            sweep.harmonic[i],
+            sweep.subharmonic[i],
+            sweep.ultraharmonic[i],
+            sweep.stable[i],
+            sweep.inertial[i],
+        ]
+        .into_iter()
+        .all(|value| value.is_finite() && value >= 0.0));
+    }
+}
+
+#[test]
+fn volume_emission_sweep_rejects_invalid_radius_population() {
+    assert_eq!(
+        volume_emission_sweep(VolumeEmissionSweepInput {
+            pressures_pa: &[20.0e3],
+            f0_hz: 1.0e6,
+            r0_population_m: &[0.0],
+            medium: VolumeSpectrumMedium {
+                p0_pa: 101_325.0,
+                rho: 998.0,
+                sigma: 0.0725,
+                gamma: 1.4,
+                mu: 1.0e-3,
+                pv_pa: 2330.0,
+                c_liquid: 1481.0,
+                xi_s: 0.0,
+            },
+            rel_halfwidth: 0.04,
+            noise_floor: 0.0,
+            n_cycles: 2.0,
+            steps_per_cycle: 64,
+            r_obs_m: 5.0e-2,
+            n_fft: 64,
+            transient_fraction: 0.25,
+        }),
+        None
+    );
+}
+
 // ─── ensemble superposition ──────────────────────────────────────────────────
 
 #[test]
@@ -477,6 +1082,53 @@ fn hann_spectrum_rejects_bad_input() {
     assert!(hann_windowed_power_spectrum(&[1.0, 2.0], 1.0, 1)
         .0
         .is_empty());
+}
+
+#[test]
+fn pcd_band_signals_detect_subharmonic_ratio() {
+    let dt = 1.0e-7_f64;
+    let n = 2048usize;
+    let f0 = 1.0e6;
+    let signal: Vec<f64> = (0..n)
+        .map(|idx| {
+            let t = idx as f64 * dt;
+            (std::f64::consts::TAU * f0 * t).sin()
+                + 0.5 * (std::f64::consts::TAU * 0.5 * f0 * t).sin()
+        })
+        .collect();
+
+    let bands = pcd_band_signals(&signal, dt, f0).unwrap();
+
+    assert!(
+        (0.20..0.30).contains(&bands.stable_signal),
+        "subharmonic/fundamental ratio should track the 0.5-amplitude tone, got {}",
+        bands.stable_signal
+    );
+    assert!(
+        bands.inertial_signal < 1.0e-3,
+        "two-line synthetic signal should not create broadband energy, got {}",
+        bands.inertial_signal
+    );
+}
+
+#[test]
+fn keller_miksis_pcd_controller_trace_has_bounded_pressures() {
+    let trace = keller_miksis_pcd_controller_trace(
+        3.0e-6, 1.0e6, 4, 50.0e3, 3, 64, 1, 0.05, 0.3, 1.05, 0.80, 10.0e3, 500.0e3, 101_325.0,
+        998.0, 0.0725, 1.002e-3, 1.4, 2338.0, 1500.0,
+    )
+    .unwrap();
+
+    assert_eq!(trace.pulse_index, vec![1.0, 2.0, 3.0, 4.0]);
+    assert_eq!(trace.pressure_kpa.len(), 4);
+    assert_eq!(trace.stable_signal.len(), 4);
+    assert_eq!(trace.inertial_signal.len(), 4);
+    assert!(trace
+        .pressure_kpa
+        .iter()
+        .all(|&pressure| (10.0..=500.0).contains(&pressure)));
+    assert!(trace.stable_signal.iter().all(|value| value.is_finite()));
+    assert!(trace.inertial_signal.iter().all(|value| value.is_finite()));
 }
 
 // ─── end-to-end: KM-driven emission → bands → dose ───────────────────────────

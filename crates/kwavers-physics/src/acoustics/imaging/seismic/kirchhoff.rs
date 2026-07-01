@@ -86,9 +86,7 @@ impl KirchhoffMigrator {
         let dim = source_tt
             .first()
             .or_else(|| receiver_tt.first())
-            .ok_or_else(|| {
-                KwaversError::InvalidInput("no traveltime tables provided".to_owned())
-            })?
+            .ok_or_else(|| KwaversError::InvalidInput("no traveltime tables provided".to_owned()))?
             .dim();
         for tt in source_tt.iter().chain(receiver_tt.iter()) {
             if tt.dim() != dim {

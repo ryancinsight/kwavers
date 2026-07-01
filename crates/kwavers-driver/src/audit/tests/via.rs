@@ -65,8 +65,7 @@ fn detects_oversized_high_speed_via_diameter() {
 
 #[test]
 fn detects_oversized_blind_and_buried_via_drills() {
-    let spec =
-        GridSpec::cover(Nm::from_mm(20.0), Nm::from_mm(20.0), Nm::from_mm(0.5), 4).unwrap();
+    let spec = GridSpec::cover(Nm::from_mm(20.0), Nm::from_mm(20.0), Nm::from_mm(0.5), 4).unwrap();
     let mut b = Board::new(spec);
     let sig = b.add_net("SIG_BLIND_BURIED_DRILL", NetClassKind::Signal);
 
@@ -114,8 +113,7 @@ fn detects_oversized_blind_and_buried_via_drills() {
 fn detects_high_speed_via_stub() {
     use crate::board::{Via, ViaKind};
 
-    let spec =
-        GridSpec::cover(Nm::from_mm(20.0), Nm::from_mm(20.0), Nm::from_mm(0.5), 4).unwrap();
+    let spec = GridSpec::cover(Nm::from_mm(20.0), Nm::from_mm(20.0), Nm::from_mm(0.5), 4).unwrap();
     let mut dirty = Board::new(spec);
     let tx = dirty.add_net("TX_STUBBED_VIA", NetClassKind::Signal);
     let p = Point::new(Nm::from_mm(8.0), Nm::from_mm(8.0));

@@ -22,7 +22,7 @@
   "response": {
     "peak_response_150_kpa": 0.0,
     "peak_response_300_kpa": 0.0,
-    "peak_response_500_kpa": 0.08961058092247894
+    "peak_response_500_kpa": 0.048790203922048206
   },
   "thermal": {
     "default_cem43_min": 0.00012911429943490878,

@@ -1,16 +1,19 @@
 use std::collections::BTreeMap;
 
-use crate::board::{Board, LayerId, NetClassKind};
-use crate::geom::Point;
-use crate::rules::DesignRules;
 use crate::audit::net_util::{
     diff_pair_interface_group, diff_pair_members, diff_pair_prefix, track_midpoint,
 };
+use crate::board::{Board, LayerId, NetClassKind};
+use crate::geom::Point;
+use crate::rules::DesignRules;
 
 use super::{diff_pair_axis, PairAxis};
 
-pub(crate) fn detect_diff_pair_interface_mismatch_violations(board: &Board) -> (usize, usize, Vec<Point>) {
-    let mut groups: BTreeMap<String, Vec<(std::collections::BTreeSet<LayerId>, usize)>> = BTreeMap::new();
+pub(crate) fn detect_diff_pair_interface_mismatch_violations(
+    board: &Board,
+) -> (usize, usize, Vec<Point>) {
+    let mut groups: BTreeMap<String, Vec<(std::collections::BTreeSet<LayerId>, usize)>> =
+        BTreeMap::new();
     let mut group_points: BTreeMap<String, Vec<Point>> = BTreeMap::new();
     for (p_net, n_net) in diff_pair_members(board) {
         let name = &board.nets[p_net.0 as usize].name;

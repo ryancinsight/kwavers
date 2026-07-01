@@ -527,9 +527,7 @@ fn directional_tv_test_model(dims: (usize, usize, usize)) -> Array3<f64> {
 /// - Panics on any assertion failure.
 #[test]
 fn test_directional_tv_gradient_is_zero_for_constant_field() {
-    use super::super::gradient::{
-        directional_tv_gradient, AXIS_TV_DIRECTIONS, FDTV_DIRECTIONS,
-    };
+    use super::super::gradient::{directional_tv_gradient, AXIS_TV_DIRECTIONS, FDTV_DIRECTIONS};
 
     let model = Array3::from_elem((6, 5, 4), 1537.0_f64);
     for dirs in [&AXIS_TV_DIRECTIONS[..], &FDTV_DIRECTIONS[..]] {
@@ -596,9 +594,7 @@ fn test_directional_tv_gradient_matches_finite_difference_of_functional() {
 /// - Panics on any assertion failure.
 #[test]
 fn test_fdtv_functional_exceeds_axis_only_for_diagonal_structure() {
-    use super::super::gradient::{
-        directional_tv_functional, AXIS_TV_DIRECTIONS, FDTV_DIRECTIONS,
-    };
+    use super::super::gradient::{directional_tv_functional, AXIS_TV_DIRECTIONS, FDTV_DIRECTIONS};
 
     // A ramp along the (1,1,0) face diagonal: m = i + j. The (1,1,0) difference
     // is 2 per step while (1,−1,0) is 0, so the diagonal directions carry real
@@ -647,11 +643,17 @@ fn test_adaptive_dtv_scale_tracks_relative_change() {
     // Monotone: a larger relative change yields a larger (or equal) scale.
     let lo = adaptive_dtv_scale(0.05, 1.0, min);
     let hi = adaptive_dtv_scale(0.5, 1.0, min);
-    assert!(hi > lo, "scale must increase with relative change: {lo} !< {hi}");
+    assert!(
+        hi > lo,
+        "scale must increase with relative change: {lo} !< {hi}"
+    );
 
     // Result is always within the documented bounds.
     for &(rel, max) in &[(0.0, 1.0), (3.0, 1.0), (0.7, 0.9), (1e-9, 2.0)] {
         let v = adaptive_dtv_scale(rel, max, min);
-        assert!((min..=1.0).contains(&v), "scale {v} out of [{min}, 1] for rel={rel}, max={max}");
+        assert!(
+            (min..=1.0).contains(&v),
+            "scale {v} out of [{min}, 1] for rel={rel}, max={max}"
+        );
     }
 }

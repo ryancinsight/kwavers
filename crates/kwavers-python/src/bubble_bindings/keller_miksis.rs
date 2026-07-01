@@ -112,3 +112,52 @@ pub fn solve_keller_miksis(
         Array1::from(rdot).into_pyarray(py).into(),
     ))
 }
+
+/// Integrate the Keller–Herring equation using the same Rust-backed conservative
+/// kernel as `solve_keller_miksis`.
+///
+/// Parameters, validation, and return shape are intentionally identical to
+/// `solve_keller_miksis`; KH is currently represented as a typed contract variant
+/// around the same adaptive kernel until a dedicated KH correction is added.
+#[pyfunction]
+#[pyo3(signature = (
+    r0_m, rdot0_m_s, p_inf_pa, p_ac_pa, frequency_hz,
+    t_end_s, n_steps, rho, sigma, gamma, mu, pv_pa, c_l,
+    xi_s = 0.0,
+))]
+#[allow(clippy::too_many_arguments)]
+pub fn solve_keller_herring(
+    py: Python<'_>,
+    r0_m: f64,
+    rdot0_m_s: f64,
+    p_inf_pa: f64,
+    p_ac_pa: f64,
+    frequency_hz: f64,
+    t_end_s: f64,
+    n_steps: usize,
+    rho: f64,
+    sigma: f64,
+    gamma: f64,
+    mu: f64,
+    pv_pa: f64,
+    c_l: f64,
+    xi_s: f64,
+) -> PyResult<(Py<PyArray1<f64>>, Py<PyArray1<f64>>, Py<PyArray1<f64>>)> {
+    solve_keller_miksis(
+        py,
+        r0_m,
+        rdot0_m_s,
+        p_inf_pa,
+        p_ac_pa,
+        frequency_hz,
+        t_end_s,
+        n_steps,
+        rho,
+        sigma,
+        gamma,
+        mu,
+        pv_pa,
+        c_l,
+        xi_s,
+    )
+}

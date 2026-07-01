@@ -4955,6 +4955,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "kwavers-driver"
+version = "0.3.13"
+dependencies = [
+ "kwavers-transducer",
+ "thiserror 1.0.69",
+]
+
+[[package]]
 name = "kwavers-field"
 version = "3.0.0"
 dependencies = [

@@ -10,6 +10,7 @@ from pathlib import Path
 import pytest
 
 from conftest import requires_kwave
+from parity_test_utils import assert_decodable_nonblank_png, report_metric_value
 
 
 skip_kwave = os.getenv("KWAVERS_SKIP_KWAVE", "0") == "1"
@@ -30,6 +31,64 @@ def _load_module(module_name: str, file_name: str):
     return module
 
 
+def _assert_waveform_summary_contract(summary, thresholds):
+    assert summary["pearson_r_min"] >= thresholds["pearson_r"]
+    assert summary["rms_ratio_min"] >= thresholds["rms_ratio_min"]
+    assert summary["rms_ratio_max"] <= thresholds["rms_ratio_max"]
+    assert summary["psnr_db_min"] >= thresholds["psnr_db"]
+    assert summary["max_abs_diff_max"] <= thresholds["max_abs_diff"]
+
+
+def _assert_waveform_metrics_contract(metrics, thresholds):
+    assert metrics["pearson_r"] >= thresholds["pearson_r"]
+    assert thresholds["rms_ratio_min"] <= metrics["rms_ratio"]
+    assert metrics["rms_ratio"] <= thresholds["rms_ratio_max"]
+    assert metrics["psnr_db"] >= thresholds["psnr_db"]
+    assert metrics["max_abs_diff"] <= thresholds["max_abs_diff"]
+
+
+def _assert_hdf5_summary_contract(summary, thresholds):
+    assert summary["status"] == "PASS"
+    assert summary["dataset_max_abs_diff_max"] == thresholds["hdf5_dataset_max_abs_diff_max"]
+    assert summary["root_attr_mismatch_count"] == thresholds["hdf5_root_attr_mismatch_count"]
+
+
+def _assert_report_contract(module, text: str):
+    thresholds = module.PARITY_THRESHOLDS
+
+    assert "parity_status   : PASS" in text
+    assert report_metric_value(text, "pearson_r_min") >= thresholds["pearson_r"]
+    assert report_metric_value(text, "rms_ratio_min") >= thresholds["rms_ratio_min"]
+    assert report_metric_value(text, "rms_ratio_max") <= thresholds["rms_ratio_max"]
+    assert report_metric_value(text, "psnr_db_min") >= thresholds["psnr_db"]
+    assert report_metric_value(text, "max_abs_diff") <= thresholds["max_abs_diff"]
+
+    for config_name, *_ in module.CONFIGS:
+        section = f"config: {config_name}"
+        assert report_metric_value(text, "pearson_r", section) >= thresholds["pearson_r"]
+        rms_ratio = report_metric_value(text, "rms_ratio", section)
+        assert thresholds["rms_ratio_min"] <= rms_ratio
+        assert rms_ratio <= thresholds["rms_ratio_max"]
+        assert report_metric_value(text, "psnr_db", section) >= thresholds["psnr_db"]
+        assert report_metric_value(text, "max_abs_diff", section) <= thresholds["max_abs_diff"]
+        assert report_metric_value(text, "hdf5_max_abs_diff", section) == thresholds[
+            "hdf5_dataset_max_abs_diff_max"
+        ]
+        assert f"  hdf5_status = PASS" in text
+
+
+@requires_kwave
+@pytest.mark.skipif(skip_kwave, reason="KWAVERS_SKIP_KWAVE=1")
+def test_current_na_controlling_the_pml_artifacts_match_thresholds():
+    module = _load_module("na_controlling_the_pml_compare", "na_controlling_the_pml_compare.py")
+
+    assert module.METRICS_PATH.exists()
+    assert module.FIGURE_PATH.exists()
+    text = module.METRICS_PATH.read_text(encoding="utf-8")
+    _assert_report_contract(module, text)
+    assert_decodable_nonblank_png(module.FIGURE_PATH)
+
+
 @requires_kwave
 @pytest.mark.skipif(skip_kwave, reason="KWAVERS_SKIP_KWAVE=1")
 @pytest.mark.skipif(not run_slow, reason=slow_reason)
@@ -43,24 +102,16 @@ class TestKWaveExampleNaControllingThePmlParity:
         assert result["status"] == "PASS"
         assert result["waveform"]["status"] == "PASS"
         assert result["hdf5"]["status"] == "PASS"
-        assert result["summary"]["pearson_r_min"] > 0.95
-        assert result["summary"]["rms_ratio_min"] > 0.85
-        assert result["summary"]["rms_ratio_max"] < 1.15
-        assert result["summary"]["psnr_db_min"] > 20.0
-        assert result["summary"]["max_abs_diff_max"] < 1.0
-        assert result["hdf5_summary"]["status"] == "PASS"
-        assert result["hdf5_summary"]["dataset_max_abs_diff_max"] == 0.0
-        assert result["hdf5_summary"]["root_attr_mismatch_count"] == 0
+        thresholds = module.PARITY_THRESHOLDS
+        _assert_waveform_summary_contract(result["summary"], thresholds)
+        _assert_hdf5_summary_contract(result["hdf5_summary"], thresholds)
 
         for config_name, case in result["cases"].items():
             metrics = case["metrics"]
             hdf5_metrics = case["hdf5"]
-            assert metrics["pearson_r"] > 0.95, config_name
-            assert 0.85 <= metrics["rms_ratio"] <= 1.15, config_name
-            assert metrics["psnr_db"] > 20.0, config_name
-            assert metrics["max_abs_diff"] < 1.0, config_name
+            _assert_waveform_metrics_contract(metrics, thresholds)
             assert hdf5_metrics["status"] == "PASS", config_name
-            assert hdf5_metrics["max_abs_diff"] == 0.0, config_name
+            assert hdf5_metrics["max_abs_diff"] == thresholds["hdf5_dataset_max_abs_diff_max"], config_name
             assert hdf5_metrics["missing_datasets"] == [], config_name
             assert hdf5_metrics["extra_datasets"] == [], config_name
             assert hdf5_metrics["root_attr_mismatches"] == {}, config_name

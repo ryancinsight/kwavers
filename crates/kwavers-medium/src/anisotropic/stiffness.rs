@@ -137,11 +137,7 @@ impl AnisotropicStiffnessTensor {
     /// (quasi-longitudinal first).
     /// # Errors
     /// - Returns [`Err`] if `density ≤ 0`.
-    pub fn phase_velocities(
-        &self,
-        direction: &[f64; 3],
-        density: f64,
-    ) -> KwaversResult<[f64; 3]> {
+    pub fn phase_velocities(&self, direction: &[f64; 3], density: f64) -> KwaversResult<[f64; 3]> {
         super::christoffel::ChristoffelEquation::create(self.clone(), density)
             .phase_velocities(direction)
     }

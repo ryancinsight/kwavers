@@ -83,6 +83,67 @@ fn bioheat_approaches_steady_state() {
 }
 
 #[test]
+fn pennes_profile_matches_dirichlet_boundaries() {
+    let l = 0.04_f64;
+    let temp = pennes_steady_state_temperature_profile(
+        &[0.0, l],
+        l,
+        0.5,
+        0.005,
+        DENSITY_BLOOD,
+        SPECIFIC_HEAT_BLOOD,
+        BODY_TEMPERATURE_C,
+        5.0e4,
+    );
+
+    assert!((temp[0] - BODY_TEMPERATURE_C).abs() < 1.0e-12);
+    assert!((temp[1] - BODY_TEMPERATURE_C).abs() < 1.0e-12);
+}
+
+#[test]
+fn pennes_profile_is_symmetric_and_heated_at_center() {
+    let l = 0.04_f64;
+    let x_left = 0.25 * l;
+    let x_center = 0.5 * l;
+    let x_right = 0.75 * l;
+    let temp = pennes_steady_state_temperature_profile(
+        &[x_left, x_center, x_right],
+        l,
+        0.5,
+        0.005,
+        DENSITY_BLOOD,
+        SPECIFIC_HEAT_BLOOD,
+        BODY_TEMPERATURE_C,
+        5.0e4,
+    );
+
+    assert!((temp[0] - temp[2]).abs() < 1.0e-12);
+    assert!(temp[1] > temp[0]);
+    assert!(temp[1] > BODY_TEMPERATURE_C);
+}
+
+#[test]
+fn pennes_profile_zero_perfusion_matches_conduction_limit() {
+    let l = 0.04_f64;
+    let k = 0.5_f64;
+    let q = 5.0e4_f64;
+    let x = 0.5 * l;
+    let temp = pennes_steady_state_temperature_profile(
+        &[x],
+        l,
+        k,
+        0.0,
+        DENSITY_BLOOD,
+        SPECIFIC_HEAT_BLOOD,
+        BODY_TEMPERATURE_C,
+        q,
+    );
+    let expected = BODY_TEMPERATURE_C + q * x * (l - x) / (2.0 * k);
+
+    assert!((temp[0] - expected).abs() < 1.0e-12);
+}
+
+#[test]
 fn beer_lambert_intensity_at_zero_is_surface() {
     let i = acoustic_intensity_depth_profile(&[0.0], 7.0, 1.0);
     assert!((i[0] - 1.0).abs() < 1e-12);
@@ -208,6 +269,31 @@ fn acoustic_intensity_quadratic_in_pressure() {
 }
 
 #[test]
+fn acoustic_pressure_from_intensity_inverts_intensity_formula() {
+    let rho = 1060.0_f64;
+    let c = 1540.0_f64;
+    let pressure = [0.0_f64, 1.0e6, 2.0e6];
+    let intensity = acoustic_intensity_from_amplitude(&pressure, rho, c);
+    let roundtrip = acoustic_pressure_amplitude_from_intensity(&intensity, rho, c)
+        .expect("invariant: finite non-negative intensities and valid medium");
+
+    for (actual, expected) in roundtrip.iter().zip(pressure) {
+        assert!(
+            (actual - expected).abs() <= 1.0e-9,
+            "pressure roundtrip {actual} != {expected}"
+        );
+    }
+}
+
+#[test]
+fn acoustic_pressure_from_intensity_rejects_invalid_inputs() {
+    assert!(acoustic_pressure_amplitude_from_intensity(&[-1.0], 1060.0, 1540.0).is_err());
+    assert!(acoustic_pressure_amplitude_from_intensity(&[f64::NAN], 1060.0, 1540.0).is_err());
+    assert!(acoustic_pressure_amplitude_from_intensity(&[1.0], 0.0, 1540.0).is_err());
+    assert!(acoustic_pressure_amplitude_from_intensity(&[1.0], 1060.0, f64::INFINITY).is_err());
+}
+
+#[test]
 fn acoustic_intensity_heat_source_identity() {
     // Q = α·p²/(ρc) = 2α·I: acoustic_heat_source_density = 2α · acoustic_intensity_from_amplitude
     let p = 2.5e5_f64;
@@ -223,6 +309,25 @@ fn acoustic_intensity_heat_source_identity() {
     );
 }
 
+#[test]
+fn adiabatic_temperature_rise_matches_first_law() {
+    // ΔT = Q·τ/(ρ·c_p), the no-perfusion Pennes limit.
+    let q = [1.0e6_f64, 2.0e6_f64];
+    let tau = [0.5_f64, 0.25_f64];
+    let rho = 1060.0_f64;
+    let cp = 3600.0_f64;
+    let expected = [q[0] * tau[0] / (rho * cp), q[1] * tau[1] / (rho * cp)];
+    let actual = adiabatic_temperature_rise_kelvin(&q, &tau, rho, cp);
+
+    assert_eq!(actual.len(), expected.len());
+    for (actual, expected) in actual.iter().zip(expected) {
+        assert!(
+            (actual - expected).abs() / expected <= 1.0e-12,
+            "actual={actual} expected={expected}"
+        );
+    }
+}
+
 // 3 T proton Larmor frequency [Hz] and a typical PRFS echo time [s].
 const LARMOR_3T_HZ: f64 = 127.7e6;
 const PRFS_TE_S: f64 = 15.0e-3;
@@ -233,7 +338,10 @@ fn prfs_round_trip_recovers_temperature() {
     let dt = 10.0_f64;
     let phase = prfs_phase_shift(dt, LARMOR_3T_HZ, PRFS_COEFFICIENT_PER_C, PRFS_TE_S);
     let recovered = prfs_temperature_change(phase, LARMOR_3T_HZ, PRFS_COEFFICIENT_PER_C, PRFS_TE_S);
-    assert!((recovered - dt).abs() < 1e-9, "recovered {recovered} != {dt}");
+    assert!(
+        (recovered - dt).abs() < 1e-9,
+        "recovered {recovered} != {dt}"
+    );
 }
 
 #[test]
@@ -257,5 +365,8 @@ fn prfs_temperature_change_handles_degenerate_inputs() {
         prfs_temperature_change(1.0, LARMOR_3T_HZ, PRFS_COEFFICIENT_PER_C, 0.0),
         0.0
     );
-    assert_eq!(prfs_temperature_change(1.0, LARMOR_3T_HZ, 0.0, PRFS_TE_S), 0.0);
+    assert_eq!(
+        prfs_temperature_change(1.0, LARMOR_3T_HZ, 0.0, PRFS_TE_S),
+        0.0
+    );
 }

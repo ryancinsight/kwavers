@@ -13,6 +13,7 @@ use crate::phase_modulation::phase_shifting::core::{
 };
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::constants::SOUND_SPEED_WATER;
+pub use kwavers_math::signal::ApodizationType;
 
 /// Dynamic focusing controller
 #[derive(Debug)]
@@ -219,5 +220,3 @@ mod tests {
         assert!(format!("{multi_error}").contains("1"));
     }
 }
-
-pub use kwavers_math::signal::ApodizationType;

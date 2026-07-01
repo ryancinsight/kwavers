@@ -159,11 +159,8 @@ mod tests {
     /// `ln α(ln ω)` across the band — the derivative is correct.
     #[test]
     fn local_exponent_matches_numerical_slope() {
-        let r = RelaxationAbsorption::new(
-            vec![1.0e-7, 3.0e-7, 1.0e-6],
-            vec![2.0e6, 1.0e6, 5.0e5],
-        )
-        .unwrap();
+        let r = RelaxationAbsorption::new(vec![1.0e-7, 3.0e-7, 1.0e-6], vec![2.0e6, 1.0e6, 5.0e5])
+            .unwrap();
         let c0 = 1540.0;
         for &f in &[1.0e5, 5.0e5, 1.0e6, 5.0e6] {
             let omega = std::f64::consts::TAU * f;

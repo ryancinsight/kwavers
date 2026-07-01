@@ -40,6 +40,36 @@ from transcranial_planning.transducer import (  # noqa: E402
 )
 
 
+def test_transcranial_planning_requires_pykwavers_for_domain_physics():
+    simulation_source = (BOOK_DIR / "transcranial_planning" / "simulation.py").read_text(encoding="utf-8")
+    transducer_source = (BOOK_DIR / "transcranial_planning" / "transducer.py").read_text(encoding="utf-8")
+    combined = simulation_source + "\n" + transducer_source
+
+    for token in (
+        "except ImportError",
+        "_HAS_PYKWAVERS",
+        "np.vectorize(kw.mechanical_index)",
+        "frequency_mhz = frequency_hz / 1.0e6",
+        "np.power(dose, hill_n)",
+        "1500.0 + (0.50 * hu",
+        "1000.0 + 0.96 * hu",
+        "distance_transform_edt",
+        "np.meshgrid(*grid_axes",
+        "subspot_dose",
+        "index_to_physical_index_grid",
+    ):
+        assert token not in combined
+    for token in (
+        "kw.mechanical_index_field",
+        "kw.mechanical_index_cavitation_risk",
+        "kw.gbm_subspot_raster_py",
+        "kw.bbb_opening_from_subspots_py",
+        "kw.hu_to_sound_speed_schneider",
+        "kw.hu_to_density_schneider",
+    ):
+        assert token in combined
+
+
 def test_transcranial_focused_bowl_geometry_has_1024_elements_on_hemisphere_radius():
     config = TransducerConfig()
     positions = fibonacci_hemisphere(config)

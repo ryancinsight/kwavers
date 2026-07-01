@@ -31,11 +31,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-try:
-    import pykwavers as kw
-    _PYKWAVERS = True
-except ImportError:
-    _PYKWAVERS = False
+import pykwavers as kw
 
 REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
 OUT_DIR = os.path.join(REPO_ROOT, "docs", "book", "figures", "ch17")
@@ -63,8 +59,6 @@ def fig01_svd_spectrum() -> None:
     (Rust core). Their rapid decay → ill-conditioning. Physics is in the Rust
     core; only the sweep over grid size N and plotting are in Python.
     """
-    if not _PYKWAVERS:
-        raise ImportError("pykwavers is required for fig01 (Helmholtz SVD spectrum)")
     N_arr = [32, 64, 128]
     k = 10.0  # wavenumber
 
@@ -96,24 +90,17 @@ def fig02_lcurve() -> None:
     (‖Ax_λ−y‖ vs ‖x_λ‖ over a λ sweep) is computed by kw.tikhonov_lcurve, and the
     maximum-curvature corner (§18.7, Hansen 1992) by kw.l_curve_corner — both in
     the Rust core. Only the synthetic A, x_true, y fixture and plotting are in
-    Python; no inversion or corner-finding is reimplemented here.
+    Python; the measurement perturbation is deterministic so the book artifact
+    does not depend on Python RNG state.
     """
-    if not _PYKWAVERS:
-        raise ImportError("pykwavers is required for fig02 (Tikhonov L-curve)")
     N = 64
     t = np.linspace(0, 1, N)
 
-    # Synthetic ill-posed fixture: Gaussian convolution matrix + two-bump signal.
-    sigma = 0.05
-    A = np.exp(-0.5 * ((t[:, None] - t[None, :]) ** 2) / sigma**2) / (
-        sigma * np.sqrt(2 * np.pi)
-    )
-    A /= N
-    x_true = np.exp(-0.5 * ((t - 0.3) ** 2) / 0.01) + 0.7 * np.exp(
-        -0.5 * ((t - 0.7) ** 2) / 0.01
-    )
-    rng = np.random.default_rng(42)
-    y = A @ x_true + 0.01 * rng.standard_normal(N)
+    # Rust-owned synthetic ill-posed fixture: Gaussian convolution matrix,
+    # two-bump signal, and deterministic sinusoidal measurement perturbation.
+    A, x_true, y = kw.gaussian_deconvolution_fixture(N, 0.05, 0.01)
+    A = np.asarray(A)
+    y = np.asarray(y)
 
     # Rust SSOT: the L-curve and its corner.
     lambdas = np.ascontiguousarray(np.logspace(-6, 2, 100))
@@ -158,10 +145,6 @@ def fig03_pinn_loss() -> None:
     """
     epochs = np.arange(1, 10001)
 
-    # Convergence model: exponential decay with additive noise floor
-    def convergence(L0, tau, floor, eps):
-        return L0 * np.exp(-eps / tau) + floor
-
     configs = [
         (r"$\lambda_r=1$ (balanced)", 0.5, 2000, 1e-4, "#1f77b4"),
         (r"$\lambda_r=10$ (physics-heavy)", 0.5, 1000, 5e-5, "#ff7f0e"),
@@ -170,7 +153,7 @@ def fig03_pinn_loss() -> None:
 
     fig, ax = plt.subplots(figsize=(7, 4.5))
     for lbl, L0, tau, floor, col in configs:
-        L = convergence(L0, tau, floor, epochs)
+        L = np.asarray(kw.exponential_convergence_curve(epochs, L0, tau, floor))
         ax.semilogy(epochs, L, color=col, label=lbl)
 
     ax.set_xlabel("Training epoch")
@@ -217,7 +200,7 @@ def _run_fwi_pair() -> "tuple[dict, dict, np.ndarray]":
     Run Born and CBS FWI on the shared phantom and return their InversionResult
     dicts plus the true sound speed volume.
 
-    Requires pykwavers.  Callers must check ``_PYKWAVERS`` before calling.
+    All forward and inverse simulation work is delegated to pykwavers/Rust.
     """
     array = kw.MultiRowRingArray(_FWI_RING_ELEMENTS, 1, _FWI_RING_RADIUS_M, 0.0)
     array = kw.snap_breast_fwi_array_to_grid(
@@ -279,10 +262,6 @@ def fig04_convergence_comparison() -> None:
 
     Data source: kwavers pykwavers CBS FWI (``invert_breast_fwi``).
     """
-    if not _PYKWAVERS:
-        print("  [skip] fig04 requires pykwavers — install and rebuild")
-        return
-
     print("  running CBS FWI for fig04/fig05 (Born + spectral CBS)...")
     born_result, cbs_result, _ = _run_fwi_pair()
 
@@ -340,10 +319,6 @@ def fig05_sound_speed_reconstruction() -> None:
 
     Data source: kwavers pykwavers CBS FWI (``invert_breast_fwi``).
     """
-    if not _PYKWAVERS:
-        print("  [skip] fig05 requires pykwavers — install and rebuild")
-        return
-
     born_result, cbs_result, truth = _run_fwi_pair()
 
     cy = _FWI_NY // 2
@@ -384,41 +359,6 @@ def fig05_sound_speed_reconstruction() -> None:
     plt.close(fig)
 
 
-def _fast_sweep_eikonal(slowness, d, source, iters=6):
-    """2-D Fast Sweeping Method eikonal solver. Mirrors the Rust SSOT
-    (kwavers_physics::...::seismic::EikonalSolver)."""
-    n0, n1 = slowness.shape
-    FAR = 1e30
-    t = np.full((n0, n1), FAR)
-    si, sj = source
-    t[si, sj] = 0.0
-    s0 = slowness[si, sj]
-    for di in (-1, 0, 1):
-        for dj in (-1, 0, 1):
-            i, j = si + di, sj + dj
-            if 0 <= i < n0 and 0 <= j < n1:
-                t[i, j] = min(t[i, j], s0 * np.hypot(di * d, dj * d))
-
-    def update(i, j):
-        a = min(t[i - 1, j] if i > 0 else FAR, t[i + 1, j] if i + 1 < n0 else FAR)
-        b = min(t[i, j - 1] if j > 0 else FAR, t[i, j + 1] if j + 1 < n1 else FAR)
-        f = slowness[i, j] * d
-        lo, hi = (a, b) if a <= b else (b, a)
-        if hi == FAR or hi - lo >= f:
-            cand = lo + f
-        else:
-            cand = 0.5 * (lo + hi + np.sqrt(2 * f * f - (hi - lo) ** 2))
-        return min(t[i, j], cand)
-
-    for _ in range(iters):
-        for oi in (range(n0), range(n0 - 1, -1, -1)):
-            for oj in (range(n1), range(n1 - 1, -1, -1)):
-                for i in oi:
-                    for j in oj:
-                        t[i, j] = update(i, j)
-    return t
-
-
 def fig06_eikonal_kirchhoff() -> None:
     """Eikonal traveltimes through a low-velocity lens and Kirchhoff migration."""
     n = 81
@@ -429,9 +369,17 @@ def fig06_eikonal_kirchhoff() -> None:
     yy, xx = np.mgrid[0:n, 0:n]
     lens = (xx - n // 2) ** 2 + (yy - n // 2) ** 2 < 12 ** 2
     speed[lens] = 1000.0
-    slowness = 1.0 / speed
 
-    t_src = _fast_sweep_eikonal(slowness, d, (n // 2, 0))
+    t_src = np.asarray(
+        kw.eikonal_traveltime_2d(
+            np.ascontiguousarray(speed, dtype=np.float64),
+            d,
+            n // 2,
+            0,
+            6,
+        ),
+        dtype=np.float64,
+    )
 
     fig, axes = plt.subplots(1, 2, figsize=(12, 5))
     ax = axes[0]
@@ -448,37 +396,31 @@ def fig06_eikonal_kirchhoff() -> None:
     # Physical millimetre cells so the two-way traveltimes fall inside the window.
     m = 41
     d_b = 1e-3  # 1 mm cells
-    slow_h = np.full((m, m), 1.0 / c0)
     aperture = [(0, k) for k in range(0, m, 4)]  # sources/receivers along z=0 row
-    tt = [_fast_sweep_eikonal(slow_h, d_b, src) for src in aperture]
     scatterers = [(22, 14), (28, 28)]
     dt = 2e-7
     nt = 700
-
-    def ricker(t0, n_t, dt_, f0=5.0e5):
-        tt_ = (np.arange(n_t) * dt_) - t0
-        a = (np.pi * f0 * tt_) ** 2
-        return (1 - 2 * a) * np.exp(-a)
-
-    traces = []
-    for s in range(len(aperture)):
-        for r in range(len(aperture)):
-            samples = np.zeros(nt)
-            for (zi, xi) in scatterers:
-                tw = tt[s][zi, xi] + tt[r][zi, xi]
-                samples += ricker(tw, nt, dt)
-            traces.append((s, r, samples))
-    image = np.zeros((m, m))
-    for (s, r, samples) in traces:
-        tw = tt[s] + tt[r]
-        idx = tw / dt
-        i0 = np.floor(idx).astype(int)
-        frac = idx - i0
-        valid = (i0 >= 0) & (i0 + 1 < nt)
-        contrib = np.zeros((m, m))
-        ii = np.clip(i0, 0, nt - 2)
-        contrib = samples[ii] * (1 - frac) + samples[ii + 1] * frac
-        image += np.where(valid, contrib, 0.0)
+    aperture_rows = np.ascontiguousarray([row for row, _ in aperture], dtype=np.int64)
+    aperture_cols = np.ascontiguousarray([col for _, col in aperture], dtype=np.int64)
+    scatterer_rows = np.ascontiguousarray([row for row, _ in scatterers], dtype=np.int64)
+    scatterer_cols = np.ascontiguousarray([col for _, col in scatterers], dtype=np.int64)
+    image = np.asarray(
+        kw.kirchhoff_point_scatterer_image_2d(
+            m,
+            m,
+            d_b,
+            c0,
+            aperture_rows,
+            aperture_cols,
+            scatterer_rows,
+            scatterer_cols,
+            dt,
+            nt,
+            5.0e5,
+            6,
+        ),
+        dtype=np.float64,
+    )
     ax = axes[1]
     env = np.abs(image)
     ax.imshow(env / env.max(), cmap="hot", origin="upper")

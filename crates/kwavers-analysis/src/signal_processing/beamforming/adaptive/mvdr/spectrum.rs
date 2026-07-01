@@ -3,7 +3,7 @@ use kwavers_math::linear_algebra::ComplexLinearAlgebra;
 use ndarray::{Array1, Array2};
 use num_complex::Complex64;
 
-use super::MinimumVariance;
+use super::{validate_real_positive_denominator, MinimumVariance};
 
 impl MinimumVariance {
     /// Compute MVDR pseudospectrum: `P_MVDR(a) = 1 / (a^H R^{-1} a)`.
@@ -42,14 +42,8 @@ impl MinimumVariance {
             .map(|(a, y_i)| a.conj() * y_i)
             .sum();
 
-        let denom_re = denom.re;
-        if !denom_re.is_finite() || denom_re <= 0.0 {
-            return Err(KwaversError::Numerical(
-                kwavers_core::error::NumericalError::InvalidOperation(
-                    "MVDR pseudospectrum: invalid denominator".to_owned(),
-                ),
-            ));
-        }
+        let denom_re =
+            validate_real_positive_denominator(denom, steering.len(), "MVDR pseudospectrum")?;
 
         Ok(1.0 / denom_re)
     }

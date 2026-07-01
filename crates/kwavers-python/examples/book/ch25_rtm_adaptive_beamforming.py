@@ -300,10 +300,7 @@ def fig11_standing_wave_spectrum(fdtd_by_freq: dict) -> None:
         axial = I[:, FOCUS_Y]   # slice at focal y (shape NX)
         # Crop to water coupling region (SOURCE_X to SKULL_X_START)
         lo, hi = SOURCE_X + 2, SKULL_X_START - 2
-        axial_crop = axial[lo:hi] - axial[lo:hi].mean()
-        win = np.hanning(len(axial_crop))
-        S = np.abs(np.fft.rfft(axial_crop * win))**2
-        kx = np.fft.rfftfreq(len(axial_crop), d=DX_M)  # cycles/m
+        kx, S = pykwavers.demeaned_hann_power_spectrum_1d(axial[lo:hi], DX_M)
         k_sw = pykwavers.standing_wave_spatial_frequency_cycles_m(freq, C_WATER)
         ax.semilogy(kx, S + 1e-12, color=col, lw=1.4)
         ax.axvline(k_sw, color="k", ls="--", lw=1.0,

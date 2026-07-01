@@ -82,6 +82,7 @@ pub enum NonlinearEquation {
 pub enum BubbleModel {
     RayleighPlesset,
     KellerMiksis,
+    KellerHerring,
     Gilmore,
 }
 

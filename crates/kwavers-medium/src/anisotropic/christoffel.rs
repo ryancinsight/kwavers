@@ -130,7 +130,14 @@ impl ChristoffelEquation {
         use nalgebra::{Matrix3, SymmetricEigen};
         let g = self.christoffel_matrix(direction);
         let m = Matrix3::new(
-            g[[0, 0]], g[[0, 1]], g[[0, 2]], g[[1, 0]], g[[1, 1]], g[[1, 2]], g[[2, 0]], g[[2, 1]],
+            g[[0, 0]],
+            g[[0, 1]],
+            g[[0, 2]],
+            g[[1, 0]],
+            g[[1, 1]],
+            g[[1, 2]],
+            g[[2, 0]],
+            g[[2, 1]],
             g[[2, 2]],
         );
         let eig = SymmetricEigen::new(m);
@@ -222,14 +229,21 @@ impl ChristoffelEquation {
     /// [`phase_velocities`]: Self::phase_velocities
     pub fn group_velocities(&self, direction: &[f64; 3]) -> KwaversResult<[[f64; 3]; 3]> {
         let norm = direction[2]
-            .mul_add(direction[2], direction[0].mul_add(direction[0], direction[1] * direction[1]))
+            .mul_add(
+                direction[2],
+                direction[0].mul_add(direction[0], direction[1] * direction[1]),
+            )
             .sqrt();
         if self.density <= 0.0 || norm <= 0.0 {
             return Err(kwavers_core::error::KwaversError::InvalidInput(
                 "group_velocities: positive density and non-zero direction required".to_owned(),
             ));
         }
-        let n = [direction[0] / norm, direction[1] / norm, direction[2] / norm];
+        let n = [
+            direction[0] / norm,
+            direction[1] / norm,
+            direction[2] / norm,
+        ];
         let (vals, vecs) = self.sorted_eigen(&n);
 
         let mut out = [[0.0_f64; 3]; 3];
@@ -346,14 +360,10 @@ mod tests {
         let c_p = ((lambda + 2.0 * mu) / rho).sqrt();
         let c_s = (mu / rho).sqrt();
         // Try several propagation directions, including off-axis.
-        let dirs = [
-            [1.0, 0.0, 0.0],
-            [0.0, 0.0, 1.0],
-            {
-                let s = 1.0 / 3.0_f64.sqrt();
-                [s, s, s]
-            },
-        ];
+        let dirs = [[1.0, 0.0, 0.0], [0.0, 0.0, 1.0], {
+            let s = 1.0 / 3.0_f64.sqrt();
+            [s, s, s]
+        }];
         for d in &dirs {
             let v = solver.phase_velocities(d).unwrap();
             assert!((v[0] - c_p).abs() < 1e-3 * c_p, "qP {} vs {c_p}", v[0]);
@@ -368,8 +378,9 @@ mod tests {
     /// isotropic) tensor.
     #[test]
     fn phase_velocity_eigenvalues_match_christoffel_trace() {
-        let c = AnisotropicStiffnessTensor::transversely_isotropic(10.0e9, 8.0e9, 4.0e9, 12.0e9, 3.0e9)
-            .expect("valid TI tensor");
+        let c =
+            AnisotropicStiffnessTensor::transversely_isotropic(10.0e9, 8.0e9, 4.0e9, 12.0e9, 3.0e9)
+                .expect("valid TI tensor");
         let rho = 1500.0;
         let solver = ChristoffelEquation::create(c, rho);
         let dir = {
@@ -393,10 +404,8 @@ mod tests {
     #[test]
     fn isotropic_group_velocity_equals_phase_velocity_along_n() {
         let (lambda, mu, rho) = (5.0e9, 2.0e9, 2000.0);
-        let solver = ChristoffelEquation::create(
-            AnisotropicStiffnessTensor::isotropic(lambda, mu),
-            rho,
-        );
+        let solver =
+            ChristoffelEquation::create(AnisotropicStiffnessTensor::isotropic(lambda, mu), rho);
         let c_p = ((lambda + 2.0 * mu) / rho).sqrt();
         let c_s = (mu / rho).sqrt();
 
@@ -428,12 +437,16 @@ mod tests {
     /// velocity is still axial.
     #[test]
     fn anisotropic_group_velocity_is_finite_and_axial_on_symmetry_axis() {
-        let c = AnisotropicStiffnessTensor::transversely_isotropic(10.0e9, 8.0e9, 4.0e9, 12.0e9, 3.0e9)
-            .expect("valid TI");
+        let c =
+            AnisotropicStiffnessTensor::transversely_isotropic(10.0e9, 8.0e9, 4.0e9, 12.0e9, 3.0e9)
+                .expect("valid TI");
         let solver = ChristoffelEquation::create(c, 1500.0);
         // Along z (symmetry axis): qP energy velocity is purely axial.
         let vg = solver.group_velocities(&[0.0, 0.0, 1.0]).unwrap();
-        assert!(vg[0][0].abs() < 1e-6 && vg[0][1].abs() < 1e-6, "qP V_g axial on z");
+        assert!(
+            vg[0][0].abs() < 1e-6 && vg[0][1].abs() < 1e-6,
+            "qP V_g axial on z"
+        );
         assert!(vg[0][2] > 0.0, "qP energy travels +z");
         // All components finite.
         for m in 0..3 {
@@ -449,13 +462,14 @@ mod tests {
     #[test]
     fn max_phase_velocity_isotropic_and_ti() {
         let (lambda, mu, rho) = (5.0e9, 2.0e9, 2000.0);
-        let iso = ChristoffelEquation::create(
-            AnisotropicStiffnessTensor::isotropic(lambda, mu),
-            rho,
-        );
+        let iso =
+            ChristoffelEquation::create(AnisotropicStiffnessTensor::isotropic(lambda, mu), rho);
         let c_p = ((lambda + 2.0 * mu) / rho).sqrt();
         let vmax = iso.max_phase_velocity().unwrap();
-        assert!((vmax - c_p).abs() < 1e-6 * c_p, "isotropic v_max {vmax} vs c_P {c_p}");
+        assert!(
+            (vmax - c_p).abs() < 1e-6 * c_p,
+            "isotropic v_max {vmax} vs c_P {c_p}"
+        );
 
         let ti = ChristoffelEquation::create(
             AnisotropicStiffnessTensor::transversely_isotropic(10.0e9, 8.0e9, 4.0e9, 12.0e9, 3.0e9)
@@ -464,7 +478,10 @@ mod tests {
         );
         let vmax_ti = ti.max_phase_velocity().unwrap();
         let on_axis_qp = ti.phase_velocities(&[0.0, 0.0, 1.0]).unwrap()[0];
-        assert!(vmax_ti >= on_axis_qp - 1e-6, "TI v_max {vmax_ti} ≥ on-axis qP {on_axis_qp}");
+        assert!(
+            vmax_ti >= on_axis_qp - 1e-6,
+            "TI v_max {vmax_ti} ≥ on-axis qP {on_axis_qp}"
+        );
         assert!(vmax_ti.is_finite() && vmax_ti > 0.0);
     }
 

@@ -20,7 +20,7 @@ fig05  Transcranial attenuation and phase aberration effect on PAM SNR
 fig06  Stable/inertial discrimination: cavitation dose accumulation
 
 Output directory: docs/book/figures/ch23/
-Requires: numpy, matplotlib, scipy
+Requires: numpy, matplotlib
 
 References
 ----------
@@ -69,55 +69,15 @@ PITCH = 3.0e-4       # m    element pitch (0.3 mm)
 SKULL_ALPHA = 6.0    # dB/(cm·MHz^1.2)  skull attenuation coefficient
 SKULL_THICK = 0.7e-2 # m    calvaria thickness
 
-RNG = np.random.default_rng(seed=0)
-
 
 # ── Figure 01: Cavitation emission spectra ────────────────────────────────────
 print("[fig01] Cavitation emission spectra (stable vs inertial)")
 
-def _cavitation_spectrum(
-    f: np.ndarray, f0: float, kind: str, snr_db: float = 30.0
-) -> np.ndarray:
-    """
-    Analytical power-spectral model for cavitation emission (Coviello 2015 §II-A).
-
-    Stable cavitation (SC): energy concentrated at harmonics of f₀ and the
-    sub-harmonic f₀/2; inter-harmonic noise floor is low.
-
-    Inertial cavitation (IC): broadband emission floor elevated by ~20 dB
-    relative to SC; harmonic peaks still present but broadened.
-
-    Model:
-        S_sc(f) = Σₙ A_n · Lorentz(f; n·f₀, Δf_n)  +  A_sub · Lorentz(f; f₀/2, Δf_sub)
-        S_ic(f) = S_sc(f)  +  S_bb(f)
-        S_bb(f) = B / (1 + (f/f_c)^4)   (Butterworth broadband envelope)
-    """
-    snr_lin = 10.0 ** (snr_db / 10.0)
-    harmonics = np.arange(1, 6)
-    amplitudes = 1.0 / harmonics**1.5  # decreasing harmonic envelope
-    delta_f = 0.02 * f0  # linewidth ~ 2 % of f0 for stable SC
-
-    def lorentz(f: np.ndarray, fc: float, bw: float) -> np.ndarray:
-        return (bw / 2.0) ** 2 / ((f - fc) ** 2 + (bw / 2.0) ** 2)
-
-    spec = np.zeros_like(f)
-    for n, A in zip(harmonics, amplitudes):
-        spec += A * lorentz(f, n * f0, delta_f)
-    # sub-harmonic
-    spec += 0.4 * lorentz(f, 0.5 * f0, 0.5 * delta_f)
-
-    if kind == "ic":
-        f_c = 3.0 * f0
-        broadband = 0.15 / (1.0 + (f / f_c) ** 4)
-        spec += broadband
-
-    noise_floor = np.max(spec) / snr_lin
-    spec += noise_floor
-    return 10.0 * np.log10(spec / np.max(spec))
-
 f_vec = np.linspace(0.1e6, 5.5e6, 4000)
-sc_db = _cavitation_spectrum(f_vec, F0, "sc")
-ic_db = _cavitation_spectrum(f_vec, F0, "ic")
+sc_psd = np.asarray(kw.normalized_cavitation_emission_spectrum(f_vec, F0, "stable"))
+ic_psd = np.asarray(kw.normalized_cavitation_emission_spectrum(f_vec, F0, "inertial"))
+sc_db = 10.0 * np.log10(np.maximum(sc_psd, np.finfo(float).tiny))
+ic_db = 10.0 * np.log10(np.maximum(ic_psd, np.finfo(float).tiny))
 
 fig, ax = plt.subplots(figsize=(8, 4))
 ax.plot(f_vec / 1e6, sc_db, color="#2166ac", label="Stable cavitation (SC)", lw=1.5)
@@ -141,22 +101,24 @@ plt.close(fig)
 print("[fig02] Passive DAS localization map (kw.passive_acoustic_map_das)")
 
 # Synthetic passive RF only: a single cavitation point source at (0, 40 mm)
-# radiates a short 3-cycle pulse; sensor i records it delayed by r_i/c with 1/r
-# spreading. The delay-and-sum localization map is then computed by the kwavers
-# PAM kernel (§22.3) — no beamforming physics is reimplemented in Python.
+# radiates a short 3-cycle pulse. Rust computes receive delays, Gaussian
+# emission envelope, carrier phase, and 1/r spreading; the delay-and-sum
+# localization map is then computed by the kwavers PAM kernel (§22.3).
 el_x = (np.arange(N_EL) - (N_EL - 1) / 2.0) * PITCH
 sensor_xyz = np.column_stack([el_x, np.zeros(N_EL), np.zeros(N_EL)])
 src = np.array([0.0, 0.0, 40e-3])
 
 N_SAMP = 1800
-t_axis = np.arange(N_SAMP) / FS
 N_CYCLES = 3.0
-passive = np.zeros((N_EL, N_SAMP))
-for i in range(N_EL):
-    r_i = float(np.linalg.norm(sensor_xyz[i] - src))
-    tau = r_i / C0
-    env = np.exp(-0.5 * ((t_axis - tau) * F0 / (N_CYCLES / 2.0)) ** 2)
-    passive[i] = env * np.sin(2.0 * np.pi * F0 * (t_axis - tau)) / max(r_i, 1e-6)
+passive = np.asarray(kw.passive_cavitation_point_source_rf(
+    np.ascontiguousarray(sensor_xyz),
+    np.ascontiguousarray(src),
+    N_SAMP,
+    FS,
+    C0,
+    F0,
+    N_CYCLES,
+))
 
 x_range = np.linspace(-15e-3, 15e-3, 100)
 z_range = np.linspace(10e-3, 70e-3, 120)
@@ -192,32 +154,17 @@ plt.close(fig)
 # ── Figure 03: Spatial coherence and van Cittert–Zernike theorem ──────────────
 print("[fig03] Spatial coherence function (van Cittert–Zernike)")
 
-def _vcz_coherence(delta_x: np.ndarray, z: float, L_src: float) -> np.ndarray:
-    """
-    Van Cittert–Zernike (VCZ) theorem for an incoherent planar source of
-    lateral extent L_src at depth z (far-field / paraxial regime):
-
-        μ(Δx) = sinc(L_src Δx / (λ z))     where sinc(u) = sin(πu)/(πu)
-
-    Physical interpretation: the coherence length Δx_c = λ z / L_src sets the
-    minimum aperture element spacing for independent measurements.
-    Reference: Goodman (2015) Speckle Phenomena §5.2.
-    """
-    lam = C0 / F0
-    u = L_src * delta_x / (lam * z)
-    return np.sinc(u)  # numpy sinc is normalised: sinc(u) = sin(πu)/(πu)
-
 delta_x = np.linspace(0, 20e-3, 400)
 depths = [20e-3, 40e-3, 70e-3]
 src_size = 1e-3  # 1 mm incoherent source region (cavitation cloud)
+lam = C0 / F0
 
 fig, ax = plt.subplots(figsize=(7, 4))
 colors = ["#2166ac", "#4dac26", "#d6604d"]
 for z, col in zip(depths, colors):
-    mu = _vcz_coherence(delta_x, z, src_size)
+    mu = np.asarray(kw.van_cittert_zernike_coherence(delta_x, src_size, z, lam))
     ax.plot(delta_x * 1e3, np.abs(mu), color=col, label=f"z = {z*1e3:.0f} mm")
     # Mark coherence length (first zero)
-    lam = C0 / F0
     xc = lam * z / src_size
     ax.axvline(xc * 1e3, color=col, lw=0.8, ls="--", alpha=0.6)
 
@@ -236,51 +183,23 @@ plt.close(fig)
 # ── Figure 04: Eigenspace beamformer singular-value structure ─────────────────
 print("[fig04] Eigenspace PAM: singular-value decomposition")
 
-def _build_csd_matrix(
-    n_el: int, n_src: int, n_snap: int, signal_power: float, noise_power: float
-) -> np.ndarray:
-    """
-    Simulate a cross-spectral density (CSD) matrix for PAM (Arnal 2017 §III).
-
-    Model: K incoherent point sources, each with a steering vector a_k ∈ ℂ^N.
-    CSD matrix:  R = Σ_k σ_k² a_k a_k^H  +  σ_n² I
-    Noise is circular complex Gaussian, spatially white.
-
-    Computed as sample CSD from n_snap simulated snapshots.
-    """
-    el_pos = (np.arange(n_el) - (n_el - 1) / 2.0) * PITCH
-    src_x = RNG.uniform(-5e-3, 5e-3, n_src)
-    src_z = RNG.uniform(40e-3, 60e-3, n_src)
-
-    # Steering vectors
-    A = np.zeros((n_el, n_src), dtype=complex)
-    for k in range(n_src):
-        r = np.sqrt((el_pos - src_x[k]) ** 2 + src_z[k] ** 2)
-        A[:, k] = np.exp(1j * 2.0 * np.pi * F0 * r / C0) / np.sqrt(n_el)
-
-    # Data matrix X = A s + n  (n_snap snapshots)
-    s = RNG.standard_normal((n_src, n_snap)) + 1j * RNG.standard_normal((n_src, n_snap))
-    s *= np.sqrt(signal_power / 2.0)
-    noise = RNG.standard_normal((n_el, n_snap)) + 1j * RNG.standard_normal((n_el, n_snap))
-    noise *= np.sqrt(noise_power / 2.0)
-    X = A @ s + noise
-
-    R = (X @ X.conj().T) / n_snap
-    return R
-
-R = _build_csd_matrix(n_el=N_EL, n_src=5, n_snap=256, signal_power=10.0, noise_power=1.0)
-# Signal/noise eigenvalue split from the Rust core (§22.4). For the Hermitian PSD
-# CSD matrix the eigenvalues equal the singular values; the synthetic R is the
-# only Python-side fixture.
-sv = np.asarray(kw.hermitian_eigenvalues_complex(
-    np.ascontiguousarray(R.real), np.ascontiguousarray(R.imag)))
+N_SRC = 5
+# Rust computes Theorem 22.2's deterministic signal/noise eigenvalue split.
+# For a Hermitian PSD CSD matrix the eigenvalues equal the singular values.
+sv = np.asarray(kw.eigenspace_covariance_eigenvalues(N_EL, N_SRC, 10.0, 1.0))
 
 fig, ax = plt.subplots(figsize=(7, 4))
 ax.semilogy(np.arange(1, len(sv) + 1), sv, "o-", color="#2166ac",
             markersize=3, lw=1.2, label="Singular values of R")
-ax.axhline(sv[5], color="#d6604d", lw=1.0, ls="--", label="Signal/noise boundary (rank 5)")
-ax.axvspan(1, 5.5, alpha=0.08, color="#4dac26", label="Signal subspace (5 sources)")
-ax.axvspan(5.5, N_EL, alpha=0.05, color="#d6604d", label="Noise subspace")
+ax.axhline(
+    sv[N_SRC], color="#d6604d", lw=1.0, ls="--",
+    label=f"Signal/noise boundary (rank {N_SRC})",
+)
+ax.axvspan(
+    1, N_SRC + 0.5, alpha=0.08, color="#4dac26",
+    label=f"Signal subspace ({N_SRC} sources)",
+)
+ax.axvspan(N_SRC + 0.5, N_EL, alpha=0.05, color="#d6604d", label="Noise subspace")
 ax.set_xlabel("Singular value index")
 ax.set_ylabel("Singular value (log scale)")
 ax.set_xlim(1, N_EL)
@@ -342,55 +261,11 @@ plt.close(fig)
 # ── Figure 06: Cavitation dose accumulation — stable vs inertial ──────────────
 print("[fig06] Cavitation dose accumulation (stable vs inertial)")
 
-def _cavitation_dose(
-    t_s: np.ndarray, prf: float, tau_p: float, kind: str
-) -> np.ndarray:
-    """
-    Cumulative cavitation dose models (Gyöngy & Coussios 2010 §III):
-
-    Stable cavitation (SC) dose  D_sc:
-        Increments at each pulse by the inertial cavitation dose-equivalent
-        computed from sub-harmonic emission amplitude.
-        Here modelled as a linearly accumulating quantity (coherent emissions
-        reinforce; no catastrophic collapse events).
-        D_sc(t) ∝  Σ_{pulse k} A_sc(k)  ≈ constant rate (steady-state cavitation).
-
-    Inertial cavitation (IC) dose  D_ic:
-        Stochastic events (individual bubble collapses); amplitude distribution
-        follows a heavy tail.  Modelled as a Poisson process with rate λ_ic;
-        each event contributes a random collapse energy drawn from an
-        exponential distribution.
-        D_ic(t) is a compound Poisson process; mean grows linearly but
-        fluctuations are large.
-    """
-    pulse_times = np.arange(0.0, t_s[-1], 1.0 / prf)
-    dose = np.zeros_like(t_s)
-
-    if kind == "sc":
-        # Deterministic linear accumulation (sustained coherent oscillation)
-        rate = 1.0  # normalised dose per pulse
-        for tp in pulse_times:
-            dose[t_s >= tp] += rate * tau_p * prf
-        dose /= dose[-1] if dose[-1] > 0 else 1.0
-    else:
-        # Compound Poisson: stochastic collapse events
-        lambda_ic = 0.3 * prf  # mean IC events per second
-        for tp in pulse_times:
-            n_events = RNG.poisson(lambda_ic / prf)
-            if n_events > 0:
-                energies = RNG.exponential(scale=1.0, size=n_events)
-                mask = t_s >= tp
-                dose[mask] += energies.sum()
-        if dose[-1] > 0:
-            dose /= dose[-1]
-
-    return dose
-
 t = np.linspace(0.0, 10.0, 2000)  # 10-second treatment window
-d_sc = _cavitation_dose(t, prf=1.0, tau_p=100e-3, kind="sc")
-# Run IC twice to show stochastic spread
-d_ic1 = _cavitation_dose(t, prf=1.0, tau_p=100e-3, kind="ic")
-d_ic2 = _cavitation_dose(t, prf=1.0, tau_p=100e-3, kind="ic")
+dose_trace = kw.passive_cavitation_dose_fixture(t, 1.0, 100e-3, seed=0)
+d_sc = np.asarray(dose_trace["stable_dose"])
+d_ic1 = np.asarray(dose_trace["inertial_trial1_dose"])
+d_ic2 = np.asarray(dose_trace["inertial_trial2_dose"])
 
 fig, ax = plt.subplots(figsize=(8, 4))
 ax.plot(t, d_sc, color="#2166ac", lw=1.8, label="Stable cavitation dose (deterministic)")

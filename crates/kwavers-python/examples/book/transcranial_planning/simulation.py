@@ -6,8 +6,8 @@ bioheat PDE) execute in Rust via ``pykwavers``.  This module contains only:
 1. Python dataclasses that carry the Rust outputs.
 2. Thin marshalling wrappers that convert triplet/transducer objects to Rust
    call arguments and package the returned dicts as typed dataclasses.
-3. Analytical / planning functions that have no Rust equivalent (acceptable in
-   Python): ``acoustic_observables``, ``gbm_subspot_plan``,
+3. Thin planning adapters around Rust/PyO3 kernels:
+   ``acoustic_observables``, ``gbm_subspot_plan``,
    ``bbb_opening_from_subspots``.
 
 No NumPy wave simulation loops, no finite-difference PDE steppers, and no
@@ -19,14 +19,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import numpy as np
-from scipy.ndimage import distance_transform_edt
 
-try:
-    import pykwavers as kw
-    _HAS_PYKWAVERS = True
-except ImportError:
-    kw = None
-    _HAS_PYKWAVERS = False
+import pykwavers as kw
 
 from .transducer import PhaseCorrection, TransducerConfig, index_to_point
 
@@ -229,13 +223,15 @@ def acoustic_observables(
     not available.
     """
     intensity = pressure_pa.astype(np.float64) ** 2 / (2.0 * density_kg_m3 * sound_speed_m_s)
-    if _HAS_PYKWAVERS:
-        # MI = p_neg[MPa] / sqrt(f[MHz]) via kw.mechanical_index(p_pa, f_hz).
-        mi = np.vectorize(kw.mechanical_index)(pressure_pa.astype(np.float64), frequency_hz)
-    else:
-        frequency_mhz = frequency_hz / 1.0e6
-        mi = pressure_pa.astype(np.float64) / 1.0e6 / np.sqrt(frequency_mhz)
-    cavitation = 1.0 / (1.0 + np.exp(-(mi - inertial_mi_threshold) / 0.10))
+    pressure_flat = np.ascontiguousarray(pressure_pa, dtype=np.float64).ravel()
+    mi = np.asarray(kw.mechanical_index_field(pressure_flat, frequency_hz)).reshape(pressure_pa.shape)
+    cavitation = np.asarray(
+        kw.mechanical_index_cavitation_risk(
+            np.ascontiguousarray(mi.ravel(), dtype=np.float64),
+            inertial_mi_threshold,
+            10.0,
+        )
+    ).reshape(pressure_pa.shape)
     return AcousticResult(
         pressure_pa.astype(np.float32),
         intensity.astype(np.float32),
@@ -249,37 +245,16 @@ def gbm_subspot_plan(
     spacing_m: tuple[float, float, float],
     pitch_m: float = 3.0e-3,
 ) -> SubspotPlan:
-    """Compute a raster grid of sonication subspots inside the tumour mask.
-
-    Geometric planning only — no wave physics.
-    """
+    """Compute a Rust-owned raster grid of sonication subspots inside a tumour."""
     if not np.any(tumor_mask):
         raise ValueError("tumor mask is empty")
-    stride = np.maximum(np.rint(pitch_m / np.asarray(spacing_m)).astype(int), 1)
-    coords = np.argwhere(tumor_mask)
-    lo = coords.min(axis=0)
-    hi = coords.max(axis=0) + 1
-    grid_axes = [np.arange(lo[axis], hi[axis], stride[axis]) for axis in range(3)]
-    candidates = np.array(np.meshgrid(*grid_axes, indexing="ij")).reshape(3, -1).T
-    inside = candidates[tumor_mask[candidates[:, 0], candidates[:, 1], candidates[:, 2]]]
-    centroid = np.rint(coords.mean(axis=0)).astype(int)
-    if inside.size == 0:
-        inside = centroid[None, :]
-    else:
-        inside = np.unique(np.vstack([inside, centroid]), axis=0)
-
-    dist_vox = distance_transform_edt(~tumor_mask, sampling=spacing_m)
-    covered = np.zeros_like(tumor_mask, dtype=bool)
-    radius_m = 0.5 * pitch_m
-    for idx in inside:
-        axes_m = index_to_physical_index_grid(tumor_mask.shape, spacing_m, tuple(idx))
-        d2 = axes_m[0] * axes_m[0] + axes_m[1] * axes_m[1] + axes_m[2] * axes_m[2]
-        covered |= d2 <= radius_m * radius_m
-    tumor_count = int(np.count_nonzero(tumor_mask))
-    covered_fraction = float(np.count_nonzero(covered & tumor_mask) / max(tumor_count, 1))
-    finite_guard = float(np.max(dist_vox[tumor_mask]))
-    if not np.isfinite(finite_guard):
-        raise ValueError("tumor distance transform is non-finite")
+    result = kw.gbm_subspot_raster_py(
+        np.ascontiguousarray(tumor_mask, dtype=bool),
+        spacing_m,
+        pitch_m,
+    )
+    inside = np.asarray(result["indices"], dtype=int)
+    covered_fraction = float(result["covered_fraction"])
     return SubspotPlan(inside.astype(int), covered_fraction, pitch_m)
 
 
@@ -294,17 +269,7 @@ def bbb_opening_from_subspots(
     d50: float = 0.40,
     hill_n: float = 2.5,
 ) -> BbbOpeningResult:
-    """Compute BBB-opening dose from planned tumour subspots.
-
-    Dose follows the Chapter 24 convention:
-
-        D = MI^2 * t_on
-
-    with Gaussian focal weighting around each subspot.  The stable operating
-    window is the BBB-opening interval 0.20 <= MI <= 0.55 used in Chapter 24.
-
-    Semi-empirical Hill model — no wave physics.
-    """
+    """Compute Rust-owned BBB-opening dose from planned tumour subspots."""
     if not np.any(tumor_mask):
         raise ValueError("tumor mask is empty")
     if plan.indices.ndim != 2 or plan.indices.shape[1] != 3:
@@ -314,47 +279,21 @@ def bbb_opening_from_subspots(
     if not 0.0 < duty_cycle <= 1.0:
         raise ValueError("duty cycle must be in (0, 1]")
 
-    on_time_s = sonication_s * duty_cycle
-    subspot_dose = mechanical_index * mechanical_index * on_time_s
-    dose = np.zeros(tumor_mask.shape, dtype=np.float64)
-    radius2 = focal_radius_m * focal_radius_m
-    for center in plan.indices:
-        axes_m = index_to_physical_index_grid(tumor_mask.shape, spacing_m, tuple(center))
-        d2 = axes_m[0] * axes_m[0] + axes_m[1] * axes_m[1] + axes_m[2] * axes_m[2]
-        dose += subspot_dose * np.exp(-0.5 * d2 / radius2)
-
-    # P(D) = D^n/(D50^n+D^n) via kw.bbb_permeability_hill (McDannold 2008)
-    if _HAS_PYKWAVERS:
-        permeability = np.asarray(kw.bbb_permeability_hill(dose.ravel(), d50, hill_n)).reshape(dose.shape)
-    else:
-        permeability = np.power(dose, hill_n) / (np.power(d50, hill_n) + np.power(dose, hill_n))
-    stable_low = logistic((mechanical_index - 0.20) / 0.04)
-    stable_high = logistic((0.55 - mechanical_index) / 0.04)
-    stable_probability = permeability * stable_low * stable_high
-    inertial_risk = logistic((mechanical_index - 0.55) / 0.04) * permeability
-    opened = (permeability >= 0.50) & tumor_mask
-    return BbbOpeningResult(
-        dose.astype(np.float32),
-        permeability.astype(np.float32),
-        stable_probability.astype(np.float32),
-        inertial_risk.astype(np.float32),
-        opened,
+    result = kw.bbb_opening_from_subspots_py(
+        np.ascontiguousarray(tumor_mask, dtype=bool),
+        np.ascontiguousarray(plan.indices, dtype=np.uintp),
+        spacing_m,
+        mechanical_index,
+        sonication_s,
+        duty_cycle,
+        focal_radius_m,
+        d50,
+        hill_n,
     )
-
-
-# ── Utility ───────────────────────────────────────────────────────────────────
-
-def logistic(x: float | np.ndarray) -> float | np.ndarray:
-    return 1.0 / (1.0 + np.exp(-x))
-
-
-def index_to_physical_index_grid(
-    shape: tuple[int, int, int],
-    spacing_m: tuple[float, float, float],
-    center: tuple[int, int, int],
-) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    axes = [
-        (np.arange(n, dtype=np.float64) - center[axis]) * spacing_m[axis]
-        for axis, n in enumerate(shape)
-    ]
-    return np.meshgrid(*axes, indexing="ij")
+    return BbbOpeningResult(
+        np.asarray(result["dose"], dtype=np.float32),
+        np.asarray(result["permeability"], dtype=np.float32),
+        np.asarray(result["stable_cavitation_probability"], dtype=np.float32),
+        np.asarray(result["inertial_cavitation_risk"], dtype=np.float32),
+        np.asarray(result["opened_mask"], dtype=bool),
+    )

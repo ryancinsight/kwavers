@@ -87,3 +87,34 @@ pub fn gbm_subspot_raster(
     let arr = Array2::from_shape_fn((m, 3), |(row, col)| candidates[row][col]);
     Ok(arr)
 }
+
+/// Fraction of tumour voxels covered by spherical subspot support.
+///
+/// Uses radius `0.5 * pitch_m`, matching the book Chapter 25 planning
+/// convention for visual GBM subspot coverage.
+#[must_use]
+pub fn gbm_subspot_covered_fraction(
+    tumor_mask: &Array3<bool>,
+    subspot_indices: &Array2<usize>,
+    spacing_m: [f64; 3],
+    pitch_m: f64,
+) -> f64 {
+    let tumor_count = tumor_mask.iter().filter(|&&active| active).count();
+    if tumor_count == 0 {
+        return 0.0;
+    }
+    let radius2 = 0.25 * pitch_m * pitch_m;
+    let covered_count = tumor_mask
+        .indexed_iter()
+        .filter(|&((ix, iy, iz), &active)| {
+            active
+                && subspot_indices.rows().into_iter().any(|spot| {
+                    let dx = (ix as f64 - spot[0] as f64) * spacing_m[0];
+                    let dy = (iy as f64 - spot[1] as f64) * spacing_m[1];
+                    let dz = (iz as f64 - spot[2] as f64) * spacing_m[2];
+                    dx * dx + dy * dy + dz * dz <= radius2
+                })
+        })
+        .count();
+    covered_count as f64 / tumor_count as f64
+}

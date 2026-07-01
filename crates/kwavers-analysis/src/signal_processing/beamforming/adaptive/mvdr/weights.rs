@@ -1,9 +1,9 @@
-use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_core::error::KwaversResult;
 use kwavers_math::linear_algebra::ComplexLinearAlgebra;
 use ndarray::{Array1, Array2};
 use num_complex::Complex64;
 
-use super::MinimumVariance;
+use super::{validate_real_positive_denominator, MinimumVariance};
 
 impl MinimumVariance {
     /// Compute MVDR beamforming weights.
@@ -33,27 +33,7 @@ impl MinimumVariance {
             .map(|(a, y_i)| a.conj() * y_i)
             .sum();
 
-        // For a Hermitian positive-definite R (validated upstream by the
-        // covariance estimator's `is_hermitian` check), aᴴR⁻¹a is provably real,
-        // so `denom.im` is zero up to round-off and `denom.re` carries the full
-        // magnitude — the checks below on `.re` are therefore exhaustive.
-        let denom_re = denom.re;
-        if !denom_re.is_finite() {
-            return Err(KwaversError::Numerical(
-                kwavers_core::error::NumericalError::InvalidOperation(
-                    "MVDR: non-finite denominator a^H R^{-1} a (covariance may be ill-conditioned)"
-                        .to_owned(),
-                ),
-            ));
-        }
-        if denom_re <= 0.0 {
-            return Err(KwaversError::Numerical(
-                kwavers_core::error::NumericalError::InvalidOperation(format!(
-                    "MVDR: non-positive denominator a^H R^{{-1}} a = {} (covariance may not be Hermitian PD)",
-                    denom_re
-                )),
-            ));
-        }
+        let denom_re = validate_real_positive_denominator(denom, steering.len(), "MVDR weights")?;
 
         Ok(y.mapv(|x| x / denom_re))
     }

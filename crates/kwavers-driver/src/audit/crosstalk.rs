@@ -1,11 +1,6 @@
-
-use crate::board::{
-    Board, NetId,
-};
-use crate::geom::{
-    segments_cross, Nm, Point,
-};
 use crate::audit::fault_report::is_hv;
+use crate::board::{Board, NetId};
+use crate::geom::{segments_cross, Nm, Point};
 /// HV↔LV pad pairs closer than `coupling` — EMI aggressor↔victim zones the next placement should pull apart.
 /// Unlike `near_shorts` (any different-net copper), this specifically targets the HV-class-vs-non-HV-class
 /// relationship at the pad level, so it drives the placer to *separate the switching node from sensitive control*

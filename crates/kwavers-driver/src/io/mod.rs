@@ -173,10 +173,10 @@ fn is_uuid_shape(value: &str) -> bool {
         8 | 13 | 18 | 23 => *b == b'-',
         _ => b.is_ascii_hexdigit(),
     })
-}// Facade-level tests live in `src/io/tests.rs` (the single slice-wide test surface).
-// Dropping per-`mod.rs` fixtures eliminates the previously-duplicated coverage
-// (`duplicate_pcb_uuids_reports_only_repeated_values` ↔
-//  `tests.rs::duplicate_pcb_uuids_reports_only_repeated_uuid_values`).
+} // Facade-level tests live in `src/io/tests.rs` (the single slice-wide test surface).
+  // Dropping per-`mod.rs` fixtures eliminates the previously-duplicated coverage
+  // (`duplicate_pcb_uuids_reports_only_repeated_values` ↔
+  //  `tests.rs::duplicate_pcb_uuids_reports_only_repeated_uuid_values`).
 #[cfg(test)]
 mod facade_tests {}
 

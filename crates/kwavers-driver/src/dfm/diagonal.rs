@@ -4,7 +4,6 @@ use crate::board::{Board, Track};
 use crate::geom::Point;
 use crate::rules::DesignRules;
 
-
 /// Replace each acid-trap diagonal segment with a two-leg orthogonal L-shape selected from the offending junction.
 ///
 /// A 45° diagonal meeting an axial segment at a < 90° interior angle traps etchant in the narrow

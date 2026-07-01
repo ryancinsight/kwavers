@@ -52,7 +52,7 @@ strictly convex. $\square$
 
 ![Singular-value spectrum of the forward map](figures/ch17/fig01_svd_spectrum.png)
 
-*Figure 18.1. Singular-value spectrum of the 2-D Helmholtz forward map (§18.1.1): the rapid decay is the ill-conditioning that makes the inverse problem ill-posed and motivates regularization.*
+*Figure 18.1. Singular-value spectrum of the 1-D finite-difference Helmholtz forward map (§18.1.1; Rust `kw.helmholtz_1d_fd_matrix` + `kw.matrix_singular_values`): the rapid decay is the ill-conditioning that makes the inverse problem ill-posed and motivates regularization.*
 
 ---
 
@@ -394,7 +394,7 @@ drivers without re-running the inversion.
 
 ![Tikhonov L-curve](figures/ch17/fig02_lcurve.png)
 
-*Figure 18.3. Tikhonov L-curve for a 1-D deconvolution (§18.7): the corner trades residual norm against solution norm and selects the regularization weight λ.*
+*Figure 18.3. Tikhonov L-curve for a 1-D deconvolution (§18.7; Rust `kw.tikhonov_lcurve` + `kw.l_curve_corner` with deterministic measurement perturbation): the corner trades residual norm against solution norm and selects the regularization weight λ.*
 
 ---
 
@@ -674,10 +674,11 @@ adjoint source is orthogonal to the synthetic trace.
 
 ![Eikonal traveltimes and Kirchhoff migration](figures/ch17/fig06_eikonal_kirchhoff.png)
 
-*Figure 18.6. (a) Fast-sweeping eikonal first-arrival traveltimes through a
-low-velocity lens (isochrones bend toward the slow region). (b) Kirchhoff
-diffraction-stack migration collapses point-scatterer diffractions to foci at the
-true locations (§18.11.1–11.2).*
+*Figure 18.6. (a) Rust `kw.eikonal_traveltime_2d` computes fast-sweeping
+first-arrival traveltimes through a low-velocity lens (isochrones bend toward
+the slow region). (b) Rust `kw.kirchhoff_point_scatterer_image_2d` computes the
+synthetic traces and Kirchhoff diffraction-stack migration that collapses
+point-scatterer diffractions to foci at the true locations (§18.11.1–11.2).*
 
 ---
 

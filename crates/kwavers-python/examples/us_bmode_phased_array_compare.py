@@ -42,7 +42,7 @@ from kwave.utils.filters import gaussian_filter
 from kwave.utils.matlab import matlab_find
 from kwave.utils.mapgen import make_ball
 from kwave.utils.signals import get_win, tone_burst
-from pykwavers.parity_targets import evaluate_parity
+from pykwavers.parity_targets import PARITY_THRESHOLDS as SHARED_PARITY_THRESHOLDS
 
 
 PML_SIZE = Vector([15, 10, 10])
@@ -66,6 +66,15 @@ COMPRESSION_RATIO = 3
 
 FIGURE_PATH = DEFAULT_OUTPUT_DIR / "us_bmode_phased_array_compare.png"
 METRICS_PATH = DEFAULT_OUTPUT_DIR / "us_bmode_phased_array_metrics.txt"
+DEBUG_FACE_TRACE_PATH = DEFAULT_OUTPUT_DIR / "us_bmode_phased_array_transducer_face_trace.png"
+
+PARITY_THRESHOLDS = {
+    **SHARED_PARITY_THRESHOLDS,
+    "quick": {
+        "fundamental": {"pearson_r": 0.999, "rms_ratio_min": 1.0, "rms_ratio_max": 1.01, "psnr_db": 45.0},
+        "harmonic": {"pearson_r": 0.996, "rms_ratio_min": 1.03, "rms_ratio_max": 1.04, "psnr_db": 40.0},
+    },
+}
 
 
 def build_reference_objects(seed: int):
@@ -402,6 +411,19 @@ def summarize_gpu_profile(profile: dict[str, np.ndarray] | None) -> list[str]:
     ]
 
 
+def evaluate_phased_array_parity(metrics: dict[str, float], label: str, n_lines: int, full_scan_lines: int) -> dict:
+    """Evaluate phased-array B-mode metrics against this example's contract."""
+    tier = "quick" if n_lines < full_scan_lines else "full"
+    target = PARITY_THRESHOLDS[tier][label]
+    checks = {
+        "pearson_r": metrics["pearson_r"] > target["pearson_r"],
+        "rms_ratio": target["rms_ratio_min"] < metrics["rms_ratio"] < target["rms_ratio_max"],
+        "psnr_db": metrics["psnr_db"] > target["psnr_db"],
+    }
+    status = "PASS" if all(checks.values()) else "FAIL"
+    return {"tier": tier, "target": target, "checks": checks, "status": status}
+
+
 def post_process(scan_lines, kgrid, medium, not_transducer, steering_angles):
     """Run the same phased-array post-processing used by the k-wave-python example."""
     t0_offset = int(round(len(not_transducer.input_signal.squeeze()) / 2) + (not_transducer.appended_zeros - not_transducer.beamforming_delays_offset))
@@ -473,8 +495,8 @@ def build_report_lines(kwave: dict, pykwavers: dict, steering_angles) -> list[st
     """Build plain-text metrics report."""
     metrics_fund = compute_image_metrics(kwave["bmode_fund"], pykwavers["bmode_fund"])
     metrics_harm = compute_image_metrics(kwave["bmode_harm"], pykwavers["bmode_harm"])
-    eval_fund = evaluate_parity(metrics_fund, "fundamental", len(steering_angles), len(STEERING_ANGLES_FULL))
-    eval_harm = evaluate_parity(metrics_harm, "harmonic", len(steering_angles), len(STEERING_ANGLES_FULL))
+    eval_fund = evaluate_phased_array_parity(metrics_fund, "fundamental", len(steering_angles), len(STEERING_ANGLES_FULL))
+    eval_harm = evaluate_phased_array_parity(metrics_harm, "harmonic", len(steering_angles), len(STEERING_ANGLES_FULL))
     overall = "PASS" if eval_fund["status"] == "PASS" and eval_harm["status"] == "PASS" else "FAIL"
 
     lines = [
@@ -488,6 +510,11 @@ def build_report_lines(kwave: dict, pykwavers: dict, steering_angles) -> list[st
         f"  pearson_r = {metrics_fund['pearson_r']:.6f}",
         f"  rms_ratio = {metrics_fund['rms_ratio']:.6f}",
         f"  psnr_db   = {metrics_fund['psnr_db']:.3f}",
+        (
+            f"  target    = r>{eval_fund['target']['pearson_r']:.3f}, "
+            f"{eval_fund['target']['rms_ratio_min']:.2f}<rms<{eval_fund['target']['rms_ratio_max']:.2f}, "
+            f"psnr>{eval_fund['target']['psnr_db']:.1f} dB"
+        ),
         f"  tier      = {eval_fund['tier']}",
         f"  status    = {eval_fund['status']}",
         "",
@@ -495,6 +522,11 @@ def build_report_lines(kwave: dict, pykwavers: dict, steering_angles) -> list[st
         f"  pearson_r = {metrics_harm['pearson_r']:.6f}",
         f"  rms_ratio = {metrics_harm['rms_ratio']:.6f}",
         f"  psnr_db   = {metrics_harm['psnr_db']:.3f}",
+        (
+            f"  target    = r>{eval_harm['target']['pearson_r']:.3f}, "
+            f"{eval_harm['target']['rms_ratio_min']:.2f}<rms<{eval_harm['target']['rms_ratio_max']:.2f}, "
+            f"psnr>{eval_harm['target']['psnr_db']:.1f} dB"
+        ),
         f"  tier      = {eval_harm['tier']}",
         f"  status    = {eval_harm['status']}",
     ]
@@ -648,7 +680,7 @@ def run_debug_probe(kgrid, medium, transducer, not_transducer, input_signal, arg
     ax.legend(loc="best")
     ax.grid(True, ls=":")
     fig.tight_layout()
-    png_path = DEFAULT_OUTPUT_DIR / "us_bmode_phased_array_transducer_face_trace.png"
+    png_path = DEBUG_FACE_TRACE_PATH
     fig.savefig(png_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
     print(f"[debug_probe] saved: {png_path}")

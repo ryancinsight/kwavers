@@ -71,7 +71,10 @@ fn default_stimulus_profiles_match_manifest() {
             "tile {i} must have a profile"
         );
     }
-    assert!(stim.profile_for(4).is_none(), "out-of-range tile returns None");
+    assert!(
+        stim.profile_for(4).is_none(),
+        "out-of-range tile returns None"
+    );
 }
 
 #[test]
@@ -230,8 +233,16 @@ fn beam_report_all_pass_for_article_class() {
     let b = v2_budget(&m);
     let step = crate::validate::manifest_to_kwavers_beam_step(&m, &b).unwrap();
     let pressure = InCrateAcousticSim.simulate(&step, &b).unwrap();
-    let min_margin = step.resistor_margin_w.iter().copied().fold(f64::INFINITY, f64::min);
-    let min_margin = if min_margin.is_finite() { min_margin } else { 0.0 };
+    let min_margin = step
+        .resistor_margin_w
+        .iter()
+        .copied()
+        .fold(f64::INFINITY, f64::min);
+    let min_margin = if min_margin.is_finite() {
+        min_margin
+    } else {
+        0.0
+    };
     let report = build_beam_report(&pressure, &step, min_margin);
     assert!(
         report.all_pass,
@@ -285,16 +296,18 @@ fn run_experiment_rejects_non_v2_manifest() {
     // A manifest with 48 lanes cannot produce a KwaversBeamStep (requires exactly 96).
     let mut m = v2_manifest();
     m.tx_nets.truncate(48);
-    let b = m
-        .validate_v2_energy_budget(EnergyBudgetInputs {
-            c_load_f: 50.0e-12,
-            r_on_ohm: 15.0,
-            r_series_ohm: 56.0,
-            ampacity_headroom_a: 20.0,
-            damping_footprint: ResistorPackage::Smd2512,
-        });
+    let b = m.validate_v2_energy_budget(EnergyBudgetInputs {
+        c_load_f: 50.0e-12,
+        r_on_ohm: 15.0,
+        r_series_ohm: 56.0,
+        ampacity_headroom_a: 20.0,
+        damping_footprint: ResistorPackage::Smd2512,
+    });
     // The budget validation itself will fail first (wrong lane count).
-    assert!(b.is_err(), "48-lane manifest must fail validate_v2_energy_budget");
+    assert!(
+        b.is_err(),
+        "48-lane manifest must fail validate_v2_energy_budget"
+    );
 }
 
 #[test]
@@ -312,4 +325,84 @@ fn run_experiment_thermal_headroom_tracks_theta_jc() {
         r_low.record.metrics.thermal_headroom_k > r_high.record.metrics.thermal_headroom_k,
         "higher θ_jc must yield less headroom"
     );
+}
+
+#[cfg(feature = "kwavers")]
+#[test]
+fn kwavers_array_design_realizes_manifest_lane_span() {
+    let manifest = v2_manifest();
+    let budget = v2_budget(&manifest);
+    let step = crate::validate::manifest_to_kwavers_beam_step(&manifest, &budget).unwrap();
+    let design = super::acoustic::array_design_from_step(&step).unwrap();
+    assert_eq!(
+        design.n_channels, step.lanes,
+        "kwavers-transducer geometry must realize every routed manifest lane"
+    );
+    assert_eq!(
+        design.nx, 1,
+        "driver stack is modeled as a 1-D linear aperture"
+    );
+    let channels = design.channel_positions([0.0, 0.0, 0.0]);
+    assert_eq!(channels.len(), step.lanes);
+    let y_min = channels.iter().map(|p| p[1]).fold(f64::INFINITY, f64::min);
+    let y_max = channels
+        .iter()
+        .map(|p| p[1])
+        .fold(f64::NEG_INFINITY, f64::max);
+    let realized_center_span_m = y_max - y_min;
+    assert!(
+        (realized_center_span_m - step.aperture_m).abs() < 1.0e-12,
+        "channel centers span the driver manifest aperture: realized={realized_center_span_m:.16e} expected={:.16e}",
+        step.aperture_m
+    );
+    assert!(
+        design.grating_lobe_free,
+        "article-class pitch remains grating-lobe-free"
+    );
+}
+
+#[cfg(feature = "kwavers")]
+#[test]
+fn kwavers_sim_report_uses_realized_geometry_and_tile_current() {
+    use kwavers_transducer::{propagate_focused_linear_array, FocusedLinearArrayPropagationSpec};
+
+    let manifest = v2_manifest();
+    let budget = v2_budget(&manifest);
+    let report =
+        run_experiment(&manifest, &budget, &super::acoustic::KwaversSim, 40.0, 30.0).unwrap();
+    assert!(
+        report.record.all_pass,
+        "kwavers-backed article-class validation must pass all checks: {:#?}",
+        report.record.beam_report
+    );
+    let design = super::acoustic::array_design_from_step(&report.record.step).unwrap();
+    let expected = propagate_focused_linear_array(&FocusedLinearArrayPropagationSpec {
+        design,
+        center_m: [0.0, 0.0, 0.0],
+        focus_m: [0.0, 0.0, report.record.step.focal_m],
+        frequency_hz: report.record.step.frequency_hz,
+        sound_speed_m_s: report.record.step.sound_speed_m_s,
+        per_channel_peak_current_a: budget.peak_i_a / CHANNELS_PER_TILE_V2 as f64,
+        pressure_per_amp_pa: KWVERS_ARTICLE_FOCAL_PRESSURE_PER_AMP_PA,
+        acoustic_impedance_rayl: PHYSICS_WATER_Z0_RAYL,
+    })
+    .unwrap();
+    assert!(
+        (report.record.metrics.focal_pressure_pa - expected.focal_pressure_pa).abs()
+            <= expected.focal_pressure_pa * 1.0e-12,
+        "focal pressure must come from kwavers-transducer focused propagation"
+    );
+    assert!(
+        (report.record.metrics.lateral_extent_mm - expected.lateral_extent_mm).abs()
+            <= expected.lateral_extent_mm * 1.0e-12
+    );
+    assert!(
+        (report.record.metrics.axial_extent_mm - expected.axial_extent_mm).abs()
+            <= expected.axial_extent_mm * 1.0e-12
+    );
+    assert_eq!(
+        report.record.metrics.grating_lobe_free,
+        expected.grating_lobe_free
+    );
+    assert!(report.record.metrics.mechanical_index <= KWVERS_MI_CAVITATION_CEILING);
 }

@@ -166,6 +166,9 @@ mod tests {
         let f = 1.0e6;
         let a_soft = medium.absorption_coefficient(0.0, 0.0, 0.0, &grid, f);
         let a_bone = medium.absorption_coefficient(3.0e-3, 3.0e-3, 3.0e-3, &grid, f);
-        assert!(a_bone > a_soft && a_soft >= 0.0, "soft={a_soft} bone={a_bone}");
+        assert!(
+            a_bone > a_soft && a_soft >= 0.0,
+            "soft={a_soft} bone={a_bone}"
+        );
     }
 }

@@ -30,8 +30,29 @@ _ROOT = bootstrap_example_paths()
 KWAVE_CACHE = DEFAULT_OUTPUT_DIR / "pr_3D_FFT_planar_sensor_kwave_cache.npz"
 PYKWAVERS_CACHE = DEFAULT_OUTPUT_DIR / "pr_3D_FFT_planar_sensor_pykwavers_cache.npz"
 PRESSURE_FIGURE_PATH = DEFAULT_OUTPUT_DIR / "pr_3D_FFT_planar_sensor_pressure_compare.png"
+METRICS_PATH = DEFAULT_OUTPUT_DIR / "pr_3D_FFT_planar_sensor_metrics.txt"
 REFRESH_CACHE = os.getenv("KWAVERS_REFRESH_CACHE", "0") == "1"
 CACHE_VERSION = 2
+
+PARITY_THRESHOLDS = {
+    "summary": {
+        "pearson_r_mean": 0.999,
+        "pearson_r_median": 0.999,
+        "rms_ratio_mean_min": 0.99,
+        "rms_ratio_mean_max": 1.01,
+        "rms_ratio_median_min": 0.99,
+        "rms_ratio_median_max": 1.01,
+        "rmse_median": 1e-3,
+        "max_abs_diff_max": 1e-2,
+        "peak_ratio_median_min": 0.99,
+        "peak_ratio_median_max": 1.01,
+    },
+    "trace": {
+        "pearson_r": 0.999,
+        "peak_ratio_min": 0.99,
+        "peak_ratio_max": 1.01,
+    },
+}
 
 import pykwavers as kw
 
@@ -214,12 +235,6 @@ def run_comparison() -> dict[str, object]:
     if kw_pressure.shape != py_pressure.shape:
         raise AssertionError(f"Sensor matrix shape mismatch: {kw_pressure.shape} != {py_pressure.shape}")
 
-    if kw_pressure.shape[1] > 1 and py_pressure.shape[1] > 1:
-        kw_pressure = kw_pressure[:, 1:]
-        py_pressure = py_pressure[:, :-1]
-        kw_results = {**kw_results, "pressure": kw_pressure, "time": np.asarray(kw_results["time"], dtype=np.float64)[1:]}
-        py_results = {**py_results, "pressure": py_pressure, "time": np.asarray(py_results["time"], dtype=np.float64)[:-1]}
-
     summary = summarize_sensor_matrix_metrics(
         kw_pressure,
         py_pressure,
@@ -240,9 +255,51 @@ def run_comparison() -> dict[str, object]:
     }
 
 
-_R_TARGET = 0.98
-_RMS_MIN = 0.90
-_RMS_MAX = 1.10
+def evaluate_parity_contract(result: dict[str, object]) -> dict[str, bool]:
+    """Evaluate PR 3-D FFT planar-sensor metrics against this example contract."""
+    summary = result["summary"]
+    trace_metrics = result["trace_metrics"]
+    summary_thr = PARITY_THRESHOLDS["summary"]
+    trace_thr = PARITY_THRESHOLDS["trace"]
+
+    checks = {
+        "pearson_r_mean": summary["pearson_r_mean"] > summary_thr["pearson_r_mean"],
+        "pearson_r_median": summary["pearson_r_median"] > summary_thr["pearson_r_median"],
+        "rms_ratio_mean": (
+            summary_thr["rms_ratio_mean_min"]
+            <= summary["rms_ratio_mean"]
+            <= summary_thr["rms_ratio_mean_max"]
+        ),
+        "rms_ratio_median": (
+            summary_thr["rms_ratio_median_min"]
+            <= summary["rms_ratio_median"]
+            <= summary_thr["rms_ratio_median_max"]
+        ),
+        "rmse_median": summary["rmse_median"] < summary_thr["rmse_median"],
+        "max_abs_diff_max": summary["max_abs_diff_max"] < summary_thr["max_abs_diff_max"],
+        "peak_ratio_median": (
+            summary_thr["peak_ratio_median_min"]
+            <= summary["peak_ratio_median"]
+            <= summary_thr["peak_ratio_median_max"]
+        ),
+    }
+    checks.update(
+        {
+            f"trace_{row}_pearson_r": metrics["pearson_r"] > trace_thr["pearson_r"]
+            for row, metrics in trace_metrics.items()
+        }
+    )
+    checks.update(
+        {
+            f"trace_{row}_peak_ratio": (
+                trace_thr["peak_ratio_min"]
+                <= metrics["peak_ratio"]
+                <= trace_thr["peak_ratio_max"]
+            )
+            for row, metrics in trace_metrics.items()
+        }
+    )
+    return checks
 
 
 def main() -> int:
@@ -252,17 +309,20 @@ def main() -> int:
 
     r_mean = float(summary["pearson_r_mean"])
     rms_mean = float(summary["rms_ratio_mean"])
-    checks = {
-        "pearson_r": r_mean >= _R_TARGET,
-        "rms_ratio": _RMS_MIN <= rms_mean <= _RMS_MAX,
-    }
+    checks = evaluate_parity_contract(result)
     overall_status = "PASS" if all(checks.values()) else "FAIL"
+    summary_thr = PARITY_THRESHOLDS["summary"]
+    trace_thr = PARITY_THRESHOLDS["trace"]
 
     print("=" * 80)
     print("k-wave-python pr_3D_FFT_planar_sensor vs pykwavers")
     print("=" * 80)
-    print(f"Mean Pearson r:   {r_mean:.6f}  (target >= {_R_TARGET})")
-    print(f"Mean RMS ratio:   {rms_mean:.6f}  (target [{_RMS_MIN}, {_RMS_MAX}])")
+    print(f"Mean Pearson r:   {r_mean:.6f}  (target > {summary_thr['pearson_r_mean']})")
+    print(
+        f"Mean RMS ratio:   {rms_mean:.6f}  "
+        f"(target [{summary_thr['rms_ratio_mean_min']}, "
+        f"{summary_thr['rms_ratio_mean_max']}])"
+    )
     print(f"Median Pearson r: {summary['pearson_r_median']:.6f}")
     print(f"Median RMS ratio: {summary['rms_ratio_median']:.6f}")
     print(f"Median RMSE:      {summary['rmse_median']:.6e}")
@@ -277,7 +337,6 @@ def main() -> int:
     kw_rt = float(result["kwave"]["runtime"])
     py_rt = float(result["pykwavers"]["runtime"])
     n_sensors = int(summary["n_sensors"])
-    output_path = DEFAULT_OUTPUT_DIR / "pr_3D_FFT_planar_sensor_metrics.txt"
     pressure_figure_path = save_side_by_side_parity_figure(
         result["kwave"]["pressure"],
         result["pykwavers"]["pressure"],
@@ -287,26 +346,37 @@ def main() -> int:
         candidate_label="pykwavers pressure",
         cmap="seismic",
     )
-    with output_path.open("w") as fh:
+    with METRICS_PATH.open("w") as fh:
         fh.write("pr_3D_FFT_planar_sensor parity metrics\n")
         fh.write(f"parity_status: {overall_status}\n\n")
         fh.write(f"kwave_runtime_s: {kw_rt:.3f}\n")
         fh.write(f"pykwavers_runtime_s: {py_rt:.3f}\n\n")
         fh.write(f"Forward sensor matrix ({n_sensors} sensors):\n")
-        fh.write(f"  pearson_r_mean    = {r_mean:.6f}  (target >= {_R_TARGET})\n")
-        fh.write(f"  rms_ratio_mean    = {rms_mean:.6f}  (target [{_RMS_MIN}, {_RMS_MAX}])\n")
+        fh.write(
+            f"  pearson_r_mean    = {r_mean:.6f}  "
+            f"(target > {summary_thr['pearson_r_mean']})\n"
+        )
+        fh.write(
+            f"  rms_ratio_mean    = {rms_mean:.6f}  "
+            f"(target [{summary_thr['rms_ratio_mean_min']}, "
+            f"{summary_thr['rms_ratio_mean_max']}])\n"
+        )
         fh.write(f"  pearson_r_median  = {summary['pearson_r_median']:.6f}\n")
         fh.write(f"  rms_ratio_median  = {summary['rms_ratio_median']:.6f}\n")
         fh.write(f"  rmse_median       = {summary['rmse_median']:.6e}\n")
         fh.write(f"  max_abs_diff      = {summary['max_abs_diff_max']:.6e}\n\n")
+        fh.write(f"  peak_ratio_median = {summary['peak_ratio_median']:.6f}\n\n")
         fh.write("Sensor row traces:\n")
         for row, m in result["trace_metrics"].items():
             fh.write(
                 f"  row={row}: pearson_r={m['pearson_r']:.6f}  "
-                f"rms_ratio={m['rms_ratio']:.6f}  rmse={m['rmse']:.6e}\n"
+                f"rms_ratio={m['rms_ratio']:.6f}  rmse={m['rmse']:.6e}  "
+                f"peak_ratio={m['peak_ratio']:.6f}  "
+                f"(targets r>{trace_thr['pearson_r']}, "
+                f"peak=[{trace_thr['peak_ratio_min']}, {trace_thr['peak_ratio_max']}])\n"
             )
         fh.write(f"\nfigure_pressure: {pressure_figure_path.name}\n")
-    print(f"Metrics written to: {output_path}")
+    print(f"Metrics written to: {METRICS_PATH}")
     print(f"Figure written to: {pressure_figure_path}")
 
     return 0 if overall_status == "PASS" else 1

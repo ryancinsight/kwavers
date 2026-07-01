@@ -35,6 +35,41 @@ pub fn minnaert_resonance_hz(r0_m: f64, gamma: f64, p0_pa: f64, rho: f64) -> f64
     1.0 / (TWO_PI * r0_m) * (3.0 * gamma * p0_pa / rho).sqrt()
 }
 
+/// Equilibrium bubble radius corresponding to a Minnaert resonance frequency.
+///
+/// This is the algebraic inverse of [`minnaert_resonance_hz`]:
+///
+/// ```text
+/// R₀ = 1/(2π·f_M) · √(3γP₀/ρ)   [m]
+/// ```
+///
+/// Returns `0` for non-finite or non-positive inputs.
+///
+/// # Arguments
+/// * `frequency_hz` – resonance frequency [Hz]
+/// * `gamma` – polytropic exponent of the gas (1.4 for air)
+/// * `p0_pa` – ambient pressure [Pa]
+/// * `rho` – liquid density [kg/m³]
+///
+/// # Reference
+/// Minnaert (1933), *Philos. Mag.* 16, 235.
+#[must_use]
+#[inline]
+pub fn minnaert_radius_for_frequency_m(frequency_hz: f64, gamma: f64, p0_pa: f64, rho: f64) -> f64 {
+    if !(frequency_hz.is_finite()
+        && gamma.is_finite()
+        && p0_pa.is_finite()
+        && rho.is_finite()
+        && frequency_hz > 0.0
+        && gamma > 0.0
+        && p0_pa > 0.0
+        && rho > 0.0)
+    {
+        return 0.0;
+    }
+    (3.0 * gamma * p0_pa / rho).sqrt() / (TWO_PI * frequency_hz)
+}
+
 /// Minnaert resonance frequency **with the surface-tension correction**.
 ///
 /// The equilibrium gas pressure is raised by the Young–Laplace pressure

@@ -68,5 +68,9 @@ fn active_dmas_preserves_aligned_coherent_impulse() {
 
     let out = delay_and_sum_dmas(&x, fs, &delays, &weights, DelayReference::SensorIndex(0))
         .expect("dmas");
-    assert!((out[[0, 0, 3]] - 1.0).abs() < 1e-12, "focus DMAS should be 1, got {}", out[[0, 0, 3]]);
+    assert!(
+        (out[[0, 0, 3]] - 1.0).abs() < 1e-12,
+        "focus DMAS should be 1, got {}",
+        out[[0, 0, 3]]
+    );
 }

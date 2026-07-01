@@ -10,18 +10,20 @@ pub mod diagnostics;
 
 pub use congestion::{rasterize_hotspots, rasterize_hotspots_radius, weakness_field};
 pub use diagnostics::{
-    charge_recycling_efficiency_audit, ChargeRecyclingReport, pulse_skip_interference_audit,
+    charge_recycling_efficiency_audit, pulse_skip_interference_audit, ChargeRecyclingReport,
     PulseSkipInterferenceReport,
 };
 
+use crate::audit::detect_power::*;
+use crate::audit::fault_report::FaultReport;
+use crate::audit::{
+    antenna::*, crosstalk::*, detect_diff_pair::*, detect_high_speed::*, detect_track::*, shorts::*,
+};
 use crate::board::Board;
 use crate::geom::{Nm, Point};
 use crate::place::{Component, FootprintDef};
 use crate::rules::DesignRules;
 use crate::verify::{parasitic_ac_coupling_check, schematic_isolation_bfs};
-use crate::audit::fault_report::FaultReport;
-use crate::audit::detect_power::*;
-use crate::audit::{antenna::*, crosstalk::*, detect_diff_pair::*, detect_high_speed::*, detect_track::*, shorts::*};
 
 /// Run the full adversarial manufacturing and physics audit over a routed board.
 #[must_use]

@@ -73,8 +73,8 @@ mod electromagnetic;
 pub mod fluids; // Fluid property catalogs
 pub mod implants;
 pub mod material; // Unified AcousticMaterialProperties (consolidated from physics/materials)
-pub mod optoacoustic; // Laser-driven optoacoustic emitter materials (SOAP/OFUS absorbers)
 mod optical;
+pub mod optoacoustic; // Laser-driven optoacoustic emitter materials (SOAP/OFUS absorbers)
 mod strength;
 pub mod temperature_dependent; // Temperature-dependent material properties
 mod thermal;

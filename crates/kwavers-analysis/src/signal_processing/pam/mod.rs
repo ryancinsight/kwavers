@@ -22,6 +22,7 @@
 
 pub mod config;
 pub mod delay_and_sum;
+mod eigenspace;
 pub mod mapper;
 pub mod processor;
 #[cfg(test)]
@@ -29,6 +30,7 @@ mod tests;
 
 pub use config::{PAMConfig, PamBeamformingConfig};
 pub use delay_and_sum::{DelayAndSumConfig, DelayAndSumPAM, PamCavitationEvent, PamImagingMode};
+pub use eigenspace::{eigenspace_covariance_eigenvalues, EigenspaceSpectrumError};
 pub use mapper::PassiveAcousticMapper;
 pub use processor::PAMProcessor;
 

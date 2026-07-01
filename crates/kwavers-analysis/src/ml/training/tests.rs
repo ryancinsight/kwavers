@@ -21,25 +21,31 @@ fn test_training_config_default() {
 
 #[test]
 fn test_training_config_validation() {
-    let mut config = PhysicsNNTrainingConfig::default();
-    config.num_epochs = 0;
+    let config = PhysicsNNTrainingConfig {
+        num_epochs: 0,
+        ..Default::default()
+    };
     let err = config.validate().unwrap_err();
     assert!(
         format!("{err:?}").contains("num_epochs"),
         "zero num_epochs error must mention 'num_epochs'; got: {err:?}"
     );
 
-    config.num_epochs = 100;
-    config.learning_rate = 0.0;
+    let config = PhysicsNNTrainingConfig {
+        learning_rate: 0.0,
+        ..Default::default()
+    };
     let err = config.validate().unwrap_err();
     assert!(
         format!("{err:?}").contains("learning_rate"),
         "zero learning_rate error must mention 'learning_rate'; got: {err:?}"
     );
 
-    config.learning_rate = 0.001;
-    config.lambda_data = 0.6;
-    config.lambda_physics = 0.3; // sum = 0.9 ≠ 1.0
+    let config = PhysicsNNTrainingConfig {
+        lambda_data: 0.6,
+        lambda_physics: 0.3, // sum = 0.9 != 1.0
+        ..Default::default()
+    };
     let err = config.validate().unwrap_err();
     assert!(
         format!("{err:?}").contains("lambda"),

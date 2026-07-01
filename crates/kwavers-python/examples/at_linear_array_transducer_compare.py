@@ -78,6 +78,28 @@ PYKWAVERS_CACHE = DEFAULT_OUTPUT_DIR / "at_linear_array_transducer_pykwavers_cac
 CACHE_VERSION = 5
 REFRESH_CACHE = os.getenv("KWAVERS_REFRESH_CACHE", "0") == "1"
 
+PARITY_THRESHOLDS = {
+    "source_mask": {
+        "active_cell_ratio": 1.0,
+        "iou": 1.0,
+        "dice": 1.0,
+    },
+    "source_weighted_mask": {
+        "pearson_r": 0.999999999999,
+        "max_abs_diff": 1e-12,
+        "rms_ratio_min": 1.0 - 1e-12,
+        "rms_ratio_max": 1.0 + 1e-12,
+        "peak_ratio": 1.0,
+        "psnr_db": 300.0,
+    },
+    "p_max": {
+        "pearson_r": 0.95,
+        "rms_ratio_min": 0.90,
+        "rms_ratio_max": 1.10,
+        "psnr_db": 25.0,
+    },
+}
+
 
 def _load_cached_result(path: Path) -> dict[str, np.ndarray | float] | None:
     if REFRESH_CACHE or not path.exists():
@@ -317,6 +339,42 @@ def build_report_lines(result: dict[str, object]) -> list[str]:
     return lines
 
 
+def _metrics_pass(metrics: dict[str, object]) -> bool:
+    """Return true when metrics satisfy the script-owned parity contract."""
+    source_mask = metrics["source_mask"]
+    source_mask_thresholds = PARITY_THRESHOLDS["source_mask"]
+    if source_mask["active_cell_ratio"] != source_mask_thresholds["active_cell_ratio"]:
+        return False
+    if source_mask["iou"] != source_mask_thresholds["iou"]:
+        return False
+    if source_mask["dice"] != source_mask_thresholds["dice"]:
+        return False
+
+    source_weighted = metrics["source_weighted_mask"]
+    source_weighted_thresholds = PARITY_THRESHOLDS["source_weighted_mask"]
+    if source_weighted["pearson_r"] < source_weighted_thresholds["pearson_r"]:
+        return False
+    if source_weighted["max_abs_diff"] >= source_weighted_thresholds["max_abs_diff"]:
+        return False
+    if source_weighted["rms_ratio"] < source_weighted_thresholds["rms_ratio_min"]:
+        return False
+    if source_weighted["rms_ratio"] > source_weighted_thresholds["rms_ratio_max"]:
+        return False
+    if source_weighted["peak_ratio"] != source_weighted_thresholds["peak_ratio"]:
+        return False
+    if source_weighted["psnr_db"] <= source_weighted_thresholds["psnr_db"]:
+        return False
+
+    p_max = metrics["p_max"]
+    p_max_thresholds = PARITY_THRESHOLDS["p_max"]
+    return (
+        p_max["pearson_r"] >= p_max_thresholds["pearson_r"]
+        and p_max_thresholds["rms_ratio_min"] <= p_max["rms_ratio"]
+        and p_max["rms_ratio"] <= p_max_thresholds["rms_ratio_max"]
+        and p_max["psnr_db"] > p_max_thresholds["psnr_db"]
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--no-cache", action="store_true", help="Ignore cached results and recompute both runs")
@@ -333,11 +391,7 @@ def main() -> int:
     source_weighted = metrics["source_weighted_mask"]
     p_max = metrics["p_max"]
 
-    source_mask_ok = source_mask["iou"] > 0.85 and source_mask["active_cell_ratio"] > 0.95
-    source_weighted_ok = source_weighted["pearson_r"] > 0.20 and source_weighted["psnr_db"] > 25.0
-    p_max_ok = p_max["pearson_r"] > 0.95 and abs(p_max["rms_ratio"] - 1.0) < 0.10 and p_max["psnr_db"] > 25.0
-
-    status = "PASS" if (source_mask_ok and source_weighted_ok and p_max_ok) else "FAIL"
+    status = "PASS" if _metrics_pass(metrics) else "FAIL"
 
     report_lines = build_report_lines(result)
     report_lines.append(f"parity_status: {status}")

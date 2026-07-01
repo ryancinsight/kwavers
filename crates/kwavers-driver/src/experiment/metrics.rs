@@ -78,7 +78,12 @@ pub fn build_beam_report(
             KWVERS_MIN_FOCAL_PRESSURE_1MPA_IN_PA,
             "Pa",
         ),
-        Check::upper(CHECK_MI_NAME, map.mechanical_index, KWVERS_MI_CAVITATION_CEILING, ""),
+        Check::upper(
+            CHECK_MI_NAME,
+            map.mechanical_index,
+            KWVERS_MI_CAVITATION_CEILING,
+            "",
+        ),
         Check::lower(
             CHECK_GRATING_LOBE_NAME,
             if map.grating_lobe_free { 1.0 } else { 0.0 },

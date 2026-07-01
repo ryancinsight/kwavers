@@ -251,11 +251,8 @@ const TV_EPSILON_SQUARED: f64 = 1e-16;
 /// Each entry is `(offset, a_d)` where `a_d = 1/|offset|²` distance-normalizes
 /// the squared difference so every direction contributes a per-unit-length
 /// directional derivative.
-pub(in crate::inverse::fwi::time_domain) const AXIS_TV_DIRECTIONS: [([isize; 3], f64); 3] = [
-    ([1, 0, 0], 1.0),
-    ([0, 1, 0], 1.0),
-    ([0, 0, 1], 1.0),
-];
+pub(in crate::inverse::fwi::time_domain) const AXIS_TV_DIRECTIONS: [([isize; 3], f64); 3] =
+    [([1, 0, 0], 1.0), ([0, 1, 0], 1.0), ([0, 0, 1], 1.0)];
 
 /// Four-direction TV (FDTV) stencil generalized to 3-D: the three Cartesian
 /// axes plus the six in-plane face diagonals (step length √2, `a_d = 1/2`).
@@ -291,10 +288,7 @@ fn offset_index(p: [usize; 3], offset: [isize; 3], dims: [usize; 3]) -> Option<[
 
 /// Per-voxel Huber-smoothed directional-TV weight
 /// `W[p] = √(ε² + Σ_d a_d (m[p+d] − m[p])²)` over in-bounds forward neighbors.
-fn directional_tv_weights(
-    model: &Array3<f64>,
-    directions: &[([isize; 3], f64)],
-) -> Array3<f64> {
+fn directional_tv_weights(model: &Array3<f64>, directions: &[([isize; 3], f64)]) -> Array3<f64> {
     let (nx, ny, nz) = model.dim();
     let dims = [nx, ny, nz];
     let mut w = Array3::<f64>::zeros((nx, ny, nz));

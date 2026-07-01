@@ -253,7 +253,7 @@ mirrors the existing `RESISTOR_MARGIN_CHECK_NAME` SSOT, generalised to the full 
                                             ▼
                                 ┌───────────────────────┐
                                 │  kwavers-transducer   │  ← external crate (NOT in src/)
-                                │  ::simulate(&step)    │
+                                │  ::propagate_focused… │
                                 └───────────────────────┘
 
                   ┌─────────────────────────────────────┐
@@ -275,7 +275,7 @@ layer that the rest of the crate can build upon.
 The crate does many things. Each leaf of the tree does ONE thing; each leaf has its own
 tests; the leaves compose through traits. When a future contributor wants to add a new
 physics axis, they add a new `physics/<axis>/mod.rs` subtree — they DON'T touch the
-routing kernel, the placement, the IO, or the sidecar. When a future kwavers-side
+routing kernel, the placement, the IO, or the sidecar. When a kwavers-side
 consumer wants to swap the acoustic simulator, they provide a new `AcousticSimulator`
 impl — they DON'T touch `src/board.rs` or the kv parser. The dependency direction +
 the trait-catalogue enforce that.

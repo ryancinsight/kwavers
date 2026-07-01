@@ -93,6 +93,38 @@ fn km_plugin_writes_nonzero_radius_after_update() {
     );
 }
 
+// ── KellerHerring ────────────────────────────────────────────────────────
+
+#[test]
+fn kh_plugin_initialises_and_advances() {
+    let config = BubbleDynamicsConfig {
+        model: BubbleModel::KellerHerring,
+        nucleation: false,
+        params: BubbleParameters::default(),
+    };
+    let mut plugin = BubbleDynamicsPlugin::new(config);
+    let grid = small_grid();
+    let medium = water(&grid);
+    plugin.initialize(&grid, &medium).expect("KH init");
+
+    let mut fields = field_array(&grid);
+    let extra_fields = null_plugin_fields(&grid);
+    let mut null_boundary = NullBoundary;
+    let mut ctx = make_context(&extra_fields, &mut null_boundary);
+    plugin
+        .update(&mut fields, &grid, &medium, 1e-7, 0.0, &mut ctx)
+        .expect("KH update");
+
+    let cx = grid.nx / 2;
+    let cy = grid.ny / 2;
+    let cz = grid.nz / 2;
+    let r = fields[[UnifiedFieldType::BubbleRadius.index(), cx, cy, cz]];
+    assert!(
+        r > 0.0,
+        "KellerHerring bubble radius must be positive; got {r}"
+    );
+}
+
 // ── RayleighPlesset ───────────────────────────────────────────────────────
 
 #[test]

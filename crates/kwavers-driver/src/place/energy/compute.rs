@@ -3,16 +3,14 @@
 //! Logic is split across four focused sub-modules; this file is the orchestrator that drives them
 //! in dependency order and combines the weighted total.
 
+use super::config::{CongestionField, EnergyTerms, PlaceConfig};
+use super::{
+    connectivity::accumulate_connectivity, floorplan::accumulate_floorplan,
+    proximity::accumulate_proximity, thermal::accumulate_thermal,
+};
 use crate::geom::{Nm, Point};
 use crate::place::component::{Component, Rect};
 use crate::place::footprint::{FootprintDef, Role};
-use super::config::{CongestionField, EnergyTerms, PlaceConfig};
-use super::{
-    connectivity::accumulate_connectivity,
-    floorplan::accumulate_floorplan,
-    proximity::accumulate_proximity,
-    thermal::accumulate_thermal,
-};
 
 /// Evaluate the placement energy of `comps`. `congestion`, when supplied, biases placement away
 /// from regions a prior routing pass found congested (place↔route co-optimization).

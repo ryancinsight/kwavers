@@ -21,7 +21,7 @@ fig06  BBB opening window: permeability vs time post-sonication
 
 All bubble dynamics use pykwavers.solve_keller_miksis (Rust RK4).
 Thermal safety uses pykwavers.ThermalSimulation (Pennes bioheat, Rust solver)
-and pykwavers.compute_cem43 (Rust CEM43 accumulator).
+and pykwavers.cem43_cumulative (Rust CEM43 accumulator).
 
 Output directory: docs/book/figures/ch24/
 Requires: numpy, matplotlib, pykwavers
@@ -47,25 +47,13 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
+import pykwavers as kw
 
-try:
-    import pykwavers as kw
-    _HAS_KW = True
-except ImportError:
-    _HAS_KW = False
-    raise RuntimeError(
-        "pykwavers not found — build with `maturin develop --release` "
-        "from the pykwavers directory."
-    )
+import sys as _sys
 
-try:
-    from cavitation_dose_monitor import (BubbleMedium, closed_loop_sonication,
-                                          dose_vs_pressure, vs_emission_spectrum)
-except ImportError:
-    import sys as _sys
-    _sys.path.insert(0, os.path.dirname(__file__))
-    from cavitation_dose_monitor import (BubbleMedium, closed_loop_sonication,
-                                          dose_vs_pressure, vs_emission_spectrum)
+_sys.path.insert(0, os.path.dirname(__file__))
+from cavitation_dose_monitor import (BubbleMedium, closed_loop_sonication,
+                                      dose_vs_pressure, vs_emission_spectrum)
 
 def _find_repo_root(start: str) -> str:
     """Walk up to the directory containing ``docs/book`` (robust to crate depth;
@@ -161,9 +149,10 @@ print("[fig02] LIFU safety parameter space: MI vs frequency")
 # Tissue damage: MI_dam ≈ 1.0–1.9  (conservative; depends on exposure time)
 
 f_mhz = np.linspace(0.1, 3.0, 300)
+f_hz = f_mhz * 1.0e6
 mi_fda = 1.9 * np.ones_like(f_mhz)        # FDA derated MI limit
-mi_ic_free = 0.45 / np.sqrt(f_mhz)        # inertial cavitation onset (free bubble)
-mi_ic_mb = 0.18 / np.sqrt(f_mhz)          # inertial onset with MBs (~4× lower pressure)
+mi_ic_free = np.asarray(kw.mechanical_index_frequency_sweep(0.45e6, f_hz))
+mi_ic_mb = np.asarray(kw.mechanical_index_frequency_sweep(0.18e6, f_hz))
 mi_bbb_low = 0.20 * np.ones_like(f_mhz)   # lower bound for BBB opening
 mi_bbb_high = 0.55 * np.ones_like(f_mhz)  # upper bound for BBB opening
 
@@ -199,9 +188,9 @@ d50_inert  = 0.4   # inertial cavitation: faster opening but irreversible risk
 perm_stable = np.asarray(kw.bbb_permeability_hill(dose_range, d50_stable, 2.5))
 perm_inert  = np.asarray(kw.bbb_permeability_hill(dose_range, d50_inert,  1.8))
 
-# Damage threshold: sigmoid beyond ~ 3.5 dose units
+# Damage threshold: logistic inertial-damage probability beyond ~3.5 dose units
 damage_thresh = 3.5
-damage = 1.0 / (1.0 + np.exp(-4.0 * (dose_range - damage_thresh)))
+damage = np.asarray(kw.bbb_inertial_damage_probability(dose_range, damage_thresh, 4.0))
 
 fig, ax = plt.subplots(figsize=(8, 4))
 ax.plot(dose_range, perm_stable, color="#4dac26", lw=1.8,
@@ -283,18 +272,12 @@ res_th = sim_th.run(N_TH, DT_TH, heat_source=Q_field, sensor_mask=sensor_mask)
 T_arr = np.asarray(res_th.temperature_at_sensors)[0]   # shape (N_TH,)
 t_arr = np.asarray(res_th.time)                         # shape (N_TH,)
 
-# Cumulative CEM43 via kw.compute_cem43 on growing sub-trajectories
-# Downsampled to 200 query points (each query is O(i) → total O(N_TH·n_q/2))
-n_cem_query = 200
-query_indices = np.linspace(0, N_TH - 1, n_cem_query, dtype=int)
-cem43_sparse = np.array([
-    kw.compute_cem43(T_arr[:idx + 1].astype(float), DT_TH)
-    for idx in query_indices
-])
-# Interpolate sparse samples to full time axis
-cem43_arr = np.interp(np.arange(N_TH), query_indices, cem43_sparse)
+cem43_arr = np.asarray(
+    kw.cem43_cumulative(np.ascontiguousarray(T_arr, dtype=float), DT_TH),
+    dtype=float,
+)
 T_max_C = float(T_arr.max())
-print(f"  T_peak = {T_max_C:.2f} °C  |  CEM43_total = {cem43_sparse[-1]:.4g} min")
+print(f"  T_peak = {T_max_C:.2f} °C  |  CEM43_total = {cem43_arr[-1]:.4g} min")
 
 fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(9, 6), sharex=True)
 ax1.plot(t_arr, T_arr, color="#d6604d", lw=1.2)
@@ -324,15 +307,16 @@ plt.close(fig)
 print("[fig05] CEUS signal vs microbubble concentration")
 
 c_range = np.linspace(0.0, 50.0, 400)  # µL(gas)/mL
-# I_bs = σ_bs·N_V·exp(−2·σ_ext·N_V·thickness) via kw.ceus_backscatter_signal
-# (de Jong 1991; single-scatter + MB-layer self-attenuation)
-signal = np.asarray(kw.ceus_backscatter_signal(c_range, 2.5e-8, 10e-3))
-signal_db = 20.0 * np.log10(signal / np.max(signal) + 1e-12)
+# I_bs = σ_bs·N_V·exp(−2·σ_ext·N_V·thickness) plus peak-normalized dB display
+# via kw.ceus_backscatter_display (de Jong 1991; single-scatter + attenuation).
+ceus = kw.ceus_backscatter_display(c_range, 2.5e-8, 10e-3, -80.0)
+signal_db = np.asarray(ceus["signal_db"])
+peak_concentration = float(ceus["peak_concentration_ul_ml"])
 
 fig, ax = plt.subplots(figsize=(7, 4))
 ax.plot(c_range, signal_db, color="#2166ac", lw=1.6)
-ax.axvline(c_range[np.argmax(signal)], color="#4dac26", lw=1.0, ls="--",
-           label=f"Optimal concentration ≈ {c_range[np.argmax(signal)]:.1f} µL/mL")
+ax.axvline(peak_concentration, color="#4dac26", lw=1.0, ls="--",
+           label=f"Optimal concentration ≈ {peak_concentration:.1f} µL/mL")
 ax.set_xlabel("MB gas concentration (µL gas / mL tissue)")
 ax.set_ylabel("CEUS backscatter signal (dB re peak)")
 ax.set_title("CEUS signal vs microbubble concentration\n"
@@ -638,7 +622,7 @@ SPEC_KW = dict(n_cycles=24.0, steps_per_cycle=4000, n_fft=4096,
 # at 1 MHz; above ~0.25 MPa the fixed-step Keller–Miksis solver is too stiff for
 # the violent inertial collapse — that regime is bounded analytically in fig02).
 p_sweep = np.linspace(20e3, 230e3, 22)
-mi_sweep = (p_sweep / 1e6) / np.sqrt(F0_PCD / 1e6)
+mi_sweep = np.asarray(kw.mechanical_index_field(p_sweep, F0_PCD))
 dose = dose_vs_pressure(kw, pressures_pa=p_sweep, f0=F0_PCD,
                         r0_population_m=R0_POP, medium=MEDIUM,
                         rel_halfwidth=0.18, noise_floor=0.0, **SPEC_KW)
@@ -650,12 +634,11 @@ freqs_demo, psd_demo = vs_emission_spectrum(
 
 # Inertial-onset indicator: broadband / harmonic emission ratio. The therapeutic
 # ceiling is where it first exceeds 0.1 (broadband becomes 10 % of harmonic).
-bh_ratio = dose["inertial"] / (dose["harmonic"] + 1e-30)
-onset_idx = int(np.argmax(bh_ratio > 0.1)) if np.any(bh_ratio > 0.1) else len(bh_ratio) - 1
+stab_idx, onset_idx, cap_idx = kw.cavitation_therapeutic_window_indices(
+    dose["harmonic"], dose["stable"], dose["inertial"], 0.01, 0.1, 0.04
+)
 mi_inertial = mi_sweep[onset_idx]
 # Stable-cavitation onset: where sub+ultra emission first exceeds 1 % of harmonic.
-sh_ratio = dose["stable"] / (dose["harmonic"] + 1e-30)
-stab_idx = int(np.argmax(sh_ratio > 0.01)) if np.any(sh_ratio > 0.01) else 0
 mi_stable = mi_sweep[stab_idx]
 print(f"  stable-cavitation onset  MI~{mi_stable:.2f}; "
       f"inertial-onset ceiling MI~{mi_inertial:.2f}")
@@ -665,7 +648,6 @@ print(f"  stable-cavitation onset  MI~{mi_stable:.2f}; "
 # inertial dose CONSERVATIVELY below the hard inertial onset — clinically the
 # controller backs off before broadband emission reaches the damage edge. The
 # cap is the broadband level where it first reaches 4 % of the harmonic dose.
-cap_idx = int(np.argmax(bh_ratio > 0.04)) if np.any(bh_ratio > 0.04) else onset_idx
 p_ceiling = float(p_sweep[onset_idx])           # hard inertial-onset (display)
 p_cap = float(p_sweep[cap_idx])                 # conservative controller cap
 loop = closed_loop_sonication(
@@ -772,7 +754,7 @@ from cavitation_dose_monitor import (per_spot_dose, plot_cavitation_monitor,  # 
 # subset of the size distribution period-doubles — which is the real clinical
 # signature, a narrowband marker just above the noise floor.)
 POP_SIM = dict(medium=MEDIUM, r0_median_m=2.0e-6, r0_sigma_ln=0.35,
-               max_nucleation_cycles=0.5, r_obs_m=5.0e-2,
+               r_obs_m=5.0e-2,
                coated=True, chi=0.5, shell_viscosity=0.5, shell_thickness=3.0e-9,
                sigma_initial=0.04, steps_per_cycle=2000)
 
@@ -784,20 +766,19 @@ pop = population_dose_vs_pressure(
 cav_power = pop["signal"]
 inert = pop["inertial"]
 stable = pop["stable"]
-total = pop["harmonic"] + stable + inert
-broad_frac = inert / (total + 1e-30)
 # Inertial onset = first drive where broadband exceeds 40 % of the emission.
 # The sonication operates one step BELOW it, in the stable-cavitation window
 # (the clinical safe regime). The operating point is chosen by this physical
 # criterion, NOT to shape the spectrum — whatever bands emerge there are shown.
-onset_i = int(np.argmax(broad_frac > 0.4)) if np.any(broad_frac > 0.4) else p_mon.size - 1
-onset_i = max(onset_i, 1)
+onset_i = kw.cavitation_inertial_fraction_onset_index(
+    pop["harmonic"], stable, inert, 0.4
+)
 oper_i = onset_i - 1
 p_oper = float(p_mon[oper_i])
 p_inertial_cap = float(inert[onset_i])      # controller backs off above this
 p_demo = p_oper
 demo = simulate_population_emission(
-    kw, drive_pa=p_demo, f0=F0_PCD, n_bubbles=60, rng=np.random.default_rng(7),
+    kw, drive_pa=p_demo, f0=F0_PCD, n_bubbles=60, seed=7,
     n_cycles=16.0, n_out=8192, **POP_SIM)
 print(f"  demo drive {p_demo/1e3:.0f} kPa: emergent bands "
       f"harm={demo['fundamental']/max(demo['total'],1e-30):.2f} "

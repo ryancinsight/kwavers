@@ -111,7 +111,10 @@ fn bga_balls_fan_out_via_in_pad_to_an_inner_layer() {
         for group in &t.terminal_groups {
             assert_eq!(group.len(), 1, "BGA access is the escaped inner node");
             let (_, _, layer) = spec.node_coords(group[0].0);
-            assert!((1..4).contains(&layer), "BGA terminal escaped off the top layer");
+            assert!(
+                (1..4).contains(&layer),
+                "BGA terminal escaped off the top layer"
+            );
             esc_layers.push(layer);
         }
     }

@@ -21,7 +21,7 @@
 //! discrete mass equals `A / dx²` up to round-off.
 
 use super::math::{apply_matrix, euler_xyz_rotation_matrix, DISC_SAMPLE_UPSAMPLING_RATE};
-use super::{ElementShape, KWaveArray};
+use super::{DiscSourceProfile, ElementShape, KWaveArray};
 use kwavers_core::constants::numerical::TWO_PI;
 
 impl KWaveArray {
@@ -184,23 +184,49 @@ impl KWaveArray {
         diameter: f64,
         focus_position: Option<(f64, f64, f64)>,
     ) {
+        self.rasterize_profiled_disc_weighted(
+            mask,
+            grid,
+            center,
+            diameter,
+            focus_position,
+            DiscSourceProfile::uniform(),
+        );
+    }
+
+    pub(super) fn rasterize_profiled_disc_weighted(
+        &self,
+        mask: &mut ndarray::Array3<f64>,
+        grid: &kwavers_grid::Grid,
+        center: (f64, f64, f64),
+        diameter: f64,
+        focus_position: Option<(f64, f64, f64)>,
+        profile: DiscSourceProfile,
+    ) {
         let x_vec = grid.x_coordinates();
         let y_vec = grid.y_coordinates();
         let z_vec = grid.z_coordinates();
-        self.rasterize_disc_points(grid, center, diameter, focus_position, |point, scale| {
-            self.map_surface_sample(
-                grid,
-                &x_vec,
-                &y_vec,
-                &z_vec,
-                point,
-                scale,
-                false,
-                |ix, iy, iz, weight| {
-                    mask[[ix, iy, iz]] += weight;
-                },
-            );
-        });
+        self.rasterize_profiled_disc_points(
+            grid,
+            center,
+            diameter,
+            focus_position,
+            profile,
+            |point, scale| {
+                self.map_surface_sample(
+                    grid,
+                    &x_vec,
+                    &y_vec,
+                    &z_vec,
+                    point,
+                    scale,
+                    false,
+                    |ix, iy, iz, weight| {
+                        mask[[ix, iy, iz]] += weight;
+                    },
+                );
+            },
+        );
     }
 
     /// Emit oriented Fibonacci disc samples.
@@ -210,6 +236,28 @@ impl KWaveArray {
         center: (f64, f64, f64),
         diameter: f64,
         focus_position: Option<(f64, f64, f64)>,
+        visit: F,
+    ) where
+        F: FnMut([f64; 3], f64),
+    {
+        self.rasterize_profiled_disc_points(
+            grid,
+            center,
+            diameter,
+            focus_position,
+            DiscSourceProfile::uniform(),
+            visit,
+        );
+    }
+
+    /// Emit oriented Fibonacci disc samples with a finite-source profile.
+    pub(super) fn rasterize_profiled_disc_points<F>(
+        &self,
+        grid: &kwavers_grid::Grid,
+        center: (f64, f64, f64),
+        diameter: f64,
+        focus_position: Option<(f64, f64, f64)>,
+        profile: DiscSourceProfile,
         mut visit: F,
     ) where
         F: FnMut([f64; 3], f64),
@@ -230,7 +278,11 @@ impl KWaveArray {
                 y_local.mul_add(v[1], x_local.mul_add(u[1], center.1)),
                 y_local.mul_add(v[2], x_local.mul_add(u[2], center.2)),
             ];
-            visit(point, scale);
+            let radius_fraction = x_local.hypot(y_local) / radius.max(f64::MIN_POSITIVE);
+            visit(
+                point,
+                scale * profile.weight_at_normalized_radius(radius_fraction),
+            );
         };
 
         emit(0.0, 0.0);
@@ -255,58 +307,103 @@ impl KWaveArray {
 
     // ─── Per-element dispatcher ────────────────────────────────────────────
 
-    /// Rasterize a single element onto a pre-allocated weighted mask.
+    /// Emit BLI-weighted grid-cell contributions for a single element.
     ///
-    /// Same dispatch as `get_array_weighted_mask` but for one element — used
-    /// by `build_per_element_source` to build per-element BLI masks.
-    pub(super) fn rasterize_element_weighted(
+    /// This preserves each element's weighted-mask sampling and BLI stencil
+    /// without materializing a full-grid temporary mask for each element.
+    pub(super) fn rasterize_element_weighted_cells<F>(
         &self,
         element: &ElementShape,
-        mask: &mut ndarray::Array3<f64>,
         grid: &kwavers_grid::Grid,
-    ) {
+        mut visit: F,
+    ) where
+        F: FnMut(usize, usize, usize, f64),
+    {
+        let x_vec = grid.x_coordinates();
+        let y_vec = grid.y_coordinates();
+        let z_vec = grid.z_coordinates();
+        let mut visit_point = |point, scale| {
+            self.map_surface_sample(
+                grid,
+                &x_vec,
+                &y_vec,
+                &z_vec,
+                point,
+                scale,
+                false,
+                |ix, iy, iz, weight| {
+                    visit(ix, iy, iz, weight);
+                },
+            );
+        };
+
         match element {
             ElementShape::Bowl {
                 position,
                 radius,
                 diameter,
             } => {
-                self.rasterize_bowl_weighted(mask, grid, *position, *radius, *diameter);
+                self.rasterize_bowl_points(grid, *position, *radius, *diameter, &mut visit_point);
             }
             ElementShape::Disc {
                 position,
                 diameter,
                 focus_position,
             } => {
-                self.rasterize_disc_weighted(mask, grid, *position, *diameter, *focus_position);
+                self.rasterize_disc_points(
+                    grid,
+                    *position,
+                    *diameter,
+                    *focus_position,
+                    &mut visit_point,
+                );
+            }
+            ElementShape::ProfiledDisc {
+                position,
+                diameter,
+                focus_position,
+                profile,
+            } => {
+                self.rasterize_profiled_disc_points(
+                    grid,
+                    *position,
+                    *diameter,
+                    *focus_position,
+                    *profile,
+                    &mut visit_point,
+                );
             }
             ElementShape::Arc {
                 position,
                 radius,
-                diameter,
+                diameter: _,
                 start_angle,
                 end_angle,
             } => {
-                self.rasterize_arc_weighted(
-                    mask,
+                self.rasterize_arc_points(
                     grid,
                     *position,
                     *radius,
-                    *diameter,
                     *start_angle,
                     *end_angle,
+                    &mut visit_point,
                 );
             }
             ElementShape::Rect {
                 position,
                 width,
                 height,
-                length,
+                length: _,
                 euler_xyz_deg,
             } => {
                 let (pos_eff, euler_eff) = self.apply_transform_rect(*position, *euler_xyz_deg);
-                self.rasterize_rect_weighted(
-                    mask, grid, pos_eff, *width, *height, *length, euler_eff,
+                self.rasterize_rect_points(
+                    grid,
+                    pos_eff,
+                    *width,
+                    *height,
+                    euler_eff,
+                    &mut visit_point,
                 );
             }
             ElementShape::Annulus {
@@ -315,13 +412,13 @@ impl KWaveArray {
                 inner_diameter,
                 outer_diameter,
             } => {
-                self.rasterize_annulus_weighted(
-                    mask,
+                self.rasterize_annulus_points(
                     grid,
                     *position,
                     *radius,
                     *inner_diameter,
                     *outer_diameter,
+                    &mut visit_point,
                 );
             }
         }

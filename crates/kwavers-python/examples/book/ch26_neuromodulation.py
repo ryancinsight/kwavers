@@ -29,16 +29,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
-
-try:
-    import pykwavers as kw
-    _HAS_KW = True
-except ImportError:
-    _HAS_KW = False
-    raise RuntimeError(
-        "pykwavers not found — build with `maturin develop --release` "
-        "from the pykwavers directory."
-    )
+import pykwavers as kw
 
 REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
 OUT_DIR = os.path.join(REPO_ROOT, "docs", "book", "figures", "ch26")
@@ -227,8 +218,8 @@ def pennes_temperature(intensity_spta_w_m2: float, sonication_s: float, dt_s: fl
 
     For a 1-point simulation (nx=ny=nz=1) spatial diffusion is zero; the
     solver integrates only the Pennes perfusion term. Stability: dt_max for
-    perfusion ≈ 2·ρ·cp/(WB·ρB·cpB) ≈ 163 s >> dt_s. CEM43 is accumulated
-    via kw.compute_cem43 on downsampled growing sub-trajectories.
+    perfusion ≈ 2·ρ·cp/(WB·ρB·cpB) ≈ 163 s >> dt_s. Cumulative CEM43 is
+    computed by the Rust vector dose kernel.
     """
     n_steps = int(np.ceil(sonication_s / dt_s))
     Q_field = np.array([[[2.0 * ALPHA_BRAIN_NP_M * intensity_spta_w_m2]]])
@@ -244,11 +235,7 @@ def pennes_temperature(intensity_spta_w_m2: float, sonication_s: float, dt_s: fl
     ).run(n_steps, dt_s, heat_source=Q_field, sensor_mask=sensor_mask)
     T_arr = np.asarray(res.temperature_at_sensors)[0]
     time_arr = np.asarray(res.time)
-    # Cumulative CEM43 via kw.compute_cem43 on 30 downsampled sub-trajectories
-    n_q = min(30, n_steps)
-    q_idx = np.linspace(0, n_steps - 1, n_q, dtype=int)
-    cem43_sp = np.array([kw.compute_cem43(T_arr[: i + 1].astype(float), dt_s) for i in q_idx])
-    cem43_arr = np.interp(np.arange(n_steps), q_idx, cem43_sp)
+    cem43_arr = np.asarray(kw.cem43_cumulative(np.ascontiguousarray(T_arr), dt_s))
     return ThermalResult(time_arr, T_arr, cem43_arr)
 
 
@@ -275,7 +262,7 @@ def neural_response(
        (drive < 0, K⁺ channels) reduces below rheobase (handled by LIF G_leak).
     3. ``simulate_lif_neuron_py`` → membrane voltage trace V(t) and spike times
        (forward-Euler LIF, Koch 1999 canonical params).
-    4. Response probability = Gaussian-smoothed instantaneous spike density
+    4. ``lif_response_probability_py`` → Gaussian-smoothed spike density
        normalised to theoretical maximum firing rate f_max = 1/(τ_ref + τ_m).
 
     Parameters
@@ -291,8 +278,6 @@ def neural_response(
     smoothing_sigma_s:
         Gaussian kernel σ for spike-density smoothing [s].
     """
-    from scipy.ndimage import gaussian_filter1d
-
     time_s = np.arange(0.0, duration_s + dt_s, dt_s)
     n = time_s.size
     envelope = pulse_envelope(time_s, protocol)
@@ -309,30 +294,36 @@ def neural_response(
     voltage_v = np.asarray(lif_result["voltage_v"], dtype=np.float64)
     spike_times_s = np.asarray(lif_result["spike_times_s"], dtype=np.float64)
 
-    # Response probability: Gaussian-smoothed spike density / f_max.
+    # Response probability: Gaussian-smoothed spike density / f_max in Rust.
     # f_max = 1 / (τ_ref + τ_m) = 1 / (2ms + 10ms) ≈ 83 Hz.
     f_max_hz = 1.0 / (2.0e-3 + 10.0e-3)
-    spike_train = np.zeros(n, dtype=np.float64)
-    if spike_times_s.size > 0:
-        spike_idx = np.rint(spike_times_s / dt_s).astype(int)
-        spike_idx = spike_idx[(spike_idx >= 0) & (spike_idx < n)]
-        spike_train[spike_idx] = 1.0
-    sigma_samples = smoothing_sigma_s / dt_s
-    smoothed = gaussian_filter1d(spike_train / dt_s, sigma=sigma_samples)
-    response = np.clip(smoothed / f_max_hz, 0.0, 1.0)
+    response_payload = kw.lif_response_probability_py(
+        np.ascontiguousarray(spike_times_s),
+        n,
+        dt_s,
+        smoothing_sigma_s,
+        f_max_hz,
+    )
+    response = np.asarray(response_payload["response_probability"], dtype=np.float64)
 
     return {
         "time_s": time_s,
         "envelope": envelope,
         "voltage_mv": voltage_v * 1.0e3,    # V → mV for plotting
         "response_probability": response,
+        "calcium": np.maximum(channel_drive, 0.0),
         "channel_drive": channel_drive,
         "spike_times_s": spike_times_s,
     }
 
 
 def cavitation_risk(mi: np.ndarray | float) -> np.ndarray:
-    return 1.0 / (1.0 + np.exp(-18.0 * (np.asarray(mi, dtype=float) - 0.7)))
+    arr = np.asarray(mi, dtype=float)
+    return np.asarray(
+        kw.mechanical_index_cavitation_risk(
+            np.ascontiguousarray(arr.ravel()), 0.7, 18.0
+        )
+    ).reshape(arr.shape)
 
 
 def guidance_map() -> dict[str, np.ndarray]:

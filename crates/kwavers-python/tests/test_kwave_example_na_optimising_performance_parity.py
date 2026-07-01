@@ -20,6 +20,12 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from parity_test_utils import (
+    assert_decodable_nonblank_png,
+    load_example_module,
+    report_metric_value,
+)
+
 ROOT = Path(__file__).resolve().parents[1]
 _paths = [ROOT / "python", ROOT / "examples",
           ROOT.parent / "external" / "k-wave-python"]
@@ -68,11 +74,40 @@ NUM_SENSOR_POINTS = 100
 PML_SIZE          = 20
 
 SOURCE_IMAGE_PATH = (
-    ROOT.parent / "external" / "k-wave-python" / "tests" / "EXAMPLE_source_two.bmp"
+    ROOT.parents[1] / "external" / "k-wave-python" / "tests" / "EXAMPLE_source_two.bmp"
 )
 
 _IMAGE_PRESENT = SOURCE_IMAGE_PATH.exists()
 requires_image = pytest.mark.skipif(not _IMAGE_PRESENT, reason="EXAMPLE_source_two.bmp not found")
+requires_parity_deps = pytest.mark.skipif(
+    not (_PYKWAVERS and _KWAVE and _IMAGE_PRESENT),
+    reason="pykwavers+k-wave-python+EXAMPLE_source_two.bmp required",
+)
+
+
+def _assert_metric_contract(text: str, section: str, thresholds: dict[str, float]) -> None:
+    pearson = report_metric_value(text, "pearson_r", section)
+    rms_ratio = report_metric_value(text, "rms_ratio", section)
+    psnr_db = report_metric_value(text, "psnr_db", section)
+
+    assert pearson >= thresholds["pearson_r"]
+    assert thresholds["rms_ratio_min"] <= rms_ratio
+    assert rms_ratio <= thresholds["rms_ratio_max"]
+    assert psnr_db >= thresholds["psnr_db"]
+
+
+@requires_parity_deps
+def test_current_na_optimising_performance_artifacts_match_thresholds():
+    module = load_example_module("na_optimising_performance_compare.py")
+    thresholds = module.PARITY_THRESHOLDS
+
+    assert module.METRICS_PATH.exists()
+    assert module.FIGURE_PATH.exists()
+    text = module.METRICS_PATH.read_text(encoding="utf-8")
+    assert "parity_status: PASS" in text
+    _assert_metric_contract(text, "[sensor time-series]", thresholds)
+    _assert_metric_contract(text, "[p_final 2-D field]", thresholds)
+    assert_decodable_nonblank_png(module.FIGURE_PATH)
 
 
 # ---------------------------------------------------------------------------
@@ -221,8 +256,9 @@ class TestNaOptimisingPerformanceSimulation:
 
         corr_matrix = np.corrcoef(kw_p_aligned.ravel(), pkw_p.ravel())
         pearson_r = float(corr_matrix[0, 1])
-        assert pearson_r >= 0.85, (
-            f"Sensor Pearson r = {pearson_r:.4f} < 0.85 "
+        assert pearson_r >= mod.PARITY_THRESHOLDS["pearson_r"], (
+            f"Sensor Pearson r = {pearson_r:.4f} "
+            f"< {mod.PARITY_THRESHOLDS['pearson_r']:.4f} "
             f"(kw peak {float(np.abs(kw_p_aligned).max()):.3e} Pa  "
             f"pkw peak {float(np.abs(pkw_p).max()):.3e} Pa)"
         )
@@ -247,6 +283,7 @@ class TestNaOptimisingPerformanceSimulation:
         pkw_pf = pkw_res["p_final"].ravel()
         corr   = np.corrcoef(kw_pf, pkw_pf)
         pearson_r = float(corr[0, 1])
-        assert pearson_r >= 0.85, (
-            f"p_final Pearson r = {pearson_r:.4f} < 0.85"
+        assert pearson_r >= mod.PARITY_THRESHOLDS["pearson_r"], (
+            f"p_final Pearson r = {pearson_r:.4f} "
+            f"< {mod.PARITY_THRESHOLDS['pearson_r']:.4f}"
         )

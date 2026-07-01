@@ -4,8 +4,8 @@
 
 use kwavers_physics::analytical::wave;
 use ndarray::Array2;
-use numpy::{IntoPyArray, PyArray1, PyArray2, PyReadonlyArray1};
-use pyo3::exceptions::PyRuntimeError;
+use numpy::{IntoPyArray, PyArray1, PyArray2, PyReadonlyArray1, PyReadonlyArray2};
+use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
 /// Compute the n-th Fubini harmonic amplitude for a finite-amplitude wave.
@@ -94,6 +94,26 @@ pub fn tone_burst_waveform(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = wave::tone_burst_waveform(t_s, amplitude_pa, freq_hz, n_cycles);
+    Ok(result.into_pyarray(py).unbind())
+}
+
+/// Generate a centered Hann-windowed tone burst on an existing time axis.
+///
+/// This binding is used by diagnostic PSF figures whose RF pulse is centered at
+/// zero and whose Hann taper is defined by the number of selected samples.
+#[pyfunction]
+#[pyo3(signature = (t_arr, amplitude_pa, freq_hz, n_cycles))]
+pub fn centered_hann_tone_burst_waveform(
+    py: Python<'_>,
+    t_arr: PyReadonlyArray1<f64>,
+    amplitude_pa: f64,
+    freq_hz: f64,
+    n_cycles: f64,
+) -> PyResult<Py<PyArray1<f64>>> {
+    let t_s = t_arr
+        .as_slice()
+        .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+    let result = wave::centered_hann_tone_burst_waveform(t_s, amplitude_pa, freq_hz, n_cycles);
     Ok(result.into_pyarray(py).unbind())
 }
 
@@ -332,6 +352,42 @@ pub fn fubini_waveform(
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = wave::fubini_waveform(t_s, p0_pa, freq_hz, sigma, n_max);
     Ok(result.into_pyarray(py).unbind())
+}
+
+/// Extract Hann-windowed harmonic amplitudes from row-major time traces.
+///
+/// Args:
+///     traces: 2-D pressure trace array with shape (n_traces, n_samples).
+///     dt_s: Sample period [s].
+///     fundamental_hz: Fundamental frequency [Hz].
+///     n_harmonics: Number of harmonics to extract.
+///
+/// Returns:
+///     ndarray of shape (n_traces, n_harmonics), amplitudes [same units as traces].
+#[pyfunction]
+#[pyo3(signature = (traces, dt_s, fundamental_hz, n_harmonics))]
+pub fn hann_windowed_harmonic_amplitudes(
+    py: Python<'_>,
+    traces: PyReadonlyArray2<f64>,
+    dt_s: f64,
+    fundamental_hz: f64,
+    n_harmonics: usize,
+) -> PyResult<Py<PyArray2<f64>>> {
+    let trace_view = traces.as_array();
+    let (n_traces, n_samples) = trace_view.dim();
+    let trace_values: Vec<f64> = trace_view.iter().copied().collect();
+    let amplitudes = wave::hann_windowed_harmonic_amplitudes(
+        &trace_values,
+        n_traces,
+        n_samples,
+        dt_s,
+        fundamental_hz,
+        n_harmonics,
+    )
+    .map_err(PyValueError::new_err)?;
+    let arr2d = Array2::from_shape_vec((n_traces, n_harmonics), amplitudes)
+        .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+    Ok(arr2d.into_pyarray(py).unbind())
 }
 
 /// Compute Westervelt harmonic pressure evolution along a propagation axis.

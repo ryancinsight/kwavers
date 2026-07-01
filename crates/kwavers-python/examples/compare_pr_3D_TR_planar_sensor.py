@@ -35,6 +35,7 @@ _ROOT = bootstrap_example_paths()
 
 KWAVE_CACHE = DEFAULT_OUTPUT_DIR / "pr_3D_TR_planar_sensor_kwave_cache.npz"
 PYKWAVERS_CACHE = DEFAULT_OUTPUT_DIR / "pr_3D_TR_planar_sensor_pykwavers_cache.npz"
+METRICS_PATH = DEFAULT_OUTPUT_DIR / "pr_3D_TR_planar_sensor_metrics.txt"
 TR_FIGURE_PATH = DEFAULT_OUTPUT_DIR / "pr_3D_TR_planar_sensor_time_reversal_compare.png"
 PRESSURE_FIGURE_PATH = DEFAULT_OUTPUT_DIR / "pr_3D_TR_planar_sensor_pressure_compare.png"
 REFRESH_CACHE = os.getenv("KWAVERS_REFRESH_CACHE", "0") == "1"
@@ -380,10 +381,28 @@ def run_comparison() -> dict[str, object]:
     }
 
 
-_R_TARGET = 0.93
-_RMS_MIN = 0.80
-_RMS_MAX = 1.20
-_PSNR_TARGET = 20.0
+PARITY_THRESHOLDS = {
+    "time_reversal": {
+        "pearson_r": 0.995,
+        "rms_ratio_min": 0.97,
+        "rms_ratio_max": 1.03,
+        "psnr_db": 40.0,
+    },
+    "reference": {
+        "pearson_r": 0.90,
+    },
+}
+
+
+def _metrics_pass(metrics: dict[str, float], thresholds: dict[str, float]) -> bool:
+    passed = float(metrics["pearson_r"]) >= thresholds["pearson_r"]
+    if "rms_ratio_min" in thresholds:
+        passed = passed and thresholds["rms_ratio_min"] <= float(metrics["rms_ratio"])
+    if "rms_ratio_max" in thresholds:
+        passed = passed and float(metrics["rms_ratio"]) <= thresholds["rms_ratio_max"]
+    if "psnr_db" in thresholds:
+        passed = passed and float(metrics["psnr_db"]) >= thresholds["psnr_db"]
+    return passed
 
 
 def main() -> int:
@@ -394,10 +413,17 @@ def main() -> int:
     r = float(summary["pearson_r"])
     rms = float(summary["rms_ratio"])
     psnr = float(summary["psnr_db"])
+    thresholds = PARITY_THRESHOLDS
     checks = {
-        "pearson_r": r >= _R_TARGET,
-        "rms_ratio": _RMS_MIN <= rms <= _RMS_MAX,
-        "psnr_db": psnr >= _PSNR_TARGET,
+        "time_reversal": _metrics_pass(summary, thresholds["time_reversal"]),
+        "kwave_reference": _metrics_pass(
+            result["reference_metrics"]["kwave_time_reversal"],
+            thresholds["reference"],
+        ),
+        "pykwavers_reference": _metrics_pass(
+            result["reference_metrics"]["pykwavers_time_reversal"],
+            thresholds["reference"],
+        ),
     }
     overall_status = "PASS" if all(checks.values()) else "FAIL"
 
@@ -407,9 +433,13 @@ def main() -> int:
     print("=" * 80)
     print("k-wave-python pr_3D_TR_planar_sensor vs pykwavers")
     print("=" * 80)
-    print(f"Time reversal Pearson r: {r:.6f}  (target >= {_R_TARGET})")
-    print(f"Time reversal RMS ratio: {rms:.6f}  (target [{_RMS_MIN}, {_RMS_MAX}])")
-    print(f"Time reversal PSNR [dB]: {psnr:.6f}  (target >= {_PSNR_TARGET})")
+    tr_thr = thresholds["time_reversal"]
+    print(f"Time reversal Pearson r: {r:.6f}  (target >= {tr_thr['pearson_r']})")
+    print(
+        f"Time reversal RMS ratio: {rms:.6f}  "
+        f"(target [{tr_thr['rms_ratio_min']}, {tr_thr['rms_ratio_max']}])"
+    )
+    print(f"Time reversal PSNR [dB]: {psnr:.6f}  (target >= {tr_thr['psnr_db']})")
     print(f"k-Wave TR vs p0 r:       {kw_ref['pearson_r']:.6f}")
     print(f"pykwavers TR vs p0 r:    {py_ref['pearson_r']:.6f}")
     print(f"Status:                  {overall_status}")
@@ -421,7 +451,6 @@ def main() -> int:
         )
 
     # --- Structured metrics file ---
-    output_path = DEFAULT_OUTPUT_DIR / "pr_3D_TR_planar_sensor_metrics.txt"
     tr_figure_path = save_side_by_side_parity_figure(
         result["kwave"]["time_reversal"],
         result["pykwavers"]["time_reversal"],
@@ -442,16 +471,23 @@ def main() -> int:
         candidate_label="pykwavers pressure",
         cmap="seismic",
     )
-    with output_path.open("w") as fh:
+    with METRICS_PATH.open("w") as fh:
         fh.write("pr_3D_TR_planar_sensor parity metrics\n")
         fh.write(f"parity_status: {overall_status}\n\n")
         fh.write("Time-reversal reconstruction (kwave vs pykwavers):\n")
-        fh.write(f"  pearson_r = {r:.6f}  (target >= {_R_TARGET})\n")
-        fh.write(f"  rms_ratio = {rms:.6f}  (target [{_RMS_MIN}, {_RMS_MAX}])\n")
-        fh.write(f"  psnr_db   = {psnr:.6f}  (target >= {_PSNR_TARGET} dB)\n\n")
+        fh.write(f"  pearson_r = {r:.6f}  (target >= {tr_thr['pearson_r']})\n")
+        fh.write(
+            f"  rms_ratio = {rms:.6f}  "
+            f"(target [{tr_thr['rms_ratio_min']}, {tr_thr['rms_ratio_max']}])\n"
+        )
+        fh.write(f"  psnr_db   = {psnr:.6f}  (target >= {tr_thr['psnr_db']} dB)\n\n")
         fh.write("Reconstruction vs ground-truth p0:\n")
         fh.write(f"  kwave     pearson_r = {kw_ref['pearson_r']:.6f}\n")
-        fh.write(f"  pykwavers pearson_r = {py_ref['pearson_r']:.6f}\n\n")
+        fh.write(f"  kwave     rms_ratio = {kw_ref['rms_ratio']:.6f}\n")
+        fh.write(f"  kwave     psnr_db   = {kw_ref['psnr_db']:.6f}\n")
+        fh.write(f"  pykwavers pearson_r = {py_ref['pearson_r']:.6f}\n")
+        fh.write(f"  pykwavers rms_ratio = {py_ref['rms_ratio']:.6f}\n")
+        fh.write(f"  pykwavers psnr_db   = {py_ref['psnr_db']:.6f}\n\n")
         fh.write("Forward sensor traces (representative rows):\n")
         for row, m in result["trace_metrics"].items():
             fh.write(
@@ -460,7 +496,7 @@ def main() -> int:
             )
         fh.write(f"\nfigure_time_reversal: {tr_figure_path.name}\n")
         fh.write(f"figure_pressure: {pressure_figure_path.name}\n")
-    print(f"Metrics written to: {output_path}")
+    print(f"Metrics written to: {METRICS_PATH}")
     print(f"Figures written to: {tr_figure_path}, {pressure_figure_path}")
 
     return 0 if overall_status == "PASS" else 1

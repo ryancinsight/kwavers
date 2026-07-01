@@ -13,6 +13,7 @@
 //! | `coupled_channel_drive_py` | `coupled_channel_drive` | Hille 2001 |
 //! | `gaussian_beam_pressure_field_py` | `gaussian_beam_pressure_field` | Goodman 2005 §3.3 |
 //! | `simulate_lif_neuron_py` | `simulate_lif_trace` | Koch 1999 |
+//! | `lif_response_probability_py` | `lif_response_probability` | Koch 1999 |
 //!
 //! # Physics contract
 //!
@@ -32,9 +33,10 @@
 
 use kwavers_physics::acoustics::therapy::sonogenetics::{
     boltzmann_open_probability_from_tension_mn_m, coupled_channel_drive,
-    gaussian_beam_pressure_field, pressure_to_membrane_tension_mn_m, simulate_lif_trace, LifParams,
+    gaussian_beam_pressure_field, lif_response_probability, pressure_threshold_p_open,
+    pressure_to_membrane_tension_mn_m, simulate_lif_trace, LifParams, PressureThresholdParams,
 };
-use ndarray::Array1;
+use ndarray::{Array1, Array3};
 use numpy::{IntoPyArray, PyReadonlyArray1};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
@@ -141,6 +143,50 @@ pub fn boltzmann_open_probability_py<'py>(
         })
         .map_err(kwavers_to_py)?;
     Ok(Array1::from_vec(p_open).into_pyarray(py))
+}
+
+/// Compute pressure-threshold open probability from acoustic radiation pressure.
+///
+/// # Model
+///
+/// ```text
+/// P_open = 1 / (1 + exp(-(P_rad - P_half) / s))
+/// ```
+///
+/// This is the hsTRPA1 pressure-gating branch used by
+/// `kwavers_physics::acoustics::therapy::sonogenetics::channels::gating`.
+/// The binding performs only array shape conversion; the gate equation and
+/// parameter validation execute in Rust core.
+///
+/// # Arguments
+///
+/// - `radiation_pressure_pa`: 1-D acoustic radiation pressure [Pa]
+/// - `half_pressure_pa`: half-activation radiation pressure P_half [Pa]
+/// - `steepness_pa`: positive sigmoid steepness s [Pa]
+///
+/// # Returns
+///
+/// 1-D numpy array of open probabilities P_open in [0, 1].
+#[pyfunction]
+pub fn pressure_threshold_open_probability_py<'py>(
+    py: Python<'py>,
+    radiation_pressure_pa: PyReadonlyArray1<'py, f64>,
+    half_pressure_pa: f64,
+    steepness_pa: f64,
+) -> PyResult<Bound<'py, numpy::PyArray1<f64>>> {
+    let pressure = radiation_pressure_pa.as_slice()?;
+    let field = Array3::from_shape_vec((pressure.len(), 1, 1), pressure.to_vec())
+        .map_err(|err| pyo3::exceptions::PyValueError::new_err(err.to_string()))?;
+    let params = PressureThresholdParams {
+        half_pressure_pa,
+        steepness_pa,
+        single_channel_conductance_s: 0.0,
+        reversal_potential_v: 0.0,
+    };
+    let p_open = py
+        .detach(|| pressure_threshold_p_open(&field, &params))
+        .map_err(kwavers_to_py)?;
+    Ok(Array1::from_iter(p_open.iter().copied()).into_pyarray(py))
 }
 
 // ── Coupled channel drive ─────────────────────────────────────────────────────
@@ -355,6 +401,37 @@ pub fn simulate_lif_neuron_py<'py>(
     Ok(dict)
 }
 
+/// Convert LIF spike times into a Gaussian-smoothed response probability.
+///
+/// The Rust core samples the spike train, applies the normalized Gaussian
+/// smoothing kernel, and clamps the response to `[0, 1]` after normalizing by
+/// the theoretical maximum firing rate.
+#[pyfunction]
+#[pyo3(signature = (spike_times_s, n_samples, dt_s, smoothing_sigma_s, f_max_hz))]
+pub fn lif_response_probability_py<'py>(
+    py: Python<'py>,
+    spike_times_s: PyReadonlyArray1<'py, f64>,
+    n_samples: usize,
+    dt_s: f64,
+    smoothing_sigma_s: f64,
+    f_max_hz: f64,
+) -> PyResult<Bound<'py, PyDict>> {
+    let spikes = spike_times_s.as_slice()?;
+    let response = py
+        .detach(|| lif_response_probability(spikes, n_samples, dt_s, smoothing_sigma_s, f_max_hz))
+        .map_err(kwavers_to_py)?;
+    let dict = PyDict::new(py);
+    dict.set_item(
+        "spike_train",
+        Array1::from_vec(response.spike_train).into_pyarray(py),
+    )?;
+    dict.set_item(
+        "response_probability",
+        Array1::from_vec(response.response_probability).into_pyarray(py),
+    )?;
+    Ok(dict)
+}
+
 // ── Module registration ───────────────────────────────────────────────────────
 
 pub fn register_sonogenetics(m: &Bound<'_, pyo3::types::PyModule>) -> PyResult<()> {
@@ -363,8 +440,13 @@ pub fn register_sonogenetics(m: &Bound<'_, pyo3::types::PyModule>) -> PyResult<(
         m
     )?)?;
     m.add_function(pyo3::wrap_pyfunction!(boltzmann_open_probability_py, m)?)?;
+    m.add_function(pyo3::wrap_pyfunction!(
+        pressure_threshold_open_probability_py,
+        m
+    )?)?;
     m.add_function(pyo3::wrap_pyfunction!(coupled_channel_drive_py, m)?)?;
     m.add_function(pyo3::wrap_pyfunction!(gaussian_beam_pressure_field_py, m)?)?;
     m.add_function(pyo3::wrap_pyfunction!(simulate_lif_neuron_py, m)?)?;
+    m.add_function(pyo3::wrap_pyfunction!(lif_response_probability_py, m)?)?;
     Ok(())
 }

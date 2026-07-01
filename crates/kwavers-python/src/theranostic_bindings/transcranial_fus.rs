@@ -15,10 +15,11 @@
 //! `kwavers_therapy::therapy::theranostic_guidance`.
 
 use kwavers_therapy::therapy::theranostic_guidance::{
+    bbb_opening_dose, gbm_subspot_covered_fraction, gbm_subspot_raster,
     run_transcranial_fus_planning, target_index_from_mask_fraction_3d,
     transcranial_pennes_thermal_dose, TranscranialFusPlanConfig,
 };
-use numpy::{IntoPyArray, PyReadonlyArray3};
+use numpy::{IntoPyArray, PyReadonlyArray2, PyReadonlyArray3};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use std::path::Path;
@@ -240,6 +241,92 @@ pub fn run_transcranial_fus_planning_from_arrays<'py>(
         .map_err(kwavers_to_py)?;
 
     plan_to_pydict(py, &plan, None)
+}
+
+/// Generate GBM subspot raster indices from a tumour mask.
+///
+/// Delegates to Rust `gbm_subspot_raster` and
+/// `gbm_subspot_covered_fraction`; Python receives a dict with `indices` and
+/// `covered_fraction`.
+#[pyfunction]
+#[pyo3(signature = (tumor_mask, spacing_m, pitch_m = 3.0e-3))]
+pub fn gbm_subspot_raster_py<'py>(
+    py: Python<'py>,
+    tumor_mask: PyReadonlyArray3<'py, bool>,
+    spacing_m: (f64, f64, f64),
+    pitch_m: f64,
+) -> PyResult<Bound<'py, PyDict>> {
+    let tumor = tumor_mask.as_array().to_owned();
+    let spacing = [spacing_m.0, spacing_m.1, spacing_m.2];
+    let spots = py
+        .detach(|| gbm_subspot_raster(&tumor, spacing, pitch_m))
+        .map_err(kwavers_to_py)?;
+    let covered_fraction = gbm_subspot_covered_fraction(&tumor, &spots, spacing, pitch_m);
+    let out = PyDict::new(py);
+    out.set_item("indices", spots.into_pyarray(py))?;
+    out.set_item("covered_fraction", covered_fraction)?;
+    Ok(out)
+}
+
+/// Compute BBB opening dose fields from a tumour mask and Rust subspot raster.
+///
+/// The returned dict contains `dose`, `permeability`,
+/// `stable_cavitation_probability`, `inertial_cavitation_risk`, and
+/// `opened_mask`.
+#[pyfunction]
+#[pyo3(signature = (
+    tumor_mask,
+    subspot_indices,
+    spacing_m,
+    mechanical_index = 0.45,
+    sonication_s = 60.0,
+    duty_cycle = 0.02,
+    focal_radius_m = 2.0e-3,
+    d50 = 0.40,
+    hill_n = 2.5,
+))]
+#[allow(clippy::too_many_arguments)]
+pub fn bbb_opening_from_subspots_py<'py>(
+    py: Python<'py>,
+    tumor_mask: PyReadonlyArray3<'py, bool>,
+    subspot_indices: PyReadonlyArray2<'py, usize>,
+    spacing_m: (f64, f64, f64),
+    mechanical_index: f64,
+    sonication_s: f64,
+    duty_cycle: f64,
+    focal_radius_m: f64,
+    d50: f64,
+    hill_n: f64,
+) -> PyResult<Bound<'py, PyDict>> {
+    let tumor = tumor_mask.as_array().to_owned();
+    let spots = subspot_indices.as_array().to_owned();
+    let spacing = [spacing_m.0, spacing_m.1, spacing_m.2];
+    let (dose, permeability, stable, inertial) = py.detach(|| {
+        bbb_opening_dose(
+            &tumor,
+            &spots,
+            spacing,
+            mechanical_index,
+            sonication_s,
+            duty_cycle,
+            focal_radius_m,
+            d50,
+            hill_n,
+        )
+    });
+    let opened = permeability
+        .indexed_iter()
+        .map(|((ix, iy, iz), &p)| p >= 0.50 && tumor[[ix, iy, iz]]);
+    let opened_mask = ndarray::Array3::from_shape_vec(tumor.dim(), opened.collect())
+        .map_err(|err| pyo3::exceptions::PyRuntimeError::new_err(err.to_string()))?;
+
+    let out = PyDict::new(py);
+    out.set_item("dose", dose.into_pyarray(py))?;
+    out.set_item("permeability", permeability.into_pyarray(py))?;
+    out.set_item("stable_cavitation_probability", stable.into_pyarray(py))?;
+    out.set_item("inertial_cavitation_risk", inertial.into_pyarray(py))?;
+    out.set_item("opened_mask", opened_mask.into_pyarray(py))?;
+    Ok(out)
 }
 
 // ── Thermal entry point ───────────────────────────────────────────────────────

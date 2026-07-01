@@ -10,15 +10,15 @@ use kwavers_core::constants::cavitation::{
 use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use kwavers_core::constants::numerical::MPA_TO_PA;
 use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_math::linear_algebra::iterative::lsqr::{
+    solve_lsqr_matfree, LsqrConfig, MatFreeOperator,
+};
+use kwavers_math::linear_algebra::LinearAlgebra;
 use kwavers_physics::acoustics::bubble_dynamics::adaptive_integration::integrate_bubble_dynamics_adaptive;
 use kwavers_physics::acoustics::bubble_dynamics::bubbly_medium::commander_prosperetti_attenuation;
 use kwavers_physics::acoustics::bubble_dynamics::gilmore::GilmoreSolver;
 use kwavers_physics::acoustics::bubble_dynamics::keller_miksis::KellerMiksisModel;
 use kwavers_physics::acoustics::bubble_dynamics::{BubbleParameters, BubbleState};
-use kwavers_math::linear_algebra::iterative::lsqr::{
-    solve_lsqr_matfree, LsqrConfig, MatFreeOperator,
-};
-use kwavers_math::linear_algebra::LinearAlgebra;
 use ndarray::{Array1, Array2, Array3};
 use std::f64::consts::PI;
 
@@ -118,16 +118,16 @@ impl Default for CloudParameters {
             viscosity: VISCOSITY_WATER,
             erosion_efficiency: 1e-12, // kg/J (empirical, Sapozhnikov et al. 2002)
             drive_frequency: 1.0e6,    // 1 MHz representative cavitation drive
-            cell_spacing: [1.0e-3; 3],          // 1 mm
-            coupling_enabled: false,            // opt-in (O(active²); see field docs)
+            cell_spacing: [1.0e-3; 3], // 1 mm
+            coupling_enabled: false,   // opt-in (O(active²); see field docs)
             interaction_radius: f64::INFINITY,
-            shielding_enabled: false,           // opt-in (ADR 029)
-            incident_axis: 2,                   // z by default
+            shielding_enabled: false, // opt-in (ADR 029)
+            incident_axis: 2,         // z by default
             incident_from_high: false,
             coupling_scheme: CouplingScheme::Explicit, // ADR 028; opt into implicit
             coupling_max_iterations: 16,
             coupling_tolerance: 1e-3,
-            couple_pressure_rate: false, // opt-in (ADR 032)
+            couple_pressure_rate: false,       // opt-in (ADR 032)
             shielding_radius_dependent: false, // opt-in (ADR 032)
         }
     }
@@ -206,7 +206,11 @@ impl MatFreeOperator for CouplingOperator {
     }
     /// `x = Mᵀ·y = y − G·(D·y)` (`G` symmetric).
     fn t_matvec(&self, y: &[f64], x: &mut [f64]) {
-        let dy: Vec<f64> = y.iter().zip(self.d.iter()).map(|(&yi, &di)| di * yi).collect();
+        let dy: Vec<f64> = y
+            .iter()
+            .zip(self.d.iter())
+            .map(|(&yi, &di)| di * yi)
+            .collect();
         let g_dy = self.apply_g(&dy);
         for a in 0..self.positions.len() {
             x[a] = y[a] - g_dy[a];
@@ -882,8 +886,9 @@ impl CavitationCloudDynamics {
                     let mut state = BubbleState::new(&params);
                     state.radius = r_before;
                     state.wall_velocity = self.velocity_field[idx];
-                    let integration =
-                        integrate_bubble_dynamics_adaptive(&solver, &mut state, p_total, dp_dt, dt, time);
+                    let integration = integrate_bubble_dynamics_adaptive(
+                        &solver, &mut state, p_total, dp_dt, dt, time,
+                    );
 
                     // A single bubble's adaptive non-convergence or non-finite state
                     // signals a destructive inertial collapse beyond the integrator's
@@ -1101,7 +1106,10 @@ mod tests {
         let r0 = CloudParameters::default().initial_bubble_radius;
         let r_shallow = grow_to(-2.0);
         let r_deep = grow_to(-4.0);
-        assert!(r_deep > r_shallow && r_shallow > r0, "deeper tension must grow larger: {r_deep} > {r_shallow} > {r0}");
+        assert!(
+            r_deep > r_shallow && r_shallow > r0,
+            "deeper tension must grow larger: {r_deep} > {r_shallow} > {r0}"
+        );
     }
 
     #[test]
@@ -1118,7 +1126,10 @@ mod tests {
         );
         // Monotone: stronger tension grows a larger bubble.
         let r_max_weak = cloud.representative_max_radius(3.0 * MPA_TO_PA);
-        assert!(r_max_strong > r_max_weak, "R_max must increase with drive amplitude");
+        assert!(
+            r_max_strong > r_max_weak,
+            "R_max must increase with drive amplitude"
+        );
     }
 
     #[test]
@@ -1127,7 +1138,10 @@ mod tests {
         let cloud = CavitationCloudDynamics::new(CloudParameters::default(), (1, 1, 1));
         let e_weak = cloud.inertial_collapse_energy(3.0 * MPA_TO_PA);
         let e_strong = cloud.inertial_collapse_energy(12.0 * MPA_TO_PA);
-        assert!(e_weak > 0.0 && e_strong > e_weak, "collapse energy must rise with drive");
+        assert!(
+            e_weak > 0.0 && e_strong > e_weak,
+            "collapse energy must rise with drive"
+        );
     }
 
     // ── Inter-bubble acoustic coupling (ADR 028) ──────────────────────────────
@@ -1138,7 +1152,10 @@ mod tests {
         let (rho, d, r, rdot, rddot) = (1000.0, 2.0e-3, 5.0e-6, 0.3, 1.0e9);
         let expected = rho / d * (r * r * rddot + 2.0 * r * rdot * rdot);
         let got = bubble_radiated_pressure(rho, d, r, rdot, rddot);
-        assert!((got - expected).abs() < 1e-9 * expected.abs(), "expected {expected}, got {got}");
+        assert!(
+            (got - expected).abs() < 1e-9 * expected.abs(),
+            "expected {expected}, got {got}"
+        );
         // Zero/negative distance guarded.
         assert_eq!(bubble_radiated_pressure(rho, 0.0, r, rdot, rddot), 0.0);
     }
@@ -1147,7 +1164,10 @@ mod tests {
     fn radiated_pressure_scales_inverse_distance() {
         let p1 = bubble_radiated_pressure(1000.0, 1.0e-3, 5.0e-6, 0.3, 1.0e9);
         let p2 = bubble_radiated_pressure(1000.0, 2.0e-3, 5.0e-6, 0.3, 1.0e9);
-        assert!((p1 - 2.0 * p2).abs() < 1e-9 * p1.abs(), "doubling distance must halve p_rad");
+        assert!(
+            (p1 - 2.0 * p2).abs() < 1e-9 * p1.abs(),
+            "doubling distance must halve p_rad"
+        );
     }
 
     /// Drive a 2-cell cloud (separated by `spacing` along x) and return cell-0 radius.
@@ -1169,7 +1189,9 @@ mod tests {
     }
 
     fn sinusoid(amp: f64, f: f64, dt: f64, n: usize) -> Vec<f64> {
-        (0..n).map(|m| amp * (2.0 * PI * f * (m as f64 * dt)).sin()).collect()
+        (0..n)
+            .map(|m| amp * (2.0 * PI * f * (m as f64 * dt)).sin())
+            .collect()
     }
 
     #[test]
@@ -1221,7 +1243,11 @@ mod tests {
             }
             cloud.cloud_radius()[[1, 0, 0]]
         };
-        assert_eq!(run(true), run(false), "a lone bubble must be unaffected by coupling");
+        assert_eq!(
+            run(true),
+            run(false),
+            "a lone bubble must be unaffected by coupling"
+        );
     }
 
     // ── Cloud-scale acoustic shielding (ADR 029) ──────────────────────────────
@@ -1316,7 +1342,9 @@ mod tests {
         let d = 1.0e-3;
         let params = CloudParameters {
             coupling_enabled: true,
-            coupling_scheme: CouplingScheme::ImplicitFixedPoint { under_relaxation: 1.0 },
+            coupling_scheme: CouplingScheme::ImplicitFixedPoint {
+                under_relaxation: 1.0,
+            },
             cell_spacing: [d, 1.0, 1.0],
             coupling_tolerance: 1e-9,
             coupling_max_iterations: 200,
@@ -1351,8 +1379,16 @@ mod tests {
         let expect0 = coeff * s([1, 0, 0]);
         let expect1 = coeff * s([0, 0, 0]);
         let tol = 1e-6 * (field[[0, 0, 0]].abs().max(field[[1, 0, 0]].abs()).max(1.0));
-        assert!((field[[0, 0, 0]] - expect0).abs() < tol, "cell0 not self-consistent: {} vs {expect0}", field[[0, 0, 0]]);
-        assert!((field[[1, 0, 0]] - expect1).abs() < tol, "cell1 not self-consistent: {} vs {expect1}", field[[1, 0, 0]]);
+        assert!(
+            (field[[0, 0, 0]] - expect0).abs() < tol,
+            "cell0 not self-consistent: {} vs {expect0}",
+            field[[0, 0, 0]]
+        );
+        assert!(
+            (field[[1, 0, 0]] - expect1).abs() < tol,
+            "cell1 not self-consistent: {} vs {expect1}",
+            field[[1, 0, 0]]
+        );
     }
 
     /// Drive a 2-cell cloud with a given coupling scheme; return cell-0 radius.
@@ -1386,7 +1422,9 @@ mod tests {
         let dt = (1.0 / f) / 200.0;
         let seq = sinusoid(0.5e6, f, dt, 150);
         let r_impl = drive_two_cells_scheme(
-            CouplingScheme::ImplicitFixedPoint { under_relaxation: 1.0 },
+            CouplingScheme::ImplicitFixedPoint {
+                under_relaxation: 1.0,
+            },
             0.5e-3,
             &seq,
             dt,
@@ -1458,7 +1496,10 @@ mod tests {
         let driving = Array3::from_elem((2, 1, 1), p_in);
         let field = cloud.coupling_pressure_field(&solver, &bp, &driving, 1.0, 0.0);
         let residual = self_consistency_residual(&cloud, &field, spacing, p_in);
-        assert!(residual < 1e-9, "direct solve must be self-consistent: residual {residual}");
+        assert!(
+            residual < 1e-9,
+            "direct solve must be self-consistent: residual {residual}"
+        );
     }
 
     #[test]
@@ -1474,7 +1515,9 @@ mod tests {
         let f_direct = direct.coupling_pressure_field(&solver, &bp, &driving, 1.0, 0.0);
 
         let fp = two_bubble_cloud(
-            CouplingScheme::ImplicitFixedPoint { under_relaxation: 1.0 },
+            CouplingScheme::ImplicitFixedPoint {
+                under_relaxation: 1.0,
+            },
             spacing,
         );
         let f_fp = fp.coupling_pressure_field(&solver, &bp, &driving, 1.0, 0.0);
@@ -1637,7 +1680,10 @@ mod tests {
 
         // Reversed acceleration ⇒ stable (no real growth).
         let stable = cloud.interface_instability(k, -accel, dv, a0);
-        assert_eq!(stable.rayleigh_taylor_rate, 0.0, "light-over-heavy must be stable");
+        assert_eq!(
+            stable.rayleigh_taylor_rate, 0.0,
+            "light-over-heavy must be stable"
+        );
     }
 
     #[test]
@@ -1657,7 +1703,10 @@ mod tests {
             "RM rate {} vs impulsive form {expected}",
             diag.richtmyer_meshkov_rate
         );
-        assert!(diag.atwood > 0.0, "expected a positive Atwood number for a seeded cloud");
+        assert!(
+            diag.atwood > 0.0,
+            "expected a positive Atwood number for a seeded cloud"
+        );
     }
 
     // ── Sparse / matrix-free coupling solver (ADR 032) ────────────────────────
@@ -1706,6 +1755,9 @@ mod tests {
         let solver = KellerMiksisModel::new(bp.clone());
         let field = cloud.coupling_pressure_field(&solver, &bp, &driving, 1.0, 0.0);
         let residual = self_consistency_residual(&cloud, &field, spacing, p_in);
-        assert!(residual < 1e-6, "iterative solve must be self-consistent: residual {residual}");
+        assert!(
+            residual < 1e-6,
+            "iterative solve must be self-consistent: residual {residual}"
+        );
     }
 }

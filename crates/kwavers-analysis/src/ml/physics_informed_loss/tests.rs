@@ -29,24 +29,32 @@ fn test_physics_loss_config_default() {
 
 #[test]
 fn test_physics_loss_config_validation() {
-    let mut config = PhysicsLossConfig::default();
-    config.sound_speed = 0.0;
+    let config = PhysicsLossConfig {
+        sound_speed: 0.0,
+        ..Default::default()
+    };
     let err = config.validate().unwrap_err();
     assert!(
         format!("{err:?}").contains("sound_speed"),
         "zero sound_speed error must mention 'sound_speed'; got: {err:?}"
     );
 
-    config.sound_speed = SOUND_SPEED_AIR;
-    config.frequency = -100.0;
+    let config = PhysicsLossConfig {
+        sound_speed: SOUND_SPEED_AIR,
+        frequency: -100.0,
+        ..Default::default()
+    };
     let err = config.validate().unwrap_err();
     assert!(
         format!("{err:?}").contains("frequency"),
         "negative frequency error must mention 'frequency'; got: {err:?}"
     );
 
-    config.frequency = MHZ_TO_HZ;
-    config.history_window = 0;
+    let config = PhysicsLossConfig {
+        frequency: MHZ_TO_HZ,
+        history_window: 0,
+        ..Default::default()
+    };
     let err = config.validate().unwrap_err();
     assert!(
         format!("{err:?}").contains("history_window"),

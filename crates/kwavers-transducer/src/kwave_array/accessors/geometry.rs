@@ -17,6 +17,7 @@ impl KWaveArray {
                     ElementShape::Arc { position, .. } => *position,
                     ElementShape::Rect { position, .. } => *position,
                     ElementShape::Disc { position, .. } => *position,
+                    ElementShape::ProfiledDisc { position, .. } => *position,
                     ElementShape::Bowl { position, .. } => *position,
                     ElementShape::Annulus { position, .. } => *position,
                 };
@@ -41,6 +42,9 @@ impl KWaveArray {
                     ..
                 } => Self::bowl_surface_area(*r, *d),
                 ElementShape::Disc { diameter: d, .. } => std::f64::consts::PI * (d / 2.0).powi(2),
+                ElementShape::ProfiledDisc { diameter: d, .. } => {
+                    std::f64::consts::PI * (d / 2.0).powi(2)
+                }
                 ElementShape::Rect {
                     width: w,
                     height: h,

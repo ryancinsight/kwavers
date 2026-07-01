@@ -193,8 +193,11 @@ T_C = T0 + dT_dt_C * t_pulse_C   # linear exact at 5 μs timescale (ΔT ≈ μ°
 # Millisecond regime: kwavers ThermalDiffusionSolver with Pennes bioheat.
 # Diffusion timescale D·(Δx)² ≈ 0.23 s ≫ TAU_M → conduction matters at 10 ms.
 # Q_M = 2·α_S·I_S_M where I_S_M is the shock-rich focal intensity.
-# kw.acoustic_heat_source_density requires pressure; invert I_S_M = p²/(2ρc).
-P_S_M = float(np.sqrt(2.0 * RHO0 * C0 * I_S_M))
+# kw.acoustic_heat_source_density requires pressure; invert I_S_M = p²/(2ρc)
+# through the Rust analytical thermal helper.
+P_S_M = float(np.asarray(
+    kw.acoustic_pressure_amplitude_from_intensity(np.array([I_S_M]), RHO0, C0)
+)[0])
 Q_M = float(np.asarray(
     kw.acoustic_heat_source_density(np.array([P_S_M]), ALPHA_S, RHO0, C0)
 )[0])

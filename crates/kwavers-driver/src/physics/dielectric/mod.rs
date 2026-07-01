@@ -19,16 +19,16 @@
 //! B1 external uncoated value at the 150 V rail. Creepage ([`crate::rules`]) governs *surface*
 //! tracking; this slice covers the complementary *air* breakdown across a gap.
 
-/// Paschen air-breakdown kinetics (`V_b(pd)`, minimum voltage, "can air possibly break down"
-/// predicate) plus the air-constant table (A, B, γ) and the closed-form `ln(ln(1+1/γ))` term.
-pub mod paschen;
+/// Relative conductive-anodic-filament (CAF) time-to-failure between two conductors at
+/// `spacing_mm` and `voltage_v` versus a reference: `TTF/TTF_ref = (s/s_ref)² · (v_ref/v)`.
+pub mod caf;
 /// IPC-2221B Table 6-1 B1 external uncoated minimum conductor spacing (mm) for `voltage_v`
 /// between conductors, below 3050 m. Piecewise in `voltage_v`; above 500 V it grows at
 /// `0.005 mm/V`.
 pub mod ipc2221_spacing;
-/// Relative conductive-anodic-filament (CAF) time-to-failure between two conductors at
-/// `spacing_mm` and `voltage_v` versus a reference: `TTF/TTF_ref = (s/s_ref)² · (v_ref/v)`.
-pub mod caf;
+/// Paschen air-breakdown kinetics (`V_b(pd)`, minimum voltage, "can air possibly break down"
+/// predicate) plus the air-constant table (A, B, γ) and the closed-form `ln(ln(1+1/γ))` term.
+pub mod paschen;
 
 #[cfg(test)]
 mod tests;
@@ -41,6 +41,6 @@ mod tests;
 // Explicit named re-exports (not glob `pub use paschen::*;` like the ampacity slice does)
 // so the slice-private `A_AIR` / `B_AIR` / `GAMMA` constants in [`paschen`] do not leak into
 // the `crate::physics::dielectric` API surface.
-pub use paschen::{air_breakdown_possible, paschen_breakdown_v, paschen_min_air};
-pub use ipc2221_spacing::ipc2221_min_spacing_mm;
 pub use caf::caf_ttf_relative;
+pub use ipc2221_spacing::ipc2221_min_spacing_mm;
+pub use paschen::{air_breakdown_possible, paschen_breakdown_v, paschen_min_air};

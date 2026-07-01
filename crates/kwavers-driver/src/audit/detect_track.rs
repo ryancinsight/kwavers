@@ -5,10 +5,10 @@
 
 use std::collections::{BTreeMap, HashMap};
 
+use crate::audit::net_util::parallel_bus_group_name;
 use crate::board::{Board, LayerId, NetClassKind, NetId, Track};
 use crate::geom::{segments_cross, Nm, Point};
 use crate::rules::DesignRules;
-use crate::audit::net_util::parallel_bus_group_name;
 
 pub(crate) fn detect_sharp_bends(board: &Board) -> (usize, Vec<Point>) {
     let tr = &board.tracks;
@@ -237,7 +237,10 @@ pub(crate) fn nearest_distance(p: Point, points: &[Point]) -> f64 {
         .unwrap_or(f64::INFINITY)
 }
 
-pub(crate) fn detect_via_spacing_violations(board: &Board, rules: &DesignRules) -> (usize, Vec<Point>) {
+pub(crate) fn detect_via_spacing_violations(
+    board: &Board,
+    rules: &DesignRules,
+) -> (usize, Vec<Point>) {
     let mut count = 0;
     let mut pts = Vec::new();
     let vias = &board.vias;

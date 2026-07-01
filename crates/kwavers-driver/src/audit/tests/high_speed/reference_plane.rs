@@ -306,8 +306,7 @@ fn detects_high_speed_track_without_adjacent_reference_plane() {
 
 #[test]
 fn detects_inner_high_speed_track_without_dual_ground_reference() {
-    let spec =
-        GridSpec::cover(Nm::from_mm(20.0), Nm::from_mm(20.0), Nm::from_mm(0.5), 4).unwrap();
+    let spec = GridSpec::cover(Nm::from_mm(20.0), Nm::from_mm(20.0), Nm::from_mm(0.5), 4).unwrap();
     let mut b = Board::new(spec);
     let tx = b.add_net("TX_INNER", NetClassKind::Signal);
     let gnd = b.add_net("GND", NetClassKind::Ground);

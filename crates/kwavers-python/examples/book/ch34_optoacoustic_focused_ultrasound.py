@@ -30,12 +30,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-try:
-    import pykwavers as kw
-    _HAS_PYKWAVERS = True
-except ImportError:
-    kw = None
-    _HAS_PYKWAVERS = False
+import pykwavers as kw
 
 REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
 OUT_DIR = os.path.join(REPO_ROOT, "docs", "book", "figures", "ch34")
@@ -62,9 +57,6 @@ D_TRANS = 12.1e-3  # transverse aperture diameter [m]
 
 def fig01_soap_resolution_gain() -> None:
     """Lateral resolution vs NA and focal gain vs f-number (Eqs. 34.4–34.5)."""
-    if not _HAS_PYKWAVERS:
-        raise ImportError("pykwavers is required for ch34 fig01 (OFUS design relations)")
-
     fig, (ax_r, ax_g) = plt.subplots(1, 2, figsize=(11, 4.3))
 
     # (a) Lateral resolution vs NA — Eq. (34.5), kw.acoustic_resolution_lateral.

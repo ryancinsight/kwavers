@@ -152,7 +152,10 @@ fn channel_operating_margin_zero_at_threshold_and_one_decade_per_20db() {
 fn return_loss_db_is_infinity_at_perfect_match_and_zero_at_full_mismatch() {
     // Perfect match ⇒ Γ = 0 ⇒ RL = +∞ (encoded as f64::INFINITY).
     let rl_inf = return_loss_db(50.0, 50.0);
-    assert!(rl_inf.is_infinite() && rl_inf.is_sign_positive(), "matched ⇒ +∞ dB");
+    assert!(
+        rl_inf.is_infinite() && rl_inf.is_sign_positive(),
+        "matched ⇒ +∞ dB"
+    );
     // 2:1 mismatch (line = 2·driver or driver = 2·line) ⇒ |Γ| = 1/3 ⇒ RL = -20·log10(1/3)
     // ≈ 9.542 dB.
     let rl_2to1_up = return_loss_db(50.0, 100.0);

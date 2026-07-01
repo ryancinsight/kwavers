@@ -148,7 +148,7 @@ mod tests {
             for &v in &[0.0, 0.5, 1.0, 2.0] {
                 let p = c.coalescence_probability(d, v);
                 assert!(
-                    p >= 0.0 && p <= 1.0,
+                    (0.0..=1.0).contains(&p),
                     "probability {p} out of [0,1] at d={d:.2e}, v={v}"
                 );
             }

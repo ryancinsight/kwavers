@@ -39,8 +39,8 @@
     "lumen_area_mm2": 7.103354716440935,
     "plaque_area_mm2": 8.623959533434718,
     "bmode_dynamic_range_db": 60.0,
-    "bmode_mean_lumen_intensity": 0.6781779438043297,
-    "bmode_mean_wall_intensity": 0.7595463055706663,
+    "bmode_mean_lumen_intensity": 0.5713665532268707,
+    "bmode_mean_wall_intensity": 0.6138396911667598,
     "therapy_mechanical_index": 0.24441586707352853,
     "therapy_peak_delta_t_c": 0.3171240635670549,
     "therapy_target_to_offtarget_deposition_ratio": 1792.851304067644

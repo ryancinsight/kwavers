@@ -5,15 +5,15 @@
 
 use std::collections::BTreeMap;
 
-use crate::board::NetId;
-use crate::geom::{segments_cross, Nm, Point};
-use crate::place::component::Component;
-use crate::place::footprint::{FootprintDef, Role};
 use super::config::{EnergyTerms, PlaceConfig};
 use super::geom::{
     connector_ingress_unit, has_non_power_pad_on_net, non_power_signal_net_count,
     segment_intersects_rect,
 };
+use crate::board::NetId;
+use crate::geom::{segments_cross, Nm, Point};
+use crate::place::component::Component;
+use crate::place::footprint::{FootprintDef, Role};
 
 /// A two-component local net flight line (used only inside [`accumulate_connectivity`]).
 struct FlightLine {
@@ -76,9 +76,9 @@ pub(super) fn accumulate_connectivity(
         for (pos, _layers, net) in c.placed_pads(lib) {
             if let Some(n) = net {
                 if let Some(e) = sum_by_net.iter_mut().find(|(id, _)| *id == n) {
-                    e.1.0 += pos.x.0;
-                    e.1.1 += pos.y.0;
-                    e.1.2 += 1;
+                    e.1 .0 += pos.x.0;
+                    e.1 .1 += pos.y.0;
+                    e.1 .2 += 1;
                 } else {
                     sum_by_net.push((n, (pos.x.0, pos.y.0, 1)));
                 }

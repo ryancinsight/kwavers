@@ -1,11 +1,8 @@
-
-use crate::board::Board;
-use crate::geom::{
-    Nm, Point,
-};
-use crate::rules::DesignRules;
-use crate::audit::fault_report::is_hv;
 use crate::audit::crosstalk::point_features;
+use crate::audit::fault_report::is_hv;
+use crate::board::Board;
+use crate::geom::{Nm, Point};
+use crate::rules::DesignRules;
 /// Different-net copper whose **edge-to-edge** gap is below `risk_margin` (a graded warning band
 /// beyond binary DRC); HV-involved pairs weighted 2×, `score` ramps linearly as the gap closes.
 ///
@@ -108,7 +105,10 @@ pub(crate) fn near_shorts(board: &Board, risk_margin: Nm) -> (usize, f64, Vec<Po
 /// of kicad-cli's `hole_clearance` class. The barrel spans `[from, to]`, so only copper on those
 /// layers is at risk; same-net copper (the via's own connection) is exempt. Pad copper is not modelled
 /// here (the board pad carries no size), so this covers the dominant via-hole↔track case.
-pub(crate) fn detect_hole_clearance_violations(board: &Board, rules: &DesignRules) -> (usize, Vec<Point>) {
+pub(crate) fn detect_hole_clearance_violations(
+    board: &Board,
+    rules: &DesignRules,
+) -> (usize, Vec<Point>) {
     let hc = rules.hole_clearance().0 as f64;
     let mut count = 0usize;
     let mut pts = Vec::new();

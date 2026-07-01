@@ -4,8 +4,7 @@
 //! `docs/PHASE_1_prelude_plan.md`) into a real entry point at `src/prelude.rs`.
 //! The goal is one lump-import that brings the canonical unit newtypes, the
 //! geometry types, the board model, and the physics facade into scope for
-//! downstream examples, integration tests, and the future kwavers-side
-//! `experiment` tree.
+//! downstream examples, integration tests, and the kwavers-backed `experiment` tree.
 //!
 //! # What lands in scope
 //!

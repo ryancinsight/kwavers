@@ -72,8 +72,10 @@ Z_START = 5e-3          # [m]
 Z_END   = 50e-3         # [m]
 N_Z     = 100
 
-PEARSON_THRESHOLD = 0.990
-PSNR_THRESHOLD_DB = 30.0
+PARITY_THRESHOLDS = {
+    "pearson_r": 0.990,
+    "psnr_db": 30.0,
+}
 
 FIGURE_PATH = DEFAULT_OUTPUT_DIR / "tvsp_acoustic_field_propagator_compare.png"
 METRICS_PATH = DEFAULT_OUTPUT_DIR / "tvsp_acoustic_field_propagator_metrics.txt"
@@ -182,7 +184,12 @@ def main() -> int:
     rms_ratio = float(np.sqrt(np.mean(asm_abs**2)) / np.sqrt(np.mean(rs2_abs**2))) if rs2_abs.any() else 1.0
     max_abs_err = float(np.max(np.abs(asm_abs - rs2_abs)))
 
-    status = "PASS" if pearson_r >= PEARSON_THRESHOLD and psnr_db >= PSNR_THRESHOLD_DB else "FAIL"
+    status = (
+        "PASS"
+        if pearson_r >= PARITY_THRESHOLDS["pearson_r"]
+        and psnr_db >= PARITY_THRESHOLDS["psnr_db"]
+        else "FAIL"
+    )
 
     report_lines = [
         "tvsp_acoustic_field_propagator parity report",
@@ -200,8 +207,8 @@ def main() -> int:
         "",
         "On-axis |pressure| parity metrics",
         "----------------------------------",
-        f"  pearson_r:   {pearson_r:.6f}  (threshold ≥ {PEARSON_THRESHOLD})",
-        f"  psnr_db:     {psnr_db:.2f} dB  (threshold ≥ {PSNR_THRESHOLD_DB} dB)",
+        f"  pearson_r:   {pearson_r:.6f}  (threshold ≥ {PARITY_THRESHOLDS['pearson_r']})",
+        f"  psnr_db:     {psnr_db:.2f} dB  (threshold ≥ {PARITY_THRESHOLDS['psnr_db']} dB)",
         f"  rms_ratio:   {rms_ratio:.6f}",
         f"  max_abs_err: {max_abs_err:.4e} Pa",
         "",

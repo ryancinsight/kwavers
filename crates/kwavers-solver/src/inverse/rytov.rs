@@ -113,7 +113,11 @@ mod tests {
         let psi = rytov_phase(&inc, &total).unwrap();
         // ψ must equal the seed u_B/u_inc.
         let expected = born[[0, 0]] / inc[[0, 0]];
-        assert!((psi[[0, 0]] - expected).norm() < 1e-12, "psi {}", psi[[0, 0]]);
+        assert!(
+            (psi[[0, 0]] - expected).norm() < 1e-12,
+            "psi {}",
+            psi[[0, 0]]
+        );
     }
 
     #[test]
@@ -143,9 +147,16 @@ mod tests {
         let inc = field(Complex64::new(1.0, 0.0));
         let born = field(Complex64::new(0.0, 0.8)); // ψ = i·0.8
         let u_rytov = rytov_total_field(&inc, &born).unwrap()[[0, 0]];
-        assert!((u_rytov.norm() - 1.0).abs() < 1e-12, "|u_rytov| = {}", u_rytov.norm());
+        assert!(
+            (u_rytov.norm() - 1.0).abs() < 1e-12,
+            "|u_rytov| = {}",
+            u_rytov.norm()
+        );
         let u_born = born_total_field(&inc, &born)[[0, 0]];
-        assert!((u_born.norm() - 1.0).abs() > 0.2, "Born must distort amplitude");
+        assert!(
+            (u_born.norm() - 1.0).abs() > 0.2,
+            "Born must distort amplitude"
+        );
     }
 
     #[test]

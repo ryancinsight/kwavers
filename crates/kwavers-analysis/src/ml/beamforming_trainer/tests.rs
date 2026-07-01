@@ -43,10 +43,12 @@ fn test_trainer_empty_dataset() {
 
 #[test]
 fn test_trainer_simple_training() {
-    let mut config = PhysicsNNTrainingConfig::default();
-    config.num_epochs = 5;
-    config.batch_size = 10;
-    config.verbose = false;
+    let config = PhysicsNNTrainingConfig {
+        num_epochs: 5,
+        batch_size: 10,
+        verbose: false,
+        ..Default::default()
+    };
 
     let physics_loss = PhysicsLoss::default();
     let mut trainer = BeamformingTrainer::new(config, physics_loss).unwrap();
@@ -65,9 +67,11 @@ fn test_trainer_simple_training() {
 
 #[test]
 fn test_trainer_with_validation_dataset() {
-    let mut config = PhysicsNNTrainingConfig::default();
-    config.num_epochs = 3;
-    config.verbose = false;
+    let config = PhysicsNNTrainingConfig {
+        num_epochs: 3,
+        verbose: false,
+        ..Default::default()
+    };
 
     let physics_loss = PhysicsLoss::default();
     let mut trainer = BeamformingTrainer::new(config, physics_loss).unwrap();

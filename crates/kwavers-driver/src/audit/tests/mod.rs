@@ -6,14 +6,13 @@ use crate::rules::DesignRules;
 
 mod diff_pair;
 mod high_speed;
+mod integration;
 mod pdn;
 mod routing;
 mod via;
-mod integration;
 
 pub(crate) fn board() -> Board {
-    let spec =
-        GridSpec::cover(Nm::from_mm(20.0), Nm::from_mm(20.0), Nm::from_mm(0.5), 2).unwrap();
+    let spec = GridSpec::cover(Nm::from_mm(20.0), Nm::from_mm(20.0), Nm::from_mm(0.5), 2).unwrap();
     Board::new(spec)
 }
 

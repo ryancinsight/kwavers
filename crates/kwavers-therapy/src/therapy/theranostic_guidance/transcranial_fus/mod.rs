@@ -24,11 +24,13 @@ mod subspot;
 mod thermal;
 pub(super) mod types;
 
+pub use bbb::bbb_opening_dose;
 pub use benchmark::{
     evaluate_pressure_field, run_skull_adaptive_transcranial_benchmark, PressureFieldMetrics,
     SkullAdaptiveBenchmarkConfig, SkullAdaptiveBenchmarkResult, SkullAwareTransducerPlacement,
 };
 pub use pipeline::run_transcranial_fus_planning;
+pub use subspot::{gbm_subspot_covered_fraction, gbm_subspot_raster};
 pub use thermal::{transcranial_pennes_thermal_dose, TranscranialThermalResult};
 pub use types::{TranscranialFusPlan, TranscranialFusPlanConfig};
 

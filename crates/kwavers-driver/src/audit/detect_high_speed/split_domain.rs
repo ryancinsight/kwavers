@@ -1,12 +1,12 @@
 //! Split-domain reference crossing, mixed-domain shared reference, and
 //! virtual split-line crossing violation detectors.
 
-use crate::board::{split_domain_from_name, Board, NetClassKind, SplitDomain};
-use crate::geom::{dist_seg_seg, point_in_polygon, Nm, Point};
-use crate::rules::DesignRules;
 use crate::audit::net_util::{
     adjacent_ground_reference_zone_indices, reference_zones, track_midpoint,
 };
+use crate::board::{split_domain_from_name, Board, NetClassKind, SplitDomain};
+use crate::geom::{dist_seg_seg, point_in_polygon, Nm, Point};
+use crate::rules::DesignRules;
 
 pub(crate) fn detect_split_domain_reference_violations(board: &Board) -> (usize, Vec<Point>) {
     let zones = reference_zones(board);

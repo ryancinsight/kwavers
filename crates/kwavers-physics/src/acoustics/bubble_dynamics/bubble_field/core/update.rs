@@ -4,7 +4,7 @@ use ndarray::Array3;
 
 use crate::acoustics::bubble_dynamics::adaptive_integration::integrate_bubble_dynamics_adaptive;
 
-use super::model::BubbleField;
+use super::model::{BubbleField, BubbleFieldSolver};
 
 impl BubbleField {
     /// Advance all bubbles by one time step.
@@ -31,9 +31,19 @@ impl BubbleField {
             let p_secondary = secondary_pressures.get(&pos).copied().unwrap_or(0.0);
             let p_effective = p_acoustic + p_secondary;
 
-            if let Err(e) =
-                integrate_bubble_dynamics_adaptive(&self.solver, state, p_effective, dp_dt, dt, t)
-            {
+            let integrate = match &self.solver {
+                BubbleFieldSolver::KellerMiksis(model) => {
+                    integrate_bubble_dynamics_adaptive(model, state, p_effective, dp_dt, dt, t)
+                }
+                BubbleFieldSolver::KellerHerring(model) => {
+                    integrate_bubble_dynamics_adaptive(model, state, p_effective, dp_dt, dt, t)
+                }
+                BubbleFieldSolver::RayleighPlesset(model) => {
+                    integrate_bubble_dynamics_adaptive(model, state, p_effective, dp_dt, dt, t)
+                }
+            };
+
+            if let Err(e) = integrate {
                 // One bubble's adaptive-step failure must not abort the whole
                 // field; log at a meaningful boundary and continue with the
                 // remaining bubbles.

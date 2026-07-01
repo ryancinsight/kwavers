@@ -13,6 +13,12 @@
 //! Pure `f64` math (no grid/signal/source), so it is cheap and testable, and the
 //! result feeds the existing array builders or a downstream geometry model.
 
+pub mod propagation;
+
+pub use propagation::{
+    propagate_focused_linear_array, FocusedLinearArrayPropagationSpec, FocusedPressureMap,
+};
+
 use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
 
 /// Pitch fraction of wavelength below which a steered array is grating-lobe-free

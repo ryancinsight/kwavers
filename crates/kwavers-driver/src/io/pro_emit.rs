@@ -69,7 +69,7 @@ pub fn write_kicad_pro(basename: &str, rules: &DesignRules) -> String {
         r.min_clearance.to_mm(),
         r.edge_clearance.to_mm(),
         r.hole_clearance().to_mm(),
-        r.min_via_drill.to_mm(),         // hole-to-hole floored at the mechanical drill diameter
+        r.min_via_drill.to_mm(), // hole-to-hole floored at the mechanical drill diameter
         r.microvia_diameter().to_mm(),
         r.microvia_drill.to_mm(),
         // TODO(Phase 4a follow-up): the slot labelled `min_through_hole_diameter` is currently

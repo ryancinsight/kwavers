@@ -19,6 +19,7 @@ import os
 import re
 import sys
 from dataclasses import dataclass, field
+from pathlib import Path
 
 import matplotlib
 
@@ -28,6 +29,7 @@ import numpy as np
 
 EXAMPLES_DIR = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_DIR = os.path.join(EXAMPLES_DIR, "output")
+EXAMPLES_PATH = Path(EXAMPLES_DIR)
 
 KWP_REF = "k-wave-python"
 KJL_REF = "KWave.jl"
@@ -104,15 +106,37 @@ def _classify_backend(script_stem: str, engine_ref: str | None) -> str:
         return KJL_REF
     if script_stem.startswith("canonical_"):
         return CAN_REF
+    if script_stem in {"cavitation_bubble_validation", "hifu_procedure"}:
+        return CAN_REF
     return KWP_REF
 
 
-def parse_metrics_file(path: str) -> ParityRecord:
+def source_script_for_stem(stem: str) -> str | None:
+    candidates = (
+        f"{stem}.py",
+        f"{stem}_compare.py",
+        f"compare_{stem}.py",
+        f"{stem}_simulation.py",
+        f"{stem}_simulation_compare.py",
+    )
+    for candidate in candidates:
+        if (EXAMPLES_PATH / candidate).exists():
+            return candidate
+    return None
+
+
+def parse_metrics_file(path: str, script_name: str | None = None) -> ParityRecord:
     text = open(path, "r", encoding="utf-8", errors="replace").read()
     stem = os.path.basename(path)[: -len("_metrics.txt")]
+    if script_name is None:
+        script_name = source_script_for_stem(stem)
+    if script_name is None:
+        script_name = stem + "_compare.py"
 
     status_match = _STATUS_RE.search(text)
     status_raw = status_match.group(1).upper() if status_match else "?"
+    if status_raw == "?" and "[PASS]" in text and "[FAIL]" not in text:
+        status_raw = "PASS"
     if status_raw in STATUS_PASS:
         status = "PASS"
     elif status_raw in STATUS_DIAG:
@@ -144,7 +168,7 @@ def parse_metrics_file(path: str) -> ParityRecord:
     pearson_val = aligned if aligned is not None else _first_match(_PATTERNS["pearson"])
 
     return ParityRecord(
-        script=stem + "_compare.py",
+        script=script_name,
         backend=_classify_backend(stem, engine_ref),
         status=status,
         pearson=_safe_float(pearson_val),
@@ -157,13 +181,90 @@ def parse_metrics_file(path: str) -> ParityRecord:
     )
 
 
-def collect_records() -> list[ParityRecord]:
-    paths = sorted(
+def metric_file_paths() -> list[str]:
+    return sorted(
         os.path.join(OUTPUT_DIR, n)
         for n in os.listdir(OUTPUT_DIR)
         if n.endswith("_metrics.txt")
     )
-    return [parse_metrics_file(p) for p in paths]
+
+
+def orphan_metric_files() -> list[str]:
+    orphaned: list[str] = []
+    for path in metric_file_paths():
+        stem = os.path.basename(path)[: -len("_metrics.txt")]
+        if source_script_for_stem(stem) is None:
+            orphaned.append(os.path.basename(path))
+    return orphaned
+
+
+def metric_stems_for_script(script: str) -> list[str]:
+    stems: list[str] = []
+    for path in metric_file_paths():
+        stem = os.path.basename(path)[: -len("_metrics.txt")]
+        if source_script_for_stem(stem) == script:
+            stems.append(stem)
+    return stems
+
+
+def declared_pngs_for_stem(stem: str) -> list[str]:
+    output_path = Path(OUTPUT_DIR)
+    names: list[str] = []
+    metrics_path = output_path / f"{stem}_metrics.txt"
+    if metrics_path.exists():
+        text = metrics_path.read_text(encoding="utf-8", errors="replace")
+        for match in re.finditer(r"(?m)^\s*figure(?:_[A-Za-z0-9_]+)?\s*:\s*(\S+\.png)\s*$", text):
+            name = Path(match.group(1)).name
+            if name not in names:
+                names.append(name)
+    return names
+
+
+def comparison_pngs_for_stem(stem: str) -> list[str]:
+    output_path = Path(OUTPUT_DIR)
+    names: list[str] = [
+        name for name in declared_pngs_for_stem(stem) if (output_path / name).exists()
+    ]
+    for name in (f"{stem}_compare.png", f"{stem}.png"):
+        if (output_path / name).exists() and name not in names:
+            names.append(name)
+    return names
+
+
+def missing_declared_pngs(recs: list[ParityRecord]) -> list[tuple[str, str]]:
+    output_path = Path(OUTPUT_DIR)
+    missing: list[tuple[str, str]] = []
+    for record in recs:
+        for stem in metric_stems_for_script(record.script):
+            for name in declared_pngs_for_stem(stem):
+                if not (output_path / name).exists():
+                    missing.append((record.script, name))
+    return missing
+
+
+def scripts_without_comparison_png(recs: list[ParityRecord]) -> list[str]:
+    metric_only: list[str] = []
+    for record in recs:
+        png_names = [
+            png_name
+            for stem in metric_stems_for_script(record.script)
+            for png_name in comparison_pngs_for_stem(stem)
+        ]
+        if not png_names:
+            metric_only.append(record.script)
+    return sorted(metric_only)
+
+
+def collect_records() -> list[ParityRecord]:
+    paths = metric_file_paths()
+    records: list[ParityRecord] = []
+    for path in paths:
+        stem = os.path.basename(path)[: -len("_metrics.txt")]
+        script_name = source_script_for_stem(stem)
+        if script_name is None:
+            continue
+        records.append(parse_metrics_file(path, script_name))
+    return records
 
 
 def _status_counts(recs: list[ParityRecord]) -> dict[str, int]:
@@ -313,7 +414,12 @@ def render_dashboard(recs: list[ParityRecord], out_png: str) -> None:
     plt.close(fig)
 
 
-def render_markdown(recs: list[ParityRecord], out_md: str) -> None:
+def render_markdown(
+    recs: list[ParityRecord],
+    out_md: str,
+    skipped_metrics: list[str] | None = None,
+    metric_only_scripts: list[str] | None = None,
+) -> None:
     counts = _status_counts(recs)
     by_backend: dict[str, list[ParityRecord]] = {}
     for r in recs:
@@ -325,7 +431,7 @@ def render_markdown(recs: list[ParityRecord], out_md: str) -> None:
         "Aggregated from `pykwavers/examples/output/*_metrics.txt`. "
         "Generated by `parity_dashboard.py`.\n"
     )
-    lines.append(f"**Total scripts:** {len(recs)}  ")
+    lines.append(f"**Total scripts:** {len(recs)}")
     lines.append("  •  ".join(f"**{k}** {v}" for k, v in counts.items()) + "\n")
 
     pearsons = [r.pearson for r in recs if r.pearson is not None]
@@ -333,7 +439,7 @@ def render_markdown(recs: list[ParityRecord], out_md: str) -> None:
     if pearsons:
         lines.append(
             f"**Pearson** — median {np.median(pearsons):.4f}, "
-            f"min {min(pearsons):.4f}, n={len(pearsons)}  "
+            f"min {min(pearsons):.4f}, n={len(pearsons)}"
         )
     if psnrs:
         lines.append(
@@ -359,6 +465,24 @@ def render_markdown(recs: list[ParityRecord], out_md: str) -> None:
                 f"{_f(r.rms_ratio, '{:.3f}')} | {_f(r.peak_ratio, '{:.3f}')} |"
             )
 
+    if skipped_metrics:
+        lines.append("\n## Skipped orphan metric files\n")
+        lines.append(
+            "These metric files do not map to a current example source and are "
+            "excluded from dashboard totals.\n"
+        )
+        for name in skipped_metrics:
+            lines.append(f"- `{name}`")
+
+    if metric_only_scripts:
+        lines.append("\n## Current rows without comparison PNG artifacts\n")
+        lines.append(
+            "These current rows have parsed PASS metrics but no per-example PNG "
+            "artifact in `examples/output`.\n"
+        )
+        for script in metric_only_scripts:
+            lines.append(f"- `{script}`")
+
     open(out_md, "w", encoding="utf-8").write("\n".join(lines) + "\n")
 
 
@@ -367,6 +491,8 @@ def main(argv: list[str]) -> int:
         print(f"missing output directory: {OUTPUT_DIR}", file=sys.stderr)
         return 2
     recs = collect_records()
+    skipped_metrics = orphan_metric_files()
+    metric_only_scripts = scripts_without_comparison_png(recs)
     if not recs:
         print("no *_metrics.txt files found", file=sys.stderr)
         return 2
@@ -374,7 +500,7 @@ def main(argv: list[str]) -> int:
     out_png = os.path.join(OUTPUT_DIR, "parity_dashboard.png")
     out_md = os.path.join(OUTPUT_DIR, "parity_dashboard.md")
     render_dashboard(recs, out_png)
-    render_markdown(recs, out_md)
+    render_markdown(recs, out_md, skipped_metrics, metric_only_scripts)
 
     counts = _status_counts(recs)
     print(f"parity_dashboard: {len(recs)} scripts aggregated")
@@ -386,6 +512,14 @@ def main(argv: list[str]) -> int:
         print(f"  Pearson  : median={np.median(pearsons):.4f}  min={min(pearsons):.4f}  n={len(pearsons)}")
     if psnrs:
         print(f"  PSNR(dB) : median={np.median(psnrs):.2f}  min={min(psnrs):.2f}  n={len(psnrs)}")
+    if skipped_metrics:
+        print(f"  skipped orphan metrics: {len(skipped_metrics)}")
+        for name in skipped_metrics:
+            print(f"    {name}")
+    if metric_only_scripts:
+        print(f"  current rows without comparison PNG: {len(metric_only_scripts)}")
+        for script in metric_only_scripts:
+            print(f"    {script}")
     print(f"  figure   : {out_png}")
     print(f"  markdown : {out_md}")
     return 0

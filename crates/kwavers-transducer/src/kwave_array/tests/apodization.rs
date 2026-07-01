@@ -89,8 +89,16 @@ fn test_apodization_blackman_endpoints_and_symmetry() {
     }
     let weights = array.get_apodization(KwaveApodizationWindow::Blackman);
     assert_eq!(weights.len(), 9);
-    assert!(weights[0].abs() < 1e-12, "Blackman ends ~0, got {}", weights[0]);
-    assert!(weights[8].abs() < 1e-12, "Blackman ends ~0, got {}", weights[8]);
+    assert!(
+        weights[0].abs() < 1e-12,
+        "Blackman ends ~0, got {}",
+        weights[0]
+    );
+    assert!(
+        weights[8].abs() < 1e-12,
+        "Blackman ends ~0, got {}",
+        weights[8]
+    );
     assert!((weights[4] - 1.0).abs() < 1e-12, "Blackman center = 1");
     for i in 0..9 {
         assert!(
@@ -129,7 +137,10 @@ fn test_apodization_tukey_limits_and_flat_top() {
     assert!(t[8].abs() < 1e-12, "Tukey(0.5) edge ~0, got {}", t[8]);
     assert!((t[4] - 1.0).abs() < 1e-12, "Tukey(0.5) center = 1");
     for i in 0..9 {
-        assert!((t[i] - t[8 - i]).abs() < 1e-12, "Tukey not symmetric at i={i}");
+        assert!(
+            (t[i] - t[8 - i]).abs() < 1e-12,
+            "Tukey not symmetric at i={i}"
+        );
     }
 }
 

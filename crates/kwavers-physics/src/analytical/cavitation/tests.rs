@@ -11,6 +11,31 @@ fn minnaert_water_air_bubble() {
 }
 
 #[test]
+fn minnaert_radius_inverse_roundtrips_forward_frequency() {
+    let expected_radius_m = 5.0e-6;
+    let frequency_hz = minnaert_resonance_hz(
+        expected_radius_m,
+        1.4,
+        ATMOSPHERIC_PRESSURE,
+        DENSITY_WATER_NOMINAL,
+    );
+    let radius_m = minnaert_radius_for_frequency_m(
+        frequency_hz,
+        1.4,
+        ATMOSPHERIC_PRESSURE,
+        DENSITY_WATER_NOMINAL,
+    );
+
+    // Same closed form solved in opposite directions; 1e-12 relative error is
+    // >1000 ulp at the 5 um scale and catches algebraic drift without relying
+    // on bitwise equality through sqrt/division ordering.
+    assert!(
+        (radius_m - expected_radius_m).abs() <= expected_radius_m * 1.0e-12,
+        "radius_m={radius_m:.16e} expected={expected_radius_m:.16e}"
+    );
+}
+
+#[test]
 fn minnaert_surface_tension_correction_reduces_to_uncorrected_at_zero_sigma() {
     // σ = 0 ⇒ the corrected form is exactly the large-bubble Minnaert frequency.
     let r0 = 10e-6;
@@ -69,6 +94,14 @@ fn closed_form_cavitation_estimators_reject_invalid_domains() {
     );
     assert_eq!(
         minnaert_resonance_hz(10e-6, -1.0, ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL),
+        0.0
+    );
+    assert_eq!(
+        minnaert_radius_for_frequency_m(0.0, 1.4, ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL),
+        0.0
+    );
+    assert_eq!(
+        minnaert_radius_for_frequency_m(1.0e6, 1.4, f64::NAN, DENSITY_WATER_NOMINAL),
         0.0
     );
     assert_eq!(

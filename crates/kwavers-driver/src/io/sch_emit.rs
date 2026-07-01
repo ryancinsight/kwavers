@@ -39,10 +39,10 @@ pub fn write_kicad_sch(board: &Board, comps: &[Component], lib: &[FootprintDef])
     let hw = 7.62; // box half-width
     let pin_x = -(hw + 2.54); // pin connection-point x in symbol space (pin points right into box)
     let top = |n: usize| (n as f64 - 1.0) * pitch / 2.0; // first pin y (symbol space, +Y up)
-    // A mechanical pad (empty designator — a non-plated board-lock/mounting hole) is not an electrical
-    // pin: it gets no schematic pin, so it cannot be a `pin_not_connected` ERC fault. It remains on the
-    // PCB as a drill/clearance keepout. Abstraction footprints carry no `pad_names`, so every pad of
-    // theirs stays electrical (the check only fires on an explicitly-empty imported designator).
+                                                         // A mechanical pad (empty designator — a non-plated board-lock/mounting hole) is not an electrical
+                                                         // pin: it gets no schematic pin, so it cannot be a `pin_not_connected` ERC fault. It remains on the
+                                                         // PCB as a drill/clearance keepout. Abstraction footprints carry no `pad_names`, so every pad of
+                                                         // theirs stays electrical (the check only fires on an explicitly-empty imported designator).
     let is_mech = |fp: &FootprintDef, k: usize| fp.pad_names.get(k).is_some_and(|nm| nm.is_empty());
 
     // --- lib_symbols ------------------------------------------------------------------------------

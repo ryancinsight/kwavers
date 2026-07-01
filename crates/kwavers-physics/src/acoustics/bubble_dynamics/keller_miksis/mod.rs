@@ -137,6 +137,7 @@ pub mod thermodynamics;
 #[cfg(test)]
 pub mod validation;
 
+use super::adaptive_integration::AdaptiveBubbleModel;
 use crate::acoustics::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};
 use crate::acoustics::bubble_dynamics::thermodynamics::{
     ThermodynamicsCalculator, VaporPressureModel,
@@ -165,6 +166,18 @@ pub struct KellerMiksisModel {
     pub shape_modes: ShapeModeState,
     /// Thermodynamics calculator — drives vapor pressure in mass-transfer update.
     pub(crate) thermo_calc: ThermodynamicsCalculator,
+}
+
+/// Keller-Herring equation model variant.
+///
+/// At this stage, `KellerHerringModel` is a typed variant wrapper around
+/// `KellerMiksisModel`. The current implementation is intentionally coupled to
+/// the Keller–Miksis kernel so users can select the variant contractually now
+/// while the dedicated Keller–Herring correction path is added in the next
+/// release.
+#[derive(Debug, Clone)]
+pub struct KellerHerringModel {
+    inner: KellerMiksisModel,
 }
 
 impl KellerMiksisModel {
@@ -301,5 +314,105 @@ impl KellerMiksisModel {
     ///
     pub fn calculate_vdw_pressure(&self, state: &BubbleState) -> KwaversResult<f64> {
         thermodynamics::calculate_vdw_pressure(state)
+    }
+}
+
+impl KellerHerringModel {
+    #[must_use]
+    pub fn new(params: BubbleParameters) -> Self {
+        Self {
+            inner: KellerMiksisModel::new(params),
+        }
+    }
+
+    /// Get the bubble parameters.
+    #[must_use]
+    pub fn params(&self) -> &BubbleParameters {
+        self.inner.params()
+    }
+
+    pub fn update_shape_stability(&mut self, state: &mut BubbleState, dt: f64) {
+        self.inner.update_shape_stability(state, dt)
+    }
+
+    #[must_use]
+    pub fn is_shape_unstable(&self, r: f64) -> bool {
+        self.inner.is_shape_unstable(r)
+    }
+
+    pub fn update_temperature(&self, state: &mut BubbleState, dt: f64) -> KwaversResult<()> {
+        self.inner.update_temperature(state, dt)
+    }
+
+    pub fn update_mass_transfer(&self, state: &mut BubbleState, dt: f64) -> KwaversResult<()> {
+        self.inner.update_mass_transfer(state, dt)
+    }
+
+    pub fn molar_heat_capacity_cv(&self, state: &BubbleState) -> f64 {
+        self.inner.molar_heat_capacity_cv(state)
+    }
+
+    pub fn calculate_vdw_pressure(&self, state: &BubbleState) -> KwaversResult<f64> {
+        self.inner.calculate_vdw_pressure(state)
+    }
+
+    pub fn calculate_acceleration(
+        &self,
+        state: &mut BubbleState,
+        p_acoustic: f64,
+        dp_dt: f64,
+        t: f64,
+    ) -> KwaversResult<f64> {
+        self.inner
+            .calculate_acceleration(state, p_acoustic, dp_dt, t)
+    }
+}
+
+impl AdaptiveBubbleModel for KellerHerringModel {
+    fn params(&self) -> &BubbleParameters {
+        self.inner.params()
+    }
+
+    fn calculate_acceleration(
+        &self,
+        state: &mut BubbleState,
+        p_acoustic: f64,
+        dp_dt: f64,
+        t: f64,
+    ) -> KwaversResult<f64> {
+        self.inner
+            .calculate_acceleration(state, p_acoustic, dp_dt, t)
+    }
+
+    fn update_temperature(&self, state: &mut BubbleState, dt: f64) -> KwaversResult<()> {
+        self.inner.update_temperature(state, dt)
+    }
+
+    fn update_mass_transfer(&self, state: &mut BubbleState, dt: f64) -> KwaversResult<()> {
+        self.inner.update_mass_transfer(state, dt)
+    }
+}
+
+impl AdaptiveBubbleModel for KellerMiksisModel {
+    fn params(&self) -> &BubbleParameters {
+        self.params()
+    }
+
+    fn calculate_acceleration(
+        &self,
+        state: &mut BubbleState,
+        p_acoustic: f64,
+        dp_dt: f64,
+        t: f64,
+    ) -> KwaversResult<f64> {
+        self.calculate_acceleration(state, p_acoustic, dp_dt, t)
+    }
+
+    fn update_temperature(&self, state: &mut BubbleState, dt: f64) -> KwaversResult<()> {
+        self.update_temperature(state, dt)
+    }
+
+    fn update_mass_transfer(&self, state: &mut BubbleState, dt: f64) -> KwaversResult<()> {
+        self.update_mass_transfer(state, dt)
     }
 }

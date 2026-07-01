@@ -268,7 +268,7 @@ def render_abdominal_3d(
 
     fig = plt.figure(figsize=(14.0, 6.0), constrained_layout=True)
     fig.suptitle(
-        f"Skin-coupled histotripsy focused bowl (HistoSonics-like) on {anatomy_label} CT — "
+        f"Skin-coupled histotripsy focused bowl on {anatomy_label} CT — "
         f"{int(geo['element_count'])} discrete elements + central imaging window, "
         f"focal depth {focal_depth_mm:.0f} mm, radius of curvature {aperture_radius_mm:.0f} mm",
         fontsize=11,
@@ -418,7 +418,7 @@ def render_brain_focused_bowl_3d(geo: dict[str, object], fig_path: Path) -> Path
 
     fig = plt.figure(figsize=(14.0, 6.0), constrained_layout=True)
     fig.suptitle(
-        f"Transcranial hemispherical helmet (InsightEC-like) over calvarium — "
+        f"Transcranial hemispherical phased array over calvarium — "
         f"{int(geo['element_count'])} elements, "
         f"radius of curvature {1e3 * float(geo['bowl_radius_m']):.0f} mm, "
         f"skull entry fraction {float(geo['intersection_fraction']):.2f}",
@@ -772,9 +772,9 @@ def render_image_then_treat_sequence(
                        levels=[0.5], colors=target_color, linewidths=1.1)
 
     applicator = (
-        "InsightEC-like hemispherical helmet"
+        "hemispherical transcranial phased array"
         if anatomy_label == "brain"
-        else "histotripsy focused bowl (HistoSonics-like)"
+        else "histotripsy focused bowl"
     )
     coupling = "transcranial" if anatomy_label == "brain" else "skin-coupled"
     fig, axes = plt.subplots(1, 4, figsize=(20.0, 5.0), constrained_layout=True)

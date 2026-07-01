@@ -50,10 +50,9 @@ pub(crate) fn detect_through_hole_high_speed_violations(
         // both categories are dominated by high-frequency concerns.
         let flagged_by_role = matches!(fp.role, Role::ActiveIc | Role::Decoupling);
         // Any other through-hole component that lands on a high-speed or clock net.
-        let flagged_by_net = comp
-            .nets
-            .iter()
-            .any(|n| n.is_some_and(|id| is_high_speed_net(board, id) || is_clock_like_net(board, id)));
+        let flagged_by_net = comp.nets.iter().any(|n| {
+            n.is_some_and(|id| is_high_speed_net(board, id) || is_clock_like_net(board, id))
+        });
 
         if flagged_by_role || flagged_by_net {
             count += 1;
@@ -68,28 +67,18 @@ mod tests {
     use super::*;
     use crate::board::{Board, NetClassKind};
     use crate::geom::{GridSpec, Nm};
-    use crate::place::Placement;
     use crate::place::rotation::Rot;
+    use crate::place::Placement;
 
     fn make_board() -> Board {
-        let spec = GridSpec::cover(
-            Nm::from_mm(50.0),
-            Nm::from_mm(50.0),
-            Nm::from_mm(0.5),
-            2,
-        )
-        .unwrap();
+        let spec =
+            GridSpec::cover(Nm::from_mm(50.0), Nm::from_mm(50.0), Nm::from_mm(0.5), 2).unwrap();
         Board::new(spec)
     }
 
     fn make_fp(role: Role, form: PackageFormFactor) -> FootprintDef {
-        FootprintDef::new(
-            "TEST",
-            (Nm::from_mm(2.0), Nm::from_mm(2.0)),
-            role,
-            vec![],
-        )
-        .with_package_form_factor(form)
+        FootprintDef::new("TEST", (Nm::from_mm(2.0), Nm::from_mm(2.0)), role, vec![])
+            .with_package_form_factor(form)
     }
 
     fn make_comp(fp: usize, net: Option<crate::board::NetId>) -> Component {
@@ -166,6 +155,9 @@ mod tests {
         let lib = vec![make_fp(Role::ActiveIc, PackageFormFactor::Unknown)];
         let comps = vec![make_comp(0, None)];
         let (n, _) = detect_through_hole_high_speed_violations(&b, &comps, &lib);
-        assert_eq!(n, 0, "Unknown package form factor is vacuous — must not flag");
+        assert_eq!(
+            n, 0,
+            "Unknown package form factor is vacuous — must not flag"
+        );
     }
 }

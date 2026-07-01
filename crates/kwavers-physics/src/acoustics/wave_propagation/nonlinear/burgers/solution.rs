@@ -27,7 +27,11 @@ use kwavers_core::constants::numerical::TWO_PI;
 pub fn fubini_harmonic_amplitude(n: u32, sigma: f64) -> f64 {
     assert!(n >= 1, "harmonic order must be >= 1");
     if sigma <= 0.0 {
-        if n == 1 { 1.0 } else { 0.0 }
+        if n == 1 {
+            1.0
+        } else {
+            0.0
+        }
     } else if sigma < 1.0 {
         // Pre-shock: Fubini Bessel series.
         let arg = n as f64 * sigma;
@@ -87,9 +91,17 @@ mod tests {
         // full source amplitude B1 = 2/(1·2) = 1.
         assert!((fubini_harmonic_amplitude(1, 1.0) - 1.0).abs() < 1e-12);
         // Every harmonic falls as 1/n, the spectrum as 1/(1+σ).
-        for &(n, sigma, expected) in &[(1u32, 1.0, 1.0), (2, 1.0, 0.5), (1, 3.0, 0.5), (3, 3.0, 1.0 / 6.0)] {
+        for &(n, sigma, expected) in &[
+            (1u32, 1.0, 1.0),
+            (2, 1.0, 0.5),
+            (1, 3.0, 0.5),
+            (3, 3.0, 1.0 / 6.0),
+        ] {
             let b = fubini_harmonic_amplitude(n, sigma);
-            assert!((b - expected).abs() < 1e-12, "B_{n}({sigma}) = {b} != {expected}");
+            assert!(
+                (b - expected).abs() < 1e-12,
+                "B_{n}({sigma}) = {b} != {expected}"
+            );
         }
         // Old-age decay: B1 monotonically decreasing for σ ≥ 1.
         assert!(fubini_harmonic_amplitude(1, 5.0) < fubini_harmonic_amplitude(1, 1.0));

@@ -94,6 +94,49 @@ impl BroadbandDetector {
     }
 }
 
+impl CavitationDetector for BroadbandDetector {
+    fn detect(&mut self, signal: &ArrayView1<f64>) -> CavitationMetrics {
+        let broadband_level = self.detect_broadband_emissions(signal);
+        let smoothed_level = self.apply_temporal_smoothing(broadband_level);
+
+        // Determine cavitation state
+        let state = if smoothed_level > 0.5 {
+            CavitationDetectionState::Inertial
+        } else if smoothed_level > 0.2 {
+            CavitationDetectionState::Transient
+        } else {
+            CavitationDetectionState::None
+        };
+
+        CavitationMetrics {
+            state,
+            subharmonic_level: 0.0,
+            ultraharmonic_level: 0.0,
+            broadband_level: smoothed_level,
+            harmonic_distortion: 0.0,
+            confidence: smoothed_level,
+            // Legacy compatibility
+            intensity: smoothed_level,
+            harmonic_content: 0.0,
+            cavitation_dose: 0.0,
+        }
+    }
+
+    fn reset(&mut self) {
+        self.baseline_energy = None;
+        self.history = HistoryBuffer::new(20);
+    }
+
+    fn method(&self) -> DetectionMethod {
+        DetectionMethod::Broadband
+    }
+
+    fn update_parameters(&mut self, params: DetectorParameters) {
+        self.sample_rate = params.sample_rate;
+        self.sensitivity = params.sensitivity;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::BroadbandDetector;
@@ -140,48 +183,5 @@ mod tests {
         let elevated_metrics = detector.detect(&elevated.view());
         assert!(elevated_metrics.broadband_level > 0.0);
         assert!(elevated_metrics.confidence > 0.0);
-    }
-}
-
-impl CavitationDetector for BroadbandDetector {
-    fn detect(&mut self, signal: &ArrayView1<f64>) -> CavitationMetrics {
-        let broadband_level = self.detect_broadband_emissions(signal);
-        let smoothed_level = self.apply_temporal_smoothing(broadband_level);
-
-        // Determine cavitation state
-        let state = if smoothed_level > 0.5 {
-            CavitationDetectionState::Inertial
-        } else if smoothed_level > 0.2 {
-            CavitationDetectionState::Transient
-        } else {
-            CavitationDetectionState::None
-        };
-
-        CavitationMetrics {
-            state,
-            subharmonic_level: 0.0,
-            ultraharmonic_level: 0.0,
-            broadband_level: smoothed_level,
-            harmonic_distortion: 0.0,
-            confidence: smoothed_level,
-            // Legacy compatibility
-            intensity: smoothed_level,
-            harmonic_content: 0.0,
-            cavitation_dose: 0.0,
-        }
-    }
-
-    fn reset(&mut self) {
-        self.baseline_energy = None;
-        self.history = HistoryBuffer::new(20);
-    }
-
-    fn method(&self) -> DetectionMethod {
-        DetectionMethod::Broadband
-    }
-
-    fn update_parameters(&mut self, params: DetectorParameters) {
-        self.sample_rate = params.sample_rate;
-        self.sensitivity = params.sensitivity;
     }
 }

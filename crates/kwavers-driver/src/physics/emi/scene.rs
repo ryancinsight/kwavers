@@ -1,13 +1,13 @@
 //! Commutation-loop scene walker — [`CommutationLoop`] struct + [`commutation_loops`] walker
 //! + the placement-aware `pad_on_net` helper.
 
+use super::r#loop::{loop_inductance_nh, polygon_area_mm2};
 use crate::board::NetId;
 use crate::geom::Point;
 use crate::place::{
     component::Component,
     footprint::{FootprintDef, Role},
 };
-use super::r#loop::{loop_inductance_nh, polygon_area_mm2};
 
 /// A device's commutation loop: its enclosed area and a representative location.
 #[derive(Debug, Clone, Copy)]

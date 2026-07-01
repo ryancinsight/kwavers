@@ -236,28 +236,40 @@ mod tests {
 
     #[test]
     fn arc_rejects_invalid_source_domains() {
-        let mut zero_radius = ArcConfig::default();
-        zero_radius.radius = 0.0;
+        let zero_radius = ArcConfig {
+            radius: 0.0,
+            ..Default::default()
+        };
         assert_validation_error(zero_radius);
 
-        let mut zero_angle = ArcConfig::default();
-        zero_angle.arc_angle = 0.0;
+        let zero_angle = ArcConfig {
+            arc_angle: 0.0,
+            ..Default::default()
+        };
         assert_validation_error(zero_angle);
 
-        let mut excessive_angle = ArcConfig::default();
-        excessive_angle.arc_angle = 2.0 * PI + 1.0e-12;
+        let excessive_angle = ArcConfig {
+            arc_angle: 2.0 * PI + 1.0e-12,
+            ..Default::default()
+        };
         assert_validation_error(excessive_angle);
 
-        let mut zero_frequency = ArcConfig::default();
-        zero_frequency.frequency = 0.0;
+        let zero_frequency = ArcConfig {
+            frequency: 0.0,
+            ..Default::default()
+        };
         assert_validation_error(zero_frequency);
 
-        let mut zero_spacing = ArcConfig::default();
-        zero_spacing.element_spacing = Some(0.0);
+        let zero_spacing = ArcConfig {
+            element_spacing: Some(0.0),
+            ..Default::default()
+        };
         assert_validation_error(zero_spacing);
 
-        let mut nonfinite_center = ArcConfig::default();
-        nonfinite_center.center = [f64::NAN, 0.0];
+        let nonfinite_center = ArcConfig {
+            center: [f64::NAN, 0.0],
+            ..Default::default()
+        };
         assert_validation_error(nonfinite_center);
     }
 

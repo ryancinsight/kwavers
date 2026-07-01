@@ -292,10 +292,10 @@ impl DesignRules {
             max_skip_fraction: 0.0, // vacuous — caller sets this for a real operating point
             pressure_error_tol: 0.05, // 5 % per TBME-2025
             high_speed_frequency_hz: 1.0e8, // 100 MHz — conservative threshold for USB / GPIO
-            dielectric_er: 4.5,             // FR4 nominal
-            dielectric_height_mm: 0.2,      // typical 4-layer prepreg/core thickness
+            dielectric_er: 4.5,     // FR4 nominal
+            dielectric_height_mm: 0.2, // typical 4-layer prepreg/core thickness
             max_decoupling_cap_distance: Nm::from_mm(3.0), // "as close as possible" ceiling
-            antenna_impedance_ohm: 50.0,    // universal RF 50-Ω convention
+            antenna_impedance_ohm: 50.0, // universal RF 50-Ω convention
             antenna_impedance_tolerance_ohm: 10.0, // ±20 % of 50 Ω
             max_ground_via_stitching_spacing: Nm::from_mm(2.5), // 0.25 cm per TI SLYP173
             min_signal_via_return_count: 2, // TI SLYP173 recommends 4; 2 is pragmatic floor

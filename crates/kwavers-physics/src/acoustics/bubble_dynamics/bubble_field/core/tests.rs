@@ -33,8 +33,10 @@ fn test_two_bubble_coupling_at_equilibrium() {
 
 #[test]
 fn test_coupling_threshold_skips_distant_bubbles() {
-    let mut params = BubbleParameters::default();
-    params.r0 = 1e-6;
+    let params = BubbleParameters {
+        r0: 1e-6,
+        ..Default::default()
+    };
 
     let mut field = BubbleField::with_spacing((20, 10, 10), params.clone(), (1e-3, 1e-3, 1e-3));
     field.coupling_threshold = 0.01;
@@ -54,8 +56,10 @@ fn test_coupling_threshold_skips_distant_bubbles() {
 
 #[test]
 fn test_nonzero_coupling_within_threshold() {
-    let mut params = BubbleParameters::default();
-    params.r0 = 1e-6;
+    let params = BubbleParameters {
+        r0: 1e-6,
+        ..Default::default()
+    };
 
     let mut field = BubbleField::with_spacing((10, 10, 10), params.clone(), (1e-6, 1e-6, 1e-6));
     field.coupling_threshold = 0.01;

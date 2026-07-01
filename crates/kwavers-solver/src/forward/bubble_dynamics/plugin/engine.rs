@@ -8,8 +8,8 @@ use kwavers_physics::acoustics::bubble_dynamics::{
 
 /// Per-model runtime engine, created lazily in [`Plugin::initialize`].
 ///
-/// `KmOrRp` covers both Keller-Miksis and Rayleigh-Plesset because the
-/// existing [`BubbleField`] code path handles both: when
+/// `KmOrRp` covers Keller-Miksis, Keller-Herring, and Rayleigh-Plesset because
+/// the existing [`BubbleField`] code path handles all three:
 /// `BubbleParameters::use_compressibility = false` the KM O(Mach) correction
 /// factors collapse to unity, recovering the incompressible RP equation.
 ///
@@ -19,7 +19,8 @@ use kwavers_physics::acoustics::bubble_dynamics::{
 /// Gilmore ODE receives the instantaneous pressure at each voxel directly from
 /// the field array; no dp/dt estimate is required.
 pub(super) enum BubbleEngine {
-    /// Keller-Miksis or Rayleigh-Plesset via existing adaptive BubbleField.
+    /// Keller-Miksis / Keller-Herring / Rayleigh-Plesset via existing adaptive
+    /// BubbleField.
     KmOrRp {
         field: Box<BubbleField>,
         /// Previous-step pressure, used to estimate dp/dt via backward difference.

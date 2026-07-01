@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use ndarray::{Array2, Array3};
 
 use super::super::KWaveArray;
@@ -62,48 +64,39 @@ impl KWaveArray {
             ));
         }
 
-        let shape = (grid.nx, grid.ny, grid.nz);
-        let per_element_masks: Vec<Array3<f64>> = self
-            .elements
+        let mut combined_weights: HashMap<(usize, usize, usize), f64> = HashMap::new();
+        for element in &self.elements {
+            self.rasterize_element_weighted_cells(element, grid, |i, j, k, weight| {
+                *combined_weights.entry((i, j, k)).or_insert(0.0) += weight;
+            });
+        }
+
+        let mut active_cells: Vec<(usize, usize, usize)> = combined_weights
             .iter()
-            .map(|element| {
-                let mut m = Array3::zeros(shape);
-                self.rasterize_element_weighted(element, &mut m, grid);
-                m
-            })
+            .filter_map(|(&cell, &weight)| (weight != 0.0).then_some(cell))
+            .collect();
+        active_cells.sort_by_key(|&(i, j, k)| (k, j, i));
+        let n_active = active_cells.len();
+        let active_index: HashMap<(usize, usize, usize), usize> = active_cells
+            .iter()
+            .copied()
+            .enumerate()
+            .map(|(idx, cell)| (cell, idx))
             .collect();
 
-        let mut combined = Array3::<f64>::zeros(shape);
-        for m in &per_element_masks {
-            combined += m;
-        }
-        let active_cells = Self::active_cells_fortran_order(&combined);
-        let n_active = active_cells.len();
-
         let mut per_cell_signal = Array2::<f64>::zeros((n_active, n_times));
-        for (idx, &(i, j, k)) in active_cells.iter().enumerate() {
-            let contribs: Vec<(usize, f64)> = per_element_masks
-                .iter()
-                .enumerate()
-                .filter_map(|(e, m)| {
-                    let w = m[[i, j, k]];
-                    if w != 0.0 {
-                        Some((e, w))
-                    } else {
-                        None
+        for (element_idx, element) in self.elements.iter().enumerate() {
+            self.rasterize_element_weighted_cells(element, grid, |i, j, k, weight| {
+                if let Some(&row_idx) = active_index.get(&(i, j, k)) {
+                    for t in 0..n_times {
+                        per_cell_signal[[row_idx, t]] +=
+                            weight * per_element_signals[[element_idx, t]];
                     }
-                })
-                .collect();
-            for t in 0..n_times {
-                let s: f64 = contribs
-                    .iter()
-                    .map(|&(e, w)| w * per_element_signals[[e, t]])
-                    .sum();
-                per_cell_signal[[idx, t]] = s;
-            }
+                }
+            });
         }
 
-        let mut mask_ones = Array3::<f64>::zeros(shape);
+        let mut mask_ones = Array3::<f64>::zeros((grid.nx, grid.ny, grid.nz));
         for &(i, j, k) in &active_cells {
             mask_ones[[i, j, k]] = 1.0;
         }
@@ -111,8 +104,26 @@ impl KWaveArray {
         Ok((mask_ones, per_cell_signal))
     }
 
+    /// Visit each BLI-weighted grid-cell contribution for each array element.
+    ///
+    /// The callback receives `(element_idx, i, j, k, weight)` using the same
+    /// finite-source rasterization path as [`Self::build_per_element_source`].
+    /// This exposes the realized source support without materializing one dense
+    /// mask per element.
+    pub fn for_each_element_weighted_cell<F>(&self, grid: &kwavers_grid::Grid, mut visit: F)
+    where
+        F: FnMut(usize, usize, usize, usize, f64),
+    {
+        for (element_idx, element) in self.elements.iter().enumerate() {
+            self.rasterize_element_weighted_cells(element, grid, |i, j, k, weight| {
+                visit(element_idx, i, j, k, weight);
+            });
+        }
+    }
+
     /// Enumerate active (nonzero) grid cells in Fortran/MATLAB column-major order
     /// (k outer, j middle, i inner), matching `matlab_find(mask)` on the same mask.
+    #[cfg(test)]
     #[inline]
     pub(in crate::kwave_array) fn active_cells_fortran_order(
         mask: &Array3<f64>,

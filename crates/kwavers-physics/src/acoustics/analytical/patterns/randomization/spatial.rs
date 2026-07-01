@@ -100,7 +100,7 @@ mod tests {
         assert_eq!(phases.len(), 8);
         for &p in phases.iter() {
             assert!(
-                p >= 0.0 && p < MAX_PHASE_SHIFT,
+                (0.0..MAX_PHASE_SHIFT).contains(&p),
                 "phase {p} out of [0, MAX_PHASE_SHIFT)"
             );
         }

@@ -84,6 +84,38 @@ fn mvdr_pseudospectrum_is_positive() {
 }
 
 #[test]
+fn mvdr_rejects_complex_denominator_in_weights() {
+    let cov = Array2::from_elem((1, 1), Complex64::new(1.0, -1.0));
+    let steering = Array1::from_elem(1, Complex64::new(1.0, 0.0));
+
+    let mvdr = MinimumVariance::new();
+    let err = mvdr
+        .compute_weights(&cov, &steering)
+        .expect_err("non-Hermitian covariance should produce a complex denominator");
+
+    assert!(
+        err.to_string().contains("imaginary component"),
+        "expected imaginary-denominator diagnostic, got {err}"
+    );
+}
+
+#[test]
+fn mvdr_rejects_complex_denominator_in_pseudospectrum() {
+    let cov = Array2::from_elem((1, 1), Complex64::new(1.0, -1.0));
+    let steering = Array1::from_elem(1, Complex64::new(1.0, 0.0));
+
+    let mvdr = MinimumVariance::new();
+    let err = mvdr
+        .pseudospectrum(&cov, &steering)
+        .expect_err("non-Hermitian covariance should produce a complex denominator");
+
+    assert!(
+        err.to_string().contains("imaginary component"),
+        "expected imaginary-denominator diagnostic, got {err}"
+    );
+}
+
+#[test]
 fn mvdr_rejects_empty_covariance() {
     let cov = Array2::<Complex64>::zeros((0, 0));
     let steering = Array1::<Complex64>::zeros(0);

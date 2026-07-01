@@ -177,12 +177,6 @@ pub use das_burn::{
 
 #[cfg(test)]
 mod tests {
-    #[test]
-    fn test_gpu_module_compiles() {
-        // Basic compilation test
-        assert!(true);
-    }
-
     #[cfg(feature = "pinn")]
     #[test]
     fn test_burn_beamformer_available() {

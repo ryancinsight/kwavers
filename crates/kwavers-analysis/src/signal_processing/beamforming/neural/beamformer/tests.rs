@@ -27,7 +27,7 @@ fn test_beamformer_creation_invalid_config() {
     };
     let err = NeuralBeamformer::new(config).unwrap_err();
     assert!(
-        format!("{err:?}").len() > 0,
+        !format!("{err:?}").is_empty(),
         "empty network_architecture must produce a non-empty error"
     );
 }

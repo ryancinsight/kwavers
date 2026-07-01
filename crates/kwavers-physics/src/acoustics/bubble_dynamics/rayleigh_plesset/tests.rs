@@ -67,7 +67,7 @@ fn test_rayleigh_plesset_equilibrium() {
     );
 
     // Also verify the bubble doesn't collapse or grow significantly
-    let mut test_state = state.clone();
+    let mut test_state = state;
     let dt = 1e-6; // 1 microsecond
     for _ in 0..100 {
         let accel = solver.calculate_acceleration(&test_state, 0.0, 0.0);

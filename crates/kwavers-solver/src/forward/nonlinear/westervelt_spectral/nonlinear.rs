@@ -315,7 +315,7 @@ mod tests {
         let eta_b = medium.bulk_viscosity(2.0, 2.0, 2.0, &grid);
         let visc_coeff = (4.0 * eta_s / 3.0 + eta_b) / RHO;
         let laplacian_at_center = 12.0_f64; // 2+4+6 for the quadratic field (Δx=1)
-        // δ·∇²(∂p/∂t): NO c² factor.
+                                            // δ·∇²(∂p/∂t): NO c² factor.
         let expected = visc_coeff * (laplacian_at_center / DT);
 
         assert!(

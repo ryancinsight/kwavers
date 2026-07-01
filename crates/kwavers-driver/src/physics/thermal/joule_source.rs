@@ -29,13 +29,10 @@ pub fn joule_source(
         if len_m <= 0.0 {
             continue;
         }
-        let r = crate::physics::ampacity::track_resistance(
-            len_m,
-            t.width.to_mm() * 1.0e-3,
-            copper_oz,
-        );
+        let r =
+            crate::physics::ampacity::track_resistance(len_m, t.width.to_mm() * 1.0e-3, copper_oz);
         let power = i * i * r; // I²R over this segment
-        // Spread over the two endpoint cells.
+                               // Spread over the two endpoint cells.
         for end in [t.start, t.end] {
             let (ix, iy) = spec.cell_of(end);
             f[iy * spec.nx + ix] += (power / 2.0) / vol / k_eff;

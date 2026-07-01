@@ -74,6 +74,7 @@ pub use acoustics::{
 pub use acoustics::bubble_dynamics::{
     BubbleParameters,      // Bubble physical parameters
     BubbleState,           // Bubble state representation
+    KellerHerringModel,    // Keller-Herring equation model wrapper
     KellerMiksisModel,     // Keller-Miksis equation solver
     RayleighPlessetSolver, // Rayleigh-Plesset equation solver
 };

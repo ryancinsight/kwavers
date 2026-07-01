@@ -74,6 +74,70 @@ pub fn bioheat_focal_temperature_rise(
         .collect()
 }
 
+/// One-dimensional steady-state Pennes temperature profile in a tissue slab.
+///
+/// Solves the steady-state Pennes bioheat equation on `0 <= x <= slab_thickness_m`
+/// with uniform volumetric heating and Dirichlet boundaries at body temperature:
+/// ```text
+/// k_t d²T/dx² - w_b rho_b c_b (T - T_b) + Q = 0,
+/// T(0) = T(L) = T_b.
+/// ```
+/// For positive perfusion the closed-form profile is
+/// ```text
+/// T(x) = T_b + Q/(w_b rho_b c_b)
+///        · (1 - cosh(lambda·(x - L/2))/cosh(lambda·L/2)),
+/// lambda = sqrt(w_b rho_b c_b / k_t).
+/// ```
+/// The zero-perfusion limit reduces to the conduction-only parabola
+/// `T(x) = T_b + Q x (L - x)/(2 k_t)`.
+///
+/// # Arguments
+/// * `x_arr` - depth positions [m]
+/// * `slab_thickness_m` - slab thickness `L` [m]
+/// * `thermal_conductivity` - tissue conductivity `k_t` [W/(m K)]
+/// * `blood_perfusion` - blood perfusion rate `w_b` [1/s]
+/// * `rho_blood` - blood density [kg/m3]
+/// * `cp_blood` - blood specific heat [J/(kg K)]
+/// * `body_temperature_c` - boundary/body temperature [deg C]
+/// * `heat_source_w_m3` - uniform volumetric heating `Q` [W/m3]
+///
+/// # Reference
+/// Pennes (1948), *J. Appl. Physiol.* 1, 93.
+#[must_use]
+#[allow(clippy::too_many_arguments)]
+pub fn pennes_steady_state_temperature_profile(
+    x_arr: &[f64],
+    slab_thickness_m: f64,
+    thermal_conductivity: f64,
+    blood_perfusion: f64,
+    rho_blood: f64,
+    cp_blood: f64,
+    body_temperature_c: f64,
+    heat_source_w_m3: f64,
+) -> Vec<f64> {
+    let perfusion_term = blood_perfusion * rho_blood * cp_blood;
+
+    if perfusion_term.abs() <= f64::MIN_POSITIVE {
+        let inv_two_k = 0.5 / thermal_conductivity;
+        return x_arr
+            .iter()
+            .map(|&x| {
+                body_temperature_c + heat_source_w_m3 * x * (slab_thickness_m - x) * inv_two_k
+            })
+            .collect();
+    }
+
+    let lambda = (perfusion_term / thermal_conductivity).sqrt();
+    let center = 0.5 * slab_thickness_m;
+    let denom = (lambda * center).cosh();
+    let steady_rise = heat_source_w_m3 / perfusion_term;
+
+    x_arr
+        .iter()
+        .map(|&x| body_temperature_c + steady_rise * (1.0 - (lambda * (x - center)).cosh() / denom))
+        .collect()
+}
+
 // ─── HIFU focal gain ──────────────────────────────────────────────────────────
 
 /// HIFU focal pressure gain for a focused transducer.
@@ -288,6 +352,44 @@ pub fn acoustic_heat_source_density(
 pub fn acoustic_intensity_from_amplitude(p_field: &[f64], rho: f64, c: f64) -> Vec<f64> {
     let inv_2rhoc = 0.5 / (rho * c);
     p_field.iter().map(|&p| p * p * inv_2rhoc).collect()
+}
+
+/// Peak acoustic pressure amplitude from intensity.
+///
+/// Inverts the plane-wave intensity relation used by
+/// [`acoustic_intensity_from_amplitude`]:
+/// ```text
+/// p = sqrt(2 rho c I)   [Pa]
+/// ```
+///
+/// # Arguments
+/// * `intensity` - acoustic intensity samples [W/m²], non-negative
+/// * `rho` - medium density [kg/m³]
+/// * `c` - speed of sound [m/s]
+///
+/// # Errors
+/// Returns an error when density or sound speed is non-positive/non-finite, or
+/// when any intensity sample is negative or non-finite.
+pub fn acoustic_pressure_amplitude_from_intensity(
+    intensity: &[f64],
+    rho: f64,
+    c: f64,
+) -> Result<Vec<f64>, String> {
+    if !rho.is_finite() || rho <= 0.0 {
+        return Err("density must be finite and positive".to_owned());
+    }
+    if !c.is_finite() || c <= 0.0 {
+        return Err("sound speed must be finite and positive".to_owned());
+    }
+    if !intensity
+        .iter()
+        .all(|value| value.is_finite() && *value >= 0.0)
+    {
+        return Err("intensity samples must be finite and non-negative".to_owned());
+    }
+
+    let scale = 2.0 * rho * c;
+    Ok(intensity.iter().map(|&i| (scale * i).sqrt()).collect())
 }
 
 /// Adiabatic (no-perfusion, no-conduction) temperature rise from a heat source.

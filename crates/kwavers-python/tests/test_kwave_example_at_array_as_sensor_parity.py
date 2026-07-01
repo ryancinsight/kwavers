@@ -14,6 +14,7 @@ import numpy as np
 import pytest
 
 from conftest import requires_kwave
+from parity_test_utils import assert_decodable_nonblank_png, report_metric_value
 
 
 skip_kwave = os.getenv("KWAVERS_SKIP_KWAVE", "0") == "1"
@@ -32,6 +33,75 @@ def _load_example_module():
     assert spec.loader is not None
     spec.loader.exec_module(module)
     return module
+
+
+def _assert_metric_contract(metric, thresholds):
+    assert metric["pearson_r"] >= thresholds["pearson_r"]
+    if "psnr_db" in thresholds:
+        assert metric["psnr_db"] > thresholds["psnr_db"]
+
+
+def _assert_trace_summary_contract(summary, thresholds):
+    assert summary["pearson_r_min"] >= thresholds["pearson_r_min"]
+    assert summary["pearson_r_mean"] >= thresholds["pearson_r_mean"]
+    assert summary["rms_ratio_min"] >= thresholds["rms_ratio_min"]
+    assert summary["rms_ratio_max"] <= thresholds["rms_ratio_max"]
+    assert summary["peak_ratio_min"] >= thresholds["peak_ratio_min"]
+    assert summary["peak_ratio_max"] <= thresholds["peak_ratio_max"]
+    assert summary["rmse_max"] < thresholds["rmse_max"]
+
+
+def _assert_report_section_contract(text: str, section: str, thresholds):
+    assert report_metric_value(text, "pearson_r", section) >= thresholds["pearson_r"]
+    if "psnr_db" in thresholds:
+        assert report_metric_value(text, "psnr_db", section) > thresholds["psnr_db"]
+
+
+def _assert_report_contract(module, text: str):
+    thresholds = module.PARITY_THRESHOLDS
+
+    assert "parity_status: PASS" in text
+    _assert_report_section_contract(
+        text,
+        "sensor mask parity:",
+        thresholds["mask_metrics"],
+    )
+    _assert_report_section_contract(
+        text,
+        "weighted mask parity:",
+        thresholds["weighted_mask_metrics"],
+    )
+    _assert_report_section_contract(
+        text,
+        "raw detector matrix parity:",
+        thresholds["raw_matrix_metrics"],
+    )
+    _assert_report_section_contract(
+        text,
+        "combined arc-trace parity:",
+        thresholds["combined_matrix_metrics"],
+    )
+
+    trace = thresholds["trace_summary"]
+    assert report_metric_value(text, "combined trace pearson_r_min") >= trace["pearson_r_min"]
+    assert report_metric_value(text, "combined trace pearson_r_mean") >= trace["pearson_r_mean"]
+    assert report_metric_value(text, "combined trace rms_ratio_min") >= trace["rms_ratio_min"]
+    assert report_metric_value(text, "combined trace rms_ratio_max") <= trace["rms_ratio_max"]
+    assert report_metric_value(text, "combined trace peak_ratio_min") >= trace["peak_ratio_min"]
+    assert report_metric_value(text, "combined trace peak_ratio_max") <= trace["peak_ratio_max"]
+    assert report_metric_value(text, "combined trace rmse_max") < trace["rmse_max"]
+
+
+@requires_kwave
+@pytest.mark.skipif(skip_kwave, reason="KWAVERS_SKIP_KWAVE=1")
+def test_current_at_array_as_sensor_artifacts_match_thresholds():
+    module = _load_example_module()
+    text = module.METRICS_PATH.read_text(encoding="utf-8")
+
+    assert module.METRICS_PATH.exists()
+    assert module.FIGURE_PATH.exists()
+    _assert_report_contract(module, text)
+    assert_decodable_nonblank_png(module.FIGURE_PATH)
 
 
 @requires_kwave
@@ -80,20 +150,23 @@ class TestKWaveExampleParityAtArrayAsSensor:
         assert np.max(np.abs(kw_combined)) > 0.0
         assert np.max(np.abs(py_combined)) > 0.0
 
-        assert mask_metrics["pearson_r"] > 0.99999
-        assert weighted_mask_metrics["pearson_r"] > 0.99999
-        assert raw_matrix_metrics["pearson_r"] > 0.98
-        assert raw_matrix_metrics["psnr_db"] > 30.0
-        assert combined_matrix_metrics["pearson_r"] > 0.99
-        assert combined_matrix_metrics["psnr_db"] > 30.0
-        assert trace_summary["pearson_r_min"] > 0.99
-        assert trace_summary["pearson_r_mean"] > 0.99
+        thresholds = module.PARITY_THRESHOLDS
+        _assert_metric_contract(mask_metrics, thresholds["mask_metrics"])
+        _assert_metric_contract(weighted_mask_metrics, thresholds["weighted_mask_metrics"])
+        _assert_metric_contract(raw_matrix_metrics, thresholds["raw_matrix_metrics"])
+        _assert_metric_contract(
+            combined_matrix_metrics,
+            thresholds["combined_matrix_metrics"],
+        )
+        _assert_trace_summary_contract(trace_summary, thresholds["trace_summary"])
 
         for metrics in trace_metrics.values():
-            assert metrics["pearson_r"] > 0.99
-            assert abs(metrics["rms_ratio"] - 1.0) < 3e-2
-            assert abs(metrics["peak_ratio"] - 1.0) < 1.5e-1
-            assert metrics["rmse"] < 2e-2
+            assert metrics["pearson_r"] >= thresholds["trace_summary"]["pearson_r_min"]
+            assert metrics["rms_ratio"] >= thresholds["trace_summary"]["rms_ratio_min"]
+            assert metrics["rms_ratio"] <= thresholds["trace_summary"]["rms_ratio_max"]
+            assert metrics["peak_ratio"] >= thresholds["trace_summary"]["peak_ratio_min"]
+            assert metrics["peak_ratio"] <= thresholds["trace_summary"]["peak_ratio_max"]
+            assert metrics["rmse"] < thresholds["trace_summary"]["rmse_max"]
 
 
 if __name__ == "__main__":

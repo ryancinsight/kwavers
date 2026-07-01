@@ -3651,8 +3651,8 @@ def plot_passive_cavitation_dose(label_vol, info, results, scenarios) -> str:
                        c_l=1500.0, p0=101_325.0, xi_s=0.0)
     r = simulate_population_emission(
         kw, drive_pa=1.0e6, f0=1.0e6, medium=med, n_bubbles=60,
-        rng=np.random.default_rng(5), r0_median_m=2.5e-6, r0_sigma_ln=0.4,
-        n_cycles=12.0, n_out=8192, max_nucleation_cycles=0.0)
+        seed=5, r0_median_m=2.5e-6, r0_sigma_ln=0.4,
+        n_cycles=12.0, n_out=8192)
     band_vals = np.array([r["fundamental"], r["stable"], r["broadband"]])
     band_total = band_vals.sum() + 1e-30
     band_frac = band_vals / band_total
@@ -3748,10 +3748,10 @@ def plot_cavitation_monitor_fig(scenarios) -> str:
     med = BubbleMedium(rho=998.0, sigma=0.072, gamma=1.4, mu=1.0e-3, pv=2330.0,
                        c_l=1500.0, p0=101_325.0, xi_s=0.0)
     HISTO_SIM = dict(r0_median_m=2.5e-6, r0_sigma_ln=0.4, n_cycles=12.0,
-                     n_out=8192, max_nucleation_cycles=0.0, r_obs_m=5.0e-2)
+                     n_out=8192, r_obs_m=5.0e-2)
     demo = simulate_population_emission(
         kw, drive_pa=1.0e6, f0=1.0e6, medium=med, n_bubbles=60,
-        rng=np.random.default_rng(5), **HISTO_SIM)
+        seed=5, **HISTO_SIM)
     # Open-loop fixed-amplitude pulse train (histotripsy does not throttle power):
     # targets above range so power stays at full; the per-pulse signal is the
     # genuinely simulated broadband-dominated population emission.

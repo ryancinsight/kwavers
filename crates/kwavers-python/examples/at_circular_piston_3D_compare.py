@@ -427,9 +427,19 @@ def run_comparison() -> dict[str, object]:
     }
 
 
-_R_TARGET = 0.999
-_RMS_MIN = 0.99
-_RMS_MAX = 1.01
+PARITY_THRESHOLDS = {
+    "pearson_r": 0.999,
+    "rms_ratio_min": 0.99,
+    "rms_ratio_max": 1.01,
+    "source_pearson_r": 0.999,
+    "source_rms_ratio_min": 0.99,
+    "source_rms_ratio_max": 1.01,
+    "source_peak_ratio_min": 0.99,
+    "source_peak_ratio_max": 1.01,
+    "reference_pearson_r": 0.9998,
+    "reference_rms_ratio_min": 0.99,
+    "reference_rms_ratio_max": 1.02,
+}
 
 
 def main() -> int:
@@ -451,7 +461,12 @@ def main() -> int:
 
     r = float(summary["pearson_r"])
     rms = float(summary["rms_ratio"])
-    overall_status = "PASS" if r >= _R_TARGET and _RMS_MIN <= rms <= _RMS_MAX else "FAIL"
+    thr = PARITY_THRESHOLDS
+    overall_status = (
+        "PASS"
+        if r >= thr["pearson_r"] and thr["rms_ratio_min"] <= rms <= thr["rms_ratio_max"]
+        else "FAIL"
+    )
 
     report_lines = build_report_lines(
         result["kwave"],
@@ -470,8 +485,11 @@ def main() -> int:
     print("at_circular_piston_3D: k-wave-python vs pykwavers")
     print("=" * 80)
     print(f"source weights Pearson r:          {result['source_metrics']['pearson_r']:.6f}")
-    print(f"k-wave vs pykwavers Pearson r:     {r:.6f}  (target >= {_R_TARGET})")
-    print(f"k-wave vs pykwavers RMS ratio:     {rms:.6f}  (target [{_RMS_MIN}, {_RMS_MAX}])")
+    print(f"k-wave vs pykwavers Pearson r:     {r:.6f}  (target >= {thr['pearson_r']})")
+    print(
+        f"k-wave vs pykwavers RMS ratio:     {rms:.6f}  "
+        f"(target [{thr['rms_ratio_min']}, {thr['rms_ratio_max']}])"
+    )
     print(f"k-Wave vs analytical Pearson r:    {reference_metrics['kwave']['pearson_r']:.6f}")
     print(f"pykwavers vs analytical Pearson r: {reference_metrics['pykwavers']['pearson_r']:.6f}")
     print(f"Status:                            {overall_status}")

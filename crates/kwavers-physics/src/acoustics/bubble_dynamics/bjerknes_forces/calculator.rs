@@ -29,8 +29,10 @@ mod tests {
     /// BjerknesCalculator::new stores the provided config.
     #[test]
     fn new_stores_config_fields() {
-        let mut cfg = BjerknesConfig::default();
-        cfg.frequency = 500e3;
+        let cfg = BjerknesConfig {
+            frequency: 500e3,
+            ..Default::default()
+        };
         let calc = BjerknesCalculator::new(cfg);
         assert!(
             (calc.config().frequency - 500e3).abs() < 1e-6,

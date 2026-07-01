@@ -2,9 +2,11 @@ use super::*;
 
 #[test]
 fn test_fuse_feature_based_tissue_classification_invariants() {
-    let mut config = FusionConfig::default();
-    config.fusion_method = ImagingFusionMethod::FeatureBased;
-    config.uncertainty_quantification = false;
+    let config = FusionConfig {
+        fusion_method: ImagingFusionMethod::FeatureBased,
+        uncertainty_quantification: false,
+        ..Default::default()
+    };
 
     let mut fusion = MultiModalFusion::new(config);
     let shape = (2, 2, 1);

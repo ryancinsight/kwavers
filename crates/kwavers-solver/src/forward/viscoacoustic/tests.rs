@@ -9,7 +9,7 @@ use std::f64::consts::TAU;
 
 const RHO: f64 = 1000.0;
 const M_INF: f64 = 2.25e9; // ρ·1500² ⇒ relaxed speed 1500 m/s
-// Two relaxation arms with loss times bracketing the ~MHz test band.
+                           // Two relaxation arms with loss times bracketing the ~MHz test band.
 const ARMS: [(f64, f64); 2] = [(1.5e8, 3.2e-7), (8.0e7, 8.0e-8)];
 
 fn m_u() -> f64 {
@@ -367,7 +367,10 @@ fn source_pulse_arrives_at_sensor_at_time_of_flight() {
     let early_peak = trace[..(expected as usize - 200)]
         .iter()
         .fold(0.0_f64, |m, &v| m.max(v.abs()));
-    assert!(early_peak < 0.05 * peak, "pre-arrival leakage {early_peak:.2e}");
+    assert!(
+        early_peak < 0.05 * peak,
+        "pre-arrival leakage {early_peak:.2e}"
+    );
 }
 
 /// Construction validation and the `GeneralizedMaxwellModel` convenience path.
@@ -376,18 +379,19 @@ fn construction_validates_and_accepts_model() {
     use kwavers_medium::viscoelastic::GeneralizedMaxwellModel;
 
     assert!(ViscoacousticMemorySolver::new_1d(0, 1e-4, 1e-8, RHO, M_INF, &[]).is_err());
-    assert!(ViscoacousticMemorySolver::new(8, 8, 0, 1e-4, 1e-4, 1e-4, 1e-8, RHO, M_INF, &[]).is_err());
     assert!(
-        ViscoacousticMemorySolver::new_1d(64, -1.0, 1e-8, RHO, M_INF, &[]).is_err()
+        ViscoacousticMemorySolver::new(8, 8, 0, 1e-4, 1e-4, 1e-4, 1e-8, RHO, M_INF, &[]).is_err()
     );
+    assert!(ViscoacousticMemorySolver::new_1d(64, -1.0, 1e-8, RHO, M_INF, &[]).is_err());
     assert!(
         ViscoacousticMemorySolver::new_1d(64, 1e-4, 1e-8, RHO, M_INF, &[(-1.0, 1e-7)]).is_err()
     );
 
     let model =
         GeneralizedMaxwellModel::power_law(M_INF, 2.0e8, 1.0e5, 2.0e6, 6, 1.3, RHO).unwrap();
-    let solver =
-        ViscoacousticMemorySolver::from_generalized_maxwell(&model, 16, 16, 16, 1e-4, 1e-4, 1e-4, 1e-8)
-            .expect("model-backed solver");
+    let solver = ViscoacousticMemorySolver::from_generalized_maxwell(
+        &model, 16, 16, 16, 1e-4, 1e-4, 1e-4, 1e-8,
+    )
+    .expect("model-backed solver");
     assert!(solver.unrelaxed_speed() > (M_INF / RHO).sqrt());
 }

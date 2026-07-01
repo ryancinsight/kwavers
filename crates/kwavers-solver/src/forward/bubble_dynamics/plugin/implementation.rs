@@ -36,6 +36,7 @@ impl BubbleDynamicsPlugin {
     pub fn new(config: BubbleDynamicsConfig) -> Self {
         let model_name = match &config.model {
             BubbleModel::KellerMiksis => "KellerMiksis",
+            BubbleModel::KellerHerring => "KellerHerring",
             BubbleModel::RayleighPlesset => "RayleighPlesset",
             BubbleModel::Gilmore => "Gilmore",
         };
@@ -134,14 +135,45 @@ impl Plugin for BubbleDynamicsPlugin {
         let positions = Self::seed_positions(grid, self.config.nucleation);
 
         self.engine = Some(match &self.config.model {
-            BubbleModel::KellerMiksis | BubbleModel::RayleighPlesset => {
-                let mut params = self.config.params.clone();
-                if matches!(self.config.model, BubbleModel::RayleighPlesset) {
-                    // Disable compressibility correction → RP limit of KM equation.
-                    params.use_compressibility = false;
+            BubbleModel::KellerMiksis => {
+                let params = self.config.params.clone();
+                let mut field = BubbleField::with_keller_miksis(
+                    shape,
+                    params.clone(),
+                    (grid.dx, grid.dy, grid.dz),
+                );
+                for (i, j, k) in &positions {
+                    field.add_bubble(*i, *j, *k, BubbleState::new(&params));
                 }
-                let mut field =
-                    BubbleField::with_spacing(shape, params.clone(), (grid.dx, grid.dy, grid.dz));
+                BubbleEngine::KmOrRp {
+                    field: Box::new(field),
+                    prev_pressure,
+                }
+            }
+            BubbleModel::KellerHerring => {
+                let params = self.config.params.clone();
+                let mut field = BubbleField::with_keller_herring(
+                    shape,
+                    params.clone(),
+                    (grid.dx, grid.dy, grid.dz),
+                );
+                for (i, j, k) in &positions {
+                    field.add_bubble(*i, *j, *k, BubbleState::new(&params));
+                }
+                BubbleEngine::KmOrRp {
+                    field: Box::new(field),
+                    prev_pressure,
+                }
+            }
+            BubbleModel::RayleighPlesset => {
+                let mut params = self.config.params.clone();
+                // Disable compressibility correction → RP limit of KM equation.
+                params.use_compressibility = false;
+                let mut field = BubbleField::with_rayleigh_plesset(
+                    shape,
+                    params.clone(),
+                    (grid.dx, grid.dy, grid.dz),
+                );
                 for (i, j, k) in &positions {
                     field.add_bubble(*i, *j, *k, BubbleState::new(&params));
                 }

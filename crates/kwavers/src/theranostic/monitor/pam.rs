@@ -177,7 +177,11 @@ mod tests {
         let (nx, nz) = (24usize, 24usize);
         let y_slice = 0.0;
         // Image grid centred at origin: pixel (0,0) at (-12mm, 0, -12mm).
-        let origin = [-(nx as f64) / 2.0 * spacing, y_slice, -(nz as f64) / 2.0 * spacing];
+        let origin = [
+            -(nx as f64) / 2.0 * spacing,
+            y_slice,
+            -(nz as f64) / 2.0 * spacing,
+        ];
         let cfg = PamMonitorConfig {
             sound_speed_m_s: c,
             origin_m: origin,
@@ -214,7 +218,10 @@ mod tests {
         );
         // Peak must dominate the off-source background.
         let mean = map.sum() / (nx * nz) as f64;
-        assert!(pk_v > 3.0 * mean, "PAM peak {pk_v} must exceed 3× mean {mean}");
+        assert!(
+            pk_v > 3.0 * mean,
+            "PAM peak {pk_v} must exceed 3× mean {mean}"
+        );
     }
 
     #[test]
@@ -225,7 +232,11 @@ mod tests {
         let fs = 2.0e6;
         let spacing = 1.0e-3;
         let (nx, nz) = (24usize, 24usize);
-        let origin = [-(nx as f64) / 2.0 * spacing, 0.0, -(nz as f64) / 2.0 * spacing];
+        let origin = [
+            -(nx as f64) / 2.0 * spacing,
+            0.0,
+            -(nz as f64) / 2.0 * spacing,
+        ];
         let cfg = PamMonitorConfig {
             sound_speed_m_s: c,
             origin_m: origin,
@@ -237,7 +248,10 @@ mod tests {
         let elements = ring_xz(24, 0.03, 0.0, 0.0, 0.0);
         let data = synthesize_emission(source, &elements, fs, c, 400, 3.0).unwrap();
         let map = passive_acoustic_map(&data, &elements, fs, &cfg).unwrap();
-        assert!(map[[12, 12]] > map[[2, 2]] * 2.0, "source pixel must out-focus a far pixel");
+        assert!(
+            map[[12, 12]] > map[[2, 2]] * 2.0,
+            "source pixel must out-focus a far pixel"
+        );
     }
 
     #[test]

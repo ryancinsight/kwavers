@@ -14,6 +14,7 @@ import numpy as np
 import pytest
 
 from conftest import requires_kwave
+from parity_test_utils import assert_decodable_nonblank_png, report_metric_value
 
 
 skip_kwave = os.getenv("KWAVERS_SKIP_KWAVE", "0") == "1"
@@ -32,6 +33,48 @@ def _load_example_module():
     assert spec.loader is not None
     spec.loader.exec_module(module)
     return module
+
+
+def _assert_metrics_contract(metrics, thresholds):
+    assert metrics["pearson_r"] >= thresholds["pearson_r"]
+    if "rms_ratio_min" in thresholds:
+        assert thresholds["rms_ratio_min"] <= metrics["rms_ratio"]
+    if "rms_ratio_max" in thresholds:
+        assert metrics["rms_ratio"] <= thresholds["rms_ratio_max"]
+    if "psnr_db" in thresholds:
+        assert metrics["psnr_db"] >= thresholds["psnr_db"]
+
+
+def _assert_report_contract(module, text: str):
+    thresholds = module.PARITY_THRESHOLDS
+    tr_section = "Time-reversal reconstruction (kwave vs pykwavers):"
+    reference_section = "Reconstruction vs ground-truth p0:"
+
+    assert "parity_status: PASS" in text
+    tr_thresholds = thresholds["time_reversal"]
+    assert report_metric_value(text, "pearson_r", tr_section) >= tr_thresholds["pearson_r"]
+    rms_ratio = report_metric_value(text, "rms_ratio", tr_section)
+    assert tr_thresholds["rms_ratio_min"] <= rms_ratio
+    assert rms_ratio <= tr_thresholds["rms_ratio_max"]
+    assert report_metric_value(text, "psnr_db", tr_section) >= tr_thresholds["psnr_db"]
+
+    reference_thresholds = thresholds["reference"]
+    for label in ("kwave     pearson_r", "pykwavers pearson_r"):
+        assert report_metric_value(text, label, reference_section) >= reference_thresholds["pearson_r"]
+
+
+@requires_kwave
+@pytest.mark.skipif(skip_kwave, reason="KWAVERS_SKIP_KWAVE=1")
+def test_current_pr_3d_time_reversal_planar_sensor_artifacts_match_thresholds():
+    module = _load_example_module()
+
+    assert module.METRICS_PATH.exists()
+    assert module.TR_FIGURE_PATH.exists()
+    assert module.PRESSURE_FIGURE_PATH.exists()
+    text = module.METRICS_PATH.read_text(encoding="utf-8")
+    _assert_report_contract(module, text)
+    assert_decodable_nonblank_png(module.TR_FIGURE_PATH)
+    assert_decodable_nonblank_png(module.PRESSURE_FIGURE_PATH)
 
 
 @requires_kwave
@@ -65,12 +108,10 @@ class TestKWaveExampleParity3DTR:
         assert np.max(np.abs(kw_tr)) > 0.0
         assert np.max(np.abs(py_tr)) > 0.0
 
-        assert summary["pearson_r"] > 0.995
-        assert abs(summary["rms_ratio"] - 1.0) < 3e-2
-        assert summary["psnr_db"] > 40.0
-
-        assert reference_metrics["kwave_time_reversal"]["pearson_r"] > 0.90
-        assert reference_metrics["pykwavers_time_reversal"]["pearson_r"] > 0.90
+        thresholds = module.PARITY_THRESHOLDS
+        _assert_metrics_contract(summary, thresholds["time_reversal"])
+        _assert_metrics_contract(reference_metrics["kwave_time_reversal"], thresholds["reference"])
+        _assert_metrics_contract(reference_metrics["pykwavers_time_reversal"], thresholds["reference"])
 
         for row, metrics in trace_metrics.items():
             assert np.isfinite(metrics["pearson_r"]), f"sensor row {row} correlation is not finite"

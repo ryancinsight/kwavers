@@ -16,8 +16,7 @@ pub(crate) fn rotation_axis(rot: Rot) -> u8 {
 }
 
 pub(crate) fn rect_contains_point(rect: Rect, p: Point) -> bool {
-    (rect.min.x.0..=rect.max.x.0).contains(&p.x.0)
-        && (rect.min.y.0..=rect.max.y.0).contains(&p.y.0)
+    (rect.min.x.0..=rect.max.x.0).contains(&p.x.0) && (rect.min.y.0..=rect.max.y.0).contains(&p.y.0)
 }
 
 pub(crate) fn segment_intersects_rect(a: Point, b: Point, rect: Rect) -> bool {
@@ -86,8 +85,17 @@ pub(crate) fn non_power_signal_net_count(c: &Component, fp: &FootprintDef) -> us
 /// Index (0=left, 1=right, 2=bottom, 3=top) of the board edge closest to `p`.
 #[inline]
 fn nearest_edge_idx(p: Point, width: f64, height: f64) -> usize {
-    let d = [p.x.to_mm(), width - p.x.to_mm(), p.y.to_mm(), height - p.y.to_mm()];
-    d.iter().enumerate().min_by(|a, b| a.1.total_cmp(b.1)).map(|(i, _)| i).unwrap_or(0)
+    let d = [
+        p.x.to_mm(),
+        width - p.x.to_mm(),
+        p.y.to_mm(),
+        height - p.y.to_mm(),
+    ];
+    d.iter()
+        .enumerate()
+        .min_by(|a, b| a.1.total_cmp(b.1))
+        .map(|(i, _)| i)
+        .unwrap_or(0)
 }
 
 pub(crate) fn nearest_board_edge_point(p: Point, width: f64, height: f64) -> Point {

@@ -174,8 +174,7 @@ fn hessian_vector(
         .and(direction)
         .for_each(|m, &v| *m += eps * v);
     clamp_slowness(&mut perturbed, config);
-    let (_objective, gradient1) =
-        objective_and_gradient(&perturbed, observations, array, config)?;
+    let (_objective, gradient1) = objective_and_gradient(&perturbed, observations, array, config)?;
     let mut hv = gradient1;
     Zip::from(&mut hv)
         .and(gradient0)
@@ -237,7 +236,9 @@ fn newton_cg(
         Zip::from(&mut p)
             .and(&direction)
             .for_each(|pv, &d| *pv += alpha * d);
-        Zip::from(&mut r).and(&hd).for_each(|rv, &h| *rv -= alpha * h);
+        Zip::from(&mut r)
+            .and(&hd)
+            .for_each(|rv, &h| *rv -= alpha * h);
         let rs_new = dot(&r, &r);
         if rs_new <= 1.0e-12 * rs_initial {
             break;
@@ -304,8 +305,7 @@ mod tests {
             objective_and_gradient(&start_slowness, &observations, &array, &config).unwrap();
 
         let gn = GaussNewtonConfig::default();
-        let result =
-            invert_gauss_newton(&observations, &array, &background, &config, &gn).unwrap();
+        let result = invert_gauss_newton(&observations, &array, &background, &config, &gn).unwrap();
 
         let obj_end = *result.objective_history.last().unwrap();
         eprintln!(

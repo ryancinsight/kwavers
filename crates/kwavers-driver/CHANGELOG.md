@@ -3,17 +3,33 @@
 ## 0.1.0 - Unreleased
 
 ### Added
+- **Exact TC8020 output-stage CAD flow**: `nsf_neuromod_phased_array` now imports the local
+  `TC8020K6_G` KiCad QFN56 footprint and symbol pin map, maps gate/drain/source pins by symbol
+  function, and enables HDI microvia fanout for the fine-pitch output packages. The regenerated
+  board is complete and LVS-clean (`layers=6/6`, `vias=248`) but remains inspection-only because
+  internal DRC reports 18 clearance violations and 302 crossing risk markers.
+- **kwavers-transducer beam propagation close-out**: `kwavers-transducer` now exports
+  `propagate_focused_linear_array` and focused propagation result types. The driver `kwavers`
+  feature path uses that API in both `KwaversSim::simulate` and feature-enabled
+  `validate_against_budget`, replacing the old driver-side coherent-gain/analytical-width proxy.
+  Regenerated `output/beamforming` from `output/manifests/v2_per_tile_stim.kv`: 96 channels,
+  11.027 MPa focal pressure, MI 7.797, 4108 W/cm2 ISPPA, 0.500 mm lateral 6 dB width,
+  2.074 mm axial 6 dB width, grating-lobe-free true, far-field false, and all four checks pass.
+- **Beamforming example kwavers-validation contract**: `examples/beamforming_results.rs` now runs
+  against a generated full-stack v2 driver manifest with `--features kwavers`, validates through
+  `run_experiment(..., &KwaversSim, ...)`, and emits `beamforming_validation.kv`,
+  `tile_geometry.csv`, `beamforming_metrics.csv`, plus deterministic BMP visualizations. The
+  kwavers-transducer geometry adapter preserves the manifest's 96 routed lanes by converting
+  driver first-to-last channel-centre aperture span into kwavers pitch-cell aperture span before
+  calling `design_array`, then routes the realized geometry through kwavers-transducer propagation.
 - **Phase 6 workspace move + kwavers-transducer wiring**: crate moved from
   `leoneuro/driver/kicad-routing/` to `crates/kwavers-driver/` (parent kwavers workspace). Standalone
   `[workspace]` table removed; parent `Cargo.toml` members updated; `kwavers-transducer = { path =
   "../kwavers-transducer", optional = true }` dep added; `kwavers = ["dep:kwavers-transducer"]`
-  feature wired. `KwaversSim::simulate` filled — calls `kwavers_transducer::design_array` to get the
-  exact element geometry from step parameters (1-D linear, `aperture_x = 0`, `ColumnsAsChannels`),
-  then computes pressure/MI/ISPPA from the realized `design.n_channels` and `design.aperture_y_m()`.
-  More accurate than `InCrateAcousticSim` for arrays where pitch quantization shifts the channel count
-  away from the nominal `step.lanes` value. `grating_lobe_free` now sourced from transducer geometry
-  (`ArrayDesign.grating_lobe_free`) rather than the driver-side `max_grating_free_steer_deg`
-  approximation; `in_far_field` uses the realized aperture after quantization. Standalone `[profile.*]`
+  feature wired. `KwaversSim::simulate` filled — initially called `kwavers_transducer::design_array`
+  to get the exact element geometry from step parameters; the current `kwavers` feature path now
+  calls `kwavers_transducer::propagate_focused_linear_array` for pressure, MI, ISPPA, beam widths,
+  grating-lobe-free status, and far-field status. Standalone `[profile.*]`
   sections removed (workspace member profiles are no-ops; workspace root governs). `Cargo.toml`
   `0.3.12` → `0.3.13`.
 - **Phase 5 experiment framework** (4 Phase-0 placeholder files filled + 4 new files + `mod.rs` + `kwavers = []` feature marker): `stimulus.rs` (`Stimulus` DIP trait + `DefaultStimulus` manifest wrapper), `acoustic.rs` (`AcousticSimulator` DIP trait + `PressureMap` output + `InCrateAcousticSim` real in-crate physics impl using `crate::physics::acoustic` — same computation as `validate_against_budget` but operating on the already-computed `KwaversBeamStep + EnergyBudgetReport` pair with no manifest required at simulation time + `#[cfg(feature="kwavers")] KwaversSim` DipSeam stub for Phase 6), `thermal.rs` (`ThermalState` + `propagate_thermal` 0-D steady-state θ_jc model), `dispatch.rs` (`LaneBinding` + `TileDispatch` equal-partition lane→tile lookup table, 96ch/4-tile → 24ch/tile), `metrics.rs` (`ExperimentMetrics` acoustic+thermal aggregate + `build_beam_report` 4-check kwavers-beam PhysicsReport assembler sourced from simulated scalars — not the analytical pre-step estimate — so future `KwaversSim` scalars propagate correctly into the check), `recorder.rs` (`ExperimentRecord` deterministic output bundle + `artifact_key` frequency×lanes×focal deterministic string key), `runner.rs` (`run_experiment<S: AcousticSimulator>` DIP-injected orchestrator: step→simulate→thermal→report + `ExperimentReport`). 18 new value-semantic tests covering positive/negative/boundary cases across all 7 sub-modules and the full `run_experiment` pipeline. `Cargo.toml` `0.3.11` → `0.3.12`. Full suite **433/433 green**; experiment slice clippy-clean; zero new warnings from the experiment subtree.
@@ -355,12 +371,9 @@
     `PhysicsReport` aggregating `focal_pressure_pa ≥ 1 MPa` (transduction
     floor), `MI < 10` (cavitation ceiling), `grating-lobe-free ≥ 89°`.
   - New `validate_against_budget(&manifest, &budget) -> Result<KwaversBeamValidation, String>`
-    is the architectural seam entry point. Until kwavers-transducer is
-    available the function reads the in-crate physics in [`crate::acoustic`];
-    the integration point carries a clear
-    `// TODO(kwavers-transducer): replace with crate::kwavers_transducer::simulate(&step) -> PressureMap`
-    marker showing exactly where the real kwavers call would land — no struct
-    migration required to swap the in-crate physics for the kwavers call.
+    is the architectural seam entry point. This Track D note originally used
+    the in-crate physics fallback; the 2026-06-29 close-out above supersedes it
+    under `--features kwavers` with `kwavers_transducer::propagate_focused_linear_array`.
   - 9 new unit tests under `validate::tests`: `manifest_to_kwavers_beam_step_adapts_a_full_v2_stack`,
     `manifest_to_kwavers_beam_step_rejects_a_non_v2_manifest`,
     `manifest_to_kwavers_beam_step_rejects_a_stale_budget_with_mismatched_lanes`,
@@ -390,9 +403,9 @@
     seam: `EnergyBudgetReport` → `KwaversBeamStep::resistor_margin_w` →
     `KwaversBeamValidation::resistor_margin_w`. The kwavers consumer reads the
     per-tile margin directly to plan footprint bumps (`Smd2512 ⇒ Smd4527`) and
-    matching-cap tightening without re-deriving `pulser_dissipation` — the
-    `// TODO(kwavers-transducer): replace with crate::kwavers_transducer::simulate`
-    marker in `validate_against_budget` calls this seam contract out explicitly.
+    matching-cap tightening without re-deriving `pulser_dissipation`; the
+    2026-06-29 close-out routes the feature-enabled validation path through
+    `kwavers_transducer::propagate_focused_linear_array`.
   - New 4th safety `Check::lower("resistor margin (per-tile min) ≥ 0 W", …)` in
     the `validate_against_budget` `PhysicsReport` locks the post-rejection
     invariant at the seam: a future contributor who removes the upstream

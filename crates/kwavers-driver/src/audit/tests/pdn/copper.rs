@@ -24,8 +24,7 @@ fn copper_imbalance_is_symmetric_pair_and_counts_planes() {
         }
         b
     };
-    let spec =
-        GridSpec::cover(Nm::from_mm(20.0), Nm::from_mm(20.0), Nm::from_mm(0.5), 4).unwrap();
+    let spec = GridSpec::cover(Nm::from_mm(20.0), Nm::from_mm(20.0), Nm::from_mm(0.5), 4).unwrap();
     assert!(
         copper_imbalance(&mk(spec, 1, 2)) < 0.01,
         "symmetric plane placement is warp-balanced"

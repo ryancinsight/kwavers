@@ -197,9 +197,11 @@ many-cycle nucleus growth and inertial collapse.
 ### Figure 14.3 — Bioheat temperature rise
 
 ![bioheat temperature](figures/ch21/fig03_bioheat_temperature.png)
-Focal $T(t)$ from the bioheat ODE for shock-rich heating. This is retained as
-a thermal-footprint diagnostic, not as the required cavitation gate for all
-millisecond-pulse histotripsy exposures.
+Focal $T(t)$ from the bioheat ODE for shock-rich heating, with the
+intensity-to-pressure inversion supplied by Rust `kw.acoustic_pressure_amplitude_from_intensity`
+before the Rust heat-source calculation. This is retained as a thermal-footprint
+diagnostic, not as the required cavitation gate for all millisecond-pulse
+histotripsy exposures.
 
 ### Figure 14.4 — CEM43 accumulation
 

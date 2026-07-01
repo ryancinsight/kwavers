@@ -12,8 +12,8 @@ pub mod spatial_impulse_response;
 pub mod steering;
 
 pub use array_factor::{
-    apodization_weights, beam_pattern_magnitude, circular_piston_directivity, grating_lobe_angles,
-    linear_array_factor,
+    apodization_weights, apodization_window_response, beam_pattern_magnitude,
+    circular_piston_directivity, grating_lobe_angles, linear_array_factor,
 };
 pub use beam::{
     beam_pattern_2d, beam_pattern_2d_magnitude, circular_piston_onaxis, delay_law_focus_2d,
@@ -23,7 +23,7 @@ pub use beam::{
     near_field_distance, safe_steering_halfangle, steered_aperture_pressure_3d,
     steered_beam_pattern_1d, steering_focus_point, steering_grating_lobe_ratio_1d,
 };
-pub use interpolation::bli_stencil_weights;
+pub use interpolation::{bli_interpolation_error_curves, bli_stencil_weights};
 pub use optoacoustic::{
     acoustic_resolution_lateral, f_number_from_na, fiber_tip_fluence, focused_aperture_gain,
     na_from_f_number, numerical_aperture_from_geometry, optoacoustic_array_focal_pressure,
@@ -89,12 +89,113 @@ mod tests {
     }
 
     #[test]
+    fn apodization_response_matches_manual_dft_shift() {
+        let n_elements = 4usize;
+        let nfft = 8usize;
+        let (weights, freq, response_db) = apodization_window_response(n_elements, "uniform", nfft)
+            .expect("invariant: nfft >= n_elements defines response");
+
+        assert_eq!(weights, vec![1.0; n_elements]);
+        assert_eq!(freq.len(), nfft);
+        assert!((freq[0] + 2.0).abs() < 1e-12);
+        assert!((freq[nfft - 1] - 2.0).abs() < 1e-12);
+        assert_eq!(response_db.len(), nfft);
+
+        let mut magnitudes = Vec::with_capacity(nfft);
+        for shifted_bin in 0..nfft {
+            let bin = (shifted_bin + nfft / 2) % nfft;
+            let mut re = 0.0;
+            let mut im = 0.0;
+            for (idx, &weight) in weights.iter().enumerate() {
+                let phase = -2.0 * PI * bin as f64 * idx as f64 / nfft as f64;
+                re += weight * phase.cos();
+                im += weight * phase.sin();
+            }
+            let magnitude = re.hypot(im);
+            magnitudes.push(if magnitude < 1.0e-14 { 0.0 } else { magnitude });
+        }
+        let peak = magnitudes.iter().copied().fold(0.0_f64, f64::max);
+        for (idx, (&got, &magnitude)) in response_db.iter().zip(magnitudes.iter()).enumerate() {
+            let expected = 20.0 * ((magnitude / peak) + 1.0e-12).log10();
+            assert!(
+                (got - expected).abs() < 1.0e-12,
+                "response[{idx}]={got}, expected={expected}"
+            );
+        }
+    }
+
+    #[test]
+    fn apodization_response_rejects_invalid_lengths() {
+        assert!(apodization_window_response(0, "hann", 8).is_err());
+        assert!(apodization_window_response(4, "hann", 0).is_err());
+        assert!(apodization_window_response(8, "hann", 4).is_err());
+    }
+
+    #[test]
     fn bli_stencil_dc_preservation() {
         let ws = bli_stencil_weights(&[0.0, 0.25, 0.5, 0.75], 8);
         for w in &ws {
             let s: f64 = w.iter().sum();
             assert!((s - 1.0).abs() < 1e-10, "sum={}", s);
         }
+    }
+
+    #[test]
+    fn bli_error_curves_match_nearest_neighbour_reference() {
+        let ppw = [4.0, 8.0, 16.0];
+        let delta = [0.0, 0.25, 0.5, 0.75];
+        let (nearest, bli) = bli_interpolation_error_curves(&ppw, &delta, 8);
+        assert_eq!(nearest.len(), ppw.len());
+        assert_eq!(bli.len(), ppw.len());
+
+        for (i, &points_per_wavelength) in ppw.iter().enumerate() {
+            let phase = 2.0 * PI / points_per_wavelength;
+            let expected = (delta
+                .iter()
+                .map(|&d| {
+                    let ideal = (phase * d).sin();
+                    ideal * ideal
+                })
+                .sum::<f64>()
+                / delta.len() as f64)
+                .sqrt();
+            assert!(
+                (nearest[i] - expected).abs() < 1.0e-14,
+                "nearest[{i}]={} expected={expected}",
+                nearest[i]
+            );
+        }
+    }
+
+    #[test]
+    fn bli_error_curves_improve_over_nearest_neighbour_at_high_ppw() {
+        let ppw = [8.0, 12.0, 16.0, 20.0];
+        let delta: Vec<f64> = (0..128).map(|i| i as f64 / 128.0).collect();
+        let (nearest, bli) = bli_interpolation_error_curves(&ppw, &delta, 8);
+        for i in 0..ppw.len() {
+            assert!(
+                bli[i] < nearest[i],
+                "BLI RMS {} must be below nearest RMS {} at PPW {}",
+                bli[i],
+                nearest[i],
+                ppw[i]
+            );
+        }
+    }
+
+    #[test]
+    fn bli_error_curves_reject_invalid_inputs() {
+        assert!(bli_interpolation_error_curves(&[], &[0.0], 8).0.is_empty());
+        assert!(bli_interpolation_error_curves(&[4.0], &[], 8).0.is_empty());
+        assert!(bli_interpolation_error_curves(&[4.0], &[0.0], 7)
+            .0
+            .is_empty());
+        assert!(bli_interpolation_error_curves(&[0.0], &[0.0], 8)
+            .0
+            .is_empty());
+        assert!(bli_interpolation_error_curves(&[4.0], &[f64::NAN], 8)
+            .0
+            .is_empty());
     }
 
     #[test]

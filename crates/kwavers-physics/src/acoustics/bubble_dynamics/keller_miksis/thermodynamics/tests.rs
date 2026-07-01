@@ -38,8 +38,12 @@ fn test_stefan_boltzmann_at_10000k_is_significant() {
 
 #[test]
 fn test_emissivity_vapor_in_range() {
-    assert!(EMISSIVITY_VAPOR >= 0.05, "emissivity must be >= 0.05");
-    assert!(EMISSIVITY_VAPOR <= 0.3, "emissivity must be <= 0.3");
+    const _: () = {
+        assert!(EMISSIVITY_VAPOR >= 0.05);
+        assert!(EMISSIVITY_VAPOR <= 0.3);
+    };
+    let emissivity_vapor = EMISSIVITY_VAPOR;
+    assert!((0.05..=0.3).contains(&emissivity_vapor));
 }
 
 #[test]

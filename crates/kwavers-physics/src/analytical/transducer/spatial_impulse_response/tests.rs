@@ -139,7 +139,7 @@ fn phi_sampled(x: f64, y: f64, rho: f64) -> f64 {
         let theta = 2.0 * PI * (k as f64 + 0.5) / n as f64;
         let px = x + rho * theta.cos();
         let py = y + rho * theta.sin();
-        if px >= -WX && px <= WX && py >= -WY && py <= WY {
+        if (-WX..=WX).contains(&px) && (-WY..=WY).contains(&py) {
             inside += 1;
         }
     }

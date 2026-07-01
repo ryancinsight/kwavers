@@ -32,9 +32,18 @@ pub struct ExperimentRecord {
 impl ExperimentRecord {
     /// Assemble the record from its parts.
     #[must_use]
-    pub fn new(step: KwaversBeamStep, metrics: ExperimentMetrics, beam_report: PhysicsReport) -> Self {
+    pub fn new(
+        step: KwaversBeamStep,
+        metrics: ExperimentMetrics,
+        beam_report: PhysicsReport,
+    ) -> Self {
         let all_pass = beam_report.all_pass;
-        Self { step, metrics, beam_report, all_pass }
+        Self {
+            step,
+            metrics,
+            beam_report,
+            all_pass,
+        }
     }
 }
 

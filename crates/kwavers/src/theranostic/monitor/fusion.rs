@@ -132,7 +132,10 @@ mod tests {
         let q = peak_at(n, 3, 4, 50.0); // quantitative lesion at (3,4)
         let p = peak_at(n, 3, 4, 1e6); // passive source at (3,4)
         let fused = fuse_lesion_map(&q, &p, FusionWeights::default()).unwrap();
-        assert!((fused.agreement[[3, 4]] - 1.0).abs() < 1e-9, "co-located → agreement 1");
+        assert!(
+            (fused.agreement[[3, 4]] - 1.0).abs() < 1e-9,
+            "co-located → agreement 1"
+        );
         // Everywhere else both are zero → agreement zero.
         assert!(fused.agreement.iter().filter(|&&v| v > 1e-9).count() == 1);
     }
@@ -144,7 +147,10 @@ mod tests {
         let p = peak_at(n, 6, 6, 1e6); // passive at (6,6) — different pixel
         let fused = fuse_lesion_map(&q, &p, FusionWeights::default()).unwrap();
         // No pixel has both → agreement is ~0 everywhere.
-        assert!(fused.agreement.iter().all(|&v| v < 1e-9), "no co-location → no agreement");
+        assert!(
+            fused.agreement.iter().all(|&v| v < 1e-9),
+            "no co-location → no agreement"
+        );
         // Union shows both peaks.
         assert!(fused.union[[1, 1]] > 0.5);
         assert!(fused.union[[6, 6]] > 0.5);
@@ -157,7 +163,10 @@ mod tests {
         let q = peak_at(n, 2, 2, -400.0);
         let p = peak_at(n, 2, 2, 5.0);
         let fused = fuse_lesion_map(&q, &p, FusionWeights::default()).unwrap();
-        assert!((fused.agreement[[2, 2]] - 1.0).abs() < 1e-9, "negative Δc is still a lesion");
+        assert!(
+            (fused.agreement[[2, 2]] - 1.0).abs() < 1e-9,
+            "negative Δc is still a lesion"
+        );
     }
 
     #[test]
@@ -280,6 +289,9 @@ mod tests {
             (5..=7).contains(&pi) && (5..=7).contains(&pj),
             "fused agreement peak ({pi},{pj}) must localize the lesion (centre {centre})"
         );
-        assert!(pv > 0.5, "fused agreement at the lesion must be strong, got {pv}");
+        assert!(
+            pv > 0.5,
+            "fused agreement at the lesion must be strong, got {pv}"
+        );
     }
 }

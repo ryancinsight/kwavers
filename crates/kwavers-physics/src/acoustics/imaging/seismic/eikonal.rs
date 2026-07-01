@@ -138,7 +138,13 @@ impl EikonalSolver {
             for dj in -1..=1 {
                 for dk in -1..=1 {
                     let (i, j, k) = (sx + di, sy + dj, sz + dk);
-                    if i < 0 || j < 0 || k < 0 || i >= nx as isize || j >= ny as isize || k >= nz as isize {
+                    if i < 0
+                        || j < 0
+                        || k < 0
+                        || i >= nx as isize
+                        || j >= ny as isize
+                        || k >= nz as isize
+                    {
                         continue;
                     }
                     let dist = ((di as f64 * self.dx).powi(2)

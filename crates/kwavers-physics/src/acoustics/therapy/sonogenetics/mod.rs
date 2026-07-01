@@ -92,6 +92,6 @@ pub use membrane::{compute_membrane_tension, compute_radiation_pressure, CellMem
 pub use neuron::{yoo_thermal_neural_response, LifNeuron, LifParams, ThermalNeuralParams};
 pub use pipeline::{
     boltzmann_open_probability_from_tension_mn_m, coupled_channel_drive,
-    gaussian_beam_pressure_field, pressure_to_membrane_tension_mn_m, simulate_lif_trace,
-    GaussianBeamPressureField, LifTrace,
+    gaussian_beam_pressure_field, lif_response_probability, pressure_to_membrane_tension_mn_m,
+    simulate_lif_trace, GaussianBeamPressureField, LifResponseProbability, LifTrace,
 };

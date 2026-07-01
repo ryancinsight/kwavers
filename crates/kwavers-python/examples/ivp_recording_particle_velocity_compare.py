@@ -41,7 +41,9 @@ Treeby & Cox (2010). k-Wave: MATLAB toolbox for simulation and reconstruction
 of photoacoustic wave fields. J. Biomed. Opt. 15(2), 021314.
 """
 
+import os
 import sys
+import time
 import numpy as np
 from pathlib import Path
 
@@ -97,6 +99,64 @@ PRESSURE_FIGURE_PATH = DEFAULT_OUTPUT_DIR / "ivp_recording_particle_velocity_pre
 UX_FIGURE_PATH = DEFAULT_OUTPUT_DIR / "ivp_recording_particle_velocity_ux_compare.png"
 UY_FIGURE_PATH = DEFAULT_OUTPUT_DIR / "ivp_recording_particle_velocity_uy_compare.png"
 REPORT_PATH = DEFAULT_OUTPUT_DIR / "ivp_recording_particle_velocity_metrics.txt"
+_KWAVE_CACHE = DEFAULT_OUTPUT_DIR / "ivp_recording_particle_velocity_kwave_cache.npz"
+_PKWAV_CACHE = DEFAULT_OUTPUT_DIR / "ivp_recording_particle_velocity_pykwavers_cache.npz"
+
+REFRESH_CACHE = os.getenv("KWAVERS_REFRESH_CACHE", "0") == "1"
+CACHE_VERSION = 1
+SENSOR_LABELS = ["-x", "-y", "+y", "+x"]
+SENSOR_EXPECT_UX = [True, False, False, True]
+# Reindex pykwavers rows to match k-wave C-order:
+# kwave[-x] -> pykwavers[1], [-y] -> pykwavers[0],
+# [+y] -> pykwavers[3], [+x] -> pykwavers[2].
+SENSOR_REORDER = [1, 0, 3, 2]
+
+PARITY_THRESHOLDS: dict[str, float] = {
+    "pressure_pearson_r": 0.99,
+    "dominant_velocity_pearson_r": 0.95,
+}
+
+
+def _load_cache(path: os.PathLike) -> dict | None:
+    if REFRESH_CACHE or not os.path.exists(os.fspath(path)):
+        return None
+    try:
+        data = np.load(os.fspath(path), allow_pickle=False)
+        if int(np.asarray(data["cache_version"]).reshape(())) != CACHE_VERSION:
+            return None
+        return {
+            "p": np.asarray(data["p"], dtype=np.float64),
+            "ux": np.asarray(data["ux"], dtype=np.float64),
+            "uy": np.asarray(data["uy"], dtype=np.float64),
+            "nt": int(data["nt"]),
+            "dt": float(data["dt"]),
+            "runtime_s": float(data["runtime_s"]),
+        }
+    except Exception:
+        return None
+
+
+def _save_cache(
+    path: os.PathLike,
+    *,
+    p: np.ndarray,
+    ux: np.ndarray,
+    uy: np.ndarray,
+    nt: int,
+    dt: float,
+    runtime_s: float,
+) -> None:
+    os.makedirs(os.path.dirname(os.fspath(path)) or ".", exist_ok=True)
+    np.savez(
+        os.fspath(path),
+        cache_version=np.array(CACHE_VERSION, dtype=np.int32),
+        p=np.asarray(p, dtype=np.float64),
+        ux=np.asarray(ux, dtype=np.float64),
+        uy=np.asarray(uy, dtype=np.float64),
+        nt=np.array(nt, dtype=np.int64),
+        dt=np.array(dt, dtype=np.float64),
+        runtime_s=np.array(runtime_s, dtype=np.float64),
+    )
 
 
 def make_sensor_mask_2d(nx: int, ny: int) -> np.ndarray:
@@ -137,6 +197,10 @@ def make_disc_p0_2d(nx: int, ny: int) -> np.ndarray:
 
 def run_kwave_python() -> dict:
     """Run k-wave-python 2-D simulation; return dict with 'p', 'ux', 'uy'."""
+    cached = _load_cache(_KWAVE_CACHE)
+    if cached is not None:
+        return cached
+
     kgrid = kWaveGrid(Vector([NX, NY]), Vector([DX, DY]))
     kgrid.makeTime(C0, t_end=T_END)
 
@@ -149,7 +213,8 @@ def run_kwave_python() -> dict:
     sensor = kSensor(mask=sensor_mask_2d)
     sensor.record = ["p", "ux", "uy"]
 
-    return kspaceFirstOrder(
+    start = time.perf_counter()
+    result = kspaceFirstOrder(
         kgrid,
         medium,
         source,
@@ -160,14 +225,29 @@ def run_kwave_python() -> dict:
         pml_inside=True,
         smooth_p0=False,
     )
+    runtime_s = time.perf_counter() - start
+    cached_result = {
+        "p": np.asarray(result["p"], dtype=np.float64),
+        "ux": np.asarray(result["ux"], dtype=np.float64),
+        "uy": np.asarray(result["uy"], dtype=np.float64),
+        "nt": int(kgrid.Nt),
+        "dt": float(kgrid.dt),
+        "runtime_s": float(runtime_s),
+    }
+    _save_cache(_KWAVE_CACHE, **cached_result)
+    return cached_result
 
 
 # =============================================================================
 # pykwavers simulation
 # =============================================================================
 
-def run_pykwavers() -> kw.SimulationResult:
+def run_pykwavers() -> dict:
     """Run pykwavers 3-D (Nx × Ny × 1) simulation with velocity recording."""
+    cached = _load_cache(_PKWAV_CACHE)
+    if cached is not None:
+        return cached
+
     # Grid: embed 2-D problem in 3-D by using NZ = 1.
     grid = kw.Grid(nx=NX, ny=NY, nz=1, dx=DX, dy=DY, dz=DX)
 
@@ -195,7 +275,21 @@ def run_pykwavers() -> kw.SimulationResult:
     dt = cfl * DX / C0
     nt = int(np.round(T_END / dt)) + 1
 
-    return sim.run(time_steps=nt, dt=dt)
+    start = time.perf_counter()
+    result = sim.run(time_steps=nt, dt=dt)
+    runtime_s = time.perf_counter() - start
+    if result.ux is None or result.uy is None:
+        raise AssertionError("pykwavers did not record both ux and uy")
+    cached_result = {
+        "p": np.asarray(result.sensor_data, dtype=np.float64),
+        "ux": np.asarray(result.ux, dtype=np.float64),
+        "uy": np.asarray(result.uy, dtype=np.float64),
+        "nt": int(nt),
+        "dt": float(dt),
+        "runtime_s": float(runtime_s),
+    }
+    _save_cache(_PKWAV_CACHE, **cached_result)
+    return cached_result
 
 
 # =============================================================================
@@ -235,9 +329,9 @@ def main() -> None:
     print("Running pykwavers (3-D embed) ...")
     kwr_result = run_pykwavers()
     # sensor_data shape: (4, Nt_kwr) — may differ from Nt_kw
-    p_kwr  = np.asarray(kwr_result.sensor_data)  # (4, Nt_kwr)
-    ux_kwr = np.asarray(kwr_result.ux) if kwr_result.ux is not None else None
-    uy_kwr = np.asarray(kwr_result.uy) if kwr_result.uy is not None else None
+    p_kwr  = np.asarray(kwr_result["p"])  # (4, Nt_kwr)
+    ux_kwr = np.asarray(kwr_result["ux"])
+    uy_kwr = np.asarray(kwr_result["uy"])
     print(f"  p  shape={p_kwr.shape}  range=[{p_kwr.min():.3f}, {p_kwr.max():.3f}]")
     if ux_kwr is not None:
         print(f"  ux shape={ux_kwr.shape}  range=[{ux_kwr.min():.3e}, {ux_kwr.max():.3e}]")
@@ -250,8 +344,8 @@ def main() -> None:
     p_kw_t  = p_kw[:, :nt_min]
     p_kwr_t = p_kwr[:, :nt_min]
 
-    P_THRESHOLD = 0.99    # pressure: shared smoothed source and aligned sensors
-    V_THRESHOLD = 0.95    # velocity dominant direction after source-preprocessing parity
+    P_THRESHOLD = PARITY_THRESHOLDS["pressure_pearson_r"]
+    V_THRESHOLD = PARITY_THRESHOLDS["dominant_velocity_pearson_r"]
     passed = True
     correlation_rows: list[str] = []
     # Diagnostic: print raw velocity RMS per sensor index (before reordering)
@@ -285,14 +379,12 @@ def main() -> None:
     #   → pykwavers order: [0=−y, 1=−x, 2=+x, 3=+y]
     #
     # Reindex pykwavers to match k-wave C-order: kwave[i] ↔ pykwavers[REORDER[i]]
-    REORDER = [1, 0, 3, 2]  # kwave[-x]→pykwr[1], [-y]→pykwr[0], [+y]→pykwr[3], [+x]→pykwr[2]
-
     print("-- Pearson correlations (sensor-wise) ----------------------------------")
-    sensor_labels = ["-x", "-y", "+y", "+x"]      # k-wave C-order
-    sensor_expect_ux = [True, False, False, True]  # True ↔ ux should dominate
+    sensor_labels = SENSOR_LABELS
+    sensor_expect_ux = SENSOR_EXPECT_UX
 
     # Reorder pykwavers rows to match k-wave C-order before all comparisons.
-    p_kwr_t = p_kwr_t[REORDER]
+    p_kwr_t = p_kwr_t[SENSOR_REORDER]
 
     # Pressure
     print(f"\nPressure (p)  [threshold={P_THRESHOLD}]:")
@@ -309,7 +401,7 @@ def main() -> None:
     # correlation is noise-dominated and meaningless. The acceptance criterion
     # is: ux at ±x sensors ≥ THRESHOLD, uy at ±y sensors ≥ THRESHOLD.
     if ux_kwr is not None:
-        ux_kwr_t = ux_kwr[:, :nt_min][REORDER]
+        ux_kwr_t = ux_kwr[:, :nt_min][SENSOR_REORDER]
         ux_kw_t  = ux_kw[:, :nt_min]
         print(f"\nParticle velocity ux  [threshold={V_THRESHOLD} dominant, no gate near-zero]:")
         for i, (label, expect_ux) in enumerate(zip(sensor_labels, sensor_expect_ux)):
@@ -326,7 +418,7 @@ def main() -> None:
         passed = False
 
     if uy_kwr is not None:
-        uy_kwr_t = uy_kwr[:, :nt_min][REORDER]
+        uy_kwr_t = uy_kwr[:, :nt_min][SENSOR_REORDER]
         uy_kw_t  = uy_kw[:, :nt_min]
         print(f"\nParticle velocity uy  [threshold={V_THRESHOLD} dominant, no gate near-zero]:")
         for i, (label, expect_ux) in enumerate(zip(sensor_labels, sensor_expect_ux)):

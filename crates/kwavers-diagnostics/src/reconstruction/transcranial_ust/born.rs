@@ -80,7 +80,8 @@ pub fn reconstruct_brain_slice(
         config.aperture,
     )?;
     let active = active_voxels(medium);
-    let matrix = build_sensitivity_matrix(medium, linear, &geometry, &active, config.aberration_model);
+    let matrix =
+        build_sensitivity_matrix(medium, linear, &geometry, &active, config.aberration_model);
     let nrows = config.measurement_count();
     let data = matrix_vector(&matrix, nrows, active.len(), |j| active[j].target_contrast);
     let migration_model = migration_contrast(&matrix, &data, nrows, active.len(), linear);

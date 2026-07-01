@@ -7,21 +7,19 @@
 //! pair — no manifest required at simulation time.
 //!
 //! When the `kwavers` Cargo feature is on, `KwaversSim` is in scope. It calls
-//! `kwavers_transducer::design_array` to synthesize the exact element geometry from the step
-//! parameters, then computes the pressure field from the realized channel count and aperture —
-//! more accurate than the in-crate model for arrays where pitch quantization shifts the channel
-//! count away from the nominal `step.lanes` value.
+//! `kwavers_pressure_map_from_step` to synthesize the exact element geometry and propagate the
+//! focused pressure envelope through `kwavers-transducer`.
 
 use crate::error::Experiment as ExperimentError;
 use crate::manifest::EnergyBudgetReport;
 use crate::physics::acoustic::{
-    acoustic_intensity_w_per_m2, focal_pressure_gain, max_grating_free_steer_deg,
-    mechanical_index, near_field_distance_m,
+    acoustic_intensity_w_per_m2, focal_pressure_gain, max_grating_free_steer_deg, mechanical_index,
+    near_field_distance_m,
 };
 use crate::ssot::*;
 use crate::validate::KwaversBeamStep;
 
-/// Acoustic pressure-field output — every scalar the in-crate model (and future kwavers) emits.
+/// Acoustic pressure-field output — every scalar the in-crate model and kwavers backend emit.
 ///
 /// `PartialEq` is derived for test assertions; `f64` fields preclude `Eq` (NaN ≠ NaN).
 #[derive(Debug, Clone, PartialEq)]
@@ -76,19 +74,20 @@ impl AcousticSimulator for InCrateAcousticSim {
         let per_element_i_a = budget.peak_i_a / (CHANNELS_PER_TILE_V2 as f64);
         // Coherent N-fold focal pressure (Pa); same formula as `estimate_focal_pressure_pa`
         // in `validate::kwavers_beam` but derived from the already-computed step.lanes.
-        let focal_pressure_pa =
-            focal_pressure_gain(step.lanes) * per_element_i_a * KWVERS_ARTICLE_FOCAL_PRESSURE_PER_AMP_PA;
+        let focal_pressure_pa = focal_pressure_gain(step.lanes)
+            * per_element_i_a
+            * KWVERS_ARTICLE_FOCAL_PRESSURE_PER_AMP_PA;
         if !focal_pressure_pa.is_finite() {
             return Err(ExperimentError::NonFiniteTransient { step: 0, t_s: 0.0 }.into());
         }
-        let isppa_w_cm2 =
-            acoustic_intensity_w_per_m2(focal_pressure_pa, PHYSICS_WATER_Z0_RAYL) / UNIT_W_CM2_PER_W_M2;
+        let isppa_w_cm2 = acoustic_intensity_w_per_m2(focal_pressure_pa, PHYSICS_WATER_Z0_RAYL)
+            / UNIT_W_CM2_PER_W_M2;
         let mi = mechanical_index(
             focal_pressure_pa / UNIT_PA_PER_MPA,
             step.frequency_hz / UNIT_MHZ_PER_HZ,
         );
-        let grating_lobe_free =
-            max_grating_free_steer_deg(step.pitch_m, step.wavelength_m) >= KWVERS_MIN_GRATING_FREE_STEER_DEG;
+        let grating_lobe_free = max_grating_free_steer_deg(step.pitch_m, step.wavelength_m)
+            >= KWVERS_MIN_GRATING_FREE_STEER_DEG;
         let n_far = near_field_distance_m(step.aperture_m, step.wavelength_m);
         let in_far_field = step.focal_m >= n_far;
         // 6 dB half-widths from uniform-illumination analytical model; kwavers refines these.
@@ -108,10 +107,9 @@ impl AcousticSimulator for InCrateAcousticSim {
 
 /// kwavers-transducer acoustic simulator. Gated on the `kwavers` Cargo feature.
 ///
-/// Uses [`kwavers_transducer::design_array`] to synthesize the exact element geometry from the
-/// step parameters (aperture, frequency, sound speed, pitch), then computes the pressure field
-/// from the **realized** channel count and aperture — more accurate than [`InCrateAcousticSim`]
-/// which uses the nominal `step.lanes` count and `step.aperture_m` directly.
+/// Uses `kwavers_pressure_map_from_step` to synthesize the exact element geometry from the
+/// step parameters and propagate a focused complex pressure envelope from the realized channel
+/// coordinates.
 ///
 /// Differences vs [`InCrateAcousticSim`]:
 /// * `grating_lobe_free` — from `ArrayDesign.grating_lobe_free` (steered-axis pitch/wavelength
@@ -119,10 +117,91 @@ impl AcousticSimulator for InCrateAcousticSim {
 ///   `max_grating_free_steer_deg` approximation.
 /// * `in_far_field` — from `design.aperture_y_m()` (realized aperture after integer element
 ///   count) rather than `step.aperture_m` (requested aperture, pre-quantization).
-/// * `focal_pressure_pa` — from `design.n_channels` (transducer geometry) rather than
-///   `CHANNELS_PER_TILE_V2` (fixed driver constant).
+/// * `focal_pressure_pa`, `mechanical_index`, `isppa_w_cm2`, and beam extents — from
+///   `kwavers-transducer` propagation, not rederived in this crate.
 #[cfg(feature = "kwavers")]
 pub struct KwaversSim;
+
+/// Synthesize the kwavers-transducer array geometry for a driver pre-step.
+///
+/// [`KwaversBeamStep::aperture_m`] is the first-to-last channel-centre span. In
+/// `kwavers-transducer`, [`kwavers_transducer::ApertureDesignSpec::aperture_y_m`] is the
+/// pitch-cell span. The adapter therefore adds one channel pitch before calling
+/// [`kwavers_transducer::design_array`], so the realized channel count remains equal to the
+/// manifest lane count and the returned channel-centre positions still span the manifest
+/// aperture.
+///
+/// # Errors
+///
+/// Returns [`crate::error::Validate::KwaversBeamStepContract`] when kwavers-transducer rejects
+/// the synthesized aperture specification.
+#[cfg(feature = "kwavers")]
+pub(crate) fn array_design_from_step(
+    step: &KwaversBeamStep,
+) -> Result<kwavers_transducer::ArrayDesign, crate::Error> {
+    use crate::error::Validate;
+    use kwavers_transducer::{
+        design_array, ApertureDesignSpec, ChannelWiring, DEFAULT_KERF_FRACTION,
+    };
+
+    // 1-D linear array: elevation axis collapsed (aperture_x = 0 -> nx = 1 element),
+    // steering along aperture_y. ColumnsAsChannels wires the single elevation row
+    // into n_channels = ny independently-driven linear channels.
+    let pitch_fraction = (step.pitch_m / step.wavelength_m).clamp(1e-9, 2.0);
+    let spec = ApertureDesignSpec {
+        aperture_x_m: 0.0,
+        aperture_y_m: step.aperture_m + step.pitch_m,
+        frequency_hz: step.frequency_hz,
+        sound_speed_m_s: step.sound_speed_m_s,
+        max_pitch_fraction: pitch_fraction,
+        kerf_fraction: DEFAULT_KERF_FRACTION,
+        wiring: ChannelWiring::ColumnsAsChannels,
+    };
+    design_array(&spec)
+        .map_err(|e| Validate::KwaversBeamStepContract(format!("design_array: {e}")).into())
+}
+
+/// Run focused propagation through `kwavers-transducer` and convert its map to the driver
+/// experiment shape.
+///
+/// # Errors
+///
+/// Returns [`crate::error::Validate::KwaversBeamStepContract`] when `kwavers-transducer`
+/// rejects the synthesized propagation contract.
+#[cfg(feature = "kwavers")]
+pub(crate) fn kwavers_pressure_map_from_step(
+    step: &KwaversBeamStep,
+    budget: &EnergyBudgetReport,
+) -> Result<PressureMap, crate::Error> {
+    use crate::error::Validate;
+    use kwavers_transducer::{propagate_focused_linear_array, FocusedLinearArrayPropagationSpec};
+
+    let design = array_design_from_step(step)?;
+    let per_element_i_a = budget.peak_i_a / (CHANNELS_PER_TILE_V2 as f64);
+    let map = propagate_focused_linear_array(&FocusedLinearArrayPropagationSpec {
+        design,
+        center_m: [0.0, 0.0, 0.0],
+        focus_m: [0.0, 0.0, step.focal_m],
+        frequency_hz: step.frequency_hz,
+        sound_speed_m_s: step.sound_speed_m_s,
+        per_channel_peak_current_a: per_element_i_a,
+        pressure_per_amp_pa: KWVERS_ARTICLE_FOCAL_PRESSURE_PER_AMP_PA,
+        acoustic_impedance_rayl: PHYSICS_WATER_Z0_RAYL,
+    })
+    .map_err(|e| {
+        Validate::KwaversBeamStepContract(format!("propagate_focused_linear_array: {e}"))
+    })?;
+
+    Ok(PressureMap {
+        focal_pressure_pa: map.focal_pressure_pa,
+        mechanical_index: map.mechanical_index,
+        isppa_w_cm2: map.isppa_w_cm2,
+        axial_extent_mm: map.axial_extent_mm,
+        lateral_extent_mm: map.lateral_extent_mm,
+        grating_lobe_free: map.grating_lobe_free,
+        in_far_field: map.in_far_field,
+    })
+}
 
 #[cfg(feature = "kwavers")]
 impl AcousticSimulator for KwaversSim {
@@ -131,59 +210,6 @@ impl AcousticSimulator for KwaversSim {
         step: &KwaversBeamStep,
         budget: &EnergyBudgetReport,
     ) -> Result<PressureMap, crate::Error> {
-        use crate::error::Validate;
-        use kwavers_transducer::{
-            design_array, ApertureDesignSpec, ChannelWiring, DEFAULT_KERF_FRACTION,
-        };
-
-        // 1-D linear array: elevation axis collapsed (aperture_x = 0 → nx = 1 element),
-        // steering along aperture_y. ColumnsAsChannels wires the single elevation row
-        // into n_channels = ny independently-driven linear channels.
-        let pitch_fraction = (step.pitch_m / step.wavelength_m).clamp(1e-9, 2.0);
-        let spec = ApertureDesignSpec {
-            aperture_x_m: 0.0,
-            aperture_y_m: step.aperture_m,
-            frequency_hz: step.frequency_hz,
-            sound_speed_m_s: step.sound_speed_m_s,
-            max_pitch_fraction: pitch_fraction,
-            kerf_fraction: DEFAULT_KERF_FRACTION,
-            wiring: ChannelWiring::ColumnsAsChannels,
-        };
-        let design = design_array(&spec)
-            .map_err(|e| Validate::KwaversBeamStepContract(format!("design_array: {e}")))?;
-
-        // N-fold coherent focal pressure using the realized channel count from the
-        // transducer geometry, not the fixed CHANNELS_PER_TILE_V2 driver constant.
-        let per_element_i_a = budget.peak_i_a / (design.n_channels as f64);
-        let focal_pressure_pa = focal_pressure_gain(design.n_channels)
-            * per_element_i_a
-            * KWVERS_ARTICLE_FOCAL_PRESSURE_PER_AMP_PA;
-        if !focal_pressure_pa.is_finite() {
-            return Err(ExperimentError::NonFiniteTransient { step: 0, t_s: 0.0 }.into());
-        }
-
-        let isppa_w_cm2 =
-            acoustic_intensity_w_per_m2(focal_pressure_pa, PHYSICS_WATER_Z0_RAYL)
-                / UNIT_W_CM2_PER_W_M2;
-        let mi = mechanical_index(
-            focal_pressure_pa / UNIT_PA_PER_MPA,
-            step.frequency_hz / UNIT_MHZ_PER_HZ,
-        );
-        // Near-field from the realized aperture after pitch quantization.
-        let n_far = near_field_distance_m(design.aperture_y_m(), step.wavelength_m);
-        let axial_extent_mm = 2.0 * step.f_number * step.wavelength_m * UNIT_MM_PER_M;
-        let lateral_extent_mm = step.wavelength_m * step.f_number * UNIT_MM_PER_M;
-
-        Ok(PressureMap {
-            focal_pressure_pa,
-            mechanical_index: mi,
-            isppa_w_cm2,
-            axial_extent_mm,
-            lateral_extent_mm,
-            // From transducer geometry (steered-axis pitch/wavelength), not driver-side
-            // max_grating_free_steer_deg approximation.
-            grating_lobe_free: design.grating_lobe_free,
-            in_far_field: step.focal_m >= n_far,
-        })
+        kwavers_pressure_map_from_step(step, budget)
     }
 }

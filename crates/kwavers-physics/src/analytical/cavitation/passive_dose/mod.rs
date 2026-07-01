@@ -18,24 +18,51 @@
 //! All physics lives here; the book chapters (Ch14 histotripsy, Ch23 BBB) call
 //! these via PyO3 and only plot.
 
+mod coherence;
 mod dose;
 mod emission;
+mod emission_spectrum;
 mod ensemble;
+mod population;
 mod receiver;
 mod simulate;
 mod spectral_bands;
 mod spectrum;
+mod volume_spectrum;
 
 #[cfg(test)]
 mod tests;
 
-pub use dose::{cavitation_controller_pressure, cumulative_cavitation_dose};
+pub use coherence::van_cittert_zernike_coherence;
+pub use dose::{
+    cavitation_controller_pressure, cavitation_inertial_fraction_onset_index,
+    cavitation_therapeutic_window_indices, cumulative_cavitation_dose,
+    passive_cavitation_dose_fixture, CavitationTherapeuticWindow, PassiveCavitationDoseFixture,
+};
 pub use emission::bubble_acoustic_emission_pressure;
+pub use emission_spectrum::{normalized_cavitation_emission_spectrum, CavitationEmissionRegime};
 pub use ensemble::ensemble_emission_superposition;
-pub use receiver::{emission_energy_in_volume, integrate_receiver_array_psd};
+pub use population::{
+    population_emission_sweep, simulate_population_emission, PopulationEmission,
+    PopulationEmissionInput, PopulationEmissionSweep, PopulationEmissionSweepInput,
+    PopulationMedium, PopulationShell,
+};
+pub use receiver::{
+    emission_energy_in_volume, integrate_receiver_array_psd, passive_cavitation_point_source_rf,
+};
 pub use simulate::{
     simulate_bubble_emission, simulate_coated_bubble_emission, BubbleDriveConfig,
     BubbleEmissionTrace, ShellDriveConfig,
 };
 pub use spectral_bands::{decompose_emission_spectrum, CavitationBandEnergies};
-pub use spectrum::hann_windowed_power_spectrum;
+pub use spectrum::{
+    hann_windowed_power_spectrum, keller_miksis_pcd_controller_trace, keller_miksis_pcd_spectrum,
+    pcd_band_signals, KellerMiksisPcdControllerTrace, KellerMiksisPcdSpectrum, PcdBandSignals,
+};
+#[allow(unused_imports)]
+// Re-exported through the parent cavitation API for PyO3 input construction.
+pub use volume_spectrum::{
+    volume_emission_spectrum, volume_emission_sweep, VolumeEmissionSpectrum,
+    VolumeEmissionSpectrumInput, VolumeEmissionSweep, VolumeEmissionSweepInput,
+    VolumeSpectrumMedium,
+};

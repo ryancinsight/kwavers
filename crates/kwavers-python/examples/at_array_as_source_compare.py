@@ -299,9 +299,45 @@ def run_comparison() -> dict[str, object]:
     }
 
 
-_R_TARGET = 0.98
-_RMS_MIN = 0.90
-_RMS_MAX = 1.10
+PARITY_THRESHOLDS = {
+    "source_mask": {
+        "pearson_r": 0.999999,
+    },
+    "source_weighted_mask": {
+        "pearson_r": 0.999999,
+        "max_abs_diff": 1e-12,
+    },
+    "source_signal": {
+        "pearson_r": 0.999999,
+        "max_abs_diff": 1e-12,
+    },
+    "p_max": {
+        "pearson_r": 0.98,
+    },
+    "p_rms": {
+        "rms_ratio_min": 0.90,
+        "rms_ratio_max": 1.10,
+    },
+}
+
+
+def _metrics_pass(metrics: dict[str, dict[str, float]]) -> bool:
+    """Return true when metrics satisfy the script-owned parity contract."""
+    for metric_name, thresholds in PARITY_THRESHOLDS.items():
+        metric = metrics[metric_name]
+        if "pearson_r" in thresholds and metric["pearson_r"] < thresholds["pearson_r"]:
+            return False
+        if "max_abs_diff" in thresholds and metric["max_abs_diff"] >= thresholds["max_abs_diff"]:
+            return False
+        if "rms_ratio_min" in thresholds and metric["rms_ratio"] < thresholds["rms_ratio_min"]:
+            return False
+        if "rms_ratio_max" in thresholds and metric["rms_ratio"] > thresholds["rms_ratio_max"]:
+            return False
+        if "rmse" in thresholds and metric["rmse"] >= thresholds["rmse"]:
+            return False
+        if "psnr_db" in thresholds and metric["psnr_db"] <= thresholds["psnr_db"]:
+            return False
+    return True
 
 
 def main() -> int:
@@ -318,11 +354,7 @@ def main() -> int:
 
     p_max_r = float(metrics["p_max"]["pearson_r"])
     p_rms_rms = float(metrics["p_rms"]["rms_ratio"])
-    overall_status = (
-        "PASS"
-        if p_max_r >= _R_TARGET and _RMS_MIN <= p_rms_rms <= _RMS_MAX
-        else "FAIL"
-    )
+    overall_status = "PASS" if _metrics_pass(metrics) else "FAIL"
 
     report_lines = build_report_lines(result)
     report_lines.append(f"parity_status: {overall_status}")
@@ -332,8 +364,16 @@ def main() -> int:
     print("=" * 80)
     print("k-wave-python at_array_as_source vs pykwavers")
     print("=" * 80)
-    print(f"p_max Pearson r:   {p_max_r:.6f}  (target >= {_R_TARGET})")
-    print(f"p_rms RMS ratio:   {p_rms_rms:.6f}  (target [{_RMS_MIN}, {_RMS_MAX}])")
+    print(
+        "p_max Pearson r:   "
+        f"{p_max_r:.6f}  (target >= {PARITY_THRESHOLDS['p_max']['pearson_r']})"
+    )
+    print(
+        "p_rms RMS ratio:   "
+        f"{p_rms_rms:.6f}  "
+        f"(target [{PARITY_THRESHOLDS['p_rms']['rms_ratio_min']}, "
+        f"{PARITY_THRESHOLDS['p_rms']['rms_ratio_max']}])"
+    )
     print(f"Status:            {overall_status}")
 
     return 0 if overall_status == "PASS" or args.allow_failure else 1

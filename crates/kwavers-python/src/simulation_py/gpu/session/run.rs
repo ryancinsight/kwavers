@@ -70,14 +70,11 @@ impl GpuPstdSession {
             self.last_medium_static_upload_ns = 0;
             let time_steps = self.time_steps;
 
-            let source_indices: Vec<u32> = Vec::new();
-            let source_signals: Vec<f32> = Vec::new();
-
             let solver_t0 = std::time::Instant::now();
             let sensor_data_f32 = self.solver.run(
                 &self.sensor_indices,
-                &source_indices,
-                &source_signals,
+                &[],
+                &[],
                 &self.vel_x_indices,
                 &self.vel_x_signals,
             );

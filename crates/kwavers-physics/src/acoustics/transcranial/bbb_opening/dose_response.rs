@@ -65,7 +65,10 @@ mod tests {
         // D = MI²·t_on·PRF: MI=0.4, 0.1 s on, 1 Hz ⇒ 0.016 MI²·s.
         assert!((bbb_acoustic_dose(0.4, 0.1, 1.0) - 0.016).abs() < 1e-12);
         // Doubling MI quadruples the dose.
-        assert!((bbb_acoustic_dose(0.8, 0.1, 1.0) / bbb_acoustic_dose(0.4, 0.1, 1.0) - 4.0).abs() < 1e-12);
+        assert!(
+            (bbb_acoustic_dose(0.8, 0.1, 1.0) / bbb_acoustic_dose(0.4, 0.1, 1.0) - 4.0).abs()
+                < 1e-12
+        );
     }
 
     #[test]
@@ -75,19 +78,24 @@ mod tests {
         assert_eq!(bbb_permeability_hill(0.0, p_max, d50, n), 0.0);
         // Saturating and monotone increasing.
         assert!(bbb_permeability_hill(100.0 * d50, p_max, d50, n) > 0.99 * p_max);
-        assert!(bbb_permeability_hill(2.0, p_max, d50, n) > bbb_permeability_hill(1.0, p_max, d50, n));
+        assert!(
+            bbb_permeability_hill(2.0, p_max, d50, n) > bbb_permeability_hill(1.0, p_max, d50, n)
+        );
     }
 
     #[test]
     fn closure_starts_at_peak_and_recovers_through_the_50pct_crossing() {
         let (p_peak, tf, ts) = (1.0, 0.5, 6.0); // hours
-        // t = 0 ⇒ full peak (0.6 + 0.4 = 1).
+                                                // t = 0 ⇒ full peak (0.6 + 0.4 = 1).
         assert!((bbb_closure_permeability(0.0, p_peak, tf, ts) - p_peak).abs() < 1e-12);
         // The fast-dominated bi-exponential crosses 50% of peak near t ≈ 0.7 h:
         // above 50% at 0.5 h, below at 1 h.
         assert!(bbb_closure_permeability(0.5, p_peak, tf, ts) > 0.5 * p_peak);
         assert!(bbb_closure_permeability(1.0, p_peak, tf, ts) < 0.5 * p_peak);
         // Monotone decreasing.
-        assert!(bbb_closure_permeability(2.0, p_peak, tf, ts) > bbb_closure_permeability(8.0, p_peak, tf, ts));
+        assert!(
+            bbb_closure_permeability(2.0, p_peak, tf, ts)
+                > bbb_closure_permeability(8.0, p_peak, tf, ts)
+        );
     }
 }

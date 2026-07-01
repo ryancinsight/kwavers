@@ -355,6 +355,30 @@ For simultaneous steering and focusing, the delay law uses the exact path formul
 `r_f` placed at the desired focal point in steered coordinates. No paraxial approximation
 is needed for kwavers' numerical implementation.
 
+### Wired-Channel Multi-Focus Synthesis
+
+Some implantable or flexible arrays have more radiating cells than electrical drive channels. In
+that case the controllable degree of freedom is the channel, not the cell. If channel `j` drives a
+set `C_j` of hard-wired cells, the transfer from channel `j` to focus `m` is
+
+```text
+H[m,j] = sum_{e in C_j} exp(i k |r_m - r_e|) / |r_m - r_e| .
+```
+
+For a multi-focus command with equal target complex pressure at `M` foci, the minimum-norm channel
+excitation is
+
+```text
+x = H^H (H H^H)^-1 1_M .
+```
+
+This is the physically realizable analogue of per-element pseudo-inverse focusing: every cell in a
+wired group receives the same amplitude/phase pair. For a single focus, this reduces to the
+matched-filter channel phase over the cells wired to each drive channel. Evidence tier:
+differential/value tests should show single-focus equivalence and balanced multi-focus pressure in
+the directivity-aware Rayleigh-Sommerfeld model before the source is exported to a full-wave PSTD
+solve.
+
 ### Apodization
 
 Amplitude apodization `A_i` (e.g., Hann, Tukey, Dolph-Chebyshev windows) is applied
@@ -427,7 +451,7 @@ strongly recommend `ppw ≥ 10` for aperture-shaped sources.
 
 ![BLI rasterization accuracy](figures/ch11/fig05_bli_accuracy.png)
 
-*Figure 6.4. BLI rasterization accuracy vs grid points per wavelength (§6.6); spectral convergence of the sinc-stencil source representation (Wise 2019).*
+*Figure 6.4. BLI interpolation accuracy vs grid points per wavelength (§6.6), computed from the Rust `kw.bli_interpolation_error_curves` kernel and compared against nearest-neighbour sub-sample assignment.*
 
 ---
 
@@ -634,9 +658,8 @@ away from broadside. Each element spans `p − kerf` with `kerf = κ·p` (gap fr
 A fully-populated `nx × ny` matrix needs `nx·ny` transmit channels. When steering is
 required on only one axis, the elements sharing a position on the *other* axis can be
 wired into a single channel, cutting the driven channel count to the steered-axis
-element count. The LeoNeuro endovascular fUS array uses this `ColumnsAsChannels`
-wiring: an `nx × ny` matrix driven as `ny` linear channels steering along the long
-axis.
+element count. This `ColumnsAsChannels` wiring models an `nx × ny` matrix driven as
+`ny` linear channels steering along the long axis.
 
 ### kwavers implementation
 
@@ -647,7 +670,7 @@ both pitches, kerf, element size, `n_channels`, and a `grating_lobe_free` flag
 `channel_positions` emit the concrete element- and driven-channel coordinates that
 feed the source factory, the beamformer (`&[[f64; 3]]`), and `KWaveArray`.
 
-*Worked example (LeoNeuro brain array).* A 5 mm × 20 mm aperture at `f = 4 MHz` in
+*Worked example.* A 5 mm × 20 mm aperture at `f = 4 MHz` in
 brain (`c = 1560 m/s`, `λ = 390 µm`) with `q = ½` gives `p_max = 195 µm`,
 `ny = ⌈20 mm / 195 µm⌉ = 103` long-axis elements (grating-lobe-free) and, wired as
 columns, 103 driven channels; with `κ = 0.1` the fill factor is `0.81`.
@@ -731,6 +754,20 @@ low-profile or very large apertures — at the cost of secondary foci at
 condition `√(r_n²+F²) − F = nλ/2` and the paraxial `√(nλF)` limit are asserted in
 its unit tests.
 
+The Shimoyama-Teshigahara-Yoshida FZP-pMUT array (Sensors and Actuators A:
+Physical 402, 2026, 117646) uses the phase-plate version of this same law inside
+the transducer instead of a separate lens. Circle-electrode pMUT cells emit the
+reference phase and donut-electrode cells emit the opposite phase under the same
+drive. The reported acoustic prototype is a flat 29 x 25 grid with 84 um pitch,
+60 um diaphragms, eight D-type rows in the 29-row short axis, 12 MHz drive in
+FC-70 (`c = 680 m/s`), and a 4 mm design focus. In kwavers terms this is modeled
+as a finite-disc source grid whose cells carry either `0` or `pi` acoustic phase,
+then propagated through the same directivity-aware Rayleigh-Sommerfeld aperture
+integral used for piston arrays. The value-semantic checks are: the grid and
+phase-row counts match the article, the Fresnel radius formula reproduces the
+reported zone law, and the 0/pi FZP source gives higher focal pressure than the
+same grid with all reference-phase cells.
+
 ### 6.11.5 Corrective and steerable single-element lens (transcranial)
 
 A cast or 3-D-printed lens can also carry an **aberration correction**, turning a
@@ -807,7 +844,7 @@ kwavers_transducer                   Transducer geometry → grid rasterization
 ├── kwave_array/
 │   ├── mod.rs                      KWaveArray struct, public API
 │   ├── bli_kernel.rs               BLI stencil, sinc kernel, on-grid detection
-│   ├── construction.rs             add_rect_element, add_disc_element, add_bowl_element, add_annular_element
+│   ├── construction.rs             add_rect_element, add_disc_element, add_profiled_disc_element, add_bowl_element, add_annular_element
 │   ├── rasterizer_planar.rs        Planar element rasterization
 │   ├── rasterizer_curved.rs        Curved (bowl) element rasterization
 │   ├── geometry.rs                 Disc / bowl / planar element geometry
@@ -841,10 +878,26 @@ pub fn add_disc_element(
     focus_position: Option<(f64, f64, f64)>,
 ) -> &mut Self
 
+// Add a finite disc with a normalized radial source-pressure profile.
+// DiscSourceProfile::uniform() is value-equivalent to add_disc_element.
+pub fn add_profiled_disc_element(
+    &mut self,
+    position: (f64, f64, f64),
+    radius: f64,
+    focus_position: Option<(f64, f64, f64)>,
+    profile: DiscSourceProfile,
+) -> &mut Self
+
 // BLI rasterization -> binary source mask for a given grid
 pub fn get_array_binary_mask(&self, grid: &Grid) -> Array3<bool>
 // (element positions / per-element weights via the `accessors` module)
 ```
+
+`DiscSourceProfile` models mode-dependent finite-source pressure over a circular element before
+BLI rasterization. `DiscSourceProfile::radial_power(p)` applies the area-normalized profile
+`w(r) = (p + 2) r^p / 2` for finite `p >= 0`; `p = 0` is the uniform piston profile. This is a
+source-surface model, not a post-propagation directivity multiplier, so the profile participates in
+the same weighted source mask and per-element signal construction as the original finite-disc path.
 
 **`SourceInjectionMode`** selects between:
 - `Boundary`: pressure or velocity at source cells is forced to the signal value (Dirichlet/hard BC).
@@ -923,6 +976,16 @@ capacitance, `k_t²` round-trip), and **CMUT/PMUT** micromachined cells are
 pre-collapse nonlinear electrostatics, coupling, self-heating, fluid-loaded bandwidth, inter-element
 crosstalk). Their figures live in Chapter 33 (`cmut_vs_pmut.md`).
 
+Array-designer integrations should use the kwavers source contract directly: generate physical
+finite-disc elements, assign value-semantic amplitude/phase excitations, apply
+`DiscSourceProfile` when the element mode has a non-uniform source surface, evaluate the
+directivity-aware Rayleigh-Sommerfeld aperture field for fast checks, and export the same elements
+to PSTD sources for full-wave propagation. The attached `S0924424726001974` article is represented
+at this acoustic source level by the FZP-pMUT grid, zone-law, 0/pi phase checks, and mode-specific
+finite-disc source-profile hook above. Residual scope: the structural piezoelectric FEM,
+element-to-element crosstalk, and resonator phase drift discussed in the paper remain
+device-physics effects, not part of the acoustic source contract.
+
 ---
 
 ## 6.15 References
@@ -942,38 +1005,45 @@ crosstalk). Their figures live in Chapter 33 (`cmut_vs_pmut.md`).
    doi:10.1109/ULTSYM.1996.584398
    — Phased array delay law and apodization; grating lobe analysis (§6.5, §6.9).
 
-4. **Treeby, B.E. and Cox, B.T. (2010)**. "k-Wave: MATLAB toolbox for the simulation and
+4. **Shimoyama, T., Teshigahara, A., and Yoshida, S. (2026)**.
+   "Development of piezoelectric micromachined ultrasonic transducer linear array including
+   focusing function based on principle of Fresnel zone plate."
+   *Sensors and Actuators A: Physical*, 402:117646.
+   doi:10.1016/j.sna.2026.117646
+   — FZP-pMUT article parameters used by the phase-type source model in §6.11.4.
+
+5. **Treeby, B.E. and Cox, B.T. (2010)**. "k-Wave: MATLAB toolbox for the simulation and
    reconstruction of photoacoustic wave fields."
    *Journal of Biomedical Optics*, 15(2):021314.
    doi:10.1117/1.3360308
    — k-Wave source model, BLI rasterization, and numerical dispersion correction.
 
-5. **Wise, E.S., Cox, B.T., Jaros, J., and Treeby, B.E. (2019)**. "Representing arbitrary
+6. **Wise, E.S., Cox, B.T., Jaros, J., and Treeby, B.E. (2019)**. "Representing arbitrary
    acoustic source and sensor distributions in Fourier collocation methods."
    *Journal of the Acoustical Society of America*, 146(1):278–288.
    doi:10.1121/1.5116132
    — BLI stencil derivation; Algorithm 1 is the canonical reference for §6.6–6.7.
 
-6. **Zemanek, J. (1971)**. "Beam behavior within the nearfield of a vibrating piston."
+7. **Zemanek, J. (1971)**. "Beam behavior within the nearfield of a vibrating piston."
    *Journal of the Acoustical Society of America*, 49(1B):181–191.
    doi:10.1121/1.1912316
    — Focal zone length and width approximations (§6.4).
 
-7. **Ladabaum, I., Jin, X., Soh, H.T., Atalar, A., and Khuri-Yakub, B.T. (1998)**.
+8. **Ladabaum, I., Jin, X., Soh, H.T., Atalar, A., and Khuri-Yakub, B.T. (1998)**.
    "Surface micromachined capacitive ultrasonic transducers."
    *IEEE Transactions on Ultrasonics, Ferroelectrics and Frequency Control*,
    45(3):678–690.
    doi:10.1109/58.677612
    — CMUT electrostatic pull-in and center frequency shift (§6.3).
 
-8. **IEEE Standard 176 (1987)**. "IEEE Standard on Piezoelectricity."
+9. **IEEE Standard 176 (1987)**. "IEEE Standard on Piezoelectricity."
    IEEE, New York.
    — Constitutive relations and resonance condition (§6.2).
 
-9. **Mason, W.P. (1948)**. *Electromechanical Transducers and Wave Filters*, 2nd ed.
+10. **Mason, W.P. (1948)**. *Electromechanical Transducers and Wave Filters*, 2nd ed.
    Van Nostrand, New York.
    — Mason equivalent circuit derivation (§6.2, Step 3).
 
-10. **Cobbold, R.S.C. (2007)**. *Foundations of Biomedical Ultrasound*.
+11. **Cobbold, R.S.C. (2007)**. *Foundations of Biomedical Ultrasound*.
     Oxford University Press, Oxford. ISBN 978-0-19-516960-5.
     — Comprehensive reference for transducer physics, directivity, and array beamforming.

@@ -164,8 +164,14 @@ mod tests {
     fn convergence_orders_are_two_and_four() {
         let sv_ratio = one_period_error(false, 100) / one_period_error(false, 200);
         let yo_ratio = one_period_error(true, 100) / one_period_error(true, 200);
-        assert!((3.0..=5.0).contains(&sv_ratio), "Störmer–Verlet ratio {sv_ratio}");
-        assert!((12.0..=20.0).contains(&yo_ratio), "Yoshida ratio {yo_ratio}");
+        assert!(
+            (3.0..=5.0).contains(&sv_ratio),
+            "Störmer–Verlet ratio {sv_ratio}"
+        );
+        assert!(
+            (12.0..=20.0).contains(&yo_ratio),
+            "Yoshida ratio {yo_ratio}"
+        );
         // Yoshida is far more accurate than Störmer–Verlet at the same step.
         assert!(one_period_error(true, 100) < one_period_error(false, 100));
     }
@@ -177,7 +183,11 @@ mod tests {
         let d = 2.0 - 2.0_f64.cbrt();
         let w1 = 1.0 / d;
         let w0 = -2.0_f64.cbrt() / d;
-        assert!((2.0 * w1 + w0 - 1.0).abs() < 1e-15, "2w1+w0 = {}", 2.0 * w1 + w0);
+        assert!(
+            (2.0 * w1 + w0 - 1.0).abs() < 1e-15,
+            "2w1+w0 = {}",
+            2.0 * w1 + w0
+        );
         // Merged leapfrog drift weights also sum to 1.
         let drifts = [w1 / 2.0, (w0 + w1) / 2.0, (w0 + w1) / 2.0, w1 / 2.0];
         assert!((drifts.iter().sum::<f64>() - 1.0).abs() < 1e-15);

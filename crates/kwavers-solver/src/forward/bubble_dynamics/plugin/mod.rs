@@ -1,11 +1,12 @@
 //! Plugin adapter for bubble dynamics.
 //!
-//! Bridges the [`Plugin`] contract to the three production bubble-equation
+//! Bridges the [`Plugin`] contract to the four production bubble-equation
 //! implementations:
 //!
 //! | [`BubbleModel`] variant | ODE / integrator used |
 //! |-------------------------|-----------------------|
 //! | `KellerMiksis`          | [`BubbleField`] (adaptive KM, `use_compressibility = true`) |
+//! | `KellerHerring`         | [`BubbleField`] (adaptive KM wrapper, dedicated contract type) |
 //! | `RayleighPlesset`       | [`BubbleField`] (adaptive KM, `use_compressibility = false` → O(Mach⁰) limit) |
 //! | `Gilmore`               | [`GilmoreSolver`] with per-voxel classical RK4, Tait liquid EOS |
 //!

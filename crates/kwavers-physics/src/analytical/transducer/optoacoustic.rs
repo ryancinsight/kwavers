@@ -302,7 +302,11 @@ mod tests {
         assert!((r_half - 2.0 * r_l).abs() / r_l < 1e-12);
 
         // Fit constant: R_L[µm]·NA = 0.71·c/f = 71.0 µm at the device point.
-        assert!((r_l * na * 1e6 - 71.0).abs() < 0.5, "fit = {}", r_l * na * 1e6);
+        assert!(
+            (r_l * na * 1e6 - 71.0).abs() < 0.5,
+            "fit = {}",
+            r_l * na * 1e6
+        );
     }
 
     #[test]
@@ -369,7 +373,10 @@ mod tests {
         let element_area = std::f64::consts::PI * (50e-6_f64).powi(2);
         let lambda = 1540.0 / (5.0 * MHZ_TO_HZ);
         let p_focus = optoacoustic_array_focal_pressure(1.25e6, 96, element_area, lambda, 3e-3);
-        assert!(p_focus >= 1.0e6, "5 MHz focal pressure {p_focus} Pa < 1 MPa");
+        assert!(
+            p_focus >= 1.0e6,
+            "5 MHz focal pressure {p_focus} Pa < 1 MPa"
+        );
         // The lower-frequency gain is below the 15 MHz case, as expected.
         let lambda_15 = 1540.0 / (15.0 * MHZ_TO_HZ);
         let g5 = focused_aperture_gain(96.0 * element_area, lambda, 3e-3);
@@ -390,8 +397,14 @@ mod tests {
         // Sparse bare-tip bundle fails: 1 MPa would need a supra-damage p₀.
         let tip_area = std::f64::consts::PI * (50e-6_f64).powi(2);
         let g_sparse = focused_aperture_gain(96.0 * tip_area, lambda, f_focus);
-        assert!(g_sparse < 0.1, "sparse-tip gain {g_sparse} unexpectedly large");
-        assert!(1.0e6 / g_sparse > 10.0e6, "sparse tips would need < damage p₀");
+        assert!(
+            g_sparse < 0.1,
+            "sparse-tip gain {g_sparse} unexpectedly large"
+        );
+        assert!(
+            1.0e6 / g_sparse > 10.0e6,
+            "sparse tips would need < damage p₀"
+        );
 
         // Filled tiles succeed: 96 tiles each ≈0.8 mm² radiating (0.5 mm
         // effective radius) over the 24×5 mm = 120 mm² face (≈0.63 fill).
@@ -402,7 +415,10 @@ mod tests {
         // wide enough to survive a 3× derate for the anisotropic (line-focus)
         // aperture — the 5 mm width is past its 20 mm near field at 40 mm.
         let p_focus = optoacoustic_array_focal_pressure(0.6e6, 96, tile_area, lambda, f_focus);
-        assert!(p_focus >= 3.0e6, "filled-aperture focal pressure {p_focus} Pa");
+        assert!(
+            p_focus >= 3.0e6,
+            "filled-aperture focal pressure {p_focus} Pa"
+        );
         assert!(p_focus / 3.0 >= 1.0e6, "3× anisotropy derate still < 1 MPa");
     }
 

@@ -101,6 +101,8 @@ PARITY_THRESHOLDS = {
     "rms_ratio_min": 0.85,
     "rms_ratio_max": 1.15,
     "psnr_db":      22.0,
+    "peak_ratio_min": 0.999,
+    "peak_ratio_max": 1.001,
 }
 
 # ---------------------------------------------------------------------------
@@ -128,7 +130,7 @@ def build_p0() -> np.ndarray:
     n_pts = int(p0.sum())
     vol   = n_pts * DX**3 * 1e12   # µL
     print(f"  Initial pressure ball: {n_pts} grid pts  "
-          f"(≈{n_pts * (4/3 * np.pi) ** (1/3) * DX * 1e6:.1f} µm effective radius)")
+          f"(~{n_pts * (4/3 * np.pi) ** (1/3) * DX * 1e6:.1f} um effective radius)")
     return p0
 
 
@@ -300,8 +302,8 @@ def main() -> None:
 
     print("=" * 60)
     print("ivp_photoacoustic_waveforms_3D: k-wave-python vs pykwavers")
-    print(f"  Grid   : {NX}³   dx = {DX*1e6:.4f} µm   (1 mm domain)")
-    print(f"  Medium : c₀ = {C0} m/s  lossless  (rho = {RHO0} kg/m³)")
+    print(f"  Grid   : {NX}^3   dx = {DX*1e6:.4f} um   (1 mm domain)")
+    print(f"  Medium : c0 = {C0} m/s  lossless  (rho = {RHO0} kg/m^3)")
     print(f"  Source : initial pressure ball, radius={SOURCE_RADIUS} pts, {SOURCE_AMP:.0f} Pa")
     print(f"  Sensor : single point at [{SENSOR_IX},{SENSOR_IY},{SENSOR_IZ}] (0-indexed)")
     print(f"  Time   : dt={DT*1e9:.0f} ns,  Nt={NT},  t_end={T_END*1e9:.0f} ns")
@@ -332,6 +334,11 @@ def main() -> None:
         "pearson_r":  metrics["pearson_r"]  >= thr["pearson_r"],
         "rms_ratio":  thr["rms_ratio_min"]  <= metrics["rms_ratio"] <= thr["rms_ratio_max"],
         "psnr_db":    metrics["psnr_db"]    >= thr["psnr_db"],
+        "peak_ratio": (
+            thr["peak_ratio_min"]
+            <= float(np.abs(pkw_tr).max()) / (float(np.abs(kw_tr).max()) + 1e-30)
+            <= thr["peak_ratio_max"]
+        ),
     }
     status   = "PASS" if all(checks.values()) else "FAIL"
     all_pass = (status == "PASS")
@@ -345,8 +352,9 @@ def main() -> None:
     print(f"  PSNR      = {metrics['psnr_db']:.2f} dB  "
           f"(target >= {thr['psnr_db']} dB)  {'OK' if checks['psnr_db'] else 'FAIL'}")
     print(f"  Peak kwave  = {float(np.abs(kw_tr).max()):.6e} Pa")
+    peak_ratio = float(np.abs(pkw_tr).max()) / (float(np.abs(kw_tr).max()) + 1e-30)
     print(f"  Peak pkwav  = {float(np.abs(pkw_tr).max()):.6e} Pa  "
-          f"(ratio = {float(np.abs(pkw_tr).max()) / (float(np.abs(kw_tr).max())+1e-30):.4f})")
+          f"(ratio = {peak_ratio:.4f})")
 
     # --- Figure ---
     plot_comparison(kw_result, pkw_result)
@@ -370,7 +378,8 @@ def main() -> None:
         f"psnr_db    = {metrics['psnr_db']:.2f}  (target >= {thr['psnr_db']} dB)",
         f"peak_kwave_Pa     = {float(np.abs(kw_tr).max()):.6e}",
         f"peak_pykwavers_Pa = {float(np.abs(pkw_tr).max()):.6e}",
-        f"peak_ratio        = {float(np.abs(pkw_tr).max())/(float(np.abs(kw_tr).max())+1e-30):.6f}",
+        f"peak_ratio        = {peak_ratio:.6f}  "
+        f"(target [{thr['peak_ratio_min']}, {thr['peak_ratio_max']}])",
     ]
     save_text_report(METRICS_PATH, header, report_lines)
     print(f"\n  Saved: {METRICS_PATH}")

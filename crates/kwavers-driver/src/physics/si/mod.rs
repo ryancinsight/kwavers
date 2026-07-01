@@ -61,12 +61,10 @@ pub mod propagation;
 
 pub use crosstalk::{channel_operating_margin_db, crosstalk_coupling};
 pub use impedance::{
-    differential_microstrip_impedance, impedance_target, microstrip_impedance,
-    return_loss_db, stripline_impedance,
+    differential_microstrip_impedance, impedance_target, microstrip_impedance, return_loss_db,
+    stripline_impedance,
 };
-pub use propagation::{
-    microstrip_delay_s_per_m, risetime_degradation_ps_per_m, within_skew,
-};
+pub use propagation::{microstrip_delay_s_per_m, risetime_degradation_ps_per_m, within_skew};
 
 #[cfg(test)]
 mod tests;

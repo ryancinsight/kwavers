@@ -20,8 +20,8 @@ use crate::rules::DesignRules;
 use crate::ssot::*;
 
 // Reaches Uuid/layer_name/mm/w/wln from the slice root via `#[macro_use]`.
-use super::{Uuid, layer_name, layer_ordinal, mm, mechanical_features};
 use super::MechKind;
+use super::{layer_name, layer_ordinal, mechanical_features, mm, Uuid};
 
 /// Emit a footprint's body — Reference/Value properties, the F.Fab outline, pads, and 3D model —
 /// shared by the board emitter (with pad-net hooks) and any future library exporter (empty pad
@@ -214,7 +214,14 @@ pub fn write_kicad_pcb(
     // Routed copper.
     emit_segments(&mut s, &board.tracks, nlayers, &mut uuid);
     emit_vias(&mut s, &board.vias, nlayers, rules, &mut uuid);
-    emit_zones(&mut s, &board.zones, board, nlayers, rules.min_clearance.to_mm(), &mut uuid);
+    emit_zones(
+        &mut s,
+        &board.zones,
+        board,
+        nlayers,
+        rules.min_clearance.to_mm(),
+        &mut uuid,
+    );
 
     s.push_str(")\n");
     s

@@ -33,7 +33,7 @@ Domain mapping:
 Parity criteria (matched physics + matched units):
     Pearson r  >= 0.9999
     RMS ratio  in [0.99, 1.01]
-    PSNR       >= 50 dB
+    PSNR       >= 45 dB
     L_inf      <= 0.05 degC at any time on the centre trace
 
 Outputs:

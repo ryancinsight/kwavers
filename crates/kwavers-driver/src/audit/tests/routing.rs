@@ -74,8 +74,7 @@ fn serpentine_spacing_uses_edge_gap_not_centerline_gap() {
 
 #[test]
 fn serpentine_compensation_must_stay_near_bend_root() {
-    let spec =
-        GridSpec::cover(Nm::from_mm(70.0), Nm::from_mm(20.0), Nm::from_mm(0.5), 2).unwrap();
+    let spec = GridSpec::cover(Nm::from_mm(70.0), Nm::from_mm(20.0), Nm::from_mm(0.5), 2).unwrap();
     let mut remote = Board::new(spec);
     let net = remote.add_net("SERP_REMOTE", NetClassKind::Signal);
     let h = |x0, x1, y| Track {

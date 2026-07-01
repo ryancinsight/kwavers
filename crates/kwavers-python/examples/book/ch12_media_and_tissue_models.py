@@ -31,14 +31,8 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-import matplotlib.ticker as mticker
 
-try:
-    import pykwavers as kw
-    _HAS_PYKWAVERS = True
-except ImportError:
-    kw = None
-    _HAS_PYKWAVERS = False
+import pykwavers as kw
 
 REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
 OUT_DIR = os.path.join(REPO_ROOT, "docs", "book", "figures", "ch12")
@@ -64,8 +58,6 @@ def fig01_sound_speed_temperature() -> None:
     Water: Del Grosso & Mader (1972) polynomial via kw.water_sound_speed_temperature.
     Soft tissue: Bamber & Hill (1979) linear approx c = 1540 + 1.8·(T−37) [no kw binding].
     """
-    if not _HAS_PYKWAVERS:
-        raise ImportError("pykwavers is required for fig01 (water sound speed)")
     T = np.linspace(0, 60, 300)
     c_water = np.asarray(kw.water_sound_speed_temperature(T))
     # Bamber & Hill (1979) linear approximation — no temperature-dependent tissue binding.
@@ -92,8 +84,6 @@ def fig02_impedance_bar() -> None:
     Computed via kw.tissue_properties(name) → (c, rho, ...) → Z = c*rho/1e6.
     Air and Cortical bone have no kw binding; Duck (1990) reference values used.
     """
-    if not _HAS_PYKWAVERS:
-        raise ImportError("pykwavers is required for fig02 (tissue impedance)")
 
     def _z_mrayl(tissue_key: str) -> float:
         """Acoustic impedance [MRayl] from kw.tissue_properties."""
@@ -139,8 +129,6 @@ def fig03_ba_parameter() -> None:
     Water is not temperature-dependent in the binding (single canonical value).
     Breast tissue uses "fat" binding (high fat content).
     """
-    if not _HAS_PYKWAVERS:
-        raise ImportError("pykwavers is required for fig03 (B/A parameter)")
     tissues = [
         ("Water (20°C)", kw.ba_parameter("water")),
         ("Water (37°C)", kw.ba_parameter("water")),
@@ -182,8 +170,6 @@ def fig04_fractional_absorption() -> None:
     Fractional Laplacian (Treeby & Cox 2010): y ∈ {1.0, 1.5, 2.0}.
     Computed via kw.power_law_attenuation_np_m(f_hz, alpha0, y), normalised at 1 MHz.
     """
-    if not _HAS_PYKWAVERS:
-        raise ImportError("pykwavers is required for fig04 (power-law absorption)")
     f_MHz = np.linspace(0.5, 10.0, 400)
     f_hz = f_MHz * 1e6
     alpha0 = 1.0  # Np/m at 1 Hz — normalised for shape illustration
@@ -217,6 +203,7 @@ def fig05_bioheat() -> None:
     Analytical solution with Dirichlet BC T(0)=T(L)=T_b:
       T(x) = T_b + Q/(W_b ρ_b c_b) · (1 - cosh(α(x-L/2))/cosh(αL/2))
     where α = √(W_b ρ_b c_b / k).
+    Computed via kw.pennes_steady_state_temperature_profile.
     """
     L = 0.04    # 40 mm tissue thickness
     k_t = 0.5   # W/(m·K) thermal conductivity
@@ -229,12 +216,18 @@ def fig05_bioheat() -> None:
               (2e5, "#2ca02c", r"$Q=200\,\mathrm{kW/m^3}$")]
 
     x = np.linspace(0, L, 400)
-    alpha_perf = np.sqrt(Wb * rho_b * c_b / k_t)
-
     fig, ax = plt.subplots(figsize=(7, 4.5))
     for Q, col, lbl in Q_vals:
-        dT_max = Q / (Wb * rho_b * c_b)
-        T_x = T_b + dT_max * (1 - np.cosh(alpha_perf * (x - L / 2)) / np.cosh(alpha_perf * L / 2))
+        T_x = np.asarray(kw.pennes_steady_state_temperature_profile(
+            x,
+            L,
+            k_t,
+            Wb,
+            rho_b,
+            c_b,
+            T_b,
+            Q,
+        ))
         ax.plot(x * 1e3, T_x, color=col, label=lbl)
 
     ax.axhline(T_b, color="k", linewidth=0.5, linestyle="--", label=r"$T_b = 37\,°C$")

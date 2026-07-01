@@ -3,7 +3,7 @@
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 
-use super::{ArrayTransform, ElementShape, KWaveArray};
+use super::{ArrayTransform, DiscSourceProfile, ElementShape, KWaveArray};
 
 impl KWaveArray {
     /// Create a new empty `KWaveArray`.
@@ -183,6 +183,29 @@ impl KWaveArray {
             position,
             diameter,
             focus_position,
+        });
+        self
+    }
+
+    /// Add a disc-shaped element with a finite-source surface profile.
+    ///
+    /// # Arguments
+    /// * `position`       - Center position `[x, y, z]` in metres
+    /// * `diameter`       - Disc diameter in metres
+    /// * `focus_position` - Optional focus point defining the disc normal
+    /// * `profile`        - Normalized source-pressure profile over the disc
+    pub fn add_profiled_disc_element(
+        &mut self,
+        position: (f64, f64, f64),
+        diameter: f64,
+        focus_position: Option<(f64, f64, f64)>,
+        profile: DiscSourceProfile,
+    ) -> &mut Self {
+        self.elements.push(ElementShape::ProfiledDisc {
+            position,
+            diameter,
+            focus_position,
+            profile,
         });
         self
     }

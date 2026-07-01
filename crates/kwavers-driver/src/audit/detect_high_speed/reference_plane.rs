@@ -3,12 +3,12 @@
 
 use std::collections::BTreeMap;
 
+use crate::audit::antenna::polygon_vertex_mean;
+use crate::audit::net_util::{is_high_speed_net, reference_zones, track_midpoint};
 use crate::board::{Board, LayerId, NetClassKind, NetId, ZoneFill};
 use crate::geom::{distance_to_polygon_boundary, point_in_polygon, Nm, Point};
 use crate::place::Component;
 use crate::rules::DesignRules;
-use crate::audit::antenna::polygon_vertex_mean;
-use crate::audit::net_util::{is_high_speed_net, reference_zones, track_midpoint};
 
 pub(crate) fn detect_reference_plane_margin_violations(
     board: &Board,
@@ -69,7 +69,9 @@ pub(crate) fn detect_reference_plane_absence_violations(board: &Board) -> (usize
     (count, pts)
 }
 
-pub(crate) fn detect_inner_layer_dual_ground_reference_violations(board: &Board) -> (usize, Vec<Point>) {
+pub(crate) fn detect_inner_layer_dual_ground_reference_violations(
+    board: &Board,
+) -> (usize, Vec<Point>) {
     let zones = reference_zones(board);
     let mut count = 0;
     let mut pts = Vec::new();

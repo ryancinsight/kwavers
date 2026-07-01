@@ -50,3 +50,64 @@ pub fn bli_stencil_weights(delta: &[f64], n_stencil: usize) -> Vec<Vec<f64>> {
         })
         .collect()
 }
+
+/// RMS interpolation error curves for nearest-neighbour and BLI interpolation.
+///
+/// For each points-per-wavelength value, this evaluates the unit sinusoid
+/// `sin(2πx / PPW)` at fractional offsets `delta`, compares nearest-neighbour
+/// zero-order reconstruction against the ideal value, and compares the
+/// BLI-reconstructed value from [`bli_stencil_weights`] against the same ideal.
+///
+/// Returns `(nearest_rms, bli_rms)`, each with length `ppw.len()`. Returns empty
+/// vectors when axes are empty, `n_stencil` is odd/zero, or any sampled value is
+/// non-finite/non-positive where positivity is required.
+#[must_use]
+pub fn bli_interpolation_error_curves(
+    ppw: &[f64],
+    delta: &[f64],
+    n_stencil: usize,
+) -> (Vec<f64>, Vec<f64>) {
+    if ppw.is_empty()
+        || delta.is_empty()
+        || n_stencil == 0
+        || !n_stencil.is_multiple_of(2)
+        || ppw.iter().any(|&v| !v.is_finite() || v <= 0.0)
+        || delta.iter().any(|&v| !v.is_finite())
+    {
+        return (Vec::new(), Vec::new());
+    }
+
+    let weights = bli_stencil_weights(delta, n_stencil);
+    let half = (n_stencil / 2) as i64;
+    let offsets: Vec<f64> = (0..n_stencil).map(|j| (j as i64 - half) as f64).collect();
+    let inv_count = 1.0 / delta.len() as f64;
+
+    let mut nearest_rms = Vec::with_capacity(ppw.len());
+    let mut bli_rms = Vec::with_capacity(ppw.len());
+    for &points_per_wavelength in ppw {
+        let phase = TWO_PI / points_per_wavelength;
+        let samples: Vec<f64> = offsets
+            .iter()
+            .map(|&offset| (phase * offset).sin())
+            .collect();
+        let mut nearest_sum_sq = 0.0_f64;
+        let mut bli_sum_sq = 0.0_f64;
+
+        for (&fractional_offset, row) in delta.iter().zip(weights.iter()) {
+            let ideal = (phase * fractional_offset).sin();
+            nearest_sum_sq += ideal * ideal;
+            let reconstructed = row
+                .iter()
+                .zip(samples.iter())
+                .map(|(&weight, &sample)| weight * sample)
+                .sum::<f64>();
+            let error = reconstructed - ideal;
+            bli_sum_sq += error * error;
+        }
+
+        nearest_rms.push((nearest_sum_sq * inv_count).sqrt());
+        bli_rms.push((bli_sum_sq * inv_count).sqrt());
+    }
+
+    (nearest_rms, bli_rms)
+}

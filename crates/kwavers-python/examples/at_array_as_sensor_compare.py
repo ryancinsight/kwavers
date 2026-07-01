@@ -343,7 +343,7 @@ def run_comparison() -> dict[str, object]:
     element_weight_masks_pk = _build_pykwavers_single_element_masks(arc_geometries, grid_pk)
     element_measures_m = [geom.measure_m for geom in arc_geometries]
 
-    kw_combined = kwave_array.combine_sensor_data(kgrid, kw_pressure)
+    kw_combined = kwave_array.combine_sensor_data(kgrid, kw_pressure, order="F")
     py_combined = combine_array_sensor_data(
         py_pressure,
         sensor_mask_pk,
@@ -370,10 +370,15 @@ def run_comparison() -> dict[str, object]:
         "pearson_r_min": float(np.min([m["pearson_r"] for m in trace_metrics.values()])),
         "pearson_r_median": float(np.median([m["pearson_r"] for m in trace_metrics.values()])),
         "rms_ratio_mean": float(np.mean([m["rms_ratio"] for m in trace_metrics.values()])),
+        "rms_ratio_min": float(np.min([m["rms_ratio"] for m in trace_metrics.values()])),
+        "rms_ratio_max": float(np.max([m["rms_ratio"] for m in trace_metrics.values()])),
         "rms_ratio_median": float(np.median([m["rms_ratio"] for m in trace_metrics.values()])),
         "rmse_mean": float(np.mean([m["rmse"] for m in trace_metrics.values()])),
+        "rmse_max": float(np.max([m["rmse"] for m in trace_metrics.values()])),
         "rmse_median": float(np.median([m["rmse"] for m in trace_metrics.values()])),
         "peak_ratio_mean": float(np.mean([m["peak_ratio"] for m in trace_metrics.values()])),
+        "peak_ratio_min": float(np.min([m["peak_ratio"] for m in trace_metrics.values()])),
+        "peak_ratio_max": float(np.max([m["peak_ratio"] for m in trace_metrics.values()])),
         "peak_ratio_median": float(np.median([m["peak_ratio"] for m in trace_metrics.values()])),
     }
 
@@ -490,35 +495,98 @@ def build_report_lines(result: dict[str, object]) -> list[str]:
         f"  pearson_r = {result['mask_metrics']['pearson_r']:.6f}",
         f"  rms_ratio = {result['mask_metrics']['rms_ratio']:.6f}",
         f"  rmse      = {result['mask_metrics']['rmse']:.6e}",
+        f"  max_abs_diff = {result['mask_metrics']['max_abs_diff']:.6e}",
         f"  peak_ratio= {result['mask_metrics']['peak_ratio']:.6f}",
+        f"  psnr_db   = {result['mask_metrics']['psnr_db']:.6f}",
         "",
         "weighted mask parity:",
         f"  pearson_r = {result['weighted_mask_metrics']['pearson_r']:.6f}",
         f"  rms_ratio = {result['weighted_mask_metrics']['rms_ratio']:.6f}",
         f"  rmse      = {result['weighted_mask_metrics']['rmse']:.6e}",
+        f"  max_abs_diff = {result['weighted_mask_metrics']['max_abs_diff']:.6e}",
         f"  peak_ratio= {result['weighted_mask_metrics']['peak_ratio']:.6f}",
+        f"  psnr_db   = {result['weighted_mask_metrics']['psnr_db']:.6f}",
         "",
         "raw detector matrix parity:",
         f"  pearson_r = {result['raw_matrix_metrics']['pearson_r']:.6f}",
         f"  rms_ratio = {result['raw_matrix_metrics']['rms_ratio']:.6f}",
         f"  rmse      = {result['raw_matrix_metrics']['rmse']:.6e}",
+        f"  max_abs_diff = {result['raw_matrix_metrics']['max_abs_diff']:.6e}",
         f"  peak_ratio= {result['raw_matrix_metrics']['peak_ratio']:.6f}",
+        f"  psnr_db   = {result['raw_matrix_metrics']['psnr_db']:.6f}",
         "",
         "combined arc-trace parity:",
         f"  pearson_r = {result['combined_matrix_metrics']['pearson_r']:.6f}",
         f"  rms_ratio = {result['combined_matrix_metrics']['rms_ratio']:.6f}",
         f"  rmse      = {result['combined_matrix_metrics']['rmse']:.6e}",
+        f"  max_abs_diff = {result['combined_matrix_metrics']['max_abs_diff']:.6e}",
         f"  peak_ratio= {result['combined_matrix_metrics']['peak_ratio']:.6f}",
+        f"  psnr_db   = {result['combined_matrix_metrics']['psnr_db']:.6f}",
         "",
         f"combined trace pearson_r_min = {result['trace_summary']['pearson_r_min']:.6f}",
         f"combined trace pearson_r_mean = {result['trace_summary']['pearson_r_mean']:.6f}",
+        f"combined trace rms_ratio_min = {result['trace_summary']['rms_ratio_min']:.6f}",
+        f"combined trace rms_ratio_max = {result['trace_summary']['rms_ratio_max']:.6f}",
         f"combined trace rms_ratio_mean = {result['trace_summary']['rms_ratio_mean']:.6f}",
+        f"combined trace peak_ratio_min = {result['trace_summary']['peak_ratio_min']:.6f}",
+        f"combined trace peak_ratio_max = {result['trace_summary']['peak_ratio_max']:.6f}",
+        f"combined trace rmse_max = {result['trace_summary']['rmse_max']:.6e}",
     ]
 
 
-_R_TARGET = 0.98
-_RMS_MIN = 0.90
-_RMS_MAX = 1.10
+PARITY_THRESHOLDS = {
+    "mask_metrics": {
+        "pearson_r": 0.99999,
+    },
+    "weighted_mask_metrics": {
+        "pearson_r": 0.99999,
+    },
+    "raw_matrix_metrics": {
+        "pearson_r": 0.98,
+        "psnr_db": 30.0,
+    },
+    "combined_matrix_metrics": {
+        "pearson_r": 0.99,
+        "psnr_db": 30.0,
+    },
+    "trace_summary": {
+        "pearson_r_min": 0.99,
+        "pearson_r_mean": 0.99,
+        "rms_ratio_min": 1.0 - 3e-2,
+        "rms_ratio_max": 1.0 + 3e-2,
+        "peak_ratio_min": 1.0 - 1.5e-1,
+        "peak_ratio_max": 1.0 + 1.5e-1,
+        "rmse_max": 2e-2,
+    },
+}
+
+
+def _metrics_pass(result: dict[str, object]) -> bool:
+    """Return true when metrics satisfy the script-owned parity contract."""
+    for metric_name in (
+        "mask_metrics",
+        "weighted_mask_metrics",
+        "raw_matrix_metrics",
+        "combined_matrix_metrics",
+    ):
+        metrics = result[metric_name]  # type: ignore[index]
+        thresholds = PARITY_THRESHOLDS[metric_name]
+        if metrics["pearson_r"] < thresholds["pearson_r"]:  # type: ignore[index]
+            return False
+        if "psnr_db" in thresholds and metrics["psnr_db"] <= thresholds["psnr_db"]:  # type: ignore[index]
+            return False
+
+    summary = result["trace_summary"]  # type: ignore[index]
+    thresholds = PARITY_THRESHOLDS["trace_summary"]
+    return (
+        summary["pearson_r_min"] >= thresholds["pearson_r_min"]  # type: ignore[index]
+        and summary["pearson_r_mean"] >= thresholds["pearson_r_mean"]  # type: ignore[index]
+        and summary["rms_ratio_min"] >= thresholds["rms_ratio_min"]  # type: ignore[index]
+        and summary["rms_ratio_max"] <= thresholds["rms_ratio_max"]  # type: ignore[index]
+        and summary["peak_ratio_min"] >= thresholds["peak_ratio_min"]  # type: ignore[index]
+        and summary["peak_ratio_max"] <= thresholds["peak_ratio_max"]  # type: ignore[index]
+        and summary["rmse_max"] < thresholds["rmse_max"]  # type: ignore[index]
+    )
 
 
 def main() -> int:
@@ -539,7 +607,7 @@ def main() -> int:
 
     r_min = float(result["trace_summary"]["pearson_r_min"])
     rms_mean = float(result["trace_summary"]["rms_ratio_mean"])
-    overall_status = "PASS" if r_min >= _R_TARGET and _RMS_MIN <= rms_mean <= _RMS_MAX else "FAIL"
+    overall_status = "PASS" if _metrics_pass(result) else "FAIL"
 
     report_lines = build_report_lines(result)
     report_lines.append(f"parity_status: {overall_status}")
@@ -554,8 +622,16 @@ def main() -> int:
     print(f"Weighted mask pearson r:     {result['weighted_mask_metrics']['pearson_r']:.6f}")
     print(f"Raw detector matrix pearson: {result['raw_matrix_metrics']['pearson_r']:.6f}")
     print(f"Combined trace pearson:      {result['combined_matrix_metrics']['pearson_r']:.6f}")
-    print(f"Combined trace min corr:     {r_min:.6f}  (target >= {_R_TARGET})")
-    print(f"Combined trace rms_ratio:    {rms_mean:.6f}  (target [{_RMS_MIN}, {_RMS_MAX}])")
+    print(
+        "Combined trace min corr:     "
+        f"{r_min:.6f}  (target >= {PARITY_THRESHOLDS['trace_summary']['pearson_r_min']})"
+    )
+    print(
+        "Combined trace rms_ratio:    "
+        f"{rms_mean:.6f}  "
+        f"(target [{PARITY_THRESHOLDS['trace_summary']['rms_ratio_min']}, "
+        f"{PARITY_THRESHOLDS['trace_summary']['rms_ratio_max']}])"
+    )
     print(f"k-Wave runtime [s]:          {float(result['kwave']['runtime_s']):.3f}")
     print(f"pykwavers runtime [s]:       {float(result['pykwavers']['runtime_s']):.3f}")
     print(f"Status:                      {overall_status}")

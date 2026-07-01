@@ -57,11 +57,8 @@ pub fn ir_drop(
         if len_m <= 0.0 {
             continue;
         }
-        let r = crate::physics::ampacity::track_resistance(
-            len_m,
-            t.width.to_mm() * 1.0e-3,
-            copper_oz,
-        );
+        let r =
+            crate::physics::ampacity::track_resistance(len_m, t.width.to_mm() * 1.0e-3, copper_oz);
         if r <= 0.0 {
             continue;
         }

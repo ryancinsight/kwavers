@@ -16,7 +16,9 @@ use ndarray::{Array1, Array3, ArrayView1};
 
 /// Small linear-congruential generator for reproducible pseudo-random speckle.
 fn lcg(state: &mut u64) -> f64 {
-    *state = state.wrapping_mul(6_364_136_223_846_793_005).wrapping_add(1);
+    *state = state
+        .wrapping_mul(6_364_136_223_846_793_005)
+        .wrapping_add(1);
     // Map high 32 bits to (-1, 1).
     ((*state >> 32) as f64 / u32::MAX as f64) * 2.0 - 1.0
 }
@@ -64,7 +66,10 @@ fn soft_tissue_coefficient_is_negative_and_physical() {
     assert!((beta - 2.0 / 1540.0).abs() < 1e-9, "β_c = {beta}");
     // k_T = α_th − β_c = 3.0e-4 − 1.299e-3 < 0 for water-based tissue.
     let k_t = cfg.combined_coefficient();
-    assert!(k_t < 0.0, "water-based tissue must have negative k_T, got {k_t}");
+    assert!(
+        k_t < 0.0,
+        "water-based tissue must have negative k_T, got {k_t}"
+    );
     assert!((k_t - (3.0e-4 - 2.0 / 1540.0)).abs() < 1e-12);
 }
 
@@ -184,7 +189,9 @@ fn reconstructs_uniform_temperature_change() {
         temperature_change,
         strain,
         ..
-    } = imager.reconstruct_temperature(&reference, &tracked).unwrap();
+    } = imager
+        .reconstruct_temperature(&reference, &tracked)
+        .unwrap();
 
     // Average ΔT and strain over a central interior block (avoid axial/lateral
     // edges). Pixel-wise NCC jitter cancels in the mean; the bias is what the
@@ -211,7 +218,10 @@ fn reconstructs_uniform_temperature_change() {
     // Mean thermal strain sign must match the (negative) thermoacoustic
     // coefficient for water-based tissue, with magnitude near k_T·ΔT.
     let strain_truth = k_t * delta_t_true;
-    assert!(mean_strain < 0.0, "expected negative mean strain, got {mean_strain}");
+    assert!(
+        mean_strain < 0.0,
+        "expected negative mean strain, got {mean_strain}"
+    );
     assert!(
         (mean_strain - strain_truth).abs() < 0.25 * strain_truth.abs(),
         "mean strain {mean_strain} vs truth {strain_truth}"
@@ -264,11 +274,13 @@ fn no_heating_gives_zero_displacement_and_temperature() {
         .displacement
         .iter()
         .fold(0.0_f64, |m, &v| m.max((v / dz).abs()));
-    assert!(max_samples < 0.5, "max |displacement| = {max_samples} samples");
+    assert!(
+        max_samples < 0.5,
+        "max |displacement| = {max_samples} samples"
+    );
 
     // No systematic temperature bias.
-    let mean_dt =
-        result.temperature_change.sum() / result.temperature_change.len() as f64;
+    let mean_dt = result.temperature_change.sum() / result.temperature_change.len() as f64;
     assert!(mean_dt.abs() < 0.5, "mean ΔT bias = {mean_dt} °C");
 }
 

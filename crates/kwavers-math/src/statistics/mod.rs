@@ -31,6 +31,70 @@ pub fn pearson(a: &[f64], b: &[f64]) -> f64 {
     }
 }
 
+/// Pearson correlation of same-frequency sinusoids separated by phase.
+///
+/// For `A(t) = sin(omega t)` and `B(t) = sin(omega t + phi)`, the Pearson
+/// coefficient is `cos(phi)`. Inputs are phase offsets in radians.
+///
+/// # Errors
+///
+/// Returns an error when any phase value is non-finite.
+pub fn phase_shift_correlation_curve(phase_rad: &[f64]) -> Result<Vec<f64>, String> {
+    if let Some((index, value)) = phase_rad
+        .iter()
+        .copied()
+        .enumerate()
+        .find(|(_, value)| !value.is_finite())
+    {
+        return Err(format!("phase_rad[{index}] must be finite, got {value}"));
+    }
+
+    Ok(phase_rad.iter().map(|phase| phase.cos()).collect())
+}
+
+/// Phase error in degrees for a target same-frequency sinusoid correlation.
+///
+/// This is the inverse of `r(phi) = cos(phi)` over `0 <= phi <= pi`.
+///
+/// # Errors
+///
+/// Returns an error when `correlation` is non-finite or outside `[-1, 1]`.
+pub fn phase_error_degrees_for_correlation(correlation: f64) -> Result<f64, String> {
+    if !correlation.is_finite() {
+        return Err(format!("correlation must be finite, got {correlation}"));
+    }
+    if !(-1.0..=1.0).contains(&correlation) {
+        return Err(format!("correlation must be in [-1, 1], got {correlation}"));
+    }
+
+    Ok(correlation.acos().to_degrees())
+}
+
+/// PSNR in dB from relative RMSE values.
+///
+/// For `relative_rmse = RMSE / MAX`, `PSNR = -20 * log10(relative_rmse)`.
+///
+/// # Errors
+///
+/// Returns an error when any relative RMSE is non-finite or non-positive.
+pub fn validation_psnr_from_relative_rmse(relative_rmse: &[f64]) -> Result<Vec<f64>, String> {
+    if let Some((index, value)) = relative_rmse
+        .iter()
+        .copied()
+        .enumerate()
+        .find(|(_, value)| !value.is_finite() || *value <= 0.0)
+    {
+        return Err(format!(
+            "relative_rmse[{index}] must be finite and positive, got {value}"
+        ));
+    }
+
+    Ok(relative_rmse
+        .iter()
+        .map(|value| -20.0 * value.log10())
+        .collect())
+}
+
 /// RMSE of `b` relative to `a`, normalised by `‖a‖₂`.
 ///
 /// Measures error energy relative to the reference signal energy.
@@ -188,14 +252,22 @@ mod tests {
         let a = [1.0, 2.0, 3.0];
         let b = [1.0, 2.0, 4.0];
         let expected = 20.0 * (4.0 / (1.0_f64 / 3.0).sqrt()).log10();
-        assert!((psnr(&a, &b) - expected).abs() < 1e-12, "psnr = {}", psnr(&a, &b));
+        assert!(
+            (psnr(&a, &b) - expected).abs() < 1e-12,
+            "psnr = {}",
+            psnr(&a, &b)
+        );
         // Exact match ⇒ infinite fidelity.
         assert!(psnr(&a, &a).is_infinite());
         // A 40 dB target corresponds to RMSE = MAX_B / 100: peak 1.0, err 0.01.
         let r = vec![1.0; 100];
         let mut s = r.clone();
         s[0] = 1.0 - 0.01 * (100.0_f64).sqrt(); // single-sample error giving RMSE = 0.01
-        assert!((psnr(&s, &r) - 40.0).abs() < 1e-9, "psnr = {}", psnr(&s, &r));
+        assert!(
+            (psnr(&s, &r) - 40.0).abs() < 1e-9,
+            "psnr = {}",
+            psnr(&s, &r)
+        );
         // MAX_B uses peak magnitude, so a bipolar reference works: peak |−4| = 4.
         let bi_ref = [1.0, -4.0, 2.0];
         let bi_sim = [1.0, -4.0, 2.0];
@@ -224,6 +296,68 @@ mod tests {
                 phi.cos()
             );
         }
+    }
+
+    #[test]
+    fn phase_shift_correlation_curve_matches_theorem_samples() {
+        use std::f64::consts::{FRAC_1_SQRT_2, FRAC_PI_2, FRAC_PI_4};
+        let phase = [0.0, FRAC_PI_4, FRAC_PI_2];
+        let observed = phase_shift_correlation_curve(&phase).unwrap();
+        let expected = [1.0, FRAC_1_SQRT_2, 0.0];
+
+        for (actual, expected) in observed.iter().zip(expected) {
+            assert!(
+                (actual - expected).abs() <= 2.0 * f64::EPSILON,
+                "actual={actual}, expected={expected}"
+            );
+        }
+    }
+
+    #[test]
+    fn phase_shift_correlation_curve_rejects_nonfinite_phase() {
+        let err = phase_shift_correlation_curve(&[0.0, f64::NAN]).unwrap_err();
+        assert!(err.contains("phase_rad[1] must be finite"));
+    }
+
+    #[test]
+    fn phase_error_degrees_for_correlation_matches_inverse_theorem() {
+        let observed = phase_error_degrees_for_correlation(0.99).unwrap();
+        let expected = 0.99_f64.acos().to_degrees();
+
+        assert!((observed - expected).abs() <= f64::EPSILON);
+        assert_eq!(phase_error_degrees_for_correlation(1.0).unwrap(), 0.0);
+        assert_eq!(phase_error_degrees_for_correlation(-1.0).unwrap(), 180.0);
+    }
+
+    #[test]
+    fn phase_error_degrees_for_correlation_rejects_invalid_correlation() {
+        let high = phase_error_degrees_for_correlation(1.01).unwrap_err();
+        assert!(high.contains("correlation must be in [-1, 1]"));
+
+        let nonfinite = phase_error_degrees_for_correlation(f64::INFINITY).unwrap_err();
+        assert!(nonfinite.contains("correlation must be finite"));
+    }
+
+    #[test]
+    fn validation_psnr_from_relative_rmse_matches_definition() {
+        let observed = validation_psnr_from_relative_rmse(&[1.0, 0.1, 0.01, 0.001]).unwrap();
+        let expected = [0.0, 20.0, 40.0, 60.0];
+
+        for (actual, expected) in observed.iter().zip(expected) {
+            assert!(
+                (actual - expected).abs() <= 8.0 * f64::EPSILON,
+                "actual={actual}, expected={expected}"
+            );
+        }
+    }
+
+    #[test]
+    fn validation_psnr_from_relative_rmse_rejects_invalid_error() {
+        let zero = validation_psnr_from_relative_rmse(&[0.0]).unwrap_err();
+        assert!(zero.contains("relative_rmse[0] must be finite and positive"));
+
+        let nonfinite = validation_psnr_from_relative_rmse(&[f64::NAN]).unwrap_err();
+        assert!(nonfinite.contains("relative_rmse[0] must be finite and positive"));
     }
 
     #[test]

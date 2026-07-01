@@ -60,10 +60,11 @@ pub use transcranial_focused_bowl3d::{
     plan_transcranial_focused_bowl_placement, TranscranialFocusedBowlPlacement3D,
 };
 pub use transcranial_fus::{
-    evaluate_pressure_field, run_skull_adaptive_transcranial_benchmark,
-    run_transcranial_fus_planning, transcranial_pennes_thermal_dose, PressureFieldMetrics,
-    SkullAdaptiveBenchmarkConfig, SkullAdaptiveBenchmarkResult, SkullAwareTransducerPlacement,
-    TranscranialFusPlan, TranscranialFusPlanConfig, TranscranialThermalResult,
+    bbb_opening_dose, evaluate_pressure_field, gbm_subspot_covered_fraction, gbm_subspot_raster,
+    run_skull_adaptive_transcranial_benchmark, run_transcranial_fus_planning,
+    transcranial_pennes_thermal_dose, PressureFieldMetrics, SkullAdaptiveBenchmarkConfig,
+    SkullAdaptiveBenchmarkResult, SkullAwareTransducerPlacement, TranscranialFusPlan,
+    TranscranialFusPlanConfig, TranscranialThermalResult,
 };
 pub use transmit_schedule::{
     select_transmit_schedule, TransmitScheduleConfig, TransmitScheduleResult,

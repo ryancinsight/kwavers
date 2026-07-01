@@ -5,7 +5,10 @@
 //! and return complex128 arrays; the inverse transforms accept complex128 and
 //! return f64.
 
-use kwavers_math::fft::{fft_1d_array, fft_3d_array, ifft_1d_array, ifft_3d_array};
+use kwavers_math::{
+    fft::{fft_1d_array, fft_3d_array, ifft_1d_array, ifft_3d_array},
+    signal::window::hann,
+};
 use ndarray::{Array1, Array3};
 use num_complex::Complex64;
 use numpy::{IntoPyArray, PyArray1, PyArray3, PyReadonlyArray1, PyReadonlyArray3};
@@ -106,11 +109,65 @@ pub fn ifft3<'py>(
     Ok(field.into_pyarray(py).into())
 }
 
+/// Demeaned Hann-windowed one-sided power spectrum of a 1-D real profile.
+///
+/// The returned frequency axis matches NumPy's `rfftfreq(n, d=sample_spacing)`.
+/// Power is `|FFT((x - mean(x)) * hann)|^2` using the same unnormalised forward
+/// DFT as [`fft1`], so it is numerically equivalent to `np.abs(np.fft.rfft(...))**2`
+/// for the one-sided bins.
+#[pyfunction]
+pub fn demeaned_hann_power_spectrum_1d<'py>(
+    py: Python<'py>,
+    signal: PyReadonlyArray1<'py, f64>,
+    sample_spacing: f64,
+) -> PyResult<(Py<PyArray1<f64>>, Py<PyArray1<f64>>)> {
+    let input = signal.as_array();
+    let n = input.len();
+    if n < 2 {
+        return Err(PyValueError::new_err(
+            "demeaned_hann_power_spectrum_1d: signal length must be at least two",
+        ));
+    }
+    if !(sample_spacing.is_finite() && sample_spacing > 0.0) {
+        return Err(PyValueError::new_err(
+            "demeaned_hann_power_spectrum_1d: sample_spacing must be positive and finite",
+        ));
+    }
+    if !input.iter().all(|sample| sample.is_finite()) {
+        return Err(PyValueError::new_err(
+            "demeaned_hann_power_spectrum_1d: signal samples must be finite",
+        ));
+    }
+
+    let mean = input.iter().sum::<f64>() / n as f64;
+    let denominator = n as f64 - 1.0;
+    let mut windowed = Vec::with_capacity(n);
+    for (idx, &sample) in input.iter().enumerate() {
+        windowed.push((sample - mean) * hann(idx as f64 / denominator));
+    }
+
+    let spectrum = py.detach(|| fft_1d_array(&Array1::from_vec(windowed)));
+    let one_sided = n / 2 + 1;
+    let scale = 1.0 / (n as f64 * sample_spacing);
+    let mut frequency = Vec::with_capacity(one_sided);
+    let mut power = Vec::with_capacity(one_sided);
+    for idx in 0..one_sided {
+        frequency.push(idx as f64 * scale);
+        power.push(spectrum[idx].norm_sqr());
+    }
+
+    Ok((
+        Array1::from_vec(frequency).into_pyarray(py).into(),
+        Array1::from_vec(power).into_pyarray(py).into(),
+    ))
+}
+
 /// Register FFT binding functions into the Python module.
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(fft1, m)?)?;
     m.add_function(wrap_pyfunction!(ifft1, m)?)?;
     m.add_function(wrap_pyfunction!(fft3, m)?)?;
     m.add_function(wrap_pyfunction!(ifft3, m)?)?;
+    m.add_function(wrap_pyfunction!(demeaned_hann_power_spectrum_1d, m)?)?;
     Ok(())
 }

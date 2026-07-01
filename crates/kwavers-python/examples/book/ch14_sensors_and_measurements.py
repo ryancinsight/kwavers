@@ -8,7 +8,7 @@ Output directory: docs/book/figures/ch14/
 
 Figures produced
 ----------------
-fig01  Hydrophone directivity: sinc pattern H(θ) = sinc(kd sinθ / π) vs angle
+fig01  Hydrophone directivity: circular-piston pattern H(θ) vs angle
 fig02  Spatial Nyquist: grating lobe position vs d/λ ratio
 fig03  Pressure-velocity relationship: |p|, |u| on-axis for a plane wave
 fig04  Time-reversal focusing: schematic demonstration (analytical Green's fn)
@@ -31,12 +31,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-try:
-    import pykwavers as kw
-    _HAS_PYKWAVERS = True
-except ImportError:
-    kw = None
-    _HAS_PYKWAVERS = False
+import pykwavers as kw
 
 REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
 OUT_DIR = os.path.join(REPO_ROOT, "docs", "book", "figures", "ch14")
@@ -61,24 +56,17 @@ C0 = 1500.0
 # ── Figure 01: Hydrophone directivity ────────────────────────────────────────
 def fig01_hydrophone_directivity() -> None:
     """
-    Rectangular active area a×b: H(θ) = sinc(kd sinθ / π)  (azimuth cut, square element).
-    For circular piston: H(θ) = 2 J₁(ka sinθ) / (ka sinθ) — available via
-    kw.circular_piston_directivity but is a different aperture geometry.
-    No rectangular-aperture sinc binding exists; sinc is closed-form and
-    computed directly from numpy (not physics, pure geometry).
+    Circular hydrophone directivity:
+    H(θ) = 2 J₁(ka sinθ) / (ka sinθ), computed via kw.circular_piston_directivity.
     """
     theta = np.linspace(-np.pi / 2 + 1e-6, np.pi / 2 - 1e-6, 3600)
-    f = 5.0e6   # 5 MHz
-    k = 2 * np.pi * f / C0
 
     fig, axes = plt.subplots(1, 2, figsize=(11, 4.5))
-    for d_um, col in [(100, "#1f77b4"), (200, "#ff7f0e"), (500, "#2ca02c"), (1000, "#d62728")]:
-        d = d_um * 1e-6
-        ka_sin = k * d * np.sin(theta)
-        H = np.sinc(ka_sin / np.pi)   # numpy sinc: sinc(x) = sin(πx)/(πx)
+    for ka, col in [(0.5, "#1f77b4"), (1.0, "#ff7f0e"), (2.0, "#2ca02c"), (5.0, "#d62728")]:
+        H = np.asarray(kw.circular_piston_directivity(theta, ka))
         H_dB = 20 * np.log10(np.abs(H) + 1e-12)
-        axes[0].plot(np.degrees(theta), H**2, color=col, label=f"$d={d_um}$ µm")
-        axes[1].plot(np.degrees(theta), np.clip(H_dB, -60, 0), color=col, label=f"$d={d_um}$ µm")
+        axes[0].plot(np.degrees(theta), np.abs(H)**2, color=col, label=f"$ka={ka:g}$")
+        axes[1].plot(np.degrees(theta), np.clip(H_dB, -60, 0), color=col, label=f"$ka={ka:g}$")
 
     for ax in axes:
         ax.set_xlabel(r"Angle $\theta$ (°)")
@@ -89,7 +77,10 @@ def fig01_hydrophone_directivity() -> None:
     axes[1].set_ylabel(r"$|H(\theta)|$ (dB)")
     axes[1].set_title("Hydrophone directivity (dB)")
     axes[1].set_ylim(-60, 5)
-    fig.suptitle(r"Hydrophone directivity: $H(\theta)=\mathrm{sinc}(kd\sin\theta/\pi)$, $f=5$ MHz", y=1.01)
+    fig.suptitle(
+        r"Hydrophone directivity: $H(\theta)=2J_1(ka\sin\theta)/(ka\sin\theta)$",
+        y=1.01,
+    )
     fig.tight_layout()
     savefig("fig01_hydrophone_directivity")
     plt.close(fig)
@@ -102,8 +93,6 @@ def fig02_grating_lobes() -> None:
     Array factor computed via kw.linear_array_factor(theta, k, d, N, steer_rad).
     Condition to avoid grating lobes: d ≤ λ/2.
     """
-    if not _HAS_PYKWAVERS:
-        raise ImportError("pykwavers is required for fig02 (grating lobes, linear_array_factor)")
     theta_s = 0.0   # steering angle
     theta = np.linspace(-np.pi / 2 + 1e-4, np.pi / 2 - 1e-4, 3600)
     f = 3.0e6
@@ -117,8 +106,8 @@ def fig02_grating_lobes() -> None:
                                 (1.5, "#2ca02c", r"$d=1.5\lambda$ (grating lobe at 42°)")]:
         d = d_lambda * lam
         AF = np.asarray(kw.linear_array_factor(theta, k, d, N, theta_s))
-        AF_dB = 20 * np.log10(AF + 1e-12)
-        axes[0].plot(np.degrees(theta), AF**2, color=col, label=lbl)
+        AF_dB = 20 * np.log10(np.abs(AF) + 1e-12)
+        axes[0].plot(np.degrees(theta), np.abs(AF)**2, color=col, label=lbl)
         axes[1].plot(np.degrees(theta), np.clip(AF_dB, -60, 0), color=col, label=lbl)
 
     for ax in axes:
@@ -146,19 +135,24 @@ def fig03_pressure_velocity() -> None:
     Impedance bar: Z = ρc from kw.tissue_properties for Water and Liver;
     Air (Duck 1990) and Cortical bone (Duck 1990) and Steel kept as reference.
     """
-    if not _HAS_PYKWAVERS:
-        raise ImportError("pykwavers is required for fig03 (tissue impedance via tissue_properties)")
     rho = 998.0
     c = C0
     Z = rho * c
     P0 = 1e5  # Pa
     f = 1e6
     k = 2 * np.pi * f / c
-    t = 0.0
 
     x = np.linspace(0, 3e-3, 500)
-    p = P0 * np.sin(k * x - 2 * np.pi * f * t)
-    u = P0 / Z * np.sin(k * x - 2 * np.pi * f * t)
+    p, u = kw.plane_wave_pressure_velocity_1d(
+        P0,
+        k,
+        np.ascontiguousarray(x),
+        np.pi / 2.0,
+        rho,
+        c,
+    )
+    p = np.asarray(p)
+    u = np.asarray(u)
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 4.5))
 
@@ -202,8 +196,6 @@ def fig04_time_reversal() -> None:
     Computed via kw.linear_array_factor(theta, k, d, N, steer_rad=0.0).
     Coherent gain at broadside = 20 log₁₀(N) dB.
     """
-    if not _HAS_PYKWAVERS:
-        raise ImportError("pykwavers is required for fig04 (TR focus, linear_array_factor)")
     N_arr = [4, 16, 64]
     f = 1e6
     lam = C0 / f
@@ -215,7 +207,7 @@ def fig04_time_reversal() -> None:
     colors = ["#1f77b4", "#ff7f0e", "#2ca02c"]
     for N, col in zip(N_arr, colors):
         AF = np.asarray(kw.linear_array_factor(theta, k, d, N, 0.0))
-        AF_dB = 20 * np.log10(AF + 1e-12)
+        AF_dB = 20 * np.log10(np.abs(AF) + 1e-12)
         ax.plot(np.degrees(theta), np.clip(AF_dB, -60, 0), color=col, label=f"$N={N}$")
 
     ax.set_xlabel(r"Angle $\theta$ (°)")
@@ -235,10 +227,8 @@ def fig05_signal_comparison() -> None:
     """
     PA sphere N-wave (reference) vs noisy sensor recording.
     Ideal signal via kw.pa_sphere_pressure_signal (Xu & Wang 2006).
-    Demonstrates SNR improvement by signal averaging (√N law).
+    Noise via kw.add_noise with explicit seeds; demonstrates √N averaging.
     """
-    if not _HAS_PYKWAVERS:
-        raise ImportError("pykwavers is required for fig05 (PA sphere signal)")
     R = 0.001    # 1 mm sphere
     r_d = 0.04   # 40 mm detector
     c = C0
@@ -254,11 +244,10 @@ def fig05_signal_comparison() -> None:
     p_scale = np.abs(p_ideal).max() + 1e-30
     p_ideal = p_ideal / p_scale
 
-    rng = np.random.default_rng(0)
-    noise = rng.standard_normal(len(t)) * 0.3
+    single_measurement = np.asarray(kw.add_noise(p_ideal, 3.0, seed=0))
 
     fig, axes = plt.subplots(1, 2, figsize=(11, 4.5))
-    axes[0].plot(t * 1e6, p_ideal + noise, color="#d62728", linewidth=0.8, label="Single measurement")
+    axes[0].plot(t * 1e6, single_measurement, color="#d62728", linewidth=0.8, label="Single measurement")
     axes[0].plot(t * 1e6, p_ideal, color="#1f77b4", linewidth=2, label="Analytical signal")
     axes[0].set_xlabel(r"Time (µs)")
     axes[0].set_ylabel("Normalised pressure")
@@ -266,11 +255,9 @@ def fig05_signal_comparison() -> None:
     axes[0].legend()
     axes[0].grid(True, alpha=0.3)
 
-    # Average of 64 realisations
-    averaged = p_ideal.copy()
-    for _ in range(64):
-        averaged = averaged + rng.standard_normal(len(t)) * 0.3
-    averaged /= 65.0
+    # Average of 64 seeded Rust-noise realisations.
+    measurements = [np.asarray(kw.add_noise(p_ideal, 3.0, seed=seed)) for seed in range(1, 65)]
+    averaged = np.mean(np.vstack(measurements), axis=0)
 
     axes[1].plot(t * 1e6, averaged, color="#d62728", linewidth=0.8, label="64-shot average")
     axes[1].plot(t * 1e6, p_ideal, color="#1f77b4", linewidth=2, label="Analytical signal")

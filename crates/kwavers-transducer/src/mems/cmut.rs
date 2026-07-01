@@ -343,8 +343,14 @@ mod tests {
         // a closer bias gets closer still.
         let u_999 = c.bias_pulldown_fraction(0.999 * vc).unwrap();
         let u_9999 = c.bias_pulldown_fraction(0.9999 * vc).unwrap();
-        assert!(u_999 < 1.0 / 3.0 && (1.0 / 3.0 - u_999) < 0.03, "near-collapse u={u_999}");
-        assert!(u_9999 > u_999 && u_9999 < 1.0 / 3.0, "tighter bias → closer to pull-in");
+        assert!(
+            u_999 < 1.0 / 3.0 && (1.0 / 3.0 - u_999) < 0.03,
+            "near-collapse u={u_999}"
+        );
+        assert!(
+            u_9999 > u_999 && u_9999 < 1.0 / 3.0,
+            "tighter bias → closer to pull-in"
+        );
 
         // Differential check: the equilibrium x satisfies kx = ε₀AV²/(2(g₀−x)²).
         for frac in [0.3, 0.6, 0.85] {
@@ -381,13 +387,22 @@ mod tests {
         let f0 = c.immersion_resonance(rho);
         let f_low = c.bias_softened_resonance(0.5 * vc, rho).unwrap();
         let f_high = c.bias_softened_resonance(0.9 * vc, rho).unwrap();
-        assert!(f_high < f_low && f_low < f0, "spring softening: {f_high} < {f_low} < {f0}");
+        assert!(
+            f_high < f_low && f_low < f0,
+            "spring softening: {f_high} < {f_low} < {f0}"
+        );
         // At 0.999 V_c the resonance is already strongly reduced (≈0.28 f0)…
         let f_999 = c.bias_softened_resonance(0.999 * vc, rho).unwrap();
-        assert!(f_999 < 0.35 * f0, "resonance strongly softened near pull-in: {f_999}");
+        assert!(
+            f_999 < 0.35 * f0,
+            "resonance strongly softened near pull-in: {f_999}"
+        );
         // …and keeps falling as the bias closes on V_c.
         let f_9999 = c.bias_softened_resonance(0.9999 * vc, rho).unwrap();
-        assert!(f_9999 < f_999, "resonance continues to collapse: {f_9999} < {f_999}");
+        assert!(
+            f_9999 < f_999,
+            "resonance continues to collapse: {f_9999} < {f_999}"
+        );
     }
 
     #[test]

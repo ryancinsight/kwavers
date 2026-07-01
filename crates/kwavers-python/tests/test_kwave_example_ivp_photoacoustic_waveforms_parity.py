@@ -14,6 +14,7 @@ import numpy as np
 import pytest
 
 from conftest import requires_kwave
+from parity_test_utils import assert_decodable_nonblank_png, report_metric_value
 
 
 skip_kwave = os.getenv("KWAVERS_SKIP_KWAVE", "0") == "1"
@@ -32,6 +33,41 @@ def _load_example_module():
     assert spec.loader is not None
     spec.loader.exec_module(module)
     return module
+
+
+def _assert_metrics_contract(metrics, thresholds):
+    assert metrics["pearson_r"] >= thresholds["pearson_r"]
+    assert thresholds["rms_ratio_min"] <= metrics["rms_ratio"]
+    assert metrics["rms_ratio"] <= thresholds["rms_ratio_max"]
+    assert metrics["psnr_db"] >= thresholds["psnr_db"]
+    assert thresholds["peak_ratio_min"] <= metrics["peak_ratio"]
+    assert metrics["peak_ratio"] <= thresholds["peak_ratio_max"]
+
+
+def _assert_report_contract(module, text: str):
+    thresholds = module.PARITY_THRESHOLDS
+
+    assert "parity_status: PASS" in text
+    assert report_metric_value(text, "pearson_r") >= thresholds["pearson_r"]
+    rms_ratio = report_metric_value(text, "rms_ratio")
+    assert thresholds["rms_ratio_min"] <= rms_ratio
+    assert rms_ratio <= thresholds["rms_ratio_max"]
+    assert report_metric_value(text, "psnr_db") >= thresholds["psnr_db"]
+    peak_ratio = report_metric_value(text, "peak_ratio")
+    assert thresholds["peak_ratio_min"] <= peak_ratio
+    assert peak_ratio <= thresholds["peak_ratio_max"]
+
+
+@requires_kwave
+@pytest.mark.skipif(skip_kwave, reason="KWAVERS_SKIP_KWAVE=1")
+def test_current_ivp_photoacoustic_waveforms_artifacts_match_thresholds():
+    module = _load_example_module()
+
+    assert module.METRICS_PATH.exists()
+    assert module.FIGURE_PATH.exists()
+    text = module.METRICS_PATH.read_text(encoding="utf-8")
+    _assert_report_contract(module, text)
+    assert_decodable_nonblank_png(module.FIGURE_PATH)
 
 
 @requires_kwave
@@ -55,12 +91,8 @@ class TestKWaveExampleParityIvpPhotoacousticWaveforms:
         assert kw_trace.shape == (module.NT,)
         assert np.max(np.abs(kw_trace)) > 0.0
         assert np.max(np.abs(pkw_trace)) > 0.0
-        assert metrics["pearson_r"] > 0.98
-        assert abs(metrics["rms_ratio"] - 1.0) < 1e-6
-        assert metrics["psnr_db"] > 24.0
-        assert abs(metrics["peak_ratio"] - 1.0) < 1e-6
-        assert "parity_status: PASS" in report_text
-        assert "peak_ratio        = 1.000000" in report_text
+        _assert_metrics_contract(metrics, module.PARITY_THRESHOLDS)
+        _assert_report_contract(module, report_text)
 
 
 if __name__ == "__main__":

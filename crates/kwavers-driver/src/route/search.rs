@@ -51,14 +51,14 @@
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashSet};
 
-use crate::board::{LayerId, NetClassKind};
-use crate::cost::RoutingCost;
-use crate::route::grid::{Grid, NodeId, Step};
 use super::search_guards::{
     diagonal_crosses_foreign_edge, diagonal_passes_foreign_track_corner,
     diagonal_passes_foreign_via_corner, via_clips_foreign_diagonal_track,
     DIAGONAL_VIA_CLEARANCE_BUDGET_NM,
 };
+use crate::board::{LayerId, NetClassKind};
+use crate::cost::RoutingCost;
+use crate::route::grid::{Grid, NodeId, Step};
 
 /// Flat penalty added to an edge whose outgoing direction forms an **acute angle** (< 90°) with
 /// the incoming direction at the expansion node.

@@ -68,7 +68,11 @@ impl TileDispatch {
                 lane_end: (t + 1) * per_tile,
             })
             .collect();
-        Ok(Self { lanes, tiles, bindings })
+        Ok(Self {
+            lanes,
+            tiles,
+            bindings,
+        })
     }
 
     /// Borrow the full binding table (one entry per tile).

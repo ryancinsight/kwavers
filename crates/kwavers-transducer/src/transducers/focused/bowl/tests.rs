@@ -99,8 +99,10 @@ fn bowl_explicit_element_count_controls_layout_count() {
 
 #[test]
 fn explicit_element_count_owns_discretization_option() {
-    let mut config = BowlConfig::default();
-    config.element_size = Some(0.0);
+    let config = BowlConfig {
+        element_size: Some(0.0),
+        ..Default::default()
+    };
 
     let bowl = BowlTransducer::with_element_count(config, 32).unwrap();
 
@@ -409,32 +411,44 @@ fn bowl_axis_projection_bounds_reject_invalid_domain() {
 
 #[test]
 fn bowl_rejects_nonfinite_or_degenerate_domains() {
-    let mut zero_radius = BowlConfig::default();
-    zero_radius.radius_of_curvature = 0.0;
+    let zero_radius = BowlConfig {
+        radius_of_curvature: 0.0,
+        ..Default::default()
+    };
     assert_validation_error(zero_radius);
 
-    let mut zero_diameter = BowlConfig::default();
-    zero_diameter.diameter = 0.0;
+    let zero_diameter = BowlConfig {
+        diameter: 0.0,
+        ..Default::default()
+    };
     assert_validation_error(zero_diameter);
 
     let mut excessive_diameter = BowlConfig::default();
     excessive_diameter.diameter = 2.0 * excessive_diameter.radius_of_curvature + 1.0e-6;
     assert_validation_error(excessive_diameter);
 
-    let mut zero_frequency = BowlConfig::default();
-    zero_frequency.frequency = 0.0;
+    let zero_frequency = BowlConfig {
+        frequency: 0.0,
+        ..Default::default()
+    };
     assert_validation_error(zero_frequency);
 
-    let mut zero_element = BowlConfig::default();
-    zero_element.element_size = Some(0.0);
+    let zero_element = BowlConfig {
+        element_size: Some(0.0),
+        ..Default::default()
+    };
     assert_validation_error(zero_element);
 
-    let mut nonfinite_center = BowlConfig::default();
-    nonfinite_center.center = [f64::NAN, 0.0, 0.0];
+    let nonfinite_center = BowlConfig {
+        center: [f64::NAN, 0.0, 0.0],
+        ..Default::default()
+    };
     assert_validation_error(nonfinite_center);
 
-    let mut nonfinite_focus = BowlConfig::default();
-    nonfinite_focus.focus = [0.0, f64::INFINITY, 0.064];
+    let nonfinite_focus = BowlConfig {
+        focus: [0.0, f64::INFINITY, 0.064],
+        ..Default::default()
+    };
     assert_validation_error(nonfinite_focus);
 
     let mut degenerate_axis = BowlConfig::default();

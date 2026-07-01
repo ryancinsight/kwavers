@@ -11,8 +11,8 @@ Figures produced
 fig01  Pearson correlation sensitivity: phase error vs r for sinusoidal waveforms
 fig02  PSNR vs amplitude error relationship
 fig03  PSTD convergence: spatial error vs kΔx (O(kΔx)² vs spectral)
-fig04  Side-by-side parity comparison: kwavers vs k-Wave focused bowl (analytical)
-fig05  Validation hierarchy: scatter plot of achieved metrics for closed gaps
+fig04  Cached focused-bowl parity comparison: analytical, k-Wave, and pykwavers
+fig05  Validation hierarchy: scatter plot of achieved metrics with PSNR
 
 References
 ----------
@@ -27,19 +27,15 @@ from __future__ import annotations
 import os
 import numpy as np
 import matplotlib
+import pykwavers as kw
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-try:
-    import pykwavers as kw
-    _PYKWAVERS = True
-except ImportError:
-    kw = None
-    _PYKWAVERS = False
-
 REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
 OUT_DIR = os.path.join(REPO_ROOT, "docs", "book", "figures", "ch20")
+EXAMPLE_OUTPUT_DIR = os.path.join(REPO_ROOT, "crates", "kwavers-python", "examples", "output")
+VALIDATION_CHAPTER = os.path.join(REPO_ROOT, "docs", "book", "validation_and_benchmarking.md")
 os.makedirs(OUT_DIR, exist_ok=True)
 
 
@@ -47,6 +43,39 @@ def savefig(name: str) -> None:
     for ext in ("pdf", "png"):
         plt.savefig(os.path.join(OUT_DIR, f"{name}.{ext}"), dpi=150, bbox_inches="tight")
     print(f"  saved: docs/book/figures/ch20/{name}.{{pdf,png}}")
+
+
+def closed_validation_gaps_with_psnr() -> list[tuple[str, float, float]]:
+    """
+    Read the Chapter 20 closed-validation table for fig05.
+
+    Rows without PSNR, such as correlation-only IVP summaries, are intentionally
+    excluded because fig05 plots Pearson r against PSNR.
+    """
+    rows: list[tuple[str, float, float]] = []
+    in_section = False
+
+    with open(VALIDATION_CHAPTER, encoding="utf-8") as chapter:
+        for line in chapter:
+            stripped = line.strip()
+            if stripped == "### 19.9.1 Closed Validation Gaps":
+                in_section = True
+                continue
+            if in_section and stripped.startswith("### "):
+                break
+            if not in_section or not stripped.startswith("|"):
+                continue
+
+            cells = [cell.strip() for cell in stripped.strip("|").split("|")]
+            if len(cells) != 5 or cells[0] == "Scenario" or set(cells[0]) <= {"-"}:
+                continue
+            if cells[2] == "N/A":
+                continue
+            rows.append((cells[0], float(cells[1]), float(cells[2])))
+
+    if not rows:
+        raise ValueError("validation chapter has no closed gaps with PSNR")
+    return rows
 
 
 plt.rcParams.update({
@@ -61,19 +90,19 @@ def fig01_pearson_phase_sensitivity() -> None:
     """
     For sinusoidal waveform: A(t) = sin(2πft), B(t) = sin(2πft + φ).
     r(φ) = cos(φ)  — proof: Pearson for two sinusoids at same frequency.
-    Demonstrate sensitivity: r=0.99 corresponds to φ ≈ 8.1°.
+    Demonstrate strict field-tier sensitivity: r=0.99 corresponds to φ ≈ 8.1°.
     """
     phi_deg = np.linspace(0, 90, 300)
     phi_rad = np.radians(phi_deg)
-    r = np.cos(phi_rad)
+    r = np.asarray(kw.phase_shift_correlation_curve(phi_rad))
 
     fig, ax = plt.subplots(figsize=(7, 4.5))
     ax.plot(phi_deg, r, color="#1f77b4", linewidth=2)
-    ax.axhline(0.99, color="#ff7f0e", linestyle="--", linewidth=1.5, label="$r=0.99$ (acceptance)")
+    ax.axhline(0.99, color="#ff7f0e", linestyle="--", linewidth=1.5, label="$r=0.99$ (strict field tier)")
     ax.axhline(0.95, color="#d62728", linestyle=":", linewidth=1.5, label="$r=0.95$")
 
-    phi_99 = np.degrees(np.arccos(0.99))
-    phi_95 = np.degrees(np.arccos(0.95))
+    phi_99 = kw.phase_error_degrees_for_correlation(0.99)
+    phi_95 = kw.phase_error_degrees_for_correlation(0.95)
     ax.axvline(phi_99, color="#ff7f0e", linewidth=0.8)
     ax.axvline(phi_95, color="#d62728", linewidth=0.8)
     ax.text(phi_99 + 1, 0.5, f"$\\phi={phi_99:.1f}°$", fontsize=9, color="#ff7f0e")
@@ -99,12 +128,12 @@ def fig02_psnr_amplitude() -> None:
     Show PSNR vs relative RMSE error.
     """
     eps = np.logspace(-4, 0, 300)  # relative RMSE 0.01% to 100%
-    PSNR_dB = -20 * np.log10(eps)
+    PSNR_dB = np.asarray(kw.validation_psnr_from_relative_rmse(eps))
 
     fig, ax = plt.subplots(figsize=(7, 4.5))
     ax.semilogx(eps * 100, PSNR_dB, color="#1f77b4", linewidth=2)
     ax.axhline(40, color="#ff7f0e", linestyle="--", linewidth=1.5,
-               label="PSNR = 40 dB (acceptance, 1% error)")
+               label="PSNR = 40 dB (strict field tier, 1% RMSE)")
     ax.axhline(60, color="#2ca02c", linestyle=":", linewidth=1.5,
                label="PSNR = 60 dB (0.1% error)")
 
@@ -159,62 +188,25 @@ def fig03_pstd_convergence() -> None:
     plt.close(fig)
 
 
-# ── Figure 04: Side-by-side parity: focused bowl on-axis ─────────────────────
+# ── Figure 04: Cached focused-bowl parity artifact ───────────────────────────
 def fig04_side_by_side_parity() -> None:
     """
-    Analytical (O'Neil 1949) vs kwavers CPU-PSTD (simulated analytically here).
-    Demonstrate the side-by-side comparison format used in compare_*.py scripts.
+    Embed the real at_focused_bowl_AS comparison artifact.
+
+    The comparison driver owns the numerical work and report thresholds; this
+    book helper only repackages the generated PNG for the chapter figure set.
     """
-    if not _PYKWAVERS:
-        raise ImportError("pykwavers is required for fig04 (parity metrics)")
-    F = 0.06     # 60 mm focal length
-    a = 0.015    # 15 mm aperture
-    f = 1.0e6    # 1 MHz
-    c = 1500.0
+    source_path = os.path.join(EXAMPLE_OUTPUT_DIR, "at_focused_bowl_AS_compare.png")
+    if not os.path.exists(source_path):
+        raise FileNotFoundError(
+            f"missing cached focused-bowl parity artifact: {source_path}"
+        )
 
-    # Analytical O'Neil (1949) circular-piston on-axis reference — the independent
-    # validation oracle — from the Rust kernel (Ch6 §6.4).
-    z = np.ascontiguousarray(np.linspace(0.001, 0.12, 500))
-    p_exact = np.asarray(kw.circular_piston_onaxis(z, a, f, 1.0, c))
-    p_focus = p_exact[np.argmin(np.abs(z - F))]
-    p_exact = np.ascontiguousarray(p_exact / p_focus)
-
-    # Stand-in kwavers PSTD output: oracle + small numerical noise + phase drift.
-    rng = np.random.default_rng(42)
-    phase_drift = 0.002 * np.sin(np.linspace(0, 3 * np.pi, 500))
-    p_kwavers = np.ascontiguousarray(
-        p_exact * (1 + 0.005 * rng.standard_normal(500) + phase_drift))
-
-    # Parity metrics from the Rust core (§19.2 Pearson, §19.3 PSNR/RMSE).
-    pearson = kw.pearson(p_kwavers, p_exact)
-    rmse = kw.rmse(p_kwavers, p_exact)
-    psnr = kw.psnr(p_kwavers, p_exact)
-
-    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
-
-    axes[0].plot(z * 1e3, p_exact, "k-", linewidth=2, label="Analytical (O'Neil 1949)")
-    axes[0].plot(z * 1e3, p_kwavers, "--", color="#d62728", linewidth=1.5,
-                 label="kwavers PSTD")
-    axes[0].axvline(F * 1e3, color="gray", linewidth=0.5, linestyle=":")
-    axes[0].set_xlabel("Axial depth $z$ (mm)")
-    axes[0].set_ylabel("Normalised pressure")
-    axes[0].set_title(f"Focused bowl on-axis pressure\n"
-                      f"$r={pearson:.4f}$, PSNR={psnr:.1f} dB")
-    axes[0].legend()
-    axes[0].grid(True, alpha=0.3)
-
-    axes[1].plot(z * 1e3, (p_kwavers - p_exact) * 100, color="#d62728")
-    axes[1].axhline(0, color="k", linewidth=0.5)
-    axes[1].axhline(1, color="orange", linestyle="--", linewidth=1, label="±1%")
-    axes[1].axhline(-1, color="orange", linestyle="--", linewidth=1)
-    axes[1].set_xlabel("Axial depth $z$ (mm)")
-    axes[1].set_ylabel("Error (%)")
-    axes[1].set_title("Residual error (kwavers − analytical)")
-    axes[1].legend()
-    axes[1].grid(True, alpha=0.3)
-
-    fig.suptitle("Parity validation: kwavers vs analytical (side-by-side format)", y=1.01)
-    fig.tight_layout()
+    image = plt.imread(source_path)
+    fig, ax = plt.subplots(figsize=(12, 6))
+    ax.imshow(image)
+    ax.axis("off")
+    fig.tight_layout(pad=0)
     savefig("fig04_side_by_side_parity")
     plt.close(fig)
 
@@ -222,40 +214,31 @@ def fig04_side_by_side_parity() -> None:
 # ── Figure 05: Validation hierarchy scatter ───────────────────────────────────
 def fig05_validation_scatter() -> None:
     """
-    Scatter plot of achieved parity metrics for all closed validation gaps.
+    Scatter plot of achieved parity metrics for closed validation gaps with PSNR.
     x-axis: Pearson correlation r, y-axis: PSNR (dB).
-    Acceptance region: r ≥ 0.99, PSNR ≥ 40 dB.
+    Strict field-tier reference lines: r ≥ 0.99, PSNR ≥ 40 dB.
     """
-    # Closed gaps from project memory (representative values)
-    results = [
-        ("PSTD plane wave",        0.9999, 119.0),
-        ("Focused bowl (CPU)",     0.9999,  45.8),
-        ("Phased array (CPU)",     0.9996,  42.0),
-        ("Phased array (GPU)",     0.9996,  41.5),
-        ("Annular array",          1.0000, 119.0),
-        ("US B-mode scan lines",   0.9770,  38.0),
-        ("PSTD absorption",        0.9999,  61.0),
-        ("Photoacoustic sphere",   0.9980,  44.0),
-    ]
+    results = closed_validation_gaps_with_psnr()
     names = [r[0] for r in results]
     r_vals = np.array([r[1] for r in results])
     psnr_vals = np.array([r[2] for r in results])
 
-    fig, ax = plt.subplots(figsize=(8, 6))
+    fig, ax = plt.subplots(figsize=(10, 6))
     colors = plt.cm.tab10(np.linspace(0, 0.8, len(results)))
     for (name, r, psnr), col in zip(results, colors):
         ax.scatter(r, psnr, s=120, color=col, label=name, zorder=5)
 
-    # Acceptance region
-    ax.axvline(0.99, color="r", linestyle="--", linewidth=1.5, label="r = 0.99 (acceptance)")
-    ax.axhline(40, color="b", linestyle="--", linewidth=1.5, label="PSNR = 40 dB (acceptance)")
+    # Strict field-tier reference lines; derived quick-tier scenarios use
+    # driver-owned thresholds documented in their metric reports.
+    ax.axvline(0.99, color="r", linestyle="--", linewidth=1.5, label="r = 0.99 (strict field tier)")
+    ax.axhline(40, color="b", linestyle="--", linewidth=1.5, label="PSNR = 40 dB (strict field tier)")
     ax.fill_between([0.99, 1.001], 40, 130, alpha=0.08, color="green")
 
     ax.set_xlabel("Pearson correlation $r$")
     ax.set_ylabel("PSNR (dB)")
-    ax.set_title("kwavers validation results: closed parity gaps")
-    ax.legend(fontsize=7, loc="lower left", ncol=2)
-    ax.set_xlim(0.965, 1.001)
+    ax.set_title("kwavers validation results: closed parity gaps with PSNR")
+    ax.legend(fontsize=7, loc="center left", bbox_to_anchor=(1.02, 0.5))
+    ax.set_xlim(0.98, 1.001)
     ax.set_ylim(30, 130)
     ax.grid(True, alpha=0.3)
     fig.tight_layout()

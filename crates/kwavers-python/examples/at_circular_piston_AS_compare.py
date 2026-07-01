@@ -104,6 +104,11 @@ PARITY_THRESHOLDS = {
     "rms_ratio_max": 1.35,
     "psnr_db":       12.0,
 }
+ANALYTICAL_REFERENCE_THRESHOLDS = {
+    "kwave_pearson_min": 0.99,
+    "pykwavers_pearson_min": 0.98,
+    "pearson_agreement_abs_max": 5e-6,
+}
 
 # Paths
 FIGURE_PATH       = DEFAULT_OUTPUT_DIR / "at_circular_piston_AS_compare.png"
@@ -353,8 +358,15 @@ def main() -> None:
           f"([{thr['rms_ratio_min']}, {thr['rms_ratio_max']}])")
     print(f"  PSNR       = {metrics['psnr_db']:.2f} dB  (≥ {thr['psnr_db']} dB)")
     print(f"\n--- vs Pierce analytical (x > 0) ---")
-    print(f"  k-wave vs analytical    pearson r = {r_kw_vs_ref:.4f}")
-    print(f"  pykwavers vs analytical pearson r = {r_pkw_vs_ref:.4f}")
+    analytical_thr = ANALYTICAL_REFERENCE_THRESHOLDS
+    print(
+        "  k-wave vs analytical    pearson r = "
+        f"{r_kw_vs_ref:.4f}  (>= {analytical_thr['kwave_pearson_min']})"
+    )
+    print(
+        "  pykwavers vs analytical pearson r = "
+        f"{r_pkw_vs_ref:.4f}  (>= {analytical_thr['pykwavers_pearson_min']})"
+    )
     print(f"\n  k-wave runtime     : {kw['runtime_s']:.1f} s")
     print(f"  pykwavers runtime  : {pw['runtime_s']:.1f} s")
 
@@ -426,8 +438,21 @@ def main() -> None:
         f"rms_ratio  = {metrics['rms_ratio']:.6f}  "
         f"(target [{thr['rms_ratio_min']}, {thr['rms_ratio_max']}])",
         f"psnr_db    = {metrics['psnr_db']:.2f}  (target >= {thr['psnr_db']} dB)",
-        f"kwave_vs_analytical_pearson = {r_kw_vs_ref:.6f}",
-        f"pkwav_vs_analytical_pearson = {r_pkw_vs_ref:.6f}",
+        (
+            "kwave_vs_analytical_pearson = "
+            f"{r_kw_vs_ref:.6f}  "
+            f"(target >= {analytical_thr['kwave_pearson_min']})"
+        ),
+        (
+            "pkwav_vs_analytical_pearson = "
+            f"{r_pkw_vs_ref:.6f}  "
+            f"(target >= {analytical_thr['pykwavers_pearson_min']})"
+        ),
+        (
+            "analytical_pearson_agreement_abs = "
+            f"{abs(r_pkw_vs_ref - r_kw_vs_ref):.6e}  "
+            f"(target < {analytical_thr['pearson_agreement_abs_max']:.6e})"
+        ),
         f"peak_kwave_Pa      = {float(kw_amp.max()):.6e}",
         f"peak_pykwavers_Pa  = {float(pw_amp.max()):.6e}",
     ]

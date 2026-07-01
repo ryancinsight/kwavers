@@ -67,7 +67,13 @@ pub fn delay_and_sum_dmas(
     weights: &[f64],
     reference: DelayReference,
 ) -> KwaversResult<Array3<f64>> {
-    let aligned = align_channels(sensor_data, sampling_frequency_hz, delays_s, weights, reference)?;
+    let aligned = align_channels(
+        sensor_data,
+        sampling_frequency_hz,
+        delays_s,
+        weights,
+        reference,
+    )?;
     let (n_elements, n_samples) = aligned.dim();
 
     let mut output = Array3::<f64>::zeros((1, 1, n_samples));

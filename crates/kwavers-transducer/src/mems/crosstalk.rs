@@ -149,7 +149,10 @@ mod tests {
         let expected_phase = FRAC_PI_2 - (w / C) * d;
         // Compare via the complex value to avoid atan2 branch issues.
         let expected = Complex::from_polar(expected_mag, expected_phase);
-        assert!((z - expected).norm() <= 1e-9 * expected_mag, "phase mismatch");
+        assert!(
+            (z - expected).norm() <= 1e-9 * expected_mag,
+            "phase mismatch"
+        );
     }
 
     /// Reciprocity: `Z_ij == Z_ji`.
@@ -179,7 +182,10 @@ mod tests {
 
         // Far separation → vanishing coupling.
         let far = mutual_radiation_impedance(a, a, 1.0, omega(2e6), RHO, C).norm();
-        assert!(far < base * 1e-3, "coupling must vanish at large separation");
+        assert!(
+            far < base * 1e-3,
+            "coupling must vanish at large separation"
+        );
     }
 
     /// The coupling matrix is complex-symmetric with a zero diagonal, and its
