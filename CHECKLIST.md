@@ -34,6 +34,19 @@
       dependency-inclusive Clippy remains blocked by existing
       `kwavers-physics` argument-count/type-complexity lints tracked in
       [gap_audit.md](gap_audit.md).
+- [x] [patch] `kwavers-physics` analytical Clippy unblock: replace broad
+      public analytical tuple/argument surfaces with typed request/result
+      structs for IVUS delivery, Gaussian photoacoustic profiles, Gaussian
+      deconvolution fixtures, and apodization-window responses; update the thin
+      PyO3 wrappers without changing their Python signatures; move the
+      centered-Hann test module after production items. Completion condition:
+      `cargo fmt -p kwavers-physics -p kwavers-python` passes, `cargo clippy -p
+      kwavers-physics --all-targets -- -D warnings` passes, `cargo check -p
+      kwavers-python` passes, focused `cargo nextest run -p kwavers-physics
+      ivus_microbubble_delivery_fraction gaussian_absorber_photoacoustic_profile
+      gaussian_deconvolution_fixture apodization_response centered_hann_tone_burst`
+      passes 10/10, and dependency-inclusive `cargo clippy -p
+      kwavers-simulation --all-targets --all-features -- -D warnings` passes.
 - [ ] [patch] Next provider-owned migration slice: audit the remaining direct
       `rayon`/`tokio` call sites outside `kwavers-core`, choose the smallest
       crate-local edge that can move to Moirai without changing public physics

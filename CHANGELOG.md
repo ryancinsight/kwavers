@@ -16,6 +16,12 @@
   feature from `kwavers-simulation`.
 - [patch] Repaired `kwavers-simulation` GPU-PSTD adapter all-features tests by
   importing the `Solver` trait whose methods the tests call.
+- [patch] Replaced broad `kwavers-physics` analytical tuple/argument surfaces
+  with typed request/result structs for IVUS delivery, Gaussian photoacoustic
+  profiles, Gaussian deconvolution fixtures, and apodization-window responses,
+  keeping PyO3 wrappers as thin adapters over Rust-owned logic.
+- [patch] Cleared the dependency-inclusive `kwavers-simulation` all-features
+  Clippy gate by resolving current `kwavers-physics` Clippy blockers.
 
 ### Changed (2026-07-01) - Cavitation passive-map bindings [patch]
 

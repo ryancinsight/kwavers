@@ -36,14 +36,20 @@ do not assert an unconfirmed physics error.
   passes, `cargo nextest run -p kwavers-simulation --all-features` passes
   91/91, and `cargo tree -p kwavers-simulation --depth 1` shows
   `moirai-parallel` as a direct dependency with no direct `rayon` dependency.
-- **Dependency-inclusive kwavers-simulation Clippy gate — OPEN [patch].**
-  `cargo clippy -p kwavers-simulation --all-targets --all-features --
-  -D warnings` is blocked before the package by existing `kwavers-physics`
-  lints: `too_many_arguments` in analytical imaging/photoacoustics functions
-  and `type_complexity` in analytical inverse/array-factor tuple returns. Next
-  closure increment: replace those broad tuple/argument surfaces with typed
-  request/result structs or aliases in `kwavers-physics`, update call sites,
-  and rerun the dependency-inclusive package Clippy gate.
+- **Dependency-inclusive kwavers-simulation Clippy gate — RESOLVED [patch].**
+  The `kwavers-physics` lints that blocked `cargo clippy -p
+  kwavers-simulation --all-targets --all-features -- -D warnings` are closed:
+  IVUS delivery and Gaussian photoacoustic profile functions now use typed
+  request structs, Gaussian deconvolution and apodization-window helpers return
+  typed result structs, thin PyO3 wrappers unpack those Rust-owned results, and
+  the centered-Hann tests now appear after production items. Evidence tier:
+  static analysis plus focused value-semantic tests; `cargo clippy -p
+  kwavers-physics --all-targets -- -D warnings`, `cargo check -p
+  kwavers-python`, focused `cargo nextest run -p kwavers-physics
+  ivus_microbubble_delivery_fraction gaussian_absorber_photoacoustic_profile
+  gaussian_deconvolution_fixture apodization_response centered_hann_tone_burst`
+  (10/10), and dependency-inclusive `cargo clippy -p kwavers-simulation
+  --all-targets --all-features -- -D warnings` pass.
 - **Remaining workspace Rayon/Tokio usage — OPEN [patch].** Root workspace
   dependencies and non-core crates still contain direct `rayon`/`tokio` usage.
   Next closure increment: audit call sites by crate, replace the smallest

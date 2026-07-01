@@ -117,13 +117,12 @@ pub fn apodization_window_response(
     window_type: String,
     nfft: usize,
 ) -> PyResult<(Py<PyArray1<f64>>, Py<PyArray1<f64>>, Py<PyArray1<f64>>)> {
-    let (weights, freq, response_db) =
-        transducer::apodization_window_response(n_elements, &window_type, nfft)
-            .map_err(PyValueError::new_err)?;
+    let response = transducer::apodization_window_response(n_elements, &window_type, nfft)
+        .map_err(PyValueError::new_err)?;
     Ok((
-        weights.into_pyarray(py).unbind(),
-        freq.into_pyarray(py).unbind(),
-        response_db.into_pyarray(py).unbind(),
+        response.weights.into_pyarray(py).unbind(),
+        response.cycles_per_aperture.into_pyarray(py).unbind(),
+        response.response_db.into_pyarray(py).unbind(),
     ))
 }
 

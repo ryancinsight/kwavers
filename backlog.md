@@ -3,6 +3,23 @@
 > Active strategy at top; CLOSED history retained below for traceability.
 > Full gap inventory: [gap_audit.md](gap_audit.md). Active increment: [CHECKLIST.md](CHECKLIST.md).
 
+## CLOSED: kwavers-physics analytical Clippy unblock (2026-07-01)
+
+Closed the dependency-inclusive `kwavers-simulation` Clippy blocker in
+`kwavers-physics` by replacing broad public analytical tuple/argument surfaces
+with typed request/result structs for IVUS microbubble delivery, Gaussian
+photoacoustic profiles, Gaussian deconvolution fixtures, and apodization-window
+responses. The PyO3 bindings remain thin adapters and keep their Python-facing
+signatures while unpacking the typed Rust results. Also moved the centered-Hann
+test module after production items to satisfy current Clippy. Evidence tier:
+static analysis plus value-semantic focused tests. Verification: `cargo
+clippy -p kwavers-physics --all-targets -- -D warnings`, `cargo check -p
+kwavers-python`, focused `cargo nextest run -p kwavers-physics
+ivus_microbubble_delivery_fraction gaussian_absorber_photoacoustic_profile
+gaussian_deconvolution_fixture apodization_response centered_hann_tone_burst`
+(10/10), and dependency-inclusive `cargo clippy -p kwavers-simulation
+--all-targets --all-features -- -D warnings`.
+
 ## CLOSED: kwavers-simulation Moirai photoacoustic slice (2026-07-01)
 
 Replaced the direct `rayon` edge in `kwavers-simulation` with workspace

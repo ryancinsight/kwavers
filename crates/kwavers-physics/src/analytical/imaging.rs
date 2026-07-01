@@ -650,16 +650,38 @@ pub fn ivus_therapy_pressure_field(
 /// Returns an error when array lengths differ, when any sample is non-finite,
 /// or when `sound_speed_m_s`, `radial_center_m`, or `radial_width_m` are not
 /// finite positive values.
+pub struct IvusMicrobubbleDeliveryInput<'a> {
+    /// Radial distance from the catheter wall for each sample.
+    pub range_m: &'a [f64],
+    /// Acoustic attenuation coefficient for each sample.
+    pub attenuation_np_m: &'a [f64],
+    /// Local acoustic intensity for each sample.
+    pub intensity_w_m2: &'a [f64],
+    /// Wall membership mask.
+    pub wall_mask: &'a [bool],
+    /// Target membership mask.
+    pub target_mask: &'a [bool],
+    /// Tissue sound speed used for acoustic radiation-force scaling.
+    pub sound_speed_m_s: f64,
+    /// Radial center of the delivery band.
+    pub radial_center_m: f64,
+    /// Radial width of the delivery band.
+    pub radial_width_m: f64,
+}
+
 pub fn ivus_microbubble_delivery_fraction(
-    range_m: &[f64],
-    attenuation_np_m: &[f64],
-    intensity_w_m2: &[f64],
-    wall_mask: &[bool],
-    target_mask: &[bool],
-    sound_speed_m_s: f64,
-    radial_center_m: f64,
-    radial_width_m: f64,
+    input: IvusMicrobubbleDeliveryInput<'_>,
 ) -> Result<Vec<f64>, String> {
+    let IvusMicrobubbleDeliveryInput {
+        range_m,
+        attenuation_np_m,
+        intensity_w_m2,
+        wall_mask,
+        target_mask,
+        sound_speed_m_s,
+        radial_center_m,
+        radial_width_m,
+    } = input;
     let len = range_m.len();
     if attenuation_np_m.len() != len
         || intensity_w_m2.len() != len
@@ -844,16 +866,16 @@ pub fn ivus_therapy_response(
         density_kg_m3,
         specific_heat_j_kg_k,
     );
-    let deposition = ivus_microbubble_delivery_fraction(
-        &range_m,
-        &alpha_eff_np_m,
-        &intensity_w_m2,
-        &wall_mask,
-        &target_mask,
+    let deposition = ivus_microbubble_delivery_fraction(IvusMicrobubbleDeliveryInput {
+        range_m: &range_m,
+        attenuation_np_m: &alpha_eff_np_m,
+        intensity_w_m2: &intensity_w_m2,
+        wall_mask: &wall_mask,
+        target_mask: &target_mask,
         sound_speed_m_s,
-        delivery_radial_center_m,
-        delivery_radial_width_m,
-    )?;
+        radial_center_m: delivery_radial_center_m,
+        radial_width_m: delivery_radial_width_m,
+    })?;
     let target_to_offtarget_ratio =
         deposition_target_to_offtarget_ratio(&deposition, &target_mask, plaque_mask)?;
     let peak_delta_t_k = temperature_rise_k.iter().copied().fold(0.0_f64, f64::max);
@@ -1666,16 +1688,16 @@ mod tests {
         let wall = [false, true, true];
         let target = [false, false, true];
 
-        let delivered = ivus_microbubble_delivery_fraction(
-            &range,
-            &attenuation,
-            &intensity,
-            &wall,
-            &target,
-            1540.0,
-            1.75e-3,
-            1.2e-3,
-        )
+        let delivered = ivus_microbubble_delivery_fraction(IvusMicrobubbleDeliveryInput {
+            range_m: &range,
+            attenuation_np_m: &attenuation,
+            intensity_w_m2: &intensity,
+            wall_mask: &wall,
+            target_mask: &target,
+            sound_speed_m_s: 1540.0,
+            radial_center_m: 1.75e-3,
+            radial_width_m: 1.2e-3,
+        })
         .unwrap();
 
         assert_eq!(delivered[0], 0.0);
@@ -1687,42 +1709,42 @@ mod tests {
 
     #[test]
     fn ivus_microbubble_delivery_fraction_rejects_invalid_inputs() {
-        let err = ivus_microbubble_delivery_fraction(
-            &[0.0],
-            &[],
-            &[1.0],
-            &[true],
-            &[false],
-            1540.0,
-            1.75e-3,
-            1.2e-3,
-        )
+        let err = ivus_microbubble_delivery_fraction(IvusMicrobubbleDeliveryInput {
+            range_m: &[0.0],
+            attenuation_np_m: &[],
+            intensity_w_m2: &[1.0],
+            wall_mask: &[true],
+            target_mask: &[false],
+            sound_speed_m_s: 1540.0,
+            radial_center_m: 1.75e-3,
+            radial_width_m: 1.2e-3,
+        })
         .unwrap_err();
         assert!(err.contains("all arrays must have length"));
 
-        let err = ivus_microbubble_delivery_fraction(
-            &[0.0],
-            &[1.0],
-            &[f64::NAN],
-            &[true],
-            &[false],
-            1540.0,
-            1.75e-3,
-            1.2e-3,
-        )
+        let err = ivus_microbubble_delivery_fraction(IvusMicrobubbleDeliveryInput {
+            range_m: &[0.0],
+            attenuation_np_m: &[1.0],
+            intensity_w_m2: &[f64::NAN],
+            wall_mask: &[true],
+            target_mask: &[false],
+            sound_speed_m_s: 1540.0,
+            radial_center_m: 1.75e-3,
+            radial_width_m: 1.2e-3,
+        })
         .unwrap_err();
         assert!(err.contains("intensity_w_m2[0]"));
 
-        let err = ivus_microbubble_delivery_fraction(
-            &[0.0],
-            &[1.0],
-            &[1.0],
-            &[true],
-            &[false],
-            0.0,
-            1.75e-3,
-            1.2e-3,
-        )
+        let err = ivus_microbubble_delivery_fraction(IvusMicrobubbleDeliveryInput {
+            range_m: &[0.0],
+            attenuation_np_m: &[1.0],
+            intensity_w_m2: &[1.0],
+            wall_mask: &[true],
+            target_mask: &[false],
+            sound_speed_m_s: 0.0,
+            radial_center_m: 1.75e-3,
+            radial_width_m: 1.2e-3,
+        })
         .unwrap_err();
         assert!(err.contains("sound_speed_m_s"));
     }

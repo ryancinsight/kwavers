@@ -198,19 +198,29 @@ pub fn apodization_weights(n: usize, window_type: &str) -> Vec<f64> {
 
 /// Apodization weights and normalized spatial-frequency response.
 ///
-/// Returns `(weights, cycles_per_aperture, response_db)`, where
-/// `response_db = 20·log10(|FFT(w)| / max(|FFT(w)|) + 1e-12)` after FFT-shift.
+/// Returns apodization weights, cycles per aperture, and normalized response,
+/// where `response_db = 20·log10(|FFT(w)| / max(|FFT(w)|) + 1e-12)` after FFT-shift.
 /// The frequency axis matches the Chapter 4 plotting convention:
 /// `linspace(-0.5, 0.5, nfft) * n_elements`.
 ///
 /// # Errors
 /// Returns an error if the number of elements is zero, the FFT length is zero,
 /// or the FFT length is shorter than the apodization window.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ApodizationWindowResponse {
+    /// Apodization weights.
+    pub weights: Vec<f64>,
+    /// Shifted spatial frequency axis in cycles per aperture.
+    pub cycles_per_aperture: Vec<f64>,
+    /// Normalized frequency response in decibels.
+    pub response_db: Vec<f64>,
+}
+
 pub fn apodization_window_response(
     n_elements: usize,
     window_type: &str,
     nfft: usize,
-) -> Result<(Vec<f64>, Vec<f64>, Vec<f64>), String> {
+) -> Result<ApodizationWindowResponse, String> {
     if n_elements == 0 {
         return Err("n_elements must be positive".to_owned());
     }
@@ -243,7 +253,11 @@ pub fn apodization_window_response(
         .map(|idx| (-0.5 + idx as f64 / denom) * n_elements as f64)
         .collect();
 
-    Ok((weights, cycles_per_aperture, response_db))
+    Ok(ApodizationWindowResponse {
+        weights,
+        cycles_per_aperture,
+        response_db,
+    })
 }
 
 // J₁ for circular-piston directivity is the workspace SSOT

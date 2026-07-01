@@ -75,21 +75,28 @@ pub fn gaussian_absorber_photoacoustic_profile<'py>(
     let time_axis = time_axis_s
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-    let (initial_pressure, surface_signal) =
-        photoacoustics::gaussian_absorber_photoacoustic_profile(
-            depth_axis,
-            time_axis,
+    let profile = photoacoustics::gaussian_absorber_photoacoustic_profile(
+        photoacoustics::GaussianAbsorberPhotoacousticProfileInput {
+            depth_axis_m: depth_axis,
+            time_axis_s: time_axis,
             gruneisen,
             absorption_per_m,
             fluence_j_m2,
             center_m,
             sigma_m,
             sound_speed_m_s,
-        )
-        .map_err(PyValueError::new_err)?;
+        },
+    )
+    .map_err(PyValueError::new_err)?;
 
     let out = PyDict::new(py);
-    out.set_item("initial_pressure_pa", initial_pressure.into_pyarray(py))?;
-    out.set_item("surface_signal_pa_per_m", surface_signal.into_pyarray(py))?;
+    out.set_item(
+        "initial_pressure_pa",
+        profile.initial_pressure_pa.into_pyarray(py),
+    )?;
+    out.set_item(
+        "surface_signal_pa_per_m",
+        profile.surface_signal_pa_per_m.into_pyarray(py),
+    )?;
     Ok(out)
 }

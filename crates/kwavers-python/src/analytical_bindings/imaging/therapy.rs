@@ -91,16 +91,16 @@ pub fn ivus_microbubble_delivery_fraction(
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let delivered = py
         .detach(|| {
-            imaging::ivus_microbubble_delivery_fraction(
-                range,
-                attenuation,
-                intensity,
-                wall,
-                target,
+            imaging::ivus_microbubble_delivery_fraction(imaging::IvusMicrobubbleDeliveryInput {
+                range_m: range,
+                attenuation_np_m: attenuation,
+                intensity_w_m2: intensity,
+                wall_mask: wall,
+                target_mask: target,
                 sound_speed_m_s,
                 radial_center_m,
                 radial_width_m,
-            )
+            })
         })
         .map_err(PyValueError::new_err)?;
     Ok(delivered.into_pyarray(py).unbind())

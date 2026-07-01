@@ -148,16 +148,47 @@ pub fn pa_sphere_pressure_signal(
 ///
 /// Returns an error if any axis or scalar is non-finite, `sigma_m <= 0`, or
 /// `sound_speed_m_s <= 0`.
+#[derive(Debug, Clone, Copy)]
+pub struct GaussianAbsorberPhotoacousticProfileInput<'a> {
+    /// Depth samples where the initial pressure is evaluated.
+    pub depth_axis_m: &'a [f64],
+    /// Time samples where the surface signal is evaluated.
+    pub time_axis_s: &'a [f64],
+    /// Grueneisen parameter.
+    pub gruneisen: f64,
+    /// Optical absorption coefficient.
+    pub absorption_per_m: f64,
+    /// Optical fluence.
+    pub fluence_j_m2: f64,
+    /// Gaussian absorber center depth.
+    pub center_m: f64,
+    /// Gaussian absorber standard deviation.
+    pub sigma_m: f64,
+    /// Acoustic sound speed.
+    pub sound_speed_m_s: f64,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct GaussianAbsorberPhotoacousticProfile {
+    /// Initial pressure profile sampled on `depth_axis_m`.
+    pub initial_pressure_pa: Vec<f64>,
+    /// Analytic surface signal sampled on `time_axis_s`.
+    pub surface_signal_pa_per_m: Vec<f64>,
+}
+
 pub fn gaussian_absorber_photoacoustic_profile(
-    depth_axis_m: &[f64],
-    time_axis_s: &[f64],
-    gruneisen: f64,
-    absorption_per_m: f64,
-    fluence_j_m2: f64,
-    center_m: f64,
-    sigma_m: f64,
-    sound_speed_m_s: f64,
-) -> Result<(Vec<f64>, Vec<f64>), String> {
+    input: GaussianAbsorberPhotoacousticProfileInput<'_>,
+) -> Result<GaussianAbsorberPhotoacousticProfile, String> {
+    let GaussianAbsorberPhotoacousticProfileInput {
+        depth_axis_m,
+        time_axis_s,
+        gruneisen,
+        absorption_per_m,
+        fluence_j_m2,
+        center_m,
+        sigma_m,
+        sound_speed_m_s,
+    } = input;
     if !depth_axis_m.iter().all(|value| value.is_finite()) {
         return Err("depth_axis_m must contain only finite values".to_owned());
     }
@@ -197,7 +228,10 @@ pub fn gaussian_absorber_photoacoustic_profile(
         })
         .collect();
 
-    Ok((pressure_profile, surface_signal))
+    Ok(GaussianAbsorberPhotoacousticProfile {
+        initial_pressure_pa: pressure_profile,
+        surface_signal_pa_per_m: surface_signal,
+    })
 }
 
 // ─── Axial resolution ─────────────────────────────────────────────────────────
@@ -567,23 +601,25 @@ mod tests {
     fn gaussian_absorber_photoacoustic_profile_matches_closed_form() {
         let depth = [0.019, 0.020, 0.021];
         let time = depth.map(|z| z / SOUND_SPEED_WATER_SIM);
-        let (profile, signal) = gaussian_absorber_photoacoustic_profile(
-            &depth,
-            &time,
-            0.18,
-            100.0,
-            0.02,
-            0.020,
-            0.001,
-            SOUND_SPEED_WATER_SIM,
-        )
-        .unwrap();
+        let profile =
+            gaussian_absorber_photoacoustic_profile(GaussianAbsorberPhotoacousticProfileInput {
+                depth_axis_m: &depth,
+                time_axis_s: &time,
+                gruneisen: 0.18,
+                absorption_per_m: 100.0,
+                fluence_j_m2: 0.02,
+                center_m: 0.020,
+                sigma_m: 0.001,
+                sound_speed_m_s: SOUND_SPEED_WATER_SIM,
+            })
+            .unwrap();
 
         let p0 = 0.18 * 100.0 * 0.02;
         let off_center = p0 * (-0.5_f64).exp();
-        assert!((profile[0] - off_center).abs() < 1.0e-15);
-        assert!((profile[1] - p0).abs() < 1.0e-15);
-        assert!((profile[2] - off_center).abs() < 1.0e-15);
+        assert!((profile.initial_pressure_pa[0] - off_center).abs() < 1.0e-15);
+        assert!((profile.initial_pressure_pa[1] - p0).abs() < 1.0e-15);
+        assert!((profile.initial_pressure_pa[2] - off_center).abs() < 1.0e-15);
+        let signal = &profile.surface_signal_pa_per_m;
         assert!(signal[0] > 0.0);
         assert!(signal[1].abs() < 1.0e-10);
         assert!(signal[2] < 0.0);
@@ -592,17 +628,18 @@ mod tests {
 
     #[test]
     fn gaussian_absorber_photoacoustic_profile_rejects_invalid_width() {
-        let err = gaussian_absorber_photoacoustic_profile(
-            &[0.0],
-            &[0.0],
-            0.18,
-            100.0,
-            0.02,
-            0.0,
-            0.0,
-            1500.0,
-        )
-        .unwrap_err();
+        let err =
+            gaussian_absorber_photoacoustic_profile(GaussianAbsorberPhotoacousticProfileInput {
+                depth_axis_m: &[0.0],
+                time_axis_s: &[0.0],
+                gruneisen: 0.18,
+                absorption_per_m: 100.0,
+                fluence_j_m2: 0.02,
+                center_m: 0.0,
+                sigma_m: 0.0,
+                sound_speed_m_s: 1500.0,
+            })
+            .unwrap_err();
 
         assert!(err.contains("sigma_m"));
     }

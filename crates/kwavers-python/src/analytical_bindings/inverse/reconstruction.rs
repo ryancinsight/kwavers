@@ -15,12 +15,12 @@ pub fn gaussian_deconvolution_fixture(
     sigma: f64,
     perturbation_scale: f64,
 ) -> PyResult<(Py<PyArray2<f64>>, Py<PyArray1<f64>>, Py<PyArray1<f64>>)> {
-    let (a, x_true, y) = inverse_mod::gaussian_deconvolution_fixture(n, sigma, perturbation_scale)
+    let fixture = inverse_mod::gaussian_deconvolution_fixture(n, sigma, perturbation_scale)
         .map_err(PyValueError::new_err)?;
     Ok((
-        array2_from_flat(py, n, n, a)?,
-        x_true.into_pyarray(py).unbind(),
-        y.into_pyarray(py).unbind(),
+        array2_from_flat(py, n, n, fixture.matrix)?,
+        fixture.truth_signal.into_pyarray(py).unbind(),
+        fixture.observed_signal.into_pyarray(py).unbind(),
     ))
 }
 
