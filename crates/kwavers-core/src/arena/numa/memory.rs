@@ -1,5 +1,7 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+use moirai_parallel::{for_each_index_with, Parallel};
+
 #[cfg(target_os = "linux")]
 use super::policy::MAX_NUMA_NODES;
 use super::policy::PAGE_SIZE;
@@ -232,26 +234,25 @@ pub unsafe fn first_touch_memory(ptr: *mut u8, size: usize) {
 /// `ptr` must be valid for `size` bytes and remain live for the duration of
 /// this call.
 pub unsafe fn first_touch_memory_parallel(ptr: *mut u8, size: usize, num_threads: usize) {
+    if size == 0 || num_threads == 0 {
+        return;
+    }
+
     let ptr_addr: usize = ptr as usize;
     let chunk_size = size.div_ceil(num_threads);
 
-    rayon::scope(|s| {
-        for thread_id in 0..num_threads {
-            let start = thread_id * chunk_size;
-            let end = ((start + chunk_size).min(size) / PAGE_SIZE) * PAGE_SIZE;
-            s.spawn(move |_| {
-                if start < end {
-                    let slice = unsafe {
-                        std::slice::from_raw_parts_mut(
-                            (ptr_addr as *mut u8).add(start),
-                            end - start,
-                        )
-                    };
-                    for i in (0..slice.len()).step_by(PAGE_SIZE) {
-                        slice[i] = 0;
-                    }
-                }
-            });
+    for_each_index_with::<Parallel, _>(num_threads, |thread_id| {
+        let start = thread_id * chunk_size;
+        let end = ((start + chunk_size).min(size) / PAGE_SIZE) * PAGE_SIZE;
+        if start < end {
+            // SAFETY: `ptr` is valid for `size` bytes by the function contract,
+            // and each worker receives a disjoint page-aligned range.
+            let slice = unsafe {
+                std::slice::from_raw_parts_mut((ptr_addr as *mut u8).add(start), end - start)
+            };
+            for i in (0..slice.len()).step_by(PAGE_SIZE) {
+                slice[i] = 0;
+            }
         }
     });
 }

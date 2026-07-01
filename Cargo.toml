@@ -13,6 +13,7 @@ ritk-io = { git = "https://github.com/ryancinsight/ritk" }
 ritk-registration = { git = "https://github.com/ryancinsight/ritk" }
 apollo = { git = "https://github.com/ryancinsight/apollo", rev = "e1a9a1ac42040832a0152c4c166d066d04ab097e", package = "apollo-fft" }
 apollofft-wgpu = { git = "https://github.com/ryancinsight/apollo", rev = "e1a9a1ac42040832a0152c4c166d066d04ab097e", package = "apollo-fft-wgpu" }
+moirai-parallel = { git = "https://github.com/ryancinsight/Moirai.git", package = "moirai-parallel", default-features = false, features = ["parallel"] }
 burn = { version = "0.19", features = ["wgpu", "autodiff"] }
 burn-ndarray = "0.19"
 pyo3 = { version = "0.22", features = ["extension-module", "abi3-py39"] }

@@ -1,5 +1,5 @@
+use moirai_parallel::{for_each_chunk_mut_with, Adaptive};
 use ndarray::{ArrayView3, ArrayViewMut3};
-use rayon::prelude::*;
 use std::alloc::{alloc, dealloc, Layout};
 use std::ptr::NonNull;
 
@@ -224,10 +224,8 @@ impl SoAFieldStorage {
     pub fn first_touch_field_parallel(&mut self, field_idx: usize) {
         if let Some(field) = self.field_mut(field_idx) {
             const CHUNK_SIZE: usize = 512;
-            field.par_chunks_mut(CHUNK_SIZE).for_each(|chunk| {
-                for elem in chunk.iter_mut() {
-                    *elem = 0.0;
-                }
+            for_each_chunk_mut_with::<Adaptive, _, _>(field, CHUNK_SIZE, |chunk| {
+                chunk.fill(0.0);
             });
         }
     }

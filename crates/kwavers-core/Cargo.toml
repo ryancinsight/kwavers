@@ -12,8 +12,8 @@ repository = "https://github.com/ryancinsight/kwavers"
 # crate) are optional + feature-gated so the foundation stays a clean leaf; the
 # `kwavers` facade enables the features it needs (see features below).
 [dependencies]
-ndarray = { version = "0.16", features = ["rayon", "serde"] }
-rayon = "1.10"
+ndarray = { version = "0.16", features = ["serde"] }
+moirai-parallel = { workspace = true }
 serde = { version = "1.0", features = ["derive"] }
 thiserror = "1.0"
 # `std` feature so `log::SetLoggerError` implements `std::error::Error`

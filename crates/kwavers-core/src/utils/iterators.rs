@@ -4,8 +4,8 @@
 //! This module provides iterator-based patterns that leverage Rust's zero-cost abstractions
 //! to achieve high performance while maintaining readable and maintainable code.
 
+use moirai_parallel::{for_each_index_with, Adaptive};
 use ndarray::{Array3, ArrayView3, ArrayViewMut3};
-use rayon::prelude::*;
 
 /// Iterator for processing 3D grid points with spatial coordinates
 #[derive(Debug)]
@@ -135,7 +135,9 @@ impl<'a> IteratorGradientComputer<'a> {
         let dy_inv = 1.0 / (2.0 * dy);
         let dz_inv = 1.0 / (2.0 * dz);
 
-        (1..self.nx - 1).into_par_iter().for_each(|i| {
+        let interior_x = self.nx.saturating_sub(2);
+        for_each_index_with::<Adaptive, _>(interior_x, |offset| {
+            let i = offset + 1;
             for j in 1..self.ny - 1 {
                 for k in 1..self.nz - 1 {
                     let grad_x = (self.array[[i + 1, j, k]] - self.array[[i - 1, j, k]]) * dx_inv;
