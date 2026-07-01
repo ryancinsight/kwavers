@@ -9,6 +9,22 @@
 > decision rationale + migration guide are recorded in CHANGELOG.md.
 > Gap inventory: [gap_audit.md](gap_audit.md) · Strategy: [backlog.md](backlog.md).
 
+## Sprint K Atlas provider migration — IN PROGRESS (2026-07-01)
+- [x] [patch] `kwavers-core` Moirai first-touch slice: replace the direct
+      `rayon` dependency and ndarray `rayon` feature in `kwavers-core` with
+      workspace `moirai-parallel`, route NUMA first-touch, SoA first-touch, and
+      gradient interior-loop parallelism through Moirai parallel helpers, and
+      move constant-invariant tests flagged by current Clippy into `const`
+      assertions. Completion condition: `cargo fmt -p kwavers-core --check`
+      passes, `cargo clippy -p kwavers-core --all-targets --all-features --
+      -D warnings` passes, `cargo nextest run -p kwavers-core` passes 68/68,
+      and `cargo tree -p kwavers-core --depth 1` shows `moirai-parallel` as the
+      direct parallel provider with no direct `rayon` dependency.
+- [ ] [patch] Next provider-owned migration slice: audit the remaining direct
+      `rayon`/`tokio` call sites outside `kwavers-core`, choose the smallest
+      crate-local edge that can move to Moirai without changing public physics
+      contracts, and verify with the package-scoped nextest/clippy gate.
+
 ## Sprint J book physics Rust ownership — IN PROGRESS (2026-06-30)
 - [x] [patch] Cavitation passive-map binding vertical tree cleanup: split
       receiver-array PSD integration and passive-map emission-energy

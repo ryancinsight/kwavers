@@ -3,6 +3,20 @@
 > Active strategy at top; CLOSED history retained below for traceability.
 > Full gap inventory: [gap_audit.md](gap_audit.md). Active increment: [CHECKLIST.md](CHECKLIST.md).
 
+## CLOSED: kwavers-core Moirai first-touch slice (2026-07-01)
+
+Replaced the direct `rayon` edge in `kwavers-core` with workspace
+`moirai-parallel` and removed the ndarray `rayon` feature from that crate.
+NUMA first-touch, SoA first-touch, and the gradient interior-loop parallel
+dispatch now route through Moirai helpers while preserving the existing data
+ownership and value semantics. Current Clippy also required converting
+compile-time constant invariant tests in `kwavers-core` to `const` assertions;
+the checked invariants are unchanged. Evidence tier: compile-time/static
+analysis plus empirical package tests. Verification: `cargo fmt -p
+kwavers-core --check`, `cargo clippy -p kwavers-core --all-targets
+--all-features -- -D warnings`, `cargo nextest run -p kwavers-core` (68/68),
+and `cargo tree -p kwavers-core --depth 1`.
+
 ## CLOSED: Cavitation passive-map binding tree cleanup (2026-07-01)
 
 Split the `kwavers-python` analytical cavitation facade's residual passive-map

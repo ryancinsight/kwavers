@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Changed (2026-07-01) - Atlas provider migration [patch]
+
+- [patch] Replaced `kwavers-core`'s direct `rayon` dependency with
+  `moirai-parallel` for NUMA first-touch, SoA first-touch, and gradient
+  interior-loop parallel dispatch, and removed ndarray's `rayon` feature from
+  `kwavers-core`.
+- [patch] Moved `kwavers-core` constant-invariant tests flagged by current
+  Clippy into `const` assertions without changing the checked predicates.
+
 ### Changed (2026-07-01) - Cavitation passive-map bindings [patch]
 
 - [patch] Split `kwavers-python` cavitation receiver-array PSD integration and

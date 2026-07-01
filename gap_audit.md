@@ -12,6 +12,25 @@ policy. Items tagged **[verify]** are pattern-match suspicions that MUST be
 confirmed against the code (and ideally a literature reference) before any fix —
 do not assert an unconfirmed physics error.
 
+### Atlas provider migration residuals (2026-07-01)
+
+- **kwavers-core direct Rayon edge — RESOLVED [patch].** `kwavers-core` no
+  longer depends directly on `rayon` or enables ndarray's `rayon` feature.
+  NUMA first-touch, SoA first-touch, and gradient interior-loop parallelism now
+  dispatch through `moirai-parallel`, matching the Atlas provider-first
+  migration path. Current Clippy also surfaced constant-invariant test
+  assertions in `kwavers-core`; those checks now execute as `const` assertions
+  with the same value predicates. Evidence tier: static analysis plus
+  empirical package tests; `cargo clippy -p kwavers-core --all-targets
+  --all-features -- -D warnings` passes, `cargo nextest run -p kwavers-core`
+  passes 68/68, and `cargo tree -p kwavers-core --depth 1` shows
+  `moirai-parallel` as the direct parallel provider.
+- **Remaining workspace Rayon/Tokio usage — OPEN [patch].** Root workspace
+  dependencies and non-core crates still contain direct `rayon`/`tokio` usage.
+  Next closure increment: audit call sites by crate, replace the smallest
+  provider-owned edge with Moirai, and keep any missing Moirai capability in
+  Moirai rather than duplicating it downstream.
+
 ### Gate residuals (2026-06-30)
 
 - **PHYS-CLIPPY all-target mechanical lint layer — RESOLVED [patch].** The
