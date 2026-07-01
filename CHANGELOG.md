@@ -10,6 +10,12 @@
   `kwavers-core`.
 - [patch] Moved `kwavers-core` constant-invariant tests flagged by current
   Clippy into `const` assertions without changing the checked predicates.
+- [patch] Replaced `kwavers-simulation`'s direct `rayon` dependency with
+  `moirai-parallel` for photoacoustic multi-wavelength fluence mapping and
+  time-reversal reconstruction output writes, and removed ndarray's `rayon`
+  feature from `kwavers-simulation`.
+- [patch] Repaired `kwavers-simulation` GPU-PSTD adapter all-features tests by
+  importing the `Solver` trait whose methods the tests call.
 
 ### Changed (2026-07-01) - Cavitation passive-map bindings [patch]
 

@@ -25,6 +25,25 @@ do not assert an unconfirmed physics error.
   --all-features -- -D warnings` passes, `cargo nextest run -p kwavers-core`
   passes 68/68, and `cargo tree -p kwavers-core --depth 1` shows
   `moirai-parallel` as the direct parallel provider.
+- **kwavers-simulation direct Rayon edge — RESOLVED [patch].**
+  `kwavers-simulation` no longer depends directly on `rayon` or enables
+  ndarray's `rayon` feature. Photoacoustic multi-wavelength fluence and
+  time-reversal reconstruction buffer writes now dispatch through
+  `moirai-parallel`. The slice also repaired all-features GPU-PSTD adapter
+  tests by importing the `Solver` trait whose methods they call. Evidence tier:
+  static analysis plus empirical package tests; `cargo clippy -p
+  kwavers-simulation --all-targets --all-features --no-deps -- -D warnings`
+  passes, `cargo nextest run -p kwavers-simulation --all-features` passes
+  91/91, and `cargo tree -p kwavers-simulation --depth 1` shows
+  `moirai-parallel` as a direct dependency with no direct `rayon` dependency.
+- **Dependency-inclusive kwavers-simulation Clippy gate — OPEN [patch].**
+  `cargo clippy -p kwavers-simulation --all-targets --all-features --
+  -D warnings` is blocked before the package by existing `kwavers-physics`
+  lints: `too_many_arguments` in analytical imaging/photoacoustics functions
+  and `type_complexity` in analytical inverse/array-factor tuple returns. Next
+  closure increment: replace those broad tuple/argument surfaces with typed
+  request/result structs or aliases in `kwavers-physics`, update call sites,
+  and rerun the dependency-inclusive package Clippy gate.
 - **Remaining workspace Rayon/Tokio usage — OPEN [patch].** Root workspace
   dependencies and non-core crates still contain direct `rayon`/`tokio` usage.
   Next closure increment: audit call sites by crate, replace the smallest

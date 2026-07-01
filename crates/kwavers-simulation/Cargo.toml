@@ -25,9 +25,9 @@ kwavers-solver = { path = "../kwavers-solver" }
 # Concrete GPU backend (the GPU-PSTD adapter routes through it). Optional —
 # only pulled by the `gpu` feature.
 kwavers-gpu = { path = "../kwavers-gpu", optional = true }
-ndarray = { version = "0.16", features = ["rayon", "serde"] }
+ndarray = { version = "0.16", features = ["serde"] }
+moirai-parallel = { workspace = true }
 num-complex = "0.4"
-rayon = "1.10"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 toml = "0.8"

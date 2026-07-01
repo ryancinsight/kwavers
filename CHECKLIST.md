@@ -20,6 +20,20 @@
       -D warnings` passes, `cargo nextest run -p kwavers-core` passes 68/68,
       and `cargo tree -p kwavers-core --depth 1` shows `moirai-parallel` as the
       direct parallel provider with no direct `rayon` dependency.
+- [x] [patch] `kwavers-simulation` Moirai photoacoustic slice: replace the
+      crate's direct `rayon` dependency and ndarray `rayon` feature with
+      workspace `moirai-parallel`, route multi-wavelength fluence mapping and
+      time-reversal reconstruction buffer writes through Moirai helpers, and
+      repair the all-features GPU-PSTD adapter tests by importing the `Solver`
+      trait they call through. Completion condition: `cargo fmt -p
+      kwavers-simulation --check` passes, `cargo clippy -p kwavers-simulation
+      --all-targets --all-features --no-deps -- -D warnings` passes, `cargo
+      nextest run -p kwavers-simulation --all-features` passes 91/91, and
+      `cargo tree -p kwavers-simulation --depth 1` shows `moirai-parallel` as a
+      direct dependency with no direct `rayon` dependency. Broader
+      dependency-inclusive Clippy remains blocked by existing
+      `kwavers-physics` argument-count/type-complexity lints tracked in
+      [gap_audit.md](gap_audit.md).
 - [ ] [patch] Next provider-owned migration slice: audit the remaining direct
       `rayon`/`tokio` call sites outside `kwavers-core`, choose the smallest
       crate-local edge that can move to Moirai without changing public physics

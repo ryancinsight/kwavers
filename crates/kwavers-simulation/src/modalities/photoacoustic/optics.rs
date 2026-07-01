@@ -40,8 +40,8 @@ use kwavers_medium::Medium;
 use kwavers_solver::forward::optical::diffusion::{
     DiffusionBoundaryCondition, DiffusionBoundaryConditions, DiffusionSolver, DiffusionSolverConfig,
 };
+use moirai_parallel::{map_collect_with, Adaptive};
 use ndarray::Array3;
-use rayon::prelude::*;
 
 /// Initialize optical properties based on tissue type and geometry
 ///
@@ -241,12 +241,12 @@ pub fn compute_multi_wavelength_fluence(
     laser_fluence: f64,
     wavelengths: &[f64],
 ) -> KwaversResult<Vec<Array3<f64>>> {
-    // Parallel computation over wavelengths using Rayon
-    let fluence_fields: Result<Vec<_>, _> = wavelengths
-        .par_iter()
-        .map(|&wavelength| {
+    // Parallel computation over wavelengths through the Atlas execution provider.
+    let fluence_fields: Result<Vec<_>, _> =
+        map_collect_with::<Adaptive, _, _, _>(wavelengths, |&wavelength| {
             compute_fluence_at_wavelength(grid, optical_properties, laser_fluence, wavelength)
         })
+        .into_iter()
         .collect();
 
     fluence_fields

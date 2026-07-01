@@ -3,6 +3,22 @@
 > Active strategy at top; CLOSED history retained below for traceability.
 > Full gap inventory: [gap_audit.md](gap_audit.md). Active increment: [CHECKLIST.md](CHECKLIST.md).
 
+## CLOSED: kwavers-simulation Moirai photoacoustic slice (2026-07-01)
+
+Replaced the direct `rayon` edge in `kwavers-simulation` with workspace
+`moirai-parallel` and removed the ndarray `rayon` feature from that crate.
+Multi-wavelength fluence mapping now uses Moirai ordered map-collect, and
+time-reversal photoacoustic reconstruction writes the contiguous output buffer
+through Moirai enumerated mutable chunks. The all-features GPU-PSTD adapter
+tests also now import the `Solver` trait whose methods they call. Evidence
+tier: compile-time/static analysis plus empirical package tests. Verification:
+`cargo fmt -p kwavers-simulation --check`, `cargo clippy -p
+kwavers-simulation --all-targets --all-features --no-deps -- -D warnings`,
+`cargo nextest run -p kwavers-simulation --all-features` (91/91), and `cargo
+tree -p kwavers-simulation --depth 1`. Dependency-inclusive Clippy remains
+blocked before this crate by existing `kwavers-physics` Clippy lints, tracked
+in `gap_audit.md`.
+
 ## CLOSED: kwavers-core Moirai first-touch slice (2026-07-01)
 
 Replaced the direct `rayon` edge in `kwavers-core` with workspace
