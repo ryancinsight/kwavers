@@ -10,7 +10,8 @@ use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_signal::Signal;
 use kwavers_source::Source;
-use ndarray::{Array1, Array3, Zip};
+use moirai_parallel::{enumerate_mut_with, Adaptive};
+use ndarray::{Array1, Array3};
 use std::sync::Arc;
 
 /// Phased array transducer with electronic beam control
@@ -161,8 +162,15 @@ impl PhasedArrayTransducer {
             element_signals = crosstalk.apply(&element_signals);
         }
 
-        // Calculate field contribution from each element
-        Zip::indexed(&mut field).par_for_each(|(i, j, k), pressure| {
+        let field_data = field
+            .as_slice_mut()
+            .expect("invariant: freshly allocated Array3 is contiguous");
+
+        // Calculate field contribution from each element.
+        enumerate_mut_with::<Adaptive, _, _>(field_data, |idx, pressure| {
+            let k = idx % grid.nz;
+            let j = (idx / grid.nz) % grid.ny;
+            let i = idx / (grid.ny * grid.nz);
             let x = i as f64 * grid.dx;
             let y = j as f64 * grid.dy;
             let z = k as f64 * grid.dz;

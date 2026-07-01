@@ -8,7 +8,8 @@ use kwavers_core::{
     error::{KwaversError, KwaversResult, ValidationError},
 };
 use kwavers_grid::Grid;
-use ndarray::{Array3, Zip};
+use moirai_parallel::{enumerate_mut_with, Adaptive};
+use ndarray::Array3;
 
 use super::cap::{SphericalCapConfig, SphericalCapLayout};
 use super::validation::{
@@ -270,7 +271,13 @@ impl BowlTransducer {
         let omega = TWO_PI * self.config.frequency;
         let focus_delays = self.calculate_focus_delays();
 
-        Zip::indexed(&mut source).par_for_each(|(ix, iy, iz), cell| {
+        let source_data = source
+            .as_slice_mut()
+            .expect("invariant: freshly allocated Array3 is contiguous");
+        enumerate_mut_with::<Adaptive, _, _>(source_data, |idx, cell| {
+            let iz = idx % grid.nz;
+            let iy = (idx / grid.nz) % grid.ny;
+            let ix = idx / (grid.ny * grid.nz);
             let point = [
                 (ix as f64).mul_add(grid.dx, grid.origin[0]),
                 (iy as f64).mul_add(grid.dy, grid.origin[1]),

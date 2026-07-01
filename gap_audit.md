@@ -50,6 +50,15 @@ do not assert an unconfirmed physics error.
   gaussian_deconvolution_fixture apodization_response centered_hann_tone_burst`
   (10/10), and dependency-inclusive `cargo clippy -p kwavers-simulation
   --all-targets --all-features -- -D warnings` pass.
+- **kwavers-transducer direct Rayon edge — RESOLVED [patch].**
+  `kwavers-transducer` no longer depends directly on `rayon` or enables
+  ndarray's `rayon` feature. Linear/matrix focus-delay writes and arc, bowl,
+  multi-bowl, and phased-array source-field writes now dispatch through
+  `moirai-parallel` indexed mutable-slice helpers. Evidence tier: static
+  analysis plus empirical package tests; `cargo clippy -p kwavers-transducer
+  --all-targets -- -D warnings`, `cargo nextest run -p kwavers-transducer`
+  (203/203, 1 skipped), and `cargo tree -p kwavers-transducer --depth 1` pass,
+  with `moirai-parallel` as the direct parallel provider.
 - **Remaining workspace Rayon/Tokio usage — OPEN [patch].** Root workspace
   dependencies and non-core crates still contain direct `rayon`/`tokio` usage.
   Next closure increment: audit call sites by crate, replace the smallest

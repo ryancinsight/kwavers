@@ -3,6 +3,21 @@
 > Active strategy at top; CLOSED history retained below for traceability.
 > Full gap inventory: [gap_audit.md](gap_audit.md). Active increment: [CHECKLIST.md](CHECKLIST.md).
 
+## CLOSED: kwavers-transducer Moirai source-field slice (2026-07-01)
+
+Replaced the direct `rayon` edge in `kwavers-transducer` with workspace
+`moirai-parallel` and removed ndarray's `rayon` feature from that crate.
+Linear and matrix array focus-delay writes now use Moirai indexed mutable-slice
+dispatch. Arc, bowl, multi-bowl, and phased-array source-field writes now use
+Moirai indexed mutable-slice helpers over freshly allocated contiguous ndarray
+storage, preserving the existing source formulas and value semantics. Evidence
+tier: compile-time/static analysis plus empirical package tests. Verification:
+`cargo fmt -p kwavers-transducer --check`, `cargo check -p kwavers-transducer`,
+`cargo clippy -p kwavers-transducer --all-targets -- -D warnings`, `cargo
+nextest run -p kwavers-transducer` (203/203, 1 skipped), `cargo tree -p
+kwavers-transducer --depth 1`, and `rg` over `crates/kwavers-transducer` for
+direct Rayon calls.
+
 ## CLOSED: kwavers-physics analytical Clippy unblock (2026-07-01)
 
 Closed the dependency-inclusive `kwavers-simulation` Clippy blocker in

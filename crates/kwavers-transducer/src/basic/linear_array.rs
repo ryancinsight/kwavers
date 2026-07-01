@@ -2,8 +2,8 @@ use kwavers_grid::Grid;
 use kwavers_signal::Signal;
 use kwavers_source::{Apodization, Source};
 use log::debug;
+use moirai_parallel::{enumerate_mut_with, Adaptive};
 use ndarray::Array3;
-use rayon::prelude::*;
 use std::fmt::Debug;
 use std::sync::Arc;
 
@@ -87,20 +87,17 @@ impl LinearArray {
         let start_x = self.x_pos - self.length / 2.0;
 
         // Calculate time delays (not phase delays) for proper broadband focusing
-        self.time_delays
-            .par_iter_mut()
-            .enumerate()
-            .for_each(|(i, delay)| {
-                let x_elem = (i as f64).mul_add(spacing, start_x);
-                let distance = (self.z_pos - focus_z)
-                    .mul_add(
-                        self.z_pos - focus_z,
-                        (self.y_pos - focus_y)
-                            .mul_add(self.y_pos - focus_y, (x_elem - focus_x).powi(2)),
-                    )
-                    .sqrt();
-                *delay = distance / c; // Time delay, not phase delay
-            });
+        enumerate_mut_with::<Adaptive, _, _>(&mut self.time_delays, |i, delay| {
+            let x_elem = (i as f64).mul_add(spacing, start_x);
+            let distance = (self.z_pos - focus_z)
+                .mul_add(
+                    self.z_pos - focus_z,
+                    (self.y_pos - focus_y)
+                        .mul_add(self.y_pos - focus_y, (x_elem - focus_x).powi(2)),
+                )
+                .sqrt();
+            *delay = distance / c; // Time delay, not phase delay
+        });
         debug!(
             "Adjusted focus to ({}, {}, {}) using time delays",
             focus_x, focus_y, focus_z

@@ -7,7 +7,8 @@ use super::validation::{field_validation_error, validate_finite_field};
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::{Array3, Zip};
+use moirai_parallel::{enumerate_mut_with, Adaptive};
+use ndarray::Array3;
 
 /// Multi-element bowl array (makeMultiBowl equivalent)
 #[derive(Debug)]
@@ -89,9 +90,15 @@ impl MultiBowlArray {
             // Apply relative amplitude
             let scale = amplitude_scale(self.amplitudes[i], bowl.config.amplitude);
 
-            Zip::from(&mut combined_source)
-                .and(&bowl_source)
-                .par_for_each(|c, &b| *c += scale * b);
+            let combined_data = combined_source
+                .as_slice_mut()
+                .expect("invariant: freshly allocated Array3 is contiguous");
+            let bowl_data = bowl_source
+                .as_slice()
+                .expect("invariant: generated bowl source Array3 is contiguous");
+            enumerate_mut_with::<Adaptive, _, _>(combined_data, |idx, c| {
+                *c += scale * bowl_data[idx];
+            });
         }
 
         Ok(combined_source)

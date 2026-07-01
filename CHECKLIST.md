@@ -47,6 +47,18 @@
       gaussian_deconvolution_fixture apodization_response centered_hann_tone_burst`
       passes 10/10, and dependency-inclusive `cargo clippy -p
       kwavers-simulation --all-targets --all-features -- -D warnings` passes.
+- [x] [patch] `kwavers-transducer` Moirai source-field slice: replace the
+      crate's direct `rayon` dependency and ndarray `rayon` feature with
+      workspace `moirai-parallel`, route linear/matrix focus-delay writes and
+      arc, bowl, multi-bowl, and phased-array field writes through Moirai
+      indexed mutable-slice helpers, and keep the source-physics formulas
+      unchanged. Completion condition: `cargo fmt -p kwavers-transducer
+      --check` passes, `cargo check -p kwavers-transducer` passes, `cargo
+      clippy -p kwavers-transducer --all-targets -- -D warnings` passes,
+      `cargo nextest run -p kwavers-transducer` passes 203/203 with 1 skipped,
+      `cargo tree -p kwavers-transducer --depth 1` shows `moirai-parallel` and
+      no direct `rayon` dependency, and `rg` finds no direct Rayon call sites in
+      `crates/kwavers-transducer`.
 - [ ] [patch] Next provider-owned migration slice: audit the remaining direct
       `rayon`/`tokio` call sites outside `kwavers-core`, choose the smallest
       crate-local edge that can move to Moirai without changing public physics

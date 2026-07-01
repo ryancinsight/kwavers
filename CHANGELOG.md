@@ -22,6 +22,9 @@
   keeping PyO3 wrappers as thin adapters over Rust-owned logic.
 - [patch] Cleared the dependency-inclusive `kwavers-simulation` all-features
   Clippy gate by resolving current `kwavers-physics` Clippy blockers.
+- [patch] Replaced `kwavers-transducer`'s direct `rayon` dependency with
+  `moirai-parallel` for focus-delay and source-field indexed buffer writes, and
+  removed ndarray's `rayon` feature from `kwavers-transducer`.
 
 ### Changed (2026-07-01) - Cavitation passive-map bindings [patch]
 

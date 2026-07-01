@@ -5316,10 +5316,10 @@ dependencies = [
  "kwavers-signal",
  "kwavers-source",
  "log",
+ "moirai-parallel",
  "nalgebra 0.32.6",
  "ndarray 0.16.1",
  "num-complex",
- "rayon",
  "serde",
 ]
 
