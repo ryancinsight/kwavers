@@ -1,9 +1,8 @@
 use super::super::{checkpoint::checkpoint_filename, DistributedPinnTrainer, TrainingCheckpoint};
-use burn::tensor::backend::AutodiffBackend;
 use kwavers_core::error::{KwaversError, KwaversResult, SystemError};
 use log::info;
 
-impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> DistributedPinnTrainer<B> {
     /// Save checkpoint.
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.

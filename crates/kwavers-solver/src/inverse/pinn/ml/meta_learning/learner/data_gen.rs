@@ -1,10 +1,9 @@
 use super::MetaLearner;
 use crate::inverse::pinn::ml::meta_learning::types::{PhysicsTask, TaskData};
-use burn::tensor::backend::AutodiffBackend;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
 
-impl<B: AutodiffBackend> MetaLearner<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> MetaLearner<B> {
     /// Generate task data.
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.

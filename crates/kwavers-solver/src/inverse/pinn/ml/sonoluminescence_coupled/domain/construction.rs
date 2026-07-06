@@ -5,13 +5,14 @@ use std::collections::HashMap;
 use crate::inverse::pinn::ml::physics::{
     BoundaryPosition, PinnCouplingInterface, PinnPhysicsCouplingType,
 };
-use burn::tensor::backend::AutodiffBackend;
 use kwavers_physics::optics::sonoluminescence::SonoluminescenceEmission;
 
 use super::super::config::{SonoluminescenceCouplingConfig, SonoluminescenceCouplingType};
 use super::SonoluminescenceCoupledDomain;
 
-impl<B: AutodiffBackend> SonoluminescenceCoupledDomain<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>
+    SonoluminescenceCoupledDomain<B>
+{
     /// Create a new sonoluminescence-coupled domain.
     pub fn new(
         config: SonoluminescenceCouplingConfig,
@@ -123,7 +124,9 @@ impl<B: AutodiffBackend> SonoluminescenceCoupledDomain<B> {
     }
 }
 
-impl<B: AutodiffBackend> Clone for SonoluminescenceCoupledDomain<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> Clone
+    for SonoluminescenceCoupledDomain<B>
+{
     fn clone(&self) -> Self {
         Self {
             config: self.config.clone(),

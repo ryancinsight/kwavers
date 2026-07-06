@@ -31,10 +31,9 @@ pub use trainer::BurnPINN2DTrainer;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use burn::backend::NdArray;
     use std::f64::consts::PI;
 
-    type TestBackend = NdArray<f32>;
+    type TestBackend = coeus_core::MoiraiBackend;
 
     #[test]
     fn test_geometry_rectangular() {
@@ -94,40 +93,44 @@ mod tests {
 
     #[test]
     fn test_burn_pinn_2d_creation() {
-        let device = Default::default();
         let config = BurnPINN2DConfig::default();
-        let result = BurnPINN2DWave::<TestBackend>::new(config, &device);
+        let result = BurnPINN2DWave::<TestBackend>::new(config);
         let _wave = result.unwrap();
     }
 
     #[test]
     fn test_burn_pinn_2d_invalid_config() {
-        let device = Default::default();
         let config = BurnPINN2DConfig {
             hidden_layers: vec![],
             ..Default::default()
         };
-        let result = BurnPINN2DWave::<TestBackend>::new(config, &device);
+        let result = BurnPINN2DWave::<TestBackend>::new(config);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_burn_pinn_2d_forward_pass() {
-        let device = Default::default();
         let config = BurnPINN2DConfig::default();
-        let pinn = BurnPINN2DWave::<TestBackend>::new(config, &device).unwrap();
+        let pinn = BurnPINN2DWave::<TestBackend>::new(config).unwrap();
 
         // Create dummy input [batch_size=2, input_dim=3]
         // But the forward method takes x, y, t separately as [batch, 1]
+        let backend = TestBackend::default();
         let batch_size = 2;
-        let x = burn::tensor::Tensor::<TestBackend, 1>::from_floats([0.5, 0.6], &device)
-            .reshape([batch_size, 1]);
-        let y = burn::tensor::Tensor::<TestBackend, 1>::from_floats([0.5, 0.6], &device)
-            .reshape([batch_size, 1]);
-        let t = burn::tensor::Tensor::<TestBackend, 1>::from_floats([0.0, 0.1], &device)
-            .reshape([batch_size, 1]);
+        let x = coeus_autograd::Var::new(
+            coeus_tensor::Tensor::from_slice_on(vec![batch_size, 1], &[0.5_f32, 0.6], &backend),
+            false,
+        );
+        let y = coeus_autograd::Var::new(
+            coeus_tensor::Tensor::from_slice_on(vec![batch_size, 1], &[0.5_f32, 0.6], &backend),
+            false,
+        );
+        let t = coeus_autograd::Var::new(
+            coeus_tensor::Tensor::from_slice_on(vec![batch_size, 1], &[0.0_f32, 0.1], &backend),
+            false,
+        );
 
-        let output = pinn.forward(x, y, t);
-        assert_eq!(output.shape().dims, [2, 1]);
+        let output = pinn.forward(&x, &y, &t);
+        assert_eq!(output.tensor.shape(), &[2, 1]);
     }
 }

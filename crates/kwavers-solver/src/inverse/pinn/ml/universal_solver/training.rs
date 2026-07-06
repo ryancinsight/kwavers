@@ -9,8 +9,7 @@ use super::types::{
     UniversalSolverGeometry2D, UniversalSolverStats, UniversalTrainingConfig,
 };
 use crate::inverse::pinn::ml::physics::{PinnDomainPhysicsParameters, SimulationPhysicsDomain};
-use burn::prelude::ToElement;
-use burn::tensor::{backend::AutodiffBackend, Tensor};
+use coeus_autograd::Var;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use log::info;
 use rand::rngs::StdRng;
@@ -21,7 +20,11 @@ use std::collections::HashMap;
 type TrainingOutcome = (HashMap<String, f64>, Vec<HashMap<String, f64>>);
 use std::time::Instant;
 
-impl<B: AutodiffBackend> UniversalPINNSolver<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> UniversalPINNSolver<B>
+where
+    B::DeviceBuffer<f32>:
+        coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+{
     /// Solve physics problem for a single domain
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
@@ -193,8 +196,7 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
             num_collocation_points: 1000,
             ..Default::default()
         };
-        let device = Default::default();
-        let model = crate::inverse::pinn::ml::BurnPINN2DWave::new(config, &device)?;
+        let model = crate::inverse::pinn::ml::BurnPINN2DWave::new(config)?;
         Ok(model)
     }
 
@@ -227,13 +229,19 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
             .map(|(_, _, t)| *t as f32)
             .collect();
 
-        let device = B::Device::default();
-        let x_tensor =
-            Tensor::<B, 1>::from_floats(x_coords.as_slice(), &device).reshape([n_points, 1]);
-        let y_tensor =
-            Tensor::<B, 1>::from_floats(y_coords.as_slice(), &device).reshape([n_points, 1]);
-        let t_tensor =
-            Tensor::<B, 1>::from_floats(t_coords.as_slice(), &device).reshape([n_points, 1]);
+        let backend = B::default();
+        let x_var = Var::new(
+            coeus_tensor::Tensor::from_slice_on(vec![n_points, 1], &x_coords, &backend),
+            false,
+        );
+        let y_var = Var::new(
+            coeus_tensor::Tensor::from_slice_on(vec![n_points, 1], &y_coords, &backend),
+            false,
+        );
+        let t_var = Var::new(
+            coeus_tensor::Tensor::from_slice_on(vec![n_points, 1], &t_coords, &backend),
+            false,
+        );
 
         let mut loss_history = Vec::new();
         let optimizer = crate::inverse::pinn::ml::burn_wave_equation_2d::SimpleOptimizer2D::new(
@@ -241,13 +249,17 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
         );
 
         for epoch in 0..config.epochs {
-            let residual =
-                domain.pde_residual(model, &x_tensor, &y_tensor, &t_tensor, physics_params);
-            let pde_loss = residual.clone().powf_scalar(2.0).mean();
-            let grads = pde_loss.backward();
-            *model = optimizer.step(model.clone(), &grads);
+            for p in model.parameters() {
+                p.zero_grad();
+            }
 
-            let loss_value = pde_loss.clone().into_scalar().to_f32() as f64;
+            let residual = domain.pde_residual(model, &x_var, &y_var, &t_var, physics_params);
+            let squared = coeus_autograd::mul(&residual, &residual);
+            let pde_loss = coeus_autograd::mean(&squared);
+            pde_loss.backward();
+            *model = optimizer.step(model.clone());
+
+            let loss_value = pde_loss.tensor.as_slice()[0] as f64;
             let mut epoch_losses = HashMap::new();
             epoch_losses.insert("pde".to_string(), loss_value);
             epoch_losses.insert("total".to_string(), loss_value);

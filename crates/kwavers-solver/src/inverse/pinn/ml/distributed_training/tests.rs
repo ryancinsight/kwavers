@@ -1,7 +1,6 @@
 use super::*;
-use burn::backend::NdArray;
 
-type TestBackend = burn::backend::Autodiff<NdArray<f32>>;
+type TestBackend = coeus_core::MoiraiBackend;
 
 fn unique_checkpoint_dir(test_name: &str) -> std::path::PathBuf {
     let nanos = std::time::SystemTime::now()

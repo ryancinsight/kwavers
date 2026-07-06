@@ -18,7 +18,7 @@ pub use types::{EMProblemType, ElectromagneticBoundarySpec};
 mod tests {
     use super::*;
 
-    type TestBackend = burn::backend::Autodiff<burn::backend::NdArray<f32>>;
+    type TestBackend = coeus_core::MoiraiBackend;
 
     // We need to bring variants into scope or use full path
     use crate::inverse::pinn::ml::physics::BoundaryPosition;

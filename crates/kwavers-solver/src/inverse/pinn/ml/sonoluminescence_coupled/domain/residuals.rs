@@ -5,33 +5,38 @@
 //! - Jackson (1999) *Classical Electrodynamics*
 //! - Putterman (1995) *Sonoluminescence: Sound into Light*
 
-use burn::tensor::{backend::AutodiffBackend, Tensor};
+use coeus_autograd::Var;
 
 use super::SonoluminescenceCoupledDomain;
 use crate::inverse::pinn::ml::physics::PinnDomainPhysicsParameters;
 use kwavers_core::constants::fundamental::{VACUUM_PERMEABILITY, VACUUM_PERMITTIVITY};
 
-impl<B: AutodiffBackend> SonoluminescenceCoupledDomain<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>
+    SonoluminescenceCoupledDomain<B>
+where
+    B::DeviceBuffer<f32>:
+        coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+{
     /// Interpolate the sonoluminescence emission field at query coordinates
     /// `(x, y, t)` and scale by the coupling efficiency.
     ///
     /// Returns a `[batch, 1]` tensor of light-source current density values.
     pub(super) fn compute_light_sources(
         &self,
-        x: &Tensor<B, 2>,
-        y: &Tensor<B, 2>,
-        t: &Tensor<B, 2>,
+        x: &Var<f32, B>,
+        y: &Var<f32, B>,
+        t: &Var<f32, B>,
         _physics_params: &PinnDomainPhysicsParameters,
-    ) -> Tensor<B, 2> {
-        let batch_size = x.shape().dims[0];
+    ) -> Var<f32, B> {
+        let batch_size = x.tensor.shape()[0];
         let mut source_terms = Vec::with_capacity(batch_size);
 
         let emission_dims = self.emission_calculator.emission_field.dim();
         let (nx, ny, nz) = (emission_dims.0, emission_dims.1, emission_dims.2);
 
-        let x_coords: Vec<f32> = x.to_data().to_vec().unwrap();
-        let y_coords: Vec<f32> = y.to_data().to_vec().unwrap();
-        let t_coords: Vec<f32> = t.to_data().to_vec().unwrap();
+        let x_coords = x.tensor.as_slice();
+        let y_coords = y.tensor.as_slice();
+        let t_coords = t.tensor.as_slice();
 
         for i in 0..batch_size {
             let x_pos = x_coords[i] as f64;
@@ -52,11 +57,11 @@ impl<B: AutodiffBackend> SonoluminescenceCoupledDomain<B> {
             source_terms.push(source_term);
         }
 
-        Tensor::<B, 1>::from_floats(
-            source_terms.as_slice(),
-            &<B as burn::tensor::backend::Backend>::Device::default(),
+        let backend = B::default();
+        Var::new(
+            coeus_tensor::Tensor::from_slice_on(vec![batch_size, 1], &source_terms, &backend),
+            false,
         )
-        .reshape([batch_size, 1])
     }
 
     /// Compute the electromagnetic PDE residual augmented with sonoluminescence
@@ -68,50 +73,56 @@ impl<B: AutodiffBackend> SonoluminescenceCoupledDomain<B> {
     pub(super) fn electromagnetic_residual_with_sources(
         &self,
         model: &crate::inverse::pinn::ml::BurnPINN2DWave<B>,
-        x: &Tensor<B, 2>,
-        y: &Tensor<B, 2>,
-        t: &Tensor<B, 2>,
+        x: &Var<f32, B>,
+        y: &Var<f32, B>,
+        t: &Var<f32, B>,
         physics_params: &PinnDomainPhysicsParameters,
-    ) -> Tensor<B, 2> {
-        let x_grad = x.clone().require_grad();
-        let y_grad = y.clone().require_grad();
-        let t_grad = t.clone().require_grad();
+    ) -> Var<f32, B> {
+        let backend = B::default();
+        let zeros_like = |v: &Var<f32, B>| {
+            Var::new(
+                coeus_tensor::Tensor::zeros_on(v.tensor.shape(), &backend),
+                false,
+            )
+        };
 
-        let electric_field = model.forward(x_grad.clone(), y_grad.clone(), t_grad.clone());
-        let _magnetic_field = model.forward(x_grad.clone(), y_grad.clone(), t_grad.clone());
+        let x_grad = Var::new(x.tensor.clone(), true);
+        let y_grad = Var::new(y.tensor.clone(), true);
+        let t_grad = Var::new(t.tensor.clone(), true);
 
-        let grad_electric = electric_field.backward();
+        let electric_field = model.forward(&x_grad, &y_grad, &t_grad);
+        electric_field.backward();
         let e_dx = x_grad
-            .grad(&grad_electric)
-            .map(|g| Tensor::<B, 2>::from_data(g.into_data(), &Default::default()))
-            .unwrap_or_else(|| x.zeros_like());
+            .grad()
+            .map(|g| Var::new(g, false))
+            .unwrap_or_else(|| zeros_like(x));
         let e_dy = y_grad
-            .grad(&grad_electric)
-            .map(|g| Tensor::<B, 2>::from_data(g.into_data(), &Default::default()))
-            .unwrap_or_else(|| y.zeros_like());
+            .grad()
+            .map(|g| Var::new(g, false))
+            .unwrap_or_else(|| zeros_like(y));
         let e_dt = t_grad
-            .grad(&grad_electric)
-            .map(|g| Tensor::<B, 2>::from_data(g.into_data(), &Default::default()))
-            .unwrap_or_else(|| t.zeros_like());
+            .grad()
+            .map(|g| Var::new(g, false))
+            .unwrap_or_else(|| zeros_like(t));
 
-        let x_grad_2 = x.clone().require_grad();
-        let y_grad_2 = y.clone().require_grad();
-        let t_grad_2 = t.clone().require_grad();
+        let x_grad_2 = Var::new(x.tensor.clone(), true);
+        let y_grad_2 = Var::new(y.tensor.clone(), true);
+        let t_grad_2 = Var::new(t.tensor.clone(), true);
 
-        let magnetic_field_2 = model.forward(x_grad_2.clone(), y_grad_2.clone(), t_grad_2.clone());
-        let grad_magnetic = magnetic_field_2.backward();
+        let magnetic_field_2 = model.forward(&x_grad_2, &y_grad_2, &t_grad_2);
+        magnetic_field_2.backward();
         let b_dx = x_grad_2
-            .grad(&grad_magnetic)
-            .map(|g| Tensor::<B, 2>::from_data(g.into_data(), &Default::default()))
-            .unwrap_or_else(|| x.zeros_like());
+            .grad()
+            .map(|g| Var::new(g, false))
+            .unwrap_or_else(|| zeros_like(x));
         let b_dy = y_grad_2
-            .grad(&grad_magnetic)
-            .map(|g| Tensor::<B, 2>::from_data(g.into_data(), &Default::default()))
-            .unwrap_or_else(|| y.zeros_like());
+            .grad()
+            .map(|g| Var::new(g, false))
+            .unwrap_or_else(|| zeros_like(y));
         let b_dt = t_grad_2
-            .grad(&grad_magnetic)
-            .map(|g| Tensor::<B, 2>::from_data(g.into_data(), &Default::default()))
-            .unwrap_or_else(|| t.zeros_like());
+            .grad()
+            .map(|g| Var::new(g, false))
+            .unwrap_or_else(|| zeros_like(t));
 
         // Physical constants (SI) from SSOT (cast to f32 for tensor arithmetic).
         let mu_0_f32 = VACUUM_PERMEABILITY as f32;
@@ -119,10 +130,23 @@ impl<B: AutodiffBackend> SonoluminescenceCoupledDomain<B> {
 
         let current_density = self.compute_light_sources(x, y, t, physics_params);
 
-        let ampere_residual = e_dy - e_dx + b_dt * mu_0_f32 + current_density.clone() * mu_0_f32;
-        let faraday_residual =
-            b_dx - b_dy - mu_0_f32 * epsilon_0_f32 * e_dt - current_density * mu_0_f32;
+        // ampere_residual = e_dy - e_dx + b_dt*mu_0 + current_density*mu_0
+        let ampere_residual = coeus_autograd::add(
+            &coeus_autograd::sub(&e_dy, &e_dx),
+            &coeus_autograd::add(
+                &coeus_autograd::scalar_mul(&b_dt, mu_0_f32),
+                &coeus_autograd::scalar_mul(&current_density, mu_0_f32),
+            ),
+        );
+        // faraday_residual = b_dx - b_dy - mu_0*epsilon_0*e_dt - current_density*mu_0
+        let faraday_residual = coeus_autograd::sub(
+            &coeus_autograd::sub(&b_dx, &b_dy),
+            &coeus_autograd::add(
+                &coeus_autograd::scalar_mul(&e_dt, mu_0_f32 * epsilon_0_f32),
+                &coeus_autograd::scalar_mul(&current_density, mu_0_f32),
+            ),
+        );
 
-        ampere_residual + faraday_residual
+        coeus_autograd::add(&ampere_residual, &faraday_residual)
     }
 }

@@ -18,8 +18,6 @@ mod sampler;
 #[cfg(test)]
 mod tests;
 
-use burn::tensor::{backend::AutodiffBackend, Tensor};
-
 /// High residual region for targeted sampling
 #[derive(Debug, Clone)]
 struct HighResidualRegion {
@@ -95,13 +93,31 @@ impl Default for SamplingStats {
     }
 }
 
-/// Adaptive collocation point sampler
-#[derive(Debug)]
-pub struct AdaptiveCollocationSampler<B: AutodiffBackend> {
+/// Adaptive collocation point sampler.
+///
+/// `active_points` is a flat `[x0,y0,t0, x1,y1,t1, ...]` buffer and `priorities`
+/// a parallel per-point buffer — plain `Vec<f32>` bookkeeping, since every
+/// consumer in this module immediately extracts to `Vec<f32>` anyway. A
+/// `Var<f32, B>` leaf is materialised only at the `pde_residual` call site.
+pub struct AdaptiveCollocationSampler<
+    B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default,
+> {
     total_points: usize,
-    active_points: Tensor<B, 2>,
-    priorities: Tensor<B, 1>,
+    active_points: Vec<f32>,
+    priorities: Vec<f32>,
     domain: Box<dyn crate::inverse::pinn::ml::physics::SimulationPhysicsDomain<B>>,
     strategy: AdaptiveRefinementConfig,
     stats: SamplingStats,
+}
+
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> std::fmt::Debug
+    for AdaptiveCollocationSampler<B>
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AdaptiveCollocationSampler")
+            .field("total_points", &self.total_points)
+            .field("strategy", &self.strategy)
+            .field("stats", &self.stats)
+            .finish_non_exhaustive()
+    }
 }

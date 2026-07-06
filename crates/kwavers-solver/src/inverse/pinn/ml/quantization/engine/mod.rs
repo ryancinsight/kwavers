@@ -2,8 +2,6 @@
 
 use std::collections::HashMap;
 
-use burn::tensor::backend::Backend;
-
 use crate::inverse::pinn::ml::BurnPINN2DWave;
 use kwavers_core::error::{KwaversError, KwaversResult};
 
@@ -37,10 +35,14 @@ impl MlQuantizer {
     /// - Returns [`KwaversError::System`] if accuracy loss exceeds tolerance.
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
-    pub fn quantize_model<B: Backend>(
+    pub fn quantize_model<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
         &self,
         model: &BurnPINN2DWave<B>,
-    ) -> KwaversResult<QuantizedModel> {
+    ) -> KwaversResult<QuantizedModel>
+    where
+        B::DeviceBuffer<f32>:
+            coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+    {
         let layers = self.analyze_model_layers(model)?;
 
         let _calibration_data = match &self.scheme {

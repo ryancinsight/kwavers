@@ -2,8 +2,7 @@ use super::constants::EPS_FD_F32;
 use super::sources::compute_current_density_z;
 use crate::inverse::pinn::ml::physics::PinnDomainPhysicsParameters;
 use crate::inverse::pinn::ml::BurnPINN2DWave;
-use burn::tensor::backend::AutodiffBackend;
-use burn::tensor::Tensor;
+use coeus_autograd::{add, scalar_add, scalar_mul, scalar_sub, sub, Var};
 
 #[cfg(test)]
 mod tests;
@@ -24,27 +23,33 @@ mod tests;
 /// ∂Ez/∂y = 0 → R_Fx = μ·0 + 0 = 0. ✓
 ///
 /// # References — Jackson (1999) §6.2; Pozar (2011) §1.3.
-pub fn tm_mode_faraday_x_residual<B: AutodiffBackend>(
+pub fn tm_mode_faraday_x_residual<
+    B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default,
+>(
     model_ez: &BurnPINN2DWave<B>,
     model_hx: &BurnPINN2DWave<B>,
-    x: &Tensor<B, 2>,
-    y: &Tensor<B, 2>,
-    t: &Tensor<B, 2>,
+    x: &Var<f32, B>,
+    y: &Var<f32, B>,
+    t: &Var<f32, B>,
     mu: f64,
-) -> Tensor<B, 2> {
+) -> Var<f32, B>
+where
+    B::DeviceBuffer<f32>:
+        coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+{
     let h = EPS_FD_F32;
 
     // μ ∂Hx/∂t
-    let hx_tp = model_hx.forward(x.clone(), y.clone(), t.clone().add_scalar(h));
-    let hx_tm = model_hx.forward(x.clone(), y.clone(), t.clone().sub_scalar(h));
-    let dhx_dt = (hx_tp.sub(hx_tm)).div_scalar(2.0 * h);
+    let hx_tp = model_hx.forward(x, y, &scalar_add(t, h));
+    let hx_tm = model_hx.forward(x, y, &scalar_sub(t, h));
+    let dhx_dt = scalar_mul(&sub(&hx_tp, &hx_tm), 1.0 / (2.0 * h));
 
     // ∂Ez/∂y
-    let ez_yp = model_ez.forward(x.clone(), y.clone().add_scalar(h), t.clone());
-    let ez_ym = model_ez.forward(x.clone(), y.clone().sub_scalar(h), t.clone());
-    let dez_dy = (ez_yp.sub(ez_ym)).div_scalar(2.0 * h);
+    let ez_yp = model_ez.forward(x, &scalar_add(y, h), t);
+    let ez_ym = model_ez.forward(x, &scalar_sub(y, h), t);
+    let dez_dy = scalar_mul(&sub(&ez_yp, &ez_ym), 1.0 / (2.0 * h));
 
-    dhx_dt.mul_scalar(mu as f32).add(dez_dy)
+    add(&scalar_mul(&dhx_dt, mu as f32), &dez_dy)
 }
 
 /// TM-mode Faraday-y residual: R_{Fy} = μ ∂Hy/∂t − ∂Ez/∂x
@@ -61,27 +66,33 @@ pub fn tm_mode_faraday_x_residual<B: AutodiffBackend>(
 /// ∂Ez/∂x = Ak·cos(kx−ωt). R_Fy = 0 ✓
 ///
 /// # References — Jackson (1999) §6.2; Pozar (2011) §1.3.
-pub fn tm_mode_faraday_y_residual<B: AutodiffBackend>(
+pub fn tm_mode_faraday_y_residual<
+    B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default,
+>(
     model_ez: &BurnPINN2DWave<B>,
     model_hy: &BurnPINN2DWave<B>,
-    x: &Tensor<B, 2>,
-    y: &Tensor<B, 2>,
-    t: &Tensor<B, 2>,
+    x: &Var<f32, B>,
+    y: &Var<f32, B>,
+    t: &Var<f32, B>,
     mu: f64,
-) -> Tensor<B, 2> {
+) -> Var<f32, B>
+where
+    B::DeviceBuffer<f32>:
+        coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+{
     let h = EPS_FD_F32;
 
     // μ ∂Hy/∂t
-    let hy_tp = model_hy.forward(x.clone(), y.clone(), t.clone().add_scalar(h));
-    let hy_tm = model_hy.forward(x.clone(), y.clone(), t.clone().sub_scalar(h));
-    let dhy_dt = (hy_tp.sub(hy_tm)).div_scalar(2.0 * h);
+    let hy_tp = model_hy.forward(x, y, &scalar_add(t, h));
+    let hy_tm = model_hy.forward(x, y, &scalar_sub(t, h));
+    let dhy_dt = scalar_mul(&sub(&hy_tp, &hy_tm), 1.0 / (2.0 * h));
 
     // ∂Ez/∂x
-    let ez_xp = model_ez.forward(x.clone().add_scalar(h), y.clone(), t.clone());
-    let ez_xm = model_ez.forward(x.clone().sub_scalar(h), y.clone(), t.clone());
-    let dez_dx = (ez_xp.sub(ez_xm)).div_scalar(2.0 * h);
+    let ez_xp = model_ez.forward(&scalar_add(x, h), y, t);
+    let ez_xm = model_ez.forward(&scalar_sub(x, h), y, t);
+    let dez_dx = scalar_mul(&sub(&ez_xp, &ez_xm), 1.0 / (2.0 * h));
 
-    dhy_dt.mul_scalar(mu as f32).sub(dez_dx)
+    sub(&scalar_mul(&dhy_dt, mu as f32), &dez_dx)
 }
 
 /// TM-mode Ampère-z residual: R_{Az} = ε ∂Ez/∂t − ∂Hy/∂x + ∂Hx/∂y + σ Ez + Jz
@@ -108,44 +119,49 @@ pub fn tm_mode_faraday_y_residual<B: AutodiffBackend>(
 // Independent per-component models, field tensors, and parameters with no
 // cohesive sub-grouping; bundling would not clarify the call site.
 #[allow(clippy::too_many_arguments)]
-pub fn tm_mode_ampere_z_residual<B: AutodiffBackend>(
+pub fn tm_mode_ampere_z_residual<
+    B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default,
+>(
     model_ez: &BurnPINN2DWave<B>,
     model_hx: &BurnPINN2DWave<B>,
     model_hy: &BurnPINN2DWave<B>,
-    x: &Tensor<B, 2>,
-    y: &Tensor<B, 2>,
-    t: &Tensor<B, 2>,
+    x: &Var<f32, B>,
+    y: &Var<f32, B>,
+    t: &Var<f32, B>,
     eps: f64,
     sigma: f64,
     physics_params: &PinnDomainPhysicsParameters,
-) -> Tensor<B, 2> {
+) -> Var<f32, B>
+where
+    B::DeviceBuffer<f32>:
+        coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+{
     let h = EPS_FD_F32;
 
     // ε ∂Ez/∂t
-    let ez_tp = model_ez.forward(x.clone(), y.clone(), t.clone().add_scalar(h));
-    let ez_tm = model_ez.forward(x.clone(), y.clone(), t.clone().sub_scalar(h));
-    let dez_dt = (ez_tp.sub(ez_tm)).div_scalar(2.0 * h);
+    let ez_tp = model_ez.forward(x, y, &scalar_add(t, h));
+    let ez_tm = model_ez.forward(x, y, &scalar_sub(t, h));
+    let dez_dt = scalar_mul(&sub(&ez_tp, &ez_tm), 1.0 / (2.0 * h));
 
     // −∂Hy/∂x
-    let hy_xp = model_hy.forward(x.clone().add_scalar(h), y.clone(), t.clone());
-    let hy_xm = model_hy.forward(x.clone().sub_scalar(h), y.clone(), t.clone());
-    let dhy_dx = (hy_xp.sub(hy_xm)).div_scalar(2.0 * h);
+    let hy_xp = model_hy.forward(&scalar_add(x, h), y, t);
+    let hy_xm = model_hy.forward(&scalar_sub(x, h), y, t);
+    let dhy_dx = scalar_mul(&sub(&hy_xp, &hy_xm), 1.0 / (2.0 * h));
 
     // +∂Hx/∂y
-    let hx_yp = model_hx.forward(x.clone(), y.clone().add_scalar(h), t.clone());
-    let hx_ym = model_hx.forward(x.clone(), y.clone().sub_scalar(h), t.clone());
-    let dhx_dy = (hx_yp.sub(hx_ym)).div_scalar(2.0 * h);
+    let hx_yp = model_hx.forward(x, &scalar_add(y, h), t);
+    let hx_ym = model_hx.forward(x, &scalar_sub(y, h), t);
+    let dhx_dy = scalar_mul(&sub(&hx_yp, &hx_ym), 1.0 / (2.0 * h));
 
     // σ Ez
-    let ez = model_ez.forward(x.clone(), y.clone(), t.clone());
+    let ez = model_ez.forward(x, y, t);
 
     // J_ext,z
     let j_z = compute_current_density_z(x, y, physics_params);
 
-    dez_dt
-        .mul_scalar(eps as f32)
-        .sub(dhy_dx)
-        .add(dhx_dy)
-        .add(ez.mul_scalar(sigma as f32))
-        .add(j_z)
+    let mut residual = scalar_mul(&dez_dt, eps as f32);
+    residual = sub(&residual, &dhy_dx);
+    residual = add(&residual, &dhx_dy);
+    residual = add(&residual, &scalar_mul(&ez, sigma as f32));
+    add(&residual, &j_z)
 }

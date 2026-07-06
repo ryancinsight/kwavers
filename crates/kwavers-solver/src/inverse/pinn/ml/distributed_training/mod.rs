@@ -4,7 +4,6 @@
 //! checkpoint management, and fault tolerance for multi-GPU PINN training.
 
 use crate::inverse::pinn::ml::BurnTrainingMetrics2D;
-use burn::tensor::backend::AutodiffBackend;
 use serde::{Deserialize, Serialize};
 
 mod checkpoint;
@@ -38,12 +37,26 @@ pub struct CheckpointManager {
 }
 
 /// Training coordinator for multi-GPU PINN training
-#[derive(Debug)]
-pub struct TrainingCoordinator<B: AutodiffBackend> {
+pub struct TrainingCoordinator<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> {
     model_replicas: Vec<crate::inverse::pinn::ml::BurnPINN2DWave<B>>,
     checkpoint_manager: CheckpointManager,
     training_state: TrainingState,
     performance_stats: Vec<PerformanceStats>,
+}
+
+// Manual `Debug` impl: `BurnPINN2DWave<B>` requires the `CpuAddressableStorage`
+// bound to implement `Debug`, which this struct's own bound does not carry.
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> std::fmt::Debug
+    for TrainingCoordinator<B>
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TrainingCoordinator")
+            .field("num_replicas", &self.model_replicas.len())
+            .field("checkpoint_manager", &self.checkpoint_manager)
+            .field("training_state", &self.training_state)
+            .field("performance_stats", &self.performance_stats)
+            .finish()
+    }
 }
 
 /// Training state information
@@ -67,11 +80,22 @@ pub struct PerformanceStats {
 }
 
 /// Distributed PINN trainer
-#[derive(Debug)]
-pub struct DistributedPinnTrainer<B: AutodiffBackend> {
+pub struct DistributedPinnTrainer<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> {
     coordinator: TrainingCoordinator<B>,
     multi_gpu_manager: Option<crate::inverse::pinn::ml::MultiGpuManager>,
     config: DistributedTrainingConfig,
+}
+
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> std::fmt::Debug
+    for DistributedPinnTrainer<B>
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DistributedPinnTrainer")
+            .field("coordinator", &self.coordinator)
+            .field("multi_gpu_manager", &self.multi_gpu_manager)
+            .field("config", &self.config)
+            .finish()
+    }
 }
 
 /// Configuration for distributed training

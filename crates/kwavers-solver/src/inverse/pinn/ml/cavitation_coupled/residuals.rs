@@ -3,13 +3,16 @@
 use super::domain::CavitationCoupledDomain;
 use super::mie_scattering::mie_backscatter_form_function;
 use crate::inverse::pinn::ml::physics::PinnDomainPhysicsParameters;
-use burn::prelude::ElementConversion;
-use burn::tensor::{backend::AutodiffBackend, Tensor};
+use coeus_autograd::Var;
 use kwavers_core::constants::acoustic_parameters::AIR_POLYTROPIC_INDEX;
 use kwavers_core::constants::cavitation::{SURFACE_TENSION_WATER, VAPOR_PRESSURE_WATER};
 use kwavers_core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL};
 
-impl<B: AutodiffBackend> CavitationCoupledDomain<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> CavitationCoupledDomain<B>
+where
+    B::DeviceBuffer<f32>:
+        coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+{
     /// Compute the Keller–Miksis cavitation residual.
     ///
     /// ## Theorem (Keller–Miksis equation)
@@ -34,10 +37,10 @@ impl<B: AutodiffBackend> CavitationCoupledDomain<B> {
     /// - Brennen, C. E. (1995). *Cavitation and Bubble Dynamics*. Oxford, §2.4.
     pub(super) fn cavitation_residual(
         &self,
-        acoustic_pressure: &Tensor<B, 2>,
-        _bubble_positions: &Tensor<B, 2>,
+        acoustic_pressure: &Var<f32, B>,
+        _bubble_positions: &Var<f32, B>,
         physics_params: &PinnDomainPhysicsParameters,
-    ) -> Tensor<B, 2> {
+    ) -> Var<f32, B> {
         let ambient_pressure = physics_params
             .domain_params
             .get("ambient_pressure")
@@ -50,7 +53,8 @@ impl<B: AutodiffBackend> CavitationCoupledDomain<B> {
             .copied()
             .unwrap_or(0.001) as f32;
 
-        let pressure_forcing = acoustic_pressure.clone() - ambient_pressure;
+        // pressure_forcing = acoustic_pressure - ambient_pressure
+        let pressure_forcing = coeus_autograd::scalar_add(acoustic_pressure, -ambient_pressure);
 
         let r_eq = self.config.bubble_params.r0 as f32;
         let gamma = AIR_POLYTROPIC_INDEX as f32;
@@ -70,14 +74,25 @@ impl<B: AutodiffBackend> CavitationCoupledDomain<B> {
         let p_viscous = 4.0 * viscosity * rdot / (r_eq * r_eq);
 
         let p_internal = p_gas + p_vapor;
-        let p_external = ambient_pressure + pressure_forcing + p_surface + p_viscous;
+        // p_external = ambient_pressure + pressure_forcing + p_surface + p_viscous
+        let p_external = coeus_autograd::scalar_add(
+            &pressure_forcing,
+            ambient_pressure + p_surface + p_viscous,
+        );
 
         // Pressure-driven acceleration term: (P_int − P_ext) / (ρ_l · R)
-        let accel = (p_internal - p_external) / (rho_l * r_eq);
+        // = -(p_external - p_internal) / (rho_l * r_eq)
+        let accel = coeus_autograd::scalar_mul(
+            &coeus_autograd::scalar_add(&p_external, -p_internal),
+            -1.0 / (rho_l * r_eq),
+        );
         // Inertial term: −(3/2) Ṙ²/R — zero since Ṙ = 0
         let inertial = -1.5_f32 * rdot * rdot / r_eq;
 
-        (accel + inertial) * self.config.coupling_strength as f32
+        coeus_autograd::scalar_mul(
+            &coeus_autograd::scalar_add(&accel, inertial),
+            self.config.coupling_strength as f32,
+        )
     }
 
     /// Compute the acoustic scattering residual from bubble cloud.
@@ -102,11 +117,16 @@ impl<B: AutodiffBackend> CavitationCoupledDomain<B> {
     /// - Morse, P. M. & Ingard, K. U. (1968). *Theoretical Acoustics* §8.3.
     pub(super) fn bubble_scattering_residual(
         &self,
-        acoustic_field: &Tensor<B, 2>,
-        bubble_positions: &Tensor<B, 2>,
-    ) -> Tensor<B, 2> {
+        acoustic_field: &Var<f32, B>,
+        bubble_positions: &Var<f32, B>,
+    ) -> Var<f32, B> {
+        let backend = B::default();
+
         if !self.config.nonlinear_acoustic {
-            return Tensor::zeros_like(acoustic_field);
+            return Var::new(
+                coeus_tensor::Tensor::zeros_on(acoustic_field.tensor.shape(), &backend),
+                false,
+            );
         }
 
         // ─── Mie constants (computed once per call, constant across all bubble pairs) ───
@@ -126,26 +146,27 @@ impl<B: AutodiffBackend> CavitationCoupledDomain<B> {
         let rho_l = self.config.bubble_params.rho_liquid as f32;
         let r_bubble = self.config.bubble_params.r0 as f32;
 
-        let n_points = acoustic_field.shape().dims[0];
+        // Bubble positions are non-differentiable coordinate data (only used to
+        // compute a scalar Mie phase/coefficient); read the raw values directly
+        // rather than tracking gradients through a slice op.
+        let pos_slice = bubble_positions.tensor.as_slice();
+        let n_points = acoustic_field.tensor.shape()[0];
+
         let mut scattered_rows = Vec::with_capacity(n_points);
 
         for i in 0..n_points {
-            let pos_i = bubble_positions.clone().slice([i..i + 1, 0..2]);
-            let mut total = Tensor::zeros([1, 1], &acoustic_field.device());
+            let pos_i = (pos_slice[i * 2], pos_slice[i * 2 + 1]);
+            let mut total = Var::new(coeus_tensor::Tensor::zeros_on(vec![1, 1], &backend), false);
 
             for j in 0..n_points {
                 if i == j {
                     continue;
                 }
 
-                let pos_j = bubble_positions.clone().slice([j..j + 1, 0..2]);
-                let dist_val = (pos_i.clone() - pos_j)
-                    .powf_scalar(2.0)
-                    .sum_dim(1)
-                    .sqrt()
-                    .clamp(1e-6_f32, f32::MAX)
-                    .into_scalar()
-                    .elem::<f32>();
+                let pos_j = (pos_slice[j * 2], pos_slice[j * 2 + 1]);
+                let dx = pos_i.0 - pos_j.0;
+                let dy = pos_i.1 - pos_j.1;
+                let dist_val = (dx * dx + dy * dy).sqrt().max(1e-6_f32);
 
                 // Mie backscattering form function (Anderson 1950, eq. 14).
                 let f_bs = mie_backscatter_form_function(k_l, k_b, rho_l, rho_b, r_bubble);
@@ -154,12 +175,14 @@ impl<B: AutodiffBackend> CavitationCoupledDomain<B> {
                     (f_bs.re * phase.cos() - f_bs.im * phase.sin()) / dist_val.max(1e-6_f32);
 
                 // Incident field at bubble j drives the scattered field at receiver i.
-                let contribution = acoustic_field.clone().slice([j..j + 1, 0..1]) * scatter_coeff;
-                total = total + contribution;
+                let field_j = coeus_autograd::slice(acoustic_field, &[(j, j + 1), (0, 1)]);
+                let contribution = coeus_autograd::scalar_mul(&field_j, scatter_coeff);
+                total = coeus_autograd::add(&total, &contribution);
             }
             scattered_rows.push(total);
         }
 
-        Tensor::cat(scattered_rows, 0)
+        let refs: Vec<&Var<f32, B>> = scattered_rows.iter().collect();
+        coeus_autograd::cat(&refs, 0)
     }
 }

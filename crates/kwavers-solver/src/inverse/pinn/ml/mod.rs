@@ -287,8 +287,7 @@ mod tests {
     fn test_pinn_module_exists() {
         #[cfg(feature = "pinn")]
         {
-            use burn::backend::{Autodiff, NdArray};
-            type TestBackend = Autodiff<NdArray>;
+            type TestBackend = coeus_core::MoiraiBackend;
             let solver = super::UniversalPINNSolver::<TestBackend>::new();
             let _solver = solver.unwrap();
         }

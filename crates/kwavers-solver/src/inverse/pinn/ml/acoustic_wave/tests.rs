@@ -1,11 +1,10 @@
 use super::domain::AcousticWaveDomain;
 use super::types::{AcousticBoundarySpec, AcousticProblemType, PinnAcousticBoundaryType};
 use crate::inverse::pinn::ml::physics::{BoundaryPosition, SimulationPhysicsDomain};
-use burn::backend::NdArray;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use std::collections::HashMap;
 
-type B = burn::backend::Autodiff<NdArray<f32>>;
+type B = coeus_core::MoiraiBackend;
 
 #[test]
 fn test_acoustic_wave_domain_creation() {

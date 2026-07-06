@@ -2,10 +2,8 @@
 
 use super::super::config::{BurnLossWeights2D, BurnPINN2DConfig};
 use super::wave_speed::WaveSpeedFn;
-use burn::module::{Ignored, Module};
-use burn::nn::{Linear, LinearConfig};
-use burn::tensor::backend::{AutodiffBackend, Backend};
-use burn::tensor::Tensor;
+use coeus_autograd::Var;
+use coeus_nn::{Linear, Module};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use ndarray::{Array1, Array2};
 use std::sync::Arc;
@@ -14,39 +12,51 @@ use std::sync::Arc;
 /// [`BurnPINN2DWave::compute_physics_loss`]:
 /// `(total, data, pde, boundary, initial)` scalar losses.
 type PhysicsLossComponents<B> = (
-    Tensor<B, 1>,
-    Tensor<B, 1>,
-    Tensor<B, 1>,
-    Tensor<B, 1>,
-    Tensor<B, 1>,
+    Var<f32, B>,
+    Var<f32, B>,
+    Var<f32, B>,
+    Var<f32, B>,
+    Var<f32, B>,
 );
 
 /// Physics-informed neural network for 2D wave equation.
 ///
 /// Supports spatially varying wave speeds c(x,y) for complex media.
-#[derive(Module, Debug)]
-pub struct BurnPINN2DWave<B: Backend> {
+#[derive(Clone)]
+pub struct BurnPINN2DWave<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> {
     /// Input layer (3 inputs: x, y, t).
-    pub input_layer: Linear<B>,
+    pub input_layer: Linear<f32, B>,
     /// Hidden layers with tanh activation.
-    pub hidden_layers: Vec<Linear<B>>,
+    pub hidden_layers: Vec<Linear<f32, B>>,
     /// Output layer (1 output: u).
-    pub output_layer: Linear<B>,
+    pub output_layer: Linear<f32, B>,
     /// Wave speed function c(x,y) for heterogeneous media (optional).
     pub wave_speed_fn: Option<WaveSpeedFn<B>>,
     /// Configuration used to create the model.
-    pub config: Ignored<BurnPINN2DConfig>,
+    pub config: BurnPINN2DConfig,
 }
 
-impl<B: Backend> BurnPINN2DWave<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> std::fmt::Debug
+    for BurnPINN2DWave<B>
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("BurnPINN2DWave")
+            .field("hidden_layers", &self.hidden_layers.len())
+            .field("wave_speed_fn", &self.wave_speed_fn)
+            .finish_non_exhaustive()
+    }
+}
+
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> BurnPINN2DWave<B>
+where
+    B::DeviceBuffer<f32>:
+        coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+{
     /// Create a new homogeneous PINN model.
     /// # Errors
     /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
-    /// # Panics
-    /// - Panics if an internal invariant assumed to hold at this call site is violated.
-    ///
-    pub fn new(config: BurnPINN2DConfig, device: &B::Device) -> KwaversResult<Self> {
+    pub fn new(config: BurnPINN2DConfig) -> KwaversResult<Self> {
         if config.hidden_layers.is_empty() {
             return Err(KwaversError::InvalidInput(
                 "Must have at least one hidden layer".into(),
@@ -55,24 +65,24 @@ impl<B: Backend> BurnPINN2DWave<B> {
 
         let input_size = 3;
         let first_hidden_size = config.hidden_layers[0];
-        let input_layer = LinearConfig::new(input_size, first_hidden_size).init(device);
+        let input_layer = Linear::new(input_size, first_hidden_size, true);
 
         let mut hidden_layers = Vec::new();
         for i in 0..config.hidden_layers.len() - 1 {
             let in_size = config.hidden_layers[i];
             let out_size = config.hidden_layers[i + 1];
-            hidden_layers.push(LinearConfig::new(in_size, out_size).init(device));
+            hidden_layers.push(Linear::new(in_size, out_size, true));
         }
 
         let last_hidden_size = *config.hidden_layers.last().unwrap();
-        let output_layer = LinearConfig::new(last_hidden_size, 1).init(device);
+        let output_layer = Linear::new(last_hidden_size, 1, true);
 
         Ok(Self {
             input_layer,
             hidden_layers,
             output_layer,
             wave_speed_fn: None,
-            config: Ignored(config),
+            config,
         })
     }
 
@@ -80,28 +90,24 @@ impl<B: Backend> BurnPINN2DWave<B> {
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
-    pub fn new_heterogeneous<F>(
-        config: BurnPINN2DConfig,
-        wave_speed_fn: F,
-        device: &B::Device,
-    ) -> KwaversResult<Self>
+    pub fn new_heterogeneous<F>(config: BurnPINN2DConfig, wave_speed_fn: F) -> KwaversResult<Self>
     where
         F: Fn(f32, f32) -> f32 + Send + Sync + 'static,
     {
-        let mut pinn = Self::new(config, device)?;
+        let mut pinn = Self::new(config)?;
         pinn.wave_speed_fn = Some(WaveSpeedFn::new(Arc::new(wave_speed_fn)));
         Ok(pinn)
     }
 
     /// Forward pass through the network.
-    pub fn forward(&self, x: Tensor<B, 2>, y: Tensor<B, 2>, t: Tensor<B, 2>) -> Tensor<B, 2> {
-        let input = Tensor::cat(vec![x, y, t], 1);
-        let mut h = self.input_layer.forward(input);
+    pub fn forward(&self, x: &Var<f32, B>, y: &Var<f32, B>, t: &Var<f32, B>) -> Var<f32, B> {
+        let input = coeus_autograd::cat(&[x, y, t], 1);
+        let mut h = self.input_layer.forward(&input);
         for layer in &self.hidden_layers {
-            h = layer.forward(h);
-            h = h.tanh();
+            h = layer.forward(&h);
+            h = coeus_autograd::tanh(&h);
         }
-        self.output_layer.forward(h)
+        self.output_layer.forward(&h)
     }
 
     /// Get wave speed at a specific location, using a default value if no function is provided.
@@ -112,13 +118,39 @@ impl<B: Backend> BurnPINN2DWave<B> {
             .unwrap_or(default_c)
     }
 
-    /// Get the device this model is on.
-    pub fn device(&self) -> B::Device {
+    /// Collect all trainable parameters, in the order `load_parameters` expects them back.
+    pub fn parameters(&self) -> Vec<Var<f32, B>> {
+        let mut params = self.input_layer.parameters();
+        for layer in &self.hidden_layers {
+            params.extend(layer.parameters());
+        }
+        params.extend(self.output_layer.parameters());
+        params
+    }
+
+    /// Write optimizer-updated parameter values back into this network's layers.
+    ///
+    /// # Panics
+    /// - Panics if `params.len()` does not match `self.parameters().len()`.
+    pub fn load_parameters(&mut self, params: &[Var<f32, B>]) {
+        let mut offset = 0;
+        let n_in = self.input_layer.parameters().len();
         self.input_layer
-            .devices()
-            .into_iter()
-            .next()
-            .unwrap_or_default()
+            .load_parameters(&params[offset..offset + n_in]);
+        offset += n_in;
+        for layer in &mut self.hidden_layers {
+            let n = layer.parameters().len();
+            layer.load_parameters(&params[offset..offset + n]);
+            offset += n;
+        }
+        let n_out = self.output_layer.parameters().len();
+        self.output_layer
+            .load_parameters(&params[offset..offset + n_out]);
+        assert_eq!(
+            offset + n_out,
+            params.len(),
+            "load_parameters: parameter count mismatch"
+        );
     }
 
     /// Get the number of parameters in the model.
@@ -126,53 +158,25 @@ impl<B: Backend> BurnPINN2DWave<B> {
     /// - Panics if an internal invariant assumed to hold at this call site is violated.
     ///
     pub fn num_parameters(&self) -> usize {
-        let input_params = self.config.0.hidden_layers[0] * 3;
+        let input_params = self.config.hidden_layers[0] * 3;
         let mut hidden_params = 0;
-        for i in 0..self.config.0.hidden_layers.len() - 1 {
-            hidden_params += self.config.0.hidden_layers[i] * self.config.0.hidden_layers[i + 1];
+        for i in 0..self.config.hidden_layers.len() - 1 {
+            hidden_params += self.config.hidden_layers[i] * self.config.hidden_layers[i + 1];
         }
-        let output_params = *self.config.0.hidden_layers.last().unwrap();
-        let bias_count: usize = self.config.0.hidden_layers.iter().sum::<usize>() + 1;
+        let output_params = *self.config.hidden_layers.last().unwrap();
+        let bias_count: usize = self.config.hidden_layers.iter().sum::<usize>() + 1;
         input_params + hidden_params + output_params + bias_count
-    }
-
-    /// Get all model parameters (weights and biases).
-    pub fn parameters(&self) -> Vec<Tensor<B, 1>> {
-        let mut params = Vec::new();
-
-        params.push(self.input_layer.weight.val().flatten(0, 1));
-        if let Some(bias) = &self.input_layer.bias {
-            params.push(bias.val().flatten(0, 0));
-        }
-
-        for layer in &self.hidden_layers {
-            params.push(layer.weight.val().flatten(0, 1));
-            if let Some(bias) = &layer.bias {
-                params.push(bias.val().flatten(0, 0));
-            }
-        }
-
-        params.push(self.output_layer.weight.val().flatten(0, 1));
-        if let Some(bias) = &self.output_layer.bias {
-            params.push(bias.val().flatten(0, 0));
-        }
-
-        params
     }
 
     /// Predict field values at given spatial and temporal coordinates.
     /// # Errors
     /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
-    /// # Panics
-    /// - Panics if an internal invariant assumed to hold at this call site is violated.
-    ///
     pub fn predict(
         &self,
         x: &Array1<f64>,
         y: &Array1<f64>,
         t: &Array1<f64>,
-        device: &B::Device,
     ) -> KwaversResult<Array2<f64>> {
         if x.len() != y.len() || x.len() != t.len() {
             return Err(KwaversError::InvalidInput(
@@ -181,143 +185,149 @@ impl<B: Backend> BurnPINN2DWave<B> {
         }
 
         let n = x.len();
+        let backend = B::default();
 
         let x_vec: Vec<f32> = x.iter().map(|&v| v as f32).collect();
         let y_vec: Vec<f32> = y.iter().map(|&v| v as f32).collect();
         let t_vec: Vec<f32> = t.iter().map(|&v| v as f32).collect();
 
-        let x_tensor = Tensor::<B, 1>::from_floats(x_vec.as_slice(), device).reshape([n, 1]);
-        let y_tensor = Tensor::<B, 1>::from_floats(y_vec.as_slice(), device).reshape([n, 1]);
-        let t_tensor = Tensor::<B, 1>::from_floats(t_vec.as_slice(), device).reshape([n, 1]);
+        let x_var = Var::new(
+            coeus_tensor::Tensor::from_slice_on(vec![n, 1], &x_vec, &backend),
+            false,
+        );
+        let y_var = Var::new(
+            coeus_tensor::Tensor::from_slice_on(vec![n, 1], &y_vec, &backend),
+            false,
+        );
+        let t_var = Var::new(
+            coeus_tensor::Tensor::from_slice_on(vec![n, 1], &t_vec, &backend),
+            false,
+        );
 
-        let u_tensor = self.forward(x_tensor, y_tensor, t_tensor);
+        let u_var = self.forward(&x_var, &y_var, &t_var);
+        let u_vec: Vec<f64> = u_var.tensor.as_slice().iter().map(|&v| v as f64).collect();
 
-        let u_data = u_tensor.to_data();
-        let u_vec: Vec<f64> = u_data
-            .as_slice::<f32>()
-            .unwrap()
-            .iter()
-            .map(|&v| v as f64)
-            .collect();
-
-        Ok(Array2::from_shape_vec((x.len(), 1), u_vec).unwrap())
+        Ok(Array2::from_shape_vec((n, 1), u_vec).unwrap())
     }
-}
 
-impl<B: AutodiffBackend> BurnPINN2DWave<B> {
-    /// Compute PDE residual using finite differences within autodiff framework.
+    /// Compute PDE residual using finite differences.
     /// # Panics
     /// - Panics if an internal invariant assumed to hold at this call site is violated.
     ///
     pub fn compute_pde_residual(
         &self,
-        x: Tensor<B, 2>,
-        y: Tensor<B, 2>,
-        t: Tensor<B, 2>,
+        x: &Var<f32, B>,
+        y: &Var<f32, B>,
+        t: &Var<f32, B>,
         wave_speed: f64,
-    ) -> Tensor<B, 2> {
+    ) -> Var<f32, B> {
         let base_eps = (f32::EPSILON).sqrt();
         let scale_factor = 1e-2_f32;
         let eps = base_eps * scale_factor;
 
-        let u = self.forward(x.clone(), y.clone(), t.clone());
+        let x_plus = coeus_autograd::scalar_add(x, eps);
+        let x_minus = coeus_autograd::scalar_add(x, -eps);
+        let y_plus = coeus_autograd::scalar_add(y, eps);
+        let y_minus = coeus_autograd::scalar_add(y, -eps);
+        let t_plus = coeus_autograd::scalar_add(t, eps);
+        let t_minus = coeus_autograd::scalar_add(t, -eps);
+
+        let u = self.forward(x, y, t);
+        let two_u = coeus_autograd::scalar_mul(&u, 2.0);
 
         let u_xx = {
-            let u_x_plus = self.forward(x.clone().add_scalar(eps), y.clone(), t.clone());
-            let u_x_minus = self.forward(x.clone().sub_scalar(eps), y.clone(), t.clone());
-            u_x_plus
-                .add(u_x_minus)
-                .sub(u.clone().mul_scalar(2.0))
-                .div_scalar(eps * eps)
+            let u_x_plus = self.forward(&x_plus, y, t);
+            let u_x_minus = self.forward(&x_minus, y, t);
+            let sum = coeus_autograd::add(&u_x_plus, &u_x_minus);
+            let diff = coeus_autograd::sub(&sum, &two_u);
+            coeus_autograd::scalar_mul(&diff, 1.0 / (eps * eps))
         };
 
         let u_yy = {
-            let u_y_plus = self.forward(x.clone(), y.clone().add_scalar(eps), t.clone());
-            let u_y_minus = self.forward(x.clone(), y.clone().sub_scalar(eps), t.clone());
-            u_y_plus
-                .add(u_y_minus)
-                .sub(u.clone().mul_scalar(2.0))
-                .div_scalar(eps * eps)
+            let u_y_plus = self.forward(x, &y_plus, t);
+            let u_y_minus = self.forward(x, &y_minus, t);
+            let sum = coeus_autograd::add(&u_y_plus, &u_y_minus);
+            let diff = coeus_autograd::sub(&sum, &two_u);
+            coeus_autograd::scalar_mul(&diff, 1.0 / (eps * eps))
         };
 
         let u_tt = {
-            let u_t_plus = self.forward(x.clone(), y.clone(), t.clone().add_scalar(eps));
-            let u_t_minus = self.forward(x.clone(), y.clone(), t.clone().sub_scalar(eps));
-            u_t_plus
-                .add(u_t_minus)
-                .sub(u.clone().mul_scalar(2.0))
-                .div_scalar(eps * eps)
+            let u_t_plus = self.forward(x, y, &t_plus);
+            let u_t_minus = self.forward(x, y, &t_minus);
+            let sum = coeus_autograd::add(&u_t_plus, &u_t_minus);
+            let diff = coeus_autograd::sub(&sum, &two_u);
+            coeus_autograd::scalar_mul(&diff, 1.0 / (eps * eps))
         };
 
-        let laplacian = u_xx.add(u_yy);
+        let laplacian = coeus_autograd::add(&u_xx, &u_yy);
 
-        let batch_size = x.shape().dims[0];
+        let x_slice = x.tensor.as_slice();
+        let y_slice = y.tensor.as_slice();
+        let batch_size = x_slice.len();
         let c_values: Vec<f32> = (0..batch_size)
-            .map(|i| {
-                let x_val = x
-                    .clone()
-                    .slice([i..i + 1, 0..1])
-                    .into_data()
-                    .as_slice::<f32>()
-                    .unwrap()[0];
-                let y_val = y
-                    .clone()
-                    .slice([i..i + 1, 0..1])
-                    .into_data()
-                    .as_slice::<f32>()
-                    .unwrap()[0];
-                self.get_wave_speed_with_default(x_val, y_val, wave_speed as f32)
-            })
+            .map(|i| self.get_wave_speed_with_default(x_slice[i], y_slice[i], wave_speed as f32))
             .collect();
 
-        let c_tensor =
-            Tensor::<B, 1>::from_floats(c_values.as_slice(), &x.device()).reshape([batch_size, 1]);
-        let c_squared = c_tensor.powf_scalar(2.0);
+        let backend = B::default();
+        let c_tensor = coeus_tensor::Tensor::from_slice_on(vec![batch_size, 1], &c_values, &backend);
+        let c_var = Var::new(c_tensor, false);
+        let c_squared = coeus_autograd::mul(&c_var, &c_var);
 
-        u_tt.sub(laplacian.mul(c_squared))
+        coeus_autograd::sub(&u_tt, &coeus_autograd::mul(&laplacian, &c_squared))
     }
 
     /// Compute physics-informed loss function.
     // Independent collocation/boundary/initial tensors plus scalar weights with
     // no cohesive sub-grouping; bundling would not clarify the call site.
     #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::type_complexity)] // (total, data, pde, bc, ic) mirrors the original burn API 1:1
     pub fn compute_physics_loss(
         &self,
-        x_data: Tensor<B, 2>,
-        y_data: Tensor<B, 2>,
-        t_data: Tensor<B, 2>,
-        u_data: Tensor<B, 2>,
-        x_collocation: Tensor<B, 2>,
-        y_collocation: Tensor<B, 2>,
-        t_collocation: Tensor<B, 2>,
-        x_boundary: Tensor<B, 2>,
-        y_boundary: Tensor<B, 2>,
-        t_boundary: Tensor<B, 2>,
-        u_boundary: Tensor<B, 2>,
-        x_initial: Tensor<B, 2>,
-        y_initial: Tensor<B, 2>,
-        t_initial: Tensor<B, 2>,
-        u_initial: Tensor<B, 2>,
+        x_data: &Var<f32, B>,
+        y_data: &Var<f32, B>,
+        t_data: &Var<f32, B>,
+        u_data: &Var<f32, B>,
+        x_collocation: &Var<f32, B>,
+        y_collocation: &Var<f32, B>,
+        t_collocation: &Var<f32, B>,
+        x_boundary: &Var<f32, B>,
+        y_boundary: &Var<f32, B>,
+        t_boundary: &Var<f32, B>,
+        u_boundary: &Var<f32, B>,
+        x_initial: &Var<f32, B>,
+        y_initial: &Var<f32, B>,
+        t_initial: &Var<f32, B>,
+        u_initial: &Var<f32, B>,
         wave_speed: f64,
         loss_weights: BurnLossWeights2D,
     ) -> PhysicsLossComponents<B> {
         let u_pred_data = self.forward(x_data, y_data, t_data);
-        let data_loss = (u_pred_data - u_data).powf_scalar(2.0).mean();
+        let data_diff = coeus_autograd::sub(&u_pred_data, u_data);
+        let data_loss = coeus_autograd::mean(&coeus_autograd::mul(&data_diff, &data_diff));
 
         let residual =
             self.compute_pde_residual(x_collocation, y_collocation, t_collocation, wave_speed);
-        let pde_loss = residual.powf_scalar(2.0).mean() * 1e-12_f32;
+        let pde_loss_raw = coeus_autograd::mean(&coeus_autograd::mul(&residual, &residual));
+        let pde_loss = coeus_autograd::scalar_mul(&pde_loss_raw, 1e-12);
 
         let u_pred_boundary = self.forward(x_boundary, y_boundary, t_boundary);
-        let bc_loss = (u_pred_boundary - u_boundary).powf_scalar(2.0).mean();
+        let bc_diff = coeus_autograd::sub(&u_pred_boundary, u_boundary);
+        let bc_loss = coeus_autograd::mean(&coeus_autograd::mul(&bc_diff, &bc_diff));
 
         let u_pred_initial = self.forward(x_initial, y_initial, t_initial);
-        let ic_loss = (u_pred_initial - u_initial).powf_scalar(2.0).mean();
+        let ic_diff = coeus_autograd::sub(&u_pred_initial, u_initial);
+        let ic_loss = coeus_autograd::mean(&coeus_autograd::mul(&ic_diff, &ic_diff));
 
-        let total_loss = data_loss.clone() * loss_weights.data as f32
-            + pde_loss.clone() * loss_weights.pde as f32
-            + bc_loss.clone() * loss_weights.boundary as f32
-            + ic_loss.clone() * loss_weights.initial as f32;
+        let total_loss = coeus_autograd::add(
+            &coeus_autograd::add(
+                &coeus_autograd::scalar_mul(&data_loss, loss_weights.data as f32),
+                &coeus_autograd::scalar_mul(&pde_loss, loss_weights.pde as f32),
+            ),
+            &coeus_autograd::add(
+                &coeus_autograd::scalar_mul(&bc_loss, loss_weights.boundary as f32),
+                &coeus_autograd::scalar_mul(&ic_loss, loss_weights.initial as f32),
+            ),
+        );
 
         (total_loss, data_loss, pde_loss, bc_loss, ic_loss)
     }

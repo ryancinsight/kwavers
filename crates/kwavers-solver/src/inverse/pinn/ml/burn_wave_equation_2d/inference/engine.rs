@@ -8,15 +8,17 @@ use super::types::{BurnWave2dInferenceMemoryPool, QuantizedNetwork};
 #[cfg(not(feature = "simd"))]
 use super::types::ActivationType;
 use crate::inverse::pinn::ml::burn_wave_equation_2d::model::BurnPINN2DWave;
-use burn::tensor::backend::Backend;
 use kwavers_core::error::{KwaversError, KwaversResult};
 
 #[cfg(feature = "simd")]
 use super::backend::simd::SimdExecutor;
 
 #[derive(Debug)]
-pub struct RealTimePINNInference<B: Backend> {
-    /// Original Burn-based PINN (used as fallback)
+pub struct RealTimePINNInference<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>
+where
+    B::DeviceBuffer<f32>: coeus_core::CpuAddressableStorage<f32>,
+{
+    /// Original PINN (used as fallback)
     _burn_pinn: BurnPINN2DWave<B>,
     /// Quantized neural network for fast inference
     quantized_network: QuantizedNetwork,
@@ -33,12 +35,15 @@ pub struct RealTimePINNInference<B: Backend> {
     _simd: std::marker::PhantomData<()>,
 }
 
-impl<B: Backend> RealTimePINNInference<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> RealTimePINNInference<B>
+where
+    B::DeviceBuffer<f32>: coeus_core::CpuAddressableStorage<f32>,
+{
     /// Create a new real-time PINN inference engine
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
-    pub fn new(burn_pinn: BurnPINN2DWave<B>, _device: &B::Device) -> KwaversResult<Self> {
+    pub fn new(burn_pinn: BurnPINN2DWave<B>) -> KwaversResult<Self> {
         let layer_sizes = BurnWave2dQuantizer::extract_layer_sizes(&burn_pinn);
         let activations = BurnWave2dQuantizer::extract_activations(&burn_pinn);
 
@@ -50,7 +55,7 @@ impl<B: Backend> RealTimePINNInference<B> {
         let simd_executor = SimdExecutor::new(16);
 
         #[cfg(feature = "gpu")]
-        let gpu_engine = BurnNeuralNetwork::new(&quantized_network, _device).ok();
+        let gpu_engine = BurnNeuralNetwork::new(&quantized_network).ok();
 
         Ok(Self {
             _burn_pinn: burn_pinn,

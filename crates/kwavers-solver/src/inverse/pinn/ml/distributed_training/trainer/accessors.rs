@@ -1,9 +1,8 @@
 use super::super::{DistributedPinnTrainer, PerformanceStats, TrainingState};
-use burn::tensor::backend::AutodiffBackend;
 use kwavers_core::error::KwaversResult;
 use log::warn;
 
-impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> DistributedPinnTrainer<B> {
     /// Get training state.
     pub fn get_training_state(&self) -> &TrainingState {
         &self.coordinator.training_state

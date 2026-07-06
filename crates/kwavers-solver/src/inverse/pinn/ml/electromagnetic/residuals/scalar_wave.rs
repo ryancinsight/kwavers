@@ -1,22 +1,27 @@
 use super::constants::EPS_FD_F32;
 use crate::inverse::pinn::ml::physics::PinnDomainPhysicsParameters;
 use crate::inverse::pinn::ml::BurnPINN2DWave;
-use burn::tensor::backend::AutodiffBackend;
-use burn::tensor::Tensor;
+use coeus_autograd::Var;
 
 // Independent field tensors and physical parameters with no cohesive
 // sub-grouping; bundling would not clarify the call site.
 #[allow(clippy::too_many_arguments)]
-pub fn wave_propagation_residual<B: AutodiffBackend>(
+pub fn wave_propagation_residual<
+    B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default,
+>(
     model: &BurnPINN2DWave<B>, // Changed from outputs to model
-    x: &Tensor<B, 2>,
-    y: &Tensor<B, 2>,
-    t: &Tensor<B, 2>,
+    x: &Var<f32, B>,
+    y: &Var<f32, B>,
+    t: &Var<f32, B>,
     eps: f64,
     mu: f64,
     sigma: f64,
     physics_params: &PinnDomainPhysicsParameters,
-) -> Tensor<B, 2> {
+) -> Var<f32, B>
+where
+    B::DeviceBuffer<f32>:
+        coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+{
     // -------------------------------------------------------------------------
     // Theorem — Scalar Wave Equation for Ez (TM-mode Maxwell)
     //
@@ -53,38 +58,39 @@ pub fn wave_propagation_residual<B: AutodiffBackend>(
     // Step size for finite differences (same pattern as other residuals in this file)
     let h = EPS_FD_F32;
 
+    use coeus_autograd::{add, scalar_add, scalar_mul, scalar_sub, sub};
+
     // --- ∂²Ez/∂x² = (Ez(x+h) − 2·Ez(x) + Ez(x−h)) / h² ---
-    let ez_xp = model.forward(x.clone().add_scalar(h), y.clone(), t.clone());
-    let ez_xm = model.forward(x.clone().sub_scalar(h), y.clone(), t.clone());
-    let ez_0 = model.forward(x.clone(), y.clone(), t.clone());
-    let d2ez_dx2 = (ez_xp.sub(ez_0.clone().mul_scalar(2.0)).add(ez_xm)).div_scalar(h * h);
+    let ez_xp = model.forward(&scalar_add(x, h), y, t);
+    let ez_xm = model.forward(&scalar_sub(x, h), y, t);
+    let ez_0 = model.forward(x, y, t);
+    let d2ez_dx2 = scalar_mul(&add(&sub(&ez_xp, &scalar_mul(&ez_0, 2.0)), &ez_xm), 1.0 / (h * h));
 
     // --- ∂²Ez/∂y² = (Ez(y+h) − 2·Ez(y) + Ez(y−h)) / h² ---
-    let ez_yp = model.forward(x.clone(), y.clone().add_scalar(h), t.clone());
-    let ez_ym = model.forward(x.clone(), y.clone().sub_scalar(h), t.clone());
-    let d2ez_dy2 = (ez_yp.sub(ez_0.clone().mul_scalar(2.0)).add(ez_ym)).div_scalar(h * h);
+    let ez_yp = model.forward(x, &scalar_add(y, h), t);
+    let ez_ym = model.forward(x, &scalar_sub(y, h), t);
+    let d2ez_dy2 = scalar_mul(&add(&sub(&ez_yp, &scalar_mul(&ez_0, 2.0)), &ez_ym), 1.0 / (h * h));
 
     // --- ∂²Ez/∂t² = (Ez(t+h) − 2·Ez(t) + Ez(t−h)) / h² ---
-    let ez_tp = model.forward(x.clone(), y.clone(), t.clone().add_scalar(h));
-    let ez_tm = model.forward(x.clone(), y.clone(), t.clone().sub_scalar(h));
-    let d2ez_dt2 = (ez_tp
-        .clone()
-        .sub(ez_0.clone().mul_scalar(2.0))
-        .add(ez_tm.clone()))
-    .div_scalar(h * h);
+    let ez_tp = model.forward(x, y, &scalar_add(t, h));
+    let ez_tm = model.forward(x, y, &scalar_sub(t, h));
+    let d2ez_dt2 = scalar_mul(
+        &add(&sub(&ez_tp, &scalar_mul(&ez_0, 2.0)), &ez_tm),
+        1.0 / (h * h),
+    );
 
     // --- ∂Ez/∂t = (Ez(t+h) − Ez(t−h)) / (2h) ---
-    let dez_dt = (ez_tp.sub(ez_tm)).div_scalar(2.0 * h);
+    let dez_dt = scalar_mul(&sub(&ez_tp, &ez_tm), 1.0 / (2.0 * h));
 
     // --- Assemble residual: R = ε·μ·∂²Ez/∂t² + μ·σ·∂Ez/∂t − ∂²Ez/∂x² − ∂²Ez/∂y² ---
     let eps_mu = (eps * mu) as f32;
     let mu_sigma = (mu * sigma) as f32;
 
-    let laplacian = d2ez_dx2.add(d2ez_dy2);
-    let wave_term = d2ez_dt2.mul_scalar(eps_mu);
-    let damping_term = dez_dt.mul_scalar(mu_sigma);
+    let laplacian = add(&d2ez_dx2, &d2ez_dy2);
+    let wave_term = scalar_mul(&d2ez_dt2, eps_mu);
+    let damping_term = scalar_mul(&dez_dt, mu_sigma);
 
-    wave_term.add(damping_term).sub(laplacian)
+    sub(&add(&wave_term, &damping_term), &laplacian)
 }
 
 #[cfg(test)]
@@ -218,7 +224,9 @@ mod tests {
     ///
     #[test]
     fn test_fd_step_is_in_safe_range() {
-        assert!(EPS_FD_F32 > 1e-4, "EPS_FD_F32 too small: {}", EPS_FD_F32);
-        assert!(EPS_FD_F32 < 1e-1, "EPS_FD_F32 too large: {}", EPS_FD_F32);
+        const {
+            assert!(EPS_FD_F32 > 1e-4, "EPS_FD_F32 too small");
+            assert!(EPS_FD_F32 < 1e-1, "EPS_FD_F32 too large");
+        }
     }
 }

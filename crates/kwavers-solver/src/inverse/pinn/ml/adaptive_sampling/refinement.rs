@@ -1,5 +1,4 @@
 use super::{AdaptiveCollocationSampler, HighResidualRegion};
-use burn::tensor::{backend::AutodiffBackend, Tensor};
 use kwavers_core::error::KwaversResult;
 use rand::Rng;
 
@@ -8,14 +7,16 @@ use rand::Rng;
 type GridCellAccumulator =
     std::collections::HashMap<(usize, usize, usize), (Vec<f32>, Vec<f32>, Vec<f32>, Vec<f32>)>;
 
-impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>
+    AdaptiveCollocationSampler<B>
+{
     /// Adaptive refinement.
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(super) fn adaptive_refinement(&mut self) -> KwaversResult<()> {
-        let priorities_data: Vec<f32> = self.priorities.to_data().to_vec().unwrap_or_default();
-        let points_data: Vec<f32> = self.active_points.to_data().to_vec().unwrap_or_default();
+        let priorities_data: Vec<f32> = self.priorities.clone();
+        let points_data: Vec<f32> = self.active_points.clone();
 
         let mut indexed_priorities: Vec<(usize, f32)> = priorities_data
             .iter()
@@ -103,9 +104,8 @@ impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
             }
         }
 
-        let device = self.active_points.device();
-        self.active_points = Tensor::from_data(new_points.as_slice(), &device);
-        self.priorities = Tensor::from_data(new_priorities.as_slice(), &device);
+        self.active_points = new_points;
+        self.priorities = new_priorities;
 
         self.stats.points_refined = refined_points.len() / 3;
         self.stats.points_coarsened = coarsening_count;
@@ -118,10 +118,8 @@ impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
         const MIN_POINTS_PER_REGION: usize = 3;
         const TOP_REGION_FRACTION: f32 = 0.3;
 
-        let points_data = self.active_points.clone().into_data();
-        let points_vec: Vec<f32> = points_data.to_vec().unwrap_or_default();
-        let priorities_data = self.priorities.clone().into_data();
-        let priorities_vec: Vec<f32> = priorities_data.to_vec().unwrap_or_default();
+        let points_vec: Vec<f32> = self.active_points.clone();
+        let priorities_vec: Vec<f32> = self.priorities.clone();
 
         if points_vec.len() < 3 || points_vec.len() / 3 != priorities_vec.len() {
             return self.create_fallback_regions();

@@ -8,12 +8,16 @@ use super::types::{
     UniversalTrainingConfig,
 };
 use crate::inverse::pinn::ml::physics::{PinnDomainPhysicsParameters, SimulationPhysicsDomain};
-use burn::tensor::backend::AutodiffBackend;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use std::collections::HashMap;
 use std::time::Instant;
 
-impl<B: AutodiffBackend + 'static> UniversalPINNSolver<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default + 'static>
+    UniversalPINNSolver<B>
+where
+    B::DeviceBuffer<f32>:
+        coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+{
     /// Register a physics domain
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.

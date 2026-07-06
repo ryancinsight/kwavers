@@ -2,15 +2,18 @@ use super::config::{BurnPINN2DConfig, BurnTrainingMetrics2D};
 use super::geometry::BurnWave2dGeometry;
 use super::model::BurnPINN2DWave;
 use super::optimizer::SimpleOptimizer2D;
-use burn::tensor::backend::AutodiffBackend;
-use burn::tensor::Tensor;
+use coeus_autograd::Var;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use ndarray::{Array1, Array2};
 use std::f64::consts::PI;
 
-/// Training state for Burn-based 2D PINN
+/// Training state for the 2D PINN.
 #[derive(Debug)]
-pub struct BurnPINN2DTrainer<B: AutodiffBackend> {
+pub struct BurnPINN2DTrainer<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>
+where
+    B::DeviceBuffer<f32>:
+        coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+{
     /// The neural network
     pub pinn: BurnPINN2DWave<B>,
     /// The geometry definition
@@ -19,7 +22,21 @@ pub struct BurnPINN2DTrainer<B: AutodiffBackend> {
     pub optimizer: SimpleOptimizer2D,
 }
 
-impl<B: AutodiffBackend> BurnPINN2DTrainer<B> {
+fn var_col<B: coeus_ops::BackendOps<f32> + Default>(
+    vals: &[f32],
+    backend: &B,
+) -> Var<f32, B> {
+    Var::new(
+        coeus_tensor::Tensor::from_slice_on(vec![vals.len(), 1], vals, backend),
+        false,
+    )
+}
+
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> BurnPINN2DTrainer<B>
+where
+    B::DeviceBuffer<f32>:
+        coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+{
     /// New trainer.
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
@@ -27,9 +44,8 @@ impl<B: AutodiffBackend> BurnPINN2DTrainer<B> {
     pub fn new_trainer(
         config: BurnPINN2DConfig,
         geometry: BurnWave2dGeometry,
-        device: &B::Device,
     ) -> KwaversResult<Self> {
-        let pinn = BurnPINN2DWave::new(config.clone(), device)?;
+        let pinn = BurnPINN2DWave::new(config.clone())?;
         let optimizer = SimpleOptimizer2D::new(config.learning_rate as f32);
 
         Ok(Self {
@@ -54,7 +70,6 @@ impl<B: AutodiffBackend> BurnPINN2DTrainer<B> {
         u_data: &Array2<f64>,
         wave_speed: f64,
         config: &BurnPINN2DConfig,
-        device: &B::Device,
         epochs: usize,
     ) -> KwaversResult<BurnTrainingMetrics2D> {
         self.train_with_callback(
@@ -64,7 +79,6 @@ impl<B: AutodiffBackend> BurnPINN2DTrainer<B> {
             u_data,
             wave_speed,
             config,
-            device,
             epochs,
             |_, _| true,
         )
@@ -86,7 +100,6 @@ impl<B: AutodiffBackend> BurnPINN2DTrainer<B> {
         u_data: &Array2<f64>,
         wave_speed: f64,
         config: &BurnPINN2DConfig,
-        device: &B::Device,
         epochs: usize,
         mut callback: F,
     ) -> KwaversResult<BurnTrainingMetrics2D>
@@ -115,20 +128,17 @@ impl<B: AutodiffBackend> BurnPINN2DTrainer<B> {
             epochs_completed: 0,
         };
 
-        let n_data = x_data.len();
+        let backend = B::default();
+
         let x_data_vec: Vec<f32> = x_data.iter().map(|&v| v as f32).collect();
         let y_data_vec: Vec<f32> = y_data.iter().map(|&v| v as f32).collect();
         let t_data_vec: Vec<f32> = t_data.iter().map(|&v| v as f32).collect();
         let u_data_vec: Vec<f32> = u_data.iter().map(|&v| v as f32).collect();
 
-        let x_data_tensor =
-            Tensor::<B, 1>::from_floats(x_data_vec.as_slice(), device).reshape([n_data, 1]);
-        let y_data_tensor =
-            Tensor::<B, 1>::from_floats(y_data_vec.as_slice(), device).reshape([n_data, 1]);
-        let t_data_tensor =
-            Tensor::<B, 1>::from_floats(t_data_vec.as_slice(), device).reshape([n_data, 1]);
-        let u_data_tensor =
-            Tensor::<B, 1>::from_floats(u_data_vec.as_slice(), device).reshape([n_data, 1]);
+        let x_data_var = var_col(&x_data_vec, &backend);
+        let y_data_var = var_col(&y_data_vec, &backend);
+        let t_data_var = var_col(&t_data_vec, &backend);
+        let u_data_var = var_col(&u_data_vec, &backend);
 
         let n_colloc = config.num_collocation_points;
         let (x_colloc, y_colloc) = self.geometry.sample_points(n_colloc);
@@ -138,43 +148,47 @@ impl<B: AutodiffBackend> BurnPINN2DTrainer<B> {
         let x_colloc_vec: Vec<f32> = x_colloc.iter().map(|&v| v as f32).collect();
         let y_colloc_vec: Vec<f32> = y_colloc.iter().map(|&v| v as f32).collect();
 
-        let x_colloc_tensor =
-            Tensor::<B, 1>::from_floats(x_colloc_vec.as_slice(), device).reshape([n_colloc, 1]);
-        let y_colloc_tensor =
-            Tensor::<B, 1>::from_floats(y_colloc_vec.as_slice(), device).reshape([n_colloc, 1]);
-        let t_colloc_tensor =
-            Tensor::<B, 1>::from_floats(t_colloc_vec.as_slice(), device).reshape([n_colloc, 1]);
+        let x_colloc_var = var_col(&x_colloc_vec, &backend);
+        let y_colloc_var = var_col(&y_colloc_vec, &backend);
+        let t_colloc_var = var_col(&t_colloc_vec, &backend);
 
-        let (x_bc, y_bc, t_bc, u_bc) = self.generate_boundary_conditions(config, device);
-        let (x_ic, y_ic, t_ic, u_ic) = self.generate_initial_conditions(config, device);
+        let (x_bc, y_bc, t_bc, u_bc) = self.generate_boundary_conditions(config, &backend);
+        let (x_ic, y_ic, t_ic, u_ic) = self.generate_initial_conditions(config, &backend);
 
         for epoch in 0..epochs {
+            // Var gradients accumulate across `backward()` calls (unlike burn's
+            // per-call-graph `Gradients`, implicitly fresh each step); zero
+            // them before this epoch's forward+backward or they carry over.
+            for p in self.pinn.parameters() {
+                p.zero_grad();
+            }
+
             let (total_loss, data_loss, pde_loss, bc_loss, ic_loss) =
                 self.pinn.compute_physics_loss(
-                    x_data_tensor.clone(),
-                    y_data_tensor.clone(),
-                    t_data_tensor.clone(),
-                    u_data_tensor.clone(),
-                    x_colloc_tensor.clone(),
-                    y_colloc_tensor.clone(),
-                    t_colloc_tensor.clone(),
-                    x_bc.clone(),
-                    y_bc.clone(),
-                    t_bc.clone(),
-                    u_bc.clone(),
-                    x_ic.clone(),
-                    y_ic.clone(),
-                    t_ic.clone(),
-                    u_ic.clone(),
+                    &x_data_var,
+                    &y_data_var,
+                    &t_data_var,
+                    &u_data_var,
+                    &x_colloc_var,
+                    &y_colloc_var,
+                    &t_colloc_var,
+                    &x_bc,
+                    &y_bc,
+                    &t_bc,
+                    &u_bc,
+                    &x_ic,
+                    &y_ic,
+                    &t_ic,
+                    &u_ic,
                     wave_speed,
                     config.loss_weights,
                 );
 
-            let total_val = total_loss.clone().into_data().as_slice::<f32>().unwrap()[0] as f64;
-            let data_val = data_loss.clone().into_data().as_slice::<f32>().unwrap()[0] as f64;
-            let pde_val = pde_loss.clone().into_data().as_slice::<f32>().unwrap()[0] as f64;
-            let bc_val = bc_loss.clone().into_data().as_slice::<f32>().unwrap()[0] as f64;
-            let ic_val = ic_loss.clone().into_data().as_slice::<f32>().unwrap()[0] as f64;
+            let total_val = total_loss.tensor.as_slice()[0] as f64;
+            let data_val = data_loss.tensor.as_slice()[0] as f64;
+            let pde_val = pde_loss.tensor.as_slice()[0] as f64;
+            let bc_val = bc_loss.tensor.as_slice()[0] as f64;
+            let ic_val = ic_loss.tensor.as_slice()[0] as f64;
 
             if !total_val.is_finite()
                 || !data_val.is_finite()
@@ -200,8 +214,8 @@ impl<B: AutodiffBackend> BurnPINN2DTrainer<B> {
             metrics.ic_loss.push(ic_val);
             metrics.epochs_completed = epoch + 1;
 
-            let grads = total_loss.backward();
-            self.pinn = self.optimizer.step(self.pinn.clone(), &grads);
+            total_loss.backward();
+            self.pinn = self.optimizer.step(self.pinn.clone());
 
             if epoch % 100 == 0 {
                 log::info!("Epoch {}/{}: total_loss={:.6e}", epoch, epochs, total_val);
@@ -216,11 +230,12 @@ impl<B: AutodiffBackend> BurnPINN2DTrainer<B> {
         Ok(metrics)
     }
 
+    #[allow(clippy::type_complexity)] // (x, y, t, u) boundary-condition tensors, no cohesive grouping
     fn generate_boundary_conditions(
         &self,
         _config: &BurnPINN2DConfig,
-        device: &B::Device,
-    ) -> (Tensor<B, 2>, Tensor<B, 2>, Tensor<B, 2>, Tensor<B, 2>) {
+        backend: &B,
+    ) -> (Var<f32, B>, Var<f32, B>, Var<f32, B>, Var<f32, B>) {
         let n_bc = 50;
         let mut x_bc = Vec::new();
         let mut y_bc = Vec::new();
@@ -277,23 +292,20 @@ impl<B: AutodiffBackend> BurnPINN2DTrainer<B> {
             u_bc.push(u as f32);
         }
 
-        let x_bc_tensor =
-            Tensor::<B, 1>::from_floats(x_bc.as_slice(), device).reshape([x_bc.len(), 1]);
-        let y_bc_tensor =
-            Tensor::<B, 1>::from_floats(y_bc.as_slice(), device).reshape([y_bc.len(), 1]);
-        let t_bc_tensor =
-            Tensor::<B, 1>::from_floats(t_bc.as_slice(), device).reshape([t_bc.len(), 1]);
-        let u_bc_tensor =
-            Tensor::<B, 1>::from_floats(u_bc.as_slice(), device).reshape([u_bc.len(), 1]);
-
-        (x_bc_tensor, y_bc_tensor, t_bc_tensor, u_bc_tensor)
+        (
+            var_col(&x_bc, backend),
+            var_col(&y_bc, backend),
+            var_col(&t_bc, backend),
+            var_col(&u_bc, backend),
+        )
     }
 
+    #[allow(clippy::type_complexity)] // (x, y, t, u) initial-condition tensors, no cohesive grouping
     fn generate_initial_conditions(
         &self,
         _config: &BurnPINN2DConfig,
-        device: &B::Device,
-    ) -> (Tensor<B, 2>, Tensor<B, 2>, Tensor<B, 2>, Tensor<B, 2>) {
+        backend: &B,
+    ) -> (Var<f32, B>, Var<f32, B>, Var<f32, B>, Var<f32, B>) {
         let n_ic = 200;
         let (x_ic, y_ic) = self.geometry.sample_points(n_ic);
 
@@ -308,16 +320,12 @@ impl<B: AutodiffBackend> BurnPINN2DTrainer<B> {
             .map(|v| v as f32)
             .collect();
 
-        let x_ic_tensor =
-            Tensor::<B, 1>::from_floats(x_ic_vec.as_slice(), device).reshape([n_ic, 1]);
-        let y_ic_tensor =
-            Tensor::<B, 1>::from_floats(y_ic_vec.as_slice(), device).reshape([n_ic, 1]);
-        let t_ic_tensor =
-            Tensor::<B, 1>::from_floats(t_ic_vec.as_slice(), device).reshape([n_ic, 1]);
-        let u_ic_tensor =
-            Tensor::<B, 1>::from_floats(u_ic_vec.as_slice(), device).reshape([n_ic, 1]);
-
-        (x_ic_tensor, y_ic_tensor, t_ic_tensor, u_ic_tensor)
+        (
+            var_col(&x_ic_vec, backend),
+            var_col(&y_ic_vec, backend),
+            var_col(&t_ic_vec, backend),
+            var_col(&u_ic_vec, backend),
+        )
     }
 
     pub fn pinn(&self) -> &BurnPINN2DWave<B> {

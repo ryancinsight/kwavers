@@ -1,8 +1,12 @@
 use super::{AdaptiveCollocationSampler, AdaptiveRefinementConfig, SamplingStats};
-use burn::tensor::{backend::AutodiffBackend, Tensor};
 use kwavers_core::error::KwaversResult;
 
-impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>
+    AdaptiveCollocationSampler<B>
+where
+    B::DeviceBuffer<f32>:
+        coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+{
     /// Create a new adaptive sampler
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
@@ -12,8 +16,8 @@ impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
         domain: Box<dyn crate::inverse::pinn::ml::physics::SimulationPhysicsDomain<B>>,
         strategy: AdaptiveRefinementConfig,
     ) -> KwaversResult<Self> {
-        let active_points = Self::initialize_uniform_points(total_points)?;
-        let priorities = Tensor::ones([total_points], &Default::default());
+        let active_points = Self::initialize_uniform_points(total_points);
+        let priorities = vec![1.0_f32; total_points];
 
         Ok(Self {
             total_points,
@@ -32,8 +36,7 @@ impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
         })
     }
 
-    fn initialize_uniform_points(total_points: usize) -> KwaversResult<Tensor<B, 2>> {
-        let device = Default::default();
+    fn initialize_uniform_points(total_points: usize) -> Vec<f32> {
         let mut points = Vec::with_capacity(total_points * 3);
 
         for _ in 0..total_points {
@@ -42,7 +45,7 @@ impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
             points.push(rand::random::<f32>());
         }
 
-        Ok(Tensor::<B, 1>::from_floats(points.as_slice(), &device).reshape([total_points, 3]))
+        points
     }
 
     /// Resample collocation points based on current model

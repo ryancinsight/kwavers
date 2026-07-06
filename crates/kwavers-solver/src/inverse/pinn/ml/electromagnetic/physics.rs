@@ -9,11 +9,15 @@ use crate::inverse::pinn::ml::physics::{
     PinnBoundaryComponent, PinnBoundaryConditionSpec, PinnCouplingInterface,
     PinnDomainPhysicsParameters, SimulationPhysicsDomain,
 };
-use burn::tensor::backend::AutodiffBackend;
-use burn::tensor::Tensor;
+use coeus_autograd::Var;
 use std::collections::HashMap;
 
-impl<B: AutodiffBackend> SimulationPhysicsDomain<B> for ElectromagneticDomain<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> SimulationPhysicsDomain<B>
+    for ElectromagneticDomain<B>
+where
+    B::DeviceBuffer<f32>:
+        coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+{
     fn domain_name(&self) -> &'static str {
         "electromagnetic"
     }
@@ -21,11 +25,11 @@ impl<B: AutodiffBackend> SimulationPhysicsDomain<B> for ElectromagneticDomain<B>
     fn pde_residual(
         &self,
         model: &crate::inverse::pinn::ml::BurnPINN2DWave<B>,
-        x: &Tensor<B, 2>,
-        y: &Tensor<B, 2>,
-        t: &Tensor<B, 2>,
+        x: &Var<f32, B>,
+        y: &Var<f32, B>,
+        t: &Var<f32, B>,
         physics_params: &PinnDomainPhysicsParameters,
-    ) -> Tensor<B, 2> {
+    ) -> Var<f32, B> {
         // Get material properties from parameters or defaults
         let eps = physics_params
             .domain_params

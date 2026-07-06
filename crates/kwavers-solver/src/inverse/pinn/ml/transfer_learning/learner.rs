@@ -2,11 +2,14 @@ use super::{
     DomainAdapter, SourceFeatures, TrainingData, TransferLearner, TransferLearningStats,
     TransferMetrics,
 };
-use burn::prelude::ToElement;
-use burn::tensor::{backend::AutodiffBackend, Tensor};
+use coeus_autograd::Var;
 use kwavers_core::error::{KwaversError, KwaversResult};
 
-impl<B: AutodiffBackend> TransferLearner<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> TransferLearner<B>
+where
+    B::DeviceBuffer<f32>:
+        coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+{
     /// Create a new transfer learner
     pub fn new(
         source_model: crate::inverse::pinn::ml::BurnPINN2DWave<B>,
@@ -87,8 +90,9 @@ impl<B: AutodiffBackend> TransferLearner<B> {
         let mut _layer_importance = Vec::new();
 
         for param in &params {
-            let magnitude_scalar = param.clone().powf_scalar(2.0).sum().sqrt().into_scalar();
-            let magnitude: f32 = magnitude_scalar.to_f32();
+            let squared = coeus_autograd::mul(param, param);
+            let magnitude_var = coeus_autograd::sqrt(&coeus_autograd::sum(&squared));
+            let magnitude: f32 = magnitude_var.tensor.as_slice()[0];
             _weight_magnitudes.push(magnitude);
             _layer_importance.push(magnitude * 0.5);
         }
@@ -226,7 +230,7 @@ impl<B: AutodiffBackend> TransferLearner<B> {
         model: &mut crate::inverse::pinn::ml::BurnPINN2DWave<B>,
         training_data: &TrainingData,
     ) -> KwaversResult<f32> {
-        let device = model.device();
+        let backend = B::default();
 
         let mut x_vec: Vec<f32> = Vec::with_capacity(training_data.collocation_points.len());
         let mut y_vec: Vec<f32> = Vec::with_capacity(training_data.collocation_points.len());
@@ -239,25 +243,36 @@ impl<B: AutodiffBackend> TransferLearner<B> {
         }
 
         let batch_size = x_vec.len();
-        let x_tensor =
-            Tensor::<B, 1>::from_floats(x_vec.as_slice(), &device).reshape([batch_size, 1]);
-        let y_tensor =
-            Tensor::<B, 1>::from_floats(y_vec.as_slice(), &device).reshape([batch_size, 1]);
-        let t_tensor =
-            Tensor::<B, 1>::from_floats(t_vec.as_slice(), &device).reshape([batch_size, 1]);
+        let x_var = Var::new(
+            coeus_tensor::Tensor::from_slice_on(vec![batch_size, 1], &x_vec, &backend),
+            false,
+        );
+        let y_var = Var::new(
+            coeus_tensor::Tensor::from_slice_on(vec![batch_size, 1], &y_vec, &backend),
+            false,
+        );
+        let t_var = Var::new(
+            coeus_tensor::Tensor::from_slice_on(vec![batch_size, 1], &t_vec, &backend),
+            false,
+        );
+
+        for p in model.parameters() {
+            p.zero_grad();
+        }
 
         let pde_residuals =
-            model.compute_pde_residual(x_tensor, y_tensor, t_tensor, self.config.wave_speed);
+            model.compute_pde_residual(&x_var, &y_var, &t_var, self.config.wave_speed);
 
-        let total_loss = pde_residuals.powf_scalar(2.0).mean() * 1e-12_f32;
+        let squared = coeus_autograd::mul(&pde_residuals, &pde_residuals);
+        let total_loss = coeus_autograd::scalar_mul(&coeus_autograd::mean(&squared), 1e-12);
 
-        let grads = total_loss.backward();
+        total_loss.backward();
 
         let optimizer =
             crate::inverse::pinn::ml::burn_wave_equation_2d::SimpleOptimizer2D::new(1e-4_f32);
-        *model = optimizer.step(model.clone(), &grads);
+        *model = optimizer.step(model.clone());
 
-        let loss_value = total_loss.into_scalar().to_f32();
+        let loss_value = total_loss.tensor.as_slice()[0];
         Ok(1.0 / (1.0 + loss_value))
     }
 

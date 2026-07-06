@@ -3,7 +3,7 @@
 //! This module implements transfer learning techniques to adapt Physics-Informed Neural Networks
 //! trained on simple geometries to more complex geometries, enabling efficient generalization.
 
-use burn::tensor::{backend::AutodiffBackend, Tensor};
+use coeus_autograd::Var;
 use kwavers_core::error::KwaversResult;
 
 mod evaluation;
@@ -57,8 +57,7 @@ pub struct TransferMetrics {
 }
 
 /// Transfer learner for geometry adaptation
-#[derive(Debug)]
-pub struct TransferLearner<B: AutodiffBackend> {
+pub struct TransferLearner<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> {
     /// Source model trained on simple geometry
     pub(super) source_model: crate::inverse::pinn::ml::BurnPINN2DWave<B>,
     /// Transfer learning configuration
@@ -69,13 +68,36 @@ pub struct TransferLearner<B: AutodiffBackend> {
     pub(super) stats: TransferLearningStats,
 }
 
+// Manual `Debug` impl: `BurnPINN2DWave<B>` requires the `CpuAddressableStorage`
+// bound to implement `Debug`, which this struct's own bound does not carry.
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> std::fmt::Debug
+    for TransferLearner<B>
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TransferLearner")
+            .field("config", &self.config)
+            .field("stats", &self.stats)
+            .finish_non_exhaustive()
+    }
+}
+
 /// Domain adaptation network for cross-geometry transfer
-#[derive(Debug)]
-pub struct DomainAdapter<B: AutodiffBackend> {
+pub struct DomainAdapter<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> {
     /// Adaptation layers
-    pub(super) _layers: Vec<Tensor<B, 2>>,
+    pub(super) _layers: Vec<coeus_tensor::Tensor<f32, B>>,
     /// Adaptation strength
     pub(super) _strength: f64,
+}
+
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> std::fmt::Debug
+    for DomainAdapter<B>
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DomainAdapter")
+            .field("num_layers", &self._layers.len())
+            .field("strength", &self._strength)
+            .finish()
+    }
 }
 
 /// Transfer learning statistics
@@ -121,7 +143,7 @@ impl Default for TransferLearningStats {
     }
 }
 
-impl<B: AutodiffBackend> DomainAdapter<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> DomainAdapter<B> {
     /// Create a new domain adapter
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
@@ -137,7 +159,7 @@ impl<B: AutodiffBackend> DomainAdapter<B> {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub fn adapt(&self, features: &Tensor<B, 2>) -> KwaversResult<Tensor<B, 2>> {
+    pub fn adapt(&self, features: &Var<f32, B>) -> KwaversResult<Var<f32, B>> {
         // Domain adaptation implementation for mathematical stability
         // Currently implements identity adaptation to prevent runtime panics
         // Future: Implement proper domain adaptation layers per Ganin et al. (2016)

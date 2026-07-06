@@ -9,11 +9,14 @@ use super::{
 use crate::inverse::pinn::ml::{
     BurnPINN2DConfig, BurnPINN2DWave, BurnTrainingMetrics2D, BurnWave2dGeometry,
 };
-use burn::tensor::backend::AutodiffBackend;
 use kwavers_core::error::KwaversResult;
 use log::info;
 
-impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> DistributedPinnTrainer<B>
+where
+    B::DeviceBuffer<f32>:
+        coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+{
     /// New.
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
@@ -44,8 +47,7 @@ impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
         let mut model_replicas = Vec::new();
 
         for _gpu_id in 0..config.num_gpus {
-            let device = B::Device::default();
-            let model = BurnPINN2DWave::new(base_config.clone(), &device)?;
+            let model = BurnPINN2DWave::new(base_config.clone())?;
             model_replicas.push(model);
         }
 

@@ -1,13 +1,16 @@
 use super::MetaLearner;
 use crate::inverse::pinn::ml::burn_wave_equation_2d::SimpleOptimizer2D;
-use crate::inverse::pinn::ml::meta_learning::gradient::{GradientApplicator, GradientExtractor};
+use crate::inverse::pinn::ml::meta_learning::gradient::utils::add_gradients;
 use crate::inverse::pinn::ml::meta_learning::metrics::MetaLoss;
 use crate::inverse::pinn::ml::meta_learning::types::PhysicsTask;
-use burn::module::Module;
-use burn::tensor::{backend::AutodiffBackend, Tensor};
+use coeus_autograd::Var;
 use kwavers_core::error::KwaversResult;
 
-impl<B: AutodiffBackend> MetaLearner<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> MetaLearner<B>
+where
+    B::DeviceBuffer<f32>:
+        coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+{
     /// Perform one meta-training step
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
@@ -20,7 +23,8 @@ impl<B: AutodiffBackend> MetaLearner<B> {
         let mut total_loss = 0.0;
         let mut task_losses = Vec::new();
         let mut physics_losses = Vec::new();
-        let mut aggregated_grads: Vec<B::Gradients> = Vec::new();
+        let num_params = self.base_model.parameters().len();
+        let mut accumulated_grads: Vec<Option<Vec<f32>>> = vec![None; num_params];
 
         for task in &tasks {
             let (task_loss, physics_loss, adapted_model) = self.adapt_to_task_internal(task)?;
@@ -33,37 +37,38 @@ impl<B: AutodiffBackend> MetaLearner<B> {
             let (_val_loss, val_grads) =
                 self.compute_gradients_and_loss(&adapted_model, &valid_data, task)?;
 
-            aggregated_grads.push(val_grads);
+            accumulated_grads = add_gradients(accumulated_grads, &val_grads);
         }
 
-        let num_tasks = tasks.len();
-        let mut accumulated_grads: Vec<Option<Tensor<B::InnerBackend, 1>>> = Vec::new();
-
-        for (i, task_grad_set) in aggregated_grads.iter().enumerate() {
-            let mut extractor = GradientExtractor::new(task_grad_set);
-            self.base_model.clone().map(&mut extractor);
-            let task_grads_flat = extractor.into_gradients();
-
-            if i == 0 {
-                accumulated_grads = task_grads_flat;
-            } else {
-                for (acc, new) in accumulated_grads.iter_mut().zip(task_grads_flat.iter()) {
-                    if let (Some(a), Some(b)) = (acc.as_mut(), new.as_ref()) {
-                        *a = a.clone() + b.clone();
-                    } else if acc.is_none() && new.is_some() {
-                        *acc = new.clone();
-                    }
-                }
-            }
-        }
-
-        let averaged_grads: Vec<Option<Tensor<B::InnerBackend, 1>>> = accumulated_grads
+        let num_tasks = tasks.len().max(1) as f32;
+        let averaged_grads: Vec<Option<Vec<f32>>> = accumulated_grads
             .into_iter()
-            .map(|opt| opt.map(|g| g.div_scalar(num_tasks as f64)))
+            .map(|opt| opt.map(|g| g.into_iter().map(|v| v / num_tasks).collect()))
             .collect();
 
-        let mut applicator = GradientApplicator::new(averaged_grads, self.config.outer_lr);
-        self.base_model = self.base_model.clone().map(&mut applicator);
+        let updated_params: Vec<Var<f32, B>> = self
+            .base_model
+            .parameters()
+            .into_iter()
+            .zip(averaged_grads.iter())
+            .map(|(param, grad)| match grad {
+                Some(g) => {
+                    let backend = B::default();
+                    let old = param.tensor.as_slice();
+                    let updated: Vec<f32> = old
+                        .iter()
+                        .zip(g.iter())
+                        .map(|(&p, &gr)| p - self.config.outer_lr as f32 * gr)
+                        .collect();
+                    Var::new(
+                        coeus_tensor::Tensor::from_slice_on(param.tensor.shape().to_vec(), &updated, &backend),
+                        param.grad.is_some(),
+                    )
+                }
+                None => param,
+            })
+            .collect();
+        self.base_model.load_parameters(&updated_params);
 
         let average_physics_loss = if !physics_losses.is_empty() {
             physics_losses.iter().sum::<f64>() / physics_losses.len() as f64
@@ -124,8 +129,8 @@ impl<B: AutodiffBackend> MetaLearner<B> {
         let mut physics_loss = 0.0;
 
         for _ in 0..self.config.adaptation_steps {
-            let (loss, grads) = self.compute_gradients_and_loss(&task_model, &task_data, task)?;
-            task_model = optimizer.step(task_model, &grads);
+            let (loss, _grads) = self.compute_gradients_and_loss(&task_model, &task_data, task)?;
+            task_model = optimizer.step(task_model);
             task_loss = loss.total_loss;
             physics_loss = loss.physics_loss;
         }
@@ -142,49 +147,5 @@ impl<B: AutodiffBackend> MetaLearner<B> {
             .sum::<f64>()
             / task_losses.len() as f64;
         1.0 / (1.0 + variance.sqrt())
-    }
-
-    /// Compute meta-gradients using MAML-style second-order derivatives
-    pub(super) fn _compute_meta_gradients(
-        &self,
-        task_gradients: &[Vec<Tensor<B, 2>>],
-        task_losses: &[f64],
-    ) -> Vec<Option<Tensor<B, 2>>> {
-        let num_params = self.base_model.parameters().len();
-        if task_gradients.is_empty() || task_losses.is_empty() {
-            return vec![None; num_params];
-        }
-
-        let num_tasks = task_gradients.len();
-        let mut meta_gradients = Vec::with_capacity(num_params);
-
-        for param_idx in 0..num_params {
-            let mut param_meta_grad: Option<Tensor<B, 2>> = None;
-
-            for task_idx in 0..num_tasks {
-                if param_idx >= task_gradients[task_idx].len() {
-                    continue;
-                }
-
-                let task_grad = &task_gradients[task_idx][param_idx];
-                let task_loss = task_losses[task_idx];
-
-                let weighted_grad = task_grad.clone().mul_scalar(task_loss as f32);
-
-                if let Some(acc) = param_meta_grad.as_mut() {
-                    *acc = acc.clone().add(weighted_grad);
-                } else {
-                    param_meta_grad = Some(weighted_grad);
-                }
-            }
-
-            if let Some(grad) = param_meta_grad {
-                meta_gradients.push(Some(grad.div_scalar(num_tasks as f32)));
-            } else {
-                meta_gradients.push(None);
-            }
-        }
-
-        meta_gradients
     }
 }

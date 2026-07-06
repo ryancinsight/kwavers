@@ -3,15 +3,13 @@
 use super::types::{
     PinnPredictionWithUncertainty, PinnUncertaintyConfig, PinnUncertaintyMethod, UncertaintyStats,
 };
-use burn::tensor::backend::AutodiffBackend;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use ndarray::Array1;
 
 use super::conformal::PinnConformalPredictor;
 
 /// Bayesian PINN with uncertainty quantification.
-#[derive(Debug)]
-pub struct PinnBayesianPINN<B: AutodiffBackend> {
+pub struct PinnBayesianPINN<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> {
     /// Ensemble of models for uncertainty estimation.
     pub(super) ensemble: Vec<crate::inverse::pinn::ml::BurnPINN2DWave<B>>,
     /// Uncertainty configuration.
@@ -24,7 +22,23 @@ pub struct PinnBayesianPINN<B: AutodiffBackend> {
     pub stats: UncertaintyStats,
 }
 
-impl<B: AutodiffBackend> PinnBayesianPINN<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> std::fmt::Debug
+    for PinnBayesianPINN<B>
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PinnBayesianPINN")
+            .field("ensemble_size", &self.ensemble.len())
+            .field("config", &self.config)
+            .field("stats", &self.stats)
+            .finish_non_exhaustive()
+    }
+}
+
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> PinnBayesianPINN<B>
+where
+    B::DeviceBuffer<f32>:
+        coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+{
     /// Create a new Bayesian PINN.
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
@@ -211,10 +225,9 @@ impl<B: AutodiffBackend> PinnBayesianPINN<B> {
         let x = Array1::from_elem((1,), input[0] as f64);
         let y = Array1::from_elem((1,), input[1] as f64);
         let t = Array1::from_elem((1,), input[2] as f64);
-        let device = model.device();
 
         let output = model
-            .predict(&x, &y, &t, &device)
+            .predict(&x, &y, &t)
             .map(|output| output.iter().map(|&v| v as f32).collect::<Vec<_>>())?;
 
         Ok(output)

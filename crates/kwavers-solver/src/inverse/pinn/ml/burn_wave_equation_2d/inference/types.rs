@@ -43,13 +43,11 @@ pub struct SIMDProcessor {
     pub lanes: usize,
 }
 
-/// Neural network state for Burn-based GPU inference
-#[cfg(feature = "gpu")]
-use burn::tensor::{backend::Backend, Tensor};
+/// Neural network state for GPU inference over a pre-quantized network.
 #[cfg(feature = "gpu")]
 #[derive(Debug, Clone)]
-pub struct BurnNeuralNetwork<B: Backend> {
-    pub weights: Vec<Tensor<B, 2>>,
-    pub biases: Vec<Tensor<B, 1>>,
+pub struct BurnNeuralNetwork<B: coeus_ops::BackendOps<f32> + Default> {
+    pub weights: Vec<coeus_tensor::Tensor<f32, B>>,
+    pub biases: Vec<coeus_tensor::Tensor<f32, B>>,
     pub activation: String,
 }

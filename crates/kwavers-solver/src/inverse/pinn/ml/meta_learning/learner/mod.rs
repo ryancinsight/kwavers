@@ -14,15 +14,13 @@ use crate::inverse::pinn::ml::meta_learning::optimizer::MetaOptimizer;
 use crate::inverse::pinn::ml::meta_learning::sampling::{
     MetaLearningSamplingStrategy, TaskSampler,
 };
-use burn::tensor::backend::AutodiffBackend;
 use kwavers_core::error::KwaversResult;
 
-#[derive(Debug)]
-pub struct MetaLearner<B: AutodiffBackend> {
+pub struct MetaLearner<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> {
     /// Base model acting as meta-parameters
     pub(super) base_model: BurnPINN2DWave<B>,
     /// Meta-optimizer state
-    pub(super) _meta_optimizer: MetaOptimizer<B>,
+    pub(super) _meta_optimizer: MetaOptimizer,
     /// Configuration
     pub(super) config: MetaLearningConfig,
     /// Task distribution sampler
@@ -31,17 +29,35 @@ pub struct MetaLearner<B: AutodiffBackend> {
     pub(super) stats: MetaLearningStats,
 }
 
-impl<B: AutodiffBackend> MetaLearner<B> {
+// Manual `Debug` impl: `BurnPINN2DWave<B>` requires the `CpuAddressableStorage`
+// bound to implement `Debug`, which this struct's own bound does not carry.
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> std::fmt::Debug
+    for MetaLearner<B>
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MetaLearner")
+            .field("config", &self.config)
+            .field("task_sampler", &self.task_sampler)
+            .field("stats", &self.stats)
+            .finish_non_exhaustive()
+    }
+}
+
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> MetaLearner<B>
+where
+    B::DeviceBuffer<f32>:
+        coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+{
     /// Create a new meta-learner
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
-    pub fn new(config: MetaLearningConfig, device: &B::Device) -> KwaversResult<Self> {
+    pub fn new(config: MetaLearningConfig) -> KwaversResult<Self> {
         let pinn_config = BurnPINN2DConfig {
             hidden_layers: vec![config.hidden_dim; config.num_layers],
             ..Default::default()
         };
-        let base_model = BurnPINN2DWave::new(pinn_config, device)?;
+        let base_model = BurnPINN2DWave::new(pinn_config)?;
 
         let total_params = base_model.parameters().len();
         let meta_optimizer = MetaOptimizer::new(config.outer_lr, total_params);

@@ -1,12 +1,10 @@
 //! Conformal prediction for PINN uncertainty quantification.
 
-use burn::tensor::backend::Backend;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use ndarray::Array1;
 
 /// Conformal prediction for uncertainty quantification.
-#[derive(Debug)]
-pub struct PinnConformalPredictor<B: Backend> {
+pub struct PinnConformalPredictor<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> {
     /// Base PINN model.
     pub(super) model: crate::inverse::pinn::ml::BurnPINN2DWave<B>,
     /// Conformal scores from calibration.
@@ -17,7 +15,23 @@ pub struct PinnConformalPredictor<B: Backend> {
     pub quantile: Option<f32>,
 }
 
-impl<B: Backend> PinnConformalPredictor<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> std::fmt::Debug
+    for PinnConformalPredictor<B>
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PinnConformalPredictor")
+            .field("calibration_scores_len", &self.calibration_scores.len())
+            .field("alpha", &self.alpha)
+            .field("quantile", &self.quantile)
+            .finish_non_exhaustive()
+    }
+}
+
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> PinnConformalPredictor<B>
+where
+    B::DeviceBuffer<f32>:
+        coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+{
     /// Create a new conformal predictor.
     pub fn new(model: crate::inverse::pinn::ml::BurnPINN2DWave<B>, alpha: f64) -> Self {
         let alpha = alpha.clamp(f64::EPSILON, 1.0 - f64::EPSILON);
@@ -90,12 +104,11 @@ impl<B: Backend> PinnConformalPredictor<B> {
             ));
         }
 
-        let device = self.model.device();
         let x = Array1::from_elem((1,), input[0] as f64);
         let y = Array1::from_elem((1,), input[1] as f64);
         let t = Array1::from_elem((1,), input[2] as f64);
 
-        let pred = self.model.predict(&x, &y, &t, &device)?;
+        let pred = self.model.predict(&x, &y, &t)?;
         let center =
             *pred.iter().next().ok_or_else(|| {
                 KwaversError::InvalidInput("Model returned empty prediction".into())
@@ -116,12 +129,11 @@ impl<B: Backend> PinnConformalPredictor<B> {
             ));
         }
 
-        let device = self.model.device();
         let x = Array1::from_elem((1,), input[0] as f64);
         let y = Array1::from_elem((1,), input[1] as f64);
         let t = Array1::from_elem((1,), input[2] as f64);
 
-        let pred = self.model.predict(&x, &y, &t, &device)?;
+        let pred = self.model.predict(&x, &y, &t)?;
         let y_hat =
             *pred.iter().next().ok_or_else(|| {
                 KwaversError::InvalidInput("Model returned empty prediction".into())

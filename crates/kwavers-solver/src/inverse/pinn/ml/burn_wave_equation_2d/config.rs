@@ -1,5 +1,3 @@
-use burn::config::Config;
-
 /// Boundary condition types for 2D domains
 #[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize)]
 pub enum BoundaryCondition2D {
@@ -13,20 +11,16 @@ pub enum BoundaryCondition2D {
     Absorbing,
 }
 
-/// Configuration for Burn-based 2D Wave Equation PINN
-#[derive(Debug, Config)]
+/// Configuration for the 2D Wave Equation PINN
+#[derive(Debug, Clone)]
 pub struct BurnPINN2DConfig {
     /// Hidden layer sizes (e.g., [100, 100, 100, 100])
-    #[config(default = "vec![100, 100, 100, 100]")]
     pub hidden_layers: Vec<usize>,
     /// Learning rate for optimizer
-    #[config(default = 1e-3)]
     pub learning_rate: f64,
     /// Loss function weights
-    #[config(default = "BurnLossWeights2D::default()")]
     pub loss_weights: BurnLossWeights2D,
     /// Number of collocation points for PDE residual
-    #[config(default = 1000)]
     pub num_collocation_points: usize,
     /// Boundary condition type
     pub boundary_condition: BoundaryCondition2D,
