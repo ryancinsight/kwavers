@@ -1,12 +1,12 @@
 //! SGD optimizer for [`super::ParamFieldPINNNetwork`].
 //!
-//! Mirrors `burn_wave_equation_3d::SimpleOptimizer3D` with
-//! parameter-tree traversal via `ModuleMapper`. Plain SGD with no
-//! momentum or weight decay — adequate for the smooth focal-envelope
-//! shapes the field surrogate is fitting.
+//! Mirrors `burn_wave_equation_3d::SimpleOptimizer3D`. Plain SGD with
+//! no momentum or weight decay — adequate for the smooth
+//! focal-envelope shapes the field surrogate is fitting; the
+//! production trainer ([`super::training::ParamFieldPINNTrainer`])
+//! uses `coeus_optim::Adam` instead.
 
-use burn::module::{Module, ModuleMapper, Param};
-use burn::tensor::{backend::AutodiffBackend, Tensor};
+use coeus_optim::{Optimizer as CoeusOptimizer, SGD};
 
 use super::network::ParamFieldPINNNetwork;
 
@@ -23,38 +23,16 @@ impl ParamFieldOptimizer {
         Self { learning_rate }
     }
 
-    /// One optimisation step. Consumes the input network and returns
-    /// the updated one.
-    pub fn step<B: AutodiffBackend>(
+    /// One optimisation step over gradients accumulated on each
+    /// parameter `Var` since the last `zero_grad`. Consumes the input
+    /// network and returns the updated one.
+    pub fn step<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
         &self,
-        net: ParamFieldPINNNetwork<B>,
-        grads: &B::Gradients,
+        mut net: ParamFieldPINNNetwork<B>,
     ) -> ParamFieldPINNNetwork<B> {
-        let mut mapper = ParamFieldGradMapper {
-            learning_rate: self.learning_rate,
-            grads,
-        };
-        net.map(&mut mapper)
-    }
-}
-
-struct ParamFieldGradMapper<'a, B: AutodiffBackend> {
-    learning_rate: f32,
-    grads: &'a B::Gradients,
-}
-
-impl<'a, B: AutodiffBackend> ModuleMapper<B> for ParamFieldGradMapper<'a, B> {
-    fn map_float<const D: usize>(&mut self, tensor: Param<Tensor<B, D>>) -> Param<Tensor<B, D>> {
-        let is_require_grad = tensor.is_require_grad();
-        let grad_opt = tensor.grad(self.grads);
-        let mut inner = (*tensor).clone().inner();
-        if let Some(grad) = grad_opt {
-            inner = inner - grad.mul_scalar(self.learning_rate as f64);
-        }
-        let mut out = Tensor::<B, D>::from_inner(inner);
-        if is_require_grad {
-            out = out.require_grad();
-        }
-        Param::from_tensor(out)
+        let mut opt = SGD::new(net.parameters(), self.learning_rate, 0.0);
+        opt.step();
+        net.load_parameters(&opt.params);
+        net
     }
 }

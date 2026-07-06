@@ -27,24 +27,31 @@
 //! here. The technique is orthogonal to LayerNorm; we are not
 //! removing normalisation (we have none) but augmenting tanh.
 
-use burn::module::{Module, Param};
-use burn::tensor::{backend::Backend, Tensor};
+use coeus_autograd::Var;
 
 /// Per-layer Dynamic Tanh activation:
 /// `y = γ · tanh(α · x) + β`.
 ///
-/// All three parameters are scalars stored as length-1 tensors so
-/// they participate in Burn's autodiff + optimiser machinery via the
-/// `Module` derive macro. Initialisation follows Zhu 2025: `α = 0.5`,
-/// `γ = 1.0`, `β = 0.0`.
-#[derive(Module, Debug)]
-pub struct DynamicTanh<B: Backend> {
-    alpha: Param<Tensor<B, 1>>,
-    gamma: Param<Tensor<B, 1>>,
-    beta: Param<Tensor<B, 1>>,
+/// All three parameters are scalars stored as length-1 `Var` leaves so
+/// they participate in `coeus_autograd`'s autodiff + `coeus_optim`
+/// machinery via `parameters()`/`load_parameters()`. Initialisation
+/// follows Zhu 2025: `α = 0.5`, `γ = 1.0`, `β = 0.0`.
+#[derive(Clone)]
+pub struct DynamicTanh<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> {
+    alpha: Var<f32, B>,
+    gamma: Var<f32, B>,
+    beta: Var<f32, B>,
 }
 
-impl<B: Backend> DynamicTanh<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> std::fmt::Debug
+    for DynamicTanh<B>
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DynamicTanh").finish_non_exhaustive()
+    }
+}
+
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> DynamicTanh<B> {
     /// Construct with `α = 1.0` (recovers vanilla `tanh`), `γ = 1.0`,
     /// `β = 0.0`. Starting from the vanilla-tanh fixed point keeps
     /// the early-training landscape identical to a plain `tanh()`
@@ -57,47 +64,57 @@ impl<B: Backend> DynamicTanh<B> {
     /// init bakes in an extra linear-region scaling that interacts
     /// badly with the cosine-annealed LR's high-LR exploration phase.
     #[must_use]
-    pub fn new(device: &B::Device) -> Self {
-        Self::with_init(1.0, 1.0, 0.0, device)
+    pub fn new() -> Self {
+        Self::with_init(1.0, 1.0, 0.0)
     }
 
     /// Construct with caller-specified scalar initialisation values.
     /// Useful for ablations (e.g. `α = 1.0` recovers vanilla `tanh`
     /// with a learnable γ on top).
     #[must_use]
-    pub fn with_init(alpha: f32, gamma: f32, beta: f32, device: &B::Device) -> Self {
+    pub fn with_init(alpha: f32, gamma: f32, beta: f32) -> Self {
+        let backend = B::default();
+        let leaf = |v: f32| {
+            Var::new(
+                coeus_tensor::Tensor::from_slice_on(vec![1], &[v], &backend),
+                true,
+            )
+        };
         Self {
-            alpha: Param::from_tensor(Tensor::<B, 1>::from_floats([alpha], device)),
-            gamma: Param::from_tensor(Tensor::<B, 1>::from_floats([gamma], device)),
-            beta: Param::from_tensor(Tensor::<B, 1>::from_floats([beta], device)),
+            alpha: leaf(alpha),
+            gamma: leaf(gamma),
+            beta: leaf(beta),
         }
     }
 
-    /// Apply the DyT activation to a 2-D input tensor `[batch, F]`.
+    /// Flatten `(α, γ, β)` in that order.
+    pub fn parameters(&self) -> Vec<Var<f32, B>> {
+        vec![self.alpha.clone(), self.gamma.clone(), self.beta.clone()]
+    }
+
+    /// Write updated `(α, γ, β)` values back (optimizer round-trip).
+    pub fn load_parameters(&mut self, params: &[Var<f32, B>]) {
+        self.alpha = params[0].clone();
+        self.gamma = params[1].clone();
+        self.beta = params[2].clone();
+    }
+
+    /// Apply the DyT activation to a 2-D input `Var` `[batch, F]`.
     ///
-    /// Broadcasting: `α, γ, β` are scalar `[1]` tensors; Burn's
-    /// arithmetic ops broadcast them across the `[batch, F]` shape
-    /// without an explicit reshape.
-    pub fn forward(&self, x: Tensor<B, 2>) -> Tensor<B, 2> {
-        let alpha = self.alpha.val().unsqueeze::<2>(); // [1, 1]
-        let gamma = self.gamma.val().unsqueeze::<2>();
-        let beta = self.beta.val().unsqueeze::<2>();
-        (x * alpha).tanh() * gamma + beta
+    /// Broadcasting: `α, γ, β` are scalar `[1]` `Var`s; `coeus_autograd`
+    /// arithmetic ops broadcast them across the `[batch, F]` shape and
+    /// reduce gradients back to `[1]` on the backward pass.
+    pub fn forward(&self, x: &Var<f32, B>) -> Var<f32, B> {
+        let scaled = coeus_autograd::mul(x, &self.alpha);
+        let activated = coeus_autograd::tanh(&scaled);
+        coeus_autograd::add(&coeus_autograd::mul(&activated, &self.gamma), &self.beta)
     }
 
     /// Read the current scalar values — useful for logging /
     /// inspecting the learned per-layer dynamics after training.
     #[must_use]
     pub fn scalars(&self) -> (f32, f32, f32) {
-        let read = |p: &Param<Tensor<B, 1>>| -> f32 {
-            let host: Vec<f32> = p
-                .val()
-                .into_data()
-                .convert::<f32>()
-                .into_vec()
-                .unwrap_or_else(|_| vec![0.0]);
-            host[0]
-        };
+        let read = |v: &Var<f32, B>| -> f32 { v.tensor.as_slice()[0] };
         (read(&self.alpha), read(&self.gamma), read(&self.beta))
     }
 }

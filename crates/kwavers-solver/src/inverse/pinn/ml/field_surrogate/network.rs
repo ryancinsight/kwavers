@@ -1,13 +1,12 @@
-//! Burn-based MLP for the parameterised field-surrogate PINN.
+//! Coeus-based MLP for the parameterised field-surrogate PINN.
 //!
 //! Input: `(x_norm, y_norm, z_norm, f0_norm, pnp_norm)` — shape
 //! `[batch, 5]`. Output: `(p_min_norm, p_max_norm, p_rms_norm)` —
 //! shape `[batch, 3]`. All inputs and outputs are caller-normalised
 //! to `[-1, 1]` to match `tanh` activation dynamics.
 
-use burn::module::Module;
-use burn::nn::{Linear, LinearConfig};
-use burn::tensor::{backend::Backend, Tensor};
+use coeus_autograd::Var;
+use coeus_nn::{Linear, Module};
 
 use kwavers_core::error::KwaversResult;
 
@@ -24,29 +23,56 @@ use super::dynamic_tanh::DynamicTanh;
 /// saturation per-layer, closing the focal-peak underprediction that
 /// the fixed-`tanh` baseline plateaus on. The output layer is linear
 /// (regression head).
-#[derive(Module, Debug)]
-pub struct ParamFieldPINNNetwork<B: Backend> {
-    input_layer: Linear<B>,
+pub struct ParamFieldPINNNetwork<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> {
+    input_layer: Linear<f32, B>,
     input_act: DynamicTanh<B>,
-    hidden_layers: Vec<Linear<B>>,
+    hidden_layers: Vec<Linear<f32, B>>,
     hidden_acts: Vec<DynamicTanh<B>>,
-    output_layer: Linear<B>,
+    output_layer: Linear<f32, B>,
 }
 
-impl<B: Backend> ParamFieldPINNNetwork<B> {
-    /// Initialise a fresh network with random weights on `device`.
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> Clone
+    for ParamFieldPINNNetwork<B>
+{
+    fn clone(&self) -> Self {
+        Self {
+            input_layer: self.input_layer.clone(),
+            input_act: self.input_act.clone(),
+            hidden_layers: self.hidden_layers.clone(),
+            hidden_acts: self.hidden_acts.clone(),
+            output_layer: self.output_layer.clone(),
+        }
+    }
+}
+
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> std::fmt::Debug
+    for ParamFieldPINNNetwork<B>
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ParamFieldPINNNetwork")
+            .field("hidden_layer_count", &self.hidden_layers.len())
+            .finish_non_exhaustive()
+    }
+}
+
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> ParamFieldPINNNetwork<B>
+where
+    B::DeviceBuffer<f32>:
+        coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+{
+    /// Initialise a fresh network with random weights.
     ///
     /// # Errors
     ///
     /// Returns `KwaversError::InvalidInput` via
     /// [`ParamFieldPINNConfig::validate`] when the config is malformed
     /// (empty hidden stack, zero-width layer, non-positive lr, etc.).
-    pub fn new(config: &ParamFieldPINNConfig, device: &B::Device) -> KwaversResult<Self> {
+    pub fn new(config: &ParamFieldPINNConfig) -> KwaversResult<Self> {
         config.validate()?;
 
         let first_hidden = config.hidden_layers[0];
-        let input_layer = LinearConfig::new(INPUT_DIM, first_hidden).init(device);
-        let input_act = DynamicTanh::new(device);
+        let input_layer = Linear::new(INPUT_DIM, first_hidden, true);
+        let input_act = DynamicTanh::new();
 
         let mut hidden_layers = Vec::with_capacity(config.hidden_layers.len().saturating_sub(1));
         let mut hidden_acts = Vec::with_capacity(config.hidden_layers.len().saturating_sub(1));
@@ -54,15 +80,15 @@ impl<B: Backend> ParamFieldPINNNetwork<B> {
             let &[in_features, out_features] = window else {
                 continue;
             };
-            hidden_layers.push(LinearConfig::new(in_features, out_features).init(device));
-            hidden_acts.push(DynamicTanh::new(device));
+            hidden_layers.push(Linear::new(in_features, out_features, true));
+            hidden_acts.push(DynamicTanh::new());
         }
 
         let last_hidden = *config
             .hidden_layers
             .last()
             .expect("validate() guarantees non-empty hidden_layers");
-        let output_layer = LinearConfig::new(last_hidden, OUTPUT_DIM).init(device);
+        let output_layer = Linear::new(last_hidden, OUTPUT_DIM, true);
 
         Ok(Self {
             input_layer,
@@ -75,10 +101,6 @@ impl<B: Backend> ParamFieldPINNNetwork<B> {
 
     /// Read the learned DyT scalars per layer — `Vec<(α, γ, β)>` in
     /// activation order (input act first, then hidden acts).
-    /// Useful for inspecting what the network has converged on
-    /// (e.g. layers near the output typically learn `α > 1` to
-    /// saturate harder; layers near the input often learn `α < 1`
-    /// to preserve amplitude).
     #[must_use]
     pub fn dyt_scalars(&self) -> Vec<(f32, f32, f32)> {
         let mut out = Vec::with_capacity(1 + self.hidden_acts.len());
@@ -95,31 +117,65 @@ impl<B: Backend> ParamFieldPINNNetwork<B> {
         self.hidden_layers.len()
     }
 
+    /// Flatten all layer + activation parameters in forward order.
+    pub fn parameters(&self) -> Vec<Var<f32, B>> {
+        let mut params = self.input_layer.parameters();
+        params.extend(self.input_act.parameters());
+        for (layer, act) in self.hidden_layers.iter().zip(self.hidden_acts.iter()) {
+            params.extend(layer.parameters());
+            params.extend(act.parameters());
+        }
+        params.extend(self.output_layer.parameters());
+        params
+    }
+
+    /// Write updated parameter values back into the network's layers.
+    pub fn load_parameters(&mut self, params: &[Var<f32, B>]) {
+        let mut offset = 0;
+        let n = self.input_layer.parameters().len();
+        self.input_layer.load_parameters(&params[offset..offset + n]);
+        offset += n;
+        let n = self.input_act.parameters().len();
+        self.input_act.load_parameters(&params[offset..offset + n]);
+        offset += n;
+        for (layer, act) in self.hidden_layers.iter_mut().zip(self.hidden_acts.iter_mut()) {
+            let n = layer.parameters().len();
+            layer.load_parameters(&params[offset..offset + n]);
+            offset += n;
+            let n = act.parameters().len();
+            act.load_parameters(&params[offset..offset + n]);
+            offset += n;
+        }
+        let n = self.output_layer.parameters().len();
+        self.output_layer
+            .load_parameters(&params[offset..offset + n]);
+    }
+
     /// Forward pass on a batch of pre-concatenated inputs.
     ///
     /// `input` shape `[batch, 5]`, output shape `[batch, 3]`.
-    pub fn forward(&self, input: Tensor<B, 2>) -> Tensor<B, 2> {
-        let mut h = self.input_act.forward(self.input_layer.forward(input));
+    pub fn forward(&self, input: &Var<f32, B>) -> Var<f32, B> {
+        let mut h = self.input_act.forward(&self.input_layer.forward(input));
         for (layer, act) in self.hidden_layers.iter().zip(self.hidden_acts.iter()) {
-            h = act.forward(layer.forward(h));
+            h = act.forward(&layer.forward(&h));
         }
         // Linear output (no activation): regression head; caller maps
         // the [-1, 1]-normalised output back to physical units using
         // the per-channel scale factors stored alongside the model.
-        self.output_layer.forward(h)
+        self.output_layer.forward(&h)
     }
 
     /// Convenience overload accepting the five input columns
     /// separately. Concatenates and dispatches to `forward`.
     pub fn forward_xyz_params(
         &self,
-        x: Tensor<B, 2>,
-        y: Tensor<B, 2>,
-        z: Tensor<B, 2>,
-        f0: Tensor<B, 2>,
-        pnp: Tensor<B, 2>,
-    ) -> Tensor<B, 2> {
-        let input = Tensor::cat(vec![x, y, z, f0, pnp], 1);
-        self.forward(input)
+        x: &Var<f32, B>,
+        y: &Var<f32, B>,
+        z: &Var<f32, B>,
+        f0: &Var<f32, B>,
+        pnp: &Var<f32, B>,
+    ) -> Var<f32, B> {
+        let input = coeus_autograd::cat(&[x, y, z, f0, pnp], 1);
+        self.forward(&input)
     }
 }

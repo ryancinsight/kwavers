@@ -1,4 +1,4 @@
-use burn::tensor::{backend::AutodiffBackend, Tensor};
+use coeus_autograd::Var;
 
 use kwavers_core::constants::SOUND_SPEED_WATER_SIM;
 use kwavers_core::error::{KwaversError, KwaversResult};
@@ -101,14 +101,14 @@ impl FieldSurrogateTrainingConfig {
 /// space; targets are pre-normalised against the per-channel scales
 /// stored in the surrounding training context.
 #[derive(Debug)]
-pub struct TrainingBatch<B: AutodiffBackend> {
+pub struct TrainingBatch<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> {
     /// Network inputs `[batch, 5]`.
-    pub inputs: Tensor<B, 2>,
+    pub inputs: Var<f32, B>,
     /// Per-channel targets `[batch, 3]`.
-    pub targets: Tensor<B, 2>,
+    pub targets: Var<f32, B>,
     /// Per-sample physical `f0` (Hz) `[batch]` — used to compute the
     /// per-sample wavenumber for the Helmholtz residual.
-    pub f0_phys_hz: Tensor<B, 1>,
+    pub f0_phys_hz: Var<f32, B>,
     /// Per-sample source-kernel index `[batch]` as f32 (storage-only
     /// — not used as a network input). Voxels from kernel `k` carry
     /// `group_id == k`. Consumed by the per-kernel-scoped
@@ -116,7 +116,7 @@ pub struct TrainingBatch<B: AutodiffBackend> {
     /// max(target))²` aggregation is per-kernel rather than batch-
     /// wide, eliminating the cross-kernel `max(target)` ambiguity
     /// that fragmented per-f0 fits in Phase C-9.
-    pub group_ids: Tensor<B, 1>,
+    pub group_ids: Var<f32, B>,
     /// Total number of distinct groups across the source dataset.
     /// Used to bound the per-group prominence loop without scanning
     /// every batch for unique IDs.

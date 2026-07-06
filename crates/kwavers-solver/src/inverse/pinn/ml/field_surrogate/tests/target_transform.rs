@@ -14,7 +14,7 @@ use super::super::forward::{infer_grid, GridQueryParams};
 use super::super::network::ParamFieldPINNNetwork;
 use super::super::target_transform::{OutputTransforms, TargetTransform};
 use super::super::KernelCubeSampler;
-use super::{AB, B};
+use super::B;
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use kwavers_physics::field_surrogate::FocalKernel;
 
@@ -64,15 +64,8 @@ fn sampler_with_signed_log1p_emits_targets_in_unit_interval() {
     let sampler =
         KernelCubeSampler::with_transforms(&kernels, None, transforms).expect("sampler build");
 
-    let device = Default::default();
-    let batch = sampler.batch::<AB>(&device, 0, 512);
-    let host: Vec<f32> = batch
-        .targets
-        .clone()
-        .into_data()
-        .convert::<f32>()
-        .into_vec()
-        .unwrap();
+    let batch = sampler.batch::<B>(0, 512);
+    let host: Vec<f32> = batch.targets.tensor.as_slice().to_vec();
 
     // All transformed targets must lie in [-1, 1] (the network's
     // output space) and the per-batch maximum magnitude must reach a
@@ -116,8 +109,7 @@ fn infer_grid_signed_log1p_round_trips_through_untrained_network() {
     // physical Pa must be finite and lie within the transform's
     // calibrated range.
     let cfg = ParamFieldPINNConfig::default();
-    let device = Default::default();
-    let net = ParamFieldPINNNetwork::<B>::new(&cfg, &device).unwrap();
+    let net = ParamFieldPINNNetwork::<B>::new(&cfg).unwrap();
     let p_max_pa = 30.0 * MPA_TO_PA as f32;
     let transforms =
         OutputTransforms::signed_log1p(p_max_pa, p_max_pa, p_max_pa * 0.7, 1.0e-3).unwrap();
@@ -133,7 +125,7 @@ fn infer_grid_signed_log1p_round_trips_through_untrained_network() {
         output_transforms: transforms,
         batch_size: 64,
     };
-    let (pmin, pmax, prms) = infer_grid(&net, &params, &device).unwrap();
+    let (pmin, pmax, prms) = infer_grid(&net, &params).unwrap();
     let bound_pa = p_max_pa as f64 * 1.0;
     for v in pmin.iter().chain(pmax.iter()).chain(prms.iter()) {
         assert!(v.is_finite(), "non-finite Pa from infer_grid: {v}");

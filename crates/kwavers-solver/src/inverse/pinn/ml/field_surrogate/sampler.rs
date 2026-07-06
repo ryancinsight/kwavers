@@ -1,4 +1,4 @@
-//! Sampling helpers that turn cached PSTD kernels into Burn
+//! Sampling helpers that turn cached PSTD kernels into
 //! `TrainingBatch`es.
 //!
 //! The trainer ([`super::training::ParamFieldPINNTrainer`]) is data-
@@ -14,7 +14,7 @@
 //! envelope amplitudes and reused across all batches so the
 //! normalisation is consistent.
 
-use burn::tensor::{backend::AutodiffBackend, Tensor, TensorData};
+use coeus_autograd::Var;
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 
@@ -351,9 +351,8 @@ impl KernelCubeSampler {
     ///
     /// Returns inputs `[batch, 5]`, targets `[batch, 3]`, and per-
     /// sample physical `f0` `[batch]` for the Helmholtz residual.
-    pub fn batch<B: AutodiffBackend>(
+    pub fn batch<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
         &self,
-        device: &B::Device,
         step: u64,
         batch_size: usize,
     ) -> TrainingBatch<B> {
@@ -370,11 +369,23 @@ impl KernelCubeSampler {
             f0_buf.push(self.f0_phys_hz[idx]);
             group_buf.push(self.group_ids[idx]);
         }
-        let inputs = Tensor::<B, 2>::from_data(TensorData::new(input_buf, [batch_size, 5]), device);
-        let targets =
-            Tensor::<B, 2>::from_data(TensorData::new(target_buf, [batch_size, 3]), device);
-        let f0_phys_hz = Tensor::<B, 1>::from_data(TensorData::new(f0_buf, [batch_size]), device);
-        let group_ids = Tensor::<B, 1>::from_data(TensorData::new(group_buf, [batch_size]), device);
+        let backend = B::default();
+        let inputs = Var::new(
+            coeus_tensor::Tensor::from_slice_on(vec![batch_size, 5], &input_buf, &backend),
+            false,
+        );
+        let targets = Var::new(
+            coeus_tensor::Tensor::from_slice_on(vec![batch_size, 3], &target_buf, &backend),
+            false,
+        );
+        let f0_phys_hz = Var::new(
+            coeus_tensor::Tensor::from_slice_on(vec![batch_size], &f0_buf, &backend),
+            false,
+        );
+        let group_ids = Var::new(
+            coeus_tensor::Tensor::from_slice_on(vec![batch_size], &group_buf, &backend),
+            false,
+        );
         TrainingBatch {
             inputs,
             targets,

@@ -14,6 +14,5 @@ mod sampling;
 mod target_transform;
 mod training;
 
-/// Shared type aliases for all sub-modules.
-pub(super) type B = burn::backend::NdArray<f32>;
-pub(super) type AB = burn::backend::Autodiff<burn::backend::NdArray<f32>>;
+/// Shared type alias for all sub-modules.
+pub(super) type B = coeus_core::MoiraiBackend;

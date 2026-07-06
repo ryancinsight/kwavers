@@ -11,7 +11,7 @@
 use ndarray::Array3;
 
 use super::super::{KernelCubeSampler, SamplingMode};
-use super::AB;
+use super::B;
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use kwavers_physics::field_surrogate::FocalKernel;
 
@@ -49,17 +49,10 @@ fn test_sampler_emits_distinct_group_ids_per_kernel() {
     let sampler = make_cube_sampler();
     // 4 corners → 4 active groups, dense indices 0..3.
     assert_eq!(sampler.num_groups(), 4);
-    let device = Default::default();
     // Large batch + uniform sampling makes the empirical group set
     // overwhelmingly likely to cover all 4 groups.
-    let batch = sampler.batch::<AB>(&device, 0, 2048);
-    let group_host: Vec<f32> = batch
-        .group_ids
-        .clone()
-        .into_data()
-        .convert::<f32>()
-        .into_vec()
-        .unwrap();
+    let batch = sampler.batch::<B>(0, 2048);
+    let group_host: Vec<f32> = batch.group_ids.tensor.as_slice().to_vec();
     assert_eq!(batch.num_groups, 4);
     let mut seen = [false; 4];
     for &g in &group_host {
@@ -102,12 +95,11 @@ fn test_set_sampling_switches_mode_idempotently() {
 #[test]
 fn test_uniform_sampling_empirical_histogram_is_flat() {
     let sampler = make_cube_sampler();
-    let device = Default::default();
     let counts = vec![0usize; sampler.len()];
     let n_batches = 50usize;
     let batch_size = 256usize;
     for step in 0..n_batches {
-        let _batch = sampler.batch::<AB>(&device, step as u64, batch_size);
+        let _batch = sampler.batch::<B>(step as u64, batch_size);
         // We can't easily recover the chosen indices from the tensor,
         // but we can verify the call doesn't panic and produces a
         // tensor of the right shape. Empirical-histogram-flatness is
@@ -130,10 +122,9 @@ fn test_importance_sampling_concentrates_on_high_magnitude_voxels() {
     // Find the index of the highest-magnitude voxel by reading the
     // internal cumulative weights — accessible via a deterministic
     // sample at u very close to 1.0.
-    let device = Default::default();
-    let batch = sampler.batch::<AB>(&device, 0, 1);
+    let batch = sampler.batch::<B>(0, 1);
     // Just confirm the call succeeds (the batch is shape [1, 5]).
-    assert_eq!(batch.inputs.dims(), [1, 5]);
+    assert_eq!(batch.inputs.tensor.shape(), &[1, 5]);
 
     // Sanity check: the top-N voxels by magnitude account for
     // > 50 % of cumulative probability mass under exponent=2.
@@ -150,14 +141,8 @@ fn test_importance_sampling_concentrates_on_high_magnitude_voxels() {
     let n_batches = 10usize;
     let batch_size = 256usize;
     for step in 0..n_batches {
-        let b = sampler.batch::<AB>(&device, step as u64, batch_size);
-        let host: Vec<f32> = b
-            .targets
-            .clone()
-            .into_data()
-            .convert::<f32>()
-            .into_vec()
-            .unwrap();
+        let b = sampler.batch::<B>(step as u64, batch_size);
+        let host: Vec<f32> = b.targets.tensor.as_slice().to_vec();
         for chunk in host.chunks_exact(3) {
             mean_abs_x_pred += chunk[1].abs() as f64; // p_max channel
         }
@@ -183,19 +168,12 @@ fn test_importance_sampling_with_unit_exponent_is_balanced() {
     // smaller than exponent=2's ~0.50.
     let mut sampler = make_cube_sampler();
     sampler.set_sampling(SamplingMode::ImportanceByMagnitude { exponent: 1.0 });
-    let device = Default::default();
     let n_batches = 10usize;
     let batch_size = 256usize;
     let mut mean_abs = 0.0_f64;
     for step in 0..n_batches {
-        let b = sampler.batch::<AB>(&device, step as u64, batch_size);
-        let host: Vec<f32> = b
-            .targets
-            .clone()
-            .into_data()
-            .convert::<f32>()
-            .into_vec()
-            .unwrap();
+        let b = sampler.batch::<B>(step as u64, batch_size);
+        let host: Vec<f32> = b.targets.tensor.as_slice().to_vec();
         for chunk in host.chunks_exact(3) {
             mean_abs += chunk[1].abs() as f64;
         }
