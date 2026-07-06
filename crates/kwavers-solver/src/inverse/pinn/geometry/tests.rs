@@ -1,5 +1,5 @@
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
-use ndarray::Array1;
+use leto::Array1;
 
 use kwavers_grid::geometry::RectangularDomain;
 
@@ -18,8 +18,8 @@ fn test_collocation_sampler() {
     let interior = sampler.sample_interior(100);
     let boundary = sampler.sample_boundary(50);
 
-    assert_eq!(interior.shape(), &[100, 2]);
-    assert_eq!(boundary.shape(), &[50, 2]);
+    assert_eq!(interior.shape(), [100, 2]);
+    assert_eq!(boundary.shape(), [50, 2]);
 }
 
 #[test]
@@ -62,14 +62,14 @@ fn test_adaptive_refinement() {
     let initial = sampler.sample_interior(10);
     let mut adaptive = AdaptiveRefinement::new(sampler, initial.clone(), 0.1);
 
-    let mut residuals = Array1::zeros(10);
+    let mut residuals = Array1::zeros([10]);
     residuals[0] = 0.5;
     residuals[5] = 0.3;
 
     adaptive.update_residuals(residuals);
     let refined = adaptive.refine(2.0);
 
-    assert!(refined.nrows() > 10);
+    assert!(refined.shape()[0] > 10);
 }
 
 #[test]

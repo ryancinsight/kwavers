@@ -7,7 +7,8 @@ use super::dot::distance;
 use super::rows::{
     compute_row_norms, passive_rows, pitch_catch_rows, write_passive_row, write_pitch_catch_row,
 };
-use rayon::prelude::*;
+use moirai_parallel::for_each_chunk_mut_enumerated_with;
+use moirai_parallel::Adaptive;
 
 #[derive(Clone, Debug)]
 pub struct FiniteFrequencyOperator<'a> {
@@ -122,24 +123,34 @@ impl<'a> FiniteFrequencyOperator<'a> {
         let cols = self.active.len();
         match &self.kind {
             OperatorKind::PitchCatch(specs) => {
-                matrix
-                    .data
-                    .par_chunks_mut(cols)
-                    .zip(specs.par_iter())
-                    .zip(self.inv_row_norms.par_iter())
-                    .for_each(|((row_slice, spec), inv_norm)| {
-                        write_pitch_catch_row(row_slice, spec, *inv_norm, self.active, self.medium);
-                    });
+                for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(
+                    &mut matrix.data,
+                    cols,
+                    |row, row_slice| {
+                        write_pitch_catch_row(
+                            row_slice,
+                            &specs[row],
+                            self.inv_row_norms[row],
+                            self.active,
+                            self.medium,
+                        );
+                    },
+                );
             }
             OperatorKind::Passive(specs) => {
-                matrix
-                    .data
-                    .par_chunks_mut(cols)
-                    .zip(specs.par_iter())
-                    .zip(self.inv_row_norms.par_iter())
-                    .for_each(|((row_slice, spec), inv_norm)| {
-                        write_passive_row(row_slice, spec, *inv_norm, self.active, self.medium);
-                    });
+                for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(
+                    &mut matrix.data,
+                    cols,
+                    |row, row_slice| {
+                        write_passive_row(
+                            row_slice,
+                            &specs[row],
+                            self.inv_row_norms[row],
+                            self.active,
+                            self.medium,
+                        );
+                    },
+                );
             }
         }
         matrix

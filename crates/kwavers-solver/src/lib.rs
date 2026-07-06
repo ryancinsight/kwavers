@@ -44,6 +44,13 @@ pub use multiphysics::{
 // Constants module remains at root level for easy access
 pub mod constants;
 
+// burn_compat: migration scaffold for gradual burn→coeus replacement.
+// When `pinn` feature is active, files in inverse/pinn/ml can opt into
+// `use crate::inverse::pinn::ml::burn_compat as burn;` to switch to
+// coeus-backed types one module at a time.
+// NOTE: do NOT create a local `mod burn` here — that would shadow the burn
+// extern crate and break `#[derive(Module)]` and other burn proc macros.
+
 // Progress reporting - use types from interface module
 pub use interface::{
     ConsoleProgressReporter, FieldsSummary, ProgressData, ProgressReporter, ProgressUpdate,
@@ -59,8 +66,8 @@ pub use forward::plugin_based;
 pub use forward::pstd;
 pub use integration::time_integration;
 
-// Module planned but not yet implemented:
-// - backend: GPU backend with WGPU integration (pending dependency resolution)
+// Concrete GPU execution lives in `kwavers-gpu`; this crate owns only the
+// solver-facing compute backend trait surface.
 pub use inverse::reconstruction;
 pub use inverse::time_reversal;
 pub use utilities::amr;

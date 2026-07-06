@@ -3,14 +3,45 @@
 use super::{geometry::FwiGeometry, FwiProcessor};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::{Array2, Array3, Zip};
-use rayon::prelude::*;
+use moirai_parallel::{for_each_chunk_mut_enumerated_with, map_collect_with, Adaptive};
+use ndarray::{Array2, Array3};
+
+const TRIAL_MODEL_CHUNK_LEN: usize = 4096;
+
+fn write_trial_model(
+    test_model: &mut Array3<f64>,
+    model: &Array3<f64>,
+    gradient: &Array3<f64>,
+    gradient_scale: f64,
+) {
+    debug_assert_eq!(test_model.dim(), model.dim());
+    debug_assert_eq!(test_model.dim(), gradient.dim());
+    let (_, ny, nz) = model.dim();
+    let values = test_model
+        .as_slice_memory_order_mut()
+        .expect("invariant: Array3::zeros trial model has contiguous storage");
+    for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(
+        values,
+        TRIAL_MODEL_CHUNK_LEN,
+        |chunk_index, chunk| {
+            let base = chunk_index * TRIAL_MODEL_CHUNK_LEN;
+            for (offset, target) in chunk.iter_mut().enumerate() {
+                let linear = base + offset;
+                let k = linear % nz;
+                let j = (linear / nz) % ny;
+                let i = linear / (ny * nz);
+                *target = gradient[[i, j, k]].mul_add(gradient_scale, model[[i, j, k]]);
+            }
+        },
+    );
+}
 
 impl FwiProcessor {
     /// Compute the model objective by running a sensor-only forward simulation.
     ///
     /// Calls `forward_model_sensor_only` — no pressure-history `Array4` is
-    /// allocated.  Peak memory ~55 MB per call; safe to call from `par_iter`.
+    /// allocated.  Peak memory ~55 MB per call; safe to call from the Atlas
+    /// execution provider.
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
@@ -28,7 +59,7 @@ impl FwiProcessor {
     /// Evaluate the joint objective `J = Σᵢ Jᵢ(model)` across all shots.
     ///
     /// Shots are independent: each forward model reads `model` and `grid`
-    /// immutably, so the loop runs fully in parallel via Rayon.
+    /// immutably, so the loop runs through the Atlas execution provider.
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
@@ -38,12 +69,10 @@ impl FwiProcessor {
         shots: &[(FwiGeometry, Array2<f64>)],
         grid: &Grid,
     ) -> KwaversResult<f64> {
-        let results: Vec<KwaversResult<f64>> = shots
-            .par_iter()
-            .map(|(geometry, observed_data)| {
+        let results: Vec<KwaversResult<f64>> =
+            map_collect_with::<Adaptive, _, _, _>(shots, |(geometry, observed_data)| {
                 self.compute_objective(model, observed_data, geometry, grid)
-            })
-            .collect();
+            });
         let mut total = 0.0_f64;
         for result in results {
             total += result?;
@@ -77,10 +106,7 @@ impl FwiProcessor {
 
         for _ in 0..max_iter {
             let s = step_size;
-            Zip::from(&mut test_model)
-                .and(model)
-                .and(gradient)
-                .par_for_each(|t, &m, &g| *t = s.mul_add(-g, m));
+            write_trial_model(&mut test_model, model, gradient, -s);
             let test_objective =
                 self.compute_objective(&test_model, observed_data, geometry, grid)?;
 
@@ -120,10 +146,7 @@ impl FwiProcessor {
 
         let mut step = self.parameters.step_size;
         for _ in 0..max_halvings {
-            Zip::from(&mut test_model)
-                .and(model)
-                .and(gradient)
-                .par_for_each(|t, &m, &g| *t = g.mul_add(-step, m));
+            write_trial_model(&mut test_model, model, gradient, -step);
             let test_obj = self.compute_joint_objective(&test_model, shots, grid)?;
             if test_obj < current_obj {
                 return Ok(step);
@@ -133,10 +156,7 @@ impl FwiProcessor {
 
         let mut step = self.parameters.step_size;
         for _ in 0..max_halvings {
-            Zip::from(&mut test_model)
-                .and(model)
-                .and(gradient)
-                .par_for_each(|t, &m, &g| *t = g.mul_add(step, m));
+            write_trial_model(&mut test_model, model, gradient, step);
             let test_obj = self.compute_joint_objective(&test_model, shots, grid)?;
             if test_obj < current_obj {
                 log::info!(

@@ -52,10 +52,11 @@ impl FdtdSolver {
             cpml.update_and_apply_v_gradient_correction(&mut self.divergence_scratch, 2);
         }
 
-        Zip::from(&mut self.divergence_scratch)
-            .and(&self.dvx_scratch)
-            .and(&self.dvy_scratch)
-            .par_for_each(|d, &dx, &dy| *d += dx + dy);
+        super::accumulate_two_fields(
+            &mut self.divergence_scratch,
+            &self.dvx_scratch,
+            &self.dvy_scratch,
+        );
         Ok(())
     }
 }

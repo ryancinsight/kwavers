@@ -43,10 +43,13 @@
 //!
 //! ## Backends
 //!
-//! This implementation supports multiple Burn backends:
+//! This implementation currently supports the Burn CPU backend:
 //!
 //! - **NdArray**: CPU-only backend (fast compilation, good for development)
-//! - **WGPU**: GPU acceleration via WebGPU (requires `pinn-gpu` feature)
+//!
+//! GPU PINN execution belongs behind the Coeus training backend and the
+//! provider-generic Hephaestus GPU traits, where WGPU and CUDA are interchangeable
+//! provider implementations.
 //!
 //! ## 3D Geometry Support
 //!
@@ -175,7 +178,7 @@
 //! ## Feature Flags
 //!
 //! - `pinn`: Basic PINN functionality with CPU backend
-//! - `pinn-gpu`: Adds GPU acceleration via WGPU backend
+//! - GPU PINN execution: pending Coeus + Hephaestus provider integration
 
 // Domain layer
 pub mod config;

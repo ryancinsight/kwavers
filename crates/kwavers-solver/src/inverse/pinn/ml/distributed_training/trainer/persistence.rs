@@ -1,6 +1,6 @@
-use super::super::{DistributedPinnTrainer, TrainingCheckpoint};
+use super::super::{checkpoint::checkpoint_filename, DistributedPinnTrainer, TrainingCheckpoint};
 use burn::tensor::backend::AutodiffBackend;
-use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_core::error::{KwaversError, KwaversResult, SystemError};
 use log::info;
 
 impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
@@ -8,7 +8,7 @@ impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub async fn save_checkpoint(&mut self) -> KwaversResult<()> {
+    pub fn save_checkpoint(&mut self) -> KwaversResult<()> {
         let checkpoint = TrainingCheckpoint {
             epoch: self.coordinator.training_state.current_epoch,
             parameters: vec![],
@@ -17,15 +17,28 @@ impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
             timestamp: std::time::SystemTime::now(),
         };
 
-        let filename = format!("checkpoint_epoch_{}.bin", checkpoint.epoch);
         let path = self
             .coordinator
             .checkpoint_manager
             .checkpoint_dir
-            .join(filename);
+            .join(checkpoint_filename(checkpoint.epoch));
+        self.coordinator
+            .checkpoint_manager
+            .ensure_checkpoint_dir()?;
+
+        let bytes = serde_json::to_vec_pretty(&checkpoint).map_err(|error| {
+            KwaversError::System(SystemError::Io {
+                operation: format!("serialize checkpoint {}", checkpoint.epoch),
+                reason: error.to_string(),
+            })
+        })?;
+        std::fs::write(&path, bytes)?;
 
         info!("Checkpoint saved: {}", path.display());
         self.coordinator.training_state.last_checkpoint = checkpoint.epoch;
+        self.coordinator
+            .checkpoint_manager
+            .cleanup_old_checkpoints()?;
 
         Ok(())
     }
@@ -34,25 +47,36 @@ impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
     /// # Errors
     /// - Returns [`KwaversError::System`] if the checkpoint file is not found.
     ///
-    pub async fn load_checkpoint(&mut self, epoch: usize) -> KwaversResult<()> {
-        let filename = format!("checkpoint_epoch_{}.bin", epoch);
+    pub fn load_checkpoint(&mut self, epoch: usize) -> KwaversResult<()> {
         let path = self
             .coordinator
             .checkpoint_manager
             .checkpoint_dir
-            .join(filename);
+            .join(checkpoint_filename(epoch));
 
-        if tokio::fs::try_exists(&path).await.unwrap_or(false) {
-            info!("Checkpoint loaded: {}", path.display());
-            self.coordinator.training_state.current_epoch = epoch;
-            self.coordinator.training_state.last_checkpoint = epoch;
-        } else {
-            return Err(KwaversError::System(
-                kwavers_core::error::SystemError::ResourceUnavailable {
-                    resource: format!("Checkpoint file not found: {}", path.display()),
-                },
-            ));
+        if !path.try_exists().map_err(|error| {
+            KwaversError::System(SystemError::Io {
+                operation: format!("check checkpoint path {}", path.display()),
+                reason: error.to_string(),
+            })
+        })? {
+            return Err(KwaversError::System(SystemError::ResourceUnavailable {
+                resource: format!("Checkpoint file not found: {}", path.display()),
+            }));
         }
+
+        let bytes = std::fs::read(&path)?;
+        let checkpoint: TrainingCheckpoint = serde_json::from_slice(&bytes).map_err(|error| {
+            KwaversError::System(SystemError::Io {
+                operation: format!("deserialize checkpoint {}", path.display()),
+                reason: error.to_string(),
+            })
+        })?;
+        self.coordinator.training_state.current_epoch = checkpoint.epoch;
+        self.coordinator.training_state.last_checkpoint = checkpoint.epoch;
+        self.coordinator.training_state.global_metrics = checkpoint.metrics;
+
+        info!("Checkpoint loaded: {}", path.display());
 
         Ok(())
     }

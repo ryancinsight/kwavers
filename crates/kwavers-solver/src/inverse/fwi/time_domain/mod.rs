@@ -64,6 +64,7 @@ mod adjoint;
 pub mod adjoint_state;
 mod constraints;
 mod encoded_source;
+mod field_ops;
 mod forward;
 mod frequency_continuation;
 mod gradient;
@@ -111,6 +112,8 @@ use ndarray::Array3;
 ///
 /// Reference: Gardner, G.H.F. et al. (1974). Geophysics 39(6), 770–780.
 pub(super) const RHO_SEISMIC_REF: f64 = 2000.0; // kg/m³
+
+pub(super) const FWI_FIELD_CHUNK: usize = 16 * 1024;
 
 /// Forward/adjoint engine backing a [`FwiProcessor`].
 ///

@@ -4,6 +4,7 @@ use super::{analytical, DiffusionSolver, DiffusionSolverConfig};
 use anyhow::Result;
 use kwavers_grid::Grid;
 use kwavers_medium::properties::OpticalPropertyData;
+use leto::Array3 as LetoArray3;
 use ndarray::Array3;
 
 #[test]
@@ -68,6 +69,47 @@ fn test_solver_uniform_medium() -> Result<()> {
         dist_from_center < 10.0,
         "Maximum fluence should be near source location"
     );
+
+    Ok(())
+}
+
+#[test]
+fn leto_solver_matches_ndarray_solver_bitwise() -> Result<()> {
+    let grid = Grid::new(12, 10, 8, 1e-3, 1e-3, 1e-3)?;
+    let tissue = OpticalPropertyData::soft_tissue();
+
+    let config = DiffusionSolverConfig {
+        max_iterations: 1000,
+        tolerance: 1e-4,
+        boundary_parameter: 2.0,
+        boundary_conditions: None,
+        verbose: false,
+    };
+
+    let solver = DiffusionSolver::uniform(grid.clone(), tissue, config)?;
+    let (nx, ny, nz) = grid.dimensions();
+    let mut ndarray_source = Array3::zeros((nx, ny, nz));
+    let mut leto_source = LetoArray3::zeros([nx, ny, nz]);
+    let source_index = (nx / 2, ny / 2, nz / 2);
+    ndarray_source[[source_index.0, source_index.1, source_index.2]] = 1e6;
+    leto_source[[source_index.0, source_index.1, source_index.2]] = 1e6;
+
+    let ndarray_fluence = solver.solve(&ndarray_source)?;
+    let leto_fluence = solver.solve_leto(&leto_source)?;
+
+    assert_eq!(leto_fluence.shape(), [nx, ny, nz]);
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                let index = [i, j, k];
+                assert_eq!(
+                    ndarray_fluence[[i, j, k]].to_bits(),
+                    leto_fluence[index].to_bits(),
+                    "fluence mismatch at {index:?}"
+                );
+            }
+        }
+    }
 
     Ok(())
 }

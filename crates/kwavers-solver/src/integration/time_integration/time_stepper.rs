@@ -7,8 +7,144 @@ use super::traits::{TimeStepper, TimeStepperConfig};
 use kwavers_core::error::KwaversResult;
 use kwavers_core::error::{KwaversError, SystemError};
 use kwavers_grid::Grid;
+use moirai_parallel::{enumerate_mut_with, Adaptive};
 use ndarray::{Array3, Zip};
 use std::collections::VecDeque;
+
+fn add_scaled_inplace(target: &mut Array3<f64>, rhs: &Array3<f64>, scale: f64) {
+    assert_eq!(
+        target.dim(),
+        rhs.dim(),
+        "invariant: add_scaled_inplace shape mismatch"
+    );
+    match (
+        target.as_slice_memory_order_mut(),
+        rhs.as_slice_memory_order(),
+    ) {
+        (Some(target_slice), Some(rhs_slice)) => {
+            enumerate_mut_with::<Adaptive, _, _>(target_slice, |idx, value| {
+                *value += scale * rhs_slice[idx];
+            });
+        }
+        _ => Zip::from(target)
+            .and(rhs)
+            .for_each(|value, &rhs| *value += scale * rhs),
+    }
+}
+
+fn combine_rk4_inplace(
+    field: &mut Array3<f64>,
+    k1: &Array3<f64>,
+    k2: &Array3<f64>,
+    k3: &Array3<f64>,
+    k4: &Array3<f64>,
+    dt: f64,
+) {
+    assert_eq!(field.dim(), k1.dim(), "invariant: RK4 k1 shape mismatch");
+    assert_eq!(field.dim(), k2.dim(), "invariant: RK4 k2 shape mismatch");
+    assert_eq!(field.dim(), k3.dim(), "invariant: RK4 k3 shape mismatch");
+    assert_eq!(field.dim(), k4.dim(), "invariant: RK4 k4 shape mismatch");
+    match (
+        field.as_slice_memory_order_mut(),
+        k1.as_slice_memory_order(),
+        k2.as_slice_memory_order(),
+        k3.as_slice_memory_order(),
+        k4.as_slice_memory_order(),
+    ) {
+        (Some(field_slice), Some(k1_slice), Some(k2_slice), Some(k3_slice), Some(k4_slice)) => {
+            enumerate_mut_with::<Adaptive, _, _>(field_slice, |idx, value| {
+                *value += dt / 6.0
+                    * (2.0f64.mul_add(k3_slice[idx], 2.0f64.mul_add(k2_slice[idx], k1_slice[idx]))
+                        + k4_slice[idx]);
+            });
+        }
+        _ => Zip::from(field)
+            .and(k1)
+            .and(k2)
+            .and(k3)
+            .and(k4)
+            .for_each(|r, k1, k2, k3, k4| {
+                *r += dt / 6.0 * (2.0f64.mul_add(*k3, 2.0f64.mul_add(*k2, *k1)) + *k4);
+            }),
+    }
+}
+
+fn adams_bashforth2_inplace(
+    field: &mut Array3<f64>,
+    f_n: &Array3<f64>,
+    f_nm1: &Array3<f64>,
+    dt: f64,
+) {
+    assert_eq!(field.dim(), f_n.dim(), "invariant: AB2 f_n shape mismatch");
+    assert_eq!(
+        field.dim(),
+        f_nm1.dim(),
+        "invariant: AB2 f_nm1 shape mismatch"
+    );
+    match (
+        field.as_slice_memory_order_mut(),
+        f_n.as_slice_memory_order(),
+        f_nm1.as_slice_memory_order(),
+    ) {
+        (Some(field_slice), Some(f_n_slice), Some(f_nm1_slice)) => {
+            enumerate_mut_with::<Adaptive, _, _>(field_slice, |idx, value| {
+                *value += dt * 1.5f64.mul_add(f_n_slice[idx], -(0.5 * f_nm1_slice[idx]));
+            });
+        }
+        _ => Zip::from(field)
+            .and(f_n)
+            .and(f_nm1)
+            .for_each(|r, fn_val, fnm1_val| {
+                *r += dt * 1.5f64.mul_add(*fn_val, -(0.5 * *fnm1_val));
+            }),
+    }
+}
+
+fn adams_bashforth3_inplace(
+    field: &mut Array3<f64>,
+    f_n: &Array3<f64>,
+    f_nm1: &Array3<f64>,
+    f_nm2: &Array3<f64>,
+    dt: f64,
+) {
+    assert_eq!(field.dim(), f_n.dim(), "invariant: AB3 f_n shape mismatch");
+    assert_eq!(
+        field.dim(),
+        f_nm1.dim(),
+        "invariant: AB3 f_nm1 shape mismatch"
+    );
+    assert_eq!(
+        field.dim(),
+        f_nm2.dim(),
+        "invariant: AB3 f_nm2 shape mismatch"
+    );
+    match (
+        field.as_slice_memory_order_mut(),
+        f_n.as_slice_memory_order(),
+        f_nm1.as_slice_memory_order(),
+        f_nm2.as_slice_memory_order(),
+    ) {
+        (Some(field_slice), Some(f_n_slice), Some(f_nm1_slice), Some(f_nm2_slice)) => {
+            enumerate_mut_with::<Adaptive, _, _>(field_slice, |idx, value| {
+                *value += dt
+                    * (5.0_f64 / 12.0).mul_add(
+                        f_nm2_slice[idx],
+                        (23.0_f64 / 12.0)
+                            .mul_add(f_n_slice[idx], -(16.0_f64 / 12.0 * f_nm1_slice[idx])),
+                    );
+            });
+        }
+        _ => Zip::from(field).and(f_n).and(f_nm1).and(f_nm2).for_each(
+            |r, fn_val, fnm1_val, fnm2_val| {
+                *r += dt
+                    * (5.0_f64 / 12.0).mul_add(
+                        *fnm2_val,
+                        (23.0_f64 / 12.0).mul_add(*fn_val, -(16.0_f64 / 12.0 * *fnm1_val)),
+                    );
+            },
+        ),
+    }
+}
 
 /// Configuration for Runge-Kutta 4 method
 #[derive(Debug, Clone)]
@@ -124,36 +260,23 @@ impl TimeStepper for RungeKutta4 {
         // Stage 2: k2 = f(t + dt/2, y + dt/2 * k1)
         // Use pre-allocated workspace instead of cloning
         intermediate_field.assign(field);
-        Zip::from(&mut *intermediate_field)
-            .and(&*k1)
-            .par_for_each(|t, k| *t += 0.5 * dt * *k);
+        add_scaled_inplace(intermediate_field, k1, 0.5 * dt);
         *k2 = rhs_fn(intermediate_field)?;
 
         // Stage 3: k3 = f(t + dt/2, y + dt/2 * k2)
         // Reuse the same workspace
         intermediate_field.assign(field);
-        Zip::from(&mut *intermediate_field)
-            .and(&*k2)
-            .par_for_each(|t, k| *t += 0.5 * dt * *k);
+        add_scaled_inplace(intermediate_field, k2, 0.5 * dt);
         *k3 = rhs_fn(intermediate_field)?;
 
         // Stage 4: k4 = f(t + dt, y + dt * k3)
         intermediate_field.assign(field);
-        Zip::from(&mut *intermediate_field)
-            .and(&*k3)
-            .par_for_each(|t, k| *t += dt * *k);
+        add_scaled_inplace(intermediate_field, k3, dt);
         *k4 = rhs_fn(intermediate_field)?;
 
         // Combine stages: y_new = y + dt/6 * (k1 + 2*k2 + 2*k3 + k4)
         // Update field in-place
-        Zip::from(field)
-            .and(&*k1)
-            .and(&*k2)
-            .and(&*k3)
-            .and(&*k4)
-            .par_for_each(|r, k1, k2, k3, k4| {
-                *r += dt / 6.0 * (2.0f64.mul_add(*k3, 2.0f64.mul_add(*k2, *k1)) + *k4);
-            });
+        combine_rk4_inplace(field, k1, k2, k3, k4, dt);
 
         Ok(())
     }
@@ -292,12 +415,7 @@ impl TimeStepper for AdamsBashforth {
                     let f_n = &current_rhs;
                     let f_nm1 = &self.rhs_history[self.rhs_history.len() - 1];
 
-                    Zip::from(field)
-                        .and(f_n)
-                        .and(f_nm1)
-                        .par_for_each(|r, fn_val, fnm1_val| {
-                            *r += dt * 1.5f64.mul_add(*fn_val, -(0.5 * *fnm1_val));
-                        });
+                    adams_bashforth2_inplace(field, f_n, f_nm1, dt);
                 }
             }
             3 => {
@@ -307,18 +425,7 @@ impl TimeStepper for AdamsBashforth {
                     let f_nm1 = &self.rhs_history[self.rhs_history.len() - 1];
                     let f_nm2 = &self.rhs_history[self.rhs_history.len() - 2];
 
-                    Zip::from(field)
-                        .and(f_n)
-                        .and(f_nm1)
-                        .and(f_nm2)
-                        .par_for_each(|r, fn_val, fnm1_val, fnm2_val| {
-                            *r += dt
-                                * (5.0_f64 / 12.0).mul_add(
-                                    *fnm2_val,
-                                    (23.0_f64 / 12.0)
-                                        .mul_add(*fn_val, -(16.0_f64 / 12.0 * *fnm1_val)),
-                                );
-                        });
+                    adams_bashforth3_inplace(field, f_n, f_nm1, f_nm2, dt);
                 }
             }
             _ => {

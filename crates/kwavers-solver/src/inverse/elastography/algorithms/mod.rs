@@ -13,6 +13,7 @@ mod detection;
 mod smoothing;
 #[cfg(test)]
 mod tests;
+mod volume;
 
 pub use boundary::fill_boundaries;
 pub use detection::find_push_locations;

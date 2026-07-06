@@ -110,39 +110,3 @@ fn test_pinn_device() {
     let pinn = BurnPINN1DWave::<TestBackend>::new(config, &device).unwrap();
     let _ = pinn.device();
 }
-
-#[cfg(feature = "pinn-gpu")]
-mod gpu_tests {
-    use crate::inverse::pinn::ml::burn_wave_equation_1d::{BurnPINN1DWave, BurnPINNConfig};
-    use burn::backend::{Autodiff, Wgpu};
-    use burn::tensor::Tensor;
-
-    type GpuBackend = Autodiff<Wgpu<f32>>;
-
-    #[test]
-    fn test_pinn_gpu_creation() {
-        let device = burn::backend::wgpu::WgpuDevice::default();
-        let config = BurnPINNConfig {
-            hidden_layers: vec![20, 20],
-            ..Default::default()
-        };
-        let result = BurnPINN1DWave::<GpuBackend>::new(config, &device);
-        let _ = result;
-    }
-
-    #[test]
-    fn test_pinn_gpu_forward_pass() {
-        let device = burn::backend::wgpu::WgpuDevice::default();
-        let config = BurnPINNConfig {
-            hidden_layers: vec![10, 10],
-            ..Default::default()
-        };
-        if let Ok(pinn) = BurnPINN1DWave::<GpuBackend>::new(config, &device) {
-            let x = Tensor::<GpuBackend, 1>::from_floats([0.5], &device).reshape([1, 1]);
-            let t = Tensor::<GpuBackend, 1>::from_floats([0.1], &device).reshape([1, 1]);
-
-            let u = pinn.forward(x, t);
-            assert!(u.to_data().as_slice::<f32>().is_ok());
-        }
-    }
-}

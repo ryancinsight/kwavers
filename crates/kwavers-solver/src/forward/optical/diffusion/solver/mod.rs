@@ -67,6 +67,7 @@ mod solve;
 #[cfg(test)]
 mod tests;
 
+use leto::Array3 as LetoArray3;
 use ndarray::Array3;
 
 use kwavers_grid::Grid;
@@ -147,4 +148,48 @@ pub struct DiffusionSolver {
     pub(super) absorption_coefficient: Array3<f64>,
     /// Solver configuration
     pub(super) config: DiffusionSolverConfig,
+}
+
+trait DiffusionVolume: Clone {
+    fn zeros(shape: [usize; 3]) -> Self;
+    fn shape3(&self) -> [usize; 3];
+    fn value(&self, index: [usize; 3]) -> f64;
+    fn set_value(&mut self, index: [usize; 3], value: f64);
+}
+
+impl DiffusionVolume for Array3<f64> {
+    fn zeros(shape: [usize; 3]) -> Self {
+        Self::zeros((shape[0], shape[1], shape[2]))
+    }
+
+    fn shape3(&self) -> [usize; 3] {
+        let (nx, ny, nz) = self.dim();
+        [nx, ny, nz]
+    }
+
+    fn value(&self, index: [usize; 3]) -> f64 {
+        self[[index[0], index[1], index[2]]]
+    }
+
+    fn set_value(&mut self, index: [usize; 3], value: f64) {
+        self[[index[0], index[1], index[2]]] = value;
+    }
+}
+
+impl DiffusionVolume for LetoArray3<f64> {
+    fn zeros(shape: [usize; 3]) -> Self {
+        Self::zeros(shape)
+    }
+
+    fn shape3(&self) -> [usize; 3] {
+        self.shape()
+    }
+
+    fn value(&self, index: [usize; 3]) -> f64 {
+        self[index]
+    }
+
+    fn set_value(&mut self, index: [usize; 3], value: f64) {
+        self[index] = value;
+    }
 }

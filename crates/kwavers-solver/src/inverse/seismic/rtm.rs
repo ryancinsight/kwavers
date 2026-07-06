@@ -6,6 +6,7 @@
 use super::parameters::{ImagingCondition, RtmSettings};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
+use moirai_parallel::{enumerate_mut_with, Adaptive};
 use ndarray::Array3;
 
 /// Reverse Time Migration processor
@@ -94,12 +95,22 @@ impl RtmProcessor {
     ) {
         use ndarray::Zip;
 
-        Zip::from(image)
-            .and(source_wavefield)
-            .and(receiver_wavefield)
-            .par_for_each(|img, &src, &rcv| {
-                *img += src * rcv;
+        if let (Some(image), Some(source), Some(receiver)) = (
+            image.as_slice_mut(),
+            source_wavefield.as_slice(),
+            receiver_wavefield.as_slice(),
+        ) {
+            enumerate_mut_with::<Adaptive, _, _>(image, |index, img| {
+                *img += source[index] * receiver[index];
             });
+        } else {
+            Zip::from(image)
+                .and(source_wavefield)
+                .and(receiver_wavefield)
+                .for_each(|img, &src, &rcv| {
+                    *img += src * rcv;
+                });
+        }
     }
 
     /// Apply source-illumination-compensated imaging condition.
@@ -140,24 +151,34 @@ impl RtmProcessor {
     ) -> KwaversResult<()> {
         use ndarray::Zip;
 
-        // Source illumination: Φ(x) = S²(x)
-        let mut source_illumination = Array3::zeros(source_wavefield.dim());
-        Zip::from(&mut source_illumination)
-            .and(source_wavefield)
-            .par_for_each(|phi, &src| *phi = src * src);
-
         // I_norm(x) = S(x)·R(x) / (Φ(x) + ε)
-        Zip::from(image)
-            .and(source_wavefield)
-            .and(receiver_wavefield)
-            .and(&source_illumination)
-            .par_for_each(|img, &src, &rcv, &phi| {
+        if let (Some(image), Some(source), Some(receiver)) = (
+            image.as_slice_mut(),
+            source_wavefield.as_slice(),
+            receiver_wavefield.as_slice(),
+        ) {
+            enumerate_mut_with::<Adaptive, _, _>(image, |index, img| {
+                let src = source[index];
+                let phi = src * src;
                 *img = if phi > f64::EPSILON {
-                    src * rcv / phi
+                    src * receiver[index] / phi
                 } else {
                     0.0
                 };
             });
+        } else {
+            Zip::from(image)
+                .and(source_wavefield)
+                .and(receiver_wavefield)
+                .for_each(|img, &src, &rcv| {
+                    let phi = src * src;
+                    *img = if phi > f64::EPSILON {
+                        src * rcv / phi
+                    } else {
+                        0.0
+                    };
+                });
+        }
 
         Ok(())
     }

@@ -72,6 +72,10 @@ pub mod fdtd_reference;
 #[cfg(feature = "pinn")]
 pub mod validation;
 
+/// Burn → Coeus compatibility shim used by all PINN submodules.
+#[cfg(feature = "pinn")]
+pub mod burn_compat;
+
 // Sprint 143 Phase 2: Burn-based PINN with automatic differentiation
 #[cfg(feature = "pinn")]
 pub mod burn_wave_equation_1d;
@@ -90,10 +94,6 @@ pub mod burn_wave_equation_3d;
 // docs for the pipeline and Phase C-1/C-2 split.
 #[cfg(feature = "pinn")]
 pub mod field_surrogate;
-
-// Sprint 151: GPU Acceleration & Advanced Geometries
-// #[cfg(feature = "pinn")]
-// pub mod gpu_accelerator;
 
 // Sprint 150: Advanced neural architectures for improved PINN convergence
 #[cfg(feature = "pinn")]
@@ -124,10 +124,6 @@ pub use burn_wave_equation_3d::{
     BoundaryCondition3D, BurnLossWeights3D, BurnPINN3DConfig, BurnPINN3DWave,
     BurnTrainingMetrics3D, Geometry3D, InterfaceCondition3D,
 };
-
-// Sprint 151: GPU Acceleration & Advanced Geometries
-#[cfg(feature = "pinn")]
-pub use gpu_accelerator::{GpuMemoryManager, TrainingStats};
 
 // Sprint 152: Multi-GPU Support & Distributed Training
 #[cfg(feature = "pinn")]
@@ -172,9 +168,6 @@ pub mod sonoluminescence_coupled;
 
 #[cfg(feature = "pinn")]
 pub mod universal_solver;
-
-#[cfg(feature = "pinn")]
-pub mod gpu_accelerator;
 
 #[cfg(feature = "pinn")]
 pub mod adaptive_sampling;
@@ -254,12 +247,6 @@ pub use universal_solver::{
 };
 
 #[cfg(feature = "pinn")]
-pub use gpu_accelerator::{
-    BatchedPINNTrainer, CudaBuffer, CudaKernelManager, CudaStream, PinnGpuMemoryPoolType,
-    TrainingStep,
-};
-
-#[cfg(feature = "pinn")]
 pub use adaptive_sampling::{AdaptiveCollocationSampler, SamplingStats};
 
 #[cfg(feature = "pinn")]
@@ -301,7 +288,7 @@ mod tests {
         #[cfg(feature = "pinn")]
         {
             use burn::backend::{Autodiff, NdArray};
-            type TestBackend = Autodiff<NdArray<f32>>;
+            type TestBackend = Autodiff<NdArray>;
             let solver = super::UniversalPINNSolver::<TestBackend>::new();
             let _solver = solver.unwrap();
         }

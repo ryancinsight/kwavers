@@ -6,7 +6,7 @@ use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_imaging::ultrasound::elastography::NonlinearParameterMap;
 use kwavers_physics::acoustics::imaging::modalities::elastography::HarmonicDisplacementField;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Harmonic ratio method: B/A from A₂/A₁.
 ///
@@ -31,15 +31,15 @@ pub(super) fn harmonic_ratio_inversion(
 ) -> KwaversResult<NonlinearParameterMap> {
     let (nx, ny, nz) = harmonic_field.fundamental_magnitude.dim();
 
-    let mut nonlinearity_parameter = Array3::zeros((nx, ny, nz));
-    let mut nonlinearity_uncertainty = Array3::zeros((nx, ny, nz));
-    let mut estimation_quality = Array3::zeros((nx, ny, nz));
+    let mut nonlinearity_parameter = Array3::zeros([nx, ny, nz]);
+    let mut nonlinearity_uncertainty = Array3::zeros([nx, ny, nz]);
+    let mut estimation_quality = Array3::zeros([nx, ny, nz]);
 
     let mut elastic_constants = vec![
-        Array3::zeros((nx, ny, nz)), // A = A_L
-        Array3::zeros((nx, ny, nz)), // B ≈ A_L / 3
-        Array3::zeros((nx, ny, nz)), // C ≈ A_L / 9
-        Array3::zeros((nx, ny, nz)), // D ≈ A_L / 27
+        Array3::zeros([nx, ny, nz]), // A = A_L
+        Array3::zeros([nx, ny, nz]), // B ≈ A_L / 3
+        Array3::zeros([nx, ny, nz]), // C ≈ A_L / 9
+        Array3::zeros([nx, ny, nz]), // D ≈ A_L / 27
     ];
 
     let mu = shear_modulus(config);

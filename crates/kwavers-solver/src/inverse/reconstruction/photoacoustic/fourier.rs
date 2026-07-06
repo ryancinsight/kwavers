@@ -9,6 +9,7 @@
 
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
+use kwavers_core::utils::iterators::apply_inplace;
 use kwavers_math::fft::{
     fft_1d_array, ifft_1d_array, Complex64, Fft3dInOutExt, Shape3D, FFT_CACHE_3D,
 };
@@ -219,7 +220,7 @@ impl FourierReconstructor {
         fft.inverse_into(k_space, &mut result, &mut scratch);
 
         // Apply positivity constraint (pressure should be non-negative)
-        result.par_mapv_inplace(|x| x.max(0.0));
+        apply_inplace(&mut result, |x| x.max(0.0));
 
         Ok(result)
     }

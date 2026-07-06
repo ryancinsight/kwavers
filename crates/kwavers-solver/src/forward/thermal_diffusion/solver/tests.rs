@@ -2,6 +2,7 @@ use super::*;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_core::error::KwaversError;
 use kwavers_medium::HomogeneousMedium;
+use ndarray::s;
 
 fn config(spatial_order: usize) -> ThermalDiffusionConfig {
     ThermalDiffusionConfig {
@@ -88,4 +89,47 @@ fn standard_update_consumes_borrowed_source_view_without_source_clone() {
 
     assert_eq!(solver.temperature()[[1, 1, 0]], 320.0);
     assert_eq!(solver.temperature()[[0, 0, 0]], 310.0);
+}
+
+#[test]
+fn standard_update_consumes_noncontiguous_source_view() {
+    let grid = Grid::new(3, 3, 1, 1.0, 1.0, 1.0).unwrap();
+    let medium =
+        HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, &grid);
+    let mut solver = ThermalDiffusionSolver::new(config(2), &grid);
+    solver.set_temperature(Array3::from_elem((3, 3, 1), 310.0));
+    let mut source = Array3::zeros((3, 3, 1));
+    source[[1, 1, 0]] = 5.0;
+    let source_view = source.slice(s![.., ..;-1, ..]);
+    assert_eq!(source_view.as_slice(), None);
+
+    solver
+        .update(&medium, &grid, 2.0, Some(source_view))
+        .unwrap();
+
+    assert_eq!(solver.temperature()[[1, 1, 0]], 320.0);
+    assert_eq!(solver.temperature()[[0, 0, 0]], 310.0);
+}
+
+#[test]
+fn standard_update_rejects_mismatched_source_shape_without_mutation() {
+    let grid = Grid::new(3, 3, 1, 1.0, 1.0, 1.0).unwrap();
+    let medium =
+        HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, &grid);
+    let mut solver = ThermalDiffusionSolver::new(config(2), &grid);
+    solver.set_temperature(Array3::from_elem((3, 3, 1), 310.0));
+    let source = Array3::zeros((2, 3, 1));
+
+    let err = solver
+        .update(&medium, &grid, 2.0, Some(source.view()))
+        .unwrap_err();
+
+    match err {
+        KwaversError::DimensionMismatch(message) => assert_eq!(
+            message,
+            "thermal diffusion source shape (2, 3, 1) does not match temperature shape (3, 3, 1)"
+        ),
+        other => panic!("expected source dimension mismatch, got {other:?}"),
+    }
+    assert_eq!(solver.temperature()[[1, 1, 0]], 310.0);
 }

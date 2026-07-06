@@ -1,6 +1,7 @@
 use super::super::coupler::MonolithicCoupler;
 use super::super::spatial_operator::laplacian_3d_into;
 use super::super::state_vector::field_block_view;
+use crate::workspace::inplace_ops::scale_inplace;
 use kwavers_core::error::KwaversResult;
 use kwavers_field::UnifiedFieldType;
 use ndarray::{s, Array3};
@@ -57,7 +58,7 @@ impl MonolithicCoupler {
                 UnifiedFieldType::Pressure => {
                     let c2 = coeff.sound_speed * coeff.sound_speed;
                     laplacian_3d_into(&field_block, grid_dims, dx, dy, dz, &mut rate);
-                    rate.par_mapv_inplace(|v| v * c2);
+                    scale_inplace(&mut rate, c2);
 
                     if let Some(light_f) = light.as_ref() {
                         let gamma_mu_a = coeff.gruneisen * coeff.optical_absorption;
@@ -69,7 +70,7 @@ impl MonolithicCoupler {
                 UnifiedFieldType::LightFluence => {
                     let d = coeff.optical_diffusion();
                     laplacian_3d_into(&field_block, grid_dims, dx, dy, dz, &mut rate);
-                    rate.par_mapv_inplace(|v| v * d);
+                    scale_inplace(&mut rate, d);
                     rate.zip_mut_with(&field_block, |r_val, &i_val| {
                         *r_val -= coeff.optical_absorption * i_val;
                     });
@@ -78,7 +79,7 @@ impl MonolithicCoupler {
                     let kappa = coeff.thermal_diffusivity();
                     let inv_rho_cp = 1.0 / (coeff.density * coeff.specific_heat);
                     laplacian_3d_into(&field_block, grid_dims, dx, dy, dz, &mut rate);
-                    rate.par_mapv_inplace(|v| v * kappa);
+                    scale_inplace(&mut rate, kappa);
 
                     if let Some(light_f) = light.as_ref() {
                         rate.zip_mut_with(light_f, |r_val, &i_val| {

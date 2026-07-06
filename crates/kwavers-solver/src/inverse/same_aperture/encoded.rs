@@ -10,7 +10,9 @@
 //! `B^T B = A^T C^T C A` exactly for the selected encoding; it is a compressed
 //! linear inverse, not nonlinear full-waveform inversion.
 
-use rayon::prelude::*;
+use moirai_parallel::{
+    fold_reduce_with, for_each_chunk_mut_enumerated_with, Adaptive, ParallelSliceMut,
+};
 
 use super::linear_operator::LinearOperator;
 use super::row_matrix::RowMatrix;
@@ -108,11 +110,11 @@ impl<O: LinearOperator + Sync> EncodedOperator<O> {
     #[must_use]
     pub fn materialize(&self) -> RowMatrix {
         let mut matrix = RowMatrix::zeros(self.rows(), self.cols());
-        matrix
-            .data
-            .par_chunks_mut(self.cols())
-            .enumerate()
-            .for_each(|(row, values)| self.row_values(row, values));
+        for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(
+            &mut matrix.data,
+            self.cols(),
+            |row, values| self.row_values(row, values),
+        );
         matrix
     }
 }
@@ -131,7 +133,7 @@ impl<O: LinearOperator + Sync> LinearOperator for EncodedOperator<O> {
         debug_assert_eq!(out.len(), self.rows());
         let mut inner_out = vec![0.0_f32; self.inner.rows()];
         self.inner.matvec(x, &mut inner_out);
-        out.par_iter_mut().enumerate().for_each(|(encoded, dst)| {
+        out.par_mut().enumerate(|encoded, dst| {
             let mut sum = 0.0_f32;
             for idx in self.spec.group_range(encoded) {
                 let entry = self.spec.entries[idx];
@@ -167,37 +169,32 @@ impl<O: LinearOperator + Sync> LinearOperator for EncodedOperator<O> {
     ///
     /// `(B^T B)_{jj} = sum_i B_{ij}^2`. Each encoded row `i` contributes
     /// its squared column values to the accumulator. Rows are independent,
-    /// so the sum parallelizes with Rayon's fold-reduce pattern.
-    /// Each Rayon thread maintains a partial `cols`-length accumulator,
+    /// so the sum parallelizes with Moirai's fold-reduce pattern.
+    /// Each worker chunk maintains a partial `cols`-length accumulator,
     /// avoiding contention. The final reduce sums partial accumulators.
     ///
     /// Total memory: `O(threads * cols)` — e.g. 8 threads × 4096 cols × 4 B ≈ 128 KB.
     fn normal_diag(&self) -> Vec<f32> {
-        use rayon::prelude::*;
         let cols = self.cols();
-        (0..self.rows())
-            .into_par_iter()
-            .fold(
-                || vec![0.0_f32; cols],
-                |mut acc, encoded| {
-                    let mut row = vec![0.0_f32; cols];
-                    let mut scratch = vec![0.0_f32; cols];
-                    self.row_values_with_scratch(encoded, &mut row, &mut scratch);
-                    for (dst, v) in acc.iter_mut().zip(row.iter()) {
-                        *dst += v * v;
-                    }
-                    acc
-                },
-            )
-            .reduce(
-                || vec![0.0_f32; cols],
-                |mut a, b| {
-                    for (av, bv) in a.iter_mut().zip(b.iter()) {
-                        *av += bv;
-                    }
-                    a
-                },
-            )
+        fold_reduce_with::<Adaptive, _, _, _, _>(
+            self.rows(),
+            || vec![0.0_f32; cols],
+            |mut acc, encoded| {
+                let mut row = vec![0.0_f32; cols];
+                let mut scratch = vec![0.0_f32; cols];
+                self.row_values_with_scratch(encoded, &mut row, &mut scratch);
+                for (dst, v) in acc.iter_mut().zip(row.iter()) {
+                    *dst += v * v;
+                }
+                acc
+            },
+            |mut a, b| {
+                for (av, bv) in a.iter_mut().zip(b.iter()) {
+                    *av += bv;
+                }
+                a
+            },
+        )
     }
 
     fn storage_values(&self) -> usize {

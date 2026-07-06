@@ -38,14 +38,20 @@ fn test_inplace_operations() {
     let c = Array3::from_elem((10, 10, 10), 3.0);
 
     add_inplace(&mut a, &b);
-    assert_eq!(a[[0, 0, 0]], 3.0);
+    assert!(a.iter().all(|&value| value == 3.0));
+
+    sub_inplace(&mut a, &b);
+    assert!(a.iter().all(|&value| value == 1.0));
 
     scale_inplace(&mut a, 2.0);
-    assert_eq!(a[[0, 0, 0]], 6.0);
+    assert!(a.iter().all(|&value| value == 2.0));
+
+    apply_inplace(&mut a, |value| value + 4.0);
+    assert!(a.iter().all(|&value| value == 6.0));
 
     // a = a * b + c = 6 * 2 + 3 = 15
     fma_inplace(&mut a, &b, &c);
-    assert_eq!(a[[0, 0, 0]], 15.0);
+    assert!(a.iter().all(|&value| value == 15.0));
 }
 
 #[test]

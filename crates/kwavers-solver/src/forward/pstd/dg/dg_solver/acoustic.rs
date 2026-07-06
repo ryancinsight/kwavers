@@ -28,8 +28,9 @@
 //! Pierce (1989) Ch. 1.
 
 use super::core::DGSolver;
+use super::rk_update::{update_euler, update_ssp_final, update_ssp_second};
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::{Array3, Zip};
+use ndarray::Array3;
 
 mod tensor;
 pub use tensor::{
@@ -97,14 +98,18 @@ impl DGSolver {
             &mut workspace.p_rhs,
             &mut workspace.u_rhs,
         )?;
-        Zip::from(&mut workspace.p_stage)
-            .and(&workspace.p_original)
-            .and(&workspace.p_rhs)
-            .for_each(|stage, &p0, &rhs| *stage = p0 + dt * rhs);
-        Zip::from(&mut workspace.u_stage)
-            .and(&workspace.u_original)
-            .and(&workspace.u_rhs)
-            .for_each(|stage, &u0, &rhs| *stage = u0 + dt * rhs);
+        update_euler(
+            &mut workspace.p_stage,
+            &workspace.p_original,
+            &workspace.p_rhs,
+            dt,
+        );
+        update_euler(
+            &mut workspace.u_stage,
+            &workspace.u_original,
+            &workspace.u_rhs,
+            dt,
+        );
 
         self.compute_acoustic_rhs_1d_into(
             &workspace.p_stage,
@@ -113,20 +118,18 @@ impl DGSolver {
             &mut workspace.p_rhs,
             &mut workspace.u_rhs,
         )?;
-        Zip::from(&mut workspace.p_stage)
-            .and(&workspace.p_original)
-            .and(&workspace.p_rhs)
-            .for_each(|stage, &p0, &rhs| {
-                let p1 = *stage;
-                *stage = 0.75 * p0 + 0.25 * (p1 + dt * rhs);
-            });
-        Zip::from(&mut workspace.u_stage)
-            .and(&workspace.u_original)
-            .and(&workspace.u_rhs)
-            .for_each(|stage, &u0, &rhs| {
-                let u1 = *stage;
-                *stage = 0.75 * u0 + 0.25 * (u1 + dt * rhs);
-            });
+        update_ssp_second(
+            &mut workspace.p_stage,
+            &workspace.p_original,
+            &workspace.p_rhs,
+            dt,
+        );
+        update_ssp_second(
+            &mut workspace.u_stage,
+            &workspace.u_original,
+            &workspace.u_rhs,
+            dt,
+        );
 
         self.compute_acoustic_rhs_1d_into(
             &workspace.p_stage,
@@ -135,20 +138,20 @@ impl DGSolver {
             &mut workspace.p_rhs,
             &mut workspace.u_rhs,
         )?;
-        Zip::from(pressure)
-            .and(&workspace.p_original)
-            .and(&workspace.p_stage)
-            .and(&workspace.p_rhs)
-            .for_each(|p_new, &p0, &p2, &rhs| {
-                *p_new = (1.0 / 3.0) * p0 + (2.0 / 3.0) * (p2 + dt * rhs);
-            });
-        Zip::from(velocity)
-            .and(&workspace.u_original)
-            .and(&workspace.u_stage)
-            .and(&workspace.u_rhs)
-            .for_each(|u_new, &u0, &u2, &rhs| {
-                *u_new = (1.0 / 3.0) * u0 + (2.0 / 3.0) * (u2 + dt * rhs);
-            });
+        update_ssp_final(
+            pressure,
+            &workspace.p_original,
+            &workspace.p_stage,
+            &workspace.p_rhs,
+            dt,
+        );
+        update_ssp_final(
+            velocity,
+            &workspace.u_original,
+            &workspace.u_stage,
+            &workspace.u_rhs,
+            dt,
+        );
         Ok(())
     }
 

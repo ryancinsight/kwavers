@@ -3,6 +3,7 @@ use super::super::residual_metric::norm;
 use super::super::state_vector::{flatten_fields, sorted_field_keys, unflatten_fields};
 use super::MonolithicCoupler;
 use crate::integration::nonlinear::GMRESSolver;
+use crate::workspace::inplace_ops::scale_inplace;
 use kwavers_core::error::KwaversResult;
 use kwavers_field::UnifiedFieldType;
 use kwavers_grid::Grid;
@@ -109,7 +110,7 @@ impl MonolithicCoupler {
                 *rhs = Array3::zeros(f.dim());
             }
             rhs.assign(&f);
-            rhs.par_mapv_inplace(|value| -value);
+            scale_inplace(rhs, -1.0);
 
             du.fill(0.0);
 

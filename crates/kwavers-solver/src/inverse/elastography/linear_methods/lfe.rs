@@ -6,13 +6,13 @@
 //! therefore sensitive to noise and to the zero-crossings of `u`), LFE forms the
 //! ratio of *windowed* energies of the first derivative and the field itself.
 
-use ndarray::Array3;
-
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_imaging::ultrasound::elastography::ElasticityMap;
 use kwavers_physics::acoustics::imaging::modalities::elastography::displacement::DisplacementField;
+use leto::Array3 as LetoArray3;
+use ndarray::Array3;
 
 use super::super::algorithms::{fill_boundaries, spatial_smoothing};
 use super::super::types::elasticity_map_from_speed;
@@ -126,7 +126,7 @@ pub(super) fn local_frequency_estimation_inversion(
     let k2_min = w2 / (20.0 * 20.0); // c_s = 20 m/s
     let eps = grad_energy.iter().cloned().fold(0.0_f64, f64::max) * 1e-9 + f64::MIN_POSITIVE;
 
-    let mut shear_wave_speed = Array3::zeros((nx, ny, nz));
+    let mut shear_wave_speed = LetoArray3::zeros([nx, ny, nz]);
     for i in 0..nx {
         for j in 0..ny {
             for k in 0..nz {

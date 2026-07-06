@@ -24,6 +24,27 @@ fn test_compute_residual_zero_fields() {
     );
 }
 
+#[test]
+fn test_pressure_residual_scales_laplacian_by_sound_speed_squared() {
+    let mut coupler = MonolithicCoupler::new(NewtonKrylovConfig::default(), GMRESConfig::default());
+    coupler.physics_coefficients.sound_speed = 3.0;
+    coupler.grid_spacing = (1.0, 1.0, 1.0);
+
+    let dims = (3, 3, 3);
+    let field_order = vec![UnifiedFieldType::Pressure];
+    let mut u = Array3::zeros(dims);
+    u[[1, 1, 1]] = 1.0;
+    let u_prev = Array3::zeros(dims);
+
+    let residual = coupler
+        .compute_residual(&u, &u_prev, 1.0, dims, &field_order)
+        .unwrap();
+
+    // Centered 3-D Laplacian of a unit impulse is -6. The pressure residual is
+    // p - dt * c^2 * laplacian(p), so 1 - 1 * 9 * (-6) = 55.
+    assert_eq!(residual[[1, 1, 1]], 55.0);
+}
+
 /// Halving the Grüneisen parameter halves the photoacoustic source contribution
 /// in the Pressure block residual.
 ///

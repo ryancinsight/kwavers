@@ -95,15 +95,14 @@
 //!
 //! ## Burn Backend Strategy
 //!
-//! PINNs use the Burn deep learning framework for:
+//! PINNs currently use the Burn deep learning framework for:
 //! - Automatic differentiation (compute ∂u/∂x, ∂²u/∂x², etc.)
-//! - GPU acceleration (training on large collocation point sets)
 //! - Model serialization and deployment
 //!
 //! Backend options:
 //! - **NdArray** (default): CPU-only, zero-copy interop with forward solvers
-//! - **WGPU**: Cross-platform GPU (Vulkan/Metal/DX12)
-//! - **CUDA**: NVIDIA GPU (best performance for large-scale training)
+//! - **GPU**: pending Coeus training backend routed through Hephaestus provider
+//!   traits; WGPU and CUDA are provider implementations behind that seam
 //!
 //! ## Tensor Interoperability
 //!
@@ -161,6 +160,7 @@
 //!   neural networks." SIAM Journal on Scientific Computing, 43(5), A3055-A3081.
 //!   DOI: 10.1137/20M1318043
 
+#[cfg(feature = "pinn")]
 pub mod elastic_2d;
 pub mod geometry;
 pub mod ml;

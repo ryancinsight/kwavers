@@ -57,6 +57,32 @@ fn test_pml_damping() {
 }
 
 #[test]
+fn pml_damping_applies_same_exponential_to_velocity_components() {
+    let grid = Grid::new(3, 3, 3, 1e-3, 1e-3, 1e-3).unwrap();
+    let config = SwePmlConfig {
+        thickness: 1,
+        sigma_max: 2.0,
+        profile_order: 1,
+        reflection_target: 1e-5,
+    };
+    let pml = ElasticSwePMLBoundary::new(&grid, config);
+    let mut vx = Array3::<f64>::from_elem((3, 3, 3), 2.0);
+    let mut vy = Array3::<f64>::from_elem((3, 3, 3), 3.0);
+    let mut vz = Array3::<f64>::from_elem((3, 3, 3), 5.0);
+    let dt = 0.25;
+
+    pml.apply_damping(&mut vx, &mut vy, &mut vz, dt);
+
+    let damping = (-2.0_f64 * dt).exp();
+    assert_eq!(vx[[0, 1, 1]], 2.0 * damping);
+    assert_eq!(vy[[0, 1, 1]], 3.0 * damping);
+    assert_eq!(vz[[0, 1, 1]], 5.0 * damping);
+    assert_eq!(vx[[1, 1, 1]], 2.0);
+    assert_eq!(vy[[1, 1, 1]], 3.0);
+    assert_eq!(vz[[1, 1, 1]], 5.0);
+}
+
+#[test]
 fn test_theoretical_reflection() {
     // R = exp(-2 * σ_max * L_pml / c_max)
     // optimize_sigma_max inverts this formula.

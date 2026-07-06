@@ -9,9 +9,9 @@ use kwavers_core::error::KwaversResult;
 use kwavers_math::linear_algebra::sparse::{
     solver::SparsePreconditioner, CompressedSparseRowMatrix,
 };
+use moirai_parallel::{map_collect_with, Adaptive};
 use ndarray::Array1;
 use num_complex::Complex64;
-use rayon::prelude::*;
 
 impl BemSolver {
     /// Invalidate cached system matrices (called when wavenumber changes).
@@ -180,9 +180,8 @@ impl BemSolver {
             )
         })?;
 
-        let results: Vec<Complex64> = points_slice
-            .par_iter()
-            .map(|&r_eval| {
+        let results: Vec<Complex64> =
+            map_collect_with::<Adaptive, _, _, _>(points_slice, |&r_eval| {
                 let mut total_field = Complex64::new(0.0, 0.0);
 
                 for element_indices in &self.triangles {
@@ -220,8 +219,7 @@ impl BemSolver {
                 }
 
                 total_field
-            })
-            .collect();
+            });
 
         Ok(Array1::from_vec(results))
     }

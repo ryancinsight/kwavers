@@ -228,7 +228,7 @@ impl PSTDCheckpoint {
                 *v = read_le(&mut r)?;
             }
             let data = Array2::from_shape_vec((n_sensors, n_recorded), flat)
-                .map_err(KwaversError::Shape)?;
+                .map_err(|e| KwaversError::Shape(e.to_string()))?;
             (Some(data), n_recorded, expected_steps)
         } else {
             (None, 0, 0)
@@ -399,5 +399,5 @@ fn read_array3<T: WirePrimitive>(
     for v in &mut flat {
         *v = read_le(r)?;
     }
-    Array3::from_shape_vec((nx, ny, nz), flat).map_err(KwaversError::Shape)
+    Array3::from_shape_vec((nx, ny, nz), flat).map_err(|e| KwaversError::Shape(e.to_string()))
 }

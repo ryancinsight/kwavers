@@ -2,6 +2,7 @@
 //! velocity-component injection, and `add_source_arc` injection-mode
 //! classification by mask geometry.
 
+use moirai_parallel::{enumerate_mut_with, Adaptive};
 use ndarray::{s, Array3, Zip};
 use std::sync::Arc;
 
@@ -9,6 +10,54 @@ use super::GenericFdtdSolver;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_source::{Source, SourceField, SourceInjectionMode};
+
+fn apply_boundary_pressure_mask(pressure: &mut Array3<f64>, mask: &Array3<f64>, amplitude: f64) {
+    assert_eq!(
+        pressure.shape(),
+        mask.shape(),
+        "invariant: FDTD pressure source mask shape matches pressure field"
+    );
+
+    if let (Some(pressure_values), Some(mask_values)) = (
+        pressure.as_slice_memory_order_mut(),
+        mask.as_slice_memory_order(),
+    ) {
+        enumerate_mut_with::<Adaptive, _, _>(pressure_values, |idx, pressure_value| {
+            if mask_values[idx] > 0.0 {
+                *pressure_value = amplitude;
+            }
+        });
+    } else {
+        Zip::from(pressure)
+            .and(mask)
+            .for_each(|pressure_value, &mask_value| {
+                if mask_value > 0.0 {
+                    *pressure_value = amplitude;
+                }
+            });
+    }
+}
+
+fn apply_additive_pressure_mask(pressure: &mut Array3<f64>, mask: &Array3<f64>, amplitude: f64) {
+    assert_eq!(
+        pressure.shape(),
+        mask.shape(),
+        "invariant: FDTD pressure source mask shape matches pressure field"
+    );
+
+    if let (Some(pressure_values), Some(mask_values)) = (
+        pressure.as_slice_memory_order_mut(),
+        mask.as_slice_memory_order(),
+    ) {
+        enumerate_mut_with::<Adaptive, _, _>(pressure_values, |idx, pressure_value| {
+            *pressure_value += mask_values[idx] * amplitude;
+        });
+    } else {
+        Zip::from(pressure)
+            .and(mask)
+            .for_each(|pressure_value, &mask_value| *pressure_value += mask_value * amplitude);
+    }
+}
 
 impl GenericFdtdSolver<Array3<f64>> {
     pub(super) fn apply_dynamic_pressure_sources(&mut self, dt: f64) {
@@ -40,19 +89,13 @@ impl GenericFdtdSolver<Array3<f64>> {
                     match mode {
                         SourceInjectionMode::Boundary => {
                             // Dirichlet: enforce p = amplitude at boundary
-                            Zip::from(&mut fields.p).and(mask).par_for_each(|p, &m| {
-                                if m > 0.0 {
-                                    *p = amp;
-                                }
-                            });
+                            apply_boundary_pressure_mask(&mut fields.p, mask, amp);
                         }
                         SourceInjectionMode::Additive { .. } => {
                             // Additive: p += mask * amplitude
                             // For parity with k-Wave's additive mass sources, we do not normalize by mask sum
                             // and we expect the physical scaling to be handled by the caller or precomputed.
-                            Zip::from(&mut fields.p)
-                                .and(mask)
-                                .par_for_each(|p, &m| *p += m * amp);
+                            apply_additive_pressure_mask(&mut fields.p, mask, amp);
                         }
                     }
                 }
@@ -80,11 +123,7 @@ impl GenericFdtdSolver<Array3<f64>> {
             if amp.abs() < 1e-12 {
                 continue;
             }
-            Zip::from(&mut fields.p).and(mask).par_for_each(|p, &m| {
-                if m > 0.0 {
-                    *p = amp;
-                }
-            });
+            apply_boundary_pressure_mask(&mut fields.p, mask, amp);
         }
     }
 

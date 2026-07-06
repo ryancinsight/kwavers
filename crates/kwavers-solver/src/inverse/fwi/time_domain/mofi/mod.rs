@@ -46,8 +46,8 @@ use super::{geometry::FwiGeometry, FwiEngine, FwiProcessor};
 use crate::inverse::reconstruction::seismic::MisfitType;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
+use moirai_parallel::{map_collect_with, Adaptive};
 use ndarray::{Array2, Array3};
-use rayon::prelude::*;
 use transform::{project_gradient, transform_template, transform_with_jacobian, PlaneGeometry};
 
 /// MOFI optimisation settings.
@@ -344,8 +344,9 @@ pub fn coarse_pose_search(
 
     // Enumerate the (θ, δ₁, δ₂) grid; each pose's misfit is an independent
     // sensor-only forward solve (~55 MB/call, documented parallel-safe), so the
-    // search runs over Rayon. `collect` preserves grid order, so reducing with a
-    // strict `<` reproduces the serial first-minimum tie-break exactly.
+    // search runs through the Atlas execution provider. Ordered collection
+    // preserves grid order, so reducing with a strict `<` reproduces the serial
+    // first-minimum tie-break exactly.
     let mut candidates: Vec<RigidTransform> =
         Vec::with_capacity(thetas.len() * deltas.len() * deltas.len());
     for &theta in &thetas {
@@ -359,14 +360,12 @@ pub fn coarse_pose_search(
             }
         }
     }
-    let misfits: Vec<KwaversResult<f64>> = candidates
-        .par_iter()
-        .map(|phi| {
+    let misfits: Vec<KwaversResult<f64>> =
+        map_collect_with::<Adaptive, _, _, _>(&candidates, |phi| {
             let model = transform_template(template, phi, &geom, search.background_c);
             let synth = processor.forward_model_sensor_only(&model, geometry, grid)?;
             processor.compute_misfit_objective(observed, &synth)
-        })
-        .collect();
+        });
 
     let mut best = RigidTransform::identity();
     let mut best_misfit = f64::INFINITY;

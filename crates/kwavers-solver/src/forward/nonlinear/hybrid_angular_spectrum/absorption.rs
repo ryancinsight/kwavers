@@ -33,6 +33,7 @@ use super::HASConfig;
 use kwavers_core::constants::acoustic_parameters::NP_TO_DB;
 use kwavers_core::constants::numerical::{CM_TO_M, MHZ_TO_HZ};
 use kwavers_core::error::KwaversResult;
+use kwavers_core::utils::iterators::apply_inplace;
 use ndarray::{Array2, Array3};
 
 /// Absorption operator implementing power-law frequency-dependent attenuation.
@@ -133,7 +134,7 @@ impl HasAbsorptionOperator {
                                                  // α_n = α₀ · n^y  (power-law frequency scaling)
             let alpha_n = alpha_np_f0 * harmonic_order.powf(self.power_law_exp);
             let decay = (-alpha_n * dz).exp();
-            plane.par_mapv_inplace(|v| v * decay);
+            apply_inplace(plane, |v| v * decay);
         }
     }
 }

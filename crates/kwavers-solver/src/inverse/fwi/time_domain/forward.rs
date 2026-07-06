@@ -282,7 +282,8 @@ impl FwiProcessor {
     /// ## Memory contract
     ///
     /// Peak allocation per call: O(N_receivers × nt × 8 bytes) ≈ 5 MB.  Total
-    /// per-call footprint ~55 MB; safe to run in parallel via `rayon::par_iter`.
+    /// per-call footprint ~55 MB; caller-side shot scheduling must account for
+    /// this bounded allocation.
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///

@@ -27,7 +27,7 @@ impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
     /// # Panics
     /// - Panics if an internal invariant assumed to hold at this call site is violated.
     ///
-    pub(super) async fn train_epoch_distributed(
+    pub(super) fn train_epoch_distributed(
         &mut self,
         collocation_points: &[(f64, f64, f64)],
         boundary_points: &[(f64, f64, f64)],
@@ -136,7 +136,7 @@ impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
         Ok(results)
     }
 
-    pub(super) async fn aggregate_gradients_and_update(
+    pub(super) fn aggregate_gradients_and_update(
         &mut self,
         gpu_results: &[(BurnTrainingMetrics2D, Vec<f32>)],
     ) -> KwaversResult<()> {

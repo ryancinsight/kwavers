@@ -9,7 +9,8 @@ use kwavers_core::error::KwaversResult;
 use kwavers_core::error::{KwaversError, ValidationError};
 use kwavers_grid::Grid;
 use kwavers_math::fft::{Fft3d, Fft3dInOutExt, Shape3D};
-use ndarray::{Array3, Zip};
+use moirai_parallel::{enumerate_mut_with, Adaptive};
+use ndarray::Array3;
 use num_complex::Complex64;
 use std::sync::Arc;
 
@@ -40,6 +41,109 @@ impl std::fmt::Debug for RegionPSTDSolver {
     }
 }
 
+#[inline]
+fn dense_indices(index: usize, ny: usize, nz: usize) -> (usize, usize, usize) {
+    let plane = ny * nz;
+    let i = index / plane;
+    let rem = index % plane;
+    let j = rem / nz;
+    let k = rem % nz;
+    (i, j, k)
+}
+
+fn fill_laplacian_symbol(
+    k2: &mut Array3<f64>,
+    kx: &Array3<f64>,
+    ky: &Array3<f64>,
+    kz: &Array3<f64>,
+) {
+    assert_eq!(
+        k2.shape(),
+        kx.shape(),
+        "invariant: DG spectral k2 shape matches kx"
+    );
+    assert_eq!(
+        k2.shape(),
+        ky.shape(),
+        "invariant: DG spectral k2 shape matches ky"
+    );
+    assert_eq!(
+        k2.shape(),
+        kz.shape(),
+        "invariant: DG spectral k2 shape matches kz"
+    );
+
+    if let (Some(k2_values), Some(kx_values), Some(ky_values), Some(kz_values)) = (
+        k2.as_slice_memory_order_mut(),
+        kx.as_slice_memory_order(),
+        ky.as_slice_memory_order(),
+        kz.as_slice_memory_order(),
+    ) {
+        enumerate_mut_with::<Adaptive, _, _>(k2_values, |index, value| {
+            let kx = kx_values[index];
+            let ky = ky_values[index];
+            let kz = kz_values[index];
+            *value = kz.mul_add(kz, kx.mul_add(kx, ky * ky));
+        });
+        return;
+    }
+
+    let (nx, ny, nz) = k2.dim();
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                let kx = kx[[i, j, k]];
+                let ky = ky[[i, j, k]];
+                let kz = kz[[i, j, k]];
+                k2[[i, j, k]] = kz.mul_add(kz, kx.mul_add(kx, ky * ky));
+            }
+        }
+    }
+}
+
+fn apply_laplacian_symbol(
+    lap_hat: &mut Array3<Complex64>,
+    field_hat: &Array3<Complex64>,
+    k2: &Array3<f64>,
+    filter: &Array3<f64>,
+) {
+    assert_eq!(
+        lap_hat.shape(),
+        field_hat.shape(),
+        "invariant: DG spectral Laplacian spectrum shape matches field spectrum"
+    );
+    assert_eq!(
+        lap_hat.shape(),
+        k2.shape(),
+        "invariant: DG spectral Laplacian spectrum shape matches k2"
+    );
+    assert_eq!(
+        lap_hat.shape(),
+        filter.shape(),
+        "invariant: DG spectral Laplacian spectrum shape matches filter"
+    );
+
+    if let (Some(lap_values), Some(field_values), Some(k2_values), Some(filter_values)) = (
+        lap_hat.as_slice_memory_order_mut(),
+        field_hat.as_slice_memory_order(),
+        k2.as_slice_memory_order(),
+        filter.as_slice_memory_order(),
+    ) {
+        enumerate_mut_with::<Adaptive, _, _>(lap_values, |index, output| {
+            *output =
+                field_values[index] * Complex64::new(-k2_values[index] * filter_values[index], 0.0);
+        });
+        return;
+    }
+
+    let (nx, ny, nz) = lap_hat.dim();
+    for index in 0..nx * ny * nz {
+        let (i, j, k) = dense_indices(index, ny, nz);
+        lap_hat[[i, j, k]] =
+            field_hat[[i, j, k]] * Complex64::new(-k2[[i, j, k]] * filter[[i, j, k]], 0.0);
+    }
+}
+
 impl RegionPSTDSolver {
     /// Create a new spectral solver with default wave speed
     pub fn new(order: usize, grid: Arc<Grid>) -> Self {
@@ -52,13 +156,7 @@ impl RegionPSTDSolver {
         let (kx, ky, kz) = compute_wavenumbers(&grid);
 
         let mut k2 = Array3::zeros((nx, ny, nz));
-        Zip::from(&mut k2)
-            .and(&kx)
-            .and(&ky)
-            .and(&kz)
-            .for_each(|k2, &kx, &ky, &kz| {
-                *k2 = kz.mul_add(kz, kx.mul_add(kx, ky * ky));
-            });
+        fill_laplacian_symbol(&mut k2, &kx, &ky, &kz);
 
         let filter = compute_anti_aliasing_filter(&grid, 2.0 / 3.0, order.max(1) as u32);
 
@@ -145,13 +243,7 @@ impl RegionPSTDSolver {
         self.wave_speed = c;
 
         self.fft.forward_into(field, &mut self.field_hat);
-        Zip::from(&mut self.lap_hat)
-            .and(&self.field_hat)
-            .and(&self.k2)
-            .and(&self.filter)
-            .for_each(|out, &u_hat, &k2, &f| {
-                *out = u_hat * Complex64::new(-k2 * f, 0.0);
-            });
+        apply_laplacian_symbol(&mut self.lap_hat, &self.field_hat, &self.k2, &self.filter);
         self.fft
             .inverse_into(&self.lap_hat, &mut self.laplacian, &mut self.scratch_hat);
 

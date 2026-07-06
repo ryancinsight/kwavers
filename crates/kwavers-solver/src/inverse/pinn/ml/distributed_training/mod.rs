@@ -5,6 +5,7 @@
 
 use crate::inverse::pinn::ml::BurnTrainingMetrics2D;
 use burn::tensor::backend::AutodiffBackend;
+use serde::{Deserialize, Serialize};
 
 mod checkpoint;
 #[cfg(test)]
@@ -20,7 +21,7 @@ pub enum GradientAggregation {
 }
 
 /// Checkpoint data for training recovery
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TrainingCheckpoint {
     pub epoch: usize,
     pub parameters: Vec<f32>,

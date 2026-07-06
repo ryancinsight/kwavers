@@ -185,7 +185,7 @@ impl<B: AutodiffBackend> ParamFieldPINNTrainer<B> {
 
 // `AutodiffModule` is required so the optimiser's `step` consumes the
 // network and the gradient mapper can traverse parameters; this trait
-// is auto-derived for any type marked `#[derive(Module)]`.
+// is auto-derived for any type marked ``.
 impl<B: AutodiffBackend> ParamFieldPINNTrainer<B>
 where
     ParamFieldPINNNetwork<B>: AutodiffModule<

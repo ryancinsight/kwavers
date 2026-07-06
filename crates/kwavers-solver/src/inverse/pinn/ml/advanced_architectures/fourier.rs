@@ -9,7 +9,7 @@ use burn::{
 ///
 /// Fourier features provide better representation of oscillatory physics by mapping
 /// input coordinates to higher-frequency sinusoidal functions.
-#[derive(Debug, Module)]
+#[derive(Module, Debug)]
 pub struct FourierFeatures<B: Backend> {
     /// Learned frequency parameters.
     frequencies: Param<Tensor<B, 2>>,

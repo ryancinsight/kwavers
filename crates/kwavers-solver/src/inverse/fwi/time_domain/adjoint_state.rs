@@ -1,6 +1,7 @@
 //! Acoustic adjoint-state primitives.
 
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
+use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
 use ndarray::{s, Array2, Array3, ArrayView3, Zip};
 
 fn validate_pair_shapes(
@@ -102,12 +103,37 @@ pub fn accumulate_signed_correlation(
         ));
     }
 
-    Zip::from(gradient.view_mut())
-        .and(forward)
-        .and(adjoint)
-        .par_for_each(|g, &f, &a| {
-            *g += scale * f * a;
-        });
+    if gradient.is_standard_layout() && forward.is_standard_layout() && adjoint.is_standard_layout()
+    {
+        let forward = forward
+            .as_slice_memory_order()
+            .expect("invariant: standard-layout forward view exposes memory-order slice");
+        let adjoint = adjoint
+            .as_slice_memory_order()
+            .expect("invariant: standard-layout adjoint view exposes memory-order slice");
+        let gradient = gradient
+            .as_slice_memory_order_mut()
+            .expect("invariant: standard-layout gradient exposes memory-order slice");
+        let chunk_size = super::FWI_FIELD_CHUNK;
+        for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(
+            gradient,
+            chunk_size,
+            |chunk_index, chunk| {
+                let start = chunk_index * chunk_size;
+                for (offset, g) in chunk.iter_mut().enumerate() {
+                    let idx = start + offset;
+                    *g += scale * forward[idx] * adjoint[idx];
+                }
+            },
+        );
+    } else {
+        Zip::from(gradient.view_mut())
+            .and(forward)
+            .and(adjoint)
+            .for_each(|g, &f, &a| {
+                *g += scale * f * a;
+            });
+    }
 
     Ok(())
 }

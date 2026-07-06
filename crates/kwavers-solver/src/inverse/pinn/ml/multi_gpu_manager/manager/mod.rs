@@ -38,11 +38,11 @@ impl MultiGpuManager {
     /// - Returns [`KwaversError::System`] if the precondition for a System-class constraint is violated.
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
-    pub async fn new(
+    pub fn new(
         decomposition: MultiGpuDecompositionStrategy,
         load_balancer: LoadBalancingAlgorithm,
     ) -> KwaversResult<Self> {
-        let devices = Self::discover_gpu_devices().await?;
+        let devices = Self::discover_gpu_devices()?;
 
         if devices.len() < 2 {
             return Err(KwaversError::System(
@@ -78,69 +78,12 @@ impl MultiGpuManager {
         })
     }
 
-    #[cfg(feature = "gpu")]
-    async fn discover_gpu_devices() -> KwaversResult<Vec<PinnMultiGpuDeviceInfo>> {
-        use super::types::PinnGpuCapabilities;
-
-        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
-            backends: wgpu::Backends::all(),
-            ..Default::default()
-        });
-
-        let mut devices = Vec::new();
-        let mut device_id = 0;
-
-        let adapters: Vec<_> = instance
-            .enumerate_adapters(wgpu::Backends::all())
-            .into_iter()
-            .collect();
-        for adapter in adapters {
-            let info = adapter.get_info();
-            let limits = adapter.limits();
-
-            if matches!(info.backend, wgpu::Backend::BrowserWebGpu) {
-                continue;
-            }
-
-            let capabilities = PinnGpuCapabilities {
-                max_buffer_size: limits.max_buffer_size,
-                max_workgroup_size: [
-                    limits.max_compute_workgroup_size_x,
-                    limits.max_compute_workgroup_size_y,
-                    limits.max_compute_workgroup_size_z,
-                ],
-                max_compute_invocations: limits.max_compute_invocations_per_workgroup,
-                supports_f64: adapter.features().contains(wgpu::Features::SHADER_F64),
-                supports_atomics: true,
-            };
-
-            devices.push(PinnMultiGpuDeviceInfo {
-                id: device_id,
-                name: info.name.clone(),
-                backend: format!("{:?}", info.backend),
-                capabilities,
-                memory_used: 0,
-                compute_load: 0.0,
-                healthy: true,
-            });
-
-            device_id += 1;
-        }
-
-        Ok(devices)
-    }
-
-    #[cfg(not(feature = "gpu"))]
-    async fn discover_gpu_devices() -> KwaversResult<Vec<PinnMultiGpuDeviceInfo>> {
-        let devices = vec![PinnMultiGpuDeviceInfo {
-            id: 0,
-            name: "CPU Backend".to_string(),
-            backend: "CPU".to_string(),
-            memory_used: 0,
-            compute_load: 0.0,
-            healthy: true,
-        }];
-        Ok(devices)
+    fn discover_gpu_devices() -> KwaversResult<Vec<PinnMultiGpuDeviceInfo>> {
+        Err(KwaversError::System(
+            kwavers_core::error::SystemError::ResourceUnavailable {
+                resource: "PINN multi-GPU discovery requires a Coeus training provider routed through Hephaestus WGPU/CUDA device traits".to_string(),
+            },
+        ))
     }
 
     pub(super) fn initialize_communication_channels(

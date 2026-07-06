@@ -1,8 +1,9 @@
 //! Gradient processing: smoothing, regularization, near-source mute, TV/Laplacian helpers.
 
 use super::FwiProcessor;
+use crate::inverse::fwi::time_domain::field_ops::{add_scaled_field, write_negative_product};
 use kwavers_core::error::KwaversResult;
-use ndarray::{s, Array3, Zip};
+use ndarray::{s, Array3};
 
 /// Zero the gradient within `radius` voxels (L2 norm) of every active source voxel.
 ///
@@ -58,12 +59,7 @@ impl FwiProcessor {
         adjoint_field: &Array3<f64>,
     ) -> Array3<f64> {
         let mut gradient = Array3::zeros(forward_field.dim());
-        Zip::from(&mut gradient)
-            .and(forward_field)
-            .and(adjoint_field)
-            .par_for_each(|g, &fwd, &adj| {
-                *g = -fwd * adj;
-            });
+        write_negative_product(&mut gradient, forward_field, adjoint_field);
         self.smooth_gradient(&gradient)
     }
 
@@ -163,33 +159,25 @@ impl FwiProcessor {
 
         if reg_params.tikhonov_weight > 0.0 {
             let w = reg_params.tikhonov_weight;
-            Zip::from(&mut regularized)
-                .and(model)
-                .par_for_each(|r, &m| *r += m * w);
+            add_scaled_field(&mut regularized, model, w);
         }
 
         if reg_params.tv_weight > 0.0 {
             let tv_term = self.compute_total_variation_gradient(model);
             let w = reg_params.tv_weight;
-            Zip::from(&mut regularized)
-                .and(&tv_term)
-                .par_for_each(|r, &t| *r += t * w);
+            add_scaled_field(&mut regularized, &tv_term, w);
         }
 
         if reg_params.directional_tv_weight > 0.0 {
             let fdtv_term = directional_tv_gradient(model, &FDTV_DIRECTIONS);
             let w = reg_params.directional_tv_weight * dtv_scale;
-            Zip::from(&mut regularized)
-                .and(&fdtv_term)
-                .par_for_each(|r, &t| *r += t * w);
+            add_scaled_field(&mut regularized, &fdtv_term, w);
         }
 
         if reg_params.smoothness_weight > 0.0 {
             let smoothness_term = compute_smoothness_gradient(model);
             let w = reg_params.smoothness_weight;
-            Zip::from(&mut regularized)
-                .and(&smoothness_term)
-                .par_for_each(|r, &s| *r += s * w);
+            add_scaled_field(&mut regularized, &smoothness_term, w);
         }
 
         Ok(regularized)

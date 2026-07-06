@@ -42,10 +42,11 @@ use super::super::config::DgTimeIntegrator;
 use super::core::DGSolver;
 use super::limiting::{apply_shock_capture_to_coeffs, apply_shock_capture_to_tensor_coeffs};
 use super::rhs::{compute_rhs_from_coeffs_into, RhsOperator};
+use super::rk_update::{update_euler, update_forward_euler, update_ssp_final, update_ssp_second};
 use super::topology::CoefficientLayout;
 use kwavers_core::error::KwaversResult;
 use kwavers_core::error::{KwaversError, ValidationError};
-use ndarray::{Array3, Zip};
+use ndarray::Array3;
 
 impl DGSolver {
     /// Advance the field by one time step `dt` using the configured integrator.
@@ -114,12 +115,7 @@ impl DGSolver {
             &self.rk_original,
             &mut self.rk_rhs,
         );
-        Zip::from(&mut self.rk_stage)
-            .and(&self.rk_original)
-            .and(&self.rk_rhs)
-            .for_each(|stage, &u_n, &rhs| {
-                *stage = u_n + dt * rhs;
-            });
+        update_euler(&mut self.rk_stage, &self.rk_original, &self.rk_rhs, dt);
         if self.config.shock_capture.apply_per_stage {
             apply_shock_capture_for_layout(
                 self.config,
@@ -144,13 +140,7 @@ impl DGSolver {
             &self.rk_stage,
             &mut self.rk_rhs,
         );
-        Zip::from(&mut self.rk_stage)
-            .and(&self.rk_original)
-            .and(&self.rk_rhs)
-            .for_each(|stage, &u_n, &rhs| {
-                let u1 = *stage;
-                *stage = 0.75 * u_n + 0.25 * (u1 + dt * rhs);
-            });
+        update_ssp_second(&mut self.rk_stage, &self.rk_original, &self.rk_rhs, dt);
         if self.config.shock_capture.apply_per_stage {
             apply_shock_capture_for_layout(
                 self.config,
@@ -180,13 +170,7 @@ impl DGSolver {
                 field: "modal_coefficients".to_owned(),
             })
         })?;
-        Zip::from(coeffs)
-            .and(&self.rk_original)
-            .and(&self.rk_stage)
-            .and(&self.rk_rhs)
-            .for_each(|u_new, &u_n, &u2, &rhs| {
-                *u_new = (1.0 / 3.0) * u_n + (2.0 / 3.0) * (u2 + dt * rhs);
-            });
+        update_ssp_final(coeffs, &self.rk_original, &self.rk_stage, &self.rk_rhs, dt);
         let coeffs = self.modal_coefficients.as_mut().ok_or_else(|| {
             KwaversError::Validation(ValidationError::MissingField {
                 field: "modal_coefficients".to_owned(),
@@ -238,9 +222,7 @@ impl DGSolver {
                 field: "modal_coefficients".to_owned(),
             })
         })?;
-        Zip::from(coeffs).and(&self.rk_rhs).for_each(|u, &rhs| {
-            *u += dt * rhs;
-        });
+        update_forward_euler(coeffs, &self.rk_rhs, dt);
         let coeffs = self.modal_coefficients.as_mut().ok_or_else(|| {
             KwaversError::Validation(ValidationError::MissingField {
                 field: "modal_coefficients".to_owned(),

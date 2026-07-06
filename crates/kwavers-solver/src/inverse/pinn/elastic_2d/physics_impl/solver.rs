@@ -19,7 +19,7 @@ use burn::tensor::backend::Backend;
 ///
 /// # Type Parameters
 ///
-/// * `B` - Burn backend (NdArray, Wgpu, Cuda, etc.)
+/// * `B` - Burn backend for the current CPU PINN implementation.
 ///
 /// # Fields
 ///

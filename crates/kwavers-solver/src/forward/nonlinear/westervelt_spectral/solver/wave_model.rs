@@ -4,6 +4,7 @@ use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_physics::traits::AcousticWaveModel;
 use kwavers_source::Source;
+use moirai_parallel::{enumerate_mut_with, Adaptive};
 use ndarray::{Array3, Array4, Axis};
 use std::time::Instant;
 
@@ -141,7 +142,7 @@ impl AcousticWaveModel for WesterveltWave {
             metrics.record_source(start.elapsed());
         }
 
-        // Leapfrog update via rayon parallel iteration.
+        // Leapfrog update via Moirai parallel iteration.
         // Disjoint field borrows: laplacian_scratch vs pressure_buffers[next_idx].
         let start = Instant::now();
         let laplacian_slice: &[f64] = if has_spectral_scratch {
@@ -175,26 +176,32 @@ impl AcousticWaveModel for WesterveltWave {
             .source_mask_scratch
             .as_slice()
             .expect("source_mask_scratch must be contiguous");
-        use rayon::prelude::*;
+        let pressure_current_slice = pressure_current
+            .as_slice()
+            .expect("pressure_current must be contiguous");
+        let pressure_previous_slice = pressure_previous
+            .as_slice()
+            .expect("pressure_previous must be contiguous");
+        let sound_speed_slice = c_arr
+            .as_slice()
+            .expect("sound_speed_array must be contiguous");
         let dt2 = dt * dt;
-        pressure_next
+        let pressure_next_slice = pressure_next
             .as_slice_mut()
-            .unwrap()
-            .par_iter_mut()
-            .enumerate()
-            .for_each(|(idx, p_next)| {
-                let p_curr = pressure_current.as_slice().unwrap()[idx];
-                let p_prev = pressure_previous.as_slice().unwrap()[idx];
-                let c = c_arr.as_slice().unwrap()[idx];
-                let lap = laplacian_slice[idx];
-                let nl = nonlinear_slice[idx];
-                let damp = damping_slice[idx];
-                let src = source_slice[idx] * src_amplitude;
+            .expect("pressure_next must be contiguous");
+        enumerate_mut_with::<Adaptive, _, _>(pressure_next_slice, |idx, p_next| {
+            let p_curr = pressure_current_slice[idx];
+            let p_prev = pressure_previous_slice[idx];
+            let c = sound_speed_slice[idx];
+            let lap = laplacian_slice[idx];
+            let nl = nonlinear_slice[idx];
+            let damp = damping_slice[idx];
+            let src = source_slice[idx] * src_amplitude;
 
-                let c2 = c * c;
-                let update = dt2 * (c2.mul_add(lap, nl) + damp + src);
-                *p_next = 2.0f64.mul_add(p_curr, -p_prev) + update;
-            });
+            let c2 = c * c;
+            let update = dt2 * (c2.mul_add(lap, nl) + damp + src);
+            *p_next = 2.0f64.mul_add(p_curr, -p_prev) + update;
+        });
 
         fields
             .index_axis_mut(Axis(0), UnifiedFieldType::Pressure.index())

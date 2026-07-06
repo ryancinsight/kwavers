@@ -53,26 +53,18 @@
 
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_math::fft::{Complex64, Fft1d, Shape1D, FFT_CACHE_1D};
-use ndarray::parallel::prelude::*;
-use ndarray::{Array1, Array3, ArrayView3, Axis};
-use std::sync::Arc;
+use kwavers_math::fft::{fft_1d_complex_inplace, ifft_1d_complex_inplace, Complex64};
+use moirai_parallel::{for_each_chunk_mut_enumerated_with, map_collect_index_with, Adaptive};
+use ndarray::{Array1, Array3, ArrayView3};
 
 /// Spectral derivative operator for 3D fields.
 ///
-/// FFT plans and i*k*dealiasing multipliers are pre-computed at construction,
-/// eliminating per-call plan creation overhead.
+/// The i*k*dealiasing multipliers are pre-computed at construction; FFT plan
+/// caching is owned by the `kwavers_math::fft` facade.
 pub struct SpectralDerivativeOperator {
     pub(super) nx: usize,
     pub(super) ny: usize,
     pub(super) nz: usize,
-
-    fft_x: Arc<Fft1d>,
-    ifft_x: Arc<Fft1d>,
-    fft_y: Arc<Fft1d>,
-    ifft_y: Arc<Fft1d>,
-    fft_z: Arc<Fft1d>,
-    ifft_z: Arc<Fft1d>,
 
     ikd_x: Vec<Complex64>,
     ikd_y: Vec<Complex64>,
@@ -95,12 +87,6 @@ impl Clone for SpectralDerivativeOperator {
             nx: self.nx,
             ny: self.ny,
             nz: self.nz,
-            fft_x: Arc::clone(&self.fft_x),
-            ifft_x: Arc::clone(&self.ifft_x),
-            fft_y: Arc::clone(&self.fft_y),
-            ifft_y: Arc::clone(&self.ifft_y),
-            fft_z: Arc::clone(&self.fft_z),
-            ifft_z: Arc::clone(&self.ifft_z),
             ikd_x: self.ikd_x.clone(),
             ikd_y: self.ikd_y.clone(),
             ikd_z: self.ikd_z.clone(),
@@ -138,23 +124,10 @@ impl SpectralDerivativeOperator {
             .map(|i| Complex64::new(0.0, kz[i] * dealiasing_filter_z[i]))
             .collect();
 
-        let fft_x = FFT_CACHE_1D.get_or_create(Shape1D { n: nx });
-        let ifft_x = Arc::clone(&fft_x);
-        let fft_y = FFT_CACHE_1D.get_or_create(Shape1D { n: ny });
-        let ifft_y = Arc::clone(&fft_y);
-        let fft_z = FFT_CACHE_1D.get_or_create(Shape1D { n: nz });
-        let ifft_z = Arc::clone(&fft_z);
-
         Self {
             nx,
             ny,
             nz,
-            fft_x,
-            ifft_x,
-            fft_y,
-            ifft_y,
-            fft_z,
-            ifft_z,
             ikd_x,
             ikd_y,
             ikd_z,
@@ -305,7 +278,8 @@ impl SpectralDerivativeOperator {
         Ok(())
     }
 
-    /// Parallelises over j (Axis 1): each rayon thread processes all nz pencils for one j.
+    /// Schedules one `(j, k)` pencil per Moirai task and scatters the x-line
+    /// results back into the strided output field.
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
@@ -316,34 +290,35 @@ impl SpectralDerivativeOperator {
     ) -> KwaversResult<()> {
         let nx = self.nx;
         let nz = self.nz;
-        let fft = &*self.fft_x;
         let ikd = &self.ikd_x;
 
-        derivative
-            .axis_iter_mut(Axis(1))
-            .into_par_iter()
-            .enumerate()
-            .for_each(|(j, mut slice)| {
-                let mut line = Array1::<Complex64>::from_elem(nx, Complex64::default());
-                for l in 0..nz {
-                    for i in 0..nx {
-                        line[i] = Complex64::new(field[[i, j, l]], 0.0);
-                    }
-                    fft.forward_complex_inplace(&mut line);
-                    for (i, &ikd_val) in ikd.iter().enumerate() {
-                        line[i] *= ikd_val;
-                    }
-                    fft.inverse_complex_inplace(&mut line);
-                    for i in 0..nx {
-                        slice[[i, l]] = line[i].re;
-                    }
-                }
-            });
+        let pencil_count = self.ny * nz;
+        let pencils = map_collect_index_with::<Adaptive, _, _>(pencil_count, |pencil_index| {
+            let j = pencil_index / nz;
+            let l = pencil_index % nz;
+            let mut line = Array1::<Complex64>::from_elem(nx, Complex64::default());
+            for i in 0..nx {
+                line[i] = Complex64::new(field[[i, j, l]], 0.0);
+            }
+            fft_1d_complex_inplace(&mut line);
+            for (i, &ikd_val) in ikd.iter().enumerate() {
+                line[i] *= ikd_val;
+            }
+            ifft_1d_complex_inplace(&mut line);
+            let values: Vec<f64> = line.iter().map(|value| value.re).collect();
+            (j, l, values)
+        });
+
+        for (j, l, values) in pencils {
+            for (i, value) in values.into_iter().enumerate() {
+                derivative[[i, j, l]] = value;
+            }
+        }
 
         Ok(())
     }
 
-    /// Parallelises over i (Axis 0): each rayon thread processes all nz pencils for one i.
+    /// Schedules one contiguous i-slab per Moirai task.
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
@@ -354,34 +329,53 @@ impl SpectralDerivativeOperator {
     ) -> KwaversResult<()> {
         let ny = self.ny;
         let nz = self.nz;
-        let fft = &*self.fft_y;
         let ikd = &self.ikd_y;
 
-        derivative
-            .axis_iter_mut(Axis(0))
-            .into_par_iter()
-            .enumerate()
-            .for_each(|(i, mut slice)| {
+        if let Some(derivative_values) = derivative.as_slice_memory_order_mut() {
+            let slab_len = ny * nz;
+            for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(
+                derivative_values,
+                slab_len,
+                |i, slab| {
+                    let mut line = Array1::<Complex64>::from_elem(ny, Complex64::default());
+                    for l in 0..nz {
+                        for j in 0..ny {
+                            line[j] = Complex64::new(field[[i, j, l]], 0.0);
+                        }
+                        fft_1d_complex_inplace(&mut line);
+                        for (j, &ikd_val) in ikd.iter().enumerate() {
+                            line[j] *= ikd_val;
+                        }
+                        ifft_1d_complex_inplace(&mut line);
+                        for j in 0..ny {
+                            slab[j * nz + l] = line[j].re;
+                        }
+                    }
+                },
+            );
+        } else {
+            for i in 0..self.nx {
                 let mut line = Array1::<Complex64>::from_elem(ny, Complex64::default());
                 for l in 0..nz {
                     for j in 0..ny {
                         line[j] = Complex64::new(field[[i, j, l]], 0.0);
                     }
-                    fft.forward_complex_inplace(&mut line);
+                    fft_1d_complex_inplace(&mut line);
                     for (j, &ikd_val) in ikd.iter().enumerate() {
                         line[j] *= ikd_val;
                     }
-                    fft.inverse_complex_inplace(&mut line);
+                    ifft_1d_complex_inplace(&mut line);
                     for j in 0..ny {
-                        slice[[j, l]] = line[j].re;
+                        derivative[[i, j, l]] = line[j].re;
                     }
                 }
-            });
+            }
+        }
 
         Ok(())
     }
 
-    /// Parallelises over i (Axis 0): each rayon thread processes all ny pencils for one i.
+    /// Schedules one contiguous i-slab per Moirai task.
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
@@ -392,29 +386,49 @@ impl SpectralDerivativeOperator {
     ) -> KwaversResult<()> {
         let ny = self.ny;
         let nz = self.nz;
-        let fft = &*self.fft_z;
         let ikd = &self.ikd_z;
 
-        derivative
-            .axis_iter_mut(Axis(0))
-            .into_par_iter()
-            .enumerate()
-            .for_each(|(i, mut slice)| {
+        if let Some(derivative_values) = derivative.as_slice_memory_order_mut() {
+            let slab_len = ny * nz;
+            for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(
+                derivative_values,
+                slab_len,
+                |i, slab| {
+                    let mut line = Array1::<Complex64>::from_elem(nz, Complex64::default());
+                    for j in 0..ny {
+                        for l in 0..nz {
+                            line[l] = Complex64::new(field[[i, j, l]], 0.0);
+                        }
+                        fft_1d_complex_inplace(&mut line);
+                        for (l, &ikd_val) in ikd.iter().enumerate() {
+                            line[l] *= ikd_val;
+                        }
+                        ifft_1d_complex_inplace(&mut line);
+                        let row_start = j * nz;
+                        for l in 0..nz {
+                            slab[row_start + l] = line[l].re;
+                        }
+                    }
+                },
+            );
+        } else {
+            for i in 0..self.nx {
                 let mut line = Array1::<Complex64>::from_elem(nz, Complex64::default());
                 for j in 0..ny {
                     for l in 0..nz {
                         line[l] = Complex64::new(field[[i, j, l]], 0.0);
                     }
-                    fft.forward_complex_inplace(&mut line);
+                    fft_1d_complex_inplace(&mut line);
                     for (l, &ikd_val) in ikd.iter().enumerate() {
                         line[l] *= ikd_val;
                     }
-                    fft.inverse_complex_inplace(&mut line);
+                    ifft_1d_complex_inplace(&mut line);
                     for l in 0..nz {
-                        slice[[j, l]] = line[l].re;
+                        derivative[[i, j, l]] = line[l].re;
                     }
                 }
-            });
+            }
+        }
 
         Ok(())
     }

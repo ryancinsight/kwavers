@@ -25,7 +25,8 @@
 //! ## Available Implementations
 //!
 //! - **Burn Backend** (`burn_adapter`): Rust-native differentiable programming
-//!   with support for CPU (NdArray), GPU (WGPU), and CUDA backends
+//!   with CPU execution today and provider-generic GPU execution pending the
+//!   Coeus + Hephaestus migration
 
 #[cfg(feature = "pinn")]
 pub mod burn_adapter;

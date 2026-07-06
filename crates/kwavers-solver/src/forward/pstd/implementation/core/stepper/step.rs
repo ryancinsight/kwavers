@@ -1,11 +1,15 @@
 //! PSTD time-stepping kernel: `step_forward` and k-space variant.
 
 use super::super::orchestrator::PSTDSolver;
+use super::ops::{
+    add_gradient_source_term, add_masked_source_term, add_previous_pressure_and_source,
+    add_source_term, apply_wave_coefficient,
+};
 use crate::forward::pstd::config::KSpaceMethod;
 use crate::forward::pstd::implementation::k_space::PSTDKSOperators;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_source::{SourceField, SourceInjectionMode};
-use ndarray::{Array3, Zip};
+use ndarray::Array3;
 use tracing::{enabled, trace, warn, Level};
 
 impl PSTDSolver {
@@ -120,18 +124,10 @@ impl PSTDSolver {
 
                     match mode {
                         SourceInjectionMode::Boundary => {
-                            Zip::from(&mut self.dpx).and(mask).par_for_each(|s, &m| {
-                                if m.abs() > 1e-12 {
-                                    *s += m * amp;
-                                }
-                            });
+                            add_masked_source_term(&mut self.dpx, mask, amp);
                         }
                         SourceInjectionMode::Additive { scale } => {
-                            Zip::from(&mut self.dpx).and(mask).par_for_each(|s, &m| {
-                                if m.abs() > 1e-12 {
-                                    *s += m * amp * scale;
-                                }
-                            });
+                            add_masked_source_term(&mut self.dpx, mask, amp * scale);
                         }
                     }
                 }
@@ -146,11 +142,7 @@ impl PSTDSolver {
                     let c_sq = self.c_ref * self.c_ref;
                     match self.velocity_source_grad_masks.get(idx) {
                         Some(Some(grad_mask)) => {
-                            Zip::from(&mut self.dpx)
-                                .and(grad_mask)
-                                .par_for_each(|s, &gm| {
-                                    *s -= c_sq * amp * gm;
-                                });
+                            add_gradient_source_term(&mut self.dpx, grad_mask, -c_sq * amp);
                         }
                         Some(None) => {}
                         None => {
@@ -244,21 +236,14 @@ impl PSTDSolver {
                 .wave_coeff
                 .as_ref()
                 .expect("invariant: ensure_wave_coeff populated wave_coeff");
-            Zip::from(&mut p_hat).and(coeff).par_for_each(|ph, &c| {
-                *ph *= if is_first { 0.5 * c } else { c };
-            });
+            apply_wave_coefficient(&mut p_hat, coeff, if is_first { 0.5 } else { 1.0 });
         }
         let mut new_p = kspace_ops.inverse_fft_3d(&p_hat)?;
 
         if let Some(prev) = &p_prev_old {
-            Zip::from(&mut new_p)
-                .and(prev)
-                .and(source_term)
-                .par_for_each(|np, &pp, &s| *np += s - pp);
+            add_previous_pressure_and_source(&mut new_p, prev, source_term);
         } else {
-            Zip::from(&mut new_p)
-                .and(source_term)
-                .par_for_each(|np, &s| *np += s);
+            add_source_term(&mut new_p, source_term);
         }
 
         // pⁿ becomes pⁿ⁻¹ for the next step; new_p becomes the current pressure.

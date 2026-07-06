@@ -1,6 +1,6 @@
 use super::super::wave_field::NonlinearElasticWaveField;
 use super::NonlinearElasticWaveSolver;
-use ndarray::Zip;
+use moirai_parallel::{map_collect_index_with, Adaptive};
 
 impl NonlinearElasticWaveSolver {
     /// Update fundamental frequency displacement.
@@ -30,9 +30,9 @@ impl NonlinearElasticWaveSolver {
     ///
     /// ## Parallelization
     ///
-    /// Each k-slice `u[:, :, k]` is disjoint.  `Zip::par_for_each` over
-    /// `Axis(2)` partitions work across Rayon threads with race-free writes.
-    /// Per-thread scratch vectors eliminate shared mutable state.
+    /// Each `(j, k)` x-line is independent. Moirai computes line updates from
+    /// the immutable previous field, then a separate write-back pass updates
+    /// the non-contiguous x-lines without unsafe strided mutable aliasing.
     ///
     /// ## Reference
     ///
@@ -43,7 +43,7 @@ impl NonlinearElasticWaveSolver {
         field: &mut NonlinearElasticWaveField,
         dt: f64,
     ) {
-        let (nx, ny, _nz) = self.grid.dimensions();
+        let (nx, ny, nz) = self.grid.dimensions();
         let c = self.config.sound_speed();
         let beta = self.config.nonlinearity_parameter;
         let dissipation = self.config.dissipation_coeff.max(0.0);
@@ -72,102 +72,97 @@ impl NonlinearElasticWaveSolver {
         let prev = field.u_fundamental.clone();
         field.u_fundamental_prev.assign(&prev);
 
-        // Parallel over k-slices: each Axis(2) slice is disjoint.
-        // Theorem: Zip::par_for_each partitions along Axis(2); slices for
-        // distinct k are disjoint by ndarray's striding, so parallel writes
-        // to `u_k[[i, j]]` are race-free.
-        Zip::from(field.u_fundamental.axis_iter_mut(ndarray::Axis(2)))
-            .and(prev.axis_iter(ndarray::Axis(2)))
-            .par_for_each(|mut u_k, prev_k| {
-                // Per-thread scratch: nx × 6 × 8 bytes — no shared mutable state.
-                let mut u_line = vec![0.0f64; nx];
-                let mut rhs0 = vec![0.0f64; nx];
-                let mut rhs1 = vec![0.0f64; nx];
-                let mut u_stage = vec![0.0f64; nx];
-                let mut slopes = vec![0.0f64; nx];
-                let mut f_iface = vec![0.0f64; nx];
+        let line_updates = map_collect_index_with::<Adaptive, _, _>(ny * nz, |line_index| {
+            let j = line_index / nz;
+            let k = line_index % nz;
 
-                for j in 0..ny {
-                    // Load x-line from previous state.
-                    for i in 0..nx {
-                        u_line[i] = prev_k[[i, j]];
-                    }
+            // Per-thread scratch: nx × 6 × 8 bytes — no shared mutable state.
+            let mut u_line = vec![0.0f64; nx];
+            let mut rhs0 = vec![0.0f64; nx];
+            let mut rhs1 = vec![0.0f64; nx];
+            let mut u_stage = vec![0.0f64; nx];
+            let mut slopes = vec![0.0f64; nx];
+            let mut f_iface = vec![0.0f64; nx];
 
-                    // ── Stage 1 ──────────────────────────────────────────────
-                    // Piecewise-linear reconstruction + minmod slopes.
-                    for i in 0..nx {
-                        let im1 = (i + nx - 1) % nx;
-                        let ip1 = (i + 1) % nx;
-                        let du_l = u_line[i] - u_line[im1];
-                        let du_r = u_line[ip1] - u_line[i];
-                        let du_c = 0.5 * (u_line[ip1] - u_line[im1]);
-                        slopes[i] = minmod3(du_c, 2.0 * du_l, 2.0 * du_r);
-                    }
+            // Load x-line from previous state.
+            for i in 0..nx {
+                u_line[i] = prev[[i, j, k]];
+            }
 
-                    // Upwind Godunov interface flux.
-                    for i in 0..nx {
-                        let ip1 = (i + 1) % nx;
-                        let u_l = 0.5f64.mul_add(slopes[i], u_line[i]);
-                        let u_r = 0.5f64.mul_add(-slopes[ip1], u_line[ip1]);
-                        let a = wave_speed(0.5 * (u_l + u_r));
-                        f_iface[i] = if a >= 0.0 { flux(u_l) } else { flux(u_r) };
-                    }
+            // Stage 1: piecewise-linear reconstruction + minmod slopes.
+            for i in 0..nx {
+                let im1 = (i + nx - 1) % nx;
+                let ip1 = (i + 1) % nx;
+                let du_l = u_line[i] - u_line[im1];
+                let du_r = u_line[ip1] - u_line[i];
+                let du_c = 0.5 * (u_line[ip1] - u_line[im1]);
+                slopes[i] = minmod3(du_c, 2.0 * du_l, 2.0 * du_r);
+            }
 
-                    for i in 0..nx {
-                        let im1 = (i + nx - 1) % nx;
-                        rhs0[i] = -(f_iface[i] - f_iface[im1]) * inv_dx;
-                    }
+            // Upwind Godunov interface flux.
+            for i in 0..nx {
+                let ip1 = (i + 1) % nx;
+                let u_l = 0.5f64.mul_add(slopes[i], u_line[i]);
+                let u_r = 0.5f64.mul_add(-slopes[ip1], u_line[ip1]);
+                let a = wave_speed(0.5 * (u_l + u_r));
+                f_iface[i] = if a >= 0.0 { flux(u_l) } else { flux(u_r) };
+            }
 
-                    for i in 0..nx {
-                        u_stage[i] = dt.mul_add(rhs0[i], u_line[i]);
-                    }
+            for i in 0..nx {
+                let im1 = (i + nx - 1) % nx;
+                rhs0[i] = -(f_iface[i] - f_iface[im1]) * inv_dx;
+            }
 
-                    // ── Stage 2 ──────────────────────────────────────────────
-                    for i in 0..nx {
-                        let im1 = (i + nx - 1) % nx;
-                        let ip1 = (i + 1) % nx;
-                        let du_l = u_stage[i] - u_stage[im1];
-                        let du_r = u_stage[ip1] - u_stage[i];
-                        let du_c = 0.5 * (u_stage[ip1] - u_stage[im1]);
-                        slopes[i] = minmod3(du_c, 2.0 * du_l, 2.0 * du_r);
-                    }
+            for i in 0..nx {
+                u_stage[i] = dt.mul_add(rhs0[i], u_line[i]);
+            }
 
-                    for i in 0..nx {
-                        let ip1 = (i + 1) % nx;
-                        let u_l = 0.5f64.mul_add(slopes[i], u_stage[i]);
-                        let u_r = 0.5f64.mul_add(-slopes[ip1], u_stage[ip1]);
-                        let a = wave_speed(0.5 * (u_l + u_r));
-                        f_iface[i] = if a >= 0.0 { flux(u_l) } else { flux(u_r) };
-                    }
+            // Stage 2.
+            for i in 0..nx {
+                let im1 = (i + nx - 1) % nx;
+                let ip1 = (i + 1) % nx;
+                let du_l = u_stage[i] - u_stage[im1];
+                let du_r = u_stage[ip1] - u_stage[i];
+                let du_c = 0.5 * (u_stage[ip1] - u_stage[im1]);
+                slopes[i] = minmod3(du_c, 2.0 * du_l, 2.0 * du_r);
+            }
 
-                    for i in 0..nx {
-                        let im1 = (i + nx - 1) % nx;
-                        rhs1[i] = -(f_iface[i] - f_iface[im1]) * inv_dx;
-                    }
+            for i in 0..nx {
+                let ip1 = (i + 1) % nx;
+                let u_l = 0.5f64.mul_add(slopes[i], u_stage[i]);
+                let u_r = 0.5f64.mul_add(-slopes[ip1], u_stage[ip1]);
+                let a = wave_speed(0.5 * (u_l + u_r));
+                f_iface[i] = if a >= 0.0 { flux(u_l) } else { flux(u_r) };
+            }
 
-                    // Heun combination: u¹ = ½(u⁰ + u* + Δt·L(u*))
-                    for i in 0..nx {
-                        u_line[i] =
-                            0.5f64.mul_add(u_line[i], 0.5 * dt.mul_add(rhs1[i], u_stage[i]));
-                    }
+            for i in 0..nx {
+                let im1 = (i + nx - 1) % nx;
+                rhs1[i] = -(f_iface[i] - f_iface[im1]) * inv_dx;
+            }
 
-                    // ── Artificial dissipation ────────────────────────────────
-                    if dissipation > 0.0 {
-                        let nu = dissipation * c;
-                        for i in 0..nx {
-                            let ip1 = (i + 1) % nx;
-                            let im1 = (i + nx - 1) % nx;
-                            let lap =
-                                (2.0f64.mul_add(-u_line[i], u_line[ip1]) + u_line[im1]) * inv_dx2;
-                            u_line[i] += nu * dt * lap;
-                        }
-                    }
+            // Heun combination: u¹ = ½(u⁰ + u* + Δt·L(u*))
+            for i in 0..nx {
+                u_line[i] = 0.5f64.mul_add(u_line[i], 0.5 * dt.mul_add(rhs1[i], u_stage[i]));
+            }
 
-                    // Write result back into the k-slice.
-                    for (i, &u) in u_line.iter().enumerate().take(nx) {
-                        u_k[[i, j]] = u;
-                    }
+            // Artificial dissipation.
+            if dissipation > 0.0 {
+                let nu = dissipation * c;
+                for i in 0..nx {
+                    let ip1 = (i + 1) % nx;
+                    let im1 = (i + nx - 1) % nx;
+                    let lap = (2.0f64.mul_add(-u_line[i], u_line[ip1]) + u_line[im1]) * inv_dx2;
+                    u_line[i] += nu * dt * lap;
                 }
-            });
+            }
+
+            (j, k, u_line)
+        });
+
+        for (j, k, u_line) in line_updates {
+            for (i, u) in u_line.into_iter().enumerate().take(nx) {
+                field.u_fundamental[[i, j, k]] = u;
+            }
+        }
     }
 }

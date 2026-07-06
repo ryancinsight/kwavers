@@ -3,36 +3,27 @@
 //! private row-evaluation helpers.
 
 use crate::inverse::linear_born_inversion::LinearBornInversionConfig;
-use rayon::prelude::*;
+use moirai_parallel::{fold_reduce_with, map_collect_index_with, reduce_index_with, Adaptive};
 
-use super::helpers::row_chunk_len;
 use super::{RowContext, VolumeOperator};
 
 impl<'a> VolumeOperator<'a> {
     /// Compute the L2 row-normalisation factors `‖A[row, :]‖` for all rows.
     pub fn row_norms(&self) -> Vec<f64> {
-        (0..self.row_contexts.len())
-            .into_par_iter()
-            .map(|row| self.row_norm(row))
-            .collect()
+        map_collect_index_with::<Adaptive, _, _>(self.row_contexts.len(), |row| self.row_norm(row))
     }
 
     /// Synthetic data vector `A · target_contrast` for all rows.
     pub fn data_from_target(&self, row_norms: &[f64]) -> Vec<f64> {
-        (0..self.row_contexts.len())
-            .into_par_iter()
-            .map(|row| {
-                self.project_row_with_norm(row, row_norms[row], |col| {
-                    self.active[col].target_contrast
-                })
-            })
-            .collect()
+        map_collect_index_with::<Adaptive, _, _>(self.row_contexts.len(), |row| {
+            self.project_row_with_norm(row, row_norms[row], |col| self.active[col].target_contrast)
+        })
     }
 
     /// Compute the normal-equation diagonal: `diag(AᵀA) + regularization`.
     ///
-    /// Uses `fold + reduce` so each Rayon task accumulates into a task-local
-    /// partial Vec, then Rayon combines partials in parallel; no intermediate
+    /// Uses `fold + reduce` so each Moirai worker shard accumulates into a
+    /// task-local partial Vec, then Moirai combines partials; no intermediate
     /// `Vec<Vec<f64>>` is collected before reduction.
     pub fn diagonal(
         &self,
@@ -42,34 +33,28 @@ impl<'a> VolumeOperator<'a> {
     ) -> Vec<f64> {
         let ncols = self.n_active;
         let reg = config.regularization.max(1.0e-12);
-        let mut diagonal = rows
-            .par_chunks(row_chunk_len(rows.len()))
-            .fold(
-                || vec![0.0f64; ncols],
-                |mut partial, chunk| {
-                    for &row in chunk {
-                        let norm = row_norms[row];
-                        if norm == 0.0 {
-                            continue;
-                        }
-                        let row_context = self.row_context(row);
-                        for (col, p) in partial.iter_mut().enumerate() {
-                            let value = self.row_value_for_col(&row_context, col) / norm;
-                            *p += value * value;
-                        }
+        let mut diagonal = fold_reduce_with::<Adaptive, _, _, _, _>(
+            rows.len(),
+            || vec![0.0f64; ncols],
+            |mut partial, row_index| {
+                let row = rows[row_index];
+                let norm = row_norms[row];
+                if norm != 0.0 {
+                    let row_context = self.row_context(row);
+                    for (col, p) in partial.iter_mut().enumerate() {
+                        let value = self.row_value_for_col(&row_context, col) / norm;
+                        *p += value * value;
                     }
-                    partial
-                },
-            )
-            .reduce(
-                || vec![0.0f64; ncols],
-                |mut a, b| {
-                    for (ai, bi) in a.iter_mut().zip(&b) {
-                        *ai += bi;
-                    }
-                    a
-                },
-            );
+                }
+                partial
+            },
+            |mut a, b| {
+                for (ai, bi) in a.iter_mut().zip(&b) {
+                    *ai += bi;
+                }
+                a
+            },
+        );
         // Add regularization once after reduction; avoids counting it n_tasks times.
         for d in diagonal.iter_mut() {
             *d += reg;
@@ -87,33 +72,27 @@ impl<'a> VolumeOperator<'a> {
     ) -> Vec<f64> {
         let ncols = self.n_active;
         let diagonal = self.diagonal(rows, row_norms, config);
-        let adjoint = rows
-            .par_chunks(row_chunk_len(rows.len()))
-            .fold(
-                || vec![0.0f64; ncols],
-                |mut partial, chunk| {
-                    for &row in chunk {
-                        let norm = row_norms[row];
-                        if norm == 0.0 {
-                            continue;
-                        }
-                        let row_context = self.row_context(row);
-                        for (col, p) in partial.iter_mut().enumerate() {
-                            *p += self.row_value_for_col(&row_context, col) * data[row] / norm;
-                        }
+        let adjoint = fold_reduce_with::<Adaptive, _, _, _, _>(
+            rows.len(),
+            || vec![0.0f64; ncols],
+            |mut partial, row_index| {
+                let row = rows[row_index];
+                let norm = row_norms[row];
+                if norm != 0.0 {
+                    let row_context = self.row_context(row);
+                    for (col, p) in partial.iter_mut().enumerate() {
+                        *p += self.row_value_for_col(&row_context, col) * data[row] / norm;
                     }
-                    partial
-                },
-            )
-            .reduce(
-                || vec![0.0f64; ncols],
-                |mut a, b| {
-                    for (ai, bi) in a.iter_mut().zip(&b) {
-                        *ai += bi;
-                    }
-                    a
-                },
-            );
+                }
+                partial
+            },
+            |mut a, b| {
+                for (ai, bi) in a.iter_mut().zip(&b) {
+                    *ai += bi;
+                }
+                a
+            },
+        );
         adjoint
             .into_iter()
             .zip(diagonal)
@@ -130,20 +109,17 @@ impl<'a> VolumeOperator<'a> {
         row_norms: &[f64],
         regularization: f64,
     ) -> f64 {
-        let data_misfit = rows
-            .par_chunks(row_chunk_len(rows.len()))
-            .map(|chunk| {
-                chunk
-                    .iter()
-                    .map(|&row| {
-                        let prediction =
-                            self.project_row_with_norm(row, row_norms[row], |col| model[col]);
-                        let residual = data[row] - prediction;
-                        0.5 * residual * residual
-                    })
-                    .sum::<f64>()
-            })
-            .sum::<f64>();
+        let data_misfit = reduce_index_with::<Adaptive, _, _, _>(
+            rows.len(),
+            0.0,
+            |row_index| {
+                let row = rows[row_index];
+                let prediction = self.project_row_with_norm(row, row_norms[row], |col| model[col]);
+                let residual = data[row] - prediction;
+                0.5 * residual * residual
+            },
+            |a, b| a + b,
+        );
         data_misfit + 0.5 * regularization * model.iter().map(|v| v * v).sum::<f64>()
     }
 
@@ -162,40 +138,34 @@ impl<'a> VolumeOperator<'a> {
         regularization: f64,
     ) -> Vec<f64> {
         let ncols = self.n_active;
-        let mut residual = rows
-            .par_chunks(row_chunk_len(rows.len()))
-            .fold(
-                || (vec![0.0f64; ncols], vec![0.0f64; ncols]),
-                |(mut partial, mut row_values), chunk| {
-                    for &row in chunk {
-                        let norm = row_norms[row];
-                        if norm == 0.0 {
-                            continue;
-                        }
-                        self.fill_row_values(row, &mut row_values);
-                        let prediction: f64 = row_values
-                            .iter()
-                            .zip(model)
-                            .map(|(rv, mv)| rv * mv / norm)
-                            .sum();
-                        let row_residual = data[row] - prediction;
-                        for (pv, rv) in partial.iter_mut().zip(&row_values) {
-                            *pv += rv * row_residual / norm;
-                        }
+        let mut residual = fold_reduce_with::<Adaptive, _, _, _, _>(
+            rows.len(),
+            || (vec![0.0f64; ncols], vec![0.0f64; ncols]),
+            |(mut partial, mut row_values), row_index| {
+                let row = rows[row_index];
+                let norm = row_norms[row];
+                if norm != 0.0 {
+                    self.fill_row_values(row, &mut row_values);
+                    let prediction: f64 = row_values
+                        .iter()
+                        .zip(model)
+                        .map(|(rv, mv)| rv * mv / norm)
+                        .sum();
+                    let row_residual = data[row] - prediction;
+                    for (pv, rv) in partial.iter_mut().zip(&row_values) {
+                        *pv += rv * row_residual / norm;
                     }
-                    (partial, row_values)
-                },
-            )
-            .map(|(partial, _)| partial)
-            .reduce(
-                || vec![0.0f64; ncols],
-                |mut a, b| {
-                    for (ai, bi) in a.iter_mut().zip(&b) {
-                        *ai += bi;
-                    }
-                    a
-                },
-            );
+                }
+                (partial, row_values)
+            },
+            |mut a, b| {
+                for (ai, bi) in a.0.iter_mut().zip(&b.0) {
+                    *ai += bi;
+                }
+                a
+            },
+        )
+        .0;
         for (value, model_value) in residual.iter_mut().zip(model) {
             *value -= regularization * model_value;
         }
@@ -214,39 +184,33 @@ impl<'a> VolumeOperator<'a> {
         regularization: f64,
     ) -> Vec<f64> {
         let ncols = self.n_active;
-        let mut out = rows
-            .par_chunks(row_chunk_len(rows.len()))
-            .fold(
-                || (vec![0.0f64; ncols], vec![0.0f64; ncols]),
-                |(mut partial, mut row_values), chunk| {
-                    for &row in chunk {
-                        let norm = row_norms[row];
-                        if norm == 0.0 {
-                            continue;
-                        }
-                        self.fill_row_values(row, &mut row_values);
-                        let projection: f64 = row_values
-                            .iter()
-                            .zip(vector)
-                            .map(|(rv, vv)| rv * vv / norm)
-                            .sum();
-                        for (pv, rv) in partial.iter_mut().zip(&row_values) {
-                            *pv += rv * projection / norm;
-                        }
+        let mut out = fold_reduce_with::<Adaptive, _, _, _, _>(
+            rows.len(),
+            || (vec![0.0f64; ncols], vec![0.0f64; ncols]),
+            |(mut partial, mut row_values), row_index| {
+                let row = rows[row_index];
+                let norm = row_norms[row];
+                if norm != 0.0 {
+                    self.fill_row_values(row, &mut row_values);
+                    let projection: f64 = row_values
+                        .iter()
+                        .zip(vector)
+                        .map(|(rv, vv)| rv * vv / norm)
+                        .sum();
+                    for (pv, rv) in partial.iter_mut().zip(&row_values) {
+                        *pv += rv * projection / norm;
                     }
-                    (partial, row_values)
-                },
-            )
-            .map(|(partial, _)| partial)
-            .reduce(
-                || vec![0.0f64; ncols],
-                |mut a, b| {
-                    for (ai, bi) in a.iter_mut().zip(&b) {
-                        *ai += bi;
-                    }
-                    a
-                },
-            );
+                }
+                (partial, row_values)
+            },
+            |mut a, b| {
+                for (ai, bi) in a.0.iter_mut().zip(&b.0) {
+                    *ai += bi;
+                }
+                a
+            },
+        )
+        .0;
         for (value, vector_value) in out.iter_mut().zip(vector) {
             *value += regularization * vector_value;
         }

@@ -2,7 +2,7 @@
 //!
 //! Reference: Numerical Recipes (2007), *Boundary Conditions*, Ch. 19.
 
-use ndarray::Array3;
+use super::volume::Volume3;
 
 /// Fill boundary voxels with nearest interior values.
 ///
@@ -13,15 +13,18 @@ use ndarray::Array3;
 /// interior to extrapolate from along that axis, so its face fill is skipped —
 /// the single layer is already its own boundary. This keeps the function panic-
 /// free on 2-D inputs.
-pub fn fill_boundaries(array: &mut Array3<f64>) {
-    let (nx, ny, nz) = array.dim();
+pub fn fill_boundaries<V>(array: &mut V)
+where
+    V: Volume3,
+{
+    let (nx, ny, nz) = array.dimensions();
 
     // Fill i=0 and i=nx-1 faces.
     if nx >= 2 {
         for k in 0..nz {
             for j in 0..ny {
-                array[[0, j, k]] = array[[1, j, k]];
-                array[[nx - 1, j, k]] = array[[nx - 2, j, k]];
+                array.set_value([0, j, k], array.value([1, j, k]));
+                array.set_value([nx - 1, j, k], array.value([nx - 2, j, k]));
             }
         }
     }
@@ -30,8 +33,8 @@ pub fn fill_boundaries(array: &mut Array3<f64>) {
     if ny >= 2 {
         for k in 0..nz {
             for i in 0..nx {
-                array[[i, 0, k]] = array[[i, 1, k]];
-                array[[i, ny - 1, k]] = array[[i, ny - 2, k]];
+                array.set_value([i, 0, k], array.value([i, 1, k]));
+                array.set_value([i, ny - 1, k], array.value([i, ny - 2, k]));
             }
         }
     }
@@ -40,8 +43,8 @@ pub fn fill_boundaries(array: &mut Array3<f64>) {
     if nz >= 2 {
         for j in 0..ny {
             for i in 0..nx {
-                array[[i, j, 0]] = array[[i, j, 1]];
-                array[[i, j, nz - 1]] = array[[i, j, nz - 2]];
+                array.set_value([i, j, 0], array.value([i, j, 1]));
+                array.set_value([i, j, nz - 1], array.value([i, j, nz - 2]));
             }
         }
     }
@@ -50,6 +53,7 @@ pub fn fill_boundaries(array: &mut Array3<f64>) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ndarray::Array3;
 
     #[test]
     fn fill_boundaries_handles_singleton_z_plane() {

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use ndarray::Array2;
+use leto::Array2;
 
 use kwavers_grid::geometry::{GeometricDomain, PointLocation};
 
@@ -124,9 +124,13 @@ impl MultiRegionDomain {
             let boundary_i = self.regions[i].sample_boundary(n_points_per_interface * 2, seed);
             let tolerance = 1e-8;
 
-            for row_idx in 0..boundary_i.nrows() {
-                let point = boundary_i.row(row_idx);
-                let point_slice: Vec<f64> = point.iter().copied().collect();
+            let n_rows = boundary_i.shape()[0];
+            let dim = boundary_i.shape()[1];
+            for row_idx in 0..n_rows {
+                let mut point_slice = vec![0.0; dim];
+                for col_idx in 0..dim {
+                    point_slice[col_idx] = boundary_i[[row_idx, col_idx]];
+                }
 
                 if self.regions[i + 1].classify_point(&point_slice, tolerance)
                     == PointLocation::Boundary
@@ -141,7 +145,7 @@ impl MultiRegionDomain {
 
         let n_found = all_points.len();
         let dim = if n_found > 0 { all_points[0].len() } else { 2 };
-        let mut result = Array2::zeros((n_found, dim));
+        let mut result = Array2::zeros([n_found, dim]);
         for (i, point) in all_points.iter().enumerate() {
             for (j, &coord) in point.iter().enumerate() {
                 result[[i, j]] = coord;

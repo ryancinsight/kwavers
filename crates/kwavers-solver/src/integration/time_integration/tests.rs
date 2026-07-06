@@ -72,6 +72,34 @@ fn adams_bashforth2_is_exact_for_constant_derivative_after_startup() -> KwaversR
 }
 
 #[test]
+fn adams_bashforth3_is_exact_for_constant_derivative_after_startup() -> KwaversResult<()> {
+    let grid = Grid::new(2, 2, 2, 1.0, 1.0, 1.0)?;
+    let mut stepper = AdamsBashforth::new(AdamsBashforthConfig {
+        order: 3,
+        startup_steps: 2,
+    });
+    let mut field = Array3::from_elem((2, 2, 2), 3.0);
+    let derivative = -1.25_f64;
+    let dt = 0.2_f64;
+
+    for _ in 0..4 {
+        stepper.step(
+            &mut field,
+            |u| Ok(Array3::from_elem(u.dim(), derivative)),
+            dt,
+            &grid,
+        )?;
+    }
+
+    let expected = 3.0 + 4.0 * dt * derivative;
+    assert!(
+        field.iter().all(|&value| (value - expected).abs() < 1e-15),
+        "AB3 constant-derivative field {field:?}, expected all {expected}"
+    );
+    Ok(())
+}
+
+#[test]
 fn stability_analyzer_uses_acoustic_and_diffusion_bounds() -> KwaversResult<()> {
     let grid = Grid::new(4, 4, 4, 0.002, 0.001, 0.004)?;
     let analyzer = StabilityAnalyzer::new(0.5);

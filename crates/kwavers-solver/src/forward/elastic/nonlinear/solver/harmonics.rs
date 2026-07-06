@@ -49,7 +49,8 @@
 //! elastography." IEEE Trans. Med. Imaging, 32(5), 863–874.
 //! DOI: 10.1109/TMI.2013.2239671
 
-use ndarray::{Array3, Zip};
+use kwavers_core::utils::iterators::for_each_indexed_mut;
+use ndarray::Array3;
 
 use super::super::wave_field::NonlinearElasticWaveField;
 use super::NonlinearElasticWaveSolver;
@@ -75,7 +76,7 @@ impl NonlinearElasticWaveSolver {
         let harmonic_factor = (beta * 1e-6).min(1e-8);
         {
             let u_fund_v = field.u_fundamental.view();
-            Zip::indexed(field.u_second.view_mut()).par_for_each(|(i, j, k), u2| {
+            for_each_indexed_mut(field.u_second.view_mut(), |(i, j, k), u2| {
                 if i >= 1 && i < nx - 1 && j >= 1 && j < ny - 1 && k >= 1 && k < nz - 1 {
                     let u1 = u_fund_v[[i, j, k]];
                     *u2 += harmonic_factor * u1 * u1.abs() * dt;
@@ -99,7 +100,7 @@ impl NonlinearElasticWaveSolver {
                 let sound_speed_sq = self.config.sound_speed().powi(2);
 
                 let mut d = Array3::<f64>::zeros((nx, ny, nz));
-                Zip::indexed(d.view_mut()).par_for_each(|(i, j, k), di| {
+                for_each_indexed_mut(d.view_mut(), |(i, j, k), di| {
                     if i >= 1 && i < nx - 1 && j >= 1 && j < ny - 1 && k >= 1 && k < nz - 1 {
                         let u1 = u_fund[[i, j, k]];
                         let u2 = u_second[[i, j, k]];
@@ -152,7 +153,7 @@ impl NonlinearElasticWaveSolver {
                 let sound_speed_sq = self.config.sound_speed().powi(2);
 
                 let mut d = Array3::<f64>::zeros((nx, ny, nz));
-                Zip::indexed(d.view_mut()).par_for_each(|(i, j, k), di| {
+                for_each_indexed_mut(d.view_mut(), |(i, j, k), di| {
                     if i >= 1 && i < nx - 1 && j >= 1 && j < ny - 1 && k >= 1 && k < nz - 1 {
                         let u1 = u_fund[[i, j, k]];
                         let u_pv = u_prev[[i, j, k]];

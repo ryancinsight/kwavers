@@ -1,12 +1,11 @@
 //! 3D directional phase-gradient inversion (Wang et al. 2014) — uses the
 //! dominant wavenumber component for anisotropic media.
 
-use ndarray::Array3;
-
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_imaging::ultrasound::elastography::ElasticityMap;
 use kwavers_physics::acoustics::imaging::modalities::elastography::displacement::DisplacementField;
+use leto::Array3;
 
 use super::super::algorithms::{directional_smoothing, fill_boundaries};
 use super::super::types::elasticity_map_from_speed;
@@ -45,7 +44,7 @@ pub(super) fn directional_phase_gradient_inversion(
     frequency: f64,
 ) -> KwaversResult<ElasticityMap> {
     let (nx, ny, nz) = displacement.uz.dim();
-    let mut shear_wave_speed = Array3::zeros((nx, ny, nz));
+    let mut shear_wave_speed = Array3::zeros([nx, ny, nz]);
 
     // 2-D plane-strain input (nz < 3) has no z-variation, so ∂u/∂z = 0; the
     // in-plane gradients carry the directional wavenumber estimate. Without this

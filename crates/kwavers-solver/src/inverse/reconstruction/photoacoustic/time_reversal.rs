@@ -51,7 +51,8 @@ use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_math::fft::{get_fft_for_grid, Fft3dInOutExt};
-use ndarray::{Array3, ArrayView2, Zip};
+use moirai_parallel::{enumerate_mut_with, Adaptive};
+use ndarray::{Array3, ArrayView2};
 use num_complex::Complex64;
 
 /// k-space pseudospectral time-reversal reconstructor.
@@ -235,13 +236,26 @@ impl PhotoacousticTimeReversal {
         // Leapfrog update in k-space: p̂_next = 2·cos·p̂ − p̂_prev.
         // `propagator` is real (f64); multiply real cosine by complex spectrum.
         let mut p_next_hat = Array3::<Complex64>::zeros((nx, ny, nz));
-        Zip::from(&mut p_next_hat)
-            .and(propagator)
-            .and(&p_hat)
-            .and(&p_prev_hat)
-            .par_for_each(|pn, &cos_val, &p, &pp| {
-                *pn = Complex64::from(2.0 * cos_val) * p - pp;
+        if let (Some(next_values), Some(propagator_values), Some(p_values), Some(prev_values)) = (
+            p_next_hat.as_slice_memory_order_mut(),
+            propagator.as_slice_memory_order(),
+            p_hat.as_slice_memory_order(),
+            p_prev_hat.as_slice_memory_order(),
+        ) {
+            enumerate_mut_with::<Adaptive, _, _>(next_values, |idx, next| {
+                *next = Complex64::from(2.0 * propagator_values[idx]) * p_values[idx]
+                    - prev_values[idx];
             });
+        } else {
+            for (((next, &cos_val), &p), &prev) in p_next_hat
+                .iter_mut()
+                .zip(propagator.iter())
+                .zip(p_hat.iter())
+                .zip(p_prev_hat.iter())
+            {
+                *next = Complex64::from(2.0 * cos_val) * p - prev;
+            }
+        }
 
         // Inverse FFT → real output.
         let mut out = Array3::<f64>::zeros((nx, ny, nz));

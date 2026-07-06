@@ -13,6 +13,7 @@ use kwavers_math::fft::{Complex64, Fft3d};
 use kwavers_medium::MaterialFields;
 use kwavers_receiver::recorder::simple::SensorRecorder;
 use kwavers_source::{Source, SourceInjectionMode};
+use moirai_parallel::{enumerate_mut_with, Adaptive};
 use ndarray::{Array1, Array2, Array3, ArrayView2};
 use std::env;
 use std::sync::Arc;
@@ -23,6 +24,49 @@ mod interface;
 mod source;
 mod stepping;
 pub mod thermal;
+
+fn fill_rho_sum_dense(
+    dest: &mut Array3<f64>,
+    rhox: &Array3<f64>,
+    rhoy: &Array3<f64>,
+    rhoz: &Array3<f64>,
+) {
+    assert_eq!(
+        dest.shape(),
+        rhox.shape(),
+        "invariant: PSTD density-sum destination shape matches rhox shape"
+    );
+    assert_eq!(
+        dest.shape(),
+        rhoy.shape(),
+        "invariant: PSTD density-sum destination shape matches rhoy shape"
+    );
+    assert_eq!(
+        dest.shape(),
+        rhoz.shape(),
+        "invariant: PSTD density-sum destination shape matches rhoz shape"
+    );
+
+    if let (Some(dest_values), Some(rx_values), Some(ry_values), Some(rz_values)) = (
+        dest.as_slice_memory_order_mut(),
+        rhox.as_slice_memory_order(),
+        rhoy.as_slice_memory_order(),
+        rhoz.as_slice_memory_order(),
+    ) {
+        enumerate_mut_with::<Adaptive, _, _>(dest_values, |index, rho_sum| {
+            *rho_sum = rx_values[index] + ry_values[index] + rz_values[index];
+        });
+    } else {
+        let (nx, ny, nz) = dest.dim();
+        for k in 0..nz {
+            for j in 0..ny {
+                for i in 0..nx {
+                    dest[[i, j, k]] = rhox[[i, j, k]] + rhoy[[i, j, k]] + rhoz[[i, j, k]];
+                }
+            }
+        }
+    }
+}
 
 /// Core PSTD solver implementing the pseudospectral method
 pub struct PSTDSolver {
@@ -173,13 +217,7 @@ pub struct PSTDSolver {
 impl PSTDSolver {
     /// Compute total density (rhox + rhoy + rhoz) into the provided buffer
     pub fn fill_rho_sum(&self, dest: &mut Array3<f64>) {
-        ndarray::Zip::from(dest)
-            .and(&self.rhox)
-            .and(&self.rhoy)
-            .and(&self.rhoz)
-            .par_for_each(|rho_sum, &rx, &ry, &rz| {
-                *rho_sum = rx + ry + rz;
-            });
+        fill_rho_sum_dense(dest, &self.rhox, &self.rhoy, &self.rhoz);
     }
 
     #[must_use]

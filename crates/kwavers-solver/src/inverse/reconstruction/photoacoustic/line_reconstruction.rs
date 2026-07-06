@@ -39,6 +39,7 @@ use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_math::fft::utils::{fft_shift_2d, ifft_shift_2d};
 use kwavers_math::fft::{fft_2d_complex_inplace, ifft_2d_complex_inplace, Complex64};
+use moirai_parallel::{for_each_mut_with, Adaptive};
 use ndarray::{s, Array1, Array2, ArrayView1, ArrayView2, Axis};
 
 /// Order of the sensor data axes.
@@ -153,7 +154,11 @@ pub fn kspace_line_recon(
         .mapv(|value| value.re * (4.0 / c));
 
     if pos_cond {
-        recon.par_mapv_inplace(|value| value.max(0.0));
+        if let Some(values) = recon.as_slice_memory_order_mut() {
+            for_each_mut_with::<Adaptive, _, _>(values, |value| *value = value.max(0.0));
+        } else {
+            recon.mapv_inplace(|value| value.max(0.0));
+        }
     }
 
     Ok(recon)
@@ -284,6 +289,44 @@ mod tests {
         )
         .expect("transposed reconstruction must succeed");
         assert_eq!(recon_ty, recon_yt);
+    }
+
+    #[test]
+    fn line_reconstruction_positive_condition_clamps_negative_values() {
+        let sensor = array![
+            [0.0, 1.0, -2.0],
+            [3.0, -4.0, 5.0],
+            [-6.0, 7.0, -8.0],
+            [9.0, -10.0, 11.0],
+        ];
+        let unclamped = kspace_line_recon(
+            sensor.view(),
+            0.1e-3,
+            1.0e-8,
+            SOUND_SPEED_WATER_SIM,
+            LineReconDataOrder::Ty,
+            LineReconInterpolation::Nearest,
+            false,
+        )
+        .expect("unclamped reconstruction must succeed");
+        let clamped = kspace_line_recon(
+            sensor.view(),
+            0.1e-3,
+            1.0e-8,
+            SOUND_SPEED_WATER_SIM,
+            LineReconDataOrder::Ty,
+            LineReconInterpolation::Nearest,
+            true,
+        )
+        .expect("clamped reconstruction must succeed");
+
+        assert!(
+            unclamped.iter().any(|value| *value < 0.0),
+            "test input must exercise the positivity clamp"
+        );
+        for (&before, &after) in unclamped.iter().zip(clamped.iter()) {
+            assert_eq!(after, before.max(0.0));
+        }
     }
 
     #[test]

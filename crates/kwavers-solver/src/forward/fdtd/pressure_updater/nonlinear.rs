@@ -6,7 +6,7 @@
 //! - Hamilton, M. F. & Blackstock, D. T. (1998). Nonlinear Acoustics, Ch. 3.
 //! - Aanonsen, S. I. et al. (1984). J. Acoust. Soc. Am. 75(3), 749–768.
 
-use ndarray::{Array3, Zip};
+use ndarray::Array3;
 
 use super::super::solver::FdtdSolver;
 
@@ -61,9 +61,7 @@ impl FdtdSolver {
             _ => return,
         }
 
-        Zip::from(self.fields.p.view_mut())
-            .and(nl_scratch.view())
-            .par_for_each(|p, &nl| *p += nl);
+        super::add_nonlinear_pressure_delta(&mut self.fields.p, nl_scratch);
     }
 
     /// Rotate pressure history: p^{n-2} ← p^{n-1} ← p^n (swap to avoid allocation).

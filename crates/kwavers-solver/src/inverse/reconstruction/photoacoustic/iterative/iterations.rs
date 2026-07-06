@@ -3,7 +3,9 @@
 use super::IterativeAlgorithm;
 use super::IterativeMethods;
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array1, Array2, Zip};
+use kwavers_core::utils::iterators::apply_inplace;
+use moirai_parallel::{enumerate_mut_with, Adaptive};
+use ndarray::{Array1, Array2};
 
 impl IterativeMethods {
     /// One SIRT step: x ← x + λ · Aᵀ(y − Ax).
@@ -41,9 +43,17 @@ impl IterativeMethods {
 
             if row_norm_sq > 0.0 {
                 let update_factor = self.relaxation_factor * residual / row_norm_sq;
-                Zip::from(&mut *x).and(&row).par_for_each(|x_val, &a_val| {
-                    *x_val += update_factor * a_val;
-                });
+                if let (Some(x_values), Some(row_values)) =
+                    (x.as_slice_memory_order_mut(), row.as_slice_memory_order())
+                {
+                    enumerate_mut_with::<Adaptive, _, _>(x_values, |idx, x_value| {
+                        *x_value += update_factor * row_values[idx];
+                    });
+                } else {
+                    for (x_value, &a_value) in x.iter_mut().zip(row.iter()) {
+                        *x_value += update_factor * a_value;
+                    }
+                }
             }
         }
         Ok(())
@@ -65,7 +75,7 @@ impl IterativeMethods {
     ) -> KwaversResult<()> {
         let (n_measurements, n_voxels) = a.dim();
 
-        x.par_mapv_inplace(|v| v.max(1e-10));
+        apply_inplace(x, |v| v.max(1e-10));
 
         let subset_size = n_measurements.div_ceil(subsets);
 
@@ -149,7 +159,7 @@ impl IterativeMethods {
         *x = &*x - self.regularization_parameter * grad_reg;
 
         if matches!(self.algorithm, IterativeAlgorithm::OSEM { .. }) {
-            x.par_mapv_inplace(|v| v.max(0.0));
+            apply_inplace(x, |v| v.max(0.0));
         }
 
         Ok(())

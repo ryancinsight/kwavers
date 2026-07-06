@@ -3,6 +3,7 @@
 //! Core time-reversal reconstruction implementation.
 
 use crate::plugin_based::PluginBasedSolver;
+use crate::workspace::inplace_ops::apply_inplace;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
@@ -318,9 +319,28 @@ impl TimeReversalReconstructor {
         let max_val = reconstruction.iter().map(|&x| x.abs()).fold(0.0, f64::max);
 
         if max_val > 0.0 {
-            reconstruction.par_mapv_inplace(|x| x / max_val);
+            apply_inplace(&mut reconstruction, |x| x / max_val);
         }
 
         Ok(reconstruction)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn post_process_normalizes_reconstruction_by_max_abs_value() {
+        let reconstructor = TimeReversalReconstructor::new(TimeReversalConfig::default()).unwrap();
+        let grid = Grid::new(2, 2, 1, 1.0, 1.0, 1.0).unwrap();
+        let reconstruction = Array3::from_shape_vec((2, 2, 1), vec![-2.0, 1.0, 4.0, 0.0]).unwrap();
+
+        let normalized = reconstructor.post_process(reconstruction, &grid).unwrap();
+
+        assert_eq!(normalized[[0, 0, 0]], -0.5);
+        assert_eq!(normalized[[0, 1, 0]], 0.25);
+        assert_eq!(normalized[[1, 0, 0]], 1.0);
+        assert_eq!(normalized[[1, 1, 0]], 0.0);
     }
 }

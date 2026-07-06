@@ -1,7 +1,7 @@
 //! Pressure field update dispatch and CPU/GPU implementations.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::{Array3, ArrayView3, Zip};
+use ndarray::{Array3, ArrayView3};
 
 use super::super::solver::{FdtdGpuAccelerator, FdtdSolver};
 
@@ -75,10 +75,11 @@ impl FdtdSolver {
                 cpml.update_and_apply_v_gradient_correction(&mut self.divergence_scratch, 2);
             }
 
-            Zip::from(&mut self.divergence_scratch)
-                .and(&self.dvx_scratch)
-                .and(&self.dvy_scratch)
-                .par_for_each(|d, &dx, &dy| *d += dx + dy);
+            super::accumulate_two_fields(
+                &mut self.divergence_scratch,
+                &self.dvx_scratch,
+                &self.dvy_scratch,
+            );
 
             Self::update_pressure_simd(
                 &mut self.fields.p,
@@ -93,17 +94,15 @@ impl FdtdSolver {
     /// Element-wise pressure update: p -= dt · ρc² · div(v).
     ///
     /// Accepts `ArrayView3<f64>` to avoid O(N³) `.to_owned()` at call sites.
-    /// Rayon parallel Zip; LLVM auto-vectorizes each worker lane.
+    /// Dense standard-layout arrays dispatch through Moirai; non-standard
+    /// ndarray views keep sequential Zip semantics.
     pub(crate) fn update_pressure_simd(
         pressure: &mut Array3<f64>,
         divergence: ArrayView3<f64>,
         rho_c_squared: &Array3<f64>,
         dt: f64,
     ) {
-        Zip::from(pressure)
-            .and(divergence)
-            .and(rho_c_squared)
-            .par_for_each(|p, &div, &rc2| *p -= dt * rc2 * div);
+        super::apply_pressure_update(pressure, divergence, rho_c_squared, dt);
     }
 
     /// GPU-accelerated pressure update via external accelerator trait.

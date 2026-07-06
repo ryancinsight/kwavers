@@ -16,6 +16,7 @@
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
+use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
 use ndarray::{Array3, ArrayView3, Zip};
 
 use kwavers_physics::thermal::diffusion::{
@@ -305,18 +306,61 @@ impl ThermalDiffusionSolver {
         grid: &Grid,
         dt: f64,
     ) -> KwaversResult<()> {
-        Zip::indexed(&mut self.temperature)
-            .and(&self.laplacian_workspace)
-            .par_for_each(|(i, j, k), temp, &lap| {
-                let x = i as f64 * grid.dx;
-                let y = j as f64 * grid.dy;
-                let z = k as f64 * grid.dz;
+        let shape = self.temperature.dim();
+        if let Some(source) = external_source.as_ref() {
+            if source.dim() != shape {
+                return Err(KwaversError::DimensionMismatch(format!(
+                    "thermal diffusion source shape {:?} does not match temperature shape {:?}",
+                    source.dim(),
+                    shape
+                )));
+            }
+        }
 
-                let alpha = medium.thermal_diffusivity(x, y, z, grid);
-                let source = external_source.as_ref().map_or(0.0, |s| s[[i, j, k]]);
+        let (_, ny, nz) = shape;
+        let slab_len = ny * nz;
+        let source_slice = external_source
+            .as_ref()
+            .and_then(|source| source.as_slice());
 
-                *temp += dt * alpha.mul_add(lap, source);
-            });
+        let update_cell = |i: usize, j: usize, k: usize, temp: &mut f64, lap: f64, source: f64| {
+            let x = i as f64 * grid.dx;
+            let y = j as f64 * grid.dy;
+            let z = k as f64 * grid.dz;
+
+            let alpha = medium.thermal_diffusivity(x, y, z, grid);
+
+            *temp += dt * alpha.mul_add(lap, source);
+        };
+
+        let source_is_contiguous = external_source.is_none() || source_slice.is_some();
+
+        if let (Some(temperature), Some(laplacian), true) = (
+            self.temperature.as_slice_mut(),
+            self.laplacian_workspace.as_slice(),
+            source_is_contiguous,
+        ) {
+            for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(
+                temperature,
+                slab_len,
+                |i, slab| {
+                    let base = i * slab_len;
+                    for (offset, temp) in slab.iter_mut().enumerate() {
+                        let j = offset / nz;
+                        let k = offset % nz;
+                        let source = source_slice.map_or(0.0, |source| source[base + offset]);
+                        update_cell(i, j, k, temp, laplacian[base + offset], source);
+                    }
+                },
+            );
+        } else {
+            Zip::indexed(&mut self.temperature)
+                .and(&self.laplacian_workspace)
+                .for_each(|(i, j, k), temp, &lap| {
+                    let source = external_source.as_ref().map_or(0.0, |s| s[[i, j, k]]);
+                    update_cell(i, j, k, temp, lap, source);
+                });
+        }
 
         Ok(())
     }

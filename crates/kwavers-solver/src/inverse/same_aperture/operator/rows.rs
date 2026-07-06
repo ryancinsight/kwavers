@@ -5,7 +5,7 @@ use super::super::active_grid::{ActiveGrid, PlanarPoint};
 use super::super::finite_frequency::{SameApertureMedium, SameApertureSettings, C_REF_M_S};
 use super::dot::column_lookup;
 use super::types::{OperatorKind, PassiveRow, PitchCatchRow};
-use rayon::prelude::*;
+use moirai_parallel::ParallelSlice;
 
 pub(super) fn pitch_catch_rows(
     therapy_elements: &[PlanarPoint],
@@ -71,13 +71,11 @@ pub(super) fn compute_row_norms(
 ) -> Vec<f32> {
     match kind {
         OperatorKind::PitchCatch(specs) => specs
-            .par_iter()
-            .map(|spec| pitch_catch_row_norm(spec, active, medium))
-            .collect(),
+            .par()
+            .map_collect(|spec| pitch_catch_row_norm(spec, active, medium)),
         OperatorKind::Passive(specs) => specs
-            .par_iter()
-            .map(|spec| passive_row_norm(spec, active, medium))
-            .collect(),
+            .par()
+            .map_collect(|spec| passive_row_norm(spec, active, medium)),
     }
 }
 

@@ -4,7 +4,7 @@
 //!
 //! `scratch` (`Array2<Complex64>`, shape (nx, ny)) is allocated once in
 //! `ParabolicDiffractionOperator::new` and reused on every `apply_complex` call.
-//! The 2-D FFT plan is obtained from `FFT_CACHE_2D` (cached per shape).
+//! The 2-D FFT plan is obtained through the `kwavers_math::fft` facade (cached per shape).
 //!
 //! Per `apply_complex` call this eliminates:
 //! - 1 × `field.to_owned()` clone (~262 KB for 128×128)
@@ -14,9 +14,9 @@
 //! When called for every retarded-time slice (nt = 1000), one diffraction
 //! half-step saves 3000 allocations (~786 MB total clones + FFT temporaries).
 
-use kwavers_math::fft::{Complex64, Fft2d, Shape2D, FFT_CACHE_2D};
-use ndarray::{Array2, ArrayViewMut2, Zip};
-use std::sync::Arc;
+use kwavers_math::fft::{fft_2d_complex_inplace, ifft_2d_complex_inplace, Complex64};
+use moirai_parallel::{enumerate_mut_with, Adaptive};
+use ndarray::{Array2, ArrayViewMut2};
 
 use super::KZKConfig;
 use kwavers_core::constants::numerical::TWO_PI;
@@ -29,9 +29,6 @@ pub struct ParabolicDiffractionOperator {
     config: KZKConfig,
     kx2: Array2<f64>,
     ky2: Array2<f64>,
-    /// Cached 2-D FFT plan for shape (nx, ny) — shared with other users of
-    /// `FFT_CACHE_2D` at the same shape.
-    fft_plan: Arc<Fft2d>,
     /// Pre-allocated complex scratch buffer (nx, ny).
     ///
     /// Reused on every `apply_complex` call to hold the complex field during
@@ -54,8 +51,8 @@ impl ParabolicDiffractionOperator {
     /// Create new complex parabolic diffraction operator.
     ///
     /// Pre-computes the transverse wavenumber grids `kx²` and `ky²`,
-    /// acquires the (nx, ny) 2-D FFT plan from `FFT_CACHE_2D`, and
-    /// allocates the complex scratch buffer.
+    /// allocates the complex scratch buffer. FFT plan caching is owned by the
+    /// `kwavers_math::fft` facade.
     #[must_use]
     pub fn new(config: &KZKConfig) -> Self {
         let nx = config.nx;
@@ -93,14 +90,12 @@ impl ParabolicDiffractionOperator {
             }
         }
 
-        let fft_plan = FFT_CACHE_2D.get_or_create(Shape2D { nx, ny });
         let scratch = Array2::<Complex64>::zeros((nx, ny));
 
         Self {
             config: config.clone(),
             kx2,
             ky2,
-            fft_plan,
             scratch,
         }
     }
@@ -137,7 +132,7 @@ impl ParabolicDiffractionOperator {
         self.scratch.assign(field);
 
         // Step 2: forward complex-to-complex in-place FFT.
-        self.fft_plan.forward_complex_inplace(&mut self.scratch);
+        fft_2d_complex_inplace(&mut self.scratch);
 
         // Step 3: apply parabolic diffraction propagator H(k_T) per mode.
         //
@@ -154,23 +149,31 @@ impl ParabolicDiffractionOperator {
         // The update is a pointwise `scratch[i,j] *= H(kx2[i,j], ky2[i,j])`.
         // Each element depends only on the collocated kx2 and ky2 values
         // (immutable read) and overwrites its own scratch cell (mutable write).
-        // No two Rayon tasks share memory → `par_for_each` is race-free.
+        // No two Moirai tasks share memory because each scratch index is visited
+        // exactly once.
         {
-            let kx2_v = self.kx2.view();
-            let ky2_v = self.ky2.view();
-            Zip::from(self.scratch.view_mut())
-                .and(kx2_v)
-                .and(ky2_v)
-                .par_for_each(|s, &kx2, &ky2| {
-                    let kt2 = kx2 + ky2;
-                    let phase = kt2 * step_size / (2.0 * k0);
-                    // exp(−i·phase): negative sign is physically correct
-                    *s *= Complex64::from_polar(1.0, -phase);
-                });
+            let kx2 = self
+                .kx2
+                .as_slice_memory_order()
+                .expect("invariant: complex KZK diffraction kx2 is standard-layout");
+            let ky2 = self
+                .ky2
+                .as_slice_memory_order()
+                .expect("invariant: complex KZK diffraction ky2 is standard-layout");
+            let scratch = self
+                .scratch
+                .as_slice_memory_order_mut()
+                .expect("invariant: complex KZK diffraction scratch is standard-layout");
+            enumerate_mut_with::<Adaptive, _, _>(scratch, |idx, s| {
+                let kt2 = kx2[idx] + ky2[idx];
+                let phase = kt2 * step_size / (2.0 * k0);
+                // exp(−i·phase): negative sign is physically correct
+                *s *= Complex64::from_polar(1.0, -phase);
+            });
         }
 
         // Step 4: inverse complex-to-complex in-place FFT (includes 1/N norm).
-        self.fft_plan.inverse_complex_inplace(&mut self.scratch);
+        ifft_2d_complex_inplace(&mut self.scratch);
 
         // Step 5: copy scratch back to the field view.
         field.assign(&self.scratch);

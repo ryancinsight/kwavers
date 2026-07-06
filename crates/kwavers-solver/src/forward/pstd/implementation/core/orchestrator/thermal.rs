@@ -43,8 +43,35 @@ use kwavers_core::error::KwaversResult;
 use kwavers_medium::Medium;
 use kwavers_physics::acoustics::conservation::acoustic_heat_source;
 use kwavers_physics::acoustics::mechanics::absorption::AbsorptionMode;
-use ndarray::{Array2, Array3, Zip};
+use moirai_parallel::{enumerate_mut_with, Adaptive};
+use ndarray::{Array2, Array3};
 use std::{fmt, sync::Arc};
+
+fn copy_scaled_absorption_field(dst: &mut Array3<f64>, alpha_si: &Array3<f64>, factor: f64) {
+    assert_eq!(
+        dst.shape(),
+        alpha_si.shape(),
+        "invariant: PSTD absorption destination shape matches alpha_si shape"
+    );
+
+    if let (Some(dst_values), Some(alpha_values)) = (
+        dst.as_slice_memory_order_mut(),
+        alpha_si.as_slice_memory_order(),
+    ) {
+        enumerate_mut_with::<Adaptive, _, _>(dst_values, |index, value| {
+            *value = alpha_values[index] * factor;
+        });
+    } else {
+        let (nx, ny, nz) = dst.dim();
+        for k in 0..nz {
+            for j in 0..ny {
+                for i in 0..nx {
+                    dst[[i, j, k]] = alpha_si[[i, j, k]] * factor;
+                }
+            }
+        }
+    }
+}
 
 /// Input bundle for the coupled PSTD acoustic + thermal time loop.
 ///
@@ -124,9 +151,7 @@ impl PSTDSolver {
                     let alpha_si = &kernel.alpha_si;
                     let shape = alpha_si.dim();
                     let buf = self.alpha_np_m.get_or_insert_with(|| Array3::zeros(shape));
-                    Zip::from(buf)
-                        .and(alpha_si)
-                        .par_for_each(|a, &si| *a = si * omega_sq);
+                    copy_scaled_absorption_field(buf, alpha_si, omega_sq);
                 }
             }
             Mode::PowerLaw(y) => {
@@ -135,9 +160,7 @@ impl PSTDSolver {
                     let alpha_si = &kernel.alpha_si;
                     let shape = alpha_si.dim();
                     let buf = self.alpha_np_m.get_or_insert_with(|| Array3::zeros(shape));
-                    Zip::from(buf)
-                        .and(alpha_si)
-                        .par_for_each(|a, &si| *a = si * omega_y);
+                    copy_scaled_absorption_field(buf, alpha_si, omega_y);
                 }
             }
         }

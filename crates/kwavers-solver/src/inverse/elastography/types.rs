@@ -4,7 +4,15 @@
 //! and nonlinear parameter characterization.
 
 use kwavers_imaging::ultrasound::elastography::{ElasticityMap, NonlinearParameterMap};
-use ndarray::Array3;
+use leto::Array3;
+
+fn mean_all(data: &Array3<f64>) -> f64 {
+    if data.size() == 0 {
+        0.0
+    } else {
+        data.iter().copied().sum::<f64>() / data.size() as f64
+    }
+}
 
 /// Extension trait for `ElasticityMap` statistics
 pub trait ElasticityMapExt {
@@ -24,7 +32,7 @@ impl ElasticityMapExt for ElasticityMap {
             .iter()
             .copied()
             .fold(f64::NEG_INFINITY, f64::max);
-        let mean = self.youngs_modulus.mean().unwrap_or(0.0);
+        let mean = mean_all(&self.youngs_modulus);
         (min, max, mean)
     }
 }
@@ -50,7 +58,7 @@ impl NonlinearParameterMapExt for NonlinearParameterMap {
             .iter()
             .copied()
             .fold(f64::NEG_INFINITY, f64::max);
-        let mean = self.nonlinearity_parameter.mean().unwrap_or(0.0);
+        let mean = mean_all(&self.nonlinearity_parameter);
         (min, max, mean)
     }
 
@@ -65,7 +73,7 @@ impl NonlinearParameterMapExt for NonlinearParameterMap {
             .iter()
             .copied()
             .fold(f64::NEG_INFINITY, f64::max);
-        let mean = self.estimation_quality.mean().unwrap_or(0.0);
+        let mean = mean_all(&self.estimation_quality);
         (min, max, mean)
     }
 }
@@ -100,11 +108,11 @@ pub fn elasticity_map_from_speed(shear_wave_speed: Array3<f64>, density: f64) ->
 mod tests {
     use super::*;
     use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
-    use ndarray::Array3;
+    use leto::Array3;
 
     #[test]
     fn test_elasticity_map_from_speed() {
-        let speed = Array3::from_elem((10, 10, 10), 3.0); // 3 m/s
+        let speed = Array3::from_elem([10, 10, 10], 3.0); // 3 m/s
         let density = DENSITY_WATER_NOMINAL; // 1000.0 kg/m³ (SSOT)
 
         let map = elasticity_map_from_speed(speed, density);
@@ -119,7 +127,7 @@ mod tests {
 
     #[test]
     fn test_elasticity_statistics() {
-        let mut speed = Array3::from_elem((10, 10, 10), 3.0);
+        let mut speed = Array3::from_elem([10, 10, 10], 3.0);
         speed[[5, 5, 5]] = 5.0; // Higher stiffness region
 
         let map = elasticity_map_from_speed(speed, DENSITY_WATER_NOMINAL);
@@ -134,15 +142,15 @@ mod tests {
 
     #[test]
     fn test_nonlinear_parameter_statistics() {
-        let nonlinearity_parameter = Array3::from_elem((10, 10, 10), 5.0);
+        let nonlinearity_parameter = Array3::from_elem([10, 10, 10], 5.0);
         let elastic_constants = vec![
-            Array3::from_elem((10, 10, 10), 1.0),
-            Array3::from_elem((10, 10, 10), 2.0),
-            Array3::from_elem((10, 10, 10), 3.0),
-            Array3::from_elem((10, 10, 10), 4.0),
+            Array3::from_elem([10, 10, 10], 1.0),
+            Array3::from_elem([10, 10, 10], 2.0),
+            Array3::from_elem([10, 10, 10], 3.0),
+            Array3::from_elem([10, 10, 10], 4.0),
         ];
-        let nonlinearity_uncertainty = Array3::from_elem((10, 10, 10), 0.5);
-        let estimation_quality = Array3::from_elem((10, 10, 10), 0.9);
+        let nonlinearity_uncertainty = Array3::from_elem([10, 10, 10], 0.5);
+        let estimation_quality = Array3::from_elem([10, 10, 10], 0.9);
 
         let map = NonlinearParameterMap {
             nonlinearity_parameter,

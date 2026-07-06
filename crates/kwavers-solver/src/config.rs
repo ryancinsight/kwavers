@@ -86,7 +86,7 @@ pub enum SolverType {
     FDTD,
     /// Pseudo-spectral Time Domain
     PSTD,
-    /// GPU-resident PSTD (requires `gpu` Cargo feature and a wgpu-compatible device).
+    /// GPU-resident PSTD (requires `gpu` Cargo feature and a Hephaestus-backed provider).
     ///
     /// Grid dimensions must be powers of two with each axis ≤ 256.  Returns
     /// [`KwaversError::FeatureNotAvailable`] when the `gpu` feature is disabled

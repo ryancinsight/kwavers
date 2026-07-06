@@ -32,7 +32,8 @@
 //! - Treeby & Cox (2010). J. Biomed. Opt. 15(2), 021314, Eqs. 9–10, 19–21.
 
 use kwavers_core::constants::ABSORPTION_SINGULARITY_THRESHOLD;
-use ndarray::{s, Array3, Zip};
+use moirai_parallel::{map_collect_index_with, Adaptive};
+use ndarray::{s, Array3};
 
 /// Maximum number of exponent strata. Caps the per-step inverse-FFT count and
 /// the symbol memory; a CT body model spans y ∈ [1.0, 1.1], so an 8-point
@@ -42,6 +43,73 @@ pub(crate) const MAX_STRATA: usize = 8;
 /// Exponents within this absolute tolerance are treated as identical (so a
 /// nominally homogeneous medium maps to the uniform path, not a 1-stratum set).
 pub(crate) const STRATA_UNIFORM_TOL: f64 = 1e-6;
+
+#[inline]
+fn dense_indices(index: usize, ny: usize, nz: usize) -> (usize, usize, usize) {
+    let plane = ny * nz;
+    let i = index / plane;
+    let rem = index % plane;
+    let j = rem / nz;
+    let k = rem % nz;
+    (i, j, k)
+}
+
+fn assign_stratum_brackets(
+    bracket_lo: &mut Array3<u32>,
+    weight_hi: &mut Array3<f64>,
+    y_field: &Array3<f64>,
+    exponents: &[f64],
+) {
+    assert_eq!(
+        bracket_lo.shape(),
+        weight_hi.shape(),
+        "invariant: stratum bracket and weight shapes match"
+    );
+    assert_eq!(
+        bracket_lo.shape(),
+        y_field.shape(),
+        "invariant: stratum bracket shape matches exponent field"
+    );
+
+    let m_count = exponents.len();
+    let assign = |y: f64| -> (u32, f64) {
+        // Largest m with exponents[m] <= y, clamped so m+1 is in range.
+        let m = match exponents.binary_search_by(|e| e.partial_cmp(&y).expect("finite exponent")) {
+            Ok(i) => i.min(m_count - 2),
+            Err(i) => i.saturating_sub(1).min(m_count - 2),
+        };
+        let denom = exponents[m + 1] - exponents[m];
+        let weight = if denom > 0.0 {
+            ((y - exponents[m]) / denom).clamp(0.0, 1.0)
+        } else {
+            0.0
+        };
+        (m as u32, weight)
+    };
+
+    if let (Some(lo_values), Some(weight_values), Some(y_values)) = (
+        bracket_lo.as_slice_memory_order_mut(),
+        weight_hi.as_slice_memory_order_mut(),
+        y_field.as_slice_memory_order(),
+    ) {
+        let assignments = map_collect_index_with::<Adaptive, _, _>(y_values.len(), |index| {
+            assign(y_values[index])
+        });
+        for (index, (lo, weight)) in assignments.into_iter().enumerate() {
+            lo_values[index] = lo;
+            weight_values[index] = weight;
+        }
+        return;
+    }
+
+    let (nx, ny, nz) = bracket_lo.dim();
+    for index in 0..(nx * ny * nz) {
+        let (i, j, k) = dense_indices(index, ny, nz);
+        let (lo, weight) = assign(y_field[[i, j, k]]);
+        bracket_lo[[i, j, k]] = lo;
+        weight_hi[[i, j, k]] = weight;
+    }
+}
 
 /// Spectral operators for a spatially-varying power-law exponent, blended
 /// per-voxel between adjacent exponent strata.
@@ -94,8 +162,6 @@ pub(crate) fn build_exponent_strata(
             .map(|m| y_min + (y_max - y_min) * (m as f64) / ((MAX_STRATA - 1) as f64))
             .collect()
     };
-    let m_count = exponents.len();
-
     // Half-spectrum symbols |k|^(y_m − 2) and |k|^(y_m − 1); DC bin → 0.
     let nz_c = k_mag.dim().2 / 2 + 1;
     let k_half = k_mag.slice(s![.., .., ..nz_c]);
@@ -114,24 +180,7 @@ pub(crate) fn build_exponent_strata(
     // Per-voxel bracket [m, m+1] and blend weight t, reconstructing y exactly.
     let mut bracket_lo = Array3::<u32>::zeros(y_field.dim());
     let mut weight_hi = Array3::<f64>::zeros(y_field.dim());
-    Zip::from(&mut bracket_lo)
-        .and(&mut weight_hi)
-        .and(y_field)
-        .for_each(|lo, t, &y| {
-            // Largest m with exponents[m] ≤ y, clamped so m+1 is in range.
-            let m =
-                match exponents.binary_search_by(|e| e.partial_cmp(&y).expect("finite exponent")) {
-                    Ok(i) => i.min(m_count - 2),
-                    Err(i) => i.saturating_sub(1).min(m_count - 2),
-                };
-            let denom = exponents[m + 1] - exponents[m];
-            *lo = m as u32;
-            *t = if denom > 0.0 {
-                ((y - exponents[m]) / denom).clamp(0.0, 1.0)
-            } else {
-                0.0
-            };
-        });
+    assign_stratum_brackets(&mut bracket_lo, &mut weight_hi, y_field, &exponents);
 
     Some(ExponentStrata {
         exponents,

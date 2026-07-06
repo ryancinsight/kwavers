@@ -53,9 +53,9 @@
 //!   diffractive field propagation." J. Acoust. Soc. Am. 90(1), 488–499.
 //!   DOI: 10.1121/1.401277
 
-use kwavers_math::fft::{Complex64, Fft2d, Shape2D, FFT_CACHE_2D};
-use ndarray::{Array2, ArrayViewMut2, Zip};
-use std::sync::Arc;
+use kwavers_math::fft::{fft_2d_complex_inplace, ifft_2d_complex_inplace, Complex64};
+use moirai_parallel::{enumerate_mut_with, Adaptive};
+use ndarray::{Array2, ArrayViewMut2};
 
 use super::KZKConfig;
 use kwavers_core::constants::numerical::TWO_PI;
@@ -91,8 +91,6 @@ pub struct KzkParabolicDiffractionOperator {
     config: KZKConfig,
     kx2: Array2<f64>,
     ky2: Array2<f64>,
-    /// Cached 2-D FFT plan for the transverse `(nx, ny)` slice shape.
-    fft_plan: Arc<Fft2d>,
     /// Reusable complex field/spectrum buffer.
     ///
     /// The real-field API stores the input as `re + 0i`, transforms the buffer
@@ -155,14 +153,12 @@ impl KzkParabolicDiffractionOperator {
             }
         }
 
-        let fft_plan = FFT_CACHE_2D.get_or_create(Shape2D { nx, ny });
         let scratch = Array2::zeros((nx, ny));
 
         Self {
             config: config.clone(),
             kx2,
             ky2,
-            fft_plan,
             scratch,
         }
     }
@@ -183,11 +179,21 @@ impl KzkParabolicDiffractionOperator {
     fn apply_with_step(&mut self, field: &mut ArrayViewMut2<f64>, step_size: f64, _step: usize) {
         let k0 = TWO_PI * self.config.frequency / self.config.c0;
 
-        Zip::from(&mut self.scratch)
-            .and(field.view())
-            .par_for_each(|s, &x| *s = Complex64::new(x, 0.0));
+        let scratch = self
+            .scratch
+            .as_slice_memory_order_mut()
+            .expect("invariant: KZK parabolic scratch is standard-layout");
+        if let Some(field_values) = field.as_slice_memory_order() {
+            enumerate_mut_with::<Adaptive, _, _>(scratch, |idx, s| {
+                *s = Complex64::new(field_values[idx], 0.0);
+            });
+        } else {
+            for (s, &x) in scratch.iter_mut().zip(field.iter()) {
+                *s = Complex64::new(x, 0.0);
+            }
+        }
 
-        self.fft_plan.forward_complex_inplace(&mut self.scratch);
+        fft_2d_complex_inplace(&mut self.scratch);
 
         // Parabolic diffraction propagator (see module theorem):
         //
@@ -198,24 +204,46 @@ impl KzkParabolicDiffractionOperator {
         // corresponds to the complex-conjugate propagator and must not be used.
         //
         // Refs: Lee & Hamilton (1995) eq. (4); Aanonsen et al. (1984) §3.
-        Zip::indexed(&mut self.scratch).par_for_each(|(i, j), value| {
-            let kt2 = self.kx2[[i, j]] + self.ky2[[i, j]];
+        let kx2 = self
+            .kx2
+            .as_slice_memory_order()
+            .expect("invariant: KZK parabolic kx2 is standard-layout");
+        let ky2 = self
+            .ky2
+            .as_slice_memory_order()
+            .expect("invariant: KZK parabolic ky2 is standard-layout");
+        let scratch = self
+            .scratch
+            .as_slice_memory_order_mut()
+            .expect("invariant: KZK parabolic scratch is standard-layout");
+        enumerate_mut_with::<Adaptive, _, _>(scratch, |idx, value| {
+            let kt2 = kx2[idx] + ky2[idx];
             let phase = kt2 * step_size / (2.0 * k0);
             *value *= Complex64::from_polar(1.0, -phase);
         });
 
-        self.fft_plan.inverse_complex_inplace(&mut self.scratch);
+        ifft_2d_complex_inplace(&mut self.scratch);
 
-        Zip::from(field)
-            .and(&self.scratch)
-            .par_for_each(|out, value| *out = value.re);
+        let scratch = self
+            .scratch
+            .as_slice_memory_order()
+            .expect("invariant: KZK parabolic scratch is standard-layout");
+        if let Some(field_values) = field.as_slice_memory_order_mut() {
+            enumerate_mut_with::<Adaptive, _, _>(field_values, |idx, out| {
+                *out = scratch[idx].re;
+            });
+        } else {
+            for (out, value) in field.iter_mut().zip(scratch.iter()) {
+                *out = value.re;
+            }
+        }
     }
 
     #[cfg(test)]
     fn fft_round_trip_into(&mut self, data: &Array2<Complex64>, recovered: &mut Array2<Complex64>) {
         self.scratch.assign(data);
-        self.fft_plan.forward_complex_inplace(&mut self.scratch);
-        self.fft_plan.inverse_complex_inplace(&mut self.scratch);
+        fft_2d_complex_inplace(&mut self.scratch);
+        ifft_2d_complex_inplace(&mut self.scratch);
 
         recovered.assign(&self.scratch);
     }

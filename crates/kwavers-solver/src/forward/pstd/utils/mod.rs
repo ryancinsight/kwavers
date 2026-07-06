@@ -6,11 +6,92 @@
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_math::fft::{fft_3d_array_into, ifft_3d_complex_inplace, KSpaceCalculator};
-use ndarray::{s, Array3, Axis, Zip};
+use moirai_parallel::{enumerate_mut_with, Adaptive};
+use ndarray::{s, Array3, Axis};
 use num_complex::Complex64;
 
 #[cfg(test)]
 mod tests;
+
+#[derive(Clone, Copy)]
+enum KNormOutput {
+    Squared,
+    Magnitude,
+}
+
+impl KNormOutput {
+    fn finish(self, squared: f64) -> f64 {
+        match self {
+            Self::Squared => squared,
+            Self::Magnitude => squared.sqrt(),
+        }
+    }
+}
+
+fn fill_k_norm(
+    output: &mut Array3<f64>,
+    kx: &Array3<f64>,
+    ky: &Array3<f64>,
+    kz: &Array3<f64>,
+    output_kind: KNormOutput,
+) {
+    assert_eq!(
+        output.shape(),
+        kx.shape(),
+        "invariant: PSTD k-norm output shape matches kx"
+    );
+    assert_eq!(
+        output.shape(),
+        ky.shape(),
+        "invariant: PSTD k-norm output shape matches ky"
+    );
+    assert_eq!(
+        output.shape(),
+        kz.shape(),
+        "invariant: PSTD k-norm output shape matches kz"
+    );
+
+    if let (Some(output_values), Some(kx_values), Some(ky_values), Some(kz_values)) = (
+        output.as_slice_memory_order_mut(),
+        kx.as_slice_memory_order(),
+        ky.as_slice_memory_order(),
+        kz.as_slice_memory_order(),
+    ) {
+        enumerate_mut_with::<Adaptive, _, _>(output_values, |index, value| {
+            let squared = kz_values[index].mul_add(
+                kz_values[index],
+                kx_values[index].mul_add(kx_values[index], ky_values[index] * ky_values[index]),
+            );
+            *value = output_kind.finish(squared);
+        });
+    } else {
+        let (nx, ny, nz) = output.dim();
+        for k in 0..nz {
+            for j in 0..ny {
+                for i in 0..nx {
+                    let squared = kz[[i, j, k]].mul_add(
+                        kz[[i, j, k]],
+                        kx[[i, j, k]].mul_add(kx[[i, j, k]], ky[[i, j, k]] * ky[[i, j, k]]),
+                    );
+                    output[[i, j, k]] = output_kind.finish(squared);
+                }
+            }
+        }
+    }
+}
+
+fn scale_complex_view_in_place(
+    mut values: ndarray::ArrayViewMut2<'_, Complex64>,
+    scale: Complex64,
+) {
+    if let Some(slice) = values.as_slice_memory_order_mut() {
+        enumerate_mut_with::<Adaptive, _, _>(slice, |_index, value| {
+            *value *= scale;
+        });
+    } else {
+        values.iter_mut().for_each(|value| *value *= scale);
+    }
+}
 
 /// Compute wavenumber arrays for spectral operations
 /// Returns (kx, ky, kz) arrays with proper Nyquist handling
@@ -78,15 +159,7 @@ pub fn compute_anti_aliasing_filter(grid: &Grid, cutoff: f64, order: u32) -> Arr
 #[must_use]
 pub fn compute_k_squared(kx: &Array3<f64>, ky: &Array3<f64>, kz: &Array3<f64>) -> Array3<f64> {
     let mut k_squared = Array3::zeros(kx.dim());
-
-    Zip::from(&mut k_squared)
-        .and(kx)
-        .and(ky)
-        .and(kz)
-        .par_for_each(|k2, &kx_val, &ky_val, &kz_val| {
-            *k2 = kz_val.mul_add(kz_val, kx_val.mul_add(kx_val, ky_val * ky_val));
-        });
-
+    fill_k_norm(&mut k_squared, kx, ky, kz, KNormOutput::Squared);
     k_squared
 }
 
@@ -94,17 +167,7 @@ pub fn compute_k_squared(kx: &Array3<f64>, ky: &Array3<f64>, kz: &Array3<f64>) -
 #[must_use]
 pub fn compute_k_magnitude(kx: &Array3<f64>, ky: &Array3<f64>, kz: &Array3<f64>) -> Array3<f64> {
     let mut k_mag = Array3::zeros(kx.dim());
-
-    Zip::from(&mut k_mag)
-        .and(kx)
-        .and(ky)
-        .and(kz)
-        .par_for_each(|km, &kx_val, &ky_val, &kz_val| {
-            *km = kz_val
-                .mul_add(kz_val, kx_val.mul_add(kx_val, ky_val * ky_val))
-                .sqrt();
-        });
-
+    fill_k_norm(&mut k_mag, kx, ky, kz, KNormOutput::Magnitude);
     k_mag
 }
 
@@ -130,8 +193,7 @@ fn spectral_deriv_axis(field: &Array3<f64>, grid: &Grid, axis: usize) -> Array3<
     // outside the per-element loop; inner loop is branch-free and vectorisable.
     for (idx, &ki) in k_vec.iter().enumerate() {
         let scale = Complex64::new(0.0, ki);
-        fhat.index_axis_mut(Axis(axis), idx)
-            .par_mapv_inplace(|c| c * scale);
+        scale_complex_view_in_place(fhat.index_axis_mut(Axis(axis), idx), scale);
     }
 
     ifft_3d_complex_inplace(&mut fhat);

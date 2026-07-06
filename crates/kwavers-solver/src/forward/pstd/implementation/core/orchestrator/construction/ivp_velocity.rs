@@ -2,8 +2,257 @@
 
 use super::PSTDSolver;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_math::fft::Fft3dInOutExt;
-use ndarray::Zip;
+use kwavers_math::fft::{Complex64, Fft3dInOutExt};
+use moirai_parallel::{enumerate_mut_with, for_each_chunk_triple_mut_enumerated_with, Adaptive};
+use ndarray::{Array1, Array3};
+
+const DENSE_IVP_CHUNK: usize = 4096;
+
+struct DensitySeedFields<'a> {
+    rhox: &'a mut Array3<f64>,
+    rhoy: &'a mut Array3<f64>,
+    rhoz: &'a mut Array3<f64>,
+    pressure: &'a Array3<f64>,
+    c0: &'a Array3<f64>,
+}
+
+struct DensitySeedConfig {
+    divisor: f64,
+    has_y: bool,
+    has_z: bool,
+}
+
+#[derive(Clone, Copy)]
+enum GradientAxis {
+    X,
+    Y,
+    Z,
+}
+
+impl GradientAxis {
+    fn factor_index(self, i: usize, j: usize, k: usize) -> usize {
+        match self {
+            Self::X => i,
+            Self::Y => j,
+            Self::Z => k,
+        }
+    }
+}
+
+fn dense_indices(index: usize, ny: usize, nz: usize) -> (usize, usize, usize) {
+    let plane = ny * nz;
+    let i = index / plane;
+    let rem = index % plane;
+    let j = rem / nz;
+    let k = rem % nz;
+    (i, j, k)
+}
+
+fn sinc_from_source_kappa(kap: f64) -> f64 {
+    let theta = kap.clamp(-1.0, 1.0).acos();
+    if theta < 1e-30 {
+        1.0
+    } else {
+        theta.sin() / theta
+    }
+}
+
+fn seed_density_components_from_pressure(fields: DensitySeedFields<'_>, config: DensitySeedConfig) {
+    let DensitySeedFields {
+        rhox,
+        rhoy,
+        rhoz,
+        pressure,
+        c0,
+    } = fields;
+    assert_eq!(
+        rhox.shape(),
+        rhoy.shape(),
+        "invariant: PSTD IVP rhox and rhoy shapes match"
+    );
+    assert_eq!(
+        rhox.shape(),
+        rhoz.shape(),
+        "invariant: PSTD IVP rhox and rhoz shapes match"
+    );
+    assert_eq!(
+        rhox.shape(),
+        pressure.shape(),
+        "invariant: PSTD IVP density shape matches pressure shape"
+    );
+    assert_eq!(
+        rhox.shape(),
+        c0.shape(),
+        "invariant: PSTD IVP density shape matches sound-speed shape"
+    );
+
+    let used_dense_path = if rhox.is_standard_layout()
+        && rhoy.is_standard_layout()
+        && rhoz.is_standard_layout()
+        && pressure.is_standard_layout()
+        && c0.is_standard_layout()
+    {
+        match (
+            rhox.as_slice_memory_order_mut(),
+            rhoy.as_slice_memory_order_mut(),
+            rhoz.as_slice_memory_order_mut(),
+            pressure.as_slice_memory_order(),
+            c0.as_slice_memory_order(),
+        ) {
+            (Some(rx_values), Some(ry_values), Some(rz_values), Some(p_values), Some(c_values)) => {
+                for_each_chunk_triple_mut_enumerated_with::<Adaptive, _, _, _, _>(
+                    rx_values,
+                    ry_values,
+                    rz_values,
+                    DENSE_IVP_CHUNK,
+                    |chunk_index, rx_chunk, ry_chunk, rz_chunk| {
+                        let start = chunk_index * DENSE_IVP_CHUNK;
+                        for (offset, rx) in rx_chunk.iter_mut().enumerate() {
+                            let index = start + offset;
+                            let c = c_values[index];
+                            let share = if c > 1e-6 {
+                                p_values[index] / (c * c) / config.divisor
+                            } else {
+                                0.0
+                            };
+                            *rx = share;
+                            ry_chunk[offset] = if config.has_y { share } else { 0.0 };
+                            rz_chunk[offset] = if config.has_z { share } else { 0.0 };
+                        }
+                    },
+                );
+                true
+            }
+            _ => false,
+        }
+    } else {
+        false
+    };
+
+    if !used_dense_path {
+        let (nx, ny, nz) = rhox.dim();
+        for k in 0..nz {
+            for j in 0..ny {
+                for i in 0..nx {
+                    let c = c0[[i, j, k]];
+                    let share = if c > 1e-6 {
+                        pressure[[i, j, k]] / (c * c) / config.divisor
+                    } else {
+                        0.0
+                    };
+                    rhox[[i, j, k]] = share;
+                    rhoy[[i, j, k]] = if config.has_y { share } else { 0.0 };
+                    rhoz[[i, j, k]] = if config.has_z { share } else { 0.0 };
+                }
+            }
+        }
+    }
+}
+
+fn write_spectral_gradient_axis(
+    grad_k: &mut Array3<Complex64>,
+    source_kappa: &Array3<f64>,
+    p_k: &Array3<Complex64>,
+    shift: &Array1<Complex64>,
+    axis: GradientAxis,
+) {
+    assert_eq!(
+        grad_k.shape(),
+        source_kappa.shape(),
+        "invariant: PSTD IVP gradient shape matches source kappa shape"
+    );
+    assert_eq!(
+        grad_k.shape(),
+        p_k.shape(),
+        "invariant: PSTD IVP gradient shape matches pressure spectrum shape"
+    );
+
+    let (nx, ny, nz) = grad_k.dim();
+    let expected_len = match axis {
+        GradientAxis::X => nx,
+        GradientAxis::Y => ny,
+        GradientAxis::Z => nz,
+    };
+    assert_eq!(
+        shift.len(),
+        expected_len,
+        "invariant: PSTD IVP shift length matches selected gradient axis"
+    );
+
+    let used_dense_path = if grad_k.is_standard_layout()
+        && source_kappa.is_standard_layout()
+        && p_k.is_standard_layout()
+    {
+        match (
+            grad_k.as_slice_memory_order_mut(),
+            source_kappa.as_slice_memory_order(),
+            p_k.as_slice_memory_order(),
+        ) {
+            (Some(grad_values), Some(kappa_values), Some(p_values)) => {
+                enumerate_mut_with::<Adaptive, _, _>(grad_values, |index, grad| {
+                    let (i, j, k) = dense_indices(index, ny, nz);
+                    let shift_factor = shift[axis.factor_index(i, j, k)];
+                    *grad = shift_factor
+                        * sinc_from_source_kappa(kappa_values[index])
+                        * p_values[index];
+                });
+                true
+            }
+            _ => false,
+        }
+    } else {
+        false
+    };
+
+    if !used_dense_path {
+        for k in 0..nz {
+            for j in 0..ny {
+                for i in 0..nx {
+                    let shift_factor = shift[axis.factor_index(i, j, k)];
+                    grad_k[[i, j, k]] = shift_factor
+                        * sinc_from_source_kappa(source_kappa[[i, j, k]])
+                        * p_k[[i, j, k]];
+                }
+            }
+        }
+    }
+}
+
+fn scale_velocity_by_density(velocity: &mut Array3<f64>, rho0: &Array3<f64>, half_dt: f64) {
+    assert_eq!(
+        velocity.shape(),
+        rho0.shape(),
+        "invariant: PSTD IVP velocity shape matches density shape"
+    );
+
+    let used_dense_path = if velocity.is_standard_layout() && rho0.is_standard_layout() {
+        match (
+            velocity.as_slice_memory_order_mut(),
+            rho0.as_slice_memory_order(),
+        ) {
+            (Some(velocity_values), Some(rho_values)) => {
+                enumerate_mut_with::<Adaptive, _, _>(velocity_values, |index, velocity| {
+                    *velocity *= half_dt / rho_values[index];
+                });
+                true
+            }
+            _ => false,
+        }
+    } else {
+        false
+    };
+
+    if !used_dense_path {
+        let (nx, ny, nz) = velocity.dim();
+        for k in 0..nz {
+            for j in 0..ny {
+                for i in 0..nx {
+                    velocity[[i, j, k]] *= half_dt / rho0[[i, j, k]];
+                }
+            }
+        }
+    }
+}
 
 impl PSTDSolver {
     /// Seed the full PSTD state for a zero-initial-velocity initial-value problem
@@ -25,17 +274,20 @@ impl PSTDSolver {
         let has_y = self.grid.ny > 1;
         let has_z = self.grid.nz > 1;
         let divisor = (1 + has_y as usize + has_z as usize) as f64;
-        Zip::from(&mut self.rhox)
-            .and(&mut self.rhoy)
-            .and(&mut self.rhoz)
-            .and(&self.fields.p)
-            .and(&self.materials.c0)
-            .par_for_each(|rx, ry, rz, &p, &c| {
-                let share = if c > 1e-6 { p / (c * c) / divisor } else { 0.0 };
-                *rx = share;
-                *ry = if has_y { share } else { 0.0 };
-                *rz = if has_z { share } else { 0.0 };
-            });
+        seed_density_components_from_pressure(
+            DensitySeedFields {
+                rhox: &mut self.rhox,
+                rhoy: &mut self.rhoy,
+                rhoz: &mut self.rhoz,
+                pressure: &self.fields.p,
+                c0: &self.materials.c0,
+            },
+            DensitySeedConfig {
+                divisor,
+                has_y,
+                has_z,
+            },
+        );
         self.initialize_ivp_velocity()
     }
 
@@ -87,78 +339,45 @@ impl PSTDSolver {
         // This replaces the old precompute-into-div_u pass, which allocated a full
         // (nx,ny,nz) scratch for a value used only on (nx,ny,nz_c) — Opt-10.
         {
-            let ddx = self.ddx_k_shift_pos.view();
-            let p_k = self.p_k.view();
-            Zip::indexed(self.grad_k.view_mut())
-                .and(self.source_kappa.view())
-                .and(p_k)
-                .par_for_each(|(i, _j, _k), gk, &kap, &p| {
-                    let theta = kap.clamp(-1.0, 1.0).acos();
-                    let sinc_kap = if theta < 1e-30 {
-                        1.0
-                    } else {
-                        theta.sin() / theta
-                    };
-                    *gk = ddx[i] * sinc_kap * p;
-                });
+            write_spectral_gradient_axis(
+                &mut self.grad_k,
+                &self.source_kappa,
+                &self.p_k,
+                &self.ddx_k_shift_pos,
+                GradientAxis::X,
+            );
         }
         self.fft
             .inverse_c2r_into(&self.grad_k, &mut self.fields.ux, &mut self.ux_k);
-        Zip::from(&mut self.fields.ux)
-            .and(&self.materials.rho0)
-            .par_for_each(|u, &rho| {
-                *u *= half_dt / rho;
-            });
+        scale_velocity_by_density(&mut self.fields.ux, &self.materials.rho0, half_dt);
 
         if has_y {
-            let ddy = self.ddy_k_shift_pos.view();
-            let p_k = self.p_k.view();
-            Zip::indexed(self.grad_k.view_mut())
-                .and(self.source_kappa.view())
-                .and(p_k)
-                .par_for_each(|(_i, j, _k), gk, &kap, &p| {
-                    let theta = kap.clamp(-1.0, 1.0).acos();
-                    let sinc_kap = if theta < 1e-30 {
-                        1.0
-                    } else {
-                        theta.sin() / theta
-                    };
-                    *gk = ddy[j] * sinc_kap * p;
-                });
+            write_spectral_gradient_axis(
+                &mut self.grad_k,
+                &self.source_kappa,
+                &self.p_k,
+                &self.ddy_k_shift_pos,
+                GradientAxis::Y,
+            );
             self.fft
                 .inverse_c2r_into(&self.grad_k, &mut self.fields.uy, &mut self.ux_k);
-            Zip::from(&mut self.fields.uy)
-                .and(&self.materials.rho0)
-                .par_for_each(|u, &rho| {
-                    *u *= half_dt / rho;
-                });
+            scale_velocity_by_density(&mut self.fields.uy, &self.materials.rho0, half_dt);
         } else {
             self.fields.uy.fill(0.0);
         }
 
         if has_z {
             // ddz has length nz_c (truncated in construction); k_idx ∈ [0, nz_c).
-            let ddz = self.ddz_k_shift_pos.view();
-            let p_k = self.p_k.view();
-            Zip::indexed(self.grad_k.view_mut())
-                .and(self.source_kappa.view())
-                .and(p_k)
-                .par_for_each(|(_i, _j, k_idx), gk, &kap, &p| {
-                    let theta = kap.clamp(-1.0, 1.0).acos();
-                    let sinc_kap = if theta < 1e-30 {
-                        1.0
-                    } else {
-                        theta.sin() / theta
-                    };
-                    *gk = ddz[k_idx] * sinc_kap * p;
-                });
+            write_spectral_gradient_axis(
+                &mut self.grad_k,
+                &self.source_kappa,
+                &self.p_k,
+                &self.ddz_k_shift_pos,
+                GradientAxis::Z,
+            );
             self.fft
                 .inverse_c2r_into(&self.grad_k, &mut self.fields.uz, &mut self.ux_k);
-            Zip::from(&mut self.fields.uz)
-                .and(&self.materials.rho0)
-                .par_for_each(|u, &rho| {
-                    *u *= half_dt / rho;
-                });
+            scale_velocity_by_density(&mut self.fields.uz, &self.materials.rho0, half_dt);
         } else {
             self.fields.uz.fill(0.0);
         }

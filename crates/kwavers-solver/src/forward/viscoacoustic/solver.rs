@@ -7,7 +7,9 @@
 
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_math::fft::{get_fft_for_grid, Complex64, Fft3d};
+use kwavers_math::fft::{
+    fft_3d_axis_complex_inplace, get_fft_for_grid, ifft_3d_axis_complex_inplace, Complex64, Fft3d,
+};
 use kwavers_medium::viscoelastic::GeneralizedMaxwellModel;
 use ndarray::{Array3, Axis, Zip};
 use std::sync::Arc;
@@ -597,12 +599,12 @@ impl ViscoacousticMemorySolver {
         Zip::from(&mut *cbuf)
             .and(field)
             .for_each(|c, &f| *c = Complex64::new(f, 0.0));
-        fft.forward_axis_complex_inplace(cbuf, axis);
+        fft_3d_axis_complex_inplace(fft, cbuf, axis);
         for (m, mut lane) in cbuf.axis_iter_mut(Axis(axis)).enumerate() {
             let factor = Complex64::new(0.0, k[m]);
             lane.mapv_inplace(|v| v * factor);
         }
-        fft.inverse_axis_complex_inplace(cbuf, axis);
+        ifft_3d_axis_complex_inplace(fft, cbuf, axis);
         Zip::from(&mut *out).and(&*cbuf).for_each(|o, c| *o = c.re);
     }
 

@@ -1,11 +1,11 @@
 //! Direct inversion — Gauss-Seidel optimization of `J(k²) = ‖∇²u + k²u‖² + λ‖∇k²‖²`.
 
-use ndarray::Array3;
-
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_imaging::ultrasound::elastography::ElasticityMap;
 use kwavers_physics::acoustics::imaging::modalities::elastography::displacement::DisplacementField;
+use leto::Array3 as LetoArray3;
+use ndarray::Array3;
 
 use super::super::algorithms::{fill_boundaries, spatial_smoothing};
 use super::super::types::elasticity_map_from_speed;
@@ -38,7 +38,7 @@ pub(super) fn direct_inversion(
     frequency: f64,
 ) -> KwaversResult<ElasticityMap> {
     let (nx, ny, nz) = displacement.uz.dim();
-    let mut shear_wave_speed = Array3::zeros((nx, ny, nz));
+    let mut shear_wave_speed = LetoArray3::zeros([nx, ny, nz]);
 
     // 1. Compute Laplacian of displacement field
     let laplacian = compute_laplacian(&displacement.uz, grid);

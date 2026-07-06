@@ -99,13 +99,13 @@ fn fwi_outperforms_linear_inversion() {
     };
     let mu_fwi = reconstruct_lesion_transmission(&g, &m, &mu_true, &params).expect("fwi");
 
-    let stat = |mask_in: bool, arr: &Array3<f64>| {
+    let stat = |mask_in: bool, value_at: &dyn Fn(usize, usize) -> f64| {
         let (mut sum, mut peak, mut cnt) = (0.0, 0.0_f64, 0);
         for i in 8..28 {
             for j in 8..28 {
                 let inside = (i as f64 - c).hypot(j as f64 - c) <= 5.0;
                 if inside == mask_in {
-                    let v = arr[[i, j, 0]];
+                    let v = value_at(i, j);
                     sum += v;
                     peak = peak.max(v);
                     cnt += 1;
@@ -114,10 +114,12 @@ fn fwi_outperforms_linear_inversion() {
         }
         (sum / cnt as f64, peak)
     };
-    let (lin_bg, _) = stat(false, &mu_lin);
-    let (_, lin_peak) = stat(true, &mu_lin);
-    let (fwi_bg, _) = stat(false, &mu_fwi);
-    let (_, fwi_peak) = stat(true, &mu_fwi);
+    let sample_lin = |i: usize, j: usize| mu_lin[[i, j, 0]];
+    let sample_fwi = |i: usize, j: usize| mu_fwi[[i, j, 0]];
+    let (lin_bg, _) = stat(false, &sample_lin);
+    let (_, lin_peak) = stat(true, &sample_lin);
+    let (fwi_bg, _) = stat(false, &sample_fwi);
+    let (_, fwi_peak) = stat(true, &sample_fwi);
 
     // FWI is accurate in absolute terms.
     assert!(

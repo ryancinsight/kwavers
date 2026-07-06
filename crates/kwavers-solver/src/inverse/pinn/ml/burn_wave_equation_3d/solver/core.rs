@@ -16,7 +16,7 @@ use super::super::wavespeed::WaveSpeedFn3D;
 ///
 /// # Type Parameters
 ///
-/// * `B` - Backend type (e.g., NdArray, Autodiff<NdArray>, WGPU)
+/// * `B` - Burn backend type for the current CPU PINN implementation.
 ///
 /// # Fields
 ///

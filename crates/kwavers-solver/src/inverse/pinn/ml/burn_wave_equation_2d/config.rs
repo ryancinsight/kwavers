@@ -29,7 +29,6 @@ pub struct BurnPINN2DConfig {
     #[config(default = 1000)]
     pub num_collocation_points: usize,
     /// Boundary condition type
-    #[config(default = "BoundaryCondition2D::Dirichlet")]
     pub boundary_condition: BoundaryCondition2D,
 }
 
@@ -44,7 +43,6 @@ impl Default for BurnPINN2DConfig {
         }
     }
 }
-
 /// Loss function weight configuration for 2D PINN
 #[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize)]
 pub struct BurnLossWeights2D {

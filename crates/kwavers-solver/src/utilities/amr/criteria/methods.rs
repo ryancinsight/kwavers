@@ -4,6 +4,9 @@
 //! `ErrorEstimator::estimate_error` in `mod.rs`.
 
 use super::ErrorEstimator;
+#[cfg(test)]
+use super::RefinementCriterion;
+use crate::workspace::inplace_ops::scale_inplace;
 use kwavers_core::error::KwaversResult;
 use ndarray::{Array2, Array3, Axis};
 
@@ -144,7 +147,7 @@ impl ErrorEstimator {
 
         let max_error = error.iter().fold(0.0_f64, |max, &val| max.max(val));
         if max_error > 1e-10 {
-            error.par_mapv_inplace(|e| e / max_error);
+            scale_inplace(&mut error, 1.0 / max_error);
         }
 
         if self.smoothing > 0.0 {
@@ -212,7 +215,7 @@ impl ErrorEstimator {
 
         let max_error = error.iter().fold(0.0_f64, |max, &val| max.max(val));
         if max_error > 1e-10 {
-            error.par_mapv_inplace(|e| e / max_error);
+            scale_inplace(&mut error, 1.0 / max_error);
         }
 
         Ok(error)
@@ -287,5 +290,27 @@ impl ErrorEstimator {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn physics_error_normalizes_by_maximum_indicator() {
+        let estimator = ErrorEstimator {
+            criterion: RefinementCriterion::Physics,
+            smoothing: 0.0,
+        };
+        let mut field = Array3::zeros((5, 5, 5));
+        field[[2, 2, 2]] = 10.0;
+        field[[2, 2, 3]] = 4.0;
+
+        let error = estimator.physics_error(&field).unwrap();
+        let max_error = error.iter().fold(0.0_f64, |max, &value| max.max(value));
+
+        assert_eq!(max_error, 1.0);
+        assert!(error[[2, 2, 2]] > 0.0);
     }
 }

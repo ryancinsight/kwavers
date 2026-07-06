@@ -49,8 +49,259 @@
 use crate::forward::pstd::implementation::core::orchestrator::PSTDSolver;
 use crate::geometry::SolverGeometry;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_math::fft::Fft3dInOutExt;
-use ndarray::{s, Zip};
+use kwavers_math::fft::{Complex64, Fft3dInOutExt};
+use moirai_parallel::{enumerate_mut_with, Adaptive};
+use ndarray::{s, Array1, Array2, Array3, ArrayView2, ArrayViewMut2};
+
+#[derive(Clone, Copy)]
+enum VelocityAxis {
+    X,
+    Y,
+    Z,
+}
+
+#[derive(Clone, Copy)]
+enum AsVelocityAxis {
+    X,
+    R,
+}
+
+#[inline]
+fn dense_indices(index: usize, ny: usize, nz: usize) -> (usize, usize, usize) {
+    let plane = ny * nz;
+    let i = index / plane;
+    let rem = index % plane;
+    let j = rem / nz;
+    let k = rem % nz;
+    (i, j, k)
+}
+
+#[inline]
+fn dense_indices_2(index: usize, nr: usize) -> (usize, usize) {
+    (index / nr, index % nr)
+}
+
+#[inline]
+fn axis_index(axis: VelocityAxis, i: usize, j: usize, k: usize) -> usize {
+    match axis {
+        VelocityAxis::X => i,
+        VelocityAxis::Y => j,
+        VelocityAxis::Z => k,
+    }
+}
+
+#[inline]
+fn as_pml_index(axis: AsVelocityAxis, i: usize, k: usize) -> usize {
+    match axis {
+        AsVelocityAxis::X => i,
+        AsVelocityAxis::R => k,
+    }
+}
+
+fn apply_shifted_kappa(
+    grad_k: &mut Array3<Complex64>,
+    spectrum: &Array3<Complex64>,
+    kappa: &Array3<f64>,
+    shift: &Array1<Complex64>,
+    axis: VelocityAxis,
+) {
+    assert_eq!(
+        grad_k.shape(),
+        spectrum.shape(),
+        "invariant: PSTD velocity gradient spectrum shape matches pressure spectrum"
+    );
+    assert_eq!(
+        grad_k.shape(),
+        kappa.shape(),
+        "invariant: PSTD velocity gradient spectrum shape matches kappa"
+    );
+
+    let (_nx, ny, nz) = grad_k.dim();
+    if let (Some(grad_values), Some(spectrum_values), Some(kappa_values), Some(shift_values)) = (
+        grad_k.as_slice_memory_order_mut(),
+        spectrum.as_slice_memory_order(),
+        kappa.as_slice_memory_order(),
+        shift.as_slice(),
+    ) {
+        enumerate_mut_with::<Adaptive, _, _>(grad_values, |index, grad| {
+            let (i, j, k) = dense_indices(index, ny, nz);
+            *grad = (shift_values[axis_index(axis, i, j, k)] * spectrum_values[index])
+                * kappa_values[index];
+        });
+        return;
+    }
+
+    let (nx, ny, nz) = grad_k.dim();
+    for k in 0..nz {
+        for j in 0..ny {
+            for i in 0..nx {
+                grad_k[[i, j, k]] =
+                    (shift[axis_index(axis, i, j, k)] * spectrum[[i, j, k]]) * kappa[[i, j, k]];
+            }
+        }
+    }
+}
+
+fn update_velocity_fused(
+    velocity: &mut Array3<f64>,
+    gradient: &Array3<f64>,
+    rho0: &Array3<f64>,
+    pml: &[f64],
+    axis: VelocityAxis,
+    dt: f64,
+) {
+    assert_eq!(
+        velocity.shape(),
+        gradient.shape(),
+        "invariant: PSTD velocity shape matches pressure gradient"
+    );
+    assert_eq!(
+        velocity.shape(),
+        rho0.shape(),
+        "invariant: PSTD velocity shape matches rho0"
+    );
+
+    let (_nx, ny, nz) = velocity.dim();
+    if let (Some(velocity_values), Some(gradient_values), Some(rho_values)) = (
+        velocity.as_slice_memory_order_mut(),
+        gradient.as_slice_memory_order(),
+        rho0.as_slice_memory_order(),
+    ) {
+        enumerate_mut_with::<Adaptive, _, _>(velocity_values, |index, velocity| {
+            let (i, j, k) = dense_indices(index, ny, nz);
+            let p = pml[axis_index(axis, i, j, k)];
+            *velocity = p * (p * *velocity - (dt / rho_values[index]) * gradient_values[index]);
+        });
+        return;
+    }
+
+    let (nx, ny, nz) = velocity.dim();
+    for k in 0..nz {
+        for j in 0..ny {
+            for i in 0..nx {
+                let p = pml[axis_index(axis, i, j, k)];
+                velocity[[i, j, k]] =
+                    p * (p * velocity[[i, j, k]] - (dt / rho0[[i, j, k]]) * gradient[[i, j, k]]);
+            }
+        }
+    }
+}
+
+fn update_velocity_unfused(
+    velocity: &mut Array3<f64>,
+    gradient: &Array3<f64>,
+    rho0: &Array3<f64>,
+    dt: f64,
+) {
+    assert_eq!(
+        velocity.shape(),
+        gradient.shape(),
+        "invariant: PSTD velocity shape matches pressure gradient"
+    );
+    assert_eq!(
+        velocity.shape(),
+        rho0.shape(),
+        "invariant: PSTD velocity shape matches rho0"
+    );
+
+    if let (Some(velocity_values), Some(gradient_values), Some(rho_values)) = (
+        velocity.as_slice_memory_order_mut(),
+        gradient.as_slice_memory_order(),
+        rho0.as_slice_memory_order(),
+    ) {
+        enumerate_mut_with::<Adaptive, _, _>(velocity_values, |index, velocity| {
+            *velocity -= (dt / rho_values[index]) * gradient_values[index];
+        });
+        return;
+    }
+
+    let (nx, ny, nz) = velocity.dim();
+    for k in 0..nz {
+        for j in 0..ny {
+            for i in 0..nx {
+                velocity[[i, j, k]] -= (dt / rho0[[i, j, k]]) * gradient[[i, j, k]];
+            }
+        }
+    }
+}
+
+fn update_axisymmetric_velocity_fused(
+    mut velocity: ArrayViewMut2<'_, f64>,
+    gradient: &Array2<f64>,
+    rho0: ArrayView2<'_, f64>,
+    pml: &[f64],
+    axis: AsVelocityAxis,
+    dt: f64,
+) {
+    assert_eq!(
+        velocity.shape(),
+        gradient.shape(),
+        "invariant: AS velocity shape matches pressure gradient"
+    );
+    assert_eq!(
+        velocity.shape(),
+        rho0.shape(),
+        "invariant: AS velocity shape matches rho0"
+    );
+
+    let (_nx, nr) = velocity.dim();
+    if let (Some(velocity_values), Some(gradient_values), Some(rho_values)) = (
+        velocity.as_slice_memory_order_mut(),
+        gradient.as_slice_memory_order(),
+        rho0.as_slice_memory_order(),
+    ) {
+        enumerate_mut_with::<Adaptive, _, _>(velocity_values, |index, velocity| {
+            let (i, k) = dense_indices_2(index, nr);
+            let p = pml[as_pml_index(axis, i, k)];
+            *velocity = p * (p * *velocity - (dt / rho_values[index]) * gradient_values[index]);
+        });
+        return;
+    }
+
+    let (nx, nr) = velocity.dim();
+    for k in 0..nr {
+        for i in 0..nx {
+            let p = pml[as_pml_index(axis, i, k)];
+            velocity[[i, k]] = p * (p * velocity[[i, k]] - (dt / rho0[[i, k]]) * gradient[[i, k]]);
+        }
+    }
+}
+
+fn update_axisymmetric_velocity_unfused(
+    mut velocity: ArrayViewMut2<'_, f64>,
+    gradient: &Array2<f64>,
+    rho0: ArrayView2<'_, f64>,
+    dt: f64,
+) {
+    assert_eq!(
+        velocity.shape(),
+        gradient.shape(),
+        "invariant: AS velocity shape matches pressure gradient"
+    );
+    assert_eq!(
+        velocity.shape(),
+        rho0.shape(),
+        "invariant: AS velocity shape matches rho0"
+    );
+
+    if let (Some(velocity_values), Some(gradient_values), Some(rho_values)) = (
+        velocity.as_slice_memory_order_mut(),
+        gradient.as_slice_memory_order(),
+        rho0.as_slice_memory_order(),
+    ) {
+        enumerate_mut_with::<Adaptive, _, _>(velocity_values, |index, velocity| {
+            *velocity -= (dt / rho_values[index]) * gradient_values[index];
+        });
+        return;
+    }
+
+    let (nx, nr) = velocity.dim();
+    for k in 0..nr {
+        for i in 0..nx {
+            velocity[[i, k]] -= (dt / rho0[[i, k]]) * gradient[[i, k]];
+        }
+    }
+}
 
 impl PSTDSolver {
     /// Update velocity fields based on pressure gradients (Momentum Conservation).
@@ -76,7 +327,7 @@ impl PSTDSolver {
     /// ## Split-field PML — fused vs. fallback paths
     ///
     /// When `self.pml_exp` is populated (CPML boundary, no Dirichlet bypass), the
-    /// update is **fused** into a single Zip pass per axis:
+    /// update is **fused** into a single dense pass per axis:
     /// ```text
     ///   u_x^{n+1}[i,j,k] = p[i] · (p[i] · u_x^n[i,j,k] − (Δt/ρ₀) · ∂p/∂x)
     /// ```
@@ -104,7 +355,7 @@ impl PSTDSolver {
 
         // Extract precomputed PML factors (or fall back if unavailable / Dirichlet bypass).
         // Taking the slice references here avoids borrow-checker conflicts with the
-        // mutable field borrows in the Zip loops below (disjoint struct fields).
+        // mutable field borrows in the dense loops below (disjoint struct fields).
         let use_fused = self.pml_exp.is_some() && self.dirichlet_pml_bypass_x.is_empty();
 
         if use_fused {
@@ -114,15 +365,13 @@ impl PSTDSolver {
             // simultaneous `&self.pml_exp` and `&mut self.fields.ux` / `&self.dpx`.
             //
             // X-direction — PML factor indexed by i (row-major outer index).
-            {
-                let ddx = self.ddx_k_shift_pos.view();
-                Zip::indexed(self.grad_k.view_mut())
-                    .and(self.p_k.view())
-                    .and(self.kappa.view())
-                    .par_for_each(|(i, _j, _k), gk, &p_val, &kap| {
-                        *gk = (ddx[i] * p_val) * kap;
-                    });
-            }
+            apply_shifted_kappa(
+                &mut self.grad_k,
+                &self.p_k,
+                &self.kappa,
+                &self.ddx_k_shift_pos,
+                VelocityAxis::X,
+            );
             self.fft
                 .inverse_c2r_into(&self.grad_k, &mut self.dpx, &mut self.ux_k);
             // Fused: u = pml * (pml * u - (dt/rho) * dp)
@@ -135,62 +384,65 @@ impl PSTDSolver {
             let pml_vx = pml_exp.vel_x.as_slice().ok_or_else(|| {
                 KwaversError::InternalError("pml_vel_x must be contiguous".into())
             })?;
-            Zip::indexed(self.fields.ux.view_mut())
-                .and(&self.dpx)
-                .and(&self.materials.rho0)
-                .par_for_each(|(i, _j, _k), u, &dp, &rho| {
-                    let p = pml_vx[i];
-                    *u = p * (p * *u - (dt / rho) * dp);
-                });
+            update_velocity_fused(
+                &mut self.fields.ux,
+                &self.dpx,
+                &self.materials.rho0,
+                pml_vx,
+                VelocityAxis::X,
+                dt,
+            );
 
             // Y-direction — PML factor indexed by j (middle index).
             if has_y {
-                let ddy = self.ddy_k_shift_pos.view();
-                Zip::indexed(self.grad_k.view_mut())
-                    .and(self.p_k.view())
-                    .and(self.kappa.view())
-                    .par_for_each(|(_i, j, _k), gk, &p_val, &kap| {
-                        *gk = (ddy[j] * p_val) * kap;
-                    });
-                // Reuse dpx for y-gradient IFFT (Opt-12): x-axis Zip has completed;
-                // dpx is free to overwrite before y-axis Zip reads it.
+                apply_shifted_kappa(
+                    &mut self.grad_k,
+                    &self.p_k,
+                    &self.kappa,
+                    &self.ddy_k_shift_pos,
+                    VelocityAxis::Y,
+                );
+                // Reuse dpx for y-gradient IFFT (Opt-12): x-axis update has completed;
+                // dpx is free to overwrite before y-axis update reads it.
                 self.fft
                     .inverse_c2r_into(&self.grad_k, &mut self.dpx, &mut self.ux_k);
                 let pml_vy = pml_exp.vel_y.as_slice().ok_or_else(|| {
                     KwaversError::InternalError("pml_vel_y must be contiguous".into())
                 })?;
-                Zip::indexed(self.fields.uy.view_mut())
-                    .and(&self.dpx)
-                    .and(&self.materials.rho0)
-                    .par_for_each(|(_i, j, _k), u, &dp, &rho| {
-                        let p = pml_vy[j];
-                        *u = p * (p * *u - (dt / rho) * dp);
-                    });
+                update_velocity_fused(
+                    &mut self.fields.uy,
+                    &self.dpx,
+                    &self.materials.rho0,
+                    pml_vy,
+                    VelocityAxis::Y,
+                    dt,
+                );
             }
 
             // Z-direction — PML factor indexed by k (innermost index).
             // ddz has length nz_c (truncated in construction).
             if has_z {
-                let ddz = self.ddz_k_shift_pos.view();
-                Zip::indexed(self.grad_k.view_mut())
-                    .and(self.p_k.view())
-                    .and(self.kappa.view())
-                    .par_for_each(|(_i, _j, k), gk, &p_val, &kap| {
-                        *gk = (ddz[k] * p_val) * kap;
-                    });
-                // Reuse dpx for z-gradient IFFT (Opt-12): y-axis Zip has completed.
+                apply_shifted_kappa(
+                    &mut self.grad_k,
+                    &self.p_k,
+                    &self.kappa,
+                    &self.ddz_k_shift_pos,
+                    VelocityAxis::Z,
+                );
+                // Reuse dpx for z-gradient IFFT (Opt-12): y-axis update has completed.
                 self.fft
                     .inverse_c2r_into(&self.grad_k, &mut self.dpx, &mut self.ux_k);
                 let pml_vz = pml_exp.vel_z.as_slice().ok_or_else(|| {
                     KwaversError::InternalError("pml_vel_z must be contiguous".into())
                 })?;
-                Zip::indexed(self.fields.uz.view_mut())
-                    .and(&self.dpx)
-                    .and(&self.materials.rho0)
-                    .par_for_each(|(_i, _j, k), u, &dp, &rho| {
-                        let p = pml_vz[k];
-                        *u = p * (p * *u - (dt / rho) * dp);
-                    });
+                update_velocity_fused(
+                    &mut self.fields.uz,
+                    &self.dpx,
+                    &self.materials.rho0,
+                    pml_vz,
+                    VelocityAxis::Z,
+                    dt,
+                );
             }
         } else {
             // ── Fallback path: explicit pre/post PML passes (Dirichlet bypass or
@@ -198,62 +450,45 @@ impl PSTDSolver {
             self.apply_pml_to_velocity()?; // pre: pml * u_old
 
             // X-direction
-            {
-                let ddx = self.ddx_k_shift_pos.view();
-                Zip::indexed(self.grad_k.view_mut())
-                    .and(self.p_k.view())
-                    .and(self.kappa.view())
-                    .par_for_each(|(i, _j, _k), gk, &p_val, &kap| {
-                        *gk = (ddx[i] * p_val) * kap;
-                    });
-            }
+            apply_shifted_kappa(
+                &mut self.grad_k,
+                &self.p_k,
+                &self.kappa,
+                &self.ddx_k_shift_pos,
+                VelocityAxis::X,
+            );
             self.fft
                 .inverse_c2r_into(&self.grad_k, &mut self.dpx, &mut self.ux_k);
-            Zip::from(&mut self.fields.ux)
-                .and(&self.dpx)
-                .and(&self.materials.rho0)
-                .par_for_each(|u, &dp, &rho| {
-                    *u -= (dt / rho) * dp;
-                });
+            update_velocity_unfused(&mut self.fields.ux, &self.dpx, &self.materials.rho0, dt);
 
             // Y-direction
             if has_y {
-                let ddy = self.ddy_k_shift_pos.view();
-                Zip::indexed(self.grad_k.view_mut())
-                    .and(self.p_k.view())
-                    .and(self.kappa.view())
-                    .par_for_each(|(_i, j, _k), gk, &p_val, &kap| {
-                        *gk = (ddy[j] * p_val) * kap;
-                    });
-                // Reuse dpx for y-gradient IFFT (Opt-12): x-axis Zip has completed.
+                apply_shifted_kappa(
+                    &mut self.grad_k,
+                    &self.p_k,
+                    &self.kappa,
+                    &self.ddy_k_shift_pos,
+                    VelocityAxis::Y,
+                );
+                // Reuse dpx for y-gradient IFFT (Opt-12): x-axis update has completed.
                 self.fft
                     .inverse_c2r_into(&self.grad_k, &mut self.dpx, &mut self.ux_k);
-                Zip::from(&mut self.fields.uy)
-                    .and(&self.dpx)
-                    .and(&self.materials.rho0)
-                    .par_for_each(|u, &dp, &rho| {
-                        *u -= (dt / rho) * dp;
-                    });
+                update_velocity_unfused(&mut self.fields.uy, &self.dpx, &self.materials.rho0, dt);
             }
 
             // Z-direction
             if has_z {
-                let ddz = self.ddz_k_shift_pos.view();
-                Zip::indexed(self.grad_k.view_mut())
-                    .and(self.p_k.view())
-                    .and(self.kappa.view())
-                    .par_for_each(|(_i, _j, k), gk, &p_val, &kap| {
-                        *gk = (ddz[k] * p_val) * kap;
-                    });
-                // Reuse dpx for z-gradient IFFT (Opt-12): y-axis Zip has completed.
+                apply_shifted_kappa(
+                    &mut self.grad_k,
+                    &self.p_k,
+                    &self.kappa,
+                    &self.ddz_k_shift_pos,
+                    VelocityAxis::Z,
+                );
+                // Reuse dpx for z-gradient IFFT (Opt-12): y-axis update has completed.
                 self.fft
                     .inverse_c2r_into(&self.grad_k, &mut self.dpx, &mut self.ux_k);
-                Zip::from(&mut self.fields.uz)
-                    .and(&self.dpx)
-                    .and(&self.materials.rho0)
-                    .par_for_each(|u, &dp, &rho| {
-                        *u -= (dt / rho) * dp;
-                    });
+                update_velocity_unfused(&mut self.fields.uz, &self.dpx, &self.materials.rho0, dt);
             }
 
             self.apply_pml_to_velocity()?; // post: pml * (pml*u_old - dt/rho*grad_p)
@@ -308,7 +543,7 @@ impl PSTDSolver {
 
         if use_fused {
             // Fused: ux = pml_x[i] · (pml_x[i] · ux − (dt/ρ₀) · ∂p/∂x)
-            // In the 2-D slice (nx, nr), indexed returns (i, k).
+            // In the 2-D slice (nx, nr), dense row-major indices map to (i, k).
             let pml_exp = self.pml_exp.as_ref().ok_or_else(|| {
                 KwaversError::InternalError(
                     "pml_exp unexpectedly None in fused AS velocity path".into(),
@@ -323,35 +558,37 @@ impl PSTDSolver {
                 .as_slice()
                 .ok_or_else(|| KwaversError::InternalError("pml_vel_z contiguous".into()))?;
 
-            Zip::indexed(self.fields.ux.slice_mut(s![.., 0, ..]))
-                .and(self.materials.rho0.slice(s![.., 0, ..]))
-                .and(&ctx.dpdx)
-                .par_for_each(|(i, _k), u, &rho, &dp| {
-                    let p = pml_vx[i];
-                    *u = p * (p * *u - (dt / rho) * dp);
-                });
+            update_axisymmetric_velocity_fused(
+                self.fields.ux.slice_mut(s![.., 0, ..]),
+                &ctx.dpdx,
+                self.materials.rho0.slice(s![.., 0, ..]),
+                pml_vx,
+                AsVelocityAxis::X,
+                dt,
+            );
 
-            Zip::indexed(self.fields.uz.slice_mut(s![.., 0, ..]))
-                .and(self.materials.rho0.slice(s![.., 0, ..]))
-                .and(&ctx.dpdr)
-                .par_for_each(|(_i, k), u, &rho, &dp| {
-                    let p = pml_vz[k];
-                    *u = p * (p * *u - (dt / rho) * dp);
-                });
+            update_axisymmetric_velocity_fused(
+                self.fields.uz.slice_mut(s![.., 0, ..]),
+                &ctx.dpdr,
+                self.materials.rho0.slice(s![.., 0, ..]),
+                pml_vz,
+                AsVelocityAxis::R,
+                dt,
+            );
         } else {
-            Zip::from(self.fields.ux.slice_mut(s![.., 0, ..]))
-                .and(self.materials.rho0.slice(s![.., 0, ..]))
-                .and(&ctx.dpdx)
-                .par_for_each(|u, &rho, &dp| {
-                    *u -= (dt / rho) * dp;
-                });
+            update_axisymmetric_velocity_unfused(
+                self.fields.ux.slice_mut(s![.., 0, ..]),
+                &ctx.dpdx,
+                self.materials.rho0.slice(s![.., 0, ..]),
+                dt,
+            );
 
-            Zip::from(self.fields.uz.slice_mut(s![.., 0, ..]))
-                .and(self.materials.rho0.slice(s![.., 0, ..]))
-                .and(&ctx.dpdr)
-                .par_for_each(|u, &rho, &dp| {
-                    *u -= (dt / rho) * dp;
-                });
+            update_axisymmetric_velocity_unfused(
+                self.fields.uz.slice_mut(s![.., 0, ..]),
+                &ctx.dpdr,
+                self.materials.rho0.slice(s![.., 0, ..]),
+                dt,
+            );
 
             self.apply_pml_to_velocity()?; // post-step PML (fallback only)
         }

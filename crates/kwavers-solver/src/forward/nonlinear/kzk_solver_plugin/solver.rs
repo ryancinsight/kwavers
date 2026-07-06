@@ -4,6 +4,7 @@ use crate::plugin::{PluginMetadata, PluginState};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
+use moirai_parallel::{enumerate_mut_with, Adaptive};
 use ndarray::Array3;
 
 use super::frequency_operator::FrequencyOperator;
@@ -188,19 +189,23 @@ impl KzkSolverPlugin {
         step_size: f64,
         _grid: &Grid,
     ) -> KwaversResult<()> {
-        use ndarray::Zip;
-
         let nonlinear_factor = beta / (2.0 * density * c0.powi(3));
-
-        Zip::from(field.view_mut()).par_for_each(|p| {
-            let p0 = *p;
+        let update_pressure = |p0: f64| {
             let denominator = (nonlinear_factor * p0).mul_add(-step_size, 1.0);
             if denominator.abs() > 0.1 {
-                *p = p0 / denominator;
+                p0 / denominator
             } else {
-                *p = p0.signum() * p0.abs().min(1.0 / (nonlinear_factor * step_size));
+                p0.signum() * p0.abs().min(1.0 / (nonlinear_factor * step_size))
             }
-        });
+        };
+
+        if let Some(values) = field.as_slice_memory_order_mut() {
+            enumerate_mut_with::<Adaptive, _, _>(values, |_idx, p| {
+                *p = update_pressure(*p);
+            });
+        } else {
+            field.iter_mut().for_each(|p| *p = update_pressure(*p));
+        }
 
         Ok(())
     }

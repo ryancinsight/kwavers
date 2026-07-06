@@ -60,10 +60,13 @@
 //!
 //! ## Backends
 //!
-//! This implementation supports multiple Burn backends:
+//! This implementation currently supports the Burn CPU backend:
 //!
 //! - **NdArray**: CPU-only backend (fast compilation, good for development)
-//! - **WGPU**: GPU acceleration via WebGPU (requires `pinn-gpu` feature)
+//!
+//! PINN GPU execution is reserved for the Coeus training backend routed through
+//! the provider-generic Hephaestus GPU traits. Concrete WGPU or CUDA providers
+//! belong behind that trait boundary, not in this Burn module.
 //!
 //! ## Quick Start
 //!
@@ -109,30 +112,6 @@
 //! let u_pred = trainer.pinn().predict(&x_test, &t_test, &device)?;
 //! ```
 //!
-//! ### GPU Backend (Requires `pinn-gpu` feature)
-//!
-//! ```rust,ignore
-//! use burn::backend::{Autodiff, Wgpu};
-//!
-//! // GPU backend
-//! type Backend = Autodiff<Wgpu<f32>>;
-//!
-//! // Initialize GPU device (async)
-//! let device = pollster::block_on(Wgpu::<f32>::default())?;
-//!
-//! // Larger network for GPU
-//! let config = BurnPINNConfig {
-//!     hidden_layers: vec![100, 100, 100, 100],
-//!     num_collocation_points: 50000,
-//!     ..Default::default()
-//! };
-//!
-//! let mut trainer = BurnPINNTrainer::<Backend>::new(config, &device)?;
-//!
-//! // Training automatically uses GPU
-//! let metrics = trainer.train(&x_data, &t_data, &u_data, 343.0, &device, 5000)?;
-//! ```
-//!
 //! ## Configuration Presets
 //!
 //! Pre-configured settings for common use cases:
@@ -141,7 +120,7 @@
 //! // Default: Balanced CPU configuration
 //! let config = BurnPINNConfig::default();
 //!
-//! // GPU: Optimized for GPU acceleration
+//! // Large-batch preset for future provider-backed GPU execution
 //! let config = BurnPINNConfig::for_gpu();
 //!
 //! // Prototyping: Fast iteration for development
@@ -224,22 +203,23 @@
 //! - Good for development and small problems
 //! - Training speed: ~10-100 epochs/s (depends on network size)
 //!
-//! ### GPU Backend
-//! - Slower compilation (~2-5 min)
-//! - Significant speedup for large networks and datasets
-//! - Training speed: ~100-1000 epochs/s (depends on GPU)
-//! - Use `num_collocation_points` > 10,000 to saturate GPU
+//! ### GPU Execution
+//! - GPU training is not provided by this Burn module.
+//! - Provider-generic GPU execution is owned by the Coeus + Hephaestus migration.
+//! - WGPU and CUDA must implement the same provider trait contract before being
+//!   exposed to solver-level PINN code.
 //!
 //! ### Recommendations
 //! - Start with CPU backend for prototyping
-//! - Switch to GPU for production training with large networks
+//! - Switch to Coeus provider-backed training for production GPU workloads once
+//!   that integration is present
 //! - Use smaller networks (2-3 layers, 20-50 neurons) for CPU
 //! - Use larger networks (4-6 layers, 100-200 neurons) for GPU
 //!
 //! ## Feature Flags
 //!
 //! - `pinn`: Basic PINN functionality with CPU backend
-//! - `pinn-gpu`: Adds GPU acceleration via WGPU backend
+//! - GPU PINN execution: pending Coeus + Hephaestus provider integration
 //!
 //! ## Module Organization
 //!

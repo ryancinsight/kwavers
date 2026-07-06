@@ -1,5 +1,6 @@
 use super::{ThermalAcousticConfig, ThermalAcousticCoupler};
 use kwavers_core::error::{KwaversError, KwaversResult};
+use moirai_parallel::{enumerate_mut_with, Adaptive};
 use ndarray::{Array3, Zip};
 
 impl ThermalAcousticCoupler {
@@ -164,46 +165,106 @@ impl ThermalAcousticCoupler {
             let pp = &self.pressure_prev;
             let dens = &self.density;
             let vxp = &self.velocity_x_prev;
-            Zip::indexed(self.velocity_x.view_mut()).par_for_each(|(i, j, k), vx| {
-                if i == 0 || i >= nx - 1 || j == 0 || j >= ny - 1 || k == 0 || k >= nz - 1 {
-                    return;
-                }
-                let rho = dens[[i, j, k]];
-                if rho > 0.0 {
-                    let dp_dx = (pp[[i + 1, j, k]] - pp[[i - 1, j, k]]) / (2.0 * dx);
-                    *vx = (dt / rho).mul_add(-dp_dx, vxp[[i, j, k]]);
-                }
-            });
+            let velocity_x = &mut self.velocity_x;
+            if let (Some(velocity_x), Some(pp), Some(dens), Some(vxp)) = (
+                velocity_x.as_slice_mut(),
+                pp.as_slice(),
+                dens.as_slice(),
+                vxp.as_slice(),
+            ) {
+                enumerate_mut_with::<Adaptive, _, _>(velocity_x, |index, vx| {
+                    let (i, j, k) = Self::cell_indices(index, ny, nz);
+                    if i == 0 || i >= nx - 1 || j == 0 || j >= ny - 1 || k == 0 || k >= nz - 1 {
+                        return;
+                    }
+                    let rho = dens[index];
+                    if rho > 0.0 {
+                        let dp_dx = (pp[index + ny * nz] - pp[index - ny * nz]) / (2.0 * dx);
+                        *vx = (dt / rho).mul_add(-dp_dx, vxp[index]);
+                    }
+                });
+            } else {
+                Zip::indexed(velocity_x.view_mut()).for_each(|(i, j, k), vx| {
+                    if i == 0 || i >= nx - 1 || j == 0 || j >= ny - 1 || k == 0 || k >= nz - 1 {
+                        return;
+                    }
+                    let rho = dens[[i, j, k]];
+                    if rho > 0.0 {
+                        let dp_dx = (pp[[i + 1, j, k]] - pp[[i - 1, j, k]]) / (2.0 * dx);
+                        *vx = (dt / rho).mul_add(-dp_dx, vxp[[i, j, k]]);
+                    }
+                });
+            }
         }
         {
             let pp = &self.pressure_prev;
             let dens = &self.density;
             let vyp = &self.velocity_y_prev;
-            Zip::indexed(self.velocity_y.view_mut()).par_for_each(|(i, j, k), vy| {
-                if i == 0 || i >= nx - 1 || j == 0 || j >= ny - 1 || k == 0 || k >= nz - 1 {
-                    return;
-                }
-                let rho = dens[[i, j, k]];
-                if rho > 0.0 {
-                    let dp_dy = (pp[[i, j + 1, k]] - pp[[i, j - 1, k]]) / (2.0 * dy);
-                    *vy = (dt / rho).mul_add(-dp_dy, vyp[[i, j, k]]);
-                }
-            });
+            let velocity_y = &mut self.velocity_y;
+            if let (Some(velocity_y), Some(pp), Some(dens), Some(vyp)) = (
+                velocity_y.as_slice_mut(),
+                pp.as_slice(),
+                dens.as_slice(),
+                vyp.as_slice(),
+            ) {
+                enumerate_mut_with::<Adaptive, _, _>(velocity_y, |index, vy| {
+                    let (i, j, k) = Self::cell_indices(index, ny, nz);
+                    if i == 0 || i >= nx - 1 || j == 0 || j >= ny - 1 || k == 0 || k >= nz - 1 {
+                        return;
+                    }
+                    let rho = dens[index];
+                    if rho > 0.0 {
+                        let dp_dy = (pp[index + nz] - pp[index - nz]) / (2.0 * dy);
+                        *vy = (dt / rho).mul_add(-dp_dy, vyp[index]);
+                    }
+                });
+            } else {
+                Zip::indexed(velocity_y.view_mut()).for_each(|(i, j, k), vy| {
+                    if i == 0 || i >= nx - 1 || j == 0 || j >= ny - 1 || k == 0 || k >= nz - 1 {
+                        return;
+                    }
+                    let rho = dens[[i, j, k]];
+                    if rho > 0.0 {
+                        let dp_dy = (pp[[i, j + 1, k]] - pp[[i, j - 1, k]]) / (2.0 * dy);
+                        *vy = (dt / rho).mul_add(-dp_dy, vyp[[i, j, k]]);
+                    }
+                });
+            }
         }
         {
             let pp = &self.pressure_prev;
             let dens = &self.density;
             let vzp = &self.velocity_z_prev;
-            Zip::indexed(self.velocity_z.view_mut()).par_for_each(|(i, j, k), vz| {
-                if i == 0 || i >= nx - 1 || j == 0 || j >= ny - 1 || k == 0 || k >= nz - 1 {
-                    return;
-                }
-                let rho = dens[[i, j, k]];
-                if rho > 0.0 {
-                    let dp_dz = (pp[[i, j, k + 1]] - pp[[i, j, k - 1]]) / (2.0 * dz);
-                    *vz = (dt / rho).mul_add(-dp_dz, vzp[[i, j, k]]);
-                }
-            });
+            let velocity_z = &mut self.velocity_z;
+            if let (Some(velocity_z), Some(pp), Some(dens), Some(vzp)) = (
+                velocity_z.as_slice_mut(),
+                pp.as_slice(),
+                dens.as_slice(),
+                vzp.as_slice(),
+            ) {
+                enumerate_mut_with::<Adaptive, _, _>(velocity_z, |index, vz| {
+                    let (i, j, k) = Self::cell_indices(index, ny, nz);
+                    if i == 0 || i >= nx - 1 || j == 0 || j >= ny - 1 || k == 0 || k >= nz - 1 {
+                        return;
+                    }
+                    let rho = dens[index];
+                    if rho > 0.0 {
+                        let dp_dz = (pp[index + 1] - pp[index - 1]) / (2.0 * dz);
+                        *vz = (dt / rho).mul_add(-dp_dz, vzp[index]);
+                    }
+                });
+            } else {
+                Zip::indexed(velocity_z.view_mut()).for_each(|(i, j, k), vz| {
+                    if i == 0 || i >= nx - 1 || j == 0 || j >= ny - 1 || k == 0 || k >= nz - 1 {
+                        return;
+                    }
+                    let rho = dens[[i, j, k]];
+                    if rho > 0.0 {
+                        let dp_dz = (pp[[i, j, k + 1]] - pp[[i, j, k - 1]]) / (2.0 * dz);
+                        *vz = (dt / rho).mul_add(-dp_dz, vzp[[i, j, k]]);
+                    }
+                });
+            }
         }
 
         // --- Pressure update ---
@@ -215,17 +276,41 @@ impl ThermalAcousticCoupler {
             let dens = &self.density;
             let ss = &self.sound_speed;
             let pp = &self.pressure_prev;
-            Zip::indexed(self.pressure.view_mut()).par_for_each(|(i, j, k), p| {
-                if i == 0 || i >= nx - 1 || j == 0 || j >= ny - 1 || k == 0 || k >= nz - 1 {
-                    return;
-                }
-                let rho_c_sq = dens[[i, j, k]] * ss[[i, j, k]] * ss[[i, j, k]];
-                let du_dx = (vx[[i + 1, j, k]] - vx[[i - 1, j, k]]) / (2.0 * dx);
-                let dv_dy = (vy[[i, j + 1, k]] - vy[[i, j - 1, k]]) / (2.0 * dy);
-                let dw_dz = (vz[[i, j, k + 1]] - vz[[i, j, k - 1]]) / (2.0 * dz);
-                let div_u = du_dx + dv_dy + dw_dz;
-                *p = (rho_c_sq * dt).mul_add(-div_u, pp[[i, j, k]]);
-            });
+            let pressure = &mut self.pressure;
+            if let (Some(pressure), Some(vx), Some(vy), Some(vz), Some(dens), Some(ss), Some(pp)) = (
+                pressure.as_slice_mut(),
+                vx.as_slice(),
+                vy.as_slice(),
+                vz.as_slice(),
+                dens.as_slice(),
+                ss.as_slice(),
+                pp.as_slice(),
+            ) {
+                enumerate_mut_with::<Adaptive, _, _>(pressure, |index, p| {
+                    let (i, j, k) = Self::cell_indices(index, ny, nz);
+                    if i == 0 || i >= nx - 1 || j == 0 || j >= ny - 1 || k == 0 || k >= nz - 1 {
+                        return;
+                    }
+                    let rho_c_sq = dens[index] * ss[index] * ss[index];
+                    let du_dx = (vx[index + ny * nz] - vx[index - ny * nz]) / (2.0 * dx);
+                    let dv_dy = (vy[index + nz] - vy[index - nz]) / (2.0 * dy);
+                    let dw_dz = (vz[index + 1] - vz[index - 1]) / (2.0 * dz);
+                    let div_u = du_dx + dv_dy + dw_dz;
+                    *p = (rho_c_sq * dt).mul_add(-div_u, pp[index]);
+                });
+            } else {
+                Zip::indexed(pressure.view_mut()).for_each(|(i, j, k), p| {
+                    if i == 0 || i >= nx - 1 || j == 0 || j >= ny - 1 || k == 0 || k >= nz - 1 {
+                        return;
+                    }
+                    let rho_c_sq = dens[[i, j, k]] * ss[[i, j, k]] * ss[[i, j, k]];
+                    let du_dx = (vx[[i + 1, j, k]] - vx[[i - 1, j, k]]) / (2.0 * dx);
+                    let dv_dy = (vy[[i, j + 1, k]] - vy[[i, j - 1, k]]) / (2.0 * dy);
+                    let dw_dz = (vz[[i, j, k + 1]] - vz[[i, j, k - 1]]) / (2.0 * dz);
+                    let div_u = du_dx + dv_dy + dw_dz;
+                    *p = (rho_c_sq * dt).mul_add(-div_u, pp[[i, j, k]]);
+                });
+            }
         }
     }
 

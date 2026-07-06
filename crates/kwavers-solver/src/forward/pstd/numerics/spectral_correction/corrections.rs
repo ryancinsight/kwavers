@@ -1,5 +1,6 @@
 use kwavers_grid::Grid;
-use ndarray::{Array3, Zip};
+use moirai_parallel::{enumerate_mut_with, Adaptive};
+use ndarray::Array3;
 use std::f64::consts::PI;
 
 use super::SpectralCorrectionMethod;
@@ -9,8 +10,8 @@ use kwavers_core::constants::numerical::TWO_PI;
 ///
 /// All five methods compute kappa as a 3D array of correction factors applied
 /// to spectral derivatives.  Each element is independent of its neighbours, so
-/// every function uses `Zip::indexed(...).par_for_each` for full Rayon
-/// parallelism over the grid volume.
+/// every function routes dense standard-layout arrays through Moirai's adaptive
+/// traversal policy over the grid volume.
 pub fn compute_spectral_correction_dispatch(
     grid: &Grid,
     method: SpectralCorrectionMethod,
@@ -36,6 +37,41 @@ pub fn compute_spectral_correction_dispatch(
     }
 }
 
+#[inline]
+fn dense_indices(index: usize, ny: usize, nz: usize) -> (usize, usize, usize) {
+    let plane = ny * nz;
+    let i = index / plane;
+    let rem = index % plane;
+    let j = rem / nz;
+    let k = rem % nz;
+    (i, j, k)
+}
+
+fn fill_spectral_correction(
+    kappa: &mut Array3<f64>,
+    compute: impl Fn(usize, usize, usize) -> f64 + Copy + Send + Sync,
+) {
+    let (_nx, ny, nz) = kappa.dim();
+    if kappa.is_standard_layout() {
+        if let Some(values) = kappa.as_slice_memory_order_mut() {
+            enumerate_mut_with::<Adaptive, _, _>(values, |index, value| {
+                let (i, j, k) = dense_indices(index, ny, nz);
+                *value = compute(i, j, k);
+            });
+            return;
+        }
+    }
+
+    let (nx, ny, nz) = kappa.dim();
+    for k in 0..nz {
+        for j in 0..ny {
+            for i in 0..nx {
+                kappa[[i, j, k]] = compute(i, j, k);
+            }
+        }
+    }
+}
+
 /// Exact dispersion correction: compensates the phase-velocity error of the
 /// modified-wavenumber k_mod relative to the physical wavenumber k_phys.
 ///
@@ -58,7 +94,7 @@ pub fn compute_spectral_correction_dispatch(
 ///
 /// Each element `kappa[(i,j,k)]` depends only on `(i,j,k)` via
 /// `compute_wavenumber_component` (pure function of the grid constants).
-/// No two parallel tasks share a write target → `par_for_each` is race-free.
+/// No two Moirai tasks share a write target, so dense traversal is race-free.
 fn compute_exact_dispersion_correction(
     grid: &Grid,
     dt: f64,
@@ -69,14 +105,14 @@ fn compute_exact_dispersion_correction(
     let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
     let (dx, dy, dz) = (grid.dx, grid.dy, grid.dz);
 
-    Zip::indexed(kappa.view_mut()).par_for_each(|(i, j, k), val| {
+    fill_spectral_correction(&mut kappa, |i, j, k| {
         let kx = compute_wavenumber_component(i, nx, dx);
         let ky = compute_wavenumber_component(j, ny, dy);
         let kz = compute_wavenumber_component(k, nz, dz);
 
         let k_phys = kz.mul_add(kz, kx.mul_add(kx, ky * ky)).sqrt();
         if k_phys <= 0.0 {
-            return; // DC component: kappa = 1 (already initialised)
+            return 1.0;
         }
 
         let kx_mod = 2.0 * (kx * dx / 2.0).sin() / dx;
@@ -85,7 +121,7 @@ fn compute_exact_dispersion_correction(
         let k_mod = (kx_mod * kx_mod + ky_mod * ky_mod + kz_mod * kz_mod).sqrt();
 
         if k_mod <= 0.0 {
-            return;
+            return 1.0;
         }
 
         let omega_phys = c_ref * k_phys;
@@ -94,9 +130,9 @@ fn compute_exact_dispersion_correction(
         if arg < 1.0 {
             let omega_num = 2.0 * arg.asin() / dt;
             let correction = omega_phys / omega_num;
-            *val = correction.min(max_correction).max(1.0 / max_correction);
+            correction.min(max_correction).max(1.0 / max_correction)
         } else {
-            *val = 1.0 / max_correction;
+            1.0 / max_correction
         }
     });
 
@@ -134,14 +170,14 @@ fn compute_treeby2010_correction(
     let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
     let (dx, dy, dz) = (grid.dx, grid.dy, grid.dz);
 
-    Zip::indexed(kappa.view_mut()).par_for_each(|(i, j, k), val| {
+    fill_spectral_correction(&mut kappa, |i, j, k| {
         let kx = compute_wavenumber_component(i, nx, dx);
         let ky = compute_wavenumber_component(j, ny, dy);
         let kz = compute_wavenumber_component(k, nz, dz);
 
         let k_phys = kz.mul_add(kz, kx.mul_add(kx, ky * ky)).sqrt();
         if k_phys <= 0.0 {
-            return; // DC: kappa = 1 (already initialised)
+            return 1.0;
         }
 
         // arg = c_ref · dt · |k_phys| / 2
@@ -152,7 +188,7 @@ fn compute_treeby2010_correction(
         } else {
             arg.sin() / arg
         };
-        *val = correction.min(max_correction).max(1.0 / max_correction);
+        correction.min(max_correction).max(1.0 / max_correction)
     });
 
     kappa
@@ -184,14 +220,14 @@ fn compute_liu_pstd_correction(
     let dx_min = dx.min(dy).min(dz);
     let stability_factor = c_ref * dt / dx_min;
 
-    Zip::indexed(kappa.view_mut()).par_for_each(|(i, j, k), val| {
+    fill_spectral_correction(&mut kappa, |i, j, k| {
         let kx = compute_wavenumber_component(i, nx, dx);
         let ky = compute_wavenumber_component(j, ny, dy);
         let kz = compute_wavenumber_component(k, nz, dz);
 
         let k_mag = kz.mul_add(kz, kx.mul_add(kx, ky * ky)).sqrt();
         if k_mag <= 0.0 {
-            return; // DC: kappa = 1
+            return 1.0;
         }
 
         let k_dx = k_mag * dx_min;
@@ -202,7 +238,7 @@ fn compute_liu_pstd_correction(
             1.0 / sinc
         };
 
-        *val = correction.min(max_correction).max(1.0 / max_correction);
+        correction.min(max_correction).max(1.0 / max_correction)
     });
 
     kappa
@@ -230,14 +266,14 @@ fn compute_low_dispersion_pstd_correction(
     let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
     let (dx, dy, dz) = (grid.dx, grid.dy, grid.dz);
 
-    Zip::indexed(kappa.view_mut()).par_for_each(|(i, j, k), val| {
+    fill_spectral_correction(&mut kappa, |i, j, k| {
         let kx = compute_wavenumber_component(i, nx, dx);
         let ky = compute_wavenumber_component(j, ny, dy);
         let kz = compute_wavenumber_component(k, nz, dz);
 
         let k_mag = kz.mul_add(kz, kx.mul_add(kx, ky * ky)).sqrt();
         if k_mag <= 0.0 {
-            return; // DC: kappa = 1
+            return 1.0;
         }
 
         let omega_dt = c_ref * dt * k_mag;
@@ -247,7 +283,7 @@ fn compute_low_dispersion_pstd_correction(
             1.0 // L'Hôpital limit as ω·dt → 0
         };
 
-        *val = correction.min(max_correction).max(1.0 / max_correction);
+        correction.min(max_correction).max(1.0 / max_correction)
     });
 
     kappa
@@ -263,14 +299,14 @@ fn compute_low_dispersion_pstd_correction(
 ///
 /// Because the correction factorises over axes, the product-form computation
 /// `1 / (sinc_x · sinc_y · sinc_z)` is mathematically equivalent to
-/// three independent 1D sinc corrections applied sequentially.  The parallel
-/// `Zip::indexed` evaluation is therefore correct by independence of axes.
+/// three independent 1D sinc corrections applied sequentially.  The dense
+/// Moirai traversal is therefore correct by independence of axes.
 fn compute_sinc_spatial_correction(grid: &Grid) -> Array3<f64> {
     let mut kappa = Array3::from_elem((grid.nx, grid.ny, grid.nz), 1.0);
     let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
     let (dx, dy, dz) = (grid.dx, grid.dy, grid.dz);
 
-    Zip::indexed(kappa.view_mut()).par_for_each(|(i, j, k), val| {
+    fill_spectral_correction(&mut kappa, |i, j, k| {
         let kx = compute_wavenumber_component(i, nx, dx);
         let ky = compute_wavenumber_component(j, ny, dy);
         let kz = compute_wavenumber_component(k, nz, dz);
@@ -294,7 +330,7 @@ fn compute_sinc_spatial_correction(grid: &Grid) -> Array3<f64> {
             1.0
         };
 
-        *val = 1.0 / (sinc_x * sinc_y * sinc_z);
+        1.0 / (sinc_x * sinc_y * sinc_z)
     });
 
     kappa
@@ -326,9 +362,34 @@ pub(super) fn compute_wavenumber_component(index: usize, n: usize, dx: f64) -> f
 /// ## Theorem (race-freedom)
 ///
 /// Each element of `field_k` is multiplied by the corresponding scalar in
-/// `kappa`; no two Rayon tasks share a memory location.
+/// `kappa`; no two Moirai tasks share a memory location.
 pub fn apply_correction(field_k: &mut Array3<num_complex::Complex<f64>>, kappa: &Array3<f64>) {
-    Zip::from(field_k).and(kappa).par_for_each(|f, &k| {
-        *f *= k;
-    });
+    assert_eq!(
+        field_k.shape(),
+        kappa.shape(),
+        "spectral correction shape mismatch: field {:?}, kappa {:?}",
+        field_k.shape(),
+        kappa.shape()
+    );
+
+    if field_k.is_standard_layout() && kappa.is_standard_layout() {
+        if let (Some(field_values), Some(kappa_values)) = (
+            field_k.as_slice_memory_order_mut(),
+            kappa.as_slice_memory_order(),
+        ) {
+            enumerate_mut_with::<Adaptive, _, _>(field_values, |index, value| {
+                *value *= kappa_values[index];
+            });
+            return;
+        }
+    }
+
+    let (nx, ny, nz) = field_k.dim();
+    for k in 0..nz {
+        for j in 0..ny {
+            for i in 0..nx {
+                field_k[[i, j, k]] *= kappa[[i, j, k]];
+            }
+        }
+    }
 }

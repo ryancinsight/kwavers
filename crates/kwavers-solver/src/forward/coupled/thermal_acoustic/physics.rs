@@ -1,9 +1,18 @@
 use super::ThermalAcousticCoupler;
 use kwavers_core::constants::RHO_C_SOFT_TISSUE;
 use kwavers_core::error::{KwaversError, KwaversResult};
+use moirai_parallel::{enumerate_mut_with, for_each_chunk_pair_mut_enumerated_with, Adaptive};
 use ndarray::Zip;
 
 impl ThermalAcousticCoupler {
+    #[inline]
+    pub(super) fn cell_indices(index: usize, ny: usize, nz: usize) -> (usize, usize, usize) {
+        let slab_len = ny * nz;
+        let i = index / slab_len;
+        let offset = index % slab_len;
+        (i, offset / nz, offset % nz)
+    }
+
     /// Update material properties based on current temperature.
     ///
     /// Linear temperature dependence:
@@ -19,10 +28,35 @@ impl ThermalAcousticCoupler {
         let temperature = &self.temperature;
         let sound_speed = &mut self.sound_speed;
         let density = &mut self.density;
+
+        if let (Some(sound_speed), Some(density), Some(temperature)) = (
+            sound_speed.as_slice_mut(),
+            density.as_slice_mut(),
+            temperature.as_slice(),
+        ) {
+            for_each_chunk_pair_mut_enumerated_with::<Adaptive, _, _, _>(
+                sound_speed,
+                density,
+                self.config.ny * self.config.nz,
+                |slab_index, sound_speed, density| {
+                    let base = slab_index * self.config.ny * self.config.nz;
+                    for (offset, (c, rho)) in
+                        sound_speed.iter_mut().zip(density.iter_mut()).enumerate()
+                    {
+                        let t = temperature[base + offset];
+                        let d_t = t - d_t_offset;
+                        *c = dc_dt.mul_add(d_t, c_ref);
+                        *rho = drho_dt.mul_add(d_t, rho_ref);
+                    }
+                },
+            );
+            return;
+        }
+
         Zip::from(sound_speed.view_mut())
             .and(density.view_mut())
             .and(temperature.view())
-            .par_for_each(|c, rho, &t| {
+            .for_each(|c, rho, &t| {
                 let d_t = t - d_t_offset;
                 *c = dc_dt.mul_add(d_t, c_ref);
                 *rho = drho_dt.mul_add(d_t, rho_ref);
@@ -44,11 +78,31 @@ impl ThermalAcousticCoupler {
         let density = &self.density;
         let sound_speed = &self.sound_speed;
         let acoustic_heating = &mut self.acoustic_heating;
+
+        if let (Some(acoustic_heating), Some(pressure_prev), Some(density), Some(sound_speed)) = (
+            acoustic_heating.as_slice_mut(),
+            pressure_prev.as_slice(),
+            density.as_slice(),
+            sound_speed.as_slice(),
+        ) {
+            enumerate_mut_with::<Adaptive, _, _>(acoustic_heating, |index, q| {
+                let p = pressure_prev[index];
+                let rho = density[index];
+                let c = sound_speed[index];
+                if rho > 0.0 && c > 0.0 {
+                    *q = 2.0 * alpha_ac * (p * p) / (rho * c);
+                } else {
+                    *q = 0.0;
+                }
+            });
+            return;
+        }
+
         Zip::from(acoustic_heating.view_mut())
             .and(pressure_prev.view())
             .and(density.view())
             .and(sound_speed.view())
-            .par_for_each(|q, &p, &rho, &c| {
+            .for_each(|q, &p, &rho, &c| {
                 if rho > 0.0 && c > 0.0 {
                     *q = 2.0 * alpha_ac * (p * p) / (rho * c);
                 } else {
@@ -88,28 +142,58 @@ impl ThermalAcousticCoupler {
         let acoustic_heating = &self.acoustic_heating;
         let temperature = &mut self.temperature;
 
-        Zip::indexed(temperature.view_mut()).par_for_each(|(i, j, k), t_new| {
-            if i == 0 || i >= nx - 1 || j == 0 || j >= ny - 1 || k == 0 || k >= nz - 1 {
-                return;
-            }
-            let t = temperature_prev[[i, j, k]];
-            let d2_t_dx2 = (2.0f64.mul_add(-t, temperature_prev[[i + 1, j, k]])
-                + temperature_prev[[i - 1, j, k]])
-                / (dx * dx);
-            let d2_t_dy2 = (2.0f64.mul_add(-t, temperature_prev[[i, j + 1, k]])
-                + temperature_prev[[i, j - 1, k]])
-                / (dy * dy);
-            let d2_t_dz2 = (2.0f64.mul_add(-t, temperature_prev[[i, j, k + 1]])
-                + temperature_prev[[i, j, k - 1]])
-                / (dz * dz);
-            let laplacian_t = d2_t_dx2 + d2_t_dy2 + d2_t_dz2;
-            let perfusion_term = w_b * (t_arterial - t);
-            let metabolic_term = q_met / rho_c;
-            let acoustic_term = acoustic_heating[[i, j, k]] / rho_c;
-            let d_t_dt =
-                k_thermal.mul_add(laplacian_t, perfusion_term) + metabolic_term + acoustic_term;
-            *t_new = dt.mul_add(d_t_dt, t);
-        });
+        if let (Some(temperature), Some(temperature_prev), Some(acoustic_heating)) = (
+            temperature.as_slice_mut(),
+            temperature_prev.as_slice(),
+            acoustic_heating.as_slice(),
+        ) {
+            enumerate_mut_with::<Adaptive, _, _>(temperature, |index, t_new| {
+                let (i, j, k) = Self::cell_indices(index, ny, nz);
+                if i == 0 || i >= nx - 1 || j == 0 || j >= ny - 1 || k == 0 || k >= nz - 1 {
+                    return;
+                }
+                let t = temperature_prev[index];
+                let d2_t_dx2 = (2.0f64.mul_add(-t, temperature_prev[index + ny * nz])
+                    + temperature_prev[index - ny * nz])
+                    / (dx * dx);
+                let d2_t_dy2 = (2.0f64.mul_add(-t, temperature_prev[index + nz])
+                    + temperature_prev[index - nz])
+                    / (dy * dy);
+                let d2_t_dz2 = (2.0f64.mul_add(-t, temperature_prev[index + 1])
+                    + temperature_prev[index - 1])
+                    / (dz * dz);
+                let laplacian_t = d2_t_dx2 + d2_t_dy2 + d2_t_dz2;
+                let perfusion_term = w_b * (t_arterial - t);
+                let metabolic_term = q_met / rho_c;
+                let acoustic_term = acoustic_heating[index] / rho_c;
+                let d_t_dt =
+                    k_thermal.mul_add(laplacian_t, perfusion_term) + metabolic_term + acoustic_term;
+                *t_new = dt.mul_add(d_t_dt, t);
+            });
+        } else {
+            Zip::indexed(temperature.view_mut()).for_each(|(i, j, k), t_new| {
+                if i == 0 || i >= nx - 1 || j == 0 || j >= ny - 1 || k == 0 || k >= nz - 1 {
+                    return;
+                }
+                let t = temperature_prev[[i, j, k]];
+                let d2_t_dx2 = (2.0f64.mul_add(-t, temperature_prev[[i + 1, j, k]])
+                    + temperature_prev[[i - 1, j, k]])
+                    / (dx * dx);
+                let d2_t_dy2 = (2.0f64.mul_add(-t, temperature_prev[[i, j + 1, k]])
+                    + temperature_prev[[i, j - 1, k]])
+                    / (dy * dy);
+                let d2_t_dz2 = (2.0f64.mul_add(-t, temperature_prev[[i, j, k + 1]])
+                    + temperature_prev[[i, j, k - 1]])
+                    / (dz * dz);
+                let laplacian_t = d2_t_dx2 + d2_t_dy2 + d2_t_dz2;
+                let perfusion_term = w_b * (t_arterial - t);
+                let metabolic_term = q_met / rho_c;
+                let acoustic_term = acoustic_heating[[i, j, k]] / rho_c;
+                let d_t_dt =
+                    k_thermal.mul_add(laplacian_t, perfusion_term) + metabolic_term + acoustic_term;
+                *t_new = dt.mul_add(d_t_dt, t);
+            });
+        }
 
         self.apply_boundary_conditions();
     }

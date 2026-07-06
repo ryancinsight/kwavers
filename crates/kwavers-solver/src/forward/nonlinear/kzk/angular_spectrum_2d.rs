@@ -1,6 +1,6 @@
-use kwavers_math::fft::{Complex64, Fft2d, Shape2D, FFT_CACHE_2D};
-use ndarray::{Array2, ArrayViewMut2, Zip};
-use std::sync::Arc;
+use kwavers_math::fft::{fft_2d_complex_inplace, ifft_2d_complex_inplace, Complex64};
+use moirai_parallel::{enumerate_mut_with, Adaptive};
+use ndarray::{Array2, ArrayViewMut2};
 
 use super::KZKConfig;
 use kwavers_core::constants::numerical::TWO_PI;
@@ -10,8 +10,6 @@ pub struct AngularSpectrum2D {
     config: KZKConfig,
     kx: Array2<f64>,
     ky: Array2<f64>,
-    /// Cached 2-D FFT plan for the transverse `(nx, ny)` slice shape.
-    fft_plan: Arc<Fft2d>,
     /// Reusable complex field/spectrum buffer for in-place angular-spectrum propagation.
     scratch: Array2<Complex64>,
 }
@@ -63,14 +61,12 @@ impl AngularSpectrum2D {
             }
         }
 
-        let fft_plan = FFT_CACHE_2D.get_or_create(Shape2D { nx, ny });
         let scratch = Array2::zeros((nx, ny));
 
         Self {
             config: config.clone(),
             kx,
             ky,
-            fft_plan,
             scratch,
         }
     }
@@ -86,15 +82,37 @@ impl AngularSpectrum2D {
     pub fn propagate(&mut self, field: &mut ArrayViewMut2<f64>, distance: f64) {
         let k0 = TWO_PI * self.config.frequency / self.config.c0;
 
-        Zip::from(&mut self.scratch)
-            .and(field.view())
-            .par_for_each(|s, &x| *s = Complex64::new(x, 0.0));
+        let scratch = self
+            .scratch
+            .as_slice_memory_order_mut()
+            .expect("invariant: KZK angular-spectrum scratch is standard-layout");
+        if let Some(field_values) = field.as_slice_memory_order() {
+            enumerate_mut_with::<Adaptive, _, _>(scratch, |idx, s| {
+                *s = Complex64::new(field_values[idx], 0.0);
+            });
+        } else {
+            for (s, &x) in scratch.iter_mut().zip(field.iter()) {
+                *s = Complex64::new(x, 0.0);
+            }
+        }
 
-        self.fft_plan.forward_complex_inplace(&mut self.scratch);
+        fft_2d_complex_inplace(&mut self.scratch);
 
-        Zip::indexed(&mut self.scratch).par_for_each(|(i, j), value| {
-            let kx = self.kx[[i, j]];
-            let ky = self.ky[[i, j]];
+        let kx = self
+            .kx
+            .as_slice_memory_order()
+            .expect("invariant: KZK angular-spectrum kx is standard-layout");
+        let ky = self
+            .ky
+            .as_slice_memory_order()
+            .expect("invariant: KZK angular-spectrum ky is standard-layout");
+        let scratch = self
+            .scratch
+            .as_slice_memory_order_mut()
+            .expect("invariant: KZK angular-spectrum scratch is standard-layout");
+        enumerate_mut_with::<Adaptive, _, _>(scratch, |idx, value| {
+            let kx = kx[idx];
+            let ky = ky[idx];
             let kt2 = kx.mul_add(kx, ky * ky);
 
             if kt2 < k0 * k0 {
@@ -107,11 +125,21 @@ impl AngularSpectrum2D {
             }
         });
 
-        self.fft_plan.inverse_complex_inplace(&mut self.scratch);
+        ifft_2d_complex_inplace(&mut self.scratch);
 
-        Zip::from(field)
-            .and(&self.scratch)
-            .par_for_each(|out, value| *out = value.re);
+        let scratch = self
+            .scratch
+            .as_slice_memory_order()
+            .expect("invariant: KZK angular-spectrum scratch is standard-layout");
+        if let Some(field_values) = field.as_slice_memory_order_mut() {
+            enumerate_mut_with::<Adaptive, _, _>(field_values, |idx, out| {
+                *out = scratch[idx].re;
+            });
+        } else {
+            for (out, value) in field.iter_mut().zip(scratch.iter()) {
+                *out = value.re;
+            }
+        }
     }
 }
 

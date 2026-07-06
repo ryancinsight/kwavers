@@ -30,7 +30,7 @@ use burn::{
 /// Approximates displacement field u(x, y, t) = [uₓ, uᵧ].
 ///
 /// # Type Parameters
-/// - `B`: Burn backend (e.g., `NdArray` for CPU, `Wgpu` for GPU).
+/// - `B`: Burn backend for the current CPU PINN implementation.
 #[cfg(feature = "pinn")]
 #[derive(Module, Debug)]
 pub struct ElasticPINN2D<B: Backend> {
@@ -229,7 +229,7 @@ impl<B: Backend> ElasticPINN2D<B> {
 
 /// Stub for environments where the `pinn` feature is disabled.
 #[cfg(not(feature = "pinn"))]
-#[derive(Debug)]
+#[derive(Module, Debug)]
 pub struct ElasticPINN2D {
     _phantom: std::marker::PhantomData<()>,
 }

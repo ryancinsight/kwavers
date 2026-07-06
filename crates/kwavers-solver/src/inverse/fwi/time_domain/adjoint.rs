@@ -1,6 +1,9 @@
 //! Adjoint simulation run, adjoint-source construction, L2 residual and objective.
 
 use super::{geometry::FwiGeometry, FwiProcessor};
+use crate::inverse::fwi::time_domain::field_ops::{
+    scale_velocity_gradient, zero_masked_by_threshold,
+};
 use crate::inverse::fwi::time_domain::{
     accumulate_signed_correlation, l2_objective, l2_residual, reverse_time_axis,
 };
@@ -11,7 +14,7 @@ use crate::inverse::reconstruction::seismic::{
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
 use kwavers_source::{GridSource, SourceMode};
-use ndarray::{Array2, Array3, Array4, ArrayView3, ArrayViewMut3, Axis, Zip};
+use ndarray::{Array2, Array3, Array4, ArrayView3, ArrayViewMut3, Axis};
 
 /// Apply the Plessix (2006) eq. (12) per-voxel scaling
 /// `g_c(x) ← -(2 / (ρ(x) · c(x)³)) · g_correlation(x)` in place.
@@ -29,7 +32,7 @@ use ndarray::{Array2, Array3, Array4, ArrayView3, ArrayViewMut3, Axis, Zip};
 /// is non-finite or non-positive (avoids silent NaN production from a 1/0
 /// or 1/NaN multiplication).
 pub(super) fn apply_velocity_gradient_scaling(
-    mut gradient: ArrayViewMut3<'_, f64>,
+    gradient: ArrayViewMut3<'_, f64>,
     model: ArrayView3<'_, f64>,
     density: ArrayView3<'_, f64>,
 ) -> KwaversResult<()> {
@@ -56,12 +59,7 @@ pub(super) fn apply_velocity_gradient_scaling(
             ));
         }
     }
-    Zip::from(&mut gradient)
-        .and(model)
-        .and(density)
-        .par_for_each(|g, &c, &rho| {
-            *g *= -2.0 / (rho * c.powi(3));
-        });
+    scale_velocity_gradient(gradient, model, density);
     Ok(())
 }
 
@@ -393,11 +391,7 @@ impl FwiProcessor {
             // Exclude Dirichlet-source voxels from the gradient kernel.
             // Reference: Sun & Symes (1991), SEG Expanded Abstracts.
             if let Some(mask) = source_mask {
-                Zip::from(&mut p_tt).and(mask).par_for_each(|pt, &m| {
-                    if m > 0.5 {
-                        *pt = 0.0;
-                    }
-                });
+                zero_masked_by_threshold(&mut p_tt, mask, 0.5);
             }
 
             // pressure_field() via Box<dyn Solver> dynamic dispatch — replaces

@@ -16,14 +16,15 @@
 //! ## Parallel reduction pattern
 //!
 //! All four parallel operators (`diagonal`, `migration`, `normal_residual`,
-//! `apply_normal`) use Rayon's `fold + reduce` pattern:
+//! `apply_normal`) use Moirai's `fold_reduce_with` pattern:
 //!
-//! - `fold`: each Rayon task processes a chunk of rows, accumulating into a
-//!   task-local partial result.  For `normal_residual` and `apply_normal` the
-//!   fold state is a `(partial, row_values)` tuple so the `ncols`-sized row buffer
-//!   is allocated once per task rather than once per row.
-//! - `reduce`: Rayon combines task partials with a parallel binary tree, reducing
-//!   the serial tail from O(n_tasks × ncols) to O(ncols × log n_tasks).
+//! - `fold`: each Moirai worker shard processes a chunk of row indices,
+//!   accumulating into a task-local partial result.  For `normal_residual` and
+//!   `apply_normal` the fold state is a `(partial, row_values)` tuple so the
+//!   `ncols`-sized row buffer is allocated once per shard rather than once per
+//!   row.
+//! - `reduce`: Moirai combines task partials, avoiding an intermediate
+//!   `Vec<Vec<f64>>` collection barrier.
 //!
 //! `collect() + add_partials()` (the prior pattern) forced a serial O(n_tasks × ncols)
 //! accumulation after a `Vec<Vec<f64>>` collection barrier.  `fold + reduce` pipelines
@@ -45,7 +46,8 @@ pub struct VolumeOperator<'a> {
     /// Flat element-to-voxel Euclidean distances.
     ///
     /// `elem_dist[elem_idx * n_active + col]` = distance from element `elem_idx` to
-    /// active voxel `col` [m].  Populated once in `new()` via `par_chunks_mut`.
+    /// active voxel `col` [m]. Populated once in `new()` via Moirai chunk
+    /// dispatch.
     elem_dist: Vec<f64>,
     /// Element-wise square roots of `elem_dist`.
     ///

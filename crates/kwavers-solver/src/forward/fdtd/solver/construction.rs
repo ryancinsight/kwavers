@@ -7,7 +7,8 @@
 //! and pre-allocates Westervelt and divergence/gradient scratch buffers.
 
 use log::info;
-use ndarray::{Array3, Zip};
+use moirai_parallel::{enumerate_mut_with, Adaptive};
+use ndarray::Array3;
 
 use super::central_diff::CentralDifferenceOperator;
 use super::{FdtdMetrics, GenericFdtdSolver};
@@ -24,6 +25,83 @@ use kwavers_source::grid_source::GridSource;
 use super::super::config::{FdtdConfig, KSpaceCorrectionMode};
 use super::super::kspace_correction::KSpaceFdtdOperators;
 use super::super::source_handler::SourceHandler;
+
+fn fill_rho_c_squared(output: &mut Array3<f64>, rho0: &Array3<f64>, c0: &Array3<f64>) {
+    assert_eq!(
+        output.shape(),
+        rho0.shape(),
+        "invariant: FDTD rho*c^2 output shape matches density field"
+    );
+    assert_eq!(
+        output.shape(),
+        c0.shape(),
+        "invariant: FDTD rho*c^2 output shape matches sound-speed field"
+    );
+
+    if let (Some(output_values), Some(rho_values), Some(c_values)) = (
+        output.as_slice_memory_order_mut(),
+        rho0.as_slice_memory_order(),
+        c0.as_slice_memory_order(),
+    ) {
+        enumerate_mut_with::<Adaptive, _, _>(output_values, |index, value| {
+            let c = c_values[index];
+            *value = rho_values[index] * c * c;
+        });
+    } else {
+        let (nx, ny, nz) = output.dim();
+        for k in 0..nz {
+            for j in 0..ny {
+                for i in 0..nx {
+                    let c = c0[[i, j, k]];
+                    output[[i, j, k]] = rho0[[i, j, k]] * c * c;
+                }
+            }
+        }
+    }
+}
+
+fn fill_nonlinear_coeff(
+    output: &mut Array3<f64>,
+    beta: &Array3<f64>,
+    rho0: &Array3<f64>,
+    c2: &Array3<f64>,
+) {
+    assert_eq!(
+        output.shape(),
+        beta.shape(),
+        "invariant: FDTD nonlinear coefficient shape matches beta field"
+    );
+    assert_eq!(
+        output.shape(),
+        rho0.shape(),
+        "invariant: FDTD nonlinear coefficient shape matches density field"
+    );
+    assert_eq!(
+        output.shape(),
+        c2.shape(),
+        "invariant: FDTD nonlinear coefficient shape matches squared sound-speed field"
+    );
+
+    if let (Some(output_values), Some(beta_values), Some(rho_values), Some(c2_values)) = (
+        output.as_slice_memory_order_mut(),
+        beta.as_slice_memory_order(),
+        rho0.as_slice_memory_order(),
+        c2.as_slice_memory_order(),
+    ) {
+        enumerate_mut_with::<Adaptive, _, _>(output_values, |index, value| {
+            *value = beta_values[index] / (rho_values[index] * c2_values[index]);
+        });
+    } else {
+        let (nx, ny, nz) = output.dim();
+        for k in 0..nz {
+            for j in 0..ny {
+                for i in 0..nx {
+                    output[[i, j, k]] = beta[[i, j, k]] / (rho0[[i, j, k]] * c2[[i, j, k]]);
+                }
+            }
+        }
+    }
+}
 
 impl GenericFdtdSolver<Array3<f64>> {
     /// Create a new FDTD solver
@@ -71,12 +149,7 @@ impl GenericFdtdSolver<Array3<f64>> {
 
         // Pre-compute rho * c^2 element-wise
         let mut rho_c_squared = Array3::<f64>::zeros(shape);
-        Zip::from(&mut rho_c_squared)
-            .and(&materials.rho0)
-            .and(&materials.c0)
-            .for_each(|rho_c_sq, &rho, &c| {
-                *rho_c_sq = rho * c * c;
-            });
+        fill_rho_c_squared(&mut rho_c_squared, &materials.rho0, &materials.c0);
 
         // Precompute k-Wave compatible pressure and velocity source scaling
         let mut source_handler = source_handler;
@@ -151,10 +224,8 @@ impl GenericFdtdSolver<Array3<f64>> {
             // Reduces per-element inner-loop reads from 5 to 3, cutting memory traffic ~40%.
             // beta and c2 are intermediate; only nl_coeff is retained in the struct.
             // Correct leapfrog Westervelt: Δp = Δt² · (β/ρ₀c₀²) · ∂²(p²)/∂t²
-            let nl = ndarray::Zip::from(&beta)
-                .and(&materials.rho0)
-                .and(&c2)
-                .map_collect(|&b, &rho, &c| b / (rho * c));
+            let mut nl = Array3::<f64>::zeros(shape);
+            fill_nonlinear_coeff(&mut nl, &beta, &materials.rho0, &c2);
             (
                 Some(Array3::<f64>::zeros(shape)),
                 Some(Array3::<f64>::zeros(shape)),

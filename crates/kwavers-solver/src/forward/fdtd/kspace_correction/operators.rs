@@ -5,8 +5,75 @@ use kwavers_math::fft::shift_operators::{
     generate_kappa, generate_shift_1d, generate_source_kappa,
 };
 use kwavers_math::fft::{get_fft_for_grid, Complex64, Fft3d, Fft3dInOutExt};
+use moirai_parallel::{enumerate_mut_with, Adaptive};
 use ndarray::{Array1, Array3, Zip};
 use std::sync::Arc;
+
+#[derive(Clone, Copy)]
+enum SpectralAxis {
+    X,
+    Y,
+    Z,
+}
+
+impl SpectralAxis {
+    fn index(self, linear_index: usize, ny: usize, nz: usize) -> usize {
+        match self {
+            Self::X => linear_index / (ny * nz),
+            Self::Y => (linear_index / nz) % ny,
+            Self::Z => linear_index % nz,
+        }
+    }
+
+    fn indexed(self, i: usize, j: usize, k: usize) -> usize {
+        match self {
+            Self::X => i,
+            Self::Y => j,
+            Self::Z => k,
+        }
+    }
+}
+
+fn apply_shifted_spectral_gradient(
+    output: &mut Array3<Complex64>,
+    field_k: &Array3<Complex64>,
+    kappa: &Array3<f64>,
+    shift: &Array1<Complex64>,
+    axis: SpectralAxis,
+) {
+    assert_eq!(
+        output.shape(),
+        field_k.shape(),
+        "invariant: FDTD spectral output shape matches transformed field"
+    );
+    assert_eq!(
+        output.shape(),
+        kappa.shape(),
+        "invariant: FDTD spectral kappa shape matches transformed field"
+    );
+    let (_nx, ny, nz) = output.dim();
+
+    if let (Some(output_values), Some(field_values), Some(kappa_values), Some(shift_values)) = (
+        output.as_slice_memory_order_mut(),
+        field_k.as_slice_memory_order(),
+        kappa.as_slice_memory_order(),
+        shift.as_slice_memory_order(),
+    ) {
+        enumerate_mut_with::<Adaptive, _, _>(output_values, |linear_index, value| {
+            let shift_index = axis.index(linear_index, ny, nz);
+            *value = shift_values[shift_index]
+                * (field_values[linear_index] * kappa_values[linear_index]);
+        });
+    } else {
+        Zip::indexed(output.view_mut())
+            .and(field_k.view())
+            .and(kappa.view())
+            .for_each(|(i, j, k), value, &field_value, &kappa_value| {
+                let shift_index = axis.indexed(i, j, k);
+                *value = shift[shift_index] * (field_value * kappa_value);
+            });
+    }
+}
 
 /// Pre-computed operators and scratch buffers for k-space corrected FDTD.
 ///
@@ -206,22 +273,27 @@ impl KSpaceFdtdOperators {
     pub fn compute_grad_pos(&mut self, field: &Array3<f64>) {
         self.fft.forward_into(field, &mut self.field_k);
 
-        {
-            let ddx = self.ddx_k_shift_pos.view();
-            let ddy = self.ddy_k_shift_pos.view();
-            let ddz = self.ddz_k_shift_pos.view();
-            Zip::indexed(self.grad_x_k.view_mut())
-                .and(self.grad_y_k.view_mut())
-                .and(self.grad_z_k.view_mut())
-                .and(self.field_k.view())
-                .and(self.kappa.view())
-                .par_for_each(|(i, j, k), gx, gy, gz, &fk, &kap| {
-                    let e = fk * kap; // real-scalar multiply: 2 mults vs complex×complex (4+2)
-                    *gx = ddx[i] * e;
-                    *gy = ddy[j] * e;
-                    *gz = ddz[k] * e;
-                });
-        }
+        apply_shifted_spectral_gradient(
+            &mut self.grad_x_k,
+            &self.field_k,
+            &self.kappa,
+            &self.ddx_k_shift_pos,
+            SpectralAxis::X,
+        );
+        apply_shifted_spectral_gradient(
+            &mut self.grad_y_k,
+            &self.field_k,
+            &self.kappa,
+            &self.ddy_k_shift_pos,
+            SpectralAxis::Y,
+        );
+        apply_shifted_spectral_gradient(
+            &mut self.grad_z_k,
+            &self.field_k,
+            &self.kappa,
+            &self.ddz_k_shift_pos,
+            SpectralAxis::Z,
+        );
 
         self.fft
             .inverse_into(&self.grad_x_k, &mut self.grad_x, &mut self.scratch_k);
@@ -244,45 +316,39 @@ impl KSpaceFdtdOperators {
 
         // ∂ux/∂x
         self.fft.forward_into(ux, &mut self.field_k);
-        {
-            let ddx = self.ddx_k_shift_neg.view();
-            Zip::indexed(self.grad_x_k.view_mut())
-                .and(self.field_k.view())
-                .and(self.kappa.view())
-                .par_for_each(|(i, _j, _k), gx, &fk, &kap| {
-                    *gx = ddx[i] * (fk * kap);
-                });
-        }
+        apply_shifted_spectral_gradient(
+            &mut self.grad_x_k,
+            &self.field_k,
+            &self.kappa,
+            &self.ddx_k_shift_neg,
+            SpectralAxis::X,
+        );
         self.fft
             .inverse_into(&self.grad_x_k, &mut self.grad_x, &mut self.scratch_k);
         self.divergence += &self.grad_x;
 
         // ∂uy/∂y
         self.fft.forward_into(uy, &mut self.field_k);
-        {
-            let ddy = self.ddy_k_shift_neg.view();
-            Zip::indexed(self.grad_y_k.view_mut())
-                .and(self.field_k.view())
-                .and(self.kappa.view())
-                .par_for_each(|(_i, j, _k), gy, &fk, &kap| {
-                    *gy = ddy[j] * (fk * kap);
-                });
-        }
+        apply_shifted_spectral_gradient(
+            &mut self.grad_y_k,
+            &self.field_k,
+            &self.kappa,
+            &self.ddy_k_shift_neg,
+            SpectralAxis::Y,
+        );
         self.fft
             .inverse_into(&self.grad_y_k, &mut self.grad_y, &mut self.scratch_k);
         self.divergence += &self.grad_y;
 
         // ∂uz/∂z
         self.fft.forward_into(uz, &mut self.field_k);
-        {
-            let ddz = self.ddz_k_shift_neg.view();
-            Zip::indexed(self.grad_z_k.view_mut())
-                .and(self.field_k.view())
-                .and(self.kappa.view())
-                .par_for_each(|(_i, _j, k), gz, &fk, &kap| {
-                    *gz = ddz[k] * (fk * kap);
-                });
-        }
+        apply_shifted_spectral_gradient(
+            &mut self.grad_z_k,
+            &self.field_k,
+            &self.kappa,
+            &self.ddz_k_shift_neg,
+            SpectralAxis::Z,
+        );
         self.fft
             .inverse_into(&self.grad_z_k, &mut self.grad_z, &mut self.scratch_k);
         self.divergence += &self.grad_z;

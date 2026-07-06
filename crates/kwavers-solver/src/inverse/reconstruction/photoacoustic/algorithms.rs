@@ -3,8 +3,9 @@
 //! This module implements the main reconstruction algorithms for
 //! photoacoustic imaging.
 
-use kwavers_core::error::KwaversResult;
+use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
+use leto::Array3 as LetoArray3;
 use ndarray::{Array3, ArrayView2};
 
 use super::config::ReconstructionPhotoacousticConfig;
@@ -73,11 +74,69 @@ impl PhotoacousticReconstructor {
         sound_speed: f64,
         sampling_frequency: f64,
     ) -> KwaversResult<Array3<f64>> {
+        let values = self.universal_back_projection_values(
+            sensor_data,
+            sensor_positions,
+            grid_size,
+            sound_speed,
+            sampling_frequency,
+        )?;
+        let mut reconstruction =
+            Array3::from_shape_vec((grid_size[0], grid_size[1], grid_size[2]), values)
+                .expect("invariant: back-projection value count equals grid_size product");
+
+        // Apply reconstruction filter if configured
+        if self.config.regularization_parameter > 0.0 {
+            reconstruction = self.filters.apply_reconstruction_filter(&reconstruction)?;
+        }
+
+        Ok(reconstruction)
+    }
+
+    /// Universal back-projection algorithm producing a Leto-owned volume.
+    ///
+    /// This is the native producer used by consumers that have already migrated
+    /// their volume surface to Leto.
+    ///
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    pub fn universal_back_projection_leto(
+        &self,
+        sensor_data: ArrayView2<f64>,
+        sensor_positions: &[[f64; 3]],
+        grid_size: [usize; 3],
+        sound_speed: f64,
+        sampling_frequency: f64,
+    ) -> KwaversResult<LetoArray3<f64>> {
+        if self.config.regularization_parameter > 0.0 {
+            return Err(KwaversError::InvalidInput(
+                "Leto universal back-projection requires a Leto-native reconstruction filter"
+                    .to_owned(),
+            ));
+        }
+
+        let values = self.universal_back_projection_values(
+            sensor_data,
+            sensor_positions,
+            grid_size,
+            sound_speed,
+            sampling_frequency,
+        )?;
+
+        Ok(LetoArray3::from_shape_vec(grid_size, values)
+            .expect("invariant: back-projection value count equals grid_size product"))
+    }
+
+    fn universal_back_projection_values(
+        &self,
+        sensor_data: ArrayView2<f64>,
+        sensor_positions: &[[f64; 3]],
+        grid_size: [usize; 3],
+        sound_speed: f64,
+        sampling_frequency: f64,
+    ) -> KwaversResult<Vec<f64>> {
         let (n_samples, n_sensors) = sensor_data.dim();
         let dt = 1.0 / sampling_frequency;
-
-        // Initialize reconstruction volume
-        let mut reconstruction = Array3::zeros((grid_size[0], grid_size[1], grid_size[2]));
 
         // Apply preprocessing if configured
         let processed_data = if let Some(bandpass) = self.config.bandpass_filter {
@@ -101,6 +160,7 @@ impl PhotoacousticReconstructor {
         let [dx, dy, dz] = self.config.grid_spacing;
 
         // Perform back-projection
+        let mut values = Vec::with_capacity(grid_size[0] * grid_size[1] * grid_size[2]);
         for i in 0..grid_size[0] {
             for j in 0..grid_size[1] {
                 for k in 0..grid_size[2] {
@@ -131,17 +191,12 @@ impl PhotoacousticReconstructor {
                         }
                     }
 
-                    reconstruction[[i, j, k]] = value / n_sensors as f64;
+                    values.push(value / n_sensors as f64);
                 }
             }
         }
 
-        // Apply reconstruction filter if configured
-        if self.config.regularization_parameter > 0.0 {
-            self.filters.apply_reconstruction_filter(&reconstruction)
-        } else {
-            Ok(reconstruction)
-        }
+        Ok(values)
     }
 
     /// Filtered back-projection algorithm

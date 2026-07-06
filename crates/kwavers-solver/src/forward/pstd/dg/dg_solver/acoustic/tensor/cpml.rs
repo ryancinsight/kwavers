@@ -36,9 +36,10 @@
 //! recursive-convolution post-updates and preserves the formal third-order
 //! accuracy of the stepper.
 
-use ndarray::{Array3, Zip};
+use ndarray::Array3;
 
 use super::super::super::core::DGSolver;
+use super::super::super::rk_update::{update_euler, update_ssp_final, update_ssp_second};
 use super::boundary::add_axis_surface_flux;
 use super::{velocity_var, AcousticDgTensorWorkspace, ACOUSTIC_PRESSURE_VAR};
 use crate::forward::pstd::dg::cpml::{
@@ -301,14 +302,13 @@ impl DGSolver {
             &mut memory.rhs,
         )?;
         add_source_rhs(t, &mut workspace.rhs);
-        Zip::from(&mut workspace.stage)
-            .and(&workspace.original)
-            .and(&workspace.rhs)
-            .for_each(|stage, &q0, &rhs| *stage = q0 + dt * rhs);
-        Zip::from(&mut memory.stage)
-            .and(&memory.original)
-            .and(&memory.rhs)
-            .for_each(|stage, &psi0, &rhs| *stage = psi0 + dt * rhs);
+        update_euler(
+            &mut workspace.stage,
+            &workspace.original,
+            &workspace.rhs,
+            dt,
+        );
+        update_euler(&mut memory.stage, &memory.original, &memory.rhs, dt);
 
         // Stage 2: q^{(2)} = 3/4 q^n + 1/4 (q^{(1)} + dt·R(q^{(1)}))
         self.compute_acoustic_tensor_rhs_with_cpml_into(
@@ -320,20 +320,13 @@ impl DGSolver {
             &mut memory.rhs,
         )?;
         add_source_rhs(t + dt, &mut workspace.rhs);
-        Zip::from(&mut workspace.stage)
-            .and(&workspace.original)
-            .and(&workspace.rhs)
-            .for_each(|stage, &q0, &rhs| {
-                let q1 = *stage;
-                *stage = 0.75 * q0 + 0.25 * (q1 + dt * rhs);
-            });
-        Zip::from(&mut memory.stage)
-            .and(&memory.original)
-            .and(&memory.rhs)
-            .for_each(|stage, &psi0, &rhs| {
-                let psi1 = *stage;
-                *stage = 0.75 * psi0 + 0.25 * (psi1 + dt * rhs);
-            });
+        update_ssp_second(
+            &mut workspace.stage,
+            &workspace.original,
+            &workspace.rhs,
+            dt,
+        );
+        update_ssp_second(&mut memory.stage, &memory.original, &memory.rhs, dt);
 
         // Stage 3: q^{n+1} = 1/3 q^n + 2/3 (q^{(2)} + dt·R(q^{(2)}))
         self.compute_acoustic_tensor_rhs_with_cpml_into(
@@ -345,20 +338,20 @@ impl DGSolver {
             &mut memory.rhs,
         )?;
         add_source_rhs(t + 0.5 * dt, &mut workspace.rhs);
-        Zip::from(state)
-            .and(&workspace.original)
-            .and(&workspace.stage)
-            .and(&workspace.rhs)
-            .for_each(|q_new, &q0, &q2, &rhs| {
-                *q_new = (1.0 / 3.0) * q0 + (2.0 / 3.0) * (q2 + dt * rhs);
-            });
-        Zip::from(&mut memory.state)
-            .and(&memory.original)
-            .and(&memory.stage)
-            .and(&memory.rhs)
-            .for_each(|psi_new, &psi0, &psi2, &rhs| {
-                *psi_new = (1.0 / 3.0) * psi0 + (2.0 / 3.0) * (psi2 + dt * rhs);
-            });
+        update_ssp_final(
+            state,
+            &workspace.original,
+            &workspace.stage,
+            &workspace.rhs,
+            dt,
+        );
+        update_ssp_final(
+            &mut memory.state,
+            &memory.original,
+            &memory.stage,
+            &memory.rhs,
+            dt,
+        );
         Ok(())
     }
 }

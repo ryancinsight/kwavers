@@ -20,8 +20,84 @@ use kwavers_medium::MaterialFields;
 use kwavers_medium::Medium;
 use kwavers_receiver::recorder::simple::SensorRecorder;
 use kwavers_source::GridSource;
-use ndarray::{s, Array3, Zip};
+use moirai_parallel::{enumerate_mut_with, for_each_chunk_triple_mut_enumerated_with, Adaptive};
+use ndarray::{s, Array3};
 use std::sync::Arc;
+
+const DENSE_CONSTRUCTION_CHUNK: usize = 4096;
+
+fn apply_kappa_cosine_transform(k_mag: &mut Array3<f64>, scale: f64) {
+    if let Some(values) = k_mag.as_slice_memory_order_mut() {
+        enumerate_mut_with::<Adaptive, _, _>(values, |_index, value| {
+            *value = (scale * *value).cos();
+        });
+    } else {
+        for value in k_mag.iter_mut() {
+            *value = (scale * *value).cos();
+        }
+    }
+}
+
+fn split_initial_density_components(
+    rhox: &mut Array3<f64>,
+    rhoy: &mut Array3<f64>,
+    rhoz: &mut Array3<f64>,
+    total_density: &Array3<f64>,
+    divisor: f64,
+    has_y_dim: bool,
+    has_z_dim: bool,
+) {
+    assert_eq!(
+        rhox.shape(),
+        rhoy.shape(),
+        "invariant: PSTD split-density rhox and rhoy shapes match"
+    );
+    assert_eq!(
+        rhox.shape(),
+        rhoz.shape(),
+        "invariant: PSTD split-density rhox and rhoz shapes match"
+    );
+    assert_eq!(
+        rhox.shape(),
+        total_density.shape(),
+        "invariant: PSTD split-density destination shape matches total density shape"
+    );
+
+    if let (Some(rx_values), Some(ry_values), Some(rz_values), Some(rho_values)) = (
+        rhox.as_slice_memory_order_mut(),
+        rhoy.as_slice_memory_order_mut(),
+        rhoz.as_slice_memory_order_mut(),
+        total_density.as_slice_memory_order(),
+    ) {
+        for_each_chunk_triple_mut_enumerated_with::<Adaptive, _, _, _, _>(
+            rx_values,
+            ry_values,
+            rz_values,
+            DENSE_CONSTRUCTION_CHUNK,
+            |chunk_index, rx_chunk, ry_chunk, rz_chunk| {
+                let start = chunk_index * DENSE_CONSTRUCTION_CHUNK;
+                for (offset, rx) in rx_chunk.iter_mut().enumerate() {
+                    let share = rho_values[start + offset] / divisor;
+                    *rx = share;
+                    ry_chunk[offset] = if has_y_dim { share } else { 0.0 };
+                    rz_chunk[offset] = if has_z_dim { share } else { 0.0 };
+                }
+            },
+        );
+    } else {
+        let (nx, ny, nz) = rhox.dim();
+        for k in 0..nz {
+            for j in 0..ny {
+                for i in 0..nx {
+                    let share = total_density[[i, j, k]] / divisor;
+                    rhox[[i, j, k]] = share;
+                    rhoy[[i, j, k]] = if has_y_dim { share } else { 0.0 };
+                    rhoz[[i, j, k]] = if has_z_dim { share } else { 0.0 };
+                }
+            }
+        }
+    }
+}
 
 impl PSTDSolver {
     /// New.
@@ -75,7 +151,7 @@ impl PSTDSolver {
         // kappa cosine transform overwrites k_mag. Needed to build the broadband
         // residual-gas absorption spectral shape ĝ(c·|k|) on demand.
         let k_mag_half = k_mag.slice(s![.., .., ..nz_c]).to_owned();
-        k_mag.par_mapv_inplace(|k| (0.5 * c_ref * config.dt * k).cos());
+        apply_kappa_cosine_transform(&mut k_mag, 0.5 * c_ref * config.dt);
         // source_kappa still has shape (nx, ny, nz) here — set_velocity_source_kappa
         // needs the full array to perform ifftshift indexing (kk = (k+nz/2)%nz).
         let source_kappa = k_mag;
@@ -289,16 +365,15 @@ impl PSTDSolver {
         let has_z_dim = solver.grid.nz > 1;
         let n_active = 1 + has_y_dim as usize + has_z_dim as usize;
         let divisor = n_active as f64;
-        Zip::from(&mut solver.rhox)
-            .and(&mut solver.rhoy)
-            .and(&mut solver.rhoz)
-            .and(&solver.div_u)
-            .par_for_each(|rx, ry, rz, &rho| {
-                let share = rho / divisor;
-                *rx = share;
-                *ry = if has_y_dim { share } else { 0.0 };
-                *rz = if has_z_dim { share } else { 0.0 };
-            });
+        split_initial_density_components(
+            &mut solver.rhox,
+            &mut solver.rhoy,
+            &mut solver.rhoz,
+            &solver.div_u,
+            divisor,
+            has_y_dim,
+            has_z_dim,
+        );
 
         if solver.source_handler.has_initial_pressure()
             && !solver.source_handler.has_initial_velocity()

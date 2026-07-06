@@ -3,6 +3,7 @@
 //! Geometry-neutral: consumes any [`VolumeOperator`] over an active voxel set,
 //! with regularization parameters drawn from [`LinearBornInversionConfig`].
 
+use moirai_parallel::{for_each_chunk_mut_with_state, Adaptive};
 use ndarray::Array3;
 
 use super::regularization::{
@@ -341,16 +342,18 @@ fn box_filter_y(data: &mut [f64], nx: usize, ny: usize, nz: usize, r: usize) {
 /// In-place 1-D prefix-sum box filter along the Z axis (contiguous).
 ///
 /// Z lines are contiguous in memory (`[ix * NY * NZ + iy * NZ .. + NZ]`).
-/// Uses Rayon `for_each_with` so the `prefix` scratch buffer is cloned once
-/// per worker thread rather than once per chunk, bounding allocations to the
-/// Rayon thread-pool size instead of `NX × NY`.
+/// Uses Moirai chunk state so the `prefix` scratch buffer is initialized once
+/// per worker shard rather than once per chunk, bounding allocations by the
+/// execution policy's worker partition instead of `NX × NY`.
 fn box_filter_z(data: &mut [f64], _nx: usize, _ny: usize, nz: usize, r: usize) {
-    use rayon::prelude::*;
-    let scratch_init = vec![0.0f64; nz + 1];
-    data.par_chunks_mut(nz)
-        .for_each_with(scratch_init, |prefix, line| {
+    for_each_chunk_mut_with_state::<Adaptive, _, _, _, _>(
+        data,
+        nz,
+        || vec![0.0f64; nz + 1],
+        |prefix, line| {
             apply_box_filter_1d_with_scratch(line, r, prefix);
-        });
+        },
+    );
 }
 
 /// Replace each element of `line` with the sum over the symmetric window of

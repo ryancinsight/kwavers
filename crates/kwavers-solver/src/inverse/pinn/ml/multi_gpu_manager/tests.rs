@@ -5,25 +5,24 @@ use super::types::{
     LoadBalancingAlgorithm, MultiGpuDecompositionStrategy, PerformanceSummary,
     PinnMultiGpuDeviceInfo,
 };
+use kwavers_core::error::{KwaversError, SystemError};
 
-#[tokio::test]
-async fn test_multi_gpu_manager_creation() {
+#[test]
+fn test_multi_gpu_manager_creation() {
     let result = MultiGpuManager::new(
         MultiGpuDecompositionStrategy::Spatial {
             dimensions: 2,
             overlap: 0.1,
         },
         LoadBalancingAlgorithm::Static,
-    )
-    .await;
+    );
 
     match result {
-        Ok(manager) => {
-            assert!(!manager.get_devices().is_empty());
+        Err(KwaversError::System(SystemError::ResourceUnavailable { resource })) => {
+            assert!(resource.contains("Coeus training provider"));
+            assert!(resource.contains("Hephaestus WGPU/CUDA device traits"));
         }
-        Err(_) => {
-            // Expected on systems without multiple GPU devices
-        }
+        other => panic!("expected missing Coeus/Hephaestus PINN provider error, got {other:?}"),
     }
 }
 

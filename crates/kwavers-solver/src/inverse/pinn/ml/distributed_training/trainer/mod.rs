@@ -18,7 +18,7 @@ impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
-    pub async fn new(
+    pub fn new(
         config: DistributedTrainingConfig,
         base_config: BurnPINN2DConfig,
         _geometry: BurnWave2dGeometry,
@@ -33,10 +33,10 @@ impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
         };
 
         let multi_gpu_manager = if config.num_gpus > 1 {
-            Some(
-                crate::inverse::pinn::ml::MultiGpuManager::new(decomposition, load_balancer)
-                    .await?,
-            )
+            Some(crate::inverse::pinn::ml::MultiGpuManager::new(
+                decomposition,
+                load_balancer,
+            )?)
         } else {
             None
         };
@@ -92,7 +92,7 @@ impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
-    pub async fn train(
+    pub fn train(
         &mut self,
         n_epochs: usize,
         collocation_points: &[(f64, f64, f64)],
@@ -105,16 +105,14 @@ impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
         for epoch in 0..n_epochs {
             let epoch_start = std::time::Instant::now();
 
-            let gpu_results = self
-                .train_epoch_distributed(
-                    collocation_points,
-                    boundary_points,
-                    initial_points,
-                    target_values,
-                )
-                .await?;
+            let gpu_results = self.train_epoch_distributed(
+                collocation_points,
+                boundary_points,
+                initial_points,
+                target_values,
+            )?;
 
-            self.aggregate_gradients_and_update(&gpu_results).await?;
+            self.aggregate_gradients_and_update(&gpu_results)?;
 
             self.coordinator.training_state.current_epoch = epoch + 1;
             self.coordinator
@@ -144,7 +142,7 @@ impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
             if self.config.checkpoint_config.auto_save
                 && (epoch + 1) % self.config.checkpoint_config.interval == 0
             {
-                self.save_checkpoint().await?;
+                self.save_checkpoint()?;
             }
 
             if epoch % 10 == 0 {

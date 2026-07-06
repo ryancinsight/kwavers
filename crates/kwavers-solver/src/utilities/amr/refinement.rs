@@ -1,6 +1,7 @@
 //! Refinement management and level control
 
 use kwavers_core::error::KwaversResult;
+use moirai_parallel::{enumerate_mut_with, Adaptive};
 use ndarray::{Array3, Zip};
 
 /// Refinement level information
@@ -84,15 +85,21 @@ impl RefinementManager {
     pub fn mark_cells(&self, error: &Array3<f64>, threshold: f64) -> KwaversResult<Array3<i8>> {
         let mut markers = Array3::zeros(error.dim());
 
-        // Mark cells based on error threshold
-        Zip::from(&mut markers).and(error).par_for_each(|m, &e| {
-            if e > threshold {
-                *m = 1; // Mark for refinement
-            } else if e < threshold * 0.1 {
-                *m = -1; // Mark for coarsening
+        match (
+            markers.as_slice_memory_order_mut(),
+            error.as_slice_memory_order(),
+        ) {
+            (Some(marker_slice), Some(error_slice)) => {
+                enumerate_mut_with::<Adaptive, _, _>(marker_slice, |idx, marker| {
+                    mark_cell(marker, error_slice[idx], threshold);
+                });
             }
-            // else 0 = no change
-        });
+            _ => Zip::from(&mut markers)
+                .and(error)
+                .for_each(|marker, &value| {
+                    mark_cell(marker, value, threshold);
+                }),
+        }
 
         // Add buffer zones around refinement regions
         self.add_buffer_zones(&mut markers)?;
@@ -234,5 +241,50 @@ impl RefinementManager {
     #[must_use]
     pub fn get_level(&self, level: usize) -> Option<&RefinementLevel> {
         self.levels.get(level)
+    }
+}
+
+#[inline]
+fn mark_cell(marker: &mut i8, error: f64, threshold: f64) {
+    if error > threshold {
+        *marker = 1;
+    } else if error < threshold * 0.1 {
+        *marker = -1;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn mark_cells_marks_uniform_coarsening_region() {
+        let manager = RefinementManager::new(1);
+        let error = Array3::from_elem((4, 4, 4), 0.05);
+
+        let markers = manager.mark_cells(&error, 1.0).unwrap();
+
+        assert_eq!(markers, Array3::from_elem((4, 4, 4), -1));
+    }
+
+    #[test]
+    fn mark_cells_preserves_threshold_band_as_no_change() {
+        let manager = RefinementManager::new(1);
+        let error = Array3::from_elem((4, 4, 4), 0.5);
+
+        let markers = manager.mark_cells(&error, 0.5).unwrap();
+
+        assert_eq!(markers, Array3::<i8>::zeros((4, 4, 4)));
+    }
+
+    #[test]
+    fn mark_cells_expands_refinement_buffer() {
+        let manager = RefinementManager::new(1);
+        let mut error = Array3::from_elem((5, 5, 5), 0.5);
+        error[[2, 2, 2]] = 1.0;
+
+        let markers = manager.mark_cells(&error, 0.75).unwrap();
+
+        assert_eq!(markers, Array3::from_elem((5, 5, 5), 1));
     }
 }

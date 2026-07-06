@@ -3,9 +3,10 @@
 //! Handles the assembly of global stiffness and mass matrices from element contributions.
 //! Provides efficient sparse matrix construction and boundary condition application.
 
-use kwavers_core::error::KwaversResult;
+use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::linear_algebra::sparse::CompressedSparseRowMatrix;
 use kwavers_mesh::Tetrahedron;
+use moirai_parallel::{map_collect_index_with, Adaptive};
 use ndarray::Array1;
 use num_complex::Complex64;
 
@@ -73,18 +74,23 @@ impl FemAssembly {
             self.preallocate_matrices(num_nodes, elements);
         let mut global_rhs = Array1::<Complex64>::zeros(num_nodes);
 
-        // Parallel assembly using rayon
-        use rayon::prelude::*;
+        self.validate_element_array_lengths(
+            elements,
+            element_stiffness,
+            element_mass,
+            element_rhs,
+        )?;
 
-        let contributions: Vec<_> = elements
-            .par_iter()
-            .zip(element_stiffness.par_iter())
-            .zip(element_mass.par_iter())
-            .zip(element_rhs.par_iter())
-            .map(|(((element, k_elem), m_elem), f_elem)| {
-                self.assemble_single_element(element, k_elem, m_elem, f_elem)
-            })
-            .collect::<KwaversResult<Vec<_>>>()?;
+        let contributions = map_collect_index_with::<Adaptive, _, _>(elements.len(), |idx| {
+            self.assemble_single_element(
+                &elements[idx],
+                &element_stiffness[idx],
+                &element_mass[idx],
+                &element_rhs[idx],
+            )
+        })
+        .into_iter()
+        .collect::<KwaversResult<Vec<_>>>()?;
 
         // Accumulate contributions into global matrices
         for contribution in contributions {
@@ -97,6 +103,29 @@ impl FemAssembly {
         }
 
         Ok((global_stiffness, global_mass, global_rhs))
+    }
+
+    fn validate_element_array_lengths(
+        &self,
+        elements: &[Tetrahedron],
+        element_stiffness: &[ndarray::Array2<Complex64>],
+        element_mass: &[ndarray::Array2<Complex64>],
+        element_rhs: &[Array1<Complex64>],
+    ) -> KwaversResult<()> {
+        let expected = elements.len();
+        let actual = (
+            element_stiffness.len(),
+            element_mass.len(),
+            element_rhs.len(),
+        );
+        if actual != (expected, expected, expected) {
+            return Err(KwaversError::InvalidInput(format!(
+                "FEM element contribution length mismatch: elements={expected}, stiffness={}, mass={}, rhs={}",
+                actual.0, actual.1, actual.2
+            )));
+        }
+
+        Ok(())
     }
 
     /// Assemble single element contribution
@@ -271,5 +300,43 @@ struct ElementContribution {
 impl Default for FemAssembly {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ndarray::Array2;
+
+    fn unit_tetrahedron() -> Tetrahedron {
+        Tetrahedron {
+            nodes: [0, 1, 2, 3],
+            material_id: 0,
+            volume: 1.0,
+            quality: 1.0,
+        }
+    }
+
+    #[test]
+    fn assembly_rejects_mismatched_element_contribution_lengths() {
+        let assembler = FemAssembly::new();
+        let elements = [unit_tetrahedron()];
+        let stiffness: [Array2<Complex64>; 0] = [];
+        let mass = [Array2::zeros((4, 4))];
+        let rhs = [Array1::zeros(4)];
+
+        let error = assembler
+            .assemble_global_matrices_parallel(&elements, &stiffness, &mass, &rhs)
+            .expect_err("mismatched element contributions must be rejected");
+
+        match error {
+            KwaversError::InvalidInput(message) => {
+                assert!(message.contains("elements=1"));
+                assert!(message.contains("stiffness=0"));
+                assert!(message.contains("mass=1"));
+                assert!(message.contains("rhs=1"));
+            }
+            other => panic!("expected InvalidInput, got {other:?}"),
+        }
     }
 }

@@ -7,7 +7,8 @@ use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_math::fft::{Fft3dInOutExt, Shape3D, FFT_CACHE_3D};
 use kwavers_medium::Medium;
-use ndarray::{Array3, Zip};
+use moirai_parallel::{enumerate_mut_with, Adaptive};
+use ndarray::Array3;
 use num_complex::Complex64;
 
 /// Mixed-Domain Propagation Plugin
@@ -169,9 +170,17 @@ impl MixedDomainPropagationPlugin {
         // Apply spectral propagator exp(ikz * dz) in frequency domain
         let mut result = field.clone();
         let k = TWO_PI / (kwavers_medium::sound_speed_at(medium, 0.0, 0.0, 0.0, grid) * time_step);
+        let phase = Complex64::from_polar(1.0, k * grid.dx);
 
-        Zip::from(&mut result).and(field).par_for_each(|r, &f| {
-            *r = f * Complex64::from_polar(1.0, k * grid.dx);
+        let input = field
+            .as_slice_memory_order()
+            .expect("invariant: mixed-domain frequency input is standard-layout");
+        let output = result
+            .as_slice_memory_order_mut()
+            .expect("invariant: mixed-domain frequency output is standard-layout");
+
+        enumerate_mut_with::<Adaptive, _, _>(output, |idx, r| {
+            *r = input[idx] * phase;
         });
 
         Ok(result)
