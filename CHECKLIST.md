@@ -9,7 +9,3343 @@
 > decision rationale + migration guide are recorded in CHANGELOG.md.
 > Gap inventory: [gap_audit.md](gap_audit.md) · Strategy: [backlog.md](backlog.md).
 
+- [x] [patch] kwavers-math numeric SSOT Phase-1A pilot: port the generic `NumericOps<T>` trait from `num_traits::{Float, NumCast, Zero}` to `eunomia::RealField` + `NumericElement::ZERO`. Add `eunomia = { workspace = true }` to `crates/kwavers-math/Cargo.toml` while retaining `num-traits` for the csr.rs blocker; prune `Clone + Zero` supertraits to `Copy + PartialOrd`; rewrite the six bodies (`dot_product`, `normalize`, `add_arrays`, `scale_array`, `l2_norm`, `max_abs`, `safe_divide`) to use `T::ZERO`; the `max_abs` fold uses `if val > acc { val } else { acc }` instead of `acc.max(val)` because eunomia's super-trait chain does not propagate `max`. Completion condition: `cargo build -p kwavers-math` succeeds, `numeric_ops.rs` drops from the kwavers xtask `legacy-migration-audit` source-legacy list, and downstream `NumericOps` callers can swap `num_traits::Float` for `eunomia::RealField`. Verification: `cargo build -p kwavers-math` exits 0, `cargo run -p xtask -- legacy-migration-audit` shows `numeric_ops.rs` absent from source-legacy per-file. Residual: csr.rs Phase-1B requires an Atlas extension (queued below) for `num_complex::Complex64` ↔ `eunomia::NumericElement`.
 ## Sprint K Atlas provider migration — IN PROGRESS (2026-07-01)
+- [x] [patch] GPU provider-neutral backend boundary: make
+      `kwavers-solver::backend::BackendType` carry an explicit
+      `GpuProvider` (`Wgpu`, `Cuda`, `Metal`), update the existing WGPU
+      backend to report `GpuProvider::Wgpu`, and remove WGPU error-conversion
+      dependencies from `kwavers-core` and downstream `kwavers-core/gpu`
+      forwarding. Completion condition: touched manifests no longer reference
+      `kwavers-core/gpu`, WGPU map errors are converted inside `kwavers-gpu`,
+      and focused compile/test checks pass for the trait surface. Verification:
+      `cargo fmt --check` for touched packages passed, `cargo check -p
+      kwavers-core --all-features` passed, `cargo check -p kwavers-solver`
+      passed, `cargo check -p kwavers-gpu --features gpu` passed, and `cargo
+      nextest run -p kwavers-solver backend_surface_tests` passed 3/3.
+      Follow-up verification after the diagnostics Leto normalization and
+      backend pipeline fixes: `cargo check -p kwavers --features gpu` passed,
+      `cargo check -p moirai-core --tests` passed, and `cargo nextest run -p
+      kwavers-gpu --features gpu backend --no-fail-fast` passed 31/31.
+- [x] [patch] Hephaestus-backed generic GPU provider seam: make
+      `kwavers-gpu::backend::GPUBackend` generic over a `GpuComputeProvider`
+      trait, bind that trait to an associated Hephaestus
+      `ComputeDeviceCapabilities` device type, move WGPU-specific state into
+      `WgpuComputeProvider`, and acquire the default WGPU provider through
+      `hephaestus_wgpu::WgpuDevice` instead of local adapter/device
+      construction. Completion condition:
+      `GPUBackend::new()` remains the default WGPU constructor, provider
+      creation/synchronization/devices route through the trait seam, and CUDA
+      can land as a sibling provider implementation without changing the
+      solver-facing `ComputeBackend` contract. Verification: `cargo fmt -p
+      kwavers-gpu` passed, `cargo check -p kwavers-gpu --features gpu`
+      passed, and `cargo nextest run -p kwavers-gpu --features gpu backend
+      --status-level fail --no-fail-fast` passed 31/31.
+- [x] [patch] Backend provider-context generic refinement: replace the
+      WGPU-specific backend initialization context with
+      `GpuProviderContext<P: GpuDeviceProvider>`, re-export
+      `GpuDeviceProvider` from `kwavers_gpu::gpu`, and keep raw WGPU
+      device/queue access only on the `GpuProviderContext<WgpuDevice>`
+      specialization used by current WGSL pipelines. Completion condition:
+      backend acquisition, synchronization, and capability queries are generic
+      over the Hephaestus provider trait while existing WGPU dispatch still
+      compiles through the specialization. Verification: `cargo fmt -p
+      kwavers-gpu --check` passed, `cargo check -p kwavers-gpu --features
+      gpu` passed, and `cargo nextest run -p kwavers-gpu --features gpu
+      backend --status-level fail --no-fail-fast` passed 31/31.
+- [x] [patch] Provider-owned GPU acquisition requirements: move the default
+      GPU acquisition label, optional features, and required limits onto
+      `GpuDeviceProvider` so `GpuProviderContext<P>` no longer forces future
+      CUDA providers through WGPU's `ShaderF64` and WGSL workgroup policy.
+      Completion condition: generic provider acquisition calls only
+      `P::acquisition_label()`, `P::acquisition_preference()`,
+      `P::optional_features()`, and `P::required_limits()`, while WGPU keeps
+      its current requirements on the `WgpuDevice` implementation.
+      Verification: `cargo fmt -p kwavers-gpu --check` passed, `cargo check
+      -p kwavers-gpu --features gpu` passed, and `cargo nextest run -p
+      kwavers-gpu --features gpu backend --status-level fail --no-fail-fast`
+      passed 31/31.
+- [x] [patch] CUDA provider acquisition contract: add local
+      `hephaestus-cuda` as an optional Atlas dependency, expose
+      `kwavers-gpu/cuda-provider` for the compile-time CUDA acquisition seam
+      and `kwavers-gpu/cuda-runtime` for Hephaestus' real CUDA loader, and
+      implement `GpuDeviceProvider` for `hephaestus_cuda::CudaDevice` without
+      adding a placeholder `CudaComputeProvider`. Completion condition:
+      `GpuProviderContext<CudaDevice>` is type-valid, CUDA provider
+      acquisition owns CUDA-specific labels/limits instead of inheriting WGPU
+      optional features, and existing WGPU dispatch remains unchanged.
+      Verification: `cargo fmt -p kwavers-gpu -p kwavers-boundary --check`
+      passed, `cargo check -p kwavers-gpu --features gpu` passed, `cargo
+      check -p kwavers-gpu --features cuda-provider --offline` passed, `cargo
+      clippy -p kwavers-gpu --features cuda-provider --all-targets --offline
+      -- -D warnings` passed, `cargo nextest run -p kwavers-gpu --features
+      cuda-provider --status-level fail --no-fail-fast --offline` passed
+      101/101 with 1 skipped, and `cargo tree -p kwavers-gpu --features
+      cuda-provider --depth 1 --offline` shows direct local
+      `hephaestus-cuda`, `hephaestus-core`, and `hephaestus-wgpu` edges.
+      Re-verified for the WGPU/CUDA trait-generic boundary on 2026-07-03:
+      `rustup run nightly cargo check -p kwavers-gpu --features
+      cuda-provider` passed, and `rustup run nightly cargo nextest run -p
+      kwavers-gpu --features cuda-provider -E
+      "test(gpu_provider_identity_is_separate_from_kernel_dispatch) or
+      test(cuda_satisfies_provider_identity_without_fake_kernels) or
+      test(cuda_device_satisfies_kwavers_provider_contract) or
+      test(gpu_backend_alias_accepts_cuda_provider) or
+      test(test_cuda_provider_context_is_type_valid)"` passed 5/5.
+      Re-verified after upstream Hephaestus CUDA unary/binary storage-kernel
+      trait closure on 2026-07-04: `rustup run nightly cargo check -p
+      kwavers-gpu --features gpu --all-targets`, `rustup run nightly cargo
+      check -p kwavers-gpu --features cuda-provider --all-targets`, `rustup
+      run nightly cargo clippy -p kwavers-gpu --features gpu --all-targets
+      --no-deps -- -D warnings`, `rustup run nightly cargo clippy -p
+      kwavers-gpu --features cuda-provider --all-targets --no-deps -- -D
+      warnings`, `rustup run nightly cargo nextest run -p kwavers-gpu
+      --features gpu provider --status-level fail --no-fail-fast` (32/32),
+      and `rustup run nightly cargo nextest run -p kwavers-gpu --features
+      cuda-provider provider --status-level fail --no-fail-fast` (39/39)
+      passed. Evidence tier: type-level trait satisfaction plus focused
+      provider tests; runtime CUDA acoustic/FDTD kernels remain a separate
+      real-kernel implementation item.
+      Follow-up 2026-07-04: exposed `kwavers/cuda-provider` and
+      `kwavers/cuda-runtime` as top-level feature forwards to the existing
+      `kwavers-gpu` Hephaestus CUDA provider features, and corrected stale
+      WGPU-only/Rayon wording at the crate boundary. Completion condition:
+      top-level feature selection reaches the same provider-generic GPU seam
+      without adding a fake CUDA compute backend. Verification: `rustup run
+      nightly cargo fmt -p kwavers -p kwavers-solver --check`, `rustup run
+      nightly cargo check -p kwavers --features cuda-provider`, `rustup run
+      nightly cargo clippy -p kwavers --features cuda-provider --lib
+      --no-deps -- -D warnings`, focused `rustup run nightly cargo nextest run
+      -p kwavers-gpu --features cuda-provider provider --status-level fail
+      --no-fail-fast` (44/44), and `cargo tree -p kwavers-gpu --features
+      cuda-provider --depth 1` provider-edge audit pass.
+      Follow-up 2026-07-04: top-level ignored GPU FFT parity tests now plan
+      through `kwavers_math::fft::gpu_fft::WgpuBackend` and Apollo's
+      `FftBackend`, with explicit Leto test buffers at the GPU boundary
+      instead of local `wgpu::Instance`/device/queue construction,
+      `pollster::block_on`, or `tokio::test` in those FFT files. Verification:
+      `rustup run nightly cargo fmt -p kwavers --check`, `rustup run nightly
+      cargo check -p kwavers --features gpu --test gpu_fft_arbitrary_size
+      --test gpu_cpu_fft_parity`, `rustup run nightly cargo clippy -p kwavers
+      --features gpu --test gpu_fft_arbitrary_size --test
+      gpu_cpu_fft_parity --no-deps -- -D warnings`, and `rustup run nightly
+      cargo nextest run -p kwavers --features gpu --test
+      gpu_fft_arbitrary_size --test gpu_cpu_fft_parity --status-level fail
+      --no-fail-fast --no-tests pass` pass; nextest reports 22 ignored GPU
+      hardware tests skipped. Residual: other top-level raw-buffer/device
+      tests still exercise WGPU-specialized handles until their public
+      surfaces are provider-wrapped.
+      Follow-up 2026-07-04: top-level `kwavers/gpu` no longer forwards direct
+      `wgpu`, `bytemuck`, or `pollster` dependencies. `kwavers-gpu` now owns
+      synchronous provider acquisition/readback wrappers for `GpuDevice`,
+      `CoreGpuContext`, `GpuBufferData`, `AcousticFieldKernel`,
+      `WaveEquationGpu`, and `FdtdGpuProvider`; top-level buffer/device/kernel
+      tests call those wrappers instead of importing runtime helper crates.
+      Verification: `rustup run nightly cargo fmt -p kwavers-gpu -p kwavers
+      --check`, `rustup run nightly cargo check -p kwavers-gpu --features gpu
+      --lib`, `rustup run nightly cargo check -p kwavers --features gpu --test
+      gpu_buffer_tests --test gpu_device_tests --test
+      gpu_allocation_tracking_test --test gpu_compute_kernel_tests`, matching
+      focused clippy commands with `-D warnings`, affected nextest 28/28, a
+      top-level source audit for `wgpu::`/`pollster::`/`bytemuck::`, and a
+      direct dependency audit for `kwavers --features gpu` pass. Residual:
+      concrete WGPU handles remain inside `kwavers-gpu` provider
+      implementations for current WGSL kernels.
+- [x] [patch] Top-level stream visualization runtime cleanup: add blocking
+      stream send/receive and stage-pipeline entry points to
+      `kwavers-analysis::visualization::stream`, route
+      `stream_visualization_test.rs` through those provider-owned paths, and
+      use provider-native `leto::Array3<f32>` frames instead of ndarray.
+      Completion condition: the stream visualization test target no longer
+      contains Tokio macros, `.await`, async test functions, or ndarray frame
+      construction. Verification: `rustup run nightly cargo fmt -p
+      kwavers-analysis -p kwavers --check`, `rustup run nightly cargo check -p
+      kwavers --features gpu-visualization,async-runtime --test
+      stream_visualization_test`, `rustup run nightly cargo clippy -p kwavers
+      --features gpu-visualization,async-runtime --test
+      stream_visualization_test --no-deps -- -D warnings`, and `rustup run
+      nightly cargo nextest run -p kwavers --features
+      gpu-visualization,async-runtime --test stream_visualization_test
+      --status-level fail --no-fail-fast` passed 25/25. Former residual:
+      `real_time_3d_beamforming.rs` still needed Tokio because construction
+      awaited raw WGPU acquisition; the provider-constructor follow-up below
+      closes that edge.
+- [x] [patch] 3-D beamforming GPU provider construction: make
+      `BeamformingProcessor3D<P>` generic over `BeamformingGpuProvider`, keep
+      `WgpuBeamformingProvider` as the current real provider acquired through
+      Hephaestus `WgpuDevice`, and make the default constructor synchronous so
+      the real-time 3-D beamforming example does not own Tokio. Completion
+      condition: the example and 3-D beamforming tests contain no Tokio macros,
+      `.await`, async functions, or `Runtime::new`; `kwavers` has no top-level
+      direct Tokio dev-dependency; WGPU remains an implementation provider, not
+      the architecture. Verification: `rustup run nightly cargo fmt -p
+      kwavers-analysis -p kwavers --check`, `rustup run nightly cargo check -p
+      kwavers-analysis --features gpu --all-targets`, `rustup run nightly
+      cargo check -p kwavers --features gpu --example
+      real_time_3d_beamforming`, `rustup run nightly cargo clippy -p
+      kwavers-analysis --features gpu --all-targets --no-deps -- -D warnings`,
+      `rustup run nightly cargo clippy -p kwavers --features gpu --example
+      real_time_3d_beamforming --no-deps -- -D warnings`, focused `rustup run
+      nightly cargo nextest run -p kwavers-analysis --features gpu
+      three_dimensional --status-level fail --no-fail-fast` (52/52), the
+      scoped Tokio source audit, and `cargo tree -p kwavers --features gpu
+      --depth 1 | rg "tokio"` pass. Follow-up 2026-07-04 closed the
+      provider-leak residual: `kwavers-analysis` now owns only the
+      `BeamformingGpuProvider` operation contract and CPU reference, while
+      `kwavers-gpu::beamforming::three_dimensional::WgpuBeamformingProvider`
+      owns WGPU acquisition, device-error mapping, bind-group layout, dispatch,
+      DAS parameters, and WGSL shaders.
+      Follow-up 2026-07-04: `with_provider` is now public as the generic GPU
+      entry point, `new_wgpu` names the concrete WGPU convenience constructor,
+      and all in-tree `BeamformingProcessor3D::new` call sites were removed.
+      Verification: `rustup run nightly cargo fmt -p kwavers-analysis -p
+      kwavers --check`, `rustup run nightly cargo check -p kwavers-analysis
+      --features gpu --all-targets`, `rustup run nightly cargo check -p
+      kwavers --features gpu --example real_time_3d_beamforming`, `rustup run
+      nightly cargo check -p kwavers-analysis --all-targets`, and focused
+      clippy for both GPU targets pass. `cargo nextest run -p kwavers-analysis
+      --features gpu three_dimensional` could not execute because `D:` had
+      4096 bytes free and rustc failed writing incremental artifacts under
+      `D:\atlas\target` with OS error 112.
+      Follow-up 2026-07-04 provider-leak closure: moved the concrete WGPU DAS
+      provider, dynamic-focus dispatch, parameters, and shaders into
+      `kwavers-gpu`; removed WGPU/bytemuck/Hephaestus/pollster from the
+      `kwavers-analysis/gpu` feature; and adapted the real-time 3-D
+      beamforming example to inject `WgpuBeamformingProvider` from the GPU leaf.
+      Verification: direct `rustfmt --edition 2021` over touched Rust files,
+      `rustup run nightly cargo check -p kwavers-analysis --features gpu`,
+      `rustup run nightly cargo check -p kwavers-gpu --features gpu`, `rustup
+      run nightly cargo check -p kwavers --features gpu --example
+      real_time_3d_beamforming`, and focused `rustup run nightly cargo nextest
+      run -p kwavers-gpu --features gpu
+      wgpu_das_matches_cpu_reference_when_available --status-level fail
+      --no-fail-fast` pass. Focused `kwavers-analysis --features gpu` nextest
+      is blocked before the target tests by the out-of-scope
+      `D:\atlas\repos\eunomia` `Complex<T>: NumericElement` compile error.
+- [x] [patch] Distributed neural beamforming Tokio removal: remove the
+      artificial `async fn` boundary from
+      `DistributedNeuralBeamformingProcessor::process_volume_distributed`,
+      keep the existing Moirai-backed `map_collect_mut_with::<Adaptive, _>`
+      fan-out as the execution mechanism, and delete the `kwavers-analysis`
+      Tokio dev-dependency. Completion condition: the distributed neural
+      beamforming test no longer constructs a Tokio runtime, the public usage
+      example no longer awaits the distributed processor, and scoped source plus
+      depth-1 dependency audits find no Tokio edge in `kwavers-analysis`.
+      Verification: `rustup run nightly cargo fmt -p kwavers-analysis
+      --check`, `rustup run nightly cargo check -p kwavers-analysis --features
+      pinn --all-targets`, `rustup run nightly cargo clippy -p kwavers-analysis
+      --features pinn --all-targets --no-deps -- -D warnings`, focused
+      `rustup run nightly cargo nextest run -p kwavers-analysis --features pinn
+      -E "test(test_distributed_processing_matches_sequential_result) or
+      test(test_processor_creation) or test(test_fault_tolerance_default) or
+      test(test_fault_tolerance_config)" --status-level fail --no-fail-fast`
+      (6/6), scoped Tokio source audit, and `cargo tree -p kwavers-analysis
+      --features pinn --depth 1 | rg "tokio"` pass.
+- [x] [patch] Acoustic-field provider trait unification: bind
+      `AcousticFieldProvider` to the shared
+      `GpuKernelProvider`/`GpuProviderBackend` stack and store the current
+      WGPU acoustic-field device through `GpuProviderContext<WgpuDevice>`.
+      Completion condition: `WaveEquationGpu<P>` and
+      `AcousticFieldKernel<P>` no longer carry a standalone acoustic scalar
+      associated type, WGPU remains the only real acoustic kernel provider,
+      and CUDA-provider builds type-check without a downstream CUDA helper or
+      placeholder acoustic implementation. Verification: `rustup run nightly
+      cargo fmt -p kwavers-gpu --check`, `rustup run nightly cargo check -p
+      kwavers-gpu --features gpu --all-targets`, `rustup run nightly cargo
+      check -p kwavers-gpu --features cuda-provider --all-targets`, `rustup
+      run nightly cargo nextest run -p kwavers-gpu --features gpu provider
+      --status-level fail --no-fail-fast` (32/32), `rustup run nightly cargo
+      nextest run -p kwavers-gpu --features cuda-provider provider
+      --status-level fail --no-fail-fast` (39/39), and clippy for both feature
+      sets pass. Evidence tier: type-level trait satisfaction plus focused
+      provider contract tests; runtime CUDA acoustic execution remains a real
+      kernel and differential-test follow-up.
+- [x] [patch] Thermal-acoustic solver provider trait unification: bind
+      `ThermalAcousticSolverProvider` to the shared
+      `GpuKernelProvider`/`GpuProviderBackend` stack and make
+      `GpuThermalAcousticSolver::new(config)` acquire the current WGPU device
+      through `GpuProviderContext<WgpuDevice>`. Completion condition: the
+      generic solver wrapper no longer takes raw `wgpu::Device`/`Queue`
+      constructor arguments, `WgpuThermalAcousticSolverProvider` owns the
+      Hephaestus context, and CUDA-provider builds type-check without a fake
+      CUDA thermal-acoustic implementation. Verification: `rustup run nightly
+      cargo fmt -p kwavers-gpu --check`, `rustup run nightly cargo check -p
+      kwavers-gpu --features gpu --all-targets`, `rustup run nightly cargo
+      check -p kwavers-gpu --features cuda-provider --all-targets`, `rustup
+      run nightly cargo nextest run -p kwavers-gpu --features gpu
+      thermal_acoustic provider --status-level fail --no-fail-fast` (38/38),
+      `rustup run nightly cargo nextest run -p kwavers-gpu --features
+      cuda-provider thermal_acoustic provider --status-level fail
+      --no-fail-fast` (45/45), and clippy for both feature sets pass. Evidence
+      tier: type-level provider-trait validation plus focused provider/config
+      tests; runtime CUDA thermal-acoustic execution remains a real kernel and
+      WGPU/CUDA differential-test follow-up.
+- [x] [patch] FDTD pressure dispatcher provider trait unification: make
+      `WgpuFdtdPressureDispatcher::new()` acquire the current WGPU device
+      through `GpuProviderContext<WgpuDevice>` and implement the shared
+      `GpuKernelProvider`/`GpuProviderBackend` stack for the dispatcher.
+      Completion condition: the dispatcher no longer accepts or stores raw
+      `Arc<wgpu::Device>`/`Arc<wgpu::Queue>` constructor arguments, WGPU remains
+      the only real FDTD pressure kernel provider, and CUDA-provider builds
+      type-check without a fake CUDA FDTD implementation. Verification:
+      `rustup run nightly cargo fmt -p kwavers-gpu --check`, `rustup run
+      nightly cargo check -p kwavers-gpu --features gpu --all-targets`, `rustup
+      run nightly cargo check -p kwavers-gpu --features cuda-provider
+      --all-targets`, `rustup run nightly cargo nextest run -p kwavers-gpu
+      --features gpu fdtd provider --status-level fail --no-fail-fast` (39/39),
+      `rustup run nightly cargo nextest run -p kwavers-gpu --features
+      cuda-provider fdtd provider --status-level fail --no-fail-fast` (46/46),
+      and clippy for both feature sets pass. Evidence tier: type-level
+      provider-trait validation plus focused FDTD/provider tests; runtime CUDA
+      FDTD pressure execution remains a real kernel and WGPU/CUDA
+      differential-test follow-up.
+- [x] [patch] kwavers-math inverse regularization ndarray/Rayon cleanup:
+      replace `Zip::par_for_each` in 1D/2D/3D regularization Tikhonov,
+      smoothness, and L1 updates with `regularization::ops::for_each_pair_mut`,
+      using `moirai_parallel::for_each_chunk_mut_enumerated_with` for
+      contiguous buffers and sequential `Zip` traversal for non-standard
+      ndarray layouts. Completion condition: no direct `par_*`/Rayon hits
+      remain under `crates/kwavers-math/src/inverse_problems/regularization`.
+      Verification: `rustup run nightly cargo fmt -p kwavers-math --check`,
+      `rustup run nightly cargo check -p kwavers-math --all-targets`, `rustup
+      run nightly cargo nextest run -p kwavers-math regularization
+      --status-level fail --no-fail-fast` (10/10), `rustup run nightly cargo
+      clippy -p kwavers-math --all-targets --no-deps -- -D warnings`, and the
+      scoped regularization direct-provider audit passed. Residual:
+      manifest-level `ndarray/rayon` removal remains a dependency audit after
+      the source-level cleanup.
+- [x] [patch] kwavers-math SIMD-safe Hermes/Moirai routing: add the local
+      `hermes-simd` Atlas dependency, replace duplicated local
+      architecture-named add/scale bodies with one shared
+      `simd_safe::auto_detect::ops` helper, route dense add/scale through
+      `hermes_simd::{elementwise_add, scale}`, and route dense ternary
+      accumulation through Moirai chunk traversal until Hermes exposes that
+      exact public facade. Completion condition: no direct `par_*`/Rayon hits
+      remain under `crates/kwavers-math/src/simd_safe`. Verification: `rustup
+      run nightly cargo fmt -p kwavers-math --check`, `rustup run nightly cargo
+      check -p kwavers-math --all-targets`, `rustup run nightly cargo nextest
+      run -p kwavers-math simd --status-level fail --no-fail-fast` (18/18),
+      `rustup run nightly cargo clippy -p kwavers-math --all-targets
+      --no-deps -- -D warnings`, and the scoped `simd_safe` direct-provider
+      audit passed. Residual: Hermes should own a public ternary
+      `out += alpha * a * b` slice facade before this Kwavers helper can route
+      that operation through Hermes without a temporary.
+- [x] [patch] kwavers-math differential Moirai traversal: add shared
+      `numerics::operators::differential::traversal` helpers, route
+      second-order central and staggered-grid standard-layout output fills
+      through `moirai_parallel::for_each_chunk_mut_enumerated_with`, and keep
+      sequential ndarray `Zip` fallback traversal for non-standard layouts.
+      Completion condition: no direct `par_*`/Rayon hits remain under
+      `crates/kwavers-math/src/numerics/operators/differential`. Verification:
+      `rustup run nightly cargo fmt -p kwavers-math --check`, `rustup run
+      nightly cargo check -p kwavers-math --all-targets`, `rustup run nightly
+      cargo nextest run -p kwavers-math differential --status-level fail
+      --no-fail-fast` (46/46), `rustup run nightly cargo clippy -p
+      kwavers-math --all-targets --no-deps -- -D warnings`, and the scoped
+      differential direct-provider audit passed. Residual: manifest-level
+      `ndarray/rayon` removal remains a dependency audit after the
+      source-level cleanup.
+- [x] [patch] kwavers-math FFT/k-space Moirai traversal: route FFT
+      real/complex packing and `KSpaceCalculator::generate_k_squared` over
+      standard-layout arrays through `moirai_parallel`, preserving sequential
+      ndarray traversal for non-standard FFT layouts. Completion condition: no
+      direct `par_*`/Rayon hits remain under `crates/kwavers-math/src`.
+      Verification: `rustup run nightly cargo fmt -p kwavers-math --check`,
+      `rustup run nightly cargo check -p kwavers-math --all-targets`, `rustup
+      run nightly cargo nextest run -p kwavers-math -E "test(fft) or
+      test(kspace)" --status-level fail --no-fail-fast` (18/18), `rustup run
+      nightly cargo clippy -p kwavers-math --all-targets --no-deps -- -D
+      warnings`, scoped source audit, and `git diff --check` passed. Evidence
+      tier: static source audit plus focused empirical tests. Residual:
+      manifest-level `ndarray/rayon` removal is the next dependency audit;
+      transitive Rayon may still enter through Atlas provider crates.
+- [x] [patch] kwavers-math Apollo/Leto FFT boundary and GPU provider trait
+      alignment: remove the direct `ndarray/rayon` feature from
+      `kwavers-math`, switch Kwavers' Apollo dependency to the local Atlas
+      Apollo checkout, route Apollo's WGPU helper through local Hephaestus,
+      and preserve the existing ndarray/`num_complex` Kwavers FFT surface via
+      one boundary that converts to Apollo's Leto/`eunomia` contract. GPU FFT
+      documentation now exposes Apollo's `FftBackend` trait and records WGPU
+      as the current implementation, not the architectural boundary.
+      Completion condition: `kwavers-math` source has no direct
+      `par_*`/Rayon hits, dependency graph no longer selects `ndarray/rayon`,
+      `kwavers-math --features gpu` resolves local `hephaestus-wgpu`, and no
+      stale legacy GPU FFT crate references remain in the touched backend docs.
+      Verification: `rustup run nightly cargo fmt -p kwavers-math --check`,
+      `rustup run nightly cargo check -p kwavers-math --all-targets`, `rustup
+      run nightly cargo check -p kwavers-math --features gpu --all-targets`,
+      `rustup run nightly cargo nextest run -p kwavers-math -E "test(fft) or
+      test(kspace) or test(spectral)" --status-level fail --no-fail-fast`
+      (33/33), `rustup run nightly cargo nextest run -p kwavers-math
+      --features gpu -E "test(gpu_fft) or test(apollo_wgpu)" --status-level
+      fail --no-fail-fast` (2/2), `rustup run nightly cargo clippy -p
+      kwavers-math --all-targets --no-deps -- -D warnings`, and focused
+      dependency-tree audits pass. Evidence tier: compile-time dependency/type
+      validation plus focused empirical FFT tests. Residual: Apollo has the
+      backend trait seam, but CUDA FFT is not implemented yet; that belongs
+      upstream in Apollo/Hephaestus with WGPU/CUDA differential tests.
+- [x] [patch] kwavers-solver GPU feature provider-boundary cleanup: remove
+      direct `wgpu`, `bytemuck`, and `pollster` optional dependencies from
+      `kwavers-solver`, keep `kwavers-solver/gpu` as a `kwavers-math/gpu`
+      forwarding feature only, and route solver-layer direct Apollo FFT plan
+      calls through the `kwavers_math::fft` ndarray/Leto facade. Completion
+      condition: solver source no longer calls Apollo's Leto-native FFT API
+      directly, `kwavers-solver --features gpu` no longer lists concrete WGPU
+      runtime crates as direct dependencies, and KZK/PSTD/viscoacoustic FFT
+      paths compile against the facade. Verification: `rustup run nightly
+      cargo fmt -p kwavers-math -p kwavers-solver --check`, `rustup run
+      nightly cargo check -p kwavers-solver --features gpu --all-targets`,
+      `rustup run nightly cargo nextest run -p kwavers-solver
+      backend_surface_tests --status-level fail --no-fail-fast` (3/3),
+      `rustup run nightly cargo clippy -p kwavers-solver --features gpu --lib
+      --no-deps -- -D warnings`, `rustup run nightly cargo nextest run -p
+      kwavers-solver -E "test(kzk) or test(spectral_derivative) or
+      test(axisymmetric) or test(viscoacoustic) or test(backend_surface_tests)"
+      --status-level fail --no-fail-fast` (62/62), direct dependency tree
+      audit, and stale-token source audit passed. Residual: broad
+      `kwavers-solver --features gpu --all-targets` clippy remains blocked by
+      pre-existing unrelated test-target lint debt.
+- [x] [patch] FDTD solver provider operation trait: add
+      `FdtdGpuProvider` as the generic FDTD GPU operation seam, make
+      `WgpuFdtd` the current real WGSL implementation, and move its pressure
+      upload/readback plus step execution onto provider-owned
+      `GpuProviderContext<WgpuDevice>`. Completion condition: callers can bind
+      to `P: FdtdGpuProvider<Scalar = f32>`, top-level FDTD roundtrip tests no
+      longer construct raw WGPU devices or ndarray fields, and CUDA remains a
+      compile-time provider contract until real CUDA FDTD kernels exist.
+      Verification: `rustup run nightly cargo fmt -p kwavers-gpu -p kwavers
+      --check`, `rustup run nightly cargo check -p kwavers-gpu --features gpu
+      --all-targets`, `rustup run nightly cargo check -p kwavers-gpu
+      --features cuda-provider --all-targets`, `rustup run nightly cargo
+      check -p kwavers --features gpu --test gpu_allocation_tracking_test`,
+      `rustup run nightly cargo clippy -p kwavers-gpu --features gpu
+      --all-targets --no-deps -- -D warnings`, `rustup run nightly cargo
+      clippy -p kwavers-gpu --features cuda-provider --all-targets --no-deps
+      -- -D warnings`, `rustup run nightly cargo clippy -p kwavers --features
+      gpu --test gpu_allocation_tracking_test --no-deps -- -D warnings`, and
+      `rustup run nightly cargo nextest run -p kwavers --features gpu --test
+      gpu_allocation_tracking_test --status-level fail --no-fail-fast` (4/4)
+      pass. Broad `kwavers --features gpu` nextest remains blocked by
+      unrelated pre-existing compile failures in `gpu_pstd_parity`,
+      `recovery_stress_tests`, and `gpu_compute_backend_patterns`.
+      Evidence tier: type-level provider-trait validation plus focused
+      value-semantic roundtrip tests.
+- [x] [patch] Top-level GPU test provider cleanup: remove stale top-level
+      tests that still depended on obsolete recovery APIs, raw WGPU
+      acquisition, Tokio test macros, and ndarray GPU surfaces after the
+      Hephaestus/Leto provider migration. Completion condition:
+      `recovery_stress_tests.rs` is removed as obsolete, and
+      `gpu_compute_backend_patterns.rs`, `gpu_buffer_tests.rs`,
+      `gpu_device_tests.rs`, `gpu_compute_kernel_tests.rs`, and
+      `gpu_pstd_parity.rs` compile through current Hephaestus/CoreGpuContext,
+      `GPUBackend`, `GpuDevice`, `GpuPstdSolver<WgpuPstdStateProvider>`, and
+      provider-native `leto::Array3<f32>` contracts without compatibility
+      shims. Verification: scoped stale-token audit over the repaired tests
+      finds no `tokio::test`, `ndarray::Array3`, direct WGPU acquisition,
+      obsolete recovery APIs, raw `GpuPstdSolver::new`, or stale `GpuBuffer`
+      surface; `rustup run nightly cargo fmt -p kwavers --check` passes;
+      focused `cargo check -p kwavers --features gpu --test ...` passes for
+      all five repaired test targets; broad `rustup run nightly cargo check -p
+      kwavers --features gpu --tests` passes; focused `rustup run nightly cargo
+      nextest run -p kwavers --features gpu --test gpu_compute_backend_patterns
+      --test gpu_buffer_tests --test gpu_device_tests --test
+      gpu_compute_kernel_tests --test gpu_pstd_parity --status-level fail
+      --no-fail-fast` passes 27/27 with 3 ignored PSTD hardware tests skipped;
+      and focused clippy for the five repaired test targets passes with `-D
+      warnings`. Evidence tier: compile-time validation plus focused
+      value-semantic GPU/provider tests. Follow-up warning cleanup:
+      `gpu_fft_arbitrary_size.rs` no longer has the unused `gpu_fft_3d` helper
+      or Tokio test macros, `pstd_finite_window_born.rs` no longer has the
+      unused second-order baseline, and the unused `moirai-http`,
+      `moirai-metrics`, and `moirai-tls` patch entries are removed because no
+      workspace manifest depends on them. Verification: `rustup run nightly
+      cargo check -p kwavers --features gpu --tests` passes warning-clean;
+      `rustup run nightly cargo nextest run -p kwavers --features gpu --test
+      gpu_fft_arbitrary_size --test pstd_finite_window_born --status-level
+      fail --no-fail-fast` passes 6/6 with 15 ignored hardware tests skipped;
+      focused clippy for those two test targets passes with `-D warnings`; and
+      an audit for `moirai-http|moirai-metrics|moirai-tls` in manifests and
+      `Cargo.lock` returns no hits. Residual: real CUDA kernels plus
+      WGPU/CUDA differential hardware coverage remain separate implementation
+      work.
+- [x] [patch] kwavers-gpu Tokio test-runtime removal: replace the remaining
+      `#[tokio::test]` GPU tests with synchronous `#[test]` functions that
+      drive existing async Hephaestus/WGPU acquisition through `pollster`, and
+      remove the crate-local Tokio dev-dependency. Completion condition:
+      `kwavers-gpu` source and manifest no longer name Tokio while
+      provider-generic WGPU/CUDA compile checks still pass. Verification:
+      `rg -n "tokio" crates\kwavers-gpu\src crates\kwavers-gpu\Cargo.toml`
+      returned no hits, `rustup run nightly cargo fmt -p kwavers-gpu --check`
+      passed, `rustup run nightly cargo check -p kwavers-gpu --features
+      cuda-provider` passed, `rustup run nightly cargo clippy -p kwavers-gpu
+      --features cuda-provider --all-targets -- -D warnings` passed, and the
+      focused provider-generic non-hardware `cargo nextest run -p kwavers-gpu
+      --features cuda-provider` selection passed 11/11. Residual: the broader
+      GPU-hardware acquisition nextest selection was interrupted after it
+      produced no result for several minutes beyond compilation.
+- [x] [major] GPU compute provider device contract: tighten
+      `GpuComputeProvider::Device` from Hephaestus capabilities alone to the
+      Kwavers `GpuDeviceProvider` trait, which itself carries Hephaestus
+      acquisition/capability contracts, and expose `GPUBackend<P>::provider()`
+      so callers can stay generic over the concrete provider. Completion
+      condition: the public backend surface is generic over `P:
+      GpuComputeProvider`, every provider device also satisfies
+      `GpuDeviceProvider`, WGPU remains the default implementation, and CUDA is
+      represented only as a real acquisition provider until CUDA kernels exist.
+      Verification: `cargo fmt -p kwavers-gpu --check` passed, `cargo check -p
+      kwavers-gpu --features gpu` passed, `cargo check -p kwavers-gpu
+      --features cuda-provider --offline` passed, `cargo clippy -p
+      kwavers-gpu --features cuda-provider --all-targets --offline -- -D
+      warnings` passed, `cargo nextest run -p kwavers-gpu --features
+      cuda-provider gpu_backend_is_generic_over_provider_trait --status-level
+      fail --no-fail-fast --offline` passed 1/1, and the full `cargo nextest
+      run -p kwavers-gpu --features cuda-provider --status-level fail
+      --no-fail-fast --offline` passed 102/102 with 1 skipped.
+- [x] [patch] GPU provider metadata honesty: remove fixed WGPU memory and
+      peak-FLOP constants from `WgpuComputeProvider`, derive the reported
+      memory bound from the Hephaestus device limits, and report unknown peak
+      throughput as `0.0` instead of fabricating hardware-specific FLOP/s.
+      Remove the generic `GpuComputeProvider::estimate_performance`
+      size/speedup heuristic so provider estimates route to the
+      provider-reported peak value unless a real provider overrides it with a
+      benchmark-backed model.
+      Completion condition: `WgpuComputeProvider::available_memory()` uses the
+      acquired provider's Hephaestus limits, `estimate_peak_performance()` no
+      longer returns a fixed value, `estimate_performance()` no longer grows
+      by hardcoded problem-size thresholds, and CUDA remains acquisition-only
+      until real kernels can supply real performance metadata. Verification:
+      `rustup run nightly cargo fmt -p kwavers-gpu --check` passed,
+      `rustup run nightly cargo check -p kwavers-gpu --features gpu` passed,
+      and `rustup run nightly cargo nextest run -p kwavers-gpu --features gpu
+      -E "test(test_performance_estimation) or
+      test(limit_bytes_to_usize_preserves_representable_values) or
+      test(limit_bytes_to_usize_saturates_unrepresentable_values)"
+      --status-level fail --no-fail-fast` passed 3/3.
+- [x] [patch] GPU backend FFT capability honesty: make
+      `WgpuComputeProvider` report `supports_fft = false` because the
+      solver-owned `ComputeBackend` trait does not expose FFT operations and
+      GPU FFT is owned by Apollo through `kwavers_math::fft::gpu_fft`.
+      Completion condition: backend capabilities no longer imply
+      `GPUBackend<P>` owns FFT dispatch, the solver trait docs define the flag
+      as operations exposed through the backend trait, and focused GPU/solver
+      backend tests pass. Verification: `rustup run nightly cargo fmt -p
+      kwavers-gpu -p kwavers-solver --check` passed, `rustup run nightly cargo
+      check -p kwavers-gpu --features gpu` passed, `rustup run nightly cargo
+      nextest run -p kwavers-gpu --features gpu -E
+      "test(test_gpu_capabilities) or test(test_performance_estimation)"
+      --status-level fail --no-fail-fast` passed 2/2, and `rustup run nightly
+      cargo nextest run -p kwavers-solver backend_surface_tests --status-level
+      fail --no-fail-fast` passed 3/3.
+- [x] [patch] WGPU/CUDA provider-generic compile recheck: re-verify that
+      `kwavers-gpu` compiles through the Hephaestus-backed provider seam with
+      the CUDA acquisition feature enabled, and keep the top-level GPU stream
+      test gated away from async-only builds. Completion condition:
+      `kwavers-gpu --features cuda-provider` type-checks, the async-only
+      stream visualization filter no longer imports GPU visualization, and the
+      stale RITK/Leto blockers exposed by that compile path are repaired
+      without adding WGPU-only domain APIs. Verification: `rustup run nightly
+      cargo fmt -p kwavers-simulation -p kwavers --check` passed; `rustup run
+      nightly cargo check -p kwavers-gpu --features cuda-provider` passed;
+      `rustup run nightly cargo check -p kwavers --features async-runtime
+      --example seismic_imaging_demo` passed; `rustup run nightly cargo
+      nextest run -p kwavers --features async-runtime
+      stream_visualization_test --status-level fail --no-fail-fast --no-tests
+      pass` passed with 0 selected tests. Residual: `rustup run nightly cargo
+      check -p kwavers --features async-runtime,gpu --test
+      stream_visualization_test` is still blocked because `kwavers-analysis`
+      does not export the old `visualization::stream` API that the test
+      imports.
+- [x] [patch] Solver-facing GPU provider documentation: update the solver
+      backend module docs to point at provider-generic `GPUBackend<P>` instead
+      of a concrete WGPU implementation, and mark the legacy elastic SWE GPU
+      path as a performance model rather than a real WGPU/CUDA dispatch path.
+      Completion condition: solver-facing docs no longer imply algorithms
+      depend on WGPU or that the SWE estimator launches real provider kernels.
+      Verification: `rustup run nightly cargo fmt -p kwavers-solver --check`
+      passed, `rustup run nightly cargo nextest run -p kwavers-solver
+      backend_surface_tests --status-level fail --no-fail-fast` passed 3/3,
+      and a static `rg` audit for the old concrete-WGPU and CPU-simulation
+      phrases in `crates/kwavers-solver/src/backend/mod.rs` and
+      `crates/kwavers-solver/src/forward/elastic/swe/gpu/solver.rs` returned
+      no matches.
+- [x] [patch] Python RITK NIfTI Burn removal: route
+      `kwavers-python::ritk_image::load_ritk_nifti` through
+      `ritk_io::format::nifti::native::NiftiReader` on
+      `coeus_core::SequentialBackend`, remove the direct Burn dependency from
+      `crates/kwavers-python/Cargo.toml`, and keep the existing NumPy-facing
+      `(x, y, z)` `Array3<f64>` plus `(dx, dy, dz)` spacing contract.
+      Completion condition: the Python RITK loader and manifest no longer
+      reference Burn, direct package dependencies include the Atlas-native
+      RITK/Coeus path, and formatting is clean. Verification: `rustup run
+      nightly cargo fmt -p kwavers-python --check` passed; `rg -n
+      "burn|NdArrayBackend|read_nifti::<|TensorData|into_data"
+      crates/kwavers-python/Cargo.toml
+      crates/kwavers-python/src/ritk_image.rs` returned no matches; `rustup
+      run nightly cargo tree -p kwavers-python --depth 1` shows direct
+      `coeus-core`, `ritk-io`, and `ritk-image` edges and no direct Burn edge.
+      Residual: `rustup run nightly cargo check -p kwavers-python` remains
+      blocked by existing crate-wide NumPy/ndarray version-boundary errors and
+      Leto wrapper-boundary mismatches outside the RITK loader slice.
+- [x] [patch] kwavers-math nalgebra decomposition removal: route
+      `LinearAlgebra::qr_decomposition` through Leto's Householder QR and
+      `LinearAlgebra::svd` through Leto-ops rank-revealing SVD, keeping the
+      existing ndarray public boundary only as a temporary compatibility edge.
+      Completion condition: `kwavers-math` source and manifest no longer
+      reference nalgebra, the workspace exposes local `leto-ops` for member
+      inheritance, and value-semantic linear-algebra tests still pass.
+      Verification: `rustup run nightly cargo fmt -p kwavers-math --check`
+      passed; `rustup run nightly cargo check -p kwavers-math --all-targets`
+      passed; `rustup run nightly cargo nextest run -p kwavers-math
+      linear_algebra --status-level fail --no-fail-fast` passed 51/51
+      selected tests; `rustup run nightly cargo clippy -p kwavers-math
+      --all-targets --no-deps -- -D warnings` passed; `rg -n
+      "nalgebra|DMatrix|DVector" crates/kwavers-math/src
+      crates/kwavers-math/Cargo.toml` returned no matches; `git diff --check`
+      for the touched files passed with only CRLF normalization warnings.
+      Evidence tier: compile-time dependency/type validation plus focused
+      empirical value-semantic tests. Residual: `kwavers-math` still owns
+      ndarray and num-traits migration holdouts outside this QR/SVD slice.
+- [x] [patch] kwavers-physics thermal diffusion Moirai traversal: add a
+      private physics dense-field traversal adapter backed by
+      `moirai-parallel`, route Pennes bioheat perfusion/update and
+      Cattaneo-Vernotte flux/divergence/temperature updates through it, and
+      keep sequential ndarray traversal only for non-contiguous views.
+      Completion condition: `thermal/diffusion/{bioheat,hyperbolic}.rs` no
+      longer contains direct Rayon or ndarray-parallel tokens, the package
+      compiles and lints, and focused thermal diffusion tests pass.
+      Verification: `rustup run nightly cargo fmt -p kwavers-physics --check`
+      passed; `rustup run nightly cargo check -p kwavers-physics --all-targets`
+      passed; `rustup run nightly cargo nextest run -p kwavers-physics
+      thermal::diffusion --status-level fail --no-fail-fast` passed 2/2
+      selected tests; `rustup run nightly cargo clippy -p kwavers-physics
+      --all-targets --no-deps -- -D warnings` passed; scoped `rg -n
+      "par_for_each|par_mapv_inplace|rayon|Zip::indexed"` over the two thermal
+      diffusion files returned no matches; scoped `git diff --check` passed
+      with only CRLF normalization warnings. Evidence tier: static source
+      audit plus compile-time/lint validation and focused empirical tests.
+      Residual: broader `kwavers-physics` direct ndarray/Rayon kernels remain
+      outside this thermal diffusion slice.
+- [x] [patch] kwavers-physics sonoluminescence Moirai traversal: extend the
+      private physics dense-field traversal adapter to the two-, three-, and
+      four-input zip arities used by optics emission kernels, route blackbody,
+      bremsstrahlung, and Cherenkov field assembly through that adapter, and
+      preserve shape validation before dense-slice scheduling.
+      Completion condition: the three sonoluminescence field kernels no longer
+      contain direct Rayon or ndarray-parallel tokens, the package compiles and
+      lints, and focused sonoluminescence tests pass. Verification: `rustup run
+      nightly cargo fmt -p kwavers-physics --check` passed; `rustup run nightly
+      cargo check -p kwavers-physics --all-targets` passed; `rustup run nightly
+      cargo nextest run -p kwavers-physics sonoluminescence --status-level
+      fail --no-fail-fast` passed 34/34 selected tests; `rustup run nightly
+      cargo clippy -p kwavers-physics --all-targets --no-deps -- -D warnings`
+      passed; scoped `rg -n "par_for_each|par_mapv_inplace|rayon|Zip::from"`
+      over the three edited sonoluminescence files returned no matches; scoped
+      `git diff --check` passed with only CRLF normalization warnings. Evidence
+      tier: static source audit plus compile-time/lint validation and focused
+      empirical tests. Residual: broader `kwavers-physics` direct ndarray/Rayon
+      kernels remain outside this sonoluminescence slice.
+- [x] [patch] Imaging CT/NIfTI RITK native path: route
+      `kwavers-imaging::medical::CTImageLoader` through
+      `ritk_io::format::nifti::native::NiftiReader` on
+      `coeus_core::SequentialBackend`, add the direct `ritk-spatial` metadata
+      dependency, and share the RITK metadata/host-data bridge with the
+      remaining legacy DICOM path. Completion condition: the CT/NIfTI loader
+      no longer calls `read_nifti::<AdapterBackend>`, the DICOM Burn holdout is
+      explicit, and the existing `(x, y, z)` volume, spacing, affine, and
+      intensity-range contract is preserved. Verification: `rustup run
+      nightly cargo fmt -p kwavers-imaging --check` passed; `rustup run
+      nightly cargo check -p kwavers-imaging` passed; `rustup run nightly
+      cargo nextest run -p kwavers-imaging ct_loader --status-level fail
+      --no-fail-fast` passed 8/8.
+- [x] [patch] Imaging DICOM RITK native path: add native DICOM series loading
+      in RITK, route `kwavers-imaging::medical::dicom_loader` through
+      `ritk_io::load_native_dicom_series` on `coeus_core::SequentialBackend`,
+      and remove direct `burn`/`ritk-core` dependencies from
+      `kwavers-imaging`. Completion condition: no `AdapterBackend`,
+      `TensorData`, direct `burn`, or direct `ritk-core` token remains in the
+      imaging crate, DICOM and NIfTI share `native_image_to_volume`, and
+      focused DICOM tests pass. Verification: RITK `cargo check -p ritk-io`
+      passed; RITK focused nextest passed
+      `native_dicom_loader_matches_legacy_loader` 1/1 and
+      `native_series_loader_matches_legacy_loader` 1/1; `rustup run nightly
+      cargo check -p kwavers-imaging` passed; `rustup run nightly cargo
+      nextest run -p kwavers-imaging dicom --status-level fail
+      --no-fail-fast` passed 14/14; `cargo tree -p kwavers-imaging --depth 1`
+      shows direct `coeus-core`, `ritk-image`, `ritk-io`, and `ritk-spatial`
+      with no direct Burn edge.
+- [x] [patch] WGPU spatial-derivative real dispatch: replace the
+      `kwavers-gpu::backend` `apply_spatial_derivative` CPU fallback and WGSL
+      copy placeholder with real WGPU finite-difference dispatch through the
+      existing provider-owned pipeline manager. Completion condition:
+      `GpuComputeProvider` dispatches derivative work on the WGPU provider,
+      the shader has no placeholder/copy path, CUDA remains acquisition-only
+      until real CUDA kernels exist, and value-semantic derivative tests pass.
+      Verification: `cargo fmt -p kwavers-gpu --check` passed, `cargo check
+      -p kwavers-gpu --features gpu` passed, `cargo clippy -p kwavers-gpu
+      --features gpu --lib -- -D warnings` passed, `cargo check -p
+      kwavers-gpu --features cuda-provider` passed, and `cargo nextest run -p
+      kwavers-gpu --features gpu -E "test(spatial_derivative_) or
+      test(gpu_provider_identity_is_separate_from_kernel_dispatch) or
+      test(gpu_backend_is_generic_over_provider_trait) or
+      test(test_gpu_backend_creation)" --status-level fail --no-fail-fast`
+      passed 5/5. Follow-up `cargo nextest run -p kwavers-gpu --features gpu
+      backend::tests --status-level fail --no-fail-fast` passed 10/10.
+- [x] [patch] WGPU backend provider-native scalar contract: make
+      `GpuComputeProvider` carry an associated scalar, move WGPU backend
+      operator dispatch to provider-native `Array3<f32>` buffers, and make the
+      solver-owned `ComputeBackend` operation contract scalar-associated so
+      WGPU and future CUDA providers share one trait seam. Completion
+      condition: WGPU capabilities no longer claim
+      f64 kernel support, native provider dispatch still computes the
+      finite-difference derivative and elementwise multiplication, shape
+      mismatches are rejected before WGPU buffer dispatch, CUDA remains
+      provider/acquisition-only without fake kernels, and solver dispatch uses
+      the provider scalar instead of a fixed f64 rejection branch.
+      Verification: `rustup run
+      nightly cargo fmt -p hephaestus-wgpu --check` passed after formatting,
+      `rustup run nightly cargo check -p hephaestus-wgpu` passed after routing
+      WGPU axis-reduction planning through the Hephaestus core planner, `rustup
+      run nightly cargo fmt -p kwavers-gpu --check` passed, `rustup run nightly
+      cargo check -p kwavers-gpu --features gpu` passed, `rustup run nightly
+      cargo check -p kwavers-gpu --features cuda-provider` passed, `rustup run
+      nightly cargo clippy -p kwavers-gpu --features gpu --lib -- -D warnings`
+      passed, and `rustup run nightly cargo nextest run -p kwavers-gpu
+      --features gpu -E
+      "test(spatial_derivative_) or
+      test(elementwise_multiply_) or
+      test(solver_f64_compute_backend_rejects_wgpu_f32_kernels) or
+      test(gpu_provider_identity_is_separate_from_kernel_dispatch) or
+      test(gpu_backend_is_generic_over_provider_trait) or
+      test(test_gpu_capabilities)" --status-level fail --no-fail-fast` passed
+      8/8. Follow-up on 2026-07-03 moved provider-native elementwise and
+      derivative dispatch to `leto::Array3<f32>` at the `GpuComputeProvider`
+      and `GPUBackend::dispatch_*` boundary, then moved
+      `WgpuBackendBufferManager` upload/readback for those operations to
+      `leto::Array3<f32>` as well. A further follow-up moved realtime field
+      maps to `leto::Array3<f64>`.
+      Re-verification: `rustup run nightly cargo fmt -p kwavers-gpu --check`,
+      `rustup run nightly cargo check -p kwavers-gpu --features gpu`,
+      `rustup run nightly cargo clippy -p kwavers-gpu --features gpu --lib --
+      -D warnings`, the same focused provider-native nextest filter passed
+      8/8, realtime/f64 focused nextest passed 5/5, `rustup run nightly cargo
+      check -p kwavers-gpu --features cuda-provider` passed, and the focused
+      CUDA-provider provider/realtime nextest filter passed 7/7.
+      Follow-up on 2026-07-04 made
+      `kwavers_solver::backend::ComputeBackend` scalar-associated and
+      implemented `GPUBackend<P>` over `P::Scalar`; `rustup run nightly cargo
+      fmt -p kwavers-solver -p kwavers-gpu --check` passed, `rustup run
+      nightly cargo check -p kwavers-solver -p kwavers-gpu --features
+      kwavers-gpu/cuda-provider` passed, focused `cargo nextest run -p
+      kwavers-solver -p kwavers-gpu --features kwavers-gpu/cuda-provider -E
+      "test(backend_surface_tests) or
+      test(gpu_backend_is_generic_over_provider_trait) or
+      test(gpu_compute_contract_is_composed_from_operation_traits) or
+      test(solver_compute_backend_uses_provider_native_scalar) or
+      test(solver_compute_backend_dispatches_provider_native_values_when_gpu_available)
+      or test(cuda_satisfies_provider_identity_without_fake_kernels) or
+      test(cuda_device_satisfies_kwavers_provider_contract)" --status-level
+      fail --no-fail-fast` passed 9/9, and lib clippy passed for
+      `kwavers-solver` plus `kwavers-gpu` under
+      `kwavers-gpu/cuda-provider`. Broader solver all-targets clippy remains
+      blocked by pre-existing test/doc lints outside this backend slice.
+- [x] [patch] GPU compute operation-trait split: factor the coarse
+      `GpuComputeProvider` contract into `GpuKernelProvider`,
+      `ElementWiseMultiplyProvider`, and `SpatialDerivativeProvider`, leaving
+      `GpuComputeProvider` as the composite trait required only by the public
+      `GPUBackend<P>` surface. Completion condition: WGPU still implements the
+      full provider-native elementwise and derivative backend, CUDA remains an
+      acquisition/provider identity only until real operation kernels exist,
+      and operation-specific provider traits can be implemented independently
+      without placeholder methods. Evidence tier: type-level/compile-time
+      validation plus focused empirical nextest. Verification: `rustup run
+      nightly cargo fmt -p kwavers-gpu` passed, `rustup run nightly cargo
+      check -p kwavers-gpu --features gpu` passed, `rustup run nightly cargo
+      check -p kwavers-gpu --features cuda-provider` passed, `rustup run
+      nightly cargo clippy -p kwavers-gpu --features gpu --lib -- -D
+      warnings` passed, and `rustup run nightly cargo nextest run -p
+      kwavers-gpu --features cuda-provider -E
+      "test(gpu_compute_contract_is_composed_from_operation_traits) or
+      test(gpu_provider_identity_is_separate_from_kernel_dispatch) or
+      test(gpu_backend_is_generic_over_provider_trait) or
+      test(cuda_satisfies_provider_identity_without_fake_kernels)"
+      --status-level fail --no-fail-fast` passed 4/4.
+- [x] [patch] WGPU pipeline manager explicit provider naming: rename the
+      backend WGSL pipeline compiler/executor from `PipelineManager` to
+      `WgpuPipelineManager` and update the WGPU provider to own that concrete
+      type. Completion condition: no backend-neutral `PipelineManager` token
+      remains under `kwavers-gpu/src/backend`, WGPU still dispatches through
+      the renamed manager, and CUDA-provider builds/tests still type-check
+      without implying a WGSL pipeline manager. Evidence tier:
+      type-level/compile-time validation plus focused empirical nextest.
+      Verification: `rustup run nightly cargo fmt -p kwavers-gpu` passed,
+      `rg -n "\bPipelineManager\b|WgpuPipelineManager"
+      crates/kwavers-gpu/src/backend` reports only `WgpuPipelineManager`,
+      `rustup run nightly cargo check -p kwavers-gpu --features gpu` passed,
+      `rustup run nightly cargo check -p kwavers-gpu --features
+      cuda-provider` passed, `rustup run nightly cargo clippy -p kwavers-gpu
+      --features gpu --lib -- -D warnings` passed, and `rustup run nightly
+      cargo nextest run -p kwavers-gpu --features cuda-provider -E
+      "test(wgpu_pipeline_manager_name_is_provider_specific) or
+      test(gpu_compute_contract_is_composed_from_operation_traits) or
+      test(gpu_provider_identity_is_separate_from_kernel_dispatch) or
+      test(gpu_backend_is_generic_over_provider_trait) or
+      test(cuda_satisfies_provider_identity_without_fake_kernels)"
+      --status-level fail --no-fail-fast` passed 5/5.
+- [x] [patch] WGPU compute command helper explicit provider naming: rename
+      the raw WGPU command helper from `GpuCompute` to `WgpuComputeCommands`
+      so bind-group layout and command-encoder ownership do not present as a
+      backend-neutral GPU compute abstraction. Completion condition: no
+      `GpuCompute` token remains under `kwavers-gpu/src`, the helper is
+      re-exported with a WGPU-specific name, and CUDA-provider checks still
+      type-check without implying CUDA command helpers. Evidence tier:
+      type-level/compile-time validation plus focused empirical nextest.
+      Verification: `rustup run nightly cargo fmt -p kwavers-gpu --check`
+      passed, `rg -n "\bGpuCompute\b|WgpuComputeCommands|CudaComputeProvider"
+      crates\kwavers-gpu\src` reports only `WgpuComputeCommands`, `rustup run
+      nightly cargo check -p kwavers-gpu --features gpu` passed, `rustup run
+      nightly cargo check -p kwavers-gpu --features cuda-provider` passed,
+      `rustup run nightly cargo clippy -p kwavers-gpu --features gpu --lib --
+      -D warnings` passed, and `rustup run nightly cargo nextest run -p
+      kwavers-gpu --features cuda-provider -E
+      "test(wgpu_compute_commands_name_is_provider_specific) or
+      test(test_pressure_params_pod_layout) or
+      test(cuda_satisfies_provider_identity_without_fake_kernels)"
+      --status-level fail --no-fail-fast` passed 3/3.
+- [x] [patch] GPU PSTD Hephaestus auto-device slice: replace
+      `GpuPstdSolver::with_auto_device` local WGPU instance/adapter/device
+      acquisition with `hephaestus_wgpu::WgpuDevice` while preserving PSTD
+      push-constant and storage-buffer limit requirements. Completion
+      condition: production PSTD auto-device construction no longer calls
+      `wgpu::Instance::request_adapter`/`request_device` directly, existing
+      raw WGPU kernel handles still come from the Hephaestus provider, and
+      focused PSTD tests pass. Verification: `cargo fmt -p kwavers-gpu
+      --check` passed, `cargo check -p kwavers-gpu --features gpu` passed,
+      and `cargo nextest run -p kwavers-gpu --features gpu pstd_gpu
+      --no-fail-fast` passed 12/12.
+- [x] [patch] `GpuDevice` Hephaestus acquisition trait slice: make
+      `kwavers-gpu::gpu::GpuDevice<P>` generic over a local
+      `GpuDeviceProvider` trait backed by Hephaestus
+      `ComputeDeviceAcquisition`, replace `wgpu::PowerPreference` with
+      backend-neutral `DevicePreference`, and expose raw WGPU handles only on
+      the default `GpuDevice<WgpuDevice>` specialization. Completion condition:
+      `crates/kwavers-gpu/src/gpu/device.rs` no longer calls
+      `wgpu::Instance::request_adapter` or `request_device`, generic callers
+      use backend-neutral limits/features, WGPU shader dispatch uses
+      `wgpu_device()`/`wgpu_queue()`, and focused neural shader tests pass.
+      Verification: `cargo fmt -p kwavers-gpu -p kwavers --check` passed,
+      `cargo check -p kwavers-gpu --features gpu` passed, and `cargo nextest
+      run -p kwavers-gpu --features gpu backend
+      gpu::shaders::neural_network gpu::multi_gpu
+      pstd_gpu::tests::construction --status-level fail --no-fail-fast`
+      passed 37/37.
+- [x] [patch] `CoreGpuContext` Hephaestus provider slice: replace the primary
+      `kwavers-gpu::gpu::CoreGpuContext` local WGPU request path with owned
+      `hephaestus_wgpu::WgpuDevice`, expose raw WGPU handles only through the
+      provider, and route multi-GPU logical-device construction through the
+      same provider request. Completion condition: `gpu/mod.rs` no longer
+      constructs a WGPU instance/adapter/device directly, multi-GPU adapter
+      contexts use Hephaestus `ComputeDeviceAcquisition::try_acquire_devices`,
+      the backend trait seam remains provider-generic for a future CUDA
+      provider, and focused GPU context tests pass. Verification: `cargo fmt
+      -p kwavers-gpu --check` passed, `cargo check -p kwavers-gpu --features
+      gpu` passed, `cargo nextest run -p kwavers-gpu --features gpu
+      gpu::multi_gpu --no-fail-fast` passed 3/3, and `cargo nextest run -p
+      kwavers-gpu --features gpu backend::tests --no-fail-fast` passed 5/5.
+      Integrator verification: `cargo check -p kwavers --features gpu`
+      passed.
+- [x] [patch] `CoreGpuContext<P>` provider-generic refinement: store
+      `GpuDevice<P: GpuDeviceProvider>` inside `CoreGpuContext<P>` instead of
+      raw `WgpuDevice`, expose `provider()` for generic callers, and keep raw
+      `wgpu` device/queue/submit methods only on `CoreGpuContext<WgpuDevice>`.
+      Completion condition: CUDA can type-check through the context provider
+      boundary without a placeholder compute implementation, WGPU preserves the
+      existing WGSL handle path, and provider capability claims are explicit.
+      Verification: `cargo fmt -p kwavers-gpu --check` passed, `cargo check
+      -p kwavers-gpu --features gpu` passed, `cargo check -p kwavers-gpu
+      --features cuda-provider --offline` passed, `cargo clippy -p
+      kwavers-gpu --features gpu --lib -- -D warnings` passed, `cargo nextest
+      run -p kwavers-gpu --features gpu provider --status-level fail
+      --no-fail-fast` passed 3/3, and `cargo nextest run -p kwavers-gpu
+      --features cuda-provider provider --status-level fail --no-fail-fast
+      --offline` passed 5/5.
+- [x] [patch] `GpuBackend<P>` context alias refinement: expose the provider
+      parameter on the public `kwavers_gpu::gpu::GpuBackend<P>` alias instead
+      of freezing the alias at the default `CoreGpuContext<WgpuDevice>`.
+      Completion condition: existing `GpuBackend` call sites keep the WGPU
+      default, provider-explicit call sites can name `GpuBackend<P>`, and the
+      alias does not introduce CUDA compute dispatch without real kernels.
+      Verification: `cargo fmt -p kwavers-gpu --check` passed, `cargo check
+      -p kwavers-gpu --features gpu` passed, `cargo clippy -p kwavers-gpu
+      --features gpu --lib -- -D warnings` passed, and `cargo nextest run -p
+      kwavers-gpu --features gpu gpu_backend_alias_exposes_provider_parameter
+      --status-level fail --no-fail-fast` passed 1/1.
+- [x] [patch] `MultiGpuContext<P>` provider-generic refinement: make
+      `kwavers-gpu::gpu::multi_gpu::MultiGpuContext` generic over
+      `P: GpuDeviceProvider`, route multi-device acquisition through
+      `P::try_acquire_devices`, and preserve `MultiGpuContext::new()` as the
+      default WGPU constructor for the current WGSL kernel path. Completion
+      condition: WGPU and CUDA provider types both compile at the multi-GPU
+      topology/scheduling boundary, raw WGPU handles remain confined to WGPU
+      specializations, and no placeholder CUDA compute path is introduced.
+      Verification: `rustup run nightly cargo fmt -p kwavers-gpu --check`
+      passed, `rustup run nightly cargo check -p kwavers-gpu --features
+      cuda-provider` passed, `rustup run nightly cargo clippy -p kwavers-gpu
+      --features gpu --all-targets -- -D warnings` passed after tightening an
+      existing PSTD run-state type assertion, `rustup run nightly cargo
+      nextest run -p kwavers-gpu --features gpu gpu::multi_gpu --status-level
+      fail --no-fail-fast` passed 4/4, and the same focused nextest command
+      under `--features cuda-provider` passed 5/5.
+- [x] [patch] Remove `kwavers-gpu` Burn accelerator surface: delete the
+      `BurnGpuAccelerator` module/export and remove the local `burn` optional
+      dependency plus `kwavers-gpu/pinn` feature instead of retaining a
+      non-Coeus/non-Hephaestus GPU path with hidden `f64`/`f32` conversions and
+      placeholder PDE residual branches. Completion condition:
+      `kwavers-gpu` no longer exposes `BurnGpuAccelerator`, no longer has a
+      direct `dep:burn` feature edge, and the package still builds under its
+      GPU and CUDA-provider feature sets. Verification: fixed-string source
+      audit found no `BurnGpuAccelerator`, `burn_accelerator`, `dep:burn`, or
+      `pinn = ["gpu"` hits in `kwavers-gpu`; `rustup run nightly cargo fmt -p
+      kwavers-gpu --check`, `rustup run nightly cargo check -p kwavers-gpu
+      --features gpu`, `rustup run nightly cargo check -p kwavers-gpu
+      --features cuda-provider`, `rustup run nightly cargo check -p
+      kwavers-gpu --all-features`, `rustup run nightly cargo clippy -p
+      kwavers-gpu --features gpu --all-targets -- -D warnings`, and `rustup
+      run nightly cargo nextest run -p kwavers-gpu --features gpu
+      --status-level fail --no-fail-fast` passed 128/128 with 1 skipped.
+      Broader `kwavers-gpu --all-features` nextest build failed before test
+      execution while writing `D:/atlas/target/debug/deps/libapollo_fft-*.rlib`
+      with OS error 112; `Get-PSDrive` reported `D:` at 0.15 GB free.
+- [x] [major] Remove false solver PINN GPU backend surface: delete the
+      solver-local `inverse::pinn::ml::gpu_accelerator` module, remove
+      `pinn-gpu`/`burn-wgpu`/`burn-cuda` Cargo feature aliases, and update
+      PINN docs/examples so GPU training is described as pending Coeus
+      training routed through provider-generic Hephaestus traits instead of
+      concrete Burn WGPU/CUDA backends. Completion condition: solver PINN no
+      longer exports CUDA-named placeholder buffers/kernels/trainers, no
+      `pinn-gpu`/`burn-wgpu`/`burn-cuda` feature declarations remain in the
+      kwavers or kwavers-solver manifests, and GPU wording names the generic
+      provider seam rather than a concrete Burn backend. Verification:
+      fixed-string audit over the touched manifests, PINN solver docs, and
+      examples found no `pinn-gpu`, `burn-wgpu`, `burn-cuda`,
+      `CudaKernelManager`, `CudaBuffer`, `CudaStream`, `BatchedPINNTrainer`,
+      `PinnGpuMemoryPoolType`, `GpuMemoryManager`, `TrainingStats`, or
+      PINN `gpu_accelerator` hits; `rustup run nightly cargo fmt -p
+      kwavers-solver -p kwavers --check` passed; scoped `git diff --check`
+      passed; `rustup run nightly cargo metadata --no-deps --format-version 1
+      --manifest-path crates/kwavers-solver/Cargo.toml --features pinn`
+      passed. `rustup run nightly cargo check -p kwavers-solver --features
+      pinn` failed before reaching the changed package while writing
+      `D:/atlas/target/debug/deps/*/full.rmeta` for dependencies with OS error
+      112; `Get-PSDrive` reported `D:` at 0.17 GB free.
+- [x] [patch] Remove solver PINN direct WGPU discovery: delete the
+      Burn-era `MultiGpuManager` WGPU adapter enumeration path and make
+      multi-GPU PINN construction return a typed `ResourceUnavailable` error
+      until a real Coeus training provider is routed through Hephaestus
+      WGPU/CUDA device traits. Completion condition: the solver PINN
+      multi-GPU manager no longer imports or calls WGPU adapter discovery, and
+      the unavailable-provider condition is value-tested rather than silently
+      fabricating CPU/GPU devices. Verification: scoped `rg` over
+      `crates/kwavers-solver/src/inverse/pinn/ml/multi_gpu_manager` and
+      `distributed_training` found no `wgpu::`, `Instance::new`,
+      `enumerate_adapters`, `request_adapter`, or `Wgpu` hits; `rustup run
+      nightly cargo check -p kwavers-solver --features pinn,gpu` passed. A
+      focused `cargo nextest run -p kwavers-solver --features pinn -E
+      "test(test_multi_gpu_manager_creation)"` attempt was stopped after it
+      remained in dependency codegen for `apollo-fft`; no test result was
+      produced. Follow-up Tokio-removal verification: `MultiGpuManager::new`
+      and provider discovery are synchronous until a real Coeus provider
+      exists, the `multi_gpu_manager` test uses `#[test]` instead of
+      `#[tokio::test]`, scoped `rg` finds no Tokio token under the solver PINN
+      multi-GPU manager, `rustup run nightly cargo fmt -p kwavers-solver
+      --check` passed, `rustup run nightly cargo check -p kwavers-solver
+      --features pinn` passed, and `rustup run nightly cargo nextest run -p
+      kwavers-solver --features pinn multi_gpu_manager --status-level fail
+      --no-fail-fast` passed 3/3. Distributed-trainer follow-up:
+      `DistributedPinnTrainer::new` is synchronous while it only assembles
+      local replicas and provider state, its creation test uses `#[test]`,
+      scoped `rg` finds no async constructor or Tokio-test holdout under
+      distributed training, `rustup run nightly cargo nextest run -p
+      kwavers-solver --features pinn distributed_training --status-level fail
+      --no-fail-fast` passed 3/3, and `rustup run nightly cargo clippy -p
+      kwavers-solver --features pinn --lib -- -D warnings` passed. Follow-up
+      solver-local async removal: `DistributedPinnTrainer::train`,
+      `train_epoch_distributed`, gradient aggregation, checkpoint save, and
+      checkpoint load are synchronous; `kwavers-solver/pinn` no longer enables
+      `dep:tokio`; `kwavers-solver/async-runtime` remains an empty feature so
+      downstream feature sets compile; checkpoint save/load writes JSON state
+      and the focused distributed-training nextest selection passed 4/4 with a
+      value-semantic save/load round-trip.
+- [x] [patch] Remove Burn WGPU dependency features from the remaining CPU PINN
+      manifests: drop `"wgpu"` from the workspace `burn` dependency and the
+      package-local `burn` dependency features in `kwavers`, `kwavers-solver`,
+      and `kwavers-analysis` while retaining only required non-GPU features for
+      the current CPU PINN path, then disable Burn defaults and add only the
+      required non-GPU `std`/`train` feature edges. Completion condition: no
+      scoped Burn dependency still enables WGPU and the selected kwavers PINN
+      graph resolves without Burn GPU backends. Verification: fixed-string
+      audit over scoped kwavers/RITK manifests and docs found no active Burn
+      WGPU/CUDA feature edge; `rustup run nightly cargo tree -p kwavers
+      --features pinn -i burn-wgpu` reports no matching package; `rustup run
+      nightly cargo tree -p kwavers --features pinn | rg
+      "burn-wgpu|burn-cuda|burn-rocm"` returns no selected dependency hits;
+      `rustup run nightly cargo fmt -p kwavers --check` passed; and `rustup
+      run nightly cargo check -p kwavers --features pinn` passed in 40.67s.
+- [x] [major] Remove analysis direct Burn dependency: delete the test-only Burn
+      DAS module, remove the `PinnUncertaintyPredictor for BurnPINN1DWave`
+      compatibility impl, drop the `burn` manifest dependency from
+      `kwavers-analysis`, and update stale analysis docs to name Coeus as the
+      model-provider path. Completion condition: source/manifest audit under
+      `crates/kwavers-analysis` finds no Burn tokens, direct metadata reports
+      no Burn dependency for `kwavers-analysis`, uncertainty trait tests and
+      authoritative non-Burn DAS suites still pass. Verification: scoped source
+      audit returned no Burn matches, direct `cargo metadata` audit returned
+      `NO_DIRECT_BURN`, `rustup run nightly cargo fmt -p kwavers-analysis
+      --check` passed, `rustup run nightly cargo check -p kwavers-analysis
+      --features pinn` passed, focused `cargo nextest run -p kwavers-analysis
+      --features pinn -E "test(uncertainty) or test(time_domain::das) or
+      test(das_single_element_zero_delay_passthrough) or
+      test(das_coherent_gain_co_located_elements) or
+      test(das_receive_delay_is_geometrically_correct) or
+      test(das_channel_mismatch_returns_error)" --status-level fail
+      --no-fail-fast` passed 47/47, and `rustup run nightly cargo clippy -p
+      kwavers-analysis --features pinn --all-targets -- -D warnings` passed.
+- [x] [patch] Remove public analysis Burn DAS GPU surface: make
+      `signal_processing::beamforming::gpu::das_burn` internal to
+      `kwavers-analysis`, remove the `BurnDasBeamformer`,
+      `BurnBeamformingConfig`, `DasInterpolationMethod`, and `beamform_cpu`
+      reexports from `beamforming::gpu` and `beamforming`, and update docs so
+      Burn is tracked only as a legacy `pinn` holdout pending
+      Coeus/Hephaestus. Completion condition: scoped source audit finds no
+      public analysis GPU Burn reexports, the Burn DAS module is test-only,
+      existing Burn DAS tests still provide value-semantic coverage, and
+      `kwavers-analysis` builds with `pinn`.
+- [x] [major] Remove public analysis Burn PINN provider surface: remove
+      `create_burn_beamforming_provider` and `BurnPinnBeamformingAdapter`
+      reexports from `signal_processing::beamforming::neural`, and expose the
+      solver-agnostic `PinnBeamformingProvider`/`PinnProviderRegistry` trait
+      seam instead. Completion condition: analysis no longer publicly names
+      the Burn adapter in the neural facade, the trait-generic provider surface
+      remains available, and `kwavers-analysis` builds with `pinn`.
+      Verification: scoped source audit over the analysis beamforming facades
+      found no public Burn provider reexport or stale CUDA/wgpu doc claim,
+      `rustup run nightly cargo fmt -p kwavers-analysis --check` passed,
+      `rustup run nightly cargo check -p kwavers-analysis --features pinn`
+      passed, focused `cargo nextest run -p kwavers-analysis --features pinn
+      neural --status-level fail --no-fail-fast` passed 77/77, and `rustup run
+      nightly cargo clippy -p kwavers-analysis --features pinn --all-targets
+      -- -D warnings` passed.
+- [x] [major] Replace analysis uncertainty Burn PINN signatures: add
+      `PinnUncertaintyPredictor` as the analysis-owned prediction contract,
+      update Bayesian, ensemble, conformal, and top-level PINN uncertainty
+      methods to accept that trait instead of `BurnPINN1DWave<B>`, and keep
+      Burn only as a compatibility impl for the current solver model.
+      Completion condition: the uncertainty algorithms no longer import Burn
+      backend traits or name `BurnPINN1DWave`, a non-Burn test predictor drives
+      value-semantic uncertainty checks, and `kwavers-analysis --features pinn`
+      passes focused verification. Verification: scoped source audit under
+      `crates/kwavers-analysis/src/ml/uncertainty` finds Burn tokens only in
+      the single `PinnUncertaintyPredictor for BurnPINN1DWave` impl, `rustup
+      run nightly cargo fmt -p kwavers-analysis --check` passed, `rustup run
+      nightly cargo check -p kwavers-analysis --features pinn` passed, focused
+      `cargo nextest run -p kwavers-analysis --features pinn uncertainty
+      --status-level fail --no-fail-fast` passed 33/33, and `rustup run
+      nightly cargo clippy -p kwavers-analysis --features pinn --all-targets
+      -- -D warnings` passed.
+- [x] [major] Remove top-level `kwavers` Rayon feature coupling: route the
+      liver theranostic and 3-D seismic example fan-out/blur loops through
+      `moirai-parallel`, add `moirai-parallel` as the direct top-level
+      provider, drop the top-level `rayon` dependency and obsolete
+      `parallel = ["ndarray/rayon"]` feature, and remove `ndarray/rayon` from
+      the Python wrapper manifest where no wrapper source used ndarray-parallel
+      APIs. Completion condition: the top-level crate and wrapper manifest no
+      longer expose direct Rayon or ndarray-parallel feature edges, and the
+      edited examples compile against Moirai. Verification: scoped source audit
+      over `crates/kwavers/{src,examples,tests,benches}` and
+      `crates/kwavers-python/src` found no `rayon::`, `use rayon`, `par_iter`,
+      `into_par_iter`, `par_iter_mut`, `par_for_each`, or `ndarray/rayon` hits;
+      `rustup run nightly rustfmt --check` passed for the touched examples;
+      `rustup run nightly cargo check -p kwavers --example
+      liver_theranostic_reconstruction --features nifti` passed; `rustup run
+      nightly cargo check -p kwavers --example seismic_imaging_3d_demo` passed
+      after updating stale RITK accessor calls in that example; scoped `git
+      diff --check` passed; and `rustup run nightly cargo tree -p kwavers
+      --depth 1` lists `moirai-parallel` but no direct `rayon`. Residual:
+      `cargo check -p kwavers-python` still fails in pre-existing wrapper
+      ndarray/numpy version-boundary errors unrelated to the removed Rayon
+      feature edge.
+- [x] [patch] Remove direct `kwavers-physics` Rayon dependency: route the
+      remaining source-level direct Rayon loops in transducer steering,
+      RTM beam/backpropagation, nonlinear stability constraints, and Monte
+      Carlo photon chunking through `moirai-parallel`, replace the package
+      manifest's direct `rayon` edge with `moirai-parallel`, and keep
+      `ndarray/rayon` only for the existing ndarray-parallel kernels that have
+      not yet moved to Leto/Hephaestus. Completion condition:
+      `kwavers-physics` has no source-level `rayon::` imports, direct Rayon
+      parallel iterator calls, or direct `rayon` manifest dependency, while the
+      residual ndarray-parallel call sites remain explicitly tracked.
+      Verification: scoped `rg` found no `rayon::`, `use rayon`, `par_iter(`,
+      or `into_par_iter(` hits under `crates/kwavers-physics/src` or its
+      manifest; residual `rg` still finds `par_for_each`/`par_mapv_inplace`
+      ndarray-parallel kernels; `rustup run nightly cargo check -p
+      kwavers-physics` passed; `rustup run nightly cargo nextest run -p
+      kwavers-physics -E "test(apply_stability_constraints) or
+      test(steering) or test(backprop) or test(monte_carlo) or
+      test(focused_gaussian) or test(intensity_projection)" --status-level
+      fail --no-fail-fast` passed 41/41; `rustup run nightly cargo tree -p
+      kwavers-physics --depth 1` lists `moirai-parallel` and no direct
+      `rayon`; and scoped `git diff --check` passed.
+      Follow-up 2026-07-04: routed
+      `acoustics::bubble_dynamics::interactions::calculate_interaction_field`
+      through the existing Moirai-backed `crate::parallel::for_each_indexed_mut`
+      adapter instead of ndarray/Rayon `Zip::par_for_each`, and added a
+      value-semantic regression for monopole pressure assembly and self-cell
+      exclusion. Verification: `rustup run nightly cargo fmt -p
+      kwavers-physics` applied formatting, `rustup run nightly cargo check -p
+      kwavers-physics` passed, `rustup run nightly cargo clippy -p
+      kwavers-physics --lib -- -D warnings` passed, focused `rustup run
+      nightly cargo nextest run -p kwavers-physics
+      bubble_dynamics::interactions --status-level fail --no-fail-fast`
+      passed 4/4, and scoped `rg` found no direct Rayon or ndarray-parallel
+      hits in the edited file.
+      Follow-up 2026-07-04: routed `field_surrogate::resample` trilinear
+      output assembly and `field_surrogate::cube` in-place corner blending
+      through the existing Moirai-backed physics traversal adapter instead of
+      ndarray/Rayon `Zip::par_for_each`. Verification: `rustup run nightly
+      cargo fmt -p kwavers-physics` applied formatting, `rustup run nightly
+      cargo check -p kwavers-physics` passed, `rustup run nightly cargo clippy
+      -p kwavers-physics --lib -- -D warnings` passed, focused `rustup run
+      nightly cargo nextest run -p kwavers-physics field_surrogate
+      --status-level fail --no-fail-fast` passed 24/24, and scoped `rg` found
+      no direct Rayon or ndarray-parallel hits under
+      `crates/kwavers-physics/src/field_surrogate`.
+      Follow-up 2026-07-04: added the reusable
+      `crate::parallel::zip_two_mut_two_refs` dense traversal adapter backed
+      by Moirai chunk-pair scheduling, then routed
+      `chemistry::reaction_kinetics::update_reactions` through it instead of
+      ndarray/Rayon `Zip::par_for_each`. Verification: `rustup run nightly
+      cargo fmt -p kwavers-physics` applied formatting, `rustup run nightly
+      cargo check -p kwavers-physics` passed, `rustup run nightly cargo clippy
+      -p kwavers-physics --lib -- -D warnings` passed, focused `rustup run
+      nightly cargo nextest run -p kwavers-physics reaction_kinetics
+      --status-level fail --no-fail-fast` passed 1/1, and scoped `rg` found
+      no direct Rayon or ndarray-parallel hits in
+      `crates/kwavers-physics/src/chemistry/reaction_kinetics/mod.rs`.
+      Follow-up 2026-07-04: routed
+      `chemistry::ros_plasma::ros_species::ROSConcentrations::apply_decay`
+      through `crate::parallel::for_each_indexed_mut` instead of ndarray/Rayon
+      `par_mapv_inplace`, and added an exact species-lifetime exponential
+      regression. Verification: `rustup run nightly cargo fmt -p
+      kwavers-physics` applied formatting, `rustup run nightly cargo check -p
+      kwavers-physics` passed, `rustup run nightly cargo clippy -p
+      kwavers-physics --lib -- -D warnings` passed, focused `rustup run
+      nightly cargo nextest run -p kwavers-physics ros_species --status-level
+      fail --no-fail-fast` passed 4/4, and scoped `rg` found no direct Rayon
+      or ndarray-parallel hits under
+      `crates/kwavers-physics/src/chemistry/ros_plasma/ros_species`.
+- [x] [patch] Solver Westervelt spectral Moirai loop slice: replace the direct
+      Rayon `par_iter_mut` leapfrog-combination loop in
+      `forward::nonlinear::westervelt_spectral::solver::wave_model` with
+      `moirai_parallel::enumerate_mut_with::<Adaptive>`, keeping all input
+      slices read-only and the next-pressure slice as the sole mutable target.
+      Completion condition: the edited wave-model file has no direct Rayon or
+      ndarray-parallel tokens, the package still compiles, clippy is clean,
+      and focused Westervelt spectral tests pass. Evidence tier:
+      source/dependency audit plus compile-time and focused empirical
+      validation. Verification: `rg -n
+      "rayon|par_iter_mut|into_par_iter|par_mapv_inplace"
+      crates\kwavers-solver\src\forward\nonlinear\westervelt_spectral\solver\wave_model.rs`
+      returned no hits; `rustup run nightly cargo fmt -p kwavers-solver
+      --check` passed; `rustup run nightly cargo check -p kwavers-solver`
+      passed; `rustup run nightly cargo clippy -p kwavers-solver --lib -- -D
+      warnings` passed; and `rustup run nightly cargo nextest run -p
+      kwavers-solver -E "test(westervelt_spectral::solver)" --status-level
+      fail --no-fail-fast` passed 8/8.
+- [x] [patch] Solver Helmholtz FEM Moirai assembly slice: replace direct Rayon
+      zipped element-contribution collection in
+      `forward::helmholtz::fem::assembly` with
+      `moirai_parallel::map_collect_index_with::<Adaptive>`, preserving ordered
+      contribution accumulation into the global sparse matrices. Add explicit
+      element-array length validation so mismatched stiffness, mass, or RHS
+      contribution arrays return `KwaversError::InvalidInput` instead of being
+      silently truncated by zip. Completion condition: the edited assembly file
+      has no direct Rayon tokens, the solver package compiles and lints, and
+      focused Helmholtz/FEM tests pass. Evidence tier: source audit plus
+      compile-time and focused empirical validation. Verification: scoped `rg`
+      found no `rayon`, `par_iter`, `into_par_iter`, `par_mapv_inplace`, or
+      `par_for_each` token in `assembly.rs`; `rustup run nightly cargo fmt -p
+      kwavers-solver --check` passed; `rustup run nightly cargo check -p
+      kwavers-solver` passed; `rustup run nightly cargo clippy -p
+      kwavers-solver --lib -- -D warnings` passed; and `rustup run nightly
+      cargo nextest run -p kwavers-solver -E
+      "test(helmholtz) or
+      test(assembly_rejects_mismatched_element_contribution_lengths)"
+      --status-level fail --no-fail-fast` passed 10/10.
+- [x] [patch] Solver Westervelt conservation Moirai reductions: replace direct
+      Rayon `par_iter`/`into_par_iter` reductions in
+      `forward::nonlinear::westervelt::conservation` with
+      `moirai_parallel::reduce_index_with::<Adaptive>` for total acoustic
+      energy, pressure-gradient momentum proxy, and acoustic mass
+      perturbation. Completion condition: the edited conservation file has no
+      direct Rayon or ndarray-parallel tokens, solver check/clippy pass, and
+      focused Westervelt tests pass. Evidence tier: source audit plus
+      compile-time and focused empirical validation. Verification: scoped `rg`
+      found no `rayon`, `par_iter`, `into_par_iter`, `par_mapv_inplace`, or
+      `par_for_each` token in `conservation.rs`; `rustup run nightly cargo fmt
+      -p kwavers-solver --check` passed; `rustup run nightly cargo check -p
+      kwavers-solver` passed; `rustup run nightly cargo clippy -p
+      kwavers-solver --lib -- -D warnings` passed; and `rustup run nightly
+      cargo nextest run -p kwavers-solver -E "test(westervelt)"
+      --status-level fail --no-fail-fast` passed 32/32.
+- [x] [patch] Solver Westervelt Laplacian Moirai slab traversal: replace direct
+      Rayon `axis_iter_mut(Axis(0)).into_par_iter()` traversal in
+      `forward::nonlinear::westervelt::laplacian` with
+      `moirai_parallel::for_each_chunk_mut_enumerated_with::<Adaptive>` over
+      standard-layout `i` slabs for the O2/O4/O6 finite-difference stencils.
+      Completion condition: the edited laplacian file has no direct Rayon or
+      ndarray-parallel tokens, solver check/clippy pass, and focused
+      Westervelt Laplacian/Westervelt tests pass. Evidence tier: source audit
+      plus compile-time and focused empirical validation. Verification: scoped
+      `rg` found no `rayon`, `par_iter`, `into_par_iter`, `par_mapv_inplace`,
+      or `par_for_each` token in `laplacian.rs`; `rustup run nightly cargo fmt
+      -p kwavers-solver --check` passed; `rustup run nightly cargo check -p
+      kwavers-solver` passed; `rustup run nightly cargo clippy -p
+      kwavers-solver --lib -- -D warnings` passed; and `rustup run nightly
+      cargo nextest run -p kwavers-solver -E
+      "test(westervelt_laplacian) or test(test_westervelt_fdtd_creation) or
+      test(westervelt)" --status-level fail --no-fail-fast` passed 32/32.
+- [x] [patch] Solver Westervelt nonlinear/update Moirai traversal: replace
+      direct ndarray/Rayon `Zip::par_for_each` traversal in
+      `forward::nonlinear::westervelt::{nonlinear,update}` with
+      `moirai_parallel::enumerate_mut_with::<Adaptive>` over standard-layout
+      fields. Completion condition: both edited files have no direct Rayon or
+      ndarray-parallel tokens, solver check/clippy pass, and focused
+      Westervelt tests pass. Evidence tier: source audit plus compile-time and
+      focused empirical validation. Verification: scoped `rg` found no
+      `rayon`, `par_iter`, `into_par_iter`, `par_mapv_inplace`,
+      `par_for_each`, or `ndarray::Zip` token in `nonlinear.rs` or
+      `update.rs`; `rustup run nightly cargo fmt -p kwavers-solver --check`
+      passed; `rustup run nightly cargo check -p kwavers-solver` passed;
+      `rustup run nightly cargo clippy -p kwavers-solver --lib -- -D
+      warnings` passed; `rustup run nightly cargo test --no-run --package
+      kwavers-solver` passed after the transient Coeus top-k stale build state
+      cleared; and `rustup run nightly cargo nextest run -p kwavers-solver -E
+      "test(westervelt)" --status-level fail --no-fail-fast` passed 32/32.
+- [x] [patch] Solver KZK observables Moirai traversal: replace direct
+      ndarray/Rayon `Zip::par_for_each` traversal in
+      `forward::nonlinear::kzk::solver::{observables,traits}` with
+      `moirai_parallel::enumerate_mut_with::<Adaptive>` over standard-layout
+      2-D outputs. Completion condition: both edited files have no direct
+      Rayon or ndarray-parallel tokens, solver check/clippy pass, and focused
+      KZK tests pass. Evidence tier: source audit plus compile-time and
+      focused empirical validation. Verification: scoped `rg` found no
+      `rayon`, `par_iter`, `into_par_iter`, `par_mapv_inplace`,
+      `par_for_each`, or `ndarray::Zip` token in `observables.rs` or
+      `traits.rs`; `rustup run nightly cargo fmt -p kwavers-solver --check`
+      passed; `rustup run nightly cargo check -p kwavers-solver` passed;
+      `rustup run nightly cargo clippy -p kwavers-solver --lib -- -D
+      warnings` passed; and `rustup run nightly cargo nextest run -p
+      kwavers-solver -E "test(kzk)" --status-level fail --no-fail-fast`
+      passed 49/49.
+- [x] [patch] Solver KZK angular-spectrum Moirai traversal: replace direct
+      ndarray/Rayon `Zip::par_for_each` traversal in
+      `forward::nonlinear::kzk::{angular_spectrum_2d,parabolic_diffraction}`
+      with `moirai_parallel::enumerate_mut_with::<Adaptive>` for scratch
+      packing, diagonal spectral multiplication, and real-output projection.
+      Completion condition: both edited files have no direct Rayon or
+      ndarray-parallel tokens, solver check/clippy pass, and focused KZK tests
+      pass. Evidence tier: source audit plus compile-time and focused
+      empirical validation.
+      Verification: scoped `rg` found no `rayon`, `par_iter`,
+      `into_par_iter`, `par_mapv_inplace`, `par_for_each`, or `ndarray::Zip`
+      token in `angular_spectrum_2d.rs` or `parabolic_diffraction/mod.rs`;
+      `rustup run nightly cargo fmt -p kwavers-solver --check` passed;
+      `rustup run nightly cargo check -p kwavers-solver` passed; `rustup run
+      nightly cargo clippy -p kwavers-solver --lib -- -D warnings` passed;
+      and `rustup run nightly cargo nextest run -p kwavers-solver -E
+      "test(kzk) or test(absorption)" --status-level fail --no-fail-fast`
+      passed 80/80.
+- [x] [patch] Solver KZK absorption Moirai slab traversal: replace direct
+      Rayon `axis_iter_mut(Axis(0)).into_par_iter()` traversal in
+      `forward::nonlinear::kzk::absorption` with
+      `moirai_parallel::for_each_chunk_mut_enumerated_with::<Adaptive>` over
+      standard-layout `i` slabs, preserving one local waveform scratch per
+      scheduled slab and the same exact spectral attenuation mask. Completion
+      condition: the edited file has no direct Rayon or ndarray-parallel
+      tokens, solver check/clippy pass, and focused KZK/absorption tests pass.
+      Evidence tier: source audit plus compile-time and focused empirical
+      validation. Verification: scoped `rg` found no `rayon`, `par_iter`,
+      `into_par_iter`, `par_mapv_inplace`, `par_for_each`, or `ndarray::Zip`
+      token in `absorption.rs`; `rustup run nightly cargo fmt -p
+      kwavers-solver --check` passed; `rustup run nightly cargo check -p
+      kwavers-solver` passed; `rustup run nightly cargo clippy -p
+      kwavers-solver --lib -- -D warnings` passed; and `rustup run nightly
+      cargo nextest run -p kwavers-solver -E "test(kzk) or test(absorption)"
+      --status-level fail --no-fail-fast` passed 80/80.
+- [x] [patch] Solver KZK remaining operator Moirai traversal: replace direct
+      ndarray/Rayon `Zip::par_for_each` traversal in
+      `forward::nonlinear::kzk::{complex_parabolic_diffraction,nonlinearity}`
+      with Moirai provider traversal. The complex diffraction operator now
+      applies its diagonal spectral multiplier through
+      `moirai_parallel::enumerate_mut_with::<Adaptive>`, and the nonlinear
+      operator computes buffered `delta` plus the real-pressure application
+      pass through `moirai_parallel::for_each_chunk_mut_enumerated_with`.
+      Completion condition: the full KZK subtree has no direct Rayon or
+      ndarray-parallel source hits, solver check/clippy pass, and focused KZK
+      tests pass. Evidence tier: source audit plus compile-time and focused
+      empirical validation. Verification: scoped `rg` found no `rayon`,
+      `par_iter`, `into_par_iter`, `par_mapv_inplace`, `par_for_each`, or
+      `ndarray::Zip` tokens under `crates/kwavers-solver/src/forward/nonlinear/kzk`;
+      `rustup run nightly cargo fmt -p kwavers-solver --check` passed;
+      `rustup run nightly cargo check -p kwavers-solver` passed; `rustup run
+      nightly cargo clippy -p kwavers-solver --lib -- -D warnings` passed; and
+      `rustup run nightly cargo nextest run -p kwavers-solver -E
+      "test(kzk) or test(absorption) or test(diffraction) or test(nonlinear)"
+      --status-level fail --no-fail-fast` passed 204/204.
+- [x] [patch] Solver mixed-domain propagator Moirai traversal: replace direct
+      ndarray/Rayon `Zip::par_for_each` in `forward::hybrid::mixed_domain`
+      with `moirai_parallel::enumerate_mut_with::<Adaptive>` over the
+      standard-layout complex spectral output. Completion condition: the
+      edited file has no direct Rayon or ndarray-parallel tokens, solver
+      check/clippy pass, and focused hybrid/mixed-domain tests run if present.
+      Evidence tier: source audit plus compile-time and focused empirical
+      validation. Verification: scoped `rg` found no `rayon`, `par_iter`,
+      `into_par_iter`, `par_mapv_inplace`, `par_for_each`, or `ndarray::Zip`
+      token in `mixed_domain.rs`; `rustup run nightly cargo fmt -p
+      kwavers-solver --check` passed; `rustup run nightly cargo check -p
+      kwavers-solver` passed; `rustup run nightly cargo clippy -p
+      kwavers-solver --lib -- -D warnings` passed; and `rustup run nightly
+      cargo nextest run -p kwavers-solver -E
+      "test(mixed_domain) or test(hybrid)" --status-level fail
+      --no-fail-fast` passed 59/59.
+- [x] [patch] Solver KZK plugin nonlinear Moirai traversal: replace direct
+      ndarray/Rayon `Zip::par_for_each` in
+      `forward::nonlinear::kzk_solver_plugin::solver` with
+      `moirai_parallel::enumerate_mut_with::<Adaptive>` for standard-layout
+      fields while preserving sequential ndarray iteration for non-standard
+      layouts. Completion condition: the edited file has no direct Rayon or
+      ndarray-parallel tokens, solver check/clippy pass, and focused
+      KZK/nonlinear tests pass. Evidence tier: source audit plus compile-time
+      and focused empirical validation. Verification: scoped `rg` found no
+      `rayon`, `par_iter`, `into_par_iter`, `par_mapv_inplace`,
+      `par_for_each`, or `ndarray::Zip` token in `kzk_solver_plugin/solver.rs`;
+      `rustup run nightly cargo fmt -p kwavers-solver --check` passed;
+      `rustup run nightly cargo check -p kwavers-solver` passed; `rustup run
+      nightly cargo clippy -p kwavers-solver --lib -- -D warnings` passed; and
+      `rustup run nightly cargo nextest run -p kwavers-solver -E
+      "test(kzk_solver_plugin) or test(kzk) or test(nonlinear)"
+      --status-level fail --no-fail-fast` passed 181/181.
+- [x] [patch] Solver FDTD pressure-source Moirai traversal: replace direct
+      ndarray/Rayon `Zip::par_for_each` in `forward::fdtd::solver::sources`
+      with file-local Moirai-backed boundary and additive pressure-mask
+      operations for standard-layout pressure/mask fields while preserving
+      sequential ndarray iteration for non-standard layouts. Completion
+      condition: the edited file has no direct Rayon or ndarray-parallel
+      tokens, solver check/clippy pass, and focused FDTD/source tests pass.
+      Evidence tier: source audit plus compile-time and focused empirical
+      validation. Verification: scoped `rg` found no `rayon`, `par_iter`,
+      `into_par_iter`, `par_mapv_inplace`, `par_for_each`, or `ndarray::Zip`
+      token in `fdtd/solver/sources.rs`; `rustup run nightly cargo fmt -p
+      kwavers-solver --check` passed; `rustup run nightly cargo check -p
+      kwavers-solver` passed; `rustup run nightly cargo clippy -p
+      kwavers-solver --lib -- -D warnings` passed; and `rustup run nightly
+      cargo nextest run -p kwavers-solver -E
+      "test(fdtd) or test(source) or test(sources)" --status-level fail
+      --no-fail-fast` passed 93/93.
+- [x] [patch] Solver FDTD pressure-updater Moirai traversal: replace direct
+      ndarray/Rayon `Zip::par_for_each` in
+      `forward::fdtd::pressure_updater` with shared Moirai-backed
+      pressure-update helpers for standard-layout fields while preserving
+      sequential ndarray iteration for non-standard layouts. Completion
+      condition: the pressure-updater subtree has no direct Rayon or
+      ndarray-parallel tokens, solver check/clippy pass, and focused
+      pressure/FDTD tests pass. Evidence tier: source audit plus compile-time
+      and focused empirical validation. Verification: scoped `rg` found no
+      `rayon`, `par_iter`, `into_par_iter`, `par_mapv_inplace`,
+      `par_for_each`, or `ndarray::Zip` token under
+      `fdtd/pressure_updater`; `rustup run nightly cargo fmt -p
+      kwavers-solver --check` passed; `rustup run nightly cargo check -p
+      kwavers-solver` passed; `rustup run nightly cargo clippy -p
+      kwavers-solver --lib -- -D warnings` passed; and `rustup run nightly
+      cargo nextest run -p kwavers-solver -E
+      "test(pressure_updater) or test(update_pressure) or test(divergence) or
+      test(fdtd)" --status-level fail --no-fail-fast` passed 63/63.
+- [x] [patch] Solver FDTD velocity-updater Moirai traversal: replace direct
+      ndarray/Rayon `Zip::par_for_each` in
+      `forward::fdtd::velocity_updater` with file-local Moirai-backed
+      velocity-gradient and staggered-gradient helpers for standard-layout
+      fields while preserving sequential ndarray iteration for non-standard
+      layouts. Completion condition: the edited file has no direct Rayon or
+      ndarray-parallel tokens, solver check/clippy pass, and focused
+      velocity/FDTD/k-space tests pass. Evidence tier: source audit plus
+      compile-time and focused empirical validation. Verification: scoped
+      `rg` found no direct Rayon or ndarray-parallel token in
+      `fdtd/velocity_updater.rs`; `rustup run nightly cargo fmt -p
+      kwavers-solver --check` passed; `rustup run nightly cargo check -p
+      kwavers-solver` passed; `rustup run nightly cargo clippy -p
+      kwavers-solver --lib -- -D warnings` passed; and `rustup run nightly
+      cargo nextest run -p kwavers-solver -E
+      "test(velocity) or test(fdtd) or test(kspace)" --status-level fail
+      --no-fail-fast` passed 91/91.
+- [x] [patch] Solver FDTD k-space-correction Moirai traversal: replace direct
+      ndarray/Rayon `Zip::par_for_each` in
+      `forward::fdtd::kspace_correction::operators` with a Moirai-backed
+      shifted spectral-gradient helper for standard-layout transformed fields
+      while preserving sequential ndarray iteration for non-standard layouts.
+      Completion condition: the edited file has no direct Rayon or
+      ndarray-parallel tokens, solver check/clippy pass, and focused
+      k-space/FDTD tests pass. Evidence tier: source audit plus compile-time
+      and focused empirical validation. Verification: scoped `rg` found no
+      direct Rayon or ndarray-parallel token in
+      `fdtd/kspace_correction/operators.rs`; `rustup run nightly cargo fmt -p
+      kwavers-solver --check` passed; `rustup run nightly cargo check -p
+      kwavers-solver` passed; `rustup run nightly cargo clippy -p
+      kwavers-solver --lib -- -D warnings` passed; and `rustup run nightly
+      cargo nextest run -p kwavers-solver -E
+      "test(kspace) or test(fdtd) or test(velocity) or test(pressure_updater)"
+      --status-level fail --no-fail-fast` passed 91/91.
+- [x] [patch] Solver FDTD construction Moirai traversal: replace
+      construction-time ndarray `Zip`/`map_collect` helpers in
+      `forward::fdtd::solver::construction` with Moirai-backed dense fills for
+      `rho*c^2` and nonlinear coefficient arrays while preserving sequential
+      ndarray indexing for non-standard layouts. Completion condition: the
+      FDTD subtree has no direct Rayon, ndarray-parallel, or explicit
+      `ndarray::Zip` tokens, solver check/clippy pass, and focused
+      FDTD/nonlinear/k-space tests pass. Evidence tier: source audit plus
+      compile-time and focused empirical validation. Verification: scoped
+      `rg` found no direct Rayon, ndarray-parallel, or explicit
+      `ndarray::Zip` token under `forward::fdtd`; `rustup run nightly cargo
+      fmt -p kwavers-solver --check` passed; `rustup run nightly cargo check
+      -p kwavers-solver` passed; `rustup run nightly cargo clippy -p
+      kwavers-solver --lib -- -D warnings` passed; and `rustup run nightly
+      cargo nextest run -p kwavers-solver -E
+      "test(fdtd) or test(kspace) or test(nonlinear) or test(construction)"
+      --status-level fail --no-fail-fast` passed 290/290.
+- [x] [patch] Solver PSTD utility Moirai traversal: replace direct
+      ndarray/Rayon `Zip::par_for_each` and `par_mapv_inplace` in
+      `forward::pstd::utils` with Moirai-backed dense helpers for k-squared,
+      k-magnitude, and spectral-derivative complex scaling while preserving
+      sequential ndarray iteration for non-standard views. Completion
+      condition: the edited file has no direct Rayon or ndarray-parallel
+      tokens, solver check/clippy pass, and focused PSTD utility tests pass.
+      Evidence tier: source audit plus compile-time and focused empirical
+      validation. Verification: scoped `rg` found no direct Rayon,
+      ndarray-parallel, or explicit `ndarray::Zip` token in
+      `forward/pstd/utils/mod.rs`; `rustup run nightly cargo fmt -p
+      kwavers-solver --check` passed; `rustup run nightly cargo check -p
+      kwavers-solver` passed; `rustup run nightly cargo clippy -p
+      kwavers-solver --lib -- -D warnings` passed; and `rustup run nightly
+      cargo nextest run -p kwavers-solver -E
+      "test(pstd::utils) or test(wavenumber) or test(k_magnitude) or
+      test(spectral_gradient) or test(kappa)" --status-level fail
+      --no-fail-fast` passed 22/22.
+- [x] [patch] Solver PSTD implementation k-space Moirai traversal: replace
+      direct ndarray/Rayon `Zip::par_for_each` in
+      `forward::pstd::implementation::k_space::operators` with
+      Moirai-backed Helmholtz and spectral-axis multiplier helpers for
+      standard-layout spectral fields while preserving sequential ndarray
+      indexing for non-standard layouts. Completion condition: the edited
+      file has no direct Rayon or ndarray-parallel tokens, solver
+      check/clippy pass, and focused PSTD/k-space tests pass. Evidence tier:
+      source audit plus compile-time and focused empirical validation.
+      Verification: scoped `rg` found no direct Rayon, ndarray-parallel, or
+      explicit `Zip` token in
+      `forward/pstd/implementation/k_space/operators.rs`; `rustup run nightly
+      cargo fmt -p kwavers-solver --check` passed; `rustup run nightly cargo
+      check -p kwavers-solver` passed; `rustup run nightly cargo clippy -p
+      kwavers-solver --lib -- -D warnings` passed; and `rustup run nightly
+      cargo nextest run -p kwavers-solver -E "test(pstd) or test(k_space) or
+      test(kspace) or test(spectral_grad) or test(helmholtz)" --status-level
+      fail --no-fail-fast` passed 206/206.
+- [x] [patch] Solver PSTD implementation anti-aliasing filter Moirai
+      traversal: replace direct ndarray/Rayon `Zip::par_for_each` in
+      `forward::pstd::implementation::core::stepper::filter` with one
+      Moirai-backed spectral-filter multiplier helper for standard-layout
+      half-spectrum buffers while preserving sequential ndarray indexing for
+      non-standard layouts. Completion condition: the edited file has no
+      direct Rayon or ndarray-parallel tokens, solver check/clippy pass, and
+      focused anti-aliasing/PSTD tests pass. Evidence tier: source audit plus
+      compile-time and focused empirical validation. Verification: scoped
+      `rg` found no direct Rayon, ndarray-parallel, or explicit `Zip` token in
+      `forward/pstd/implementation/core/stepper/filter.rs`; `rustup run
+      nightly cargo fmt -p kwavers-solver --check` passed; `rustup run
+      nightly cargo check -p kwavers-solver` passed; `rustup run nightly cargo
+      clippy -p kwavers-solver --lib -- -D warnings` passed; and `rustup run
+      nightly cargo nextest run -p kwavers-solver -E "test(anti_aliasing) or
+      test(filter) or test(pstd)" --status-level fail --no-fail-fast` passed
+      175/175.
+- [x] [patch] Solver PSTD implementation full-k-space step Moirai traversal:
+      replace direct ndarray/Rayon `Zip::par_for_each` in
+      `forward::pstd::implementation::core::stepper::step` with
+      Moirai-backed helpers for dynamic pressure-source accumulation,
+      velocity-source gradient accumulation, spectral wave-coefficient
+      multiplication, and propagated pressure/source updates while preserving
+      sequential ndarray indexing for non-standard layouts. Completion
+      condition: the edited file has no direct Rayon or ndarray-parallel
+      tokens, solver check/clippy pass, and focused step/source/full-k-space
+      tests pass. Evidence tier: source audit plus compile-time and focused
+      empirical validation. Verification: scoped `rg` found no direct Rayon,
+      ndarray-parallel, or explicit `Zip` token in
+      `forward/pstd/implementation/core/stepper/step.rs`; `rustup run nightly
+      cargo fmt -p kwavers-solver --check` passed; `rustup run nightly cargo
+      check -p kwavers-solver` passed; `rustup run nightly cargo clippy -p
+      kwavers-solver --lib -- -D warnings` passed; and `rustup run nightly
+      cargo nextest run -p kwavers-solver -E "test(source) or test(step) or
+      test(kspace) or test(fullkspace) or test(pstd)" --status-level fail
+      --no-fail-fast` passed 231/231.
+- [x] [patch] Solver PSTD implementation source-handler Moirai traversal:
+      consolidate shared dense stepper helpers in
+      `forward::pstd::implementation::core::stepper::ops` and replace direct
+      ndarray/Rayon `Zip::par_for_each` plus source-gain `mapv_inplace` in
+      `forward::pstd::implementation::core::stepper::sources` with
+      Moirai-backed helpers for pressure-source accumulation, source-kappa
+      spectral multiplication, split-density component injection, and dynamic
+      velocity-source writes. Completion condition: the stepper filter, step,
+      sources, and shared ops files have no direct Rayon or ndarray-parallel
+      tokens, solver check/clippy pass, and focused source/step/filter/PSTD
+      tests pass. Evidence tier: source audit plus compile-time and focused
+      empirical validation. Verification: scoped `rg` found no direct Rayon,
+      ndarray-parallel, or explicit `Zip` token in
+      `forward/pstd/implementation/core/stepper/{filter,step,sources,ops}.rs`;
+      `rustup run nightly cargo fmt -p kwavers-solver --check` passed;
+      `rustup run nightly cargo check -p kwavers-solver` passed; `rustup run
+      nightly cargo clippy -p kwavers-solver --lib -- -D warnings` passed; and
+      `rustup run nightly cargo nextest run -p kwavers-solver -E
+      "test(source) or test(step) or test(kspace) or test(fullkspace) or
+      test(anti_aliasing) or test(filter) or test(pstd)" --status-level fail
+      --no-fail-fast` passed 234/234.
+- [x] [patch] Solver PSTD implementation density-sum Moirai traversal:
+      replace direct ndarray/Rayon `Zip::par_for_each` in
+      `forward::pstd::implementation::core::orchestrator::PSTDSolver::fill_rho_sum`
+      with a Moirai-backed dense helper while preserving sequential ndarray
+      indexing for non-standard layouts. Completion condition: the edited
+      file has no direct Rayon or ndarray-parallel tokens, solver check/clippy
+      pass, and focused PSTD/source/step tests pass. Evidence tier: source
+      audit plus compile-time and focused empirical validation. Verification:
+      scoped `rg` found no direct Rayon, ndarray-parallel, or explicit `Zip`
+      token in `forward/pstd/implementation/core/orchestrator/mod.rs`;
+      `rustup run nightly cargo fmt -p kwavers-solver --check` passed;
+      `rustup run nightly cargo check -p kwavers-solver` passed; `rustup run
+      nightly cargo clippy -p kwavers-solver --lib -- -D warnings` passed; and
+      `rustup run nightly cargo nextest run -p kwavers-solver -E
+      "test(rho_sum) or test(source) or test(step) or test(pstd)"
+      --status-level fail --no-fail-fast` passed 208/208.
+- [x] [patch] Solver PSTD implementation thermal absorption Moirai
+      traversal: replace direct ndarray/Rayon `Zip::par_for_each` in
+      `forward::pstd::implementation::core::orchestrator::thermal::populate_alpha_np_m_at_frequency`
+      with a Moirai-backed dense copy-scale helper while preserving sequential
+      ndarray indexing for non-standard layouts. Completion condition: the
+      edited file has no direct Rayon or ndarray-parallel tokens, solver
+      check/clippy pass, and focused thermal/PSTD tests pass. Evidence tier:
+      source audit plus compile-time and focused empirical validation.
+      Verification: scoped `rg` found no direct Rayon, ndarray-parallel, or
+      explicit `Zip` token in
+      `forward/pstd/implementation/core/orchestrator/thermal.rs`; `rustup run
+      nightly cargo fmt -p kwavers-solver --check` passed; `rustup run nightly
+      cargo check -p kwavers-solver` passed; `rustup run nightly cargo clippy
+      -p kwavers-solver --lib -- -D warnings` passed; and `rustup run nightly
+      cargo nextest run -p kwavers-solver -E
+      "test(thermal) or test(pstd) or test(acoustic_heat) or
+      test(absorption)" --status-level fail --no-fail-fast` passed 206/206.
+- [x] [patch] Solver PSTD implementation construction Moirai traversal:
+      replace construction-time direct ndarray/Rayon `par_mapv_inplace` and
+      `Zip::par_for_each` in
+      `forward::pstd::implementation::core::orchestrator::construction` with
+      Moirai-backed dense helpers for source-kappa cosine transformation and
+      initial split-density component fills while preserving sequential ndarray
+      semantics for non-standard layouts. Completion condition: the edited
+      file has no direct Rayon or ndarray-parallel tokens, solver check/clippy
+      pass, and focused construction/PSTD tests pass. Evidence tier: source
+      audit plus compile-time and focused empirical validation. Verification:
+      scoped `rg` found no direct Rayon, ndarray-parallel, or explicit `Zip`
+      token in
+      `forward/pstd/implementation/core/orchestrator/construction/mod.rs`;
+      `rustup run nightly cargo fmt -p kwavers-solver --check` passed;
+      `rustup run nightly cargo check -p kwavers-solver` passed; `rustup run
+      nightly cargo clippy -p kwavers-solver --lib -- -D warnings` passed; and
+      `rustup run nightly cargo nextest run -p kwavers-solver -E
+      "test(construction) or test(pstd) or test(initial_pressure) or test(ivp)
+      or test(kappa)" --status-level fail --no-fail-fast` passed 209/209.
+- [x] [patch] Solver PSTD implementation IVP velocity Moirai traversal:
+      replace direct ndarray/Rayon `Zip::par_for_each` in
+      `forward::pstd::implementation::core::orchestrator::construction::ivp_velocity`
+      with Moirai-backed dense helpers for IVP density seeding,
+      k-space-corrected spectral-gradient construction, and half-step velocity
+      density scaling while preserving sequential ndarray semantics for
+      non-standard layouts. Completion condition: the edited file has no direct
+      Rayon or ndarray-parallel tokens, solver check/clippy pass, focused
+      IVP/PSTD tests pass, and the PSTD implementation-core scan has no direct
+      provider hits. Evidence tier: source audit plus compile-time and focused
+      empirical validation. Verification: scoped `rg` found no direct Rayon,
+      ndarray-parallel, or explicit `Zip` token in
+      `forward/pstd/implementation/core/orchestrator/construction/ivp_velocity.rs`;
+      `rustup run nightly cargo fmt -p kwavers-solver --check` passed;
+      `rustup run nightly cargo check -p kwavers-solver` passed; `rustup run
+      nightly cargo clippy -p kwavers-solver --lib -- -D warnings` passed; and
+      `rustup run nightly cargo nextest run -p kwavers-solver -E "test(ivp) or
+      test(initial_pressure) or test(construction) or test(pstd) or
+      test(kappa)" --status-level fail --no-fail-fast` passed 209/209.
+- [x] [patch] Solver PSTD spectral-correction Moirai traversal: replace
+      direct ndarray/Rayon `Zip::par_for_each` in
+      `forward::pstd::numerics::spectral_correction::corrections` with
+      Moirai-backed dense helpers for kappa-field generation and spectral
+      correction multiplication while preserving sequential ndarray semantics
+      for non-standard layouts. Completion condition: the edited file has no
+      direct Rayon or ndarray-parallel tokens, solver check/clippy pass, and
+      focused spectral-correction/PSTD tests pass. Evidence tier: source audit
+      plus compile-time and focused empirical validation. Verification: scoped
+      `rg` found no direct Rayon, ndarray-parallel, or explicit `Zip` token in
+      `forward/pstd/numerics/spectral_correction/corrections.rs`; `rustup run
+      nightly cargo fmt -p kwavers-solver --check` passed; `rustup run nightly
+      cargo check -p kwavers-solver` passed; `rustup run nightly cargo clippy
+      -p kwavers-solver --lib -- -D warnings` passed; and `rustup run nightly
+      cargo nextest run -p kwavers-solver -E "test(spectral_correction) or
+      test(kappa) or test(wavenumber) or test(pstd)" --status-level fail
+      --no-fail-fast` passed 175/175.
+- [x] [patch] Solver PSTD propagator pressure Moirai traversal: replace
+      direct ndarray/Rayon `Zip::par_for_each` in
+      `forward::pstd::propagator::pressure::update_pressure` with
+      Moirai-backed dense helpers for split-density accumulation, nonlinear
+      equation-of-state pressure writes, and fused linear pressure writes while
+      preserving sequential ndarray semantics for non-standard layouts.
+      Completion condition: the edited file has no direct Rayon or
+      ndarray-parallel tokens, solver check/clippy pass, and focused
+      pressure/PSTD tests pass. Evidence tier: source audit plus compile-time
+      and focused empirical validation. Verification: scoped `rg` found no
+      direct Rayon, ndarray-parallel, or explicit `Zip` token in
+      `forward/pstd/propagator/pressure/mod.rs`; `rustup run nightly cargo fmt
+      -p kwavers-solver --check` passed; `rustup run nightly cargo check -p
+      kwavers-solver` passed; `rustup run nightly cargo clippy -p
+      kwavers-solver --lib -- -D warnings` passed; and `rustup run nightly
+      cargo nextest run -p kwavers-solver -E "test(pressure) or test(density)
+      or test(pstd) or test(kappa)" --status-level fail --no-fail-fast` passed
+      203/203.
+- [x] [patch] Solver PSTD Cartesian density Moirai traversal: replace direct
+      ndarray/Rayon `Zip::par_for_each` in
+      `forward::pstd::propagator::pressure::density_cartesian` with
+      Moirai-backed dense helpers for shifted-kappa spectral multiplication,
+      nonlinear density coefficient construction, fused PML density updates,
+      and fallback pre/post-PML density updates while preserving sequential
+      ndarray semantics for non-standard layouts. Completion condition: the
+      edited file has no direct Rayon or ndarray-parallel tokens, solver
+      check/clippy pass, and focused density/pressure/PSTD tests pass.
+      Evidence tier: source audit plus compile-time and focused empirical
+      validation. Verification: scoped `rg` found no direct Rayon,
+      ndarray-parallel, or explicit `Zip` token in
+      `forward/pstd/propagator/pressure/density_cartesian.rs`; `rustup run
+      nightly cargo fmt -p kwavers-solver --check` passed; `rustup run nightly
+      cargo check -p kwavers-solver` passed; `rustup run nightly cargo clippy
+      -p kwavers-solver --lib -- -D warnings` passed; and `rustup run nightly
+      cargo nextest run -p kwavers-solver -E "test(density) or test(pressure)
+      or test(pstd) or test(kappa)" --status-level fail --no-fail-fast` passed
+      203/203.
+- [x] [patch] Solver PSTD axisymmetric density Moirai traversal: replace
+      direct ndarray/Rayon `Zip::par_for_each` in
+      `forward::pstd::propagator::pressure::density_as` with Moirai-backed
+      dense helpers for nonlinear coefficient construction, fused PML
+      axisymmetric density updates, and fallback pre/post-PML density updates
+      while preserving sequential ndarray semantics for non-standard 2-D
+      views. Completion condition: the edited file has no direct Rayon or
+      ndarray-parallel tokens, solver check/clippy pass, focused
+      density/pressure/axisymmetric/PSTD tests pass, and the pressure
+      propagator subtree has no direct Rayon/ndarray-parallel hits. Evidence
+      tier: source audit plus compile-time and focused empirical validation.
+      Verification: scoped `rg` found no direct Rayon, ndarray-parallel, or
+      explicit `Zip` token in
+      `forward/pstd/propagator/pressure/density_as.rs`; `rustup run nightly
+      cargo fmt -p kwavers-solver --check` passed; `rustup run nightly cargo
+      check -p kwavers-solver` passed; `rustup run nightly cargo clippy -p
+      kwavers-solver --lib -- -D warnings` passed; and `rustup run nightly
+      cargo nextest run -p kwavers-solver -E "test(density) or test(pressure)
+      or test(axisymmetric) or test(pstd) or test(kappa)" --status-level fail
+      --no-fail-fast` passed 203/203. Follow-up subtree audit found no direct
+      Rayon, ndarray-parallel, or explicit `Zip` token under
+      `forward/pstd/propagator/pressure`.
+- [x] [patch] Solver PSTD velocity propagator Moirai traversal: replace
+      direct ndarray/Rayon `Zip::par_for_each` in
+      `forward::pstd::propagator::velocity` with Moirai-backed dense helpers
+      for shifted-kappa spectral-gradient construction, fused Cartesian
+      velocity updates, fallback Cartesian velocity updates, fused AS velocity
+      updates, and fallback AS velocity updates while preserving sequential
+      ndarray semantics for non-standard layouts/views. Completion condition:
+      the edited file has no direct Rayon or ndarray-parallel tokens, solver
+      check/clippy pass, and focused velocity/pressure/density/axisymmetric/PSTD
+      tests pass. Evidence tier: source audit plus compile-time and focused
+      empirical validation. Verification: scoped `rg` found no direct Rayon,
+      ndarray-parallel, or explicit `Zip` token in
+      `forward/pstd/propagator/velocity.rs`; `rustup run nightly cargo fmt -p
+      kwavers-solver --check` passed; `rustup run nightly cargo check -p
+      kwavers-solver` passed; `rustup run nightly cargo clippy -p
+      kwavers-solver --lib -- -D warnings` passed; and `rustup run nightly
+      cargo nextest run -p kwavers-solver -E "test(velocity) or
+      test(pressure) or test(density) or test(axisymmetric) or test(pstd) or
+      test(kappa)" --status-level fail --no-fail-fast` passed 210/210.
+- [x] [patch] Solver PSTD axisymmetric propagator Moirai traversal: replace
+      direct ndarray/Rayon traversal in `forward::pstd::propagator::axisymmetric`
+      with Moirai-backed dense helpers for kappa multiplication, row/column
+      spectral operators, real-window extraction, radial velocity quotient
+      construction, and radial divergence composition; replace non-contiguous
+      expansion-slice `Zip` calls with explicit indexed assignments. Completion
+      condition: the edited file has no direct Rayon, ndarray-parallel, or
+      explicit `Zip` tokens, solver check/clippy pass, and focused
+      axisymmetric/velocity/density/pressure/PSTD tests pass. Evidence tier:
+      source audit plus compile-time and focused empirical validation.
+      Verification: scoped `rg` found no direct Rayon, ndarray-parallel, or
+      explicit `Zip` token in `forward/pstd/propagator/axisymmetric.rs`;
+      `rustup run nightly cargo fmt -p kwavers-solver --check` passed; `rustup
+      run nightly cargo check -p kwavers-solver` passed; `rustup run nightly
+      cargo clippy -p kwavers-solver --lib -- -D warnings` passed; and `rustup
+      run nightly cargo nextest run -p kwavers-solver -E "test(axisymmetric) or
+      test(velocity) or test(density) or test(pressure) or test(pstd) or
+      test(kappa)" --status-level fail --no-fail-fast` passed 210/210.
+- [x] [patch] Solver PSTD residual-gas absorption Moirai traversal: replace
+      direct ndarray/Rayon `Zip::par_for_each` in
+      `forward::pstd::physics::residual_gas_absorption` with Moirai-backed
+      dense helpers for broadband attenuation spectral-shape multiplication,
+      pressure loss application, dispersion spectral-shape multiplication, and
+      pressure dispersion application while preserving explicit sequential
+      fallback indexing for non-standard layouts. Completion condition: the
+      edited file has no direct Rayon, ndarray-parallel, or explicit `Zip`
+      tokens, solver check/clippy pass, and focused residual-gas/absorption/PSTD
+      tests pass. Evidence tier: source audit plus compile-time and focused
+      empirical validation. Verification: scoped `rg` found no direct Rayon,
+      ndarray-parallel, or explicit `Zip` token in
+      `forward/pstd/physics/residual_gas_absorption.rs`; `rustup run nightly
+      cargo fmt -p kwavers-solver --check` passed; `rustup run nightly cargo
+      check -p kwavers-solver` passed; `rustup run nightly cargo clippy -p
+      kwavers-solver --lib -- -D warnings` passed; and `rustup run nightly
+      cargo nextest run -p kwavers-solver -E "test(residual_gas) or
+      test(absorption) or test(pressure) or test(pstd) or test(kappa)"
+      --status-level fail --no-fail-fast` passed 213/213.
+- [x] [patch] Solver PSTD pressure absorption Moirai traversal: replace direct
+      ndarray/Rayon `Zip::par_for_each` in
+      `forward::pstd::physics::absorption::apply` with Moirai-backed dense
+      helpers for weighted divergence construction, spectral operator
+      multiplication, stratified bracket-weight accumulation, and final pressure
+      correction while preserving indexed fallback semantics for non-standard
+      layouts and sliced spectral operators. Completion condition: the edited
+      file has no direct Rayon, ndarray-parallel, or explicit `Zip` tokens,
+      solver check/clippy pass, and focused absorption/pressure/PSTD tests pass.
+      Evidence tier: source audit plus compile-time and focused empirical
+      validation. Verification: scoped `rg` found no direct Rayon,
+      ndarray-parallel, or explicit `Zip` token in
+      `forward/pstd/physics/absorption/apply.rs`; `rustup run nightly cargo fmt
+      -p kwavers-solver --check` passed; `rustup run nightly cargo check -p
+      kwavers-solver` passed; `rustup run nightly cargo clippy -p
+      kwavers-solver --lib -- -D warnings` passed; and `rustup run nightly
+      cargo nextest run -p kwavers-solver -E "test(absorption) or
+      test(pressure) or test(pstd) or test(kappa)" --status-level fail
+      --no-fail-fast` passed 211/211.
+- [x] [patch] Solver PSTD absorption strata Moirai traversal: replace the
+      explicit ndarray `Zip` bracket/weight fill in
+      `forward::pstd::physics::absorption::strata` with Moirai indexed
+      collection of `(lower_stratum, upper_weight)` pairs plus explicit writes
+      to the two output arrays. Completion condition: the edited absorption
+      subtree has no direct Rayon, ndarray-parallel, or explicit `Zip` tokens,
+      solver check/clippy pass, and focused absorption/pressure/PSTD tests pass.
+      Evidence tier: source audit plus compile-time and focused empirical
+      validation. Verification: scoped `rg` found no direct Rayon,
+      ndarray-parallel, or explicit `Zip` token under
+      `forward/pstd/physics/absorption`; `rustup run nightly cargo fmt -p
+      kwavers-solver --check` passed; `rustup run nightly cargo check -p
+      kwavers-solver` passed; `rustup run nightly cargo clippy -p
+      kwavers-solver --lib -- -D warnings` passed; and `rustup run nightly
+      cargo nextest run -p kwavers-solver -E "test(absorption) or
+      test(pressure) or test(pstd) or test(kappa)" --status-level fail
+      --no-fail-fast` passed 211/211.
+- [x] [patch] Solver PSTD derivative operator Moirai traversal: replace direct
+      ndarray/Rayon `axis_iter_mut(...).into_par_iter()` in
+      `forward::pstd::derivatives::operator` with Moirai indexed collection for
+      strided x-pencils and Moirai chunked i-slab traversal for y/z pencils.
+      Completion condition: the edited file has no direct Rayon,
+      ndarray-parallel, or explicit `Zip` tokens, solver check/clippy pass, and
+      focused derivative/spectral/PSTD tests pass. Evidence tier: source audit
+      plus compile-time and focused empirical validation. Verification: scoped
+      `rg` found no direct Rayon, ndarray-parallel, or explicit `Zip` token in
+      `forward/pstd/derivatives/operator.rs`; `rustup run nightly cargo fmt -p
+      kwavers-solver --check` passed; `rustup run nightly cargo check -p
+      kwavers-solver` passed; `rustup run nightly cargo clippy -p
+      kwavers-solver --lib -- -D warnings` passed; and `rustup run nightly
+      cargo nextest run -p kwavers-solver -E "test(derivative) or
+      test(spectral) or test(pstd) or test(kappa)" --status-level fail
+      --no-fail-fast` passed 214/214.
+- [x] [patch] Solver PSTD DG spectral solver Moirai traversal: replace
+      explicit ndarray `Zip` traversal in
+      `forward::pstd::dg::spectral_solver` with Moirai-backed dense helpers for
+      Laplacian-symbol construction and spectral Laplacian application.
+      Completion condition: the edited file has no direct Rayon,
+      ndarray-parallel, or explicit `Zip` tokens, solver check/clippy pass, and
+      focused DG/spectral/PSTD tests pass. Evidence tier: source audit plus
+      compile-time and focused empirical validation. Verification: scoped `rg`
+      found no direct Rayon, ndarray-parallel, or explicit `Zip` token in
+      `forward/pstd/dg/spectral_solver.rs`; `rustup run nightly cargo fmt -p
+      kwavers-solver --check` passed; `rustup run nightly cargo check -p
+      kwavers-solver` passed; `rustup run nightly cargo clippy -p
+      kwavers-solver --lib -- -D warnings` passed; and `rustup run nightly
+      cargo nextest run -p kwavers-solver -E "test(dg) or test(spectral) or
+      test(pstd) or test(kappa)" --status-level fail --no-fail-fast` passed
+      210/210.
+- [x] [patch] Solver PSTD DG acoustic SSP-RK Moirai traversal: replace
+      explicit ndarray `Zip` traversal in
+      `forward::pstd::dg::dg_solver::acoustic` with Moirai-backed dense helpers
+      for Euler, second-stage SSP, and final-stage SSP updates over pressure
+      and velocity coefficient arrays. Completion condition: the edited file
+      has no direct Rayon, ndarray-parallel, or explicit `Zip` tokens, solver
+      check/clippy pass, and focused DG/spectral/PSTD tests pass. Evidence
+      tier: source audit plus compile-time and focused empirical validation.
+      Verification: scoped `rg` found no direct Rayon, ndarray-parallel, or
+      explicit `Zip` token in `forward/pstd/dg/dg_solver/acoustic.rs`; `rustup
+      run nightly cargo fmt -p kwavers-solver --check` passed; `rustup run
+      nightly cargo check -p kwavers-solver` passed; `rustup run nightly cargo
+      clippy -p kwavers-solver --lib -- -D warnings` passed; and `rustup run
+      nightly cargo nextest run -p kwavers-solver -E "test(dg) or
+      test(spectral) or test(pstd) or test(kappa)" --status-level fail
+      --no-fail-fast` passed 210/210.
+- [x] [patch] Solver PSTD DG modal RK Moirai traversal: consolidate dense
+      Runge-Kutta coefficient update helpers in
+      `forward::pstd::dg::dg_solver::rk_update`, route
+      `forward::pstd::dg::dg_solver::solver_ops` SSP-RK3 and Forward Euler
+      coefficient writes through those Moirai-backed helpers, and keep the
+      one-dimensional acoustic SSP-RK path on the same helper module instead of
+      duplicating stage algebra. Completion condition: the edited solver-ops,
+      acoustic, and RK helper files have no direct Rayon, ndarray-parallel, or
+      explicit `Zip` tokens, solver check/clippy pass, and focused
+      DG/spectral/PSTD tests pass. Evidence tier: source audit plus
+      compile-time and focused empirical validation. Verification: scoped `rg`
+      found no direct Rayon, ndarray-parallel, or explicit `Zip` token in
+      `forward/pstd/dg/dg_solver/solver_ops.rs`,
+      `forward/pstd/dg/dg_solver/acoustic.rs`, or
+      `forward/pstd/dg/dg_solver/rk_update.rs`; `rustup run nightly cargo fmt
+      -p kwavers-solver --check` passed; `rustup run nightly cargo check -p
+      kwavers-solver` passed; `rustup run nightly cargo clippy -p
+      kwavers-solver --lib -- -D warnings` passed; and `rustup run nightly
+      cargo nextest run -p kwavers-solver -E "test(dg) or test(spectral) or
+      test(pstd) or test(kappa)" --status-level fail --no-fail-fast` passed
+      210/210.
+- [x] [patch] Solver PSTD DG tensor source RK Moirai traversal: route
+      `forward::pstd::dg::dg_solver::acoustic::tensor::source` source-coupled
+      SSP-RK3 state updates through the shared
+      `forward::pstd::dg::dg_solver::rk_update` Moirai-backed dense helpers.
+      Completion condition: the edited tensor source file and shared RK helper
+      have no direct Rayon, ndarray-parallel, or explicit `Zip` tokens, solver
+      check/clippy pass, and focused DG/spectral/PSTD tests pass. Evidence
+      tier: source audit plus compile-time and focused empirical validation.
+      Verification: scoped `rg` found no direct Rayon, ndarray-parallel, or
+      explicit `Zip` token in `forward/pstd/dg/dg_solver/acoustic/tensor/source.rs`
+      or `forward/pstd/dg/dg_solver/rk_update.rs`; `rustup run nightly cargo
+      fmt -p kwavers-solver --check` passed; `rustup run nightly cargo check -p
+      kwavers-solver` passed; `rustup run nightly cargo clippy -p
+      kwavers-solver --lib -- -D warnings` passed; and `rustup run nightly
+      cargo nextest run -p kwavers-solver -E "test(dg) or test(spectral) or
+      test(pstd) or test(kappa)" --status-level fail --no-fail-fast` passed
+      210/210.
+- [x] [patch] Solver PSTD DG tensor CPML RK Moirai traversal: route
+      `forward::pstd::dg::dg_solver::acoustic::tensor::cpml` field and CPML
+      memory SSP-RK3 state updates through the shared
+      `forward::pstd::dg::dg_solver::rk_update` Moirai-backed dense helpers.
+      Completion condition: the DG subtree has no direct Rayon,
+      ndarray-parallel, or explicit `Zip` tokens, solver check/clippy pass,
+      and focused DG/spectral/PSTD tests pass. Evidence tier: source audit
+      plus compile-time and focused empirical validation. Verification: scoped
+      `rg` found no direct Rayon, ndarray-parallel, or explicit `Zip` token in
+      `crates/kwavers-solver/src/forward/pstd/dg`; `rustup run nightly cargo
+      fmt -p kwavers-solver --check` passed; `rustup run nightly cargo check
+      -p kwavers-solver` passed; `rustup run nightly cargo clippy -p
+      kwavers-solver --lib -- -D warnings` passed; and `rustup run nightly
+      cargo nextest run -p kwavers-solver -E "test(dg) or test(spectral) or
+      test(pstd) or test(kappa)" --status-level fail --no-fail-fast` passed
+      210/210.
+- [x] [patch] Solver photoacoustic reconstruction Moirai traversal: route
+      iterative ART/OSEM updates, Fourier positivity clamping, and
+      time-reversal k-space leapfrog spectrum updates through Moirai-backed
+      traversal instead of direct ndarray/Rayon calls. Completion condition:
+      `inverse/reconstruction/photoacoustic` has no direct Rayon,
+      ndarray-parallel, or explicit `Zip` traversal tokens, solver
+      check/clippy pass, and focused photoacoustic tests pass. Evidence tier:
+      source audit plus compile-time and focused empirical validation.
+      Verification: scoped `rg` found no direct Rayon, ndarray-parallel, or
+      explicit `Zip` token in
+      `crates/kwavers-solver/src/inverse/reconstruction/photoacoustic`;
+      `rustup run nightly cargo fmt -p kwavers-solver --check` passed;
+      `rustup run nightly cargo check -p kwavers-solver` passed; `rustup run
+      nightly cargo clippy -p kwavers-solver --lib -- -D warnings` passed; and
+      `rustup run nightly cargo nextest run -p kwavers-solver -E
+      "test(photoacoustic)" --status-level fail --no-fail-fast` passed 10/10.
+- [x] [patch] Solver hybrid angular spectrum absorption Moirai traversal:
+      route broadband harmonic attenuation planes through the shared
+      Moirai-backed dense traversal instead of ndarray/Rayon
+      `par_mapv_inplace`. Completion condition:
+      `forward/nonlinear/hybrid_angular_spectrum` has no direct Rayon,
+      ndarray-parallel, or explicit `Zip` traversal tokens, solver
+      check/clippy pass, and focused HAS/absorption tests pass. Evidence tier:
+      source audit plus compile-time and focused empirical validation.
+      Verification: scoped `rg` found no direct Rayon, ndarray-parallel, or
+      explicit `Zip` token in
+      `crates/kwavers-solver/src/forward/nonlinear/hybrid_angular_spectrum`;
+      `rustup run nightly cargo fmt -p kwavers-solver --check` passed;
+      `rustup run nightly cargo check -p kwavers-solver` passed; `rustup run
+      nightly cargo clippy -p kwavers-solver --lib -- -D warnings` passed; and
+      `rustup run nightly cargo nextest run -p kwavers-solver -E
+      "test(hybrid_angular_spectrum) or test(absorption)" --status-level fail
+      --no-fail-fast` passed 43/43.
+- [x] [patch] Solver nonlinear elastic propagation damping Moirai traversal:
+      route fundamental, previous-fundamental, second-harmonic, and higher
+      harmonic damping maps through shared Moirai-backed dense traversal
+      instead of ndarray/Rayon `par_mapv_inplace`. Completion condition:
+      `forward/elastic/nonlinear/solver/propagation.rs` has no
+      `par_mapv_inplace` token, solver check/clippy pass, and focused
+      nonlinear/elastic/propagation tests pass. Evidence tier: source audit
+      plus compile-time and focused empirical validation. Verification:
+      scoped `rg` found no `par_mapv_inplace` token in
+      `crates/kwavers-solver/src/forward/elastic/nonlinear/solver/propagation.rs`;
+      `rustup run nightly cargo fmt -p kwavers-solver --check` passed;
+      `rustup run nightly cargo check -p kwavers-solver` passed; `rustup run
+      nightly cargo clippy -p kwavers-solver --lib -- -D warnings` passed; and
+      `rustup run nightly cargo nextest run -p kwavers-solver -E
+      "test(nonlinear) or test(elastic) or test(harmonic) or
+      test(propagation)" --status-level fail --no-fail-fast` passed 264/264.
+      Residual: the follow-up harmonic-generation and stepping slices below
+      close the remaining nonlinear elastic direct-provider files.
+- [x] [patch] Solver nonlinear elastic harmonic-generation Moirai traversal:
+      route second-harmonic Jacobi updates plus third/higher harmonic delta
+      fills through shared Moirai-backed indexed traversal instead of
+      ndarray/Rayon `Zip::par_for_each`. Completion condition:
+      `forward/elastic/nonlinear/solver/harmonics.rs` has no direct Rayon,
+      ndarray-parallel, or explicit `Zip` traversal tokens, solver
+      check/clippy pass, and focused nonlinear/elastic/propagation tests pass.
+      Evidence tier: source audit plus compile-time and focused empirical
+      validation. Verification: scoped `rg` found no direct Rayon,
+      ndarray-parallel, or explicit `Zip` token in
+      `crates/kwavers-solver/src/forward/elastic/nonlinear/solver/harmonics.rs`;
+      `rustup run nightly cargo fmt -p kwavers-solver --check` passed;
+      `rustup run nightly cargo check -p kwavers-solver` passed; `rustup run
+      nightly cargo clippy -p kwavers-solver --lib -- -D warnings` passed; and
+      `rustup run nightly cargo nextest run -p kwavers-solver -E
+      "test(nonlinear) or test(elastic) or test(harmonic) or
+      test(propagation)" --status-level fail --no-fail-fast` passed 264/264.
+      Residual: the follow-up stepping slice below closes the remaining
+      nonlinear elastic direct-provider file.
+- [x] [patch] Solver nonlinear elastic fundamental stepping Moirai traversal:
+      route independent `(j, k)` x-line Heun/TVD-RK2 updates through
+      Moirai-backed line scheduling, then apply the computed lines in a
+      separate write-back pass to avoid unsafe strided mutable aliasing.
+      Completion condition: `forward/elastic/nonlinear` has no direct Rayon,
+      ndarray-parallel, or explicit `Zip` traversal tokens, solver
+      check/clippy pass, and focused nonlinear/elastic/propagation tests pass.
+      Evidence tier: source audit plus compile-time and focused empirical
+      validation. Verification: scoped `rg` found no direct Rayon,
+      ndarray-parallel, or explicit `Zip` token under
+      `crates/kwavers-solver/src/forward/elastic/nonlinear`; `rustup run
+      nightly cargo fmt -p kwavers-solver --check` passed; `rustup run nightly
+      cargo check -p kwavers-solver` passed; `rustup run nightly cargo clippy
+      -p kwavers-solver --lib -- -D warnings` passed; and `rustup run nightly
+      cargo nextest run -p kwavers-solver -E "test(nonlinear) or
+      test(elastic) or test(harmonic) or test(propagation)" --status-level
+      fail --no-fail-fast` passed 264/264.
+- [x] [patch] Leto thermal CEM43 state slice: move
+      `kwavers_physics::thermal::ThermalCEM43Grid` dose storage and update
+      input from `ndarray::Array3<f64>` to `leto::Array3<f64>`, schedule dense
+      dose updates through `moirai-parallel`, return a typed shape error for
+      mismatched temperature fields, and move the top-level theranostic lesion
+      mask plus brain monitor thermal state to Leto. Completion condition:
+      the CEM43 dose producer, lesion mask, and brain monitor thermal
+      temperature/absorbed-power fields no longer use ndarray for this thermal
+      state path, while the FWI sound-speed reconstruction arrays remain on the
+      existing ndarray boundary for a separate solver slice. Verification:
+      `rustup run nightly cargo check -p kwavers-physics` passed; `rustup run
+      nightly cargo check -p kwavers --example brain_theranostic_monitor`
+      passed; `rustup run nightly cargo nextest run -p kwavers-physics -E
+      "test(thermal_dose)" --status-level fail --no-fail-fast` passed 12/12;
+      `rustup run nightly cargo nextest run -p kwavers --lib -E
+      "test(lesion) or test(thermal_shift_matches_linear_law) or
+      test(thermal_no_rise_is_identity) or test(dispatch_matches_direct_calls)"
+      --status-level fail --no-fail-fast` passed 10/10; `rustup run nightly
+      rustfmt --check` passed for touched Rust files; scoped `git diff
+      --check` passed. Follow-up below closed the then-existing Leto/RITK
+      target failures in `skull_ct_phase_correction`,
+      `ultrasound_physics_validation`, and `nl_swe_validation`.
+- [x] [patch] Top-level Leto/RITK compile-blocker slice: update
+      `skull_ct_phase_correction` to current RITK series/image accessors,
+      update ultrasound registration/fusion validation inputs to use Leto
+      arrays directly, and update NL-SWE validation statistics for Leto field
+      access without adding ndarray/Leto compatibility helpers. Completion
+      condition: the skull CT example and both validation test targets compile
+      against the migrated APIs, focused value-semantic tests pass, and the
+      NL-SWE constant-quality mean assertion uses a derived reduction bound
+      rather than exact floating-point equality. Verification: `rustup run
+      nightly cargo check -p kwavers --example skull_ct_phase_correction
+      --test ultrasound_physics_validation --test nl_swe_validation` passed;
+      `rustup run nightly cargo nextest run -p kwavers --test
+      ultrasound_physics_validation -E
+      "test(validate_multi_modal_fusion_ultrasound_optical) or
+      test(validate_fusion_registration_validation) or
+      test(validate_interdisciplinary_fusion_quality) or
+      test(validate_multi_modal_spatial_registration) or
+      test(validate_temporal_synchronization_multi_modal)" --status-level fail
+      --no-fail-fast` passed 5/5; and `rustup run nightly cargo nextest run
+      -p kwavers --test nl_swe_validation -E "test(test_bayesian_inversion) or
+      test(test_nonlinear_parameter_statistics)" --status-level fail
+      --no-fail-fast` passed 2/2.
+- [x] [patch] Demote top-level `kwavers` Burn dependency scope: remove unused
+      workspace-level `burn`/`burn-ndarray` dependency aliases and move the
+      top-level `kwavers` Burn dependency from `[dependencies]` to
+      `[dev-dependencies]`, because `crates/kwavers/src` has no Burn imports and
+      Burn is only used by that package's examples, benches, and integration
+      tests. Completion condition: no package uses workspace-inherited Burn,
+      the root workspace has no Burn alias, and metadata reports `kwavers`
+      Burn as a dev dependency only. Verification: static audit found no
+      `burn = { workspace = true }` or `burn-ndarray` hits; scoped source audit
+      found Burn imports only under `crates/kwavers/examples`,
+      `crates/kwavers/benches`, and `crates/kwavers/tests`; `rustup run
+      nightly cargo metadata --no-deps --format-version 1 --manifest-path
+      Cargo.toml --features pinn` passed and reported `kwavers burn kind=dev
+      features: ndarray,autodiff`. Follow-up after disabling Burn defaults:
+      `rustup run nightly cargo check -p kwavers --features pinn` passed.
+- [x] [patch] Acoustic-field kernel provider seam: split
+      `AcousticFieldKernel<P>` from concrete WGPU execution by adding an
+      `AcousticFieldProvider` operation trait and moving the WGSL pipeline,
+      buffer allocation, dispatch, and readback code into
+      `WgpuAcousticFieldProvider`. Completion condition: `WaveEquationGpu`
+      keeps its existing default construction, the acoustic-field wrapper is
+      generic over a provider trait, and no CUDA compute implementation is
+      exposed without real CUDA kernels. Verification: `cargo fmt -p
+      kwavers-gpu --check` passed, `cargo check -p kwavers-gpu --features gpu`
+      passed, and `cargo nextest run -p kwavers-gpu --features gpu
+      acoustic_kernel_wrapper_is_generic_over_provider_trait --status-level
+      fail --no-fail-fast` passed 1/1. Follow-up moved the provider operation
+      surface and `WaveEquationGpu` to provider-native `leto::Array3<f32>`,
+      with WGPU declaring `AcousticFieldProvider::Scalar = f32` instead of
+      narrowing f64 ndarray fields inside the provider. Re-verification:
+      `rustup run nightly cargo fmt -p kwavers-gpu --check`, `rustup run
+      nightly cargo check -p kwavers-gpu --features gpu`, `rustup run nightly
+      cargo clippy -p kwavers-gpu --features gpu --lib -- -D warnings`,
+      focused acoustic/provider nextest 4/4, and `rustup run nightly cargo
+      check -p kwavers-gpu --features cuda-provider` passed.
+- [x] [patch] Wave-equation acoustic provider-generic wrapper: make
+      `kwavers-gpu::gpu::compute_kernels::WaveEquationGpu<P>` carry the same
+      `AcousticFieldProvider<Scalar = f32>` parameter as
+      `AcousticFieldKernel<P>`, add a `from_provider` constructor, and keep
+      `WaveEquationGpu::new()` as the WGPU-backed default. Completion
+      condition: the wave-equation wrapper no longer fixes
+      `AcousticFieldKernel` to its default WGPU provider internally, CUDA
+      remains acquisition-only with no fake acoustic kernel, and focused GPU
+      checks pass. Evidence tier: type-level/compile-time validation plus
+      focused empirical nextest. Verification: `rustup run nightly cargo fmt
+      -p kwavers-gpu` passed, `rustup run nightly cargo check -p kwavers-gpu
+      --features gpu` passed, `rustup run nightly cargo check -p kwavers-gpu
+      --features cuda-provider` passed, `rustup run nightly cargo clippy -p
+      kwavers-gpu --features gpu --lib -- -D warnings` passed, and `rustup
+      run nightly cargo nextest run -p kwavers-gpu --features cuda-provider
+      -E "test(wave_equation_wrapper_is_generic_over_acoustic_provider) or
+      test(acoustic_kernel_wrapper_is_generic_over_provider_trait) or
+      test(wgpu_acoustic_provider_declares_native_scalar) or
+      test(cuda_satisfies_provider_identity_without_fake_kernels)"
+      --status-level fail --no-fail-fast` passed 4/4.
+- [x] [patch] Thermal-acoustic buffer provider seam: split
+      `GpuThermalAcousticBuffers<P>` from concrete WGPU storage/uniform buffer
+      handles by adding `ThermalAcousticBufferProvider` and moving WGPU buffer
+      allocation, field upload, and field readback into
+      `WgpuThermalAcousticBuffers`. Completion condition: the generic
+      thermal-acoustic buffer wrapper no longer exposes `wgpu::Buffer` fields,
+      the WGPU solver consumes the concrete WGPU buffer provider internally,
+      and no CUDA buffer implementation is exposed without real CUDA transfer
+      and kernel contracts. Verification: `cargo fmt -p kwavers-gpu --check`
+      passed, `cargo check -p kwavers-gpu --features gpu` passed, `cargo
+      clippy -p kwavers-gpu --features gpu --lib -- -D warnings` passed, and
+      `cargo nextest run -p kwavers-gpu --features gpu
+      thermal_acoustic_buffers_are_generic_over_provider_trait --status-level
+      fail --no-fail-fast` passed 1/1. Follow-up moved upload/readback field
+      I/O from `ndarray::Array3<f32>` to `leto::Array3<f32>`, with WGPU
+      declaring `ThermalAcousticBufferProvider::Scalar = f32`.
+      Re-verification: `rustup run nightly cargo fmt -p kwavers-gpu --check`,
+      `rustup run nightly cargo check -p kwavers-gpu --features gpu`, `rustup
+      run nightly cargo clippy -p kwavers-gpu --features gpu --lib -- -D
+      warnings`, focused thermal-acoustic nextest 9/9, and `rustup run
+      nightly cargo check -p kwavers-gpu --features cuda-provider` passed.
+- [x] [patch] FDTD pressure provider-native I/O: move
+      `kwavers-gpu::gpu::WgpuFdtd` pressure upload/readback from
+      `ndarray::Array3<f64>` to provider-native `leto::Array3<f32>`,
+      surface non-dense host fields as `KwaversError::InvalidInput`, and
+      remove hidden widen/narrow pressure conversion at the WGPU storage
+      boundary. Completion condition: `fdtd.rs` has no ndarray pressure
+      surface or f64/f32 pressure casts, WGPU pressure storage remains f32 by
+      contract, and the CUDA-provider graph still compiles without a fake FDTD
+      kernel implementation. Verification: `rustup run nightly cargo fmt -p
+      kwavers-gpu --check` passed, `rustup run nightly cargo check -p
+      kwavers-gpu --features gpu` passed, `rustup run nightly cargo clippy -p
+      kwavers-gpu --features gpu --lib -- -D warnings` passed, focused
+      FDTD/acoustic provider nextest passed 7/7, and `rustup run nightly cargo
+      check -p kwavers-gpu --features cuda-provider` passed.
+- [x] [patch] WGPU FDTD public type names: rename the WGSL-only
+      `FdtdGpu`/`FdtdGpuShaderDispatcher` surfaces to
+      `WgpuFdtd`/`WgpuFdtdPressureDispatcher` without compatibility aliases, so
+      CUDA remains represented as a missing provider-trait implementation
+      rather than a generic GPU type. Completion condition: scoped `rg` finds no
+      stale Rust references to the old names, `kwavers-gpu` builds with `gpu`
+      and `cuda-provider`, and focused FDTD nextest still passes.
+- [x] [patch] FDTD CPU reference Leto pressure surface: move
+      `kwavers-gpu::gpu::compute::FdtdCpuReferenceDispatcher::{update_pressure,
+      update_pressure_into}` and boundary-zeroing from `ndarray::Array3<f64>`
+      to `leto::Array3<f64>`, preserving the f64 reference stencil and
+      strengthening the dimension-mismatch test to assert
+      `KwaversError::InvalidInput`. Completion condition: `fdtd_cpu.rs` no
+      longer imports ndarray or names `Array3<f64>`, CPU reference tests build
+      Leto arrays directly, the public export no longer names the CPU path as a
+      GPU dispatcher, and CUDA-provider type validation remains intact.
+      Verification: `rustup run nightly cargo fmt -p kwavers-gpu --check`
+      passed, `rustup run nightly cargo check -p kwavers-gpu --features gpu`
+      passed, `rustup run nightly cargo clippy -p kwavers-gpu --features gpu
+      --lib -- -D warnings` passed, `rustup run nightly cargo nextest run -p
+      kwavers-gpu --features gpu fdtd_gpu --status-level fail
+      --no-fail-fast` passed 5/5, and `rustup run nightly cargo check -p
+      kwavers-gpu --features cuda-provider` passed.
+- [x] [patch] ComputeManager provider-generic boundary: make
+      `kwavers-gpu::gpu::ComputeManager<P>` generic over `GpuDeviceProvider`,
+      store `Option<GpuDevice<P>>`, keep raw `wgpu::Device`/`wgpu::Queue`
+      helpers only on `ComputeManager<WgpuDevice>`, and make CPU-only use
+      explicit through `cpu_only()` instead of silent GPU-acquisition fallback.
+      Completion condition: `ComputeManager<hephaestus_cuda::CudaDevice>`
+      type-checks under `cuda-provider`, no fake CUDA compute manager dispatch
+      exists, and the remaining ndarray field-update helpers are documented as
+      CPU routines. Verification: `rustup run nightly cargo fmt -p
+      kwavers-gpu --check` passed, `rustup run nightly cargo check -p
+      kwavers-gpu --features gpu` passed, `rustup run nightly cargo clippy -p
+      kwavers-gpu --features gpu --lib -- -D warnings` passed, `rustup run
+      nightly cargo check -p kwavers-gpu --features cuda-provider` passed,
+      focused WGPU compute-manager nextest passed 2/2, and focused
+      CUDA-provider compute-manager nextest passed 3/3.
+      Follow-up 2026-07-04: removed `pollster::block_on` from
+      `ComputeManager::new_blocking` by acquiring through
+      `GpuDevice<P>::try_create_with_features_and_limits`. Verification:
+      scoped `rg` found no `pollster::block_on` in `compute_manager.rs` or
+      `kwavers-gpu::backend`, `rustup run nightly cargo fmt -p kwavers-gpu
+      --check` passed, `rustup run nightly cargo check -p kwavers-gpu
+      --features cuda-provider` passed, `rustup run nightly cargo clippy -p
+      kwavers-gpu --features cuda-provider --all-targets -- -D warnings`
+      passed, and focused `rustup run nightly cargo nextest run -p
+      kwavers-gpu --features cuda-provider compute_manager --status-level fail
+      --no-fail-fast` passed 5/5.
+- [x] [patch] ComputeBackend Leto array contract: move
+      `kwavers_solver::backend::ComputeBackend::{element_wise_multiply,
+      apply_spatial_derivative}` from `ndarray::Array3<f64>` to
+      `leto::Array3<f64>`, and update `kwavers-gpu::backend::GPUBackend<P>`
+      so the solver-facing dispatch surface no longer preserves an ndarray
+      array contract. Completion condition: `kwavers-solver::backend` and
+      `kwavers-gpu::backend` contain no `ndarray::Array3`/`NdArray3` backend
+      dispatch surface, provider-native WGPU methods remain on
+      `leto::Array3<P::Scalar>`, and the CUDA-provider backend seam still
+      type-checks. Verification: scoped `rg` found no `ndarray::Array3` or
+      `NdArray3` in the backend trait/impl surface, `rustup run nightly cargo
+      fmt -p kwavers-solver -p kwavers-gpu --check` passed, `rustup run
+      nightly cargo check -p kwavers-solver -p kwavers-gpu --features
+      kwavers-gpu/cuda-provider` passed, `rustup run nightly cargo clippy -p
+      kwavers-solver --lib -- -D warnings` passed, `rustup run nightly cargo
+      clippy -p kwavers-gpu --features cuda-provider --all-targets -- -D
+      warnings` passed, and focused `rustup run nightly cargo nextest run -p
+      kwavers-solver -p kwavers-gpu --features kwavers-gpu/cuda-provider
+      backend --status-level fail --no-fail-fast` passed 48/48. Broader
+      `kwavers-solver --all-targets` clippy remains blocked by unrelated
+      pre-existing test/doc lints.
+- [x] [patch] ComputeManager Leto CPU field helpers: move
+      `ComputeManager::{fdtd_update, apply_absorption}` and their private CPU
+      implementations from `ndarray::Array3<f64>` to `leto::Array3<f64>`,
+      and surface absorption shape/layout violations as typed
+      `KwaversError::InvalidInput`. Completion condition:
+      `compute_manager.rs` no longer imports ndarray or names `Array3<f64>`,
+      CPU-only manager tests use Leto arrays, and CUDA-provider type
+      validation remains intact. Verification: `rustup run nightly cargo fmt
+      -p kwavers-gpu --check` passed, `rustup run nightly cargo check -p
+      kwavers-gpu --features gpu` passed, `rustup run nightly cargo clippy -p
+      kwavers-gpu --features gpu --lib -- -D warnings` passed, `rustup run
+      nightly cargo check -p kwavers-gpu --features cuda-provider` passed,
+      focused WGPU compute-manager nextest passed 3/3, and focused
+      CUDA-provider compute-manager nextest passed 4/4.
+- [x] [patch] GPU/CPU equivalence validator Leto comparison: move
+      `kwavers-gpu::validation::gpu_cpu_equivalence::EquivalenceValidator`
+      result comparison from `ndarray::Array3<f64>` and `ndarray::Zip` to
+      `leto::Array3<f64>`, converting the current FDTD solver pressure output
+      at the validation runner boundary. Completion condition:
+      `validator.rs` contains no ndarray imports, validation tests construct
+      Leto arrays directly, and the runner confines ndarray use to the
+      solver-owned source mask/signal interface before converting pressure
+      fields into Leto. Verification: `rustup run nightly cargo fmt -p
+      kwavers-gpu --check` passed, `rustup run nightly cargo check -p
+      kwavers-gpu --features gpu` passed, `rustup run nightly cargo clippy -p
+      kwavers-gpu --features gpu --lib -- -D warnings` passed, `rustup run
+      nightly cargo nextest run -p kwavers-gpu --features gpu
+      gpu_cpu_equivalence --status-level fail --no-fail-fast` passed 21/21,
+      and `rustup run nightly cargo check -p kwavers-gpu --features
+      cuda-provider` passed.
+- [x] [patch] FDTD GPU equivalence honesty gate: remove the validation runner
+      path that constructed `GPUBackend` but still executed `FdtdSolver` on
+      CPU, and require the report to surface a typed unavailable-provider
+      failure until a real provider-generic Leto/Hephaestus FDTD GPU trait
+      implementation is wired.
+      Completion condition: `run_simulation_gpu` cannot return CPU-computed
+      pressure as GPU evidence, runner tests assert the failure reason names
+      `FDTD provider-generic Leto/Hephaestus GPU equivalence`, and module docs
+      no longer claim this path exercises concrete WGPU FDTD kernels. Verification: `rustup
+      run nightly cargo fmt -p kwavers-gpu --check` passed, `rustup run
+      nightly cargo check -p kwavers-gpu --features gpu` passed, `rustup run
+      nightly cargo clippy -p kwavers-gpu --features gpu --all-targets --
+      -D warnings` passed, and `rustup run nightly cargo nextest run -p
+      kwavers-gpu --features gpu gpu_cpu_equivalence --status-level fail
+      --no-fail-fast` passed 21/21.
+- [x] [patch] Realtime imaging pipeline Leto frame buffers: move
+      `kwavers-gpu::gpu::pipeline::{RealtimeImagingPipeline,
+      StreamingDataSource}` RF input/output frame buffers from
+      `ndarray::Array4<f32>`/`Array3<f32>` to
+      `leto::Array4<f32>`/`Array3<f32>`, replace the local beamforming
+      `sum_axis` path with explicit Leto traversal, and move the private
+      Hilbert FFT scratch from ndarray `Array1<Complex64>` to a thread-local
+      `Vec<Complex64>` passed through Apollo's slice FFT API. Completion
+      condition: the public pipeline submit/get methods and frame queues use
+      Leto arrays, pipeline tests construct Leto frames directly, the
+      `kwavers-gpu::gpu::pipeline` subtree contains no ndarray imports, and
+      CUDA-provider type validation remains intact. Verification: `rustup run
+      nightly cargo fmt -p kwavers-gpu --check` passed, `rustup run nightly
+      cargo check -p kwavers-gpu --features gpu` passed, `rustup run nightly
+      cargo clippy -p kwavers-gpu --features gpu --lib -- -D warnings`
+      passed, `rustup run nightly cargo nextest run -p kwavers-gpu --features
+      gpu gpu::pipeline --status-level fail --no-fail-fast` passed 5/5, and
+      `rustup run nightly cargo check -p kwavers-gpu --features cuda-provider`
+      passed. Follow-up 2026-07-04 verification: scoped `rg` found no ndarray
+      token in `crates/kwavers-gpu/src/gpu/pipeline`, `rustup run nightly cargo
+      fmt -p kwavers-gpu --check` passed, `rustup run nightly cargo check -p
+      kwavers-gpu --features cuda-provider` passed, `rustup run nightly cargo
+      clippy -p kwavers-gpu --features cuda-provider --all-targets -- -D
+      warnings` passed, and focused `rustup run nightly cargo nextest run -p
+      kwavers-gpu --features cuda-provider pipeline --status-level fail
+      --no-fail-fast` passed 8/8.
+- [x] [patch] Thermal-acoustic solver provider seam: split
+      `GpuThermalAcousticSolver<P>` from concrete WGPU compute-pipeline
+      ownership by adding `ThermalAcousticSolverProvider` and moving WGPU
+      device/queue handles, pipelines, bind group, and step dispatch into
+      `WgpuThermalAcousticSolverProvider`. Completion condition: the generic
+      thermal-acoustic solver wrapper no longer exposes `wgpu::ComputePipeline`
+      fields or WGPU step parameters, the default WGPU constructor preserves
+      real WGSL dispatch, and no CUDA solver implementation is exposed without
+      real CUDA kernels. Verification: `cargo fmt -p kwavers-gpu --check`
+      passed, `cargo check -p kwavers-gpu --features gpu` passed, `cargo
+      clippy -p kwavers-gpu --features gpu --lib -- -D warnings` passed, and
+      `cargo nextest run -p kwavers-gpu --features gpu
+      thermal_acoustic_solver_is_generic_over_provider_trait --status-level
+      fail --no-fail-fast` passed 1/1.
+- [x] [patch] Backend buffer-manager provider seam: split
+      `GpuBackendBufferManager<P>` from concrete WGPU buffer pooling and
+      readback by adding `BackendBufferProvider` and moving WGPU buffer
+      allocation, array upload, readback, and pooling into
+      `WgpuBackendBufferManager`. Completion condition: the generic backend
+      buffer manager wrapper no longer exposes `wgpu::Buffer` methods, the
+      WGPU compute provider consumes the concrete WGPU buffer provider
+      internally, and no CUDA buffer provider is exposed without real CUDA
+      transfer contracts. Verification: `cargo fmt -p kwavers-gpu --check`
+      passed, `cargo check -p kwavers-gpu --features gpu` passed, `cargo
+      clippy -p kwavers-gpu --features gpu --lib -- -D warnings` passed, and
+      `cargo nextest run -p kwavers-gpu --features gpu
+      backend_buffer_manager_wrapper_is_generic_over_provider_trait
+      --status-level fail --no-fail-fast` passed 1/1.
+- [x] [patch] PSTD buffer allocation provider seam: split solver
+      construction and run-cache storage-buffer allocation behind
+      `PstdBufferProvider` and move WGPU read-only, static, upload,
+      read/write, and staging-buffer creation into `WgpuPstdBufferFactory`.
+      Completion condition: PSTD construction and run-cache rebuild no longer
+      call WGPU buffer allocation directly for their owned storage/staging
+      buffers, both paths consume the provider trait surface, and no CUDA
+      buffer implementation is exposed without real CUDA transfer contracts.
+      Verification: `cargo fmt -p kwavers-gpu --check` passed, `cargo check
+      -p kwavers-gpu --features gpu` passed, `cargo clippy -p kwavers-gpu
+      --features gpu --lib -- -D warnings` passed, and `cargo nextest run -p
+      kwavers-gpu --features gpu
+      pstd_buffer_factory_is_generic_over_provider_trait
+      packed_signal_len_keeps_storage_buffers_non_empty
+      rewrite_packed_source_buffer_preserves_indices_and_signal_tail
+      rewrite_packed_source_buffer_uses_zero_signal_sentinel_for_empty_tail
+      overwrite_packed_signal_tail_keeps_index_prefix_stable --status-level
+      fail --no-fail-fast` passed 5/5.
+- [x] [patch] PSTD pipeline provider seam: split PSTD shader-module,
+      pipeline-layout, and compute-pipeline creation behind
+      `PstdPipelineProvider` and move WGPU shader, layout, and
+      `ComputePipelineDescriptor` construction into `WgpuPstdPipelineFactory`.
+      Completion condition: PSTD construction no longer calls WGPU shader,
+      pipeline-layout, or compute-pipeline creation APIs directly, the
+      constructor consumes the provider trait surface for standard and
+      absorption pipeline entries, and no CUDA pipeline implementation is
+      exposed without real CUDA kernels. Verification: `cargo fmt -p
+      kwavers-gpu --check` passed, `cargo check -p kwavers-gpu --features
+      gpu` passed, `cargo clippy -p kwavers-gpu --features gpu --lib -- -D
+      warnings` passed, and `cargo nextest run -p kwavers-gpu --features gpu
+      pstd_buffer_factory_is_generic_over_provider_trait
+      pstd_pipeline_factory_is_generic_over_provider_trait
+      packed_signal_len_keeps_storage_buffers_non_empty
+      rewrite_packed_source_buffer_preserves_indices_and_signal_tail
+      rewrite_packed_source_buffer_uses_zero_signal_sentinel_for_empty_tail
+      overwrite_packed_signal_tail_keeps_index_prefix_stable --status-level
+      fail --no-fail-fast` passed 6/6.
+- [x] [patch] PSTD bind-group layout provider seam: split PSTD bind-group
+      layout creation behind `PstdBindGroupLayoutProvider` and move WGPU
+      binding-slot descriptor construction into
+      `WgpuPstdBindGroupLayoutFactory`. Completion condition: PSTD
+      construction no longer calls WGPU bind-group-layout creation helpers
+      directly, layout creation consumes the provider trait surface for field,
+      k-space, sensor/source, and absorption groups, and no CUDA layout
+      implementation is exposed without real CUDA kernels. Verification:
+      `cargo fmt -p kwavers-gpu --check` passed, `cargo check -p
+      kwavers-gpu --features gpu` passed, `cargo clippy -p kwavers-gpu
+      --features gpu --lib -- -D warnings` passed, and `cargo nextest run -p
+      kwavers-gpu --features gpu
+      pstd_bind_group_layout_factory_is_generic_over_provider_trait
+      pstd_buffer_factory_is_generic_over_provider_trait
+      pstd_pipeline_factory_is_generic_over_provider_trait
+      packed_signal_len_keeps_storage_buffers_non_empty
+      rewrite_packed_source_buffer_preserves_indices_and_signal_tail
+      rewrite_packed_source_buffer_uses_zero_signal_sentinel_for_empty_tail
+      overwrite_packed_signal_tail_keeps_index_prefix_stable --status-level
+      fail --no-fail-fast` passed 7/7.
+- [x] [patch] PSTD bind-group provider seam: split permanent constructor
+      bind groups and run-cache sensor bind groups behind
+      `PstdBindGroupProvider` and move WGPU bind-group descriptor construction
+      into `WgpuPstdBindGroupFactory`. Completion condition: PSTD construction
+      and run-cache rebuild no longer call WGPU bind-group creation APIs
+      directly, both paths consume the provider trait surface, and no CUDA
+      bind-group implementation is exposed without real CUDA kernels.
+      Verification: `cargo fmt -p kwavers-gpu --check` passed, `cargo check
+      -p kwavers-gpu --features gpu` passed, `cargo clippy -p kwavers-gpu
+      --features gpu --lib -- -D warnings` passed, and `cargo nextest run -p
+      kwavers-gpu --features gpu
+      pstd_bind_group_factory_is_generic_over_provider_trait
+      pstd_bind_group_layout_factory_is_generic_over_provider_trait
+      pstd_buffer_factory_is_generic_over_provider_trait
+      pstd_pipeline_factory_is_generic_over_provider_trait
+      packed_signal_len_keeps_storage_buffers_non_empty
+      rewrite_packed_source_buffer_preserves_indices_and_signal_tail
+      rewrite_packed_source_buffer_uses_zero_signal_sentinel_for_empty_tail
+      overwrite_packed_signal_tail_keeps_index_prefix_stable --status-level
+      fail --no-fail-fast` passed 8/8.
+- [x] [patch] PSTD command provider seam: split run-loop sensor clear,
+      sensor copy, command submit, and wait-poll operations behind
+      `PstdCommandProvider`, moving the WGPU command encoder/queue mechanics
+      for those paths into `WgpuPstdCommandProvider`. Completion condition:
+      run-loop sensor clear/copy and provider waits no longer call WGPU
+      command/queue APIs directly, batch compute-pass encoding remains the
+      only direct run-loop command-encoder surface, and no CUDA command
+      provider is exposed without real CUDA kernels. Verification: `cargo fmt
+      -p kwavers-gpu --check` passed, `cargo check -p kwavers-gpu --features
+      gpu` passed, `cargo clippy -p kwavers-gpu --features gpu --lib -- -D
+      warnings` passed, and `cargo nextest run -p kwavers-gpu --features gpu
+      pstd_command_provider_is_generic_over_provider_trait
+      pstd_bind_group_factory_is_generic_over_provider_trait
+      pstd_bind_group_layout_factory_is_generic_over_provider_trait
+      pstd_buffer_factory_is_generic_over_provider_trait
+      pstd_pipeline_factory_is_generic_over_provider_trait
+      packed_signal_len_keeps_storage_buffers_non_empty
+      rewrite_packed_source_buffer_preserves_indices_and_signal_tail
+      rewrite_packed_source_buffer_uses_zero_signal_sentinel_for_empty_tail
+      overwrite_packed_signal_tail_keeps_index_prefix_stable --status-level
+      fail --no-fail-fast` passed 9/9.
+- [x] [patch] PSTD command encoder provider seam: split zero-field and
+      batched-step command encoder creation/submission behind
+      `PstdCommandProvider::submit_encoder`, with provider-native encoder
+      ownership expressed as an associated type. Completion condition:
+      `time_loop::run` no longer calls `create_command_encoder` or
+      `queue.submit` directly for the zero-field and batch paths,
+      `PstdCommandProvider` does not name `wgpu::CommandEncoder` in its trait
+      contract, and WGPU compute-pass encoding remains recorded as the next
+      residual rather than claimed complete. Verification: `cargo fmt -p
+      kwavers-gpu --check` passed, `cargo check -p kwavers-gpu --features gpu`
+      passed, `cargo clippy -p kwavers-gpu --features gpu --lib -- -D
+      warnings` passed, `cargo nextest run -p kwavers-gpu --features gpu
+      pstd_command_provider_is_generic_over_provider_trait
+      pstd_bind_group_factory_is_generic_over_provider_trait
+      pstd_bind_group_layout_factory_is_generic_over_provider_trait
+      pstd_buffer_factory_is_generic_over_provider_trait
+      pstd_pipeline_factory_is_generic_over_provider_trait
+      packed_signal_len_keeps_storage_buffers_non_empty
+      rewrite_packed_source_buffer_preserves_indices_and_signal_tail
+      rewrite_packed_source_buffer_uses_zero_signal_sentinel_for_empty_tail
+      overwrite_packed_signal_tail_keeps_index_prefix_stable` passed 9/9, and
+      source audit found direct `create_command_encoder`/`queue.submit` calls
+      confined to `time_loop/commands.rs` for the touched PSTD run-loop files.
+- [x] [patch] PSTD compute-pass provider seam: split zero-field and
+      batched-step compute-pass creation behind
+      `PstdCommandProvider::submit_compute_pass` and
+      `PstdCommandProvider::submit_compute_passes`, with the provider-native
+      pass modeled as a lifetime-associated type. Completion condition:
+      `time_loop::run` no longer calls `begin_compute_pass` or constructs WGPU
+      compute-pass descriptors directly, batched steps still share one
+      submitted command buffer per batch, and WGPU pass-body dispatch remains
+      recorded as the next residual rather than claimed complete.
+      Verification: `cargo fmt -p kwavers-gpu --check` passed, `cargo check
+      -p kwavers-gpu --features gpu` passed, `cargo clippy -p kwavers-gpu
+      --features gpu --lib -- -D warnings` passed, `cargo nextest run -p
+      kwavers-gpu --features gpu
+      pstd_command_provider_is_generic_over_provider_trait
+      pstd_bind_group_factory_is_generic_over_provider_trait
+      pstd_bind_group_layout_factory_is_generic_over_provider_trait
+      pstd_buffer_factory_is_generic_over_provider_trait
+      pstd_pipeline_factory_is_generic_over_provider_trait
+      packed_signal_len_keeps_storage_buffers_non_empty
+      rewrite_packed_source_buffer_preserves_indices_and_signal_tail
+      rewrite_packed_source_buffer_uses_zero_signal_sentinel_for_empty_tail
+      overwrite_packed_signal_tail_keeps_index_prefix_stable` passed 9/9, and
+      source audit found direct `begin_compute_pass` calls confined to
+      `time_loop/commands.rs` for the touched PSTD run-loop files.
+- [x] [patch] PSTD pass-body provider seam: split zero-field and per-step
+      pass-body encoding behind `PstdPassProvider`, with WGPU dispatch and
+      `encode_*` call sequencing owned by `WgpuPstdPassProvider`. Completion
+      condition: `time_loop::run` no longer calls `self.dispatch`,
+      `self.encode_*`, `begin_compute_pass`, or names `wgpu::ComputePass`;
+      existing WGPU shader dispatch remains implemented only in the WGPU
+      provider path, with no CUDA compute placeholder. Verification: `cargo
+      fmt -p kwavers-gpu --check` passed, `cargo check -p kwavers-gpu
+      --features gpu` passed, `cargo clippy -p kwavers-gpu --features gpu
+      --lib -- -D warnings` passed, `cargo nextest run -p kwavers-gpu
+      --features gpu pstd_pass_provider_is_generic_over_provider_trait
+      pstd_command_provider_is_generic_over_provider_trait
+      pstd_bind_group_factory_is_generic_over_provider_trait
+      pstd_bind_group_layout_factory_is_generic_over_provider_trait
+      pstd_buffer_factory_is_generic_over_provider_trait
+      pstd_pipeline_factory_is_generic_over_provider_trait
+      packed_signal_len_keeps_storage_buffers_non_empty
+      rewrite_packed_source_buffer_preserves_indices_and_signal_tail
+      rewrite_packed_source_buffer_uses_zero_signal_sentinel_for_empty_tail
+      overwrite_packed_signal_tail_keeps_index_prefix_stable` passed 10/10,
+      and source audit found no direct WGPU pass-body calls in
+      `time_loop::run`.
+- [x] [patch] PSTD readback provider seam: split sensor staging-buffer mapping
+      and host extraction behind `PstdCommandProvider::read_mapped`, with WGPU
+      `slice`, `map_async`, `MapMode::Read`, `get_mapped_range`, and `unmap`
+      confined to `WgpuPstdCommandProvider`. Completion condition:
+      `time_loop::run` no longer maps or unmaps WGPU buffers directly and only
+      requests a typed host vector from the provider; upload provider seams
+      landed in later slices. Verification: `cargo fmt -p
+      kwavers-gpu --check` passed, `cargo check -p kwavers-gpu --features gpu`
+      passed after the upstream Ritk manifest repair, `cargo clippy -p
+      kwavers-gpu --features gpu --lib -- -D warnings` passed after the
+      upstream Moirai cache-wrapper repair, `cargo nextest run -p kwavers-gpu
+      --features gpu pstd_pass_provider_is_generic_over_provider_trait
+      pstd_command_provider_is_generic_over_provider_trait
+      pstd_bind_group_factory_is_generic_over_provider_trait
+      pstd_bind_group_layout_factory_is_generic_over_provider_trait
+      pstd_buffer_factory_is_generic_over_provider_trait
+      pstd_pipeline_factory_is_generic_over_provider_trait
+      packed_signal_len_keeps_storage_buffers_non_empty
+      rewrite_packed_source_buffer_preserves_indices_and_signal_tail
+      rewrite_packed_source_buffer_uses_zero_signal_sentinel_for_empty_tail
+      overwrite_packed_signal_tail_keeps_index_prefix_stable` passed 10/10,
+      and source audit found direct readback map/unmap calls confined to
+      `time_loop/commands.rs` for the touched PSTD run-loop files.
+- [x] [patch] PSTD cache-hit upload provider seam: split signal-tail queue
+      uploads behind `PstdCommandProvider::write_buffer`, with WGPU
+      `queue.write_buffer` mechanics confined to `WgpuPstdCommandProvider`.
+      Completion condition: `time_loop::buffer` no longer calls
+      `self.queue.write_buffer` directly for cache-hit source/velocity tail
+      refreshes, the provider trait accepts POD host slices generically, and
+      medium-update uploads landed in a later provider slice. Verification:
+      `cargo fmt -p kwavers-gpu --check`
+      passed, `cargo check -p kwavers-gpu --features gpu` passed, `cargo
+      clippy -p kwavers-gpu --features gpu --lib -- -D warnings` passed,
+      `cargo nextest run -p kwavers-gpu --features gpu
+      pstd_pass_provider_is_generic_over_provider_trait
+      pstd_command_provider_is_generic_over_provider_trait
+      pstd_bind_group_factory_is_generic_over_provider_trait
+      pstd_bind_group_layout_factory_is_generic_over_provider_trait
+      pstd_buffer_factory_is_generic_over_provider_trait
+      pstd_pipeline_factory_is_generic_over_provider_trait
+      packed_signal_len_keeps_storage_buffers_non_empty
+      rewrite_packed_source_buffer_preserves_indices_and_signal_tail
+      rewrite_packed_source_buffer_uses_zero_signal_sentinel_for_empty_tail
+      overwrite_packed_signal_tail_keeps_index_prefix_stable` passed 10/10,
+      and source audit found direct WGPU `queue.write_buffer` calls for the
+      touched PSTD run-cache files confined to `time_loop/commands.rs`.
+- [x] [patch] PSTD medium-update upload provider seam: split variable/full
+      medium refreshes and source-correction writes behind
+      `PstdCommandProvider::write_buffer`, exposing the command provider only
+      inside `pstd_gpu`. Completion condition: `medium_update.rs` no longer
+      calls `self.queue.write_buffer` or performs WGPU byte casting directly,
+      all direct PSTD `queue.write_buffer` calls are confined to
+      `time_loop/commands.rs`, and no CUDA command provider is exposed without
+      real CUDA transfer contracts. Verification: `cargo fmt -p kwavers-gpu
+      --check` passed, `cargo check -p kwavers-gpu --features gpu` passed,
+      `cargo clippy -p kwavers-gpu --features gpu --lib -- -D warnings`
+      passed, `cargo nextest run -p kwavers-gpu --features gpu
+      medium_variable_update pstd_command_provider_is_generic_over_provider_trait
+      pstd_pass_provider_is_generic_over_provider_trait
+      pstd_bind_group_factory_is_generic_over_provider_trait
+      pstd_bind_group_layout_factory_is_generic_over_provider_trait
+      pstd_buffer_factory_is_generic_over_provider_trait
+      pstd_pipeline_factory_is_generic_over_provider_trait` passed 7/7, and
+      source audit found no direct `queue.write_buffer` calls under
+      `crates/kwavers-gpu/src/pstd_gpu` outside `time_loop/commands.rs`.
+- [x] [patch] PSTD medium buffer state grouping: group k-space, medium,
+      twiddle, and source-kappa WGPU buffers into
+      `WgpuPstdMediumBuffers`. Completion condition: `GpuPstdSolver` no
+      longer has separate top-level `buf_kappa`, `buf_rho0_inv`, `buf_c0_sq`,
+      `buf_rho0`, `buf_bon_a`, `buf_alpha_decay`, or `buf_source_kappa`
+      fields; construction binds the grouped state into the existing bind-group
+      slots; medium-update tests read through the grouped state; and no CUDA
+      buffer state is exposed without real CUDA transfer contracts.
+      Verification: `cargo fmt -p kwavers-gpu --check` passed, `cargo check
+      -p kwavers-gpu --features gpu` passed, `cargo clippy -p kwavers-gpu
+      --features gpu --lib -- -D warnings` passed, `cargo nextest run -p
+      kwavers-gpu --features gpu medium_variable_update
+      pstd_command_provider_is_generic_over_provider_trait
+      pstd_pass_provider_is_generic_over_provider_trait
+      pstd_bind_group_factory_is_generic_over_provider_trait
+      pstd_bind_group_layout_factory_is_generic_over_provider_trait
+      pstd_buffer_factory_is_generic_over_provider_trait
+      pstd_pipeline_factory_is_generic_over_provider_trait` passed 7/7, and
+      source audit found no top-level medium/source-kappa `buf_*` solver fields
+      in `pstd_gpu::mod`.
+- [x] [patch] PSTD k-space work buffer state grouping: group `kspace_re` and
+      `kspace_im` WGPU buffers into `WgpuPstdKspaceBuffers`. Completion
+      condition: `GpuPstdSolver` no longer has separate top-level
+      `buf_kspace_re` or `buf_kspace_im` fields; construction binds grouped
+      state into the existing group(1) slots; and no CUDA k-space buffer state
+      is exposed without real CUDA transfer/kernel contracts. Verification:
+      `cargo fmt -p kwavers-gpu --check` passed, `cargo check -p kwavers-gpu
+      --features gpu` passed, `cargo clippy -p kwavers-gpu --features gpu
+      --lib -- -D warnings` passed, `cargo nextest run -p kwavers-gpu
+      --features gpu medium_variable_update
+      pstd_command_provider_is_generic_over_provider_trait
+      pstd_pass_provider_is_generic_over_provider_trait
+      pstd_bind_group_factory_is_generic_over_provider_trait
+      pstd_bind_group_layout_factory_is_generic_over_provider_trait
+      pstd_buffer_factory_is_generic_over_provider_trait
+      pstd_pipeline_factory_is_generic_over_provider_trait` passed 7/7, and
+      source audit found no separate top-level k-space work buffer solver
+      fields in `pstd_gpu::mod`.
+- [x] [patch] PSTD acoustic field buffer state grouping: group pressure,
+      velocity, and density WGPU buffers into `WgpuPstdFieldBuffers`.
+      Completion condition: `GpuPstdSolver` no longer has separate top-level
+      `buf_p`, `buf_ux`, `buf_uy`, `buf_uz`, `buf_rhox`, `buf_rhoy`, or
+      `buf_rhoz` fields; construction binds the grouped state into the
+      existing group(0) slots; and no CUDA field-buffer state is exposed
+      without real CUDA transfer/kernel contracts. Verification: `cargo fmt -p
+      kwavers-gpu --check` passed, `cargo check -p kwavers-gpu --features
+      gpu` passed, `cargo clippy -p kwavers-gpu --features gpu --lib -- -D
+      warnings` passed, `cargo nextest run -p kwavers-gpu --features gpu
+      medium_variable_update pstd_command_provider_is_generic_over_provider_trait
+      pstd_pass_provider_is_generic_over_provider_trait
+      pstd_bind_group_factory_is_generic_over_provider_trait
+      pstd_bind_group_layout_factory_is_generic_over_provider_trait
+      pstd_buffer_factory_is_generic_over_provider_trait
+      pstd_pipeline_factory_is_generic_over_provider_trait` passed 7/7, and
+      source audit found no top-level acoustic field `buf_*` solver fields in
+      `pstd_gpu::mod`.
+- [x] [patch] PSTD absorption buffer state grouping: group
+      fractional-Laplacian operator and scratch WGPU buffers into
+      `WgpuPstdAbsorptionBuffers`. Completion condition: `GpuPstdSolver` no
+      longer has separate top-level `buf_absorb_nabla1`,
+      `buf_absorb_nabla2`, `buf_absorb_tau`, `buf_absorb_eta`,
+      `buf_absorb_scratch_kre`, `buf_absorb_scratch_kim`,
+      `buf_absorb_scratch_l1`, or `buf_absorb_scratch_l2` fields;
+      construction binds grouped state into existing group(3) slots; medium
+      update writes tau/eta through grouped state; and no CUDA
+      absorption-buffer state is exposed without real CUDA transfer/kernel
+      contracts. Verification: `cargo fmt -p kwavers-gpu --check` passed,
+      `cargo check -p kwavers-gpu --features gpu` passed, `cargo clippy -p
+      kwavers-gpu --features gpu --lib -- -D warnings` passed, `cargo
+      nextest run -p kwavers-gpu --features gpu medium_variable_update
+      pstd_command_provider_is_generic_over_provider_trait
+      pstd_pass_provider_is_generic_over_provider_trait
+      pstd_bind_group_factory_is_generic_over_provider_trait
+      pstd_bind_group_layout_factory_is_generic_over_provider_trait
+      pstd_buffer_factory_is_generic_over_provider_trait
+      pstd_pipeline_factory_is_generic_over_provider_trait` passed 7/7, and
+      source audit found no top-level absorption `buf_absorb_*` solver fields
+      in `pstd_gpu::mod`.
+- [x] [patch] PSTD PML/shift buffer state grouping: group split PML
+      coefficients, packed PML axis data, and packed k-space shift operators
+      into `WgpuPstdPmlShiftBuffers`. Completion condition: `GpuPstdSolver`
+      no longer has separate top-level `buf_pml_sgx`, `buf_pml_sgy`,
+      `buf_pml_sgz`, `buf_pml_xyz`, or `buf_shifts_all` fields; the run-cache
+      sensor bind groups read PML/shift buffers through grouped state; and no
+      CUDA PML/shift buffer state is exposed without real CUDA transfer/kernel
+      contracts. Verification: `cargo fmt -p kwavers-gpu --check` passed,
+      `cargo check -p kwavers-gpu --features gpu` passed, `cargo clippy -p
+      kwavers-gpu --features gpu --lib -- -D warnings` passed, `cargo
+      nextest run -p kwavers-gpu --features gpu medium_variable_update
+      pstd_command_provider_is_generic_over_provider_trait
+      pstd_pass_provider_is_generic_over_provider_trait
+      pstd_bind_group_factory_is_generic_over_provider_trait
+      pstd_bind_group_layout_factory_is_generic_over_provider_trait
+      pstd_buffer_factory_is_generic_over_provider_trait
+      pstd_pipeline_factory_is_generic_over_provider_trait` passed 7/7, and
+      source audit found no top-level PML/shift `buf_*` solver fields in
+      `pstd_gpu::mod`.
+- [x] [patch] PSTD run-cache state grouping: group cached sensor/source/velocity
+      buffers, staging buffer, sensor bind groups, and cache-key counters into
+      `WgpuPstdRunCache`. Completion condition: `GpuPstdSolver` no longer has
+      separate top-level `cache_sensor_indices_buf`, `cache_sensor_data_buf`,
+      `cache_source_data_buf`, `cache_vel_x_data_buf`, `cache_staging_buf`,
+      `cache_bg_sensor`, `cache_bg_sensor_vel`, `cache_n_sensors`,
+      `cache_n_src`, or `cache_n_vel_x` fields; cache-hit refreshes and
+      readback use grouped state; and no CUDA run-cache state is exposed
+      without real CUDA transfer/kernel contracts. Verification: `cargo fmt -p
+      kwavers-gpu --check` passed, `cargo check -p kwavers-gpu --features gpu`
+      passed, `cargo clippy -p kwavers-gpu --features gpu --lib -- -D
+      warnings` passed, `cargo nextest run -p kwavers-gpu --features gpu
+      medium_variable_update pstd_command_provider_is_generic_over_provider_trait
+      pstd_pass_provider_is_generic_over_provider_trait
+      pstd_bind_group_factory_is_generic_over_provider_trait
+      pstd_bind_group_layout_factory_is_generic_over_provider_trait
+      pstd_buffer_factory_is_generic_over_provider_trait
+      pstd_pipeline_factory_is_generic_over_provider_trait` passed 7/7, and
+      source audit found no separate top-level `cache_*` solver fields in
+      `pstd_gpu`.
+- [x] [patch] PSTD permanent bind-group state grouping: group field, k-space,
+      and absorption WGPU bind groups into `WgpuPstdPermanentBindGroups`.
+      Completion condition: `GpuPstdSolver` no longer has separate top-level
+      `bg_fields`, `bg_kspace`, or `bg_absorb` fields; dispatch helpers bind
+      through grouped state; and no CUDA bind-group state is exposed without
+      real CUDA transfer/kernel contracts. Verification: `cargo fmt -p
+      kwavers-gpu --check` passed, `cargo check -p kwavers-gpu --features gpu`
+      passed, `cargo clippy -p kwavers-gpu --features gpu --lib -- -D
+      warnings` passed, `cargo nextest run -p kwavers-gpu --features gpu
+      medium_variable_update pstd_command_provider_is_generic_over_provider_trait
+      pstd_pass_provider_is_generic_over_provider_trait
+      pstd_bind_group_factory_is_generic_over_provider_trait
+      pstd_bind_group_layout_factory_is_generic_over_provider_trait
+      pstd_buffer_factory_is_generic_over_provider_trait
+      pstd_pipeline_factory_is_generic_over_provider_trait` passed 7/7, and
+      source audit found no separate top-level `bg_*` solver fields in
+      `pstd_gpu::mod`.
+- [x] [patch] PSTD layout state grouping: group retained WGPU layout handles
+      into `WgpuPstdLayouts` and delete the unused retained base pipeline
+      layout field. Completion condition: `GpuPstdSolver` no longer has
+      separate top-level `bgl_sensor` or `pipeline_layout` fields; run-cache
+      bind-group rebuilds use the grouped sensor layout; and no CUDA layout
+      state is exposed without real CUDA transfer/kernel contracts.
+      Verification: `cargo fmt -p kwavers-gpu --check` passed, `cargo check
+      -p kwavers-gpu --features gpu` passed, `cargo clippy -p kwavers-gpu
+      --features gpu --lib -- -D warnings` passed, `cargo nextest run -p
+      kwavers-gpu --features gpu medium_variable_update
+      pstd_command_provider_is_generic_over_provider_trait
+      pstd_pass_provider_is_generic_over_provider_trait
+      pstd_bind_group_factory_is_generic_over_provider_trait
+      pstd_bind_group_layout_factory_is_generic_over_provider_trait
+      pstd_buffer_factory_is_generic_over_provider_trait
+      pstd_pipeline_factory_is_generic_over_provider_trait` passed 7/7, and
+      source audit found no separate top-level layout solver fields in
+      `pstd_gpu::mod`.
+- [x] [patch] PSTD compute-pipeline state grouping: group all WGPU compute
+      pipelines into `WgpuPstdPipelines`. Completion condition:
+      `GpuPstdSolver` no longer has separate top-level `pipeline_*` fields;
+      time-loop dispatch and encode paths read pipelines through grouped state;
+      and no CUDA pipeline state is exposed without real CUDA kernels and
+      differential tests. Verification: `cargo fmt -p kwavers-gpu --check`
+      passed, `cargo check -p kwavers-gpu --features gpu` passed, `cargo
+      clippy -p kwavers-gpu --features gpu --lib -- -D warnings` passed,
+      `cargo nextest run -p kwavers-gpu --features gpu medium_variable_update
+      pstd_command_provider_is_generic_over_provider_trait
+      pstd_pass_provider_is_generic_over_provider_trait
+      pstd_bind_group_factory_is_generic_over_provider_trait
+      pstd_bind_group_layout_factory_is_generic_over_provider_trait
+      pstd_buffer_factory_is_generic_over_provider_trait
+      pstd_pipeline_factory_is_generic_over_provider_trait` passed 7/7, and
+      source audit found no separate top-level `pipeline_*` solver fields in
+      `pstd_gpu::mod`.
+- [x] [patch] PSTD WGPU state aggregate: consolidate grouped WGPU buffers,
+      pipelines, bind groups, layouts, and run-cache state into
+      `WgpuPstdState`. Completion condition: `GpuPstdSolver` exposes one
+      provider-state field instead of direct `field_buffers`, `kspace_buffers`,
+      `medium_buffers`, `absorption_buffers`, `pml_shift_buffers`,
+      `pipelines`, `permanent_bind_groups`, `layouts`, or `run_cache` fields;
+      all time-loop and medium-update call sites read through `self.state`;
+      and no CUDA state is exposed without real CUDA transfer/kernel contracts.
+      Verification: `cargo fmt -p kwavers-gpu --check` passed, `cargo check
+      -p kwavers-gpu --features gpu` passed, `cargo clippy -p kwavers-gpu
+      --features gpu --lib -- -D warnings` passed, `cargo nextest run -p
+      kwavers-gpu --features gpu medium_variable_update
+      pstd_command_provider_is_generic_over_provider_trait
+      pstd_pass_provider_is_generic_over_provider_trait
+      pstd_bind_group_factory_is_generic_over_provider_trait
+      pstd_bind_group_layout_factory_is_generic_over_provider_trait
+      pstd_buffer_factory_is_generic_over_provider_trait
+      pstd_pipeline_factory_is_generic_over_provider_trait` passed 7/7, and
+      source audit found no direct grouped-state solver fields in `pstd_gpu`.
+- [x] [patch] PSTD provider-associated state: make `GpuPstdSolver` generic
+      over `PstdStateProvider`, expose `WgpuPstdStateProvider` as the default
+      real provider, and specialize existing construction, medium-update, and
+      time-loop methods on the WGPU provider. Completion condition: PSTD state
+      is `P::State`, all existing WGPU methods compile only for
+      `GpuPstdSolver<WgpuPstdStateProvider>`, and no fake CUDA PSTD provider is
+      introduced. Verification: `cargo fmt -p kwavers-gpu --check` passed,
+      `cargo check -p kwavers-gpu --features gpu` passed, `cargo clippy -p
+      kwavers-gpu --features gpu --lib -- -D warnings` passed, and `cargo
+      nextest run -p kwavers-gpu --features gpu medium_variable_update
+      pstd_solver_state_is_provider_associated
+      pstd_command_provider_is_generic_over_provider_trait
+      pstd_pass_provider_is_generic_over_provider_trait
+      pstd_bind_group_factory_is_generic_over_provider_trait
+      pstd_bind_group_layout_factory_is_generic_over_provider_trait
+      pstd_buffer_factory_is_generic_over_provider_trait
+      pstd_pipeline_factory_is_generic_over_provider_trait` passed 8/8.
+      Source audit confirms every PSTD solver impl is WGPU-provider-specialized
+      and no CUDA PSTD placeholder, fake provider, `todo!`, or
+      `unimplemented!` exists under `crates/kwavers-gpu/src/pstd_gpu`.
+- [x] [patch] PSTD provider-context state ownership: replace the raw WGPU
+      `Device`/`Queue` handles in `WgpuPstdState` with
+      `GpuProviderContext<WgpuDevice>`, and make `PstdStateBuilder` plus
+      `PstdAutoDeviceProvider` pass one provider context instead of separate
+      device/queue associated handles. Completion condition:
+      `GpuPstdSolver<P>` and `WgpuPstdState` no longer have raw WGPU handle
+      fields, WGPU-specialized medium-update/run-cache/run-loop code borrows
+      raw handles only from the provider context, and CUDA-provider builds
+      type-check without a fake CUDA PSTD implementation. Verification:
+      `rustup run nightly cargo fmt -p kwavers-gpu --check`, `rustup run
+      nightly cargo check -p kwavers-gpu --features gpu --all-targets`,
+      `rustup run nightly cargo check -p kwavers-gpu --features cuda-provider
+      --all-targets`, `rustup run nightly cargo nextest run -p kwavers-gpu
+      --features gpu pstd provider --status-level fail --no-fail-fast` (46/46),
+      `rustup run nightly cargo nextest run -p kwavers-gpu --features
+      cuda-provider pstd provider --status-level fail --no-fail-fast` (53/53),
+      and clippy for both feature sets pass. Source audit confirms no
+      `Arc<wgpu::Device>`/`Arc<wgpu::Queue>`, old device/queue associated
+      handles, or raw WGPU clone accessors remain in the PSTD state/device
+      boundary.
+- [x] [patch] PSTD provider-owned WGPU scratch buffers: move WGPU host
+      scratch/upload buffers from `GpuPstdSolver` into `WgpuPstdState`, and
+      route medium-update plus run-cache staging through `self.state`.
+      Completion condition: `GpuPstdSolver<P>` no longer owns
+      `scratch_c0_sq`, `scratch_rho0_inv`, `scratch_rho0_flat`,
+      `scratch_source_kappa_ones`, `scratch_source_data`, or
+      `scratch_vel_x_data`; those buffers are owned by WGPU provider state.
+      Verification: `cargo fmt -p kwavers-gpu --check` passed, `cargo check
+      -p kwavers-gpu --features gpu` passed, `cargo clippy -p kwavers-gpu
+      --features gpu --lib -- -D warnings` passed, and `cargo nextest run -p
+      kwavers-gpu --features gpu medium_variable_update
+      pstd_solver_state_is_provider_associated
+      pstd_command_provider_is_generic_over_provider_trait
+      pstd_pass_provider_is_generic_over_provider_trait
+      pstd_bind_group_factory_is_generic_over_provider_trait
+      pstd_bind_group_layout_factory_is_generic_over_provider_trait
+      pstd_buffer_factory_is_generic_over_provider_trait
+      pstd_pipeline_factory_is_generic_over_provider_trait` passed 8/8.
+      Source audit confirms those scratch/upload fields exist only on
+      `WgpuPstdState`, and every solver impl remains WGPU-provider-specialized
+      with no CUDA placeholder.
+- [x] [patch] PSTD provider-owned WGPU state construction: move WGPU buffer,
+      pipeline, bind-group, layout, run-cache, handle, and scratch-buffer state
+      assembly behind `WgpuPstdStateProvider::build_state`, leaving
+      `GpuPstdSolver::new` to validate/wrap dimensions, time step, flags, and
+      provider-built state. Completion condition: the WGPU state provider owns
+      `WgpuPstdState` construction and no CUDA constructor/provider stub is
+      introduced. Verification: `cargo fmt -p kwavers-gpu --check` passed,
+      `cargo check -p kwavers-gpu --features gpu` passed, `cargo clippy -p
+      kwavers-gpu --features gpu --lib -- -D warnings` passed, and `cargo
+      nextest run -p kwavers-gpu --features gpu medium_variable_update
+      pstd_solver_state_is_provider_associated
+      pstd_command_provider_is_generic_over_provider_trait
+      pstd_pass_provider_is_generic_over_provider_trait
+      pstd_bind_group_factory_is_generic_over_provider_trait
+      pstd_bind_group_layout_factory_is_generic_over_provider_trait
+      pstd_buffer_factory_is_generic_over_provider_trait
+      pstd_pipeline_factory_is_generic_over_provider_trait` passed 8/8.
+      Source audit confirms `WgpuPstdStateProvider::build_state` owns WGPU
+      state assembly, `GpuPstdSolver::new` wraps the returned state, and every
+      solver impl remains WGPU-provider-specialized with no CUDA placeholder.
+- [x] [patch] PSTD provider-owned WGPU medium uploads: move
+      `update_medium_variable`, full medium refresh, and source-correction
+      disablement write-buffer bodies onto `WgpuPstdState`, leaving
+      `GpuPstdSolver<WgpuPstdStateProvider>` methods as public wrappers.
+      Completion condition: WGPU command provider creation and medium/source
+      `write_buffer` calls for these paths live on provider state, not in the
+      solver wrapper, and no CUDA placeholder is added. Verification: `cargo
+      fmt -p kwavers-gpu --check` passed, `cargo check -p kwavers-gpu
+      --features gpu` passed, `cargo clippy -p kwavers-gpu --features gpu
+      --lib -- -D warnings` passed, and `cargo nextest run -p kwavers-gpu
+      --features gpu medium_variable_update
+      pstd_solver_state_is_provider_associated
+      pstd_command_provider_is_generic_over_provider_trait
+      pstd_pass_provider_is_generic_over_provider_trait
+      pstd_bind_group_factory_is_generic_over_provider_trait
+      pstd_bind_group_layout_factory_is_generic_over_provider_trait
+      pstd_buffer_factory_is_generic_over_provider_trait
+      pstd_pipeline_factory_is_generic_over_provider_trait` passed 8/8.
+      Source audit confirms `WgpuPstdState` owns these upload bodies and every
+      solver impl remains WGPU-provider-specialized with no CUDA placeholder.
+- [x] [patch] PSTD provider-owned WGPU run cache: move run-scoped sensor,
+      source, velocity buffer allocation, sensor bind-group rebuild, cache-key
+      updates, and signal-tail upload bodies onto `WgpuPstdState`, leaving
+      `GpuPstdSolver<WgpuPstdStateProvider>` run-cache methods as forwarding
+      wrappers that supply solver time-step count. Completion condition: WGPU
+      buffer factories, bind-group factories, command providers, and
+      `run_cache` mutation for these paths live on provider state, and no CUDA
+      placeholder is added. Verification: `cargo fmt -p kwavers-gpu --check`
+      passed, `cargo check -p kwavers-gpu --features gpu` passed, `cargo
+      clippy -p kwavers-gpu --features gpu --lib -- -D warnings` passed, and
+      `cargo nextest run -p kwavers-gpu --features gpu medium_variable_update
+      pstd_solver_state_is_provider_associated
+      pstd_command_provider_is_generic_over_provider_trait
+      pstd_pass_provider_is_generic_over_provider_trait
+      pstd_bind_group_factory_is_generic_over_provider_trait
+      pstd_bind_group_layout_factory_is_generic_over_provider_trait
+      pstd_buffer_factory_is_generic_over_provider_trait
+      pstd_pipeline_factory_is_generic_over_provider_trait
+      packed_signal_len_keeps_storage_buffers_non_empty
+      rewrite_packed_source_buffer_preserves_indices_and_signal_tail
+      rewrite_packed_source_buffer_uses_zero_signal_sentinel_for_empty_tail
+      overwrite_packed_signal_tail_keeps_index_prefix_stable` passed 12/12.
+      Source audit confirms `WgpuPstdState` owns run-cache allocation and tail
+      upload bodies, with solver methods forwarding and no CUDA placeholder.
+- [x] [patch] PSTD provider-owned WGPU pass encoding: move WGPU dispatch,
+      absorption dispatch, FFT/IFFT, and per-phase pass encoding methods onto
+      `WgpuPstdState`, leaving `WgpuPstdPassProvider` with a provider-state
+      reference instead of a solver-wrapper reference. Completion condition:
+      WGPU pass-body sequencing no longer depends on
+      `GpuPstdSolver<WgpuPstdStateProvider>`, `StepCtx` supplies solver scalar
+      parameters to provider-state FFT dispatch, and no CUDA placeholder is
+      added. Verification: `cargo fmt -p kwavers-gpu --check` passed, `cargo
+      check -p kwavers-gpu --features gpu` passed, `cargo clippy -p
+      kwavers-gpu --features gpu --lib -- -D warnings` passed, and `cargo
+      nextest run -p kwavers-gpu --features gpu
+      pstd_pass_provider_is_generic_over_provider_trait
+      pstd_command_provider_is_generic_over_provider_trait
+      pstd_solver_state_is_provider_associated
+      pstd_buffer_factory_is_generic_over_provider_trait
+      pstd_bind_group_factory_is_generic_over_provider_trait
+      pstd_pipeline_factory_is_generic_over_provider_trait
+      pstd_bind_group_layout_factory_is_generic_over_provider_trait
+      packed_signal_len_keeps_storage_buffers_non_empty
+      rewrite_packed_source_buffer_preserves_indices_and_signal_tail
+      rewrite_packed_source_buffer_uses_zero_signal_sentinel_for_empty_tail
+      overwrite_packed_signal_tail_keeps_index_prefix_stable
+      medium_variable_update` passed 12/12. Source audit confirms the
+      time-loop `encode_*` and dispatch methods are implemented on
+      `WgpuPstdState`, with no CUDA placeholder.
+- [x] [patch] PSTD provider-owned WGPU run orchestration: move cache
+      validation, cache rebuild/refresh selection, sensor clear, zero-field
+      pass submission, batched time-step submission, throttled provider wait,
+      sensor copy, and mapped readback orchestration onto `WgpuPstdState`,
+      leaving `GpuPstdSolver<WgpuPstdStateProvider>::run` as the public
+      wrapper that supplies scalar metadata and input slices. Completion
+      condition: the only time-loop solver impl is the public delegate,
+      run-cache forwarding methods are removed, and no CUDA placeholder is
+      added. Verification: `cargo fmt -p kwavers-gpu --check` passed, `cargo
+      check -p kwavers-gpu --features gpu` passed, `cargo clippy -p
+      kwavers-gpu --features gpu --lib -- -D warnings` passed, and `cargo
+      nextest run -p kwavers-gpu --features gpu
+      pstd_pass_provider_is_generic_over_provider_trait
+      pstd_command_provider_is_generic_over_provider_trait
+      pstd_solver_state_is_provider_associated
+      pstd_buffer_factory_is_generic_over_provider_trait
+      pstd_bind_group_factory_is_generic_over_provider_trait
+      pstd_pipeline_factory_is_generic_over_provider_trait
+      pstd_bind_group_layout_factory_is_generic_over_provider_trait
+      packed_signal_len_keeps_storage_buffers_non_empty
+      rewrite_packed_source_buffer_preserves_indices_and_signal_tail
+      rewrite_packed_source_buffer_uses_zero_signal_sentinel_for_empty_tail
+      overwrite_packed_signal_tail_keeps_index_prefix_stable
+      medium_variable_update` passed 12/12. Source audit confirms
+      `WgpuPstdState::run` owns high-level run orchestration, with no CUDA
+      placeholder.
+- [x] [patch] PSTD provider-generic state construction: add
+      `PstdStateBuilder` with an associated provider context type, implement it
+      for `WgpuPstdStateProvider` with `GpuProviderContext<WgpuDevice>`, and
+      make `GpuPstdSolver<P>::new` build provider state through
+      `P::build_state` instead of a
+      `GpuPstdSolver<WgpuPstdStateProvider>` constructor impl. Completion
+      condition: WGPU construction remains the only real implementation,
+      direct WGPU test/helper constructor calls name `WgpuPstdStateProvider`,
+      and no CUDA placeholder is added. Verification: `cargo fmt -p
+      kwavers-gpu --check` passed, `cargo check -p kwavers-gpu --features gpu`
+      passed, `cargo clippy -p kwavers-gpu --features gpu --lib -- -D
+      warnings` passed, and `cargo nextest run -p kwavers-gpu --features gpu
+      pstd_solver_state_builder_uses_provider_handles
+      pstd_solver_state_is_provider_associated
+      pstd_pass_provider_is_generic_over_provider_trait
+      pstd_command_provider_is_generic_over_provider_trait
+      pstd_buffer_factory_is_generic_over_provider_trait
+      pstd_bind_group_factory_is_generic_over_provider_trait
+      pstd_pipeline_factory_is_generic_over_provider_trait
+      pstd_bind_group_layout_factory_is_generic_over_provider_trait
+      packed_signal_len_keeps_storage_buffers_non_empty
+      rewrite_packed_source_buffer_preserves_indices_and_signal_tail
+      rewrite_packed_source_buffer_uses_zero_signal_sentinel_for_empty_tail
+      overwrite_packed_signal_tail_keeps_index_prefix_stable
+      medium_variable_update` passed 13/13. Source audit confirms
+      `GpuPstdSolver<P>::new` is bound by `PstdStateBuilder`, with no stale
+      direct `WgpuPstdStateProvider::build_state` calls and no CUDA placeholder.
+- [x] [patch] PSTD provider-generic run execution: add `PstdRunState` plus
+      provider-neutral `PstdRunScalars` and `PstdRunInputs`, implement the run
+      contract for `WgpuPstdState`, and make `GpuPstdSolver<P>::run` available
+      for providers whose state implements `PstdRunState`. Completion
+      condition: no time-loop `run` impl remains specialized on
+      `GpuPstdSolver<WgpuPstdStateProvider>`, WGPU remains the only real run
+      implementation, and no CUDA placeholder is added. Verification: `cargo
+      fmt -p kwavers-gpu --check` passed, `cargo check -p kwavers-gpu
+      --features gpu` passed, `cargo clippy -p kwavers-gpu --features gpu
+      --lib -- -D warnings` passed, and `cargo nextest run -p kwavers-gpu
+      --features gpu pstd_solver_run_state_is_provider_owned
+      pstd_solver_state_builder_uses_provider_handles
+      pstd_solver_state_is_provider_associated
+      pstd_pass_provider_is_generic_over_provider_trait
+      pstd_command_provider_is_generic_over_provider_trait
+      pstd_buffer_factory_is_generic_over_provider_trait
+      pstd_bind_group_factory_is_generic_over_provider_trait
+      pstd_pipeline_factory_is_generic_over_provider_trait
+      pstd_bind_group_layout_factory_is_generic_over_provider_trait
+      packed_signal_len_keeps_storage_buffers_non_empty
+      rewrite_packed_source_buffer_preserves_indices_and_signal_tail
+      rewrite_packed_source_buffer_uses_zero_signal_sentinel_for_empty_tail
+      overwrite_packed_signal_tail_keeps_index_prefix_stable
+      medium_variable_update` passed 14/14. Source audit confirms
+      `GpuPstdSolver<P>::run` is bound by `P::State: PstdRunState`, with no
+      WGPU-specialized time-loop run wrapper and no CUDA placeholder.
+- [x] [patch] PSTD provider-generic medium updates: add
+      `PstdMediumUpdateState`, implement it for `WgpuPstdState`, and make
+      `update_medium_variable`, `update_medium`, and
+      `disable_source_correction` available for providers whose state
+      implements the medium-update contract. Completion condition: no
+      `medium_update` impl remains specialized on
+      `GpuPstdSolver<WgpuPstdStateProvider>`, WGPU remains the only real
+      medium-update implementation, and no CUDA placeholder is added.
+      Verification: `cargo fmt -p kwavers-gpu --check` passed, `cargo check -p
+      kwavers-gpu --features gpu` passed, `cargo clippy -p kwavers-gpu
+      --features gpu --lib -- -D warnings` passed, and `cargo nextest run -p
+      kwavers-gpu --features gpu
+      pstd_solver_medium_update_state_is_provider_owned
+      pstd_solver_run_state_is_provider_owned
+      pstd_solver_state_builder_uses_provider_handles
+      pstd_solver_state_is_provider_associated
+      pstd_pass_provider_is_generic_over_provider_trait
+      pstd_command_provider_is_generic_over_provider_trait
+      pstd_buffer_factory_is_generic_over_provider_trait
+      pstd_bind_group_factory_is_generic_over_provider_trait
+      pstd_pipeline_factory_is_generic_over_provider_trait
+      pstd_bind_group_layout_factory_is_generic_over_provider_trait
+      packed_signal_len_keeps_storage_buffers_non_empty
+      rewrite_packed_source_buffer_preserves_indices_and_signal_tail
+      rewrite_packed_source_buffer_uses_zero_signal_sentinel_for_empty_tail
+      overwrite_packed_signal_tail_keeps_index_prefix_stable
+      medium_variable_update` passed 15/15. Source audit confirms
+      `GpuPstdSolver<P>` medium methods are bound by
+      `P::State: PstdMediumUpdateState`, with no WGPU-specialized
+      medium-update wrapper and no CUDA placeholder.
+- [x] [patch] PSTD provider-generic auto-device acquisition: add
+      `PstdAutoDeviceProvider`, implement it for `WgpuPstdStateProvider`, and
+      make `GpuPstdSolver<P>::with_auto_device` generic over providers that
+      can acquire real device/queue handles. Completion condition: no
+      `with_auto_device` impl remains specialized on
+      `GpuPstdSolver<WgpuPstdStateProvider>`, WGPU remains the only real
+      auto-device implementation, explicit WGPU call sites name
+      `WgpuPstdStateProvider` where inference cannot select the default
+      provider, and no CUDA placeholder is added. Verification: `cargo fmt -p
+      kwavers-gpu --check` passed, `cargo check -p kwavers-gpu --features gpu`
+      passed, `cargo clippy -p kwavers-gpu --features gpu --lib -- -D
+      warnings` passed, and `cargo nextest run -p kwavers-gpu --features gpu
+      pstd_solver_auto_device_provider_uses_provider_handles
+      pstd_solver_medium_update_state_is_provider_owned
+      pstd_solver_run_state_is_provider_owned
+      pstd_solver_state_builder_uses_provider_handles
+      pstd_solver_state_is_provider_associated
+      pstd_pass_provider_is_generic_over_provider_trait
+      pstd_command_provider_is_generic_over_provider_trait
+      pstd_buffer_factory_is_generic_over_provider_trait
+      pstd_bind_group_factory_is_generic_over_provider_trait
+      pstd_pipeline_factory_is_generic_over_provider_trait
+      pstd_bind_group_layout_factory_is_generic_over_provider_trait
+      packed_signal_len_keeps_storage_buffers_non_empty
+      rewrite_packed_source_buffer_preserves_indices_and_signal_tail
+      rewrite_packed_source_buffer_uses_zero_signal_sentinel_for_empty_tail
+      overwrite_packed_signal_tail_keeps_index_prefix_stable
+      medium_variable_update` passed 16/16. Source audit confirms no
+      `impl GpuPstdSolver<WgpuPstdStateProvider>` remains under PSTD, no
+      unqualified `GpuPstdSolver::with_auto_device` call site remains under
+      `crates/kwavers-gpu/src`, and no CUDA placeholder was introduced.
+- [x] [patch] PSTD public runner Leto/provider surface: add
+      `run_gpu_pstd_with_provider<P>` over `PstdAutoDeviceProvider` and
+      `P::State: PstdRunState`, keep `run_gpu_pstd` as the WGPU default, and
+      change the public sensor mask/output contract to
+      `leto::Array3<bool>`/`leto::Array2<f64>`. Completion condition:
+      `kwavers-gpu::pstd_gpu::runner` no longer exposes ndarray sensor masks
+      or trace arrays, the breast UST GPU call site passes a Leto mask, and no
+      CUDA placeholder provider is added. Verification: `rustup run nightly
+      cargo fmt -p kwavers-gpu -p kwavers-diagnostics --check` passed,
+      `rustup run nightly cargo check -p kwavers-gpu -p kwavers-diagnostics
+      --features kwavers-gpu/cuda-provider,kwavers-diagnostics/gpu` passed,
+      `rustup run nightly cargo clippy -p kwavers-gpu -p kwavers-diagnostics
+      --features kwavers-gpu/cuda-provider,kwavers-diagnostics/gpu
+      --all-targets -- -D warnings` passed, focused `kwavers-gpu`
+      `collect_sensor_indices` nextest passed 1/1, focused diagnostics
+      `phantom_mat5` nextest passed 2/2, and broader `kwavers-gpu` PSTD
+      nextest passed 24/24.
+- [x] [patch] CPML profile Leto storage: move `CPMLProfiles` and
+      `PmlExpFactors` one-dimensional profile/factor arrays from ndarray
+      `Array1` to Leto `Array1`, and fill the upstream Leto `Array1` indexing
+      plus owned-array equality gaps required by the real boundary tests.
+      Completion condition: CPML profile generation/update code and the GPU
+      PSTD PML-factor upload path no longer import ndarray `Array1`; remaining
+      `kwavers-gpu` ndarray use is confined to the validation runner's
+      solver-owned source mask/signal boundary. Verification: `rustup run
+      nightly cargo nextest run -p leto
+      test_owned_array_equality_checks_shape_and_values --status-level fail
+      --no-fail-fast` passed 1/1, `rustup run nightly cargo check -p
+      kwavers-boundary -p kwavers-gpu -p kwavers-solver --features
+      kwavers-gpu/cuda-provider` passed, `rustup run nightly cargo clippy -p
+      kwavers-boundary -p kwavers-gpu --features kwavers-gpu/cuda-provider
+      --all-targets -- -D warnings` passed, `rustup run nightly cargo nextest
+      run -p kwavers-boundary cpml --status-level fail --no-fail-fast` passed
+      15/15, `rustup run nightly cargo nextest run -p kwavers-gpu --features
+      cuda-provider pstd --status-level fail --no-fail-fast` passed 24/24,
+      and `rustup run nightly cargo nextest run -p kwavers-solver pml
+      --status-level fail --no-fail-fast` passed 45/45. Broad
+      `kwavers-solver --all-targets` clippy remains blocked by unrelated
+      pre-existing solver test lint debt.
+- [x] [patch] `kwavers-analysis` visualization data-pipeline Moirai
+      traversal: replace `DataProcessor` normalization/log-scaling
+      `par_mapv_inplace` calls with Moirai-backed contiguous scalar traversal
+      and preserve ndarray sequential traversal for non-standard layouts.
+      Completion condition: the visualization data-pipeline subtree has no
+      direct Rayon or ndarray-parallel source hits, focused value-semantic
+      tests cover range normalization and epsilon-clamped log scaling, and
+      package check/clippy pass under `gpu-visualization`. Verification:
+      `cargo fmt -p kwavers-analysis --check` passed, `cargo check -p
+      kwavers-analysis --features gpu-visualization` passed, `cargo clippy -p
+      kwavers-analysis --features gpu-visualization --lib -- -D warnings`
+      passed, and `cargo nextest run -p kwavers-analysis --features
+      gpu-visualization -E "test(normalize_maps_contiguous_values_to_configured_range) or test(log_scale_clamps_values_at_configured_epsilon)"`
+      passed 2/2. Residual risk: `kwavers-analysis` still carries direct
+      Rayon for other analysis paths.
+- [x] [patch] `kwavers-analysis` performance optimizer Moirai traversal:
+      replace `ParallelOptimizer` direct Rayon fan-out, chunk map/reduce, and
+      global thread-pool mutation with Moirai indexed fan-out, ordered
+      map-collect, indexed reduction, and a validated chunk-size scheduling
+      hint. Completion condition: `performance::optimization::parallel` has no
+      direct Rayon source hits, package check/clippy pass, and focused
+      `ParallelOptimizer` value tests pass. Verification: `cargo fmt -p
+      kwavers-analysis --check` passed, `cargo check -p kwavers-analysis`
+      passed, `cargo clippy -p kwavers-analysis --lib -- -D warnings` passed,
+      and `cargo nextest run -p kwavers-analysis -E "test(parallel_optimizer_) or test(parallel_3d_visits_every_cell_exactly_once) or test(set_num_threads_)"`
+      passed 8/8. Residual risk: `kwavers-analysis` still carries direct Rayon
+      in signal-processing paths.
+- [x] [patch] Shared scalar ndarray Moirai seam: promote the analysis-local
+      scalar in-place traversal into `kwavers-core::utils::iterators`, route
+      visualization normalization/log scaling, PAM time-exposure squaring, and
+      polynomial clutter-filter time normalization through it, and verify both
+      standard and non-standard ndarray layouts. Completion condition: the
+      touched analysis files have no direct Rayon or ndarray-parallel source
+      hits, the shared helper has value-semantic tests for both layout paths,
+      and focused consumer tests pass. Verification: `cargo fmt -p
+      kwavers-core -p kwavers-analysis --check` passed, `cargo check -p
+      kwavers-core` passed, `cargo check -p kwavers-analysis` passed, `cargo
+      clippy -p kwavers-core --lib -- -D warnings` passed, `cargo clippy -p
+      kwavers-analysis --lib -- -D warnings` passed, `cargo clippy -p
+      kwavers-analysis --features gpu-visualization --lib -- -D warnings`
+      passed, `cargo nextest run -p kwavers-core -E
+      "test(apply_inplace_updates_standard_layout_values) or test(apply_inplace_updates_non_standard_layout_values)"`
+      passed 2/2, `cargo nextest run -p kwavers-analysis -E
+      "test(polynomial_filter_linear_signal_normalized_time_zero_residual) or test(pam_policy_to_core_)"`
+      passed 3/3, and `cargo nextest run -p kwavers-analysis --features
+      gpu-visualization -E "test(normalize_maps_contiguous_values_to_configured_range) or test(log_scale_clamps_values_at_configured_epsilon)"`
+      passed 2/2. Residual risk: `kwavers-analysis` still carries direct
+      Rayon/ndarray-parallel edges in 3-D CPU beamforming paths.
+- [x] [patch] `kwavers-analysis` covariance scalar-transform Moirai closure:
+      route sample-covariance scaling, covariance-estimator real/complex
+      normalization, shrinkage scaling, and spatial-smoothing normalization
+      through `kwavers-core::utils::iterators::apply_inplace`. Completion
+      condition: the covariance subtree has no direct Rayon or
+      ndarray-parallel source hits, package check/clippy pass, and focused
+      covariance value tests pass. Verification: `cargo fmt -p
+      kwavers-analysis --check` passed, `cargo check -p kwavers-analysis`
+      passed, `cargo clippy -p kwavers-analysis --lib -- -D warnings` passed,
+      `cargo nextest run -p kwavers-analysis -E "test(covariance_) or test(shrinkage_to_identity_real_) or test(estimate_complex_) or test(estimate_single_snapshot_gives_exact_outer_product) or test(estimate_two_orthogonal_snapshots_gives_half_identity) or test(spatial_smoothing_complex_shapes_match) or test(test_sample_covariance_basic) or test(test_sample_covariance_with_diagonal_loading)"`
+      passed 30/30, and `rg` found no direct Rayon or ndarray-parallel hits in
+      `crates/kwavers-analysis/src/signal_processing/beamforming/covariance`.
+      Residual risk: `kwavers-analysis` still carries direct Rayon or
+      ndarray-parallel edges in 3-D CPU beamforming paths.
+- [x] [patch] `kwavers-analysis` safe-vectorization Moirai closure: route
+      `add_arrays_parallel`, non-contiguous chunked addition fallback, and
+      in-place scalar multiplication through `kwavers-core::utils::iterators`
+      instead of ndarray/Rayon parallel traversal. Completion condition:
+      `performance::safe_vectorization` has no direct Rayon or
+      ndarray-parallel source hits, package check/clippy pass, and focused
+      value tests cover parallel add, chunked add, zero chunk-size hint, scalar
+      multiplication, dot product, and L2 norm. Verification: `cargo fmt -p
+      kwavers-analysis --check` passed, `cargo check -p kwavers-analysis`
+      passed, `cargo clippy -p kwavers-analysis --lib -- -D warnings` passed,
+      `cargo nextest run -p kwavers-analysis -E "test(add_arrays_) or test(scalar_multiply_) or test(test_add_arrays_correctness) or test(test_scalar_multiply_correctness) or test(test_dot_product_correctness) or test(test_l2_norm_correctness)"`
+      passed 8/8, and `rg` found no direct Rayon or ndarray-parallel hits in
+      `crates/kwavers-analysis/src/performance/safe_vectorization.rs`.
+      Residual risk: `kwavers-analysis` still carries direct Rayon or
+      ndarray-parallel edges in 3-D CPU beamforming paths.
+- [x] [patch] `kwavers-analysis` SLSC Moirai traversal closure: replace
+      `process_parallel` and `process_volume` Rayon fan-out with
+      `moirai-parallel` ordered indexed collection, and route coherence-map
+      clamping through the shared scalar ndarray seam. Completion condition:
+      the SLSC subtree has no direct Rayon or ndarray-parallel source hits,
+      package check/clippy pass, and focused SLSC value tests pass.
+      Verification: `cargo fmt -p kwavers-analysis --check` passed, `cargo
+      check -p kwavers-analysis` passed, `cargo clippy -p kwavers-analysis
+      --lib -- -D warnings` passed, `cargo nextest run -p kwavers-analysis -E
+      "test(slsc_) or test(lag_coherence_) or test(multi_lag_slsc_) or test(adaptive_slsc_) or test(test_slsc_) or test(test_lag_weighting_) or test(triangular_weighting_midpoint_is_half) or test(hamming_weighting_lag_zero_is_point_zero_eight)"`
+      passed 24/24, and `rg` found no direct Rayon or ndarray-parallel hits in
+      `crates/kwavers-analysis/src/signal_processing/beamforming/slsc`.
+      Residual risk: `kwavers-analysis` still carries direct Rayon or
+      ndarray-parallel edges in 3-D CPU beamforming paths.
+- [x] [patch] `kwavers-analysis` neural scalar-transform Moirai closure:
+      route neural layer adaptation weight/bias scaling and neural feature
+      normalization through `kwavers-core::utils::iterators::apply_inplace`.
+      Completion condition: the scalar neural transform sites have no direct
+      Rayon or ndarray-parallel source hits, package check/clippy pass, and
+      focused layer/feature value tests pass. Verification: `cargo fmt -p
+      kwavers-analysis --check` passed, `cargo check -p kwavers-analysis`
+      passed, `cargo clippy -p kwavers-analysis --lib -- -D warnings` passed,
+      `cargo nextest run -p kwavers-analysis -E "test(test_neural_layer_adaptation) or test(test_neural_layer_adaptation_zero_gradient_is_noop) or test(test_normalize_features) or test(test_normalize_features_value_semantics)"`
+      passed 4/4, and `rg` shows neural direct Rayon remains only in
+      `crates/kwavers-analysis/src/signal_processing/beamforming/neural/distributed/core/processor.rs`.
+      Residual risk: `kwavers-analysis` still carries direct Rayon or
+      ndarray-parallel edges in 3-D CPU beamforming paths.
+- [x] [patch] `kwavers-analysis` distributed neural Moirai closure: replace
+      the distributed neural processor's direct Rayon `par_iter_mut`
+      fan-out with `moirai_parallel::map_collect_mut_with`, preserving ordered
+      per-processor result collection and error propagation. Completion
+      condition: the neural subtree has no direct Rayon or ndarray-parallel
+      source hits, `pinn` feature check/clippy pass, and focused distributed
+      neural value tests pass. Verification: `cargo fmt -p kwavers-analysis
+      --check` passed, `cargo check -p kwavers-analysis --features pinn`
+      passed, `cargo clippy -p kwavers-analysis --features pinn --lib -- -D
+      warnings` passed, `cargo nextest run -p kwavers-analysis --features
+      pinn -E "test(test_distributed_processing_matches_sequential_result) or test(test_processor_creation) or test(test_fault_tolerance_)"`
+      passed 6/6, and `rg` found no direct Rayon or ndarray-parallel hits in
+      `crates/kwavers-analysis/src/signal_processing/beamforming/neural`.
+      Residual risk from this item was the 3-D CPU beamforming path, closed by
+      the following checklist item.
+- [x] [patch] `kwavers-analysis` 3-D CPU beamforming Moirai closure: replace
+      DAS/MVDR voxel fan-out with `moirai_parallel::map_collect_index_with`
+      and remove the package's direct `rayon` dependency plus ndarray `rayon`
+      feature. Completion condition: `kwavers-analysis` has no direct Rayon
+      or ndarray-parallel source/manifest hits, package check/clippy pass,
+      and focused DAS/MVDR value tests pass. Verification: `cargo fmt -p
+      kwavers-analysis --check` passed, `cargo check -p kwavers-analysis`
+      passed, `cargo clippy -p kwavers-analysis --lib -- -D warnings`
+      passed, `cargo nextest run -p kwavers-analysis -E
+      "test(das_) or test(mvdr_) or test(test_algorithm_mvdr_3d) or test(test_processor_creation_cpu_only) or test(test_beamforming_config_3d_default)"`
+      passed 39/39, `rg` found no direct Rayon or ndarray-parallel hits in
+      `crates/kwavers-analysis/src` or `crates/kwavers-analysis/Cargo.toml`,
+      and `cargo tree -p kwavers-analysis --depth 1` lists no direct
+      `rayon` dependency. Residual risk: package-level Rayon provider gap is
+      closed for `kwavers-analysis`; broader Atlas migration remains open in
+      other crates.
+- [x] [patch] Upstream Atlas consumer gate repairs: fix owner-crate build
+      blockers discovered by the `kwavers-gpu` provider gate. Completion
+      condition: `ritk-registration` declares the `ritk-tensor-ops` dependency
+      used by native preprocessing, Moirai core no longer references removed
+      `CachePadded`, and the Kwavers consumer gate resumes without downstream
+      shims. Verification: `cargo check -p ritk-registration` passed in
+      `D:\atlas\repos\ritk`; `cargo fmt -p moirai-core --check` and `cargo
+      check -p moirai-core` passed in `D:\atlas\repos\moirai`; downstream
+      `kwavers-gpu` check/clippy/nextest gates passed after those fixes.
+- [x] [patch] GPU provider identity/dispatch trait split: introduce
+      `GpuProviderBackend` for provider identity, Hephaestus device access,
+      and synchronization, make `GpuComputeProvider` extend it only for real
+      kernel dispatch, and add provider identity on `GpuDeviceProvider`.
+      Completion condition: `GpuProviderContext<WgpuDevice>` and
+      `GpuProviderContext<CudaDevice>` both satisfy the provider identity
+      contract, `GPUBackend<P>` remains bound to compute-capable providers, and
+      CUDA is not exposed as a fake compute implementation. Verification:
+      `cargo fmt -p kwavers-gpu` passed, `cargo check -p kwavers-gpu
+      --features gpu` passed, `cargo check -p kwavers-gpu --features
+      cuda-provider --offline` passed, `cargo clippy -p kwavers-gpu --features
+      gpu --lib -- -D warnings` passed, `cargo clippy -p kwavers-gpu
+      --features cuda-provider --all-targets --offline -- -D warnings`
+      passed, `cargo nextest run -p kwavers-gpu --features gpu provider
+      --status-level fail --no-fail-fast` passed 4/4, `cargo nextest run -p
+      kwavers-gpu --features cuda-provider provider --status-level fail
+      --no-fail-fast --offline` passed 7/7, and the stale CUDA-compute claim
+      audit returned no hits.
+- [ ] [arch] GPU kernel-buffer provider trait migration: lift concrete
+      WGPU buffer allocation, pipeline execution, and shader dispatch behind a
+      Hephaestus-owned provider trait so WGPU and CUDA can implement the same
+      operation contracts without caller branches. Completion condition:
+      remaining `kwavers-gpu` backend pipeline and PSTD modules no longer
+      expose `wgpu::Buffer`, `wgpu::ComputePipeline`, or
+      `GpuProviderContext<WgpuDevice>` in algorithm-facing signatures except
+      inside WGPU provider implementations, and CUDA compute is added only with
+      real kernels and differential tests.
+      Follow-up 2026-07-04: routed the acoustic-field WGPU provider through
+      `GpuDevice<WgpuDevice>` and the shared `GpuDeviceProvider` acquisition
+      contract instead of directly acquiring/storing raw `WgpuDevice`.
+      Verification: `rustup run nightly cargo fmt -p kwavers-gpu --check`
+      passed, `rustup run nightly cargo check -p kwavers-gpu --features
+      cuda-provider` passed, `rustup run nightly cargo clippy -p kwavers-gpu
+      --features cuda-provider --all-targets -- -D warnings` passed, and
+      `rustup run nightly cargo nextest run -p kwavers-gpu --features
+      cuda-provider acoustic provider device --status-level fail
+      --no-fail-fast` passed 42/42.
+      Follow-up 2026-07-04: routed PSTD auto-device acquisition through
+      `GpuDevice<WgpuDevice>` and `GpuDeviceProvider`, preserving the WGPU
+      state builder as the only real PSTD implementation while removing direct
+      WGPU acquisition from `pstd_gpu::pipeline::auto_device`. Verification:
+      scoped `rg` found no direct WGPU acquisition or `pollster::block_on` in
+      that constructor, `rustup run nightly cargo fmt -p kwavers-gpu --check`
+      passed, `rustup run nightly cargo check -p kwavers-gpu --features
+      cuda-provider` passed, `rustup run nightly cargo clippy -p kwavers-gpu
+      --features cuda-provider --all-targets -- -D warnings` passed, and
+      focused `rustup run nightly cargo nextest run -p kwavers-gpu --features
+      cuda-provider pstd_auto_device
+      pstd_solver_auto_device_provider_uses_provider_handles
+      pstd_gpu::tests::construction --status-level fail --no-fail-fast`
+      passed 6/6.
+      Follow-up 2026-07-04: routed PSTD construction and medium-update test
+      helpers through `GpuDevice<WgpuDevice>` and `GpuDeviceProvider`.
+      Completion condition: scoped `rg` finds no direct WGPU acquisition or
+      `pollster::block_on` under `crates/kwavers-gpu/src/pstd_gpu`, and focused
+      PSTD construction/medium-update tests still pass. Verification: `rustup
+      run nightly cargo fmt -p kwavers-gpu --check` passed, `rustup run
+      nightly cargo check -p kwavers-gpu --features cuda-provider` passed,
+      `rustup run nightly cargo clippy -p kwavers-gpu --features
+      cuda-provider --all-targets -- -D warnings` passed, and focused `rustup
+      run nightly cargo nextest run -p kwavers-gpu --features cuda-provider
+      pstd_auto_device pstd_solver_auto_device_provider_uses_provider_handles
+      pstd_gpu::tests::construction pstd_gpu::tests::medium_update
+      --status-level fail --no-fail-fast` passed 7/7.
+      Follow-up 2026-07-04: added `CudaElementWiseProvider` as a real
+      Hephaestus CUDA-backed `ElementWiseMultiplyProvider` and routed the
+      realtime Hilbert FFT path through the `kwavers_math::fft` slice facade
+      instead of Apollo's Leto-native plan API. CUDA remains outside
+      `GpuComputeProvider` until spatial derivative and the rest of the
+      composite backend contract have real CUDA kernels. Verification:
+      `rustup run nightly cargo fmt -p kwavers-math -p kwavers-gpu --check`
+      passed, `rustup run nightly cargo check -p kwavers-gpu --features
+      cuda-provider` passed, `rustup run nightly cargo check -p kwavers-math
+      -p kwavers-gpu --features kwavers-gpu/cuda-provider` passed, `rustup
+      run nightly cargo clippy -p kwavers-gpu --features cuda-provider --lib
+      --no-deps -- -D warnings` passed, and focused `rustup run nightly cargo
+      nextest run -p kwavers-gpu --features cuda-provider provider
+      elementwise realtime --status-level fail --no-fail-fast` passed 52/52.
+      Follow-up 2026-07-04: routed the backend buffer-manager GPU construction
+      test through `GpuDevice<WgpuDevice>` and `GpuDeviceProvider`.
+      Completion condition: scoped `rg` finds no direct WGPU acquisition in
+      `backend::buffers` or `pstd_gpu`, and focused backend buffer-manager
+      tests pass. Verification: `rustup run nightly cargo fmt -p kwavers-gpu
+      --check` passed, `rustup run nightly cargo check -p kwavers-gpu
+      --features cuda-provider` passed, `rustup run nightly cargo clippy -p
+      kwavers-gpu --features cuda-provider --all-targets -- -D warnings`
+      passed, and focused `rustup run nightly cargo nextest run -p
+      kwavers-gpu --features cuda-provider test_buffer_manager_creation
+      backend_buffer_manager_wrapper_is_generic_over_provider_trait
+      --status-level fail --no-fail-fast` passed 2/2.
+      Follow-up 2026-07-04: removed `pollster::block_on` from backend buffer
+      readback by sharing one blocking WGPU map/read implementation between
+      the async and synchronous readback entry points. Completion condition:
+      scoped `rg` finds no `pollster::block_on` under `kwavers-gpu::backend`,
+      and focused backend tests pass. Verification: `rustup run nightly cargo
+      fmt -p kwavers-gpu --check` passed, `rustup run nightly cargo check -p
+      kwavers-gpu --features cuda-provider` passed, `rustup run nightly cargo
+      clippy -p kwavers-gpu --features cuda-provider --all-targets -- -D
+      warnings` passed, and `rustup run nightly cargo nextest run -p
+      kwavers-gpu --features cuda-provider backend --status-level fail
+      --no-fail-fast` passed 45/45.
+- [x] [patch] `kwavers-math` tensor Burn placeholder removal: delete the
+      unused `TensorBackend::BurnNdArray` variant and remove tensor docs that
+      advertised Burn ndarray/WGPU/CUDA backends without an implementation.
+      Completion condition: `kwavers-math::tensor` describes only the
+      implemented ndarray-backed host tensor boundary, points differentiable
+      PINN tensors to the future solver-layer Coeus provider seam, and source
+      audit finds no Burn-specific tensor backend names under
+      `crates/kwavers-math/src`. Verification: `cargo fmt -p kwavers-math
+      --check` passed, `cargo check -p kwavers-math` passed, `cargo clippy -p
+      kwavers-math --all-targets -- -D warnings` passed after replacing an
+      existing FFT test Tau literal with `std::f64::consts::TAU`, `cargo
+      nextest run -p kwavers-math tensor r2c_optimized --status-level fail
+      --no-fail-fast` passed 9/9, and the Burn-specific tensor audit returned
+      no hits.
+- [x] [patch] `kwavers-math` tensor Moirai traversal slice: replace
+      `NdArrayTensor::map_inplace` ndarray/Rayon dispatch with
+      `moirai_parallel::for_each_chunk_mut_with::<Adaptive>` for contiguous
+      storage, retaining sequential ndarray mutation for non-contiguous
+      layouts. Completion condition: `crates/kwavers-math/src/tensor` no
+      longer contains Rayon-style ndarray parallel calls, the package depends
+      directly on workspace `moirai-parallel`, and tensor map tests cover both
+      contiguous and non-contiguous layouts. Verification: `cargo fmt -p
+      kwavers-math --check` passed, `cargo check -p kwavers-math` passed,
+      `cargo clippy -p kwavers-math --all-targets -- -D warnings` passed,
+      `cargo nextest run -p kwavers-math tensor --status-level fail
+      --no-fail-fast` passed 9/9, `rg
+      "par_mapv_inplace|par_for_each|rayon::|par_iter"
+      crates/kwavers-math/src/tensor` returned no hits, and `cargo tree -p
+      kwavers-math --depth 1` shows the direct local `moirai-parallel`
+      dependency.
+- [x] [patch] `kwavers-gpu` leaf acquisition cleanup: route
+      `AcousticFieldKernel`, `ComputeManager`, and the backend buffer-manager
+      GPU test helper through Hephaestus-backed provider wrappers instead of
+      local WGPU instance/adapter/device requests. Completion condition:
+      `rg "wgpu::Instance|request_adapter|request_device"` under
+      `crates/kwavers-gpu/src/{gpu,backend}` finds no direct device creation
+      outside multi-GPU adapter enumeration, and focused GPU checks pass.
+      Verification: `cargo fmt -p kwavers-gpu` passed, `cargo check -p
+      kwavers-gpu --features gpu` passed, production source audit leaves only
+      test-only direct provider helper calls in `backend/buffers.rs` and
+      `pstd_gpu/tests/helpers.rs`, and `cargo nextest run -p kwavers-gpu
+      --features gpu backend gpu::shaders::neural_network gpu::multi_gpu
+      pstd_gpu::tests::construction --status-level fail --no-fail-fast`
+      passed 37/37.
+- [x] [patch] `kwavers-gpu` direct WGPU acquisition closure: route multi-GPU
+      device discovery through Hephaestus
+      `ComputeDeviceAcquisition::try_acquire_devices` and route PSTD GPU test
+      construction helpers through `hephaestus_wgpu::WgpuDevice`. Completion
+      condition: `rg
+      "try_with_power_preference|try_with_device_preference|try_from_adapter|try_enumerate|request_adapter|request_device|wgpu::Instance"
+      crates/kwavers-gpu/src -g "*.rs"` returns no production hits, focused
+      multi-GPU and PSTD construction tests pass, and the `kwavers` GPU feature
+      check passes. Verification: source search leaves only test-only provider
+      helper calls, `cargo fmt -p kwavers-gpu -p kwavers-solver` passed,
+      `cargo check -p kwavers-gpu --features gpu` passed, and `cargo nextest
+      run -p kwavers-gpu --features gpu backend
+      gpu::shaders::neural_network gpu::multi_gpu
+      pstd_gpu::tests::construction --status-level fail --no-fail-fast`
+      passed 37/37.
+- [x] [patch] `kwavers-gpu` Moirai pipeline slice: replace direct Rayon
+      dispatch in `gpu::pipeline::{realtime,streaming}` with
+      `moirai-parallel` chunk scheduling and remove the crate's direct Rayon
+      dependency. Completion condition: `rg` finds no direct Rayon imports or
+      parallel iterator calls under `crates/kwavers-gpu`, `cargo tree -p
+      kwavers-gpu --features gpu --depth 1` shows `moirai-parallel` and no
+      direct `rayon`, and focused pipeline tests pass. Verification: `cargo
+      fmt -p kwavers-gpu --check` passed, `cargo check -p kwavers-gpu
+      --features gpu` passed, `cargo nextest run -p kwavers-gpu --features gpu
+      gpu::pipeline --status-level fail --no-fail-fast` passed 5/5, and the
+      source/dependency audits passed.
+- [x] [patch] `kwavers-boundary` Moirai CPML/adaptive slice: replace direct
+      ndarray/Rayon `par_for_each` and `par_mapv_inplace` dispatch in CPML
+      damping, CPML strip memory/correction updates, and adaptive boundary
+      attenuation with a private Moirai-backed traversal helper, and remove
+      ndarray's `rayon` feature from `kwavers-boundary`. Completion condition:
+      `rg` finds no direct Rayon or ndarray-parallel source/manifest hits under
+      `crates/kwavers-boundary`, `cargo tree -p kwavers-boundary --depth 1`
+      shows `moirai-parallel` and no direct `rayon`, and package tests pass.
+      Verification: `cargo fmt -p kwavers-boundary --check` passed, `cargo
+      check -p kwavers-boundary` passed, `cargo nextest run -p
+      kwavers-boundary --status-level fail --no-fail-fast` passed 96/96, and
+      the source/dependency audits passed.
+- [x] [patch] `kwavers-receiver` Moirai statistics slice: replace direct
+      ndarray/Rayon pressure and velocity statistics updates with Atlas
+      `moirai-parallel` triple/quad chunk dispatch for standard-layout arrays,
+      retain sequential ndarray `Zip` semantics for non-standard layouts, and
+      remove the crate's direct `rayon` dependency plus ndarray `rayon`
+      feature. Completion condition: `rg` finds no direct Rayon or
+      ndarray-parallel source/manifest hits under `crates/kwavers-receiver`,
+      `cargo tree -p kwavers-receiver --depth 1` shows `moirai-parallel` and
+      no direct `rayon`, and package tests pass. Verification: `cargo fmt -p
+      kwavers-receiver --check` passed, `cargo check -p kwavers-receiver`
+      passed, `cargo nextest run -p kwavers-receiver --status-level fail
+      --no-fail-fast` passed 47/47, and the source/dependency audits passed.
+- [x] [patch] `kwavers-medium` Moirai absorption/iterator slice: replace direct
+      Rayon and ndarray-parallel dispatch in medium property traversal,
+      absorption/dispersion k-space updates, and frequency-dependent correction
+      with Atlas `moirai-parallel` indexed and standard-layout chunk adapters,
+      retaining sequential ndarray traversal for non-standard layouts. Also
+      clear current package-local Clippy blockers surfaced by the focused gate.
+      Completion condition: `rg` finds no direct Rayon or ndarray-parallel
+      source/manifest hits under `crates/kwavers-medium`, `cargo tree -p
+      kwavers-medium --depth 1` shows `moirai-parallel` and no direct `rayon`,
+      and package checks pass. Verification: `cargo fmt -p kwavers-medium
+      --check` passed, `cargo check -p kwavers-medium` passed, `cargo clippy
+      -p kwavers-medium --all-targets -- -D warnings` passed, `cargo nextest
+      run -p kwavers-medium --status-level fail --no-fail-fast` passed 179/179,
+      and the source/dependency audits passed.
 - [x] [patch] `kwavers-core` Moirai first-touch slice: replace the direct
       `rayon` dependency and ndarray `rayon` feature in `kwavers-core` with
       workspace `moirai-parallel`, route NUMA first-touch, SoA first-touch, and
@@ -20,6 +3356,161 @@
       -D warnings` passes, `cargo nextest run -p kwavers-core` passes 68/68,
       and `cargo tree -p kwavers-core --depth 1` shows `moirai-parallel` as the
       direct parallel provider with no direct `rayon` dependency.
+- [x] [minor] `kwavers-therapy` orchestrator execution Moirai slice: add
+      shared `kwavers-core::utils::iterators` indexed mutable array traversal
+      helpers backed by `moirai-parallel` for standard-layout arrays, retain
+      sequential ndarray traversal for non-standard layouts, and route therapy
+      integration acoustic-field/heating loops through those helpers.
+      Completion condition: the orchestrator execution path has no direct
+      Rayon or ndarray-parallel dispatch, the shared helper tests pass, and
+      the therapy integration filter passes. Verification: `cargo fmt -p
+      kwavers-core -p kwavers-therapy -p kwavers-gpu --check` passed, `cargo
+      check -p kwavers-therapy` passed, `cargo clippy -p kwavers-core -p
+      kwavers-therapy --all-targets -- -D warnings` passed after cleaning
+      package-local therapy test lints, `cargo nextest run -p kwavers-core
+      iterators --status-level fail --no-fail-fast` passed 2/2, `cargo nextest
+      run -p kwavers-therapy therapy_integration --status-level fail
+      --no-fail-fast` passed 59/59, and the source audit leaves only the
+      intentional non-standard-layout `Zip::indexed` fallback in
+      `kwavers-core`. Residual risk: full `cargo nextest run -p
+      kwavers-therapy --status-level fail --no-fail-fast` is blocked by two
+      existing abdominal preprocessing timeouts, with 338/340 passed and 1
+      skipped.
+- [x] [patch] `kwavers-therapy` abdominal preprocessing timeout closure:
+      tighten the theranostic acoustic recording window from padded-domain
+      overcoverage to the actual source/body/receiver geometry, reuse
+      checkpoint replay work buffers in the adjoint RTM path, and evaluate
+      elastic-FWI line-search candidates lazily in first-improving order
+      instead of launching all candidate PSTD propagations speculatively.
+      Completion condition: the two abdominal preprocessing tests no longer
+      terminate under nextest and the elastic line-search descent contract is
+      unchanged. Verification: `cargo fmt -p kwavers-therapy --check` passed,
+      `cargo clippy -p kwavers-therapy --all-targets -- -D warnings` passed,
+      `cargo nextest run -p kwavers-therapy
+      peak_pressure_exposure_records_bounded_workspace
+      peak_pressure_exposure_responds_to_internal_gas_scattering
+      --status-level fail --no-fail-fast` passed 2/2, and `cargo nextest run
+      -p kwavers-therapy abdominal_preprocessing --status-level fail
+      --no-fail-fast` passed 2/2. Broader verification: `cargo nextest run -p
+      kwavers-therapy --status-level fail --no-fail-fast` passed 340/340 with
+      1 skipped. Residual risk: the full package run takes about 141 s and the
+      paired abdominal filter still runs in about 110 s, so this closes the
+      timeout but not the 30 s slow-test budget.
+- [x] [patch] `kwavers-therapy` elastic-shear and emission Moirai slice:
+      replace direct Rayon flat-index dispatch in
+      `theranostic_guidance::elastic_shear::sampling::migrate_residual` with
+      `moirai_parallel::map_collect_index_with`, replace passive-acoustic
+      mapping eikonal delay-column solves in `waveform::emission` with
+      `moirai_parallel::map_collect_with`, add the package's direct Moirai
+      dependency, and update the migration docs for the elastic-shear function.
+      Completion condition: both selected production paths no longer import
+      Rayon, their focused value-semantic tests pass, and the package still
+      compiles/lints. Verification: `cargo fmt -p kwavers-therapy --check`
+      passed, `cargo check -p kwavers-therapy` passed, `cargo clippy -p
+      kwavers-therapy --all-targets -- -D warnings` passed, `cargo nextest run
+      -p kwavers-therapy residual_migration_samples_expected_arrival
+      --status-level fail --no-fail-fast` passed 1/1, `cargo nextest run -p
+      kwavers-therapy waveform::emission --status-level fail --no-fail-fast`
+      passed 3/3, `cargo tree -p kwavers-therapy --depth 1` shows
+      `moirai-parallel`, and the focused source audit leaves no direct Rayon
+      hit in `elastic_shear/sampling.rs` or `waveform/emission.rs`. Residual
+      risk: the `kwavers-therapy` manifest still carries Rayon and ndarray's
+      `rayon` feature for remaining nonlinear3d forward-stencil and
+      passive-inverse paths.
+- [x] [patch] `kwavers-therapy` standing-wave FDTD Moirai slice:
+      replace direct Rayon Green-function column fan-out in
+      `theranostic_guidance::standing_wave_opt::fdtd` with
+      `moirai_parallel::map_collect_with`. Completion condition: the selected
+      production path no longer imports Rayon, focused standing-wave tests
+      pass, and package compile/lint gates stay green. Verification: `cargo
+      fmt -p kwavers-therapy --check` passed, `cargo check -p
+      kwavers-therapy` passed, `cargo clippy -p kwavers-therapy --all-targets
+      -- -D warnings` passed, `cargo nextest run -p kwavers-therapy
+      standing_wave --status-level fail --no-fail-fast` passed 5/5, and the
+      focused source audit leaves no direct Rayon hit in
+      `standing_wave_opt/fdtd.rs`. Residual risk: the `kwavers-therapy`
+      manifest still carries Rayon and ndarray's `rayon` feature for remaining
+      nonlinear3d forward-stencil and passive-inverse paths.
+- [x] [patch] `kwavers-therapy` waveform-forward Moirai slice:
+      replace direct Rayon row-chunk and element-wise dispatch in
+      `theranostic_guidance::waveform::forward` with
+      `moirai_parallel::{for_each_chunk_mut_enumerated_with,
+      enumerate_mut_with, for_each_chunk_pair_mut_enumerated_with}`. Completion
+      condition: the selected production path no longer imports Rayon, focused
+      waveform tests pass, and package compile/lint gates stay green.
+      Verification: `cargo fmt -p kwavers-therapy --check` passed, `cargo
+      check -p kwavers-therapy` passed, `cargo clippy -p kwavers-therapy
+      --all-targets -- -D warnings` passed, `cargo nextest run -p
+      kwavers-therapy waveform --status-level fail --no-fail-fast` passed
+      13/13 with 1 slow test, and the focused source audit leaves no direct
+      Rayon hit in `waveform/forward.rs`. Residual risk: the
+      `kwavers-therapy` manifest still carries Rayon and ndarray's `rayon`
+      feature for remaining nonlinear3d forward-stencil and passive-inverse
+      paths.
+- [x] [patch] `kwavers-therapy` nonlinear3d absorption Moirai slice:
+      replace direct Rayon coefficient construction and absorption
+      apply/transpose element-wise dispatch in
+      `theranostic_guidance::nonlinear3d::absorption` with
+      `moirai_parallel::{map_collect_index_with, enumerate_mut_with}`.
+      Completion condition: the selected absorption operator files no longer
+      import Rayon, focused absorption tests pass, and package compile/lint
+      gates stay green. Verification: `cargo fmt -p kwavers-therapy --check`
+      passed, `cargo check -p kwavers-therapy` passed, `cargo clippy -p
+      kwavers-therapy --all-targets -- -D warnings` passed, `cargo nextest run
+      -p kwavers-therapy absorption --status-level fail --no-fail-fast` passed
+      5/5, and the focused source audit leaves no direct Rayon hit in
+      `nonlinear3d/absorption/{construction,apply}.rs`. Residual risk: the
+      `kwavers-therapy` manifest still carries Rayon and ndarray's `rayon`
+      feature for remaining nonlinear3d forward-stencil and passive-inverse
+      paths.
+- [x] [patch] `kwavers-therapy` nonlinear3d cavitation-forward Moirai slice:
+      replace direct Rayon max-reduction and source-density map dispatch in
+      `theranostic_guidance::nonlinear3d::cavitation::forward` with
+      `moirai_parallel::{fold_reduce_with, map_collect_index_with}`.
+      Completion condition: the selected cavitation-forward file no longer
+      imports Rayon, focused cavitation tests pass, and package compile/lint
+      gates stay green. Verification: `cargo fmt -p kwavers-therapy --check`
+      passed, `cargo check -p kwavers-therapy` passed, `cargo clippy -p
+      kwavers-therapy --all-targets -- -D warnings` passed, `cargo nextest run
+      -p kwavers-therapy cavitation --status-level fail --no-fail-fast` passed
+      46/46, and the focused source audit leaves no direct Rayon hit in
+      `nonlinear3d/cavitation/forward.rs`. Residual risk: the
+      `kwavers-therapy` manifest still carries Rayon and ndarray's `rayon`
+      feature for remaining nonlinear3d forward-stencil and passive-inverse
+      paths.
+- [x] [patch] `kwavers-therapy` nonlinear3d forward-stencil Moirai slice:
+      replace direct Rayon x-slab chunk dispatch in
+      `theranostic_guidance::nonlinear3d::forward::stencil` with
+      `moirai_parallel::for_each_chunk_mut_enumerated_with`.
+      Completion condition: the selected forward-stencil file and Westervelt
+      performance docs no longer mention direct Rayon, focused nonlinear3d
+      tests pass, and package compile/lint gates stay green. Verification:
+      `cargo fmt -p kwavers-therapy --check` passed, `cargo check -p
+      kwavers-therapy` passed, `cargo clippy -p kwavers-therapy
+      --all-targets -- -D warnings` passed, `cargo nextest run -p
+      kwavers-therapy nonlinear3d --status-level fail --no-fail-fast` passed
+      59/59, and the focused source audit leaves no direct Rayon hit in
+      `nonlinear3d/forward/stencil.rs` or `nonlinear3d/westervelt/mod.rs`.
+      Residual risk: the `kwavers-therapy` manifest still carries Rayon and
+      ndarray's `rayon` feature for remaining nonlinear3d passive-inverse
+      paths.
+- [x] [patch] `kwavers-therapy` nonlinear3d passive-inverse Moirai closure:
+      replace direct Rayon dense Green-operator fill, forward apply,
+      normal-gradient, objective reductions, residual updates, and projected
+      model updates in `theranostic_guidance::nonlinear3d::cavitation::passive_inverse`
+      with `moirai_parallel::{enumerate_mut_with, fold_reduce_with}`.
+      Completion condition: `kwavers-therapy` has no direct Rayon source or
+      manifest hits, ndarray no longer enables its `rayon` feature for this
+      crate, focused cavitation/nonlinear3d tests pass, and the direct
+      dependency graph shows `moirai-parallel` with no direct `rayon`.
+      Verification: `cargo fmt -p kwavers-therapy --check` passed, `cargo
+      check -p kwavers-therapy` passed, `cargo clippy -p kwavers-therapy
+      --all-targets -- -D warnings` passed, `cargo nextest run -p
+      kwavers-therapy cavitation --status-level fail --no-fail-fast` passed
+      46/46, `cargo nextest run -p kwavers-therapy nonlinear3d --status-level
+      fail --no-fail-fast` passed 59/59, `rg` found no Rayon hits under
+      `crates/kwavers-therapy/src` or its manifest, and `cargo tree -p
+      kwavers-therapy --depth 1` shows no direct `rayon`.
 - [x] [patch] `kwavers-simulation` Moirai photoacoustic slice: replace the
       crate's direct `rayon` dependency and ndarray `rayon` feature with
       workspace `moirai-parallel`, route multi-wavelength fluence mapping and
@@ -71,10 +3562,337 @@
       `cargo nextest run -p kwavers-source -p kwavers-field -p kwavers-signal
       -p kwavers-imaging` passes 136/136, and `cargo tree -p` for the four
       crates shows no direct `rayon` dependency.
-- [ ] [patch] Next provider-owned migration slice: audit the remaining direct
-      `rayon`/`tokio` call sites outside `kwavers-core`, choose the smallest
-      crate-local edge that can move to Moirai without changing public physics
-      contracts, and verify with the package-scoped nextest/clippy gate.
+- [x] [patch] `kwavers-solver` same-aperture Moirai slice: replace direct
+      Rayon iterator usage in `inverse::same_aperture` encoded/operator paths
+      with the Atlas Moirai execution provider without changing the linear
+      operator contract. Completion condition: `rg` finds no `rayon::prelude`
+      imports in `crates/kwavers-solver/src/inverse/same_aperture`, focused
+      same-aperture nextest remains value-semantic, and `cargo check -p
+      kwavers-solver` passes. Verification: source search found no direct
+      Rayon iterator imports or calls in the module tree, `cargo check -p
+      kwavers-solver` passed, and `cargo nextest run -p kwavers-solver
+      same_aperture` passed 7/7.
+- [x] [patch] `kwavers-solver` linear Born inversion Moirai slice: replace the
+      next concentrated direct Rayon cluster in
+      `inverse::linear_born_inversion` volume-operator construction, dense
+      products, and PCG paths with Atlas Moirai dispatch. Completion condition:
+      `rg` finds no direct Rayon imports/calls in
+      `crates/kwavers-solver/src/inverse/linear_born_inversion`, focused
+      linear-Born nextest remains value-semantic, and `cargo check -p
+      kwavers-solver` passes. Verification: source search found no direct
+      Rayon iterator imports or calls in the module tree, `cargo check -p
+      kwavers-solver` passed, and `cargo nextest run -p kwavers-solver
+      linear_born_inversion` passed 6/6.
+- [x] [patch] `kwavers-solver` time-domain FWI Moirai search/MOFI slice: replace direct
+      Rayon usage in `inverse::fwi::time_domain::{search,mofi}` with Atlas
+      Moirai dispatch while preserving objective-search and MOFI contracts.
+      Completion condition: `rg` finds no direct Rayon imports/calls in those
+      module paths, focused time-domain FWI nextest remains value-semantic, and
+      `cargo check -p kwavers-solver` passes. Verification: source search
+      found no direct Rayon/thread-pool hits in `search.rs` or `mofi/mod.rs`,
+      `cargo fmt -p kwavers-solver --check` passed, `cargo check -p
+      kwavers-solver` passed, `cargo nextest run -p kwavers-solver
+      time_domain --status-level fail` passed 58/58, and `cargo test --doc -p
+      kwavers-solver -- --show-output` passed 6 doctests with 14 ignored.
+      `cargo doc -p kwavers-solver --no-deps` generated docs but reported 189
+      pre-existing rustdoc warnings outside this slice.
+- [x] [patch] `kwavers-solver` time-domain FWI field-update Moirai slice:
+      replace the remaining direct ndarray Rayon update calls in
+      `inverse::fwi::time_domain/{adjoint.rs,gradient.rs,inversion/multi_source.rs}`
+      and the stale `forward.rs` Rayon doc mention. Completion condition: `rg`
+      finds no direct Rayon/thread-pool hits in
+      `crates/kwavers-solver/src/inverse/fwi/time_domain`, focused
+      `time_domain` nextest remains value-semantic, and `cargo check -p
+      kwavers-solver` passes. Verification: shared field mutations now route
+      through `field_ops.rs` Moirai chunk dispatch, `rg` found no direct
+      Rayon/thread-pool hits in the time-domain FWI tree, `cargo fmt -p
+      kwavers-solver` passed, `cargo check -p kwavers-solver` passed, and
+      `cargo nextest run -p kwavers-solver time_domain --status-level fail
+      --no-fail-fast` passed 58/58. Follow-up on 2026-07-04 removed explicit
+      ndarray `Zip` fallback traversal from `field_ops.rs`; scoped `rg` found
+      no `Zip` tokens in that helper, `cargo fmt -p kwavers-solver --check`
+      passed, `cargo check -p kwavers-solver` passed, `cargo clippy -p
+      kwavers-solver --lib -- -D warnings` passed, and `cargo nextest run -p
+      kwavers-solver time_domain --status-level fail --no-fail-fast` passed
+      58/58.
+- [x] [patch] `kwavers-solver` workspace in-place Moirai slice: replace direct
+      ndarray Rayon calls in `workspace::inplace_ops` with Moirai dispatch for
+      standard-layout arrays while preserving sequential ndarray semantics for
+      non-standard layouts. Verification: `cargo fmt -p kwavers-solver
+      --check` passed, `cargo check -p kwavers-solver` passed, `cargo nextest
+      run -p kwavers-solver workspace --status-level fail --no-fail-fast`
+      passed 20/20, and source audit found no direct Rayon/thread-pool hits in
+      `crates/kwavers-solver/src/workspace`.
+- [x] [patch] `kwavers-solver` time-integration Moirai slice: replace direct
+      ndarray Rayon stage-update kernels in
+      `integration::time_integration::time_stepper` with Moirai-backed
+      standard-layout kernels and sequential ndarray fallbacks for non-standard
+      layouts. Verification: `cargo fmt -p kwavers-solver --check` passed,
+      `cargo check -p kwavers-solver` passed, `cargo nextest run -p
+      kwavers-solver time_integration --status-level fail --no-fail-fast`
+      passed 12/12, and source audit found no direct Rayon/thread-pool hits in
+      `crates/kwavers-solver/src/integration/time_integration`.
+- [x] [patch] `kwavers-solver` plugin execution Rayon placeholder removal:
+      remove `ParallelStrategy::with_thread_pool(rayon::ThreadPool)`, which
+      accepted and discarded a concrete Rayon pool while the strategy still
+      executed plugins sequentially. Verification: `cargo fmt -p
+      kwavers-solver --check` passed, `cargo check -p kwavers-solver` passed,
+      `cargo clippy -p kwavers-solver --lib -- -D warnings` passed, `cargo
+      nextest run -p kwavers-solver plugin --status-level fail --no-fail-fast`
+      passed 37/37, and source audit found no `with_thread_pool` or
+      `rayon::ThreadPool` hits in the solver plugin module. Residual risk:
+      `cargo clippy -p kwavers-solver --all-targets -- -D warnings` remains
+      blocked by unrelated pre-existing test/doc lints outside this slice.
+- [x] [patch] `kwavers-solver` time-reversal reconstruction Moirai slice:
+      replace the reconstruction normalization `par_mapv_inplace` call with
+      the shared `workspace::inplace_ops::apply_inplace` Moirai traversal.
+      Completion condition: `crates/kwavers-solver/src/inverse/time_reversal`
+      has no direct Rayon or ndarray-parallel source hits, normalization
+      remains value-semantic, and focused time-reversal tests pass.
+      Verification: `cargo fmt -p kwavers-solver --check` passed, `cargo
+      clippy -p kwavers-solver --lib -- -D warnings` passed, `cargo nextest
+      run -p kwavers-solver time_reversal --status-level fail --no-fail-fast`
+      passed 9/9, and `rg
+      "par_mapv_inplace|par_for_each|rayon::|par_iter"
+      crates/kwavers-solver/src/inverse/time_reversal` returned no hits.
+      Residual risk: `cargo clippy -p kwavers-solver --all-targets -- -D
+      warnings` still fails on unrelated pre-existing test/doc lints outside
+      this slice.
+- [x] [patch] `kwavers-solver` monolithic residual Moirai slice: replace the
+      residual Laplacian rate-scaling `par_mapv_inplace` calls with the shared
+      `workspace::inplace_ops::scale_inplace` Moirai traversal. Completion
+      condition: `multiphysics::monolithic::residual` has no direct Rayon or
+      ndarray-parallel source hits, pressure Laplacian scaling remains
+      value-semantic, and focused monolithic tests pass. Verification: `cargo
+      fmt -p kwavers-solver --check` passed, `cargo check -p kwavers-solver`
+      passed, `cargo clippy -p kwavers-solver --lib -- -D warnings` passed,
+      `cargo nextest run -p kwavers-solver monolithic --status-level fail
+      --no-fail-fast` passed 30/30, and `rg
+      "par_mapv_inplace|par_for_each|rayon::|par_iter"
+      crates/kwavers-solver/src/multiphysics/monolithic/residual` returned no
+      hits.
+- [x] [patch] `kwavers-solver` monolithic coupler RHS Moirai slice: replace
+      the Newton GMRES RHS sign-inversion `par_mapv_inplace` call with the
+      shared `workspace::inplace_ops::scale_inplace` Moirai traversal.
+      Completion condition: `multiphysics::monolithic::coupler` has no direct
+      Rayon or ndarray-parallel source hits, the `J*du = -F(u)` RHS contract
+      remains value-semantic, and focused monolithic tests pass. Verification:
+      `cargo fmt -p kwavers-solver --check` passed, `cargo check -p
+      kwavers-solver` passed, `cargo clippy -p kwavers-solver --lib -- -D
+      warnings` passed, `cargo nextest run -p kwavers-solver monolithic
+      --status-level fail --no-fail-fast` passed 30/30, and `rg
+      "par_mapv_inplace|par_for_each|rayon::|par_iter|into_par_iter"
+      crates/kwavers-solver/src/multiphysics/monolithic/coupler` returned no
+      hits.
+- [x] [patch] `kwavers-solver` AMR Moirai slice: replace AMR
+      `par_mapv_inplace` calls in wavelet/physics error normalization,
+      wavelet coefficient thresholding, and the `refinement::mark_cells`
+      marker pass with Moirai-backed traversal while preserving sequential
+      ndarray semantics for non-standard layouts. Completion condition:
+      `utilities::amr` has no remaining direct Rayon or ndarray-parallel
+      source hits, scalar-transform and marker semantics are pinned by value
+      tests, and focused AMR tests pass. Verification: `cargo fmt -p
+      kwavers-solver --check` passed, `cargo nextest run -p kwavers-solver
+      amr --status-level fail --no-fail-fast` passed 11/11, and `rg
+      "par_mapv_inplace|par_for_each|rayon::|par_iter|into_par_iter"
+      crates/kwavers-solver/src/utilities/amr` returned no hits.
+- [x] [patch] `kwavers-solver` SWE displacement-magnitude Moirai slice:
+      replace `ElasticWaveField::displacement_magnitude` direct
+      `par_mapv_inplace(f64::sqrt)` with the shared Moirai-backed
+      `workspace::inplace_ops::apply_inplace` helper. Completion condition:
+      `types.rs` has no direct Rayon or ndarray-parallel source hits,
+      vector-norm semantics are pinned by value tests, and focused SWE tests
+      pass. Verification: `cargo fmt -p kwavers-solver --check` passed,
+      `cargo nextest run -p kwavers-solver displacement_magnitude
+      --status-level fail --no-fail-fast` passed 3/3, and `rg
+      "par_mapv_inplace|par_for_each|rayon::|par_iter|into_par_iter"
+      crates/kwavers-solver/src/forward/elastic/swe/types.rs` returned no
+      hits.
+- [x] [patch] `kwavers-solver` SWE PML boundary Moirai slice: replace
+      `ElasticSwePMLBoundary` attenuation-field construction, mask generation,
+      and velocity damping direct ndarray/Rayon dispatch with Moirai-backed
+      indexed traversal and triple mutable chunk traversal. Completion
+      condition: the SWE boundary subtree has no direct Rayon or
+      ndarray-parallel source hits, damping semantics are pinned by component
+      value tests, and focused PML tests pass. Verification: `cargo fmt -p
+      kwavers-solver --check` passed, `cargo nextest run -p kwavers-solver
+      pml --status-level fail --no-fail-fast` passed 45/45, and `rg
+      "par_mapv_inplace|par_for_each|rayon::|par_iter|into_par_iter"
+      crates/kwavers-solver/src/forward/elastic/swe/boundary` returned no
+      hits.
+- [x] [patch] `kwavers-solver` thermal diffusion Moirai slice: replace the
+      standard thermal diffusion `Zip::par_for_each` update with
+      `moirai-parallel` chunk scheduling for dense owned temperature and
+      Laplacian buffers, preserving sequential ndarray view semantics for
+      non-contiguous borrowed source views. Completion condition:
+      `forward::thermal_diffusion::solver` has no direct Rayon or
+      ndarray-parallel source hits, source-shape mismatch returns a typed error
+      instead of panicking during indexing, and focused thermal diffusion tests
+      pass. Verification: `rustup run nightly cargo check -p kwavers-solver`
+      passed, `rustup run nightly cargo clippy -p kwavers-solver --lib -- -D
+      warnings` passed, focused `cargo nextest run -p kwavers-solver` over the
+      seven thermal diffusion tests passed 7/7 with 934 skipped, rustfmt
+      `--check` passed, and scoped `rg` found no direct Rayon hits in
+      `crates/kwavers-solver/src/forward/thermal_diffusion/solver`.
+- [x] [patch] `kwavers-solver` thermal-acoustic Moirai slice: replace direct
+      ndarray/Rayon kernels in `forward::coupled::thermal_acoustic` material
+      properties, acoustic heating, acoustic velocity/pressure stepping, and
+      thermal stepping with Moirai dense-buffer scheduling, retaining
+      sequential ndarray fallback paths for unexpected non-standard layouts.
+      Completion condition: the thermal-acoustic subtree has no direct Rayon
+      or ndarray-parallel source hits, formula coverage is value-semantic, and
+      focused thermal-acoustic tests pass. Verification: `rustup run nightly
+      cargo check -p kwavers-solver` passed, `rustup run nightly cargo clippy
+      -p kwavers-solver --lib -- -D warnings` passed, `rustup run nightly
+      cargo nextest run -p kwavers-solver thermal_acoustic --status-level fail
+      --no-fail-fast` passed 9/9 with 934 skipped, rustfmt `--check` passed,
+      scoped `git diff --check` passed with only LF/CRLF warnings, and scoped
+      `rg` found no direct Rayon hits under
+      `crates/kwavers-solver/src/forward/coupled/thermal_acoustic`.
+- [x] [patch] `kwavers-solver` BEM scattered-field Moirai slice: replace the
+      direct Rayon `par_iter` in `forward::bem::solver::solution` with
+      `moirai-parallel` ordered map-collect while preserving the BEM
+      representation formula. Completion condition: the BEM solution file has
+      no direct Rayon source hits, BEM focused tests pass, and solver package
+      compile/clippy remain clean. Verification: `rustup run nightly cargo
+      check -p kwavers-solver` passed, `rustup run nightly cargo clippy -p
+      kwavers-solver --lib -- -D warnings` passed, `rustup run nightly cargo
+      nextest run -p kwavers-solver bem --status-level fail --no-fail-fast`
+      passed 65/65 with 878 skipped, rustfmt `--check` passed, scoped `git
+      diff --check` passed with only LF/CRLF warnings, and scoped `rg` found no
+      direct Rayon hits in
+      `crates/kwavers-solver/src/forward/bem/solver/solution.rs`.
+- [x] [patch] `kwavers-solver` legacy seismic RTM Moirai slice: replace direct
+      ndarray/Rayon imaging-condition passes in `inverse::seismic::rtm` with
+      Moirai dense traversal and sequential ndarray fallbacks for non-standard
+      layouts. Completion condition: the legacy RTM processor has no direct
+      Rayon source hits, zero-lag and normalized imaging-condition tests remain
+      value-semantic, and solver compile/clippy stay clean. Verification:
+      `rustup run nightly cargo check -p kwavers-solver` passed, `rustup run
+      nightly cargo clippy -p kwavers-solver --lib -- -D warnings` passed,
+      focused `cargo nextest run -p kwavers-solver` over the three legacy RTM
+      tests passed 3/3 with 940 skipped, rustfmt `--check` passed, scoped `git
+      diff --check` passed with only LF/CRLF warnings, and scoped `rg` found no
+      direct Rayon hits in `crates/kwavers-solver/src/inverse/seismic/rtm.rs`.
+- [x] [patch] `kwavers-solver` photoacoustic line reconstruction Moirai slice:
+      replace the k-space line reconstruction positivity `par_mapv_inplace`
+      clamp with Moirai dense traversal and a sequential ndarray fallback for
+      unexpected non-standard layouts. Completion condition: the line
+      reconstruction file has no direct Rayon source hits, positivity clamping
+      is value-semantic, and focused line reconstruction tests pass.
+      Verification: `rustup run nightly cargo check -p kwavers-solver` passed,
+      `rustup run nightly cargo clippy -p kwavers-solver --lib -- -D warnings`
+      passed, `rustup run nightly cargo nextest run -p kwavers-solver
+      line_reconstruction --status-level fail --no-fail-fast` passed 4/4 with
+      940 skipped, rustfmt `--check` passed, scoped `git diff --check` passed
+      with only LF/CRLF warnings, and scoped `rg` found no direct Rayon hits in
+      `crates/kwavers-solver/src/inverse/reconstruction/photoacoustic/line_reconstruction.rs`.
+- [x] [patch] `kwavers-diagnostics` transcranial UST sensitivity Moirai slice:
+      replace direct Rayon row-chunk dispatch in
+      `reconstruction::transcranial_ust::sensitivity` with
+      `moirai-parallel` while preserving finite-frequency sensitivity and ray
+      integral row semantics. Completion condition: the transcranial UST
+      sensitivity module has no direct Rayon import/call sites, diagnostics
+      compile with local Atlas Moirai, and focused transcranial tests pass.
+      Verification: `cargo fmt -p kwavers-diagnostics` passed, `cargo check
+      -p kwavers-diagnostics` passed, and `cargo nextest run -p
+      kwavers-diagnostics transcranial_ust --status-level fail
+      --no-fail-fast` passed 7/7.
+- [x] [patch] `kwavers-diagnostics` sound-speed-shift operator Moirai slice:
+      replace direct Rayon dispatch in
+      `reconstruction::sound_speed_shift::operator::algebra` with Moirai
+      indexed mutable dispatch and fold/reduce partial-vector reductions.
+      Completion condition: the sound-speed-shift algebra module has no direct
+      Rayon import/call sites, focused sound-speed-shift nextest remains
+      value-semantic, and `cargo check -p kwavers-diagnostics` passes.
+      Verification: `cargo fmt -p kwavers-diagnostics` passed, `cargo check
+      -p kwavers-diagnostics` passed, `cargo nextest run -p
+      kwavers-diagnostics sound_speed_shift --status-level fail
+      --no-fail-fast` passed 34/34, and source audit now leaves only
+      `real_time_sirt/pipeline.rs` as a direct diagnostics Rayon source
+      holdout.
+- [x] [patch] `kwavers-diagnostics` real-time SIRT Moirai closure: replace the
+      final direct diagnostics Rayon source cluster in
+      `reconstruction::real_time_sirt::pipeline` with Moirai row-norm
+      map-collect and separable smoothing chunk dispatch, then remove
+      diagnostics' direct `rayon` dependency and ndarray `rayon` feature.
+      Verification: `cargo fmt -p kwavers-diagnostics` passed, `cargo check
+      -p kwavers-diagnostics` passed, `cargo nextest run -p
+      kwavers-diagnostics real_time_sirt --status-level fail --no-fail-fast`
+      passed 14/14, `rg` found no direct Rayon/thread-pool hits in
+      `crates/kwavers-diagnostics/src` or its manifest, and `cargo tree -p
+      kwavers-diagnostics --depth 1` shows `moirai-parallel` as a direct
+      dependency with no direct `rayon`.
+- [x] [patch] `kwavers-solver` time-domain FWI constraints/adjoint-state
+      Moirai sub-slice: route `constraints.rs` model clamping and pressure
+      second-derivative writes plus `adjoint_state.rs` signed-correlation
+      accumulation through `moirai-parallel` chunk dispatch for standard
+      layouts, preserving sequential Zip semantics for non-standard ndarray
+      views. Verification: `rg` found no direct Rayon hits in the two files,
+      `cargo fmt -p kwavers-solver --check` passed, `cargo check -p
+      kwavers-solver` passed, and `cargo nextest run -p kwavers-solver
+      time_domain --status-level fail --no-fail-fast` passed 58/58.
+- [x] [patch] `kwavers-grid` Moirai Laplacian slice: remove ndarray's `rayon`
+      feature from `kwavers-grid`, add workspace `moirai-parallel`, and route
+      second-order interior Laplacian writes through Moirai chunk dispatch
+      while preserving the nonstandard output-view path. Completion condition:
+      `cargo fmt -p kwavers-grid --check`, `cargo check -p kwavers-grid`, and
+      `cargo nextest run -p kwavers-grid test_laplacian` pass, with 3/3
+      focused tests passing.
+- [x] [patch] Gaia-backed straight-ray geometry slice: consume Gaia's
+      `Ray<f64>` in the liver theranostic reconstruction straight-ray
+      rasterizer, add local Atlas provider patches for Gaia/Leto/Eunomia,
+      and keep voxel path-length weighting in Kwavers. Completion condition:
+      Gaia's focused `cargo nextest run -p gaia ray` passes 8/8, and Kwavers
+      compile reaches the remaining `kwavers-physics` ndarray-to-Leto fusion
+      boundary rather than the liver example's local ray code.
+- [x] [patch] `kwavers-imaging` Leto multimodality volume slice: replace
+      `multimodality_fusion::ImageData.data` and fusion outputs with
+      `leto::Array3<f64>` instead of adding an ndarray-to-Leto helper. Route
+      registration directly into local Ritk's Leto API and rewrite fusion math
+      through Leto `zip_map`/`mapv`/indexing. Completion condition:
+      `cargo fmt -p kwavers-imaging --check`, `cargo check -p
+      kwavers-imaging`, and `cargo nextest run -p kwavers-imaging
+      multimodality` pass, with 9/9 focused tests passing.
+- [x] [patch] Leto provider-owned fusion and PA workflow slice: migrate
+      `kwavers-physics::acoustics::imaging::fusion` registered-modality,
+      registration, resampling, quality, and algorithm data surfaces from
+      ndarray arrays to Leto arrays; move diagnostics workflow products,
+      fUS atlas registration volumes, photoacoustic result volumes, and
+      photoacoustic simulation fluence/pressure/reconstruction snapshots onto
+      `leto::Array3<f64>` without adding an ndarray-to-Leto helper. Completion
+      condition: no direct `ritk_registration::*_registration_mutual_info` call
+      in the migrated fusion/workflow paths receives ndarray data, `cargo check
+      -p kwavers --example liver_theranostic_reconstruction --features nifti`
+      passes, `cargo nextest run -p kwavers-physics fusion` passes 103/103,
+      `cargo nextest run -p kwavers-diagnostics workflows functional_ultrasound
+      atlas` passes 80/80, and `cargo nextest run -p kwavers-simulation
+      photoacoustic` passes 27/27.
+- [x] [patch] `kwavers-solver` linear elastography Leto producer slice:
+      generalize elastography smoothing and boundary utilities over a
+      crate-local 3-D volume trait, then allocate direct, directional, and LFE
+      shear-wave-speed maps as `leto::Array3<f64>` instead of ndarray maps
+      converted at the caller. Completion condition: no `.into()` array
+      conversion remains in `linear_methods`, `cargo check -p kwavers-solver`
+      passes, `cargo nextest run -p kwavers-solver elastography` passes 53/53,
+      `cargo fmt -p kwavers-solver --check` passes, and `cargo check -p
+      kwavers --example liver_theranostic_reconstruction --features nifti`
+      passes.
+- [x] [patch] Photoacoustic solver reconstructor Leto producer slice: remove
+      the photoacoustic solver reconstructor ndarray output boundary that still
+      crossed into Leto in
+      `kwavers-simulation::modalities::photoacoustic::core::acoustic`.
+      Completion condition: the selected photoacoustic reconstructor producer
+      returns Leto arrays directly, focused photoacoustic nextest remains
+      value-semantic, and the caller-side `Into::into` conversion is removed.
+- [x] [patch] Optical diffusion fluence Leto producer slice: remove the
+      optical diffusion fluence
+      producer boundary that still computes ndarray before crossing into Leto in
+      `kwavers-simulation::modalities::photoacoustic::optics`.
+      Completion condition: the selected optical diffusion producer returns
+      Leto arrays directly, focused photoacoustic nextest remains
+      value-semantic, and the caller-side `Ok(fluence.into())` conversion is
+      removed.
 
 ## Sprint J book physics Rust ownership — IN PROGRESS (2026-06-30)
 - [x] [patch] Cavitation passive-map binding vertical tree cleanup: split

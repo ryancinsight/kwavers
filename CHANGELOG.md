@@ -2,14 +2,859 @@
 
 ## Unreleased
 
+### Changed (2026-07-05) - kwavers-math numeric SSOT Phase-1A pilot [patch]
+- [patch] Phase-1A closed `kwavers_math::linear_algebra::NumericOps<T>` against the eunomia numeric SSOT. `num_traits::{Float, NumCast, Zero}` is replaced by `eunomia::RealField` (re-exported from `eunomia::traits::field`) and `eunomia::NumericElement::ZERO`. Super-traits `Clone + Zero` (and the vestigial `NumCast`) are dropped to `Copy + PartialOrd`. The six method bodies (`dot_product`, `normalize`, `add_arrays`, `scale_array`, `l2_norm`, `max_abs`, `safe_divide`) use `T::ZERO` instead of `T::zero()`. `max_abs` folds via `if val > acc { val } else { acc }` driven by `T: PartialOrd` because `eunomia::RealField` does not propagate a `max` method. `eunomia = { workspace = true }` is now declared in `crates/kwavers-math/Cargo.toml`; `num-traits` is retained only for `linear_algebra::sparse::csr.rs` (Phase-1B blocker — `num_complex::Complex64` does not impl `eunomia::NumericElement` under eunomia's `private::Sealed` float traits). Completion condition: `cargo build -p kwavers-math` succeeds; `numeric_ops.rs` drops from the kwavers xtask `legacy-migration-audit` source-legacy list. Residual: csr.rs Phase-1B queued under `CR-EUNOMIA-COMPLEX`.
+
+### Reverted (2026-07-05) - kwavers-math Phase-1B §2 ssot-rebind [patch]
+- [patch] Reverted the kwavers-math Phase-1B §2 batch that attempted to rebind `CsrScalar: eunomia::ComplexField` with blanket impls. The orphan-rule gap in `eunomia::types::complex::{ops.rs,float.rs}` (`ndarray::ScalarOperand` / `nalgebra::LinalgScalar` cross-impls missing) surfaced 7× E0277 from the proposed `Complex * Array1` site in `solver/bicgstab.rs` and the migration was abandoned before landing. `crates/kwavers-math/src/linear_algebra/sparse/csr.rs` returns to `CsrScalar: num_traits::Zero` + per-impl `magnitude(self) -> f64` (`f64::abs()`, `num_complex::Complex64::norm()`); `crates/kwavers-math/Cargo.toml` retains `num-traits = "0.2"` for csr.rs. The §3 deliverable — `kwavers-boundary` `num_complex::Complex64` → `eunomia::Complex64` migration plus the csr.rs ssot-rebind — is rescheduled to a follow-up ADR bundled with the upstream eunomia cross-impl. Reference: csr.rs `//!` mod-doc (`crates/kwavers-math/src/linear_algebra/sparse/csr.rs:1-9`) and the new `## TODO: kwavers-math Phase-1B §3 deferral` section in `repos/kwavers/backlog.md`.
+
 ### Changed (2026-07-01) - Atlas provider migration [patch]
 
+- [patch] Made the solver-owned GPU backend boundary provider-generic by
+  carrying `GpuProvider` on `BackendType::GPU`, updated the WGPU leaf backend
+  to report `GpuProvider::Wgpu`, and removed WGPU error conversion/feature
+  forwarding from `kwavers-core`.
+- [patch] Closed the focused GPU backend verification blockers by normalizing
+  diagnostics Leto arrays through direct volume traversal, making transfer
+  overhead dominate bottleneck classification before derived GPU-utilization
+  checks, and adding the missing WGPU derivative-pipeline binding.
+- [patch] Made `kwavers-gpu::backend::GPUBackend` generic over a
+  `GpuComputeProvider` trait and routed the default WGPU provider through
+  `hephaestus_wgpu::WgpuDevice`, leaving CUDA as a sibling provider
+  implementation point behind the same trait.
+- [patch] Corrected solver-facing GPU documentation to name the
+  provider-generic `GPUBackend<P>` boundary and to identify the legacy SWE GPU
+  file as a performance model, not a real WGPU/CUDA dispatch path.
+- [patch] Split the `kwavers-gpu` GPU compute contract into
+  `GpuKernelProvider`, `ElementWiseMultiplyProvider`, and
+  `SpatialDerivativeProvider`, keeping `GpuComputeProvider` as the composite
+  backend trait so WGPU and CUDA can implement operation families only when
+  real kernels exist.
+- [patch] Renamed the backend WGSL pipeline surface to
+  `WgpuPipelineManager`, making WGPU pipeline compilation/execution explicit
+  instead of exposing a backend-neutral `PipelineManager` name.
+- [patch] Renamed the raw WGPU command helper from `GpuCompute` to
+  `WgpuComputeCommands`, making bind-group layout and command-encoder
+  ownership provider-explicit instead of naming it as generic GPU compute.
+- [patch] Bound `GpuComputeProvider` to an associated Hephaestus
+  `ComputeDeviceCapabilities` device type so WGPU and future CUDA providers
+  compile through the same accelerator trait seam.
+- [patch] Reverified the `kwavers-gpu` provider-generic boundary after
+  `hephaestus-cuda` implemented the shared unary/binary storage-kernel traits;
+  WGPU and CUDA-provider feature sets compile, lint, and pass focused provider
+  tests without a Kwavers-local CUDA helper.
+- [patch] Added `CudaElementWiseProvider` as a real
+  `ElementWiseMultiplyProvider` backed by Hephaestus CUDA elementwise kernels,
+  keeping CUDA out of the composite `GpuComputeProvider` until the remaining
+  operation families have real CUDA kernels. The realtime imaging Hilbert FFT
+  path now calls the `kwavers_math::fft` slice facade instead of Apollo's
+  Leto-native plan API directly.
+- [patch] Bound `AcousticFieldProvider` to the shared
+  `GpuKernelProvider`/`GpuProviderBackend` trait stack and moved the current
+  WGPU acoustic-field provider onto `GpuProviderContext<WgpuDevice>`, so future
+  real CUDA acoustic kernels substitute through the same Hephaestus-backed
+  provider contract instead of a standalone acoustic trait.
+- [patch] Bound the thermal-acoustic solver provider to the shared
+  `GpuKernelProvider`/`GpuProviderBackend` stack and moved default WGPU
+  construction onto `GpuProviderContext<WgpuDevice>`, removing the raw
+  `wgpu::Device`/`Queue` constructor from the generic solver wrapper.
+- [patch] Made `kwavers-gpu::backend::GpuProviderContext<P>` generic over the
+  Hephaestus-backed `GpuDeviceProvider` trait and re-exported that trait from
+  `kwavers_gpu::gpu`, keeping raw WGPU device/queue access on the
+  `WgpuDevice` specialization only.
+- [patch] Moved default GPU acquisition requirements onto
+  `GpuDeviceProvider` so `GpuProviderContext<P>` is generic over provider
+  labels, preferences, optional features, and limits instead of baking WGPU's
+  `ShaderF64` and WGSL workgroup policy into the generic path.
+- [patch] Added the optional `kwavers-gpu/cuda-provider` acquisition contract
+  backed by local `hephaestus-cuda`, plus `cuda-runtime` for Hephaestus' real
+  CUDA loader, and implemented `GpuDeviceProvider` for
+  `hephaestus_cuda::CudaDevice` without adding placeholder CUDA compute
+  dispatch.
+- [patch] Exposed the existing Hephaestus CUDA provider seam through top-level
+  `kwavers/cuda-provider` and `kwavers/cuda-runtime` feature forwards, keeping
+  concrete WGPU/CUDA execution behind `kwavers-gpu` provider traits.
+- [patch] Routed top-level ignored GPU FFT parity tests through Apollo's
+  `FftBackend` plan seam and Leto test buffers instead of constructing raw
+  WGPU instances/devices in `kwavers`, keeping WGPU as the current
+  Hephaestus-backed implementation and CUDA as an upstream backend
+  implementation of the same trait.
+- [patch] Removed top-level `kwavers/gpu` direct `wgpu`, `bytemuck`, and
+  `pollster` feature edges by adding provider-owned synchronous acquisition,
+  buffer, readback, acoustic-kernel, and FDTD readback wrappers in
+  `kwavers-gpu`; top-level GPU tests now exercise those provider APIs without
+  importing concrete WGPU runtime crates.
+- [patch] Converted the top-level stream visualization tests to blocking
+  stream/pipeline entry points and provider-native `leto::Array3<f32>` frames,
+  removing Tokio and ndarray from that test target while keeping the async
+  stream API available. The electromagnetic PINN example also no longer uses a
+  Tokio wrapper where no async work exists; the former real-time 3-D
+  beamforming raw async WGPU constructor edge is closed by the provider
+  constructor slice below.
+- [patch] Made `kwavers-analysis` 3-D beamforming construction generic over a
+  `BeamformingGpuProvider` trait, with the current WGPU implementation
+  acquired through Hephaestus `WgpuDevice`;
+  `BeamformingProcessor3D::with_provider` is the public provider-generic
+  constructor, `BeamformingProcessor3D::new_wgpu` names the current WGPU
+  implementation explicitly, the real-time 3-D beamforming example no longer
+  uses Tokio, and top-level `kwavers` no longer has a direct Tokio
+  dev-dependency.
+- [patch] Moved the concrete 3-D WGPU beamforming provider, DAS dispatch,
+  dynamic-focus dispatch, parameters, device-error mapping, and WGSL shaders
+  from `kwavers-analysis` into `kwavers-gpu`, leaving analysis with only the
+  provider contract and CPU reference. The real-time 3-D beamforming example
+  now injects `kwavers_gpu::beamforming::three_dimensional::WgpuBeamformingProvider`,
+  and `kwavers-gpu` owns the WGPU-vs-CPU differential seam.
+- [patch] Removed the artificial async wrapper from distributed neural
+  beamforming in `kwavers-analysis`; `process_volume_distributed` now executes
+  synchronously over the existing Moirai-backed processor fan-out, and the
+  crate no longer needs a Tokio dev-dependency for that test path.
+- [major] Tightened `GpuComputeProvider::Device` to require the Kwavers
+  `GpuDeviceProvider` trait, making WGPU/CUDA provider substitution a public
+  type contract backed by Hephaestus acquisition/capability traits, and exposed
+  `GPUBackend<P>::provider()` for provider-generic callers.
+- [patch] Removed fixed WGPU memory and peak-FLOP constants from
+  `WgpuComputeProvider`; reported memory now derives from the acquired
+  Hephaestus device limits, and unknown peak throughput is reported as `0.0`
+  rather than a fabricated hardware value. The generic provider performance
+  estimate now returns the provider-reported peak value instead of a hardcoded
+  problem-size speedup curve.
+- [patch] Corrected `WgpuComputeProvider` capabilities to report
+  `supports_fft = false` because `ComputeBackend` does not expose FFT
+  operations; GPU FFT remains owned by Apollo through
+  `kwavers_math::fft::gpu_fft`.
+- [patch] Removed `kwavers-math`'s direct `ndarray/rayon` feature, routed the
+  Apollo dependency to the local Atlas Apollo checkout, and patched Apollo to
+  use local Hephaestus for GPU FFT support. The Kwavers FFT facade preserves
+  the current ndarray/`num_complex` API while calling Apollo's Leto/`eunomia`
+  FFT contract internally, and its GPU facade now exposes Apollo's
+  `FftBackend` trait while recording WGPU as the current implementation.
+- [patch] Removed concrete WGPU runtime dependencies from `kwavers-solver/gpu`
+  by dropping its direct `wgpu`, `bytemuck`, and `pollster` optional edges,
+  keeping concrete GPU ownership in `kwavers-gpu`; solver FFT call sites now
+  route through the `kwavers_math::fft` ndarray/Leto facade instead of calling
+  Apollo's Leto-native plan API directly.
+- [patch] Re-verified the WGPU/CUDA provider-generic boundary with
+  `kwavers-gpu --features cuda-provider`, kept the stream visualization test
+  out of async-only builds, updated the seismic imaging example to current
+  RITK DICOM/spacing accessors, and repaired the GPU PSTD simulation adapter
+  so its CPML profile coefficient helper consumes Leto arrays directly.
+- [patch] Routed `GpuPstdSolver::with_auto_device` through
+  `hephaestus_wgpu::WgpuDevice` while preserving PSTD push-constant and
+  storage-buffer limit requirements.
+- [patch] Routed `GpuPstdSolver::with_auto_device` through
+  `GpuDevice<WgpuDevice>` and the shared `GpuDeviceProvider` acquisition
+  contract, preserving PSTD push-constant limits while removing the remaining
+  direct WGPU acquisition call from the PSTD auto-device constructor.
+- [patch] Routed PSTD GPU construction and medium-update test helpers through
+  `GpuDevice<WgpuDevice>` and the shared `GpuDeviceProvider` acquisition
+  contract, removing the last direct WGPU adapter/device acquisition path from
+  the PSTD subtree.
+- [patch] Routed the backend buffer-manager GPU construction test through
+  `GpuDevice<WgpuDevice>` and `GpuDeviceProvider`, removing its direct
+  Hephaestus WGPU acquisition helper while keeping buffer management
+  WGPU-owned.
+- [patch] Removed `pollster` from the backend buffer readback path by routing
+  both async and synchronous public readback methods through one blocking WGPU
+  readback implementation, leaving provider-native `leto::Array3<f32>`
+  semantics unchanged.
+- [patch] Made `kwavers-gpu::gpu::GpuDevice<P>` generic over a local
+  `GpuDeviceProvider` trait backed by Hephaestus `ComputeDeviceAcquisition`,
+  replaced the public constructor preference with backend-neutral
+  `DevicePreference`, and kept raw WGPU handles only on the default
+  `GpuDevice<WgpuDevice>` specialization for WGSL shader dispatch.
+- [patch] Routed the acoustic-field WGPU provider through
+  `GpuDevice<WgpuDevice>` and the shared `GpuDeviceProvider` acquisition
+  contract instead of directly acquiring/storing a raw Hephaestus
+  `WgpuDevice`, keeping CUDA eligible for the same provider trait without
+  placeholder acoustic kernels.
+- [patch] Routed `kwavers-gpu::gpu::CoreGpuContext` and multi-GPU
+  logical-device creation through Hephaestus `ComputeDeviceAcquisition` while
+  keeping raw WGPU handles as provider-owned dispatch handles and preserving
+  the generic `GpuComputeProvider` seam for a future CUDA provider.
+- [patch] Made `kwavers-gpu::gpu::CoreGpuContext<P>` generic over
+  `GpuDeviceProvider`, storing `GpuDevice<P>` instead of raw `WgpuDevice`,
+  while keeping raw `wgpu` handle access only on `CoreGpuContext<WgpuDevice>`.
+- [patch] Made the public `kwavers-gpu::gpu::GpuBackend<P>` alias expose the
+  same provider parameter as `CoreGpuContext<P>`, keeping WGPU as the default
+  provider while allowing CUDA and future Hephaestus providers to type-check at
+  the context boundary without call-site backend branches.
+- [patch] Made `kwavers-gpu::gpu::multi_gpu::MultiGpuContext<P>` generic over
+  the same `GpuDeviceProvider` trait, added a provider-generic multi-device
+  acquisition constructor, and kept `MultiGpuContext::new()` as the WGPU
+  default for current WGSL kernels while CUDA type-checks through
+  `kwavers-gpu/cuda-provider`.
+- [patch] Removed `kwavers-gpu`'s direct Tokio test-runtime dependency by
+  running the remaining async GPU acquisition tests through `pollster`, keeping
+  the crate's provider-generic WGPU/CUDA seam free of a Tokio dev-dependency.
+- [patch] Removed the `kwavers-gpu` Burn-backed `BurnGpuAccelerator` and its
+  `pinn` feature/dependency because it was not a Hephaestus or Coeus backend
+  and contained placeholder PDE residual branches for non-wave equations.
+- [major] Removed the solver-local PINN `gpu_accelerator` surface and the
+  `pinn-gpu`/`burn-wgpu`/`burn-cuda` feature aliases. PINN GPU training is now
+  documented as pending Coeus training routed through provider-generic
+  Hephaestus traits, so WGPU and CUDA remain provider implementations behind
+  the same seam instead of Burn-specific public feature contracts.
+- [patch] Removed solver PINN multi-GPU manager direct WGPU adapter discovery;
+  multi-GPU PINN construction now returns a typed unavailable-provider error
+  until a real Coeus training provider is routed through Hephaestus WGPU/CUDA
+  device traits, and that unavailable-provider constructor path no longer
+  requires a Tokio test runtime. The distributed PINN trainer constructor is
+  also synchronous while it only assembles local replicas and provider state;
+  distributed training/checkpoint persistence no longer depends on Tokio, and
+  checkpoint save/load now writes JSON checkpoint files with value-tested state
+  restoration.
+- [patch] Removed the Burn `wgpu` feature from the workspace and remaining
+  `kwavers`/`kwavers-solver`/`kwavers-analysis` Burn dependencies, keeping Burn
+  scoped to the current CPU PINN path while GPU PINN execution migrates to
+  Coeus through Hephaestus providers.
+- [patch] Removed unused workspace-level Burn dependency aliases and demoted
+  the top-level `kwavers` Burn edge to `dev-dependencies`, since that crate's
+  production targets do not import Burn and only examples, benches, and tests
+  still instantiate Burn CPU PINN paths.
+- [patch] Disabled Burn default features on remaining kwavers Burn edges,
+  retained only required non-GPU features, and repaired the upstream RITK
+  workspace Burn default from WGPU to NdArray so `kwavers --features pinn` no
+  longer resolves `burn-wgpu`, `burn-cuda`, or `burn-rocm`.
+- [major] Removed the remaining direct Burn dependency from `kwavers-analysis`
+  by deleting the test-only Burn DAS holdout, removing the analysis-side Burn
+  model compatibility impl, and keeping the PINN uncertainty API on the
+  solver-agnostic `PinnUncertaintyPredictor` trait.
+- [patch] Removed the direct Burn dependency from `kwavers-python` by routing
+  RITK NIfTI loading through `ritk_io::format::nifti::native` on
+  `coeus_core::SequentialBackend`, preserving the existing NumPy-facing
+  `(x, y, z)` volume and spacing contract.
+- [patch] Routed `kwavers-imaging` CT/NIfTI loading through the native RITK
+  Coeus image path while preserving the existing `(x, y, z)` volume, spacing,
+  affine, and intensity-range contract.
+- [patch] Removed the remaining direct Burn edge from `kwavers-imaging` by
+  adding native DICOM series loading in RITK and routing the Kwavers DICOM
+  bridge through `ritk_io::load_native_dicom_series` on
+  `coeus_core::SequentialBackend`.
+- [patch] Removed the public `kwavers-analysis::beamforming::gpu` Burn DAS
+  reexports, leaving the Burn implementation as a test-only legacy `pinn`
+  holdout until the DAS/PINN path is migrated to Coeus/Hephaestus.
+- [major] Removed the public `kwavers-analysis::beamforming::neural` Burn PINN
+  provider reexports and exposed the solver-agnostic
+  `PinnBeamformingProvider` trait instead, keeping analysis generic over the
+  provider seam while Burn remains a solver implementation detail pending
+  Coeus/Hephaestus migration.
+- [major] Replaced direct `BurnPINN1DWave` uncertainty estimator signatures in
+  `kwavers-analysis` with the solver-agnostic `PinnUncertaintyPredictor` trait,
+  leaving a single Burn compatibility impl for the current solver model while
+  Coeus becomes the replacement provider.
+- [major] Removed the top-level `kwavers` `parallel` feature and direct Rayon
+  dependency, routed the remaining top-level example parallel loops through
+  `moirai-parallel`, and removed `ndarray/rayon` from the Python wrapper
+  manifest where wrapper source has no ndarray-parallel call sites.
+- [patch] Removed the direct `kwavers-physics` Rayon dependency by routing
+  remaining direct Rayon loops through `moirai-parallel`; `ndarray/rayon`
+  remains only for tracked ndarray-parallel kernels pending Leto/Hephaestus
+  backend migration.
+- [patch] Routed `kwavers-physics` bubble-interaction field assembly through
+  the crate's Moirai-backed indexed traversal adapter instead of
+  ndarray/Rayon `Zip::par_for_each`, with a value test for the monopole
+  pressure contribution and self-cell exclusion.
+- [patch] Routed `kwavers-physics::field_surrogate` trilinear resampling and
+  kernel-corner blending through the crate's Moirai-backed traversal adapter
+  instead of ndarray/Rayon `Zip::par_for_each`, preserving focal-position,
+  normalization, and blend semantics.
+- [patch] Added a two-output/two-input Moirai-backed physics traversal adapter
+  and routed `kwavers-physics::chemistry::reaction_kinetics` through it instead
+  of ndarray/Rayon `Zip::par_for_each`, with a value test for Arrhenius
+  radical generation and hydrogen-peroxide recombination.
+- [patch] Routed `kwavers-physics::chemistry::ros_plasma::ros_species`
+  concentration decay through the crate's Moirai-backed traversal adapter
+  instead of ndarray/Rayon `par_mapv_inplace`, with an exact species-lifetime
+  exponential regression.
+- [patch] Routed `kwavers-physics` Pennes bioheat and Cattaneo-Vernotte
+  thermal diffusion traversals through a private Moirai-backed dense-field
+  adapter, removing direct ndarray/Rayon dispatch from those thermal diffusion
+  files while preserving sequential ndarray semantics for non-contiguous views.
+- [patch] Routed `kwavers-physics` sonoluminescence blackbody,
+  bremsstrahlung, and Cherenkov emission field assembly through the same
+  Moirai-backed physics traversal adapter, removing direct ndarray/Rayon
+  dispatch from those optics kernels.
+- [patch] Replaced the `kwavers-math` QR/SVD nalgebra bridge with
+  Leto/Leto-ops decompositions, added the workspace-local `leto-ops`
+  dependency, and removed the direct `kwavers-math` nalgebra manifest edge.
+- [patch] Routed `kwavers-math::fft` real/complex packing and k-space
+  squared-field generation through Moirai-backed contiguous traversal,
+  removing the final source-level ndarray/Rayon parallel calls under
+  `crates/kwavers-math/src` while preserving sequential ndarray traversal for
+  non-standard FFT array layouts.
+- [patch] Routed the Westervelt spectral wave-model leapfrog combination loop
+  in `kwavers-solver` through `moirai-parallel`, removing that direct Rayon
+  iterator while preserving the same value-semantic pressure recurrence.
+- [patch] Routed Helmholtz FEM element-contribution collection in
+  `kwavers-solver` through `moirai-parallel` and added explicit element-array
+  length validation instead of the previous zipped truncation behavior.
+- [patch] Routed Westervelt FDTD conservation energy, momentum, and mass
+  reductions in `kwavers-solver` through `moirai-parallel` indexed reductions,
+  removing the direct Rayon iterator dependency from that diagnostic path.
+- [patch] Routed Westervelt FDTD Laplacian O2/O4/O6 stencil slabs in
+  `kwavers-solver` through `moirai-parallel`, preserving the same finite
+  difference coefficients and quadratic exactness contract.
+- [patch] Routed Westervelt FDTD nonlinear-term and leapfrog update field
+  traversals in `kwavers-solver` through `moirai-parallel`, preserving the
+  product-rule curvature initialization and medium-coupled propagation algebra.
+- [patch] Routed KZK solver observable reductions and physics-trait RMS field
+  generation in `kwavers-solver` through `moirai-parallel`, removing direct
+  ndarray/Rayon dispatch from those 2-D pressure summary paths.
+- [patch] Routed KZK angular-spectrum and real-field parabolic diffraction
+  scratch packing, diagonal spectral multiplication, and real-output
+  projection in `kwavers-solver` through `moirai-parallel`, preserving cached
+  FFT workspaces and propagator semantics while removing direct
+  ndarray/Rayon dispatch from those operators.
+- [patch] Routed KZK spectral absorption slab traversal in `kwavers-solver`
+  through `moirai-parallel`, preserving per-slab waveform scratch reuse and
+  the exact frequency-domain attenuation mask.
+- [patch] Routed KZK complex parabolic diffraction and nonlinear sub-step slab
+  traversals in `kwavers-solver` through `moirai-parallel`, leaving the KZK
+  subtree with no direct Rayon or ndarray-parallel call sites.
+- [patch] Routed the mixed-domain frequency-domain propagator in
+  `kwavers-solver` through `moirai-parallel`, replacing direct ndarray/Rayon
+  dispatch with provider-owned indexed traversal over the complex spectral
+  field.
+- [patch] Routed the legacy KZK solver plugin nonlinear Burgers update in
+  `kwavers-solver` through `moirai-parallel` for dense fields, preserving
+  sequential ndarray semantics for non-standard layouts.
+- [patch] Routed FDTD dynamic pressure-source Dirichlet and additive mask
+  updates in `kwavers-solver` through `moirai-parallel` for dense fields,
+  preserving sequential ndarray semantics for non-standard layouts.
+- [patch] Routed FDTD pressure-updater divergence accumulation, pressure
+  update, and Westervelt nonlinear pressure-delta application in
+  `kwavers-solver` through `moirai-parallel` for dense fields.
+- [patch] Routed FDTD velocity-updater spectral, collocated, and staggered
+  pressure-gradient velocity updates in `kwavers-solver` through
+  `moirai-parallel` for dense fields.
+- [patch] Routed FDTD k-space correction spectral gradient/divergence kernels
+  in `kwavers-solver` through `moirai-parallel` for dense transformed fields.
+- [patch] Routed FDTD construction-time `rho*c^2` and nonlinear coefficient
+  fills in `kwavers-solver` through `moirai-parallel` for dense fields.
+- [patch] Routed PSTD utility k-norm fills and spectral-derivative scaling in
+  `kwavers-solver` through `moirai-parallel` for dense buffers.
+- [patch] Routed PSTD implementation k-space Helmholtz and spectral-gradient
+  multipliers in `kwavers-solver` through `moirai-parallel` for dense
+  spectral fields.
+- [patch] Routed PSTD implementation anti-aliasing spectral filter
+  multipliers in `kwavers-solver` through `moirai-parallel` for dense
+  half-spectrum buffers.
+- [patch] Routed PSTD implementation full-k-space source accumulation,
+  spectral wave-coefficient multiplication, and propagated pressure/source
+  updates in `kwavers-solver` through `moirai-parallel` for dense fields.
+- [patch] Routed PSTD implementation pressure-source correction, split-density
+  source injection, and dynamic velocity-source writes in `kwavers-solver`
+  through shared `moirai-parallel` dense stepper helpers.
+- [patch] Routed PSTD implementation total split-density accumulation in
+  `kwavers-solver` through `moirai-parallel` for dense fields.
+- [patch] Routed PSTD implementation thermal absorption coefficient scaling
+  in `kwavers-solver` through `moirai-parallel` for dense fields.
+- [patch] Routed PSTD implementation construction-time source-kappa cosine
+  transformation and initial split-density component fills in `kwavers-solver`
+  through `moirai-parallel` for dense fields.
+- [patch] Routed PSTD implementation IVP density seeding, spectral-gradient
+  construction, and half-step velocity scaling in `kwavers-solver` through
+  `moirai-parallel` for dense fields.
+- [patch] Routed PSTD spectral-correction kappa fills and correction
+  application in `kwavers-solver` through `moirai-parallel` for dense spectral
+  fields.
+- [patch] Routed PSTD propagator pressure equation-of-state density
+  accumulation and pressure writes in `kwavers-solver` through
+  `moirai-parallel` for dense fields.
+- [patch] Routed PSTD Cartesian density spectral-gradient and split-density
+  updates in `kwavers-solver` through `moirai-parallel` for dense fields.
+- [patch] Routed PSTD axisymmetric pressure-density coefficient and
+  split-density updates in `kwavers-solver` through `moirai-parallel` for dense
+  fields.
+- [patch] Routed PSTD Cartesian and axisymmetric velocity spectral-gradient and
+  velocity-field updates in `kwavers-solver` through `moirai-parallel` for dense
+  fields.
+- [patch] Routed PSTD axisymmetric WSWA-FFT pressure-gradient and
+  density-divergence propagation in `kwavers-solver` through
+  `moirai-parallel` for dense spectral fields.
+- [patch] Routed PSTD broadband residual-gas absorption and dispersion pressure
+  corrections in `kwavers-solver` through `moirai-parallel` for dense fields.
+- [patch] Routed PSTD pressure-side fractional-Laplacian absorption correction
+  in `kwavers-solver` through `moirai-parallel` for dense fields.
+- [patch] Routed PSTD fractional-Laplacian absorption stratum bracket
+  construction in `kwavers-solver` through `moirai-parallel`.
+- [patch] Routed PSTD spectral derivative pencil traversal in `kwavers-solver`
+  through `moirai-parallel`.
+- [patch] Routed PSTD DG spectral Laplacian symbol construction and
+  application in `kwavers-solver` through `moirai-parallel`.
+- [patch] Routed PSTD DG one-dimensional acoustic SSP-RK stage updates in
+  `kwavers-solver` through `moirai-parallel`.
+- [patch] Routed PSTD DG modal SSP-RK and Forward Euler coefficient updates in
+  `kwavers-solver` through shared `moirai-parallel` dense RK helpers.
+- [patch] Routed PSTD DG tensor acoustic source SSP-RK state updates in
+  `kwavers-solver` through shared `moirai-parallel` dense RK helpers.
+- [patch] Routed PSTD DG tensor CPML field and memory SSP-RK state updates in
+  `kwavers-solver` through shared `moirai-parallel` dense RK helpers, leaving
+  the DG subtree with no direct Rayon or explicit ndarray `Zip` traversal.
+- [patch] Moved `ThermalCEM43Grid` dose storage and update input to
+  `leto::Array3<f64>`, scheduled dense CEM43 updates through
+  `moirai-parallel`, and moved the top-level theranostic lesion mask plus
+  brain-monitor thermal state to Leto.
+- [patch] Routed `kwavers-solver` standard thermal diffusion updates through
+  `moirai-parallel` for dense owned buffers, preserved sequential ndarray view
+  semantics for non-contiguous borrowed sources, and added a typed source-shape
+  mismatch error instead of indexing mismatched views.
+- [patch] Routed `kwavers-solver` coupled thermal-acoustic material-property,
+  acoustic-heating, acoustic-step, and thermal-step kernels through
+  `moirai-parallel` for dense owned buffers, leaving only sequential ndarray
+  fallback paths for unexpected non-standard layouts.
+- [patch] Routed `kwavers-solver` BEM scattered-field evaluation through
+  `moirai-parallel` ordered map-collect instead of direct Rayon `par_iter`.
+- [patch] Routed the legacy `kwavers-solver` seismic RTM zero-lag and
+  normalized imaging-condition passes through `moirai-parallel`, removing the
+  temporary source-illumination allocation from the single-snapshot normalized
+  formula.
+- [patch] Routed `kwavers-solver` k-space line reconstruction positivity
+  clamping through `moirai-parallel` instead of ndarray/Rayon
+  `par_mapv_inplace`.
+- [patch] Routed `kwavers-solver` photoacoustic iterative, Fourier, and
+  time-reversal reconstruction updates through Moirai-backed traversal,
+  leaving the photoacoustic reconstruction subtree with no direct Rayon or
+  ndarray-parallel traversal.
+- [patch] Routed `kwavers-solver` hybrid angular spectrum broadband harmonic
+  absorption through Moirai-backed dense traversal instead of ndarray/Rayon
+  `par_mapv_inplace`.
+- [patch] Routed `kwavers-solver` nonlinear elastic propagation damping maps
+  through Moirai-backed dense traversal instead of ndarray/Rayon
+  `par_mapv_inplace`.
+- [patch] Routed `kwavers-solver` nonlinear elastic harmonic-generation Jacobi
+  update and delta-fill passes through Moirai-backed indexed traversal instead
+  of ndarray/Rayon `Zip::par_for_each`.
+- [patch] Routed `kwavers-solver` nonlinear elastic fundamental frequency
+  line updates through Moirai-backed line scheduling, leaving the nonlinear
+  elastic subtree with no direct Rayon or ndarray-parallel traversal.
+- [patch] Repaired the top-level skull CT example and ultrasound/NL-SWE
+  validation tests for current RITK accessor and Leto array APIs, keeping
+  registration/fusion inputs on Leto and using a derived floating-point
+  reduction bound for the constant-quality NL-SWE statistic.
+- [patch] Split `kwavers-gpu::gpu::compute_kernels::AcousticFieldKernel<P>`
+  from concrete WGPU dispatch by adding an `AcousticFieldProvider` operation
+  trait and moving the WGSL pipeline, buffers, and readback path into
+  `WgpuAcousticFieldProvider`.
+- [patch] Made `kwavers-gpu::gpu::compute_kernels::WaveEquationGpu<P>`
+  generic over the same `AcousticFieldProvider<Scalar = f32>` provider seam,
+  keeping the default constructor WGPU-backed and avoiding CUDA placeholders.
+- [patch] Moved `AcousticFieldProvider` and `WaveEquationGpu` from
+  `ndarray::Array3<f64>` to provider-native `leto::Array3<f32>` for the WGPU
+  implementation, making the WGPU precision contract explicit as an associated
+  scalar instead of narrowing f64 fields inside the provider.
+- [patch] Split `kwavers-gpu::gpu::thermal_acoustic::GpuThermalAcousticBuffers<P>`
+  from concrete WGPU buffer handles by adding `ThermalAcousticBufferProvider`
+  and moving the WGPU storage/uniform buffers plus upload/download paths into
+  `WgpuThermalAcousticBuffers`.
+- [patch] Moved thermal-acoustic buffer upload/readback from
+  `ndarray::Array3<f32>` to provider-native `leto::Array3<f32>`, with WGPU
+  declaring `ThermalAcousticBufferProvider::Scalar = f32`.
+- [patch] Moved `kwavers-gpu::gpu::WgpuFdtd` pressure upload/readback from
+  `ndarray::Array3<f64>` to provider-native `leto::Array3<f32>`, surfacing
+  dense-layout validation on upload and removing hidden widen/narrow pressure
+  conversion at the WGPU storage boundary.
+- [patch] Renamed the WGPU-only FDTD public surfaces to `WgpuFdtd` and
+  `WgpuFdtdPressureDispatcher`, removing generic GPU names from WGSL-specific
+  implementations while leaving CUDA behind the provider-trait gap.
+- [patch] Moved `WgpuFdtdPressureDispatcher` construction onto
+  `GpuProviderContext<WgpuDevice>` and implemented the shared
+  `GpuKernelProvider`/`GpuProviderBackend` stack for the dispatcher, removing
+  raw `Arc<wgpu::Device>`/`Arc<wgpu::Queue>` ownership from the FDTD pressure
+  kernel boundary.
+- [patch] Added the provider-generic `FdtdGpuProvider` operation trait and
+  made `WgpuFdtd` its current real implementation, with pressure upload,
+  readback, and step execution routed through `GpuProviderContext<WgpuDevice>`.
+  The top-level allocation/roundtrip test now binds through the trait over
+  provider-native `leto::Array3<f32>` instead of raw WGPU handles, Tokio, or
+  ndarray; CUDA remains a real-kernel implementation gap rather than a fake
+  branch.
+- [patch] Repaired the top-level GPU test compile gate by deleting the obsolete
+  recovery stress test, replacing raw-WGPU compute and buffer tests with
+  Hephaestus/CoreGpuContext/GPUBackend coverage, routing GPU device tests
+  through pollster-backed `GpuDevice`, and converting acoustic-field and
+  wave-equation tests to provider-native `leto::Array3<f32>`. Broad
+  `kwavers --features gpu --tests` now compiles, and focused top-level GPU
+  nextest passes 27/27 with 3 ignored PSTD hardware tests skipped.
+- [patch] Closed the remaining warning debt in the top-level GPU test compile
+  gate by deleting the unused `gpu_fft_3d` helper, converting ignored GPU FFT
+  tests from Tokio macros to `pollster::block_on`, removing the unused
+  finite-window Born baseline, and dropping unused Moirai patch entries for
+  crates that no workspace manifest depends on.
+- [patch] Moved `kwavers-gpu::gpu::compute::FdtdCpuReferenceDispatcher`
+  pressure updates from `ndarray::Array3<f64>` to `leto::Array3<f64>`,
+  preserving the f64 reference stencil while eliminating the local ndarray
+  pressure API and removing the misleading CPU-as-GPU dispatcher name.
+- [patch] Made `kwavers-gpu::gpu::ComputeManager<P>` generic over
+  `GpuDeviceProvider`, kept raw WGPU handle helpers only on the WGPU
+  specialization, and replaced silent GPU-acquisition fallback with explicit
+  `cpu_only()` construction.
+- [patch] Removed `pollster` from `ComputeManager::new_blocking` by routing
+  blocking construction through `GpuDevice<P>::try_create_with_features_and_limits`,
+  preserving the same provider-generic WGPU/CUDA acquisition contract.
+- [patch] Moved the solver-owned `ComputeBackend` element-wise and spatial
+  derivative method contract from `ndarray::Array3<f64>` to
+  `leto::Array3<f64>`, removing the legacy ndarray surface from the
+  provider-generic GPU backend implementation.
+- [major] Made the solver-owned `ComputeBackend` operation contract
+  scalar-associated, so `kwavers-gpu::backend::GPUBackend<P>` dispatches
+  element-wise and spatial-derivative work through `P::Scalar` instead of a
+  fixed f64 method surface while WGPU and future CUDA providers share the same
+  trait boundary.
+- [patch] Moved `kwavers-gpu::gpu::ComputeManager` CPU field-update helpers
+  from `ndarray::Array3<f64>` to `leto::Array3<f64>`, including dense-layout
+  validation on absorption updates.
+- [patch] Moved `kwavers-gpu::validation::gpu_cpu_equivalence` result
+  comparison from `ndarray::Array3<f64>`/`Zip` to `leto::Array3<f64>`, with
+  solver-owned pressure fields converted at the validation runner boundary.
+- [patch] Removed the false FDTD GPU equivalence path that constructed a
+  GPU backend but still ran the CPU solver, so the runner now reports a typed
+  unavailable-provider failure until a real provider-generic Leto/Hephaestus
+  FDTD GPU trait implementation is wired.
+- [patch] Moved `kwavers-gpu::gpu::pipeline` realtime RF input and processed
+  output frame buffers from `ndarray::Array4<f32>`/`Array3<f32>` to
+  `leto::Array4<f32>`/`Array3<f32>`, replacing the local beamforming
+  `sum_axis` path with explicit Leto traversal.
+- [patch] Removed the private `ndarray::Array1<Complex64>` Hilbert FFT scratch
+  from `kwavers-gpu::gpu::pipeline`, reusing a thread-local `Vec<Complex64>`
+  through Apollo's slice FFT API so the realtime pipeline subtree has no
+  ndarray dependency.
+- [patch] Split `kwavers-gpu::gpu::thermal_acoustic::GpuThermalAcousticSolver<P>`
+  from concrete WGPU pipeline ownership by adding `ThermalAcousticSolverProvider`
+  and moving WGPU device/queue handles, compute pipelines, bind group, and step
+  dispatch into `WgpuThermalAcousticSolverProvider`.
+- [patch] Split `kwavers-gpu::backend::GpuBackendBufferManager<P>` from
+  concrete WGPU buffer pooling/readback by adding `BackendBufferProvider` and
+  moving WGPU buffer allocation, upload, readback, and pooling into
+  `WgpuBackendBufferManager`.
+- [patch] Made `kwavers-gpu::backend::GpuComputeProvider` scalar-associated
+  and moved WGPU backend operator dispatch onto provider-native `Array3<f32>`
+  buffers, with the solver-owned `ComputeBackend` trait now dispatching through
+  the provider scalar instead of a fixed f64 rejection path.
+- [patch] Moved `kwavers-gpu::backend::GpuComputeProvider` provider-native
+  elementwise and spatial-derivative dispatch from `ndarray::Array3<f32>` to
+  `leto::Array3<f32>`, keeping ndarray only inside the current WGPU buffer
+  manager adapter until that lower staging layer is migrated.
+- [patch] Moved `kwavers-gpu::backend::WgpuBackendBufferManager` upload and
+  readback for provider-native elementwise/derivative dispatch onto
+  `leto::Array3<f32>`, removing the provider-side Leto-to-ndarray adapter.
+- [patch] Moved `kwavers-gpu::backend::RealtimeSimulationOrchestrator` field
+  maps to `leto::Array3<f64>`, keeping realtime scheduling on the same
+  provider-generic GPU surface while the compute backend operation seam remains
+  scalar-associated for provider-native dispatch.
+- [patch] Added provider-native WGPU elementwise value tests and shape
+  precondition checks for backend elementwise/derivative dispatch, and repaired
+  the upstream Hephaestus WGPU axis-reduction planner call sites so Kwavers GPU
+  gates build through the shared Atlas GPU provider.
+- [patch] Split PSTD construction and run-cache storage-buffer allocation
+  behind `PstdBufferProvider`, moving WGPU read-only, static, upload,
+  read/write, and staging-buffer creation into `WgpuPstdBufferFactory`.
+- [patch] Split PSTD shader-module, pipeline-layout, and compute-pipeline
+  creation behind `PstdPipelineProvider`, moving WGPU shader, layout, and
+  `ComputePipelineDescriptor` construction into `WgpuPstdPipelineFactory`.
+- [patch] Split PSTD bind-group layout creation behind
+  `PstdBindGroupLayoutProvider`, moving WGPU binding-slot descriptor
+  construction into `WgpuPstdBindGroupLayoutFactory`.
+- [patch] Split PSTD constructor and run-cache bind-group assembly behind
+  `PstdBindGroupProvider`, moving WGPU bind-group descriptor construction into
+  `WgpuPstdBindGroupFactory`.
+- [patch] Split PSTD run-loop clear, copy, submit, and poll operations behind
+  `PstdCommandProvider`, moving WGPU command encoder and queue wait mechanics
+  for those paths into `WgpuPstdCommandProvider`.
+- [patch] Split PSTD zero-field and batched-step command encoder
+  creation/submission behind `PstdCommandProvider::submit_encoder`, with the
+  provider-native encoder modeled as an associated type so the contract remains
+  open to non-WGPU providers.
+- [patch] Split PSTD zero-field and batched-step compute-pass creation behind
+  `PstdCommandProvider::{submit_compute_pass, submit_compute_passes}`, with the
+  provider-native pass modeled as a lifetime-associated type so the contract
+  does not name `wgpu::ComputePass`.
+- [patch] Split PSTD zero-field and per-step pass-body encoding behind
+  `PstdPassProvider`, moving WGPU dispatch and `encode_*` call sequencing out
+  of `time_loop::run` without exposing CUDA compute until real kernels exist.
+- [patch] Split PSTD sensor staging-buffer readback behind
+  `PstdCommandProvider::read_mapped`, moving WGPU map/unmap mechanics out of
+  `time_loop::run`.
+- [patch] Split PSTD cache-hit signal-tail uploads behind
+  `PstdCommandProvider::write_buffer`, moving WGPU queue upload mechanics out
+  of `time_loop::buffer`.
+- [patch] Split PSTD medium and source-correction uploads behind
+  `PstdCommandProvider::write_buffer`, moving remaining direct
+  `queue.write_buffer` calls out of `pstd_gpu` modules.
+- [patch] Grouped PSTD k-space, medium, twiddle, and source-kappa WGPU buffers
+  into `WgpuPstdMediumBuffers`, removing their separate top-level solver
+  fields while preserving existing bind-group layout and medium-update
+  semantics.
+- [patch] Grouped PSTD k-space work buffers into `WgpuPstdKspaceBuffers`,
+  removing the remaining separate top-level k-space buffer fields while
+  preserving the existing group(1) bind-group bindings.
+- [patch] Grouped PSTD acoustic field WGPU buffers into
+  `WgpuPstdFieldBuffers`, removing their separate top-level solver fields
+  while preserving the existing group(0) bind-group layout.
+- [patch] Grouped PSTD fractional-Laplacian absorption WGPU buffers into
+  `WgpuPstdAbsorptionBuffers`, removing their separate top-level solver fields
+  while preserving existing group(3) bind-group layout and medium absorption
+  updates.
+- [patch] Grouped PSTD PML and packed k-space shift WGPU buffers into
+  `WgpuPstdPmlShiftBuffers`, removing their separate top-level solver fields
+  while preserving the per-run sensor bind-group rebuild path.
+- [patch] Grouped PSTD run-cache WGPU buffers, bind groups, and cache-key
+  counters into `WgpuPstdRunCache`, removing the separate top-level cache
+  fields while preserving cache-hit signal-tail refreshes.
+- [patch] Grouped PSTD permanent WGPU bind groups into
+  `WgpuPstdPermanentBindGroups`, removing the separate top-level solver bind
+  group fields while preserving field, k-space, and absorption dispatch slots.
+- [patch] Grouped retained PSTD WGPU layout state into `WgpuPstdLayouts`,
+  keeping only the sensor bind-group layout needed for run-cache rebuilds and
+  deleting the unused retained base pipeline layout field.
+- [patch] Grouped PSTD WGPU compute pipelines into `WgpuPstdPipelines`,
+  removing the separate top-level solver pipeline fields while preserving all
+  shader entry-point mappings and dispatch call sites.
+- [patch] Consolidated PSTD grouped WGPU state under `WgpuPstdState`, so
+  `GpuPstdSolver` owns one provider-state field instead of separate WGPU buffer,
+  pipeline, bind-group, layout, and run-cache groups.
+- [patch] Made PSTD solver state provider-associated through
+  `PstdStateProvider`, keeping `WgpuPstdStateProvider` as the default real
+  implementation and specializing current WGPU construction/time-loop methods
+  without adding a placeholder CUDA compute path.
+- [patch] Moved PSTD WGPU device and queue ownership into `WgpuPstdState`, so
+  the generic `GpuPstdSolver<P>` wrapper no longer stores raw WGPU handles.
+- [patch] Replaced PSTD WGPU state raw device/queue ownership with
+  `GpuProviderContext<WgpuDevice>`, changed `PstdStateBuilder` and
+  `PstdAutoDeviceProvider` to pass one provider context instead of separate
+  device/queue associated handles, and removed the obsolete raw WGPU handle
+  clone accessors from `GpuDevice<WgpuDevice>`.
+- [patch] Moved PSTD WGPU host scratch/upload buffers into `WgpuPstdState`,
+  leaving the generic `GpuPstdSolver<P>` wrapper with provider state,
+  dimensions, time step, and physics flags only.
+- [patch] Moved PSTD WGPU state assembly behind
+  `WgpuPstdStateProvider::build_state`, so `GpuPstdSolver::new` wraps
+  provider-built state instead of owning WGPU buffer, pipeline, and bind-group
+  construction directly.
+- [patch] Moved PSTD WGPU medium/source upload bodies onto `WgpuPstdState`,
+  leaving `GpuPstdSolver` medium-update methods as thin public wrappers around
+  provider-owned buffer writes.
+- [patch] Moved PSTD WGPU run-cache allocation, bind-group rebuild, and
+  signal-tail upload bodies onto `WgpuPstdState`, leaving solver run-cache
+  methods as time-loop forwarding wrappers.
+- [patch] Moved PSTD WGPU dispatch, FFT, and per-phase pass encoding onto
+  `WgpuPstdState`, so `WgpuPstdPassProvider` now encodes compute passes from
+  provider-owned state instead of holding a
+  `GpuPstdSolver<WgpuPstdStateProvider>` reference.
+- [patch] Moved PSTD WGPU high-level run-loop orchestration onto
+  `WgpuPstdState`, leaving `GpuPstdSolver<WgpuPstdStateProvider>::run` as a
+  public delegate that supplies solver scalar metadata and input slices.
+- [patch] Added the provider-generic `PstdStateBuilder` construction seam and
+  made `GpuPstdSolver<P>::new` build state through `P::build_state`, with
+  WGPU as the only real implementation and no CUDA placeholder.
+- [patch] Added the provider-state `PstdRunState` execution seam and made
+  `GpuPstdSolver<P>::run` generic over `P::State: PstdRunState`, with WGPU as
+  the only real implementation and no CUDA placeholder.
+- [patch] Added the provider-state `PstdMediumUpdateState` seam and made PSTD
+  medium/source-correction wrapper methods generic over
+  `P::State: PstdMediumUpdateState`, with WGPU as the only real implementation
+  and no CUDA placeholder.
+- [patch] Added the provider-generic `PstdAutoDeviceProvider` acquisition seam
+  and made `GpuPstdSolver<P>::with_auto_device` build through provider-owned
+  context acquisition, with WGPU as the only real implementation and no CUDA
+  placeholder.
+- [patch] Made `kwavers-gpu::pstd_gpu::run_gpu_pstd_with_provider<P>`
+  provider-generic over `PstdAutoDeviceProvider`/`PstdRunState`, kept
+  `run_gpu_pstd` as the WGPU default, and moved the public PSTD sensor mask
+  and returned traces from ndarray to `leto::Array3<bool>`/`leto::Array2<f64>`.
+- [patch] Moved `kwavers-boundary` CPML profile and `PmlExpFactors`
+  one-dimensional storage from ndarray `Array1` to Leto `Array1`, filling Leto
+  owned-array indexing/equality gaps upstream and removing the CPML ndarray
+  import from `kwavers-gpu::pstd_gpu::runner`.
+- [patch] Routed visualization data-pipeline normalization and log scaling
+  through Moirai-backed contiguous traversal, retaining ndarray's sequential
+  value semantics for non-standard layouts and leaving crate-level Rayon in
+  place for remaining `kwavers-analysis` call sites.
+- [patch] Routed `kwavers-analysis` `ParallelOptimizer` fan-out, map, and
+  reduction helpers through Moirai's shared scheduler and removed the local
+  Rayon thread-pool mutation path, keeping `set_num_threads` as a validated
+  chunk-size scheduling hint.
+- [patch] Promoted a shared `kwavers-core::utils::iterators::apply_inplace`
+  ndarray scalar-transform seam backed by Moirai for standard layouts and
+  routed `kwavers-analysis` visualization normalization/log scaling, PAM
+  time-exposure squaring, and polynomial clutter-filter time normalization
+  through it.
+- [patch] Routed `kwavers-analysis` beamforming covariance sample scaling,
+  shrinkage scaling, and spatial-smoothing normalization through the shared
+  Moirai-backed scalar ndarray seam, removing the covariance subtree's direct
+  ndarray/Rayon parallel transforms.
+- [patch] Routed `kwavers-analysis` safe-vectorization array addition and
+  in-place scalar multiplication through shared Moirai-backed ndarray traversal
+  seams, replacing the remaining ndarray/Rayon `Zip::par_for_each` paths in
+  that module.
+- [patch] Routed `kwavers-analysis` SLSC sample and volume coherence fan-out
+  through Moirai ordered index collection and moved coherence-map clamping onto
+  the shared scalar ndarray seam, removing direct Rayon from the SLSC subtree.
+- [patch] Routed `kwavers-analysis` neural layer adaptation scaling and neural
+  feature normalization through the shared Moirai-backed scalar ndarray seam.
+- [patch] Replaced `kwavers-analysis` distributed neural processor fan-out
+  with Moirai mutable map-collect scheduling, removing direct Rayon from the
+  neural subtree while preserving distributed-vs-sequential output equality.
+- [patch] Routed `kwavers-analysis` 3-D CPU DAS/MVDR voxel fan-out through
+  Moirai ordered index collection, removed the package's direct `rayon`
+  dependency and ndarray `rayon` feature, and left no direct Rayon or
+  ndarray-parallel source hits in `kwavers-analysis`.
+- [patch] Repaired upstream Atlas consumer gates by declaring
+  `ritk-registration`'s `ritk-tensor-ops` dependency and consolidating Moirai
+  core stale `CachePadded` uses onto the canonical `CacheAligned` wrapper.
+- [patch] Split `kwavers-gpu::backend` GPU provider identity from kernel
+  dispatch with `GpuProviderBackend`, so `GpuProviderContext<CudaDevice>` can
+  satisfy the provider/acquisition contract while `GpuComputeProvider` remains
+  reserved for providers with real Kwavers kernels.
+- [patch] Replaced the `kwavers-gpu::backend` spatial-derivative CPU fallback
+  and WGSL copy placeholder with real WGPU finite-difference dispatch, while
+  keeping CUDA at the provider/acquisition boundary until CUDA kernels exist.
+- [patch] Removed the unused `kwavers-math::tensor::TensorBackend::BurnNdArray`
+  placeholder and updated the tensor docs to describe the implemented
+  ndarray-backed host tensor boundary until a real Coeus PINN provider lands.
+- [patch] Routed `kwavers-math::tensor::NdArrayTensor::map_inplace` through
+  `moirai-parallel` chunk traversal for contiguous host tensors while keeping
+  ndarray's sequential value semantics for non-contiguous tensor layouts.
+- [patch] Routed inverse regularization Tikhonov, smoothness, and L1 gradient
+  updates through a shared Moirai-backed contiguous traversal helper, removing
+  the regularization subtree's direct ndarray/Rayon `Zip::par_for_each` calls
+  while preserving sequential ndarray semantics for non-standard layouts.
+- [patch] Routed `kwavers-math::simd_safe` dense add/scale operations through
+  the Atlas Hermes SIMD facade, routed dense ternary accumulation through
+  Moirai chunk traversal, and removed the subtree's direct ndarray/Rayon
+  `par_*` calls while preserving sequential ndarray semantics for
+  non-standard layouts.
+- [patch] Routed `kwavers-math` second-order central and staggered-grid
+  differential operators through a shared Moirai-backed standard-layout
+  traversal, removing the differential subtree's direct ndarray/Rayon
+  `par_for_each` calls while preserving sequential ndarray traversal for
+  non-standard layouts.
+- [patch] Routed `AcousticFieldKernel`, `ComputeManager`, and the backend
+  buffer-manager GPU test helper through Hephaestus-backed provider wrappers,
+  removing their local WGPU instance/adapter/device request paths. The
+  `ComputeManager` acquisition now goes through generic `GpuDevice` so CUDA can
+  land as a sibling provider without changing the manager entry point.
+- [patch] Routed multi-GPU device discovery and PSTD GPU test construction
+  through Hephaestus provider traits; remaining direct WGPU-provider
+  constructor calls under `crates/kwavers-gpu/src` are test-only provider
+  helpers.
+- [patch] Replaced `kwavers-gpu` real-time pipeline Rayon dispatch with
+  `moirai-parallel` chunk scheduling for Hilbert-envelope planes and synthetic
+  RF frame generation, removing the crate's direct Rayon dependency.
+- [patch] Replaced `kwavers-boundary` CPML damping, CPML strip
+  memory/correction updates, and adaptive-boundary attenuation ndarray/Rayon
+  dispatch with private `moirai-parallel` traversal helpers, and removed
+  ndarray's `rayon` feature from `kwavers-boundary`.
+- [patch] Replaced `kwavers-receiver` pressure and velocity statistics
+  ndarray/Rayon dispatch with `moirai-parallel` multi-output chunk helpers for
+  standard-layout arrays, retaining sequential ndarray semantics for
+  non-standard layouts, and removed the crate's direct Rayon dependency plus
+  ndarray `rayon` feature.
+- [patch] Replaced `kwavers-medium` medium-property traversal,
+  absorption/dispersion k-space updates, and frequency-dependent correction
+  ndarray/Rayon dispatch with `moirai-parallel` indexed and chunk traversal,
+  removed the crate's direct Rayon dependency plus ndarray `rayon` feature, and
+  cleared package-local Clippy blockers in Christoffel and material-property
+  tests.
 - [patch] Replaced `kwavers-core`'s direct `rayon` dependency with
   `moirai-parallel` for NUMA first-touch, SoA first-touch, and gradient
   interior-loop parallel dispatch, and removed ndarray's `rayon` feature from
   `kwavers-core`.
 - [patch] Moved `kwavers-core` constant-invariant tests flagged by current
   Clippy into `const` assertions without changing the checked predicates.
+- [minor] Added shared `kwavers-core::utils::iterators` indexed mutable array
+  traversal helpers backed by `moirai-parallel` for standard-layout arrays and
+  routed therapy integration acoustic-field/heating loops through them, keeping
+  sequential ndarray traversal only as the non-standard-layout fallback.
+- [patch] Cleared current `kwavers-therapy` package-local Clippy blockers in
+  therapy tests without changing the tested predicates.
+- [patch] Closed the `kwavers-therapy` abdominal preprocessing nextest
+  timeouts by tightening the theranostic acoustic recording window to actual
+  source/body/receiver geometry, reusing adjoint RTM replay buffers, and
+  evaluating elastic-FWI line-search candidates lazily in first-improving
+  order. The full `kwavers-therapy` nextest package now passes, with remaining
+  runtime over the 30 s slow-test budget tracked as performance debt.
+- [patch] Replaced the `kwavers-therapy` elastic-shear residual-migration
+  Rayon flat-index map and passive-acoustic-mapping eikonal delay-column map
+  with `moirai-parallel`, adding the package's direct Moirai provider
+  dependency while leaving crate-level Rayon in place for remaining
+  nonlinear3d forward-stencil and passive-inverse paths.
+- [patch] Replaced `kwavers-therapy` standing-wave FDTD Green-function column
+  fan-out with `moirai-parallel`, leaving crate-level Rayon in place for
+  remaining nonlinear3d forward-stencil and passive-inverse paths.
+- [patch] Replaced `kwavers-therapy` waveform-forward CPML row updates,
+  pressure updates, attenuation, and peak-pressure updates with
+  `moirai-parallel`, leaving crate-level Rayon in place for remaining
+  nonlinear3d forward-stencil and passive-inverse paths.
+- [patch] Replaced `kwavers-therapy` nonlinear3d absorption coefficient
+  construction and forward/adjoint absorption element-wise updates with
+  `moirai-parallel`, leaving crate-level Rayon in place for remaining
+  nonlinear3d forward-stencil and passive-inverse paths.
+- [patch] Replaced `kwavers-therapy` nonlinear3d cavitation-forward contiguous
+  source-mask max reduction and source-density mapping with `moirai-parallel`,
+  leaving crate-level Rayon in place for remaining nonlinear3d forward-stencil
+  and passive-inverse paths.
+- [patch] Replaced `kwavers-therapy` nonlinear3d forward-stencil x-slab
+  dispatch with `moirai-parallel` and updated the adjacent Westervelt
+  performance docs, leaving crate-level Rayon in place for the remaining
+  nonlinear3d passive-inverse path.
+- [patch] Replaced `kwavers-therapy` nonlinear3d passive-inverse Green
+  operator and projected-Tikhonov update parallelism with `moirai-parallel`,
+  removing the crate's direct Rayon dependency and ndarray `rayon` feature.
+- [patch] Routed time-domain FWI model constraints, pressure
+  second-derivative writes, and signed-correlation accumulation through
+  `moirai-parallel` chunk dispatch for standard-layout field volumes.
+- [patch] Routed time-domain FWI adjoint, gradient, and multi-source field
+  updates through a shared Moirai-backed `field_ops.rs` helper module and
+  removed the stale forward-run Rayon doc mention.
+- [patch] Removed explicit ndarray `Zip` fallback traversal from the
+  time-domain FWI shared `field_ops.rs` helper; standard-layout fields still
+  use Moirai chunk execution and non-standard layouts now use direct indexed
+  sequential traversal.
+- [patch] Routed `kwavers-solver::workspace::inplace_ops` standard-layout
+  in-place array arithmetic through `moirai-parallel`, retaining sequential
+  ndarray semantics for non-standard layouts.
+- [patch] Routed `kwavers-solver::integration::time_integration` RK4 and
+  Adams-Bashforth field-update kernels through `moirai-parallel`, retaining
+  sequential ndarray semantics for non-standard layouts.
+- [patch] Removed `kwavers-solver::plugin::execution::ParallelStrategy`'s
+  unused `rayon::ThreadPool` constructor because the strategy still executes
+  plugins in order until a real read/compute/write plugin parallelism contract
+  exists.
+- [patch] Routed `kwavers-solver::inverse::time_reversal` reconstruction
+  normalization through the shared Moirai-backed workspace in-place operation,
+  removing that module's direct ndarray/Rayon map edge.
+- [patch] Routed `kwavers-solver::multiphysics::monolithic::residual`
+  Laplacian rate scaling through the shared Moirai-backed workspace in-place
+  operation, removing that residual subsystem's direct ndarray/Rayon map edge.
+- [patch] Routed `kwavers-solver::multiphysics::monolithic::coupler` GMRES
+  RHS sign inversion through the shared Moirai-backed workspace in-place
+  operation, removing the coupler's direct ndarray/Rayon map edge.
+- [patch] Routed `kwavers-solver::utilities::amr` wavelet/physics error
+  normalization and wavelet-threshold scalar transforms through the shared
+  Moirai-backed workspace in-place operations, removing AMR's remaining
+  direct `par_mapv_inplace` sites.
+- [patch] Replaced `kwavers-solver::utilities::amr::refinement` marker
+  initialization with `moirai-parallel` indexed traversal for standard-layout
+  arrays, removing the AMR subtree's remaining direct ndarray/Rayon parallel
+  call site.
+- [patch] Routed `kwavers-solver::forward::elastic::swe` displacement
+  magnitude square-root normalization through the shared Moirai-backed
+  workspace in-place operation, removing the SWE types module's direct
+  ndarray/Rayon scalar-transform edge.
+- [patch] Replaced `kwavers-solver::forward::elastic::swe::boundary` PML
+  attenuation, mask, and velocity-damping ndarray/Rayon dispatch with
+  Moirai-backed indexed and triple-chunk traversal.
+- [patch] Routed transcranial UST finite-frequency sensitivity and ray-integral
+  row assembly through `moirai-parallel` and resolved `moirai-parallel` to the
+  sibling Atlas checkout for local provider co-evolution.
+- [patch] Routed sound-speed-shift matrix-vector algebra through
+  `moirai-parallel` indexed mutable dispatch and fold/reduce partial-vector
+  reductions.
+- [patch] Routed real-time SIRT row-norm construction and separable smoothing
+  through `moirai-parallel`, removing `kwavers-diagnostics`' direct `rayon`
+  dependency and ndarray `rayon` feature.
 - [patch] Replaced `kwavers-simulation`'s direct `rayon` dependency with
   `moirai-parallel` for photoacoustic multi-wavelength fluence mapping and
   time-reversal reconstruction output writes, and removed ndarray's `rayon`
@@ -28,6 +873,53 @@
 - [patch] Removed unused ndarray `rayon` feature activation from
   `kwavers-field`, `kwavers-signal`, `kwavers-source`, and `kwavers-imaging`
   after confirming those crate trees have no direct parallel call sites.
+- [patch] Replaced `kwavers-grid`'s Laplacian interior parallel dispatch with
+  `moirai-parallel` and removed ndarray's `rayon` feature from that crate.
+- [patch] Routed the liver theranostic straight-ray rasterizer through Gaia's
+  `Ray<f64>` primitive while retaining voxel path-length accumulation in
+  Kwavers.
+- [patch] Moved `kwavers-imaging::multimodality_fusion` medical image volumes
+  and fusion outputs to `leto::Array3<f64>` and routed registration directly
+  into local Ritk's Leto API without an ndarray compatibility helper.
+- [patch] Moved `kwavers-physics::acoustics::imaging::fusion` registered
+  modality, registration, resampling, quality, and algorithm volume surfaces
+  to `leto::Array3<f64>`, removing ndarray inputs from the local Ritk
+  registration path.
+- [patch] Moved diagnostics workflow products, fUS atlas registration
+  reference volumes, photoacoustic result volumes, and photoacoustic
+  simulation fluence/pressure/reconstruction snapshots to `leto::Array3<f64>`
+  without adding an ndarray compatibility helper.
+- [patch] Restored the liver theranostic reconstruction example compile gate
+  under local Atlas provider routing; remaining Leto work is narrowed to
+  producer boundaries that still compute ndarray arrays before returning Leto
+  results.
+- [patch] Moved `kwavers-solver` direct, directional, and LFE linear
+  elastography shear-wave-speed producers to allocate `leto::Array3<f64>`
+  directly, with shared smoothing and boundary extrapolation consolidated over
+  a crate-local ndarray/Leto volume trait.
+- [patch] Moved the selected photoacoustic solver universal back-projection
+  producer to return `leto::Array3<f64>` directly for the simulation
+  reconstruction path, removing the caller-side ndarray-to-Leto conversion.
+- [patch] Moved the selected optical diffusion fluence producer to a shared
+  generic PCG volume kernel with a direct `leto::Array3<f64>` source/result
+  path, removing the caller-side ndarray-to-Leto conversion and pinning
+  ndarray/Leto parity with a bitwise differential test.
+- [patch] Replaced direct Rayon iterator usage in
+  `kwavers-solver::inverse::same_aperture` encoded/operator paths with
+  `moirai-parallel`, preserving the matrix-free linear operator contract.
+- [patch] Replaced direct Rayon iterator usage in
+  `kwavers-solver::inverse::linear_born_inversion` dense, volume-operator, and
+  Sobolev-preconditioner paths with `moirai-parallel`, using the provider-owned
+  stateful chunk primitive for reusable Z-pass scratch.
+- [patch] Narrowed the next provider residual to direct Rayon usage in
+  `kwavers-solver::inverse::fwi::time_domain` search and MOFI paths.
+- [patch] Replaced direct Rayon usage in
+  `kwavers-solver::inverse::fwi::time_domain::{search,mofi}` with
+  `moirai-parallel` for joint objective evaluation, line-search trial-model
+  writes, and MOFI coarse-pose candidate evaluation.
+- [patch] Resolved local Atlas Apollo/RITK/Mnemosyne scratch compatibility by
+  enabling Mnemosyne's `eunomia` scratch feature through RITK and resolving
+  Mnemosyne's optional Eunomia dependency to the sibling Atlas checkout.
 
 ### Changed (2026-07-01) - Cavitation passive-map bindings [patch]
 
