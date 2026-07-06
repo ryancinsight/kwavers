@@ -17,16 +17,20 @@ fn test_coupler_creation() {
 
 #[test]
 fn test_config_validation_negative_dt() {
-    let mut config = ThermalAcousticConfig::default();
-    config.dt = -0.001;
+    let config = ThermalAcousticConfig {
+        dt: -0.001,
+        ..Default::default()
+    };
     let result = ThermalAcousticCoupler::new(config);
     assert!(result.is_err());
 }
 
 #[test]
 fn test_config_validation_cfl_acoustic() {
-    let mut config = ThermalAcousticConfig::default();
-    config.dt = 0.01; // Way too large
+    let config = ThermalAcousticConfig {
+        dt: 0.01, // Way too large
+        ..Default::default()
+    };
     let result = ThermalAcousticCoupler::new(config);
     assert!(result.is_err());
 }

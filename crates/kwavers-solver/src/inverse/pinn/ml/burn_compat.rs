@@ -24,8 +24,8 @@
 
 use std::fmt;
 
-use coeus_autograd::{scalar_mul, Var, VarScalarExt};
-use coeus_core::{MoiraiBackend, Scalar};
+use coeus_autograd::{scalar_mul, Var};
+use coeus_core::MoiraiBackend;
 use coeus_ops::BackendOps;
 use coeus_tensor::Tensor as CoeusTensor;
 
@@ -304,30 +304,6 @@ impl<B: Backend, const N: usize> Tensor<B, N> {
         }
     }
 
-    /// Negate element-wise.
-    pub fn neg(self) -> Self {
-        Self::from_var(coeus_autograd::neg(&self.inner))
-    }
-
-    /// Element-wise subtraction.
-    pub fn sub(self, rhs: Self) -> Self {
-        Self::from_var(coeus_autograd::sub(&self.inner, &rhs.inner))
-    }
-
-    /// Element-wise addition.
-    pub fn add(self, rhs: Self) -> Self {
-        Self::from_var(coeus_autograd::add(&self.inner, &rhs.inner))
-    }
-
-    /// Element-wise multiplication.
-    pub fn mul(self, rhs: Self) -> Self {
-        Self::from_var(coeus_autograd::mul(&self.inner, &rhs.inner))
-    }
-
-    /// Element-wise division.
-    pub fn div(self, rhs: Self) -> Self {
-        Self::from_var(coeus_autograd::div(&self.inner, &rhs.inner))
-    }
 }
 
 impl<B: Backend, const N: usize> std::ops::Add for Tensor<B, N> {
@@ -355,6 +331,13 @@ impl<B: Backend, const N: usize> std::ops::Neg for Tensor<B, N> {
     type Output = Self;
     fn neg(self) -> Self::Output {
         Self::from_var(coeus_autograd::neg(&self.inner))
+    }
+}
+
+impl<B: Backend, const N: usize> std::ops::Div for Tensor<B, N> {
+    type Output = Self;
+    fn div(self, rhs: Self) -> Self::Output {
+        Self::from_var(coeus_autograd::div(&self.inner, &rhs.inner))
     }
 }
 
@@ -686,6 +669,12 @@ where
     B::DeviceBuffer<f32>:
         coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
 {
+    // Unwired scaffolding: `Optimizer<M, B>` is not yet implemented for `Adam`
+    // (needs a `Module<B>` parameter-extraction method that doesn't exist yet),
+    // so no constructor reads `inner` today. This is the declared extension
+    // seam for Batch #4 (kwavers-solver PINN Burn -> Coeus), not a present
+    // defect; wiring it up is that batch's scope, not this compat shim's.
+    #[allow(dead_code)]
     inner: coeus_optim::Adam<f32, B>,
     _lr: std::marker::PhantomData<Lr>,
     _wd: std::marker::PhantomData<Wd>,
@@ -694,6 +683,9 @@ where
 /// Replacement for `crate::burn::optim::AdamConfig`.
 #[derive(Debug, Clone)]
 pub struct AdamConfig {
+    // Same Batch #4 scaffolding note as `Adam::inner` above: no constructor
+    // consumes this field yet.
+    #[allow(dead_code)]
     lr: f32,
     beta1: f32,
     beta2: f32,
