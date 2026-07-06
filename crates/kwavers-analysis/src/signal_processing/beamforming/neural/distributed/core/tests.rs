@@ -82,11 +82,7 @@ fn test_distributed_processing_matches_sequential_result() {
 
     let expected = sequential.process_volume(&rf_data).unwrap();
 
-    let runtime = tokio::runtime::Runtime::new().unwrap();
-
-    let actual = runtime
-        .block_on(distributed.process_volume_distributed(&rf_data))
-        .unwrap();
+    let actual = distributed.process_volume_distributed(&rf_data).unwrap();
 
     assert_eq!(actual.volume, expected.volume);
     assert_eq!(actual.uncertainty, expected.uncertainty);

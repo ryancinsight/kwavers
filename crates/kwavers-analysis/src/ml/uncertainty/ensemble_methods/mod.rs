@@ -8,7 +8,7 @@ mod model;
 mod tests;
 
 #[cfg(feature = "pinn")]
-use burn::tensor::backend::Backend;
+use crate::ml::uncertainty::PinnUncertaintyPredictor;
 use kwavers_core::error::KwaversResult;
 use model::EnsembleModel;
 #[cfg(not(feature = "pinn"))]
@@ -74,16 +74,16 @@ impl EnsembleQuantifier {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     #[cfg(feature = "pinn")]
-    pub fn quantify_uncertainty<B: Backend>(
+    pub fn quantify_uncertainty<P: PinnUncertaintyPredictor + ?Sized>(
         &self,
-        pinn: &kwavers_solver::inverse::pinn::ml::BurnPINN1DWave<B>,
+        predictor: &P,
         inputs: &Array2<f32>,
     ) -> KwaversResult<super::MlPredictionWithUncertainty> {
         let mut predictions = Vec::new();
         let mut weights = Vec::new();
 
         for model in &self.ensemble_models {
-            let prediction = model.predict_with_noise(pinn, inputs)?;
+            let prediction = model.predict_with_noise(predictor, inputs)?;
             predictions.push(prediction);
             weights.push(model.weight);
         }

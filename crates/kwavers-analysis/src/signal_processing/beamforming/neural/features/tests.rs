@@ -85,6 +85,16 @@ fn test_normalize_features() {
 }
 
 #[test]
+fn test_normalize_features_value_semantics() {
+    let mut features = vec![Array3::from_shape_vec((1, 1, 4), vec![2.0, 4.0, 6.0, 10.0]).unwrap()];
+
+    normalize_features(&mut features);
+
+    let expected = Array3::from_shape_vec((1, 1, 4), vec![0.0, 0.25, 0.5, 1.0]).unwrap();
+    assert_eq!(features[0], expected);
+}
+
+#[test]
 fn test_concatenate_features() {
     // Create multiple feature maps for concatenation testing
     let image = create_test_image();

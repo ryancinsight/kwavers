@@ -5,6 +5,7 @@ use crate::signal_processing::beamforming::narrowband::{
     subspace_spatial_spectrum_point, SubspaceMethod, SubspaceSpectrumConfig,
 };
 use kwavers_core::error::KwaversResult;
+use kwavers_core::utils::iterators::apply_inplace;
 use kwavers_transducer::beamforming::processor::BeamformingProcessor;
 use kwavers_transducer::beamforming::BeamformingCoreConfig;
 use kwavers_transducer::passive_acoustic_mapping::geometry::PamArrayGeometry;
@@ -92,7 +93,7 @@ impl PassiveAcousticMapper {
                 )?;
 
                 let mut squared = das;
-                squared.par_mapv_inplace(|x| x * x);
+                apply_inplace(&mut squared, |x| x * x);
 
                 let integrated = squared.sum_axis(Axis(2));
                 let (nx, ny) = (integrated.shape()[0], integrated.shape()[1]);

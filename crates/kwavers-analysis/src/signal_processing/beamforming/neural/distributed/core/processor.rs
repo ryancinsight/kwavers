@@ -1,8 +1,8 @@
 //! DistributedNeuralBeamformingProcessor and FaultToleranceState.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
+use moirai_parallel::{map_collect_mut_with, Adaptive};
 use ndarray::{s, Array3, Array4};
-use rayon::prelude::*;
 
 #[cfg(feature = "pinn")]
 use kwavers_solver::interface::pinn_beamforming::{
@@ -160,7 +160,7 @@ impl DistributedNeuralBeamformingProcessor {
     /// # Panics
     /// - Panics if an internal precondition is violated.
     ///
-    pub async fn process_volume_distributed(
+    pub fn process_volume_distributed(
         &mut self,
         rf_data: &Array4<f32>,
     ) -> KwaversResult<DistributedNeuralBeamformingResult> {
@@ -227,35 +227,36 @@ impl DistributedNeuralBeamformingProcessor {
                 round_frames * channels * samples * std::mem::size_of::<f32>() * 3;
             peak_round_chunk_bytes = peak_round_chunk_bytes.max(round_chunk_bytes);
 
-            let round_results: KwaversResult<Vec<Option<DistributedChunkResult>>> = self
-                .processors
-                .par_iter_mut()
-                .enumerate()
-                .map(|(processor_index, processor)| {
-                    let Some(slot) = active_lookup[processor_index] else {
-                        return Ok::<Option<DistributedChunkResult>, KwaversError>(None);
-                    };
+            let round_results: KwaversResult<Vec<Option<DistributedChunkResult>>> =
+                map_collect_mut_with::<Adaptive, _, _, _>(
+                    &mut self.processors,
+                    |processor_index, processor| {
+                        let Some(slot) = active_lookup[processor_index] else {
+                            return Ok::<Option<DistributedChunkResult>, KwaversError>(None);
+                        };
 
-                    let Some(range) = ranges.get(slot).cloned() else {
-                        return Ok::<Option<DistributedChunkResult>, KwaversError>(None);
-                    };
+                        let Some(range) = ranges.get(slot).cloned() else {
+                            return Ok::<Option<DistributedChunkResult>, KwaversError>(None);
+                        };
 
-                    if range.is_empty() {
-                        return Ok::<Option<DistributedChunkResult>, KwaversError>(None);
-                    }
+                        if range.is_empty() {
+                            return Ok::<Option<DistributedChunkResult>, KwaversError>(None);
+                        }
 
-                    let chunk_view = rf_data.slice(s![range.start..range.end, .., .., ..]);
-                    let result = processor.process_volume_view(chunk_view)?;
+                        let chunk_view = rf_data.slice(s![range.start..range.end, .., .., ..]);
+                        let result = processor.process_volume_view(chunk_view)?;
 
-                    Ok(Some(DistributedChunkResult {
-                        start: range.start,
-                        processor_index,
-                        processing_time_ms: result.processing_time_ms,
-                        volume: result.volume,
-                        uncertainty: result.uncertainty,
-                        confidence: result.confidence,
-                    }))
-                })
+                        Ok(Some(DistributedChunkResult {
+                            start: range.start,
+                            processor_index,
+                            processing_time_ms: result.processing_time_ms,
+                            volume: result.volume,
+                            uncertainty: result.uncertainty,
+                            confidence: result.confidence,
+                        }))
+                    },
+                )
+                .into_iter()
                 .collect();
 
             for chunk in round_results?.into_iter().flatten() {

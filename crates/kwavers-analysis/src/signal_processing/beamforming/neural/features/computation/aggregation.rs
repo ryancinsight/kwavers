@@ -1,3 +1,4 @@
+use kwavers_core::utils::iterators::apply_inplace;
 use ndarray::Array3;
 
 use super::local_ops::{
@@ -95,7 +96,7 @@ pub fn normalize_features(features: &mut [Array3<f32>]) {
 
         let range = max_val - min_val;
         if range > 1e-10 {
-            feature.par_mapv_inplace(|v| (v - min_val) / range);
+            apply_inplace(feature, |v| (v - min_val) / range);
         }
     }
 }

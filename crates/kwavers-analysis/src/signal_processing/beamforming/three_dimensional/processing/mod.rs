@@ -13,9 +13,15 @@ use ndarray::{Array3, Array4};
 
 use super::config::BeamformingAlgorithm3D;
 use super::processor::BeamformingProcessor3D;
+#[cfg(feature = "gpu")]
+use super::provider::BeamformingGpuProvider;
 use super::SaftProcessor;
 
-impl BeamformingProcessor3D {
+#[cfg(feature = "gpu")]
+impl<P> BeamformingProcessor3D<P>
+where
+    P: BeamformingGpuProvider,
+{
     /// Process 3D beamforming for a single volume
     ///
     /// # Arguments
@@ -69,7 +75,10 @@ impl BeamformingProcessor3D {
 
         Ok(volume)
     }
+}
 
+#[cfg(not(feature = "gpu"))]
+impl BeamformingProcessor3D {
     /// CPU 3D beamforming dispatcher — active when the `gpu` feature is absent.
     ///
     /// Dispatches to the analytically specified CPU kernels in `super::cpu`:
@@ -120,7 +129,13 @@ impl BeamformingProcessor3D {
 
         Ok(volume)
     }
+}
 
+#[cfg(feature = "gpu")]
+impl<P> BeamformingProcessor3D<P>
+where
+    P: BeamformingGpuProvider,
+{
     /// Process streaming data for real-time 4D imaging.
     ///
     /// Accumulates frames into a buffer and processes complete volumes when ready.
@@ -164,7 +179,10 @@ impl BeamformingProcessor3D {
             .clone();
         self.process_volume(&rf_data, algorithm).map(Some)
     }
+}
 
+#[cfg(not(feature = "gpu"))]
+impl BeamformingProcessor3D {
     /// CPU streaming entry point — wraps a single RF frame as a 1-frame volume
     /// and delegates to [`Self::process_volume`].
     ///

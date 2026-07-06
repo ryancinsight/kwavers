@@ -11,6 +11,7 @@
 //! snapshots `x_n ∈ ℂ^M` with a **Hermitian** covariance `R = E[x xᴴ]`.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_core::utils::iterators::apply_inplace;
 use ndarray::Array2;
 use num_complex::Complex64;
 
@@ -97,7 +98,7 @@ impl CovarianceEstimator {
             }
         }
 
-        covariance.par_mapv_inplace(|x| x / num_snapshots as f64);
+        apply_inplace(&mut covariance, |x| x / num_snapshots as f64);
 
         if self.forward_backward_averaging {
             covariance = self.apply_forward_backward_averaging(&covariance);
@@ -136,7 +137,7 @@ impl CovarianceEstimator {
         }
 
         let inv_n = 1.0 / (num_snapshots as f64);
-        covariance.par_mapv_inplace(|v| v * inv_n);
+        apply_inplace(&mut covariance, |v| v * inv_n);
 
         if self.forward_backward_averaging {
             covariance = self.apply_forward_backward_averaging_complex(&covariance);

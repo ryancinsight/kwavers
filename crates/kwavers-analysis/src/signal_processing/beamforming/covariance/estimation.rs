@@ -1,5 +1,6 @@
 use super::is_hermitian;
 use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_core::utils::iterators::apply_inplace;
 use ndarray::Array2;
 use num_complex::Complex64;
 
@@ -66,7 +67,7 @@ pub fn estimate_sample_covariance(
     }
 
     let scale = 1.0 / (n_snapshots as f64);
-    covariance.par_mapv_inplace(|x| x * scale);
+    apply_inplace(&mut covariance, |x| x * scale);
 
     if diagonal_loading > 0.0 {
         for i in 0..n_sensors {

@@ -1,3 +1,4 @@
+use kwavers_core::utils::iterators::apply_inplace;
 use ndarray::Array2;
 use num_complex::Complex64;
 
@@ -11,7 +12,7 @@ pub(super) fn shrinkage_to_identity_real(covariance: &Array2<f64>, alpha: f64) -
     }
     let mu = trace / (m as f64);
 
-    out.par_mapv_inplace(|v| (1.0 - alpha) * v);
+    apply_inplace(&mut out, |v| (1.0 - alpha) * v);
     for i in 0..m {
         out[(i, i)] += alpha * mu;
     }
@@ -31,7 +32,7 @@ pub(super) fn shrinkage_to_identity_complex(
     }
     let mu = trace_re / (m as f64);
 
-    out.par_mapv_inplace(|v| v * (1.0 - alpha));
+    apply_inplace(&mut out, |v| v * (1.0 - alpha));
     for i in 0..m {
         out[(i, i)] += Complex64::new(alpha * mu, 0.0);
     }

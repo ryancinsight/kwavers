@@ -38,6 +38,8 @@ pub mod controls;
 pub mod data_pipeline;
 #[cfg(feature = "gpu-visualization")]
 pub mod renderer;
+#[cfg(feature = "gpu-visualization")]
+pub mod stream;
 
 // Re-exports for convenience
 pub use config::{ColorScheme, RenderQuality, VisualizationConfig};
@@ -54,6 +56,8 @@ pub use controls::InteractiveControls;
 pub use data_pipeline::DataPipeline;
 #[cfg(feature = "gpu-visualization")]
 pub use renderer::Renderer3D;
+#[cfg(feature = "gpu-visualization")]
+pub use stream::{FrameMetadata, VizFrame, VizStream};
 
 #[cfg(test)]
 mod tests {

@@ -17,37 +17,49 @@ kwavers-medium = { path = "../kwavers-medium" }
 kwavers-field = { path = "../kwavers-field" }
 kwavers-signal = { path = "../kwavers-signal" }
 kwavers-solver = { path = "../kwavers-solver" }
-ndarray = { version = "0.16", features = ["rayon", "serde"] }
+ndarray = { version = "0.16", features = ["serde"] }
+leto = { workspace = true }
+moirai-parallel = { workspace = true }
 num-complex = "0.4"
 num-traits = "0.2"
 nalgebra = { version = "0.32" }
 rand = "0.8"
-rayon = "1.10"
 log = "0.4"
 anyhow = "1.0"
 tracing = { version = "0.1", features = ["attributes"] }
 chrono = { version = "0.4", features = ["serde"] }
 serde = { version = "1.0", features = ["derive"] }
-burn = { version = "0.19", features = ["ndarray", "autodiff", "wgpu"] }
-
-# Optional GPU compute (the `visualization` subtree is `gpu`-gated).
+# Optional GPU visualization dependencies.
 wgpu = { version = "26.0", features = ["wgsl"], optional = true }
 bytemuck = { version = "1.19", features = ["derive"], optional = true }
+hephaestus-core = { workspace = true, optional = true }
+hephaestus-wgpu = { workspace = true, optional = true }
 # Optional plotting / immediate-mode UI surfaces.
 plotly = { version = "0.8", optional = true }
 egui = { version = "0.25", optional = true }
-# Block-on for the GPU adapter/device requests in the `gpu` visualization path.
+# Block-on for the GPU adapter/device requests in the visualization path.
 pollster = { version = "0.4", optional = true }
+# Bounded visualization frame channels; enabled only for the stream pipeline.
+flume = { version = "0.11", optional = true }
 
 [features]
-gpu = ["dep:wgpu", "dep:bytemuck", "dep:pollster", "kwavers-core/gpu", "kwavers-math/gpu", "kwavers-solver/gpu"]
+gpu = ["kwavers-math/gpu", "kwavers-solver/gpu"]
 plotting = ["dep:plotly"]
-gpu-visualization = ["gpu", "plotting", "dep:egui"]
+gpu-visualization = [
+    "gpu",
+    "plotting",
+    "dep:wgpu",
+    "dep:bytemuck",
+    "dep:hephaestus-core",
+    "dep:hephaestus-wgpu",
+    "dep:pollster",
+    "dep:egui",
+    "dep:flume",
+]
 pinn = ["kwavers-solver/pinn"]
 
 [dev-dependencies]
 approx = "0.5"
-tokio = { version = "1.42", features = ["rt-multi-thread", "macros", "time"] }
 
 [lints]
 workspace = true

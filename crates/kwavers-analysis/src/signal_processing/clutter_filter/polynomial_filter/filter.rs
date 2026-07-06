@@ -1,6 +1,7 @@
 //! `PolynomialFilter`: polynomial regression clutter filter implementation.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_core::utils::iterators::apply_inplace;
 use ndarray::{s, Array1, Array2};
 
 use super::config::PolynomialFilterConfig;
@@ -68,7 +69,7 @@ impl PolynomialFilter {
 
         if self.config.normalize_time {
             let max_time = (n_frames - 1) as f64;
-            time.par_mapv_inplace(|t| t / max_time);
+            apply_inplace(&mut time, |t| t / max_time);
         }
 
         // Vandermonde matrix: V[t, i] = t^i for i = 0..=polynomial_order.

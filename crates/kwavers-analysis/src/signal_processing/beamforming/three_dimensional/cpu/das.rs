@@ -35,8 +35,8 @@
 //! - Jeong M.K., Kwon S. (2013): "A comparison study of beamforming techniques
 //!   for 3D ultrasound." *J. Med. Ultrason.* 40, 395–408.
 
+use moirai_parallel::{map_collect_index_with, Adaptive};
 use ndarray::{Array3, Array4};
-use rayon::prelude::*;
 
 use crate::signal_processing::beamforming::three_dimensional::apodization::create_apodization_weights;
 use crate::signal_processing::beamforming::three_dimensional::config::{
@@ -136,11 +136,9 @@ pub fn delay_and_sum_cpu(
         alpha.mul_add(s1 - s0, s0)
     };
 
-    // Parallelise across voxels with Rayon.
+    // Schedule independent voxel evaluations through the Atlas provider seam.
     let n_voxels = vol_x * vol_y * vol_z;
-    let mut flat: Vec<f32> = vec![0.0_f32; n_voxels];
-
-    flat.par_iter_mut().enumerate().for_each(|(v_idx, out)| {
+    let flat: Vec<f32> = map_collect_index_with::<Adaptive, _, _>(n_voxels, |v_idx| {
         let vx = v_idx / (vol_y * vol_z);
         let vy = (v_idx / vol_z) % vol_y;
         let vz = v_idx % vol_z;
@@ -169,7 +167,7 @@ pub fn delay_and_sum_cpu(
         }
 
         // Coherent compounding average.
-        *out = coherent_sum / frames.max(1) as f32;
+        coherent_sum / frames.max(1) as f32
     });
 
     Array3::from_shape_vec((vol_x, vol_y, vol_z), flat)

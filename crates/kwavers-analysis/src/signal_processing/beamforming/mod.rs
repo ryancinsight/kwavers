@@ -231,7 +231,7 @@ pub mod neural; // Neural/ML beamforming (PINN, distributed) // Experimental/res
 pub mod slsc; // Short-Lag Spatial Coherence beamforming
 
 // GPU-accelerated implementations (Sprint 214 Session 3)
-pub mod gpu; // GPU beamforming (Burn-based + WGSL shaders)
+pub mod gpu; // GPU beamforming provider integration and WGSL reference shaders
 
 // Future algorithm modules (planned for Phase 3)
 pub mod narrowband; // Frequency-domain beamforming (awaiting migration)
@@ -256,10 +256,6 @@ pub use covariance::{
     estimate_forward_backward_covariance, estimate_sample_covariance, is_hermitian, trace,
     validate_covariance_matrix,
 };
-
-// GPU beamforming re-exports (conditional on pinn feature)
-#[cfg(feature = "pinn")]
-pub use gpu::{beamform_cpu, BurnBeamformingConfig, BurnDasBeamformer, DasInterpolationMethod};
 
 #[cfg(test)]
 mod tests {

@@ -58,9 +58,9 @@
 //! - Shan T.J., Kailath T. (1985): "Adaptive beamforming for coherent signals and
 //!   interference." *IEEE Trans. Acoust. Speech Signal Process.* 33(3), 527–536.
 
+use moirai_parallel::{map_collect_index_with, Adaptive};
 use nalgebra::{DMatrix, DVector};
 use ndarray::{Array3, Array4};
-use rayon::prelude::*;
 
 use crate::signal_processing::beamforming::three_dimensional::config::BeamformingConfig3D;
 use kwavers_core::error::{KwaversError, KwaversResult};
@@ -175,9 +175,7 @@ pub fn mvdr_cpu(
     let n_subarrays = n_sub_x * n_sub_y * n_sub_z;
 
     let n_voxels = vol_x * vol_y * vol_z;
-    let mut flat: Vec<f32> = vec![0.0_f32; n_voxels];
-
-    flat.par_iter_mut().enumerate().for_each(|(v_idx, out)| {
+    let flat: Vec<f32> = map_collect_index_with::<Adaptive, _, _>(n_voxels, |v_idx| {
         let vx = v_idx / (vol_y * vol_z);
         let vy = (v_idx / vol_z) % vol_y;
         let vz = v_idx % vol_z;
@@ -254,7 +252,7 @@ pub fn mvdr_cpu(
                 // Fall back to LU if Cholesky fails (e.g. insufficient loading).
                 match r_loaded.lu().solve(&ones) {
                     Some(sol) => sol,
-                    None => return, // Singular system — output remains 0.
+                    None => return 0.0, // Singular system output remains 0.
                 }
             }
         };
@@ -262,7 +260,7 @@ pub fn mvdr_cpu(
         // MVDR output power P = 1 / (1^T u).
         let denom = ones.dot(&u);
         if denom.abs() < f64::EPSILON {
-            return;
+            return 0.0;
         }
         let p = 1.0_f64 / denom;
 
@@ -286,7 +284,7 @@ pub fn mvdr_cpu(
             x_bar[i] = mean_sample;
         }
 
-        *out = (p * u.dot(&x_bar)).abs() as f32;
+        (p * u.dot(&x_bar)).abs() as f32
     });
 
     Array3::from_shape_vec((vol_x, vol_y, vol_z), flat).map_err(|e| {

@@ -50,7 +50,10 @@
 //! - He et al. (2015): "Delving Deep into Rectifiers"
 //! - LeCun et al. (1998): "Efficient BackProp"
 
-use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_core::{
+    error::{KwaversError, KwaversResult},
+    utils::iterators::apply_inplace,
+};
 use ndarray::{Array1, Array2, Array3};
 use rand::distributions::{Distribution, Uniform};
 
@@ -299,8 +302,8 @@ impl NeuralLayer {
             ));
         }
 
-        self.weights.par_mapv_inplace(|w| w * scale);
-        self.biases.par_mapv_inplace(|b| b * scale);
+        apply_inplace(&mut self.weights, |w| w * scale);
+        apply_inplace(&mut self.biases, |b| b * scale);
         Ok(())
     }
 }

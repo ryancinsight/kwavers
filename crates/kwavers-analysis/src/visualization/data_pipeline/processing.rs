@@ -1,6 +1,7 @@
 //! Data processing stages for visualization
 
 use super::ProcessingOperation;
+use kwavers_core::utils::iterators::apply_inplace;
 use ndarray::Array3;
 
 /// Processing configuration
@@ -59,13 +60,15 @@ impl ProcessingStage {
         let (target_min, target_max) = self.config.normalize_range;
         let target_range = (target_max - target_min) as f64;
 
-        data.par_mapv_inplace(|v| target_min as f64 + (v - min) * target_range / range);
+        apply_inplace(data, |v| {
+            target_min as f64 + (v - min) * target_range / range
+        });
     }
 
     /// Apply logarithmic scaling
     fn log_scale(&self, data: &mut Array3<f64>) {
         let epsilon = self.config.log_epsilon as f64;
-        data.par_mapv_inplace(|v| if v > epsilon { v.ln() } else { epsilon.ln() });
+        apply_inplace(data, |v| if v > epsilon { v.ln() } else { epsilon.ln() });
     }
 
     /// Compute gradient magnitude
@@ -126,5 +129,45 @@ impl ProcessingStage {
         }
 
         *data = smoothed;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{ProcessingStage, VisualizationProcessingConfig};
+    use crate::visualization::data_pipeline::ProcessingOperation;
+    use ndarray::Array3;
+
+    #[test]
+    fn normalize_maps_contiguous_values_to_configured_range() {
+        let config = VisualizationProcessingConfig {
+            normalize_range: (-1.0, 1.0),
+            ..VisualizationProcessingConfig::default()
+        };
+        let stage = ProcessingStage::new(config);
+        let mut data = Array3::from_shape_vec((1, 1, 3), vec![2.0, 4.0, 6.0])
+            .expect("invariant: shape matches data length");
+
+        stage.apply(ProcessingOperation::Normalize, &mut data);
+
+        let values: Vec<f64> = data.iter().copied().collect();
+        assert_eq!(values, vec![-1.0, 0.0, 1.0]);
+    }
+
+    #[test]
+    fn log_scale_clamps_values_at_configured_epsilon() {
+        let config = VisualizationProcessingConfig {
+            log_epsilon: 0.5,
+            ..VisualizationProcessingConfig::default()
+        };
+        let stage = ProcessingStage::new(config);
+        let mut data = Array3::from_shape_vec((1, 1, 3), vec![0.0, 0.5, 2.0])
+            .expect("invariant: shape matches data length");
+
+        stage.apply(ProcessingOperation::LogScale, &mut data);
+
+        let expected = vec![0.5_f64.ln(), 0.5_f64.ln(), 2.0_f64.ln()];
+        let values: Vec<f64> = data.iter().copied().collect();
+        assert_eq!(values, expected);
     }
 }

@@ -9,6 +9,7 @@
 pub mod bayesian_networks;
 pub mod conformal_prediction;
 pub mod ensemble_methods;
+pub mod predictor;
 pub mod quantifier;
 pub mod sensitivity_analysis;
 #[cfg(test)]
@@ -18,6 +19,7 @@ pub mod types;
 pub use bayesian_networks::{BayesianConfig, MlBayesianPINN, MlPredictionWithUncertainty};
 pub use conformal_prediction::{ConformalConfig, ConformalResult, MlConformalPredictor};
 pub use ensemble_methods::{EnsembleConfig, EnsembleQuantifier, EnsembleResult};
+pub use predictor::PinnUncertaintyPredictor;
 pub use quantifier::UncertaintyQuantifier;
 pub use sensitivity_analysis::{SensitivityAnalyzer, SensitivityConfig, SensitivityIndices};
 pub use types::{

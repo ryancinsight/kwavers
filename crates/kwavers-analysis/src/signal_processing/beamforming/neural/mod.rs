@@ -141,7 +141,7 @@
 //! **Future Enhancements:**
 //! - Full backpropagation with automatic differentiation
 //! - Advanced architectures (CNNs, Transformers, U-Nets)
-//! - Real-time GPU acceleration via CUDA/wgpu
+//! - Real-time GPU acceleration through provider-generic solver traits
 //! - Integration with actual PINN frameworks (Burn, Candle)
 //! - Ensemble methods for improved uncertainty estimation
 //!
@@ -185,12 +185,7 @@ pub mod uncertainty;
 // Solver-agnostic PINN interface (always available for type definitions)
 pub mod pinn_interface;
 
-// Backend implementations are in solver layer to respect Clean Architecture
-// Re-export for convenience (Analysis can depend on Solver via trait)
-#[cfg(feature = "pinn")]
-pub use kwavers_solver::inverse::pinn::beamforming::{
-    create_burn_beamforming_provider, BurnPinnBeamformingAdapter,
-};
+pub use pinn_interface::{PinnBeamformingProvider, PinnProviderRegistry};
 
 // Feature-gated modules
 #[cfg(feature = "pinn")]

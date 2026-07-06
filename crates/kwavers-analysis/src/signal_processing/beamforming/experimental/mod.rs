@@ -39,7 +39,7 @@
 //!
 //! Optional (feature-gated):
 //!   ↓ imports from
-//! External ML crates (tch, burn, candle, etc.) - neural network inference
+//! Coeus-backed model providers - neural network inference
 //! ```
 //!
 //! # Warning: Experimental Status

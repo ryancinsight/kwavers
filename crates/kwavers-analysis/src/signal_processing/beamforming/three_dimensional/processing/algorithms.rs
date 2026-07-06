@@ -1,11 +1,17 @@
 use super::super::config::Beamforming3dApodizationWindow;
 use super::super::processor::BeamformingProcessor3D;
 #[cfg(feature = "gpu")]
+use super::super::provider::BeamformingGpuProvider;
+#[cfg(feature = "gpu")]
 use kwavers_core::error::KwaversError;
 use kwavers_core::error::KwaversResult;
 use ndarray::{Array3, Array4};
 
-impl BeamformingProcessor3D {
+#[cfg(feature = "gpu")]
+impl<P> BeamformingProcessor3D<P>
+where
+    P: BeamformingGpuProvider,
+{
     /// Process delay-and-sum beamforming (GPU path).
     ///
     /// When `dynamic_focusing` is `false`, the static DAS kernel
@@ -20,7 +26,6 @@ impl BeamformingProcessor3D {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[cfg(feature = "gpu")]
     pub(super) fn process_delay_and_sum(
         &self,
         rf_data: &Array4<f32>,
@@ -47,7 +52,10 @@ impl BeamformingProcessor3D {
             self.delay_and_sum_gpu(rf_data, dynamic_focusing, apodization, &apodization_weights)
         }
     }
+}
 
+#[cfg(not(feature = "gpu"))]
+impl BeamformingProcessor3D {
     /// CPU delay-and-sum dispatch.
     ///
     /// Forwards to [`super::super::cpu::delay_and_sum_cpu`].  The `dynamic_focusing`
@@ -56,7 +64,6 @@ impl BeamformingProcessor3D {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[cfg(not(feature = "gpu"))]
     pub(super) fn process_delay_and_sum(
         &self,
         rf_data: &Array4<f32>,
@@ -66,7 +73,13 @@ impl BeamformingProcessor3D {
     ) -> KwaversResult<Array3<f32>> {
         super::super::cpu::delay_and_sum_cpu(rf_data, &self.config, apodization)
     }
+}
 
+#[cfg(feature = "gpu")]
+impl<P> BeamformingProcessor3D<P>
+where
+    P: BeamformingGpuProvider,
+{
     /// Process MVDR 3D beamforming (GPU path — stub).
     ///
     /// # References
@@ -75,7 +88,6 @@ impl BeamformingProcessor3D {
     /// # Errors
     /// - Returns [`KwaversError::System`] always (GPU MVDR not yet implemented).
     ///
-    #[cfg(feature = "gpu")]
     pub(super) fn process_mvdr_3d(
         &mut self,
         rf_data: &Array4<f32>,
@@ -90,7 +102,10 @@ impl BeamformingProcessor3D {
             },
         ))
     }
+}
 
+#[cfg(not(feature = "gpu"))]
+impl BeamformingProcessor3D {
     /// CPU MVDR-3D adaptive beamforming.
     ///
     /// Forwards to [`super::super::cpu::mvdr_cpu`] which implements spatially-smoothed
@@ -103,7 +118,6 @@ impl BeamformingProcessor3D {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[cfg(not(feature = "gpu"))]
     pub(super) fn process_mvdr_3d(
         &mut self,
         rf_data: &Array4<f32>,

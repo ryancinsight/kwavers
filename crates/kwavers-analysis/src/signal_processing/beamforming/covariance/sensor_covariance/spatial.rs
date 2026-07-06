@@ -1,4 +1,5 @@
 use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_core::utils::iterators::apply_inplace;
 use ndarray::{s, Array2};
 use num_complex::Complex64;
 
@@ -37,7 +38,7 @@ impl SpatialSmoothing {
             smoothed += &sub_cov;
         }
 
-        smoothed.par_mapv_inplace(|x| x / num_subarrays as f64);
+        apply_inplace(&mut smoothed, |x| x / num_subarrays as f64);
         Ok(smoothed)
     }
 }
@@ -89,7 +90,7 @@ impl SpatialSmoothingComplex {
         }
 
         let inv = 1.0 / (num_subarrays as f64);
-        smoothed.par_mapv_inplace(|v| v * inv);
+        apply_inplace(&mut smoothed, |v| v * inv);
         Ok(smoothed)
     }
 }

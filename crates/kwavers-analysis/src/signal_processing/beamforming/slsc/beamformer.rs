@@ -1,8 +1,9 @@
 use super::SlscConfig;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::{Array1, Array2, Array3, Axis};
+use kwavers_core::utils::iterators::apply_inplace;
+use moirai_parallel::{map_collect_index_with, Adaptive};
+use ndarray::{Array1, Array2, Array3};
 use num_complex::Complex64;
-use rayon::prelude::*;
 
 /// Short-Lag Spatial Coherence beamformer
 #[derive(Debug, Clone)]
@@ -92,14 +93,12 @@ impl SlscBeamformer {
 
         let max_lag = self.config.max_lag.min(n_elements - 1);
 
-        let coherence_vec: Vec<f64> = (0..n_samples)
-            .into_par_iter()
-            .map(|sample_idx| {
+        let coherence_vec: Vec<f64> =
+            map_collect_index_with::<Adaptive, _, _>(n_samples, |sample_idx| {
                 let sample_data = data.column(sample_idx);
                 let slice: Vec<Complex64> = sample_data.iter().copied().collect();
                 self.compute_short_lag_coherence(&slice, max_lag)
-            })
-            .collect();
+            });
 
         Ok(Array1::from(coherence_vec))
     }
@@ -152,24 +151,21 @@ impl SlscBeamformer {
         }
 
         let max_lag = self.config.max_lag.min(n_elements - 1);
-        let mut coherence = Array2::zeros((n_beams, n_samples));
+        let values = map_collect_index_with::<Adaptive, _, _>(n_beams * n_samples, |flat_index| {
+            let beam_idx = flat_index / n_samples;
+            let sample_idx = flat_index % n_samples;
+            let sample_data: Vec<Complex64> = (0..n_elements)
+                .map(|elem| data[[elem, beam_idx, sample_idx]])
+                .collect();
 
-        coherence
-            .axis_iter_mut(Axis(0))
-            .into_par_iter()
-            .enumerate()
-            .for_each(|(beam_idx, mut beam_coherence)| {
-                for sample_idx in 0..n_samples {
-                    let sample_data: Vec<Complex64> = (0..n_elements)
-                        .map(|elem| data[[elem, beam_idx, sample_idx]])
-                        .collect();
+            self.compute_short_lag_coherence(&sample_data, max_lag)
+        });
 
-                    beam_coherence[sample_idx] =
-                        self.compute_short_lag_coherence(&sample_data, max_lag);
-                }
-            });
-
-        Ok(coherence)
+        Array2::from_shape_vec((n_beams, n_samples), values).map_err(|err| {
+            KwaversError::InvalidInput(format!(
+                "SLSC volume output shape invariant violated: {err}"
+            ))
+        })
     }
 
     /// Process data for a grid of pixels (for imaging)
@@ -236,7 +232,7 @@ impl SlscBeamformer {
             map[[0, i]] = (db_value + dyn_range) / dyn_range;
         }
 
-        map.par_mapv_inplace(|v| v.clamp(0.0, 1.0));
+        apply_inplace(&mut map, |v| v.clamp(0.0, 1.0));
 
         Ok(map)
     }

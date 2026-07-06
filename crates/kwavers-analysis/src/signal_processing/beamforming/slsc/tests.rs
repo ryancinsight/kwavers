@@ -170,6 +170,60 @@ fn slsc_process_identical_input_yields_all_ones() {
     }
 }
 
+#[test]
+fn slsc_process_parallel_identical_input_yields_all_ones() {
+    let data = Array2::from_elem((4, 8), Complex64::new(1.0, 0.0));
+    let slsc = SlscBeamformer::new();
+
+    let result = slsc
+        .process_parallel(&data)
+        .expect("parallel SLSC processing should succeed");
+
+    assert_eq!(result.len(), 8);
+    for (i, &c) in result.iter().enumerate() {
+        assert!(
+            (c - 1.0).abs() < 1e-12,
+            "parallel coherence[{i}] = {c} (expected 1.0 for identical signals)"
+        );
+    }
+}
+
+#[test]
+fn slsc_process_volume_identical_input_yields_all_ones() {
+    let data = Array3::from_elem((4, 3, 5), Complex64::new(1.0, 0.0));
+    let slsc = SlscBeamformer::new();
+
+    let result = slsc
+        .process_volume(&data)
+        .expect("volume SLSC processing should succeed");
+
+    assert_eq!(result.shape(), &[3, 5]);
+    for beam in 0..3 {
+        for sample in 0..5 {
+            let c = result[[beam, sample]];
+            assert!(
+                (c - 1.0).abs() < 1e-12,
+                "volume coherence[{beam},{sample}] = {c} (expected 1.0)"
+            );
+        }
+    }
+}
+
+#[test]
+fn slsc_coherence_map_clamps_to_unit_interval() {
+    let data = Array2::from_elem((4, 4), Complex64::new(1.0, 0.0));
+    let slsc = SlscBeamformer::new();
+
+    let map = slsc
+        .create_coherence_map(&data, Some(40.0))
+        .expect("coherence map should succeed");
+
+    assert_eq!(map.shape(), &[1, 4]);
+    for (idx, &value) in map.iter().enumerate() {
+        assert_eq!(value, 1.0, "map[{idx}] should be clamped to 1.0");
+    }
+}
+
 /// `LagWeighting::Triangular` at lag=max_lag/2 is exactly 0.5.
 ///
 /// weight(5, 10) = 1 - 5/10 = 0.5 (exact IEEE 754).

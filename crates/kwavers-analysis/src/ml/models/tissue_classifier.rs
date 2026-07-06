@@ -16,7 +16,7 @@ impl TissueClassifierModel {
     /// Load model from path
     ///
     /// **Implementation Status**: Template model with random initialization
-    /// **Rationale**: Full neural network loading requires ML framework selection (burn/candle).
+    /// **Rationale**: Full neural network loading requires the Coeus model provider path.
     /// Template provides functional inference API for integration testing and development.
     /// Production ML models would deserialize trained weights from checkpoint files.
     ///
