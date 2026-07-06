@@ -27,7 +27,7 @@ use super::MultiModalFusion;
 use crate::acoustics::imaging::fusion::registration::generate_coordinate_arrays;
 use crate::acoustics::imaging::fusion::types::{FusedImageResult, RegisteredModality};
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array3;
+use leto::Array3;
 use std::collections::HashMap;
 
 const MIN_PRIOR: f64 = 1.0e-12;
@@ -48,9 +48,9 @@ pub(crate) fn fuse_deep_learning(fusion: &MultiModalFusion) -> KwaversResult<Fus
         .uncertainty_quantification
         .then(|| Array3::<f64>::zeros(dims));
 
-    for i in 0..dims.0 {
-        for j in 0..dims.1 {
-            for k in 0..dims.2 {
+    for i in 0..dims[0] {
+        for j in 0..dims[1] {
+            for k in 0..dims[2] {
                 let mut denominator = 0.0;
                 let mut weighted_value = 0.0;
                 let mut weighted_quality = 0.0;
@@ -115,7 +115,7 @@ fn normalization_bounds(
                     "DeepFusion attention requires finite intensity values; modality {name} contains non-finite data"
                 )));
             }
-            Ok(super::utils::compute_robust_bounds(modality.data.view()))
+            Ok(super::utils::compute_robust_bounds(&modality.data))
         })
         .collect()
 }

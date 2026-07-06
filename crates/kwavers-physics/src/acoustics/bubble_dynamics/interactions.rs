@@ -41,29 +41,31 @@ impl BubbleInteractions {
     ) -> Array3<f64> {
         let mut interaction_field = Array3::zeros(grid_shape);
 
-        // For each grid point
-        ndarray::Zip::indexed(&mut interaction_field).par_for_each(|(i, j, k), field_val| {
-            let total_interaction = bubbles
-                .iter()
-                .filter(|((bi, bj, bk), _)| !(i == *bi && j == *bj && k == *bk)) // Skip self-interaction
-                .filter_map(|((bi, bj, bk), state)| {
-                    // Calculate distance
-                    let dx = (i as f64 - *bi as f64) * grid_spacing.0;
-                    let dy = (j as f64 - *bj as f64) * grid_spacing.1;
-                    let dz = (k as f64 - *bk as f64) * grid_spacing.2;
-                    let distance = dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt();
+        crate::parallel::for_each_indexed_mut(
+            interaction_field.view_mut(),
+            |(i, j, k), field_val| {
+                let total_interaction = bubbles
+                    .iter()
+                    .filter(|((bi, bj, bk), _)| !(i == *bi && j == *bj && k == *bk)) // Skip self-interaction
+                    .filter_map(|((bi, bj, bk), state)| {
+                        // Calculate distance
+                        let dx = (i as f64 - *bi as f64) * grid_spacing.0;
+                        let dy = (j as f64 - *bj as f64) * grid_spacing.1;
+                        let dz = (k as f64 - *bk as f64) * grid_spacing.2;
+                        let distance = dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt();
 
-                    if distance < self.cutoff_distance && distance > 0.0 {
-                        // Bjerknes force contribution
-                        Some(self.calculate_bjerknes_contribution(state, distance))
-                    } else {
-                        None
-                    }
-                })
-                .sum::<f64>();
+                        if distance < self.cutoff_distance && distance > 0.0 {
+                            // Bjerknes force contribution
+                            Some(self.calculate_bjerknes_contribution(state, distance))
+                        } else {
+                            None
+                        }
+                    })
+                    .sum::<f64>();
 
-            *field_val = total_interaction * self.interaction_strength;
-        });
+                *field_val = total_interaction * self.interaction_strength;
+            },
+        );
 
         interaction_field
     }
@@ -276,6 +278,46 @@ mod tests {
         assert!(
             (ratio - expected).abs() / expected < 1.0e-12,
             "secondary Bjerknes ratio {ratio} should equal {expected} = (d_b/d_a)²"
+        );
+    }
+
+    #[test]
+    fn interaction_field_uses_monopole_pressure_and_skips_self_cell() {
+        let params = BubbleParameters::default();
+        let mut bubble = BubbleState::new(&params);
+        bubble.radius = 2.0e-6;
+        bubble.wall_velocity = -0.25;
+        bubble.wall_acceleration = 1.5e8;
+
+        let mut bubbles = HashMap::new();
+        bubbles.insert((1, 1, 1), bubble);
+
+        let interactions = BubbleInteractions {
+            cutoff_distance: 5.0e-3,
+            interaction_strength: 0.75,
+            liquid_density: DENSITY_WATER_NOMINAL,
+        };
+
+        let spacing = (1.0e-3, 2.0e-3, 3.0e-3);
+        let field = interactions.calculate_interaction_field(&bubbles, (3, 3, 3), spacing);
+
+        assert_eq!(field[[1, 1, 1]], 0.0);
+
+        let distance_x = spacing.0;
+        let expected_x = interactions.calculate_bjerknes_contribution(&bubble, distance_x) * 0.75;
+        let actual_x = field[[2, 1, 1]];
+        assert!(
+            (actual_x - expected_x).abs() / expected_x.abs().max(1.0) < 1.0e-12,
+            "interaction field {actual_x} should equal monopole pressure {expected_x}"
+        );
+
+        let distance_diag = (spacing.0.mul_add(spacing.0, spacing.1 * spacing.1)).sqrt();
+        let expected_diag =
+            interactions.calculate_bjerknes_contribution(&bubble, distance_diag) * 0.75;
+        let actual_diag = field[[2, 2, 1]];
+        assert!(
+            (actual_diag - expected_diag).abs() / expected_diag.abs().max(1.0) < 1.0e-12,
+            "diagonal interaction field {actual_diag} should equal monopole pressure {expected_diag}"
         );
     }
 

@@ -26,7 +26,7 @@ use super::MultiModalFusion;
 use crate::acoustics::imaging::fusion::registration::generate_coordinate_arrays;
 use crate::acoustics::imaging::fusion::types::{FusedImageResult, RegisteredModality};
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array3;
+use leto::Array3;
 use std::collections::HashMap;
 
 const POWER_ITERATIONS: usize = 128;
@@ -48,13 +48,17 @@ pub(crate) fn fuse_pca(fusion: &MultiModalFusion) -> KwaversResult<FusedImageRes
         .uncertainty_quantification
         .then(|| Array3::<f64>::from_elem(dims, 1.0 - confidence));
 
-    for ((i, j, k), output) in intensity_image.indexed_iter_mut() {
-        *output = weights
-            .iter()
-            .zip(modalities.iter())
-            .map(|(weight, (_, modality))| weight * modality.data[[i, j, k]])
-            .sum();
-        confidence_map[[i, j, k]] = confidence;
+    for i in 0..dims[0] {
+        for j in 0..dims[1] {
+            for k in 0..dims[2] {
+                intensity_image[[i, j, k]] = weights
+                    .iter()
+                    .zip(modalities.iter())
+                    .map(|(weight, (_, modality))| weight * modality.data[[i, j, k]])
+                    .sum();
+                confidence_map[[i, j, k]] = confidence;
+            }
+        }
     }
 
     Ok(FusedImageResult {
@@ -70,7 +74,7 @@ pub(crate) fn fuse_pca(fusion: &MultiModalFusion) -> KwaversResult<FusedImageRes
 
 fn principal_component_weights(
     modalities: &[(&str, &RegisteredModality)],
-    dims: (usize, usize, usize),
+    dims: [usize; 3],
 ) -> KwaversResult<Vec<f64>> {
     let covariance = covariance_matrix(modalities, dims)?;
     Ok(normalized_absolute_principal_loading(
@@ -81,15 +85,15 @@ fn principal_component_weights(
 
 fn covariance_matrix(
     modalities: &[(&str, &RegisteredModality)],
-    dims: (usize, usize, usize),
+    dims: [usize; 3],
 ) -> KwaversResult<Vec<f64>> {
     let modality_count = modalities.len();
-    let voxel_count = dims.0 * dims.1 * dims.2;
+    let voxel_count = dims[0] * dims[1] * dims[2];
     let mut means = vec![0.0; modality_count];
 
     for (index, (name, modality)) in modalities.iter().enumerate() {
         let mut sum = 0.0;
-        for value in &modality.data {
+        for &value in modality.data.iter() {
             if !value.is_finite() {
                 return Err(KwaversError::InvalidInput(format!(
                     "PCA fusion requires finite intensity values; modality {name} contains {value}"
@@ -107,7 +111,7 @@ fn covariance_matrix(
         for b in a..modality_count {
             let mut sum = 0.0;
             for (a_value, b_value) in modalities[a].1.data.iter().zip(modalities[b].1.data.iter()) {
-                sum += (a_value - means[a]) * (b_value - means[b]);
+                sum += (*a_value - means[a]) * (*b_value - means[b]);
             }
             let value = sum / denominator;
             covariance[a * modality_count + b] = value;

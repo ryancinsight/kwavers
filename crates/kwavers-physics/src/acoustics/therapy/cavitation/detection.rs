@@ -1,5 +1,6 @@
 use super::constants::{BUBBLE_Q_FACTOR, DEFAULT_NUCLEUS_RADIUS};
 use super::{CavitationDetectionMethod, TherapyCavitationDetector};
+use moirai_parallel::{enumerate_mut_with, Adaptive};
 use ndarray::Array3;
 
 impl TherapyCavitationDetector {
@@ -23,11 +24,7 @@ impl TherapyCavitationDetector {
 
     /// Per-voxel Blake threshold detection: cavitates iff `−p > P_Blake`.
     fn detect_by_threshold(&self, pressure: &Array3<f64>, cavitation: &mut Array3<bool>) {
-        ndarray::Zip::from(cavitation)
-            .and(pressure)
-            .par_for_each(|cav, &p| {
-                *cav = -p > self.blake_threshold;
-            });
+        mark_cavitation(pressure, cavitation, self.blake_threshold);
     }
 
     /// Per-voxel resonance-enhanced threshold detection.
@@ -45,11 +42,7 @@ impl TherapyCavitationDetector {
     fn detect_by_spectral(&self, pressure: &Array3<f64>, cavitation: &mut Array3<bool>) {
         let effective_threshold = self.resonance_effective_threshold(DEFAULT_NUCLEUS_RADIUS);
 
-        ndarray::Zip::from(cavitation)
-            .and(pressure)
-            .par_for_each(|cav, &p| {
-                *cav = -p > effective_threshold;
-            });
+        mark_cavitation(pressure, cavitation, effective_threshold);
     }
 
     pub(super) fn resonance_effective_threshold(&self, r0: f64) -> f64 {
@@ -65,4 +58,23 @@ impl TherapyCavitationDetector {
         };
         self.blake_threshold / enhancement
     }
+}
+
+fn mark_cavitation(pressure: &Array3<f64>, cavitation: &mut Array3<bool>, threshold: f64) {
+    assert_eq!(
+        pressure.dim(),
+        cavitation.dim(),
+        "invariant: cavitation detection pressure and output shapes must match"
+    );
+
+    let cavitation = cavitation
+        .as_slice_memory_order_mut()
+        .expect("invariant: cavitation detection output must be contiguous");
+    let pressure = pressure
+        .as_slice_memory_order()
+        .expect("invariant: cavitation pressure field must be contiguous");
+
+    enumerate_mut_with::<Adaptive, _, _>(cavitation, |idx, cav| {
+        *cav = -pressure[idx] > threshold;
+    });
 }

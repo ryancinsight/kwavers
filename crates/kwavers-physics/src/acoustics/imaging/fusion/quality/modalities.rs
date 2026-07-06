@@ -2,7 +2,7 @@
 
 use super::metrics::calculate_image_metrics;
 use kwavers_imaging::ultrasound::elastography::ElasticityMap;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Compute photoacoustic image quality score
 ///
@@ -76,14 +76,14 @@ pub fn compute_elastography_quality(elasticity_map: &ElasticityMap) -> f64 {
 pub fn compute_optical_quality(optical_intensity: &Array3<f64>, wavelength: f64) -> f64 {
     // Compute basic intensity statistics
     let total_intensity: f64 = optical_intensity.iter().sum();
-    let mean_intensity = total_intensity / optical_intensity.len() as f64;
+    let mean_intensity = total_intensity / optical_intensity.size() as f64;
 
     // Signal-to-noise ratio approximation
     let variance: f64 = optical_intensity
         .iter()
         .map(|&x| (x - mean_intensity).powi(2))
         .sum::<f64>()
-        / optical_intensity.len() as f64;
+        / optical_intensity.size() as f64;
 
     let snr = if variance > 0.0 {
         mean_intensity / variance.sqrt()

@@ -1,6 +1,7 @@
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use log::warn;
+use moirai_parallel::{for_each_mut_with, Adaptive};
 use ndarray::Array3;
 use std::f64;
 
@@ -13,18 +14,22 @@ impl NonlinearWave {
     ///
     /// * `field` - Field to constrain (modified in place)
     pub(crate) fn apply_stability_constraints(&self, field: &mut Array3<f64>) {
-        // Clamp extreme values
-        use rayon::prelude::*;
-        field.par_iter_mut().for_each(|val| {
-            if val.abs() > self.max_pressure {
-                *val = val.signum() * self.max_pressure;
+        let max_pressure = self.max_pressure;
+        let clamp = |val: &mut f64| {
+            if val.abs() > max_pressure {
+                *val = val.signum() * max_pressure;
             }
             // Remove NaN or Inf values
             if !val.is_finite() {
                 *val = 0.0;
                 warn!("Non-finite value detected and zeroed in pressure field");
             }
-        });
+        };
+        if let Some(values) = field.as_slice_mut() {
+            for_each_mut_with::<Adaptive, _, _>(values, clamp);
+        } else {
+            field.iter_mut().for_each(clamp);
+        }
     }
 
     /// Computes adaptive time step based on CFL condition.

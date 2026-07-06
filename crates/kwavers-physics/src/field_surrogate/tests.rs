@@ -267,7 +267,7 @@ fn test_resample_large_kernel_completes() {
 fn test_cube_blend_in_place_zero_extra_allocation() {
     // Functional test that the in-place blend produces the same result
     // as the previous out-of-place implementation. Exercises the new
-    // Zip-based blend path inside KernelCube::query.
+    // Moirai-backed blend path inside KernelCube::query.
     let kernels: Vec<FocalKernel> = [
         (0.5 * MHZ_TO_HZ, 15.0 * MPA_TO_PA),
         (0.5 * MHZ_TO_HZ, 30.0 * MPA_TO_PA),

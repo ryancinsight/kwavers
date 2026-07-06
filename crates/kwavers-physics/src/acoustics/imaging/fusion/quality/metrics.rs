@@ -1,6 +1,6 @@
 //! Base image metrics and noise estimation for quality assessment
 
-use ndarray::Array3;
+use leto::Array3;
 
 /// Basic image metrics for quality assessment
 #[derive(Debug, Clone, Copy)]
@@ -17,7 +17,7 @@ pub struct ImageMetrics {
 ///
 #[must_use]
 pub fn calculate_image_metrics(data: &Array3<f64>) -> ImageMetrics {
-    if data.is_empty() {
+    if data.size() == 0 {
         return ImageMetrics { snr: 0.0, cnr: 0.0 };
     }
 
@@ -84,8 +84,8 @@ pub fn calculate_image_metrics(data: &Array3<f64>) -> ImageMetrics {
 #[must_use]
 pub fn estimate_modality_noise(data: &Array3<f64>) -> f64 {
     // Compute local variance as noise estimate
-    let mean: f64 = data.iter().sum::<f64>() / data.len() as f64;
-    let variance: f64 = data.iter().map(|&x| (x - mean).powi(2)).sum::<f64>() / data.len() as f64;
+    let mean: f64 = data.iter().sum::<f64>() / data.size() as f64;
+    let variance: f64 = data.iter().map(|&x| (x - mean).powi(2)).sum::<f64>() / data.size() as f64;
 
     variance
 }

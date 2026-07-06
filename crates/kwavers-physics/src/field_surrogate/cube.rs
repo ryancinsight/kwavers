@@ -1,7 +1,7 @@
 //! `KernelCube` — bilinear interpolator across a sparse `(f0, pnp)`
 //! grid of cached [`FocalKernel`]s.
 
-use ndarray::{Array3, Zip};
+use ndarray::Array3;
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 
@@ -188,15 +188,14 @@ impl KernelCube {
             return env_lo;
         }
         let env_hi = self.envelope_at_f0(f0_hi, target_shape, target_focus_idx, target_dx_m);
-        // In-place blend into `env_lo` (consumed by ownership) — saves
+        // In-place blend into `env_lo` (consumed by ownership) - saves
         // ~2×N³×f64 of intermediate allocation vs the naive
-        // `&env_lo * (1-α) + &env_hi * α`. Parallel Zip splits the
-        // work across cores; the per-element fused multiply-add is
-        // the entire inner loop.
+        // `&env_lo * (1-α) + &env_hi * α`. Moirai owns the execution
+        // provider; the per-element fused multiply-add is the inner loop.
         let mut blend = env_lo;
         let inv_alpha = 1.0 - alpha;
-        Zip::from(&mut blend).and(&env_hi).par_for_each(|lo, &hi| {
-            *lo = (*lo).mul_add(inv_alpha, hi * alpha);
+        crate::parallel::for_each_indexed_pair_mut(blend.view_mut(), env_hi.view(), |_, lo, hi| {
+            *lo = (*lo).mul_add(inv_alpha, *hi * alpha);
         });
         let peak = blend.iter().copied().fold(f64::NEG_INFINITY, f64::max);
         if peak > 0.0 {

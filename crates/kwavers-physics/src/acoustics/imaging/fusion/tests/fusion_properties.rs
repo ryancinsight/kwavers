@@ -1,16 +1,16 @@
 //! Tissue-property extraction and classification tests.
 
 use super::super::*;
-use ndarray::Array3;
+use leto::Array3;
 use std::collections::HashMap;
 
 #[test]
 fn test_tissue_property_extraction() {
     let fused_result = FusedImageResult {
-        intensity_image: Array3::<f64>::from_elem((4, 4, 2), 0.7),
+        intensity_image: Array3::<f64>::from_elem([4, 4, 2], 0.7),
         tissue_properties: HashMap::new(),
-        confidence_map: Array3::<f64>::ones((4, 4, 2)),
-        uncertainty_map: Some(Array3::<f64>::from_elem((4, 4, 2), 0.1)),
+        confidence_map: Array3::<f64>::ones([4, 4, 2]),
+        uncertainty_map: Some(Array3::<f64>::from_elem([4, 4, 2], 0.1)),
         registration_transforms: HashMap::new(),
         modality_quality: HashMap::new(),
         coordinates: [vec![0.0, 1.0], vec![0.0, 1.0], vec![0.0, 1.0]],
@@ -24,14 +24,14 @@ fn test_tissue_property_extraction() {
     assert!(properties.contains_key("composite_stiffness"));
 
     // Verify property dimensions match input
-    assert_eq!(properties["tissue_classification"].dim(), (4, 4, 2));
-    assert_eq!(properties["oxygenation_index"].dim(), (4, 4, 2));
-    assert_eq!(properties["composite_stiffness"].dim(), (4, 4, 2));
+    assert_eq!(properties["tissue_classification"].shape(), [4, 4, 2]);
+    assert_eq!(properties["oxygenation_index"].shape(), [4, 4, 2]);
+    assert_eq!(properties["composite_stiffness"].shape(), [4, 4, 2]);
 }
 
 #[test]
 fn test_tissue_classification_thresholds() {
-    let mut intensity = Array3::<f64>::zeros((4, 4, 2));
+    let mut intensity = Array3::<f64>::zeros([4, 4, 2]);
     intensity[[0, 0, 0]] = 0.2; // Normal
     intensity[[1, 1, 0]] = 0.5; // Borderline
     intensity[[2, 2, 0]] = 0.7; // Moderate abnormality
@@ -47,7 +47,7 @@ fn test_tissue_classification_thresholds() {
 
 #[test]
 fn test_oxygenation_index_range() {
-    let intensity = Array3::<f64>::from_shape_fn((4, 4, 2), |(i, j, k)| (i + j + k) as f64 / 10.0);
+    let intensity = Array3::<f64>::from_shape_fn([4, 4, 2], |[i, j, k]| (i + j + k) as f64 / 10.0);
 
     let oxygenation = properties::compute_oxygenation_index(&intensity);
 
@@ -60,7 +60,7 @@ fn test_oxygenation_index_range() {
 
 #[test]
 fn test_composite_stiffness_range() {
-    let intensity = Array3::<f64>::from_shape_fn((4, 4, 2), |(i, j, k)| (i + j + k) as f64 / 10.0);
+    let intensity = Array3::<f64>::from_shape_fn([4, 4, 2], |[i, j, k]| (i + j + k) as f64 / 10.0);
 
     let stiffness = properties::compute_composite_stiffness(&intensity);
 

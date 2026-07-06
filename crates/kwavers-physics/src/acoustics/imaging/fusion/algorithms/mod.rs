@@ -43,7 +43,7 @@ use super::quality;
 use super::types::{FusedImageResult, RegisteredModality};
 use intensity_projection::ProjectionKind;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array3;
+use leto::Array3;
 use std::collections::HashMap;
 
 /// Multi-modal imaging fusion processor
@@ -74,11 +74,24 @@ impl MultiModalFusion {
     ///
     pub fn register_ultrasound(&mut self, ultrasound_data: &Array3<f64>) -> KwaversResult<()> {
         // Compute quality score from signal-to-noise ratio estimate
-        let mean = ultrasound_data.mean().unwrap_or(0.0);
-        let variance = ultrasound_data
-            .mapv(|v| (v - mean).powi(2))
-            .mean()
-            .unwrap_or(1.0);
+        let voxel_count = ultrasound_data.size() as f64;
+        let mean = if voxel_count > 0.0 {
+            ultrasound_data.iter().copied().sum::<f64>() / voxel_count
+        } else {
+            0.0
+        };
+        let variance = if voxel_count > 0.0 {
+            ultrasound_data
+                .iter()
+                .map(|&value| {
+                    let centered = value - mean;
+                    centered * centered
+                })
+                .sum::<f64>()
+                / voxel_count
+        } else {
+            1.0
+        };
         let snr = if variance > 1e-15 {
             mean.abs() / variance.sqrt()
         } else {

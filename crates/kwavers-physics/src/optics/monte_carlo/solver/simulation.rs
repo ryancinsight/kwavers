@@ -2,7 +2,7 @@
 
 use super::MonteCarloSolver;
 use anyhow::Result;
-use rayon::prelude::*;
+use moirai_parallel::{for_each_index_with, Adaptive};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
@@ -19,36 +19,39 @@ impl MonteCarloSolver {
     ///
     pub fn simulate(&self, source: &PhotonSource, config: &SimulationConfig) -> Result<MCResult> {
         let num_photons = config.num_photons;
-        let chunk_size = (num_photons / rayon::current_num_threads()).max(1000);
+        let lanes = std::thread::available_parallelism()
+            .map(std::num::NonZeroUsize::get)
+            .unwrap_or(1);
+        let chunk_size = (num_photons / lanes).max(1000);
+        let chunk_count = num_photons.div_ceil(chunk_size);
         let total_voxels = total_voxels(&self.grid);
         let absorbed_energy = Arc::new(new_atomic_vec(total_voxels));
         let fluence = Arc::new(new_atomic_vec(total_voxels));
         let reflected_weight = Arc::new(AtomicU64::new(0));
 
-        (0..num_photons)
-            .into_par_iter()
-            .chunks(chunk_size)
-            .for_each(|chunk| {
-                let mut rng = rand::thread_rng();
+        for_each_index_with::<Adaptive, _>(chunk_count, |chunk_idx| {
+            let start = chunk_idx * chunk_size;
+            let end = (start + chunk_size).min(num_photons);
+            let mut rng = rand::thread_rng();
 
-                for _ in chunk {
-                    let mut photon = source.launch_photon(&mut rng);
-                    if let Some(sp) = self.optical_map.get(0, 0, 0) {
-                        let n = sp.refractive_index;
-                        if n > 1.0 + 1e-9 {
-                            photon.weight *= 1.0 - fresnel_reflectance(1.0, n, 1.0);
-                        }
+            for _ in start..end {
+                let mut photon = source.launch_photon(&mut rng);
+                if let Some(sp) = self.optical_map.get(0, 0, 0) {
+                    let n = sp.refractive_index;
+                    if n > 1.0 + 1e-9 {
+                        photon.weight *= 1.0 - fresnel_reflectance(1.0, n, 1.0);
                     }
-                    self.trace_photon(
-                        photon,
-                        config,
-                        &absorbed_energy,
-                        &fluence,
-                        &reflected_weight,
-                        &mut rng,
-                    );
                 }
-            });
+                self.trace_photon(
+                    photon,
+                    config,
+                    &absorbed_energy,
+                    &fluence,
+                    &reflected_weight,
+                    &mut rng,
+                );
+            }
+        });
 
         let absorbed_energy = collect_atomic_vec(&absorbed_energy);
         let fluence = collect_atomic_vec(&fluence);

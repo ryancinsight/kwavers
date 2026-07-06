@@ -2,7 +2,7 @@ use super::MultiModalFusion;
 use crate::acoustics::imaging::fusion::types::RegisteredModality;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_imaging::fusion::AffineTransform;
-use ndarray::ArrayView3;
+use leto::Array3;
 use std::collections::HashMap;
 /// Sorted modalities.
 /// # Errors
@@ -34,25 +34,25 @@ pub(crate) fn sorted_modalities(
 pub(crate) fn common_registered_dims(
     modalities: &[(&str, &RegisteredModality)],
     algorithm_name: &str,
-) -> KwaversResult<(usize, usize, usize)> {
+) -> KwaversResult<[usize; 3]> {
     let (reference_name, reference) = modalities.first().ok_or_else(|| {
         KwaversError::Validation(kwavers_core::error::ValidationError::ConstraintViolation {
             message: format!("{algorithm_name} requires at least one registered modality"),
         })
     })?;
-    let dims = reference.data.dim();
+    let dims = reference.data.shape();
 
-    if dims.0 == 0 || dims.1 == 0 || dims.2 == 0 {
+    if dims[0] == 0 || dims[1] == 0 || dims[2] == 0 {
         return Err(KwaversError::InvalidInput(format!(
             "{algorithm_name} requires non-empty registered volumes; modality {reference_name} has {dims:?}"
         )));
     }
 
     for (name, modality) in modalities {
-        if modality.data.dim() != dims {
+        if modality.data.shape() != dims {
             return Err(KwaversError::DimensionMismatch(format!(
                 "{algorithm_name} requires identical registered dimensions; reference {dims:?}, modality {name} has {:?}",
-                modality.data.dim()
+                modality.data.shape()
             )));
         }
     }
@@ -82,7 +82,7 @@ pub(crate) fn identity_registration_transforms(
 /// # Panics
 /// - Panics if an internal invariant assumed to hold at this call site is violated.
 ///
-pub(crate) fn compute_robust_bounds(data: ArrayView3<'_, f64>) -> (f64, f64) {
+pub(crate) fn compute_robust_bounds(data: &Array3<f64>) -> (f64, f64) {
     let mut values: Vec<f64> = data.iter().copied().filter(|v| v.is_finite()).collect();
 
     if values.is_empty() {

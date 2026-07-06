@@ -100,9 +100,10 @@ impl ROSConcentrations {
         for (species, conc) in &mut self.fields {
             let lifetime = species.lifetime_water();
             let decay_rate = 1.0 / lifetime;
+            let decay_factor = (-dt * decay_rate).exp();
 
             // Exponential decay: C(t+dt) = C(t) * exp(-dt/τ)
-            conc.par_mapv_inplace(|c| c * (-dt * decay_rate).exp());
+            crate::parallel::for_each_indexed_mut(conc.view_mut(), |_, c| *c *= decay_factor);
         }
     }
 }

@@ -1,10 +1,9 @@
 use super::MultiModalFusion;
-use crate::acoustics::imaging::fusion::registration;
+use crate::acoustics::imaging::fusion::registration::{self, RitkRegistrationEngine};
 use crate::acoustics::imaging::fusion::types::{AffineTransform, FusedImageResult};
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::{Array3, CowArray, Zip};
-use ritk_registration::{AffineTransform as RitkAffineTransform, ImageRegistration};
-use std::collections::HashMap;
+use leto::Array3;
+use std::{borrow::Cow, collections::HashMap};
 
 /// Maximum likelihood estimation fusion
 ///
@@ -40,7 +39,7 @@ use std::collections::HashMap;
 pub(crate) fn fuse_maximum_likelihood(
     fusion: &MultiModalFusion,
 ) -> KwaversResult<FusedImageResult> {
-    let image_reg = ImageRegistration::default();
+    let registration_engine = RitkRegistrationEngine::default();
 
     let mut modality_names: Vec<&String> = fusion.registered_data.keys().collect();
     modality_names.sort();
@@ -58,8 +57,7 @@ pub(crate) fn fuse_maximum_likelihood(
     })?;
 
     // Define target grid dimensions based on the reference modality's native grid
-    let ref_shape = reference_modality.data.dim();
-    let target_dims = (ref_shape.0, ref_shape.1, ref_shape.2);
+    let target_dims = reference_modality.data.shape();
 
     let mut fused_intensity = Array3::<f64>::zeros(target_dims);
     let mut confidence_map = Array3::<f64>::zeros(target_dims);
@@ -71,7 +69,7 @@ pub(crate) fn fuse_maximum_likelihood(
     // 1. Prepare and register all data
     // We store: (resampled_data, current_variance)
     struct ModalityContext<'a> {
-        data: CowArray<'a, f64, ndarray::Ix3>,
+        data: Cow<'a, Array3<f64>>,
         variance: f64,
     }
     let mut contexts = Vec::new();
@@ -83,27 +81,27 @@ pub(crate) fn fuse_maximum_likelihood(
         modality_quality.insert(modality_name.to_string(), modality.quality_score);
 
         // Register
-        let registration_result = image_reg.rigid_registration_mutual_info(
+        let registration_result = registration_engine.register_for_method(
             &reference_modality.data,
             &modality.data,
-            &RitkAffineTransform::IDENTITY,
+            kwavers_imaging::fusion::RegistrationMethod::RigidBody,
         )?;
 
         let affine_transform =
-            AffineTransform::from_homogeneous(registration_result.transform.as_array());
+            AffineTransform::from_homogeneous(&registration_result.transform_matrix);
         registration_transforms.insert(modality_name.to_string(), affine_transform);
 
         // Resample
-        let transform = *registration_result.transform.as_array();
+        let transform = registration_result.transform_matrix;
         let resampled_data =
-            if modality.data.dim() == target_dims && transform == identity_transform {
-                CowArray::from(modality.data.view())
+            if modality.data.shape() == target_dims && transform == identity_transform {
+                Cow::Borrowed(&modality.data)
             } else {
-                CowArray::from(registration::resample_to_target_grid(
+                Cow::Owned(registration_engine.resample_registered(
                     &modality.data,
-                    &transform,
+                    &registration_result,
                     target_dims,
-                ))
+                )?)
             };
 
         // Initialize variance based on quality score
@@ -121,7 +119,7 @@ pub(crate) fn fuse_maximum_likelihood(
     const MAX_ITERATIONS: usize = 10;
     const CONVERGENCE_THRESHOLD: f64 = 1e-6;
     const MIN_VARIANCE: f64 = 1e-9;
-    let num_voxels = (target_dims.0 * target_dims.1 * target_dims.2) as f64;
+    let num_voxels = (target_dims[0] * target_dims[1] * target_dims[2]) as f64;
 
     for _iter in 0..MAX_ITERATIONS {
         let mut max_change = 0.0;
@@ -133,8 +131,13 @@ pub(crate) fn fuse_maximum_likelihood(
 
         for ctx in &contexts {
             let w = 1.0 / ctx.variance;
-            // Accumulate weighted data in place to avoid allocation
-            numerator.scaled_add(w, &ctx.data);
+            for i in 0..target_dims[0] {
+                for j in 0..target_dims[1] {
+                    for k in 0..target_dims[2] {
+                        numerator[[i, j, k]] += w * ctx.data[[i, j, k]];
+                    }
+                }
+            }
             denominator += w;
         }
 
@@ -143,10 +146,10 @@ pub(crate) fn fuse_maximum_likelihood(
         // Check convergence on image
         // We can use a simplified check: L2 norm difference or max difference
         // Here using max difference
-        let diff = &new_fused_intensity - &fused_intensity;
-        for v in &diff {
-            if v.abs() > max_change {
-                max_change = v.abs();
+        for (&new_value, &old_value) in new_fused_intensity.iter().zip(fused_intensity.iter()) {
+            let diff = (new_value - old_value).abs();
+            if diff > max_change {
+                max_change = diff;
             }
         }
 
@@ -159,13 +162,15 @@ pub(crate) fn fuse_maximum_likelihood(
         // M-Step: Update variances
         // var_i = mean((data_i - fused)^2)
         for ctx in &mut contexts {
-            let sum_sq_error: f64 =
-                Zip::from(&ctx.data)
-                    .and(&fused_intensity)
-                    .fold(0.0, |acc, &val, &mean| {
-                        let diff = val - mean;
-                        diff.mul_add(diff, acc)
-                    });
+            let sum_sq_error: f64 = ctx
+                .data
+                .iter()
+                .zip(fused_intensity.iter())
+                .map(|(&value, &mean)| {
+                    let diff = value - mean;
+                    diff * diff
+                })
+                .sum();
             ctx.variance = (sum_sq_error / num_voxels).max(MIN_VARIANCE);
         }
     }

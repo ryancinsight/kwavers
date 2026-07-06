@@ -8,7 +8,7 @@ fn test_maximum_likelihood_fusion_monotonicity() {
     };
     let mut fusion = MultiModalFusion::new(config);
 
-    let shape = (5, 5, 2);
+    let shape = [5, 5, 2];
 
     // M-step should adaptively trust the cleaner signal
     fusion.registered_data.insert(

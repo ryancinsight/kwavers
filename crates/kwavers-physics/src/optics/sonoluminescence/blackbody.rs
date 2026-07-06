@@ -2,7 +2,7 @@
 //!
 //! Implements Planck's law for thermal radiation from hot bubble interior
 
-use ndarray::{Array1, Array3, Zip};
+use ndarray::{Array1, Array3};
 use std::f64::consts::PI;
 
 use kwavers_core::constants::fundamental::{
@@ -153,11 +153,11 @@ pub fn calculate_blackbody_emission(
 ) -> Array3<f64> {
     let mut emission_field = Array3::zeros(temperature_field.dim());
 
-    // Use zip and map for zero-copy iteration
-    Zip::from(&mut emission_field)
-        .and(temperature_field)
-        .and(bubble_radius_field)
-        .par_for_each(|out, &temp, &radius| {
+    crate::parallel::zip_mut_two_refs(
+        emission_field.view_mut(),
+        temperature_field.view(),
+        bubble_radius_field.view(),
+        |out, &temp, &radius| {
             if radius > 0.0 && temp > 0.0 {
                 // Surface area of bubble
                 let surface_area = FOUR_PI * radius * radius;
@@ -175,7 +175,8 @@ pub fn calculate_blackbody_emission(
                     *out = power / volume;
                 }
             }
-        });
+        },
+    );
 
     emission_field
 }

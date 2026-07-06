@@ -9,7 +9,7 @@ use kwavers_core::constants::tissue_acoustics::DENSITY_BLOOD;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use ndarray::{Array3, ArrayView3, Zip};
+use ndarray::{Array3, ArrayView3};
 
 /// Pennes bioheat equation parameters
 #[derive(Debug, Clone)]
@@ -64,9 +64,10 @@ impl PennesBioheat {
     ) -> KwaversResult<Array3<f64>> {
         let mut source = Array3::zeros(temperature.raw_dim());
 
-        Zip::indexed(&mut source)
-            .and(temperature)
-            .par_for_each(|(i, j, k), q, &t| {
+        crate::parallel::for_each_indexed_pair_mut(
+            source.view_mut(),
+            temperature.view(),
+            |(i, j, k), q, &t| {
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
@@ -80,7 +81,8 @@ impl PennesBioheat {
                     / (rho * cp);
 
                 *q = perfusion_coeff * (self.params.arterial_temperature - t);
-            });
+            },
+        );
 
         Ok(source)
     }
@@ -106,9 +108,10 @@ impl PennesBioheat {
         grid: &Grid,
         dt: f64,
     ) -> KwaversResult<()> {
-        Zip::indexed(temperature)
-            .and(laplacian)
-            .par_for_each(|(i, j, k), t, &lap| {
+        crate::parallel::for_each_indexed_pair_mut(
+            temperature.view_mut(),
+            laplacian.view(),
+            |(i, j, k), t, &lap| {
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
@@ -124,7 +127,8 @@ impl PennesBioheat {
                 let ext_source = external_source.as_ref().map_or(0.0, |s| s[[i, j, k]]);
 
                 *t += dt * (alpha.mul_add(lap, perfusion) + ext_source);
-            });
+            },
+        );
 
         Ok(())
     }

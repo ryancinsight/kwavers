@@ -29,6 +29,28 @@ fn test_ros_concentrations() {
 }
 
 #[test]
+fn ros_decay_matches_species_lifetime_exponential() {
+    let mut ros = ROSConcentrations::new(2, 1, 1);
+    let initial = 2.5e-6;
+    let species = ROSSpecies::HydrogenPeroxide;
+    ros.get_mut(species)
+        .expect("invariant: H2O2 field exists")
+        .fill(initial);
+
+    let dt = 0.25 * species.lifetime_water();
+    ros.apply_decay(dt);
+
+    let expected = initial * (-dt / species.lifetime_water()).exp();
+    let field = ros.get(species).expect("invariant: H2O2 field exists");
+    for &actual in field {
+        assert!(
+            (actual - expected).abs() <= expected.abs().max(1.0) * 1.0e-12,
+            "decayed concentration {actual} should equal {expected}"
+        );
+    }
+}
+
+#[test]
 fn test_ros_generation() {
     let rates = calculate_ros_generation(3000.0, ATMOSPHERIC_PRESSURE, 0.5);
     assert!(rates.contains_key(&ROSSpecies::HydroxylRadical));

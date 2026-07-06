@@ -1,6 +1,6 @@
 //! Field assembly for bremsstrahlung power density.
 
-use ndarray::{Array3, Zip};
+use ndarray::Array3;
 
 use super::model::BremsstrahlungModel;
 
@@ -14,15 +14,17 @@ pub fn calculate_bremsstrahlung_emission(
 ) -> Array3<f64> {
     let mut emission_field = Array3::zeros(temperature_field.dim());
 
-    Zip::from(&mut emission_field)
-        .and(temperature_field)
-        .and(electron_density_field)
-        .and(ion_density_field)
-        .par_for_each(|out, &temp, &n_electron, &n_ion| {
+    crate::parallel::zip_mut_three_refs(
+        emission_field.view_mut(),
+        temperature_field.view(),
+        electron_density_field.view(),
+        ion_density_field.view(),
+        |out, &temp, &n_electron, &n_ion| {
             if n_electron > 0.0 && n_ion > 0.0 && temp > 0.0 {
                 *out = model.total_power(temp, n_electron, n_ion, 1.0);
             }
-        });
+        },
+    );
 
     emission_field
 }

@@ -1,7 +1,7 @@
 use super::model::CherenkovModel;
 use kwavers_core::constants::fundamental::SPEED_OF_LIGHT;
 use kwavers_core::constants::thermodynamic::BUBBLE_REFERENCE_TEMPERATURE_K;
-use ndarray::{Array3, Zip};
+use ndarray::Array3;
 
 /// Piezo-optic coefficient: Δn per unit compression excess.
 ///
@@ -61,12 +61,13 @@ pub fn calculate_cherenkov_emission(
     let n_base = model.refractive_index_base;
     let coherence = model.coherence_factor;
 
-    Zip::from(&mut emission)
-        .and(velocity_field)
-        .and(charge_density_field)
-        .and(temperature_field)
-        .and(compression_field)
-        .par_for_each(|e, &v, &charge_density, &temp, &comp| {
+    crate::parallel::zip_mut_four_refs(
+        emission.view_mut(),
+        velocity_field.view(),
+        charge_density_field.view(),
+        temperature_field.view(),
+        compression_field.view(),
+        |e, &v, &charge_density, &temp, &comp| {
             let charge_density = charge_density.max(0.0);
             let temp = temp.max(0.0);
             let comp = comp.max(0.0);
@@ -87,6 +88,7 @@ pub fn calculate_cherenkov_emission(
             let threshold_term = (1.0 - 1.0 / (n_local.powi(2) * beta.powi(2))).max(0.0);
             // Frank–Tamm emission per cell
             *e = coherence * charge_density * threshold_term;
-        });
+        },
+    );
     emission
 }

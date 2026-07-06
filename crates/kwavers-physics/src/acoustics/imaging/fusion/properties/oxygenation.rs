@@ -20,7 +20,7 @@
 //! - Severinghaus, J. W. (1979). "Simple, accurate equations for human blood O2 dissociation"
 //! - Jacques, S. L. (2013). "Optical properties of biological tissues: a review". Phys. Med. Biol. 58, R37
 
-use ndarray::Array3;
+use leto::Array3;
 
 /// Resting mixed-venous oxygen saturation (Severinghaus 1979)
 const BASELINE_OXYGENATION: f64 = 0.75;

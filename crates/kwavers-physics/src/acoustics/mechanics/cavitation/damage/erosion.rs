@@ -1,8 +1,9 @@
 //! Erosion pattern analysis and cavitation intensity
 
 use crate::bubble_dynamics::bubble_field::BubbleStateFields;
+use crate::parallel::zip_mut_three_refs;
 use kwavers_core::constants::cavitation::IMPACT_ENERGY_COEFFICIENT;
-use ndarray::{Array3, Zip};
+use ndarray::Array3;
 
 /// Empirical flow-velocity enhancement coefficient for erosion potential.
 ///
@@ -22,17 +23,19 @@ pub fn cavitation_intensity(bubble_states: &BubbleStateFields, liquid_density: f
     let shape = bubble_states.radius.dim();
     let mut intensity = Array3::zeros(shape);
 
-    Zip::from(&mut intensity)
-        .and(&bubble_states.radius)
-        .and(&bubble_states.velocity)
-        .and(&bubble_states.compression_ratio)
-        .par_for_each(|out, &r, &v, &compression| {
+    zip_mut_three_refs(
+        intensity.view_mut(),
+        bubble_states.radius.view(),
+        bubble_states.velocity.view(),
+        bubble_states.compression_ratio.view(),
+        |out, &r, &v, &compression| {
             *out = IMPACT_ENERGY_COEFFICIENT
                 * liquid_density
                 * v.powi(2)
                 * r.powi(3)
                 * compression.powi(2);
-        });
+        },
+    );
 
     intensity
 }
@@ -52,13 +55,15 @@ impl ErosionPattern {
         let shape = damage_field.dim();
         let mut potential = Array3::zeros(shape);
 
-        Zip::from(&mut potential)
-            .and(damage_field)
-            .and(flow_velocity)
-            .and(surface_normal)
-            .par_for_each(|out, &damage, &v, &n| {
+        zip_mut_three_refs(
+            potential.view_mut(),
+            damage_field.view(),
+            flow_velocity.view(),
+            surface_normal.view(),
+            |out, &damage, &v, &n| {
                 *out = damage * FLOW_INFLUENCE_COEFFICIENT.mul_add(v, 1.0) * n.abs();
-            });
+            },
+        );
 
         potential
     }

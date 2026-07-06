@@ -12,7 +12,7 @@ use super::MultiModalFusion;
 use crate::acoustics::imaging::fusion::registration::generate_coordinate_arrays;
 use crate::acoustics::imaging::fusion::types::FusedImageResult;
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 use std::collections::HashMap;
 
 #[derive(Clone, Copy)]
@@ -38,9 +38,9 @@ pub(crate) fn fuse_intensity_projection(
         .uncertainty_quantification
         .then(|| Array3::<f64>::zeros(dims));
 
-    for i in 0..dims.0 {
-        for j in 0..dims.1 {
-            for k in 0..dims.2 {
+    for i in 0..dims[0] {
+        for j in 0..dims[1] {
+            for k in 0..dims[2] {
                 let mut selected_value = match kind {
                     ProjectionKind::Maximum => f64::NEG_INFINITY,
                     ProjectionKind::Minimum => f64::INFINITY,

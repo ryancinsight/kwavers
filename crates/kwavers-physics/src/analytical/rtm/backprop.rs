@@ -1,5 +1,5 @@
 use kwavers_core::constants::numerical::{FOUR_PI, TWO_PI};
-use rayon::prelude::*;
+use moirai_parallel::{for_each_chunk_pair_mut_enumerated_with, Adaptive};
 
 /// 2-D Green's function backpropagation from a focal point.
 ///
@@ -16,9 +16,9 @@ use rayon::prelude::*;
 /// ## Parallelism
 ///
 /// The outer loop over x-rows is embarrassingly parallel (each row writes to an
-/// independent slice `[ix*nz .. (ix+1)*nz]`).  Rayon `par_chunks_mut(nz)` + zip
-/// distributes rows across threads.  `f64::sin_cos` computes both sin and cos in
-/// a single instruction on x86 (FSINCOS / `__sincosf`).
+/// independent slice `[ix*nz .. (ix+1)*nz]`) and is scheduled through Moirai.
+/// `f64::sin_cos` computes both sin and cos in a single instruction on x86
+/// (FSINCOS / `__sincosf`).
 ///
 /// # Arguments
 /// * `x_arr`, `z_arr` – grid coordinates [m]
@@ -44,11 +44,12 @@ pub fn backprop_green_function_2d(
     let mut imag_out = vec![0.0_f64; nx * nz];
 
     // Each ix row writes to an independent nz-element slice → race-free.
-    real_out
-        .par_chunks_mut(nz)
-        .zip(imag_out.par_chunks_mut(nz))
-        .zip(x_arr.par_iter())
-        .for_each(|((re_row, im_row), &x)| {
+    for_each_chunk_pair_mut_enumerated_with::<Adaptive, _, _, _>(
+        &mut real_out,
+        &mut imag_out,
+        nz,
+        |ix, re_row, im_row| {
+            let x = x_arr[ix];
             for (iz, (re, im)) in re_row.iter_mut().zip(im_row.iter_mut()).enumerate() {
                 let r_f = ((x - x_f).powi(2) + (z_arr[iz] - z_f).powi(2))
                     .sqrt()
@@ -59,7 +60,8 @@ pub fn backprop_green_function_2d(
                 *re = amp * cos_ph;
                 *im = amp * sin_ph;
             }
-        });
+        },
+    );
     (real_out, imag_out)
 }
 
@@ -74,8 +76,8 @@ pub fn backprop_green_function_2d(
 ///
 /// ## Parallelism
 ///
-/// Outer ix loop distributes independent `[ny×nz]`-element slices across Rayon
-/// threads.  `f64::sin_cos` eliminates the separate `cos`/`sin` evaluations.
+/// Outer ix loop distributes independent `[ny×nz]`-element slices through
+/// Moirai. `f64::sin_cos` eliminates the separate `cos`/`sin` evaluations.
 ///
 /// Output: `(real_flat, imag_flat)` for an NX × NY × NZ grid, row-major `[x][y][z]`.
 ///
@@ -101,11 +103,12 @@ pub fn backprop_green_function_3d(
     let stride = ny * nz;
 
     // Each ix slice is [stride] elements, written independently → race-free.
-    real_out
-        .par_chunks_mut(stride)
-        .zip(imag_out.par_chunks_mut(stride))
-        .zip(x_arr.par_iter())
-        .for_each(|((re_slice, im_slice), &x)| {
+    for_each_chunk_pair_mut_enumerated_with::<Adaptive, _, _, _>(
+        &mut real_out,
+        &mut imag_out,
+        stride,
+        |ix, re_slice, im_slice| {
+            let x = x_arr[ix];
             let dx2 = (x - x_f).powi(2);
             for (iy, &y) in y_arr.iter().enumerate() {
                 let dxy2 = (y - y_f).mul_add(y - y_f, dx2);
@@ -118,6 +121,7 @@ pub fn backprop_green_function_3d(
                     im_slice[idx] = amp * sin_ph;
                 }
             }
-        });
+        },
+    );
     (real_out, imag_out)
 }

@@ -2,7 +2,7 @@
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use log::debug;
-use ndarray::{Array3, Zip};
+use ndarray::Array3;
 
 #[derive(Debug, Clone)]
 pub struct ReactionKinetics {
@@ -23,21 +23,18 @@ impl ReactionKinetics {
         &mut self,
         radical_init: &Array3<f64>,
         temperature: &Array3<f64>,
-        grid: &Grid,
+        _grid: &Grid,
         dt: f64,
         _medium: &dyn Medium,
     ) {
         debug!("Updating reaction kinetics");
 
-        Zip::indexed(&mut self.hydroxyl_concentration)
-            .and(&mut self.hydrogen_peroxide)
-            .and(radical_init)
-            .and(temperature)
-            .par_for_each(|(i, j, k), oh, h2o2, &r_init, &t| {
-                let _x = i as f64 * grid.dx;
-                let _y = j as f64 * grid.dy;
-                let _z = k as f64 * grid.dz;
-
+        crate::parallel::zip_two_mut_two_refs(
+            self.hydroxyl_concentration.view_mut(),
+            self.hydrogen_peroxide.view_mut(),
+            radical_init.view(),
+            temperature.view(),
+            |oh, h2o2, &r_init, &t| {
                 use kwavers_core::constants::thermodynamic::{
                     REACTION_REFERENCE_TEMPERATURE, SECONDARY_REACTION_RATE,
                     SONOCHEMISTRY_ACTIVATION_TEMPERATURE, SONOCHEMISTRY_BASE_RATE,
@@ -62,7 +59,8 @@ impl ReactionKinetics {
                 *oh -= 2.0 * h2o2_prod;
                 *h2o2 = h2o2.max(0.0);
                 *oh = oh.max(0.0);
-            });
+            },
+        );
     }
 
     #[must_use]
@@ -73,5 +71,49 @@ impl ReactionKinetics {
     #[must_use]
     pub fn hydrogen_peroxide(&self) -> &Array3<f64> {
         &self.hydrogen_peroxide
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use kwavers_core::constants::thermodynamic::{
+        REACTION_REFERENCE_TEMPERATURE, SECONDARY_REACTION_RATE,
+        SONOCHEMISTRY_ACTIVATION_TEMPERATURE, SONOCHEMISTRY_BASE_RATE,
+    };
+    use kwavers_medium::HomogeneousMedium;
+
+    #[test]
+    fn update_reactions_matches_arrhenius_and_recombination_formula() {
+        let grid = Grid::new(2, 2, 1, 1.0e-3, 1.0e-3, 1.0e-3)
+            .expect("invariant: valid chemistry test grid");
+        let medium = HomogeneousMedium::water(&grid);
+        let mut kinetics = ReactionKinetics::new(&grid);
+
+        let radical_init = Array3::from_elem((2, 2, 1), 3.0);
+        let temperature = Array3::from_elem((2, 2, 1), REACTION_REFERENCE_TEMPERATURE);
+        let dt = 2.0e-6;
+
+        kinetics.update_reactions(&radical_init, &temperature, &grid, dt, &medium);
+
+        let k1 = SONOCHEMISTRY_BASE_RATE
+            * (-SONOCHEMISTRY_ACTIVATION_TEMPERATURE / REACTION_REFERENCE_TEMPERATURE).exp();
+        let k2 = SECONDARY_REACTION_RATE;
+        let hydroxyl_before_recombination = k1 * 3.0 * dt;
+        let expected_h2o2 = k2 * hydroxyl_before_recombination.powi(2) * dt;
+        let expected_oh = (hydroxyl_before_recombination - 2.0 * expected_h2o2).max(0.0);
+
+        for &oh in &kinetics.hydroxyl_concentration {
+            assert!(
+                (oh - expected_oh).abs() <= expected_oh.abs().max(1.0) * 1.0e-12,
+                "OH concentration {oh} should equal {expected_oh}"
+            );
+        }
+        for &h2o2 in &kinetics.hydrogen_peroxide {
+            assert!(
+                (h2o2 - expected_h2o2).abs() <= expected_h2o2.abs().max(1.0) * 1.0e-12,
+                "H2O2 concentration {h2o2} should equal {expected_h2o2}"
+            );
+        }
     }
 }

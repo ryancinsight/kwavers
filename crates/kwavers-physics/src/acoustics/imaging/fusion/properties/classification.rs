@@ -14,7 +14,7 @@
 //! | Moderate | [0.6, 0.85) | Potentially abnormal |
 //! | High | [0.85, 1.0] | Calcified / vascular |
 
-use ndarray::Array3;
+use leto::Array3;
 
 /// Fisher discriminant boundary: normal ↔ borderline tissue
 const THRESHOLD_NORMAL_BORDERLINE: f64 = 0.3;

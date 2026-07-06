@@ -1,7 +1,7 @@
 use super::{resample_to_target_grid, validate_registration_compatibility, IDENTITY_HOMOGENEOUS};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_imaging::fusion::{AffineTransform, RegistrationMethod};
-use ndarray::Array3;
+use leto::Array3;
 use ritk_registration::{AffineTransform as RitkAffineTransform, ImageRegistration};
 
 /// Fusion-local validation case for registration dispatch.
@@ -49,7 +49,7 @@ impl RitkRegistrationEngine {
         moving: &Array3<f64>,
         method: RegistrationMethod,
     ) -> KwaversResult<FusionRegistrationResult> {
-        validate_registration_compatibility(fixed.dim(), moving.dim())?;
+        validate_registration_compatibility(fixed.shape(), moving.shape())?;
 
         let result = match method {
             RegistrationMethod::RigidBody | RegistrationMethod::Automatic => self
@@ -63,7 +63,7 @@ impl RitkRegistrationEngine {
             RegistrationMethod::NonRigid => {
                 // Symmetric Gaussian Demons non-rigid registration (Vercauteren 2009).
                 use ritk_registration::demons::{DemonsConfig, SymmetricDemonsRegistration};
-                let (nz, ny, nx) = fixed.dim();
+                let [nz, ny, nx] = fixed.shape();
                 let fixed_flat: Vec<f32> = fixed.iter().map(|&v| v as f32).collect();
                 let moving_flat: Vec<f32> = moving.iter().map(|&v| v as f32).collect();
                 let demons_result = SymmetricDemonsRegistration::new(DemonsConfig::default())
@@ -93,7 +93,7 @@ impl RitkRegistrationEngine {
         &self,
         moving: &Array3<f64>,
         registration: &FusionRegistrationResult,
-        target_shape: (usize, usize, usize),
+        target_shape: [usize; 3],
     ) -> KwaversResult<Array3<f64>> {
         // Use pre-warped image for non-rigid (Demons) results.
         if let Some((ref warped_f32, _shape)) = registration.prewarped {

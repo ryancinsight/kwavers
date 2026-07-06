@@ -1,6 +1,6 @@
 //! Bayesian fusion uncertainty and confidence mapping
 
-use ndarray::Array3;
+use leto::Array3;
 
 /// Compute fusion uncertainty using multi-modal variance
 ///
@@ -18,16 +18,16 @@ use ndarray::Array3;
 #[must_use]
 pub fn compute_fusion_uncertainty(modality_data: &[&Array3<f64>], weights: &[f64]) -> Array3<f64> {
     if modality_data.is_empty() {
-        return Array3::<f64>::ones((1, 1, 1)); // Maximum uncertainty
+        return Array3::<f64>::ones([1, 1, 1]); // Maximum uncertainty
     }
 
-    let dims = modality_data[0].dim();
+    let dims = modality_data[0].shape();
     let mut uncertainty_map = Array3::<f64>::zeros(dims);
 
     // For each voxel, compute weighted variance across modalities
-    for i in 0..dims.0 {
-        for j in 0..dims.1 {
-            for k in 0..dims.2 {
+    for i in 0..dims[0] {
+        for j in 0..dims[1] {
+            for k in 0..dims[2] {
                 let values: Vec<f64> = modality_data.iter().map(|data| data[[i, j, k]]).collect();
 
                 let (_mean, uncertainty) = bayesian_fusion_single_voxel(&values, weights);
