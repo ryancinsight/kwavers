@@ -298,8 +298,7 @@ pub fn quasi_static_induction_example() -> KwaversResult<()> {
 
 /// Run all electromagnetic simulation examples
 #[cfg(feature = "pinn")]
-#[tokio::main]
-async fn main() -> KwaversResult<()> {
+fn main() -> KwaversResult<()> {
     println!("Electromagnetic PINN Simulation Examples");
     println!("========================================");
 
@@ -337,28 +336,28 @@ async fn main() -> KwaversResult<()> {
 mod tests {
     use super::*;
 
-    #[tokio::test]
-    async fn test_electrostatic_example() {
+    #[test]
+    fn test_electrostatic_example() {
         // Test that the electrostatic example can be created without errors
         let result = electrostatic_capacitor_example();
         // Note: Full training might be too slow for unit tests, so we just check setup
         assert!(result.is_ok() || matches!(result, Err(_))); // Allow setup errors in test environment
     }
 
-    #[tokio::test]
-    async fn test_magnetostatic_example() {
+    #[test]
+    fn test_magnetostatic_example() {
         let result = magnetostatic_wire_example();
         assert!(result.is_ok() || matches!(result, Err(_)));
     }
 
-    #[tokio::test]
-    async fn test_wave_propagation_example() {
+    #[test]
+    fn test_wave_propagation_example() {
         let result = wave_propagation_example();
         assert!(result.is_ok() || matches!(result, Err(_)));
     }
 
-    #[tokio::test]
-    async fn test_domain_configurations() {
+    #[test]
+    fn test_domain_configurations() {
         // Test that different domain configurations can be created
         let electrostatic = ElectromagneticDomain::<Backend>::new(
             EMProblemType::Electrostatic,

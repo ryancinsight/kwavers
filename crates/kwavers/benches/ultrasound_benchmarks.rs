@@ -214,14 +214,16 @@ fn bench_clinical_workflow(c: &mut Criterion) {
             // - Clinical reporting with diagnostic thresholds
             // - Quality metrics (SNR, CNR, confidence intervals)
             // Current: mean/std only for benchmark timing
-            let mean_stiffness = elasticity_map.youngs_modulus.mean().unwrap();
+            let sample_count = elasticity_map.youngs_modulus.iter().count();
+            let mean_stiffness =
+                elasticity_map.youngs_modulus.iter().copied().sum::<f64>() / sample_count as f64;
             let std_stiffness = {
                 let variance = elasticity_map
                     .youngs_modulus
                     .iter()
                     .map(|&x| (x - mean_stiffness).powi(2))
                     .sum::<f64>()
-                    / elasticity_map.youngs_modulus.len() as f64;
+                    / sample_count as f64;
                 variance.sqrt()
             };
 

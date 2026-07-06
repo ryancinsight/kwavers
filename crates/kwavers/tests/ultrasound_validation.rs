@@ -407,8 +407,9 @@ pub mod swe_validation {
             },
             performance: PerformanceMetrics {
                 computation_time,
-                memory_usage: (elasticity_map.youngs_modulus.len() * 3 * std::mem::size_of::<f64>())
-                    as f64
+                memory_usage: (elasticity_map.youngs_modulus.size()
+                    * 3
+                    * std::mem::size_of::<f64>()) as f64
                     / 1e6,
                 convergence_rate: 0.95,
             },

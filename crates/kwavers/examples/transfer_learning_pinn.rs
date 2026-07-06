@@ -11,7 +11,7 @@ use kwavers_solver::inverse::pinn::ml::transfer_learning::{
 };
 #[cfg(feature = "pinn")]
 use kwavers_solver::inverse::pinn::ml::{
-    BoundaryCondition2D, BurnPINN2DConfig, BurnPINN2DWave, Geometry2D,
+    BoundaryCondition2D, BurnPINN2DConfig, BurnPINN2DWave, BurnWave2dGeometry,
 };
 
 #[cfg(feature = "pinn")]
@@ -32,7 +32,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut learner = TransferLearner::new(source_model, transfer_config);
 
-    let target_geometry = Geometry2D::rectangular(0.0, 1.0, 0.0, 1.0);
+    let target_geometry = BurnWave2dGeometry::rectangular(0.0, 1.0, 0.0, 1.0);
     let target_conditions: Vec<BoundaryCondition2D> = Vec::new();
 
     let (_target_model, metrics) =

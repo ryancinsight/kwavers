@@ -39,7 +39,7 @@ proptest! {
         let result = sim.simulate(&initial).unwrap();
 
         // Assert: dimensions
-        assert_eq!(result.reconstructed_image.dim(), (nx, ny, nz));
+        assert_eq!(result.reconstructed_image.shape(), [nx, ny, nz]);
         assert_eq!(result.pressure_fields.len(), result.time.len());
 
         // Assert: values finite and not all zeros
@@ -47,7 +47,9 @@ proptest! {
         for val in result.reconstructed_image.iter() {
             let val: f64 = *val;
             assert!(val.is_finite(), "non-finite value in reconstructed image");
-            if val.abs() > 0.0 { any_nonzero = true; }
+            if val.abs() > 0.0 {
+                any_nonzero = true;
+            }
         }
         assert!(any_nonzero, "reconstructed image should contain non-zero signal");
     }

@@ -10,7 +10,7 @@
 
 use kwavers_gpu::gpu::compute_kernels::{AcousticFieldKernel, WaveEquationGpu};
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3 as LetoArray3;
 
 /// Create a test grid for acoustic simulations
 fn create_test_grid() -> Grid {
@@ -25,9 +25,9 @@ fn create_test_grid() -> Grid {
     .expect("Failed to create test grid")
 }
 
-#[tokio::test]
-async fn test_acoustic_field_kernel_creation() {
-    match AcousticFieldKernel::new().await {
+#[test]
+fn test_acoustic_field_kernel_creation() {
+    match AcousticFieldKernel::try_new() {
         Ok(kernel) => {
             // Kernel created successfully
             assert!(format!("{:?}", kernel).contains("AcousticFieldKernel"));
@@ -39,9 +39,9 @@ async fn test_acoustic_field_kernel_creation() {
     }
 }
 
-#[tokio::test]
-async fn test_compute_propagation_gaussian() {
-    let kernel: AcousticFieldKernel = match AcousticFieldKernel::new().await {
+#[test]
+fn test_compute_propagation_gaussian() {
+    let kernel: AcousticFieldKernel = match AcousticFieldKernel::try_new() {
         Ok(k) => k,
         Err(_) => {
             eprintln!("GPU not available, skipping test");
@@ -54,7 +54,7 @@ async fn test_compute_propagation_gaussian() {
     let sound_speed = 1500.0; // m/s in water
 
     // Create Gaussian pressure field
-    let mut pressure = Array3::zeros((32, 32, 32));
+    let mut pressure = LetoArray3::<f32>::zeros([32, 32, 32]);
     let center = 16;
     for i in 0..32 {
         for j in 0..32 {
@@ -63,7 +63,7 @@ async fn test_compute_propagation_gaussian() {
                 let dy = (j as f64 - center as f64) * grid.dy;
                 let dz = (k as f64 - center as f64) * grid.dz;
                 let r2 = dx * dx + dy * dy + dz * dz;
-                pressure[[i, j, k]] = (-r2 / (0.001 * 0.001)).exp();
+                pressure[[i, j, k]] = (-r2 / (0.001 * 0.001)).exp() as f32;
             }
         }
     }
@@ -73,10 +73,10 @@ async fn test_compute_propagation_gaussian() {
 
     match result {
         Ok(propagated) => {
-            assert_eq!(propagated.dim(), pressure.dim());
+            assert_eq!(propagated.shape(), pressure.shape());
             // Check that propagation occurred (values should change)
-            let initial_sum: f64 = pressure.sum();
-            let propagated_sum: f64 = propagated.sum();
+            let initial_sum: f64 = pressure.iter().map(|&x| f64::from(x)).sum();
+            let propagated_sum: f64 = propagated.iter().map(|&x| f64::from(x)).sum();
             assert!(
                 (propagated_sum - initial_sum).abs() < initial_sum * 0.5,
                 "Propagation should conserve energy approximately"
@@ -88,9 +88,9 @@ async fn test_compute_propagation_gaussian() {
     }
 }
 
-#[tokio::test]
-async fn test_compute_propagation_zero_field() {
-    let kernel: AcousticFieldKernel = match AcousticFieldKernel::new().await {
+#[test]
+fn test_compute_propagation_zero_field() {
+    let kernel: AcousticFieldKernel = match AcousticFieldKernel::try_new() {
         Ok(k) => k,
         Err(_) => {
             eprintln!("GPU not available, skipping test");
@@ -99,14 +99,17 @@ async fn test_compute_propagation_zero_field() {
     };
 
     let grid = create_test_grid();
-    let pressure = Array3::zeros((32, 32, 32));
+    let pressure = LetoArray3::<f32>::zeros([32, 32, 32]);
     let dt = 1e-6;
     let sound_speed = 1500.0;
 
     match kernel.compute_propagation(&pressure, &grid, dt, sound_speed) {
         Ok(result) => {
             // Zero field should remain zero
-            assert_eq!(result.sum(), 0.0, "Zero field should remain zero");
+            assert!(
+                result.iter().all(|&value| value == 0.0),
+                "Zero field should remain zero"
+            );
         }
         Err(e) => {
             eprintln!("Test failed (acceptable if GPU unavailable): {}", e);
@@ -114,9 +117,9 @@ async fn test_compute_propagation_zero_field() {
     }
 }
 
-#[tokio::test]
-async fn test_wave_equation_gpu_creation() {
-    match WaveEquationGpu::new().await {
+#[test]
+fn test_wave_equation_gpu_creation() {
+    match WaveEquationGpu::try_new() {
         Ok(solver) => {
             assert!(format!("{:?}", solver).contains("WaveEquationGpu"));
         }
@@ -126,9 +129,9 @@ async fn test_wave_equation_gpu_creation() {
     }
 }
 
-#[tokio::test]
-async fn test_wave_equation_step() {
-    let solver: WaveEquationGpu = match WaveEquationGpu::new().await {
+#[test]
+fn test_wave_equation_step() {
+    let solver: WaveEquationGpu = match WaveEquationGpu::try_new() {
         Ok(s) => s,
         Err(_) => {
             eprintln!("GPU not available, skipping test");
@@ -137,13 +140,13 @@ async fn test_wave_equation_step() {
     };
 
     let grid = create_test_grid();
-    let dim = (32, 32, 32);
+    let shape = [32, 32, 32];
 
     // Create test fields
-    let mut pressure = Array3::zeros(dim);
-    let velocity = Array3::zeros(dim);
-    let density = Array3::from_elem(dim, 1000.0); // Water density
-    let sound_speed = Array3::from_elem(dim, 1500.0); // Water sound speed
+    let mut pressure = LetoArray3::<f32>::zeros(shape);
+    let velocity = LetoArray3::<f32>::zeros(shape);
+    let density = LetoArray3::<f32>::from_elem(shape, 1000.0); // Water density
+    let sound_speed = LetoArray3::<f32>::from_elem(shape, 1500.0); // Water sound speed
 
     // Add initial pressure perturbation
     pressure[[16, 16, 16]] = 1.0;
@@ -152,16 +155,16 @@ async fn test_wave_equation_step() {
 
     match solver.step(&pressure, &velocity, &density, &sound_speed, &grid, dt) {
         Ok((new_pressure, new_velocity)) => {
-            assert_eq!(new_pressure.dim(), dim);
-            assert_eq!(new_velocity.dim(), dim);
+            assert_eq!(new_pressure.shape(), shape);
+            assert_eq!(new_velocity.shape(), shape);
 
             // Check that fields have reasonable values
             assert!(
-                new_pressure.iter().all(|&x: &f64| x.is_finite()),
+                new_pressure.iter().all(|&x| x.is_finite()),
                 "Pressure should be finite"
             );
             assert!(
-                new_velocity.iter().all(|&x: &f64| x.is_finite()),
+                new_velocity.iter().all(|&x| x.is_finite()),
                 "Velocity should be finite"
             );
         }
@@ -171,9 +174,9 @@ async fn test_wave_equation_step() {
     }
 }
 
-#[tokio::test]
-async fn test_wave_equation_step_rejects_small_grid() {
-    let solver: WaveEquationGpu = match WaveEquationGpu::new().await {
+#[test]
+fn test_wave_equation_step_rejects_small_grid() {
+    let solver: WaveEquationGpu = match WaveEquationGpu::try_new() {
         Ok(s) => s,
         Err(_) => {
             eprintln!("GPU not available, skipping test");
@@ -182,11 +185,11 @@ async fn test_wave_equation_step_rejects_small_grid() {
     };
 
     let grid = Grid::new(2, 2, 2, 0.001, 0.001, 0.001).expect("Failed to create grid");
-    let dim = (2, 2, 2);
-    let pressure = Array3::zeros(dim);
-    let velocity = Array3::zeros(dim);
-    let density = Array3::from_elem(dim, 1000.0);
-    let sound_speed = Array3::from_elem(dim, 1500.0);
+    let shape = [2, 2, 2];
+    let pressure = LetoArray3::<f32>::zeros(shape);
+    let velocity = LetoArray3::<f32>::zeros(shape);
+    let density = LetoArray3::<f32>::from_elem(shape, 1000.0);
+    let sound_speed = LetoArray3::<f32>::from_elem(shape, 1500.0);
 
     let err = solver
         .step(&pressure, &velocity, &density, &sound_speed, &grid, 1e-7)
@@ -195,9 +198,9 @@ async fn test_wave_equation_step_rejects_small_grid() {
     assert!(format!("{err:?}").contains("grid dimensions >= 3"));
 }
 
-#[tokio::test]
-async fn test_wave_equation_step_rejects_shape_mismatch() {
-    let solver: WaveEquationGpu = match WaveEquationGpu::new().await {
+#[test]
+fn test_wave_equation_step_rejects_shape_mismatch() {
+    let solver: WaveEquationGpu = match WaveEquationGpu::try_new() {
         Ok(s) => s,
         Err(_) => {
             eprintln!("GPU not available, skipping test");
@@ -206,10 +209,10 @@ async fn test_wave_equation_step_rejects_shape_mismatch() {
     };
 
     let grid = create_test_grid();
-    let pressure = Array3::zeros((32, 32, 32));
-    let velocity = Array3::zeros((31, 32, 32));
-    let density = Array3::from_elem((32, 32, 32), 1000.0);
-    let sound_speed = Array3::from_elem((32, 32, 32), 1500.0);
+    let pressure = LetoArray3::<f32>::zeros([32, 32, 32]);
+    let velocity = LetoArray3::<f32>::zeros([31, 32, 32]);
+    let density = LetoArray3::<f32>::from_elem([32, 32, 32], 1000.0);
+    let sound_speed = LetoArray3::<f32>::from_elem([32, 32, 32], 1500.0);
 
     let err = solver
         .step(&pressure, &velocity, &density, &sound_speed, &grid, 1e-7)
@@ -218,9 +221,9 @@ async fn test_wave_equation_step_rejects_shape_mismatch() {
     assert!(format!("{err:?}").contains("matching field dimensions"));
 }
 
-#[tokio::test]
-async fn test_compute_propagation_different_sizes() {
-    let kernel: AcousticFieldKernel = match AcousticFieldKernel::new().await {
+#[test]
+fn test_compute_propagation_different_sizes() {
+    let kernel: AcousticFieldKernel = match AcousticFieldKernel::try_new() {
         Ok(k) => k,
         Err(_) => {
             eprintln!("GPU not available, skipping test");
@@ -234,11 +237,11 @@ async fn test_compute_propagation_different_sizes() {
     for (nx, ny, nz) in sizes {
         let grid = Grid::new(nx, ny, nz, 0.001, 0.001, 0.001).expect("Failed to create grid");
 
-        let pressure = Array3::from_elem((nx, ny, nz), 0.5);
+        let pressure = LetoArray3::<f32>::from_elem([nx, ny, nz], 0.5);
 
         match kernel.compute_propagation(&pressure, &grid, 1e-6, 1500.0) {
             Ok(result) => {
-                assert_eq!(result.dim(), (nx, ny, nz));
+                assert_eq!(result.shape(), [nx, ny, nz]);
             }
             Err(e) => {
                 eprintln!("Test with size ({}, {}, {}) failed: {}", nx, ny, nz, e);

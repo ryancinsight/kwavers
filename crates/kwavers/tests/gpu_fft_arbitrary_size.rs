@@ -12,9 +12,9 @@
 //! 3. **Power-of-2 regression** — sizes `{16, 32, 64}` must also pass both
 //!    checks (ensures the radix-2 path is not broken by the Chirp-Z changes).
 //!
-//! All tests require the `gpu` feature and a working wgpu device.  They are
-//! marked `#[ignore]` on headless CI (use `cargo test --features gpu -- --ignored`
-//! or `cargo nextest run --features gpu --run-ignored all` to execute them).
+//! All tests require the `gpu` feature and a working Apollo/Hephaestus WGPU
+//! backend. They are marked `#[ignore]` on headless CI (use
+//! `cargo nextest run --features gpu --run-ignored all` to execute them).
 //!
 //! ## References
 //! - Bluestein L.I. (1970). IEEE Trans. AU-18(4), 451–455.
@@ -22,24 +22,31 @@
 
 #![cfg(feature = "gpu")]
 
-use kwavers_math::fft::{fft_1d_array, Complex64};
-use ndarray::Array1;
+use kwavers_math::fft::{
+    fft_1d_array,
+    gpu_fft::{FftBackend, GpuFft3d, WgpuBackend},
+    Complex64, Shape3D,
+};
+use ndarray::{Array1, Array3};
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
-/// Initialise a wgpu device synchronously (Vulkan/DX12/Metal/GL).
-/// Returns `None` if no suitable adapter is available (headless CI).
-async fn try_init_gpu() -> Option<(std::sync::Arc<wgpu::Device>, std::sync::Arc<wgpu::Queue>)> {
-    let instance = wgpu::Instance::default();
-    let adapter = instance
-        .request_adapter(&wgpu::RequestAdapterOptions::default())
-        .await
-        .ok()?;
-    let (device, queue) = adapter
-        .request_device(&wgpu::DeviceDescriptor::default())
-        .await
-        .ok()?;
-    Some((std::sync::Arc::new(device), std::sync::Arc::new(queue)))
+/// Plan a 3-D GPU FFT through the Apollo backend trait.
+/// Returns `None` if no suitable Hephaestus-backed adapter is available.
+fn try_gpu_fft_plan(nx: usize, ny: usize, nz: usize) -> Option<GpuFft3d> {
+    let shape = Shape3D::new(nx, ny, nz).expect("test dimensions must be positive");
+    let backend = match WgpuBackend::try_default() {
+        Ok(backend) => backend,
+        Err(error) => {
+            eprintln!("Skipping GPU FFT test: Apollo WGPU backend unavailable: {error}");
+            return None;
+        }
+    };
+    Some(
+        backend
+            .plan_3d(shape)
+            .expect("validated positive shape must produce a GPU FFT plan"),
+    )
 }
 
 /// Build a deterministic 1-D complex test signal of length `n`.
@@ -59,31 +66,15 @@ fn cpu_fft_1d(signal: &[f64]) -> Array1<Complex64> {
     fft_1d_array(&Array1::from_vec(signal.to_vec()))
 }
 
-/// Compute the 3-D GPU FFT for a grid of shape (nx, ny, nz) using a uniform
-/// real signal and return (gpu_re, gpu_im) as flat Vec<f32> length nx*ny*nz.
-fn gpu_fft_3d(
-    device: std::sync::Arc<wgpu::Device>,
-    queue: std::sync::Arc<wgpu::Queue>,
-    nx: usize,
-    ny: usize,
-    nz: usize,
-) -> (Vec<f32>, Vec<f32>) {
-    use kwavers_math::fft::gpu_fft::GpuFft3d;
-    use ndarray::Array3;
+fn leto_field(field: &Array3<f64>) -> leto::Array3<f64> {
+    let (nx, ny, nz) = field.dim();
+    leto::Array3::from_shape_vec([nx, ny, nz], field.iter().copied().collect())
+        .expect("test field must map to Leto storage with identical shape")
+}
 
-    let signal: Array3<f64> = Array3::from_shape_fn((nx, ny, nz), |(i, j, k)| {
-        use std::f64::consts::TAU;
-        let t = (i + j + k) as f64 / (nx + ny + nz) as f64;
-        (TAU * 3.0 * t).cos() + 0.5 * (TAU * 7.0 * t).sin()
-    });
-
-    let gpu_fft = GpuFft3d::new(device, queue, nx, ny, nz).expect("GpuFft3d::new failed");
-    let spectrum = gpu_fft.forward(&signal);
-
-    let n = nx * ny * nz;
-    let re: Vec<f32> = (0..n).map(|i| spectrum[2 * i]).collect();
-    let im: Vec<f32> = (0..n).map(|i| spectrum[2 * i + 1]).collect();
-    (re, im)
+fn leto_zeros(nx: usize, ny: usize, nz: usize) -> leto::Array3<f64> {
+    leto::Array3::from_shape_vec([nx, ny, nz], vec![0.0; nx * ny * nz])
+        .expect("zero field must map to Leto storage with identical shape")
 }
 
 // ── roundtrip test helper ─────────────────────────────────────────────────────
@@ -91,14 +82,11 @@ fn gpu_fft_3d(
 /// Test that IFFT(FFT(x)) ≈ x to within `tol` (infinity norm).
 /// The grid is (n, 4, 4) to keep data volume small while exercising the axis
 /// under test at length `n`.
-async fn roundtrip_1d_in_3d(n: usize, tol: f64) {
-    let Some((device, queue)) = try_init_gpu().await else {
+fn roundtrip_1d_in_3d(n: usize, tol: f64) {
+    let Some(gpu) = try_gpu_fft_plan(n, 4, 4) else {
         eprintln!("Skipping roundtrip_1d_in_3d(n={n}): no GPU available");
         return;
     };
-    use kwavers_math::fft::gpu_fft::GpuFft3d;
-    use ndarray::Array3;
-
     let nx = n;
     let ny = 4;
     let nz = 4;
@@ -109,9 +97,8 @@ async fn roundtrip_1d_in_3d(n: usize, tol: f64) {
             + 0.25 * (TAU * 5.0 * k as f64 / nz as f64).cos()
     });
 
-    let gpu = GpuFft3d::new(device, queue, nx, ny, nz).expect("GpuFft3d::new");
-    let spectrum = gpu.forward(&original);
-    let mut reconstructed = Array3::zeros((nx, ny, nz));
+    let spectrum = gpu.forward(&leto_field(&original));
+    let mut reconstructed = leto_zeros(nx, ny, nz);
     gpu.inverse(&spectrum, &mut reconstructed);
 
     let max_err = original
@@ -130,22 +117,18 @@ async fn roundtrip_1d_in_3d(n: usize, tol: f64) {
 
 /// Check that the GPU 1D FFT agrees with the CPU f64 FFT for a 1D signal
 /// embedded in a (n, 1, 1) grid, to within relative error `rel_tol`.
-async fn cross_validate_1d(n: usize, rel_tol: f64) {
-    let Some((device, queue)) = try_init_gpu().await else {
+fn cross_validate_1d(n: usize, rel_tol: f64) {
+    let Some(gpu) = try_gpu_fft_plan(n, 1, 1) else {
         eprintln!("Skipping cross_validate_1d(n={n}): no GPU available");
         return;
     };
-    use kwavers_math::fft::gpu_fft::GpuFft3d;
-    use ndarray::Array3;
-
     let signal = test_signal_1d(n);
     let cpu_spec = cpu_fft_1d(&signal);
     let signal_scale = signal.iter().copied().map(f64::abs).fold(0.0_f64, f64::max);
     let abs_tol = 4.0 * signal.len() as f64 * f32::EPSILON as f64 * signal_scale;
 
     let arr: Array3<f64> = Array3::from_shape_fn((n, 1, 1), |(i, _, _)| signal[i]);
-    let gpu = GpuFft3d::new(device, queue, n, 1, 1).expect("GpuFft3d::new");
-    let spec = gpu.forward(&arr);
+    let spec = gpu.forward(&leto_field(&arr));
 
     let mut max_rel_err = 0.0_f64;
     let mut max_abs_err = 0.0_f64;
@@ -176,111 +159,108 @@ async fn cross_validate_1d(n: usize, rel_tol: f64) {
 
 // Non-power-of-2 roundtrip tests
 
-#[tokio::test]
+#[test]
 #[ignore = "requires GPU device"]
-async fn test_roundtrip_n12() {
-    roundtrip_1d_in_3d(12, 1e-5).await;
+fn test_roundtrip_n12() {
+    roundtrip_1d_in_3d(12, 1e-5);
 }
 
-#[tokio::test]
+#[test]
 #[ignore = "requires GPU device"]
-async fn test_roundtrip_n30() {
-    roundtrip_1d_in_3d(30, 1e-5).await;
+fn test_roundtrip_n30() {
+    roundtrip_1d_in_3d(30, 1e-5);
 }
 
-#[tokio::test]
+#[test]
 #[ignore = "requires GPU device"]
-async fn test_roundtrip_n48() {
-    roundtrip_1d_in_3d(48, 1e-5).await;
+fn test_roundtrip_n48() {
+    roundtrip_1d_in_3d(48, 1e-5);
 }
 
-#[tokio::test]
+#[test]
 #[ignore = "requires GPU device"]
-async fn test_roundtrip_n100() {
-    roundtrip_1d_in_3d(100, 1e-5).await;
+fn test_roundtrip_n100() {
+    roundtrip_1d_in_3d(100, 1e-5);
 }
 
-#[tokio::test]
+#[test]
 #[ignore = "requires GPU device"]
-async fn test_roundtrip_n200() {
-    roundtrip_1d_in_3d(200, 1e-5).await;
+fn test_roundtrip_n200() {
+    roundtrip_1d_in_3d(200, 1e-5);
 }
 
 // Power-of-2 regression tests (radix-2 path)
 
-#[tokio::test]
+#[test]
 #[ignore = "requires GPU device"]
-async fn test_roundtrip_n16() {
-    roundtrip_1d_in_3d(16, 1e-5).await;
+fn test_roundtrip_n16() {
+    roundtrip_1d_in_3d(16, 1e-5);
 }
 
-#[tokio::test]
+#[test]
 #[ignore = "requires GPU device"]
-async fn test_roundtrip_n32() {
-    roundtrip_1d_in_3d(32, 1e-5).await;
+fn test_roundtrip_n32() {
+    roundtrip_1d_in_3d(32, 1e-5);
 }
 
-#[tokio::test]
+#[test]
 #[ignore = "requires GPU device"]
-async fn test_roundtrip_n64() {
-    roundtrip_1d_in_3d(64, 1e-5).await;
+fn test_roundtrip_n64() {
+    roundtrip_1d_in_3d(64, 1e-5);
 }
 
 // CPU cross-validation tests (non-power-of-2)
 
-#[tokio::test]
+#[test]
 #[ignore = "requires GPU device"]
-async fn test_cross_validate_n12() {
-    cross_validate_1d(12, 5e-6).await;
+fn test_cross_validate_n12() {
+    cross_validate_1d(12, 5e-6);
 }
 
-#[tokio::test]
+#[test]
 #[ignore = "requires GPU device"]
-async fn test_cross_validate_n30() {
-    cross_validate_1d(30, 5e-6).await;
+fn test_cross_validate_n30() {
+    cross_validate_1d(30, 5e-6);
 }
 
-#[tokio::test]
+#[test]
 #[ignore = "requires GPU device"]
-async fn test_cross_validate_n48() {
-    cross_validate_1d(48, 5e-6).await;
+fn test_cross_validate_n48() {
+    cross_validate_1d(48, 5e-6);
 }
 
-#[tokio::test]
+#[test]
 #[ignore = "requires GPU device"]
-async fn test_cross_validate_n100() {
-    cross_validate_1d(100, 5e-6).await;
+fn test_cross_validate_n100() {
+    cross_validate_1d(100, 5e-6);
 }
 
-#[tokio::test]
+#[test]
 #[ignore = "requires GPU device"]
-async fn test_cross_validate_n200() {
-    cross_validate_1d(200, 5e-6).await;
+fn test_cross_validate_n200() {
+    cross_validate_1d(200, 5e-6);
 }
 
 // CPU cross-validation tests (power-of-2 regression)
 
-#[tokio::test]
+#[test]
 #[ignore = "requires GPU device"]
-async fn test_cross_validate_n64() {
-    cross_validate_1d(64, 5e-6).await;
+fn test_cross_validate_n64() {
+    cross_validate_1d(64, 5e-6);
 }
 
 /// Parseval's theorem: ||FFT(x)||² / N ≈ ||x||² within 1e-5.
-#[tokio::test]
+#[test]
 #[ignore = "requires GPU device"]
-async fn test_parseval_n30() {
+fn test_parseval_n30() {
     let n = 30;
-    let Some((device, queue)) = try_init_gpu().await else {
+    let Some(gpu) = try_gpu_fft_plan(n, 1, 1) else {
         return;
     };
-    use kwavers_math::fft::gpu_fft::GpuFft3d;
-    use ndarray::Array3;
 
     let signal = test_signal_1d(n);
     let arr: Array3<f64> = Array3::from_shape_fn((n, 1, 1), |(i, _, _)| signal[i]);
-    let gpu = GpuFft3d::new(device, queue, n, 1, 1).expect("GpuFft3d::new");
-    let spec = gpu.forward(&arr);
+    let spec = gpu.forward(&leto_field(&arr));
 
     let time_energy: f64 = signal.iter().map(|x| x * x).sum::<f64>();
     let freq_energy: f64 = (0..n)

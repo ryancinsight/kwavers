@@ -35,29 +35,48 @@
 
 #![cfg(feature = "gpu")]
 
-use kwavers_math::fft::{fft_3d_array, Complex64};
+use kwavers_math::fft::{
+    fft_3d_array,
+    gpu_fft::{FftBackend, GpuFft3d, WgpuBackend},
+    Complex64, Shape3D,
+};
 use ndarray::Array3;
 
-// ── GPU device initialisation ─────────────────────────────────────────────────
+// ── GPU plan initialisation ───────────────────────────────────────────────────
 
-/// Attempt to acquire a wgpu device/queue pair.  Returns `None` on headless CI.
-async fn try_init_gpu() -> Option<(std::sync::Arc<wgpu::Device>, std::sync::Arc<wgpu::Queue>)> {
-    let instance = wgpu::Instance::default();
-    let adapter = instance
-        .request_adapter(&wgpu::RequestAdapterOptions::default())
-        .await
-        .ok()?;
-    let (device, queue) = adapter
-        .request_device(&wgpu::DeviceDescriptor::default())
-        .await
-        .ok()?;
-    Some((std::sync::Arc::new(device), std::sync::Arc::new(queue)))
+/// Attempt to create a provider-owned GPU FFT plan.
+/// Returns `None` when the Apollo/Hephaestus WGPU backend is unavailable.
+fn try_gpu_fft_plan(nx: usize, ny: usize, nz: usize) -> Option<GpuFft3d> {
+    let shape = Shape3D::new(nx, ny, nz).expect("test dimensions must be positive");
+    let backend = match WgpuBackend::try_default() {
+        Ok(backend) => backend,
+        Err(error) => {
+            eprintln!("Skipping GPU FFT parity test: Apollo WGPU backend unavailable: {error}");
+            return None;
+        }
+    };
+    Some(
+        backend
+            .plan_3d(shape)
+            .expect("validated positive shape must produce a GPU FFT plan"),
+    )
 }
 
 // ── CPU 3D FFT reference (Apollo-backed, f64) ─────────────────────────────────
 
 fn cpu_fft_3d_forward(field: &Array3<f64>) -> Array3<Complex64> {
     fft_3d_array(field)
+}
+
+fn leto_field(field: &Array3<f64>) -> leto::Array3<f64> {
+    let (nx, ny, nz) = field.dim();
+    leto::Array3::from_shape_vec([nx, ny, nz], field.iter().copied().collect())
+        .expect("test field must map to Leto storage with identical shape")
+}
+
+fn leto_zeros(nx: usize, ny: usize, nz: usize) -> leto::Array3<f64> {
+    leto::Array3::from_shape_vec([nx, ny, nz], vec![0.0; nx * ny * nz])
+        .expect("zero field must map to Leto storage with identical shape")
 }
 
 // ── Deterministic 3D test signal ─────────────────────────────────────────────
@@ -85,9 +104,7 @@ fn test_signal_3d(nx: usize, ny: usize, nz: usize) -> Array3<f64> {
 /// on all bins where `|CPU_k| > 1e-10`.
 ///
 /// Also asserts Parseval: `‖GPU_FFT‖²/N ≈ ‖x‖²` within relative error `parseval_tol`.
-async fn parity_test(
-    device: std::sync::Arc<wgpu::Device>,
-    queue: std::sync::Arc<wgpu::Queue>,
+fn parity_test(
     nx: usize,
     ny: usize,
     nz: usize,
@@ -95,19 +112,19 @@ async fn parity_test(
     cross_val_rel_tol: f64,
     parseval_tol: f64,
 ) {
-    use kwavers_math::fft::gpu_fft::GpuFft3d;
+    let Some(gpu) = try_gpu_fft_plan(nx, ny, nz) else {
+        eprintln!("Skipping GPU/CPU FFT parity for grid {nx}×{ny}×{nz}: no GPU available");
+        return;
+    };
 
     let signal = test_signal_3d(nx, ny, nz);
     let n = nx * ny * nz;
 
-    let gpu = GpuFft3d::new(device, queue, nx, ny, nz)
-        .unwrap_or_else(|e| panic!("GpuFft3d::new({nx},{ny},{nz}) failed: {e}"));
-
     // ── GPU forward FFT ───────────────────────────────────────────────────────
-    let spectrum = gpu.forward(&signal);
+    let spectrum = gpu.forward(&leto_field(&signal));
 
     // ── GPU roundtrip ─────────────────────────────────────────────────────────
-    let mut reconstructed = Array3::<f64>::zeros((nx, ny, nz));
+    let mut reconstructed = leto_zeros(nx, ny, nz);
     gpu.inverse(&spectrum, &mut reconstructed);
 
     let max_abs_err = signal
@@ -181,6 +198,30 @@ async fn parity_test(
     );
 }
 
+fn parseval_test(nx: usize, ny: usize, nz: usize, parseval_tol: f64) {
+    let Some(gpu) = try_gpu_fft_plan(nx, ny, nz) else {
+        eprintln!("Skipping Parseval check for grid {nx}×{ny}×{nz}: no GPU available");
+        return;
+    };
+    let n = nx * ny * nz;
+    let signal = test_signal_3d(nx, ny, nz);
+    let spectrum = gpu.forward(&leto_field(&signal));
+
+    let time_energy: f64 = signal.iter().map(|x| x * x).sum();
+    let freq_energy: f64 = (0..n)
+        .map(|i| {
+            let re = spectrum[2 * i] as f64;
+            let im = spectrum[2 * i + 1] as f64;
+            (re * re + im * im) / n as f64
+        })
+        .sum();
+    let rel_err = ((time_energy - freq_energy) / time_energy).abs();
+    assert!(
+        rel_err < parseval_tol,
+        "Parseval violated for {nx}×{ny}×{nz}: time={time_energy:.6e} freq={freq_energy:.6e} rel={rel_err:.3e}"
+    );
+}
+
 // ── Power-of-2 cubic grids ────────────────────────────────────────────────────
 
 /// 64×64×64 — Radix-2 DIT on all three axes.
@@ -189,42 +230,30 @@ async fn parity_test(
 /// - Roundtrip (L∞ absolute):  1e-4  (accumulated f32 error over log₂(64)=6 stages × 3 axes)
 /// - CPU cross-validation (relative): 6e-7
 /// - Parseval (relative): 1e-5
-#[tokio::test]
+#[test]
 #[ignore = "requires GPU device"]
-async fn test_gpu_cpu_fft_parity_64_cubic() {
-    let Some((device, queue)) = try_init_gpu().await else {
-        eprintln!("Skipping test_gpu_cpu_fft_parity_64_cubic: no GPU available");
-        return;
-    };
-    parity_test(device, queue, 64, 64, 64, 1e-4, 6e-7, 1e-5).await;
+fn test_gpu_cpu_fft_parity_64_cubic() {
+    parity_test(64, 64, 64, 1e-4, 6e-7, 1e-5);
 }
 
 /// 128×128×128 — Radix-2 DIT on all three axes.
 ///
 /// Accumulated f32 error budget: log₂(128)=7 stages × 3 axes × ε_f32 ≈ 2.5e-6.
 /// Tolerances: roundtrip 1e-4, cross-val 6e-7, Parseval 1e-5.
-#[tokio::test]
+#[test]
 #[ignore = "requires GPU device"]
-async fn test_gpu_cpu_fft_parity_128_cubic() {
-    let Some((device, queue)) = try_init_gpu().await else {
-        eprintln!("Skipping test_gpu_cpu_fft_parity_128_cubic: no GPU available");
-        return;
-    };
-    parity_test(device, queue, 128, 128, 128, 1e-4, 6e-7, 1e-5).await;
+fn test_gpu_cpu_fft_parity_128_cubic() {
+    parity_test(128, 128, 128, 1e-4, 6e-7, 1e-5);
 }
 
 /// 256×256×256 — Radix-2 DIT on all three axes.
 ///
 /// Accumulated f32 error budget: log₂(256)=8 stages × 3 axes × ε_f32 ≈ 3e-6.
 /// Tolerances: roundtrip 1e-4, cross-val 6e-7, Parseval 1e-5.
-#[tokio::test]
+#[test]
 #[ignore = "requires GPU device"]
-async fn test_gpu_cpu_fft_parity_256_cubic() {
-    let Some((device, queue)) = try_init_gpu().await else {
-        eprintln!("Skipping test_gpu_cpu_fft_parity_256_cubic: no GPU available");
-        return;
-    };
-    parity_test(device, queue, 256, 256, 256, 1e-4, 6e-7, 1e-5).await;
+fn test_gpu_cpu_fft_parity_256_cubic() {
+    parity_test(256, 256, 256, 1e-4, 6e-7, 1e-5);
 }
 
 // ── Non-power-of-2 grid ───────────────────────────────────────────────────────
@@ -233,14 +262,10 @@ async fn test_gpu_cpu_fft_parity_256_cubic() {
 ///
 /// Tests the hybrid radix-2 / Chirp-Z dispatch path for mixed-strategy grids.
 /// Tolerances: roundtrip 1e-4, cross-val 6e-7, Parseval 1e-5.
-#[tokio::test]
+#[test]
 #[ignore = "requires GPU device"]
-async fn test_gpu_cpu_fft_parity_48x64x32() {
-    let Some((device, queue)) = try_init_gpu().await else {
-        eprintln!("Skipping test_gpu_cpu_fft_parity_48x64x32: no GPU available");
-        return;
-    };
-    parity_test(device, queue, 48, 64, 32, 1e-4, 6e-7, 1e-5).await;
+fn test_gpu_cpu_fft_parity_48x64x32() {
+    parity_test(48, 64, 32, 1e-4, 6e-7, 1e-5);
 }
 
 // ── Parseval-only sanity checks for each cubic size ───────────────────────────
@@ -249,88 +274,22 @@ async fn test_gpu_cpu_fft_parity_48x64x32() {
 ///
 /// Separate test so Parseval can be checked without waiting for the cross-val
 /// CPU reference path (CPU 3D FFT at 64³ is fast but at 256³ can be slow).
-#[tokio::test]
+#[test]
 #[ignore = "requires GPU device"]
-async fn test_parseval_64_cubic() {
-    let Some((device, queue)) = try_init_gpu().await else {
-        return;
-    };
-    use kwavers_math::fft::gpu_fft::GpuFft3d;
-    let (nx, ny, nz) = (64, 64, 64);
-    let n = nx * ny * nz;
-    let signal = test_signal_3d(nx, ny, nz);
-    let gpu = GpuFft3d::new(device, queue, nx, ny, nz).expect("GpuFft3d::new");
-    let spectrum = gpu.forward(&signal);
-
-    let time_energy: f64 = signal.iter().map(|x| x * x).sum();
-    let freq_energy: f64 = (0..n)
-        .map(|i| {
-            let re = spectrum[2 * i] as f64;
-            let im = spectrum[2 * i + 1] as f64;
-            (re * re + im * im) / n as f64
-        })
-        .sum();
-    let rel_err = ((time_energy - freq_energy) / time_energy).abs();
-    assert!(
-        rel_err < 1e-5,
-        "Parseval violated for {nx}³: time={time_energy:.6e} freq={freq_energy:.6e} rel={rel_err:.3e}"
-    );
+fn test_parseval_64_cubic() {
+    parseval_test(64, 64, 64, 1e-5);
 }
 
 /// Parseval's theorem for 128³ grid.
-#[tokio::test]
+#[test]
 #[ignore = "requires GPU device"]
-async fn test_parseval_128_cubic() {
-    let Some((device, queue)) = try_init_gpu().await else {
-        return;
-    };
-    use kwavers_math::fft::gpu_fft::GpuFft3d;
-    let (nx, ny, nz) = (128, 128, 128);
-    let n = nx * ny * nz;
-    let signal = test_signal_3d(nx, ny, nz);
-    let gpu = GpuFft3d::new(device, queue, nx, ny, nz).expect("GpuFft3d::new");
-    let spectrum = gpu.forward(&signal);
-
-    let time_energy: f64 = signal.iter().map(|x| x * x).sum();
-    let freq_energy: f64 = (0..n)
-        .map(|i| {
-            let re = spectrum[2 * i] as f64;
-            let im = spectrum[2 * i + 1] as f64;
-            (re * re + im * im) / n as f64
-        })
-        .sum();
-    let rel_err = ((time_energy - freq_energy) / time_energy).abs();
-    assert!(
-        rel_err < 1e-5,
-        "Parseval violated for {nx}³: time={time_energy:.6e} freq={freq_energy:.6e} rel={rel_err:.3e}"
-    );
+fn test_parseval_128_cubic() {
+    parseval_test(128, 128, 128, 1e-5);
 }
 
 /// Parseval's theorem for 48×64×32 non-power-of-2 grid.
-#[tokio::test]
+#[test]
 #[ignore = "requires GPU device"]
-async fn test_parseval_48x64x32() {
-    let Some((device, queue)) = try_init_gpu().await else {
-        return;
-    };
-    use kwavers_math::fft::gpu_fft::GpuFft3d;
-    let (nx, ny, nz) = (48, 64, 32);
-    let n = nx * ny * nz;
-    let signal = test_signal_3d(nx, ny, nz);
-    let gpu = GpuFft3d::new(device, queue, nx, ny, nz).expect("GpuFft3d::new");
-    let spectrum = gpu.forward(&signal);
-
-    let time_energy: f64 = signal.iter().map(|x| x * x).sum();
-    let freq_energy: f64 = (0..n)
-        .map(|i| {
-            let re = spectrum[2 * i] as f64;
-            let im = spectrum[2 * i + 1] as f64;
-            (re * re + im * im) / n as f64
-        })
-        .sum();
-    let rel_err = ((time_energy - freq_energy) / time_energy).abs();
-    assert!(
-        rel_err < 1e-5,
-        "Parseval violated for {nx}×{ny}×{nz}: time={time_energy:.6e} freq={freq_energy:.6e} rel={rel_err:.3e}"
-    );
+fn test_parseval_48x64x32() {
+    parseval_test(48, 64, 32, 1e-5);
 }

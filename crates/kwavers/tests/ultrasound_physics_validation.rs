@@ -797,6 +797,7 @@ fn validate_multi_modal_fusion_ultrasound_optical() {
         FusionConfig, ImagingFusionMethod, MultiModalFusion, RegistrationMethod,
     };
     use kwavers_physics::optics::sonoluminescence::{EmissionParameters, SonoluminescenceEmission};
+    use leto::Array3 as LetoArray3;
     use ndarray::Array3;
     use std::collections::HashMap;
 
@@ -819,8 +820,9 @@ fn validate_multi_modal_fusion_ultrasound_optical() {
 
     // Create mock ultrasound data (B-mode image)
     let grid_shape = (8, 8, 8);
-    let mut ultrasound_data = Array3::from_elem(grid_shape, 0.8); // High echogenicity
-                                                                  // Add some spatial variation
+    let leto_shape = [grid_shape.0, grid_shape.1, grid_shape.2];
+    let mut ultrasound_data = LetoArray3::from_elem(leto_shape, 0.8); // High echogenicity
+                                                                      // Add some spatial variation
     for i in 4..8 {
         for j in 4..8 {
             for k in 4..8 {
@@ -848,13 +850,18 @@ fn validate_multi_modal_fusion_ultrasound_optical() {
         &compression_field,
         0.0,
     );
+    let optical_data = LetoArray3::from_shape_vec(
+        leto_shape,
+        emission.emission_field.iter().copied().collect(),
+    )
+    .unwrap();
 
     let optical_wavelength = 500e-9; // 500 nm (green light)
 
     // Register modalities
     fusion.register_ultrasound(&ultrasound_data).unwrap();
     fusion
-        .register_optical(&emission.emission_field, optical_wavelength)
+        .register_optical(&optical_data, optical_wavelength)
         .unwrap();
 
     // Verify registration
@@ -878,16 +885,15 @@ fn validate_multi_modal_fusion_ultrasound_optical() {
     // Validate fusion result
     assert_eq!(
         fused_result.intensity_image.shape(),
-        &[grid_shape.0, grid_shape.1, grid_shape.2],
+        leto_shape,
         "Fused image should match input shape"
     );
 
     // Check that fusion produces reasonable combined information
     let fused_mean: f64 = fused_result.intensity_image.iter().sum::<f64>()
-        / fused_result.intensity_image.len() as f64;
-    let us_mean: f64 = ultrasound_data.iter().sum::<f64>() / ultrasound_data.len() as f64;
-    let opt_mean: f64 =
-        emission.emission_field.iter().sum::<f64>() / emission.emission_field.len() as f64;
+        / fused_result.intensity_image.size() as f64;
+    let us_mean: f64 = ultrasound_data.iter().sum::<f64>() / ultrasound_data.size() as f64;
+    let opt_mean: f64 = optical_data.iter().sum::<f64>() / optical_data.size() as f64;
 
     // Fused result should be between the individual modality means
     assert!(
@@ -922,7 +928,7 @@ fn validate_fusion_registration_validation() {
     use kwavers_physics::acoustics::imaging::fusion::{
         FusionConfig, ImagingFusionMethod, MultiModalFusion, RegistrationMethod,
     };
-    use ndarray::Array3;
+    use leto::Array3;
     use std::collections::HashMap;
 
     // Test registration validation
@@ -943,7 +949,7 @@ fn validate_fusion_registration_validation() {
     let mut fusion = MultiModalFusion::new(fusion_config.clone());
 
     // Test single modality (should fail)
-    let grid_shape = (4, 4, 4);
+    let grid_shape = [4, 4, 4];
     let ultrasound_data = Array3::from_elem(grid_shape, 0.6);
 
     fusion.register_ultrasound(&ultrasound_data).unwrap();
@@ -1010,11 +1016,11 @@ fn validate_interdisciplinary_fusion_quality() {
     use kwavers_physics::acoustics::imaging::fusion::{
         FusionConfig, ImagingFusionMethod, MultiModalFusion, RegistrationMethod,
     };
-    use ndarray::Array3;
+    use leto::Array3;
     use std::collections::HashMap;
 
     // Create high-quality complementary data
-    let grid_shape = (6, 6, 6);
+    let grid_shape = [6, 6, 6];
     let mut ultrasound_data = Array3::from_elem(grid_shape, 0.2); // Low echogenicity background
     let mut optical_data = Array3::from_elem(grid_shape, 0.1); // Low optical absorption background
 
@@ -1113,14 +1119,14 @@ fn validate_multi_modal_spatial_registration() {
     // Test spatial registration for multi-modal imaging alignment
     // Theorem: Accurate spatial registration enables meaningful multi-modal fusion
 
-    use ndarray::Array2;
+    use leto::Array2;
     use ritk_registration::{ImageRegistration, SpatialTransform};
 
     let registration = ImageRegistration::default();
 
     // Create corresponding landmark points between ultrasound and optical images
     let ultrasound_landmarks = Array2::from_shape_vec(
-        (4, 3),
+        [4, 3],
         vec![
             10.0, 20.0, 5.0, // Landmark 1
             30.0, 15.0, 8.0, // Landmark 2
@@ -1131,7 +1137,7 @@ fn validate_multi_modal_spatial_registration() {
     .unwrap();
 
     let optical_landmarks = Array2::from_shape_vec(
-        (4, 3),
+        [4, 3],
         vec![
             14.8, 16.9, 7.0, // Landmark 1 + transform
             34.8, 11.9, 10.0, // Landmark 2 + transform
@@ -1158,7 +1164,7 @@ fn validate_multi_modal_spatial_registration() {
 
     // Verify transform matrix is valid (homogeneous)
     assert!(
-        (result.transform[15] - 1.0).abs() < 1e-6,
+        (result.transform[(3, 3)] - 1.0).abs() < 1e-6,
         "Homogeneous matrix should have [3,3] = 1"
     );
 
@@ -1188,7 +1194,7 @@ fn validate_multi_modal_spatial_registration() {
 fn validate_temporal_synchronization_multi_modal() {
     // Test temporal synchronization for real-time multi-modal acquisition
 
-    use ndarray::Array1;
+    use leto::Array1;
     use ritk_registration::ImageRegistration;
 
     let registration = ImageRegistration::default();
@@ -1196,19 +1202,23 @@ fn validate_temporal_synchronization_multi_modal() {
     let n_samples = 1000;
 
     // Generate reference and target signals with known phase offset
-    let ref_signal = Array1::from_vec(
+    let ref_signal = Array1::from_shape_vec(
+        [n_samples],
         (0..n_samples)
             .map(|i| (2.0 * std::f64::consts::PI * i as f64 / 100.0).sin())
             .collect(),
-    );
+    )
+    .unwrap();
 
-    let target_signal = Array1::from_vec(
+    let target_signal = Array1::from_shape_vec(
+        [n_samples],
         (0..n_samples)
             .map(|i| {
                 (2.0 * std::f64::consts::PI * i as f64 / 100.0 + std::f64::consts::PI / 4.0).sin()
             })
             .collect(),
-    );
+    )
+    .unwrap();
 
     let (phase_offset, quality) = registration
         .temporal_synchronization(&ref_signal, &target_signal)

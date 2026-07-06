@@ -66,6 +66,10 @@
 //! - Quesson, B. et al. (2010). A method for MRI guidance of intercostal HIFU
 //!   ablation in the liver. *Med. Phys.* **37**(6), 2533–2540.
 
+use gaia::{
+    domain::core::scalar::{Point3r, Vector3r},
+    Ray as GaiaRay,
+};
 use image::codecs::gif::{GifEncoder, Repeat};
 use image::{Delay, Frame, RgbaImage};
 use kwavers_core::error::KwaversResult;
@@ -79,8 +83,8 @@ use kwavers_solver::inverse::seismic::{
     rtm::RtmProcessor,
 };
 use kwavers_source::{GridSource, SourceMode};
-use ndarray::{Array2, Array3, Zip};
-use rayon::prelude::*;
+use moirai_parallel::{map_collect_index_with, map_collect_with, Adaptive};
+use ndarray::{Array2, Array3};
 use std::f64::consts::PI;
 use std::fs::File;
 use std::io::BufWriter;
@@ -451,24 +455,33 @@ fn extract_tof(trace: &[f64], wavelet: &[f64], dt: f64) -> f64 {
     best_lag as f64 * dt
 }
 
+fn straight_ray(s: (f64, f64), r: (f64, f64)) -> Option<(GaiaRay, f64)> {
+    let origin = Point3r::new(s.0, 0.0, s.1);
+    let receiver = Point3r::new(r.0, 0.0, r.1);
+    let direction = Vector3r::new(
+        receiver.x - origin.x,
+        receiver.y - origin.y,
+        receiver.z - origin.z,
+    );
+    let length = direction.norm();
+    GaiaRay::try_from_direction(origin, direction).map(|ray| (ray, length))
+}
+
 fn rasterise_ray(
-    s: (f64, f64),
-    r: (f64, f64),
+    ray: &GaiaRay,
+    length_voxels: f64,
     nx: usize,
     nz: usize,
     dx: f64,
 ) -> Vec<((usize, usize), f64)> {
     // Uniform sampling along the segment with sub-voxel step (dx/2).
-    let dxv = r.0 - s.0;
-    let dzv = r.1 - s.1;
-    let length = (dxv * dxv + dzv * dzv).sqrt();
-    let n_steps = ((length / 0.5).ceil() as usize).max(1);
-    let step_len = length / n_steps as f64 * dx;
+    let n_steps = ((length_voxels / 0.5).ceil() as usize).max(1);
+    let step_len = length_voxels / n_steps as f64 * dx;
     let mut hits: std::collections::HashMap<(usize, usize), f64> = std::collections::HashMap::new();
     for k in 0..n_steps {
-        let t = (k as f64 + 0.5) / n_steps as f64;
-        let x = s.0 + t * dxv;
-        let z = s.1 + t * dzv;
+        let p = ray.point_at((k as f64 + 0.5) * length_voxels / n_steps as f64);
+        let x = p.x;
+        let z = p.z;
         if x < 0.0 || z < 0.0 {
             continue;
         }
@@ -482,7 +495,7 @@ fn rasterise_ray(
 /// Pre-extracted straight-ray observation: (voxel hits with segment lengths,
 /// observed ΔT_obs − ΔT_water residual in seconds).  Eliminates redundant
 /// ray-tracing and TOF picking across SIRT iterations.
-struct Ray {
+struct StraightRayObservation {
     hits: Vec<((usize, usize), f64)>,
     delta_t_obs: f64,
     row_norm_sq: f64, // Σ ℓ²  (denominator of Kaczmarz step)
@@ -499,39 +512,34 @@ fn extract_rays(
     dt: f64,
     f0: f64,
     nt: usize,
-) -> Vec<Ray> {
+) -> Vec<StraightRayObservation> {
     let wavelet = ricker(f0, dt, nt);
-    // Per-ray work is independent → rayon par_iter.
-    shots
-        .par_iter()
-        .enumerate()
-        .flat_map_iter(|(shot_idx, (_geom, obs, (tx_ix, tx_iz), rcvs))| {
-            let water_obs = &water_shots[shot_idx];
-            let wavelet = wavelet.clone();
-            rcvs.iter()
-                .enumerate()
-                .map(move |(r_idx, &(rx_ix, _, rx_iz))| {
-                    let trace: Vec<f64> = obs.row(r_idx).to_vec();
-                    let water_trace: Vec<f64> = water_obs.row(r_idx).to_vec();
-                    let t_obs = extract_tof(&trace, &wavelet, dt);
-                    let t_water = extract_tof(&water_trace, &wavelet, dt);
-                    let hits = rasterise_ray(
-                        (*tx_ix as f64, *tx_iz as f64),
-                        (rx_ix as f64, rx_iz as f64),
-                        NX,
-                        NZ,
-                        DX,
-                    );
-                    let row_norm_sq: f64 = hits.iter().map(|(_, l)| l * l).sum();
-                    Ray {
-                        hits,
-                        delta_t_obs: t_obs - t_water,
-                        row_norm_sq,
-                    }
+    // Per-ray work is independent and scheduled through the Atlas Moirai provider.
+    map_collect_index_with::<Adaptive, _, _>(shots.len(), |shot_idx| {
+        let (_geom, obs, (tx_ix, tx_iz), rcvs) = &shots[shot_idx];
+        let water_obs = &water_shots[shot_idx];
+        rcvs.iter()
+            .enumerate()
+            .filter_map(|(r_idx, &(rx_ix, _, rx_iz))| {
+                let trace: Vec<f64> = obs.row(r_idx).to_vec();
+                let water_trace: Vec<f64> = water_obs.row(r_idx).to_vec();
+                let t_obs = extract_tof(&trace, &wavelet, dt);
+                let t_water = extract_tof(&water_trace, &wavelet, dt);
+                let (ray, length_voxels) =
+                    straight_ray((*tx_ix as f64, *tx_iz as f64), (rx_ix as f64, rx_iz as f64))?;
+                let hits = rasterise_ray(&ray, length_voxels, NX, NZ, DX);
+                let row_norm_sq: f64 = hits.iter().map(|(_, l)| l * l).sum();
+                Some(StraightRayObservation {
+                    hits,
+                    delta_t_obs: t_obs - t_water,
+                    row_norm_sq,
                 })
-                .collect::<Vec<_>>()
-        })
-        .collect()
+            })
+            .collect::<Vec<_>>()
+    })
+    .into_iter()
+    .flatten()
+    .collect()
 }
 
 /// Simultaneous Iterative Reconstruction Technique (SIRT) for slowness.
@@ -551,7 +559,7 @@ fn extract_rays(
 ///   reconstruction of an object from projections. *J. Theor. Biol.*
 ///   **36**(1), 105–117.
 fn reconstruct_sos_sirt(
-    rays: &[Ray],
+    rays: &[StraightRayObservation],
     n_iterations: usize,
     relax: f64,
     capture_frames: bool,
@@ -662,13 +670,12 @@ fn per_element_aberration_delays(
     elements
         .iter()
         .map(|&(ix, iz)| {
-            let hits = rasterise_ray(
-                (ix as f64, iz as f64),
-                (focal.0 as f64, focal.1 as f64),
-                NX,
-                NZ,
-                DX,
-            );
+            let Some((ray, length_voxels)) =
+                straight_ray((ix as f64, iz as f64), (focal.0 as f64, focal.1 as f64))
+            else {
+                return 0.0;
+            };
+            let hits = rasterise_ray(&ray, length_voxels, NX, NZ, DX);
             let tof_med: f64 = hits.iter().map(|((i, k), l)| l / c_map[[*i, 0, *k]]).sum();
             let dxv = (focal.0 as f64 - ix as f64) * DX;
             let dzv = (focal.1 as f64 - iz as f64) * DX;
@@ -1027,6 +1034,7 @@ fn main() -> KwaversResult<()> {
             smoothness_weight: 0.0,
         },
         source_mute_radius: 0,
+        ..FwiParameters::default()
     };
 
     let fwi = FwiProcessor::new(fwi_params.clone());
@@ -1037,30 +1045,31 @@ fn main() -> KwaversResult<()> {
         nt as f64 * dt * 1e6
     );
 
-    // Shot-parallel acquisition: each shot's FDTD run is independent, so
-    // collect them with rayon::par_iter.  FwiProcessor::generate_synthetic_data
-    // is Send+Sync (the processor wraps an immutable FwiParameters), and the
+    // Shot-parallel acquisition: each shot's FDTD run is independent, so collect
+    // them through Moirai. FwiProcessor::generate_synthetic_data is Send+Sync
+    // (the processor wraps an immutable FwiParameters), and the
     // per-call peak allocation is bounded (forward_model_sensor_only, ~55 MB —
-    // safe for n_shots × num_cpus concurrent calls on a workstation).
+    // safe for n_shots × available scheduling lanes on a workstation).
     let t0 = Instant::now();
     let shots: Vec<(
         FwiGeometry,
         Array2<f64>,
         (usize, usize),
         Vec<(usize, usize, usize)>,
-    )> = tx
-        .par_iter()
-        .map(|&(ix, iz)| {
-            let (geom, rcvs) = build_shot_geometry(ix, iz, &ring, nt, dt, f0);
-            let obs = fwi.generate_synthetic_data(&phantom.sound_speed, &geom, &grid)?;
-            Ok::<_, kwavers_core::error::KwaversError>((geom, obs, (ix, iz), rcvs))
-        })
-        .collect::<KwaversResult<Vec<_>>>()?;
+    )> = map_collect_with::<Adaptive, _, _, _>(&tx, |&(ix, iz)| {
+        let (geom, rcvs) = build_shot_geometry(ix, iz, &ring, nt, dt, f0);
+        let obs = fwi.generate_synthetic_data(&phantom.sound_speed, &geom, &grid)?;
+        Ok::<_, kwavers_core::error::KwaversError>((geom, obs, (ix, iz), rcvs))
+    })
+    .into_iter()
+    .collect::<KwaversResult<Vec<_>>>()?;
     println!(
         "  {} shots simulated in {:.1} s ({} parallel)",
         shots.len(),
         t0.elapsed().as_secs_f32(),
-        rayon::current_num_threads()
+        std::thread::available_parallelism()
+            .map(std::num::NonZeroUsize::get)
+            .unwrap_or(1)
     );
 
     // ── 4. Reconstructions ────────────────────────────────────────────────
@@ -1072,9 +1081,11 @@ fn main() -> KwaversResult<()> {
     // TOF residual ΔT = t_obs − t_water is free of grid / Dirichlet bias.
     let water_model = Array3::<f64>::from_elem((NX, NY, NZ), C_WATER);
     let t = Instant::now();
-    let water_shots: Vec<Array2<f64>> = shots
-        .par_iter()
-        .map(|(geom, _, _, _)| fwi.generate_synthetic_data(&water_model, geom, &grid))
+    let water_shots: Vec<Array2<f64>> =
+        map_collect_with::<Adaptive, _, _, _>(&shots, |(geom, _, _, _)| {
+            fwi.generate_synthetic_data(&water_model, geom, &grid)
+        })
+        .into_iter()
         .collect::<KwaversResult<Vec<_>>>()?;
     println!(
         "    {} water-reference shots in {:.1} s",
@@ -1450,12 +1461,12 @@ fn metrics(truth: &Array3<f64>, recon: &Array3<f64>) -> (f64, f64) {
 /// Separable Gaussian blur (σ in voxels), parallel along the convolved axis.
 ///
 /// Two-pass separable convolution: x then z (the 2-D slice axes; y has only 5
-/// voxels of replicated medium, no blurring needed).  Each pass uses a single
-/// `Zip::par_for_each` walk over the output slice, with clamped boundary
-/// handling.  Used to build the CT-derived smooth prior for FWI and the RTM
-/// background velocity, following Guasch (2020) §Methods.
+/// voxels of replicated medium, no blurring needed). Each pass maps one flat
+/// output index through Moirai with clamped boundary handling. Used to build the
+/// CT-derived smooth prior for FWI and the RTM background velocity, following
+/// Guasch (2020) §Methods.
 fn gaussian_blur(field: &Array3<f64>, sigma: f64) -> Array3<f64> {
-    let (nx, _ny, nz) = field.dim();
+    let (nx, ny, nz) = field.dim();
     let radius = (3.0 * sigma).ceil() as isize;
     let raw: Vec<f64> = (-radius..=radius)
         .map(|k| (-0.5 * (k as f64 / sigma).powi(2)).exp())
@@ -1464,25 +1475,35 @@ fn gaussian_blur(field: &Array3<f64>, sigma: f64) -> Array3<f64> {
     let kernel: Vec<f64> = raw.iter().map(|v| v / ksum).collect();
 
     // X-pass: tmp[i,j,k] = Σ_kk kernel[kk] * field[clamp(i+kk-r),j,k]
-    let mut tmp = Array3::<f64>::zeros(field.dim());
-    Zip::indexed(&mut tmp).par_for_each(|(i, j, k), out| {
+    let cell_count = nx * ny * nz;
+    let tmp_values = map_collect_index_with::<Adaptive, _, _>(cell_count, |idx| {
+        let i = idx / (ny * nz);
+        let rem = idx % (ny * nz);
+        let j = rem / nz;
+        let k = rem % nz;
         let mut acc = 0.0;
         for (kk, &w) in kernel.iter().enumerate() {
             let ii = (i as isize + kk as isize - radius).clamp(0, nx as isize - 1) as usize;
             acc += w * field[[ii, j, k]];
         }
-        *out = acc;
+        acc
     });
+    let tmp = Array3::<f64>::from_shape_vec(field.dim(), tmp_values)
+        .expect("invariant: flat Moirai x-pass preserves field shape length");
 
     // Z-pass.
-    let mut out = Array3::<f64>::zeros(field.dim());
-    Zip::indexed(&mut out).par_for_each(|(i, j, k), o| {
+    let out_values = map_collect_index_with::<Adaptive, _, _>(cell_count, |idx| {
+        let i = idx / (ny * nz);
+        let rem = idx % (ny * nz);
+        let j = rem / nz;
+        let k = rem % nz;
         let mut acc = 0.0;
         for (kk, &w) in kernel.iter().enumerate() {
             let kz = (k as isize + kk as isize - radius).clamp(0, nz as isize - 1) as usize;
             acc += w * tmp[[i, j, kz]];
         }
-        *o = acc;
+        acc
     });
-    out
+    Array3::<f64>::from_shape_vec(field.dim(), out_values)
+        .expect("invariant: flat Moirai z-pass preserves field shape length")
 }

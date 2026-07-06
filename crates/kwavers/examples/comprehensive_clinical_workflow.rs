@@ -28,7 +28,7 @@ use kwavers_analysis::ml::uncertainty::{
 use kwavers_analysis::validation::clinical::{
     ClinicalValidator, ImageQualityMetrics, MeasurementAccuracy, SafetyIndices,
 };
-use kwavers_core::error::KwaversResult;
+use kwavers_core::error::{KwaversError, KwaversResult};
 #[cfg(feature = "gpu")]
 use kwavers_gpu::gpu::memory::UnifiedMemoryManager;
 use kwavers_grid::Grid;
@@ -47,6 +47,7 @@ use kwavers_solver::forward::elastic::{ElasticWaveConfig, ElasticWaveField, Elas
 use kwavers_solver::inverse::elastography::{
     NonlinearInversion, NonlinearInversionConfig, ShearWaveInversion, ShearWaveInversionConfig,
 };
+use leto::Array3 as LetoArray3;
 use ndarray::{s, Array3, Array4};
 use std::time::Instant;
 
@@ -386,9 +387,17 @@ impl LiverAssessmentWorkflow {
 
         // Perform perfusion analysis
         let perfusion_model = CeusPerfusionModel::gamma_variate_model();
-        let perfusion_map = self
+        let perfusion_map_nd = self
             .ceus_system
             .estimate_perfusion(&contrast_signal, &perfusion_model)?;
+        let (nx, ny, nz) = perfusion_map_nd.dim();
+        let perfusion_map =
+            LetoArray3::from_shape_vec([nx, ny, nz], perfusion_map_nd.iter().copied().collect())
+                .map_err(|error| {
+                    KwaversError::InvalidInput(format!(
+                        "CEUS perfusion map must convert to Leto Array3: {error}"
+                    ))
+                })?;
 
         // Calculate perfusion metrics
         let perfusion_metrics = self.calculate_perfusion_metrics(&perfusion_map)?;
@@ -573,10 +582,10 @@ impl LiverAssessmentWorkflow {
 
     fn calculate_fibrosis_metrics(
         &self,
-        stiffness_map: &Array3<f32>,
+        stiffness_map: &LetoArray3<f32>,
         nonlinear_analysis: &NonlinearParameterMap,
     ) -> KwaversResult<FibrosisMetrics> {
-        let mean_stiffness: f32 = stiffness_map.iter().sum::<f32>() / stiffness_map.len() as f32;
+        let mean_stiffness: f32 = stiffness_map.iter().sum::<f32>() / stiffness_map.size() as f32;
 
         // Classify fibrosis stage based on METAVIR scoring system
         let fibrosis_stage = if mean_stiffness < 5.0 {
@@ -600,16 +609,16 @@ impl LiverAssessmentWorkflow {
                 .iter()
                 .copied()
                 .sum::<f64>()
-                / nonlinear_analysis.nonlinearity_parameter.len() as f64,
+                / nonlinear_analysis.nonlinearity_parameter.size() as f64,
         })
     }
 
     fn calculate_perfusion_metrics(
         &self,
-        perfusion_map: &Array3<f32>,
+        perfusion_map: &LetoArray3<f32>,
     ) -> KwaversResult<PerfusionMetrics> {
         let peak_enhancement: f32 = perfusion_map.iter().cloned().fold(0.0_f32, f32::max);
-        let mean_perfusion: f32 = perfusion_map.iter().sum::<f32>() / perfusion_map.len() as f32;
+        let mean_perfusion: f32 = perfusion_map.iter().sum::<f32>() / perfusion_map.size() as f32;
 
         Ok(PerfusionMetrics {
             peak_enhancement: 20.0 * (peak_enhancement as f64).log10(), // dB
@@ -686,7 +695,7 @@ pub struct BModeResult {
 /// SWE assessment results
 #[derive(Debug)]
 pub struct SWEResult {
-    pub stiffness_map: Array3<f32>,
+    pub stiffness_map: LetoArray3<f32>,
     pub displacement_history: Vec<ElasticWaveField>,
     pub nonlinear_analysis: NonlinearParameterMap,
     pub fibrosis_metrics: FibrosisMetrics,
@@ -696,7 +705,7 @@ pub struct SWEResult {
 #[derive(Debug)]
 pub struct CEUSResult {
     pub contrast_signal: Array4<f32>,
-    pub perfusion_map: Array3<f32>,
+    pub perfusion_map: LetoArray3<f32>,
     pub perfusion_metrics: PerfusionMetrics,
 }
 

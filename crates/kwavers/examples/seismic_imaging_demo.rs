@@ -845,7 +845,7 @@ fn load_ct_volume(path: &Path) -> anyhow::Result<CtVolume> {
         load_dicom_series::<Backend>(&selected, &device).map_err(|e| {
             anyhow::anyhow!(
                 "DICOM load failed for series '{}': {e:#}",
-                selected.series_instance_uid
+                selected.series_instance_uid()
             )
         })?
     } else {
@@ -864,12 +864,7 @@ fn load_ct_volume(path: &Path) -> anyhow::Result<CtVolume> {
 
     // image shape is [depth/Z, rows/Y, cols/X] in ritk convention
     let [depth, rows, cols] = image.shape();
-    let spacing = image.spacing().to_vec();
-    anyhow::ensure!(
-        spacing.len() == 3,
-        "unexpected spacing rank {}",
-        spacing.len()
-    );
+    let spacing = image.spacing().into_vector().to_array();
 
     let tensor_data = image.data().clone().into_data();
     let values = tensor_data
@@ -932,7 +927,7 @@ fn build_dicom_series(mut series: Vec<DicomSeriesInfo>) -> DicomSeriesInfo {
 
     if let Some(best) = series
         .iter()
-        .position(|s| s.series_instance_uid.as_str() == DEFAULT_MEDIMODEL_SERIES_UID)
+        .position(|s| s.series_instance_uid() == DEFAULT_MEDIMODEL_SERIES_UID)
     {
         return series.swap_remove(best);
     }
@@ -948,19 +943,19 @@ fn build_dicom_series(mut series: Vec<DicomSeriesInfo>) -> DicomSeriesInfo {
             "  Note: each DICOM slice has a unique SeriesInstanceUID; \
                   merging {n} files into one logical series for spatial sort."
         );
-        DicomSeriesInfo {
-            series_instance_uid: "merged".parse().expect("UID fits in 64 chars"),
-            series_description: format!("merged-{n}-slices"),
-            modality: "CT".parse().expect("modality fits in 16 chars"),
-            patient_id: String::new(),
-            file_paths: all_paths,
-        }
+        DicomSeriesInfo::new(
+            "merged",
+            format!("merged-{n}-slices"),
+            "CT",
+            String::new(),
+            all_paths,
+        )
     } else {
         // Standard multi-file series: pick the best one.
         let ct: Vec<usize> = series
             .iter()
             .enumerate()
-            .filter(|(_, s)| s.modality.as_str() == "CT")
+            .filter(|(_, s)| s.modality() == "CT")
             .map(|(i, _)| i)
             .collect();
         let pool: Vec<usize> = if ct.is_empty() {

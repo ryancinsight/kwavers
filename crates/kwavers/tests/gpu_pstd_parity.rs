@@ -28,7 +28,9 @@
 
 #![cfg(feature = "gpu")]
 
-use kwavers_gpu::pstd_gpu::GpuPstdSolver;
+use kwavers_gpu::pstd_gpu::{
+    AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays, SolverParams, WgpuPstdStateProvider,
+};
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_signal::SineWave;
@@ -37,42 +39,6 @@ use kwavers_solver::forward::pstd::implementation::core::orchestrator::PSTDSolve
 use kwavers_solver::interface::Solver;
 use kwavers_source::{InjectionMode, PlaneWaveSource, PlaneWaveSourceConfig, SourceField};
 use std::sync::Arc;
-
-// ── GPU initialisation ────────────────────────────────────────────────────────
-
-/// Try to acquire a wgpu device/queue pair. Returns `None` on headless CI.
-async fn try_init_gpu() -> Option<(Arc<wgpu::Device>, Arc<wgpu::Queue>)> {
-    let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
-        backends: wgpu::Backends::all(),
-        ..Default::default()
-    });
-    let adapter = instance
-        .request_adapter(&wgpu::RequestAdapterOptions {
-            power_preference: wgpu::PowerPreference::HighPerformance,
-            compatible_surface: None,
-            force_fallback_adapter: false,
-        })
-        .await?;
-    let native_limits = adapter.limits();
-    let (device, queue) = adapter
-        .request_device(
-            &wgpu::DeviceDescriptor {
-                label: Some("gpu_pstd_parity device"),
-                required_features: wgpu::Features::PUSH_CONSTANTS,
-                required_limits: wgpu::Limits {
-                    max_push_constant_size: 128,
-                    max_storage_buffers_per_shader_stage: native_limits
-                        .max_storage_buffers_per_shader_stage,
-                    ..wgpu::Limits::default()
-                },
-                memory_hints: wgpu::MemoryHints::Performance,
-            },
-            None,
-        )
-        .await
-        .ok()?;
-    Some((Arc::new(device), Arc::new(queue)))
-}
 
 // ── CPU PSTD reference ────────────────────────────────────────────────────────
 
@@ -125,6 +91,43 @@ fn max_rel_err(cpu: &[f64], gpu: &[f32]) -> f64 {
         .fold(0.0_f64, f64::max)
 }
 
+struct GpuPstdTestInput<'a> {
+    grid: &'a Grid,
+    c0_flat: &'a [f32],
+    rho0_flat: &'a [f32],
+    solver: SolverParams,
+    pml: &'a [f32],
+    absorption_zero: &'a [f32],
+}
+
+fn make_gpu_pstd_solver(
+    input: GpuPstdTestInput<'_>,
+) -> Result<GpuPstdSolver<WgpuPstdStateProvider>, String> {
+    GpuPstdSolver::<WgpuPstdStateProvider>::with_auto_device(
+        input.grid,
+        MediumArrays {
+            c0_flat: input.c0_flat,
+            rho0_flat: input.rho0_flat,
+        },
+        input.solver,
+        PmlArrays {
+            x: input.pml,
+            y: input.pml,
+            z: input.pml,
+            sgx: input.pml,
+            sgy: input.pml,
+            sgz: input.pml,
+        },
+        AbsorptionArrays {
+            bon_a_flat: input.absorption_zero,
+            nabla1: input.absorption_zero,
+            nabla2: input.absorption_zero,
+            tau: input.absorption_zero,
+            eta: input.absorption_zero,
+        },
+    )
+}
+
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 /// Theorem (Higham 2002 §2.7): max relative error < γ_100 < 1e-5 for f32 GPU
@@ -132,14 +135,6 @@ fn max_rel_err(cpu: &[f64], gpu: &[f32]) -> f64 {
 #[test]
 #[ignore = "requires GPU device"]
 fn test_pstd_gpu_cpu_parity_64() {
-    let (device, queue) = match pollster::block_on(try_init_gpu()) {
-        Some(dq) => dq,
-        None => {
-            eprintln!("No GPU available — skipping test_pstd_gpu_cpu_parity_64");
-            return;
-        }
-    };
-
     let n = 64usize;
     let dx = 1e-3_f64;
     let c0 = 1500.0_f64;
@@ -154,11 +149,26 @@ fn test_pstd_gpu_cpu_parity_64() {
     let ones: Vec<f32> = vec![1.0f32; total];
     let zeros: Vec<f32> = vec![0.0f32; total];
 
-    let mut gpu_solver = GpuPstdSolver::new(
-        device, queue, &grid, &c0v, &rho0v, dt, nt, c0, &ones, &ones, &ones, &ones, &ones, &ones,
-        &zeros, &ones, false, false,
-    )
-    .expect("GpuPstdSolver::new");
+    let mut gpu_solver = match make_gpu_pstd_solver(GpuPstdTestInput {
+        grid: &grid,
+        c0_flat: &c0v,
+        rho0_flat: &rho0v,
+        solver: SolverParams {
+            dt,
+            nt,
+            c_ref: c0,
+            nonlinear: false,
+            absorbing: false,
+        },
+        pml: &ones,
+        absorption_zero: &zeros,
+    }) {
+        Ok(solver) => solver,
+        Err(_) => {
+            eprintln!("No GPU available — skipping test_pstd_gpu_cpu_parity_64");
+            return;
+        }
+    };
 
     // Run with a single sensor at grid centre, no sources (free decay from initial state)
     let cx = (n / 2 * n * n + n / 2 * n + n / 2) as u32;
@@ -180,14 +190,6 @@ fn test_pstd_gpu_cpu_parity_64() {
 #[test]
 #[ignore = "requires GPU device"]
 fn test_pstd_gpu_cpu_parity_128_heterogeneous() {
-    let (device, queue) = match pollster::block_on(try_init_gpu()) {
-        Some(dq) => dq,
-        None => {
-            eprintln!("No GPU available — skipping test_pstd_gpu_cpu_parity_128_heterogeneous");
-            return;
-        }
-    };
-
     let n = 128usize;
     let dx = 5e-4_f64;
     let c0 = 1500.0_f64;
@@ -213,11 +215,26 @@ fn test_pstd_gpu_cpu_parity_128_heterogeneous() {
     let ones: Vec<f32> = vec![1.0f32; total];
     let zeros: Vec<f32> = vec![0.0f32; total];
 
-    let mut gpu_solver = GpuPstdSolver::new(
-        device, queue, &grid, &c0v, &rho0v, dt, nt, c_ref, &ones, &ones, &ones, &ones, &ones,
-        &ones, &zeros, &ones, false, false,
-    )
-    .expect("GpuPstdSolver::new 128³");
+    let mut gpu_solver = match make_gpu_pstd_solver(GpuPstdTestInput {
+        grid: &grid,
+        c0_flat: &c0v,
+        rho0_flat: &rho0v,
+        solver: SolverParams {
+            dt,
+            nt,
+            c_ref,
+            nonlinear: false,
+            absorbing: false,
+        },
+        pml: &ones,
+        absorption_zero: &zeros,
+    }) {
+        Ok(solver) => solver,
+        Err(_) => {
+            eprintln!("No GPU available — skipping test_pstd_gpu_cpu_parity_128_heterogeneous");
+            return;
+        }
+    };
 
     // Sensor at grid centre
     let cx = (n / 2 * n * n + n / 2 * n + n / 2) as u32;
@@ -241,14 +258,6 @@ fn test_pstd_gpu_cpu_parity_128_heterogeneous() {
 #[test]
 #[ignore = "requires GPU device"]
 fn test_energy_conservation_gpu_1000steps() {
-    let (device, queue) = match pollster::block_on(try_init_gpu()) {
-        Some(dq) => dq,
-        None => {
-            eprintln!("No GPU available — skipping test_energy_conservation_gpu_1000steps");
-            return;
-        }
-    };
-
     let n = 64usize;
     let dx = 1e-3_f64;
     let c0 = 1500.0_f64;
@@ -263,11 +272,26 @@ fn test_energy_conservation_gpu_1000steps() {
     let ones: Vec<f32> = vec![1.0f32; total];
     let zeros: Vec<f32> = vec![0.0f32; total];
 
-    let mut gpu_solver = GpuPstdSolver::new(
-        device, queue, &grid, &c0v, &rho0v, dt, nt, c0, &ones, &ones, &ones, &ones, &ones, &ones,
-        &zeros, &ones, false, false,
-    )
-    .expect("GpuPstdSolver::new 1000-step");
+    let mut gpu_solver = match make_gpu_pstd_solver(GpuPstdTestInput {
+        grid: &grid,
+        c0_flat: &c0v,
+        rho0_flat: &rho0v,
+        solver: SolverParams {
+            dt,
+            nt,
+            c_ref: c0,
+            nonlinear: false,
+            absorbing: false,
+        },
+        pml: &ones,
+        absorption_zero: &zeros,
+    }) {
+        Ok(solver) => solver,
+        Err(_) => {
+            eprintln!("No GPU available — skipping test_energy_conservation_gpu_1000steps");
+            return;
+        }
+    };
 
     // Sample pressure at grid centre over all time steps
     let cx = (n / 2 * n * n + n / 2 * n + n / 2) as u32;

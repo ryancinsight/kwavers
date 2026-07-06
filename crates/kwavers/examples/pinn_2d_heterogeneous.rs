@@ -25,7 +25,7 @@
 use kwavers_core::error::KwaversResult;
 #[cfg(feature = "pinn")]
 use kwavers_solver::inverse::pinn::ml::burn_wave_equation_2d::{
-    BurnLossWeights2D, BurnPINN2DConfig, BurnPINN2DTrainer, BurnPINN2DWave, Geometry2D,
+    BurnLossWeights2D, BurnPINN2DConfig, BurnPINN2DTrainer, BurnPINN2DWave, BurnWave2dGeometry,
 };
 #[cfg(feature = "pinn")]
 use ndarray::{Array1, Array2};
@@ -80,7 +80,7 @@ fn gradient_wave_speed(_x: f32, y: f32) -> f32 {
 #[cfg(feature = "pinn")]
 fn generate_heterogeneous_training_data<F>(
     n_samples: usize,
-    geometry: &Geometry2D,
+    geometry: &BurnWave2dGeometry,
     wave_speed_fn: F,
 ) -> (Array1<f64>, Array1<f64>, Array1<f64>, Array2<f64>)
 where
@@ -127,7 +127,7 @@ fn generate_heterogeneous_test_grid<F>(
     nx: usize,
     ny: usize,
     nt: usize,
-    geometry: &Geometry2D,
+    geometry: &BurnWave2dGeometry,
     wave_speed_fn: F,
 ) -> (Array1<f64>, Array1<f64>, Array1<f64>, Vec<f32>)
 where
@@ -239,7 +239,7 @@ fn main() -> KwaversResult<()> {
         println!("=====================================");
 
         // Create geometry (unit square)
-        let geometry = Geometry2D::rectangular(0.0, 1.0, 0.0, 1.0);
+        let geometry = BurnWave2dGeometry::rectangular(0.0, 1.0, 0.0, 1.0);
         println!("📐 Geometry: Unit square [0,1] × [0,1]");
         println!("🎵 Wave speed: {}", media_name);
         println!();

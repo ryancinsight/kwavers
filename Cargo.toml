@@ -8,14 +8,26 @@ resolver = "2"
 # These repos carry their own [workspace], so Cargo resolves their internal
 # inheritance against THEIR roots — no path scaffolding needed here. SSOT: members
 # inherit via `{ workspace = true }`.
-ritk-core = { git = "https://github.com/ryancinsight/ritk" }
-ritk-io = { git = "https://github.com/ryancinsight/ritk" }
-ritk-registration = { git = "https://github.com/ryancinsight/ritk" }
-apollo = { git = "https://github.com/ryancinsight/apollo", rev = "e1a9a1ac42040832a0152c4c166d066d04ab097e", package = "apollo-fft" }
-apollofft-wgpu = { git = "https://github.com/ryancinsight/apollo", rev = "e1a9a1ac42040832a0152c4c166d066d04ab097e", package = "apollo-fft-wgpu" }
-moirai-parallel = { git = "https://github.com/ryancinsight/Moirai.git", package = "moirai-parallel", default-features = false, features = ["parallel"] }
-burn = { version = "0.19", features = ["wgpu", "autodiff"] }
-burn-ndarray = "0.19"
+ritk-core = { path = "../ritk/crates/ritk-core" }
+ritk-io = { path = "../ritk/crates/ritk-io" }
+ritk-image = { path = "../ritk/crates/ritk-image" }
+ritk-spatial = { path = "../ritk/crates/ritk-spatial" }
+ritk-registration = { path = "../ritk/crates/ritk-registration" }
+coeus-core = { path = "../coeus/coeus-core" }
+coeus-tensor = { path = "../coeus/coeus-tensor" }
+coeus-autograd = { path = "../coeus/coeus-autograd" }
+coeus-nn = { path = "../coeus/coeus-nn" }
+coeus-optim = { path = "../coeus/coeus-optim" }
+coeus-ops = { path = "../coeus/coeus-ops" }
+apollo = { path = "../apollo/crates/apollo-fft", package = "apollo-fft" }
+hephaestus-core = { path = "../hephaestus/crates/hephaestus-core", default-features = false }
+hephaestus-wgpu = { path = "../hephaestus/crates/hephaestus-wgpu", default-features = false, features = ["decomposition"] }
+hephaestus-cuda = { path = "../hephaestus/crates/hephaestus-cuda", default-features = false }
+hermes-simd = { path = "../hermes/crates/hermes-simd", default-features = false, features = ["std"] }
+moirai-parallel = { path = "../moirai/moirai-parallel", default-features = false, features = ["parallel"] }
+leto = { path = "../leto/crates/leto", default-features = false, features = ["std"] }
+leto-ops = { path = "../leto/crates/leto-ops", default-features = false, features = ["std"] }
+eunomia = { path = "../eunomia/crates/eunomia", default-features = false, features = ["std"] }
 pyo3 = { version = "0.22", features = ["extension-module", "abi3-py39"] }
 numpy = "0.22"
 nalgebra = { version = "0.33", features = ["serde-serialize"] }
@@ -28,12 +40,10 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 bytemuck = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-rayon = "1.9"
 ndarray = { version = "0.16", features = ["rayon"] }
 gaia = { git = "https://github.com/ryancinsight/gaia", default-features = false }
 tempfile = "3.10"
 proptest = "1.0"
-tokio = { version = "1.0", features = ["full"] }
 walkdir = "2.4"
 charls = { version = "0.4", features = ["static"] }
 clap = { version = "4", features = ["derive"] }
@@ -90,3 +100,59 @@ opt-level = 3
 lto = true
 codegen-units = 1
 strip = true  # Strip symbols for smaller Python wheels
+
+[patch."https://github.com/ryancinsight/gaia"]
+gaia = { path = "../gaia" }
+
+[patch."https://github.com/ryancinsight/leto.git"]
+leto = { path = "../leto/crates/leto" }
+leto-ops = { path = "../leto/crates/leto-ops" }
+
+[patch."https://github.com/ryancinsight/eunomia"]
+eunomia = { path = "../eunomia/crates/eunomia" }
+
+[patch."https://github.com/ryancinsight/eunomia.git"]
+eunomia = { path = "../eunomia/crates/eunomia" }
+
+[patch."https://github.com/ryancinsight/hephaestus.git"]
+hephaestus-core = { path = "../hephaestus/crates/hephaestus-core" }
+hephaestus-wgpu = { path = "../hephaestus/crates/hephaestus-wgpu" }
+hephaestus-cuda = { path = "../hephaestus/crates/hephaestus-cuda" }
+
+[patch."https://github.com/ryancinsight/Mnemosyne.git"]
+mnemosyne = { path = "../mnemosyne/crates/mnemosyne" }
+mnemosyne-arena = { path = "../mnemosyne/crates/mnemosyne-arena" }
+mnemosyne-backend = { path = "../mnemosyne/crates/mnemosyne-backend" }
+mnemosyne-core = { path = "../mnemosyne/crates/mnemosyne-core" }
+mnemosyne-decay = { path = "../mnemosyne/crates/mnemosyne-decay" }
+mnemosyne-hardened = { path = "../mnemosyne/crates/mnemosyne-hardened" }
+mnemosyne-heap = { path = "../mnemosyne/crates/mnemosyne-heap" }
+mnemosyne-local = { path = "../mnemosyne/crates/mnemosyne-local" }
+mnemosyne-prof = { path = "../mnemosyne/crates/mnemosyne-prof" }
+
+[patch."https://github.com/ryancinsight/Moirai.git"]
+moirai = { path = "../moirai/moirai" }
+moirai-async = { path = "../moirai/moirai-async" }
+moirai-core = { path = "../moirai/moirai-core" }
+moirai-executor = { path = "../moirai/moirai-executor" }
+moirai-gpu = { path = "../moirai/moirai-gpu" }
+moirai-iter = { path = "../moirai/moirai-iter" }
+moirai-pal = { path = "../moirai/moirai-pal" }
+moirai-parallel = { path = "../moirai/moirai-parallel" }
+moirai-scheduler = { path = "../moirai/moirai-scheduler" }
+moirai-sync = { path = "../moirai/moirai-sync" }
+moirai-utils = { path = "../moirai/moirai-utils" }
+
+[patch."https://github.com/ryancinsight/themis"]
+themis = { path = "../themis" }
+
+[patch."https://github.com/ryancinsight/hermes.git"]
+hermes-simd = { path = "../hermes/crates/hermes-simd" }
+hermes-simd-core = { path = "../hermes/crates/hermes-simd-core" }
+
+[patch."https://github.com/ryancinsight/melinoe.git"]
+melinoe = { path = "../melinoe" }
+
+[patch.crates-io]
+numpy = { path = "vendor/numpy-0.27.1" }
+melinoe = { path = "../melinoe" }

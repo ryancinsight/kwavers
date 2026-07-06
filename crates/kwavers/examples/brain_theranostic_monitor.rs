@@ -56,6 +56,7 @@ use kwavers_solver::inverse::fwi::time_domain::{FwiGeometry, FwiProcessor};
 use kwavers_solver::inverse::seismic::parameters::{FwiParameters, RegularizationParameters};
 use kwavers_source::{GridSource, Source, SourceMode};
 use kwavers_transducer::HemisphericalArray;
+use leto::Array3 as LetoArray3;
 use ndarray::{Array2, Array3};
 use std::f64::consts::PI;
 use std::time::Instant;
@@ -245,7 +246,7 @@ fn fwi_params(nt: usize, dt: f64, n_recv: usize, iters: usize) -> FwiParameters 
 }
 
 /// One explicit Pennes bioheat sub-step (FTCS): advance temperature [°C].
-fn bioheat_step(temp: &mut Array3<f64>, q: &Array3<f64>, dt: f64) {
+fn bioheat_step(temp: &mut LetoArray3<f64>, q: &LetoArray3<f64>, dt: f64) {
     let inv_dx2 = 1.0 / (DX * DX);
     let prev = temp.clone();
     for i in 1..NX - 1 {
@@ -268,9 +269,9 @@ fn bioheat_step(temp: &mut Array3<f64>, q: &Array3<f64>, dt: f64) {
 }
 
 /// Gaussian focal absorbed-power field `Q = 2αI·exp(-r²/2σ²)` [W/m³].
-fn focal_q(target: (usize, usize, usize)) -> Array3<f64> {
+fn focal_q(target: (usize, usize, usize)) -> LetoArray3<f64> {
     let q0 = 2.0 * ABSORPTION_NP_M * FOCAL_INTENSITY_W_M2;
-    let mut q = Array3::<f64>::zeros((NX, NY, NZ));
+    let mut q = LetoArray3::<f64>::zeros([NX, NY, NZ]);
     let s2 = 2.0 * FOCAL_SIGMA_VOX * FOCAL_SIGMA_VOX;
     for i in 0..NX {
         for j in 0..NY {
@@ -490,7 +491,7 @@ fn main() -> KwaversResult<()> {
 
     // Therapy state.
     let coeff = TemperatureCoefficients::soft_tissue();
-    let mut temperature = Array3::from_elem(dims, BODY_TEMP_C);
+    let mut temperature = LetoArray3::from_elem([NX, NY, NZ], BODY_TEMP_C);
     let mut cem43 = ThermalCEM43Grid::new(NX, NY, NZ);
     let mut void_fraction = Array3::<f64>::zeros(dims);
     let q_focal = focal_q(tgt);
@@ -507,7 +508,7 @@ fn main() -> KwaversResult<()> {
                         for _ in 0..THERMAL_SUBSTEPS {
                             bioheat_step(&mut temperature, &q_focal, dts);
                         }
-                        cem43.update(&temperature, THERAPY_PRI_S);
+                        cem43.update(&temperature, THERAPY_PRI_S)?;
                     }
                     lesion::TherapyMode::Cavitation => {
                         // Cumulative (irreversible) fractionation: β grows toward

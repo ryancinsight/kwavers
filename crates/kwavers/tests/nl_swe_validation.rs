@@ -339,7 +339,12 @@ mod nonlinear_inversion_tests {
         let param_map = result.unwrap();
 
         // Bayesian method should provide uncertainty estimates
-        let avg_uncertainty = param_map.nonlinearity_uncertainty.mean().unwrap_or(0.0);
+        let avg_uncertainty = param_map
+            .nonlinearity_uncertainty
+            .iter()
+            .copied()
+            .sum::<f64>()
+            / param_map.nonlinearity_uncertainty.size() as f64;
         assert!(
             avg_uncertainty > 0.0,
             "Should have non-zero uncertainty estimates"
@@ -348,16 +353,18 @@ mod nonlinear_inversion_tests {
 
     #[test]
     fn test_nonlinear_parameter_statistics() {
+        use leto::Array3 as LetoArray3;
+
         let param_map = NonlinearParameterMap {
-            nonlinearity_parameter: Array3::from_elem((5, 5, 5), 5.0),
+            nonlinearity_parameter: LetoArray3::from_elem([5, 5, 5], 5.0),
             elastic_constants: vec![
-                Array3::from_elem((5, 5, 5), 1000.0),
-                Array3::from_elem((5, 5, 5), 500.0),
-                Array3::from_elem((5, 5, 5), 200.0),
-                Array3::from_elem((5, 5, 5), 100.0),
+                LetoArray3::from_elem([5, 5, 5], 1000.0),
+                LetoArray3::from_elem([5, 5, 5], 500.0),
+                LetoArray3::from_elem([5, 5, 5], 200.0),
+                LetoArray3::from_elem([5, 5, 5], 100.0),
             ],
-            nonlinearity_uncertainty: Array3::from_elem((5, 5, 5), 0.5),
-            estimation_quality: Array3::from_elem((5, 5, 5), 0.8),
+            nonlinearity_uncertainty: LetoArray3::from_elem([5, 5, 5], 0.5),
+            estimation_quality: LetoArray3::from_elem([5, 5, 5], 0.8),
         };
 
         let (min, max, mean) = param_map.nonlinearity_statistics();
@@ -368,7 +375,12 @@ mod nonlinear_inversion_tests {
         let (q_min, q_max, q_mean) = param_map.quality_statistics();
         assert_eq!(q_min, 0.8);
         assert_eq!(q_max, 0.8);
-        assert_eq!(q_mean, 0.8);
+        let mean_roundoff_bound =
+            param_map.estimation_quality.size() as f64 * f64::EPSILON * q_mean.abs();
+        assert!(
+            (q_mean - 0.8).abs() <= mean_roundoff_bound,
+            "quality mean {q_mean} differs from 0.8 by more than the {mean_roundoff_bound} reduction bound"
+        );
     }
 }
 

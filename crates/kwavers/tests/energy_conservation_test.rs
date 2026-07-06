@@ -8,6 +8,7 @@
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 use ndarray::{Array3, Zip};
+use eunomia::{FloatElement, NumericElement};
 
 /// Parameters for acoustic energy calculation
 struct EnergyParams<T> {
@@ -26,7 +27,7 @@ struct EnergyParams<T> {
 ///
 /// # Generic Implementation
 ///
-/// This function supports both f32 and f64 precision through num_traits::Float bounds,
+/// This function supports both f32 and f64 precision through Eunomia float bounds,
 /// eliminating the hardcoded f64 antipattern identified in the audit.
 fn calculate_acoustic_energy<T>(
     pressure: &Array3<T>,
@@ -36,16 +37,16 @@ fn calculate_acoustic_energy<T>(
     params: &EnergyParams<T>,
 ) -> T
 where
-    T: num_traits::Float + std::default::Default + std::iter::Sum,
+    T: FloatElement + std::iter::Sum,
 {
     let dv = params.dx * params.dy * params.dz; // Volume element
-    let half = T::from(0.5).unwrap();
+    let half = T::from_f64(0.5);
 
     Zip::from(pressure)
         .and(velocity_x)
         .and(velocity_y)
         .and(velocity_z)
-        .fold(T::default(), |energy, &p, &vx, &vy, &vz| {
+        .fold(<T as NumericElement>::ZERO, |energy, &p, &vx, &vy, &vz| {
             let kinetic = half * params.density * (vx * vx + vy * vy + vz * vz);
             let potential =
                 half * p * p / (params.density * params.sound_speed * params.sound_speed);

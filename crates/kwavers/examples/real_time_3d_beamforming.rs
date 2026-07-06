@@ -16,26 +16,29 @@
 //! - Speedup: 10-100× vs CPU implementation
 //! - Memory efficiency: Streaming processing
 
+#[cfg(feature = "gpu")]
+use kwavers_analysis::signal_processing::beamforming::three_dimensional::{
+    Beamforming3dApodizationWindow as ApodizationWindow, BeamformingAlgorithm3D,
+    BeamformingConfig3D, BeamformingProcessor3D,
+};
+#[cfg(feature = "gpu")]
 use kwavers_core::error::KwaversResult;
 #[cfg(feature = "gpu")]
-use kwavers_transducer::beamforming::{
-    ApodizationWindow, BeamformingAlgorithm3D, BeamformingConfig3D, BeamformingProcessor3D,
-};
+use kwavers_gpu::beamforming::three_dimensional::WgpuBeamformingProvider;
 use ndarray::{Array3, Array4};
 #[cfg(feature = "gpu")]
 use std::time::Instant;
 
 #[cfg(feature = "gpu")]
-#[tokio::main]
-async fn main() -> KwaversResult<()> {
+fn main() -> KwaversResult<()> {
     println!("🚀 Real-Time 3D Beamforming Demonstration");
     println!("==========================================");
 
     // Demonstrate different beamforming configurations
-    demonstrate_delay_and_sum().await?;
-    demonstrate_dynamic_focusing().await?;
-    demonstrate_streaming_processing().await?;
-    demonstrate_performance_benchmarking().await?;
+    demonstrate_delay_and_sum()?;
+    demonstrate_dynamic_focusing()?;
+    demonstrate_streaming_processing()?;
+    demonstrate_performance_benchmarking()?;
 
     println!("\n✅ Real-time 3D beamforming demonstration completed successfully!");
     println!("   Demonstrated: GPU acceleration, streaming processing, dynamic focusing, performance benchmarking");
@@ -49,12 +52,11 @@ fn main() {
     println!("====================================");
     println!("This example requires GPU acceleration.");
     println!("Run with: cargo run --example real_time_3d_beamforming --features gpu");
-    println!("Or: cargo run --example real_time_3d_beamforming --features gpu,wgpu");
 }
 
 #[cfg(feature = "gpu")]
 /// Demonstrate basic delay-and-sum beamforming
-async fn demonstrate_delay_and_sum() -> KwaversResult<()> {
+fn demonstrate_delay_and_sum() -> KwaversResult<()> {
     println!("\n📊 Delay-and-Sum 3D Beamforming Demonstration");
     println!("---------------------------------------------");
 
@@ -80,7 +82,8 @@ async fn demonstrate_delay_and_sum() -> KwaversResult<()> {
     println!("  Voxel spacing: {:.1}mm", config.voxel_spacing.0 * 1000.0);
 
     // Create processor
-    let mut processor = BeamformingProcessor3D::new(config.clone()).await?;
+    let mut processor =
+        BeamformingProcessor3D::with_provider(config.clone(), WgpuBeamformingProvider::new()?)?;
 
     // Generate synthetic RF data (simulating ultrasound acquisition)
     let rf_data = generate_synthetic_rf_data(
@@ -127,7 +130,7 @@ async fn demonstrate_delay_and_sum() -> KwaversResult<()> {
 
 /// Demonstrate dynamic focusing capabilities
 #[cfg(feature = "gpu")]
-async fn demonstrate_dynamic_focusing() -> KwaversResult<()> {
+fn demonstrate_dynamic_focusing() -> KwaversResult<()> {
     println!("\n🎯 Dynamic Focusing 3D Beamforming Demonstration");
     println!("------------------------------------------------");
 
@@ -137,7 +140,8 @@ async fn demonstrate_dynamic_focusing() -> KwaversResult<()> {
         ..Default::default()
     };
 
-    let mut processor = BeamformingProcessor3D::new(config.clone()).await?;
+    let mut processor =
+        BeamformingProcessor3D::with_provider(config.clone(), WgpuBeamformingProvider::new()?)?;
 
     // Generate RF data
     let rf_data = generate_synthetic_rf_data(2, 256, 256);
@@ -187,7 +191,7 @@ async fn demonstrate_dynamic_focusing() -> KwaversResult<()> {
 
 /// Demonstrate real-time streaming processing for 4D ultrasound
 #[cfg(feature = "gpu")]
-async fn demonstrate_streaming_processing() -> KwaversResult<()> {
+fn demonstrate_streaming_processing() -> KwaversResult<()> {
     println!("\n📺 Real-Time Streaming 4D Ultrasound Demonstration");
     println!("--------------------------------------------------");
 
@@ -199,7 +203,8 @@ async fn demonstrate_streaming_processing() -> KwaversResult<()> {
         ..Default::default()
     };
 
-    let mut processor = BeamformingProcessor3D::new(config.clone()).await?;
+    let mut processor =
+        BeamformingProcessor3D::with_provider(config.clone(), WgpuBeamformingProvider::new()?)?;
 
     let algorithm = BeamformingAlgorithm3D::DelayAndSum {
         dynamic_focusing: true,
@@ -269,7 +274,7 @@ async fn demonstrate_streaming_processing() -> KwaversResult<()> {
 
 /// Demonstrate performance benchmarking against CPU implementation
 #[cfg(feature = "gpu")]
-async fn demonstrate_performance_benchmarking() -> KwaversResult<()> {
+fn demonstrate_performance_benchmarking() -> KwaversResult<()> {
     println!("\n⚡ Performance Benchmarking Demonstration");
     println!("-----------------------------------------");
 
@@ -279,7 +284,8 @@ async fn demonstrate_performance_benchmarking() -> KwaversResult<()> {
         ..Default::default()
     };
 
-    let mut processor = BeamformingProcessor3D::new(config.clone()).await?;
+    let mut processor =
+        BeamformingProcessor3D::with_provider(config.clone(), WgpuBeamformingProvider::new()?)?;
 
     // Generate test data
     let rf_data = generate_synthetic_rf_data(1, 32, 128);

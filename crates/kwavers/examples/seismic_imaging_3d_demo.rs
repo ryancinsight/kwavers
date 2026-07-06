@@ -22,6 +22,7 @@ use kwavers_grid::Grid;
 use kwavers_solver::inverse::fwi::time_domain::{FwiGeometry, FwiProcessor};
 use kwavers_solver::inverse::seismic::parameters::{FwiParameters, RegularizationParameters};
 use kwavers_source::{GridSource, SourceMode};
+use moirai_parallel::{map_collect_index_with, Adaptive};
 use ndarray::{Array2, Array3, Zip};
 use ritk_io::{
     load_dicom_series, read_nifti, read_png_series, scan_dicom_directory, DicomSeriesInfo,
@@ -223,7 +224,7 @@ fn build_dicom_series(mut series: Vec<DicomSeriesInfo>) -> DicomSeriesInfo {
 
     if let Some(best) = series
         .iter()
-        .position(|s| s.series_instance_uid.as_str() == DEFAULT_MEDIMODEL_SERIES_UID)
+        .position(|s| s.series_instance_uid() == DEFAULT_MEDIMODEL_SERIES_UID)
     {
         return series.swap_remove(best);
     }
@@ -238,18 +239,18 @@ fn build_dicom_series(mut series: Vec<DicomSeriesInfo>) -> DicomSeriesInfo {
             "  Note: each DICOM slice has a unique SeriesInstanceUID; \
                   merging {n} files into one logical series for spatial sort."
         );
-        DicomSeriesInfo {
-            series_instance_uid: "merged".parse().expect("UID fits in 64 chars"),
-            series_description: format!("merged-{n}-slices"),
-            modality: "CT".parse().expect("modality fits in 16 chars"),
-            patient_id: String::new(),
-            file_paths: all_paths,
-        }
+        DicomSeriesInfo::new(
+            "merged",
+            format!("merged-{n}-slices"),
+            "CT",
+            String::new(),
+            all_paths,
+        )
     } else {
         let ct: Vec<usize> = series
             .iter()
             .enumerate()
-            .filter(|(_, s)| s.modality.as_str() == "CT")
+            .filter(|(_, s)| s.modality() == "CT")
             .map(|(i, _)| i)
             .collect();
         let pool: Vec<usize> = if ct.is_empty() {
@@ -336,7 +337,7 @@ fn load_ct_volume(path: &Path) -> anyhow::Result<CtVolume> {
         load_dicom_series::<Backend>(&selected, &device).map_err(|e| {
             anyhow::anyhow!(
                 "DICOM load failed for series '{}': {e:#}",
-                selected.series_instance_uid
+                selected.series_instance_uid()
             )
         })?
     } else {
@@ -353,12 +354,7 @@ fn load_ct_volume(path: &Path) -> anyhow::Result<CtVolume> {
     };
 
     let [depth, rows, cols] = image.shape();
-    let spacing = image.spacing().to_vec();
-    anyhow::ensure!(
-        spacing.len() == 3,
-        "unexpected spacing rank {}",
-        spacing.len()
-    );
+    let spacing = image.spacing().into_vector().to_array();
     let tensor_data = image.data().clone().into_data();
     let values = tensor_data
         .as_slice::<f32>()
@@ -700,12 +696,7 @@ fn load_t1_mri(path: &Path) -> anyhow::Result<(Array3<f64>, [f64; 3])> {
         .with_context(|| format!("T1 NIfTI read failed for '{}'", path.display()))?;
 
     let [depth, rows, cols] = img.shape();
-    let spacing = img.spacing().to_vec();
-    anyhow::ensure!(
-        spacing.len() == 3,
-        "unexpected spacing rank {}",
-        spacing.len()
-    );
+    let spacing = img.spacing().into_vector().to_array();
     let tensor_data = img.data().clone().into_data();
     let values = tensor_data
         .as_slice::<f32>()
@@ -993,9 +984,8 @@ fn build_shot_3d(
 
 /// Separable 3D Gaussian blur applied sequentially in x → y → z.
 ///
-/// Uses two temporary buffers (not three): the z-pass writes back into the
-/// first buffer, eliminating one 1.2 MB allocation.  All three passes run in
-/// parallel via `Zip::par_for_each` (ndarray rayon feature).
+/// Each pass maps one flat output index through Moirai with clamped boundary
+/// handling.
 ///
 /// Boundary voxels use reflect-padding (clamp-at-edge).
 ///
@@ -1014,43 +1004,59 @@ fn gaussian_blur_3d(model: &Array3<f64>, sigma: f64) -> Array3<f64> {
     let ksum: f64 = raw.iter().sum();
     let kernel: Vec<f64> = raw.iter().map(|&k| k / ksum).collect();
 
-    // Pass 1: convolve along x → tmp_x.  Parallel over all output voxels.
-    let mut tmp_x = Array3::<f64>::zeros((NX, NY, NZ));
-    Zip::indexed(tmp_x.view_mut()).par_for_each(|(ix, iy, iz), v| {
+    let cell_count = NX * NY * NZ;
+
+    // Pass 1: convolve along x → tmp_x. Parallel over all output voxels.
+    let tmp_x_values = map_collect_index_with::<Adaptive, _, _>(cell_count, |idx| {
+        let ix = idx / (NY * NZ);
+        let rem = idx % (NY * NZ);
+        let iy = rem / NZ;
+        let iz = rem % NZ;
         let mut acc = 0.0_f64;
         for (ki, &kw) in kernel.iter().enumerate() {
             let si =
                 (ix as isize + ki as isize - radius as isize).clamp(0, NX as isize - 1) as usize;
             acc += kw * model[[si, iy, iz]];
         }
-        *v = acc;
+        acc
     });
+    let tmp_x = Array3::<f64>::from_shape_vec((NX, NY, NZ), tmp_x_values)
+        .expect("invariant: flat Moirai x-pass preserves model shape length");
 
-    // Pass 2: convolve along y → tmp_y.  Parallel over all output voxels.
-    let mut tmp_y = Array3::<f64>::zeros((NX, NY, NZ));
-    Zip::indexed(tmp_y.view_mut()).par_for_each(|(ix, iy, iz), v| {
+    // Pass 2: convolve along y → tmp_y. Parallel over all output voxels.
+    let tmp_y_values = map_collect_index_with::<Adaptive, _, _>(cell_count, |idx| {
+        let ix = idx / (NY * NZ);
+        let rem = idx % (NY * NZ);
+        let iy = rem / NZ;
+        let iz = rem % NZ;
         let mut acc = 0.0_f64;
         for (ki, &kw) in kernel.iter().enumerate() {
             let sj =
                 (iy as isize + ki as isize - radius as isize).clamp(0, NY as isize - 1) as usize;
             acc += kw * tmp_x[[ix, sj, iz]];
         }
-        *v = acc;
+        acc
     });
+    let tmp_y = Array3::<f64>::from_shape_vec((NX, NY, NZ), tmp_y_values)
+        .expect("invariant: flat Moirai y-pass preserves model shape length");
 
-    // Pass 3: convolve along z back into tmp_x (reuse; saves one 1.2 MB allocation).
-    // Reads only from tmp_y; writes only to tmp_x — no aliasing.
-    Zip::indexed(tmp_x.view_mut()).par_for_each(|(ix, iy, iz), v| {
+    // Pass 3: convolve along z.
+    let out_values = map_collect_index_with::<Adaptive, _, _>(cell_count, |idx| {
+        let ix = idx / (NY * NZ);
+        let rem = idx % (NY * NZ);
+        let iy = rem / NZ;
+        let iz = rem % NZ;
         let mut acc = 0.0_f64;
         for (ki, &kw) in kernel.iter().enumerate() {
             let sk =
                 (iz as isize + ki as isize - radius as isize).clamp(0, NZ as isize - 1) as usize;
             acc += kw * tmp_y[[ix, iy, sk]];
         }
-        *v = acc;
+        acc
     });
 
-    tmp_x
+    Array3::<f64>::from_shape_vec((NX, NY, NZ), out_values)
+        .expect("invariant: flat Moirai z-pass preserves model shape length")
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

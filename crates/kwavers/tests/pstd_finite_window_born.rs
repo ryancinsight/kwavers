@@ -72,7 +72,6 @@ fn finite_window_born_rejects_off_grid_ring_geometry() {
 fn second_order_correction_is_quadratic_in_contrast() {
     let array = MultiRowRingArray::new(4, 1, 0.01, 0.0).expect("ring array");
     let config = test_config();
-    let base = Array3::from_elem((3, 3, 1), SOUND_SPEED_WATER_SIM);
     let small = contrast_volume(0.01);
     let double = contrast_volume(0.02);
 

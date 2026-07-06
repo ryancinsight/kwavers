@@ -207,7 +207,7 @@ fn load_ct_with_ritk(path: &Path, selected_uid: Option<&str>) -> Result<CtVolume
     let selected = match selected_uid {
         Some(uid) => series
             .iter()
-            .find(|candidate| candidate.series_instance_uid.as_str() == uid)
+            .find(|candidate| candidate.series_instance_uid() == uid)
             .with_context(|| format!("series UID '{uid}' was not found"))?,
         None if series.len() == 1 => &series[0],
         None => {
@@ -215,8 +215,8 @@ fn load_ct_with_ritk(path: &Path, selected_uid: Option<&str>) -> Result<CtVolume
             for item in &series {
                 eprintln!(
                     "  UID={} modality={} description={} files={}",
-                    item.series_instance_uid,
-                    item.modality,
+                    item.series_instance_uid(),
+                    item.modality(),
                     item.series_description,
                     item.file_paths.len()
                 );
@@ -229,18 +229,12 @@ fn load_ct_with_ritk(path: &Path, selected_uid: Option<&str>) -> Result<CtVolume
     let image = load_dicom_series::<Backend>(selected, &device).with_context(|| {
         format!(
             "RITK failed to load series '{}'",
-            selected.series_instance_uid
+            selected.series_instance_uid()
         )
     })?;
     let [depth, rows, cols] = image.shape();
-    let spacing = image.spacing().to_vec();
-    if spacing.len() != 3 {
-        bail!("RITK returned invalid spacing rank {}", spacing.len());
-    }
-    let origin_vec = image.origin().to_vec();
-    if origin_vec.len() != 3 {
-        bail!("RITK returned invalid origin rank {}", origin_vec.len());
-    }
+    let spacing = image.spacing().into_vector().to_array();
+    let origin_vec = image.origin().to_array();
     let direction_matrix = image.direction().0;
 
     let tensor_data = image.data().clone().into_data();

@@ -43,9 +43,11 @@ use burn::tensor::Tensor;
 #[cfg(feature = "pinn")]
 use kwavers_core::error::{KwaversError, KwaversResult};
 #[cfg(feature = "pinn")]
-use kwavers_solver::inverse::pinn::elastic_2d::training::PINNOptimizer;
+use kwavers_solver::inverse::pinn::elastic_2d::training::optimizer::PINNOptimizer;
 #[cfg(feature = "pinn")]
 use kwavers_solver::inverse::pinn::elastic_2d::{Config, ElasticPINN2D};
+#[cfg(feature = "pinn")]
+use std::time::Instant;
 
 #[cfg(feature = "pinn")]
 type AutodiffBackend = Autodiff<NdArray>;
@@ -212,7 +214,7 @@ fn train_pinn(
         let diff = predicted - target_tensor.clone();
         let loss = (diff.clone() * diff).mean();
         let grads = loss.backward();
-        model = optimizer.step(model, &grads);
+        model = optimizer.step(model, grads);
 
         let loss_value: f64 = f64::from(loss.into_scalar());
         loss_history.push(loss_value);
