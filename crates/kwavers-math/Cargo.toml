@@ -9,19 +9,21 @@ repository = "https://github.com/ryancinsight/kwavers"
 
 [dependencies]
 kwavers-core = { path = "../kwavers-core" }
-ndarray = { version = "0.16", features = ["rayon", "serde"] }
-nalgebra = { version = "0.32" }
+moirai-parallel = { workspace = true }
+hermes-simd = { workspace = true }
+ndarray = { version = "0.16", features = ["serde"] }
+leto = { workspace = true, features = ["ndarray-compat"] }
+leto-ops = { workspace = true }
 num-complex = "0.4"
-num-traits = "0.2"
+num-traits = "0.2" # Phase-1A pilot ported numeric_ops.rs only; full kwavers-math sweep lands in Phase-1B once eunomia exposes a non-sealed Scalar trait usable for num_complex::Complex<f64> (csr.rs blocker).
+eunomia = { workspace = true }
 serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
 rand = "0.8"
 apollo = { workspace = true }
-# Optional GPU FFT backend (the `apollofft_wgpu`-backed path is `gpu`-gated).
-apollofft-wgpu = { workspace = true, optional = true }
 
 [features]
-gpu = ["dep:apollofft-wgpu"]
+gpu = ["apollo/wgpu"]
 
 [dev-dependencies]
 approx = "0.5"

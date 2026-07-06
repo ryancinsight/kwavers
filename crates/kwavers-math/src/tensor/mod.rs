@@ -1,44 +1,35 @@
-//! Unified Tensor Abstraction Layer
+//! Host tensor abstraction layer.
 //!
-//! This module provides a unified tensor interface that abstracts over different
-//! backend implementations (ndarray for CPU, Burn for GPU/autodiff).
+//! This module provides the implemented host tensor interface used by forward
+//! solvers that exchange dense arrays at CPU boundaries.
 //!
 //! # Design Rationale
 //!
 //! The kwavers library needs to support two distinct computational patterns:
 //!
-//! 1. **Forward solvers** (numerical integration): Use ndarray for efficient CPU
-//!    computation without autodiff overhead. These solvers discretize PDEs using
-//!    finite differences, finite elements, or spectral methods.
+//! 1. **Forward solvers** (numerical integration): use ndarray for efficient
+//!    CPU computation without autodiff overhead. These solvers discretize PDEs
+//!    using finite differences, finite elements, or spectral methods.
 //!
-//! 2. **Inverse solvers** (PINNs, optimization): Use Burn for automatic differentiation
-//!    and GPU acceleration. These solvers train neural networks to approximate PDE
-//!    solutions or perform gradient-based optimization.
-//!
-//! # Zero-Copy Interoperability
-//!
-//! When both ndarray and Burn are enabled, tensors can be converted with minimal
-//! overhead using Burn's NdArray backend:
-//!
-//! ```text
-//! ndarray::ArrayD ←→ Burn::Tensor (NdArray backend) [zero-copy when possible]
-//! ```
+//! 2. **Inverse solvers** (PINNs, optimization): use a differentiable provider
+//!    in the solver layer. `kwavers-math` does not expose a differentiable
+//!    tensor backend until the Coeus migration lands with real training and
+//!    gradient operations.
 //!
 //! # Feature Gates
 //!
-//! - Default: ndarray backend only (minimal dependencies)
-//! - `burn-ndarray`: Enable Burn with NdArray backend (autodiff, CPU)
-//! - `burn-wgpu`: Enable Burn with WGPU backend (autodiff, GPU)
-//! - `burn-cuda`: Enable Burn with CUDA backend (autodiff, GPU)
+//! - Default: ndarray-backed host tensor view only.
+//! - Differentiable PINN tensors belong behind the solver-layer Coeus provider
+//!   seam, not as a placeholder backend in this module.
 //!
 //! # Architecture
 //!
 //! ```text
 //! Domain Layer (this module)
-//!     ↓
+//!     |
 //! Solver Layer
-//!     ├─ Forward Solvers  → use TensorView (read-only ndarray)
-//!     └─ Inverse Solvers  → use DifferentiableTensor (Burn)
+//!     |- Forward Solvers -> use TensorView (read-only ndarray)
+//!     `- Inverse Solvers -> use solver-owned differentiable provider
 //! ```
 
 pub mod convert;
@@ -53,7 +44,7 @@ pub use types::{DType, Shape, TensorBackend};
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::arr2;
+    use ndarray::{arr2, s};
 
     #[test]
     fn test_shape() {
@@ -92,6 +83,24 @@ mod tests {
         for val in arr.iter() {
             assert!((val - 2.0).abs() < 1e-10);
         }
+    }
+
+    #[test]
+    fn test_ndarray_tensor_map_preserves_non_standard_layout_values() {
+        let data = arr2(&[[1.0, 2.0], [3.0, 4.0], [5.0, 6.0], [7.0, 8.0]])
+            .slice_move(s![..;2, ..])
+            .into_dyn();
+        let mut tensor = NdArrayTensor::from_array(data);
+
+        assert!(tensor.as_array().as_slice_memory_order().is_none());
+
+        tensor.map_inplace(|x| x + 10.0);
+
+        let arr = tensor.to_ndarray();
+        assert_eq!(arr[[0, 0]], 11.0);
+        assert_eq!(arr[[0, 1]], 12.0);
+        assert_eq!(arr[[1, 0]], 15.0);
+        assert_eq!(arr[[1, 1]], 16.0);
     }
 
     #[test]

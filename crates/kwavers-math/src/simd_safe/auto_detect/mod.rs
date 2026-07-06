@@ -13,6 +13,7 @@
 
 pub mod capability;
 pub mod dispatcher;
+mod ops;
 pub mod x86_64;
 
 #[cfg(target_arch = "aarch64")]

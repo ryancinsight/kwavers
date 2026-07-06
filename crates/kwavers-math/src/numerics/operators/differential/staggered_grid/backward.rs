@@ -3,6 +3,7 @@
 //! SRP: changes when the backward stencil or boundary treatment changes.
 
 use super::operator::StaggeredGridOperator;
+use crate::numerics::operators::differential::traversal;
 use kwavers_core::error::{KwaversResult, NumericalError};
 use ndarray::{s, Array3, ArrayView3, Zip};
 
@@ -38,10 +39,28 @@ impl StaggeredGridOperator {
             dst.dim()
         );
         let dx = self.dx;
+        if field.is_standard_layout() {
+            if let Some(field_values) = field.as_slice() {
+                if traversal::try_fill_standard_layout(dst, |i, j, k| {
+                    let center = traversal::row_major_index(i, j, k, ny, nz);
+                    if i == 0 {
+                        (field_values[traversal::row_major_index(1, j, k, ny, nz)]
+                            - field_values[center])
+                            / dx
+                    } else {
+                        (field_values[center]
+                            - field_values[traversal::row_major_index(i - 1, j, k, ny, nz)])
+                            / dx
+                    }
+                }) {
+                    return Ok(());
+                }
+            }
+        }
         Zip::from(dst.slice_mut(s![1.., .., ..]))
             .and(field.slice(s![1.., .., ..]))
             .and(field.slice(s![..nx - 1, .., ..]))
-            .par_for_each(|r, &hi, &lo| *r = (hi - lo) / dx);
+            .for_each(|r, &hi, &lo| *r = (hi - lo) / dx);
         Zip::from(dst.slice_mut(s![0, .., ..]))
             .and(field.slice(s![1, .., ..]))
             .and(field.slice(s![0, .., ..]))
@@ -79,10 +98,28 @@ impl StaggeredGridOperator {
             dst.dim()
         );
         let dy = self.dy;
+        if field.is_standard_layout() {
+            if let Some(field_values) = field.as_slice() {
+                if traversal::try_fill_standard_layout(dst, |i, j, k| {
+                    let center = traversal::row_major_index(i, j, k, ny, nz);
+                    if j == 0 {
+                        (field_values[traversal::row_major_index(i, 1, k, ny, nz)]
+                            - field_values[center])
+                            / dy
+                    } else {
+                        (field_values[center]
+                            - field_values[traversal::row_major_index(i, j - 1, k, ny, nz)])
+                            / dy
+                    }
+                }) {
+                    return Ok(());
+                }
+            }
+        }
         Zip::from(dst.slice_mut(s![.., 1.., ..]))
             .and(field.slice(s![.., 1.., ..]))
             .and(field.slice(s![.., ..ny - 1, ..]))
-            .par_for_each(|r, &hi, &lo| *r = (hi - lo) / dy);
+            .for_each(|r, &hi, &lo| *r = (hi - lo) / dy);
         Zip::from(dst.slice_mut(s![.., 0, ..]))
             .and(field.slice(s![.., 1, ..]))
             .and(field.slice(s![.., 0, ..]))
@@ -120,10 +157,28 @@ impl StaggeredGridOperator {
             dst.dim()
         );
         let dz = self.dz;
+        if field.is_standard_layout() {
+            if let Some(field_values) = field.as_slice() {
+                if traversal::try_fill_standard_layout(dst, |i, j, k| {
+                    let center = traversal::row_major_index(i, j, k, ny, nz);
+                    if k == 0 {
+                        (field_values[traversal::row_major_index(i, j, 1, ny, nz)]
+                            - field_values[center])
+                            / dz
+                    } else {
+                        (field_values[center]
+                            - field_values[traversal::row_major_index(i, j, k - 1, ny, nz)])
+                            / dz
+                    }
+                }) {
+                    return Ok(());
+                }
+            }
+        }
         Zip::from(dst.slice_mut(s![.., .., 1..]))
             .and(field.slice(s![.., .., 1..]))
             .and(field.slice(s![.., .., ..nz - 1]))
-            .par_for_each(|r, &hi, &lo| *r = (hi - lo) / dz);
+            .for_each(|r, &hi, &lo| *r = (hi - lo) / dz);
         Zip::from(dst.slice_mut(s![.., .., 0]))
             .and(field.slice(s![.., .., 1]))
             .and(field.slice(s![.., .., 0]))

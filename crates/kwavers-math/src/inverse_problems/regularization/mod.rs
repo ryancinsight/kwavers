@@ -9,6 +9,7 @@
 //! - Hastie, Tibshirani, Wainwright (2015): "Statistical Learning with Sparsity"
 
 pub mod config;
+mod ops;
 pub mod regularizer_1d;
 pub mod regularizer_2d;
 pub mod regularizer_3d;

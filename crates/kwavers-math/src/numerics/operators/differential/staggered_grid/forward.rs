@@ -3,6 +3,7 @@
 //! SRP: changes when the forward stencil or allocation strategy changes.
 
 use super::operator::StaggeredGridOperator;
+use crate::numerics::operators::differential::traversal;
 use kwavers_core::error::{KwaversResult, NumericalError};
 use ndarray::{s, Array3, ArrayView3, Zip};
 
@@ -38,10 +39,21 @@ impl StaggeredGridOperator {
             nx - 1
         );
         let dx = self.dx;
+        if field.is_standard_layout() {
+            if let Some(field_values) = field.as_slice() {
+                if traversal::try_fill_standard_layout(dst, |i, j, k| {
+                    (field_values[traversal::row_major_index(i + 1, j, k, ny, nz)]
+                        - field_values[traversal::row_major_index(i, j, k, ny, nz)])
+                        / dx
+                }) {
+                    return Ok(());
+                }
+            }
+        }
         Zip::from(dst)
             .and(field.slice(s![1.., .., ..]))
             .and(field.slice(s![..nx - 1, .., ..]))
-            .par_for_each(|r, &hi, &lo| *r = (hi - lo) / dx);
+            .for_each(|r, &hi, &lo| *r = (hi - lo) / dx);
         Ok(())
     }
 
@@ -76,10 +88,21 @@ impl StaggeredGridOperator {
             ny - 1
         );
         let dy = self.dy;
+        if field.is_standard_layout() {
+            if let Some(field_values) = field.as_slice() {
+                if traversal::try_fill_standard_layout(dst, |i, j, k| {
+                    (field_values[traversal::row_major_index(i, j + 1, k, ny, nz)]
+                        - field_values[traversal::row_major_index(i, j, k, ny, nz)])
+                        / dy
+                }) {
+                    return Ok(());
+                }
+            }
+        }
         Zip::from(dst)
             .and(field.slice(s![.., 1.., ..]))
             .and(field.slice(s![.., ..ny - 1, ..]))
-            .par_for_each(|r, &hi, &lo| *r = (hi - lo) / dy);
+            .for_each(|r, &hi, &lo| *r = (hi - lo) / dy);
         Ok(())
     }
 
@@ -114,10 +137,21 @@ impl StaggeredGridOperator {
             nz - 1
         );
         let dz = self.dz;
+        if field.is_standard_layout() {
+            if let Some(field_values) = field.as_slice() {
+                if traversal::try_fill_standard_layout(dst, |i, j, k| {
+                    (field_values[traversal::row_major_index(i, j, k + 1, ny, nz)]
+                        - field_values[traversal::row_major_index(i, j, k, ny, nz)])
+                        / dz
+                }) {
+                    return Ok(());
+                }
+            }
+        }
         Zip::from(dst)
             .and(field.slice(s![.., .., 1..]))
             .and(field.slice(s![.., .., ..nz - 1]))
-            .par_for_each(|r, &hi, &lo| *r = (hi - lo) / dz);
+            .for_each(|r, &hi, &lo| *r = (hi - lo) / dz);
         Ok(())
     }
 

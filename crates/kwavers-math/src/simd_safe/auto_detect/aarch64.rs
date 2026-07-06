@@ -21,6 +21,7 @@
 //! reserved for a future sprint that includes aarch64 CI validation.
 
 pub mod neon {
+    use crate::simd_safe::auto_detect::ops;
     use ndarray::Array3;
 
     /// Add two arrays element-wise: `out[i] = a[i] + b[i]`.
@@ -31,12 +32,7 @@ pub mod neon {
     ///
     #[inline]
     pub fn add_arrays(a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) {
-        debug_assert_eq!(a.shape(), b.shape());
-        debug_assert_eq!(a.shape(), out.shape());
-        ndarray::Zip::from(out)
-            .and(a)
-            .and(b)
-            .for_each(|o, &ai, &bi| *o = ai + bi);
+        ops::add_arrays(a, b, out);
     }
 
     /// Scale array in place: `array[i] *= scalar`.
@@ -44,7 +40,7 @@ pub mod neon {
     /// LLVM autovectorises to `FMUL Vn.2D` on `-C target-cpu=native`.
     #[inline]
     pub fn scale_array(array: &mut Array3<f64>, scalar: f64) {
-        array.par_mapv_inplace(|x| x * scalar);
+        ops::scale_array(array, scalar);
     }
 
     /// Fused multiply-add in place: `c[i] += multiplier * a[i] * b[i]`.
@@ -59,11 +55,6 @@ pub mod neon {
     ///
     #[inline]
     pub fn fma_arrays(a: &Array3<f64>, b: &Array3<f64>, c: &mut Array3<f64>, multiplier: f64) {
-        debug_assert_eq!(a.shape(), b.shape());
-        debug_assert_eq!(a.shape(), c.shape());
-        ndarray::Zip::from(c)
-            .and(a)
-            .and(b)
-            .for_each(|ci, &ai, &bi| *ci += multiplier * ai * bi);
+        ops::fma_arrays(a, b, c, multiplier);
     }
 }

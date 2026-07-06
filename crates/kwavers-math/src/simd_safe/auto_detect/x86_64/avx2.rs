@@ -3,6 +3,7 @@
 //! This module contains AVX2-optimized operations following IEEE TSE 2022
 //! memory safety practices with comprehensive safety documentation.
 
+use crate::simd_safe::auto_detect::ops;
 use ndarray::Array3;
 
 /// Add two arrays using AVX2 instructions
@@ -18,26 +19,12 @@ use ndarray::Array3;
 /// - Panics if an internal precondition is violated.
 ///
 pub fn add_arrays(a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) {
-    // Validation: Ensure all arrays have the same shape
-    assert_eq!(a.shape(), b.shape());
-    assert_eq!(a.shape(), out.shape());
-
-    // Safe portable implementation: ndarray leverages compiler auto-vectorization
-    // Explicit AVX2 intrinsics deferred to Sprint 126+ (requires unsafe blocks + safety proof)
-    // Current approach: Compiler generates AVX2 instructions with -C target-cpu=native
-    // Benefits: Zero unsafe code, cross-platform compatibility, LLVM optimization
-    ndarray::Zip::from(out)
-        .and(a)
-        .and(b)
-        .for_each(|out, &a, &b| {
-            *out = a + b;
-        });
+    ops::add_arrays(a, b, out);
 }
 
 /// Scale array using AVX2 instructions
 pub fn scale_array(array: &mut Array3<f64>, scalar: f64) {
-    // Safe fallback implementation
-    array.par_mapv_inplace(|x| x * scalar);
+    ops::scale_array(array, scalar);
 }
 
 /// Fused multiply-add using AVX2 instructions
@@ -45,17 +32,7 @@ pub fn scale_array(array: &mut Array3<f64>, scalar: f64) {
 /// - Panics if an internal precondition is violated.
 ///
 pub fn fma_arrays(a: &Array3<f64>, b: &Array3<f64>, c: &mut Array3<f64>, multiplier: f64) {
-    // Validation
-    assert_eq!(a.shape(), b.shape());
-    assert_eq!(a.shape(), c.shape());
-
-    // Safe fallback implementation
-    ndarray::Zip::from(c)
-        .and(a)
-        .and(b)
-        .par_for_each(|c, &a, &b| {
-            *c += multiplier * a * b;
-        });
+    ops::fma_arrays(a, b, c, multiplier);
 }
 
 #[cfg(test)]

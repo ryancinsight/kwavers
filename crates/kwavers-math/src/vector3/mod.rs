@@ -29,7 +29,7 @@
 //
 // Vectors use `[f64; 3]` (SoA-friendly) rather than a struct to ensure:
 // - Cache-friendly contiguous storage in `Vec<[f64; 3]>`
-// - Zero-cost conversion to/from `nalgebra::Point3` and `Vector3`
+// - Direct compatibility with geometry and backend buffer newtypes
 // - Direct use in FFI/GPU buffer layouts
 
 #[cfg(test)]

@@ -71,6 +71,7 @@ mod central_difference_2;
 mod central_difference_4;
 mod central_difference_6;
 mod staggered_grid;
+mod traversal;
 
 // Re-export implementations
 pub use central_difference_2::CentralDifference2;

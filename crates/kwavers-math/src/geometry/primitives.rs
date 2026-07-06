@@ -1,5 +1,5 @@
 use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
-use ndarray::Array3;
+use leto::Array3;
 
 /// Create a 2D circular disc mask
 ///
@@ -29,7 +29,7 @@ pub fn make_disc(
     let (nx, ny, nz) = dim;
     let (dx, dy, _dz) = spacing;
 
-    let mut mask = Array3::from_elem((nx, ny, nz), false);
+    let mut mask = Array3::from_elem([nx, ny, nz], false);
     let radius_sq = radius * radius;
 
     for i in 0..nx {
@@ -76,7 +76,7 @@ pub fn make_ball(
     let (nx, ny, nz) = dim;
     let (dx, dy, dz) = spacing;
 
-    let mut mask = Array3::from_elem((nx, ny, nz), false);
+    let mut mask = Array3::from_elem([nx, ny, nz], false);
     let radius_sq = radius * radius;
 
     for i in 0..nx {

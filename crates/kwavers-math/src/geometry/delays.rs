@@ -1,6 +1,6 @@
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array1;
+use leto::Array1;
 /// Focus phase delays.
 /// # Errors
 /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
@@ -74,7 +74,7 @@ pub fn focus_phase_delays(
         ));
     }
 
-    let mut phase_delays = Array1::<f64>::zeros(element_positions.len());
+    let mut phase_delays = Array1::<f64>::zeros([element_positions.len()]);
     for (i, &distance) in distances.iter().enumerate() {
         phase_delays[i] = wavenumber * (max_distance - distance);
         debug_assert!(phase_delays[i] >= 0.0, "Phase delay must be non-negative");
@@ -133,7 +133,7 @@ pub fn plane_wave_phase_delays(
 
     let wavenumber = TWO_PI * frequency / sound_speed;
 
-    let mut phase_delays = Array1::<f64>::zeros(element_positions.len());
+    let mut phase_delays = Array1::<f64>::zeros([element_positions.len()]);
 
     for (i, pos) in element_positions.iter().enumerate() {
         if !pos.iter().all(|&x| x.is_finite()) {

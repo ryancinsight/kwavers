@@ -4,8 +4,10 @@
 //! and vectors, including system solving, matrix inversion, and basic decompositions.
 
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
-use nalgebra::DMatrix;
+use leto::Array2 as LetoArray2;
+use leto_ops::{qr_decompose, svd_rank_revealing};
 use ndarray::{Array1, Array2};
+use std::fmt::Display;
 
 /// Basic linear algebra operations for real-valued matrices
 #[derive(Debug)]
@@ -126,30 +128,24 @@ impl LinearAlgebra {
         Ok(result)
     }
 
-    /// Compute the reduced (thin) QR decomposition of a matrix.
+    /// Compute the Householder QR decomposition of a matrix.
     ///
     /// # Arguments
     /// * `matrix` - Input matrix (m×n)
     ///
     /// # Returns
-    /// Tuple `(Q, R)` with `Q` (m×k) having orthonormal columns, `R` (k×n) upper
-    /// triangular, `k = min(m, n)`, such that `A = Q·R`. For a square matrix
-    /// `Q` is m×m (fully orthogonal). Delegates to nalgebra's Householder QR
-    /// (same pattern as [`svd`](Self::svd)).
+    /// Tuple `(Q, R)` with `Q` (m×m) orthogonal and `R` (m×n) upper
+    /// triangular such that `A = Q·R`. Delegates to Leto's native Householder QR.
     /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
+    /// - Returns [`Err`] if `matrix` is underdetermined (`m < n`), contains a
+    ///   non-finite value, or is rank-deficient under Leto's QR contract.
     ///
     pub fn qr_decomposition(matrix: &Array2<f64>) -> KwaversResult<(Array2<f64>, Array2<f64>)> {
-        let (m, n) = (matrix.nrows(), matrix.ncols());
-        let na = DMatrix::from_fn(m, n, |i, j| matrix[[i, j]]);
-        let qr = na.qr();
-        let q_na = qr.q();
-        let r_na = qr.r();
-
-        let (qr_rows, qr_cols) = q_na.shape();
-        let q = Array2::from_shape_fn((qr_rows, qr_cols), |(i, j)| q_na[(i, j)]);
-        let (rr_rows, rr_cols) = r_na.shape();
-        let r = Array2::from_shape_fn((rr_rows, rr_cols), |(i, j)| r_na[(i, j)]);
+        let leto_matrix = ndarray_to_leto(matrix);
+        let qr =
+            qr_decompose(&leto_matrix.view()).map_err(leto_linalg_error("QR decomposition"))?;
+        let q = leto_to_ndarray(qr.q(), "QR Q")?;
+        let r = leto_to_ndarray(qr.r(), "QR R")?;
         Ok((q, r))
     }
 
@@ -159,72 +155,48 @@ impl LinearAlgebra {
     /// * `matrix` - Input matrix (m×n)
     ///
     /// # Returns
-    /// Tuple (U, S, V) where U is (m×m) or (m×min(m,n)), S is diagonal (min(m,n)), V is (n×n) or (n×min(m,n))
+    /// Tuple `(U, S, V)` where `U` is `(m×min(m,n))`, `S` has length
+    /// `min(m,n)`, and `V` is `(n×min(m,n))`.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`Err`] if Leto rejects the input shape or values.
     ///
     pub fn svd(matrix: &Array2<f64>) -> KwaversResult<(Array2<f64>, Array1<f64>, Array2<f64>)> {
-        let (m, n) = (matrix.nrows(), matrix.ncols());
+        let leto_matrix = ndarray_to_leto(matrix);
+        let svd = svd_rank_revealing(&leto_matrix.view()).map_err(leto_linalg_error("SVD"))?;
+        let u = leto_to_ndarray(svd.left_singular_vectors, "SVD U")?;
+        let s = Array1::from_vec(svd.singular_values);
+        let v = leto_to_ndarray(svd.right_singular_vectors, "SVD V")?;
 
-        // Convert ndarray to nalgebra DMatrix
-        let mut na_matrix = DMatrix::zeros(m, n);
-        for i in 0..m {
-            for j in 0..n {
-                na_matrix[(i, j)] = matrix[[i, j]];
-            }
-        }
-
-        // Compute SVD using nalgebra
-        // We request both U and V^T
-        let svd = na_matrix.svd(true, true);
-
-        // Extract U
-        let u_na = svd.u.ok_or_else(|| {
-            KwaversError::Numerical(NumericalError::SolverFailed {
-                method: "SVD".to_owned(),
-                reason: "Failed to compute left singular vectors (U)".to_owned(),
-            })
-        })?;
-
-        // Extract S
-        let s_na = svd.singular_values;
-
-        // Extract V^T (nalgebra returns V^T in v_t)
-        let vt_na = svd.v_t.ok_or_else(|| {
-            KwaversError::Numerical(NumericalError::SolverFailed {
-                method: "SVD".to_owned(),
-                reason: "Failed to compute right singular vectors (V^T)".to_owned(),
-            })
-        })?;
-
-        // Convert U to ndarray
-        let (u_rows, u_cols) = u_na.shape();
-        let mut u = Array2::zeros((u_rows, u_cols));
-        for i in 0..u_rows {
-            for j in 0..u_cols {
-                u[[i, j]] = u_na[(i, j)];
-            }
-        }
-
-        // Convert S to ndarray
-        let s_len = s_na.len();
-        let mut s = Array1::zeros(s_len);
-        for i in 0..s_len {
-            s[i] = s_na[i];
-        }
-
-        // Convert V^T to ndarray
-        let (vt_rows, vt_cols) = vt_na.shape();
-        let mut vt = Array2::zeros((vt_rows, vt_cols));
-        for i in 0..vt_rows {
-            for j in 0..vt_cols {
-                vt[[i, j]] = vt_na[(i, j)];
-            }
-        }
-
-        // Return (U, S, V). V = vt^T
-        Ok((u, s, vt.t().to_owned()))
+        Ok((u, s, v))
     }
+}
+
+fn ndarray_to_leto(matrix: &Array2<f64>) -> LetoArray2<f64> {
+    matrix.clone().into()
+}
+
+fn leto_to_ndarray(matrix: LetoArray2<f64>, method: &'static str) -> KwaversResult<Array2<f64>> {
+    matrix.try_into().map_err(|error| {
+        KwaversError::Numerical(NumericalError::SolverFailed {
+            method: method.to_owned(),
+            reason: format!("failed to convert Leto matrix result to ndarray: {error}"),
+        })
+    })
+}
+
+fn leto_linalg_error(
+    method: &'static str,
+) -> impl FnOnce(leto::LetoError) -> KwaversError + 'static {
+    move |error| {
+        KwaversError::Numerical(NumericalError::SolverFailed {
+            method: method.to_owned(),
+            reason: leto_error_reason(error),
+        })
+    }
+}
+
+fn leto_error_reason(error: impl Display) -> String {
+    error.to_string()
 }
 
 #[cfg(test)]

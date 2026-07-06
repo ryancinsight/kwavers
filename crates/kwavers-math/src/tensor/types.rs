@@ -63,8 +63,6 @@ pub enum DType {
 /// Tensor backend specification.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TensorBackend {
-    /// CPU-only ndarray backend (no autodiff).
+    /// CPU-only ndarray backend for the current host tensor view.
     NdArray,
-    /// Burn with NdArray backend (autodiff on CPU).
-    BurnNdArray,
 }

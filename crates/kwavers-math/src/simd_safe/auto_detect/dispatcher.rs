@@ -4,6 +4,7 @@
 //! GRASP principle by encapsulating dispatch knowledge.
 
 use super::capability::SimdCapability;
+use super::ops;
 use super::x86_64;
 use ndarray::Array3;
 
@@ -94,25 +95,15 @@ impl SimdAuto {
 
     // Fallback implementations using standard operations
     fn fallback_add(&self, a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) {
-        ndarray::Zip::from(out)
-            .and(a)
-            .and(b)
-            .for_each(|out, &a, &b| {
-                *out = a + b;
-            });
+        ops::add_arrays(a, b, out);
     }
 
     fn fallback_scale(&self, array: &mut Array3<f64>, scalar: f64) {
-        array.par_mapv_inplace(|x| x * scalar);
+        ops::scale_array(array, scalar);
     }
 
     fn fallback_fma(&self, a: &Array3<f64>, b: &Array3<f64>, c: &mut Array3<f64>, multiplier: f64) {
-        ndarray::Zip::from(c)
-            .and(a)
-            .and(b)
-            .par_for_each(|c, &a, &b| {
-                *c += multiplier * a * b;
-            });
+        ops::fma_arrays(a, b, c, multiplier);
     }
 }
 

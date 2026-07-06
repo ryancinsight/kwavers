@@ -1,5 +1,6 @@
 //! `NdArrayTensor`: ndarray-backed concrete tensor implementation.
 
+use moirai_parallel::{for_each_chunk_mut_with, Adaptive, ADAPTIVE_PARALLEL_THRESHOLD};
 use ndarray::{ArrayD, IxDyn};
 use std::fmt;
 
@@ -91,7 +92,20 @@ impl TensorMut for NdArrayTensor {
     }
 
     fn map_inplace(&mut self, f: impl Fn(f64) -> f64 + Send + Sync) {
-        self.data.par_mapv_inplace(f);
+        if let Some(values) = self.data.as_slice_memory_order_mut() {
+            let f = &f;
+            for_each_chunk_mut_with::<Adaptive, _, _>(
+                values,
+                ADAPTIVE_PARALLEL_THRESHOLD,
+                |chunk| {
+                    for value in chunk {
+                        *value = f(*value);
+                    }
+                },
+            );
+        } else {
+            self.data.mapv_inplace(f);
+        }
     }
 
     fn fill(&mut self, value: f64) {

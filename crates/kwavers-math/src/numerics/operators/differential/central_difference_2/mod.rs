@@ -53,7 +53,7 @@
 use kwavers_core::error::{KwaversResult, NumericalError};
 use ndarray::{s, Array3, ArrayView3, Zip};
 
-use super::DifferentialOperator;
+use super::{traversal, DifferentialOperator};
 
 #[cfg(test)]
 mod tests;
@@ -146,11 +146,34 @@ impl CentralDifference2 {
         let inv2dx = 0.5 / self.dx;
         let inv_dx = 1.0 / self.dx;
 
+        if field.is_standard_layout() {
+            if let Some(field_values) = field.as_slice() {
+                if traversal::try_fill_standard_layout(dst, |i, j, k| {
+                    let center = traversal::row_major_index(i, j, k, ny, nz);
+                    if i == 0 {
+                        (field_values[traversal::row_major_index(1, j, k, ny, nz)]
+                            - field_values[center])
+                            * inv_dx
+                    } else if i == nx - 1 {
+                        (field_values[center]
+                            - field_values[traversal::row_major_index(nx - 2, j, k, ny, nz)])
+                            * inv_dx
+                    } else {
+                        (field_values[traversal::row_major_index(i + 1, j, k, ny, nz)]
+                            - field_values[traversal::row_major_index(i - 1, j, k, ny, nz)])
+                            * inv2dx
+                    }
+                }) {
+                    return Ok(());
+                }
+            }
+        }
+
         // Interior: central difference via contiguous slice pairs
         Zip::from(dst.slice_mut(s![1..nx - 1, .., ..]))
             .and(field.slice(s![2..nx, .., ..]))
             .and(field.slice(s![0..nx - 2, .., ..]))
-            .par_for_each(|r, &hi, &lo| *r = (hi - lo) * inv2dx);
+            .for_each(|r, &hi, &lo| *r = (hi - lo) * inv2dx);
 
         // Left boundary (i=0): forward difference
         Zip::from(dst.slice_mut(s![0, .., ..]))
@@ -191,11 +214,34 @@ impl CentralDifference2 {
         let inv2dy = 0.5 / self.dy;
         let inv_dy = 1.0 / self.dy;
 
+        if field.is_standard_layout() {
+            if let Some(field_values) = field.as_slice() {
+                if traversal::try_fill_standard_layout(dst, |i, j, k| {
+                    let center = traversal::row_major_index(i, j, k, ny, nz);
+                    if j == 0 {
+                        (field_values[traversal::row_major_index(i, 1, k, ny, nz)]
+                            - field_values[center])
+                            * inv_dy
+                    } else if j == ny - 1 {
+                        (field_values[center]
+                            - field_values[traversal::row_major_index(i, ny - 2, k, ny, nz)])
+                            * inv_dy
+                    } else {
+                        (field_values[traversal::row_major_index(i, j + 1, k, ny, nz)]
+                            - field_values[traversal::row_major_index(i, j - 1, k, ny, nz)])
+                            * inv2dy
+                    }
+                }) {
+                    return Ok(());
+                }
+            }
+        }
+
         // Interior
         Zip::from(dst.slice_mut(s![.., 1..ny - 1, ..]))
             .and(field.slice(s![.., 2..ny, ..]))
             .and(field.slice(s![.., 0..ny - 2, ..]))
-            .par_for_each(|r, &hi, &lo| *r = (hi - lo) * inv2dy);
+            .for_each(|r, &hi, &lo| *r = (hi - lo) * inv2dy);
 
         // Bottom boundary (j=0)
         Zip::from(dst.slice_mut(s![.., 0, ..]))
@@ -237,11 +283,34 @@ impl CentralDifference2 {
         let inv2dz = 0.5 / self.dz;
         let inv_dz = 1.0 / self.dz;
 
+        if field.is_standard_layout() {
+            if let Some(field_values) = field.as_slice() {
+                if traversal::try_fill_standard_layout(dst, |i, j, k| {
+                    let center = traversal::row_major_index(i, j, k, ny, nz);
+                    if k == 0 {
+                        (field_values[traversal::row_major_index(i, j, 1, ny, nz)]
+                            - field_values[center])
+                            * inv_dz
+                    } else if k == nz - 1 {
+                        (field_values[center]
+                            - field_values[traversal::row_major_index(i, j, nz - 2, ny, nz)])
+                            * inv_dz
+                    } else {
+                        (field_values[traversal::row_major_index(i, j, k + 1, ny, nz)]
+                            - field_values[traversal::row_major_index(i, j, k - 1, ny, nz)])
+                            * inv2dz
+                    }
+                }) {
+                    return Ok(());
+                }
+            }
+        }
+
         // Interior (innermost dimension — highest SIMD throughput)
         Zip::from(dst.slice_mut(s![.., .., 1..nz - 1]))
             .and(field.slice(s![.., .., 2..nz]))
             .and(field.slice(s![.., .., 0..nz - 2]))
-            .par_for_each(|r, &hi, &lo| *r = (hi - lo) * inv2dz);
+            .for_each(|r, &hi, &lo| *r = (hi - lo) * inv2dz);
 
         // Near boundary (k=0)
         Zip::from(dst.slice_mut(s![.., .., 0]))

@@ -1,7 +1,7 @@
 //! `ModelRegularizer2D` — regularization on 2D spatial model arrays.
 
-use super::config::RegularizationConfig;
-use ndarray::{Array2, Zip};
+use super::{config::RegularizationConfig, ops::for_each_pair_mut};
+use ndarray::Array2;
 
 /// 2D Model Regularizer
 ///
@@ -42,9 +42,8 @@ impl ModelRegularizer2D {
     }
 
     fn apply_tikhonov(&self, gradient: &mut Array2<f64>, model: &Array2<f64>) {
-        Zip::from(gradient).and(model).par_for_each(|g, &m| {
-            *g += self.config.tikhonov_weight * m;
-        });
+        let weight = self.config.tikhonov_weight;
+        for_each_pair_mut(gradient, model, |g, m| *g += weight * m);
     }
 
     fn apply_total_variation(&self, gradient: &mut Array2<f64>, model: &Array2<f64>) {
@@ -82,14 +81,12 @@ impl ModelRegularizer2D {
             }
         }
 
-        Zip::from(gradient).and(&laplacian).par_for_each(|g, &lap| {
-            *g += self.config.smoothness_weight * lap;
-        });
+        let weight = self.config.smoothness_weight;
+        for_each_pair_mut(gradient, &laplacian, |g, lap| *g += weight * lap);
     }
 
     fn apply_l1(&self, gradient: &mut Array2<f64>, model: &Array2<f64>) {
-        Zip::from(gradient).and(model).par_for_each(|g, &m| {
-            *g += self.config.l1_weight * m.signum();
-        });
+        let weight = self.config.l1_weight;
+        for_each_pair_mut(gradient, model, |g, m| *g += weight * m.signum());
     }
 }

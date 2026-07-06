@@ -1,5 +1,5 @@
 use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
-use ndarray::Array3;
+use leto::Array3;
 
 /// Create a 2D circle outline (shell) mask.
 ///
@@ -32,7 +32,7 @@ pub fn make_circle(
     let (nx, ny, nz) = dim;
     let (dx, dy, _dz) = spacing;
 
-    let mut mask = Array3::from_elem((nx, ny, nz), false);
+    let mut mask = Array3::from_elem([nx, ny, nz], false);
     let half_thickness = thickness as f64 * dx * 0.5;
 
     for i in 0..nx {

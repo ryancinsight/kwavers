@@ -68,7 +68,7 @@ pub use simd::{
 /// Safe SIMD operations with runtime feature detection
 pub use simd_safe::SimdOps;
 
-/// Unified CPU/GPU tensor abstraction (ndarray-backed; Burn-ready)
+/// Host tensor abstraction for ndarray-backed forward-solver boundaries.
 pub use tensor::{
     convert, DType, NdArrayTensor, Shape as TensorShape, TensorBackend, TensorMut, TensorView,
 };

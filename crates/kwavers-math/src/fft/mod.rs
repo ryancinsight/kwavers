@@ -10,16 +10,12 @@ pub mod kspace;
 pub mod shift_operators;
 pub mod utils;
 
+use apollo::Complex64 as ApolloComplex64;
 pub use apollo::{
-    fft_1d_array, fft_1d_array_typed, fft_1d_complex, fft_1d_complex_inplace, fft_2d_array,
-    fft_2d_array_typed, fft_2d_complex, fft_2d_complex_inplace, fft_3d_array, fft_3d_array_into,
-    fft_3d_array_typed, fft_3d_complex, fft_3d_complex_inplace, fft_3d_complex_into, fftfreq,
-    fftshift, ifft_1d_array, ifft_1d_array_typed, ifft_1d_complex, ifft_1d_complex_inplace,
-    ifft_2d_array, ifft_2d_array_typed, ifft_2d_complex, ifft_2d_complex_inplace, ifft_3d_array,
-    ifft_3d_array_into, ifft_3d_array_typed, ifft_3d_complex, ifft_3d_complex_inplace, ifftshift,
-    rfftfreq, Complex32, Complex64, FftPlan1D, FftPlan2D, FftPlan3D, Normalization,
+    fftfreq, fftshift, ifftshift, rfftfreq, FftPlan1D, FftPlan2D, FftPlan3D, Normalization,
     PlanCacheProvider, Shape1D, Shape2D, Shape3D,
 };
+pub use num_complex::{Complex32, Complex64};
 use std::sync::Arc;
 
 /// f64-specialized FFT plan aliases. Apollo's `FftPlan{N}D` became generic over
@@ -92,8 +88,11 @@ pub use gpu_fft::gpu_fft_available;
 pub use kspace::KSpaceCalculator;
 pub use utils::{analytic_signal_1d, apply_spectral_response_1d};
 
-use ndarray::{s, Array2, Array3, Zip};
+use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
+use ndarray::{s, Array1, Array2, Array3, ArrayBase, Data, DataMut, Dimension, Zip};
 use std::cell::RefCell;
+
+const FFT_ASSIGN_CHUNK_LEN: usize = 4096;
 
 thread_local! {
     /// Per-thread full-spectrum `(nx, ny, nz)` complex scratch used by the
@@ -103,29 +102,213 @@ thread_local! {
     /// layout the PSTD core still uses. Resized on grid-shape change, then reused
     /// across timesteps (zero steady-state allocation for a fixed grid).
     static R2C_FULL_SCRATCH: RefCell<Array3<Complex64>> = RefCell::new(Array3::zeros((0, 0, 0)));
+}
 
-    /// Per-thread half-spectrum `(nx, ny, nz_c)` complex scratch for the c2r
-    /// transposed-axis inverse, kept separate from the caller's scratch argument
-    /// (which some callers reuse as an input across calls).
-    static R2C_HALF_SCRATCH: RefCell<Array3<Complex64>> = RefCell::new(Array3::zeros((0, 0, 0)));
+/// Forward 1-D FFT of a real ndarray through Apollo's Leto-owned engine.
+#[must_use]
+pub fn fft_1d_array(field: &Array1<f64>) -> Array1<Complex64> {
+    from_leto_complex_1d(&apollo::fft_1d_array(&to_leto_real_1d(field)))
+}
 
-    /// Per-thread `(nx, ny, nz/2)` packed-real working buffer for the even-nz
-    /// forward r2c z-pass (`FftPlan3D::forward_real_z_into`).
-    static R2C_PACK_SCRATCH: RefCell<Array3<Complex64>> = RefCell::new(Array3::zeros((0, 0, 0)));
+/// Inverse 1-D FFT of a complex ndarray, returning the real component.
+#[must_use]
+pub fn ifft_1d_array(field_hat: &Array1<Complex64>) -> Array1<f64> {
+    from_leto_real_1d(&apollo::ifft_1d_array(&to_leto_complex_1d(field_hat)))
+}
+
+/// Forward 1-D complex FFT, allocating output.
+#[must_use]
+pub fn fft_1d_complex(field: &Array1<Complex64>) -> Array1<Complex64> {
+    let mut out = field.clone();
+    fft_1d_complex_inplace(&mut out);
+    out
+}
+
+/// Inverse 1-D complex FFT, allocating output.
+#[must_use]
+pub fn ifft_1d_complex(field_hat: &Array1<Complex64>) -> Array1<Complex64> {
+    let mut out = field_hat.clone();
+    ifft_1d_complex_inplace(&mut out);
+    out
+}
+
+/// Forward 1-D complex FFT in place.
+pub fn fft_1d_complex_inplace(data: &mut Array1<Complex64>) {
+    let mut leto_data = to_leto_complex_1d(data);
+    apollo::fft_1d_complex_inplace(&mut leto_data);
+    copy_leto_complex_1d(&leto_data, data);
+}
+
+/// Inverse 1-D complex FFT in place.
+pub fn ifft_1d_complex_inplace(data: &mut Array1<Complex64>) {
+    let mut leto_data = to_leto_complex_1d(data);
+    apollo::ifft_1d_complex_inplace(&mut leto_data);
+    copy_leto_complex_1d(&leto_data, data);
+}
+
+/// Forward 1-D complex FFT over a dense slice.
+///
+/// This preserves the Kwavers `num_complex::Complex64` boundary while Apollo
+/// owns Leto/eunomia-native execution internally.
+pub fn fft_1d_complex_slice_inplace(data: &mut [Complex64]) {
+    let mut leto_data = to_leto_complex_slice(data);
+    apollo::fft_1d_complex_inplace(&mut leto_data);
+    copy_leto_complex_slice(&leto_data, data);
+}
+
+/// Inverse 1-D complex FFT over a dense slice.
+///
+/// This is the slice counterpart of [`ifft_1d_complex_inplace`].
+pub fn ifft_1d_complex_slice_inplace(data: &mut [Complex64]) {
+    let mut leto_data = to_leto_complex_slice(data);
+    apollo::ifft_1d_complex_inplace(&mut leto_data);
+    copy_leto_complex_slice(&leto_data, data);
+}
+
+/// Forward 2-D FFT of a real ndarray.
+#[must_use]
+pub fn fft_2d_array(field: &Array2<f64>) -> Array2<Complex64> {
+    let mut out = field.mapv(|value| Complex64::new(value, 0.0));
+    fft_2d_complex_inplace(&mut out);
+    out
+}
+
+/// Inverse 2-D FFT of a complex ndarray, returning the real component.
+#[must_use]
+pub fn ifft_2d_array(field_hat: &Array2<Complex64>) -> Array2<f64> {
+    let mut tmp = field_hat.clone();
+    ifft_2d_complex_inplace(&mut tmp);
+    tmp.mapv(|value| value.re)
+}
+
+/// Forward 2-D complex FFT, allocating output.
+#[must_use]
+pub fn fft_2d_complex(field: &Array2<Complex64>) -> Array2<Complex64> {
+    let mut out = field.clone();
+    fft_2d_complex_inplace(&mut out);
+    out
+}
+
+/// Inverse 2-D complex FFT, allocating output.
+#[must_use]
+pub fn ifft_2d_complex(field_hat: &Array2<Complex64>) -> Array2<Complex64> {
+    let mut out = field_hat.clone();
+    ifft_2d_complex_inplace(&mut out);
+    out
+}
+
+/// Forward 2-D complex FFT in place.
+pub fn fft_2d_complex_inplace(data: &mut Array2<Complex64>) {
+    let mut leto_data = to_leto_complex_2d(data);
+    apollo::fft_2d_complex_inplace(&mut leto_data);
+    copy_leto_complex_2d(&leto_data, data);
+}
+
+/// Inverse 2-D complex FFT in place.
+pub fn ifft_2d_complex_inplace(data: &mut Array2<Complex64>) {
+    let mut leto_data = to_leto_complex_2d(data);
+    apollo::ifft_2d_complex_inplace(&mut leto_data);
+    copy_leto_complex_2d(&leto_data, data);
+}
+
+/// Forward 3-D FFT of a real ndarray.
+#[must_use]
+pub fn fft_3d_array(field: &Array3<f64>) -> Array3<Complex64> {
+    from_leto_complex_3d(&apollo::fft_3d_array(&to_leto_real_3d(field)))
+}
+
+/// Forward 3-D FFT of a real ndarray into caller-owned storage.
+pub fn fft_3d_array_into(field: &Array3<f64>, out: &mut Array3<Complex64>) {
+    assert_eq!(
+        field.dim(),
+        out.dim(),
+        "fft_3d_array_into: input and output shapes must match"
+    );
+    out.assign(&fft_3d_array(field));
+}
+
+/// Inverse 3-D FFT of a complex ndarray, returning the real component.
+#[must_use]
+pub fn ifft_3d_array(field_hat: &Array3<Complex64>) -> Array3<f64> {
+    from_leto_real_3d(&apollo::ifft_3d_array(&to_leto_complex_3d(field_hat)))
+}
+
+/// Inverse 3-D FFT into caller-owned real storage.
+pub fn ifft_3d_array_into(field_hat: &mut Array3<Complex64>, out: &mut Array3<f64>) {
+    assert_eq!(
+        field_hat.dim(),
+        out.dim(),
+        "ifft_3d_array_into: input and output shapes must match"
+    );
+    out.assign(&ifft_3d_array(field_hat));
+}
+
+/// Forward 3-D complex FFT, allocating output.
+#[must_use]
+pub fn fft_3d_complex(field: &Array3<Complex64>) -> Array3<Complex64> {
+    let mut out = field.clone();
+    fft_3d_complex_inplace(&mut out);
+    out
+}
+
+/// Forward 3-D complex FFT into caller-owned storage.
+pub fn fft_3d_complex_into(field: &Array3<Complex64>, out: &mut Array3<Complex64>) {
+    assert_eq!(
+        field.dim(),
+        out.dim(),
+        "fft_3d_complex_into: input and output shapes must match"
+    );
+    out.assign(field);
+    fft_3d_complex_inplace(out);
+}
+
+/// Inverse 3-D complex FFT, allocating output.
+#[must_use]
+pub fn ifft_3d_complex(field_hat: &Array3<Complex64>) -> Array3<Complex64> {
+    let mut out = field_hat.clone();
+    ifft_3d_complex_inplace(&mut out);
+    out
+}
+
+/// Forward 3-D complex FFT in place.
+pub fn fft_3d_complex_inplace(data: &mut Array3<Complex64>) {
+    let mut leto_data = to_leto_complex_3d(data);
+    apollo::fft_3d_complex_inplace(&mut leto_data);
+    copy_leto_complex_3d(&leto_data, data);
+}
+
+/// Inverse 3-D complex FFT in place.
+pub fn ifft_3d_complex_inplace(data: &mut Array3<Complex64>) {
+    let mut leto_data = to_leto_complex_3d(data);
+    apollo::ifft_3d_complex_inplace(&mut leto_data);
+    copy_leto_complex_3d(&leto_data, data);
+}
+
+/// Forward 3-D complex FFT along one axis in place.
+///
+/// This preserves the ndarray-facing Kwavers contract while Apollo owns the
+/// Leto-backed axis transform implementation.
+pub fn fft_3d_axis_complex_inplace(plan: &Fft3d, data: &mut Array3<Complex64>, axis: usize) {
+    let mut leto_data = to_leto_complex_3d(data);
+    plan.forward_axis_complex_inplace(&mut leto_data, axis);
+    copy_leto_complex_3d(&leto_data, data);
+}
+
+/// Inverse 3-D complex FFT along one axis in place.
+///
+/// This is the axis-transform counterpart to [`ifft_3d_complex_inplace`].
+pub fn ifft_3d_axis_complex_inplace(plan: &Fft3d, data: &mut Array3<Complex64>, axis: usize) {
+    let mut leto_data = to_leto_complex_3d(data);
+    plan.inverse_axis_complex_inplace(&mut leto_data, axis);
+    copy_leto_complex_3d(&leto_data, data);
 }
 
 /// Full-spectrum (nx, ny, nz) complex-to-complex 3-D transforms with caller-owned
 /// real and complex storage.
 ///
-/// The apollo 0.11 refactor removed `FftPlan{2D,3D}::forward_into` and
-/// `inverse_into` in favor of the explicit `forward_r2c_into` /
-/// `inverse_c2r_into` (half-spectrum r2c/c2r) and `forward_complex_inplace` /
-/// `inverse_complex_inplace` (full-spectrum c2c) splits. Every kwavers call
-/// site that used the old `forward_into` / `inverse_into` was full-spectrum
-/// c2c with `Array3<Complex64>::zeros((nx, ny, nz))` outputs, so this
-/// extension trait re-binds the previous surface to the new c2c inplace
-/// methods. The transform is mathematically identical; the migration is
-/// purely an API rename driven by the apollo split.
+/// Local Apollo now accepts Leto arrays and `eunomia::Complex64`. This extension
+/// trait preserves Kwavers' ndarray/`num_complex` spectral contract at one
+/// boundary while Apollo remains the single FFT engine.
 pub trait Fft3dInOutExt {
     /// Forward 3-D FFT of a real field into a caller-owned full-spectrum
     /// complex buffer. Equivalent to assigning `field + 0i` into `out` and
@@ -144,25 +327,15 @@ pub trait Fft3dInOutExt {
     );
 
     /// Forward real-to-complex 3-D FFT writing the **half-spectrum** `(nx, ny,
-    /// nz/2+1)` of a real field. The contiguous z-axis is transformed to the
-    /// half-spectrum — for even `nz` via apollo's **packed-real** transform
-    /// (`forward_real_z_into`: a length-`nz/2` complex FFT + Hermitian unpack, half
-    /// the z-FFT work and z scratch), for odd `nz` via a full c2c z-pass then
-    /// truncation — after which the transposed y and x axes are transformed on the
-    /// **half** with apollo's batched tiled per-axis FFT. The y/x passes are
-    /// per-z-slice independent, so the result is bit-identical to a full c2c
-    /// followed by truncation. `half_out` must have shape `(nx, ny, nz/2+1)`.
+    /// nz/2+1)` of a real field. The facade computes the full complex
+    /// transform through Apollo's Leto path and stores the non-redundant
+    /// z-spectrum. `half_out` must have shape `(nx, ny, nz/2+1)`.
     fn forward_r2c_into(&self, real: &Array3<f64>, half_out: &mut Array3<Complex64>);
 
     /// Inverse complex-to-real 3-D FFT from a **half-spectrum** `(nx, ny,
-    /// nz/2+1)` into a real field. Inverse-transforms the transposed x and y axes
-    /// on the half-spectrum first (per-z-slice independent), reconstructs the full
-    /// z-spectrum — after the x/y inverse the upper z-slices are the plain
-    /// conjugate z-mirror of the lower (the `(nx-i, ny-j)` reflection is absorbed
-    /// by `IDFT(conj(X[-n])) = conj(IDFT(X))`) — then inverses along z. Bit-
-    /// identical to a full Hermitian reconstruction + full c2c inverse, at ~half
-    /// the transposed x/y work. The `scratch` argument is retained for call-site
-    /// compatibility and is unused (a thread-local half scratch is used instead).
+    /// nz/2+1)` into a real field. The facade reconstructs the full Hermitian
+    /// spectrum and calls Apollo's full complex inverse path. The `scratch`
+    /// argument is retained for call-site compatibility and is unused.
     /// `half_in` must have shape `(nx, ny, nz/2+1)`.
     fn inverse_c2r_into(
         &self,
@@ -202,12 +375,8 @@ impl Fft2dInOutExt for Fft2d {
             out.dim(),
             "Fft2dInOutExt::forward_into: shape mismatch between real input and complex output"
         );
-        Zip::from(out.view_mut())
-            .and(field)
-            .par_for_each(|dst, &src| {
-                *dst = Complex64::new(src, 0.0);
-            });
-        self.forward_complex_inplace(out);
+        assign_real_to_complex(field, out);
+        fft_2d_complex_inplace(out);
     }
 
     #[inline]
@@ -228,10 +397,8 @@ impl Fft2dInOutExt for Fft2d {
             "Fft2dInOutExt::inverse_into: shape mismatch between complex input and real output"
         );
         scratch.assign(field_hat);
-        self.inverse_complex_inplace(scratch);
-        Zip::from(out.view_mut())
-            .and(scratch.view())
-            .par_for_each(|dst, src| *dst = src.re);
+        ifft_2d_complex_inplace(scratch);
+        assign_complex_real(scratch, out);
     }
 }
 
@@ -243,12 +410,8 @@ impl Fft3dInOutExt for Fft3d {
             out.dim(),
             "Fft3dInOutExt::forward_into: shape mismatch between real input and complex output"
         );
-        Zip::from(out.view_mut())
-            .and(field)
-            .par_for_each(|dst, &src| {
-                *dst = Complex64::new(src, 0.0);
-            });
-        self.forward_complex_inplace(out);
+        assign_real_to_complex(field, out);
+        fft_3d_complex_inplace(out);
     }
 
     #[inline]
@@ -269,10 +432,8 @@ impl Fft3dInOutExt for Fft3d {
             "Fft3dInOutExt::inverse_into: shape mismatch between complex input and real output"
         );
         scratch.assign(field_hat);
-        self.inverse_complex_inplace(scratch);
-        Zip::from(out.view_mut())
-            .and(scratch.view())
-            .par_for_each(|dst, src| *dst = src.re);
+        ifft_3d_complex_inplace(scratch);
+        assign_complex_real(scratch, out);
     }
 
     #[inline]
@@ -284,38 +445,16 @@ impl Fft3dInOutExt for Fft3d {
             (nx, ny, nz_c),
             "forward_r2c_into: half_out must be (nx, ny, nz/2+1)"
         );
-        // Transform the contiguous z-axis to the half-spectrum, then the
-        // transposed y/x axes on that half (per-z-slice independent ⇒ bit-
-        // identical to a full c2c + truncation, at ~half the y/x work). For even
-        // nz the z-pass is a **packed-real** transform (length-nz/2 complex FFT +
-        // Hermitian unpack), halving the z-FFT work and z scratch; odd nz falls
-        // back to a full c2c z-pass on the thread-local full scratch.
-        if nz % 2 == 0 {
-            R2C_PACK_SCRATCH.with(|cell| {
-                let mut borrow = cell.borrow_mut();
-                let m = nz / 2;
-                if borrow.dim() != (nx, ny, m) {
-                    *borrow = Array3::<Complex64>::zeros((nx, ny, m));
-                }
-                self.forward_real_z_into(real, half_out, &mut borrow);
-            });
-        } else {
-            R2C_FULL_SCRATCH.with(|cell| {
-                let mut borrow = cell.borrow_mut();
-                if borrow.dim() != (nx, ny, nz) {
-                    *borrow = Array3::<Complex64>::zeros((nx, ny, nz));
-                }
-                let full: &mut Array3<Complex64> = &mut borrow;
-                Zip::from(full.view_mut())
-                    .and(real)
-                    .par_for_each(|dst, &src| *dst = Complex64::new(src, 0.0));
-                self.forward_axis_complex_inplace(full, 2);
-                half_out.assign(&full.slice(s![.., .., 0..nz_c]));
-            });
-        }
-        let half_plan = get_fft_for_grid(nx, ny, nz_c);
-        half_plan.forward_axis_complex_inplace(half_out, 1);
-        half_plan.forward_axis_complex_inplace(half_out, 0);
+        R2C_FULL_SCRATCH.with(|cell| {
+            let mut borrow = cell.borrow_mut();
+            if borrow.dim() != (nx, ny, nz) {
+                *borrow = Array3::<Complex64>::zeros((nx, ny, nz));
+            }
+            let full: &mut Array3<Complex64> = &mut borrow;
+            assign_real_to_complex(real, full);
+            fft_3d_complex_inplace(full);
+            half_out.assign(&full.slice(s![.., .., 0..nz_c]));
+        });
     }
 
     #[inline]
@@ -332,66 +471,261 @@ impl Fft3dInOutExt for Fft3d {
             (nx, ny, nz_c),
             "inverse_c2r_into: half_in must be (nx, ny, nz/2+1)"
         );
-        // Inverse along the transposed x and y axes on the half-spectrum first
-        // (per-z-slice independent, on a thread-local half scratch so the caller's
-        // `_scratch` — which some callers reuse as a later input — is untouched),
-        // then reconstruct the full z-spectrum and inverse along z. After the x/y
-        // inverse the upper z-slices are the plain conjugate z-mirror of the lower
-        // — the (nx-i, ny-j) reflection of the Hermitian symmetry is absorbed by
-        // the identity `IDFT(conj(X[-n])) = conj(IDFT(X))` — so this is bit-
-        // identical to a full Hermitian reconstruction followed by a full c2c
-        // inverse, at ~half the tiled-transpose x/y work.
-        R2C_HALF_SCRATCH.with(|hcell| {
-            let mut hborrow = hcell.borrow_mut();
-            if hborrow.dim() != (nx, ny, nz_c) {
-                *hborrow = Array3::<Complex64>::zeros((nx, ny, nz_c));
+        R2C_FULL_SCRATCH.with(|cell| {
+            let mut borrow = cell.borrow_mut();
+            if borrow.dim() != (nx, ny, nz) {
+                *borrow = Array3::<Complex64>::zeros((nx, ny, nz));
             }
-            let half: &mut Array3<Complex64> = &mut hborrow;
-            half.assign(half_in);
-            let half_plan = get_fft_for_grid(nx, ny, nz_c);
-            half_plan.inverse_axis_complex_inplace(half, 0);
-            half_plan.inverse_axis_complex_inplace(half, 1);
-            R2C_FULL_SCRATCH.with(|cell| {
-                let mut borrow = cell.borrow_mut();
-                if borrow.dim() != (nx, ny, nz) {
-                    *borrow = Array3::<Complex64>::zeros((nx, ny, nz));
-                }
-                let full: &mut Array3<Complex64> = &mut borrow;
-                full.slice_mut(s![.., .., 0..nz_c]).assign(half);
-                for k in nz_c..nz {
-                    let kk = nz - k;
-                    for i in 0..nx {
-                        for j in 0..ny {
-                            full[[i, j, k]] = half[[i, j, kk]].conj();
-                        }
+            let full: &mut Array3<Complex64> = &mut borrow;
+            full.slice_mut(s![.., .., 0..nz_c]).assign(half_in);
+            for k in nz_c..nz {
+                let kk = nz - k;
+                for i in 0..nx {
+                    let ii = if i == 0 { 0 } else { nx - i };
+                    for j in 0..ny {
+                        let jj = if j == 0 { 0 } else { ny - j };
+                        full[[i, j, k]] = half_in[[ii, jj, kk]].conj();
                     }
                 }
-                self.inverse_axis_complex_inplace(full, 2);
-                Zip::from(out.view_mut())
-                    .and(full.view())
-                    .par_for_each(|dst, src| *dst = src.re);
-            });
+            }
+            ifft_3d_complex_inplace(full);
+            assign_complex_real(full, out);
         });
     }
 
     #[inline]
     fn forward(&self, real: &Array3<f64>) -> Array3<Complex64> {
         let mut out = real.mapv(|v| Complex64::new(v, 0.0));
-        self.forward_complex_inplace(&mut out);
+        fft_3d_complex_inplace(&mut out);
         out
     }
 
     #[inline]
     fn inverse(&self, spectrum: &Array3<Complex64>) -> Array3<f64> {
         let mut tmp = spectrum.clone();
-        self.inverse_complex_inplace(&mut tmp);
+        ifft_3d_complex_inplace(&mut tmp);
         tmp.mapv(|c| c.re)
     }
 }
 
+fn to_apollo_complex(value: Complex64) -> ApolloComplex64 {
+    ApolloComplex64::new(value.re, value.im)
+}
+
+fn from_apollo_complex(value: ApolloComplex64) -> Complex64 {
+    Complex64::new(value.re, value.im)
+}
+
+fn to_leto_real_1d(field: &Array1<f64>) -> leto::Array1<f64> {
+    leto::Array1::from_shape_vec([field.len()], field.iter().copied().collect())
+        .expect("ndarray 1-D real data must map to a Leto array of equal length")
+}
+
+fn to_leto_real_3d(field: &Array3<f64>) -> leto::Array3<f64> {
+    let (nx, ny, nz) = field.dim();
+    leto::Array3::from_shape_vec([nx, ny, nz], field.iter().copied().collect())
+        .expect("ndarray 3-D real data must map to a Leto array of equal shape")
+}
+
+fn to_leto_complex_1d(field: &Array1<Complex64>) -> leto::Array1<ApolloComplex64> {
+    leto::Array1::from_shape_vec(
+        [field.len()],
+        field.iter().copied().map(to_apollo_complex).collect(),
+    )
+    .expect("ndarray 1-D complex data must map to a Leto array of equal length")
+}
+
+fn to_leto_complex_slice(field: &[Complex64]) -> leto::Array1<ApolloComplex64> {
+    leto::Array1::from_shape_vec(
+        [field.len()],
+        field.iter().copied().map(to_apollo_complex).collect(),
+    )
+    .expect("complex slice data must map to a Leto array of equal length")
+}
+
+fn to_leto_complex_2d(field: &Array2<Complex64>) -> leto::Array2<ApolloComplex64> {
+    let (nx, ny) = field.dim();
+    leto::Array2::from_shape_vec(
+        [nx, ny],
+        field.iter().copied().map(to_apollo_complex).collect(),
+    )
+    .expect("ndarray 2-D complex data must map to a Leto array of equal shape")
+}
+
+fn to_leto_complex_3d(field: &Array3<Complex64>) -> leto::Array3<ApolloComplex64> {
+    let (nx, ny, nz) = field.dim();
+    leto::Array3::from_shape_vec(
+        [nx, ny, nz],
+        field.iter().copied().map(to_apollo_complex).collect(),
+    )
+    .expect("ndarray 3-D complex data must map to a Leto array of equal shape")
+}
+
+fn from_leto_real_1d(field: &leto::Array1<f64>) -> Array1<f64> {
+    Array1::from_vec(
+        field
+            .as_slice_memory_order()
+            .expect("Leto Array1 from VecStorage must be contiguous")
+            .to_vec(),
+    )
+}
+
+fn from_leto_real_3d(field: &leto::Array3<f64>) -> Array3<f64> {
+    let [nx, ny, nz] = field.shape();
+    Array3::from_shape_vec(
+        (nx, ny, nz),
+        field
+            .as_slice_memory_order()
+            .expect("Leto Array3 from VecStorage must be contiguous")
+            .to_vec(),
+    )
+    .expect("Leto 3-D real data must convert to ndarray with the same shape")
+}
+
+fn from_leto_complex_1d(field: &leto::Array1<ApolloComplex64>) -> Array1<Complex64> {
+    Array1::from_vec(
+        field
+            .as_slice_memory_order()
+            .expect("Leto Array1 from VecStorage must be contiguous")
+            .iter()
+            .copied()
+            .map(from_apollo_complex)
+            .collect(),
+    )
+}
+
+fn from_leto_complex_3d(field: &leto::Array3<ApolloComplex64>) -> Array3<Complex64> {
+    let [nx, ny, nz] = field.shape();
+    Array3::from_shape_vec(
+        (nx, ny, nz),
+        field
+            .as_slice_memory_order()
+            .expect("Leto Array3 from VecStorage must be contiguous")
+            .iter()
+            .copied()
+            .map(from_apollo_complex)
+            .collect(),
+    )
+    .expect("Leto 3-D complex data must convert to ndarray with the same shape")
+}
+
+fn copy_leto_complex_1d(field: &leto::Array1<ApolloComplex64>, out: &mut Array1<Complex64>) {
+    assert_eq!(field.shape(), [out.len()]);
+    for (dst, src) in out.iter_mut().zip(
+        field
+            .as_slice_memory_order()
+            .expect("Leto Array1 from VecStorage must be contiguous"),
+    ) {
+        *dst = from_apollo_complex(*src);
+    }
+}
+
+fn copy_leto_complex_slice(field: &leto::Array1<ApolloComplex64>, out: &mut [Complex64]) {
+    assert_eq!(field.shape(), [out.len()]);
+    for (dst, src) in out.iter_mut().zip(
+        field
+            .as_slice_memory_order()
+            .expect("Leto Array1 from VecStorage must be contiguous"),
+    ) {
+        *dst = from_apollo_complex(*src);
+    }
+}
+
+fn copy_leto_complex_2d(field: &leto::Array2<ApolloComplex64>, out: &mut Array2<Complex64>) {
+    let [nx, ny] = field.shape();
+    assert_eq!((nx, ny), out.dim());
+    for (dst, src) in out.iter_mut().zip(
+        field
+            .as_slice_memory_order()
+            .expect("Leto Array2 from VecStorage must be contiguous"),
+    ) {
+        *dst = from_apollo_complex(*src);
+    }
+}
+
+fn copy_leto_complex_3d(field: &leto::Array3<ApolloComplex64>, out: &mut Array3<Complex64>) {
+    let [nx, ny, nz] = field.shape();
+    assert_eq!((nx, ny, nz), out.dim());
+    for (dst, src) in out.iter_mut().zip(
+        field
+            .as_slice_memory_order()
+            .expect("Leto Array3 from VecStorage must be contiguous"),
+    ) {
+        *dst = from_apollo_complex(*src);
+    }
+}
+
+fn assign_real_to_complex<Sr, Sc, D>(real: &ArrayBase<Sr, D>, complex: &mut ArrayBase<Sc, D>)
+where
+    Sr: Data<Elem = f64>,
+    Sc: DataMut<Elem = Complex64>,
+    D: Dimension,
+{
+    assert_eq!(
+        real.dim(),
+        complex.dim(),
+        "real and complex FFT arrays must have equal shapes"
+    );
+
+    if let (Some(real_values), Some(complex_values)) = (
+        real.as_slice_memory_order(),
+        complex.as_slice_memory_order_mut(),
+    ) {
+        for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(
+            complex_values,
+            FFT_ASSIGN_CHUNK_LEN,
+            |chunk_index, chunk| {
+                let base = chunk_index * FFT_ASSIGN_CHUNK_LEN;
+                for (offset, complex_value) in chunk.iter_mut().enumerate() {
+                    *complex_value = Complex64::new(real_values[base + offset], 0.0);
+                }
+            },
+        );
+        return;
+    }
+
+    Zip::from(complex)
+        .and(real)
+        .for_each(|complex_value, &real_value| *complex_value = Complex64::new(real_value, 0.0));
+}
+
+fn assign_complex_real<Sc, Sr, D>(complex: &ArrayBase<Sc, D>, real: &mut ArrayBase<Sr, D>)
+where
+    Sc: Data<Elem = Complex64>,
+    Sr: DataMut<Elem = f64>,
+    D: Dimension,
+{
+    assert_eq!(
+        complex.dim(),
+        real.dim(),
+        "complex and real FFT arrays must have equal shapes"
+    );
+
+    if let (Some(complex_values), Some(real_values)) = (
+        complex.as_slice_memory_order(),
+        real.as_slice_memory_order_mut(),
+    ) {
+        for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(
+            real_values,
+            FFT_ASSIGN_CHUNK_LEN,
+            |chunk_index, chunk| {
+                let base = chunk_index * FFT_ASSIGN_CHUNK_LEN;
+                for (offset, real_value) in chunk.iter_mut().enumerate() {
+                    *real_value = complex_values[base + offset].re;
+                }
+            },
+        );
+        return;
+    }
+
+    Zip::from(real)
+        .and(complex)
+        .for_each(|real_value, complex_value| *real_value = complex_value.re);
+}
+
 #[cfg(test)]
 mod r2c_optimized_tests {
-    use super::{get_fft_for_grid, Fft3dInOutExt};
+    use super::{fft_3d_complex_inplace, get_fft_for_grid, Fft3dInOutExt};
     use ndarray::{s, Array3};
     use num_complex::Complex64;
 
@@ -400,14 +734,14 @@ mod r2c_optimized_tests {
         let fft = get_fft_for_grid(nx, ny, nz);
         let real = Array3::from_shape_fn((nx, ny, nz), |(i, j, k)| {
             let x = ((i * 131 + j * 17 + k * 7) % 101) as f64 / 101.0 - 0.5;
-            (x * 6.283).sin() + 0.3 * x + 0.1
+            (x * std::f64::consts::TAU).sin() + 0.3 * x + 0.1
         });
 
-        // (1) Optimized forward_r2c is bit-identical to a full c2c + truncation.
+        // (1) forward_r2c is bit-identical to a full c2c + truncation.
         let mut half_new = Array3::zeros((nx, ny, nz_c));
         fft.forward_r2c_into(&real, &mut half_new);
         let mut full = real.mapv(|v| Complex64::new(v, 0.0));
-        fft.forward_complex_inplace(&mut full);
+        fft_3d_complex_inplace(&mut full);
         let ref_half = full.slice(s![.., .., 0..nz_c]).to_owned();
         let fwd_err = half_new
             .iter()
@@ -419,7 +753,7 @@ mod r2c_optimized_tests {
             "forward_r2c({nx},{ny},{nz}) vs full-c2c reference: {fwd_err:.2e}"
         );
 
-        // (2) Optimized inverse_c2r recovers the real field (round-trip).
+        // (2) inverse_c2r recovers the real field (round-trip).
         let mut out = Array3::zeros((nx, ny, nz));
         let mut scratch = Array3::zeros((nx, ny, nz_c));
         fft.inverse_c2r_into(&half_new, &mut out, &mut scratch);
