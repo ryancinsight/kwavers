@@ -1,11 +1,10 @@
 //! Config defaults and collocation point generation tests.
 
 use super::super::*;
-use burn::backend::{Autodiff, NdArray};
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
-use kwavers_core::error::{KwaversError, KwaversResult, SystemError};
+use kwavers_core::error::KwaversResult;
 
-type TestBackend = Autodiff<NdArray>;
+type TestBackend = coeus_core::MoiraiBackend;
 
 #[test]
 fn test_config_defaults() {
@@ -26,7 +25,6 @@ fn test_config_defaults() {
 
 #[test]
 fn test_collocation_points_rectangular() -> KwaversResult<()> {
-    let device = Default::default();
     let config = BurnPINN3DConfig {
         num_collocation_points: 100,
         ..Default::default()
@@ -35,45 +33,20 @@ fn test_collocation_points_rectangular() -> KwaversResult<()> {
     let geometry = Geometry3D::rectangular(0.0, 2.0, 0.0, 3.0, 0.0, 4.0);
     let wave_speed = |_x: f32, _y: f32, _z: f32| SOUND_SPEED_WATER_SIM as f32;
 
-    let solver = BurnPINN3DWave::<TestBackend>::new(config.clone(), geometry, wave_speed, &device)?;
+    let solver = BurnPINN3DWave::<TestBackend>::new(config.clone(), geometry, wave_speed)?;
 
-    let (x_colloc, y_colloc, z_colloc, t_colloc) =
-        solver.generate_collocation_points(&config, &device);
+    let (x_colloc, y_colloc, z_colloc, t_colloc) = solver.generate_collocation_points(&config);
 
-    let n_generated = x_colloc.dims()[0];
+    let n_generated = x_colloc.tensor.shape()[0];
     assert_eq!(n_generated, config.num_collocation_points);
-    assert_eq!(y_colloc.dims()[0], n_generated);
-    assert_eq!(z_colloc.dims()[0], n_generated);
-    assert_eq!(t_colloc.dims()[0], n_generated);
+    assert_eq!(y_colloc.tensor.shape()[0], n_generated);
+    assert_eq!(z_colloc.tensor.shape()[0], n_generated);
+    assert_eq!(t_colloc.tensor.shape()[0], n_generated);
 
-    let x_colloc_data = x_colloc.into_data();
-    let x_data = x_colloc_data.as_slice::<f32>().map_err(|e| {
-        KwaversError::System(SystemError::InvalidOperation {
-            operation: "tensor_to_f32_slice".to_string(),
-            reason: format!("{e:?}"),
-        })
-    })?;
-    let y_colloc_data = y_colloc.into_data();
-    let y_data = y_colloc_data.as_slice::<f32>().map_err(|e| {
-        KwaversError::System(SystemError::InvalidOperation {
-            operation: "tensor_to_f32_slice".to_string(),
-            reason: format!("{e:?}"),
-        })
-    })?;
-    let z_colloc_data = z_colloc.into_data();
-    let z_data = z_colloc_data.as_slice::<f32>().map_err(|e| {
-        KwaversError::System(SystemError::InvalidOperation {
-            operation: "tensor_to_f32_slice".to_string(),
-            reason: format!("{e:?}"),
-        })
-    })?;
-    let t_colloc_data = t_colloc.into_data();
-    let t_data = t_colloc_data.as_slice::<f32>().map_err(|e| {
-        KwaversError::System(SystemError::InvalidOperation {
-            operation: "tensor_to_f32_slice".to_string(),
-            reason: format!("{e:?}"),
-        })
-    })?;
+    let x_data = x_colloc.tensor.as_slice();
+    let y_data = y_colloc.tensor.as_slice();
+    let z_data = z_colloc.tensor.as_slice();
+    let t_data = t_colloc.tensor.as_slice();
 
     assert!(x_data.iter().all(|&x| (0.0..=2.0).contains(&x)));
     assert!(y_data.iter().all(|&y| (0.0..=3.0).contains(&y)));
@@ -84,7 +57,6 @@ fn test_collocation_points_rectangular() -> KwaversResult<()> {
 
 #[test]
 fn test_collocation_points_spherical_filtering() -> KwaversResult<()> {
-    let device = Default::default();
     let config = BurnPINN3DConfig {
         num_collocation_points: 100,
         ..Default::default()
@@ -93,12 +65,11 @@ fn test_collocation_points_spherical_filtering() -> KwaversResult<()> {
     let geometry = Geometry3D::spherical(0.5, 0.5, 0.5, 0.2);
     let wave_speed = |_x: f32, _y: f32, _z: f32| SOUND_SPEED_WATER_SIM as f32;
 
-    let solver = BurnPINN3DWave::<TestBackend>::new(config.clone(), geometry, wave_speed, &device)?;
+    let solver = BurnPINN3DWave::<TestBackend>::new(config.clone(), geometry, wave_speed)?;
 
-    let (x_colloc, _y_colloc, _z_colloc, _t_colloc) =
-        solver.generate_collocation_points(&config, &device);
+    let (x_colloc, _y_colloc, _z_colloc, _t_colloc) = solver.generate_collocation_points(&config);
 
-    let n_generated = x_colloc.dims()[0];
+    let n_generated = x_colloc.tensor.shape()[0];
     assert!(n_generated > 0);
     assert!(n_generated < config.num_collocation_points);
     Ok(())

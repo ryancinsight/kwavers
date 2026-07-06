@@ -1,15 +1,13 @@
 //! Training metrics and prediction shape consistency tests.
 
 use super::super::*;
-use burn::backend::{Autodiff, NdArray};
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::error::KwaversResult;
 
-type TestBackend = Autodiff<NdArray>;
+type TestBackend = coeus_core::MoiraiBackend;
 
 #[test]
 fn test_training_metrics_completeness() -> KwaversResult<()> {
-    let device = Default::default();
     let config = BurnPINN3DConfig {
         hidden_layers: vec![8],
         num_collocation_points: 10,
@@ -20,7 +18,7 @@ fn test_training_metrics_completeness() -> KwaversResult<()> {
     let geometry = Geometry3D::rectangular(0.0, 1.0, 0.0, 1.0, 0.0, 1.0);
     let wave_speed = |_x: f32, _y: f32, _z: f32| SOUND_SPEED_WATER_SIM as f32;
 
-    let mut solver = BurnPINN3DWave::<TestBackend>::new(config, geometry, wave_speed, &device)?;
+    let mut solver = BurnPINN3DWave::<TestBackend>::new(config, geometry, wave_speed)?;
 
     let x_data = vec![0.5];
     let y_data = vec![0.5];
@@ -29,9 +27,7 @@ fn test_training_metrics_completeness() -> KwaversResult<()> {
     let u_data = vec![0.0];
 
     let epochs = 5;
-    let metrics = solver.train(
-        &x_data, &y_data, &z_data, &t_data, &u_data, None, &device, epochs,
-    )?;
+    let metrics = solver.train(&x_data, &y_data, &z_data, &t_data, &u_data, None, epochs)?;
 
     assert_eq!(metrics.epochs_completed, epochs);
     assert_eq!(metrics.total_loss.len(), epochs);
@@ -51,7 +47,6 @@ fn test_training_metrics_completeness() -> KwaversResult<()> {
 
 #[test]
 fn test_prediction_shape_consistency() -> KwaversResult<()> {
-    let device = Default::default();
     let config = BurnPINN3DConfig {
         hidden_layers: vec![8],
         ..Default::default()
@@ -60,7 +55,7 @@ fn test_prediction_shape_consistency() -> KwaversResult<()> {
     let geometry = Geometry3D::rectangular(0.0, 1.0, 0.0, 1.0, 0.0, 1.0);
     let wave_speed = |_x: f32, _y: f32, _z: f32| SOUND_SPEED_WATER_SIM as f32;
 
-    let solver = BurnPINN3DWave::<TestBackend>::new(config, geometry, wave_speed, &device)?;
+    let solver = BurnPINN3DWave::<TestBackend>::new(config, geometry, wave_speed)?;
 
     for n in [1, 5, 10, 50] {
         let x_test = vec![0.5; n];
@@ -68,7 +63,7 @@ fn test_prediction_shape_consistency() -> KwaversResult<()> {
         let z_test = vec![0.5; n];
         let t_test = vec![0.1; n];
 
-        let predictions = solver.predict(&x_test, &y_test, &z_test, &t_test, &device)?;
+        let predictions = solver.predict(&x_test, &y_test, &z_test, &t_test)?;
         assert_eq!(predictions.len(), n);
         assert!(predictions.iter().all(|&p| p.is_finite()));
     }

@@ -1,9 +1,12 @@
 use super::*;
-use burn::backend::NdArray;
-use burn::module::Module;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
-type TestBackend = NdArray<f32>;
+type TestBackend = coeus_core::MoiraiBackend;
+
+fn grid_of(dims: [usize; 3], value: f32, backend: &TestBackend) -> coeus_tensor::Tensor<f32, TestBackend> {
+    let n = dims[0] * dims[1] * dims[2];
+    coeus_tensor::Tensor::from_slice_on(dims.to_vec(), &vec![value; n], backend)
+}
 
 #[test]
 fn test_wavespeed_creation_closure() -> KwaversResult<()> {
@@ -17,8 +20,8 @@ fn test_wavespeed_creation_closure() -> KwaversResult<()> {
 
 #[test]
 fn test_wavespeed_creation_grid() -> KwaversResult<()> {
-    let device = Default::default();
-    let grid = Tensor::<TestBackend, 3>::ones([10, 10, 10], &device).mul_scalar(3000.0);
+    let backend = TestBackend::default();
+    let grid = grid_of([10, 10, 10], 3000.0, &backend);
 
     let wave_speed =
         WaveSpeedFn3D::<TestBackend>::from_grid_with_bbox(grid, [0.0, 1.0, 0.0, 1.0, 0.0, 1.0])?;
@@ -63,20 +66,6 @@ fn test_wavespeed_radial_variation() -> KwaversResult<()> {
 }
 
 #[test]
-fn test_wavespeed_device_migration() -> KwaversResult<()> {
-    let device1 = Default::default();
-    let grid1 = Tensor::<TestBackend, 3>::ones([5, 5, 5], &device1);
-    let wave_speed1 =
-        WaveSpeedFn3D::<TestBackend>::from_grid_with_bbox(grid1, [0.0, 1.0, 0.0, 1.0, 0.0, 1.0])?;
-
-    let device2 = Default::default();
-    let wave_speed2 = wave_speed1.to_device(&device2);
-
-    assert!(wave_speed2.has_grid());
-    Ok(())
-}
-
-#[test]
 fn test_wavespeed_clone() -> KwaversResult<()> {
     let original =
         WaveSpeedFn3D::<TestBackend>::new(Arc::new(|_x, _y, _z| SOUND_SPEED_WATER_SIM as f32));
@@ -99,9 +88,8 @@ fn test_wavespeed_debug_format() -> KwaversResult<()> {
 
 #[test]
 fn test_wavespeed_grid_shape() -> KwaversResult<()> {
-    let device = Default::default();
-    let grid = Tensor::<TestBackend, 3>::ones([32, 64, 128], &device)
-        .mul_scalar(SOUND_SPEED_WATER_SIM as f32);
+    let backend = TestBackend::default();
+    let grid = grid_of([32, 64, 128], SOUND_SPEED_WATER_SIM as f32, &backend);
     let wave_speed =
         WaveSpeedFn3D::<TestBackend>::from_grid_with_bbox(grid, [0.0, 1.0, 0.0, 1.0, 0.0, 1.0])?;
     assert_eq!(wave_speed.grid_dims(), Some([32, 64, 128]));
@@ -110,12 +98,9 @@ fn test_wavespeed_grid_shape() -> KwaversResult<()> {
 
 #[test]
 fn test_wavespeed_grid_trilinear_interpolation() -> KwaversResult<()> {
-    let device = Default::default();
+    let backend = TestBackend::default();
     let data: Vec<f32> = (1..=8).map(|v| v as f32).collect();
-    let grid = Tensor::<TestBackend, 3>::from_data(
-        burn::tensor::TensorData::new(data, [2, 2, 2]),
-        &device,
-    );
+    let grid = coeus_tensor::Tensor::from_slice_on(vec![2, 2, 2], &data, &backend);
     let wave_speed =
         WaveSpeedFn3D::<TestBackend>::from_grid_with_bbox(grid, [0.0, 1.0, 0.0, 1.0, 0.0, 1.0])?;
 
@@ -129,8 +114,8 @@ fn test_wavespeed_grid_trilinear_interpolation() -> KwaversResult<()> {
 #[test]
 fn test_wavespeed_grid_invalid_bbox_rejected() -> KwaversResult<()> {
     use kwavers_core::error::{KwaversError, SystemError};
-    let device = Default::default();
-    let grid = Tensor::<TestBackend, 3>::ones([2, 2, 2], &device);
+    let backend = TestBackend::default();
+    let grid = grid_of([2, 2, 2], SOUND_SPEED_WATER_SIM as f32, &backend);
 
     let result =
         WaveSpeedFn3D::<TestBackend>::from_grid_with_bbox(grid, [1.0, 0.0, 0.0, 1.0, 0.0, 1.0]);
@@ -155,7 +140,7 @@ fn test_wavespeed_grid_invalid_bbox_rejected() -> KwaversResult<()> {
 #[test]
 fn test_wavespeed_grid_invalid_values_rejected() -> KwaversResult<()> {
     use kwavers_core::error::{KwaversError, SystemError};
-    let device = Default::default();
+    let backend = TestBackend::default();
     let data: Vec<f32> = vec![
         SOUND_SPEED_WATER_SIM as f32,
         0.0,
@@ -166,10 +151,7 @@ fn test_wavespeed_grid_invalid_values_rejected() -> KwaversResult<()> {
         SOUND_SPEED_WATER_SIM as f32,
         SOUND_SPEED_WATER_SIM as f32,
     ];
-    let grid = Tensor::<TestBackend, 3>::from_data(
-        burn::tensor::TensorData::new(data, [2, 2, 2]),
-        &device,
-    );
+    let grid = coeus_tensor::Tensor::from_slice_on(vec![2, 2, 2], &data, &backend);
 
     let result =
         WaveSpeedFn3D::<TestBackend>::from_grid_with_bbox(grid, [0.0, 1.0, 0.0, 1.0, 0.0, 1.0]);
@@ -194,7 +176,7 @@ fn test_wavespeed_grid_invalid_values_rejected() -> KwaversResult<()> {
 #[test]
 fn test_wavespeed_grid_nan_values_rejected() -> KwaversResult<()> {
     use kwavers_core::error::{KwaversError, SystemError};
-    let device = Default::default();
+    let backend = TestBackend::default();
     let data: Vec<f32> = vec![
         SOUND_SPEED_WATER_SIM as f32,
         SOUND_SPEED_WATER_SIM as f32,
@@ -205,10 +187,7 @@ fn test_wavespeed_grid_nan_values_rejected() -> KwaversResult<()> {
         SOUND_SPEED_WATER_SIM as f32,
         f32::NAN,
     ];
-    let grid = Tensor::<TestBackend, 3>::from_data(
-        burn::tensor::TensorData::new(data, [2, 2, 2]),
-        &device,
-    );
+    let grid = coeus_tensor::Tensor::from_slice_on(vec![2, 2, 2], &data, &backend);
 
     let result =
         WaveSpeedFn3D::<TestBackend>::from_grid_with_bbox(grid, [0.0, 1.0, 0.0, 1.0, 0.0, 1.0]);

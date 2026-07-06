@@ -1,22 +1,14 @@
-//! Wave speed function wrapper with Burn Module trait support
+//! Wave speed function wrapper
 //!
-//! This module provides a wrapper for wave speed functions c(x, y, z) that integrates
-//! with Burn's Module system. It supports both CPU-based closures and device-resident
-//! grids for efficient heterogeneous media modeling.
+//! This module provides a wrapper for wave speed functions c(x, y, z), supporting
+//! both CPU-based closures and device-resident grids for efficient heterogeneous
+//! media modeling.
 //!
 //! ## Wave Speed Representations
 //!
 //! - **CPU Closure**: Function `c(x, y, z) → f32` evaluated on-demand
 //! - **Device Grid**: Pre-computed tensor of wave speeds for fast lookup
-//!
-//! ## Module Integration
-//!
-//! Implements `Module`, `AutodiffModule`, and `ModuleDisplay` traits to enable:
-//! - Device migration (CPU ↔ GPU)
-//! - Automatic differentiation compatibility
-//! - Module hierarchy inspection
 
-use burn::tensor::{backend::Backend, Tensor};
 use std::sync::Arc;
 
 use kwavers_core::error::{KwaversError, KwaversResult, SystemError};
@@ -25,31 +17,30 @@ mod speed_fn;
 #[cfg(test)]
 mod tests;
 
-#[derive(Debug, Clone)]
-pub struct WaveSpeedGrid3D<B: Backend> {
-    pub(super) grid: Tensor<B, 3>,
+#[derive(Clone)]
+pub struct WaveSpeedGrid3D<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> {
+    pub(super) grid: coeus_tensor::Tensor<f32, B>,
     pub(super) data_cpu: Arc<Vec<f32>>,
     pub(super) dims: [usize; 3],
     pub(super) bbox: [f32; 6],
 }
 
-impl<B: Backend> WaveSpeedGrid3D<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> WaveSpeedGrid3D<B>
+where
+    B::DeviceBuffer<f32>: coeus_core::CpuAddressableStorage<f32>,
+{
     /// Try new.
     /// # Errors
     /// - Returns [`KwaversError::System`] if the precondition for a System-class constraint is violated.
     /// - Propagates any [`KwaversError`] returned by called functions.
-    ///
-    pub fn try_new(grid: Tensor<B, 3>, bbox: [f32; 6]) -> KwaversResult<Self> {
+    pub fn try_new(grid: coeus_tensor::Tensor<f32, B>, bbox: [f32; 6]) -> KwaversResult<Self> {
         let shape = grid.shape();
-        let dims = match shape.dims.as_slice() {
+        let dims = match shape {
             [nx, ny, nz] => [*nx, *ny, *nz],
             _ => {
                 return Err(KwaversError::System(SystemError::InvalidConfiguration {
                     parameter: "wave_speed_grid".to_string(),
-                    reason: format!(
-                        "Expected wave speed grid with 3 dimensions, got {:?}",
-                        shape.dims
-                    ),
+                    reason: format!("Expected wave speed grid with 3 dimensions, got {shape:?}"),
                 }))
             }
         };
@@ -75,13 +66,7 @@ impl<B: Backend> WaveSpeedGrid3D<B> {
             }));
         }
 
-        let data = grid.clone().to_data();
-        let slice = data.as_slice::<f32>().map_err(|e| {
-            KwaversError::System(SystemError::InvalidConfiguration {
-                parameter: "wave_speed_grid".to_string(),
-                reason: format!("Expected f32 tensor data for wave speed grid: {e:?}"),
-            })
-        })?;
+        let slice = grid.as_slice();
 
         let expected_len = nx
             .checked_mul(ny)
@@ -125,7 +110,7 @@ impl<B: Backend> WaveSpeedGrid3D<B> {
         })
     }
 
-    pub fn grid(&self) -> &Tensor<B, 3> {
+    pub fn grid(&self) -> &coeus_tensor::Tensor<f32, B> {
         &self.grid
     }
 
@@ -199,16 +184,13 @@ impl<B: Backend> WaveSpeedGrid3D<B> {
 }
 
 /// Wave speed function wrapper supporting CPU closures and device grids
-///
-/// This struct wraps a wave speed function c(x, y, z) and integrates it with
-/// Burn's Module system for device management and autodiff compatibility.
 #[derive(Clone)]
-pub struct WaveSpeedFn3D<B: Backend> {
+pub struct WaveSpeedFn3D<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> {
     pub(super) repr: WaveSpeedRepr3D<B>,
 }
 
 #[derive(Clone)]
-pub(super) enum WaveSpeedRepr3D<B: Backend> {
+pub(super) enum WaveSpeedRepr3D<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> {
     Cpu(Arc<dyn Fn(f32, f32, f32) -> f32 + Send + Sync>),
     Grid(WaveSpeedGrid3D<B>),
 }

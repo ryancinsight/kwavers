@@ -1,80 +1,51 @@
 use super::core::BurnPINN3DWave;
-use burn::tensor::{backend::Backend, Tensor, TensorData};
+use coeus_autograd::Var;
 use kwavers_core::error::{KwaversError, KwaversResult};
 
 /// Initial-condition coordinate/value tensors `(x, y, z, t, u)`, each `[N, 1]`.
+#[allow(clippy::type_complexity)] // 5 independent IC tensors, no cohesive grouping
 type InitialConditionTensors<B> = (
-    Tensor<B, 2>,
-    Tensor<B, 2>,
-    Tensor<B, 2>,
-    Tensor<B, 2>,
-    Tensor<B, 2>,
+    Var<f32, B>,
+    Var<f32, B>,
+    Var<f32, B>,
+    Var<f32, B>,
+    Var<f32, B>,
 );
 
-impl<B: Backend> BurnPINN3DWave<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> BurnPINN3DWave<B>
+where
+    B::DeviceBuffer<f32>: coeus_core::CpuAddressableStorage<f32>,
+{
     /// Compute temporal derivative ∂u/∂t at t=0 via forward finite difference
     ///
     /// Uses forward difference: ∂u/∂t(0) ≈ (u(ε) - u(0)) / ε
-    ///
-    /// # Arguments
-    ///
-    /// * `x` - X-coordinates at t=0
-    /// * `y` - Y-coordinates at t=0
-    /// * `z` - Z-coordinates at t=0
-    /// * `t` - Time coordinates (should be t=0)
-    ///
-    /// # Returns
-    ///
-    /// Tensor containing ∂u/∂t values at the specified points
     pub(crate) fn compute_temporal_derivative_at_t0(
         &self,
-        x: Tensor<B, 2>,
-        y: Tensor<B, 2>,
-        z: Tensor<B, 2>,
-        t: Tensor<B, 2>,
-    ) -> Tensor<B, 2> {
+        x: &Var<f32, B>,
+        y: &Var<f32, B>,
+        z: &Var<f32, B>,
+        t: &Var<f32, B>,
+    ) -> Var<f32, B> {
         let eps = 1e-3_f32;
 
-        // u(t=0)
-        let u_t0 = self
-            .pinn
-            .forward(x.clone(), y.clone(), z.clone(), t.clone());
+        let u_t0 = self.pinn.forward(x, y, z, t);
 
-        // u(t=ε)
-        let t_eps = t.add_scalar(eps);
-        let u_t_eps = self.pinn.forward(x, y, z, t_eps);
+        let t_eps = coeus_autograd::scalar_add(t, eps);
+        let u_t_eps = self.pinn.forward(x, y, z, &t_eps);
 
-        // Forward difference: ∂u/∂t ≈ (u(ε) - u(0)) / ε
-        u_t_eps.sub(u_t0).div_scalar(eps)
+        coeus_autograd::scalar_mul(&coeus_autograd::sub(&u_t_eps, &u_t0), 1.0 / eps)
     }
 
     /// Extract velocity initial condition tensor from training data
-    ///
-    /// Finds all points at t=0 and extracts their velocity values.
-    ///
-    /// # Arguments
-    ///
-    /// * `x_data` - X-coordinates of training data
-    /// * `y_data` - Y-coordinates of training data
-    /// * `z_data` - Z-coordinates of training data
-    /// * `t_data` - Time coordinates of training data
-    /// * `v_data` - Velocity values (∂u/∂t)
-    /// * `device` - Target device
-    ///
-    /// # Returns
-    ///
-    /// Tensor [n_ic, 1] containing velocity IC values
     /// # Errors
     /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    ///
     pub(crate) fn extract_velocity_initial_condition_tensor(
         _x_data: &[f32],
         _y_data: &[f32],
         _z_data: &[f32],
         t_data: &[f32],
         v_data: &[f32],
-        device: &B::Device,
-    ) -> KwaversResult<Tensor<B, 2>> {
+    ) -> KwaversResult<Var<f32, B>> {
         if v_data.len() != t_data.len() {
             return Err(KwaversError::InvalidInput(
                 "v_data and t_data must have equal length".into(),
@@ -104,22 +75,22 @@ impl<B: Backend> BurnPINN3DWave<B> {
         }
 
         let n_ic = v_ic.len();
-        Ok(Tensor::<B, 2>::from_data(
-            TensorData::new(v_ic, [n_ic, 1]),
-            device,
+        let backend = B::default();
+        Ok(Var::new(
+            coeus_tensor::Tensor::from_slice_on(vec![n_ic, 1], &v_ic, &backend),
+            false,
         ))
     }
+
     /// Extract initial condition tensors.
     /// # Errors
     /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    ///
     pub(crate) fn extract_initial_condition_tensors(
         x_data: &[f32],
         y_data: &[f32],
         z_data: &[f32],
         t_data: &[f32],
         u_data: &[f32],
-        device: &B::Device,
     ) -> KwaversResult<InitialConditionTensors<B>> {
         let min_t = t_data.iter().copied().fold(f32::INFINITY, |a, b| a.min(b));
         if !min_t.is_finite() {
@@ -152,12 +123,9 @@ impl<B: Backend> BurnPINN3DWave<B> {
         let n_ic = x_ic.len();
         let t_ic = vec![min_t; n_ic];
 
-        Ok((
-            Tensor::<B, 2>::from_data(TensorData::new(x_ic, [n_ic, 1]), device),
-            Tensor::<B, 2>::from_data(TensorData::new(y_ic, [n_ic, 1]), device),
-            Tensor::<B, 2>::from_data(TensorData::new(z_ic, [n_ic, 1]), device),
-            Tensor::<B, 2>::from_data(TensorData::new(t_ic, [n_ic, 1]), device),
-            Tensor::<B, 2>::from_data(TensorData::new(u_ic, [n_ic, 1]), device),
-        ))
+        let backend = B::default();
+        let mk = |v: &[f32]| Var::new(coeus_tensor::Tensor::from_slice_on(vec![n_ic, 1], v, &backend), false);
+
+        Ok((mk(&x_ic), mk(&y_ic), mk(&z_ic), mk(&t_ic), mk(&u_ic)))
     }
 }

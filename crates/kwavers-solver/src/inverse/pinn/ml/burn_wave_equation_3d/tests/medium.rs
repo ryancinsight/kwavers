@@ -1,15 +1,13 @@
 //! Heterogeneous and radially varying medium tests.
 
 use super::super::*;
-use burn::backend::{Autodiff, NdArray};
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::error::KwaversResult;
 
-type TestBackend = Autodiff<NdArray>;
+type TestBackend = coeus_core::MoiraiBackend;
 
 #[test]
 fn test_heterogeneous_layered_medium() -> KwaversResult<()> {
-    let device = Default::default();
     let config = BurnPINN3DConfig {
         hidden_layers: vec![16],
         num_collocation_points: 20,
@@ -26,7 +24,7 @@ fn test_heterogeneous_layered_medium() -> KwaversResult<()> {
         }
     };
 
-    let mut solver = BurnPINN3DWave::<TestBackend>::new(config, geometry, wave_speed, &device)?;
+    let mut solver = BurnPINN3DWave::<TestBackend>::new(config, geometry, wave_speed)?;
 
     assert_eq!(
         solver.get_wave_speed(0.5, 0.5, 0.3)?,
@@ -40,16 +38,13 @@ fn test_heterogeneous_layered_medium() -> KwaversResult<()> {
     let t_data = vec![0.1, 0.2, 0.1, 0.2];
     let u_data = vec![0.0, 0.0, 0.0, 0.0];
 
-    let metrics = solver.train(
-        &x_data, &y_data, &z_data, &t_data, &u_data, None, &device, 10,
-    )?;
+    let metrics = solver.train(&x_data, &y_data, &z_data, &t_data, &u_data, None, 10)?;
     assert_eq!(metrics.epochs_completed, 10);
     Ok(())
 }
 
 #[test]
 fn test_radially_varying_medium() -> KwaversResult<()> {
-    let device = Default::default();
     let config = BurnPINN3DConfig {
         hidden_layers: vec![8],
         num_collocation_points: 20,
@@ -71,7 +66,7 @@ fn test_radially_varying_medium() -> KwaversResult<()> {
         }
     };
 
-    let solver = BurnPINN3DWave::<TestBackend>::new(config, geometry, wave_speed, &device)?;
+    let solver = BurnPINN3DWave::<TestBackend>::new(config, geometry, wave_speed)?;
 
     assert_eq!(solver.get_wave_speed(0.5, 0.5, 0.5)?, 2500.0);
     assert_eq!(

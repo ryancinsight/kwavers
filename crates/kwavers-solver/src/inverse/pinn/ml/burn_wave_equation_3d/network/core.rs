@@ -19,11 +19,10 @@
 //! Spatial and temporal derivatives are computed via finite differences with adaptive
 //! step size to balance numerical stability and accuracy.
 
-use burn::module::Module;
-use burn::nn::{Linear, LinearConfig};
-use burn::tensor::{backend::Backend, Tensor, TensorData};
+use coeus_autograd::Var;
+use coeus_nn::{Linear, Module};
 
-use kwavers_core::error::{KwaversError, KwaversResult, SystemError, ValidationError};
+use kwavers_core::error::{KwaversError, KwaversResult};
 
 use super::super::config::BurnPINN3DConfig;
 
@@ -31,76 +30,68 @@ use super::super::config::BurnPINN3DConfig;
 ///
 /// This network learns to approximate solutions u(x, y, z, t) to the 3D wave equation
 /// using physics-informed training with PDE residual enforcement.
-#[derive(Module, Debug)]
-pub struct PINN3DNetwork<B: Backend> {
+pub struct PINN3DNetwork<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> {
     /// Input layer: (x, y, z, t) → hidden[0]
-    input_layer: Linear<B>,
+    input_layer: Linear<f32, B>,
     /// Hidden layers
-    hidden_layers: Vec<Linear<B>>,
+    hidden_layers: Vec<Linear<f32, B>>,
     /// Output layer: hidden[last] → u
-    output_layer: Linear<B>,
+    output_layer: Linear<f32, B>,
 }
 
-impl<B: Backend> PINN3DNetwork<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> Clone for PINN3DNetwork<B> {
+    fn clone(&self) -> Self {
+        Self {
+            input_layer: self.input_layer.clone(),
+            hidden_layers: self.hidden_layers.clone(),
+            output_layer: self.output_layer.clone(),
+        }
+    }
+}
+
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> std::fmt::Debug
+    for PINN3DNetwork<B>
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PINN3DNetwork")
+            .field("hidden_layer_count", &self.hidden_layers.len())
+            .finish_non_exhaustive()
+    }
+}
+
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> PINN3DNetwork<B>
+where
+    B::DeviceBuffer<f32>:
+        coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+{
     /// Create a new PINN network with the specified architecture
     ///
-    /// # Arguments
-    ///
-    /// * `config` - Network configuration specifying hidden layer dimensions
-    /// * `device` - Target device for network parameters
-    ///
-    /// # Returns
-    ///
-    /// A new `PINN3DNetwork` instance with randomized initial weights
-    ///
-    /// # Architecture
-    ///
-    /// - Input: 4D (x, y, z, t)
-    /// - Hidden: As specified in config (e.g., [128, 128, 128])
-    /// - Output: 1D (u)
-    ///
-    /// # Examples
-    ///
-    /// ```rust,ignore
-    /// use burn::backend::NdArray;
-    /// use kwavers_solver::inverse::pinn::ml::burn_wave_equation_3d::{PINN3DNetwork, BurnPINN3DConfig};
-    ///
-    /// type Backend = NdArray<f32>;
-    /// let device = Default::default();
-    /// let config = BurnPINN3DConfig::default();
-    /// let network = PINN3DNetwork::<Backend>::new(&config, &device);
-    /// ```
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
-    ///
-    pub fn new(config: &BurnPINN3DConfig, device: &B::Device) -> KwaversResult<Self> {
+    pub fn new(config: &BurnPINN3DConfig) -> KwaversResult<Self> {
         config.validate()?;
         let input_size = 4; // (x, y, z, t)
         let output_size = 1; // u
 
-        // Input layer: 4D → hidden[0]
         let first_hidden = *config
             .hidden_layers
             .first()
             .ok_or_else(|| KwaversError::InvalidInput("Hidden layers must be non-empty".into()))?;
-        let input_layer = LinearConfig::new(input_size, first_hidden).init(device);
+        let input_layer = Linear::new(input_size, first_hidden, true);
 
-        // Hidden layers: hidden[i] → hidden[i+1] with tanh activation
         let mut hidden_layers = Vec::new();
         for window in config.hidden_layers.windows(2) {
             let [in_features, out_features] = window else {
                 continue;
             };
-            let layer = LinearConfig::new(*in_features, *out_features).init(device);
-            hidden_layers.push(layer)
+            hidden_layers.push(Linear::new(*in_features, *out_features, true));
         }
 
-        // Output layer: hidden[last] → 1D
         let last_hidden = *config
             .hidden_layers
             .last()
             .ok_or_else(|| KwaversError::InvalidInput("Hidden layers must be non-empty".into()))?;
-        let output_layer = LinearConfig::new(last_hidden, output_size).init(device);
+        let output_layer = Linear::new(last_hidden, output_size, true);
 
         Ok(Self {
             input_layer,
@@ -113,152 +104,127 @@ impl<B: Backend> PINN3DNetwork<B> {
         self.hidden_layers.len()
     }
 
+    /// Flatten all layer parameters (weights and biases) in forward order.
+    pub fn parameters(&self) -> Vec<Var<f32, B>> {
+        let mut params = self.input_layer.parameters();
+        for layer in &self.hidden_layers {
+            params.extend(layer.parameters());
+        }
+        params.extend(self.output_layer.parameters());
+        params
+    }
+
+    /// Write updated parameter values back into the network's layers.
+    ///
+    /// `coeus_tensor::Tensor` storage is copy-on-write, so a clone taken via
+    /// `parameters()` detaches from the network on first mutation; an
+    /// optimizer that mutates its own owned copy needs this round-trip to
+    /// propagate updates back.
+    pub fn load_parameters(&mut self, params: &[Var<f32, B>]) {
+        let mut offset = 0;
+        let n = self.input_layer.parameters().len();
+        self.input_layer.load_parameters(&params[offset..offset + n]);
+        offset += n;
+        for layer in &mut self.hidden_layers {
+            let n = layer.parameters().len();
+            layer.load_parameters(&params[offset..offset + n]);
+            offset += n;
+        }
+        let n = self.output_layer.parameters().len();
+        self.output_layer
+            .load_parameters(&params[offset..offset + n]);
+    }
+
     /// Forward pass through the network
     ///
-    /// # Arguments
-    ///
-    /// * `x` - Spatial x-coordinates [batch_size, 1]
-    /// * `y` - Spatial y-coordinates [batch_size, 1]
-    /// * `z` - Spatial z-coordinates [batch_size, 1]
-    /// * `t` - Time coordinates [batch_size, 1]
-    ///
-    /// # Returns
-    ///
-    /// Predicted displacement/pressure field u [batch_size, 1]
-    ///
-    /// # Mathematical Form
-    ///
-    /// u = NN(x, y, z, t) = σ(W_L σ(...σ(W_1[x,y,z,t] + b_1)...) + b_L)
-    ///
-    /// where σ is the tanh activation function.
+    /// u = NN(x, y, z, t) = tanh(W_L tanh(...tanh(W_1[x,y,z,t] + b_1)...) + b_L)
     pub fn forward(
         &self,
-        x: Tensor<B, 2>,
-        y: Tensor<B, 2>,
-        z: Tensor<B, 2>,
-        t: Tensor<B, 2>,
-    ) -> Tensor<B, 2> {
-        // Concatenate inputs: [x, y, z, t] → [batch_size, 4]
-        let input = Tensor::cat(vec![x, y, z, t], 1);
-
-        // Input layer
-        let mut output = self.input_layer.forward(input).tanh();
+        x: &Var<f32, B>,
+        y: &Var<f32, B>,
+        z: &Var<f32, B>,
+        t: &Var<f32, B>,
+    ) -> Var<f32, B> {
+        let input = coeus_autograd::cat(&[x, y, z, t], 1);
+        let mut output = coeus_autograd::tanh(&self.input_layer.forward(&input));
 
         for layer in &self.hidden_layers {
-            output = layer.forward(output).tanh();
+            output = coeus_autograd::tanh(&layer.forward(&output));
         }
 
-        // Output layer (no activation for regression)
-        self.output_layer.forward(output)
+        self.output_layer.forward(&output)
     }
 
     /// Compute PDE residual for the wave equation using finite differences
     ///
-    /// # Arguments
-    ///
-    /// * `x` - Spatial x-coordinates [batch_size, 1]
-    /// * `y` - Spatial y-coordinates [batch_size, 1]
-    /// * `z` - Spatial z-coordinates [batch_size, 1]
-    /// * `t` - Time coordinates [batch_size, 1]
-    /// * `wave_speed` - Function c(x, y, z) returning wave speed at each point
-    ///
-    /// # Returns
-    ///
-    /// PDE residual R = ∂²u/∂t² - c²∇²u [batch_size, 1]
-    ///
-    /// # Mathematical Form
-    ///
     /// R(x,y,z,t) = ∂²u/∂t² - c²(x,y,z) × (∂²u/∂x² + ∂²u/∂y² + ∂²u/∂z²)
     ///
-    /// # Numerical Method
-    ///
-    /// Second-order central finite differences:
-    ///
-    /// ∂²u/∂x² ≈ [u(x+ε) - 2u(x) + u(x-ε)] / ε²
-    ///
-    /// with adaptive ε = sqrt(f32::EPSILON) × 0.01 for numerical stability.
-    ///
-    /// # Examples
-    ///
-    /// ```rust,ignore
-    /// use burn::tensor::Tensor;
-    ///
-    /// let residual = network.compute_pde_residual(
-    ///     x_colloc,
-    ///     y_colloc,
-    ///     z_colloc,
-    ///     t_colloc,
-    ///     |x, y, z| 1500.0, // Constant wave speed
-    /// );
-    /// ```
+    /// Second-order central finite differences with adaptive ε = sqrt(f32::EPSILON) × 0.01.
     /// # Errors
     /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
-    ///
     pub fn compute_pde_residual(
         &self,
-        x: Tensor<B, 2>,
-        y: Tensor<B, 2>,
-        z: Tensor<B, 2>,
-        t: Tensor<B, 2>,
+        x: &Var<f32, B>,
+        y: &Var<f32, B>,
+        z: &Var<f32, B>,
+        t: &Var<f32, B>,
         wave_speed: impl Fn(f32, f32, f32) -> KwaversResult<f32>,
-    ) -> KwaversResult<Tensor<B, 2>> {
+    ) -> KwaversResult<Var<f32, B>>
+    where
+        B::DeviceBuffer<f32>: coeus_core::CpuAddressableStorage<f32>,
+    {
         let eps = 1e-3_f32;
 
-        // Base prediction
-        let u = self.forward(x.clone(), y.clone(), z.clone(), t.clone());
+        let u = self.forward(x, y, z, t);
 
-        // Perturbed coordinates for finite differences
-        let x_plus = x.clone().add_scalar(eps);
-        let x_minus = x.clone().sub_scalar(eps);
-        let y_plus = y.clone().add_scalar(eps);
-        let y_minus = y.clone().sub_scalar(eps);
-        let z_plus = z.clone().add_scalar(eps);
-        let z_minus = z.clone().sub_scalar(eps);
-        let t_plus = t.clone().add_scalar(eps);
-        let t_minus = t.clone().sub_scalar(eps);
+        let x_plus = coeus_autograd::scalar_add(x, eps);
+        let x_minus = coeus_autograd::scalar_add(x, -eps);
+        let y_plus = coeus_autograd::scalar_add(y, eps);
+        let y_minus = coeus_autograd::scalar_add(y, -eps);
+        let z_plus = coeus_autograd::scalar_add(z, eps);
+        let z_minus = coeus_autograd::scalar_add(z, -eps);
+        let t_plus = coeus_autograd::scalar_add(t, eps);
+        let t_minus = coeus_autograd::scalar_add(t, -eps);
 
-        // Second-order spatial derivatives: ∂²u/∂x²
-        let u_x_plus = self.forward(x_plus, y.clone(), z.clone(), t.clone());
-        let u_x_minus = self.forward(x_minus, y.clone(), z.clone(), t.clone());
-        let u_xx = u_x_plus
-            .add(u_x_minus)
-            .sub(u.clone().mul_scalar(2.0))
-            .div_scalar(eps * eps);
+        let two_u = coeus_autograd::scalar_mul(&u, 2.0);
 
-        // ∂²u/∂y²
-        let u_y_plus = self.forward(x.clone(), y_plus, z.clone(), t.clone());
-        let u_y_minus = self.forward(x.clone(), y_minus, z.clone(), t.clone());
-        let u_yy = u_y_plus
-            .add(u_y_minus)
-            .sub(u.clone().mul_scalar(2.0))
-            .div_scalar(eps * eps);
+        let u_x_plus = self.forward(&x_plus, y, z, t);
+        let u_x_minus = self.forward(&x_minus, y, z, t);
+        let u_xx = coeus_autograd::scalar_mul(
+            &coeus_autograd::sub(&coeus_autograd::add(&u_x_plus, &u_x_minus), &two_u),
+            1.0 / (eps * eps),
+        );
 
-        // ∂²u/∂z²
-        let u_z_plus = self.forward(x.clone(), y.clone(), z_plus, t.clone());
-        let u_z_minus = self.forward(x.clone(), y.clone(), z_minus, t.clone());
-        let u_zz = u_z_plus
-            .add(u_z_minus)
-            .sub(u.clone().mul_scalar(2.0))
-            .div_scalar(eps * eps);
+        let u_y_plus = self.forward(x, &y_plus, z, t);
+        let u_y_minus = self.forward(x, &y_minus, z, t);
+        let u_yy = coeus_autograd::scalar_mul(
+            &coeus_autograd::sub(&coeus_autograd::add(&u_y_plus, &u_y_minus), &two_u),
+            1.0 / (eps * eps),
+        );
 
-        // Second-order temporal derivative: ∂²u/∂t²
-        let u_t_plus = self.forward(x.clone(), y.clone(), z.clone(), t_plus);
-        let u_t_minus = self.forward(x.clone(), y.clone(), z.clone(), t_minus);
-        let u_tt = u_t_plus
-            .add(u_t_minus)
-            .sub(u.clone().mul_scalar(2.0))
-            .div_scalar(eps * eps);
+        let u_z_plus = self.forward(x, y, &z_plus, t);
+        let u_z_minus = self.forward(x, y, &z_minus, t);
+        let u_zz = coeus_autograd::scalar_mul(
+            &coeus_autograd::sub(&coeus_autograd::add(&u_z_plus, &u_z_minus), &two_u),
+            1.0 / (eps * eps),
+        );
+
+        let u_t_plus = self.forward(x, y, z, &t_plus);
+        let u_t_minus = self.forward(x, y, z, &t_minus);
+        let u_tt = coeus_autograd::scalar_mul(
+            &coeus_autograd::sub(&coeus_autograd::add(&u_t_plus, &u_t_minus), &two_u),
+            1.0 / (eps * eps),
+        );
 
         // Compute wave speed c(x,y,z) at each collocation point
-        let x_vals = Self::extract_column(&x)?;
-        let y_vals = Self::extract_column(&y)?;
-        let z_vals = Self::extract_column(&z)?;
+        let x_vals = x.tensor.as_slice();
+        let y_vals = y.tensor.as_slice();
+        let z_vals = z.tensor.as_slice();
         let c_values: Vec<f32> = x_vals
-            .into_iter()
-            .zip(y_vals)
-            .zip(z_vals)
-            .map(|((xv, yv), zv)| wave_speed(xv, yv, zv))
+            .iter()
+            .zip(y_vals.iter())
+            .zip(z_vals.iter())
+            .map(|((&xv, &yv), &zv)| wave_speed(xv, yv, zv))
             .collect::<KwaversResult<Vec<f32>>>()?;
 
         for &c in &c_values {
@@ -268,54 +234,21 @@ impl<B: Backend> PINN3DNetwork<B> {
                 ));
             }
         }
+        let c_squared: Vec<f32> = c_values.iter().map(|&c| c * c).collect();
 
-        let c_tensor =
-            Tensor::<B, 1>::from_data(TensorData::from(c_values.as_slice()), &x.device())
-                .unsqueeze_dim(1);
-        let c_squared = c_tensor.powf_scalar(2.0);
+        let backend = B::default();
+        let c_squared_var = Var::new(
+            coeus_tensor::Tensor::from_slice_on(vec![c_squared.len(), 1], &c_squared, &backend),
+            false,
+        );
 
         // Laplacian: ∇²u = ∂²u/∂x² + ∂²u/∂y² + ∂²u/∂z²
-        let laplacian = u_xx.add(u_yy).add(u_zz);
+        let laplacian = coeus_autograd::add(&coeus_autograd::add(&u_xx, &u_yy), &u_zz);
 
         // PDE residual: R = ∂²u/∂t² - c²∇²u
-        Ok(u_tt.sub(laplacian.mul(c_squared)))
-    }
-
-    fn extract_column(t: &Tensor<B, 2>) -> KwaversResult<Vec<f32>> {
-        let shape = t.shape();
-        let dims = shape.dims.as_slice();
-        let [n, m] = dims else {
-            return Err(KwaversError::Validation(
-                ValidationError::DimensionMismatch {
-                    expected: "[N, 1]".to_string(),
-                    actual: format!("{dims:?}"),
-                },
-            ));
-        };
-        if *m != 1 {
-            return Err(KwaversError::Validation(
-                ValidationError::DimensionMismatch {
-                    expected: "[N, 1]".to_string(),
-                    actual: format!("{dims:?}"),
-                },
-            ));
-        }
-
-        let data = t.clone().into_data();
-        let slice = data.as_slice::<f32>().map_err(|e| {
-            KwaversError::System(SystemError::InvalidOperation {
-                operation: "tensor_to_f32_slice".to_string(),
-                reason: format!("{e:?}"),
-            })
-        })?;
-        if slice.len() != *n {
-            return Err(KwaversError::Validation(
-                ValidationError::DimensionMismatch {
-                    expected: format!("len={n}"),
-                    actual: format!("len={}", slice.len()),
-                },
-            ));
-        }
-        Ok(slice.to_vec())
+        Ok(coeus_autograd::sub(
+            &u_tt,
+            &coeus_autograd::mul(&laplacian, &c_squared_var),
+        ))
     }
 }

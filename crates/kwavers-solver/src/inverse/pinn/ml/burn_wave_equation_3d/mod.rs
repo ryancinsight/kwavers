@@ -1,8 +1,8 @@
 //! Burn-based 3D Wave Equation Physics-Informed Neural Network with Automatic Differentiation
 //!
-//! This module implements a PINN for the 3D acoustic wave equation using the Burn deep learning
-//! framework with native automatic differentiation. This extends the 2D implementation to handle
-//! three spatial dimensions with complex geometries and boundary conditions.
+//! This module implements a PINN for the 3D acoustic wave equation using `coeus_autograd`'s
+//! native automatic differentiation. This extends the 2D implementation to handle three
+//! spatial dimensions with complex geometries and boundary conditions.
 //!
 //! ## Wave Equation
 //!
@@ -43,9 +43,8 @@
 //!
 //! ## Backends
 //!
-//! This implementation currently supports the Burn CPU backend:
-//!
-//! - **NdArray**: CPU-only backend (fast compilation, good for development)
+//! This implementation runs on any `coeus_ops::BackendOps<f32> + CpuBackend` backend
+//! (e.g. `coeus_core::MoiraiBackend`).
 //!
 //! GPU PINN execution belongs behind the Coeus training backend and the
 //! provider-generic Hephaestus GPU traits, where WGPU and CUDA are interchangeable
@@ -74,28 +73,26 @@
 //! ## References
 //!
 //! - Raissi et al. (2019): "Physics-informed neural networks" - JCP 378:686-707
-//! - Burn Framework: https://burn.dev/ (v0.18 API)
+//! - `coeus_autograd`: reverse-mode automatic differentiation over `coeus_tensor`
 //!
 //! ## Examples
 //!
 //! ### Basic Usage with CPU Backend
 //!
 //! ```rust,ignore
-//! use burn::backend::NdArray;
 //! use kwavers_solver::inverse::pinn::ml::burn_wave_equation_3d::{
 //!     BurnPINN3DWave, BurnPINN3DConfig, Geometry3D
 //! };
 //! use kwavers_core::error::KwaversResult;
 //!
-//! // Create PINN with NdArray backend (CPU)
-//! type Backend = NdArray<f32>;
-//! let device = Default::default();
+//! // Create PINN with the coeus MoiraiBackend (CPU)
+//! type Backend = coeus_core::MoiraiBackend;
 //! let config = BurnPINN3DConfig::default();
 //! let geometry = Geometry3D::rectangular(0.0, 1.0, 0.0, 1.0, 0.0, 1.0); // Unit cube
 //! let wave_speed = |_x: f32, _y: f32, _z: f32| 1500.0; // Constant speed
 //!
 //! fn run() -> KwaversResult<()> {
-//!     let mut pinn = BurnPINN3DWave::<Backend>::new(config, geometry, wave_speed, &device)?;
+//!     let mut pinn = BurnPINN3DWave::<Backend>::new(config, geometry, wave_speed)?;
 //!
 //! // Train on reference data
 //! let x_data = vec![0.5, 0.6, 0.7];
@@ -106,7 +103,7 @@
 //!
 //! let metrics = pinn.train(
 //!     &x_data, &y_data, &z_data, &t_data, &u_data,
-//!     &device, 1000
+//!     None, 1000
 //! )?;
 //!
 //! if let Some(final_loss) = metrics.total_loss.last() {
@@ -118,7 +115,7 @@
 //! let y_test = vec![0.5, 0.5];
 //! let z_test = vec![0.5, 0.5];
 //! let t_test = vec![0.5, 0.6];
-//! let u_pred = pinn.predict(&x_test, &y_test, &z_test, &t_test, &device)?;
+//! let u_pred = pinn.predict(&x_test, &y_test, &z_test, &t_test)?;
 //!     Ok(())
 //! }
 //! ```
@@ -126,7 +123,6 @@
 //! ### Heterogeneous Media (Layered)
 //!
 //! ```rust,ignore
-//! use burn::backend::NdArray;
 //! use kwavers_solver::inverse::pinn::ml::burn_wave_equation_3d::{
 //!     BurnPINN3DWave, BurnPINN3DConfig, Geometry3D
 //! };
@@ -140,12 +136,11 @@
 //!     }
 //! };
 //!
-//! type Backend = NdArray<f32>;
-//! let device = Default::default();
+//! type Backend = coeus_core::MoiraiBackend;
 //! let config = BurnPINN3DConfig::default();
 //! let geometry = Geometry3D::rectangular(0.0, 1.0, 0.0, 1.0, 0.0, 1.0);
 //!
-//! let pinn = BurnPINN3DWave::<Backend>::new(config, geometry, wave_speed, &device)?;
+//! let pinn = BurnPINN3DWave::<Backend>::new(config, geometry, wave_speed)?;
 //!
 //! // Verify wave speeds
 //! assert_eq!(pinn.get_wave_speed(0.5, 0.5, 0.3)?, 1500.0);
@@ -155,7 +150,6 @@
 //! ### Complex Geometry (Spherical)
 //!
 //! ```rust,ignore
-//! use burn::backend::NdArray;
 //! use kwavers_solver::inverse::pinn::ml::burn_wave_equation_3d::{
 //!     BurnPINN3DWave, BurnPINN3DConfig, Geometry3D
 //! };
@@ -164,15 +158,14 @@
 //! let geometry = Geometry3D::spherical(0.5, 0.5, 0.5, 0.3); // Center + radius
 //! let wave_speed = |_x: f32, _y: f32, _z: f32| 1500.0;
 //!
-//! type Backend = NdArray<f32>;
-//! let device = Default::default();
+//! type Backend = coeus_core::MoiraiBackend;
 //! let config = BurnPINN3DConfig {
 //!     hidden_layers: vec![128, 128, 128],
 //!     num_collocation_points: 1000,
 //!     ..Default::default()
 //! };
 //!
-//! let pinn = BurnPINN3DWave::<Backend>::new(config, geometry, wave_speed, &device)?;
+//! let pinn = BurnPINN3DWave::<Backend>::new(config, geometry, wave_speed)?;
 //! ```
 //!
 //! ## Feature Flags
